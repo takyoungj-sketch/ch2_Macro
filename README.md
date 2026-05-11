@@ -70,6 +70,8 @@ ch2_macro/
 psql -U postgres -c "CREATE DATABASE land_stats;"
 psql -U postgres -d land_stats -f db/001_init.sql
 psql -U postgres -d land_stats -f db/002_indexes.sql
+# 유료 필터 분석 속도 향상(선택): psql ... -f db/002_paid_analyze_index.sql
+# 백엔드 venv에서 적용 스크립트: cd backend && .venv\\Scripts\\python scripts/run_paid_index.py
 # 이미 예전 001만 적용한 DB라면: psql ... -f db/003_legacy_patch.sql
 # 기존 DB에 표준편차 컬럼이 없다면: psql ... -f db/004_add_basic_stats_std.sql
 ```
@@ -127,8 +129,9 @@ python run_pipeline.py --refresh --months 3
 
 **현재**
 
-- 무료 API는 `land_basic_stats`만 조회한다 (원자료 스캔 없음).
-- 유료 API는 `land_transactions`에 인덱스(`db/002_indexes.sql`)를 탄 동적 집계 + 선택적 `analysis_cache`.
+- 무료 API는 `land_basic_stats`만 조회한다 (원자료 스캔 없음). **복수 동·리 기본통계**(유료 화면 「기본 통계 보기」)는 같은 응답 형식으로 `POST /api/free/stats/bulk` 가 `land_transactions`를 한 번 재집계한다 (도로 미적용 매트릭스와 표시 차이는 구현 참고).
+- 유료 「필터 분석」(이상치 제외 **미사용**)은 `WHERE` 에 맞는 행만 `WITH base AS MATERIALIZED (...)` 에 올린 뒤 전체합·법정별·매트릭스 집계를 한 라운드트립으로 돌린다. PostgreSQL percentile 정렬이 `work_mem` 에 민감해 `paid_analyze_work_mem_mb`(기본 192)·`SET LOCAL work_mem` 을 적용한다. 부분 인덱스는 `db/002_paid_analyze_index.sql`.
+- 선택적 `analysis_cache` 로 같은 조건 재조회 비용을 줄인다.
 - 필요 시 `land_transactions`를 `sido_code` 등으로 파티션하는 것을 우선 검토한다.
 
 **ClickHouse·DuckDB 등 분리 검토 시점 (예시 기준)**
@@ -158,12 +161,17 @@ npm run dev
 
 ## 무료/유료 기능 구분 (제품 경계)
 
+### 유료 웹 UI 흐름 (두 단계)
+
+1. **기본 통계 보기**: 지역을 선택한 뒤 무료 패널과 같은 형식으로 요약 표시한다. 무료 탭에서는 법정단위가 1곳일 때만, 유료에서는 **복수 동·면 합산**이 가능하다 (`/api/free/stats/bulk`).
+2. **필터 분석 실행**: 연도·도로·면적 등 추가 필터 후 `/api/paid/analyze` 로 용도×지목 매트릭스를 조회한다. 복수 지역일 때는 지역별 부분통계 표를 함께 볼 수 있다.
+
 API·화면 설계 기준이다. 인증·과금 연동 전에는 엔드포인트가 모두 열려 있을 수 있으나, 기능 범위는 아래로 고정한다.
 
 | 기능 | 무료 (`/api/free/...`) | 유료 (`/api/paid/...`) |
 |------|------|------|
 | 단일 동/리 기본 통계 (사전집계) | ✅ | 동일 데이터를 동적 집계로도 조회 가능 |
-| 복수 동/리 선택 | ❌ | ✅ |
+| 복수 동·리 선택 (합산 기본 통계) | ❌ (법정코드 정확히 1곳만) | ✅ (`/api/free/stats/bulk` — 유료 화면 「기본 통계 보기」) |
 | 연도/기간 필터 | ❌ (무료는 아래「무료 사전집계 분석 기간 정책」 범위로 고정) | ✅ |
 | 도로조건 필터 | ❌ | ✅ |
 | 면적형 필터 (광소/정상/광대) | ❌ | ✅ |

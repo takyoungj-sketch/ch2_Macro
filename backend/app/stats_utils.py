@@ -54,9 +54,108 @@ def remove_outliers(prices: Sequence[float]) -> list[float]:
     return arr[(arr >= lo) & (arr <= hi)].tolist()
 
 
+def outlier_keep_mask(prices: Sequence[float]) -> list[bool]:
+    """행 단위 계산 후 연도·그룹으로 나눌 때 같은 인덱스에 대해 재사용."""
+    raw_list = list(prices)
+    n = len(raw_list)
+    if n == 0:
+        return []
+    finite_idx: list[int] = []
+    vals: list[float] = []
+    out = [False] * n
+    for i, x in enumerate(raw_list):
+        try:
+            fx = float(x)
+        except (TypeError, ValueError):
+            continue
+        if not np.isfinite(fx):
+            continue
+        finite_idx.append(i)
+        vals.append(fx)
+
+    if not vals:
+        return out
+
+    arr = np.asarray(vals, dtype=float)
+    if len(arr) < 4:
+        for i in finite_idx:
+            out[i] = True
+        return out
+
+    q1, q3 = np.percentile(arr, [25, 75])
+    iqr = q3 - q1
+    lo, hi = q1 - OUTLIER_IQR_MULTIPLIER * iqr, q3 + OUTLIER_IQR_MULTIPLIER * iqr
+    keep_val = ((arr >= lo) & (arr <= hi)).tolist()
+
+    for j, ki in enumerate(finite_idx):
+        if keep_val[j]:
+            out[ki] = True
+    return out
+
+
 def _empty(n: int) -> dict:
     return {
         "count": n, "mean": None, "std": None, "ci_lower": None, "ci_upper": None,
         "min": None, "p25": None, "median": None, "p75": None, "max": None,
         "is_reliable": False,
+    }
+
+
+def stats_dict_from_sql_aggregates(
+    n: int,
+    mean_raw: float | None,
+    std_samp_raw: float | None,
+    min_raw: float | None,
+    p25_raw: float | None,
+    median_raw: float | None,
+    p75_raw: float | None,
+    max_raw: float | None,
+) -> dict:
+    """
+    compute_stats 출력과 같은 키를 갖도록, PG 집계만으로 통계 행 하나를 만든다.
+    (이상치 제거 전 순수 AVG / STDDEV_SAMP / percentile_cont 기준)
+    """
+
+    def _flt(x):
+        try:
+            if x is None:
+                return None
+            v = float(x)
+            return v if v == v else None
+        except (TypeError, ValueError):
+            return None
+
+    if n <= 0:
+        return _empty(0)
+
+    mean_f = _flt(mean_raw)
+    std_raw = _flt(std_samp_raw)
+    vmin = _flt(min_raw)
+    q1 = _flt(p25_raw)
+    med = _flt(median_raw)
+    q3 = _flt(p75_raw)
+    vmax = _flt(max_raw)
+
+    ci_lower, ci_upper = None, None
+    std_out = round(std_raw, 0) if std_raw is not None else None
+    if n >= 2 and mean_f is not None and std_raw is not None:
+        sem = float(std_raw) / (n ** 0.5)
+        ci = st.t.interval(1 - ALPHA, df=n - 1, loc=float(mean_f), scale=sem)
+        ci_lower = float(ci[0])
+        ci_upper = float(ci[1])
+
+    mean_out = round(mean_f, 0) if mean_f is not None else None
+
+    return {
+        "count": int(n),
+        "mean": mean_out,
+        "std": std_out,
+        "ci_lower": round(ci_lower, 0) if ci_lower is not None else None,
+        "ci_upper": round(ci_upper, 0) if ci_upper is not None else None,
+        "min": round(vmin, 0) if vmin is not None else None,
+        "p25": round(q1, 0) if q1 is not None else None,
+        "median": round(med, 0) if med is not None else None,
+        "p75": round(q3, 0) if q3 is not None else None,
+        "max": round(vmax, 0) if vmax is not None else None,
+        "is_reliable": int(n) >= MIN_RELIABLE_COUNT,
     }

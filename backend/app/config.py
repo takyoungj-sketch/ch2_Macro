@@ -8,7 +8,9 @@ class Settings(BaseSettings):
     secret_key: str = "change_me"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
-    cors_origins: str = "http://localhost:5173"
+    cors_origins: str = "http://localhost:5173,http://localhost:5174,http://localhost:5175"
+    #: 필터 분석 percentile 정렬용 work_mem(MB). 너무 작으면 디스크 스필로 매우 느려질 수 있음.
+    paid_analyze_work_mem_mb: int = 192
 
     @property
     def cors_origins_list(self) -> list[str]:

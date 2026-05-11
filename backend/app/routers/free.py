@@ -6,20 +6,191 @@
 
 from __future__ import annotations
 
+from itertools import product
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.schemas import (
+    FreeStatsBulkRequest,
     FreeStatsResponse,
     MatrixCell,
     RegionItem,
     StatsResult,
     YearlyTradeStat,
 )
+from app.stats_utils import compute_stats
 
 router = APIRouter(prefix="/free", tags=["무료 통계"])
+
+_MAX_STATS_REGIONS = 200
+
+
+def _dedupe_codes_preserve(region_codes: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for c in region_codes:
+        t = str(c).strip()
+        if not t or t in seen:
+            continue
+        seen.add(t)
+        out.append(t)
+    return out
+
+
+def _stats_dict_to_result(st: dict) -> StatsResult:
+    return StatsResult(
+        count=int(st["count"]),
+        mean=st.get("mean"),
+        std=st.get("std"),
+        ci_lower=st.get("ci_lower"),
+        ci_upper=st.get("ci_upper"),
+        min=st.get("min"),
+        p25=st.get("p25"),
+        median=st.get("median"),
+        p75=st.get("p75"),
+        max=st.get("max"),
+        is_reliable=bool(st.get("is_reliable", int(st["count"]) >= 15)),
+    )
+
+
+def _overlap_year_window(db: Session, codes: list[str]) -> tuple[int, int]:
+    """land_basic_stats ALL×ALL 구간의 교집합(PSQL CHAR 패딩은 btrim 처리)."""
+    stmt = text(
+        """
+        SELECT btrim(cast(beopjungri_code AS text)) AS bc,
+               year_from::int AS yf,
+               year_to::int AS yt
+        FROM land_basic_stats
+        WHERE btrim(cast(beopjungri_code AS text)) = ANY(:codes)
+          AND zone_type = 'ALL' AND land_category = 'ALL'
+        """
+    )
+    rows = db.execute(stmt, {"codes": codes}).fetchall()
+    if not rows:
+        raise HTTPException(
+            status_code=404,
+            detail="선택 지역 중 사전 집계 통계가 없는 코드가 포함되어 있습니다.",
+        )
+    seen = {str(r.bc).strip() for r in rows}
+    missing = [c for c in codes if c not in seen]
+    if missing:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "다음 법정코드는 사전 집계 데이터가 없어 합산할 수 없습니다: "
+                + ", ".join(missing[:15])
+                + (" …" if len(missing) > 15 else "")
+            ),
+        )
+    y_from = max(int(r.yf) for r in rows)
+    y_to = min(int(r.yt) for r in rows)
+    if y_from > y_to:
+        raise HTTPException(
+            status_code=404,
+            detail="선택 지역의 집계 연도 구간이 겹치지 않습니다.",
+        )
+    return (y_from, y_to)
+
+
+def _combined_bundle_from_transactions(
+    db: Session,
+    codes: list[str],
+    year_from: int,
+    year_to: int,
+) -> tuple[StatsResult, dict[str, StatsResult], dict[str, StatsResult], list[MatrixCell]]:
+    """
+    build_stats 와 같은 필터(정상·해제 제외·단가 있음)로 원장을 합산해 매트릭스를 계산한다.
+    """
+    stmt = text(
+        """
+        SELECT zone_type, land_category, unit_price_per_sqm::double precision AS up
+        FROM land_transactions
+        WHERE is_valid = TRUE
+          AND is_cancelled = FALSE
+          AND unit_price_per_sqm IS NOT NULL
+          AND contract_year >= :yf
+          AND contract_year <= :yt
+          AND btrim(cast(beopjungri_code AS text)) = ANY(:codes)
+        """
+    )
+    raw = db.execute(
+        stmt,
+        {"codes": codes, "yf": year_from, "yt": year_to},
+    ).fetchall()
+    trips: list[tuple[str, str, float]] = []
+    for r in raw:
+        zt = (r.zone_type or "").strip() or "UNKNOWN"
+        lc = (r.land_category or "").strip() or "UNKNOWN"
+        try:
+            p = float(r.up)
+        except (TypeError, ValueError):
+            continue
+        if p == p:
+            trips.append((zt, lc, p))
+
+    if not trips:
+        raise HTTPException(
+            status_code=404,
+            detail="합산 가능한 거래 단가 데이터가 없습니다. 연도 또는 지역을 조정해 보세요.",
+        )
+
+    zones = sorted({t[0] for t in trips})
+    cats = sorted({t[1] for t in trips})
+
+    def prices_for(zone: str, cat: str) -> list[float]:
+        return [
+            p
+            for zt, lc, p in trips
+            if (zone == "ALL" or zt == zone) and (cat == "ALL" or lc == cat)
+        ]
+
+    total_d = compute_stats(prices_for("ALL", "ALL"))
+    total = _stats_dict_to_result(total_d)
+
+    by_zone: dict[str, StatsResult] = {}
+    for zone in zones:
+        d = compute_stats(prices_for(zone, "ALL"))
+        by_zone[zone] = _stats_dict_to_result(d)
+
+    by_land_category: dict[str, StatsResult] = {}
+    for lc in cats:
+        d = compute_stats(prices_for("ALL", lc))
+        by_land_category[lc] = _stats_dict_to_result(d)
+
+    matrix_list: list[MatrixCell] = []
+    for zone, cat in product(zones, cats):
+        st = compute_stats(prices_for(zone, cat))
+        matrix_list.append(
+            MatrixCell(
+                zone_type=zone,
+                land_category=cat,
+                stats=_stats_dict_to_result(st),
+            )
+        )
+
+    return (total, by_zone, by_land_category, matrix_list)
+
+
+def _build_region_title(db: Session, codes: list[str]) -> str:
+    stmt = text(
+        """
+        SELECT btrim(cast(beopjungri_code AS text)) AS bc, beopjungri_name
+        FROM region_codes
+        WHERE btrim(cast(beopjungri_code AS text)) = ANY(:codes)
+        """
+    )
+    rows = db.execute(stmt, {"codes": codes}).fetchall()
+    cmap = {str(r.bc).strip(): str(r.beopjungri_name) for r in rows}
+    missing = [c for c in codes if c not in cmap]
+    if missing:
+        raise HTTPException(
+            status_code=404,
+            detail=f"등록되지 않은 법정동·리 코드가 있습니다: {', '.join(missing[:10])}",
+        )
+    return ", ".join(cmap[c] for c in codes)
 
 
 @router.get("/regions", response_model=list[RegionItem], summary="지역 목록 조회")
@@ -43,6 +214,86 @@ def list_regions(
         params,
     ).fetchall()
     return [RegionItem(**dict(r._mapping)) for r in rows]
+
+
+@router.post(
+    "/stats/bulk",
+    response_model=FreeStatsResponse,
+    summary="복수 법정동·리 기본 통계 합산",
+)
+def get_basic_stats_bulk(
+    payload: FreeStatsBulkRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    무료 화면과 동일 형식으로, 선택한 법정동·리 거래 단가를 하나의 표본으로 묶어 집계한다.
+    매트릭스는 원장 재집계(사전 집계와 동일한 필터)·연도별는 정상 거래 합계(해제 포함 정책은 단일 통계와 동일).
+    """
+    codes = _dedupe_codes_preserve(payload.region_codes)
+    if not codes:
+        raise HTTPException(status_code=422, detail="유효한 지역 코드가 없습니다.")
+    if len(codes) > _MAX_STATS_REGIONS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"한 번에 합산할 수 있는 최대 개수({_MAX_STATS_REGIONS})를 초과했습니다.",
+        )
+
+    title = _build_region_title(db, codes)
+    year_from, year_to = _overlap_year_window(db, codes)
+    total, by_zone, by_land_category, matrix = _combined_bundle_from_transactions(
+        db, codes, year_from, year_to
+    )
+
+    y_stmt = text(
+        """
+        SELECT contract_year::int AS y,
+               COUNT(*)::int AS cnt,
+               COALESCE(SUM(total_price_10k), 0) AS sum_price,
+               COALESCE(SUM(area_sqm), 0) AS sum_area
+        FROM land_transactions
+        WHERE btrim(cast(beopjungri_code AS text)) = ANY(:codes)
+          AND is_valid IS TRUE
+          AND contract_year >= :yf
+          AND contract_year <= :yt
+        GROUP BY contract_year
+        ORDER BY contract_year
+        """
+    )
+    y_rows = db.execute(
+        y_stmt,
+        {"codes": codes, "yf": year_from, "yt": year_to},
+    ).fetchall()
+    y_map = {int(r.y): r for r in y_rows}
+    by_year: list[YearlyTradeStat] = []
+    for y in range(year_from, year_to + 1):
+        rr = y_map.get(y)
+        if rr:
+            sp = float(rr.sum_price)
+            sa = float(rr.sum_area)
+            unit = (sp / sa) if sa > 0 else None
+            by_year.append(
+                YearlyTradeStat(
+                    year=y,
+                    count=int(rr.cnt),
+                    total_price_10k_sum=sp,
+                    area_sqm_sum=sa,
+                    unit_price_per_sqm=unit,
+                )
+            )
+        else:
+            by_year.append(YearlyTradeStat(year=y, count=0))
+
+    return FreeStatsResponse(
+        beopjungri_code=",".join(codes),
+        beopjungri_name=title,
+        year_from=year_from,
+        year_to=year_to,
+        total=total,
+        by_year=by_year,
+        by_zone=by_zone,
+        by_land_category=by_land_category,
+        matrix=matrix,
+    )
 
 
 @router.get("/stats/{beopjungri_code}", response_model=FreeStatsResponse, summary="동/리 기본 통계")

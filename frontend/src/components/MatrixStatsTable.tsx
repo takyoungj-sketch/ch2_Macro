@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, type KeyboardEvent } from "react";
 import clsx from "clsx";
 import type { MatrixCell, StatsResult } from "../types";
 
@@ -87,6 +87,8 @@ interface Props {
   byLandCategory?: Record<string, StatsResult>;
   /** 무료처럼 범례를 상단별도 배치하면 false */
   showEmbeddedLegend?: boolean;
+  /** 유료 전용 — 거래가 있는 칸을 클릭하면 교차 영역별 연도 추이 활성화 */
+  onPaidMatrixCellClick?: (zoneType: string, landCategory: string) => void;
 }
 
 function cellHl(reliable?: boolean): string {
@@ -119,12 +121,38 @@ function cellRightCat(): string {
   return CELL;
 }
 
+function paidInsightAttrs(
+  deal: boolean,
+  pick: Props["onPaidMatrixCellClick"],
+  zoneType: string,
+  landCategory: string
+): {
+  role?: "button";
+  tabIndex?: number;
+  onClick?: () => void;
+  onKeyDown?: (e: KeyboardEvent<HTMLTableCellElement>) => void;
+} {
+  if (!deal || !pick) return {};
+  return {
+    role: "button",
+    tabIndex: 0,
+    onClick: () => pick(zoneType, landCategory),
+    onKeyDown: (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        pick(zoneType, landCategory);
+      }
+    },
+  };
+}
+
 export default function MatrixStatsTable({
   title = "용도지역 × 지목 분석표",
   matrix,
   byZone = {},
   byLandCategory = {},
   showEmbeddedLegend = true,
+  onPaidMatrixCellClick,
 }: Props) {
   const cells = matrix ?? [];
   const showHeadingRow =
@@ -291,31 +319,46 @@ export default function MatrixStatsTable({
                     const stats = lookup.get(`${zone}|||${category}`);
                     const deal = hasDeals(stats);
                     const faint = faintBlock(stats);
+                    const insight = paidInsightAttrs(
+                      deal,
+                      onPaidMatrixCellClick,
+                      zone,
+                      category
+                    );
 
                     return (
                       <Fragment key={`${zone}-${category}-r0`}>
                         <td
+                          {...insight}
                           className={clsx(
                             cellLeftCat(ci),
                             "px-1 py-0 text-right align-middle tabular-nums truncate",
                             faint,
                             cellHl(stats?.is_reliable),
-                            stats?.is_reliable ? "text-slate-900 font-medium" : "text-blue-950"
+                            stats?.is_reliable ? "text-slate-900 font-medium" : "text-blue-950",
+                            insight.role && "cursor-pointer hover:bg-sky-50/50 outline-none focus-visible:ring-1 ring-sky-400"
                           )}
                           title={
-                            deal ? `거래수: ${fmtCount(stats!.count)}` : "거래수"
+                            deal
+                              ? `거래수: ${fmtCount(stats!.count)}${insight.role ? " · 클릭: 연도별 추이" : ""}`
+                              : "거래수"
                           }
                         >
                           {deal ? fmtCount(stats!.count) : "-"}
                         </td>
                         <td
+                          {...insight}
                           className={clsx(
                             cellRightCat(),
                             "px-1 py-0 align-middle text-right tabular-nums truncate text-slate-600",
                             faint,
-                            cellHl(stats?.is_reliable)
+                            cellHl(stats?.is_reliable),
+                            insight.role &&
+                              "cursor-pointer hover:bg-sky-50/50 outline-none focus-visible:ring-1 ring-sky-400"
                           )}
-                          title={deal ? `최소: ${fmtD1(stats!.min)}` : "최소"}
+                          title={
+                            deal ? `최소: ${fmtD1(stats!.min)} · 클릭: 연도별 추이` : "최소"
+                          }
                         >
                           {deal ? fmtD1(stats!.min) : "-"}
                         </td>
@@ -329,28 +372,45 @@ export default function MatrixStatsTable({
                     const stats = lookup.get(`${zone}|||${category}`);
                     const deal = hasDeals(stats);
                     const faint = faintBlock(stats);
+                    const insight = paidInsightAttrs(
+                      deal,
+                      onPaidMatrixCellClick,
+                      zone,
+                      category
+                    );
                     return (
                       <Fragment key={`${zone}-${category}-r1`}>
                         <td
                           rowSpan={2}
+                          {...insight}
                           className={clsx(
                             cellLeftCat(ci),
                             "px-1 py-0 align-middle text-right font-bold tabular-nums leading-tight truncate text-blue-950 text-[1.125rem]",
                             faint,
-                            cellHl(stats?.is_reliable)
+                            cellHl(stats?.is_reliable),
+                            insight.role && "cursor-pointer hover:bg-sky-50/50 outline-none focus-visible:ring-1 ring-sky-400"
                           )}
-                          title={deal ? `평균: ${fmtD1(stats!.mean)}` : "평균"}
+                          title={
+                            deal
+                              ? `평균: ${fmtD1(stats!.mean)} · 클릭: 연도별 추이`
+                              : "평균"
+                          }
                         >
                           {deal ? fmtD1(stats!.mean) : "-"}
                         </td>
                         <td
+                          {...insight}
                           className={clsx(
                             cellRightCat(),
                             "px-1 py-0 align-middle text-right tabular-nums truncate text-slate-600",
                             faint,
-                            cellHl(stats?.is_reliable)
+                            cellHl(stats?.is_reliable),
+                            insight.role &&
+                              "cursor-pointer hover:bg-sky-50/50 outline-none focus-visible:ring-1 ring-sky-400"
                           )}
-                          title={deal ? `25%: ${fmtD1(stats!.p25)}` : "25%"}
+                          title={
+                            deal ? `25%: ${fmtD1(stats!.p25)} · 클릭: 연도별 추이` : "25%"
+                          }
                         >
                           {deal ? fmtD1(stats!.p25) : "-"}
                         </td>
@@ -363,16 +423,26 @@ export default function MatrixStatsTable({
                     const stats = lookup.get(`${zone}|||${category}`);
                     const deal = hasDeals(stats);
                     const faint = faintBlock(stats);
+                    const insight = paidInsightAttrs(
+                      deal,
+                      onPaidMatrixCellClick,
+                      zone,
+                      category
+                    );
                     return (
                       <td
                         key={`${zone}-${category}-r2`}
+                        {...insight}
                         className={clsx(
                           cellRightCat(),
                           "px-1 py-0 align-middle text-right tabular-nums truncate font-bold text-slate-700",
                           faint,
-                          cellHl(stats?.is_reliable)
+                          cellHl(stats?.is_reliable),
+                          insight.role && "cursor-pointer hover:bg-sky-50/50 outline-none focus-visible:ring-1 ring-sky-400"
                         )}
-                        title={deal ? `중위: ${fmtD1(stats!.median)}` : "중위값"}
+                        title={
+                          deal ? `중위: ${fmtD1(stats!.median)} · 클릭: 연도별 추이` : "중위값"
+                        }
                       >
                         {deal ? fmtD1(stats!.median) : "-"}
                       </td>
@@ -385,27 +455,43 @@ export default function MatrixStatsTable({
                     const stats = lookup.get(`${zone}|||${category}`);
                     const deal = hasDeals(stats);
                     const faint = faintBlock(stats);
+                    const insight = paidInsightAttrs(
+                      deal,
+                      onPaidMatrixCellClick,
+                      zone,
+                      category
+                    );
                     return (
                       <Fragment key={`${zone}-${category}-r3`}>
                         <td
+                          {...insight}
                           className={clsx(
                             cellLeftCat(ci),
                             "px-1 py-0 align-middle text-right tabular-nums font-semibold truncate text-blue-900 text-[10px]",
                             faint,
-                            cellHl(stats?.is_reliable)
+                            cellHl(stats?.is_reliable),
+                            insight.role &&
+                              "cursor-pointer hover:bg-sky-50/50 outline-none focus-visible:ring-1 ring-sky-400"
                           )}
-                          title={deal ? `표준편차: ${fmtD1(stats!.std)}` : "표준편차"}
+                          title={
+                            deal ? `표준편차: ${fmtD1(stats!.std)} · 클릭: 연도별 추이` : "표준편차"
+                          }
                         >
                           {deal ? fmtD1(stats!.std) : "-"}
                         </td>
                         <td
+                          {...insight}
                           className={clsx(
                             cellRightCat(),
                             "px-1 py-0 align-middle text-right tabular-nums truncate text-slate-600",
                             faint,
-                            cellHl(stats?.is_reliable)
+                            cellHl(stats?.is_reliable),
+                            insight.role &&
+                              "cursor-pointer hover:bg-sky-50/50 outline-none focus-visible:ring-1 ring-sky-400"
                           )}
-                          title={deal ? `75%: ${fmtD1(stats!.p75)}` : "75%"}
+                          title={
+                            deal ? `75%: ${fmtD1(stats!.p75)} · 클릭: 연도별 추이` : "75%"
+                          }
                         >
                           {deal ? fmtD1(stats!.p75) : "-"}
                         </td>
@@ -419,6 +505,12 @@ export default function MatrixStatsTable({
                     const stats = lookup.get(`${zone}|||${category}`);
                     const deal = hasDeals(stats);
                     const faint = faintBlock(stats);
+                    const insight = paidInsightAttrs(
+                      deal,
+                      onPaidMatrixCellClick,
+                      zone,
+                      category
+                    );
                     const ciTxt =
                       stats && deal
                         ? fmtCiRange(stats.ci_lower, stats.ci_upper)
@@ -426,28 +518,36 @@ export default function MatrixStatsTable({
                     return (
                       <Fragment key={`${zone}-${category}-r4`}>
                         <td
+                          {...insight}
                           className={clsx(
                             cellLeftCat(ci),
                             "px-1 py-0 align-middle text-right tabular-nums font-semibold truncate text-blue-900",
                             faint,
-                            cellHl(stats?.is_reliable)
+                            cellHl(stats?.is_reliable),
+                            insight.role &&
+                              "cursor-pointer hover:bg-sky-50/50 outline-none focus-visible:ring-1 ring-sky-400"
                           )}
                           title={
                             deal
-                              ? `95% 신뢰구간: ${fmtCiRange(stats!.ci_lower, stats!.ci_upper)}`
+                              ? `95% 신뢰구간: ${fmtCiRange(stats!.ci_lower, stats!.ci_upper)} · 클릭: 연도별 추이`
                               : "신뢰구간"
                           }
                         >
                           {deal ? ciTxt : "-"}
                         </td>
                         <td
+                          {...insight}
                           className={clsx(
                             cellRightCat(),
                             "px-1 py-0 align-middle text-right tabular-nums truncate text-slate-600",
                             faint,
-                            cellHl(stats?.is_reliable)
+                            cellHl(stats?.is_reliable),
+                            insight.role &&
+                              "cursor-pointer hover:bg-sky-50/50 outline-none focus-visible:ring-1 ring-sky-400"
                           )}
-                          title={deal ? `최대: ${fmtD1(stats!.max)}` : "최대"}
+                          title={
+                            deal ? `최대: ${fmtD1(stats!.max)} · 클릭: 연도별 추이` : "최대"
+                          }
                         >
                           {deal ? fmtD1(stats!.max) : "-"}
                         </td>
