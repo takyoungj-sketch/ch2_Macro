@@ -1,0 +1,26 @@
+# Dependencies & build outputs
+node_modules/
+frontend/node_modules/
+frontend/dist/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Secrets & local env
+.env
+.env.local
+!.env.example
+
+# Local bulk source (엑셀 원본 등 — 레포에 포함하지 않음)
+원본/
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE (선택)
+.idea/
+.vscode/*.log
