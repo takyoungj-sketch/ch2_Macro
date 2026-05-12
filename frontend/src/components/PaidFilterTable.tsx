@@ -1,10 +1,14 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchRegions } from "../api/client";
 import {
   AREA_CATEGORIES,
   getPaidYearButtonYears,
   ROAD_CONDITIONS,
 } from "../constants/paidFilters";
+import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import { useAppStore } from "../store";
+import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
 
 export default function PaidFilterTable() {
   const {
@@ -24,9 +28,19 @@ export default function PaidFilterTable() {
   const yearOptions = useMemo(() => [...getPaidYearButtonYears()], []);
   const selectedYears = paidRequest.years ?? [];
 
+  const { data: regions = [] } = useQuery({
+    queryKey: REGIONS_CATALOG_QUERY_KEY,
+    queryFn: () => fetchRegions(),
+    staleTime: 6 * 60 * 60 * 1000,
+  });
+  const resolvedRegionCodes = useMemo(
+    () => resolveUnionBeopjungriCodes(regions, tierSelection),
+    [regions, tierSelection]
+  );
+
   const runFiltered = () => {
     setFilterError(null);
-    if (tierSelection.beopjungri_codes.length === 0) {
+    if (resolvedRegionCodes.length === 0) {
       setFilterError("먼저 지역을 입력하고 기본 통계 보기까지 반영해 주세요.");
       return;
     }
@@ -34,7 +48,7 @@ export default function PaidFilterTable() {
       setFilterError("분석할 연도를 하나 이상 선택해 주세요.");
       return;
     }
-    void runPaidFilteredAnalysis();
+    void runPaidFilteredAnalysis(resolvedRegionCodes);
   };
 
   return (
@@ -48,6 +62,7 @@ export default function PaidFilterTable() {
             <td className="px-2 py-2">
               <p className="text-[10px] text-slate-500 mb-1.5">
                 클릭으로 포함·제외합니다. 선택된 해에만 따라 집계됩니다 (비연속 가능).
+                기본통계 표에 없던 연도만 골라도, 후보 거래 행에는 칩에 나온 연도(올해 기준 과거 최대 5개년)까지 포함됩니다.
               </p>
               <div className="flex flex-wrap gap-1">
                 {yearOptions.map((y) => {
