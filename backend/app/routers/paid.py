@@ -31,6 +31,7 @@ from app.schemas import (
     PaidAnalysisResponse,
     RegionSelectionUnit,
     StatsResult,
+    YearlyTradeStat,
 )
 from app.stats_utils import (
     compute_stats,
@@ -295,7 +296,10 @@ def _build_conditions(
 def _select_full_query(where_sql: str) -> str:
     return f"""
         SELECT lt.beopjungri_code, lt.zone_type, lt.land_category, lt.road_condition,
-               lt.unit_price_per_sqm
+               lt.unit_price_per_sqm,
+               lt.contract_year::int AS contract_year,
+               lt.total_price_10k::float8 AS total_price_10k,
+               lt.area_sqm::float8 AS area_sqm
         FROM land_transactions lt
         WHERE {where_sql}
     """
@@ -462,6 +466,96 @@ def _stats_result_from_agg_row(m: dict) -> StatsResult:
     return StatsResult(**d)
 
 
+def _ordered_analysis_years(req: PaidAnalysisRequest) -> list[int]:
+    if req.years is not None and len(req.years) > 0:
+        return sorted({int(y) for y in req.years})
+    if req.year_from is not None and req.year_to is not None:
+        a, b = int(req.year_from), int(req.year_to)
+        if a <= b:
+            return list(range(a, b + 1))
+    return []
+
+
+def _parse_by_year_agg_json(rows: list, columns: list[int]) -> list[YearlyTradeStat]:
+    m: dict[int, dict] = {}
+    for raw in rows:
+        if not isinstance(raw, dict):
+            continue
+        yr = raw.get("yr")
+        if yr is None:
+            continue
+        try:
+            y = int(yr)
+        except (TypeError, ValueError):
+            continue
+        m[y] = raw
+    out: list[YearlyTradeStat] = []
+    for y in columns:
+        row = m.get(y)
+        if not row:
+            out.append(YearlyTradeStat(year=y, count=0))
+            continue
+        cnt = int(row.get("cnt") or 0)
+        sp = float(row.get("sum_p") or 0.0)
+        sa = float(row.get("sum_a") or 0.0)
+        unit = (sp / sa) if sa > 0 else None
+        out.append(
+            YearlyTradeStat(
+                year=y,
+                count=cnt,
+                total_price_10k_sum=sp,
+                area_sqm_sum=sa,
+                unit_price_per_sqm=unit,
+            )
+        )
+    return out
+
+
+def _by_year_trade_stats_materialized(
+    bucket: dict[int, list[tuple[float, float, float]]],
+    *,
+    columns: list[int],
+    iqr_multiplier: float,
+) -> list[YearlyTradeStat]:
+    """연도별 (단가·총액·면적) 행 목록으로 Tukey 마스크 후 금액·면적 합산."""
+
+    out: list[YearlyTradeStat] = []
+    k = float(iqr_multiplier)
+    for y in columns:
+        tup = bucket.get(y) or ()
+        if not tup:
+            out.append(YearlyTradeStat(year=y, count=0))
+            continue
+        prices = [t[0] for t in tup]
+        mask = outlier_keep_mask(prices, iqr_multiplier=k)
+        kept = [tup[i] for i in range(len(tup)) if mask[i]]
+        cnt = len(kept)
+        sp = sum(t[1] for t in kept)
+        sa = sum(t[2] for t in kept)
+        unit = (sp / sa) if sa > 0 else None
+        out.append(
+            YearlyTradeStat(
+                year=y,
+                count=cnt,
+                total_price_10k_sum=sp,
+                area_sqm_sum=sa,
+                unit_price_per_sqm=unit,
+            )
+        )
+    return out
+
+
+def _infer_year_columns_from_items(items: list) -> list[int]:
+    ys: list[int] = []
+    for it in items:
+        if isinstance(it, dict) and it.get("yr") is not None:
+            try:
+                ys.append(int(it["yr"]))
+            except (TypeError, ValueError):
+                continue
+    return sorted(set(ys))
+
+
 def _analyze_core_materialized_rows(
     req: PaidAnalysisRequest,
     *,
@@ -491,6 +585,7 @@ def _analyze_core_materialized_rows(
     all_prices: list[float] = []
     by_region: dict[str, list[float]] = defaultdict(list)
     matrix_prices: dict[tuple[str, str], list[float]] = defaultdict(list)
+    year_bucket: dict[int, list[tuple[float, float, float]]] = defaultdict(list)
 
     for r in rows:
         p = float(r.unit_price_per_sqm)
@@ -503,8 +598,22 @@ def _analyze_core_materialized_rows(
         zt = zraw if zraw else "미지정"
         lc = lraw if lraw else "기타"
         matrix_prices[(zt, lc)].append(p)
+        try:
+            cy = int(r.contract_year)
+        except (TypeError, ValueError):
+            cy = None
+        if cy is not None:
+            tp = float(r.total_price_10k or 0)
+            ar_sq = float(r.area_sqm or 0)
+            year_bucket[cy].append((p, tp, ar_sq))
 
     k = float(req.outlier_iqr_multiplier)
+    ycols = _ordered_analysis_years(req)
+    if not ycols:
+        ycols = sorted(year_bucket.keys())
+    by_year_list = _by_year_trade_stats_materialized(
+        year_bucket, columns=ycols, iqr_multiplier=k
+    )
     total = _prices_to_stats(all_prices, req.exclude_outlier, iqr_multiplier=k)
     matrix = [
         MatrixCell(
@@ -518,6 +627,7 @@ def _analyze_core_materialized_rows(
     return PaidAnalysisResponse(
         request=req,
         total=total,
+        by_year=by_year_list,
         by_region={
             rk: _prices_to_stats(v, req.exclude_outlier, iqr_multiplier=k)
             for rk, v in by_region.items()
@@ -587,7 +697,17 @@ def _analyze_core_sql_aggregate(
                {apx}
              FROM base
              GROUP BY 1, 2
-           ) x) AS matrix_json
+           ) x) AS matrix_json,
+          (SELECT COALESCE(json_agg(row_to_json(x)), '[]'::json)
+           FROM (
+             SELECT lt.contract_year::int AS yr,
+                    COUNT(*)::bigint AS cnt,
+                    COALESCE(SUM(lt.total_price_10k), 0)::float8 AS sum_p,
+                    COALESCE(SUM(lt.area_sqm), 0)::float8 AS sum_a
+             FROM land_transactions lt
+             WHERE {where_sql}
+             GROUP BY lt.contract_year
+           ) x) AS by_year_json
         """
     )
 
@@ -620,9 +740,16 @@ def _analyze_core_sql_aggregate(
             )
         )
 
+    by_year_items = _json_list_maybe(bundle["by_year_json"])
+    ycols = _ordered_analysis_years(req)
+    if not ycols:
+        ycols = _infer_year_columns_from_items(by_year_items)
+    by_year_list = _parse_by_year_agg_json(by_year_items, ycols)
+
     return PaidAnalysisResponse(
         request=req,
         total=total,
+        by_year=by_year_list,
         by_region=by_region,
         by_zone={},
         by_land_category={},
@@ -740,6 +867,7 @@ def analyze(
     cached_req = PaidAnalysisResponse(
         request=req_for_cache,
         total=payload.total,
+        by_year=payload.by_year,
         by_region=payload.by_region,
         by_zone=payload.by_zone,
         by_land_category=payload.by_land_category,

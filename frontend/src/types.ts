@@ -37,6 +37,8 @@ export interface FreeStatsResponse {
   by_zone: Record<string, StatsResult>;
   by_land_category: Record<string, StatsResult>;
   matrix: MatrixCell[];
+  /** 합산 요청에 포함됐으나 사전집계 부재로 빠진 법정코드 */
+  stats_excluded_codes?: string[];
 }
 
 export type RegionScopeType = "beopjungri" | "eupmyeondong" | "sigungu";
@@ -82,6 +84,8 @@ export interface PaidAnalysisRequest {
 export interface PaidAnalysisResponse {
   request: PaidAnalysisRequest;
   total: StatsResult;
+  /** 필터 적용 후 연도별 요약(상단 표); 없으면 기본통계 by_year 에서 선택 연도만 필터 */
+  by_year?: YearlyTradeStat[];
   by_region: Record<string, StatsResult>;
   by_zone: Record<string, StatsResult>;
   by_land_category: Record<string, StatsResult>;

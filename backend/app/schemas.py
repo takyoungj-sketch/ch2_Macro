@@ -206,6 +206,8 @@ class PaidAnalysisRequest(BaseModel):
 class PaidAnalysisResponse(BaseModel):
     request: PaidAnalysisRequest
     total: StatsResult
+    """요청 연도별 건수·총액·면적 요약 (필터 조건과 동일, 상단 표용)."""
+    by_year: list[YearlyTradeStat] = Field(default_factory=list)
     by_region: dict[str, StatsResult] = {}
     by_zone: dict[str, StatsResult] = {}
     by_land_category: dict[str, StatsResult] = {}

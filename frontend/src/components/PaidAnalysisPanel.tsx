@@ -7,7 +7,6 @@ import {
   fetchRegions,
 } from "../api/client";
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
-import { yearsRangeInclusive } from "../constants/paidFilters";
 import { useAppStore } from "../store";
 import type { MatrixYearlyRequest } from "../types";
 import { parseApiError } from "../utils/apiError";
@@ -22,7 +21,6 @@ export default function PaidAnalysisPanel() {
   const viewMode = useAppStore((s) => s.viewMode);
   const paidBasicStatsKick = useAppStore((s) => s.paidBasicStatsKick);
   const setPaidBasicBaseKey = useAppStore((s) => s.setPaidBasicBaseKey);
-  const setPaidRequest = useAppStore((s) => s.setPaidRequest);
   const tierSelection = useAppStore((s) => s.tierSelection);
   const paidRequest = useAppStore((s) => s.paidRequest);
   const paidRoadExcluded = useAppStore((s) => s.paidRoadExcluded);
@@ -82,15 +80,7 @@ export default function PaidAnalysisPanel() {
     }
   }, [basicData?.analysis_base_key, setPaidBasicBaseKey]);
 
-  /** 상단 기본 통계와 동일한 연도 창으로 칩 선택 맞춤 (필터 결과 화면에서도 동일 데이터 기준 유지·새로고침 복귀 등) */
-  useEffect(() => {
-    if (viewMode !== "paid" || basicData == null) return;
-    const next = yearsRangeInclusive(basicData.year_from, basicData.year_to);
-    if (next.length === 0) return;
-    setPaidRequest({ years: next, year_from: null, year_to: null });
-  }, [viewMode, paidBasicStatsKick, basicData?.year_from, basicData?.year_to, setPaidRequest]);
-
-  /** 기본 통계 API는 사전 집계 전체 연도 구간을 주므로, 유료 패널에서는 연도 필터 선택만 표에 반영한다. */
+  /** 필터 결과가 있으면 서버 연도별 집계(도로·면적 필터 포함)를 상단에 표시, 없으면 기본통계 by_year 에서 선택 연도만 표시 */
   const yearlyRowsForPaidFilter = useMemo(() => {
     const rows = basicData?.by_year ?? [];
     const sel = paidRequest.years ?? [];
@@ -98,6 +88,17 @@ export default function PaidAnalysisPanel() {
     const want = new Set(sel);
     return rows.filter((r) => want.has(r.year));
   }, [basicData?.by_year, paidRequest.years]);
+
+  const yearlyRowsPaidTop = useMemo(() => {
+    if (
+      status === "success" &&
+      result?.by_year != null &&
+      result.by_year.length > 0
+    ) {
+      return result.by_year;
+    }
+    return yearlyRowsForPaidFilter;
+  }, [status, result?.by_year, yearlyRowsForPaidFilter]);
 
   const isLoading = status === "loading";
   const [analyzeWaitSec, setAnalyzeWaitSec] = useState(0);
@@ -211,7 +212,7 @@ export default function PaidAnalysisPanel() {
                 {basicData.beopjungri_name}
               </h2>
               <div className="min-w-0 flex-1 basis-[12rem]">
-                <YearlyStatsTable rows={yearlyRowsForPaidFilter} hideTitle />
+                <YearlyStatsTable rows={yearlyRowsPaidTop} hideTitle />
               </div>
               <div className="shrink-0">
                 <MatrixStatsLegend />
