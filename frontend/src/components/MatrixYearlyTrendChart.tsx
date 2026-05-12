@@ -100,7 +100,7 @@ export default function MatrixYearlyTrendChart({ rows }: { rows: MatrixYearlySta
   return (
     <div className="w-full" role="img" aria-label="연도별 평균 단가 및 거래 건수 추이 그래프">
       <p className="text-[10px] text-slate-500 mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-        <span className="inline-flex items-center gap-1 font-medium text-blue-600">
+        <span className="inline-flex items-center gap-1 font-bold text-blue-600">
           <span className="inline-block w-3 h-0.5 bg-blue-600 rounded" aria-hidden />
           평균(만원/㎡)
         </span>

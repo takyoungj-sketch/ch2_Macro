@@ -1,7 +1,6 @@
 import { useLayoutEffect } from "react";
 import {
   UI_FONT_SCALE_STEPS,
-  applyRootFontFromStep,
   clampFontStep,
   type UiTableTone,
 } from "./constants/displayUi";
@@ -37,10 +36,11 @@ export default function App() {
   const setUiTableTone = useAppStore((s) => s.setUiTableTone);
 
   useLayoutEffect(() => {
-    applyRootFontFromStep(uiFontScaleStep);
-  }, [uiFontScaleStep]);
+    document.documentElement.style.removeProperty("font-size");
+  }, []);
 
   const fontIdx = clampFontStep(uiFontScaleStep);
+  const contentZoom = UI_FONT_SCALE_STEPS[fontIdx];
   const fontPct = Math.round(UI_FONT_SCALE_STEPS[fontIdx] * 100);
   const fontStepMin = fontIdx <= 0;
   const fontStepMax = fontIdx >= UI_FONT_SCALE_STEPS.length - 1;
@@ -124,7 +124,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="flex flex-1 overflow-hidden">
+      <main className="flex flex-1 overflow-hidden min-h-0" style={{ zoom: contentZoom }}>
         <aside className="w-[22rem] min-w-[20rem] border-r border-slate-200 bg-white overflow-y-auto p-4 space-y-3 flex-shrink-0">
           <RegionSelector />
           {viewMode === "paid" && <PaidFilterTable />}

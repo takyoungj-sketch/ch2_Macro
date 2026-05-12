@@ -28,7 +28,7 @@ export default function StatsTable({ title, rows }: Props) {
           <tr className={headRow}>
             <th className="px-3 py-2 text-left">구분</th>
             <th className="px-3 py-2 text-right">건수</th>
-            <th className="px-3 py-2 text-right text-blue-700 font-semibold">평균단가</th>
+            <th className="px-3 py-2 text-right text-blue-700 font-bold">평균단가</th>
             <th className="px-3 py-2 text-right">95% CI 하한</th>
             <th className="px-3 py-2 text-right">95% CI 상한</th>
             <th className="px-3 py-2 text-right">최솟값</th>
@@ -58,7 +58,7 @@ export default function StatsTable({ title, rows }: Props) {
               >
                 {stats.count}
               </td>
-              <td className="px-3 py-2 text-right tabular-nums text-blue-600 font-semibold">
+              <td className="px-3 py-2 text-right tabular-nums text-blue-600 font-bold">
                 {fmt(stats.mean)}
               </td>
               <td className="px-3 py-2 text-right tabular-nums text-slate-500">

@@ -141,7 +141,7 @@ export default function PaidMatrixYearlyModal({
                     <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">
                       건수
                     </th>
-                    <th className="border border-slate-200 px-2 py-1.5 text-right font-medium text-blue-700">
+                    <th className="border border-slate-200 px-2 py-1.5 text-right font-bold text-blue-700">
                       평균(만원/㎡)
                     </th>
                   </tr>
@@ -153,7 +153,7 @@ export default function PaidMatrixYearlyModal({
                       <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
                         {r.count.toLocaleString("ko-KR")}
                       </td>
-                      <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-blue-600 font-semibold">
+                      <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-blue-600 font-bold">
                         {r.mean_unit_price_per_sqm != null
                           ? Number(r.mean_unit_price_per_sqm).toLocaleString("ko-KR", {
                               minimumFractionDigits: 1,

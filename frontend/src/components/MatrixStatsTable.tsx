@@ -1,10 +1,10 @@
 import { Fragment, type KeyboardEvent } from "react";
 import clsx from "clsx";
 import {
+  MATRIX_TABLE_TONE,
   matrixTheadPrimaryClass,
   matrixTheadSecondaryClass,
 } from "../constants/displayUi";
-import { useAppStore } from "../store";
 import type { MatrixCell, StatsResult } from "../types";
 
 /** 고정 레이아웃 (만원/㎡) — 통계 라벨 열 없음 */
@@ -62,7 +62,7 @@ export function MatrixStatsLegend() {
         <tr>
           <td
             rowSpan={2}
-            className="border border-slate-200 px-0.5 py-px text-center align-middle font-semibold text-blue-700 leading-tight"
+            className="border border-slate-200 px-0.5 py-px text-center align-middle font-bold text-blue-700 leading-tight"
           >
             평균
           </td>
@@ -159,9 +159,8 @@ export default function MatrixStatsTable({
   showEmbeddedLegend = true,
   onPaidMatrixCellClick,
 }: Props) {
-  const uiTableTone = useAppStore((s) => s.uiTableTone);
-  const thMain = matrixTheadPrimaryClass(uiTableTone);
-  const thSub = matrixTheadSecondaryClass(uiTableTone);
+  const thMain = matrixTheadPrimaryClass(MATRIX_TABLE_TONE);
+  const thSub = matrixTheadSecondaryClass(MATRIX_TABLE_TONE);
 
   const cells = matrix ?? [];
   const showHeadingRow =
@@ -261,10 +260,10 @@ export default function MatrixStatsTable({
                   title={`${category} ${fmtCount(byLandCategory[category]?.count ?? countCategory(cells, category))}건`}
                 >
                   <span className="flex flex-col items-center gap-px leading-tight">
-                    <span className="block truncate w-full text-sm font-semibold text-slate-700">
+                    <span className="block truncate w-full text-sm font-semibold text-sky-950">
                       {category}
                     </span>
-                    <span className="text-[11px] text-slate-400 font-normal">
+                    <span className="text-[11px] text-sky-800/85 font-normal">
                       {fmtCount(byLandCategory[category]?.count ?? countCategory(cells, category))}
                       건
                     </span>
@@ -318,14 +317,14 @@ export default function MatrixStatsTable({
                   <th
                     rowSpan={5}
                     className={clsx(
-                      "sticky left-0 z-10 bg-white px-1 py-1 align-middle text-center text-sm font-semibold text-slate-700",
+                      "sticky left-0 z-10 bg-sky-100 px-1 py-1 align-middle text-center text-sm font-semibold text-sky-950",
                       cellZoneCol()
                     )}
 
                     title={zone}
                   >
                     <div className="line-clamp-2 break-all text-center">{zone}</div>
-                    <div className="mt-0.5 text-[10px] font-normal leading-tight text-slate-400">
+                    <div className="mt-0.5 text-[10px] font-normal leading-tight text-sky-800/85">
                       {fmtCount(byZone[zone]?.count ?? countZone(cells, zone))}건
                     </div>
                   </th>
@@ -399,7 +398,7 @@ export default function MatrixStatsTable({
                           {...insight}
                           className={clsx(
                             cellLeftCat(ci),
-                            "px-1 py-0 align-middle text-right font-semibold tabular-nums leading-tight truncate text-blue-600 text-[1.0625rem]",
+                            "px-1 py-0 align-middle text-right font-bold tabular-nums leading-tight truncate text-blue-600 text-[1.0625rem]",
                             faint,
                             cellHl(stats?.is_reliable),
                             insight.role && "cursor-pointer hover:bg-sky-50/50 outline-none focus-visible:ring-1 ring-sky-400"

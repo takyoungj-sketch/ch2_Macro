@@ -1,8 +1,9 @@
-/** 브라우저 기준 16px × 배율 → documentElement.fontSize (Tailwind rem과 연동). */
+/** 글자 크기 단계별 배율(사이드바·우측 본문 레이아웃 `zoom`만 적용, 최상단 헤더는 제외). */
 export const UI_FONT_SCALE_STEPS = [
   0.8125, 0.875, 0.9375, 1, 1.0625, 1.125, 1.1875, 1.25,
 ] as const;
 
+export const UI_FONT_LS_KEY = "ch2_macro_ui_font_step";
 export const UI_TABLE_TONE_LS_KEY = "ch2_macro_ui_table_tone";
 
 export type UiTableTone = "neutral" | "blueHeaders";
@@ -46,11 +47,9 @@ export function persistTableTone(tone: UiTableTone): void {
   }
 }
 
-export function applyRootFontFromStep(stepIndex: number): void {
-  const i = clampFontStep(stepIndex);
-  const scale = UI_FONT_SCALE_STEPS[i];
-  document.documentElement.style.fontSize = `${16 * scale}px`;
-}
+
+/** 매트릭스(용도·지목 헤더·좌측 용도지역 열)는 항상 연블루 톤 고정 — 표 헤더 설정과 무관. */
+export const MATRIX_TABLE_TONE: UiTableTone = "blueHeaders";
 
 /** 간단 표(StatsTable, Yearly 등) thead 한 줄 스타일 */
 export function simpleTableHeadClass(tone: UiTableTone): string {

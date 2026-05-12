@@ -7,7 +7,6 @@ import {
   persistTableTone,
   readStoredFontStep,
   readStoredTableTone,
-  applyRootFontFromStep,
 } from "./constants/displayUi";
 import { getDefaultPaidSelectedYears } from "./constants/paidFilters";
 import type { PaidAnalysisRequest, PaidAnalysisResponse, RegionItem, ViewMode } from "./types";
@@ -402,7 +401,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => {
       const next = clampFontStep(s.uiFontScaleStep + direction);
       persistFontStep(next);
-      applyRootFontFromStep(next);
       return { uiFontScaleStep: next };
     }),
 

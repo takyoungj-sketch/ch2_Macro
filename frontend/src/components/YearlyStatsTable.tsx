@@ -103,7 +103,7 @@ export default function YearlyStatsTable({
               {list.map((r) => (
                 <td
                   key={`u-${r.year}`}
-                  className="border border-slate-200 px-2 py-1 text-right tabular-nums text-blue-600 font-semibold"
+                  className="border border-slate-200 px-2 py-1 text-right tabular-nums text-blue-600 font-bold"
                 >
                   {fmtUnit(typeof r.unit_price_per_sqm === "number" ? r.unit_price_per_sqm : null)}
                 </td>
