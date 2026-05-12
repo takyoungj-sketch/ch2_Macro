@@ -96,6 +96,10 @@ class FreeStatsResponse(BaseModel):
     by_zone: dict[str, StatsResult] = {}
     by_land_category: dict[str, StatsResult] = {}
     matrix: list[MatrixCell] = []
+    stats_excluded_codes: list[str] = Field(
+        default_factory=list,
+        description="요청에 있었지만 land_basic_stats(ALL×ALL)가 없어 합산 표본에서 제외된 법정코드.",
+    )
 
 
 class FreeStatsBulkRequest(BaseModel):
