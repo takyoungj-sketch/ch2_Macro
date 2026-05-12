@@ -1,10 +1,12 @@
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchFreeStats, fetchFreeStatsBulk, fetchRegions } from "../api/client";
+import { fetchFreeStats, fetchFreeStatsBulk, fetchPaidMatrixYearly, fetchRegions } from "../api/client";
 import { useAppStore } from "../store";
+import type { MatrixYearlyRequest } from "../types";
 import { parseApiError } from "../utils/apiError";
 import { resolveBeopjungriCodes } from "../utils/regionTier";
 import MatrixStatsTable, { MatrixStatsLegend } from "./MatrixStatsTable";
+import PaidMatrixYearlyModal from "./PaidMatrixYearlyModal";
 import YearlyStatsTable from "./YearlyStatsTable";
 
 export default function FreeStatsPanel() {
@@ -12,7 +14,18 @@ export default function FreeStatsPanel() {
   const paidResultView = useAppStore((s) => s.paidResultView);
   const paidBasicStatsKick = useAppStore((s) => s.paidBasicStatsKick);
   const setPaidBasicBaseKey = useAppStore((s) => s.setPaidBasicBaseKey);
+  const paidBasicBaseKey = useAppStore((s) => s.paidBasicBaseKey);
   const { tierSelection } = useAppStore();
+
+  const [trendModal, setTrendModal] = useState<{
+    zoneType: string;
+    landCategory: string;
+  } | null>(null);
+  const [trendLoading, setTrendLoading] = useState(false);
+  const [trendError, setTrendError] = useState<string | null>(null);
+  const [trendRows, setTrendRows] = useState<
+    { year: number; count: number; mean_unit_price_per_sqm: number | null }[]
+  >([]);
 
   const { data: regions = [], isLoading: regionsLoading } = useQuery({
     queryKey: ["regions"],
@@ -50,6 +63,58 @@ export default function FreeStatsPanel() {
     if (!isPaidBasic) return;
     setPaidBasicBaseKey(data?.analysis_base_key ?? null);
   }, [data?.analysis_base_key, isPaidBasic, setPaidBasicBaseKey]);
+
+  const closeTrend = () => {
+    setTrendModal(null);
+    setTrendLoading(false);
+    setTrendError(null);
+    setTrendRows([]);
+  };
+
+  const openMatrixTrend = useCallback(
+    async (zoneType: string, landCategory: string) => {
+      if (!isPaidBasic || resolvedCodes.length === 0) return;
+      const statsData = data;
+      if (!statsData) {
+        setTrendError("통계 데이터가 없습니다.");
+        setTrendModal({ zoneType, landCategory });
+        setTrendLoading(false);
+        return;
+      }
+
+      const baseKey = statsData.analysis_base_key ?? paidBasicBaseKey;
+      const body: MatrixYearlyRequest = {
+        region_selections: null,
+        region_codes: resolvedCodes,
+        year_from: statsData.year_from,
+        year_to: statsData.year_to,
+        years: null,
+        base_cache_key: baseKey,
+        road_conditions: null,
+        area_categories: null,
+        land_categories: null,
+        zone_types: null,
+        exclude_partial: false,
+        exclude_outlier: false,
+        zone_type: zoneType,
+        land_category: landCategory,
+      };
+
+      setTrendModal({ zoneType, landCategory });
+      setTrendLoading(true);
+      setTrendError(null);
+      setTrendRows([]);
+      try {
+        const res = await fetchPaidMatrixYearly(body);
+        setTrendRows(res.rows ?? []);
+      } catch (e) {
+        setTrendError(parseApiError(e).message);
+      } finally {
+        setTrendLoading(false);
+      }
+    },
+    [isPaidBasic, resolvedCodes, data, paidBasicBaseKey]
+  );
 
   if (regionsLoading)
     return (
@@ -138,6 +203,18 @@ export default function FreeStatsPanel() {
         byZone={data.by_zone}
         byLandCategory={data.by_land_category}
         showEmbeddedLegend={false}
+        onPaidMatrixCellClick={isPaidBasic ? openMatrixTrend : undefined}
+      />
+
+      <PaidMatrixYearlyModal
+        open={trendModal != null}
+        onClose={closeTrend}
+        loading={trendLoading}
+        error={trendError}
+        zoneType={trendModal?.zoneType ?? ""}
+        landCategory={trendModal?.landCategory ?? ""}
+        rows={trendRows}
+        scopeNote="기본 통계에 표시된 지역·연도 범위가 적용됩니다. (유료 필터 표의 도로·면적 등은 이 단계에 포함되지 않습니다.)"
       />
     </div>
   );
