@@ -7,6 +7,7 @@ import {
   fetchRegions,
 } from "../api/client";
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
+import { yearsRangeInclusive } from "../constants/paidFilters";
 import { useAppStore } from "../store";
 import type { MatrixYearlyRequest } from "../types";
 import { parseApiError } from "../utils/apiError";
@@ -21,6 +22,7 @@ export default function PaidAnalysisPanel() {
   const viewMode = useAppStore((s) => s.viewMode);
   const paidBasicStatsKick = useAppStore((s) => s.paidBasicStatsKick);
   const setPaidBasicBaseKey = useAppStore((s) => s.setPaidBasicBaseKey);
+  const setPaidRequest = useAppStore((s) => s.setPaidRequest);
   const tierSelection = useAppStore((s) => s.tierSelection);
   const paidRequest = useAppStore((s) => s.paidRequest);
   const paidRoadExcluded = useAppStore((s) => s.paidRoadExcluded);
@@ -79,6 +81,14 @@ export default function PaidAnalysisPanel() {
       setPaidBasicBaseKey(basicData.analysis_base_key);
     }
   }, [basicData?.analysis_base_key, setPaidBasicBaseKey]);
+
+  /** 상단 기본 통계와 동일한 연도 창으로 칩 선택 맞춤 (필터 결과 화면에서도 동일 데이터 기준 유지·새로고침 복귀 등) */
+  useEffect(() => {
+    if (viewMode !== "paid" || basicData == null) return;
+    const next = yearsRangeInclusive(basicData.year_from, basicData.year_to);
+    if (next.length === 0) return;
+    setPaidRequest({ years: next, year_from: null, year_to: null });
+  }, [viewMode, paidBasicStatsKick, basicData?.year_from, basicData?.year_to, setPaidRequest]);
 
   /** 기본 통계 API는 사전 집계 전체 연도 구간을 주므로, 유료 패널에서는 연도 필터 선택만 표에 반영한다. */
   const yearlyRowsForPaidFilter = useMemo(() => {

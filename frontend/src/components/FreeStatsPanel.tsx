@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchFreeStats, fetchFreeStatsBulk, fetchPaidMatrixYearly, fetchRegions } from "../api/client";
+import { yearsRangeInclusive } from "../constants/paidFilters";
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import { useAppStore } from "../store";
 import type { MatrixYearlyRequest } from "../types";
 import { parseApiError } from "../utils/apiError";
-import { resolveBeopjungriCodes } from "../utils/regionTier";
+import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
 import MatrixStatsTable, { MatrixStatsLegend } from "./MatrixStatsTable";
 import PaidMatrixYearlyModal from "./PaidMatrixYearlyModal";
 import YearlyStatsTable from "./YearlyStatsTable";
@@ -15,6 +16,7 @@ export default function FreeStatsPanel() {
   const paidResultView = useAppStore((s) => s.paidResultView);
   const paidBasicStatsKick = useAppStore((s) => s.paidBasicStatsKick);
   const setPaidBasicBaseKey = useAppStore((s) => s.setPaidBasicBaseKey);
+  const setPaidRequest = useAppStore((s) => s.setPaidRequest);
   const paidBasicBaseKey = useAppStore((s) => s.paidBasicBaseKey);
   const { tierSelection } = useAppStore();
 
@@ -35,7 +37,7 @@ export default function FreeStatsPanel() {
   });
 
   const resolvedCodes = useMemo(
-    () => resolveBeopjungriCodes(regions, tierSelection),
+    () => resolveUnionBeopjungriCodes(regions, tierSelection),
     [regions, tierSelection]
   );
 
@@ -66,6 +68,14 @@ export default function FreeStatsPanel() {
     setPaidBasicBaseKey(data?.analysis_base_key ?? null);
   }, [data?.analysis_base_key, isPaidBasic, setPaidBasicBaseKey]);
 
+  /** 기본 통계 창과 동일 연도(year_from∼year_to)로 필터 칩 동기화 */
+  useEffect(() => {
+    if (!isPaidBasic || data == null) return;
+    const next = yearsRangeInclusive(data.year_from, data.year_to);
+    if (next.length === 0) return;
+    setPaidRequest({ years: next, year_from: null, year_to: null });
+  }, [isPaidBasic, paidBasicStatsKick, data?.year_from, data?.year_to, setPaidRequest]);
+
   const closeTrend = () => {
     setTrendModal(null);
     setTrendLoading(false);
@@ -85,9 +95,15 @@ export default function FreeStatsPanel() {
       }
 
       const baseKey = statsData.analysis_base_key ?? paidBasicBaseKey;
+      const codesForTrend = (
+        statsData.beopjungri_code
+          ?.split(",")
+          .map((x) => x.trim())
+          .filter(Boolean) ?? resolvedCodes
+      );
       const body: MatrixYearlyRequest = {
         region_selections: null,
-        region_codes: resolvedCodes,
+        region_codes: codesForTrend,
         year_from: statsData.year_from,
         year_to: statsData.year_to,
         years: null,
@@ -178,16 +194,27 @@ export default function FreeStatsPanel() {
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-5 space-y-5">
-      {viewMode === "paid" && (
-        <p className="text-[11px] text-indigo-700 font-medium leading-relaxed">
-          유료 · 기본 통계
-          {useBulk && (
-            <span className="block text-indigo-600/90 font-normal mt-0.5">
-              선택 법정동·리 거래 단가를 합친 결과입니다. 매트릭스는 원장 기준 즉시 집계입니다.
-            </span>
-          )}
-        </p>
-      )}
+        {viewMode === "paid" && (
+          <>
+            <p className="text-[11px] text-indigo-700 font-medium leading-relaxed">
+              유료 · 기본 통계
+              {useBulk && (
+                <span className="block text-indigo-600/90 font-normal mt-0.5">
+                  선택 법정동·리 거래 단가를 합친 결과입니다. 매트릭스는 원장 기준 즉시 집계입니다.
+                </span>
+              )}
+            </p>
+            {Boolean(data.stats_excluded_codes?.length) && (
+              <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 leading-snug">
+                사전 집계가 없는 법정코드 {(data.stats_excluded_codes ?? []).length}건은 요청과 함께 보냈지만
+                합산 표본에서는 자동으로 제외되었습니다. 예: {(data.stats_excluded_codes ?? [])
+                  .slice(0, 8)
+                  .join(", ")}
+                {(data.stats_excluded_codes?.length ?? 0) > 8 ? " …" : ""}
+              </p>
+            )}
+          </>
+        )}
       <div className="flex flex-wrap items-start gap-3 gap-y-2">
         <h2 className="text-base font-bold text-slate-800 shrink-0 leading-tight max-w-md">
           {data.beopjungri_name}

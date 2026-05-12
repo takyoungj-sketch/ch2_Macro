@@ -14,3 +14,13 @@ export function getPaidYearButtonYears(): readonly number[] {
 export function getDefaultPaidSelectedYears(): number[] {
   return [...getPaidYearButtonYears()];
 }
+
+/** 기본 통계 API의 year_from∼year_to (사전집계 창)과 같은 연도 목록 */
+export function yearsRangeInclusive(yearFrom: number, yearTo: number): number[] {
+  const yf = Number(yearFrom);
+  const yt = Number(yearTo);
+  if (!Number.isFinite(yf) || !Number.isFinite(yt) || yf > yt) return [];
+  const out: number[] = [];
+  for (let y = yf; y <= yt; y += 1) out.push(y);
+  return out;
+}
