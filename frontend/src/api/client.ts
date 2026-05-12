@@ -10,11 +10,19 @@ import type {
 
 const api = axios.create({ baseURL: "/api" });
 
+/** 전체 카탈로그: limit 미지정·비검색 시 4만 행 규모 로드(search 시 서버에서 짧게 캡). */
 export const fetchRegions = async (params?: {
   sigungu_code?: string;
   eupmyeondong_code?: string;
+  search?: string;
+  limit?: number;
 }): Promise<RegionItem[]> => {
-  const { data } = await api.get<RegionItem[]>("/free/regions", { params });
+  const p: Record<string, string | number> = params ? { ...params } : {};
+  const hasSearch = Boolean(params?.search && params.search.trim().length > 0);
+  if (!hasSearch && p.limit === undefined) {
+    p.limit = 40000;
+  }
+  const { data } = await api.get<RegionItem[]>("/free/regions", { params: p });
   return data;
 };
 

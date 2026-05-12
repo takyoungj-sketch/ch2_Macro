@@ -6,6 +6,7 @@ import {
   fetchPaidMatrixYearly,
   fetchRegions,
 } from "../api/client";
+import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import { useAppStore } from "../store";
 import type { MatrixYearlyRequest } from "../types";
 import { parseApiError } from "../utils/apiError";
@@ -43,8 +44,9 @@ export default function PaidAnalysisPanel() {
   >([]);
 
   const { data: regions = [], isLoading: regionsLoading } = useQuery({
-    queryKey: ["regions"],
+    queryKey: REGIONS_CATALOG_QUERY_KEY,
     queryFn: () => fetchRegions(),
+    staleTime: 6 * 60 * 60 * 1000,
   });
 
   const resolvedCodes = useMemo(

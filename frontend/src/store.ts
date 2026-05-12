@@ -10,6 +10,13 @@ import { emptyTierCodes } from "./utils/regionTier";
 
 const EMPTY_REGION_SEGMENTS: RegionFiveFields = ["", "", "", "", ""];
 
+const MAX_BEOPJUNGRI_PICK = 200;
+
+function normalizeAndSortCodes(codes: readonly string[]): string[] {
+  return [...new Set(codes.map((c) => c.trim()).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, "ko-KR")
+  );
+}
 export type PaidResultView = "idle" | "basic" | "filtered";
 
 export type PaidAnalysisStatus = "idle" | "loading" | "success" | "error";
@@ -43,6 +50,9 @@ interface AppState {
   setViewMode: (m: ViewMode) => void;
   setRegionSegment: (idx: 0 | 1 | 2 | 3 | 4, value: string) => void;
   applyBeopjungriCodes: (codes: readonly string[]) => void;
+  /** 검색·칩에서 법정단위 추가(무료는 항상 1개로 교체) */
+  addPickedBeopjungri: (code: string) => void;
+  removePickedBeopjungri: (code: string) => void;
   clearTierSelection: () => void;
 
   /** 지역 반영 후 무료와 동일한 기본 통계 화면 */
@@ -79,7 +89,7 @@ const defaultPaidRequest: PaidAnalysisRequest = {
 function tierOnlyBeopjungri(codes: readonly string[]): TierCodes {
   return {
     ...emptyTierCodes(),
-    beopjungri_codes: codes.map((c) => c.trim()).filter(Boolean),
+    beopjungri_codes: normalizeAndSortCodes(codes),
   };
 }
 
@@ -117,6 +127,27 @@ export const useAppStore = create<AppState>((set, get) => ({
   applyBeopjungriCodes: (codes) =>
     set({
       tierSelection: tierOnlyBeopjungri(codes),
+    }),
+
+  addPickedBeopjungri: (code) =>
+    set((s) => {
+      const c = String(code ?? "").trim();
+      if (!c) return s;
+      if (s.viewMode === "free") {
+        return { tierSelection: tierOnlyBeopjungri([c]) };
+      }
+      const cur = s.tierSelection.beopjungri_codes.map((x) => x.trim()).filter(Boolean);
+      if (cur.includes(c)) return s;
+      if (cur.length >= MAX_BEOPJUNGRI_PICK) return s;
+      return { tierSelection: tierOnlyBeopjungri([...cur, c]) };
+    }),
+
+  removePickedBeopjungri: (code) =>
+    set((s) => {
+      const c = String(code ?? "").trim();
+      if (!c) return s;
+      const next = s.tierSelection.beopjungri_codes.filter((x) => x.trim() !== c);
+      return { tierSelection: tierOnlyBeopjungri(next) };
     }),
 
   clearTierSelection: () =>
