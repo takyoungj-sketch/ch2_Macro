@@ -19,6 +19,7 @@ from pydantic import ValidationError
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.analysis_base_cache import has_valid_analysis_base_cache
 from app.config import settings
 from app.db import get_db
 from app.schemas import (
@@ -100,32 +101,45 @@ def expand_region_units(selections: list[RegionSelectionUnit], db: Session) -> l
     agg: set[str] = set()
     missing: list[str] = []
 
-    for u in selections:
-        code = u.code.strip()
+    beopjungri_units = [
+        u.code.strip()
+        for u in selections
+        if u.scope_type == "beopjungri" and u.code.strip()
+    ]
+    if beopjungri_units:
+        rows = db.execute(
+            text(
+                """
+                SELECT btrim(cast(beopjungri_code AS text)) AS code
+                FROM region_codes
+                WHERE btrim(cast(beopjungri_code AS text)) = ANY(:codes)
+                  AND COALESCE(is_active, TRUE)
+                """
+            ),
+            {"codes": sorted(set(beopjungri_units))},
+        ).fetchall()
+        found = {str(r._mapping["code"]).strip() for r in rows}
+        agg.update(found)
+        for code in sorted(set(beopjungri_units)):
+            if code not in found:
+                missing.append(f"beopjungri:{code}")
 
+    for u in selections:
         if u.scope_type == "beopjungri":
-            row = db.execute(
-                text(
-                    """
-                    SELECT 1 FROM region_codes
-                    WHERE beopjungri_code = :c AND COALESCE(is_active, TRUE)
-                    LIMIT 1
-                    """
-                ),
-                {"c": code},
-            ).fetchone()
-            if not row:
-                missing.append(f"{u.scope_type}:{code}")
-                continue
-            agg.add(code)
+            continue
+
+        code = u.code.strip()
+        if not code:
             continue
 
         if u.scope_type == "eupmyeondong":
             rows = db.execute(
                 text(
                     """
-                    SELECT DISTINCT beopjungri_code FROM region_codes
-                    WHERE eupmyeondong_code = :c AND COALESCE(is_active, TRUE)
+                    SELECT DISTINCT btrim(cast(beopjungri_code AS text)) AS code
+                    FROM region_codes
+                    WHERE btrim(cast(eupmyeondong_code AS text)) = :c
+                      AND COALESCE(is_active, TRUE)
                     """
                 ),
                 {"c": code},
@@ -134,8 +148,10 @@ def expand_region_units(selections: list[RegionSelectionUnit], db: Session) -> l
             rows = db.execute(
                 text(
                     """
-                    SELECT DISTINCT beopjungri_code FROM region_codes
-                    WHERE sigungu_code = :c AND COALESCE(is_active, TRUE)
+                    SELECT DISTINCT btrim(cast(beopjungri_code AS text)) AS code
+                    FROM region_codes
+                    WHERE btrim(cast(sigungu_code AS text)) = :c
+                      AND COALESCE(is_active, TRUE)
                     """
                 ),
                 {"c": code},
@@ -150,7 +166,7 @@ def expand_region_units(selections: list[RegionSelectionUnit], db: Session) -> l
             missing.append(f"{u.scope_type}:{code}")
             continue
         for r in rows:
-            agg.add(r[0])
+            agg.add(str(r._mapping["code"]).strip())
 
     if missing:
         raise HTTPException(
@@ -167,6 +183,7 @@ def _normalize_matrix_yearly_req(req_body: MatrixYearlyRequest) -> PaidAnalysisR
         year_from=req_body.year_from,
         year_to=req_body.year_to,
         years=req_body.years,
+        base_cache_key=req_body.base_cache_key,
         road_conditions=req_body.road_conditions,
         area_categories=req_body.area_categories,
         land_categories=req_body.land_categories,
@@ -214,6 +231,7 @@ def _build_conditions(
     year_from: Optional[int],
     year_to: Optional[int],
     years: Optional[list[int]],
+    base_cache_key: Optional[str],
     road_conditions: Optional[list[str]],
     area_categories: Optional[list[str]],
     land_categories: Optional[list[str]],
@@ -224,9 +242,25 @@ def _build_conditions(
         "lt.is_valid = TRUE",
         "lt.is_cancelled = FALSE",
         "lt.unit_price_per_sqm IS NOT NULL",
-        "lt.beopjungri_code = ANY(:region_codes)",
     ]
-    params: dict = {"region_codes": list(beopjungri_codes)}
+    params: dict = {}
+
+    base_key = (base_cache_key or "").strip()
+    if base_key:
+        conditions.append(
+            """
+            lt.id IN (
+                SELECT unnest(row_ids)
+                FROM analysis_base_cache
+                WHERE cache_key = :base_cache_key
+                  AND expires_at > NOW()
+            )
+            """
+        )
+        params["base_cache_key"] = base_key
+    else:
+        conditions.append("lt.beopjungri_code = ANY(:region_codes)")
+        params["region_codes"] = list(beopjungri_codes)
 
     if years is not None and len(years) > 0:
         ys = sorted({int(y) for y in years})
@@ -434,6 +468,7 @@ def _analyze_core_materialized_rows(
         req.year_from,
         req.year_to,
         req.years,
+        req.base_cache_key,
         req.road_conditions,
         req.area_categories,
         req.land_categories,
@@ -497,6 +532,7 @@ def _analyze_core_sql_aggregate(
         req.year_from,
         req.year_to,
         req.years,
+        req.base_cache_key,
         req.road_conditions,
         req.area_categories,
         req.land_categories,
@@ -657,8 +693,14 @@ def analyze(
 
     units = _normalize_region_units(req)
     resolved_codes = expand_region_units(units, db)
+    base_cache_key = (
+        req.base_cache_key
+        if has_valid_analysis_base_cache(db, req.base_cache_key)
+        else None
+    )
+    req_for_analysis = req.model_copy(update={"base_cache_key": base_cache_key})
     req_for_cache = PaidAnalysisRequest(
-        **req.model_dump()
+        **req_for_analysis.model_dump()
         | {"region_selections": units, "region_codes": sorted(resolved_codes)}
     )
 
@@ -677,7 +719,7 @@ def analyze(
 
     t0 = time.time()
 
-    payload = _analyze_core(req, resolved_codes=resolved_codes, db=db)
+    payload = _analyze_core(req_for_analysis, resolved_codes=resolved_codes, db=db)
     elapsed_ms = int((time.time() - t0) * 1000)
     result_count = int(payload.total.count)
 
@@ -714,12 +756,18 @@ def matrix_yearly(body: MatrixYearlyRequest, db: Session = Depends(get_db)):
     base_req = _normalize_matrix_yearly_req(body)
     units = _normalize_region_units(base_req)
     resolved_codes = expand_region_units(units, db)
+    base_cache_key = (
+        body.base_cache_key
+        if has_valid_analysis_base_cache(db, body.base_cache_key)
+        else None
+    )
 
     base_parts, params = _build_conditions(
         resolved_codes,
         body.year_from,
         body.year_to,
         body.years,
+        base_cache_key,
         body.road_conditions,
         body.area_categories,
         body.land_categories,

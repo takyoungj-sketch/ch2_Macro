@@ -26,7 +26,7 @@ def compute_stats(prices: Sequence[float]) -> dict:
     if n >= 2:
         se = st.sem(arr)
         ci = st.t.interval(1 - ALPHA, df=n - 1, loc=mean, scale=se)
-        ci_lower, ci_upper = float(ci[0]), float(ci[1])
+        ci_lower, ci_upper = _finite_or_none(ci[0]), _finite_or_none(ci[1])
 
     return {
         "count": n,
@@ -101,6 +101,14 @@ def _empty(n: int) -> dict:
     }
 
 
+def _finite_or_none(x) -> float | None:
+    try:
+        v = float(x)
+    except (TypeError, ValueError):
+        return None
+    return v if np.isfinite(v) else None
+
+
 def stats_dict_from_sql_aggregates(
     n: int,
     mean_raw: float | None,
@@ -116,33 +124,24 @@ def stats_dict_from_sql_aggregates(
     (이상치 제거 전 순수 AVG / STDDEV_SAMP / percentile_cont 기준)
     """
 
-    def _flt(x):
-        try:
-            if x is None:
-                return None
-            v = float(x)
-            return v if v == v else None
-        except (TypeError, ValueError):
-            return None
-
     if n <= 0:
         return _empty(0)
 
-    mean_f = _flt(mean_raw)
-    std_raw = _flt(std_samp_raw)
-    vmin = _flt(min_raw)
-    q1 = _flt(p25_raw)
-    med = _flt(median_raw)
-    q3 = _flt(p75_raw)
-    vmax = _flt(max_raw)
+    mean_f = _finite_or_none(mean_raw)
+    std_raw = _finite_or_none(std_samp_raw)
+    vmin = _finite_or_none(min_raw)
+    q1 = _finite_or_none(p25_raw)
+    med = _finite_or_none(median_raw)
+    q3 = _finite_or_none(p75_raw)
+    vmax = _finite_or_none(max_raw)
 
     ci_lower, ci_upper = None, None
     std_out = round(std_raw, 0) if std_raw is not None else None
     if n >= 2 and mean_f is not None and std_raw is not None:
         sem = float(std_raw) / (n ** 0.5)
         ci = st.t.interval(1 - ALPHA, df=n - 1, loc=float(mean_f), scale=sem)
-        ci_lower = float(ci[0])
-        ci_upper = float(ci[1])
+        ci_lower = _finite_or_none(ci[0])
+        ci_upper = _finite_or_none(ci[1])
 
     mean_out = round(mean_f, 0) if mean_f is not None else None
 

@@ -88,6 +88,7 @@ class FreeStatsResponse(BaseModel):
     beopjungri_name: str
     year_from: int
     year_to: int
+    analysis_base_key: Optional[str] = None
     total: StatsResult
     by_year: list[YearlyTradeStat] = []
     by_zone: dict[str, StatsResult] = {}
@@ -127,6 +128,10 @@ class PaidFilters(BaseModel):
         None,
         description="선택 연도(비연속 포함). 비어 있지 않으면 year_from/year_to 대신 적용",
     )
+    base_cache_key: Optional[str] = Field(
+        None,
+        description="1단계 기본 통계에서 확정한 후보 거래행 캐시 키",
+    )
     road_conditions: Optional[list[str]] = Field(None, description="도로조건 복수")
     area_categories: Optional[list[str]] = Field(
         None,
@@ -160,6 +165,7 @@ class PaidAnalysisRequest(BaseModel):
     year_from: Optional[int] = Field(None, description="연도 시작(포함)")
     year_to: Optional[int] = Field(None, description="연도 종료(포함)")
     years: Optional[list[int]] = Field(None)
+    base_cache_key: Optional[str] = Field(None)
     road_conditions: Optional[list[str]] = Field(None)
     area_categories: Optional[list[str]] = Field(None)
     land_categories: Optional[list[str]] = Field(None)

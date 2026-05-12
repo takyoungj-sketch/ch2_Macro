@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.analysis_base_cache import create_analysis_base_cache
 from app.db import get_db
 from app.schemas import (
     FreeStatsBulkRequest,
@@ -240,6 +241,9 @@ def get_basic_stats_bulk(
 
     title = _build_region_title(db, codes)
     year_from, year_to = _overlap_year_window(db, codes)
+    analysis_base_key = create_analysis_base_cache(
+        db, region_codes=codes, year_from=year_from, year_to=year_to
+    )
     total, by_zone, by_land_category, matrix = _combined_bundle_from_transactions(
         db, codes, year_from, year_to
     )
@@ -288,6 +292,7 @@ def get_basic_stats_bulk(
         beopjungri_name=title,
         year_from=year_from,
         year_to=year_to,
+        analysis_base_key=analysis_base_key,
         total=total,
         by_year=by_year,
         by_zone=by_zone,
@@ -360,6 +365,12 @@ def get_basic_stats(beopjungri_code: str, db: Session = Depends(get_db)):
         )
 
     total = row_to_stats(total_row) if total_row else StatsResult(count=0)
+    analysis_base_key = create_analysis_base_cache(
+        db,
+        region_codes=[beopjungri_code],
+        year_from=int(year_from),
+        year_to=int(year_to),
+    )
 
     # 연도별 실거래 요약 (기간 내 모든 연도 행 포함, 건수 0 허용)
     y_rows = db.execute(
@@ -419,6 +430,7 @@ def get_basic_stats(beopjungri_code: str, db: Session = Depends(get_db)):
         beopjungri_name=region.beopjungri_name,
         year_from=year_from,
         year_to=year_to,
+        analysis_base_key=analysis_base_key,
         total=total,
         by_year=by_year,
         by_zone=by_zone,
