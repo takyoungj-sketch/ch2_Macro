@@ -15,8 +15,8 @@ const THEAD_ROW1_HEIGHT = ROW_PX + 8;
 
 /** 평균적인 셀 테두리 (1px — 경계선 강조는 별도) */
 const CELL = "box-border border border-slate-200";
-/** 용도지역 열 ↔ 지목 데이터 구간 세로 경계 — 굵게(2px) 대비 ×0.7 */
-const ZONE_TO_DATA = "border-r-[1.4px] border-r-slate-400";
+/** 용도지역 열 ↔ 지목 데이터 구간 세로 경계 — 기존 1.4px 의 1.2배 */
+const ZONE_TO_DATA = "border-r-[1.68px] border-r-slate-400";
 /** 지목 블록(좌+우 두 열) 사이 세로 경계 — 이전 1.8px 의 1.5배 */
 const BETWEEN_CATEGORIES_LEFT = "border-l-[2.7px] border-l-slate-400";
 
