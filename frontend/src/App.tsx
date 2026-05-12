@@ -1,9 +1,5 @@
 import { useLayoutEffect } from "react";
-import {
-  UI_FONT_SCALE_STEPS,
-  clampFontStep,
-  type UiTableTone,
-} from "./constants/displayUi";
+import { UI_FONT_SCALE_STEPS, clampFontStep } from "./constants/displayUi";
 import { useAppStore } from "./store";
 import RegionSelector from "./components/RegionSelector";
 import FreeStatsPanel from "./components/FreeStatsPanel";
@@ -31,9 +27,7 @@ function PaidIntro() {
 export default function App() {
   const { viewMode, setViewMode, paidResultView } = useAppStore();
   const uiFontScaleStep = useAppStore((s) => s.uiFontScaleStep);
-  const uiTableTone = useAppStore((s) => s.uiTableTone);
   const bumpUiFontScale = useAppStore((s) => s.bumpUiFontScale);
-  const setUiTableTone = useAppStore((s) => s.setUiTableTone);
 
   useLayoutEffect(() => {
     document.documentElement.style.removeProperty("font-size");
@@ -84,18 +78,6 @@ export default function App() {
                 +
               </button>
             </div>
-            <label className="flex items-center gap-1 text-[11px] text-slate-500 whitespace-nowrap">
-              <span className="hidden sm:inline">표 헤더</span>
-              <select
-                className="max-w-[7.5rem] rounded border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700"
-                aria-label="표 헤더 색 테마"
-                value={uiTableTone}
-                onChange={(e) => setUiTableTone(e.target.value as UiTableTone)}
-              >
-                <option value="neutral">연회색</option>
-                <option value="blueHeaders">연블루</option>
-              </select>
-            </label>
           </div>
           <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
           <button

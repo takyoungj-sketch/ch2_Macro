@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { simpleTableHeadClass } from "../constants/displayUi";
-import { useAppStore } from "../store";
 import type { MatrixYearlyStat } from "../types";
 import MatrixYearlyTrendChart from "./MatrixYearlyTrendChart";
 
@@ -30,7 +29,6 @@ export default function PaidMatrixYearlyModal({
   scopeNote,
 }: Props) {
   const [panel, setPanel] = useState<PanelMode>("chart");
-  const uiTableTone = useAppStore((s) => s.uiTableTone);
 
   useEffect(() => {
     if (open) setPanel("chart");
@@ -134,7 +132,7 @@ export default function PaidMatrixYearlyModal({
               </p>
               <table className="w-full text-xs border-collapse">
                 <thead>
-                  <tr className={simpleTableHeadClass(uiTableTone)}>
+                  <tr className={simpleTableHeadClass("neutral")}>
                     <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">
                       연도
                     </th>

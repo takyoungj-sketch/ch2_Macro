@@ -1,6 +1,5 @@
 import clsx from "clsx";
 import { simpleTableHeadClass, simpleTableHeadStickyBgClass } from "../constants/displayUi";
-import { useAppStore } from "../store";
 import type { YearlyTradeStat } from "../types";
 
 interface Props {
@@ -32,7 +31,6 @@ export default function YearlyStatsTable({
   hideTitle = false,
   rows,
 }: Props) {
-  const uiTableTone = useAppStore((s) => s.uiTableTone);
   const list = rows ?? [];
   if (list.length === 0) return null;
 
@@ -46,11 +44,11 @@ export default function YearlyStatsTable({
       <div className="overflow-x-auto border border-slate-200 rounded-lg">
         <table className="border-collapse bg-white text-[11px] leading-tight min-w-max">
           <thead>
-            <tr className={simpleTableHeadClass(uiTableTone)}>
+            <tr className={simpleTableHeadClass("neutral")}>
               <th
                 className={clsx(
                   "border border-slate-200 px-2 py-1.5 text-left font-medium sticky left-0 z-10",
-                  simpleTableHeadStickyBgClass(uiTableTone)
+                  simpleTableHeadStickyBgClass("neutral")
                 )}
               >
                 구분

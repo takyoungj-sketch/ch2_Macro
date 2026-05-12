@@ -1,6 +1,5 @@
 import clsx from "clsx";
 import { simpleTableHeadClass } from "../constants/displayUi";
-import { useAppStore } from "../store";
 import type { StatsResult } from "../types";
 
 const fmt = (v: number | null) =>
@@ -12,11 +11,9 @@ interface Props {
 }
 
 export default function StatsTable({ title, rows }: Props) {
-  const uiTableTone = useAppStore((s) => s.uiTableTone);
-
   if (rows.length === 0) return null;
 
-  const headRow = clsx(simpleTableHeadClass(uiTableTone), "uppercase tracking-wide");
+  const headRow = clsx(simpleTableHeadClass("neutral"), "uppercase tracking-wide");
 
   return (
     <div className="overflow-x-auto">

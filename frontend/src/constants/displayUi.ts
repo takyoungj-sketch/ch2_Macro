@@ -4,7 +4,6 @@ export const UI_FONT_SCALE_STEPS = [
 ] as const;
 
 export const UI_FONT_LS_KEY = "ch2_macro_ui_font_step";
-export const UI_TABLE_TONE_LS_KEY = "ch2_macro_ui_table_tone";
 
 export type UiTableTone = "neutral" | "blueHeaders";
 
@@ -22,15 +21,6 @@ export function readStoredFontStep(): number {
   }
 }
 
-export function readStoredTableTone(): UiTableTone {
-  try {
-    const v = localStorage.getItem(UI_TABLE_TONE_LS_KEY);
-    return v === "blueHeaders" ? "blueHeaders" : "neutral";
-  } catch {
-    return "neutral";
-  }
-}
-
 export function persistFontStep(step: number): void {
   try {
     localStorage.setItem(UI_FONT_LS_KEY, String(clampFontStep(step)));
@@ -39,16 +29,7 @@ export function persistFontStep(step: number): void {
   }
 }
 
-export function persistTableTone(tone: UiTableTone): void {
-  try {
-    localStorage.setItem(UI_TABLE_TONE_LS_KEY, tone);
-  } catch {
-    /* ignore */
-  }
-}
-
-
-/** 매트릭스(용도·지목 헤더·좌측 용도지역 열)는 항상 연블루 톤 고정 — 표 헤더 설정과 무관. */
+/** 매트릭스(용도·지목 헤더·좌측 용도지역 열)는 항상 연블루 톤 고정 */
 export const MATRIX_TABLE_TONE: UiTableTone = "blueHeaders";
 
 /** 간단 표(StatsTable, Yearly 등) thead 한 줄 스타일 */
@@ -67,10 +48,4 @@ export function matrixTheadPrimaryClass(tone: UiTableTone): string {
   return tone === "blueHeaders"
     ? "bg-sky-100 text-sky-900 shadow-[inset_0_-1px_0_0_rgb(186_230_253)]"
     : "bg-slate-100 text-slate-600 shadow-[inset_0_-1px_0_0_rgb(226_232_240)]";
-}
-
-export function matrixTheadSecondaryClass(tone: UiTableTone): string {
-  return tone === "blueHeaders"
-    ? "bg-sky-50 text-sky-800/85 shadow-[inset_0_-1px_0_0_rgb(186_230_253)]"
-    : "bg-slate-50 text-slate-400 shadow-[inset_0_-1px_0_0_rgb(226_232_240)]";
 }

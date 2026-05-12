@@ -1,12 +1,9 @@
 import { create } from "zustand";
 import { runPaidAnalysis as runPaidAnalysisApi } from "./api/client";
 import {
-  type UiTableTone,
   clampFontStep,
   persistFontStep,
-  persistTableTone,
   readStoredFontStep,
-  readStoredTableTone,
 } from "./constants/displayUi";
 import { getDefaultPaidSelectedYears } from "./constants/paidFilters";
 import type { PaidAnalysisRequest, PaidAnalysisResponse, RegionItem, ViewMode } from "./types";
@@ -94,11 +91,9 @@ interface AppState {
   togglePaidYear: (year: number) => void;
   resetPaidExcluded: () => void;
 
-  /** 전역 표시 설정 (localStorage 유지). */
+  /** 글자 크기 단계(본문 zoom, localStorage 유지) */
   uiFontScaleStep: number;
-  uiTableTone: UiTableTone;
   bumpUiFontScale: (direction: 1 | -1) => void;
-  setUiTableTone: (tone: UiTableTone) => void;
 }
 
 const defaultPaidRequest: PaidAnalysisRequest = {
@@ -129,7 +124,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   regionSegments: [...EMPTY_REGION_SEGMENTS],
   tierSelection: emptyTierCodes(),
   uiFontScaleStep: readStoredFontStep(),
-  uiTableTone: readStoredTableTone(),
   paidRequest: { ...defaultPaidRequest },
   paidRoadExcluded: [],
   paidAreaExcluded: [],
@@ -404,8 +398,4 @@ export const useAppStore = create<AppState>((set, get) => ({
       return { uiFontScaleStep: next };
     }),
 
-  setUiTableTone: (tone) => {
-    persistTableTone(tone);
-    set({ uiTableTone: tone });
-  },
 }));

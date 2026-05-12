@@ -3,7 +3,6 @@ import clsx from "clsx";
 import {
   MATRIX_TABLE_TONE,
   matrixTheadPrimaryClass,
-  matrixTheadSecondaryClass,
 } from "../constants/displayUi";
 import type { MatrixCell, StatsResult } from "../types";
 
@@ -11,15 +10,15 @@ import type { MatrixCell, StatsResult } from "../types";
 const COL_ZONE_PX = 96; // 이전 대비 용도지역 열 0.6배 (160×0.6)
 const COL_VALUE_PX = 88;
 const ROW_PX = 28;
-/** 지목 헤더 1행 높이(고정값) — sticky 2행 offset과 맞춤 */
+/** 지목 헤더 1행 높이(고정값) */
 const THEAD_ROW1_HEIGHT = ROW_PX + 8;
 
 /** 평균적인 셀 테두리 (1px — 경계선 강조는 별도) */
 const CELL = "box-border border border-slate-200";
 /** 용도지역 열 ↔ 지목 데이터 구간 세로 경계 — 굵게(2px) 대비 ×0.7 */
 const ZONE_TO_DATA = "border-r-[1.4px] border-r-slate-400";
-/** 지목 블록(좌+우 두 열) 사이 세로 경계 — 1.5px 대비 ×1.2 */
-const BETWEEN_CATEGORIES_LEFT = "border-l-[1.8px] border-l-slate-400";
+/** 지목 블록(좌+우 두 열) 사이 세로 경계 — 이전 1.8px 의 1.5배 */
+const BETWEEN_CATEGORIES_LEFT = "border-l-[2.7px] border-l-slate-400";
 
 /** 표시 수치: 소수 첫째자리 고정 (만원/㎡ 등) */
 const fmtD1 = (v: number | null | undefined) =>
@@ -160,7 +159,6 @@ export default function MatrixStatsTable({
   onPaidMatrixCellClick,
 }: Props) {
   const thMain = matrixTheadPrimaryClass(MATRIX_TABLE_TONE);
-  const thSub = matrixTheadSecondaryClass(MATRIX_TABLE_TONE);
 
   const cells = matrix ?? [];
   const showHeadingRow =
@@ -269,40 +267,6 @@ export default function MatrixStatsTable({
                     </span>
                   </span>
                 </th>
-              ))}
-            </tr>
-            <tr style={{ height: ROW_PX }}>
-              <th
-                className={clsx(
-                  "sticky left-0 z-[31] p-0",
-                  thSub,
-                  cellZoneCol()
-                )}
-                style={{ top: THEAD_ROW1_HEIGHT }}
-              />
-              {landCategories.map((category, ci) => (
-                <Fragment key={`${category}-subhead`}>
-                  <th
-                    className={clsx(
-                      "sticky z-[21] px-1 py-0.5 text-center font-normal truncate text-[11px]",
-                      thSub,
-                      cellLeftCat(ci)
-                    )}
-                    style={{ top: THEAD_ROW1_HEIGHT }}
-                  >
-                    좌
-                  </th>
-                  <th
-                    className={clsx(
-                      "sticky z-[21] px-1 py-0.5 text-center font-normal truncate text-[11px]",
-                      thSub,
-                      cellRightCat()
-                    )}
-                    style={{ top: THEAD_ROW1_HEIGHT }}
-                  >
-                    우
-                  </th>
-                </Fragment>
               ))}
             </tr>
           </thead>
