@@ -1,16 +1,27 @@
 import { create } from "zustand";
 import { runPaidAnalysis as runPaidAnalysisApi } from "./api/client";
+import {
+  type UiTableTone,
+  clampFontStep,
+  persistFontStep,
+  persistTableTone,
+  readStoredFontStep,
+  readStoredTableTone,
+  applyRootFontFromStep,
+} from "./constants/displayUi";
 import { getDefaultPaidSelectedYears } from "./constants/paidFilters";
-import type { PaidAnalysisRequest, PaidAnalysisResponse, ViewMode } from "./types";
+import type { PaidAnalysisRequest, PaidAnalysisResponse, RegionItem, ViewMode } from "./types";
 import { parseApiError, type ParsedApiError } from "./utils/apiError";
 import { buildPaidPayload } from "./utils/paidAnalysisPayload";
 import type { RegionFiveFields } from "./utils/resolveRegionFiveFields";
 import type { TierCodes } from "./utils/regionTier";
-import { emptyTierCodes } from "./utils/regionTier";
+import { emptyTierCodes, resolveUnionBeopjungriCodes } from "./utils/regionTier";
 
 const EMPTY_REGION_SEGMENTS: RegionFiveFields = ["", "", "", "", ""];
 
 const MAX_BEOPJUNGRI_PICK = 200;
+const MAX_SIGUNGU_TIER_PICK = 20;
+const MAX_EUP_TIER_PICK = 40;
 
 function normalizeAndSortCodes(codes: readonly string[]): string[] {
   return [...new Set(codes.map((c) => c.trim()).filter(Boolean))].sort((a, b) =>
@@ -52,14 +63,29 @@ interface AppState {
   applyBeopjungriCodes: (codes: readonly string[]) => void;
   /** 검색·칩에서 법정단위 추가(무료는 항상 1개로 교체) */
   addPickedBeopjungri: (code: string) => void;
+  /** 검색 등에서 법정코드 여러 개를 한 번에 병합(유료; 중복 제거·200 상한). 무료는 단건일 때만 반영 가능 */
+  mergePickedBeopjungriCodes: (codes: readonly string[]) => boolean;
+  mergePickedSigunguCodes: (
+    codes: readonly string[],
+    regions: readonly RegionItem[]
+  ) => boolean;
+  mergePickedEupmyeondongCodes: (
+    codes: readonly string[],
+    regions: readonly RegionItem[]
+  ) => boolean;
   removePickedBeopjungri: (code: string) => void;
+  removePickedSigungu: (code: string) => void;
+  removePickedEupmyeondong: (code: string) => void;
   clearTierSelection: () => void;
 
-  /** 지역 반영 후 무료와 동일한 기본 통계 화면 */
-  kickPaidBasicStatsAnalysis: (beopjungriCodes: readonly string[]) => void;
+  /**
+   * 기본 통계 패널 갱신. 인자 없으면 현재 tier 그대로.
+   * 단계별 적용처럼 법정코드 목록만으로 덮어쓸 때에만 평평한 코드 배열을 넘김.
+   */
+  kickPaidBasicStatsAnalysis: (flattenTierToBeops?: readonly string[]) => void;
   setPaidBasicBaseKey: (key: string | null) => void;
   /** 현재 지역+필터로 유료 매트릭스 분석 — promise 기반, 직접 호출 */
-  runPaidFilteredAnalysis: () => Promise<void>;
+  runPaidFilteredAnalysis: (resolvedBeopjungriCodes: readonly string[]) => Promise<void>;
   /** 진행 중인 분석을 폐기하고 idle 로 */
   cancelPaidFilteredAnalysis: () => void;
 
@@ -68,6 +94,12 @@ interface AppState {
   togglePaidAreaExclude: (area: string) => void;
   togglePaidYear: (year: number) => void;
   resetPaidExcluded: () => void;
+
+  /** 전역 표시 설정 (localStorage 유지). */
+  uiFontScaleStep: number;
+  uiTableTone: UiTableTone;
+  bumpUiFontScale: (direction: 1 | -1) => void;
+  setUiTableTone: (tone: UiTableTone) => void;
 }
 
 const defaultPaidRequest: PaidAnalysisRequest = {
@@ -97,6 +129,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   viewMode: "free",
   regionSegments: [...EMPTY_REGION_SEGMENTS],
   tierSelection: emptyTierCodes(),
+  uiFontScaleStep: readStoredFontStep(),
+  uiTableTone: readStoredTableTone(),
   paidRequest: { ...defaultPaidRequest },
   paidRoadExcluded: [],
   paidAreaExcluded: [],
@@ -139,15 +173,111 @@ export const useAppStore = create<AppState>((set, get) => ({
       const cur = s.tierSelection.beopjungri_codes.map((x) => x.trim()).filter(Boolean);
       if (cur.includes(c)) return s;
       if (cur.length >= MAX_BEOPJUNGRI_PICK) return s;
-      return { tierSelection: tierOnlyBeopjungri([...cur, c]) };
+      return {
+        tierSelection: {
+          ...s.tierSelection,
+          beopjungri_codes: normalizeAndSortCodes([...cur, c]),
+        },
+      };
     }),
+
+  mergePickedBeopjungriCodes: (incoming) => {
+    const uniqIn = [...new Set(incoming.map((c) => String(c ?? "").trim()).filter(Boolean))];
+    if (uniqIn.length === 0) return false;
+    const s = get();
+    if (s.viewMode === "free") {
+      if (uniqIn.length !== 1) return false;
+      set({ tierSelection: tierOnlyBeopjungri(normalizeAndSortCodes(uniqIn)) });
+      return true;
+    }
+    const merged = normalizeAndSortCodes([...s.tierSelection.beopjungri_codes, ...uniqIn]);
+    if (merged.length > MAX_BEOPJUNGRI_PICK) return false;
+    const before = normalizeAndSortCodes(s.tierSelection.beopjungri_codes).join("|");
+    const after = merged.join("|");
+    if (before === after) return false;
+    set({
+      tierSelection: {
+        ...s.tierSelection,
+        beopjungri_codes: merged,
+      },
+    });
+    return true;
+  },
+
+  mergePickedSigunguCodes: (incoming, regions) => {
+    const uniqIn = [...new Set(incoming.map((c) => String(c ?? "").trim()).filter(Boolean))];
+    if (uniqIn.length === 0) return false;
+    const s = get();
+    if (s.viewMode === "free") return false;
+    const merged = normalizeAndSortCodes([...s.tierSelection.sigungu_codes, ...uniqIn]);
+    if (merged.length > MAX_SIGUNGU_TIER_PICK) return false;
+    const next: TierCodes = { ...s.tierSelection, sigungu_codes: merged };
+    if (resolveUnionBeopjungriCodes(regions, next).length > MAX_BEOPJUNGRI_PICK) return false;
+    if (normalizeAndSortCodes(s.tierSelection.sigungu_codes).join("|") === merged.join("|")) {
+      return false;
+    }
+    set({ tierSelection: next });
+    return true;
+  },
+
+  mergePickedEupmyeondongCodes: (incoming, regions) => {
+    const uniqIn = [...new Set(incoming.map((c) => String(c ?? "").trim()).filter(Boolean))];
+    if (uniqIn.length === 0) return false;
+    const s = get();
+    if (s.viewMode === "free") return false;
+    const merged = normalizeAndSortCodes([
+      ...s.tierSelection.eupmyeondong_codes,
+      ...uniqIn,
+    ]);
+    if (merged.length > MAX_EUP_TIER_PICK) return false;
+    const next: TierCodes = { ...s.tierSelection, eupmyeondong_codes: merged };
+    if (resolveUnionBeopjungriCodes(regions, next).length > MAX_BEOPJUNGRI_PICK) return false;
+    if (
+      normalizeAndSortCodes(s.tierSelection.eupmyeondong_codes).join("|") === merged.join("|")
+    ) {
+      return false;
+    }
+    set({ tierSelection: next });
+    return true;
+  },
 
   removePickedBeopjungri: (code) =>
     set((s) => {
       const c = String(code ?? "").trim();
       if (!c) return s;
       const next = s.tierSelection.beopjungri_codes.filter((x) => x.trim() !== c);
-      return { tierSelection: tierOnlyBeopjungri(next) };
+      return {
+        tierSelection: {
+          ...s.tierSelection,
+          beopjungri_codes: normalizeAndSortCodes(next),
+        },
+      };
+    }),
+
+  removePickedSigungu: (code) =>
+    set((s) => {
+      const c = String(code ?? "").trim();
+      if (!c) return s;
+      const next = s.tierSelection.sigungu_codes.filter((x) => x.trim() !== c);
+      return {
+        tierSelection: {
+          ...s.tierSelection,
+          sigungu_codes: normalizeAndSortCodes(next),
+        },
+      };
+    }),
+
+  removePickedEupmyeondong: (code) =>
+    set((s) => {
+      const c = String(code ?? "").trim();
+      if (!c) return s;
+      const next = s.tierSelection.eupmyeondong_codes.filter((x) => x.trim() !== c);
+      return {
+        tierSelection: {
+          ...s.tierSelection,
+          eupmyeondong_codes: normalizeAndSortCodes(next),
+        },
+      };
     }),
 
   clearTierSelection: () =>
@@ -162,25 +292,28 @@ export const useAppStore = create<AppState>((set, get) => ({
       paidAnalysisStartedAt: null,
     }),
 
-  kickPaidBasicStatsAnalysis: (beopjungriCodes) =>
+  kickPaidBasicStatsAnalysis: (flattenTierToBeops) =>
     set((s) => ({
-      tierSelection: tierOnlyBeopjungri(beopjungriCodes),
+      ...(flattenTierToBeops != null && flattenTierToBeops.length > 0
+        ? { tierSelection: tierOnlyBeopjungri(normalizeAndSortCodes(flattenTierToBeops)) }
+        : {}),
       paidBasicStatsKick: s.paidBasicStatsKick + 1,
       paidResultView: "basic",
       paidBasicBaseKey: null,
       paidAnalysisStatus: "idle",
       paidAnalysisResult: null,
       paidAnalysisError: null,
+      paidAnalysisStartedAt: null,
     })),
 
   setPaidBasicBaseKey: (key) => set({ paidBasicBaseKey: key }),
 
-  runPaidFilteredAnalysis: async () => {
-    const s = get();
-    const codes = s.tierSelection.beopjungri_codes;
+  runPaidFilteredAnalysis: async (resolvedBeopjungriCodes) => {
+    const codes = [...resolvedBeopjungriCodes.map((c) => String(c ?? "").trim()).filter(Boolean)];
     if (codes.length === 0) {
       return;
     }
+    const s = get();
     const reqId = s.paidAnalysisRequestId + 1;
     const payload = buildPaidPayload(
       s.paidRequest,
@@ -264,4 +397,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     }),
 
   resetPaidExcluded: () => set({ paidRoadExcluded: [], paidAreaExcluded: [] }),
+
+  bumpUiFontScale: (direction) =>
+    set((s) => {
+      const next = clampFontStep(s.uiFontScaleStep + direction);
+      persistFontStep(next);
+      applyRootFontFromStep(next);
+      return { uiFontScaleStep: next };
+    }),
+
+  setUiTableTone: (tone) => {
+    persistTableTone(tone);
+    set({ uiTableTone: tone });
+  },
 }));

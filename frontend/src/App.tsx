@@ -1,3 +1,10 @@
+import { useLayoutEffect } from "react";
+import {
+  UI_FONT_SCALE_STEPS,
+  applyRootFontFromStep,
+  clampFontStep,
+  type UiTableTone,
+} from "./constants/displayUi";
 import { useAppStore } from "./store";
 import RegionSelector from "./components/RegionSelector";
 import FreeStatsPanel from "./components/FreeStatsPanel";
@@ -24,15 +31,73 @@ function PaidIntro() {
 
 export default function App() {
   const { viewMode, setViewMode, paidResultView } = useAppStore();
+  const uiFontScaleStep = useAppStore((s) => s.uiFontScaleStep);
+  const uiTableTone = useAppStore((s) => s.uiTableTone);
+  const bumpUiFontScale = useAppStore((s) => s.bumpUiFontScale);
+  const setUiTableTone = useAppStore((s) => s.setUiTableTone);
+
+  useLayoutEffect(() => {
+    applyRootFontFromStep(uiFontScaleStep);
+  }, [uiFontScaleStep]);
+
+  const fontIdx = clampFontStep(uiFontScaleStep);
+  const fontPct = Math.round(UI_FONT_SCALE_STEPS[fontIdx] * 100);
+  const fontStepMin = fontIdx <= 0;
+  const fontStepMax = fontIdx >= UI_FONT_SCALE_STEPS.length - 1;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm">
+      <header className="bg-white border-b border-slate-200 px-6 py-3 flex flex-wrap items-center justify-between gap-3 shadow-sm">
         <div>
           <h1 className="text-base font-bold text-slate-800">토지 실거래 통계</h1>
           <p className="text-xs text-slate-400">감정평가사용 토지 가격 분석</p>
         </div>
-        <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
+        <div className="flex flex-wrap items-center justify-end gap-3 shrink-0">
+          <div
+            className="flex flex-wrap items-center gap-2 text-xs text-slate-600"
+            aria-label="화면 표시 설정"
+          >
+            <span className="text-[11px] text-slate-500 hidden sm:inline">글자</span>
+            <div className="flex items-center gap-0.5 border border-slate-200 rounded-md bg-slate-50/90 p-0.5">
+              <button
+                type="button"
+                className="w-8 h-7 rounded text-sm font-semibold leading-none text-slate-700 hover:bg-white disabled:opacity-40 disabled:hover:bg-transparent"
+                aria-label="글자 크기 줄이기"
+                disabled={fontStepMin}
+                onClick={() => bumpUiFontScale(-1)}
+              >
+                −
+              </button>
+              <span
+                className="min-w-[2.85rem] text-center tabular-nums font-medium text-[11px] text-slate-600"
+                aria-live="polite"
+              >
+                {fontPct}%
+              </span>
+              <button
+                type="button"
+                className="w-8 h-7 rounded text-sm font-semibold leading-none text-slate-700 hover:bg-white disabled:opacity-40 disabled:hover:bg-transparent"
+                aria-label="글자 크기 키우기"
+                disabled={fontStepMax}
+                onClick={() => bumpUiFontScale(1)}
+              >
+                +
+              </button>
+            </div>
+            <label className="flex items-center gap-1 text-[11px] text-slate-500 whitespace-nowrap">
+              <span className="hidden sm:inline">표 헤더</span>
+              <select
+                className="max-w-[7.5rem] rounded border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700"
+                aria-label="표 헤더 색 테마"
+                value={uiTableTone}
+                onChange={(e) => setUiTableTone(e.target.value as UiTableTone)}
+              >
+                <option value="neutral">연회색</option>
+                <option value="blueHeaders">연블루</option>
+              </select>
+            </label>
+          </div>
+          <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
           <button
             type="button"
             onClick={() => setViewMode("free")}
@@ -55,6 +120,7 @@ export default function App() {
           >
             유료 분석
           </button>
+        </div>
         </div>
       </header>
 

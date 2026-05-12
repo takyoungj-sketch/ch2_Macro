@@ -1,5 +1,10 @@
 import { Fragment, type KeyboardEvent } from "react";
 import clsx from "clsx";
+import {
+  matrixTheadPrimaryClass,
+  matrixTheadSecondaryClass,
+} from "../constants/displayUi";
+import { useAppStore } from "../store";
 import type { MatrixCell, StatsResult } from "../types";
 
 /** 고정 레이아웃 (만원/㎡) — 통계 라벨 열 없음 */
@@ -57,7 +62,7 @@ export function MatrixStatsLegend() {
         <tr>
           <td
             rowSpan={2}
-            className="border border-slate-200 px-0.5 py-px text-center align-middle font-semibold text-slate-700 leading-tight"
+            className="border border-slate-200 px-0.5 py-px text-center align-middle font-semibold text-blue-700 leading-tight"
           >
             평균
           </td>
@@ -154,6 +159,10 @@ export default function MatrixStatsTable({
   showEmbeddedLegend = true,
   onPaidMatrixCellClick,
 }: Props) {
+  const uiTableTone = useAppStore((s) => s.uiTableTone);
+  const thMain = matrixTheadPrimaryClass(uiTableTone);
+  const thSub = matrixTheadSecondaryClass(uiTableTone);
+
   const cells = matrix ?? [];
   const showHeadingRow =
     (title ?? "").trim().length > 0 || showEmbeddedLegend;
@@ -230,10 +239,11 @@ export default function MatrixStatsTable({
             ))}
           </colgroup>
           <thead>
-            <tr className="bg-slate-100 text-slate-600" style={{ height: THEAD_ROW1_HEIGHT }}>
+            <tr style={{ height: THEAD_ROW1_HEIGHT }}>
               <th
                 className={clsx(
-                  "sticky left-0 top-0 z-[31] bg-slate-100 px-1 py-1 align-middle text-center font-medium shadow-[inset_0_-1px_0_0_rgb(226_232_240)]",
+                  "sticky left-0 top-0 z-[31] px-1 py-1 align-middle text-center font-medium",
+                  thMain,
                   cellZoneCol()
                 )}
               >
@@ -244,7 +254,8 @@ export default function MatrixStatsTable({
                   key={category}
                   colSpan={2}
                   className={clsx(
-                    "sticky top-0 z-[21] bg-slate-100 max-w-0 px-1 py-1 text-center align-middle text-sm font-medium truncate shadow-[inset_0_-1px_0_0_rgb(226_232_240)]",
+                    "sticky top-0 z-[21] max-w-0 px-1 py-1 text-center align-middle text-sm font-medium truncate",
+                    thMain,
                     cellLeftCat(ci)
                   )}
                   title={`${category} ${fmtCount(byLandCategory[category]?.count ?? countCategory(cells, category))}건`}
@@ -261,10 +272,11 @@ export default function MatrixStatsTable({
                 </th>
               ))}
             </tr>
-            <tr className="bg-slate-50 text-slate-400" style={{ height: ROW_PX }}>
+            <tr style={{ height: ROW_PX }}>
               <th
                 className={clsx(
-                  "sticky left-0 z-[31] bg-slate-50 p-0 shadow-[inset_0_-1px_0_0_rgb(226_232_240)]",
+                  "sticky left-0 z-[31] p-0",
+                  thSub,
                   cellZoneCol()
                 )}
                 style={{ top: THEAD_ROW1_HEIGHT }}
@@ -273,7 +285,8 @@ export default function MatrixStatsTable({
                 <Fragment key={`${category}-subhead`}>
                   <th
                     className={clsx(
-                      "sticky z-[21] bg-slate-50 px-1 py-0.5 text-center font-normal truncate text-[11px] shadow-[inset_0_-1px_0_0_rgb(226_232_240)]",
+                      "sticky z-[21] px-1 py-0.5 text-center font-normal truncate text-[11px]",
+                      thSub,
                       cellLeftCat(ci)
                     )}
                     style={{ top: THEAD_ROW1_HEIGHT }}
@@ -282,7 +295,8 @@ export default function MatrixStatsTable({
                   </th>
                   <th
                     className={clsx(
-                      "sticky z-[21] bg-slate-50 px-1 py-0.5 text-center font-normal truncate text-[11px] shadow-[inset_0_-1px_0_0_rgb(226_232_240)]",
+                      "sticky z-[21] px-1 py-0.5 text-center font-normal truncate text-[11px]",
+                      thSub,
                       cellRightCat()
                     )}
                     style={{ top: THEAD_ROW1_HEIGHT }}
@@ -335,7 +349,7 @@ export default function MatrixStatsTable({
                             "px-1 py-0 text-right align-middle tabular-nums truncate",
                             faint,
                             cellHl(stats?.is_reliable),
-                            stats?.is_reliable ? "text-slate-900 font-medium" : "text-blue-950",
+                            stats?.is_reliable ? "text-slate-900 font-medium" : "text-slate-800",
                             insight.role && "cursor-pointer hover:bg-sky-50/50 outline-none focus-visible:ring-1 ring-sky-400"
                           )}
                           title={
@@ -385,7 +399,7 @@ export default function MatrixStatsTable({
                           {...insight}
                           className={clsx(
                             cellLeftCat(ci),
-                            "px-1 py-0 align-middle text-right font-bold tabular-nums leading-tight truncate text-blue-950 text-[1.125rem]",
+                            "px-1 py-0 align-middle text-right font-semibold tabular-nums leading-tight truncate text-blue-600 text-[1.0625rem]",
                             faint,
                             cellHl(stats?.is_reliable),
                             insight.role && "cursor-pointer hover:bg-sky-50/50 outline-none focus-visible:ring-1 ring-sky-400"
@@ -467,7 +481,7 @@ export default function MatrixStatsTable({
                           {...insight}
                           className={clsx(
                             cellLeftCat(ci),
-                            "px-1 py-0 align-middle text-right tabular-nums font-semibold truncate text-blue-900 text-[10px]",
+                            "px-1 py-0 align-middle text-right tabular-nums font-semibold truncate text-slate-700 text-[10px]",
                             faint,
                             cellHl(stats?.is_reliable),
                             insight.role &&
@@ -521,7 +535,7 @@ export default function MatrixStatsTable({
                           {...insight}
                           className={clsx(
                             cellLeftCat(ci),
-                            "px-1 py-0 align-middle text-right tabular-nums font-semibold truncate text-blue-900",
+                            "px-1 py-0 align-middle text-right tabular-nums font-semibold truncate text-slate-700",
                             faint,
                             cellHl(stats?.is_reliable),
                             insight.role &&

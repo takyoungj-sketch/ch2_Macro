@@ -1,3 +1,6 @@
+import clsx from "clsx";
+import { simpleTableHeadClass, simpleTableHeadStickyBgClass } from "../constants/displayUi";
+import { useAppStore } from "../store";
 import type { YearlyTradeStat } from "../types";
 
 interface Props {
@@ -29,6 +32,7 @@ export default function YearlyStatsTable({
   hideTitle = false,
   rows,
 }: Props) {
+  const uiTableTone = useAppStore((s) => s.uiTableTone);
   const list = rows ?? [];
   if (list.length === 0) return null;
 
@@ -42,8 +46,13 @@ export default function YearlyStatsTable({
       <div className="overflow-x-auto border border-slate-200 rounded-lg">
         <table className="border-collapse bg-white text-[11px] leading-tight min-w-max">
           <thead>
-            <tr className="bg-slate-100 text-slate-600">
-              <th className="border border-slate-200 px-2 py-1.5 text-left font-medium sticky left-0 bg-slate-100 z-10">
+            <tr className={simpleTableHeadClass(uiTableTone)}>
+              <th
+                className={clsx(
+                  "border border-slate-200 px-2 py-1.5 text-left font-medium sticky left-0 z-10",
+                  simpleTableHeadStickyBgClass(uiTableTone)
+                )}
+              >
                 구분
               </th>
               {years.map((y) => (
@@ -92,7 +101,10 @@ export default function YearlyStatsTable({
                 단가(만원/㎡)
               </td>
               {list.map((r) => (
-                <td key={`u-${r.year}`} className="border border-slate-200 px-2 py-1 text-right tabular-nums">
+                <td
+                  key={`u-${r.year}`}
+                  className="border border-slate-200 px-2 py-1 text-right tabular-nums text-blue-600 font-semibold"
+                >
                   {fmtUnit(typeof r.unit_price_per_sqm === "number" ? r.unit_price_per_sqm : null)}
                 </td>
               ))}

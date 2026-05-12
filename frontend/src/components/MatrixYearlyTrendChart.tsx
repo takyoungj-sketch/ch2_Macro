@@ -1,11 +1,21 @@
 import type { MatrixYearlyStat } from "../types";
 
 const W = 420;
-const H = 200;
-const PAD_L = 48;
-const PAD_R = 48;
-const PAD_T = 14;
+const H = 230;
+const PAD_L = 28;
+const PAD_R = 28;
+const PAD_T = 44;
 const PAD_B = 36;
+
+const LABEL_MEAN_ABOVE = 10;
+const LABEL_COUNT_BELOW = 12;
+
+function formatMeanLabel(v: number): string {
+  return Number(v).toLocaleString("ko-KR", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+}
 
 function niceStep(max: number, targetTicks = 4): number {
   if (max <= 0) return 1;
@@ -20,7 +30,10 @@ function niceStep(max: number, targetTicks = 4): number {
   return step * pow10;
 }
 
-/** 연도별 평균 단가·거래 건수 꺾은선 (SVG, 이중 Y축: 좌 평균 / 우 건수) */
+const COUNT_LINE = "#94a3b8";
+const COUNT_MARKER_STROKE = "#787f89";
+
+/** 연도별 평균 단가·거래 건수 꺾은선 (SVG, 이중 Y축 좌 평균 · 우 건수; 축 숫자는 표시 안 함) */
 export default function MatrixYearlyTrendChart({ rows }: { rows: MatrixYearlyStat[] }) {
   const sorted = [...rows].sort((a, b) => a.year - b.year);
   if (sorted.length === 0) return null;
@@ -87,18 +100,18 @@ export default function MatrixYearlyTrendChart({ rows }: { rows: MatrixYearlySta
   return (
     <div className="w-full" role="img" aria-label="연도별 평균 단가 및 거래 건수 추이 그래프">
       <p className="text-[10px] text-slate-500 mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-        <span className="inline-flex items-center gap-1">
+        <span className="inline-flex items-center gap-1 font-medium text-blue-600">
           <span className="inline-block w-3 h-0.5 bg-blue-600 rounded" aria-hidden />
-          평균(만원/㎡) · 좌측 눈금
+          평균(만원/㎡)
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="inline-block w-3 h-0.5 bg-amber-500 rounded" aria-hidden />
-          건수 · 우측 눈금
+          <span className="inline-block w-3 h-0.5 rounded bg-slate-400" aria-hidden />
+          거래 건수
         </span>
       </p>
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        className="w-full h-auto max-h-[220px] text-slate-500"
+        className="w-full h-auto max-h-[240px] text-slate-500"
         preserveAspectRatio="xMidYMid meet"
       >
         {/* 수평 격자: 평균(좌) 눈금 기준 */}
@@ -136,40 +149,6 @@ export default function MatrixYearlyTrendChart({ rows }: { rows: MatrixYearlySta
             );
           })}
 
-        {/* 좌측: 평균(만원/㎡) */}
-        {hasMean &&
-          meanTicks.map((v) => {
-            const y = yMean(v);
-            if (y < PAD_T - 2 || y > H - PAD_B + 2) return null;
-            return (
-              <text
-                key={`ym-${v}`}
-                x={PAD_L - 6}
-                y={y + 3}
-                textAnchor="end"
-                className="fill-slate-500 text-[9px]"
-              >
-                {v.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}
-              </text>
-            );
-          })}
-
-        {/* 우측: 건수 */}
-        {countTicks.map((v) => {
-          const y = yCount(v);
-          return (
-            <text
-              key={`yc-${v}`}
-              x={W - PAD_R + 8}
-              y={y + 3}
-              textAnchor="start"
-              className="fill-slate-500 text-[9px]"
-            >
-              {v >= 1000 ? `${(v / 1000).toFixed(v % 1000 === 0 ? 0 : 1)}k` : Math.round(v)}
-            </text>
-          );
-        })}
-
         {sorted.map((r) => (
           <text
             key={`xl-${r.year}`}
@@ -182,10 +161,10 @@ export default function MatrixYearlyTrendChart({ rows }: { rows: MatrixYearlySta
           </text>
         ))}
 
-        {/* 꺾은선: 건수 (amber) */}
+        {/* 꺾은선: 건수 (회색) */}
         <polyline
           fill="none"
-          stroke="#f59e0b"
+          stroke={COUNT_LINE}
           strokeWidth={2}
           strokeLinejoin="round"
           strokeLinecap="round"
@@ -198,10 +177,29 @@ export default function MatrixYearlyTrendChart({ rows }: { rows: MatrixYearlySta
             cy={yCount(r.count)}
             r={3.5}
             fill="#fff"
-            stroke="#d97706"
+            stroke={COUNT_MARKER_STROKE}
             strokeWidth={2}
           />
         ))}
+
+        {sorted.map((r) => {
+          const xc = xAt(r.year);
+          const yc = yCount(r.count);
+          return (
+            <text
+              key={`cl-${r.year}`}
+              x={xc}
+              y={yc + LABEL_COUNT_BELOW}
+              textAnchor="middle"
+              dominantBaseline="hanging"
+              className="fill-slate-400"
+              opacity={0.72}
+              style={{ fontSize: "9px" }}
+            >
+              {r.count.toLocaleString("ko-KR")}
+            </text>
+          );
+        })}
 
         {/* 꺾은선: 평균 (파랑) */}
         {meanLineRows.length > 0 && (
@@ -225,6 +223,23 @@ export default function MatrixYearlyTrendChart({ rows }: { rows: MatrixYearlySta
                 strokeWidth={2}
               />
             ))}
+            {meanLineRows.map((r) => {
+              const ym = Number(r.mean_unit_price_per_sqm);
+              const cy = yMean(ym);
+              return (
+                <text
+                  key={`ml-${r.year}`}
+                  x={xAt(r.year)}
+                  y={cy - LABEL_MEAN_ABOVE}
+                  textAnchor="middle"
+                  dominantBaseline="auto"
+                  className="fill-slate-800 text-[10px] font-semibold tracking-tight"
+                  style={{ fontSize: "10px" }}
+                >
+                  {formatMeanLabel(ym)}
+                </text>
+              );
+            })}
           </>
         )}
       </svg>
