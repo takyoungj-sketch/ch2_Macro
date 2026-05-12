@@ -17,7 +17,7 @@ export const emptyTierCodes = (): TierCodes => ({
 
 /** 상위 선택이 비어 있으면 해당 차원에서 필터를 걸지 않는다. */
 export function resolveBeopjungriCodes(
-  regions: RegionItem[],
+  regions: readonly RegionItem[],
   tier: TierCodes
 ): string[] {
   let cand = [...regions];
@@ -40,13 +40,53 @@ export function resolveBeopjungriCodes(
   }
 
   const out = [...new Set(cand.map((r) => String(r.beopjungri_code).trim()))];
-  out.sort((a, b) => a.localeCompare(b));
+  out.sort((a, b) => a.localeCompare(b, "ko-KR"));
   return out;
+}
+
+/**
+ * 검색·시군구·읍면 칩 선택용: 차원별로 지정된 법정코드 명시 목록 ∪ 상위 행정구역에 속하는 모든 법정코드를 합합니다.
+ */
+export function resolveUnionBeopjungriCodes(regions: readonly RegionItem[], tier: TierCodes): string[] {
+  const out = new Set<string>();
+  const add = (c: string | null | undefined) => {
+    const t = String(c ?? "").trim();
+    if (t) out.add(t);
+  };
+
+  if (tier.sido_codes.length > 0) {
+    const sd = new Set(tier.sido_codes.map((x) => x.trim()));
+    for (const r of regions) {
+      if (sd.has(String(r.sido_code ?? "").trim())) add(r.beopjungri_code);
+    }
+  }
+
+  if (tier.sigungu_codes.length > 0) {
+    const sg = new Set(tier.sigungu_codes.map((x) => x.trim()));
+    for (const r of regions) {
+      if (sg.has(String(r.sigungu_code ?? "").trim())) add(r.beopjungri_code);
+    }
+  }
+
+  if (tier.eupmyeondong_codes.length > 0) {
+    const eu = new Set(tier.eupmyeondong_codes.map((x) => x.trim()));
+    for (const r of regions) {
+      if (eu.has(String(r.eupmyeondong_code ?? "").trim())) add(r.beopjungri_code);
+    }
+  }
+
+  for (const c of tier.beopjungri_codes) {
+    add(c);
+  }
+
+  const list = [...out].filter(Boolean);
+  list.sort((a, b) => a.localeCompare(b, "ko-KR"));
+  return list;
 }
 
 /** `by_region` 등 법정리 코드 → 표시용 명칭 (로드된 regions 목록 기준) */
 export function beopjungriNameForCode(
-  regions: RegionItem[],
+  regions: readonly RegionItem[],
   beopjungriCode: string
 ): string {
   const c = String(beopjungriCode).trim();
