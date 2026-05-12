@@ -8,3 +8,45 @@ body {
   background: #f8fafc;
   color: #1e293b;
 }
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body.print-paid-active * {
+    visibility: hidden;
+  }
+  body.print-paid-active .paid-analysis-print-root,
+  body.print-paid-active .paid-analysis-print-root * {
+    visibility: visible;
+  }
+  body.print-paid-active .paid-analysis-print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  body.print-free-active * {
+    visibility: hidden;
+  }
+  body.print-free-active .free-stats-print-root,
+  body.print-free-active .free-stats-print-root * {
+    visibility: visible;
+  }
+  body.print-free-active .free-stats-print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .compare-print-root {
+    background: white !important;
+  }
+}

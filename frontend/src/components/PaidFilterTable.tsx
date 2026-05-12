@@ -4,7 +4,9 @@ import {
   getPaidYearButtonYears,
   ROAD_CONDITIONS,
 } from "../constants/paidFilters";
+import { OutlierHelpContent } from "../help/helpCopy";
 import { useAppStore } from "../store";
+import HelpPopover from "./HelpPopover";
 
 export default function PaidFilterTable() {
   const {
@@ -140,8 +142,13 @@ export default function PaidFilterTable() {
           {advanced && (
             <>
               <tr className="border-t border-slate-100 align-top">
-                <th className="px-2 py-2 bg-slate-50 text-[11px] font-semibold text-slate-600 text-left whitespace-nowrap">
-                  이상치
+                <th className="px-2 py-2 bg-slate-50 text-[11px] font-semibold text-slate-600 text-left whitespace-nowrap align-top">
+                  <span className="inline-flex items-center gap-1">
+                    이상치
+                    <HelpPopover ariaLabel="유료 분석에서의 이상치 제거 방법" align="right">
+                      <OutlierHelpContent />
+                    </HelpPopover>
+                  </span>
                 </th>
                 <td className="px-2 py-2 space-y-2">
                   <label className="flex items-center gap-1.5 text-[11px] text-slate-600 cursor-pointer">

@@ -6,6 +6,8 @@ import { useAppStore } from "../store";
 import type { MatrixYearlyRequest } from "../types";
 import { parseApiError } from "../utils/apiError";
 import { resolveBeopjungriCodes } from "../utils/regionTier";
+import { downloadMatrixCsv, downloadYearlyStatsCsv } from "../utils/exportCsv";
+import { safeFileStem } from "../utils/safeFilename";
 import MatrixStatsTable, { MatrixStatsLegend } from "./MatrixStatsTable";
 import PaidMatrixYearlyModal from "./PaidMatrixYearlyModal";
 import YearlyStatsTable from "./YearlyStatsTable";
@@ -119,6 +121,14 @@ export default function FreeStatsPanel() {
     [isPaidBasic, resolvedCodes, data, paidBasicBaseKey]
   );
 
+  const triggerPrintFree = useCallback(() => {
+    document.body.classList.add("print-free-active");
+    const cleanup = () => document.body.classList.remove("print-free-active");
+    window.addEventListener("afterprint", cleanup, { once: true });
+    window.setTimeout(cleanup, 4000);
+    window.print();
+  }, []);
+
   if (regionsLoading)
     return (
       <div className="bg-white rounded-xl shadow-sm p-6 text-center text-slate-400 text-sm">
@@ -177,7 +187,40 @@ export default function FreeStatsPanel() {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-5 space-y-5">
+    <div className="free-stats-print-root bg-white rounded-xl shadow-sm p-5 space-y-5">
+      <div className="no-print flex flex-wrap justify-end gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            downloadYearlyStatsCsv(
+              `${safeFileStem(`yearly_${data.beopjungri_name}_${Date.now()}`)}.csv`,
+              data.by_year ?? []
+            )
+          }
+          className="text-xs font-medium px-2.5 py-1 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+        >
+          CSV 연도별
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            downloadMatrixCsv(
+              `${safeFileStem(`matrix_${data.beopjungri_name}_${Date.now()}`)}.csv`,
+              data.matrix ?? []
+            )
+          }
+          className="text-xs font-medium px-2.5 py-1 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+        >
+          CSV 매트릭스
+        </button>
+        <button
+          type="button"
+          onClick={triggerPrintFree}
+          className="text-xs font-medium px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-800 text-white hover:bg-slate-900"
+        >
+          인쇄 / PDF
+        </button>
+      </div>
       {viewMode === "paid" && (
         <p className="text-[11px] text-indigo-700 font-medium leading-relaxed">
           유료 · 기본 통계

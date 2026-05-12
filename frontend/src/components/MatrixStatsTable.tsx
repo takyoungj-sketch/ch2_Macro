@@ -41,10 +41,14 @@ function fmtCiRange(
   return `${fmtD1(lo)}~${fmtD1(hi)}`;
 }
 
+import HelpPopover from "./HelpPopover";
+import { MatrixHelpContent } from "../help/helpCopy";
+
 /** 무료 패널 상단(지역명 행 우측) 등에서 재사용 */
-export function MatrixStatsLegend() {
+export function MatrixStatsLegend({ withHelp = true }: { withHelp?: boolean }) {
   return (
-    <table
+    <div className="flex items-start gap-1.5 shrink-0">
+      <table
       className="table-fixed shrink-0 border-collapse border border-slate-200 bg-white text-[9px] leading-tight text-slate-600"
       style={{ width: 236 }}
       aria-label="매트릭스 셀 구조 범례"
@@ -76,6 +80,12 @@ export function MatrixStatsLegend() {
         </tr>
       </tbody>
     </table>
+      {withHelp ? (
+        <HelpPopover ariaLabel="용도지역과 지목, 매트릭스 표 읽는 법" align="left">
+          <MatrixHelpContent />
+        </HelpPopover>
+      ) : null}
+    </div>
   );
 }
 
@@ -215,7 +225,7 @@ export default function MatrixStatsTable({
         </div>
       ) : null}
 
-      <div className="max-h-[min(72vh,56rem)] overflow-auto border border-slate-200 rounded-lg overscroll-contain">
+      <div className="max-h-[min(74vh,58rem)] overflow-auto border border-slate-200 rounded-lg overscroll-contain">
         <table
           className="table-fixed border-collapse bg-white text-xs leading-tight"
           style={{ width: tableWidth }}
@@ -233,7 +243,7 @@ export default function MatrixStatsTable({
             <tr className="bg-slate-100 text-slate-600" style={{ height: THEAD_ROW1_HEIGHT }}>
               <th
                 className={clsx(
-                  "sticky left-0 top-0 z-[31] bg-slate-100 px-1 py-1 align-middle text-center font-medium shadow-[inset_0_-1px_0_0_rgb(226_232_240)]",
+                  "sticky left-0 top-0 z-[31] bg-slate-100 px-1 py-1 align-middle text-center font-medium shadow-[inset_-4px_0_6px_-4px_rgb(148_163_184_/_0.35)] shadow-[inset_0_-1px_0_0_rgb(226_232_240)]",
                   cellZoneCol()
                 )}
               >
@@ -264,7 +274,7 @@ export default function MatrixStatsTable({
             <tr className="bg-slate-50 text-slate-400" style={{ height: ROW_PX }}>
               <th
                 className={clsx(
-                  "sticky left-0 z-[31] bg-slate-50 p-0 shadow-[inset_0_-1px_0_0_rgb(226_232_240)]",
+                  "sticky left-0 z-[31] bg-slate-50 p-0 shadow-[inset_-4px_0_6px_-4px_rgb(148_163_184_/_0.3)] shadow-[inset_0_-1px_0_0_rgb(226_232_240)]",
                   cellZoneCol()
                 )}
                 style={{ top: THEAD_ROW1_HEIGHT }}
@@ -304,7 +314,7 @@ export default function MatrixStatsTable({
                   <th
                     rowSpan={5}
                     className={clsx(
-                      "sticky left-0 z-10 bg-white px-1 py-1 align-middle text-center text-sm font-semibold text-slate-700",
+                      "sticky left-0 z-10 bg-white px-1 py-1 align-middle text-center text-sm font-semibold text-slate-700 shadow-[4px_0_12px_-4px_rgb(148_163_184_/_0.55)]",
                       cellZoneCol()
                     )}
 

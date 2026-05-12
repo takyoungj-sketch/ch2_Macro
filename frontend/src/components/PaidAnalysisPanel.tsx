@@ -9,7 +9,12 @@ import {
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import { useAppStore } from "../store";
 import type { MatrixYearlyRequest } from "../types";
+import { COMPARE_SESSION_KEY } from "../constants/compareStorage";
+import type { ComparePayloadV1 } from "../types/comparePayload";
+import { resolveCompareHref } from "../utils/appPaths";
+import { downloadByRegionCsv, downloadMatrixCsv } from "../utils/exportCsv";
 import { parseApiError } from "../utils/apiError";
+import { safeFileStem } from "../utils/safeFilename";
 import { buildPaidPayload } from "../utils/paidAnalysisPayload";
 import { beopjungriNameForCode, resolveBeopjungriCodes } from "../utils/regionTier";
 import MatrixStatsTable, { MatrixStatsLegend } from "./MatrixStatsTable";
@@ -94,15 +99,25 @@ export default function PaidAnalysisPanel() {
     return () => window.clearInterval(id);
   }, [isLoading, startedAt]);
 
-  const regionBreakdownRows = useMemo(() => {
-    if (!result?.by_region) return [];
-    return Object.entries(result.by_region)
-      .map(([code, stats]) => ({
-        label: beopjungriNameForCode(regions, code),
-        stats,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label, "ko-KR"));
+  const filterAnalysisDerived = useMemo(() => {
+    if (!result?.by_region) return null;
+    const enriched = Object.entries(result.by_region).map(([code, stats]) => ({
+      code,
+      label: beopjungriNameForCode(regions, code),
+      stats,
+    }));
+    enriched.sort((a, b) => a.label.localeCompare(b.label, "ko-KR"));
+    return {
+      regionBreakdownRows: enriched.map(({ label, stats }) => ({ label, stats })),
+      regionLabels: Object.fromEntries(enriched.map((e) => [e.code, e.label])) as Record<
+        string,
+        string
+      >,
+      regionOrder: enriched.map((e) => e.code),
+    };
   }, [result?.by_region, regions]);
+
+  const regionBreakdownRows = filterAnalysisDerived?.regionBreakdownRows ?? [];
 
   const closeTrend = () => {
     setTrendModal(null);
@@ -149,6 +164,32 @@ export default function PaidAnalysisPanel() {
     },
     [basicData?.analysis_base_key, paidBasicBaseKey, paidRequest, paidRoadExcluded, paidAreaExcluded, resolvedCodes]
   );
+
+  const triggerPrintPaid = useCallback(() => {
+    document.body.classList.add("print-paid-active");
+    const cleanup = () => document.body.classList.remove("print-paid-active");
+    window.addEventListener("afterprint", cleanup, { once: true });
+    window.setTimeout(cleanup, 4000);
+    window.print();
+  }, []);
+
+  const openCompareWindow = useCallback(() => {
+    if (!result) return;
+    const fd = filterAnalysisDerived;
+    const payload: ComparePayloadV1 = {
+      v: 1,
+      savedAt: Date.now(),
+      title: `필터 분석 · ${resolvedCodes.length}개 법정단위`,
+      matrix: result.matrix,
+      by_zone: result.by_zone,
+      by_land_category: result.by_land_category,
+      by_region: result.by_region,
+      regionOrder: fd?.regionOrder ?? [],
+      regionLabels: fd?.regionLabels ?? {},
+    };
+    sessionStorage.setItem(COMPARE_SESSION_KEY, JSON.stringify(payload));
+    window.open(resolveCompareHref(), "_blank", "noopener,noreferrer");
+  }, [filterAnalysisDerived, resolvedCodes.length, result]);
 
   return (
     <div className="space-y-4">
@@ -242,11 +283,52 @@ export default function PaidAnalysisPanel() {
       )}
 
       {!isLoading && status === "success" && result && (
-        <div className="bg-white rounded-xl shadow-sm p-5 space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-base font-bold text-slate-800">필터 분석 결과</h2>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400">{result.response_ms}ms</span>
+        <div className="paid-analysis-print-root bg-white rounded-xl shadow-sm p-5 space-y-6">
+          <div className="no-print flex flex-wrap items-start justify-between gap-3 pb-4 border-b border-slate-100">
+            <h2 className="text-base font-bold text-slate-800 shrink-0">필터 분석 결과</h2>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <span className="text-xs text-slate-400 tabular-nums">{result.response_ms}ms</span>
+              <button
+                type="button"
+                onClick={openCompareWindow}
+                className="text-xs font-medium px-2.5 py-1 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+              >
+                비교 새 창
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  downloadMatrixCsv(
+                    `${safeFileStem(`matrix_${resolvedCodes.slice(0, 2).join("_")}_${Date.now()}`)}.csv`,
+                    result.matrix
+                  )
+                }
+                className="text-xs font-medium px-2.5 py-1 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+              >
+                CSV 매트릭스
+              </button>
+              {regionBreakdownRows.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    downloadByRegionCsv(
+                      `${safeFileStem(`by_region_${Date.now()}`)}.csv`,
+                      result.by_region,
+                      filterAnalysisDerived?.regionLabels
+                    )
+                  }
+                  className="text-xs font-medium px-2.5 py-1 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                >
+                  CSV 지역별
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={triggerPrintPaid}
+                className="text-xs font-medium px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-800 text-white hover:bg-slate-900"
+              >
+                인쇄 / PDF
+              </button>
               <button
                 type="button"
                 onClick={() => void runPaidFilteredAnalysis()}
@@ -256,6 +338,14 @@ export default function PaidAnalysisPanel() {
                 동일 조건 재실행
               </button>
             </div>
+          </div>
+
+          <p className="no-print text-[11px] text-slate-500 leading-relaxed -mt-2">
+            새 창에서는 법정단위별 요약 블록이 위에서부터 이어지고, 맨 아래에 선택 지역 통합 매트릭스가 표시됩니다.
+          </p>
+
+          <div className="no-print flex justify-end">
+            <MatrixStatsLegend />
           </div>
 
           <MatrixStatsTable
@@ -272,7 +362,6 @@ export default function PaidAnalysisPanel() {
           )}
         </div>
       )}
-
       <PaidMatrixYearlyModal
         open={trendModal != null}
         onClose={closeTrend}
