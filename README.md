@@ -131,7 +131,9 @@ python run_pipeline.py --refresh --months 3
 
 - 무료 API는 `land_basic_stats`만 조회한다 (원자료 스캔 없음). **복수 동·리 기본통계**(유료 화면 「기본 통계 보기」)는 같은 응답 형식으로 `POST /api/free/stats/bulk` 가 `land_transactions`를 한 번 재집계한다 (도로 미적용 매트릭스와 표시 차이는 구현 참고).
 - 유료 「필터 분석」(이상치 제외 **미사용**)은 `WHERE` 에 맞는 행만 `WITH base AS MATERIALIZED (...)` 에 올린 뒤 전체합·법정별·매트릭스 집계를 한 라운드트립으로 돌린다. PostgreSQL percentile 정렬이 `work_mem` 에 민감해 `paid_analyze_work_mem_mb`(기본 192)·`SET LOCAL work_mem` 을 적용한다. 부분 인덱스는 `db/002_paid_analyze_index.sql`.
-- 선택적 `analysis_cache` 로 같은 조건 재조회 비용을 줄인다.
+- **2단계 행ID 캐시 (`analysis_base_cache`)**: 「기본 통계 보기」(`/free/stats/...`, `/free/stats/bulk`) 가 선택 지역·연도 윈도우에서 유효 거래행 id 배열을 `analysis_base_cache` 에 적재하고 `analysis_base_key` 를 돌려준다. 이어지는 「필터 분석 실행」이 이 키를 함께 보내면 `paid/analyze` 는 region 재확장·`beopjungri_code` 재스캔 없이 `lt.id IN (SELECT unnest(row_ids) ...)` 만으로 출발해 추가 필터를 얹는다. 키가 없거나 만료된 경우 자동 fallback (legacy region_codes 경로) 으로 동작한다.
+- 응답 캐시(`analysis_cache`) 로 같은 페이로드 재조회 비용도 줄인다. 통계 산출의 `NaN`(표본 1건일 때의 CI 등) 은 직렬화 전 `None` 으로 정규화해 `jsonb` 저장 실패를 막는다.
+- 행정구역 코드 (`beopjungri_code` 등 `CHAR(N)`) 비교는 `btrim(cast(... AS text)) = ANY(:codes)` 로 통일해 패딩으로 인한 매칭 누락을 막는다.
 - 필요 시 `land_transactions`를 `sido_code` 등으로 파티션하는 것을 우선 검토한다.
 
 **ClickHouse·DuckDB 등 분리 검토 시점 (예시 기준)**
@@ -209,4 +211,6 @@ API·화면 설계 기준이다. 인증·과금 연동 전에는 엔드포인트
 - `region_codes` : 시도·시군구·읍면동·법정리 코드/명칭
 - `land_basic_stats` : 무료 화면용 동/리 단위 사전 집계
 - `paid_analysis_logs` : 유료 분석 사용 기록
+- `analysis_cache` : 유료 분석 응답 캐시 (요청 페이로드 해시 키 기반)
+- `analysis_base_cache` : 「기본 통계 보기」가 만든 후보 거래행 id 배열 캐시. 같은 지역/연도 윈도우에서 「필터 분석 실행」이 region 재확장·재스캔 없이 이 행집합 위에서만 추가 필터를 돌릴 수 있게 한다 (TTL 4시간, 백엔드 시작 시 lazy 생성).
 - `population_stats` : 추후 행정구역 인구 레이어 (현재 스키마만 준비)
