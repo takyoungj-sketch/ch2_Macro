@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchFreeStats, fetchFreeStatsBulk, fetchRegions } from "../api/client";
 import { useAppStore } from "../store";
@@ -11,6 +11,7 @@ export default function FreeStatsPanel() {
   const viewMode = useAppStore((s) => s.viewMode);
   const paidResultView = useAppStore((s) => s.paidResultView);
   const paidBasicStatsKick = useAppStore((s) => s.paidBasicStatsKick);
+  const setPaidBasicBaseKey = useAppStore((s) => s.setPaidBasicBaseKey);
   const { tierSelection } = useAppStore();
 
   const { data: regions = [], isLoading: regionsLoading } = useQuery({
@@ -44,6 +45,11 @@ export default function FreeStatsPanel() {
         : fetchFreeStats(resolvedCodes[0]!),
     enabled: canFetch,
   });
+
+  useEffect(() => {
+    if (!isPaidBasic) return;
+    setPaidBasicBaseKey(data?.analysis_base_key ?? null);
+  }, [data?.analysis_base_key, isPaidBasic, setPaidBasicBaseKey]);
 
   if (regionsLoading)
     return (

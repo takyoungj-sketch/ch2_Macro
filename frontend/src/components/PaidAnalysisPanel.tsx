@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { fetchPaidMatrixYearly, fetchRegions, runPaidAnalysis } from "../api/client";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchPaidMatrixYearly, fetchRegions } from "../api/client";
 import { useAppStore } from "../store";
 import type { MatrixYearlyRequest } from "../types";
 import { parseApiError } from "../utils/apiError";
@@ -11,14 +11,18 @@ import PaidMatrixYearlyModal from "./PaidMatrixYearlyModal";
 import StatsTable from "./StatsTable";
 
 export default function PaidAnalysisPanel() {
-  const {
-    tierSelection,
-    paidRequest,
-    paidRoadExcluded,
-    paidAreaExcluded,
-    paidRunKick,
-    bumpPaidRunKick,
-  } = useAppStore();
+  const tierSelection = useAppStore((s) => s.tierSelection);
+  const paidRequest = useAppStore((s) => s.paidRequest);
+  const paidRoadExcluded = useAppStore((s) => s.paidRoadExcluded);
+  const paidAreaExcluded = useAppStore((s) => s.paidAreaExcluded);
+  const paidBasicBaseKey = useAppStore((s) => s.paidBasicBaseKey);
+  const status = useAppStore((s) => s.paidAnalysisStatus);
+  const result = useAppStore((s) => s.paidAnalysisResult);
+  const apiErr = useAppStore((s) => s.paidAnalysisError);
+  const startedAt = useAppStore((s) => s.paidAnalysisStartedAt);
+  const runPaidFilteredAnalysis = useAppStore((s) => s.runPaidFilteredAnalysis);
+  const cancelPaidFilteredAnalysis = useAppStore((s) => s.cancelPaidFilteredAnalysis);
+
   const [trendModal, setTrendModal] = useState<{
     zoneType: string;
     landCategory: string;
@@ -39,39 +43,19 @@ export default function PaidAnalysisPanel() {
     [regions, tierSelection]
   );
 
-  const mutation = useMutation({
-    mutationFn: runPaidAnalysis,
-  });
-
+  const isLoading = status === "loading";
   const [analyzeWaitSec, setAnalyzeWaitSec] = useState(0);
   useEffect(() => {
-    if (!mutation.isPending) {
+    if (!isLoading || startedAt == null) {
       setAnalyzeWaitSec(0);
       return;
     }
-    const t0 = Date.now();
-    const id = window.setInterval(() => {
-      setAnalyzeWaitSec(Math.floor((Date.now() - t0) / 1000));
-    }, 400);
+    const update = () =>
+      setAnalyzeWaitSec(Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
+    update();
+    const id = window.setInterval(update, 400);
     return () => window.clearInterval(id);
-  }, [mutation.isPending]);
-
-  const lastHandledKick = useRef(0);
-  useEffect(() => {
-    if (paidRunKick <= 0 || paidRunKick === lastHandledKick.current) return;
-    lastHandledKick.current = paidRunKick;
-    const st = useAppStore.getState();
-    const codes = st.tierSelection.beopjungri_codes;
-    if (codes.length === 0) return;
-    mutation.mutate(
-      buildPaidPayload(
-        st.paidRequest,
-        codes,
-        st.paidRoadExcluded,
-        st.paidAreaExcluded
-      )
-    );
-  }, [paidRunKick, mutation]);
+  }, [isLoading, startedAt]);
 
   const closeTrend = () => {
     setTrendModal(null);
@@ -93,7 +77,8 @@ export default function PaidAnalysisPanel() {
         paidRequest,
         resolvedCodes,
         paidRoadExcluded,
-        paidAreaExcluded
+        paidAreaExcluded,
+        paidBasicBaseKey
       );
       const body: MatrixYearlyRequest = {
         ...base,
@@ -114,15 +99,12 @@ export default function PaidAnalysisPanel() {
         setTrendLoading(false);
       }
     },
-    [paidRequest, resolvedCodes, paidRoadExcluded, paidAreaExcluded]
+    [paidRequest, resolvedCodes, paidRoadExcluded, paidAreaExcluded, paidBasicBaseKey]
   );
-
-  const result = mutation.data ?? null;
-  const apiErr = mutation.isError ? parseApiError(mutation.error) : null;
 
   return (
     <div className="space-y-4">
-      {mutation.isPending && (
+      {isLoading && (
         <div className="flex flex-col items-center justify-center gap-3 py-8 px-4 text-center rounded-xl bg-white shadow-sm border border-slate-100">
           <div
             className="h-9 w-9 rounded-full border-2 border-slate-200 border-t-blue-600 animate-spin shrink-0"
@@ -138,10 +120,19 @@ export default function PaidAnalysisPanel() {
             거래량이 많으면 열 시간이 길어질 수 있습니다. 「이상치 제외」가 켜져 있으면 전체 거래 행을
             읽는 방식이라 더 느릴 수 있습니다.
           </p>
+          {analyzeWaitSec >= 5 && (
+            <button
+              type="button"
+              onClick={() => cancelPaidFilteredAnalysis()}
+              className="mt-1 text-[11px] text-slate-500 underline underline-offset-2 hover:text-red-600"
+            >
+              취소하고 초기 상태로
+            </button>
+          )}
         </div>
       )}
 
-      {apiErr != null && (
+      {!isLoading && apiErr != null && (
         <div
           className={`rounded-xl border px-4 py-3 text-center text-sm leading-relaxed ${
             apiErr.status === 404
@@ -163,7 +154,7 @@ export default function PaidAnalysisPanel() {
         </div>
       )}
 
-      {result && (
+      {!isLoading && status === "success" && result && (
         <div className="bg-white rounded-xl shadow-sm p-5 space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-base font-bold text-slate-800">필터 분석 결과</h2>
@@ -171,8 +162,8 @@ export default function PaidAnalysisPanel() {
               <span className="text-xs text-slate-400">{result.response_ms}ms</span>
               <button
                 type="button"
-                onClick={() => bumpPaidRunKick()}
-                disabled={resolvedCodes.length === 0 || mutation.isPending}
+                onClick={() => void runPaidFilteredAnalysis()}
+                disabled={resolvedCodes.length === 0 || isLoading}
                 className="text-xs font-medium text-blue-600 hover:text-blue-800 disabled:opacity-40"
               >
                 동일 조건 재실행
@@ -209,7 +200,7 @@ export default function PaidAnalysisPanel() {
         rows={trendRows}
       />
 
-      {!result && !mutation.isPending && !mutation.isError && (
+      {!isLoading && status === "idle" && !apiErr && (
         <p className="text-center text-[11px] text-slate-400">
           왼쪽 필터 표 하단의{" "}
           <strong className="text-slate-600">필터 분석 실행</strong>으로 조건을 적용한 매트릭스를

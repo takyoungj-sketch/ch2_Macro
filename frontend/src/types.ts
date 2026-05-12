@@ -31,6 +31,7 @@ export interface FreeStatsResponse {
   beopjungri_name: string;
   year_from: number;
   year_to: number;
+  analysis_base_key?: string | null;
   total: StatsResult;
   by_year: YearlyTradeStat[];
   by_zone: Record<string, StatsResult>;
@@ -66,6 +67,8 @@ export interface PaidAnalysisRequest {
   year_to?: number | null;
   /** 비연속 연도 선택 시 사용. 설정 시 서버에서 year_from/to 대신 적용 */
   years?: number[] | null;
+  /** 기본 통계 보기에서 서버가 만든 후보 거래행 캐시 키 */
+  base_cache_key?: string | null;
   road_conditions?: string[] | null;
   area_categories?: string[] | null;
   land_categories?: string[] | null;

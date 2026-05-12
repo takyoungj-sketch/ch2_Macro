@@ -34,7 +34,7 @@ export default function PaidFilterTable() {
       setFilterError("분석할 연도를 하나 이상 선택해 주세요.");
       return;
     }
-    runPaidFilteredAnalysis();
+    void runPaidFilteredAnalysis();
   };
 
   return (
