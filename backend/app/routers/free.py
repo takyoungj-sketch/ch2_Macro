@@ -1,7 +1,7 @@
 """
 무료 통계 API 라우터
 - 사전 집계: land_basic_stats (매트릭스·부분합)
-- 연도별 요약: land_transactions 집계 (정상 거래만)
+- 연도별 표·매트릭스 집계 구간: 파이프라인이 land_basic_stats에 넣은 year_from/year_to와 동일(원장 최소·최대가 아님)
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ def _stats_dict_to_result(st: dict) -> StatsResult:
 
 
 def _validate_basic_stats_all_rows(db: Session, codes: list[str]) -> None:
-    """사전 집계(ALL×ALL) 존재 여부 확인 — 패딩은 btrim."""
+    """사전 집계(ALL×ALL) 존재 여부 확인 — 패딩은 btrim (단건 엔드포인트용)."""
     stmt = text(
         """
         SELECT btrim(cast(beopjungri_code AS text)) AS bc
@@ -86,26 +86,66 @@ def _validate_basic_stats_all_rows(db: Session, codes: list[str]) -> None:
         )
 
 
-def _overlap_year_window(db: Session, codes: list[str]) -> tuple[int, int]:
-    """원장 MIN/MAX(contract_year), is_valid만. 복수 코드는 포함 지역 거래 통합 표본의 최소~최대 연도."""
-    _validate_basic_stats_all_rows(db, codes)
+def _split_codes_with_basic_stats(
+    db: Session, codes: list[str]
+) -> tuple[list[str], list[str]]:
+    """합산에 포함할 코드 vs 사전집계 미존재로 제외할 코드."""
+    if not codes:
+        return [], []
     stmt = text(
         """
-        SELECT MIN(contract_year)::int AS yf, MAX(contract_year)::int AS yt
-        FROM land_transactions
-        WHERE is_valid IS TRUE
-          AND contract_year IS NOT NULL
-          AND btrim(cast(beopjungri_code AS text)) = ANY(:codes)
+        SELECT btrim(cast(beopjungri_code AS text)) AS bc
+        FROM land_basic_stats
+        WHERE btrim(cast(beopjungri_code AS text)) = ANY(:codes)
+          AND zone_type = 'ALL' AND land_category = 'ALL'
         """
     )
-    row = db.execute(stmt, {"codes": codes}).mappings().one()
-    yf, yt = row.get("yf"), row.get("yt")
-    if yf is None or yt is None or int(yf) > int(yt):
+    rows = db.execute(stmt, {"codes": codes}).fetchall()
+    seen_stats = {str(r.bc).strip() for r in rows}
+    kept: list[str] = []
+    missing: list[str] = []
+    dedupe_pass: set[str] = set()
+    for c in codes:
+        cc = str(c).strip()
+        if not cc or cc in dedupe_pass:
+            continue
+        dedupe_pass.add(cc)
+        if cc in seen_stats:
+            kept.append(cc)
+        else:
+            missing.append(cc)
+    return kept, missing
+
+
+def _basic_stats_year_window_for_codes(db: Session, codes: list[str]) -> tuple[int, int]:
+    """
+    land_basic_stats ALL×ALL 행에 기록된 집계 연도 구간.
+    복수 지역이면 구간 교집합([max(year_from), min(year_to)])을 사용한다.
+    """
+    if not codes:
+        raise HTTPException(status_code=422, detail="유효한 지역 코드가 없습니다.")
+    stmt = text(
+        """
+        SELECT year_from::int AS yf, year_to::int AS yt
+        FROM land_basic_stats
+        WHERE btrim(cast(beopjungri_code AS text)) = ANY(:codes)
+          AND zone_type = 'ALL' AND land_category = 'ALL'
+        """
+    )
+    rows = db.execute(stmt, {"codes": codes}).fetchall()
+    if not rows:
         raise HTTPException(
             status_code=404,
-            detail="선택 지역 조건(is_valid 거래)에 해당하는 거래 데이터가 없습니다.",
+            detail="선택 지역의 사전 집계(ALL×ALL) 연도 구간을 찾을 수 없습니다.",
         )
-    return int(yf), int(yt)
+    yf = max(int(r.yf) for r in rows)
+    yt = min(int(r.yt) for r in rows)
+    if yf > yt:
+        raise HTTPException(
+            status_code=422,
+            detail="선택한 법정동·리들의 사전 집계 연도 구간이 맞물리지 않습니다. 같은 시점 배치 결과만 합산할 수 있습니다.",
+        )
+    return yf, yt
 
 
 def _combined_bundle_from_transactions(
@@ -206,7 +246,7 @@ def _build_region_title(db: Session, codes: list[str]) -> str:
     return ", ".join(cmap[c] for c in codes)
 
 
-_REGIONS_SEARCH_MAX = 150
+_REGIONS_SEARCH_MAX = 420
 _REGIONS_HARD_MAX = 50_000
 _REGIONS_DEFAULT_CAP = 500
 
@@ -302,13 +342,25 @@ def get_basic_stats_bulk(
             detail=f"한 번에 합산할 수 있는 최대 개수({_MAX_STATS_REGIONS})를 초과했습니다.",
         )
 
-    title = _build_region_title(db, codes)
-    year_from, year_to = _overlap_year_window(db, codes)
+    kept, stats_excluded_codes = _split_codes_with_basic_stats(db, codes)
+    if not kept:
+        preview = ", ".join(stats_excluded_codes[:15])
+        tail = " …" if len(stats_excluded_codes) > 15 else ""
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "합산에 쓸 사전 집계가 있는 코드가 없습니다. "
+                + (f"(제외된 코드: {preview}{tail})" if stats_excluded_codes else "")
+            ),
+        )
+
+    title = _build_region_title(db, kept)
+    year_from, year_to = _basic_stats_year_window_for_codes(db, kept)
     analysis_base_key = create_analysis_base_cache(
-        db, region_codes=codes, year_from=year_from, year_to=year_to
+        db, region_codes=kept, year_from=year_from, year_to=year_to
     )
     total, by_zone, by_land_category, matrix = _combined_bundle_from_transactions(
-        db, codes, year_from, year_to
+        db, kept, year_from, year_to
     )
 
     y_stmt = text(
@@ -328,7 +380,7 @@ def get_basic_stats_bulk(
     )
     y_rows = db.execute(
         y_stmt,
-        {"codes": codes, "yf": year_from, "yt": year_to},
+        {"codes": kept, "yf": year_from, "yt": year_to},
     ).fetchall()
     y_map = {int(r.y): r for r in y_rows}
     by_year: list[YearlyTradeStat] = []
@@ -351,7 +403,7 @@ def get_basic_stats_bulk(
             by_year.append(YearlyTradeStat(year=y, count=0))
 
     return FreeStatsResponse(
-        beopjungri_code=",".join(codes),
+        beopjungri_code=",".join(kept),
         beopjungri_name=title,
         year_from=year_from,
         year_to=year_to,
@@ -361,6 +413,7 @@ def get_basic_stats_bulk(
         by_zone=by_zone,
         by_land_category=by_land_category,
         matrix=matrix,
+        stats_excluded_codes=stats_excluded_codes,
     )
 
 
@@ -411,7 +464,11 @@ def get_basic_stats(beopjungri_code: str, db: Session = Depends(get_db)):
     total_row = next((r for r in rows if r.zone_type == "ALL" and r.land_category == "ALL"), None)
 
     code_trim = _dedupe_codes_preserve([beopjungri_code])[0]
-    year_from, year_to = _overlap_year_window(db, [code_trim])
+    if total_row is None:
+        raise HTTPException(status_code=404, detail="해당 지역의 전체(ALL×ALL) 통계 행이 없습니다.")
+
+    year_from = int(total_row.year_from)
+    year_to = int(total_row.year_to)
 
     def row_to_stats(r) -> StatsResult:
         return StatsResult(
@@ -428,7 +485,7 @@ def get_basic_stats(beopjungri_code: str, db: Session = Depends(get_db)):
             is_reliable=r.count >= 15,
         )
 
-    total = row_to_stats(total_row) if total_row else StatsResult(count=0)
+    total = row_to_stats(total_row)
     analysis_base_key = create_analysis_base_cache(
         db,
         region_codes=[code_trim],

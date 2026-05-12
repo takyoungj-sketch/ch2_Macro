@@ -11,7 +11,7 @@ import { useAppStore } from "../store";
 import type { MatrixYearlyRequest } from "../types";
 import { parseApiError } from "../utils/apiError";
 import { buildPaidPayload } from "../utils/paidAnalysisPayload";
-import { beopjungriNameForCode, resolveBeopjungriCodes } from "../utils/regionTier";
+import { beopjungriNameForCode, resolveUnionBeopjungriCodes } from "../utils/regionTier";
 import MatrixStatsTable, { MatrixStatsLegend } from "./MatrixStatsTable";
 import PaidMatrixYearlyModal from "./PaidMatrixYearlyModal";
 import StatsTable from "./StatsTable";
@@ -50,7 +50,7 @@ export default function PaidAnalysisPanel() {
   });
 
   const resolvedCodes = useMemo(
-    () => resolveBeopjungriCodes(regions, tierSelection),
+    () => resolveUnionBeopjungriCodes(regions, tierSelection),
     [regions, tierSelection]
   );
 
@@ -79,6 +79,15 @@ export default function PaidAnalysisPanel() {
       setPaidBasicBaseKey(basicData.analysis_base_key);
     }
   }, [basicData?.analysis_base_key, setPaidBasicBaseKey]);
+
+  /** 기본 통계 API는 사전 집계 전체 연도 구간을 주므로, 유료 패널에서는 연도 필터 선택만 표에 반영한다. */
+  const yearlyRowsForPaidFilter = useMemo(() => {
+    const rows = basicData?.by_year ?? [];
+    const sel = paidRequest.years ?? [];
+    if (sel.length === 0) return rows;
+    const want = new Set(sel);
+    return rows.filter((r) => want.has(r.year));
+  }, [basicData?.by_year, paidRequest.years]);
 
   const isLoading = status === "loading";
   const [analyzeWaitSec, setAnalyzeWaitSec] = useState(0);
@@ -121,9 +130,14 @@ export default function PaidAnalysisPanel() {
       }
 
       const cacheKey = basicData?.analysis_base_key ?? paidBasicBaseKey;
+      const codesForTrend =
+        basicData?.beopjungri_code
+          ?.split(",")
+          .map((x) => x.trim())
+          .filter(Boolean) ?? resolvedCodes;
       const base = buildPaidPayload(
         paidRequest,
-        resolvedCodes,
+        codesForTrend,
         paidRoadExcluded,
         paidAreaExcluded,
         cacheKey
@@ -147,7 +161,7 @@ export default function PaidAnalysisPanel() {
         setTrendLoading(false);
       }
     },
-    [basicData?.analysis_base_key, paidBasicBaseKey, paidRequest, paidRoadExcluded, paidAreaExcluded, resolvedCodes]
+    [basicData, paidBasicBaseKey, paidRequest, paidRoadExcluded, paidAreaExcluded, resolvedCodes]
   );
 
   return (
@@ -173,12 +187,21 @@ export default function PaidAnalysisPanel() {
         )}
         {!basicLoading && basicData && (
           <>
+            {Boolean(basicData.stats_excluded_codes?.length) && (
+              <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 leading-snug mb-3">
+                사전 집계가 없는 법정코드 {(basicData.stats_excluded_codes ?? []).length}건은 요청 목록에서는
+                보냈지만 합산 표본에서는 자동으로 제외했습니다. 예: {(basicData.stats_excluded_codes ?? [])
+                  .slice(0, 6)
+                  .join(", ")}
+                {(basicData.stats_excluded_codes?.length ?? 0) > 6 ? " …" : ""}
+              </p>
+            )}
             <div className="flex flex-wrap items-start gap-3 gap-y-2">
               <h2 className="text-base font-bold text-slate-800 shrink-0 leading-tight max-w-md">
                 {basicData.beopjungri_name}
               </h2>
               <div className="min-w-0 flex-1 basis-[12rem]">
-                <YearlyStatsTable rows={basicData.by_year ?? []} hideTitle />
+                <YearlyStatsTable rows={yearlyRowsForPaidFilter} hideTitle />
               </div>
               <div className="shrink-0">
                 <MatrixStatsLegend />
@@ -249,7 +272,7 @@ export default function PaidAnalysisPanel() {
               <span className="text-xs text-slate-400">{result.response_ms}ms</span>
               <button
                 type="button"
-                onClick={() => void runPaidFilteredAnalysis()}
+                onClick={() => void runPaidFilteredAnalysis(resolvedCodes)}
                 disabled={resolvedCodes.length === 0 || isLoading}
                 className="text-xs font-medium text-blue-600 hover:text-blue-800 disabled:opacity-40"
               >
