@@ -150,13 +150,15 @@ export default function PaidAnalysisPanel() {
 
   return (
     <div className="space-y-4">
-      {/* 기본 통계 보기와 동일: 상단 연도별 개수·총액·면적·단가 + 범례 */}
+      {/* 기본 통계 보기와 동일: 상단 연도별 표 + 범례 1회만 (매트릭스에는 범례 비표시) */}
       <div className="bg-white rounded-xl shadow-sm p-5 space-y-5">
         <p className="text-[11px] text-indigo-700 font-medium leading-relaxed">
-          유료 · 연도별 요약
-          <span className="block text-indigo-600/90 font-normal mt-0.5">
-            선택 지역의 기본 통계와 동일한 구간입니다. 아래 필터 분석 결과와 함께 유지됩니다.
-          </span>
+          유료 · 기본 통계
+          {useBulkBasic && (
+            <span className="block text-indigo-600/90 font-normal mt-0.5">
+              선택 법정동·리 거래 단가를 합친 결과입니다. 매트릭스는 원장 기준 즉시 집계입니다.
+            </span>
+          )}
         </p>
         {basicLoading && (
           <p className="text-xs text-slate-400 text-center py-4">연도별 요약 불러오는 중…</p>
@@ -255,9 +257,11 @@ export default function PaidAnalysisPanel() {
           </div>
 
           <MatrixStatsTable
+            title=""
             matrix={result.matrix}
             byZone={result.by_zone}
             byLandCategory={result.by_land_category}
+            showEmbeddedLegend={false}
             onPaidMatrixCellClick={openMatrixTrend}
           />
 
