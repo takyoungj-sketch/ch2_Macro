@@ -10,8 +10,7 @@ export function getPaidYearButtonYears(): readonly number[] {
   return [Y - 5, Y - 4, Y - 3, Y - 2, Y - 1] as const;
 }
 
-/** 기본 선택: 최근 4년 (Y-4 ~ Y-1). 예: 2026년 → 22~25년 체크 */
+/** 기본 선택: 연도 버튼과 동일하게 Y-5 ~ Y-1 전부 포함 (예: 2026년 기준 → 2021~2025 체크) */
 export function getDefaultPaidSelectedYears(): number[] {
-  const Y = new Date().getFullYear();
-  return [Y - 4, Y - 3, Y - 2, Y - 1];
+  return [...getPaidYearButtonYears()];
 }

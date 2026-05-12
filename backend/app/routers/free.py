@@ -57,13 +57,11 @@ def _stats_dict_to_result(st: dict) -> StatsResult:
     )
 
 
-def _overlap_year_window(db: Session, codes: list[str]) -> tuple[int, int]:
-    """land_basic_stats ALL×ALL 구간의 교집합(PSQL CHAR 패딩은 btrim 처리)."""
+def _validate_basic_stats_all_rows(db: Session, codes: list[str]) -> None:
+    """사전 집계(ALL×ALL) 존재 여부 확인 — 패딩은 btrim."""
     stmt = text(
         """
-        SELECT btrim(cast(beopjungri_code AS text)) AS bc,
-               year_from::int AS yf,
-               year_to::int AS yt
+        SELECT btrim(cast(beopjungri_code AS text)) AS bc
         FROM land_basic_stats
         WHERE btrim(cast(beopjungri_code AS text)) = ANY(:codes)
           AND zone_type = 'ALL' AND land_category = 'ALL'
@@ -86,14 +84,28 @@ def _overlap_year_window(db: Session, codes: list[str]) -> tuple[int, int]:
                 + (" …" if len(missing) > 15 else "")
             ),
         )
-    y_from = max(int(r.yf) for r in rows)
-    y_to = min(int(r.yt) for r in rows)
-    if y_from > y_to:
+
+
+def _overlap_year_window(db: Session, codes: list[str]) -> tuple[int, int]:
+    """원장 MIN/MAX(contract_year), is_valid만. 복수 코드는 포함 지역 거래 통합 표본의 최소~최대 연도."""
+    _validate_basic_stats_all_rows(db, codes)
+    stmt = text(
+        """
+        SELECT MIN(contract_year)::int AS yf, MAX(contract_year)::int AS yt
+        FROM land_transactions
+        WHERE is_valid IS TRUE
+          AND contract_year IS NOT NULL
+          AND btrim(cast(beopjungri_code AS text)) = ANY(:codes)
+        """
+    )
+    row = db.execute(stmt, {"codes": codes}).mappings().one()
+    yf, yt = row.get("yf"), row.get("yt")
+    if yf is None or yt is None or int(yf) > int(yt):
         raise HTTPException(
             status_code=404,
-            detail="선택 지역의 집계 연도 구간이 겹치지 않습니다.",
+            detail="선택 지역 조건(is_valid 거래)에 해당하는 거래 데이터가 없습니다.",
         )
-    return (y_from, y_to)
+    return int(yf), int(yt)
 
 
 def _combined_bundle_from_transactions(
@@ -346,8 +358,9 @@ def get_basic_stats(beopjungri_code: str, db: Session = Depends(get_db)):
 
     # ALL × ALL = 전체 통계
     total_row = next((r for r in rows if r.zone_type == "ALL" and r.land_category == "ALL"), None)
-    year_from = rows[0].year_from
-    year_to = rows[0].year_to
+
+    code_trim = _dedupe_codes_preserve([beopjungri_code])[0]
+    year_from, year_to = _overlap_year_window(db, [code_trim])
 
     def row_to_stats(r) -> StatsResult:
         return StatsResult(
@@ -367,7 +380,7 @@ def get_basic_stats(beopjungri_code: str, db: Session = Depends(get_db)):
     total = row_to_stats(total_row) if total_row else StatsResult(count=0)
     analysis_base_key = create_analysis_base_cache(
         db,
-        region_codes=[beopjungri_code],
+        region_codes=[code_trim],
         year_from=int(year_from),
         year_to=int(year_to),
     )
@@ -380,14 +393,14 @@ def get_basic_stats(beopjungri_code: str, db: Session = Depends(get_db)):
                    COALESCE(SUM(total_price_10k), 0) AS sum_price,
                    COALESCE(SUM(area_sqm), 0) AS sum_area
             FROM land_transactions
-            WHERE beopjungri_code = :code
+            WHERE btrim(cast(beopjungri_code AS text)) = :code_trim
               AND is_valid IS TRUE
               AND contract_year >= :yf
               AND contract_year <= :yt
             GROUP BY contract_year
             ORDER BY contract_year
         """),
-        {"code": beopjungri_code, "yf": year_from, "yt": year_to},
+        {"code_trim": code_trim, "yf": year_from, "yt": year_to},
     ).fetchall()
     y_map = {int(r.y): r for r in y_rows}
     by_year: list[YearlyTradeStat] = []
