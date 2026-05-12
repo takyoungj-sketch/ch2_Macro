@@ -1,16 +1,25 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchPaidMatrixYearly, fetchRegions } from "../api/client";
+import {
+  fetchFreeStats,
+  fetchFreeStatsBulk,
+  fetchPaidMatrixYearly,
+  fetchRegions,
+} from "../api/client";
 import { useAppStore } from "../store";
 import type { MatrixYearlyRequest } from "../types";
 import { parseApiError } from "../utils/apiError";
 import { buildPaidPayload } from "../utils/paidAnalysisPayload";
-import { resolveBeopjungriCodes } from "../utils/regionTier";
-import MatrixStatsTable from "./MatrixStatsTable";
+import { beopjungriNameForCode, resolveBeopjungriCodes } from "../utils/regionTier";
+import MatrixStatsTable, { MatrixStatsLegend } from "./MatrixStatsTable";
 import PaidMatrixYearlyModal from "./PaidMatrixYearlyModal";
 import StatsTable from "./StatsTable";
+import YearlyStatsTable from "./YearlyStatsTable";
 
 export default function PaidAnalysisPanel() {
+  const viewMode = useAppStore((s) => s.viewMode);
+  const paidBasicStatsKick = useAppStore((s) => s.paidBasicStatsKick);
+  const setPaidBasicBaseKey = useAppStore((s) => s.setPaidBasicBaseKey);
   const tierSelection = useAppStore((s) => s.tierSelection);
   const paidRequest = useAppStore((s) => s.paidRequest);
   const paidRoadExcluded = useAppStore((s) => s.paidRoadExcluded);
@@ -33,7 +42,7 @@ export default function PaidAnalysisPanel() {
     { year: number; count: number; mean_unit_price_per_sqm: number | null }[]
   >([]);
 
-  const { data: regions = [] } = useQuery({
+  const { data: regions = [], isLoading: regionsLoading } = useQuery({
     queryKey: ["regions"],
     queryFn: () => fetchRegions(),
   });
@@ -42,6 +51,32 @@ export default function PaidAnalysisPanel() {
     () => resolveBeopjungriCodes(regions, tierSelection),
     [regions, tierSelection]
   );
+
+  const bulkKey = useMemo(() => [...resolvedCodes].slice().sort().join(","), [resolvedCodes]);
+  const useBulkBasic = resolvedCodes.length > 1;
+
+  const canFetchBasic =
+    resolvedCodes.length > 0 && !regionsLoading && (useBulkBasic || resolvedCodes.length === 1);
+
+  const {
+    data: basicData,
+    isLoading: basicLoading,
+    isError: basicIsError,
+    error: basicError,
+  } = useQuery({
+    queryKey: useBulkBasic
+      ? ["freeStatsBulk", bulkKey, paidBasicStatsKick]
+      : ["freeStats", resolvedCodes[0] ?? "", paidBasicStatsKick, viewMode],
+    queryFn: () =>
+      useBulkBasic ? fetchFreeStatsBulk(resolvedCodes) : fetchFreeStats(resolvedCodes[0]!),
+    enabled: canFetchBasic && viewMode === "paid",
+  });
+
+  useEffect(() => {
+    if (basicData?.analysis_base_key) {
+      setPaidBasicBaseKey(basicData.analysis_base_key);
+    }
+  }, [basicData?.analysis_base_key, setPaidBasicBaseKey]);
 
   const isLoading = status === "loading";
   const [analyzeWaitSec, setAnalyzeWaitSec] = useState(0);
@@ -56,6 +91,16 @@ export default function PaidAnalysisPanel() {
     const id = window.setInterval(update, 400);
     return () => window.clearInterval(id);
   }, [isLoading, startedAt]);
+
+  const regionBreakdownRows = useMemo(() => {
+    if (!result?.by_region) return [];
+    return Object.entries(result.by_region)
+      .map(([code, stats]) => ({
+        label: beopjungriNameForCode(regions, code),
+        stats,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, "ko-KR"));
+  }, [result?.by_region, regions]);
 
   const closeTrend = () => {
     setTrendModal(null);
@@ -73,12 +118,13 @@ export default function PaidAnalysisPanel() {
         return;
       }
 
+      const cacheKey = basicData?.analysis_base_key ?? paidBasicBaseKey;
       const base = buildPaidPayload(
         paidRequest,
         resolvedCodes,
         paidRoadExcluded,
         paidAreaExcluded,
-        paidBasicBaseKey
+        cacheKey
       );
       const body: MatrixYearlyRequest = {
         ...base,
@@ -99,11 +145,48 @@ export default function PaidAnalysisPanel() {
         setTrendLoading(false);
       }
     },
-    [paidRequest, resolvedCodes, paidRoadExcluded, paidAreaExcluded, paidBasicBaseKey]
+    [basicData?.analysis_base_key, paidBasicBaseKey, paidRequest, paidRoadExcluded, paidAreaExcluded, resolvedCodes]
   );
 
   return (
     <div className="space-y-4">
+      {/* 기본 통계 보기와 동일: 상단 연도별 개수·총액·면적·단가 + 범례 */}
+      <div className="bg-white rounded-xl shadow-sm p-5 space-y-5">
+        <p className="text-[11px] text-indigo-700 font-medium leading-relaxed">
+          유료 · 연도별 요약
+          <span className="block text-indigo-600/90 font-normal mt-0.5">
+            선택 지역의 기본 통계와 동일한 구간입니다. 아래 필터 분석 결과와 함께 유지됩니다.
+          </span>
+        </p>
+        {basicLoading && (
+          <p className="text-xs text-slate-400 text-center py-4">연도별 요약 불러오는 중…</p>
+        )}
+        {basicIsError && (
+          <p className="text-xs text-amber-700 text-center py-2">
+            연도별 요약을 불러오지 못했습니다
+            {basicError ? ` — ${parseApiError(basicError).message}` : ""}
+          </p>
+        )}
+        {!basicLoading && basicData && (
+          <>
+            <div className="flex flex-wrap items-start gap-3 gap-y-2">
+              <h2 className="text-base font-bold text-slate-800 shrink-0 leading-tight max-w-md">
+                {basicData.beopjungri_name}
+              </h2>
+              <div className="min-w-0 flex-1 basis-[12rem]">
+                <YearlyStatsTable rows={basicData.by_year ?? []} hideTitle />
+              </div>
+              <div className="shrink-0">
+                <MatrixStatsLegend />
+              </div>
+            </div>
+          </>
+        )}
+        {!basicLoading && !basicData && !basicIsError && canFetchBasic && (
+          <p className="text-xs text-slate-400 text-center py-4">연도별 요약 데이터가 없습니다.</p>
+        )}
+      </div>
+
       {isLoading && (
         <div className="flex flex-col items-center justify-center gap-3 py-8 px-4 text-center rounded-xl bg-white shadow-sm border border-slate-100">
           <div
@@ -178,14 +261,8 @@ export default function PaidAnalysisPanel() {
             onPaidMatrixCellClick={openMatrixTrend}
           />
 
-          {Object.keys(result.by_region).length > 1 && (
-            <StatsTable
-              title="지역별"
-              rows={Object.entries(result.by_region).map(([k, v]) => ({
-                label: k,
-                stats: v,
-              }))}
-            />
+          {regionBreakdownRows.length > 0 && (
+            <StatsTable title="지역별 (법정동·리)" rows={regionBreakdownRows} />
           )}
         </div>
       )}

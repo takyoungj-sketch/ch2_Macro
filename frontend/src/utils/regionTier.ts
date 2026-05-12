@@ -43,3 +43,14 @@ export function resolveBeopjungriCodes(
   out.sort((a, b) => a.localeCompare(b));
   return out;
 }
+
+/** `by_region` 등 법정리 코드 → 표시용 명칭 (로드된 regions 목록 기준) */
+export function beopjungriNameForCode(
+  regions: RegionItem[],
+  beopjungriCode: string
+): string {
+  const c = String(beopjungriCode).trim();
+  const row = regions.find((r) => String(r.beopjungri_code).trim() === c);
+  const name = row?.beopjungri_name?.trim();
+  return name && name.length > 0 ? name : c;
+}
