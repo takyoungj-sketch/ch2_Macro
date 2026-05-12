@@ -202,8 +202,8 @@ export default function PaidAnalysisPanel() {
             )}
           </div>
           <p className="text-[11px] text-slate-400 max-w-sm leading-relaxed">
-            거래량이 많으면 열 시간이 길어질 수 있습니다. 「이상치 제외」가 켜져 있으면 전체 거래 행을
-            읽는 방식이라 더 느릴 수 있습니다.
+            거래량이 많으면 열 시간이 길어질 수 있습니다. 「이상치 제외」가 켜져 있으면 IQR 배수와
+            관계없이 전체 거래 행을 읽는 방식이라 더 느릴 수 있습니다.
           </p>
           {analyzeWaitSec >= 5 && (
             <button

@@ -43,18 +43,22 @@ def compute_stats(prices: Sequence[float]) -> dict:
     }
 
 
-def remove_outliers(prices: Sequence[float]) -> list[float]:
+def remove_outliers(
+    prices: Sequence[float], *, iqr_multiplier: float = OUTLIER_IQR_MULTIPLIER
+) -> list[float]:
     arr = np.asarray(prices, dtype=float)
     arr = arr[~np.isnan(arr)]
     if len(arr) < 4:
         return arr.tolist()
     q1, q3 = np.percentile(arr, [25, 75])
     iqr = q3 - q1
-    lo, hi = q1 - OUTLIER_IQR_MULTIPLIER * iqr, q3 + OUTLIER_IQR_MULTIPLIER * iqr
+    lo, hi = q1 - iqr_multiplier * iqr, q3 + iqr_multiplier * iqr
     return arr[(arr >= lo) & (arr <= hi)].tolist()
 
 
-def outlier_keep_mask(prices: Sequence[float]) -> list[bool]:
+def outlier_keep_mask(
+    prices: Sequence[float], *, iqr_multiplier: float = OUTLIER_IQR_MULTIPLIER
+) -> list[bool]:
     """행 단위 계산 후 연도·그룹으로 나눌 때 같은 인덱스에 대해 재사용."""
     raw_list = list(prices)
     n = len(raw_list)
@@ -84,7 +88,7 @@ def outlier_keep_mask(prices: Sequence[float]) -> list[bool]:
 
     q1, q3 = np.percentile(arr, [25, 75])
     iqr = q3 - q1
-    lo, hi = q1 - OUTLIER_IQR_MULTIPLIER * iqr, q3 + OUTLIER_IQR_MULTIPLIER * iqr
+    lo, hi = q1 - iqr_multiplier * iqr, q3 + iqr_multiplier * iqr
     keep_val = ((arr >= lo) & (arr <= hi)).tolist()
 
     for j, ki in enumerate(finite_idx):

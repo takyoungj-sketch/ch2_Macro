@@ -138,24 +138,53 @@ export default function PaidFilterTable() {
           </tr>
 
           {advanced && (
-            <tr className="border-t border-slate-100 align-top">
-              <th className="px-2 py-2 bg-slate-50 text-[11px] font-semibold text-slate-600 text-left whitespace-nowrap">
-                이상치
-              </th>
-              <td className="px-2 py-2">
-                <label className="flex items-center gap-1.5 text-[11px] text-slate-600 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={paidRequest.exclude_outlier}
-                    onChange={(e) =>
-                      setPaidRequest({ exclude_outlier: e.target.checked })
-                    }
-                    className="rounded"
-                  />
-                  IQR×3 단가 이상치 제외 후 집계
-                </label>
-              </td>
-            </tr>
+            <>
+              <tr className="border-t border-slate-100 align-top">
+                <th className="px-2 py-2 bg-slate-50 text-[11px] font-semibold text-slate-600 text-left whitespace-nowrap">
+                  이상치
+                </th>
+                <td className="px-2 py-2 space-y-2">
+                  <label className="flex items-center gap-1.5 text-[11px] text-slate-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={paidRequest.exclude_outlier}
+                      onChange={(e) =>
+                        setPaidRequest({ exclude_outlier: e.target.checked })
+                      }
+                      className="rounded"
+                    />
+                    단가 Tukey 펜스로 이상치 제외 후 집계 (Q1−k×IQR ~ Q3+k×IQR)
+                  </label>
+                  <div
+                    className={`flex flex-wrap items-center gap-2 pt-0.5 ${
+                      paidRequest.exclude_outlier ? "" : "opacity-40 pointer-events-none"
+                    }`}
+                    aria-disabled={!paidRequest.exclude_outlier}
+                  >
+                    <span className="text-[10px] text-slate-500 shrink-0">IQR 배수 k:</span>
+                    {([1.5, 2, 3] as const).map((k) => (
+                      <label
+                        key={k}
+                        className={`inline-flex items-center gap-0.5 text-[11px] cursor-pointer ${paidRequest.outlier_iqr_multiplier === k ? "text-blue-700 font-semibold" : "text-slate-600"}`}
+                      >
+                        <input
+                          type="radio"
+                          name="outlier-iqr-k"
+                          className="rounded-full border-slate-300"
+                          checked={paidRequest.outlier_iqr_multiplier === k}
+                          onChange={() => setPaidRequest({ outlier_iqr_multiplier: k })}
+                          disabled={!paidRequest.exclude_outlier}
+                        />
+                        {k}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-slate-400 leading-snug">
+                    k가 작을수록 더 많은 극단 단가가 제외됩니다. 기존 고정값은 k=3(보수적)에 해당합니다.
+                  </p>
+                </td>
+              </tr>
+            </>
           )}
 
           <tr className="border-t border-slate-200 bg-slate-50/80">

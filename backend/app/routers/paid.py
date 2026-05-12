@@ -190,6 +190,7 @@ def _normalize_matrix_yearly_req(req_body: MatrixYearlyRequest) -> PaidAnalysisR
         zone_types=req_body.zone_types,
         exclude_partial=req_body.exclude_partial,
         exclude_outlier=req_body.exclude_outlier,
+        outlier_iqr_multiplier=req_body.outlier_iqr_multiplier,
     )
 
 
@@ -394,10 +395,15 @@ def _set_cache(key: str, result: dict, db: Session) -> None:
             pass
 
 
-def _prices_to_stats(prices: list[float], exclude_outlier: bool) -> StatsResult:
+def _prices_to_stats(
+    prices: list[float],
+    exclude_outlier: bool,
+    *,
+    iqr_multiplier: float,
+) -> StatsResult:
     ps = prices
     if exclude_outlier:
-        ps = remove_outliers(ps)
+        ps = remove_outliers(ps, iqr_multiplier=iqr_multiplier)
     s = compute_stats(ps)
     return StatsResult(**s)
 
@@ -498,16 +504,24 @@ def _analyze_core_materialized_rows(
         lc = lraw if lraw else "기타"
         matrix_prices[(zt, lc)].append(p)
 
-    total = _prices_to_stats(all_prices, req.exclude_outlier)
+    k = float(req.outlier_iqr_multiplier)
+    total = _prices_to_stats(all_prices, req.exclude_outlier, iqr_multiplier=k)
     matrix = [
-        MatrixCell(zone_type=z, land_category=c, stats=_prices_to_stats(ps, req.exclude_outlier))
+        MatrixCell(
+            zone_type=z,
+            land_category=c,
+            stats=_prices_to_stats(ps, req.exclude_outlier, iqr_multiplier=k),
+        )
         for (z, c), ps in matrix_prices.items()
     ]
 
     return PaidAnalysisResponse(
         request=req,
         total=total,
-        by_region={k: _prices_to_stats(v, req.exclude_outlier) for k, v in by_region.items()},
+        by_region={
+            rk: _prices_to_stats(v, req.exclude_outlier, iqr_multiplier=k)
+            for rk, v in by_region.items()
+        },
         by_zone={},
         by_land_category={},
         by_road_condition={},
@@ -800,7 +814,9 @@ def matrix_yearly(body: MatrixYearlyRequest, db: Session = Depends(get_db)):
     prices_px: list[float] = [float(r.px) for r in rows]
 
     if body.exclude_outlier:
-        keep = outlier_keep_mask(prices_px)
+        keep = outlier_keep_mask(
+            prices_px, iqr_multiplier=float(body.outlier_iqr_multiplier)
+        )
         years_px = [y for y, ok in zip(years_px, keep) if ok]
         prices_px = [p for p, ok in zip(prices_px, keep) if ok]
 

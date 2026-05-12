@@ -75,6 +75,8 @@ export interface PaidAnalysisRequest {
   zone_types?: string[] | null;
   exclude_partial: boolean;
   exclude_outlier: boolean;
+  /** 이상치 제외 시 단가 Tukey 펜스 IQR 배수 (1.5 / 2 / 3) */
+  outlier_iqr_multiplier: number;
 }
 
 export interface PaidAnalysisResponse {

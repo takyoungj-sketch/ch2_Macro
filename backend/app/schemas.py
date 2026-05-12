@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional
-from pydantic import BaseModel, Field
+import math
+from typing import Annotated, Literal, Optional
+
+from pydantic import AfterValidator, BaseModel, Field
 
 
 # ---------------------------------------------------------------------------
@@ -119,6 +121,27 @@ class RegionSelectionUnit(BaseModel):
     model_config = {"extra": "forbid"}
 
 
+def _normalize_outlier_iqr_multiplier(v: object) -> float:
+    """허용: 1.5, 2, 3 (exclude_outlier 미사용 시 값은 무시됨)."""
+    if v is None:
+        return 3.0
+    fv = float(v)
+    for a in (1.5, 2.0, 3.0):
+        if math.isclose(fv, a, rel_tol=0, abs_tol=1e-9):
+            return a
+    raise ValueError("outlier_iqr_multiplier는 1.5, 2, 3 중 하나여야 합니다.")
+
+
+OutlierIqrMultiplier = Annotated[
+    float,
+    Field(
+        3.0,
+        description="이상치 제외 시 적용할 IQR 배수(Tukey 펜스: Q1−k·IQR ~ Q3+k·IQR)",
+    ),
+    AfterValidator(_normalize_outlier_iqr_multiplier),
+]
+
+
 class PaidFilters(BaseModel):
     """유료 분석 공통 필터 (동적 쿼리 WHERE 조건과 동일)."""
 
@@ -140,7 +163,8 @@ class PaidFilters(BaseModel):
     land_categories: Optional[list[str]] = Field(None)
     zone_types: Optional[list[str]] = Field(None)
     exclude_partial: bool = Field(False, description="지분거래 제외(True일 때 미포함)")
-    exclude_outlier: bool = Field(False, description="IQR×3 이상치 제외")
+    exclude_outlier: bool = Field(False, description="단가 IQR 기반 이상치 제외 활성화")
+    outlier_iqr_multiplier: OutlierIqrMultiplier = 3.0
 
     model_config = {"extra": "forbid"}
 
@@ -172,6 +196,7 @@ class PaidAnalysisRequest(BaseModel):
     zone_types: Optional[list[str]] = Field(None)
     exclude_partial: bool = Field(False, description="지분거래 제외")
     exclude_outlier: bool = Field(False)
+    outlier_iqr_multiplier: OutlierIqrMultiplier = 3.0
 
 
 class PaidAnalysisResponse(BaseModel):

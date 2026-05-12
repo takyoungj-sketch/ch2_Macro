@@ -72,6 +72,7 @@ const defaultPaidRequest: PaidAnalysisRequest = {
   zone_types: null,
   exclude_partial: false,
   exclude_outlier: false,
+  outlier_iqr_multiplier: 3,
   base_cache_key: null,
 };
 

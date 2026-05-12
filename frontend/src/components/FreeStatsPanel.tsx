@@ -96,6 +96,7 @@ export default function FreeStatsPanel() {
         zone_types: null,
         exclude_partial: false,
         exclude_outlier: false,
+        outlier_iqr_multiplier: 3,
         zone_type: zoneType,
         land_category: landCategory,
       };
