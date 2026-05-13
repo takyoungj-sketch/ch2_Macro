@@ -138,6 +138,8 @@ python seed_population_csv.py --file ../data/population/지역별(법정동) 성
 python seed_population_csv.py --file ...csv --codes-prefix 41
 # 충청남도만 (법정동코드 접두 44)
 python seed_population_csv.py --file ...csv --codes-prefix 44
+# 경상북도만 (법정동코드 접두 47)
+python seed_population_csv.py --file ...csv --codes-prefix 47
 # 검증만
 python seed_population_csv.py --file ...csv --dry-run
 # 해당 연도·월 전국 행 삭제 후 전량 재적재 (주의)
