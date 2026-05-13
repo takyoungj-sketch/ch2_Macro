@@ -9,6 +9,7 @@
 사용 예:
     python run_pipeline.py --initial --years 5
     python run_pipeline.py --refresh --months 3
+    python run_pipeline.py --excel-dir "C:/원본/토지"   # 폴더 내 xlsx 전부 → raw → clean → build_stats
 """
 
 from __future__ import annotations
@@ -37,6 +38,11 @@ def main() -> None:
     g = parser.add_mutually_exclusive_group(required=True)
     g.add_argument("--initial", action="store_true", help="최근 N년 전체 수집 (api 모드)")
     g.add_argument("--refresh", action="store_true", help="최근 M개월 재수집·정제 (해제 반영용)")
+    g.add_argument(
+        "--excel-dir",
+        metavar="DIR",
+        help="폴더 내 .xlsx 일괄 수집 후 정제·사전집계 (국토부 원본/통합은 collect --format 참고)",
+    )
     parser.add_argument("--years", type=int, default=5)
     parser.add_argument("--months", type=int, default=3)
     parser.add_argument(
@@ -44,10 +50,26 @@ def main() -> None:
         action="store_true",
         help="수집 생략 (이미 raw에 적재된 경우 정제·집계만)",
     )
+    parser.add_argument(
+        "--excel-format",
+        choices=["raw", "merged", "auto"],
+        default="auto",
+        help="--excel-dir 사용 시 collect.py 의 --format (국토부 원본=raw·통합·auto)",
+    )
     args = parser.parse_args()
 
     if not args.skip_collect:
-        if args.initial:
+        if getattr(args, "excel_dir", None):
+            _run(
+                "collect.py",
+                "--mode",
+                "excel",
+                "--directory",
+                str(Path(args.excel_dir).resolve()),
+                "--format",
+                str(args.excel_format),
+            )
+        elif args.initial:
             _run("collect.py", "--mode", "api", "--years", str(args.years))
         else:
             _run("collect.py", "--mode", "api", "--months", str(args.months))

@@ -7,6 +7,7 @@ land_transactions_raw 테이블에 적재한다.
     python collect.py --mode api --years 5            # API로 최근 5년 수집
     python collect.py --mode api --months 3           # API로 최근 3개월 (정기 갱신)
     python collect.py --mode excel --file raw.xlsx    # 국토부 원본 xlsx (13행 헤더 자동 처리)
+    python collect.py --mode excel --directory C:/원본/토지  # 폴더 내 .xlsx 전부(전국 base 등)
     python collect.py --mode excel --file merged.xlsx --format merged
                                                       # 통합 xlsx (헤더 없음, 14컬럼)
 
@@ -192,29 +193,73 @@ def _record_nan_to_none(rec: dict) -> dict:
     return clean
 
 
-def load_to_raw_table(df: pd.DataFrame, source_year: int, source_month: int) -> int:
+_RAW_INSERT = text("""
+    INSERT INTO land_transactions_raw (source_year, source_month, raw_data)
+    VALUES (:year, :month, CAST(:data AS jsonb))
+""")
+
+
+def load_to_raw_table(
+    df: pd.DataFrame,
+    source_year: int,
+    source_month: int,
+    *,
+    batch_size: int = 500,
+) -> int:
     """
-    DataFrame을 land_transactions_raw 테이블에 UPSERT 방식으로 적재한다.
+    DataFrame을 land_transactions_raw 테이블에 적재한다.
+    SQLAlchemy executemany 형태의 배치 INSERT로 왕복 비용을 줄인다.
     반환: 신규 적재된 행 수
     """
-    engine = get_engine()
-    inserted = 0
+    if df.empty:
+        return 0
 
+    engine = get_engine()
+    params_list: list[dict] = []
+
+    for _, row in df.iterrows():
+        row_dict = _record_nan_to_none(row.to_dict())
+        raw_json = json.dumps(row_dict, ensure_ascii=False, default=str)
+        params_list.append(
+            {"year": source_year, "month": source_month, "data": raw_json}
+        )
+
+    inserted = 0
     with engine.begin() as conn:
-        for _, row in df.iterrows():
-            row_dict = _record_nan_to_none(row.to_dict())
-            raw_json = json.dumps(row_dict, ensure_ascii=False, default=str)
-            conn.execute(
-                text("""
-                    INSERT INTO land_transactions_raw (source_year, source_month, raw_data)
-                    VALUES (:year, :month, CAST(:data AS jsonb))
-                """),
-                {"year": source_year, "month": source_month, "data": raw_json},
-            )
-            inserted += 1
+        for start in range(0, len(params_list), batch_size):
+            chunk = params_list[start : start + batch_size]
+            conn.execute(_RAW_INSERT, chunk)
+            inserted += len(chunk)
 
     log.info("raw 테이블 적재 완료: %d건 (연도=%d, 월=%d)", inserted, source_year, source_month)
     return inserted
+
+
+def resolve_excel_paths(*, file_arg: str | None, directory_arg: str | None) -> list[Path]:
+    """--file 과 --directory 배타. 호출 전에 둘 중 하나만 있는지 검증할 것."""
+    if file_arg:
+        out: list[Path] = []
+        for part in file_arg.split(","):
+            p = Path(part.strip()).expanduser().resolve()
+            if not p.is_file():
+                raise FileNotFoundError(f"파일이 없습니다: {p}")
+            out.append(p)
+        return out
+
+    if directory_arg:
+        root = Path(directory_arg).expanduser().resolve()
+        if not root.is_dir():
+            raise FileNotFoundError(f"폴더가 없습니다: {root}")
+        by_lower: dict[str, Path] = {}
+        for child in root.iterdir():
+            if not child.is_file():
+                continue
+            if child.suffix.lower() != ".xlsx":
+                continue
+            by_lower.setdefault(child.name.lower(), child)
+        return sorted(by_lower.values(), key=lambda p: p.name.lower())
+
+    raise ValueError("내부 오류: excel 경로 미지정")
 
 
 def get_year_months_for_last_n_months(n: int) -> list[tuple[int, int]]:
@@ -246,7 +291,17 @@ def main():
     parser.add_argument("--mode", choices=["api", "excel"], default="api")
     parser.add_argument("--years", type=int, default=5, help="최근 N년 수집 (api 모드)")
     parser.add_argument("--months", type=int, default=0, help="최근 N개월 수집 (정기 갱신용)")
-    parser.add_argument("--file", type=str, help="로컬 Excel 파일 경로, 쉼표로 복수 지정 가능 (excel 모드)")
+    parser.add_argument(
+        "--file",
+        type=str,
+        help="로컬 Excel 경로, 쉼표 구분 복수 (excel 모드, --directory 와 배타)",
+    )
+    parser.add_argument(
+        "--directory",
+        type=str,
+        metavar="DIR",
+        help="폴더 안의 .xlsx 전부 (excel 모드, --file 과 배타)",
+    )
     parser.add_argument(
         "--format",
         choices=["raw", "merged", "auto"],
@@ -257,18 +312,32 @@ def main():
     args = parser.parse_args()
 
     if args.mode == "excel":
-        if not args.file:
-            parser.error("--file 이 필요합니다")
-        # 쉼표로 복수 파일 지정 지원 (예: 충북2021.xlsx,충북2022.xlsx)
-        file_list = [f.strip() for f in args.file.split(",") if f.strip()]
+        if args.file and args.directory:
+            parser.error("--file 과 --directory 는 함께 지정할 수 없습니다")
+        if not args.file and not args.directory:
+            parser.error("excel 모드에는 --file 또는 --directory 가 필요합니다")
         fmt = getattr(args, "format", "auto")
-        all_frames = []
-        for fpath in file_list:
-            df = collect_from_excel(fpath, fmt=fmt)
-            all_frames.append(df)
-        df = pd.concat(all_frames, ignore_index=True) if all_frames else pd.DataFrame()
+        try:
+            paths = resolve_excel_paths(file_arg=args.file, directory_arg=args.directory)
+        except (ValueError, FileNotFoundError) as exc:
+            parser.error(str(exc))
+        if not paths:
+            parser.error("적재할 .xlsx 파일이 없습니다.")
+
         today = date.today()
-        load_to_raw_table(df, today.year, today.month)
+        total_rows = 0
+        inserted = 0
+        for idx, path in enumerate(paths, start=1):
+            log.info("[%d/%d] Excel 처리: %s", idx, len(paths), path)
+            df = collect_from_excel(str(path), fmt=fmt)
+            total_rows += len(df)
+            inserted += load_to_raw_table(df, today.year, today.month)
+        log.info(
+            "excel 일괄 적재 종료: 파일 %d개, 데이터 행 %d건 → raw 행 %d건",
+            len(paths),
+            total_rows,
+            inserted,
+        )
 
     elif args.mode == "api":
         service_key = os.environ.get("MOLIT_API_KEY", "")

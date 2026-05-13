@@ -74,6 +74,7 @@ psql -U postgres -d land_stats -f db/002_indexes.sql
 # 백엔드 venv에서 적용 스크립트: cd backend && .venv\\Scripts\\python scripts/run_paid_index.py
 # 이미 예전 001만 적용한 DB라면: psql ... -f db/003_legacy_patch.sql
 # 기존 DB에 표준편차 컬럼이 없다면: psql ... -f db/004_add_basic_stats_std.sql
+# 도로조건 문자열 명칭 이전 반영 시: psql ... -f db/005_road_condition_labels.sql
 ```
 
 ### 2. 파이프라인 실행
@@ -91,6 +92,27 @@ python run_pipeline.py --initial --years 5
 # 매월 갱신: 최근 3개월 재수집(해제·정정 반영) → 정제 → 사전집계 전체 재계산
 python run_pipeline.py --refresh --months 3
 ```
+
+#### 전국 엑셀으로 base DB 초기 적재 (파일럿 DB에서 확장할 때)
+
+1. **법정동 마스터(전국)**  
+   행정안전부·공공데이터포털 등에서 법정동코드 전체 파일을 받은 뒤, `DATABASE_URL` 이 있는 환경에서:  
+   `python seed_region_codes.py --file 법정동코드_전체.txt`  
+   (`--sido` 를 생략하면 전 시도가 들어갑니다. 강원·전북 특별자치도 등은 파일에 쓰인 시도명과 `seed_region_codes.py` 의 `SIDO_CODE_MAP` 이 맞아야 합니다.)
+2. **`pipeline` 쪽 DB 접속**  
+   `pipeline/` 에서도 `DATABASE_URL` 을 읽습니다. `pipeline/.env` 에 백엔드와 동일한 URL을 두거나, 같은 셸에서 `set DATABASE_URL=...` 후 실행하세요.
+3. **원본 엑셀 경로**  
+   국토부 토지 거래 **원본 xlsx**(또는 통합 xlsx)만 `원본폴더/토지` 같은 **한 폴더**에 모읍니다 (하위 폴더는 검색하지 않습니다. 필요하면 평면으로 복사).
+4. **한 번에 실행** (수집 후 `clean.py`·`build_stats.py` 자동):  
+
+```bash
+cd pipeline
+python run_pipeline.py --excel-dir "절대/경로/원본폴더/토지" --excel-format auto
+```
+
+통합 xlsx만 있으면 `--excel-format merged`, 국토부 다운로드 원본만 있으면 보통 `auto` 또는 `raw` 입니다.
+
+전량 갈아엎을 때는 적재 전에 `land_transactions_raw`, `land_transactions`, `land_basic_stats` 등 비우기(TRUNCATE)·백업 여부를 결정하세요(FK·캐시 테이블 순서 주의).
 
 ### 파이프라인 설계 요약
 
