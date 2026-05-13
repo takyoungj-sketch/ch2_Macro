@@ -262,6 +262,11 @@ def map_beopjungri_codes(df: pd.DataFrame, lookup: dict) -> pd.Series:
     return pd.Series(results, index=df.index)
 
 
+_NOT_IN_LT = """NOT EXISTS (
+                  SELECT 1 FROM land_transactions lt WHERE lt.raw_id = r.id
+              )"""
+
+
 def fetch_unprocessed_raw(since: str | None = None, reprocess_all: bool = False) -> pd.DataFrame:
     """미처리 raw 데이터를 읽어 DataFrame으로 반환한다."""
     engine = get_engine()
@@ -273,10 +278,10 @@ def fetch_unprocessed_raw(since: str | None = None, reprocess_all: bool = False)
             where = "WHERE r.loaded_at >= :since"
             params["since"] = since
     elif since:
-        where = "WHERE r.loaded_at >= :since AND r.id NOT IN (SELECT DISTINCT raw_id FROM land_transactions WHERE raw_id IS NOT NULL)"
+        where = f"WHERE r.loaded_at >= :since AND {_NOT_IN_LT}"
         params["since"] = since
     else:
-        where = "WHERE r.id NOT IN (SELECT DISTINCT raw_id FROM land_transactions WHERE raw_id IS NOT NULL)"
+        where = f"WHERE {_NOT_IN_LT}"
 
     query = f"""
         SELECT r.id AS raw_id, r.source_year, r.source_month, r.raw_data

@@ -75,6 +75,7 @@ psql -U postgres -d land_stats -f db/002_indexes.sql
 # 이미 예전 001만 적용한 DB라면: psql ... -f db/003_legacy_patch.sql
 # 기존 DB에 표준편차 컬럼이 없다면: psql ... -f db/004_add_basic_stats_std.sql
 # 도로조건 문자열 명칭 이전 반영 시: psql ... -f db/005_road_condition_labels.sql
+# 대량 raw → clean 시 미처리 조회 속도: psql ... -f db/006_land_tx_raw_id_index.sql
 ```
 
 ### 2. 파이프라인 실행
