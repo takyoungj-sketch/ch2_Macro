@@ -11,6 +11,15 @@ ALPHA = 0.05
 MIN_RELIABLE_COUNT = 15
 OUTLIER_IQR_MULTIPLIER = 3.0
 
+# 만원/㎡ 단가 통계 반올림 자리수 (매트릭스·표는 소수 첫째 자리까지 표시)
+PRICE_STAT_DECIMALS = 1
+
+
+def _rnd_price(x: float | None) -> float | None:
+    if x is None:
+        return None
+    return round(float(x), PRICE_STAT_DECIMALS)
+
 
 def compute_stats(prices: Sequence[float]) -> dict:
     arr = np.asarray(prices, dtype=float)
@@ -30,15 +39,15 @@ def compute_stats(prices: Sequence[float]) -> dict:
 
     return {
         "count": n,
-        "mean": round(mean, 0),
-        "std": round(std, 0) if std is not None else None,
-        "ci_lower": round(ci_lower, 0) if ci_lower is not None else None,
-        "ci_upper": round(ci_upper, 0) if ci_upper is not None else None,
-        "min": round(float(np.min(arr)), 0),
-        "p25": round(float(np.percentile(arr, 25)), 0),
-        "median": round(float(np.median(arr)), 0),
-        "p75": round(float(np.percentile(arr, 75)), 0),
-        "max": round(float(np.max(arr)), 0),
+        "mean": _rnd_price(mean),
+        "std": _rnd_price(std) if std is not None else None,
+        "ci_lower": _rnd_price(ci_lower) if ci_lower is not None else None,
+        "ci_upper": _rnd_price(ci_upper) if ci_upper is not None else None,
+        "min": _rnd_price(float(np.min(arr))),
+        "p25": _rnd_price(float(np.percentile(arr, 25))),
+        "median": _rnd_price(float(np.median(arr))),
+        "p75": _rnd_price(float(np.percentile(arr, 75))),
+        "max": _rnd_price(float(np.max(arr))),
         "is_reliable": n >= MIN_RELIABLE_COUNT,
     }
 
@@ -140,25 +149,25 @@ def stats_dict_from_sql_aggregates(
     vmax = _finite_or_none(max_raw)
 
     ci_lower, ci_upper = None, None
-    std_out = round(std_raw, 0) if std_raw is not None else None
+    std_out = _rnd_price(std_raw) if std_raw is not None else None
     if n >= 2 and mean_f is not None and std_raw is not None:
         sem = float(std_raw) / (n ** 0.5)
         ci = st.t.interval(1 - ALPHA, df=n - 1, loc=float(mean_f), scale=sem)
         ci_lower = _finite_or_none(ci[0])
         ci_upper = _finite_or_none(ci[1])
 
-    mean_out = round(mean_f, 0) if mean_f is not None else None
+    mean_out = _rnd_price(mean_f) if mean_f is not None else None
 
     return {
         "count": int(n),
         "mean": mean_out,
         "std": std_out,
-        "ci_lower": round(ci_lower, 0) if ci_lower is not None else None,
-        "ci_upper": round(ci_upper, 0) if ci_upper is not None else None,
-        "min": round(vmin, 0) if vmin is not None else None,
-        "p25": round(q1, 0) if q1 is not None else None,
-        "median": round(med, 0) if med is not None else None,
-        "p75": round(q3, 0) if q3 is not None else None,
-        "max": round(vmax, 0) if vmax is not None else None,
+        "ci_lower": _rnd_price(ci_lower) if ci_lower is not None else None,
+        "ci_upper": _rnd_price(ci_upper) if ci_upper is not None else None,
+        "min": _rnd_price(vmin) if vmin is not None else None,
+        "p25": _rnd_price(q1) if q1 is not None else None,
+        "median": _rnd_price(med) if med is not None else None,
+        "p75": _rnd_price(q3) if q3 is not None else None,
+        "max": _rnd_price(vmax) if vmax is not None else None,
         "is_reliable": int(n) >= MIN_RELIABLE_COUNT,
     }

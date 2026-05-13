@@ -13,6 +13,9 @@ import scipy.stats as st
 
 from constants import ALPHA, MIN_RELIABLE_COUNT, OUTLIER_IQR_MULTIPLIER
 
+# 만원/㎡ 통계 저장·표시와 동일하게 소수 첫째 자리까지 반올림 (backend stats_utils 와 맞춤)
+PRICE_STAT_DECIMALS = 1
+
 
 def compute_stats(prices: Sequence[float]) -> dict:
     """
@@ -43,15 +46,15 @@ def compute_stats(prices: Sequence[float]) -> dict:
 
     return {
         "count": n,
-        "mean": round(mean, 0),
-        "std": round(std, 0) if std is not None else None,
-        "ci_lower": round(ci_lower, 0) if ci_lower is not None else None,
-        "ci_upper": round(ci_upper, 0) if ci_upper is not None else None,
-        "min": round(mn, 0),
-        "p25": round(p25, 0),
-        "median": round(median, 0),
-        "p75": round(p75, 0),
-        "max": round(mx, 0),
+        "mean": round(mean, PRICE_STAT_DECIMALS),
+        "std": round(std, PRICE_STAT_DECIMALS) if std is not None else None,
+        "ci_lower": round(ci_lower, PRICE_STAT_DECIMALS) if ci_lower is not None else None,
+        "ci_upper": round(ci_upper, PRICE_STAT_DECIMALS) if ci_upper is not None else None,
+        "min": round(mn, PRICE_STAT_DECIMALS),
+        "p25": round(p25, PRICE_STAT_DECIMALS),
+        "median": round(median, PRICE_STAT_DECIMALS),
+        "p75": round(p75, PRICE_STAT_DECIMALS),
+        "max": round(mx, PRICE_STAT_DECIMALS),
     }
 
 
