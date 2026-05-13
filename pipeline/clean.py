@@ -335,7 +335,7 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     df["total_price_10k"] = pd.to_numeric(
         price_raw.str.replace(",", "", regex=False),
         errors="coerce",
-    )
+    ).round(1)
 
     # 단가(만원/㎡) = 거래금액(만원) / 계약면적.
     # 참고 엑셀 정제 파일의 '단가' 컬럼과 같은 분석 단위다.
@@ -510,6 +510,9 @@ def upsert_transactions(df: pd.DataFrame) -> int:
                         contract_year = EXCLUDED.contract_year,
                         contract_month = EXCLUDED.contract_month,
                         contract_date = EXCLUDED.contract_date,
+                        beopjungri_code = EXCLUDED.beopjungri_code,
+                        sido_code = EXCLUDED.sido_code,
+                        sigungu_code = EXCLUDED.sigungu_code,
                         land_category = EXCLUDED.land_category,
                         zone_type = EXCLUDED.zone_type,
                         road_condition = EXCLUDED.road_condition,
