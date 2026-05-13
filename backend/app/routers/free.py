@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.analysis_base_cache import create_analysis_base_cache
 from app.db import get_db
+from app.population_query import attach_population_year_end
 from app.schemas import (
     FreeStatsBulkRequest,
     FreeStatsResponse,
@@ -402,6 +403,8 @@ def get_basic_stats_bulk(
         else:
             by_year.append(YearlyTradeStat(year=y, count=0))
 
+    by_year = attach_population_year_end(db, region_codes=kept, items=by_year)
+
     return FreeStatsResponse(
         beopjungri_code=",".join(kept),
         beopjungri_name=title,
@@ -529,6 +532,8 @@ def get_basic_stats(beopjungri_code: str, db: Session = Depends(get_db)):
             )
         else:
             by_year.append(YearlyTradeStat(year=y, count=0))
+
+    by_year = attach_population_year_end(db, region_codes=[code_trim], items=by_year)
 
     by_zone = {
         r.zone_type: row_to_stats(r)

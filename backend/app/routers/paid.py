@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 from app.analysis_base_cache import has_valid_analysis_base_cache
 from app.config import settings
 from app.db import get_db
+from app.population_query import attach_population_year_end
 from app.schemas import (
     MatrixCell,
     MatrixYearlyRequest,
@@ -614,6 +615,9 @@ def _analyze_core_materialized_rows(
     by_year_list = _by_year_trade_stats_materialized(
         year_bucket, columns=ycols, iqr_multiplier=k
     )
+    by_year_list = attach_population_year_end(
+        db, region_codes=resolved_codes, items=by_year_list
+    )
     total = _prices_to_stats(all_prices, req.exclude_outlier, iqr_multiplier=k)
     matrix = [
         MatrixCell(
@@ -745,6 +749,9 @@ def _analyze_core_sql_aggregate(
     if not ycols:
         ycols = _infer_year_columns_from_items(by_year_items)
     by_year_list = _parse_by_year_agg_json(by_year_items, ycols)
+    by_year_list = attach_population_year_end(
+        db, region_codes=resolved_codes, items=by_year_list
+    )
 
     return PaidAnalysisResponse(
         request=req,
@@ -849,7 +856,11 @@ def analyze(
     cached = _get_cache(cache_key, db)
     if cached is not None:
         try:
-            return PaidAnalysisResponse.model_validate(cached)
+            resp = PaidAnalysisResponse.model_validate(cached)
+            merged_y = attach_population_year_end(
+                db, region_codes=resolved_codes, items=list(resp.by_year)
+            )
+            return resp.model_copy(update={"by_year": merged_y})
         except (ValidationError, TypeError, ValueError) as val_err:
             log.warning(
                 "analysis_cache entry invalid (%s…), rebuilding: %s",

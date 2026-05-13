@@ -24,6 +24,8 @@ export interface YearlyTradeStat {
   total_price_10k_sum: number;
   area_sqm_sum: number;
   unit_price_per_sqm: number | null;
+  /** 해당 연도 연말 법정동 인구 합 (population_stats 없으면 null/미포함) */
+  population_year_end?: number | null;
 }
 
 export interface FreeStatsResponse {

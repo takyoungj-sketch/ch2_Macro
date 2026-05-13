@@ -77,6 +77,7 @@ class YearlyTradeStat(BaseModel):
     total_price_10k_sum: float = 0.0
     area_sqm_sum: float = 0.0
     unit_price_per_sqm: Optional[float] = None  # Σ만원 / Σ㎡, 면적 합 0이면 None
+    population_year_end: Optional[int] = None  # 해당 연도 연말 법정동 인구 합(선택 지역·population_stats)
 
 
 class MatrixCell(BaseModel):

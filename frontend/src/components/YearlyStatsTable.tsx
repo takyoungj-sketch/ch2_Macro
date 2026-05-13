@@ -12,6 +12,13 @@ interface Props {
 
 const fmtInt = (n: number) => n.toLocaleString("ko-KR", { maximumFractionDigits: 0 });
 
+/** 총거래액(만원) — 소수 첫째 자리까지 */
+const fmtManwonSum = (n: number) =>
+  n.toLocaleString("ko-KR", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+
 const fmtArea = (n: number) =>
   n.toLocaleString("ko-KR", { maximumFractionDigits: 1, minimumFractionDigits: 0 });
 
@@ -23,7 +30,7 @@ const num = (v: unknown, fallback = 0): number => {
 const fmtUnit = (n: number | null) =>
   n == null
     ? "-"
-    : n.toLocaleString("ko-KR", { maximumFractionDigits: 1, minimumFractionDigits: 0 });
+    : n.toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 /** 연도별 전체 거래·총거래액·총면적·가중 단가(만원/㎡) */
 export default function YearlyStatsTable({
@@ -80,7 +87,7 @@ export default function YearlyStatsTable({
               </td>
               {list.map((r) => (
                 <td key={`p-${r.year}`} className="border border-slate-200 px-2 py-1 text-right tabular-nums">
-                  {fmtInt(Math.round(num(r.total_price_10k_sum)))}
+                  {fmtManwonSum(Math.round(num(r.total_price_10k_sum) * 10) / 10)}
                 </td>
               ))}
             </tr>
@@ -106,6 +113,26 @@ export default function YearlyStatsTable({
                   {fmtUnit(typeof r.unit_price_per_sqm === "number" ? r.unit_price_per_sqm : null)}
                 </td>
               ))}
+            </tr>
+            <tr>
+              <td className="border border-slate-200 px-2 py-1 text-slate-600 sticky left-0 bg-white z-10">
+                연말 인구(명)
+              </td>
+              {list.map((r) => {
+                const pop = r.population_year_end;
+                const show =
+                  pop != null &&
+                  typeof pop === "number" &&
+                  Number.isFinite(pop);
+                return (
+                  <td
+                    key={`pop-${r.year}`}
+                    className="border border-slate-200 px-2 py-1 text-right tabular-nums text-slate-700"
+                  >
+                    {show ? fmtInt(pop) : ""}
+                  </td>
+                );
+              })}
             </tr>
           </tbody>
         </table>

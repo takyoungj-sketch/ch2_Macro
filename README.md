@@ -114,6 +114,22 @@ python run_pipeline.py --excel-dir "절대/경로/원본폴더/토지" --excel-f
 
 전량 갈아엎을 때는 적재 전에 `land_transactions_raw`, `land_transactions`, `land_basic_stats` 등 비우기(TRUNCATE)·백업 여부를 결정하세요(FK·캐시 테이블 순서 주의).
 
+#### 법정동 연말 인구 CSV (`population_stats`)
+
+행안부 형식 「지역별(법정동) 성별 연령별 주민등록 인구수_YYYYMMDD.csv」(헤더에 `법정동코드`, `계` 등)를 `data/population/` 등에 두고:
+
+```bash
+cd pipeline
+# 충북(코드 접두 43)만 적재·교체 (기본)
+python seed_population_csv.py --file ../data/population/지역별(법정동) 성별 연령별 주민등록 인구수_20221231.csv
+# 검증만
+python seed_population_csv.py --file ...csv --dry-run
+# 해당 연도·월 전국 행 삭제 후 전량 재적재 (주의)
+python seed_population_csv.py --file ...csv --all-sido
+```
+
+연도별 통계 표의 「연말 인구(명)」 행은 같은 DB의 `population_stats`(연말 월=`stats_month`)와 선택 법정동 코드를 맞춰 합산합니다. 적재 연도가 없는 해는 빈 칸입니다.
+
 ### 파이프라인 설계 요약
 
 | 단계 | 스크립트 | 출력 |
