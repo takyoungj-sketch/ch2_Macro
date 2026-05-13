@@ -112,6 +112,17 @@ python run_pipeline.py --excel-dir "절대/경로/원본폴더/토지" --excel-f
 
 통합 xlsx만 있으면 `--excel-format merged`, 국토부 다운로드 원본만 있으면 보통 `auto` 또는 `raw` 입니다.
 
+**시도별 폴더로만 넣을 때(예: `원본/토지_경기`)**  
+`collect.py`는 지정한 폴더 **바로 아래**의 `.xlsx`만 읽습니다(하위 폴더 미검색). 해당 시도 엑셀만 두고 `--excel-dir`에 그 폴더 절대 경로를 주면 됩니다.
+
+**`region_codes` 선행 적재(필수에 가깝게 권장)**  
+`clean.py`는 `시군구` 주소 문자열을 `region_codes`로 조회해 `beopjungri_code`·`sido_code`·`sigungu_code`를 채웁니다. 적재할 시도가 테이블에 없으면 코드가 비어 들어갑니다. 시도 단위로만 확장할 때는 같은 법정동 마스터 파일로  
+`python seed_region_codes.py --file ... --sido 경기도`  
+처럼 넣거나, 처음부터 전국을 넣습니다(`--sido` 생략).
+
+**같은 거래에 대해 정제를 다시 돌릴 때**  
+`land_transactions`는 `transaction_hash` 기준 UPSERT입니다. `clean.py`는 충돌 시에도 **`beopjungri_code`, `sido_code`, `sigungu_code`를 갱신**하도록 되어 있어, `region_codes`를 나중에 채운 뒤 `python clean.py --reprocess-all`로 주소 매핑을 다시 반영할 수 있습니다(집계는 이어서 `build_stats.py`).
+
 전량 갈아엎을 때는 적재 전에 `land_transactions_raw`, `land_transactions`, `land_basic_stats` 등 비우기(TRUNCATE)·백업 여부를 결정하세요(FK·캐시 테이블 순서 주의).
 
 #### 법정동 연말 인구 CSV (`population_stats`)
@@ -122,6 +133,8 @@ python run_pipeline.py --excel-dir "절대/경로/원본폴더/토지" --excel-f
 cd pipeline
 # 충북(코드 접두 43)만 적재·교체 (기본)
 python seed_population_csv.py --file ../data/population/지역별(법정동) 성별 연령별 주민등록 인구수_20221231.csv
+# 경기도만 (법정동코드 접두 41)
+python seed_population_csv.py --file ...csv --codes-prefix 41
 # 검증만
 python seed_population_csv.py --file ...csv --dry-run
 # 해당 연도·월 전국 행 삭제 후 전량 재적재 (주의)
