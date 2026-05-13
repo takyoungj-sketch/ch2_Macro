@@ -136,13 +136,16 @@ cd pipeline
 python seed_population_csv.py --file ../data/population/지역별(법정동) 성별 연령별 주민등록 인구수_20221231.csv
 # 경기도만 (법정동코드 접두 41)
 python seed_population_csv.py --file ...csv --codes-prefix 41
+# 충청남도만 (법정동코드 접두 44)
+python seed_population_csv.py --file ...csv --codes-prefix 44
 # 검증만
 python seed_population_csv.py --file ...csv --dry-run
 # 해당 연도·월 전국 행 삭제 후 전량 재적재 (주의)
 python seed_population_csv.py --file ...csv --all-sido
 ```
 
-연도별 통계 표의 「연말 인구(명)」 행은 같은 DB의 `population_stats`(연말 월=`stats_month`)와 선택 법정동 코드를 맞춰 합산합니다. 적재 연도가 없는 해는 빈 칸입니다.
+연도별 통계 표의 「연말 인구(명)」 행은 같은 DB의 `population_stats`(연말 월=`stats_month`)와 선택 법정동 코드를 맞춰 합산합니다. 적재 연도가 없는 해는 빈 칸입니다.  
+**기본 `--codes-prefix`는 `43`(충북)** 이라 같은 CSV라도 경기·충남 등은 **`--codes-prefix 41`** / **`44`** 로 연도별로 한 번씩 더 적재해야 표에 나옵니다(또는 시도 무관하게 `--all-sido`).
 
 ### 파이프라인 설계 요약
 
