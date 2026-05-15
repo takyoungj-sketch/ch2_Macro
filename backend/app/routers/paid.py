@@ -14,6 +14,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Optional
 
+import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import ValidationError
 from sqlalchemy import text
@@ -24,7 +25,13 @@ from app.config import settings
 from app.db import get_db
 from app.population_query import attach_population_year_end
 from app.schemas import (
+    HistogramBin,
     MatrixCell,
+    MatrixCellHistogramRequest,
+    MatrixCellHistogramResponse,
+    MatrixCellTransactionItem,
+    MatrixCellTransactionsRequest,
+    MatrixCellTransactionsResponse,
     MatrixYearlyRequest,
     MatrixYearlyResponse,
     MatrixYearlyStat,
@@ -194,6 +201,37 @@ def _normalize_matrix_yearly_req(req_body: MatrixYearlyRequest) -> PaidAnalysisR
         exclude_outlier=req_body.exclude_outlier,
         outlier_iqr_multiplier=req_body.outlier_iqr_multiplier,
     )
+
+
+def _matrix_cell_merged_where(body: MatrixYearlyRequest, db: Session) -> tuple[str, dict]:
+    """land_transactions lt 에 대해 매트릭스 한 칸(용도×지목)까지 적용한 WHERE 절과 바인딩."""
+    base_req = _normalize_matrix_yearly_req(body)
+    units = _normalize_region_units(base_req)
+    resolved_codes = expand_region_units(units, db)
+    base_cache_key = (
+        body.base_cache_key
+        if has_valid_analysis_base_cache(db, body.base_cache_key)
+        else None
+    )
+    base_parts, params = _build_conditions(
+        resolved_codes,
+        body.year_from,
+        body.year_to,
+        body.years,
+        base_cache_key,
+        body.road_conditions,
+        body.area_categories,
+        body.land_categories,
+        body.zone_types,
+        body.exclude_partial,
+    )
+    mtx_sql, mtx_par = _matrix_dimension_sql(
+        "lt", body.zone_type.strip(), body.land_category.strip()
+    )
+    merged_params = dict(params)
+    merged_params.update(mtx_par)
+    merged_where = " AND ".join(base_parts + [mtx_sql])
+    return merged_where, merged_params
 
 
 def _matrix_dimension_sql(alias: str, zone_display: str, land_display: str) -> tuple[str, dict]:
@@ -906,35 +944,7 @@ def matrix_yearly(body: MatrixYearlyRequest, db: Session = Depends(get_db)):
     같은 필터·지역 범위 안에서 특정 용도지역×지목 칸에 대해 계약연도별로
     만원/㎡ 단가 목록 산술평균을 반환한다. 이상치 제외 시 전체 매칭 행 목록 기준 마스킹 후 연도별로 건수·평균을 계산한다.
     """
-    base_req = _normalize_matrix_yearly_req(body)
-    units = _normalize_region_units(base_req)
-    resolved_codes = expand_region_units(units, db)
-    base_cache_key = (
-        body.base_cache_key
-        if has_valid_analysis_base_cache(db, body.base_cache_key)
-        else None
-    )
-
-    base_parts, params = _build_conditions(
-        resolved_codes,
-        body.year_from,
-        body.year_to,
-        body.years,
-        base_cache_key,
-        body.road_conditions,
-        body.area_categories,
-        body.land_categories,
-        body.zone_types,
-        body.exclude_partial,
-    )
-
-    mtx_sql, mtx_par = _matrix_dimension_sql(
-        "lt", body.zone_type.strip(), body.land_category.strip()
-    )
-
-    merged_params = dict(params)
-    merged_params.update(mtx_par)
-    merged_where = " AND ".join(base_parts + [mtx_sql])
+    merged_where, merged_params = _matrix_cell_merged_where(body, db)
 
     query = text(
         f"""
@@ -979,4 +989,190 @@ def matrix_yearly(body: MatrixYearlyRequest, db: Session = Depends(get_db)):
         zone_type=body.zone_type.strip(),
         land_category=body.land_category.strip(),
         rows=stat_rows,
+    )
+
+
+@router.post(
+    "/matrix-cell-histogram",
+    response_model=MatrixCellHistogramResponse,
+    summary="매트릭스 칸 단가 분포(히스토그램)",
+)
+def matrix_cell_histogram(
+    body: MatrixCellHistogramRequest, db: Session = Depends(get_db)
+):
+    """
+    matrix-yearly 와 동일 필터·이상치 정책으로 단가(만원/㎡) 표본을 만든 뒤
+    구간별 건수만 반환한다. `histogram_scope=all` 이면 필터 연도 전체,
+    `single` 이면 `histogram_year` 한 해의 표본만 사용한다.
+    """
+    merged_where, merged_params = _matrix_cell_merged_where(body, db)
+    query = text(
+        f"""
+        SELECT lt.contract_year AS y, lt.unit_price_per_sqm AS px
+        FROM land_transactions lt
+        WHERE {merged_where}
+        ORDER BY lt.contract_year ASC
+        """
+    )
+    rows = db.execute(query, merged_params).fetchall()
+    if not rows:
+        raise HTTPException(status_code=404, detail="해당 상세 칸에는 거래가 없습니다.")
+
+    years_px = [int(r.y) for r in rows]
+    prices_px = [float(r.px) for r in rows]
+    if body.exclude_outlier:
+        keep = outlier_keep_mask(
+            prices_px, iqr_multiplier=float(body.outlier_iqr_multiplier)
+        )
+    else:
+        keep = [True] * len(prices_px)
+
+    if body.histogram_scope == "single":
+        hy = int(body.histogram_year)
+        combined = [ok and y == hy for ok, y in zip(keep, years_px)]
+    else:
+        combined = list(keep)
+
+    prices_f = [p for p, ok in zip(prices_px, combined) if ok]
+    if not prices_f:
+        raise HTTPException(
+            status_code=404, detail="이상치·연도 조건 후 남은 단가 표본이 없습니다."
+        )
+
+    arr = np.asarray(prices_f, dtype=float)
+    n = int(arr.size)
+    req_bins = int(body.bin_count)
+    if n == 1:
+        v = float(arr[0])
+        delta = 0.5 if v == 0 else abs(v) * 0.05
+        edges = np.array([v - delta, v + delta], dtype=float)
+        counts = np.array([1], dtype=int)
+    else:
+        n_bins = max(3, min(req_bins, n))
+        counts, edges = np.histogram(arr, bins=n_bins)
+
+    bins_out: list[HistogramBin] = []
+    for i in range(int(counts.size)):
+        bins_out.append(
+            HistogramBin(
+                bin_from=round(float(edges[i]), 4),
+                bin_to=round(float(edges[i + 1]), 4),
+                count=int(counts[i]),
+            )
+        )
+
+    return MatrixCellHistogramResponse(
+        zone_type=body.zone_type.strip(),
+        land_category=body.land_category.strip(),
+        n=n,
+        exclude_outlier=bool(body.exclude_outlier),
+        outlier_iqr_multiplier=float(body.outlier_iqr_multiplier),
+        histogram_scope=body.histogram_scope,
+        histogram_year=int(body.histogram_year)
+        if body.histogram_scope == "single"
+        else None,
+        bins=bins_out,
+    )
+
+
+@router.post(
+    "/matrix-cell-transactions",
+    response_model=MatrixCellTransactionsResponse,
+    summary="매트릭스 칸 원거래 목록(페이지)",
+)
+def matrix_cell_transactions(
+    body: MatrixCellTransactionsRequest, db: Session = Depends(get_db)
+):
+    """
+    matrix-yearly 와 동일 필터·이상치 정책을 적용한 뒤, 남은 행을 최신 계약 순으로 정렬해
+    offset/limit 으로 잘라 반환한다.
+    """
+    merged_where, merged_params = _matrix_cell_merged_where(body, db)
+    query = text(
+        f"""
+        SELECT lt.id, lt.contract_year, lt.contract_month, lt.beopjungri_code,
+               TRIM(BOTH FROM COALESCE(rc.beopjungri_name::text, '')) AS beopjungri_name,
+               lt.area_sqm::float8 AS area_sqm,
+               lt.total_price_10k::float8 AS total_price_10k,
+               lt.unit_price_per_sqm::float8 AS unit_price_per_sqm,
+               TRIM(BOTH FROM COALESCE(lt.road_condition::text, '')) AS road_condition
+        FROM land_transactions lt
+        LEFT JOIN region_codes rc ON rc.beopjungri_code = lt.beopjungri_code
+        WHERE {merged_where}
+        ORDER BY lt.contract_year ASC, lt.contract_month ASC, lt.id ASC
+        """
+    )
+    rows = db.execute(query, merged_params).fetchall()
+    if not rows:
+        raise HTTPException(status_code=404, detail="해당 상세 칸에는 거래가 없습니다.")
+
+    candidates: list[dict] = []
+    prices_px: list[float] = []
+    for r in rows:
+        m = r._mapping
+        px = m["unit_price_per_sqm"]
+        if px is None:
+            continue
+        fv = float(px)
+        nm = (m.get("beopjungri_name") or "").strip()
+        rd = (m.get("road_condition") or "").strip()
+        candidates.append(
+            {
+                "id": int(m["id"]),
+                "contract_year": int(m["contract_year"]),
+                "contract_month": int(m["contract_month"]),
+                "beopjungri_code": str(m["beopjungri_code"]).strip(),
+                "beopjungri_name": nm or None,
+                "area_sqm": float(m["area_sqm"]) if m["area_sqm"] is not None else None,
+                "total_price_10k": float(m["total_price_10k"]),
+                "unit_price_per_sqm": fv,
+                "road_condition": rd or None,
+            }
+        )
+        prices_px.append(fv)
+
+    if body.exclude_outlier:
+        keep = outlier_keep_mask(
+            prices_px, iqr_multiplier=float(body.outlier_iqr_multiplier)
+        )
+    else:
+        keep = [True] * len(candidates)
+
+    filtered = [c for c, ok in zip(candidates, keep) if ok]
+    if not filtered:
+        raise HTTPException(
+            status_code=404, detail="이상치 제외 후 남은 거래가 없습니다."
+        )
+
+    filtered.sort(
+        key=lambda x: (-x["contract_year"], -x["contract_month"], -x["id"])
+    )
+    total = len(filtered)
+    off = int(body.offset)
+    lim = int(body.limit)
+    page = filtered[off : off + lim]
+    items = [
+        MatrixCellTransactionItem(
+            id=c["id"],
+            contract_year=c["contract_year"],
+            contract_month=c["contract_month"],
+            beopjungri_code=c["beopjungri_code"],
+            beopjungri_name=c["beopjungri_name"],
+            area_sqm=c["area_sqm"],
+            total_price_10k=c["total_price_10k"],
+            unit_price_per_sqm=c["unit_price_per_sqm"],
+            road_condition=c["road_condition"],
+        )
+        for c in page
+    ]
+
+    return MatrixCellTransactionsResponse(
+        zone_type=body.zone_type.strip(),
+        land_category=body.land_category.strip(),
+        total=total,
+        offset=off,
+        limit=lim,
+        exclude_outlier=bool(body.exclude_outlier),
+        outlier_iqr_multiplier=float(body.outlier_iqr_multiplier),
+        items=items,
     )

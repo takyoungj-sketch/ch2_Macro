@@ -29,6 +29,7 @@ export default function FreeStatsPanel() {
   const [trendRows, setTrendRows] = useState<
     { year: number; count: number; mean_unit_price_per_sqm: number | null }[]
   >([]);
+  const [trendRequest, setTrendRequest] = useState<MatrixYearlyRequest | null>(null);
 
   const { data: regions = [], isLoading: regionsLoading } = useQuery({
     queryKey: REGIONS_CATALOG_QUERY_KEY,
@@ -78,6 +79,7 @@ export default function FreeStatsPanel() {
 
   const closeTrend = () => {
     setTrendModal(null);
+    setTrendRequest(null);
     setTrendLoading(false);
     setTrendError(null);
     setTrendRows([]);
@@ -90,6 +92,7 @@ export default function FreeStatsPanel() {
       if (!statsData) {
         setTrendError("통계 데이터가 없습니다.");
         setTrendModal({ zoneType, landCategory });
+        setTrendRequest(null);
         setTrendLoading(false);
         return;
       }
@@ -120,6 +123,7 @@ export default function FreeStatsPanel() {
       };
 
       setTrendModal({ zoneType, landCategory });
+      setTrendRequest(body);
       setTrendLoading(true);
       setTrendError(null);
       setTrendRows([]);
@@ -244,6 +248,7 @@ export default function FreeStatsPanel() {
         zoneType={trendModal?.zoneType ?? ""}
         landCategory={trendModal?.landCategory ?? ""}
         rows={trendRows}
+        filterRequest={trendRequest}
         scopeNote="기본 통계에 표시된 지역·연도 범위가 적용됩니다. (유료 필터 표의 도로·면적 등은 이 단계에 포함되지 않습니다.)"
       />
     </div>

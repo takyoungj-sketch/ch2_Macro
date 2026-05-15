@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from typing import Annotated, Literal, Optional
 
-from pydantic import AfterValidator, BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field, model_validator
 
 
 # ---------------------------------------------------------------------------
@@ -239,3 +239,71 @@ class MatrixYearlyResponse(BaseModel):
     zone_type: str
     land_category: str
     rows: list[MatrixYearlyStat] = []
+
+
+class HistogramBin(BaseModel):
+    """단가(만원/㎡) 구간별 건수."""
+
+    bin_from: float
+    bin_to: float
+    count: int
+
+
+class MatrixCellHistogramRequest(MatrixYearlyRequest):
+    """매트릭스 한 칸: 단가 분포(히스토그램)."""
+
+    histogram_scope: Literal["all", "single"] = Field(
+        "all",
+        description="all: 필터 연도 전체 합산 단가 표본, single: histogram_year 한 연도만",
+    )
+    histogram_year: Optional[int] = Field(
+        None, description="histogram_scope=single일 때 필수(계약연도)"
+    )
+    bin_count: int = Field(
+        20, ge=5, le=60, description="히스토그램 구간 개수(서버에서 표본 크기에 맞게 조정 가능)"
+    )
+
+    @model_validator(mode="after")
+    def _year_when_single(self) -> MatrixCellHistogramRequest:
+        if self.histogram_scope == "single" and self.histogram_year is None:
+            raise ValueError("histogram_scope가 single이면 histogram_year가 필요합니다.")
+        return self
+
+
+class MatrixCellHistogramResponse(BaseModel):
+    zone_type: str
+    land_category: str
+    n: int
+    exclude_outlier: bool
+    outlier_iqr_multiplier: float
+    histogram_scope: Literal["all", "single"]
+    histogram_year: Optional[int] = None
+    bins: list[HistogramBin] = []
+
+
+class MatrixCellTransactionItem(BaseModel):
+    id: int
+    contract_year: int
+    contract_month: int
+    beopjungri_code: str
+    beopjungri_name: Optional[str] = None
+    area_sqm: Optional[float] = None
+    total_price_10k: float
+    unit_price_per_sqm: Optional[float] = None
+    road_condition: Optional[str] = None
+
+
+class MatrixCellTransactionsRequest(MatrixYearlyRequest):
+    offset: int = Field(0, ge=0)
+    limit: int = Field(25, ge=1, le=100)
+
+
+class MatrixCellTransactionsResponse(BaseModel):
+    zone_type: str
+    land_category: str
+    total: int
+    offset: int
+    limit: int
+    exclude_outlier: bool
+    outlier_iqr_multiplier: float
+    items: list[MatrixCellTransactionItem] = []

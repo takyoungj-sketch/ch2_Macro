@@ -1,6 +1,10 @@
 import axios from "axios";
 import type {
   FreeStatsResponse,
+  MatrixCellHistogramRequest,
+  MatrixCellHistogramResponse,
+  MatrixCellTransactionsRequest,
+  MatrixCellTransactionsResponse,
   MatrixYearlyRequest,
   MatrixYearlyResponse,
   PaidAnalysisRequest,
@@ -61,6 +65,26 @@ export const fetchPaidMatrixYearly = async (
 ): Promise<MatrixYearlyResponse> => {
   const { data } = await api.post<MatrixYearlyResponse>(
     "/paid/matrix-yearly",
+    body
+  );
+  return data;
+};
+
+export const fetchMatrixCellHistogram = async (
+  body: MatrixCellHistogramRequest
+): Promise<MatrixCellHistogramResponse> => {
+  const { data } = await api.post<MatrixCellHistogramResponse>(
+    "/paid/matrix-cell-histogram",
+    body
+  );
+  return data;
+};
+
+export const fetchMatrixCellTransactions = async (
+  body: MatrixCellTransactionsRequest
+): Promise<MatrixCellTransactionsResponse> => {
+  const { data } = await api.post<MatrixCellTransactionsResponse>(
+    "/paid/matrix-cell-transactions",
     body
   );
   return data;

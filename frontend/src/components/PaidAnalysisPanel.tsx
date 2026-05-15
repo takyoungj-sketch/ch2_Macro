@@ -42,6 +42,7 @@ export default function PaidAnalysisPanel() {
   const [trendRows, setTrendRows] = useState<
     { year: number; count: number; mean_unit_price_per_sqm: number | null }[]
   >([]);
+  const [trendRequest, setTrendRequest] = useState<MatrixYearlyRequest | null>(null);
 
   const { data: regions = [], isLoading: regionsLoading } = useQuery({
     queryKey: REGIONS_CATALOG_QUERY_KEY,
@@ -126,6 +127,7 @@ export default function PaidAnalysisPanel() {
 
   const closeTrend = () => {
     setTrendModal(null);
+    setTrendRequest(null);
     setTrendLoading(false);
     setTrendError(null);
     setTrendRows([]);
@@ -136,6 +138,7 @@ export default function PaidAnalysisPanel() {
       if (resolvedCodes.length === 0) {
         setTrendError("먼저 분석할 지역을 선택하세요.");
         setTrendModal({ zoneType, landCategory });
+        setTrendRequest(null);
         setTrendLoading(false);
         return;
       }
@@ -160,6 +163,7 @@ export default function PaidAnalysisPanel() {
       };
 
       setTrendModal({ zoneType, landCategory });
+      setTrendRequest(body);
       setTrendLoading(true);
       setTrendError(null);
       setTrendRows([]);
@@ -315,6 +319,7 @@ export default function PaidAnalysisPanel() {
         zoneType={trendModal?.zoneType ?? ""}
         landCategory={trendModal?.landCategory ?? ""}
         rows={trendRows}
+        filterRequest={trendRequest}
       />
 
       {!isLoading && status === "idle" && !apiErr && (

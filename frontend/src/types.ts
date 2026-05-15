@@ -113,4 +113,57 @@ export interface MatrixYearlyResponse {
   rows: MatrixYearlyStat[];
 }
 
+export interface HistogramBin {
+  bin_from: number;
+  bin_to: number;
+  count: number;
+}
+
+/** POST /paid/matrix-cell-histogram 요청 (MatrixYearlyRequest + 분포 옵션) */
+export interface MatrixCellHistogramRequest extends MatrixYearlyRequest {
+  histogram_scope?: "all" | "single";
+  histogram_year?: number | null;
+  bin_count?: number;
+}
+
+export interface MatrixCellHistogramResponse {
+  zone_type: string;
+  land_category: string;
+  n: number;
+  exclude_outlier: boolean;
+  outlier_iqr_multiplier: number;
+  histogram_scope: "all" | "single";
+  histogram_year?: number | null;
+  bins: HistogramBin[];
+}
+
+export interface MatrixCellTransactionItem {
+  id: number;
+  contract_year: number;
+  contract_month: number;
+  beopjungri_code: string;
+  beopjungri_name?: string | null;
+  area_sqm?: number | null;
+  total_price_10k: number;
+  unit_price_per_sqm?: number | null;
+  road_condition?: string | null;
+}
+
+/** POST /paid/matrix-cell-transactions 요청 */
+export interface MatrixCellTransactionsRequest extends MatrixYearlyRequest {
+  offset?: number;
+  limit?: number;
+}
+
+export interface MatrixCellTransactionsResponse {
+  zone_type: string;
+  land_category: string;
+  total: number;
+  offset: number;
+  limit: number;
+  exclude_outlier: boolean;
+  outlier_iqr_multiplier: number;
+  items: MatrixCellTransactionItem[];
+}
+
 export type ViewMode = "free" | "paid";
