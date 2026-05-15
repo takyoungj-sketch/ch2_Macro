@@ -3,7 +3,12 @@ import { simpleTableHeadClass } from "../constants/displayUi";
 import type { StatsResult } from "../types";
 
 const fmt = (v: number | null) =>
-  v == null ? "-" : v.toLocaleString("ko-KR", { maximumFractionDigits: 0 });
+  v == null
+    ? "-"
+    : v.toLocaleString("ko-KR", {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      });
 
 interface Props {
   title?: string;

@@ -1,6 +1,6 @@
 /** 유료 분석 UI·API 매핑 — `pipeline/clean.py` 축약값과 DB `road_condition` 일치 */
 
-export const ROAD_CONDITIONS = ["25이", "25미", "12미", "8미", "-"] as const;
+export const ROAD_CONDITIONS = ["25이상", "25미만", "12미만", "8미만", "-"] as const;
 
 export const AREA_CATEGORIES = ["광소", "정상", "광대"] as const;
 
