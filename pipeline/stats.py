@@ -6,10 +6,13 @@ STAT_COLUMNS 순서에 맞춰 결과를 반환합니다.
 from __future__ import annotations
 
 import math
+import warnings
 from typing import Sequence
 
 import numpy as np
 import scipy.stats as st
+
+warnings.filterwarnings("ignore", category=RuntimeWarning, module="scipy")
 
 from constants import ALPHA, MIN_RELIABLE_COUNT, OUTLIER_IQR_MULTIPLIER
 
@@ -20,7 +23,7 @@ PRICE_STAT_DECIMALS = 1
 def compute_stats(prices: Sequence[float]) -> dict:
     """
     단가 목록(원/㎡)을 받아 통계 딕셔너리를 반환한다.
-    거래건수가 2건 미만이면 신뢰구간을 None으로 처리한다.
+    n < 2 이거나 표본 표준편차가 0이면 신뢰구간은 None (t-구간·scipy 호출 생략, 배치 경고 억제).
     """
     arr = np.asarray(prices, dtype=float)
     arr = arr[~np.isnan(arr)]
@@ -38,11 +41,14 @@ def compute_stats(prices: Sequence[float]) -> dict:
     mx = float(np.max(arr))
 
     ci_lower, ci_upper = None, None
-    if n >= 2:
+    if n >= 2 and std is not None and std > 0:
         se = st.sem(arr)
-        ci = st.t.interval(1 - ALPHA, df=n - 1, loc=mean, scale=se)
-        ci_lower = float(ci[0])
-        ci_upper = float(ci[1])
+        if se > 0 and math.isfinite(se):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                ci = st.t.interval(1 - ALPHA, df=n - 1, loc=mean, scale=se)
+            ci_lower = float(ci[0])
+            ci_upper = float(ci[1])
 
     return {
         "count": n,

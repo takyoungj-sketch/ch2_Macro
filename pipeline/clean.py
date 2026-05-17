@@ -13,9 +13,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import logging
+import os
+import re
 from datetime import datetime
 
 import pandas as pd
+import psycopg2
+from psycopg2.extras import execute_values
 from sqlalchemy import text
 from tqdm import tqdm
 
@@ -30,6 +34,28 @@ from db_utils import get_engine
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
+
+# 전국 재처리 시 행 단위 UPSERT 비용 완화 (환경변수로 조정)
+_CLEAN_UPSERT_PAGE = max(100, int(os.environ.get("CLEAN_UPSERT_PAGE_SIZE", "1500")))
+
+# 국토부 엑셀 등: 기암리(岐岩里) ↔ 행정코드 기암리(岐岩) 같이 괄호 병기만 다른 경우
+_RE_PAREN_FW = re.compile(r"（[^（）]*）")
+_RE_PAREN_ASCII = re.compile(r"\([^()]*\)")
+
+
+def _normalize_admin_label(s: str | None) -> str:
+    """읍면동·법정리명 lookup 정규화: 전각·반각 괄호 구간(한자 병기 등) 제거 후 trim."""
+    if s is None:
+        return ""
+    t = str(s).strip()
+    if not t:
+        return ""
+    prev = None
+    while prev != t:
+        prev = t
+        t = _RE_PAREN_FW.sub("", t).strip()
+        t = _RE_PAREN_ASCII.sub("", t).strip()
+    return t
 
 
 # ---------------------------------------------------------------------------
@@ -148,14 +174,39 @@ def _compact_values(series: pd.Series, mapping: dict[str, str], fallback: str | 
     return mapped.fillna(fallback)
 
 
+def _register_strong_key(
+    target: dict[tuple, str],
+    key: tuple,
+    code: str,
+    label: str,
+) -> None:
+    """강한 키만 등록. 동일 키에 서로 다른 코드면 경고 후 기존 유지."""
+    c = str(code).strip()
+    if not c or not key or all(str(x).strip() == "" for x in key if x is not None):
+        return
+    key_n = tuple(str(x).strip() if x is not None else "" for x in key)
+    if key_n in target:
+        if str(target[key_n]).strip() != c:
+            log.warning(
+                "region_codes %s 키 충돌(첫 코드 유지): key=%r existing=%r new=%r",
+                label,
+                key_n,
+                target[key_n],
+                c,
+            )
+        return
+    target[key_n] = c
+
+
 def build_region_lookup(engine) -> dict:
     """
-    region_codes 테이블 전체를 메모리에 로드해 주소 → beopjungri_code 조회용 dict를 반환한다.
+    region_codes → beopjungri_code 강한 키만:
+      - by_sigungu_name: (sido_name, sigungu_name, eupmyeondong_name, beopjungri_name)
+      - by_sigungu_code: (sido_code 2자, sigungu_code 5자, eupmyeondong_name, beopjungri_name)
 
-    키 우선순위 (중복 방지):
-        1. (sido_name, eupmyeondong_name, beopjungri_name)  ← 가장 구체적
-        2. (eupmyeondong_name, beopjungri_name)
-        3. (sigungu_name, eupmyeondong_name)               ← 동 단위 fallback
+    읍면동·법정리명은 괄호 한자 병기 제거 후 키로 사용해 엑셀 원문과 행정DB 표기 차이를 흡수한다.
+
+    약한 키 (읍면동+법정명 단독 등)는 매핑에 사용하지 않는다.
     """
     with engine.connect() as conn:
         rows = conn.execute(
@@ -167,99 +218,202 @@ def build_region_lookup(engine) -> dict:
             """)
         ).fetchall()
 
-    lookup: dict[tuple, str] = {}
-    code_lookup: dict[tuple, str] = {}  # (sido_code, eupmyeondong_name, beopjungri_name)
+    by_sigungu_name: dict[tuple, str] = {}
+    by_sigungu_code: dict[tuple, str] = {}
+    weak_pairs: dict[tuple[str, str], set[str]] = {}
 
     for row in rows:
         sido_name, sigungu_name, eupmyeondong_name, beopjungri_name, beopjungri_code, sido_code, sigungu_code = row
-        k1 = (sido_name, eupmyeondong_name, beopjungri_name)
-        k2 = (eupmyeondong_name, beopjungri_name)
-        k3 = (sigungu_name, eupmyeondong_name)
-        k4 = (sido_code, eupmyeondong_name, beopjungri_name)
+        sn = str(sido_name).strip()
+        sg = str(sigungu_name).strip()
+        eu = str(eupmyeondong_name).strip()
+        bn = str(beopjungri_name).strip()
+        eu_k = _normalize_admin_label(eu)
+        bn_k = _normalize_admin_label(bn)
+        sc = str(sido_code).strip()[:2]
+        gc = str(sigungu_code).strip().zfill(5)[:5]
 
-        # 덜 구체적인 키는 이미 등록된 게 없을 때만 삽입 (충돌 시 덮어쓰지 않음)
-        lookup.setdefault(k1, beopjungri_code)
-        lookup.setdefault(k2, beopjungri_code)
-        lookup.setdefault(k3, beopjungri_code)
-        code_lookup.setdefault(k4, beopjungri_code)
+        _register_strong_key(
+            by_sigungu_name,
+            (sn, sg, eu_k, bn_k),
+            beopjungri_code,
+            "by_sigungu_name",
+        )
+        if sc and gc:
+            _register_strong_key(
+                by_sigungu_code,
+                (sc, gc, eu_k, bn_k),
+                beopjungri_code,
+                "by_sigungu_code",
+            )
 
-    log.info("region_codes 조회 테이블 빌드 완료: %d개 법정동/리", len(rows))
-    return {"name": lookup, "code": code_lookup}
+        wk = (eu_k, bn_k)
+        weak_pairs.setdefault(wk, set()).add(str(beopjungri_code).strip())
+
+    multi_weak = sum(1 for s in weak_pairs.values() if len(s) > 1)
+    if multi_weak:
+        log.warning(
+            "동명이인 약한 키(읍면동명,법정명) 조합 %d개가 전국에 복수 코드 — 단독 매핑 미사용",
+            multi_weak,
+        )
+
+    log.info(
+        "region_codes 강한 lookup: name_keys=%d code_keys=%d 행=%d",
+        len(by_sigungu_name),
+        len(by_sigungu_code),
+        len(rows),
+    )
+    return {
+        "by_sigungu_name": by_sigungu_name,
+        "by_sigungu_code": by_sigungu_code,
+    }
 
 
-def _parse_address(address: str) -> tuple[str, str, str]:
+def _parse_address_structured(address: str) -> tuple[str, str, str, str]:
     """
-    국토부 Excel '시군구' 컬럼 주소 문자열을 파싱해
-    (sido_name, eupmyeondong_name, beopjungri_name)을 반환한다.
+    국토부 Excel '시군구' 컬럼 전체 주소 문자열 →
+    (sido_name, sigungu_name, eupmyeondong_name, beopjungri_name).
 
-    예:
-        "충청북도 청주시 청원구 오창읍 가곡리" → ("충청북도", "오창읍", "가곡리")
-        "충청북도 청주시 흥덕구 가경동"       → ("충청북도", "가경동", "가경동")
-        "충청북도 충주시 이류면 문촌리"        → ("충청북도", "이류면", "문촌리")
+    - 법정리: ... 시·군·구 … 읍·면 가곡리 → sigungu=앞 중간 전부(시도 제외), eup=읍·면, beop=리
+    - 그 외(동·읍·면 단일 행정리): ... 수원시 영통동 / … 분당구 대장동
+      → sigungu = parts[1:-1] 공백 결합, eup=beop=마지막 토큰
     """
     parts = [p for p in str(address).strip().split() if p]
     if not parts:
-        return "", "", ""
+        return "", "", "", ""
 
     sido = parts[0]
+    if len(parts) >= 2 and parts[-1].endswith("리") and len(parts) >= 4:
+        sigungu = " ".join(parts[1:-2])
+        eup = parts[-2]
+        beop = parts[-1]
+        return sido, sigungu, eup, beop
 
-    # 마지막 토큰이 '리'로 끝나면 리 단위
-    if len(parts) >= 2 and parts[-1].endswith("리"):
-        eupmyeondong = parts[-2]
-        beopjungri = parts[-1]
-    else:
-        # 동/읍/면 단위: eupmyeondong == beopjungri
-        eupmyeondong = parts[-1]
-        beopjungri = parts[-1]
+    leaf = parts[-1]
+    if len(parts) < 2:
+        return sido, "", leaf, leaf
 
-    return sido, eupmyeondong, beopjungri
+    sigungu = " ".join(parts[1:-1])
+    return sido, sigungu, leaf, leaf
 
 
-def map_beopjungri_codes(df: pd.DataFrame, lookup: dict) -> pd.Series:
+def map_beopjungri_codes(df: pd.DataFrame, region_maps: dict) -> pd.DataFrame:
     """
-    DataFrame의 sigungu_name(주소 문자열) 컬럼으로 beopjungri_code를 조회해 Series로 반환한다.
-    매핑 실패 행은 빈 문자열로 남긴다.
+    시군구 전체 주소(sigungu_name) 또는 (sigungu_code+sido_code + eupmyeondong_name)로
+    강한 키만 매핑. 실패 시 code 공백, needs_review=True, mapping_notes 채움.
+    읍면동·법정리는 괄호 병기 제거 정규화 후 lookup 한다.
+    약한 키·시도 무관 fallback 은 사용하지 않는다.
     """
-    name_lookup = lookup.get("name", {})
-    code_lookup = lookup.get("code", {})
+    by_name = region_maps.get("by_sigungu_name", {})
+    by_code = region_maps.get("by_sigungu_code", {})
 
-    results = []
-    miss_count = 0
-
-    for _, row in df.iterrows():
-        address = str(row.get("sigungu_name", ""))
-        sido_code = str(row.get("sido_code", ""))
-
-        if not address or address == "nan":
-            results.append("")
-            continue
-
-        sido, eupmyeondong, beopjungri = _parse_address(address)
-
-        # 우선순위 1: sido_name + eupmyeondong + beopjungri
-        code = name_lookup.get((sido, eupmyeondong, beopjungri))
-
-        # 우선순위 2: sido_code(2자리) + eupmyeondong + beopjungri
-        if not code and sido_code:
-            code = code_lookup.get((sido_code[:2], eupmyeondong, beopjungri))
-
-        # 우선순위 3: eupmyeondong + beopjungri (시도 구분 없음)
-        if not code:
-            code = name_lookup.get((eupmyeondong, beopjungri))
-
-        if not code:
-            miss_count += 1
-
-        results.append(code or "")
-
-    if miss_count:
-        log.warning(
-            "beopjungri_code 매핑 실패: %d건 / 전체 %d건. "
-            "region_codes 시드 적재 여부 및 주소 형식을 확인하세요.",
-            miss_count, len(df),
+    n = len(df)
+    if n == 0:
+        return pd.DataFrame(
+            {
+                "beopjungri_code": pd.Series([], index=df.index, dtype=object),
+                "needs_review": pd.Series([], index=df.index, dtype=bool),
+                "mapping_notes": pd.Series([], index=df.index, dtype=object),
+            }
         )
 
-    return pd.Series(results, index=df.index)
+    addr = (
+        df.get("sigungu_name", pd.Series("", index=df.index))
+        .fillna("")
+        .astype(str)
+        .str.strip()
+    )
+    umd = (
+        df.get(
+            "eupmyeondong_name",
+            df.get("umdNm", pd.Series("", index=df.index)),
+        )
+        .fillna("")
+        .astype(str)
+        .str.strip()
+    )
+    sido_code = df.get("sido_code", pd.Series("", index=df.index)).fillna("").astype(str).str.strip()
+    sg_raw = df.get("sigungu_code", pd.Series("", index=df.index)).fillna("").astype(str).str.strip()
+
+    mask_addr = addr.ne("") & addr.ne("nan")
+    # 주소 파싱 (리/동 분기) — 리스트 컴프리헨션으로 iterrows 대체
+    parsed = [_parse_address_structured(a) for a in addr.tolist()]
+    sido_n = pd.Series([p[0] for p in parsed], index=df.index, dtype=object)
+    sigungu_n = pd.Series([p[1] for p in parsed], index=df.index, dtype=object)
+    eup_n = pd.Series([p[2] for p in parsed], index=df.index, dtype=object)
+    beop_n = pd.Series([p[3] for p in parsed], index=df.index, dtype=object)
+
+    only_umd = ~mask_addr & umd.ne("")
+    eup_n = eup_n.where(~only_umd, umd)
+    beop_n = beop_n.where(~only_umd, umd)
+
+    sc5_list = [
+        s.zfill(5)[-5:] if s and str(s).replace(" ", "").isdigit() else ""
+        for s in sg_raw.tolist()
+    ]
+    sc2_list = sido_code.str[:2].tolist()
+
+    sn_l = sido_n.tolist()
+    sg_l = sigungu_n.tolist()
+    eu_l = eup_n.tolist()
+    bp_l = beop_n.tolist()
+    addr_l = addr.tolist()
+    umd_l = umd.tolist()
+
+    codes: list[str] = []
+    reviews: list[bool] = []
+    notes: list[str] = []
+    miss = 0
+
+    for i in range(n):
+        sn, sg, eu, bp = sn_l[i], sg_l[i], eu_l[i], bp_l[i]
+        eu_k = _normalize_admin_label(eu)
+        bp_k = _normalize_admin_label(bp)
+        code = ""
+        if sn and sg and eu_k and bp_k:
+            code = by_name.get((sn, sg, eu_k, bp_k), "") or ""
+        if not code:
+            s2, s5 = sc2_list[i], sc5_list[i]
+            if s2 and s5 and eu_k and bp_k:
+                code = by_code.get((s2, s5, eu_k, bp_k), "") or ""
+
+        if not code:
+            miss += 1
+            reviews.append(True)
+            a = addr_l[i]
+            u = umd_l[i]
+            if not a or a == "nan":
+                if not u:
+                    note = "no_address_and_no_umd"
+                else:
+                    note = "no_strong_match_umd_only"
+            elif not sg_l[i]:
+                note = "no_strong_match_short_address"
+            else:
+                note = "no_strong_match"
+            codes.append("")
+            notes.append(note)
+            continue
+
+        codes.append(str(code).strip())
+        reviews.append(False)
+        notes.append("")
+
+    if miss:
+        log.warning(
+            "beopjungri_code 강한키 매핑 실패: %d건 / %d건 (region_codes·주소 형식 확인)",
+            miss,
+            n,
+        )
+
+    idx = df.index
+    return pd.DataFrame(
+        {
+            "beopjungri_code": pd.Series(codes, index=idx, dtype=object),
+            "needs_review": pd.Series(reviews, index=idx, dtype=bool),
+            "mapping_notes": pd.Series(notes, index=idx, dtype=object),
+        }
+    )
 
 
 _NOT_IN_LT = """NOT EXISTS (
@@ -395,6 +549,9 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         & ~df["is_cancelled"]
     )
 
+    df["needs_review"] = False
+    df["mapping_notes"] = ""
+
     # sido_code: API 모드는 sigungu_code 앞 2자리, Excel 모드는 주소에서 추출
     df["sido_code"] = df.get("sigungu_code", pd.Series("", index=df.index)).astype(str).str[:2]
 
@@ -466,8 +623,24 @@ def _make_hash(row: pd.Series) -> str:
     return hashlib.sha256(key.encode()).hexdigest()
 
 
+def _prepare_land_tx_upsert(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
+    """UPSERT용 컬럼만 복사·정규화 (NaN → None, bool·mapping_notes 정리)."""
+    out = df.loc[:, cols].copy()
+    for c in ("is_partial_ownership", "is_cancelled", "is_valid", "needs_review"):
+        out[c] = out[c].fillna(False).astype(bool)
+
+    def _mn(v):
+        if v is None or (isinstance(v, float) and pd.isna(v)):
+            return None
+        sm = str(v).strip()
+        return sm if sm else None
+
+    out["mapping_notes"] = out["mapping_notes"].map(_mn)
+    return out
+
+
 def upsert_transactions(df: pd.DataFrame) -> int:
-    """정제된 DataFrame을 land_transactions 에 UPSERT 한다."""
+    """정제된 DataFrame을 land_transactions 에 UPSERT 한다 (psycopg2 배치)."""
     before = len(df)
     df = df[df["total_price_10k"].notna()].copy()
     skipped = before - len(df)
@@ -477,8 +650,6 @@ def upsert_transactions(df: pd.DataFrame) -> int:
         log.info("UPSERT 대상 없음")
         return 0
 
-    engine = get_engine()
-    inserted = 0
     cols = [
         "transaction_hash", "contract_year", "contract_month", "contract_date",
         "beopjungri_code", "sido_code", "sigungu_code",
@@ -486,56 +657,67 @@ def upsert_transactions(df: pd.DataFrame) -> int:
         "area_sqm", "area_category",
         "total_price_10k", "unit_price_per_sqm",
         "is_partial_ownership", "is_cancelled", "is_valid", "raw_id",
+        "needs_review", "mapping_notes",
     ]
+    prep = _prepare_land_tx_upsert(df, cols)
+    prep = prep.astype(object).where(pd.notna(prep), None)
 
-    with engine.begin() as conn:
-        for _, row in tqdm(df.iterrows(), total=len(df), desc="UPSERT"):
-            values = {c: (None if pd.isna(row.get(c)) else row.get(c)) for c in cols}
-            values["is_partial_ownership"] = bool(values.get("is_partial_ownership", False))
-            values["is_cancelled"] = bool(values.get("is_cancelled", False))
-            values["is_valid"] = bool(values.get("is_valid", True))
-            conn.execute(
-                text("""
-                    INSERT INTO land_transactions (
-                        transaction_hash, contract_year, contract_month, contract_date,
-                        beopjungri_code, sido_code, sigungu_code,
-                        land_category, zone_type, road_condition,
-                        area_sqm, area_category,
-                        total_price_10k, unit_price_per_sqm,
-                        is_partial_ownership, is_cancelled, is_valid, raw_id
-                    ) VALUES (
-                        :transaction_hash, :contract_year, :contract_month, :contract_date,
-                        :beopjungri_code, :sido_code, :sigungu_code,
-                        :land_category, :zone_type, :road_condition,
-                        :area_sqm, :area_category,
-                        :total_price_10k, :unit_price_per_sqm,
-                        :is_partial_ownership, :is_cancelled, :is_valid, :raw_id
-                    )
-                    ON CONFLICT (transaction_hash) DO UPDATE SET
-                        contract_year = EXCLUDED.contract_year,
-                        contract_month = EXCLUDED.contract_month,
-                        contract_date = EXCLUDED.contract_date,
-                        beopjungri_code = EXCLUDED.beopjungri_code,
-                        sido_code = EXCLUDED.sido_code,
-                        sigungu_code = EXCLUDED.sigungu_code,
-                        land_category = EXCLUDED.land_category,
-                        zone_type = EXCLUDED.zone_type,
-                        road_condition = EXCLUDED.road_condition,
-                        area_sqm = EXCLUDED.area_sqm,
-                        area_category = EXCLUDED.area_category,
-                        total_price_10k = EXCLUDED.total_price_10k,
-                        unit_price_per_sqm = EXCLUDED.unit_price_per_sqm,
-                        is_partial_ownership = EXCLUDED.is_partial_ownership,
-                        is_cancelled = EXCLUDED.is_cancelled,
-                        is_valid = EXCLUDED.is_valid,
-                        raw_id = EXCLUDED.raw_id,
-                        updated_at = NOW()
-                """),
-                values,
-            )
-            inserted += 1
+    engine = get_engine()
+    url = engine.url
+    insert_sql = """
+        INSERT INTO land_transactions (
+            transaction_hash, contract_year, contract_month, contract_date,
+            beopjungri_code, sido_code, sigungu_code,
+            land_category, zone_type, road_condition,
+            area_sqm, area_category,
+            total_price_10k, unit_price_per_sqm,
+            is_partial_ownership, is_cancelled, is_valid, raw_id,
+            needs_review, mapping_notes
+        ) VALUES %s
+        ON CONFLICT (transaction_hash) DO UPDATE SET
+            contract_year = EXCLUDED.contract_year,
+            contract_month = EXCLUDED.contract_month,
+            contract_date = EXCLUDED.contract_date,
+            beopjungri_code = EXCLUDED.beopjungri_code,
+            sido_code = EXCLUDED.sido_code,
+            sigungu_code = EXCLUDED.sigungu_code,
+            land_category = EXCLUDED.land_category,
+            zone_type = EXCLUDED.zone_type,
+            road_condition = EXCLUDED.road_condition,
+            area_sqm = EXCLUDED.area_sqm,
+            area_category = EXCLUDED.area_category,
+            total_price_10k = EXCLUDED.total_price_10k,
+            unit_price_per_sqm = EXCLUDED.unit_price_per_sqm,
+            is_partial_ownership = EXCLUDED.is_partial_ownership,
+            is_cancelled = EXCLUDED.is_cancelled,
+            is_valid = EXCLUDED.is_valid,
+            raw_id = EXCLUDED.raw_id,
+            needs_review = EXCLUDED.needs_review,
+            mapping_notes = EXCLUDED.mapping_notes,
+            updated_at = NOW()
+    """
 
-    log.info("UPSERT 완료: %d건", inserted)
+    inserted = 0
+    page = _CLEAN_UPSERT_PAGE
+    n = len(prep)
+    conn = psycopg2.connect(
+        host=url.host,
+        port=url.port or 5432,
+        user=url.username,
+        password=url.password,
+        dbname=url.database,
+    )
+    try:
+        with conn, conn.cursor() as cur:
+            for start in tqdm(range(0, n, page), desc="UPSERT", total=(n + page - 1) // page):
+                chunk = prep.iloc[start : start + page]
+                tuples = list(chunk.itertuples(index=False, name=None))
+                execute_values(cur, insert_sql, tuples, page_size=len(tuples))
+                inserted += len(tuples)
+    finally:
+        conn.close()
+
+    log.info("UPSERT 완료: %d건 (배치 크기 %d)", inserted, page)
     return inserted
 
 
@@ -554,6 +736,15 @@ def main():
     )
     args = parser.parse_args()
 
+    if args.reprocess_all:
+        log.warning(
+            "reprocess-all: transaction_hash 가 법정동 코드 등을 포함하므로 "
+            "기존 행과 충돌하지 않고 중복이 쌓일 수 있습니다. "
+            "land_transactions 를 비운 뒤 재적재합니다."
+        )
+        with get_engine().begin() as conn:
+            conn.execute(text("DELETE FROM land_transactions"))
+
     log.info("미처리 raw 데이터 조회 중...")
     df = fetch_unprocessed_raw(since=args.since, reprocess_all=args.reprocess_all)
 
@@ -567,33 +758,49 @@ def main():
     # clean_step2: 주소 문자열 → beopjungri_code 매핑
     if not args.skip_region_map:
         engine = get_engine()
-        needs_mapping = cleaned["beopjungri_code"].eq("") | cleaned["beopjungri_code"].isna()
+        _bc = cleaned["beopjungri_code"].fillna("").astype(str).str.strip()
+        needs_mapping = _bc.eq("")
         if needs_mapping.any():
             log.info("beopjungri_code 매핑 시작: %d건", needs_mapping.sum())
             lookup = build_region_lookup(engine)
-            mapped = map_beopjungri_codes(cleaned[needs_mapping], lookup)
-            cleaned.loc[needs_mapping, "beopjungri_code"] = mapped.values
+            meta = map_beopjungri_codes(cleaned[needs_mapping], lookup)
+            cleaned.loc[needs_mapping, "beopjungri_code"] = meta["beopjungri_code"].values
+            cleaned.loc[needs_mapping, "needs_review"] = meta["needs_review"].values
+            cleaned.loc[needs_mapping, "mapping_notes"] = meta["mapping_notes"].values
+
+            # 법정동 코드가 바뀌면 transaction_hash 도 갱신 (중복·추적 일관성)
+            cleaned.loc[needs_mapping, "transaction_hash"] = cleaned.loc[needs_mapping].apply(
+                _make_hash, axis=1
+            )
 
             # 매핑 후 sido_code도 보완 (beopjungri_code 앞 2자리)
             still_no_sido = cleaned["sido_code"].eq("") | cleaned["sido_code"].isna()
             cleaned.loc[still_no_sido, "sido_code"] = (
-                cleaned.loc[still_no_sido, "beopjungri_code"].str[:2]
+                cleaned.loc[still_no_sido, "beopjungri_code"].astype(str).str[:2]
             )
             # sigungu_code 보완 (beopjungri_code 앞 5자리)
             if "sigungu_code" not in cleaned.columns:
                 cleaned["sigungu_code"] = ""
             no_sigungu = cleaned["sigungu_code"].eq("") | cleaned["sigungu_code"].isna()
             cleaned.loc[no_sigungu, "sigungu_code"] = (
-                cleaned.loc[no_sigungu, "beopjungri_code"].str[:5]
+                cleaned.loc[no_sigungu, "beopjungri_code"].astype(str).str[:5]
             )
 
-            still_missing = cleaned["beopjungri_code"].eq("").sum()
+            still_missing = cleaned["beopjungri_code"].fillna("").astype(str).str.strip().eq("").sum()
+            n_review = int(cleaned["needs_review"].sum())
             log.info(
-                "beopjungri_code 매핑 완료. 미매핑: %d건 (region_codes 확인 필요)",
+                "beopjungri_code 매핑 완료. 미매핑: %d건, needs_review: %d건",
                 still_missing,
+                n_review,
             )
         else:
             log.info("beopjungri_code 이미 존재, 매핑 생략")
+
+        bc_empty = cleaned["beopjungri_code"].fillna("").astype(str).str.strip().eq("")
+        cleaned.loc[bc_empty, "needs_review"] = True
+        cleaned.loc[bc_empty, "is_valid"] = False
+        idx_no_note = bc_empty & cleaned["mapping_notes"].fillna("").astype(str).str.strip().eq("")
+        cleaned.loc[idx_no_note, "mapping_notes"] = "no_beopjungri_code"
     else:
         log.warning("--skip-region-map: beopjungri_code 매핑 건너뜀")
 

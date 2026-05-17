@@ -1,12 +1,22 @@
 import { create } from "zustand";
-import { runPaidAnalysis as runPaidAnalysisApi } from "./api/client";
+import {
+  fetchFreeStatsBulk,
+  runPaidAnalysis as runPaidAnalysisApi,
+} from "./api/client";
 import {
   clampFontStep,
   persistFontStep,
   readStoredFontStep,
 } from "./constants/displayUi";
 import { getDefaultPaidSelectedYears } from "./constants/paidFilters";
-import type { PaidAnalysisRequest, PaidAnalysisResponse, RegionItem, ViewMode } from "./types";
+import type {
+  FreeStatsWindowYears,
+  PaidAnalysisRequest,
+  PaidAnalysisResponse,
+  RegionItem,
+  ViewMode,
+} from "./types";
+import { normalizeFreeStatsWindowYears } from "./types";
 import { parseApiError, type ParsedApiError } from "./utils/apiError";
 import { buildPaidPayload } from "./utils/paidAnalysisPayload";
 import type { RegionFiveFields } from "./utils/resolveRegionFiveFields";
@@ -40,11 +50,27 @@ interface AppState {
   paidRoadExcluded: string[];
   paidAreaExcluded: string[];
 
-  /** 유료: 기본통계(/free 통계 패널) 재조회 틱 */
+  /** 유료: 기본통계(/free 통계 패널) 재조회 틱 — commitStatsDisplayScope 와 함께 증가 */
   paidBasicStatsKick: number;
+
+  /**
+   * 기본 통계 패널: 「무료 통계 조회」/「기본 통계 보기」 확정 시점의 법정리 스코프.
+   * 선택이 바뀌면 키가 어긋나 자동 조회되지 않는다.
+   */
+  statsDisplayScopeKey: string | null;
+  statsDisplayKick: number;
+
+  /** 무료·기본통계 V2: 계약일 기준 롤링 창 (3년 또는 5년) */
+  freeStatsWindowYears: FreeStatsWindowYears;
+  setFreeStatsWindowYears: (y: FreeStatsWindowYears) => void;
 
   paidResultView: PaidResultView;
   paidBasicBaseKey: string | null;
+  /**
+   * 마지막 기본통계(/free/v2) 응답의 beopjungri_code(쉼표 구분)와 동기화.
+   * 사전집계에서 제외된 코드 없이 kept만 담겨 analyze·모달과 동일한 행 집합을 쓰기 위함.
+   */
+  paidBulkBeopjungriCodes: string[] | null;
 
   /** 필터 분석 상태/결과 (effect/kick 없이 단일 진입점) */
   paidAnalysisStatus: PaidAnalysisStatus;
@@ -79,7 +105,12 @@ interface AppState {
    * 단계별 적용처럼 법정코드 목록만으로 덮어쓸 때에만 평평한 코드 배열을 넘김.
    */
   kickPaidBasicStatsAnalysis: (flattenTierToBeops?: readonly string[]) => void;
-  setPaidBasicBaseKey: (key: string | null) => void;
+  commitStatsDisplayScope: (scopeKey: string) => void;
+  /** 기본통계 응답의 analysis_base_key + beopjungri_code를 한 번에 반영 */
+  syncPaidBasicStatsMeta: (payload: {
+    analysis_base_key?: string | null;
+    beopjungri_code?: string | null;
+  }) => void;
   /** 현재 지역+필터로 유료 매트릭스 분석 — promise 기반, 직접 호출 */
   runPaidFilteredAnalysis: (resolvedBeopjungriCodes: readonly string[]) => Promise<void>;
   /** 진행 중인 분석을 폐기하고 idle 로 */
@@ -104,6 +135,8 @@ const defaultPaidRequest: PaidAnalysisRequest = {
   years: getDefaultPaidSelectedYears(),
   road_conditions: null,
   area_categories: null,
+  area_sqm_min: null,
+  area_sqm_max: null,
   land_categories: null,
   zone_types: null,
   exclude_partial: false,
@@ -128,9 +161,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   paidRoadExcluded: [],
   paidAreaExcluded: [],
   paidBasicStatsKick: 0,
+  statsDisplayScopeKey: null,
+  statsDisplayKick: 0,
+  freeStatsWindowYears: 5,
 
   paidResultView: "idle",
   paidBasicBaseKey: null,
+  paidBulkBeopjungriCodes: null,
 
   paidAnalysisStatus: "idle",
   paidAnalysisResult: null,
@@ -139,10 +176,46 @@ export const useAppStore = create<AppState>((set, get) => ({
   paidAnalysisStartedAt: null,
 
   setViewMode: (m) =>
-    set((s) => ({
-      viewMode: m,
-      paidResultView: m === "free" ? "idle" : s.paidResultView,
-    })),
+    set((s) => {
+      if (m !== "free") {
+        return {
+          viewMode: m,
+          paidResultView: s.paidResultView,
+          statsDisplayScopeKey: null,
+          statsDisplayKick: 0,
+        };
+      }
+      /**
+       * 무료 화면은 단건(법정동·리 1개)만 다룬다.
+       * 유료에서 시군구·읍면동 다중 선택을 한 채로 무료로 돌아오면
+       * resolveUnionBeopjungriCodes 가 1개 초과 코드를 돌려줘 무료 패널 canFetch 가 막혀
+       * 화면이 비어 보이는 문제가 있어, 마지막 법정코드만 보존한다.
+       */
+      const beops = s.tierSelection.beopjungri_codes.filter(Boolean);
+      const lastBeop = beops.length > 0 ? [beops[beops.length - 1]!] : [];
+      const needsTrim =
+        s.tierSelection.sigungu_codes.length > 0 ||
+        s.tierSelection.eupmyeondong_codes.length > 0 ||
+        beops.length > 1;
+      return {
+        viewMode: m,
+        paidResultView: "idle",
+        tierSelection: needsTrim ? tierOnlyBeopjungri(lastBeop) : s.tierSelection,
+        // 유료 잔재 정리(매트릭스/캐시키 등은 무료 모드와 무관)
+        paidBasicBaseKey: null,
+        paidBulkBeopjungriCodes: null,
+        paidAnalysisStatus: "idle",
+        paidAnalysisResult: null,
+        paidAnalysisError: null,
+        paidAnalysisStartedAt: null,
+        statsDisplayScopeKey: null,
+        statsDisplayKick: 0,
+        paidBasicStatsKick: 0,
+      };
+    }),
+
+  setFreeStatsWindowYears: (y) =>
+    set({ freeStatsWindowYears: normalizeFreeStatsWindowYears(y) }),
 
   setRegionSegment: (idx, value) =>
     set((s) => {
@@ -279,10 +352,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       regionSegments: [...EMPTY_REGION_SEGMENTS],
       paidResultView: "idle",
       paidBasicBaseKey: null,
+      paidBulkBeopjungriCodes: null,
       paidAnalysisStatus: "idle",
       paidAnalysisResult: null,
       paidAnalysisError: null,
       paidAnalysisStartedAt: null,
+      statsDisplayScopeKey: null,
+      statsDisplayKick: 0,
+      paidBasicStatsKick: 0,
     }),
 
   kickPaidBasicStatsAnalysis: (flattenTierToBeops) =>
@@ -290,31 +367,48 @@ export const useAppStore = create<AppState>((set, get) => ({
       ...(flattenTierToBeops != null && flattenTierToBeops.length > 0
         ? { tierSelection: tierOnlyBeopjungri(normalizeAndSortCodes(flattenTierToBeops)) }
         : {}),
-      paidBasicStatsKick: s.paidBasicStatsKick + 1,
       paidResultView: "basic",
       paidBasicBaseKey: null,
+      paidBulkBeopjungriCodes: null,
       paidAnalysisStatus: "idle",
       paidAnalysisResult: null,
       paidAnalysisError: null,
       paidAnalysisStartedAt: null,
     })),
 
-  setPaidBasicBaseKey: (key) => set({ paidBasicBaseKey: key }),
+  commitStatsDisplayScope: (scopeKey: string) =>
+    set((s) => ({
+      statsDisplayScopeKey: scopeKey,
+      statsDisplayKick: s.statsDisplayKick + 1,
+      paidBasicStatsKick: s.paidBasicStatsKick + 1,
+    })),
+
+  syncPaidBasicStatsMeta: (payload) =>
+    set(() => {
+      const raw = payload.beopjungri_code;
+      const split =
+        raw == null || String(raw).trim() === ""
+          ? null
+          : normalizeAndSortCodes(String(raw).split(","));
+      return {
+        paidBasicBaseKey: payload.analysis_base_key ?? null,
+        paidBulkBeopjungriCodes: split != null && split.length > 0 ? split : null,
+      };
+    }),
 
   runPaidFilteredAnalysis: async (resolvedBeopjungriCodes) => {
-    const codes = [...resolvedBeopjungriCodes.map((c) => String(c ?? "").trim()).filter(Boolean)];
-    if (codes.length === 0) {
+    const resolved = normalizeAndSortCodes(resolvedBeopjungriCodes);
+    if (resolved.length === 0) {
       return;
     }
-    const s = get();
-    const reqId = s.paidAnalysisRequestId + 1;
-    const payload = buildPaidPayload(
-      s.paidRequest,
-      codes,
-      s.paidRoadExcluded,
-      s.paidAreaExcluded,
-      s.paidBasicBaseKey
-    );
+
+    /**
+     * 분석 시작 시점에 reqId 를 먼저 올리고 loading 으로 진입한다.
+     * - bulk 사전조회가 끝나기 전 사용자가 다시 「필터 분석 실행」을 눌러도,
+     *   reqId 가 달라지므로 늦게 도착한 bulk/analyze 응답은 set 단계에서 폐기된다.
+     * - UI 가 즉시 「분석 중…」 으로 전환되어 멍한 무반응 구간이 사라진다.
+     */
+    const reqId = get().paidAnalysisRequestId + 1;
     set({
       paidResultView: "filtered",
       paidAnalysisStatus: "loading",
@@ -322,6 +416,60 @@ export const useAppStore = create<AppState>((set, get) => ({
       paidAnalysisRequestId: reqId,
       paidAnalysisStartedAt: Date.now(),
     });
+
+    const s0 = get();
+    let codes: string[];
+    const rc = resolved;
+    const sc =
+      s0.paidBulkBeopjungriCodes != null
+        ? normalizeAndSortCodes(s0.paidBulkBeopjungriCodes)
+        : [];
+    /** 사전집계 kept(부분 코드) vs 선택 전체가 다르면 스토어 값이 더 넓거나 더 좁을 수 있어 재확인 필요 */
+    const storeMatchesTierSelection =
+      sc.length > 0 && sc.length === rc.length && sc.every((c, i) => c === rc[i]);
+    if (storeMatchesTierSelection) {
+      codes = [...sc];
+    } else if (resolved.length > 1) {
+      /**
+       * 필터 분석 화면만 볼 때 PaidAnalysisPanel 이 아직 없어 기본통계 동기화가 안 된 경우가 많다.
+       * 복수 법정단위는 free/v2/bulk 의 kept(beopjungri_code)와 analyze·모달이 같아야 한다.
+       */
+      const w = normalizeFreeStatsWindowYears(s0.freeStatsWindowYears);
+      try {
+        const bulk = await fetchFreeStatsBulk(resolved, { window_years: w });
+        // bulk 결과를 store 에 반영하기 전에 cancel/재호출 여부 재확인.
+        if (get().paidAnalysisRequestId !== reqId) return;
+        const split = normalizeAndSortCodes(
+          String(bulk.beopjungri_code ?? "")
+            .split(",")
+            .map((c) => c.trim())
+            .filter(Boolean)
+        );
+        if (split.length > 0) {
+          get().syncPaidBasicStatsMeta({
+            analysis_base_key: bulk.analysis_base_key ?? null,
+            beopjungri_code: bulk.beopjungri_code ?? null,
+          });
+          codes = split;
+        } else {
+          codes = resolved;
+        }
+      } catch {
+        if (get().paidAnalysisRequestId !== reqId) return;
+        codes = resolved;
+      }
+    } else {
+      codes = resolved;
+    }
+
+    const st = get();
+    const payload = buildPaidPayload(
+      st.paidRequest,
+      codes,
+      st.paidRoadExcluded,
+      st.paidAreaExcluded,
+      st.paidBasicBaseKey
+    );
     try {
       const data = await runPaidAnalysisApi(payload);
       // 사이에 새 호출이나 cancel 이 일어났으면 결과 폐기.

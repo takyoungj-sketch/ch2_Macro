@@ -11,7 +11,7 @@ import json
 import logging
 import time
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import numpy as np
@@ -58,6 +58,17 @@ CACHE_TTL_HOURS = 24
 def _make_cache_key(req: PaidAnalysisRequest) -> str:
     payload = json.dumps(_request_stable_payload(req.model_dump()), sort_keys=True)
     return hashlib.sha256(payload.encode()).hexdigest()
+
+
+def _effective_paid_request(req: PaidAnalysisRequest) -> PaidAnalysisRequest:
+    """
+    면적 직접 범위(B 모드): area_sqm_min/max 중 하나라도 있으면 area_categories는 무시한다.
+    """
+    if req.area_sqm_min is None and req.area_sqm_max is None:
+        return req
+    if not req.area_categories:
+        return req
+    return req.model_copy(update={"area_categories": None})
 
 
 def _request_stable_payload(d: dict) -> dict:
@@ -186,7 +197,7 @@ def expand_region_units(selections: list[RegionSelectionUnit], db: Session) -> l
 
 
 def _normalize_matrix_yearly_req(req_body: MatrixYearlyRequest) -> PaidAnalysisRequest:
-    return PaidAnalysisRequest(
+    r = PaidAnalysisRequest(
         region_selections=req_body.region_selections,
         region_codes=req_body.region_codes,
         year_from=req_body.year_from,
@@ -200,7 +211,10 @@ def _normalize_matrix_yearly_req(req_body: MatrixYearlyRequest) -> PaidAnalysisR
         exclude_partial=req_body.exclude_partial,
         exclude_outlier=req_body.exclude_outlier,
         outlier_iqr_multiplier=req_body.outlier_iqr_multiplier,
+        area_sqm_min=req_body.area_sqm_min,
+        area_sqm_max=req_body.area_sqm_max,
     )
+    return _effective_paid_request(r)
 
 
 def _matrix_cell_merged_where(body: MatrixYearlyRequest, db: Session) -> tuple[str, dict]:
@@ -215,15 +229,17 @@ def _matrix_cell_merged_where(body: MatrixYearlyRequest, db: Session) -> tuple[s
     )
     base_parts, params = _build_conditions(
         resolved_codes,
-        body.year_from,
-        body.year_to,
-        body.years,
+        base_req.year_from,
+        base_req.year_to,
+        base_req.years,
         base_cache_key,
-        body.road_conditions,
-        body.area_categories,
-        body.land_categories,
-        body.zone_types,
-        body.exclude_partial,
+        base_req.road_conditions,
+        base_req.area_categories,
+        base_req.land_categories,
+        base_req.zone_types,
+        base_req.exclude_partial,
+        base_req.area_sqm_min,
+        base_req.area_sqm_max,
     )
     mtx_sql, mtx_par = _matrix_dimension_sql(
         "lt", body.zone_type.strip(), body.land_category.strip()
@@ -278,6 +294,8 @@ def _build_conditions(
     land_categories: Optional[list[str]],
     zone_types: Optional[list[str]],
     exclude_partial: bool,
+    area_sqm_min: Optional[float] = None,
+    area_sqm_max: Optional[float] = None,
 ) -> tuple[list[str], dict]:
     conditions = [
         "lt.is_valid = TRUE",
@@ -317,9 +335,19 @@ def _build_conditions(
     if road_conditions:
         conditions.append("lt.road_condition = ANY(:road_conditions)")
         params["road_conditions"] = road_conditions
-    if area_categories:
+
+    use_area_span = area_sqm_min is not None or area_sqm_max is not None
+    if use_area_span:
+        if area_sqm_min is not None:
+            conditions.append("lt.area_sqm >= :area_sqm_min")
+            params["area_sqm_min"] = float(area_sqm_min)
+        if area_sqm_max is not None:
+            conditions.append("lt.area_sqm <= :area_sqm_max")
+            params["area_sqm_max"] = float(area_sqm_max)
+    elif area_categories:
         conditions.append("lt.area_category = ANY(:area_categories)")
         params["area_categories"] = area_categories
+
     if land_categories:
         conditions.append("lt.land_category = ANY(:land_categories)")
         params["land_categories"] = land_categories
@@ -410,7 +438,8 @@ def _get_cache(key: str, db: Session) -> dict | None:
 
 def _set_cache(key: str, result: dict, db: Session) -> None:
     """쓰기 실패는 로그만 — 분석 결과는 그대로 응답."""
-    expires = datetime.utcnow() + timedelta(hours=CACHE_TTL_HOURS)
+    # DECISIONS D-005 — UTC + tz-aware 통일. PostgreSQL TIMESTAMPTZ 와 비교 시 묵시 캐스팅 위험을 없앤다.
+    expires = datetime.now(timezone.utc) + timedelta(hours=CACHE_TTL_HOURS)
     try:
         db.execute(
             text(
@@ -613,6 +642,8 @@ def _analyze_core_materialized_rows(
         req.land_categories,
         req.zone_types,
         req.exclude_partial,
+        req.area_sqm_min,
+        req.area_sqm_max,
     )
 
     query = _select_full_query(" AND ".join(parts))
@@ -704,6 +735,8 @@ def _analyze_core_sql_aggregate(
         req.land_categories,
         req.zone_types,
         req.exclude_partial,
+        req.area_sqm_min,
+        req.area_sqm_max,
     )
     where_sql = " AND ".join(parts)
     apx = _AGG_ON_PX
@@ -817,6 +850,29 @@ def _analyze_core(
     return _analyze_core_sql_aggregate(req, resolved_codes=resolved_codes, db=db)
 
 
+def _latest_v2_as_of(db: Session) -> tuple[Optional[object], Optional[object]]:
+    """
+    DECISIONS D-006 — 유료 응답에 같이 노출할 `as_of_month`, `stats_reference_date`.
+    `land_basic_stats_v2` 미적재 환경에서는 둘 다 None.
+    """
+    try:
+        row = db.execute(
+            text("SELECT MAX(as_of_month) AS am FROM land_basic_stats_v2")
+        ).fetchone()
+    except Exception as exc:  # noqa: BLE001
+        log.debug("latest_v2_as_of skipped: %s", exc)
+        return None, None
+    am = row.am if row else None
+    if am is None:
+        return None, None
+    # stats_reference_date = as_of_month 의 다음 달 1일 (`v2_stats_windows.stats_ui_reference_date` 와 동일).
+    if am.month == 12:
+        ref = am.replace(year=am.year + 1, month=1, day=1)
+    else:
+        ref = am.replace(month=am.month + 1, day=1)
+    return am, ref
+
+
 def _log_usage(
     req: PaidAnalysisRequest,
     resolved_codes: list[str],
@@ -877,18 +933,22 @@ def analyze(
     이상치 제외가 켜져 있으면 행별 IQR 때문에 전체 결과를 불러오며 느릴 수 있다.
     """
 
-    units = _normalize_region_units(req)
+    req0 = _effective_paid_request(req)
+    units = _normalize_region_units(req0)
     resolved_codes = expand_region_units(units, db)
     base_cache_key = (
-        req.base_cache_key
-        if has_valid_analysis_base_cache(db, req.base_cache_key)
+        req0.base_cache_key
+        if has_valid_analysis_base_cache(db, req0.base_cache_key)
         else None
     )
-    req_for_analysis = req.model_copy(update={"base_cache_key": base_cache_key})
+    req_for_analysis = req0.model_copy(update={"base_cache_key": base_cache_key})
     req_for_cache = PaidAnalysisRequest(
         **req_for_analysis.model_dump()
         | {"region_selections": units, "region_codes": sorted(resolved_codes)}
     )
+
+    # DECISIONS D-006 — 모든 응답 경로에서 같은 as_of/ref 를 단다.
+    as_of, ref = _latest_v2_as_of(db)
 
     cache_key = _make_cache_key(req_for_cache)
     cached = _get_cache(cache_key, db)
@@ -898,7 +958,13 @@ def analyze(
             merged_y = attach_population_year_end(
                 db, region_codes=resolved_codes, items=list(resp.by_year)
             )
-            return resp.model_copy(update={"by_year": merged_y})
+            return resp.model_copy(
+                update={
+                    "by_year": merged_y,
+                    "as_of_month": as_of,
+                    "stats_reference_date": ref,
+                }
+            )
         except (ValidationError, TypeError, ValueError) as val_err:
             log.warning(
                 "analysis_cache entry invalid (%s…), rebuilding: %s",
@@ -923,13 +989,15 @@ def analyze(
         by_road_condition=payload.by_road_condition,
         matrix=payload.matrix,
         response_ms=elapsed_ms,
+        as_of_month=as_of,
+        stats_reference_date=ref,
     )
 
     dumped = cached_req.model_dump()
     dumped["response_ms"] = elapsed_ms
 
     _set_cache(cache_key, dumped, db)
-    _log_usage(req, resolved_codes, result_count, elapsed_ms, request, db)
+    _log_usage(req_for_analysis, resolved_codes, result_count, elapsed_ms, request, db)
 
     return cached_req
 

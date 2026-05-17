@@ -36,6 +36,7 @@ const SIDO_CANON_FROM_ABBR = new Map<string, string>(
     대전: "대전광역시",
     울산: "울산광역시",
     세종: "세종특별자치시",
+    경기: "경기도",
   })
 );
 

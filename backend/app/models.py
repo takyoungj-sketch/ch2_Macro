@@ -45,6 +45,8 @@ class LandTransaction(Base):
     is_partial_ownership = Column(Boolean, nullable=False, default=False)
     is_cancelled = Column(Boolean, nullable=False, default=False)
     is_valid = Column(Boolean, nullable=False, default=True)
+    needs_review = Column(Boolean, nullable=False, default=False)
+    mapping_notes = Column(String(240))
     updated_at = Column(TIMESTAMP)
 
 

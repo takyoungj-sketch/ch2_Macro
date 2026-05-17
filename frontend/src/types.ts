@@ -28,20 +28,37 @@ export interface YearlyTradeStat {
   population_year_end?: number | null;
 }
 
-export interface FreeStatsResponse {
+/** 무료 통계 V2 API (`/api/free/v2/…`) — 계약일(contract_date) 롤링 창 */
+export type FreeStatsWindowYears = 3 | 5;
+
+/** 쿼리/스토어 값이 비어 있거나 잘못돼도 API에는 3 또는 5만 보냄 (빈 window_years → 422 방지) */
+export function normalizeFreeStatsWindowYears(v: unknown): FreeStatsWindowYears {
+  if (v === 3 || v === "3") return 3;
+  if (v === 5 || v === "5") return 5;
+  return 5;
+}
+
+export interface FreeStatsV2Response {
   beopjungri_code: string;
   beopjungri_name: string;
-  year_from: number;
-  year_to: number;
+  /** 기준 스냅샷 월(YYYY-MM-01) */
+  as_of_month: string;
+  /** UI 기준일: as_of_month 다음 달 1일. 구버전 API면 없을 수 있음 */
+  stats_reference_date?: string;
+  period_start: string;
+  period_end: string;
+  window_years: FreeStatsWindowYears;
   analysis_base_key?: string | null;
   total: StatsResult;
   by_year: YearlyTradeStat[];
   by_zone: Record<string, StatsResult>;
   by_land_category: Record<string, StatsResult>;
   matrix: MatrixCell[];
-  /** 합산 요청에 포함됐으나 사전집계 부재로 빠진 법정코드 */
   stats_excluded_codes?: string[];
 }
+
+/** @deprecated 서버 V1 제거됨 — `FreeStatsV2Response` 사용 */
+export type FreeStatsResponse = FreeStatsV2Response;
 
 export type RegionScopeType = "beopjungri" | "eupmyeondong" | "sigungu";
 
@@ -75,6 +92,9 @@ export interface PaidAnalysisRequest {
   base_cache_key?: string | null;
   road_conditions?: string[] | null;
   area_categories?: string[] | null;
+  /** 계약면적(㎡) 하한·상한(포함). 둘 중 하나만 있어도 됨. 지정 시 광소/정상/광대(area_categories)는 서버에서 적용하지 않음(B 모드). */
+  area_sqm_min?: number | null;
+  area_sqm_max?: number | null;
   land_categories?: string[] | null;
   zone_types?: string[] | null;
   exclude_partial: boolean;
@@ -94,6 +114,13 @@ export interface PaidAnalysisResponse {
   by_road_condition: Record<string, StatsResult>;
   matrix: MatrixCell[];
   response_ms: number;
+  /**
+   * DECISIONS D-006 — V2 사전집계의 최신 스냅샷 월 1일. 무료/유료 화면이 같은 「YYYY년 M월 말 기준」 표기를 쓰도록 노출.
+   * 비어 있으면 V2 사전집계가 적재되지 않은 상태.
+   */
+  as_of_month?: string | null;
+  /** UI 표시용 기준일 — `as_of_month` 의 다음 달 1일. 화면 상단 라벨과 1:1. */
+  stats_reference_date?: string | null;
 }
 
 export interface MatrixYearlyStat {

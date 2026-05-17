@@ -1,200 +1,126 @@
 # 다음 작업 메모
 
-마지막 정리일: 2026-05-15
+마지막 정리일: 2026-05-17
 
-전체 로드맵(충북 유료 → 전국 DB → 2026-01-01 전제 갱신)은 **`README.md`의 「진행 계획 (합의)」** 를 따른다.
+> **큰 결정** 은 [`docs/DECISIONS.md`](docs/DECISIONS.md) 에, **운영 SOP** 는 [`docs/V2_OPERATOR_CHECKLIST.md`](docs/V2_OPERATOR_CHECKLIST.md) 에 둔다. 이 문서는 **지금 손대는 일 + 짧은 백로그** 만 유지한다.
 
-## 전국 base DB — 잔여 시도 이어받기 (출근 중·에이전트 공용)
+---
 
-**목적**: 시도별 국토부 토지 실거래 엑셀을 `land_transactions_raw` → `land_transactions` → `land_basic_stats`까지 넣고, 같은 시도에 대해 **`population_stats`**(연말 인구)도 맞춘다.
+## 0. 내일 첫 일 (이번 세션 마감 시점에 남은 검증)
 
-### 이미 끝난 시도 (같은 절차로 적재·검증 완료)
+이번 세션에서 백엔드(`main.py` lifespan + `/health.latest_as_of_month`, `paid.py` as_of/ref 노출, API_TOKEN 옵트인)와
+프론트(매트릭스/연도별 표 캡션을 「YYYY년 M월 말 기준」으로 통일)를 모두 손봤지만, 실행 중인 백엔드 프로세스는 옛 코드 그대로다.
+리허설(`pipeline/rehearse_v2_update.py`) 결과 → `logs/rehearse_v2_update.txt` 도 같이 참고.
 
-| 시도 | `seed_region_codes.py --sido` | 인구 `--codes-prefix` | 원본 폴더(명명 예시) |
-|------|------------------------------|------------------------|------------------|
-| 충청북도 | `충청북도` | `43` | `원본/토지_충북` |
-| 경기도 | `경기도` | `41` | `원본/토지_경기` |
-| 충청남도 | `충청남도` | `44` | `원본/토지_충남` |
-| 경상북도 | `경상북도` | `47` | `원본/토지_경북` |
+| 순 | 액션 | 확인 |
+|----|------|------|
+| 0-1 | **백엔드 재시작** | `curl http://127.0.0.1:8000/health` → `latest_as_of_month: "2025-12-01"` 가 같이 와야 함 |
+| 0-2 | **프론트 강제 새로고침** | 무료/유료 두 패널 우상단·매트릭스 캡션이 모두 「2025년 12월 말 기준」으로 동일한지 눈 확인 |
+| 0-3 | (선택) **API_TOKEN 켜기** | `backend/.env` 의 `API_TOKEN` + `frontend/.env` 의 `VITE_API_TOKEN` 같은 값으로 채우고 양쪽 재시작 → 호출 통과 확인 |
+| 0-4 | **리허설 재실행** | `py -3.13 pipeline/rehearse_v2_update.py --health-url http://127.0.0.1:8000/health` → errors=0 목표 (남은 errors 는 §1 P2 의 인구 시드 1건뿐이어야 함) |
 
-### 앞으로 할 시도 (위 네 곳 제외 전부, 같은 방식 반복)
+위 4개 끝나면 본 세션의 모든 코드 변경분이 사용자 화면까지 닿은 것.
 
-`--sido` 문자열은 **`pipeline/seed_region_codes.py`의 `SIDO_CODE_MAP` 키와 한 글자도 다르면 안 된다.**
+## 1. 지금 진행 중
 
-| 시도 | `--sido` | `--codes-prefix` | 원본 폴더(명명 예시) |
-|------|----------|-------------------|-----------------|
-| 서울특별시 | `서울특별시` | `11` | `원본/토지_서울` |
-| 부산광역시 | `부산광역시` | `26` | `원본/토지_부산` |
-| 대구광역시 | `대구광역시` | `27` | `원본/토지_대구` |
-| 인천광역시 | `인천광역시` | `28` | `원본/토지_인천` |
-| 광주광역시 | `광주광역시` | `29` | `원본/토지_광주` |
-| 대전광역시 | `대전광역시` | `30` | `원본/토지_대전` |
-| 울산광역시 | `울산광역시` | `31` | `원본/토지_울산` |
-| 세종특별자치시 | `세종특별자치시` | `36` | `원본/토지_세종` |
-| 강원특별자치도 | `강원특별자치도` | `51` | `원본/토지_강원` |
-| 전북특별자치도 | `전북특별자치도` | `52` | `원본/토지_전북` |
-| 전라남도 | `전라남도` | `46` | `원본/토지_전남` |
-| 경상남도 | `경상남도` | `48` | `원본/토지_경남` |
-| 제주특별자치도 | `제주특별자치도` | `50` | `원본/토지_제주` |
+| 우선 | 항목 | 메모 |
+|------|------|------|
+| P1 | **웹 배포 (프로덕션 / 준프로덕션)** | DECISIONS D-007 의 `API_TOKEN` 옵션을 활성한 채 배포. CORS·도메인·env 점검. |
+| P2 | **`population_jusosagae` 전국 시드** | 리허설이 잡아낸 미적재 1건. SOP §B7: `py -3.13 pipeline/seed_population_csv.py --file ../data/population/<최신_CSV>` (DECISIONS D-004, prefix 미지정 = 전국). |
+| P3 | **2026년 첫 월별 갱신 본 운영** | `docs/V2_OPERATOR_CHECKLIST.md` §B0 (리허설) → §B1~B12 그대로. `/health.latest_as_of_month` 가 직전 달 1일로 바뀌는지가 통과 기준. |
+| P4 | **V1 라우터 폐기 일정 모니터링** | `docs/DECISIONS.md` D-001: 26-03-31 신규 호출 차단, 26-06-30 코드/테이블 제거. |
 
-### 데이터 파일
+## 2. 짧은 백로그 (제품·코드)
 
-1. **법정동 마스터**  
-   - `data/region_codes/*.csv` — 전국 통합 파일을 두고 `--sido`로 해당 시도만 필터링한다.  
-   - 컬럼 형식은 `seed_region_codes.py` 요구(법정동코드·법정동명칭·폐지여부 등)와 맞아야 한다.  
-   - `_launch_*` 스크립트는 `glob("*.csv")` **첫 번째 파일**만 쓰므로, 폴더에 마스터 CSV는 **한 개만** 두는 것이 안전하다.
+브랜치 리뷰(2026-05-16)와 그 이후 추가 항목.
 
-2. **연말 인구**  
-   - `data/population/지역별(법정동) 성별 연령별 주민등록 인구수_YYYYMMDD.csv`  
-   - 현재 레포 예: `20221231`, `20231231`, `20241231`, `20251231`, `20260331`  
-   - **`seed_population_csv.py` 기본 `--codes-prefix`는 `43`(충북)** 이라, 다른 시도는 매번 **`--codes-prefix`를 반드시 지정**한다.
+| # | 영역 | 항목 | 비고 |
+|---|------|------|------|
+| 1 | ~~backend/frontend~~ | ~~`paid.py` 매트릭스 응답에 `as_of_month`/`stats_reference_date` 노출 + 프론트 캡션 「YYYY년 M월 말 기준」 통일~~ | **2026-05-17 완료 — DECISIONS D-002/D-006**. archive 참조. |
+| 2 | backend | `free_v2._combined_bundle_v2_from_transactions` 메모리 합산 → SQL `GROUPING SETS` 로 이전 | 시군구 다중 합산 시 성능 |
+| 3 | pipeline | `clean.py --reprocess-all` 에 `--yes-i-am-sure` 또는 stdin 확인 도입 | 전 테이블 삭제 가드 |
+| 4 | backend | `free_v2.get_basic_stats_v2` 단건 — 사전집계 미적재 시 안내 메시지에 `build_stats_v2.py --as-of …` 명시 | UX |
+| 5 | backend | `free.py`(V1) 라우터 deprecated 마킹 후 **2026-03-31 제거** | DECISIONS D-001 |
+| 6 | backend | 갱신 실패 알림 (Slack/SMTP) — `build_stats_v2.py` 종료 코드를 받는 wrapper | 외부 webhook 정해지면 |
+| 7 | ops | DB 일일 백업 자동화 (`pg_dump` 또는 PITR) + 복구 리허설 | 결제 도입 전이라도 |
+| 8 | tests | `clean.py` 강한 키 매핑·`compute_stats`·`period_bounds_for_window` 단위 테스트 | 26년 코드 변경 회귀 방지 |
+| 9 | ops | Selenium/Playwright 자동 수집 | 현재는 수동 다운로드 → `--excel-dir` |
+| 10 | ui | 신규 연도 첫 분기 "참고용" 워터마크 (count<15 강조 외 보조) | 26년 1Q UX |
+| 11 | docs | README 분할 (`docs/SETUP.md`, `docs/PRODUCT.md`, `docs/PIPELINE.md`) | 현재 README 270+ 줄 |
+| 12 | backend | `region_codes` 활성/비활성(`is_active`) 갱신 절차 — 행정 개편 대응 | 신규 법정동 코드 자동 반영 |
 
-### 시도 하나당 실행 순서 (PowerShell 복사용)
+## 3. 유료 매트릭스 모달 확장 (상시 백로그)
 
-```powershell
-cd c:\ch2\ch2_Macro\pipeline
-# 0) DATABASE_URL — pipeline/.env
+매트릭스 셀 모달(`PaidMatrixYearlyModal`) 에 단계적으로 확장.
 
-# 1) region_codes
-.\.venv\Scripts\python.exe seed_region_codes.py --file ..\data\region_codes\<법정동마스터.csv> --sido "<위 표 --sido>"
-
-# 2) 토지 엑셀 (폴더 바로 아래 .xlsx 만, 하위 폴더 검색 없음)
-.\.venv\Scripts\python.exe run_pipeline.py --excel-dir "c:\ch2\ch2_Macro\원본\토지_<약칭>" --excel-format auto
-
-# 3) 인구 — 연도별 CSV마다 한 번씩
-foreach ($f in Get-ChildItem ..\data\population\*_????????.csv | Sort-Object Name) {
-  .\.venv\Scripts\python.exe seed_population_csv.py --file $f.FullName --codes-prefix "<위 표 2자리>"
-}
-```
-
-### `원본` 폴더 주의
-
-- `.gitignore`에 `원본/` 이 있어 **Git에는 포함되지 않는다.**
-- 시도별 하위 폴더(`원본/토지_서울` 등)만 `--excel-dir`에 넣는다.
-- **`원본/토지`** 같이 접미사 없는 폴더에 엑셀이 따로 있으면, 다른 폴더와 **중복 적재가 아닌지** 확인 후 처리한다.
-
-### 레포 안 참고 스크립트
-
-- **`pipeline/run_remaining_sidos.py`**: 충북·경기·충남·경북을 제외한 **나머지 13개 시도** 일괄(시드 → 토지 파이프라인 → 인구 연도별). 로그: `pipeline/logs/remaining_sidos_*.log`. 재개: `--resume-from "전라남도"` 등 `SIDO_CODE_MAP`과 동일한 `--sido` 문자열. 검증: `--dry-run`.
-- `pipeline/_launch_gyeongbuk_pipeline.py`: 시드 + `run_pipeline` + 인구 루프(경북 `47`) 전체 패턴.  
-- `pipeline/_launch_chungnam_pipeline.py`: 시드 + `run_pipeline`만. 인구는 위 3번처럼 별도 실행 권장.
-
-새 시도용 런처는 위 파일을 복사해 폴더 탐색용 문자열(파일명에 들어가는 시도명), `--sido`, `--codes-prefix` 만 바꾸면 된다.
-
-### 실행 타이밍
-
-- Cursor 에이전트는 요청 시에만 동작한다. 장시간 작업은 **Windows 작업 스케줄러**로 위 순서를 스크립트화해 실행한다.
-
-### 다음 데이터 업데이트 시 반드시 고려 — `build_stats` 전량 재집계 비용
-
-**문제**: `pipeline/run_pipeline.py`는 매 실행 끝에 **`build_stats.py`를 인자 없이** 호출한다. 이때 `land_transactions` **전국 분량**을 읽어 **모든 법정동·리**에 대해 `land_basic_stats`를 다시 만든다.
-
-**결과**: 시도(또는 엑셀 묶음)마다 `run_pipeline`을 **연속으로** 돌리면, **전국 사전집계가 시도 수만큼 반복**된다. 원장이 클수록 한 번이 수십 분~수 시간이 될 수 있고, **마지막 시도**일수록 DB가 가장 커서 **가장 오래 걸린다**고 체감하기 쉽다. (`run_remaining_sidos.py` 같은 일괄 루프에서 특히 심함.)
-
-**다음 갱신·대량 적재 때 권장**:
-
-1. **한 번에 넣기**: 시도별 폴더는 검증용으로 두되, 작업 시에는 **평면 한 폴더에 필요한 `.xlsx`만** 모아 `run_pipeline.py --excel-dir ...` **한 번**만 돌려 **`build_stats`도 한 번**만 돌게 한다. (통합 xlsx 1개면 `--excel-format merged` 등 형식에 맞춤.)
-2. **시도별로 나눌 때**: `collect` + `clean`만 반복하고 **`build_stats`는 맨 마지막에 한 번**만 실행하는 흐름으로 바꾼다.  
-   - 구현 방향: `run_pipeline.py`에 **`--skip-build-stats`**(이름 예시)를 두어 `clean`까지 하고 `build_stats`는 생략 → 전부 적재 후 **`python build_stats.py` 단독 1회**.  
-   - (레포에 아직 플래그가 없으면 **다음 업데이트 전에 코드 반영**할 것.)
-3. **인구 `seed_population_csv`**: 시도별 `--codes-prefix` 루프는 기존과 동일해도 무방(상대적으로 짧음).
-
-이 내용을 **규칙으로 두지 않으면**, 매년·매월 갱신 때마다 **불필요하게 긴 배치 시간**이 반복된다.
-
-## 현재 완료 상태
-
-- `참고/7.토지 통합 정제.ipynb`의 핵심 정제 기준을 `pipeline/clean.py`에 반영했다.
-- 단가는 엑셀과 동일하게 `거래금액(만원) / 계약면적(㎡)`인 `만원/㎡`로 저장한다.
-- 용도지역, 지목, 도로조건은 엑셀 분석표 기준으로 축약한다.
-- 신고 행 단위 보존 정책을 확정했다.
-  - 정상 신고와 해제 신고가 같은 물건에 함께 있어도 서로 덮어쓰지 않는다.
-  - 해제 신고만 통계에서 제외한다.
-  - 원본 `순번`을 `transaction_hash`에 우선 포함하고, 없으면 `raw_id`를 fallback으로 사용한다.
-- DB를 새 정제 기준으로 재구축했다.
-  - 백업: `backup_land_transactions_20260510_152743`
-  - 백업: `backup_land_basic_stats_20260510_152743`
-- 호암동 `2022~2025` 기준 검증 완료:
-  - 원장 전체: `433건`
-  - 통계 대상: `406건`
-  - `land_basic_stats` 전체 통계: `406건`
-
-## 확인한 핵심 판단
-
-기존 차이는 단순 UI 문제가 아니었다. 주요 원인은 다음이었다.
-
-- 과거 해시가 물건 단위에 가까워 정상 신고와 해제 신고가 서로 덮어쓸 수 있었다.
-- 동일 물건에 실제 소유권이전이 있었고, 그중 일부 신고만 해제된 사례가 있었다.
-- 따라서 물건 단위로 전체 제거하면 유효 거래까지 빠질 수 있다.
-
-최종 정책은 **신고 행 보존 + 해제 행만 제외**이다.
-
-## 전국 base DB 완료 후 로드맵 (진행 순서 합의)
-
-전국(잔여 시도 포함) **base DB 적재가 끝난 뒤**에는 아래 **순서**로 가는 것을 기본안으로 둔다.
-
-1. **웹서비스(웹페이지)**: 프로덕션(또는 준프로덕션) 환경에 **프론트·API·DB**를 연결해 **무료/유료 화면**을 실사용 가능하게 한다. (배포, 도메인, 환경변수, 인증·과금은 단계적으로.)
-2. **데이터 운영 파이프라인**: 웹이 참조하는 DB를 **지속적으로 맞추기** 위해, 아래 **흐름**을 문서·스케줄·Runbook으로 고정한다.  
-   **수집** (`pipeline/collect.py` 등) → **원장 적재·통합** (`land_transactions_raw`) → **정제** (`clean.py` → `land_transactions`) → **사전집계·부가 적재** (`build_stats.py`, 인구 `seed_population_csv.py` 등) → **정기 갱신** (`run_pipeline` 주기 실행 등).
-
-구현 코드는 이미 이 순서와 맞춰져 있으므로, “다음 일”은 **제품(웹)을 먼저 세우고**, 그다음 **운영 자동화·모니터링**을 다듬는 쪽으로 우선순위를 둔다.
-
-## 다음 우선순위
-
-### 단계 1 — 충청북도 기준 유료 화면
-
-1. 유료 API·필터(`FilterPanel` 등)를 **충북 법정동만** 선택·요청 가능하도록 검증·차단 로직을 명확히 한다.
-2. 호암동 등 기준 지역으로 무료/유료 매트릭스·수치를 엑셀과 대조한다.
-3. 신뢰구간·표본 경계(`scipy` 경고 등)는 유료 경로에서도 동일 정책으로 정리한다.
-
-### 이후 (README 로드맵)
-
-- 전국 **2021~2025** 원본 엑셀 기반 **base DB** 적재 — 잔여 시도 배치 **완료 후**에는 위 「전국 base DB 완료 후 로드맵」**(웹 먼저 → 수집·정제·갱신 운영)** 순으로 진행.
-- **2026-01-01** 전제의 정기 수집·갱신 배치 확정.
-
-### 유료 용도×지목 모달 확장 (다음 고려할 일)
-
-매트릭스 셀에서 뜨는 모달(`PaidMatrixYearlyModal` 등, 연도별 평균 추세선 기준)에 아래 **두 기능**을 붙이는 것을 할 일로 둔다.
-
-#### 1) 히스토그램 (분포·정규성 확인용)
+### 3-1. 히스토그램 (분포·정규성 확인용)
 
 | 고려사항 | 내용 |
 |----------|------|
-| 데이터 정의 | 현재 모달과 **동일한 유료 필터**(지역·연도·도로·면적·이상치 제외 등) + 선택한 **용도지역·지목**을 만족하는 **`unit_price_per_sqm`(만원/㎡)** 표본. |
-| 연도 범위 | **특정 연도 한 해** 분포 vs **모달이 다루는 연도 전체 합산** 분포 중 탭 또는 셀렉터로 구분할지 결정. |
-| 왜곡 | 단가는 꼬리가 길 수 있음 → **선형 히스토그램 + log 스케일(또는 log 단가 bin)** 병행 검토. “정규성”은 모양·대칭 위주 안내가 현실적(대표본에서 검정 수치만 강조하면 오해 소지). |
-| 구현 위치 | **서버에서 bin 경계·빈도·`n`만 반환**하면 전송량·상한 제어에 유리. 필요 시 최대 `n`·표집 정책. |
-| UI | 표본 수 `n`, bin 수 또는 구간, (선택) 정규 근사 곡선 오버레이. 추세선과 **같은 이상치 옵션** 적용 여부 명시. |
+| 데이터 정의 | 모달과 **동일한 유료 필터** + 선택한 **용도지역·지목** 의 `unit_price_per_sqm` 표본. |
+| 연도 범위 | "특정 연도 한 해" 분포 vs "모달이 다루는 연도 전체 합산" 분포 — 탭 또는 셀렉터. |
+| 왜곡 | 단가는 꼬리가 길 수 있음 → **선형 히스토그램 + log 스케일** 병행. 정규성은 모양·대칭 위주 안내. |
+| 구현 위치 | **서버에서 bin 경계·빈도·`n` 만 반환**. 최대 표본 상한 정책. |
+| UI | 표본 수 `n`, bin 수, (선택) 정규 근사 곡선. 추세선과 같은 이상치 옵션 적용 여부 명시. |
 
-#### 2) 원데이터 보기 (거래 목록)
+### 3-2. 원데이터 보기 (거래 목록)
 
 | 고려사항 | 내용 |
 |----------|------|
-| 데이터 출처 | `land_transactions` 정제 행. 히스토그램과 **동일 필터 + 용도·지목** 조건. |
-| API | 기존 `PaidAnalysisRequest`와 동일한 필터 컨텍스트 + `zone_type`, `land_category` + **페이지네이션**(offset/limit 또는 cursor). 선택 필드만 반환해 페이로드 제한. |
-| 노출 컬럼 | 계약연월·지역·면적·금액·단가·도로 등 **제품 정책**에 맞게 최소화; 주소 세부는 필요 시 단계적. |
-| 규모 | 셀당 수천 건 가능 → **한 페이지 건수 상한**, 총 건수 표시, (선택) CSV 다운로드 별도 한도. |
-| 성능·보안 | 인덱스 활용(`beopjungri_code`, `contract_year`, `zone_type`, `land_category` 등); 유료·과금 정책과 일치하는 엔드포인트. |
-| 캐시 | 가능하면 `analysis_base_cache` 키 재사용으로 **같은 후보 행 집합** 위에서 목록만 조회(백엔드 패턴은 README·`paid.py` 참고). |
+| 데이터 출처 | `land_transactions` 정제 행. 히스토그램과 동일 필터 + 용도·지목. |
+| API | `PaidAnalysisRequest` + `zone_type`, `land_category` + 페이지네이션. |
+| 노출 컬럼 | 계약연월·지역·면적·금액·단가·도로 등 최소화. |
+| 규모 | 셀당 수천 건 가능 → 한 페이지 건수 상한, 총 건수 표시. |
+| 캐시 | `analysis_base_cache` 키 재사용으로 같은 후보 행 집합 위에서 목록 조회. |
 
-#### 공통
+(현재 위 두 기능 일부는 이미 `MatrixCellHistogramRequest`/`MatrixCellTransactionsRequest` 로 백엔드에 도입돼 있고, 프론트 합류는 단계적으로.)
 
-- 모달 내 **탭 구조**(예: 연도 추세 | 분포 | 거래 목록)로 나누면 UX가 단순해짐.
-- 구현 순서 제안: **목록 API + 표** → 히스토그램(bin 요약 API + 차트), 또는 반대로 작은 표본부터 검증.
+---
 
-## 재구축 명령
+## 부록 A. 끝난 단계 (Archive)
 
-정제 정책을 다시 바꾼 뒤에는 백업 후 아래 순서로 재생성한다.
+> 다음 항목들은 종료 상태. 다음 정리에서 별도 파일(`docs/archive/`) 로 이동 예정.
 
-```powershell
-cd c:\ch2\ch2_Macro\pipeline
-.\.venv\Scripts\python.exe clean.py --reprocess-all
-.\.venv\Scripts\python.exe build_stats.py
-```
+### 정제 정책 확정 (2026-05-10)
 
-정제 해시 정책이 바뀌는 경우에는 기존 `land_transactions`, `land_basic_stats`를 백업 후 비우고 재생성하는 편이 안전하다.
+- 신고 행 단위 보존 + 해제 행만 통계 제외 정책 확정.
+- `참고/7.토지 통합 정제.ipynb` 의 핵심 정제 기준을 `pipeline/clean.py` 에 반영.
+- 단가 = `거래금액(만원) / 계약면적(㎡)` 로 저장.
+- DB 백업: `backup_land_transactions_20260510_152743`, `backup_land_basic_stats_20260510_152743`.
+- 호암동 2022~2025 검증: 원장 433 건, 통계 대상 406 건, `land_basic_stats` ALL 통계 406 건.
+
+### 전국 base DB — 시도별 적재 (2026-05-15 시점 진행, V2 사전집계는 전국 완료)
+
+- `pipeline/seed_region_codes.py` + `pipeline/run_pipeline.py --excel-dir ...` 패턴으로 시도별 적재.
+- `pipeline/run_remaining_sidos.py` 가 잔여 13개 시도 일괄 처리(시드 → 토지 파이프라인 → 인구 연도별).
+- 인구 CSV 는 `data/population/` 의 행안부 「지역별(법정동) 성별 연령별 주민등록 인구수」 사용.
+
+이후 신규 시도 적재가 발생하면 위 SOP 동일 적용. 운영 진입 후에는 시도별 폴더보다 **평면 한 폴더 + `--skip-build-stats` + 마지막 1회 `build_stats_v2.py`** 권장 (`docs/V2_OPERATOR_CHECKLIST.md`).
+
+### 매트릭스 ↔ 모달 일관성 (2026-05-16 패치)
+
+- 무료 V2 응답의 `kept` 코드를 `paidBulkBeopjungriCodes` 로 동기화 → 유료 분석/매트릭스/모달이 같은 행 집합.
+- `runPaidFilteredAnalysis` race / 로딩 표시 누락 수정.
+- 파이프라인 끝에서 `analysis_cache` + `analysis_base_cache` 자동 무효화.
+- `setViewMode("free")` 시 다중 선택 잔재 정리.
+- `PaidAnalysisRequest` `extra="forbid"` 로 오타 방어.
+
+### 캡션 통일 + 리허설 도구 (2026-05-17 패치)
+
+- 무료/유료 패널 모두 「YYYY년 M월 말 기준」으로 표기 통일 (`statsAsOfLabel` 유틸).
+  - `frontend/src/utils/freeStatsV2.ts`, `FreeStatsPanel.tsx`, `PaidAnalysisPanel.tsx`.
+- 백엔드 `paid.py` 의 매트릭스 응답에도 `as_of_month`/`stats_reference_date` 노출 (DECISIONS D-006).
+- `backend/app/main.py` lifespan 전환 + `/health.latest_as_of_month` 노출 + `API_TOKEN` 옵트인 미들웨어 + V1 라우터 `Sunset` 헤더.
+- SOP §B 앞에 **B0 (리허설)** 단계 추가: `pipeline/rehearse_v2_update.py` (읽기 전용; 환경/DB/마이그레이션/SOP `--help`/`/health` 일괄 점검).
+  - 산출물: `logs/rehearse_v2_update.txt` (UTF-8). PowerShell 콘솔이 cp949 라 화면이 깨질 수 있어 항상 파일을 본다.
+
+---
 
 ## 관련 문서
 
-- `LAND_CLEANING.md`: 정제 기준과 2026-05-10 검증 이력
-- `README.md`: 제품/파이프라인 기준 요약
-- `토지mvp.pdf`: MVP 요구사항 원문
+- 결정 기록: [`docs/DECISIONS.md`](docs/DECISIONS.md)
+- 운영 SOP: [`docs/V2_OPERATOR_CHECKLIST.md`](docs/V2_OPERATOR_CHECKLIST.md)
+- 갱신 흐름: [`docs/V2_STATS_PRODUCTION.md`](docs/V2_STATS_PRODUCTION.md)
+- 통계 설계: [`docs/V2_STATS_DESIGN.md`](docs/V2_STATS_DESIGN.md)
+- 정제 정책: [`LAND_CLEANING.md`](LAND_CLEANING.md)
+- 제품 기준: [`README.md`](README.md)

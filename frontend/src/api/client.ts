@@ -1,6 +1,7 @@
 import axios from "axios";
 import type {
-  FreeStatsResponse,
+  FreeStatsV2Response,
+  FreeStatsWindowYears,
   MatrixCellHistogramRequest,
   MatrixCellHistogramResponse,
   MatrixCellTransactionsRequest,
@@ -11,8 +12,18 @@ import type {
   PaidAnalysisResponse,
   RegionItem,
 } from "../types";
+import { normalizeFreeStatsWindowYears } from "../types";
+import { viteOptionalV2AsOfMonth } from "../utils/freeStatsV2";
 
-const api = axios.create({ baseURL: "/api" });
+/**
+ * DECISIONS D-007 — 빌드 시 `VITE_API_TOKEN` 이 주입돼 있으면 모든 API 호출에 `X-Api-Token` 헤더를 단다.
+ * 값이 없으면 헤더를 보내지 않아 개발 모드(미설정 백엔드)와 호환.
+ */
+const _API_TOKEN = (import.meta.env.VITE_API_TOKEN ?? "").trim();
+const api = axios.create({
+  baseURL: "/api",
+  headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
+});
 
 /** 전체 카탈로그: limit 미지정·비검색 시 4만 행 규모 로드(search 시 서버에서 짧게 캡). */
 export const fetchRegions = async (params?: {
@@ -24,31 +35,39 @@ export const fetchRegions = async (params?: {
   const p: Record<string, string | number> = params ? { ...params } : {};
   const hasSearch = Boolean(params?.search && params.search.trim().length > 0);
   if (!hasSearch && p.limit === undefined) {
-    p.limit = 40000;
+    p.limit = 50000;
   }
   const { data } = await api.get<RegionItem[]>("/free/regions", { params: p });
   return data;
 };
 
 export const fetchFreeStats = async (
-  beopjungri_code: string
-): Promise<FreeStatsResponse> => {
-  const { data } = await api.get<FreeStatsResponse>(
-    `/free/stats/${beopjungri_code}`
+  beopjungri_code: string,
+  opts: { window_years: FreeStatsWindowYears | unknown }
+): Promise<FreeStatsV2Response> => {
+  const w = normalizeFreeStatsWindowYears(opts.window_years);
+  const asOf = viteOptionalV2AsOfMonth();
+  const qs = new URLSearchParams({ window_years: String(w) });
+  if (asOf) qs.set("as_of_month", asOf);
+  const { data } = await api.get<FreeStatsV2Response>(
+    `/free/v2/stats/${encodeURIComponent(beopjungri_code)}?${qs.toString()}`
   );
   return data;
 };
-
-/** 복수 법정동·리 합산 (유료 모드 기본 통계 등) */
+/** 복수 법정동·리 합산 (유료 모드 기본 통계 등) — V2 동일 period 원장 재집계 */
 export const fetchFreeStatsBulk = async (
-  region_codes: string[]
-): Promise<FreeStatsResponse> => {
-  const { data } = await api.post<FreeStatsResponse>("/free/stats/bulk", {
+  region_codes: string[],
+  opts: { window_years: FreeStatsWindowYears | unknown }
+): Promise<FreeStatsV2Response> => {
+  const window_years = normalizeFreeStatsWindowYears(opts.window_years);
+  const asOf = viteOptionalV2AsOfMonth();
+  const { data } = await api.post<FreeStatsV2Response>("/free/v2/stats/bulk", {
     region_codes,
+    window_years,
+    ...(asOf ? { as_of_month: asOf } : {}),
   });
   return data;
 };
-
 export const runPaidAnalysis = async (
   req: PaidAnalysisRequest
 ): Promise<PaidAnalysisResponse> => {

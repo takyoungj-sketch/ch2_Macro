@@ -8,8 +8,9 @@ import {
 } from "../api/client";
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import { useAppStore } from "../store";
-import type { MatrixYearlyRequest } from "../types";
+import { type MatrixYearlyRequest, normalizeFreeStatsWindowYears } from "../types";
 import { parseApiError } from "../utils/apiError";
+import { statsAsOfLabel } from "../utils/freeStatsV2";
 import { buildPaidPayload } from "../utils/paidAnalysisPayload";
 import { beopjungriNameForCode, resolveUnionBeopjungriCodes } from "../utils/regionTier";
 import MatrixStatsTable, { MatrixStatsLegend } from "./MatrixStatsTable";
@@ -20,18 +21,22 @@ import YearlyStatsTable from "./YearlyStatsTable";
 export default function PaidAnalysisPanel() {
   const viewMode = useAppStore((s) => s.viewMode);
   const paidBasicStatsKick = useAppStore((s) => s.paidBasicStatsKick);
-  const setPaidBasicBaseKey = useAppStore((s) => s.setPaidBasicBaseKey);
+  const syncPaidBasicStatsMeta = useAppStore((s) => s.syncPaidBasicStatsMeta);
   const tierSelection = useAppStore((s) => s.tierSelection);
   const paidRequest = useAppStore((s) => s.paidRequest);
   const paidRoadExcluded = useAppStore((s) => s.paidRoadExcluded);
   const paidAreaExcluded = useAppStore((s) => s.paidAreaExcluded);
   const paidBasicBaseKey = useAppStore((s) => s.paidBasicBaseKey);
+  const freeStatsWindowYears = useAppStore((s) =>
+    normalizeFreeStatsWindowYears(s.freeStatsWindowYears)
+  );
   const status = useAppStore((s) => s.paidAnalysisStatus);
   const result = useAppStore((s) => s.paidAnalysisResult);
   const apiErr = useAppStore((s) => s.paidAnalysisError);
   const startedAt = useAppStore((s) => s.paidAnalysisStartedAt);
   const runPaidFilteredAnalysis = useAppStore((s) => s.runPaidFilteredAnalysis);
   const cancelPaidFilteredAnalysis = useAppStore((s) => s.cancelPaidFilteredAnalysis);
+  const paidBulkBeopjungriCodes = useAppStore((s) => s.paidBulkBeopjungriCodes);
 
   const [trendModal, setTrendModal] = useState<{
     zoneType: string;
@@ -68,18 +73,22 @@ export default function PaidAnalysisPanel() {
     error: basicError,
   } = useQuery({
     queryKey: useBulkBasic
-      ? ["freeStatsBulk", bulkKey, paidBasicStatsKick]
-      : ["freeStats", resolvedCodes[0] ?? "", paidBasicStatsKick, viewMode],
+      ? ["freeStatsBulkV2", bulkKey, paidBasicStatsKick, freeStatsWindowYears]
+      : ["freeStatsV2", resolvedCodes[0] ?? "", paidBasicStatsKick, viewMode, freeStatsWindowYears],
     queryFn: () =>
-      useBulkBasic ? fetchFreeStatsBulk(resolvedCodes) : fetchFreeStats(resolvedCodes[0]!),
+      useBulkBasic
+        ? fetchFreeStatsBulk(resolvedCodes, { window_years: freeStatsWindowYears })
+        : fetchFreeStats(resolvedCodes[0]!, { window_years: freeStatsWindowYears }),
     enabled: canFetchBasic && viewMode === "paid",
   });
 
   useEffect(() => {
-    if (basicData?.analysis_base_key) {
-      setPaidBasicBaseKey(basicData.analysis_base_key);
-    }
-  }, [basicData?.analysis_base_key, setPaidBasicBaseKey]);
+    if (basicData === undefined) return;
+    syncPaidBasicStatsMeta({
+      analysis_base_key: basicData.analysis_base_key ?? null,
+      beopjungri_code: basicData.beopjungri_code ?? null,
+    });
+  }, [basicData, syncPaidBasicStatsMeta]);
 
   /** 필터 결과가 있으면 서버 연도별 집계(도로·면적 필터 포함)를 상단에 표시, 없으면 기본통계 by_year 에서 선택 연도만 표시 */
   const yearlyRowsForPaidFilter = useMemo(() => {
@@ -125,6 +134,18 @@ export default function PaidAnalysisPanel() {
       .sort((a, b) => a.label.localeCompare(b.label, "ko-KR"));
   }, [result?.by_region, regions]);
 
+  const codesForPaidMatrix = useMemo(() => {
+    if (paidBulkBeopjungriCodes != null && paidBulkBeopjungriCodes.length > 0) {
+      return paidBulkBeopjungriCodes;
+    }
+    const fromBasic = basicData?.beopjungri_code
+      ?.split(",")
+      .map((x) => x.trim())
+      .filter(Boolean);
+    if (fromBasic != null && fromBasic.length > 0) return fromBasic;
+    return resolvedCodes;
+  }, [paidBulkBeopjungriCodes, basicData?.beopjungri_code, resolvedCodes]);
+
   const closeTrend = () => {
     setTrendModal(null);
     setTrendRequest(null);
@@ -144,14 +165,9 @@ export default function PaidAnalysisPanel() {
       }
 
       const cacheKey = basicData?.analysis_base_key ?? paidBasicBaseKey;
-      const codesForTrend =
-        basicData?.beopjungri_code
-          ?.split(",")
-          .map((x) => x.trim())
-          .filter(Boolean) ?? resolvedCodes;
       const base = buildPaidPayload(
         paidRequest,
-        codesForTrend,
+        codesForPaidMatrix,
         paidRoadExcluded,
         paidAreaExcluded,
         cacheKey
@@ -176,7 +192,30 @@ export default function PaidAnalysisPanel() {
         setTrendLoading(false);
       }
     },
-    [basicData, paidBasicBaseKey, paidRequest, paidRoadExcluded, paidAreaExcluded, resolvedCodes]
+    [basicData, paidBasicBaseKey, paidRequest, paidRoadExcluded, paidAreaExcluded, codesForPaidMatrix]
+  );
+
+  // DECISIONS D-002 / D-006 — 무료/유료 화면 모두 같은 「YYYY년 M월 말 기준」 라벨.
+  // 기본통계 박스는 basicData(/free/v2/...)에서, 필터 분석 결과는 result(/paid/analyze)에서 각각 가져온다.
+  const basicAsOfLabel = useMemo(
+    () =>
+      basicData
+        ? statsAsOfLabel({
+            as_of_month: basicData.as_of_month,
+            stats_reference_date: basicData.stats_reference_date,
+          })
+        : null,
+    [basicData]
+  );
+  const filteredAsOfLabel = useMemo(
+    () =>
+      result
+        ? statsAsOfLabel({
+            as_of_month: result.as_of_month ?? null,
+            stats_reference_date: result.stats_reference_date ?? null,
+          })
+        : null,
+    [result]
   );
 
   return (
@@ -184,7 +223,12 @@ export default function PaidAnalysisPanel() {
       {/* 기본 통계 보기와 동일: 상단 연도별 표 + 범례 1회만 (매트릭스에는 범례 비표시) */}
       <div className="bg-white rounded-xl shadow-sm p-5 space-y-5">
         <p className="text-[11px] text-indigo-700 font-medium leading-relaxed">
-          유료 · 기본 통계
+          유료 · 기본 통계 (V2)
+          {basicAsOfLabel && (
+            <span className="ml-2 inline-block text-slate-700 font-medium">
+              · {basicAsOfLabel}
+            </span>
+          )}
           {useBulkBasic && (
             <span className="block text-indigo-600/90 font-normal mt-0.5">
               선택 법정동·리 거래 단가를 합친 결과입니다. 매트릭스는 원장 기준 즉시 집계입니다.
@@ -282,12 +326,19 @@ export default function PaidAnalysisPanel() {
       {!isLoading && status === "success" && result && (
         <div className="bg-white rounded-xl shadow-sm p-5 space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-base font-bold text-slate-800">필터 분석 결과</h2>
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <h2 className="text-base font-bold text-slate-800">필터 분석 결과</h2>
+              {filteredAsOfLabel && (
+                <span className="text-[11px] text-slate-600 font-medium">
+                  · {filteredAsOfLabel}
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-400">{result.response_ms}ms</span>
               <button
                 type="button"
-                onClick={() => void runPaidFilteredAnalysis(resolvedCodes)}
+                onClick={() => void runPaidFilteredAnalysis(codesForPaidMatrix)}
                 disabled={resolvedCodes.length === 0 || isLoading}
                 className="text-xs font-medium text-blue-600 hover:text-blue-800 disabled:opacity-40"
               >

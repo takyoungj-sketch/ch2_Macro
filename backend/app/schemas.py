@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import math
+from datetime import date
 from typing import Annotated, Literal, Optional
 
-from pydantic import AfterValidator, BaseModel, Field, model_validator
+from pydantic import AfterValidator, BaseModel, Field, field_validator, model_validator
 
 
 # ---------------------------------------------------------------------------
@@ -110,6 +111,100 @@ class FreeStatsBulkRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# 무료 통계 V2 (land_basic_stats_v2, contract_date 롤링 창)
+# ---------------------------------------------------------------------------
+class FreeStatsV2BulkRequest(BaseModel):
+    """V2 복수 법정동·리 합산 (원장을 동일 period로 재집계)."""
+
+    region_codes: list[str] = Field(..., min_length=1)
+    window_years: Literal[3, 5] = Field(
+        default=5,
+        description="무료 V2: 3년 또는 5년 롤링 창",
+    )
+    as_of_month: Optional[date] = Field(
+        None,
+        description=(
+            "기준월(해당 월 1일). 미지정 시 STATS_V2_DEFAULT_AS_OF_MONTH·"
+            "STATS_V2_ASSUMED_TODAY·실제 오늘 순(§3)."
+        ),
+    )
+
+    @field_validator("window_years", mode="before")
+    @classmethod
+    def _coerce_window_years(cls, v):
+        """JSON/클라이언트에서 빈 문자열·문자 숫자가 오는 경우 허용."""
+        if v is None:
+            return 5
+        if isinstance(v, str):
+            t = v.strip()
+            if t == "" or t.lower() in ("null", "undefined"):
+                return 5
+            if t == "3":
+                return 3
+            if t == "5":
+                return 5
+        if v in (3, 5):
+            return v
+        raise ValueError("window_years 는 3 또는 5 여야 합니다.")
+
+    @model_validator(mode="after")
+    def _as_of_first(self) -> FreeStatsV2BulkRequest:
+        if self.as_of_month is not None and self.as_of_month.day != 1:
+            raise ValueError("as_of_month 는 YYYY-MM-01 형태(월의 1일)여야 합니다.")
+        return self
+
+
+class FreeStatsV2Response(BaseModel):
+    """V2 기본 통계 응답: 기준월·날짜 구간·롤링 연수가 명시된다."""
+
+    beopjungri_code: str
+    beopjungri_name: str
+    as_of_month: date
+    stats_reference_date: date = Field(
+        ...,
+        description=(
+            "UI 표시용 기준일: as_of_month(저장·스냅샷 키)의 다음 달 1일. "
+            "예: as_of_month=2025-12-01 → stats_reference_date=2026-01-01 (1월 갱신 시점)"
+        ),
+    )
+    period_start: date
+    period_end: date
+    window_years: int
+    total: StatsResult
+    by_year: list[YearlyTradeStat] = Field(
+        default_factory=list,
+        description=(
+            "달력 연도별 총계(첫 연도는 해당 연 1/1~12/31, 마지막 연도는 period_end까지). "
+            "용도×지목 매트릭스의 롤링 구간(period_start~period_end)과 범위가 다를 수 있음."
+        ),
+    )
+    by_zone: dict[str, StatsResult] = Field(default_factory=dict)
+    by_land_category: dict[str, StatsResult] = Field(default_factory=dict)
+    matrix: list[MatrixCell] = Field(default_factory=list)
+    stats_excluded_codes: list[str] = Field(
+        default_factory=list,
+        description="요청에 있었으나 해당 as_of_month·window 에서 V2 ALL×ALL 행이 없어 제외된 코드",
+    )
+    analysis_base_key: Optional[str] = Field(
+        None,
+        description="V2 MVP: analysis_base_cache 미연동(추후 contract_date 구간 지원 시)",
+    )
+
+
+class FreeStatsV2MetaAsOfResponse(BaseModel):
+    """테이블에 적재된 V2 스냅샷 메타(배치 확인용)."""
+
+    max_as_of_month: Optional[date] = Field(
+        None,
+        description="land_basic_stats_v2 전체 중 최대 as_of_month(필터 없음)",
+    )
+    window_years_present: list[int] = Field(
+        default_factory=list,
+        description="해당 스냅샷에 존재하는 window_years 목록(중복 제거·정렬)",
+    )
+
+
+# ---------------------------------------------------------------------------
 # 유료 분석 요청/응답
 # ---------------------------------------------------------------------------
 class RegionSelectionUnit(BaseModel):
@@ -147,7 +242,39 @@ OutlierIqrMultiplier = Annotated[
 ]
 
 
-class PaidFilters(BaseModel):
+class PaidAreaSqmBounds(BaseModel):
+    """
+    계약면적(㎡) 직접 범위. 둘 중 하나만 줘도 된다.
+    `area_sqm_min` 또는 `area_sqm_max` 가 하나라도 있으면 서버는 광소/정상/광대(`area_categories`)를 적용하지 않는다.
+    """
+
+    area_sqm_min: Optional[float] = Field(
+        None,
+        description="계약면적(㎡) 하한(포함). 지정 시 면적구분 칩 대신 면적 범위만 필터.",
+    )
+    area_sqm_max: Optional[float] = Field(
+        None,
+        description="계약면적(㎡) 상한(포함).",
+    )
+
+    @model_validator(mode="after")
+    def _validate_area_sqm_range(self) -> PaidAreaSqmBounds:
+        lo = self.area_sqm_min
+        hi = self.area_sqm_max
+        if lo is None and hi is None:
+            return self
+        if lo is not None:
+            if not math.isfinite(lo) or lo <= 0:
+                raise ValueError("area_sqm_min는 양의 유한 숫자여야 합니다.")
+        if hi is not None:
+            if not math.isfinite(hi) or hi <= 0:
+                raise ValueError("area_sqm_max는 양의 유한 숫자여야 합니다.")
+        if lo is not None and hi is not None and lo > hi:
+            raise ValueError("area_sqm_min는 area_sqm_max 이하여야 합니다.")
+        return self
+
+
+class PaidFilters(PaidAreaSqmBounds):
     """유료 분석 공통 필터 (동적 쿼리 WHERE 조건과 동일)."""
 
     year_from: Optional[int] = Field(None, description="연도 시작(포함), years 미사용 시")
@@ -174,7 +301,7 @@ class PaidFilters(BaseModel):
     model_config = {"extra": "forbid"}
 
 
-class PaidAnalysisRequest(BaseModel):
+class PaidAnalysisRequest(PaidAreaSqmBounds):
     """
     유료 전용 분석 요청.
 
@@ -203,6 +330,9 @@ class PaidAnalysisRequest(BaseModel):
     exclude_outlier: bool = Field(False)
     outlier_iqr_multiplier: OutlierIqrMultiplier = 3.0
 
+    # 다른 PaidFilters · RegionSelectionUnit 와 동일 정책: 프론트 필드명 오타가 조용히 무시되지 않게 422 반환.
+    model_config = {"extra": "forbid"}
+
 
 class PaidAnalysisResponse(BaseModel):
     request: PaidAnalysisRequest
@@ -215,6 +345,15 @@ class PaidAnalysisResponse(BaseModel):
     by_road_condition: dict[str, StatsResult] = {}
     matrix: list[MatrixCell] = []
     response_ms: int = 0
+    # DECISIONS D-006 — 무료/유료 화면이 같은 「YYYY년 M월 말 기준」 표기를 쓰도록 응답에 같이 노출.
+    as_of_month: Optional[date] = Field(
+        None,
+        description="현재 land_basic_stats_v2 의 최신 스냅샷 월 1일 (= 직전 달까지 반영). 비어 있으면 V2 사전집계가 적재되지 않은 상태.",
+    )
+    stats_reference_date: Optional[date] = Field(
+        None,
+        description="UI 표시용 기준일 — `as_of_month` 의 다음 달 1일. 화면 상단의 「YYYY년 M월 말 기준」 라벨과 1:1.",
+    )
 
 
 class MatrixYearlyStat(BaseModel):

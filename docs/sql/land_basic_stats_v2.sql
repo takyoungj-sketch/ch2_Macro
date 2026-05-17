@@ -1,0 +1,8 @@
+-- land_basic_stats_v2 DDL 은 **마이그레이션 단일 소스** 인 아래 파일을 사용한다.
+--
+--   db/007_land_basic_stats_v2.sql
+--
+-- 적용:
+--   psql "$DATABASE_URL" -f db/007_land_basic_stats_v2.sql
+--
+-- 설계 문서: docs/V2_STATS_DESIGN.md

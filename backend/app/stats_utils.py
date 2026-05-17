@@ -32,10 +32,11 @@ def compute_stats(prices: Sequence[float]) -> dict:
     mean = float(np.mean(arr))
     std = float(np.std(arr, ddof=1)) if n >= 2 else None
     ci_lower, ci_upper = None, None
-    if n >= 2:
-        se = st.sem(arr)
-        ci = st.t.interval(1 - ALPHA, df=n - 1, loc=mean, scale=se)
-        ci_lower, ci_upper = _finite_or_none(ci[0]), _finite_or_none(ci[1])
+    if n >= 2 and std is not None and std > 0:
+        se = float(st.sem(arr))
+        if se > 0 and np.isfinite(se):
+            ci = st.t.interval(1 - ALPHA, df=n - 1, loc=mean, scale=se)
+            ci_lower, ci_upper = _finite_or_none(ci[0]), _finite_or_none(ci[1])
 
     return {
         "count": n,
@@ -150,11 +151,12 @@ def stats_dict_from_sql_aggregates(
 
     ci_lower, ci_upper = None, None
     std_out = _rnd_price(std_raw) if std_raw is not None else None
-    if n >= 2 and mean_f is not None and std_raw is not None:
+    if n >= 2 and mean_f is not None and std_raw is not None and float(std_raw) > 0:
         sem = float(std_raw) / (n ** 0.5)
-        ci = st.t.interval(1 - ALPHA, df=n - 1, loc=float(mean_f), scale=sem)
-        ci_lower = _finite_or_none(ci[0])
-        ci_upper = _finite_or_none(ci[1])
+        if sem > 0 and np.isfinite(sem):
+            ci = st.t.interval(1 - ALPHA, df=n - 1, loc=float(mean_f), scale=sem)
+            ci_lower = _finite_or_none(ci[0])
+            ci_upper = _finite_or_none(ci[1])
 
     mean_out = _rnd_price(mean_f) if mean_f is not None else None
 

@@ -15,7 +15,7 @@ export function getDefaultPaidSelectedYears(): number[] {
   return [...getPaidYearButtonYears()];
 }
 
-/** 기본 통계 API의 year_from∼year_to (사전집계 창)과 같은 연도 목록 */
+/** 기본 통계(무료 V2)의 period_start∼period_end 가 걸치는 달력 연도 범위와 같은 연도 목록 */
 export function yearsRangeInclusive(yearFrom: number, yearTo: number): number[] {
   const yf = Number(yearFrom);
   const yt = Number(yearTo);

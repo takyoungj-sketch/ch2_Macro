@@ -9,6 +9,7 @@ import {
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import { useAppStore } from "../store";
 import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
+import { paidUsesCustomAreaSpan } from "../utils/paidFiltersMap";
 
 export default function PaidFilterTable() {
   const {
@@ -37,6 +38,7 @@ export default function PaidFilterTable() {
     () => resolveUnionBeopjungriCodes(regions, tierSelection),
     [regions, tierSelection]
   );
+  const customAreaSpan = paidUsesCustomAreaSpan(paidRequest);
 
   const runFiltered = () => {
     setFilterError(null);
@@ -47,6 +49,28 @@ export default function PaidFilterTable() {
     if ((paidRequest.years ?? []).length === 0) {
       setFilterError("분석할 연도를 하나 이상 선택해 주세요.");
       return;
+    }
+    if (customAreaSpan) {
+      const amin = paidRequest.area_sqm_min;
+      const amax = paidRequest.area_sqm_max;
+      const hasLo = amin != null && Number.isFinite(amin);
+      const hasHi = amax != null && Number.isFinite(amax);
+      if (!hasLo && !hasHi) {
+        setFilterError("면적 최소 또는 최대(㎡) 중 하나 이상 입력하세요.");
+        return;
+      }
+      if (hasLo && amin! <= 0) {
+        setFilterError("면적 최소(㎡)는 0보다 커야 합니다.");
+        return;
+      }
+      if (hasHi && amax! <= 0) {
+        setFilterError("면적 최대(㎡)는 0보다 커야 합니다.");
+        return;
+      }
+      if (hasLo && hasHi && amin! > amax!) {
+        setFilterError("면적 최소(㎡)는 최대(㎡)보다 클 수 없습니다.");
+        return;
+      }
     }
     void runPaidFilteredAnalysis(resolvedRegionCodes);
   };
@@ -113,11 +137,86 @@ export default function PaidFilterTable() {
               </span>
             </th>
             <td className="px-2 py-1.5">
-              <IncludeToggleGrid
-                options={AREA_CATEGORIES}
-                excluded={paidAreaExcluded}
-                onToggle={togglePaidAreaExclude}
-              />
+              <div className={customAreaSpan ? "opacity-45 pointer-events-none" : ""}>
+                <IncludeToggleGrid
+                  options={AREA_CATEGORIES}
+                  excluded={paidAreaExcluded}
+                  onToggle={togglePaidAreaExclude}
+                />
+              </div>
+              {customAreaSpan && (
+                <p className="text-[10px] text-amber-800 mt-1 leading-snug">
+                  면적(㎡) 직접 범위를 쓰는 동안에는 광소·정상·광대 구분이 적용되지 않습니다.
+                </p>
+              )}
+            </td>
+          </tr>
+
+          <tr className="border-b border-slate-100 align-top">
+            <th className="align-top px-2 py-2 bg-slate-50 text-[11px] font-semibold text-slate-600 text-left leading-snug">
+              면적(㎡) 범위
+              <span className="block font-normal text-[10px] text-slate-400 mt-0.5">
+                선택 시 계약면적만 필터 (광소/정상/광대 무시)
+              </span>
+            </th>
+            <td className="px-2 py-2 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="flex items-center gap-1 text-[11px] text-slate-600">
+                  <span className="text-slate-500 w-8 shrink-0">최소</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    placeholder="—"
+                    value={paidRequest.area_sqm_min ?? ""}
+                    onChange={(e) => {
+                      const raw = e.target.value.trim();
+                      if (raw === "") {
+                        setPaidRequest({ area_sqm_min: null });
+                        return;
+                      }
+                      const n = Number(raw);
+                      setPaidRequest({
+                        area_sqm_min: Number.isFinite(n) ? n : null,
+                      });
+                    }}
+                    className="w-24 rounded border border-slate-200 px-1.5 py-0.5 text-[11px] tabular-nums"
+                  />
+                </label>
+                <span className="text-slate-300">~</span>
+                <label className="flex items-center gap-1 text-[11px] text-slate-600">
+                  <span className="text-slate-500 w-8 shrink-0">최대</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    placeholder="—"
+                    value={paidRequest.area_sqm_max ?? ""}
+                    onChange={(e) => {
+                      const raw = e.target.value.trim();
+                      if (raw === "") {
+                        setPaidRequest({ area_sqm_max: null });
+                        return;
+                      }
+                      const n = Number(raw);
+                      setPaidRequest({
+                        area_sqm_max: Number.isFinite(n) ? n : null,
+                      });
+                    }}
+                    className="w-24 rounded border border-slate-200 px-1.5 py-0.5 text-[11px] tabular-nums"
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="text-[10px] text-blue-600 underline-offset-2 hover:underline"
+                  onClick={() => setPaidRequest({ area_sqm_min: null, area_sqm_max: null })}
+                >
+                  범위 지우기
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400 leading-snug">
+                한쪽만 넣으면 반대쪽은 제한 없음. 비우면 다시 면적구분(광소·정상·광대) 칩이 적용됩니다.
+              </p>
             </td>
           </tr>
 

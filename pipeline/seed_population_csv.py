@@ -150,14 +150,17 @@ def main() -> None:
     parser.add_argument("--file", required=True, help="CSV 경로")
     parser.add_argument(
         "--codes-prefix",
-        default="43",
+        default=None,
         metavar="PREFIX",
-        help="법정동코드 접두 필터 (기본 43=충북). 전국 적재는 --all-sido 사용.",
+        help=(
+            "법정동코드 접두 필터 (예: 43=충북, 41=경기). "
+            "**미지정·빈 문자 시 전국 적재**(DECISIONS D-004). 시도 한정 시에만 명시."
+        ),
     )
     parser.add_argument(
         "--all-sido",
         action="store_true",
-        help="접두 필터 없음·해당 연도·월의 전국 법정동 행 삭제 후 재적재",
+        help="(레거시) 접두 필터 비움 — 미지정 기본값과 동일. 호환을 위해 유지.",
     )
     parser.add_argument("--dry-run", action="store_true", help="DB 쓰기 없이 행 수만 출력")
     args = parser.parse_args()
@@ -167,7 +170,9 @@ def main() -> None:
         raise SystemExit(f"파일 없음: {path}")
 
     rows, stats_year, stats_month, source_label = load_population_rows(path)
-    prefix = "" if args.all_sido else str(args.codes_prefix).strip()
+    # DECISIONS D-004: --codes-prefix 미지정 시 전국 적재. --all-sido 는 레거시 동의어.
+    raw_prefix = args.codes_prefix if args.codes_prefix is not None else ""
+    prefix = "" if args.all_sido else str(raw_prefix).strip()
 
     filtered = rows
     if prefix:
