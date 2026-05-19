@@ -43,10 +43,12 @@ _REGION_CODE_LEN: dict[RegionLevel, int] = {
     "eupmyeondong": 8,
 }
 
-_LEVEL_TX_COL: dict[RegionLevel, str] = {
-    "sido": "sido_code",
-    "sigungu": "sigungu_code",
-    "eupmyeondong": "eupmyeondong_code",
+# land_transactions 의 region 필터 식 — eupmyeondong 컬럼이 없으므로
+# beopjungri_code 앞 8자리를 사용한다(행정코드: 시군구5 + 읍면동3 + 리2).
+_LEVEL_TX_WHERE: dict[RegionLevel, str] = {
+    "sido": "btrim(sido_code::text) = :code",
+    "sigungu": "btrim(sigungu_code::text) = :code",
+    "eupmyeondong": "LEFT(btrim(beopjungri_code::text), 8) = :code",
 }
 
 
@@ -155,7 +157,7 @@ def _by_year_upper(
     period_end: date,
 ) -> list[YearlyTradeStat]:
     """land_transactions 의 region_level/code 별 contract_year 총계."""
-    col = _LEVEL_TX_COL[level]
+    where = _LEVEL_TX_WHERE[level]
     y0 = date(period_start.year, 1, 1)
     rows = db.execute(
         text(
@@ -165,7 +167,7 @@ def _by_year_upper(
                    COALESCE(SUM(total_price_10k), 0) AS sum_price,
                    COALESCE(SUM(area_sqm), 0) AS sum_area
             FROM land_transactions
-            WHERE btrim({col}::text) = :code
+            WHERE {where}
               AND is_valid IS TRUE
               AND contract_date IS NOT NULL
               AND contract_date >= :d0
