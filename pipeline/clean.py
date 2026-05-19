@@ -42,6 +42,13 @@ _CLEAN_UPSERT_PAGE = max(100, int(os.environ.get("CLEAN_UPSERT_PAGE_SIZE", "1500
 _RE_PAREN_FW = re.compile(r"（[^（）]*）")
 _RE_PAREN_ASCII = re.compile(r"\([^()]*\)")
 
+# 시도명 별칭: 거래 원장에 쓰이는 신표기 ↔ region_codes 마스터 표기
+# (예: 2024 이후 거래원장 "전북특별자치도" vs region_codes "전라북도")
+_SIDO_NAME_ALIASES: dict[str, str] = {
+    "전북특별자치도": "전라북도",
+    "강원특별자치도": "강원도",
+}
+
 
 def _normalize_admin_label(s: str | None) -> str:
     """읍면동·법정리명 lookup 정규화: 전각·반각 괄호 구간(한자 병기 등) 제거 후 trim."""
@@ -375,12 +382,35 @@ def map_beopjungri_codes(df: pd.DataFrame, region_maps: dict) -> pd.DataFrame:
         eu_k = _normalize_admin_label(eu)
         bp_k = _normalize_admin_label(bp)
         code = ""
+        fallback_note = ""
+
         if sn and sg and eu_k and bp_k:
             code = by_name.get((sn, sg, eu_k, bp_k), "") or ""
         if not code:
             s2, s5 = sc2_list[i], sc5_list[i]
             if s2 and s5 and eu_k and bp_k:
                 code = by_code.get((s2, s5, eu_k, bp_k), "") or ""
+
+        # Fallback 1: 시도명 별칭 (전북특별자치도 → 전라북도 등)
+        if not code and sn in _SIDO_NAME_ALIASES and sg and eu_k and bp_k:
+            alias_sn = _SIDO_NAME_ALIASES[sn]
+            code = by_name.get((alias_sn, sg, eu_k, bp_k), "") or ""
+            if code:
+                fallback_note = "sido_alias"
+
+        # Fallback 2: 시군구가 분구 표기(예: '화성시 만세구')라 마스터에 없을 때,
+        # 마지막 시군구 토큰을 한 번씩 제거하며 재시도. sigungu_code(5자리)는 동일하므로
+        # 상위 통계엔 영향 없음. 신설 분구 등이 region_codes에 적재되기 전 임시 흡수.
+        if not code and sg and eu_k and bp_k:
+            sg_tokens = sg.split()
+            current_sn = sn if sn not in _SIDO_NAME_ALIASES else _SIDO_NAME_ALIASES[sn]
+            while not code and len(sg_tokens) >= 2:
+                sg_tokens = sg_tokens[:-1]
+                sg_trim = " ".join(sg_tokens)
+                code = by_name.get((current_sn, sg_trim, eu_k, bp_k), "") or ""
+                if code:
+                    fallback_note = "subgu_dropped"
+                    break
 
         if not code:
             miss += 1
@@ -402,7 +432,7 @@ def map_beopjungri_codes(df: pd.DataFrame, region_maps: dict) -> pd.DataFrame:
 
         codes.append(str(code).strip())
         reviews.append(False)
-        notes.append("")
+        notes.append(fallback_note)
 
     if miss:
         log.warning(

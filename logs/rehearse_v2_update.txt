@@ -1,0 +1,49 @@
+
+=== V2 갱신 리허설 시작 ===
+        repo = C:\ch2\ch2_Macro
+        python = 3.13.3
+
+=== 1) 환경 (.env, DB 접속) ===
+  [OK] backend/.env 존재
+  [OK] pipeline/.env 존재
+        frontend/.env: 있음
+  [OK] DB 접속 성공
+        PostgreSQL 18.3 on x86_64-windows
+
+=== 2) 테이블 존재 여부 ===
+  [OK] land_transactions 존재
+  [OK] land_basic_stats_v2 존재
+  [OK] land_basic_stats 존재
+  [OK] region_codes 존재
+  [ERR] population_jusosagae 없음 — db/00*.sql 적용 필요
+  [OK] analysis_cache 존재
+  [OK] analysis_base_cache 존재
+
+=== 3) 행수·신선도 스냅샷 ===
+  [OK] land_transactions 행수 = 2,691,574
+  [OK] land_basic_stats_v2 행수 = 1,368,078
+  [OK] land_basic_stats 행수 = 813,595
+  [OK] region_codes 행수 = 18,864
+  [WARN] population_jusosagae: 조회 실패
+  [OK] analysis_cache 행수 = 1
+  [OK] analysis_base_cache 행수 = 136
+  [OK] land_basic_stats_v2 (as_of_month, window_years, n) — 최근 20
+        2025-12-01  win=3  rows=610,502
+        2025-12-01  win=5  rows=757,576
+  [OK] V2 최신 as_of_month = 2025-12-01  → 2025년 12월 말 기준
+  [WARN] population_jusosagae 분포 조회 실패: ProgrammingError('(psycopg2.errors.UndefinedTable) 오류:  "population_jusosagae" 이름의 릴레이션(relation)이 없습니다\nLINE 3:                       FROM population_jusosagae\n                                   ^\n')
+
+=== 4) SOP §B 명령 dry-run (--help) ===
+  [OK] run_pipeline.py --help OK
+  [OK] build_stats_v2.py --help OK
+  [OK] seed_population_csv.py --help OK
+  [OK] verify_v2_national_samples.py --help OK
+
+=== 5) GET http://127.0.0.1:8000/health ===
+  [OK] status = 200
+        {"status": "ok"}
+  [WARN] latest_as_of_month 비어있음 — V2 미적재거나 백엔드 코드가 옛 버전(B4 이전)
+
+=== 결과 요약 ===
+        errors=1  warnings=3
+  [ERR] 에러가 있습니다 — 위 항목을 해결한 뒤 다시 돌리세요.

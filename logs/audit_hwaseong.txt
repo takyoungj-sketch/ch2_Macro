@@ -1,0 +1,24 @@
+[region_codes 화성 sigungu]
+  41590 화성시
+
+region_codes contains '만세구': 0
+region_codes contains '동탄구': 0
+region_codes contains '병점구': 0
+region_codes contains '남양구': 0
+
+[failing 5-token addresses parsed as (sido, sigungu5tok, umd, leaf)]
+  ('경기도'   , '화성시 만세구'                , '남양읍'   , '남양리'   ) strict_hit=None sigungu_without_subgu='화성시' hit=4159026221
+  ('경기도'   , '화성시 만세구'                , '남양읍'   , '무송리'   ) strict_hit=None sigungu_without_subgu='화성시' hit=4159026227
+  ('경기도'   , '화성시 만세구'                , '남양읍'   , '문호리'   ) strict_hit=None sigungu_without_subgu='화성시' hit=4159026233
+  ('경기도'   , '화성시 만세구'                , '남양읍'   , '북양리'   ) strict_hit=None sigungu_without_subgu='화성시' hit=4159026228
+  ('경기도'   , '화성시 만세구'                , '남양읍'   , '송림리'   ) strict_hit=None sigungu_without_subgu='화성시' hit=4159026229
+  ('경기도'   , '화성시 만세구'                , '남양읍'   , '수화리'   ) strict_hit=None sigungu_without_subgu='화성시' hit=4159026230
+  ('경기도'   , '화성시 만세구'                , '남양읍'   , '시리'    ) strict_hit=None sigungu_without_subgu='화성시' hit=4159026234
+  ('경기도'   , '화성시 만세구'                , '남양읍'   , '신남리'   ) strict_hit=None sigungu_without_subgu='화성시' hit=4159026222
+  ('경기도'   , '화성시 만세구'                , '남양읍'   , '신외리'   ) strict_hit=None sigungu_without_subgu='화성시' hit=4159026232
+  ('경기도'   , '화성시 만세구'                , '남양읍'   , '안석리'   ) strict_hit=None sigungu_without_subgu='화성시' hit=4159026224
+  ('경기도'   , '화성시 만세구'                , '남양읍'   , '온석리'   ) strict_hit=None sigungu_without_subgu='화성시' hit=4159026226
+  ('경기도'   , '화성시 만세구'                , '남양읍'   , '원천리'   ) strict_hit=None sigungu_without_subgu='화성시' hit=4159026235
+  ('경기도'   , '화성시 만세구'                , '남양읍'   , '장덕리'   ) strict_hit=None sigungu_without_subgu='화성시' hit=4159026223
+  ('경기도'   , '화성시 만세구'                , '남양읍'   , '장전리'   ) strict_hit=None sigungu_without_subgu='화성시' hit=4159026231
+  ('경기도'   , '화성시 만세구'                , '남양읍'   , '활초리'   ) strict_hit=None sigungu_without_subgu='화성시' hit=4159026225
