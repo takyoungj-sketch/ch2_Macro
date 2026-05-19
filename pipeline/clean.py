@@ -50,6 +50,26 @@ _SIDO_NAME_ALIASES: dict[str, str] = {
 }
 
 
+def _extract_paren_content(s: str | None) -> str:
+    """행정명 안 괄호 내용(주로 한자) 추출. 여러 괄호가 있으면 모두 이어 붙임.
+
+    예: '기암리(岐岩)' → '岐岩'  / '화산리（花山）' → '花山'  / 일반 한글명 → ''.
+    동명이리 disambiguation 키로만 쓰인다.
+    """
+    if s is None:
+        return ""
+    t = str(s).strip()
+    if not t:
+        return ""
+    parts: list[str] = []
+    for m in _RE_PAREN_FW.finditer(t):
+        # 전각 괄호 _RE_PAREN_FW 패턴은 '（...）' 통째라 슬라이싱으로 안쪽만 취한다.
+        parts.append(m.group(0)[1:-1])
+    for m in _RE_PAREN_ASCII.finditer(t):
+        parts.append(m.group(0)[1:-1])
+    return "".join(p.strip() for p in parts if p and p.strip())
+
+
 def _normalize_admin_label(s: str | None) -> str:
     """읍면동·법정리명 lookup 정규화: 전각·반각 괄호 구간(한자 병기 등) 제거 후 trim."""
     if s is None:
@@ -228,6 +248,11 @@ def build_region_lookup(engine) -> dict:
     by_sigungu_name: dict[tuple, str] = {}
     by_sigungu_code: dict[tuple, str] = {}
     weak_pairs: dict[tuple[str, str], set[str]] = {}
+    # 동명이리 disambiguation 인덱스:
+    # 정규화 키(시도명, 시군구명, 읍면, 정규화된 동·리명) → [(code, 괄호안한자, 원본명), …]
+    # 동일 키에 항목이 2개 이상이면 한자 비교로 분기 (DECISIONS A안).
+    disamb_by_name: dict[tuple, list[tuple[str, str, str]]] = {}
+    disamb_by_code: dict[tuple, list[tuple[str, str, str]]] = {}
 
     for row in rows:
         sido_name, sigungu_name, eupmyeondong_name, beopjungri_name, beopjungri_code, sido_code, sigungu_code = row
@@ -239,6 +264,7 @@ def build_region_lookup(engine) -> dict:
         bn_k = _normalize_admin_label(bn)
         sc = str(sido_code).strip()[:2]
         gc = str(sigungu_code).strip().zfill(5)[:5]
+        bn_hanja = _extract_paren_content(bn)
 
         _register_strong_key(
             by_sigungu_name,
@@ -257,11 +283,31 @@ def build_region_lookup(engine) -> dict:
         wk = (eu_k, bn_k)
         weak_pairs.setdefault(wk, set()).add(str(beopjungri_code).strip())
 
+        # disambiguation 후보 누적: 동일 정규화 키에 여러 코드가 있으면 한자 비교로 골라낸다.
+        disamb_by_name.setdefault((sn, sg, eu_k, bn_k), []).append(
+            (str(beopjungri_code).strip(), bn_hanja, bn)
+        )
+        if sc and gc:
+            disamb_by_code.setdefault((sc, gc, eu_k, bn_k), []).append(
+                (str(beopjungri_code).strip(), bn_hanja, bn)
+            )
+
+    # 충돌 그룹만 남긴다(>=2 개). 단일 코드 그룹은 메모리만 차지하므로 제외.
+    disamb_by_name = {k: v for k, v in disamb_by_name.items() if len(v) > 1}
+    disamb_by_code = {k: v for k, v in disamb_by_code.items() if len(v) > 1}
+
     multi_weak = sum(1 for s in weak_pairs.values() if len(s) > 1)
     if multi_weak:
         log.warning(
             "동명이인 약한 키(읍면동명,법정명) 조합 %d개가 전국에 복수 코드 — 단독 매핑 미사용",
             multi_weak,
+        )
+
+    if disamb_by_name:
+        log.info(
+            "동명이리 disambiguation 그룹: name=%d, code=%d (한자 키로 분기)",
+            len(disamb_by_name),
+            len(disamb_by_code),
         )
 
     log.info(
@@ -273,6 +319,8 @@ def build_region_lookup(engine) -> dict:
     return {
         "by_sigungu_name": by_sigungu_name,
         "by_sigungu_code": by_sigungu_code,
+        "disamb_by_name": disamb_by_name,
+        "disamb_by_code": disamb_by_code,
     }
 
 
@@ -318,6 +366,8 @@ def map_beopjungri_codes(df: pd.DataFrame, region_maps: dict) -> pd.DataFrame:
     """
     by_name = region_maps.get("by_sigungu_name", {})
     by_code = region_maps.get("by_sigungu_code", {})
+    disamb_by_name = region_maps.get("disamb_by_name", {})
+    disamb_by_code = region_maps.get("disamb_by_code", {})
 
     n = len(df)
     if n == 0:
@@ -381,10 +431,37 @@ def map_beopjungri_codes(df: pd.DataFrame, region_maps: dict) -> pd.DataFrame:
         sn, sg, eu, bp = sn_l[i], sg_l[i], eu_l[i], bp_l[i]
         eu_k = _normalize_admin_label(eu)
         bp_k = _normalize_admin_label(bp)
+        # 거래 원장의 동·리 한자 — disambiguation 키.
+        # `bp` 는 _parse_address_structured 가 _normalize_admin_label 로 정규화한 결과라
+        # 괄호 한자가 이미 제거돼 있다. 원문 addr 의 마지막 토큰에서 직접 추출한다.
+        addr_tail = addr_l[i].split()[-1] if addr_l[i] else ""
+        bp_hanja = _extract_paren_content(addr_tail)
         code = ""
         fallback_note = ""
 
-        if sn and sg and eu_k and bp_k:
+        # 0) Disambiguation 우선 — 동명이리 그룹(같은 정규화 이름·다른 한자)이면 한자 일치로 분기.
+        #    DECISIONS A안: region_codes 의 괄호 한자가 거래 표기 한자에 포함되면 해당 코드 선택.
+        #    (region_codes 한자가 부분 표기인 경우(예: '岐岩' vs '岐岩里')도 흡수)
+        if bp_hanja and sn and sg and eu_k and bp_k:
+            cand = disamb_by_name.get((sn, sg, eu_k, bp_k))
+            if cand:
+                for c_code, c_hanja, _ in cand:
+                    if c_hanja and (c_hanja in bp_hanja or bp_hanja in c_hanja):
+                        code = c_code
+                        fallback_note = "disambiguated_hanja"
+                        break
+        if not code and bp_hanja:
+            s2, s5 = sc2_list[i], sc5_list[i]
+            if s2 and s5 and eu_k and bp_k:
+                cand = disamb_by_code.get((s2, s5, eu_k, bp_k))
+                if cand:
+                    for c_code, c_hanja, _ in cand:
+                        if c_hanja and (c_hanja in bp_hanja or bp_hanja in c_hanja):
+                            code = c_code
+                            fallback_note = "disambiguated_hanja"
+                            break
+
+        if not code and sn and sg and eu_k and bp_k:
             code = by_name.get((sn, sg, eu_k, bp_k), "") or ""
         if not code:
             s2, s5 = sc2_list[i], sc5_list[i]
