@@ -191,6 +191,28 @@ class FreeStatsV2Response(BaseModel):
     )
 
 
+RegionLevel = Literal["sido", "sigungu", "eupmyeondong"]
+
+
+class UpperStatsV2Response(BaseModel):
+    """상위 행정구역(시도·시군구·읍면동) 사전집계 단건 응답."""
+
+    region_level: RegionLevel
+    region_code: str
+    region_name: str
+    as_of_month: date
+    stats_reference_date: date = Field(
+        ...,
+        description="as_of_month 의 다음 달 1일 (UI '기준일' 표시)",
+    )
+    period_start: date
+    period_end: date
+    window_years: int
+    zone_type: str = "ALL"
+    land_category: str = "ALL"
+    stats: StatsResult
+
+
 class FreeStatsV2MetaAsOfResponse(BaseModel):
     """테이블에 적재된 V2 스냅샷 메타(배치 확인용)."""
 

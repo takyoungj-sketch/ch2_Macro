@@ -11,6 +11,8 @@ import type {
   PaidAnalysisRequest,
   PaidAnalysisResponse,
   RegionItem,
+  RegionLevel,
+  UpperStatsV2Response,
 } from "../types";
 import { normalizeFreeStatsWindowYears } from "../types";
 import { viteOptionalV2AsOfMonth } from "../utils/freeStatsV2";
@@ -105,6 +107,31 @@ export const fetchMatrixCellTransactions = async (
   const { data } = await api.post<MatrixCellTransactionsResponse>(
     "/paid/matrix-cell-transactions",
     body
+  );
+  return data;
+};
+
+/**
+ * 상위 행정구역(시도·시군구·읍면동) 사전집계 단건 조회.
+ * 설계: docs/UPPER_STATS_DESIGN.md / DECISIONS D-009.
+ */
+export const fetchUpperStats = async (
+  level: RegionLevel,
+  code: string,
+  opts: {
+    window_years: FreeStatsWindowYears | unknown;
+    zone_type?: string;
+    land_category?: string;
+  }
+): Promise<UpperStatsV2Response> => {
+  const w = normalizeFreeStatsWindowYears(opts.window_years);
+  const asOf = viteOptionalV2AsOfMonth();
+  const qs = new URLSearchParams({ window_years: String(w) });
+  if (opts.zone_type) qs.set("zone_type", opts.zone_type);
+  if (opts.land_category) qs.set("land_category", opts.land_category);
+  if (asOf) qs.set("as_of_month", asOf);
+  const { data } = await api.get<UpperStatsV2Response>(
+    `/paid/upper-stats/${encodeURIComponent(level)}/${encodeURIComponent(code)}?${qs.toString()}`
   );
   return data;
 };

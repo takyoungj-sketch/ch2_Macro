@@ -28,6 +28,26 @@ export interface YearlyTradeStat {
   population_year_end?: number | null;
 }
 
+/**
+ * 상위 행정구역 사전집계 (`/api/paid/upper-stats/{level}/{code}`).
+ * 설계: docs/UPPER_STATS_DESIGN.md / DECISIONS D-009.
+ */
+export type RegionLevel = "sido" | "sigungu" | "eupmyeondong";
+
+export interface UpperStatsV2Response {
+  region_level: RegionLevel;
+  region_code: string;
+  region_name: string;
+  as_of_month: string;
+  stats_reference_date: string;
+  period_start: string;
+  period_end: string;
+  window_years: number;
+  zone_type: string;
+  land_category: string;
+  stats: StatsResult;
+}
+
 /** 무료 통계 V2 API (`/api/free/v2/…`) — 계약일(contract_date) 롤링 창 */
 export type FreeStatsWindowYears = 3 | 5;
 
