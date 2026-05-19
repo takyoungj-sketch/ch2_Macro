@@ -7,6 +7,7 @@
 ## 1. 이미 반영된 것 (참고)
 
 - `pipeline/clean.py`: 강한 키만 사용, 약한 키·임의 fallback 제거, `--reprocess-all` 시 `land_transactions` 전체 삭제 후 재적재(해시 변경 시 중복 방지), 배치 UPSERT, 읍면동·법정리명 **괄호 병기 제거** 정규화(`_normalize_admin_label`).
+- `pipeline/clean.py` (2026-05-19): `_parse_address_structured` — `기암리(岐岩)` 등 **괄호 병기 리**는 정규화 후 `endswith("리")` 로 법정리 분기. 단위 테스트: `pipeline/tests/test_clean_address.py`.
 - `db/009_land_transactions_mapping_review.sql`: `needs_review`, `mapping_notes`.
 - ORM `LandTransaction`에 동일 컬럼.
 

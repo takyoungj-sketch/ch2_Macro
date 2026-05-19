@@ -275,21 +275,26 @@ def _parse_address_structured(address: str) -> tuple[str, str, str, str]:
     (sido_name, sigungu_name, eupmyeondong_name, beopjungri_name).
 
     - 법정리: ... 시·군·구 … 읍·면 가곡리 → sigungu=앞 중간 전부(시도 제외), eup=읍·면, beop=리
+      마지막 토큰이 `기암리(岐岩)` 처럼 괄호 한자 병기면 `endswith("리")` 가 실패하므로,
+      괄호 제거 정규화 후 `리` 여부를 판별한다.
     - 그 외(동·읍·면 단일 행정리): ... 수원시 영통동 / … 분당구 대장동
-      → sigungu = parts[1:-1] 공백 결합, eup=beop=마지막 토큰
+      → sigungu = parts[1:-1] 공백 결합, eup=beop=마지막 토큰(정규화)
     """
     parts = [p for p in str(address).strip().split() if p]
     if not parts:
         return "", "", "", ""
 
     sido = parts[0]
-    if len(parts) >= 2 and parts[-1].endswith("리") and len(parts) >= 4:
+    last_raw = parts[-1]
+    last_norm = _normalize_admin_label(last_raw) or last_raw
+
+    if len(parts) >= 4 and last_norm.endswith("리"):
         sigungu = " ".join(parts[1:-2])
         eup = parts[-2]
-        beop = parts[-1]
+        beop = last_norm
         return sido, sigungu, eup, beop
 
-    leaf = parts[-1]
+    leaf = last_norm
     if len(parts) < 2:
         return sido, "", leaf, leaf
 

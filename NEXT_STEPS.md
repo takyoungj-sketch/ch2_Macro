@@ -49,11 +49,57 @@
 | 11 | docs | README 분할 (`docs/SETUP.md`, `docs/PRODUCT.md`, `docs/PIPELINE.md`) | 현재 README 270+ 줄 |
 | 12 | backend | `region_codes` 활성/비활성(`is_active`) 갱신 절차 — 행정 개편 대응 | 신규 법정동 코드 자동 반영 |
 
-## 3. 유료 매트릭스 모달 확장 (상시 백로그)
+## 3. 상위단계 사전집계 + 쌍둥이 지역 (DECISIONS D-009~D-011)
+
+> 상세 설계: [`docs/UPPER_STATS_DESIGN.md`](docs/UPPER_STATS_DESIGN.md)
+> **선행 조건**: §3-0의 한자 병기 이슈 해소 완료 후 진행.
+
+### 3-0. 선행 — 한자 병기 beopjungri_code 오류 해소 (P0)
+
+| # | 액션 | 확인 |
+|---|------|------|
+| 0-a | ~~`clean.py` 괄호 병기 리 주소 파싱~~ (`_parse_address_structured` 정규화 후 `리` 판별) | **코드·테스트 완료** — `pipeline/tests/test_clean_address.py` |
+| 0-b | `land_transactions` 전체 재정제 (`--reprocess-all`) | 오매핑 행 0건 |
+| 0-c | `land_basic_stats_v2` 전체 재구축 (`build_stats_v2.py`) | `/health.latest_as_of_month` 갱신 확인 |
+
+### 3-1. DB 마이그레이션
+
+| # | 항목 | 파일 |
+|---|------|------|
+| 1 | `land_upper_stats_v2` 테이블 생성 DDL | `db/010_land_upper_stats_v2.sql` |
+
+### 3-2. 파이프라인
+
+| # | 항목 | 비고 |
+|---|------|------|
+| 2 | `pipeline/build_upper_stats_v2.py` 구현 | `build_stats_v2.py` 구조 참고, `--level` 인수 |
+| 3 | `run_pipeline.py`에 upper stats 빌드 단계 연동 | `build_stats_v2` 완료 직후 |
+
+### 3-3. 백엔드 API
+
+| # | 항목 | 비고 |
+|---|------|------|
+| 4 | `GET /api/paid/upper-stats/{level}/{code}` 엔드포인트 | 사전집계 단건 조회 |
+| 5 | 복수지역 레벨 검증 미들웨어/의존성 추가 | 무료=단건, 유료=법정동/리 최대 10개, 상위=단건 강제 |
+| 6 | `population_stats` 상위 레벨 집계 뷰 (`v_population_sigungu`, `v_population_eupmyeondong`) | `region_codes JOIN population_stats` |
+| 7 | `POST /api/paid/twin-regions` 엔드포인트 | 피처 벡터·z-score·거리 계산 |
+
+### 3-4. 프론트엔드
+
+| # | 항목 | 비고 |
+|---|------|------|
+| 8 | 상위 행정구역 단건 분석 패널 (유료 탭) | 읍면동·시군구·시도 선택 시 사전집계 조회 |
+| 9 | 시군구·시도 선택 시 복수 선택 비활성화 UI | D-010 정책 반영 |
+| 10 | 쌍둥이 지역 카드 UI | 기준 지역 vs 유사 지역 비교 테이블, 가중치 모드 선택 |
+| 11 | 쌍둥이 지역명 클릭 → 해당 지역 분석 화면 이동 | 딥링크 |
+
+---
+
+## 4. 유료 매트릭스 모달 확장 (상시 백로그)
 
 매트릭스 셀 모달(`PaidMatrixYearlyModal`) 에 단계적으로 확장.
 
-### 3-1. 히스토그램 (분포·정규성 확인용)
+### 4-1. 히스토그램 (분포·정규성 확인용)
 
 | 고려사항 | 내용 |
 |----------|------|
@@ -63,7 +109,7 @@
 | 구현 위치 | **서버에서 bin 경계·빈도·`n` 만 반환**. 최대 표본 상한 정책. |
 | UI | 표본 수 `n`, bin 수, (선택) 정규 근사 곡선. 추세선과 같은 이상치 옵션 적용 여부 명시. |
 
-### 3-2. 원데이터 보기 (거래 목록)
+### 4-2. 원데이터 보기 (거래 목록)
 
 | 고려사항 | 내용 |
 |----------|------|

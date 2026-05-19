@@ -121,6 +121,11 @@ def main() -> None:
         default="3,5",
         help="--with-v2 사용 시 build_stats_v2.py 의 --windows (기본 3,5)",
     )
+    parser.add_argument(
+        "--with-upper-v2",
+        action="store_true",
+        help="--with-v2 와 함께 build_upper_stats_v2.py (시도·시군구·읍면동 사전집계)",
+    )
     args = parser.parse_args()
 
     if not args.skip_collect:
@@ -155,6 +160,8 @@ def main() -> None:
             if as_of_env:
                 v2_args += ["--as-of", as_of_env]
             _run("build_stats_v2.py", *v2_args)
+            if args.with_upper_v2:
+                _run("build_upper_stats_v2.py", *v2_args)
     # 캐시는 정제만 한 경우에도 stale 이 될 수 있어 항상 비운다 (DECISIONS D-003).
     _truncate_paid_caches()
     log.info("파이프라인 완료")

@@ -1,0 +1,9 @@
+=== BEFORE (2026-05-19 local rebuild) ===
+land_transactions total=2,691,574 valid=2,392,073
+needs_review=106,669 empty_beopjungri=106,669
+land_basic_stats_v2 rows=1,368,078
+land_upper_stats_v2 rows=None (table not yet created)
+sample 기암리 scope/eup rows=2236 mapped_to_4311132026=0
+mapping_notes (needs_review):
+  'no_strong_match': 106,199
+  'no_strong_match_short_address': 470

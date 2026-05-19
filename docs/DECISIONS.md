@@ -12,6 +12,9 @@
 | D-006 | 2026-05-16 | **유료 분석 응답에도 `as_of_month` + `stats_reference_date` 를 노출**한다. 무료/유료 화면이 가리키는 "데이터 기준 시점" 을 항상 같이 보여 준다. |
 | D-007 | 2026-05-16 | 배포 직후 노출 보호: 환경변수 **`API_TOKEN`** 을 두면 백엔드가 모든 요청에서 `X-Api-Token` 헤더를 검사한다(없으면 미들웨어는 비활성). 결제·로그인 도입 전 1단 보호. |
 | D-008 | 2026-05-16 | 갱신 절차의 단일 SOP 는 **`docs/V2_OPERATOR_CHECKLIST.md`** 1개. README/NEXT_STEPS 는 그쪽으로 포인터만 둔다. |
+| D-009 | 2026-05-19 | **상위 행정구역 사전집계 도입**: 법정동/리 외에 읍면동·시군구·시도 레벨도 사전집계(`land_upper_stats_v2`)를 구축한다. 단, **한자 병기 beopjungri_code 오류 해소 및 원장 재정제 완료 후** 구축 시작. 설계: `docs/UPPER_STATS_DESIGN.md`. |
+| D-010 | 2026-05-19 | **무료/유료 접근 경계 재정의**: 무료는 법정동/리 단건만. 유료는 단일 모든 레벨(법정동/리·읍면동·시군구·시도). 복수지역 실시간 집계는 유료에서 읍면동/동/리 최대 10개로 제한; 시군구·시도 복수지역 선택은 API·프론트에서 차단. |
+| D-011 | 2026-05-19 | **쌍둥이 지역 찾기** 유료 기능 설계 확정: 시군구·읍면동 레벨, 가격 통계·거래량·인구·토지 구성 피처 벡터, 가중 유클리드 거리. 상세 설계: `docs/UPPER_STATS_DESIGN.md` §8. |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 
@@ -47,12 +50,45 @@
 - 값이 있으면 모든 비-`/health` 요청이 `X-Api-Token: <값>` 헤더를 가져야 200, 아니면 401.
 - 프론트는 빌드 시 `VITE_API_TOKEN` 으로 주입. 결제·로그인 도입 후에는 사용자 토큰으로 대체할 자리.
 
+## D-009 상위 행정구역 사전집계 (`land_upper_stats_v2`)
+
+- **신규 테이블**: `land_upper_stats_v2` (`db/010_land_upper_stats_v2.sql`)
+  - `region_level`: `'sido'` | `'sigungu'` | `'eupmyeondong'`
+  - `region_code`: 레벨에 맞는 코드 (2/5/8자리)
+  - 나머지 컬럼은 `land_basic_stats_v2`와 동일 (`as_of_month`, `window_years`, 통계 필드)
+- **집계 원칙**: `land_transactions` 원장에서 직접 집계 (하위 단계 사전집계 값 합산 금지).
+- **신규 파이프라인**: `pipeline/build_upper_stats_v2.py` → `run_pipeline.py`에 통합.
+- **선행 조건**: 한자 병기 beopjungri_code 매핑 오류 해소 + 원장 재정제 완료.
+
+## D-010 복수지역 제한 정책
+
+| 요청 레벨 | 무료 | 유료 |
+|-----------|------|------|
+| 법정동/리 (10자리) | 단건 1개 | 최대 10개 (실시간 집계) |
+| 읍면동 (8자리) | 불가 | 단건 1개 (사전집계) |
+| 시군구 (5자리) | 불가 | 단건 1개 (사전집계) |
+| 시도 (2자리) | 불가 | 단건 1개 (사전집계) |
+
+- `_MAX_STATS_REGIONS`: 무료 1 / 유료 10 (법정동/리 한정).
+- 시군구·시도 복수 선택은 API 422로 차단 (프론트에서도 선택 자체 비활성화).
+
+## D-011 쌍둥이 지역 찾기
+
+- **대상 레벨**: 시군구, 읍면동.
+- **피처 그룹**: 가격 통계(mean/median/p25/p75/std), 거래량(log count), 인구(log 총인구·밀도), 토지 구성(주거·상업·농림 비율, 대지·농경지·임야 비율).
+- **알고리즘**: z-score 정규화 → 가중 유클리드 거리 → top-N 반환.
+- **가중치 모드**: `uniform`(기본) | `price` | `population` | `composition`.
+- **인구 데이터 보강**: 현재 `population_stats`는 beopjungri 레벨만 보유 → `region_codes JOIN population_stats` 집계 뷰로 시군구·읍면동 레벨 인구 확보.
+- **API**: `POST /api/paid/twin-regions`.
+- 상세 설계: `docs/UPPER_STATS_DESIGN.md` §8.
+
 ---
 
 ## 관련 문서
 
 - 운영 SOP: `docs/V2_OPERATOR_CHECKLIST.md`
 - 갱신 흐름: `docs/V2_STATS_PRODUCTION.md`
-- 통계 설계: `docs/V2_STATS_DESIGN.md`
+- 통계 설계 (V2): `docs/V2_STATS_DESIGN.md`
+- 상위단계·쌍둥이 설계: `docs/UPPER_STATS_DESIGN.md`
 - 정제 정책: `LAND_CLEANING.md`
 - 다음 작업: `NEXT_STEPS.md`
