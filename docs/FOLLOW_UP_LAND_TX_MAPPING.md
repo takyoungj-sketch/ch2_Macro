@@ -7,7 +7,11 @@
 ## 1. 이미 반영된 것 (참고)
 
 - `pipeline/clean.py`: 강한 키만 사용, 약한 키·임의 fallback 제거, `--reprocess-all` 시 `land_transactions` 전체 삭제 후 재적재(해시 변경 시 중복 방지), 배치 UPSERT, 읍면동·법정리명 **괄호 병기 제거** 정규화(`_normalize_admin_label`).
-- `pipeline/clean.py` (2026-05-19): `_parse_address_structured` — `기암리(岐岩)` 등 **괄호 병기 리**는 정규화 후 `endswith("리")` 로 법정리 분기. 단위 테스트: `pipeline/tests/test_clean_address.py`.
+- `pipeline/clean.py` (2026-05-19, `a220caf`): `_parse_address_structured` — `기암리(岐岩)` 등 **괄호 병기 리**는 정규화 후 `endswith("리")` 로 법정리 분기.
+- `pipeline/clean.py` (2026-05-19, `e76e167`): 매핑 **2단 fallback** — 시도명 별칭(`전북특별자치도→전라북도`, `_SIDO_NAME_ALIASES`)·분구 토큰 drop(`화성시 만세구→화성시`). `mapping_notes` = `sido_alias` / `subgu_dropped`. 실측: 전국 `needs_review` **106,428 → 862 (-99.19%)** (`logs/rebuild_local_20260519_164409.txt`).
+- `pipeline/clean.py` (2026-05-19, `86ce77f`): 매핑 **3단 — 동명이리 한자 disambiguation**. `build_region_lookup` 이 `disamb_by_name` / `disamb_by_code` 그룹 인덱스를 반환하고, `map_beopjungri_codes` 가 일반 lookup 전에 한자 부분 포함 비교로 분기. `mapping_notes='disambiguated_hanja'`. 전국 그룹 3쌍(기암리·화산리·양리) 중 거래 영향 2쌍, 합 241건 재분배. **부분 재매핑 도구**: `pipeline/remap_homonym_targets.py`.
+- 결정 기록: `docs/DECISIONS.md` **D-012** (3단 방어 전체 정리).
+- 단위 테스트: `pipeline/tests/test_clean_address.py` (17건 통과).
 - `db/009_land_transactions_mapping_review.sql`: `needs_review`, `mapping_notes`.
 - ORM `LandTransaction`에 동일 컬럼.
 

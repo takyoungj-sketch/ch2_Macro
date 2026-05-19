@@ -15,6 +15,7 @@
 | D-009 | 2026-05-19 | **상위 행정구역 사전집계 도입**: 법정동/리 외에 읍면동·시군구·시도 레벨도 사전집계(`land_upper_stats_v2`)를 구축한다. 단, **한자 병기 beopjungri_code 오류 해소 및 원장 재정제 완료 후** 구축 시작. 설계: `docs/UPPER_STATS_DESIGN.md`. |
 | D-010 | 2026-05-19 | **무료/유료 접근 경계 재정의**: 무료는 법정동/리 단건만. 유료는 단일 모든 레벨(법정동/리·읍면동·시군구·시도). 복수지역 실시간 집계는 유료에서 읍면동/동/리 최대 10개로 제한; 시군구·시도 복수지역 선택은 API·프론트에서 차단. |
 | D-011 | 2026-05-19 | **쌍둥이 지역 찾기** 유료 기능 설계 확정: 시군구·읍면동 레벨, 가격 통계·거래량·인구·토지 구성 피처 벡터, 가중 유클리드 거리. 상세 설계: `docs/UPPER_STATS_DESIGN.md` §8. |
+| D-012 | 2026-05-19 | **한자 병기·신설 분구 매핑 3단 방어** (`pipeline/clean.py`): ① 괄호 한자 정규화(`_normalize_admin_label`) + 리 주소 파싱(`_parse_address_structured`), ② 시도명 별칭(`전북특별자치도→전라북도` 등)·분구 토큰 drop(`화성시 만세구→화성시`) **fallback**, ③ **동명이리 한자 disambiguation** (정규화 이름이 같은 코드가 2 개 이상인 그룹에서 거래 원장의 괄호 한자와 `region_codes` 의 괄호 한자를 부분 포함 비교로 분기, `mapping_notes='disambiguated_hanja'`). 실측: ① + ② 로 `needs_review` 106,428 → 862 (-99.19%), ③ 으로 기암리·화산리 거래 241건 재분배. 적용 후 영향 단일 코드만 `land_basic_stats_v2` 재빌드 → `pipeline/remap_homonym_targets.py`. |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 
@@ -71,6 +72,50 @@
 
 - `_MAX_STATS_REGIONS`: 무료 1 / 유료 10 (법정동/리 한정).
 - 시군구·시도 복수 선택은 API 422로 차단 (프론트에서도 선택 자체 비활성화).
+
+## D-012 한자 병기·신설 분구 매핑 3단 방어
+
+원장(`land_transactions`) 의 `beopjungri_code` 매핑 손실을 다층 방어로 회복.
+
+### 1단 — 정규화 (이미 반영, 커밋 `a220caf`)
+
+- `_normalize_admin_label`: 읍·면·동·리명의 전각·반각 괄호(`(岐岩)`, `（花山）`) 제거.
+- `_parse_address_structured`: 마지막 토큰이 `기암리(岐岩)` 처럼 괄호 병기여도 정규화 후 `endswith("리")` 로 법정리 분기.
+
+### 2단 — Fallback (커밋 `e76e167`)
+
+`map_beopjungri_codes` 의 기본 강한 키 lookup 이 실패할 때만:
+
+| Fallback | 조건 | 예 | `mapping_notes` |
+|---|---|---|---|
+| `sido_alias` | 신설 시·도 별칭(`_SIDO_NAME_ALIASES`) | `전북특별자치도 → 전라북도` | `sido_alias` |
+| `subgu_dropped` | 마스터에 없는 분구가 시군구 토큰에 붙은 경우 — 마지막 토큰을 하나씩 떼며 재시도 | `화성시 만세구 → 화성시` | `subgu_dropped` |
+
+실측: 전국 로컬 재정제 결과 `needs_review` **106,428 → 862 (-99.19%)**. 로그: `logs/rebuild_local_20260519_164409.txt`.
+
+### 3단 — 동명이리 (同名異里) Disambiguation (커밋 `86ce77f`)
+
+`region_codes` 의 정규화 이름이 같은 코드가 2 개 이상인 그룹(전국 **3쌍**: 기암리, 화산리, 양리)에서 일반 lookup 은 등록 순서상 첫 코드만 살아남아 거래가 한쪽으로 몰린다.
+
+- `build_region_lookup` 이 `disamb_by_name` / `disamb_by_code` (정규화 키 → `[(code, 괄호한자, 원본명), …]`) 인덱스를 반환.
+- `map_beopjungri_codes` 가 일반 lookup **이전에** 한자 부분 포함 비교로 분기, `mapping_notes='disambiguated_hanja'` 기록.
+
+| 그룹 | 코드·한자 | 원장 영향 |
+|---|---|---|
+| 충북 상당구 미원면 기암리 | `4311132026` (岐岩) / `4311132033` (基岩) | 77건이 `2026 → 2033` 으로 이동 |
+| 충북 흥덕구 오창읍 화산리 | `4311425322` (华山) / `4311425350` (花山) | 65건이 `5322 → 5350` 으로 이동 |
+| 강원 양양 현남면 양리 | `4729025331` / `4729025332` | 거래 0건 — 변경 없음 |
+
+### 적용 도구
+
+- 전체 재정제: `pipeline/clean.py --reprocess-all` (수 시간) — 1·2단을 한 번에 흡수하는 표준 절차.
+- 동명이리만 영향이라면 **부분 적용**: `pipeline/remap_homonym_targets.py --as-of YYYY-MM-01 --windows 3,5`.
+  - 영향 6개 코드 범위 raw 만 재매핑 → `land_basic_stats_v2` 의 해당 행 삭제 → `build_stats_v2.py --region <code>` 로 영향 코드만 재빌드.
+  - `land_upper_stats_v2` 는 동일 시군구·읍면 내 재분배라 합계가 동일하므로 **재빌드 불요**.
+
+### 테스트
+
+`pipeline/tests/test_clean_address.py` — 17건 통과. `_extract_paren_content` 4건, `subgu_dropped`/`sido_alias` 3건, `disambiguated_hanja` 3건 포함.
 
 ## D-011 쌍둥이 지역 찾기
 

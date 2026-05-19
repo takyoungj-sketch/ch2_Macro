@@ -54,13 +54,17 @@
 > 상세 설계: [`docs/UPPER_STATS_DESIGN.md`](docs/UPPER_STATS_DESIGN.md)
 > **선행 조건**: §3-0의 한자 병기 이슈 해소 완료 후 진행.
 
-### 3-0. 선행 — 한자 병기 beopjungri_code 오류 해소 (P0)
+### 3-0. 선행 — 한자 병기 beopjungri_code 오류 해소 (P0) ✅ **완료 (2026-05-19)**
 
-| # | 액션 | 확인 |
+3단 방어 적용. 상세는 `docs/DECISIONS.md` **D-012**, `docs/FOLLOW_UP_LAND_TX_MAPPING.md` §1 참고.
+
+| # | 액션 | 결과 |
 |---|------|------|
-| 0-a | ~~`clean.py` 괄호 병기 리 주소 파싱~~ (`_parse_address_structured` 정규화 후 `리` 판별) | **코드·테스트 완료** — `pipeline/tests/test_clean_address.py` |
-| 0-b | `land_transactions` 전체 재정제 (`--reprocess-all`) | 오매핑 행 0건 |
-| 0-c | `land_basic_stats_v2` 전체 재구축 (`build_stats_v2.py`) | `/health.latest_as_of_month` 갱신 확인 |
+| 0-a | `clean.py` 괄호 병기 리 주소 파싱 (`_parse_address_structured`) | ✅ 코드 + 테스트 (`a220caf`) |
+| 0-b | `clean.py` 2단 fallback — 시도 별칭 + 분구 토큰 drop | ✅ `e76e167` — `needs_review` 106,428 → 862 (-99.19%) |
+| 0-c | `clean.py` 3단 — 동명이리 한자 disambiguation | ✅ `86ce77f` — 3쌍 중 거래 영향 2쌍 (241건) 부분 재매핑 |
+| 0-d | `land_transactions` 전체 재정제 (`--reprocess-all`) + `land_basic_stats_v2` 전체 재구축 | ✅ 2026-05-19 (`logs/rebuild_local_20260519_164409.txt`) |
+| 0-e | 동명이리 영향 코드 `land_basic_stats_v2` 부분 재빌드 | ✅ `pipeline/remap_homonym_targets.py` — 216행 삭제 후 재빌드 |
 
 ### 3-1. DB 마이그레이션
 
