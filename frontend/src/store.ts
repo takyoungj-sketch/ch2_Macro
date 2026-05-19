@@ -28,6 +28,7 @@ const EMPTY_REGION_SEGMENTS: RegionFiveFields = ["", "", "", "", ""];
 const MAX_BEOPJUNGRI_PICK = 200;
 const MAX_SIGUNGU_TIER_PICK = 20;
 const MAX_EUP_TIER_PICK = 40;
+const MAX_SIDO_TIER_PICK = 6;
 
 function normalizeAndSortCodes(codes: readonly string[]): string[] {
   return [...new Set(codes.map((c) => c.trim()).filter(Boolean))].sort((a, b) =>
@@ -95,9 +96,15 @@ interface AppState {
     codes: readonly string[],
     regions: readonly RegionItem[]
   ) => boolean;
+  /** 시·도(2자리 sido_code) 단독 선택용. 유료 모드 한정. */
+  mergePickedSidoCodes: (
+    codes: readonly string[],
+    regions: readonly RegionItem[]
+  ) => boolean;
   removePickedBeopjungri: (code: string) => void;
   removePickedSigungu: (code: string) => void;
   removePickedEupmyeondong: (code: string) => void;
+  removePickedSido: (code: string) => void;
   clearTierSelection: () => void;
 
   /**
@@ -178,6 +185,28 @@ export const useAppStore = create<AppState>((set, get) => ({
   setViewMode: (m) =>
     set((s) => {
       if (m !== "free") {
+        /**
+         * 무료 → 유료 전환은 새 분석 세션의 시작점이다.
+         * 사용자는 유료에서 지역을 다시 고르길 원하므로 모든 tier 선택과 분석 잔재를 비운다.
+         * (유료 → 유료 안에서 paidResultView 만 바뀌는 경우는 setViewMode 가 아닌 별도 액션.)
+         */
+        if (s.viewMode === "free") {
+          return {
+            viewMode: m,
+            tierSelection: emptyTierCodes(),
+            regionSegments: [...EMPTY_REGION_SEGMENTS],
+            paidResultView: "idle",
+            paidBasicBaseKey: null,
+            paidBulkBeopjungriCodes: null,
+            paidAnalysisStatus: "idle",
+            paidAnalysisResult: null,
+            paidAnalysisError: null,
+            paidAnalysisStartedAt: null,
+            statsDisplayScopeKey: null,
+            statsDisplayKick: 0,
+            paidBasicStatsKick: 0,
+          };
+        }
         return {
           viewMode: m,
           paidResultView: s.paidResultView,
@@ -286,6 +315,22 @@ export const useAppStore = create<AppState>((set, get) => ({
     return true;
   },
 
+  mergePickedSidoCodes: (incoming, regions) => {
+    const uniqIn = [...new Set(incoming.map((c) => String(c ?? "").trim()).filter(Boolean))];
+    if (uniqIn.length === 0) return false;
+    const s = get();
+    if (s.viewMode === "free") return false;
+    const merged = normalizeAndSortCodes([...s.tierSelection.sido_codes, ...uniqIn]);
+    if (merged.length > MAX_SIDO_TIER_PICK) return false;
+    const next: TierCodes = { ...s.tierSelection, sido_codes: merged };
+    if (resolveUnionBeopjungriCodes(regions, next).length > MAX_BEOPJUNGRI_PICK) return false;
+    if (normalizeAndSortCodes(s.tierSelection.sido_codes).join("|") === merged.join("|")) {
+      return false;
+    }
+    set({ tierSelection: next });
+    return true;
+  },
+
   mergePickedEupmyeondongCodes: (incoming, regions) => {
     const uniqIn = [...new Set(incoming.map((c) => String(c ?? "").trim()).filter(Boolean))];
     if (uniqIn.length === 0) return false;
@@ -342,6 +387,19 @@ export const useAppStore = create<AppState>((set, get) => ({
         tierSelection: {
           ...s.tierSelection,
           eupmyeondong_codes: normalizeAndSortCodes(next),
+        },
+      };
+    }),
+
+  removePickedSido: (code) =>
+    set((s) => {
+      const c = String(code ?? "").trim();
+      if (!c) return s;
+      const next = s.tierSelection.sido_codes.filter((x) => x.trim() !== c);
+      return {
+        tierSelection: {
+          ...s.tierSelection,
+          sido_codes: normalizeAndSortCodes(next),
         },
       };
     }),

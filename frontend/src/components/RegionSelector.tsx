@@ -36,6 +36,12 @@ function labelEupChip(regions: RegionItem[], code: string): string {
     .join(" ");
 }
 
+function labelSidoChip(regions: RegionItem[], code: string): string {
+  const c = String(code).trim();
+  const row = regions.find((r) => String(r.sido_code ?? "").trim() === c);
+  return row?.sido_name ? String(row.sido_name).trim() : c;
+}
+
 export default function RegionSelector() {
   const {
     viewMode,
@@ -48,8 +54,10 @@ export default function RegionSelector() {
     removePickedBeopjungri,
     mergePickedSigunguCodes,
     mergePickedEupmyeondongCodes,
+    mergePickedSidoCodes,
     removePickedSigungu,
     removePickedEupmyeondong,
+    removePickedSido,
   } = useAppStore();
 
   const [localError, setLocalError] = useState<string | null>(null);
@@ -125,6 +133,7 @@ export default function RegionSelector() {
 
   const pickedCodes = tierSelection.beopjungri_codes;
   const selectionChipCount =
+    tierSelection.sido_codes.length +
     tierSelection.sigungu_codes.length +
     tierSelection.eupmyeondong_codes.length +
     tierSelection.beopjungri_codes.length;
@@ -184,6 +193,46 @@ export default function RegionSelector() {
     if (!ok) {
       setLocalError(
         "추가하지 못했습니다. 이미 있거나 선택 상한을 넘깁니다(시군구 칩 최대 개수·합산 법정 200개)."
+      );
+      return;
+    }
+    setSearchInput("");
+    setDebouncedSearch("");
+    setHighlightIdx(-1);
+    inputRef.current?.focus();
+  };
+
+  const handlePickSidoAggregate = (sidoCode: string) => {
+    setLocalError(null);
+    if (viewMode === "free") {
+      setLocalError(
+        "무료 통계는 법정동·리 한 곳만 선택할 수 있습니다. 유료에서 시·도 단위를 이용해 주세요."
+      );
+      return;
+    }
+    const ok = mergePickedSidoCodes([sidoCode], regions);
+    if (!ok) {
+      setLocalError("추가하지 못했습니다. 이미 있거나 선택 상한을 넘깁니다.");
+      return;
+    }
+    setSearchInput("");
+    setDebouncedSearch("");
+    setHighlightIdx(-1);
+    inputRef.current?.focus();
+  };
+
+  const handlePickCityAggregate = (sigunguCodes: readonly string[]) => {
+    setLocalError(null);
+    if (viewMode === "free") {
+      setLocalError(
+        "무료 통계는 법정동·리 한 곳만 선택할 수 있습니다. 유료에서 시 단위를 이용해 주세요."
+      );
+      return;
+    }
+    const ok = mergePickedSigunguCodes(sigunguCodes, regions);
+    if (!ok) {
+      setLocalError(
+        "추가하지 못했습니다. 시군구 칩 한도(20)·합산 법정 한도(200)를 확인해 주세요."
       );
       return;
     }
@@ -278,7 +327,9 @@ export default function RegionSelector() {
 
         if (flatSuggestions.length > 0) {
           const entry = flatSuggestions[highlightIdx >= 0 ? highlightIdx : 0];
-          if (entry.kind === "sigungu_aggregate") handlePickSigunguAggregate(entry.sigunguCode);
+          if (entry.kind === "sido_aggregate") handlePickSidoAggregate(entry.sidoCode);
+          else if (entry.kind === "city_aggregate") handlePickCityAggregate(entry.sigunguCodes);
+          else if (entry.kind === "sigungu_aggregate") handlePickSigunguAggregate(entry.sigunguCode);
           else if (entry.kind === "eup_aggregate") handlePickEupAggregate(entry.eupCode);
           else pickBeopRow(entry.row);
           return;
@@ -292,7 +343,9 @@ export default function RegionSelector() {
 
       if (flatSuggestions.length > 0) {
         const entry = flatSuggestions[highlightIdx >= 0 ? highlightIdx : 0];
-        if (entry.kind === "sigungu_aggregate") handlePickSigunguAggregate(entry.sigunguCode);
+        if (entry.kind === "sido_aggregate") handlePickSidoAggregate(entry.sidoCode);
+        else if (entry.kind === "city_aggregate") handlePickCityAggregate(entry.sigunguCodes);
+        else if (entry.kind === "sigungu_aggregate") handlePickSigunguAggregate(entry.sigunguCode);
         else if (entry.kind === "eup_aggregate") handlePickEupAggregate(entry.eupCode);
         else pickBeopRow(entry.row);
         return;
@@ -303,7 +356,9 @@ export default function RegionSelector() {
         setLocalError(null);
         if (resolved.kind === "beopjungri") pickBeopRow(resolved.row);
         else if (resolved.kind === "sigungu_aggregate") handlePickSigunguAggregate(resolved.sigunguCode);
-        else handlePickEupAggregate(resolved.eupCode);
+        else if (resolved.kind === "eup_aggregate") handlePickEupAggregate(resolved.eupCode);
+        else if (resolved.kind === "sido_aggregate") handlePickSidoAggregate(resolved.sidoCode);
+        else if (resolved.kind === "city_aggregate") handlePickCityAggregate(resolved.sigunguCodes);
         return;
       }
 
@@ -492,6 +547,12 @@ export default function RegionSelector() {
                   >
                     {flatSuggestions.map((entry, idx) => {
                   const hl = idx === highlightIdx;
+                  const showSidoHeader =
+                    entry.kind === "sido_aggregate" &&
+                    (idx === 0 || flatSuggestions[idx - 1]?.kind !== "sido_aggregate");
+                  const showCityHeader =
+                    entry.kind === "city_aggregate" &&
+                    (idx === 0 || flatSuggestions[idx - 1]?.kind !== "city_aggregate");
                   const showSigunguHeader =
                     entry.kind === "sigungu_aggregate" &&
                     (idx === 0 || flatSuggestions[idx - 1]?.kind !== "sigungu_aggregate");
@@ -501,6 +562,83 @@ export default function RegionSelector() {
                   const showBeopHeader =
                     entry.kind === "beopjungri" &&
                     (idx === 0 || flatSuggestions[idx - 1]?.kind !== "beopjungri");
+
+                  if (entry.kind === "sido_aggregate") {
+                    return (
+                      <Fragment key={`sid-${entry.sidoCode}`}>
+                        {showSidoHeader ? (
+                          <li
+                            className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50 px-2 py-1 text-[10px] font-semibold text-slate-500"
+                            aria-hidden
+                          >
+                            시·도 (클릭 시 시도 전체 사전집계로 한 줄 분석)
+                          </li>
+                        ) : null}
+                        <li role="presentation">
+                          <button
+                            type="button"
+                            role="option"
+                            data-hl={hl ? "true" : undefined}
+                            aria-selected={hl}
+                            className={`w-full text-left px-2 py-1.5 hover:bg-blue-50 ${
+                              hl ? "bg-blue-50" : ""
+                            }`}
+                            onMouseEnter={() => setHighlightIdx(idx)}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => handlePickSidoAggregate(entry.sidoCode)}
+                          >
+                            <span className="text-violet-900 text-[10px] font-semibold uppercase tracking-tight">
+                              [시·도]
+                            </span>
+                            <span className="text-slate-800 leading-snug block">
+                              {entry.primaryLabel}
+                            </span>
+                            <span className="text-[10px] text-slate-400">{entry.subtitle}</span>
+                            <span className="text-[10px] text-slate-400 tabular-nums block">
+                              코드 {entry.sidoCode}
+                            </span>
+                          </button>
+                        </li>
+                      </Fragment>
+                    );
+                  }
+
+                  if (entry.kind === "city_aggregate") {
+                    return (
+                      <Fragment key={`city-${entry.sidoCode}-${entry.cityName}`}>
+                        {showCityHeader ? (
+                          <li
+                            className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50 px-2 py-1 text-[10px] font-semibold text-slate-500"
+                            aria-hidden
+                          >
+                            시 (자치구를 묶어 한 번에 선택)
+                          </li>
+                        ) : null}
+                        <li role="presentation">
+                          <button
+                            type="button"
+                            role="option"
+                            data-hl={hl ? "true" : undefined}
+                            aria-selected={hl}
+                            className={`w-full text-left px-2 py-1.5 hover:bg-blue-50 ${
+                              hl ? "bg-blue-50" : ""
+                            }`}
+                            onMouseEnter={() => setHighlightIdx(idx)}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => handlePickCityAggregate(entry.sigunguCodes)}
+                          >
+                            <span className="text-indigo-900 text-[10px] font-semibold uppercase tracking-tight">
+                              [시]
+                            </span>
+                            <span className="text-slate-800 leading-snug block">
+                              {entry.primaryLabel}
+                            </span>
+                            <span className="text-[10px] text-slate-400">{entry.subtitle}</span>
+                          </button>
+                        </li>
+                      </Fragment>
+                    );
+                  }
 
                   if (entry.kind === "sigungu_aggregate") {
                     return (
@@ -636,6 +774,26 @@ export default function RegionSelector() {
           <p className="text-[10px] text-slate-500 leading-snug">검색 결과를 눌러 추가하세요.</p>
         ) : (
           <div className="flex flex-wrap gap-1">
+            {tierSelection.sido_codes.map((code) => (
+              <span
+                key={`sid-${code}`}
+                className="inline-flex items-center gap-1 max-w-full rounded-full border border-violet-200 bg-white pl-2 pr-1 py-0.5 text-[10px] text-violet-950"
+              >
+                <span className="truncate max-w-[14rem]" title={`시도 ${code}`}>
+                  [시·도] {labelSidoChip(regions, code)}
+                </span>
+                {viewMode === "paid" ? (
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-full p-0.5 hover:bg-red-50 text-slate-500 hover:text-red-700"
+                    aria-label={`시도 삭제 ${code}`}
+                    onClick={() => removePickedSido(code)}
+                  >
+                    ×
+                  </button>
+                ) : null}
+              </span>
+            ))}
             {tierSelection.sigungu_codes.map((code) => (
               <span
                 key={`sgg-${code}`}

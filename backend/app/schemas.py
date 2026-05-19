@@ -195,7 +195,13 @@ RegionLevel = Literal["sido", "sigungu", "eupmyeondong"]
 
 
 class UpperStatsV2Response(BaseModel):
-    """상위 행정구역(시도·시군구·읍면동) 사전집계 단건 응답."""
+    """
+    상위 행정구역(시도·시군구·읍면동) 사전집계 단건 응답.
+
+    FreeStatsV2Response 와 같은 모양: total/by_zone/by_land_category/matrix/by_year.
+    matrix(용도×지목) 는 land_upper_stats_v2 의 비-ALL 행에서 가져온다(C 작업).
+    by_year 는 land_transactions 의 region_level/code 별 집계.
+    """
 
     region_level: RegionLevel
     region_code: str
@@ -208,9 +214,11 @@ class UpperStatsV2Response(BaseModel):
     period_start: date
     period_end: date
     window_years: int
-    zone_type: str = "ALL"
-    land_category: str = "ALL"
-    stats: StatsResult
+    total: StatsResult
+    by_year: list[YearlyTradeStat] = Field(default_factory=list)
+    by_zone: dict[str, StatsResult] = Field(default_factory=dict)
+    by_land_category: dict[str, StatsResult] = Field(default_factory=dict)
+    matrix: list[MatrixCell] = Field(default_factory=list)
 
 
 class FreeStatsV2MetaAsOfResponse(BaseModel):

@@ -1,10 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchFreeStats, fetchFreeStatsBulk, fetchPaidMatrixYearly, fetchRegions } from "../api/client";
+import {
+  fetchFreeStats,
+  fetchFreeStatsBulk,
+  fetchPaidMatrixYearly,
+  fetchRegions,
+  fetchUpperStats,
+} from "../api/client";
 import { yearsRangeInclusive } from "../constants/paidFilters";
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import { useAppStore } from "../store";
-import { type MatrixYearlyRequest, normalizeFreeStatsWindowYears } from "../types";
+import {
+  type FreeStatsV2Response,
+  type MatrixYearlyRequest,
+  type RegionLevel,
+  type UpperStatsV2Response,
+  normalizeFreeStatsWindowYears,
+} from "../types";
 import { parseApiError } from "../utils/apiError";
 import { statsAsOfLabel, v2PeriodToYearRange } from "../utils/freeStatsV2";
 import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
@@ -12,6 +24,30 @@ import { statsScopeKeyFromBeopjungriCodes } from "../utils/statsScopeKey";
 import MatrixStatsTable, { MatrixStatsLegend } from "./MatrixStatsTable";
 import PaidMatrixYearlyModal from "./PaidMatrixYearlyModal";
 import YearlyStatsTable from "./YearlyStatsTable";
+
+/**
+ * 단일 상위 행정구역 사전집계 응답을 FreeStatsV2Response 형태로 어댑트한다.
+ * - beopjungri_code/name 자리에 상위 코드·이름을 채워 같은 UI 컴포넌트로 그릴 수 있게 함.
+ * - 매트릭스 셀 트렌드 모달의 region_codes 는 resolvedCodes(상위지역 산하 동·리 전체)를 별도로 사용.
+ */
+function upperToFreeStatsShape(up: UpperStatsV2Response): FreeStatsV2Response {
+  return {
+    beopjungri_code: up.region_code,
+    beopjungri_name: up.region_name,
+    as_of_month: up.as_of_month,
+    stats_reference_date: up.stats_reference_date,
+    period_start: up.period_start,
+    period_end: up.period_end,
+    window_years: up.window_years as 3 | 5,
+    total: up.total,
+    by_year: up.by_year,
+    by_zone: up.by_zone,
+    by_land_category: up.by_land_category,
+    matrix: up.matrix,
+    stats_excluded_codes: [],
+    analysis_base_key: null,
+  };
+}
 
 export default function FreeStatsPanel() {
   const viewMode = useAppStore((s) => s.viewMode);
@@ -49,8 +85,34 @@ export default function FreeStatsPanel() {
     [regions, tierSelection]
   );
 
+  /**
+   * 단일 상위 행정구역(시·도/시군구/읍면동) 단독 선택을 판별 (DECISIONS D-009 / D-010).
+   * - 시도 1개 + 다른 차원 0 → upper-stats sido
+   * - 시군구 1개 + 다른 차원 0 → upper-stats sigungu
+   * - 읍면동 1개 + 다른 차원 0 → upper-stats eupmyeondong
+   * 그 외는 bulk(여러 동·리 합산) 또는 단건 동·리.
+   */
+  const upperSingle = useMemo<
+    { level: RegionLevel; code: string } | null
+  >(() => {
+    const sidoN = tierSelection.sido_codes.length;
+    const sigunguN = tierSelection.sigungu_codes.length;
+    const eupN = tierSelection.eupmyeondong_codes.length;
+    const beopN = tierSelection.beopjungri_codes.length;
+    if (beopN > 0) return null;
+    if (sidoN === 1 && sigunguN === 0 && eupN === 0)
+      return { level: "sido", code: tierSelection.sido_codes[0]! };
+    if (sidoN === 0 && sigunguN === 1 && eupN === 0)
+      return { level: "sigungu", code: tierSelection.sigungu_codes[0]! };
+    if (sidoN === 0 && sigunguN === 0 && eupN === 1)
+      return { level: "eupmyeondong", code: tierSelection.eupmyeondong_codes[0]! };
+    return null;
+  }, [tierSelection]);
+
   const isPaidBasic = viewMode === "paid" && paidResultView === "basic";
-  const useBulk = isPaidBasic && resolvedCodes.length > 1;
+  const useUpper = isPaidBasic && upperSingle != null;
+  const useBulk =
+    isPaidBasic && upperSingle == null && resolvedCodes.length > 1;
   const bulkKey = useMemo(
     () => statsScopeKeyFromBeopjungriCodes(resolvedCodes),
     [resolvedCodes]
@@ -61,16 +123,25 @@ export default function FreeStatsPanel() {
     statsDisplayKick > 0;
 
   const canFetch =
-    resolvedCodes.length > 0 &&
     !regionsLoading &&
-    (useBulk ||
-      (viewMode === "free" && resolvedCodes.length === 1) ||
-      (isPaidBasic && resolvedCodes.length === 1));
+    (useUpper ||
+      useBulk ||
+      (resolvedCodes.length > 0 &&
+        ((viewMode === "free" && resolvedCodes.length === 1) ||
+          (isPaidBasic && resolvedCodes.length === 1))));
 
   const enabled = canFetch && scopeOk;
 
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: useBulk
+  const { data, isLoading, isError, error } = useQuery<FreeStatsV2Response>({
+    queryKey: useUpper
+      ? [
+          "upperStats",
+          upperSingle!.level,
+          upperSingle!.code,
+          paidBasicStatsKick,
+          freeStatsWindowYears,
+        ]
+      : useBulk
       ? ["freeStatsBulkV2", bulkKey, paidBasicStatsKick, freeStatsWindowYears]
       : [
           "freeStatsV2",
@@ -79,20 +150,41 @@ export default function FreeStatsPanel() {
           viewMode,
           freeStatsWindowYears,
         ],
-    queryFn: () =>
-      useBulk
-        ? fetchFreeStatsBulk(resolvedCodes, { window_years: freeStatsWindowYears })
-        : fetchFreeStats(resolvedCodes[0]!, { window_years: freeStatsWindowYears }),
+    queryFn: async () => {
+      if (useUpper) {
+        const up = await fetchUpperStats(upperSingle!.level, upperSingle!.code, {
+          window_years: freeStatsWindowYears,
+        });
+        return upperToFreeStatsShape(up);
+      }
+      if (useBulk) {
+        return fetchFreeStatsBulk(resolvedCodes, {
+          window_years: freeStatsWindowYears,
+        });
+      }
+      return fetchFreeStats(resolvedCodes[0]!, {
+        window_years: freeStatsWindowYears,
+      });
+    },
     enabled,
   });
 
   useEffect(() => {
     if (!isPaidBasic || data == null) return;
+    /**
+     * 단일 상위지역 모드: data.beopjungri_code 는 상위 region_code 라 paidBulkBeopjungriCodes
+     * 에 잘못 들어가면 후속 분석에서 그 한 코드만 가지고 쿼리하게 된다.
+     * 그 경우엔 base/code 메타를 null 로 리셋해 paidFiltered 분석이 resolvedCodes 를 다시 사용하게 함.
+     */
+    if (useUpper) {
+      syncPaidBasicStatsMeta({ analysis_base_key: null, beopjungri_code: null });
+      return;
+    }
     syncPaidBasicStatsMeta({
       analysis_base_key: data.analysis_base_key ?? null,
       beopjungri_code: data.beopjungri_code ?? null,
     });
-  }, [data, isPaidBasic, syncPaidBasicStatsMeta]);
+  }, [data, isPaidBasic, useUpper, syncPaidBasicStatsMeta]);
 
   /** 기본 통계 창과 동일 연도(period 달력 연도 범위)로 필터 칩 동기화 */
   useEffect(() => {
@@ -130,12 +222,16 @@ export default function FreeStatsPanel() {
       }
 
       const baseKey = statsData.analysis_base_key ?? paidBasicBaseKey;
-      const codesForTrend = (
-        statsData.beopjungri_code
-          ?.split(",")
-          .map((x) => x.trim())
-          .filter(Boolean) ?? resolvedCodes
-      );
+      /**
+       * 단일 상위지역 모드에서 statsData.beopjungri_code 는 region_code(시도/시군구/읍면동 코드)다.
+       * 셀 트렌드 모달은 법정동·리 코드 리스트가 필요하므로 항상 resolvedCodes(산하 union)를 우선 사용.
+       */
+      const codesForTrend = useUpper
+        ? resolvedCodes
+        : statsData.beopjungri_code
+            ?.split(",")
+            .map((x) => x.trim())
+            .filter(Boolean) ?? resolvedCodes;
       const { year_from, year_to } = v2PeriodToYearRange(statsData);
       const body: MatrixYearlyRequest = {
         region_selections: null,
@@ -171,7 +267,7 @@ export default function FreeStatsPanel() {
         setTrendLoading(false);
       }
     },
-    [isPaidBasic, resolvedCodes, data, paidBasicBaseKey]
+    [isPaidBasic, resolvedCodes, data, paidBasicBaseKey, useUpper]
   );
 
   if (regionsLoading)

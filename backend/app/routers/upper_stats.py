@@ -1,8 +1,13 @@
 """
 상위 행정구역 사전집계 조회 — `land_upper_stats_v2` 단건 (유료).
 
-설계: docs/UPPER_STATS_DESIGN.md
+설계: docs/UPPER_STATS_DESIGN.md (D-009)
 선행: db/010_land_upper_stats_v2.sql + pipeline/build_upper_stats_v2.py 적재
+
+응답 구조는 FreeStatsV2Response 와 같다:
+- total (ALL/ALL)
+- by_zone / by_land_category / matrix : land_upper_stats_v2 의 zone×cat 행
+- by_year : land_transactions 의 region_level/code 별 contract_year 집계
 """
 
 from __future__ import annotations
@@ -16,7 +21,14 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import get_db
-from app.schemas import RegionLevel, StatsResult, UpperStatsV2Response
+from app.population_query import attach_population_year_end
+from app.schemas import (
+    MatrixCell,
+    RegionLevel,
+    StatsResult,
+    UpperStatsV2Response,
+    YearlyTradeStat,
+)
 from app.v2_stats_windows import (
     default_as_of_month_for_service,
     period_bounds_for_window,
@@ -25,10 +37,16 @@ from app.v2_stats_windows import (
 
 router = APIRouter(prefix="/paid", tags=["상위 행정구역 통계 (유료)"])
 
-_REGION_CODE_LEN: dict[str, int] = {
+_REGION_CODE_LEN: dict[RegionLevel, int] = {
     "sido": 2,
     "sigungu": 5,
     "eupmyeondong": 8,
+}
+
+_LEVEL_TX_COL: dict[RegionLevel, str] = {
+    "sido": "sido_code",
+    "sigungu": "sigungu_code",
+    "eupmyeondong": "eupmyeondong_code",
 }
 
 
@@ -103,17 +121,95 @@ def _resolve_as_of(explicit: Optional[date]) -> date:
     )
 
 
+def _fetch_zone_cat_rows(
+    db: Session,
+    *,
+    level: RegionLevel,
+    code: str,
+    as_of: date,
+    window_years: int,
+) -> list:
+    return db.execute(
+        text(
+            """
+            SELECT zone_type, land_category,
+                   count, mean, std, ci_lower, ci_upper,
+                   p_min, p25, median, p75, p_max
+            FROM land_upper_stats_v2
+            WHERE region_level = :level
+              AND btrim(region_code::text) = :code
+              AND as_of_month = :as_of
+              AND window_years = :w
+            """
+        ),
+        {"level": level, "code": code, "as_of": as_of, "w": window_years},
+    ).fetchall()
+
+
+def _by_year_upper(
+    db: Session,
+    *,
+    level: RegionLevel,
+    code: str,
+    period_start: date,
+    period_end: date,
+) -> list[YearlyTradeStat]:
+    """land_transactions 의 region_level/code 별 contract_year 총계."""
+    col = _LEVEL_TX_COL[level]
+    y0 = date(period_start.year, 1, 1)
+    rows = db.execute(
+        text(
+            f"""
+            SELECT contract_year::int AS y,
+                   COUNT(*)::int AS cnt,
+                   COALESCE(SUM(total_price_10k), 0) AS sum_price,
+                   COALESCE(SUM(area_sqm), 0) AS sum_area
+            FROM land_transactions
+            WHERE btrim({col}::text) = :code
+              AND is_valid IS TRUE
+              AND contract_date IS NOT NULL
+              AND contract_date >= :d0
+              AND contract_date <= :d1
+            GROUP BY contract_year
+            ORDER BY contract_year
+            """
+        ),
+        {"code": code, "d0": y0, "d1": period_end},
+    ).fetchall()
+    y_map = {int(r.y): r for r in rows}
+    out: list[YearlyTradeStat] = []
+    for y in range(int(period_start.year), int(period_end.year) + 1):
+        r = y_map.get(y)
+        if r:
+            sp = float(r.sum_price)
+            sa = float(r.sum_area)
+            unit = (sp / sa) if sa > 0 else None
+            out.append(
+                YearlyTradeStat(
+                    year=y,
+                    count=int(r.cnt),
+                    total_price_10k_sum=sp,
+                    area_sqm_sum=sa,
+                    unit_price_per_sqm=unit,
+                )
+            )
+        else:
+            out.append(YearlyTradeStat(year=y, count=0))
+    # 인구 합산은 시·도/시·군·구/읍·면·동 모두 region 단위 합산이 의미 있어, 코드 단위 attach.
+    # attach_population_year_end 는 region_codes 인자로 동·리 코드 리스트를 받지만,
+    # 여기서는 상위 코드 1개를 그대로 넘겨 함수가 (없으면) 인구를 비워두는 것에 의존.
+    return attach_population_year_end(db, region_codes=[code], items=out)
+
+
 @router.get(
     "/upper-stats/{level}/{code}",
     response_model=UpperStatsV2Response,
-    summary="상위 행정구역 단건 사전집계 조회",
+    summary="상위 행정구역 단건 사전집계 조회 (matrix·by_year 포함)",
 )
 def get_upper_stats(
     level: RegionLevel,
     code: str,
     window_years: int = Query(5, ge=1, le=5),
-    zone_type: str = Query("ALL"),
-    land_category: str = Query("ALL"),
     as_of_month: Optional[date] = Query(None),
     db: Session = Depends(get_db),
 ) -> UpperStatsV2Response:
@@ -127,40 +223,50 @@ def get_upper_stats(
     as_of = _resolve_as_of(as_of_month)
     period_start, period_end = period_bounds_for_window(as_of, window_years)
 
-    row = db.execute(
-        text(
-            """
-            SELECT count, mean, std, ci_lower, ci_upper,
-                   p_min, p25, median, p75, p_max
-            FROM land_upper_stats_v2
-            WHERE region_level = :level
-              AND btrim(region_code::text) = :code
-              AND as_of_month = :as_of
-              AND window_years = :w
-              AND zone_type = :z
-              AND land_category = :c
-            LIMIT 1
-            """
-        ),
-        {
-            "level": level,
-            "code": code,
-            "as_of": as_of,
-            "w": window_years,
-            "z": zone_type,
-            "c": land_category,
-        },
-    ).fetchone()
-    if not row:
+    rows = _fetch_zone_cat_rows(
+        db, level=level, code=code, as_of=as_of, window_years=window_years
+    )
+    if not rows:
         raise HTTPException(
             status_code=404,
             detail=(
                 f"해당 상위지역 사전집계 없음: level={level} code={code} "
-                f"as_of_month={as_of} window_years={window_years} "
-                f"zone_type={zone_type} land_category={land_category}. "
+                f"as_of_month={as_of} window_years={window_years}. "
                 "build_upper_stats_v2.py 적재 여부를 확인하세요."
             ),
         )
+
+    total: Optional[StatsResult] = None
+    by_zone: dict[str, StatsResult] = {}
+    by_land_category: dict[str, StatsResult] = {}
+    matrix: list[MatrixCell] = []
+    for r in rows:
+        zt = (r.zone_type or "ALL").strip() or "ALL"
+        lc = (r.land_category or "ALL").strip() or "ALL"
+        stats = _row_to_stats(r)
+        if zt == "ALL" and lc == "ALL":
+            total = stats
+        elif zt != "ALL" and lc == "ALL":
+            by_zone[zt] = stats
+        elif zt == "ALL" and lc != "ALL":
+            by_land_category[lc] = stats
+        else:
+            matrix.append(MatrixCell(zone_type=zt, land_category=lc, stats=stats))
+
+    if total is None:
+        # ALL/ALL 행이 없으면 가장 기본은 비어 있는 응답 — 404로 일관 처리
+        raise HTTPException(
+            status_code=404,
+            detail="ALL/ALL 사전집계 행을 찾지 못했습니다(adapter/build 점검 필요).",
+        )
+
+    by_year = _by_year_upper(
+        db,
+        level=level,
+        code=code,
+        period_start=period_start,
+        period_end=period_end,
+    )
 
     return UpperStatsV2Response(
         region_level=level,
@@ -171,7 +277,9 @@ def get_upper_stats(
         period_start=period_start,
         period_end=period_end,
         window_years=window_years,
-        zone_type=zone_type,
-        land_category=land_category,
-        stats=_row_to_stats(row),
+        total=total,
+        by_year=by_year,
+        by_zone=by_zone,
+        by_land_category=by_land_category,
+        matrix=matrix,
     )

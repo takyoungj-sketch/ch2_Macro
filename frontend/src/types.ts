@@ -43,9 +43,11 @@ export interface UpperStatsV2Response {
   period_start: string;
   period_end: string;
   window_years: number;
-  zone_type: string;
-  land_category: string;
-  stats: StatsResult;
+  total: StatsResult;
+  by_year: YearlyTradeStat[];
+  by_zone: Record<string, StatsResult>;
+  by_land_category: Record<string, StatsResult>;
+  matrix: MatrixCell[];
 }
 
 /** 무료 통계 V2 API (`/api/free/v2/…`) — 계약일(contract_date) 롤링 창 */

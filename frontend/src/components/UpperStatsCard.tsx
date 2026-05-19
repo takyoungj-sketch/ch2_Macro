@@ -117,24 +117,28 @@ export default function UpperStatsCard() {
           <dl className="grid grid-cols-4 gap-y-1.5 gap-x-3 text-xs">
             <dt className="text-slate-500">거래수</dt>
             <dd className="col-span-3 tabular-nums">
-              {fmt(data.stats.count, 0)}건{" "}
-              {data.stats.is_reliable ? (
+              {fmt(data.total.count, 0)}건{" "}
+              {data.total.is_reliable ? (
                 <span className="text-emerald-600">(신뢰)</span>
               ) : (
                 <span className="text-amber-600">(표본 작음)</span>
               )}
             </dd>
             <dt className="text-slate-500">평균(원/㎡)</dt>
-            <dd className="col-span-3 tabular-nums">{fmt(data.stats.mean)}</dd>
+            <dd className="col-span-3 tabular-nums">{fmt(data.total.mean)}</dd>
             <dt className="text-slate-500">중앙값</dt>
-            <dd className="col-span-3 tabular-nums">{fmt(data.stats.median)}</dd>
+            <dd className="col-span-3 tabular-nums">{fmt(data.total.median)}</dd>
             <dt className="text-slate-500">P25 / P75</dt>
             <dd className="col-span-3 tabular-nums">
-              {fmt(data.stats.p25)} / {fmt(data.stats.p75)}
+              {fmt(data.total.p25)} / {fmt(data.total.p75)}
             </dd>
             <dt className="text-slate-500">95% CI</dt>
             <dd className="col-span-3 tabular-nums">
-              [{fmt(data.stats.ci_lower)} – {fmt(data.stats.ci_upper)}]
+              [{fmt(data.total.ci_lower)} – {fmt(data.total.ci_upper)}]
+            </dd>
+            <dt className="text-slate-500">매트릭스</dt>
+            <dd className="col-span-3 tabular-nums text-slate-400">
+              용도×지목 {data.matrix.length}셀 · 연도별 {data.by_year.length}행
             </dd>
           </dl>
         </div>
