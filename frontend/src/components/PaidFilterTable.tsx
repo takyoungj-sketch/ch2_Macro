@@ -7,8 +7,10 @@ import {
   ROAD_CONDITIONS,
 } from "../constants/paidFilters";
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
+import { MAX_V2_STATS_BULK_CODES } from "../constants/v2BulkLimits";
 import { useAppStore } from "../store";
 import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
+import { resolveUpperSingleFromTier } from "../utils/upperTierStats";
 import { paidUsesCustomAreaSpan } from "../utils/paidFiltersMap";
 
 export default function PaidFilterTable() {
@@ -38,6 +40,7 @@ export default function PaidFilterTable() {
     () => resolveUnionBeopjungriCodes(regions, tierSelection),
     [regions, tierSelection]
   );
+  const upperOnlySelection = useMemo(() => resolveUpperSingleFromTier(tierSelection), [tierSelection]);
   const customAreaSpan = paidUsesCustomAreaSpan(paidRequest);
 
   const runFiltered = () => {
@@ -303,6 +306,28 @@ export default function PaidFilterTable() {
 
           <tr className="border-t border-slate-200 bg-slate-50/80">
             <td colSpan={2} className="p-3">
+              <p className="text-[10px] text-slate-600 leading-relaxed mb-2">
+                <span className="font-semibold text-slate-700">필터 분석에 쓰이는 법정동·리 코드</span>:{" "}
+                <span className="tabular-nums font-bold text-indigo-800">
+                  {resolvedRegionCodes.length.toLocaleString()}
+                </span>
+                곳 (지역 선택이 카탈로그에서 확장된 수). 상위 행정(시도·구·읍면동·[시] 등)만 골라도 매칭되는
+                동·리 코드 전부가 포함됩니다.
+                {resolvedRegionCodes.length > MAX_V2_STATS_BULK_CODES ? (
+                  <span className="block mt-1.5 text-amber-900/90">
+                    기본통계 벌크 선조회(/free/v2/stats/bulk)는 코드{" "}
+                    <span className="tabular-nums">{MAX_V2_STATS_BULK_CODES}</span>
+                    건 한도입니다. 초과하면 선조회에 실패할 수 있고, 그때는 동일 선택의 전 코드로 거래 원장 집계로
+                    이어져 기본통계 카드와 표본이 달라질 수 있습니다(화면 안내 참고).
+                  </span>
+                ) : null}
+                {upperOnlySelection != null && resolvedRegionCodes.length > 0 ? (
+                  <span className="block mt-1.5 text-slate-500">
+                    지금은 상위 행정만 선택된 상태입니다. 위 기본통계 카드가 사전집계라면 필터 분석은 산하{" "}
+                    {resolvedRegionCodes.length.toLocaleString()}곳을 원장에서 다시 거릅니다.
+                  </span>
+                ) : null}
+              </p>
               {filterError ? (
                 <p className="text-[11px] text-red-600 mb-2">{filterError}</p>
               ) : null}

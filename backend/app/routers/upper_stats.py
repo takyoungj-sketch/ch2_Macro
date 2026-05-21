@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import get_db
-from app.population_query import attach_population_year_end
+from app.population_query import attach_population_year_end_for_upper_level
 from app.schemas import (
     MatrixCell,
     RegionLevel,
@@ -41,6 +41,7 @@ _REGION_CODE_LEN: dict[RegionLevel, int] = {
     "sido": 2,
     "sigungu": 5,
     "eupmyeondong": 8,
+    "city": 5,
 }
 
 # land_transactions 의 region 필터 식 — eupmyeondong 컬럼이 없으므로
@@ -77,8 +78,50 @@ def _validate_code(level: RegionLevel, code: str) -> str:
     return code
 
 
+def _sigungu_codes_for_city_bucket(db: Session, city_code: str) -> list[str]:
+    """시군구코드 floor/10*10 버킷(5자리)에 속하는 모든 시군구(자치구 등)."""
+    cc = (city_code or "").strip()
+    if not cc.isdigit():
+        return []
+    rows = db.execute(
+        text(
+            """
+            SELECT DISTINCT btrim(sigungu_code::text) AS sg
+            FROM region_codes
+            WHERE COALESCE(is_active, TRUE)
+              AND btrim(sigungu_code::text) ~ '^[0-9]{5}$'
+              AND (CAST(btrim(sigungu_code::text) AS INTEGER) / 10 * 10) = CAST(:cc AS INTEGER)
+            """
+        ),
+        {"cc": int(cc)},
+    ).fetchall()
+    return sorted({str(r.sg).strip() for r in rows if r.sg})
+
+
 def _region_name(db: Session, level: RegionLevel, code: str) -> str:
     """region_codes 에서 해당 레벨의 대표 이름을 가져온다."""
+    if level == "city":
+        sgs = _sigungu_codes_for_city_bucket(db, code)
+        if not sgs:
+            return ""
+        row = db.execute(
+            text(
+                """
+                SELECT sigungu_name
+                FROM region_codes
+                WHERE COALESCE(is_active, TRUE)
+                  AND btrim(sigungu_code::text) = ANY(:sgs)
+                LIMIT 1
+                """
+            ),
+            {"sgs": sgs},
+        ).fetchone()
+        if not row or not row[0]:
+            return ""
+        parts = str(row[0]).split()
+        if parts and parts[0].endswith("시"):
+            return parts[0]
+        return parts[0] if parts else ""
     if level == "sido":
         col_code, col_name = "sido_code", "sido_name"
     elif level == "sigungu":
@@ -157,8 +200,25 @@ def _by_year_upper(
     period_end: date,
 ) -> list[YearlyTradeStat]:
     """land_transactions 의 region_level/code 별 contract_year 총계."""
-    where = _LEVEL_TX_WHERE[level]
     y0 = date(period_start.year, 1, 1)
+    if level == "city":
+        sgs = _sigungu_codes_for_city_bucket(db, code)
+        if not sgs:
+            out_empty = [
+                YearlyTradeStat(year=y, count=0)
+                for y in range(int(period_start.year), int(period_end.year) + 1)
+            ]
+            return attach_population_year_end_for_upper_level(
+                db, level=level, upper_code=code, items=out_empty
+            )
+        in_clause = ", ".join(f":c{i}" for i in range(len(sgs)))
+        params: dict = {f"c{i}": s for i, s in enumerate(sgs)}
+        params["d0"] = y0
+        params["d1"] = period_end
+        where = f"btrim(sigungu_code::text) IN ({in_clause})"
+    else:
+        where = _LEVEL_TX_WHERE[level]
+        params = {"code": code, "d0": y0, "d1": period_end}
     rows = db.execute(
         text(
             f"""
@@ -176,7 +236,7 @@ def _by_year_upper(
             ORDER BY contract_year
             """
         ),
-        {"code": code, "d0": y0, "d1": period_end},
+        params,
     ).fetchall()
     y_map = {int(r.y): r for r in rows}
     out: list[YearlyTradeStat] = []
@@ -197,10 +257,9 @@ def _by_year_upper(
             )
         else:
             out.append(YearlyTradeStat(year=y, count=0))
-    # 인구 합산은 시·도/시·군·구/읍·면·동 모두 region 단위 합산이 의미 있어, 코드 단위 attach.
-    # attach_population_year_end 는 region_codes 인자로 동·리 코드 리스트를 받지만,
-    # 여기서는 상위 코드 1개를 그대로 넘겨 함수가 (없으면) 인구를 비워두는 것에 의존.
-    return attach_population_year_end(db, region_codes=[code], items=out)
+    return attach_population_year_end_for_upper_level(
+        db, level=level, upper_code=code, items=out
+    )
 
 
 @router.get(

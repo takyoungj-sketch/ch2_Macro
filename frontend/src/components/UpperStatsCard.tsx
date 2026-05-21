@@ -14,6 +14,7 @@ import { normalizeFreeStatsWindowYears } from "../types";
  */
 const LEVELS: { value: RegionLevel; label: string; digits: number }[] = [
   { value: "sido", label: "시도 (2자리)", digits: 2 },
+  { value: "city", label: "시(자치구 묶음, 5자리 버킷)", digits: 5 },
   { value: "sigungu", label: "시군구 (5자리)", digits: 5 },
   { value: "eupmyeondong", label: "읍·면·동 (8자리)", digits: 8 },
 ];

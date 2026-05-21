@@ -32,7 +32,7 @@ export interface YearlyTradeStat {
  * 상위 행정구역 사전집계 (`/api/paid/upper-stats/{level}/{code}`).
  * 설계: docs/UPPER_STATS_DESIGN.md / DECISIONS D-009.
  */
-export type RegionLevel = "sido" | "sigungu" | "eupmyeondong";
+export type RegionLevel = "sido" | "sigungu" | "eupmyeondong" | "city";
 
 export interface UpperStatsV2Response {
   region_level: RegionLevel;

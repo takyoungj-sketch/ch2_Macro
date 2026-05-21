@@ -124,7 +124,7 @@ def main() -> None:
     parser.add_argument(
         "--with-upper-v2",
         action="store_true",
-        help="--with-v2 와 함께 build_upper_stats_v2.py (시도·시군구·읍면동 사전집계)",
+        help="--with-v2 와 함께 build_upper_stats_v2.py (시도·시(자치구 묶음)·시군구·읍면동 사전집계)",
     )
     args = parser.parse_args()
 

@@ -51,9 +51,9 @@ CREATE TABLE IF NOT EXISTS land_upper_stats_v2 (
 
 COMMENT ON TABLE land_upper_stats_v2 IS
     'V2: 시도·시군구·읍면동 단위 단가 통계 사전집계 (원장 직접 GROUP BY)';
-COMMENT ON COLUMN land_upper_stats_v2.region_level IS 'sido | sigungu | eupmyeondong';
+COMMENT ON COLUMN land_upper_stats_v2.region_level IS 'sido | sigungu | eupmyeondong | city';
 COMMENT ON COLUMN land_upper_stats_v2.region_code IS
-    'sido 2자리, sigungu 5자리, eupmyeondong 8자리';
+    'sido 2자리, sigungu 5자리, eupmyeondong 8자리, city 5자리(자치구형 시 통합 버킷=floor(sigungu/10)*10)';
 
 CREATE INDEX IF NOT EXISTS ix_lus_v2_level_code_asof_window
     ON land_upper_stats_v2 (region_level, region_code, as_of_month DESC, window_years);

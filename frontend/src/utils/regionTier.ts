@@ -1,9 +1,12 @@
 import type { RegionItem } from "../types";
+import { cityBucketFromSigungu } from "./cityBucket";
 
 /** 지역 선택 — 각 차원별 코드(복수). 빈 차원은 그 조건 무시. AND 조합. */
 export interface TierCodes {
   sido_codes: string[];
   sigungu_codes: string[];
+  /** 자치구로 나뉜 시 등: 5자리 버킷 코드(예: 청주 43110). cityBucketFromSigungu 와 동일 규칙. */
+  city_codes: string[];
   eupmyeondong_codes: string[];
   beopjungri_codes: string[];
 }
@@ -11,6 +14,7 @@ export interface TierCodes {
 export const emptyTierCodes = (): TierCodes => ({
   sido_codes: [],
   sigungu_codes: [],
+  city_codes: [],
   eupmyeondong_codes: [],
   beopjungri_codes: [],
 });
@@ -25,6 +29,13 @@ export function resolveBeopjungriCodes(
   if (tier.sido_codes.length > 0) {
     const set = new Set(tier.sido_codes.map((c) => c.trim()));
     cand = cand.filter((r) => set.has(String(r.sido_code).trim()));
+  }
+  if (tier.city_codes.length > 0) {
+    const buckets = new Set(tier.city_codes.map((c) => c.trim()));
+    cand = cand.filter((r) => {
+      const b = cityBucketFromSigungu(String(r.sigungu_code ?? ""));
+      return b && buckets.has(b);
+    });
   }
   if (tier.sigungu_codes.length > 0) {
     const set = new Set(tier.sigungu_codes.map((c) => c.trim()));
@@ -58,6 +69,14 @@ export function resolveUnionBeopjungriCodes(regions: readonly RegionItem[], tier
     const sd = new Set(tier.sido_codes.map((x) => x.trim()));
     for (const r of regions) {
       if (sd.has(String(r.sido_code ?? "").trim())) add(r.beopjungri_code);
+    }
+  }
+
+  if (tier.city_codes.length > 0) {
+    const buckets = new Set(tier.city_codes.map((x) => x.trim()));
+    for (const r of regions) {
+      const b = cityBucketFromSigungu(String(r.sigungu_code ?? ""));
+      if (b && buckets.has(b)) add(r.beopjungri_code);
     }
   }
 

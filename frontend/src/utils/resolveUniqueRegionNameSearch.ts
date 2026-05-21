@@ -1,4 +1,5 @@
 import type { RegionItem } from "../types";
+import { cityBucketFromSigungu } from "./cityBucket";
 
 function norm(s: string): string {
   return String(s ?? "").trim().toLowerCase().replace(/\s+/g, "");
@@ -9,7 +10,13 @@ export type UniqueRegionSearchPick =
   | { kind: "eup_aggregate"; eupCode: string }
   | { kind: "sigungu_aggregate"; sigunguCode: string }
   | { kind: "sido_aggregate"; sidoCode: string }
-  | { kind: "city_aggregate"; cityName: string; sidoCode: string; sigunguCodes: string[] };
+  | {
+      kind: "city_aggregate";
+      cityCode: string;
+      cityName: string;
+      sidoCode: string;
+      sigunguCodes: string[];
+    };
 
 /**
  * 검색어가 전국에서 한 시군구·읍면동·법정단위로만 안내될 때 자동 선택에 쓰입니다.
@@ -105,11 +112,14 @@ export function tryResolveUniqueRegionSearch(
   if (cityCandidates.length === 1) {
     const [key, v] = cityCandidates[0]!;
     const cityName = key.split("::")[1] ?? "";
+    const sigunguCodes = [...v.sigungus].sort();
+    const cityCode = sigunguCodes.length ? cityBucketFromSigungu(sigunguCodes[0]!) : "";
     return {
       kind: "city_aggregate",
+      cityCode,
       cityName,
       sidoCode: v.sido,
-      sigunguCodes: [...v.sigungus].sort(),
+      sigunguCodes,
     };
   }
 

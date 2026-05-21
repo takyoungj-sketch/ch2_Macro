@@ -1,7 +1,7 @@
 """
 V2 상위 행정구역 사전 집계: land_transactions → land_upper_stats_v2
 
-집계 레벨: sido(2) · sigungu(5) · eupmyeondong(8)
+집계 레벨: sido(2) · sigungu(5) · eupmyeondong(8) · city(5, 자치구형 시 통합 버킷)
 원장에서 직접 집계 (하위 land_basic_stats_v2 합산 금지).
 
 사용:
@@ -49,6 +49,75 @@ LEVEL_COLUMNS: dict[str, str] = {
     "sigungu": "sigungu_code",
     "eupmyeondong": "eupmyeondong_code",
 }
+
+
+def _sigungu_to_city_bucket(sigungu_code: str) -> str:
+    """시군구 5자리 → 의사 시 단위 버킷 (floor/10*10). 청주 43111~ → 43110."""
+    s = str(sigungu_code).strip()
+    if not s.isdigit() or len(s) != 5:
+        return ""
+    n = int(s)
+    return str((n // 10) * 10).zfill(5)
+
+
+def build_stats_for_upper_city(
+    df: pd.DataFrame,
+    city_code: str,
+    sigungu_members: set[str],
+    *,
+    as_of_month: date,
+    window_years: int,
+    period_start: date,
+    period_end: date,
+    batch_id: str | None,
+) -> list[dict]:
+    """자치구형 시: 시군구 코드 여럿을 합쳐 zone×cat 통계."""
+    rc = str(city_code).strip()
+    if not sigungu_members:
+        return []
+    sub = df[df["sigungu_code"].astype(str).str.strip().isin(sigungu_members)]
+    if sub.empty:
+        return []
+
+    from itertools import product
+
+    zone_types = ["ALL"] + sorted(sub["zone_type"].dropna().astype(str).str.strip().unique().tolist())
+    land_cats = ["ALL"] + sorted(sub["land_category"].dropna().astype(str).str.strip().unique().tolist())
+
+    records: list[dict] = []
+    for zone, cat in product(zone_types, land_cats):
+        mask = pd.Series([True] * len(sub), index=sub.index)
+        if zone != "ALL":
+            mask &= sub["zone_type"].astype(str).str.strip() == zone
+        if cat != "ALL":
+            mask &= sub["land_category"].astype(str).str.strip() == cat
+
+        prices = sub.loc[mask, "unit_price_per_sqm"].dropna().tolist()
+        stats = compute_stats(prices)
+        records.append(
+            {
+                "region_level": "city",
+                "region_code": rc,
+                "as_of_month": as_of_month,
+                "window_years": window_years,
+                "period_start": period_start,
+                "period_end": period_end,
+                "zone_type": zone,
+                "land_category": cat,
+                "count": stats["count"],
+                "mean": stats["mean"],
+                "std": stats["std"],
+                "ci_lower": stats["ci_lower"],
+                "ci_upper": stats["ci_upper"],
+                "p_min": stats["min"],
+                "p25": stats["p25"],
+                "median": stats["median"],
+                "p75": stats["p75"],
+                "p_max": stats["max"],
+                "batch_id": batch_id,
+            }
+        )
+    return records
 
 
 def fetch_transactions_for_upper_union(
@@ -184,6 +253,33 @@ def collect_upper_records_for_windows(
             log.warning("upper window_years=%d: 거래 없음, 건너뜀", w)
             continue
         for level in levels:
+            if level == "city":
+                sg_series = df_w["sigungu_code"].astype(str).str.strip()
+                bucket_to_sigungus: dict[str, set[str]] = {}
+                for s in sg_series.unique():
+                    if not s or not str(s).isdigit() or len(str(s)) != 5:
+                        continue
+                    b = _sigungu_to_city_bucket(s)
+                    if not b:
+                        continue
+                    bucket_to_sigungus.setdefault(b, set()).add(s)
+                for bucket, members in sorted(bucket_to_sigungus.items()):
+                    if len(members) < 2:
+                        continue
+                    total.extend(
+                        build_stats_for_upper_city(
+                            df_w,
+                            bucket,
+                            members,
+                            as_of_month=as_of_month,
+                            window_years=w,
+                            period_start=ps,
+                            period_end=pe,
+                            batch_id=batch_id,
+                        )
+                    )
+                continue
+
             col = LEVEL_COLUMNS[level]
             codes = sorted(c for c in df_w[col].dropna().astype(str).str.strip().unique() if c)
             for code in codes:
@@ -281,7 +377,7 @@ def main() -> None:
     parser.add_argument(
         "--levels",
         type=str,
-        default="sido,sigungu,eupmyeondong",
+        default="sido,sigungu,eupmyeondong,city",
         help="집계 레벨 (쉼표)",
     )
     parser.add_argument("--batch-id", type=str, default=None)
@@ -301,7 +397,7 @@ def main() -> None:
 
     levels = [x.strip() for x in args.levels.split(",") if x.strip()]
     for lv in levels:
-        if lv not in LEVEL_COLUMNS:
+        if lv not in set(LEVEL_COLUMNS) | {"city"}:
             raise SystemExit(f"알 수 없는 level: {lv}")
 
     batch_id = args.batch_id or uuid.uuid4().hex

@@ -5,6 +5,7 @@ import {
   fetchFreeStatsBulk,
   fetchPaidMatrixYearly,
   fetchRegions,
+  fetchUpperStats,
 } from "../api/client";
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import { useAppStore } from "../store";
@@ -13,6 +14,7 @@ import { parseApiError } from "../utils/apiError";
 import { statsAsOfLabel } from "../utils/freeStatsV2";
 import { buildPaidPayload } from "../utils/paidAnalysisPayload";
 import { beopjungriNameForCode, resolveUnionBeopjungriCodes } from "../utils/regionTier";
+import { resolveUpperSingleFromTier, upperToFreeStatsShape } from "../utils/upperTierStats";
 import MatrixStatsTable, { MatrixStatsLegend } from "./MatrixStatsTable";
 import PaidMatrixYearlyModal from "./PaidMatrixYearlyModal";
 import StatsTable from "./StatsTable";
@@ -37,6 +39,7 @@ export default function PaidAnalysisPanel() {
   const runPaidFilteredAnalysis = useAppStore((s) => s.runPaidFilteredAnalysis);
   const cancelPaidFilteredAnalysis = useAppStore((s) => s.cancelPaidFilteredAnalysis);
   const paidBulkBeopjungriCodes = useAppStore((s) => s.paidBulkBeopjungriCodes);
+  const paidFilteredAnalysisScopeNotice = useAppStore((s) => s.paidFilteredAnalysisScopeNotice);
 
   const [trendModal, setTrendModal] = useState<{
     zoneType: string;
@@ -60,11 +63,18 @@ export default function PaidAnalysisPanel() {
     [regions, tierSelection]
   );
 
+  const upperSingle = useMemo(() => resolveUpperSingleFromTier(tierSelection), [tierSelection]);
+  const useUpperPaidBasic = viewMode === "paid" && upperSingle !== null;
+
   const bulkKey = useMemo(() => [...resolvedCodes].slice().sort().join(","), [resolvedCodes]);
-  const useBulkBasic = resolvedCodes.length > 1;
+  const useBulkBasic = viewMode === "paid" && !useUpperPaidBasic && resolvedCodes.length > 1;
 
   const canFetchBasic =
-    resolvedCodes.length > 0 && !regionsLoading && (useBulkBasic || resolvedCodes.length === 1);
+    !regionsLoading &&
+    viewMode === "paid" &&
+    (useUpperPaidBasic ||
+      useBulkBasic ||
+      (!upperSingle && resolvedCodes.length === 1));
 
   const {
     data: basicData,
@@ -72,23 +82,43 @@ export default function PaidAnalysisPanel() {
     isError: basicIsError,
     error: basicError,
   } = useQuery({
-    queryKey: useBulkBasic
-      ? ["freeStatsBulkV2", bulkKey, paidBasicStatsKick, freeStatsWindowYears]
-      : ["freeStatsV2", resolvedCodes[0] ?? "", paidBasicStatsKick, viewMode, freeStatsWindowYears],
-    queryFn: () =>
-      useBulkBasic
-        ? fetchFreeStatsBulk(resolvedCodes, { window_years: freeStatsWindowYears })
-        : fetchFreeStats(resolvedCodes[0]!, { window_years: freeStatsWindowYears }),
-    enabled: canFetchBasic && viewMode === "paid",
+    queryKey: useUpperPaidBasic
+      ? [
+          "upperStats",
+          upperSingle!.level,
+          upperSingle!.code,
+          paidBasicStatsKick,
+          freeStatsWindowYears,
+        ]
+      : useBulkBasic
+        ? ["freeStatsBulkV2", bulkKey, paidBasicStatsKick, freeStatsWindowYears]
+        : ["freeStatsV2", resolvedCodes[0] ?? "", paidBasicStatsKick, viewMode, freeStatsWindowYears],
+    queryFn: async () => {
+      if (useUpperPaidBasic) {
+        const up = await fetchUpperStats(upperSingle!.level, upperSingle!.code, {
+          window_years: freeStatsWindowYears,
+        });
+        return upperToFreeStatsShape(up);
+      }
+      if (useBulkBasic) {
+        return fetchFreeStatsBulk(resolvedCodes, { window_years: freeStatsWindowYears });
+      }
+      return fetchFreeStats(resolvedCodes[0]!, { window_years: freeStatsWindowYears });
+    },
+    enabled: canFetchBasic,
   });
 
   useEffect(() => {
     if (basicData === undefined) return;
+    if (useUpperPaidBasic) {
+      syncPaidBasicStatsMeta({ analysis_base_key: null, beopjungri_code: null });
+      return;
+    }
     syncPaidBasicStatsMeta({
       analysis_base_key: basicData.analysis_base_key ?? null,
       beopjungri_code: basicData.beopjungri_code ?? null,
     });
-  }, [basicData, syncPaidBasicStatsMeta]);
+  }, [basicData, useUpperPaidBasic, syncPaidBasicStatsMeta]);
 
   /** 필터 결과가 있으면 서버 연도별 집계(도로·면적 필터 포함)를 상단에 표시, 없으면 기본통계 by_year 에서 선택 연도만 표시 */
   const yearlyRowsForPaidFilter = useMemo(() => {
@@ -229,11 +259,26 @@ export default function PaidAnalysisPanel() {
               · {basicAsOfLabel}
             </span>
           )}
+          {useUpperPaidBasic && (
+            <span className="block text-indigo-600/90 font-normal mt-0.5">
+              시·도·시군구·읍면동·[시](자치구 묶음)만 단독 선택한 경우{" "}
+              <code className="text-[10px]">land_upper_stats_v2</code> 사전집계입니다. 메인 기본 통계 카드와 동일 소스입니다.
+            </span>
+          )}
           {useBulkBasic && (
             <span className="block text-indigo-600/90 font-normal mt-0.5">
               선택 법정동·리 거래 단가를 합친 결과입니다. 매트릭스는 원장 기준 즉시 집계입니다.
             </span>
           )}
+          {viewMode === "paid" && !useUpperPaidBasic && !useBulkBasic && canFetchBasic && (
+            <span className="block text-indigo-600/90 font-normal mt-0.5">
+              단일 동·리는 <code className="text-[10px]">land_basic_stats_v2</code> 사전집계입니다.
+            </span>
+          )}
+        </p>
+        <p className="text-[10px] text-slate-500 leading-relaxed rounded-md bg-slate-50 border border-slate-100 px-2 py-1.5">
+          <strong className="text-slate-600">필터 분석</strong> 결과는 거래 원장에 연도·도로·면적 등을 적용해 다시 만듭니다.
+          위 기본 통계와 수치·표본 범위가 같지 않을 수 있습니다.
         </p>
         {basicLoading && (
           <p className="text-xs text-slate-400 text-center py-4">연도별 요약 불러오는 중…</p>
@@ -275,6 +320,11 @@ export default function PaidAnalysisPanel() {
 
       {isLoading && (
         <div className="flex flex-col items-center justify-center gap-3 py-8 px-4 text-center rounded-xl bg-white shadow-sm border border-slate-100">
+          {paidFilteredAnalysisScopeNotice ? (
+            <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 max-w-lg leading-relaxed text-left">
+              {paidFilteredAnalysisScopeNotice}
+            </p>
+          ) : null}
           <div
             className="h-9 w-9 rounded-full border-2 border-slate-200 border-t-blue-600 animate-spin shrink-0"
             aria-hidden
@@ -310,6 +360,11 @@ export default function PaidAnalysisPanel() {
           }`}
           role="alert"
         >
+          {paidFilteredAnalysisScopeNotice ? (
+            <p className="text-[11px] text-left text-slate-700 bg-white/70 border border-slate-200 rounded-md px-2 py-1.5 mb-2 leading-relaxed">
+              {paidFilteredAnalysisScopeNotice}
+            </p>
+          ) : null}
           <p className="font-medium">{apiErr.message}</p>
           {apiErr.status === 404 ? (
             <p className="mt-2 text-xs text-amber-800/90">
@@ -346,6 +401,16 @@ export default function PaidAnalysisPanel() {
               </button>
             </div>
           </div>
+
+          {paidFilteredAnalysisScopeNotice ? (
+            <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 leading-relaxed">
+              {paidFilteredAnalysisScopeNotice}
+            </p>
+          ) : null}
+          <p className="text-[10px] text-slate-500 leading-relaxed">
+            이 화면은 <code className="text-[10px]">/paid/analyze</code>가 <code className="text-[10px]">land_transactions</code>{" "}
+            원장을 필터한 결과입니다. 기본 통계(사전집계·롤링 구간)와 정의가 다릅니다.
+          </p>
 
           <MatrixStatsTable
             title=""

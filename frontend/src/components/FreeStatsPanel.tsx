@@ -10,44 +10,15 @@ import {
 import { yearsRangeInclusive } from "../constants/paidFilters";
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import { useAppStore } from "../store";
-import {
-  type FreeStatsV2Response,
-  type MatrixYearlyRequest,
-  type RegionLevel,
-  type UpperStatsV2Response,
-  normalizeFreeStatsWindowYears,
-} from "../types";
+import { type FreeStatsV2Response, type MatrixYearlyRequest, normalizeFreeStatsWindowYears } from "../types";
 import { parseApiError } from "../utils/apiError";
 import { statsAsOfLabel, v2PeriodToYearRange } from "../utils/freeStatsV2";
 import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
 import { statsScopeKeyFromBeopjungriCodes } from "../utils/statsScopeKey";
+import { resolveUpperSingleFromTier, upperToFreeStatsShape } from "../utils/upperTierStats";
 import MatrixStatsTable, { MatrixStatsLegend } from "./MatrixStatsTable";
 import PaidMatrixYearlyModal from "./PaidMatrixYearlyModal";
 import YearlyStatsTable from "./YearlyStatsTable";
-
-/**
- * 단일 상위 행정구역 사전집계 응답을 FreeStatsV2Response 형태로 어댑트한다.
- * - beopjungri_code/name 자리에 상위 코드·이름을 채워 같은 UI 컴포넌트로 그릴 수 있게 함.
- * - 매트릭스 셀 트렌드 모달의 region_codes 는 resolvedCodes(상위지역 산하 동·리 전체)를 별도로 사용.
- */
-function upperToFreeStatsShape(up: UpperStatsV2Response): FreeStatsV2Response {
-  return {
-    beopjungri_code: up.region_code,
-    beopjungri_name: up.region_name,
-    as_of_month: up.as_of_month,
-    stats_reference_date: up.stats_reference_date,
-    period_start: up.period_start,
-    period_end: up.period_end,
-    window_years: up.window_years as 3 | 5,
-    total: up.total,
-    by_year: up.by_year,
-    by_zone: up.by_zone,
-    by_land_category: up.by_land_category,
-    matrix: up.matrix,
-    stats_excluded_codes: [],
-    analysis_base_key: null,
-  };
-}
 
 export default function FreeStatsPanel() {
   const viewMode = useAppStore((s) => s.viewMode);
@@ -85,29 +56,8 @@ export default function FreeStatsPanel() {
     [regions, tierSelection]
   );
 
-  /**
-   * 단일 상위 행정구역(시·도/시군구/읍면동) 단독 선택을 판별 (DECISIONS D-009 / D-010).
-   * - 시도 1개 + 다른 차원 0 → upper-stats sido
-   * - 시군구 1개 + 다른 차원 0 → upper-stats sigungu
-   * - 읍면동 1개 + 다른 차원 0 → upper-stats eupmyeondong
-   * 그 외는 bulk(여러 동·리 합산) 또는 단건 동·리.
-   */
-  const upperSingle = useMemo<
-    { level: RegionLevel; code: string } | null
-  >(() => {
-    const sidoN = tierSelection.sido_codes.length;
-    const sigunguN = tierSelection.sigungu_codes.length;
-    const eupN = tierSelection.eupmyeondong_codes.length;
-    const beopN = tierSelection.beopjungri_codes.length;
-    if (beopN > 0) return null;
-    if (sidoN === 1 && sigunguN === 0 && eupN === 0)
-      return { level: "sido", code: tierSelection.sido_codes[0]! };
-    if (sidoN === 0 && sigunguN === 1 && eupN === 0)
-      return { level: "sigungu", code: tierSelection.sigungu_codes[0]! };
-    if (sidoN === 0 && sigunguN === 0 && eupN === 1)
-      return { level: "eupmyeondong", code: tierSelection.eupmyeondong_codes[0]! };
-    return null;
-  }, [tierSelection]);
+  /** 단일 상위 행정(시도·시군구·읍면동·city) 선택이면 상위 사전집계 API 사용 — resolveUpperSingleFromTier */
+  const upperSingle = useMemo(() => resolveUpperSingleFromTier(tierSelection), [tierSelection]);
 
   const isPaidBasic = viewMode === "paid" && paidResultView === "basic";
   const useUpper = isPaidBasic && upperSingle != null;
@@ -337,8 +287,10 @@ export default function FreeStatsPanel() {
         {apiErr?.status === 503 && (
           <p className="text-xs text-slate-500 leading-relaxed">
             서버에 V2 사전집계 테이블(<code className="text-[11px]">land_basic_stats_v2</code>)이 없거나
-            데이터가 적재되지 않았습니다. DB 마이그레이션과 <code className="text-[11px]">build_stats_v2</code> 실행 여부를
-            확인해 보세요.
+            데이터가 적재되지 않았습니다. 시·도 등 상위 행정만 선택했다면{" "}
+            <code className="text-[11px]">land_upper_stats_v2</code> 적재도 확인해 보세요. DB 마이그레이션과{" "}
+            <code className="text-[11px]">build_stats_v2</code> · <code className="text-[11px]">build_upper_stats_v2</code>{" "}
+            실행 여부를 확인합니다.
           </p>
         )}
         {apiErr?.status === 404 && (
@@ -357,11 +309,28 @@ export default function FreeStatsPanel() {
           <>
             <p className="text-[11px] text-indigo-700 font-medium leading-relaxed">
               유료 · 기본 통계 (V2)
+              {useUpper && (
+                <span className="block text-indigo-600/90 font-normal mt-0.5">
+                  시·도·시군구·읍면동·[시](자치구 묶음)만 단독 선택한 경우{" "}
+                  <code className="text-[10px]">land_upper_stats_v2</code> 사전집계입니다. 아래는 롤링 계약 구간 매트릭스이며
+                  필터표의 도로·면적 조건은 포함되지 않습니다.
+                </span>
+              )}
               {useBulk && (
                 <span className="block text-indigo-600/90 font-normal mt-0.5">
                   선택 법정동·리 거래 단가를 합친 결과입니다. 매트릭스는 원장 기준 즉시 집계입니다.
                 </span>
               )}
+              {isPaidBasic && !useUpper && !useBulk && (
+                <span className="block text-indigo-600/90 font-normal mt-0.5">
+                  단일 동·리는 <code className="text-[10px]">land_basic_stats_v2</code> 사전집계(연도별 일부 원장)·롤링
+                  매트릭스입니다.
+                </span>
+              )}
+            </p>
+            <p className="text-[10px] text-slate-500 leading-relaxed rounded-md bg-slate-50 border border-slate-100 px-2 py-1.5">
+              <strong className="text-slate-600">필터 분석 실행</strong> 시에는 선택 범위의 법정동·리 거래 원장 위에 연도·도로·면적 등이
+              적용됩니다. 같은 지역을 보더라도 숫자가 기본 통계 카드와 다를 수 있습니다.
             </p>
             {Boolean(data.stats_excluded_codes?.length) && (
               <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 leading-snug">

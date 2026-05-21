@@ -78,7 +78,7 @@ class YearlyTradeStat(BaseModel):
     total_price_10k_sum: float = 0.0
     area_sqm_sum: float = 0.0
     unit_price_per_sqm: Optional[float] = None  # Σ만원 / Σ㎡, 면적 합 0이면 None
-    population_year_end: Optional[int] = None  # 해당 연도 연말 법정동 인구 합(선택 지역·population_stats)
+    population_year_end: Optional[int] = None  # 연도별 연말 인구 합(region_codes 산하·population_stats; 상위통계 시 구·시 확장 합산)
 
 
 class MatrixCell(BaseModel):
@@ -191,7 +191,7 @@ class FreeStatsV2Response(BaseModel):
     )
 
 
-RegionLevel = Literal["sido", "sigungu", "eupmyeondong"]
+RegionLevel = Literal["sido", "sigungu", "eupmyeondong", "city"]
 
 
 class UpperStatsV2Response(BaseModel):

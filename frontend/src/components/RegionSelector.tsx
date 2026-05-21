@@ -15,6 +15,7 @@ import FreeStatsWindowToggle from "./FreeStatsWindowToggle";
 import { buildFlattenedRegionSuggestions, type RegionSearchFlatEntry } from "../utils/regionSearchSuggest";
 import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
 import { REGION_PICK_MANY_WARN_AT, REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
+import { cityBucketFromSigungu } from "../utils/cityBucket";
 
 function labelSigunguChip(regions: RegionItem[], code: string): string {
   const c = String(code).trim();
@@ -42,6 +43,21 @@ function labelSidoChip(regions: RegionItem[], code: string): string {
   return row?.sido_name ? String(row.sido_name).trim() : c;
 }
 
+function labelCityChip(regions: RegionItem[], cityCode: string): string {
+  const c = String(cityCode).trim();
+  const row = regions.find(
+    (r) => cityBucketFromSigungu(String(r.sigungu_code ?? "")) === c
+  );
+  if (!row) return c;
+  const toks = String(row.sigungu_name ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const head = toks[0] ?? "";
+  const cityTok = /시$/.test(head) ? head : head || c;
+  return [row.sido_name, cityTok].map((x) => String(x ?? "").trim()).filter(Boolean).join(" ");
+}
+
 export default function RegionSelector() {
   const {
     viewMode,
@@ -55,9 +71,11 @@ export default function RegionSelector() {
     mergePickedSigunguCodes,
     mergePickedEupmyeondongCodes,
     mergePickedSidoCodes,
+    mergePickedCityCodes,
     removePickedSigungu,
     removePickedEupmyeondong,
     removePickedSido,
+    removePickedCity,
   } = useAppStore();
 
   const [localError, setLocalError] = useState<string | null>(null);
@@ -134,6 +152,7 @@ export default function RegionSelector() {
   const pickedCodes = tierSelection.beopjungri_codes;
   const selectionChipCount =
     tierSelection.sido_codes.length +
+    tierSelection.city_codes.length +
     tierSelection.sigungu_codes.length +
     tierSelection.eupmyeondong_codes.length +
     tierSelection.beopjungri_codes.length;
@@ -221,7 +240,7 @@ export default function RegionSelector() {
     inputRef.current?.focus();
   };
 
-  const handlePickCityAggregate = (sigunguCodes: readonly string[]) => {
+  const handlePickCityAggregate = (cityCode: string) => {
     setLocalError(null);
     if (viewMode === "free") {
       setLocalError(
@@ -229,10 +248,15 @@ export default function RegionSelector() {
       );
       return;
     }
-    const ok = mergePickedSigunguCodes(sigunguCodes, regions);
+    const cc = String(cityCode ?? "").trim();
+    if (!cc) {
+      setLocalError("시 단위 코드를 알 수 없습니다.");
+      return;
+    }
+    const ok = mergePickedCityCodes([cc], regions);
     if (!ok) {
       setLocalError(
-        "추가하지 못했습니다. 시군구 칩 한도(20)·합산 법정 한도(200)를 확인해 주세요."
+        "추가하지 못했습니다. 이미 있거나 시 단위 칩 상한·합산 법정 한도를 확인해 주세요."
       );
       return;
     }
@@ -328,7 +352,7 @@ export default function RegionSelector() {
         if (flatSuggestions.length > 0) {
           const entry = flatSuggestions[highlightIdx >= 0 ? highlightIdx : 0];
           if (entry.kind === "sido_aggregate") handlePickSidoAggregate(entry.sidoCode);
-          else if (entry.kind === "city_aggregate") handlePickCityAggregate(entry.sigunguCodes);
+          else if (entry.kind === "city_aggregate") handlePickCityAggregate(entry.cityCode);
           else if (entry.kind === "sigungu_aggregate") handlePickSigunguAggregate(entry.sigunguCode);
           else if (entry.kind === "eup_aggregate") handlePickEupAggregate(entry.eupCode);
           else pickBeopRow(entry.row);
@@ -344,7 +368,7 @@ export default function RegionSelector() {
       if (flatSuggestions.length > 0) {
         const entry = flatSuggestions[highlightIdx >= 0 ? highlightIdx : 0];
         if (entry.kind === "sido_aggregate") handlePickSidoAggregate(entry.sidoCode);
-        else if (entry.kind === "city_aggregate") handlePickCityAggregate(entry.sigunguCodes);
+        else if (entry.kind === "city_aggregate") handlePickCityAggregate(entry.cityCode);
         else if (entry.kind === "sigungu_aggregate") handlePickSigunguAggregate(entry.sigunguCode);
         else if (entry.kind === "eup_aggregate") handlePickEupAggregate(entry.eupCode);
         else pickBeopRow(entry.row);
@@ -358,7 +382,7 @@ export default function RegionSelector() {
         else if (resolved.kind === "sigungu_aggregate") handlePickSigunguAggregate(resolved.sigunguCode);
         else if (resolved.kind === "eup_aggregate") handlePickEupAggregate(resolved.eupCode);
         else if (resolved.kind === "sido_aggregate") handlePickSidoAggregate(resolved.sidoCode);
-        else if (resolved.kind === "city_aggregate") handlePickCityAggregate(resolved.sigunguCodes);
+        else if (resolved.kind === "city_aggregate") handlePickCityAggregate(resolved.cityCode);
         return;
       }
 
@@ -381,10 +405,11 @@ export default function RegionSelector() {
     }
     if (
       tierSelection.sigungu_codes.length > 0 ||
+      tierSelection.city_codes.length > 0 ||
       tierSelection.eupmyeondong_codes.length > 0
     ) {
       setLocalError(
-        "무료 모드에서는 시군구·읍면 전체 행만 있는 선택을 쓸 수 없습니다. 법정단위 하나를 검색해서 고르세요."
+        "무료 모드에서는 시군구·시(자치구 묶음)·읍면 전체 행만 있는 선택을 쓸 수 없습니다. 법정단위 하나를 검색해서 고르세요."
       );
       return;
     }
@@ -625,7 +650,7 @@ export default function RegionSelector() {
                             }`}
                             onMouseEnter={() => setHighlightIdx(idx)}
                             onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => handlePickCityAggregate(entry.sigunguCodes)}
+                            onClick={() => handlePickCityAggregate(entry.cityCode)}
                           >
                             <span className="text-indigo-900 text-[10px] font-semibold uppercase tracking-tight">
                               [시]
@@ -788,6 +813,26 @@ export default function RegionSelector() {
                     className="shrink-0 rounded-full p-0.5 hover:bg-red-50 text-slate-500 hover:text-red-700"
                     aria-label={`시도 삭제 ${code}`}
                     onClick={() => removePickedSido(code)}
+                  >
+                    ×
+                  </button>
+                ) : null}
+              </span>
+            ))}
+            {tierSelection.city_codes.map((code) => (
+              <span
+                key={`city-${code}`}
+                className="inline-flex items-center gap-1 max-w-full rounded-full border border-indigo-200 bg-white pl-2 pr-1 py-0.5 text-[10px] text-indigo-950"
+              >
+                <span className="truncate max-w-[14rem]" title={`의사 시(자치구 묶음) ${code}`}>
+                  [시] {labelCityChip(regions, code)}
+                </span>
+                {viewMode === "paid" ? (
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-full p-0.5 hover:bg-red-50 text-slate-500 hover:text-red-700"
+                    aria-label={`시(묶음) 삭제 ${code}`}
+                    onClick={() => removePickedCity(code)}
                   >
                     ×
                   </button>

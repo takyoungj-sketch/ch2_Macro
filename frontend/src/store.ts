@@ -8,6 +8,7 @@ import {
   persistFontStep,
   readStoredFontStep,
 } from "./constants/displayUi";
+import { MAX_V2_STATS_BULK_CODES } from "./constants/v2BulkLimits";
 import { getDefaultPaidSelectedYears } from "./constants/paidFilters";
 import type {
   FreeStatsWindowYears,
@@ -25,10 +26,11 @@ import { emptyTierCodes, resolveUnionBeopjungriCodes } from "./utils/regionTier"
 
 const EMPTY_REGION_SEGMENTS: RegionFiveFields = ["", "", "", "", ""];
 
-const MAX_BEOPJUNGRI_PICK = 200;
+const MAX_BEOPJUNGRI_PICK = MAX_V2_STATS_BULK_CODES;
 const MAX_SIGUNGU_TIER_PICK = 20;
 const MAX_EUP_TIER_PICK = 40;
 const MAX_SIDO_TIER_PICK = 6;
+const MAX_CITY_TIER_PICK = 6;
 
 function normalizeAndSortCodes(codes: readonly string[]): string[] {
   return [...new Set(codes.map((c) => c.trim()).filter(Boolean))].sort((a, b) =>
@@ -73,13 +75,15 @@ interface AppState {
    */
   paidBulkBeopjungriCodes: string[] | null;
 
-  /** 필터 분석 상태/결과 (effect/kick 없이 단일 진입점) */
+  /** 필터 분석 상태/결과 (effect 없이 단일 진입점) */
   paidAnalysisStatus: PaidAnalysisStatus;
   paidAnalysisResult: PaidAnalysisResponse | null;
   paidAnalysisError: ParsedApiError | null;
   /** 진행 중인 분석 식별자 — race 시 마지막 호출의 결과만 채택 */
   paidAnalysisRequestId: number;
   paidAnalysisStartedAt: number | null;
+  /** 마지막 필터 분석이 사용한 법정코드 스코프 안내(선조회 실패·kept 부분집합 등). 다음 실행 시작 시 비움 */
+  paidFilteredAnalysisScopeNotice: string | null;
 
   setViewMode: (m: ViewMode) => void;
   setRegionSegment: (idx: 0 | 1 | 2 | 3 | 4, value: string) => void;
@@ -101,6 +105,12 @@ interface AppState {
     codes: readonly string[],
     regions: readonly RegionItem[]
   ) => boolean;
+  /** 자치구형 시(청주·천안 등) 단독 — `city_codes` 5자리 버킷 */
+  mergePickedCityCodes: (
+    codes: readonly string[],
+    regions: readonly RegionItem[]
+  ) => boolean;
+  removePickedCity: (code: string) => void;
   removePickedBeopjungri: (code: string) => void;
   removePickedSigungu: (code: string) => void;
   removePickedEupmyeondong: (code: string) => void;
@@ -181,6 +191,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   paidAnalysisError: null,
   paidAnalysisRequestId: 0,
   paidAnalysisStartedAt: null,
+  paidFilteredAnalysisScopeNotice: null,
 
   setViewMode: (m) =>
     set((s) => {
@@ -202,6 +213,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             paidAnalysisResult: null,
             paidAnalysisError: null,
             paidAnalysisStartedAt: null,
+            paidFilteredAnalysisScopeNotice: null,
             statsDisplayScopeKey: null,
             statsDisplayKick: 0,
             paidBasicStatsKick: 0,
@@ -224,6 +236,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const lastBeop = beops.length > 0 ? [beops[beops.length - 1]!] : [];
       const needsTrim =
         s.tierSelection.sigungu_codes.length > 0 ||
+        s.tierSelection.city_codes.length > 0 ||
         s.tierSelection.eupmyeondong_codes.length > 0 ||
         beops.length > 1;
       return {
@@ -237,6 +250,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         paidAnalysisResult: null,
         paidAnalysisError: null,
         paidAnalysisStartedAt: null,
+        paidFilteredAnalysisScopeNotice: null,
         statsDisplayScopeKey: null,
         statsDisplayKick: 0,
         paidBasicStatsKick: 0,
@@ -323,8 +337,48 @@ export const useAppStore = create<AppState>((set, get) => ({
     const merged = normalizeAndSortCodes([...s.tierSelection.sido_codes, ...uniqIn]);
     if (merged.length > MAX_SIDO_TIER_PICK) return false;
     const next: TierCodes = { ...s.tierSelection, sido_codes: merged };
-    if (resolveUnionBeopjungriCodes(regions, next).length > MAX_BEOPJUNGRI_PICK) return false;
+    // 시·도 단독 선택은 `/paid/upper-stats/sido/…`(sido_code 필터) — 하위 법정단위 수와 무관.
+    // 충청북도 등 전체 시도는 법정단위 수가 200을 훨씬 넘어 기존 검사에 걸려 칩 추가가 불가했음.
+    const sidoOnlyUpper =
+      next.sido_codes.length > 0 &&
+      next.sigungu_codes.length === 0 &&
+      next.city_codes.length === 0 &&
+      next.eupmyeondong_codes.length === 0 &&
+      next.beopjungri_codes.length === 0;
+    if (
+      !sidoOnlyUpper &&
+      resolveUnionBeopjungriCodes(regions, next).length > MAX_BEOPJUNGRI_PICK
+    ) {
+      return false;
+    }
     if (normalizeAndSortCodes(s.tierSelection.sido_codes).join("|") === merged.join("|")) {
+      return false;
+    }
+    set({ tierSelection: next });
+    return true;
+  },
+
+  mergePickedCityCodes: (incoming, regions) => {
+    const uniqIn = [...new Set(incoming.map((c) => String(c ?? "").trim()).filter(Boolean))];
+    if (uniqIn.length === 0) return false;
+    const s = get();
+    if (s.viewMode === "free") return false;
+    const merged = normalizeAndSortCodes([...s.tierSelection.city_codes, ...uniqIn]);
+    if (merged.length > MAX_CITY_TIER_PICK) return false;
+    const next: TierCodes = { ...s.tierSelection, city_codes: merged };
+    const cityOnlyUpper =
+      next.city_codes.length > 0 &&
+      next.sido_codes.length === 0 &&
+      next.sigungu_codes.length === 0 &&
+      next.eupmyeondong_codes.length === 0 &&
+      next.beopjungri_codes.length === 0;
+    if (
+      !cityOnlyUpper &&
+      resolveUnionBeopjungriCodes(regions, next).length > MAX_BEOPJUNGRI_PICK
+    ) {
+      return false;
+    }
+    if (normalizeAndSortCodes(s.tierSelection.city_codes).join("|") === merged.join("|")) {
       return false;
     }
     set({ tierSelection: next });
@@ -404,6 +458,19 @@ export const useAppStore = create<AppState>((set, get) => ({
       };
     }),
 
+  removePickedCity: (code) =>
+    set((s) => {
+      const c = String(code ?? "").trim();
+      if (!c) return s;
+      const next = s.tierSelection.city_codes.filter((x) => x.trim() !== c);
+      return {
+        tierSelection: {
+          ...s.tierSelection,
+          city_codes: normalizeAndSortCodes(next),
+        },
+      };
+    }),
+
   clearTierSelection: () =>
     set({
       tierSelection: emptyTierCodes(),
@@ -415,6 +482,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       paidAnalysisResult: null,
       paidAnalysisError: null,
       paidAnalysisStartedAt: null,
+      paidFilteredAnalysisScopeNotice: null,
       statsDisplayScopeKey: null,
       statsDisplayKick: 0,
       paidBasicStatsKick: 0,
@@ -432,6 +500,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       paidAnalysisResult: null,
       paidAnalysisError: null,
       paidAnalysisStartedAt: null,
+      paidFilteredAnalysisScopeNotice: null,
     })),
 
   commitStatsDisplayScope: (scopeKey: string) =>
@@ -467,12 +536,14 @@ export const useAppStore = create<AppState>((set, get) => ({
      * - UI 가 즉시 「분석 중…」 으로 전환되어 멍한 무반응 구간이 사라진다.
      */
     const reqId = get().paidAnalysisRequestId + 1;
+    let scopeNotice: string | null = null;
     set({
       paidResultView: "filtered",
       paidAnalysisStatus: "loading",
       paidAnalysisError: null,
       paidAnalysisRequestId: reqId,
       paidAnalysisStartedAt: Date.now(),
+      paidFilteredAnalysisScopeNotice: null,
     });
 
     const s0 = get();
@@ -509,16 +580,39 @@ export const useAppStore = create<AppState>((set, get) => ({
             beopjungri_code: bulk.beopjungri_code ?? null,
           });
           codes = split;
+          if (split.length < resolved.length) {
+            scopeNotice =
+              `선조회(/free/v2/stats/bulk)에서 V2 사전집계가 있는 법정단위만 포함되었습니다. ` +
+              `필터 분석은 ${split.length.toLocaleString()}/${resolved.length.toLocaleString()}곳 코드로 진행합니다 ` +
+              `(제외된 동·리는 이 합산에서 빠집니다). 기본 통계 벌크 카드와 같은 표본 범위입니다.`;
+          }
         } else {
           codes = resolved;
+          scopeNotice =
+            `선조회 응답에 유효한 법정코드가 없어, 필터 분석은 확장된 법정동·리 ${resolved.length.toLocaleString()}곳 전체로 진행합니다.`;
         }
-      } catch {
+      } catch (e) {
         if (get().paidAnalysisRequestId !== reqId) return;
         codes = resolved;
+        const pe = parseApiError(e);
+        let detail = pe.message;
+        if (
+          (pe.status === 422 || pe.status === 400) &&
+          !detail.includes(String(MAX_V2_STATS_BULK_CODES))
+        ) {
+          detail = `${detail} (참고: 복수 선조회 한도는 법정코드 ${MAX_V2_STATS_BULK_CODES}건)`;
+        }
+        scopeNotice =
+          `복수 법정단위 기본통계 선조회(/free/v2/stats/bulk)에 실패했습니다: ${detail}. ` +
+          `거래 원장 집계는 선택 확장 법정동·리 ${rc.length.toLocaleString()}곳 전체 코드로 진행합니다. ` +
+          `이때 기본 통계 카드(사전집계·선조회 규칙)와 표본·수치가 달라질 수 있습니다.`;
       }
     } else {
       codes = resolved;
     }
+
+    if (get().paidAnalysisRequestId !== reqId) return;
+    set({ paidFilteredAnalysisScopeNotice: scopeNotice });
 
     const st = get();
     const payload = buildPaidPayload(
@@ -554,6 +648,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       paidAnalysisStatus: "idle",
       paidAnalysisError: null,
       paidAnalysisStartedAt: null,
+      paidFilteredAnalysisScopeNotice: null,
     })),
 
   setPaidRequest: (req) =>

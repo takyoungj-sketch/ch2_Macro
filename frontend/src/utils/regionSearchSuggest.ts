@@ -1,4 +1,5 @@
 import type { RegionItem } from "../types";
+import { cityBucketFromSigungu } from "./cityBucket";
 import { formatRegionHierarchyLabel } from "./regionDisplay";
 
 function norm(s: string): string {
@@ -17,6 +18,8 @@ export type RegionSearchFlatEntry =
   | {
       /** 청주시·고양시 같이 region_codes 에 별도 코드가 없는 의사-시. 자치구 sigungu_code 묶음으로 표시. */
       kind: "city_aggregate";
+      /** `/paid/upper-stats/city/{cityCode}` — sigungu floor/10*10 버킷 5자리 */
+      cityCode: string;
       cityName: string;
       sidoCode: string;
       sigunguCodes: string[];
@@ -119,11 +122,13 @@ export function buildFlattenedRegionSuggestions(
     const cityNn = norm(city);
     if (!(cityNn === qN || cityNn.includes(qN))) continue;
     const codes = [...info.codes].sort();
+    const cityCode = codes.length ? cityBucketFromSigungu(codes[0]!) : "";
     const primaryLabel = [String(info.sample.sido_name ?? "").trim(), city]
       .filter(Boolean)
       .join(" ");
     cityAggregates.push({
       kind: "city_aggregate",
+      cityCode,
       cityName: city,
       sidoCode: info.sido,
       sigunguCodes: codes,
