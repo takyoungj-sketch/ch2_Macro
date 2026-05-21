@@ -13,11 +13,10 @@ import { type MatrixYearlyRequest, normalizeFreeStatsWindowYears } from "../type
 import { parseApiError } from "../utils/apiError";
 import { statsAsOfLabel } from "../utils/freeStatsV2";
 import { buildPaidPayload } from "../utils/paidAnalysisPayload";
-import { beopjungriNameForCode, resolveUnionBeopjungriCodes } from "../utils/regionTier";
+import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
 import { resolveUpperSingleFromTier, upperToFreeStatsShape } from "../utils/upperTierStats";
 import MatrixStatsTable, { MatrixStatsLegend } from "./MatrixStatsTable";
 import PaidMatrixYearlyModal from "./PaidMatrixYearlyModal";
-import StatsTable from "./StatsTable";
 import YearlyStatsTable from "./YearlyStatsTable";
 
 export default function PaidAnalysisPanel() {
@@ -153,16 +152,6 @@ export default function PaidAnalysisPanel() {
     const id = window.setInterval(update, 400);
     return () => window.clearInterval(id);
   }, [isLoading, startedAt]);
-
-  const regionBreakdownRows = useMemo(() => {
-    if (!result?.by_region) return [];
-    return Object.entries(result.by_region)
-      .map(([code, stats]) => ({
-        label: beopjungriNameForCode(regions, code),
-        stats,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label, "ko-KR"));
-  }, [result?.by_region, regions]);
 
   const codesForPaidMatrix = useMemo(() => {
     if (paidBulkBeopjungriCodes != null && paidBulkBeopjungriCodes.length > 0) {
@@ -420,10 +409,6 @@ export default function PaidAnalysisPanel() {
             showEmbeddedLegend={false}
             onPaidMatrixCellClick={openMatrixTrend}
           />
-
-          {regionBreakdownRows.length > 0 && (
-            <StatsTable title="지역별 (법정동·리)" rows={regionBreakdownRows} />
-          )}
         </div>
       )}
 

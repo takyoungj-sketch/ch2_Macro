@@ -5,7 +5,6 @@ import RegionSelector from "./components/RegionSelector";
 import FreeStatsPanel from "./components/FreeStatsPanel";
 import PaidAnalysisPanel from "./components/PaidAnalysisPanel";
 import PaidFilterTable from "./components/PaidFilterTable";
-import UpperStatsCard from "./components/UpperStatsCard";
 
 function PaidIntro() {
   return (
@@ -117,10 +116,7 @@ export default function App() {
           {viewMode === "free" ? (
             <FreeStatsPanel />
           ) : paidResultView === "idle" ? (
-            <div className="space-y-6">
-              <PaidIntro />
-              <UpperStatsCard />
-            </div>
+            <PaidIntro />
           ) : paidResultView === "basic" ? (
             <FreeStatsPanel />
           ) : (
