@@ -15,6 +15,7 @@ import FreeStatsWindowToggle from "./FreeStatsWindowToggle";
 import { buildFlattenedRegionSuggestions, type RegionSearchFlatEntry } from "../utils/regionSearchSuggest";
 import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
 import { REGION_PICK_MANY_WARN_AT, REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
+import { MAX_PAID_LEAF_BEOPJUNGRI_PICK } from "../constants/tierPickLimits";
 import { cityBucketFromSigungu } from "../utils/cityBucket";
 
 function labelSigunguChip(regions: RegionItem[], code: string): string {
@@ -183,13 +184,9 @@ export default function RegionSelector() {
       inputRef.current?.focus();
       return;
     }
-    const trial = {
-      ...tierSelection,
-      beopjungri_codes: [...cur, c].sort((a, b) => a.localeCompare(b, "ko-KR")),
-    };
-    if (resolveUnionBeopjungriCodes(regions, trial).length > 200) {
+    if (cur.length >= MAX_PAID_LEAF_BEOPJUNGRI_PICK) {
       setLocalError(
-        "합산에 포함되는 법정단위 수가 한도(200)를 넘습니다. 시군구·법정 선택을 줄여 주세요."
+        `법정동·리 복수 선택은 최대 ${MAX_PAID_LEAF_BEOPJUNGRI_PICK}곳입니다. 칩에서 하나를 빼거나 상위 행정 단일 선택으로 바꿔 주세요.`
       );
       return;
     }
@@ -211,7 +208,7 @@ export default function RegionSelector() {
     const ok = mergePickedSigunguCodes([sigunguCode], regions);
     if (!ok) {
       setLocalError(
-        "추가하지 못했습니다. 이미 있거나 선택 상한을 넘깁니다(시군구 칩 최대 개수·합산 법정 200개)."
+        "추가하지 못했습니다. 시·군·구 칩은 한 번에 하나만 선택할 수 있습니다(복수 합산은 법정동·리 칩만 최대 10곳)."
       );
       return;
     }
@@ -256,7 +253,7 @@ export default function RegionSelector() {
     const ok = mergePickedCityCodes([cc], regions);
     if (!ok) {
       setLocalError(
-        "추가하지 못했습니다. 이미 있거나 시 단위 칩 상한·합산 법정 한도를 확인해 주세요."
+        "추가하지 못했습니다. 이미 있거나 시 단위 칩은 하나만 선택할 수 있습니다."
       );
       return;
     }
@@ -277,7 +274,7 @@ export default function RegionSelector() {
     const ok = mergePickedEupmyeondongCodes([eupCode], regions);
     if (!ok) {
       setLocalError(
-        "추가하지 못했습니다. 이미 있거나 선택 상한을 넘깁니다(읍면동 칩 최대 개수·합산 법정 200개)."
+        "추가하지 못했습니다. 읍·면·동 행정단위 칩은 하나만 선택할 수 있습니다(복수는 동·리 최종 단위 칩만)."
       );
       return;
     }
@@ -450,6 +447,13 @@ export default function RegionSelector() {
           초기화
         </button>
       </div>
+
+      {viewMode === "paid" ? (
+        <p className="text-[10px] text-slate-500 leading-snug px-0.5 -mt-1">
+          유료: 시·도·[시]·시군구·읍면동 행정 칩은 각각 하나만. 여러 지역 합산은 법정동·리 칩만 가능 (최대{" "}
+          {MAX_PAID_LEAF_BEOPJUNGRI_PICK}곳).
+        </p>
+      ) : null}
 
       <div className="space-y-1.5">
         <label className="block text-[11px] font-semibold text-slate-700" htmlFor="region-search">
@@ -900,8 +904,7 @@ export default function RegionSelector() {
           </div>
         )}
         {viewMode === "paid" &&
-          resolvedCount >= REGION_PICK_MANY_WARN_AT &&
-          resolvedCount < 200 && (
+          resolvedCount >= REGION_PICK_MANY_WARN_AT && (
           <p className="text-[10px] text-slate-500">합산 단위가 많을수록 집계에 시간이 걸릴 수 있습니다.</p>
         )}
       </div>

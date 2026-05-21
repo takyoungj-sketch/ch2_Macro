@@ -8,6 +8,7 @@ import {
 } from "../constants/paidFilters";
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import { MAX_V2_STATS_BULK_CODES } from "../constants/v2BulkLimits";
+import { MAX_PAID_LEAF_BEOPJUNGRI_PICK } from "../constants/tierPickLimits";
 import { useAppStore } from "../store";
 import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
 import { resolveUpperSingleFromTier } from "../utils/upperTierStats";
@@ -311,7 +312,8 @@ export default function PaidFilterTable() {
                 <span className="tabular-nums font-bold text-indigo-800">
                   {resolvedRegionCodes.length.toLocaleString()}
                 </span>
-                곳 (지역 선택이 카탈로그에서 확장된 수). 상위 행정(시도·구·읍면동·[시] 등)만 골라도 매칭되는
+                곳 (지역 선택이 카탈로그에서 확장된 수). 동·리 법정단위 칩만 여러 개 고른 경우에는 칩 개수 최대{" "}
+                {MAX_PAID_LEAF_BEOPJUNGRI_PICK}곳까지입니다. 상위 행정(시도·구·읍면동·[시] 등)만 골라도 매칭되는
                 동·리 코드 전부가 포함됩니다.
                 {resolvedRegionCodes.length > MAX_V2_STATS_BULK_CODES ? (
                   <span className="block mt-1.5 text-amber-900/90">

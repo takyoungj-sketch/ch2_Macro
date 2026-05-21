@@ -9,6 +9,13 @@ import {
   readStoredFontStep,
 } from "./constants/displayUi";
 import { MAX_V2_STATS_BULK_CODES } from "./constants/v2BulkLimits";
+import {
+  MAX_CITY_TIER_CHIP,
+  MAX_EUPMYEONDONG_TIER_CHIP,
+  MAX_PAID_LEAF_BEOPJUNGRI_PICK,
+  MAX_SIDO_TIER_CHIP,
+  MAX_SIGUNGU_TIER_CHIP,
+} from "./constants/tierPickLimits";
 import { getDefaultPaidSelectedYears } from "./constants/paidFilters";
 import type {
   FreeStatsWindowYears,
@@ -22,15 +29,15 @@ import { parseApiError, type ParsedApiError } from "./utils/apiError";
 import { buildPaidPayload } from "./utils/paidAnalysisPayload";
 import type { RegionFiveFields } from "./utils/resolveRegionFiveFields";
 import type { TierCodes } from "./utils/regionTier";
-import { emptyTierCodes, resolveUnionBeopjungriCodes } from "./utils/regionTier";
+import { emptyTierCodes } from "./utils/regionTier";
 
 const EMPTY_REGION_SEGMENTS: RegionFiveFields = ["", "", "", "", ""];
 
-const MAX_BEOPJUNGRI_PICK = MAX_V2_STATS_BULK_CODES;
-const MAX_SIGUNGU_TIER_PICK = 20;
-const MAX_EUP_TIER_PICK = 40;
-const MAX_SIDO_TIER_PICK = 6;
-const MAX_CITY_TIER_PICK = 6;
+const MAX_BEOPJUNGRI_PICK = MAX_PAID_LEAF_BEOPJUNGRI_PICK;
+const MAX_SIGUNGU_TIER_PICK = MAX_SIGUNGU_TIER_CHIP;
+const MAX_EUP_TIER_PICK = MAX_EUPMYEONDONG_TIER_CHIP;
+const MAX_SIDO_TIER_PICK = MAX_SIDO_TIER_CHIP;
+const MAX_CITY_TIER_PICK = MAX_CITY_TIER_CHIP;
 
 function normalizeAndSortCodes(codes: readonly string[]): string[] {
   return [...new Set(codes.map((c) => c.trim()).filter(Boolean))].sort((a, b) =>
@@ -90,7 +97,7 @@ interface AppState {
   applyBeopjungriCodes: (codes: readonly string[]) => void;
   /** 검색·칩에서 법정단위 추가(무료는 항상 1개로 교체) */
   addPickedBeopjungri: (code: string) => void;
-  /** 검색 등에서 법정코드 여러 개를 한 번에 병합(유료; 중복 제거·200 상한). 무료는 단건일 때만 반영 가능 */
+  /** 검색 등에서 법정코드 여러 개를 한 번에 병합(유료; 최종 단위 칩 최대 10·상위 칩 각 1). 무료는 단건일 때만 반영 가능 */
   mergePickedBeopjungriCodes: (codes: readonly string[]) => boolean;
   mergePickedSigunguCodes: (
     codes: readonly string[],
@@ -284,7 +291,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (cur.length >= MAX_BEOPJUNGRI_PICK) return s;
       return {
         tierSelection: {
-          ...s.tierSelection,
+          ...emptyTierCodes(),
           beopjungri_codes: normalizeAndSortCodes([...cur, c]),
         },
       };
@@ -299,15 +306,15 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ tierSelection: tierOnlyBeopjungri(normalizeAndSortCodes(uniqIn)) });
       return true;
     }
-    const merged = normalizeAndSortCodes([...s.tierSelection.beopjungri_codes, ...uniqIn]);
-    if (merged.length > MAX_BEOPJUNGRI_PICK) return false;
+    const mergedAll = normalizeAndSortCodes([...s.tierSelection.beopjungri_codes, ...uniqIn]);
+    if (mergedAll.length > MAX_BEOPJUNGRI_PICK) return false;
     const before = normalizeAndSortCodes(s.tierSelection.beopjungri_codes).join("|");
-    const after = merged.join("|");
+    const after = mergedAll.join("|");
     if (before === after) return false;
     set({
       tierSelection: {
-        ...s.tierSelection,
-        beopjungri_codes: merged,
+        ...emptyTierCodes(),
+        beopjungri_codes: mergedAll,
       },
     });
     return true;
@@ -320,8 +327,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (s.viewMode === "free") return false;
     const merged = normalizeAndSortCodes([...s.tierSelection.sigungu_codes, ...uniqIn]);
     if (merged.length > MAX_SIGUNGU_TIER_PICK) return false;
-    const next: TierCodes = { ...s.tierSelection, sigungu_codes: merged };
-    if (resolveUnionBeopjungriCodes(regions, next).length > MAX_BEOPJUNGRI_PICK) return false;
+    const next: TierCodes = {
+      ...emptyTierCodes(),
+      sigungu_codes: merged,
+    };
     if (normalizeAndSortCodes(s.tierSelection.sigungu_codes).join("|") === merged.join("|")) {
       return false;
     }
@@ -336,21 +345,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (s.viewMode === "free") return false;
     const merged = normalizeAndSortCodes([...s.tierSelection.sido_codes, ...uniqIn]);
     if (merged.length > MAX_SIDO_TIER_PICK) return false;
-    const next: TierCodes = { ...s.tierSelection, sido_codes: merged };
-    // 시·도 단독 선택은 `/paid/upper-stats/sido/…`(sido_code 필터) — 하위 법정단위 수와 무관.
-    // 충청북도 등 전체 시도는 법정단위 수가 200을 훨씬 넘어 기존 검사에 걸려 칩 추가가 불가했음.
-    const sidoOnlyUpper =
-      next.sido_codes.length > 0 &&
-      next.sigungu_codes.length === 0 &&
-      next.city_codes.length === 0 &&
-      next.eupmyeondong_codes.length === 0 &&
-      next.beopjungri_codes.length === 0;
-    if (
-      !sidoOnlyUpper &&
-      resolveUnionBeopjungriCodes(regions, next).length > MAX_BEOPJUNGRI_PICK
-    ) {
-      return false;
-    }
+    const next: TierCodes = {
+      ...emptyTierCodes(),
+      sido_codes: merged,
+    };
     if (normalizeAndSortCodes(s.tierSelection.sido_codes).join("|") === merged.join("|")) {
       return false;
     }
@@ -365,19 +363,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (s.viewMode === "free") return false;
     const merged = normalizeAndSortCodes([...s.tierSelection.city_codes, ...uniqIn]);
     if (merged.length > MAX_CITY_TIER_PICK) return false;
-    const next: TierCodes = { ...s.tierSelection, city_codes: merged };
-    const cityOnlyUpper =
-      next.city_codes.length > 0 &&
-      next.sido_codes.length === 0 &&
-      next.sigungu_codes.length === 0 &&
-      next.eupmyeondong_codes.length === 0 &&
-      next.beopjungri_codes.length === 0;
-    if (
-      !cityOnlyUpper &&
-      resolveUnionBeopjungriCodes(regions, next).length > MAX_BEOPJUNGRI_PICK
-    ) {
-      return false;
-    }
+    const next: TierCodes = {
+      ...emptyTierCodes(),
+      city_codes: merged,
+    };
     if (normalizeAndSortCodes(s.tierSelection.city_codes).join("|") === merged.join("|")) {
       return false;
     }
@@ -395,8 +384,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       ...uniqIn,
     ]);
     if (merged.length > MAX_EUP_TIER_PICK) return false;
-    const next: TierCodes = { ...s.tierSelection, eupmyeondong_codes: merged };
-    if (resolveUnionBeopjungriCodes(regions, next).length > MAX_BEOPJUNGRI_PICK) return false;
+    const next: TierCodes = {
+      ...emptyTierCodes(),
+      eupmyeondong_codes: merged,
+    };
     if (
       normalizeAndSortCodes(s.tierSelection.eupmyeondong_codes).join("|") === merged.join("|")
     ) {
@@ -491,7 +482,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   kickPaidBasicStatsAnalysis: (flattenTierToBeops) =>
     set((s) => ({
       ...(flattenTierToBeops != null && flattenTierToBeops.length > 0
-        ? { tierSelection: tierOnlyBeopjungri(normalizeAndSortCodes(flattenTierToBeops)) }
+        ? {
+            tierSelection: tierOnlyBeopjungri(
+              normalizeAndSortCodes(flattenTierToBeops).slice(0, MAX_BEOPJUNGRI_PICK)
+            ),
+          }
         : {}),
       paidResultView: "basic",
       paidBasicBaseKey: null,
