@@ -1,5 +1,6 @@
 import type { RegionItem } from "../types";
 import { cityBucketFromSigungu } from "./cityBucket";
+import { isEupMyeonUnitNameQuery } from "./regionSearchSuggest";
 
 function norm(s: string): string {
   return String(s ?? "").trim().toLowerCase().replace(/\s+/g, "");
@@ -19,9 +20,9 @@ export type UniqueRegionSearchPick =
     };
 
 /**
- * 검색어가 전국에서 한 시군구·읍면동·법정단위로만 안내될 때 자동 선택에 쓰입니다.
- * - 법정동·리: 정규화 후 완전 일치이거나, 검색어 3글자 이상일 때 이름에 부분 일치(포함)하면 묶음
- * - 읍·면·동·시·군·구: 완전 일치만 (짧은 글자로 잘못 합치는 것 방지)
+ * 검색어가 전국 카탈로그 기준 단일 후보로 확정 가능할 때 Enter 자동 선택에 사용.
+ * - …읍/…면 검색이면 행정명 전국 유일 eup → eup_aggregate.(그 외는 목록에서 고름.)
+ * - 법정: 이름 포함·코드 일치 등(읍면 전용 검색일 땐 읍명 일치만으로 법정 후보 묶지 않음)
  */
 export function tryResolveUniqueRegionSearch(
   regions: readonly RegionItem[],
@@ -31,12 +32,18 @@ export function tryResolveUniqueRegionSearch(
   const qN = norm(String(rawQuery ?? "").trim());
   if (qN.length < 2) return null;
 
+  const eupMyeonQ = isEupMyeonUnitNameQuery(rawQuery);
+
   const beopRows: RegionItem[] = [];
   for (const row of regions) {
     const n = norm(row.beopjungri_name ?? "");
     const exact = n === qN;
     const sub = qN.length >= 3 && n.includes(qN);
-    if (exact || sub) beopRows.push(row);
+    const codeEq = norm(String(row.beopjungri_code ?? "").trim()) === qN;
+    /** 동·등 검색: 읍면동 이름이 검색어와 같을 때 해당 법정 줄 후보 포함. (?읍/?면 검색에서는 제외) */
+    const eupEx =
+      !eupMyeonQ && norm(row.eupmyeondong_name ?? "") === qN;
+    if (exact || sub || eupEx || codeEq) beopRows.push(row);
   }
   const beopCodes = new Set(
     beopRows.map((r) => String(r.beopjungri_code ?? "").trim()).filter(Boolean)
@@ -49,17 +56,18 @@ export function tryResolveUniqueRegionSearch(
 
   if (viewMode !== "paid") return null;
 
-  const eupRows: RegionItem[] = [];
-  for (const row of regions) {
-    const n = norm(row.eupmyeondong_name ?? "");
-    if (n === qN) eupRows.push(row);
-  }
-  const eupCodes = new Set(
-    eupRows.map((r) => String(r.eupmyeondong_code ?? "").trim()).filter(Boolean)
-  );
-  if (eupCodes.size === 1) {
-    const eupCode = [...eupCodes][0]!;
-    return { kind: "eup_aggregate", eupCode };
+  if (eupMyeonQ) {
+    /** 행정명이 검색어와 완전 일치하는 eup 코드 중 전국에 하나만 있으면 확정 */
+    const eupCodes = new Set<string>();
+    for (const row of regions) {
+      const en = norm(row.eupmyeondong_name ?? "");
+      if (en !== qN) continue;
+      const ec = String(row.eupmyeondong_code ?? "").trim();
+      if (ec) eupCodes.add(ec);
+    }
+    if (eupCodes.size === 1) {
+      return { kind: "eup_aggregate", eupCode: [...eupCodes][0]! };
+    }
   }
 
   const sigRows: RegionItem[] = [];

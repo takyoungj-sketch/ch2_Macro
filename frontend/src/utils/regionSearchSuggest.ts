@@ -6,6 +6,13 @@ function norm(s: string): string {
   return String(s ?? "").trim().toLowerCase().replace(/\s+/g, "");
 }
 
+/** 검색어가 행정상 「읍·면」 단위 이름으로 보이면, 목록은 eup 한 줄씩만 두고 리·법정 줄은 펼치지 않는다. */
+export function isEupMyeonUnitNameQuery(rawQuery: string): boolean {
+  const qN = norm(rawQuery);
+  if (qN.length < 2) return false;
+  return qN.endsWith("읍") || qN.endsWith("면");
+}
+
 export type RegionSearchFlatEntry =
   | {
       kind: "sido_aggregate";
@@ -47,9 +54,9 @@ export type RegionSearchFlatEntry =
 
 /**
  * 백엔드 검색 hit(법정단위별 행)을 동명 구분용 목록으로 변환합니다.
- * - 검색어가 시군구명·코드와 맞으면 "[시군구 포함]" 묶음(클릭 시 그 시군구 전체 법정단위 병합).
- * - 검색어가 읍·면·동 이름과 맞으면 해당 단위별 "[읍면동 포함]" 묶음.
- * - 법정리·법정동 이름(또는 코드) 일치 행은 풀 경로 레이블로 나열합니다.
+ * - 검색어가 …읍/…면 으로 끝나면: 전국 동명 읍·면을 행정 한 단위(eup) 카드로만 나열(하위 리·법정 줄 생략).
+ * - 그 외: 법정동·리 이름·코드 또는 읍면 행정명 매칭으로 법정 줄을 만듭니다.
+ * - 시도·자치구 묶음 시·시군구 상위 카드는 기존과 동일합니다.
  */
 /** "청주시 상당구" → "청주시" / "수원시 영통구" → "수원시" / "포항시 남구" → "포항시" 등.
  *  region_codes 에 별도 코드가 없는 의사-시(시 단위) 첫 토큰을 추출. */
@@ -75,6 +82,7 @@ export function buildFlattenedRegionSuggestions(
   const maxSigungu = opts?.maxSigungu ?? 60;
   const maxAgg = opts?.maxAgg ?? 40;
   const maxBeop = opts?.maxBeop ?? 250;
+  const eupMyeonFocused = isEupMyeonUnitNameQuery(rawQuery);
 
   // 시·도 묶음: hits 안에 검색어가 sido_name 이나 sido_code 와 맞는 행이 있으면 시도 한 줄.
   const bySido = new Map<string, RegionItem[]>();
@@ -183,47 +191,57 @@ export function buildFlattenedRegionSuggestions(
     a.primaryLabel.localeCompare(b.primaryLabel, "ko-KR")
   );
 
-  const byEup = new Map<string, RegionItem[]>();
-  for (const h of hits) {
-    const k = String(h.eupmyeondong_code ?? "").trim();
-    if (!k) continue;
-    if (!byEup.has(k)) byEup.set(k, []);
-    byEup.get(k)!.push(h);
+  const eupAggregates: Extract<RegionSearchFlatEntry, { kind: "eup_aggregate" }>[] = [];
+
+  if (eupMyeonFocused) {
+    const byEup = new Map<string, RegionItem[]>();
+    for (const h of hits) {
+      const k = String(h.eupmyeondong_code ?? "").trim();
+      if (!k) continue;
+      if (!byEup.has(k)) byEup.set(k, []);
+      byEup.get(k)!.push(h);
+    }
+
+    for (const [eupCode, bucket] of byEup.entries()) {
+      const sample = bucket[0];
+      const eupNn = norm(sample.eupmyeondong_name ?? "");
+      /** …읍/…면 검색: 이름이 검색어와 동일한 행정 단위만(부분 문자열 포함으로 신남이면 등 배제). */
+      if (eupNn !== qN) continue;
+      const prefix = [sample.sido_name, sample.sigungu_name, sample.eupmyeondong_name]
+        .map((x) => String(x ?? "").trim())
+        .filter(Boolean)
+        .join(" ");
+      eupAggregates.push({
+        kind: "eup_aggregate",
+        eupCode,
+        primaryLabel: prefix,
+        subtitle: `읍·면 행정 한 단위(8자 코드) · 하위 법정 ${bucket.length}곳`,
+        countInSample: bucket.length,
+        sample,
+      });
+    }
+    eupAggregates.sort((a, b) =>
+      a.primaryLabel.localeCompare(b.primaryLabel, "ko-KR")
+    );
   }
 
-  const eupAggregates: Extract<RegionSearchFlatEntry, { kind: "eup_aggregate" }>[] =
-    [];
-
-  for (const [eupCode, bucket] of byEup.entries()) {
-    const sample = bucket[0];
-    const eupNn = norm(sample.eupmyeondong_name ?? "");
-    if (!eupNn.includes(qN)) continue;
-    const prefix = [sample.sido_name, sample.sigungu_name, sample.eupmyeondong_name]
-      .map((x) => String(x ?? "").trim())
-      .filter(Boolean)
-      .join(" ");
-    eupAggregates.push({
-      kind: "eup_aggregate",
-      eupCode,
-      primaryLabel: prefix,
-      subtitle: `법정단위 포함 · 검색 결과 중 ${bucket.length}곳 확인됨`,
-      countInSample: bucket.length,
-      sample,
-    });
-  }
-
-  eupAggregates.sort((a, b) =>
-    a.primaryLabel.localeCompare(b.primaryLabel, "ko-KR")
-  );
-
+  /**
+   * 읍·면 이름 검색: 하위 리를 펼치지 않음(위 eup 카드만).
+   * 동·리·코드 검색: 법정명·코드 매칭; 읍명만 매칭된 경우에는(동 검색 등) 해당 법정 줄 포함.
+   */
   const beopMap = new Map<string, RegionItem>();
-  for (const h of hits) {
-    const codeKey = String(h.beopjungri_code ?? "").trim();
-    if (!codeKey) continue;
-    const bn = norm(h.beopjungri_name ?? "");
-    const bc = norm(codeKey);
-    if (!(bn.includes(qN) || bc.includes(qN))) continue;
-    if (!beopMap.has(codeKey)) beopMap.set(codeKey, h);
+  if (!eupMyeonFocused) {
+    for (const h of hits) {
+      const codeKey = String(h.beopjungri_code ?? "").trim();
+      if (!codeKey) continue;
+      const bn = norm(h.beopjungri_name ?? "");
+      const bc = norm(codeKey);
+      const eupNn = norm(h.eupmyeondong_name ?? "");
+      const matchesLeaf = bn.includes(qN) || bc.includes(qN);
+      const matchesEupLabel = eupNn.includes(qN);
+      if (!(matchesLeaf || matchesEupLabel)) continue;
+      if (!beopMap.has(codeKey)) beopMap.set(codeKey, h);
+    }
   }
   const beopRows = [...beopMap.values()].sort((a, b) =>
     formatRegionHierarchyLabel(a).localeCompare(formatRegionHierarchyLabel(b), "ko-KR")

@@ -19,6 +19,59 @@ export const emptyTierCodes = (): TierCodes => ({
   beopjungri_codes: [],
 });
 
+/** 읍·면·동 행정 칩 + 법정동·리 줄 개수 합계(각각 시군구 미만 선택 1단위로 셈). */
+export function paidSubSigunguSelectionsCount(tier: TierCodes): number {
+  const eup = tier.eupmyeondong_codes.map((c) => c.trim()).filter(Boolean).length;
+  const bp = tier.beopjungri_codes.map((c) => c.trim()).filter(Boolean).length;
+  return eup + bp;
+}
+
+/** 유료 패널: 시도·군구 위 선택 없음일 때 사용자가 고른 순서를 보여 줄 시군구 미만 선택 한 줄 단위 */
+export type PaidSubSigunguPickEntry =
+  | { kind: "eup"; code: string }
+  | { kind: "beop"; code: string };
+
+/**
+ * `preferredSeq` 순서를 유지하며 tier 에 없는 항목만 제거·중복 제거 후,
+ * tier 에만 있는 읍면·법정은 각각 코드 순으로 뒤에 붙입니다.
+ */
+export function reconcilePaidSubSigunguPickOrder(
+  preferredSeq: readonly PaidSubSigunguPickEntry[],
+  tier: TierCodes
+): PaidSubSigunguPickEntry[] {
+  const eupInTier = [...new Set(tier.eupmyeondong_codes.map((c) => String(c ?? "").trim()).filter(Boolean))].sort(
+    (a, b) => a.localeCompare(b, "ko-KR")
+  );
+  const beopInTier = [...new Set(tier.beopjungri_codes.map((c) => String(c ?? "").trim()).filter(Boolean))].sort(
+    (a, b) => a.localeCompare(b, "ko-KR")
+  );
+  const eupSet = new Set(eupInTier);
+  const beopSet = new Set(beopInTier);
+
+  const out: PaidSubSigunguPickEntry[] = [];
+  const placed = new Set<string>();
+
+  const tryPlace = (e: PaidSubSigunguPickEntry): void => {
+    const c = String(e.code ?? "").trim();
+    if (!c) return;
+    const k = `${e.kind}:${c}`;
+    if (placed.has(k)) return;
+    if (e.kind === "eup" && eupSet.has(c)) {
+      out.push({ kind: "eup", code: c });
+      placed.add(k);
+    }
+    if (e.kind === "beop" && beopSet.has(c)) {
+      out.push({ kind: "beop", code: c });
+      placed.add(k);
+    }
+  };
+
+  for (const e of preferredSeq) tryPlace(e);
+  for (const c of eupInTier) tryPlace({ kind: "eup", code: c });
+  for (const c of beopInTier) tryPlace({ kind: "beop", code: c });
+  return out;
+}
+
 /** 상위 선택이 비어 있으면 해당 차원에서 필터를 걸지 않는다. */
 export function resolveBeopjungriCodes(
   regions: readonly RegionItem[],

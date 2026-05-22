@@ -312,7 +312,7 @@ export default function PaidFilterTable() {
                 <span className="tabular-nums font-bold text-indigo-800">
                   {resolvedRegionCodes.length.toLocaleString()}
                 </span>
-                곳 (지역 선택이 카탈로그에서 확장된 수). 동·리 법정단위 칩만 여러 개 고른 경우에는 칩 개수 최대{" "}
+                곳 (지역 선택이 카탈로그에서 확장된 수). 동·리 법정단위 줄과 읍·면 행정 단위 칩을 합쳐 선택한 개수 최대{" "}
                 {MAX_PAID_LEAF_BEOPJUNGRI_PICK}곳까지입니다. 상위 행정(시도·구·읍면동·[시] 등)만 골라도 매칭되는
                 동·리 코드 전부가 포함됩니다.
                 {resolvedRegionCodes.length > MAX_V2_STATS_BULK_CODES ? (
