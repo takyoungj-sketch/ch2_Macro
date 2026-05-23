@@ -19,6 +19,7 @@ import logging
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from sqlalchemy import text
@@ -32,10 +33,19 @@ ROOT = Path(__file__).resolve().parent
 PY = sys.executable
 
 
-def _run(script: str, *args: str) -> None:
+def _run_timed(phase: str, script: str, *args: str) -> None:
     cmd = [PY, str(ROOT / script), *args]
     log.info("실행: %s", " ".join(cmd))
+    t0 = time.perf_counter()
     subprocess.run(cmd, check=True, cwd=str(ROOT))
+    sec = time.perf_counter() - t0
+    log.info(
+        "[pipeline timing] %s (%s) 소요=%.1fs (%.2f분)",
+        phase,
+        script,
+        sec,
+        sec / 60.0,
+    )
 
 
 def _truncate_paid_caches() -> None:
@@ -135,10 +145,12 @@ def main() -> None:
         help="--with-v2 와 함께 build_upper_stats_v2.py (시도·시(자치구 묶음)·시군구·읍면동 사전집계)",
     )
     args = parser.parse_args()
+    pipeline_t0 = time.perf_counter()
 
     if not args.skip_collect:
         if getattr(args, "excel_dir", None):
-            _run(
+            _run_timed(
+                "collect_excel",
                 "collect.py",
                 "--mode",
                 "excel",
@@ -148,18 +160,18 @@ def main() -> None:
                 str(args.excel_format),
             )
         elif args.initial:
-            _run("collect.py", "--mode", "api", "--years", str(args.years))
+            _run_timed("collect_api_initial", "collect.py", "--mode", "api", "--years", str(args.years))
         else:
-            _run("collect.py", "--mode", "api", "--months", str(args.months))
+            _run_timed("collect_api_refresh", "collect.py", "--mode", "api", "--months", str(args.months))
 
-    _run("clean.py")
+    _run_timed("clean", "clean.py")
     if args.skip_build_stats:
         log.info(
             "--skip-build-stats: build_stats(V1)/build_stats_v2 생략. "
             "여러 시도/엑셀 적재가 끝난 뒤 마지막에 한 번만 사전집계를 돌리세요."
         )
     else:
-        _run("build_stats.py")
+        _run_timed("build_stats_v1", "build_stats.py")
         if args.with_v2:
             v2_args: list[str] = ["--windows", str(args.v2_windows)]
             # --v2-as-of → env STATS_V2_DEFAULT_AS_OF_MONTH 순.
@@ -169,11 +181,22 @@ def main() -> None:
                 v2_args += ["--as-of", v2_as_of_cli]
             elif as_of_env:
                 v2_args += ["--as-of", as_of_env]
-            _run("build_stats_v2.py", *v2_args)
+            _run_timed("build_stats_v2", "build_stats_v2.py", *v2_args)
             if args.with_upper_v2:
-                _run("build_upper_stats_v2.py", *v2_args)
+                _run_timed("build_upper_stats_v2", "build_upper_stats_v2.py", *v2_args)
     # 캐시는 정제만 한 경우에도 stale 이 될 수 있어 항상 비운다 (DECISIONS D-003).
+    tr_t0 = time.perf_counter()
     _truncate_paid_caches()
+    log.info(
+        "[pipeline timing] paid_cache_truncate 소요=%.1fs",
+        time.perf_counter() - tr_t0,
+    )
+    total_sec = time.perf_counter() - pipeline_t0
+    log.info(
+        "[pipeline timing] 전체 소요=%.1fs (%.2f분) — 완료",
+        total_sec,
+        total_sec / 60.0,
+    )
     log.info("파이프라인 완료")
 
 

@@ -557,6 +557,9 @@ def main() -> None:
     total_rows_fetched = 0
     total_upsert_rows = 0
     sido_times: list[float] = []
+    cumulative_fetch_sec = 0.0
+    cumulative_agg_sec = 0.0
+    cumulative_upsert_sec = 0.0
 
     def run_one_scope(
         sido: str | None,
@@ -565,6 +568,7 @@ def main() -> None:
         record_timing: bool = True,
     ) -> None:
         nonlocal total_rows_fetched, total_upsert_rows, sido_times
+        nonlocal cumulative_fetch_sec, cumulative_agg_sec, cumulative_upsert_sec
         scope_start = time.perf_counter()
         log.info("[%s] 조회 시작 sido=%s ...", label, sido or "-")
         df_full = fetch_transactions_for_window_union(
@@ -581,6 +585,7 @@ def main() -> None:
             mem_mb,
             time.perf_counter() - scope_start,
         )
+        cumulative_fetch_sec += time.perf_counter() - scope_start
         if df_full.empty:
             log_empty_fetch_diagnostics_v2(codes, p_start_min, period_end, sido_code=sido)
             if record_timing:
@@ -590,15 +595,19 @@ def main() -> None:
         total_records = collect_records_for_windows(
             df_full, as_of_month=as_of_month, windows=windows, batch_id=batch_id
         )
+        agg_sec_scope = time.perf_counter() - agg_t0
+        cumulative_agg_sec += agg_sec_scope
         log.info(
             "[%s] 집계 행 %d건 (집계 %.1fs)",
             label,
             len(total_records),
-            time.perf_counter() - agg_t0,
+            agg_sec_scope,
         )
         up_t0 = time.perf_counter()
         upsert_basic_stats_v2(total_records, chunk_size=upsert_chunk)
-        log.info("[%s] UPSERT 완료 %d행 (%.1fs)", label, len(total_records), time.perf_counter() - up_t0)
+        up_sec_scope = time.perf_counter() - up_t0
+        cumulative_upsert_sec += up_sec_scope
+        log.info("[%s] UPSERT 완료 %d행 (%.1fs)", label, len(total_records), up_sec_scope)
         total_upsert_rows += len(total_records)
         elapsed_scope = time.perf_counter() - scope_start
         if record_timing:
@@ -700,6 +709,19 @@ def main() -> None:
     if v2_rows_before is not None and v2_rows_after is not None:
         delta_rows = v2_rows_after - v2_rows_before
 
+    phased = cumulative_fetch_sec + cumulative_agg_sec + cumulative_upsert_sec
+    log.info(
+        "[build_stats_v2 timing] 누적 phase 합계: sql_fetch %.1fs (%.2f분) | "
+        "python_aggregate %.1fs (%.2f분) | db_upsert %.1fs (%.2f분) | 상기합=%.1fs | batch_wall=%.1fs",
+        cumulative_fetch_sec,
+        cumulative_fetch_sec / 60.0,
+        cumulative_agg_sec,
+        cumulative_agg_sec / 60.0,
+        cumulative_upsert_sec,
+        cumulative_upsert_sec / 60.0,
+        phased,
+        wall_total,
+    )
     log.info(
         "V2 사전 집계 완료 - wall 종료=%s 총 %.1f분, 누적조회행=%s, UPSERT시도행=%s",
         wall_end_dt.strftime("%Y-%m-%d %H:%M:%S"),

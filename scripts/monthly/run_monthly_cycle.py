@@ -12,6 +12,7 @@ import json
 import logging
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -23,6 +24,23 @@ if str(_SCRIPT_DIR) not in sys.path:
 from cycle_utils import stats_as_of_iso_from_cycle_id  # noqa: E402
 
 log = logging.getLogger(__name__)
+
+
+def _run_subprocess_timed(
+    phase: str,
+    cmd: list[str],
+    *,
+    cwd: Path | None = None,
+) -> None:
+    """subprocess 실행과 wall-clock 시간을 로그로 남긴다."""
+    log.info("[%s]: %s", phase, " ".join(cmd))
+    t0 = time.perf_counter()
+    kwargs: dict[str, object] = {}
+    if cwd is not None:
+        kwargs["cwd"] = str(cwd.resolve())
+    subprocess.run(cmd, check=True, **kwargs)
+    sec = time.perf_counter() - t0
+    log.info("[%s timing] %s 소요=%.1fs (%.2f분)", "monthly_cycle", phase, sec, sec / 60.0)
 
 
 def _write_manifest(repo: Path, cycle_id: str) -> Path:
@@ -82,12 +100,13 @@ def main() -> None:
 
     flat_dir = repo / "clean_snapshots" / cycle / "flat_in"
     py = sys.executable
+    cycle_t0 = time.perf_counter()
     if not args.skip_flatten:
         flat_dir.mkdir(parents=True, exist_ok=True)
         flatten_script = _SCRIPT_DIR / "flatten_raw_xlsx.py"
-        subprocess.run(
+        _run_subprocess_timed(
+            "flatten_raw_xlsx",
             [py, str(flatten_script), "--source", str(raw_dir), "--dest", str(flat_dir)],
-            check=True,
         )
     else:
         flat_dir = raw_dir
@@ -113,23 +132,32 @@ def main() -> None:
     if args.with_upper_v2:
         cmd.append("--with-upper-v2")
 
-    log.info("실행: %s", " ".join(cmd))
-    subprocess.run(cmd, check=True, cwd=str(repo / "pipeline"))
+    _run_subprocess_timed("run_pipeline(full)", cmd, cwd=repo / "pipeline")
 
     snap_script = _SCRIPT_DIR / "snapshot_land_tx_counts.py"
     snap_out = repo / "clean_snapshots" / cycle / "land_tx_counts_after.json"
-    subprocess.run([py, str(snap_script), "--output", str(snap_out)], check=True)
+    _run_subprocess_timed(
+        "snapshot_land_tx_counts",
+        [py, str(snap_script), "--output", str(snap_out)],
+    )
     log.info("스냅샷: %s", snap_out)
 
     v2_snap = _SCRIPT_DIR / "snapshot_v2_stats.py"
     v2_out_dir = repo / "stats_snapshots" / cycle
     v2_out_dir.mkdir(parents=True, exist_ok=True)
     v2_out = v2_out_dir / "land_basic_stats_v2_summary.json"
-    subprocess.run(
+    _run_subprocess_timed(
+        "snapshot_v2_stats",
         [py, str(v2_snap), "--as-of", v2_as, "--output", str(v2_out)],
-        check=True,
     )
     log.info("V2 통계 요약 스냅샷: %s", v2_out)
+    total_sec = time.perf_counter() - cycle_t0
+    log.info(
+        "[%s timing] monthly_cycle_total 소요=%.1fs (%.2f분)",
+        "monthly_cycle",
+        total_sec,
+        total_sec / 60.0,
+    )
     log.info("다음: SOP 검증(rehearse / verify_v2 / compare_count_snapshots) 후 promote")
 
 

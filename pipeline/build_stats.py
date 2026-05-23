@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import time
 from itertools import product
 
 import pandas as pd
@@ -187,6 +188,13 @@ def build_stats_for_region(
     return records
 
 
+def _timing_log(prefix: str, label: str, t0: float) -> float:
+    """t0부터의 경과(초)를 로깅하고, 경과값을 반환한다."""
+    sec = time.perf_counter() - t0
+    log.info("[%s timing] %s 소요=%.1fs (%.2f분)", prefix, label, sec, sec / 60.0)
+    return sec
+
+
 def upsert_basic_stats(records: list[dict]) -> None:
     """계산된 통계를 land_basic_stats 에 UPSERT 한다."""
     if not records:
@@ -230,27 +238,51 @@ def main():
     parser.add_argument("--region", type=str, default=None, help="특정 법정동/리 코드 (미지정 시 전체)")
     args = parser.parse_args()
 
+    pipeline_t0 = time.perf_counter()
+    rng_t0 = time.perf_counter()
     year_from, year_to = get_year_range()
+    _timing_log("build_stats", "year_range_query", rng_t0)
 
     codes = [args.region] if args.region else None
 
+    fetch_t0 = time.perf_counter()
     log.info("거래 데이터 조회 중...")
     df = fetch_transactions_for_stats(codes, year_from, year_to)
+    _timing_log("build_stats", "sql_fetch_land_transactions", fetch_t0)
+    log.info("조회 결과 DataFrame 행수=%s", f"{len(df):,}")
 
     if df.empty:
         log_empty_fetch_diagnostics(codes, year_from, year_to)
+        total_sec = time.perf_counter() - pipeline_t0
+        log.info(
+            "[%s timing] build_stats_total(비어종료) 소요=%.1fs (%.2f분)",
+            "build_stats",
+            total_sec,
+            total_sec / 60.0,
+        )
         return
 
     all_codes = df["beopjungri_code"].unique().tolist()
     log.info("집계 대상 법정동/리: %d개", len(all_codes))
 
+    agg_t0 = time.perf_counter()
     total_records = []
     for code in tqdm(all_codes, desc="집계"):
         records = build_stats_for_region(df, code, year_from, year_to)
         total_records.extend(records)
+    _timing_log("build_stats", "python_aggregate_by_beopjungri", agg_t0)
 
     log.info("집계 결과: %d행, DB 저장 중...", len(total_records))
+    ups_t0 = time.perf_counter()
     upsert_basic_stats(total_records)
+    _timing_log("build_stats", "db_upsert_land_basic_stats", ups_t0)
+    total_sec = time.perf_counter() - pipeline_t0
+    log.info(
+        "[%s timing] build_stats_total 소요=%.1fs (%.2f분)",
+        "build_stats",
+        total_sec,
+        total_sec / 60.0,
+    )
     log.info("사전 집계 완료")
 
 
