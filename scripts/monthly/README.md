@@ -20,3 +20,9 @@
 - `py -m pip install "selenium>=4.15"`
 - 전국 확장 전 1연치 검증 예:  
   `py scripts/monthly/download_molit_land_xlsx.py --cycle-id 202605 --limit-regions 1`
+
+## 참고 노트북 규격 통합·정제 (템플릿용 산출)
+
+- 설계·폴더 구조: `docs/LAND_NOTEBOOK_EXCEL_PREP.md`
+- 일괄 실행:  
+  `py scripts/monthly/run_land_notebook_excel_prep.py --cycle-id YYYYMM`

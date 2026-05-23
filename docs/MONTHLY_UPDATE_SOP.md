@@ -77,7 +77,9 @@ raw\토지\202605\
   예(2026년 5월 초 배치 가정 · **계약일 2025-05-01 ~ 2026-04-30** 전국):  
   `py scripts/monthly/download_molit_land_xlsx.py --cycle-id 202605`  
   검증만 할 때 한두 시도: `--limit-regions 1` 또는 `--regions "세종특별자치시"`  
-  산출물은 `raw\토지\<cycle_id>\토지_매매\<시도명>\*.xlsx` 이다. 이후 `flatten` 으로 평탄화해 파이프라인에 넘긴다.
+  **시도당 `--start-date`~`--end-date` 구간을 한 번에 요청**(국토부 UI가 허용하는 범위에서 달력연도 분할 없음); 파일명에 구간 태그가 붙는다(`…_토지_매매_20250501_20260430.xlsx`).  
+- **통합 · 정제(노트북 규격, 템플릿용)** 는 `docs/LAND_NOTEBOOK_EXCEL_PREP.md` 와  
+  `py scripts/monthly/run_land_notebook_excel_prep.py --cycle-id …` 참고 (**DB 적재와 별도 디렉터리** 출력).
 - **성공/실패 기록:** `clean_snapshots\{cycle_id}\raw_manifest.json` — `scripts/monthly/run_monthly_cycle.py` 가 `.xlsx` 목록과 개수 기록.
 
 ---

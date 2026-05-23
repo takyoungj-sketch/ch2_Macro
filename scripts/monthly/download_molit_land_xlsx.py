@@ -5,7 +5,7 @@
 `참고/0.수집.ipynb` 와 같은 Selenium 흐름:
   rt.molit.go.kr → 탭 선택 → 계약일 · 시도 선택 → EXCEL 다운 ...
 
-기본 출력: `<repo>/raw/토지/<cycle_id>/토지_매매/<시도명>/<파일>.xlsx`
+기본 출력: `<repo>/raw/토지/<cycle_id>/토지_매매/<시도>_토지_매매_<YYYYMMDD>_<YYYYMMDD>.xlsx` (시도 하위폴더 없음)
 `flatten_raw_xlsx.py` 로 같은 cycle 폴더 아래 평탄화 후 파이프라인에 넣으면 된다.
 
 예)
@@ -20,7 +20,6 @@ import os
 import sys
 import time
 import traceback
-from datetime import datetime
 from pathlib import Path
 
 # repo 루트 (scripts/monthly/ 기준 두 단계 상위)
@@ -84,16 +83,9 @@ def handle_processing_popup(driver) -> None:
         pass
 
 
-def get_date_ranges(start: str, end: str) -> list[tuple[int, str, str]]:
-    """달력연도 단위로 (year, from_date, to_date) 목록 생성 (참고 노트북과 동일)."""
-    result: list[tuple[int, str, str]] = []
-    start_dt = datetime.strptime(start, "%Y-%m-%d")
-    end_dt = datetime.strptime(end, "%Y-%m-%d")
-    for year in range(start_dt.year, end_dt.year + 1):
-        from_dt = max(start_dt, datetime(year, 1, 1))
-        to_dt = min(end_dt, datetime(year, 12, 31))
-        result.append((year, from_dt.strftime("%Y-%m-%d"), to_dt.strftime("%Y-%m-%d")))
-    return result
+def _range_file_tag(start: str, end: str) -> str:
+    """파일명용: 2025-05-01, 2026-04-30 -> 20250501_20260430"""
+    return f"{start.replace('-', '')}_{end.replace('-', '')}"
 
 
 def resolve_regions(args: argparse.Namespace) -> list[str]:
@@ -117,7 +109,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-dir",
         type=str,
         default="",
-        help="토지_매매 상위 디렉터리. 미지정 시 <repo>/raw/토지/<cycle-id>",
+        help="토지_매매 루트(파일 바로 두는 폴더). 미지정 시 <repo>/raw/토지/<cycle-id>/토지_매매",
     )
     p.add_argument("--start-date", default="2025-05-01", help="계약일 시작")
     p.add_argument("--end-date", default="2026-04-30", help="계약일 종료")
@@ -137,7 +129,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--headless",
         action="store_true",
-        help="Chrome headless=new (환경에 따라 다운 실패 가능 — 기본은 창 표시)",
+        help="Chrome headless=new (환경에 따라 다운 실패 가능. 기본은 창 표시)",
     )
     return p
 
@@ -162,13 +154,12 @@ def main() -> None:
         sys.exit(1)
 
     if args.output_dir.strip():
-        base_parent = Path(args.output_dir.strip()).expanduser().resolve()
+        download_dir = Path(args.output_dir.strip()).expanduser().resolve()
+        download_dir.mkdir(parents=True, exist_ok=True)
     else:
         base_parent = (REPO_ROOT / "raw" / "토지" / args.cycle_id).resolve()
-    os.makedirs(base_parent, exist_ok=True)
-
-    download_dir = base_parent / f"{LAND_TYPE_LABEL_KO}_{deal_type_name}"
-    download_dir.mkdir(parents=True, exist_ok=True)
+        download_dir = base_parent / f"{LAND_TYPE_LABEL_KO}_{deal_type_name}"
+        download_dir.mkdir(parents=True, exist_ok=True)
 
     options = Options()
     if args.headless:
@@ -183,12 +174,13 @@ def main() -> None:
         },
     )
 
-    date_ranges = get_date_ranges(args.start_date, args.end_date)
+    from_date = args.start_date
+    to_date = args.end_date
+    range_tag = _range_file_tag(from_date, to_date)
     print(
         "다운로드 설정:",
         f"시도={len(regions)}개",
-        f"기간={args.start_date}~{args.end_date}",
-        f"연도 슬라이스={len(date_ranges)}건/시도",
+        f"기간(한 번에 요청)={from_date}~{to_date}",
         f"저장={download_dir}",
         sep="\n  ",
         flush=True,
@@ -200,66 +192,65 @@ def main() -> None:
     try:
         driver.get(MOLIT_XLS_URL)
         for region in regions:
-            region_folder = download_dir / region
-            region_folder.mkdir(parents=True, exist_ok=True)
-            for year, from_date, to_date in date_ranges:
-                file_name = f"{region}_{LAND_TYPE_LABEL_KO}_{deal_type_name}_{year}.xlsx"
-                file_path = region_folder / file_name
-                if file_path.exists():
-                    print(region, year, "이미 존재 → 스킵", flush=True)
+            file_name = (
+                f"{region}_{LAND_TYPE_LABEL_KO}_{deal_type_name}_{range_tag}.xlsx"
+            )
+            file_path = download_dir / file_name
+            if file_path.exists():
+                print(region, range_tag, "이미 존재 → 스킵", flush=True)
+                continue
+
+            try:
+                wait.until(
+                    EC.element_to_be_clickable((By.ID, f"xlsTab{property_type}"))
+                ).click()
+
+                driver.find_element(By.ID, "srhFromDt").clear()
+                driver.find_element(By.ID, "srhFromDt").send_keys(from_date)
+                driver.find_element(By.ID, "srhToDt").clear()
+                driver.find_element(By.ID, "srhToDt").send_keys(to_date)
+
+                sido_select = wait.until(
+                    EC.presence_of_element_located((By.ID, "srhSidoCd"))
+                )
+                for option in sido_select.find_elements(By.TAG_NAME, "option"):
+                    if option.text.strip() == region.strip():
+                        option.click()
+                        break
+                else:
+                    print(region, range_tag, "시도 옵션을 찾지 못함 → 스킵", flush=True)
                     continue
 
-                try:
-                    wait.until(
-                        EC.element_to_be_clickable((By.ID, f"xlsTab{property_type}"))
-                    ).click()
-
-                    driver.find_element(By.ID, "srhFromDt").clear()
-                    driver.find_element(By.ID, "srhFromDt").send_keys(from_date)
-                    driver.find_element(By.ID, "srhToDt").clear()
-                    driver.find_element(By.ID, "srhToDt").send_keys(to_date)
-
-                    sido_select = wait.until(
-                        EC.presence_of_element_located((By.ID, "srhSidoCd"))
+                btn = wait.until(
+                    EC.presence_of_element_located(
+                        (By.XPATH, "//button[contains(text(),'EXCEL 다운')]")
                     )
-                    for option in sido_select.find_elements(By.TAG_NAME, "option"):
-                        if option.text.strip() == region.strip():
-                            option.click()
-                            break
-                    else:
-                        print(region, year, "시도 옵션을 찾지 못함 → 스킵", flush=True)
-                        continue
-
-                    btn = wait.until(
-                        EC.presence_of_element_located(
-                            (By.XPATH, "//button[contains(text(),'EXCEL 다운')]")
-                        )
-                    )
-                    driver.execute_script("arguments[0].click();", btn)
-                    print(region, year, "다운로드 시작", flush=True)
-                    time.sleep(2)
-                    handle_processing_popup(driver)
-                    wait_for_downloads(str(download_dir))
-
-                    candidates = [
-                        os.path.join(download_dir, f)
-                        for f in os.listdir(download_dir)
-                        if os.path.isfile(os.path.join(download_dir, f))
-                        and (f.endswith(".xlsx") or f.endswith(".XLSX"))
-                        and Path(os.path.join(download_dir, f)) != Path(file_path)
-                    ]
-                    if not candidates:
-                        print(region, year, ".xlsx 없음 → 실패 처리", flush=True)
-                        continue
-
-                    newest = max(candidates, key=os.path.getctime)
-                    Path(newest).replace(file_path)
-                    print(region, year, "저장 완료 →", file_path, flush=True)
-                except Exception:
-                    print(region, year, "오류", flush=True)
-                    traceback.print_exc()
-
+                )
+                driver.execute_script("arguments[0].click();", btn)
+                print(region, from_date, "~", to_date, "다운로드 시작", flush=True)
                 time.sleep(2)
+                handle_processing_popup(driver)
+                wait_for_downloads(str(download_dir))
+
+                candidates = [
+                    os.path.join(download_dir, f)
+                    for f in os.listdir(download_dir)
+                    if os.path.isfile(os.path.join(download_dir, f))
+                    and (f.endswith(".xlsx") or f.endswith(".XLSX"))
+                    and Path(os.path.join(download_dir, f)) != Path(file_path)
+                ]
+                if not candidates:
+                    print(region, range_tag, ".xlsx 없음 → 실패 처리", flush=True)
+                    continue
+
+                newest = max(candidates, key=os.path.getctime)
+                Path(newest).replace(file_path)
+                print(region, "저장 완료 →", file_path, flush=True)
+            except Exception:
+                print(region, range_tag, "오류", flush=True)
+                traceback.print_exc()
+
+            time.sleep(2)
     finally:
         driver.quit()
         print("수집 종료", flush=True)
