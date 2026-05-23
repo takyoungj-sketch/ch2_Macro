@@ -14,3 +14,9 @@
 
 `DATABASE_URL`(및 선택 `STATS_*`)은 기존과 같이 **`pipeline/.env`** 또는 환경 변수를 사용한다.  
 `flatten`/`snapshot*` 은 레포 루트에서 실행해도 `pipeline/` 을 `sys.path` 에 넣어 `db_utils` 를 로드한다.
+
+## 국토부 엑셀 수집 (Selenium · 토지 매매)
+
+- `py -m pip install "selenium>=4.15"`
+- 전국 확장 전 1연치 검증 예:  
+  `py scripts/monthly/download_molit_land_xlsx.py --cycle-id 202605 --limit-regions 1`

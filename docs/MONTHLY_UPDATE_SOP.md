@@ -72,7 +72,12 @@ raw\토지\202605\
 
 ## 5. 수집 단계 (`raw`)
 
-- **자동 웹 다운로드:** 레포 기본 제공 아님. 수동 또는 별도 수집기로 `raw` 채운다.
+- **실거래가 엑셀(토지 매매)** 는 국토교통부 페이지에서 브라우저로 받는 형태(**Selenium**)가 보통 안정적이다. 참고 레시피: `참고/0.수집.ipynb` 와 같은 흐름을 스크립트로 옮긴 것이 **`scripts/monthly/download_molit_land_xlsx.py`** 이다.  
+  의존성: `py -m pip install "selenium>=4.15"` (Chrome 설치 필요, Selenium 4 가 드라이버를 관리한다).  
+  예(2026년 5월 초 배치 가정 · **계약일 2025-05-01 ~ 2026-04-30** 전국):  
+  `py scripts/monthly/download_molit_land_xlsx.py --cycle-id 202605`  
+  검증만 할 때 한두 시도: `--limit-regions 1` 또는 `--regions "세종특별자치시"`  
+  산출물은 `raw\토지\<cycle_id>\토지_매매\<시도명>\*.xlsx` 이다. 이후 `flatten` 으로 평탄화해 파이프라인에 넘긴다.
 - **성공/실패 기록:** `clean_snapshots\{cycle_id}\raw_manifest.json` — `scripts/monthly/run_monthly_cycle.py` 가 `.xlsx` 목록과 개수 기록.
 
 ---
