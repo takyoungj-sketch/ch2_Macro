@@ -66,7 +66,7 @@ def main() -> None:
     merge_dir.mkdir(parents=True, exist_ok=True)
 
     grouped: dict[str, list[Path]] = {}
-    for p in sorted(src.glob("*.xlsx")):
+    for p in sorted(src.rglob("*.xlsx")):
         name = p.name
         if name.startswith("~$"):
             continue
