@@ -25,6 +25,7 @@
 
 | 우선 | 항목 | 메모 |
 |------|------|------|
+| P0-M | **월간 갱신 재현 SOP** | [`docs/MONTHLY_UPDATE_SOP.md`](docs/MONTHLY_UPDATE_SOP.md), `scripts/monthly/run_monthly_cycle.py` — 반자동 월배치. |
 | P1 | **웹 배포 (프로덕션 / 준프로덕션)** | DECISIONS D-007 의 `API_TOKEN` 옵션을 활성한 채 배포. CORS·도메인·env 점검. |
 | P2 | **`population_jusosagae` 전국 시드** | 리허설이 잡아낸 미적재 1건. SOP §B7: `py -3.13 pipeline/seed_population_csv.py --file ../data/population/<최신_CSV>` (DECISIONS D-004, prefix 미지정 = 전국). |
 | P3 | **2026년 첫 월별 갱신 본 운영** | `docs/V2_OPERATOR_CHECKLIST.md` §B0 (리허설) → §B1~B12 그대로. `/health.latest_as_of_month` 가 직전 달 1일로 바뀌는지가 통과 기준. |
@@ -170,6 +171,7 @@
 
 - 결정 기록: [`docs/DECISIONS.md`](docs/DECISIONS.md)
 - 운영 SOP: [`docs/V2_OPERATOR_CHECKLIST.md`](docs/V2_OPERATOR_CHECKLIST.md)
+- **월간 로컬 재현 SOP**: [`docs/MONTHLY_UPDATE_SOP.md`](docs/MONTHLY_UPDATE_SOP.md)
 - 갱신 흐름: [`docs/V2_STATS_PRODUCTION.md`](docs/V2_STATS_PRODUCTION.md)
 - 통계 설계: [`docs/V2_STATS_DESIGN.md`](docs/V2_STATS_DESIGN.md)
 - 정제 정책: [`LAND_CLEANING.md`](LAND_CLEANING.md)

@@ -16,6 +16,13 @@ venv/
 # Local bulk source (엑셀 원본 등 — 레포에 포함하지 않음)
 원본/
 
+# 월간 배치 로컬 아티팩트 (레포 불포함)
+raw/
+clean_snapshots/
+stats_snapshots/
+backups/
+logs/
+
 # Logs & OS
 *.log
 .DS_Store

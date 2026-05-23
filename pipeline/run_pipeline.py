@@ -96,23 +96,23 @@ def main() -> None:
         "--skip-build-stats",
         action="store_true",
         help=(
-            "build_stats.py(V1) · build_stats_v2.py 를 모두 건너뛴다. "
+            "build_stats.py(V1) / build_stats_v2.py 를 모두 건너뛴다. "
             "여러 시도 폴더를 순서대로 정제만 끝낸 뒤 마지막에 한 번만 사전집계를 돌릴 때 사용 "
-            "(DECISIONS D-008 / V2_OPERATOR_CHECKLIST §B 권장 흐름)."
+            "(DECISIONS D-008 / V2_OPERATOR_CHECKLIST B절 권장 흐름)."
         ),
     )
     parser.add_argument(
         "--excel-format",
         choices=["raw", "merged", "auto"],
         default="auto",
-        help="--excel-dir 사용 시 collect.py 의 --format (국토부 원본=raw·통합·auto)",
+        help="--excel-dir 사용 시 collect.py 의 --format (국토부 원본=raw/통합/auto)",
     )
     parser.add_argument(
         "--with-v2",
         action="store_true",
         help=(
-            "build_stats.py(V1) 후 build_stats_v2.py 도 실행 — 무료 V2 화면 stale 방지. "
-            "windows=3,5, --as-of 는 STATS_V2_DEFAULT_AS_OF_MONTH 가 있으면 그대로 사용. "
+            "build_stats.py(V1) 후 build_stats_v2.py 도 실행. 무료 V2 화면 stale 방지. "
+            "`--v2-as-of` 가 있으면 그 값을, 없으면 환경변수 STATS_V2_DEFAULT_AS_OF_MONTH 를 build_stats_v2 --as-of 에 전달. "
             "--skip-build-stats 가 있으면 무시된다."
         ),
     )
@@ -120,6 +120,14 @@ def main() -> None:
         "--v2-windows",
         default="3,5",
         help="--with-v2 사용 시 build_stats_v2.py 의 --windows (기본 3,5)",
+    )
+    parser.add_argument(
+        "--v2-as-of",
+        metavar="YYYY-MM-DD",
+        help=(
+            "--with-v2 시 build_stats_v2.py 에 넘길 --as-of(해당 월 1일). "
+            "지정하면 STATS_V2_DEFAULT_AS_OF_MONTH 환경 변수보다 우선한다."
+        ),
     )
     parser.add_argument(
         "--with-upper-v2",
@@ -147,17 +155,19 @@ def main() -> None:
     _run("clean.py")
     if args.skip_build_stats:
         log.info(
-            "--skip-build-stats: build_stats(V1)·build_stats_v2 생략. "
+            "--skip-build-stats: build_stats(V1)/build_stats_v2 생략. "
             "여러 시도/엑셀 적재가 끝난 뒤 마지막에 한 번만 사전집계를 돌리세요."
         )
     else:
         _run("build_stats.py")
         if args.with_v2:
             v2_args: list[str] = ["--windows", str(args.v2_windows)]
-            # STATS_V2_DEFAULT_AS_OF_MONTH 가 있으면 명시 — build_stats_v2 도 동일 로직으로 fallback 하지만
-            # CLI 에 박아 두면 실행 로그(`실행: ...build_stats_v2.py --as-of ...`)에서 의도가 분명해진다.
+            # --v2-as-of → env STATS_V2_DEFAULT_AS_OF_MONTH 순.
+            v2_as_of_cli = (getattr(args, "v2_as_of", None) or "").strip()
             as_of_env = (os.environ.get("STATS_V2_DEFAULT_AS_OF_MONTH") or "").strip()
-            if as_of_env:
+            if v2_as_of_cli:
+                v2_args += ["--as-of", v2_as_of_cli]
+            elif as_of_env:
                 v2_args += ["--as-of", as_of_env]
             _run("build_stats_v2.py", *v2_args)
             if args.with_upper_v2:
