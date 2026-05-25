@@ -1,4 +1,5 @@
-import type { FreeStatsV2Response } from "../types";
+import type { FreeStatsV2Response, PaidAnalysisRequest, YearlyTradeStat } from "../types";
+
 
 /** 백엔드 `default_as_of_month_for_service` 와 동일: 해당 날짜가 속한 달의 직전 달 1일(UTC 일 단위). */
 export function asOfMonthFromAssumedServiceToday(isoDate: string): string {
@@ -83,4 +84,39 @@ export function statsAsOfLabel(input: {
   }
   if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) return null;
   return `${y}년 ${m}월 말 기준`;
+}
+
+/** 참고표: 순수 만년력 1·1~12·31 연도별. */
+export function calendarYearReferenceRows(
+  data: FreeStatsV2Response
+): YearlyTradeStat[] | undefined {
+  const r = data.by_year_calendar_reference;
+  return r != null && r.length > 0 ? r : undefined;
+}
+
+/** 매트릭스 셀 모달(`/paid/matrix-yearly`) 롤링 트렌드 본문. */
+export function rollingMatrixModalPayload(
+  data: Pick<
+    FreeStatsV2Response,
+    "period_start" | "period_end" | "window_years" | "stats_reference_date"
+  >
+): Pick<
+  PaidAnalysisRequest,
+  | "rolling_matrix_period_start"
+  | "rolling_matrix_period_end"
+  | "rolling_bucket_count"
+  | "rolling_stats_reference_date"
+  | "year_from"
+  | "year_to"
+  | "years"
+> {
+  return {
+    rolling_matrix_period_start: data.period_start ?? null,
+    rolling_matrix_period_end: data.period_end ?? null,
+    rolling_bucket_count: data.window_years,
+    rolling_stats_reference_date: data.stats_reference_date ?? null,
+    year_from: null,
+    year_to: null,
+    years: null,
+  };
 }

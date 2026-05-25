@@ -105,7 +105,7 @@ py scripts\monthly\run_monthly_cycle.py --cycle-id 202605
 
 1. `clean_snapshots\{cycle_id}\raw_manifest.json` 작성  
 2. `flatten_raw_xlsx` → `clean_snapshots\{cycle_id}\flat_in\`  
-3. `run_pipeline.py --excel-dir …\flat_in --excel-format auto --with-v2 --v2-windows 3,5 --v2-as-of <매핑>`  
+3. `run_pipeline.py --excel-dir …\flat_in --excel-format auto --with-v2 --v2-windows 3,5 --v2-as-of <매핑>` **및 기본으로** `--with-upper-v2`(상위 행정 사전집계). 생략하려면 `run_monthly_cycle.py --skip-upper-v2`.  
 4. `clean_snapshots\{cycle_id}\land_tx_counts_after.json` — 시도별 `land_transactions` 건수  
 5. `stats_snapshots\{cycle_id}\land_basic_stats_v2_summary.json` — 해당 `as_of` V2 행수 요약  
 
@@ -120,7 +120,8 @@ py scripts\monthly\run_monthly_cycle.py --cycle-id 202605
 ## 7. 사전통계 생성 (V2)
 
 - `--with-v2` 로 `build_stats_v2.py` 실행. **`--as-of` 는 반드시 이번 데이터에 맞게 고정**(CLI 또는 `--v2-as-of`).
-- 선택: 상위통계 필요 시 같은 `as_of` 로 `python pipeline/build_upper_stats_v2.py` — `run_pipeline.py --with-upper-v2` 로 묶음 실행 가능.
+- **상위 행정(시도·시군구·읍면동·city 버킷)** 은 `run_monthly_cycle.py` 가 **기본으로** `run_pipeline.py --with-upper-v2` 를 넣어 `build_upper_stats_v2.py` 까지 실행한다. **끄려면** `--skip-upper-v2`.
+- 수동만 필요할 때: `python pipeline/build_upper_stats_v2.py --as-of … --windows 3,5` (전국; 시도 한정은 `--sido-code`).
 
 ---
 
@@ -194,12 +195,13 @@ pg_dump -h 호스트 -U 유저 -d land_stats -Fc -f C:\ch2\ch2_Macro\backups\lan
 | 목적 | 명령 |
 |------|------|
 | 월간 로컬 한 번에 | `py scripts\monthly\run_monthly_cycle.py --cycle-id 202605` |
+| 상위통계 생략(드물게) | `… run_monthly_cycle.py --cycle-id 202605 --skip-upper-v2` |
 | 수집 목록만 | `py scripts\monthly\run_monthly_cycle.py --cycle-id 202605 --manifest-only` |
 | 평탄화만 | `py scripts\monthly\flatten_raw_xlsx.py --source raw\토지\202605 --dest clean_snapshots\202605\flat_in` |
 | 시도 건수 스냅샷 | `py scripts\monthly\snapshot_land_tx_counts.py --output clean_snapshots\202605\land_tx_counts_after.json` |
 | 스냅샷 비교 | `py scripts\monthly\compare_count_snapshots.py --before … --after …` |
 
-PowerShell 래퍼: `scripts\monthly\run_monthly_cycle.ps1 -CycleId 202605`
+PowerShell 래퍼: `scripts\monthly\run_monthly_cycle.ps1 -CycleId 202605` (상위 생략: `-SkipUpperV2`)
 
 ---
 
@@ -216,4 +218,4 @@ PowerShell 래퍼: `scripts\monthly\run_monthly_cycle.ps1 -CycleId 202605`
 
 | 날짜 | 내용 |
 |------|------|
-| 2026-05-23 | 초안 — 반자동 스크립트·`--v2-as-of`·폴더 규약 정리 |
+| 2026-05-24 | `run_monthly_cycle` 기본에 `build_upper_stats_v2`(상위통계) 포함, `--skip-upper-v2` 로 생략 |

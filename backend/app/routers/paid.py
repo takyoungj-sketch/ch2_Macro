@@ -11,7 +11,7 @@ import json
 import logging
 import time
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 import numpy as np
@@ -21,6 +21,10 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.analysis_base_cache import has_valid_analysis_base_cache
+from app.matrix_rolling_buckets import (
+    chart_bucket_labels_old_first_for_ref_month,
+    iter_rolling_year_buckets_old_first,
+)
 from app.config import settings
 from app.db import get_db
 from app.population_query import attach_population_year_end
@@ -62,13 +66,31 @@ def _make_cache_key(req: PaidAnalysisRequest) -> str:
 
 def _effective_paid_request(req: PaidAnalysisRequest) -> PaidAnalysisRequest:
     """
-    면적 직접 범위(B 모드): area_sqm_min/max 중 하나라도 있으면 area_categories는 무시한다.
+    - 연도 칩(`years` 비어 있지 않음)이 있으면 year_from/year_to는 무시한다(과거 클라이언트가 둘 다 보내도 혼선 방지).
+    - 면적 직접 범위(B 모드): area_sqm_min/max 중 하나라도 있으면 area_categories는 무시한다.
     """
-    if req.area_sqm_min is None and req.area_sqm_max is None:
+    updates: dict = {}
+
+    rps = req.rolling_matrix_period_start
+    rpe = req.rolling_matrix_period_end
+    if rps is not None and rpe is not None:
+        updates["years"] = None
+        updates["year_from"] = None
+        updates["year_to"] = None
+
+    ys = req.years
+    if (rps is None or rpe is None) and ys is not None and len(ys) > 0:
+        updates["years"] = sorted({int(y) for y in ys})
+        updates["year_from"] = None
+        updates["year_to"] = None
+
+    if req.area_sqm_min is not None or req.area_sqm_max is not None:
+        if req.area_categories:
+            updates["area_categories"] = None
+
+    if not updates:
         return req
-    if not req.area_categories:
-        return req
-    return req.model_copy(update={"area_categories": None})
+    return req.model_copy(update=updates)
 
 
 def _request_stable_payload(d: dict) -> dict:
@@ -213,6 +235,10 @@ def _normalize_matrix_yearly_req(req_body: MatrixYearlyRequest) -> PaidAnalysisR
         outlier_iqr_multiplier=req_body.outlier_iqr_multiplier,
         area_sqm_min=req_body.area_sqm_min,
         area_sqm_max=req_body.area_sqm_max,
+        rolling_matrix_period_start=req_body.rolling_matrix_period_start,
+        rolling_matrix_period_end=req_body.rolling_matrix_period_end,
+        rolling_bucket_count=req_body.rolling_bucket_count,
+        rolling_stats_reference_date=req_body.rolling_stats_reference_date,
     )
     return _effective_paid_request(r)
 
@@ -227,11 +253,19 @@ def _matrix_cell_merged_where(body: MatrixYearlyRequest, db: Session) -> tuple[s
         if has_valid_analysis_base_cache(db, body.base_cache_key)
         else None
     )
+    roll_ps = base_req.rolling_matrix_period_start
+    roll_pe = base_req.rolling_matrix_period_end
+    yf, yt, ylst = base_req.year_from, base_req.year_to, base_req.years
+    if roll_ps is not None and roll_pe is not None:
+        yf = None
+        yt = None
+        ylst = None
+
     base_parts, params = _build_conditions(
         resolved_codes,
-        base_req.year_from,
-        base_req.year_to,
-        base_req.years,
+        yf,
+        yt,
+        ylst,
         base_cache_key,
         base_req.road_conditions,
         base_req.area_categories,
@@ -240,6 +274,8 @@ def _matrix_cell_merged_where(body: MatrixYearlyRequest, db: Session) -> tuple[s
         base_req.exclude_partial,
         base_req.area_sqm_min,
         base_req.area_sqm_max,
+        rolling_contract_ps=roll_ps,
+        rolling_contract_pe=roll_pe,
     )
     mtx_sql, mtx_par = _matrix_dimension_sql(
         "lt", body.zone_type.strip(), body.land_category.strip()
@@ -296,6 +332,8 @@ def _build_conditions(
     exclude_partial: bool,
     area_sqm_min: Optional[float] = None,
     area_sqm_max: Optional[float] = None,
+    rolling_contract_ps: Optional[date] = None,
+    rolling_contract_pe: Optional[date] = None,
 ) -> tuple[list[str], dict]:
     conditions = [
         "lt.is_valid = TRUE",
@@ -321,7 +359,13 @@ def _build_conditions(
         conditions.append("lt.beopjungri_code = ANY(:region_codes)")
         params["region_codes"] = list(beopjungri_codes)
 
-    if years is not None and len(years) > 0:
+    if rolling_contract_ps is not None and rolling_contract_pe is not None:
+        conditions.append("lt.contract_date IS NOT NULL")
+        conditions.append("lt.contract_date >= :rolling_ps")
+        conditions.append("lt.contract_date <= :rolling_pe")
+        params["rolling_ps"] = rolling_contract_ps
+        params["rolling_pe"] = rolling_contract_pe
+    elif years is not None and len(years) > 0:
         ys = sorted({int(y) for y in years})
         conditions.append("lt.contract_year = ANY(:filter_years)")
         params["filter_years"] = ys
@@ -1008,14 +1052,91 @@ def analyze(
 @router.post(
     "/matrix-yearly",
     response_model=MatrixYearlyResponse,
-    summary="매트릭스 칸 연도별 평균·건수 추이",
+    summary="매트릭스 칸 연도별 또는 롤링 12개월 구간별 평균·건수 추이",
 )
 def matrix_yearly(body: MatrixYearlyRequest, db: Session = Depends(get_db)):
     """
-    같은 필터·지역 범위 안에서 특정 용도지역×지목 칸에 대해 계약연도별로
-    만원/㎡ 단가 목록 산술평균을 반환한다. 이상치 제외 시 전체 매칭 행 목록 기준 마스킹 후 연도별로 건수·평균을 계산한다.
+    - 기본(레거시): 계약연도별 산술평균.
+    - `rolling_matrix_period_*` 와 `rolling_bucket_count` 가 모두 오면 매트릭스 V2와 동일 계약 구간 안에서
+      12개월 롤링 버킷(과거→최근) 집계.
     """
     merged_where, merged_params = _matrix_cell_merged_where(body, db)
+
+    rp_s = body.rolling_matrix_period_start
+    rp_e = body.rolling_matrix_period_end
+    rb_n = body.rolling_bucket_count
+    rolling_mode = rp_s is not None and rp_e is not None and rb_n is not None
+
+    if rolling_mode:
+        if rp_s > rp_e:
+            raise HTTPException(
+                status_code=422,
+                detail="rolling_matrix_period_start 가 rolling_matrix_period_end 보다 클 수 없습니다.",
+            )
+        bc = int(rb_n)
+        if bc < 1 or bc > 10:
+            raise HTTPException(status_code=422, detail="rolling_bucket_count 는 1~10 입니다.")
+
+        buckets = iter_rolling_year_buckets_old_first(rp_e, bc)
+        ref_d = body.rolling_stats_reference_date
+        chart_labels = chart_bucket_labels_old_first_for_ref_month(ref_d, buckets)
+        stat_rows: list[MatrixYearlyStat] = []
+        for bi, ((bs_raw, be_raw), chart_label) in enumerate(zip(buckets, chart_labels)):
+            bs_eff = bs_raw if bs_raw >= rp_s else rp_s
+            be_eff = be_raw if be_raw <= rp_e else rp_e
+            if bs_eff > be_eff:
+                stat_rows.append(
+                    MatrixYearlyStat(
+                        year=None,
+                        bucket_index=bi,
+                        period_start=bs_raw,
+                        period_end=be_raw,
+                        chart_label=chart_label,
+                        count=0,
+                        mean_unit_price_per_sqm=None,
+                    )
+                )
+                continue
+            w_extra = merged_where + " AND lt.contract_date >= :buck_ps AND lt.contract_date <= :buck_pe"
+            pb = dict(merged_params)
+            pb["buck_ps"] = bs_eff
+            pb["buck_pe"] = be_eff
+            qry = text(
+                "SELECT lt.unit_price_per_sqm::float8 AS px "
+                "FROM land_transactions lt "
+                f"WHERE {w_extra}"
+            )
+            prow = db.execute(qry, pb).fetchall()
+            prices_px = [float(r.px) for r in prow if r.px is not None]
+            if body.exclude_outlier and prices_px:
+                keep = outlier_keep_mask(
+                    prices_px, iqr_multiplier=float(body.outlier_iqr_multiplier)
+                )
+                prices_px = [p for p, k in zip(prices_px, keep) if k]
+            if not prices_px:
+                mean_v = None
+            else:
+                mean_v = round(float(sum(prices_px)) / len(prices_px), 1)
+            stat_rows.append(
+                MatrixYearlyStat(
+                    year=None,
+                    bucket_index=bi,
+                    period_start=bs_raw,
+                    period_end=be_raw,
+                    chart_label=chart_label,
+                    count=len(prices_px),
+                    mean_unit_price_per_sqm=mean_v,
+                )
+            )
+        if not any(sr.count > 0 for sr in stat_rows):
+            raise HTTPException(
+                status_code=404, detail="해당 상세 칸에는 거래가 없습니다."
+            )
+        return MatrixYearlyResponse(
+            zone_type=body.zone_type.strip(),
+            land_category=body.land_category.strip(),
+            rows=stat_rows,
+        )
 
     query = text(
         f"""
@@ -1047,9 +1168,13 @@ def matrix_yearly(body: MatrixYearlyRequest, db: Session = Depends(get_db)):
     for y, p in zip(years_px, prices_px):
         out_map[y].append(p)
 
-    stat_rows = [
+    stat_rows_legacy = [
         MatrixYearlyStat(
             year=y,
+            bucket_index=None,
+            period_start=None,
+            period_end=None,
+            chart_label=None,
             count=len(out_map[y]),
             mean_unit_price_per_sqm=round(float(sum(out_map[y])) / len(out_map[y]), 1),
         )
@@ -1059,7 +1184,7 @@ def matrix_yearly(body: MatrixYearlyRequest, db: Session = Depends(get_db)):
     return MatrixYearlyResponse(
         zone_type=body.zone_type.strip(),
         land_category=body.land_category.strip(),
-        rows=stat_rows,
+        rows=stat_rows_legacy,
     )
 
 
@@ -1079,7 +1204,9 @@ def matrix_cell_histogram(
     merged_where, merged_params = _matrix_cell_merged_where(body, db)
     query = text(
         f"""
-        SELECT lt.contract_year AS y, lt.unit_price_per_sqm AS px
+        SELECT lt.contract_date AS cd,
+               lt.contract_year AS y,
+               lt.unit_price_per_sqm AS px
         FROM land_transactions lt
         WHERE {merged_where}
         ORDER BY lt.contract_year ASC
@@ -1089,6 +1216,7 @@ def matrix_cell_histogram(
     if not rows:
         raise HTTPException(status_code=404, detail="해당 상세 칸에는 거래가 없습니다.")
 
+    cds = [r.cd for r in rows]
     years_px = [int(r.y) for r in rows]
     prices_px = [float(r.px) for r in rows]
     if body.exclude_outlier:
@@ -1098,9 +1226,44 @@ def matrix_cell_histogram(
     else:
         keep = [True] * len(prices_px)
 
+    hist_ps: Optional[date] = None
+    hist_pe: Optional[date] = None
+    h_bucket_index: Optional[int] = None
+    rolling_single = False
+
+    rp_s = body.rolling_matrix_period_start
+    rp_e = body.rolling_matrix_period_end
+    rb_n = body.rolling_bucket_count
+
     if body.histogram_scope == "single":
-        hy = int(body.histogram_year)
-        combined = [ok and y == hy for ok, y in zip(keep, years_px)]
+        if rp_s is not None and rp_e is not None and rb_n is not None:
+            rolling_single = True
+            bi = int(body.histogram_bucket_index or 0)
+            h_bucket_index = bi
+            buckets = iter_rolling_year_buckets_old_first(rp_e, int(rb_n))
+            if bi < 0 or bi >= len(buckets):
+                raise HTTPException(
+                    status_code=422, detail="histogram_bucket_index 범위를 벗어났습니다."
+                )
+            bs_raw, be_raw = buckets[bi]
+            bs_eff = bs_raw if bs_raw >= rp_s else rp_s
+            be_eff = be_raw if be_raw <= rp_e else rp_e
+            hist_ps, hist_pe = bs_eff, be_eff
+            combined = []
+            for ok, cd in zip(keep, cds):
+                if cd is None or ok is False:
+                    combined.append(False)
+                    continue
+                if not isinstance(cd, date):
+                    try:
+                        cd = date.fromisoformat(str(cd)[:10])
+                    except ValueError:
+                        combined.append(False)
+                        continue
+                combined.append(ok and bs_eff <= cd <= be_eff)
+        else:
+            hy = int(body.histogram_year or 0)
+            combined = [ok and y == hy for ok, y in zip(keep, years_px)]
     else:
         combined = list(keep)
 
@@ -1139,9 +1302,14 @@ def matrix_cell_histogram(
         exclude_outlier=bool(body.exclude_outlier),
         outlier_iqr_multiplier=float(body.outlier_iqr_multiplier),
         histogram_scope=body.histogram_scope,
-        histogram_year=int(body.histogram_year)
-        if body.histogram_scope == "single"
-        else None,
+        histogram_year=(
+            int(body.histogram_year)
+            if body.histogram_scope == "single" and not rolling_single
+            else None
+        ),
+        histogram_bucket_index=h_bucket_index if rolling_single else None,
+        histogram_period_start=hist_ps if rolling_single else None,
+        histogram_period_end=hist_pe if rolling_single else None,
         bins=bins_out,
     )
 
@@ -1179,8 +1347,8 @@ def matrix_cell_transactions(
 
     candidates: list[dict] = []
     prices_px: list[float] = []
-    for r in rows:
-        m = r._mapping
+    for row in rows:
+        m = row._mapping
         px = m["unit_price_per_sqm"]
         if px is None:
             continue

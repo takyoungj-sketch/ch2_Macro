@@ -1,6 +1,6 @@
 """
 월간 로컬 사이클(반자동):
-  평탄화 → pipeline/run_pipeline.py(excel+V2, --v2-as-of 명시) → 시도별 건수 스냅샷 JSON
+  평탄화 → pipeline/run_pipeline.py(excel+V2·상위통계 V2 기본 포함, --v2-as-of 명시) → 스냅샷 JSON
 
 사전 조건은 docs/MONTHLY_UPDATE_SOP.md 참고.
 """
@@ -82,7 +82,16 @@ def main() -> None:
         "--v2-as-of",
         help="build_stats_v2 --as-of (YYYY-MM-DD). 미지정 시 cycle_id 기본 매핑(SOP 참고)",
     )
-    p.add_argument("--with-upper-v2", action="store_true")
+    p.add_argument(
+        "--skip-upper-v2",
+        action="store_true",
+        help="run_pipeline 에서 build_upper_stats_v2 단계 생략 (기본: 전국 상위 사전집계 포함)",
+    )
+    p.add_argument(
+        "--with-upper-v2",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
     p.add_argument("--excel-format", default="auto", choices=["auto", "raw", "merged"])
     p.add_argument("--manifest-only", action="store_true", help="수집 목록 JSON 만 쓰고 종료")
     args = p.parse_args()
@@ -129,7 +138,12 @@ def main() -> None:
         "--v2-as-of",
         v2_as,
     ]
-    if args.with_upper_v2:
+    if args.skip_upper_v2:
+        if args.with_upper_v2:
+            log.warning(
+                "--skip-upper-v2 가 지정되어 --with-upper-v2 무시: 상위 통계 V2 를 생략합니다."
+            )
+    else:
         cmd.append("--with-upper-v2")
 
     _run_subprocess_timed("run_pipeline(full)", cmd, cwd=repo / "pipeline")

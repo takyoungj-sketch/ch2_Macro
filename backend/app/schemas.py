@@ -174,8 +174,14 @@ class FreeStatsV2Response(BaseModel):
     by_year: list[YearlyTradeStat] = Field(
         default_factory=list,
         description=(
-            "달력 연도별 총계(첫 연도는 해당 연 1/1~12/31, 마지막 연도는 period_end까지). "
-            "용도×지목 매트릭스의 롤링 구간(period_start~period_end)과 범위가 다를 수 있음."
+            "달력 연도별 총계(참고)—첫·중간 해는 해당 연도 1/1부터, 롤링창 시작과 교차하는 방식 포함. "
+            "마지막 연도는 period_end 까지만. 순수 만년력 1·1~12·31 보려면 by_year_calendar_reference."
+        ),
+    )
+    by_year_calendar_reference: list[YearlyTradeStat] = Field(
+        default_factory=list,
+        description=(
+            "참고: 각 계약연도에 대해 contract_date 각 연도 1·1 ~ 12·31 로만 집계(롤링·필터와 무관)."
         ),
     )
     by_zone: dict[str, StatsResult] = Field(default_factory=dict)
@@ -219,6 +225,10 @@ class UpperStatsV2Response(BaseModel):
     by_zone: dict[str, StatsResult] = Field(default_factory=dict)
     by_land_category: dict[str, StatsResult] = Field(default_factory=dict)
     matrix: list[MatrixCell] = Field(default_factory=list)
+    by_year_calendar_reference: list[YearlyTradeStat] = Field(
+        default_factory=list,
+        description="참고: 만년력 1·1~12·31 연도별 집계(by_year 와 다른 정의 가능).",
+    )
 
 
 class FreeStatsV2MetaAsOfResponse(BaseModel):
@@ -328,6 +338,25 @@ class PaidFilters(PaidAreaSqmBounds):
     exclude_outlier: bool = Field(False, description="단가 IQR 기반 이상치 제외 활성화")
     outlier_iqr_multiplier: OutlierIqrMultiplier = 3.0
 
+    rolling_matrix_period_start: Optional[date] = Field(
+        None,
+        description="매트릭스 칸 트렌드: contract_date 하한—V2 매트릭스 롤링 창과 동일해야 함.",
+    )
+    rolling_matrix_period_end: Optional[date] = Field(
+        None,
+        description="매트릭스 칸 트렌드: contract_date 상한.",
+    )
+    rolling_bucket_count: Optional[int] = Field(
+        None,
+        ge=1,
+        le=10,
+        description="롤링 12개월 구간 수(통상 window_years)",
+    )
+    rolling_stats_reference_date: Optional[date] = Field(
+        None,
+        description="차트 우측 기준 레이블(통상 stats_reference_date 미지정 시 자동 표기)",
+    )
+
     model_config = {"extra": "forbid"}
 
 
@@ -360,6 +389,13 @@ class PaidAnalysisRequest(PaidAreaSqmBounds):
     exclude_outlier: bool = Field(False)
     outlier_iqr_multiplier: OutlierIqrMultiplier = 3.0
 
+    rolling_matrix_period_start: Optional[date] = Field(
+        None, description="/paid/matrix-* 롤링 모드 전용(api 본편에서는 미사용)"
+    )
+    rolling_matrix_period_end: Optional[date] = Field(None)
+    rolling_bucket_count: Optional[int] = Field(None, ge=1, le=10)
+    rolling_stats_reference_date: Optional[date] = Field(None)
+
     # 다른 PaidFilters · RegionSelectionUnit 와 동일 정책: 프론트 필드명 오타가 조용히 무시되지 않게 422 반환.
     model_config = {"extra": "forbid"}
 
@@ -387,9 +423,16 @@ class PaidAnalysisResponse(BaseModel):
 
 
 class MatrixYearlyStat(BaseModel):
-    """매트릭스 특정 칸: 계약연도별 거래건수·평균 단가(만원/㎡)."""
+    """매트릭스 특정 칸: 연도별·또는 롤링 연간 구간별 분포 요약."""
 
-    year: int
+    year: Optional[int] = Field(
+        None,
+        description="달력연도 모드(contract_year 단위 집계)일 때만 사용",
+    )
+    bucket_index: Optional[int] = Field(None, ge=0, description="롤링 12개월 모드 버킷(0=가장 과거)")
+    period_start: Optional[date] = Field(None)
+    period_end: Optional[date] = Field(None)
+    chart_label: Optional[str] = Field(None, description="축 표시 문자열 예: y-1, 기준연월)")
     count: int
     mean_unit_price_per_sqm: Optional[float] = None
 
@@ -423,18 +466,41 @@ class MatrixCellHistogramRequest(MatrixYearlyRequest):
 
     histogram_scope: Literal["all", "single"] = Field(
         "all",
-        description="all: 필터 연도 전체 합산 단가 표본, single: histogram_year 한 연도만",
+        description="all: 해당 칸 표본 전체, single: histogram_year 또는 histogram_bucket_index 에 해당하는 표본만",
     )
     histogram_year: Optional[int] = Field(
-        None, description="histogram_scope=single일 때 필수(계약연도)"
+        None,
+        description="달력(contract_year) 모드 single 시 필수. 롤링 트렌드에는 histogram_bucket_index 사용",
+    )
+    histogram_bucket_index: Optional[int] = Field(
+        None,
+        ge=0,
+        description="롤링 트렌드 요청 중 single 한 구간(0부터 가장 과거 버킷)",
     )
     bin_count: int = Field(
         20, ge=5, le=60, description="히스토그램 구간 개수(서버에서 표본 크기에 맞게 조정 가능)"
     )
 
     @model_validator(mode="after")
-    def _year_when_single(self) -> MatrixCellHistogramRequest:
-        if self.histogram_scope == "single" and self.histogram_year is None:
+    def _single_target(self) -> MatrixCellHistogramRequest:
+        rolling = (
+            self.rolling_matrix_period_start is not None
+            and self.rolling_matrix_period_end is not None
+            and self.rolling_bucket_count is not None
+        )
+        if self.histogram_scope != "single":
+            return self
+        if rolling:
+            bc = self.rolling_bucket_count or 0
+            bi = self.histogram_bucket_index
+            if bi is None:
+                raise ValueError(
+                    "롤링 트렌드에서는 histogram_bucket_index 로 구간을 지정해야 합니다."
+                )
+            if bi < 0 or bi >= int(bc):
+                raise ValueError(f"histogram_bucket_index 는 0 ~ {bc - 1} 범위여야 합니다.")
+            return self
+        if self.histogram_year is None:
             raise ValueError("histogram_scope가 single이면 histogram_year가 필요합니다.")
         return self
 
@@ -447,6 +513,9 @@ class MatrixCellHistogramResponse(BaseModel):
     outlier_iqr_multiplier: float
     histogram_scope: Literal["all", "single"]
     histogram_year: Optional[int] = None
+    histogram_bucket_index: Optional[int] = None
+    histogram_period_start: Optional[date] = None
+    histogram_period_end: Optional[date] = None
     bins: list[HistogramBin] = []
 
 

@@ -116,11 +116,15 @@
 
 ### 4-2. 원데이터 보기 (거래 목록)
 
+계획만 유지. **거래 목록 열 확대(예: 계약일 yyyy-MM-dd, 지번, 지분구분 원문, 거래유형 등)** 는 `db`·`pipeline/clean`·API·모달 변경이 따라붙으며, **`운영자가 명시적으로 지시하기 전까지 진행하지 않는다**(서버 이전 타이밍이나 월별 업데이트에 자동으로 묶어 일정 고정 안 함)**.
+
+예상 노출 형태(실행 지시 후 참고용): 계약일·지번·면적·금액·단가·도로·지분구분·거래유형. 현재 UI는 재범위를 줄여 **계약연월·면적·금액·단가·도로** 만 노출.
+
 | 고려사항 | 내용 |
 |----------|------|
 | 데이터 출처 | `land_transactions` 정제 행. 히스토그램과 동일 필터 + 용도·지목. |
 | API | `PaidAnalysisRequest` + `zone_type`, `land_category` + 페이지네이션. |
-| 노출 컬럼 | 계약연월·지역·면적·금액·단가·도로 등 최소화. |
+| DB·정합 | 지시 시점에 확정한다. 참고 시 `contract_date`(또는 동일 정보)·`db/011` 표시 컬럼 등과 `pipeline/clean` 동기화 검토. |
 | 규모 | 셀당 수천 건 가능 → 한 페이지 건수 상한, 총 건수 표시. |
 | 캐시 | `analysis_base_cache` 키 재사용으로 같은 후보 행 집합 위에서 목록 조회. |
 
@@ -164,6 +168,15 @@
 - `backend/app/main.py` lifespan 전환 + `/health.latest_as_of_month` 노출 + `API_TOKEN` 옵트인 미들웨어 + V1 라우터 `Sunset` 헤더.
 - SOP §B 앞에 **B0 (리허설)** 단계 추가: `pipeline/rehearse_v2_update.py` (읽기 전용; 환경/DB/마이그레이션/SOP `--help`/`/health` 일괄 점검).
   - 산출물: `logs/rehearse_v2_update.txt` (UTF-8). PowerShell 콘솔이 cp949 라 화면이 깨질 수 있어 항상 파일을 본다.
+
+### 통합 브랜치 `feature/land-integration-export` 종료 및 main 병합 (2026-05-25)
+
+- **거래 목록 고도화(계약 일자·지번·지분·거래유형 등)**: `NEXT_STEPS` §4-2 로 계획만 남김.**운영자 명시 지시 전 미진행.**
+- 당분간 모달 거래 목록은 **연·월 기준 간소 목록**(면적·금액·단가·도로); `matrix-cell-transactions` 는 `land_transactions`+`region_codes` 만 조회.
+- 롤링 매트릭스 구간·차트 레이블: `backend/app/matrix_rolling_buckets.py`, `frontend/src/utils/matrixYearlyLabels.ts`.
+- 유료/무료 패널·필터·모달 리팩터, `paid`·`schemas` 확장, `free_v2`·`upper_stats` 보강, `analysis_base_cache`·페이로드 유틸 정리.
+- 정제 준비: `pipeline/clean` 표시 필드 채우기, `db/001_init.sql` 및 `db/011_land_transactions_display_columns.sql`(향후 DDL용).
+- 월간 스크립트·SOP 및 `.env.example` 보완.
 
 ---
 

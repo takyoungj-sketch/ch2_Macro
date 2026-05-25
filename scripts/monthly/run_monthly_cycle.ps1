@@ -7,7 +7,7 @@ param(
   [Parameter(Mandatory = $false)][string]$RepoRoot = "",
   [Parameter(Mandatory = $false)][switch]$SkipFlatten,
   [Parameter(Mandatory = $false)][string]$V2AsOf = "",
-  [Parameter(Mandatory = $false)][switch]$WithUpperV2
+  [Parameter(Mandatory = $false)][switch]$SkipUpperV2
 )
 
 $ErrorActionPreference = "Stop"
@@ -27,6 +27,6 @@ $runner = Join-Path $RepoRoot "scripts\monthly\run_monthly_cycle.py"
 $argsList = @($runner, "--cycle-id", $CycleId, "--repo-root", $RepoRoot)
 if ($SkipFlatten) { $argsList += "--skip-flatten" }
 if (-not [string]::IsNullOrWhiteSpace($V2AsOf)) { $argsList += "--v2-as-of", $V2AsOf }
-if ($WithUpperV2) { $argsList += "--with-upper-v2" }
+if ($SkipUpperV2) { $argsList += "--skip-upper-v2" }
 
 & $py @argsList

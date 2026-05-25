@@ -65,6 +65,10 @@ CREATE TABLE IF NOT EXISTS land_transactions (
     -- 가격
     total_price_10k         NUMERIC(14,2) NOT NULL,  -- 거래금액 (만원)
     unit_price_per_sqm      NUMERIC(14,2),           -- 단가 (만원/㎡) = total_price_10k / area
+    -- 목록·참고 표시 (원천 엑셀/API에서 정제 시 채움)
+    lot_display               VARCHAR(64),
+    partial_ownership_label   VARCHAR(128),
+    deal_type                 VARCHAR(128),
     -- 지분거래
     is_partial_ownership    BOOLEAN      NOT NULL DEFAULT FALSE,
     -- 정제 상태

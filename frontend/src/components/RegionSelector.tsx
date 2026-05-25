@@ -18,7 +18,7 @@ import {
   paidSubSigunguSelectionsCount,
   reconcilePaidSubSigunguPickOrder,
 } from "../utils/regionTier";
-import { REGION_PICK_MANY_WARN_AT, REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
+import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import { MAX_PAID_LEAF_BEOPJUNGRI_PICK } from "../constants/tierPickLimits";
 import { cityBucketFromSigungu } from "../utils/cityBucket";
 
@@ -522,17 +522,6 @@ export default function RegionSelector() {
         </button>
       </div>
 
-      {viewMode === "paid" ? (
-        <p className="text-[10px] text-slate-500 leading-snug px-0.5 -mt-1">
-          유료: <span className="font-semibold text-slate-600">시·도·[시]·시군구</span> 행정 단위만 칩으로 고를 수 있고 각각 하나씩입니다.{" "}
-          <span className="font-semibold text-slate-600">시군구 미만</span>은 같은 번호 목록에 모아표시합니다(읍·면 한 덩어리든
-          가경동처럼 법정 줄이든 똑같이 한 줄). 검색해서 넣되{" "}
-          <span className="font-semibold text-slate-600">합쳐 최대 {MAX_PAID_LEAF_BEOPJUNGRI_PICK}곳</span>
-          까지이며 다음을 더할 때는 「<span className="font-semibold text-slate-600">+ 추가 지역 선택</span>」 후 다시 검색해
-          주세요. 시도·군구만 고르는 상태에는 + 버튼이 필요 없습니다.
-        </p>
-      ) : null}
-
       <div className="space-y-1.5">
         <label className="block text-[11px] font-semibold text-slate-700" htmlFor="region-search">
           지역 이름·코드 검색
@@ -867,8 +856,6 @@ export default function RegionSelector() {
               </>
             )}
           </div>
-        ) : searchInput.trim().length > 0 ? (
-          <p className="text-[10px] text-slate-500">검색은 두 글자 이상 입력해 주세요.</p>
         ) : null}
       </div>
 
@@ -930,14 +917,12 @@ export default function RegionSelector() {
 
       <div className="rounded-lg border border-slate-100 bg-slate-50/80 px-2 py-2 space-y-1">
         <p className="text-[11px] font-semibold text-slate-700">
-          {viewMode === "paid" ? "선택된 지역" : "선택 (무료는 1개)"}{" "}
+          {viewMode === "paid" ? "선택된 지역" : "선택"}{" "}
           <span className="font-normal text-slate-500">
             항목 {selectionChipCount} · 합산 법정 {resolvedCount}곳
           </span>
         </p>
-        {selectionChipCount === 0 ? (
-          <p className="text-[10px] text-slate-500 leading-snug">검색 결과를 눌러 추가하세요.</p>
-        ) : (
+        {selectionChipCount === 0 ? null : (
           <div className="flex flex-wrap gap-1">
             {tierSelection.sido_codes.map((code) => (
               <span
@@ -1042,17 +1027,7 @@ export default function RegionSelector() {
                   </span>
                 ))
               : null}
-            {viewMode === "paid" && strictUpperTierChipCount === 0 && paidSubSigunguSelections > 0 ? (
-              <p className="text-[10px] text-slate-500 leading-snug w-full pt-0.5">
-                시도·군구 등 상위 선택은 검색 결과의 [시·도]·[시군구] 등으로 고릅니다. 시군구 미만은 위 번호 목록에서
-                확인·삭제할 수 있고, 추가할 때는 「+ 추가 지역 선택」 다음 검색 순서입니다.
-              </p>
-            ) : null}
           </div>
-        )}
-        {viewMode === "paid" &&
-          resolvedCount >= REGION_PICK_MANY_WARN_AT && (
-          <p className="text-[10px] text-slate-500">합산 단위가 많을수록 집계에 시간이 걸릴 수 있습니다.</p>
         )}
       </div>
 
@@ -1063,9 +1038,6 @@ export default function RegionSelector() {
       ) : null}
 
       <div className="rounded-lg border border-slate-100 bg-slate-50/80 px-2.5 py-2 space-y-2">
-        <p className="text-[10px] text-slate-500 leading-snug">
-          기본 통계(V2): 계약일 기준 롤링 — 조회 전에 구간을 고르세요.
-        </p>
         <FreeStatsWindowToggle idPrefix="sidebar-v2" />
       </div>
 

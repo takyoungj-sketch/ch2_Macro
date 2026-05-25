@@ -189,6 +189,60 @@ def _text_series(df: pd.DataFrame, column: str, default: str = "") -> pd.Series:
     return df[column].fillna(default).astype(str).str.strip()
 
 
+def _nullable_lot_token(v: object) -> str:
+    """본번·부번 등 번지 성분 문자열화 (정수처럼 보이면 불필요한 소수점 제거)."""
+    if v is None or (isinstance(v, float) and pd.isna(v)):
+        return ""
+    if isinstance(v, bool):
+        return ""
+    if isinstance(v, int):
+        return str(v)
+    if isinstance(v, float):
+        try:
+            if v != v:  # NaN
+                return ""
+            iv = int(v)
+            return str(iv) if abs(float(v) - float(iv)) < 1e-9 else str(v).strip()
+        except (ValueError, OverflowError):
+            return str(v).strip()
+    try:
+        f = float(v)
+        if f != f:
+            return ""
+        iv = int(f)
+        if abs(float(f) - float(iv)) < 1e-9:
+            return str(iv)
+    except (TypeError, ValueError):
+        pass
+    s = str(v).strip()
+    if not s or s.lower() == "nan":
+        return ""
+    return s
+
+
+def _derive_lot_display(df: pd.DataFrame) -> pd.Series:
+    """엑셀 「번지」 또는 API 본번·부번으로 표시용 번지 문자열."""
+    idx = df.index
+    lot_num = df.get("lot_number", pd.Series("", index=idx)).fillna("").astype(str).str.strip()
+
+    mn_s = (
+        df["main_number"].map(_nullable_lot_token)
+        if "main_number" in df.columns
+        else pd.Series("", index=idx, dtype=str)
+    )
+    sn_s = (
+        df["sub_number"].map(_nullable_lot_token)
+        if "sub_number" in df.columns
+        else pd.Series("", index=idx, dtype=str)
+    )
+
+    invalid_sub = (sn_s.eq("")) | (sn_s.eq("0"))
+    suffix_s = ("-" + sn_s.astype(str)).where(~invalid_sub, other="")
+    assembled = mn_s.astype(str).str.cat(suffix_s)
+    combined = lot_num.where(lot_num.ne(""), assembled.where(mn_s.ne(""), ""))
+    return combined.astype(str).str.strip().str.slice(0, 64)
+
+
 def _compact_values(series: pd.Series, mapping: dict[str, str], fallback: str | None = None) -> pd.Series:
     """
     참고 노트북의 map(...).fillna(...) 패턴을 재현한다.
@@ -693,6 +747,12 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     except Exception:
         df["contract_date"] = None
 
+    df["lot_display"] = _derive_lot_display(df)
+    _pl_raw = partial_txt.str.slice(0, 128)
+    df["partial_ownership_label"] = _pl_raw.mask(_pl_raw.eq(""), other=pd.NA)
+    _dt_trim = df.get("deal_type", pd.Series("", index=df.index)).fillna("").astype(str).str.strip().str.slice(0, 128)
+    df["deal_type"] = _dt_trim.mask(_dt_trim.eq(""), other=pd.NA)
+
     # transaction_hash 생성 (중복 방지)
     df["transaction_hash"] = df.apply(_make_hash, axis=1)
 
@@ -768,6 +828,7 @@ def upsert_transactions(df: pd.DataFrame) -> int:
         "land_category", "zone_type", "road_condition",
         "area_sqm", "area_category",
         "total_price_10k", "unit_price_per_sqm",
+        "lot_display", "partial_ownership_label", "deal_type",
         "is_partial_ownership", "is_cancelled", "is_valid", "raw_id",
         "needs_review", "mapping_notes",
     ]
@@ -783,6 +844,7 @@ def upsert_transactions(df: pd.DataFrame) -> int:
             land_category, zone_type, road_condition,
             area_sqm, area_category,
             total_price_10k, unit_price_per_sqm,
+            lot_display, partial_ownership_label, deal_type,
             is_partial_ownership, is_cancelled, is_valid, raw_id,
             needs_review, mapping_notes
         ) VALUES %s
@@ -800,6 +862,9 @@ def upsert_transactions(df: pd.DataFrame) -> int:
             area_category = EXCLUDED.area_category,
             total_price_10k = EXCLUDED.total_price_10k,
             unit_price_per_sqm = EXCLUDED.unit_price_per_sqm,
+            lot_display = EXCLUDED.lot_display,
+            partial_ownership_label = EXCLUDED.partial_ownership_label,
+            deal_type = EXCLUDED.deal_type,
             is_partial_ownership = EXCLUDED.is_partial_ownership,
             is_cancelled = EXCLUDED.is_cancelled,
             is_valid = EXCLUDED.is_valid,

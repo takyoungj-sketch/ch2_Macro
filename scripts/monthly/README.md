@@ -5,8 +5,8 @@
 ## 진입점
 
 - **통합 실행:**  
-  `py scripts/monthly/run_monthly_cycle.py --cycle-id YYYYMM`  
-  또는 `pwsh scripts/monthly/run_monthly_cycle.ps1 -CycleId YYYYMM`
+  `py scripts/monthly/run_monthly_cycle.py --cycle-id YYYYMM` — **기본적으로** `run_pipeline` 에 `--with-upper-v2`(상위 행정 사전집계) 포함. 끄려면 `--skip-upper-v2`.  
+  또는 `pwsh scripts/monthly/run_monthly_cycle.ps1 -CycleId YYYYMM` (상위 생략: `-SkipUpperV2`)
 - **평탄화만:** `py scripts/monthly/flatten_raw_xlsx.py`
 - **시도별 건수 스냅샷:** `py scripts/monthly/snapshot_land_tx_counts.py`
 - **스냅샷 비교:** `py scripts/monthly/compare_count_snapshots.py`

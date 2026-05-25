@@ -7,11 +7,8 @@ import {
   ROAD_CONDITIONS,
 } from "../constants/paidFilters";
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
-import { MAX_V2_STATS_BULK_CODES } from "../constants/v2BulkLimits";
-import { MAX_PAID_LEAF_BEOPJUNGRI_PICK } from "../constants/tierPickLimits";
 import { useAppStore } from "../store";
 import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
-import { resolveUpperSingleFromTier } from "../utils/upperTierStats";
 import { paidUsesCustomAreaSpan } from "../utils/paidFiltersMap";
 
 export default function PaidFilterTable() {
@@ -41,7 +38,6 @@ export default function PaidFilterTable() {
     () => resolveUnionBeopjungriCodes(regions, tierSelection),
     [regions, tierSelection]
   );
-  const upperOnlySelection = useMemo(() => resolveUpperSingleFromTier(tierSelection), [tierSelection]);
   const customAreaSpan = paidUsesCustomAreaSpan(paidRequest);
 
   const runFiltered = () => {
@@ -88,10 +84,6 @@ export default function PaidFilterTable() {
               연도
             </th>
             <td className="px-2 py-2">
-              <p className="text-[10px] text-slate-500 mb-1.5">
-                클릭으로 포함·제외합니다. 선택된 해에만 따라 집계됩니다 (비연속 가능).
-                기본통계 표에 없던 연도만 골라도, 후보 거래 행에는 칩에 나온 연도(올해 기준 과거 최대 5개년)까지 포함됩니다.
-              </p>
               <div className="flex flex-wrap gap-1">
                 {yearOptions.map((y) => {
                   const on = selectedYears.includes(y);
@@ -120,9 +112,6 @@ export default function PaidFilterTable() {
           <tr className="border-b border-slate-100 align-top">
             <th className="align-top px-2 py-2 bg-slate-50 text-[11px] font-semibold text-slate-600 text-left leading-snug">
               도로조건
-              <span className="block font-normal text-[10px] text-slate-400 mt-0.5">
-                ✓ 포함 · 체크 해제 시 제외(DB 축약명)
-              </span>
             </th>
             <td className="px-2 py-1.5">
               <IncludeToggleGrid
@@ -136,9 +125,6 @@ export default function PaidFilterTable() {
           <tr className="border-b border-slate-100 align-top">
             <th className="align-top px-2 py-2 bg-slate-50 text-[11px] font-semibold text-slate-600 text-left leading-snug">
               면적구분
-              <span className="block font-normal text-[10px] text-slate-400 mt-0.5">
-                ✓ 포함 · 체크 해제 시 제외
-              </span>
             </th>
             <td className="px-2 py-1.5">
               <div className={customAreaSpan ? "opacity-45 pointer-events-none" : ""}>
@@ -159,9 +145,6 @@ export default function PaidFilterTable() {
           <tr className="border-b border-slate-100 align-top">
             <th className="align-top px-2 py-2 bg-slate-50 text-[11px] font-semibold text-slate-600 text-left leading-snug">
               면적(㎡) 범위
-              <span className="block font-normal text-[10px] text-slate-400 mt-0.5">
-                선택 시 계약면적만 필터 (광소/정상/광대 무시)
-              </span>
             </th>
             <td className="px-2 py-2 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
@@ -218,9 +201,6 @@ export default function PaidFilterTable() {
                   범위 지우기
                 </button>
               </div>
-              <p className="text-[10px] text-slate-400 leading-snug">
-                한쪽만 넣으면 반대쪽은 제한 없음. 비우면 다시 면적구분(광소·정상·광대) 칩이 적용됩니다.
-              </p>
             </td>
           </tr>
 
@@ -271,7 +251,7 @@ export default function PaidFilterTable() {
                       }
                       className="rounded"
                     />
-                    단가 Tukey 펜스로 이상치 제외 후 집계 (Q1−k×IQR ~ Q3+k×IQR)
+                    이상치 제외 (IQR)
                   </label>
                   <div
                     className={`flex flex-wrap items-center gap-2 pt-0.5 ${
@@ -297,9 +277,6 @@ export default function PaidFilterTable() {
                       </label>
                     ))}
                   </div>
-                  <p className="text-[10px] text-slate-400 leading-snug">
-                    k가 작을수록 더 많은 극단 단가가 제외됩니다. 기존 고정값은 k=3(보수적)에 해당합니다.
-                  </p>
                 </td>
               </tr>
             </>
@@ -307,29 +284,6 @@ export default function PaidFilterTable() {
 
           <tr className="border-t border-slate-200 bg-slate-50/80">
             <td colSpan={2} className="p-3">
-              <p className="text-[10px] text-slate-600 leading-relaxed mb-2">
-                <span className="font-semibold text-slate-700">필터 분석에 쓰이는 법정동·리 코드</span>:{" "}
-                <span className="tabular-nums font-bold text-indigo-800">
-                  {resolvedRegionCodes.length.toLocaleString()}
-                </span>
-                곳 (지역 선택이 카탈로그에서 확장된 수). 동·리 법정단위 줄과 읍·면 행정 단위 칩을 합쳐 선택한 개수 최대{" "}
-                {MAX_PAID_LEAF_BEOPJUNGRI_PICK}곳까지입니다. 상위 행정(시도·구·읍면동·[시] 등)만 골라도 매칭되는
-                동·리 코드 전부가 포함됩니다.
-                {resolvedRegionCodes.length > MAX_V2_STATS_BULK_CODES ? (
-                  <span className="block mt-1.5 text-amber-900/90">
-                    기본통계 벌크 선조회(/free/v2/stats/bulk)는 코드{" "}
-                    <span className="tabular-nums">{MAX_V2_STATS_BULK_CODES}</span>
-                    건 한도입니다. 초과하면 선조회에 실패할 수 있고, 그때는 동일 선택의 전 코드로 거래 원장 집계로
-                    이어져 기본통계 카드와 표본이 달라질 수 있습니다(화면 안내 참고).
-                  </span>
-                ) : null}
-                {upperOnlySelection != null && resolvedRegionCodes.length > 0 ? (
-                  <span className="block mt-1.5 text-slate-500">
-                    지금은 상위 행정만 선택된 상태입니다. 위 기본통계 카드가 사전집계라면 필터 분석은 산하{" "}
-                    {resolvedRegionCodes.length.toLocaleString()}곳을 원장에서 다시 거릅니다.
-                  </span>
-                ) : null}
-              </p>
               {filterError ? (
                 <p className="text-[11px] text-red-600 mb-2">{filterError}</p>
               ) : null}
@@ -340,9 +294,6 @@ export default function PaidFilterTable() {
               >
                 필터 분석 실행
               </button>
-              <p className="mt-2 text-[10px] text-slate-500 text-center">
-                위 설정(연도·도로·면적 등)으로 용도×지목 매트릭스를 만듭니다.
-              </p>
             </td>
           </tr>
         </tbody>

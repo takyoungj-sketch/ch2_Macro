@@ -262,6 +262,68 @@ def _by_year_upper(
     )
 
 
+def _by_year_upper_calendar_reference(
+    db: Session,
+    *,
+    level: RegionLevel,
+    code: str,
+    period_start: date,
+    period_end: date,
+) -> list[YearlyTradeStat]:
+    items: list[YearlyTradeStat] = []
+
+    def stat_for_calendar_year(y: int) -> YearlyTradeStat:
+        d0, d1 = date(y, 1, 1), date(y, 12, 31)
+        if level == "city":
+            sgs = _sigungu_codes_for_city_bucket(db, code)
+            if not sgs:
+                return YearlyTradeStat(year=y, count=0)
+            in_clause = ", ".join(f":ca{i}" for i in range(len(sgs)))
+            params = {f"ca{i}": s for i, s in enumerate(sgs)}
+            params["d0"] = d0
+            params["d1"] = d1
+            where = f"btrim(sigungu_code::text) IN ({in_clause})"
+        else:
+            where = _LEVEL_TX_WHERE[level]
+            params = {"code": code, "d0": d0, "d1": d1}
+
+        row = db.execute(
+            text(
+                f"""
+                SELECT COUNT(*)::int AS cnt,
+                       COALESCE(SUM(total_price_10k), 0) AS sum_price,
+                       COALESCE(SUM(area_sqm), 0) AS sum_area
+                FROM land_transactions
+                WHERE {where}
+                  AND is_valid IS TRUE
+                  AND contract_date IS NOT NULL
+                  AND contract_date >= :d0 AND contract_date <= :d1
+                """
+            ),
+            params,
+        ).fetchone()
+
+        if row and int(row.cnt or 0) > 0:
+            cnt = int(row.cnt)
+            sp = float(row.sum_price)
+            sa = float(row.sum_area)
+            unit = (sp / sa) if sa > 0 else None
+            return YearlyTradeStat(
+                year=y,
+                count=cnt,
+                total_price_10k_sum=sp,
+                area_sqm_sum=sa,
+                unit_price_per_sqm=unit,
+            )
+        return YearlyTradeStat(year=y, count=0)
+
+    for y in range(int(period_start.year), int(period_end.year) + 1):
+        items.append(stat_for_calendar_year(y))
+    return attach_population_year_end_for_upper_level(
+        db, level=level, upper_code=code, items=items
+    )
+
+
 @router.get(
     "/upper-stats/{level}/{code}",
     response_model=UpperStatsV2Response,
@@ -328,6 +390,13 @@ def get_upper_stats(
         period_start=period_start,
         period_end=period_end,
     )
+    by_year_calendar_reference = _by_year_upper_calendar_reference(
+        db,
+        level=level,
+        code=code,
+        period_start=period_start,
+        period_end=period_end,
+    )
 
     return UpperStatsV2Response(
         region_level=level,
@@ -340,6 +409,7 @@ def get_upper_stats(
         window_years=window_years,
         total=total,
         by_year=by_year,
+        by_year_calendar_reference=by_year_calendar_reference,
         by_zone=by_zone,
         by_land_category=by_land_category,
         matrix=matrix,

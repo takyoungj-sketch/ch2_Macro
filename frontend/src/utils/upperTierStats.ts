@@ -46,5 +46,6 @@ export function upperToFreeStatsShape(up: UpperStatsV2Response): FreeStatsV2Resp
     matrix: up.matrix,
     stats_excluded_codes: [],
     analysis_base_key: null,
+    by_year_calendar_reference: up.by_year_calendar_reference,
   };
 }

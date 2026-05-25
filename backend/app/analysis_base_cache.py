@@ -23,17 +23,17 @@ BASE_CACHE_TTL_HOURS = 4
 def _paid_ui_chip_year_bounds() -> tuple[int, int]:
     """
     유료 필터 칩 연도 구간과 동일해야 함 (`frontend/constants/paidFilters.ts` 의 getPaidYearButtonYears).
-    당해 기준 CY-5 … CY-1.
+    당해 기준 CY-5 … CY (올해 포함 6개년).
     """
 
     cy = date.today().year
-    return cy - 5, cy - 1
+    return cy - 5, cy
 
 
 def _expanded_row_cache_bounds(year_from_basic: int, year_to_basic: int) -> tuple[int, int]:
     """
     기본 통계 사전집계 창 ∪ 유료 칩 가능 구간 을 포함.
-    그렇지 않으면 기본통계는 22~25만 되어도 칩으로 21을 선택해도 캐시 row_ids 에 21년이 없어 필터 결과가 빈다.
+    그렇지 않으면 기본통계 창이 일부 연도만 되어도 칩으로 21 등을 선택해도 캐시 row_ids 에 해당 연도가 없어 필터 결과가 빈다.
     """
     yf_chip, yt_chip = _paid_ui_chip_year_bounds()
     return min(int(year_from_basic), yf_chip), max(int(year_to_basic), yt_chip)
@@ -66,7 +66,7 @@ def create_analysis_base_cache(
 ) -> str | None:
     """
     선택 지역 후보 거래 id 캐시.
-    저장 구간은 (기본통계 연도 ∪ 유료 필터 칩 구간 CY-5…CY-1) 로 넓히며,
+    저장 구간은 (기본통계 연도 ∪ 유료 필터 칩 구간 CY-5…CY) 로 넓히며,
     두 번째 단계 필터 연도 선택이 가능한 모든 칩값을 커버한다.
     """
 

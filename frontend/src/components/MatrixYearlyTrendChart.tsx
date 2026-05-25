@@ -1,11 +1,12 @@
 import type { MatrixYearlyStat } from "../types";
+import { formatMatrixBucketAxisLabel } from "../utils/matrixYearlyLabels";
 
 const W = 420;
 const H = 230;
 const PAD_L = 28;
 const PAD_R = 28;
 const PAD_T = 44;
-const PAD_B = 36;
+const PAD_B = 42;
 
 const LABEL_MEAN_ABOVE = 10;
 const LABEL_COUNT_BELOW = 12;
@@ -30,20 +31,30 @@ function niceStep(max: number, targetTicks = 4): number {
   return step * pow10;
 }
 
-const COUNT_LINE = "#94a3b8";
 const COUNT_MARKER_STROKE = "#787f89";
+const COUNT_DASH_LINE = "#94a3b8";
 
-/** 연도별 평균 단가·거래 건수 꺾은선 (SVG, 이중 Y축 좌 평균 · 우 건수; 축 숫자는 표시 안 함) */
+function rowSortKey(r: MatrixYearlyStat): number {
+  if (r.bucket_index != null && Number.isFinite(r.bucket_index)) return r.bucket_index;
+  if (r.year != null && Number.isFinite(r.year)) return r.year;
+  return 0;
+}
+
+function rowKey(r: MatrixYearlyStat, i: number): string {
+  if (r.bucket_index != null) return `b${r.bucket_index}`;
+  if (r.year != null) return `y${r.year}`;
+  return `i${i}`;
+}
+
+/** 연도·또는 롤링 구간별 평균 단가(꺾은선)·거래 건수(점선+점) */
 export default function MatrixYearlyTrendChart({ rows }: { rows: MatrixYearlyStat[] }) {
-  const sorted = [...rows].sort((a, b) => a.year - b.year);
+  const sorted = [...rows].sort((a, b) => rowSortKey(a) - rowSortKey(b));
   if (sorted.length === 0) return null;
 
   const innerW = W - PAD_L - PAD_R;
   const innerH = H - PAD_T - PAD_B;
-
-  const yearMin = sorted[0]!.year;
-  const yearMax = sorted[sorted.length - 1]!.year;
-  const yearSpan = Math.max(yearMax - yearMin, 1);
+  const n = sorted.length;
+  const lastI = Math.max(n - 1, 1);
 
   const countMax = Math.max(...sorted.map((r) => r.count), 1);
   const countTick = niceStep(countMax);
@@ -63,26 +74,25 @@ export default function MatrixYearlyTrendChart({ rows }: { rows: MatrixYearlySta
   const meanAxisMin = hasMean ? Math.floor(meanMin / meanTick) * meanTick : 0;
   const meanAxisMax = hasMean ? Math.ceil(meanMax / meanTick) * meanTick : 1;
 
-  const xAt = (y: number) => PAD_L + ((y - yearMin) / yearSpan) * innerW;
-  const yCount = (c: number) =>
-    PAD_T + innerH - (c / countAxisMax) * innerH;
+  const xAt = (i: number) => PAD_L + (n <= 1 ? innerW / 2 : (i / lastI) * innerW);
+  const yCount = (c: number) => PAD_T + innerH - (c / countAxisMax) * innerH;
   const yMean = (m: number) =>
     PAD_T +
     innerH -
     ((m - meanAxisMin) / (meanAxisMax - meanAxisMin || 1)) * innerH;
 
-  const countPoints = sorted
-    .map((r) => `${xAt(r.year).toFixed(1)},${yCount(r.count).toFixed(1)}`)
+  const countDashPoints = sorted
+    .map((r, i) => `${xAt(i).toFixed(1)},${yCount(r.count).toFixed(1)}`)
     .join(" ");
 
   const meanLineRows = sorted.filter(
     (r) => r.mean_unit_price_per_sqm != null && Number.isFinite(r.mean_unit_price_per_sqm)
   );
   const meanPoints = meanLineRows
-    .map(
-      (r) =>
-        `${xAt(r.year).toFixed(1)},${yMean(Number(r.mean_unit_price_per_sqm)).toFixed(1)}`
-    )
+    .map((r) => {
+      const idx = sorted.indexOf(r);
+      return `${xAt(idx).toFixed(1)},${yMean(Number(r.mean_unit_price_per_sqm)).toFixed(1)}`;
+    })
     .join(" ");
 
   const countTicks: number[] = [];
@@ -98,14 +108,27 @@ export default function MatrixYearlyTrendChart({ rows }: { rows: MatrixYearlySta
   }
 
   return (
-    <div className="w-full" role="img" aria-label="연도별 평균 단가 및 거래 건수 추이 그래프">
+    <div className="w-full" role="img" aria-label="구간별 평균 단가 및 거래 건수 추이 그래프">
       <p className="text-[10px] text-slate-500 mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
         <span className="inline-flex items-center gap-1 font-bold text-blue-600">
           <span className="inline-block w-3 h-0.5 bg-blue-600 rounded" aria-hidden />
           평균(만원/㎡)
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="inline-block w-3 h-0.5 rounded bg-slate-400" aria-hidden />
+          <svg width={22} height={10} viewBox="0 0 22 10" className="shrink-0 text-slate-500" aria-hidden>
+            <line
+              x1="1"
+              y1="5"
+              x2="14"
+              y2="5"
+              stroke={COUNT_DASH_LINE}
+              strokeWidth="1.4"
+              strokeDasharray="3 5"
+              strokeOpacity={0.55}
+              strokeLinecap="round"
+            />
+            <circle cx="17" cy="5" r="3" fill="#fff" stroke={COUNT_MARKER_STROKE} strokeWidth="1.6" />
+          </svg>
           거래 건수
         </span>
       </p>
@@ -114,7 +137,6 @@ export default function MatrixYearlyTrendChart({ rows }: { rows: MatrixYearlySta
         className="w-full h-auto max-h-[240px] text-slate-500"
         preserveAspectRatio="xMidYMid meet"
       >
-        {/* 수평 격자: 평균(좌) 눈금 기준 */}
         {hasMean &&
           meanTicks.map((v) => {
             const y = yMean(v);
@@ -149,31 +171,34 @@ export default function MatrixYearlyTrendChart({ rows }: { rows: MatrixYearlySta
             );
           })}
 
-        {sorted.map((r) => (
+        {sorted.map((r, i) => (
           <text
-            key={`xl-${r.year}`}
-            x={xAt(r.year)}
-            y={H - 10}
+            key={`xl-${rowKey(r, i)}`}
+            x={xAt(i)}
+            y={H - 8}
             textAnchor="middle"
-            className="fill-slate-600 text-[10px] font-medium"
+            className={`fill-slate-600 font-medium ${n > 6 ? "text-[7.5px]" : "text-[9px]"}`}
           >
-            {r.year}
+            {formatMatrixBucketAxisLabel(r)}
           </text>
         ))}
 
-        {/* 꺾은선: 건수 (회색) */}
-        <polyline
-          fill="none"
-          stroke={COUNT_LINE}
-          strokeWidth={2}
-          strokeLinejoin="round"
-          strokeLinecap="round"
-          points={countPoints}
-        />
-        {sorted.map((r) => (
+        {n >= 2 && (
+          <polyline
+            fill="none"
+            stroke={COUNT_DASH_LINE}
+            strokeWidth={1.25}
+            strokeDasharray="3 5"
+            strokeOpacity={0.48}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            points={countDashPoints}
+          />
+        )}
+        {sorted.map((r, i) => (
           <circle
-            key={`c-${r.year}`}
-            cx={xAt(r.year)}
+            key={`c-${rowKey(r, i)}`}
+            cx={xAt(i)}
             cy={yCount(r.count)}
             r={3.5}
             fill="#fff"
@@ -182,12 +207,12 @@ export default function MatrixYearlyTrendChart({ rows }: { rows: MatrixYearlySta
           />
         ))}
 
-        {sorted.map((r) => {
-          const xc = xAt(r.year);
+        {sorted.map((r, i) => {
+          const xc = xAt(i);
           const yc = yCount(r.count);
           return (
             <text
-              key={`cl-${r.year}`}
+              key={`cl-${rowKey(r, i)}`}
               x={xc}
               y={yc + LABEL_COUNT_BELOW}
               textAnchor="middle"
@@ -201,7 +226,6 @@ export default function MatrixYearlyTrendChart({ rows }: { rows: MatrixYearlySta
           );
         })}
 
-        {/* 꺾은선: 평균 (파랑) */}
         {meanLineRows.length > 0 && (
           <>
             <polyline
@@ -212,24 +236,28 @@ export default function MatrixYearlyTrendChart({ rows }: { rows: MatrixYearlySta
               strokeLinecap="round"
               points={meanPoints}
             />
-            {meanLineRows.map((r) => (
-              <circle
-                key={`mpt-${r.year}`}
-                cx={xAt(r.year)}
-                cy={yMean(Number(r.mean_unit_price_per_sqm))}
-                r={3.5}
-                fill="#fff"
-                stroke="#2563eb"
-                strokeWidth={2}
-              />
-            ))}
+            {meanLineRows.map((r) => {
+              const idx = sorted.indexOf(r);
+              return (
+                <circle
+                  key={`mpt-${rowKey(r, idx)}`}
+                  cx={xAt(idx)}
+                  cy={yMean(Number(r.mean_unit_price_per_sqm))}
+                  r={3.5}
+                  fill="#fff"
+                  stroke="#2563eb"
+                  strokeWidth={2}
+                />
+              );
+            })}
             {meanLineRows.map((r) => {
               const ym = Number(r.mean_unit_price_per_sqm);
+              const idx = sorted.indexOf(r);
               const cy = yMean(ym);
               return (
                 <text
-                  key={`ml-${r.year}`}
-                  x={xAt(r.year)}
+                  key={`ml-${rowKey(r, idx)}`}
+                  x={xAt(idx)}
                   y={cy - LABEL_MEAN_ABOVE}
                   textAnchor="middle"
                   dominantBaseline="auto"

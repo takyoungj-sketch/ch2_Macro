@@ -7,7 +7,8 @@ export default function FreeStatsWindowToggle({
 }: {
   idPrefix?: string;
 }) {
-  const windowYears = useAppStore((s) => normalizeFreeStatsWindowYears(s.freeStatsWindowYears));  const setWindowYears = useAppStore((s) => s.setFreeStatsWindowYears);
+  const windowYears = useAppStore((s) => normalizeFreeStatsWindowYears(s.freeStatsWindowYears));
+  const setWindowYears = useAppStore((s) => s.setFreeStatsWindowYears);
 
   const choice = (y: FreeStatsWindowYears, label: string) => {
     const active = windowYears === y;

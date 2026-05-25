@@ -376,6 +376,99 @@ def _by_year_bulk_contract_date(
     return attach_population_year_end(db, region_codes=codes, items=by_year)
 
 
+def _jan_dec_for_calendar_year(y: int) -> tuple[date, date]:
+    return date(y, 1, 1), date(y, 12, 31)
+
+
+def _by_year_calendar_reference_single(
+    db: Session,
+    code_trim: str,
+    *,
+    period_start: date,
+    period_end: date,
+) -> list[YearlyTradeStat]:
+    """참고 표: 각 달력연도별 contract_date 그 연도만 1·1~12·31."""
+    items: list[YearlyTradeStat] = []
+    for y in range(int(period_start.year), int(period_end.year) + 1):
+        d0, d1 = _jan_dec_for_calendar_year(y)
+        row = db.execute(
+            text(
+                """
+                SELECT COUNT(*)::int AS cnt,
+                       COALESCE(SUM(total_price_10k), 0) AS sum_price,
+                       COALESCE(SUM(area_sqm), 0) AS sum_area
+                FROM land_transactions
+                WHERE btrim(cast(beopjungri_code AS text)) = :code_trim
+                  AND is_valid IS TRUE
+                  AND contract_date IS NOT NULL
+                  AND contract_date >= :d0 AND contract_date <= :d1
+                """
+            ),
+            {"code_trim": code_trim, "d0": d0, "d1": d1},
+        ).fetchone()
+        if row and int(row.cnt or 0) > 0:
+            cnt = int(row.cnt)
+            sp = float(row.sum_price)
+            sa = float(row.sum_area)
+            unit = (sp / sa) if sa > 0 else None
+            items.append(
+                YearlyTradeStat(
+                    year=y,
+                    count=cnt,
+                    total_price_10k_sum=sp,
+                    area_sqm_sum=sa,
+                    unit_price_per_sqm=unit,
+                )
+            )
+        else:
+            items.append(YearlyTradeStat(year=y, count=0))
+    return attach_population_year_end(db, region_codes=[code_trim], items=items)
+
+
+def _by_year_calendar_reference_bulk(
+    db: Session,
+    codes: list[str],
+    *,
+    period_start: date,
+    period_end: date,
+) -> list[YearlyTradeStat]:
+    items: list[YearlyTradeStat] = []
+    for y in range(int(period_start.year), int(period_end.year) + 1):
+        d0, d1 = _jan_dec_for_calendar_year(y)
+        row = db.execute(
+            text(
+                """
+                SELECT COUNT(*)::int AS cnt,
+                       COALESCE(SUM(total_price_10k), 0) AS sum_price,
+                       COALESCE(SUM(area_sqm), 0) AS sum_area
+                FROM land_transactions
+                WHERE btrim(cast(beopjungri_code AS text)) = ANY(:codes)
+                  AND is_valid IS TRUE
+                  AND contract_date IS NOT NULL
+                  AND contract_date >= :d0 AND contract_date <= :d1
+                """
+            ),
+            {"codes": codes, "d0": d0, "d1": d1},
+        ).fetchone()
+        if row and int(row.cnt or 0) > 0:
+            cnt = int(row.cnt)
+            sp = float(row.sum_price)
+            sa = float(row.sum_area)
+            unit = (sp / sa) if sa > 0 else None
+            items.append(
+                YearlyTradeStat(
+                    year=y,
+                    count=cnt,
+                    total_price_10k_sum=sp,
+                    area_sqm_sum=sa,
+                    unit_price_per_sqm=unit,
+                )
+            )
+        else:
+            items.append(YearlyTradeStat(year=y, count=0))
+    return attach_population_year_end(db, region_codes=codes, items=items)
+
+
 @router.get(
     "/meta/as-of",
     response_model=FreeStatsV2MetaAsOfResponse,
@@ -494,6 +587,9 @@ def get_basic_stats_v2(
     ]
 
     by_year = _by_year_contract_date(db, code_trim, ps, pe)
+    by_year_calendar_reference = _by_year_calendar_reference_single(
+        db, code_trim, period_start=ps, period_end=pe
+    )
 
     return FreeStatsV2Response(
         beopjungri_code=beopjungri_code,
@@ -505,6 +601,7 @@ def get_basic_stats_v2(
         window_years=window_years,
         total=total,
         by_year=by_year,
+        by_year_calendar_reference=by_year_calendar_reference,
         by_zone=by_zone,
         by_land_category=by_land_category,
         matrix=matrix,
@@ -558,6 +655,9 @@ def get_basic_stats_v2_bulk(
         db, kept, ps, pe
     )
     by_year = _by_year_bulk_contract_date(db, kept, ps, pe)
+    by_year_calendar_reference = _by_year_calendar_reference_bulk(
+        db, kept, period_start=ps, period_end=pe
+    )
 
     return FreeStatsV2Response(
         beopjungri_code=",".join(kept),
@@ -569,6 +669,7 @@ def get_basic_stats_v2_bulk(
         window_years=payload.window_years,
         total=total,
         by_year=by_year,
+        by_year_calendar_reference=by_year_calendar_reference,
         by_zone=by_zone,
         by_land_category=by_land_category,
         matrix=matrix,

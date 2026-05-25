@@ -5,14 +5,50 @@ import {
 } from "../api/client";
 import { simpleTableHeadClass } from "../constants/displayUi";
 import type {
+  MatrixCellHistogramRequest,
   MatrixCellHistogramResponse,
   MatrixCellTransactionsResponse,
   MatrixYearlyRequest,
   MatrixYearlyStat,
 } from "../types";
 import { parseApiError } from "../utils/apiError";
+import { formatMatrixBucketAxisLabel } from "../utils/matrixYearlyLabels";
 import MatrixCellHistogramChart from "./MatrixCellHistogramChart";
 import MatrixYearlyTrendChart from "./MatrixYearlyTrendChart";
+
+function sortMatrixRows(rows: MatrixYearlyStat[]): MatrixYearlyStat[] {
+  return [...rows].sort((a, b) => {
+    const ka =
+      a.bucket_index != null && Number.isFinite(Number(a.bucket_index))
+        ? Number(a.bucket_index)
+        : a.year ?? 0;
+    const kb =
+      b.bucket_index != null && Number.isFinite(Number(b.bucket_index))
+        ? Number(b.bucket_index)
+        : b.year ?? 0;
+    return ka - kb;
+  });
+}
+
+function detectRollingBucketRows(rows: MatrixYearlyStat[]): boolean {
+  return rows.some(
+    (r) => r.bucket_index != null && Number.isFinite(Number(r.bucket_index)),
+  );
+}
+
+function formatIsoDateBrief(d: string | null | undefined): string {
+  if (!d || typeof d !== "string") return "";
+  const t = d.slice(0, 10);
+  return t || d;
+}
+
+function rowStableKey(r: MatrixYearlyStat, idx: number): string {
+  if (r.bucket_index != null && Number.isFinite(Number(r.bucket_index))) {
+    return `b:${r.bucket_index}`;
+  }
+  if (r.year != null) return `y:${r.year}`;
+  return `i:${idx}`;
+}
 
 interface Props {
   open: boolean;
@@ -46,7 +82,8 @@ export default function PaidMatrixYearlyModal({
 }: Props) {
   const [panel, setPanel] = useState<PanelMode>("trend");
   const [histScope, setHistScope] = useState<"all" | "single">("all");
-  const [histYear, setHistYear] = useState<number | null>(null);
+  /** calendar year 또는 롤링 bucket_index (histogram single 대상 키) */
+  const [histSliceKey, setHistSliceKey] = useState<number | null>(null);
   const [histLoading, setHistLoading] = useState(false);
   const [histError, setHistError] = useState<string | null>(null);
   const [histData, setHistData] = useState<MatrixCellHistogramResponse | null>(null);
@@ -60,7 +97,7 @@ export default function PaidMatrixYearlyModal({
     if (open) {
       setPanel("trend");
       setHistScope("all");
-      setHistYear(null);
+      setHistSliceKey(null);
       setHistData(null);
       setHistError(null);
       setTxOffset(0);
@@ -69,39 +106,61 @@ export default function PaidMatrixYearlyModal({
     }
   }, [open, zoneType, landCategory]);
 
-  const sortedRows = useMemo(
-    () => [...rows].sort((a, b) => a.year - b.year),
-    [rows]
+  const sortedRows = useMemo(() => sortMatrixRows(rows), [rows]);
+
+  const isRolling = useMemo(
+    () =>
+      Boolean(
+        (filterRequest?.rolling_matrix_period_end &&
+          filterRequest?.rolling_bucket_count != null &&
+          filterRequest.rolling_bucket_count > 0) ||
+          detectRollingBucketRows(rows),
+      ),
+    [filterRequest, rows],
   );
 
   useEffect(() => {
     if (sortedRows.length === 0) return;
-    setHistYear((y) => {
-      const years = sortedRows.map((r) => r.year);
-      if (y != null && years.includes(y)) return y;
-      return years[0]!;
+    const keys = sortedRows
+      .map((r) => (isRolling ? r.bucket_index : r.year))
+      .filter((k): k is number => typeof k === "number" && Number.isFinite(k));
+    if (keys.length === 0) return;
+    setHistSliceKey((prev) => {
+      if (prev != null && keys.includes(prev)) return prev;
+      return keys[0]!;
     });
-  }, [sortedRows]);
+  }, [sortedRows, isRolling]);
 
   useEffect(() => {
     if (!open || panel !== "histogram" || !filterRequest) return;
-    const yearForReq =
+    const sliceKeyForReq =
       histScope === "single"
-        ? histYear ?? sortedRows[0]?.year ?? null
+        ? isRolling
+          ? histSliceKey ?? sortedRows[0]?.bucket_index ?? null
+          : histSliceKey ?? sortedRows[0]?.year ?? null
         : null;
-    if (histScope === "single" && yearForReq == null) return;
+    if (histScope === "single" && sliceKeyForReq == null) return;
 
     let cancelled = false;
     (async () => {
       setHistLoading(true);
       setHistError(null);
       try {
-        const body = {
+        const body: MatrixCellHistogramRequest = {
           ...filterRequest,
           histogram_scope: histScope,
-          histogram_year: yearForReq,
           bin_count: 20,
         };
+        if (histScope === "all") {
+          body.histogram_year = null;
+          body.histogram_bucket_index = null;
+        } else if (isRolling) {
+          body.histogram_bucket_index = sliceKeyForReq;
+          body.histogram_year = null;
+        } else {
+          body.histogram_year = sliceKeyForReq;
+          body.histogram_bucket_index = null;
+        }
         const data = await fetchMatrixCellHistogram(body);
         if (!cancelled) setHistData(data);
       } catch (e) {
@@ -116,7 +175,7 @@ export default function PaidMatrixYearlyModal({
     return () => {
       cancelled = true;
     };
-  }, [open, panel, filterRequest, histScope, histYear, sortedRows]);
+  }, [open, panel, filterRequest, histScope, histSliceKey, isRolling, sortedRows]);
 
   useEffect(() => {
     if (!open || panel !== "transactions" || !filterRequest) return;
@@ -154,6 +213,17 @@ export default function PaidMatrixYearlyModal({
 
   const canDetail = Boolean(filterRequest) && !loading && !error && rows.length > 0;
 
+  const histogramRollingBucketLabel =
+    histData?.histogram_bucket_index != null
+      ? (() => {
+          const bi = histData.histogram_bucket_index;
+          const rm = sortedRows.find(
+            (r) => r.bucket_index != null && r.bucket_index === bi,
+          );
+          return rm ? formatMatrixBucketAxisLabel(rm) : `버킷 ${bi}`;
+        })()
+      : null;
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/35"
@@ -168,14 +238,14 @@ export default function PaidMatrixYearlyModal({
         <div className="flex justify-between items-start gap-2 px-4 py-3 border-b border-slate-100">
           <div className="min-w-0 flex-1">
             <h2 id="paid-matrix-yearly-title" className="text-sm font-bold text-slate-800">
-              연도별 평균 변동
+              {isRolling ? "롤링 구간별 평균 변동" : "연도별 평균 변동"}
             </h2>
             <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
               용도 <span className="font-semibold text-slate-700">{zoneType}</span> · 지목{" "}
               <span className="font-semibold text-slate-700">{landCategory}</span>
-              <span className="block text-[10px] mt-1 text-slate-400">
-                {scopeNote ?? "선택한 분석 필터 및 지역 범위가 그대로 적용됩니다."}
-              </span>
+              {scopeNote ? (
+                <span className="block text-[10px] mt-1 text-slate-400">{scopeNote}</span>
+              ) : null}
             </p>
             {canDetail && (
               <div
@@ -220,30 +290,36 @@ export default function PaidMatrixYearlyModal({
 
         <div className="flex-1 overflow-auto px-4 py-3 space-y-4">
           {loading && (
-            <p className="text-xs text-slate-400 text-center py-6">연도별 집계 중…</p>
+            <p className="text-xs text-slate-400 text-center py-6">
+              {isRolling ? "구간별 집계 중…" : "연도별 집계 중…"}
+            </p>
           )}
           {error && (
             <p className="text-xs text-red-500 text-center py-6">{error}</p>
           )}
           {!loading && !error && rows.length === 0 && (
-            <p className="text-xs text-slate-400 text-center py-6">표시할 연도별 데이터가 없습니다.</p>
+            <p className="text-xs text-slate-400 text-center py-6">
+              {isRolling ? "표시할 구간별 데이터가 없습니다." : "표시할 연도별 데이터가 없습니다."}
+            </p>
           )}
 
           {canDetail && panel === "trend" && (
             <>
               <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3">
                 <p className="text-[10px] font-semibold text-slate-600 px-1 mb-2">추이 (꺾은선)</p>
-                <MatrixYearlyTrendChart rows={rows} />
+                <MatrixYearlyTrendChart rows={sortedRows} />
               </div>
               <div className="rounded-lg border border-slate-100 bg-white overflow-hidden">
                 <p className="text-[10px] font-semibold text-slate-600 px-3 pt-3 pb-1">
-                  연도별 수치 (같은 조건 요약 집계)
+                  {isRolling
+                    ? "구간별 수치 (같은 조건 요약 집계)"
+                    : "연도별 수치 (같은 조건 요약 집계)"}
                 </p>
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className={simpleTableHeadClass("neutral")}>
                       <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">
-                        연도
+                        {isRolling ? "구간" : "연도"}
                       </th>
                       <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">
                         건수
@@ -254,9 +330,11 @@ export default function PaidMatrixYearlyModal({
                     </tr>
                   </thead>
                   <tbody className="text-slate-800">
-                    {sortedRows.map((r) => (
-                      <tr key={r.year}>
-                        <td className="border border-slate-200 px-2 py-1 tabular-nums">{r.year}</td>
+                    {sortedRows.map((r, ri) => (
+                      <tr key={rowStableKey(r, ri)}>
+                        <td className="border border-slate-200 px-2 py-1 tabular-nums">
+                          {formatMatrixBucketAxisLabel(r)}
+                        </td>
                         <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
                           {r.count.toLocaleString("ko-KR")}
                         </td>
@@ -287,20 +365,24 @@ export default function PaidMatrixYearlyModal({
                   }
                   className="border border-slate-200 rounded px-2 py-1 bg-white text-slate-800"
                 >
-                  <option value="all">필터 연도 전체</option>
-                  <option value="single">특정 연도만</option>
+                  <option value="all">{isRolling ? "필터 구간 전체" : "필터 연도 전체"}</option>
+                  <option value="single">{isRolling ? "특정 구간만" : "특정 연도만"}</option>
                 </select>
                 {histScope === "single" && (
                   <select
-                    value={histYear ?? ""}
-                    onChange={(e) => setHistYear(Number(e.target.value))}
+                    value={histSliceKey ?? ""}
+                    onChange={(e) => setHistSliceKey(Number(e.target.value))}
                     className="border border-slate-200 rounded px-2 py-1 bg-white text-slate-800"
                   >
-                    {sortedRows.map((r) => (
-                      <option key={r.year} value={r.year}>
-                        {r.year}년 ({r.count.toLocaleString("ko-KR")}건)
-                      </option>
-                    ))}
+                    {sortedRows.map((r, ri) => {
+                      const optVal = isRolling ? r.bucket_index : r.year;
+                      if (optVal == null) return null;
+                      return (
+                        <option key={rowStableKey(r, ri)} value={optVal}>
+                          {formatMatrixBucketAxisLabel(r)} ({r.count.toLocaleString("ko-KR")}건)
+                        </option>
+                      );
+                    })}
                   </select>
                 )}
               </div>
@@ -322,11 +404,30 @@ export default function PaidMatrixYearlyModal({
                         (IQR×{histData.outlier_iqr_multiplier})
                       </span>
                     ) : null}
-                    {histData.histogram_scope === "single" && histData.histogram_year != null ? (
-                      <span>
-                        {" "}
-                        · 대상 연도 <strong className="text-slate-700">{histData.histogram_year}</strong>
-                      </span>
+                    {histData.histogram_scope === "single" ? (
+                      isRolling && histogramRollingBucketLabel ? (
+                        <span>
+                          {" "}
+                          · 대상 구간{" "}
+                          <strong className="text-slate-700">
+                            {histogramRollingBucketLabel}
+                          </strong>
+                          {histData.histogram_period_start &&
+                          histData.histogram_period_end ? (
+                            <span className="text-slate-500">
+                              {" "}
+                              ({formatIsoDateBrief(histData.histogram_period_start)}{" "}
+                              ~ {formatIsoDateBrief(histData.histogram_period_end)})
+                            </span>
+                          ) : null}
+                        </span>
+                      ) : histData.histogram_year != null ? (
+                        <span>
+                          {" "}
+                          · 대상 연도{" "}
+                          <strong className="text-slate-700">{histData.histogram_year}</strong>
+                        </span>
+                      ) : null
                     ) : null}
                   </p>
                   <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-2">
@@ -359,14 +460,11 @@ export default function PaidMatrixYearlyModal({
                     ) : null}
                   </p>
                   <div className="overflow-x-auto rounded-lg border border-slate-100">
-                    <table className="w-full text-[11px] border-collapse min-w-[640px]">
+                    <table className="w-full text-[11px] border-collapse min-w-[520px]">
                       <thead>
                         <tr className={simpleTableHeadClass("neutral")}>
                           <th className="border border-slate-200 px-2 py-1.5 text-left font-medium whitespace-nowrap">
                             계약
-                          </th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium whitespace-nowrap">
-                            지역
                           </th>
                           <th className="border border-slate-200 px-2 py-1.5 text-right font-medium whitespace-nowrap">
                             면적(㎡)
@@ -387,12 +485,6 @@ export default function PaidMatrixYearlyModal({
                           <tr key={r.id}>
                             <td className="border border-slate-200 px-2 py-1 tabular-nums whitespace-nowrap">
                               {r.contract_year}.{String(r.contract_month).padStart(2, "0")}
-                            </td>
-                            <td
-                              className="border border-slate-200 px-2 py-1 max-w-[11rem] truncate"
-                              title={r.beopjungri_name ?? r.beopjungri_code}
-                            >
-                              {r.beopjungri_name ?? r.beopjungri_code}
                             </td>
                             <td className="border border-slate-200 px-2 py-1 text-right tabular-nums whitespace-nowrap">
                               {r.area_sqm != null

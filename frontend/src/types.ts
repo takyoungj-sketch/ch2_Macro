@@ -48,6 +48,7 @@ export interface UpperStatsV2Response {
   by_zone: Record<string, StatsResult>;
   by_land_category: Record<string, StatsResult>;
   matrix: MatrixCell[];
+  by_year_calendar_reference?: YearlyTradeStat[];
 }
 
 /** 무료 통계 V2 API (`/api/free/v2/…`) — 계약일(contract_date) 롤링 창 */
@@ -77,6 +78,8 @@ export interface FreeStatsV2Response {
   by_land_category: Record<string, StatsResult>;
   matrix: MatrixCell[];
   stats_excluded_codes?: string[];
+  /** 참고 만년력 연도별(1·1~12·31) 집계 — 연도 필터 칩과 독립 */
+  by_year_calendar_reference?: YearlyTradeStat[];
 }
 
 /** @deprecated 서버 V1 제거됨 — `FreeStatsV2Response` 사용 */
@@ -123,6 +126,11 @@ export interface PaidAnalysisRequest {
   exclude_outlier: boolean;
   /** 이상치 제외 시 단가 Tukey 펜스 IQR 배수 (1.5 / 2 / 3) */
   outlier_iqr_multiplier: number;
+  /** 매트릭스 셀 모달 롤링 트렌드 — 매트릭스 V2와 동일 contract_date 창이어야 함(ISO yyyy-mm-dd 권장) */
+  rolling_matrix_period_start?: string | null;
+  rolling_matrix_period_end?: string | null;
+  rolling_bucket_count?: number | null;
+  rolling_stats_reference_date?: string | null;
 }
 
 export interface PaidAnalysisResponse {
@@ -146,7 +154,12 @@ export interface PaidAnalysisResponse {
 }
 
 export interface MatrixYearlyStat {
-  year: number;
+  /** 계약연도 모드 레거시 */
+  year?: number | null;
+  bucket_index?: number | null;
+  period_start?: string | null;
+  period_end?: string | null;
+  chart_label?: string | null;
   count: number;
   mean_unit_price_per_sqm: number | null;
 }
@@ -172,6 +185,7 @@ export interface HistogramBin {
 export interface MatrixCellHistogramRequest extends MatrixYearlyRequest {
   histogram_scope?: "all" | "single";
   histogram_year?: number | null;
+  histogram_bucket_index?: number | null;
   bin_count?: number;
 }
 
@@ -183,6 +197,9 @@ export interface MatrixCellHistogramResponse {
   outlier_iqr_multiplier: number;
   histogram_scope: "all" | "single";
   histogram_year?: number | null;
+  histogram_bucket_index?: number | null;
+  histogram_period_start?: string | null;
+  histogram_period_end?: string | null;
   bins: HistogramBin[];
 }
 
