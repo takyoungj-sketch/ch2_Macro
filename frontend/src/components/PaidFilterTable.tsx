@@ -8,7 +8,10 @@ import {
 } from "../constants/paidFilters";
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import { useAppStore } from "../store";
+import type { TwinCitySearchTarget } from "../types";
 import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
+import { resolveTwinAnchorEupmyeondong, resolveTwinAnchorSigungu } from "../utils/twinRegionAnchor";
+import TwinCityModal from "./TwinCityModal";
 import { paidUsesCustomAreaSpan } from "../utils/paidFiltersMap";
 
 export default function PaidFilterTable() {
@@ -25,6 +28,7 @@ export default function PaidFilterTable() {
   } = useAppStore();
   const [advanced, setAdvanced] = useState(false);
   const [filterError, setFilterError] = useState<string | null>(null);
+  const [twinModalTarget, setTwinModalTarget] = useState<TwinCitySearchTarget | null>(null);
 
   const yearOptions = useMemo(() => [...getPaidYearButtonYears()], []);
   const selectedYears = paidRequest.years ?? [];
@@ -36,7 +40,16 @@ export default function PaidFilterTable() {
   });
   const resolvedRegionCodes = useMemo(
     () => resolveUnionBeopjungriCodes(regions, tierSelection),
-    [regions, tierSelection]
+    [regions, tierSelection],
+  );
+
+  const twinEupAnchor = useMemo(
+    () => resolveTwinAnchorEupmyeondong(regions, resolvedRegionCodes),
+    [regions, resolvedRegionCodes],
+  );
+  const twinSigunguAnchor = useMemo(
+    () => resolveTwinAnchorSigungu(regions, resolvedRegionCodes),
+    [regions, resolvedRegionCodes],
   );
   const customAreaSpan = paidUsesCustomAreaSpan(paidRequest);
 
@@ -73,6 +86,25 @@ export default function PaidFilterTable() {
       }
     }
     void runPaidFilteredAnalysis(resolvedRegionCodes);
+  };
+
+  const openTwinModal = () => {
+    setFilterError(null);
+    if (resolvedRegionCodes.length === 0) {
+      setFilterError("먼저 지역을 선택해 주세요.");
+      return;
+    }
+    if (twinEupAnchor != null) {
+      setTwinModalTarget({ kind: "eupmyeondong", anchor: twinEupAnchor });
+      return;
+    }
+    if (twinSigunguAnchor != null) {
+      setTwinModalTarget({ kind: "sigungu", anchor: twinSigunguAnchor });
+      return;
+    }
+    setFilterError(
+      "쌍둥이 도시: 동일 읍면동 또는 동일 시군구로 줄인 뒤 조회할 수 있습니다. 지금은 여러 시군구가 섞였거나, 카탈로그와 매칭되지 않았습니다. 시·군·구 한 곳만 선택해 보세요.",
+    );
   };
 
   return (
@@ -294,10 +326,23 @@ export default function PaidFilterTable() {
               >
                 필터 분석 실행
               </button>
+              <button
+                type="button"
+                onClick={openTwinModal}
+                className="w-full mt-2 py-2 rounded-lg border border-slate-300 bg-white text-slate-800 text-sm font-semibold hover:bg-slate-50 shadow-sm transition-colors"
+              >
+                쌍둥이 도시 찾기
+              </button>
             </td>
           </tr>
         </tbody>
       </table>
+
+      <TwinCityModal
+        open={twinModalTarget != null}
+        onClose={() => setTwinModalTarget(null)}
+        target={twinModalTarget}
+      />
     </div>
   );
 }

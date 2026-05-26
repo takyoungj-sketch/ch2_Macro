@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import math
-from datetime import date
-from typing import Annotated, Literal, Optional
+from datetime import date, datetime
+from typing import Annotated, Any, Literal, Optional
 
 from pydantic import AfterValidator, BaseModel, Field, field_validator, model_validator
 
@@ -545,3 +545,65 @@ class MatrixCellTransactionsResponse(BaseModel):
     exclude_outlier: bool
     outlier_iqr_multiplier: float
     items: list[MatrixCellTransactionItem] = []
+
+
+# ---------------------------------------------------------------------------
+# 쌍둥이 지역 (Twin Region) MVP — twin_region_neighbor_mvp
+# ---------------------------------------------------------------------------
+class TwinRegionLatestBatch(BaseModel):
+    """ twin_region_neighbor_mvp 최신 배치 메타. """
+
+    batch_key: str
+    computed_at: Optional[datetime] = None
+    algorithm_version: int = 1
+    sido_scope_codes: str
+    twin_row_count: int = 0
+
+
+class TwinNeighborItem(BaseModel):
+    rank: int
+    twin_sigungu_code: str
+    twin_sigungu_name: str
+    twin_sido_code: str
+    twin_sido_name: str
+    similarity_score: float
+    detail_scores: dict[str, Any] = Field(default_factory=dict)
+
+
+class TwinNeighborsForSigunguResponse(BaseModel):
+    batch_key: str
+    computed_at: Optional[datetime] = None
+    algorithm_version: int = 1
+    sido_scope_codes: str
+    anchor_sigungu_code: str
+    anchor_sigungu_name: str
+    anchor_sido_code: str
+    anchor_sido_name: str
+    neighbors: list[TwinNeighborItem] = []
+
+
+# twin_eupmyeondong_neighbor_mvp
+class TwinEupmyeondongNeighborItem(BaseModel):
+    rank: int
+    twin_eupmyeondong_code: str
+    twin_eupmyeondong_name: str
+    twin_sigungu_code: str
+    twin_sigungu_name: str
+    twin_sido_code: str
+    twin_sido_name: str
+    similarity_score: float
+    detail_scores: dict[str, Any] = Field(default_factory=dict)
+
+
+class TwinNeighborsForEupmyeondongResponse(BaseModel):
+    batch_key: str
+    computed_at: Optional[datetime] = None
+    algorithm_version: int = 4
+    sido_scope_codes: str
+    anchor_eupmyeondong_code: str
+    anchor_eupmyeondong_name: str
+    anchor_sigungu_code: str
+    anchor_sigungu_name: str
+    anchor_sido_code: str
+    anchor_sido_name: str
+    neighbors: list[TwinEupmyeondongNeighborItem] = []

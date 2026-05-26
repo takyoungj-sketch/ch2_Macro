@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import get_db
-from app.routers import free, free_v2, paid, upper_stats
+from app.routers import free, free_v2, paid, twin_regions, upper_stats
 
 logging.basicConfig(level=logging.INFO)
 _LOG = logging.getLogger(__name__)
@@ -83,6 +83,7 @@ app.include_router(free.router, prefix="/api", deprecated=True)
 app.include_router(free_v2.router, prefix="/api")
 app.include_router(paid.router, prefix="/api")
 app.include_router(upper_stats.router, prefix="/api")
+app.include_router(twin_regions.router, prefix="/api")
 
 
 # 폐기 일정 헤더 — RFC 8594 Sunset.

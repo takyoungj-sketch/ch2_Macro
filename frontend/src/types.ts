@@ -233,3 +233,85 @@ export interface MatrixCellTransactionsResponse {
 }
 
 export type ViewMode = "free" | "paid";
+
+/** GET /twin-regions/latest-batch */
+export interface TwinRegionLatestBatch {
+  batch_key: string;
+  computed_at: string | null;
+  algorithm_version: number;
+  sido_scope_codes: string;
+  twin_row_count: number;
+}
+
+/** GET /twin-regions/neighbors/{sigungu_code} */
+export interface TwinNeighborItem {
+  rank: number;
+  twin_sigungu_code: string;
+  twin_sigungu_name: string;
+  twin_sido_code: string;
+  twin_sido_name: string;
+  similarity_score: number;
+  detail_scores: Record<string, unknown>;
+}
+
+export interface TwinNeighborsForSigunguResponse {
+  batch_key: string;
+  computed_at: string | null;
+  algorithm_version: number;
+  sido_scope_codes: string;
+  anchor_sigungu_code: string;
+  anchor_sigungu_name: string;
+  anchor_sido_code: string;
+  anchor_sido_name: string;
+  neighbors: TwinNeighborItem[];
+}
+
+/** GET /twin-regions/eupmyeondong/neighbors/{code} */
+export interface TwinEupmyeondongNeighborItem {
+  rank: number;
+  twin_eupmyeondong_code: string;
+  twin_eupmyeondong_name: string;
+  twin_sigungu_code: string;
+  twin_sigungu_name: string;
+  twin_sido_code: string;
+  twin_sido_name: string;
+  similarity_score: number;
+  detail_scores: Record<string, unknown>;
+}
+
+export interface TwinNeighborsForEupmyeondongResponse {
+  batch_key: string;
+  computed_at: string | null;
+  algorithm_version: number;
+  sido_scope_codes: string;
+  anchor_eupmyeondong_code: string;
+  anchor_eupmyeondong_name: string;
+  anchor_sigungu_code: string;
+  anchor_sigungu_name: string;
+  anchor_sido_code: string;
+  anchor_sido_name: string;
+  neighbors: TwinEupmyeondongNeighborItem[];
+}
+
+/** 로컬 UI: 현재 선택이 단일 읍면동으로 귀결될 때 */
+export interface TwinEupAnchor {
+  eupmyeondong_code: string;
+  eupmyeondong_name: string;
+  sigungu_code: string;
+  sigungu_name: string;
+  sido_code: string;
+  sido_name: string;
+}
+
+/** 로컬 UI: 동일 시군구로만 귀결될 때(시·구 전체 등) 시군구 트윈 조회용 */
+export interface TwinSigunguAnchor {
+  sigungu_code: string;
+  sigungu_name: string;
+  sido_code: string;
+  sido_name: string;
+}
+
+/** 쌍둥이 모달: 읍면동(인접 시도 후보) 또는 시군구(전국 후보) */
+export type TwinCitySearchTarget =
+  | { kind: "eupmyeondong"; anchor: TwinEupAnchor }
+  | { kind: "sigungu"; anchor: TwinSigunguAnchor };

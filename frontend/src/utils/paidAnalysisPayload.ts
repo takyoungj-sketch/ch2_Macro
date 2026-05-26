@@ -21,3 +21,16 @@ export function buildPaidPayload(
     years: useYears ? [...ys].sort((a, b) => a - b) : merged.years,
   };
 }
+
+/** 필터 분석 모달: 기본통계 V2 롤링(contract_date 버킷) 필드 제거 후 연도·필터만 사용 */
+export function clearRollingMatrixFields(
+  req: PaidAnalysisRequest
+): PaidAnalysisRequest {
+  return {
+    ...req,
+    rolling_matrix_period_start: null,
+    rolling_matrix_period_end: null,
+    rolling_bucket_count: null,
+    rolling_stats_reference_date: null,
+  };
+}

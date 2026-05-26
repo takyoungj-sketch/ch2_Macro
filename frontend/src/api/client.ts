@@ -12,6 +12,9 @@ import type {
   PaidAnalysisResponse,
   RegionItem,
   RegionLevel,
+  TwinNeighborsForEupmyeondongResponse,
+  TwinNeighborsForSigunguResponse,
+  TwinRegionLatestBatch,
   UpperStatsV2Response,
 } from "../types";
 import { normalizeFreeStatsWindowYears } from "../types";
@@ -132,6 +135,32 @@ export const fetchUpperStats = async (
   if (asOf) qs.set("as_of_month", asOf);
   const { data } = await api.get<UpperStatsV2Response>(
     `/paid/upper-stats/${encodeURIComponent(level)}/${encodeURIComponent(code)}?${qs.toString()}`
+  );
+  return data;
+};
+
+/** 쌍둥이 지역 MVP — 최신 배치 메타 */
+export const fetchTwinRegionLatestBatch = async (): Promise<TwinRegionLatestBatch> => {
+  const { data } = await api.get<TwinRegionLatestBatch>("/twin-regions/latest-batch");
+  return data;
+};
+
+/** 쌍둥이 지역 MVP — 시군구 코드 기준 유사 시군구 상위 목록 */
+export const fetchTwinNeighborsForSigungu = async (
+  sigunguCode: string,
+): Promise<TwinNeighborsForSigunguResponse> => {
+  const { data } = await api.get<TwinNeighborsForSigunguResponse>(
+    `/twin-regions/neighbors/${encodeURIComponent(sigunguCode)}`,
+  );
+  return data;
+};
+
+/** 쌍둥이 지역 MVP — 읍면동(8자리) 기준 유사 읍면동 상위 목록 */
+export const fetchTwinNeighborsForEupmyeondong = async (
+  eupmyeondongCode: string,
+): Promise<TwinNeighborsForEupmyeondongResponse> => {
+  const { data } = await api.get<TwinNeighborsForEupmyeondongResponse>(
+    `/twin-regions/eupmyeondong/neighbors/${encodeURIComponent(eupmyeondongCode)}`,
   );
   return data;
 };

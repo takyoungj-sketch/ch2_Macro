@@ -10,7 +10,7 @@ function parseLeadingYmd(isoOrDate: string): { y: number; m: number } | null {
   return { y: Number(m[1]), m: Number(m[2]) };
 }
 
-/** 롤링·기간 버킷: YY.MM~YY.MM. 레거시 계약연도 모드는 해당 연도 01~12월. */
+/** 롤링·기간 버킷: YY.MM~YY.MM. 계약연도만 있는 레거시 집계는 두 자리 연도 라벨(예 25·26). */
 export function formatMatrixBucketAxisLabel(r: MatrixYearlyStat): string {
   const ps = r.period_start;
   const pe = r.period_end;
@@ -26,7 +26,7 @@ export function formatMatrixBucketAxisLabel(r: MatrixYearlyStat): string {
   }
   if (r.year != null && Number.isFinite(Number(r.year))) {
     const y = Number(r.year);
-    return `${yyDotMm(y, 1)}~${yyDotMm(y, 12)}`;
+    return String(y).slice(-2);
   }
   const c = (r.chart_label ?? "").trim();
   if (c) return c;

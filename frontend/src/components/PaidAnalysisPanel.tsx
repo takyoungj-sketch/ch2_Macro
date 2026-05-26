@@ -13,9 +13,8 @@ import { type MatrixYearlyRequest, type MatrixYearlyStat, normalizeFreeStatsWind
 import { parseApiError } from "../utils/apiError";
 import {
   calendarYearReferenceRows,
-  rollingMatrixModalPayload,
 } from "../utils/freeStatsV2";
-import { buildPaidPayload } from "../utils/paidAnalysisPayload";
+import { buildPaidPayload, clearRollingMatrixFields } from "../utils/paidAnalysisPayload";
 import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
 import { resolveUpperSingleFromTier, upperToFreeStatsShape } from "../utils/upperTierStats";
 import MatrixStatsTable, { MatrixStatsLegend } from "./MatrixStatsTable";
@@ -173,14 +172,9 @@ export default function PaidAnalysisPanel() {
       }
 
       const cacheKey = basicData?.analysis_base_key ?? paidBasicBaseKey;
-      const rollingExtras =
-        basicData != null ? rollingMatrixModalPayload(basicData) : {};
-
+      /** 매트릭스 모달은 필터 선택 연도·조건과 동일해야 함 — 기본통계 V2 롤링(contract_date 버킷)은 합치지 않는다 */
       const base = buildPaidPayload(
-        {
-          ...paidRequest,
-          ...rollingExtras,
-        },
+        clearRollingMatrixFields(paidRequest),
         codesForPaidMatrix,
         paidRoadExcluded,
         paidAreaExcluded,

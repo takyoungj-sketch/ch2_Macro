@@ -187,5 +187,6 @@
 - **월간 로컬 재현 SOP**: [`docs/MONTHLY_UPDATE_SOP.md`](docs/MONTHLY_UPDATE_SOP.md)
 - 갱신 흐름: [`docs/V2_STATS_PRODUCTION.md`](docs/V2_STATS_PRODUCTION.md)
 - 통계 설계: [`docs/V2_STATS_DESIGN.md`](docs/V2_STATS_DESIGN.md)
+- **Twin Region 유사도 엔진(설계안)**: [`docs/TWIN_REGION_SIMILARITY_ENGINE.md`](docs/TWIN_REGION_SIMILARITY_ENGINE.md)
 - 정제 정책: [`LAND_CLEANING.md`](LAND_CLEANING.md)
 - 제품 기준: [`README.md`](README.md)
