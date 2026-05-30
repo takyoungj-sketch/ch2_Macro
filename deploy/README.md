@@ -20,6 +20,7 @@
 | 5 | [05-operations-checklist.md](./05-operations-checklist.md) | 일상 운영·월간 Promote |
 | 6 | [06-recovery.md](./06-recovery.md) | 장애·롤백 절차 |
 | 7 | [07-verification-checklist.md](./07-verification-checklist.md) | 기능·HTTPS·CORS·DB 검증 |
+| 8 | [08-ch2data-portal.md](./08-ch2data-portal.md) | **ch2data.com** 허브 + 서브도메인 (Macro/Viewer/FieldNote) |
 
 ---
 
@@ -34,6 +35,7 @@ deploy/
 │   ├── ch2-macro-backend.service        # systemd 유닛
 │   └── postgresql-4gb.conf.snippet      # 4GB RAM 튜닝 참고
 └── scripts/
+    ├── deploy-hub.sh                   # ch2data.com 정적 허브 배치
     ├── redeploy.sh                      # git pull → build → restart
     └── health-check.sh                  # /health 스모크 테스트
 ```

@@ -12,7 +12,7 @@
 ## 생태계 (ch2data)
 
 `ch2_Macro`는 **`ch2_FieldNote`**, **`ch2_Viewer`** 와 함께 **`ch2data.com`** 을 구성하는 서비스 중 하나이다.  
-도메인은 같이 쓸 수 있으나 **제품·결제는 서비스별로 분리**한다.
+도메인은 같이 쓸 수 있으나 **제품·결제는 서비스별로 분리**한다. 포털·DNS·허브 배포: [`deploy/08-ch2data-portal.md`](deploy/08-ch2data-portal.md).
 
 ## 제품 롤아웃 전략
 

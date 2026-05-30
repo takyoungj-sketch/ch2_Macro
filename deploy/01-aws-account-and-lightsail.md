@@ -72,6 +72,7 @@ Lightsail 콘솔의 **Connect using SSH** 버튼도 사용 가능.
 도메인이 있으면:
 
 - `dev-macro.ch2data.com` → Static IP **A 레코드**
+- `ch2data.com`, `www` → 같은 Static IP (허브 — [08-ch2data-portal.md](./08-ch2data-portal.md))
 - 없으면 초기에는 `https://DEV_PUBLIC_IP` 는 Let's Encrypt **불가** → **도메인 1개 필요** (무료 서브도메인 가능)
 
 Let's Encrypt는 **도메인 + 80/443** 이 필요합니다. IP만으로는 인증서 발급이 어렵습니다.
