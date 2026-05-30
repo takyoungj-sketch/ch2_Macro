@@ -61,6 +61,7 @@ python build_stats_v2.py --as-of 2025-12-01 --windows 3,5 2>&1 | tee ../logs/v2_
 | B1 | 새 원본 엑셀 수집 | 현재는 수동 다운로드 → `원본/토지/` 평면 폴더에 모음 (자동화는 `NEXT_STEPS` #9) |
 | B2 | (필요 시) `region_codes` 갱신 | 행정 개편 있으면 `seed_region_codes.py` 재실행 |
 | B3 | `run_pipeline.py --excel-dir <원본 폴더> --excel-format auto` | 내부에서 `collect → clean → build_stats(V1) → analysis_cache + analysis_base_cache 자동 비움` |
+| B3a | **`dedupe_land_transactions.py --execute --rehash`** | **2026-06~** — [`TRANSACTION_HASH_DEDUPE.md`](./TRANSACTION_HASH_DEDUPE.md). B5 V2 배치 **전**. 비하동 보녹·답 **2건** 확인. |
 | B4 | **§3에 맞는 `as_of_month`(해당 월 1일)** 확정 | 보통 직전 월 1일 |
 | B5 | `ANALYZE land_transactions;` | `db/preflight_v2_national.sql` 에 포함 |
 | B6 | V2 배치 실행 | `python build_stats_v2.py --as-of YYYY-MM-01 --windows 3,5` (또는 B3 에서 `--with-v2 --v2-windows 3,5` 로 합쳐도 됨) |

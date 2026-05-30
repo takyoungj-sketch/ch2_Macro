@@ -28,7 +28,7 @@
 | P0-M | **월간 갱신 재현 SOP** | [`docs/MONTHLY_UPDATE_SOP.md`](docs/MONTHLY_UPDATE_SOP.md), `scripts/monthly/run_monthly_cycle.py` — 반자동 월배치. |
 | P1 | **웹 배포 (프로덕션 / 준프로덕션)** | DECISIONS D-007 의 `API_TOKEN` 옵션을 활성한 채 배포. CORS·도메인·env 점검. |
 | P2 | **`population_jusosagae` 전국 시드** | 리허설이 잡아낸 미적재 1건. SOP §B7: `py -3.13 pipeline/seed_population_csv.py --file ../data/population/<최신_CSV>` (DECISIONS D-004, prefix 미지정 = 전국). |
-| P3 | **2026년 첫 월별 갱신 본 운영** | `docs/V2_OPERATOR_CHECKLIST.md` §B0 (리허설) → §B1~B12 그대로. `/health.latest_as_of_month` 가 직전 달 1일로 바뀌는지가 통과 기준. |
+| P3 | **2026년 6월 월별 갱신 + dedupe** | [`docs/TRANSACTION_HASH_DEDUPE.md`](docs/TRANSACTION_HASH_DEDUPE.md) — B3 직후 `dedupe_land_transactions.py --execute --rehash` → V2 재집계 → VPS Promote. |
 | P4 | **V1 라우터 폐기 일정 모니터링** | `docs/DECISIONS.md` D-001: 26-03-31 신규 호출 차단, 26-06-30 코드/테이블 제거. |
 
 ## 2. 짧은 백로그 (제품·코드)
@@ -47,7 +47,7 @@
 | 8 | tests | `clean.py` 강한 키 매핑·`compute_stats`·`period_bounds_for_window` 단위 테스트 | 26년 코드 변경 회귀 방지 |
 | 9 | ops | Selenium/Playwright 자동 수집 | 현재는 수동 다운로드 → `--excel-dir` |
 | 10 | ui | 신규 연도 첫 분기 "참고용" 워터마크 (count<15 강조 외 보조) | 26년 1Q UX |
-| 11 | docs | README 분할 (`docs/SETUP.md`, `docs/PRODUCT.md`, `docs/PIPELINE.md`) | 현재 README 270+ 줄 |
+| 11 | data/pipeline | **`transaction_hash` dedupe (6월)** | [`docs/TRANSACTION_HASH_DEDUPE.md`](docs/TRANSACTION_HASH_DEDUPE.md) — 비하동 4→2건 회귀. 코드 준비됨, DB 실행은 6월 Promote 전. |
 | 12 | backend | `region_codes` 활성/비활성(`is_active`) 갱신 절차 — 행정 개편 대응 | 신규 법정동 코드 자동 반영 |
 
 ## 3. 상위단계 사전집계 + 쌍둥이 지역 (DECISIONS D-009~D-011)

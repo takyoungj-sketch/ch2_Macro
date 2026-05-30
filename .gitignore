@@ -12,6 +12,7 @@ venv/
 .env
 .env.local
 !.env.example
+*.pem
 
 # Local bulk source (엑셀 원본 등 — 레포에 포함하지 않음)
 원본/

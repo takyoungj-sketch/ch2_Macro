@@ -260,6 +260,49 @@ def check_db_snapshot(rep: Report) -> dict[str, Any]:
     return snapshot
 
 
+def check_land_tx_duplicates(rep: Report, engine) -> None:
+    """TRANSACTION_HASH_DEDUPE — business key 중복·비하동 회귀 샘플 (읽기 only)."""
+    rep.section("3b) land_transactions 중복 (6월 dedupe 전 점검)")
+    try:
+        with engine.connect() as conn:
+            extra = conn.execute(
+                text(
+                    """
+                    SELECT COALESCE(SUM(cnt - 1), 0)::bigint
+                    FROM (
+                      SELECT COUNT(*) AS cnt
+                      FROM land_transactions
+                      WHERE is_valid = TRUE
+                      GROUP BY beopjungri_code, contract_date, area_sqm, total_price_10k,
+                               COALESCE(land_category, ''), COALESCE(zone_type, ''), is_cancelled
+                      HAVING COUNT(*) > 1
+                    ) s
+                    """
+                )
+            ).scalar()
+            biha = conn.execute(
+                text(
+                    """
+                    SELECT COUNT(*) FROM land_transactions lt
+                    WHERE lt.beopjungri_code = '4311313800'
+                      AND lt.zone_type = '보녹' AND lt.land_category = '답'
+                      AND lt.is_valid = TRUE
+                    """
+                )
+            ).scalar()
+        extra_i = int(extra or 0)
+        biha_i = int(biha or 0)
+        if extra_i == 0 and biha_i == 2:
+            rep.ok(f"중복 없음, 비하동 보녹·답 = {biha_i}건")
+        else:
+            rep.warn(
+                f"중복 extra_rows≈{extra_i:,}, 비하동 보녹·답={biha_i}건 (dedupe 후 기대: 0, 2) — "
+                "docs/TRANSACTION_HASH_DEDUPE.md"
+            )
+    except Exception as exc:
+        rep.warn(f"land_transactions 중복 조회 실패: {exc!r}")
+
+
 # ---------------------------------------------------------------------------
 # 4) SOP §B 명령 dry-run (--help 만)
 # ---------------------------------------------------------------------------
@@ -268,6 +311,7 @@ def check_db_snapshot(rep: Report) -> dict[str, Any]:
 SOP_COMMANDS = [
     ("run_pipeline.py", ["--help"]),
     ("build_stats_v2.py", ["--help"]),
+    ("dedupe_land_transactions.py", ["--help"]),
     ("seed_population_csv.py", ["--help"]),
     ("verify_v2_national_samples.py", ["--help"]),
 ]
@@ -367,7 +411,9 @@ def main() -> int:
     rep.info(f"python = {sys.version.split()[0]}")
 
     check_env(rep)
+    engine = get_engine()
     check_db_snapshot(rep)
+    check_land_tx_duplicates(rep, engine)
     check_sop_helps(rep)
     check_health(rep, args.health_url or None)
 

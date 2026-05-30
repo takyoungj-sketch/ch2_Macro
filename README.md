@@ -60,8 +60,11 @@ ch2_macro/
 ├── db/                  # DB 스키마 및 마이그레이션 SQL
 ├── pipeline/            # 수집·정제·사전집계 배치 파이프라인
 ├── backend/             # FastAPI 백엔드
-└── frontend/            # React 프론트엔드
+├── frontend/            # React 프론트엔드
+└── deploy/              # dev/test VPS (AWS Lightsail) 배포 가이드·템플릿
 ```
+
+**dev/test VPS 이전:** [`deploy/README.md`](deploy/README.md) (Lightsail·PostgreSQL·Nginx·Promote 절차).
 
 ## 빠른 시작
 

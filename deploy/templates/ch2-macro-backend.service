@@ -1,0 +1,21 @@
+[Unit]
+Description=CH2 Macro FastAPI (dev VPS)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/ch2_Macro/backend
+Environment=PYTHONUNBUFFERED=1
+# pydantic-settings 가 backend/.env 를 읽음 (config.py)
+ExecStart=/opt/ch2_Macro/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1
+Restart=on-failure
+RestartSec=5
+
+# 4 GB RAM — 유료 쿼리 피크 고려 workers 1 고정
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

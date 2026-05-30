@@ -96,7 +96,7 @@ CREATE INDEX IF NOT EXISTS ix_land_tx_filters
     ON land_transactions (beopjungri_code, contract_year, road_condition, area_category, land_category, zone_type);
 
 COMMENT ON TABLE land_transactions IS '분석용 정규화 토지 실거래 테이블';
-COMMENT ON COLUMN land_transactions.transaction_hash IS 'SHA-256(시군구+계약일+지번+면적+금액) 중복 방지';
+COMMENT ON COLUMN land_transactions.transaction_hash IS 'SHA-256(법정동·계약일·지번·면적·금액·해제 등). Excel 순번 미포함 — docs/TRANSACTION_HASH_DEDUPE.md';
 COMMENT ON COLUMN land_transactions.is_partial_ownership IS '지분거래 여부 (분자/분모 형태 소유권)';
 
 -- =============================================================================

@@ -11,7 +11,6 @@ land_transactions 테이블에 UPSERT 방식으로 적재한다.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import logging
 import os
 import re
@@ -753,7 +752,7 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     _dt_trim = df.get("deal_type", pd.Series("", index=df.index)).fillna("").astype(str).str.strip().str.slice(0, 128)
     df["deal_type"] = _dt_trim.mask(_dt_trim.eq(""), other=pd.NA)
 
-    # transaction_hash 생성 (중복 방지)
+    # transaction_hash 생성 (중복 방지 — transaction_hash.hash_from_series)
     df["transaction_hash"] = df.apply(_make_hash, axis=1)
 
     df["raw_id"] = df["_raw_id"]
@@ -771,28 +770,10 @@ def _classify_area(area: float | None) -> str | None:
 
 
 def _make_hash(row: pd.Series) -> str:
-    """신고 행 고유키: 정상 신고와 해제 신고가 서로 덮어쓰지 않게 만든다."""
-    region_key = row.get("beopjungri_code") or row.get("sigungu_code") or row.get("sigungu_name") or ""
-    lot_key = row.get("lot_number") or "|".join(str(row.get(c, "")) for c in ["main_number", "sub_number"])
-    # Excel 원본의 순번을 우선 사용한다. API 등 순번이 없으면 raw_id로 행 단위를 보존한다.
-    source_row_key = row.get("source_row_no") or row.get("_raw_id") or ""
-    key = "|".join(
-        str(v)
-        for v in [
-            source_row_key,
-            region_key,
-            row.get("contract_year", ""),
-            row.get("contract_month", ""),
-            row.get("contract_day", ""),
-            lot_key,
-            row.get("area_sqm", ""),
-            row.get("total_price_10k", ""),
-            row.get("cancel_date", ""),
-            row.get("cancel_type", ""),
-            row.get("cancel_flag_raw", ""),
-        ]
-    )
-    return hashlib.sha256(key.encode()).hexdigest()
+    """하위 호환 — hash_from_series 로 위임."""
+    from transaction_hash import hash_from_series
+
+    return hash_from_series(row)
 
 
 def _prepare_land_tx_upsert(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
