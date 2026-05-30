@@ -4,89 +4,95 @@
 
 | URL | 역할 | 상태 |
 |-----|------|------|
-| `https://ch2data.com` | 포털 (3분기) | 이 문서 |
-| `https://dev-macro.ch2data.com` | CH2 Macro (dev VPS) | 배포됨 → [04-deploy-checklist.md](./04-deploy-checklist.md) |
-| `https://dev-viewer.ch2data.com` | CH2 Viewer | 예약 (개발중) |
-| `https://dev-fieldnote.ch2data.com` | CH2 FieldNote | 예약 (개발중) |
-
-프로덕션 서브도메인(`macro.`, `viewer.`, `fieldnote.`)은 dev 검증 후 분리합니다.
+| `https://ch2data.com` | 포털 (3분기) | ✅ HTTPS (2026-05-30) |
+| `https://macro.ch2data.com` | CH2 Macro | ✅ HTTPS (2026-05-30) → [04-deploy-checklist.md](./04-deploy-checklist.md) |
+| `https://viewer.ch2data.com` | CH2 Viewer | 예약 (개발중) |
+| `https://fieldnote.ch2data.com` | CH2 FieldNote | 예약 (개발중) |
 
 ---
 
-## 8.1 DNS (등록업체 또는 Route 53)
+## 8.1 DNS (가비아 등)
 
-Static IP: **Lightsail dev VPS** (예: `13.209.203.178`)
+Static IP: **Lightsail VPS** `13.209.203.178`
 
 | 호스트 | 타입 | 값 |
 |--------|------|-----|
-| `@` (`ch2data.com`) | A | VPS Static IP |
-| `www` | A 또는 CNAME | VPS IP / `ch2data.com` |
-| `dev-macro` | A | VPS Static IP |
+| `@` (`ch2data.com`) | A | `13.209.203.178` |
+| `www` | A | `13.209.203.178` |
+| `macro` | A | `13.209.203.178` |
+
+전파 확인:
+
+```bash
+dig +short ch2data.com A
+dig +short www.ch2data.com A
+dig +short macro.ch2data.com A
+# 모두 13.209.203.178
+```
 
 Viewer·FieldNote는 앱 준비 전까지 DNS 생략 가능.
 
 ---
 
-## 8.2 허브 파일 배치
+## 8.2 Lightsail 방화벽 (HTTPS 필수)
+
+**UFW만으로는 부족합니다.** Lightsail 콘솔 → 인스턴스 → **Networking** → Firewall:
+
+| 포트 | 프로토콜 | 허용 |
+|------|----------|------|
+| 22 | TCP | SSH |
+| 80 | TCP | HTTP (certbot·리다이렉트) |
+| **443** | **TCP** | **HTTPS** ← 없으면 브라우저 타임아웃 |
+
+외부에서 `curl -I https://ch2data.com/` 이 200/301 이어야 합니다.
+
+---
+
+## 8.3 허브 파일 배치
 
 소스: [`deploy/hub/`](../hub/) (`index.html`, `style.css`)
 
 ```bash
-# VPS (repo가 /opt/ch2_Macro 일 때)
 sudo bash /opt/ch2_Macro/deploy/scripts/deploy-hub.sh
 ```
 
-수동:
-
-```bash
-sudo mkdir -p /var/www/ch2data-hub
-sudo rsync -a --delete /opt/ch2_Macro/deploy/hub/ /var/www/ch2data-hub/
-sudo cp /opt/ch2_Macro/deploy/templates/nginx-ch2data-hub.conf /etc/nginx/sites-available/ch2data-hub
-sudo ln -sf /etc/nginx/sites-available/ch2data-hub /etc/nginx/sites-enabled/ch2data-hub
-sudo nginx -t && sudo systemctl reload nginx
-```
-
-- [ ] `curl -sS http://ch2data.com/` → `CH2 DATA` HTML
-- [ ] Macro 카드 링크 → `https://dev-macro.ch2data.com/`
+- [ ] `https://ch2data.com/` → CH2 DATA 허브
+- [ ] Macro 카드 → `https://macro.ch2data.com/`
 
 ---
 
-## 8.3 HTTPS
+## 8.4 HTTPS (certbot)
 
-DNS 전파 후:
+DNS 전파 + **Lightsail 443 개방** 후:
 
 ```bash
-# 허브
-sudo certbot --nginx -d ch2data.com -d www.ch2data.com
+sudo certbot --nginx -d ch2data.com -d www.ch2data.com \
+  --non-interactive --agree-tos --register-unsafely-without-email --redirect
 
-# Macro (아직이면)
-sudo certbot --nginx -d dev-macro.ch2data.com
+sudo certbot --nginx -d macro.ch2data.com \
+  --non-interactive --agree-tos --register-unsafely-without-email --redirect
+
+sudo certbot renew --dry-run
 ```
 
-- [ ] `https://ch2data.com` 자물쇠
-- [ ] `http://` → `https://` 리다이렉트
-- [ ] `sudo certbot renew --dry-run`
+- [ ] `https://ch2data.com` · `https://macro.ch2data.com` 자물쇠
+- [ ] HTTP → HTTPS 리다이렉트
+
+인증서 경로:
+
+- `/etc/letsencrypt/live/ch2data.com/`
+- `/etc/letsencrypt/live/macro.ch2data.com/`
 
 ---
 
-## 8.4 Macro 연동 (dev-macro)
+## 8.5 Macro 연동
 
-1. [`templates/nginx-ch2-macro.conf`](./templates/nginx-ch2-macro.conf) — `server_name dev-macro.ch2data.com;`
-2. `backend/.env` — `CORS_ORIGINS=https://dev-macro.ch2data.com`
-3. `frontend/.env` — API base URL HTTPS (템플릿 참고)
-4. `npm run build` + `systemctl restart ch2-macro-backend`
+1. [`templates/nginx-ch2-macro.conf`](./templates/nginx-ch2-macro.conf) — `server_name macro.ch2data.com;`
+2. `backend/.env` — `CORS_ORIGINS=https://macro.ch2data.com` (IP 직접 접속 유지 시 `,http://13.209.203.178` 추가 가능)
+3. `systemctl restart ch2-macro-backend`
+4. 프론트는 상대 경로 `/api/` 사용 시 재빌드 불필요
 
 검증: [07-verification-checklist.md](./07-verification-checklist.md)
-
----
-
-## 8.5 허브 내용 수정
-
-1. 로컬에서 `deploy/hub/index.html` · `style.css` 수정
-2. git push → VPS `git pull` (또는 tar sync)
-3. `sudo bash deploy/scripts/deploy-hub.sh`
-
-Viewer·FieldNote가 준비되면 카드를 `<a href="https://dev-viewer.ch2data.com">` 형태로 바꾸고 DNS·Nginx vhost를 추가합니다.
 
 ---
 
@@ -94,8 +100,17 @@ Viewer·FieldNote가 준비되면 카드를 `<a href="https://dev-viewer.ch2data
 
 ```
 /etc/nginx/sites-enabled/
-├── ch2data-hub      → /var/www/ch2data-hub          (ch2data.com, www)
-└── ch2-macro        → /opt/ch2_Macro/frontend/dist  (dev-macro.ch2data.com)
+├── ch2data-hub   → /var/www/ch2data-hub          (ch2data.com, www)
+└── ch2-macro     → /opt/ch2_Macro/frontend/dist  (macro.ch2data.com)
 ```
 
-각 `server_name` 이 다르므로 충돌 없음.
+certbot 이 각 server 블록에 SSL listen 443 을 추가합니다. `/api/` 프록시가 사라졌으면 템플릿의 `location` 블록을 merge 하세요.
+
+---
+
+## 8.7 허브 수정
+
+1. `deploy/hub/index.html` · `style.css` 수정
+2. VPS sync → `sudo bash deploy/scripts/deploy-hub.sh`
+
+Viewer·FieldNote 준비 시 DNS·Nginx vhost·허브 카드 링크를 추가합니다.
