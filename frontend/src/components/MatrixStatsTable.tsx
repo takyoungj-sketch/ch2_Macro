@@ -10,8 +10,8 @@ import type { MatrixCell, StatsResult } from "../types";
 const COL_ZONE_PX = 96; // 이전 대비 용도지역 열 0.6배 (160×0.6)
 const COL_VALUE_PX = 88;
 const ROW_PX = 28;
-/** 지목 헤더 1행 높이(고정값) */
-const THEAD_ROW1_HEIGHT = ROW_PX + 8;
+/** 지목 헤더 1행 높이(고정값) — 건수 + 행·열 평균 */
+const THEAD_ROW1_HEIGHT = ROW_PX + 20;
 
 /** 평균적인 셀 테두리 (1px — 경계선 강조는 별도) */
 const CELL = "box-border border border-slate-200";
@@ -246,32 +246,44 @@ export default function MatrixStatsTable({
               >
                 용도지역
               </th>
-              {landCategories.map((category, ci) => (
-                <th
-                  key={category}
-                  colSpan={2}
-                  className={clsx(
-                    "sticky top-0 z-[21] max-w-0 px-1 py-1 text-center align-middle text-sm font-medium truncate",
-                    thMain,
-                    cellLeftCat(ci)
-                  )}
-                  title={`${category} ${fmtCount(byLandCategory[category]?.count ?? countCategory(cells, category))}건`}
-                >
-                  <span className="flex flex-col items-center gap-px leading-tight">
-                    <span className="block truncate w-full text-sm font-semibold text-sky-950">
-                      {category}
+              {landCategories.map((category, ci) => {
+                const catStats = byLandCategory[category];
+                const catCount =
+                  catStats?.count ?? countCategory(cells, category);
+                const catMean = fmtMarginalMean(catStats, catCount);
+                return (
+                  <th
+                    key={category}
+                    colSpan={2}
+                    className={clsx(
+                      "sticky top-0 z-[21] max-w-0 px-1 py-1 text-center align-middle text-sm font-medium truncate",
+                      thMain,
+                      cellLeftCat(ci)
+                    )}
+                    title={`${category} ${fmtCount(catCount)}건 · 평균 ${catMean}`}
+                  >
+                    <span className="flex flex-col items-center gap-px leading-tight">
+                      <span className="block truncate w-full text-sm font-semibold text-sky-950">
+                        {category}
+                      </span>
+                      <span className="text-[11px] text-sky-800/85 font-normal">
+                        {fmtCount(catCount)}건
+                      </span>
+                      <span className="text-[11px] font-bold tabular-nums text-blue-600">
+                        {catMean}
+                      </span>
                     </span>
-                    <span className="text-[11px] text-sky-800/85 font-normal">
-                      {fmtCount(byLandCategory[category]?.count ?? countCategory(cells, category))}
-                      건
-                    </span>
-                  </span>
-                </th>
-              ))}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
-            {zones.map((zone, zi) => (
+            {zones.map((zone, zi) => {
+              const zoneStats = byZone[zone];
+              const zoneCount = zoneStats?.count ?? countZone(cells, zone);
+              const zoneMean = fmtMarginalMean(zoneStats, zoneCount);
+              return (
               <Fragment key={zone}>
                 {/* ① 거래수 | 최소 */}
                 <tr
@@ -285,11 +297,14 @@ export default function MatrixStatsTable({
                       cellZoneCol()
                     )}
 
-                    title={zone}
+                    title={`${zone} ${fmtCount(zoneCount)}건 · 평균 ${zoneMean}`}
                   >
                     <div className="line-clamp-2 break-all text-center">{zone}</div>
                     <div className="mt-0.5 text-[10px] font-normal leading-tight text-sky-800/85">
-                      {fmtCount(byZone[zone]?.count ?? countZone(cells, zone))}건
+                      {fmtCount(zoneCount)}건
+                    </div>
+                    <div className="mt-px text-[11px] font-bold tabular-nums leading-tight text-blue-600">
+                      {zoneMean}
                     </div>
                   </th>
                   {landCategories.map((category, ci) => {
@@ -533,7 +548,8 @@ export default function MatrixStatsTable({
                   })}
                 </tr>
               </Fragment>
-            ))}
+            );
+            })}
           </tbody>
         </table>
       </div>
@@ -564,4 +580,13 @@ function countCategory(matrix: MatrixCell[], category: string) {
   return matrix
     .filter((cell) => cell.land_category === category)
     .reduce((sum, cell) => sum + (cell.stats?.count ?? 0), 0);
+}
+
+function fmtMarginalMean(
+  stats: StatsResult | undefined,
+  fallbackCount: number
+): string {
+  const count = stats?.count ?? fallbackCount;
+  if (count < 1 || stats?.mean == null) return "-";
+  return fmtD1(stats.mean);
 }

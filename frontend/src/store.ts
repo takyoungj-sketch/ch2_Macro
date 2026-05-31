@@ -184,6 +184,18 @@ function tierOnlyBeopjungri(codes: readonly string[]): TierCodes {
   };
 }
 
+/** 필터 분석 UI·요청을 초기 상태로 (기본 통계 보기 복귀 시) */
+function defaultPaidFilterState(): Pick<
+  AppState,
+  "paidRequest" | "paidRoadExcluded" | "paidAreaExcluded"
+> {
+  return {
+    paidRequest: { ...defaultPaidRequest },
+    paidRoadExcluded: [],
+    paidAreaExcluded: [],
+  };
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
   viewMode: "free",
   regionSegments: [...EMPTY_REGION_SEGMENTS],
@@ -586,6 +598,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           : {};
       return {
         ...tierPart,
+        ...defaultPaidFilterState(),
         paidResultView: "basic",
         paidBasicBaseKey: null,
         paidBulkBeopjungriCodes: null,
@@ -784,7 +797,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       };
     }),
 
-  resetPaidExcluded: () => set({ paidRoadExcluded: [], paidAreaExcluded: [] }),
+  resetPaidExcluded: () => set(defaultPaidFilterState()),
 
   bumpUiFontScale: (direction) =>
     set((s) => {
