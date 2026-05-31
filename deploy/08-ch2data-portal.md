@@ -6,7 +6,7 @@
 |-----|------|------|
 | `https://ch2data.com` | 포털 (3분기) | ✅ HTTPS (2026-05-30) |
 | `https://macro.ch2data.com` | CH2 Macro | ✅ HTTPS (2026-05-30) → [04-deploy-checklist.md](./04-deploy-checklist.md) |
-| `https://viewer.ch2data.com` | CH2 Viewer | 예약 (개발중) |
+| `https://viewer.ch2data.com` | CH2 Viewer | ✅ 다운로드 포털 (Windows ZIP) |
 | `https://fieldnote.ch2data.com` | CH2 FieldNote | 예약 (개발중) |
 
 ---
