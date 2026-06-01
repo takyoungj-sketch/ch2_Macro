@@ -1,4 +1,4 @@
-import { Fragment, type KeyboardEvent } from "react";
+import { Fragment, useMemo, type KeyboardEvent } from "react";
 import clsx from "clsx";
 import {
   MATRIX_TABLE_TONE,
@@ -9,6 +9,9 @@ import type { MatrixCell, StatsResult } from "../types";
 /** 고정 레이아웃 (만원/㎡) — 통계 라벨 열 없음 */
 const COL_ZONE_PX = 96; // 이전 대비 용도지역 열 0.6배 (160×0.6)
 const COL_VALUE_PX = 88;
+/** 신뢰구간 등 긴 수치 — table-fixed 에서 필요 시 열 확장 (px) */
+const COL_VALUE_CHAR_PX = 6.5;
+const COL_VALUE_PAD_PX = 10;
 const ROW_PX = 28;
 /** 지목 헤더 1행 높이(고정값) — 건수 + 행·열 평균 */
 const THEAD_ROW1_HEIGHT = ROW_PX + 20;
@@ -43,6 +46,15 @@ function fmtCiRange(
 ): string {
   if (lo == null || hi == null) return "-";
   return `${fmtD1(lo)}~${fmtD1(hi)}`;
+}
+
+/** 고정 폭(col)에서 텍스트가 들어갈 최소 너비 추정 */
+function minColWidthForText(text: string): number {
+  if (!text || text === "-") return COL_VALUE_PX;
+  return Math.max(
+    COL_VALUE_PX,
+    Math.ceil(text.length * COL_VALUE_CHAR_PX) + COL_VALUE_PAD_PX
+  );
 }
 
 /** 무료 패널 상단(지역명 행 우측) 등에서 재사용 */
@@ -206,7 +218,22 @@ export default function MatrixStatsTable({
         .reduce((sum, cell) => sum + (cell.stats?.count ?? 0), 0)
   );
 
-  const tableWidth = COL_ZONE_PX + landCategories.length * (COL_VALUE_PX * 2);
+  /** 지목별 좌측 열 — 신뢰구간이 88px에 안 들어갈 때만 넓힘 */
+  const leftColWidths = useMemo(() => {
+    return landCategories.map((category) => {
+      let w = COL_VALUE_PX;
+      for (const zone of zones) {
+        const stats = lookup.get(`${zone}|||${category}`);
+        if (!hasDeals(stats)) continue;
+        w = Math.max(w, minColWidthForText(fmtCiRange(stats.ci_lower, stats.ci_upper)));
+      }
+      return w;
+    });
+  }, [landCategories, zones, lookup]);
+
+  const tableWidth =
+    COL_ZONE_PX +
+    leftColWidths.reduce((sum, w) => sum + w + COL_VALUE_PX, 0);
 
   return (
     <div>
@@ -228,9 +255,9 @@ export default function MatrixStatsTable({
         >
           <colgroup>
             <col style={{ width: COL_ZONE_PX }} />
-            {landCategories.map((category) => (
+            {landCategories.map((category, ci) => (
               <Fragment key={`col-${category}`}>
-                <col style={{ width: COL_VALUE_PX }} />
+                <col style={{ width: leftColWidths[ci] }} />
                 <col style={{ width: COL_VALUE_PX }} />
               </Fragment>
             ))}
@@ -513,7 +540,7 @@ export default function MatrixStatsTable({
                           {...insight}
                           className={clsx(
                             cellLeftCat(ci),
-                            "px-1 py-0 align-middle text-right tabular-nums font-semibold truncate text-slate-700",
+                            "px-1 py-0 align-middle text-right tabular-nums font-semibold whitespace-nowrap text-slate-700",
                             faint,
                             cellHl(stats?.is_reliable),
                             insight.role &&

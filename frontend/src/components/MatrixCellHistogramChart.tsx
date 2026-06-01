@@ -5,7 +5,7 @@ const H = 248;
 const PAD_L = 40;
 const PAD_R = 14;
 const PAD_T = 16;
-const PAD_B = 46;
+const PAD_B = 28;
 
 function shortNum(v: number): string {
   if (!Number.isFinite(v)) return "—";
@@ -29,10 +29,8 @@ export default function MatrixCellHistogramChart({
   const gap = n > 24 ? 0.5 : n > 14 ? 1 : 2;
   const barW = Math.max((innerW - gap * (n - 1)) / n, 2);
 
-  const lo = bins[0]!.bin_from;
-  const hi = bins[bins.length - 1]!.bin_to;
-
-  const labelEvery = n <= 10 ? 1 : n <= 20 ? 2 : Math.ceil(n / 6);
+  const labelEvery = n <= 8 ? 1 : n <= 16 ? 2 : Math.ceil(n / 5);
+  const tickFontPx = n > 20 ? 9 : n > 12 ? 10 : 11;
 
   return (
     <div className="w-full" role="img" aria-label="단가 분포 히스토그램">
@@ -70,24 +68,15 @@ export default function MatrixCellHistogramChart({
             <text
               key={`l-${i}`}
               x={x}
-              y={H - 8}
+              y={H - 6}
               textAnchor="middle"
-              className="fill-slate-500"
-              style={{ fontSize: n > 16 ? "6px" : "8px" }}
+              className="fill-slate-600"
+              style={{ fontSize: `${tickFontPx}px` }}
             >
               {shortNum(b.bin_from)}
             </text>
           );
         })}
-        <text
-          x={W / 2}
-          y={H - 1}
-          textAnchor="middle"
-          className="fill-slate-400"
-          style={{ fontSize: "9px" }}
-        >
-          만원/㎡ ({shortNum(lo)} ~ {shortNum(hi)})
-        </text>
       </svg>
     </div>
   );

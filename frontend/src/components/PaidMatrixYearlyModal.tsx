@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   fetchMatrixCellHistogram,
   fetchMatrixCellTransactions,
@@ -92,6 +92,63 @@ export default function PaidMatrixYearlyModal({
   const [txLoading, setTxLoading] = useState(false);
   const [txError, setTxError] = useState<string | null>(null);
   const [txData, setTxData] = useState<MatrixCellTransactionsResponse | null>(null);
+
+  /** 모달 드래그 이동 (헤더 잡고 끌기) */
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const dragSession = useRef<{
+    startX: number;
+    startY: number;
+    baseX: number;
+    baseY: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setDragOffset({ x: 0, y: 0 });
+      dragSession.current = null;
+    }
+  }, [open, zoneType, landCategory]);
+
+  const onDragMove = useCallback((e: MouseEvent) => {
+    const s = dragSession.current;
+    if (!s) return;
+    setDragOffset({
+      x: s.baseX + (e.clientX - s.startX),
+      y: s.baseY + (e.clientY - s.startY),
+    });
+  }, []);
+
+  const onDragEnd = useCallback(() => {
+    dragSession.current = null;
+    window.removeEventListener("mousemove", onDragMove);
+    window.removeEventListener("mouseup", onDragEnd);
+  }, [onDragMove]);
+
+  const onHeaderMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0) return;
+      const target = e.target as HTMLElement;
+      if (target.closest("button")) return;
+      e.preventDefault();
+      dragSession.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        baseX: dragOffset.x,
+        baseY: dragOffset.y,
+      };
+      window.addEventListener("mousemove", onDragMove);
+      window.addEventListener("mouseup", onDragEnd);
+    },
+    [dragOffset.x, dragOffset.y, onDragMove, onDragEnd],
+  );
+
+  useEffect(
+    () => () => {
+      window.removeEventListener("mousemove", onDragMove);
+      window.removeEventListener("mouseup", onDragEnd);
+    },
+    [onDragMove, onDragEnd],
+  );
 
   useEffect(() => {
     if (open) {
@@ -226,7 +283,7 @@ export default function PaidMatrixYearlyModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/35"
+      className="fixed inset-0 z-[100] bg-black/35"
       role="dialog"
       aria-modal="true"
       aria-labelledby="paid-matrix-yearly-title"
@@ -234,8 +291,17 @@ export default function PaidMatrixYearlyModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[85vh] flex flex-col border border-slate-200">
-        <div className="flex justify-between items-start gap-2 px-4 py-3 border-b border-slate-100">
+      <div
+        className="fixed left-1/2 top-1/2 bg-white rounded-xl shadow-xl max-w-4xl w-[calc(100%-2rem)] max-h-[85vh] flex flex-col border border-slate-200"
+        style={{
+          transform: `translate(calc(-50% + ${dragOffset.x}px), calc(-50% + ${dragOffset.y}px))`,
+        }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div
+          className="flex justify-between items-start gap-2 px-4 py-3 border-b border-slate-100 cursor-move select-none"
+          onMouseDown={onHeaderMouseDown}
+        >
           <div className="min-w-0 flex-1">
             <h2 id="paid-matrix-yearly-title" className="text-sm font-bold text-slate-800">
               {isRolling ? "롤링 구간별 평균 변동" : "연도별 평균 변동"}
