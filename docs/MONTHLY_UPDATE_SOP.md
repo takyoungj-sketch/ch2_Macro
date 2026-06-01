@@ -135,6 +135,14 @@ py rehearse_v2_update.py --health-url http://127.0.0.1:8000/health
 ```
 
 ```powershell
+py verify_monthly_integrity.py --as-of-month 2026-05-01
+```
+
+(`--as-of-month` 생략 시 `STATS_V2_DEFAULT_AS_OF_MONTH` 또는 DB `MAX(as_of_month)` 사용.  
+`--base-url http://127.0.0.1:8000` 추가 시 API `total.count` ↔ DB 대조.  
+배치 직후 golden count 갱신: `--update-golden`)
+
+```powershell
 py verify_v2_national_samples.py --base-url http://127.0.0.1:8000 --as-of-month 2026-04-01
 ```
 
@@ -148,7 +156,8 @@ py verify_v2_national_samples.py --base-url http://127.0.0.1:8000 --as-of-month 
 
 ### 8.2 수동 체크리스트 (최소)
 
-- [ ] **거래량 급변** 시도 없음 (`compare_*` 또는 수동표)  
+- [ ] **`verify_monthly_integrity.py`** exit 0 (Promote 게이트)  
+- [ ] **거래량 급변** 시도 없음 (`compare_*` 또는 `--count-before`/`--after`)  
 - [ ] **`raw_manifest`** 의 기대 행정구역 파일 수와 실제 제공 범위 일치  
 - [ ] **평균 단가 급변** 이슈 — 대표 동 2~3곳 재조회 (프론트·API)  
 - [ ] **`/health.latest_as_of_month`** 의 정책과 `--v2-as-of` 의도 일치 확인  
@@ -200,6 +209,7 @@ pg_dump -h 호스트 -U 유저 -d land_stats -Fc -f C:\ch2\ch2_Macro\backups\lan
 | 평탄화만 | `py scripts\monthly\flatten_raw_xlsx.py --source raw\토지\202605 --dest clean_snapshots\202605\flat_in` |
 | 시도 건수 스냅샷 | `py scripts\monthly\snapshot_land_tx_counts.py --output clean_snapshots\202605\land_tx_counts_after.json` |
 | 스냅샷 비교 | `py scripts\monthly\compare_count_snapshots.py --before … --after …` |
+| **Promote 게이트** | `py pipeline\verify_monthly_integrity.py --as-of YYYY-MM-01` |
 
 PowerShell 래퍼: `scripts\monthly\run_monthly_cycle.ps1 -CycleId 202605` (상위 생략: `-SkipUpperV2`)
 

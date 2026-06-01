@@ -816,6 +816,15 @@ def upsert_transactions(df: pd.DataFrame) -> int:
     prep = _prepare_land_tx_upsert(df, cols)
     prep = prep.astype(object).where(pd.notna(prep), None)
 
+    before_hash_dedupe = len(prep)
+    prep = prep.drop_duplicates(subset=["transaction_hash"], keep="last")
+    if len(prep) < before_hash_dedupe:
+        log.info(
+            "transaction_hash 배치 내 중복 제거: %d → %d",
+            before_hash_dedupe,
+            len(prep),
+        )
+
     engine = get_engine()
     url = engine.url
     insert_sql = """

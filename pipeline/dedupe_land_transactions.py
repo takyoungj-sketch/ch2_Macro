@@ -139,14 +139,26 @@ def _rehash_all(conn, *, batch: int = 5000) -> int:
                 is_cancelled=bool(r.is_cancelled),
             )
             new_hash = make_transaction_hash(key)
-            if new_hash != r.transaction_hash:
+            if new_hash == r.transaction_hash:
+                continue
+            existing_id = conn.execute(
+                text(
+                    "SELECT id FROM land_transactions WHERE transaction_hash = :h LIMIT 1"
+                ),
+                {"h": new_hash},
+            ).scalar()
+            if existing_id is not None and int(existing_id) != int(r.id):
                 conn.execute(
-                    text(
-                        "UPDATE land_transactions SET transaction_hash = :h WHERE id = :id"
-                    ),
-                    {"h": new_hash, "id": r.id},
+                    text("DELETE FROM land_transactions WHERE id = :id"),
+                    {"id": int(r.id)},
                 )
                 updated += 1
+                continue
+            conn.execute(
+                text("UPDATE land_transactions SET transaction_hash = :h WHERE id = :id"),
+                {"h": new_hash, "id": int(r.id)},
+            )
+            updated += 1
         offset += batch
         log.info("rehash progress: scanned %s rows, updated %s", f"{offset:,}", f"{updated:,}")
     return updated

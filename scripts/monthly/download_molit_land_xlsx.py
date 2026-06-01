@@ -164,6 +164,7 @@ def main() -> None:
     options = Options()
     if args.headless:
         options.add_argument("--headless=new")
+        options.add_argument("--window-size=1920,1080")
     options.add_experimental_option(
         "prefs",
         {
@@ -201,9 +202,10 @@ def main() -> None:
                 continue
 
             try:
-                wait.until(
+                tab = wait.until(
                     EC.element_to_be_clickable((By.ID, f"xlsTab{property_type}"))
-                ).click()
+                )
+                driver.execute_script("arguments[0].click();", tab)
 
                 driver.find_element(By.ID, "srhFromDt").clear()
                 driver.find_element(By.ID, "srhFromDt").send_keys(from_date)

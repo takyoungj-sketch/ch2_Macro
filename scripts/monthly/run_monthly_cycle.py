@@ -172,7 +172,9 @@ def main() -> None:
         total_sec,
         total_sec / 60.0,
     )
-    log.info("다음: SOP 검증(rehearse / verify_v2 / compare_count_snapshots) 후 promote")
+    log.info(
+        "다음: SOP 검증(rehearse / verify_monthly_integrity / verify_v2) 후 promote"
+    )
 
 
 if __name__ == "__main__":

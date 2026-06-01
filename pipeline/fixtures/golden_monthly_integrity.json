@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "description": "월간 Promote 전 회귀 앵커. 의도적 기준 변경 후 `verify_monthly_integrity.py --update-golden` 으로 expected_v2_counts 갱신.",
+  "ledger_exact": [
+    {
+      "id": "biha_borok_dap",
+      "label": "청주 비하동 보녹·답",
+      "beopjungri_code": "4311313800",
+      "zone_type": "보녹",
+      "land_category": "답",
+      "expected_count": 2
+    }
+  ],
+  "v2_raw_match": [
+    {
+      "id": "gagyeong",
+      "label": "가경동",
+      "beopjungri_code": "4311311300",
+      "windows": [3, 5]
+    }
+  ],
+  "national_samples": [
+    {"label": "서울", "beopjungri_code": "1111010100"},
+    {"label": "경기", "beopjungri_code": "4113110100"},
+    {"label": "부산", "beopjungri_code": "2635010100"},
+    {"label": "충북", "beopjungri_code": "4311311300"},
+    {"label": "제주", "beopjungri_code": "5011010100"}
+  ],
+  "count_floors": {
+    "4311311300": {"3": 40, "5": 60}
+  },
+  "expected_v2_counts": {
+    "2026-05-01": {
+      "4311311300": {"3": 83, "5": 124}
+    }
+  }
+}

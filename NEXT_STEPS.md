@@ -45,6 +45,7 @@
 | 6 | backend | 갱신 실패 알림 (Slack/SMTP) — `build_stats_v2.py` 종료 코드를 받는 wrapper | 외부 webhook 정해지면 |
 | 7 | ops | DB 일일 백업 자동화 (`pg_dump` 또는 PITR) + 복구 리허설 | 결제 도입 전이라도 |
 | 8 | tests | `clean.py` 강한 키 매핑·`compute_stats`·`period_bounds_for_window` 단위 테스트 | 26년 코드 변경 회귀 방지 |
+| 8a | ops | **`verify_monthly_integrity.py`** — 월간 Promote 게이트 (L1+L2) | `pipeline/fixtures/golden_monthly_integrity.json` |
 | 9 | ops | Selenium/Playwright 자동 수집 | 현재는 수동 다운로드 → `--excel-dir` |
 | 10 | ui | 신규 연도 첫 분기 "참고용" 워터마크 (count<15 강조 외 보조) | 26년 1Q UX |
 | 11 | data/pipeline | **`transaction_hash` dedupe (6월)** | [`docs/TRANSACTION_HASH_DEDUPE.md`](docs/TRANSACTION_HASH_DEDUPE.md) — 비하동 4→2건 회귀. 코드 준비됨, DB 실행은 6월 Promote 전. |

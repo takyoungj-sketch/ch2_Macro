@@ -68,7 +68,8 @@ python build_stats_v2.py --as-of 2025-12-01 --windows 3,5 2>&1 | tee ../logs/v2_
 | B7 | 인구 CSV 신규본 적재 | `python seed_population_csv.py --file ../data/population/...` (DECISIONS D-004 — `--codes-prefix` 미지정 시 전국 적재) |
 | B8 | **백엔드 재시작** | `.env` 의 `STATS_V2_DEFAULT_AS_OF_MONTH` 반영. 재시작 후 `/health` 의 `latest_as_of_month` 확인 |
 | B9 | **프론트 재시작** (Vite) | `VITE_STATS_V2_ASSUMED_TODAY` 변경 시 |
-| B10 | `verify_v2_national_samples.py` | `--as-of-month` 를 신규 스냅샷으로 |
+| B10 | `verify_monthly_integrity.py` | `--as-of-month` 신규 스냅샷 (Promote 게이트, exit 0 필수) |
+| B10a | `verify_v2_national_samples.py` | `--as-of-month` 를 신규 스냅샷으로 (API 스모크) |
 | B11 | 프론트·API 샘플 수동 확인 | 주요 지역·3/5년 |
 | B12 | (옵션) 사용자 캐시 클리어 안내 | 브라우저 강제 새로고침. 백엔드 캐시는 B3 에서 자동 비워짐 |
 

@@ -314,6 +314,7 @@ SOP_COMMANDS = [
     ("dedupe_land_transactions.py", ["--help"]),
     ("seed_population_csv.py", ["--help"]),
     ("verify_v2_national_samples.py", ["--help"]),
+    ("verify_monthly_integrity.py", ["--help"]),
 ]
 
 
