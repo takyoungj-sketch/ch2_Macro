@@ -15,6 +15,17 @@
 `DATABASE_URL`(및 선택 `STATS_*`)은 기존과 같이 **`pipeline/.env`** 또는 환경 변수를 사용한다.  
 `flatten`/`snapshot*` 은 레포 루트에서 실행해도 `pipeline/` 을 `sys.path` 에 넣어 `db_utils` 를 로드한다.
 
+## 복합부동산 월간 배치
+
+- **통합 실행:**  
+  `py scripts/monthly/run_built_monthly_cycle.py --cycle-id YYYYMM --require-land-cycle`  
+  (토지 cycle **이후** · `--use-legacy-defaults` 로 GUKTO 경로 전환기 ingest)
+- **건수 스냅샷:** `py scripts/monthly/snapshot_built_tx_counts.py`
+- **스냅샷 비교:** `py scripts/monthly/compare_built_count_snapshots.py`
+- **SOP:** `docs/BUILT_MONTHLY_UPDATE_SOP.md`
+
+`BUILT_DATABASE_URL` 은 **`pipeline/.env.built`** (및 `import_refined` 의 built db_utils).
+
 ## 국토부 엑셀 수집 (Selenium · 토지 매매)
 
 - `py -m pip install "selenium>=4.15"`

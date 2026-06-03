@@ -17,6 +17,11 @@ class Settings(BaseSettings):
         extra="ignore",
     )
     database_url: str = "postgresql+psycopg2://postgres:password@localhost:5432/land_stats"
+    #: built_stats (복합부동산 연구 MVP). 비어 있으면 /api/built 라우터 미등록.
+    built_database_url: str = Field(
+        default="",
+        validation_alias="BUILT_DATABASE_URL",
+    )
     secret_key: str = "change_me"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60

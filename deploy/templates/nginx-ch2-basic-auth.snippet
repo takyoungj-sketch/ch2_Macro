@@ -1,0 +1,8 @@
+# /etc/nginx/snippets/ch2-basic-auth.conf
+# HTTPS server { } 블록 안, server_name 다음 줄에 include:
+#   include /etc/nginx/snippets/ch2-basic-auth.conf;
+#
+# 생성: deploy/scripts/setup-ch2-basic-auth.sh
+
+auth_basic "CH2 DATA";
+auth_basic_user_file /etc/nginx/.htpasswd-ch2;

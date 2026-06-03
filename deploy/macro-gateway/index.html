@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="CH2 Macro — 토지·복합부동산 실거래 통계" />
+    <title>CH2 Macro — 유형 선택</title>
+    <link rel="stylesheet" href="style.css" />
+    <script>
+      /* 예전 루트(/) 토지 SPA service worker 제거 — 게이트웨이가 안 뜰 때 */
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function (rs) {
+          rs.forEach(function (r) {
+            r.unregister();
+          });
+        });
+      }
+    </script>
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <a class="hero__back" href="https://ch2data.com/">← CH2 DATA</a>
+        <p class="hero__eyebrow">실거래 통계</p>
+        <h1 class="hero__title">CH2 Macro</h1>
+        <p class="hero__lead">분석할 부동산 유형을 선택하세요.</p>
+      </header>
+
+      <main class="grid" aria-label="부동산 유형">
+        <a class="card" href="/land/">
+          <span class="card__badge card__badge--live">이용 가능</span>
+          <h2 class="card__name">토지</h2>
+          <p class="card__desc">토지 매매 실거래 — 단가·분포·V2 통계·필터 분석</p>
+          <span class="card__action">토지 통계 →</span>
+        </a>
+
+        <a class="card" href="/built/">
+          <span class="card__badge card__badge--beta">베타</span>
+          <h2 class="card__name">복합부동산</h2>
+          <p class="card__desc">상업·공장·단독다가구 — 거래 탐색·OLS 회귀·예측</p>
+          <span class="card__action">복합부동산 통계 →</span>
+        </a>
+      </main>
+
+      <footer class="footer">
+        <p>© CH2 Macro</p>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -21,6 +21,8 @@
 | 6 | [06-recovery.md](./06-recovery.md) | 장애·롤백 절차 |
 | 7 | [07-verification-checklist.md](./07-verification-checklist.md) | 기능·HTTPS·CORS·DB 검증 |
 | 8 | [08-ch2data-portal.md](./08-ch2data-portal.md) | **ch2data.com** 허브 + 서브도메인 (Macro/Viewer/FieldNote) |
+| 9 | [09-macro-built-vps.md](./09-macro-built-vps.md) | **Macro 내 복합부동산** — 게이트웨이·/land/·/built/·built_stats Promote |
+| — | [../docs/BUILT_HANDOFF_AND_ROADMAP.md](../docs/BUILT_HANDOFF_AND_ROADMAP.md) | **인수·로드맵** — AI 연동 · 202607 월간 업데이트 |
 
 ---
 
@@ -36,7 +38,11 @@ deploy/
 │   └── postgresql-4gb.conf.snippet      # 4GB RAM 튜닝 참고
 └── scripts/
     ├── deploy-hub.sh                   # ch2data.com 정적 허브 배치
-    ├── redeploy.sh                      # git pull → build → restart
+    ├── deploy-macro-gateway.sh         # macro.ch2data.com / 유형 선택
+    ├── promote_built_restore.sh        # built_stats Promote
+    ├── vps_sync_nginx_api_token.sh     # nginx X-CH2-Proxy-Token 스니펫
+    ├── vps_rebuild_frontends_with_token.sh
+    ├── redeploy.sh                      # git pull → land+built build → restart
     └── health-check.sh                  # /health 스모크 테스트
 ```
 

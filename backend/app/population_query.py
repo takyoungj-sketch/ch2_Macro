@@ -106,9 +106,9 @@ def attach_population_year_end(
     items: list[YearlyTradeStat],
 ) -> list[YearlyTradeStat]:
     """
-    선택 법정동·리 코드 집합에 대해 stats_month=12(또는 NULL을 연말로 간주) 인구 합계를
-    연도별로 조회해 YearlyTradeStat.population_year_end 에 채운다.
-    DB에 해당 연도·코드 데이터가 없으면 None.
+    선택 법정동·리 코드 집합에 대해 연말(stats_month=12, NULL은 레거시 연말) 인구만
+    연도별로 합산해 YearlyTradeStat.population_year_end 에 채운다.
+    중간 월(예: 2026-03)은 사용하지 않는다. 해당 연도·코드에 연말 행이 없으면 None.
     """
     if not items:
         return items
@@ -128,8 +128,8 @@ def attach_population_year_end(
             WHERE admin_level = 'beopjungri'
               AND btrim(cast(admin_code AS text)) = ANY(:codes)
               AND stats_year = ANY(:years)
-            ORDER BY stats_year, btrim(cast(admin_code AS text)),
-                     stats_month DESC NULLS LAST
+              AND (stats_month = 12 OR stats_month IS NULL)
+            ORDER BY stats_year, btrim(cast(admin_code AS text)), id DESC
         )
         SELECT stats_year::int AS y,
                SUM(total_population)::bigint AS pop

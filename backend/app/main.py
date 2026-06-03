@@ -17,6 +17,11 @@ from app.config import settings
 from app.db import get_db
 from app.routers import free, free_v2, paid, twin_regions, upper_stats
 
+if (settings.built_database_url or "").strip():
+    from app.built.router import router as built_router
+else:
+    built_router = None
+
 logging.basicConfig(level=logging.INFO)
 _LOG = logging.getLogger(__name__)
 
@@ -68,7 +73,12 @@ async def _api_token_guard(request: Request, call_next):
     open_paths = {"/health", "/openapi.json", "/docs", "/redoc"}
     if request.url.path in open_paths or request.method == "OPTIONS":
         return await call_next(request)
-    sent = request.headers.get("x-api-token", "")
+    # nginx가 /api/ 프록시 시 X-CH2-Proxy-Token 을 주입(클라이언트 헤더 덮어씀).
+    sent = (
+        request.headers.get("x-ch2-proxy-token")
+        or request.headers.get("x-api-token")
+        or ""
+    ).strip()
     if sent != expected:
         return JSONResponse(
             status_code=401,
@@ -84,6 +94,9 @@ app.include_router(free_v2.router, prefix="/api")
 app.include_router(paid.router, prefix="/api")
 app.include_router(upper_stats.router, prefix="/api")
 app.include_router(twin_regions.router, prefix="/api")
+if built_router is not None:
+    app.include_router(built_router, prefix="/api")
+    _LOG.info("built_stats API 활성: /api/built/*")
 
 
 # 폐기 일정 헤더 — RFC 8594 Sunset.
@@ -132,6 +145,40 @@ def _safe_latest_as_of_month(db: Session) -> Optional[date]:
         return None
 
 
+def _safe_built_health() -> Optional[dict]:
+    if not (settings.built_database_url or "").strip():
+        return None
+    try:
+        from app.built.db import get_built_engine
+
+        eng = get_built_engine()
+        if eng is None:
+            return None
+        with eng.connect() as conn:
+            total = conn.execute(text("SELECT COUNT(*) FROM built_transactions")).scalar()
+            by_type = conn.execute(
+                text(
+                    """
+                    SELECT asset_type, COUNT(*)::bigint AS n
+                    FROM built_transactions
+                    GROUP BY asset_type
+                    ORDER BY asset_type
+                    """
+                )
+            ).mappings().all()
+            max_year = conn.execute(
+                text("SELECT MAX(contract_year) FROM built_transactions")
+            ).scalar()
+        return {
+            "total_transactions": int(total or 0),
+            "by_asset_type": {str(r["asset_type"]): int(r["n"]) for r in by_type},
+            "max_contract_year": int(max_year) if max_year is not None else None,
+        }
+    except Exception as exc:  # noqa: BLE001
+        _LOG.warning("/health built_stats 조회 실패: %s", exc)
+        return None
+
+
 @app.get("/health", tags=["헬스체크"])
 def health(db: Session = Depends(get_db)):
     """
@@ -139,7 +186,11 @@ def health(db: Session = Depends(get_db)):
     값이 비어 있으면 V2 사전집계가 적재되지 않은 상태.
     """
     latest = _safe_latest_as_of_month(db)
-    return {
+    payload: dict = {
         "status": "ok",
         "latest_as_of_month": latest.isoformat() if latest else None,
     }
+    built = _safe_built_health()
+    if built is not None:
+        payload["built_stats"] = built
+    return payload

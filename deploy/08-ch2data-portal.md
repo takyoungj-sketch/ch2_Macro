@@ -87,28 +87,43 @@ sudo certbot renew --dry-run
 
 ## 8.5 Macro 연동
 
-1. [`templates/nginx-ch2-macro.conf`](./templates/nginx-ch2-macro.conf) — `server_name macro.ch2data.com;`
-2. `backend/.env` — `CORS_ORIGINS=https://macro.ch2data.com` (IP 직접 접속 유지 시 `,http://13.209.203.178` 추가 가능)
-3. `systemctl restart ch2-macro-backend`
-4. 프론트는 상대 경로 `/api/` 사용 시 재빌드 불필요
+1. [`templates/nginx-ch2-macro.conf`](./templates/nginx-ch2-macro.conf) — `/` 게이트웨이, `/land/`, `/built/`, `/api/`
+2. `backend/.env` — `CORS_ORIGINS=https://macro.ch2data.com`, `BUILT_DATABASE_URL=...built_stats`
+3. `redeploy.sh` — land + built 프론트 빌드
+4. 복합 DB Promote: [`09-macro-built-vps.md`](./09-macro-built-vps.md)
 
-검증: [07-verification-checklist.md](./07-verification-checklist.md)
+검증: [07-verification-checklist.md](./07-verification-checklist.md) · [09-macro-built-vps.md](./09-macro-built-vps.md) §9.8
 
 ---
 
 ## 8.6 Nginx 사이트 요약 (한 VPS)
 
-```
-/etc/nginx/sites-enabled/
-├── ch2data-hub   → /var/www/ch2data-hub          (ch2data.com, www)
-└── ch2-macro     → /opt/ch2_Macro/frontend/dist  (macro.ch2data.com)
-```
+| site file | server_name | root / backend |
+|-----------|-------------|----------------|
+| `ch2data-hub` | `ch2data.com`, `www` | `/var/www/ch2data-hub` |
+| `ch2-macro` | `macro.ch2data.com` | `/` gateway · `/land/` · `/built/` SPA + `/api` |
+| `ch2-viewer` | `viewer.ch2data.com` | `/var/www/ch2-viewer` |
+| `ch2-fieldnote` | `fieldnote.ch2data.com` | proxy `:5174` |
 
 certbot 이 각 server 블록에 SSL listen 443 을 추가합니다. `/api/` 프록시가 사라졌으면 템플릿의 `location` 블록을 merge 하세요.
 
+### 8.7 개인용 Basic Auth (전체 잠금)
+
+전 서브도메인에 HTTP Basic Auth:
+
+```bash
+sudo bash /opt/ch2_Macro/deploy/scripts/setup-ch2-basic-auth.sh
+# 또는 비밀번호 직접 지정:
+CH2_BASIC_AUTH_USER=ch2admin CH2_BASIC_AUTH_PASS='...' sudo -E bash ...
+```
+
+- 스니펫: `/etc/nginx/snippets/ch2-basic-auth.conf`
+- 계정 파일: `/etc/nginx/.htpasswd-ch2`
+- 비밀번호 변경: `sudo htpasswd /etc/nginx/.htpasswd-ch2 ch2admin`
+
 ---
 
-## 8.7 허브 수정
+## 8.8 허브 수정
 
 1. `deploy/hub/index.html` · `style.css` 수정
 2. VPS sync → `sudo bash deploy/scripts/deploy-hub.sh`

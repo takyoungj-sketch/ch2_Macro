@@ -29,9 +29,21 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="bg-white border-b border-slate-200 px-6 py-3 flex flex-wrap items-center justify-between gap-3 shadow-sm">
         <div>
+          <p className="text-[11px] text-slate-500 mb-0.5">
+            <a href="/" className="hover:text-slate-700">
+              CH2 Macro
+            </a>
+            {" · 토지"}
+          </p>
           <h1 className="text-base font-bold text-slate-800">토지 실거래 통계</h1>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-3 shrink-0">
+          <a
+            href="/built/"
+            className="text-xs text-slate-600 border border-slate-200 rounded-md px-2 py-1 hover:bg-slate-50"
+          >
+            복합부동산 →
+          </a>
           <div
             className="flex flex-wrap items-center gap-2 text-xs text-slate-600"
             aria-label="화면 표시 설정"
