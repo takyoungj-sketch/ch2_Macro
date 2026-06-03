@@ -22,6 +22,11 @@ class Settings(BaseSettings):
         default="",
         validation_alias="BUILT_DATABASE_URL",
     )
+    #: collective_stats (집합부동산 MVP). 비어 있으면 /api/collective 라우터 미등록.
+    collective_database_url: str = Field(
+        default="",
+        validation_alias="COLLECTIVE_DATABASE_URL",
+    )
     secret_key: str = "change_me"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60

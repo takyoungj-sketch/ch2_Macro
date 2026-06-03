@@ -23,6 +23,7 @@
 | 8 | [08-ch2data-portal.md](./08-ch2data-portal.md) | **ch2data.com** 허브 + 서브도메인 (Macro/Viewer/FieldNote) |
 | 9 | [09-macro-built-vps.md](./09-macro-built-vps.md) | **Macro 내 복합부동산** — 게이트웨이·/land/·/built/·built_stats Promote |
 | — | [../docs/BUILT_HANDOFF_AND_ROADMAP.md](../docs/BUILT_HANDOFF_AND_ROADMAP.md) | **인수·로드맵** — AI 연동 · 202607 월간 업데이트 |
+| — | [../docs/COLLECTIVE_RESEARCH_MVP.md](../docs/COLLECTIVE_RESEARCH_MVP.md) | **집합부동산** MVP · collective_stats |
 
 ---
 

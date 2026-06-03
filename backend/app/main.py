@@ -22,6 +22,11 @@ if (settings.built_database_url or "").strip():
 else:
     built_router = None
 
+if (settings.collective_database_url or "").strip():
+    from app.collective.router import router as collective_router
+else:
+    collective_router = None
+
 logging.basicConfig(level=logging.INFO)
 _LOG = logging.getLogger(__name__)
 
@@ -97,6 +102,9 @@ app.include_router(twin_regions.router, prefix="/api")
 if built_router is not None:
     app.include_router(built_router, prefix="/api")
     _LOG.info("built_stats API 활성: /api/built/*")
+if collective_router is not None:
+    app.include_router(collective_router, prefix="/api")
+    _LOG.info("collective_stats API 활성: /api/collective/*")
 
 
 # 폐기 일정 헤더 — RFC 8594 Sunset.
@@ -179,6 +187,40 @@ def _safe_built_health() -> Optional[dict]:
         return None
 
 
+def _safe_collective_health() -> Optional[dict]:
+    if not (settings.collective_database_url or "").strip():
+        return None
+    try:
+        from app.collective.db import get_collective_engine
+
+        eng = get_collective_engine()
+        if eng is None:
+            return None
+        with eng.connect() as conn:
+            total = conn.execute(text("SELECT COUNT(*) FROM collective_transactions")).scalar()
+            by_type = conn.execute(
+                text(
+                    """
+                    SELECT asset_type, COUNT(*)::bigint AS n
+                    FROM collective_transactions
+                    GROUP BY asset_type
+                    ORDER BY asset_type
+                    """
+                )
+            ).mappings().all()
+            buildings = conn.execute(
+                text("SELECT COUNT(DISTINCT building_key) FROM collective_transactions")
+            ).scalar()
+        return {
+            "total_transactions": int(total or 0),
+            "distinct_buildings": int(buildings or 0),
+            "by_asset_type": {str(r["asset_type"]): int(r["n"]) for r in by_type},
+        }
+    except Exception as exc:  # noqa: BLE001
+        _LOG.warning("/health collective_stats 조회 실패: %s", exc)
+        return None
+
+
 @app.get("/health", tags=["헬스체크"])
 def health(db: Session = Depends(get_db)):
     """
@@ -193,4 +235,7 @@ def health(db: Session = Depends(get_db)):
     built = _safe_built_health()
     if built is not None:
         payload["built_stats"] = built
+    collective = _safe_collective_health()
+    if collective is not None:
+        payload["collective_stats"] = collective
     return payload

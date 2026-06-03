@@ -9,7 +9,7 @@ if [[ -z "$TOKEN" ]]; then
   exit 1
 fi
 
-for app in frontend frontend-built; do
+for app in frontend frontend-built frontend-collective; do
   echo "VITE_API_TOKEN=$TOKEN" > "$REPO/$app/.env"
   chmod 600 "$REPO/$app/.env"
   echo "==> build $app"

@@ -26,6 +26,17 @@
 
 `BUILT_DATABASE_URL` 은 **`pipeline/.env.built`** (및 `import_refined` 의 built db_utils).
 
+## 집합부동산 월간 배치
+
+- **통합 실행:**  
+  `py scripts/monthly/run_collective_monthly_cycle.py --cycle-id YYYYMM --require-land-cycle`  
+  (`--use-legacy-defaults` GUKTO 경로)
+- **건수 스냅샷:** `py scripts/monthly/snapshot_collective_tx_counts.py`
+- **스냅샷 비교:** `py scripts/monthly/compare_collective_count_snapshots.py`
+- **SOP:** `docs/COLLECTIVE_MONTHLY_UPDATE_SOP.md`
+
+`COLLECTIVE_DATABASE_URL` 은 **`pipeline/.env.collective`**.
+
 ## 국토부 엑셀 수집 (Selenium · 토지 매매)
 
 - `py -m pip install "selenium>=4.15"`

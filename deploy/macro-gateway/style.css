@@ -74,6 +74,15 @@ body {
   }
 }
 
+@media (min-width: 900px) {
+  .page {
+    max-width: 960px;
+  }
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 .card {
   position: relative;
   display: flex;
