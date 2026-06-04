@@ -11,6 +11,93 @@ from app.collective.schemas import (
     RegressionCoeff,
 )
 
+# 상대 층(단지 max 층 대비) — 참고 preprocess_floor_dummies 규격
+_REL_FLOOR_LABELS: dict[str, str] = {
+    "floor_rel_1": "1층",
+    "floor_rel_top": "최상층",
+    "floor_rel_low": "저층부",
+    "floor_rel_mid": "중층부",
+    "floor_rel_high": "고층부",
+}
+
+
+def relative_floor_group(floor: float, max_floor: float) -> str:
+    """단지 내 max(층) 대비 백분위 구간 + 1층·최상층 독립."""
+    if pd.isna(floor):
+        return "floor_rel_mid"
+    f = float(floor)
+    mx = float(max_floor) if pd.notna(max_floor) and float(max_floor) > 0 else f
+    if f == 1:
+        return "floor_rel_1"
+    if f == mx:
+        return "floor_rel_top"
+    ratio = f / mx if mx > 0 else 0.5
+    if f > 1 and ratio <= 0.3:
+        return "floor_rel_low"
+    if 0.3 < ratio <= 0.7:
+        return "floor_rel_mid"
+    if ratio > 0.7 and f < mx:
+        return "floor_rel_high"
+    return "floor_rel_mid"
+
+
+def _floor_group_label(floor: float) -> str:
+    if floor <= 5:
+        return "floor_grp_1-5"
+    if floor <= 15:
+        return "floor_grp_6-15"
+    return "floor_grp_16+"
+
+
+def _add_floor_columns(work: pd.DataFrame, mode: str) -> tuple[pd.DataFrame, dict[str, str]]:
+    labels: dict[str, str] = {}
+    if not work["floor"].notna().any():
+        return pd.DataFrame(index=work.index), labels
+
+    if mode == "linear":
+        fl = work["floor"].astype(float).fillna(0)
+        out = fl.to_frame("floor")
+        labels["floor"] = "층(선형)"
+        return out, labels
+
+    fl = work["floor"].astype(float)
+
+    if mode == "relative":
+        max_floor = fl.max()
+        grp = fl.apply(
+            lambda x: relative_floor_group(x, max_floor) if pd.notna(x) else "floor_rel_mid"
+        )
+        dummies = pd.get_dummies(grp, prefix="", prefix_sep="", drop_first=True)
+        for c in dummies.columns:
+            base = _REL_FLOOR_LABELS.get(c, c)
+            labels[c] = f"{base} (기준 대비)"
+        return dummies, labels
+
+    if mode == "grouped":
+        grp = fl.apply(lambda x: _floor_group_label(x) if pd.notna(x) else "floor_grp_unknown")
+        dummies = pd.get_dummies(grp, prefix="", prefix_sep="", drop_first=True)
+    else:
+        floor_str = fl.apply(
+            lambda x: (
+                str(int(x))
+                if pd.notna(x) and float(x) == int(float(x))
+                else (f"{float(x):g}" if pd.notna(x) else None)
+            )
+        )
+        dummies = pd.get_dummies(floor_str, prefix="floor", drop_first=True)
+
+    if dummies.empty:
+        return pd.DataFrame(index=work.index), labels
+
+    for c in dummies.columns:
+        if c.startswith("floor_grp_"):
+            labels[c] = c.replace("floor_grp_", "층 ") + " (기준 대비)"
+        elif c.startswith("floor_rel_"):
+            labels[c] = _REL_FLOOR_LABELS.get(c, c) + " (기준 대비)"
+        else:
+            labels[c] = f"층 {c.replace('floor_', '')} (기준 대비)"
+    return dummies, labels
+
 
 def run_building_regression(
     df: pd.DataFrame,
@@ -58,9 +145,10 @@ def run_building_regression(
         labels["building_age"] = "연식"
 
     if req.variables.floor and work["floor"].notna().any():
-        fl = work["floor"].astype(float).fillna(0)
-        parts.append(fl.to_frame("floor"))
-        labels["floor"] = "층"
+        floor_part, floor_labels = _add_floor_columns(work, req.variables.floor_mode)
+        if not floor_part.empty:
+            parts.append(floor_part)
+            labels.update(floor_labels)
 
     if req.variables.dong and work["dong"].notna().any():
         dummies = pd.get_dummies(work["dong"].astype(str).str.strip(), prefix="dong", drop_first=True)

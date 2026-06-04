@@ -6,9 +6,31 @@ export interface CollectiveFilterMeta {
   addr1_list: string[];
 }
 
+export interface RegionStructure {
+  has_intermediate: boolean;
+  intermediate_label: string | null;
+  leaf_level: string;
+}
+
+export interface RegionOption {
+  name: string;
+  count: number;
+  parent?: string | null;
+}
+
+export interface AnalysisFeatures {
+  floor_index: boolean;
+  regression: boolean;
+  count_total: number;
+  count_recent: number;
+  messages: string[];
+}
+
 export interface BuildingStatsRow {
   building_key: string;
   display_name: string;
+  address: string;
+  building_year?: number | null;
   asset_type: string;
   count: number;
   mean?: number | null;
@@ -16,6 +38,29 @@ export interface BuildingStatsRow {
   ci_lower?: number | null;
   ci_upper?: number | null;
   is_reliable: boolean;
+  analysis?: AnalysisFeatures;
+}
+
+export interface FloorIndexCell {
+  label: string;
+  floor?: number | null;
+  dong?: string | null;
+  area?: number | null;
+  count: number;
+  mean_unit_price?: number | null;
+  index?: number | null;
+  is_reliable: boolean;
+}
+
+export interface FloorIndexResponse {
+  building_key: string;
+  display_name: string;
+  asset_type: string;
+  dimension: string;
+  n_total: number;
+  baseline_median?: number | null;
+  cells: FloorIndexCell[];
+  analysis?: AnalysisFeatures;
 }
 
 export interface BuildingListResponse {
@@ -45,6 +90,14 @@ export interface HistogramBin {
   lo: number;
   hi: number;
   count: number;
+}
+
+export interface HistogramResponse {
+  building_key: string;
+  bins: HistogramBin[];
+  n: number;
+  contract_year?: number | null;
+  unit: string;
 }
 
 export interface RegressionCoeff {

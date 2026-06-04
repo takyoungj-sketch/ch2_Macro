@@ -51,6 +51,8 @@
 | 11 | data/pipeline | **`transaction_hash` dedupe (6월)** | [`docs/TRANSACTION_HASH_DEDUPE.md`](docs/TRANSACTION_HASH_DEDUPE.md) — 비하동 4→2건 회귀. 코드 준비됨, DB 실행은 6월 Promote 전. |
 | 12 | backend | `region_codes` 활성/비활성(`is_active`) 갱신 절차 — 행정 개편 대응 | 신규 법정동 코드 자동 반영 |
 | 13 | data/ui | **장기 연도별 추세 (v1)** | [`docs/LONG_TERM_TREND_DESIGN.md`](docs/LONG_TERM_TREND_DESIGN.md) — D-013. P1~P2: `land_annual_stats` + 모달 다중 선. 2010~ backfill은 P3. |
+| 14 | collective | ~~**아파트 재적재 (semantic hash → 원본 행 전량)**~~ ✅ **완료 (2026-06-04)** | 2,288,749건. [`docs/COLLECTIVE_HANDOFF.md`](docs/COLLECTIVE_HANDOFF.md) §적재 정책. |
+| 15 | collective | **연립·다세대 데이터 적재** | GUKTO `연립다세대_매매_정제` → `import_refined.py --rowhouse-only`. 아파트·오피스텔과 동일 전량 적재 정책. |
 
 ## 3. 상위단계 사전집계 + 쌍둥이 지역 (DECISIONS D-009~D-011)
 

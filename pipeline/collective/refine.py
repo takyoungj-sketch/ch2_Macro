@@ -7,6 +7,7 @@ MOLIT raw or refined xlsx → canonical collective DataFrame.
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Literal
 
 import numpy as np
@@ -17,6 +18,8 @@ from molit_schemas import REFINED_COL_MAP, SCHEMAS, AssetType
 InputKind = Literal["raw", "refined"]
 
 MOLIT_RAW_SKIPROWS = 13
+# 국토부 CSV(오피스텔 등): 1~16행 메타·헤더, 17행부터 데이터 (header=None iloc 기준)
+MOLIT_CSV_SKIPROWS = 16
 
 
 def _normalize_dong(val, *, max_len: int = 64) -> str | None:
@@ -47,6 +50,8 @@ def _extract_raw(df: pd.DataFrame, asset_type: AssetType) -> pd.DataFrame:
     for logical, idx in schema.columns.items():
         out[logical] = _get_col(df, idx)
     out["asset_type"] = asset_type
+    if "_source_key" in df.columns:
+        out["_source_key"] = df["_source_key"]
 
     if df.shape[1] > schema.cancel_col:
         cancel_val = df.iloc[:, schema.cancel_col].astype(str).str.strip()
@@ -103,8 +108,11 @@ def _extract_raw(df: pd.DataFrame, asset_type: AssetType) -> pd.DataFrame:
 
 
 def _load_refined(df: pd.DataFrame, asset_type: AssetType) -> pd.DataFrame:
+    source_key = df["_source_key"] if "_source_key" in df.columns else None
     rename = {k: v for k, v in REFINED_COL_MAP.items() if k in df.columns}
     out = df.rename(columns=rename).copy()
+    if source_key is not None:
+        out["_source_key"] = source_key.values
     if "building_name" not in out.columns:
         if "단지명" in df.columns:
             out["building_name"] = df["단지명"]
@@ -158,6 +166,26 @@ def refine_dataframe(
     return work.reset_index(drop=True)
 
 
+def read_molit_raw_csv(path) -> pd.DataFrame:
+    """MOLIT 자료실 CSV — skiprows=16, iloc 컬럼 인덱스는 xlsx raw와 동일."""
+    last_err: Exception | None = None
+    for enc in ("utf-8-sig", "utf-8", "cp949"):
+        try:
+            return pd.read_csv(
+                path,
+                header=None,
+                skiprows=MOLIT_CSV_SKIPROWS,
+                encoding=enc,
+                dtype=str,
+                keep_default_na=False,
+            )
+        except UnicodeDecodeError as e:
+            last_err = e
+    if last_err:
+        raise last_err
+    raise RuntimeError(f"failed to read csv: {path}")
+
+
 def read_source_excel(path) -> tuple[pd.DataFrame, InputKind]:
     """정제 xlsx vs MOLIT raw(13행 헤더) 자동 판별."""
     probe = pd.read_excel(path, nrows=5)
@@ -166,11 +194,23 @@ def read_source_excel(path) -> tuple[pd.DataFrame, InputKind]:
     return pd.read_excel(path, header=None, skiprows=MOLIT_RAW_SKIPROWS), "raw"
 
 
+def read_source_file(path) -> tuple[pd.DataFrame, InputKind]:
+    """xlsx 또는 MOLIT raw csv."""
+    p = Path(path) if not isinstance(path, Path) else path
+    if p.suffix.lower() == ".csv":
+        return read_molit_raw_csv(p), "raw"
+    return read_source_excel(p)
+
+
 def refine_excel(path, asset_type: AssetType, *, input_kind: InputKind | None = None) -> pd.DataFrame:
     if input_kind is None:
-        df, input_kind = read_source_excel(path)
+        df, input_kind = read_source_file(path)
     elif input_kind == "raw":
-        df = pd.read_excel(path, header=None, skiprows=MOLIT_RAW_SKIPROWS)
+        p = Path(path)
+        if p.suffix.lower() == ".csv":
+            df = read_molit_raw_csv(p)
+        else:
+            df = pd.read_excel(path, header=None, skiprows=MOLIT_RAW_SKIPROWS)
     else:
         df = pd.read_excel(path)
     return refine_dataframe(df, asset_type, input_kind=input_kind)

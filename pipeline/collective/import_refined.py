@@ -1,8 +1,14 @@
 """
-MOLIT raw 또는 정제 xlsx → collective_transactions 적재.
+MOLIT raw 또는 정제 xlsx/csv → collective_transactions 적재.
 
   원본/아파트/*.xlsx (raw, skiprows=13)
+  원본/오피스텔/*.csv (raw, skiprows=16 — 동 컬럼 없음)
   아파트_매매_정제/*.xlsx (정제)
+
+집합부동산 적재 정책 (토지와 다름):
+  - 해제 거래만 refine 단계에서 제외
+  - 그 외 원본 행은 semantic dedupe 없이 전량 INSERT
+  - transaction_hash = SHA-256(asset_type|파일명|원본순번) — 행 식별용, UNIQUE 아님
 """
 
 from __future__ import annotations
@@ -17,7 +23,7 @@ from sqlalchemy import text
 
 from building_keys import _sha256_series, attach_building_identity
 from db_utils import get_collective_engine, get_land_engine_for_region_copy
-from refine import InputKind, detect_input_kind, read_source_excel, refine_dataframe
+from refine import InputKind, detect_input_kind, read_source_file, refine_dataframe
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -25,9 +31,11 @@ log = logging.getLogger(__name__)
 REPO = Path(__file__).resolve().parents[2]
 GUKTO = Path(r"C:\startcoding\GUKTO")
 DEFAULT_APARTMENT_DIR = REPO / "원본" / "아파트"
+DEFAULT_OFFICETEL_DIR = REPO / "원본" / "오피스텔"
 DEFAULT_ROWHOUSE = GUKTO / "연립다세대_매매" / "연립다세대_매매_정제" / "연립다세대_매매_정제.xlsx"
-DEFAULT_OFFICETEL = GUKTO / "오피스텔_매매" / "오피스텔_매매_정제" / "오피스텔_전국정제_정제.xlsx"
+DEFAULT_OFFICETEL = DEFAULT_OFFICETEL_DIR  # legacy --officetel 단일 파일 대신 디렉터리 기본
 DDL = REPO / "db" / "016_collective_transactions.sql"
+MIGRATION_ROW_IDENTITY = REPO / "db" / "017_collective_tx_row_identity.sql"
 
 INSERT_STMT = text(
     """
@@ -48,7 +56,6 @@ INSERT_STMT = text(
         :building_year, :building_age, :exclusive_area, :price, :unit_price,
         :area_bucket, :age_bucket, :floor, :dong, :is_valid
     )
-    ON CONFLICT (transaction_hash) DO NOTHING
     """
 )
 
@@ -140,9 +147,10 @@ def _attach_codes(df: pd.DataFrame, rc: pd.DataFrame) -> pd.DataFrame:
 
 
 def ensure_schema(engine) -> None:
-    sql = DDL.read_text(encoding="utf-8")
     with engine.begin() as conn:
-        conn.execute(text(sql))
+        conn.execute(text(DDL.read_text(encoding="utf-8")))
+        if MIGRATION_ROW_IDENTITY.is_file():
+            conn.execute(text(MIGRATION_ROW_IDENTITY.read_text(encoding="utf-8")))
 
 
 def sync_region_codes_from_land(collective_engine, land_engine, *, force: bool = False) -> None:
@@ -181,49 +189,43 @@ def sync_region_codes_from_land(collective_engine, land_engine, *, force: bool =
     log.info("region_codes synced: %s rows", len(rows))
 
 
-def _prepare_df(df_raw: pd.DataFrame, asset_type: str, *, input_kind: InputKind | None = None) -> pd.DataFrame:
-    kind = input_kind or detect_input_kind(df_raw)
-    df = refine_dataframe(df_raw, asset_type, input_kind=kind)
-    return attach_building_identity(df, asset_type)
-
-
-def _add_transaction_hashes(df: pd.DataFrame, asset_type: str) -> pd.DataFrame:
-    out = df.copy()
-
-    def _col(name: str) -> pd.Series:
-        if name not in out.columns:
-            return pd.Series("", index=out.index)
-        return out[name].fillna("").astype(str)
-
-    raw = (
-        asset_type
-        + "|"
-        + _col("building_key")
-        + "|"
-        + _col("addr1")
-        + "|"
-        + _col("addr2")
-        + "|"
-        + _col("addr3")
-        + "|"
-        + _col("contract_year")
-        + "|"
-        + _col("contract_month")
-        + "|"
-        + _col("price")
-        + "|"
-        + _col("exclusive_area")
-        + "|"
-        + _col("floor")
-        + "|"
-        + _col("dong")
-    )
-    out["transaction_hash"] = _sha256_series(raw)
+def _attach_source_keys(
+    df_raw: pd.DataFrame, path: Path, *, input_kind: InputKind
+) -> pd.DataFrame:
+    """원본 파일·순번 기준 행 식별자 (집합부동산 전량 적재용)."""
+    out = df_raw.copy()
+    if input_kind == "raw" and out.shape[1] > 0:
+        row_id = out.iloc[:, 0].astype(str).str.strip()
+    else:
+        row_id = pd.Series(range(len(out)), index=out.index, dtype="int64").astype(str)
+    out["_source_key"] = path.name + "|" + row_id
     return out
 
 
+def _prepare_df(
+    df_raw: pd.DataFrame,
+    asset_type: str,
+    path: Path,
+    *,
+    input_kind: InputKind | None = None,
+) -> pd.DataFrame:
+    kind = input_kind or detect_input_kind(df_raw)
+    keyed = _attach_source_keys(df_raw, path, input_kind=kind)
+    df = refine_dataframe(keyed, asset_type, input_kind=kind)
+    return attach_building_identity(df, asset_type)
+
+
+def _add_row_hashes(df: pd.DataFrame, asset_type: str) -> pd.DataFrame:
+    if "_source_key" not in df.columns:
+        raise ValueError("_source_key missing — call _attach_source_keys before refine")
+    out = df.copy()
+    raw = asset_type + "|" + out["_source_key"].astype(str)
+    out["transaction_hash"] = _sha256_series(raw)
+    return out.drop(columns=["_source_key"], errors="ignore")
+
+
 def _records_from_df(df: pd.DataFrame, asset_type: str) -> list[dict]:
-    work = _add_transaction_hashes(df, asset_type)
+    work = _add_row_hashes(df, asset_type)
     records: list[dict] = []
     for row in work.itertuples(index=False):
         rec = {
@@ -293,22 +295,37 @@ def ingest_paths(paths: list[Path], asset_type: str, engine, rc: pd.DataFrame, t
             log.warning("skip missing %s", path)
             continue
         log.info("Reading %s", path)
-        df_raw, kind = read_source_excel(path)
-        df = _prepare_df(df_raw, asset_type, input_kind=kind)
+        df_raw, kind = read_source_file(path)
+        df = _prepare_df(df_raw, asset_type, path, input_kind=kind)
         df = _attach_codes(df, rc)
         n = _insert_records(engine, _records_from_df(df, asset_type))
         total += n
         log.info("%s: %d rows (cumulative %d)", path.name, n, total)
 
-    log.info("%s: attempted %d rows", asset_type, total)
+    log.info("%s: inserted %d rows", asset_type, total)
     return total
+
+
+def resolve_officetel_paths(officetel_arg: Path) -> list[Path]:
+    if officetel_arg.is_dir():
+        paths = sorted(officetel_arg.glob("*.csv"))
+        if not paths:
+            paths = sorted(officetel_arg.glob("*.xlsx"))
+        return paths
+    return [officetel_arg]
 
 
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--apartment-dir", type=Path, default=DEFAULT_APARTMENT_DIR)
     p.add_argument("--rowhouse", type=Path, default=DEFAULT_ROWHOUSE)
-    p.add_argument("--officetel", type=Path, default=DEFAULT_OFFICETEL)
+    p.add_argument(
+        "--officetel",
+        type=Path,
+        default=DEFAULT_OFFICETEL,
+        help="오피스텔 정제 xlsx 단일 파일 또는 원본 csv 디렉터리",
+    )
+    p.add_argument("--officetel-dir", type=Path, default=None, help="원본/오피스텔/*.csv ( --officetel 보다 우선 )")
     p.add_argument("--apartment-only", action="store_true")
     p.add_argument("--rowhouse-only", action="store_true")
     p.add_argument("--officetel-only", action="store_true")
@@ -332,7 +349,11 @@ def main() -> None:
     if run_all or args.rowhouse_only:
         ingest_paths([args.rowhouse], "rowhouse", eng, rc, truncate_type=run_all or args.rowhouse_only)
     if run_all or args.officetel_only:
-        ingest_paths([args.officetel], "officetel", eng, rc, truncate_type=run_all or args.officetel_only)
+        ot_root = args.officetel_dir or args.officetel
+        ot_paths = resolve_officetel_paths(ot_root)
+        if not ot_paths:
+            raise SystemExit(f"no officetel files under {ot_root}")
+        ingest_paths(ot_paths, "officetel", eng, rc, truncate_type=run_all or args.officetel_only)
 
 
 if __name__ == "__main__":

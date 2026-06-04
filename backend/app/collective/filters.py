@@ -13,6 +13,7 @@ def apply_region_filters(
     addr2: Optional[str] = None,
     addr3: Optional[str] = None,
     addr3_list: list[str] | None = None,
+    addr4_list: list[str] | None = None,
 ) -> None:
     if addr1:
         clauses.append("addr1 = :addr1")
@@ -20,7 +21,10 @@ def apply_region_filters(
     if addr2:
         clauses.append("addr2 = :addr2")
         params["addr2"] = addr2
-    if addr3_list:
+    if addr4_list:
+        clauses.append("addr4 = ANY(:addr4_list)")
+        params["addr4_list"] = addr4_list
+    elif addr3_list:
         clauses.append("addr3 = ANY(:addr3_list)")
         params["addr3_list"] = addr3_list
     elif addr3:

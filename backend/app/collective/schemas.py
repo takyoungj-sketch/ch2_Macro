@@ -15,9 +15,33 @@ class CollectiveFilterMeta(BaseModel):
     addr1_list: list[str]
 
 
+class RegionStructureResponse(BaseModel):
+    has_intermediate: bool
+    intermediate_label: Optional[str] = None
+    leaf_level: str = "addr3"
+
+
+class RegionOption(BaseModel):
+    name: str
+    count: int
+    parent: Optional[str] = None
+
+
+class AnalysisFeatures(BaseModel):
+    """고급 분석(효용지수·회귀) 활성화 여부 — 선택 연도 구간 기준."""
+
+    floor_index: bool = False
+    regression: bool = False
+    count_total: int = 0
+    count_recent: int = 0
+    messages: list[str] = []
+
+
 class BuildingStatsRow(BaseModel):
     building_key: str
     display_name: str
+    address: str = ""
+    building_year: Optional[int] = None
     asset_type: str
     count: int
     mean: Optional[float] = None
@@ -25,6 +49,7 @@ class BuildingStatsRow(BaseModel):
     ci_lower: Optional[float] = None
     ci_upper: Optional[float] = None
     is_reliable: bool = False
+    analysis: AnalysisFeatures = Field(default_factory=AnalysisFeatures)
 
 
 class BuildingListResponse(BaseModel):
@@ -76,7 +101,31 @@ class HistogramBin(BaseModel):
 class HistogramResponse(BaseModel):
     building_key: str
     bins: list[HistogramBin]
+    n: int = 0
+    contract_year: Optional[int] = None
     unit: str = "만원/㎡"
+
+
+class FloorIndexCell(BaseModel):
+    label: str
+    floor: Optional[float] = None
+    dong: Optional[str] = None
+    area: Optional[float] = None
+    count: int
+    mean_unit_price: Optional[float] = None
+    index: Optional[float] = None
+    is_reliable: bool = False
+
+
+class FloorIndexResponse(BaseModel):
+    building_key: str
+    display_name: str
+    asset_type: str
+    dimension: str
+    n_total: int
+    baseline_median: Optional[float] = None
+    cells: list[FloorIndexCell] = []
+    analysis: AnalysisFeatures = Field(default_factory=AnalysisFeatures)
 
 
 class CollectiveRegressionSpec(BaseModel):
@@ -84,6 +133,7 @@ class CollectiveRegressionSpec(BaseModel):
     building_age: bool = True
     floor: bool = True
     dong: bool = True
+    floor_mode: Literal["linear", "dummy", "grouped", "relative"] = "relative"
 
 
 class CollectiveRegressionRequest(BaseModel):
@@ -93,6 +143,7 @@ class CollectiveRegressionRequest(BaseModel):
     variables: CollectiveRegressionSpec = Field(default_factory=CollectiveRegressionSpec)
     exclude_outliers_iqr: bool = False
     outlier_iqr_multiplier: float = 3.0
+    experiment: bool = False
 
 
 class RegressionCoeff(BaseModel):

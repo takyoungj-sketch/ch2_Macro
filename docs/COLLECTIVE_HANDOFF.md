@@ -26,9 +26,48 @@ land_stats.region_codes  → sync → collective_stats.region_codes
 
 토지와 동일 95% t-CI: [`backend/app/stats_utils.py`](../backend/app/stats_utils.py), `MIN_RELIABLE_COUNT=15`
 
+### 고급 분석 게이트 (방안 1)
+
+선택 연도 구간 기준 — [`analysis_gates.py`](../backend/app/collective/analysis_gates.py)
+
+| 기능 | 조건 |
+|------|------|
+| 건물表 CI | n≥15 |
+| **층·동 효용지수** | n≥50 |
+| **회귀** | n≥30 **且** 최근 3년 n≥15 |
+
+- API: `GET /buildings/{key}/floor-index` (403 if gated)
+- 회귀: `POST .../regression/run` (403 if gated) · 층 `floor_mode=relative`(기본): max층 대비 1·최상·저·중·고 더미
+- `/buildings` 응답 `analysis` 필드로 UI 버튼 disabled
+
+### 층·동 효용지수 (Track 1)
+
+단지 중앙값 ㎡당가 = 100. 셀 n&lt;15 경고. 인근 단지 fallback(방안 2)은 미구현.
+
 ## 월간
 
 [`COLLECTIVE_MONTHLY_UPDATE_SOP.md`](COLLECTIVE_MONTHLY_UPDATE_SOP.md) · `run_collective_monthly_cycle.py`
+
+## 적재 정책 (2026-06)
+
+집합부동산은 **토지와 다르게** semantic hash dedupe 하지 않는다.
+
+- **해제 거래만** `refine` 단계에서 제외
+- 그 외 원본 행은 **전량 INSERT** (`transaction_hash` = `asset_type|파일명|순번`, UNIQUE 아님)
+- 마이그레이션: [`db/017_collective_tx_row_identity.sql`](../db/017_collective_tx_row_identity.sql)
+
+| 유형 | 상태 |
+|------|------|
+| 오피스텔 | `원본/오피스텔/*.csv` — 신규 정책 적용 완료 (209,082건) |
+| 아파트 | `원본/아파트/*.xlsx` — **재적재 완료 (2026-06-04, 2,288,749건)** |
+| 연립 | **다음 작업 예정** — GUKTO 정제 xlsx → `--rowhouse-only` |
+
+### 아파트 재적재 (완료)
+
+- **이전:** semantic hash + `ON CONFLICT DO NOTHING` → **2,118,163건**
+- **이후:** `asset_type\|파일명\|순번` 행 식별 + 전량 INSERT → **2,288,749건** (+170,586)
+- **명령:** `py pipeline/collective/import_refined.py --apartment-only`
+- **로그:** `pipeline/collective/apartment_reimport.log`
 
 ## 202607 업데이트
 

@@ -9,18 +9,27 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.collective.address import format_building_address
+from app.collective.analysis_gates import count_recent_transactions, evaluate_analysis_gates
 from app.collective.db import get_collective_db
 from app.collective.filters import apply_region_filters, apply_year_filters
+from app.collective.floor_index import compute_floor_index
 from app.collective.regression.engine import run_building_regression
+from app.collective.region_structure import detect_region_structure
 from app.collective.schemas import (
+    AnalysisFeatures,
     BuildingListResponse,
     BuildingStatsRow,
     CollectiveFilterMeta,
     CollectiveRegressionRequest,
     CollectiveRegressionResponse,
     CollectiveTransactionRow,
+    FloorIndexCell,
+    FloorIndexResponse,
     HistogramBin,
     HistogramResponse,
+    RegionOption,
+    RegionStructureResponse,
     TransactionListResponse,
     YearlyStatPoint,
     YearlyStatsResponse,
@@ -37,6 +46,7 @@ def _base_where(
     addr2: Optional[str] = None,
     addr3: Optional[str] = None,
     addr3_list: list[str] | None = None,
+    addr4_list: list[str] | None = None,
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
 ) -> tuple[str, dict]:
@@ -45,7 +55,15 @@ def _base_where(
     if asset_type:
         clauses.append("asset_type = :asset_type")
         params["asset_type"] = asset_type
-    apply_region_filters(clauses, params, addr1=addr1, addr2=addr2, addr3=addr3, addr3_list=addr3_list)
+    apply_region_filters(
+        clauses,
+        params,
+        addr1=addr1,
+        addr2=addr2,
+        addr3=addr3,
+        addr3_list=addr3_list,
+        addr4_list=addr4_list,
+    )
     apply_year_filters(
         clauses,
         params,
@@ -99,6 +117,43 @@ def list_addr2(db: Session = Depends(get_collective_db), addr1: str = Query(...)
     return [r.v for r in rows]
 
 
+@router.get("/regions/structure", response_model=RegionStructureResponse)
+def region_structure(
+    db: Session = Depends(get_collective_db),
+    addr1: str = Query(...),
+    addr2: str = Query(...),
+    asset_type: Optional[str] = Query(None),
+):
+    info = detect_region_structure(db.connection(), addr1, addr2, asset_type)
+    return RegionStructureResponse(**info)
+
+
+@router.get("/regions/leaf", response_model=list[RegionOption])
+def list_leaf_regions(
+    db: Session = Depends(get_collective_db),
+    addr1: str = Query(...),
+    addr2: str = Query(...),
+    addr3_list: list[str] = Query(default=[]),
+    asset_type: Optional[str] = Query(None),
+):
+    """청주·수원 등: addr3=구, addr4=읍면동."""
+    where, params = _base_where(asset_type=asset_type, addr1=addr1, addr2=addr2, addr3_list=addr3_list or None)
+    rows = db.execute(
+        text(
+            f"""
+            SELECT addr4 AS name, addr3 AS parent, COUNT(*)::int AS count
+            FROM collective_transactions
+            WHERE {where}
+              AND addr4 IS NOT NULL AND btrim(addr4::text) <> ''
+            GROUP BY addr4, addr3
+            ORDER BY addr3, addr4
+            """
+        ),
+        params,
+    ).mappings().all()
+    return [RegionOption(**dict(r)) for r in rows]
+
+
 @router.get("/regions/addr3")
 def list_addr3(
     db: Session = Depends(get_collective_db),
@@ -129,20 +184,24 @@ def list_buildings(
     addr1: Optional[str] = None,
     addr2: Optional[str] = None,
     addr3: Optional[str] = None,
+    addr3_list: list[str] = Query(default=[]),
+    addr4_list: list[str] = Query(default=[]),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
     sort: str = Query("count", pattern="^(count|mean|display_name)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(100, ge=1, le=500),
 ):
-    if not addr2 and not addr1:
-        raise HTTPException(400, "addr1·addr2 중 최소 시군구(addr2)까지 선택해 주세요.")
+    if not addr2:
+        raise HTTPException(400, "시군구(addr2)를 선택해 주세요.")
 
     where, params = _base_where(
         asset_type=asset_type,
         addr1=addr1,
         addr2=addr2,
         addr3=addr3,
+        addr3_list=addr3_list or None,
+        addr4_list=addr4_list or None,
         contract_year_from=contract_year_from,
         contract_year_to=contract_year_to,
     )
@@ -152,7 +211,13 @@ def list_buildings(
             SELECT building_key,
                    MAX(display_name) AS display_name,
                    MAX(asset_type) AS asset_type,
-                   array_agg(unit_price ORDER BY unit_price) AS prices
+                   MAX(addr3) AS addr3,
+                   MAX(addr4) AS addr4,
+                   MAX(lot_number) AS lot_number,
+                   MAX(road_name) AS road_name,
+                   MAX(building_year) AS building_year,
+                   array_agg(unit_price ORDER BY unit_price) AS prices,
+                   array_agg(contract_year) AS years
             FROM collective_transactions
             WHERE {where}
             GROUP BY building_key
@@ -164,11 +229,25 @@ def list_buildings(
     items: list[BuildingStatsRow] = []
     for r in rows:
         prices = [float(x) for x in (r["prices"] or []) if x is not None]
+        years = [int(y) for y in (r["years"] or []) if y is not None]
         st = compute_stats(prices)
+        cnt_recent = count_recent_transactions(
+            years,
+            contract_year_from=contract_year_from,
+            contract_year_to=contract_year_to,
+        )
+        gates = evaluate_analysis_gates(st["count"], cnt_recent)
         items.append(
             BuildingStatsRow(
                 building_key=r["building_key"],
                 display_name=r["display_name"] or "",
+                address=format_building_address(
+                    addr3=r["addr3"],
+                    addr4=r["addr4"],
+                    lot_number=r["lot_number"],
+                    road_name=r["road_name"],
+                ),
+                building_year=int(r["building_year"]) if r["building_year"] is not None else None,
                 asset_type=r["asset_type"] or asset_type or "",
                 count=st["count"],
                 mean=st["mean"],
@@ -176,6 +255,13 @@ def list_buildings(
                 ci_lower=st["ci_lower"],
                 ci_upper=st["ci_upper"],
                 is_reliable=st["is_reliable"],
+                analysis=AnalysisFeatures(
+                    floor_index=gates.floor_index_eligible,
+                    regression=gates.regression_eligible,
+                    count_total=gates.count_total,
+                    count_recent=gates.count_recent,
+                    messages=gates.messages,
+                ),
             )
         )
 
@@ -230,7 +316,7 @@ def building_transactions(
                    exclusive_area, price, unit_price, floor, dong, building_age
             FROM collective_transactions
             WHERE {where}
-            ORDER BY contract_year DESC NULLS LAST, id DESC
+            ORDER BY contract_year DESC NULLS LAST, contract_month DESC NULLS LAST, id DESC
             LIMIT :limit OFFSET :offset
             """
         ),
@@ -272,24 +358,28 @@ def building_histogram(
     building_key: str,
     db: Session = Depends(get_collective_db),
     bins: int = Query(12, ge=4, le=40),
+    contract_year: Optional[int] = None,
 ):
+    clauses = ["building_key = :bk", "is_valid = true", "unit_price IS NOT NULL"]
+    params: dict = {"bk": building_key}
+    if contract_year is not None:
+        clauses.append("contract_year = :cy")
+        params["cy"] = contract_year
+    where = " AND ".join(clauses)
     rows = db.execute(
-        text(
-            """
-            SELECT unit_price FROM collective_transactions
-            WHERE building_key = :bk AND is_valid = true AND unit_price IS NOT NULL
-            """
-        ),
-        {"bk": building_key},
+        text(f"SELECT unit_price FROM collective_transactions WHERE {where}"),
+        params,
     ).fetchall()
     prices = [float(r[0]) for r in rows if r[0] is not None]
     if not prices:
-        return HistogramResponse(building_key=building_key, bins=[])
+        return HistogramResponse(building_key=building_key, bins=[], n=0, contract_year=contract_year)
     lo, hi = min(prices), max(prices)
     if lo == hi:
         return HistogramResponse(
             building_key=building_key,
             bins=[HistogramBin(lo=lo, hi=hi, count=len(prices))],
+            n=len(prices),
+            contract_year=contract_year,
         )
     edges = np.linspace(lo, hi, bins + 1)
     counts, _ = np.histogram(prices, bins=edges)
@@ -298,7 +388,73 @@ def building_histogram(
         for i in range(len(counts))
         if counts[i] > 0
     ]
-    return HistogramResponse(building_key=building_key, bins=out)
+    return HistogramResponse(
+        building_key=building_key,
+        bins=out,
+        n=len(prices),
+        contract_year=contract_year,
+    )
+
+
+@router.get("/buildings/{building_key}/floor-index", response_model=FloorIndexResponse)
+def building_floor_index(
+    building_key: str,
+    db: Session = Depends(get_collective_db),
+    dimension: str = Query("floor", pattern="^(floor|dong|area)$"),
+    contract_year_from: Optional[int] = None,
+    contract_year_to: Optional[int] = None,
+    experiment: bool = Query(False, description="실험 단계: 표본 게이트 우회"),
+):
+    import pandas as pd
+
+    display_name, asset_type = _get_building_meta(db, building_key)
+    where, params = _base_where(
+        contract_year_from=contract_year_from,
+        contract_year_to=contract_year_to,
+    )
+    params["bk"] = building_key
+    rows = db.execute(
+        text(
+            f"""
+            SELECT unit_price, floor, dong, exclusive_area, contract_year
+            FROM collective_transactions
+            WHERE building_key = :bk AND {where}
+            """
+        ),
+        params,
+    ).mappings().all()
+    years = [int(r["contract_year"]) for r in rows if r.get("contract_year") is not None]
+    cnt_recent = count_recent_transactions(
+        years,
+        contract_year_from=contract_year_from,
+        contract_year_to=contract_year_to,
+    )
+    gates = evaluate_analysis_gates(len(rows), cnt_recent)
+    if not gates.floor_index_eligible and not experiment:
+        raise HTTPException(
+            403,
+            detail=gates.messages[0] if gates.messages else "효용지수 분석 최소 표본 미달",
+        )
+
+    df = pd.DataFrame(rows)
+    raw = compute_floor_index(df, asset_type=asset_type, dimension=dimension)
+    cells = [FloorIndexCell(**c) for c in raw["cells"]]
+    return FloorIndexResponse(
+        building_key=building_key,
+        display_name=display_name,
+        asset_type=asset_type,
+        dimension=raw["dimension"],
+        n_total=raw["n_total"],
+        baseline_median=raw["baseline_median"],
+        cells=cells,
+        analysis=AnalysisFeatures(
+            floor_index=gates.floor_index_eligible,
+            regression=gates.regression_eligible,
+            count_total=gates.count_total,
+            count_recent=gates.count_recent,
+            messages=gates.messages,
+        ),
+    )
 
 
 @router.post("/buildings/{building_key}/regression/run", response_model=CollectiveRegressionResponse)
@@ -322,13 +478,26 @@ def building_regression(
     rows = db.execute(
         text(
             f"""
-            SELECT price, unit_price, exclusive_area, building_age, floor, dong
+            SELECT price, unit_price, exclusive_area, building_age, floor, dong, contract_year
             FROM collective_transactions
             WHERE {where}
             """
         ),
         params,
     ).mappings().all()
+    years = [int(r["contract_year"]) for r in rows if r.get("contract_year") is not None]
+    cnt_recent = count_recent_transactions(
+        years,
+        contract_year_from=body.contract_year_from,
+        contract_year_to=body.contract_year_to,
+    )
+    gates = evaluate_analysis_gates(len(rows), cnt_recent)
+    if not gates.regression_eligible and not body.experiment:
+        raise HTTPException(
+            403,
+            detail="; ".join(gates.messages) if gates.messages else "회귀 분석 최소 표본 미달",
+        )
+
     df = pd.DataFrame(rows)
     if body.asset_type != asset_type:
         pass  # allow client hint; data is keyed by building
