@@ -93,6 +93,7 @@ export interface RegressionRunRequest {
   road_code_max?: number;
   variables: RegressionVariableSpec;
   compare_admin_levels?: boolean;
+  leaf_level?: "addr3" | "addr4";
   exclude_outliers_iqr: boolean;
   outlier_iqr_multiplier?: number;
 }
@@ -152,7 +153,7 @@ export interface PredictOptions {
 }
 
 export interface RegressionLevelResult {
-  admin_level: "sigungu" | "eupmyeondong" | "beopjungri";
+  admin_level: "sigungu" | "gu" | "eupmyeondong" | "beopjungri";
   scope_label?: string | null;
   n: number;
   r_squared?: number | null;
@@ -184,13 +185,13 @@ export interface RegressionRunResponse {
   primary: RegressionLevelResult;
   comparisons: RegressionLevelResult[];
   correlations: CorrelationSeries[];
-  correlation_admin_level?: "sigungu" | "eupmyeondong" | "beopjungri" | null;
+  correlation_admin_level?: "sigungu" | "gu" | "eupmyeondong" | "beopjungri" | null;
   correlation_scope_label?: string | null;
   correlation_n?: number | null;
 }
 
 export interface RegressionPredictRequest extends RegressionRunRequest {
-  admin_level: "sigungu" | "eupmyeondong" | "beopjungri";
+  admin_level: "sigungu" | "gu" | "eupmyeondong" | "beopjungri";
   gross_area?: number;
   land_area?: number;
   building_age?: number;
@@ -200,7 +201,7 @@ export interface RegressionPredictRequest extends RegressionRunRequest {
 }
 
 export interface RegressionPredictResponse {
-  admin_level: "sigungu" | "eupmyeondong" | "beopjungri";
+  admin_level: "sigungu" | "gu" | "eupmyeondong" | "beopjungri";
   scope_label?: string | null;
   n: number;
   y_hat: number;

@@ -8,7 +8,7 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 
 AssetType = Literal["commercial", "factory", "detached"]
-AdminLevel = Literal["sigungu", "eupmyeondong", "beopjungri"]
+AdminLevel = Literal["sigungu", "gu", "eupmyeondong", "beopjungri"]
 
 
 class BuiltTransactionRow(BaseModel):
@@ -117,6 +117,7 @@ class RegressionRunRequest(BaseModel):
     road_code_max: Optional[float] = None
     variables: RegressionVariableSpec = Field(default_factory=RegressionVariableSpec)
     compare_admin_levels: bool = True  # 하위 호환 — 엔진이 선택 깊이로 자동 결정
+    leaf_level: Optional[Literal["addr3", "addr4"]] = None
     exclude_outliers_iqr: bool = False
     outlier_iqr_multiplier: float = 3.0
 

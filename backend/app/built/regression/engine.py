@@ -12,6 +12,7 @@ from app.built.filters import (
     effective_addr4_list,
     format_scope_label,
 )
+from app.built.region_structure import detect_region_structure
 from app.built.schemas import (
     AdminLevel,
     ContinuousRange,
@@ -121,6 +122,109 @@ def _uses_addr4_leaf(df: pd.DataFrame) -> bool:
     return bool((a3.str.endswith("구")).mean() >= 0.85)
 
 
+def _resolve_addr4_city(
+    conn,
+    req: RegressionRunRequest,
+    wide_df: pd.DataFrame,
+) -> bool:
+    """구→읍면동 2단계 시군구 — 클라이언트 leaf_level · region_structure · 표본 휴리스틱."""
+    if req.leaf_level == "addr4":
+        return True
+    if req.leaf_level == "addr3":
+        return False
+
+    leaves = effective_addr4_list(None, req.addr4_list)
+    if leaves and not wide_df.empty:
+        hits = wide_df[_norm_col(wide_df, "addr4").isin(set(leaves))]
+        if len(hits):
+            a3 = _norm_col(hits, "addr3")
+            if a3.str.endswith("구").mean() >= 0.5:
+                return True
+
+    if req.addr1 and req.addr2:
+        info = detect_region_structure(conn, req.addr1, req.addr2, req.asset_type)
+        if info.get("leaf_level") == "addr4":
+            return True
+        if not info.get("has_intermediate"):
+            return False
+    return _uses_addr4_leaf(wide_df)
+
+
+def _normalize_leaf_fields(
+    req: RegressionRunRequest,
+    wide_df: pd.DataFrame,
+    *,
+    addr4_city: bool,
+) -> RegressionRunRequest:
+    """addr3_list에 읍면동(실제 addr4)이 들어온 경우 addr4_list로 이동."""
+    if wide_df.empty:
+        return req
+
+    gu_in_data = {s for s in _norm_col(wide_df, "addr3").tolist() if s.endswith("구")}
+    dong_in_data = {s for s in _norm_col(wide_df, "addr4").tolist() if s}
+
+    a3 = effective_addr3_list(req.addr3, req.addr3_list)
+    a4 = effective_addr4_list(None, req.addr4_list)
+    has_dong_in_a3 = any(n in dong_in_data and n not in gu_in_data for n in a3)
+    should_norm = addr4_city or req.leaf_level == "addr4" or bool(a4) or has_dong_in_a3
+    if not should_norm:
+        return req
+
+    kept_gu: list[str] = []
+    extra_a4: list[str] = []
+    for name in a3:
+        if name in gu_in_data:
+            kept_gu.append(name)
+        elif name in dong_in_data:
+            extra_a4.append(name)
+        elif name.endswith("구"):
+            kept_gu.append(name)
+        else:
+            kept_gu.append(name)
+
+    merged_a4 = list(a4)
+    seen_a4 = set(a4)
+    for name in extra_a4:
+        if name not in seen_a4:
+            seen_a4.add(name)
+            merged_a4.append(name)
+
+    if extra_a4 or kept_gu != a3 or (merged_a4 and merged_a4 != a4):
+        return req.model_copy(update={"addr3": None, "addr3_list": kept_gu, "addr4_list": merged_a4})
+    return req
+
+
+def _finalize_addr4_city(
+    conn,
+    req: RegressionRunRequest,
+    wide_df: pd.DataFrame,
+) -> bool:
+    """정규화 후 최종 구-동 구조 여부."""
+    if _resolve_addr4_city(conn, req, wide_df):
+        return True
+    leaves = effective_addr4_list(None, req.addr4_list)
+    if not leaves or wide_df.empty:
+        return False
+    hits = wide_df[_norm_col(wide_df, "addr4").isin(set(leaves))]
+    if hits.empty:
+        return False
+    return bool(_norm_col(hits, "addr3").str.endswith("구").mean() >= 0.5)
+
+
+def _prepare_regression_scope(
+    conn,
+    req: RegressionRunRequest,
+) -> tuple[pd.DataFrame, RegressionRunRequest, bool, CompareMode]:
+    wide_df = _fetch_df(conn, req, include_subregion=False)
+    if req.exclude_outliers_iqr:
+        wide_df = _iqr_filter(wide_df, "price", req.outlier_iqr_multiplier)
+    addr4_city_hint = _resolve_addr4_city(conn, req, wide_df)
+    req = _normalize_leaf_fields(req, wide_df, addr4_city=addr4_city_hint)
+    addr4_city = _finalize_addr4_city(conn, req, wide_df)
+    mode = _compare_mode(req, addr4_city)
+    return wide_df, req, addr4_city, mode
+
+
 def _has_leaf_selection(req: RegressionRunRequest, addr4_city: bool) -> bool:
     if addr4_city:
         return bool(effective_addr4_list(None, req.addr4_list))
@@ -141,6 +245,28 @@ def _norm_col(df: pd.DataFrame, col: str) -> pd.Series:
 
 def _filter_sigungu(df: pd.DataFrame, req: RegressionRunRequest) -> pd.DataFrame:
     return df.copy()
+
+
+def _effective_gu_names(req: RegressionRunRequest, df: pd.DataFrame) -> list[str]:
+    """구-동 구조에서 비교 대상 구(addr3) — 명시 선택 또는 선택 동의 상위 구 추론."""
+    gu = effective_addr3_list(req.addr3, req.addr3_list)
+    if gu:
+        return gu
+    leaves = effective_addr4_list(None, req.addr4_list)
+    if leaves and not df.empty:
+        sub = df[_norm_col(df, "addr4").isin(set(leaves))]
+        inferred = sorted({s for s in _norm_col(sub, "addr3").tolist() if s})
+        if inferred:
+            return inferred
+    return []
+
+
+def _filter_gu(df: pd.DataFrame, req: RegressionRunRequest) -> pd.DataFrame:
+    """구 단위 (addr3=구, addr4=읍면동 구조)."""
+    names = _effective_gu_names(req, df)
+    if not names:
+        return df.iloc[0:0]
+    return df[_norm_col(df, "addr3").isin(set(names))]
 
 
 def _filter_eup_leaf(df: pd.DataFrame, req: RegressionRunRequest, addr4_city: bool) -> pd.DataFrame:
@@ -357,6 +483,8 @@ def _scope_for_level(
 ) -> pd.DataFrame:
     if admin_level == "sigungu":
         return _filter_sigungu(wide_df, req)
+    if admin_level == "gu":
+        return _filter_gu(wide_df, req)
     if admin_level == "eupmyeondong":
         if mode == "three_way":
             return _filter_parent_eups(wide_df, req.ri_list, addr4_city)
@@ -476,6 +604,18 @@ def _sigungu_label(req: RegressionRunRequest) -> str:
     return "전국"
 
 
+def _gu_label(req: RegressionRunRequest, df: pd.DataFrame) -> str:
+    names = _effective_gu_names(req, df)
+    if not names:
+        return "구"
+    if len(names) == 1:
+        return names[0]
+    preview = ", ".join(names[:3])
+    if len(names) > 3:
+        preview += f" 외 {len(names) - 3}개"
+    return f"선택 구 {len(names)}개 ({preview})"
+
+
 def _eup_label(req: RegressionRunRequest, addr4_city: bool) -> str:
     if addr4_city:
         leaves = effective_addr4_list(None, req.addr4_list)
@@ -495,12 +635,7 @@ def _ri_label(ri_list: list[RiPick]) -> str:
 
 
 def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
-    wide_df = _fetch_df(conn, req, include_subregion=False)
-    if req.exclude_outliers_iqr:
-        wide_df = _iqr_filter(wide_df, "price", req.outlier_iqr_multiplier)
-
-    addr4_city = _uses_addr4_leaf(wide_df)
-    mode = _compare_mode(req, addr4_city)
+    wide_df, req, addr4_city, mode = _prepare_regression_scope(conn, req)
 
     if mode == "sigungu_only":
         scoped = _filter_sigungu(wide_df, req)
@@ -516,9 +651,13 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
         )
 
     if mode == "two_way":
-        sig = _filter_sigungu(wide_df, req)
         eup = _filter_eup_leaf(wide_df, req, addr4_city)
-        primary = _fit_ols(sig, req.variables, "sigungu", _sigungu_label(req))
+        if addr4_city:
+            gu = _filter_gu(wide_df, req)
+            primary = _fit_ols(gu, req.variables, "gu", _gu_label(req, wide_df))
+        else:
+            sig = _filter_sigungu(wide_df, req)
+            primary = _fit_ols(sig, req.variables, "sigungu", _sigungu_label(req))
         comp = _fit_ols(eup, req.variables, "eupmyeondong", _eup_label(req, addr4_city))
         corrs = _correlations(eup, req.variables)
         return RegressionRunResponse(
@@ -532,10 +671,14 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
 
     # three_way
     ri_list = req.ri_list
-    sig = _filter_sigungu(wide_df, req)
+    if addr4_city:
+        gu = _filter_gu(wide_df, req)
+        primary = _fit_ols(gu, req.variables, "gu", _gu_label(req, wide_df))
+    else:
+        sig = _filter_sigungu(wide_df, req)
+        primary = _fit_ols(sig, req.variables, "sigungu", _sigungu_label(req))
     eup = _filter_parent_eups(wide_df, ri_list, addr4_city)
     ri = _filter_ri_picks(wide_df, ri_list)
-    primary = _fit_ols(sig, req.variables, "sigungu", _sigungu_label(req))
     comp_eup = _fit_ols(eup, req.variables, "eupmyeondong", _parent_eup_label(ri_list))
     comp_ri = _fit_ols(ri, req.variables, "beopjungri", _ri_label(ri_list))
     corr_df = ri if len(ri) >= 10 else eup
@@ -554,17 +697,14 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
 def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredictResponse:
     import statsmodels.api as sm
 
-    wide_df = _fetch_df(conn, req, include_subregion=False)
-    if req.exclude_outliers_iqr:
-        wide_df = _iqr_filter(wide_df, "price", req.outlier_iqr_multiplier)
-
-    addr4_city = _uses_addr4_leaf(wide_df)
-    mode = _compare_mode(req, addr4_city)
+    wide_df, req, addr4_city, mode = _prepare_regression_scope(conn, req)
     df = _scope_for_level(wide_df, req, req.admin_level, addr4_city, mode)
 
     scope_label = None
     if req.admin_level == "sigungu":
         scope_label = _sigungu_label(req)
+    elif req.admin_level == "gu":
+        scope_label = _gu_label(req, wide_df)
     elif req.admin_level == "eupmyeondong":
         scope_label = (
             _parent_eup_label(req.ri_list)

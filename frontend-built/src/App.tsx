@@ -38,6 +38,7 @@ function riKey(p: RiPick) {
 
 const ADMIN_LABELS: Record<string, string> = {
   sigungu: "시군구",
+  gu: "구",
   eupmyeondong: "읍면동",
   beopjungri: "법정리",
 };
@@ -603,15 +604,22 @@ function RegionChipPanel({
   );
 }
 
+function levelCardTitle(result: RegressionLevelResult): string {
+  const sl = result.scope_label?.trim();
+  if (!sl) return ADMIN_LABELS[result.admin_level] ?? result.admin_level;
+  if (sl.endsWith(" 시군구")) return sl.slice(0, -" 시군구".length);
+  if (sl.endsWith(" 읍면동")) return sl.slice(0, -" 읍면동".length);
+  if (sl.endsWith(" 읍·면")) return sl.slice(0, -" 읍·면".length);
+  return sl;
+}
+
 function LevelCard({ result, assetType }: { result: RegressionLevelResult; assetType: AssetType }) {
   return (
     <div className="card space-y-2">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h3 className="font-semibold text-sm">{ADMIN_LABELS[result.admin_level] ?? result.admin_level}</h3>
-          {result.scope_label && (
-            <p className="text-xs text-slate-500 mt-0.5">{result.scope_label}</p>
-          )}
+          <h3 className="font-semibold text-sm">{levelCardTitle(result)}</h3>
+          <p className="text-xs text-slate-500 mt-0.5">{ADMIN_LABELS[result.admin_level] ?? result.admin_level}</p>
         </div>
         <span className="text-xs text-slate-500">n={fmtNum(result.n)}</span>
       </div>
@@ -710,53 +718,53 @@ export default function App() {
   });
   const hasIntermediate = structureQ.data?.has_intermediate ?? false;
   const intermediateLabel = structureQ.data?.intermediate_label ?? "구";
+  const leafLevel = structureQ.data?.leaf_level ?? "addr3";
+  const useAddr4Leaf = leafLevel === "addr4";
 
   const guQ = useQuery({
     queryKey: ["gu", addr1, addr2, assetType],
     queryFn: () => fetchAddr3WithCounts(addr1, addr2, assetType),
-    enabled: !!addr1 && !!addr2 && hasIntermediate,
+    enabled: !!addr1 && !!addr2 && useAddr4Leaf,
   });
 
   const flatLeafQ = useQuery({
     queryKey: ["flat-leaf", addr1, addr2, assetType],
     queryFn: () => fetchAddr3WithCounts(addr1, addr2, assetType),
-    enabled: !!addr1 && !!addr2 && !hasIntermediate && structureQ.isSuccess,
+    enabled: !!addr1 && !!addr2 && !useAddr4Leaf && structureQ.isSuccess,
   });
 
   const leafQ = useQuery({
     queryKey: ["leaf", addr1, addr2, assetType, guList],
     queryFn: () => fetchLeafRegions(addr1, addr2, guList, assetType),
-    enabled: !!addr1 && !!addr2 && hasIntermediate,
+    enabled: !!addr1 && !!addr2 && useAddr4Leaf,
   });
-
-  const leafLevel = structureQ.data?.leaf_level ?? "addr3";
 
   const riQ = useQuery({
     queryKey: ["ri", addr1, addr2, assetType, leafLevel, guList, leafList],
     queryFn: () =>
       fetchRiRegions(addr1, addr2, {
         leafLevel,
-        addr3List: hasIntermediate ? (guList.length ? guList : undefined) : leafList,
-        addr4List: hasIntermediate ? leafList : undefined,
+        addr3List: useAddr4Leaf ? (guList.length ? guList : undefined) : leafList,
+        addr4List: useAddr4Leaf ? leafList : undefined,
         assetType,
       }),
     enabled: !!addr1 && !!addr2 && leafList.length > 0 && structureQ.isSuccess,
   });
 
   const visibleLeafOptions = useMemo(() => {
-    if (!hasIntermediate) {
+    if (!useAddr4Leaf) {
       return (flatLeafQ.data ?? []).map((o: Addr3Option) => ({ ...o, id: o.name, parent: null }));
     }
     const opts = leafQ.data ?? [];
     const filtered = !guList.length ? opts : opts.filter((o) => o.parent && guList.includes(o.parent));
     return filtered.map((o) => ({ ...o, id: `${o.parent ?? ""}|${o.name}` }));
-  }, [hasIntermediate, flatLeafQ.data, leafQ.data, guList]);
+  }, [useAddr4Leaf, flatLeafQ.data, leafQ.data, guList]);
 
   useEffect(() => {
-    if (!hasIntermediate) return;
+    if (!useAddr4Leaf) return;
     const allowed = new Set(visibleLeafOptions.map((o) => o.name));
     setLeafList((prev) => prev.filter((n) => allowed.has(n)));
-  }, [hasIntermediate, visibleLeafOptions]);
+  }, [useAddr4Leaf, visibleLeafOptions]);
 
   useEffect(() => {
     const allowed = new Set(
@@ -795,16 +803,27 @@ export default function App() {
     return "sigungu_only" as const;
   }, [riList.length, leafList.length]);
 
-  const regionFilterParams = useMemo(
-    () =>
-      hasIntermediate
-        ? {
-            addr3_list: guList.length ? guList : undefined,
-            addr4_list: leafList.length ? leafList : undefined,
-          }
-        : { addr3_list: leafList.length ? leafList : undefined },
-    [hasIntermediate, guList, leafList],
-  );
+  const inferredGuList = useMemo(() => {
+    const fromParent = visibleLeafOptions
+      .filter((o) => leafList.includes(o.name) && o.parent)
+      .map((o) => o.parent as string);
+    return [...new Set([...guList, ...fromParent])];
+  }, [guList, leafList, visibleLeafOptions]);
+
+  const regionFilterParams = useMemo(() => {
+    const addr4Mode = useAddr4Leaf || inferredGuList.length > 0;
+    if (addr4Mode) {
+      return {
+        leaf_level: "addr4" as const,
+        addr3_list: inferredGuList.length ? inferredGuList : undefined,
+        addr4_list: leafList.length ? leafList : undefined,
+      };
+    }
+    return {
+      leaf_level: "addr3" as const,
+      addr3_list: leafList.length ? leafList : undefined,
+    };
+  }, [useAddr4Leaf, inferredGuList, leafList]);
 
   const scopeBaseParams = useMemo(
     () => ({
@@ -881,6 +900,51 @@ export default function App() {
   );
 
   const regM = useMutation({ mutationFn: runRegression });
+
+  const regressionSummaryText = useMemo(() => {
+    if (regressionMode === "sigungu_only") {
+      return addr2 ? `${addr2} 시군구 단일 회귀` : "시군구 단일 회귀";
+    }
+    if (regressionMode === "two_way") {
+      if (regM.data?.comparisons.length) {
+        const upper = levelCardTitle(regM.data.primary);
+        const lower = regM.data.comparisons[0]
+          ? levelCardTitle(regM.data.comparisons[0])
+          : `선택 읍·면·동 ${leafList.length}개`;
+        return `2-way: ${upper} vs ${lower}`;
+      }
+      if (useAddr4Leaf || inferredGuList.length > 0) {
+        const guHint =
+          inferredGuList.length > 0
+            ? inferredGuList.join(", ")
+            : guList.length
+              ? guList.join(", ")
+              : "선택 동 상위";
+        return `2-way: ${intermediateLabel}(${guHint}) vs 선택 읍·면·동 ${leafList.length}개`;
+      }
+      return `2-way: 시군구(${addr2}) vs 선택 읍·면·동 ${leafList.length}개`;
+    }
+    if (regressionMode === "three_way") {
+      const topLabel =
+        regM.data?.primary?.scope_label && useAddr4Leaf
+          ? `${intermediateLabel} · ${regM.data.primary.scope_label}`
+          : useAddr4Leaf
+            ? intermediateLabel
+            : "시군구";
+      return `3-way: ${topLabel} · 상위 읍·면(${[...new Set(riList.map((p) => p.eup))].join(", ")}) · 리 ${riList.length}개`;
+    }
+    return "";
+  }, [
+    regressionMode,
+    addr2,
+    useAddr4Leaf,
+    inferredGuList,
+    intermediateLabel,
+    guList,
+    leafList.length,
+    riList,
+    regM.data,
+  ]);
 
   const years = metaQ.data?.contract_years ?? [];
   const totalPages = txQ.data ? Math.max(1, Math.ceil(txQ.data.total / txQ.data.page_size)) : 1;
@@ -1235,23 +1299,19 @@ export default function App() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h2 className="font-semibold text-sm">회귀 실험 (종속: 금액 만원)</h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    {regressionMode === "sigungu_only" &&
-                      (addr2 ? `${addr2} 시군구 단일 회귀` : "시군구 단일 회귀")}
-                    {regressionMode === "two_way" &&
-                      `2-way: 시군구(${addr2}) vs 선택 읍·면·동 ${leafList.length}개`}
-                    {regressionMode === "three_way" && (
-                      <>
-                        3-way: 시군구 · 상위 읍·면(
-                        {[...new Set(riList.map((p) => p.eup))].join(", ")}) · 리 {riList.length}개
-                      </>
-                    )}
-                  </p>
+                  <p className="text-xs text-slate-500 mt-1">{regressionSummaryText}</p>
                 </div>
                 <button
                   className="btn btn-primary shrink-0"
                   onClick={() => regM.mutate(regBody)}
-                  disabled={regM.isPending}
+                  disabled={
+                    regM.isPending || (!!addr2 && leafList.length > 0 && !structureQ.isSuccess)
+                  }
+                  title={
+                    !!addr2 && leafList.length > 0 && !structureQ.isSuccess
+                      ? "지역 구조 확인 중… 잠시 후 다시 시도하세요."
+                      : undefined
+                  }
                 >
                   {regM.isPending ? "계산 중…" : "회귀 실행"}
                 </button>
