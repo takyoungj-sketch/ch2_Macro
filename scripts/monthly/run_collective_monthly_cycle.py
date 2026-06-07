@@ -87,7 +87,7 @@ def main() -> None:
         apt_dir = paths.get("apartment_dir")
         if isinstance(apt_dir, Path):
             cmd.extend(["--apartment-dir", str(apt_dir)])
-        cmd.extend(["--rowhouse", str(paths["rowhouse"]), "--officetel", str(paths["officetel"])])
+        cmd.extend(["--rowhouse-dir", str(paths.get("rowhouse_dir", paths["rowhouse"])), "--officetel", str(paths["officetel"])])
     _run("import_refined", cmd, cwd=collective_dir)
 
     _run(

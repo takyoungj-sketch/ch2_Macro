@@ -6,7 +6,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
-AssetType = Literal["apartment", "rowhouse", "officetel"]
+AssetType = Literal["apartment", "rowhouse", "officetel", "presale"]
 
 
 class CollectiveFilterMeta(BaseModel):
@@ -68,10 +68,12 @@ class CollectiveTransactionRow(BaseModel):
     contract_year: Optional[int] = None
     contract_month: Optional[int] = None
     exclusive_area: Optional[float] = None
+    land_area: Optional[float] = None
     price: float
     unit_price: Optional[float] = None
     floor: Optional[float] = None
     dong: Optional[str] = None
+    housing_subtype: Optional[str] = None
     building_age: Optional[float] = None
 
 
@@ -115,6 +117,35 @@ class FloorIndexCell(BaseModel):
     mean_unit_price: Optional[float] = None
     index: Optional[float] = None
     is_reliable: bool = False
+    is_reference: bool = False
+    gamma: Optional[float] = None
+    p_value: Optional[float] = None
+    index_lo: Optional[float] = None
+    index_hi: Optional[float] = None
+
+
+class AnalysisExplainPreset(BaseModel):
+    id: str
+    question: str
+    answer: str
+
+
+class AnalysisExplain(BaseModel):
+    """분석 탭 설명 — 정적 spec + 이번 실행 결과 힌트(AI 연동용 fact)."""
+
+    spec_id: str
+    spec_version: str = "1"
+    title: str
+    summary: str
+    formula: Optional[str] = None
+    index_rule: Optional[str] = None
+    reference: Optional[str] = None
+    floor_groups: list[str] = Field(default_factory=list)
+    controls: list[str] = Field(default_factory=list)
+    interpretation: list[str] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+    interpretation_hints: list[str] = Field(default_factory=list)
+    presets: list[AnalysisExplainPreset] = Field(default_factory=list)
 
 
 class FloorIndexResponse(BaseModel):
@@ -133,6 +164,7 @@ class CollectiveRegressionSpec(BaseModel):
     building_age: bool = True
     floor: bool = True
     dong: bool = True
+    housing_subtype: bool = False
     floor_mode: Literal["linear", "dummy", "grouped", "relative"] = "relative"
 
 

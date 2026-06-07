@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from app.collective.analysis_gates import MIN_RELIABLE_BUILDING_STATS
+from app.collective.area_buckets import FACTORY_BUCKET_ORDER, label_for_gross_area, shop_fixed_bucket_label
 from app.stats_utils import _rnd_price
 
 AREA_BUCKET_M2 = 30
@@ -63,6 +64,19 @@ def compute_floor_index(
         for _, row in work.iterrows():
             ea = row.get("exclusive_area")
             if ea is None or (isinstance(ea, float) and pd.isna(ea)):
+                ea = row.get("gross_area")
+            abl = row.get("area_bucket_label")
+            if asset_type == "collective_factory" and abl is not None and not (
+                isinstance(abl, float) and pd.isna(abl)
+            ):
+                s = str(abl).strip()
+                if s and s not in ("면적 미상", "nan", "None"):
+                    _, sort_key = label_for_gross_area(asset_type, float(ea) if ea is not None and not pd.isna(ea) else None)
+                    key = s
+                    area_sort[key] = sort_key if sort_key is not None else FACTORY_BUCKET_ORDER.get(s)
+                    groups[key].append(float(row["unit_price"]))
+                    continue
+            if ea is None or (isinstance(ea, float) and pd.isna(ea)):
                 key = "—"
                 area_sort[key] = None
             else:
@@ -71,6 +85,12 @@ def compute_floor_index(
                     if fv <= 0:
                         key = "—"
                         area_sort[key] = None
+                    elif asset_type == "collective_factory":
+                        key, sort_val = label_for_gross_area(asset_type, fv)
+                        area_sort[key] = sort_val
+                    elif asset_type == "collective_shop":
+                        key, sort_val = shop_fixed_bucket_label(fv)
+                        area_sort[key] = sort_val
                     else:
                         bucket = _area_bucket(fv)
                         key = _area_label(bucket)
@@ -79,8 +99,16 @@ def compute_floor_index(
                     key = "—"
                     area_sort[key] = None
             groups[key].append(float(row["unit_price"]))
+    elif dimension == "rights":
+        for _, row in work.iterrows():
+            hs = row.get("housing_subtype")
+            if hs is None or (isinstance(hs, float) and pd.isna(hs)):
+                key = "—"
+            else:
+                key = str(hs).strip() or "—"
+            groups[key].append(float(row["unit_price"]))
     elif dimension == "dong":
-        if asset_type == "officetel":
+        if asset_type in ("officetel", "presale"):
             dimension = "floor"
         else:
             for _, row in work.iterrows():

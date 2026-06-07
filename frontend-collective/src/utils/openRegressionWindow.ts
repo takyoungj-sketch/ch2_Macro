@@ -8,7 +8,7 @@ export function openBuildingRegressionWindow(params: {
   yearTo?: number;
 }) {
   const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
-  const u = new URL(`${window.location.origin}${base}`);
+  const u = new URL(`${window.location.origin}${base}residential/`);
   u.searchParams.set("view", "regression");
   u.searchParams.set("building_key", params.buildingKey);
   u.searchParams.set("display_name", params.displayName);

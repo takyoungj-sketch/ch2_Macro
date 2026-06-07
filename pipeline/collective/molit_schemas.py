@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-AssetType = Literal["apartment", "rowhouse", "officetel"]
+AssetType = Literal["apartment", "rowhouse", "officetel", "presale"]
 
 
 @dataclass(frozen=True)
@@ -50,6 +50,7 @@ ROWHOUSE = MolitSchema(
         "lot_number": 2,
         "building_name": 5,
         "exclusive_area": 6,
+        "land_area": 7,
         "contract_ym": 8,
         "contract_day": 9,
         "price": 10,
@@ -80,10 +81,31 @@ OFFICETEL = MolitSchema(
     },
 )
 
+# 분양입주권 CSV: 15열 — col7·8 매수자/매도자, 해제 col12
+PRESALE = MolitSchema(
+    asset_type="presale",
+    building_name_field="building_name",
+    cancel_col=12,
+    cancel_regex=r"^\d{4,8}$",
+    contract_day_fillna=1,
+    columns={
+        "sigungu": 1,
+        "lot_number": 2,
+        "building_name": 3,
+        "exclusive_area": 4,
+        "price": 5,
+        "floor": 6,
+        "contract_ym": 9,
+        "contract_day": 10,
+        "housing_subtype": 11,
+    },
+)
+
 SCHEMAS: dict[AssetType, MolitSchema] = {
     "apartment": APARTMENT,
     "rowhouse": ROWHOUSE,
     "officetel": OFFICETEL,
+    "presale": PRESALE,
 }
 
 REFINED_COL_MAP = {
@@ -102,11 +124,15 @@ REFINED_COL_MAP = {
     "단지명": "building_name",
     "건물명": "building_name",
     "주택유형": "housing_subtype",
+    "분양권/입주권": "housing_subtype",
+    "권리구분": "housing_subtype",
     "계약일자": "contract_date_label",
     "거래금액": "price",
     "면적규모": "area_bucket",
     "연식규모": "age_bucket",
     "전용면적": "exclusive_area",
+    "대지권면적": "land_area",
+    "대지면적": "land_area",
     "연식": "building_age",
     "층": "floor",
     "동": "dong",

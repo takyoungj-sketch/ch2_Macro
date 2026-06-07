@@ -19,11 +19,11 @@ const TX_PAGE = 25;
 
 type PanelMode = "trend" | "histogram" | "transactions" | "floor_index" | "regression";
 
-const TABS: { id: PanelMode; label: string }[] = [
+const TABS: { id: PanelMode; label: string | ((assetType: AssetType) => string) }[] = [
   { id: "trend", label: "추세·요약" },
   { id: "histogram", label: "단가 분포" },
   { id: "transactions", label: "거래 목록" },
-  { id: "floor_index", label: "층·동·면적 효용지수" },
+  { id: "floor_index", label: (t) => (t === "presale" ? "층·권리·면적 효용지수" : "층·동·면적 효용지수") },
   { id: "regression", label: "회귀 분석" },
 ];
 
@@ -77,11 +77,13 @@ export default function BuildingDetailModal({
   });
 
   const txQ = useQuery({
-    queryKey: ["b-tx", row.building_key, txPage],
+    queryKey: ["b-tx", row.building_key, txPage, yearFrom, yearTo],
     queryFn: () =>
       fetchBuildingTransactions(row.building_key, {
         page: txPage,
         page_size: TX_PAGE,
+        contract_year_from: yearFrom,
+        contract_year_to: yearTo,
       }),
   });
 
@@ -169,6 +171,7 @@ export default function BuildingDetailModal({
             role="tablist"
           >
             {TABS.map(({ id, label }) => {
+              const tabLabel = typeof label === "function" ? label(assetType) : label;
               const needsGate = id === "floor_index" || id === "regression";
               const eligible =
                 id === "floor_index" ? analysis.floor_index : id === "regression" ? analysis.regression : true;
@@ -189,7 +192,7 @@ export default function BuildingDetailModal({
                   )}
                   onClick={() => setPanel(id)}
                 >
-                  {label}
+                  {tabLabel}
                   {showWarn && <span className="ml-0.5 text-[9px]">*</span>}
                 </button>
               );
@@ -296,8 +299,15 @@ export default function BuildingDetailModal({
               {txQ.data && (
                 <>
                   <p className="text-[10px] text-slate-500">
-                    전체 <strong className="text-slate-700">{txQ.data.total.toLocaleString("ko-KR")}</strong>건 (전체
-                    연도)
+                    전체 <strong className="text-slate-700">{txQ.data.total.toLocaleString("ko-KR")}</strong>건
+                    {yearFrom != null || yearTo != null ? (
+                      <>
+                        {" "}
+                        · 연도 {yearFrom ?? "…"}–{yearTo ?? "…"}
+                      </>
+                    ) : (
+                      " (전체 연도)"
+                    )}
                   </p>
                   <div className="overflow-x-auto rounded-lg border border-slate-100">
                     <table className="w-full text-[11px] border-collapse min-w-[480px]">
@@ -305,10 +315,15 @@ export default function BuildingDetailModal({
                         <tr className="bg-slate-50 text-slate-600">
                           <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">계약</th>
                           <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">면적(㎡)</th>
+                          {assetType === "rowhouse" && (
+                            <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">대지(㎡)</th>
+                          )}
                           <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">금액(만원)</th>
                           <th className="border border-slate-200 px-2 py-1.5 text-right font-bold text-blue-700">단가</th>
                           <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">층</th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">동</th>
+                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">
+                            {assetType === "presale" ? "권리" : "동"}
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="text-slate-800">
@@ -321,12 +336,19 @@ export default function BuildingDetailModal({
                             <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
                               {fmtPrice(t.exclusive_area)}
                             </td>
+                            {assetType === "rowhouse" && (
+                              <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
+                                {fmtPrice(t.land_area)}
+                              </td>
+                            )}
                             <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">{fmtPrice(t.price)}</td>
                             <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-blue-600 font-semibold">
                               {fmtPrice(t.unit_price)}
                             </td>
                             <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">{t.floor ?? "—"}</td>
-                            <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">{t.dong ?? "—"}</td>
+                            <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">
+                              {assetType === "presale" ? (t.housing_subtype ?? "—") : (t.dong ?? "—")}
+                            </td>
                           </tr>
                         ))}
                       </tbody>

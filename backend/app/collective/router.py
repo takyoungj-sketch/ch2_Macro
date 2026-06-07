@@ -313,7 +313,7 @@ def building_transactions(
             f"""
             SELECT id, asset_type, building_key, display_name,
                    addr1, addr2, addr3, contract_year, contract_month,
-                   exclusive_area, price, unit_price, floor, dong, building_age
+                   exclusive_area, land_area, price, unit_price, floor, dong, housing_subtype, building_age
             FROM collective_transactions
             WHERE {where}
             ORDER BY contract_year DESC NULLS LAST, contract_month DESC NULLS LAST, id DESC
@@ -400,7 +400,7 @@ def building_histogram(
 def building_floor_index(
     building_key: str,
     db: Session = Depends(get_collective_db),
-    dimension: str = Query("floor", pattern="^(floor|dong|area)$"),
+    dimension: str = Query("floor", pattern="^(floor|dong|area|rights)$"),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
     experiment: bool = Query(False, description="실험 단계: 표본 게이트 우회"),
@@ -416,7 +416,7 @@ def building_floor_index(
     rows = db.execute(
         text(
             f"""
-            SELECT unit_price, floor, dong, exclusive_area, contract_year
+            SELECT unit_price, floor, dong, housing_subtype, exclusive_area, contract_year
             FROM collective_transactions
             WHERE building_key = :bk AND {where}
             """
@@ -478,7 +478,7 @@ def building_regression(
     rows = db.execute(
         text(
             f"""
-            SELECT price, unit_price, exclusive_area, building_age, floor, dong, contract_year
+            SELECT price, unit_price, exclusive_area, building_age, floor, dong, housing_subtype, contract_year
             FROM collective_transactions
             WHERE {where}
             """
@@ -502,3 +502,8 @@ def building_regression(
     if body.asset_type != asset_type:
         pass  # allow client hint; data is keyed by building
     return run_building_regression(df, building_key, display_name, body)
+
+
+from app.collective_commercial.router import router as commercial_router  # noqa: E402
+
+router.include_router(commercial_router)

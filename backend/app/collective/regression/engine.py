@@ -150,12 +150,25 @@ def run_building_regression(
             parts.append(floor_part)
             labels.update(floor_labels)
 
-    if req.variables.dong and work["dong"].notna().any():
+    if req.variables.dong and "dong" in work.columns and work["dong"].notna().any():
         dummies = pd.get_dummies(work["dong"].astype(str).str.strip(), prefix="dong", drop_first=True)
         if not dummies.empty:
             parts.append(dummies)
             for c in dummies.columns:
                 labels[c] = f"동 {c.replace('dong_', '')}"
+
+    if (
+        req.variables.housing_subtype
+        and "housing_subtype" in work.columns
+        and work["housing_subtype"].notna().any()
+    ):
+        dummies = pd.get_dummies(
+            work["housing_subtype"].astype(str).str.strip(), prefix="rights", drop_first=True
+        )
+        if not dummies.empty:
+            parts.append(dummies)
+            for c in dummies.columns:
+                labels[c] = f"권리 {c.replace('rights_', '')}"
 
     if not parts:
         return CollectiveRegressionResponse(

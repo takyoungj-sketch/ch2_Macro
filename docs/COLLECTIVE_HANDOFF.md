@@ -15,6 +15,7 @@ land_stats.region_codes  → sync → collective_stats.region_codes
 |------|------|
 | building_name | 단지명(아파트·오피스텔) 또는 건물명(연립) |
 | exclusive_area, price, unit_price | 전용면적, 만원, 만원/㎡ |
+| land_area | 대지권면적(㎡) — **연립·다세대만** |
 | floor, dong | 층·동 (아파트 dong은 raw col10) |
 | area_bucket, age_bucket | round(면적/30)*30, round(연식/10)*10 |
 
@@ -60,7 +61,14 @@ land_stats.region_codes  → sync → collective_stats.region_codes
 |------|------|
 | 오피스텔 | `원본/오피스텔/*.csv` — 신규 정책 적용 완료 (209,082건) |
 | 아파트 | `원본/아파트/*.xlsx` — **재적재 완료 (2026-06-04, 2,288,749건)** |
-| 연립 | **다음 작업 예정** — GUKTO 정제 xlsx → `--rowhouse-only` |
+| 연립 | `원본/연립다세대/*.csv` — **적재 완료 (2026-06-05, 552,849건, land_area 포함)** |
+
+### 연립·다세대 적재 (완료)
+
+1. CSV 수집: `download_molit_rowhouse_csv.py` — 85파일 (2021–2025 전국)
+2. 적재: `import_refined.py --rowhouse-only` — **552,849건**
+3. `land_area`(대지권면적) 전 건 non-null · `housing_subtype`은 MOLIT CSV에 컬럼 없음(NULL)
+4. 로그: `pipeline/collective/rowhouse_download.log`, `rowhouse_import.log`
 
 ### 아파트 재적재 (완료)
 

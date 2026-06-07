@@ -9,22 +9,25 @@ function fmt(v: number | null | undefined) {
   return v.toLocaleString(undefined, { maximumFractionDigits: 1 });
 }
 
-type Dimension = "floor" | "dong" | "area";
+type Dimension = "floor" | "dong" | "area" | "rights";
 
 const DIMENSION_OPTIONS: { id: Dimension; label: string; show?: (assetType: AssetType) => boolean }[] = [
   { id: "floor", label: "층별" },
   { id: "dong", label: "동별", show: (t) => t === "apartment" || t === "rowhouse" },
+  { id: "rights", label: "권리별", show: (t) => t === "presale" },
   { id: "area", label: "면적형별" },
 ];
 
 function dimensionColumnLabel(dim: string) {
   if (dim === "dong") return "동";
+  if (dim === "rights") return "권리";
   if (dim === "area") return "면적형";
   return "층";
 }
 
 function dimensionHelpText(dim: string) {
   if (dim === "dong") return "동별 평균 ㎡당가를 단지 중앙값 대비 지수(%)로 표시합니다.";
+  if (dim === "rights") return "분양권·입주권 등 권리별 평균 ㎡당가를 단지 중앙값 대비 지수(%)로 표시합니다.";
   if (dim === "area") {
     return "면적형별 평균 ㎡당가를 단지 중앙값 대비 지수(%)로 표시합니다. 면적형은 전용면적을 30㎡ 구간으로 묶은 값입니다.";
   }

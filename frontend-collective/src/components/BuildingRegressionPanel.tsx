@@ -5,7 +5,7 @@ import type { AssetType, CollectiveRegressionResponse } from "../types";
 
 export type FloorMode = "linear" | "dummy" | "grouped" | "relative";
 
-function RegressionTable({ data }: { data: CollectiveRegressionResponse }) {
+export function RegressionTable({ data }: { data: CollectiveRegressionResponse }) {
   return (
     <div className="text-xs space-y-2">
       {data.warnings.map((w) => (
@@ -63,9 +63,10 @@ export default function BuildingRegressionPanel({
   const [floorMode, setFloorMode] = useState<FloorMode>("relative");
   const [vars, setVars] = useState({
     exclusive_area: true,
-    building_age: true,
+    building_age: assetType !== "presale",
     floor: true,
     dong: assetType === "apartment" || assetType === "rowhouse",
+    housing_subtype: assetType === "presale",
   });
 
   const regM = useMutation({
@@ -88,17 +89,22 @@ export default function BuildingRegressionPanel({
         </p>
       )}
 
-      <p className="text-[10px] text-slate-500">금액 ~ 전용면적·연식·층·동 (OLS). 층 변수 형식은 실험용으로 선택하세요.</p>
+      <p className="text-[10px] text-slate-500">
+        {assetType === "presale"
+          ? "금액 ~ 전용면적·층·권리 (OLS). 층 변수 형식은 실험용으로 선택하세요."
+          : "금액 ~ 전용면적·연식·층·동 (OLS). 층 변수 형식은 실험용으로 선택하세요."}
+      </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
         {(
           [
             ["exclusive_area", "전용면적"],
-            ["building_age", "연식"],
+            ...(assetType !== "presale" ? ([["building_age", "연식"]] as const) : []),
             ["floor", "층"],
             ...(assetType === "apartment" || assetType === "rowhouse"
               ? ([["dong", "동"]] as const)
               : []),
+            ...(assetType === "presale" ? ([["housing_subtype", "권리"]] as const) : []),
           ] as const
         ).map(([key, label]) => (
           <label key={key} className="flex items-center gap-2">

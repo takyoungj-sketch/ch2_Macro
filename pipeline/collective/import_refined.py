@@ -3,7 +3,8 @@ MOLIT raw 또는 정제 xlsx/csv → collective_transactions 적재.
 
   원본/아파트/*.xlsx (raw, skiprows=13)
   원본/오피스텔/*.csv (raw, skiprows=16 — 동 컬럼 없음)
-  아파트_매매_정제/*.xlsx (정제)
+  원본/연립다세대/*.csv (raw, skiprows=16 — 대지권면적 col7)
+  원본/분양입주권/*.csv (raw, skiprows=16 — 분양권/입주권 col10)
 
 집합부동산 적재 정책 (토지와 다름):
   - 해제 거래만 refine 단계에서 제외
@@ -32,10 +33,13 @@ REPO = Path(__file__).resolve().parents[2]
 GUKTO = Path(r"C:\startcoding\GUKTO")
 DEFAULT_APARTMENT_DIR = REPO / "원본" / "아파트"
 DEFAULT_OFFICETEL_DIR = REPO / "원본" / "오피스텔"
-DEFAULT_ROWHOUSE = GUKTO / "연립다세대_매매" / "연립다세대_매매_정제" / "연립다세대_매매_정제.xlsx"
+DEFAULT_ROWHOUSE_DIR = REPO / "원본" / "연립다세대"
+DEFAULT_PRESALE_DIR = REPO / "원본" / "분양입주권"
+DEFAULT_ROWHOUSE = DEFAULT_ROWHOUSE_DIR  # legacy --rowhouse 단일 파일 대신 디렉터리 기본
 DEFAULT_OFFICETEL = DEFAULT_OFFICETEL_DIR  # legacy --officetel 단일 파일 대신 디렉터리 기본
 DDL = REPO / "db" / "016_collective_transactions.sql"
 MIGRATION_ROW_IDENTITY = REPO / "db" / "017_collective_tx_row_identity.sql"
+MIGRATION_LAND_AREA = REPO / "db" / "018_collective_land_area.sql"
 
 INSERT_STMT = text(
     """
@@ -45,7 +49,7 @@ INSERT_STMT = text(
         addr1, addr2, addr3, addr4, addr5, lot_number, road_name,
         sido_code, sigungu_code, eupmyeondong_code, beopjungri_code,
         contract_year, contract_month, contract_date,
-        building_year, building_age, exclusive_area, price, unit_price,
+        building_year, building_age, exclusive_area, land_area, price, unit_price,
         area_bucket, age_bucket, floor, dong, is_valid
     ) VALUES (
         :transaction_hash, :asset_type, :building_key, :display_name,
@@ -53,7 +57,7 @@ INSERT_STMT = text(
         :addr1, :addr2, :addr3, :addr4, :addr5, :lot_number, :road_name,
         :sido_code, :sigungu_code, :eupmyeondong_code, :beopjungri_code,
         :contract_year, :contract_month, :contract_date,
-        :building_year, :building_age, :exclusive_area, :price, :unit_price,
+        :building_year, :building_age, :exclusive_area, :land_area, :price, :unit_price,
         :area_bucket, :age_bucket, :floor, :dong, :is_valid
     )
     """
@@ -151,6 +155,8 @@ def ensure_schema(engine) -> None:
         conn.execute(text(DDL.read_text(encoding="utf-8")))
         if MIGRATION_ROW_IDENTITY.is_file():
             conn.execute(text(MIGRATION_ROW_IDENTITY.read_text(encoding="utf-8")))
+        if MIGRATION_LAND_AREA.is_file():
+            conn.execute(text(MIGRATION_LAND_AREA.read_text(encoding="utf-8")))
 
 
 def sync_region_codes_from_land(collective_engine, land_engine, *, force: bool = False) -> None:
@@ -248,6 +254,7 @@ def _records_from_df(df: pd.DataFrame, asset_type: str) -> list[dict]:
             "building_year": int(row.building_year) if pd.notna(getattr(row, "building_year", None)) else None,
             "building_age": _null_if_nan(getattr(row, "building_age", None)),
             "exclusive_area": float(row.exclusive_area),
+            "land_area": _null_if_nan(getattr(row, "land_area", None)),
             "price": float(row.price),
             "unit_price": float(row.unit_price) if pd.notna(getattr(row, "unit_price", None)) else None,
             "area_bucket": _null_if_nan(getattr(row, "area_bucket", None)),
@@ -315,10 +322,19 @@ def resolve_officetel_paths(officetel_arg: Path) -> list[Path]:
     return [officetel_arg]
 
 
+resolve_rowhouse_paths = resolve_officetel_paths
+
+
+def resolve_presale_paths(presale_arg: Path) -> list[Path]:
+    paths = resolve_officetel_paths(presale_arg)
+    return [p for p in paths if "_분양입주권_매매_" in p.name]
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--apartment-dir", type=Path, default=DEFAULT_APARTMENT_DIR)
-    p.add_argument("--rowhouse", type=Path, default=DEFAULT_ROWHOUSE)
+    p.add_argument("--rowhouse", type=Path, default=DEFAULT_ROWHOUSE, help="연립 정제 xlsx 단일 또는 원본 csv 디렉터리")
+    p.add_argument("--rowhouse-dir", type=Path, default=None, help="원본/연립다세대/*.csv (--rowhouse 보다 우선)")
     p.add_argument(
         "--officetel",
         type=Path,
@@ -326,13 +342,20 @@ def main() -> None:
         help="오피스텔 정제 xlsx 단일 파일 또는 원본 csv 디렉터리",
     )
     p.add_argument("--officetel-dir", type=Path, default=None, help="원본/오피스텔/*.csv ( --officetel 보다 우선 )")
+    p.add_argument(
+        "--presale-dir",
+        type=Path,
+        default=DEFAULT_PRESALE_DIR,
+        help="원본/분양입주권/*.csv 디렉터리",
+    )
     p.add_argument("--apartment-only", action="store_true")
     p.add_argument("--rowhouse-only", action="store_true")
     p.add_argument("--officetel-only", action="store_true")
+    p.add_argument("--presale-only", action="store_true")
     p.add_argument("--refresh-region-codes", action="store_true")
     args = p.parse_args()
 
-    only = sum([args.apartment_only, args.rowhouse_only, args.officetel_only])
+    only = sum([args.apartment_only, args.rowhouse_only, args.officetel_only, args.presale_only])
     if only > 1:
         raise SystemExit("only one --*-only flag")
 
@@ -347,13 +370,25 @@ def main() -> None:
         apt_paths = sorted(args.apartment_dir.glob("*.xlsx"))
         ingest_paths(apt_paths, "apartment", eng, rc, truncate_type=True)
     if run_all or args.rowhouse_only:
-        ingest_paths([args.rowhouse], "rowhouse", eng, rc, truncate_type=run_all or args.rowhouse_only)
+        rh_root = args.rowhouse_dir or args.rowhouse
+        rh_paths = resolve_rowhouse_paths(rh_root)
+        if not rh_paths:
+            raise SystemExit(f"no rowhouse files under {rh_root}")
+        ingest_paths(rh_paths, "rowhouse", eng, rc, truncate_type=run_all or args.rowhouse_only)
     if run_all or args.officetel_only:
         ot_root = args.officetel_dir or args.officetel
         ot_paths = resolve_officetel_paths(ot_root)
         if not ot_paths:
             raise SystemExit(f"no officetel files under {ot_root}")
         ingest_paths(ot_paths, "officetel", eng, rc, truncate_type=run_all or args.officetel_only)
+    if run_all or args.presale_only:
+        ps_paths = resolve_presale_paths(args.presale_dir)
+        if not ps_paths:
+            if args.presale_only:
+                raise SystemExit(f"no presale files under {args.presale_dir}")
+            log.warning("no presale csv under %s — skip", args.presale_dir)
+        else:
+            ingest_paths(ps_paths, "presale", eng, rc, truncate_type=run_all or args.presale_only)
 
 
 if __name__ == "__main__":

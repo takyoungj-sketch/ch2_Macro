@@ -118,7 +118,7 @@ export async function fetchBuildingYearlyStats(
 export async function fetchBuildingFloorIndex(
   buildingKey: string,
   params?: {
-    dimension?: "floor" | "dong" | "area";
+    dimension?: "floor" | "dong" | "area" | "rights";
     contract_year_from?: number;
     contract_year_to?: number;
     experiment?: boolean;
@@ -146,6 +146,7 @@ export async function runBuildingRegression(
       building_age?: boolean;
       floor?: boolean;
       dong?: boolean;
+      housing_subtype?: boolean;
       floor_mode?: "linear" | "dummy" | "grouped" | "relative";
     };
   },

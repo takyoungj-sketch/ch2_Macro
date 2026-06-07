@@ -63,6 +63,7 @@ def _extract_raw(df: pd.DataFrame, asset_type: AssetType) -> pd.DataFrame:
     )
     num_cols = [
         "exclusive_area",
+        "land_area",
         "contract_ym",
         "contract_day",
         "price",
@@ -89,7 +90,12 @@ def _extract_raw(df: pd.DataFrame, asset_type: AssetType) -> pd.DataFrame:
     out["contract_date"] = temp_dt.dt.date
     out["contract_year"] = temp_dt.dt.year
     out["contract_month"] = temp_dt.dt.month
-    out["building_age"] = temp_dt.dt.year - out["building_year"]
+
+    if "building_year" in out.columns:
+        out["building_age"] = temp_dt.dt.year - out["building_year"]
+    else:
+        out["building_year"] = None
+        out["building_age"] = np.nan
 
     addr = out["sigungu"].astype(str).str.split(" ", expand=True)
     for i in range(5):
@@ -97,6 +103,12 @@ def _extract_raw(df: pd.DataFrame, asset_type: AssetType) -> pd.DataFrame:
     out["lot_number"] = out.get("lot_number", out.get("lot_number"))
     out["road_name"] = out.get("road_name")
     out["housing_subtype"] = out.get("housing_subtype")
+    if "dong" not in out.columns:
+        out["dong"] = None
+    if asset_type == "rowhouse" and "land_area" in out.columns:
+        out["land_area"] = pd.to_numeric(out["land_area"], errors="coerce")
+    elif asset_type != "rowhouse":
+        out["land_area"] = None
 
     out["area_bucket"] = (out["exclusive_area"] / 30).round() * 30
     out["age_bucket"] = (out["building_age"] / 10).round() * 10
@@ -127,7 +139,7 @@ def _load_refined(df: pd.DataFrame, asset_type: AssetType) -> pd.DataFrame:
         out["contract_year"] = pd.to_datetime(s, format="%y%m%d", errors="coerce").dt.year
         out["contract_month"] = pd.to_datetime(s, format="%y%m%d", errors="coerce").dt.month
 
-    for col in ("exclusive_area", "price", "floor", "building_age", "area_bucket", "age_bucket", "unit_price"):
+    for col in ("exclusive_area", "land_area", "price", "floor", "building_age", "area_bucket", "age_bucket", "unit_price"):
         if col in out.columns:
             out[col] = pd.to_numeric(out[col], errors="coerce")
 
@@ -142,6 +154,8 @@ def _load_refined(df: pd.DataFrame, asset_type: AssetType) -> pd.DataFrame:
         out["road_name"] = None
     if "housing_subtype" not in out.columns:
         out["housing_subtype"] = None
+    if "land_area" not in out.columns:
+        out["land_area"] = None
     if "dong" not in out.columns:
         out["dong"] = None
     else:

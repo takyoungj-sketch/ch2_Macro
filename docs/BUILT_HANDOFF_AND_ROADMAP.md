@@ -192,6 +192,7 @@ py scripts\monthly\compare_built_count_snapshots.py --before ... --after ...
 
 ## 6. 백로그 (우선순위 낮음)
 
+- **건축물대장 연계** — [`BUILDING_REGISTER_ROADMAP.md`](BUILDING_REGISTER_ROADMAP.md) (구현 보류, 1순위 `building_register_title` 적재)
 - 세 유형 **통합 회귀** (`asset_type` 더미, zone 결측 처리)
 - 집합상가/집합공장 별도 `asset_type`
 - 행정코드 매칭률 개선 (`addr` 텍스트 ↔ `region_codes`)
@@ -204,6 +205,7 @@ py scripts\monthly\compare_built_count_snapshots.py --before ... --after ...
 | 문서/스크립트 | 용도 |
 |---------------|------|
 | [`BUILT_RESEARCH_MVP.md`](BUILT_RESEARCH_MVP.md) | 로컬 개발·API 목록 |
+| [`BUILDING_REGISTER_ROADMAP.md`](BUILDING_REGISTER_ROADMAP.md) | 건축물대장 표제부 — 향후 tier 매칭·구조 변수 |
 | [`BUILT_MONTHLY_UPDATE_SOP.md`](BUILT_MONTHLY_UPDATE_SOP.md) | 월간 ingest·Promote |
 | [`deploy/09-macro-built-vps.md`](../deploy/09-macro-built-vps.md) | VPS URL·Nginx·restore |
 | `deploy/scripts/vps_rebuild_frontends_with_token.sh` | 프론트 .env + 빌드 |

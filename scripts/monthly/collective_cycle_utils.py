@@ -40,12 +40,14 @@ def resolve_collective_xlsx_paths(repo: Path, cycle_id: str, *, use_legacy: bool
             raise FileNotFoundError(f"no apartment xlsx in {apt_dir}")
         return {
             "apartment_dir": apt_dir,
+            "rowhouse_dir": GUKTO / "연립다세대_매매" / "연립다세대_매매_정제",
             "rowhouse": GUKTO / "연립다세대_매매" / "연립다세대_매매_정제" / "연립다세대_매매_정제.xlsx",
             "officetel": GUKTO / "오피스텔_매매" / "오피스텔_매매_정제" / "오피스텔_전국정제_정제.xlsx",
         }
     root = collective_raw_root(repo, cycle_id)
     return {
         "apartment_dir": root / "apartment",
-        "rowhouse": root / "rowhouse" / "rowhouse.xlsx",
+        "rowhouse_dir": root / "rowhouse",
+        "rowhouse": root / "rowhouse",
         "officetel": root / "officetel" / "officetel.xlsx",
     }

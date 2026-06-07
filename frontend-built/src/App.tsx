@@ -969,7 +969,11 @@ export default function App() {
             </p>
             <h1 className="text-lg font-bold">복합부동산 통계</h1>
             <p className="text-sm text-slate-300 mt-1">
-              상업·공장·단독다가구 일반(非집합) — 거래 탐색·OLS 회귀·예측
+              상업·공장·단독다가구 일반(非집합) — 거래 탐색·OLS 회귀 ·{" "}
+              <a href="/collective/commercial/" className="underline hover:text-white">
+                집합상가·공장
+              </a>
+              은 별도
             </p>
           </div>
         </div>

@@ -51,6 +51,15 @@
 - 전국 2021~2025:  
   `py scripts/monthly/download_molit_officetel_csv.py --start-year 2021 --end-year 2025 --headless`
 
+## 국토부 CSV 수집 (Selenium · 연립·다세대 매매)
+
+- `scripts/monthly/download_molit_rowhouse_csv.py` — 시도×연도별 CSV → `원본/연립다세대/`
+- 검증 예:  
+  `py scripts/monthly/download_molit_rowhouse_csv.py --limit-regions 1 --years 2021 --headless`
+- 전국 2021~2025:  
+  `py scripts/monthly/download_molit_rowhouse_csv.py --start-year 2021 --end-year 2025 --headless`
+- 적재: `py pipeline/collective/import_refined.py --rowhouse-only` (대지권면적 `land_area` 포함)
+
 ## 참고 노트북 규격 통합·정제 (템플릿용 산출)
 
 - 설계·폴더 구조: `docs/LAND_NOTEBOOK_EXCEL_PREP.md`

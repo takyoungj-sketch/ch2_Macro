@@ -22,6 +22,7 @@
 | 7 | [07-verification-checklist.md](./07-verification-checklist.md) | 기능·HTTPS·CORS·DB 검증 |
 | 8 | [08-ch2data-portal.md](./08-ch2data-portal.md) | **ch2data.com** 허브 + 서브도메인 (Macro/Viewer/FieldNote) |
 | 9 | [09-macro-built-vps.md](./09-macro-built-vps.md) | **Macro 내 복합부동산** — 게이트웨이·/land/·/built/·built_stats Promote |
+| **A** | **[AGENT_DEPLOY_RUNBOOK.md](./AGENT_DEPLOY_RUNBOOK.md)** | **Cursor 에이전트 자동 배포** — 「배포해줘」 시 commit·push·VPS·검증 (추가 질문 없음) |
 | — | [../docs/BUILT_HANDOFF_AND_ROADMAP.md](../docs/BUILT_HANDOFF_AND_ROADMAP.md) | **인수·로드맵** — AI 연동 · 202607 월간 업데이트 |
 | — | [../docs/COLLECTIVE_RESEARCH_MVP.md](../docs/COLLECTIVE_RESEARCH_MVP.md) | **집합부동산** MVP · collective_stats |
 
@@ -44,6 +45,8 @@ deploy/
     ├── vps_sync_nginx_api_token.sh     # nginx X-CH2-Proxy-Token 스니펫
     ├── vps_rebuild_frontends_with_token.sh
     ├── redeploy.sh                      # git pull → land+built build → restart
+    ├── deploy-from-windows.ps1          # Windows → VPS (commit·push·scp·build·verify)
+    ├── vps_apply_scope.sh               # VPS: scope별 frontend build + backend restart
     └── health-check.sh                  # /health 스모크 테스트
 ```
 

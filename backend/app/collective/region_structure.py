@@ -5,13 +5,19 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
+_TX_TABLES = frozenset({"collective_transactions", "collective_commercial_transactions"})
+
 
 def detect_region_structure(
     conn: Connection,
     addr1: str,
     addr2: str,
     asset_type: str | None = None,
+    *,
+    table: str = "collective_transactions",
 ) -> dict:
+    if table not in _TX_TABLES:
+        raise ValueError(f"unsupported table: {table}")
     clauses = ["addr1 = :a1", "addr2 = :a2", "is_valid = true"]
     params: dict = {"a1": addr1, "a2": addr2}
     if asset_type:
@@ -30,7 +36,7 @@ def detect_region_structure(
                    COUNT(*) FILTER (
                        WHERE addr4 IS NOT NULL AND btrim(addr4::text) <> ''
                    )::int AS has_a4
-            FROM collective_transactions
+            FROM {table}
             WHERE {where}
             """
         ),
