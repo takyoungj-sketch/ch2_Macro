@@ -145,13 +145,20 @@ export default function PaidAnalysisPanel() {
     if (paidBulkBeopjungriCodes != null && paidBulkBeopjungriCodes.length > 0) {
       return paidBulkBeopjungriCodes;
     }
+    /**
+     * 상위지역(시·도/시군구/읍·면·동) 기본통계는 beopjungri_code 에 region_code(8자 등)가 들어간다.
+     * paid API·매트릭스 모달은 10자리 법정리 코드가 필요하므로 산하 union(resolvedCodes)를 우선한다.
+     */
+    if (useUpperPaidBasic) {
+      return resolvedCodes;
+    }
     const fromBasic = basicData?.beopjungri_code
       ?.split(",")
       .map((x) => x.trim())
       .filter(Boolean);
     if (fromBasic != null && fromBasic.length > 0) return fromBasic;
     return resolvedCodes;
-  }, [paidBulkBeopjungriCodes, basicData?.beopjungri_code, resolvedCodes]);
+  }, [paidBulkBeopjungriCodes, basicData?.beopjungri_code, resolvedCodes, useUpperPaidBasic]);
 
   const closeTrend = () => {
     setTrendModal(null);
@@ -321,6 +328,7 @@ export default function PaidAnalysisPanel() {
             byLandCategory={result.by_land_category}
             showEmbeddedLegend={false}
             onPaidMatrixCellClick={openMatrixTrend}
+            suppressEscapeClose={trendModal != null}
           />
         </div>
       )}

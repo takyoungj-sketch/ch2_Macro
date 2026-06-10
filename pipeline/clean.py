@@ -48,6 +48,13 @@ _SIDO_NAME_ALIASES: dict[str, str] = {
     "강원특별자치도": "강원도",
 }
 
+# Molit 토지 historical CSV: 시도 생략·구表기 구식 시·군명
+_HISTORICAL_CITY_ALIASES: dict[str, str] = {
+    "전주광역시": "전주시",
+}
+
+_RE_EUP_GA_SUFFIX = re.compile(r"\d+가$")
+
 
 def _extract_paren_content(s: str | None) -> str:
     """행정명 안 괄호 내용(주로 한자) 추출. 여러 괄호가 있으면 모두 이어 붙임.
@@ -278,6 +285,65 @@ def _register_strong_key(
     target[key_n] = c
 
 
+def _sido_lookup_variants(sn: str) -> list[str]:
+    """region_codes·거래 원장 간 시도 표기 차이 — lookup 시도 순서."""
+    out: list[str] = []
+    for name in (sn, _SIDO_NAME_ALIASES.get(sn, "")):
+        if name and name not in out:
+            out.append(name)
+    for src, dst in _SIDO_NAME_ALIASES.items():
+        if sn == dst and src not in out:
+            out.append(src)
+    return out
+
+
+def _is_province_sido(sn: str) -> bool:
+    if not sn or sn in _HISTORICAL_CITY_ALIASES:
+        return False
+    if sn.endswith("도") or sn.endswith("특별시"):
+        return True
+    if sn in ("세종특별자치시",):
+        return True
+    return sn.endswith("광역시")
+
+
+def _register_eup_prefix(
+    index: dict[tuple[str, str, str], list[str]],
+    sn: str,
+    sg: str,
+    eu_k: str,
+    code: str,
+) -> None:
+    """효자동 → 효자동1가 등 historical CSV 동명 prefix lookup."""
+    base = _RE_EUP_GA_SUFFIX.sub("", eu_k)
+    if not base or base == eu_k:
+        return
+    key = (sn, sg, base)
+    codes = index.setdefault(key, [])
+    if code not in codes:
+        codes.append(code)
+
+
+def _lookup_by_sigungu_name(
+    by_name: dict[tuple, str],
+    by_eup_prefix: dict[tuple[str, str, str], list[str]],
+    sn: str,
+    sg: str,
+    eu_k: str,
+    bp_k: str,
+) -> tuple[str, str]:
+    for s in _sido_lookup_variants(sn):
+        code = by_name.get((s, sg, eu_k, bp_k), "") or ""
+        if code:
+            return str(code).strip(), ""
+        pref = by_eup_prefix.get((s, sg, bp_k), [])
+        if len(pref) == 1:
+            return pref[0], "eup_prefix"
+        if len(pref) > 1:
+            return pref[0], "eup_prefix_ambiguous"
+    return "", ""
+
+
 def build_region_lookup(engine) -> dict:
     """
     region_codes → beopjungri_code 강한 키만:
@@ -300,6 +366,7 @@ def build_region_lookup(engine) -> dict:
 
     by_sigungu_name: dict[tuple, str] = {}
     by_sigungu_code: dict[tuple, str] = {}
+    by_eup_prefix: dict[tuple[str, str, str], list[str]] = {}
     weak_pairs: dict[tuple[str, str], set[str]] = {}
     # 동명이리 disambiguation 인덱스:
     # 정규화 키(시도명, 시군구명, 읍면, 정규화된 동·리명) → [(code, 괄호안한자, 원본명), …]
@@ -319,12 +386,14 @@ def build_region_lookup(engine) -> dict:
         gc = str(sigungu_code).strip().zfill(5)[:5]
         bn_hanja = _extract_paren_content(bn)
 
+        code_s = str(beopjungri_code).strip()
         _register_strong_key(
             by_sigungu_name,
             (sn, sg, eu_k, bn_k),
             beopjungri_code,
             "by_sigungu_name",
         )
+        _register_eup_prefix(by_eup_prefix, sn, sg, eu_k, code_s)
         if sc and gc:
             _register_strong_key(
                 by_sigungu_code,
@@ -372,6 +441,7 @@ def build_region_lookup(engine) -> dict:
     return {
         "by_sigungu_name": by_sigungu_name,
         "by_sigungu_code": by_sigungu_code,
+        "by_eup_prefix": by_eup_prefix,
         "disamb_by_name": disamb_by_name,
         "disamb_by_code": disamb_by_code,
     }
@@ -419,6 +489,7 @@ def map_beopjungri_codes(df: pd.DataFrame, region_maps: dict) -> pd.DataFrame:
     """
     by_name = region_maps.get("by_sigungu_name", {})
     by_code = region_maps.get("by_sigungu_code", {})
+    by_eup_prefix = region_maps.get("by_eup_prefix", {})
     disamb_by_name = region_maps.get("disamb_by_name", {})
     disamb_by_code = region_maps.get("disamb_by_code", {})
 
@@ -515,18 +586,22 @@ def map_beopjungri_codes(df: pd.DataFrame, region_maps: dict) -> pd.DataFrame:
                             break
 
         if not code and sn and sg and eu_k and bp_k:
-            code = by_name.get((sn, sg, eu_k, bp_k), "") or ""
+            code, fb = _lookup_by_sigungu_name(by_name, by_eup_prefix, sn, sg, eu_k, bp_k)
+            if code and fb:
+                fallback_note = fb
+
         if not code:
             s2, s5 = sc2_list[i], sc5_list[i]
             if s2 and s5 and eu_k and bp_k:
                 code = by_code.get((s2, s5, eu_k, bp_k), "") or ""
 
-        # Fallback 1: 시도명 별칭 (전북특별자치도 → 전라북도 등)
+        # Fallback 1: 시도명 별칭 (전북특별자치도 ↔ 전라북도 등)
         if not code and sn in _SIDO_NAME_ALIASES and sg and eu_k and bp_k:
-            alias_sn = _SIDO_NAME_ALIASES[sn]
-            code = by_name.get((alias_sn, sg, eu_k, bp_k), "") or ""
+            code, fb = _lookup_by_sigungu_name(
+                by_name, by_eup_prefix, _SIDO_NAME_ALIASES[sn], sg, eu_k, bp_k
+            )
             if code:
-                fallback_note = "sido_alias"
+                fallback_note = fb or "sido_alias"
 
         # Fallback 2: 시군구가 분구 표기(예: '화성시 만세구')라 마스터에 없을 때,
         # 마지막 시군구 토큰을 한 번씩 제거하며 재시도. sigungu_code(5자리)는 동일하므로
@@ -541,6 +616,30 @@ def map_beopjungri_codes(df: pd.DataFrame, region_maps: dict) -> pd.DataFrame:
                 if code:
                     fallback_note = "subgu_dropped"
                     break
+
+        # Fallback 3: 세종특별자치시 — 국토부 CSV 「시도 + 동·읍·면」(2토큰, 중간 시군구 없음)
+        # region_codes 에서 sigungu_name 자리에 행정동·읍·면명이 들어 있는 경우.
+        if (
+            not code
+            and sn == "세종특별자치시"
+            and not sg
+            and eu_k
+            and eu_k == bp_k
+        ):
+            code = by_name.get((sn, eu_k, "", ""), "") or ""
+            if code:
+                fallback_note = "sejong_admin_leaf"
+
+        # Fallback 4: Molit historical CSV — 시도 생략「시·군 [구] 동·리」(예: 전주광역시 완산구 효자동)
+        if not code and sn and not _is_province_sido(sn) and eu_k and bp_k:
+            city_norm = _HISTORICAL_CITY_ALIASES.get(sn, sn)
+            sg_full = f"{city_norm} {sg}".strip() if sg else city_norm
+            cand, fb = _lookup_by_sigungu_name(
+                by_name, by_eup_prefix, "전북특별자치도", sg_full, eu_k, bp_k
+            )
+            if cand and str(cand).startswith("52"):
+                code = cand
+                fallback_note = fb or "historical_short_addr"
 
         if not code:
             miss += 1
@@ -712,6 +811,8 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         & (df["area_sqm"] > 0)
         & (df["total_price_10k"] > 0)
         & ~df["is_cancelled"]
+        & df["contract_year"].notna()
+        & df["contract_month"].notna()
     )
 
     df["needs_review"] = False
@@ -799,6 +900,11 @@ def upsert_transactions(df: pd.DataFrame) -> int:
     skipped = before - len(df)
     if skipped:
         log.info("total_price_10k 가 NULL/NaN 인 거래 UPSERT 제외: %d건", skipped)
+    before = len(df)
+    df = df[df["contract_year"].notna() & df["contract_month"].notna()].copy()
+    skipped_date = before - len(df)
+    if skipped_date:
+        log.info("contract_year/month 가 NULL 인 거래 UPSERT 제외: %d건", skipped_date)
     if df.empty:
         log.info("UPSERT 대상 없음")
         return 0

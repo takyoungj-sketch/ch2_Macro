@@ -24,6 +24,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -59,6 +60,7 @@ EXCEL_COLUMN_MAP = {
     "용도지역": "zone_type",
     "도로조건": "road_condition",
     "계약연월": "deal_ymd",          # YYYYMM → clean.py에서 year/month 분리
+    "계약년월": "deal_ymd",          # Molit CSV 헤더 (연월 표기 차이)
     "계약일": "contract_day",
     "계약면적": "area_sqm",
     "거래금액(만원)": "total_price_10k",
@@ -160,23 +162,94 @@ def collect_from_excel(file_path: str, fmt: str = "raw") -> pd.DataFrame:
             log.info("auto 감지: raw 형식")
             return collect_from_excel(file_path, fmt="raw")
 
-    # 컬럼명 → 내부 키 매핑
-    df = df.rename(columns={k: v for k, v in EXCEL_COLUMN_MAP.items() if k in df.columns})
+    df = _normalize_land_dataframe(df)
+    log.info("Excel 로드 완료: %d행", len(df))
+    return df
 
-    # 계약연월(YYYYMM) → contract_year / contract_month 분리
+
+def _detect_molit_csv_skiprows(file_path: str) -> int:
+    """Molit CSV: 면책·검색조건 행 뒤 'NO'/'순번' 헤더 행까지 skiprows."""
+    path = Path(file_path)
+    for enc in ("utf-8-sig", "utf-8", "cp949", "euc-kr"):
+        try:
+            with path.open(encoding=enc, errors="strict") as fh:
+                for i, line in enumerate(fh):
+                    stripped = line.strip().lstrip("\ufeff")
+                    if stripped.startswith('"NO"') or stripped.startswith("NO,"):
+                        return i
+                    if '"시군구"' in stripped or stripped.startswith("시군구,"):
+                        return max(i - 1, 0) if stripped.startswith("시군구") else i
+                    if '"순번"' in stripped or stripped.startswith("순번,"):
+                        return i
+            break
+        except UnicodeDecodeError:
+            continue
+    return 15
+
+
+def _normalize_land_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """Excel/CSV 공통: 컬럼 매핑·계약연월 분리·빈 행 제거."""
+    rename_map = {k: v for k, v in EXCEL_COLUMN_MAP.items() if k in df.columns}
+    if "NO" in df.columns and "순번" not in df.columns:
+        rename_map["NO"] = "seq_no"
+    df = df.rename(columns=rename_map)
+
     if "deal_ymd" in df.columns and "contract_year" not in df.columns:
         deal_ymd = df["deal_ymd"].astype(str).str.strip()
         df["contract_year"] = deal_ymd.str[:4]
         df["contract_month"] = deal_ymd.str[4:6]
 
-    # 빈 행 제거 (순번이 없거나 NaN인 행)
+    seq_col = None
     if "순번" in df.columns:
-        df = df[df["순번"].notna() & (df["순번"].astype(str).str.strip() != "")]
+        seq_col = "순번"
+    elif "seq_no" in df.columns:
+        seq_col = "seq_no"
+    if seq_col:
+        df = df[df[seq_col].notna() & (df[seq_col].astype(str).str.strip() != "")]
     elif "area_sqm" in df.columns:
         df = df[df["area_sqm"].notna()]
 
-    log.info("Excel 로드 완료: %d행", len(df))
     return df
+
+
+def collect_from_csv(file_path: str) -> pd.DataFrame:
+    """
+    Molit 토지 CSV (면책·검색조건 + 헤더 + 데이터)를 읽는다.
+    """
+    log.info("CSV 파일 읽기: %s", file_path)
+    skip = _detect_molit_csv_skiprows(file_path)
+    df = None
+    read_kw = {"skiprows": skip, "header": 0, "dtype": str, "on_bad_lines": "skip"}
+    for enc in ("utf-8-sig", "utf-8", "cp949", "euc-kr"):
+        try:
+            df = pd.read_csv(file_path, encoding=enc, **read_kw)
+            log.debug("CSV encoding=%s", enc)
+            break
+        except UnicodeDecodeError:
+            continue
+        except TypeError:
+            # pandas < 1.3
+            read_kw.pop("on_bad_lines", None)
+            read_kw["error_bad_lines"] = False
+            df = pd.read_csv(file_path, encoding=enc, **read_kw)
+            log.debug("CSV encoding=%s (legacy bad lines)", enc)
+            break
+    if df is None:
+        raise UnicodeDecodeError("csv", b"", 0, 1, "지원 인코딩으로 CSV를 읽지 못했습니다")
+    df = _normalize_land_dataframe(df)
+    log.info("CSV 로드 완료: %d행", len(df))
+    return df
+
+
+def collect_from_file(file_path: str, fmt: str = "auto") -> pd.DataFrame:
+    """확장자·fmt 에 따라 Excel 또는 CSV 로드."""
+    path = Path(file_path)
+    suffix = path.suffix.lower()
+    if fmt == "csv" or (fmt == "auto" and suffix == ".csv"):
+        return collect_from_csv(str(path))
+    if fmt in ("raw", "merged", "auto"):
+        return collect_from_excel(str(path), fmt=fmt if fmt != "auto" else "auto")
+    raise ValueError(f"지원하지 않는 format: {fmt}")
 
 
 def _record_nan_to_none(rec: dict) -> dict:
@@ -236,7 +309,7 @@ def load_to_raw_table(
 
 
 def resolve_excel_paths(*, file_arg: str | None, directory_arg: str | None) -> list[Path]:
-    """--file 과 --directory 배타. 호출 전에 둘 중 하나만 있는지 검증할 것."""
+    """--file 과 --directory 배타. .xlsx · .csv 지원."""
     if file_arg:
         out: list[Path] = []
         for part in file_arg.split(","):
@@ -254,7 +327,7 @@ def resolve_excel_paths(*, file_arg: str | None, directory_arg: str | None) -> l
         for child in root.iterdir():
             if not child.is_file():
                 continue
-            if child.suffix.lower() != ".xlsx":
+            if child.suffix.lower() not in (".xlsx", ".csv"):
                 continue
             by_lower.setdefault(child.name.lower(), child)
         return sorted(by_lower.values(), key=lambda p: p.name.lower())
@@ -304,9 +377,21 @@ def main():
     )
     parser.add_argument(
         "--format",
-        choices=["raw", "merged", "auto"],
+        choices=["raw", "merged", "auto", "csv"],
         default="auto",
-        help="Excel 형식: raw=국토부 원본(skiprows=13), merged=통합xlsx(헤더없음), auto=자동감지",
+        help="Excel 형식: raw=국토부 원본(skiprows=13), merged=통합xlsx, csv=Molit CSV, auto=확장자·구조 감지",
+    )
+    parser.add_argument(
+        "--source-year",
+        type=int,
+        default=0,
+        help="raw 적재 source_year (0=오늘 연도). historical CSV는 파일명 연도 지정 권장",
+    )
+    parser.add_argument(
+        "--source-month",
+        type=int,
+        default=0,
+        help="raw 적재 source_month (0=오늘 월)",
     )
     parser.add_argument("--sigungu", type=str, default="", help="쉼표 구분 시군구 코드 (미지정시 전국)")
     args = parser.parse_args()
@@ -322,16 +407,30 @@ def main():
         except (ValueError, FileNotFoundError) as exc:
             parser.error(str(exc))
         if not paths:
-            parser.error("적재할 .xlsx 파일이 없습니다.")
+            parser.error("적재할 .xlsx/.csv 파일이 없습니다.")
 
         today = date.today()
+        default_sy = args.source_year if args.source_year > 0 else today.year
+        default_sm = args.source_month if args.source_month > 0 else today.month
         total_rows = 0
         inserted = 0
         for idx, path in enumerate(paths, start=1):
-            log.info("[%d/%d] Excel 처리: %s", idx, len(paths), path)
-            df = collect_from_excel(str(path), fmt=fmt)
+            log.info("[%d/%d] 파일 처리: %s", idx, len(paths), path)
+            fmt = getattr(args, "format", "auto")
+            if fmt == "auto" and path.suffix.lower() == ".csv":
+                fmt = "csv"
+            if fmt == "csv":
+                df = collect_from_csv(str(path))
+            else:
+                df = collect_from_excel(str(path), fmt=fmt)
+            sy = default_sy
+            sm = default_sm
+            ym = re.search(r"_(\d{4})\.(csv|xlsx)$", path.name, re.I)
+            if ym:
+                sy = int(ym.group(1))
+                sm = 6
             total_rows += len(df)
-            inserted += load_to_raw_table(df, today.year, today.month)
+            inserted += load_to_raw_table(df, sy, sm)
         log.info(
             "excel 일괄 적재 종료: 파일 %d개, 데이터 행 %d건 → raw 행 %d건",
             len(paths),

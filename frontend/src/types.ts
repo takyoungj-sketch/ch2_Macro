@@ -175,6 +175,66 @@ export interface MatrixYearlyResponse {
   rows: MatrixYearlyStat[];
 }
 
+export interface LongTermRegionTarget {
+  region_level: RegionLevel | "beopjungri";
+  region_code: string;
+}
+
+export interface LongTermTrendRequest {
+  region_codes?: string[];
+  region_targets?: LongTermRegionTarget[];
+  zone_type: string;
+  land_category: string;
+  year_from?: number | null;
+  year_to?: number | null;
+}
+
+export interface LongTermTrendPoint {
+  year: number;
+  count: number;
+  mean?: number | null;
+  median?: number | null;
+  reference_only?: boolean;
+}
+
+export interface LongTermTrendSeries {
+  region_level: string;
+  region_code: string;
+  region_name: string;
+  points: LongTermTrendPoint[];
+}
+
+export interface LongTermTrendResponse {
+  zone_type: string;
+  land_category: string;
+  year_from: number;
+  year_to: number;
+  disclaimer: string;
+  series: LongTermTrendSeries[];
+}
+
+export interface AnalysisExplainPreset {
+  id: string;
+  question: string;
+  answer: string;
+}
+
+export interface AnalysisExplain {
+  spec_id: string;
+  spec_version: string;
+  title: string;
+  summary: string;
+  formula?: string | null;
+  index_rule?: string | null;
+  reference?: string | null;
+  floor_groups?: string[];
+  controls?: string[];
+  interpretation: string[];
+  limitations: string[];
+  interpretation_hints: string[];
+  presets: AnalysisExplainPreset[];
+}
+
 export interface HistogramBin {
   bin_from: number;
   bin_to: number;

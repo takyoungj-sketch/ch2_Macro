@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 from datetime import date
+from itertools import product
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -22,6 +23,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db import get_db
 from app.population_query import attach_population_year_end_for_upper_level
+from app.routers.free import _stats_dict_to_result
 from app.schemas import (
     MatrixCell,
     RegionLevel,
@@ -29,6 +31,7 @@ from app.schemas import (
     UpperStatsV2Response,
     YearlyTradeStat,
 )
+from app.stats_utils import compute_stats
 from app.v2_stats_windows import (
     default_as_of_month_for_service,
     period_bounds_for_window,
@@ -128,18 +131,174 @@ def _region_name(db: Session, level: RegionLevel, code: str) -> str:
         col_code, col_name = "sigungu_code", "sigungu_name"
     else:
         col_code, col_name = "eupmyeondong_code", "eupmyeondong_name"
+    if level == "eupmyeondong":
+        row = db.execute(
+            text(
+                f"""
+                SELECT COALESCE(
+                    NULLIF(MAX({col_name}), ''),
+                    NULLIF(MAX(sigungu_name), '')
+                ) AS name
+                FROM region_codes
+                WHERE btrim({col_code}::text) = :c
+                  AND COALESCE(is_active, TRUE)
+                """
+            ),
+            {"c": code},
+        ).fetchone()
+    else:
+        row = db.execute(
+            text(
+                f"""
+                SELECT MAX({col_name}) AS name
+                FROM region_codes
+                WHERE btrim({col_code}::text) = :c
+                  AND COALESCE(is_active, TRUE)
+                """
+            ),
+            {"c": code},
+        ).fetchone()
+    return str(row.name) if row and row.name else ""
+
+
+def _region_code_in_catalog(db: Session, level: RegionLevel, code: str) -> bool:
+    if level == "city":
+        return bool(_sigungu_codes_for_city_bucket(db, code))
+    col_map = {
+        "sido": "sido_code",
+        "sigungu": "sigungu_code",
+        "eupmyeondong": "eupmyeondong_code",
+    }
+    col = col_map[level]
     row = db.execute(
         text(
             f"""
-            SELECT MAX({col_name}) AS name
+            SELECT 1
             FROM region_codes
-            WHERE btrim({col_code}::text) = :c
+            WHERE btrim({col}::text) = :c
               AND COALESCE(is_active, TRUE)
+            LIMIT 1
             """
         ),
         {"c": code},
     ).fetchone()
-    return str(row.name) if row and row.name else ""
+    return row is not None
+
+
+def _fetch_tx_trips_for_upper(
+    db: Session,
+    *,
+    level: RegionLevel,
+    code: str,
+    period_start: date,
+    period_end: date,
+) -> list[tuple[str, str, float]]:
+    if level == "city":
+        sgs = _sigungu_codes_for_city_bucket(db, code)
+        if not sgs:
+            return []
+        in_clause = ", ".join(f":c{i}" for i in range(len(sgs)))
+        params: dict = {f"c{i}": s for i, s in enumerate(sgs)}
+        params["ps"] = period_start
+        params["pe"] = period_end
+        where = f"btrim(sigungu_code::text) IN ({in_clause})"
+    else:
+        where = _LEVEL_TX_WHERE[level]
+        params = {"code": code, "ps": period_start, "pe": period_end}
+
+    rows = db.execute(
+        text(
+            f"""
+            SELECT zone_type, land_category, unit_price_per_sqm::float8 AS up
+            FROM land_transactions
+            WHERE {where}
+              AND is_valid IS TRUE
+              AND is_cancelled IS FALSE
+              AND unit_price_per_sqm IS NOT NULL
+              AND contract_date IS NOT NULL
+              AND contract_date >= :ps
+              AND contract_date <= :pe
+            """
+        ),
+        params,
+    ).fetchall()
+    trips: list[tuple[str, str, float]] = []
+    for r in rows:
+        zt = (r.zone_type or "").strip() or "UNKNOWN"
+        lc = (r.land_category or "").strip() or "UNKNOWN"
+        try:
+            p = float(r.up)
+        except (TypeError, ValueError):
+            continue
+        if p == p:
+            trips.append((zt, lc, p))
+    return trips
+
+
+def _compute_upper_bundle_from_transactions(
+    db: Session,
+    *,
+    level: RegionLevel,
+    code: str,
+    period_start: date,
+    period_end: date,
+) -> tuple[StatsResult, dict[str, StatsResult], dict[str, StatsResult], list[MatrixCell]]:
+    trips = _fetch_tx_trips_for_upper(
+        db, level=level, code=code, period_start=period_start, period_end=period_end
+    )
+    if not trips:
+        return StatsResult(count=0), {}, {}, []
+
+    zones = sorted({t[0] for t in trips})
+    cats_sorted = sorted({t[1] for t in trips})
+
+    def prices_for(zone: str, cat: str) -> list[float]:
+        return [
+            p
+            for zt, lc, p in trips
+            if (zone == "ALL" or zt == zone) and (cat == "ALL" or lc == cat)
+        ]
+
+    total = _stats_dict_to_result(compute_stats(prices_for("ALL", "ALL")))
+    by_zone = {
+        zone: _stats_dict_to_result(compute_stats(prices_for(zone, "ALL")))
+        for zone in zones
+    }
+    by_land_category = {
+        lc: _stats_dict_to_result(compute_stats(prices_for("ALL", lc)))
+        for lc in cats_sorted
+    }
+    matrix = [
+        MatrixCell(
+            zone_type=zone,
+            land_category=cat,
+            stats=_stats_dict_to_result(compute_stats(prices_for(zone, cat))),
+        )
+        for zone, cat in product(zones, cats_sorted)
+    ]
+    return total, by_zone, by_land_category, matrix
+
+
+def _parse_preagg_rows(
+    rows: list,
+) -> tuple[StatsResult | None, dict[str, StatsResult], dict[str, StatsResult], list[MatrixCell]]:
+    total: Optional[StatsResult] = None
+    by_zone: dict[str, StatsResult] = {}
+    by_land_category: dict[str, StatsResult] = {}
+    matrix: list[MatrixCell] = []
+    for r in rows:
+        zt = (r.zone_type or "ALL").strip() or "ALL"
+        lc = (r.land_category or "ALL").strip() or "ALL"
+        stats = _row_to_stats(r)
+        if zt == "ALL" and lc == "ALL":
+            total = stats
+        elif zt != "ALL" and lc == "ALL":
+            by_zone[zt] = stats
+        elif zt == "ALL" and lc != "ALL":
+            by_land_category[lc] = stats
+        else:
+            matrix.append(MatrixCell(zone_type=zt, land_category=lc, stats=stats))
+    return total, by_zone, by_land_category, matrix
 
 
 def _row_to_stats(r) -> StatsResult:
@@ -349,7 +508,22 @@ def get_upper_stats(
     rows = _fetch_zone_cat_rows(
         db, level=level, code=code, as_of=as_of, window_years=window_years
     )
-    if not rows:
+    if rows:
+        total, by_zone, by_land_category, matrix = _parse_preagg_rows(rows)
+        if total is None:
+            raise HTTPException(
+                status_code=404,
+                detail="ALL/ALL 사전집계 행을 찾지 못했습니다(adapter/build 점검 필요).",
+            )
+    elif _region_code_in_catalog(db, level, code):
+        total, by_zone, by_land_category, matrix = _compute_upper_bundle_from_transactions(
+            db,
+            level=level,
+            code=code,
+            period_start=period_start,
+            period_end=period_end,
+        )
+    else:
         raise HTTPException(
             status_code=404,
             detail=(
@@ -357,30 +531,6 @@ def get_upper_stats(
                 f"as_of_month={as_of} window_years={window_years}. "
                 "build_upper_stats_v2.py 적재 여부를 확인하세요."
             ),
-        )
-
-    total: Optional[StatsResult] = None
-    by_zone: dict[str, StatsResult] = {}
-    by_land_category: dict[str, StatsResult] = {}
-    matrix: list[MatrixCell] = []
-    for r in rows:
-        zt = (r.zone_type or "ALL").strip() or "ALL"
-        lc = (r.land_category or "ALL").strip() or "ALL"
-        stats = _row_to_stats(r)
-        if zt == "ALL" and lc == "ALL":
-            total = stats
-        elif zt != "ALL" and lc == "ALL":
-            by_zone[zt] = stats
-        elif zt == "ALL" and lc != "ALL":
-            by_land_category[lc] = stats
-        else:
-            matrix.append(MatrixCell(zone_type=zt, land_category=lc, stats=stats))
-
-    if total is None:
-        # ALL/ALL 행이 없으면 가장 기본은 비어 있는 응답 — 404로 일관 처리
-        raise HTTPException(
-            status_code=404,
-            detail="ALL/ALL 사전집계 행을 찾지 못했습니다(adapter/build 점검 필요).",
         )
 
     by_year = _by_year_upper(

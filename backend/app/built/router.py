@@ -15,6 +15,7 @@ from app.built.filters import (
     apply_ri_filter,
     apply_sample_filters,
 )
+from app.flat_sido_region import apply_addr2_scope, list_addr2_for_sido, region_scope_clauses
 from app.built.region_structure import detect_region_structure
 from app.built.regression.engine import predict_regression, run_regression
 from app.built.schemas import (
@@ -79,8 +80,7 @@ def _transaction_where(
         clauses.append("addr1 = :addr1")
         params["addr1"] = addr1
     if addr2:
-        clauses.append("addr2 = :addr2")
-        params["addr2"] = addr2
+        apply_addr2_scope(clauses, params, addr1=addr1, addr2=addr2)
     apply_addr3_filter(clauses, params, addr3, addr3_list or [])
     apply_addr4_filter(clauses, params, None, addr4_list or [])
     apply_ri_filter(clauses, params, _parse_ri_picks(ri_pick or []))
@@ -283,18 +283,18 @@ def list_transactions(
 
 
 @router.get("/regions/addr2")
-def list_addr2(db: Session = Depends(get_built_db), addr1: str = Query(...)):
-    rows = db.execute(
-        text(
-            """
-            SELECT DISTINCT addr2 AS v FROM built_transactions
-            WHERE addr1 = :a1 AND addr2 IS NOT NULL AND btrim(addr2) <> ''
-            ORDER BY 1
-            """
-        ),
-        {"a1": addr1},
-    ).fetchall()
-    return [r.v for r in rows]
+def list_addr2(
+    db: Session = Depends(get_built_db),
+    addr1: str = Query(...),
+    asset_type: Optional[str] = Query(None),
+):
+    return list_addr2_for_sido(
+        db.connection(),
+        table="built_transactions",
+        addr1=addr1,
+        asset_type=asset_type,
+        valid_sql="is_valid = true",
+    )
 
 
 @router.get("/regions/structure", response_model=RegionStructureResponse)
@@ -317,17 +317,10 @@ def list_addr3(
     with_counts: bool = Query(False),
 ):
     """flat 시군구: 읍면동 목록. 구가 있는 시: 구 목록."""
-    clauses = [
-        "addr1 = :a1",
-        "addr2 = :a2",
-        "addr3 IS NOT NULL",
-        "btrim(addr3::text) <> ''",
-        "is_valid = true",
-    ]
-    params: dict = {"a1": addr1, "a2": addr2}
-    if asset_type:
-        clauses.append("asset_type = :asset_type")
-        params["asset_type"] = asset_type
+    clauses, params = region_scope_clauses(
+        addr1=addr1, addr2=addr2, asset_type=asset_type, valid_sql="is_valid = true"
+    )
+    clauses.extend(["addr3 IS NOT NULL", "btrim(addr3::text) <> ''"])
     where = " AND ".join(clauses)
     if with_counts:
         rows = db.execute(
@@ -365,17 +358,10 @@ def list_leaf_regions(
     asset_type: Optional[str] = Query(None),
 ):
     """구-읍면동 2단계 시군구: addr4(읍면동) 목록. addr3_list로 구 필터."""
-    clauses = [
-        "addr1 = :a1",
-        "addr2 = :a2",
-        "addr4 IS NOT NULL",
-        "btrim(addr4::text) <> ''",
-        "is_valid = true",
-    ]
-    params: dict = {"a1": addr1, "a2": addr2}
-    if asset_type:
-        clauses.append("asset_type = :asset_type")
-        params["asset_type"] = asset_type
+    clauses, params = region_scope_clauses(
+        addr1=addr1, addr2=addr2, asset_type=asset_type, valid_sql="is_valid = true"
+    )
+    clauses.extend(["addr4 IS NOT NULL", "btrim(addr4::text) <> ''"])
     if addr3_list:
         clauses.append("addr3 = ANY(:addr3_list)")
         params["addr3_list"] = addr3_list
@@ -406,17 +392,10 @@ def list_ri_regions(
     asset_type: Optional[str] = Query(None),
 ):
     """선택 읍·면·동 하위 리(addr5) 목록. parent=상위 읍·면."""
-    clauses = [
-        "addr1 = :a1",
-        "addr2 = :a2",
-        "addr5 IS NOT NULL",
-        "btrim(addr5::text) <> ''",
-        "is_valid = true",
-    ]
-    params: dict = {"a1": addr1, "a2": addr2}
-    if asset_type:
-        clauses.append("asset_type = :asset_type")
-        params["asset_type"] = asset_type
+    clauses, params = region_scope_clauses(
+        addr1=addr1, addr2=addr2, asset_type=asset_type, valid_sql="is_valid = true"
+    )
+    clauses.extend(["addr5 IS NOT NULL", "btrim(addr5::text) <> ''"])
     if leaf_level == "addr4" and addr4_list:
         clauses.append("addr4 = ANY(:leaf_list)")
         params["leaf_list"] = addr4_list

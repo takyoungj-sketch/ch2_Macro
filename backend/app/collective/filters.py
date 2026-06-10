@@ -9,6 +9,9 @@ def _col(name: str, prefix: str = "") -> str:
     return f"{prefix}.{name}" if prefix else name
 
 
+from app.flat_sido_region import apply_addr2_scope
+
+
 def apply_region_filters(
     clauses: list[str],
     params: dict,
@@ -20,12 +23,12 @@ def apply_region_filters(
     addr4_list: list[str] | None = None,
     col_prefix: str = "",
 ) -> None:
-    if addr1:
-        clauses.append(f"{_col('addr1', col_prefix)} = :addr1")
-        params["addr1"] = addr1
-    if addr2:
-        clauses.append(f"{_col('addr2', col_prefix)} = :addr2")
-        params["addr2"] = addr2
+    if addr1 and addr2:
+        apply_addr2_scope(clauses, params, addr1=addr1, addr2=addr2, col_prefix=col_prefix)
+    elif addr1:
+        p = f"{col_prefix}." if col_prefix else ""
+        clauses.append(f"{p}addr1 = :addr1")
+        params["addr1"] = addr1.strip()
     if addr4_list:
         clauses.append(f"{_col('addr4', col_prefix)} = ANY(:addr4_list)")
         params["addr4_list"] = addr4_list

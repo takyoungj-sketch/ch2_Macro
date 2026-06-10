@@ -73,12 +73,13 @@ def _build_where(
 ) -> tuple[str, dict]:
     clauses = ["is_valid = true", "asset_type = :asset_type"]
     params: dict[str, Any] = {"asset_type": req.asset_type}
-    if req.addr1:
+    if req.addr1 and req.addr2:
+        from app.flat_sido_region import apply_addr2_scope
+
+        apply_addr2_scope(clauses, params, addr1=req.addr1, addr2=req.addr2)
+    elif req.addr1:
         clauses.append("addr1 = :addr1")
         params["addr1"] = req.addr1
-    if req.addr2:
-        clauses.append("addr2 = :addr2")
-        params["addr2"] = req.addr2
     if include_subregion:
         from app.built.filters import apply_addr3_filter, apply_addr4_filter, apply_ri_filter
 
@@ -598,6 +599,10 @@ def _correlations(df: pd.DataFrame, vars_spec: RegressionVariableSpec) -> list[C
 
 def _sigungu_label(req: RegressionRunRequest) -> str:
     if req.addr2:
+        from app.flat_sido_region import is_flat_sido_addr2
+
+        if is_flat_sido_addr2(req.addr2):
+            return req.addr1 or "시도"
         return f"{req.addr2} 시군구"
     if req.addr1:
         return f"{req.addr1} 전체"

@@ -8,6 +8,8 @@ import type {
   MatrixCellTransactionsResponse,
   MatrixYearlyRequest,
   MatrixYearlyResponse,
+  LongTermTrendRequest,
+  LongTermTrendResponse,
   PaidAnalysisRequest,
   PaidAnalysisResponse,
   RegionItem,
@@ -89,6 +91,16 @@ export const fetchPaidMatrixYearly = async (
 ): Promise<MatrixYearlyResponse> => {
   const { data } = await api.post<MatrixYearlyResponse>(
     "/paid/matrix-yearly",
+    body
+  );
+  return data;
+};
+
+export const fetchLongTermTrend = async (
+  body: LongTermTrendRequest
+): Promise<LongTermTrendResponse> => {
+  const { data } = await api.post<LongTermTrendResponse>(
+    "/paid/long-term-trend",
     body
   );
   return data;

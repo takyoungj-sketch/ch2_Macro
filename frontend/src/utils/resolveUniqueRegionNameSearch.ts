@@ -1,5 +1,9 @@
 import type { RegionItem } from "../types";
 import { cityBucketFromSigungu } from "./cityBucket";
+import {
+  isSejongPseudoSigunguCode,
+  uniqueSejongEupCodeForAdminName,
+} from "./sejongRegion";
 import { isEupMyeonUnitNameQuery } from "./regionSearchSuggest";
 
 function norm(s: string): string {
@@ -68,6 +72,10 @@ export function tryResolveUniqueRegionSearch(
     if (eupCodes.size === 1) {
       return { kind: "eup_aggregate", eupCode: [...eupCodes][0]! };
     }
+    const sejongEup = uniqueSejongEupCodeForAdminName(regions, qN);
+    if (sejongEup) {
+      return { kind: "eup_aggregate", eupCode: sejongEup };
+    }
   }
 
   const sigRows: RegionItem[] = [];
@@ -80,6 +88,12 @@ export function tryResolveUniqueRegionSearch(
   );
   if (sigCodes.size === 1) {
     const sigunguCode = [...sigCodes][0]!;
+    if (isSejongPseudoSigunguCode(sigunguCode)) {
+      const sejongEup = uniqueSejongEupCodeForAdminName(regions, qN);
+      if (sejongEup) {
+        return { kind: "eup_aggregate", eupCode: sejongEup };
+      }
+    }
     return { kind: "sigungu_aggregate", sigunguCode };
   }
 

@@ -13,6 +13,11 @@ import {
   predictRegression,
   runRegression,
 } from "./api/client";
+import {
+  formatAddr2OptionLabel,
+  formatScopeAddr2,
+  isFlatSidoAddr2,
+} from "./utils/flatSidoRegion";
 import type {
   Addr3Option,
   AssetType,
@@ -707,10 +712,18 @@ export default function App() {
 
   const metaQ = useQuery({ queryKey: ["built-meta"], queryFn: fetchFilterMeta });
   const addr2Q = useQuery({
-    queryKey: ["addr2", addr1],
-    queryFn: () => fetchAddr2(addr1),
+    queryKey: ["addr2", addr1, assetType],
+    queryFn: () => fetchAddr2(addr1, assetType),
     enabled: !!addr1,
   });
+
+  useEffect(() => {
+    if (!addr1 || addr2) return;
+    const opts = addr2Q.data ?? [];
+    if (opts.length === 1 && isFlatSidoAddr2(opts[0])) {
+      setAddr2(opts[0]!);
+    }
+  }, [addr1, addr2, addr2Q.data]);
   const structureQ = useQuery({
     queryKey: ["region-structure", addr1, addr2, assetType],
     queryFn: () => fetchRegionStructure(addr1, addr2, assetType),
@@ -901,9 +914,11 @@ export default function App() {
 
   const regM = useMutation({ mutationFn: runRegression });
 
+  const addr2ScopeLabel = formatScopeAddr2(addr2, addr1) || addr1;
+
   const regressionSummaryText = useMemo(() => {
     if (regressionMode === "sigungu_only") {
-      return addr2 ? `${addr2} 시군구 단일 회귀` : "시군구 단일 회귀";
+      return addr2 ? `${addr2ScopeLabel} 시군구 단일 회귀` : "시군구 단일 회귀";
     }
     if (regressionMode === "two_way") {
       if (regM.data?.comparisons.length) {
@@ -922,7 +937,7 @@ export default function App() {
               : "선택 동 상위";
         return `2-way: ${intermediateLabel}(${guHint}) vs 선택 읍·면·동 ${leafList.length}개`;
       }
-      return `2-way: 시군구(${addr2}) vs 선택 읍·면·동 ${leafList.length}개`;
+      return `2-way: 시군구(${addr2ScopeLabel}) vs 선택 읍·면·동 ${leafList.length}개`;
     }
     if (regressionMode === "three_way") {
       const topLabel =
@@ -937,6 +952,7 @@ export default function App() {
   }, [
     regressionMode,
     addr2,
+    addr2ScopeLabel,
     useAddr4Leaf,
     inferredGuList,
     intermediateLabel,
@@ -1088,7 +1104,7 @@ export default function App() {
                   <option value="">전체</option>
                   {(addr2Q.data ?? []).map((a) => (
                     <option key={a} value={a}>
-                      {a}
+                      {formatAddr2OptionLabel(a)}
                     </option>
                   ))}
                 </select>
@@ -1100,7 +1116,7 @@ export default function App() {
             <RegionChipPanel
               compact
               title={`${intermediateLabel} 선택`}
-              hint={`미선택 시 ${addr2} 전체.`}
+              hint={`미선택 시 ${addr2ScopeLabel} 전체.`}
               selected={guList}
               options={guQ.data ?? []}
               onToggle={toggleGu}
@@ -1119,7 +1135,7 @@ export default function App() {
             <RegionChipPanel
               compact
               title="읍면동 선택"
-              hint={hasIntermediate ? `${intermediateLabel} 선택 후 좁힐 수 있습니다.` : "미선택 시 시군구 전체."}
+              hint={hasIntermediate ? `${intermediateLabel} 선택 후 좁힐 수 있습니다.` : `미선택 시 ${addr2ScopeLabel} 전체.`}
               selected={leafList}
               options={visibleLeafOptions}
               formatLabel={(o) => {

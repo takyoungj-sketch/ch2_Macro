@@ -21,9 +21,15 @@ import {
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import { MAX_PAID_LEAF_BEOPJUNGRI_PICK } from "../constants/tierPickLimits";
 import { cityBucketFromSigungu } from "../utils/cityBucket";
+import { isSejongPseudoSigunguCode } from "../utils/sejongRegion";
 
 function labelSigunguChip(regions: RegionItem[], code: string): string {
   const c = String(code).trim();
+  if (isSejongPseudoSigunguCode(c)) {
+    const row = regions.find((r) => isSejongPseudoSigunguCode(String(r.sigungu_code ?? "").trim()));
+    const sido = row?.sido_name ? String(row.sido_name).trim() : "세종특별자치시";
+    return `${sido} 전체`;
+  }
   const row = regions.find((r) => String(r.sigungu_code ?? "").trim() === c);
   if (!row) return c;
   return [row.sido_name, row.sigungu_name]

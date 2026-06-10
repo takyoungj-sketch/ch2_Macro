@@ -453,6 +453,55 @@ class MatrixYearlyResponse(BaseModel):
     rows: list[MatrixYearlyStat] = []
 
 
+class LongTermRegionTarget(BaseModel):
+    region_level: Literal["sido", "sigungu", "eupmyeondong", "city", "beopjungri"]
+    region_code: str = Field(..., min_length=1, max_length=10)
+
+
+class LongTermTrendRequest(BaseModel):
+    """장기 추세 — land_annual_stats / land_annual_upper_stats 조회."""
+
+    region_codes: list[str] = Field(default_factory=list, max_length=10)
+    region_targets: list[LongTermRegionTarget] = Field(default_factory=list, max_length=10)
+    zone_type: str = Field(...)
+    land_category: str = Field(...)
+    year_from: Optional[int] = Field(None, ge=2000, le=2100)
+    year_to: Optional[int] = Field(None, ge=2000, le=2100)
+
+    @model_validator(mode="after")
+    def _require_targets(self) -> LongTermTrendRequest:
+        if self.region_targets or self.region_codes:
+            return self
+        raise ValueError("region_targets 또는 region_codes 가 필요합니다.")
+
+
+class LongTermTrendPoint(BaseModel):
+    year: int
+    count: int
+    mean: Optional[float] = None
+    median: Optional[float] = None
+    reference_only: bool = Field(
+        False,
+        description="count < 15 — 참고용",
+    )
+
+
+class LongTermTrendSeries(BaseModel):
+    region_level: str
+    region_code: str
+    region_name: str
+    points: list[LongTermTrendPoint] = []
+
+
+class LongTermTrendResponse(BaseModel):
+    zone_type: str
+    land_category: str
+    year_from: int
+    year_to: int
+    disclaimer: str
+    series: list[LongTermTrendSeries] = []
+
+
 class HistogramBin(BaseModel):
     """단가(만원/㎡) 구간별 건수."""
 

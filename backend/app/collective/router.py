@@ -13,6 +13,7 @@ from app.collective.address import format_building_address
 from app.collective.analysis_gates import count_recent_transactions, evaluate_analysis_gates
 from app.collective.db import get_collective_db
 from app.collective.filters import apply_region_filters, apply_year_filters
+from app.flat_sido_region import list_addr2_for_sido
 from app.collective.floor_index import compute_floor_index
 from app.collective.regression.engine import run_building_regression
 from app.collective.region_structure import detect_region_structure
@@ -103,18 +104,18 @@ def filter_meta(db: Session = Depends(get_collective_db)):
 
 
 @router.get("/regions/addr2")
-def list_addr2(db: Session = Depends(get_collective_db), addr1: str = Query(...)):
-    rows = db.execute(
-        text(
-            """
-            SELECT DISTINCT addr2 AS v FROM collective_transactions
-            WHERE addr1 = :a1 AND addr2 IS NOT NULL AND btrim(addr2) <> ''
-            ORDER BY 1
-            """
-        ),
-        {"a1": addr1},
-    ).fetchall()
-    return [r.v for r in rows]
+def list_addr2(
+    db: Session = Depends(get_collective_db),
+    addr1: str = Query(...),
+    asset_type: Optional[str] = Query(None),
+):
+    return list_addr2_for_sido(
+        db.connection(),
+        table="collective_transactions",
+        addr1=addr1,
+        asset_type=asset_type,
+        valid_sql="is_valid = true",
+    )
 
 
 @router.get("/regions/structure", response_model=RegionStructureResponse)

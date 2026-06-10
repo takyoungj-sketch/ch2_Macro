@@ -285,6 +285,15 @@ export default function FreeStatsPanel() {
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-5 space-y-5">
+        {useUpper &&
+          upperSingle?.level === "eupmyeondong" &&
+          upperSingle.code.startsWith("361101") &&
+          data.total.count === 0 && (
+          <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 leading-snug">
+            세종 행정동(361101xx) 거래는 현재 DB에 아직 집계되지 않았을 수 있습니다. 읍·면 단위(361103xx 등)는
+            조회 가능합니다. 원천 엑셀·CSV 재적재 후 상위 통계가 채워집니다.
+          </p>
+        )}
         {viewMode === "paid" && Boolean(data.stats_excluded_codes?.length) && (
           <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 leading-snug">
             사전 집계가 없는 법정코드 {(data.stats_excluded_codes ?? []).length}건은 요청과 함께 보냈지만
@@ -313,6 +322,7 @@ export default function FreeStatsPanel() {
         byLandCategory={data.by_land_category}
         showEmbeddedLegend={false}
         onPaidMatrixCellClick={isPaidBasic ? openMatrixTrend : undefined}
+        suppressEscapeClose={trendModal != null}
       />
 
       <PaidMatrixYearlyModal

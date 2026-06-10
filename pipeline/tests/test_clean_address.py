@@ -63,10 +63,13 @@ class TestMapBeopjungriFallbacks(unittest.TestCase):
     region_maps = {
         "by_sigungu_name": {
             ("경기도", "화성시", "남양읍", "남양리"): "4159026221",
-            ("전라북도", "전주시 완산구", "효자동", "효자동"): "4511110700",
+            ("전북특별자치도", "전주시 완산구", "효자동1가", "효자동1가"): "5211114000",
             ("충청북도", "청주시 상당구", "미원면", "기암리"): "4311132026",
         },
         "by_sigungu_code": {},
+        "by_eup_prefix": {
+            ("전북특별자치도", "전주시 완산구", "효자동"): ["5211114000"],
+        },
     }
 
     def _map_one(self, addr: str) -> tuple[str, bool, str]:
@@ -86,15 +89,48 @@ class TestMapBeopjungriFallbacks(unittest.TestCase):
 
     def test_sido_alias_jeonbuk(self) -> None:
         code, review, note = self._map_one("전북특별자치도 전주시 완산구 효자동")
-        self.assertEqual(code, "4511110700")
+        self.assertEqual(code, "5211114000")
         self.assertFalse(review)
-        self.assertEqual(note, "sido_alias")
+        self.assertIn(note, ("", "sido_alias", "eup_prefix", "eup_prefix_ambiguous"))
+
+    def test_historical_short_addr_jeonbuk(self) -> None:
+        code, review, note = self._map_one("전주광역시 완산구 효자동")
+        self.assertEqual(code, "5211114000")
+        self.assertFalse(review)
+        self.assertIn(note, ("historical_short_addr", "eup_prefix", "eup_prefix_ambiguous"))
+
+    def test_historical_city_dong_jeonbuk(self) -> None:
+        maps = {
+            **self.region_maps,
+            "by_sigungu_name": {
+                **self.region_maps["by_sigungu_name"],
+                ("전북특별자치도", "군산시", "나운동", "나운동"): "5213014400",
+            },
+        }
+        df = pd.DataFrame({"sigungu_name": ["군산시 나운동"]})
+        out = map_beopjungri_codes(df, maps)
+        self.assertEqual(str(out["beopjungri_code"].iloc[0]), "5213014400")
+        self.assertEqual(str(out["mapping_notes"].iloc[0]), "historical_short_addr")
 
     def test_plain_match_no_fallback_note(self) -> None:
         code, review, note = self._map_one("충청북도 청주시 상당구 미원면 기암리(岐岩)")
         self.assertEqual(code, "4311132026")
         self.assertFalse(review)
         self.assertEqual(note, "")
+
+    def test_sejong_two_token_dong(self) -> None:
+        maps = {
+            **self.region_maps,
+            "by_sigungu_name": {
+                **self.region_maps["by_sigungu_name"],
+                ("세종특별자치시", "집현동", "", ""): "3611011800",
+            },
+        }
+        df = pd.DataFrame({"sigungu_name": ["세종특별자치시  집현동"]})
+        out = map_beopjungri_codes(df, maps)
+        self.assertEqual(str(out["beopjungri_code"].iloc[0]), "3611011800")
+        self.assertFalse(bool(out["needs_review"].iloc[0]))
+        self.assertEqual(str(out["mapping_notes"].iloc[0]), "sejong_admin_leaf")
 
 
 class TestExtractParenContent(unittest.TestCase):

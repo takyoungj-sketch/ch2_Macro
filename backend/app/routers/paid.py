@@ -21,6 +21,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.analysis_base_cache import has_valid_analysis_base_cache
+from app.routers.upper_stats import _region_name
 from app.matrix_rolling_buckets import (
     chart_bucket_labels_old_first_for_ref_month,
     iter_rolling_year_buckets_old_first,
@@ -36,6 +37,10 @@ from app.schemas import (
     MatrixCellTransactionItem,
     MatrixCellTransactionsRequest,
     MatrixCellTransactionsResponse,
+    LongTermTrendPoint,
+    LongTermTrendRequest,
+    LongTermTrendResponse,
+    LongTermTrendSeries,
     MatrixYearlyRequest,
     MatrixYearlyResponse,
     MatrixYearlyStat,
@@ -162,9 +167,38 @@ def expand_region_units(selections: list[RegionSelectionUnit], db: Session) -> l
         ).fetchall()
         found = {str(r._mapping["code"]).strip() for r in rows}
         agg.update(found)
-        for code in sorted(set(beopjungri_units)):
-            if code not in found:
-                missing.append(f"beopjungri:{code}")
+        unresolved_beop = [c for c in sorted(set(beopjungri_units)) if c not in found]
+        if unresolved_beop:
+            # 8자리 읍·면·동(세종 행정동 등)이 beopjungri 로 잘못 넘어온 경우 접두/읍면동 코드로 확장
+            fb_rows = db.execute(
+                text(
+                    """
+                    SELECT DISTINCT btrim(cast(beopjungri_code AS text)) AS code,
+                           LEFT(btrim(cast(beopjungri_code AS text)), 8) AS p8,
+                           btrim(cast(eupmyeondong_code AS text)) AS eup
+                    FROM region_codes
+                    WHERE (
+                        LEFT(btrim(cast(beopjungri_code AS text)), 8) = ANY(:codes)
+                        OR btrim(cast(eupmyeondong_code AS text)) = ANY(:codes)
+                    )
+                      AND COALESCE(is_active, TRUE)
+                    """
+                ),
+                {"codes": unresolved_beop},
+            ).fetchall()
+            resolved_inputs: set[str] = set()
+            for r in fb_rows:
+                bc = str(r._mapping["code"]).strip()
+                agg.add(bc)
+                p8 = str(r._mapping["p8"]).strip()
+                eup = str(r._mapping["eup"]).strip()
+                if p8 in unresolved_beop:
+                    resolved_inputs.add(p8)
+                if eup in unresolved_beop:
+                    resolved_inputs.add(eup)
+            for code in unresolved_beop:
+                if code not in resolved_inputs:
+                    missing.append(f"beopjungri:{code}")
 
     for u in selections:
         if u.scope_type == "beopjungri":
@@ -1185,6 +1219,244 @@ def matrix_yearly(body: MatrixYearlyRequest, db: Session = Depends(get_db)):
         zone_type=body.zone_type.strip(),
         land_category=body.land_category.strip(),
         rows=stat_rows_legacy,
+    )
+
+
+LONG_TERM_DISCLAIMER = (
+    "장기 추세는 만년력 연도·용도×지목 기준입니다. "
+    "도로·면적·이상치·지분 필터는 적용되지 않으며, 지역별로 선이 분리됩니다. "
+    "행정구역 통·폐합·개명 지역은 코드 이력 remap 없이 현행 마트 기준이며, "
+    "과거 연도와 현재 선택 지명이 같은 구역을 가리키지 않을 수 있습니다."
+)
+LONG_TERM_MIN_RELIABLE = 15
+_UPPER_LEVELS = frozenset({"sido", "sigungu", "eupmyeondong", "city"})
+
+
+def _infer_long_term_level(code: str) -> str:
+    c = str(code).strip()
+    if len(c) == 2:
+        return "sido"
+    if len(c) == 8:
+        return "eupmyeondong"
+    if len(c) == 10:
+        return "beopjungri"
+    if len(c) == 5:
+        return "city" if c.endswith("0") else "sigungu"
+    raise HTTPException(status_code=422, detail=f"지원하지 않는 region_code 길이: {c!r}")
+
+
+def _normalize_long_term_targets(body: LongTermTrendRequest) -> list[tuple[str, str]]:
+    raw: list[tuple[str, str]] = []
+    if body.region_targets:
+        for t in body.region_targets:
+            lv = str(t.region_level).strip()
+            rc = str(t.region_code).strip()
+            if not rc:
+                continue
+            raw.append((lv, rc))
+    else:
+        for c in body.region_codes:
+            rc = str(c).strip()
+            if not rc:
+                continue
+            raw.append((_infer_long_term_level(rc), rc))
+
+    seen: set[tuple[str, str]] = set()
+    out: list[tuple[str, str]] = []
+    for lv, rc in raw:
+        key = (lv, rc)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(key)
+    out.sort(key=lambda x: (x[0], x[1]))
+    if not out:
+        raise HTTPException(status_code=400, detail="region_targets 가 비어 있습니다.")
+    if len(out) > 10:
+        raise HTTPException(status_code=400, detail="region_targets 는 최대 10개입니다.")
+    return out
+
+
+def _long_term_region_name(db: Session, level: str, code: str) -> str:
+    if level == "beopjungri":
+        row = db.execute(
+            text(
+                """
+                SELECT beopjungri_name FROM region_codes
+                WHERE btrim(beopjungri_code::text) = :c
+                LIMIT 1
+                """
+            ),
+            {"c": code},
+        ).fetchone()
+        return str(row[0]).strip() if row and row[0] else code
+    if level in _UPPER_LEVELS:
+        name = _region_name(db, level, code)  # type: ignore[arg-type]
+        return name if name else code
+    return code
+
+
+@router.post(
+    "/long-term-trend",
+    response_model=LongTermTrendResponse,
+    summary="장기 추세 — 연도별 사전집계 조회 (법정동·리 / 상위 행정)",
+)
+def long_term_trend(body: LongTermTrendRequest, db: Session = Depends(get_db)):
+    targets = _normalize_long_term_targets(body)
+    zt = body.zone_type.strip()
+    lc = body.land_category.strip()
+
+    beop_codes = [c for lv, c in targets if lv == "beopjungri"]
+    upper_targets = [(lv, c) for lv, c in targets if lv in _UPPER_LEVELS]
+
+    y_candidates: list[int] = []
+
+    if beop_codes:
+        b = db.execute(
+            text(
+                """
+                SELECT MIN(calendar_year)::int AS y0, MAX(calendar_year)::int AS y1
+                FROM land_annual_stats
+                WHERE zone_type = :zt AND land_category = :lc
+                  AND beopjungri_code = ANY(:codes)
+                """
+            ),
+            {"zt": zt, "lc": lc, "codes": beop_codes},
+        ).mappings().first()
+        if b and b["y0"] is not None:
+            y_candidates.extend([int(b["y0"]), int(b["y1"])])
+
+    for lv, rc in upper_targets:
+        b = db.execute(
+            text(
+                """
+                SELECT MIN(calendar_year)::int AS y0, MAX(calendar_year)::int AS y1
+                FROM land_annual_upper_stats
+                WHERE zone_type = :zt AND land_category = :lc
+                  AND region_level = :lv AND region_code = :rc
+                """
+            ),
+            {"zt": zt, "lc": lc, "lv": lv, "rc": rc},
+        ).mappings().first()
+        if b and b["y0"] is not None:
+            y_candidates.extend([int(b["y0"]), int(b["y1"])])
+
+    if not y_candidates:
+        raise HTTPException(status_code=404, detail="장기 추세 데이터가 없습니다.")
+
+    y_from = body.year_from if body.year_from is not None else min(y_candidates)
+    y_to = body.year_to if body.year_to is not None else max(y_candidates)
+    if y_from > y_to:
+        raise HTTPException(status_code=422, detail="year_from 은 year_to 이하여야 합니다.")
+
+    series: list[LongTermTrendSeries] = []
+
+    if beop_codes:
+        rows = db.execute(
+            text(
+                """
+                SELECT
+                    las.calendar_year AS y,
+                    btrim(las.beopjungri_code::text) AS bc,
+                    las.transaction_count AS cnt,
+                    las.mean_unit_price::float8 AS mean_px,
+                    las.median_unit_price::float8 AS med_px
+                FROM land_annual_stats las
+                WHERE las.zone_type = :zt
+                  AND las.land_category = :lc
+                  AND las.beopjungri_code = ANY(:codes)
+                  AND las.calendar_year >= :y0
+                  AND las.calendar_year <= :y1
+                ORDER BY las.beopjungri_code, las.calendar_year
+                """
+            ),
+            {"zt": zt, "lc": lc, "codes": beop_codes, "y0": y_from, "y1": y_to},
+        ).mappings().all()
+
+        by_code: dict[str, list[LongTermTrendPoint]] = defaultdict(list)
+        for r in rows:
+            bc = str(r["bc"]).strip()
+            cnt = int(r["cnt"] or 0)
+            by_code[bc].append(
+                LongTermTrendPoint(
+                    year=int(r["y"]),
+                    count=cnt,
+                    mean=round(float(r["mean_px"]), 1) if r["mean_px"] is not None else None,
+                    median=round(float(r["med_px"]), 1) if r["med_px"] is not None else None,
+                    reference_only=cnt < LONG_TERM_MIN_RELIABLE,
+                )
+            )
+
+        for bc in beop_codes:
+            if bc not in by_code:
+                continue
+            series.append(
+                LongTermTrendSeries(
+                    region_level="beopjungri",
+                    region_code=bc,
+                    region_name=_long_term_region_name(db, "beopjungri", bc),
+                    points=by_code[bc],
+                )
+            )
+
+    for lv, rc in upper_targets:
+        rows = db.execute(
+            text(
+                """
+                SELECT
+                    calendar_year AS y,
+                    transaction_count AS cnt,
+                    mean_unit_price::float8 AS mean_px,
+                    median_unit_price::float8 AS med_px
+                FROM land_annual_upper_stats
+                WHERE zone_type = :zt
+                  AND land_category = :lc
+                  AND region_level = :lv
+                  AND region_code = :rc
+                  AND calendar_year >= :y0
+                  AND calendar_year <= :y1
+                ORDER BY calendar_year
+                """
+            ),
+            {"zt": zt, "lc": lc, "lv": lv, "rc": rc, "y0": y_from, "y1": y_to},
+        ).mappings().all()
+        if not rows:
+            continue
+        points: list[LongTermTrendPoint] = []
+        for r in rows:
+            cnt = int(r["cnt"] or 0)
+            points.append(
+                LongTermTrendPoint(
+                    year=int(r["y"]),
+                    count=cnt,
+                    mean=round(float(r["mean_px"]), 1) if r["mean_px"] is not None else None,
+                    median=round(float(r["med_px"]), 1) if r["med_px"] is not None else None,
+                    reference_only=cnt < LONG_TERM_MIN_RELIABLE,
+                )
+            )
+        series.append(
+            LongTermTrendSeries(
+                region_level=lv,
+                region_code=rc,
+                region_name=_long_term_region_name(db, lv, rc),
+                points=points,
+            )
+        )
+
+    series = [s for s in series if s.points]
+    if not series:
+        raise HTTPException(status_code=404, detail="해당 구간·셀에 장기 추세 데이터가 없습니다.")
+
+    order = {(lv, rc): i for i, (lv, rc) in enumerate(targets)}
+    series.sort(key=lambda s: order.get((s.region_level, s.region_code), 999))
+
+    return LongTermTrendResponse(
+        zone_type=zt,
+        land_category=lc,
+        year_from=y_from,
+        year_to=y_to,
+        disclaimer=LONG_TERM_DISCLAIMER,
+        series=series,
     )
 
 

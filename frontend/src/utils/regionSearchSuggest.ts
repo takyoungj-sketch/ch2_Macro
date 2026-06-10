@@ -1,6 +1,10 @@
 import type { RegionItem } from "../types";
 import { cityBucketFromSigungu } from "./cityBucket";
 import { formatRegionHierarchyLabel } from "./regionDisplay";
+import {
+  isSejongPseudoSigunguCode,
+  isSejongRegionRow,
+} from "./sejongRegion";
 
 function norm(s: string): string {
   return String(s ?? "").trim().toLowerCase().replace(/\s+/g, "");
@@ -163,6 +167,7 @@ export function buildFlattenedRegionSuggestions(
   >[] = [];
 
   for (const [sigunguCode, bucket] of bySigungu.entries()) {
+    if (isSejongPseudoSigunguCode(sigunguCode)) continue;
     const sample = bucket[0];
     const sgcNn = norm(sigunguCode);
     const matchesSigunguLevel = bucket.some((row) => {
@@ -225,6 +230,40 @@ export function buildFlattenedRegionSuggestions(
     );
   }
 
+  /** 세종: sigungu_name 이 동·읍·면명(36110 공통 코드)일 때 eup 카드 */
+  if (!eupMyeonFocused) {
+    const bySejongEup = new Map<string, RegionItem[]>();
+    for (const h of hits) {
+      if (!isSejongRegionRow(h)) continue;
+      if (!isSejongPseudoSigunguCode(String(h.sigungu_code ?? "").trim())) continue;
+      const adminNn = norm(h.sigungu_name ?? "");
+      if (!(adminNn === qN || adminNn.includes(qN))) continue;
+      const ec = String(h.eupmyeondong_code ?? "").trim();
+      if (!ec) continue;
+      if (!bySejongEup.has(ec)) bySejongEup.set(ec, []);
+      bySejongEup.get(ec)!.push(h);
+    }
+    for (const [eupCode, bucket] of bySejongEup.entries()) {
+      const sample = bucket[0]!;
+      const adminLabel = String(sample.sigungu_name ?? "").trim();
+      const primaryLabel = [sample.sido_name, adminLabel]
+        .map((x) => String(x ?? "").trim())
+        .filter(Boolean)
+        .join(" ");
+      eupAggregates.push({
+        kind: "eup_aggregate",
+        eupCode,
+        primaryLabel,
+        subtitle: `세종 행정동·읍·면 · 하위 법정 ${bucket.length}곳`,
+        countInSample: bucket.length,
+        sample,
+      });
+    }
+    eupAggregates.sort((a, b) =>
+      a.primaryLabel.localeCompare(b.primaryLabel, "ko-KR")
+    );
+  }
+
   /**
    * 읍·면 이름 검색: 하위 리를 펼치지 않음(위 eup 카드만).
    * 동·리·코드 검색: 법정명·코드 매칭; 읍명만 매칭된 경우에는(동 검색 등) 해당 법정 줄 포함.
@@ -237,9 +276,14 @@ export function buildFlattenedRegionSuggestions(
       const bn = norm(h.beopjungri_name ?? "");
       const bc = norm(codeKey);
       const eupNn = norm(h.eupmyeondong_name ?? "");
+      const sejongAdminNn =
+        isSejongRegionRow(h) && isSejongPseudoSigunguCode(String(h.sigungu_code ?? "").trim())
+          ? norm(h.sigungu_name ?? "")
+          : "";
       const matchesLeaf = bn.includes(qN) || bc.includes(qN);
       const matchesEupLabel = eupNn.includes(qN);
-      if (!(matchesLeaf || matchesEupLabel)) continue;
+      const matchesSejongAdmin = sejongAdminNn.includes(qN);
+      if (!(matchesLeaf || matchesEupLabel || matchesSejongAdmin)) continue;
       if (!beopMap.has(codeKey)) beopMap.set(codeKey, h);
     }
   }

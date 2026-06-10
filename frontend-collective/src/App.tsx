@@ -13,6 +13,11 @@ import BuildingDetailModal from "./components/BuildingDetailModal";
 import RegionChipPanel from "./components/RegionChipPanel";
 import type { AssetType, RegionOption } from "./types";
 import { ASSET_LABELS } from "./types";
+import {
+  formatAddr2OptionLabel,
+  formatScopeAddr2,
+  isFlatSidoAddr2,
+} from "./utils/flatSidoRegion";
 
 type AnalysisScope = {
   assetType: AssetType;
@@ -50,10 +55,18 @@ export default function App() {
 
   const metaQ = useQuery({ queryKey: ["coll-meta"], queryFn: fetchFilterMeta });
   const addr2Q = useQuery({
-    queryKey: ["coll-addr2", addr1],
-    queryFn: () => fetchAddr2(addr1),
+    queryKey: ["coll-addr2", addr1, assetType],
+    queryFn: () => fetchAddr2(addr1, assetType),
     enabled: !!addr1,
   });
+
+  useEffect(() => {
+    if (!addr1 || addr2) return;
+    const opts = addr2Q.data ?? [];
+    if (opts.length === 1 && isFlatSidoAddr2(opts[0])) {
+      setAddr2(opts[0]!);
+    }
+  }, [addr1, addr2, addr2Q.data]);
   const structureQ = useQuery({
     queryKey: ["coll-structure", addr1, addr2, assetType],
     queryFn: () => fetchRegionStructure(addr1, addr2, assetType),
@@ -116,6 +129,8 @@ export default function App() {
     },
     enabled: scope !== null && !!scope.addr2,
   });
+
+  const addr2ScopeLabel = formatScopeAddr2(addr2, addr1) || addr1;
 
   const years = metaQ.data?.contract_years ?? [];
   const scopeStale =
@@ -263,7 +278,7 @@ export default function App() {
                 <option value="">선택</option>
                 {(addr2Q.data ?? []).map((a) => (
                   <option key={a} value={a}>
-                    {a}
+                    {formatAddr2OptionLabel(a)}
                   </option>
                 ))}
               </select>
@@ -272,7 +287,7 @@ export default function App() {
             {addr2 && hasIntermediate && (
               <RegionChipPanel
                 title={`${intermediateLabel} 선택`}
-                hint={`미선택 시 ${addr2} 전체`}
+                hint={`미선택 시 ${addr2ScopeLabel} 전체`}
                 selected={guList}
                 options={guQ.data ?? []}
                 onToggle={(name) => setGuList((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]))}
@@ -287,7 +302,7 @@ export default function App() {
             {addr2 && structureQ.isSuccess && (
               <RegionChipPanel
                 title="읍·면·동"
-                hint={hasIntermediate ? `${intermediateLabel} 선택 후 좁힐 수 있습니다` : "미선택 시 시군구 전체"}
+                hint={hasIntermediate ? `${intermediateLabel} 선택 후 좁힐 수 있습니다` : `미선택 시 ${addr2ScopeLabel} 전체`}
                 selected={leafList}
                 options={visibleLeafOptions}
                 formatLabel={(o) => (o.parent ? `${o.parent} · ${o.name}` : o.name)}
@@ -326,7 +341,8 @@ export default function App() {
           {scope && buildingsQ.data && (
             <>
               <p className="text-xs text-slate-500 mb-2">
-                {scope.addr1} {scope.addr2} · 건물 {buildingsQ.data.total}개
+                {scope.addr1}
+                {!isFlatSidoAddr2(scope.addr2) && scope.addr2 ? ` ${scope.addr2}` : ""} · 건물 {buildingsQ.data.total}개
               </p>
               <div className="card overflow-x-auto p-0 inline-block max-w-full">
                 <table className="data buildings-table">

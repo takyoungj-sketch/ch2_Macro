@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
+  fetchLongTermTrend,
   fetchMatrixCellHistogram,
   fetchMatrixCellTransactions,
 } from "../api/client";
 import { simpleTableHeadClass } from "../constants/displayUi";
 import type {
+  LongTermTrendPoint,
+  LongTermTrendResponse,
   MatrixCellHistogramRequest,
   MatrixCellHistogramResponse,
   MatrixCellTransactionsResponse,
@@ -13,8 +17,12 @@ import type {
 } from "../types";
 import { parseApiError } from "../utils/apiError";
 import { formatMatrixBucketAxisLabel } from "../utils/matrixYearlyLabels";
+import { resolveLongTermTargetsForFetch } from "../utils/longTermTargets";
+import { useAppStore } from "../store";
 import MatrixCellHistogramChart from "./MatrixCellHistogramChart";
 import MatrixYearlyTrendChart from "./MatrixYearlyTrendChart";
+import AnalysisHelpPanel from "./AnalysisHelpPanel";
+import { buildLongTermTrendExplain } from "../constants/longTermTrendExplain";
 
 function sortMatrixRows(rows: MatrixYearlyStat[]): MatrixYearlyStat[] {
   return [...rows].sort((a, b) => {
@@ -64,7 +72,26 @@ interface Props {
   scopeNote?: string;
 }
 
-type PanelMode = "trend" | "histogram" | "transactions";
+type PanelMode = "trend" | "longTerm" | "histogram" | "transactions";
+type LtPriceMetric = "mean" | "median";
+
+function ltPointsToChartRows(
+  points: LongTermTrendPoint[],
+  metric: LtPriceMetric,
+): MatrixYearlyStat[] {
+  return [...points]
+    .sort((a, b) => a.year - b.year)
+    .map((p) => ({
+      year: p.year,
+      bucket_index: null,
+      period_start: null,
+      period_end: null,
+      chart_label: null,
+      count: p.count,
+      mean_unit_price_per_sqm:
+        metric === "median" ? (p.median ?? null) : (p.mean ?? null),
+    }));
+}
 
 const TX_PAGE = 25;
 
@@ -92,6 +119,11 @@ export default function PaidMatrixYearlyModal({
   const [txLoading, setTxLoading] = useState(false);
   const [txError, setTxError] = useState<string | null>(null);
   const [txData, setTxData] = useState<MatrixCellTransactionsResponse | null>(null);
+
+  const [ltLoading, setLtLoading] = useState(false);
+  const [ltError, setLtError] = useState<string | null>(null);
+  const [ltData, setLtData] = useState<LongTermTrendResponse | null>(null);
+  const [ltMetric, setLtMetric] = useState<LtPriceMetric>("median");
 
   /** 모달 드래그 이동 (헤더 잡고 끌기) */
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -160,6 +192,9 @@ export default function PaidMatrixYearlyModal({
       setTxOffset(0);
       setTxData(null);
       setTxError(null);
+      setLtData(null);
+      setLtError(null);
+      setLtMetric("median");
     }
   }, [open, zoneType, landCategory]);
 
@@ -176,6 +211,15 @@ export default function PaidMatrixYearlyModal({
     [filterRequest, rows],
   );
 
+  /** 만년력 연도(필터 분석)에서만 장기 추세 — 기본통계 롤링 창과 기간 축이 다름 */
+  const showLongTermTab = !isRolling;
+
+  useEffect(() => {
+    if (!showLongTermTab && panel === "longTerm") {
+      setPanel("trend");
+    }
+  }, [showLongTermTab, panel]);
+
   useEffect(() => {
     if (sortedRows.length === 0) return;
     const keys = sortedRows
@@ -187,6 +231,46 @@ export default function PaidMatrixYearlyModal({
       return keys[0]!;
     });
   }, [sortedRows, isRolling]);
+
+  const tierSelection = useAppStore((s) => s.tierSelection);
+
+  useEffect(() => {
+    if (!open || panel !== "longTerm" || !filterRequest) return;
+    const targets = resolveLongTermTargetsForFetch(
+      tierSelection,
+      filterRequest.region_codes ?? [],
+    );
+    if (targets.length === 0) {
+      setLtError("장기 추세는 지역 코드가 필요합니다.");
+      setLtData(null);
+      return;
+    }
+    let cancelled = false;
+    setLtLoading(true);
+    setLtError(null);
+    setLtData(null);
+    (async () => {
+      try {
+        const data = await fetchLongTermTrend({
+          region_targets: targets,
+          region_codes: targets.map((t) => t.region_code),
+          zone_type: zoneType,
+          land_category: landCategory,
+        });
+        if (!cancelled) setLtData(data);
+      } catch (e) {
+        if (!cancelled) {
+          setLtData(null);
+          setLtError(parseApiError(e).message);
+        }
+      } finally {
+        if (!cancelled) setLtLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, panel, filterRequest, zoneType, landCategory, tierSelection]);
 
   useEffect(() => {
     if (!open || panel !== "histogram" || !filterRequest) return;
@@ -266,9 +350,57 @@ export default function PaidMatrixYearlyModal({
     setTxOffset(0);
   }, [panel, filterRequest]);
 
-  if (!open) return null;
-
   const canDetail = Boolean(filterRequest) && !loading && !error && rows.length > 0;
+
+  const detailTabs = useMemo(() => {
+    const tabs: { id: PanelMode; label: string }[] = [
+      { id: "trend", label: isRolling ? "롤링 구간" : "선택 연도" },
+      { id: "histogram", label: "단가 분포" },
+      { id: "transactions", label: "거래 목록" },
+    ];
+    if (showLongTermTab) {
+      tabs.push({ id: "longTerm", label: "장기 추세" });
+    }
+    return tabs;
+  }, [isRolling, showLongTermTab]);
+
+  const ltPriceLabel = ltMetric === "median" ? "중앙값" : "평균";
+
+  const ltExplain = useMemo(() => {
+    if (!showLongTermTab || !filterRequest) return null;
+    const targets = resolveLongTermTargetsForFetch(
+      tierSelection,
+      filterRequest.region_codes ?? [],
+    );
+    let referenceOnlyYears = 0;
+    if (ltData) {
+      const refYears = new Set<number>();
+      for (const s of ltData.series) {
+        for (const p of s.points) {
+          if (p.reference_only) refYears.add(p.year);
+        }
+      }
+      referenceOnlyYears = refYears.size;
+    }
+    return buildLongTermTrendExplain({
+      zoneType,
+      landCategory,
+      metric: ltMetric,
+      targets,
+      yearFrom: ltData?.year_from,
+      yearTo: ltData?.year_to,
+      seriesCount: ltData?.series.length ?? targets.length,
+      referenceOnlyYears,
+    });
+  }, [
+    showLongTermTab,
+    filterRequest,
+    tierSelection,
+    zoneType,
+    landCategory,
+    ltMetric,
+    ltData,
+  ]);
 
   const histogramRollingBucketLabel =
     histData?.histogram_bucket_index != null
@@ -281,9 +413,23 @@ export default function PaidMatrixYearlyModal({
         })()
       : null;
 
-  return (
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-[100] bg-black/35"
+      className="fixed inset-0 z-[130] bg-black/35"
       role="dialog"
       aria-modal="true"
       aria-labelledby="paid-matrix-yearly-title"
@@ -319,13 +465,7 @@ export default function PaidMatrixYearlyModal({
                 role="tablist"
                 aria-label="보기 형식"
               >
-                {(
-                  [
-                    ["trend", "추세·요약"],
-                    ["histogram", "단가 분포"],
-                    ["transactions", "거래 목록"],
-                  ] as const
-                ).map(([id, label]) => (
+                {detailTabs.map(({ id, label }) => (
                   <button
                     key={id}
                     type="button"
@@ -367,6 +507,123 @@ export default function PaidMatrixYearlyModal({
             <p className="text-xs text-slate-400 text-center py-6">
               {isRolling ? "표시할 구간별 데이터가 없습니다." : "표시할 연도별 데이터가 없습니다."}
             </p>
+          )}
+
+          {canDetail && showLongTermTab && panel === "longTerm" && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 leading-relaxed flex-1 min-w-[12rem]">
+                  {ltData?.disclaimer ??
+                    "장기 추세: 만년력 연도·용도×지목 기준 · 도로·면적·이상치·지분 필터 미적용 · 지역별 선 분리"}
+                </p>
+                <div className="flex items-center gap-2 shrink-0">
+                  <AnalysisHelpPanel explain={ltExplain} />
+                  <div
+                    className="inline-flex rounded-md border border-slate-200 bg-slate-50 p-0.5"
+                    role="group"
+                    aria-label="추세선 기준"
+                  >
+                  {(
+                    [
+                      ["median", "중앙값"],
+                      ["mean", "평균"],
+                    ] as const
+                  ).map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      aria-pressed={ltMetric === id}
+                      className={`px-2.5 py-1 text-[11px] font-medium rounded transition-colors ${
+                        ltMetric === id
+                          ? "bg-white text-slate-800 shadow-sm border border-slate-100"
+                          : "text-slate-500 hover:text-slate-700"
+                      }`}
+                      onClick={() => setLtMetric(id)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                  </div>
+                </div>
+              </div>
+              {ltLoading && (
+                <p className="text-xs text-slate-400 text-center py-6">장기 추세 불러오는 중…</p>
+              )}
+              {ltError && (
+                <p className="text-xs text-red-500 text-center py-6">{ltError}</p>
+              )}
+              {!ltLoading && !ltError && ltData && ltData.series.length === 0 && (
+                <p className="text-xs text-slate-400 text-center py-6">
+                  표시할 장기 추세 데이터가 없습니다.
+                </p>
+              )}
+              {!ltLoading &&
+                !ltError &&
+                ltData?.series.map((s) => {
+                  const chartRows = ltPointsToChartRows(s.points, ltMetric);
+                  if (chartRows.length === 0) return null;
+                  return (
+                    <div key={`${s.region_level}:${s.region_code}`} className="space-y-2">
+                      <p className="text-[11px] font-semibold text-slate-700">
+                        {s.region_name}{" "}
+                        <span className="font-normal text-slate-400">
+                          ({ltData.year_from}–{ltData.year_to} · {ltPriceLabel})
+                        </span>
+                      </p>
+                      <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3">
+                        <MatrixYearlyTrendChart rows={chartRows} />
+                      </div>
+                      <div className="rounded-lg border border-slate-100 bg-white overflow-hidden">
+                        <table className="w-full text-xs border-collapse">
+                          <thead>
+                            <tr className={simpleTableHeadClass("neutral")}>
+                              <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">
+                                연도
+                              </th>
+                              <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">
+                                건수
+                              </th>
+                              <th className="border border-slate-200 px-2 py-1.5 text-right font-bold text-blue-700">
+                                {ltPriceLabel}(만원/㎡)
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="text-slate-800">
+                            {chartRows.map((r) => (
+                              <tr
+                                key={`${s.region_code}-${r.year}`}
+                                className={
+                                  s.points.find((p) => p.year === r.year)?.reference_only
+                                    ? "opacity-60"
+                                    : undefined
+                                }
+                              >
+                                <td className="border border-slate-200 px-2 py-1 tabular-nums">
+                                  {r.year}
+                                  {s.points.find((p) => p.year === r.year)?.reference_only ? (
+                                    <span className="ml-1 text-[10px] text-amber-700">참고</span>
+                                  ) : null}
+                                </td>
+                                <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
+                                  {r.count.toLocaleString("ko-KR")}
+                                </td>
+                                <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-blue-600 font-bold">
+                                  {r.mean_unit_price_per_sqm != null
+                                    ? Number(r.mean_unit_price_per_sqm).toLocaleString("ko-KR", {
+                                        minimumFractionDigits: 1,
+                                        maximumFractionDigits: 1,
+                                      })
+                                    : "—"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
           )}
 
           {canDetail && panel === "trend" && (
@@ -611,6 +868,7 @@ export default function PaidMatrixYearlyModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -70,8 +70,10 @@ export async function fetchRegionStructure(
   return data;
 }
 
-export async function fetchAddr2(addr1: string): Promise<string[]> {
-  const { data } = await api.get<string[]>("/regions/addr2", { params: { addr1 } });
+export async function fetchAddr2(addr1: string, assetType?: string): Promise<string[]> {
+  const { data } = await api.get<string[]>("/regions/addr2", {
+    params: { addr1, asset_type: assetType },
+  });
   return data;
 }
 
