@@ -15,6 +15,8 @@
 | **`as_of_month` (V2)** | `build_stats_v2.py --as-of YYYY-MM-01` — 해당 **달 말일까지**가 통계 기간 끝으로 해석된다 (`build_stats_v2` 주석·`V2_STATS_DESIGN` 참고). |
 | **기본 `--as-of` 매핑** | *수집 끝 연월이 `cycle`의 **직전 달**과 같다*고 가정할 때: `cycle_id=202605` → 마지막 월 `202604` → **`--as-of 2026-04-01`**. 자동화: `scripts/monthly/cycle_utils.stats_as_of_iso_from_cycle_id`. **실제 수집 끝 월이 다르면 `--v2-as-of`로 수동 지정.** |
 
+> **토지 원장 재구축 중 (2026-06):** `land_stats_next` 는 재구축 배치로 `as_of_month=2026-06-01` 이 올라가 있을 수 있다. 6월 중순 **운영 정상값은 `2026-05-01`** 이다. **Promote·as_of 정상화는 `cycle_id=202607`(7월 초)에 `run_monthly_cycle` 로 일괄 처리** — 상세 [`LAND_LEDGER_REBUILD_PLAN.md`](./LAND_LEDGER_REBUILD_PLAN.md) **§12**.
+
 ---
 
 ## 2. 디렉터리 구조 (권장)
@@ -71,6 +73,10 @@ raw\토지\202605\
 ---
 
 ## 5. 수집 단계 (`raw`)
+
+> **⚠ CSV Selenium 수집 치명적 주의:** 이전 다운로드 완료 전 rename·짧은 sleep(2초)은 **시도/연도 오염 CSV**를 만든다.  
+> 반드시 `molit_csv_download_core` / `deploy/molit_csv_collector` **검증 포함 버전** 사용.  
+> 상세: [`docs/MOLIT_CSV_COLLECTOR_WARNINGS.md`](MOLIT_CSV_COLLECTOR_WARNINGS.md)
 
 - **실거래가 엑셀(토지 매매)** 는 국토교통부 페이지에서 브라우저로 받는 형태(**Selenium**)가 보통 안정적이다. 참고 레시피: `참고/0.수집.ipynb` 와 같은 흐름을 스크립트로 옮긴 것이 **`scripts/monthly/download_molit_land_xlsx.py`** 이다.  
   의존성: `py -m pip install "selenium>=4.15"` (Chrome 설치 필요, Selenium 4 가 드라이버를 관리한다).  

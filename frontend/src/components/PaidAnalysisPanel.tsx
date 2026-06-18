@@ -8,6 +8,11 @@ import {
   fetchUpperStats,
 } from "../api/client";
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
+import {
+  buildFreeStatsExplain,
+  buildMatrixLegendExplain,
+  buildPaidFilteredExplain,
+} from "../constants/landStatsExplain";
 import { useAppStore } from "../store";
 import { type MatrixYearlyRequest, type MatrixYearlyStat, normalizeFreeStatsWindowYears } from "../types";
 import { parseApiError } from "../utils/apiError";
@@ -17,9 +22,11 @@ import {
 import { buildPaidPayload, clearRollingMatrixFields } from "../utils/paidAnalysisPayload";
 import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
 import { resolveUpperSingleFromTier, upperToFreeStatsShape } from "../utils/upperTierStats";
+import { shouldUseBulkStats } from "../utils/statsFetchStrategy";
 import MatrixStatsTable, { MatrixStatsLegend } from "./MatrixStatsTable";
 import PaidMatrixYearlyModal from "./PaidMatrixYearlyModal";
 import YearlyStatsTable from "./YearlyStatsTable";
+import AnalysisHelpPanel from "./AnalysisHelpPanel";
 
 export default function PaidAnalysisPanel() {
   const viewMode = useAppStore((s) => s.viewMode);
@@ -66,7 +73,10 @@ export default function PaidAnalysisPanel() {
   const useUpperPaidBasic = viewMode === "paid" && upperSingle !== null;
 
   const bulkKey = useMemo(() => [...resolvedCodes].slice().sort().join(","), [resolvedCodes]);
-  const useBulkBasic = viewMode === "paid" && !useUpperPaidBasic && resolvedCodes.length > 1;
+  const useBulkBasic =
+    viewMode === "paid" &&
+    !useUpperPaidBasic &&
+    shouldUseBulkStats(resolvedCodes.length, upperSingle);
 
   const canFetchBasic =
     !regionsLoading &&
@@ -210,6 +220,34 @@ export default function PaidAnalysisPanel() {
     [basicData, paidBasicBaseKey, paidRequest, paidRoadExcluded, paidAreaExcluded, codesForPaidMatrix]
   );
 
+  const legendExplain = useMemo(() => buildMatrixLegendExplain(), []);
+  const basicStatsExplain = useMemo(
+    () =>
+      basicData
+        ? buildFreeStatsExplain({
+            data: basicData,
+            viewMode: "paid",
+            isPaidBasic: true,
+            windowYears: freeStatsWindowYears,
+            useUpper: useUpperPaidBasic,
+            upperLevelLabel: upperSingle
+              ? `${upperSingle.level} (${upperSingle.code})`
+              : undefined,
+          })
+        : null,
+    [basicData, freeStatsWindowYears, useUpperPaidBasic, upperSingle],
+  );
+  const filteredExplain = useMemo(
+    () =>
+      result
+        ? buildPaidFilteredExplain({
+            result,
+            regionLabel: basicData?.beopjungri_name,
+          })
+        : null,
+    [result, basicData?.beopjungri_name],
+  );
+
   return (
     <div className="space-y-4">
       {/* 기본 통계 보기와 동일: 상단 연도별 표 + 범례 1회만 (매트릭스에는 범례 비표시) */}
@@ -233,16 +271,17 @@ export default function PaidAnalysisPanel() {
                 {(basicData.stats_excluded_codes?.length ?? 0) > 6 ? " …" : ""}
               </p>
             )}
-            <div className="flex flex-wrap items-start gap-3 gap-y-2">
-              <h2 className="text-base font-bold text-slate-800 shrink-0 leading-tight max-w-md">
-                {basicData.beopjungri_name}
-              </h2>
+            <div className="flex flex-wrap items-stretch gap-3 gap-y-2">
+              <div className="flex items-start gap-1 shrink-0 self-start max-w-md">
+                <h2 className="text-base font-bold text-slate-800 leading-tight">
+                  {basicData.beopjungri_name}
+                </h2>
+                <AnalysisHelpPanel explain={basicStatsExplain} />
+              </div>
               <div className="min-w-0 flex-1 basis-[12rem]">
                 <YearlyStatsTable rows={yearlyReferenceRowsPaid} hideTitle />
               </div>
-              <div className="shrink-0">
-                <MatrixStatsLegend />
-              </div>
+              <MatrixStatsLegend matchYearlyStatsHeight helpExplain={legendExplain} />
             </div>
           </>
         )}
@@ -301,7 +340,10 @@ export default function PaidAnalysisPanel() {
       {!isLoading && status === "success" && result && (
         <div className="bg-white rounded-xl shadow-sm p-5 space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-base font-bold text-slate-800">필터 분석 결과</h2>
+            <div className="flex items-center gap-1">
+              <h2 className="text-base font-bold text-slate-800">필터 분석 결과</h2>
+              <AnalysisHelpPanel explain={filteredExplain} />
+            </div>
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-400">{result.response_ms}ms</span>
               <button

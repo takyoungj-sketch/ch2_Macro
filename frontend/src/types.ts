@@ -267,8 +267,12 @@ export interface MatrixCellTransactionItem {
   id: number;
   contract_year: number;
   contract_month: number;
+  contract_date?: string | null;
   beopjungri_code: string;
   beopjungri_name?: string | null;
+  lot_display?: string | null;
+  partial_ownership_label?: string | null;
+  deal_type?: string | null;
   area_sqm?: number | null;
   total_price_10k: number;
   unit_price_per_sqm?: number | null;

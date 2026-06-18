@@ -54,7 +54,7 @@ export default function StatsTable({ title, rows }: Props) {
                 className={clsx(
                   "px-3 py-2 text-right tabular-nums",
                   stats.is_reliable
-                    ? "text-amber-600 font-semibold"
+                    ? "text-emerald-600 dark:text-emerald-400 font-semibold"
                     : "text-slate-500"
                 )}
               >
@@ -79,7 +79,7 @@ export default function StatsTable({ title, rows }: Props) {
         </tbody>
       </table>
       <p className="text-xs text-slate-400 mt-1">
-        * 단위: 만원/㎡ &nbsp;|&nbsp; 건수 15건 이상 시 노란색 강조 &nbsp;|&nbsp; 95% 신뢰구간
+        * 단위: 만원/㎡ &nbsp;|&nbsp; 건수 15건 이상 시 녹색 강조 &nbsp;|&nbsp; 95% 신뢰구간
       </p>
     </div>
   );

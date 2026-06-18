@@ -47,11 +47,21 @@ function rowKey(r: MatrixYearlyStat, i: number): string {
 }
 
 /** 연도·또는 롤링 구간별 평균 단가(꺾은선)·거래 건수(점선+점) */
-export default function MatrixYearlyTrendChart({ rows }: { rows: MatrixYearlyStat[] }) {
+export default function MatrixYearlyTrendChart({
+  rows,
+  /** x축 점 간격 배율 (장기 추세 등) */
+  xSpacingScale = 1,
+}: {
+  rows: MatrixYearlyStat[];
+  xSpacingScale?: number;
+}) {
   const sorted = [...rows].sort((a, b) => rowSortKey(a) - rowSortKey(b));
   if (sorted.length === 0) return null;
 
-  const innerW = W - PAD_L - PAD_R;
+  const scale = Math.max(1, xSpacingScale);
+  const baseInnerW = W - PAD_L - PAD_R;
+  const innerW = baseInnerW * scale;
+  const chartW = PAD_L + PAD_R + innerW;
   const innerH = H - PAD_T - PAD_B;
   const n = sorted.length;
   const lastI = Math.max(n - 1, 1);
@@ -133,8 +143,13 @@ export default function MatrixYearlyTrendChart({ rows }: { rows: MatrixYearlySta
         </span>
       </p>
       <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="w-full h-auto max-h-[240px] text-slate-500"
+        viewBox={`0 0 ${chartW} ${H}`}
+        className={
+          scale > 1
+            ? "h-auto max-h-[240px] text-slate-500 shrink-0"
+            : "w-full h-auto max-h-[240px] text-slate-500"
+        }
+        width={scale > 1 ? chartW : undefined}
         preserveAspectRatio="xMidYMid meet"
       >
         {hasMean &&
@@ -146,7 +161,7 @@ export default function MatrixYearlyTrendChart({ rows }: { rows: MatrixYearlySta
                 key={`grid-${v}`}
                 x1={PAD_L}
                 y1={y}
-                x2={W - PAD_R}
+                x2={chartW - PAD_R}
                 y2={y}
                 stroke="currentColor"
                 strokeOpacity={0.14}
@@ -162,7 +177,7 @@ export default function MatrixYearlyTrendChart({ rows }: { rows: MatrixYearlySta
                 key={`grid-c-${v}`}
                 x1={PAD_L}
                 y1={y}
-                x2={W - PAD_R}
+                x2={chartW - PAD_R}
                 y2={y}
                 stroke="currentColor"
                 strokeOpacity={0.14}

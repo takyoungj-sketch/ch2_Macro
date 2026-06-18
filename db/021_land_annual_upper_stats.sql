@@ -66,3 +66,11 @@ CREATE INDEX IF NOT EXISTS ix_laus_year_level_code_zone_cat
     ON land_annual_upper_stats (
         calendar_year, region_level, region_code, zone_type, land_category
     );
+
+-- VPS 운영 DB 사용자(ch2app) 조회 권한 — DDL 적용 직후 1회
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ch2app') THEN
+        GRANT SELECT, INSERT, UPDATE, DELETE ON land_annual_upper_stats TO ch2app;
+    END IF;
+END $$;

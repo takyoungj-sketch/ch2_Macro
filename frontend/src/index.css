@@ -8,3 +8,121 @@ body {
   background: #f8fafc;
   color: #1e293b;
 }
+
+html.dark body {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+/*
+ * 기존 컴포넌트의 light 전용 Tailwind 클래스를 dark에서도 읽기 좋게 보정.
+ * (점진적으로 dark: 변형을 컴포넌트에 직접 넣어가며 축소 가능)
+ */
+@layer utilities {
+  html.dark .bg-white {
+    background-color: rgb(30 41 59);
+  }
+  html.dark .bg-slate-50 {
+    background-color: rgb(15 23 42);
+  }
+  html.dark .bg-slate-50\/90 {
+    background-color: rgb(15 23 42 / 0.9);
+  }
+  html.dark .bg-slate-50\/60 {
+    background-color: rgb(15 23 42 / 0.6);
+  }
+  html.dark .bg-slate-100 {
+    background-color: rgb(30 41 59);
+  }
+  html.dark .bg-sky-100 {
+    background-color: rgb(8 47 73);
+  }
+  html.dark .bg-indigo-50 {
+    background-color: rgb(30 27 75);
+  }
+  html.dark .bg-indigo-50\/95 {
+    background-color: rgb(30 27 75 / 0.95);
+  }
+  html.dark .bg-amber-50 {
+    background-color: rgb(69 26 3);
+  }
+  html.dark .bg-red-50 {
+    background-color: rgb(69 10 10);
+  }
+
+  html.dark .text-slate-900 {
+    color: rgb(241 245 249);
+  }
+  html.dark .text-slate-800 {
+    color: rgb(226 232 240);
+  }
+  html.dark .text-slate-700 {
+    color: rgb(203 213 225);
+  }
+  html.dark .text-slate-600 {
+    color: rgb(148 163 184);
+  }
+  html.dark .text-slate-500 {
+    color: rgb(148 163 184);
+  }
+  html.dark .text-slate-400 {
+    color: rgb(100 116 139);
+  }
+  html.dark .text-sky-950 {
+    color: rgb(186 230 253);
+  }
+  html.dark .text-sky-900 {
+    color: rgb(186 230 253);
+  }
+  html.dark .text-amber-800,
+  html.dark .text-amber-900,
+  html.dark .text-amber-950 {
+    color: rgb(253 230 138);
+  }
+  html.dark .text-red-500,
+  html.dark .text-red-600,
+  html.dark .text-red-800 {
+    color: rgb(252 165 165);
+  }
+
+  html.dark .border-slate-100 {
+    border-color: rgb(51 65 85);
+  }
+  html.dark .border-slate-200 {
+    border-color: rgb(51 65 85);
+  }
+  html.dark .border-slate-300 {
+    border-color: rgb(71 85 105);
+  }
+  html.dark .border-indigo-100 {
+    border-color: rgb(67 56 202);
+  }
+  html.dark .border-amber-200 {
+    border-color: rgb(180 83 9);
+  }
+  html.dark .border-red-200 {
+    border-color: rgb(185 28 28);
+  }
+
+  html.dark .hover\:bg-white:hover {
+    background-color: rgb(51 65 85);
+  }
+  html.dark .hover\:bg-slate-50:hover {
+    background-color: rgb(51 65 85);
+  }
+  html.dark .hover\:bg-sky-50\/50:hover {
+    background-color: rgb(12 74 110 / 0.5);
+  }
+
+  html.dark input,
+  html.dark select,
+  html.dark textarea {
+    background-color: rgb(30 41 59);
+    color: rgb(226 232 240);
+    border-color: rgb(71 85 105);
+  }
+
+  html.dark .shadow-sm {
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.35);
+  }
+}

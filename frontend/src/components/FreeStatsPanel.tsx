@@ -9,6 +9,10 @@ import {
 } from "../api/client";
 import { yearsRangeInclusive } from "../constants/paidFilters";
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
+import {
+  buildFreeStatsExplain,
+  buildMatrixLegendExplain,
+} from "../constants/landStatsExplain";
 import { useAppStore } from "../store";
 import { type FreeStatsV2Response, type MatrixYearlyRequest, type MatrixYearlyStat, normalizeFreeStatsWindowYears } from "../types";
 import { parseApiError } from "../utils/apiError";
@@ -20,9 +24,11 @@ import {
 import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
 import { statsScopeKeyFromBeopjungriCodes } from "../utils/statsScopeKey";
 import { resolveUpperSingleFromTier, upperToFreeStatsShape } from "../utils/upperTierStats";
+import { shouldUseBulkStats } from "../utils/statsFetchStrategy";
 import MatrixStatsTable, { MatrixStatsLegend } from "./MatrixStatsTable";
 import PaidMatrixYearlyModal from "./PaidMatrixYearlyModal";
 import YearlyStatsTable from "./YearlyStatsTable";
+import AnalysisHelpPanel from "./AnalysisHelpPanel";
 
 export default function FreeStatsPanel() {
   const viewMode = useAppStore((s) => s.viewMode);
@@ -64,7 +70,7 @@ export default function FreeStatsPanel() {
   const isPaidBasic = viewMode === "paid" && paidResultView === "basic";
   const useUpper = isPaidBasic && upperSingle != null;
   const useBulk =
-    isPaidBasic && upperSingle == null && resolvedCodes.length > 1;
+    isPaidBasic && shouldUseBulkStats(resolvedCodes.length, upperSingle);
   const bulkKey = useMemo(
     () => statsScopeKeyFromBeopjungriCodes(resolvedCodes),
     [resolvedCodes]
@@ -283,6 +289,18 @@ export default function FreeStatsPanel() {
     );
   }
 
+  const legendExplain = buildMatrixLegendExplain();
+  const statsExplain = buildFreeStatsExplain({
+    data,
+    viewMode,
+    isPaidBasic,
+    windowYears: freeStatsWindowYears,
+    useUpper,
+    upperLevelLabel: upperSingle
+      ? `${upperSingle.level} (${upperSingle.code})`
+      : undefined,
+  });
+
   return (
     <div className="bg-white rounded-xl shadow-sm p-5 space-y-5">
         {useUpper &&
@@ -303,16 +321,17 @@ export default function FreeStatsPanel() {
             {(data.stats_excluded_codes?.length ?? 0) > 8 ? " …" : ""}
           </p>
         )}
-      <div className="flex flex-wrap items-start gap-3 gap-y-2">
-        <h2 className="text-base font-bold text-slate-800 shrink-0 leading-tight max-w-md">
-          {data.beopjungri_name}
-        </h2>
+      <div className="flex flex-wrap items-stretch gap-3 gap-y-2">
+        <div className="flex items-start gap-1 shrink-0 self-start max-w-md">
+          <h2 className="text-base font-bold text-slate-800 leading-tight">
+            {data.beopjungri_name}
+          </h2>
+          <AnalysisHelpPanel explain={statsExplain} />
+        </div>
         <div className="min-w-0 flex-1 basis-[12rem]">
           <YearlyStatsTable rows={yearlyRowsFreeReference} hideTitle />
         </div>
-        <div className="shrink-0">
-          <MatrixStatsLegend />
-        </div>
+        <MatrixStatsLegend matchYearlyStatsHeight helpExplain={legendExplain} />
       </div>
 
       <MatrixStatsTable

@@ -45,7 +45,9 @@
 
 ## 국토부 CSV 수집 (Selenium · 토지 매매 · 2010~2020 backfill)
 
-- `scripts/monthly/download_molit_land_historical_csv.py` — 시도×연도별 CSV → `raw/토지_2010_2020/`
+> **⚠ 필독:** [`docs/MOLIT_CSV_COLLECTOR_WARNINGS.md`](../docs/MOLIT_CSV_COLLECTOR_WARNINGS.md) — 시도/연도 오염 CSV 방지
+
+- `scripts/monthly/download_molit_land_historical_csv.py` — `molit_csv_download_core` (검증·안정 대기)
 - 충북·충남 pilot (wave 1, 2010~2020):  
   `py scripts/monthly/download_molit_land_historical_csv.py --regions "충청북도,충청남도" --start-year 2010 --end-year 2020`
 - 충청 인접 5시도 (wave 2: 대전·세종·경기·경북·강원):  
@@ -58,6 +60,18 @@
   **진행 상황·내일 재개:** `pipeline/logs/LAND_ANNUAL_BACKFILL_RESUME.md`
 - 1연치 검증:  
   `py scripts/monthly/download_molit_land_historical_csv.py --regions "충청북도" --years 2010`
+
+## 국토부 CSV 수집 (Selenium · 아파트 매매 · 2010~2020 backfill)
+
+> **⚠** [`docs/MOLIT_CSV_COLLECTOR_WARNINGS.md`](../docs/MOLIT_CSV_COLLECTOR_WARNINGS.md)
+
+- `scripts/monthly/download_molit_apartment_historical_csv.py` — `molit_csv_download_core`
+- 사무실 GUI/EXE: `deploy/molit_csv_collector/` — 시도 선택·실패 로그(빨간색)·CSV 검증
+- 전국 2010~2020 (일일 100건 제한, 2일 분할 예):  
+  `py scripts/monthly/download_molit_apartment_historical_csv.py --start-year 2010 --end-year 2020 --headless --max-new-downloads 100`  
+  (다음날 동일 명령 재실행 — 이미 있는 파일은 스킵)
+- 1연치 검증:  
+  `py scripts/monthly/download_molit_apartment_historical_csv.py --limit-regions 1 --years 2010 --headless`
 
 ## 국토부 CSV 수집 (Selenium · 오피스텔 매매)
 

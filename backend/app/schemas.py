@@ -572,8 +572,12 @@ class MatrixCellTransactionItem(BaseModel):
     id: int
     contract_year: int
     contract_month: int
+    contract_date: Optional[date] = None
     beopjungri_code: str
     beopjungri_name: Optional[str] = None
+    lot_display: Optional[str] = None
+    partial_ownership_label: Optional[str] = None
+    deal_type: Optional[str] = None
     area_sqm: Optional[float] = None
     total_price_10k: float
     unit_price_per_sqm: Optional[float] = None

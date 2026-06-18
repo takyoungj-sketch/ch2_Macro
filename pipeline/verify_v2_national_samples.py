@@ -52,6 +52,18 @@ def check_one(
         print(f"  [FAIL] expected 404, got {r.status_code} for {code}")
         return False
 
+    if r.status_code == 404:
+        detail = ""
+        try:
+            detail = str(r.json().get("detail", ""))
+        except Exception:
+            detail = r.text[:200]
+        if expect_error or "V2 집계가 없습니다" in detail:
+            print(f"  [OK] {code} w={window_years} — no V2 row (404, sparse)")
+            return True
+        print(f"  [FAIL] {code} w={window_years} unexpected 404 {detail[:200]}")
+        return False
+
     if r.status_code != 200:
         print(f"  [FAIL] {code} w={window_years} HTTP {r.status_code} {r.text[:200]}")
         return False

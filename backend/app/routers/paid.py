@@ -7,6 +7,8 @@
 from __future__ import annotations
 
 import hashlib
+import csv
+import io
 import json
 import logging
 import time
@@ -16,6 +18,7 @@ from typing import Optional
 
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import Response
 from pydantic import ValidationError
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -58,6 +61,8 @@ from app.stats_utils import (
 )
 
 router = APIRouter(prefix="/paid", tags=["유료 분석"])
+
+MAX_MATRIX_CELL_TX_EXPORT = 50_000
 
 log = logging.getLogger(__name__)
 
@@ -1277,6 +1282,47 @@ def _normalize_long_term_targets(body: LongTermTrendRequest) -> list[tuple[str, 
     return out
 
 
+def _long_term_beop_codes(
+    body: LongTermTrendRequest, targets: list[tuple[str, str]], db: Session
+) -> list[str]:
+    """법정동·리(10자) — explicit target + 필터 region_codes + 읍면동 하위 fallback."""
+    codes: list[str] = []
+    seen: set[str] = set()
+
+    def add(code: str) -> None:
+        c = str(code).strip()
+        if len(c) != 10 or c in seen:
+            return
+        seen.add(c)
+        codes.append(c)
+
+    for lv, rc in targets:
+        if lv == "beopjungri":
+            add(rc)
+
+    for rc in body.region_codes:
+        add(str(rc).strip())
+
+    for lv, rc in targets:
+        if lv != "eupmyeondong":
+            continue
+        rows = db.execute(
+            text(
+                """
+                SELECT DISTINCT btrim(beopjungri_code::text) AS bc
+                FROM region_codes
+                WHERE btrim(eupmyeondong_code::text) = :ec
+                  AND btrim(beopjungri_code::text) <> ''
+                """
+            ),
+            {"ec": rc.strip()},
+        ).fetchall()
+        for row in rows:
+            add(str(row.bc))
+
+    return codes[:10]
+
+
 def _long_term_region_name(db: Session, level: str, code: str) -> str:
     if level == "beopjungri":
         row = db.execute(
@@ -1306,7 +1352,7 @@ def long_term_trend(body: LongTermTrendRequest, db: Session = Depends(get_db)):
     zt = body.zone_type.strip()
     lc = body.land_category.strip()
 
-    beop_codes = [c for lv, c in targets if lv == "beopjungri"]
+    beop_codes = _long_term_beop_codes(body, targets, db)
     upper_targets = [(lv, c) for lv, c in targets if lv in _UPPER_LEVELS]
 
     y_candidates: list[int] = []
@@ -1586,23 +1632,20 @@ def matrix_cell_histogram(
     )
 
 
-@router.post(
-    "/matrix-cell-transactions",
-    response_model=MatrixCellTransactionsResponse,
-    summary="매트릭스 칸 원거래 목록(페이지)",
-)
-def matrix_cell_transactions(
-    body: MatrixCellTransactionsRequest, db: Session = Depends(get_db)
-):
-    """
-    matrix-yearly 와 동일 필터·이상치 정책을 적용한 뒤, 남은 행을 최신 계약 순으로 정렬해
-    offset/limit 으로 잘라 반환한다.
-    """
+def _fetch_matrix_cell_filtered_transactions(
+    body: MatrixYearlyRequest, db: Session
+) -> list[dict]:
+    """matrix-yearly 와 동일 필터·이상치 정책을 적용한 원거래 행(최신 계약 순)."""
     merged_where, merged_params = _matrix_cell_merged_where(body, db)
     query = text(
         f"""
-        SELECT lt.id, lt.contract_year, lt.contract_month, lt.beopjungri_code,
+        SELECT lt.id, lt.contract_year, lt.contract_month, lt.contract_date,
+               lt.beopjungri_code,
                TRIM(BOTH FROM COALESCE(rc.beopjungri_name::text, '')) AS beopjungri_name,
+               NULLIF(TRIM(BOTH FROM COALESCE(lt.lot_display::text, '')), '') AS lot_display,
+               NULLIF(TRIM(BOTH FROM COALESCE(lt.partial_ownership_label::text, '')), '')
+                   AS partial_ownership_label,
+               NULLIF(TRIM(BOTH FROM COALESCE(lt.deal_type::text, '')), '') AS deal_type,
                lt.area_sqm::float8 AS area_sqm,
                lt.total_price_10k::float8 AS total_price_10k,
                lt.unit_price_per_sqm::float8 AS unit_price_per_sqm,
@@ -1632,8 +1675,14 @@ def matrix_cell_transactions(
                 "id": int(m["id"]),
                 "contract_year": int(m["contract_year"]),
                 "contract_month": int(m["contract_month"]),
+                "contract_date": m.get("contract_date"),
                 "beopjungri_code": str(m["beopjungri_code"]).strip(),
                 "beopjungri_name": nm or None,
+                "lot_display": (m.get("lot_display") or "").strip() or None,
+                "partial_ownership_label": (
+                    (m.get("partial_ownership_label") or "").strip() or None
+                ),
+                "deal_type": (m.get("deal_type") or "").strip() or None,
                 "area_sqm": float(m["area_sqm"]) if m["area_sqm"] is not None else None,
                 "total_price_10k": float(m["total_price_10k"]),
                 "unit_price_per_sqm": fv,
@@ -1658,6 +1707,62 @@ def matrix_cell_transactions(
     filtered.sort(
         key=lambda x: (-x["contract_year"], -x["contract_month"], -x["id"])
     )
+    return filtered
+
+
+def _format_tx_contract_date_csv(row: dict) -> str:
+    cd = row.get("contract_date")
+    if cd is not None:
+        if isinstance(cd, date):
+            return cd.isoformat()
+        return str(cd)[:10]
+    return f"{row['contract_year']}.{row['contract_month']:02d}"
+
+
+def _matrix_cell_transactions_csv_bytes(rows: list[dict]) -> bytes:
+    buf = io.StringIO()
+    buf.write("\ufeff")
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerow(
+        ["계약일", "지번", "면적(㎡)", "금액(만원)", "단가(만원/㎡)", "도로", "지분", "유형"]
+    )
+    for c in rows:
+        writer.writerow(
+            [
+                _format_tx_contract_date_csv(c),
+                c.get("lot_display") or "",
+                "" if c.get("area_sqm") is None else c["area_sqm"],
+                c["total_price_10k"],
+                c["unit_price_per_sqm"],
+                c.get("road_condition") or "",
+                c.get("partial_ownership_label") or "",
+                c.get("deal_type") or "",
+            ]
+        )
+    return buf.getvalue().encode("utf-8")
+
+
+def _matrix_cell_export_filename(body: MatrixYearlyRequest) -> str:
+    z = (body.zone_type or "zone").strip() or "zone"
+    l = (body.land_category or "land").strip() or "land"
+    safe = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in f"{z}_{l}")
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d")
+    return f"matrix_tx_{safe}_{ts}.csv"
+
+
+@router.post(
+    "/matrix-cell-transactions",
+    response_model=MatrixCellTransactionsResponse,
+    summary="매트릭스 칸 원거래 목록(페이지)",
+)
+def matrix_cell_transactions(
+    body: MatrixCellTransactionsRequest, db: Session = Depends(get_db)
+):
+    """
+    matrix-yearly 와 동일 필터·이상치 정책을 적용한 뒤, 남은 행을 최신 계약 순으로 정렬해
+    offset/limit 으로 잘라 반환한다.
+    """
+    filtered = _fetch_matrix_cell_filtered_transactions(body, db)
     total = len(filtered)
     off = int(body.offset)
     lim = int(body.limit)
@@ -1667,8 +1772,12 @@ def matrix_cell_transactions(
             id=c["id"],
             contract_year=c["contract_year"],
             contract_month=c["contract_month"],
+            contract_date=c.get("contract_date"),
             beopjungri_code=c["beopjungri_code"],
             beopjungri_name=c["beopjungri_name"],
+            lot_display=c.get("lot_display"),
+            partial_ownership_label=c.get("partial_ownership_label"),
+            deal_type=c.get("deal_type"),
             area_sqm=c["area_sqm"],
             total_price_10k=c["total_price_10k"],
             unit_price_per_sqm=c["unit_price_per_sqm"],
@@ -1686,4 +1795,30 @@ def matrix_cell_transactions(
         exclude_outlier=bool(body.exclude_outlier),
         outlier_iqr_multiplier=float(body.outlier_iqr_multiplier),
         items=items,
+    )
+
+
+@router.post(
+    "/matrix-cell-transactions/export",
+    summary="매트릭스 칸 원거래 목록 CSV 내보내기",
+)
+def matrix_cell_transactions_export(
+    body: MatrixYearlyRequest, db: Session = Depends(get_db)
+):
+    """목록 API와 동일 필터·이상치 정책으로 전체 행을 CSV(UTF-8 BOM)로 반환한다."""
+    filtered = _fetch_matrix_cell_filtered_transactions(body, db)
+    if len(filtered) > MAX_MATRIX_CELL_TX_EXPORT:
+        raise HTTPException(
+            status_code=413,
+            detail=(
+                f"내보내기 상한({MAX_MATRIX_CELL_TX_EXPORT:,}건)을 초과했습니다. "
+                "연도·지역 범위를 줄여 주세요."
+            ),
+        )
+    payload = _matrix_cell_transactions_csv_bytes(filtered)
+    filename = _matrix_cell_export_filename(body)
+    return Response(
+        content=payload,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

@@ -4,11 +4,14 @@ import {
   runPaidAnalysis as runPaidAnalysisApi,
 } from "./api/client";
 import {
+  applyColorScheme,
   clampFontStep,
+  persistColorScheme,
   persistFontStep,
+  readStoredColorScheme,
   readStoredFontStep,
+  type UiColorScheme,
 } from "./constants/displayUi";
-import { MAX_V2_STATS_BULK_CODES } from "./constants/v2BulkLimits";
 import {
   MAX_CITY_TIER_CHIP,
   MAX_PAID_LEAF_BEOPJUNGRI_PICK,
@@ -26,6 +29,10 @@ import type {
 import { normalizeFreeStatsWindowYears } from "./types";
 import { parseApiError, type ParsedApiError } from "./utils/apiError";
 import { buildPaidPayload } from "./utils/paidAnalysisPayload";
+import {
+  filteredAnalysisScopeNoticeOverBulkLimit,
+  exceedsV2BulkLimit,
+} from "./utils/statsFetchStrategy";
 import type { RegionFiveFields } from "./utils/resolveRegionFiveFields";
 import {
   emptyTierCodes,
@@ -33,6 +40,7 @@ import {
   type PaidSubSigunguPickEntry,
   type TierCodes,
 } from "./utils/regionTier";
+import { resolveUpperSingleFromTier } from "./utils/upperTierStats";
 
 const EMPTY_REGION_SEGMENTS: RegionFiveFields = ["", "", "", "", ""];
 
@@ -157,6 +165,11 @@ interface AppState {
   /** 글자 크기 단계(본문 zoom, localStorage 유지) */
   uiFontScaleStep: number;
   bumpUiFontScale: (direction: 1 | -1) => void;
+
+  /** 화면 색상 테마(light | dark, localStorage 유지) */
+  uiColorScheme: UiColorScheme;
+  setUiColorScheme: (scheme: UiColorScheme) => void;
+  toggleUiColorScheme: () => void;
 }
 
 const defaultPaidRequest: PaidAnalysisRequest = {
@@ -202,6 +215,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   tierSelection: emptyTierCodes(),
   paidSubSigunguPickOrder: [],
   uiFontScaleStep: readStoredFontStep(),
+  uiColorScheme: readStoredColorScheme(),
   paidRequest: { ...defaultPaidRequest },
   paidRoadExcluded: [],
   paidAreaExcluded: [],
@@ -665,7 +679,19 @@ export const useAppStore = create<AppState>((set, get) => ({
       sc.length > 0 && sc.length === rc.length && sc.every((c, i) => c === rc[i]);
     if (storeMatchesTierSelection) {
       codes = [...sc];
-    } else if (resolved.length > 1) {
+    } else {
+      const upperSingle = resolveUpperSingleFromTier(s0.tierSelection);
+      if (upperSingle != null) {
+        /** 상위 단일(시·도 등) — bulk 미호출, 기본통계는 upper API(PaidAnalysisPanel). */
+        codes = resolved;
+        if (exceedsV2BulkLimit(resolved.length)) {
+          scopeNotice = filteredAnalysisScopeNoticeOverBulkLimit(resolved.length, upperSingle);
+        }
+      } else if (exceedsV2BulkLimit(resolved.length)) {
+        /** 200곳 초과·상위 단일 없음 — bulk 미호출, 원장 실시간만. */
+        codes = resolved;
+        scopeNotice = filteredAnalysisScopeNoticeOverBulkLimit(resolved.length, null);
+      } else if (resolved.length > 1) {
       /**
        * 필터 분석 화면만 볼 때 PaidAnalysisPanel 이 아직 없어 기본통계 동기화가 안 된 경우가 많다.
        * 복수 법정단위는 free/v2/bulk 의 kept(beopjungri_code)와 analyze·모달이 같아야 한다.
@@ -702,20 +728,13 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (get().paidAnalysisRequestId !== reqId) return;
         codes = resolved;
         const pe = parseApiError(e);
-        let detail = pe.message;
-        if (
-          (pe.status === 422 || pe.status === 400) &&
-          !detail.includes(String(MAX_V2_STATS_BULK_CODES))
-        ) {
-          detail = `${detail} (참고: 복수 선조회 한도는 법정코드 ${MAX_V2_STATS_BULK_CODES}건)`;
-        }
         scopeNotice =
-          `복수 법정단위 기본통계 선조회(/free/v2/stats/bulk)에 실패했습니다: ${detail}. ` +
-          `거래 원장 집계는 선택 확장 법정동·리 ${rc.length.toLocaleString()}곳 전체 코드로 진행합니다. ` +
-          `이때 기본 통계 카드(사전집계·선조회 규칙)와 표본·수치가 달라질 수 있습니다.`;
+          `사전집계 bulk를 사용하지 못해 원장 실시간 집계로 전환했습니다 (${pe.message}). ` +
+          `필터 분석은 확장 법정동·리 ${rc.length.toLocaleString()}곳 전체 코드로 진행합니다.`;
       }
-    } else {
-      codes = resolved;
+      } else {
+        codes = resolved;
+      }
     }
 
     if (get().paidAnalysisRequestId !== reqId) return;
@@ -804,6 +823,20 @@ export const useAppStore = create<AppState>((set, get) => ({
       const next = clampFontStep(s.uiFontScaleStep + direction);
       persistFontStep(next);
       return { uiFontScaleStep: next };
+    }),
+
+  setUiColorScheme: (scheme) => {
+    persistColorScheme(scheme);
+    applyColorScheme(scheme);
+    set({ uiColorScheme: scheme });
+  },
+
+  toggleUiColorScheme: () =>
+    set((s) => {
+      const next: UiColorScheme = s.uiColorScheme === "dark" ? "light" : "dark";
+      persistColorScheme(next);
+      applyColorScheme(next);
+      return { uiColorScheme: next };
     }),
 
 }));

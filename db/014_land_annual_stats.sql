@@ -70,6 +70,13 @@ CREATE INDEX IF NOT EXISTS ix_las_beopjungri_year
 CREATE INDEX IF NOT EXISTS ix_las_year_beopjungri_zone_cat
     ON land_annual_stats (calendar_year, beopjungri_code, zone_type, land_category);
 
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ch2app') THEN
+        GRANT SELECT, INSERT, UPDATE, DELETE ON land_annual_stats TO ch2app;
+    END IF;
+END $$;
+
 -- 행정구역 코드 이력 (장기 backfill·remap 선행 — 상세 docs/LONG_TERM_TREND_DESIGN.md §2)
 CREATE TABLE IF NOT EXISTS region_code_history (
     id                  BIGSERIAL PRIMARY KEY,

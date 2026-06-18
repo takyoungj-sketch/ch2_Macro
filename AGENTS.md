@@ -26,6 +26,7 @@
 |----|-----|
 | 복합 | http://localhost:5174/built/ |
 | 토지 | http://localhost:5173/land/ |
+| 토지 재구축 | http://localhost:5176/land/ → API `:8001` (`land_stats_next`) |
 | 집합 | http://localhost:5175/collective/ |
 | API | http://127.0.0.1:8000 |
 

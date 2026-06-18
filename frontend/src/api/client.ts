@@ -20,6 +20,7 @@ import type {
   UpperStatsV2Response,
 } from "../types";
 import { normalizeFreeStatsWindowYears } from "../types";
+import { filenameFromContentDisposition, saveBlobAsFile } from "../utils/downloadBlob";
 import { viteOptionalV2AsOfMonth } from "../utils/freeStatsV2";
 
 /**
@@ -124,6 +125,22 @@ export const fetchMatrixCellTransactions = async (
     body
   );
   return data;
+};
+
+/** 매트릭스 칸 원거래 목록 CSV(UTF-8 BOM) 다운로드 — 목록 API와 동일 필터·이상치 정책 */
+export const downloadMatrixCellTransactionsCsv = async (
+  body: MatrixYearlyRequest,
+): Promise<void> => {
+  const response = await api.post<Blob>(
+    "/paid/matrix-cell-transactions/export",
+    body,
+    { responseType: "blob" },
+  );
+  const filename = filenameFromContentDisposition(
+    response.headers["content-disposition"],
+    "matrix_transactions.csv",
+  );
+  saveBlobAsFile(response.data, filename);
 };
 
 /**

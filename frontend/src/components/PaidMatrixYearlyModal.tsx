@@ -4,6 +4,7 @@ import {
   fetchLongTermTrend,
   fetchMatrixCellHistogram,
   fetchMatrixCellTransactions,
+  downloadMatrixCellTransactionsCsv,
 } from "../api/client";
 import { simpleTableHeadClass } from "../constants/displayUi";
 import type {
@@ -12,10 +13,11 @@ import type {
   MatrixCellHistogramRequest,
   MatrixCellHistogramResponse,
   MatrixCellTransactionsResponse,
+  MatrixCellTransactionItem,
   MatrixYearlyRequest,
   MatrixYearlyStat,
 } from "../types";
-import { parseApiError } from "../utils/apiError";
+import { parseApiError, parseApiErrorAsync } from "../utils/apiError";
 import { formatMatrixBucketAxisLabel } from "../utils/matrixYearlyLabels";
 import { resolveLongTermTargetsForFetch } from "../utils/longTermTargets";
 import { useAppStore } from "../store";
@@ -23,6 +25,11 @@ import MatrixCellHistogramChart from "./MatrixCellHistogramChart";
 import MatrixYearlyTrendChart from "./MatrixYearlyTrendChart";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import { buildLongTermTrendExplain } from "../constants/longTermTrendExplain";
+import {
+  buildHistogramExplain,
+  buildMatrixCellTrendExplain,
+  buildTransactionListExplain,
+} from "../constants/landStatsExplain";
 
 function sortMatrixRows(rows: MatrixYearlyStat[]): MatrixYearlyStat[] {
   return [...rows].sort((a, b) => {
@@ -48,6 +55,17 @@ function formatIsoDateBrief(d: string | null | undefined): string {
   if (!d || typeof d !== "string") return "";
   const t = d.slice(0, 10);
   return t || d;
+}
+
+function formatTxContractDate(r: MatrixCellTransactionItem): string {
+  const brief = formatIsoDateBrief(r.contract_date ?? undefined);
+  if (brief) return brief;
+  return `${r.contract_year}.${String(r.contract_month).padStart(2, "0")}`;
+}
+
+function formatTxCell(value: string | null | undefined): string {
+  const t = (value ?? "").trim();
+  return t || "—";
 }
 
 function rowStableKey(r: MatrixYearlyStat, idx: number): string {
@@ -119,6 +137,8 @@ export default function PaidMatrixYearlyModal({
   const [txLoading, setTxLoading] = useState(false);
   const [txError, setTxError] = useState<string | null>(null);
   const [txData, setTxData] = useState<MatrixCellTransactionsResponse | null>(null);
+  const [txExportLoading, setTxExportLoading] = useState(false);
+  const [txExportError, setTxExportError] = useState<string | null>(null);
 
   const [ltLoading, setLtLoading] = useState(false);
   const [ltError, setLtError] = useState<string | null>(null);
@@ -253,7 +273,6 @@ export default function PaidMatrixYearlyModal({
       try {
         const data = await fetchLongTermTrend({
           region_targets: targets,
-          region_codes: targets.map((t) => t.region_code),
           zone_type: zoneType,
           land_category: landCategory,
         });
@@ -348,7 +367,22 @@ export default function PaidMatrixYearlyModal({
   useEffect(() => {
     if (panel !== "transactions") return;
     setTxOffset(0);
+    setTxExportError(null);
   }, [panel, filterRequest]);
+
+  const handleTxExport = useCallback(async () => {
+    if (!filterRequest) return;
+    setTxExportLoading(true);
+    setTxExportError(null);
+    try {
+      await downloadMatrixCellTransactionsCsv(filterRequest);
+    } catch (e) {
+      const parsed = await parseApiErrorAsync(e);
+      setTxExportError(parsed.message);
+    } finally {
+      setTxExportLoading(false);
+    }
+  }, [filterRequest]);
 
   const canDetail = Boolean(filterRequest) && !loading && !error && rows.length > 0;
 
@@ -412,6 +446,30 @@ export default function PaidMatrixYearlyModal({
           return rm ? formatMatrixBucketAxisLabel(rm) : `버킷 ${bi}`;
         })()
       : null;
+
+  const trendExplain = useMemo(
+    () => buildMatrixCellTrendExplain(isRolling),
+    [isRolling],
+  );
+  const histogramExplain = useMemo(() => buildHistogramExplain(), []);
+  const txExplain = useMemo(
+    () =>
+      filterRequest
+        ? buildTransactionListExplain({
+            zoneType,
+            landCategory,
+            total: txData?.total,
+            excludeOutlier: filterRequest.exclude_outlier,
+            outlierMultiplier: filterRequest.outlier_iqr_multiplier,
+          })
+        : null,
+    [
+      filterRequest,
+      zoneType,
+      landCategory,
+      txData?.total,
+    ],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -570,8 +628,8 @@ export default function PaidMatrixYearlyModal({
                           ({ltData.year_from}–{ltData.year_to} · {ltPriceLabel})
                         </span>
                       </p>
-                      <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3">
-                        <MatrixYearlyTrendChart rows={chartRows} />
+                      <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3 overflow-x-auto">
+                        <MatrixYearlyTrendChart rows={chartRows} xSpacingScale={1.5} />
                       </div>
                       <div className="rounded-lg border border-slate-100 bg-white overflow-hidden">
                         <table className="w-full text-xs border-collapse">
@@ -629,7 +687,10 @@ export default function PaidMatrixYearlyModal({
           {canDetail && panel === "trend" && (
             <>
               <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3">
-                <p className="text-[10px] font-semibold text-slate-600 px-1 mb-2">추이 (꺾은선)</p>
+                <div className="flex items-center gap-1 px-1 mb-2">
+                  <p className="text-[10px] font-semibold text-slate-600">추이 (꺾은선)</p>
+                  <AnalysisHelpPanel explain={trendExplain} />
+                </div>
                 <MatrixYearlyTrendChart rows={sortedRows} />
               </div>
               <div className="rounded-lg border border-slate-100 bg-white overflow-hidden">
@@ -708,6 +769,7 @@ export default function PaidMatrixYearlyModal({
                     })}
                   </select>
                 )}
+                <AnalysisHelpPanel explain={histogramExplain} className="ml-auto" />
               </div>
               {histLoading && (
                 <p className="text-xs text-slate-400 text-center py-4">분포 계산 중…</p>
@@ -763,31 +825,59 @@ export default function PaidMatrixYearlyModal({
 
           {canDetail && panel === "transactions" && filterRequest && (
             <div className="space-y-2">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0 flex-1 space-y-1">
+                  {txLoading && (
+                    <p className="text-xs text-slate-400">목록 불러오는 중…</p>
+                  )}
+                  {txError && (
+                    <p className="text-xs text-red-500">{txError}</p>
+                  )}
+                  {!txLoading && !txError && txData && (
+                    <p className="text-[10px] text-slate-500">
+                      전체{" "}
+                      <strong className="text-slate-700">
+                        {txData.total.toLocaleString("ko-KR")}
+                      </strong>
+                      건 · 이상치 제외{" "}
+                      <strong className="text-slate-700">
+                        {txData.exclude_outlier ? "적용" : "안 함"}
+                      </strong>
+                      {txData.exclude_outlier ? (
+                        <span> (IQR×{txData.outlier_iqr_multiplier})</span>
+                      ) : null}
+                    </p>
+                  )}
+                  {txExportError && (
+                    <p className="text-[10px] text-red-500">{txExportError}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <AnalysisHelpPanel explain={txExplain} />
+                  <button
+                    type="button"
+                    disabled={txExportLoading}
+                    onClick={() => void handleTxExport()}
+                    className="shrink-0 px-2.5 py-1 rounded border border-slate-200 text-[11px] font-medium text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    {txExportLoading ? "내보내는 중…" : "CSV 내보내기"}
+                  </button>
+                </div>
+              </div>
               {txLoading && (
                 <p className="text-xs text-slate-400 text-center py-4">목록 불러오는 중…</p>
               )}
-              {txError && (
-                <p className="text-xs text-red-500 text-center py-4">{txError}</p>
-              )}
               {!txLoading && !txError && txData && (
                 <>
-                  <p className="text-[10px] text-slate-500">
-                    전체{" "}
-                    <strong className="text-slate-700">
-                      {txData.total.toLocaleString("ko-KR")}
-                    </strong>
-                    건 · 이상치 제외{" "}
-                    <strong className="text-slate-700">{txData.exclude_outlier ? "적용" : "안 함"}</strong>
-                    {txData.exclude_outlier ? (
-                      <span> (IQR×{txData.outlier_iqr_multiplier})</span>
-                    ) : null}
-                  </p>
                   <div className="overflow-x-auto rounded-lg border border-slate-100">
-                    <table className="w-full text-[11px] border-collapse min-w-[520px]">
+                    <table className="w-full text-[11px] border-collapse min-w-[780px]">
                       <thead>
                         <tr className={simpleTableHeadClass("neutral")}>
                           <th className="border border-slate-200 px-2 py-1.5 text-left font-medium whitespace-nowrap">
-                            계약
+                            계약일
+                          </th>
+                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium whitespace-nowrap">
+                            지번
                           </th>
                           <th className="border border-slate-200 px-2 py-1.5 text-right font-medium whitespace-nowrap">
                             면적(㎡)
@@ -801,13 +891,25 @@ export default function PaidMatrixYearlyModal({
                           <th className="border border-slate-200 px-2 py-1.5 text-left font-medium whitespace-nowrap">
                             도로
                           </th>
+                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium whitespace-nowrap">
+                            지분
+                          </th>
+                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium whitespace-nowrap">
+                            유형
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="text-slate-800">
                         {txData.items.map((r) => (
                           <tr key={r.id}>
                             <td className="border border-slate-200 px-2 py-1 tabular-nums whitespace-nowrap">
-                              {r.contract_year}.{String(r.contract_month).padStart(2, "0")}
+                              {formatTxContractDate(r)}
+                            </td>
+                            <td
+                              className="border border-slate-200 px-2 py-1 max-w-[140px] truncate"
+                              title={r.lot_display?.trim() || undefined}
+                            >
+                              {formatTxCell(r.lot_display)}
                             </td>
                             <td className="border border-slate-200 px-2 py-1 text-right tabular-nums whitespace-nowrap">
                               {r.area_sqm != null
@@ -831,6 +933,12 @@ export default function PaidMatrixYearlyModal({
                             </td>
                             <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">
                               {r.road_condition ?? "—"}
+                            </td>
+                            <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">
+                              {formatTxCell(r.partial_ownership_label)}
+                            </td>
+                            <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">
+                              {formatTxCell(r.deal_type)}
                             </td>
                           </tr>
                         ))}

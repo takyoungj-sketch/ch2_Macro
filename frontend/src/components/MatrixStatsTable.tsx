@@ -5,7 +5,9 @@ import {
   MATRIX_TABLE_TONE,
   matrixTheadPrimaryClass,
 } from "../constants/displayUi";
-import type { MatrixCell, StatsResult } from "../types";
+import { buildMatrixLegendExplain, buildMatrixTableExplain } from "../constants/landStatsExplain";
+import type { AnalysisExplain, MatrixCell, StatsResult } from "../types";
+import AnalysisHelpPanel from "./AnalysisHelpPanel";
 
 /** 고정 레이아웃 (만원/㎡) — 통계 라벨 열 없음 */
 const COL_ZONE_PX = 96; // 이전 대비 용도지역 열 0.6배 (160×0.6)
@@ -59,42 +61,77 @@ function minColWidthForText(text: string): number {
 }
 
 /** 무료 패널 상단(지역명 행 우측) 등에서 재사용 */
-export function MatrixStatsLegend() {
+export function MatrixStatsLegend({
+  matchYearlyStatsHeight = false,
+  className,
+  helpExplain,
+}: {
+  /** YearlyStatsTable(총거래)과 나란히 높이·글자 크기 맞춤 */
+  matchYearlyStatsHeight?: boolean;
+  className?: string;
+  /** 범례 옆 물음표 — 셀 수치 의미 설명 */
+  helpExplain?: AnalysisExplain | null;
+} = {}) {
+  const cellClass = clsx(
+    "border border-slate-200 text-center align-middle",
+    matchYearlyStatsHeight ? "px-2 py-1" : "px-0.5 py-px",
+  );
+
+  const legendHelp = helpExplain ?? null;
+
   return (
-    <table
-      className="table-fixed shrink-0 border-collapse border border-slate-200 bg-white text-[9px] leading-tight text-slate-600"
-      style={{ width: 236 }}
-      aria-label="매트릭스 셀 구조 범례"
+    <div
+      className={clsx(
+        "shrink-0 flex items-start gap-1",
+        matchYearlyStatsHeight && "self-stretch min-h-0",
+        className,
+      )}
     >
-      <tbody>
-        <tr>
-          <td className="border border-slate-200 px-0.5 py-px">거래수</td>
-          <td className="border border-slate-200 px-0.5 py-px">최소</td>
-        </tr>
-        <tr>
-          <td
-            rowSpan={2}
-            className="border border-slate-200 px-0.5 py-px text-center align-middle font-bold text-blue-700 leading-tight"
-          >
-            평균
-          </td>
-          <td className="border border-slate-200 px-0.5 py-px">25%값</td>
-        </tr>
-        <tr>
-          <td className="border border-slate-200 px-0.5 py-px">중위</td>
-        </tr>
-        <tr>
-          <td className="border border-slate-200 px-0.5 py-px">표준편차</td>
-          <td className="border border-slate-200 px-0.5 py-px">75%값</td>
-        </tr>
-        <tr>
-          <td className="border border-slate-200 px-0.5 py-px">신뢰구간(95%)</td>
-          <td className="border border-slate-200 px-0.5 py-px">최대</td>
-        </tr>
-      </tbody>
-    </table>
+      <table
+        className={clsx(
+          "table-fixed border-collapse border border-slate-200 bg-white leading-tight text-slate-600",
+          matchYearlyStatsHeight ? "h-full w-full text-[11px]" : "text-[9px]",
+        )}
+        style={{ width: matchYearlyStatsHeight ? 280 : 236 }}
+        aria-label="매트릭스 셀 구조 범례"
+      >
+        <tbody className={matchYearlyStatsHeight ? "h-full" : undefined}>
+          <tr style={matchYearlyStatsHeight ? { height: "20%" } : undefined}>
+            <td className={cellClass}>거래수</td>
+            <td className={cellClass}>최소</td>
+          </tr>
+          <tr style={matchYearlyStatsHeight ? { height: "20%" } : undefined}>
+            <td
+              rowSpan={2}
+              className={clsx(
+                cellClass,
+                "font-bold text-blue-700 leading-tight",
+              )}
+            >
+              평균
+            </td>
+            <td className={cellClass}>25%값</td>
+          </tr>
+          <tr style={matchYearlyStatsHeight ? { height: "20%" } : undefined}>
+            <td className={cellClass}>중위</td>
+          </tr>
+          <tr style={matchYearlyStatsHeight ? { height: "20%" } : undefined}>
+            <td className={cellClass}>표준편차</td>
+            <td className={cellClass}>75%값</td>
+          </tr>
+          <tr style={matchYearlyStatsHeight ? { height: "20%" } : undefined}>
+            <td className={cellClass}>신뢰구간(95%)</td>
+            <td className={cellClass}>최대</td>
+          </tr>
+        </tbody>
+      </table>
+      {legendHelp ? <AnalysisHelpPanel explain={legendHelp} className="shrink-0" /> : null}
+    </div>
   );
 }
+
+const matrixTableExplain = buildMatrixTableExplain();
+const matrixLegendExplainDefault = buildMatrixLegendExplain();
 
 interface Props {
   /** 빈 문자열이면 표 위 제목 비표시 */
@@ -111,7 +148,9 @@ interface Props {
 }
 
 function cellHl(reliable?: boolean): string {
-  return reliable ? "bg-amber-50" : "";
+  return reliable
+    ? "bg-emerald-50 dark:bg-emerald-950/45"
+    : "";
 }
 
 /** 거래 1건 이상인 경우에만 수치 표시, 없으면 '-' (0 표기 없음) */
@@ -216,7 +255,7 @@ function MatrixStatsTableGrid({
                 cellZoneCol()
               )}
             >
-              용도지역
+              <span className="block leading-tight">용도지역\지목</span>
             </th>
             {landCategories.map((category, ci) => {
               const catStats = byLandCategory[category];
@@ -663,7 +702,9 @@ export default function MatrixStatsTable({
             ) : (
               <div />
             )}
-            {showEmbeddedLegend ? <MatrixStatsLegend /> : null}
+            {showEmbeddedLegend ? (
+              <MatrixStatsLegend helpExplain={matrixLegendExplainDefault} />
+            ) : null}
           </div>
         ) : null}
         <p className="text-xs text-slate-400">표시할 매트릭스 데이터가 없습니다.</p>
@@ -686,7 +727,10 @@ export default function MatrixStatsTable({
         </div>
       ) : null}
       <div className="flex flex-wrap items-center gap-2 shrink-0 ml-auto">
-        {showEmbeddedLegend ? <MatrixStatsLegend /> : null}
+        {showEmbeddedLegend ? (
+          <MatrixStatsLegend helpExplain={matrixLegendExplainDefault} />
+        ) : null}
+        <AnalysisHelpPanel explain={matrixTableExplain} />
         <MatrixFullscreenButton onClick={() => setFullscreen(true)} />
       </div>
     </div>
@@ -700,12 +744,12 @@ export default function MatrixStatsTable({
       {fullscreen &&
         createPortal(
           <div
-            className="fixed inset-0 z-[120] flex flex-col bg-slate-100"
+            className="fixed inset-0 z-[120] flex flex-col bg-slate-100 dark:bg-slate-950"
             role="dialog"
             aria-modal="true"
             aria-labelledby="matrix-fullscreen-title"
           >
-            <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2.5 shadow-sm">
+            <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 shadow-sm">
               <h3
                 id="matrix-fullscreen-title"
                 className="text-sm font-semibold text-slate-800"
@@ -713,7 +757,8 @@ export default function MatrixStatsTable({
                 {headingText}
               </h3>
               <div className="flex flex-wrap items-center gap-2">
-                <MatrixStatsLegend />
+                <MatrixStatsLegend helpExplain={matrixLegendExplainDefault} />
+                <AnalysisHelpPanel explain={matrixTableExplain} />
                 <MatrixFullscreenButton
                   variant="close"
                   label="닫기 (Esc)"
