@@ -6,7 +6,10 @@ import CommercialApp from "./CommercialApp";
 import CollectiveLanding from "./CollectiveLanding";
 import BuildingRegressionPage from "./pages/BuildingRegressionPage";
 import { getCollectiveSegment, redirectToCollectiveSubpath } from "./routing";
+import { applyColorScheme, readStoredColorScheme } from "./constants/displayUi";
 import "./index.css";
+
+applyColorScheme(readStoredColorScheme());
 
 const qc = new QueryClient();
 

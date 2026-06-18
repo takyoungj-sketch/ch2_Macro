@@ -1,5 +1,7 @@
 # 집합부동산 — 인수·기술 메모
 
+> **고도화·Profile·mart 설계:** [`REGIONAL_PROFILE_ARCHITECTURE.md`](REGIONAL_PROFILE_ARCHITECTURE.md) (D-016)
+
 ## 아키텍처
 
 ```
@@ -83,3 +85,18 @@ land_stats.region_codes  → sync → collective_stats.region_codes
 2. GUKTO 정제 xlsx 갱신
 3. `run_collective_monthly_cycle.py --cycle-id 202607 --require-land-cycle`
 4. snapshot/compare → VPS Promote (built와 독립)
+
+## VPS 배포 체크리스트 (2026-06 집합 UI·API 변경)
+
+로컬 검증 후 [`deploy/AGENT_DEPLOY_RUNBOOK.md`](../deploy/AGENT_DEPLOY_RUNBOOK.md) — `-Scope collective`.
+
+| # | 작업 | 명령·메모 |
+|---|------|-----------|
+| 1 | DB 마이그레이션 | `psql -U postgres -d collective_stats -f db/028_collective_building_stats_addr5.sql` |
+| 2 | mart 재집계 (권장) | `cd pipeline/collective` → `python build_collective_building_stats.py` (addr5·지번/도로명 2열) |
+| 3 | 백엔드 반영 | `backend/app/collective/` — 주소 분리, 통합 정렬, 효용지수 회귀, 코호트 추세 API |
+| 4 | 프론트 빌드 | `frontend-collective` — 전체 목록 fetch, 지번/도로명 열, 코호트·효용지수 UI |
+| 5 | systemd 재시작 | VPS `ch2-macro-backend` restart |
+| 6 | 스모크 | `/collective/` 목록·정렬·건물 모달(코호트·효용지수·회귀) |
+
+**참고:** 연도 필터를 켠 live 경로는 mart 없이도 `addr5`를 원장에서 조회 가능. mart-only 조회 DB는 **028 + 재집계** 없으면 리(里)가 빠질 수 있음.

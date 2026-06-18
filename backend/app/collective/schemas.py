@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
@@ -19,12 +20,16 @@ class RegionStructureResponse(BaseModel):
     has_intermediate: bool
     intermediate_label: Optional[str] = None
     leaf_level: str = "addr3"
+    has_ri: bool = False
+    tx_count: int = 0
 
 
 class RegionOption(BaseModel):
     name: str
     count: int
     parent: Optional[str] = None
+    disabled: bool = False
+    min_reliable_count: int = 15
 
 
 class AnalysisFeatures(BaseModel):
@@ -41,6 +46,8 @@ class BuildingStatsRow(BaseModel):
     building_key: str
     display_name: str
     address: str = ""
+    jibun_address: str = ""
+    road_address: str = ""
     building_year: Optional[int] = None
     asset_type: str
     count: int
@@ -55,6 +62,13 @@ class BuildingStatsRow(BaseModel):
 class BuildingListResponse(BaseModel):
     total: int
     items: list[BuildingStatsRow]
+    data_source: Literal["mart", "live"] = "live"
+    as_of_month: Optional[str] = None
+    stats_reference_date: Optional[str] = None
+    stats_as_of_label: Optional[str] = None
+    window_years: Optional[int] = None
+    period_start: Optional[str] = None
+    period_end: Optional[str] = None
 
 
 class CollectiveTransactionRow(BaseModel):
@@ -67,6 +81,7 @@ class CollectiveTransactionRow(BaseModel):
     addr3: Optional[str] = None
     contract_year: Optional[int] = None
     contract_month: Optional[int] = None
+    contract_date: Optional[str] = None
     exclusive_area: Optional[float] = None
     land_area: Optional[float] = None
     price: float
@@ -75,6 +90,10 @@ class CollectiveTransactionRow(BaseModel):
     dong: Optional[str] = None
     housing_subtype: Optional[str] = None
     building_age: Optional[float] = None
+    buyer_type: Optional[str] = None
+    seller_type: Optional[str] = None
+    deal_type: Optional[str] = None
+    road_name: Optional[str] = None
 
 
 class TransactionListResponse(BaseModel):
@@ -92,6 +111,25 @@ class YearlyStatsResponse(BaseModel):
     building_key: str
     display_name: str
     points: list[YearlyStatPoint]
+    data_source: Literal["mart", "live"] = "live"
+
+
+class RollingStatPoint(BaseModel):
+    bucket_index: int
+    period_start: str
+    period_end: str
+    label: str
+    count: int
+    mean: Optional[float] = None
+
+
+class RollingStatsResponse(BaseModel):
+    building_key: str
+    display_name: str
+    window_years: int
+    as_of_month: Optional[str] = None
+    points: list[RollingStatPoint]
+    data_source: Literal["mart", "live"] = "live"
 
 
 class HistogramBin(BaseModel):
@@ -153,9 +191,16 @@ class FloorIndexResponse(BaseModel):
     display_name: str
     asset_type: str
     dimension: str
+    method: Optional[str] = None
+    reference_floor: Optional[str] = None
+    controls: list[str] = Field(default_factory=list)
     n_total: int
+    n_regression: Optional[int] = None
+    r_squared: Optional[float] = None
     baseline_median: Optional[float] = None
     cells: list[FloorIndexCell] = []
+    warnings: list[str] = Field(default_factory=list)
+    explain: Optional[AnalysisExplain] = None
     analysis: AnalysisFeatures = Field(default_factory=AnalysisFeatures)
 
 
@@ -168,16 +213,6 @@ class CollectiveRegressionSpec(BaseModel):
     floor_mode: Literal["linear", "dummy", "grouped", "relative"] = "relative"
 
 
-class CollectiveRegressionRequest(BaseModel):
-    asset_type: AssetType
-    contract_year_from: Optional[int] = None
-    contract_year_to: Optional[int] = None
-    variables: CollectiveRegressionSpec = Field(default_factory=CollectiveRegressionSpec)
-    exclude_outliers_iqr: bool = False
-    outlier_iqr_multiplier: float = 3.0
-    experiment: bool = False
-
-
 class RegressionCoeff(BaseModel):
     name: str
     label: str
@@ -185,6 +220,73 @@ class RegressionCoeff(BaseModel):
     se: Optional[float] = None
     t: Optional[float] = None
     p: Optional[float] = None
+
+
+class ContinuousRange(BaseModel):
+    name: str
+    min: Optional[float] = None
+    max: Optional[float] = None
+
+
+class BuildingFeOption(BaseModel):
+    building_key: str
+    display_name: str
+    count: int
+    is_reference: bool = False
+    has_fe: bool = False
+
+
+class CollectivePredictOptions(BaseModel):
+    exclusive_area: Optional[ContinuousRange] = None
+    building_age: Optional[ContinuousRange] = None
+    floor: Optional[ContinuousRange] = None
+    max_floor: Optional[float] = None
+    floor_mode: str = "relative"
+    dongs: list[str] = Field(default_factory=list)
+    dong_reference: Optional[str] = None
+    housing_subtypes: list[str] = Field(default_factory=list)
+    housing_subtype_reference: Optional[str] = None
+    buildings: list[BuildingFeOption] = Field(default_factory=list)
+
+
+class CollectiveRegressionPredictInputs(BaseModel):
+    exclusive_area: Optional[float] = None
+    building_age: Optional[float] = None
+    floor: Optional[float] = None
+    dong: Optional[str] = None
+    housing_subtype: Optional[str] = None
+    building_key: Optional[str] = None
+
+
+class CollectiveRegressionRequest(BaseModel):
+    asset_type: AssetType
+    contract_year_from: Optional[int] = None
+    contract_year_to: Optional[int] = None
+    contract_date_from: Optional[date] = None
+    contract_date_to: Optional[date] = None
+    variables: CollectiveRegressionSpec = Field(default_factory=CollectiveRegressionSpec)
+    exclude_outliers_iqr: bool = False
+    outlier_iqr_multiplier: float = 3.0
+    experiment: bool = False
+
+
+class CollectiveRegressionPredictRequest(CollectiveRegressionRequest):
+    inputs: CollectiveRegressionPredictInputs = Field(default_factory=CollectiveRegressionPredictInputs)
+
+
+class CohortRegressionPredictRequest(CollectiveRegressionPredictRequest):
+    building_keys: list[str] = Field(..., min_length=1, max_length=10)
+
+
+class CollectiveRegressionPredictResponse(BaseModel):
+    n: int
+    y_hat: float
+    pi_lower: float
+    pi_upper: float
+    ci_lower: float
+    ci_upper: float
+    unit_price_hat: Optional[float] = None
+    warnings: list[str] = Field(default_factory=list)
 
 
 class CollectiveRegressionResponse(BaseModel):
@@ -195,3 +297,75 @@ class CollectiveRegressionResponse(BaseModel):
     adj_r_squared: Optional[float] = None
     coefficients: list[RegressionCoeff] = []
     warnings: list[str] = []
+    predict_options: Optional[CollectivePredictOptions] = None
+    explain: Optional[AnalysisExplain] = None
+
+
+class CohortBuildingSummary(BaseModel):
+    building_key: str
+    display_name: str
+    count: int
+
+
+class CohortAnalysisRequest(BaseModel):
+    building_keys: list[str] = Field(..., min_length=1, max_length=10)
+    asset_type: Optional[AssetType] = None
+    contract_year_from: Optional[int] = None
+    contract_year_to: Optional[int] = None
+    contract_date_from: Optional[date] = None
+    contract_date_to: Optional[date] = None
+    variables: CollectiveRegressionSpec = Field(default_factory=CollectiveRegressionSpec)
+    dimension: Literal["floor", "dong", "area", "rights"] = "floor"
+    exclude_outliers_iqr: bool = False
+    outlier_iqr_multiplier: float = 3.0
+    experiment: bool = False
+
+
+class CohortFloorIndexResponse(BaseModel):
+    building_keys: list[str]
+    cohort_buildings: list[CohortBuildingSummary]
+    asset_type: str
+    dimension: str
+    method: Optional[str] = None
+    reference_floor: Optional[str] = None
+    controls: list[str] = Field(default_factory=list)
+    n_total: int
+    n_regression: Optional[int] = None
+    r_squared: Optional[float] = None
+    baseline_median: Optional[float] = None
+    cells: list[FloorIndexCell] = []
+    warnings: list[str] = Field(default_factory=list)
+    explain: Optional[AnalysisExplain] = None
+    analysis: AnalysisFeatures = Field(default_factory=AnalysisFeatures)
+
+
+class CohortRegressionResponse(CollectiveRegressionResponse):
+    building_keys: list[str] = Field(default_factory=list)
+    cohort_buildings: list[CohortBuildingSummary] = Field(default_factory=list)
+
+
+class CohortYearlyStatsResponse(BaseModel):
+    building_keys: list[str]
+    series: list[YearlyStatsResponse]
+    data_source: Literal["live"] = "live"
+
+
+class CohortHistogramResponse(BaseModel):
+    building_keys: list[str]
+    bins: list[HistogramBin]
+    n: int = 0
+    contract_year: Optional[int] = None
+    data_source: Literal["live"] = "live"
+
+
+class CohortTransactionsRequest(CohortAnalysisRequest):
+    page: int = Field(1, ge=1)
+    page_size: int = Field(25, ge=1, le=200)
+    contract_year: Optional[int] = None
+
+
+class CohortTransactionsResponse(BaseModel):
+    building_keys: list[str]
+    total: int
+    items: list[CollectiveTransactionRow]
+    data_source: Literal["live"] = "live"

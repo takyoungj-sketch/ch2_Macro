@@ -3,16 +3,17 @@
 @tailwind utilities;
 
 body {
-  @apply bg-slate-100 text-slate-900 antialiased;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+  @apply bg-slate-100 text-slate-900 antialiased dark:bg-slate-900 dark:text-slate-100;
 }
 
 .input {
-  @apply w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm;
+  @apply w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm
+    dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100;
 }
 
 .card {
-  @apply rounded-lg border border-slate-200 bg-white shadow-sm;
+  @apply rounded-lg border border-slate-200 bg-white shadow-sm
+    dark:border-slate-700 dark:bg-slate-800;
 }
 
 .btn {
@@ -20,11 +21,13 @@ body {
 }
 
 .btn-primary {
-  @apply bg-slate-800 text-white hover:bg-slate-700;
+  @apply bg-slate-800 text-white hover:bg-slate-700
+    dark:bg-slate-600 dark:hover:bg-slate-500;
 }
 
 .btn-ghost {
-  @apply bg-slate-100 text-slate-700 hover:bg-slate-200;
+  @apply bg-slate-100 text-slate-700 hover:bg-slate-200
+    dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600;
 }
 
 table.data {
@@ -32,43 +35,63 @@ table.data {
 }
 
 table.data.buildings-table {
-  width: 26cm;
-  min-width: 26cm;
-  max-width: 26cm;
+  width: 100%;
+  min-width: 44cm;
 }
 
-table.data.buildings-table col.col-name {
+table.data.buildings-table col.col-jibun {
   width: 7cm;
 }
 
-table.data.buildings-table col.col-addr {
-  width: 6cm;
+table.data.buildings-table col.col-road {
+  width: 9cm;
+}
+
+table.data.buildings-table col.col-type {
+  width: 2cm;
+}
+
+table.data.buildings-table col.col-name {
+  width: 5.5cm;
 }
 
 table.data.buildings-table col.col-year {
-  width: 2.5cm;
+  width: 2.2cm;
 }
 
 table.data.buildings-table col.col-num {
-  width: 2.625cm;
+  width: 2.4cm;
 }
 
 table.data th,
 table.data td {
-  @apply px-1 py-0.5 border-b border-slate-100 align-middle overflow-hidden;
+  @apply px-1 py-0.5 border-b border-slate-100 align-middle overflow-hidden
+    dark:border-slate-700;
 }
 
 table.data th {
-  @apply bg-slate-50 font-semibold text-slate-600;
+  @apply bg-slate-50 font-semibold text-slate-600
+    dark:bg-slate-800 dark:text-slate-300;
 }
 
 table.data td.num {
   @apply text-right tabular-nums whitespace-nowrap;
 }
 
-table.data td.name,
-table.data td.addr {
+table.data td.name {
   @apply truncate text-center;
+}
+
+table.data td.addr {
+  @apply text-left whitespace-normal break-words leading-snug;
+}
+
+table.data.buildings-table td.addr {
+  @apply text-center;
+}
+
+table.data.buildings-table th.col-addr-head {
+  @apply text-center;
 }
 
 table.data.buildings-table th:first-child,
@@ -77,9 +100,50 @@ table.data.buildings-table th:last-child {
 }
 
 .layout-sidebar {
-  @apply w-72 shrink-0 border-r border-slate-200 bg-white overflow-y-auto;
+  @apply w-72 shrink-0 border-r border-slate-200 bg-white overflow-y-auto
+    dark:border-slate-700 dark:bg-slate-800;
 }
 
 .layout-main {
   @apply flex-1 min-w-0 overflow-auto;
+}
+
+.modal-shell {
+  @apply bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100;
+}
+
+.modal-header {
+  @apply border-b border-slate-100 dark:border-slate-700;
+}
+
+.modal-tab-bar {
+  @apply border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/60;
+}
+
+.modal-tab-active {
+  @apply bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm border border-slate-100 dark:border-slate-600;
+}
+
+.modal-tab-idle {
+  @apply text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200;
+}
+
+.modal-card {
+  @apply rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/40;
+}
+
+.modal-table-wrap {
+  @apply rounded-lg border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden;
+}
+
+.modal-inner-table th {
+  @apply bg-slate-50 dark:bg-slate-900/60 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600;
+}
+
+.modal-inner-table td {
+  @apply text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-600;
+}
+
+.modal-select {
+  @apply border border-slate-200 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100;
 }

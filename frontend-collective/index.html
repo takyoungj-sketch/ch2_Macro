@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CH2 Macro · 집합부동산</title>
     <script>
+      (function () {
+        try {
+          var s = localStorage.getItem("ch2_macro_ui_color_scheme");
+          if (s === "dark") document.documentElement.classList.add("dark");
+          if (s === "dark" || s === "light") document.documentElement.style.colorScheme = s;
+        } catch (e) {}
+      })();
+    </script>
+    <script>
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker.getRegistrations().then(function (rs) {
           rs.forEach(function (r) {

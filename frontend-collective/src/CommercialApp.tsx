@@ -10,7 +10,10 @@ import {
   fetchCommercialRegionStructure,
 } from "./api/commercialClient";
 import CommercialClusterDetailModal from "./components/CommercialClusterDetailModal";
+import StatsPageHeader from "./components/StatsPageHeader";
 import RegionChipPanel from "./components/RegionChipPanel";
+import { useUiColorScheme } from "./hooks/useUiColorScheme";
+import { useUiFontScale } from "./hooks/useUiFontScale";
 import { COMMERCIAL_ASSET_LABELS, type CommercialAssetType, type CommercialClusterRow, type RegionOption } from "./types";
 
 function fmtPrice(v: number | null | undefined) {
@@ -46,6 +49,8 @@ export default function CommercialApp() {
   const [sort, setSort] = useState("count");
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [selected, setSelected] = useState<CommercialClusterRow | null>(null);
+  const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
+  const { isDark, toggleUiColorScheme } = useUiColorScheme();
 
   const metaQ = useQuery({ queryKey: ["comm-meta"], queryFn: fetchCommercialFilterMeta });
   const addr2Q = useQuery({
@@ -153,40 +158,31 @@ export default function CommercialApp() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="bg-slate-900 text-white px-6 py-4">
-        <p className="text-xs text-slate-400 mb-1">
-          <a href="/" className="hover:text-white">
-            CH2 Macro
-          </a>
-          {" · "}
-          <a href="/land/" className="hover:text-white">
-            토지
-          </a>
-          {" · "}
-          <a href="/built/" className="hover:text-white">
-            복합
-          </a>
-          {" · "}
-          <a href="/collective/" className="hover:text-white">
-            집합
-          </a>
-        </p>
-        <h1 className="text-xl font-semibold">상업·업무 집합부동산</h1>
-        <p className="text-sm text-slate-400 mt-1">
-          집합상가 · 집합공장 — 도로(cluster)별 ㎡당 단가 · 95% CI ·{" "}
-          <a href="/collective/residential/" className="underline hover:text-white">
-            주거형 집합
-          </a>
-        </p>
-      </header>
+    <div className="min-h-screen flex flex-col bg-slate-100 dark:bg-slate-900">
+      <StatsPageHeader
+        title="상업·업무 집합부동산"
+        subtitle={
+          <>
+            집합상가 · 집합공장 — 도로(cluster)별 ㎡당 단가 · 95% CI ·{" "}
+            <a href="/collective/residential/" className="underline hover:text-slate-700 dark:hover:text-slate-200">
+              주거형 집합
+            </a>
+          </>
+        }
+        fontPct={fontPct}
+        fontStepMin={fontStepMin}
+        fontStepMax={fontStepMax}
+        onBumpFont={bumpUiFontScale}
+        isDark={isDark}
+        onToggleTheme={toggleUiColorScheme}
+      />
 
-      <main className="flex flex-1 min-h-0">
+      <main className="flex flex-1 min-h-0" style={{ zoom: contentZoom }}>
         <aside className="layout-sidebar p-4">
-          <h2 className="text-sm font-semibold mb-3">조건</h2>
+          <h2 className="text-sm font-semibold mb-3 text-slate-800 dark:text-slate-100">조건</h2>
           <div className="space-y-3">
             <label className="text-xs block space-y-1">
-              <span className="text-slate-500">유형</span>
+              <span className="text-slate-500 dark:text-slate-400">유형</span>
               <select
                 className="input"
                 value={assetType}
@@ -205,7 +201,7 @@ export default function CommercialApp() {
 
             <div className="grid grid-cols-2 gap-2">
               <label className="text-xs block space-y-1">
-                <span className="text-slate-500">연도(from)</span>
+                <span className="text-slate-500 dark:text-slate-400">연도(from)</span>
                 <select className="input" value={yearFrom} onChange={(e) => setYearFrom(e.target.value ? Number(e.target.value) : "")}>
                   <option value="">—</option>
                   {years.map((y) => (
@@ -216,7 +212,7 @@ export default function CommercialApp() {
                 </select>
               </label>
               <label className="text-xs block space-y-1">
-                <span className="text-slate-500">연도(to)</span>
+                <span className="text-slate-500 dark:text-slate-400">연도(to)</span>
                 <select className="input" value={yearTo} onChange={(e) => setYearTo(e.target.value ? Number(e.target.value) : "")}>
                   <option value="">—</option>
                   {years.map((y) => (
@@ -229,7 +225,7 @@ export default function CommercialApp() {
             </div>
 
             <label className="text-xs block space-y-1">
-              <span className="text-slate-500">시도</span>
+              <span className="text-slate-500 dark:text-slate-400">시도</span>
               <select
                 className="input"
                 value={addr1}
@@ -249,7 +245,7 @@ export default function CommercialApp() {
             </label>
 
             <label className="text-xs block space-y-1">
-              <span className="text-slate-500">시군구</span>
+              <span className="text-slate-500 dark:text-slate-400">시군구</span>
               <select
                 className="input"
                 value={addr2}
@@ -297,7 +293,7 @@ export default function CommercialApp() {
             )}
 
             <label className="text-xs block space-y-1">
-              <span className="text-slate-500">정렬</span>
+              <span className="text-slate-500 dark:text-slate-400">정렬</span>
               <select className="input" value={sort} onChange={(e) => setSort(e.target.value)}>
                 <option value="count">거래수</option>
                 <option value="mean">평균 단가</option>
@@ -313,21 +309,21 @@ export default function CommercialApp() {
 
         <div className="layout-main p-4 min-w-0 flex-1">
             {!scope && (
-              <p className="text-sm text-slate-500">시군구까지 선택한 뒤 「통계분석」을 누르면 도로(cluster) 목록이 표시됩니다.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">시군구까지 선택한 뒤 「통계분석」을 누르면 도로(cluster) 목록이 표시됩니다.</p>
             )}
             {scopeStale && (
-              <p className="text-xs text-amber-700 mb-2 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+              <p className="text-xs text-amber-700 dark:text-amber-300 mb-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded px-2 py-1">
                 조건이 변경되었습니다. 「통계분석」을 다시 실행하세요.
               </p>
             )}
-            {scope && clustersQ.isLoading && <p className="text-sm text-slate-500">불러오는 중…</p>}
+            {scope && clustersQ.isLoading && <p className="text-sm text-slate-500 dark:text-slate-400">불러오는 중…</p>}
             {scope && clustersQ.isError && <p className="text-sm text-red-600">도로 목록을 불러오지 못했습니다.</p>}
             {scope && clustersQ.data && (
               <>
-                <p className="text-xs text-slate-500 mb-2">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
                   {scope.addr1} {scope.addr2} · 도로 {clustersQ.data.total}개
                 </p>
-                <div className="card overflow-x-auto p-0">
+                <div className="card overflow-x-auto p-0 w-full">
                   <table className="data buildings-table">
                     <thead>
                       <tr>
@@ -344,8 +340,8 @@ export default function CommercialApp() {
                         <tr
                           key={row.cluster_key}
                           className={clsx(
-                            "hover:bg-indigo-50 cursor-pointer",
-                            selected?.cluster_key === row.cluster_key && "bg-indigo-50",
+                            "hover:bg-indigo-50 dark:hover:bg-indigo-950/40 cursor-pointer",
+                            selected?.cluster_key === row.cluster_key && "bg-indigo-50 dark:bg-indigo-950/50",
                           )}
                           onClick={() => setSelected(row)}
                         >
@@ -357,7 +353,7 @@ export default function CommercialApp() {
                           <td className="num">{fmtPrice(row.mean)}</td>
                           <td className="num">{fmtPrice(row.median)}</td>
                           <td className="num text-[10px]">{fmtCi(row.ci_lower, row.ci_upper)}</td>
-                          <td className="text-[10px] text-slate-600">
+                          <td className="text-[10px] text-slate-600 dark:text-slate-300">
                             {[row.addr3, row.addr4].filter(Boolean).join(" · ") || "—"}
                           </td>
                         </tr>

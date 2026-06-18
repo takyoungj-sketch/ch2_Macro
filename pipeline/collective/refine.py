@@ -6,6 +6,7 @@ MOLIT raw or refined xlsx → canonical collective DataFrame.
 
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 from typing import Literal
@@ -13,7 +14,12 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 
-from molit_schemas import REFINED_COL_MAP, SCHEMAS, AssetType
+try:
+    from .molit_schemas import REFINED_COL_MAP, SCHEMAS, AssetType
+except ImportError:
+    from molit_schemas import REFINED_COL_MAP, SCHEMAS, AssetType
+
+log = logging.getLogger(__name__)
 
 InputKind = Literal["raw", "refined"]
 
@@ -103,6 +109,9 @@ def _extract_raw(df: pd.DataFrame, asset_type: AssetType) -> pd.DataFrame:
     out["lot_number"] = out.get("lot_number", out.get("lot_number"))
     out["road_name"] = out.get("road_name")
     out["housing_subtype"] = out.get("housing_subtype")
+    for col in ("buyer_type", "seller_type", "deal_type"):
+        if col in out.columns:
+            out[col] = out[col].astype(str).str.strip().replace({"nan": None, "-": None, "None": None})
     if "dong" not in out.columns:
         out["dong"] = None
     if asset_type == "rowhouse" and "land_area" in out.columns:
@@ -185,16 +194,35 @@ def read_molit_raw_csv(path) -> pd.DataFrame:
     last_err: Exception | None = None
     for enc in ("utf-8-sig", "utf-8", "cp949"):
         try:
-            return pd.read_csv(
+            df = pd.read_csv(
                 path,
                 header=None,
                 skiprows=MOLIT_CSV_SKIPROWS,
                 encoding=enc,
                 dtype=str,
                 keep_default_na=False,
+                on_bad_lines="skip",
             )
+            if enc != "utf-8-sig":
+                log.warning("%s: read with encoding %s (malformed rows skipped)", path.name, enc)
+            return df
         except UnicodeDecodeError as e:
             last_err = e
+        except pd.errors.ParserError as e:
+            log.warning("%s: parser error with %s (%s) — retry python engine", path.name, enc, e)
+            try:
+                return pd.read_csv(
+                    path,
+                    header=None,
+                    skiprows=MOLIT_CSV_SKIPROWS,
+                    encoding=enc,
+                    dtype=str,
+                    keep_default_na=False,
+                    engine="python",
+                    on_bad_lines="skip",
+                )
+            except UnicodeDecodeError as e2:
+                last_err = e2
     if last_err:
         raise last_err
     raise RuntimeError(f"failed to read csv: {path}")

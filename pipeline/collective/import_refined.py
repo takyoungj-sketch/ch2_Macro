@@ -17,29 +17,39 @@ from __future__ import annotations
 import argparse
 import hashlib
 import logging
+import sys
 from pathlib import Path
 
 import pandas as pd
 from sqlalchemy import text
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from region_mapping import attach_beopjungri_codes, clean_code_columns, log_mapping_coverage
+
 from building_keys import _sha256_series, attach_building_identity
-from db_utils import get_collective_engine, get_land_engine_for_region_copy
+from collective.db_utils import get_collective_engine, get_land_engine_for_region_copy
 from refine import InputKind, detect_input_kind, read_source_file, refine_dataframe
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
 REPO = Path(__file__).resolve().parents[2]
-GUKTO = Path(r"C:\startcoding\GUKTO")
-DEFAULT_APARTMENT_DIR = REPO / "원본" / "아파트"
-DEFAULT_OFFICETEL_DIR = REPO / "원본" / "오피스텔"
-DEFAULT_ROWHOUSE_DIR = REPO / "원본" / "연립다세대"
-DEFAULT_PRESALE_DIR = REPO / "원본" / "분양입주권"
+RAW_BASE = REPO / "raw" / "raw base"
+DEFAULT_APARTMENT_DIR = RAW_BASE / "아파트_2021_2026"
+DEFAULT_OFFICETEL_DIR = RAW_BASE / "오피스텔_2021_2026"
+DEFAULT_ROWHOUSE_DIR = RAW_BASE / "연립다세대_2021_2026"
+DEFAULT_PRESALE_DIR = RAW_BASE / "분양입주권_2021_2026"
 DEFAULT_ROWHOUSE = DEFAULT_ROWHOUSE_DIR  # legacy --rowhouse 단일 파일 대신 디렉터리 기본
 DEFAULT_OFFICETEL = DEFAULT_OFFICETEL_DIR  # legacy --officetel 단일 파일 대신 디렉터리 기본
 DDL = REPO / "db" / "016_collective_transactions.sql"
 MIGRATION_ROW_IDENTITY = REPO / "db" / "017_collective_tx_row_identity.sql"
 MIGRATION_LAND_AREA = REPO / "db" / "018_collective_land_area.sql"
+MIGRATION_REGION = REPO / "db" / "022_collective_region_patch.sql"
+MIGRATION_REGION_META = REPO / "db" / "022b_region_sigungu_meta.sql"
+MIGRATION_DISPLAY = REPO / "db" / "026_collective_tx_display_columns.sql"
+MIGRATION_ROLLING = REPO / "db" / "027_collective_building_rolling_stats.sql"
+
+RESIDENTIAL_ASSET_TYPES = ("apartment", "rowhouse", "officetel", "presale")
 
 INSERT_STMT = text(
     """
@@ -50,7 +60,9 @@ INSERT_STMT = text(
         sido_code, sigungu_code, eupmyeondong_code, beopjungri_code,
         contract_year, contract_month, contract_date,
         building_year, building_age, exclusive_area, land_area, price, unit_price,
-        area_bucket, age_bucket, floor, dong, is_valid
+        area_bucket, age_bucket, floor, dong,
+        buyer_type, seller_type, deal_type,
+        is_valid, needs_review, mapping_notes
     ) VALUES (
         :transaction_hash, :asset_type, :building_key, :display_name,
         :building_name, :housing_subtype,
@@ -58,7 +70,9 @@ INSERT_STMT = text(
         :sido_code, :sigungu_code, :eupmyeondong_code, :beopjungri_code,
         :contract_year, :contract_month, :contract_date,
         :building_year, :building_age, :exclusive_area, :land_area, :price, :unit_price,
-        :area_bucket, :age_bucket, :floor, :dong, :is_valid
+        :area_bucket, :age_bucket, :floor, :dong,
+        :buyer_type, :seller_type, :deal_type,
+        :is_valid, :needs_review, :mapping_notes
     )
     """
 )
@@ -157,6 +171,27 @@ def ensure_schema(engine) -> None:
             conn.execute(text(MIGRATION_ROW_IDENTITY.read_text(encoding="utf-8")))
         if MIGRATION_LAND_AREA.is_file():
             conn.execute(text(MIGRATION_LAND_AREA.read_text(encoding="utf-8")))
+        if MIGRATION_REGION.is_file():
+            conn.execute(text(MIGRATION_REGION.read_text(encoding="utf-8")))
+        if MIGRATION_REGION_META.is_file():
+            conn.execute(text(MIGRATION_REGION_META.read_text(encoding="utf-8")))
+        if MIGRATION_DISPLAY.is_file():
+            conn.execute(text(MIGRATION_DISPLAY.read_text(encoding="utf-8")))
+        if MIGRATION_ROLLING.is_file():
+            conn.execute(text(MIGRATION_ROLLING.read_text(encoding="utf-8")))
+
+
+def truncate_residential(engine) -> None:
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                """
+                DELETE FROM collective_transactions
+                WHERE asset_type IN ('apartment', 'rowhouse', 'officetel', 'presale')
+                """
+            )
+        )
+    log.info("truncated residential collective_transactions (4 types)")
 
 
 def sync_region_codes_from_land(collective_engine, land_engine, *, force: bool = False) -> None:
@@ -261,11 +296,16 @@ def _records_from_df(df: pd.DataFrame, asset_type: str) -> list[dict]:
             "age_bucket": _null_if_nan(getattr(row, "age_bucket", None)),
             "floor": _null_if_nan(getattr(row, "floor", None)),
             "dong": _null_if_nan(getattr(row, "dong", None)),
+            "buyer_type": _null_if_nan(getattr(row, "buyer_type", None)),
+            "seller_type": _null_if_nan(getattr(row, "seller_type", None)),
+            "deal_type": _null_if_nan(getattr(row, "deal_type", None)),
             "is_valid": True,
             "sido_code": getattr(row, "sido_code", None),
             "sigungu_code": getattr(row, "sigungu_code", None),
             "eupmyeondong_code": getattr(row, "eupmyeondong_code", None),
             "beopjungri_code": getattr(row, "beopjungri_code", None),
+            "needs_review": bool(getattr(row, "needs_review", False)),
+            "mapping_notes": _null_if_nan(getattr(row, "mapping_notes", None)),
         }
         for ck in ("sido_code", "sigungu_code", "eupmyeondong_code", "beopjungri_code"):
             w = {"sido_code": 2, "sigungu_code": 5, "eupmyeondong_code": 8, "beopjungri_code": 10}[ck]
@@ -288,7 +328,15 @@ def _insert_records(engine, records: list[dict]) -> int:
     return inserted
 
 
-def ingest_paths(paths: list[Path], asset_type: str, engine, rc: pd.DataFrame, truncate_type: bool) -> int:
+def ingest_paths(
+    paths: list[Path],
+    asset_type: str,
+    engine,
+    region_maps: dict,
+    truncate_type: bool,
+    *,
+    resume_from: str | None = None,
+) -> int:
     if truncate_type:
         with engine.begin() as conn:
             conn.execute(
@@ -297,14 +345,22 @@ def ingest_paths(paths: list[Path], asset_type: str, engine, rc: pd.DataFrame, t
             )
 
     total = 0
+    past_resume = resume_from is None
     for path in paths:
+        if not past_resume:
+            if path.name == resume_from:
+                past_resume = True
+            else:
+                log.info("skip (resume) %s", path.name)
+                continue
         if not path.is_file():
             log.warning("skip missing %s", path)
             continue
         log.info("Reading %s", path)
         df_raw, kind = read_source_file(path)
         df = _prepare_df(df_raw, asset_type, path, input_kind=kind)
-        df = _attach_codes(df, rc)
+        df = attach_beopjungri_codes(df, engine, region_maps=region_maps)
+        df = clean_code_columns(df)
         n = _insert_records(engine, _records_from_df(df, asset_type))
         total += n
         log.info("%s: %d rows (cumulative %d)", path.name, n, total)
@@ -313,16 +369,17 @@ def ingest_paths(paths: list[Path], asset_type: str, engine, rc: pd.DataFrame, t
     return total
 
 
-def resolve_officetel_paths(officetel_arg: Path) -> list[Path]:
-    if officetel_arg.is_dir():
-        paths = sorted(officetel_arg.glob("*.csv"))
+def resolve_apartment_paths(apartment_dir: Path) -> list[Path]:
+    if apartment_dir.is_dir():
+        paths = sorted(apartment_dir.glob("*.csv"))
         if not paths:
-            paths = sorted(officetel_arg.glob("*.xlsx"))
+            paths = sorted(apartment_dir.glob("*.xlsx"))
         return paths
-    return [officetel_arg]
+    return [apartment_dir]
 
 
-resolve_rowhouse_paths = resolve_officetel_paths
+resolve_officetel_paths = resolve_apartment_paths
+resolve_rowhouse_paths = resolve_apartment_paths
 
 
 def resolve_presale_paths(presale_arg: Path) -> list[Path]:
@@ -353,34 +410,61 @@ def main() -> None:
     p.add_argument("--officetel-only", action="store_true")
     p.add_argument("--presale-only", action="store_true")
     p.add_argument("--refresh-region-codes", action="store_true")
+    p.add_argument(
+        "--truncate-residential",
+        action="store_true",
+        help="주거 4유형 collective_transactions 전량 삭제 후 ingest",
+    )
+    p.add_argument(
+        "--resume-from",
+        metavar="FILENAME",
+        help="해당 파일명부터 ingest (이전 파일 스킵, truncate 없이 재개)",
+    )
     args = p.parse_args()
 
     only = sum([args.apartment_only, args.rowhouse_only, args.officetel_only, args.presale_only])
     if only > 1:
         raise SystemExit("only one --*-only flag")
 
+    from clean import build_region_lookup
+
     eng = get_collective_engine()
     land = get_land_engine_for_region_copy()
     ensure_schema(eng)
     sync_region_codes_from_land(eng, land, force=args.refresh_region_codes)
-    rc = _load_region_codes_df(eng)
+    region_maps = build_region_lookup(eng)
+
+    if args.truncate_residential and only == 0:
+        truncate_residential(eng)
 
     run_all = only == 0
     if run_all or args.apartment_only:
-        apt_paths = sorted(args.apartment_dir.glob("*.xlsx"))
-        ingest_paths(apt_paths, "apartment", eng, rc, truncate_type=True)
+        apt_paths = resolve_apartment_paths(args.apartment_dir)
+        if not apt_paths:
+            raise SystemExit(f"no apartment files under {args.apartment_dir}")
+        ingest_paths(
+            apt_paths,
+            "apartment",
+            eng,
+            region_maps,
+            truncate_type=(run_all or args.apartment_only) and not args.resume_from,
+            resume_from=args.resume_from if (run_all or args.apartment_only) else None,
+        )
+        log_mapping_coverage(eng, "collective_transactions", asset_type="apartment")
     if run_all or args.rowhouse_only:
         rh_root = args.rowhouse_dir or args.rowhouse
         rh_paths = resolve_rowhouse_paths(rh_root)
         if not rh_paths:
             raise SystemExit(f"no rowhouse files under {rh_root}")
-        ingest_paths(rh_paths, "rowhouse", eng, rc, truncate_type=run_all or args.rowhouse_only)
+        ingest_paths(rh_paths, "rowhouse", eng, region_maps, truncate_type=run_all or args.rowhouse_only)
+        log_mapping_coverage(eng, "collective_transactions", asset_type="rowhouse")
     if run_all or args.officetel_only:
         ot_root = args.officetel_dir or args.officetel
         ot_paths = resolve_officetel_paths(ot_root)
         if not ot_paths:
             raise SystemExit(f"no officetel files under {ot_root}")
-        ingest_paths(ot_paths, "officetel", eng, rc, truncate_type=run_all or args.officetel_only)
+        ingest_paths(ot_paths, "officetel", eng, region_maps, truncate_type=run_all or args.officetel_only)
+        log_mapping_coverage(eng, "collective_transactions", asset_type="officetel")
     if run_all or args.presale_only:
         ps_paths = resolve_presale_paths(args.presale_dir)
         if not ps_paths:
@@ -388,7 +472,8 @@ def main() -> None:
                 raise SystemExit(f"no presale files under {args.presale_dir}")
             log.warning("no presale csv under %s — skip", args.presale_dir)
         else:
-            ingest_paths(ps_paths, "presale", eng, rc, truncate_type=run_all or args.presale_only)
+            ingest_paths(ps_paths, "presale", eng, region_maps, truncate_type=run_all or args.presale_only)
+            log_mapping_coverage(eng, "collective_transactions", asset_type="presale")
 
 
 if __name__ == "__main__":

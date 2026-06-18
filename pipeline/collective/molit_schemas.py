@@ -36,6 +36,9 @@ APARTMENT = MolitSchema(
         "floor": 11,
         "building_year": 14,
         "road_name": 15,
+        "buyer_type": 12,
+        "seller_type": 13,
+        "deal_type": 17,
     },
 )
 
@@ -58,6 +61,9 @@ ROWHOUSE = MolitSchema(
         "building_year": 14,
         "road_name": 15,
         "housing_subtype": 20,
+        "buyer_type": 12,
+        "seller_type": 13,
+        "deal_type": 17,
     },
 )
 
@@ -78,6 +84,9 @@ OFFICETEL = MolitSchema(
         "floor": 10,
         "building_year": 13,
         "road_name": 14,
+        "buyer_type": 11,
+        "seller_type": 12,
+        "deal_type": 16,
     },
 )
 
@@ -98,6 +107,9 @@ PRESALE = MolitSchema(
         "contract_ym": 9,
         "contract_day": 10,
         "housing_subtype": 11,
+        "buyer_type": 7,
+        "seller_type": 8,
+        "deal_type": 14,
     },
 )
 

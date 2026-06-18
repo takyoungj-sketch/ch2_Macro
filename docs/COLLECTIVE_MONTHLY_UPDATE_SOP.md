@@ -5,6 +5,8 @@
 
 관련: [`MONTHLY_UPDATE_SOP.md`](MONTHLY_UPDATE_SOP.md), [`BUILT_MONTHLY_UPDATE_SOP.md`](BUILT_MONTHLY_UPDATE_SOP.md), [`COLLECTIVE_RESEARCH_MVP.md`](COLLECTIVE_RESEARCH_MVP.md)
 
+> **⚠ CSV Selenium 수집:** historical·backfill 시 [`MOLIT_CSV_COLLECTOR_WARNINGS.md`](MOLIT_CSV_COLLECTOR_WARNINGS.md) — 검증 없는 rename 금지.
+
 ---
 
 ## 1. 실행 순서
