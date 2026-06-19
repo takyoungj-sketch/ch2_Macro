@@ -263,6 +263,45 @@ def _apply_floor_display_reference(
     return cells, extra_warnings, display_label
 
 
+def _period_code(year: float | None, month: float | None) -> str | None:
+    """거래 시점 → 반기 코드(예: 2025H1). 월 결측이면 연도 코드로 폴백."""
+    if year is None or pd.isna(year):
+        return None
+    y = int(year)
+    if month is None or pd.isna(month):
+        return f"{y}"
+    m = int(month)
+    return f"{y}H{1 if m <= 6 else 2}"
+
+
+def _add_time_dummies(reg: pd.DataFrame, parts: list[pd.DataFrame], controls: list[str]) -> None:
+    """거래 시점(반기) 통제 — 표본 최다 반기를 기준(omitted)으로 더미화.
+
+    선택 구간이 수년이면 시장 추세가 층·면적 분포와 교란되므로, 효용지수에서
+    시장 상승/하락분을 제거하기 위한 통제. 더미 자체는 cell로 노출하지 않는다.
+    """
+    if "contract_year" not in reg.columns:
+        return
+    months = reg["contract_month"] if "contract_month" in reg.columns else pd.Series(np.nan, index=reg.index)
+    reg["_period_code"] = [
+        _period_code(y, m) for y, m in zip(reg["contract_year"], months)
+    ]
+    counts = reg["_period_code"].dropna().value_counts()
+    if len(counts) < 2:
+        return
+    ref = str(counts.idxmax())
+    added = False
+    for code, cnt in counts.items():
+        if code == ref or cnt < MIN_GROUP_FOR_DUMMY:
+            continue
+        col = f"time_{code}"
+        reg[col] = (reg["_period_code"] == code).astype(float)
+        parts.append(reg[[col]])
+        added = True
+    if added:
+        controls.append("contract_period")
+
+
 def _add_floor_control_dummies(reg: pd.DataFrame, parts: list[pd.DataFrame], controls: list[str]) -> None:
     """층 구간을 통제변수로 (1층 기준)."""
     if "floor_index_code" not in reg.columns:
@@ -531,13 +570,20 @@ def compute_residential_floor_index_regression(
         )
 
     reg["ln_unit_price"] = np.log(reg["unit_price"].astype(float))
-    reg["ln_exclusive_area"] = np.log(reg["exclusive_area"].astype(float))
-    parts: list[pd.DataFrame] = [reg[["ln_exclusive_area"]]]
-    controls.append("ln_exclusive_area")
+    parts: list[pd.DataFrame] = []
+
+    # 면적 차원에서는 연속 ln(면적)과 면적 버킷 더미가 면적 효과를 이중으로 잡으므로
+    # ln(면적) 통제를 빼고 버킷 더미만 둔다. 그 외 차원은 규모 프리미엄을 통제한다.
+    if effective_dim != "area":
+        reg["ln_exclusive_area"] = np.log(reg["exclusive_area"].astype(float))
+        parts.append(reg[["ln_exclusive_area"]])
+        controls.append("ln_exclusive_area")
 
     if reg["building_age"].notna().any():
         parts.append(reg[["building_age"]].astype(float))
         controls.append("building_age")
+
+    _add_time_dummies(reg, parts, controls)
 
     if effective_dim != "floor":
         _add_floor_control_dummies(reg, parts, controls)
@@ -592,7 +638,8 @@ def compute_residential_floor_index_regression(
 
     X = sm.add_constant(X, has_constant="add")
     try:
-        model = sm.OLS(y, X, missing="drop").fit()
+        # HC3 강건표준오차 — 부동산 단가의 이분산성 대응 (계수는 OLS와 동일, SE만 보정)
+        model = sm.OLS(y, X, missing="drop").fit(cov_type="HC3")
     except Exception as exc:
         warnings.append(f"회귀 실패: {exc}")
         fb_ref, fb_label = (

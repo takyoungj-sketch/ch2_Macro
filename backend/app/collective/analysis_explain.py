@@ -10,6 +10,7 @@ CONTROL_LABELS: dict[str, str] = {
     "building_age": "연식(경과연수)",
     "building_use": "건축물용도 더미",
     "relative_floor": "상대 층구간 더미",
+    "contract_period": "거래시점(반기) 더미",
     "building_fixed_effects": "단지 고정효과",
 }
 
@@ -44,9 +45,11 @@ def _preset_answers_residential_floor_index() -> list[dict[str, str]]:
             "id": "formula",
             "question": "공식이 어떻게 만들어졌나요?",
             "answer": (
-                "종속변수 ln(㎡당단가)에 대해 OLS(최소자승) 회귀를 추정합니다. "
-                "독립변수는 ln(전용면적), 연식, (동·면적·권리 탭일 때) 상대 층구간 더미, "
-                "분석 차원(층·동·면적형·권리) 더미, (코호트일 때) 단지 고정효과입니다. "
+                "종속변수 ln(㎡당단가)에 대해 HC3 강건표준오차 OLS 회귀를 추정합니다. "
+                "통제변수는 ln(전용면적), 연식, 거래시점(반기) 더미, (동·면적·권리 탭일 때) 상대 층구간 더미, "
+                "(코호트일 때) 단지 고정효과이며, 여기에 분석 차원(층·동·면적형·권리) 더미를 더합니다. "
+                "단, 면적형 탭은 면적을 더미로 직접 추정하므로 ln(전용면적)을 통제에서 빼 이중 반영을 막습니다. "
+                "거래시점(반기)을 통제해 선택 기간의 시장 추세가 지수에 섞이지 않게 합니다. "
                 "층 탭은 회귀 omitted category를 거래 최다 구간으로 두고, 화면 지수는 1층=100%로 환산합니다."
             ),
         },
@@ -529,8 +532,11 @@ def build_residential_floor_index_explain(*, raw: dict, asset_type: str) -> dict
             + (f" (층 형식: {floor_mode_label})" if dim == "floor" else "")
         ),
         "formula": (
-            "ln(㎡당단가) = β₀ + ln(전용면적) + 연식"
-            + (" + 상대층 더미" if dim != "floor" else "")
+            "ln(㎡당단가) = β₀"
+            + (" + ln(전용면적)" if "ln_exclusive_area" in controls else "")
+            + (" + 연식" if "building_age" in controls else "")
+            + (" + 거래시점(반기) 더미" if "contract_period" in controls else "")
+            + (" + 상대층 더미" if "relative_floor" in controls else "")
             + (" + 단지 FE" if "building_fixed_effects" in controls else "")
             + " + Σ γ_g·D_g"
         ),
@@ -544,9 +550,13 @@ def build_residential_floor_index_explain(*, raw: dict, asset_type: str) -> dict
         "floor_groups": floor_lines,
         "controls": controls_h,
         "interpretation": [
-            f"지수는 「비슷한 전용면적·연식」 조건에서의 {dim_title} 간 상대 수준입니다.",
+            (
+                f"지수는 「{', '.join(controls_h)}」을(를) 통제한 뒤의 {dim_title} 간 상대 수준입니다."
+                if controls_h
+                else f"지수는 {dim_title} 간 상대 ㎡당 단가 수준입니다."
+            ),
             f"100%보다 낮을수록 기준({ref}) 대비 ㎡당 단가가 낮은 패턴입니다.",
-            "95% CI는 계수 불확실성을 반영한 구간 추정치입니다.",
+            "95% CI는 HC3 강건표준오차 기반 구간 추정치입니다.",
         ],
         "limitations": [
             "단지·기간 내 패턴 설명 — 인과 추론 불가",

@@ -39,6 +39,7 @@ const CONTROL_LABELS: Record<string, string> = {
   ln_gross_area: "ln(연면적)",
   building_age: "연식",
   relative_floor: "상대 층구간",
+  contract_period: "거래시점(반기)",
   building_fixed_effects: "단지 고정효과",
 };
 

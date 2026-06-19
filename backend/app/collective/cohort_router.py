@@ -76,7 +76,7 @@ def _fetch_cohort_transactions(
             f"""
             SELECT building_key, display_name, asset_type,
                    unit_price, floor, dong, housing_subtype, exclusive_area,
-                   price, building_age, building_year, contract_year
+                   price, building_age, building_year, contract_year, contract_month
             FROM collective_transactions
             WHERE {where}
             """

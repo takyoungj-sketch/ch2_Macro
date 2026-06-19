@@ -627,7 +627,7 @@ def building_floor_index(
         text(
             f"""
             SELECT unit_price, floor, dong, housing_subtype, exclusive_area,
-                   contract_year, building_age, building_year
+                   contract_year, contract_month, building_age, building_year
             FROM collective_transactions
             WHERE building_key = :bk AND {where}
             """
