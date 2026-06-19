@@ -640,11 +640,11 @@ def building_floor_index(
         contract_year_from=contract_year_from,
         contract_year_to=contract_year_to,
     )
-    gates = evaluate_analysis_gates(len(rows), cnt_recent)
+    gates = evaluate_analysis_gates(len(rows), cnt_recent, suggest_cohort=True)
     if not gates.floor_index_eligible and not experiment:
         raise HTTPException(
             403,
-            detail=gates.messages[0] if gates.messages else "효용지수 분석 최소 표본 미달",
+            detail="; ".join(gates.messages) if gates.messages else "효용지수 분석 최소 표본 미달",
         )
 
     df = pd.DataFrame(rows)
@@ -715,7 +715,7 @@ def building_regression(
         contract_year_from=body.contract_year_from,
         contract_year_to=body.contract_year_to,
     )
-    gates = evaluate_analysis_gates(len(rows), cnt_recent)
+    gates = evaluate_analysis_gates(len(rows), cnt_recent, suggest_cohort=True)
     if not gates.regression_eligible and not body.experiment:
         raise HTTPException(
             403,
@@ -771,7 +771,7 @@ def building_regression_predict(
         contract_year_from=body.contract_year_from,
         contract_year_to=body.contract_year_to,
     )
-    gates = evaluate_analysis_gates(len(rows), cnt_recent)
+    gates = evaluate_analysis_gates(len(rows), cnt_recent, suggest_cohort=True)
     if not gates.regression_eligible and not body.experiment:
         raise HTTPException(
             403,
