@@ -49,6 +49,15 @@
 - Twin 산출은 **`build_stats` / V2 통계 재생 성공 직후** 또는 동일 묶음의 명시 단계에서 수행한다.
 - 동일 **`as_of_month`(또는 스냅샷 버전)** 기준으로 다른 사전 집계와 정합성을 맞춘다.
 
+### 3.3 Twin은 Regional Profile을 「소비」한다 — Feature 재생성 금지 (D-017)
+
+계층 순서는 **Market Stats → Regional Profile → Twin** 이다 ([`REGIONAL_PROFILE_ARCHITECTURE.md`](REGIONAL_PROFILE_ARCHITECTURE.md) Layer 5).
+
+- Twin은 **상위 소비자(서비스 계층)** 이며, 용도지역×지목 비중·가격 수준 등 Feature를 **다시 만들지 않는다.**
+- 입력은 `SELECT * FROM regional_profile WHERE profile_version=:v AND as_of_month=:as_of AND window_years=:w` 로 **고정 버전·스냅샷**을 읽는다.
+- 본 문서 §5의 「구조 블록/가격 블록」은 **Profile feature로부터의 변환·결합 규약**으로 해석한다. 원천 집계는 Profile/Market Stats가 **SSOT**이며 Twin 빌더에 이중 구현하지 않는다.
+- 따라서 Twin 결과는 `(profile_version, as_of_month, window_years)` 에 **종속**되며, `detail_scores`·아티팩트에 이 3개 키를 함께 기록한다(재현성).
+
 ---
 
 ## 4. 탐색 범위 (Search Space)
@@ -265,11 +274,11 @@ Similarity 재계산 시 **pivot를 매번 새로 깊게 파지 않도록** parq
 
 다음 레포 규격과 합류 지점 확인 후 첫 브랜치에서 반영 여부 확인:
 
-1. 통계 재생 버전 키 `as_of_month`와 동일 기준 피처 집계
-2. `region_codes`(또는 비교 레벨 키)와 인구 매핑 키 무결점
+1. **입력은 `regional_profile`** — `(profile_version, as_of_month, window_years)` 고정 조회. Twin이 Feature를 재집계하지 않음 (§3.3)
+2. `region_codes`(또는 비교 레벨 키)와 인구 매핑 키 무결점 — **8/10자리 SSOT 통일** 전제
 3. 인접 룩업 DDL·시드 방법·검증 쿼리
-4. `build_stats`/월간 순서표(`MONTHLY_UPDATE_SOP`)에 한 단계 삽입
-5. parquet 아티팩트 저장 경로(naming 포함)와 로테이션 크기 고려
+4. `build_stats`/월간 순서표(`MONTHLY_UPDATE_SOP`)에서 **Profile 빌드 → Twin** 순서 보장
+5. parquet 아티팩트 저장 경로(naming 포함)와 로테이션 크기 고려, `profile_version` 포함
 
 ---
 
