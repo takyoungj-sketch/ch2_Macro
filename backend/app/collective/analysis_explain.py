@@ -589,12 +589,27 @@ def build_residential_regression_explain(
     if v.housing_subtype and asset_type == "presale":
         active.append("권리")
 
-    hints: list[str] = [
-        f"종속변수: 금액(만원, 수준). 표본 n={result.n}.",
-    ]
+    model_type = getattr(result, "model_type", "linear")
+    if model_type == "log":
+        hints = [f"종속변수: ln(금액). 계수≈변화율, 예측은 Duan smearing 보정. 표본 n={result.n}."]
+    else:
+        hints = [f"종속변수: 금액(만원, 수준). 표본 n={result.n}."]
     if result.r_squared is not None:
         adj = round(result.adj_r_squared, 3) if result.adj_r_squared else "—"
-        hints.append(f"R²={round(result.r_squared, 3)}, Adj.R²={adj}.")
+        hints.append(f"R²={round(result.r_squared, 3)}, Adj.R²={adj} (적합척도).")
+    cmp = getattr(result, "model_comparison", None)
+    if cmp is not None:
+        rec = "로그회귀" if cmp.recommended == "log" else "선형회귀"
+        basis = "교차검증" if cmp.metric_basis == "cv" else "표본내"
+        parts = []
+        if cmp.log and cmp.log.mape is not None:
+            parts.append(f"로그 MAPE {cmp.log.mape}%")
+        if cmp.linear and cmp.linear.mape is not None:
+            parts.append(f"선형 MAPE {cmp.linear.mape}%")
+        stars = "★" * cmp.confidence_stars + "☆" * (5 - cmp.confidence_stars)
+        hints.append(
+            f"모델비교({basis}): {', '.join(parts) if parts else '—'} · 권장={rec} · 신뢰 {stars} ({cmp.confidence_label})."
+        )
     hints.append(f"독립변수: {', '.join(active) if active else '(없음)'}.")
 
     sig = [c for c in result.coefficients if c.p is not None and c.p < 0.05 and c.name != "const"]

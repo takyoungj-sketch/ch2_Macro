@@ -387,6 +387,7 @@ def cohort_regression(body: CohortAnalysisRequest, db: Session = Depends(get_col
         contract_year_from=body.contract_year_from,
         contract_year_to=body.contract_year_to,
         variables=body.variables,
+        model_type=body.model_type,
         exclude_outliers_iqr=body.exclude_outliers_iqr,
         outlier_iqr_multiplier=body.outlier_iqr_multiplier,
         experiment=body.experiment,

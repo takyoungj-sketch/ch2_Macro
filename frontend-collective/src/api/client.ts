@@ -232,6 +232,7 @@ export async function runCohortRegression(body: {
   contract_date_to?: string;
   experiment?: boolean;
   exclude_outliers_iqr?: boolean;
+  model_type?: "log" | "linear";
   variables?: {
     exclusive_area?: boolean;
     building_age?: boolean;
@@ -263,6 +264,7 @@ type RegressionBody = {
   contract_date_to?: string;
   experiment?: boolean;
   exclude_outliers_iqr?: boolean;
+  model_type?: "log" | "linear";
   variables?: {
     exclusive_area?: boolean;
     building_age?: boolean;
@@ -384,6 +386,7 @@ export async function runBuildingRegression(
     contract_date_to?: string;
     exclude_outliers_iqr?: boolean;
     experiment?: boolean;
+    model_type?: "log" | "linear";
     variables?: {
       exclusive_area?: boolean;
       building_age?: boolean;

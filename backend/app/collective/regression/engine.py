@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 
@@ -15,10 +16,167 @@ from app.collective.schemas import (
     CollectiveRegressionRequest,
     CollectiveRegressionResponse,
     ContinuousRange,
+    ModelComparison,
+    ModelMetrics,
     RegressionCoeff,
 )
 
 MIN_BUILDING_FE_GROUP = 5
+CV_MIN_N = 40  # 이 이상이면 5-fold 교차검증으로 MAPE/RMSE 산정
+
+
+def _duan_smearing(resid: pd.Series | np.ndarray) -> float:
+    """로그모델 역변환 편의 보정계수 = mean(exp(residual))."""
+    arr = np.asarray(resid, dtype=float)
+    arr = arr[np.isfinite(arr)]
+    if arr.size == 0:
+        return 1.0
+    return float(np.mean(np.exp(arr)))
+
+
+def _insample_price_pred(model, x_const: pd.DataFrame, model_type: str) -> np.ndarray:
+    """적합 모델의 표본내 예측을 원척도(price)로 환산."""
+    pred = np.asarray(model.predict(x_const), dtype=float)
+    if model_type == "log":
+        return np.exp(pred) * _duan_smearing(model.resid)
+    return pred
+
+
+def _orig_scale_metrics(
+    y_price: np.ndarray, y_pred: np.ndarray, k_params: int
+) -> tuple[float | None, float | None, float | None]:
+    """원척도 조정 R²·MAPE(%)·RMSE(만원)."""
+    y = np.asarray(y_price, dtype=float)
+    p = np.asarray(y_pred, dtype=float)
+    mask = np.isfinite(y) & np.isfinite(p)
+    y, p = y[mask], p[mask]
+    n = y.size
+    if n < 2:
+        return None, None, None
+    err = y - p
+    ss_res = float(np.sum(err**2))
+    ss_tot = float(np.sum((y - y.mean()) ** 2))
+    r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else None
+    adj = r2
+    if r2 is not None and n - k_params - 1 > 0:
+        adj = 1.0 - (1.0 - r2) * (n - 1) / (n - k_params - 1)
+    nz = y != 0
+    mape = float(np.mean(np.abs(err[nz]) / y[nz])) * 100 if nz.any() else None
+    rmse = float(np.sqrt(np.mean(err**2)))
+    return (
+        round(adj, 4) if adj is not None else None,
+        round(mape, 2) if mape is not None else None,
+        round(rmse, 1) if rmse is not None else None,
+    )
+
+
+def _cv_price_metrics(
+    y_price: np.ndarray, x_const: np.ndarray, model_type: str, *, k: int = 5, seed: int = 42
+) -> tuple[float | None, float | None]:
+    """5-fold 교차검증 MAPE(%)·RMSE(만원), 원척도."""
+    y = np.asarray(y_price, dtype=float)
+    X = np.asarray(x_const, dtype=float)
+    n = y.size
+    if n < CV_MIN_N:
+        return None, None
+    idx = np.arange(n)
+    rng = np.random.default_rng(seed)
+    rng.shuffle(idx)
+    folds = np.array_split(idx, k)
+    preds = np.full(n, np.nan)
+    y_fit = np.log(y) if model_type == "log" else y
+    for fold in folds:
+        test = fold
+        train = np.setdiff1d(idx, fold, assume_unique=False)
+        if train.size <= X.shape[1] + 1:
+            continue
+        try:
+            m = sm.OLS(y_fit[train], X[train]).fit()
+            p = np.asarray(m.predict(X[test]), dtype=float)
+            if model_type == "log":
+                p = np.exp(p) * _duan_smearing(m.resid)
+            preds[test] = p
+        except Exception:
+            continue
+    mask = np.isfinite(preds) & np.isfinite(y)
+    if mask.sum() < 2:
+        return None, None
+    err = y[mask] - preds[mask]
+    nz = y[mask] != 0
+    mape = float(np.mean(np.abs(err[nz]) / y[mask][nz])) * 100 if nz.any() else None
+    rmse = float(np.sqrt(np.mean(err**2)))
+    return (
+        round(mape, 2) if mape is not None else None,
+        round(rmse, 1) if rmse is not None else None,
+    )
+
+
+def _confidence_rating(mape: float | None, n: int) -> tuple[int, str]:
+    """권장 모델 MAPE·표본수 기반 신뢰등급(별 1~5)."""
+    if mape is None:
+        return 0, "평가 불가"
+    if mape <= 5 and n >= 100:
+        return 5, "매우 높음"
+    if mape <= 8 and n >= 50:
+        return 4, "높음"
+    if mape <= 12:
+        return 3, "보통"
+    if mape <= 20:
+        return 2, "낮음"
+    return 1, "매우 낮음"
+
+
+def _build_model_comparison(
+    y_price: pd.Series, x_const: pd.DataFrame
+) -> ModelComparison | None:
+    """로그·선형 모델을 모두 적합해 원척도 지표로 비교·권장."""
+    y = y_price.astype(float)
+    if y.shape[0] < 5 or x_const.empty:
+        return None
+    k_params = max(x_const.shape[1] - 1, 0)  # const 제외
+    n = int(y.shape[0])
+    metrics: dict[str, ModelMetrics] = {}
+    cv_mape: dict[str, float | None] = {}
+
+    for mt in ("linear", "log"):
+        if mt == "log" and (y <= 0).any():
+            continue
+        try:
+            y_fit = np.log(y) if mt == "log" else y
+            model = sm.OLS(y_fit, x_const, missing="drop").fit()
+        except Exception:
+            continue
+        pred = _insample_price_pred(model, x_const, mt)
+        adj, mape, rmse = _orig_scale_metrics(y.to_numpy(), pred, k_params)
+        cmape, crmse = _cv_price_metrics(y.to_numpy(), x_const.to_numpy(), mt)
+        cv_mape[mt] = cmape
+        use_mape = cmape if cmape is not None else mape
+        use_rmse = crmse if crmse is not None else rmse
+        metrics[mt] = ModelMetrics(
+            model_type=mt, adj_r_squared=adj, mape=use_mape, rmse=use_rmse
+        )
+
+    if not metrics:
+        return None
+    basis = "cv" if any(v is not None for v in cv_mape.values()) else "insample"
+
+    def _mape_of(mt: str) -> float:
+        m = metrics.get(mt)
+        return m.mape if (m and m.mape is not None) else float("inf")
+
+    if "log" in metrics and "linear" in metrics:
+        recommended = "log" if _mape_of("log") <= _mape_of("linear") else "linear"
+    else:
+        recommended = next(iter(metrics))
+    stars, label = _confidence_rating(_mape_of(recommended), n)
+    return ModelComparison(
+        log=metrics.get("log"),
+        linear=metrics.get("linear"),
+        recommended=recommended,
+        metric_basis=basis,
+        confidence_stars=stars,
+        confidence_label=label,
+    )
 
 # 상대 층(단지 max 층 대비)
 _REL_FLOOR_LABELS: dict[str, str] = {
@@ -343,8 +501,13 @@ def _fit_regression(
         )
 
     X_const = sm.add_constant(X, has_constant="add")
+    model_type = req.model_type
+    if model_type == "log" and (y <= 0).any():
+        base_warnings = base_warnings + ["price≤0 거래가 있어 선형모델로 대체"]
+        model_type = "linear"
+    y_fit = np.log(y) if model_type == "log" else y
     try:
-        model = sm.OLS(y, X_const, missing="drop").fit()
+        model = sm.OLS(y_fit, X_const, missing="drop").fit()
     except Exception as exc:
         return None, CollectiveRegressionResponse(
             building_key="",
@@ -356,6 +519,11 @@ def _fit_regression(
     warnings = list(base_warnings)
     if int(model.nobs) < 30:
         warnings.append(f"n={int(model.nobs)} — 참고용 (권장 n≥30)")
+
+    comparison = _build_model_comparison(y, X_const)
+    if comparison and comparison.recommended != model_type:
+        rec_label = "로그회귀" if comparison.recommended == "log" else "선형회귀"
+        warnings.append(f"권장 모델은 {rec_label} (설명력·오차 기준)")
 
     coefs: list[RegressionCoeff] = []
     for name in X_const.columns:
@@ -377,11 +545,13 @@ def _fit_regression(
         building_key="",
         display_name="",
         n=int(model.nobs),
+        model_type=model_type,
         r_squared=float(model.rsquared) if model.rsquared is not None else None,
         adj_r_squared=float(model.rsquared_adj) if model.rsquared_adj is not None else None,
         coefficients=coefs,
         warnings=warnings,
         predict_options=predict_options,
+        model_comparison=comparison,
     )
 
 
@@ -549,17 +719,33 @@ def predict_regression(
     if fit_resp.n < 30:
         warnings.insert(0, f"n={fit_resp.n} — 참고용 (권장 n≥30, 예측구간 넓음)")
 
-    y_hat = float(row["mean"])
+    model_type = fit_resp.model_type
+    if model_type == "log":
+        # 로그모델: 평균·평균CI는 Duan smearing 보정, 예측구간(PI)은 분위수 환산
+        duan = _duan_smearing(model.resid)
+        y_hat = float(np.exp(float(row["mean"])) * duan)
+        pi_lower = float(np.exp(float(row["obs_ci_lower"])))
+        pi_upper = float(np.exp(float(row["obs_ci_upper"])))
+        ci_lower = float(np.exp(float(row["mean_ci_lower"])) * duan)
+        ci_upper = float(np.exp(float(row["mean_ci_upper"])) * duan)
+    else:
+        y_hat = float(row["mean"])
+        pi_lower = float(row["obs_ci_lower"])
+        pi_upper = float(row["obs_ci_upper"])
+        ci_lower = float(row["mean_ci_lower"])
+        ci_upper = float(row["mean_ci_upper"])
+
     exclusive = inputs.exclusive_area
     unit_hat = round(y_hat / float(exclusive), 2) if exclusive and float(exclusive) > 0 else None
 
     return {
         "n": fit_resp.n,
+        "model_type": model_type,
         "y_hat": round(y_hat, 1),
-        "pi_lower": round(float(row["obs_ci_lower"]), 1),
-        "pi_upper": round(float(row["obs_ci_upper"]), 1),
-        "ci_lower": round(float(row["mean_ci_lower"]), 1),
-        "ci_upper": round(float(row["mean_ci_upper"]), 1),
+        "pi_lower": round(pi_lower, 1),
+        "pi_upper": round(pi_upper, 1),
+        "ci_lower": round(ci_lower, 1),
+        "ci_upper": round(ci_upper, 1),
         "unit_price_hat": unit_hat,
         "warnings": warnings,
     }

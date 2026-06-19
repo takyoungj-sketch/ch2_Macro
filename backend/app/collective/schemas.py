@@ -274,6 +274,7 @@ class CollectiveRegressionRequest(BaseModel):
     contract_date_from: Optional[date] = None
     contract_date_to: Optional[date] = None
     variables: CollectiveRegressionSpec = Field(default_factory=CollectiveRegressionSpec)
+    model_type: Literal["log", "linear"] = "log"
     exclude_outliers_iqr: bool = False
     outlier_iqr_multiplier: float = 3.0
     experiment: bool = False
@@ -289,6 +290,7 @@ class CohortRegressionPredictRequest(CollectiveRegressionPredictRequest):
 
 class CollectiveRegressionPredictResponse(BaseModel):
     n: int
+    model_type: Literal["log", "linear"] = "linear"
     y_hat: float
     pi_lower: float
     pi_upper: float
@@ -298,15 +300,35 @@ class CollectiveRegressionPredictResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
+class ModelMetrics(BaseModel):
+    """단일 모델의 원척도(price) 평가지표."""
+    model_type: Literal["log", "linear"]
+    adj_r_squared: Optional[float] = None
+    mape: Optional[float] = None  # %
+    rmse: Optional[float] = None  # 만원
+
+
+class ModelComparison(BaseModel):
+    """로그·선형 모델 비교 + 권장·신뢰등급 (P1-B)."""
+    log: Optional[ModelMetrics] = None
+    linear: Optional[ModelMetrics] = None
+    recommended: Literal["log", "linear"] = "log"
+    metric_basis: Literal["cv", "insample"] = "insample"
+    confidence_stars: int = 0  # 0~5
+    confidence_label: Optional[str] = None
+
+
 class CollectiveRegressionResponse(BaseModel):
     building_key: str
     display_name: str
     n: int
+    model_type: Literal["log", "linear"] = "linear"
     r_squared: Optional[float] = None
     adj_r_squared: Optional[float] = None
     coefficients: list[RegressionCoeff] = []
     warnings: list[str] = []
     predict_options: Optional[CollectivePredictOptions] = None
+    model_comparison: Optional[ModelComparison] = None
     explain: Optional[AnalysisExplain] = None
 
 
@@ -324,6 +346,7 @@ class CohortAnalysisRequest(BaseModel):
     contract_date_from: Optional[date] = None
     contract_date_to: Optional[date] = None
     variables: CollectiveRegressionSpec = Field(default_factory=CollectiveRegressionSpec)
+    model_type: Literal["log", "linear"] = "log"
     dimension: Literal["floor", "dong", "area", "rights"] = "floor"
     exclude_outliers_iqr: bool = False
     outlier_iqr_multiplier: float = 3.0

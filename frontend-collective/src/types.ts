@@ -378,8 +378,11 @@ export interface CollectiveRegressionPredictInputs {
   building_key?: string | null;
 }
 
+export type RegressionModelType = "log" | "linear";
+
 export interface CollectiveRegressionPredictResponse {
   n: number;
+  model_type?: RegressionModelType;
   y_hat: number;
   pi_lower: number;
   pi_upper: number;
@@ -389,15 +392,33 @@ export interface CollectiveRegressionPredictResponse {
   warnings: string[];
 }
 
+export interface ModelMetrics {
+  model_type: RegressionModelType;
+  adj_r_squared?: number | null;
+  mape?: number | null;
+  rmse?: number | null;
+}
+
+export interface ModelComparison {
+  log?: ModelMetrics | null;
+  linear?: ModelMetrics | null;
+  recommended: RegressionModelType;
+  metric_basis: "cv" | "insample";
+  confidence_stars: number;
+  confidence_label?: string | null;
+}
+
 export interface CollectiveRegressionResponse {
   building_key: string;
   display_name: string;
   n: number;
+  model_type?: RegressionModelType;
   r_squared?: number | null;
   adj_r_squared?: number | null;
   coefficients: RegressionCoeff[];
   warnings: string[];
   predict_options?: CollectivePredictOptions | null;
+  model_comparison?: ModelComparison | null;
   explain?: AnalysisExplain | null;
 }
 
