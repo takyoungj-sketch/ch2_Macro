@@ -400,7 +400,7 @@ def cohort_regression(body: CohortAnalysisRequest, db: Session = Depends(get_col
         building_display_names={s.building_key: s.display_name for s in summaries},
     )
     return CohortRegressionResponse(
-        **result.model_dump(),
+        **result.model_dump(exclude={"explain"}),
         building_keys=body.building_keys,
         cohort_buildings=summaries,
         explain=AnalysisExplain(
