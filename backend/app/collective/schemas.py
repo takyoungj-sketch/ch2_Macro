@@ -162,6 +162,14 @@ class FloorIndexCell(BaseModel):
     index_hi: Optional[float] = None
 
 
+class FloorIndexDiagnostics(BaseModel):
+    """효용지수 회귀 공선성 진단 (P1-A)."""
+    max_vif: Optional[float] = None
+    max_vif_term: Optional[str] = None
+    condition_number: Optional[float] = None
+    vifs: dict[str, float] = Field(default_factory=dict)
+
+
 class AnalysisExplainPreset(BaseModel):
     id: str
     question: str
@@ -202,6 +210,7 @@ class FloorIndexResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     explain: Optional[AnalysisExplain] = None
     analysis: AnalysisFeatures = Field(default_factory=AnalysisFeatures)
+    diagnostics: Optional[FloorIndexDiagnostics] = None
 
 
 class CollectiveRegressionSpec(BaseModel):
@@ -337,6 +346,7 @@ class CohortFloorIndexResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     explain: Optional[AnalysisExplain] = None
     analysis: AnalysisFeatures = Field(default_factory=AnalysisFeatures)
+    diagnostics: Optional[FloorIndexDiagnostics] = None
 
 
 class CohortRegressionResponse(CollectiveRegressionResponse):

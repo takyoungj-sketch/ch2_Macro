@@ -186,6 +186,7 @@ export default function FloorIndexPanel({
     r_squared,
     warnings,
     explain,
+    diagnostics,
   } = q.data;
 
   const isRegression = method === "regression_semilog";
@@ -285,6 +286,28 @@ export default function FloorIndexPanel({
       {isRegression && controls && controls.length > 0 && (
         <p className="text-[10px] text-slate-500 dark:text-slate-400">
           통제변수: {controls.map((c) => CONTROL_LABELS[c] ?? c).join(", ")}
+        </p>
+      )}
+
+      {isRegression && diagnostics && diagnostics.max_vif != null && (
+        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+          공선성 진단: 최대 VIF{" "}
+          <strong
+            className={clsx(
+              diagnostics.max_vif >= 10
+                ? "text-rose-600 dark:text-rose-400"
+                : diagnostics.max_vif >= 5
+                  ? "text-amber-600 dark:text-amber-400"
+                  : "text-slate-700 dark:text-slate-200",
+            )}
+          >
+            {fmt(diagnostics.max_vif)}
+          </strong>
+          {diagnostics.max_vif_term && (
+            <> ({CONTROL_LABELS[diagnostics.max_vif_term] ?? diagnostics.max_vif_term})</>
+          )}
+          {diagnostics.condition_number != null && <> · 조건수 {fmt(diagnostics.condition_number)}</>}
+          {diagnostics.max_vif < 5 && <> · 양호</>}
         </p>
       )}
 

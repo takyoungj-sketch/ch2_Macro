@@ -109,6 +109,14 @@ export interface FloorIndexResponse {
   warnings?: string[];
   explain?: AnalysisExplain | null;
   analysis?: AnalysisFeatures;
+  diagnostics?: FloorIndexDiagnostics | null;
+}
+
+export interface FloorIndexDiagnostics {
+  max_vif?: number | null;
+  max_vif_term?: string | null;
+  condition_number?: number | null;
+  vifs?: Record<string, number>;
 }
 
 export interface CohortBuildingSummary {

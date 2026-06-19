@@ -675,6 +675,7 @@ def building_floor_index(
             count_recent=gates.count_recent,
             messages=gates.messages,
         ),
+        diagnostics=raw.get("diagnostics"),
     )
 
 

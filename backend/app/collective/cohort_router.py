@@ -353,6 +353,7 @@ def cohort_floor_index(body: CohortAnalysisRequest, db: Session = Depends(get_co
             count_recent=gates.count_recent,
             messages=gates.messages,
         ),
+        diagnostics=raw.get("diagnostics"),
     )
 
 

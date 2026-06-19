@@ -302,6 +302,64 @@ def _add_time_dummies(reg: pd.DataFrame, parts: list[pd.DataFrame], controls: li
         controls.append("contract_period")
 
 
+def _collinearity_diagnostics(x_const: pd.DataFrame) -> tuple[dict, list[str]]:
+    """설계행렬 다중공선성 진단 — VIF(연속·차원 더미) + 조건수(스케일 불변).
+
+    면적·층 등 통제변수가 분석 차원과 실제로 겹치는지는 이론이 아니라 VIF로 판정한다.
+    time_*·bldg_* 더미는 통제 목적상 공선성이 자연스러우므로 경고 대상에서 제외한다.
+    """
+    from statsmodels.stats.outliers_influence import variance_inflation_factor
+
+    warnings: list[str] = []
+    arr = x_const.to_numpy(dtype=float)
+    cols = list(x_const.columns)
+
+    vif_targets = [
+        c
+        for c in cols
+        if c in ("ln_exclusive_area", "building_age")
+        or c.startswith("idx_")
+        or c.startswith("ctrl_")
+    ]
+    vifs: dict[str, float] = {}
+    for c in vif_targets:
+        try:
+            v = float(variance_inflation_factor(arr, cols.index(c)))
+        except Exception:
+            continue
+        if np.isfinite(v):
+            vifs[c] = round(v, 2)
+
+    cond_no: float | None = None
+    try:
+        norms = np.linalg.norm(arr, axis=0)
+        norms[norms == 0] = 1.0
+        cond_no = float(np.linalg.cond(arr / norms))
+    except Exception:
+        cond_no = None
+
+    # 헤드라인 경고는 관심 변수(연속 통제·차원 더미) 기준. 층 통제 더미(ctrl_*)는
+    # 상호배타 더미 특성상 공선성이 자연스러우므로 표시만 하고 경고에서는 제외.
+    primary = {c: v for c, v in vifs.items() if not c.startswith("ctrl_")}
+    max_vif = max(primary.values()) if primary else None
+    max_vif_term = max(primary, key=lambda k: primary[k]) if primary else None
+    diag = {
+        "max_vif": max_vif,
+        "max_vif_term": max_vif_term,
+        "condition_number": round(cond_no, 1) if cond_no is not None else None,
+        "vifs": vifs,
+    }
+
+    if max_vif is not None and max_vif >= 10:
+        warnings.append(f"다중공선성 높음 — 최대 VIF {max_vif} ({max_vif_term}), 통제변수 해석 주의")
+    elif max_vif is not None and max_vif >= 5:
+        warnings.append(f"다중공선성 주의 — 최대 VIF {max_vif} ({max_vif_term})")
+    if cond_no is not None and cond_no >= 100:
+        warnings.append(f"설계행렬 조건수 {round(cond_no)} — 수치 불안정·공선성 가능")
+
+    return diag, warnings
+
+
 def _add_floor_control_dummies(reg: pd.DataFrame, parts: list[pd.DataFrame], controls: list[str]) -> None:
     """층 구간을 통제변수로 (1층 기준)."""
     if "floor_index_code" not in reg.columns:
@@ -660,6 +718,9 @@ def compute_residential_floor_index_regression(
             floor_mode=effective_floor_mode if effective_dim == "floor" else None,
         )
 
+    diagnostics, diag_warnings = _collinearity_diagnostics(X)
+    warnings.extend(diag_warnings)
+
     coef_map: dict[str, dict] = {}
     for code in dummy_codes:
         col = f"idx_{code}"
@@ -718,6 +779,7 @@ def compute_residential_floor_index_regression(
         result_warnings,
         regression_reference_floor=regression_reference_floor,
         floor_mode=effective_floor_mode if effective_dim == "floor" else None,
+        diagnostics=diagnostics,
     )
 
 
@@ -749,6 +811,7 @@ def _result_with_cells(
     *,
     regression_reference_floor: str | None = None,
     floor_mode: str | None = None,
+    diagnostics: dict | None = None,
 ) -> dict:
     out: dict = {
         "method": "regression_semilog",
@@ -766,6 +829,8 @@ def _result_with_cells(
         out["regression_reference_floor"] = regression_reference_floor
     if floor_mode:
         out["floor_mode"] = floor_mode
+    if diagnostics:
+        out["diagnostics"] = diagnostics
     return out
 
 
