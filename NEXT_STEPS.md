@@ -51,8 +51,49 @@
 | 11 | data/pipeline | **`transaction_hash` dedupe (6월)** | [`docs/TRANSACTION_HASH_DEDUPE.md`](docs/TRANSACTION_HASH_DEDUPE.md) — 비하동 4→2건 회귀. 코드 준비됨, DB 실행은 6월 Promote 전. |
 | 12 | backend | `region_codes` 활성/비활성(`is_active`) 갱신 절차 — 행정 개편 대응 | 신규 법정동 코드 자동 반영 |
 | 13 | data/ui | **장기 연도별 추세 (v1)** | [`docs/LONG_TERM_TREND_DESIGN.md`](docs/LONG_TERM_TREND_DESIGN.md) — D-013. P1~P2: `land_annual_stats` + 모달 다중 선. 2010~ backfill은 P3. |
+| 13a | data/pipeline/ui | **토지 원장·사전통계 전면 재구축 (2021~26 CSV)** | [`docs/LAND_LEDGER_REBUILD_PLAN.md`](docs/LAND_LEDGER_REBUILD_PLAN.md) — `land_stats_next` 병렬 DB, 모달 §4-2. **토지만**; 복합·집합 후속. |
 | 14 | collective | ~~**아파트 재적재 (semantic hash → 원본 행 전량)**~~ ✅ **완료 (2026-06-04)** | 2,288,749건. [`docs/COLLECTIVE_HANDOFF.md`](docs/COLLECTIVE_HANDOFF.md) §적재 정책. |
 | 15 | collective | ~~**연립·다세대 데이터 적재**~~ ✅ **완료 (2026-06-05)** | 552,849건 · `land_area` 포함. [`docs/COLLECTIVE_HANDOFF.md`](docs/COLLECTIVE_HANDOFF.md) |
+| 16 | collective / profile | **Regional Profile · 집합 mart · cohort 회귀** | [`docs/REGIONAL_PROFILE_ARCHITECTURE.md`](docs/REGIONAL_PROFILE_ARCHITECTURE.md) — D-016. `feature/collective-work`: region 공통화 → `building_stats` → `market_stats` → Profile → built A/B. |
+| 17 | collective | ~~**비주거 집합 재구축 (상가·공장, MOLIT raw base)**~~ | ✅ **완료 (2026-06-20)** — [`docs/COLLECTIVE_COMMERCIAL_REBUILD_PLAN.md`](docs/COLLECTIVE_COMMERCIAL_REBUILD_PLAN.md) D-018 Phase 0~4. grain=**도로 cluster**. VPS Promote만 잔여. |
+
+## 2c. 비주거 집합 (2026-06 — D-018)
+
+> **단일 계획서:** [`docs/COLLECTIVE_COMMERCIAL_REBUILD_PLAN.md`](docs/COLLECTIVE_COMMERCIAL_REBUILD_PLAN.md)  
+> **설계(도로 cluster):** [`docs/COLLECTIVE_COMMERCIAL_DESIGN.md`](docs/COLLECTIVE_COMMERCIAL_DESIGN.md)  
+> **주거 재구축 템플릿:** [`docs/COLLECTIVE_LEDGER_REBUILD_PLAN.md`](docs/COLLECTIVE_LEDGER_REBUILD_PLAN.md)
+
+| Phase | 내용 | 상태 |
+|-------|------|------|
+| 0 | 계획·MOLIT 로더·`--source molit`·probe·orchestrator | ✅ |
+| 1 | raw base 전량 ingest (`유형=집합`) | ✅ 272,640건 · 20,194 clusters |
+| 1b | buyer/seller/deal_type DDL·거래목록 UI | ✅ |
+| 2 | `cluster_stats` mart (3·5y + rolling) | ✅ |
+| 3 | 회귀·효용지수 주거 패리티 (시점더미·HC3·VIF·log/linear) | ✅ |
+| 4 | 장기 추세 2010~ | ✅ |
+
+## 2b. 집합·Regional Profile (2026-06 — `feature/collective-work`)
+
+> **단일 설계 문서:** [`docs/REGIONAL_PROFILE_ARCHITECTURE.md`](docs/REGIONAL_PROFILE_ARCHITECTURE.md)
+
+| Phase | 내용 |
+|-------|------|
+| A | region 공통화, `building_stats` mart, 모달 mart 연동 |
+| B | `market_stats`, 장기 CSV (`raw/raw long term`), `building_annual_stats` |
+| C | Analysis Cohort — 모달 다중 아파트 + building FE 회귀·효용지수 |
+| D | `regional_profile` + built 지역결합 회귀 검증 (MAPE·Adj R²) |
+
+**충북 파일럿 (D-021, 2026-06-20 착수)**
+
+```bash
+cd pipeline
+# DDL (최초 1회): db/026_regional_profile_data_product_patch.sql
+python rebuild_regional_profile_chungbuk.py
+```
+
+- land domain: `config/land_domain_extraction.yaml` → `build_land_market_stats.py`
+- Profile: `build_regional_profile.py --profile-version v1.0-chungbuk --sido-code 43`
+- UI: 토지 앱 **「지역 프로필」** 탭 · API `GET /api/regional-profile`
 
 ## 3. 상위단계 사전집계 + 쌍둥이 지역 (DECISIONS D-009~D-011)
 

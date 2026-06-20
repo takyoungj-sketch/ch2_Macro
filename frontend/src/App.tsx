@@ -9,6 +9,7 @@ import RegionSelector from "./components/RegionSelector";
 import FreeStatsPanel from "./components/FreeStatsPanel";
 import PaidAnalysisPanel from "./components/PaidAnalysisPanel";
 import PaidFilterTable from "./components/PaidFilterTable";
+import ProfilePanel from "./components/ProfilePanel";
 
 function PaidIntro() {
   return <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm min-h-[12rem]" />;
@@ -130,6 +131,17 @@ export default function App() {
             >
               유료 분석
             </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("profile")}
+              className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                viewMode === "profile"
+                  ? "bg-white dark:bg-slate-600 text-blue-700 dark:text-blue-300 shadow-sm"
+                  : "text-slate-500 dark:text-slate-300 hover:text-slate-700 dark:hover:text-slate-100"
+              }`}
+            >
+              지역 프로필
+            </button>
           </div>
         </div>
       </header>
@@ -143,6 +155,8 @@ export default function App() {
         <section className="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-900">
           {viewMode === "free" ? (
             <FreeStatsPanel />
+          ) : viewMode === "profile" ? (
+            <ProfilePanel />
           ) : paidResultView === "idle" ? (
             <PaidIntro />
           ) : paidResultView === "basic" ? (

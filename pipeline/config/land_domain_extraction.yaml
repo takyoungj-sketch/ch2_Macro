@@ -1,0 +1,55 @@
+# 토지 matrix → market_stats land_* domain 추출 규칙 (SSOT)
+# 설계: docs/REGIONAL_PROFILE_ARCHITECTURE.md § Layer 3
+version: "1.0"
+
+domains:
+  land_residential:
+    description: "주거 대표 — 2종일반주거×대 (없으면 1종일반×대)"
+    cells:
+      - { zone_type: "2주", land_category: "대" }
+      - { zone_type: "1주", land_category: "대" }
+
+  land_commercial:
+    description: "상업 대표 — 상업지역×대 (우선순위 순)"
+    cells:
+      - { zone_type: "일상", land_category: "대" }
+      - { zone_type: "중상", land_category: "대" }
+      - { zone_type: "근상", land_category: "대" }
+      - { zone_type: "유상", land_category: "대" }
+
+  land_industrial:
+    description: "공업 대표 — 공업×공장용지"
+    cells:
+      - { zone_type: "일공", land_category: "장" }
+      - { zone_type: "준공", land_category: "장" }
+      - { zone_type: "전공", land_category: "장" }
+
+  # v1.0-chungbuk: 표본 검증 후 Profile feature 로 승격 가능
+  land_agricultural:
+    description: "농경 — 농림×전·답"
+    cells:
+      - { zone_type: "농림", land_category: "전" }
+      - { zone_type: "농림", land_category: "답" }
+
+  land_forest:
+    description: "임야 — 지목 임 (우선순위 zone)"
+    cells:
+      - { zone_type: "농림", land_category: "임" }
+      - { zone_type: "자녹", land_category: "임" }
+      - { zone_type: "계관", land_category: "임" }
+      - { zone_type: "보관", land_category: "임" }
+
+# Profile composition feature (거래건수 비중, land_upper_stats_v2 기준)
+composition:
+  ratio_residential_zone:
+    zone_types: ["1전", "2전", "1주", "2주", "3주", "준주"]
+  ratio_commercial_zone:
+    zone_types: ["근상", "유상", "일상", "중상"]
+  ratio_agri_zone:
+    zone_types: ["농림", "자보", "자녹", "생녹", "보녹"]
+  ratio_land_danji:
+    land_categories: ["대"]
+  ratio_land_rice:
+    land_categories: ["전", "답"]
+  ratio_land_forest:
+    land_categories: ["임"]

@@ -14,6 +14,7 @@ import type {
   PaidAnalysisResponse,
   RegionItem,
   RegionLevel,
+  RegionalProfileResponse,
   TwinNeighborsForEupmyeondongResponse,
   TwinNeighborsForSigunguResponse,
   TwinRegionLatestBatch,
@@ -191,5 +192,17 @@ export const fetchTwinNeighborsForEupmyeondong = async (
   const { data } = await api.get<TwinNeighborsForEupmyeondongResponse>(
     `/twin-regions/eupmyeondong/neighbors/${encodeURIComponent(eupmyeondongCode)}`,
   );
+  return data;
+};
+
+/** Regional Profile — 충북 파일럿 조회 */
+export const fetchRegionalProfile = async (params: {
+  region_level: RegionLevel;
+  region_code: string;
+  profile_version?: string;
+  window_years?: number;
+  as_of_month?: string;
+}): Promise<RegionalProfileResponse> => {
+  const { data } = await api.get<RegionalProfileResponse>("/regional-profile", { params });
   return data;
 };

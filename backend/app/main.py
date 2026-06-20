@@ -105,6 +105,10 @@ if built_router is not None:
 if collective_router is not None:
     app.include_router(collective_router, prefix="/api")
     _LOG.info("collective_stats API 활성: /api/collective/*")
+    from app.regional_profile.router import router as regional_profile_router
+
+    app.include_router(regional_profile_router, prefix="/api")
+    _LOG.info("regional_profile API 활성: /api/regional-profile/*")
 
 
 # 폐기 일정 헤더 — RFC 8594 Sunset.

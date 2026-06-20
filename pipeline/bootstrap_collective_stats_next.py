@@ -25,6 +25,7 @@ COLLECTIVE_REBUILD_DDL = (
     "023_collective_building_stats.sql",
     "024_market_stats.sql",
     "025_regional_profile.sql",
+    "026_regional_profile_data_product_patch.sql",
 )
 
 ADMIN_URL = "postgresql+psycopg2://postgres:8972@localhost:5432/postgres"

@@ -296,7 +296,25 @@ export interface MatrixCellTransactionsResponse {
   items: MatrixCellTransactionItem[];
 }
 
-export type ViewMode = "free" | "paid";
+export type ViewMode = "free" | "paid" | "profile";
+
+/** GET /regional-profile */
+export interface RegionalProfileMeta {
+  profile_version: string;
+  as_of_month: string;
+  window_years: number;
+  region_level: RegionLevel;
+  region_code: string;
+  feature_count?: number | null;
+  builder_version?: string | null;
+  validation_status: string;
+  computed_at?: string | null;
+}
+
+export interface RegionalProfileResponse {
+  meta: RegionalProfileMeta;
+  features: Record<string, number>;
+}
 
 /** GET /twin-regions/latest-batch */
 export interface TwinRegionLatestBatch {
