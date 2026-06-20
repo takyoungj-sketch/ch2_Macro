@@ -1,6 +1,7 @@
 export type AssetType = "apartment" | "rowhouse" | "officetel" | "presale";
 export type AssetSelectorType = AssetType | "all";
 export type CommercialAssetType = "collective_shop" | "collective_factory";
+export type CommercialAssetSelectorType = CommercialAssetType | "all";
 export type AnyAssetType = AssetType | CommercialAssetType;
 
 export function isCommercialAsset(t: AnyAssetType): t is CommercialAssetType {
@@ -191,6 +192,13 @@ export interface CommercialAddressListResponse {
 export interface CommercialClusterListResponse {
   total: number;
   items: CommercialClusterRow[];
+  data_source?: "mart" | "live";
+  as_of_month?: string | null;
+  stats_reference_date?: string | null;
+  stats_as_of_label?: string | null;
+  window_years?: number | null;
+  period_start?: string | null;
+  period_end?: string | null;
 }
 
 export interface CommercialTransactionRow {
@@ -202,6 +210,7 @@ export interface CommercialTransactionRow {
   lot_number?: string | null;
   contract_year?: number | null;
   contract_month?: number | null;
+  contract_date?: string | null;
   price: number;
   gross_area?: number | null;
   land_area?: number | null;
@@ -215,6 +224,9 @@ export interface CommercialTransactionRow {
   road_name?: string | null;
   road_code?: number | null;
   road_width_label?: string | null;
+  buyer_type?: string | null;
+  seller_type?: string | null;
+  deal_type?: string | null;
 }
 
 export interface CommercialTransactionListResponse {
@@ -226,6 +238,7 @@ export interface CommercialYearlyStatsResponse {
   cluster_key: string;
   display_label: string;
   points: YearlyStatPoint[];
+  data_source?: "mart" | "live";
 }
 
 export interface CommercialHistogramResponse {
@@ -252,17 +265,137 @@ export interface CommercialFloorIndexResponse {
   warnings?: string[];
   explain?: AnalysisExplain | null;
   analysis?: AnalysisFeatures;
+  diagnostics?: FloorIndexDiagnostics | null;
+}
+
+export interface CommercialRollingStatPoint {
+  bucket_index: number;
+  period_start: string;
+  period_end: string;
+  label: string;
+  count: number;
+  mean?: number | null;
+}
+
+export interface CommercialRollingStatsResponse {
+  cluster_key: string;
+  display_label: string;
+  window_years: number;
+  as_of_month?: string | null;
+  points: CommercialRollingStatPoint[];
+  data_source?: "mart" | "live";
 }
 
 export interface CommercialRegressionResponse {
   cluster_key: string;
   display_label: string;
   n: number;
+  model_type?: RegressionModelType;
   r_squared?: number | null;
   adj_r_squared?: number | null;
   coefficients: RegressionCoeff[];
+  model_comparison?: ModelComparison | null;
   warnings: string[];
+  predict_options?: CommercialPredictOptions | null;
   explain?: AnalysisExplain | null;
+}
+
+export interface ClusterFeOption {
+  cluster_key: string;
+  display_label: string;
+  count: number;
+  is_reference?: boolean;
+  has_fe?: boolean;
+}
+
+export interface CommercialPredictOptions {
+  gross_area?: ContinuousRange | null;
+  land_area?: ContinuousRange | null;
+  building_age?: ContinuousRange | null;
+  floor?: ContinuousRange | null;
+  road_code?: ContinuousRange | null;
+  max_floor?: number | null;
+  floor_mode?: string;
+  zone_types?: string[];
+  zone_reference?: string | null;
+  building_uses?: string[];
+  building_use_reference?: string | null;
+  road_widths?: string[];
+  road_width_reference?: string | null;
+  addr4_list?: string[];
+  addr4_reference?: string | null;
+  clusters?: ClusterFeOption[];
+}
+
+export interface CommercialRegressionPredictInputs {
+  gross_area?: number | null;
+  land_area?: number | null;
+  building_age?: number | null;
+  floor?: number | null;
+  road_code?: number | null;
+  zone_type?: string | null;
+  building_use?: string | null;
+  road_width?: string | null;
+  addr4?: string | null;
+  cluster_key?: string | null;
+}
+
+export interface CommercialRegressionPredictResponse {
+  n: number;
+  model_type?: RegressionModelType;
+  y_hat: number;
+  pi_lower: number;
+  pi_upper: number;
+  ci_lower: number;
+  ci_upper: number;
+  unit_price_hat?: number | null;
+  warnings: string[];
+}
+
+export interface CommercialPeerClusterRow {
+  cluster_key: string;
+  display_label: string;
+  road_name?: string | null;
+  addr3?: string | null;
+  addr4?: string | null;
+  count: number;
+  same_dong: boolean;
+}
+
+export interface CommercialPeerClusterListResponse {
+  cluster_key: string;
+  items: CommercialPeerClusterRow[];
+}
+
+export interface CommercialCohortClusterSummary {
+  cluster_key: string;
+  display_label: string;
+  road_name?: string | null;
+  count: number;
+}
+
+export interface CommercialCohortFloorIndexResponse
+  extends Omit<CommercialFloorIndexResponse, "cluster_key" | "display_label"> {
+  cluster_keys: string[];
+  cohort_clusters: CommercialCohortClusterSummary[];
+}
+
+export interface CommercialCohortRegressionResponse extends CommercialRegressionResponse {
+  cluster_keys: string[];
+  cohort_clusters: CommercialCohortClusterSummary[];
+}
+
+export interface CommercialCohortHistogramResponse {
+  cluster_keys: string[];
+  bins: HistogramBin[];
+  n: number;
+  contract_year?: number | null;
+}
+
+export interface CommercialCohortTransactionsResponse {
+  cluster_keys: string[];
+  total: number;
+  items: CommercialTransactionRow[];
 }
 
 export interface CollectiveTransactionRow {
@@ -476,3 +609,13 @@ export const COMMERCIAL_ASSET_LABELS: Record<CommercialAssetType, string> = {
   collective_shop: "집합상가",
   collective_factory: "집합공장",
 };
+
+export const COMMERCIAL_ASSET_SELECTOR_LABELS: Record<CommercialAssetSelectorType, string> = {
+  all: "통합",
+  ...COMMERCIAL_ASSET_LABELS,
+};
+
+export function commercialAssetTypeLabel(t: string | undefined | null): string {
+  if (!t) return "—";
+  return COMMERCIAL_ASSET_LABELS[t as CommercialAssetType] ?? t;
+}

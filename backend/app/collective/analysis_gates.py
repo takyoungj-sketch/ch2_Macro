@@ -56,8 +56,11 @@ def count_recent_transactions(
     return sum(1 for y in clean if y >= recent_from)
 
 
-# 단일 단지 표본 부족 시 코호트(인접·유사 단지) 분석 유도 문구
+# 단일 단지/cluster 표본 부족 시 코호트(통합) 분석 유도 문구
 COHORT_GUIDANCE = "데이터가 부족합니다. 인접·유사 단지를 코호트(통합)로 묶어 분석하세요."
+COMMERCIAL_COHORT_GUIDANCE = (
+    "데이터가 부족합니다. 인접·유사 도로 cluster를 코호트(통합)로 묶어 분석하세요."
+)
 
 
 def evaluate_analysis_gates(
@@ -65,6 +68,7 @@ def evaluate_analysis_gates(
     count_recent: int,
     *,
     suggest_cohort: bool = False,
+    cohort_guidance: str | None = None,
 ) -> AnalysisGateResult:
     messages: list[str] = []
     floor_ok = count_total >= MIN_COUNT_FLOOR_INDEX
@@ -87,7 +91,7 @@ def evaluate_analysis_gates(
         )
 
     if suggest_cohort and not (floor_ok and regression_ok):
-        messages.append(COHORT_GUIDANCE)
+        messages.append(cohort_guidance or COHORT_GUIDANCE)
 
     return AnalysisGateResult(
         floor_index_eligible=floor_ok,

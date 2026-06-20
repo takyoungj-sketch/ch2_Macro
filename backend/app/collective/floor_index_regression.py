@@ -317,7 +317,7 @@ def _collinearity_diagnostics(x_const: pd.DataFrame) -> tuple[dict, list[str]]:
     vif_targets = [
         c
         for c in cols
-        if c in ("ln_exclusive_area", "building_age")
+        if c in ("ln_exclusive_area", "ln_gross_area", "building_age")
         or c.startswith("idx_")
         or c.startswith("ctrl_")
     ]
@@ -340,7 +340,7 @@ def _collinearity_diagnostics(x_const: pd.DataFrame) -> tuple[dict, list[str]]:
 
     # 헤드라인 경고는 관심 변수(연속 통제·차원 더미) 기준. 층 통제 더미(ctrl_*)는
     # 상호배타 더미 특성상 공선성이 자연스러우므로 표시만 하고 경고에서는 제외.
-    primary = {c: v for c, v in vifs.items() if not c.startswith("ctrl_")}
+    primary = {c: v for c, v in vifs.items() if not c.startswith("ctrl_") and not c.startswith("floor_")}
     max_vif = max(primary.values()) if primary else None
     max_vif_term = max(primary, key=lambda k: primary[k]) if primary else None
     diag = {

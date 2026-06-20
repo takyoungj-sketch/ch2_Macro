@@ -12,6 +12,7 @@ CONTROL_LABELS: dict[str, str] = {
     "relative_floor": "상대 층구간 더미",
     "contract_period": "거래시점(반기) 더미",
     "building_fixed_effects": "단지 고정효과",
+    "cluster_fixed_effects": "도로(cluster) 고정효과",
 }
 
 FLOOR_GROUP_LINES = [
@@ -369,6 +370,53 @@ def _floor_index_hints(raw: dict, *, asset_type: str = "collective_shop") -> lis
     return hints
 
 
+def _preset_answers_commercial_area_regression(*, asset_type: str) -> list[dict[str, str]]:
+    is_factory = asset_type == "collective_factory"
+    bucket_desc = (
+        "100/300/1000㎡ 구간"
+        if is_factory
+        else "연면적 30㎡ 단위 구간"
+    )
+    return [
+        {
+            "id": "formula",
+            "question": "공식이 어떻게 만들어졌나요?",
+            "answer": (
+                "종속변수 ln(㎡당단가)에 대해 HC3 강건표준오차 OLS 회귀를 추정합니다. "
+                f"면적은 {bucket_desc} 더미로 직접 추정하고, ln(연면적) 연속항은 넣지 않아 "
+                "이중 반영을 막습니다(주거 면적형 탭과 동일). "
+                "연식·층구간(1층 기준)·거래시점(반기) 더미로 통제합니다."
+            ),
+        },
+        {
+            "id": "interpret",
+            "question": "지수를 어떻게 해석하나요?",
+            "answer": (
+                "기준 면적구간(표본 중앙값 구간)=100%. "
+                "예: 120% → 연식·층·시점을 통제한 조건에서 기준 대비 ㎡당 단가가 약 20% 높은 패턴(반로그). "
+                "95% CI·p-value로 불확실성을 함께 보세요."
+            ),
+        },
+        {
+            "id": "limits",
+            "question": "한계점은 무엇인가요?",
+            "answer": (
+                "① 도로(cluster) 내 거래만 사용합니다. "
+                "② 구간별 n<5 → 해당 더미·지수 미산출, n<15 → 참고용. "
+                "③ 인과가 아니라 선택 기간·cluster 내 상관 패턴입니다."
+            ),
+        },
+        {
+            "id": "vs_regression_tab",
+            "question": "회귀 분석 탭과 무엇이 다른가요?",
+            "answer": (
+                "효용지수 탭은 ln(㎡당단가) 반로그 spec이 고정되어 면적구간 상대 지수(%)만 산출합니다. "
+                "회귀 탭은 금액(만원) 수준 OLS로 변수·층 형식을 바꿀 수 있는 탐색용입니다."
+            ),
+        },
+    ]
+
+
 def build_commercial_floor_index_explain(
     *,
     method: str,
@@ -378,6 +426,51 @@ def build_commercial_floor_index_explain(
 ) -> dict[str, Any]:
     controls = raw.get("controls") or []
     controls_h = _controls_human(controls)
+
+    if method == "regression_semilog" and dimension == "area":
+        is_factory = asset_type == "collective_factory"
+        area_rule = (
+            "구간: 100㎡ 미만 · 100~300㎡ · 300~1000㎡ · 1000㎡ 이상"
+            if is_factory
+            else "연면적 30㎡ 단위 구간 (주거 면적형과 동일)"
+        )
+        spec_id = "commercial_floor_index_regression_area_v1"
+        return {
+            "spec_id": spec_id,
+            "spec_version": "1",
+            "title": "회귀 기반 면적형별 효용지수",
+            "summary": (
+                "도로(cluster) 거래에 반로그 OLS(HC3)를 적용해, "
+                f"기준 면적구간({raw.get('reference_floor') or '중앙값 구간'})=100% "
+                "상대 ㎡당 단가 지수를 산출합니다. 주거 면적형 탭과 동일하게 "
+                "면적은 더미로 추정하고 ln(연면적) 연속항은 넣지 않습니다."
+            ),
+            "formula": (
+                "ln(㎡당단가) = β₀ + 연식 + 층구간더미(1층 기준) + 거래시점(반기) 더미 + Σ γ_g·D_g"
+            ),
+            "index_rule": f"지수_g = exp(γ_g) × 100  (기준 면적구간 = 100%, 더미 없음) · {area_rule}",
+            "reference": raw.get("reference_floor") or "중앙값 면적구간",
+            "floor_groups": [],
+            "controls": controls_h,
+            "interpretation": [
+                (
+                    f"지수는 「{', '.join(controls_h)}」을(를) 통제한 뒤의 면적구간 간 상대 수준입니다."
+                    if controls_h
+                    else "지수는 면적구간 간 상대 ㎡당 단가 수준입니다."
+                ),
+                "100%보다 낮을수록 기준 면적구간 대비 ㎡당 단가가 낮은 패턴입니다.",
+                "95% CI는 HC3 강건표준오차 기반 구간 추정치입니다.",
+            ],
+            "limitations": [
+                "도로(cluster) 단위 혼합 — 동일 도로 내 건물·입지 차이 잔존",
+                "면적·층 결측 거래는 해당 탭에서 제외될 수 있음",
+                "구간별 n<5 → 해당 더미·지수 미산출",
+                "셀 n<15 → 참고용 표시",
+                "인과 추론 불가 — 해당 cluster·기간 내 패턴 설명",
+            ],
+            "interpretation_hints": _floor_index_hints(raw, asset_type=asset_type),
+            "presets": _preset_answers_commercial_area_regression(asset_type=asset_type),
+        }
 
     if method == "regression_semilog" and dimension == "floor":
         spec_id = "commercial_floor_index_regression_v1"

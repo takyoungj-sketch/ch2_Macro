@@ -31,7 +31,7 @@ function stars(n: number) {
   return "★".repeat(Math.max(0, Math.min(5, n))) + "☆".repeat(Math.max(0, 5 - n));
 }
 
-function ModelComparisonCard({
+export function ModelComparisonCard({
   cmp,
   selected,
 }: {

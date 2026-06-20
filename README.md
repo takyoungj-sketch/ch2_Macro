@@ -39,6 +39,7 @@ MVP·초기 검증 단계에서는 **전국 데이터를 한 번에 목표로 �
 **합의된 방향**
 
 - **대량 초기·전국 적재**: **Selenium**(또는 검증 후 **Playwright**) 기반으로 브라우저·파일 다운로드 등 **대량 수집을 중심**에 둔다. 기존 Selenium 자산을 정리·안정화하는 것이 MVP 속도에 유리하다.
+- **국토부 CSV (historical·사무실)**: rename 전 **메타데이터 검증** 필수 — [`docs/MOLIT_CSV_COLLECTOR_WARNINGS.md`](docs/MOLIT_CSV_COLLECTOR_WARNINGS.md), GUI [`deploy/molit_csv_collector/`](deploy/molit_csv_collector/)
 - **API**: 호출 수가 적게 나가는 구간(증분 검증, 소량 보정, 특정 구간 보조 등)에 **보조**로 사용한다.
 - **실행 로드맵(요약)**  
   1. Selenium 코드 정리 및 **전국 토지 초기 적재(예: 5개년)** 안정화  

@@ -4,7 +4,7 @@ import clsx from "clsx";
 import {
   fetchCommercialAddr2,
   fetchCommercialAddr3,
-  fetchCommercialClusters,
+  fetchAllCommercialClusters,
   fetchCommercialFilterMeta,
   fetchCommercialLeafRegions,
   fetchCommercialRegionStructure,
@@ -12,9 +12,10 @@ import {
 import CommercialClusterDetailModal from "./components/CommercialClusterDetailModal";
 import StatsPageHeader from "./components/StatsPageHeader";
 import RegionChipPanel from "./components/RegionChipPanel";
+import StatsWindowToggle, { normalizeStatsWindowYears, type StatsWindowYears } from "./components/StatsWindowToggle";
 import { useUiColorScheme } from "./hooks/useUiColorScheme";
 import { useUiFontScale } from "./hooks/useUiFontScale";
-import { COMMERCIAL_ASSET_LABELS, type CommercialAssetType, type CommercialClusterRow, type RegionOption } from "./types";
+import { COMMERCIAL_ASSET_SELECTOR_LABELS, commercialAssetTypeLabel, type CommercialAssetSelectorType, type CommercialClusterRow, type RegionOption } from "./types";
 
 function fmtPrice(v: number | null | undefined) {
   if (v == null) return "—";
@@ -27,7 +28,7 @@ function fmtCi(lo: number | null | undefined, hi: number | null | undefined) {
 }
 
 type AnalysisScope = {
-  assetType: CommercialAssetType;
+  assetType: CommercialAssetSelectorType;
   addr1: string;
   addr2: string;
   guList: string[];
@@ -35,24 +36,26 @@ type AnalysisScope = {
   hasIntermediate: boolean;
   yearFrom: number | "";
   yearTo: number | "";
+  windowYears: StatsWindowYears;
   sort: string;
 };
 
 export default function CommercialApp() {
-  const [assetType, setAssetType] = useState<CommercialAssetType>("collective_shop");
+  const [assetType, setAssetType] = useState<CommercialAssetSelectorType>("collective_shop");
   const [addr1, setAddr1] = useState("");
   const [addr2, setAddr2] = useState("");
   const [guList, setGuList] = useState<string[]>([]);
   const [leafList, setLeafList] = useState<string[]>([]);
   const [yearFrom, setYearFrom] = useState<number | "">("");
   const [yearTo, setYearTo] = useState<number | "">("");
+  const [windowYears, setWindowYears] = useState<StatsWindowYears>(5);
   const [sort, setSort] = useState("count");
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [selected, setSelected] = useState<CommercialClusterRow | null>(null);
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
   const { isDark, toggleUiColorScheme } = useUiColorScheme();
 
-  const metaQ = useQuery({ queryKey: ["comm-meta"], queryFn: fetchCommercialFilterMeta });
+  const metaQ = useQuery({ queryKey: ["comm-meta", assetType], queryFn: () => fetchCommercialFilterMeta(assetType) });
   const addr2Q = useQuery({
     queryKey: ["comm-addr2", addr1],
     queryFn: () => fetchCommercialAddr2(addr1),
@@ -107,15 +110,15 @@ export default function CommercialApp() {
             addr4_list: scope.leafList.length ? scope.leafList : undefined,
           }
         : { addr3_list: scope.leafList.length ? scope.leafList : undefined };
-      return fetchCommercialClusters({
+      return fetchAllCommercialClusters({
         asset_type: scope.assetType,
         addr1: scope.addr1,
         addr2: scope.addr2,
         ...regionParams,
         contract_year_from: scope.yearFrom === "" ? undefined : scope.yearFrom,
         contract_year_to: scope.yearTo === "" ? undefined : scope.yearTo,
+        window_years: scope.yearFrom === "" && scope.yearTo === "" ? scope.windowYears : undefined,
         sort: scope.sort,
-        page_size: 500,
       });
     },
     enabled: scope !== null && !!scope.addr2,
@@ -132,6 +135,7 @@ export default function CommercialApp() {
       JSON.stringify(scope.leafList) !== JSON.stringify(leafList) ||
       scope.yearFrom !== yearFrom ||
       scope.yearTo !== yearTo ||
+      scope.windowYears !== windowYears ||
       scope.sort !== sort);
 
   const runAnalysis = () => {
@@ -145,6 +149,7 @@ export default function CommercialApp() {
       hasIntermediate,
       yearFrom,
       yearTo,
+      windowYears: normalizeStatsWindowYears(windowYears),
       sort,
     });
     setSelected(null);
@@ -187,13 +192,13 @@ export default function CommercialApp() {
                 className="input"
                 value={assetType}
                 onChange={(e) => {
-                  setAssetType(e.target.value as CommercialAssetType);
+                  setAssetType(e.target.value as CommercialAssetSelectorType);
                   resetRegion();
                 }}
               >
-                {(Object.keys(COMMERCIAL_ASSET_LABELS) as CommercialAssetType[]).map((t) => (
+                {(Object.keys(COMMERCIAL_ASSET_SELECTOR_LABELS) as CommercialAssetSelectorType[]).map((t) => (
                   <option key={t} value={t}>
-                    {COMMERCIAL_ASSET_LABELS[t]}
+                    {COMMERCIAL_ASSET_SELECTOR_LABELS[t]}
                   </option>
                 ))}
               </select>
@@ -223,6 +228,10 @@ export default function CommercialApp() {
                 </select>
               </label>
             </div>
+
+            {yearFrom === "" && yearTo === "" && (
+              <StatsWindowToggle value={windowYears} onChange={setWindowYears} />
+            )}
 
             <label className="text-xs block space-y-1">
               <span className="text-slate-500 dark:text-slate-400">시도</span>
@@ -323,16 +332,26 @@ export default function CommercialApp() {
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
                   {scope.addr1} {scope.addr2} · 도로 {clustersQ.data.total}개
                 </p>
-                <div className="card overflow-x-auto p-0 w-full">
-                  <table className="data buildings-table">
+                <div className="card overflow-x-auto p-0 w-full max-w-3xl">
+                  <table className="data commercial-clusters-table">
+                    <colgroup>
+                      {scope.assetType === "all" && <col className="col-type" />}
+                      <col className="col-road-name" />
+                      <col className="col-stat" />
+                      <col className="col-stat" />
+                      <col className="col-stat" />
+                      <col className="col-stat col-ci" />
+                      <col className="col-dong" />
+                    </colgroup>
                     <thead>
                       <tr>
+                        {scope.assetType === "all" && <th>유형</th>}
                         <th>도로명</th>
                         <th className="text-right">거래</th>
                         <th className="text-right">평균</th>
                         <th className="text-right">중앙</th>
                         <th className="text-right">95% CI</th>
-                        <th>구·동</th>
+                        <th className="col-dong-head">구·동</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -345,6 +364,11 @@ export default function CommercialApp() {
                           )}
                           onClick={() => setSelected(row)}
                         >
+                          {scope.assetType === "all" && (
+                            <td className="text-[10px] whitespace-nowrap text-center">
+                              {commercialAssetTypeLabel(row.asset_type)}
+                            </td>
+                          )}
                           <td className="name">
                             {row.road_name || row.display_label}
                             {!row.is_reliable && <span className="ml-0.5 text-[9px] text-amber-600">n&lt;15</span>}
@@ -353,7 +377,7 @@ export default function CommercialApp() {
                           <td className="num">{fmtPrice(row.mean)}</td>
                           <td className="num">{fmtPrice(row.median)}</td>
                           <td className="num text-[10px]">{fmtCi(row.ci_lower, row.ci_upper)}</td>
-                          <td className="text-[10px] text-slate-600 dark:text-slate-300">
+                          <td className="col-dong text-[10px] text-slate-600 dark:text-slate-300">
                             {[row.addr3, row.addr4].filter(Boolean).join(" · ") || "—"}
                           </td>
                         </tr>
@@ -367,7 +391,15 @@ export default function CommercialApp() {
       </main>
 
       {selected && scope && (
-        <CommercialClusterDetailModal row={selected} scope={scope} onClose={() => setSelected(null)} />
+        <CommercialClusterDetailModal
+          row={selected}
+          scope={scope}
+          periodStart={clustersQ.data?.period_start}
+          periodEnd={clustersQ.data?.period_end}
+          statsAsOfLabel={clustersQ.data?.stats_as_of_label}
+          peerClusters={clustersQ.data?.items ?? []}
+          onClose={() => setSelected(null)}
+        />
       )}
     </div>
   );

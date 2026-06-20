@@ -179,14 +179,15 @@ CH2 Macro는 **국토부 실거래가** 기반이다. 원천 한계:
 
 ---
 
-## 7. 4순위 — 집합 `building_key` 개선
+## 7. 4순위 — **주거** 집합 `building_key` 개선
+
+> **집합상가·집합공장(`collective_commercial_*`)은 해당 없음** — 도로 cluster만 (D-020).
 
 ### 7.1 목표
 
-[`COLLECTIVE_COMMERCIAL_DESIGN.md`](COLLECTIVE_COMMERCIAL_DESIGN.md) §4 **building_key_v2**와 연계.
+**주거** 아파트·연립 등 — 표제부 연계 `building_key_v2` ([`pipeline/collective/building_keys.py`](../pipeline/collective/building_keys.py)).
 
 - **아파트·연립:** 단지명 + 도로명 ↔ 표제부 **57.7만** 행
-- **마스킹 상가:** tier C — 도로 cluster 유지, building_key는 High tier만
 - [`pipeline/collective/building_keys.py`](../pipeline/collective/building_keys.py) — `building_key_v2` 분기 (표제부 PK 또는 normalized key)
 
 ### 7.2 기대 효과
@@ -196,9 +197,8 @@ CH2 Macro는 **국토부 실거래가** 기반이다. 원천 한계:
 
 ### 7.3 완료 기준
 
-- [ ] `building_key_v2` + `resolution_mode` (`ledger` / `name_road` / `legacy`)
-- [ ] collective UI tier 라벨 (“대장 매칭 · 높음/보통/미상”)
-- [ ] 상가 2단계 착수 조건([`COLLECTIVE_COMMERCIAL_DESIGN.md`](COLLECTIVE_COMMERCIAL_DESIGN.md) §8) 재평가
+- [ ] `building_key_v2` + `resolution_mode` (`ledger` / `name_road` / `legacy`) — **주거 집합**
+- [ ] collective UI tier 라벨 (“대장 매칭 · 높음/보통/미상”) — **주거**
 
 ---
 
@@ -208,7 +208,7 @@ CH2 Macro는 **국토부 실거래가** 기반이다. 원천 한계:
 |----|-----|-------|-------|-------|-------|
 | 복합 `/built/` | `built_stats` | ✅ | ✅ **주력** | ✅ | — |
 | 집합 `/collective/` | `collective_stats` | ✅ | △ (연립) | ✅ | ✅ **주력** |
-| 집합상가 | `collective_stats` | ✅ | △ | △ | ✅ tier High만 |
+| 집합상가 | `collective_stats` | ✅ | — | — | — (도로 cluster만, D-020) |
 
 **토지 `/land/`:** 범위 외 (건축물대장 미사용).
 

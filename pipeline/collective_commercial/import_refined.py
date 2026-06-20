@@ -26,6 +26,8 @@ from cluster_keys import (  # noqa: E402
 )
 from gukto_raw_factory import load_collective_factory_raw  # noqa: E402
 from gukto_raw_shop import load_collective_shop_raw  # noqa: E402
+from molit_raw_factory import load_collective_factory_molit  # noqa: E402
+from molit_raw_shop import load_collective_shop_molit  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -33,6 +35,9 @@ log = logging.getLogger(__name__)
 REPO = Path(__file__).resolve().parents[2]
 DDL = REPO / "db" / "019_collective_commercial.sql"
 DDL_ROAD_WIDTH = REPO / "db" / "020_collective_commercial_road_width.sql"
+DDL_DISPLAY = REPO / "db" / "029_collective_commercial_display.sql"
+DDL_CLUSTER_STATS = REPO / "db" / "030_collective_cluster_stats.sql"
+DDL_CLUSTER_ANNUAL = REPO / "db" / "031_collective_cluster_annual_stats.sql"
 
 UPSERT_CLUSTER = text(
     """
@@ -61,13 +66,15 @@ INSERT_TX = text(
         addr1, addr2, addr3, addr4, addr5, lot_number, road_name,
         zone_type, building_use, building_year, area_bucket_label,
         contract_year, contract_month, contract_date,
-        price, gross_area, land_area, unit_price, floor, road_code, road_width_label, building_age
+        price, gross_area, land_area, unit_price, floor, road_code, road_width_label, building_age,
+        buyer_type, seller_type, deal_type
     ) VALUES (
         :transaction_hash, :cluster_id, :asset_type, :cluster_key, :resolution_mode,
         :addr1, :addr2, :addr3, :addr4, :addr5, :lot_number, :road_name,
         :zone_type, :building_use, :building_year, :area_bucket_label,
         :contract_year, :contract_month, :contract_date,
-        :price, :gross_area, :land_area, :unit_price, :floor, :road_code, :road_width_label, :building_age
+        :price, :gross_area, :land_area, :unit_price, :floor, :road_code, :road_width_label, :building_age,
+        :buyer_type, :seller_type, :deal_type
     )
     """
 )
@@ -110,7 +117,7 @@ def _str(val, width: int | None = None) -> str | None:
 
 
 def apply_ddl(engine) -> None:
-    for path in (DDL, DDL_ROAD_WIDTH):
+    for path in (DDL, DDL_ROAD_WIDTH, DDL_DISPLAY, DDL_CLUSTER_STATS, DDL_CLUSTER_ANNUAL):
         if not path.is_file():
             continue
         sql = path.read_text(encoding="utf-8")
@@ -257,6 +264,9 @@ def insert_transactions(engine, df: pd.DataFrame, id_map: dict[str, int], *, sou
                 "road_code": _null(d.get("road_code")),
                 "road_width_label": _str(d.get("road_width_label"), 32),
                 "building_age": _null(d.get("building_age")),
+                "buyer_type": _str(d.get("buyer_type"), 20),
+                "seller_type": _str(d.get("seller_type"), 20),
+                "deal_type": _str(d.get("deal_type"), 20),
             }
             batch.append(rec)
             if len(batch) >= 2000:
@@ -301,12 +311,22 @@ def ingest_asset(engine, loader, *, source: str, enrich_fn, truncate: bool = Fal
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description="GUKTO 집합상가·집합공장 원본 xlsx 적재 (도로 cluster)")
+    p = argparse.ArgumentParser(description="집합상가·집합공장 ingest (도로 cluster)")
+    p.add_argument(
+        "--source",
+        choices=("molit", "gukto"),
+        default="molit",
+        help="molit=raw/raw base CSV (SSOT, 2021~2026) · gukto=legacy GUKTO xlsx",
+    )
     p.add_argument("--shop-only", action="store_true")
     p.add_argument("--factory-only", action="store_true")
     p.add_argument("--truncate", action="store_true", help="기존 commercial 테이블 비우고 재적재")
     p.add_argument("--skip-ddl", action="store_true")
     args = p.parse_args()
+
+    shop_loader = load_collective_shop_molit if args.source == "molit" else load_collective_shop_raw
+    factory_loader = load_collective_factory_molit if args.source == "molit" else load_collective_factory_raw
+    source_prefix = "molit" if args.source == "molit" else "gukto"
 
     engine = get_collective_engine()
     if not args.skip_ddl:
@@ -323,8 +343,8 @@ def main() -> None:
     if do_shop:
         n, _ = ingest_asset(
             engine,
-            load_collective_shop_raw,
-            source="gukto_shop_raw",
+            shop_loader,
+            source=f"{source_prefix}_shop_raw",
             enrich_fn=enrich_commercial_road,
             truncate=args.truncate,
             purge=True,
@@ -334,8 +354,8 @@ def main() -> None:
     if do_factory:
         n, _ = ingest_asset(
             engine,
-            load_collective_factory_raw,
-            source="gukto_factory_raw",
+            factory_loader,
+            source=f"{source_prefix}_factory_raw",
             enrich_fn=enrich_commercial_road,
             truncate=False,
             purge=True,

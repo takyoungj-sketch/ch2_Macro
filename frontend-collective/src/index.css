@@ -39,6 +39,42 @@ table.data.buildings-table {
   min-width: 44cm;
 }
 
+/* 비주거 집합 — 도로 cluster 목록 (컬럼 폭 compact) */
+table.data.commercial-clusters-table {
+  width: 100%;
+  max-width: 52rem;
+  min-width: 0;
+}
+
+table.data.commercial-clusters-table col.col-type {
+  width: 4.5rem;
+}
+
+table.data.commercial-clusters-table col.col-road-name {
+  width: 9rem;
+}
+
+table.data.commercial-clusters-table col.col-stat {
+  width: 3.75rem;
+}
+
+table.data.commercial-clusters-table col.col-ci {
+  width: 5.5rem;
+}
+
+table.data.commercial-clusters-table col.col-dong {
+  width: 4.5rem;
+}
+
+table.data.commercial-clusters-table th.col-dong-head,
+table.data.commercial-clusters-table td.col-dong {
+  @apply text-center whitespace-normal break-words leading-snug;
+}
+
+table.data.commercial-clusters-table td.name {
+  @apply text-left truncate;
+}
+
 table.data.buildings-table col.col-jibun {
   width: 7cm;
 }
