@@ -1,0 +1,99 @@
+{
+  "source": "built",
+  "asset": "detached",
+  "sido": "충청북도",
+  "n": 18354,
+  "coverage": {
+    "sigungu": 0.6412771058079982,
+    "eupmyeondong": 0.6412771058079982
+  },
+  "dummies": {
+    "sigungu": 10,
+    "eupmyeondong": 130
+  },
+  "results": [
+    {
+      "model": "M0_base",
+      "adj_r2": 0.5942658461876932,
+      "aic": -22584.7757407239,
+      "n_params": 10,
+      "cv_mape": 0.47820113194074565,
+      "cv_r2_log": 0.5941186695346949,
+      "n_cols": 9
+    },
+    {
+      "model": "M_sgg_dummy",
+      "adj_r2": 0.6576769784570997,
+      "aic": -25693.924218168868,
+      "n_params": 20,
+      "cv_mape": 0.43341264492658726,
+      "cv_r2_log": 0.657487511761864,
+      "n_cols": 19
+    },
+    {
+      "model": "M_emd_dummy",
+      "adj_r2": 0.6912078501515486,
+      "aic": -27466.497817088028,
+      "n_params": 140,
+      "cv_mape": 0.41057453020309254,
+      "cv_r2_log": 0.6882225341661617,
+      "n_cols": 139
+    },
+    {
+      "model": "M_prof_sgg(all)",
+      "adj_r2": 0.6502529244346533,
+      "aic": -25302.128756144353,
+      "n_params": 18,
+      "cv_mape": 0.4377117549695543,
+      "cv_r2_log": 0.6501128359604487,
+      "n_cols": 17
+    },
+    {
+      "model": "M_prof_emd(all)",
+      "adj_r2": 0.6172327152932775,
+      "aic": -23646.287025298,
+      "n_params": 18,
+      "cv_mape": 0.4615446318256381,
+      "cv_r2_log": 0.6169569890032536,
+      "n_cols": 17
+    },
+    {
+      "model": "  prof_emd_pop",
+      "adj_r2": 0.6008979898886224,
+      "aic": -22886.270475985028,
+      "n_params": 11,
+      "cv_mape": 0.47229213264162384,
+      "cv_r2_log": 0.600752687358686,
+      "n_cols": 10
+    },
+    {
+      "model": "  prof_emd_land",
+      "adj_r2": 0.6141028048336346,
+      "aic": -23501.81135728891,
+      "n_params": 13,
+      "cv_mape": 0.4638390921728447,
+      "cv_r2_log": 0.6138208646332443,
+      "n_cols": 12
+    },
+    {
+      "model": "  prof_emd_house",
+      "adj_r2": 0.6012837751013487,
+      "aic": -22902.02194868358,
+      "n_params": 13,
+      "cv_mape": 0.4733321196668527,
+      "cv_r2_log": 0.6011530087894376,
+      "n_cols": 12
+    }
+  ],
+  "profile_vif": {
+    "log_population": 5.56376791687396,
+    "log_land_residential_median": 11.309423284758555,
+    "log_land_commercial_median": 2.057384835331858,
+    "log_land_industrial_median": 2.3052401443766497,
+    "log_apartment_median": 3.345677439203925,
+    "log_rowhouse_median": 3.5356977044665774,
+    "log_officetel_median": 2.5352682158399458,
+    "ratio_commercial_zone": 10.801942140566041
+  },
+  "kpi_note": "심판은 CV-MAPE/CV-R2log. in-sample adjR2는 더미 과적합으로 부풀려질 수 있음."
+}
