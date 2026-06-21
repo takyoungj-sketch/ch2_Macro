@@ -234,10 +234,27 @@ python build_twin_sigungu_hybrid.py --profile-version v1.1-national --window-yea
 - 검증: 강남구 → 서초·동대문·마포·중랑·성북 등 10개(배치 `sgg_hybrid2_national_…`).
 - 비고: legacy `/twin-regions/neighbors`(land DB)는 유지(읍면동 모달은 그대로). 추후 단일화 검토.
 
-### 3.11 향후
+### 3.11 차후 계획 (기록, 2026-06-21)
 
-- **Phase 3**: 읍면동 full matrix 벡터화 → 전국 scope 실용화.
-- **학습형 가중치 / 데이터 기반 권역**: 장기.
+화면 검증(B안)을 우선하고, 아래는 미착수 계획으로 보류한다.
+
+#### Phase 3 — 읍면동 full matrix 벡터화 → 전국 scope 실용화
+- **문제**: `build_twin_hybrid.py._build_twin_rows` 가 앵커×후보를 Python 이중 루프로 한 쌍씩 계산. 권역(region) scope는 후보가 적어 빠르나, 전국(national)은 후보≈전체 N(약 5,000) → 쌍 ≈ N²(2,500만+)이라 전국 전체 배치가 비현실적. 현재 collective DB의 전국 읍면동 배치는 **충북 smoke 뿐**이며 사이드바 "전국" 토글도 이에 의존.
+- **작업**:
+  1. 블록 유사도 행렬화 — 토지/집합 구성비 코사인은 `land_norm @ land_norm.T`, `coll_norm @ coll_norm.T`; 가격·인구·밀도 log-sim(`exp(-|log a−log b|)`)은 로그 벡터 브로드캐스팅.
+  2. ±40% 인구 허들 = 마스크 행렬.
+  3. 적응형 가중치(`wl/wc/wp`) 벡터 합성 → score 행렬.
+  4. 행별 `argpartition` Top-K 20 + 기존 `_select_with_quota` 권역 쿼터 재사용.
+  5. 메모리 타일링(앵커 블록 500개 등; 5,000² float64 ≈ 200MB/행렬).
+- **검증**: 충북 anchor 일부로 기존 루프 결과와 수치 동일성 회귀; `None`(결측 가격/인구) → NaN 마스크로 "블록 제외" 의미 보존; 메모리 피크 측정.
+- **결과**: 전국 읍면동 hybrid 배치를 분 단위 생성 → "전국" 토글이 smoke 의존을 벗고 실데이터로 동작.
+
+#### 기타 보류 항목
+- **읍면동 모달 hybrid 단일화**: 현재 읍면동 모달은 legacy `/twin-regions/eupmyeondong`(land DB) 유지. 사이드바와 동일하게 `/regional-profile/twins` 로 통일할지 결정.
+- **legacy `/twin-regions` 정리**: 시군구 모달은 hybrid 전환 완료, 읍면동만 legacy 사용 → 단일화 시 라우터/DB 정리.
+- **학습형 가중치**: 사용자 "추천 채택/거부" 로깅 → 0.5/0.3/0.2 가중치 자동 최적화.
+- **데이터 기반 권역**: Twin 엣지 그래프 community detection 으로 생활권 재도출(오프라인, 순환 회피).
+- **presence 플래그**: 구성비 cosine 만으로 구분 안 되는 사례 확인 시 검토.
 - **학습형 가중치**: 사용자 "추천 채택/거부" 피드백 로깅 → 가중치(0.5/0.3/0.2) 자동 최적화.
 - **데이터 기반 권역**: Twin 엣지 그래프 community detection 으로 생활권 재도출(오프라인, 순환 회피).
 - **presence 플래그**: 구성비 cosine만으로 구분 안 되는 사례 확인 시 검토.
