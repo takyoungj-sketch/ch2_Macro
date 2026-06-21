@@ -107,50 +107,83 @@ Top-k(기본 5) 저장 → `twin_eupmyeondong_neighbor_mvp.detail_scores`에 `pr
   - **집합 market 30%** — apartment / rowhouse / officetel 시장 fingerprint
   - **Profile 20%** — 인구·density·land domain 요약 (composition과 legacy **중복 최소화**)
 
-### 3.2 점수식 (초안)
+### 3.2 점수식 (hybrid_v2 — 구현 확정)
 
-동일 후보 pool (인접 시도 + min_tx + 인구 허들)에서:
+리뷰(2026-06-21) 반영. **역할 분리** = 토지(토지시장)·집합(집합시장)·Profile(지역특성).
+모든 블록 점수 ∈ **[0, 1]**, **pairwise 로그차 유사도**(전역 min/max 비의존, 아웃라이어 강건).
 
 ```
-S_land   = legacy MVP 점수 (struct×0.72 + price×0.28, algorithm_version=4)
-S_coll   = cosine( z-score( apartment/rowhouse/officetel mean, count, volatility ) )
-S_prof   = cosine( population, density, land_R/C/I mean )   // ratio_* 제외 권장
+# 토지 블록 (legacy 검증값 유지)
+land_struct = cosine(zone×지목 거래 share)
+land_price  = 1 - min(1, |log1p(median단가_A) - log1p(median단가_B)| / 2.5)
+S_land      = 0.72 × land_struct + 0.28 × land_price
 
-similarity_hybrid = 0.50 × S_land + 0.30 × S_coll + 0.20 × S_prof
+# 집합 블록 (구성비 + 가격수준; z-score·cosine 폐기)
+coll_pattern = cosine([apt_count, 연립_count, 오피스텔_count])   # 구성비 방향, 결측=0(시장없음)
+coll_price   = 1 - min(1, |log1p(apt_mean_A) - log1p(apt_mean_B)| / 2.5)
+S_coll       = 0.70 × coll_pattern + 0.30 × coll_price           # apt_mean 결측 시 = coll_pattern
+
+# Profile 블록 (가격 제거 → 지역 메타만)
+S_prof = mean( pop_sim, density_sim )   # 각 1 - min(1, |log1p Δ| / 2.5)
+
+# 적응형 가중치: 집합 신뢰도 = min(1, 집합거래수 / N0=20), 앵커·후보 min
+conf  = min(conf_anchor, conf_cand)
+(wl, wc, wp) = normalize( 0.50, 0.30 × conf, 0.20 )   # 남는 비중은 토지·Profile로 재분배
+similarity = wl × S_land + wc × S_coll + wp × S_prof
 ```
 
-각 `S_*` ∈ [0, 1] 정규화. 가중치는 **튜닝 가능 파라미터** (파일럿 10~20 앵커 QA).
+**근거:**
+- **스케일 통일** — 기존 `S_coll/S_prof`가 z-cosine으로 [−1,1]이라 집합이 감점 역할을 하던 버그 제거.
+- **z-score+cosine 폐기** — "모든 항목 평균 이상 → cosine≈1" 병리 제거. 구성비 cosine + 가격 pairwise 로 대체.
+- **가격 중복 제거** — 가격을 토지·집합 두 블록에만 둠(Profile에서 제거).
+- **결측 = 시장 없음** — 평균 대체 금지. 구성비 0 + 적응형 가중치로 자연 처리.
 
 ### 3.3 `detail_scores` (설명 가능성)
 
+문장은 DB 대신 **reason_codes + sub-signal(별점)** 로 저장 → 프론트에서 추천 이유 자동 생성(로케일·포맷 비종속).
+
 ```json
 {
-  "algorithm": "hybrid_v1",
+  "algorithm": "hybrid_v2",
   "profile_version": "v1.1-national",
-  "as_of_month": "2026-05-01",
   "window_years": 5,
-  "s_land": 0.46,
-  "s_collective": 0.28,
-  "s_profile": 0.18,
-  "similarity_final": 0.42
+  "s_land": 0.91, "s_collective": 0.90, "s_profile": 0.99,
+  "similarity_final": 0.925,
+  "land_struct_sim": 0.91, "land_price_sim": 0.83,
+  "coll_pattern_sim": 0.90, "coll_price_sim": 0.61,
+  "pop_sim": 0.99, "density_sim": null,
+  "collective_confidence": 1.0,
+  "weights_effective": {"land": 0.5, "collective": 0.3, "profile": 0.2},
+  "stars": {"land_struct": 5, "land_price": 4, "coll_pattern": 5, "population": 5},
+  "reason_codes": ["LAND_STRUCT_STRONG", "LAND_PRICE_STRONG", "COLL_PATTERN_STRONG", "POP_STRONG"]
 }
 ```
 
-UI: legacy 화면처럼 블록별 기여도 표시.
-
 ### 3.4 중복 counting 방지
 
-- Profile **composition ratio** ≈ legacy zone×지목 share의 **축약** → hybrid에서 Profile 블록은 **비구조 feature** 위주.
-- 장기: legacy share·collective block을 **Profile v1.2 feature로 흡수** → Twin은 Profile-only로 회귀 (D-017 SSOT).
+- **가격**: 토지(단가)·집합(아파트가)만. Profile은 인구·밀도만 → 3중 가격 counting 제거.
+- **구조**: 토지=zone×지목, 집합=거래종류 구성비로 도메인 분리.
+- 장기: legacy share·collective block을 **Profile feature로 흡수** → Twin은 Profile-only로 회귀 (D-017 SSOT).
 
-### 3.5 구현 파일
+### 3.5 검증 (충북 스모크, 2026-06-21)
+
+- **anchor=충북, 후보풀=충북+인접 시도**(대전·세종·경기·강원·충남·경북)로 로드 → 스모크가 전국 결과를 대표.
+- **가경동(43113113)** Top5: 용인 성복·고림, 남양주 호평, 용인 영덕, **천안 신방동** — legacy 1위였던 신방동을 포함하며 토지·집합·인구가 모두 강하게 일치.
+- **서문동(아파트 시장 無)**: 집합 신뢰도 0 → 가중치 토지 0.714 / Profile 0.286 자동 재분배 확인.
+
+### 3.6 구현 파일
 
 | 파일 | 역할 |
 |------|------|
-| `pipeline/build_twin_hybrid.py` | 3블록 점수 + Top-k (**구현됨**) |
+| `pipeline/build_twin_hybrid.py` | hybrid_v2 — 3블록 [0,1] + 적응형 가중치 + reason_codes (**구현됨**) |
 | `pipeline/rebuild_regional_profile_national.py` | `--twin-mode hybrid` (기본) |
 | `backend/.../regional_profile/router.py` | `/twins` — v6 우선, v5 fallback |
-| `algorithm_version` | **6** (hybrid) |
+| `algorithm_version` / `detail.algorithm` | **6** / `hybrid_v2` |
+
+### 3.7 향후 (장기)
+
+- **학습형 가중치**: 사용자 "추천 채택/거부" 피드백 로깅 → 가중치(0.5/0.3/0.2) 자동 최적화.
+- **presence 플래그**: 전국 QA에서 구성비 cosine만으로 구분 안 되는 사례 확인 시 phase 2.
 
 ---
 

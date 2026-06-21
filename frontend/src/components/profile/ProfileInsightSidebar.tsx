@@ -39,6 +39,31 @@ function formatTwinBlockScores(detail: Record<string, unknown>): string | null {
   return parts.join(" · ");
 }
 
+const REASON_LABELS: Record<string, string> = {
+  LAND_STRUCT_STRONG: "토지 거래구조 매우 유사",
+  LAND_STRUCT_SIMILAR: "토지 거래구조 유사",
+  LAND_PRICE_STRONG: "토지 단가 수준 매우 유사",
+  LAND_PRICE_SIMILAR: "토지 단가 수준 유사",
+  COLL_PATTERN_STRONG: "집합 거래구성 매우 유사",
+  COLL_PATTERN_SIMILAR: "집합 거래구성 유사",
+  COLL_PRICE_STRONG: "아파트 가격대 매우 유사",
+  COLL_PRICE_SIMILAR: "아파트 가격대 유사",
+  POP_STRONG: "인구 규모 유사",
+  POP_SIMILAR: "인구 규모 비슷",
+  DENSITY_STRONG: "인구 밀도 유사",
+  DENSITY_SIMILAR: "인구 밀도 비슷",
+};
+
+function formatTwinReasons(detail: Record<string, unknown>): string | null {
+  const raw = detail.reason_codes;
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const labels = raw
+    .map((code) => (typeof code === "string" ? REASON_LABELS[code] : undefined))
+    .filter((v): v is string => Boolean(v))
+    .slice(0, 3);
+  return labels.length > 0 ? labels.join(", ") : null;
+}
+
 export default function ProfileInsightSidebar({
   features,
   eupmyeondongCode,
@@ -92,6 +117,7 @@ export default function ProfileInsightSidebar({
           <ol className="space-y-2">
             {twins.neighbors.map((n) => {
               const blocks = formatTwinBlockScores(n.detail_scores);
+              const reasons = formatTwinReasons(n.detail_scores);
               return (
                 <li key={n.rank} className="text-[11px] text-slate-800 dark:text-slate-200">
                   <span className="font-medium text-violet-900 dark:text-violet-200">
@@ -100,6 +126,11 @@ export default function ProfileInsightSidebar({
                   <span className="block text-slate-500">
                     {n.twin_sido_name} {n.twin_sigungu_name}
                   </span>
+                  {reasons ? (
+                    <span className="block text-[10px] text-slate-600 dark:text-slate-300 mt-0.5">
+                      {reasons}
+                    </span>
+                  ) : null}
                   {blocks ? (
                     <span className="block text-[10px] text-violet-700/80 dark:text-violet-300/80 mt-0.5">
                       {blocks}

@@ -27,6 +27,7 @@
 | D-021 | 2026-06-20 | **Regional Profile 충북 파일럿**: 전국 확장 전 **시도 43 End-to-End** 반복. `profile_version=v1.0-chungbuk`, land domain 추출 SSOT=`pipeline/config/land_domain_extraction.yaml`, 빌드=`rebuild_regional_profile_chungbuk.py`. 물리 토지 GIS·고용 등 **추가 외부 데이터는 v2 후보** — v1은 거래 통계+인구+거래비중 파생. |
 | D-022 | 2026-06-20 | **Regional Profile 전국 Phase 1**: 충북 단독 회귀 A/B로 Profile 효과 결론 내리지 않음. **`v1.1-national`** 전국 Profile → **`build_twin_from_profile.py`**(Profile 소비, algorithm_version=5) → 복합 회귀 pooling(1안 AI 제안·2안 원격 유사)은 **Twin 이후**. orchestrator=`rebuild_regional_profile_national.py`. |
 | D-023 | 2026-06-20 | **Twin 하이브리드(v1.2)**: Profile-only Twin(v5)은 API·SSOT 검증용. **제품 Twin** = 토지 legacy **50%** + 집합 market **30%** + Profile **20%** (composition 중복 회피). 장기: 블록을 Profile feature로 흡수 후 Twin은 Profile-only 복귀. 상세: [`docs/PROFILE_TWIN_HYBRID.md`](PROFILE_TWIN_HYBRID.md). |
+| D-023b | 2026-06-21 | **Hybrid Twin v2 정련**(리뷰 반영): 전 블록 [0,1] 통일, 집합=구성비 cosine+아파트가 pairwise log-sim(z-score 폐기), Profile 가격 제거(인구·밀도만, 가격 3중 counting 회피), 결측=시장없음(평균 대체 금지), 집합 신뢰도 기반 적응형 가중치(남는 비중 토지·Profile 재분배), reason_codes 설명성, 스모크 후보풀=anchor+인접 시도. `detail.algorithm=hybrid_v2`. |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 
