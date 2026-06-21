@@ -221,10 +221,18 @@ similarity = wl × S_land + wc × S_coll + wp × S_prof
 python build_twin_sigungu_hybrid.py --profile-version v1.1-national --window-years 5
 ```
 
-### 3.9 향후
+### 3.9 API/UI 연결 (Phase 2, 2026-06-21)
 
-- **Phase 2 잔여**: API/UI 권역·전국 토글 노출, 시군구 hybrid API/UI(`twin_regions`·`TwinCityModal`) 연결. (읍면동 Top-N 20 + 쿼터, 시군구 hybrid 빌더는 **완료**.)
+- **읍면동**: `GET /api/regional-profile/twins/{eup}?scope=region|national` — hybrid(v6)만 scope 태그로 배치 필터(v5 fallback은 scope 무시). 응답에 `scope`, item `detail_scores`에 `twin_region`·`in_region`.
+- **시군구**: `GET /api/regional-profile/twins-sigungu/{sigungu}?scope=national` — `twin_region_neighbor_mvp`(algorithm_version=7) 조회.
+- **UI**(`ProfileInsightSidebar`): **권역/전국 토글** 추가, 전국 모드에서 후보별 `twin_region` 배지 표시. reason_codes 한국어 렌더 유지.
+- 검증: 가경동 region(충청권 5: 신방·분평·충주 연수·세종 조치원·청당) / national(용인·춘천·전주 등). 강남구 시군구 → 서초·동대문·마포·중랑·성북.
+
+### 3.10 향후
+
+- **시군구 UI**: 기존 `TwinCityModal`(`/twin-regions`, land DB)을 collective hybrid 로 연결 또는 Profile 시군구 패널에 노출(별도 DB·라우터라 소규모 정리 필요).
 - **Phase 3**: 읍면동 full matrix 벡터화 → 전국 scope 실용화.
+- **학습형 가중치 / 데이터 기반 권역**: 장기.
 - **학습형 가중치**: 사용자 "추천 채택/거부" 피드백 로깅 → 가중치(0.5/0.3/0.2) 자동 최적화.
 - **데이터 기반 권역**: Twin 엣지 그래프 community detection 으로 생활권 재도출(오프라인, 순환 회피).
 - **presence 플래그**: 구성비 cosine만으로 구분 안 되는 사례 확인 시 검토.

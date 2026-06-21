@@ -331,6 +331,7 @@ export interface ProfileTwinNeighborsResponse {
   profile_version: string;
   window_years: number;
   algorithm_version?: number;
+  scope?: string | null;
   as_of_month?: string | null;
   batch_key?: string | null;
   anchor_eupmyeondong_code: string;

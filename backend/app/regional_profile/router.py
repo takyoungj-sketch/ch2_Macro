@@ -51,10 +51,29 @@ class ProfileTwinNeighborsResponse(BaseModel):
     profile_version: str
     window_years: int
     algorithm_version: int = 6
+    scope: Optional[str] = None
     as_of_month: Optional[date] = None
     batch_key: Optional[str] = None
     anchor_eupmyeondong_code: str
     neighbors: list[ProfileTwinNeighborItem] = Field(default_factory=list)
+
+
+class ProfileSigunguTwinItem(BaseModel):
+    rank: int
+    twin_sigungu_code: str
+    twin_sigungu_name: str
+    twin_sido_name: str
+    similarity_score: float
+    detail_scores: dict[str, Any] = Field(default_factory=dict)
+
+
+class ProfileSigunguTwinsResponse(BaseModel):
+    profile_version: str
+    window_years: int
+    scope: Optional[str] = None
+    batch_key: Optional[str] = None
+    anchor_sigungu_code: str
+    neighbors: list[ProfileSigunguTwinItem] = Field(default_factory=list)
 
 
 def _table_exists(db: Session, name: str) -> bool:
@@ -182,11 +201,15 @@ def get_profile_twin_neighbors(
     eupmyeondong_code: str,
     profile_version: str = Query("v1.1-national"),
     window_years: int = Query(5, ge=1, le=5),
-    top_k: int = Query(3, ge=1, le=10),
+    top_k: int = Query(3, ge=1, le=20),
+    scope: str = Query("region", pattern="^(adjacent|region|national)$"),
     algorithm_version: int = Query(6, ge=5, le=6, description="6=hybrid, 5=profile-only"),
     db: Session = Depends(get_collective_db),
 ):
-    """쌍둥이 읍면동 Top-k — hybrid(v6) 기본, profile-only(v5) fallback."""
+    """쌍둥이 읍면동 Top-k — hybrid(v6) 기본, profile-only(v5) fallback.
+
+    scope: region(권역, 기본) / national(전국) / adjacent. hybrid(v6) 배치만 scope 구분.
+    """
     if db is None:
         raise HTTPException(503, "collective_stats DB 미연결")
     if not _table_exists(db, "twin_eupmyeondong_neighbor_mvp"):
@@ -210,20 +233,26 @@ def get_profile_twin_neighbors(
     resolved_algo = algorithm_version
     for wy in window_candidates:
         for av in algo_candidates:
+            # hybrid(v6)만 scope 태그 보유 → scope 필터; v5 fallback은 scope 무시
+            scope_clause = " AND detail_scores->>'scope' = :scope " if av == 6 else ""
+            params = {"pv": profile_version, "wy": wy, "av": av}
+            if av == 6:
+                params["scope"] = scope
             batch_row = db.execute(
                 text(
-                    """
+                    f"""
                     SELECT batch_key, MAX(computed_at) AS computed_at
                     FROM twin_eupmyeondong_neighbor_mvp
                     WHERE algorithm_version = :av
                       AND detail_scores->>'profile_version' = :pv
                       AND (detail_scores->>'window_years')::int = :wy
+                      {scope_clause}
                     GROUP BY batch_key
                     ORDER BY computed_at DESC
                     LIMIT 1
                     """
                 ),
-                {"pv": profile_version, "wy": wy, "av": av},
+                params,
             ).mappings().first()
             if batch_row:
                 resolved_window = wy
@@ -237,6 +266,7 @@ def get_profile_twin_neighbors(
             profile_version=profile_version,
             window_years=window_years,
             algorithm_version=algorithm_version,
+            scope=scope,
             anchor_eupmyeondong_code=anchor,
             neighbors=[],
         )
@@ -289,8 +319,102 @@ def get_profile_twin_neighbors(
         profile_version=profile_version,
         window_years=resolved_window,
         algorithm_version=resolved_algo,
+        scope=scope if resolved_algo == 6 else None,
         as_of_month=as_of,
         batch_key=batch_key,
         anchor_eupmyeondong_code=anchor,
+        neighbors=neighbors,
+    )
+
+
+@router.get("/twins-sigungu/{sigungu_code}", response_model=ProfileSigunguTwinsResponse)
+def get_profile_twin_sigungu(
+    sigungu_code: str,
+    profile_version: str = Query("v1.1-national"),
+    window_years: int = Query(5, ge=1, le=5),
+    top_k: int = Query(5, ge=1, le=20),
+    scope: str = Query("national", pattern="^(adjacent|region|national)$"),
+    db: Session = Depends(get_collective_db),
+):
+    """쌍둥이 시군구 Top-k — hybrid_v2 (algorithm_version=7, twin_region_neighbor_mvp)."""
+    if db is None:
+        raise HTTPException(503, "collective_stats DB 미연결")
+    if not _table_exists(db, "twin_region_neighbor_mvp"):
+        raise HTTPException(404, "twin_region 테이블 없음 — build_twin_sigungu_hybrid.py 실행")
+
+    anchor = sigungu_code.strip()[:5]
+    if len(anchor) < 5:
+        raise HTTPException(400, "sigungu_code 5자리 필요")
+
+    window_candidates = [window_years] + [w for w in (5, 3) if w != window_years]
+    batch_row = None
+    resolved_window = window_years
+    for wy in window_candidates:
+        batch_row = db.execute(
+            text(
+                """
+                SELECT batch_key, MAX(computed_at) AS computed_at
+                FROM twin_region_neighbor_mvp
+                WHERE algorithm_version = 7
+                  AND detail_scores->>'profile_version' = :pv
+                  AND (detail_scores->>'window_years')::int = :wy
+                  AND detail_scores->>'scope' = :scope
+                GROUP BY batch_key
+                ORDER BY computed_at DESC
+                LIMIT 1
+                """
+            ),
+            {"pv": profile_version, "wy": wy, "scope": scope},
+        ).mappings().first()
+        if batch_row:
+            resolved_window = wy
+            break
+
+    if not batch_row:
+        return ProfileSigunguTwinsResponse(
+            profile_version=profile_version,
+            window_years=window_years,
+            scope=scope,
+            anchor_sigungu_code=anchor,
+            neighbors=[],
+        )
+
+    batch_key = batch_row["batch_key"]
+    rows = db.execute(
+        text(
+            """
+            SELECT rank, twin_sigungu_code, twin_sigungu_name, twin_sido_name,
+                   similarity_score, detail_scores
+            FROM twin_region_neighbor_mvp
+            WHERE batch_key = :bk AND anchor_sigungu_code = :anchor
+            ORDER BY rank
+            LIMIT :top_k
+            """
+        ),
+        {"bk": batch_key, "anchor": anchor, "top_k": top_k},
+    ).mappings().all()
+
+    neighbors: list[ProfileSigunguTwinItem] = []
+    for r in rows:
+        detail = r.get("detail_scores") or {}
+        if not isinstance(detail, dict):
+            detail = dict(detail)
+        neighbors.append(
+            ProfileSigunguTwinItem(
+                rank=int(r["rank"]),
+                twin_sigungu_code=str(r["twin_sigungu_code"]).strip(),
+                twin_sigungu_name=str(r["twin_sigungu_name"]),
+                twin_sido_name=str(r["twin_sido_name"]),
+                similarity_score=float(r["similarity_score"]),
+                detail_scores=detail,
+            )
+        )
+
+    return ProfileSigunguTwinsResponse(
+        profile_version=profile_version,
+        window_years=resolved_window,
+        scope=scope,
+        batch_key=batch_key,
+        anchor_sigungu_code=anchor,
         neighbors=neighbors,
     )

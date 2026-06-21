@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchProfileTwinNeighbors } from "../../api/client";
 import { DEFAULT_PROFILE_VERSION } from "../../constants/profileVersion";
 import { buildProfileInsights } from "../../utils/profileFeatureDisplay";
+
+type TwinScope = "region" | "national";
 
 function InsightCard({
   title,
@@ -76,6 +79,7 @@ export default function ProfileInsightSidebar({
   windowYears: number;
 }) {
   const insights = buildProfileInsights(features);
+  const [twinScope, setTwinScope] = useState<TwinScope>("region");
 
   const twinCode =
     eupmyeondongCode && eupmyeondongCode.length >= 8
@@ -83,13 +87,14 @@ export default function ProfileInsightSidebar({
       : null;
 
   const { data: twins, isError } = useQuery({
-    queryKey: ["profile-twins", twinCode, windowYears, profileVersion],
+    queryKey: ["profile-twins", twinCode, windowYears, profileVersion, twinScope],
     queryFn: () =>
       fetchProfileTwinNeighbors({
         eupmyeondong_code: twinCode!,
         profile_version: profileVersion,
         window_years: windowYears,
-        top_k: 3,
+        top_k: 5,
+        scope: twinScope,
       }),
     enabled: Boolean(twinCode),
     staleTime: 30 * 60 * 1000,
@@ -108,11 +113,38 @@ export default function ProfileInsightSidebar({
       {insights.topComposition ? (
         <InsightCard title="토지 거래 구성" value={insights.topComposition} />
       ) : null}
+      {twinCode ? (
+        <div className="flex items-center gap-1" role="tablist" aria-label="쌍둥이 범위">
+          {(
+            [
+              ["region", "권역"],
+              ["national", "전국"],
+            ] as [TwinScope, string][]
+          ).map(([val, label]) => (
+            <button
+              key={val}
+              type="button"
+              role="tab"
+              aria-selected={twinScope === val}
+              onClick={() => setTwinScope(val)}
+              className={
+                "text-[11px] px-2 py-0.5 rounded-md border " +
+                (twinScope === val
+                  ? "bg-violet-600 text-white border-violet-600"
+                  : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700")
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : null}
       {twins && twins.neighbors.length > 0 ? (
         <div className="rounded-lg border border-violet-200 dark:border-violet-900/50 bg-violet-50/60 dark:bg-violet-950/20 p-3">
           <p className="text-[11px] font-semibold text-violet-800 dark:text-violet-300 mb-2">
             쌍둥이 지역
             {twins.algorithm_version === 6 ? " (하이브리드)" : twins.algorithm_version === 5 ? " (Profile)" : ""}
+            {twinScope === "national" ? " · 전국" : " · 권역"}
           </p>
           <ol className="space-y-2">
             {twins.neighbors.map((n) => {
@@ -125,6 +157,12 @@ export default function ProfileInsightSidebar({
                   </span>
                   <span className="block text-slate-500">
                     {n.twin_sido_name} {n.twin_sigungu_name}
+                    {twinScope === "national" &&
+                    typeof n.detail_scores.twin_region === "string" ? (
+                      <span className="ml-1 text-[9px] text-violet-600 dark:text-violet-400">
+                        · {n.detail_scores.twin_region as string}
+                      </span>
+                    ) : null}
                   </span>
                   {reasons ? (
                     <span className="block text-[10px] text-slate-600 dark:text-slate-300 mt-0.5">
@@ -143,8 +181,8 @@ export default function ProfileInsightSidebar({
         </div>
       ) : twinCode && !isError ? (
         <p className="text-[10px] text-slate-400">
-          쌍둥이 지역 데이터가 없습니다 ({profileVersion ?? DEFAULT_PROFILE_VERSION} · {windowYears}
-          년).
+          쌍둥이 지역 데이터가 없습니다 ({twinScope === "national" ? "전국" : "권역"} ·{" "}
+          {profileVersion ?? DEFAULT_PROFILE_VERSION} · {windowYears}년).
         </p>
       ) : null}
       {insights.cautionLines.length > 0 ? (

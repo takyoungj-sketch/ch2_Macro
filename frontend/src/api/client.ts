@@ -231,8 +231,10 @@ export const fetchProfileTwinNeighbors = async (params: {
   profile_version?: string;
   window_years?: number;
   top_k?: number;
+  scope?: "adjacent" | "region" | "national";
 }): Promise<ProfileTwinNeighborsResponse> => {
   const code = params.eupmyeondong_code.trim().slice(0, 8);
+  const scope = params.scope ?? "region";
   const versions = [
     params.profile_version ?? DEFAULT_PROFILE_VERSION,
     FALLBACK_PROFILE_VERSION,
@@ -247,7 +249,8 @@ export const fetchProfileTwinNeighbors = async (params: {
           params: {
             profile_version: pv,
             window_years: params.window_years,
-            top_k: params.top_k ?? 3,
+            top_k: params.top_k ?? 5,
+            scope,
           },
         }
       );
@@ -261,6 +264,7 @@ export const fetchProfileTwinNeighbors = async (params: {
   return last ?? {
     profile_version: versions[0]!,
     window_years: params.window_years ?? 5,
+    scope,
     anchor_eupmyeondong_code: code,
     neighbors: [],
   };
