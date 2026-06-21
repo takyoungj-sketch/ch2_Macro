@@ -192,7 +192,11 @@ similarity = wl × S_land + wc × S_coll + wp × S_prof
 
 **권역맵:** 수도권(서울·인천·경기), 충청권(대전·세종·충북·충남), 호남권(광주·전북·전남), 대경권(대구·경북), 동남권(부산·울산·경남), 강원권, 제주권. → 서울↔인천 단절, 세종·청주·천안 연결성 해결.
 
-`detail_scores` 에 `scope`, `anchor_region`, `twin_region`, `in_region` 태그 저장 → UI에서 권역/전국 토글 시 **재계산 없이 필터**(Phase 2).
+`detail_scores` 에 `scope`, `anchor_region`, `twin_region`, `in_region` 태그 저장 → UI에서 권역/전국 토글 시 **재계산 없이 필터**.
+
+**Top-K 20 + 권역 최소 보장 쿼터** (`--top-k 20`, `--region-quota 5`): 앵커당 20개 저장(블록 위주 재정렬·권역/전국 토글 대비). scope=national 에서 권역 트윈이 먼 거리 매칭에 밀려도, **권역 내 후보를 최소 5개 보장**(권역 밖 하위 후보 교체, 전체 크기 유지). scope=region 이면 전부 in_region 이라 자연 충족.
+
+검증(가경동 national Top20): 점수순 충청권은 천안 신방동(#8) 1개뿐 → 쿼터가 분평동·충주 연수동·세종 조치원·천안 청당동을 17~20위에 주입해 **in_region 5개 보장**.
 
 **검증 (가경동 43113113):**
 - `region`(충청권): 천안 신방동·청주 분평동·충주 연수동·세종 조치원·천안 청당동 (전부 `in_region`).
@@ -219,7 +223,7 @@ python build_twin_sigungu_hybrid.py --profile-version v1.1-national --window-yea
 
 ### 3.9 향후
 
-- **Phase 2 잔여**: 읍면동 Top-N 20 저장 + UI 권역/전국 토글 + 권역 최소 보장 쿼터, API/UI 시군구 hybrid 연결.
+- **Phase 2 잔여**: API/UI 권역·전국 토글 노출, 시군구 hybrid API/UI(`twin_regions`·`TwinCityModal`) 연결. (읍면동 Top-N 20 + 쿼터, 시군구 hybrid 빌더는 **완료**.)
 - **Phase 3**: 읍면동 full matrix 벡터화 → 전국 scope 실용화.
 - **학습형 가중치**: 사용자 "추천 채택/거부" 피드백 로깅 → 가중치(0.5/0.3/0.2) 자동 최적화.
 - **데이터 기반 권역**: Twin 엣지 그래프 community detection 으로 생활권 재도출(오프라인, 순환 회피).

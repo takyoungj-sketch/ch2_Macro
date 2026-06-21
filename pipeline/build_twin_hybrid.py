@@ -115,6 +115,41 @@ def _stars(x: float | None) -> int:
     return int(max(1, min(5, round(x * 5))))
 
 
+def _select_with_quota(
+    scored: list[tuple[float, str, dict]],
+    top_k: int,
+    region_quota: int,
+) -> list[tuple[float, str, dict]]:
+    """점수 내림차순 Top-K 선택. 단, 권역 내(in_region) 후보를 최소 quota 만큼 보장.
+
+    scope=region 이면 모든 후보가 in_region 이라 무효(자연 충족). scope=national/adjacent
+    에서 권역 트윈이 먼 거리 매칭에 밀려 Top-K 밖으로 빠지는 것을 방지(UI 권역 필터용).
+    전체 크기는 top_k 유지(권역 추가분 만큼 권역 밖 하위 후보를 교체).
+    """
+    scored.sort(key=lambda x: (-x[0], x[1]))
+    base = scored[:top_k]
+    if region_quota <= 0:
+        return base
+    n_in = sum(1 for s in base if s[2].get("in_region"))
+    if n_in >= region_quota:
+        return base
+
+    base_codes = {s[1] for s in base}
+    extra = [
+        s for s in scored[top_k:] if s[2].get("in_region") and s[1] not in base_codes
+    ][: region_quota - n_in]
+    if not extra:
+        return base
+
+    out_in_base = [s for s in base if not s[2].get("in_region")]
+    drop_n = min(len(extra), len(out_in_base))
+    drop_codes = {s[1] for s in out_in_base[-drop_n:]}
+    kept = [s for s in base if s[1] not in drop_codes]
+    result = kept + extra[:drop_n]
+    result.sort(key=lambda x: (-x[0], x[1]))
+    return result
+
+
 def _reason_codes(
     *,
     land_struct: float,
@@ -204,6 +239,7 @@ def _build_twin_rows(
     min_tx: int,
     min_activity: float,
     top_k: int,
+    region_quota: int,
     pop_tol: float,
     w_land: float,
     w_coll: float,
@@ -389,9 +425,9 @@ def _build_twin_rows(
             }
             scored.append((final, eligible[ci], detail))
 
-        # 동점 결정성: 점수 내림차순, 코드 오름차순
-        scored.sort(key=lambda x: (-x[0], x[1]))
-        for rank, (score, twin_code, detail) in enumerate(scored[:top_k], start=1):
+        # Top-K (동점: 점수↓·코드↑) + 권역 최소 보장 쿼터
+        selected = _select_with_quota(scored, top_k, region_quota)
+        for rank, (score, twin_code, detail) in enumerate(selected, start=1):
             tm = meta_idx.loc[twin_code]
             rows.append(
                 {
@@ -423,7 +459,10 @@ def main() -> None:
     p.add_argument("--sido-code", type=str, default=None, help="스모크: anchor 시도 한정 (후보풀은 scope 기준)")
     p.add_argument("--scope", choices=SCOPES, default=DEFAULT_SCOPE,
                    help="후보군 범위: adjacent(육상 인접) / region(권역, 기본) / national(전국)")
-    p.add_argument("--top-k", type=int, default=5)
+    p.add_argument("--top-k", type=int, default=20,
+                   help="앵커당 저장 수(블록 위주 재정렬·권역 토글 대비)")
+    p.add_argument("--region-quota", type=int, default=5,
+                   help="Top-K 내 권역 내(in_region) 후보 최소 보장 수")
     p.add_argument("--min-tx", type=int, default=20, help="토지 legacy 최소 거래")
     p.add_argument("--min-activity", type=float, default=15.0)
     p.add_argument("--pop-tolerance-rel", type=float, default=0.4)
@@ -518,6 +557,7 @@ def main() -> None:
         min_tx=args.min_tx,
         min_activity=args.min_activity,
         top_k=args.top_k,
+        region_quota=args.region_quota,
         pop_tol=args.pop_tolerance_rel,
         w_land=w_land,
         w_coll=w_coll,

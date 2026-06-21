@@ -56,7 +56,7 @@ def main() -> None:
     )
     p.add_argument("--include-extended-land", action="store_true")
     p.add_argument("--collective-rolling-only", action="store_true")
-    p.add_argument("--twin-top-k", type=int, default=5)
+    p.add_argument("--twin-top-k", type=int, default=20)
     p.add_argument("--dry-run", action="store_true")
     args = p.parse_args()
 
