@@ -198,9 +198,28 @@ similarity = wl × S_land + wc × S_coll + wp × S_prof
 - `region`(충청권): 천안 신방동·청주 분평동·충주 연수동·세종 조치원·천안 청당동 (전부 `in_region`).
 - `national`: 용인 성복(0.925)·용인 고림·춘천 석사·전주 효자·남양주 호평 (통계 최강, 전국 산재).
 
-### 3.8 향후
+### 3.8 시군구 Hybrid (Phase 2, 2026-06-21)
 
-- **Phase 2**: Top-N 20 저장 + UI 권역/전국 토글 + 권역 최소 보장 쿼터, 시군구 hybrid_v2(전국).
+읍면동과 동일한 hybrid_v2 사상을 **시군구 grain**에 적용. `pipeline/build_twin_sigungu_hybrid.py`.
+
+- 시군구 ~250개 → 전국 O(n²) ≈ 6만 쌍으로 가벼워 **scope=national 기본**, **Top-K 20** 저장.
+- 입력: `regional_profile(region_level='sigungu')` (집합·인구) + land 시군구 zone×지목 share·단가.
+- 출력: `twin_region_neighbor_mvp` (collective DB, `algorithm_version=7`, `detail.algorithm=hybrid_v2`, `detail.grain=sigungu`). db/012 를 collective DB에 적용.
+- 점수·적응형 가중치·reason_codes 헬퍼는 `build_twin_hybrid.py` 재사용(중복 최소화).
+
+**검증 (전국 250개, 4,954행):**
+- 서울 강남구 → **서초구**(0.92)·마포·동대문 (전부 서울 자치구).
+- 성남 분당구 → 용인 수지·기흥, **인천 연수(송도)**, 안산 상록 (수도권 신도시).
+- 청주 흥덕구 → 양주·안성·천안 서북·전주 덕진 (national: 권역 혼합 정상).
+
+**실행:**
+```powershell
+python build_twin_sigungu_hybrid.py --profile-version v1.1-national --window-years 5
+```
+
+### 3.9 향후
+
+- **Phase 2 잔여**: 읍면동 Top-N 20 저장 + UI 권역/전국 토글 + 권역 최소 보장 쿼터, API/UI 시군구 hybrid 연결.
 - **Phase 3**: 읍면동 full matrix 벡터화 → 전국 scope 실용화.
 - **학습형 가중치**: 사용자 "추천 채택/거부" 피드백 로깅 → 가중치(0.5/0.3/0.2) 자동 최적화.
 - **데이터 기반 권역**: Twin 엣지 그래프 community detection 으로 생활권 재도출(오프라인, 순환 회피).
