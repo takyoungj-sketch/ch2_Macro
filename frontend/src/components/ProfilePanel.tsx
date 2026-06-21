@@ -1,61 +1,66 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchRegionalProfile } from "../api/client";
+import { useQuery } from "@tanstack/react-query";
+import { fetchRegionalProfile, fetchRegions } from "../api/client";
+import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import { useAppStore } from "../store";
 import type { RegionalProfileResponse } from "../types";
 import { parseApiError } from "../utils/apiError";
-import { resolveUpperSingleFromTier } from "../utils/upperTierStats";
+import {
+  PROFILE_REGION_LEVEL_LABEL,
+  resolveProfileRegionLabel,
+} from "../utils/regionDisplay";
+import { resolveProfileRegionFromTier } from "../utils/upperTierStats";
+import ProfileBrowserPanel from "./profile/ProfileBrowserPanel";
+import ProfileInsightSidebar from "./profile/ProfileInsightSidebar";
+import ProfileMetaBar from "./profile/ProfileMetaBar";
+import ProfileSummaryPanel from "./profile/ProfileSummaryPanel";
 
-const FEATURE_LABELS: Record<string, string> = {
-  population: "인구(명)",
-  population_density: "인구밀도",
-  apartment_count: "아파트 거래수",
-  apartment_mean: "아파트 평균단가",
-  apartment_median: "아파트 중앙단가",
-  land_residential_mean: "토지(주거) 평균단가",
-  land_residential_median: "토지(주거) 중앙단가",
-  land_commercial_mean: "토지(상업) 평균단가",
-  land_industrial_mean: "토지(공업) 평균단가",
-  ratio_residential_zone: "주거 zone 거래비중",
-  ratio_commercial_zone: "상업 zone 거래비중",
-  ratio_agri_zone: "농림·녹지 거래비중",
-  ratio_land_danji: "대지 거래비중",
-  ratio_land_rice: "전·답 거래비중",
-  ratio_land_forest: "임야 거래비중",
-};
-
-function formatFeatureValue(key: string, value: number): string {
-  if (key.startsWith("ratio_")) {
-    return `${(value * 100).toFixed(1)}%`;
-  }
-  if (key.includes("mean") || key.includes("median")) {
-    return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 1 })} 만원/㎡`;
-  }
-  if (key === "population") {
-    return `${Math.round(value).toLocaleString("ko-KR")}명`;
-  }
-  return value.toLocaleString("ko-KR");
-}
+type ProfileTab = "summary" | "browser";
 
 export default function ProfilePanel() {
   const tierSelection = useAppStore((s) => s.tierSelection);
-  const upperSingle = useMemo(() => resolveUpperSingleFromTier(tierSelection), [tierSelection]);
+  const statsDisplayKick = useAppStore((s) => s.statsDisplayKick);
+  const freeStatsWindowYears = useAppStore((s) => s.freeStatsWindowYears);
+  const profileTarget = useMemo(() => resolveProfileRegionFromTier(tierSelection), [tierSelection]);
 
+  const { data: regions = [] } = useQuery({
+    queryKey: REGIONS_CATALOG_QUERY_KEY,
+    queryFn: () => fetchRegions(),
+    staleTime: 60 * 60 * 1000,
+  });
+
+  const regionLabel = useMemo(() => {
+    if (!profileTarget) return null;
+    return resolveProfileRegionLabel(regions, profileTarget);
+  }, [regions, profileTarget]);
+
+  const [tab, setTab] = useState<ProfileTab>("summary");
   const [data, setData] = useState<RegionalProfileResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [committed, setCommitted] = useState(false);
 
   useEffect(() => {
-    if (!upperSingle) {
+    if (!profileTarget) {
       setData(null);
       setError(null);
+      setCommitted(false);
+      return;
+    }
+    if (statsDisplayKick <= 0) {
+      setData(null);
+      setError(null);
+      setCommitted(false);
       return;
     }
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setCommitted(true);
     fetchRegionalProfile({
-      region_level: upperSingle.level,
-      region_code: upperSingle.code,
+      region_level: profileTarget.level,
+      region_code: profileTarget.code,
+      window_years: freeStatsWindowYears,
     })
       .then((res) => {
         if (!cancelled) setData(res);
@@ -69,27 +74,89 @@ export default function ProfilePanel() {
     return () => {
       cancelled = true;
     };
-  }, [upperSingle?.level, upperSingle?.code]);
+  }, [profileTarget?.level, profileTarget?.code, statsDisplayKick, freeStatsWindowYears]);
 
-  if (!upperSingle) {
+  if (!profileTarget) {
     return (
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6 text-sm text-slate-600 dark:text-slate-300">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6 text-sm text-slate-600 dark:text-slate-300 max-w-3xl">
         <h2 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-2">지역 프로필</h2>
-        <p>시·도, 시군구, 또는 읍면동을 <strong>하나만</strong> 선택하면 Profile feature를 조회할 수 있습니다.</p>
+        <p>
+          시·도, 시군구, 읍면동, 또는 <strong>법정동·리 1곳</strong>을 선택한 뒤 좌측{" "}
+          <strong>프로필 조회</strong>를 누르세요.
+        </p>
         <p className="mt-2 text-xs text-slate-500">
-          충북 파일럿 · profile_version=v1.0-chungbuk · 법정동·리 복수 선택 시 미지원
+          법정동·리만 고른 경우 같은 읍·면·동 프로필로 조회합니다
+        </p>
+      </div>
+    );
+  }
+
+  if (!committed && !loading) {
+    return (
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6 text-sm text-slate-600 dark:text-slate-300 max-w-3xl">
+        <h2 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-2">지역 프로필</h2>
+        <p>
+          <strong>{regionLabel ?? profileTarget.level}</strong>
+          {regionLabel ? (
+            <span className="ml-2 text-xs text-slate-500 font-mono">{profileTarget.code}</span>
+          ) : (
+            <>
+              {" "}
+              · <code className="text-xs">{profileTarget.code}</code>
+            </>
+          )}
+          {profileTarget.escalatedFromBeop ? (
+            <span className="ml-2 text-xs text-violet-600">(법정동 → 읍면동 프로필)</span>
+          ) : null}
+        </p>
+        <p className="mt-2">
+          좌측 하단 <strong>프로필 조회</strong> 버튼을 눌러 feature를 불러오세요.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm p-6 space-y-4 max-w-3xl">
-      <div>
-        <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">지역 프로필</h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          Regional Profile (운영·검증용) · 충북 파일럿
-        </p>
+    <div className="max-w-6xl space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">지역 프로필</h2>
+          {regionLabel ? (
+            <p className="text-lg font-bold text-violet-800 dark:text-violet-200 mt-1 leading-snug">
+              {regionLabel}
+            </p>
+          ) : null}
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            {profileTarget
+              ? `${PROFILE_REGION_LEVEL_LABEL[profileTarget.level]} · ${profileTarget.code}`
+              : "Regional Profile Browser · 충북 파일럿"}
+            {profileTarget?.escalatedFromBeop ? " · 법정동 → 읍면동" : ""}
+          </p>
+        </div>
+        <div className="flex gap-1 bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
+          <button
+            type="button"
+            onClick={() => setTab("summary")}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+              tab === "summary"
+                ? "bg-white dark:bg-slate-600 text-violet-700 dark:text-violet-300 shadow-sm"
+                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-200"
+            }`}
+          >
+            프로필 요약
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("browser")}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+              tab === "browser"
+                ? "bg-white dark:bg-slate-600 text-violet-700 dark:text-violet-300 shadow-sm"
+                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-200"
+            }`}
+          >
+            Feature Browser
+          </button>
+        </div>
       </div>
 
       {loading && <p className="text-sm text-slate-500">불러오는 중…</p>}
@@ -101,52 +168,28 @@ export default function ProfilePanel() {
 
       {data && (
         <>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-300 border border-slate-100 dark:border-slate-700 rounded-lg p-3">
-            <dt className="text-slate-500">버전</dt>
-            <dd>{data.meta.profile_version}</dd>
-            <dt className="text-slate-500">기준월</dt>
-            <dd>{data.meta.as_of_month}</dd>
-            <dt className="text-slate-500">창</dt>
-            <dd>{data.meta.window_years}년</dd>
-            <dt className="text-slate-500">검증</dt>
-            <dd>{data.meta.validation_status}</dd>
-            <dt className="text-slate-500">feature 수</dt>
-            <dd>{data.meta.feature_count ?? Object.keys(data.features).length}</dd>
-          </dl>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-600 text-left text-xs text-slate-500">
-                  <th className="py-2 pr-3 font-medium">Feature</th>
-                  <th className="py-2 pr-3 font-medium">값</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(data.features)
-                  .sort(([a], [b]) => a.localeCompare(b, "ko-KR"))
-                  .map(([key, raw]) => {
-                    const num = typeof raw === "number" ? raw : Number(raw);
-                    if (!Number.isFinite(num)) return null;
-                    return (
-                      <tr key={key} className="border-b border-slate-100 dark:border-slate-700/80">
-                        <td className="py-1.5 pr-3 font-mono text-[11px] text-slate-700 dark:text-slate-200">
-                          {FEATURE_LABELS[key] ? (
-                            <>
-                              {FEATURE_LABELS[key]}
-                              <span className="block text-[10px] text-slate-400">{key}</span>
-                            </>
-                          ) : (
-                            key
-                          )}
-                        </td>
-                        <td className="py-1.5 pr-3 tabular-nums">{formatFeatureValue(key, num)}</td>
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
-          </div>
+          <ProfileMetaBar meta={data.meta} regionLabel={regionLabel} />
+          {tab === "summary" ? (
+            <div className="grid lg:grid-cols-[1fr_16rem] gap-6 items-start">
+              <div className="min-w-0">
+                <ProfileSummaryPanel features={data.features} />
+              </div>
+              <ProfileInsightSidebar
+                features={data.features}
+                eupmyeondongCode={
+                  data.meta.region_level === "eupmyeondong"
+                    ? data.meta.region_code
+                    : profileTarget.level === "eupmyeondong"
+                      ? profileTarget.code
+                      : null
+                }
+                profileVersion={data.meta.profile_version}
+                windowYears={data.meta.window_years}
+              />
+            </div>
+          ) : (
+            <ProfileBrowserPanel features={data.features} />
+          )}
         </>
       )}
     </div>

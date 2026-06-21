@@ -113,6 +113,10 @@ interface AppState {
   applyBeopjungriCodes: (codes: readonly string[]) => void;
   /** 검색·칩에서 법정단위 추가(무료는 항상 1개로 교체) */
   addPickedBeopjungri: (code: string) => void;
+  /** 유료·프로필: 시군구 미만 선택을 법정동·리 1곳으로 교체 */
+  replacePaidLeafBeopjungri: (code: string) => void;
+  /** 유료·프로필: 시군구 미만 선택을 읍·면·동 행정 1곳으로 교체 */
+  replacePaidLeafEupmyeondong: (code: string) => void;
   /** 검색 등에서 법정코드 여러 개를 한 번에 병합(유료; 시군구 미만은 읍·면 칩+법정 줄 합산 최대 10·시도·군구 상위 칩 각 1). 무료는 단건일 때만 반영 가능 */
   mergePickedBeopjungriCodes: (codes: readonly string[]) => boolean;
   mergePickedSigunguCodes: (
@@ -237,6 +241,14 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setViewMode: (m) =>
     set((s) => {
+      if (m === "profile") {
+        return {
+          viewMode: m,
+          paidResultView: "idle",
+          statsDisplayScopeKey: null,
+          statsDisplayKick: 0,
+        };
+      }
       if (m !== "free") {
         /**
          * 무료 → 유료 전환은 새 분석 세션의 시작점이다.
@@ -354,6 +366,34 @@ export const useAppStore = create<AppState>((set, get) => ({
           [...s.paidSubSigunguPickOrder, { kind: "beop", code: c }],
           nt
         ),
+      };
+    }),
+
+  replacePaidLeafBeopjungri: (code) =>
+    set((s) => {
+      const c = String(code ?? "").trim();
+      if (!c) return s;
+      const nt: TierCodes = {
+        ...emptyTierCodes(),
+        beopjungri_codes: [c],
+      };
+      return {
+        tierSelection: nt,
+        paidSubSigunguPickOrder: reconcilePaidSubSigunguPickOrder([{ kind: "beop", code: c }], nt),
+      };
+    }),
+
+  replacePaidLeafEupmyeondong: (code) =>
+    set((s) => {
+      const c = String(code ?? "").trim();
+      if (!c) return s;
+      const nt: TierCodes = {
+        ...emptyTierCodes(),
+        eupmyeondong_codes: [c],
+      };
+      return {
+        tierSelection: nt,
+        paidSubSigunguPickOrder: reconcilePaidSubSigunguPickOrder([{ kind: "eup", code: c }], nt),
       };
     }),
 

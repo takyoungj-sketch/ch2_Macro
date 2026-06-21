@@ -14,6 +14,7 @@ import type {
   PaidAnalysisResponse,
   RegionItem,
   RegionLevel,
+  ProfileTwinNeighborsResponse,
   RegionalProfileResponse,
   TwinNeighborsForEupmyeondongResponse,
   TwinNeighborsForSigunguResponse,
@@ -21,6 +22,7 @@ import type {
   UpperStatsV2Response,
 } from "../types";
 import { normalizeFreeStatsWindowYears } from "../types";
+import { DEFAULT_PROFILE_VERSION, FALLBACK_PROFILE_VERSION } from "../constants/profileVersion";
 import { filenameFromContentDisposition, saveBlobAsFile } from "../utils/downloadBlob";
 import { viteOptionalV2AsOfMonth } from "../utils/freeStatsV2";
 
@@ -195,7 +197,7 @@ export const fetchTwinNeighborsForEupmyeondong = async (
   return data;
 };
 
-/** Regional Profile — 충북 파일럿 조회 */
+/** Regional Profile 조회 — v1.1-national 없으면 파일럿 버전 fallback */
 export const fetchRegionalProfile = async (params: {
   region_level: RegionLevel;
   region_code: string;
@@ -203,6 +205,63 @@ export const fetchRegionalProfile = async (params: {
   window_years?: number;
   as_of_month?: string;
 }): Promise<RegionalProfileResponse> => {
-  const { data } = await api.get<RegionalProfileResponse>("/regional-profile", { params });
-  return data;
+  const versions = [
+    params.profile_version ?? DEFAULT_PROFILE_VERSION,
+    FALLBACK_PROFILE_VERSION,
+  ].filter((v, i, a) => a.indexOf(v) === i);
+
+  let lastErr: unknown;
+  for (const pv of versions) {
+    try {
+      const { data } = await api.get<RegionalProfileResponse>("/regional-profile", {
+        params: { ...params, profile_version: pv },
+      });
+      return data;
+    } catch (err) {
+      lastErr = err;
+      if (axios.isAxiosError(err) && err.response?.status === 404) continue;
+      throw err;
+    }
+  }
+  throw lastErr;
+};
+
+export const fetchProfileTwinNeighbors = async (params: {
+  eupmyeondong_code: string;
+  profile_version?: string;
+  window_years?: number;
+  top_k?: number;
+}): Promise<ProfileTwinNeighborsResponse> => {
+  const code = params.eupmyeondong_code.trim().slice(0, 8);
+  const versions = [
+    params.profile_version ?? DEFAULT_PROFILE_VERSION,
+    FALLBACK_PROFILE_VERSION,
+  ].filter((v, i, a) => a.indexOf(v) === i);
+
+  let last: ProfileTwinNeighborsResponse | null = null;
+  for (const pv of versions) {
+    try {
+      const { data } = await api.get<ProfileTwinNeighborsResponse>(
+        `/regional-profile/twins/${encodeURIComponent(code)}`,
+        {
+          params: {
+            profile_version: pv,
+            window_years: params.window_years,
+            top_k: params.top_k ?? 3,
+          },
+        }
+      );
+      last = data;
+      if (data.neighbors.length > 0) return data;
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 404) continue;
+      throw err;
+    }
+  }
+  return last ?? {
+    profile_version: versions[0]!,
+    window_years: params.window_years ?? 5,
+    anchor_eupmyeondong_code: code,
+    neighbors: [],
+  };
 };

@@ -316,6 +316,26 @@ export interface RegionalProfileResponse {
   features: Record<string, number>;
 }
 
+/** GET /regional-profile/twins/{eupmyeondong_code} */
+export interface ProfileTwinNeighborItem {
+  rank: number;
+  twin_eupmyeondong_code: string;
+  twin_eupmyeondong_name: string;
+  twin_sigungu_name: string;
+  twin_sido_name: string;
+  similarity_score: number;
+  detail_scores: Record<string, unknown>;
+}
+
+export interface ProfileTwinNeighborsResponse {
+  profile_version: string;
+  window_years: number;
+  as_of_month?: string | null;
+  batch_key?: string | null;
+  anchor_eupmyeondong_code: string;
+  neighbors: ProfileTwinNeighborItem[];
+}
+
 /** GET /twin-regions/latest-batch */
 export interface TwinRegionLatestBatch {
   batch_key: string;

@@ -286,4 +286,6 @@ Similarity 재계산 시 **pivot를 매번 새로 깊게 파지 않도록** parq
 
 본 문서는 **제안 초안과 리뷰 수정안**(비중 cosine과 가격 블록 결합 분리, DB 역할 분리, 레벨별 threshold, 선택 Jaccard, 인접 정책 장기 노트 등)을 반영한 결과이다.
 
+**2026-06-20 추가:** Profile 기반 Twin v5 (`build_twin_from_profile.py`) 및 **하이브리드 Twin v1.2** (legacy 50% + collective 30% + profile 20%) — [`docs/PROFILE_TWIN_HYBRID.md`](PROFILE_TWIN_HYBRID.md) · D-023.
+
 구현 DDL·실제 피처 키 네임스페이스·파이프 파일명 확정 후 이 문서에 **변경 세션**(날짜·커밋 레퍼런스)를 덧붙이는 형태가 좋다.

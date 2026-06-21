@@ -1,4 +1,4 @@
-import type { RegionItem } from "../types";
+import type { RegionItem, ViewMode } from "../types";
 import { cityBucketFromSigungu } from "./cityBucket";
 import {
   isSejongPseudoSigunguCode,
@@ -31,7 +31,7 @@ export type UniqueRegionSearchPick =
 export function tryResolveUniqueRegionSearch(
   regions: readonly RegionItem[],
   rawQuery: string,
-  viewMode: "free" | "paid"
+  viewMode: ViewMode
 ): UniqueRegionSearchPick | null {
   const qN = norm(String(rawQuery ?? "").trim());
   if (qN.length < 2) return null;
@@ -58,7 +58,7 @@ export function tryResolveUniqueRegionSearch(
     return { kind: "beopjungri", row };
   }
 
-  if (viewMode !== "paid") return null;
+  if (viewMode !== "paid" && viewMode !== "profile") return null;
 
   if (eupMyeonQ) {
     /** 행정명이 검색어와 완전 일치하는 eup 코드 중 전국에 하나만 있으면 확정 */

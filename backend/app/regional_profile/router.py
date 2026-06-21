@@ -37,6 +37,25 @@ class RegionalProfileVersionsResponse(BaseModel):
     latest_as_of_month: Optional[date] = None
 
 
+class ProfileTwinNeighborItem(BaseModel):
+    rank: int
+    twin_eupmyeondong_code: str
+    twin_eupmyeondong_name: str
+    twin_sigungu_name: str
+    twin_sido_name: str
+    similarity_score: float
+    detail_scores: dict[str, Any] = Field(default_factory=dict)
+
+
+class ProfileTwinNeighborsResponse(BaseModel):
+    profile_version: str
+    window_years: int
+    as_of_month: Optional[date] = None
+    batch_key: Optional[str] = None
+    anchor_eupmyeondong_code: str
+    neighbors: list[ProfileTwinNeighborItem] = Field(default_factory=list)
+
+
 def _table_exists(db: Session, name: str) -> bool:
     row = db.execute(
         text("SELECT to_regclass(:n)::text IS NOT NULL AS ok"),
@@ -75,7 +94,7 @@ def list_profile_versions(db: Session = Depends(get_collective_db)):
 def get_regional_profile(
     region_level: str = Query(..., pattern="^(sido|sigungu|eupmyeondong|city)$"),
     region_code: str = Query(..., min_length=2, max_length=10),
-    profile_version: str = Query("v1.0-chungbuk"),
+    profile_version: str = Query("v1.1-national"),
     window_years: int = Query(5, ge=1, le=5),
     as_of_month: Optional[date] = Query(None),
     db: Session = Depends(get_collective_db),
@@ -155,3 +174,110 @@ def get_regional_profile(
     if not isinstance(feats, dict):
         feats = dict(feats)
     return RegionalProfileResponse(meta=meta, features=feats)
+
+
+@router.get("/twins/{eupmyeondong_code}", response_model=ProfileTwinNeighborsResponse)
+def get_profile_twin_neighbors(
+    eupmyeondong_code: str,
+    profile_version: str = Query("v1.1-national"),
+    window_years: int = Query(5, ge=1, le=5),
+    top_k: int = Query(3, ge=1, le=10),
+    db: Session = Depends(get_collective_db),
+):
+    """Profile 기반 쌍둥이 읍면동 Top-k (algorithm_version=5)."""
+    if db is None:
+        raise HTTPException(503, "collective_stats DB 미연결")
+    if not _table_exists(db, "twin_eupmyeondong_neighbor_mvp"):
+        raise HTTPException(404, "twin 테이블 없음 — build_twin_from_profile.py 실행")
+
+    anchor = eupmyeondong_code.strip()[:8]
+    if len(anchor) < 8:
+        raise HTTPException(400, "eupmyeondong_code 8자리 필요")
+
+    window_candidates = [window_years]
+    for alt in (5, 3):
+        if alt not in window_candidates:
+            window_candidates.append(alt)
+
+    batch_row = None
+    resolved_window = window_years
+    for wy in window_candidates:
+        batch_row = db.execute(
+            text(
+                """
+                SELECT batch_key, MAX(computed_at) AS computed_at
+                FROM twin_eupmyeondong_neighbor_mvp
+                WHERE algorithm_version = 5
+                  AND detail_scores->>'profile_version' = :pv
+                  AND (detail_scores->>'window_years')::int = :wy
+                GROUP BY batch_key
+                ORDER BY computed_at DESC
+                LIMIT 1
+                """
+            ),
+            {"pv": profile_version, "wy": wy},
+        ).mappings().first()
+        if batch_row:
+            resolved_window = wy
+            break
+
+    if not batch_row:
+        return ProfileTwinNeighborsResponse(
+            profile_version=profile_version,
+            window_years=window_years,
+            anchor_eupmyeondong_code=anchor,
+            neighbors=[],
+        )
+
+    batch_key = batch_row["batch_key"]
+    rows = db.execute(
+        text(
+            """
+            SELECT rank,
+                   twin_eupmyeondong_code,
+                   twin_eupmyeondong_name,
+                   twin_sigungu_name,
+                   twin_sido_name,
+                   similarity_score,
+                   detail_scores
+            FROM twin_eupmyeondong_neighbor_mvp
+            WHERE batch_key = :bk
+              AND anchor_eupmyeondong_code = :anchor
+            ORDER BY rank
+            LIMIT :top_k
+            """
+        ),
+        {"bk": batch_key, "anchor": anchor, "top_k": top_k},
+    ).mappings().all()
+
+    as_of = None
+    neighbors: list[ProfileTwinNeighborItem] = []
+    for r in rows:
+        detail = r.get("detail_scores") or {}
+        if not isinstance(detail, dict):
+            detail = dict(detail)
+        if as_of is None and detail.get("as_of_month"):
+            try:
+                as_of = date.fromisoformat(str(detail["as_of_month"])[:10])
+            except ValueError:
+                pass
+        neighbors.append(
+            ProfileTwinNeighborItem(
+                rank=int(r["rank"]),
+                twin_eupmyeondong_code=str(r["twin_eupmyeondong_code"]).strip(),
+                twin_eupmyeondong_name=str(r["twin_eupmyeondong_name"]),
+                twin_sigungu_name=str(r["twin_sigungu_name"]),
+                twin_sido_name=str(r["twin_sido_name"]),
+                similarity_score=float(r["similarity_score"]),
+                detail_scores=detail,
+            )
+        )
+
+    return ProfileTwinNeighborsResponse(
+        profile_version=profile_version,
+        window_years=resolved_window,
+        as_of_month=as_of,
+        batch_key=batch_key,
+        anchor_eupmyeondong_code=anchor,
+        neighbors=neighbors,
+    )

@@ -25,6 +25,8 @@
 | D-019 | 2026-06-20 | **비주거 집합 재구축 Phase 0~4 완료**: ① **장기 추세** — `raw/raw long term` 집합만 → `collective_cluster_annual_stats` (2010~2020) + transactions (2021~). ② API `stats/by-year` mart-first·`data_source`. ③ UI 코호트(롤링·분포·거래·회귀·장기)·회귀 PI. ④ `finish_collective_commercial.py` Promote 게이트. VPS Promote는 운영자 지시 시. |
 | D-020 | 2026-06-20 | **비주거 집합 — 건물 grain 계획 제외**: MOLIT 마스킹 번지·표본 부족으로 **`building_key` / `building_key_v2` 기반 건물 단위 분석은 구현·로드맵에서 제거**. 분석 해상도 = **도로 cluster만** (`COLLECTIVE_COMMERCIAL_DESIGN.md`). DB `building_key` nullable 컬럼은 스키마 호환용 유지. |
 | D-021 | 2026-06-20 | **Regional Profile 충북 파일럿**: 전국 확장 전 **시도 43 End-to-End** 반복. `profile_version=v1.0-chungbuk`, land domain 추출 SSOT=`pipeline/config/land_domain_extraction.yaml`, 빌드=`rebuild_regional_profile_chungbuk.py`. 물리 토지 GIS·고용 등 **추가 외부 데이터는 v2 후보** — v1은 거래 통계+인구+거래비중 파생. |
+| D-022 | 2026-06-20 | **Regional Profile 전국 Phase 1**: 충북 단독 회귀 A/B로 Profile 효과 결론 내리지 않음. **`v1.1-national`** 전국 Profile → **`build_twin_from_profile.py`**(Profile 소비, algorithm_version=5) → 복합 회귀 pooling(1안 AI 제안·2안 원격 유사)은 **Twin 이후**. orchestrator=`rebuild_regional_profile_national.py`. |
+| D-023 | 2026-06-20 | **Twin 하이브리드(v1.2)**: Profile-only Twin(v5)은 API·SSOT 검증용. **제품 Twin** = 토지 legacy **50%** + 집합 market **30%** + Profile **20%** (composition 중복 회피). 장기: 블록을 Profile feature로 흡수 후 Twin은 Profile-only 복귀. 상세: [`docs/PROFILE_TWIN_HYBRID.md`](PROFILE_TWIN_HYBRID.md). |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 

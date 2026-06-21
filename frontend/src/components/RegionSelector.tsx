@@ -22,6 +22,7 @@ import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import { MAX_PAID_LEAF_BEOPJUNGRI_PICK } from "../constants/tierPickLimits";
 import { cityBucketFromSigungu } from "../utils/cityBucket";
 import { isSejongPseudoSigunguCode } from "../utils/sejongRegion";
+import { resolveProfileRegionFromTier } from "../utils/upperTierStats";
 
 function labelSigunguChip(regions: RegionItem[], code: string): string {
   const c = String(code).trim();
@@ -88,6 +89,8 @@ export default function RegionSelector() {
     removePickedEupmyeondong,
     removePickedSido,
     removePickedCity,
+    replacePaidLeafBeopjungri,
+    replacePaidLeafEupmyeondong,
   } = useAppStore();
 
   const [localError, setLocalError] = useState<string | null>(null);
@@ -187,12 +190,11 @@ export default function RegionSelector() {
   const upperTierChipCount =
     strictUpperTierChipCount + tierSelection.eupmyeondong_codes.length;
 
-  /** 유료: 시도·군구 위가 없고 시군구 미만 선택이 1개 이상일 때 「+ 추가」 후 다음 선택을 허용. */
-  const paidBlocksNewLeafWithoutPlus = (): boolean =>
+  /** 유료: 시도·군구 위가 없고 시군구 미만 선택이 1개 이상일 때 「+ 추가」 없이 검색하면 교체. */
+  const paidReplaceLeafWithoutPlus = (): boolean =>
     viewMode === "paid" &&
     strictUpperTierChipCount === 0 &&
     paidSubSigunguSelections >= 1 &&
-    paidSubSigunguSelections < MAX_PAID_LEAF_BEOPJUNGRI_PICK &&
     !paidLeafAddGateOpen;
 
   /** 칩 또는 목록 한 줄이라도 채워지면 비어 있지 않음(유료에서는 법정동·리는 아래 목록으로 표시). */
@@ -217,28 +219,40 @@ export default function RegionSelector() {
     return row ? formatRegionHierarchyLabel(row) : c;
   };
 
+  const finishLeafPick = () => {
+    setSearchInput("");
+    setDebouncedSearch("");
+    setHighlightIdx(-1);
+    inputRef.current?.focus();
+  };
+
   const pickBeopRow = (r: RegionItem) => {
     setLocalError(null);
     const c = String(r.beopjungri_code ?? "").trim();
-    if (!c || viewMode !== "paid") {
+    if (!c) return;
+
+    if (viewMode === "free") {
       addPickedBeopjungri(r.beopjungri_code);
       setPaidLeafAddGateOpen(true);
-      setSearchInput("");
-      setDebouncedSearch("");
-      setHighlightIdx(-1);
-      inputRef.current?.focus();
+      finishLeafPick();
       return;
     }
+
+    if (viewMode === "profile") {
+      replacePaidLeafBeopjungri(c);
+      finishLeafPick();
+      return;
+    }
+
     const cur = pickedCodes;
     if (leafAlreadySelected(c)) {
-      setSearchInput("");
-      setDebouncedSearch("");
-      setHighlightIdx(-1);
-      inputRef.current?.focus();
+      finishLeafPick();
       return;
     }
-    if (paidBlocksNewLeafWithoutPlus()) {
-      setLocalError("다음 지역 단위를 더하려면 먼저 「+ 추가 지역 선택」을 눌러 주세요.");
+    if (paidReplaceLeafWithoutPlus()) {
+      replacePaidLeafBeopjungri(c);
+      setPaidLeafAddGateOpen(false);
+      finishLeafPick();
       return;
     }
     const eupSlots = tierSelection.eupmyeondong_codes.map((x) => x.trim()).filter(Boolean).length;
@@ -250,10 +264,7 @@ export default function RegionSelector() {
     }
     addPickedBeopjungri(r.beopjungri_code);
     setPaidLeafAddGateOpen(false);
-    setSearchInput("");
-    setDebouncedSearch("");
-    setHighlightIdx(-1);
-    inputRef.current?.focus();
+    finishLeafPick();
   };
 
   const handlePickSigunguAggregate = (sigunguCode: string) => {
@@ -330,19 +341,26 @@ export default function RegionSelector() {
       );
       return;
     }
-    if (paidBlocksNewLeafWithoutPlus()) {
-      setLocalError("다음 지역 단위를 더하려면 먼저 「+ 추가 지역 선택」을 눌러 주세요.");
-      return;
-    }
     const ec = String(eupCode ?? "").trim();
     if (!ec) return;
+
+    if (viewMode === "profile") {
+      replacePaidLeafEupmyeondong(ec);
+      finishLeafPick();
+      return;
+    }
+
+    if (paidReplaceLeafWithoutPlus()) {
+      replacePaidLeafEupmyeondong(ec);
+      setPaidLeafAddGateOpen(false);
+      finishLeafPick();
+      return;
+    }
+
     const eupCur = tierSelection.eupmyeondong_codes.map((x) => x.trim()).filter(Boolean);
     if (eupCur.includes(ec)) {
       setLocalError("이미 선택한 읍·면·동 행정 단위입니다.");
-      setSearchInput("");
-      setDebouncedSearch("");
-      setHighlightIdx(-1);
-      inputRef.current?.focus();
+      finishLeafPick();
       return;
     }
     if (pickedCodes.length + eupCur.length >= MAX_PAID_LEAF_BEOPJUNGRI_PICK) {
@@ -357,10 +375,7 @@ export default function RegionSelector() {
       return;
     }
     setPaidLeafAddGateOpen(false);
-    setSearchInput("");
-    setDebouncedSearch("");
-    setHighlightIdx(-1);
-    inputRef.current?.focus();
+    finishLeafPick();
   };
 
   const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -508,6 +523,28 @@ export default function RegionSelector() {
     commitStatsDisplayScope(statsScopeKeyFromBeopjungriCodes(resolvedUnionCodes));
   };
 
+  const commitProfile = () => {
+    setLocalError(null);
+    const target = resolveProfileRegionFromTier(tierSelection);
+    if (!target) {
+      if (tierSelection.beopjungri_codes.length > 1) {
+        setLocalError(
+          "여러 법정동·리가 섞여 있습니다. 같은 읍·면·동 안의 항목만 남기거나, 검색에서 「읍·면·동 포함」을 선택하세요."
+        );
+        return;
+      }
+      if (resolvedUnionCodes.length === 0) {
+        setLocalError("검색에서 지역을 추가해 주세요.");
+        return;
+      }
+      setLocalError(
+        "지역 프로필은 상위 행정구역(시·도·시군구·읍면동)을 하나만 선택할 수 있습니다. 복수 칩은 줄여 주세요."
+      );
+      return;
+    }
+    commitStatsDisplayScope(`profile:${target.level}:${target.code}`);
+  };
+
   const suggestionListMaxClass = suggestionsShortHeight ? "max-h-28" : "max-h-52";
 
   return (
@@ -545,6 +582,15 @@ export default function RegionSelector() {
           disabled={catalogLoading}
           className="w-full border border-slate-300 rounded-md px-2 py-1.5 text-[12px]"
         />
+        {viewMode === "paid" &&
+        strictUpperTierChipCount === 0 &&
+        paidSubSigunguSelections >= 1 &&
+        !paidLeafAddGateOpen ? (
+          <p className="text-[10px] text-slate-500 leading-snug">
+            다른 지역을 검색·선택하면 현재 선택이 <strong>바뀝니다</strong>. 이어서 추가하려면 아래 「+ 추가
+            지역 선택」을 누르세요.
+          </p>
+        ) : null}
         {searchPanelOpen ? (
           <div className="relative">
             {flatSuggestions.length > 0 ? (
@@ -883,7 +929,7 @@ export default function RegionSelector() {
           >
             {paidLeafAddGateOpen
               ? "검색란에서 다음 행정이나 법정동·리를 검색해 주세요."
-              : `+ 추가 지역 선택 (시군구 미만 · 남은 ${paidExtraRegionsRemaining}곳)`}
+              : `+ 추가 지역 선택 (복수 · 남은 ${paidExtraRegionsRemaining}곳)`}
           </button>
         </div>
       ) : null}
@@ -1056,6 +1102,16 @@ export default function RegionSelector() {
           disabled={catalogLoading && regions.length === 0}
         >
           무료 통계 조회
+        </button>
+      ) : viewMode === "profile" ? (
+        <button
+          type="button"
+          onClick={commitProfile}
+          className="w-full py-2 rounded-lg bg-violet-600 text-white text-sm font-semibold
+                     hover:bg-violet-700 disabled:opacity-40 transition-colors"
+          disabled={catalogLoading && regions.length === 0}
+        >
+          프로필 조회
         </button>
       ) : (
         <button

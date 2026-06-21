@@ -1,6 +1,6 @@
 # Regional Profile · 집합부동산 · Market Stats — 통합 설계
 
-> **상태 (2026-06-20):** Phase A/B **구현 완료**, Phase C(코호트) **완료**. **충북 파일럿(v1.0-chungbuk)** — land domain 추출·Profile 빌더·조회 UI **착수**. A/B 다중지역 pooling **미구현**.  
+> **상태 (2026-06-20):** Phase A/B **구현 완료**, Phase C(코호트) **완료**. **전국 Profile v1.1-national** + **Profile Twin v5** 적재 완료. **하이브리드 Twin v1.2** — [`docs/PROFILE_TWIN_HYBRID.md`](PROFILE_TWIN_HYBRID.md) · D-023. A/B 다중지역 pooling **미구현**.  
 > **목적:** CH2 Macro의 **최종 지향점인 Regional Profile DB**를 중심에 두고, 토지·집합·복합·AI가 공유할 **Statistics → Profile → 회귀/쌍둥이** 파이프라인을 정의한다.  
 > **관련:** [`DECISIONS.md`](DECISIONS.md) D-016·D-017, [`REGION_ARCHITECTURE_ROADMAP.md`](REGION_ARCHITECTURE_ROADMAP.md), [`UPPER_STATS_DESIGN.md`](UPPER_STATS_DESIGN.md), [`COLLECTIVE_HANDOFF.md`](COLLECTIVE_HANDOFF.md)
 >

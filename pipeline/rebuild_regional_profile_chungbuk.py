@@ -70,18 +70,20 @@ def main() -> None:
         _run(cmd)
 
     if not args.skip_profile:
-        cmd = [
-            py,
-            "build_regional_profile.py",
-            "--sido-code",
-            "43",
-            "--profile-version",
-            args.profile_version,
-            "--window-years",
-            str(args.window_years),
-            *as_of_args,
-        ]
-        _run(cmd)
+        profile_windows = [int(x.strip()) for x in args.windows.split(",") if x.strip()]
+        for wy in profile_windows:
+            cmd = [
+                py,
+                "build_regional_profile.py",
+                "--sido-code",
+                "43",
+                "--profile-version",
+                args.profile_version,
+                "--window-years",
+                str(wy),
+                *as_of_args,
+            ]
+            _run(cmd)
 
     log.info("충북 regional profile rebuild 완료")
 

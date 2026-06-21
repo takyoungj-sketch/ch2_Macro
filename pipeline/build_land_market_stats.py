@@ -111,7 +111,12 @@ def main() -> None:
     p = argparse.ArgumentParser(description="토지 domain → market_stats (collective DB)")
     p.add_argument("--as-of", type=str, default=None)
     p.add_argument("--windows", type=str, default="3,5")
-    p.add_argument("--sido-code", type=str, default="43", help="시도 코드 (기본 43=충북)")
+    p.add_argument(
+        "--sido-code",
+        type=str,
+        default=None,
+        help="시도 코드 (미지정=전국). 파일럿: 43",
+    )
     p.add_argument("--include-extended", action="store_true", help="land_agricultural/forest 포함")
     p.add_argument("--dry-run", action="store_true")
     args = p.parse_args()

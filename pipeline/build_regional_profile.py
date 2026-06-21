@@ -33,8 +33,8 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-BUILDER_VERSION = "2026.06.19"
-DEFAULT_PROFILE_VERSION = "v1.0-chungbuk"
+BUILDER_VERSION = "2026.06.20"
+DEFAULT_PROFILE_VERSION = "v1.1-national"
 
 DOMAIN_FEATURES: dict[str, tuple[str, ...]] = {
     "apartment_market": ("count", "mean", "median", "std", "volatility"),
@@ -295,7 +295,12 @@ def main() -> None:
     p.add_argument("--as-of", type=str, default=None)
     p.add_argument("--window-years", type=int, default=5)
     p.add_argument("--profile-version", type=str, default=DEFAULT_PROFILE_VERSION)
-    p.add_argument("--sido-code", type=str, default="43", help="시도 코드 필터 (기본 43=충북)")
+    p.add_argument(
+        "--sido-code",
+        type=str,
+        default=None,
+        help="시도 코드 필터 (미지정=전국). 파일럿: 43",
+    )
     p.add_argument("--no-escalate-land", action="store_true")
     p.add_argument("--skip-population", action="store_true")
     p.add_argument("--skip-composition", action="store_true")

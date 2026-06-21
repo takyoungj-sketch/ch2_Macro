@@ -1,0 +1,299 @@
+# Regional Profile UI feature catalog (SSOT)
+# Frontend: frontend/src/constants/profileFeatureCatalog.ts 와 동기화
+version: "1.0"
+
+categories:
+  population:
+    label_ko: "인구"
+    order: 1
+  land_market:
+    label_ko: "토지 시장"
+    order: 2
+  apartment_market:
+    label_ko: "아파트 시장"
+    order: 3
+  rowhouse_market:
+    label_ko: "연립·다세대 시장"
+    order: 4
+  officetel_market:
+    label_ko: "오피스텔 시장"
+    order: 5
+  composition:
+    label_ko: "거래 구성"
+    order: 6
+
+features:
+  population:
+    category: population
+    label_ko: "인구"
+    value_kind: population
+    source_table: population_stats
+    sort_order: 1
+  population_density:
+    category: population
+    label_ko: "인구밀도"
+    value_kind: density
+    unit: "명/km²"
+    source_table: population_stats
+    sort_order: 2
+
+  land_residential_count:
+    category: land_market
+    label_ko: "거래수 (주거용지)"
+    value_kind: count
+    source_table: market_stats
+    source_domain: land_residential
+    sort_order: 10
+  land_residential_mean:
+    category: land_market
+    label_ko: "평균단가 (주거용지)"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: land_residential
+    count_key: land_residential_count
+    sort_order: 11
+  land_residential_median:
+    category: land_market
+    label_ko: "중앙단가 (주거용지)"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: land_residential
+    count_key: land_residential_count
+    sort_order: 12
+  land_residential_std:
+    category: land_market
+    label_ko: "표준편차 (주거용지)"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: land_residential
+    count_key: land_residential_count
+    sort_order: 13
+
+  land_commercial_count:
+    category: land_market
+    label_ko: "거래수 (상업용지)"
+    value_kind: count
+    source_table: market_stats
+    source_domain: land_commercial
+    sort_order: 20
+  land_commercial_mean:
+    category: land_market
+    label_ko: "평균단가 (상업용지)"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: land_commercial
+    count_key: land_commercial_count
+    sort_order: 21
+  land_commercial_median:
+    category: land_market
+    label_ko: "중앙단가 (상업용지)"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: land_commercial
+    count_key: land_commercial_count
+    sort_order: 22
+  land_commercial_std:
+    category: land_market
+    label_ko: "표준편차 (상업용지)"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: land_commercial
+    count_key: land_commercial_count
+    sort_order: 23
+
+  land_industrial_count:
+    category: land_market
+    label_ko: "거래수 (공업용지)"
+    value_kind: count
+    source_table: market_stats
+    source_domain: land_industrial
+    sort_order: 30
+  land_industrial_mean:
+    category: land_market
+    label_ko: "평균단가 (공업용지)"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: land_industrial
+    count_key: land_industrial_count
+    sort_order: 31
+  land_industrial_median:
+    category: land_market
+    label_ko: "중앙단가 (공업용지)"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: land_industrial
+    count_key: land_industrial_count
+    sort_order: 32
+  land_industrial_std:
+    category: land_market
+    label_ko: "표준편차 (공업용지)"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: land_industrial
+    count_key: land_industrial_count
+    sort_order: 33
+
+  apartment_count:
+    category: apartment_market
+    label_ko: "거래수"
+    value_kind: count
+    source_table: market_stats
+    source_domain: apartment_market
+    sort_order: 1
+  apartment_mean:
+    category: apartment_market
+    label_ko: "평균단가"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: apartment_market
+    count_key: apartment_count
+    sort_order: 2
+  apartment_median:
+    category: apartment_market
+    label_ko: "중앙단가"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: apartment_market
+    count_key: apartment_count
+    sort_order: 3
+  apartment_std:
+    category: apartment_market
+    label_ko: "표준편차"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: apartment_market
+    count_key: apartment_count
+    sort_order: 4
+  apartment_volatility:
+    category: apartment_market
+    label_ko: "변동성"
+    value_kind: ratio
+    source_table: market_stats
+    source_domain: apartment_market
+    count_key: apartment_count
+    sort_order: 5
+  apartment_yoy:
+    category: apartment_market
+    label_ko: "전년 대비"
+    value_kind: percent
+    source_table: market_stats
+    source_domain: apartment_market
+    count_key: apartment_count
+    sort_order: 6
+
+  rowhouse_count:
+    category: rowhouse_market
+    label_ko: "거래수"
+    value_kind: count
+    source_table: market_stats
+    source_domain: rowhouse_market
+    sort_order: 1
+  rowhouse_mean:
+    category: rowhouse_market
+    label_ko: "평균단가"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: rowhouse_market
+    count_key: rowhouse_count
+    sort_order: 2
+  rowhouse_median:
+    category: rowhouse_market
+    label_ko: "중앙단가"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: rowhouse_market
+    count_key: rowhouse_count
+    sort_order: 3
+  rowhouse_std:
+    category: rowhouse_market
+    label_ko: "표준편차"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: rowhouse_market
+    count_key: rowhouse_count
+    sort_order: 4
+  rowhouse_volatility:
+    category: rowhouse_market
+    label_ko: "변동성"
+    value_kind: ratio
+    source_table: market_stats
+    source_domain: rowhouse_market
+    count_key: rowhouse_count
+    sort_order: 5
+
+  officetel_count:
+    category: officetel_market
+    label_ko: "거래수"
+    value_kind: count
+    source_table: market_stats
+    source_domain: officetel_market
+    sort_order: 1
+  officetel_mean:
+    category: officetel_market
+    label_ko: "평균단가"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: officetel_market
+    count_key: officetel_count
+    sort_order: 2
+  officetel_median:
+    category: officetel_market
+    label_ko: "중앙단가"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: officetel_market
+    count_key: officetel_count
+    sort_order: 3
+  officetel_std:
+    category: officetel_market
+    label_ko: "표준편차"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: officetel_market
+    count_key: officetel_count
+    sort_order: 4
+  officetel_volatility:
+    category: officetel_market
+    label_ko: "변동성"
+    value_kind: ratio
+    source_table: market_stats
+    source_domain: officetel_market
+    count_key: officetel_count
+    sort_order: 5
+
+  ratio_residential_zone:
+    category: composition
+    label_ko: "주거 용도지역 거래비중"
+    value_kind: ratio
+    source_table: land_upper_stats_v2
+    sort_order: 1
+  ratio_commercial_zone:
+    category: composition
+    label_ko: "상업 용도지역 거래비중"
+    value_kind: ratio
+    source_table: land_upper_stats_v2
+    sort_order: 2
+  ratio_agri_zone:
+    category: composition
+    label_ko: "농림·녹지 거래비중"
+    value_kind: ratio
+    source_table: land_upper_stats_v2
+    sort_order: 3
+  ratio_land_danji:
+    category: composition
+    label_ko: "대지 거래비중"
+    value_kind: ratio
+    source_table: land_upper_stats_v2
+    sort_order: 4
+  ratio_land_rice:
+    category: composition
+    label_ko: "전·답 거래비중"
+    value_kind: ratio
+    source_table: land_upper_stats_v2
+    sort_order: 5
+  ratio_land_forest:
+    category: composition
+    label_ko: "임야 거래비중"
+    value_kind: ratio
+    source_table: land_upper_stats_v2
+    sort_order: 6

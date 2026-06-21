@@ -29,6 +29,37 @@ export function resolveUpperSingleFromTier(
   return null;
 }
 
+/**
+ * Profile 조회용 region 해석.
+ * 상위 행정 단독 선택이면 그대로, 법정동·리만 있으면 동일 읍면동(코드 앞 8자리)으로 승격.
+ */
+export function resolveProfileRegionFromTier(
+  tierSelection: TierCodes
+): { level: RegionLevel; code: string; escalatedFromBeop: boolean } | null {
+  const direct = resolveUpperSingleFromTier(tierSelection);
+  if (direct) {
+    return { ...direct, escalatedFromBeop: false };
+  }
+
+  const hasUpperChip =
+    tierSelection.sido_codes.length > 0 ||
+    tierSelection.city_codes.length > 0 ||
+    tierSelection.sigungu_codes.length > 0 ||
+    tierSelection.eupmyeondong_codes.length > 0;
+  if (hasUpperChip) return null;
+
+  const beops = tierSelection.beopjungri_codes.map((b) => b.trim()).filter(Boolean);
+  if (beops.length === 0) return null;
+
+  const eupCodes = new Set(beops.map((b) => (b.length >= 8 ? b.slice(0, 8) : b.padEnd(8, "0").slice(0, 8))));
+  if (eupCodes.size !== 1) return null;
+
+  const eup = [...eupCodes][0]!;
+  if (!/^\d{8}$/.test(eup)) return null;
+
+  return { level: "eupmyeondong", code: eup, escalatedFromBeop: true };
+}
+
 /** `/paid/upper-stats/…` 응답을 FreeStatsV2Response 로 맞춤 — 기본통계 카드 재사용. */
 export function upperToFreeStatsShape(up: UpperStatsV2Response): FreeStatsV2Response {
   return {
