@@ -50,6 +50,7 @@ class ProfileTwinNeighborItem(BaseModel):
 class ProfileTwinNeighborsResponse(BaseModel):
     profile_version: str
     window_years: int
+    algorithm_version: int = 6
     as_of_month: Optional[date] = None
     batch_key: Optional[str] = None
     anchor_eupmyeondong_code: str
@@ -182,13 +183,14 @@ def get_profile_twin_neighbors(
     profile_version: str = Query("v1.1-national"),
     window_years: int = Query(5, ge=1, le=5),
     top_k: int = Query(3, ge=1, le=10),
+    algorithm_version: int = Query(6, ge=5, le=6, description="6=hybrid, 5=profile-only"),
     db: Session = Depends(get_collective_db),
 ):
-    """Profile 기반 쌍둥이 읍면동 Top-k (algorithm_version=5)."""
+    """쌍둥이 읍면동 Top-k — hybrid(v6) 기본, profile-only(v5) fallback."""
     if db is None:
         raise HTTPException(503, "collective_stats DB 미연결")
     if not _table_exists(db, "twin_eupmyeondong_neighbor_mvp"):
-        raise HTTPException(404, "twin 테이블 없음 — build_twin_from_profile.py 실행")
+        raise HTTPException(404, "twin 테이블 없음 — build_twin_hybrid.py 또는 build_twin_from_profile.py 실행")
 
     anchor = eupmyeondong_code.strip()[:8]
     if len(anchor) < 8:
@@ -199,32 +201,42 @@ def get_profile_twin_neighbors(
         if alt not in window_candidates:
             window_candidates.append(alt)
 
+    algo_candidates = [algorithm_version]
+    if algorithm_version == 6 and 5 not in algo_candidates:
+        algo_candidates.append(5)
+
     batch_row = None
     resolved_window = window_years
+    resolved_algo = algorithm_version
     for wy in window_candidates:
-        batch_row = db.execute(
-            text(
-                """
-                SELECT batch_key, MAX(computed_at) AS computed_at
-                FROM twin_eupmyeondong_neighbor_mvp
-                WHERE algorithm_version = 5
-                  AND detail_scores->>'profile_version' = :pv
-                  AND (detail_scores->>'window_years')::int = :wy
-                GROUP BY batch_key
-                ORDER BY computed_at DESC
-                LIMIT 1
-                """
-            ),
-            {"pv": profile_version, "wy": wy},
-        ).mappings().first()
+        for av in algo_candidates:
+            batch_row = db.execute(
+                text(
+                    """
+                    SELECT batch_key, MAX(computed_at) AS computed_at
+                    FROM twin_eupmyeondong_neighbor_mvp
+                    WHERE algorithm_version = :av
+                      AND detail_scores->>'profile_version' = :pv
+                      AND (detail_scores->>'window_years')::int = :wy
+                    GROUP BY batch_key
+                    ORDER BY computed_at DESC
+                    LIMIT 1
+                    """
+                ),
+                {"pv": profile_version, "wy": wy, "av": av},
+            ).mappings().first()
+            if batch_row:
+                resolved_window = wy
+                resolved_algo = av
+                break
         if batch_row:
-            resolved_window = wy
             break
 
     if not batch_row:
         return ProfileTwinNeighborsResponse(
             profile_version=profile_version,
             window_years=window_years,
+            algorithm_version=algorithm_version,
             anchor_eupmyeondong_code=anchor,
             neighbors=[],
         )
@@ -276,6 +288,7 @@ def get_profile_twin_neighbors(
     return ProfileTwinNeighborsResponse(
         profile_version=profile_version,
         window_years=resolved_window,
+        algorithm_version=resolved_algo,
         as_of_month=as_of,
         batch_key=batch_key,
         anchor_eupmyeondong_code=anchor,

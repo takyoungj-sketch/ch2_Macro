@@ -48,6 +48,12 @@ def main() -> None:
     p.add_argument("--skip-collective", action="store_true", help="집합 market_stats 생략")
     p.add_argument("--skip-profile", action="store_true")
     p.add_argument("--skip-twin", action="store_true")
+    p.add_argument(
+        "--twin-mode",
+        choices=("profile", "hybrid", "both"),
+        default="hybrid",
+        help="profile=v5 only, hybrid=v6 (default), both",
+    )
     p.add_argument("--include-extended-land", action="store_true")
     p.add_argument("--collective-rolling-only", action="store_true")
     p.add_argument("--twin-top-k", type=int, default=5)
@@ -84,19 +90,25 @@ def main() -> None:
             _run(cmd, dry_run=args.dry_run)
 
     if not args.skip_twin:
+        twin_builders: list[tuple[str, str]] = []
+        if args.twin_mode in ("profile", "both"):
+            twin_builders.append(("build_twin_from_profile.py", "profile"))
+        if args.twin_mode in ("hybrid", "both"):
+            twin_builders.append(("build_twin_hybrid.py", "hybrid"))
         for wy in profile_windows:
-            cmd = [
-                py,
-                "build_twin_from_profile.py",
-                "--profile-version",
-                args.profile_version,
-                "--window-years",
-                str(wy),
-                "--top-k",
-                str(args.twin_top_k),
-                *as_of_args,
-            ]
-            _run(cmd, dry_run=args.dry_run)
+            for script, _label in twin_builders:
+                cmd = [
+                    py,
+                    script,
+                    "--profile-version",
+                    args.profile_version,
+                    "--window-years",
+                    str(wy),
+                    "--top-k",
+                    str(args.twin_top_k),
+                    *as_of_args,
+                ]
+                _run(cmd, dry_run=args.dry_run)
 
     log.info(
         "전국 regional profile rebuild %s (version=%s windows=%s)",

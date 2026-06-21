@@ -21,6 +21,24 @@ function InsightCard({
   );
 }
 
+function formatTwinBlockScores(detail: Record<string, unknown>): string | null {
+  const sLand = detail.s_land;
+  const sColl = detail.s_collective;
+  const sProf = detail.s_profile;
+  if (
+    typeof sLand !== "number" &&
+    typeof sColl !== "number" &&
+    typeof sProf !== "number"
+  ) {
+    return null;
+  }
+  const parts: string[] = [];
+  if (typeof sLand === "number") parts.push(`토지 ${sLand.toFixed(2)}`);
+  if (typeof sColl === "number") parts.push(`집합 ${sColl.toFixed(2)}`);
+  if (typeof sProf === "number") parts.push(`Profile ${sProf.toFixed(2)}`);
+  return parts.join(" · ");
+}
+
 export default function ProfileInsightSidebar({
   features,
   eupmyeondongCode,
@@ -68,19 +86,28 @@ export default function ProfileInsightSidebar({
       {twins && twins.neighbors.length > 0 ? (
         <div className="rounded-lg border border-violet-200 dark:border-violet-900/50 bg-violet-50/60 dark:bg-violet-950/20 p-3">
           <p className="text-[11px] font-semibold text-violet-800 dark:text-violet-300 mb-2">
-            쌍둥이 지역 (Profile)
+            쌍둥이 지역
+            {twins.algorithm_version === 6 ? " (하이브리드)" : twins.algorithm_version === 5 ? " (Profile)" : ""}
           </p>
           <ol className="space-y-2">
-            {twins.neighbors.map((n) => (
-              <li key={n.rank} className="text-[11px] text-slate-800 dark:text-slate-200">
-                <span className="font-medium text-violet-900 dark:text-violet-200">
-                  [{n.rank}] {n.twin_eupmyeondong_name}
-                </span>
-                <span className="block text-slate-500">
-                  {n.twin_sido_name} {n.twin_sigungu_name}
-                </span>
-              </li>
-            ))}
+            {twins.neighbors.map((n) => {
+              const blocks = formatTwinBlockScores(n.detail_scores);
+              return (
+                <li key={n.rank} className="text-[11px] text-slate-800 dark:text-slate-200">
+                  <span className="font-medium text-violet-900 dark:text-violet-200">
+                    [{n.rank}] {n.twin_eupmyeondong_name}
+                  </span>
+                  <span className="block text-slate-500">
+                    {n.twin_sido_name} {n.twin_sigungu_name}
+                  </span>
+                  {blocks ? (
+                    <span className="block text-[10px] text-violet-700/80 dark:text-violet-300/80 mt-0.5">
+                      {blocks}
+                    </span>
+                  ) : null}
+                </li>
+              );
+            })}
           </ol>
         </div>
       ) : twinCode && !isError ? (

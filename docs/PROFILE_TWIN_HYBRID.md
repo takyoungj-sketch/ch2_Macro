@@ -143,13 +143,13 @@ UI: legacy 화면처럼 블록별 기여도 표시.
 - Profile **composition ratio** ≈ legacy zone×지목 share의 **축약** → hybrid에서 Profile 블록은 **비구조 feature** 위주.
 - 장기: legacy share·collective block을 **Profile v1.2 feature로 흡수** → Twin은 Profile-only로 회귀 (D-017 SSOT).
 
-### 3.5 구현 파일 (예정)
+### 3.5 구현 파일
 
 | 파일 | 역할 |
 |------|------|
-| `pipeline/build_twin_hybrid.py` | 3블록 점수 + Top-k |
-| `pipeline/rebuild_regional_profile_national.py` | `--twin-mode hybrid` 옵션 |
-| `backend/.../regional_profile/router.py` | `/twins` — hybrid batch 조회 |
+| `pipeline/build_twin_hybrid.py` | 3블록 점수 + Top-k (**구현됨**) |
+| `pipeline/rebuild_regional_profile_national.py` | `--twin-mode hybrid` (기본) |
+| `backend/.../regional_profile/router.py` | `/twins` — v6 우선, v5 fallback |
 | `algorithm_version` | **6** (hybrid) |
 
 ---
