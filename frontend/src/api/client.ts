@@ -14,6 +14,7 @@ import type {
   PaidAnalysisResponse,
   RegionItem,
   RegionLevel,
+  ProfileSigunguTwinsResponse,
   ProfileTwinNeighborsResponse,
   RegionalProfileResponse,
   TwinNeighborsForEupmyeondongResponse,
@@ -195,6 +196,51 @@ export const fetchTwinNeighborsForEupmyeondong = async (
     `/twin-regions/eupmyeondong/neighbors/${encodeURIComponent(eupmyeondongCode)}`,
   );
   return data;
+};
+
+/** 시군구 hybrid 쌍둥이(algo 7) — /regional-profile/twins-sigungu, 전국 scope 기본 */
+export const fetchProfileTwinSigungu = async (params: {
+  sigungu_code: string;
+  profile_version?: string;
+  window_years?: number;
+  top_k?: number;
+  scope?: "adjacent" | "region" | "national";
+}): Promise<ProfileSigunguTwinsResponse> => {
+  const code = params.sigungu_code.trim().slice(0, 5);
+  const scope = params.scope ?? "national";
+  const versions = [
+    params.profile_version ?? DEFAULT_PROFILE_VERSION,
+    FALLBACK_PROFILE_VERSION,
+  ].filter((v, i, a) => a.indexOf(v) === i);
+
+  let last: ProfileSigunguTwinsResponse | null = null;
+  for (const pv of versions) {
+    try {
+      const { data } = await api.get<ProfileSigunguTwinsResponse>(
+        `/regional-profile/twins-sigungu/${encodeURIComponent(code)}`,
+        {
+          params: {
+            profile_version: pv,
+            window_years: params.window_years,
+            top_k: params.top_k ?? 10,
+            scope,
+          },
+        }
+      );
+      last = data;
+      if (data.neighbors.length > 0) return data;
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 404) continue;
+      throw err;
+    }
+  }
+  return last ?? {
+    profile_version: versions[0]!,
+    window_years: params.window_years ?? 5,
+    scope,
+    anchor_sigungu_code: code,
+    neighbors: [],
+  };
 };
 
 /** Regional Profile 조회 — v1.1-national 없으면 파일럿 버전 fallback */

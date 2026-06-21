@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
-import { fetchTwinNeighborsForEupmyeondong, fetchTwinNeighborsForSigungu } from "../api/client";
+import { fetchProfileTwinSigungu, fetchTwinNeighborsForEupmyeondong } from "../api/client";
 import type { TwinCitySearchTarget } from "../types";
 import { parseApiError } from "../utils/apiError";
 
@@ -28,8 +28,8 @@ export default function TwinCityModal({ open, onClose, target }: Props) {
   });
 
   const sgQ = useQuery({
-    queryKey: ["twinNeighborsSigungu", sgCode],
-    queryFn: () => fetchTwinNeighborsForSigungu(sgCode),
+    queryKey: ["twinSigunguHybrid", sgCode],
+    queryFn: () => fetchProfileTwinSigungu({ sigungu_code: sgCode, top_k: 10 }),
     enabled: sgEnabled,
     staleTime: 5 * 60 * 1000,
     retry: twinRetryPolicy,
@@ -115,8 +115,9 @@ export default function TwinCityModal({ open, onClose, target }: Props) {
           ) : (
             <p className="text-[11px] text-slate-500 leading-relaxed">
               선택 범위가 <span className="font-medium text-slate-700">하나의 시군구</span>
-              에만 속할 때는 읍면동 단위 대신 전국 시군구 간 유사도를 표시합니다(동일 알고범· ±40%
-              인구 허들).
+              에만 속할 때는 읍면동 단위 대신{" "}
+              <span className="font-medium text-slate-700">전국 시군구</span> 하이브리드 유사도를
+              표시합니다(토지+집합거래+프로파일).
               {sgData?.batch_key ? (
                 <span className="block text-[10px] text-slate-400 mt-1 truncate" title={sgData.batch_key}>
                   배치 {sgData.batch_key}
@@ -170,6 +171,11 @@ export default function TwinCityModal({ open, onClose, target }: Props) {
                   <span className="text-slate-500">
                     （{n.twin_sido_name} · {n.twin_sigungu_code}）
                   </span>
+                  {typeof n.detail_scores.twin_region === "string" ? (
+                    <span className="text-[10px] text-violet-600 ml-1">
+                      {n.detail_scores.twin_region as string}
+                    </span>
+                  ) : null}
                   <span className="text-slate-400 tabular-nums ml-1">
                     · 유사도 {n.similarity_score.toFixed(4)}
                   </span>

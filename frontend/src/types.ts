@@ -338,6 +338,25 @@ export interface ProfileTwinNeighborsResponse {
   neighbors: ProfileTwinNeighborItem[];
 }
 
+/** GET /regional-profile/twins-sigungu/{sigungu_code} — hybrid v7 */
+export interface ProfileSigunguTwinItem {
+  rank: number;
+  twin_sigungu_code: string;
+  twin_sigungu_name: string;
+  twin_sido_name: string;
+  similarity_score: number;
+  detail_scores: Record<string, unknown>;
+}
+
+export interface ProfileSigunguTwinsResponse {
+  profile_version: string;
+  window_years: number;
+  scope?: string | null;
+  batch_key?: string | null;
+  anchor_sigungu_code: string;
+  neighbors: ProfileSigunguTwinItem[];
+}
+
 /** GET /twin-regions/latest-batch */
 export interface TwinRegionLatestBatch {
   batch_key: string;

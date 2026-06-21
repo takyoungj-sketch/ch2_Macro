@@ -228,9 +228,14 @@ python build_twin_sigungu_hybrid.py --profile-version v1.1-national --window-yea
 - **UI**(`ProfileInsightSidebar`): **권역/전국 토글** 추가, 전국 모드에서 후보별 `twin_region` 배지 표시. reason_codes 한국어 렌더 유지.
 - 검증: 가경동 region(충청권 5: 신방·분평·충주 연수·세종 조치원·청당) / national(용인·춘천·전주 등). 강남구 시군구 → 서초·동대문·마포·중랑·성북.
 
-### 3.10 향후
+### 3.10 시군구 UI 연결 (2026-06-21)
 
-- **시군구 UI**: 기존 `TwinCityModal`(`/twin-regions`, land DB)을 collective hybrid 로 연결 또는 Profile 시군구 패널에 노출(별도 DB·라우터라 소규모 정리 필요).
+- `TwinCityModal` 시군구 분기를 `/regional-profile/twins-sigungu`(collective hybrid v7)로 전환. 클라이언트 `fetchProfileTwinSigungu`(전국 scope·top_k 10) 추가, 후보별 `twin_region` 배지 표시.
+- 검증: 강남구 → 서초·동대문·마포·중랑·성북 등 10개(배치 `sgg_hybrid2_national_…`).
+- 비고: legacy `/twin-regions/neighbors`(land DB)는 유지(읍면동 모달은 그대로). 추후 단일화 검토.
+
+### 3.11 향후
+
 - **Phase 3**: 읍면동 full matrix 벡터화 → 전국 scope 실용화.
 - **학습형 가중치 / 데이터 기반 권역**: 장기.
 - **학습형 가중치**: 사용자 "추천 채택/거부" 피드백 로깅 → 가중치(0.5/0.3/0.2) 자동 최적화.
