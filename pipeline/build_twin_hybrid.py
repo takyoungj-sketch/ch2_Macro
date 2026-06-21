@@ -48,7 +48,12 @@ from build_twin_eupmyeondong_mvp import (  # noqa: E402
     _pass_pop,
 )
 from collective.db_utils import get_collective_engine, get_land_engine_for_region_copy  # noqa: E402
-from sido_adjacency import allowed_twin_sidoes  # noqa: E402
+from region_scope import (  # noqa: E402
+    DEFAULT_SCOPE,
+    SCOPES,
+    candidate_scope_sidoes,
+    region_name_of,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -195,6 +200,7 @@ def _build_twin_rows(
     median_price: pd.Series,
     meta: pd.DataFrame,
     anchor_sido_code: str | None,
+    scope: str,
     min_tx: int,
     min_activity: float,
     top_k: int,
@@ -273,12 +279,16 @@ def _build_twin_rows(
     for ai in anchor_indices:
         anchor = eligible[ai]
         anchor_meta = meta_idx.loc[anchor]
-        allowed = allowed_twin_sidoes(sido_arr[ai])
+        anchor_region = region_name_of(sido_arr[ai])
+        allowed = candidate_scope_sidoes(sido_arr[ai], scope)
         pop_a = float(pop_arr[ai]) if np.isfinite(pop_arr[ai]) else None
 
-        cand_idx: list[int] = []
-        for sd in allowed:
-            cand_idx.extend(sido_to_idx.get(sd, []))
+        if allowed is None:  # national: 후보 제한 없음
+            cand_idx: list[int] = list(range(n))
+        else:
+            cand_idx = []
+            for sd in allowed:
+                cand_idx.extend(sido_to_idx.get(sd, []))
 
         scored: list[tuple[float, str, dict]] = []
         for ci in cand_idx:
@@ -334,11 +344,16 @@ def _build_twin_rows(
             if final <= 0:
                 continue
 
+            twin_region = region_name_of(sido_arr[ci])
             detail = {
                 "algorithm": ALGORITHM_LABEL,
                 "profile_version": profile_version,
                 "as_of_month": str(as_of),
                 "window_years": window_years,
+                "scope": scope,
+                "anchor_region": anchor_region,
+                "twin_region": twin_region,
+                "in_region": bool(anchor_region is not None and anchor_region == twin_region),
                 "s_land": round(s_land, 6),
                 "s_collective": round(s_coll, 6),
                 "s_profile": round(s_prof, 6),
@@ -405,7 +420,9 @@ def main() -> None:
     p.add_argument("--profile-version", type=str, default="v1.1-national")
     p.add_argument("--as-of", type=str, default=None)
     p.add_argument("--window-years", type=int, default=5)
-    p.add_argument("--sido-code", type=str, default=None, help="스모크: anchor 시도 한정 (후보풀은 anchor+인접 시도)")
+    p.add_argument("--sido-code", type=str, default=None, help="스모크: anchor 시도 한정 (후보풀은 scope 기준)")
+    p.add_argument("--scope", choices=SCOPES, default=DEFAULT_SCOPE,
+                   help="후보군 범위: adjacent(육상 인접) / region(권역, 기본) / national(전국)")
     p.add_argument("--top-k", type=int, default=5)
     p.add_argument("--min-tx", type=int, default=20, help="토지 legacy 최소 거래")
     p.add_argument("--min-activity", type=float, default=15.0)
@@ -432,15 +449,22 @@ def main() -> None:
 
     as_of = parse_as_of_month(args.as_of) if args.as_of else default_as_of_month()
     year_from = as_of.year - int(args.window_years) + 1
-    batch_key = f"hybrid2_{args.profile_version}_{as_of:%Y%m}_w{args.window_years}_{uuid.uuid4().hex[:8]}"
+    batch_key = (
+        f"hybrid2_{args.scope}_{args.profile_version}_{as_of:%Y%m}_w{args.window_years}_{uuid.uuid4().hex[:8]}"
+    )
 
-    # 스모크: anchor 시도만 한정하되, 후보풀·기준선은 anchor+인접 시도로 로드
+    # 스모크: anchor 시도만 한정하되, 후보풀·기준선은 scope 기준 시도로 로드
     anchor_sido_code = None
     sido_prefixes: list[str] | None = None
     if args.sido_code:
         anchor_sido_code = args.sido_code.strip()[:2]
-        sido_prefixes = sorted(set(allowed_twin_sidoes(anchor_sido_code)) | {anchor_sido_code})
-        log.info("smoke: anchor 시도=%s, 후보풀 시도=%s", anchor_sido_code, sido_prefixes)
+        pool = candidate_scope_sidoes(anchor_sido_code, args.scope)
+        if pool is None:
+            sido_prefixes = None  # national: 전국 로드
+        else:
+            sido_prefixes = sorted(set(pool) | {anchor_sido_code})
+        log.info("smoke: scope=%s anchor 시도=%s, 후보풀 시도=%s",
+                 args.scope, anchor_sido_code, sido_prefixes or "전국")
 
     coll = get_collective_engine()
     land = get_land_engine_for_region_copy()
@@ -490,6 +514,7 @@ def main() -> None:
         median_price=median_series,
         meta=meta,
         anchor_sido_code=anchor_sido_code,
+        scope=args.scope,
         min_tx=args.min_tx,
         min_activity=args.min_activity,
         top_k=args.top_k,
@@ -507,8 +532,9 @@ def main() -> None:
     )
 
     log.info(
-        "batch=%s hybrid_v2 profile=%s twin_rows=%s dry_run=%s",
+        "batch=%s hybrid_v2 scope=%s profile=%s twin_rows=%s dry_run=%s",
         batch_key,
+        args.scope,
         args.profile_version,
         len(twin_rows),
         args.dry_run,

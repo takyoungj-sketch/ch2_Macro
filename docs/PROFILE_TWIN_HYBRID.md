@@ -180,10 +180,31 @@ similarity = wl × S_land + wc × S_coll + wp × S_prof
 | `backend/.../regional_profile/router.py` | `/twins` — v6 우선, v5 fallback |
 | `algorithm_version` / `detail.algorithm` | **6** / `hybrid_v2` |
 
-### 3.7 향후 (장기)
+### 3.7 후보군 scope (Phase 1, 2026-06-21)
 
+후보군을 "육상 인접" 하드코딩이 아니라 **생활권(권역)** 으로 파라미터화. `pipeline/region_scope.py`.
+
+| scope | 범위 | 용도 |
+|-------|------|------|
+| `adjacent` | 앵커 시도 + 육상 인접 시도 | legacy 호환 |
+| `region` (**기본**) | 앵커 생활권(권역) 시도 | UI 기본 — 설명 가능한 comparable |
+| `national` | 전국 | 전국 검색 옵션 / 회귀 pooling |
+
+**권역맵:** 수도권(서울·인천·경기), 충청권(대전·세종·충북·충남), 호남권(광주·전북·전남), 대경권(대구·경북), 동남권(부산·울산·경남), 강원권, 제주권. → 서울↔인천 단절, 세종·청주·천안 연결성 해결.
+
+`detail_scores` 에 `scope`, `anchor_region`, `twin_region`, `in_region` 태그 저장 → UI에서 권역/전국 토글 시 **재계산 없이 필터**(Phase 2).
+
+**검증 (가경동 43113113):**
+- `region`(충청권): 천안 신방동·청주 분평동·충주 연수동·세종 조치원·천안 청당동 (전부 `in_region`).
+- `national`: 용인 성복(0.925)·용인 고림·춘천 석사·전주 효자·남양주 호평 (통계 최강, 전국 산재).
+
+### 3.8 향후
+
+- **Phase 2**: Top-N 20 저장 + UI 권역/전국 토글 + 권역 최소 보장 쿼터, 시군구 hybrid_v2(전국).
+- **Phase 3**: 읍면동 full matrix 벡터화 → 전국 scope 실용화.
 - **학습형 가중치**: 사용자 "추천 채택/거부" 피드백 로깅 → 가중치(0.5/0.3/0.2) 자동 최적화.
-- **presence 플래그**: 전국 QA에서 구성비 cosine만으로 구분 안 되는 사례 확인 시 phase 2.
+- **데이터 기반 권역**: Twin 엣지 그래프 community detection 으로 생활권 재도출(오프라인, 순환 회피).
+- **presence 플래그**: 구성비 cosine만으로 구분 안 되는 사례 확인 시 검토.
 
 ---
 
