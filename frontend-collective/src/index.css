@@ -63,6 +63,29 @@ table.data.buildings-table col.col-num {
   width: 2.4cm;
 }
 
+/* 집합상가·공장 — cluster 목록 (buildings-table 대비 칼럼 너비 50%) */
+table.data.commercial-clusters-table {
+  width: 100%;
+  min-width: 11.2cm;
+}
+
+table.data.commercial-clusters-table col.col-road {
+  width: 4.5cm;
+}
+
+table.data.commercial-clusters-table col.col-num {
+  width: 1.2cm;
+}
+
+table.data.commercial-clusters-table col.col-district {
+  width: 2.75cm;
+}
+
+table.data.commercial-clusters-table th.col-district,
+table.data.commercial-clusters-table td.col-district {
+  @apply text-center;
+}
+
 table.data th,
 table.data td {
   @apply px-1 py-0.5 border-b border-slate-100 align-middle overflow-hidden

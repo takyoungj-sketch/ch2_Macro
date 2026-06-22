@@ -7,6 +7,7 @@ from typing import Optional
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
+from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session
 
 from app.collective.analysis_explain import (
@@ -46,6 +47,7 @@ router = APIRouter(prefix="/commercial", tags=["집합상가·공장"])
 
 def _tx_where(
     *,
+    conn: Connection | None = None,
     asset_type: Optional[str] = None,
     addr1: Optional[str] = None,
     addr2: Optional[str] = None,
@@ -57,8 +59,9 @@ def _tx_where(
     col_prefix: str = "",
 ) -> tuple[str, dict]:
     p = col_prefix
+    valid_sql = f"{p}.is_valid = true" if p else "is_valid = true"
     clauses = [
-        f"{_col('is_valid', p)} = true",
+        valid_sql,
         f"{_col('unit_price', p)} IS NOT NULL",
         f"{_col('unit_price', p)} > 0",
     ]
@@ -69,12 +72,16 @@ def _tx_where(
     apply_region_filters(
         clauses,
         params,
+        conn=conn,
+        table="collective_commercial_transactions",
         addr1=addr1,
         addr2=addr2,
         addr3=addr3,
         addr3_list=addr3_list,
         addr4_list=addr4_list,
+        asset_type=asset_type,
         col_prefix=p,
+        valid_sql=valid_sql,
     )
     apply_year_filters(
         clauses,
@@ -156,7 +163,7 @@ def list_addr3(
     addr2: str = Query(...),
     asset_type: Optional[str] = Query(None),
 ):
-    where, params = _tx_where(asset_type=asset_type, addr1=addr1, addr2=addr2)
+    where, params = _tx_where(conn=db.connection(), asset_type=asset_type, addr1=addr1, addr2=addr2)
     rows = db.execute(
         text(
             f"""
@@ -198,6 +205,7 @@ def list_leaf_regions(
     asset_type: Optional[str] = Query(None),
 ):
     where, params = _tx_where(
+        conn=db.connection(),
         asset_type=asset_type,
         addr1=addr1,
         addr2=addr2,
@@ -237,6 +245,7 @@ def list_clusters(
         raise HTTPException(400, "시군구(addr2)를 선택해 주세요.")
 
     where, params = _tx_where(
+        conn=db.connection(),
         asset_type=asset_type,
         addr1=addr1,
         addr2=addr2,
@@ -324,6 +333,7 @@ def list_cluster_addresses(
 ):
     """도로(cluster) 내 번지·읍면동별 ㎡당 단가 — 목록 조회와 동일 지역 필터 적용."""
     where, params = _tx_where(
+        conn=db.connection(),
         addr1=addr1,
         addr2=addr2,
         addr3_list=addr3_list or None,
@@ -390,6 +400,7 @@ def cluster_stats_by_year(
     contract_year_to: Optional[int] = None,
 ):
     where, params = _tx_where(
+        conn=db.connection(),
         addr1=addr1,
         addr2=addr2,
         addr3_list=addr3_list or None,
@@ -442,6 +453,7 @@ def cluster_histogram(
     contract_year: Optional[int] = None,
 ):
     where, params = _tx_where(
+        conn=db.connection(),
         addr1=addr1,
         addr2=addr2,
         addr3_list=addr3_list or None,
@@ -503,6 +515,7 @@ def cluster_regression(
     import pandas as pd
 
     where, params = _tx_where(
+        conn=db.connection(),
         addr1=body.addr1,
         addr2=body.addr2,
         addr3_list=body.addr3_list or None,
@@ -577,6 +590,7 @@ def cluster_floor_index(
     import pandas as pd
 
     where, params = _tx_where(
+        conn=db.connection(),
         addr1=addr1,
         addr2=addr2,
         addr3_list=addr3_list or None,
@@ -683,6 +697,7 @@ def list_cluster_transactions(
     page_size: int = Query(50, ge=1, le=200),
 ):
     where, params = _tx_where(
+        conn=db.connection(),
         addr1=addr1,
         addr2=addr2,
         addr3_list=addr3_list or None,

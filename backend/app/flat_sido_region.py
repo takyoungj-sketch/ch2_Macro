@@ -9,6 +9,13 @@ from sqlalchemy.engine import Connection
 FLAT_SIDO_ADDR2_TOKEN = "__FLAT_SIDO__"
 
 
+def normalize_region_asset_type(asset_type: str | None) -> str | None:
+    """통합(all) 또는 빈 값 — 유형 필터 없음."""
+    if not asset_type or asset_type == "all":
+        return None
+    return asset_type
+
+
 def is_flat_sido_addr2(addr2: str | None) -> bool:
     return (addr2 or "").strip() == FLAT_SIDO_ADDR2_TOKEN
 
@@ -58,6 +65,7 @@ def _table_has_flat_sido(
         valid_sql,
     ]
     params: dict = {"a1": addr1.strip()}
+    asset_type = normalize_region_asset_type(asset_type)
     if asset_type:
         clauses.append("asset_type = :asset_type")
         params["asset_type"] = asset_type
@@ -84,6 +92,7 @@ def list_addr2_for_sido(
         valid_sql,
     ]
     params: dict = {"a1": addr1.strip()}
+    asset_type = normalize_region_asset_type(asset_type)
     if asset_type:
         clauses.append("asset_type = :asset_type")
         params["asset_type"] = asset_type
@@ -117,6 +126,7 @@ def region_scope_clauses(
     """지역 목록 API용 addr1+addr2(+asset_type) WHERE 조각."""
     clauses = [valid_sql]
     params: dict = {}
+    asset_type = normalize_region_asset_type(asset_type)
     if asset_type:
         clauses.append("asset_type = :asset_type")
         params["asset_type"] = asset_type
@@ -141,6 +151,7 @@ def detect_region_structure_for_table(
     else:
         clauses.append("addr2 = :a2")
         params["a2"] = addr2.strip()
+    asset_type = normalize_region_asset_type(asset_type)
     if asset_type:
         clauses.append("asset_type = :asset_type")
         params["asset_type"] = asset_type

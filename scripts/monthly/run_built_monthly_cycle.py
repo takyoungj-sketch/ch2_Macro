@@ -103,6 +103,11 @@ def main() -> None:
         action="store_true",
         help="raw 폴더 없이 import_refined 기본 GUKTO 경로 사용 (전환기)",
     )
+    p.add_argument(
+        "--skip-mapping-check",
+        action="store_true",
+        help="beopjungri 매칭 품질 게이트 생략 (기본: ingest 후 실행)",
+    )
     args = p.parse_args()
 
     only_flags = sum([args.commercial_only, args.factory_only, args.detached_only])
@@ -162,21 +167,37 @@ def main() -> None:
 
     cycle_t0 = time.perf_counter()
     py = sys.executable
-    import_script = repo / "pipeline" / "built" / "import_refined.py"
 
     if not args.skip_ingest:
-        cmd = [py, str(import_script)]
+        cmd = [py, str(repo / "pipeline" / "built" / "import_molit.py")]
         if not args.no_refresh_region_codes:
             cmd.append("--refresh-region-codes")
         for asset in xlsx_paths:
-            cmd.extend([f"--{asset}", str(xlsx_paths[asset])])
+            # MOLIT ingest는 raw CSV 경로 — legacy xlsx override는 --use-legacy-defaults 전용
+            pass
+        if args.use_legacy_defaults:
+            import_script = repo / "pipeline" / "built" / "import_refined.py"
+            cmd = [py, str(import_script)]
+            if not args.no_refresh_region_codes:
+                cmd.append("--refresh-region-codes")
+            for asset in xlsx_paths:
+                cmd.extend([f"--{asset}", str(xlsx_paths[asset])])
+        else:
+            log.info("MOLIT ingest: raw base CSV incremental (no per-file xlsx args)")
         if args.commercial_only:
             cmd.append("--commercial-only")
         elif args.factory_only:
             cmd.append("--factory-only")
         elif args.detached_only:
             cmd.append("--detached-only")
-        _run_subprocess_timed("import_refined", cmd, cwd=repo / "pipeline" / "built")
+        phase = "import_molit" if not args.use_legacy_defaults else "import_refined"
+        _run_subprocess_timed(phase, cmd, cwd=repo / "pipeline")
+        if not args.use_legacy_defaults:
+            _run_subprocess_timed(
+                "build_scope_stats",
+                [py, str(repo / "pipeline" / "built" / "build_scope_stats.py")],
+                cwd=repo / "pipeline",
+            )
     else:
         log.info("skip-ingest: DB 변경 없음")
 
@@ -187,6 +208,14 @@ def main() -> None:
         [py, str(snap_script), "--output", str(snap_out), "--cycle-id", cycle],
     )
     log.info("스냅샷: %s", snap_out)
+
+    if not args.skip_mapping_check:
+        verify_script = repo / "pipeline" / "verify_beopjungri_mapping.py"
+        _run_subprocess_timed(
+            "verify_beopjungri_mapping",
+            [py, str(verify_script), "--cycle-id", cycle],
+            cwd=repo / "pipeline",
+        )
 
     total_sec = time.perf_counter() - cycle_t0
     log.info(

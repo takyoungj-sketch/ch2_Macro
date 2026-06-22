@@ -1,8 +1,9 @@
 # Region · Property 아키텍처 — 장기 과제 (Post-MVP)
 
-> **상태:** 보류 — **현재 MVP(토지·복합·집합 기능 완성) 우선**. 본 문서는 구조 개선 논의·설계 참고용이다.  
+> **Statistics → Regional Profile → 회귀/AI** 의 구체 5-Layer·집합 mart·cohort 회귀: [`REGIONAL_PROFILE_ARCHITECTURE.md`](./REGIONAL_PROFILE_ARCHITECTURE.md) (D-016).  
+> **상태:** 보류 — **현재 MVP(토지·복합·집합 기능 완성) 우선**. 본 문서는 Property Registry 등 Post-MVP 구조 개선 참고용.  
 > **재논의 시점:** 2026년 6월 말 수정 반영 후, **7월 정기 업데이트 전** 전반적 구조 개선 회의.  
-> **관련 결정:** [`DECISIONS.md`](./DECISIONS.md) D-014
+> **관련 결정:** [`DECISIONS.md`](./DECISIONS.md) D-014, D-016
 
 ---
 
@@ -134,6 +135,74 @@ Statistics          — 집계·추세·회귀
 | [`BUILDING_REGISTER_ROADMAP.md`](./BUILDING_REGISTER_ROADMAP.md) | Property SSOT 데이터 소스 |
 | [`TWIN_REGION_SIMILARITY_ENGINE.md`](./TWIN_REGION_SIMILARITY_ENGINE.md) | 쌍둥이 · 유사 Property |
 | [`COLLECTIVE_COMMERCIAL_DESIGN.md`](./COLLECTIVE_COMMERCIAL_DESIGN.md) | cluster grain · 2-tier |
+
+---
+
+## D-015 복합부동산 리(法定里) addr 정규화 — 추후 작업 계획
+
+> **상태:** 미착수 (2026-06-16 기록)  
+> **우선순위:** 중 — 농촌·면 지역 built 거래 분석 시 리 단위 선택 불가로 직결  
+> **관련 결정:** `DECISIONS.md` D-015
+
+### 문제 요약
+
+국토부 복합부동산 원본 주소의 행정 depth가 구조에 따라 다르다.
+
+| 구조 | 원본 depth | 현재 addr 매핑 | 리 위치 |
+|------|-----------|----------------|---------|
+| **구(區) 있는 시** (청주·수원 등) | 시도/시/구/읍면동/리 — 5단계 | addr3=구, addr4=읍면동, addr5=리 | `addr5` ✅ |
+| **구(區) 없는 시** (안성·제천 등) | 시도/시/읍면동/리 — 4단계 | addr3=읍면동, addr4=리, addr5=NULL | `addr4` ❌ |
+
+`/regions/ri` API와 `apply_ri_filter`는 항상 `addr5`를 리로 간주한다.  
+→ 구 없는 시에서 읍(邑)·면(面) 하위 리를 조회·필터링할 수 없어 **리 선택 패널이 공란**, 3-way 회귀도 비활성화.
+
+### 해결 방안 A — import 정규화 (선택)
+
+`pipeline/built/import_refined.py` 정제 단계에서:
+
+```python
+# 정규화 규칙: addr4=리값, addr5=NULL, addr3이 구(區)가 아닌 경우
+# → 리를 addr5로 올리고 addr4는 NULL 처리
+if row.addr4 and not row.addr5 and not str(row.addr3 or "").endswith("구"):
+    row.addr5, row.addr4 = row.addr4, None
+```
+
+**적용 범위:**
+- `pipeline/built/import_refined.py` — 신규 ingest 시 적용
+- 기존 `built_transactions` 데이터 전체 backfill 필요 (UPDATE 또는 재ingest)
+
+**장점:**
+- 기존 `/regions/ri`, `apply_ri_filter`, 회귀 엔진 코드 **변경 없음**
+- `addr5=리` 단일 규약 유지 → 향후 집합·상가까지 일관 적용 가능
+
+**단점:**
+- 기존 적재 데이터 전체 재처리 필요
+
+### 작업 체크리스트
+
+- [ ] `built_transactions`에서 구 없는 시 표본 쿼리로 현재 addr4/addr5 분포 확인
+  ```sql
+  SELECT addr1, addr2, addr3, addr4, addr5, COUNT(*)
+  FROM built_transactions
+  WHERE addr4 IS NOT NULL AND addr5 IS NULL
+    AND addr3 NOT LIKE '%구'
+  GROUP BY 1,2,3,4,5
+  ORDER BY 1,2,3
+  LIMIT 100;
+  ```
+- [ ] `pipeline/built/import_refined.py` — 정규화 로직 추가 및 단위 테스트
+- [ ] 기존 데이터 backfill 스크립트 작성 (`UPDATE built_transactions SET addr5=addr4, addr4=NULL WHERE ...`)
+- [ ] `pipeline/collective/import_refined.py` — 동일 패턴 적용 여부 확인 후 반영
+- [ ] `pipeline/collective_commercial/gukto_refine.py` — 동일 패턴 확인
+- [ ] 적용 후 `/regions/ri` 응답에 구 없는 시의 면 지역 리 데이터 조회 검증
+- [ ] `detect_region_structure` 재실행으로 구조 감지 변경 없음 확인 (구 없는 시는 여전히 flat)
+- [ ] 회귀 3-way 모드(리 선택 시) 작동 검증
+
+### 주의사항
+
+- `apply_ri_filter`의 parent 조건 `(addr4 = :eup OR addr3 = :eup)`은 정규화 후에도 양쪽을 체크하므로 호환 유지
+- 세종 flat-sido (`FLAT_SIDO_ADDR2_TOKEN`) 케이스는 별도 검토 필요
+- 방안 B(조회 로직 fix)는 단기 임시 대응으로만 고려; 장기적으로는 방안 A 완료 후 불필요
 
 ---
 

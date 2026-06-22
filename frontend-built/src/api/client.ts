@@ -1,4 +1,5 @@
 import axios from "axios";
+import { filenameFromContentDisposition, saveBlobAsFile } from "../utils/downloadBlob";
 import type {
   Addr3Option,
   BuiltFilterMeta,
@@ -27,6 +28,7 @@ export interface TransactionQueryParams {
   ri_pick?: string[];
   zone_types?: string[];
   building_uses?: string[];
+  road_width_labels?: string[];
   gross_area_min?: number;
   gross_area_max?: number;
   land_area_min?: number;
@@ -37,6 +39,8 @@ export interface TransactionQueryParams {
   road_code_max?: number;
   contract_year_from?: number;
   contract_year_to?: number;
+  as_of_month?: string;
+  window_years?: number;
   page?: number;
   page_size?: number;
 }
@@ -45,7 +49,15 @@ function toSearchParams(params: TransactionQueryParams): string {
   const sp = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value == null || value === "") return;
-    if ((key === "addr3_list" || key === "addr4_list" || key === "ri_pick" || key === "zone_types" || key === "building_uses") && Array.isArray(value)) {
+    if (
+      (key === "addr3_list" ||
+        key === "addr4_list" ||
+        key === "ri_pick" ||
+        key === "zone_types" ||
+        key === "building_uses" ||
+        key === "road_width_labels") &&
+      Array.isArray(value)
+    ) {
       value.forEach((v) => sp.append(key, v));
       return;
     }
@@ -77,14 +89,19 @@ export async function fetchAddr2(addr1: string, assetType?: string): Promise<str
   return data;
 }
 
+export type RegionChipScopeParams = Omit<
+  TransactionQueryParams,
+  "page" | "page_size" | "addr1" | "addr2" | "addr3_list" | "addr4_list" | "ri_pick"
+>;
+
 export async function fetchAddr3WithCounts(
   addr1: string,
   addr2: string,
   assetType?: string,
+  scope?: RegionChipScopeParams,
 ): Promise<Addr3Option[]> {
-  const { data } = await api.get<Addr3Option[]>("/regions/addr3", {
-    params: { addr1, addr2, asset_type: assetType, with_counts: true },
-  });
+  const qs = toSearchParams({ ...scope, addr1, addr2, asset_type: assetType });
+  const { data } = await api.get<Addr3Option[]>(`/regions/addr3?${qs}&with_counts=true`);
   return data;
 }
 
@@ -93,9 +110,9 @@ export async function fetchLeafRegions(
   addr2: string,
   guList: string[],
   assetType?: string,
+  scope?: RegionChipScopeParams,
 ): Promise<RegionOption[]> {
-  const sp = new URLSearchParams({ addr1, addr2 });
-  if (assetType) sp.append("asset_type", assetType);
+  const sp = new URLSearchParams(toSearchParams({ ...scope, addr1, addr2, asset_type: assetType }));
   guList.forEach((g) => sp.append("addr3_list", g));
   const { data } = await api.get<RegionOption[]>(`/regions/leaf?${sp.toString()}`);
   return data;
@@ -109,10 +126,18 @@ export async function fetchRiRegions(
     addr3List?: string[];
     addr4List?: string[];
     assetType?: string;
+    scope?: RegionChipScopeParams;
   },
 ): Promise<RegionOption[]> {
-  const sp = new URLSearchParams({ addr1, addr2, leaf_level: opts.leafLevel });
-  if (opts.assetType) sp.append("asset_type", opts.assetType);
+  const sp = new URLSearchParams(
+    toSearchParams({
+      ...opts.scope,
+      addr1,
+      addr2,
+      asset_type: opts.assetType,
+    }),
+  );
+  sp.set("leaf_level", opts.leafLevel);
   (opts.addr3List ?? []).forEach((v) => sp.append("addr3_list", v));
   (opts.addr4List ?? []).forEach((v) => sp.append("addr4_list", v));
   const { data } = await api.get<RegionOption[]>(`/regions/ri?${sp.toString()}`);
@@ -128,6 +153,8 @@ export async function fetchScopeSampleFilters(params: {
   ri_pick?: string[];
   contract_year_from?: number;
   contract_year_to?: number;
+  as_of_month?: string;
+  window_years?: number;
 }): Promise<ScopeSampleFilterResponse> {
   const sp = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
@@ -146,6 +173,19 @@ export async function fetchTransactions(params: TransactionQueryParams) {
   const qs = toSearchParams(params);
   const { data } = await api.get<BuiltTransactionListResponse>(`/transactions?${qs}`);
   return data;
+}
+
+/** 거래목록 CSV(UTF-8 BOM) — 목록 API와 동일 필터·전체 건 */
+export async function downloadBuiltTransactionsCsv(
+  params: Omit<TransactionQueryParams, "page" | "page_size">,
+): Promise<void> {
+  const qs = toSearchParams(params);
+  const response = await api.get<Blob>(`/transactions/export?${qs}`, { responseType: "blob" });
+  const filename = filenameFromContentDisposition(
+    response.headers["content-disposition"],
+    "built_transactions.csv",
+  );
+  saveBlobAsFile(response.data, filename);
 }
 
 export async function runRegression(body: RegressionRunRequest) {

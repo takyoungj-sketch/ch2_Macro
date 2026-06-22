@@ -243,14 +243,14 @@ uvicorn app.main:app --port 8001
 
 ## 8. 후속 (복합·집합)
 
-동일 패턴:
+| 영역 | 계획서 | 상태 |
+|------|--------|------|
+| 주거 집합 4유형 | [`COLLECTIVE_LEDGER_REBUILD_PLAN.md`](./COLLECTIVE_LEDGER_REBUILD_PLAN.md) | 진행/완료 |
+| 복합 일반 3유형 | [`BUILT_LEDGER_REBUILD_PLAN.md`](./BUILT_LEDGER_REBUILD_PLAN.md) | Phase A 착수 (D-024) |
 
-1. `built_stats_next` / `collective_stats_next`
-2. `raw\raw base\{유형}_2021_2026`
-3. ingest + `region_codes` sync from land
-4. 지역선택 재구축(`region_sigungu_meta`) ingest 후 meta build
+공통 패턴: `raw/raw base/{유형}_2021_2026` → ingest → **`region_codes` sync from land** → (Phase B) mart·UI.
 
-**토지 Promote 완료 후** 착수.
+**토지 Promote 완료 후** 복합 Phase A 착수 권장 (병행 시 `built_stats` 백업 필수).
 
 ---
 

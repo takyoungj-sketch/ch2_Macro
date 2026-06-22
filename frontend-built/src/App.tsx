@@ -18,10 +18,10 @@ import {
   formatScopeAddr2,
   isFlatSidoAddr2,
 } from "./utils/flatSidoRegion";
+import BuiltTransactionListModal from "./components/BuiltTransactionListModal";
 import type {
   Addr3Option,
   AssetType,
-  BuiltTransactionRow,
   CorrelationSeries,
   IqrMultiplier,
   PredictOptions,
@@ -31,6 +31,7 @@ import type {
   RegressionRunRequest,
   RegressionRunResponse,
   RegressionVariableSpec,
+  ResponseScale,
   RiPick,
   SampleFilterState,
   ScopeSampleFilterResponse,
@@ -56,6 +57,12 @@ const COEF_LABELS: Record<string, string> = {
   road_code: "도로",
 };
 
+const ASSET_TYPE_LABELS: Record<string, string> = {
+  commercial: "상업",
+  factory: "공장",
+  detached: "단독",
+};
+
 /** statsmodels 변수명 → 표시용 한글 */
 function formatCoefName(name: string, assetType?: AssetType): string {
   if (COEF_LABELS[name]) return COEF_LABELS[name];
@@ -64,6 +71,12 @@ function formatCoefName(name: string, assetType?: AssetType): string {
     const prefix = assetType === "detached" ? "주택유형" : "건축물용도";
     return `${prefix}·${name.slice(4)}`;
   }
+  if (name.startsWith("road_")) return `도로조건·${name.slice(5)}`;
+  if (name.startsWith("atype_")) {
+    const key = name.slice(6);
+    return `유형·${ASSET_TYPE_LABELS[key] ?? key}`;
+  }
+  if (name.startsWith("loc_")) return `지역·${name.slice(4)}`;
   return name;
 }
 
@@ -78,15 +91,44 @@ function sampleFilterToApi(sf: SampleFilterState) {
   return {
     zone_types: sf.zoneTypes.length ? sf.zoneTypes : undefined,
     building_uses: sf.buildingUses.length ? sf.buildingUses : undefined,
+    road_width_labels: sf.roadWidthLabels.length ? sf.roadWidthLabels : undefined,
     gross_area_min: parseOptionalNum(sf.gross_area_min),
     gross_area_max: parseOptionalNum(sf.gross_area_max),
     land_area_min: parseOptionalNum(sf.land_area_min),
     land_area_max: parseOptionalNum(sf.land_area_max),
     building_age_min: parseOptionalNum(sf.building_age_min),
     building_age_max: parseOptionalNum(sf.building_age_max),
-    road_code_min: parseOptionalNum(sf.road_code_min),
-    road_code_max: parseOptionalNum(sf.road_code_max),
   };
+}
+
+function isEmptySampleFilter(sample: SampleFilterState): boolean {
+  return (
+    sample.zoneTypes.length === 0 &&
+    sample.buildingUses.length === 0 &&
+    sample.roadWidthLabels.length === 0 &&
+    !sample.gross_area_min.trim() &&
+    !sample.gross_area_max.trim() &&
+    !sample.land_area_min.trim() &&
+    !sample.land_area_max.trim() &&
+    !sample.building_age_min.trim() &&
+    !sample.building_age_max.trim()
+  );
+}
+
+function sampleFilterSummary(sample: SampleFilterState): string {
+  if (isEmptySampleFilter(sample)) return "전체";
+  let n = sample.zoneTypes.length + sample.buildingUses.length + sample.roadWidthLabels.length;
+  for (const k of [
+    "gross_area_min",
+    "gross_area_max",
+    "land_area_min",
+    "land_area_max",
+    "building_age_min",
+    "building_age_max",
+  ] as const) {
+    if (sample[k].trim()) n += 1;
+  }
+  return `${n}개 조건`;
 }
 
 function SampleFilterPanel({
@@ -102,10 +144,11 @@ function SampleFilterPanel({
   onChange: (next: SampleFilterState) => void;
   filteredTotal?: number;
 }) {
+  const [open, setOpen] = useState(false);
   const useLabel = assetType === "detached" ? "주택유형" : "건축물용도";
   const contHint = (name: string) => scope?.continuous.find((c) => c.name === name);
 
-  const toggle = (key: "zoneTypes" | "buildingUses", name: string) => {
+  const toggle = (key: "zoneTypes" | "buildingUses" | "roadWidthLabels", name: string) => {
     const arr = sample[key];
     onChange({
       ...sample,
@@ -113,14 +156,12 @@ function SampleFilterPanel({
     });
   };
 
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-slate-800">표본 필터</h3>
-        <span className="text-xs text-slate-500">
-          {filteredTotal != null ? `적용 후 n=${fmtNum(filteredTotal)}` : scope ? `scope n=${fmtNum(scope.total)}` : "…"}
-        </span>
-      </div>
+  const showZone = assetType !== "detached" && assetType !== "all";
+  const countLabel =
+    filteredTotal != null ? `n=${fmtNum(filteredTotal)}` : scope ? `n=${fmtNum(scope.total)}` : "…";
+
+  const filterBody = (
+    <>
       <p className="text-xs text-slate-500">
         미선택 = 전체. 회귀·거래 목록·예측에 동일 적용됩니다.
       </p>
@@ -131,7 +172,6 @@ function SampleFilterPanel({
             ["gross_area", "gross_area_min", "gross_area_max"],
             ["land_area", "land_area_min", "land_area_max"],
             ["building_age", "building_age_min", "building_age_max"],
-            ["road_code", "road_code_min", "road_code_max"],
           ] as const
         ).map(([col, minKey, maxKey]) => {
           const hint = contHint(col);
@@ -167,11 +207,12 @@ function SampleFilterPanel({
         })}
       </div>
 
-      {(assetType !== "detached" && (scope?.zone_types?.length ?? 0) > 0) ||
-      (scope?.building_uses?.length ?? 0) > 0 ? (
+      {(showZone && (scope?.zone_types?.length ?? 0) > 0) ||
+      (scope?.building_uses?.length ?? 0) > 0 ||
+      (scope?.road_width_labels?.length ?? 0) > 0 ? (
         <div className="space-y-2 pt-1">
           <p className="text-xs font-medium text-slate-600">범주(더미) 변수</p>
-          {assetType !== "detached" && (scope?.zone_types?.length ?? 0) > 0 && (
+          {showZone && (scope?.zone_types?.length ?? 0) > 0 && (
             <RegionChipPanel
               compact
               collapsible
@@ -198,6 +239,22 @@ function SampleFilterPanel({
               onClear={() => onChange({ ...sample, buildingUses: [] })}
             />
           )}
+
+          {(scope?.road_width_labels?.length ?? 0) > 0 && (
+            <RegionChipPanel
+              compact
+              collapsible
+              title="도로조건"
+              hint="선택한 도로조건 거래만 포함"
+              selected={sample.roadWidthLabels}
+              options={scope!.road_width_labels}
+              onToggle={(n) => toggle("roadWidthLabels", n)}
+              onSelectAll={() =>
+                onChange({ ...sample, roadWidthLabels: scope!.road_width_labels.map((u) => u.name) })
+              }
+              onClear={() => onChange({ ...sample, roadWidthLabels: [] })}
+            />
+          )}
         </div>
       ) : null}
 
@@ -208,6 +265,24 @@ function SampleFilterPanel({
       >
         표본 필터 초기화
       </button>
+    </>
+  );
+
+  return (
+    <div className="border border-slate-200 rounded-lg overflow-hidden">
+      <button
+        type="button"
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-xs bg-slate-50 hover:bg-slate-100 transition-colors"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        <span className="font-medium text-slate-800">표본 필터</span>
+        <span className="text-slate-500 shrink-0 text-right">
+          {sampleFilterSummary(sample)} · {countLabel}
+          <span className="ml-1.5 inline-block w-3 text-center">{open ? "▾" : "▸"}</span>
+        </span>
+      </button>
+      {open && <div className="p-3 space-y-3 border-t border-slate-200 bg-white">{filterBody}</div>}
     </div>
   );
 }
@@ -224,6 +299,15 @@ function defaultPredictInputs(opts?: PredictOptions | null): Record<string, stri
   }
   if (opts?.building_uses?.length) {
     out.building_use = opts.building_use_reference ?? opts.building_uses[0];
+  }
+  if (opts?.road_width_labels?.length) {
+    out.road_width_label = opts.road_width_reference ?? opts.road_width_labels[0];
+  }
+  if (opts?.asset_types?.length) {
+    out.predict_asset_type = opts.asset_type_reference ?? opts.asset_types[0];
+  }
+  if (opts?.region_leaves?.length) {
+    out.region_leaf = opts.region_reference ?? opts.region_leaves[0];
   }
   return out;
 }
@@ -278,6 +362,11 @@ function PredictPanel({
     }
     if (vars.zone_type_dummy && inputs.zone_type) body.zone_type = inputs.zone_type;
     if (vars.building_use_dummy && inputs.building_use) body.building_use = inputs.building_use;
+    if (vars.road_width_dummy && inputs.road_width_label) body.road_width_label = inputs.road_width_label;
+    if (vars.asset_type_dummy && inputs.predict_asset_type) body.predict_asset_type = inputs.predict_asset_type;
+    if (vars.region_leaf_dummy && adminLevel === "eupmyeondong" && inputs.region_leaf) {
+      body.region_leaf = inputs.region_leaf;
+    }
     predictM.mutate(body);
   };
 
@@ -368,6 +457,62 @@ function PredictPanel({
             </select>
           </label>
         )}
+
+        {vars.road_width_dummy && (opts?.road_width_labels?.length ?? 0) > 0 && (
+          <label className="space-y-1 shrink-0">
+            <span className="text-slate-500 block whitespace-nowrap">도로조건</span>
+            <select
+              className="input !w-[11rem] py-1 text-xs"
+              value={inputs.road_width_label ?? ""}
+              onChange={(e) => setInputs((prev) => ({ ...prev, road_width_label: e.target.value }))}
+            >
+              {opts!.road_width_labels.map((u) => (
+                <option key={u} value={u}>
+                  {u}
+                  {u === opts!.road_width_reference ? " (기준)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        {vars.asset_type_dummy && (opts?.asset_types?.length ?? 0) > 0 && (
+          <label className="space-y-1 shrink-0">
+            <span className="text-slate-500 block whitespace-nowrap">유형</span>
+            <select
+              className="input !w-[11rem] py-1 text-xs"
+              value={inputs.predict_asset_type ?? ""}
+              onChange={(e) => setInputs((prev) => ({ ...prev, predict_asset_type: e.target.value }))}
+            >
+              {opts!.asset_types.map((u) => (
+                <option key={u} value={u}>
+                  {ASSET_TYPE_LABELS[u] ?? u}
+                  {u === opts!.asset_type_reference ? " (기준)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        {vars.region_leaf_dummy &&
+          adminLevel === "eupmyeondong" &&
+          (opts?.region_leaves?.length ?? 0) > 0 && (
+          <label className="space-y-1 shrink-0">
+            <span className="text-slate-500 block whitespace-nowrap">지역</span>
+            <select
+              className="input !w-[11rem] py-1 text-xs"
+              value={inputs.region_leaf ?? ""}
+              onChange={(e) => setInputs((prev) => ({ ...prev, region_leaf: e.target.value }))}
+            >
+              {opts!.region_leaves.map((u) => (
+                <option key={u} value={u}>
+                  {u}
+                  {u === opts!.region_reference ? " (기준)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
 
       {selected?.scope_label && (
@@ -406,35 +551,56 @@ function PredictPanel({
 }
 
 const ASSET_LABELS: Record<AssetType, string> = {
+  all: "통합(3유형)",
   commercial: "상업(일반상가)",
   factory: "공장창고",
   detached: "단독다가구",
 };
 
 const DEFAULT_VARS_BY_TYPE: Record<AssetType, RegressionVariableSpec> = {
+  all: {
+    gross_area: true,
+    land_area: true,
+    building_age: true,
+    road_width_dummy: true,
+    road_code: false,
+    zone_type_dummy: true,
+    building_use_dummy: true,
+    asset_type_dummy: true,
+    region_leaf_dummy: false,
+  },
   commercial: {
     gross_area: true,
     land_area: true,
     building_age: true,
-    road_code: true,
+    road_width_dummy: true,
+    road_code: false,
     zone_type_dummy: true,
     building_use_dummy: true,
+    asset_type_dummy: false,
+    region_leaf_dummy: false,
   },
   factory: {
     gross_area: true,
     land_area: true,
     building_age: true,
-    road_code: true,
+    road_width_dummy: true,
+    road_code: false,
     zone_type_dummy: true,
     building_use_dummy: true,
+    asset_type_dummy: false,
+    region_leaf_dummy: false,
   },
   detached: {
     gross_area: true,
     land_area: true,
     building_age: true,
-    road_code: true,
+    road_width_dummy: true,
+    road_code: false,
     zone_type_dummy: false,
     building_use_dummy: true,
+    asset_type_dummy: false,
+    region_leaf_dummy: false,
   },
 };
 
@@ -632,6 +798,9 @@ function LevelCard({ result, assetType }: { result: RegressionLevelResult; asset
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div>R² {fmtDecimal(result.r_squared, 5)}</div>
         <div>Adj R² {fmtDecimal(result.adj_r_squared, 5)}</div>
+        <div title="in-sample · 금액(만원) 원척도">
+          MAPE {result.mape != null ? `${fmtDecimal(result.mape, 2)}%` : "—"}
+        </div>
         <div>유의 변수 {result.significant_count}개</div>
         <div>F p {fmtDecimal(result.f_p_value, 5)}</div>
       </div>
@@ -695,11 +864,22 @@ export default function App() {
   const [riList, setRiList] = useState<RiPick[]>([]);
   const [yearFrom, setYearFrom] = useState<number | "">("");
   const [yearTo, setYearTo] = useState<number | "">("");
-  const [page, setPage] = useState(1);
+  const [txModalOpen, setTxModalOpen] = useState(false);
   const [vars, setVars] = useState<RegressionVariableSpec>(DEFAULT_VARS_BY_TYPE.commercial);
   const [excludeOutliers, setExcludeOutliers] = useState(false);
   const [iqrMultiplier, setIqrMultiplier] = useState<IqrMultiplier>(3);
   const [sampleFilter, setSampleFilter] = useState<SampleFilterState>(EMPTY_SAMPLE_FILTER);
+  const [useRollingWindow, setUseRollingWindow] = useState(true);
+  const [windowYears, setWindowYears] = useState<3 | 5>(3);
+  const [responseScale, setResponseScale] = useState<ResponseScale>("linear");
+
+  const metaQ = useQuery({
+    queryKey: ["built-meta"],
+    queryFn: fetchFilterMeta,
+    retry: 2,
+    staleTime: 60_000,
+  });
+  const asOfMonth = metaQ.data?.as_of_month ?? undefined;
 
   useEffect(() => {
     setVars(DEFAULT_VARS_BY_TYPE[assetType]);
@@ -708,9 +888,31 @@ export default function App() {
 
   useEffect(() => {
     setSampleFilter(EMPTY_SAMPLE_FILTER);
-  }, [addr1, addr2, guList, leafList, riList, yearFrom, yearTo]);
+  }, [addr1, addr2, guList, leafList, riList, yearFrom, yearTo, useRollingWindow, windowYears]);
 
-  const metaQ = useQuery({ queryKey: ["built-meta"], queryFn: fetchFilterMeta });
+  useEffect(() => {
+    if (leafList.length < 2) {
+      setVars((v) => (v.region_leaf_dummy ? { ...v, region_leaf_dummy: false } : v));
+    }
+  }, [leafList.length]);
+
+  const rollingParams = useMemo(
+    () =>
+      useRollingWindow && asOfMonth
+        ? { as_of_month: asOfMonth, window_years: windowYears }
+        : {},
+    [useRollingWindow, asOfMonth, windowYears],
+  );
+  const sampleApiParams = useMemo(() => sampleFilterToApi(sampleFilter), [sampleFilter]);
+  const regionChipScopeParams = useMemo(
+    () => ({
+      contract_year_from: yearFrom === "" ? undefined : yearFrom,
+      contract_year_to: yearTo === "" ? undefined : yearTo,
+      ...rollingParams,
+      ...sampleApiParams,
+    }),
+    [yearFrom, yearTo, rollingParams, sampleApiParams],
+  );
   const addr2Q = useQuery({
     queryKey: ["addr2", addr1, assetType],
     queryFn: () => fetchAddr2(addr1, assetType),
@@ -735,31 +937,32 @@ export default function App() {
   const useAddr4Leaf = leafLevel === "addr4";
 
   const guQ = useQuery({
-    queryKey: ["gu", addr1, addr2, assetType],
-    queryFn: () => fetchAddr3WithCounts(addr1, addr2, assetType),
+    queryKey: ["gu", addr1, addr2, assetType, regionChipScopeParams],
+    queryFn: () => fetchAddr3WithCounts(addr1, addr2, assetType, regionChipScopeParams),
     enabled: !!addr1 && !!addr2 && useAddr4Leaf,
   });
 
   const flatLeafQ = useQuery({
-    queryKey: ["flat-leaf", addr1, addr2, assetType],
-    queryFn: () => fetchAddr3WithCounts(addr1, addr2, assetType),
-    enabled: !!addr1 && !!addr2 && !useAddr4Leaf && structureQ.isSuccess,
+    queryKey: ["flat-leaf", addr1, addr2, assetType, regionChipScopeParams],
+    queryFn: () => fetchAddr3WithCounts(addr1, addr2, assetType, regionChipScopeParams),
+    enabled: !!addr1 && !!addr2 && !useAddr4Leaf,
   });
 
   const leafQ = useQuery({
-    queryKey: ["leaf", addr1, addr2, assetType, guList],
-    queryFn: () => fetchLeafRegions(addr1, addr2, guList, assetType),
+    queryKey: ["leaf", addr1, addr2, assetType, guList, regionChipScopeParams],
+    queryFn: () => fetchLeafRegions(addr1, addr2, guList, assetType, regionChipScopeParams),
     enabled: !!addr1 && !!addr2 && useAddr4Leaf,
   });
 
   const riQ = useQuery({
-    queryKey: ["ri", addr1, addr2, assetType, leafLevel, guList, leafList],
+    queryKey: ["ri", addr1, addr2, assetType, leafLevel, guList, leafList, regionChipScopeParams],
     queryFn: () =>
       fetchRiRegions(addr1, addr2, {
         leafLevel,
         addr3List: useAddr4Leaf ? (guList.length ? guList : undefined) : leafList,
         addr4List: useAddr4Leaf ? leafList : undefined,
         assetType,
+        scope: regionChipScopeParams,
       }),
     enabled: !!addr1 && !!addr2 && leafList.length > 0 && structureQ.isSuccess,
   });
@@ -794,12 +997,10 @@ export default function App() {
 
   const toggleGu = (name: string) => {
     setGuList((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]));
-    setPage(1);
   };
 
   const toggleLeaf = (name: string) => {
     setLeafList((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]));
-    setPage(1);
   };
 
   const toggleRi = (pick: RiPick) => {
@@ -807,7 +1008,6 @@ export default function App() {
     setRiList((prev) =>
       prev.some((p) => riKey(p) === key) ? prev.filter((p) => riKey(p) !== key) : [...prev, pick],
     );
-    setPage(1);
   };
 
   const regressionMode = useMemo(() => {
@@ -847,11 +1047,10 @@ export default function App() {
       ri_pick: riList.length ? riList.map(riKey) : undefined,
       contract_year_from: yearFrom === "" ? undefined : yearFrom,
       contract_year_to: yearTo === "" ? undefined : yearTo,
+      ...rollingParams,
     }),
-    [assetType, addr1, addr2, regionFilterParams, riList, yearFrom, yearTo],
+    [assetType, addr1, addr2, regionFilterParams, riList, yearFrom, yearTo, rollingParams],
   );
-
-  const sampleApiParams = useMemo(() => sampleFilterToApi(sampleFilter), [sampleFilter]);
 
   const scopeFilterQ = useQuery({
     queryKey: ["scope-filters", scopeBaseParams],
@@ -865,22 +1064,22 @@ export default function App() {
         ri_pick: scopeBaseParams.ri_pick,
         contract_year_from: scopeBaseParams.contract_year_from,
         contract_year_to: scopeBaseParams.contract_year_to,
+        as_of_month: scopeBaseParams.as_of_month,
+        window_years: scopeBaseParams.window_years,
       }),
   });
 
-  const txParams = useMemo(
+  const txExportParams = useMemo(
     () => ({
       ...scopeBaseParams,
       ...sampleApiParams,
-      page,
-      page_size: 10,
     }),
-    [scopeBaseParams, sampleApiParams, page],
+    [scopeBaseParams, sampleApiParams],
   );
 
-  const txQ = useQuery({
-    queryKey: ["built-tx", txParams],
-    queryFn: () => fetchTransactions(txParams),
+  const txCountQ = useQuery({
+    queryKey: ["built-tx-count", txExportParams],
+    queryFn: () => fetchTransactions({ ...txExportParams, page: 1, page_size: 1 }),
   });
 
   const regBody: RegressionRunRequest = useMemo(
@@ -892,8 +1091,10 @@ export default function App() {
       ri_list: riList.length ? riList : undefined,
       contract_year_from: yearFrom === "" ? undefined : yearFrom,
       contract_year_to: yearTo === "" ? undefined : yearTo,
+      ...rollingParams,
       ...sampleApiParams,
       variables: vars,
+      response_scale: responseScale,
       exclude_outliers_iqr: excludeOutliers,
       outlier_iqr_multiplier: iqrMultiplier,
     }),
@@ -905,8 +1106,10 @@ export default function App() {
       riList,
       yearFrom,
       yearTo,
+      rollingParams,
       sampleApiParams,
       vars,
+      responseScale,
       excludeOutliers,
       iqrMultiplier,
     ],
@@ -963,10 +1166,17 @@ export default function App() {
   ]);
 
   const years = metaQ.data?.contract_years ?? [];
-  const totalPages = txQ.data ? Math.max(1, Math.ceil(txQ.data.total / txQ.data.page_size)) : 1;
+
+  const txModalSummary = useMemo(() => {
+    const parts = [ASSET_LABELS[assetType]];
+    if (addr1) parts.push(addr1);
+    if (addr2) parts.push(formatScopeAddr2(addr2, addr1));
+    if (useRollingWindow && asOfMonth) parts.push(`롤링 ${windowYears}년 · ${asOfMonth}`);
+    return parts.join(" · ");
+  }, [assetType, addr1, addr2, useRollingWindow, asOfMonth, windowYears]);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden">
       <header className="bg-slate-900 text-white px-6 py-4 shrink-0">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -995,7 +1205,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="flex flex-1 min-h-0">
+      <main className="flex flex-1 min-h-0 overflow-hidden">
         {/* 왼쪽: 유형·지역·표본 필터 */}
         <aside className="layout-sidebar p-4 space-y-4">
           <div>
@@ -1023,16 +1233,56 @@ export default function App() {
                   value={assetType}
                   onChange={(e) => {
                     setAssetType(e.target.value as AssetType);
-                    setPage(1);
                   }}
                 >
-                  {(Object.keys(ASSET_LABELS) as AssetType[]).map((t) => (
+                  {(metaQ.data?.asset_types ?? (Object.keys(ASSET_LABELS) as AssetType[])).map((t) => (
                     <option key={t} value={t}>
-                      {ASSET_LABELS[t]}
+                      {ASSET_LABELS[t as AssetType] ?? t}
                     </option>
                   ))}
                 </select>
               </label>
+              <div className="space-y-2 rounded border border-slate-200 p-2">
+                <label className="flex items-center gap-2 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={useRollingWindow}
+                    onChange={(e) => {
+                      setUseRollingWindow(e.target.checked);
+                    }}
+                  />
+                  <span>롤링 창 (contract_date)</span>
+                </label>
+                {useRollingWindow && (
+                  <div className="flex gap-2 text-xs">
+                    <label className="flex items-center gap-1">
+                      <input
+                        type="radio"
+                        name="window-years"
+                        checked={windowYears === 3}
+                        onChange={() => {
+                          setWindowYears(3);
+                        }}
+                      />
+                      3년
+                    </label>
+                    <label className="flex items-center gap-1">
+                      <input
+                        type="radio"
+                        name="window-years"
+                        checked={windowYears === 5}
+                        onChange={() => {
+                          setWindowYears(5);
+                        }}
+                      />
+                      5년
+                    </label>
+                    {asOfMonth && (
+                      <span className="text-slate-500 ml-auto">기준 {asOfMonth}</span>
+                    )}
+                  </div>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <label className="text-xs space-y-1 block">
                   <span className="text-slate-500">연도(from)</span>
@@ -1070,13 +1320,13 @@ export default function App() {
                 <select
                   className="input"
                   value={addr1}
+                  disabled={metaQ.isLoading && !metaQ.data}
                   onChange={(e) => {
                     setAddr1(e.target.value);
                     setAddr2("");
                     setGuList([]);
                     setLeafList([]);
                     setRiList([]);
-                    setPage(1);
                   }}
                 >
                   <option value="">전국</option>
@@ -1086,6 +1336,12 @@ export default function App() {
                     </option>
                   ))}
                 </select>
+                {metaQ.isLoading && !metaQ.data && (
+                  <span className="text-slate-400 text-[11px]">시도 목록 불러오는 중…</span>
+                )}
+                {metaQ.isSuccess && !(metaQ.data?.addr1_list?.length) && (
+                  <span className="text-amber-700 text-[11px]">시도 목록이 비어 있습니다.</span>
+                )}
               </label>
               <label className="text-xs space-y-1 block">
                 <span className="text-slate-500">시군구</span>
@@ -1098,7 +1354,6 @@ export default function App() {
                     setGuList([]);
                     setLeafList([]);
                     setRiList([]);
-                    setPage(1);
                   }}
                 >
                   <option value="">전체</option>
@@ -1122,20 +1377,24 @@ export default function App() {
               onToggle={toggleGu}
               onSelectAll={() => {
                 setGuList((guQ.data ?? []).map((o) => o.name));
-                setPage(1);
               }}
               onClear={() => {
                 setGuList([]);
-                setPage(1);
               }}
             />
           )}
 
-          {addr2 && structureQ.isSuccess && (
+          {addr2 && (
             <RegionChipPanel
               compact
               title="읍면동 선택"
-              hint={hasIntermediate ? `${intermediateLabel} 선택 후 좁힐 수 있습니다.` : `미선택 시 ${addr2ScopeLabel} 전체.`}
+              hint={
+                structureQ.isLoading
+                  ? "지역 구조 확인 중…"
+                  : hasIntermediate
+                    ? `${intermediateLabel} 선택 후 좁힐 수 있습니다.`
+                    : `미선택 시 ${addr2ScopeLabel} 전체.`
+              }
               selected={leafList}
               options={visibleLeafOptions}
               formatLabel={(o) => {
@@ -1145,14 +1404,20 @@ export default function App() {
               onToggle={toggleLeaf}
               onSelectAll={() => {
                 setLeafList(visibleLeafOptions.map((o) => o.name));
-                setPage(1);
               }}
               onClear={() => {
                 setLeafList([]);
                 setRiList([]);
-                setPage(1);
               }}
             />
+          )}
+
+          {addr2 && !structureQ.isLoading && structureQ.isError && (
+            <p className="text-xs text-red-600">읍·면·동 목록을 불러오지 못했습니다.</p>
+          )}
+
+          {addr2 && (flatLeafQ.isLoading || leafQ.isLoading) && !visibleLeafOptions.length && (
+            <p className="text-xs text-slate-400">읍·면·동 목록 불러오는 중…</p>
           )}
 
           {addr2 && leafList.length > 0 && (
@@ -1173,7 +1438,6 @@ export default function App() {
                           .filter((o) => o.parent)
                           .map((o) => ({ eup: o.parent!, ri: o.name })),
                       );
-                      setPage(1);
                     }}
                   >
                     전체 선택
@@ -1184,7 +1448,6 @@ export default function App() {
                     disabled={!riList.length}
                     onClick={() => {
                       setRiList([]);
-                      setPage(1);
                     }}
                   >
                     선택 해제
@@ -1236,9 +1499,8 @@ export default function App() {
               sample={sampleFilter}
               onChange={(next) => {
                 setSampleFilter(next);
-                setPage(1);
               }}
-              filteredTotal={txQ.data?.total}
+              filteredTotal={txCountQ.data?.total}
             />
             {scopeFilterQ.isLoading && (
               <p className="text-xs text-slate-400 mt-2">필터 옵션 불러오는 중…</p>
@@ -1246,95 +1508,43 @@ export default function App() {
           </div>
         </aside>
 
-        {/* 오른쪽: 거래 목록 + 회귀 */}
-        <div className="layout-main overflow-y-auto">
-          <section className="p-4 pb-2">
-            <div className="card">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="font-semibold text-sm">
-                  거래 목록{" "}
-                  <span className="text-slate-500 font-normal">
-                    ({txQ.isLoading ? "…" : fmtNum(txQ.data?.total)}건 · 페이지당 10건)
-                  </span>
-                </h2>
-                <div className="flex gap-2">
-                  <button className="btn btn-ghost" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                    이전
-                  </button>
-                  <span className="text-xs self-center">
-                    {page} / {totalPages}
-                  </span>
-                  <button
-                    className="btn btn-ghost"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage((p) => p + 1)}
-                  >
-                    다음
-                  </button>
-                </div>
-              </div>
-              <div className="table-wrap table-wrap-compact">
-                <table className="data w-full">
-                  <thead>
-                    <tr>
-                      <th>시도</th>
-                      <th>시군구</th>
-                      {hasIntermediate && <th>구</th>}
-                      <th>읍면동</th>
-                      <th>연도</th>
-                      {assetType !== "detached" && <th>용도지역</th>}
-                      <th>{assetType === "detached" ? "주택유형" : "건축물용도"}</th>
-                      <th>금액(만)</th>
-                      <th>연면적</th>
-                      <th>대지</th>
-                      <th>연식</th>
-                      <th>도로</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(txQ.data?.items ?? []).map((r: BuiltTransactionRow) => (
-                      <tr key={r.id}>
-                        <td>{r.addr1}</td>
-                        <td>{r.addr2}</td>
-                        {hasIntermediate && <td>{r.addr3}</td>}
-                        <td>{hasIntermediate ? r.addr4 : r.addr3}</td>
-                        <td>{r.contract_year ?? r.trade_year_label}</td>
-                        {assetType !== "detached" && <td>{r.zone_type}</td>}
-                        <td>{r.building_use}</td>
-                        <td>{fmtNum(r.price)}</td>
-                        <td>{fmtNum(r.gross_area, 1)}</td>
-                        <td>{fmtNum(r.land_area, 1)}</td>
-                        <td>{fmtNum(r.building_age, 0)}</td>
-                        <td>{fmtNum(r.road_code, 1)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-
-          <section className="px-4 pb-4 pt-0">
+        {/* 오른쪽: 회귀 분석 */}
+        <div className="layout-main">
+          <section className="px-4 py-4 pb-8 shrink-0">
             <div className="card space-y-2">
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start justify-between gap-3 sticky top-0 bg-white z-10 py-1 -mx-1 px-1">
                 <div className="min-w-0">
                   <h2 className="font-semibold text-sm">회귀 실험 (종속: 금액 만원)</h2>
                   <p className="text-xs text-slate-500 mt-1">{regressionSummaryText}</p>
                 </div>
-                <button
-                  className="btn btn-primary shrink-0"
-                  onClick={() => regM.mutate(regBody)}
-                  disabled={
-                    regM.isPending || (!!addr2 && leafList.length > 0 && !structureQ.isSuccess)
-                  }
-                  title={
-                    !!addr2 && leafList.length > 0 && !structureQ.isSuccess
-                      ? "지역 구조 확인 중… 잠시 후 다시 시도하세요."
-                      : undefined
-                  }
-                >
-                  {regM.isPending ? "계산 중…" : "회귀 실행"}
-                </button>
+                <div className="flex flex-wrap gap-2 shrink-0">
+                  <button
+                    type="button"
+                    className="btn btn-ghost shrink-0"
+                    onClick={() => setTxModalOpen(true)}
+                  >
+                    거래목록
+                    {txCountQ.data?.total != null && (
+                      <span className="ml-1 text-slate-500 font-normal">
+                        ({fmtNum(txCountQ.data.total)})
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    className="btn btn-primary shrink-0"
+                    onClick={() => regM.mutate(regBody)}
+                    disabled={
+                      regM.isPending || (!!addr2 && leafList.length > 0 && !structureQ.isSuccess)
+                    }
+                    title={
+                      !!addr2 && leafList.length > 0 && !structureQ.isSuccess
+                        ? "지역 구조 확인 중… 잠시 후 다시 시도하세요."
+                        : undefined
+                    }
+                  >
+                    {regM.isPending ? "계산 중…" : "통계분석"}
+                  </button>
+                </div>
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
                 {(
@@ -1342,7 +1552,7 @@ export default function App() {
                     ["gross_area", "연면적"],
                     ["land_area", "대지면적"],
                     ["building_age", "연식"],
-                    ["road_code", "도로"],
+                    ["road_width_dummy", "도로조건 더미"],
                     ...(assetType !== "detached"
                       ? ([["zone_type_dummy", "용도지역 더미"]] as const)
                       : []),
@@ -1350,6 +1560,10 @@ export default function App() {
                       "building_use_dummy",
                       assetType === "detached" ? "주택유형 더미" : "건축물용도 더미",
                     ],
+                    ...(assetType === "all" ? ([["asset_type_dummy", "유형 더미"]] as const) : []),
+                    ...(leafList.length >= 2
+                      ? ([["region_leaf_dummy", "지역(읍·면·동) 더미"]] as const)
+                      : []),
                   ] as const
                 ).map(([key, label]) => (
                   <label key={key} className="flex items-center gap-1">
@@ -1363,6 +1577,19 @@ export default function App() {
                     {label}
                   </label>
                 ))}
+                {vars.region_leaf_dummy && (
+                  <span className="text-slate-500 w-full">
+                    읍·면·동 풀링 회귀(하위 scope)에만 적용. 시군구·구 단일 회귀에는 넣지 않습니다.
+                  </span>
+                )}
+                <label className="flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={responseScale === "log"}
+                    onChange={(e) => setResponseScale(e.target.checked ? "log" : "linear")}
+                  />
+                  log(금액) semi-log
+                </label>
                 <label className="flex items-center gap-1">
                   <input type="checkbox" checked={excludeOutliers} onChange={(e) => setExcludeOutliers(e.target.checked)} />
                   IQR 금액 이상치 제외
@@ -1427,6 +1654,14 @@ export default function App() {
           )}
         </div>
       </main>
+
+      <BuiltTransactionListModal
+        open={txModalOpen}
+        onClose={() => setTxModalOpen(false)}
+        assetType={assetType}
+        exportParams={txExportParams}
+        summary={txModalSummary}
+      />
     </div>
   );
 }

@@ -192,8 +192,9 @@ py scripts\monthly\compare_built_count_snapshots.py --before ... --after ...
 
 ## 6. 백로그 (우선순위 낮음)
 
+- **원장 재구축 (Phase A — 진행 예정):** [`BUILT_LEDGER_REBUILD_PLAN.md`](BUILT_LEDGER_REBUILD_PLAN.md) — MOLIT raw base 21~26, GUKTO 폐기, `road_width_label`, 주소 B (DECISIONS D-024)
 - **건축물대장 연계** — [`BUILDING_REGISTER_ROADMAP.md`](BUILDING_REGISTER_ROADMAP.md) (구현 보류, 1순위 `building_register_title` 적재)
-- 세 유형 **통합 회귀** (`asset_type` 더미, zone 결측 처리)
+- 세 유형 **통합 회귀** (`asset_type` 더미, zone 결측 처리) — Phase B
 - 집합상가/집합공장 별도 `asset_type`
 - 행정코드 매칭률 개선 (`addr` 텍스트 ↔ `region_codes`)
 - VPS를 git 기반 `redeploy.sh` 단일 경로로 통일 (tar 배포 이력 정리)

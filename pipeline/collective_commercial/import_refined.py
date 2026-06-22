@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import logging
 import sys
 from pathlib import Path
@@ -12,10 +13,19 @@ import numpy as np
 import pandas as pd
 from sqlalchemy import text
 
-_ROOT = Path(__file__).resolve().parent.parent / "collective"
+_PIPELINE = Path(__file__).resolve().parent.parent
+_ROOT = _PIPELINE / "collective"
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
-from db_utils import get_collective_engine  # noqa: E402
+if str(_PIPELINE) not in sys.path:
+    sys.path.insert(0, str(_PIPELINE))
+
+from collective.db_utils import get_collective_engine, get_land_engine_for_region_copy  # noqa: E402
+from region_mapping import (  # noqa: E402
+    attach_beopjungri_codes,
+    clean_code_columns,
+    log_mapping_coverage,
+)
 
 from cluster_keys import (  # noqa: E402
     area_bucket_label,
@@ -33,22 +43,29 @@ log = logging.getLogger(__name__)
 REPO = Path(__file__).resolve().parents[2]
 DDL = REPO / "db" / "019_collective_commercial.sql"
 DDL_ROAD_WIDTH = REPO / "db" / "020_collective_commercial_road_width.sql"
+DDL_REGION = REPO / "db" / "030_collective_commercial_region_codes.sql"
 
 UPSERT_CLUSTER = text(
     """
     INSERT INTO commercial_clusters (
         cluster_key, asset_type, display_label, resolution_mode,
         addr1, addr2, addr3, addr4, road_name, zone_type, building_use,
-        building_year, area_bucket_label, n_total, cohesion_score, confidence_tier
+        building_year, area_bucket_label, n_total, cohesion_score, confidence_tier,
+        beopjungri_code, sido_code, sigungu_code, eupmyeondong_code
     ) VALUES (
         :cluster_key, :asset_type, :display_label, :resolution_mode,
         :addr1, :addr2, :addr3, :addr4, :road_name, :zone_type, :building_use,
-        :building_year, :area_bucket_label, :n_total, :cohesion_score, :confidence_tier
+        :building_year, :area_bucket_label, :n_total, :cohesion_score, :confidence_tier,
+        :beopjungri_code, :sido_code, :sigungu_code, :eupmyeondong_code
     )
     ON CONFLICT (cluster_key) DO UPDATE SET
         n_total = EXCLUDED.n_total,
         cohesion_score = EXCLUDED.cohesion_score,
         confidence_tier = EXCLUDED.confidence_tier,
+        beopjungri_code = COALESCE(EXCLUDED.beopjungri_code, commercial_clusters.beopjungri_code),
+        sido_code = COALESCE(EXCLUDED.sido_code, commercial_clusters.sido_code),
+        sigungu_code = COALESCE(EXCLUDED.sigungu_code, commercial_clusters.sigungu_code),
+        eupmyeondong_code = COALESCE(EXCLUDED.eupmyeondong_code, commercial_clusters.eupmyeondong_code),
         updated_at = NOW()
     RETURNING id, cluster_key
     """
@@ -61,13 +78,17 @@ INSERT_TX = text(
         addr1, addr2, addr3, addr4, addr5, lot_number, road_name,
         zone_type, building_use, building_year, area_bucket_label,
         contract_year, contract_month, contract_date,
-        price, gross_area, land_area, unit_price, floor, road_code, road_width_label, building_age
+        price, gross_area, land_area, unit_price, floor, road_code, road_width_label, building_age,
+        beopjungri_code, sido_code, sigungu_code, eupmyeondong_code,
+        needs_review, mapping_notes
     ) VALUES (
         :transaction_hash, :cluster_id, :asset_type, :cluster_key, :resolution_mode,
         :addr1, :addr2, :addr3, :addr4, :addr5, :lot_number, :road_name,
         :zone_type, :building_use, :building_year, :area_bucket_label,
         :contract_year, :contract_month, :contract_date,
-        :price, :gross_area, :land_area, :unit_price, :floor, :road_code, :road_width_label, :building_age
+        :price, :gross_area, :land_area, :unit_price, :floor, :road_code, :road_width_label, :building_age,
+        :beopjungri_code, :sido_code, :sigungu_code, :eupmyeondong_code,
+        :needs_review, :mapping_notes
     )
     """
 )
@@ -110,13 +131,36 @@ def _str(val, width: int | None = None) -> str | None:
 
 
 def apply_ddl(engine) -> None:
-    for path in (DDL, DDL_ROAD_WIDTH):
+    for path in (DDL, DDL_ROAD_WIDTH, DDL_REGION):
         if not path.is_file():
             continue
         sql = path.read_text(encoding="utf-8")
         with engine.begin() as conn:
             conn.execute(text(sql))
         log.info("DDL applied: %s", path.name)
+
+
+def _code_fields(row) -> dict:
+    def g(name):
+        return _str(getattr(row, name, None) if hasattr(row, name) else row.get(name), None)
+
+    return {
+        "beopjungri_code": _str(getattr(row, "beopjungri_code", None) if hasattr(row, "beopjungri_code") else row.get("beopjungri_code"), 10),
+        "sido_code": _str(getattr(row, "sido_code", None) if hasattr(row, "sido_code") else row.get("sido_code"), 2),
+        "sigungu_code": _str(getattr(row, "sigungu_code", None) if hasattr(row, "sigungu_code") else row.get("sigungu_code"), 5),
+        "eupmyeondong_code": _str(getattr(row, "eupmyeondong_code", None) if hasattr(row, "eupmyeondong_code") else row.get("eupmyeondong_code"), 8),
+    }
+
+
+def _load_sync_region_codes():
+    spec = importlib.util.spec_from_file_location(
+        "collective_import_refined", _ROOT / "import_refined.py"
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError("cannot load collective/import_refined.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.sync_region_codes_from_land
 
 
 def enrich_commercial_road(df: pd.DataFrame) -> pd.DataFrame:
@@ -185,6 +229,7 @@ def _cluster_agg(df: pd.DataFrame) -> pd.DataFrame:
                 "n_total": n,
                 "cohesion_score": round(1 - min(cv or 0, 1), 2) if cv is not None else None,
                 "confidence_tier": confidence_tier(n, area_cv=cv),
+                **_code_fields(first),
             }
         )
     return pd.DataFrame(rows)
@@ -211,6 +256,7 @@ def upsert_clusters(engine, cluster_df: pd.DataFrame) -> dict[str, int]:
                 "n_total": int(row.n_total),
                 "cohesion_score": _null(row.cohesion_score),
                 "confidence_tier": row.confidence_tier,
+                **_code_fields(row),
             }
             r = conn.execute(UPSERT_CLUSTER, payload).fetchone()
             mapping[r.cluster_key] = int(r.id)
@@ -257,6 +303,12 @@ def insert_transactions(engine, df: pd.DataFrame, id_map: dict[str, int], *, sou
                 "road_code": _null(d.get("road_code")),
                 "road_width_label": _str(d.get("road_width_label"), 32),
                 "building_age": _null(d.get("building_age")),
+                "beopjungri_code": _str(d.get("beopjungri_code"), 10),
+                "sido_code": _str(d.get("sido_code"), 2),
+                "sigungu_code": _str(d.get("sigungu_code"), 5),
+                "eupmyeondong_code": _str(d.get("eupmyeondong_code"), 8),
+                "needs_review": bool(d.get("needs_review", False)),
+                "mapping_notes": _str(d.get("mapping_notes"), None),
             }
             batch.append(rec)
             if len(batch) >= 2000:
@@ -282,7 +334,16 @@ def purge_asset_type(engine, asset_type: str) -> None:
     log.info("purged asset_type=%s", asset_type)
 
 
-def ingest_asset(engine, loader, *, source: str, enrich_fn, truncate: bool = False, purge: bool = False) -> tuple[int, int]:
+def ingest_asset(
+    engine,
+    loader,
+    *,
+    source: str,
+    enrich_fn,
+    region_maps: dict,
+    truncate: bool = False,
+    purge: bool = False,
+) -> tuple[int, int]:
     if purge:
         asset_type = "collective_shop" if "shop" in source else "collective_factory"
         purge_asset_type(engine, asset_type)
@@ -290,6 +351,8 @@ def ingest_asset(engine, loader, *, source: str, enrich_fn, truncate: bool = Fal
     if df.empty:
         log.warning("no rows for %s", source)
         return 0, 0
+    df = attach_beopjungri_codes(df, engine, region_maps=region_maps)
+    df = clean_code_columns(df)
     clusters = _cluster_agg(df)
     if truncate:
         with engine.begin() as conn:
@@ -306,15 +369,22 @@ def main() -> None:
     p.add_argument("--factory-only", action="store_true")
     p.add_argument("--truncate", action="store_true", help="기존 commercial 테이블 비우고 재적재")
     p.add_argument("--skip-ddl", action="store_true")
+    p.add_argument("--refresh-region-codes", action="store_true")
     args = p.parse_args()
 
     engine = get_collective_engine()
     if not args.skip_ddl:
         apply_ddl(engine)
-    elif DDL_ROAD_WIDTH.is_file():
+    elif DDL_REGION.is_file():
         with engine.begin() as conn:
-            conn.execute(text(DDL_ROAD_WIDTH.read_text(encoding="utf-8")))
-        log.info("migration applied: %s", DDL_ROAD_WIDTH.name)
+            conn.execute(text(DDL_REGION.read_text(encoding="utf-8")))
+        log.info("migration applied: %s", DDL_REGION.name)
+
+    sync_fn = _load_sync_region_codes()
+    sync_fn(engine, get_land_engine_for_region_copy(), force=args.refresh_region_codes)
+    from clean import build_region_lookup
+
+    region_maps = build_region_lookup(engine)
 
     do_shop = not args.factory_only
     do_factory = not args.shop_only
@@ -326,10 +396,12 @@ def main() -> None:
             load_collective_shop_raw,
             source="gukto_shop_raw",
             enrich_fn=enrich_commercial_road,
+            region_maps=region_maps,
             truncate=args.truncate,
             purge=True,
         )
         total_tx += n
+        log_mapping_coverage(engine, "collective_commercial_transactions", asset_type="collective_shop")
         args.truncate = False
     if do_factory:
         n, _ = ingest_asset(
@@ -337,10 +409,12 @@ def main() -> None:
             load_collective_factory_raw,
             source="gukto_factory_raw",
             enrich_fn=enrich_commercial_road,
+            region_maps=region_maps,
             truncate=False,
             purge=True,
         )
         total_tx += n
+        log_mapping_coverage(engine, "collective_commercial_transactions", asset_type="collective_factory")
 
     with engine.connect() as conn:
         shop = conn.execute(

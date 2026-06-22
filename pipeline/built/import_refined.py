@@ -12,12 +12,16 @@ import argparse
 import hashlib
 import logging
 import re
+import sys
 from pathlib import Path
 
 import pandas as pd
 from sqlalchemy import text
 
-from db_utils import get_built_engine, get_land_engine_for_region_copy
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from region_mapping import attach_beopjungri_codes, clean_code_columns, log_mapping_coverage
+
+from built.db_utils import get_built_engine, get_land_engine_for_region_copy
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -29,6 +33,7 @@ DEFAULT_DETACHED = Path(
     r"C:\startcoding\GUKTO\단독다가구_매매\단독다가구_매매_정제\단독다가구_매매_정제.xlsx"
 )
 DDL = REPO / "db" / "015_built_transactions.sql"
+MIGRATION_REGION = REPO / "db" / "022_region_rebuild.sql"
 
 COL_MAP = {
     "주1": "addr1",
@@ -215,6 +220,8 @@ def ensure_schema(engine) -> None:
     sql = DDL.read_text(encoding="utf-8")
     with engine.begin() as conn:
         conn.execute(text(sql))
+        if MIGRATION_REGION.is_file():
+            conn.execute(text(MIGRATION_REGION.read_text(encoding="utf-8")))
 
 
 def copy_region_codes_if_empty(built_engine, land_engine) -> None:
@@ -264,11 +271,12 @@ def sync_region_codes_from_land(built_engine, land_engine, *, force: bool = Fals
     log.info("region_codes synced: %s rows from land_stats", len(rows))
 
 
-def ingest_file(path: Path, asset_type: str, engine, lookup: dict, truncate_type: bool) -> int:
+def ingest_file(path: Path, asset_type: str, engine, region_maps: dict, truncate_type: bool) -> int:
     log.info("Reading %s (%s)", path, asset_type)
     df = pd.read_excel(path)
     df = _normalize_df(df, asset_type)
-    df = _attach_codes(df, lookup)
+    df = attach_beopjungri_codes(df, engine, region_maps=region_maps)
+    df = clean_code_columns(df)
     if truncate_type:
         with engine.begin() as conn:
             conn.execute(
@@ -286,7 +294,7 @@ def ingest_file(path: Path, asset_type: str, engine, lookup: dict, truncate_type
             trade_year_label, contract_year, contract_month, contract_date,
             zone_type, building_use, building_scale, land_scale, age_bucket,
             price, gross_area, land_area, building_age, road_code, floor,
-            is_valid
+            is_valid, needs_review, mapping_notes
         ) VALUES (
             :transaction_hash, :asset_type, :deal_form,
             :addr1, :addr2, :addr3, :addr4, :addr5, :lot_number,
@@ -294,7 +302,7 @@ def ingest_file(path: Path, asset_type: str, engine, lookup: dict, truncate_type
             :trade_year_label, :contract_year, :contract_month, :contract_date,
             :zone_type, :building_use, :building_scale, :land_scale, :age_bucket,
             :price, :gross_area, :land_area, :building_age, :road_code, :floor,
-            :is_valid
+            :is_valid, :needs_review, :mapping_notes
         )
         ON CONFLICT (transaction_hash) DO NOTHING
         """
@@ -313,6 +321,8 @@ def ingest_file(path: Path, asset_type: str, engine, lookup: dict, truncate_type
                 "sido_code": row.get("sido_code"),
                 "sigungu_code": row.get("sigungu_code"),
                 "eupmyeondong_code": row.get("eupmyeondong_code"),
+                "needs_review": bool(row.get("needs_review")),
+                "mapping_notes": row.get("mapping_notes"),
             }
         )
         for k in list(rec.keys()):
@@ -362,6 +372,8 @@ def main() -> None:
     if only_flags > 1:
         raise SystemExit("--*-only flags are mutually exclusive")
 
+    from clean import build_region_lookup
+
     built = get_built_engine()
     land = get_land_engine_for_region_copy()
     ensure_schema(built)
@@ -369,27 +381,30 @@ def main() -> None:
         sync_region_codes_from_land(built, land, force=True)
     else:
         copy_region_codes_if_empty(built, land)
-    lookup = _load_region_lookup(built)
+    region_maps = build_region_lookup(built)
 
     run_all = only_flags == 0
     if run_all or args.commercial_only:
-        ingest_file(args.commercial, "commercial", built, lookup, truncate_type=True)
+        ingest_file(args.commercial, "commercial", built, region_maps, truncate_type=True)
+        log_mapping_coverage(built, "built_transactions", asset_type="commercial")
     if run_all or args.factory_only:
         ingest_file(
             args.factory,
             "factory",
             built,
-            lookup,
+            region_maps,
             truncate_type=run_all or args.factory_only,
         )
+        log_mapping_coverage(built, "built_transactions", asset_type="factory")
     if run_all or args.detached_only:
         ingest_file(
             args.detached,
             "detached",
             built,
-            lookup,
+            region_maps,
             truncate_type=run_all or args.detached_only,
         )
+        log_mapping_coverage(built, "built_transactions", asset_type="detached")
 
     with built.connect() as conn:
         for t in ("commercial", "factory", "detached"):

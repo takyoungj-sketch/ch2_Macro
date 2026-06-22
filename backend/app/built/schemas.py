@@ -7,7 +7,8 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-AssetType = Literal["commercial", "factory", "detached"]
+AssetType = Literal["commercial", "factory", "detached", "all"]
+ResponseScale = Literal["linear", "log"]
 AdminLevel = Literal["sigungu", "gu", "eupmyeondong", "beopjungri"]
 
 
@@ -20,8 +21,12 @@ class BuiltTransactionRow(BaseModel):
     addr4: Optional[str] = None
     addr5: Optional[str] = None
     lot_number: Optional[str] = None
+    display_address: Optional[str] = None
+    road_name: Optional[str] = None
     trade_year_label: Optional[str] = None
     contract_year: Optional[int] = None
+    contract_month: Optional[int] = None
+    contract_date: Optional[str] = None
     zone_type: Optional[str] = None
     building_use: Optional[str] = None
     building_scale: Optional[float] = None
@@ -32,6 +37,8 @@ class BuiltTransactionRow(BaseModel):
     land_area: Optional[float] = None
     building_age: Optional[float] = None
     road_code: Optional[float] = None
+    road_width_label: Optional[str] = None
+    deal_type: Optional[str] = None
 
 
 class BuiltTransactionListResponse(BaseModel):
@@ -46,7 +53,21 @@ class BuiltFilterMetaResponse(BaseModel):
     contract_years: list[int]
     zone_types: list[str]
     building_uses: list[str]
+    road_width_labels: list[str] = Field(default_factory=list)
     addr1_list: list[str]
+    as_of_month: Optional[str] = None
+    default_window_years: int = 3
+
+
+class BuiltScopeStatsRow(BaseModel):
+    asset_type: str
+    addr1: str
+    addr2: str
+    as_of_month: str
+    window_years: int
+    tx_count: int
+    median_price: Optional[float] = None
+    mean_price: Optional[float] = None
 
 
 class CategoryCountOption(BaseModel):
@@ -64,6 +85,7 @@ class ScopeSampleFilterResponse(BaseModel):
     total: int
     zone_types: list[CategoryCountOption] = Field(default_factory=list)
     building_uses: list[CategoryCountOption] = Field(default_factory=list)
+    road_width_labels: list[CategoryCountOption] = Field(default_factory=list)
     continuous: list[NumericRangeHint] = Field(default_factory=list)
 
 
@@ -71,12 +93,16 @@ class RegionStructureResponse(BaseModel):
     has_intermediate: bool
     intermediate_label: Optional[str] = None
     leaf_level: str = "addr3"
+    has_ri: bool = False
+    tx_count: int = 0
 
 
 class RegionOption(BaseModel):
     name: str
     count: int
     parent: Optional[str] = None
+    disabled: bool = False
+    min_reliable_count: int = 15
 
 
 class RiPick(BaseModel):
@@ -90,9 +116,12 @@ class RegressionVariableSpec(BaseModel):
     gross_area: bool = True
     land_area: bool = True
     building_age: bool = True
-    road_code: bool = True
+    road_width_dummy: bool = True
+    road_code: bool = False
     zone_type_dummy: bool = True
     building_use_dummy: bool = True
+    asset_type_dummy: bool = True
+    region_leaf_dummy: bool = False
 
 
 class RegressionRunRequest(BaseModel):
@@ -105,8 +134,11 @@ class RegressionRunRequest(BaseModel):
     ri_list: list[RiPick] = Field(default_factory=list)
     contract_year_from: Optional[int] = None
     contract_year_to: Optional[int] = None
+    as_of_month: Optional[str] = None
+    window_years: Optional[int] = None
     zone_types: list[str] = Field(default_factory=list)
     building_uses: list[str] = Field(default_factory=list)
+    road_width_labels: list[str] = Field(default_factory=list)
     gross_area_min: Optional[float] = None
     gross_area_max: Optional[float] = None
     land_area_min: Optional[float] = None
@@ -116,6 +148,7 @@ class RegressionRunRequest(BaseModel):
     road_code_min: Optional[float] = None
     road_code_max: Optional[float] = None
     variables: RegressionVariableSpec = Field(default_factory=RegressionVariableSpec)
+    response_scale: ResponseScale = "linear"
     compare_admin_levels: bool = True  # 하위 호환 — 엔진이 선택 깊이로 자동 결정
     leaf_level: Optional[Literal["addr3", "addr4"]] = None
     exclude_outliers_iqr: bool = False
@@ -156,8 +189,14 @@ class PredictOptions(BaseModel):
 
     zone_types: list[str] = Field(default_factory=list)
     building_uses: list[str] = Field(default_factory=list)
+    road_width_labels: list[str] = Field(default_factory=list)
+    asset_types: list[str] = Field(default_factory=list)
     zone_reference: Optional[str] = None
     building_use_reference: Optional[str] = None
+    road_width_reference: Optional[str] = None
+    asset_type_reference: Optional[str] = None
+    region_leaves: list[str] = Field(default_factory=list)
+    region_reference: Optional[str] = None
     continuous: list[ContinuousRange] = Field(default_factory=list)
 
 
@@ -176,6 +215,7 @@ class RegressionLevelResult(BaseModel):
     vif_warning: Optional[str] = None
     predict_options: Optional[PredictOptions] = None
     warning: Optional[str] = None
+    mape: Optional[float] = None  # in-sample MAPE (%), 원척도 금액(만원)
 
 
 class CorrelationPoint(BaseModel):
@@ -205,8 +245,11 @@ class RegressionPredictRequest(RegressionRunRequest):
     land_area: Optional[float] = None
     building_age: Optional[float] = None
     road_code: Optional[float] = None
+    road_width_label: Optional[str] = None
     zone_type: Optional[str] = None
     building_use: Optional[str] = None
+    predict_asset_type: Optional[str] = None
+    region_leaf: Optional[str] = None
 
 
 class RegressionPredictResponse(BaseModel):
@@ -218,4 +261,5 @@ class RegressionPredictResponse(BaseModel):
     pi_upper: float
     ci_lower: float
     ci_upper: float
+    response_scale: ResponseScale = "linear"
     warnings: list[str] = Field(default_factory=list)

@@ -324,7 +324,15 @@ export default function CommercialApp() {
                   {scope.addr1} {scope.addr2} · 도로 {clustersQ.data.total}개
                 </p>
                 <div className="card overflow-x-auto p-0 w-full">
-                  <table className="data buildings-table">
+                  <table className="data commercial-clusters-table">
+                    <colgroup>
+                      <col className="col-road" />
+                      <col className="col-num" />
+                      <col className="col-num" />
+                      <col className="col-num" />
+                      <col className="col-num" />
+                      <col className="col-district" />
+                    </colgroup>
                     <thead>
                       <tr>
                         <th>도로명</th>
@@ -332,7 +340,7 @@ export default function CommercialApp() {
                         <th className="text-right">평균</th>
                         <th className="text-right">중앙</th>
                         <th className="text-right">95% CI</th>
-                        <th>구·동</th>
+                        <th className="col-district">구·동</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -353,7 +361,7 @@ export default function CommercialApp() {
                           <td className="num">{fmtPrice(row.mean)}</td>
                           <td className="num">{fmtPrice(row.median)}</td>
                           <td className="num text-[10px]">{fmtCi(row.ci_lower, row.ci_upper)}</td>
-                          <td className="text-[10px] text-slate-600 dark:text-slate-300">
+                          <td className="col-district text-[10px] text-slate-600 dark:text-slate-300">
                             {[row.addr3, row.addr4].filter(Boolean).join(" · ") || "—"}
                           </td>
                         </tr>

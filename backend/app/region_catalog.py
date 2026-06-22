@@ -14,7 +14,7 @@ MIN_LEAF_COUNT = MIN_RELIABLE_COUNT
 
 
 def _asset_clause(asset_type: str | None, *, prefix: str = "t") -> tuple[str, dict]:
-    if not asset_type:
+    if not asset_type or asset_type == "all":
         return "", {}
     return f" AND {prefix}.asset_type = :asset_type", {"asset_type": asset_type}
 
@@ -38,7 +38,7 @@ def fetch_sigungu_meta(
         "token": token,
     }
     asset_sql = ""
-    if asset_type:
+    if asset_type and asset_type != "all":
         asset_sql = " AND (asset_type IS NULL OR asset_type = :asset_type)"
         params["asset_type"] = asset_type
     row = conn.execute(
@@ -152,6 +152,7 @@ def list_leaf_options(
     gu_list: list[str],
     asset_type: str | None,
     leaf_level: str,
+    check_density: bool = True,
 ) -> list[dict]:
     """읍면동(leaf) 목록."""
     params: dict[str, Any] = {"a1": addr1.strip()}
@@ -201,7 +202,7 @@ def list_leaf_options(
             ),
             params,
         ).mappings().all()
-    return [_option_row(r, parent=r.get("parent")) for r in rows]
+    return [_option_row(r, parent=r.get("parent"), check_density=check_density) for r in rows]
 
 
 def list_ri_options(
@@ -214,6 +215,7 @@ def list_ri_options(
     leaf_list: list[str],
     leaf_level: str,
     asset_type: str | None,
+    check_density: bool = True,
 ) -> list[dict]:
     params: dict[str, Any] = {"a1": addr1.strip()}
     addr2_sql = ""
@@ -256,7 +258,7 @@ def list_ri_options(
         ),
         params,
     ).mappings().all()
-    return [_option_row(r, parent=r.get("parent")) for r in rows]
+    return [_option_row(r, parent=r.get("parent"), check_density=check_density) for r in rows]
 
 
 def _option_row(row: dict, *, parent: str | None = None, check_density: bool = True) -> dict:

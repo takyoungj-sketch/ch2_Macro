@@ -22,6 +22,7 @@
   (토지 cycle **이후** · `--use-legacy-defaults` 로 GUKTO 경로 전환기 ingest)
 - **건수 스냅샷:** `py scripts/monthly/snapshot_built_tx_counts.py`
 - **스냅샷 비교:** `py scripts/monthly/compare_built_count_snapshots.py`
+- **beopjungri 매칭 품질:** `py scripts/monthly/verify_beopjungri_mapping.py --cycle-id YYYYMM` (토지·집합·복합 통합, 목표 ≥99.7%)
 - **SOP:** `docs/BUILT_MONTHLY_UPDATE_SOP.md`
 
 `BUILT_DATABASE_URL` 은 **`pipeline/.env.built`** (및 `import_refined` 의 built db_utils).

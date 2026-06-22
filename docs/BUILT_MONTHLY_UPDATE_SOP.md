@@ -125,7 +125,9 @@ py scripts\monthly\compare_built_count_snapshots.py `
 - [ ] `compare_built_count_snapshots` exit 0 (또는 급변 사유 확인)
 - [ ] `commercial` / `factory` / `detached` total > 0
 - [ ] UI: 대표 시군구 2~3곳 — 거래 n·회귀 실행 sanity
-- [ ] `region_codes` sync 후 코드 매칭률 급락 없음 (addr 텍스트 매칭 한계는 별도 이슈)
+- [ ] **beopjungri 매칭 품질 게이트** (토지·집합·복합, 목표 ≥99.7%):
+  `py scripts\monthly\verify_beopjungri_mapping.py --cycle-id YYYYMM` → exit 0
+  (리포트: `clean_snapshots/YYYYMM/beopjungri_mapping_report.json`)
 
 ---
 

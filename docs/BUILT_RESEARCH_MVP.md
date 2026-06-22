@@ -10,12 +10,16 @@
 | factory    | 공장창고 (집합 제외) |
 | detached   | 단독다가구 (`유형`→`building_use`, 용도지역 없음, 용적률 미적재) |
 
-출처: GUKTO 정제 xlsx · 연면적·금액 필수
+출처: MOLIT `raw/raw base` CSV (21~26) — [`BUILT_LEDGER_REBUILD_PLAN.md`](BUILT_LEDGER_REBUILD_PLAN.md) (D-024)
 
 ```powershell
-py import_refined.py              # 세 유형 전체
-py import_refined.py --detached-only
+cd c:\ch2\ch2_Macro\pipeline
+py rebuild_built_ledger.py              # TRUNCATE + 전국 ingest
+py rebuild_built_ledger.py --smoke      # 서울 2021 smoke
+py built/import_molit.py --commercial-only --truncate
 ```
+
+Legacy GUKTO xlsx (`import_refined.py`) — **사용 중단**, fallback only.
 
 ## 1. DB (이미 생성됨)
 

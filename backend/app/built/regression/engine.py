@@ -5,8 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+import numpy as np
 import pandas as pd
 
+from app.built.asset_scope import apply_asset_type_filter, is_unified
 from app.built.filters import (
     effective_addr3_list,
     effective_addr4_list,
@@ -26,20 +28,62 @@ from app.built.schemas import (
     RegressionRunRequest,
     RegressionRunResponse,
     RegressionVariableSpec,
+    ResponseScale,
     RiPick,
     VifEntry,
 )
 
+from app.built.time_scope import apply_contract_date_window, parse_as_of_month
+
 CompareMode = Literal["sigungu_only", "two_way", "three_way"]
-CONTINUOUS_VARS = frozenset({"gross_area", "land_area", "building_age", "road_code"})
+CONTINUOUS_VARS = frozenset({"gross_area", "land_area", "building_age"})
 _CONT_LABELS = {
     "gross_area": "연면적",
     "land_area": "대지면적",
     "building_age": "연식",
     "road_code": "도로",
 }
+_ASSET_LABELS = {
+    "commercial": "상업",
+    "factory": "공장",
+    "detached": "단독",
+}
 VIF_WARN = 10.0
 VIF_CAUTION = 5.0
+MAX_REGION_DUMMY_WARN = 15
+
+
+def _eup_leaf_column(addr4_city: bool) -> str:
+    """읍·면·동 풀링 회귀에서 지역 더미용 컬럼 (광역=addr4 동, 그 외=addr3)."""
+    return "addr4" if addr4_city else "addr3"
+
+
+def _duan_smearing(residuals: np.ndarray) -> float:
+    r = np.asarray(residuals, dtype=float)
+    r = r[np.isfinite(r)]
+    if r.size == 0:
+        return 1.0
+    return float(np.mean(np.exp(r)))
+
+
+def _insample_mape_pct(
+    y_price: np.ndarray,
+    model,
+    *,
+    response_scale: ResponseScale,
+) -> float | None:
+    """적합값 기준 in-sample MAPE(%), 종속은 항상 금액(만원) 원척도."""
+    y = np.asarray(y_price, dtype=float)
+    fitted = np.asarray(model.fittedvalues, dtype=float)
+    if response_scale == "log":
+        pred = np.exp(fitted) * _duan_smearing(model.resid.to_numpy())
+    else:
+        pred = fitted
+    mask = np.isfinite(y) & np.isfinite(pred) & (y != 0)
+    if not mask.any():
+        return None
+    err = np.abs(y[mask] - pred[mask]) / np.abs(y[mask])
+    return round(float(np.mean(err)) * 100, 2)
 
 
 @dataclass
@@ -47,9 +91,16 @@ class DesignMeta:
     feature_columns: list[str] = field(default_factory=list)
     zone_types: list[str] = field(default_factory=list)
     building_uses: list[str] = field(default_factory=list)
+    road_width_labels: list[str] = field(default_factory=list)
+    asset_types: list[str] = field(default_factory=list)
     zone_reference: str | None = None
     building_use_reference: str | None = None
+    road_width_reference: str | None = None
+    asset_type_reference: str | None = None
+    region_leaves: list[str] = field(default_factory=list)
+    region_reference: str | None = None
     continuous_ranges: dict[str, tuple[float, float]] = field(default_factory=dict)
+    response_scale: ResponseScale = "linear"
 
 
 def _meta_to_predict_options(meta: DesignMeta | None) -> PredictOptions | None:
@@ -58,40 +109,80 @@ def _meta_to_predict_options(meta: DesignMeta | None) -> PredictOptions | None:
     return PredictOptions(
         zone_types=meta.zone_types,
         building_uses=meta.building_uses,
+        road_width_labels=meta.road_width_labels,
+        asset_types=meta.asset_types,
         zone_reference=meta.zone_reference,
         building_use_reference=meta.building_use_reference,
+        road_width_reference=meta.road_width_reference,
+        asset_type_reference=meta.asset_type_reference,
+        region_leaves=meta.region_leaves,
+        region_reference=meta.region_reference,
         continuous=[
             ContinuousRange(name=k, min=v[0], max=v[1]) for k, v in meta.continuous_ranges.items()
         ],
     )
 
 
+def _back_transform(value: float, scale: ResponseScale) -> float:
+    if scale == "log":
+        return float(np.exp(value))
+    return float(value)
+
+
 def _build_where(
     req: RegressionRunRequest,
     *,
+    conn=None,
     include_subregion: bool = True,
 ) -> tuple[str, dict]:
-    clauses = ["is_valid = true", "asset_type = :asset_type"]
-    params: dict[str, Any] = {"asset_type": req.asset_type}
-    if req.addr1 and req.addr2:
+    clauses = ["is_valid = true"]
+    params: dict[str, Any] = {}
+    apply_asset_type_filter(clauses, params, req.asset_type)
+    if include_subregion:
+        from app.region_scope import apply_region_scope
+
+        if req.addr1 and req.addr2:
+            apply_region_scope(
+                clauses,
+                params,
+                conn=conn,
+                table="built_transactions",
+                addr1=req.addr1,
+                addr2=req.addr2,
+                addr3=req.addr3,
+                addr3_list=req.addr3_list,
+                addr4_list=req.addr4_list,
+                ri_list=req.ri_list,
+                asset_type=req.asset_type,
+            )
+        elif req.addr1:
+            clauses.append("addr1 = :addr1")
+            params["addr1"] = req.addr1
+            from app.built.filters import apply_addr3_filter, apply_addr4_filter, apply_ri_filter
+
+            apply_addr3_filter(clauses, params, req.addr3, req.addr3_list)
+            apply_addr4_filter(clauses, params, None, req.addr4_list)
+            apply_ri_filter(clauses, params, req.ri_list)
+    elif req.addr1 and req.addr2:
         from app.flat_sido_region import apply_addr2_scope
 
         apply_addr2_scope(clauses, params, addr1=req.addr1, addr2=req.addr2)
     elif req.addr1:
         clauses.append("addr1 = :addr1")
         params["addr1"] = req.addr1
-    if include_subregion:
-        from app.built.filters import apply_addr3_filter, apply_addr4_filter, apply_ri_filter
-
-        apply_addr3_filter(clauses, params, req.addr3, req.addr3_list)
-        apply_addr4_filter(clauses, params, None, req.addr4_list)
-        apply_ri_filter(clauses, params, req.ri_list)
     if req.contract_year_from is not None:
         clauses.append("contract_year >= :cy_from")
         params["cy_from"] = req.contract_year_from
     if req.contract_year_to is not None:
         clauses.append("contract_year <= :cy_to")
         params["cy_to"] = req.contract_year_to
+    if req.as_of_month and req.window_years:
+        apply_contract_date_window(
+            clauses,
+            params,
+            as_of_month=parse_as_of_month(req.as_of_month),
+            window_years=req.window_years,
+        )
     from app.built.filters import apply_sample_filters_from_request
 
     apply_sample_filters_from_request(clauses, params, req)
@@ -101,10 +192,10 @@ def _build_where(
 def _fetch_df(conn, req: RegressionRunRequest, *, include_subregion: bool = True) -> pd.DataFrame:
     from sqlalchemy import text
 
-    where, params = _build_where(req, include_subregion=include_subregion)
+    where, params = _build_where(req, conn=conn, include_subregion=include_subregion)
     sql = f"""
-        SELECT price, gross_area, land_area, building_age, road_code,
-               zone_type, building_use, contract_year,
+        SELECT price, gross_area, land_area, building_age, road_code, road_width_label,
+               zone_type, building_use, asset_type, contract_year,
                addr3, addr4, addr5,
                sigungu_code, eupmyeondong_code, beopjungri_code
         FROM built_transactions
@@ -367,6 +458,10 @@ def _vif_warning(vif_entries: list[VifEntry]) -> str | None:
 def _build_design_matrix(
     df: pd.DataFrame,
     vars_spec: RegressionVariableSpec,
+    *,
+    unified: bool = False,
+    response_scale: ResponseScale = "linear",
+    region_col: str | None = None,
 ) -> tuple[pd.Series, pd.DataFrame, DesignMeta | None]:
     """종속 y와 독립 X (상수 미포함), 설계 메타."""
     if df.empty:
@@ -374,13 +469,12 @@ def _build_design_matrix(
 
     y = pd.to_numeric(df["price"], errors="coerce")
     parts: list[pd.DataFrame] = []
-    meta = DesignMeta()
+    meta = DesignMeta(response_scale=response_scale)
 
     for col, enabled in (
         ("gross_area", vars_spec.gross_area),
         ("land_area", vars_spec.land_area),
         ("building_age", vars_spec.building_age),
-        ("road_code", vars_spec.road_code),
     ):
         if not enabled:
             continue
@@ -390,15 +484,34 @@ def _build_design_matrix(
         if len(valid):
             meta.continuous_ranges[col] = (float(valid.min()), float(valid.max()))
 
+    if vars_spec.road_code and "road_code" in df.columns:
+        s = pd.to_numeric(df["road_code"], errors="coerce")
+        parts.append(pd.DataFrame({"road_code": s}))
+        valid = s.dropna()
+        if len(valid):
+            meta.continuous_ranges["road_code"] = (float(valid.min()), float(valid.max()))
+
     X = pd.concat(parts, axis=1) if parts else pd.DataFrame(index=df.index)
 
-    if vars_spec.zone_type_dummy and "zone_type" in df.columns:
-        zt = df["zone_type"].fillna("(null)").astype(str)
-        cats = sorted(zt.unique().tolist())
-        meta.zone_types = cats
-        meta.zone_reference = cats[0] if len(cats) > 1 else None
-        d = pd.get_dummies(zt, prefix="zone", drop_first=True)
+    if vars_spec.road_width_dummy and "road_width_label" in df.columns:
+        rw = df["road_width_label"].fillna("(null)").astype(str)
+        cats = sorted(rw.unique().tolist())
+        meta.road_width_labels = cats
+        meta.road_width_reference = cats[0] if len(cats) > 1 else None
+        d = pd.get_dummies(rw, prefix="road", drop_first=True)
         X = pd.concat([X, d], axis=1)
+
+    if vars_spec.zone_type_dummy and "zone_type" in df.columns:
+        zt = df["zone_type"].copy()
+        if unified and "asset_type" in df.columns:
+            zt = zt.where(df["asset_type"].astype(str) != "detached")
+        zt = zt.fillna("(null)").astype(str)
+        cats = sorted(zt.unique().tolist())
+        if len(cats) > 1 or (len(cats) == 1 and cats[0] != "(null)"):
+            meta.zone_types = cats
+            meta.zone_reference = cats[0] if len(cats) > 1 else None
+            d = pd.get_dummies(zt, prefix="zone", drop_first=True)
+            X = pd.concat([X, d], axis=1)
 
     if vars_spec.building_use_dummy and "building_use" in df.columns:
         bu = df["building_use"].fillna("(null)").astype(str)
@@ -408,14 +521,38 @@ def _build_design_matrix(
         d = pd.get_dummies(bu, prefix="use", drop_first=True)
         X = pd.concat([X, d], axis=1)
 
+    if unified and vars_spec.asset_type_dummy and "asset_type" in df.columns:
+        at = df["asset_type"].fillna("(null)").astype(str)
+        cats = sorted(at.unique().tolist())
+        meta.asset_types = cats
+        meta.asset_type_reference = "commercial" if "commercial" in cats else (cats[0] if cats else None)
+        d = pd.get_dummies(at, prefix="atype", drop_first=True)
+        X = pd.concat([X, d], axis=1)
+
+    if vars_spec.region_leaf_dummy and region_col and region_col in df.columns:
+        rs = _norm_col(df, region_col).replace("", "(null)")
+        valid = rs[(rs != "(null)") & (rs.notna())]
+        cats = sorted(valid.unique().tolist())
+        if len(cats) >= 2:
+            meta.region_leaves = cats
+            meta.region_reference = cats[0]
+            d = pd.get_dummies(rs, prefix="loc", drop_first=True)
+            if not d.empty:
+                X = pd.concat([X, d], axis=1)
+
     if X.empty:
         return y, X, None
 
     meta.feature_columns = list(X.columns)
     mask = y.notna()
+    if response_scale == "log":
+        mask &= y > 0
     for c in X.columns:
         mask &= pd.to_numeric(X[c], errors="coerce").notna()
-    return y.loc[mask], X.loc[mask].astype(float), meta
+    y_out = y.loc[mask]
+    if response_scale == "log":
+        y_out = np.log(y_out.astype(float))
+    return y_out, X.loc[mask].astype(float), meta
 
 
 def _input_to_x_row(
@@ -454,6 +591,42 @@ def _input_to_x_row(
                 row[c] = 0.0
         if meta.building_use_reference and u != meta.building_use_reference:
             key = f"use_{u}"
+            if key in row:
+                row[key] = 1.0
+
+    if vars_spec.road_width_dummy and meta.road_width_labels:
+        rw = inp.road_width_label or meta.road_width_reference or meta.road_width_labels[0]
+        if rw not in meta.road_width_labels:
+            raise ValueError(f"도로조건 '{rw}' — 모형에 없는 값입니다.")
+        for c in meta.feature_columns:
+            if c.startswith("road_"):
+                row[c] = 0.0
+        if meta.road_width_reference and rw != meta.road_width_reference:
+            key = f"road_{rw}"
+            if key in row:
+                row[key] = 1.0
+
+    if vars_spec.asset_type_dummy and meta.asset_types:
+        at = inp.predict_asset_type or meta.asset_type_reference or meta.asset_types[0]
+        if at not in meta.asset_types:
+            raise ValueError(f"유형 '{at}' — 모형에 없는 값입니다.")
+        for c in meta.feature_columns:
+            if c.startswith("atype_"):
+                row[c] = 0.0
+        if meta.asset_type_reference and at != meta.asset_type_reference:
+            key = f"atype_{at}"
+            if key in row:
+                row[key] = 1.0
+
+    if vars_spec.region_leaf_dummy and meta.region_leaves:
+        leaf = inp.region_leaf or meta.region_reference or meta.region_leaves[0]
+        if leaf not in meta.region_leaves:
+            raise ValueError(f"지역 '{leaf}' — 모형에 없는 값입니다.")
+        for c in meta.feature_columns:
+            if str(c).startswith("loc_"):
+                row[c] = 0.0
+        if meta.region_reference and leaf != meta.region_reference:
+            key = f"loc_{leaf}"
             if key in row:
                 row[key] = 1.0
 
@@ -500,6 +673,10 @@ def _fit_ols(
     vars_spec: RegressionVariableSpec,
     admin_level: str | None,
     scope_label: str | None = None,
+    *,
+    unified: bool = False,
+    response_scale: ResponseScale = "linear",
+    addr4_city: bool = False,
 ) -> RegressionLevelResult:
     import statsmodels.api as sm
 
@@ -514,17 +691,30 @@ def _fit_ols(
             warning="표본 0건",
         )
 
-    y, X, meta = _build_design_matrix(df, vars_spec)
+    region_col = None
+    if vars_spec.region_leaf_dummy and level == "eupmyeondong":
+        region_col = _eup_leaf_column(addr4_city)
+
+    y, X, meta = _build_design_matrix(
+        df,
+        vars_spec,
+        unified=unified,
+        response_scale=response_scale,
+        region_col=region_col,
+    )
     n = len(y)
 
     if n < 10 or X.empty:
+        warn = f"n={n} — 회귀 비권장 (권장 n≥30)"
+        if response_scale == "log":
+            warn += " · log(금액) 모형"
         return RegressionLevelResult(
             admin_level=level,
             scope_label=scope_label,
             n=n,
             equation="",
             coefficients=[],
-            warning=f"n={n} — 회귀 비권장 (권장 n≥30)",
+            warning=warn,
         )
 
     vif_entries = _compute_vif(X)
@@ -548,8 +738,28 @@ def _fit_ols(
     warn = None
     if n < 30:
         warn = f"n={n} — 참고용 (권장 n≥30)"
+    if response_scale == "log":
+        log_note = "종속=log(금액) — 계수는 log-선형"
+        warn = f"{warn} · {log_note}" if warn else log_note
     if vif_warn:
         warn = f"{warn} · {vif_warn}" if warn else vif_warn
+    if vars_spec.region_leaf_dummy and level == "eupmyeondong":
+        loc_cols = sum(1 for c in X.columns if str(c).startswith("loc_"))
+        if loc_cols == 0:
+            ref_note = "지역 1개뿐 — 지역 더미 미적용"
+            warn = f"{warn} · {ref_note}" if warn else ref_note
+        elif loc_cols >= MAX_REGION_DUMMY_WARN:
+            ref = meta.region_reference if meta else "?"
+            many_note = (
+                f"지역 더미 {loc_cols + 1}개(기준={ref}) — 과적합·n 대비 변수 주의"
+            )
+            warn = f"{warn} · {many_note}" if warn else many_note
+        elif meta and meta.region_reference:
+            ref_note = f"지역 더미 기준={meta.region_reference}"
+            warn = f"{warn} · {ref_note}" if warn else ref_note
+
+    y_price = pd.to_numeric(df["price"], errors="coerce").loc[y.index].to_numpy()
+    mape = _insample_mape_pct(y_price, model, response_scale=response_scale)
 
     return RegressionLevelResult(
         admin_level=level,
@@ -566,6 +776,7 @@ def _fit_ols(
         vif_warning=vif_warn,
         predict_options=_meta_to_predict_options(meta),
         warning=warn,
+        mape=mape,
     )
 
 
@@ -579,7 +790,9 @@ def _correlations(df: pd.DataFrame, vars_spec: RegressionVariableSpec) -> list[C
         specs.append(("land_area", "대지면적"))
     if vars_spec.building_age:
         specs.append(("building_age", "연식"))
-    if vars_spec.road_code:
+    if vars_spec.road_width_dummy:
+        specs.append(("road_width_label", "도로조건"))
+    elif vars_spec.road_code:
         specs.append(("road_code", "도로"))
     for col, label in specs:
         x = pd.to_numeric(df[col], errors="coerce")
@@ -641,10 +854,13 @@ def _ri_label(ri_list: list[RiPick]) -> str:
 
 def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
     wide_df, req, addr4_city, mode = _prepare_regression_scope(conn, req)
+    unified = is_unified(req.asset_type)
+    scale = req.response_scale
+    fit_kw = dict(unified=unified, response_scale=scale, addr4_city=addr4_city)
 
     if mode == "sigungu_only":
         scoped = _filter_sigungu(wide_df, req)
-        primary = _fit_ols(scoped, req.variables, "sigungu", _sigungu_label(req))
+        primary = _fit_ols(scoped, req.variables, "sigungu", _sigungu_label(req), **fit_kw)
         corrs = _correlations(scoped, req.variables)
         return RegressionRunResponse(
             primary=primary,
@@ -659,11 +875,11 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
         eup = _filter_eup_leaf(wide_df, req, addr4_city)
         if addr4_city:
             gu = _filter_gu(wide_df, req)
-            primary = _fit_ols(gu, req.variables, "gu", _gu_label(req, wide_df))
+            primary = _fit_ols(gu, req.variables, "gu", _gu_label(req, wide_df), **fit_kw)
         else:
             sig = _filter_sigungu(wide_df, req)
-            primary = _fit_ols(sig, req.variables, "sigungu", _sigungu_label(req))
-        comp = _fit_ols(eup, req.variables, "eupmyeondong", _eup_label(req, addr4_city))
+            primary = _fit_ols(sig, req.variables, "sigungu", _sigungu_label(req), **fit_kw)
+        comp = _fit_ols(eup, req.variables, "eupmyeondong", _eup_label(req, addr4_city), **fit_kw)
         corrs = _correlations(eup, req.variables)
         return RegressionRunResponse(
             primary=primary,
@@ -678,14 +894,14 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
     ri_list = req.ri_list
     if addr4_city:
         gu = _filter_gu(wide_df, req)
-        primary = _fit_ols(gu, req.variables, "gu", _gu_label(req, wide_df))
+        primary = _fit_ols(gu, req.variables, "gu", _gu_label(req, wide_df), **fit_kw)
     else:
         sig = _filter_sigungu(wide_df, req)
-        primary = _fit_ols(sig, req.variables, "sigungu", _sigungu_label(req))
+        primary = _fit_ols(sig, req.variables, "sigungu", _sigungu_label(req), **fit_kw)
     eup = _filter_parent_eups(wide_df, ri_list, addr4_city)
     ri = _filter_ri_picks(wide_df, ri_list)
-    comp_eup = _fit_ols(eup, req.variables, "eupmyeondong", _parent_eup_label(ri_list))
-    comp_ri = _fit_ols(ri, req.variables, "beopjungri", _ri_label(ri_list))
+    comp_eup = _fit_ols(eup, req.variables, "eupmyeondong", _parent_eup_label(ri_list), **fit_kw)
+    comp_ri = _fit_ols(ri, req.variables, "beopjungri", _ri_label(ri_list), **fit_kw)
     corr_df = ri if len(ri) >= 10 else eup
     use_ri = len(ri) >= 10
     corrs = _correlations(corr_df, req.variables)
@@ -719,7 +935,17 @@ def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredict
     elif req.admin_level == "beopjungri":
         scope_label = _ri_label(req.ri_list)
 
-    y, X, meta = _build_design_matrix(df, req.variables)
+    region_col = None
+    if req.variables.region_leaf_dummy and req.admin_level == "eupmyeondong":
+        region_col = _eup_leaf_column(addr4_city)
+
+    y, X, meta = _build_design_matrix(
+        df,
+        req.variables,
+        unified=is_unified(req.asset_type),
+        response_scale=req.response_scale,
+        region_col=region_col,
+    )
     n = len(y)
     if n < 10 or X.empty or meta is None:
         raise ValueError(f"예측 불가 — scope n={n} (최소 10건 필요)")
@@ -734,16 +960,20 @@ def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredict
     warnings = _extrapolation_warnings(meta, req)
     if n < 30:
         warnings.insert(0, f"n={n} — 참고용 (권장 n≥30, 예측구간 넓음)")
+    if req.response_scale == "log":
+        warnings.insert(0, "log(금액) 모형 — 예측값은 exp(ŷ) 역변환")
 
     row = frame.iloc[0]
+    scale = req.response_scale
     return RegressionPredictResponse(
         admin_level=req.admin_level,
         scope_label=scope_label,
         n=n,
-        y_hat=float(row["mean"]),
-        pi_lower=float(row["obs_ci_lower"]),
-        pi_upper=float(row["obs_ci_upper"]),
-        ci_lower=float(row["mean_ci_lower"]),
-        ci_upper=float(row["mean_ci_upper"]),
+        y_hat=_back_transform(float(row["mean"]), scale),
+        pi_lower=_back_transform(float(row["obs_ci_lower"]), scale),
+        pi_upper=_back_transform(float(row["obs_ci_upper"]), scale),
+        ci_lower=_back_transform(float(row["mean_ci_lower"]), scale),
+        ci_upper=_back_transform(float(row["mean_ci_upper"]), scale),
+        response_scale=scale,
         warnings=warnings,
     )

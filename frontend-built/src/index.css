@@ -55,9 +55,29 @@ table.data th {
 }
 
 .layout-sidebar {
-  @apply w-72 xl:w-80 shrink-0 bg-white border-r border-slate-200 overflow-y-auto;
+  @apply w-72 xl:w-80 shrink-0 min-h-0 self-stretch bg-white border-r border-slate-200 overflow-y-auto;
 }
 
 .layout-main {
-  @apply flex-1 min-w-0 flex flex-col bg-slate-50;
+  @apply flex-1 min-w-0 min-h-0 overflow-y-auto bg-slate-50;
+}
+
+.modal-shell {
+  @apply bg-white border-slate-200 text-slate-900;
+}
+
+.modal-header {
+  @apply border-b border-slate-100;
+}
+
+.modal-table-wrap {
+  @apply rounded-lg border border-slate-100 bg-white overflow-hidden;
+}
+
+.modal-inner-table th {
+  @apply bg-slate-50 text-slate-600 border-slate-200;
+}
+
+.modal-inner-table td {
+  @apply text-slate-800 border-slate-200;
 }

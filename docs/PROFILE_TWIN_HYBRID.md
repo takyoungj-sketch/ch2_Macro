@@ -254,10 +254,13 @@ python build_twin_sigungu_hybrid.py --profile-version v1.1-national --window-yea
 - **legacy `/twin-regions` 정리**: 시군구 모달은 hybrid 전환 완료, 읍면동만 legacy 사용 → 단일화 시 라우터/DB 정리.
 - **학습형 가중치**: 사용자 "추천 채택/거부" 로깅 → 0.5/0.3/0.2 가중치 자동 최적화.
 - **데이터 기반 권역**: Twin 엣지 그래프 community detection 으로 생활권 재도출(오프라인, 순환 회피).
-- **presence 플래그**: 구성비 cosine 만으로 구분 안 되는 사례 확인 시 검토.
-- **학습형 가중치**: 사용자 "추천 채택/거부" 피드백 로깅 → 가중치(0.5/0.3/0.2) 자동 최적화.
-- **데이터 기반 권역**: Twin 엣지 그래프 community detection 으로 생활권 재도출(오프라인, 순환 회피).
 - **presence 플래그**: 구성비 cosine만으로 구분 안 되는 사례 확인 시 검토.
+
+#### Twin 유사도 재검토 (2026-06-21, **구현 보류**)
+
+- **문서:** [`TWIN_SIMILARITY_REVIEW.md`](TWIN_SIMILARITY_REVIEW.md)
+- **요지:** hybrid v6의 cross-tier 오매칭(예: 비하동 ↔ 분당·대장), 가중·log-sim 한계, 사용자 제안(인구 gate + 토지 Top3 셀·단가 + 아파트 3-tier) 기록.
+- **다음:** 3축 프레임 추가 고민 후 hybrid_v3 스펙 여부 결정.
 
 ---
 

@@ -95,12 +95,23 @@ format_addr3_scope_label = format_scope_label
 CONTINUOUS_FILTER_COLS = ("gross_area", "land_area", "building_age", "road_code")
 
 
+def apply_road_width_filter(
+    clauses: list[str],
+    params: dict,
+    road_width_labels: list[str] | None,
+) -> None:
+    if road_width_labels:
+        clauses.append("road_width_label = ANY(:road_width_labels)")
+        params["road_width_labels"] = road_width_labels
+
+
 def apply_sample_filters(
     clauses: list[str],
     params: dict,
     *,
     zone_types: list[str] | None = None,
     building_uses: list[str] | None = None,
+    road_width_labels: list[str] | None = None,
     gross_area_min: float | None = None,
     gross_area_max: float | None = None,
     land_area_min: float | None = None,
@@ -117,6 +128,7 @@ def apply_sample_filters(
     if building_uses:
         clauses.append("building_use = ANY(:building_uses)")
         params["building_uses"] = building_uses
+    apply_road_width_filter(clauses, params, road_width_labels)
     for col, lo, hi in (
         ("gross_area", gross_area_min, gross_area_max),
         ("land_area", land_area_min, land_area_max),
@@ -138,6 +150,7 @@ def apply_sample_filters_from_request(clauses: list[str], params: dict, req) -> 
         params,
         zone_types=list(req.zone_types or []) or None,
         building_uses=list(req.building_uses or []) or None,
+        road_width_labels=list(getattr(req, "road_width_labels", None) or []) or None,
         gross_area_min=getattr(req, "gross_area_min", None),
         gross_area_max=getattr(req, "gross_area_max", None),
         land_area_min=getattr(req, "land_area_min", None),

@@ -56,6 +56,7 @@
 | 15 | collective | ~~**연립·다세대 데이터 적재**~~ ✅ **완료 (2026-06-05)** | 552,849건 · `land_area` 포함. [`docs/COLLECTIVE_HANDOFF.md`](docs/COLLECTIVE_HANDOFF.md) |
 | 16 | collective / profile | **Regional Profile · 집합 mart · cohort 회귀** | [`docs/REGIONAL_PROFILE_ARCHITECTURE.md`](docs/REGIONAL_PROFILE_ARCHITECTURE.md) — D-016. `feature/collective-work`: region 공통화 → `building_stats` → `market_stats` → Profile → built A/B. |
 | 17 | collective | ~~**비주거 집합 재구축 (상가·공장, MOLIT raw base)**~~ | ✅ **완료 (2026-06-20)** — [`docs/COLLECTIVE_COMMERCIAL_REBUILD_PLAN.md`](docs/COLLECTIVE_COMMERCIAL_REBUILD_PLAN.md) D-018 Phase 0~4. grain=**도로 cluster**. VPS Promote만 잔여. |
+| 18 | built | ~~**복합부동산 원장 재구축 (일반 3유형, MOLIT raw base)**~~ | ✅ **Phase A (2026-06-22)** — commercial 89,314 · factory 37,953 · detached 291,773. [`docs/BUILT_LEDGER_REBUILD_PLAN.md`](docs/BUILT_LEDGER_REBUILD_PLAN.md) · `py pipeline/rebuild_built_ledger.py` |
 
 ## 2c. 비주거 집합 (2026-06 — D-018)
 
