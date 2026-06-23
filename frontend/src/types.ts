@@ -438,3 +438,41 @@ export interface TwinSigunguAnchor {
 export type TwinCitySearchTarget =
   | { kind: "eupmyeondong"; anchor: TwinEupAnchor }
   | { kind: "sigungu"; anchor: TwinSigunguAnchor };
+
+/** Twin v8 API region_level */
+export type TwinV8RegionLevel = "sigungu" | "eupmyeondong" | "beopjungri";
+
+/** GET /twin-v8/neighbors/{level}/{code} */
+export interface TwinV8NeighborItem {
+  rank: number;
+  twin_region_code: string;
+  twin_region_name: string;
+  twin_sigungu_code: string | null;
+  twin_sigungu_name: string | null;
+  twin_sido_code: string;
+  twin_sido_name: string;
+  similarity_score: number;
+  confidence_score: number;
+  explanation_ko: string | null;
+  detail_scores: Record<string, unknown>;
+}
+
+export interface TwinV8NeighborsResponse {
+  batch_key: string;
+  scope_label: string;
+  region_level: TwinV8RegionLevel;
+  anchor_region_code: string;
+  anchor_region_name: string;
+  algorithm_version: number;
+  neighbors: TwinV8NeighborItem[];
+}
+
+/** UI: v8 조회 앵커 (충청권 sigungu/eup/beopjungri) */
+export interface TwinV8Query {
+  region_level: TwinV8RegionLevel;
+  region_code: string;
+  region_name: string;
+  sido_code: string;
+  sido_name: string;
+  sigungu_name: string;
+}
