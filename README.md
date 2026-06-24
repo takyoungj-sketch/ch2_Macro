@@ -269,10 +269,35 @@ API·화면 설계 기준이다. 인증·과금 연동 전에는 엔드포인트
 ## DB 구조 (PostgreSQL)
 
 - `land_transactions_raw` : 정제 전/후 원자료 보존
-- `land_transactions` : 분석용 정규화 테이블
-- `region_codes` : 시도·시군구·읍면동·법정리 코드/명칭
-- `land_basic_stats` : 무료 화면용 동/리 단위 사전 집계
+- `land_transactions` : 분석용 정규화 테이블 (transaction_hash UNIQUE, ~9.6M건)
+- `region_codes` : 시도·시군구·읍면동·법정리 코드/명칭 (SSOT = land_stats)
+- `land_basic_stats_v2` : V2 무료·유료용 법정동/리 단위 사전집계 (as_of_month + window_years)
+- `land_upper_stats_v2` : 상위 행정구역(시도·시군구·읍면동) 사전집계
+- `land_annual_stats` : 장기 연도별 추세 집계
+- `twin_neighbor_v8` : Twin v8 쌍둥이 지역 (충청권 현재, 전국 예정)
+- `regional_profile` : Regional Profile 피처 벡터 (JSONB)
 - `paid_analysis_logs` : 유료 분석 사용 기록
-- `analysis_cache` : 유료 분석 응답 캐시 (요청 페이로드 해시 키 기반)
-- `analysis_base_cache` : 「기본 통계 보기」가 만든 후보 거래행 id 배열 캐시. 같은 지역/연도 윈도우에서 「필터 분석 실행」이 region 재확장·재스캔 없이 이 행집합 위에서만 추가 필터를 돌릴 수 있게 한다 (TTL 4시간, 백엔드 시작 시 lazy 생성).
-- `population_stats` : 추후 행정구역 인구 레이어 (현재 스키마만 준비)
+- `analysis_cache` : 유료 분석 응답 캐시 (요청 페이로드 해시 키 기반, 24h TTL)
+- `analysis_base_cache` : 「기본 통계 보기」가 만든 후보 거래행 id 배열 캐시 (TTL 4h; 갱신 직후 TRUNCATE 필수)
+- `population_stats` : 행정구역 인구 레이어 (행안부 CSV 기반)
+
+> **상세 스키마**: [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md)
+
+---
+
+## 기술 문서 (docs/)
+
+| 문서 | 내용 |
+|------|------|
+| [`docs/SYSTEM_ARCHITECTURE.md`](docs/SYSTEM_ARCHITECTURE.md) | 전체 시스템 아키텍처 (레이어·배포·API·파이프라인) |
+| [`docs/DATA_FLOW.md`](docs/DATA_FLOW.md) | 데이터 흐름 (수집→정제→집계→API) |
+| [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) | DB 테이블·컬럼·인덱스 상세 |
+| [`docs/MONTHLY_UPDATE_PIPELINE.md`](docs/MONTHLY_UPDATE_PIPELINE.md) | 월간 갱신 단계별 가이드 및 실패 시나리오 |
+| [`docs/DATA_INTEGRITY_CHECKLIST.md`](docs/DATA_INTEGRITY_CHECKLIST.md) | 무결성 검증 체크리스트 (Level 0~4) |
+| [`docs/RISK_REGISTER.md`](docs/RISK_REGISTER.md) | 위험 요소 레지스터 (CRITICAL~LOW) |
+| [`docs/ARCHITECTURE_REVIEW_REPORT.md`](docs/ARCHITECTURE_REVIEW_REPORT.md) | 아키텍처 비판적 검토 및 1년 확장 예상 문제 |
+| [`docs/DECISIONS.md`](docs/DECISIONS.md) | 설계 결정 이력 (D-001~D-024b) |
+| [`docs/MONTHLY_UPDATE_SOP.md`](docs/MONTHLY_UPDATE_SOP.md) | 운영 SOP (상세 절차) |
+| [`docs/TRANSACTION_HASH_DEDUPE.md`](docs/TRANSACTION_HASH_DEDUPE.md) | transaction_hash 중복제거·rehash 배경 |
+| [`docs/TWIN_V8_DESIGN.md`](docs/TWIN_V8_DESIGN.md) | Twin v8 알고리즘 설계 |
+| [`docs/REGIONAL_PROFILE_ARCHITECTURE.md`](docs/REGIONAL_PROFILE_ARCHITECTURE.md) | Regional Profile 5-Layer 아키텍처 |
