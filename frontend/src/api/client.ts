@@ -51,7 +51,7 @@ export const fetchRegions = async (params?: {
   if (!hasSearch && p.limit === undefined) {
     p.limit = 50000;
   }
-  const { data } = await api.get<RegionItem[]>("/free/regions", { params: p });
+  const { data } = await api.get<RegionItem[]>("/free/v2/regions", { params: p });
   return data;
 };
 

@@ -23,6 +23,7 @@ import sys
 from sqlalchemy import text
 
 from db_utils import get_engine
+from run_pipeline import _truncate_paid_caches
 from transaction_hash import hash_from_series, make_transaction_hash, transaction_hash_key  # noqa: F401
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -339,12 +340,16 @@ def main() -> int:
 
     with engine.connect() as conn:
         biha = _count(conn, SAMPLE_BIHA_SQL)
-        if biha != 2:
+        # 기대값 3: 2015-09-09(1건) + 2025-05-30(1건) + 2025-07-12(1건) — 모두 별개 거래
+        if biha != 3:
             log.warning(
-                "회귀 샘플 비하동 보녹·답 valid=%s (기대 2). 수동 확인 필요.", biha
+                "회귀 샘플 비하동 보녹·답 valid=%s (기대 3). 수동 확인 필요.", biha
             )
         else:
-            log.info("회귀 샘플 OK: 비하동 보녹·답 = 2건")
+            log.info("회귀 샘플 OK: 비하동 보녹·답 = 3건")
+
+    # dedupe/rehash 후 캐시 무효화 — stale analysis_base_cache 가 잘못된 row_ids 를 반환하는 것을 방지.
+    _truncate_paid_caches()
 
     log.info(
         "다음: build_stats_v2 / build_upper_stats_v2 / twin 배치 재실행 → Promote. "

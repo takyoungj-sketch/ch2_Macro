@@ -31,6 +31,7 @@ from app.schemas import (
     FreeStatsV2MetaAsOfResponse,
     FreeStatsV2Response,
     MatrixCell,
+    RegionItem,
     StatsResult,
     YearlyTradeStat,
 )
@@ -676,3 +677,79 @@ def get_basic_stats_v2_bulk(
         stats_excluded_codes=stats_excluded_codes,
         analysis_base_key=None,
     )
+
+
+# ---------------------------------------------------------------------------
+# 지역 카탈로그 — 기존 /free/regions 와 동일 구현. V1 라우터 폐기 후 이 경로가 정식.
+# ---------------------------------------------------------------------------
+_REGIONS_SEARCH_MAX = 420
+_REGIONS_HARD_MAX = 50_000
+_REGIONS_DEFAULT_CAP = 500
+
+
+@router.get("/regions", response_model=list[RegionItem], summary="지역 목록 조회")
+def list_regions_v2(
+    sigungu_code: str | None = None,
+    eupmyeondong_code: str | None = None,
+    search: str | None = Query(
+        None,
+        description="이름 또는 코드 부분 검색(ILIKE·동명이명 시 상위 행정구역명 포함으로 구분 가능)",
+        max_length=64,
+    ),
+    limit: int = Query(
+        _REGIONS_DEFAULT_CAP,
+        ge=1,
+        le=_REGIONS_HARD_MAX,
+        description="결과 행 최대 개수(search 시 서버에서 추가로 묶임)",
+    ),
+    db: Session = Depends(get_db),
+):
+    """
+    지역 코드 계층 조회. 시군구/읍면동 코드로 하위 항목 필터링 가능.
+    검색 문자열은 2자 이상 권장(짧으면 과다 매칭·빈 결과).
+    """
+    where_parts = ["COALESCE(rc.is_active, TRUE) = TRUE"]
+    params: dict = {}
+    base_alias = (
+        "(SELECT *, btrim(cast(beopjungri_code AS text)) AS bc_trim FROM region_codes) rc"
+    )
+    if sigungu_code:
+        where_parts.append("rc.sigungu_code = :sigungu_code")
+        params["sigungu_code"] = sigungu_code
+    if eupmyeondong_code:
+        where_parts.append("rc.eupmyeondong_code = :eupmyeondong_code")
+        params["eupmyeondong_code"] = eupmyeondong_code
+
+    q_raw = (search or "").strip()
+    if q_raw:
+        params["region_search_pat"] = f"%{q_raw}%"
+        where_parts.append(
+            "("
+            "COALESCE(rc.sido_name,'') ILIKE :region_search_pat "
+            "OR COALESCE(rc.sigungu_name,'') ILIKE :region_search_pat "
+            "OR COALESCE(rc.eupmyeondong_name,'') ILIKE :region_search_pat "
+            "OR COALESCE(rc.beopjungri_name,'') ILIKE :region_search_pat "
+            "OR rc.bc_trim ILIKE :region_search_pat"
+            ")"
+        )
+        effective_limit = min(limit, _REGIONS_SEARCH_MAX)
+    else:
+        effective_limit = min(limit, _REGIONS_HARD_MAX)
+
+    where_sql = " AND ".join(where_parts)
+    rows = db.execute(
+        text(
+            f"""
+            SELECT rc.beopjungri_code, rc.beopjungri_name,
+                   rc.eupmyeondong_code, rc.eupmyeondong_name,
+                   rc.sigungu_code, rc.sigungu_name,
+                   rc.sido_code, rc.sido_name
+            FROM {base_alias}
+            WHERE {where_sql}
+            ORDER BY rc.beopjungri_code
+            LIMIT :region_limit
+            """
+        ),
+        {**params, "region_limit": effective_limit},
+    ).fetchall()
+    return [RegionItem(**dict(r._mapping)) for r in rows]

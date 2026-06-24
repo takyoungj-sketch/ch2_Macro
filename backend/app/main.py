@@ -92,9 +92,9 @@ async def _api_token_guard(request: Request, call_next):
     return await call_next(request)
 
 
-# DECISIONS D-001 — V1 무료 라우터는 폐기 일정에 들어감. include 시 deprecated 마킹은 라우터 단위
-# (모든 V1 엔드포인트 OpenAPI 에 deprecated 표기). 폐기 일정은 `docs/DECISIONS.md` D-001 참조.
-app.include_router(free.router, prefix="/api", deprecated=True)
+# DECISIONS D-001 — V1 통계 엔드포인트(/free/stats/*)는 폐기됨. /free/regions 는 V2로 이전 완료.
+# free.py 는 free_v2.py 가 의존하는 헬퍼 함수 유지 목적으로 존재.
+app.include_router(free.router, prefix="/api")
 app.include_router(free_v2.router, prefix="/api")
 app.include_router(paid.router, prefix="/api")
 app.include_router(upper_stats.router, prefix="/api")
@@ -112,20 +112,20 @@ if collective_router is not None:
     _LOG.info("regional_profile API 활성: /api/regional-profile/*")
 
 
-# 폐기 일정 헤더 — RFC 8594 Sunset.
-_V1_SUNSET_HEADER = "Wed, 31 Mar 2026 23:59:59 GMT"
+# 폐기 일정 헤더 — RFC 8594 Sunset. V1 통계 경로(/free/stats/*)에만 적용.
+_V1_SUNSET_HEADER = "Wed, 30 Jun 2026 23:59:59 GMT"
 
 
 @app.middleware("http")
 async def _v1_sunset_header(request: Request, call_next):
     response = await call_next(request)
     path = request.url.path
-    # 무료 V1 (`/api/free/...`) 만 대상. V2 (`/api/free/v2/...`) 는 제외.
-    if path.startswith("/api/free/") and not path.startswith("/api/free/v2/"):
+    # 무료 V1 통계 경로만 대상 (/free/stats/). /free/regions 및 /free/v2/ 는 제외.
+    if path.startswith("/api/free/stats/") or path == "/api/free/stats":
         response.headers.setdefault("Sunset", _V1_SUNSET_HEADER)
         response.headers.setdefault(
             "Deprecation",
-            "version=\"v1\"; date=\"Wed, 31 Mar 2026 23:59:59 GMT\"",
+            "version=\"v1\"; date=\"Mon, 30 Jun 2026 23:59:59 GMT\"",
         )
     return response
 

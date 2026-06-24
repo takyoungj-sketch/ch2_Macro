@@ -500,6 +500,25 @@ def main() -> None:
                 raise SystemExit(f"환경변수 STATS_V2_SIDO_CODE: {exc}") from exc
 
     as_of_month = parse_as_of_month(args.as_of) if args.as_of else default_as_of_month()
+
+    # 방어 코드: as_of_month 가 비정상 범위이면 경고 후 계속 (오퍼레이터가 눈치채도록).
+    _today = date.today()
+    if as_of_month > _today:
+        log.warning(
+            "⚠ as_of_month=%s 이(가) 오늘(%s)보다 미래입니다. "
+            "STATS_V2_DEFAULT_AS_OF_MONTH 또는 --as-of 값을 확인하세요.",
+            as_of_month,
+            _today,
+        )
+    elif (_today - as_of_month).days > 180:
+        log.warning(
+            "⚠ as_of_month=%s 이(가) 오늘(%s) 기준 %d일 전입니다(180일 초과). "
+            "오래된 기준월로 통계가 집계됩니다. 의도한 경우가 아니면 확인하세요.",
+            as_of_month,
+            _today,
+            (_today - as_of_month).days,
+        )
+
     try:
         windows = sorted({int(x.strip()) for x in args.windows.split(",") if x.strip()})
     except ValueError as exc:

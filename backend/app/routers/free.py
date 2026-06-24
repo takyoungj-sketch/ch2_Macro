@@ -324,7 +324,8 @@ def list_regions(
 @router.post(
     "/stats/bulk",
     response_model=FreeStatsResponse,
-    summary="복수 법정동·리 기본 통계 합산",
+    summary="복수 법정동·리 기본 통계 합산 [폐기됨 — /free/v2/stats/bulk 사용]",
+    deprecated=True,
 )
 def get_basic_stats_bulk(
     payload: FreeStatsBulkRequest,
@@ -420,7 +421,12 @@ def get_basic_stats_bulk(
     )
 
 
-@router.get("/stats/{beopjungri_code}", response_model=FreeStatsResponse, summary="동/리 기본 통계")
+@router.get(
+    "/stats/{beopjungri_code}",
+    response_model=FreeStatsResponse,
+    summary="동/리 기본 통계 [폐기됨 — /free/v2/stats/{code} 사용]",
+    deprecated=True,
+)
 def get_basic_stats(beopjungri_code: str, db: Session = Depends(get_db)):
     """
     법정동/리 코드 기준 기본 통계 조회 (최근 5년, 정상 데이터).
