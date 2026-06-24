@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import get_db
-from app.routers import free, free_v2, paid, twin_regions, upper_stats
+from app.routers import free, free_v2, paid, twin_regions, twin_v8, upper_stats
 
 if (settings.built_database_url or "").strip():
     from app.built.router import router as built_router
@@ -99,6 +99,7 @@ app.include_router(free_v2.router, prefix="/api")
 app.include_router(paid.router, prefix="/api")
 app.include_router(upper_stats.router, prefix="/api")
 app.include_router(twin_regions.router, prefix="/api")
+app.include_router(twin_v8.router, prefix="/api")
 if built_router is not None:
     app.include_router(built_router, prefix="/api")
     _LOG.info("built_stats API 활성: /api/built/*")

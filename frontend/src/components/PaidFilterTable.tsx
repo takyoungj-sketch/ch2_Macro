@@ -10,7 +10,7 @@ import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import { useAppStore } from "../store";
 import type { TwinCitySearchTarget } from "../types";
 import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
-import { resolveTwinAnchorEupmyeondong, resolveTwinAnchorSigungu } from "../utils/twinRegionAnchor";
+import { resolveTwinAnchorEupmyeondong, resolveTwinAnchorSigungu, resolveTwinV8Query } from "../utils/twinRegionAnchor";
 import TwinCityModal from "./TwinCityModal";
 import { paidUsesCustomAreaSpan } from "../utils/paidFiltersMap";
 
@@ -49,6 +49,10 @@ export default function PaidFilterTable() {
   );
   const twinSigunguAnchor = useMemo(
     () => resolveTwinAnchorSigungu(regions, resolvedRegionCodes),
+    [regions, resolvedRegionCodes],
+  );
+  const twinV8Query = useMemo(
+    () => resolveTwinV8Query(regions, resolvedRegionCodes),
     [regions, resolvedRegionCodes],
   );
   const customAreaSpan = paidUsesCustomAreaSpan(paidRequest);
@@ -342,6 +346,7 @@ export default function PaidFilterTable() {
         open={twinModalTarget != null}
         onClose={() => setTwinModalTarget(null)}
         target={twinModalTarget}
+        v8Query={twinV8Query}
       />
     </div>
   );

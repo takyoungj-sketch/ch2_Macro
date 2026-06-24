@@ -20,6 +20,8 @@ import type {
   TwinNeighborsForEupmyeondongResponse,
   TwinNeighborsForSigunguResponse,
   TwinRegionLatestBatch,
+  TwinV8NeighborsResponse,
+  TwinV8RegionLevel,
   UpperStatsV2Response,
 } from "../types";
 import { normalizeFreeStatsWindowYears } from "../types";
@@ -194,6 +196,23 @@ export const fetchTwinNeighborsForEupmyeondong = async (
 ): Promise<TwinNeighborsForEupmyeondongResponse> => {
   const { data } = await api.get<TwinNeighborsForEupmyeondongResponse>(
     `/twin-regions/eupmyeondong/neighbors/${encodeURIComponent(eupmyeondongCode)}`,
+  );
+  return data;
+};
+
+/** Twin v8 — 충청권 쌍둥이 (algorithm_version=8) */
+export const fetchTwinV8Neighbors = async (params: {
+  region_level: TwinV8RegionLevel;
+  region_code: string;
+  top_k?: number;
+}): Promise<TwinV8NeighborsResponse> => {
+  const level = params.region_level;
+  const code = params.region_code.trim();
+  const qs = new URLSearchParams();
+  if (params.top_k != null) qs.set("top_k", String(params.top_k));
+  const suffix = qs.size > 0 ? `?${qs.toString()}` : "";
+  const { data } = await api.get<TwinV8NeighborsResponse>(
+    `/twin-v8/neighbors/${encodeURIComponent(level)}/${encodeURIComponent(code)}${suffix}`,
   );
   return data;
 };
