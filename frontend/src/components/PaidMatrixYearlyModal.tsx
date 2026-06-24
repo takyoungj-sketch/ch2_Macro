@@ -930,10 +930,10 @@ export default function PaidMatrixYearlyModal({
                               {formatTxContractDate(r)}
                             </td>
                             <td
-                              className="border border-slate-200 px-2 py-1 max-w-[160px] truncate whitespace-nowrap"
-                              title={[r.sigungu_name, r.beopjungri_name].filter(Boolean).join(" ") || undefined}
+                              className="border border-slate-200 px-2 py-1 max-w-[180px] truncate whitespace-nowrap"
+                              title={[r.sigungu_name, r.eupmyeondong_name, r.beopjungri_name].filter(Boolean).join(" ") || undefined}
                             >
-                              {[r.sigungu_name, r.beopjungri_name].filter(Boolean).join(" ") || "—"}
+                              {[r.sigungu_name, r.eupmyeondong_name, r.beopjungri_name].filter(Boolean).join(" ") || "—"}
                             </td>
                             <td
                               className="border border-slate-200 px-2 py-1 max-w-[120px] truncate"

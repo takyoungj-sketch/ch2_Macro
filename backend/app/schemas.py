@@ -575,6 +575,7 @@ class MatrixCellTransactionItem(BaseModel):
     contract_date: Optional[date] = None
     beopjungri_code: str
     sigungu_name: Optional[str] = None
+    eupmyeondong_name: Optional[str] = None
     beopjungri_name: Optional[str] = None
     lot_display: Optional[str] = None
     partial_ownership_label: Optional[str] = None
