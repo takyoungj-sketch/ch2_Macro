@@ -1641,6 +1641,7 @@ def _fetch_matrix_cell_filtered_transactions(
         f"""
         SELECT lt.id, lt.contract_year, lt.contract_month, lt.contract_date,
                lt.beopjungri_code,
+               TRIM(BOTH FROM COALESCE(rc.sigungu_name::text, '')) AS sigungu_name,
                TRIM(BOTH FROM COALESCE(rc.beopjungri_name::text, '')) AS beopjungri_name,
                NULLIF(TRIM(BOTH FROM COALESCE(lt.lot_display::text, '')), '') AS lot_display,
                NULLIF(TRIM(BOTH FROM COALESCE(lt.partial_ownership_label::text, '')), '')
@@ -1669,6 +1670,7 @@ def _fetch_matrix_cell_filtered_transactions(
             continue
         fv = float(px)
         nm = (m.get("beopjungri_name") or "").strip()
+        sn = (m.get("sigungu_name") or "").strip()
         rd = (m.get("road_condition") or "").strip()
         candidates.append(
             {
@@ -1677,6 +1679,7 @@ def _fetch_matrix_cell_filtered_transactions(
                 "contract_month": int(m["contract_month"]),
                 "contract_date": m.get("contract_date"),
                 "beopjungri_code": str(m["beopjungri_code"]).strip(),
+                "sigungu_name": sn or None,
                 "beopjungri_name": nm or None,
                 "lot_display": (m.get("lot_display") or "").strip() or None,
                 "partial_ownership_label": (
@@ -1724,12 +1727,14 @@ def _matrix_cell_transactions_csv_bytes(rows: list[dict]) -> bytes:
     buf.write("\ufeff")
     writer = csv.writer(buf, lineterminator="\n")
     writer.writerow(
-        ["계약일", "지번", "면적(㎡)", "금액(만원)", "단가(만원/㎡)", "도로", "지분", "유형"]
+        ["계약일", "시군구", "동리명", "지번", "면적(㎡)", "금액(만원)", "단가(만원/㎡)", "도로", "지분", "유형"]
     )
     for c in rows:
         writer.writerow(
             [
                 _format_tx_contract_date_csv(c),
+                c.get("sigungu_name") or "",
+                c.get("beopjungri_name") or "",
                 c.get("lot_display") or "",
                 "" if c.get("area_sqm") is None else c["area_sqm"],
                 c["total_price_10k"],
@@ -1744,8 +1749,12 @@ def _matrix_cell_transactions_csv_bytes(rows: list[dict]) -> bytes:
 
 def _matrix_cell_export_filename(body: MatrixYearlyRequest) -> str:
     z = (body.zone_type or "zone").strip() or "zone"
-    l = (body.land_category or "land").strip() or "land"
-    safe = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in f"{z}_{l}")
+    lc = (body.land_category or "land").strip() or "land"
+    # HTTP 헤더는 latin-1만 허용 → ASCII 범위 문자만 남기고 나머지는 _ 치환.
+    safe = "".join(
+        ch if (ch.isascii() and (ch.isalnum() or ch in "-_")) else "_"
+        for ch in f"{z}_{lc}"
+    )
     ts = datetime.now(timezone.utc).strftime("%Y%m%d")
     return f"matrix_tx_{safe}_{ts}.csv"
 
@@ -1774,6 +1783,7 @@ def matrix_cell_transactions(
             contract_month=c["contract_month"],
             contract_date=c.get("contract_date"),
             beopjungri_code=c["beopjungri_code"],
+            sigungu_name=c.get("sigungu_name"),
             beopjungri_name=c["beopjungri_name"],
             lot_display=c.get("lot_display"),
             partial_ownership_label=c.get("partial_ownership_label"),

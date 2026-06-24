@@ -870,11 +870,14 @@ export default function PaidMatrixYearlyModal({
               {!txLoading && !txError && txData && (
                 <>
                   <div className="overflow-x-auto rounded-lg border border-slate-100">
-                    <table className="w-full text-[11px] border-collapse min-w-[780px]">
+                    <table className="w-full text-[11px] border-collapse min-w-[900px]">
                       <thead>
                         <tr className={simpleTableHeadClass("neutral")}>
                           <th className="border border-slate-200 px-2 py-1.5 text-left font-medium whitespace-nowrap">
                             계약일
+                          </th>
+                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium whitespace-nowrap">
+                            주소
                           </th>
                           <th className="border border-slate-200 px-2 py-1.5 text-left font-medium whitespace-nowrap">
                             지번
@@ -906,7 +909,13 @@ export default function PaidMatrixYearlyModal({
                               {formatTxContractDate(r)}
                             </td>
                             <td
-                              className="border border-slate-200 px-2 py-1 max-w-[140px] truncate"
+                              className="border border-slate-200 px-2 py-1 max-w-[160px] truncate whitespace-nowrap"
+                              title={[r.sigungu_name, r.beopjungri_name].filter(Boolean).join(" ") || undefined}
+                            >
+                              {[r.sigungu_name, r.beopjungri_name].filter(Boolean).join(" ") || "—"}
+                            </td>
+                            <td
+                              className="border border-slate-200 px-2 py-1 max-w-[120px] truncate"
                               title={r.lot_display?.trim() || undefined}
                             >
                               {formatTxCell(r.lot_display)}
