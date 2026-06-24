@@ -1356,6 +1356,10 @@ def long_term_trend(body: LongTermTrendRequest, db: Session = Depends(get_db)):
 
     beop_codes = _long_term_beop_codes(body, targets, db)
     upper_targets = [(lv, c) for lv, c in targets if lv in _UPPER_LEVELS]
+    explicit_beop_targets = [c for lv, c in targets if lv == "beopjungri"]
+    # 상위 행정(읍면동·시군구 등) 타겟이 있을 때는 하위 법정동별 시리즈를 생성하지 않음.
+    # 집계 시리즈(land_annual_upper_stats)만 사용해 과다 시리즈 방지.
+    show_beop_series = bool(explicit_beop_targets) or not upper_targets
 
     y_candidates: list[int] = []
 
@@ -1399,7 +1403,7 @@ def long_term_trend(body: LongTermTrendRequest, db: Session = Depends(get_db)):
 
     series: list[LongTermTrendSeries] = []
 
-    if beop_codes:
+    if beop_codes and show_beop_series:
         rows = db.execute(
             text(
                 """
