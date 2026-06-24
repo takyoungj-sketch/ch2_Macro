@@ -187,19 +187,31 @@ export default function FreeStatsPanel() {
       }
 
       const baseKey = statsData.analysis_base_key ?? paidBasicBaseKey;
-      /**
-       * 단일 상위지역 모드에서 statsData.beopjungri_code 는 region_code(시도/시군구/읍면동 코드)다.
-       * 셀 트렌드 모달은 법정동·리 코드 리스트가 필요하므로 항상 resolvedCodes(산하 union)를 우선 사용.
-       */
-      const codesForTrend = useUpper
-        ? resolvedCodes
-        : statsData.beopjungri_code
-            ?.split(",")
-            .map((x) => x.trim())
-            .filter(Boolean) ?? resolvedCodes;
       const rollingExtras = rollingMatrixModalPayload(statsData);
+
+      /**
+       * 단일 상위지역(시군구·읍면동) 모드: 백엔드 expand_region_units 가 sigungu/eupmyeondong
+       * scope_type 을 DB 기준 전체 법정동으로 확장하므로, resolvedCodes(카탈로그 cap 에 걸려
+       * 불완전할 수 있음) 대신 scope 전달 방식을 사용한다.
+       * 시도·city 레벨은 expand_region_units 미지원 → resolvedCodes 폴백.
+       */
+      const upperScope =
+        upperSingle != null &&
+        (upperSingle.level === "sigungu" || upperSingle.level === "eupmyeondong")
+          ? { scope_type: upperSingle.level as "sigungu" | "eupmyeondong", code: upperSingle.code }
+          : null;
+
+      const codesForTrend = useUpper && upperScope == null
+        ? resolvedCodes
+        : useUpper
+          ? null
+          : statsData.beopjungri_code
+              ?.split(",")
+              .map((x) => x.trim())
+              .filter(Boolean) ?? resolvedCodes;
+
       const body: MatrixYearlyRequest = {
-        region_selections: null,
+        region_selections: upperScope != null ? [upperScope] : null,
         region_codes: codesForTrend,
         ...rollingExtras,
         base_cache_key: baseKey,
@@ -230,7 +242,7 @@ export default function FreeStatsPanel() {
         setTrendLoading(false);
       }
     },
-    [isPaidBasic, resolvedCodes, data, paidBasicBaseKey, useUpper]
+    [isPaidBasic, resolvedCodes, data, paidBasicBaseKey, useUpper, upperSingle]
   );
 
   if (regionsLoading)
