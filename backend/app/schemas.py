@@ -661,3 +661,46 @@ class TwinNeighborsForEupmyeondongResponse(BaseModel):
     anchor_sido_code: str
     anchor_sido_name: str
     neighbors: list[TwinEupmyeondongNeighborItem] = []
+
+
+# ---------------------------------------------------------------------------
+# 토지 단가 회귀 분석 (매트릭스 칸 원거래 → 단가 헤도닉 OLS)
+# ---------------------------------------------------------------------------
+
+class LandRegressionVariables(BaseModel):
+    """사용자가 선택하는 회귀 투입 변수 플래그."""
+    area_sqm: bool = True
+    log_area: bool = True
+    road_condition: bool = True
+    deal_type: bool = True
+    partial_ownership: bool = False
+    year_trend: bool = True
+    beopjungri_fe: bool = False
+
+
+class LandRegressionRequest(MatrixYearlyRequest):
+    """POST /paid/matrix-cell-transactions/regression 요청."""
+    variables: LandRegressionVariables = Field(default_factory=LandRegressionVariables)
+    model_type: Literal["log", "linear"] = "log"
+    exclude_outliers_iqr: bool = False
+    outlier_iqr_multiplier: float = 3.0
+    min_n: int = 15
+
+
+class LandRegressionCoeff(BaseModel):
+    name: str
+    label: str
+    coef: float
+    se: float
+    t: float
+    p: float
+
+
+class LandRegressionResponse(BaseModel):
+    n: int
+    model_type: Literal["log", "linear"]
+    r_squared: float
+    adj_r_squared: float
+    coefficients: list[LandRegressionCoeff]
+    reference_categories: dict[str, str] = {}
+    warnings: list[str] = []

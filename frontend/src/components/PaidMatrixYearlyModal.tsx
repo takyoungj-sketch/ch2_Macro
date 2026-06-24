@@ -4,10 +4,14 @@ import {
   fetchLongTermTrend,
   fetchMatrixCellHistogram,
   fetchMatrixCellTransactions,
+  fetchLandRegression,
   downloadMatrixCellTransactionsCsv,
 } from "../api/client";
 import { simpleTableHeadClass } from "../constants/displayUi";
 import type {
+  LandRegressionVariables,
+  LandRegressionResponse,
+  LandRegressionCoeff,
   LongTermTrendPoint,
   LongTermTrendResponse,
   MatrixCellHistogramRequest,
@@ -90,7 +94,7 @@ interface Props {
   scopeNote?: string;
 }
 
-type PanelMode = "trend" | "longTerm" | "histogram" | "transactions";
+type PanelMode = "trend" | "longTerm" | "histogram" | "transactions" | "regression";
 type LtPriceMetric = "mean" | "median";
 
 function ltPointsToChartRows(
@@ -137,6 +141,22 @@ export default function PaidMatrixYearlyModal({
   const [txLoading, setTxLoading] = useState(false);
   const [txError, setTxError] = useState<string | null>(null);
   const [txData, setTxData] = useState<MatrixCellTransactionsResponse | null>(null);
+
+  // 회귀 탭 state
+  const [regVars, setRegVars] = useState<LandRegressionVariables>({
+    area_sqm: true,
+    log_area: true,
+    road_condition: true,
+    deal_type: true,
+    partial_ownership: false,
+    year_trend: true,
+    beopjungri_fe: false,
+  });
+  const [regModelType, setRegModelType] = useState<"log" | "linear">("log");
+  const [regExcludeOutlier, setRegExcludeOutlier] = useState(false);
+  const [regLoading, setRegLoading] = useState(false);
+  const [regError, setRegError] = useState<string | null>(null);
+  const [regResult, setRegResult] = useState<LandRegressionResponse | null>(null);
   const [txExportLoading, setTxExportLoading] = useState(false);
   const [txExportError, setTxExportError] = useState<string | null>(null);
 
@@ -391,6 +411,7 @@ export default function PaidMatrixYearlyModal({
       { id: "trend", label: isRolling ? "롤링 구간" : "선택 연도" },
       { id: "histogram", label: "단가 분포" },
       { id: "transactions", label: "거래 목록" },
+      { id: "regression", label: "회귀 분석" },
     ];
     if (showLongTermTab) {
       tabs.push({ id: "longTerm", label: "장기 추세" });
@@ -980,6 +1001,194 @@ export default function PaidMatrixYearlyModal({
                     </div>
                   </div>
                 </>
+              )}
+            </div>
+          )}
+
+          {/* ── 회귀 분석 탭 ── */}
+          {canDetail && panel === "regression" && filterRequest && (
+            <div className="space-y-4">
+              {/* 변수 선택 */}
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
+                <p className="text-xs font-semibold text-slate-600">투입 변수 선택</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  {(
+                    [
+                      ["area_sqm", "면적(㎡)"],
+                      ["road_condition", "도로조건"],
+                      ["deal_type", "거래유형"],
+                      ["partial_ownership", "지분여부"],
+                      ["year_trend", "연도추세"],
+                      ["beopjungri_fe", "법정동 FE"],
+                    ] as [keyof LandRegressionVariables, string][]
+                  ).map(([key, label]) => (
+                    <label key={key} className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={regVars[key]}
+                        onChange={(e) =>
+                          setRegVars((v) => ({ ...v, [key]: e.target.checked }))
+                        }
+                        className="accent-blue-600"
+                      />
+                      <span>{label}</span>
+                    </label>
+                  ))}
+                </div>
+                {regVars.area_sqm && (
+                  <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={regVars.log_area}
+                      onChange={(e) =>
+                        setRegVars((v) => ({ ...v, log_area: e.target.checked }))
+                      }
+                      className="accent-blue-600"
+                    />
+                    <span className="text-slate-500">면적 로그 변환 (log area)</span>
+                  </label>
+                )}
+                <div className="flex flex-wrap gap-4 text-xs">
+                  <span className="text-slate-500 font-medium">종속변수:</span>
+                  {(["log", "linear"] as const).map((mt) => (
+                    <label key={mt} className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="regModelType"
+                        value={mt}
+                        checked={regModelType === mt}
+                        onChange={() => setRegModelType(mt)}
+                        className="accent-blue-600"
+                      />
+                      <span>{mt === "log" ? "log(단가)" : "단가(선형)"}</span>
+                    </label>
+                  ))}
+                  <label className="flex items-center gap-1.5 cursor-pointer ml-4">
+                    <input
+                      type="checkbox"
+                      checked={regExcludeOutlier}
+                      onChange={(e) => setRegExcludeOutlier(e.target.checked)}
+                      className="accent-blue-600"
+                    />
+                    <span className="text-slate-500">IQR 이상치 제외</span>
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  disabled={regLoading}
+                  onClick={async () => {
+                    if (!filterRequest) return;
+                    setRegLoading(true);
+                    setRegError(null);
+                    setRegResult(null);
+                    try {
+                      const res = await fetchLandRegression({
+                        ...filterRequest,
+                        variables: regVars,
+                        model_type: regModelType,
+                        exclude_outliers_iqr: regExcludeOutlier,
+                        outlier_iqr_multiplier: 3,
+                        min_n: 15,
+                      });
+                      setRegResult(res);
+                    } catch (e) {
+                      setRegError(parseApiError(e).message);
+                    } finally {
+                      setRegLoading(false);
+                    }
+                  }}
+                  className="px-4 py-1.5 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {regLoading ? "계산 중…" : "회귀 실행"}
+                </button>
+              </div>
+
+              {regError && (
+                <p className="text-xs text-red-500 bg-red-50 rounded p-2">{regError}</p>
+              )}
+
+              {regResult && (
+                <div className="space-y-3">
+                  {/* 요약 */}
+                  <div className="flex flex-wrap gap-4 text-xs text-slate-600 bg-white border border-slate-200 rounded-lg p-3">
+                    <span>
+                      <span className="font-medium">n</span> = {regResult.n.toLocaleString("ko-KR")}
+                    </span>
+                    <span>
+                      <span className="font-medium">모델</span> {regResult.model_type === "log" ? "log(단가)" : "선형"}
+                    </span>
+                    <span>
+                      <span className="font-medium">R²</span>{" "}
+                      {regResult.r_squared.toFixed(3)}
+                    </span>
+                    <span>
+                      <span className="font-medium">adj R²</span>{" "}
+                      {regResult.adj_r_squared.toFixed(3)}
+                    </span>
+                    {Object.entries(regResult.reference_categories).map(([k, v]) => (
+                      <span key={k} className="text-slate-400">
+                        기준[{k}]: {v}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* 경고 */}
+                  {regResult.warnings.length > 0 && (
+                    <ul className="text-xs text-amber-700 bg-amber-50 rounded p-2 space-y-0.5">
+                      {regResult.warnings.map((w, i) => (
+                        <li key={i}>⚠ {w}</li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {/* 계수 테이블 */}
+                  <div className="overflow-x-auto rounded-lg border border-slate-100">
+                    <table className="w-full text-[11px] border-collapse min-w-[520px]">
+                      <thead>
+                        <tr className={simpleTableHeadClass("neutral")}>
+                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">변수</th>
+                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">계수</th>
+                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">SE</th>
+                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">t</th>
+                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">p-값</th>
+                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">유의</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-slate-800">
+                        {regResult.coefficients.map((c: LandRegressionCoeff) => {
+                          const sig =
+                            c.p < 0.001 ? "***" : c.p < 0.01 ? "**" : c.p < 0.05 ? "*" : c.p < 0.1 ? "." : "";
+                          const pRow =
+                            c.p < 0.05 ? "bg-blue-50" : "";
+                          return (
+                            <tr key={c.name} className={pRow}>
+                              <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">{c.label}</td>
+                              <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
+                                {c.coef.toFixed(4)}
+                              </td>
+                              <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-slate-500">
+                                {c.se.toFixed(4)}
+                              </td>
+                              <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-slate-500">
+                                {c.t.toFixed(2)}
+                              </td>
+                              <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
+                                {c.p < 0.0001 ? "<0.0001" : c.p.toFixed(4)}
+                              </td>
+                              <td className="border border-slate-200 px-2 py-1 font-semibold text-blue-700 text-center w-10">
+                                {sig}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-[10px] text-slate-400">
+                    유의수준: *** p&lt;0.001 &nbsp;** p&lt;0.01 &nbsp;* p&lt;0.05 &nbsp;. p&lt;0.1 &nbsp;· p≥0.1
+                    {regResult.model_type === "log" && " · log 모델: 계수는 단가 log 기준 (e^coef ≈ 배율)"}
+                  </p>
+                </div>
               )}
             </div>
           )}

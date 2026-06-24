@@ -37,6 +37,8 @@ from app.schemas import (
     MatrixCell,
     MatrixCellHistogramRequest,
     MatrixCellHistogramResponse,
+    LandRegressionRequest,
+    LandRegressionResponse,
     MatrixCellTransactionItem,
     MatrixCellTransactionsRequest,
     MatrixCellTransactionsResponse,
@@ -1832,3 +1834,22 @@ def matrix_cell_transactions_export(
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.post(
+    "/matrix-cell-transactions/regression",
+    response_model=LandRegressionResponse,
+    summary="매트릭스 칸 토지 단가 헤도닉 OLS 회귀",
+)
+def matrix_cell_regression(
+    body: LandRegressionRequest, db: Session = Depends(get_db)
+):
+    """
+    해당 용도×지목 칸의 원거래를 표본으로 단가(만원/㎡) 헤도닉 OLS 회귀 분석.
+    - 종속변수: unit_price_per_sqm (log 또는 linear)
+    - 독립변수: 면적(log/linear), 도로조건 더미, 거래유형 더미, 지분 더미, 연도 추세, 법정동 FE
+    """
+    from app.land_regression import run_land_regression
+
+    filtered = _fetch_matrix_cell_filtered_transactions(body, db)
+    return run_land_regression(filtered, body)

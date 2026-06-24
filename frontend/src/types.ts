@@ -468,6 +468,46 @@ export interface TwinV8NeighborsResponse {
   neighbors: TwinV8NeighborItem[];
 }
 
+// ---------------------------------------------------------------------------
+// 토지 단가 회귀 분석
+// ---------------------------------------------------------------------------
+export interface LandRegressionVariables {
+  area_sqm: boolean;
+  log_area: boolean;
+  road_condition: boolean;
+  deal_type: boolean;
+  partial_ownership: boolean;
+  year_trend: boolean;
+  beopjungri_fe: boolean;
+}
+
+export interface LandRegressionRequest extends MatrixYearlyRequest {
+  variables: LandRegressionVariables;
+  model_type: "log" | "linear";
+  exclude_outliers_iqr: boolean;
+  outlier_iqr_multiplier: number;
+  min_n: number;
+}
+
+export interface LandRegressionCoeff {
+  name: string;
+  label: string;
+  coef: number;
+  se: number;
+  t: number;
+  p: number;
+}
+
+export interface LandRegressionResponse {
+  n: number;
+  model_type: "log" | "linear";
+  r_squared: number;
+  adj_r_squared: number;
+  coefficients: LandRegressionCoeff[];
+  reference_categories: Record<string, string>;
+  warnings: string[];
+}
+
 /** UI: v8 조회 앵커 (충청권 sigungu/eup/beopjungri) */
 export interface TwinV8Query {
   region_level: TwinV8RegionLevel;
