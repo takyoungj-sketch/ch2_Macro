@@ -64,7 +64,7 @@ fi
 
 echo "==> restart ch2-macro-backend"
 sudo systemctl restart ch2-macro-backend
-sleep 2
+sleep 5
 
 if systemctl is-active --quiet ch2-macro-backend; then
   echo "OK: ch2-macro-backend active"
@@ -74,9 +74,15 @@ else
   exit 1
 fi
 
-curl -sf "http://127.0.0.1:8000/health" | head -c 400 || {
-  echo "WARN: /health check failed"
-  exit 1
-}
-echo
+for i in 1 2 3 4 5; do
+  if curl -sf "http://127.0.0.1:8000/health" | head -c 400; then
+    echo
+    break
+  fi
+  if [[ "$i" -eq 5 ]]; then
+    echo "WARN: /health check failed" >&2
+    exit 1
+  fi
+  sleep 2
+done
 echo "OK: vps_apply_scope.sh $SCOPE complete"
