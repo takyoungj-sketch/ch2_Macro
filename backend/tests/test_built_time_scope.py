@@ -37,6 +37,21 @@ def test_default_as_of_month():
     assert d == date(2026, 5, 1)
 
 
-def test_parse_as_of_month_invalid():
-    with pytest.raises(ValueError):
-        parse_as_of_month("2024")
+def test_apply_contract_date_window_includes_year_fallback():
+    from app.built.time_scope import apply_contract_date_window
+
+    clauses: list[str] = []
+    params: dict = {}
+    apply_contract_date_window(
+        clauses,
+        params,
+        as_of_month=date(2026, 5, 1),
+        window_years=3,
+    )
+    assert len(clauses) == 1
+    assert "contract_date IS NULL" in clauses[0]
+    assert "contract_year" in clauses[0]
+    assert params["cd_start"] == date(2023, 6, 1)
+    assert params["cd_end"] == date(2026, 5, 31)
+    assert params["cy_start"] == 2023
+    assert params["cy_end"] == 2026

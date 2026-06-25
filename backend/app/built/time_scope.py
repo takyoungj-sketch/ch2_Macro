@@ -69,7 +69,13 @@ def apply_contract_date_window(
         return
     start, end = period_bounds_for_window(as_of_month, window_years)
     p = f"{col_prefix}." if col_prefix else ""
-    clauses.append(f"{p}contract_date >= :cd_start")
-    clauses.append(f"{p}contract_date <= :cd_end")
+    # contract_date 미적재 원장(Phase A ingest) — contract_year 로 롤링 창 근사
+    clauses.append(
+        f"(({p}contract_date >= :cd_start AND {p}contract_date <= :cd_end)"
+        f" OR ({p}contract_date IS NULL AND {p}contract_year >= :cy_start"
+        f" AND {p}contract_year <= :cy_end))"
+    )
     params["cd_start"] = start
     params["cd_end"] = end
+    params["cy_start"] = start.year
+    params["cy_end"] = end.year
