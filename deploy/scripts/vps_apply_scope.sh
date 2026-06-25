@@ -24,7 +24,7 @@ build_app() {
     echo "SKIP: $app (no package.json)"
     return 0
   fi
-  Write-Host "==> build $app"
+  echo "==> build $app"
   echo "VITE_API_TOKEN=$TOKEN" > "$dir/.env"
   chmod 600 "$dir/.env"
   cd "$dir"
