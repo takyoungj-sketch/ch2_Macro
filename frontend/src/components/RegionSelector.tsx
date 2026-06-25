@@ -104,7 +104,7 @@ export default function RegionSelector() {
   const listRef = useRef<HTMLUListElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const { data: regions = [], isLoading: catalogLoading } = useQuery({
+  const { data: regions = [], isLoading: catalogLoading, isError: catalogError } = useQuery({
     queryKey: REGIONS_CATALOG_QUERY_KEY,
     queryFn: () => fetchRegions(),
     staleTime: 6 * 60 * 60 * 1000,
@@ -125,7 +125,7 @@ export default function RegionSelector() {
   const apiSearchEnabled =
     debouncedSearch.length >= 2 && !isLooseMultiSegmentQuery(debouncedSearch);
 
-  const { data: searchHits = [], isFetching: searchFetching } = useQuery({
+  const { data: searchHits = [], isFetching: searchFetching, isError: searchError } = useQuery({
     queryKey: ["regions", "search", debouncedSearch],
     queryFn: () =>
       fetchRegions({ search: debouncedSearch, limit: 400 }),
@@ -678,7 +678,12 @@ export default function RegionSelector() {
                 {(searchFetching || catalogLoading) && (
                   <p className="text-[10px] text-slate-400 py-1">검색 중…</p>
                 )}
-                {!searchFetching && searchHits.length === 0 && (
+                {(searchError || catalogError) && !searchFetching && !catalogLoading && (
+                  <p className="text-[10px] text-red-500 py-1">
+                    지역 API에 연결하지 못했습니다. 백엔드(포트 8000) 실행 여부를 확인하세요.
+                  </p>
+                )}
+                {!searchError && !searchFetching && searchHits.length === 0 && (
                   <p className="text-[10px] text-slate-500 py-1">일치 결과가 없습니다.</p>
                 )}
                 {!searchFetching && searchHits.length > 0 && flatSuggestions.length === 0 && (

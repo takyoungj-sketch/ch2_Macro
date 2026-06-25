@@ -24,10 +24,13 @@ build_app() {
     echo "SKIP: $app (no package.json)"
     return 0
   fi
-  echo "==> build $app"
+  Write-Host "==> build $app"
   echo "VITE_API_TOKEN=$TOKEN" > "$dir/.env"
   chmod 600 "$dir/.env"
   cd "$dir"
+  if [[ -f package-lock.json ]]; then
+    npm ci --silent
+  fi
   npm run build
 }
 

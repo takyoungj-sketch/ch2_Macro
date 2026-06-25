@@ -21,6 +21,15 @@ TX_SELECT = """
 """
 
 
+def tx_row_dict(row: Any) -> dict[str, Any]:
+    """SQLAlchemy Row → CollectiveTransactionRow kwargs (contract_date ISO)."""
+    d = dict(row)
+    cd = d.get("contract_date")
+    if cd is not None and hasattr(cd, "isoformat"):
+        d["contract_date"] = cd.isoformat()
+    return d
+
+
 def format_contract_date_csv(row: dict[str, Any]) -> str:
     cd = row.get("contract_date")
     if cd is not None:

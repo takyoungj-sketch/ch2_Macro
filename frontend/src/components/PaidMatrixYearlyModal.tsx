@@ -14,6 +14,7 @@ import type {
   LandRegressionCoeff,
   LongTermTrendPoint,
   LongTermTrendResponse,
+  LongTermTrendSeries,
   MatrixCellHistogramRequest,
   MatrixCellHistogramResponse,
   MatrixCellTransactionsResponse,
@@ -27,6 +28,7 @@ import { resolveLongTermTargetsForFetch } from "../utils/longTermTargets";
 import { useAppStore } from "../store";
 import MatrixCellHistogramChart from "./MatrixCellHistogramChart";
 import MatrixYearlyTrendChart from "./MatrixYearlyTrendChart";
+import MultiRegionTrendChart, { type TrendSeries } from "./MultiRegionTrendChart";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import { buildLongTermTrendExplain } from "../constants/longTermTrendExplain";
 import {
@@ -113,6 +115,23 @@ function ltPointsToChartRows(
       mean_unit_price_per_sqm:
         metric === "median" ? (p.median ?? null) : (p.mean ?? null),
     }));
+}
+
+function longTermSeriesToTrendSeries(
+  series: LongTermTrendSeries[],
+  metric: LtPriceMetric,
+): TrendSeries[] {
+  return series.map((s) => ({
+    label: s.region_name,
+    points: [...s.points]
+      .sort((a, b) => a.year - b.year)
+      .map((p) => ({
+        xLabel: String(p.year),
+        xOrder: p.year,
+        count: p.count,
+        value: metric === "median" ? (p.median ?? null) : (p.mean ?? null),
+      })),
+  }));
 }
 
 const TX_PAGE = 25;
@@ -638,7 +657,25 @@ export default function PaidMatrixYearlyModal({
               )}
               {!ltLoading &&
                 !ltError &&
-                ltData?.series.map((s) => {
+                ltData &&
+                ltData.series.length >= 2 && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-2 py-1">
+                      {ltData.series.length}개 지역 비교 · {ltData.year_from}–{ltData.year_to} · {ltPriceLabel}
+                    </p>
+                    <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3 overflow-x-auto">
+                      <p className="text-[10px] font-semibold text-slate-600 px-1 mb-2">연도별 추이 (꺾은선)</p>
+                      <MultiRegionTrendChart
+                        series={longTermSeriesToTrendSeries(ltData.series, ltMetric)}
+                        metricLabel={`${ltPriceLabel}(만원/㎡)`}
+                      />
+                    </div>
+                  </div>
+                )}
+              {!ltLoading &&
+                !ltError &&
+                ltData?.series.length === 1 &&
+                ltData.series.map((s) => {
                   const chartRows = ltPointsToChartRows(s.points, ltMetric);
                   if (chartRows.length === 0) return null;
                   return (

@@ -37,6 +37,7 @@ from app.collective.transaction_export import (
     TX_SELECT,
     export_filename,
     transactions_csv_bytes,
+    tx_row_dict,
     csv_attachment_response,
 )
 from app.collective.region_structure import detect_region_structure
@@ -336,14 +337,6 @@ def _get_building_meta(db: Session, building_key: str) -> tuple[str, str]:
     return row["display_name"], row["asset_type"]
 
 
-def _tx_row_dict(r) -> dict:
-    d = dict(r)
-    cd = d.get("contract_date")
-    if cd is not None and hasattr(cd, "isoformat"):
-        d["contract_date"] = cd.isoformat()
-    return d
-
-
 @router.get("/buildings/{building_key}/transactions", response_model=TransactionListResponse)
 def building_transactions(
     building_key: str,
@@ -383,7 +376,7 @@ def building_transactions(
         ),
         params,
     ).mappings().all()
-    items = [CollectiveTransactionRow(**_tx_row_dict(r)) for r in rows]
+    items = [CollectiveTransactionRow(**tx_row_dict(r)) for r in rows]
     return TransactionListResponse(total=int(total or 0), items=items)
 
 

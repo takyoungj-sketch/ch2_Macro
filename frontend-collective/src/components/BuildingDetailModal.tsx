@@ -72,45 +72,45 @@ function TransactionTable({
 }) {
   const col = dongLabel(assetType);
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-100">
+    <div className="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-700">
       <table className="w-full text-[11px] border-collapse min-w-[640px]">
         <thead>
-          <tr className="bg-slate-50 text-slate-600">
+          <tr className="bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
             {showBuilding && (
-              <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">단지</th>
+              <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-left font-medium">단지</th>
             )}
-            <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">계약일</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">{col}</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">층</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">면적(㎡)</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">금액(만원)</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-right font-bold text-blue-700">단가</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">매수</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">매도</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">거래유형</th>
+            <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-left font-medium">계약일</th>
+            <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-left font-medium">{col}</th>
+            <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-right font-medium">층</th>
+            <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-right font-medium">면적(㎡)</th>
+            <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-right font-medium">금액(만원)</th>
+            <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-right font-bold text-blue-700 dark:text-blue-400">단가</th>
+            <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-left font-medium">매수</th>
+            <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-left font-medium">매도</th>
+            <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-left font-medium">거래유형</th>
           </tr>
         </thead>
-        <tbody className="text-slate-800">
+        <tbody className="text-slate-800 dark:text-slate-200">
           {items.map((t) => (
             <tr key={t.id}>
               {showBuilding && (
-                <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">{t.display_name ?? "—"}</td>
+                <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 whitespace-nowrap">{t.display_name ?? "—"}</td>
               )}
-              <td className="border border-slate-200 px-2 py-1 tabular-nums whitespace-nowrap">
+              <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 tabular-nums whitespace-nowrap">
                 {fmtContractDate(t)}
               </td>
-              <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">{dongCell(t, assetType)}</td>
-              <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">{t.floor ?? "—"}</td>
-              <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
+              <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 whitespace-nowrap">{dongCell(t, assetType)}</td>
+              <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 text-right tabular-nums">{t.floor ?? "—"}</td>
+              <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 text-right tabular-nums">
                 {fmtPrice(t.exclusive_area)}
               </td>
-              <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">{fmtPrice(t.price)}</td>
-              <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-blue-600 font-semibold">
+              <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 text-right tabular-nums">{fmtPrice(t.price)}</td>
+              <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 text-right tabular-nums text-blue-600 dark:text-blue-400 font-semibold">
                 {fmtPrice(t.unit_price)}
               </td>
-              <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">{t.buyer_type ?? "—"}</td>
-              <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">{t.seller_type ?? "—"}</td>
-              <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">{t.deal_type ?? "—"}</td>
+              <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 whitespace-nowrap">{t.buyer_type ?? "—"}</td>
+              <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 whitespace-nowrap">{t.seller_type ?? "—"}</td>
+              <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 whitespace-nowrap">{t.deal_type ?? "—"}</td>
             </tr>
           ))}
         </tbody>
@@ -796,7 +796,7 @@ export default function BuildingDetailModal({
                         type="button"
                         disabled={txPage <= 1}
                         onClick={() => setTxPage((p) => Math.max(1, p - 1))}
-                        className="px-2 py-1 rounded border border-slate-200 text-slate-600 disabled:opacity-40 hover:bg-slate-50"
+                        className="px-2 py-1 rounded border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700"
                       >
                         이전
                       </button>
@@ -804,7 +804,7 @@ export default function BuildingDetailModal({
                         type="button"
                         disabled={txOffset + TX_PAGE >= cohortTxQ.data.total}
                         onClick={() => setTxPage((p) => p + 1)}
-                        className="px-2 py-1 rounded border border-slate-200 text-slate-600 disabled:opacity-40 hover:bg-slate-50"
+                        className="px-2 py-1 rounded border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700"
                       >
                         다음
                       </button>
@@ -817,8 +817,8 @@ export default function BuildingDetailModal({
               {!txCohortActive && txQ.data && (
                 <>
                   <div className="flex flex-wrap items-start justify-between gap-2">
-                    <p className="text-[10px] text-slate-500">
-                      전체 <strong className="text-slate-700">{txQ.data.total.toLocaleString("ko-KR")}</strong>건
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                      전체 <strong className="text-slate-700 dark:text-slate-200">{txQ.data.total.toLocaleString("ko-KR")}</strong>건
                       {yearFrom != null || yearTo != null ? (
                         <span>
                           {" "}
@@ -845,7 +845,7 @@ export default function BuildingDetailModal({
                         type="button"
                         disabled={txPage <= 1}
                         onClick={() => setTxPage((p) => Math.max(1, p - 1))}
-                        className="px-2 py-1 rounded border border-slate-200 text-slate-600 disabled:opacity-40 hover:bg-slate-50"
+                        className="px-2 py-1 rounded border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700"
                       >
                         이전
                       </button>
@@ -853,7 +853,7 @@ export default function BuildingDetailModal({
                         type="button"
                         disabled={txOffset + TX_PAGE >= txQ.data.total}
                         onClick={() => setTxPage((p) => p + 1)}
-                        className="px-2 py-1 rounded border border-slate-200 text-slate-600 disabled:opacity-40 hover:bg-slate-50"
+                        className="px-2 py-1 rounded border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700"
                       >
                         다음
                       </button>

@@ -24,6 +24,7 @@ from app.collective.transaction_export import (
     TX_SELECT,
     export_filename,
     transactions_csv_bytes,
+    tx_row_dict,
     csv_attachment_response,
 )
 from app.collective.schemas import (
@@ -256,7 +257,7 @@ def cohort_transactions(body: CohortTransactionsRequest, db: Session = Depends(g
         ),
         params,
     ).mappings().all()
-    items = [CollectiveTransactionRow(**_tx_row_dict(r)) for r in rows]
+    items = [CollectiveTransactionRow(**tx_row_dict(r)) for r in rows]
     return CohortTransactionsResponse(building_keys=keys, total=int(total or 0), items=items)
 
 

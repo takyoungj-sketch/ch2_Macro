@@ -57,7 +57,7 @@ try {
       Invoke-Scp @("frontend-built/src") "frontend-built/"
     }
     "land" {
-      Invoke-Scp @("backend/app/routers", "backend/app/models.py", "backend/app/schemas.py", "backend/app/main.py", "backend/app/config.py", "backend/app/db.py", "backend/app/stats_utils.py") "backend/app/"
+      Invoke-Scp @("backend/app") "backend/"
       Invoke-Scp @("frontend/src") "frontend/"
     }
     "collective" {
@@ -69,7 +69,7 @@ try {
       Invoke-Scp @("frontend/src") "frontend/"
       Invoke-Scp @("frontend-built/src") "frontend-built/"
       Invoke-Scp @("frontend-collective/src") "frontend-collective/"
-      Invoke-Scp @("deploy/macro-gateway", "deploy/hub") "deploy/"
+      Invoke-Scp @("deploy/macro-gateway", "deploy/hub", "deploy/scripts") "deploy/"
     }
   }
 
@@ -78,6 +78,34 @@ try {
   if ($LASTEXITCODE -ne 0) { throw "remote vps_apply_scope failed" }
 
   if (-not $SkipVerify) {
+    Write-Host "==> verify production (health + land + built + collective)"
+    & ssh -i $Key $VpsHost @'
+bash -s <<'VERIFY'
+set -euo pipefail
+ENV=/opt/ch2_Macro/backend/.env
+TOKEN=$(grep '^API_TOKEN=' "$ENV" | cut -d= -f2- | tr -d '\r')
+HDR=(-H "X-Api-Token: $TOKEN")
+
+echo "==> health"
+curl -sf http://127.0.0.1:8000/health | head -c 200
+echo
+
+echo "==> land regions search"
+N=$(curl -sf "${HDR[@]}" "http://127.0.0.1:8000/api/free/v2/regions?search=%EA%B0%80%EA%B2%BD%EB%8F%99&limit=5" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d) if isinstance(d,list) else len(d.get('items',[])))")
+if [[ "$N" -lt 1 ]]; then echo "FAIL: land regions search"; exit 1; fi
+echo "land hits: $N"
+
+echo "==> collective meta/filters"
+curl -sf "${HDR[@]}" http://127.0.0.1:8000/api/collective/meta/filters | head -c 120
+echo
+
+echo "==> collective commercial meta/filters"
+curl -sf "${HDR[@]}" http://127.0.0.1:8000/api/collective/commercial/meta/filters | head -c 120
+echo
+VERIFY
+'@
+    if ($LASTEXITCODE -ne 0) { throw "VPS smoke verify failed" }
+
     Write-Host "==> verify production built regression (gu vs dong)"
     python -c @"
 import json, urllib.request, ssl
