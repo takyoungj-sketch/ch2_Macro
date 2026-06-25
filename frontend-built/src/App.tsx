@@ -504,10 +504,10 @@ function PredictPanel({
               value={inputs.region_leaf ?? ""}
               onChange={(e) => setInputs((prev) => ({ ...prev, region_leaf: e.target.value }))}
             >
-              {opts!.region_leaves.map((u) => (
+              {(opts?.region_leaves ?? []).map((u) => (
                 <option key={u} value={u}>
                   {u}
-                  {u === opts!.region_reference ? " (기준)" : ""}
+                  {u === opts?.region_reference ? " (기준)" : ""}
                 </option>
               ))}
             </select>
