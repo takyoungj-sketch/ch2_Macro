@@ -70,9 +70,9 @@ try {
     "all" {
       Invoke-Scp @("backend/app") "backend/"
       Invoke-Scp @("shared") "."
-      Invoke-Scp @("frontend/src") "frontend/"
-      Invoke-Scp @("frontend-built/src") "frontend-built/"
-      Invoke-Scp @("frontend-collective/src") "frontend-collective/"
+      Invoke-Scp @("frontend/tsconfig.json", "frontend/vite.config.ts", "frontend/src") "frontend/"
+      Invoke-Scp @("frontend-built/tsconfig.json", "frontend-built/vite.config.ts", "frontend-built/src") "frontend-built/"
+      Invoke-Scp @("frontend-collective/tsconfig.json", "frontend-collective/vite.config.ts", "frontend-collective/src") "frontend-collective/"
       Invoke-Scp @("deploy/macro-gateway", "deploy/hub", "deploy/scripts") "deploy/"
     }
   }

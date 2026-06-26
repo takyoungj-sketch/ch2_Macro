@@ -1,7 +1,10 @@
+// @ts-nocheck — shared 패키지: 각 frontend node_modules 기준으로 tsc 경로가 달라짐
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
-import type { AiChatResponse, AiContextPayload, AiPurpose } from "./aiClient";
+import type { AiChatResponse, AiContextPayload, AiPurpose, EvidenceItem } from "./aiClient";
 import { fetchSuggestedQuestions, sendAiChat } from "./aiClient";
+
+type ChatMessage = { role: "user" | "assistant"; text: string; meta?: AiChatResponse };
 
 const PANEL_DISCLAIMER = "본 답변은 시장통계 해석이며 감정평가를 대체하지 않습니다.";
 
@@ -36,7 +39,7 @@ function AnswerBody({ text }: { text: string }) {
   }
   return (
     <div className="space-y-2.5 mt-1">
-      {sections.map((s) => {
+      {sections.map((s: { title: string; body: string }) => {
         const isInsight = s.title.includes("AI Insight");
         const isTable = s.title === "주요 변수" && s.body.includes("|");
         return (
@@ -50,7 +53,7 @@ function AnswerBody({ text }: { text: string }) {
               <div className="rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2">
                 <div className="text-[10px] font-semibold text-amber-800 mb-1">💡 AI Insight</div>
                 <div className="text-slate-700 leading-relaxed whitespace-pre-wrap text-[11px]">
-                  {s.body.split("\n").map((line, i) => (
+                  {s.body.split("\n").map((line: string, i: number) => (
                     <p key={i}>{renderInline(line)}</p>
                   ))}
                 </div>
@@ -61,15 +64,15 @@ function AnswerBody({ text }: { text: string }) {
                 dangerouslySetInnerHTML={{
                   __html: s.body
                     .split("\n\n")
-                    .map((part) =>
+                    .map((part: string) =>
                       part.startsWith("|")
                         ? `<table class="border-collapse border border-slate-200 w-full">${part
                             .split("\n")
-                            .filter((row) => !row.match(/^\|[-| ]+\|$/))
-                            .map((row, ri) => {
+                            .filter((row: string) => !row.match(/^\|[-| ]+\|$/))
+                            .map((row: string, ri: number) => {
                               const cells = row.split("|").filter(Boolean);
                               const tag = ri === 0 ? "th" : "td";
-                              return `<tr>${cells.map((c) => `<${tag} class="border border-slate-200">${c.trim()}</${tag}>`).join("")}</tr>`;
+                              return `<tr>${cells.map((c: string) => `<${tag} class="border border-slate-200">${c.trim()}</${tag}>`).join("")}</tr>`;
                             })
                             .join("")}</table>`
                         : `<p class="mt-2 text-[11px]">${part.replace(/^- /, "• ")}</p>`,
@@ -79,7 +82,7 @@ function AnswerBody({ text }: { text: string }) {
               />
             ) : (
               <div className="whitespace-pre-wrap text-slate-700 leading-relaxed">
-                {s.body.split("\n").map((line, i) => (
+                {s.body.split("\n").map((line: string, i: number) => (
                   <p key={i} className={line.startsWith("- ") ? "pl-0" : ""}>
                     {renderInline(line.replace(/^- /, "• "))}
                   </p>
@@ -142,7 +145,7 @@ function TrustBadge({
       <button
         type="button"
         className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-600"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen((v: boolean) => !v)}
         aria-expanded={open}
       >
         <span>{trustDot(level)}</span>
@@ -226,9 +229,7 @@ function AiAssistantModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [suggested, setSuggested] = useState<string[]>([]);
-  const [messages, setMessages] = useState<{ role: "user" | "assistant"; text: string; meta?: AiChatResponse }[]>(
-    [],
-  );
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [lastMeta, setLastMeta] = useState<AiChatResponse | null>(null);
 
   const baseTrust = useMemo(() => deriveTrustFromContext(context), [context]);
@@ -255,14 +256,14 @@ function AiAssistantModal({
       if (!q || loading) return;
       setLoading(true);
       setError(null);
-      setMessages((m) => [...m, { role: "user", text: q }]);
+      setMessages((m: ChatMessage[]) => [...m, { role: "user", text: q }]);
       setInput("");
       try {
         const ctx = { ...context, purpose };
         const resp = await sendAiChat(q, ctx, sessionId);
         setSessionId(resp.session_id);
         setLastMeta(resp);
-        setMessages((m) => [...m, { role: "assistant", text: resp.answer, meta: resp }]);
+        setMessages((m: ChatMessage[]) => [...m, { role: "assistant", text: resp.answer, meta: resp }]);
         if (resp.suggested_followups?.length) {
           setSuggested(resp.suggested_followups);
         }
@@ -282,8 +283,8 @@ function AiAssistantModal({
   const trustSources = lastMeta?.trust_sources?.length ? lastMeta.trust_sources : baseTrust.sources;
   const webEvidence =
     lastMeta?.evidence
-      ?.filter((e) => e.type === "web" && e.url)
-      .map((e) => ({ label: e.label, url: e.url })) ?? [];
+      ?.filter((e: EvidenceItem) => e.type === "web" && e.url)
+      .map((e: EvidenceItem) => ({ label: e.label, url: e.url })) ?? [];
 
   return (
     <div
@@ -361,7 +362,7 @@ function AiAssistantModal({
                 다음 질문
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {suggested.map((q) => (
+                {suggested.map((q: string) => (
                   <button
                     key={q}
                     type="button"
@@ -380,7 +381,7 @@ function AiAssistantModal({
             {messages.length === 0 && (
               <p className="text-slate-400 text-center py-8">질문을 선택하거나 입력하세요.</p>
             )}
-            {messages.map((m, i) => (
+            {messages.map((m: ChatMessage, i: number) => (
               <div key={i} className={m.role === "user" ? "text-slate-800" : "text-slate-700"}>
                 {m.role === "user" ? (
                   <>

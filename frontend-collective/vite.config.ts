@@ -8,6 +8,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "@ch2/ai-assistant": path.resolve(__dirname, "../shared/ai-assistant"),
+      clsx: path.resolve(__dirname, "node_modules/clsx"),
+      axios: path.resolve(__dirname, "node_modules/axios"),
     },
   },
   server: {

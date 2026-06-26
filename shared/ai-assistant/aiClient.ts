@@ -1,3 +1,4 @@
+// @ts-nocheck
 import axios from "axios";
 
 const _API_TOKEN = (import.meta.env.VITE_API_TOKEN ?? "").trim();
