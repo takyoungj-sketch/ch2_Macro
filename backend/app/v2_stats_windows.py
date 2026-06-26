@@ -55,3 +55,29 @@ def period_bounds_for_window(as_of_month: date, window_years: int) -> tuple[date
     anchor = _anchor_n_calendar_years_before(period_end, window_years)
     period_start = anchor + timedelta(days=1)
     return period_start, period_end
+
+
+def _bucket_range_closed_ending(bucket_end: date) -> tuple[date, date]:
+    """12개월 버킷 [start, end] — end 포함, start는 anchor+1일."""
+    anchor = _anchor_n_calendar_years_before(bucket_end, 1)
+    start = anchor + timedelta(days=1)
+    return start, bucket_end
+
+
+def iter_rolling_year_buckets_old_first(
+    period_end: date, bucket_count: int
+) -> list[tuple[date, date, int]]:
+    """과거→최근 12개월 버킷 (bucket_index 1..N). pipeline/build_collective_building_rolling_stats 와 동일."""
+    if bucket_count < 1:
+        return []
+    ends: list[date] = []
+    cur = period_end
+    ends.append(cur)
+    for _ in range(1, bucket_count):
+        cur = _anchor_n_calendar_years_before(cur, 1)
+        ends.append(cur)
+    ends.reverse()
+    return [
+        (*_bucket_range_closed_ending(e), idx + 1)
+        for idx, e in enumerate(ends)
+    ]

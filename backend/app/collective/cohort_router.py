@@ -21,9 +21,9 @@ from app.collective.floor_index_regression import compute_residential_floor_inde
 from app.collective.regression.engine import predict_regression, run_cohort_regression
 from app.collective.transaction_export import (
     MAX_COLLECTIVE_TX_EXPORT,
-    TX_SELECT,
     export_filename,
     transactions_csv_bytes,
+    tx_list_select_sql,
     tx_row_dict,
     csv_attachment_response,
 )
@@ -242,14 +242,11 @@ def cohort_transactions(body: CohortTransactionsRequest, db: Session = Depends(g
     where = " AND ".join(clauses)
     total = db.execute(text(f"SELECT COUNT(*) FROM collective_transactions WHERE {where}"), params).scalar()
     params.update({"limit": body.page_size, "offset": (body.page - 1) * body.page_size})
+    tx_select = tx_list_select_sql(db.connection())
     rows = db.execute(
         text(
             f"""
-            SELECT id, asset_type, building_key, display_name,
-                   addr1, addr2, addr3, contract_year, contract_month, contract_date,
-                   exclusive_area, land_area, price, unit_price, floor, dong, housing_subtype, building_age,
-                   buyer_type, seller_type, deal_type, road_name
-            FROM collective_transactions
+            {tx_select}
             WHERE {where}
             ORDER BY contract_date DESC NULLS LAST, contract_year DESC NULLS LAST, display_name, id DESC
             LIMIT :limit OFFSET :offset
@@ -288,7 +285,7 @@ def cohort_transactions_export(body: CohortAnalysisRequest, db: Session = Depend
     rows = db.execute(
         text(
             f"""
-            {TX_SELECT}
+            {tx_list_select_sql(db.connection())}
             WHERE {where}
             ORDER BY contract_date DESC NULLS LAST, contract_year DESC NULLS LAST, display_name, id DESC
             """

@@ -8,9 +8,35 @@ import re
 from datetime import date, datetime, timezone
 from typing import Any
 
+from sqlalchemy import text
+from sqlalchemy.engine import Connection
 from starlette.responses import Response
 
 MAX_COLLECTIVE_TX_EXPORT = 50_000
+
+TX_LIST_BASE_COLUMNS = (
+    "id",
+    "asset_type",
+    "building_key",
+    "display_name",
+    "addr1",
+    "addr2",
+    "addr3",
+    "contract_year",
+    "contract_month",
+    "contract_date",
+    "exclusive_area",
+    "land_area",
+    "price",
+    "unit_price",
+    "floor",
+    "dong",
+    "housing_subtype",
+    "building_age",
+    "road_name",
+)
+
+TX_LIST_OPTIONAL_COLUMNS = ("buyer_type", "seller_type", "deal_type")
 
 TX_SELECT = """
     SELECT id, asset_type, building_key, display_name,
@@ -19,6 +45,28 @@ TX_SELECT = """
            buyer_type, seller_type, deal_type
     FROM collective_transactions
 """
+
+
+def tx_list_columns(conn: Connection) -> tuple[str, ...]:
+    rows = conn.execute(
+        text(
+            """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'collective_transactions'
+            """
+        )
+    ).fetchall()
+    existing = {str(r[0]) for r in rows}
+    cols = [c for c in TX_LIST_BASE_COLUMNS if c in existing]
+    cols.extend(c for c in TX_LIST_OPTIONAL_COLUMNS if c in existing)
+    return tuple(cols)
+
+
+def tx_list_select_sql(conn: Connection) -> str:
+    cols = tx_list_columns(conn)
+    return f"SELECT {', '.join(cols)} FROM collective_transactions"
 
 
 def tx_row_dict(row: Any) -> dict[str, Any]:

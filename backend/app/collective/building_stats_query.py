@@ -13,7 +13,11 @@ from app.collective.analysis_gates import count_recent_transactions, evaluate_an
 from app.collective.filters import apply_region_filters
 from app.collective.schemas import AnalysisFeatures, BuildingStatsRow
 from app.stats_utils import compute_stats
-from app.v2_stats_windows import period_bounds_for_window
+from app.v2_stats_windows import (
+    default_as_of_month_for_service,
+    iter_rolling_year_buckets_old_first,
+    period_bounds_for_window,
+)
 
 ASSET_TYPE_ORDER = ("apartment", "rowhouse", "officetel", "presale")
 
@@ -331,6 +335,69 @@ def building_yearly_from_mart(
     return display_name, points, "mart"
 
 
+def building_yearly_live(
+    conn: Connection,
+    building_key: str,
+) -> tuple[str, list[dict], str] | None:
+    rows = conn.execute(
+        text(
+            """
+            SELECT MAX(display_name) AS display_name,
+                   contract_year AS year,
+                   COUNT(*)::int AS count,
+                   AVG(unit_price)::float AS mean
+            FROM collective_transactions
+            WHERE building_key = :bk
+              AND is_valid = true
+              AND unit_price IS NOT NULL
+              AND unit_price > 0
+              AND contract_year IS NOT NULL
+            GROUP BY contract_year
+            ORDER BY contract_year
+            """
+        ),
+        {"bk": building_key},
+    ).mappings().all()
+    if not rows:
+        return None
+    display_name = rows[0]["display_name"] or ""
+    points = [
+        {
+            "year": int(r["year"]),
+            "count": int(r["count"] or 0),
+            "mean": round(float(r["mean"]), 1) if r["mean"] is not None else None,
+        }
+        for r in rows
+    ]
+    return display_name, points, "live"
+
+
+def building_yearly_resolved(
+    conn: Connection,
+    building_key: str,
+) -> tuple[str, list[dict], str] | None:
+    """장기추세 — annual mart(장기 ingest 포함) + live 연도 보강."""
+    mart = building_yearly_from_mart(conn, building_key)
+    live = building_yearly_live(conn, building_key)
+    if mart is None and live is None:
+        return None
+    if mart is None:
+        return live
+    if live is None:
+        return mart
+
+    display_name = mart[0] or live[0]
+    by_year: dict[int, dict] = {int(p["year"]): p for p in mart[1]}
+    for p in live[1]:
+        yr = int(p["year"])
+        if yr not in by_year:
+            by_year[yr] = p
+    points = [by_year[y] for y in sorted(by_year)]
+    mart_years = {int(p["year"]) for p in mart[1]}
+    source: str = "mart" if all(int(p["year"]) in mart_years for p in points) else "live"
+    return display_name, points, source
+
+
 def list_buildings_live(
     conn: Connection,
     where: str,
@@ -426,3 +493,74 @@ def building_rolling_from_mart(
         for r in rows
     ]
     return display_name, points, "mart"
+
+
+def building_rolling_live(
+    conn: Connection,
+    building_key: str,
+    *,
+    window_years: int,
+    as_of_month: date | None = None,
+) -> tuple[str, list[dict], str] | None:
+    """mart 미적재 시 collective_transactions에서 12개월 버킷 live 집계."""
+    as_of = as_of_month
+    if as_of is None:
+        as_of, _ = latest_mart_snapshot(conn)
+    if as_of is None:
+        as_of = default_as_of_month_for_service()
+
+    _, period_end = period_bounds_for_window(as_of, window_years)
+    buckets = iter_rolling_year_buckets_old_first(period_end, window_years)
+
+    meta = conn.execute(
+        text(
+            """
+            SELECT MAX(display_name) AS display_name
+            FROM collective_transactions
+            WHERE building_key = :bk AND is_valid = true
+            """
+        ),
+        {"bk": building_key},
+    ).mappings().first()
+    if not meta:
+        return None
+    display_name = meta["display_name"] or ""
+
+    points: list[dict] = []
+    for ps, pe, bidx in buckets:
+        row = conn.execute(
+            text(
+                """
+                SELECT array_agg(unit_price ORDER BY unit_price) AS prices
+                FROM collective_transactions
+                WHERE building_key = :bk
+                  AND is_valid = true
+                  AND unit_price IS NOT NULL
+                  AND unit_price > 0
+                  AND contract_date IS NOT NULL
+                  AND contract_date >= :ps
+                  AND contract_date <= :pe
+                """
+            ),
+            {"bk": building_key, "ps": ps, "pe": pe},
+        ).mappings().first()
+        prices_raw = (row or {}).get("prices") or []
+        prices = [float(x) for x in prices_raw if x is not None]
+        if not prices:
+            continue
+        st = compute_stats(prices)
+        if st["count"] <= 0:
+            continue
+        points.append(
+            {
+                "bucket_index": bidx,
+                "period_start": ps.isoformat(),
+                "period_end": pe.isoformat(),
+                "label": _rolling_bucket_label(ps, pe),
+                "count": st["count"],
+                "mean": round(float(st["mean"]), 1) if st["mean"] is not None else None,
+            }
+        )
+    if not points:
+        return None
+    return display_name, points, "live"

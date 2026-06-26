@@ -18,7 +18,9 @@ from app.collective.analysis_explain import (
 from app.collective.analysis_gates import count_recent_transactions, evaluate_analysis_gates
 from app.collective.building_stats_query import (
     building_rolling_from_mart,
+    building_rolling_live,
     building_yearly_from_mart,
+    building_yearly_resolved,
     latest_mart_snapshot,
     list_buildings_from_mart,
     list_buildings_live,
@@ -34,9 +36,9 @@ from app.collective.floor_index_regression import compute_residential_floor_inde
 from app.collective.regression.engine import predict_regression, run_building_regression
 from app.collective.transaction_export import (
     MAX_COLLECTIVE_TX_EXPORT,
-    TX_SELECT,
     export_filename,
     transactions_csv_bytes,
+    tx_list_select_sql,
     tx_row_dict,
     csv_attachment_response,
 )
@@ -361,14 +363,11 @@ def building_transactions(
     where = " AND ".join(clauses)
     total = db.execute(text(f"SELECT COUNT(*) FROM collective_transactions WHERE {where}"), params).scalar()
     params.update({"limit": page_size, "offset": (page - 1) * page_size})
+    tx_select = tx_list_select_sql(db.connection())
     rows = db.execute(
         text(
             f"""
-            SELECT id, asset_type, building_key, display_name,
-                   addr1, addr2, addr3, contract_year, contract_month, contract_date,
-                   exclusive_area, land_area, price, unit_price, floor, dong, housing_subtype, building_age,
-                   buyer_type, seller_type, deal_type, road_name
-            FROM collective_transactions
+            {tx_select}
             WHERE {where}
             ORDER BY contract_date DESC NULLS LAST, contract_year DESC NULLS LAST, id DESC
             LIMIT :limit OFFSET :offset
@@ -414,7 +413,7 @@ def building_transactions_export(
     rows = db.execute(
         text(
             f"""
-            {TX_SELECT}
+            {tx_list_select_sql(db.connection())}
             WHERE {where}
             ORDER BY contract_date DESC NULLS LAST, contract_year DESC NULLS LAST, id DESC
             """
@@ -439,6 +438,20 @@ def building_stats_rolling(
     )
     if mart is not None:
         display_name, points, data_source = mart
+        return RollingStatsResponse(
+            building_key=building_key,
+            display_name=display_name,
+            window_years=window_years,
+            as_of_month=as_of_month.isoformat() if as_of_month else None,
+            points=[RollingStatPoint(**p) for p in points],
+            data_source=data_source,
+        )
+
+    live = building_rolling_live(
+        conn, building_key, window_years=window_years, as_of_month=as_of_month
+    )
+    if live is not None:
+        display_name, points, data_source = live
         return RollingStatsResponse(
             building_key=building_key,
             display_name=display_name,
@@ -506,9 +519,9 @@ def building_stats_by_year(
         )
 
     conn = db.connection()
-    mart = building_yearly_from_mart(conn, building_key)
-    if mart is not None:
-        display_name, points, data_source = mart
+    resolved = building_yearly_resolved(conn, building_key)
+    if resolved is not None:
+        display_name, points, data_source = resolved
         return YearlyStatsResponse(
             building_key=building_key,
             display_name=display_name,
