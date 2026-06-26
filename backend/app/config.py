@@ -50,6 +50,16 @@ class Settings(BaseSettings):
         description="통계 기준일 가정(STATS_V2_ASSUMED_TODAY)",
     )
 
+    #: CH2 AI — OpenAI (비어 있으면 템플릿·Explain presets 모드)
+    openai_api_key: str = Field(default="", validation_alias="OPENAI_API_KEY")
+    openai_model: str = Field(default="gpt-4o-mini", validation_alias="OPENAI_MODEL")
+    ai_session_ttl_seconds: int = Field(default=86400, validation_alias="AI_SESSION_TTL_SECONDS")
+    ai_rate_limit_per_minute: int = Field(default=30, validation_alias="AI_RATE_LIMIT_PER_MINUTE")
+    #: CH2 AI — 템플릿 내러티브 OpenAI polish (OPENAI_API_KEY 필요)
+    ai_polish_enabled: bool = Field(default=False, validation_alias="AI_POLISH_ENABLED")
+    #: CH2 AI — Tavily 웹 검색 (없으면 DuckDuckGo Instant 폴백)
+    tavily_api_key: str = Field(default="", validation_alias="TAVILY_API_KEY")
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",")]

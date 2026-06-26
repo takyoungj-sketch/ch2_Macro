@@ -97,41 +97,46 @@ built_stats ←── built_transactions + region_codes(land에서 sync)
 
 ---
 
-## 4. 다음 작업 A — AI 연동 (미구현)
+## 4. 다음 작업 A — AI 연동
 
-### 목표
+> **SSOT:** [`CH2_AI_CONSTITUTION.md`](./CH2_AI_CONSTITUTION.md) · [`CH2_AI_ARCHITECTURE.md`](./CH2_AI_ARCHITECTURE.md)  
+> **API:** `/api/ai/chat` · `/api/ai/explain` · `/api/ai/suggested-questions`  
+> **코드:** `backend/app/ai/` · Pilot UI: `frontend-built` `AiAssistantPanel`
 
-회귀 결과·표본 scope·핵심 계수를 **감정평가사 관점**으로 짧게 해석 (한국어). UI는 회귀 패널 하단 «AI 해석».
+### Phase A (완료)
 
-### 제안 API
+- [x] 헌법·아키텍처 문서
+- [x] AiContext · Evidence · Reasoning Bundle (`bundle_id`)
+- [x] 6-way Router (refusal · ch2 · explain · statistics · opinion · web)
+- [x] 세션 기반 chat · 질문 추천
+- [x] 복합 회귀 패널 «통계 분석 어시스턴트»
 
-```
-POST /api/built/regression/interpret
-Body: {
-  "scope_label": "서울특별시 강남구 …",
-  "asset_type": "commercial",
-  "n": 120,
-  "r_squared": 0.42,
-  "levels": [ ... RegressionLevelResult ... ],
-  "sample_summary": { "total": 120, "year_from": 2023, ... }
-}
-Response: { "text": "…", "model": "…", "disclaimer": "…" }
-```
+### Phase B (완료)
 
-### 구현 체크리스트
+- [x] `AI_RATE_LIMIT_PER_MINUTE` · `/api/ai/*` rate limit
+- [x] `land_explain.py` · `collective_explain.py`
+- [x] land · collective `AiAssistantPanel` (`shared/ai-assistant`)
+- [x] 세션 scope **comparison bundle** (최근 2 scope diff)
+- [ ] ~~Web search (Phase E)~~ ✅
+- [ ] `OPENAI_API_KEY` + `AI_POLISH_ENABLED` 운영 polish layer (선택)
 
-- [ ] `backend/app/built/ai/` 또는 `interpret.py` — 프롬프트·입력 JSON 정규화
-- [ ] `backend/.env` — `OPENAI_API_KEY` (또는 사용할 provider) · **레포/커밋 금지**
-- [ ] 토큰·비용 가드: 최대 표본 설명 길이, rate limit, 실패 시 503 + 사용자 메시지
-- [ ] `frontend-built` — 회귀 성공 후 «AI 해석» 버튼 · 로딩·오류 UI
-- [ ] **개인정보·원시 거래 전송 금지** — 집계·계수·n/R²만 LLM에 전달
-- [ ] (선택) land V2 해석과 프롬프트 공통 모듈화 — 2차
+### Phase D (완료)
 
-### 참고 파일
+- [x] `trend_narrative.py` · `prediction_narrative.py` — 추세·예측 내러티브
+- [x] land 매트릭스 연도별·장기추세 탭 AI (`TrendCard`)
+- [x] 복합 예측 패널 AI (`PredictionCard` / `PredictPanel`)
+- [x] bundle 라우팅 (`trend_diagnostic` · `prediction_explain`)
 
-- 회귀 스키마: `backend/app/built/schemas.py` (`RegressionRunResponse`)
-- 회귀 엔진: `backend/app/built/regression/engine.py`
-- UI 회귀 패널: `frontend-built/src/App.tsx` (`regM`, `RegressionLevelResult`)
+### Phase E (완료)
+
+- [x] `web_search.py` — Tavily · DuckDuckGo Instant
+- [x] `web_answer.py` · 웹 route 실연동 (출처 URL evidence)
+- [x] `AI_POLISH_ENABLED` — 템플릿 내러티브 OpenAI polish (숫자 보존 검증)
+- [x] TrustBadge 웹 출처 링크 표시
+
+### 구 API 초안 (대체)
+
+~~`POST /api/built/regression/interpret`~~ → **`POST /api/ai/chat`** (app·panel·facts in context)
 
 ---
 

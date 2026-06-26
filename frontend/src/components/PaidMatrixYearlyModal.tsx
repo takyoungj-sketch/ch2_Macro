@@ -23,6 +23,12 @@ import type {
   MatrixYearlyStat,
 } from "../types";
 import { parseApiError, parseApiErrorAsync } from "../utils/apiError";
+import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
+import {
+  buildLandLongTermContext,
+  buildLandMatrixTrendContext,
+  buildLandRegressionContext,
+} from "../api/aiContext";
 import { formatMatrixBucketAxisLabel } from "../utils/matrixYearlyLabels";
 import { resolveLongTermTargetsForFetch } from "../utils/longTermTargets";
 import { useAppStore } from "../store";
@@ -176,6 +182,16 @@ export default function PaidMatrixYearlyModal({
   const [regLoading, setRegLoading] = useState(false);
   const [regError, setRegError] = useState<string | null>(null);
   const [regResult, setRegResult] = useState<LandRegressionResponse | null>(null);
+  const aiRegressionContext = useMemo(() => {
+    if (!regResult) return null;
+    const label = scopeNote?.trim() || `${zoneType} × ${landCategory}`;
+    return buildLandRegressionContext(regResult, {
+      regionLabel: label,
+      zoneType,
+      landCategory,
+      modelType: regModelType,
+    });
+  }, [regResult, scopeNote, zoneType, landCategory, regModelType]);
   const [txExportLoading, setTxExportLoading] = useState(false);
   const [txExportError, setTxExportError] = useState<string | null>(null);
 
@@ -272,6 +288,22 @@ export default function PaidMatrixYearlyModal({
 
   /** 만년력 연도(필터 분석)에서만 장기 추세 — 기본통계 롤링 창과 기간 축이 다름 */
   const showLongTermTab = !isRolling;
+
+  const aiPanelContext = useMemo(() => {
+    const label = scopeNote?.trim() || `${zoneType} × ${landCategory}`;
+    if (panel === "regression" && aiRegressionContext) return aiRegressionContext;
+    if (panel === "trend" && sortedRows.length > 0) {
+      return buildLandMatrixTrendContext(sortedRows, {
+        regionLabel: label,
+        zoneType,
+        landCategory,
+      });
+    }
+    if (panel === "longTerm" && ltData && ltData.series.length > 0) {
+      return buildLandLongTermContext(ltData, { regionLabel: label });
+    }
+    return null;
+  }, [panel, aiRegressionContext, sortedRows, ltData, scopeNote, zoneType, landCategory]);
 
   useEffect(() => {
     if (!showLongTermTab && panel === "longTerm") {
@@ -582,14 +614,20 @@ export default function PaidMatrixYearlyModal({
               </div>
             )}
           </div>
-          <button
-            type="button"
-            aria-label="닫기"
-            className="shrink-0 text-slate-400 hover:text-slate-700 text-xl leading-none px-1"
-            onClick={onClose}
+          <div
+            className="flex items-center gap-2 shrink-0"
+            onMouseDown={(e) => e.stopPropagation()}
           >
-            ×
-          </button>
+            {aiPanelContext && <AiAssistantPanel context={aiPanelContext} />}
+            <button
+              type="button"
+              aria-label="닫기"
+              className="shrink-0 text-slate-400 hover:text-slate-700 text-xl leading-none px-1"
+              onClick={onClose}
+            >
+              ×
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-auto px-4 py-3 space-y-4">
@@ -1110,34 +1148,36 @@ export default function PaidMatrixYearlyModal({
                     <span className="text-slate-500">IQR 이상치 제외</span>
                   </label>
                 </div>
-                <button
-                  type="button"
-                  disabled={regLoading}
-                  onClick={async () => {
-                    if (!filterRequest) return;
-                    setRegLoading(true);
-                    setRegError(null);
-                    setRegResult(null);
-                    try {
-                      const res = await fetchLandRegression({
-                        ...filterRequest,
-                        variables: regVars,
-                        model_type: regModelType,
-                        exclude_outliers_iqr: regExcludeOutlier,
-                        outlier_iqr_multiplier: 3,
-                        min_n: 15,
-                      });
-                      setRegResult(res);
-                    } catch (e) {
-                      setRegError(parseApiError(e).message);
-                    } finally {
-                      setRegLoading(false);
-                    }
-                  }}
-                  className="px-4 py-1.5 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {regLoading ? "계산 중…" : "회귀 실행"}
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={regLoading}
+                    onClick={async () => {
+                      if (!filterRequest) return;
+                      setRegLoading(true);
+                      setRegError(null);
+                      setRegResult(null);
+                      try {
+                        const res = await fetchLandRegression({
+                          ...filterRequest,
+                          variables: regVars,
+                          model_type: regModelType,
+                          exclude_outliers_iqr: regExcludeOutlier,
+                          outlier_iqr_multiplier: 3,
+                          min_n: 15,
+                        });
+                        setRegResult(res);
+                      } catch (e) {
+                        setRegError(parseApiError(e).message);
+                      } finally {
+                        setRegLoading(false);
+                      }
+                    }}
+                    className="px-4 py-1.5 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {regLoading ? "계산 중…" : "회귀 실행"}
+                  </button>
+                </div>
               </div>
 
               {regError && (

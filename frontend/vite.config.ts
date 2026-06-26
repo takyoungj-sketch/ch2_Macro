@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
+import path from "node:path";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
@@ -8,6 +9,11 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     base: "/land/",
+    resolve: {
+      alias: {
+        "@ch2/ai-assistant": path.resolve(__dirname, "../shared/ai-assistant"),
+      },
+    },
     server: {
       port: Number(env.VITE_DEV_PORT ?? 5173),
       proxy: {

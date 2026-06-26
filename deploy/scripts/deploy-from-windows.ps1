@@ -53,19 +53,23 @@ try {
   Write-Host "==> scp to VPS (scope=$Scope)"
   switch ($Scope) {
     "built" {
-      Invoke-Scp @("backend/app/built") "backend/app/"
+      Invoke-Scp @("backend/app/built", "backend/app/ai", "backend/app/config.py", "backend/app/main.py") "backend/app/"
+      Invoke-Scp @("shared") "."
       Invoke-Scp @("frontend-built/src") "frontend-built/"
     }
     "land" {
       Invoke-Scp @("backend/app") "backend/"
+      Invoke-Scp @("shared") "."
       Invoke-Scp @("frontend/src") "frontend/"
     }
     "collective" {
-      Invoke-Scp @("backend/app/collective", "backend/app/collective_commercial") "backend/app/"
+      Invoke-Scp @("backend/app/collective", "backend/app/collective_commercial", "backend/app/ai", "backend/app/config.py", "backend/app/main.py") "backend/app/"
+      Invoke-Scp @("shared") "."
       Invoke-Scp @("frontend-collective/src") "frontend-collective/"
     }
     "all" {
       Invoke-Scp @("backend/app") "backend/"
+      Invoke-Scp @("shared") "."
       Invoke-Scp @("frontend/src") "frontend/"
       Invoke-Scp @("frontend-built/src") "frontend-built/"
       Invoke-Scp @("frontend-collective/src") "frontend-collective/"

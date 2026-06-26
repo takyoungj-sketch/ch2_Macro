@@ -19,6 +19,8 @@ import type {
 import { buildAnalysisPeriodParams } from "../utils/analysisPeriod";
 import { RESIDENTIAL_REGRESSION_HELP } from "../utils/residentialAnalysisHelp";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
+import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
+import { buildCollectiveRegressionContext } from "../api/aiContext";
 
 export type FloorMode = "linear" | "dummy" | "grouped" | "relative";
 
@@ -429,6 +431,15 @@ export default function BuildingRegressionPanel({
 
   const regM = useMutation({ mutationFn: runRegression });
 
+  const aiRegressionContext = useMemo(() => {
+    if (!regM.data) return null;
+    return buildCollectiveRegressionContext(regM.data, {
+      regionLabel: regM.data.display_name,
+      assetType,
+      cohort: useCohort,
+    });
+  }, [regM.data, assetType, useCohort]);
+
   const predictM = useMutation({
     mutationFn: () => {
       const body = { ...regressionBody, inputs: predictInputs };
@@ -472,7 +483,10 @@ export default function BuildingRegressionPanel({
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-2">
         <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200">회귀 분석</p>
-        <AnalysisHelpPanel explain={regM.data?.explain ?? RESIDENTIAL_REGRESSION_HELP} />
+        <div className="flex items-center gap-2 shrink-0">
+          {aiRegressionContext && <AiAssistantPanel context={aiRegressionContext} />}
+          <AnalysisHelpPanel explain={regM.data?.explain ?? RESIDENTIAL_REGRESSION_HELP} />
+        </div>
       </div>
 
       {useCohort && (

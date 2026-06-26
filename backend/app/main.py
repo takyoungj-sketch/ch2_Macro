@@ -111,6 +111,11 @@ if collective_router is not None:
     app.include_router(regional_profile_router, prefix="/api")
     _LOG.info("regional_profile API 활성: /api/regional-profile/*")
 
+from app.ai.router import router as ai_router
+
+app.include_router(ai_router, prefix="/api")
+_LOG.info("CH2 AI API 활성: /api/ai/*")
+
 
 # 폐기 일정 헤더 — RFC 8594 Sunset. V1 통계 경로(/free/stats/*)에만 적용.
 _V1_SUNSET_HEADER = "Wed, 30 Jun 2026 23:59:59 GMT"

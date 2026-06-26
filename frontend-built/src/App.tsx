@@ -19,6 +19,8 @@ import {
   isFlatSidoAddr2,
 } from "./utils/flatSidoRegion";
 import BuiltTransactionListModal from "./components/BuiltTransactionListModal";
+import AiAssistantPanel from "./components/AiAssistantPanel";
+import { buildBuiltRegressionContext, buildBuiltPredictionContext } from "./api/aiClient";
 import type {
   Addr3Option,
   AssetType,
@@ -317,11 +319,13 @@ function PredictPanel({
   regBody,
   vars,
   assetType,
+  regionLabel,
 }: {
   regData: RegressionRunResponse;
   regBody: RegressionRunRequest;
   vars: RegressionVariableSpec;
   assetType: AssetType;
+  regionLabel: string;
 }) {
   const levels = useMemo(() => {
     const all = [regData.primary, ...regData.comparisons];
@@ -345,6 +349,16 @@ function PredictPanel({
   }, [adminLevel, selected?.predict_options]);
 
   const predictM = useMutation({ mutationFn: predictRegression });
+
+  const aiPredictionContext = useMemo(() => {
+    if (!predictM.data || !selected) return null;
+    return buildBuiltPredictionContext(predictM.data, {
+      regionLabel: selected.scope_label ?? regionLabel,
+      assetType,
+      regressionN: selected.n,
+      adjR2: selected.adj_r_squared,
+    });
+  }, [predictM.data, selected, regionLabel, assetType]);
 
   if (!levels.length) return null;
 
@@ -379,14 +393,17 @@ function PredictPanel({
             탐색용 OLS — 개별 거래 95% 예측구간(PI). n이 작으면 구간이 매우 넓습니다.
           </p>
         </div>
-        <button
-          type="button"
-          className="btn btn-primary shrink-0"
-          onClick={runPredict}
-          disabled={predictM.isPending}
-        >
-          {predictM.isPending ? "계산 중…" : "예측"}
-        </button>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {aiPredictionContext && <AiAssistantPanel context={aiPredictionContext} />}
+          <button
+            type="button"
+            className="btn btn-primary shrink-0"
+            onClick={runPredict}
+            disabled={predictM.isPending}
+          >
+            {predictM.isPending ? "계산 중…" : "예측"}
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-nowrap items-end gap-2 text-xs overflow-x-auto pb-0.5">
@@ -1117,6 +1134,20 @@ export default function App() {
 
   const regM = useMutation({ mutationFn: runRegression });
 
+  const aiRegionLabel = useMemo(() => {
+    if (regM.data?.primary?.scope_label) return regM.data.primary.scope_label;
+    const parts = [addr1, formatScopeAddr2(addr2, addr1), ...guList, ...leafList].filter(Boolean);
+    return parts.join(" ") || "선택 지역";
+  }, [regM.data, addr1, addr2, guList, leafList]);
+
+  const aiRegressionContext = useMemo(() => {
+    if (!regM.data) return null;
+    return buildBuiltRegressionContext(regM.data, {
+      regionLabel: aiRegionLabel,
+      assetType,
+    });
+  }, [regM.data, aiRegionLabel, assetType]);
+
   const addr2ScopeLabel = formatScopeAddr2(addr2, addr1) || addr1;
 
   const regressionSummaryText = useMemo(() => {
@@ -1518,6 +1549,9 @@ export default function App() {
                   <p className="text-xs text-slate-500 mt-1">{regressionSummaryText}</p>
                 </div>
                 <div className="flex flex-wrap gap-2 shrink-0">
+                  {regM.data && aiRegressionContext && (
+                    <AiAssistantPanel context={aiRegressionContext} />
+                  )}
                   <button
                     type="button"
                     className="btn btn-ghost shrink-0"
@@ -1649,7 +1683,13 @@ export default function App() {
 
           {regM.data && (
             <section className="px-4 pb-4 pt-0">
-              <PredictPanel regData={regM.data} regBody={regBody} vars={vars} assetType={assetType} />
+              <PredictPanel
+                regData={regM.data}
+                regBody={regBody}
+                vars={vars}
+                assetType={assetType}
+                regionLabel={aiRegionLabel}
+              />
             </section>
           )}
         </div>
