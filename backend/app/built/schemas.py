@@ -7,6 +7,9 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.ai.schemas import AnalysisExplain
+from app.collective.schemas import ModelComparison, ModelMetrics
+
 AssetType = Literal["commercial", "factory", "detached", "all"]
 ResponseScale = Literal["linear", "log"]
 AdminLevel = Literal["sigungu", "gu", "eupmyeondong", "beopjungri"]
@@ -36,9 +39,12 @@ class BuiltTransactionRow(BaseModel):
     gross_area: Optional[float] = None
     land_area: Optional[float] = None
     building_age: Optional[float] = None
+    building_year: Optional[int] = None
     road_code: Optional[float] = None
     road_width_label: Optional[str] = None
     deal_type: Optional[str] = None
+    buyer_type: Optional[str] = None
+    seller_type: Optional[str] = None
 
 
 class BuiltTransactionListResponse(BaseModel):
@@ -228,15 +234,33 @@ class CorrelationSeries(BaseModel):
     label: str
     pearson_r: Optional[float] = None
     points: list[CorrelationPoint]
+    y_axis_label: Optional[str] = None
+
+
+class PartialRegressionSeries(BaseModel):
+    """Added-variable plot — 모형 통제변수 제거 후 잔차 vs 잔차."""
+
+    variable: str
+    label: str
+    points: list[CorrelationPoint]
+    beta: Optional[float] = None
+    p_value: Optional[float] = None
+    partial_r_squared: Optional[float] = None
+    x_axis_label: Optional[str] = None
+    y_axis_label: Optional[str] = None
 
 
 class RegressionRunResponse(BaseModel):
     primary: RegressionLevelResult
     comparisons: list[RegressionLevelResult] = Field(default_factory=list)
+    focus_admin_level: Optional[AdminLevel] = None
+    focus_scope_label: Optional[str] = None
     correlations: list[CorrelationSeries] = Field(default_factory=list)
+    partial_regressions: list[PartialRegressionSeries] = Field(default_factory=list)
     correlation_admin_level: Optional[AdminLevel] = None
     correlation_scope_label: Optional[str] = None
     correlation_n: Optional[int] = None
+    explain: Optional[AnalysisExplain] = None
 
 
 class RegressionPredictRequest(RegressionRunRequest):
@@ -263,3 +287,68 @@ class RegressionPredictResponse(BaseModel):
     ci_upper: float
     response_scale: ResponseScale = "linear"
     warnings: list[str] = Field(default_factory=list)
+    explain: Optional[AnalysisExplain] = None
+
+
+class RegressionSelectionRequest(RegressionRunRequest):
+    """Group Forward / Best Subset — 후보 블록·랭킹 옵션."""
+
+    candidate_blocks: list[str] = Field(default_factory=list)
+    max_candidates: int = 5
+    ranking_metric: Literal["aic", "bic", "mape", "adj_r2"] = "aic"
+
+
+class ExcludedBlockReason(BaseModel):
+    code: str
+    message: str
+    metric_value: Optional[float] = None
+
+
+class ExcludedBlock(BaseModel):
+    block_id: str
+    label: str
+    reasons: list[ExcludedBlockReason]
+
+
+class ForwardStepInfo(BaseModel):
+    added_block: str
+    block_label: str
+    aic_before: float
+    aic_after: float
+
+
+class RegressionSuggestResponse(BaseModel):
+    recommended_blocks: list[str]
+    recommended_variables: RegressionVariableSpec
+    response_scale: ResponseScale
+    model_comparison: Optional[ModelComparison] = None
+    metrics: ModelMetrics
+    excluded: list[ExcludedBlock]
+    forward_steps: list[ForwardStepInfo] = Field(default_factory=list)
+    n: int
+    scope_label: Optional[str] = None
+    warnings: list[str] = Field(default_factory=list)
+    explain: Optional[AnalysisExplain] = None
+
+
+class ModelCandidate(BaseModel):
+    rank: int
+    blocks: list[str]
+    variables: RegressionVariableSpec
+    response_scale: ResponseScale
+    metrics: ModelMetrics
+    model_comparison: Optional[ModelComparison] = None
+    aic: Optional[float] = None
+    bic: Optional[float] = None
+
+
+class RegressionCompareResponse(BaseModel):
+    candidates_by_aic: list[ModelCandidate]
+    candidates_by_bic: list[ModelCandidate]
+    candidates_by_mape: list[ModelCandidate]
+    n: int
+    scope_label: Optional[str] = None
+    total_subsets: int = 0
+    truncated: bool = False
+    warnings: list[str] = Field(default_factory=list)
+    explain: Optional[AnalysisExplain] = None

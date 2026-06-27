@@ -27,6 +27,9 @@ export interface BuiltTransactionRow {
   gross_area?: number | null;
   land_area?: number | null;
   building_age?: number | null;
+  building_year?: number | null;
+  buyer_type?: string | null;
+  seller_type?: string | null;
   road_code?: number | null;
 }
 
@@ -161,6 +164,28 @@ export interface RegressionCoeff {
   p_value?: number | null;
 }
 
+export interface AnalysisExplainPreset {
+  id: string;
+  question: string;
+  answer: string;
+}
+
+export interface AnalysisExplain {
+  spec_id: string;
+  spec_version: string;
+  title: string;
+  summary: string;
+  formula?: string | null;
+  index_rule?: string | null;
+  reference?: string | null;
+  floor_groups?: string[];
+  controls?: string[];
+  interpretation: string[];
+  limitations: string[];
+  interpretation_hints: string[];
+  presets: AnalysisExplainPreset[];
+}
+
 export interface VifEntry {
   name: string;
   vif?: number | null;
@@ -208,15 +233,31 @@ export interface CorrelationSeries {
   label: string;
   pearson_r?: number | null;
   points: CorrelationPoint[];
+  y_axis_label?: string | null;
+}
+
+export interface PartialRegressionSeries {
+  variable: string;
+  label: string;
+  points: CorrelationPoint[];
+  beta?: number | null;
+  p_value?: number | null;
+  partial_r_squared?: number | null;
+  x_axis_label?: string | null;
+  y_axis_label?: string | null;
 }
 
 export interface RegressionRunResponse {
   primary: RegressionLevelResult;
   comparisons: RegressionLevelResult[];
+  focus_admin_level?: "sigungu" | "gu" | "eupmyeondong" | "beopjungri" | null;
+  focus_scope_label?: string | null;
   correlations: CorrelationSeries[];
+  partial_regressions?: PartialRegressionSeries[];
   correlation_admin_level?: "sigungu" | "gu" | "eupmyeondong" | "beopjungri" | null;
   correlation_scope_label?: string | null;
   correlation_n?: number | null;
+  explain?: AnalysisExplain | null;
 }
 
 export interface RegressionPredictRequest extends RegressionRunRequest {
@@ -243,4 +284,83 @@ export interface RegressionPredictResponse {
   ci_upper: number;
   response_scale?: ResponseScale;
   warnings: string[];
+  explain?: AnalysisExplain | null;
+}
+
+export interface ModelMetrics {
+  model_type: ResponseScale;
+  adj_r_squared?: number | null;
+  mape?: number | null;
+  rmse?: number | null;
+}
+
+export interface ModelComparison {
+  log?: ModelMetrics | null;
+  linear?: ModelMetrics | null;
+  recommended: ResponseScale;
+  metric_basis: "cv" | "insample";
+  confidence_stars: number;
+  confidence_label?: string | null;
+}
+
+export interface ExcludedBlockReason {
+  code: string;
+  message: string;
+  metric_value?: number | null;
+}
+
+export interface ExcludedBlock {
+  block_id: string;
+  label: string;
+  reasons: ExcludedBlockReason[];
+}
+
+export interface ForwardStepInfo {
+  added_block: string;
+  block_label: string;
+  aic_before: number;
+  aic_after: number;
+}
+
+export interface RegressionSelectionRequest extends RegressionRunRequest {
+  candidate_blocks?: string[];
+  max_candidates?: number;
+  ranking_metric?: "aic" | "bic" | "mape" | "adj_r2";
+}
+
+export interface RegressionSuggestResponse {
+  recommended_blocks: string[];
+  recommended_variables: RegressionVariableSpec;
+  response_scale: ResponseScale;
+  model_comparison?: ModelComparison | null;
+  metrics: ModelMetrics;
+  excluded: ExcludedBlock[];
+  forward_steps: ForwardStepInfo[];
+  n: number;
+  scope_label?: string | null;
+  warnings: string[];
+  explain?: AnalysisExplain | null;
+}
+
+export interface ModelCandidate {
+  rank: number;
+  blocks: string[];
+  variables: RegressionVariableSpec;
+  response_scale: ResponseScale;
+  metrics: ModelMetrics;
+  model_comparison?: ModelComparison | null;
+  aic?: number | null;
+  bic?: number | null;
+}
+
+export interface RegressionCompareResponse {
+  candidates_by_aic: ModelCandidate[];
+  candidates_by_bic: ModelCandidate[];
+  candidates_by_mape: ModelCandidate[];
+  n: number;
+  scope_label?: string | null;
+  total_subsets: number;
+  truncated: boolean;
+  warnings: string[];
+  explain?: AnalysisExplain | null;
 }

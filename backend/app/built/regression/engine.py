@@ -20,6 +20,7 @@ from app.built.schemas import (
     ContinuousRange,
     CorrelationPoint,
     CorrelationSeries,
+    PartialRegressionSeries,
     PredictOptions,
     RegressionCoeff,
     RegressionLevelResult,
@@ -35,7 +36,7 @@ from app.built.schemas import (
 
 from app.built.time_scope import apply_contract_date_window, parse_as_of_month
 
-CompareMode = Literal["sigungu_only", "two_way", "three_way"]
+CompareMode = Literal["sigungu_only", "gu_only", "two_way", "three_way"]
 CONTINUOUS_VARS = frozenset({"gross_area", "land_area", "building_age"})
 _CONT_LABELS = {
     "gross_area": "연면적",
@@ -323,12 +324,131 @@ def _has_leaf_selection(req: RegressionRunRequest, addr4_city: bool) -> bool:
     return bool(effective_addr3_list(req.addr3, req.addr3_list))
 
 
+def _has_gu_selection(req: RegressionRunRequest, addr4_city: bool) -> bool:
+    """구-동 구조에서 구(addr3)만 선택·동 미선택."""
+    if not addr4_city:
+        return False
+    return bool(effective_addr3_list(req.addr3, req.addr3_list))
+
+
 def _compare_mode(req: RegressionRunRequest, addr4_city: bool) -> CompareMode:
     if req.ri_list:
         return "three_way"
     if _has_leaf_selection(req, addr4_city):
         return "two_way"
+    if _has_gu_selection(req, addr4_city):
+        return "gu_only"
     return "sigungu_only"
+
+
+def _focus_admin_level(req: RegressionRunRequest, addr4_city: bool) -> AdminLevel:
+    """사용자 최종 선택 행정 층위 = 분석 초점."""
+    if req.ri_list:
+        return "beopjungri"
+    if _has_leaf_selection(req, addr4_city):
+        return "eupmyeondong"
+    if _has_gu_selection(req, addr4_city):
+        return "gu"
+    return "sigungu"
+
+
+def _upper_admin_levels(focus: AdminLevel, addr4_city: bool) -> list[AdminLevel]:
+    """초점보다 상위 행정 층위 (가까운 순)."""
+    if focus == "beopjungri":
+        levels: list[AdminLevel] = ["eupmyeondong"]
+        if addr4_city:
+            levels.append("gu")
+        levels.append("sigungu")
+        return levels
+    if focus == "eupmyeondong":
+        if addr4_city:
+            return ["gu", "sigungu"]
+        return ["sigungu"]
+    if focus == "gu":
+        return ["sigungu"]
+    return []
+
+
+def _eup_scope_for_level(
+    admin_level: AdminLevel,
+    focus: AdminLevel,
+    req: RegressionRunRequest,
+) -> Literal["leaf", "parent"]:
+    if admin_level == "eupmyeondong" and focus == "beopjungri" and req.ri_list:
+        return "parent"
+    return "leaf"
+
+
+def _label_for_level(
+    req: RegressionRunRequest,
+    wide_df: pd.DataFrame,
+    level: AdminLevel,
+    addr4_city: bool,
+    *,
+    eup_scope: Literal["leaf", "parent"] = "leaf",
+) -> str:
+    if level == "sigungu":
+        return _sigungu_label(req)
+    if level == "gu":
+        return _gu_label(req, wide_df)
+    if level == "eupmyeondong":
+        if eup_scope == "parent":
+            return _parent_eup_label(req.ri_list)
+        return _eup_label(req, addr4_city)
+    if level == "beopjungri":
+        return _ri_label(req.ri_list)
+    return ""
+
+
+def _coef_display_name(name: str) -> str:
+    if name == "const":
+        return "절편"
+    if name in _CONT_LABELS:
+        return _CONT_LABELS[name]
+    if name.startswith("zone_"):
+        return f"용도지역·{name[5:]}"
+    if name.startswith("use_"):
+        return f"건축물용도·{name[4:]}"
+    if name.startswith("road_"):
+        return f"도로조건·{name[5:]}"
+    if name.startswith("atype_"):
+        return f"유형·{name[6:]}"
+    if name.startswith("loc_"):
+        return f"지역·{name[4:]}"
+    return name
+
+
+_EQUATION_SIG_P = 0.1
+
+
+def _format_equation(
+    coefs: list[RegressionCoeff],
+    *,
+    response_scale: ResponseScale,
+) -> str:
+    """회귀식 문자열 — 유의(p<0.1) 변수만 (프론트 전체보기 기본과 동일)."""
+    dep = "log(금액)" if response_scale == "log" else "금액"
+    intercept = next((c for c in coefs if c.name == "const"), None)
+    if intercept is None:
+        return f"{dep} = —"
+
+    def _fmt(v: float) -> str:
+        if abs(v) >= 100:
+            return f"{v:,.0f}"
+        if abs(v) >= 1:
+            return f"{v:,.1f}".rstrip("0").rstrip(".")
+        return f"{v:.4f}".rstrip("0").rstrip(".")
+
+    parts = [f"{dep} = {_fmt(intercept.estimate)}"]
+    others = [c for c in coefs if c.name != "const"]
+    sig = [c for c in others if c.p_value is not None and c.p_value < _EQUATION_SIG_P]
+    sig.sort(key=lambda c: c.p_value if c.p_value is not None else 1.0)
+    for c in sig:
+        sign = "+" if c.estimate >= 0 else "−"
+        mag = _fmt(abs(c.estimate))
+        label = _coef_display_name(c.name)
+        parts.append(f" {sign} {mag}·{label}")
+    return "".join(parts)
 
 
 def _norm_col(df: pd.DataFrame, col: str) -> pd.Series:
@@ -654,13 +774,15 @@ def _scope_for_level(
     admin_level: AdminLevel,
     addr4_city: bool,
     mode: CompareMode,
+    *,
+    eup_scope: Literal["leaf", "parent"] = "leaf",
 ) -> pd.DataFrame:
     if admin_level == "sigungu":
         return _filter_sigungu(wide_df, req)
     if admin_level == "gu":
         return _filter_gu(wide_df, req)
     if admin_level == "eupmyeondong":
-        if mode == "three_way":
+        if eup_scope == "parent" and req.ri_list:
             return _filter_parent_eups(wide_df, req.ri_list, addr4_city)
         return _filter_eup_leaf(wide_df, req, addr4_city)
     if admin_level == "beopjungri":
@@ -770,7 +892,7 @@ def _fit_ols(
         f_statistic=float(model.fvalue) if model.fvalue is not None else None,
         f_p_value=float(model.f_pvalue) if model.f_pvalue is not None else None,
         significant_count=sig,
-        equation="",
+        equation=_format_equation(coefs, response_scale=response_scale),
         coefficients=coefs,
         vif=vif_entries,
         vif_warning=vif_warn,
@@ -780,34 +902,151 @@ def _fit_ols(
     )
 
 
-def _correlations(df: pd.DataFrame, vars_spec: RegressionVariableSpec) -> list[CorrelationSeries]:
-    out: list[CorrelationSeries] = []
-    y = pd.to_numeric(df["price"], errors="coerce")
-    specs = []
+def _continuous_plot_specs(vars_spec: RegressionVariableSpec) -> list[tuple[str, str]]:
+    specs: list[tuple[str, str]] = []
     if vars_spec.gross_area:
         specs.append(("gross_area", "연면적"))
     if vars_spec.land_area:
         specs.append(("land_area", "대지면적"))
     if vars_spec.building_age:
         specs.append(("building_age", "연식"))
-    if vars_spec.road_width_dummy:
-        specs.append(("road_width_label", "도로조건"))
-    elif vars_spec.road_code:
+    if vars_spec.road_code and not vars_spec.road_width_dummy:
         specs.append(("road_code", "도로"))
-    for col, label in specs:
+    return specs
+
+
+def _subsample_points(xv: pd.Series, yv: pd.Series, *, max_pts: int = 500) -> list[CorrelationPoint]:
+    step = max(1, len(xv) // max_pts)
+    return [
+        CorrelationPoint(x=float(xv.iloc[i]), y=float(yv.iloc[i]))
+        for i in range(0, len(xv), step)
+    ]
+
+
+def _correlations(df: pd.DataFrame, vars_spec: RegressionVariableSpec) -> list[CorrelationSeries]:
+    out: list[CorrelationSeries] = []
+    y = pd.to_numeric(df["price"], errors="coerce")
+    for col, label in _continuous_plot_specs(vars_spec):
         x = pd.to_numeric(df[col], errors="coerce")
         m = x.notna() & y.notna()
         if m.sum() < 2:
             continue
         xv, yv = x[m], y[m]
         r = float(xv.corr(yv)) if xv.std() > 0 else None
-        step = max(1, len(xv) // 500)
-        pts = [
-            CorrelationPoint(x=float(xv.iloc[i]), y=float(yv.iloc[i]))
-            for i in range(0, len(xv), step)
-        ]
-        out.append(CorrelationSeries(variable=col, label=label, pearson_r=r, points=pts))
+        out.append(
+            CorrelationSeries(
+                variable=col,
+                label=label,
+                pearson_r=r,
+                points=_subsample_points(xv, yv),
+                y_axis_label="금액(만원)",
+            )
+        )
     return out
+
+
+def _region_col_for_scatter(
+    vars_spec: RegressionVariableSpec,
+    admin_level: AdminLevel,
+    addr4_city: bool,
+) -> str | None:
+    if vars_spec.region_leaf_dummy and admin_level == "eupmyeondong":
+        return _eup_leaf_column(addr4_city)
+    return None
+
+
+def _partial_regression_plots(
+    df: pd.DataFrame,
+    vars_spec: RegressionVariableSpec,
+    *,
+    unified: bool = False,
+    response_scale: ResponseScale = "linear",
+    region_col: str | None = None,
+) -> list[PartialRegressionSeries]:
+    """Added-variable plot — OLS와 동일 설계행렬 기준."""
+    import statsmodels.api as sm
+
+    y, X, _meta = _build_design_matrix(
+        df,
+        vars_spec,
+        unified=unified,
+        response_scale=response_scale,
+        region_col=region_col,
+    )
+    if len(y) < 10 or X.empty:
+        return []
+
+    X_const = sm.add_constant(X, has_constant="add")
+    model = sm.OLS(y, X_const).fit()
+    y_label = "log(금액) 잔차" if response_scale == "log" else "금액 잔차"
+
+    out: list[PartialRegressionSeries] = []
+    for col, label in _continuous_plot_specs(vars_spec):
+        if col not in X.columns:
+            continue
+        other_cols = [c for c in X.columns if c != col]
+        if not other_cols:
+            continue
+
+        X_other = sm.add_constant(X[other_cols], has_constant="add")
+        y_res = sm.OLS(y, X_other).fit().resid
+        x_res = sm.OLS(X[col], X_other).fit().resid
+
+        pr2: float | None = None
+        if x_res.std() > 0 and y_res.std() > 0:
+            pr2 = round(float(x_res.corr(y_res) ** 2), 4)
+
+        beta = float(model.params[col]) if col in model.params else None
+        p_val = float(model.pvalues[col]) if col in model.pvalues else None
+
+        out.append(
+            PartialRegressionSeries(
+                variable=col,
+                label=label,
+                points=_subsample_points(x_res, y_res),
+                beta=beta,
+                p_value=p_val,
+                partial_r_squared=pr2,
+                x_axis_label=f"{label} 잔차",
+                y_axis_label=y_label,
+            )
+        )
+    return out
+
+
+def _scatter_scope(
+    wide_df: pd.DataFrame,
+    req: RegressionRunRequest,
+    addr4_city: bool,
+    mode: CompareMode,
+) -> tuple[pd.DataFrame, AdminLevel, str]:
+    """산점도 scope = 분석 초점과 동일."""
+    focus = _focus_admin_level(req, addr4_city)
+    scoped = _scope_for_level(wide_df, req, focus, addr4_city, mode)
+    label = _label_for_level(req, wide_df, focus, addr4_city)
+    return scoped, focus, label
+
+
+def _build_scatter_bundle(
+    wide_df: pd.DataFrame,
+    req: RegressionRunRequest,
+    *,
+    addr4_city: bool,
+    mode: CompareMode,
+    unified: bool,
+    response_scale: ResponseScale,
+) -> tuple[list[CorrelationSeries], list[PartialRegressionSeries], AdminLevel, str, int]:
+    scatter_df, admin_level, scope_label = _scatter_scope(wide_df, req, addr4_city, mode)
+    region_col = _region_col_for_scatter(req.variables, admin_level, addr4_city)
+    corrs = _correlations(scatter_df, req.variables)
+    partials = _partial_regression_plots(
+        scatter_df,
+        req.variables,
+        unified=unified,
+        response_scale=response_scale,
+        region_col=region_col,
+    )
+    return corrs, partials, admin_level, scope_label, len(scatter_df)
 
 
 def _sigungu_label(req: RegressionRunRequest) -> str:
@@ -858,60 +1097,44 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
     scale = req.response_scale
     fit_kw = dict(unified=unified, response_scale=scale, addr4_city=addr4_city)
 
-    if mode == "sigungu_only":
-        scoped = _filter_sigungu(wide_df, req)
-        primary = _fit_ols(scoped, req.variables, "sigungu", _sigungu_label(req), **fit_kw)
-        corrs = _correlations(scoped, req.variables)
-        return RegressionRunResponse(
-            primary=primary,
-            comparisons=[],
-            correlations=corrs,
-            correlation_admin_level="sigungu",
-            correlation_scope_label=_sigungu_label(req),
-            correlation_n=len(scoped),
+    scatter_kw = dict(
+        addr4_city=addr4_city,
+        mode=mode,
+        unified=unified,
+        response_scale=scale,
+    )
+
+    focus = _focus_admin_level(req, addr4_city)
+    focus_df = _scope_for_level(wide_df, req, focus, addr4_city, mode)
+    focus_label = _label_for_level(req, wide_df, focus, addr4_city)
+    primary = _fit_ols(focus_df, req.variables, focus, focus_label, **fit_kw)
+
+    comparisons: list[RegressionLevelResult] = []
+    for level in _upper_admin_levels(focus, addr4_city):
+        eup_scope = _eup_scope_for_level(level, focus, req)
+        scoped = _scope_for_level(
+            wide_df, req, level, addr4_city, mode, eup_scope=eup_scope
+        )
+        label = _label_for_level(
+            req, wide_df, level, addr4_city, eup_scope=eup_scope
+        )
+        comparisons.append(
+            _fit_ols(scoped, req.variables, level, label, **fit_kw)
         )
 
-    if mode == "two_way":
-        eup = _filter_eup_leaf(wide_df, req, addr4_city)
-        if addr4_city:
-            gu = _filter_gu(wide_df, req)
-            primary = _fit_ols(gu, req.variables, "gu", _gu_label(req, wide_df), **fit_kw)
-        else:
-            sig = _filter_sigungu(wide_df, req)
-            primary = _fit_ols(sig, req.variables, "sigungu", _sigungu_label(req), **fit_kw)
-        comp = _fit_ols(eup, req.variables, "eupmyeondong", _eup_label(req, addr4_city), **fit_kw)
-        corrs = _correlations(eup, req.variables)
-        return RegressionRunResponse(
-            primary=primary,
-            comparisons=[comp],
-            correlations=corrs,
-            correlation_admin_level="eupmyeondong",
-            correlation_scope_label=_eup_label(req, addr4_city),
-            correlation_n=len(eup),
-        )
-
-    # three_way
-    ri_list = req.ri_list
-    if addr4_city:
-        gu = _filter_gu(wide_df, req)
-        primary = _fit_ols(gu, req.variables, "gu", _gu_label(req, wide_df), **fit_kw)
-    else:
-        sig = _filter_sigungu(wide_df, req)
-        primary = _fit_ols(sig, req.variables, "sigungu", _sigungu_label(req), **fit_kw)
-    eup = _filter_parent_eups(wide_df, ri_list, addr4_city)
-    ri = _filter_ri_picks(wide_df, ri_list)
-    comp_eup = _fit_ols(eup, req.variables, "eupmyeondong", _parent_eup_label(ri_list), **fit_kw)
-    comp_ri = _fit_ols(ri, req.variables, "beopjungri", _ri_label(ri_list), **fit_kw)
-    corr_df = ri if len(ri) >= 10 else eup
-    use_ri = len(ri) >= 10
-    corrs = _correlations(corr_df, req.variables)
+    corrs, partials, s_level, s_label, s_n = _build_scatter_bundle(
+        wide_df, req, **scatter_kw
+    )
     return RegressionRunResponse(
         primary=primary,
-        comparisons=[comp_eup, comp_ri],
+        comparisons=comparisons,
+        focus_admin_level=focus,
+        focus_scope_label=focus_label,
         correlations=corrs,
-        correlation_admin_level="beopjungri" if use_ri else "eupmyeondong",
-        correlation_scope_label=_ri_label(ri_list) if use_ri else _parent_eup_label(ri_list),
-        correlation_n=len(corr_df),
+        partial_regressions=partials,
+        correlation_admin_level=s_level,
+        correlation_scope_label=s_label,
+        correlation_n=s_n,
     )
 
 
@@ -919,21 +1142,15 @@ def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredict
     import statsmodels.api as sm
 
     wide_df, req, addr4_city, mode = _prepare_regression_scope(conn, req)
-    df = _scope_for_level(wide_df, req, req.admin_level, addr4_city, mode)
+    focus = _focus_admin_level(req, addr4_city)
+    eup_scope = _eup_scope_for_level(req.admin_level, focus, req)
+    df = _scope_for_level(
+        wide_df, req, req.admin_level, addr4_city, mode, eup_scope=eup_scope
+    )
 
-    scope_label = None
-    if req.admin_level == "sigungu":
-        scope_label = _sigungu_label(req)
-    elif req.admin_level == "gu":
-        scope_label = _gu_label(req, wide_df)
-    elif req.admin_level == "eupmyeondong":
-        scope_label = (
-            _parent_eup_label(req.ri_list)
-            if mode == "three_way"
-            else _eup_label(req, addr4_city)
-        )
-    elif req.admin_level == "beopjungri":
-        scope_label = _ri_label(req.ri_list)
+    scope_label = _label_for_level(
+        req, wide_df, req.admin_level, addr4_city, eup_scope=eup_scope
+    )
 
     region_col = None
     if req.variables.region_leaf_dummy and req.admin_level == "eupmyeondong":

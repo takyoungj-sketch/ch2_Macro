@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
+import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
+import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
+import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
 import {
   fetchAddr2,
   fetchAddr3WithCounts,
@@ -12,6 +15,8 @@ import {
   fetchTransactions,
   predictRegression,
   runRegression,
+  suggestRegression,
+  compareRegression,
 } from "./api/client";
 import {
   formatAddr2OptionLabel,
@@ -20,11 +25,13 @@ import {
 } from "./utils/flatSidoRegion";
 import BuiltTransactionListModal from "./components/BuiltTransactionListModal";
 import AiAssistantPanel from "./components/AiAssistantPanel";
-import { buildBuiltRegressionContext, buildBuiltPredictionContext } from "./api/aiClient";
+import RegressionScatterSection from "./components/RegressionScatterSection";
+import { buildBuiltRegressionContext, buildBuiltPredictionContext, buildBuiltModelSelectionContext } from "./api/aiClient";
+import AnalysisHelpPanel from "./components/AnalysisHelpPanel";
+import { BUILT_PREDICTION_HELP, BUILT_REGRESSION_HELP } from "./utils/builtAnalysisHelp";
 import type {
   Addr3Option,
   AssetType,
-  CorrelationSeries,
   IqrMultiplier,
   PredictOptions,
   RegionOption,
@@ -39,47 +46,18 @@ import type {
   ScopeSampleFilterResponse,
 } from "./types";
 import { EMPTY_SAMPLE_FILTER } from "./types";
+import FocusRegressionCard from "./components/FocusRegressionCard";
+import ModelExploreModal from "./components/ModelExploreModal";
+import UpperScopeCompareModal from "./components/UpperScopeCompareModal";
+import {
+  ADMIN_LABELS,
+  ASSET_TYPE_LABELS,
+  formatCoefName,
+  levelCardTitle,
+} from "./utils/regressionFormat";
 
 function riKey(p: RiPick) {
   return `${p.eup}|${p.ri}`;
-}
-
-const ADMIN_LABELS: Record<string, string> = {
-  sigungu: "시군구",
-  gu: "구",
-  eupmyeondong: "읍면동",
-  beopjungri: "법정리",
-};
-
-const COEF_LABELS: Record<string, string> = {
-  const: "상수(절편)",
-  gross_area: "연면적",
-  land_area: "대지면적",
-  building_age: "연식",
-  road_code: "도로",
-};
-
-const ASSET_TYPE_LABELS: Record<string, string> = {
-  commercial: "상업",
-  factory: "공장",
-  detached: "단독",
-};
-
-/** statsmodels 변수명 → 표시용 한글 */
-function formatCoefName(name: string, assetType?: AssetType): string {
-  if (COEF_LABELS[name]) return COEF_LABELS[name];
-  if (name.startsWith("zone_")) return `용도지역·${name.slice(5)}`;
-  if (name.startsWith("use_")) {
-    const prefix = assetType === "detached" ? "주택유형" : "건축물용도";
-    return `${prefix}·${name.slice(4)}`;
-  }
-  if (name.startsWith("road_")) return `도로조건·${name.slice(5)}`;
-  if (name.startsWith("atype_")) {
-    const key = name.slice(6);
-    return `유형·${ASSET_TYPE_LABELS[key] ?? key}`;
-  }
-  if (name.startsWith("loc_")) return `지역·${name.slice(4)}`;
-  return name;
 }
 
 function parseOptionalNum(s: string): number | undefined {
@@ -292,9 +270,7 @@ function SampleFilterPanel({
 function defaultPredictInputs(opts?: PredictOptions | null): Record<string, string> {
   const out: Record<string, string> = {};
   for (const c of opts?.continuous ?? []) {
-    const lo = c.min ?? 0;
-    const hi = c.max ?? lo;
-    out[c.name] = String(Math.round((lo + hi) / 2));
+    out[c.name] = "";
   }
   if (opts?.zone_types?.length) {
     out.zone_type = opts.zone_reference ?? opts.zone_types[0];
@@ -338,9 +314,10 @@ function PredictPanel({
 
   useEffect(() => {
     if (!levels.length) return;
-    const best = [...levels].sort((a, b) => b.n - a.n)[0];
-    setAdminLevel(best.admin_level);
-    setInputs(defaultPredictInputs(best.predict_options));
+    const focus = regData.primary;
+    const pick = levels.find((l) => l.admin_level === focus.admin_level) ?? focus;
+    setAdminLevel(pick.admin_level);
+    setInputs(defaultPredictInputs(pick.predict_options));
   }, [regData, levels]);
 
   useEffect(() => {
@@ -388,12 +365,15 @@ function PredictPanel({
     <div className="card space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-semibold text-sm">예측 계산</h2>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">예측</p>
+          <h2 className="font-semibold text-sm">다른 변수 고정 · 예측값</h2>
           <p className="text-xs text-slate-500 mt-1">
-            탐색용 OLS — 개별 거래 95% 예측구간(PI). n이 작으면 구간이 매우 넓습니다.
+            탐색(통제 전) → 분석(통제 후) → <strong className="text-slate-600">예측</strong> 순으로
+            해석하세요. OLS 기준 95% 예측구간(PI) — n이 작으면 구간이 넓습니다.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+          <AnalysisHelpPanel explain={predictM.data?.explain ?? BUILT_PREDICTION_HELP} />
           {aiPredictionContext && <AiAssistantPanel context={aiPredictionContext} />}
           <button
             type="button"
@@ -629,54 +609,6 @@ function fmtNum(n?: number | null, digits = 0) {
   });
 }
 
-/** e 표기 없이 고정 소수 — p값·계수 등 */
-function fmtDecimal(n?: number | null, digits = 5) {
-  if (n == null || Number.isNaN(n)) return "—";
-  return n.toFixed(digits);
-}
-
-/** 회귀 계수 — 정수 */
-function fmtCoefInt(n?: number | null) {
-  if (n == null || Number.isNaN(n)) return "—";
-  return Math.round(n).toLocaleString("ko-KR");
-}
-
-function ScatterMini({
-  points,
-  label,
-  r,
-}: {
-  points: { x: number; y: number }[];
-  label: string;
-  r?: number | null;
-}) {
-  if (!points.length) return null;
-  const xs = points.map((p) => p.x);
-  const ys = points.map((p) => p.y);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-  const pad = 8;
-  const w = 220;
-  const h = 120;
-  const sx = (x: number) => pad + ((x - minX) / (maxX - minX || 1)) * (w - pad * 2);
-  const sy = (y: number) => h - pad - ((y - minY) / (maxY - minY || 1)) * (h - pad * 2);
-
-  return (
-    <div className="card">
-      <div className="text-xs font-semibold mb-1">
-        {label} vs 금액 {r != null && <span className="text-slate-500">r={fmtDecimal(r, 5)}</span>}
-      </div>
-      <svg width={w} height={h} className="bg-slate-50 rounded border border-slate-100">
-        {points.map((p, i) => (
-          <circle key={i} cx={sx(p.x)} cy={sy(p.y)} r={2} fill="#64748b" opacity={0.5} />
-        ))}
-      </svg>
-    </div>
-  );
-}
-
 function RegionChipPanel({
   title,
   hint,
@@ -792,84 +724,8 @@ function RegionChipPanel({
   );
 }
 
-function levelCardTitle(result: RegressionLevelResult): string {
-  const sl = result.scope_label?.trim();
-  if (!sl) return ADMIN_LABELS[result.admin_level] ?? result.admin_level;
-  if (sl.endsWith(" 시군구")) return sl.slice(0, -" 시군구".length);
-  if (sl.endsWith(" 읍면동")) return sl.slice(0, -" 읍면동".length);
-  if (sl.endsWith(" 읍·면")) return sl.slice(0, -" 읍·면".length);
-  return sl;
-}
-
-function LevelCard({ result, assetType }: { result: RegressionLevelResult; assetType: AssetType }) {
-  return (
-    <div className="card space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h3 className="font-semibold text-sm">{levelCardTitle(result)}</h3>
-          <p className="text-xs text-slate-500 mt-0.5">{ADMIN_LABELS[result.admin_level] ?? result.admin_level}</p>
-        </div>
-        <span className="text-xs text-slate-500">n={fmtNum(result.n)}</span>
-      </div>
-      {result.warning && <p className="text-xs badge-warn">{result.warning}</p>}
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div>R² {fmtDecimal(result.r_squared, 5)}</div>
-        <div>Adj R² {fmtDecimal(result.adj_r_squared, 5)}</div>
-        <div title="in-sample · 금액(만원) 원척도">
-          MAPE {result.mape != null ? `${fmtDecimal(result.mape, 2)}%` : "—"}
-        </div>
-        <div>유의 변수 {result.significant_count}개</div>
-        <div>F p {fmtDecimal(result.f_p_value, 5)}</div>
-      </div>
-      {result.coefficients.length > 0 && (
-        <div className="table-wrap max-h-48">
-          <table className="data w-full">
-            <thead>
-              <tr>
-                <th>변수</th>
-                <th>계수</th>
-                <th>SE</th>
-                <th>t</th>
-                <th>p</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.coefficients.map((c) => (
-                <tr key={c.name}>
-                  <td>{formatCoefName(c.name, assetType)}</td>
-                  <td>{fmtCoefInt(c.estimate)}</td>
-                  <td>{fmtCoefInt(c.std_err)}</td>
-                  <td>{fmtDecimal(c.t_value, 2)}</td>
-                  <td className={clsx(c.p_value != null && c.p_value < 0.05 && "badge-sig")}>
-                    {fmtDecimal(c.p_value, 5)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {(result.vif?.length ?? 0) > 0 && (
-        <div className="text-xs space-y-1">
-          <div className="font-semibold text-slate-600">다중공선성 (VIF · 연속변수)</div>
-          <div className="flex flex-wrap gap-x-3 gap-y-1">
-            {result.vif!.map((v) => (
-              <span
-                key={v.name}
-                className={clsx(
-                  v.vif != null && v.vif >= 10 && "text-red-600 font-medium",
-                  v.vif != null && v.vif >= 5 && v.vif < 10 && "text-amber-700",
-                )}
-              >
-                {formatCoefName(v.name, assetType)} {v.vif != null ? fmtDecimal(v.vif, 2) : "—"}
-              </span>
-            ))}
-          </div>
-          <p className="text-slate-400">VIF≥10 주의 · ≥5 참고</p>
-        </div>
-      )}
-    </div>
-  );
+function levelCardTitleFromResult(result: RegressionLevelResult): string {
+  return levelCardTitle(result.scope_label, result.admin_level);
 }
 
 export default function App() {
@@ -882,13 +738,18 @@ export default function App() {
   const [yearFrom, setYearFrom] = useState<number | "">("");
   const [yearTo, setYearTo] = useState<number | "">("");
   const [txModalOpen, setTxModalOpen] = useState(false);
+  const [modelExploreOpen, setModelExploreOpen] = useState(false);
+  const [upperCompareOpen, setUpperCompareOpen] = useState(false);
   const [vars, setVars] = useState<RegressionVariableSpec>(DEFAULT_VARS_BY_TYPE.commercial);
   const [excludeOutliers, setExcludeOutliers] = useState(false);
   const [iqrMultiplier, setIqrMultiplier] = useState<IqrMultiplier>(3);
   const [sampleFilter, setSampleFilter] = useState<SampleFilterState>(EMPTY_SAMPLE_FILTER);
   const [useRollingWindow, setUseRollingWindow] = useState(true);
-  const [windowYears, setWindowYears] = useState<3 | 5>(3);
+  const [windowYears, setWindowYears] = useState<3 | 5>(5);
   const [responseScale, setResponseScale] = useState<ResponseScale>("linear");
+
+  const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
+  const { isDark, toggleUiColorScheme } = useUiColorScheme();
 
   const metaQ = useQuery({
     queryKey: ["built-meta"],
@@ -971,19 +832,6 @@ export default function App() {
     enabled: !!addr1 && !!addr2 && useAddr4Leaf,
   });
 
-  const riQ = useQuery({
-    queryKey: ["ri", addr1, addr2, assetType, leafLevel, guList, leafList, regionChipScopeParams],
-    queryFn: () =>
-      fetchRiRegions(addr1, addr2, {
-        leafLevel,
-        addr3List: useAddr4Leaf ? (guList.length ? guList : undefined) : leafList,
-        addr4List: useAddr4Leaf ? leafList : undefined,
-        assetType,
-        scope: regionChipScopeParams,
-      }),
-    enabled: !!addr1 && !!addr2 && leafList.length > 0 && structureQ.isSuccess,
-  });
-
   const visibleLeafOptions = useMemo(() => {
     if (!useAddr4Leaf) {
       return (flatLeafQ.data ?? []).map((o: Addr3Option) => ({ ...o, id: o.name, parent: null }));
@@ -998,15 +846,6 @@ export default function App() {
     const allowed = new Set(visibleLeafOptions.map((o) => o.name));
     setLeafList((prev) => prev.filter((n) => allowed.has(n)));
   }, [useAddr4Leaf, visibleLeafOptions]);
-
-  useEffect(() => {
-    const allowed = new Set(
-      (riQ.data ?? [])
-        .filter((o) => o.parent)
-        .map((o) => `${o.parent}|${o.name}`),
-    );
-    setRiList((prev) => prev.filter((p) => allowed.has(riKey(p))));
-  }, [riQ.data]);
 
   useEffect(() => {
     if (!leafList.length) setRiList([]);
@@ -1027,18 +866,45 @@ export default function App() {
     );
   };
 
-  const regressionMode = useMemo(() => {
-    if (riList.length > 0) return "three_way" as const;
-    if (leafList.length > 0) return "two_way" as const;
-    return "sigungu_only" as const;
-  }, [riList.length, leafList.length]);
-
   const inferredGuList = useMemo(() => {
     const fromParent = visibleLeafOptions
       .filter((o) => leafList.includes(o.name) && o.parent)
       .map((o) => o.parent as string);
     return [...new Set([...guList, ...fromParent])];
   }, [guList, leafList, visibleLeafOptions]);
+
+  const riQ = useQuery({
+    queryKey: ["ri", addr1, addr2, assetType, leafLevel, guList, inferredGuList, leafList, regionChipScopeParams],
+    queryFn: () =>
+      fetchRiRegions(addr1, addr2, {
+        leafLevel,
+        addr3List: useAddr4Leaf
+          ? (inferredGuList.length ? inferredGuList : guList.length ? guList : undefined)
+          : leafList,
+        addr4List: useAddr4Leaf ? leafList : undefined,
+        assetType,
+        scope: regionChipScopeParams,
+      }),
+    enabled: !!addr1 && !!addr2 && leafList.length > 0 && structureQ.isSuccess,
+  });
+
+  useEffect(() => {
+    const allowed = new Set(
+      (riQ.data ?? [])
+        .filter((o) => o.parent)
+        .map((o) => `${o.parent}|${o.name}`),
+    );
+    setRiList((prev) => prev.filter((p) => allowed.has(riKey(p))));
+  }, [riQ.data]);
+
+  const regressionMode = useMemo(() => {
+    if (riList.length > 0) return "three_way" as const;
+    if (leafList.length > 0) return "two_way" as const;
+    if ((useAddr4Leaf || inferredGuList.length > 0) && inferredGuList.length > 0) {
+      return "gu_only" as const;
+    }
+    return "sigungu_only" as const;
+  }, [riList.length, leafList.length, useAddr4Leaf, inferredGuList.length]);
 
   const regionFilterParams = useMemo(() => {
     const addr4Mode = useAddr4Leaf || inferredGuList.length > 0;
@@ -1133,6 +999,21 @@ export default function App() {
   );
 
   const regM = useMutation({ mutationFn: runRegression });
+  const suggestM = useMutation({ mutationFn: suggestRegression });
+  const compareM = useMutation({ mutationFn: compareRegression });
+
+  const adoptModel = (nextVars: RegressionVariableSpec, scale: ResponseScale) => {
+    setVars(nextVars);
+    setResponseScale(scale);
+    setModelExploreOpen(false);
+    regM.mutate({ ...regBody, variables: nextVars, response_scale: scale });
+  };
+
+  const selectionDisabled =
+    regM.isPending ||
+    suggestM.isPending ||
+    compareM.isPending ||
+    (!!addr2 && leafList.length > 0 && !structureQ.isSuccess);
 
   const aiRegionLabel = useMemo(() => {
     if (regM.data?.primary?.scope_label) return regM.data.primary.scope_label;
@@ -1145,54 +1026,55 @@ export default function App() {
     return buildBuiltRegressionContext(regM.data, {
       regionLabel: aiRegionLabel,
       assetType,
+      responseScale,
     });
-  }, [regM.data, aiRegionLabel, assetType]);
+  }, [regM.data, aiRegionLabel, assetType, responseScale]);
+
+  const aiSuggestContext = useMemo(() => {
+    if (!suggestM.data) return null;
+    return buildBuiltModelSelectionContext(suggestM.data, {
+      regionLabel: aiRegionLabel,
+      assetType,
+      mode: "suggest",
+    });
+  }, [suggestM.data, aiRegionLabel, assetType]);
+
+  const aiCompareContext = useMemo(() => {
+    if (!compareM.data) return null;
+    return buildBuiltModelSelectionContext(compareM.data, {
+      regionLabel: aiRegionLabel,
+      assetType,
+      mode: "compare",
+    });
+  }, [compareM.data, aiRegionLabel, assetType]);
 
   const addr2ScopeLabel = formatScopeAddr2(addr2, addr1) || addr1;
 
   const regressionSummaryText = useMemo(() => {
+    const focusLabel =
+      regM.data?.focus_scope_label ??
+      (regM.data?.primary ? levelCardTitleFromResult(regM.data.primary) : null);
+
     if (regressionMode === "sigungu_only") {
-      return addr2 ? `${addr2ScopeLabel} 시군구 단일 회귀` : "시군구 단일 회귀";
+      return focusLabel ? `${focusLabel} 시군구 회귀` : "시군구 회귀";
+    }
+    if (regressionMode === "gu_only") {
+      return focusLabel ? `${focusLabel} ${intermediateLabel} 회귀` : `${intermediateLabel} 회귀`;
     }
     if (regressionMode === "two_way") {
-      if (regM.data?.comparisons.length) {
-        const upper = levelCardTitle(regM.data.primary);
-        const lower = regM.data.comparisons[0]
-          ? levelCardTitle(regM.data.comparisons[0])
-          : `선택 읍·면·동 ${leafList.length}개`;
-        return `2-way: ${upper} vs ${lower}`;
-      }
-      if (useAddr4Leaf || inferredGuList.length > 0) {
-        const guHint =
-          inferredGuList.length > 0
-            ? inferredGuList.join(", ")
-            : guList.length
-              ? guList.join(", ")
-              : "선택 동 상위";
-        return `2-way: ${intermediateLabel}(${guHint}) vs 선택 읍·면·동 ${leafList.length}개`;
-      }
-      return `2-way: 시군구(${addr2ScopeLabel}) vs 선택 읍·면·동 ${leafList.length}개`;
+      const layer = ADMIN_LABELS[regM.data?.focus_admin_level ?? "eupmyeondong"] ?? "읍면동";
+      return focusLabel ? `${focusLabel} (${layer}) 회귀` : `선택 읍·면·동 ${leafList.length}개 회귀`;
     }
     if (regressionMode === "three_way") {
-      const topLabel =
-        regM.data?.primary?.scope_label && useAddr4Leaf
-          ? `${intermediateLabel} · ${regM.data.primary.scope_label}`
-          : useAddr4Leaf
-            ? intermediateLabel
-            : "시군구";
-      return `3-way: ${topLabel} · 상위 읍·면(${[...new Set(riList.map((p) => p.eup))].join(", ")}) · 리 ${riList.length}개`;
+      const layer = ADMIN_LABELS[regM.data?.focus_admin_level ?? "beopjungri"] ?? "법정리";
+      return focusLabel ? `${focusLabel} (${layer}) 회귀` : `리 ${riList.length}개 회귀`;
     }
     return "";
   }, [
     regressionMode,
-    addr2,
-    addr2ScopeLabel,
-    useAddr4Leaf,
-    inferredGuList,
     intermediateLabel,
-    guList,
     leafList.length,
-    riList,
+    riList.length,
     regM.data,
   ]);
 
@@ -1207,40 +1089,40 @@ export default function App() {
   }, [assetType, addr1, addr2, useRollingWindow, asOfMonth, windowYears]);
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
-      <header className="bg-slate-900 text-white px-6 py-4 shrink-0">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-xs text-slate-400 mb-1">
-              <a href="/" className="hover:text-white">
-                CH2 Macro
-              </a>
-              {" · "}
-              <a href="/land/" className="hover:text-white">
-                토지
-              </a>
-              {" · 복합부동산"}
-              <span className="ml-2 text-amber-300/90 text-[10px] font-medium uppercase tracking-wide">
-                beta
-              </span>
-            </p>
-            <h1 className="text-lg font-bold">복합부동산 통계</h1>
-            <p className="text-sm text-slate-300 mt-1">
-              상업·공장·단독다가구 일반(非집합) — 거래 탐색·OLS 회귀 ·{" "}
-              <a href="/collective/commercial/" className="underline hover:text-white">
-                집합상가·공장
-              </a>
-              은 별도
-            </p>
-          </div>
-        </div>
-      </header>
+    <div className="h-screen flex flex-col overflow-hidden bg-slate-100 dark:bg-slate-900">
+      <MacroStatsHeader
+        currentApp="built"
+        title="복합부동산 통계"
+        badge={
+          <span className="text-amber-600 dark:text-amber-300 text-[10px] font-medium uppercase tracking-wide">
+            beta
+          </span>
+        }
+        subtitle={
+          <>
+            상업·공장·단독다가구 일반(非집합) — 거래 탐색·OLS 회귀 ·{" "}
+            <a
+              href="/collective/commercial/"
+              className="underline hover:text-slate-700 dark:hover:text-slate-200"
+            >
+              집합상가·공장
+            </a>
+            은 별도
+          </>
+        }
+        fontPct={fontPct}
+        fontStepMin={fontStepMin}
+        fontStepMax={fontStepMax}
+        onBumpFont={bumpUiFontScale}
+        isDark={isDark}
+        onToggleTheme={toggleUiColorScheme}
+      />
 
-      <main className="flex flex-1 min-h-0 overflow-hidden">
+      <main className="flex flex-1 min-h-0 overflow-hidden" style={{ zoom: contentZoom }}>
         {/* 왼쪽: 유형·지역·표본 필터 */}
         <aside className="layout-sidebar p-4 space-y-4">
           <div>
-            <h2 className="text-sm font-semibold text-slate-800 mb-3">유형 · 지역</h2>
+            <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-3">유형 · 지역</h2>
             {metaQ.isError && (
               <div className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
                 <p>지역·연도 목록을 불러오지 못했습니다. 새로고침(Ctrl+Shift+R) 후 다시 시도해 주세요.</p>
@@ -1486,7 +1368,8 @@ export default function App() {
                 </div>
               </div>
               <p className="text-xs text-slate-500">
-                미선택 시 읍·면·동 단위 2-way 비교. 리 선택 시 3-way(시군구 · 상위 읍·면 · 리).
+                선택 읍·면·동 아래 원장에 법정리(addr5)가 있으면 목록이 표시됩니다. 미선택 시 2-way · 리
+                선택 시 3-way(구 · 상위 읍·면 · 리).
               </p>
               <div className="flex flex-wrap gap-2 overflow-y-auto border border-slate-100 rounded p-2 max-h-36">
                 {(riQ.data ?? []).map((o) => {
@@ -1548,7 +1431,10 @@ export default function App() {
                   <h2 className="font-semibold text-sm">회귀 실험 (종속: 금액 만원)</h2>
                   <p className="text-xs text-slate-500 mt-1">{regressionSummaryText}</p>
                 </div>
-                <div className="flex flex-wrap gap-2 shrink-0">
+                <div className="flex flex-wrap gap-1.5 shrink-0 items-center">
+                  <AnalysisHelpPanel
+                    explain={regM.data?.explain ?? BUILT_REGRESSION_HELP}
+                  />
                   {regM.data && aiRegressionContext && (
                     <AiAssistantPanel context={aiRegressionContext} />
                   )}
@@ -1567,9 +1453,7 @@ export default function App() {
                   <button
                     className="btn btn-primary shrink-0"
                     onClick={() => regM.mutate(regBody)}
-                    disabled={
-                      regM.isPending || (!!addr2 && leafList.length > 0 && !structureQ.isSuccess)
-                    }
+                    disabled={selectionDisabled}
                     title={
                       !!addr2 && leafList.length > 0 && !structureQ.isSuccess
                         ? "지역 구조 확인 중… 잠시 후 다시 시도하세요."
@@ -1645,37 +1529,39 @@ export default function App() {
                 <p className="text-sm text-red-600">{(regM.error as Error).message ?? "회귀 실패"}</p>
               )}
               {regM.data && (
-                <div className="space-y-2 pt-1">
-                  <div
-                    className={clsx(
-                      "grid gap-2",
-                      regressionMode === "sigungu_only" && "md:grid-cols-1",
-                      regressionMode === "two_way" && "md:grid-cols-2",
-                      regressionMode === "three_way" && "md:grid-cols-3",
+                <div className="relative space-y-2 pt-1">
+                  <div className="absolute top-0 right-0 flex gap-1.5 z-10">
+                    <button
+                      type="button"
+                      className="btn btn-ghost text-xs shrink-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm shadow-sm"
+                      onClick={() => setModelExploreOpen(true)}
+                      disabled={suggestM.isPending || compareM.isPending}
+                      title="Group Forward 추천 · Best Subset 비교"
+                    >
+                      {suggestM.isPending || compareM.isPending ? "추천 중…" : "모형추천"}
+                    </button>
+                    {regM.data.comparisons.length > 0 && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost text-xs shrink-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm shadow-sm"
+                        onClick={() => setUpperCompareOpen(true)}
+                        title="분석 초점 vs 상위 행정 scope"
+                      >
+                        상위지역분석
+                      </button>
                     )}
-                  >
-                    <LevelCard result={regM.data.primary} assetType={assetType} />
-                    {regM.data.comparisons.map((c: RegressionLevelResult, i: number) => (
-                      <LevelCard key={`${c.admin_level}-${i}`} result={c} assetType={assetType} />
-                    ))}
                   </div>
-                  {regM.data.correlations.length > 0 && (
-                    <div className="space-y-1">
-                      <p className="text-xs text-slate-500">
-                        상관·산점도 —{" "}
-                        {ADMIN_LABELS[regM.data.correlation_admin_level ?? "sigungu"]}
-                        {regM.data.correlation_scope_label
-                          ? ` · ${regM.data.correlation_scope_label}`
-                          : ""}
-                        {regM.data.correlation_n != null ? ` (n=${fmtNum(regM.data.correlation_n)})` : ""}
-                      </p>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                        {regM.data.correlations.map((s: CorrelationSeries) => (
-                          <ScatterMini key={s.variable} points={s.points} label={s.label} r={s.pearson_r} />
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <FocusRegressionCard
+                    result={regM.data.primary}
+                    assetType={assetType}
+                    responseScale={responseScale}
+                  />
+                  <RegressionScatterSection
+                    data={regM.data}
+                    regionLabel={aiRegionLabel}
+                    assetType={assetType}
+                    responseScale={responseScale}
+                  />
                 </div>
               )}
             </div>
@@ -1702,6 +1588,29 @@ export default function App() {
         exportParams={txExportParams}
         summary={txModalSummary}
       />
+
+      <ModelExploreModal
+        open={modelExploreOpen}
+        onClose={() => setModelExploreOpen(false)}
+        regBody={regBody}
+        suggestM={suggestM}
+        compareM={compareM}
+        onAdopt={adoptModel}
+        adopting={regM.isPending}
+        aiSuggestContext={aiSuggestContext}
+        aiCompareContext={aiCompareContext}
+      />
+
+      {regM.data && (
+        <UpperScopeCompareModal
+          open={upperCompareOpen}
+          onClose={() => setUpperCompareOpen(false)}
+          regData={regM.data}
+          assetType={assetType}
+          responseScale={responseScale}
+          focusLabel={regM.data.focus_scope_label ?? levelCardTitleFromResult(regM.data.primary)}
+        />
+      )}
     </div>
   );
 }
