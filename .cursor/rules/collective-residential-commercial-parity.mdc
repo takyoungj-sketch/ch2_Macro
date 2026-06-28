@@ -1,0 +1,37 @@
+---
+description: 주거·비주거 집합은 통계·UI를 쌍으로 유지 (분석 단위만 다름)
+globs: frontend-collective/**,backend/app/collective/**,backend/app/collective_commercial/**,docs/COLLECTIVE*.md
+alwaysApply: false
+---
+
+# 집합(주거·비주거) 쌍 작업 원칙
+
+주거용 집합과 비주거용 집합은 **분석 대상(해상도)만 다르고**, 통계 방식·UI·UX는 **동일하게** 유지한다.
+
+## 분석 대상 차이 (허용되는 유일한 차이)
+
+| 구분 | 주거용 집합 | 비주거용 집합 |
+|------|-------------|---------------|
+| 기본 해상도 | **건물/단지** (`building_key`) | **도로명 cluster** (`cluster_key`) |
+| 대표 UI | `BuildingDetailModal`, `BuildingRegressionPanel` | `CommercialClusterDetailModal`, `CommercialRegressionPanel` |
+| 백엔드 | `backend/app/collective/` | `backend/app/collective_commercial/` |
+
+번지·도로명 등 **데이터 필드 차이**는 라벨·컬럼·필터에만 반영하고, 패널 구조·통계 정의·다크모드·예측 UX 등은 맞춘다.
+
+## 작업 시 기본 동작
+
+1. **한쪽만 수정하지 않는다.** UI·통계·회귀·예측·다크모드·내보내기 등 집합 관련 변경은 **주거 + 비주거를 동시에** 적용한다.
+2. **공통화를 우선한다.** 반복 패턴은 `BuildingRegressionPanel` export, `modal-*` CSS, `collectiveDetailModalShell` 등 **공유 컴ponent/유틸**로 빼고, 두 모달이 같은 API를 쓰게 한다.
+3. **차이가 필요하면 문서화한다.** 해상도(건물 vs 도로) 때문에 의도적으로 다르게 둔 경우, PR/커밋에 이유를 한 줄 남긴다.
+
+## 체크리스트 (집합 작업 완료 전)
+
+- [ ] `BuildingDetailModal` / `CommercialClusterDetailModal` 동일 탭·테이블·페이지네이션 스타일
+- [ ] `BuildingRegressionPanel` / `CommercialRegressionPanel` 동일 예측·모델 비교 UX (연속 변수 기본값 빈칸 등)
+- [ ] 층지수·히스토그램·추세 등 분석 패널 쌍 대칭
+- [ ] 백엔드 스키마·회귀 엔진 동작이 쌍으로 일치 (필드명만 `exclusive_area` vs `gross_area` 등 도메인 매핑)
+
+## 참고
+
+- 설계: `docs/COLLECTIVE_COMMERCIAL_DESIGN.md`
+- 모달 셸: `frontend-collective/src/utils/collectiveDetailModalShell.ts`

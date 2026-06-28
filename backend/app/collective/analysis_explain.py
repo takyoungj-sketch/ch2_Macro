@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.collective.regression.presentation import (
+    build_market_interpretation_hints,
+    short_display_label,
+)
+
 CONTROL_LABELS: dict[str, str] = {
     "ln_gross_area": "ln(연면적)",
     "ln_exclusive_area": "ln(전용면적)",
@@ -508,7 +513,12 @@ def _dimension_title(dim: str) -> str:
     }.get(dim, dim)
 
 
-def build_residential_floor_index_explain(*, raw: dict, asset_type: str) -> dict[str, Any]:
+def build_residential_floor_index_explain(
+    *,
+    raw: dict,
+    asset_type: str,
+    scope_kind: str = "building",
+) -> dict[str, Any]:
     dim = raw.get("dimension") or "floor"
     floor_mode = raw.get("floor_mode") or "relative"
     controls = raw.get("controls") or []
@@ -521,15 +531,20 @@ def build_residential_floor_index_explain(*, raw: dict, asset_type: str) -> dict
         "dummy": "개별 층 더미",
         "grouped": "절대 구간 (1–5 / 6–15 / 16+)",
     }.get(floor_mode, floor_mode)
+    is_cluster = scope_kind == "cluster"
+    scope_label = "도로 cluster" if is_cluster else "단지(또는 코호트)"
+    area_label = "연면적" if is_cluster else "전용면적"
+    spec_prefix = "cluster" if is_cluster else "residential"
 
     return {
-        "spec_id": f"residential_floor_index_regression_{dim}_v1",
+        "spec_id": f"{spec_prefix}_floor_index_regression_{dim}_v1",
         "spec_version": "1",
         "title": f"회귀 기반 {dim_title} 효용지수",
         "summary": (
-            f"단지(또는 코호트) 거래에 반로그 OLS를 적용해, "
+            f"{scope_label} 거래에 반로그 OLS(HC3)를 적용해, "
             f"{ref}=100% 기준 {dim_title} 상대 ㎡당 단가 지수를 산출합니다."
             + (f" (층 형식: {floor_mode_label})" if dim == "floor" else "")
+            + (f" ({area_label}·연식·거래시점 통제)" if is_cluster else "")
         ),
         "formula": (
             "ln(㎡당단가) = β₀"
@@ -558,12 +573,23 @@ def build_residential_floor_index_explain(*, raw: dict, asset_type: str) -> dict
             f"100%보다 낮을수록 기준({ref}) 대비 ㎡당 단가가 낮은 패턴입니다.",
             "95% CI는 HC3 강건표준오차 기반 구간 추정치입니다.",
         ],
-        "limitations": [
-            "단지·기간 내 패턴 설명 — 인과 추론 불가",
-            "구간별 n<5 → 해당 더미·지수 미산출",
-            "셀 n<15 → 참고용 표시",
-            "층·동·면적·권리 결측 거래는 해당 탭에서 제외될 수 있음",
-        ],
+        "limitations": (
+            [
+                "도로 cluster·기간 내 패턴 설명 — 인과 추론 불가",
+                "동일 도로 내 건물·max층·입지 차이 잔존",
+                "구간별 n<5 → 해당 더미·지수 미산출",
+                "셀 n<15 → 참고용 표시",
+                "층·면적 결측 거래는 해당 탭에서 제외될 수 있음",
+                "회귀 기준=거래 최다 층·구간, 화면(층 탭)=1층=100% 환산",
+            ]
+            if is_cluster
+            else [
+                "단지·기간 내 패턴 설명 — 인과 추론 불가",
+                "구간별 n<5 → 해당 더미·지수 미산출",
+                "셀 n<15 → 참고용 표시",
+                "층·동·면적·권리 결측 거래는 해당 탭에서 제외될 수 있음",
+            ]
+        ),
         "interpretation_hints": _floor_index_hints(raw, asset_type=asset_type),
         "presets": _preset_answers_residential_floor_index(),
     }
@@ -591,38 +617,41 @@ def build_residential_regression_explain(
 
     model_type = getattr(result, "model_type", "linear")
     if model_type == "log":
-        hints = [f"종속변수: ln(금액). 계수≈변화율, 예측은 Duan smearing 보정. 표본 n={result.n}."]
+        hints = [
+            f"종속변수: ln(금액). 연속 변수 계수는 대략 % 변화율, 더미는 기준 대비 % 차이로 읽습니다. 표본 n={result.n}."
+        ]
+        formula = "log(금액) = β₀ + Σ β_k·X_k  (로그 OLS · % 해석 옵션)"
     else:
-        hints = [f"종속변수: 금액(만원, 수준). 표본 n={result.n}."]
+        hints = [f"종속변수: 금액(만원, 수준). 연속 변수는 1단위당 만원 변화. 표본 n={result.n}."]
+        formula = "금액(만원) = β₀ + Σ β_k·X_k  (선형 OLS · 기본)"
     if result.r_squared is not None:
         adj = round(result.adj_r_squared, 3) if result.adj_r_squared else "—"
         hints.append(f"R²={round(result.r_squared, 3)}, Adj.R²={adj} (적합척도).")
     cmp = getattr(result, "model_comparison", None)
     if cmp is not None:
         rec = "로그회귀" if cmp.recommended == "log" else "선형회귀"
-        basis = "교차검증" if cmp.metric_basis == "cv" else "표본내"
-        parts = []
-        if cmp.log and cmp.log.mape is not None:
-            parts.append(f"로그 MAPE {cmp.log.mape}%")
-        if cmp.linear and cmp.linear.mape is not None:
-            parts.append(f"선형 MAPE {cmp.linear.mape}%")
-        stars = "★" * cmp.confidence_stars + "☆" * (5 - cmp.confidence_stars)
-        hints.append(
-            f"모델비교({basis}): {', '.join(parts) if parts else '—'} · 권장={rec} · 신뢰 {stars} ({cmp.confidence_label})."
-        )
+        hints.append(f"모형: 사용자 선택({model_type}). API model_comparison 권장={rec} (화면 미표시).")
     hints.append(f"독립변수: {', '.join(active) if active else '(없음)'}.")
 
-    sig = [c for c in result.coefficients if c.p is not None and c.p < 0.05 and c.name != "const"]
+    market = build_market_interpretation_hints(
+        result.coefficients, model_type=model_type
+    )
+    hints[:0] = market
+
+    sig = [c for c in result.coefficients if c.p is not None and c.p < 0.1 and c.name != "const"]
     if sig:
         top = sig[:5]
         hints.append(
-            "유의한 변수(p<0.05): "
-            + "; ".join(f"{c.label} (계수 {round(c.coef, 2)})" for c in top)
+            "유의한 변수(p<0.1): "
+            + "; ".join(
+                f"{short_display_label(c.label)} ({getattr(c, 'effect_plain', None) or f'계수 {round(c.coef, 2)}'})"
+                for c in top
+            )
             + (" …" if len(sig) > 5 else "")
             + "."
         )
     else:
-        hints.append("p<0.05 유의 변수가 없거나 표본이 적어 참고용으로 보세요.")
+        hints.append("p<0.1 유의 변수가 없거나 표본이 적어 참고용으로 보세요.")
 
     for w in result.warnings or []:
         hints.append(f"⚠ {w}")
@@ -635,22 +664,21 @@ def build_residential_regression_explain(
     return {
         "spec_id": f"residential_regression_explore_{asset_type}_v1",
         "spec_version": "1",
-        "title": "단지 회귀 분석 (탐색용)",
+        "title": "단지 가격 형성 분석 (탐색용)",
         "summary": (
-            "선택한 변수로 거래금액(만원) OLS를 추정합니다. "
-            "변수·층 형식을 바꿀 수 있는 탐색용 분석이며, "
-            "「층·동·면적 효용지수」 탭의 반로그 지수 spec과는 별도입니다."
+            "선택한 표본·변수에서 가격이 어떻게 형성되는지 읽기 위한 OLS입니다. "
+            "AVM·적정가가 아닙니다. 기본은 선형(만원), 로그는 % 변화 옵션. "
+            "「층·동·면적 효용지수」 탭과는 별도 spec입니다."
         ),
-        "formula": "금액(만원) = β₀ + Σ β_k·X_k  (OLS, 수준 모델)",
+        "formula": formula,
         "index_rule": None,
         "reference": "범주형 변수는 drop_first 기준 범주 대비",
         "floor_groups": floor_lines,
         "controls": active,
         "interpretation": [
-            "연속 변수 계수: 해당 변수 1단위 증가 시 금액(만원) 변화.",
-            "더미 계수: 기준 범주 대비 금액 차이(만원).",
-            "층 relative/dummy/grouped/linear 모드에 따라 층 해석이 달라집니다.",
-            "예측: 적합 모형으로 입력 조건의 금액·95% 예측·평균 신뢰구간을 산출합니다.",
+            "기본(선형): 연속 변수 1단위 증가 시 금액(만원) 변화, 더미는 기준 범주 대비 만원 차이.",
+            "로그 옵션: 연속 변수는 대략 % 변화, 더미는 기준 대비 % 차이 — 화면 「쉬운 설명」 참고.",
+            "예측은 가정 시나리오 참고값이며, AVM·적정가가 아닙니다.",
         ],
         "limitations": [
             "사용자 변수 선택에 따라 결과 변경",
@@ -690,24 +718,38 @@ def build_commercial_regression_explain(
     if v.addr4:
         active.append("동(addr4)")
 
-    hints: list[str] = [
-        f"종속변수: 금액(만원, 수준). 표본 n={result.n}.",
-    ]
+    model_type = getattr(result, "model_type", "linear")
+    if model_type == "log":
+        hints = [
+            f"종속변수: ln(금액). 연속 변수는 대략 % 변화, 더미는 기준 대비 % 차이. 표본 n={result.n}."
+        ]
+        formula = "log(금액) = β₀ + Σ β_k·X_k  (로그 OLS · % 해석 옵션)"
+    else:
+        hints = [f"종속변수: 금액(만원, 수준). 표본 n={result.n}."]
+        formula = "금액(만원) = β₀ + Σ β_k·X_k  (선형 OLS · 기본)"
     if result.r_squared is not None:
         hints.append(f"R²={round(result.r_squared, 3)}, Adj.R²={round(result.adj_r_squared, 3) if result.adj_r_squared else '—'}.")
     hints.append(f"독립변수: {', '.join(active) if active else '(없음)'}.")
 
-    sig = [c for c in result.coefficients if c.p is not None and c.p < 0.05 and c.name != "const"]
+    market = build_market_interpretation_hints(
+        result.coefficients, model_type=model_type
+    )
+    hints[:0] = market
+
+    sig = [c for c in result.coefficients if c.p is not None and c.p < 0.1 and c.name != "const"]
     if sig:
         top = sig[:5]
         hints.append(
-            "유의한 변수(p<0.05): "
-            + "; ".join(f"{c.label} (계수 {round(c.coef, 2)})" for c in top)
+            "유의한 변수(p<0.1): "
+            + "; ".join(
+                f"{short_display_label(c.label)} ({getattr(c, 'effect_plain', None) or f'계수 {round(c.coef, 2)}'})"
+                for c in top
+            )
             + (" …" if len(sig) > 5 else "")
             + "."
         )
     else:
-        hints.append("p<0.05 유의 변수가 없거나 표본이 적어 참고용으로 보세요.")
+        hints.append("p<0.1 유의 변수가 없거나 표본이 적어 참고용으로 보세요.")
 
     for w in result.warnings or []:
         hints.append(f"⚠ {w}")
@@ -715,20 +757,20 @@ def build_commercial_regression_explain(
     return {
         "spec_id": "commercial_regression_explore_v1",
         "spec_version": "1",
-        "title": "도로(cluster) 회귀 분석 (탐색용)",
+        "title": "도로(cluster) 가격 형성 분석 (탐색용)",
         "summary": (
-            "선택한 변수로 금액(만원) OLS를 추정합니다. "
-            "변수·층 형식을 바꿀 수 있는 탐색용 분석입니다."
+            "선택한 표본·변수에서 가격 형성 패턴을 읽기 위한 OLS입니다. "
+            "AVM·적정가가 아닙니다. 기본은 선형(만원), 로그는 % 변화 옵션입니다."
         ),
-        "formula": "금액(만원) = β₀ + Σ β_k·X_k  (OLS, 수준 모델)",
+        "formula": formula,
         "index_rule": None,
         "reference": "범주형 변수는 drop_first 기준 범주 대비",
         "floor_groups": [],
         "controls": active,
         "interpretation": [
-            "연속 변수 계수: 해당 변수 1단위 증가 시 금액(만원) 변화.",
-            "더미 계수: 기준 범주 대비 금액 차이(만원).",
-            "층 relative/dummy/grouped/linear 모드에 따라 층 해석이 달라집니다.",
+            "기본(선형): 연속 변수 1단위 증가 시 금액(만원) 변화, 더미는 기준 범주 대비 만원 차이.",
+            "로그 옵션: 연속 변수는 대략 % 변화 — 화면 「쉬운 설명」 참고.",
+            "예측은 가정 시나리오 참고값이며, AVM·적정가가 아닙니다.",
         ],
         "limitations": [
             "사용자 변수 선택에 따라 결과 변경",

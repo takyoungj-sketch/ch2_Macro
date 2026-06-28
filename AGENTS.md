@@ -1,6 +1,7 @@
 # CH2 Macro — Cursor Agent 지침
 
-전역 Git·버전 정책: `~/.cursor/agent.md`
+전역 Git·버전 정책: `~/.cursor/agent.md`  
+**제품 헌법:** [`docs/CH2_CONSTITUTION.md`](docs/CH2_CONSTITUTION.md) · AI: [`docs/CH2_AI_CONSTITUTION.md`](docs/CH2_AI_CONSTITUTION.md)
 
 ---
 
@@ -29,6 +30,7 @@
 | 토지 재구축 | http://localhost:5176/land/ → API `:8001` (`land_stats_next`) |
 | 집합 | http://localhost:5175/collective/ |
 | API | http://127.0.0.1:8000 |
+| AI | http://127.0.0.1:8000/api/ai/health · 헌법 [`CH2_CONSTITUTION.md`](docs/CH2_CONSTITUTION.md) · AI [`CH2_AI_CONSTITUTION.md`](docs/CH2_AI_CONSTITUTION.md) |
 
 ---
 
@@ -36,3 +38,11 @@
 
 - 사용자가 배포만 요청: 변경 범위에 맞는 파일만 commit (전체 `git add .` 지양).
 - `.env`, `*.pem`, 대용량 원본 커밋 금지.
+
+---
+
+## 집합(주거·비주거) 쌍 작업
+
+주거용·비주거용 집합은 **분석 단위만 다름**(건물/단지 vs 도로명 cluster). **통계 방식·UI·UX는 동일**하게 유지한다.
+
+집합 관련 작업 시 **기본으로 주거 + 비주거를 동시에** 수정한다. 상세: `.cursor/rules/collective-residential-commercial-parity.mdc`

@@ -229,6 +229,7 @@ class RegressionCoeff(BaseModel):
     se: Optional[float] = None
     t: Optional[float] = None
     p: Optional[float] = None
+    effect_plain: Optional[str] = None
 
 
 class ContinuousRange(BaseModel):
@@ -274,7 +275,7 @@ class CollectiveRegressionRequest(BaseModel):
     contract_date_from: Optional[date] = None
     contract_date_to: Optional[date] = None
     variables: CollectiveRegressionSpec = Field(default_factory=CollectiveRegressionSpec)
-    model_type: Literal["log", "linear"] = "log"
+    model_type: Literal["log", "linear"] = "linear"
     exclude_outliers_iqr: bool = False
     outlier_iqr_multiplier: float = 3.0
     experiment: bool = False
@@ -325,6 +326,11 @@ class CollectiveRegressionResponse(BaseModel):
     model_type: Literal["log", "linear"] = "linear"
     r_squared: Optional[float] = None
     adj_r_squared: Optional[float] = None
+    price_adj_r_squared: Optional[float] = None
+    mape: Optional[float] = None  # in-sample or CV, 금액(만원) 원척도
+    f_p_value: Optional[float] = None
+    significant_count: int = 0
+    equation: str = ""
     coefficients: list[RegressionCoeff] = []
     warnings: list[str] = []
     predict_options: Optional[CollectivePredictOptions] = None
@@ -346,7 +352,7 @@ class CohortAnalysisRequest(BaseModel):
     contract_date_from: Optional[date] = None
     contract_date_to: Optional[date] = None
     variables: CollectiveRegressionSpec = Field(default_factory=CollectiveRegressionSpec)
-    model_type: Literal["log", "linear"] = "log"
+    model_type: Literal["log", "linear"] = "linear"
     dimension: Literal["floor", "dong", "area", "rights"] = "floor"
     exclude_outliers_iqr: bool = False
     outlier_iqr_multiplier: float = 3.0

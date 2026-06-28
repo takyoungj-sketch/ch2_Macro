@@ -6,8 +6,8 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from app.collective.schemas import AnalysisExplain, RegressionCoeff
-from app.collective.schemas import AnalysisFeatures, FloorIndexCell
+from app.collective.schemas import AnalysisExplain, ContinuousRange, ModelComparison, RegressionCoeff
+from app.collective.schemas import AnalysisFeatures, FloorIndexCell, FloorIndexDiagnostics
 
 CommercialAssetType = Literal["collective_shop", "collective_factory"]
 
@@ -142,17 +142,67 @@ class CommercialRegressionRequest(BaseModel):
     exclude_outliers_iqr: bool = False
     outlier_iqr_multiplier: float = 3.0
     experiment: bool = False
+    model_type: Literal["log", "linear"] = "linear"
 
 
 class CommercialRegressionResponse(BaseModel):
     cluster_key: str
     display_label: str
     n: int
+    model_type: Literal["log", "linear"] = "linear"
     r_squared: Optional[float] = None
     adj_r_squared: Optional[float] = None
+    price_adj_r_squared: Optional[float] = None
+    mape: Optional[float] = None
+    f_p_value: Optional[float] = None
+    significant_count: int = 0
+    equation: str = ""
     coefficients: list[RegressionCoeff] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    predict_options: Optional["CommercialPredictOptions"] = None
+    model_comparison: Optional[ModelComparison] = None
     explain: Optional[AnalysisExplain] = None
+
+
+class CommercialPredictOptions(BaseModel):
+    gross_area: Optional[ContinuousRange] = None
+    building_age: Optional[ContinuousRange] = None
+    floor: Optional[ContinuousRange] = None
+    max_floor: Optional[float] = None
+    floor_mode: str = "relative"
+    road_code: Optional[ContinuousRange] = None
+    zone_types: list[str] = Field(default_factory=list)
+    zone_type_reference: Optional[str] = None
+    building_uses: list[str] = Field(default_factory=list)
+    building_use_reference: Optional[str] = None
+    road_width_labels: list[str] = Field(default_factory=list)
+    road_width_reference: Optional[str] = None
+
+
+class CommercialRegressionPredictInputs(BaseModel):
+    gross_area: Optional[float] = None
+    building_age: Optional[float] = None
+    floor: Optional[float] = None
+    road_code: Optional[float] = None
+    zone_type: Optional[str] = None
+    building_use: Optional[str] = None
+    road_width_label: Optional[str] = None
+
+
+class CommercialRegressionPredictRequest(CommercialRegressionRequest):
+    inputs: CommercialRegressionPredictInputs = Field(default_factory=CommercialRegressionPredictInputs)
+
+
+class CommercialRegressionPredictResponse(BaseModel):
+    n: int
+    model_type: Literal["log", "linear"] = "linear"
+    y_hat: float
+    pi_lower: float
+    pi_upper: float
+    ci_lower: float
+    ci_upper: float
+    unit_price_hat: Optional[float] = None
+    warnings: list[str] = Field(default_factory=list)
 
 
 class CommercialFloorIndexResponse(BaseModel):
@@ -160,8 +210,10 @@ class CommercialFloorIndexResponse(BaseModel):
     display_label: str
     asset_type: str
     dimension: str
-    method: str = "simple_median"
+    method: str = "regression_semilog"
+    floor_mode: Optional[str] = None
     reference_floor: Optional[str] = None
+    regression_reference_floor: Optional[str] = None
     controls: list[str] = Field(default_factory=list)
     n_total: int
     n_regression: Optional[int] = None
@@ -170,4 +222,5 @@ class CommercialFloorIndexResponse(BaseModel):
     cells: list[FloorIndexCell] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     explain: Optional[AnalysisExplain] = None
+    diagnostics: Optional[FloorIndexDiagnostics] = None
     analysis: AnalysisFeatures = Field(default_factory=AnalysisFeatures)

@@ -1,6 +1,7 @@
 export type AssetType = "apartment" | "rowhouse" | "officetel" | "presale";
 export type AssetSelectorType = AssetType | "all";
 export type CommercialAssetType = "collective_shop" | "collective_factory";
+export type CommercialAssetSelectorType = CommercialAssetType | "all";
 export type AnyAssetType = AssetType | CommercialAssetType;
 
 export function isCommercialAsset(t: AnyAssetType): t is CommercialAssetType {
@@ -242,7 +243,9 @@ export interface CommercialFloorIndexResponse {
   asset_type: string;
   dimension: string;
   method?: string;
+  floor_mode?: string | null;
   reference_floor?: string | null;
+  regression_reference_floor?: string | null;
   controls?: string[];
   n_total: number;
   n_regression?: number | null;
@@ -251,6 +254,7 @@ export interface CommercialFloorIndexResponse {
   cells: FloorIndexCell[];
   warnings?: string[];
   explain?: AnalysisExplain | null;
+  diagnostics?: FloorIndexDiagnostics | null;
   analysis?: AnalysisFeatures;
 }
 
@@ -258,11 +262,56 @@ export interface CommercialRegressionResponse {
   cluster_key: string;
   display_label: string;
   n: number;
+  model_type?: RegressionModelType;
   r_squared?: number | null;
   adj_r_squared?: number | null;
+  price_adj_r_squared?: number | null;
+  mape?: number | null;
+  f_p_value?: number | null;
+  significant_count?: number;
+  equation?: string;
   coefficients: RegressionCoeff[];
   warnings: string[];
+  predict_options?: CommercialPredictOptions | null;
+  model_comparison?: ModelComparison | null;
   explain?: AnalysisExplain | null;
+}
+
+export interface CommercialPredictOptions {
+  gross_area?: ContinuousRange | null;
+  building_age?: ContinuousRange | null;
+  floor?: ContinuousRange | null;
+  max_floor?: number | null;
+  floor_mode?: string;
+  road_code?: ContinuousRange | null;
+  zone_types?: string[];
+  zone_type_reference?: string | null;
+  building_uses?: string[];
+  building_use_reference?: string | null;
+  road_width_labels?: string[];
+  road_width_reference?: string | null;
+}
+
+export interface CommercialRegressionPredictInputs {
+  gross_area?: number | null;
+  building_age?: number | null;
+  floor?: number | null;
+  road_code?: number | null;
+  zone_type?: string | null;
+  building_use?: string | null;
+  road_width_label?: string | null;
+}
+
+export interface CommercialRegressionPredictResponse {
+  n: number;
+  model_type?: RegressionModelType;
+  y_hat: number;
+  pi_lower: number;
+  pi_upper: number;
+  ci_lower: number;
+  ci_upper: number;
+  unit_price_hat?: number | null;
+  warnings: string[];
 }
 
 export interface CollectiveTransactionRow {
@@ -340,6 +389,7 @@ export interface RegressionCoeff {
   se?: number | null;
   t?: number | null;
   p?: number | null;
+  effect_plain?: string | null;
 }
 
 export interface ContinuousRange {
@@ -415,6 +465,11 @@ export interface CollectiveRegressionResponse {
   model_type?: RegressionModelType;
   r_squared?: number | null;
   adj_r_squared?: number | null;
+  price_adj_r_squared?: number | null;
+  mape?: number | null;
+  f_p_value?: number | null;
+  significant_count?: number;
+  equation?: string;
   coefficients: RegressionCoeff[];
   warnings: string[];
   predict_options?: CollectivePredictOptions | null;
@@ -476,3 +531,13 @@ export const COMMERCIAL_ASSET_LABELS: Record<CommercialAssetType, string> = {
   collective_shop: "집합상가",
   collective_factory: "집합공장",
 };
+
+export const COMMERCIAL_ASSET_SELECTOR_LABELS: Record<CommercialAssetSelectorType, string> = {
+  all: "통합",
+  ...COMMERCIAL_ASSET_LABELS,
+};
+
+export function commercialAssetTypeLabel(t: string | undefined | null): string {
+  if (!t) return "—";
+  return COMMERCIAL_ASSET_LABELS[t as CommercialAssetType] ?? t;
+}

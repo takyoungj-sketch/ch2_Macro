@@ -11,9 +11,6 @@ import type {
   CollectivePredictOptions,
   CollectiveRegressionPredictInputs,
   CollectiveRegressionPredictResponse,
-  CollectiveRegressionResponse,
-  ModelComparison,
-  RegressionCoeff,
   RegressionModelType,
 } from "../types";
 import { buildAnalysisPeriodParams } from "../utils/analysisPeriod";
@@ -21,82 +18,18 @@ import { RESIDENTIAL_REGRESSION_HELP } from "../utils/residentialAnalysisHelp";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
 import { buildCollectiveRegressionContext } from "../api/aiContext";
+import { CollectiveRegressionResults } from "./CollectiveRegressionResults";
+import type { FloorMode } from "../utils/collectiveRegressionTypes";
 
-export type FloorMode = "linear" | "dummy" | "grouped" | "relative";
-
+export type { FloorMode };
 function fmt(v: number | null | undefined) {
   if (v == null) return "—";
   return v.toLocaleString(undefined, { maximumFractionDigits: 1 });
 }
 
-function stars(n: number) {
-  return "★".repeat(Math.max(0, Math.min(5, n))) + "☆".repeat(Math.max(0, 5 - n));
-}
-
-function ModelComparisonCard({
-  cmp,
-  selected,
-}: {
-  cmp: ModelComparison;
-  selected: RegressionModelType;
-}) {
-  const rows: { type: RegressionModelType; label: string; m: ModelComparison["log"] }[] = [
-    { type: "log", label: "로그회귀", m: cmp.log },
-    { type: "linear", label: "선형회귀", m: cmp.linear },
-  ];
-  const basis = cmp.metric_basis === "cv" ? "교차검증" : "표본내";
-  return (
-    <div className="rounded-md border border-slate-200 dark:border-slate-600 p-2 space-y-1.5">
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] font-medium text-slate-700 dark:text-slate-200">모델 비교 ({basis})</span>
-        <span className="text-[11px] text-amber-600 dark:text-amber-400" title={cmp.confidence_label ?? ""}>
-          신뢰 {stars(cmp.confidence_stars)} {cmp.confidence_label ?? ""}
-        </span>
-      </div>
-      <table className="w-full border-collapse text-[11px]">
-        <thead>
-          <tr className="text-slate-500 dark:text-slate-400">
-            <th className="text-left font-normal py-0.5">모델</th>
-            <th className="text-right font-normal">조정 R²</th>
-            <th className="text-right font-normal">MAPE</th>
-            <th className="text-right font-normal">RMSE(만원)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(({ type, label, m }) => {
-            const isRec = cmp.recommended === type;
-            const isSel = selected === type;
-            return (
-              <tr
-                key={type}
-                className={isSel ? "bg-indigo-50 dark:bg-indigo-950/40 font-medium" : undefined}
-              >
-                <td className="py-0.5 text-slate-700 dark:text-slate-200">
-                  {label}
-                  {isRec && <span className="ml-1 text-[10px] text-emerald-600 dark:text-emerald-400">권장</span>}
-                </td>
-                <td className="text-right tabular-nums">{m?.adj_r_squared?.toFixed(3) ?? "—"}</td>
-                <td className="text-right tabular-nums">{m?.mape != null ? `${m.mape}%` : "—"}</td>
-                <td className="text-right tabular-nums">
-                  {m?.rmse != null ? Math.round(m.rmse).toLocaleString("ko-KR") : "—"}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 function fmtInt(v: number | null | undefined) {
   if (v == null) return "—";
   return Math.round(v).toLocaleString("ko-KR");
-}
-
-function midRange(min?: number | null, max?: number | null): number | undefined {
-  if (min == null || max == null) return undefined;
-  return Math.round(((min + max) / 2) * 10) / 10;
 }
 
 function defaultPredictInputs(
@@ -111,91 +44,12 @@ function defaultPredictInputs(
 ): CollectiveRegressionPredictInputs {
   if (!opts) return {};
   return {
-    exclusive_area: vars.exclusive_area ? midRange(opts.exclusive_area?.min, opts.exclusive_area?.max) : undefined,
-    building_age: vars.building_age ? midRange(opts.building_age?.min, opts.building_age?.max) : undefined,
-    floor: vars.floor ? midRange(opts.floor?.min, opts.floor?.max) : undefined,
     dong: vars.dong ? opts.dong_reference ?? opts.dongs?.[0] : undefined,
     housing_subtype: vars.housing_subtype
       ? opts.housing_subtype_reference ?? opts.housing_subtypes?.[0]
       : undefined,
     building_key: opts.buildings?.find((b) => b.is_reference)?.building_key ?? opts.buildings?.[0]?.building_key,
   };
-}
-
-function RegressionCoeffTable({ coefficients }: { coefficients: RegressionCoeff[] }) {
-  const [feOpen, setFeOpen] = useState(false);
-  const main = coefficients.filter((c) => c.name !== "const" && !c.name.startsWith("bld_"));
-  const fe = coefficients.filter((c) => c.name.startsWith("bld_"));
-  const intercept = coefficients.find((c) => c.name === "const");
-
-  const renderRow = (c: RegressionCoeff) => (
-    <tr key={c.name}>
-      <td className="border border-slate-200 dark:border-slate-600 px-2 py-1">{c.label}</td>
-      <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 text-right tabular-nums">
-        {c.coef.toFixed(2)}
-      </td>
-      <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 text-right tabular-nums">
-        {c.se?.toFixed(2) ?? "—"}
-      </td>
-      <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 text-right tabular-nums">
-        {c.t?.toFixed(2) ?? "—"}
-      </td>
-      <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 text-right tabular-nums">
-        {c.p?.toFixed(3) ?? "—"}
-      </td>
-    </tr>
-  );
-
-  return (
-    <table className="w-full border-collapse text-xs">
-      <thead>
-        <tr className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-          <th className="border border-slate-200 dark:border-slate-600 px-2 py-1 text-left">변수</th>
-          <th className="border border-slate-200 dark:border-slate-600 px-2 py-1 text-right">계수</th>
-          <th className="border border-slate-200 dark:border-slate-600 px-2 py-1 text-right">SE</th>
-          <th className="border border-slate-200 dark:border-slate-600 px-2 py-1 text-right">t</th>
-          <th className="border border-slate-200 dark:border-slate-600 px-2 py-1 text-right">p</th>
-        </tr>
-      </thead>
-      <tbody className="text-slate-800 dark:text-slate-200">
-        {intercept && renderRow(intercept)}
-        {main.map(renderRow)}
-        {fe.length > 0 && (
-          <>
-            <tr className="bg-slate-50/80 dark:bg-slate-800/60">
-              <td colSpan={5} className="border border-slate-200 dark:border-slate-600 px-2 py-1">
-                <button
-                  type="button"
-                  className="text-[11px] font-medium text-indigo-700 dark:text-indigo-400"
-                  onClick={() => setFeOpen((v) => !v)}
-                >
-                  단지 고정효과 ({fe.length}개) {feOpen ? "▲" : "▼"}
-                </button>
-              </td>
-            </tr>
-            {feOpen && fe.map(renderRow)}
-          </>
-        )}
-      </tbody>
-    </table>
-  );
-}
-
-export function RegressionTable({ data }: { data: CollectiveRegressionResponse }) {
-  return (
-    <div className="text-xs space-y-2">
-      {data.warnings.map((w) => (
-        <p key={w} className="text-amber-700 dark:text-amber-300">
-          {w}
-        </p>
-      ))}
-      <p className="text-slate-600 dark:text-slate-400">
-        {data.model_type === "log" ? "로그회귀" : "선형회귀"} · n={data.n}, R²=
-        {data.r_squared?.toFixed(3) ?? "—"}, adj R²={data.adj_r_squared?.toFixed(3) ?? "—"} (적합척도)
-      </p>
-      <RegressionCoeffTable coefficients={data.coefficients} />
-    </div>
-  );
 }
 
 function PredictPanel({
@@ -229,7 +83,10 @@ function PredictPanel({
 }) {
   return (
     <div className="rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/40 p-3 space-y-3">
-      <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200">예측 (변수값 입력)</p>
+      <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200">가정 시나리오 (참고)</p>
+      <p className="text-[10px] text-slate-500 dark:text-slate-400">
+        아래 조건에서 모형이 가리키는 금액 수준입니다. AVM·적정가가 아닙니다.
+      </p>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
         {vars.exclusive_area && opts.exclusive_area && (
           <label className="space-y-0.5">
@@ -328,7 +185,7 @@ function PredictPanel({
       </div>
 
       <button type="button" className="btn btn-primary text-xs" disabled={pending} onClick={onPredict}>
-        {pending ? "예측 중…" : "예측 실행"}
+        {pending ? "계산 중…" : "시나리오 계산"}
       </button>
 
       {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
@@ -337,7 +194,8 @@ function PredictPanel({
         <div className="rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 space-y-2">
           <div>
             <span className="text-slate-500 dark:text-slate-400 text-[10px]">
-              예상 거래금액{result.model_type ? ` · ${result.model_type === "log" ? "로그회귀" : "선형회귀"}` : ""}
+              시나리오 금액 (참고)
+              {result.model_type ? ` · ${result.model_type === "log" ? "로그" : "선형"}` : ""}
             </span>
             <div className="text-lg font-bold text-slate-800 dark:text-slate-100">{fmtInt(result.y_hat)}만원</div>
             {result.unit_price_hat != null && (
@@ -393,7 +251,8 @@ export default function BuildingRegressionPanel({
 }) {
   const [excludeOutliers, setExcludeOutliers] = useState(false);
   const [floorMode, setFloorMode] = useState<FloorMode>("relative");
-  const [modelType, setModelType] = useState<RegressionModelType>("log");
+  const [floorAdvanced, setFloorAdvanced] = useState(false);
+  const [modelType, setModelType] = useState<RegressionModelType>("linear");
   const [vars, setVars] = useState({
     exclusive_area: true,
     building_age: assetType !== "presale",
@@ -462,15 +321,6 @@ export default function BuildingRegressionPanel({
     }
   }, [regM.data, vars]);
 
-  // 회귀 실행 결과의 권장 모델을 기본 선택으로 자동 반영 (사용자는 토글로 변경 가능)
-  useEffect(() => {
-    const rec = regM.data?.model_comparison?.recommended;
-    if (rec && rec !== modelType) {
-      setModelType(rec);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 권장 모델은 run 결과에서만 반영
-  }, [regM.data]);
-
   if (useCohort && cohortRunId === 0) {
     return (
       <p className="text-xs text-slate-500 text-center py-6">
@@ -501,9 +351,8 @@ export default function BuildingRegressionPanel({
       )}
 
       <p className="text-[10px] text-slate-500 dark:text-slate-400">
-        {assetType === "presale"
-          ? "금액 ~ 전용면적·층·권리 (OLS). 층 변수 형식은 실험용으로 선택하세요."
-          : "금액 ~ 전용면적·연식·층·동 (OLS). 층 변수 형식은 실험용으로 선택하세요."}
+        변수가 시세에 어떤 방향·크기로 작용하는지 탐색합니다. 기본은 선형(만원). % 해석은 로그 옵션.
+        층·동 % 지수는 「효용지수」 탭을 참고하세요.
       </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
@@ -527,21 +376,41 @@ export default function BuildingRegressionPanel({
             {label}
           </label>
         ))}
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={modelType === "log"}
+            onChange={(e) => setModelType(e.target.checked ? "log" : "linear")}
+          />
+          로그(% 해석)
+        </label>
       </div>
 
       {vars.floor && (
         <div className="text-xs space-y-1">
-          <span className="text-slate-600 dark:text-slate-400 font-medium">층 변수 형식</span>
-          <select
-            className="border border-slate-200 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900 w-full max-w-md"
-            value={floorMode}
-            onChange={(e) => setFloorMode(e.target.value as FloorMode)}
-          >
-            <option value="relative">상대 층 (1·최상·저·중·고 / max층)</option>
-            <option value="dummy">층별 더미 (개별 층)</option>
-            <option value="grouped">절대 구간 (1–5 / 6–15 / 16+)</option>
-            <option value="linear">층 선형</option>
-          </select>
+          <span className="text-slate-600 dark:text-slate-400 font-medium">
+            층 구간 · 상대(1·저·중·고·최상) 기본
+          </span>
+          {!floorAdvanced ? (
+            <button
+              type="button"
+              className="text-[11px] text-indigo-700 dark:text-indigo-400 underline"
+              onClick={() => setFloorAdvanced(true)}
+            >
+              고급: 층 형식 변경
+            </button>
+          ) : (
+            <select
+              className="border border-slate-200 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900 w-full max-w-md"
+              value={floorMode}
+              onChange={(e) => setFloorMode(e.target.value as FloorMode)}
+            >
+              <option value="relative">상대 층 (1·최상·저·중·고 / max층)</option>
+              <option value="dummy">층별 더미 (개별 층)</option>
+              <option value="grouped">절대 구간 (1–5 / 6–15 / 16+)</option>
+              <option value="linear">층 선형</option>
+            </select>
+          )}
         </div>
       )}
 
@@ -564,33 +433,8 @@ export default function BuildingRegressionPanel({
           {(regM.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? "회귀 실패"}
         </p>
       )}
-      {regM.data && <RegressionTable data={regM.data} />}
-
-      {regM.data?.model_comparison && (
-        <div className="space-y-2">
-          <ModelComparisonCard cmp={regM.data.model_comparison} selected={modelType} />
-          <div className="flex flex-wrap items-center gap-3 text-[11px]">
-            <span className="text-slate-500 dark:text-slate-400">회귀방식</span>
-            {(["log", "linear"] as RegressionModelType[]).map((mt) => {
-              const isRec = regM.data!.model_comparison!.recommended === mt;
-              return (
-                <label key={mt} className="flex items-center gap-1 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="model-type"
-                    checked={modelType === mt}
-                    onChange={() => setModelType(mt)}
-                  />
-                  {mt === "log" ? "로그회귀" : "선형회귀"}
-                  {isRec && <span className="text-[10px] text-emerald-600 dark:text-emerald-400">(권장)</span>}
-                </label>
-              );
-            })}
-            <span className="text-[10px] text-slate-400">
-              변경 후 「예측 실행」을 누르면 선택한 모델로 예측합니다.
-            </span>
-          </div>
-        </div>
+      {regM.data && (
+        <CollectiveRegressionResults data={regM.data} modelType={modelType} />
       )}
 
       {regM.data?.predict_options && (

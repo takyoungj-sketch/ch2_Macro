@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 
+from app.collective.regression.presentation import enrich_regression_response
 from app.collective.schemas import (
     BuildingFeOption,
     CollectivePredictOptions,
@@ -124,6 +125,34 @@ def _confidence_rating(mape: float | None, n: int) -> tuple[int, str]:
     if mape <= 20:
         return 2, "낮음"
     return 1, "매우 낮음"
+
+
+def fit_model_price_metrics(
+    y: pd.Series,
+    x_const: pd.DataFrame,
+    model,
+    model_type: str,
+) -> dict[str, float | str | None]:
+    """선택 모델 1회 적합 기준 원척도 MAPE·adj R² (이중 OLS 비교 없음)."""
+    k_params = max(x_const.shape[1] - 1, 0)
+    pred = _insample_price_pred(model, x_const, model_type)
+    adj, mape, rmse = _orig_scale_metrics(y.to_numpy(), pred, k_params)
+    cv_mape, cv_rmse = _cv_price_metrics(y.to_numpy(), x_const.to_numpy(), model_type)
+    basis: str = "cv" if cv_mape is not None else "insample"
+    return {
+        "price_adj_r_squared": adj,
+        "mape": cv_mape if cv_mape is not None else mape,
+        "rmse": cv_rmse if cv_rmse is not None else rmse,
+        "metric_basis": basis,
+    }
+
+
+def count_significant_coefficients(coefs: list[RegressionCoeff], *, p_threshold: float = 0.1) -> int:
+    return sum(
+        1
+        for c in coefs
+        if c.name != "const" and c.p is not None and c.p < p_threshold
+    )
 
 
 def _build_model_comparison(
@@ -520,10 +549,7 @@ def _fit_regression(
     if int(model.nobs) < 30:
         warnings.append(f"n={int(model.nobs)} — 참고용 (권장 n≥30)")
 
-    comparison = _build_model_comparison(y, X_const)
-    if comparison and comparison.recommended != model_type:
-        rec_label = "로그회귀" if comparison.recommended == "log" else "선형회귀"
-        warnings.append(f"권장 모델은 {rec_label} (설명력·오차 기준)")
+    metrics = fit_model_price_metrics(y, X_const, model, model_type)
 
     coefs: list[RegressionCoeff] = []
     for name in X_const.columns:
@@ -540,6 +566,14 @@ def _fit_regression(
             )
         )
 
+    equation, enriched, price_adj = enrich_regression_response(
+        coefs,
+        model_type=model_type,
+        price_adj_r_squared=metrics.get("price_adj_r_squared"),
+    )
+    coefs = [RegressionCoeff(**row) for row in enriched]
+    sig_count = count_significant_coefficients(coefs)
+
     predict_options = _meta_to_predict_options(meta, req)
     return model, CollectiveRegressionResponse(
         building_key="",
@@ -548,10 +582,15 @@ def _fit_regression(
         model_type=model_type,
         r_squared=float(model.rsquared) if model.rsquared is not None else None,
         adj_r_squared=float(model.rsquared_adj) if model.rsquared_adj is not None else None,
+        price_adj_r_squared=price_adj,
+        mape=metrics.get("mape"),
+        f_p_value=float(model.f_pvalue) if model.f_pvalue is not None else None,
+        significant_count=sig_count,
+        equation=equation,
         coefficients=coefs,
         warnings=warnings,
         predict_options=predict_options,
-        model_comparison=comparison,
+        model_comparison=None,
     )
 
 
