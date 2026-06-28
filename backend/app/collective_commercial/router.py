@@ -10,14 +10,14 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session
 
+from app.collective.building_stats_query import normalize_asset_type
 from app.collective.analysis_explain import (
-    build_commercial_floor_index_explain,
     build_commercial_regression_explain,
+    build_residential_floor_index_explain,
 )
 from app.collective.analysis_gates import count_recent_transactions, evaluate_analysis_gates
 from app.collective.db import get_collective_db
-from app.collective.floor_index import compute_floor_index
-from app.collective_commercial.floor_index_regression import compute_shop_floor_index_regression
+from app.collective.floor_index_regression import compute_residential_floor_index_regression
 from app.collective.schemas import AnalysisExplain, AnalysisFeatures, FloorIndexCell
 from app.collective.filters import _col, apply_region_filters, apply_year_filters
 from app.collective.region_structure import detect_region_structure
@@ -31,6 +31,8 @@ from app.collective_commercial.schemas import (
     CommercialFloorIndexResponse,
     CommercialHistogramBin,
     CommercialHistogramResponse,
+    CommercialRegressionPredictRequest,
+    CommercialRegressionPredictResponse,
     CommercialRegressionRequest,
     CommercialRegressionResponse,
     CommercialTransactionListResponse,
@@ -40,7 +42,7 @@ from app.collective_commercial.schemas import (
 )
 from app.stats_utils import compute_stats
 
-from app.collective_commercial.regression.engine import run_commercial_regression
+from app.collective_commercial.regression.engine import predict_commercial_regression, run_commercial_regression
 
 router = APIRouter(prefix="/commercial", tags=["집합상가·공장"])
 
@@ -66,6 +68,7 @@ def _tx_where(
         f"{_col('unit_price', p)} > 0",
     ]
     params: dict = {}
+    asset_type = normalize_asset_type(asset_type)
     if asset_type:
         clauses.append(f"{_col('asset_type', p)} = :asset_type")
         params["asset_type"] = asset_type
@@ -186,6 +189,7 @@ def region_structure(
     addr2: str = Query(...),
     asset_type: Optional[str] = Query(None),
 ):
+    asset_type = normalize_asset_type(asset_type)
     info = detect_region_structure(
         db.connection(),
         addr1,
@@ -308,11 +312,11 @@ def list_clusters(
         )
 
     if sort == "mean":
-        items.sort(key=lambda x: (x.mean is None, -(x.mean or 0)))
+        items.sort(key=lambda x: (x.mean is None, -(x.mean or 0), x.asset_type or ""))
     elif sort == "display_label":
-        items.sort(key=lambda x: x.display_label)
+        items.sort(key=lambda x: (x.display_label, x.asset_type or ""))
     else:
-        items.sort(key=lambda x: -x.count)
+        items.sort(key=lambda x: (-x.count, x.asset_type or ""))
 
     total = len(items)
     start = (page - 1) * page_size
@@ -574,6 +578,64 @@ def cluster_regression(
     )
 
 
+@router.post("/clusters/{cluster_key}/regression/predict", response_model=CommercialRegressionPredictResponse)
+def cluster_regression_predict(
+    cluster_key: str,
+    body: CommercialRegressionPredictRequest,
+    db: Session = Depends(get_collective_db),
+):
+    import pandas as pd
+
+    where, params = _tx_where(
+        conn=db.connection(),
+        addr1=body.addr1,
+        addr2=body.addr2,
+        addr3_list=body.addr3_list or None,
+        addr4_list=body.addr4_list or None,
+        contract_year_from=body.contract_year_from,
+        contract_year_to=body.contract_year_to,
+    )
+    params["cluster_key"] = cluster_key
+    rows = db.execute(
+        text(
+            f"""
+            SELECT price, unit_price, gross_area, land_area, building_age, building_year, floor,
+                   zone_type, building_use, road_width_label, road_code, addr4, contract_year,
+                   asset_type
+            FROM collective_commercial_transactions
+            WHERE cluster_key = :cluster_key AND {where}
+            """
+        ),
+        params,
+    ).mappings().all()
+    if not rows:
+        raise HTTPException(404, "해당 cluster 거래가 없습니다.")
+
+    years = [int(r["contract_year"]) for r in rows if r.get("contract_year") is not None]
+    gates = evaluate_analysis_gates(
+        len(rows),
+        count_recent_transactions(
+            years,
+            contract_year_from=body.contract_year_from,
+            contract_year_to=body.contract_year_to,
+        ),
+    )
+    if not gates.regression_eligible and not body.experiment:
+        raise HTTPException(
+            403,
+            detail="; ".join(gates.messages) if gates.messages else "회귀 예측 최소 표본 미달",
+        )
+
+    asset_type = rows[0].get("asset_type") or ""
+    is_shop = asset_type == "collective_shop"
+    df = pd.DataFrame(rows)
+    try:
+        raw = predict_commercial_regression(df, body, body.inputs, is_shop=is_shop)
+    except ValueError as exc:
+        raise HTTPException(400, detail=str(exc)) from exc
+    return CommercialRegressionPredictResponse(**raw)
+
+
 @router.get("/clusters/{cluster_key}/floor-index", response_model=CommercialFloorIndexResponse)
 def cluster_floor_index(
     cluster_key: str,
@@ -585,6 +647,7 @@ def cluster_floor_index(
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
     dimension: str = Query("floor", pattern="^(floor|area)$"),
+    floor_mode: str = Query("relative", pattern="^(relative|dummy|grouped)$"),
     experiment: bool = Query(False, description="표본 게이트 우회"),
 ):
     import pandas as pd
@@ -602,8 +665,8 @@ def cluster_floor_index(
     rows = db.execute(
         text(
             f"""
-            SELECT unit_price, floor, gross_area, contract_year, building_year, building_age,
-                   building_use, area_bucket_label, asset_type
+            SELECT unit_price, floor, gross_area, contract_year, contract_month,
+                   building_year, building_age, building_use, area_bucket_label, asset_type
             FROM collective_commercial_transactions
             WHERE cluster_key = :cluster_key AND {where}
             """
@@ -629,33 +692,27 @@ def cluster_floor_index(
         )
 
     df = pd.DataFrame(rows)
+    df["exclusive_area"] = df["gross_area"]
     asset_type = rows[0].get("asset_type") or "collective_shop"
     display_label = _cluster_display_label(db, cluster_key)
 
-    if dimension == "floor" and asset_type in ("collective_shop", "collective_factory"):
-        raw = compute_shop_floor_index_regression(df)
-    else:
-        df["exclusive_area"] = df["gross_area"]
-        raw = compute_floor_index(df, asset_type=asset_type, dimension=dimension)
-        raw.setdefault("method", "simple_median")
-        raw.setdefault("reference_floor", None)
-        raw.setdefault("controls", [])
-        raw.setdefault("n_regression", None)
-        raw.setdefault("r_squared", None)
-        raw.setdefault("warnings", [])
-        if asset_type == "collective_factory" and dimension == "floor":
-            raw["warnings"] = list(raw.get("warnings") or []) + [
-                "집합공장은 층 정보가 일부만 있을 수 있습니다 — 면적대 탭과 함께 참고하세요."
-            ]
+    raw = compute_residential_floor_index_regression(
+        df,
+        asset_type=asset_type,
+        dimension=dimension,
+        floor_mode=floor_mode if dimension == "floor" else "relative",
+    )
+    if asset_type == "collective_factory" and dimension == "floor":
+        raw["warnings"] = list(raw.get("warnings") or []) + [
+            "집합공장은 층 정보가 일부만 있을 수 있습니다 — 면적형 탭과 함께 참고하세요."
+        ]
 
     cells = [FloorIndexCell(**c) for c in raw["cells"]]
-    method = raw.get("method", "simple_median")
     explain = AnalysisExplain(
-        **build_commercial_floor_index_explain(
-            method=method,
-            dimension=raw["dimension"],
-            asset_type=asset_type,
+        **build_residential_floor_index_explain(
             raw=raw,
+            asset_type=asset_type,
+            scope_kind="cluster",
         )
     )
     return CommercialFloorIndexResponse(
@@ -663,8 +720,10 @@ def cluster_floor_index(
         display_label=display_label,
         asset_type=asset_type,
         dimension=raw["dimension"],
-        method=method,
+        method=raw.get("method", "regression_semilog"),
+        floor_mode=raw.get("floor_mode"),
         reference_floor=raw.get("reference_floor"),
+        regression_reference_floor=raw.get("regression_reference_floor"),
         controls=raw.get("controls") or [],
         n_total=raw["n_total"],
         n_regression=raw.get("n_regression"),
@@ -673,6 +732,7 @@ def cluster_floor_index(
         cells=cells,
         warnings=raw.get("warnings") or [],
         explain=explain,
+        diagnostics=raw.get("diagnostics"),
         analysis=AnalysisFeatures(
             floor_index=gates.floor_index_eligible,
             regression=gates.regression_eligible,

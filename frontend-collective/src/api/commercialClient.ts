@@ -1,14 +1,18 @@
 import axios from "axios";
 import type {
+  CommercialAssetSelectorType,
   CommercialAssetType,
   CommercialAddressListResponse,
   CommercialClusterListResponse,
   CommercialFilterMeta,
   CommercialFloorIndexResponse,
   CommercialHistogramResponse,
+  CommercialRegressionPredictInputs,
+  CommercialRegressionPredictResponse,
   CommercialRegressionResponse,
   CommercialTransactionListResponse,
   CommercialYearlyStatsResponse,
+  RegressionModelType,
   RegionOption,
   RegionStructure,
 } from "../types";
@@ -18,6 +22,11 @@ const api = axios.create({
   baseURL: "/api/collective/commercial",
   headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
 });
+
+function apiCommercialAssetParam(assetType?: CommercialAssetSelectorType): string | undefined {
+  if (!assetType || assetType === "all") return undefined;
+  return assetType;
+}
 
 export async function fetchCommercialFilterMeta(): Promise<CommercialFilterMeta> {
   const { data } = await api.get<CommercialFilterMeta>("/meta/filters");
@@ -32,10 +41,10 @@ export async function fetchCommercialAddr2(addr1: string): Promise<string[]> {
 export async function fetchCommercialAddr3(
   addr1: string,
   addr2: string,
-  assetType?: CommercialAssetType,
+  assetType?: CommercialAssetSelectorType,
 ): Promise<RegionOption[]> {
   const { data } = await api.get<RegionOption[]>("/regions/addr3", {
-    params: { addr1, addr2, asset_type: assetType },
+    params: { addr1, addr2, asset_type: apiCommercialAssetParam(assetType) },
   });
   return data;
 }
@@ -43,10 +52,10 @@ export async function fetchCommercialAddr3(
 export async function fetchCommercialRegionStructure(
   addr1: string,
   addr2: string,
-  assetType?: CommercialAssetType,
+  assetType?: CommercialAssetSelectorType,
 ): Promise<RegionStructure> {
   const { data } = await api.get<RegionStructure>("/regions/structure", {
-    params: { addr1, addr2, asset_type: assetType },
+    params: { addr1, addr2, asset_type: apiCommercialAssetParam(assetType) },
   });
   return data;
 }
@@ -55,13 +64,13 @@ export async function fetchCommercialLeafRegions(
   addr1: string,
   addr2: string,
   addr3List: string[],
-  assetType?: CommercialAssetType,
+  assetType?: CommercialAssetSelectorType,
 ): Promise<RegionOption[]> {
   const { data } = await api.get<RegionOption[]>("/regions/leaf", {
     params: {
       addr1,
       addr2,
-      asset_type: assetType,
+      asset_type: apiCommercialAssetParam(assetType),
       addr3_list: addr3List.length ? addr3List : undefined,
     },
     paramsSerializer: { indexes: null },
@@ -70,7 +79,7 @@ export async function fetchCommercialLeafRegions(
 }
 
 export async function fetchCommercialClusters(params: {
-  asset_type?: CommercialAssetType;
+  asset_type?: CommercialAssetSelectorType;
   addr1?: string;
   addr2?: string;
   addr3_list?: string[];
@@ -81,8 +90,12 @@ export async function fetchCommercialClusters(params: {
   page?: number;
   page_size?: number;
 }): Promise<CommercialClusterListResponse> {
+  const { asset_type, ...rest } = params;
   const { data } = await api.get<CommercialClusterListResponse>("/clusters", {
-    params,
+    params: {
+      ...rest,
+      asset_type: apiCommercialAssetParam(asset_type),
+    },
     paramsSerializer: { indexes: null },
   });
   return data;
@@ -152,7 +165,11 @@ export async function fetchCommercialAddresses(
 
 export async function fetchCommercialFloorIndex(
   clusterKey: string,
-  params?: ClusterScopeParams & { dimension?: "floor" | "area"; experiment?: boolean },
+  params?: ClusterScopeParams & {
+    dimension?: "floor" | "area";
+    floor_mode?: "relative" | "dummy" | "grouped";
+    experiment?: boolean;
+  },
 ): Promise<CommercialFloorIndexResponse> {
   const { data } = await api.get<CommercialFloorIndexResponse>(`/clusters/${clusterKey}/floor-index`, {
     params: {
@@ -169,16 +186,15 @@ export async function runCommercialRegression(
   body: ClusterScopeParams & {
     exclude_outliers_iqr?: boolean;
     experiment?: boolean;
+    model_type?: RegressionModelType;
     variables?: {
       gross_area?: boolean;
-      land_area?: boolean;
       building_age?: boolean;
       floor?: boolean;
       zone_type?: boolean;
       building_use?: boolean;
       road_width?: boolean;
       road_code?: boolean;
-      addr4?: boolean;
       floor_mode?: "linear" | "dummy" | "grouped" | "relative";
     };
   },
@@ -194,6 +210,7 @@ export async function runCommercialRegression(
       floor_mode: "relative",
       ...body.variables,
     },
+    model_type: body.model_type ?? "linear",
     exclude_outliers_iqr: body.exclude_outliers_iqr ?? false,
     experiment: body.experiment ?? false,
     addr1: body.addr1,
@@ -203,5 +220,52 @@ export async function runCommercialRegression(
     contract_year_from: body.contract_year_from,
     contract_year_to: body.contract_year_to,
   });
+  return data;
+}
+
+export async function predictCommercialRegression(
+  clusterKey: string,
+  body: ClusterScopeParams & {
+    exclude_outliers_iqr?: boolean;
+    experiment?: boolean;
+    model_type?: RegressionModelType;
+    inputs: CommercialRegressionPredictInputs;
+    variables?: {
+      gross_area?: boolean;
+      building_age?: boolean;
+      floor?: boolean;
+      zone_type?: boolean;
+      building_use?: boolean;
+      road_width?: boolean;
+      road_code?: boolean;
+      floor_mode?: "linear" | "dummy" | "grouped" | "relative";
+    };
+  },
+): Promise<CommercialRegressionPredictResponse> {
+  const { data } = await api.post<CommercialRegressionPredictResponse>(
+    `/clusters/${clusterKey}/regression/predict`,
+    {
+      variables: {
+        gross_area: true,
+        building_age: true,
+        floor: true,
+        zone_type: true,
+        building_use: true,
+        road_width: true,
+        floor_mode: "relative",
+        ...body.variables,
+      },
+      model_type: body.model_type ?? "linear",
+      exclude_outliers_iqr: body.exclude_outliers_iqr ?? false,
+      experiment: body.experiment ?? false,
+      inputs: body.inputs,
+      addr1: body.addr1,
+      addr2: body.addr2,
+      addr3_list: body.addr3_list,
+      addr4_list: body.addr4_list,
+      contract_year_from: body.contract_year_from,
+      contract_year_to: body.contract_year_to,
+    },
+  );
   return data;
 }
