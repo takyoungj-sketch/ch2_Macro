@@ -41,3 +41,12 @@ Thumbs.db
 # IDE (선택)
 .idea/
 .vscode/*.log
+
+# 로컬 임시·진단 파일 (레포 불포함)
+tmp_*.txt
+tmp_*.csv
+*.dump
+pipeline/_vps_*.sh
+pipeline/_*.py
+pipeline/.env.rebuild
+data/*.db

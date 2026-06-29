@@ -684,6 +684,16 @@ _NOT_IN_LT = """NOT EXISTS (
                   SELECT 1 FROM land_transactions lt WHERE lt.raw_id = r.id
               )"""
 
+_DISPLAY_BACKFILL_LT = """EXISTS (
+    SELECT 1 FROM land_transactions lt
+    WHERE lt.raw_id = r.id
+      AND lt.is_valid = true
+      AND (
+          lt.lot_display IS NULL OR btrim(lt.lot_display::text) = ''
+          OR lt.deal_type IS NULL OR btrim(lt.deal_type::text) = ''
+      )
+)"""
+
 
 def fetch_unprocessed_raw(since: str | None = None, reprocess_all: bool = False) -> pd.DataFrame:
     """미처리 raw 데이터를 읽어 DataFrame으로 반환한다."""
@@ -719,6 +729,37 @@ def fetch_unprocessed_raw(since: str | None = None, reprocess_all: bool = False)
         record.update(row[3])  # JSONB dict
         records.append(record)
 
+    return pd.DataFrame(records)
+
+
+def fetch_raw_needing_display_backfill(since: str | None = None) -> pd.DataFrame:
+    """이미 land_transactions에 연결됐지만 표시 컬럼(lot_display 등)이 비어 있는 raw."""
+    engine = get_engine()
+    where = f"WHERE {_DISPLAY_BACKFILL_LT}"
+    params: dict = {}
+    if since:
+        where += " AND r.loaded_at >= :since"
+        params["since"] = since
+
+    query = f"""
+        SELECT r.id AS raw_id, r.source_year, r.source_month, r.raw_data
+        FROM land_transactions_raw r
+        {where}
+        ORDER BY r.id
+    """
+    with engine.connect() as conn:
+        rows = conn.execute(text(query), params).fetchall()
+
+    if not rows:
+        return pd.DataFrame()
+
+    records = []
+    for row in rows:
+        record = {"_raw_id": row[0], "_source_year": row[1], "_source_month": row[2]}
+        record.update(row[3])
+        records.append(record)
+
+    log.info("표시 컬럼 백필 대상 raw: %d건", len(records))
     return pd.DataFrame(records)
 
 
@@ -1003,6 +1044,12 @@ def main():
         help="이미 처리된 raw_id도 다시 정제해 UPSERT (정제 기준 변경 후 재생성용)",
     )
     parser.add_argument(
+        "--backfill-display",
+        action="store_true",
+        help="[DEPRECATED] backfill_land_display.py 로 위임 (UPDATE-only). "
+        "과거 UPSERT 경로는 raw_id 중복 INSERT 위험 — 직접 사용 금지.",
+    )
+    parser.add_argument(
         "--skip-region-map",
         action="store_true",
         help="beopjungri_code 주소 매핑을 건너뜀 (region_codes 미적재 환경에서 테스트용)",
@@ -1017,6 +1064,20 @@ def main():
         )
         with get_engine().begin() as conn:
             conn.execute(text("DELETE FROM land_transactions"))
+
+    if args.backfill_display and args.reprocess_all:
+        parser.error("--backfill-display 와 --reprocess-all 은 동시에 사용할 수 없습니다.")
+
+    if args.backfill_display:
+        log.warning(
+            "표시 컬럼 백필: backfill_land_display.py (UPDATE-only) 로 위임합니다. "
+            "clean UPSERT 는 lot_display 반영 시 transaction_hash 가 바뀌어 "
+            "동일 raw_id 중복 INSERT 가 발생할 수 있습니다 — 사용 금지."
+        )
+        from backfill_land_display import run_backfill
+
+        run_backfill(year=None, batch_size=5000, dry_run=False, max_batches=None)
+        return
 
     log.info("미처리 raw 데이터 조회 중...")
     df = fetch_unprocessed_raw(since=args.since, reprocess_all=args.reprocess_all)

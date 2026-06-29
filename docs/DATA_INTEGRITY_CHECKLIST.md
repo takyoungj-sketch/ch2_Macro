@@ -1,6 +1,6 @@
 # 데이터 무결성 체크리스트 (Data Integrity Checklist)
 
-> 최종 업데이트: 2026-06-24  
+> 최종 업데이트: 2026-06-29  
 > 월간 갱신 후 반드시 이 체크리스트를 순서대로 실행한다.
 
 ---
@@ -25,6 +25,21 @@ hash = SHA-256(key)
 **효과:** 동일 거래를 다른 엑셀에서 재다운로드해도 UPDATE(충돌)로 처리, 2중 INSERT 방지.
 
 **한계:** `lot_display`를 hash에서 제외했으므로, 이전에 lot_display를 포함한 hash로 적재된 행과는 충돌 미발생 → **dedupe + rehash 주기 실행 필요**.
+
+**CRITICAL (2026-06-29):** 표시 컬럼만 채울 때 **`clean.py` UPSERT 금지**. `lot_display`가 hash `lot_key`에 들어가면 hash가 바뀌어 **동일 raw_id 2행 INSERT**. 반드시 `backfill_land_display.py`(UPDATE-only). → [`DISPLAY_BACKFILL_DEDUP_INCIDENT.md`](./DISPLAY_BACKFILL_DEDUP_INCIDENT.md)
+
+---
+
+### 1-1b. `raw_id` 1:1 UNIQUE (`db/033`)
+
+`land_transactions_raw` 1행 → `land_transactions` 1행. dedupe 후:
+
+```sql
+CREATE UNIQUE INDEX uq_land_transactions_raw_id ON land_transactions (raw_id)
+WHERE raw_id IS NOT NULL;
+```
+
+Promote 게이트: `rebuild_land_coverage.py --gate` → `raw_id_dup_groups = 0` 필수.
 
 ---
 
@@ -193,6 +208,86 @@ WHERE bs.beopjungri_code LIKE '4315082%'
   AND bs.window_years = 5
   AND bs.zone_type = 'ALL' AND bs.land_category = 'ALL';
 -- diff ≒ 0 (이상치 처리 정책 차이 허용)
+```
+
+---
+
+## 2-5. Exception Queue (D-025, 2026-06-29)
+
+**원칙:** `land_transactions`(Master)는 절대 수정하지 않는다. MOLIT CSV에서 동일 거래 추정 데이터에 용도지역·지목 충돌이 발생하면 `land_exception_queue`에 격리한다.
+
+### 관련 오브젝트
+
+| 오브젝트 | 역할 |
+|----------|------|
+| `land_exception_queue` | 충돌·이상 거래 격리 대기열. `status`: pending/resolved/dismissed |
+| `land_correction_rules` | 운영자가 확인한 보정 Rule (DB 저장) |
+| `land_transactions_resolved` | Master + Rule 적용 분석 VIEW. 통계·mart 기준 |
+| `pipeline/detect_land_exceptions.py` | 충돌 탐지 → queue 적재 |
+
+### 월간 갱신 후 추가 체크
+
+```powershell
+# 신규 충돌 탐지 (DRY-RUN 먼저 확인)
+python pipeline/detect_land_exceptions.py --dry-run --since 2021-01-01
+
+# 탐지된 신규 건 있으면 적재
+python pipeline/detect_land_exceptions.py --execute --since 2021-01-01
+```
+
+Queue에서 pending 건을 검토하는 SQL:
+
+```sql
+-- 미처리 건 조회 (최신순)
+SELECT id, beopjungri_code, contract_date, area_sqm, total_price_10k,
+       conflict_type, conflict_values, detected_at
+FROM land_exception_queue
+WHERE status = 'pending'
+ORDER BY conflict_type, contract_date DESC
+LIMIT 50;
+
+-- Rule 등록 후 resolved로 갱신
+UPDATE land_exception_queue
+SET status = 'resolved',
+    resolved_value = '보녹',
+    resolution_note = '원본 CSV 확인',
+    resolved_by = 'operator',
+    resolved_at = NOW(),
+    correction_rule_id = <rule_id>
+WHERE id = <exception_id>;
+
+-- 정상 데이터로 확인 시 dismissed
+UPDATE land_exception_queue
+SET status = 'dismissed'
+WHERE id = <exception_id>;
+```
+
+### Correction Rule 등록 예시
+
+```sql
+INSERT INTO land_correction_rules (
+    beopjungri_code, contract_year, contract_month, contract_day,
+    area_sqm, total_price_10k,
+    conflict_type, action, action_value,
+    basis, created_by, source_exception_id
+) VALUES (
+    '4311312300', 2025, 1, 13,
+    1.65, 250.00,
+    'zone_type', 'set_zone_type', '보녹',
+    '충북 CSV 순번25163 원본 보전녹지지역 확인',
+    'operator', 1
+);
+```
+
+**Rule 삭제 → `land_transactions_resolved` 가 즉시 Master 원본값 복원.**
+
+### 현황 조회
+
+```sql
+SELECT conflict_type, status, COUNT(*) AS cnt
+FROM land_exception_queue
+GROUP BY conflict_type, status
+ORDER BY conflict_type, status;
 ```
 
 ---

@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """
-land_transactions 중복 행 제거 + (선택) transaction_hash 재계산.
+land_transactions 중복 행 제거 + (선택) transaction_hash 재계산 + raw_id UNIQUE.
 
-배경: 2026-05 이전 hash 에 Excel 순번/raw_id 가 포함되어 동일 거래가
-여러 번 INSERT 된 상태. 2026-06 월간 갱신 전 로컬 DB 에 1회 실행.
+배경:
+  - 2026-05: hash 에 Excel 순번 포함 → business key 중복
+  - 2026-06-29: clean.py --backfill-display UPSERT → lot_display hash drift →
+    raw_id당 2행 INSERT (docs/DISPLAY_BACKFILL_DEDUP_INCIDENT.md)
+
+실행 (--execute): raw_id dedupe → business key dedupe → uq_land_transactions_raw_id
 
 사용 (로컬, DATABASE_URL 필수):
     cd pipeline
@@ -51,6 +55,62 @@ FROM (
 ) s
 """
 
+RAW_ID_DUP_STATS_SQL = """
+SELECT COUNT(*) AS dup_groups,
+       COALESCE(SUM(cnt - 1), 0)::bigint AS extra_rows
+FROM (
+  SELECT COUNT(*) AS cnt
+  FROM land_transactions
+  WHERE raw_id IS NOT NULL
+  GROUP BY raw_id
+  HAVING COUNT(*) > 1
+) s
+"""
+
+_DEDUPE_RANK_ORDER = """
+             ORDER BY
+               CASE WHEN lot_display IS NULL OR btrim(lot_display::text) = '' THEN 1 ELSE 0 END,
+               CASE WHEN partial_ownership_label IS NULL
+                         OR btrim(partial_ownership_label::text) = '' THEN 1 ELSE 0 END,
+               CASE WHEN deal_type IS NULL OR btrim(deal_type::text) = '' THEN 1 ELSE 0 END,
+               id DESC
+"""
+
+CREATE_RAW_ID_DUP_IDS_WORK = f"""
+CREATE UNLOGGED TABLE _land_tx_dup_ids_work AS
+SELECT id FROM (
+  SELECT id,
+         ROW_NUMBER() OVER (
+           PARTITION BY raw_id
+           ORDER BY
+               CASE WHEN is_valid THEN 0 ELSE 1 END,
+               CASE WHEN lot_display IS NULL OR btrim(lot_display::text) = '' THEN 1 ELSE 0 END,
+               CASE WHEN partial_ownership_label IS NULL
+                         OR btrim(partial_ownership_label::text) = '' THEN 1 ELSE 0 END,
+               CASE WHEN deal_type IS NULL OR btrim(deal_type::text) = '' THEN 1 ELSE 0 END,
+               id DESC
+         ) AS rn
+  FROM land_transactions
+  WHERE raw_id IS NOT NULL
+) ranked
+WHERE rn > 1
+"""
+
+CREATE_DUP_IDS_WORK = f"""
+CREATE UNLOGGED TABLE _land_tx_dup_ids_work AS
+SELECT id FROM (
+  SELECT id,
+         ROW_NUMBER() OVER (
+           PARTITION BY beopjungri_code, contract_date, area_sqm, total_price_10k,
+                        COALESCE(land_category, ''), COALESCE(zone_type, ''), is_cancelled
+           {_DEDUPE_RANK_ORDER}
+         ) AS rn
+  FROM land_transactions
+  WHERE is_valid = TRUE
+) ranked
+WHERE rn > 1
+"""
+
 DELETE_DUPES_SQL = """
 DELETE FROM land_transactions lt
 WHERE lt.id IN (
@@ -73,29 +133,7 @@ WHERE lt.id IN (
 )
 """
 
-_DEDUPE_RANK_ORDER = """
-             ORDER BY
-               CASE WHEN lot_display IS NULL OR btrim(lot_display::text) = '' THEN 1 ELSE 0 END,
-               CASE WHEN partial_ownership_label IS NULL
-                         OR btrim(partial_ownership_label::text) = '' THEN 1 ELSE 0 END,
-               CASE WHEN deal_type IS NULL OR btrim(deal_type::text) = '' THEN 1 ELSE 0 END,
-               id DESC
-"""
-
-CREATE_DUP_IDS_WORK = f"""
-CREATE UNLOGGED TABLE _land_tx_dup_ids_work AS
-SELECT id FROM (
-  SELECT id,
-         ROW_NUMBER() OVER (
-           PARTITION BY beopjungri_code, contract_date, area_sqm, total_price_10k,
-                        COALESCE(land_category, ''), COALESCE(zone_type, ''), is_cancelled
-           {_DEDUPE_RANK_ORDER}
-         ) AS rn
-  FROM land_transactions
-  WHERE is_valid = TRUE
-) ranked
-WHERE rn > 1
-"""
+# legacy alias — business-key materialize (raw_id pass uses CREATE_RAW_ID_DUP_IDS_WORK)
 
 DELETE_DUPES_BATCH = """
 DELETE FROM land_transactions lt
@@ -112,12 +150,14 @@ WHERE d.id IN (
 """
 
 
-def _delete_dupes_batched(engine, *, batch_size: int = 100_000) -> int:
+def _delete_dupes_batched(
+    engine, *, batch_size: int = 100_000, create_work_sql: str = CREATE_DUP_IDS_WORK
+) -> int:
     """중복 id를 UNLOGGED work table에 materialize 후 배치 DELETE (배치마다 커밋)."""
     with engine.begin() as conn:
         conn.execute(text("DROP TABLE IF EXISTS _land_tx_dup_ids_work"))
         log.info("materializing duplicate ids (work table)…")
-        conn.execute(text(CREATE_DUP_IDS_WORK))
+        conn.execute(text(create_work_sql))
         conn.execute(text("CREATE INDEX _land_tx_dup_ids_work_id_idx ON _land_tx_dup_ids_work (id)"))
         pending = int(conn.execute(text("SELECT COUNT(*) FROM _land_tx_dup_ids_work")).scalar() or 0)
     log.info("duplicate ids to delete: %s", f"{pending:,}")
@@ -146,6 +186,11 @@ def _count(conn, sql: str) -> int:
     return int(conn.execute(text(sql)).scalar() or 0)
 
 
+def _raw_id_dup_stats(conn) -> tuple[int, int]:
+    row = conn.execute(text(RAW_ID_DUP_STATS_SQL)).one()
+    return int(row.dup_groups or 0), int(row.extra_rows or 0)
+
+
 def _dup_stats(conn) -> tuple[int, int]:
     row = conn.execute(text(DEDUPE_STATS_SQL)).one()
     return int(row.dup_groups or 0), int(row.extra_rows or 0)
@@ -155,14 +200,53 @@ def _report(conn, label: str) -> None:
     total = _count(conn, "SELECT COUNT(*) FROM land_transactions")
     biha = _count(conn, SAMPLE_BIHA_SQL)
     groups, extra = _dup_stats(conn)
+    rid_groups, rid_extra = _raw_id_dup_stats(conn)
     log.info(
-        "%s: land_transactions=%s, biha_borok_dap_valid=%s, dup_groups=%s, extra_rows=%s",
+        "%s: land_transactions=%s, biha_borok_dap_valid=%s, "
+        "business_dup_groups=%s, business_extra_rows=%s, "
+        "raw_id_dup_groups=%s, raw_id_extra_rows=%s",
         label,
         f"{total:,}",
         biha,
         f"{groups:,}",
         f"{extra:,}",
+        f"{rid_groups:,}",
+        f"{rid_extra:,}",
     )
+
+
+def _ensure_raw_id_unique_index(engine) -> bool:
+    """raw_id 1:1 보장 — 표시 컬럼 백fill UPSERT 중복 재발 방지."""
+    with engine.connect() as conn:
+        remaining = int(
+            conn.execute(
+                text(
+                    """
+                    SELECT COUNT(*) FROM (
+                      SELECT raw_id FROM land_transactions
+                      WHERE raw_id IS NOT NULL
+                      GROUP BY raw_id HAVING COUNT(*) > 1
+                    ) t
+                    """
+                )
+            ).scalar()
+            or 0
+        )
+    if remaining:
+        log.error("raw_id 중복 %s그룹 남음 — unique index 생성 생략", f"{remaining:,}")
+        return False
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_land_transactions_raw_id
+                ON land_transactions (raw_id)
+                WHERE raw_id IS NOT NULL
+                """
+            )
+        )
+    log.info("unique index uq_land_transactions_raw_id OK")
+    return True
 
 
 def _rehash_batch(conn, rows, *, lot_col_used: bool) -> int:
@@ -327,10 +411,15 @@ def main() -> int:
         return 0
 
     if not args.rehash_only:
+        deleted_raw = _delete_dupes_batched(
+            engine, batch_size=max(1000, int(args.batch_size)), create_work_sql=CREATE_RAW_ID_DUP_IDS_WORK
+        )
+        log.info("deleted raw_id duplicate rows: %s", f"{deleted_raw:,}")
         deleted = _delete_dupes_batched(engine, batch_size=max(1000, int(args.batch_size)))
-        log.info("deleted duplicate rows (total): %s", f"{deleted:,}")
+        log.info("deleted business-key duplicate rows: %s", f"{deleted:,}")
         with engine.connect() as conn:
             _report(conn, "after dedupe")
+        _ensure_raw_id_unique_index(engine)
 
     if args.rehash:
         n = _rehash_batched(engine, batch=max(1000, int(args.batch_size)))

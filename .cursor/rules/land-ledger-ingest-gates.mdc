@@ -1,0 +1,54 @@
+---
+description: 토지·집합 원장 ingest — 재적재 반복 방지 게이트 (백필 우선, 검증 필수)
+globs: pipeline/clean.py,pipeline/backfill_land_display.py,pipeline/dedupe_land*.py,pipeline/collect*.py,pipeline/import_refined.py,pipeline/rebuild_land*.py,pipeline/collective/**,pipeline/collective_commercial/**,docs/LAND_LEDGER*.md,docs/DISPLAY_BACKFILL*.md,docs/COLLECTIVE_LEDGER*.md
+alwaysApply: false
+---
+
+# 원장 ingest — 재적재 반복 방지
+
+## CRITICAL — 표시 컬럼 백필
+
+**`clean.py --backfill-display` UPSERT는 금지.** (위임만 가능 — 내부적으로 `backfill_land_display.py` UPDATE-only)
+
+`lot_display` 채움 → `transaction_hash` 변경 → **동일 raw_id 2행 INSERT** → 거래목록 2배.
+
+| 허용 | 금지 |
+|------|------|
+| `python backfill_land_display.py` | `clean.py` UPSERT로 표시 컬럼 “백필” |
+| dedupe 후 `db/033` raw_id UNIQUE | hash 바뀐 채 INSERT |
+
+사고 기록: `docs/DISPLAY_BACKFILL_DEDUP_INCIDENT.md`
+
+## 절대 하지 말 것
+
+1. **`clean.py` / `import_refined.py`만 돌리고 "완료" 선언** — 표시 컬럼·**raw_id 중복 0**·연도별 채움률 확인 없이 Promote 금지.
+2. **증상(모달 `—`)만 보고 전량 TRUNCATE·재적재** — raw JSON에 값이 있으면 **백필** 먼저.
+3. **`--reprocess-all` / TRUNCATE** — 사용자 명시 요청 또는 백필·게이트 실패 후 원인 문서화 없이 사용 금지.
+
+## 토지 (`land_stats`) — 표준 순서
+
+```
+collect → clean (신규 raw만)
+       → backfill_land_display.py  (표시 컬럼 UPDATE-only)
+       → rebuild_land_coverage.py --by-year --gate  (lot/deal ≥95%, raw_id_dup=0)
+       → build_stats*
+```
+
+| 단계 | 명령 | 목적 |
+|------|------|------|
+| 백필 | `python backfill_land_display.py` | raw JSON → `lot_display`/`deal_type` **UPDATE** |
+| 중복 제거 | `python dedupe_land_transactions.py --execute` | raw_id·business key 중복 DELETE |
+| 게이트 | `python rebuild_land_coverage.py --by-year --gate` | 채움률 + **raw_id 중복 0** |
+| 최후 수단 | `LAND_LEDGER_REBUILD_PLAN` 전량 재적재 | 백필·게이트 실패 + raw 자체 결손 |
+
+## "완료" 보고 전 체크리스트
+
+- [ ] `rebuild_land_coverage.py --gate` **exit 0** (raw_id_dup_groups=0 포함)
+- [ ] UI 거래목록 spot check — 동일 계약 2행 없음
+- [ ] 연도별 lot/deal fill-rate **숫자로** 보고
+
+## 참고
+
+- `docs/DISPLAY_BACKFILL_DEDUP_INCIDENT.md`
+- `docs/DATA_INTEGRITY_CHECKLIST.md`
+- `docs/TRANSACTION_HASH_DEDUPE.md`
