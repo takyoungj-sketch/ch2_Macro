@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import {
   fetchLongTermTrend,
   fetchMatrixCellHistogram,
-  fetchMatrixCellTransactions,
+  fetchAllMatrixCellTransactions,
   fetchLandRegression,
   downloadMatrixCellTransactionsCsv,
 } from "../api/client";
@@ -18,7 +18,6 @@ import type {
   MatrixCellHistogramRequest,
   MatrixCellHistogramResponse,
   MatrixCellTransactionsResponse,
-  MatrixCellTransactionItem,
   MatrixYearlyRequest,
   MatrixYearlyStat,
 } from "../types";
@@ -33,6 +32,7 @@ import { formatMatrixBucketAxisLabel } from "../utils/matrixYearlyLabels";
 import { resolveLongTermTargetsForFetch } from "../utils/longTermTargets";
 import { useAppStore } from "../store";
 import MatrixCellHistogramChart from "./MatrixCellHistogramChart";
+import MatrixCellTransactionTable from "./MatrixCellTransactionTable";
 import MatrixYearlyTrendChart from "./MatrixYearlyTrendChart";
 import MultiRegionTrendChart, { type TrendSeries } from "./MultiRegionTrendChart";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
@@ -67,17 +67,6 @@ function formatIsoDateBrief(d: string | null | undefined): string {
   if (!d || typeof d !== "string") return "";
   const t = d.slice(0, 10);
   return t || d;
-}
-
-function formatTxContractDate(r: MatrixCellTransactionItem): string {
-  const brief = formatIsoDateBrief(r.contract_date ?? undefined);
-  if (brief) return brief;
-  return `${r.contract_year}.${String(r.contract_month).padStart(2, "0")}`;
-}
-
-function formatTxCell(value: string | null | undefined): string {
-  const t = (value ?? "").trim();
-  return t || "—";
 }
 
 function rowStableKey(r: MatrixYearlyStat, idx: number): string {
@@ -140,7 +129,7 @@ function longTermSeriesToTrendSeries(
   }));
 }
 
-const TX_PAGE = 25;
+/** 매트릭스 칸당 건수는 보통 수백 — fetchAllMatrixCellTransactions 로 100건씩 모아 로드 */
 
 /** 유료 매트릭스 칸: 연도별 추이 + 단가 분포 + 원거래 목록 */
 export default function PaidMatrixYearlyModal({
@@ -162,7 +151,6 @@ export default function PaidMatrixYearlyModal({
   const [histError, setHistError] = useState<string | null>(null);
   const [histData, setHistData] = useState<MatrixCellHistogramResponse | null>(null);
 
-  const [txOffset, setTxOffset] = useState(0);
   const [txLoading, setTxLoading] = useState(false);
   const [txError, setTxError] = useState<string | null>(null);
   const [txData, setTxData] = useState<MatrixCellTransactionsResponse | null>(null);
@@ -264,7 +252,6 @@ export default function PaidMatrixYearlyModal({
       setHistSliceKey(null);
       setHistData(null);
       setHistError(null);
-      setTxOffset(0);
       setTxData(null);
       setTxError(null);
       setLtData(null);
@@ -415,10 +402,10 @@ export default function PaidMatrixYearlyModal({
       setTxLoading(true);
       setTxError(null);
       try {
-        const data = await fetchMatrixCellTransactions({
+        const data = await fetchAllMatrixCellTransactions({
           ...filterRequest,
-          offset: txOffset,
-          limit: TX_PAGE,
+          offset: 0,
+          limit: 100,
         });
         if (!cancelled) setTxData(data);
       } catch (e) {
@@ -433,11 +420,10 @@ export default function PaidMatrixYearlyModal({
     return () => {
       cancelled = true;
     };
-  }, [open, panel, filterRequest, txOffset]);
+  }, [open, panel, filterRequest]);
 
   useEffect(() => {
     if (panel !== "transactions") return;
-    setTxOffset(0);
     setTxExportError(null);
   }, [panel, filterRequest]);
 
@@ -568,7 +554,7 @@ export default function PaidMatrixYearlyModal({
       }}
     >
       <div
-        className="fixed left-1/2 top-1/2 bg-white rounded-xl shadow-xl max-w-4xl w-[calc(100%-2rem)] max-h-[85vh] flex flex-col border border-slate-200"
+        className="fixed left-1/2 top-1/2 bg-white rounded-xl shadow-xl max-w-6xl w-[calc(100%-2rem)] max-h-[88vh] flex flex-col border border-slate-200"
         style={{
           transform: `translate(calc(-50% + ${dragOffset.x}px), calc(-50% + ${dragOffset.y}px))`,
         }}
@@ -964,118 +950,10 @@ export default function PaidMatrixYearlyModal({
                 <p className="text-xs text-slate-400 text-center py-4">목록 불러오는 중…</p>
               )}
               {!txLoading && !txError && txData && (
-                <>
-                  <div className="overflow-x-auto rounded-lg border border-slate-100">
-                    <table className="w-full text-[11px] border-collapse min-w-[900px]">
-                      <thead>
-                        <tr className={simpleTableHeadClass("neutral")}>
-                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium whitespace-nowrap">
-                            계약일
-                          </th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium whitespace-nowrap">
-                            주소
-                          </th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium whitespace-nowrap">
-                            지번
-                          </th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium whitespace-nowrap">
-                            면적(㎡)
-                          </th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium whitespace-nowrap">
-                            금액(만원)
-                          </th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-right font-bold text-blue-700 whitespace-nowrap">
-                            단가
-                          </th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium whitespace-nowrap">
-                            도로
-                          </th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium whitespace-nowrap">
-                            지분
-                          </th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium whitespace-nowrap">
-                            유형
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-slate-800">
-                        {txData.items.map((r) => (
-                          <tr key={r.id}>
-                            <td className="border border-slate-200 px-2 py-1 tabular-nums whitespace-nowrap">
-                              {formatTxContractDate(r)}
-                            </td>
-                            <td
-                              className="border border-slate-200 px-2 py-1 max-w-[180px] truncate whitespace-nowrap"
-                              title={[r.sigungu_name, r.eupmyeondong_name, r.beopjungri_name].filter(Boolean).join(" ") || undefined}
-                            >
-                              {[r.sigungu_name, r.eupmyeondong_name, r.beopjungri_name].filter(Boolean).join(" ") || "—"}
-                            </td>
-                            <td
-                              className="border border-slate-200 px-2 py-1 max-w-[120px] truncate"
-                              title={r.lot_display?.trim() || undefined}
-                            >
-                              {formatTxCell(r.lot_display)}
-                            </td>
-                            <td className="border border-slate-200 px-2 py-1 text-right tabular-nums whitespace-nowrap">
-                              {r.area_sqm != null
-                                ? Number(r.area_sqm).toLocaleString("ko-KR", {
-                                    maximumFractionDigits: 2,
-                                  })
-                                : "—"}
-                            </td>
-                            <td className="border border-slate-200 px-2 py-1 text-right tabular-nums whitespace-nowrap">
-                              {Number(r.total_price_10k).toLocaleString("ko-KR", {
-                                maximumFractionDigits: 0,
-                              })}
-                            </td>
-                            <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-blue-600 font-semibold whitespace-nowrap">
-                              {r.unit_price_per_sqm != null
-                                ? Number(r.unit_price_per_sqm).toLocaleString("ko-KR", {
-                                    minimumFractionDigits: 1,
-                                    maximumFractionDigits: 1,
-                                  })
-                                : "—"}
-                            </td>
-                            <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">
-                              {r.road_condition ?? "—"}
-                            </td>
-                            <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">
-                              {formatTxCell(r.partial_ownership_label)}
-                            </td>
-                            <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">
-                              {formatTxCell(r.deal_type)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
-                    <span className="text-slate-400">
-                      {txData.total > 0
-                        ? `${(txData.offset + 1).toLocaleString("ko-KR")}–${Math.min(txData.offset + txData.items.length, txData.total).toLocaleString("ko-KR")} / ${txData.total.toLocaleString("ko-KR")}`
-                        : "0건"}
-                    </span>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        disabled={txOffset <= 0}
-                        onClick={() => setTxOffset((o) => Math.max(0, o - TX_PAGE))}
-                        className="px-2 py-1 rounded border border-slate-200 text-slate-600 disabled:opacity-40 hover:bg-slate-50"
-                      >
-                        이전
-                      </button>
-                      <button
-                        type="button"
-                        disabled={txOffset + TX_PAGE >= txData.total}
-                        onClick={() => setTxOffset((o) => o + TX_PAGE)}
-                        className="px-2 py-1 rounded border border-slate-200 text-slate-600 disabled:opacity-40 hover:bg-slate-50"
-                      >
-                        다음
-                      </button>
-                    </div>
-                  </div>
-                </>
+                <MatrixCellTransactionTable
+                  items={txData.items}
+                  truncated={txData.total > txData.items.length}
+                />
               )}
             </div>
           )}

@@ -588,7 +588,8 @@ class MatrixCellTransactionItem(BaseModel):
 
 class MatrixCellTransactionsRequest(MatrixYearlyRequest):
     offset: int = Field(0, ge=0)
-    limit: int = Field(25, ge=1, le=100)
+    # 매트릭스 칸 단위 subset — 서버가 전체 필터 후 slice. 클라이언트 필터·정렬용 상한.
+    limit: int = Field(25, ge=1, le=10_000)
 
 
 class MatrixCellTransactionsResponse(BaseModel):

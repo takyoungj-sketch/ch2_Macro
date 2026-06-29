@@ -135,6 +135,35 @@ export const fetchMatrixCellTransactions = async (
   return data;
 };
 
+/** 거래목록 탭: 필터·정렬용 전체 로드 (API limit 상한 100씩 페이지). */
+const MATRIX_TX_PAGE_MAX = 100;
+
+export async function fetchAllMatrixCellTransactions(
+  body: MatrixCellTransactionsRequest
+): Promise<MatrixCellTransactionsResponse> {
+  const first = await fetchMatrixCellTransactions({
+    ...body,
+    offset: 0,
+    limit: MATRIX_TX_PAGE_MAX,
+  });
+  if (first.items.length >= first.total) {
+    return first;
+  }
+  const all = [...first.items];
+  let offset = MATRIX_TX_PAGE_MAX;
+  while (offset < first.total) {
+    const page = await fetchMatrixCellTransactions({
+      ...body,
+      offset,
+      limit: MATRIX_TX_PAGE_MAX,
+    });
+    all.push(...page.items);
+    offset += MATRIX_TX_PAGE_MAX;
+    if (page.items.length === 0) break;
+  }
+  return { ...first, items: all, offset: 0, limit: all.length };
+};
+
 export const fetchLandRegression = async (
   body: LandRegressionRequest
 ): Promise<LandRegressionResponse> => {

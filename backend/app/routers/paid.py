@@ -336,24 +336,24 @@ def _matrix_dimension_sql(alias: str, zone_display: str, land_display: str) -> t
     zd = (zone_display or "").strip()
     if zd in ("미지정", ""):
         zs.append(
-            f"({alias}.zone_type IS NULL OR TRIM(BOTH FROM COALESCE({alias}.zone_type::text, '')) = '')"
+            f"({alias}.zone_type_resolved IS NULL OR TRIM(BOTH FROM COALESCE({alias}.zone_type_resolved::text, '')) = '')"
         )
     else:
         param["mtx_zone"] = zd
         zs.append(
-            f"TRIM(BOTH FROM COALESCE({alias}.zone_type::text, ''))"
+            f"TRIM(BOTH FROM COALESCE({alias}.zone_type_resolved::text, ''))"
             " = TRIM(:mtx_zone)"
         )
 
     ld = (land_display or "").strip()
     if ld in ("기타", ""):
         zs.append(
-            f"({alias}.land_category IS NULL OR TRIM(BOTH FROM COALESCE({alias}.land_category::text, '')) = '')"
+            f"({alias}.land_category_resolved IS NULL OR TRIM(BOTH FROM COALESCE({alias}.land_category_resolved::text, '')) = '')"
         )
     else:
         param["mtx_land"] = ld
         zs.append(
-            f"TRIM(BOTH FROM COALESCE({alias}.land_category::text, ''))"
+            f"TRIM(BOTH FROM COALESCE({alias}.land_category_resolved::text, ''))"
             " = TRIM(:mtx_land)"
         )
 
@@ -434,10 +434,10 @@ def _build_conditions(
         params["area_categories"] = area_categories
 
     if land_categories:
-        conditions.append("lt.land_category = ANY(:land_categories)")
+        conditions.append("lt.land_category_resolved = ANY(:land_categories)")
         params["land_categories"] = land_categories
     if zone_types:
-        conditions.append("lt.zone_type = ANY(:zone_types)")
+        conditions.append("lt.zone_type_resolved = ANY(:zone_types)")
         params["zone_types"] = zone_types
     if exclude_partial:
         conditions.append("lt.is_partial_ownership = FALSE")
@@ -447,12 +447,15 @@ def _build_conditions(
 
 def _select_full_query(where_sql: str) -> str:
     return f"""
-        SELECT lt.beopjungri_code, lt.zone_type, lt.land_category, lt.road_condition,
+        SELECT lt.beopjungri_code,
+               lt.zone_type_resolved  AS zone_type,
+               lt.land_category_resolved AS land_category,
+               lt.road_condition,
                lt.unit_price_per_sqm,
                lt.contract_year::int AS contract_year,
                lt.total_price_10k::float8 AS total_price_10k,
                lt.area_sqm::float8 AS area_sqm
-        FROM land_transactions lt
+        FROM land_transactions_resolved lt
         WHERE {where_sql}
     """
 
@@ -834,10 +837,10 @@ def _analyze_core_sql_aggregate(
         WITH base AS MATERIALIZED (
           SELECT
             btrim(cast(lt.beopjungri_code AS text)) AS bc,
-            lt.zone_type,
-            lt.land_category,
+            lt.zone_type_resolved  AS zone_type,
+            lt.land_category_resolved AS land_category,
             lt.unit_price_per_sqm::float8 AS px
-          FROM land_transactions lt
+          FROM land_transactions_resolved lt
           WHERE {where_sql}
         )
         SELECT
@@ -864,7 +867,7 @@ def _analyze_core_sql_aggregate(
                     COUNT(*)::bigint AS cnt,
                     COALESCE(SUM(lt.total_price_10k), 0)::float8 AS sum_p,
                     COALESCE(SUM(lt.area_sqm), 0)::float8 AS sum_a
-             FROM land_transactions lt
+             FROM land_transactions_resolved lt
              WHERE {where_sql}
              GROUP BY lt.contract_year
            ) x) AS by_year_json
@@ -1144,7 +1147,7 @@ def matrix_yearly(body: MatrixYearlyRequest, db: Session = Depends(get_db)):
             pb["buck_pe"] = be_eff
             qry = text(
                 "SELECT lt.unit_price_per_sqm::float8 AS px "
-                "FROM land_transactions lt "
+                "FROM land_transactions_resolved lt "
                 f"WHERE {w_extra}"
             )
             prow = db.execute(qry, pb).fetchall()
@@ -1182,7 +1185,7 @@ def matrix_yearly(body: MatrixYearlyRequest, db: Session = Depends(get_db)):
     query = text(
         f"""
         SELECT lt.contract_year AS y, lt.unit_price_per_sqm AS px
-        FROM land_transactions lt
+        FROM land_transactions_resolved lt
         WHERE {merged_where}
         ORDER BY lt.contract_year ASC
         """
@@ -1531,7 +1534,7 @@ def matrix_cell_histogram(
         SELECT lt.contract_date AS cd,
                lt.contract_year AS y,
                lt.unit_price_per_sqm AS px
-        FROM land_transactions lt
+        FROM land_transactions_resolved lt
         WHERE {merged_where}
         ORDER BY lt.contract_year ASC
         """
@@ -1658,7 +1661,7 @@ def _fetch_matrix_cell_filtered_transactions(
                lt.total_price_10k::float8 AS total_price_10k,
                lt.unit_price_per_sqm::float8 AS unit_price_per_sqm,
                TRIM(BOTH FROM COALESCE(lt.road_condition::text, '')) AS road_condition
-        FROM land_transactions lt
+        FROM land_transactions_resolved lt
         LEFT JOIN region_codes rc ON rc.beopjungri_code = lt.beopjungri_code
         WHERE {merged_where}
         ORDER BY lt.contract_year ASC, lt.contract_month ASC, lt.id ASC
