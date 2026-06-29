@@ -4,12 +4,17 @@ import type {
   CommercialAssetType,
   CommercialAddressListResponse,
   CommercialClusterListResponse,
+  CommercialCohortHistogramResponse,
+  CommercialCohortRegressionResponse,
+  CommercialCohortTransactionsResponse,
+  CommercialCohortYearlyStatsResponse,
   CommercialFilterMeta,
   CommercialFloorIndexResponse,
   CommercialHistogramResponse,
   CommercialRegressionPredictInputs,
   CommercialRegressionPredictResponse,
   CommercialRegressionResponse,
+  CommercialRollingStatsResponse,
   CommercialTransactionListResponse,
   CommercialYearlyStatsResponse,
   RegressionModelType,
@@ -42,9 +47,21 @@ export async function fetchCommercialAddr3(
   addr1: string,
   addr2: string,
   assetType?: CommercialAssetSelectorType,
+  period?: {
+    contract_year_from?: number;
+    contract_year_to?: number;
+    contract_date_from?: string;
+    contract_date_to?: string;
+    window_years?: number;
+  },
 ): Promise<RegionOption[]> {
   const { data } = await api.get<RegionOption[]>("/regions/addr3", {
-    params: { addr1, addr2, asset_type: apiCommercialAssetParam(assetType) },
+    params: {
+      addr1,
+      addr2,
+      asset_type: apiCommercialAssetParam(assetType),
+      ...period,
+    },
   });
   return data;
 }
@@ -65,6 +82,13 @@ export async function fetchCommercialLeafRegions(
   addr2: string,
   addr3List: string[],
   assetType?: CommercialAssetSelectorType,
+  period?: {
+    contract_year_from?: number;
+    contract_year_to?: number;
+    contract_date_from?: string;
+    contract_date_to?: string;
+    window_years?: number;
+  },
 ): Promise<RegionOption[]> {
   const { data } = await api.get<RegionOption[]>("/regions/leaf", {
     params: {
@@ -72,6 +96,7 @@ export async function fetchCommercialLeafRegions(
       addr2,
       asset_type: apiCommercialAssetParam(assetType),
       addr3_list: addr3List.length ? addr3List : undefined,
+      ...period,
     },
     paramsSerializer: { indexes: null },
   });
@@ -86,6 +111,7 @@ export async function fetchCommercialClusters(params: {
   addr4_list?: string[];
   contract_year_from?: number;
   contract_year_to?: number;
+  window_years?: number;
   sort?: string;
   page?: number;
   page_size?: number;
@@ -110,6 +136,9 @@ export async function fetchCommercialTransactions(
     addr4_list?: string[];
     contract_year_from?: number;
     contract_year_to?: number;
+    contract_date_from?: string;
+    contract_date_to?: string;
+    window_years?: number;
     page?: number;
     page_size?: number;
   },
@@ -267,5 +296,121 @@ export async function predictCommercialRegression(
       contract_year_to: body.contract_year_to,
     },
   );
+  return data;
+}
+
+type CommercialCohortBody = {
+  cluster_keys: string[];
+  asset_type?: CommercialAssetType;
+  contract_year_from?: number;
+  contract_year_to?: number;
+  contract_date_from?: string;
+  contract_date_to?: string;
+  experiment?: boolean;
+};
+
+export async function fetchCommercialRollingStats(
+  clusterKey: string,
+  windowYears: number,
+): Promise<CommercialRollingStatsResponse> {
+  const { data } = await api.get<CommercialRollingStatsResponse>(`/clusters/${clusterKey}/stats/rolling`, {
+    params: { window_years: windowYears },
+  });
+  return data;
+}
+
+export async function runCommercialCohortFloorIndex(
+  body: CommercialCohortBody & {
+    dimension?: "floor" | "area";
+    variables?: { floor_mode?: string };
+  },
+): Promise<CommercialFloorIndexResponse> {
+  const { data } = await api.post<CommercialFloorIndexResponse>("/analysis/cohort/floor-index", body);
+  return data;
+}
+
+export async function fetchCommercialCohortYearlyStats(
+  body: CommercialCohortBody,
+): Promise<CommercialCohortYearlyStatsResponse> {
+  const { data } = await api.post<CommercialCohortYearlyStatsResponse>("/analysis/cohort/stats/by-year", body);
+  return data;
+}
+
+export async function fetchCommercialCohortHistogram(
+  body: CommercialCohortBody,
+  params?: { bins?: number; contract_year?: number },
+): Promise<CommercialCohortHistogramResponse> {
+  const { data } = await api.post<CommercialCohortHistogramResponse>("/analysis/cohort/histogram", body, { params });
+  return data;
+}
+
+export async function fetchCommercialCohortTransactions(
+  body: CommercialCohortBody & { page?: number; page_size?: number; contract_year?: number },
+): Promise<CommercialCohortTransactionsResponse> {
+  const { data } = await api.post<CommercialCohortTransactionsResponse>("/analysis/cohort/transactions", body);
+  return data;
+}
+
+export async function runCommercialCohortRegression(
+  body: CommercialCohortBody & {
+    exclude_outliers_iqr?: boolean;
+    model_type?: RegressionModelType;
+    variables?: Record<string, unknown>;
+  },
+): Promise<CommercialCohortRegressionResponse> {
+  const { data } = await api.post<CommercialCohortRegressionResponse>("/analysis/cohort/regression/run", {
+    variables: {
+      gross_area: true,
+      building_age: true,
+      floor: true,
+      zone_type: true,
+      building_use: true,
+      road_width: true,
+      floor_mode: "relative",
+      ...body.variables,
+    },
+    model_type: body.model_type ?? "linear",
+    exclude_outliers_iqr: body.exclude_outliers_iqr ?? false,
+    experiment: body.experiment ?? false,
+    cluster_keys: body.cluster_keys,
+    asset_type: body.asset_type,
+    contract_year_from: body.contract_year_from,
+    contract_year_to: body.contract_year_to,
+    contract_date_from: body.contract_date_from,
+    contract_date_to: body.contract_date_to,
+  });
+  return data;
+}
+
+export async function predictCommercialCohortRegression(
+  body: CommercialCohortBody & {
+    exclude_outliers_iqr?: boolean;
+    model_type?: RegressionModelType;
+    inputs: CommercialRegressionPredictInputs;
+    variables?: Record<string, unknown>;
+  },
+): Promise<CommercialRegressionPredictResponse> {
+  const { data } = await api.post<CommercialRegressionPredictResponse>("/analysis/cohort/regression/predict", {
+    variables: {
+      gross_area: true,
+      building_age: true,
+      floor: true,
+      zone_type: true,
+      building_use: true,
+      road_width: true,
+      floor_mode: "relative",
+      ...body.variables,
+    },
+    model_type: body.model_type ?? "linear",
+    exclude_outliers_iqr: body.exclude_outliers_iqr ?? false,
+    experiment: body.experiment ?? false,
+    inputs: body.inputs,
+    cluster_keys: body.cluster_keys,
+    asset_type: body.asset_type,
+    contract_year_from: body.contract_year_from,
+    contract_year_to: body.contract_year_to,
+    contract_date_from: body.contract_date_from,
+    contract_date_to: body.contract_date_to,
+  });
   return data;
 }

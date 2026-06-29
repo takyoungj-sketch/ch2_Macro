@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
-import { fetchCommercialFloorIndex } from "../api/commercialClient";
+import { fetchCommercialFloorIndex, runCommercialCohortFloorIndex } from "../api/commercialClient";
 import type { CommercialModalScope } from "./CommercialClusterDetailModal";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 
@@ -60,12 +60,25 @@ export default function CommercialFloorIndexPanel({
   scope,
   count,
   isFactory = false,
+  cohortKeys,
+  cohortRunId = 0,
+  analysisPeriod,
 }: {
   clusterKey: string;
   scope: CommercialModalScope;
   count: number;
   isFactory?: boolean;
+  cohortKeys?: string[];
+  cohortRunId?: number;
+  analysisPeriod?: {
+    contract_year_from?: number;
+    contract_year_to?: number;
+    contract_date_from?: string;
+    contract_date_to?: string;
+  };
 }) {
+  const useCohort = cohortRunId > 0 && (cohortKeys?.length ?? 0) > 1;
+  const keys = useCohort ? cohortKeys! : [clusterKey];
   const [dimension, setDimension] = useState<Dimension>(isFactory ? "area" : "floor");
   const floorIndexEligible = count >= 50;
   const experiment = !floorIndexEligible;
@@ -82,16 +95,36 @@ export default function CommercialFloorIndexPanel({
       ];
 
   const q = useQuery({
-    queryKey: ["comm-floor-index", clusterKey, scope, dimension, experiment, isFactory],
+    queryKey: ["comm-floor-index", useCohort ? keys.join("|") : clusterKey, scope, dimension, experiment, isFactory, cohortRunId],
     queryFn: () =>
-      fetchCommercialFloorIndex(clusterKey, {
-        ...regionParams(scope),
-        contract_year_from: scope.yearFrom === "" ? undefined : scope.yearFrom,
-        contract_year_to: scope.yearTo === "" ? undefined : scope.yearTo,
-        dimension,
-        experiment,
-      }),
+      useCohort
+        ? runCommercialCohortFloorIndex({
+            cluster_keys: keys,
+            asset_type: scope.assetType,
+            ...analysisPeriod,
+            contract_year_from: scope.yearFrom === "" ? undefined : scope.yearFrom,
+            contract_year_to: scope.yearTo === "" ? undefined : scope.yearTo,
+            dimension,
+            experiment,
+            variables: { floor_mode: "relative" },
+          })
+        : fetchCommercialFloorIndex(clusterKey, {
+            ...regionParams(scope),
+            contract_year_from: scope.yearFrom === "" ? undefined : scope.yearFrom,
+            contract_year_to: scope.yearTo === "" ? undefined : scope.yearTo,
+            dimension,
+            experiment,
+          }),
+    enabled: !useCohort || cohortRunId > 0,
   });
+
+  if (useCohort && cohortRunId === 0) {
+    return (
+      <p className="text-xs text-slate-500 text-center py-6">
+        코호트에 cluster를 추가한 뒤 「통합분석」을 누르면 통합 효용지수가 표시됩니다.
+      </p>
+    );
+  }
 
   if (q.isLoading) return <p className="text-xs text-slate-400 text-center py-6">효용지수 계산 중…</p>;
   if (q.isError) {

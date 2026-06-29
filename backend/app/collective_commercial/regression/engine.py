@@ -12,6 +12,7 @@ from app.collective.regression.engine import (
     _add_floor_columns,
     _duan_smearing,
     _floor_row_for_predict,
+    _sanitize_key,
     count_significant_coefficients,
     fit_model_price_metrics,
 )
@@ -39,6 +40,13 @@ class CommercialRegressionDesignMeta:
     building_use_reference: str | None = None
     road_width_categories: list[str] = field(default_factory=list)
     road_width_reference: str | None = None
+    cluster_counts: dict[str, int] = field(default_factory=dict)
+    cluster_labels: dict[str, str] = field(default_factory=dict)
+    cluster_reference_key: str | None = None
+    cluster_fe_map: dict[str, str] = field(default_factory=dict)
+
+
+MIN_CLUSTER_FE_GROUP = 5
 
 
 def _add_cat_dummies(
@@ -88,11 +96,39 @@ def _build_design_matrix(
     req: CommercialRegressionRequest,
     *,
     is_shop: bool,
+    cohort_mode: bool = False,
+    cluster_display_labels: dict[str, str] | None = None,
 ) -> tuple[pd.Series, pd.DataFrame, dict[str, str], CommercialRegressionDesignMeta, list[str]]:
     warnings: list[str] = []
     meta = CommercialRegressionDesignMeta(floor_mode=req.variables.floor_mode)
     labels: dict[str, str] = {"const": "절편"}
     parts: list[pd.DataFrame] = []
+
+    display_labels = cluster_display_labels or {}
+    if "cluster_key" in work.columns:
+        for ck, cnt in work.groupby("cluster_key").size().items():
+            meta.cluster_counts[str(ck)] = int(cnt)
+            meta.cluster_labels[str(ck)] = display_labels.get(str(ck), str(ck))
+
+    if cohort_mode and "cluster_key" in work.columns and work["cluster_key"].nunique() > 1:
+        keys = work["cluster_key"].astype(str)
+        ref = str(work.groupby("cluster_key").size().idxmax())
+        meta.cluster_reference_key = ref
+        ref_name = meta.cluster_labels.get(ref, ref[:12])
+        warnings.append(f"cluster FE 기준: {ref_name} (거래 최다)")
+        for ck in sorted(keys.unique()):
+            if ck == ref:
+                continue
+            cnt = meta.cluster_counts.get(ck, 0)
+            ck_name = meta.cluster_labels.get(ck, ck[:12])
+            if cnt < MIN_CLUSTER_FE_GROUP:
+                warnings.append(f"cluster FE 제외 — {ck_name} n={cnt} (최소 {MIN_CLUSTER_FE_GROUP}건)")
+                continue
+            col = _sanitize_key(ck, "clu")
+            work[col] = (keys == ck).astype(float)
+            parts.append(work[[col]])
+            labels[col] = f"cluster {ck_name}"
+            meta.cluster_fe_map[ck] = col
 
     if req.variables.gross_area:
         parts.append(work[["gross_area"]].astype(float))
@@ -247,6 +283,8 @@ def _inputs_to_x_row(
     meta: CommercialRegressionDesignMeta,
     req: CommercialRegressionRequest,
     inputs: CommercialRegressionPredictInputs,
+    *,
+    cluster_key: str | None = None,
 ) -> pd.Series:
     row = {c: 0.0 for c in X.columns}
     if req.variables.gross_area and inputs.gross_area is not None:
@@ -275,6 +313,11 @@ def _inputs_to_x_row(
     if rw_col and rw_col in row:
         row[rw_col] = 1.0
 
+    if cluster_key and cluster_key != meta.cluster_reference_key:
+        fe_col = meta.cluster_fe_map.get(cluster_key)
+        if fe_col and fe_col in row:
+            row[fe_col] = 1.0
+
     return pd.Series(row, index=X.columns)
 
 
@@ -283,6 +326,8 @@ def _run_regression_core(
     req: CommercialRegressionRequest,
     *,
     is_shop: bool,
+    cohort_mode: bool = False,
+    cluster_display_labels: dict[str, str] | None = None,
 ) -> tuple[sm.regression.linear_model.RegressionResultsWrapper | None, pd.DataFrame, CommercialRegressionDesignMeta, CommercialRegressionResponse]:
     if df.empty:
         resp = CommercialRegressionResponse(
@@ -304,7 +349,13 @@ def _run_regression_core(
         )
         return None, pd.DataFrame(), CommercialRegressionDesignMeta(), resp
 
-    y, X, labels, meta, base_warnings = _build_design_matrix(work, req, is_shop=is_shop)
+    y, X, labels, meta, base_warnings = _build_design_matrix(
+        work,
+        req,
+        is_shop=is_shop,
+        cohort_mode=cohort_mode,
+        cluster_display_labels=cluster_display_labels,
+    )
     if X.empty:
         resp = CommercialRegressionResponse(
             cluster_key="",
@@ -390,10 +441,38 @@ def run_commercial_regression(
     *,
     is_shop: bool,
 ) -> CommercialRegressionResponse:
-    model, _, _, resp = _run_regression_core(df, req, is_shop=is_shop)
+    model, _, _, resp = _run_regression_core(df, req, is_shop=is_shop, cohort_mode=False)
     if model is None:
         return resp.model_copy(update={"cluster_key": cluster_key, "display_label": display_label})
     return resp.model_copy(update={"cluster_key": cluster_key, "display_label": display_label})
+
+
+def run_cohort_commercial_regression(
+    df: pd.DataFrame,
+    cluster_keys: list[str],
+    display_label: str,
+    req: CommercialRegressionRequest,
+    *,
+    is_shop: bool,
+    cluster_display_labels: dict[str, str] | None = None,
+) -> CommercialRegressionResponse:
+    names = cluster_display_labels or {}
+    _, _, _, resp = _run_regression_core(
+        df,
+        req,
+        is_shop=is_shop,
+        cohort_mode=True,
+        cluster_display_labels=names,
+    )
+    if len(cluster_keys) > 1 and resp.n > 0 and not any("cluster FE" in w for w in resp.warnings):
+        resp.warnings.insert(0, f"코호트 {len(cluster_keys)}개 cluster — cluster 고정효과 적용")
+    resp = resp.model_copy(
+        update={
+            "cluster_key": cluster_keys[0] if cluster_keys else "",
+            "display_label": display_label,
+        }
+    )
+    return resp
 
 
 def predict_commercial_regression(
@@ -402,12 +481,27 @@ def predict_commercial_regression(
     inputs: CommercialRegressionPredictInputs,
     *,
     is_shop: bool,
+    cohort_mode: bool = False,
+    cluster_display_labels: dict[str, str] | None = None,
+    predict_cluster_key: str | None = None,
 ) -> dict:
-    model, X, meta, fit_resp = _run_regression_core(df, req, is_shop=is_shop)
+    model, X, meta, fit_resp = _run_regression_core(
+        df,
+        req,
+        is_shop=is_shop,
+        cohort_mode=cohort_mode,
+        cluster_display_labels=cluster_display_labels,
+    )
     if model is None or X.empty:
         raise ValueError("; ".join(fit_resp.warnings) or "예측 불가 — 회귀 미추정")
 
-    x_row = _inputs_to_x_row(X, meta, req, inputs)
+    x_row = _inputs_to_x_row(
+        X,
+        meta,
+        req,
+        inputs,
+        cluster_key=predict_cluster_key,
+    )
     vals: dict[str, float] = {"const": 1.0}
     vals.update(x_row.to_dict())
     x_df = pd.DataFrame([vals]).reindex(columns=model.params.index, fill_value=0.0)

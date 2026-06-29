@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { predictCommercialRegression, runCommercialRegression } from "../api/commercialClient";
+import { predictCommercialRegression, runCommercialCohortRegression, runCommercialRegression, predictCommercialCohortRegression } from "../api/commercialClient";
 import { buildCommercialRegressionContext } from "../api/aiContext";
 import type {
   CommercialPredictOptions,
@@ -268,12 +268,25 @@ export default function CommercialRegressionPanel({
   scope,
   isShop,
   count,
+  cohortKeys,
+  cohortRunId = 0,
+  analysisPeriod,
 }: {
   clusterKey: string;
   scope: CommercialModalScope;
   isShop: boolean;
   count: number;
+  cohortKeys?: string[];
+  cohortRunId?: number;
+  analysisPeriod?: {
+    contract_year_from?: number;
+    contract_year_to?: number;
+    contract_date_from?: string;
+    contract_date_to?: string;
+  };
 }) {
+  const useCohort = cohortRunId > 0 && (cohortKeys?.length ?? 0) > 1;
+  const keys = useCohort ? cohortKeys! : [clusterKey];
   const [excludeOutliers, setExcludeOutliers] = useState(false);
   const [floorMode, setFloorMode] = useState<FloorMode>("relative");
   const [floorAdvanced, setFloorAdvanced] = useState(false);
@@ -299,21 +312,37 @@ export default function CommercialRegressionPanel({
       ...regionParams(scope),
       contract_year_from: scope.yearFrom === "" ? undefined : scope.yearFrom,
       contract_year_to: scope.yearTo === "" ? undefined : scope.yearTo,
+      ...(analysisPeriod ?? {}),
       exclude_outliers_iqr: excludeOutliers,
       experiment: !regressionEligible,
       model_type: modelType,
       variables: { ...vars, floor_mode: floorMode },
     }),
-    [scope, excludeOutliers, regressionEligible, modelType, vars, floorMode],
+    [scope, analysisPeriod, excludeOutliers, regressionEligible, modelType, vars, floorMode],
   );
 
   const regM = useMutation({
-    mutationFn: () => runCommercialRegression(clusterKey, regressionBody),
+    mutationFn: () =>
+      useCohort
+        ? runCommercialCohortRegression({ cluster_keys: keys, asset_type: scope.assetType, ...regressionBody })
+        : runCommercialRegression(clusterKey, regressionBody),
   });
 
   const predictM = useMutation({
-    mutationFn: () => predictCommercialRegression(clusterKey, { ...regressionBody, inputs: predictInputs }),
+    mutationFn: () => {
+      const body = { ...regressionBody, inputs: predictInputs };
+      return useCohort
+        ? predictCommercialCohortRegression({ cluster_keys: keys, asset_type: scope.assetType, ...body })
+        : predictCommercialRegression(clusterKey, body);
+    },
   });
+
+  useEffect(() => {
+    if (useCohort && cohortRunId > 0) {
+      regM.mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cohortRunId triggers cohort run
+  }, [cohortRunId, keys.join("|")]);
 
   useEffect(() => {
     if (regM.data?.predict_options) {
@@ -326,8 +355,17 @@ export default function CommercialRegressionPanel({
     return buildCommercialRegressionContext(regM.data, {
       regionLabel: regM.data.display_label,
       assetType: isShop ? "collective_shop" : "collective_factory",
+      cohort: useCohort,
     });
-  }, [regM.data, isShop]);
+  }, [regM.data, isShop, useCohort]);
+
+  if (useCohort && cohortRunId === 0) {
+    return (
+      <p className="text-xs text-slate-500 text-center py-6">
+        코호트에 cluster를 추가한 뒤 「통합분석」을 누르면 통합 회귀 결과가 표시됩니다.
+      </p>
+    );
+  }
 
   const varOptions = (
     [

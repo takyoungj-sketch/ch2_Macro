@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
@@ -61,6 +62,13 @@ class CommercialAddressListResponse(BaseModel):
 class CommercialClusterListResponse(BaseModel):
     total: int
     items: list[CommercialClusterRow]
+    data_source: Literal["mart", "live"] = "live"
+    as_of_month: Optional[str] = None
+    stats_reference_date: Optional[str] = None
+    stats_as_of_label: Optional[str] = None
+    window_years: Optional[int] = None
+    period_start: Optional[str] = None
+    period_end: Optional[str] = None
 
 
 class CommercialTransactionRow(BaseModel):
@@ -72,6 +80,7 @@ class CommercialTransactionRow(BaseModel):
     lot_number: Optional[str] = None
     contract_year: Optional[int] = None
     contract_month: Optional[int] = None
+    contract_date: Optional[str] = None
     price: float
     gross_area: Optional[float] = None
     land_area: Optional[float] = None
@@ -102,6 +111,26 @@ class CommercialYearlyStatsResponse(BaseModel):
     cluster_key: str
     display_label: str
     points: list[CommercialYearlyStatPoint]
+    data_source: Literal["mart", "live"] = "live"
+
+
+class CommercialRollingStatPoint(BaseModel):
+    bucket_index: int
+    period_start: str
+    period_end: str
+    label: str
+    count: int
+    mean: Optional[float] = None
+
+
+class CommercialRollingStatsResponse(BaseModel):
+    cluster_key: str
+    display_label: str
+    window_years: int
+    as_of_month: Optional[str] = None
+    stats_as_of_label: Optional[str] = None
+    points: list[CommercialRollingStatPoint]
+    data_source: Literal["mart", "live"] = "live"
 
 
 class CommercialHistogramBin(BaseModel):
@@ -224,3 +253,86 @@ class CommercialFloorIndexResponse(BaseModel):
     explain: Optional[AnalysisExplain] = None
     diagnostics: Optional[FloorIndexDiagnostics] = None
     analysis: AnalysisFeatures = Field(default_factory=AnalysisFeatures)
+
+
+class CommercialCohortClusterSummary(BaseModel):
+    cluster_key: str
+    display_label: str
+    count: int
+
+
+class CommercialCohortAnalysisRequest(BaseModel):
+    cluster_keys: list[str] = Field(..., min_length=1, max_length=10)
+    asset_type: Optional[CommercialAssetType] = None
+    contract_year_from: Optional[int] = None
+    contract_year_to: Optional[int] = None
+    contract_date_from: Optional[date] = None
+    contract_date_to: Optional[date] = None
+    variables: CommercialRegressionSpec = Field(default_factory=CommercialRegressionSpec)
+    model_type: Literal["log", "linear"] = "linear"
+    dimension: Literal["floor", "area"] = "floor"
+    exclude_outliers_iqr: bool = False
+    outlier_iqr_multiplier: float = 3.0
+    experiment: bool = False
+
+
+class CommercialCohortRegressionPredictRequest(CommercialRegressionPredictRequest):
+    cluster_keys: list[str] = Field(..., min_length=1, max_length=10)
+
+
+class CommercialCohortRegressionResponse(CommercialRegressionResponse):
+    cluster_keys: list[str] = Field(default_factory=list)
+    cohort_clusters: list[CommercialCohortClusterSummary] = Field(default_factory=list)
+
+
+class CommercialCohortYearlySeries(BaseModel):
+    cluster_key: str
+    display_label: str
+    points: list[CommercialYearlyStatPoint]
+    data_source: Literal["mart", "live"] = "live"
+
+
+class CommercialCohortYearlyStatsResponse(BaseModel):
+    cluster_keys: list[str]
+    series: list[CommercialCohortYearlySeries]
+    data_source: Literal["live"] = "live"
+
+
+class CommercialCohortHistogramResponse(BaseModel):
+    cluster_keys: list[str]
+    bins: list[CommercialHistogramBin]
+    n: int = 0
+    contract_year: Optional[int] = None
+    data_source: Literal["live"] = "live"
+
+
+class CommercialCohortTransactionsRequest(CommercialCohortAnalysisRequest):
+    page: int = Field(1, ge=1)
+    page_size: int = Field(25, ge=1, le=200)
+    contract_year: Optional[int] = None
+
+
+class CommercialCohortTransactionsResponse(BaseModel):
+    cluster_keys: list[str]
+    total: int
+    items: list[CommercialTransactionRow]
+    data_source: Literal["live"] = "live"
+
+
+class CommercialCohortFloorIndexResponse(BaseModel):
+    cluster_keys: list[str]
+    cohort_clusters: list[CommercialCohortClusterSummary]
+    asset_type: str
+    dimension: str
+    method: Optional[str] = None
+    reference_floor: Optional[str] = None
+    controls: list[str] = Field(default_factory=list)
+    n_total: int
+    n_regression: Optional[int] = None
+    r_squared: Optional[float] = None
+    baseline_median: Optional[float] = None
+    cells: list[FloorIndexCell] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    explain: Optional[AnalysisExplain] = None
+    analysis: AnalysisFeatures = Field(default_factory=AnalysisFeatures)
+    diagnostics: Optional[FloorIndexDiagnostics] = None

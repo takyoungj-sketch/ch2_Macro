@@ -1,4 +1,4 @@
-"""collective_commercial ingest — GUKTO 정제 → commercial_clusters + transactions."""
+"""collective_commercial ingest — MOLIT raw base CSV (집합) → commercial_clusters + transactions."""
 
 from __future__ import annotations
 
@@ -34,8 +34,7 @@ from cluster_keys import (  # noqa: E402
     make_road_cluster_key,
     make_road_display_label,
 )
-from gukto_raw_factory import load_collective_factory_raw  # noqa: E402
-from gukto_raw_shop import load_collective_shop_raw  # noqa: E402
+from molit_raw import load_collective_factory_raw, load_collective_shop_raw  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -44,6 +43,7 @@ REPO = Path(__file__).resolve().parents[2]
 DDL = REPO / "db" / "019_collective_commercial.sql"
 DDL_ROAD_WIDTH = REPO / "db" / "020_collective_commercial_road_width.sql"
 DDL_REGION = REPO / "db" / "030_collective_commercial_region_codes.sql"
+DDL_CLUSTER_STATS = REPO / "db" / "032_collective_commercial_cluster_stats.sql"
 
 UPSERT_CLUSTER = text(
     """
@@ -131,7 +131,7 @@ def _str(val, width: int | None = None) -> str | None:
 
 
 def apply_ddl(engine) -> None:
-    for path in (DDL, DDL_ROAD_WIDTH, DDL_REGION):
+    for path in (DDL, DDL_ROAD_WIDTH, DDL_REGION, DDL_CLUSTER_STATS):
         if not path.is_file():
             continue
         sql = path.read_text(encoding="utf-8")
@@ -364,11 +364,15 @@ def ingest_asset(
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description="GUKTO 집합상가·집합공장 원본 xlsx 적재 (도로 cluster)")
+    p = argparse.ArgumentParser(
+        description="MOLIT raw base CSV (집합) → 집합상가·집합공장 적재 (raw/raw base 2021~2026)"
+    )
     p.add_argument("--shop-only", action="store_true")
     p.add_argument("--factory-only", action="store_true")
     p.add_argument("--truncate", action="store_true", help="기존 commercial 테이블 비우고 재적재")
     p.add_argument("--skip-ddl", action="store_true")
+    p.add_argument("--year-from", type=int, default=2021)
+    p.add_argument("--year-to", type=int, default=2026)
     p.add_argument("--refresh-region-codes", action="store_true")
     args = p.parse_args()
 
@@ -393,8 +397,8 @@ def main() -> None:
     if do_shop:
         n, _ = ingest_asset(
             engine,
-            load_collective_shop_raw,
-            source="gukto_shop_raw",
+            lambda: load_collective_shop_raw(year_from=args.year_from, year_to=args.year_to),
+            source="molit_shop_raw",
             enrich_fn=enrich_commercial_road,
             region_maps=region_maps,
             truncate=args.truncate,
@@ -406,8 +410,8 @@ def main() -> None:
     if do_factory:
         n, _ = ingest_asset(
             engine,
-            load_collective_factory_raw,
-            source="gukto_factory_raw",
+            lambda: load_collective_factory_raw(year_from=args.year_from, year_to=args.year_to),
+            source="molit_factory_raw",
             enrich_fn=enrich_commercial_road,
             region_maps=region_maps,
             truncate=False,

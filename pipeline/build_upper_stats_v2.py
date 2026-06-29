@@ -139,11 +139,11 @@ def fetch_transactions_for_upper_union(
             btrim(lt.sido_code::text) AS sido_code,
             btrim(lt.sigungu_code::text) AS sigungu_code,
             btrim(r.eupmyeondong_code::text) AS eupmyeondong_code,
-            lt.zone_type,
-            lt.land_category,
+            lt.zone_type_resolved  AS zone_type,
+            lt.land_category_resolved AS land_category,
             lt.unit_price_per_sqm,
             lt.contract_date::date AS contract_date
-        FROM land_transactions lt
+        FROM land_transactions_resolved lt
         INNER JOIN region_codes r
             ON btrim(r.beopjungri_code::text) = btrim(lt.beopjungri_code::text)
            AND COALESCE(r.is_active, TRUE)

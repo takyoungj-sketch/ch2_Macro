@@ -192,6 +192,13 @@ export interface CommercialAddressListResponse {
 export interface CommercialClusterListResponse {
   total: number;
   items: CommercialClusterRow[];
+  data_source?: "mart" | "live";
+  as_of_month?: string | null;
+  stats_reference_date?: string | null;
+  stats_as_of_label?: string | null;
+  window_years?: number | null;
+  period_start?: string | null;
+  period_end?: string | null;
 }
 
 export interface CommercialTransactionRow {
@@ -203,6 +210,7 @@ export interface CommercialTransactionRow {
   lot_number?: string | null;
   contract_year?: number | null;
   contract_month?: number | null;
+  contract_date?: string | null;
   price: number;
   gross_area?: number | null;
   land_area?: number | null;
@@ -227,6 +235,65 @@ export interface CommercialYearlyStatsResponse {
   cluster_key: string;
   display_label: string;
   points: YearlyStatPoint[];
+  data_source?: "mart" | "live";
+}
+
+export interface CommercialRollingStatPoint {
+  bucket_index: number;
+  period_start: string;
+  period_end: string;
+  label: string;
+  count: number;
+  mean?: number | null;
+}
+
+export interface CommercialRollingStatsResponse {
+  cluster_key: string;
+  display_label: string;
+  window_years: number;
+  as_of_month?: string | null;
+  stats_as_of_label?: string | null;
+  points: CommercialRollingStatPoint[];
+  data_source?: "mart" | "live";
+}
+
+export interface CommercialCohortClusterSummary {
+  cluster_key: string;
+  display_label: string;
+  count: number;
+}
+
+export interface CommercialCohortYearlySeries {
+  cluster_key: string;
+  display_label: string;
+  points: YearlyStatPoint[];
+  data_source?: "mart" | "live";
+}
+
+export interface CommercialCohortYearlyStatsResponse {
+  cluster_keys: string[];
+  series: CommercialCohortYearlySeries[];
+  data_source: "live";
+}
+
+export interface CommercialCohortHistogramResponse {
+  cluster_keys: string[];
+  bins: HistogramBin[];
+  n: number;
+  contract_year?: number | null;
+  data_source: "live";
+}
+
+export interface CommercialCohortTransactionsResponse {
+  cluster_keys: string[];
+  total: number;
+  items: CommercialTransactionRow[];
+  data_source: "live";
+}
+
+export interface CommercialCohortRegressionResponse extends CommercialRegressionResponse {
+  cluster_keys?: string[];
+  cohort_clusters?: CommercialCohortClusterSummary[];
 }
 
 export interface CommercialHistogramResponse {

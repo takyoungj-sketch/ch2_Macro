@@ -1,4 +1,4 @@
-import type { RollingStatsResponse, YearlyStatPoint, YearlyStatsResponse } from "../types";
+import type { RollingStatsResponse, YearlyStatPoint, YearlyStatsResponse, CommercialRollingStatsResponse, CommercialYearlyStatsResponse, CommercialCohortYearlySeries } from "../types";
 import type { TrendSeries } from "../components/MultiBuildingTrendChart";
 
 export function rollingToTrendSeries(data: RollingStatsResponse): TrendSeries {
@@ -31,4 +31,26 @@ export function yearlyToTrendSeries(displayName: string, points: YearlyStatPoint
 
 export function yearlyResponseToTrendSeries(data: YearlyStatsResponse): TrendSeries {
   return yearlyToTrendSeries(data.display_name, data.points);
+}
+
+export function commercialRollingToTrendSeries(data: CommercialRollingStatsResponse): TrendSeries {
+  return {
+    label: data.display_label,
+    points: [...data.points]
+      .sort((a, b) => a.bucket_index - b.bucket_index)
+      .map((p) => ({
+        xLabel: p.label,
+        xOrder: p.bucket_index,
+        count: p.count,
+        mean: p.mean,
+      })),
+  };
+}
+
+export function commercialYearlyToTrendSeries(data: CommercialYearlyStatsResponse): TrendSeries {
+  return yearlyToTrendSeries(data.display_label, data.points);
+}
+
+export function commercialCohortYearlyToTrendSeries(data: CommercialCohortYearlySeries): TrendSeries {
+  return yearlyToTrendSeries(data.display_label, data.points);
 }

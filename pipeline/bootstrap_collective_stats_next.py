@@ -23,6 +23,7 @@ COLLECTIVE_REBUILD_DDL = (
     "020_collective_commercial_road_width.sql",
     "022_region_rebuild.sql",
     "023_collective_building_stats.sql",
+    "032_collective_commercial_cluster_stats.sql",
     "024_market_stats.sql",
     "025_regional_profile.sql",
     "026_regional_profile_data_product_patch.sql",

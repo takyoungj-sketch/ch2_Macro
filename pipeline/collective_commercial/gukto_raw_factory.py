@@ -1,4 +1,7 @@
-"""GUKTO 공장창고 통합 xlsx → 집합공장 (상업업무용 원본과 동일 열 구조)."""
+"""GUKTO 공장창고 통합 xlsx → 집합공장 (상업업무용 원본과 동일 열 구조).
+
+DEPRECATED — 신규 적재는 molit_raw.py (raw/raw base CSV, 유형=집합) 사용.
+"""
 
 from __future__ import annotations
 

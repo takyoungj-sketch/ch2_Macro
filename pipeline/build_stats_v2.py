@@ -173,9 +173,12 @@ def fetch_transactions_for_window_union(
         params["codes"] = beopjungri_codes
 
     query = f"""
-        SELECT beopjungri_code, zone_type, land_category, unit_price_per_sqm,
+        SELECT beopjungri_code,
+               zone_type_resolved  AS zone_type,
+               land_category_resolved AS land_category,
+               unit_price_per_sqm,
                contract_date::date AS contract_date
-        FROM land_transactions
+        FROM land_transactions_resolved
         WHERE is_valid = TRUE
           AND is_cancelled = FALSE
           AND unit_price_per_sqm IS NOT NULL

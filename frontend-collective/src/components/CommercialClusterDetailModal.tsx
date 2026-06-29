@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
+import { COLLECTIVE_EXPERIMENT_MODE } from "../api/client";
 import {
   fetchCommercialAddresses,
+  fetchCommercialCohortHistogram,
+  fetchCommercialCohortTransactions,
   fetchCommercialHistogram,
+  fetchCommercialRollingStats,
   fetchCommercialTransactions,
   fetchCommercialYearlyStats,
 } from "../api/commercialClient";
@@ -12,14 +16,24 @@ import {
   type CommercialAssetType,
   type CommercialClusterRow,
 } from "../types";
+import { buildAnalysisPeriodParams, formatPeriodLabel } from "../utils/analysisPeriod";
+import {
+  commercialRollingToTrendSeries,
+  commercialYearlyToTrendSeries,
+} from "../utils/cohortTrendSeries";
+import CohortTrendPanel from "./CohortTrendPanel";
+import type { CohortTrendMetric } from "./MultiBuildingTrendChart";
 import HistogramChart from "./HistogramChart";
 import CommercialFloorIndexPanel from "./CommercialFloorIndexPanel";
 import CommercialRegressionPanel from "./CommercialRegressionPanel";
+import RollingTrendChart from "./RollingTrendChart";
 import YearlyTrendChart from "./YearlyTrendChart";
+import type { StatsWindowYears } from "./StatsWindowToggle";
 
 const TX_PAGE = 25;
+const MAX_COHORT_CLUSTERS = 10;
 
-type PanelMode = "trend" | "histogram" | "transactions" | "addresses" | "floor_index" | "regression";
+type PanelMode = "trend" | "long_term" | "histogram" | "transactions" | "addresses" | "floor_index" | "regression";
 
 function fmtPrice(v: number | null | undefined, digits = 1) {
   if (v == null) return "—";
@@ -35,6 +49,19 @@ function fmtRoadWidth(t: { road_width_label?: string | null; road_code?: number 
   if (t.road_width_label) return t.road_width_label;
   if (t.road_code != null) return `${t.road_code}m`;
   return "—";
+}
+
+function fmtCommercialContractDate(t: {
+  contract_date?: string | null;
+  contract_year?: number | null;
+  contract_month?: number | null;
+}) {
+  if (t.contract_date) return t.contract_date;
+  if (t.contract_year == null) return "—";
+  if (t.contract_month) {
+    return `${t.contract_year}-${String(t.contract_month).padStart(2, "0")}-01`;
+  }
+  return String(t.contract_year);
 }
 
 export type CommercialModalScope = {
@@ -63,23 +90,43 @@ function regionParams(scope: CommercialModalScope) {
       };
 }
 
-function yearParams(scope: CommercialModalScope) {
-  return {
-    contract_year_from: scope.yearFrom === "" ? undefined : scope.yearFrom,
-    contract_year_to: scope.yearTo === "" ? undefined : scope.yearTo,
-  };
-}
 
 export default function CommercialClusterDetailModal({
   row,
   scope,
+  windowYears = 5,
+  periodStart,
+  periodEnd,
+  statsAsOfLabel,
+  peerClusters = [],
   onClose,
 }: {
   row: CommercialClusterRow;
   scope: CommercialModalScope;
+  windowYears?: StatsWindowYears;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  statsAsOfLabel?: string | null;
+  peerClusters?: CommercialClusterRow[];
   onClose: () => void;
 }) {
+  const analysisPeriod = useMemo(
+    () =>
+      buildAnalysisPeriodParams(
+        scope.yearFrom === "" ? undefined : scope.yearFrom,
+        scope.yearTo === "" ? undefined : scope.yearTo,
+        periodStart,
+        periodEnd,
+      ),
+    [scope.yearFrom, scope.yearTo, periodStart, periodEnd],
+  );
+  const periodLabel = formatPeriodLabel(periodStart, periodEnd);
+  const experiment = COLLECTIVE_EXPERIMENT_MODE;
   const [panel, setPanel] = useState<PanelMode>("trend");
+  const [cohortExtra, setCohortExtra] = useState<string[]>([]);
+  const [cohortRunKeys, setCohortRunKeys] = useState<string[]>([]);
+  const [cohortRunByPanel, setCohortRunByPanel] = useState<Partial<Record<PanelMode, number>>>({});
+  const [cohortChartMetric, setCohortChartMetric] = useState<CohortTrendMetric>("mean");
   const [histScope, setHistScope] = useState<"all" | "single">("all");
   const [histYear, setHistYear] = useState<number | null>(null);
   const [txPage, setTxPage] = useState(1);
@@ -87,14 +134,37 @@ export default function CommercialClusterDetailModal({
   const dragSession = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
 
   const region = regionParams(scope);
-  const years = yearParams(scope);
-  const scopeKey = { ...region, ...years };
+  const scopeKey = { ...region, ...analysisPeriod };
 
   const isShop = scope.assetType === "collective_shop";
 
+  const cohortKeys = useMemo(
+    () => [row.cluster_key, ...cohortExtra.filter((k) => k !== row.cluster_key)].slice(0, MAX_COHORT_CLUSTERS),
+    [row.cluster_key, cohortExtra],
+  );
+  const cohortStale =
+    Object.keys(cohortRunByPanel).length > 0 &&
+    (cohortRunKeys.length !== cohortKeys.length || cohortRunKeys.some((k, i) => k !== cohortKeys[i]));
+  const canRunCohort = cohortKeys.length > 1;
+  const cohortRunForPanel = (p: PanelMode) => (cohortStale ? 0 : cohortRunByPanel[p] ?? 0);
+  const cohortBody = useMemo(
+    () => ({
+      cluster_keys: cohortRunKeys,
+      asset_type: scope.assetType,
+      experiment,
+      ...analysisPeriod,
+    }),
+    [cohortRunKeys, scope.assetType, experiment, analysisPeriod],
+  );
+  const peerOptions = useMemo(
+    () => peerClusters.filter((c) => c.cluster_key !== row.cluster_key && !cohortExtra.includes(c.cluster_key)),
+    [peerClusters, row.cluster_key, cohortExtra],
+  );
+
   const tabs: { id: PanelMode; label: string; shopOnly?: boolean }[] = useMemo(
     () => [
-      { id: "trend", label: "추세·요약" },
+      { id: "trend", label: "롤링 구간" },
+      { id: "long_term", label: "장기 추세" },
       { id: "histogram", label: "단가 분포" },
       { id: "transactions", label: "거래 목록" },
       ...(isShop ? [{ id: "addresses" as const, label: "번지별 요약", shopOnly: true }] : []),
@@ -104,30 +174,69 @@ export default function CommercialClusterDetailModal({
     [isShop],
   );
 
-  const yearQ = useQuery({
-    queryKey: ["comm-year", row.cluster_key, scopeKey],
-    queryFn: () => fetchCommercialYearlyStats(row.cluster_key, { ...region, ...years }),
+  const rollingQ = useQuery({
+    queryKey: ["comm-rolling", row.cluster_key, windowYears],
+    queryFn: () => fetchCommercialRollingStats(row.cluster_key, windowYears),
+    enabled: cohortRunForPanel("trend") === 0 && panel === "trend",
+  });
+
+  const longTermYearQ = useQuery({
+    queryKey: ["comm-year-long", row.cluster_key],
+    queryFn: () => fetchCommercialYearlyStats(row.cluster_key),
+    enabled: cohortRunForPanel("long_term") === 0 && panel === "long_term",
+  });
+
+  const windowYearQ = useQuery({
+    queryKey: ["comm-year-window", row.cluster_key, analysisPeriod],
+    queryFn: () =>
+      fetchCommercialYearlyStats(row.cluster_key, {
+        ...analysisPeriod,
+      }),
+    enabled: cohortRunForPanel("histogram") === 0 && panel === "histogram",
   });
 
   const sortedYears = useMemo(
-    () => [...(yearQ.data?.points ?? [])].sort((a, b) => a.year - b.year),
-    [yearQ.data?.points],
+    () => [...(windowYearQ.data?.points ?? [])].sort((a, b) => a.year - b.year),
+    [windowYearQ.data?.points],
   );
 
-  useEffect(() => {
-    if (sortedYears.length && histYear == null) {
-      setHistYear(sortedYears[sortedYears.length - 1].year);
-    }
-  }, [sortedYears, histYear]);
+  const cohortRollingQ = useQuery({
+    queryKey: ["comm-cohort-rolling", cohortRunKeys, windowYears, cohortRunForPanel("trend")],
+    queryFn: async () => Promise.all(cohortRunKeys.map((k) => fetchCommercialRollingStats(k, windowYears))),
+    enabled: cohortRunForPanel("trend") > 0 && cohortRunKeys.length > 1 && panel === "trend",
+  });
+
+  const cohortLongTermQ = useQuery({
+    queryKey: ["comm-cohort-year-long", cohortRunKeys, cohortRunForPanel("long_term")],
+    queryFn: async () => Promise.all(cohortRunKeys.map((k) => fetchCommercialYearlyStats(k))),
+    enabled: cohortRunForPanel("long_term") > 0 && cohortRunKeys.length > 1 && panel === "long_term",
+  });
+
+  const cohortHistQ = useQuery({
+    queryKey: [
+      "comm-cohort-hist",
+      cohortRunKeys,
+      cohortRunForPanel("histogram"),
+      histScope,
+      histScope === "single" ? histYear : null,
+      analysisPeriod,
+    ],
+    queryFn: () =>
+      fetchCommercialCohortHistogram(cohortBody, {
+        contract_year: histScope === "single" && histYear != null ? histYear : undefined,
+      }),
+    enabled: cohortRunForPanel("histogram") > 0 && cohortRunKeys.length > 1,
+  });
 
   const histQ = useQuery({
     queryKey: ["comm-hist", row.cluster_key, scopeKey, histScope, histScope === "single" ? histYear : null],
     queryFn: () =>
       fetchCommercialHistogram(row.cluster_key, {
         ...region,
-        ...years,
+        ...analysisPeriod,
         contract_year: histScope === "single" && histYear != null ? histYear : undefined,
       }),
+    enabled: cohortRunForPanel("histogram") === 0 && panel === "histogram",
   });
 
   const txQ = useQuery({
@@ -135,17 +244,36 @@ export default function CommercialClusterDetailModal({
     queryFn: () =>
       fetchCommercialTransactions(row.cluster_key, {
         ...region,
-        ...years,
+        ...analysisPeriod,
+        window_years: analysisPeriod.contract_date_from ? undefined : windowYears,
         page: txPage,
         page_size: TX_PAGE,
       }),
+    enabled: cohortRunForPanel("transactions") === 0 && panel === "transactions",
+  });
+
+  const cohortTxQ = useQuery({
+    queryKey: ["comm-cohort-tx", cohortRunKeys, cohortRunForPanel("transactions"), txPage, analysisPeriod],
+    queryFn: () =>
+      fetchCommercialCohortTransactions({
+        ...cohortBody,
+        page: txPage,
+        page_size: TX_PAGE,
+      }),
+    enabled: cohortRunForPanel("transactions") > 0 && cohortRunKeys.length > 1 && panel === "transactions",
   });
 
   const addrQ = useQuery({
     queryKey: ["comm-addr-modal", row.cluster_key, scopeKey],
-    queryFn: () => fetchCommercialAddresses(row.cluster_key, { ...region, ...years }),
+    queryFn: () => fetchCommercialAddresses(row.cluster_key, { ...region, ...analysisPeriod }),
     enabled: isShop && panel === "addresses",
   });
+
+  useEffect(() => {
+    if (sortedYears.length && histYear == null) {
+      setHistYear(sortedYears[sortedYears.length - 1].year);
+    }
+  }, [sortedYears, histYear]);
 
   useEffect(() => {
     setDragOffset({ x: 0, y: 0 });
@@ -154,7 +282,27 @@ export default function CommercialClusterDetailModal({
     setTxPage(1);
     setHistScope("all");
     setHistYear(null);
+    setCohortExtra([]);
+    setCohortRunKeys([]);
+    setCohortRunByPanel({});
+    setCohortChartMetric("mean");
   }, [row.cluster_key]);
+
+  const runCohortAnalysis = () => {
+    if (!canRunCohort) return;
+    setCohortRunKeys([...cohortKeys]);
+    setCohortRunByPanel((prev) => ({ ...prev, [panel]: (prev[panel] ?? 0) + 1 }));
+  };
+
+  const addToCohort = (clusterKey: string) => {
+    if (cohortKeys.length >= MAX_COHORT_CLUSTERS) return;
+    setCohortExtra((prev) => (prev.includes(clusterKey) ? prev : [...prev, clusterKey]));
+  };
+
+  const trendCohortActive = cohortRunForPanel("trend") > 0;
+  const longTermCohortActive = cohortRunForPanel("long_term") > 0;
+  const histCohortActive = cohortRunForPanel("histogram") > 0;
+  const txCohortActive = cohortRunForPanel("transactions") > 0;
 
   const onDragMove = (e: MouseEvent) => {
     const s = dragSession.current;
@@ -176,6 +324,7 @@ export default function CommercialClusterDetailModal({
   };
 
   const txOffset = (txPage - 1) * TX_PAGE;
+  const activeTxQ = txCohortActive ? cohortTxQ : txQ;
   const label = row.road_name || row.display_label;
 
   return (
@@ -252,23 +401,166 @@ export default function CommercialClusterDetailModal({
               );
             })}
           </div>
+          {peerClusters.length > 0 && (
+            <div className="mt-2 rounded border border-indigo-100 bg-indigo-50/50 px-2 py-1.5 text-[10px]">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold text-indigo-800">분석 코호트</span>
+                <span className="text-slate-600">
+                  {cohortKeys.length === 1 ? "단일 cluster" : `${cohortKeys.length}개 cluster`}
+                </span>
+                {canRunCohort && (
+                  <button
+                    type="button"
+                    className="ml-auto px-2 py-0.5 rounded bg-indigo-700 text-white text-[10px] font-semibold hover:bg-indigo-800"
+                    onClick={runCohortAnalysis}
+                  >
+                    통합분석
+                  </button>
+                )}
+              </div>
+              {cohortStale && (
+                <p className="mt-1 text-amber-700">코호트가 변경되었습니다. 「통합분석」을 다시 실행하세요.</p>
+              )}
+              {cohortExtra.length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {cohortExtra.map((k) => {
+                    const peerLabel =
+                      peerClusters.find((c) => c.cluster_key === k)?.road_name ||
+                      peerClusters.find((c) => c.cluster_key === k)?.display_label ||
+                      k.slice(0, 8);
+                    return (
+                      <button
+                        key={k}
+                        type="button"
+                        className="px-1.5 py-0.5 rounded bg-white border border-indigo-200 text-indigo-700"
+                        onClick={() => setCohortExtra((prev) => prev.filter((x) => x !== k))}
+                      >
+                        {peerLabel} ×
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {peerOptions.length > 0 && (
+                <label className="mt-1 flex items-center gap-1 text-slate-600">
+                  <span>+ cluster 추가</span>
+                  <select
+                    className="text-[10px] border border-slate-200 rounded px-1 py-0.5 max-w-[180px]"
+                    defaultValue=""
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v) addToCohort(v);
+                      e.target.value = "";
+                    }}
+                    disabled={cohortKeys.length >= MAX_COHORT_CLUSTERS}
+                  >
+                    <option value="">선택…</option>
+                    {peerOptions.slice(0, 80).map((c) => (
+                      <option key={c.cluster_key} value={c.cluster_key}>
+                        {c.road_name || c.display_label} (n={c.count})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-auto px-4 py-3 space-y-4">
           {panel === "trend" && (
             <>
-              {yearQ.isLoading && <p className="text-xs text-slate-400 text-center py-6">연도별 집계 중…</p>}
-              {!yearQ.isLoading && sortedYears.length === 0 && (
-                <p className="text-xs text-slate-400 text-center py-6">표시할 연도별 데이터가 없습니다.</p>
+              {trendCohortActive && cohortRollingQ.isLoading && (
+                <p className="text-xs text-slate-400 text-center py-6">코호트 롤링 구간 집계 중…</p>
               )}
-              {sortedYears.length > 0 && (
+              {trendCohortActive && cohortRollingQ.data && (
+                <CohortTrendPanel
+                  series={cohortRollingQ.data.map(commercialRollingToTrendSeries)}
+                  metric={cohortChartMetric}
+                  onMetricChange={setCohortChartMetric}
+                  buildingCount={cohortRunKeys.length}
+                  chartTitle={`${windowYears}년 롤링 구간 · 평균 ㎡당 단가`}
+                  note={
+                    cohortRollingQ.data[0]?.stats_as_of_label
+                      ? `${cohortRollingQ.data[0].stats_as_of_label} · ${windowYears}년 창`
+                      : undefined
+                  }
+                />
+              )}
+              {!trendCohortActive && rollingQ.isLoading && (
+                <p className="text-xs text-slate-400 text-center py-6">롤링 구간 집계 중…</p>
+              )}
+              {!trendCohortActive && rollingQ.data && rollingQ.data.points.length > 0 && (
                 <>
+                  {(rollingQ.data.stats_as_of_label || statsAsOfLabel || periodLabel) && (
+                    <p className="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-2 py-1">
+                      {rollingQ.data.stats_as_of_label || statsAsOfLabel}
+                      {windowYears ? ` · ${windowYears}년 창` : ""}
+                      {periodLabel ? ` · ${periodLabel}` : ""}
+                    </p>
+                  )}
                   <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3">
-                    <p className="text-[10px] font-semibold text-slate-600 px-1 mb-2">추이 (꺾은선)</p>
-                    <YearlyTrendChart points={sortedYears} />
+                    <p className="text-[10px] font-semibold text-slate-600 px-1 mb-2">12개월 롤링 구간 추이</p>
+                    <RollingTrendChart points={rollingQ.data.points} />
                   </div>
                   <div className="rounded-lg border border-slate-100 bg-white overflow-hidden">
-                    <p className="text-[10px] font-semibold text-slate-600 px-3 pt-3 pb-1">연도별 수치</p>
+                    <table className="w-full text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-600">
+                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">구간</th>
+                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">건수</th>
+                          <th className="border border-slate-200 px-2 py-1.5 text-right font-bold text-blue-700">
+                            평균(만원/㎡)
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-slate-800">
+                        {[...rollingQ.data.points].sort((a, b) => a.bucket_index - b.bucket_index).map((p) => (
+                          <tr key={p.bucket_index}>
+                            <td className="border border-slate-200 px-2 py-1 tabular-nums">{p.label}</td>
+                            <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
+                              {p.count.toLocaleString("ko-KR")}
+                            </td>
+                            <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-blue-600 font-bold">
+                              {p.mean != null ? fmtPrice(p.mean) : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+              {!trendCohortActive && rollingQ.data && rollingQ.data.points.length === 0 && (
+                <p className="text-xs text-slate-400 text-center py-6">표시할 롤링 구간 데이터가 없습니다.</p>
+              )}
+            </>
+          )}
+
+          {panel === "long_term" && (
+            <>
+              {longTermCohortActive && cohortLongTermQ.isLoading && (
+                <p className="text-xs text-slate-400 text-center py-6">코호트 장기 추세 집계 중…</p>
+              )}
+              {longTermCohortActive && cohortLongTermQ.data && (
+                <CohortTrendPanel
+                  series={cohortLongTermQ.data.map(commercialYearlyToTrendSeries)}
+                  metric={cohortChartMetric}
+                  onMetricChange={setCohortChartMetric}
+                  buildingCount={cohortRunKeys.length}
+                  chartTitle="연도별 장기 추세"
+                />
+              )}
+              {!longTermCohortActive && longTermYearQ.isLoading && (
+                <p className="text-xs text-slate-400 text-center py-6">장기 추세 집계 중…</p>
+              )}
+              {!longTermCohortActive && longTermYearQ.data && longTermYearQ.data.points.length > 0 && (
+                <>
+                  <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3">
+                    <p className="text-[10px] font-semibold text-slate-600 px-1 mb-2">연도별 장기 추세</p>
+                    <YearlyTrendChart points={[...longTermYearQ.data.points].sort((a, b) => a.year - b.year)} />
+                  </div>
+                  <div className="rounded-lg border border-slate-100 bg-white overflow-hidden">
                     <table className="w-full text-xs border-collapse">
                       <thead>
                         <tr className="bg-slate-50 text-slate-600">
@@ -280,7 +572,7 @@ export default function CommercialClusterDetailModal({
                         </tr>
                       </thead>
                       <tbody className="text-slate-800">
-                        {sortedYears.map((p) => (
+                        {[...longTermYearQ.data.points].sort((a, b) => a.year - b.year).map((p) => (
                           <tr key={p.year}>
                             <td className="border border-slate-200 px-2 py-1 tabular-nums">{p.year}</td>
                             <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
@@ -295,6 +587,9 @@ export default function CommercialClusterDetailModal({
                     </table>
                   </div>
                 </>
+              )}
+              {!longTermCohortActive && longTermYearQ.data && longTermYearQ.data.points.length === 0 && (
+                <p className="text-xs text-slate-400 text-center py-6">표시할 장기 추세 데이터가 없습니다.</p>
               )}
             </>
           )}
@@ -325,9 +620,22 @@ export default function CommercialClusterDetailModal({
                   </select>
                 )}
               </div>
-              {histQ.isLoading && <p className="text-xs text-slate-400 text-center py-4">분포 계산 중…</p>}
-              {histQ.isError && <p className="text-xs text-red-500 text-center py-4">분포를 불러오지 못했습니다.</p>}
-              {histQ.data && (
+              {histQ.isLoading && !histCohortActive && <p className="text-xs text-slate-400 text-center py-4">분포 계산 중…</p>}
+              {histCohortActive && cohortHistQ.isLoading && (
+                <p className="text-xs text-slate-400 text-center py-4">코호트 분포 계산 중…</p>
+              )}
+              {histCohortActive && cohortHistQ.data && (
+                <>
+                  <p className="text-[10px] text-indigo-700">
+                    {cohortRunKeys.length}개 cluster 통합 · 실시간 · n={cohortHistQ.data.n.toLocaleString("ko-KR")}건
+                  </p>
+                  <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-2">
+                    <HistogramChart bins={cohortHistQ.data.bins} />
+                  </div>
+                </>
+              )}
+              {!histCohortActive && histQ.isError && <p className="text-xs text-red-500 text-center py-4">분포를 불러오지 못했습니다.</p>}
+              {!histCohortActive && histQ.data && (
                 <>
                   <p className="text-[10px] text-slate-500">
                     표본 수 <strong className="text-slate-700">{histQ.data.n.toLocaleString("ko-KR")}</strong>건
@@ -348,12 +656,15 @@ export default function CommercialClusterDetailModal({
 
           {panel === "transactions" && (
             <div className="space-y-2">
-              {txQ.isLoading && <p className="text-xs text-slate-400 text-center py-4">목록 불러오는 중…</p>}
-              {txQ.isError && <p className="text-xs text-red-500 text-center py-4">목록을 불러오지 못했습니다.</p>}
-              {txQ.data && (
+              {activeTxQ.isLoading && <p className="text-xs text-slate-400 text-center py-4">목록 불러오는 중…</p>}
+              {activeTxQ.isError && <p className="text-xs text-red-500 text-center py-4">목록을 불러오지 못했습니다.</p>}
+              {activeTxQ.data && (
                 <>
                   <p className="text-[10px] text-slate-500">
-                    전체 <strong className="text-slate-700">{txQ.data.total.toLocaleString("ko-KR")}</strong>건
+                    {txCohortActive && (
+                      <span className="text-indigo-700 mr-1">{cohortRunKeys.length}개 cluster 통합 ·</span>
+                    )}
+                    전체 <strong className="text-slate-700">{activeTxQ.data.total.toLocaleString("ko-KR")}</strong>건
                     {(scope.yearFrom !== "" || scope.yearTo !== "") && (
                       <>
                         {" "}
@@ -365,7 +676,7 @@ export default function CommercialClusterDetailModal({
                     <table className="w-full text-[11px] border-collapse min-w-[720px]">
                       <thead>
                         <tr className="bg-slate-50 text-slate-600">
-                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">계약</th>
+                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">계약일</th>
                           {isShop && (
                             <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">번지</th>
                           )}
@@ -384,11 +695,10 @@ export default function CommercialClusterDetailModal({
                         </tr>
                       </thead>
                       <tbody className="text-slate-800">
-                        {txQ.data.items.map((t) => (
+                        {activeTxQ.data.items.map((t) => (
                           <tr key={t.id}>
                             <td className="border border-slate-200 px-2 py-1 tabular-nums whitespace-nowrap">
-                              {t.contract_year ?? "—"}
-                              {t.contract_month ? `.${String(t.contract_month).padStart(2, "0")}` : ""}
+                              {fmtCommercialContractDate(t)}
                             </td>
                             {isShop && (
                               <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">
@@ -428,8 +738,8 @@ export default function CommercialClusterDetailModal({
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
                     <span className="text-slate-400">
-                      {txQ.data.total > 0
-                        ? `${(txOffset + 1).toLocaleString("ko-KR")}–${Math.min(txOffset + txQ.data.items.length, txQ.data.total).toLocaleString("ko-KR")} / ${txQ.data.total.toLocaleString("ko-KR")}`
+                      {activeTxQ.data.total > 0
+                        ? `${(txOffset + 1).toLocaleString("ko-KR")}–${Math.min(txOffset + activeTxQ.data.items.length, activeTxQ.data.total).toLocaleString("ko-KR")} / ${activeTxQ.data.total.toLocaleString("ko-KR")}`
                         : "0건"}
                     </span>
                     <div className="flex gap-2">
@@ -443,7 +753,7 @@ export default function CommercialClusterDetailModal({
                       </button>
                       <button
                         type="button"
-                        disabled={txOffset + TX_PAGE >= txQ.data.total}
+                        disabled={txOffset + TX_PAGE >= activeTxQ.data.total}
                         onClick={() => setTxPage((p) => p + 1)}
                         className="px-2 py-1 rounded border border-slate-200 text-slate-600 disabled:opacity-40 hover:bg-slate-50"
                       >
@@ -511,6 +821,9 @@ export default function CommercialClusterDetailModal({
               scope={scope}
               count={row.count}
               isFactory={!isShop}
+              cohortKeys={cohortRunKeys}
+              cohortRunId={cohortRunForPanel("floor_index")}
+              analysisPeriod={analysisPeriod}
             />
           )}
 
@@ -520,6 +833,9 @@ export default function CommercialClusterDetailModal({
               scope={scope}
               isShop={isShop}
               count={row.count}
+              cohortKeys={cohortRunKeys}
+              cohortRunId={cohortRunForPanel("regression")}
+              analysisPeriod={analysisPeriod}
             />
           )}
         </div>

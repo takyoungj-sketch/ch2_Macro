@@ -11,6 +11,7 @@ import {
 } from "./api/commercialClient";
 import CommercialClusterDetailModal from "./components/CommercialClusterDetailModal";
 import StatsPageHeader from "./components/StatsPageHeader";
+import StatsWindowToggle, { normalizeStatsWindowYears, type StatsWindowYears } from "./components/StatsWindowToggle";
 import RegionChipPanel from "./components/RegionChipPanel";
 import { useUiColorScheme } from "./hooks/useUiColorScheme";
 import { useUiFontScale } from "./hooks/useUiFontScale";
@@ -36,7 +37,26 @@ type AnalysisScope = {
   yearFrom: number | "";
   yearTo: number | "";
   sort: string;
+  windowYears: StatsWindowYears;
 };
+
+function hasYearFilter(from: number | "", to: number | "") {
+  return from !== "" || to !== "";
+}
+
+function buildRegionPeriodParams(
+  yearFrom: number | "",
+  yearTo: number | "",
+  windowYears: StatsWindowYears,
+) {
+  if (hasYearFilter(yearFrom, yearTo)) {
+    return {
+      contract_year_from: yearFrom === "" ? undefined : yearFrom,
+      contract_year_to: yearTo === "" ? undefined : yearTo,
+    };
+  }
+  return { window_years: windowYears };
+}
 
 export default function CommercialApp() {
   const [assetType, setAssetType] = useState<CommercialAssetType>("collective_shop");
@@ -47,6 +67,7 @@ export default function CommercialApp() {
   const [yearFrom, setYearFrom] = useState<number | "">("");
   const [yearTo, setYearTo] = useState<number | "">("");
   const [sort, setSort] = useState("count");
+  const [windowYears, setWindowYears] = useState<StatsWindowYears>(5);
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [selected, setSelected] = useState<CommercialClusterRow | null>(null);
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
@@ -66,19 +87,21 @@ export default function CommercialApp() {
   const hasIntermediate = structureQ.data?.has_intermediate ?? false;
   const intermediateLabel = structureQ.data?.intermediate_label ?? "구";
 
+  const regionPeriod = buildRegionPeriodParams(yearFrom, yearTo, windowYears);
+
   const guQ = useQuery({
-    queryKey: ["comm-gu", addr1, addr2, assetType],
-    queryFn: () => fetchCommercialAddr3(addr1, addr2, assetType),
+    queryKey: ["comm-gu", addr1, addr2, assetType, regionPeriod],
+    queryFn: () => fetchCommercialAddr3(addr1, addr2, assetType, regionPeriod),
     enabled: !!addr1 && !!addr2 && hasIntermediate,
   });
   const flatLeafQ = useQuery({
-    queryKey: ["comm-flat-leaf", addr1, addr2, assetType],
-    queryFn: () => fetchCommercialAddr3(addr1, addr2, assetType),
+    queryKey: ["comm-flat-leaf", addr1, addr2, assetType, regionPeriod],
+    queryFn: () => fetchCommercialAddr3(addr1, addr2, assetType, regionPeriod),
     enabled: !!addr1 && !!addr2 && !hasIntermediate && structureQ.isSuccess,
   });
   const leafQ = useQuery({
-    queryKey: ["comm-leaf", addr1, addr2, assetType, guList],
-    queryFn: () => fetchCommercialLeafRegions(addr1, addr2, guList, assetType),
+    queryKey: ["comm-leaf", addr1, addr2, assetType, guList, regionPeriod],
+    queryFn: () => fetchCommercialLeafRegions(addr1, addr2, guList, assetType, regionPeriod),
     enabled: !!addr1 && !!addr2 && hasIntermediate,
   });
 
@@ -114,6 +137,7 @@ export default function CommercialApp() {
         ...regionParams,
         contract_year_from: scope.yearFrom === "" ? undefined : scope.yearFrom,
         contract_year_to: scope.yearTo === "" ? undefined : scope.yearTo,
+        window_years: scope.windowYears,
         sort: scope.sort,
         page_size: 500,
       });
@@ -132,7 +156,8 @@ export default function CommercialApp() {
       JSON.stringify(scope.leafList) !== JSON.stringify(leafList) ||
       scope.yearFrom !== yearFrom ||
       scope.yearTo !== yearTo ||
-      scope.sort !== sort);
+      scope.sort !== sort ||
+      scope.windowYears !== windowYears);
 
   const runAnalysis = () => {
     if (!addr2) return;
@@ -146,6 +171,7 @@ export default function CommercialApp() {
       yearFrom,
       yearTo,
       sort,
+      windowYears,
     });
     setSelected(null);
   };
@@ -301,6 +327,17 @@ export default function CommercialApp() {
               </select>
             </label>
 
+            <StatsWindowToggle
+              value={windowYears}
+              onChange={(y) => setWindowYears(normalizeStatsWindowYears(y))}
+              disabled={hasYearFilter(yearFrom, yearTo)}
+            />
+            {hasYearFilter(yearFrom, yearTo) && (
+              <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-snug">
+                연도가 선택되어 롤링 구간은 적용되지 않습니다.
+              </p>
+            )}
+
             <button type="button" className="btn btn-primary w-full" disabled={!addr2} onClick={runAnalysis}>
               통계분석
             </button>
@@ -322,6 +359,20 @@ export default function CommercialApp() {
               <>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
                   {scope.addr1} {scope.addr2} · 도로 {clustersQ.data.total}개
+                  {clustersQ.data.stats_as_of_label && !hasYearFilter(scope.yearFrom, scope.yearTo) && (
+                    <span className="ml-2 text-indigo-600 dark:text-indigo-400">
+                      · {clustersQ.data.stats_as_of_label}
+                      {clustersQ.data.window_years ? ` (${clustersQ.data.window_years}년 창)` : ""}
+                    </span>
+                  )}
+                  {hasYearFilter(scope.yearFrom, scope.yearTo) && (
+                    <span className="ml-2 text-indigo-600 dark:text-indigo-400">
+                      · 연도 {scope.yearFrom || "…"}–{scope.yearTo || "…"}
+                    </span>
+                  )}
+                  {clustersQ.data.data_source === "live" && (
+                    <span className="ml-1 text-amber-700 dark:text-amber-400">· 실시간 집계</span>
+                  )}
                 </p>
                 <div className="card overflow-x-auto p-0 w-full">
                   <table className="data commercial-clusters-table">
@@ -375,7 +426,16 @@ export default function CommercialApp() {
       </main>
 
       {selected && scope && (
-        <CommercialClusterDetailModal row={selected} scope={scope} onClose={() => setSelected(null)} />
+        <CommercialClusterDetailModal
+          row={selected}
+          scope={scope}
+          windowYears={scope.windowYears}
+          periodStart={clustersQ.data?.period_start}
+          periodEnd={clustersQ.data?.period_end}
+          statsAsOfLabel={clustersQ.data?.stats_as_of_label}
+          peerClusters={clustersQ.data?.items ?? []}
+          onClose={() => setSelected(null)}
+        />
       )}
     </div>
   );

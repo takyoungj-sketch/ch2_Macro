@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Optional
 
 import numpy as np
@@ -10,7 +11,16 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session
 
-from app.collective.building_stats_query import normalize_asset_type
+from app.collective.building_stats_query import normalize_asset_type, stats_as_of_label, stats_reference_date
+from app.v2_stats_windows import period_bounds_for_window
+from app.collective_commercial.cluster_stats_query import (
+    cluster_rolling_from_mart,
+    cluster_rolling_live,
+    cluster_yearly_resolved,
+    latest_mart_snapshot,
+    list_clusters_from_mart,
+    list_clusters_live,
+)
 from app.collective.analysis_explain import (
     build_commercial_regression_explain,
     build_residential_floor_index_explain,
@@ -19,14 +29,14 @@ from app.collective.analysis_gates import count_recent_transactions, evaluate_an
 from app.collective.db import get_collective_db
 from app.collective.floor_index_regression import compute_residential_floor_index_regression
 from app.collective.schemas import AnalysisExplain, AnalysisFeatures, FloorIndexCell
-from app.collective.filters import _col, apply_region_filters, apply_year_filters
+from app.collective.filters import _col, apply_region_filters
+from app.collective_commercial.tx_rows import apply_commercial_tx_period, commercial_tx_row_dict
 from app.collective.region_structure import detect_region_structure
 from app.collective.schemas import RegionOption, RegionStructureResponse
 from app.collective_commercial.schemas import (
     CommercialAddressListResponse,
     CommercialAddressRow,
     CommercialClusterListResponse,
-    CommercialClusterRow,
     CommercialFilterMeta,
     CommercialFloorIndexResponse,
     CommercialHistogramBin,
@@ -35,6 +45,8 @@ from app.collective_commercial.schemas import (
     CommercialRegressionPredictResponse,
     CommercialRegressionRequest,
     CommercialRegressionResponse,
+    CommercialRollingStatPoint,
+    CommercialRollingStatsResponse,
     CommercialTransactionListResponse,
     CommercialTransactionRow,
     CommercialYearlyStatPoint,
@@ -58,6 +70,9 @@ def _tx_where(
     addr4_list: list[str] | None = None,
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
+    contract_date_from: Optional[date] = None,
+    contract_date_to: Optional[date] = None,
+    window_years: Optional[int] = None,
     col_prefix: str = "",
 ) -> tuple[str, dict]:
     p = col_prefix
@@ -86,11 +101,15 @@ def _tx_where(
         col_prefix=p,
         valid_sql=valid_sql,
     )
-    apply_year_filters(
+    apply_commercial_tx_period(
+        conn,
         clauses,
         params,
+        window_years=window_years,
         contract_year_from=contract_year_from,
         contract_year_to=contract_year_to,
+        contract_date_from=contract_date_from,
+        contract_date_to=contract_date_to,
         col_prefix=p,
     )
     return " AND ".join(clauses), params
@@ -165,8 +184,24 @@ def list_addr3(
     addr1: str = Query(...),
     addr2: str = Query(...),
     asset_type: Optional[str] = Query(None),
+    contract_year_from: Optional[int] = None,
+    contract_year_to: Optional[int] = None,
+    contract_date_from: Optional[date] = None,
+    contract_date_to: Optional[date] = None,
+    window_years: Optional[int] = Query(None, ge=1, le=5),
 ):
-    where, params = _tx_where(conn=db.connection(), asset_type=asset_type, addr1=addr1, addr2=addr2)
+    conn = db.connection()
+    where, params = _tx_where(
+        conn=conn,
+        asset_type=asset_type,
+        addr1=addr1,
+        addr2=addr2,
+        contract_year_from=contract_year_from,
+        contract_year_to=contract_year_to,
+        contract_date_from=contract_date_from,
+        contract_date_to=contract_date_to,
+        window_years=window_years,
+    )
     rows = db.execute(
         text(
             f"""
@@ -207,13 +242,24 @@ def list_leaf_regions(
     addr2: str = Query(...),
     addr3_list: list[str] = Query(default=[]),
     asset_type: Optional[str] = Query(None),
+    contract_year_from: Optional[int] = None,
+    contract_year_to: Optional[int] = None,
+    contract_date_from: Optional[date] = None,
+    contract_date_to: Optional[date] = None,
+    window_years: Optional[int] = Query(None, ge=1, le=5),
 ):
+    conn = db.connection()
     where, params = _tx_where(
-        conn=db.connection(),
+        conn=conn,
         asset_type=asset_type,
         addr1=addr1,
         addr2=addr2,
         addr3_list=addr3_list or None,
+        contract_year_from=contract_year_from,
+        contract_year_to=contract_year_to,
+        contract_date_from=contract_date_from,
+        contract_date_to=contract_date_to,
+        window_years=window_years,
     )
     rows = db.execute(
         text(
@@ -241,75 +287,52 @@ def list_clusters(
     addr4_list: list[str] = Query(default=[]),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
+    window_years: int = Query(5, ge=1, le=5),
     sort: str = Query("count", pattern="^(count|mean|display_label)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(100, ge=1, le=500),
 ):
     if not addr2:
         raise HTTPException(400, "시군구(addr2)를 선택해 주세요.")
+    if (
+        contract_year_from is not None
+        and contract_year_to is not None
+        and contract_year_from > contract_year_to
+    ):
+        raise HTTPException(400, "연도(from)는 연도(to) 이하여야 합니다.")
 
-    where, params = _tx_where(
-        conn=db.connection(),
-        asset_type=asset_type,
+    conn = db.connection()
+    asset_filter = normalize_asset_type(asset_type)
+    as_of_month, _ = latest_mart_snapshot(conn)
+    meta: dict = {"data_source": "live", "window_years": window_years}
+
+    mart = list_clusters_from_mart(
+        conn,
+        asset_type=asset_filter,
         addr1=addr1,
         addr2=addr2,
         addr3_list=addr3_list or None,
         addr4_list=addr4_list or None,
+        window_years=window_years,
+        as_of_month=as_of_month,
         contract_year_from=contract_year_from,
         contract_year_to=contract_year_to,
-        col_prefix="t",
     )
-    rows = db.execute(
-        text(
-            f"""
-            SELECT t.cluster_key,
-                   MAX(c.display_label) AS display_label,
-                   MAX(t.asset_type) AS asset_type,
-                   MAX(c.road_name) AS road_name,
-                   MAX(t.addr3) AS addr3,
-                   MAX(t.addr4) AS addr4,
-                   MAX(c.resolution_mode) AS resolution_mode,
-                   MAX(t.zone_type) AS zone_type,
-                   MAX(t.building_use) AS building_use,
-                   MAX(t.building_year) AS building_year,
-                   MAX(t.area_bucket_label) AS area_bucket_label,
-                   MAX(c.confidence_tier) AS confidence_tier,
-                   array_agg(t.unit_price ORDER BY t.unit_price) AS prices
-            FROM collective_commercial_transactions t
-            JOIN commercial_clusters c ON c.id = t.cluster_id
-            WHERE {where}
-            GROUP BY t.cluster_key
-            """
-        ),
-        params,
-    ).mappings().all()
-
-    items: list[CommercialClusterRow] = []
-    for r in rows:
-        prices = [float(x) for x in (r["prices"] or []) if x is not None]
-        st = compute_stats(prices)
-        items.append(
-            CommercialClusterRow(
-                cluster_key=r["cluster_key"],
-                display_label=r["display_label"] or "",
-                asset_type=r["asset_type"] or "",
-                road_name=r["road_name"],
-                addr3=r["addr3"],
-                addr4=r["addr4"],
-                resolution_mode=r["resolution_mode"],
-                zone_type=r["zone_type"],
-                building_use=r["building_use"],
-                building_year=int(r["building_year"]) if r["building_year"] is not None else None,
-                area_bucket_label=r["area_bucket_label"],
-                confidence_tier=r["confidence_tier"],
-                count=st["count"],
-                mean=st["mean"],
-                median=st["median"],
-                ci_lower=st["ci_lower"],
-                ci_upper=st["ci_upper"],
-                is_reliable=st["count"] >= 15,
-            )
+    if mart is not None:
+        items, meta = mart
+    else:
+        where, params = _tx_where(
+            conn=conn,
+            asset_type=asset_filter,
+            addr1=addr1,
+            addr2=addr2,
+            addr3_list=addr3_list or None,
+            addr4_list=addr4_list or None,
+            contract_year_from=contract_year_from,
+            contract_year_to=contract_year_to,
+            col_prefix="t",
         )
+        items = list_clusters_live(conn, where, params)
 
     if sort == "mean":
         items.sort(key=lambda x: (x.mean is None, -(x.mean or 0), x.asset_type or ""))
@@ -321,7 +344,25 @@ def list_clusters(
     total = len(items)
     start = (page - 1) * page_size
     page_items = items[start : start + page_size]
-    return CommercialClusterListResponse(total=total, items=page_items)
+    if as_of_month is not None:
+        ps, pe = period_bounds_for_window(as_of_month, window_years)
+        meta.setdefault("period_start", ps.isoformat())
+        meta.setdefault("period_end", pe.isoformat())
+        if meta.get("data_source") == "live":
+            meta.setdefault("stats_as_of_label", stats_as_of_label(as_of_month))
+            meta.setdefault("stats_reference_date", stats_reference_date(as_of_month).isoformat())
+            meta.setdefault("as_of_month", as_of_month.isoformat())
+    return CommercialClusterListResponse(
+        total=total,
+        items=page_items,
+        data_source=meta.get("data_source", "live"),
+        as_of_month=meta.get("as_of_month"),
+        stats_reference_date=meta.get("stats_reference_date"),
+        stats_as_of_label=meta.get("stats_as_of_label"),
+        window_years=meta.get("window_years", window_years),
+        period_start=meta.get("period_start"),
+        period_end=meta.get("period_end"),
+    )
 
 
 @router.get("/clusters/{cluster_key}/addresses", response_model=CommercialAddressListResponse)
@@ -392,6 +433,53 @@ def list_cluster_addresses(
     )
 
 
+@router.get("/clusters/{cluster_key}/stats/rolling", response_model=CommercialRollingStatsResponse)
+def cluster_stats_rolling(
+    cluster_key: str,
+    db: Session = Depends(get_collective_db),
+    window_years: int = Query(5, ge=1, le=5),
+):
+    conn = db.connection()
+    as_of_month, _ = latest_mart_snapshot(conn)
+    mart = cluster_rolling_from_mart(
+        conn, cluster_key, window_years=window_years, as_of_month=as_of_month
+    )
+    if mart is not None:
+        display_label, points, data_source = mart
+        return CommercialRollingStatsResponse(
+            cluster_key=cluster_key,
+            display_label=display_label,
+            window_years=window_years,
+            as_of_month=as_of_month.isoformat() if as_of_month else None,
+            stats_as_of_label=stats_as_of_label(as_of_month),
+            points=[CommercialRollingStatPoint(**p) for p in points],
+            data_source=data_source,
+        )
+
+    live = cluster_rolling_live(
+        conn, cluster_key, window_years=window_years, as_of_month=as_of_month
+    )
+    if live is not None:
+        display_label, points, data_source = live
+        return CommercialRollingStatsResponse(
+            cluster_key=cluster_key,
+            display_label=display_label,
+            window_years=window_years,
+            as_of_month=as_of_month.isoformat() if as_of_month else None,
+            stats_as_of_label=stats_as_of_label(as_of_month),
+            points=[CommercialRollingStatPoint(**p) for p in points],
+            data_source=data_source,
+        )
+
+    return CommercialRollingStatsResponse(
+        cluster_key=cluster_key,
+        display_label=_cluster_display_label(db, cluster_key),
+        window_years=window_years,
+        points=[],
+        data_source="live",
+    )
+
+
 @router.get("/clusters/{cluster_key}/stats/by-year", response_model=CommercialYearlyStatsResponse)
 def cluster_stats_by_year(
     cluster_key: str,
@@ -403,6 +491,28 @@ def cluster_stats_by_year(
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
 ):
+    conn = db.connection()
+    scoped = any(
+        [
+            addr1,
+            addr2,
+            addr3_list,
+            addr4_list,
+            contract_year_from is not None,
+            contract_year_to is not None,
+        ]
+    )
+    if not scoped:
+        resolved = cluster_yearly_resolved(conn, cluster_key)
+        if resolved is not None:
+            display_label, points, data_source = resolved
+            return CommercialYearlyStatsResponse(
+                cluster_key=cluster_key,
+                display_label=display_label,
+                points=[CommercialYearlyStatPoint(**p) for p in points],
+                data_source=data_source,
+            )
+
     where, params = _tx_where(
         conn=db.connection(),
         addr1=addr1,
@@ -440,6 +550,7 @@ def cluster_stats_by_year(
         cluster_key=cluster_key,
         display_label=_cluster_display_label(db, cluster_key),
         points=points,
+        data_source="live",
     )
 
 
@@ -753,17 +864,24 @@ def list_cluster_transactions(
     addr4_list: list[str] = Query(default=[]),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
+    contract_date_from: Optional[date] = None,
+    contract_date_to: Optional[date] = None,
+    window_years: Optional[int] = Query(None, ge=1, le=5),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
 ):
+    conn = db.connection()
     where, params = _tx_where(
-        conn=db.connection(),
+        conn=conn,
         addr1=addr1,
         addr2=addr2,
         addr3_list=addr3_list or None,
         addr4_list=addr4_list or None,
         contract_year_from=contract_year_from,
         contract_year_to=contract_year_to,
+        contract_date_from=contract_date_from,
+        contract_date_to=contract_date_to,
+        window_years=window_years,
     )
     params["cluster_key"] = cluster_key
     total = db.execute(
@@ -782,17 +900,22 @@ def list_cluster_transactions(
         text(
             f"""
             SELECT id, asset_type, cluster_key, addr3, addr4, lot_number,
-                   contract_year, contract_month, price, gross_area, land_area,
+                   contract_year, contract_month, contract_date, price, gross_area, land_area,
                    unit_price, floor, building_year, building_age,
                    zone_type, building_use, area_bucket_label, road_name,
                    road_code, road_width_label
             FROM collective_commercial_transactions
             WHERE cluster_key = :cluster_key AND {where}
-            ORDER BY contract_year DESC NULLS LAST, contract_month DESC NULLS LAST, id DESC
+            ORDER BY contract_date DESC NULLS LAST, contract_year DESC NULLS LAST, contract_month DESC NULLS LAST, id DESC
             LIMIT :limit OFFSET :offset
             """
         ),
         params,
     ).mappings().all()
-    items = [CommercialTransactionRow(**dict(r)) for r in rows]
+    items = [CommercialTransactionRow(**commercial_tx_row_dict(r)) for r in rows]
     return CommercialTransactionListResponse(total=int(total), items=items)
+
+
+from app.collective_commercial.commercial_cohort_router import router as commercial_cohort_router  # noqa: E402
+
+router.include_router(commercial_cohort_router)

@@ -207,6 +207,7 @@ export function buildCommercialRegressionContext(
     regionLabel: string;
     assetType: "collective_shop" | "collective_factory";
     purpose?: AiPurpose;
+    cohort?: boolean;
   },
 ): AiContextPayload {
   return {
@@ -219,6 +220,7 @@ export function buildCommercialRegressionContext(
     },
     facts: {
       ...regData,
+      cohort: opts.cohort ?? false,
     },
   };
 }

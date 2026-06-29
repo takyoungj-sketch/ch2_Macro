@@ -1,8 +1,12 @@
-"""GUKTO 상업업무용 원본 xlsx → 집합상가 (도로명 포함)."""
+"""GUKTO 상업업무용 원본 xlsx → 집합상가 (도로명 포함).
+
+DEPRECATED — 신규 적재는 molit_raw.py (raw/raw base CSV, 유형=집합) 사용.
+"""
 
 from __future__ import annotations
 
 import re
+from datetime import date
 from pathlib import Path
 
 import numpy as np
@@ -24,21 +28,28 @@ def _parse_price(val) -> float | None:
         return None
 
 
-def _parse_yyyymm(val) -> tuple[int | None, int | None]:
+def _parse_contract(val) -> tuple[int | None, int | None, date | None]:
     if val is None or (isinstance(val, float) and pd.isna(val)):
-        return None, None
+        return None, None, None
     s = re.sub(r"\D", "", str(val).strip())
+    if len(s) >= 8:
+        y, m, d = int(s[:4]), int(s[4:6]), int(s[6:8])
+        if 1900 <= y <= 2100 and 1 <= m <= 12 and 1 <= d <= 31:
+            try:
+                return y, m, date(y, m, d)
+            except ValueError:
+                pass
     if len(s) >= 6:
         y, m = int(s[:4]), int(s[4:6])
         if 1900 <= y <= 2100 and 1 <= m <= 12:
-            return y, m
+            return y, m, None
     if len(s) == 4:
         y = int(s)
         if y < 100:
             y += 2000
         if 1900 <= y <= 2100:
-            return y, None
-    return None, None
+            return y, None, None
+    return None, None, None
 
 
 def _split_address(full: str | None) -> tuple[str | None, str | None, str | None, str | None, str | None]:
@@ -73,7 +84,7 @@ def _read_raw_file(path: Path, *, asset_type: str = "collective_shop") -> pd.Dat
         road_width_raw = r[7] if len(r) > 7 else None
         gross = r[8]
         price = _parse_price(r[10])
-        cy, cm = _parse_yyyymm(r[14] if len(r) > 14 else None)
+        cy, cm, cdt = _parse_contract(r[14] if len(r) > 14 else None)
         by_raw = r[17] if len(r) > 17 else None
         floor_raw = r[11] if len(r) > 11 else None
         land_raw = r[9] if len(r) > 9 else None
@@ -133,7 +144,7 @@ def _read_raw_file(path: Path, *, asset_type: str = "collective_shop") -> pd.Dat
                 "building_use": str(use).strip() if use is not None else None,
                 "contract_year": cy,
                 "contract_month": cm,
-                "contract_date": None,
+                "contract_date": cdt,
                 "price": price,
                 "gross_area": ga,
                 "land_area": land_area,
