@@ -30,19 +30,20 @@ def parse_metadata(text: str) -> dict[str, str]:
     return out
 
 
-def _year_from_contract_range(meta: dict[str, str]) -> tuple[int | None, int | None]:
+def _contract_range(meta: dict[str, str]) -> tuple[str | None, str | None]:
     raw = meta.get("계약일자", "")
-    m = re.search(r"(\d{4})-\d{2}-\d{2}\s*~\s*(\d{4})-\d{2}-\d{2}", raw)
+    m = re.search(r"(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})", raw)
     if not m:
         return None, None
-    return int(m.group(1)), int(m.group(2))
+    return m.group(1), m.group(2)
 
 
 def validate_csv_file(
     path: Path,
     *,
     region: str,
-    year: int,
+    from_date: str,
+    to_date: str,
     property_type: PropertyType,
 ) -> tuple[bool, str]:
     if not path.is_file() or path.stat().st_size < 200:
@@ -61,16 +62,15 @@ def validate_csv_file(
     if sido != region:
         return False, f"시도 불일치: 기대={region}, 실제={sido}"
 
-    y0, y1 = _year_from_contract_range(meta)
-    if y0 is None or y1 is None:
+    c0, c1 = _contract_range(meta)
+    if c0 is None or c1 is None:
         return False, f"계약일자 파싱 실패: {meta.get('계약일자', '')}"
-    if y0 != year or y1 != year:
-        return False, f"연도 불일치: 기대={year}, 실제={y0}~{y1}"
+    if c0 != from_date or c1 != to_date:
+        return False, f"계약일자 불일치: 기대={from_date}~{to_date}, 실제={c0}~{c1}"
 
     deal = meta.get("실거래구분", "")
     expected_deal = f"{property_type.label_ko}({property_type.deal_type})"
     if expected_deal not in deal.replace(" ", ""):
-        # 분양입주권 등 표기 차이 허용
         if property_type.label_ko not in deal:
             return False, f"유형 불일치: 기대≈{expected_deal}, 실제={deal}"
 

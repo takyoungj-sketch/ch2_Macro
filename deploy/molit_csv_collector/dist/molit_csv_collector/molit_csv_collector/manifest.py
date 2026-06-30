@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .config import PropertyType
+from .config import DownloadPeriod, PropertyType
 
 MANIFEST_NAME = ".download_manifest.json"
 
@@ -15,17 +15,17 @@ def csv_exists(path: Path) -> bool:
     return path.is_file() and path.stat().st_size > 0
 
 
-def years_present(
+def periods_present(
     download_dir: Path,
     region: str,
-    years: list[int],
+    periods: list[DownloadPeriod],
     property_type: PropertyType,
-) -> list[int]:
-    out: list[int] = []
-    for year in years:
-        path = download_dir / property_type.csv_filename(region, year)
+) -> list[str]:
+    out: list[str] = []
+    for period in periods:
+        path = download_dir / property_type.csv_filename(region, period.key)
         if csv_exists(path):
-            out.append(year)
+            out.append(period.key)
     return out
 
 
@@ -34,27 +34,30 @@ def write_manifest(
     *,
     property_type: PropertyType,
     regions: list[str],
-    years: list[int],
+    periods: list[DownloadPeriod],
     stats: dict[str, int],
     stopped_reason: str | None = None,
 ) -> Path:
     download_dir = download_dir.resolve()
     download_dir.mkdir(parents=True, exist_ok=True)
+    period_keys = [p.key for p in periods]
     payload = {
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "property_type": property_type.key,
         "property_label": property_type.label_ko,
         "deal_type": property_type.deal_type,
-        "years": years,
+        "periods": [
+            {"key": p.key, "from_date": p.from_date, "to_date": p.to_date} for p in periods
+        ],
         "stats": stats,
         "stopped_reason": stopped_reason,
         "regions": {
             region: {
-                "complete": len(years_present(download_dir, region, years, property_type))
-                == len(years),
-                "files": len(years_present(download_dir, region, years, property_type)),
-                "expected": len(years),
-                "years": years_present(download_dir, region, years, property_type),
+                "complete": len(periods_present(download_dir, region, periods, property_type))
+                == len(periods),
+                "files": len(periods_present(download_dir, region, periods, property_type)),
+                "expected": len(periods),
+                "periods": periods_present(download_dir, region, periods, property_type),
             }
             for region in regions
         },

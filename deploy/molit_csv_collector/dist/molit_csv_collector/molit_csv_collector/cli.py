@@ -13,8 +13,16 @@ from .downloader import DownloadJob, run_download
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="국토부 실거래 CSV 수집 (CLI)")
     p.add_argument("--property-type", default="apartment", help="apartment, land, …")
+    p.add_argument(
+        "--deal-type",
+        default="sale",
+        choices=["sale", "rent", "매매", "전월세"],
+        help="거래 구분 (아파트·연립·단독·오피스텔만 전월세)",
+    )
     p.add_argument("--start-year", type=int, default=2010)
+    p.add_argument("--start-month", type=int, default=1)
     p.add_argument("--end-year", type=int, default=2020)
+    p.add_argument("--end-month", type=int, default=12)
     p.add_argument("--output-dir", required=True, help="CSV 저장 폴더")
     p.add_argument(
         "--max-new-downloads",
@@ -33,7 +41,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    pt = get_property_type(args.property_type)
+    pt = get_property_type(args.property_type, deal_type=args.deal_type)
     regions = (
         [r.strip() for r in args.regions.split(",") if r.strip()]
         if args.regions.strip()
@@ -42,7 +50,9 @@ def main(argv: list[str] | None = None) -> int:
     job = DownloadJob(
         property_type=pt,
         start_year=args.start_year,
+        start_month=args.start_month,
         end_year=args.end_year,
+        end_month=args.end_month,
         output_dir=Path(args.output_dir),
         regions=regions,
         max_new_downloads=args.max_new_downloads,

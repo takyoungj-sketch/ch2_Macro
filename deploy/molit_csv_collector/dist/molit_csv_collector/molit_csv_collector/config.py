@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from calendar import monthrange
 from dataclasses import dataclass
+from datetime import date
 
 MOLIT_XLS_URL = "https://rt.molit.go.kr/pt/xls/xls.do?mobileAt="
 
@@ -26,7 +28,14 @@ DEFAULT_SIDO_LIST = [
     "제주특별자치도",
 ]
 
-DEAL_TYPE_NAME = "매매"
+DEAL_TYPE_SALE = "매매"
+DEAL_TYPE_RENT = "전월세"
+DEAL_TYPE_CHOICES: list[tuple[str, str]] = [
+    ("sale", DEAL_TYPE_SALE),
+    ("rent", DEAL_TYPE_RENT),
+]
+RENT_SUPPORTED_KEYS = frozenset({"apartment", "rowhouse", "detached", "officetel"})
+
 DEFAULT_MAX_NEW_DOWNLOADS = 100
 
 # 거래량 많은 시도 — 서버 CSV 생성·다운로드 10~15분 걸릴 수 있음
@@ -51,18 +60,94 @@ def processing_timeout_sec(region: str) -> int:
     return 600 if region in LARGE_VOLUME_REGIONS else 300
 
 
+def resolve_deal_type(key: str) -> str:
+    if key == "sale":
+        return DEAL_TYPE_SALE
+    if key == "rent":
+        return DEAL_TYPE_RENT
+    if key in (DEAL_TYPE_SALE, DEAL_TYPE_RENT):
+        return key
+    raise ValueError(f"unknown deal type: {key}")
+
+
+@dataclass(frozen=True)
+class DownloadPeriod:
+    key: str
+    from_date: str
+    to_date: str
+
+    @property
+    def label(self) -> str:
+        if self.key.isdigit() and len(self.key) == 4:
+            return self.key
+        return f"{self.from_date}~{self.to_date}"
+
+
+def period_file_key(from_date: str, to_date: str) -> str:
+    """전체 연도(1/1~12/31)면 연도만, 아니면 YYYYMMDD_YYYYMMDD."""
+    if from_date.endswith("-01-01") and to_date.endswith("-12-31"):
+        year_from = from_date[:4]
+        year_to = to_date[:4]
+        if year_from == year_to:
+            return year_from
+    return f"{from_date.replace('-', '')}_{to_date.replace('-', '')}"
+
+
+def iter_download_periods(
+    start_year: int,
+    start_month: int,
+    end_year: int,
+    end_month: int,
+) -> list[DownloadPeriod]:
+    if (start_year, start_month) > (end_year, end_month):
+        raise ValueError("시작 기간이 종료보다 늦습니다.")
+    if not (1 <= start_month <= 12 and 1 <= end_month <= 12):
+        raise ValueError("월은 1~12 사이여야 합니다.")
+
+    periods: list[DownloadPeriod] = []
+    for year in range(start_year, end_year + 1):
+        m_start = start_month if year == start_year else 1
+        m_end = end_month if year == end_year else 12
+        from_d = date(year, m_start, 1)
+        to_d = date(year, m_end, monthrange(year, m_end)[1])
+        from_s = from_d.isoformat()
+        to_s = to_d.isoformat()
+        periods.append(DownloadPeriod(period_file_key(from_s, to_s), from_s, to_s))
+    return periods
+
+
 @dataclass(frozen=True)
 class PropertyType:
     key: str
     tab_id: int
     label_ko: str
-    deal_type: str = DEAL_TYPE_NAME
+    deal_type: str = DEAL_TYPE_SALE
 
-    def csv_filename(self, region: str, year: int) -> str:
-        return f"{region}_{self.label_ko}_{self.deal_type}_{year}.csv"
+    @property
+    def supports_rent(self) -> bool:
+        return self.key in RENT_SUPPORTED_KEYS
 
-    def output_subdir(self, start_year: int, end_year: int) -> str:
-        return f"{self.label_ko}_{start_year}_{end_year}"
+    def with_deal_type(self, deal_type: str) -> PropertyType:
+        if deal_type == DEAL_TYPE_RENT and not self.supports_rent:
+            raise ValueError(f"{self.label_ko}은(는) 전월세를 지원하지 않습니다.")
+        return PropertyType(self.key, self.tab_id, self.label_ko, deal_type)
+
+    def csv_filename(self, region: str, period_key: str) -> str:
+        return f"{region}_{self.label_ko}_{self.deal_type}_{period_key}.csv"
+
+    def output_subdir(
+        self,
+        start_year: int,
+        start_month: int,
+        end_year: int,
+        end_month: int,
+    ) -> str:
+        deal_part = f"_{self.deal_type}" if self.deal_type != DEAL_TYPE_SALE else ""
+        if start_month == 1 and end_month == 12:
+            return f"{self.label_ko}{deal_part}_{start_year}_{end_year}"
+        return (
+            f"{self.label_ko}{deal_part}_{start_year}{start_month:02d}_{end_year}{end_month:02d}"
+        )
 
 
 PROPERTY_TYPES: dict[str, PropertyType] = {
@@ -77,12 +162,11 @@ PROPERTY_TYPES: dict[str, PropertyType] = {
 }
 
 PROPERTY_TYPE_CHOICES: list[tuple[str, str]] = [
-    (key, f"{pt.label_ko} ({pt.deal_type})")
-    for key, pt in PROPERTY_TYPES.items()
+    (key, pt.label_ko) for key, pt in PROPERTY_TYPES.items()
 ]
 
 
-def get_property_type(key: str) -> PropertyType:
+def get_property_type(key: str, *, deal_type: str = "sale") -> PropertyType:
     if key not in PROPERTY_TYPES:
         raise KeyError(f"unknown property type: {key}")
-    return PROPERTY_TYPES[key]
+    return PROPERTY_TYPES[key].with_deal_type(resolve_deal_type(deal_type))

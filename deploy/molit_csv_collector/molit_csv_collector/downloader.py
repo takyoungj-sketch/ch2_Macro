@@ -14,9 +14,13 @@ from pathlib import Path
 from .config import (
     DEFAULT_MAX_NEW_DOWNLOADS,
     DEFAULT_SIDO_LIST,
+    DEAL_TYPE_RENT,
+    DEAL_TYPE_SALE,
+    DownloadPeriod,
     MOLIT_XLS_URL,
     PropertyType,
     download_timeout_sec,
+    iter_download_periods,
     processing_timeout_sec,
 )
 from .csv_validate import parse_metadata, read_csv_text, validate_csv_file
@@ -47,6 +51,8 @@ class DownloadJob:
     start_year: int
     end_year: int
     output_dir: Path
+    start_month: int = 1
+    end_month: int = 12
     regions: list[str] = field(default_factory=lambda: list(DEFAULT_SIDO_LIST))
     max_new_downloads: int = DEFAULT_MAX_NEW_DOWNLOADS
     headless: bool = False
@@ -102,7 +108,7 @@ def quarantine_csv(
     output_dir: Path,
     *,
     expected_region: str,
-    year: int,
+    period: DownloadPeriod,
     property_type: PropertyType,
     reason: str,
 ) -> Path:
@@ -121,7 +127,7 @@ def quarantine_csv(
     safe_actual = actual.replace("/", "_").replace("\\", "_")
     base = (
         f"{expected_region}_{property_type.label_ko}_{property_type.deal_type}"
-        f"_{year}_실제_{safe_actual}.csv"
+        f"_{period.key}_실제_{safe_actual}.csv"
     )
     dest = failed_dir / base
     if dest.exists():
@@ -170,6 +176,13 @@ def move_csv_to_final(
             time.sleep(FILE_MOVE_RETRY_DELAY_SEC)
     assert last_err is not None
     raise last_err
+
+
+def select_deal_type(driver, *, deal_type: str) -> None:
+    """매매(1) / 전월세(2) — 아파트·연립·단독·오피스텔만 전월세 탭 표시."""
+    code = "1" if deal_type == DEAL_TYPE_SALE else "2"
+    driver.execute_script(f"fnRtToLr('{code}');")
+    time.sleep(1)
 
 
 def select_sido_region(driver, wait, region: str) -> tuple[bool, str]:
@@ -431,15 +444,18 @@ def _record_failure(
     output_dir: Path,
     *,
     region: str,
-    year: int,
+    period: DownloadPeriod,
     reason: str,
     property_type: PropertyType,
 ) -> None:
     rec = {
         "at": datetime.now(timezone.utc).isoformat(),
         "region": region,
-        "year": year,
+        "period": period.key,
+        "from_date": period.from_date,
+        "to_date": period.to_date,
         "property_type": property_type.key,
+        "deal_type": property_type.deal_type,
         "reason": reason,
     }
     result.failures.append(rec)
@@ -452,9 +468,7 @@ def _download_one_task(
     wait,
     job: DownloadJob,
     region: str,
-    year: int,
-    from_date: str,
-    to_date: str,
+    period: DownloadPeriod,
     download_dir: Path,
     chrome_dir: Path,
     result: DownloadResult,
@@ -462,15 +476,15 @@ def _download_one_task(
     log_level,
     should_stop,
 ) -> str:
-    """단일 (시도, 연도) 다운로드. 반환: done | failed | deferred."""
+    """단일 (시도, 기간) 다운로드. 반환: done | failed | deferred."""
     from selenium.common.exceptions import UnexpectedAlertPresentException
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support import expected_conditions as EC
 
-    tag = f"{region} {year}"
+    tag = f"{region} {period.label}"
     dl_timeout = download_timeout_sec(region)
     proc_timeout = processing_timeout_sec(region)
-    file_path = download_dir / job.property_type.csv_filename(region, year)
+    file_path = download_dir / job.property_type.csv_filename(region, period.key)
 
     try:
         n_orphan = cleanup_orphan_temp_csv(chrome_dir, job.property_type)
@@ -492,11 +506,15 @@ def _download_one_task(
             EC.element_to_be_clickable((By.ID, f"xlsTab{job.property_type.tab_id}"))
         )
         driver.execute_script("arguments[0].click();", tab)
+        if job.property_type.deal_type == DEAL_TYPE_RENT:
+            select_deal_type(driver, deal_type=DEAL_TYPE_RENT)
+        else:
+            select_deal_type(driver, deal_type=DEAL_TYPE_SALE)
 
         driver.find_element(By.ID, "srhFromDt").clear()
-        driver.find_element(By.ID, "srhFromDt").send_keys(from_date)
+        driver.find_element(By.ID, "srhFromDt").send_keys(period.from_date)
         driver.find_element(By.ID, "srhToDt").clear()
-        driver.find_element(By.ID, "srhToDt").send_keys(to_date)
+        driver.find_element(By.ID, "srhToDt").send_keys(period.to_date)
 
         wait.until(EC.presence_of_element_located((By.ID, "srhSidoCd")))
         ok_sido, sido_reason = select_sido_region(driver, wait, region)
@@ -504,7 +522,7 @@ def _download_one_task(
             _log_fail(log, log_level, f"{tag} {sido_reason}")
             _record_failure(
                 result, download_dir,
-                region=region, year=year, reason=sido_reason,
+                region=region, period=period, reason=sido_reason,
                 property_type=job.property_type,
             )
             result.failed += 1
@@ -536,7 +554,7 @@ def _download_one_task(
             if "실패" in alert_text:
                 _record_failure(
                     result, download_dir,
-                    region=region, year=year, reason=alert_text,
+                    region=region, period=period, reason=alert_text,
                     property_type=job.property_type,
                 )
                 result.failed += 1
@@ -556,14 +574,15 @@ def _download_one_task(
             _log_info(
                 log,
                 log_level,
-                f"{tag} 다운로드 미완료 → 보류 (다른 시도·연도 우선)",
+                f"{tag} 다운로드 미완료 → 보류 (다른 시도·기간 우선)",
             )
             return "deferred"
 
         ok, vreason = validate_csv_file(
             temp_path,
             region=region,
-            year=year,
+            from_date=period.from_date,
+            to_date=period.to_date,
             property_type=job.property_type,
         )
         if not ok:
@@ -571,7 +590,7 @@ def _download_one_task(
                 temp_path,
                 download_dir,
                 expected_region=region,
-                year=year,
+                period=period,
                 property_type=job.property_type,
                 reason=vreason,
             )
@@ -582,7 +601,7 @@ def _download_one_task(
             )
             _record_failure(
                 result, download_dir,
-                region=region, year=year, reason=vreason,
+                region=region, period=period, reason=vreason,
                 property_type=job.property_type,
             )
             result.failed += 1
@@ -613,7 +632,7 @@ def _download_one_task(
         _log_fail(log, log_level, f"{tag} 알림 오류: {alert_text}")
         _record_failure(
             result, download_dir,
-            region=region, year=year, reason=alert_text,
+            region=region, period=period, reason=alert_text,
             property_type=job.property_type,
         )
         result.failed += 1
@@ -642,9 +661,11 @@ def run_download(
     except ImportError as exc:
         raise RuntimeError("selenium 패키지가 필요합니다: py -m pip install selenium>=4.15") from exc
 
-    years = list(range(job.start_year, job.end_year + 1))
-    if not years:
-        raise ValueError("연도 범위가 비어 있습니다.")
+    periods = iter_download_periods(
+        job.start_year, job.start_month, job.end_year, job.end_month
+    )
+    if not periods:
+        raise ValueError("기간 범위가 비어 있습니다.")
     if not job.regions:
         raise ValueError("선택된 시도가 없습니다.")
 
@@ -666,8 +687,12 @@ def run_download(
         },
     )
 
-    year_ranges = [(y, f"{y}-01-01", f"{y}-12-31") for y in years]
-    total = len(job.regions) * len(year_ranges)
+    total = len(job.regions) * len(periods)
+    period_summary = (
+        f"{periods[0].from_date}~{periods[-1].to_date}"
+        if len(periods) > 1
+        else f"{periods[0].from_date}~{periods[0].to_date}"
+    )
     _log_info(
         log,
         log_level,
@@ -676,22 +701,22 @@ def run_download(
                 "다운로드 설정:",
                 f"  유형={job.property_type.label_ko} {job.property_type.deal_type}",
                 f"  시도={len(job.regions)}개",
-                f"  연도={years[0]}~{years[-1]} ({len(years)}년)",
+                f"  기간={period_summary} ({len(periods)}구간)",
                 f"  예상 파일={total}개",
                 f"  신규 상한={job.max_new_downloads}",
                 f"  저장={download_dir}",
                 f"  Chrome 다운로드={chrome_dir}",
                 f"  검증 실패 → {FAILED_SUBDIR}/ 보관 (삭제 안 함)",
-                f"  작업 순서=연도별 시도 교차 (실패·보류 시 다른 시도 우선)",
+                f"  작업 순서=기간별 시도 교차 (실패·보류 시 다른 시도 우선)",
                 f"  진행 없음 조기중단={STALL_ABORT_SEC}s",
             ]
         ),
     )
 
-    # 연도 → 시도 순: 경기 2019 실패 시 같은 연도 다른 시도부터 진행
-    tasks: list[tuple[str, int, str, str]] = [
-        (region, year, from_d, to_d)
-        for year, from_d, to_d in year_ranges
+    # 기간 → 시도 순: 같은 기간 다른 시도부터 진행
+    tasks: list[tuple[str, DownloadPeriod]] = [
+        (region, period)
+        for period in periods
         for region in job.regions
     ]
 
@@ -699,7 +724,7 @@ def run_download(
     wait = WebDriverWait(driver, 90)
     result = DownloadResult()
     max_new = max(0, int(job.max_new_downloads or 0))
-    deferred: list[tuple[str, int, str, str]] = []
+    deferred: list[tuple[str, DownloadPeriod]] = []
 
     def _should_abort() -> bool:
         return bool(
@@ -709,14 +734,14 @@ def run_download(
         )
 
     def _process_tasks(
-        queue: list[tuple[str, int, str, str]],
+        queue: list[tuple[str, DownloadPeriod]],
         *,
         pass_name: str,
         allow_defer: bool,
-    ) -> list[tuple[str, int, str, str]]:
-        next_deferred: list[tuple[str, int, str, str]] = []
-        for region, year, from_date, to_date in queue:
-            tag = f"{region} {year}"
+    ) -> list[tuple[str, DownloadPeriod]]:
+        next_deferred: list[tuple[str, DownloadPeriod]] = []
+        for region, period in queue:
+            tag = f"{region} {period.label}"
             if should_stop and should_stop():
                 result.stopped_reason = "user_stop"
                 _log_info(log, log_level, "사용자 중지 요청")
@@ -726,13 +751,14 @@ def run_download(
                 _log_info(log, log_level, f"신규 다운로드 {max_new}건 도달 → 중단")
                 break
 
-            file_path = download_dir / job.property_type.csv_filename(region, year)
+            file_path = download_dir / job.property_type.csv_filename(region, period.key)
             if file_path.exists() and file_path.stat().st_size > 0:
                 if job.revalidate_existing:
                     ok, reason = validate_csv_file(
                         file_path,
                         region=region,
-                        year=year,
+                        from_date=period.from_date,
+                        to_date=period.to_date,
                         property_type=job.property_type,
                     )
                     if ok:
@@ -744,7 +770,7 @@ def run_download(
                         file_path,
                         download_dir,
                         expected_region=region,
-                        year=year,
+                        period=period,
                         property_type=job.property_type,
                         reason=reason,
                     )
@@ -763,9 +789,7 @@ def run_download(
                 wait=wait,
                 job=job,
                 region=region,
-                year=year,
-                from_date=from_date,
-                to_date=to_date,
+                period=period,
                 download_dir=download_dir,
                 chrome_dir=chrome_dir,
                 result=result,
@@ -775,13 +799,13 @@ def run_download(
             )
             if outcome == "deferred":
                 if allow_defer:
-                    next_deferred.append((region, year, from_date, to_date))
+                    next_deferred.append((region, period))
                 else:
                     reason = "재시도 후에도 실패(다운로드·저장)"
                     _log_fail(log, log_level, f"{tag} {reason}")
                     _record_failure(
                         result, download_dir,
-                        region=region, year=year, reason=reason,
+                        region=region, period=period, reason=reason,
                         property_type=job.property_type,
                     )
                     result.failed += 1
@@ -805,7 +829,7 @@ def run_download(
             download_dir,
             property_type=job.property_type,
             regions=job.regions,
-            years=years,
+            periods=periods,
             stats={
                 "done": result.done,
                 "skipped": result.skipped,
@@ -823,7 +847,11 @@ def run_download(
         if result.failures:
             _log_fail(log, log_level, "실패 목록 (해당 시도만 선택 후 재실행):")
             for f in result.failures:
-                _log_fail(log, log_level, f"  · {f['region']} {f['year']}: {f['reason']}")
+                _log_fail(
+                    log,
+                    log_level,
+                    f"  · {f['region']} {f['period']}: {f['reason']}",
+                )
         if result.stopped_reason:
             _log_info(log, log_level, f"중단 사유: {result.stopped_reason}")
         _log_info(log, log_level, f"manifest: {result.manifest_path}")

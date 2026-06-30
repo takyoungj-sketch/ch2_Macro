@@ -3,8 +3,11 @@
 ch2_Macro 전체 없이 **CSV만** 수집. 파일명은 본 프로젝트 `raw/` 와 동일.
 
 ```
-{시도}_{유형}_매매_{연도}.csv
+{시도}_{유형}_{매매|전월세}_{기간}.csv
 ```
+
+- **기간**: 달력 연도 전체(1~12월)면 `{연도}` (예: `2020`), 그 외 `YYYYMMDD_YYYYMMDD` (예: `20200301_20200630`)
+- **전월세**: 아파트·연립다세대·단독다가구·오피스텔만 지원
 
 ## ⚠ 필독 — 데이터 오염 방지
 
@@ -28,7 +31,7 @@ ch2_Macro 전체 없이 **CSV만** 수집. 파일명은 본 프로젝트 `raw/` 
 
 ## GUI
 
-- **유형·연도·신규 상한(100)**
+- **유형·거래구분(매매/전월세)·기간(연·월)·신규 상한(100)**
 - **시도 체크박스** — 기본 전국, 실패 시 해당 시도만 선택 후 재실행
 - **실패 로그** — 빨간색 강조
 
@@ -52,5 +55,8 @@ powershell -File deploy\molit_csv_collector\build_dist.ps1 -WithExe
 ## CLI
 
 ```powershell
-py -m molit_csv_collector --cli --property-type apartment --start-year 2010 --end-year 2020 --output-dir D:\out --max-new-downloads 100 --regions "경기도,서울특별시"
+py -m molit_csv_collector --cli --property-type apartment --deal-type sale --start-year 2010 --start-month 1 --end-year 2020 --end-month 12 --output-dir D:\out --max-new-downloads 100 --regions "경기도,서울특별시"
+
+# 전월세 예시 (2024년 3~5월만)
+py -m molit_csv_collector --cli --property-type apartment --deal-type rent --start-year 2024 --start-month 3 --end-year 2024 --end-month 5 --output-dir D:\out
 ```

@@ -1,4 +1,4 @@
-"""tkinter GUI — 연도·유형·시도 선택 후 CSV 수집."""
+"""tkinter GUI — 기간·유형·거래구분·시도 선택 후 CSV 수집."""
 
 from __future__ import annotations
 
@@ -9,6 +9,9 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, scrolledtext, ttk
 
 from .config import (
+    DEAL_TYPE_CHOICES,
+    DEAL_TYPE_RENT,
+    DEAL_TYPE_SALE,
     DEFAULT_MAX_NEW_DOWNLOADS,
     DEFAULT_SIDO_LIST,
     PROPERTY_TYPE_CHOICES,
@@ -21,8 +24,8 @@ class CollectorApp(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("국토부 실거래 CSV 수집기")
-        self.geometry("820x720")
-        self.minsize(720, 600)
+        self.geometry("820x760")
+        self.minsize(720, 640)
 
         self._worker: threading.Thread | None = None
         self._stop_flag = threading.Event()
@@ -55,21 +58,58 @@ class CollectorApp(tk.Tk):
         ttk.Label(frm, textvariable=self.type_hint_var, foreground="#555").grid(
             row=row, column=2, sticky=tk.W, **pad
         )
-        self._on_type_change()
 
         row += 1
-        ttk.Label(frm, text="시작 연도").grid(row=row, column=0, sticky=tk.W, **pad)
+        ttk.Label(frm, text="거래 구분").grid(row=row, column=0, sticky=tk.W, **pad)
+        deal_frm = ttk.Frame(frm)
+        deal_frm.grid(row=row, column=1, columnspan=2, sticky=tk.W, **pad)
+        self.deal_var = tk.StringVar(value="sale")
+        self._deal_sale = ttk.Radiobutton(
+            deal_frm,
+            text=DEAL_TYPE_SALE,
+            variable=self.deal_var,
+            value="sale",
+            command=self._on_type_change,
+        )
+        self._deal_sale.pack(side=tk.LEFT, padx=(0, 12))
+        self._deal_rent = ttk.Radiobutton(
+            deal_frm,
+            text=DEAL_TYPE_RENT,
+            variable=self.deal_var,
+            value="rent",
+            command=self._on_type_change,
+        )
+        self._deal_rent.pack(side=tk.LEFT)
+        self.deal_hint_var = tk.StringVar()
+        ttk.Label(deal_frm, textvariable=self.deal_hint_var, foreground="#555").pack(
+            side=tk.LEFT, padx=12
+        )
+
+        row += 1
+        period_frm = ttk.Frame(frm)
+        period_frm.grid(row=row, column=0, columnspan=3, sticky=tk.W, **pad)
+        ttk.Label(period_frm, text="시작").pack(side=tk.LEFT)
         self.start_year_var = tk.IntVar(value=2010)
-        ttk.Spinbox(frm, from_=2006, to=2030, textvariable=self.start_year_var, width=10).grid(
-            row=row, column=1, sticky=tk.W, **pad
-        )
-
-        row += 1
-        ttk.Label(frm, text="종료 연도").grid(row=row, column=0, sticky=tk.W, **pad)
+        ttk.Spinbox(
+            period_frm, from_=2006, to=2030, textvariable=self.start_year_var, width=6
+        ).pack(side=tk.LEFT, padx=(6, 2))
+        ttk.Label(period_frm, text="년").pack(side=tk.LEFT)
+        self.start_month_var = tk.IntVar(value=1)
+        ttk.Spinbox(
+            period_frm, from_=1, to=12, textvariable=self.start_month_var, width=4
+        ).pack(side=tk.LEFT, padx=(6, 2))
+        ttk.Label(period_frm, text="월").pack(side=tk.LEFT, padx=(0, 16))
+        ttk.Label(period_frm, text="종료").pack(side=tk.LEFT)
         self.end_year_var = tk.IntVar(value=2020)
-        ttk.Spinbox(frm, from_=2006, to=2030, textvariable=self.end_year_var, width=10).grid(
-            row=row, column=1, sticky=tk.W, **pad
-        )
+        ttk.Spinbox(
+            period_frm, from_=2006, to=2030, textvariable=self.end_year_var, width=6
+        ).pack(side=tk.LEFT, padx=(6, 2))
+        ttk.Label(period_frm, text="년").pack(side=tk.LEFT)
+        self.end_month_var = tk.IntVar(value=12)
+        ttk.Spinbox(
+            period_frm, from_=1, to=12, textvariable=self.end_month_var, width=4
+        ).pack(side=tk.LEFT, padx=(6, 2))
+        ttk.Label(period_frm, text="월").pack(side=tk.LEFT)
 
         row += 1
         ttk.Label(frm, text="신규 다운로드 상한").grid(row=row, column=0, sticky=tk.W, **pad)
@@ -146,6 +186,8 @@ class CollectorApp(tk.Tk):
         frm.rowconfigure(row, weight=1)
         frm.columnconfigure(2, weight=1)
 
+        self._on_type_change()
+
     def _selected_type_key(self) -> str:
         label = self.type_var.get()
         try:
@@ -154,9 +196,20 @@ class CollectorApp(tk.Tk):
             idx = 0
         return self._type_keys[idx]
 
+    def _selected_property_type(self):
+        return get_property_type(self._selected_type_key(), deal_type=self.deal_var.get())
+
     def _on_type_change(self, *_args) -> None:
         pt = get_property_type(self._selected_type_key())
-        self.type_hint_var.set(f"{{시도}}_{pt.label_ko}_{pt.deal_type}_{{연도}}.csv")
+        if pt.supports_rent:
+            self._deal_rent.config(state=tk.NORMAL)
+            self.deal_hint_var.set("")
+        else:
+            self.deal_var.set("sale")
+            self._deal_rent.config(state=tk.DISABLED)
+            self.deal_hint_var.set("(이 유형은 매매만 지원)")
+        pt = self._selected_property_type()
+        self.type_hint_var.set(f"{{시도}}_{pt.label_ko}_{pt.deal_type}_{{기간}}.csv")
 
     def _select_all_regions(self) -> None:
         for var in self._region_vars.values():
@@ -194,8 +247,13 @@ class CollectorApp(tk.Tk):
 
     def _resolve_output_dir(self) -> Path:
         base = Path(self.output_var.get().strip()).expanduser()
-        pt = get_property_type(self._selected_type_key())
-        return base / pt.output_subdir(int(self.start_year_var.get()), int(self.end_year_var.get()))
+        pt = self._selected_property_type()
+        return base / pt.output_subdir(
+            int(self.start_year_var.get()),
+            int(self.start_month_var.get()),
+            int(self.end_year_var.get()),
+            int(self.end_month_var.get()),
+        )
 
     def _start(self) -> None:
         if self._worker and self._worker.is_alive():
@@ -203,8 +261,13 @@ class CollectorApp(tk.Tk):
 
         start_y = int(self.start_year_var.get())
         end_y = int(self.end_year_var.get())
-        if start_y > end_y:
-            messagebox.showerror("입력 오류", "시작 연도가 종료 연도보다 큽니다.")
+        start_m = int(self.start_month_var.get())
+        end_m = int(self.end_month_var.get())
+        if (start_y, start_m) > (end_y, end_m):
+            messagebox.showerror("입력 오류", "시작 기간이 종료 기간보다 늦습니다.")
+            return
+        if not (1 <= start_m <= 12 and 1 <= end_m <= 12):
+            messagebox.showerror("입력 오류", "월은 1~12 사이여야 합니다.")
             return
 
         regions = self._selected_regions()
@@ -217,12 +280,19 @@ class CollectorApp(tk.Tk):
             messagebox.showerror("입력 오류", "신규 다운로드 상한은 1~100 입니다.")
             return
 
-        pt = get_property_type(self._selected_type_key())
+        try:
+            pt = self._selected_property_type()
+        except ValueError as exc:
+            messagebox.showerror("입력 오류", str(exc))
+            return
+
         output_dir = self._resolve_output_dir()
         job = DownloadJob(
             property_type=pt,
             start_year=start_y,
+            start_month=start_m,
             end_year=end_y,
+            end_month=end_m,
             output_dir=output_dir,
             regions=regions,
             max_new_downloads=max_new,
