@@ -15,7 +15,7 @@ import StatsWindowToggle, { normalizeStatsWindowYears, type StatsWindowYears } f
 import RegionChipPanel from "./components/RegionChipPanel";
 import { useUiColorScheme } from "./hooks/useUiColorScheme";
 import { useUiFontScale } from "./hooks/useUiFontScale";
-import { COMMERCIAL_ASSET_LABELS, type CommercialAssetType, type CommercialClusterRow, type RegionOption } from "./types";
+import { COMMERCIAL_ASSET_SELECTOR_LABELS, commercialAssetTypeLabel, type CommercialAssetSelectorType, type CommercialClusterRow, type RegionOption } from "./types";
 
 function fmtPrice(v: number | null | undefined) {
   if (v == null) return "—";
@@ -28,7 +28,7 @@ function fmtCi(lo: number | null | undefined, hi: number | null | undefined) {
 }
 
 type AnalysisScope = {
-  assetType: CommercialAssetType;
+  assetType: CommercialAssetSelectorType;
   addr1: string;
   addr2: string;
   guList: string[];
@@ -59,7 +59,7 @@ function buildRegionPeriodParams(
 }
 
 export default function CommercialApp() {
-  const [assetType, setAssetType] = useState<CommercialAssetType>("collective_shop");
+  const [assetType, setAssetType] = useState<CommercialAssetSelectorType>("collective_shop");
   const [addr1, setAddr1] = useState("");
   const [addr2, setAddr2] = useState("");
   const [guList, setGuList] = useState<string[]>([]);
@@ -213,13 +213,13 @@ export default function CommercialApp() {
                 className="input"
                 value={assetType}
                 onChange={(e) => {
-                  setAssetType(e.target.value as CommercialAssetType);
+                  setAssetType(e.target.value as CommercialAssetSelectorType);
                   resetRegion();
                 }}
               >
-                {(Object.keys(COMMERCIAL_ASSET_LABELS) as CommercialAssetType[]).map((t) => (
+                {(Object.keys(COMMERCIAL_ASSET_SELECTOR_LABELS) as CommercialAssetSelectorType[]).map((t) => (
                   <option key={t} value={t}>
-                    {COMMERCIAL_ASSET_LABELS[t]}
+                    {COMMERCIAL_ASSET_SELECTOR_LABELS[t]}
                   </option>
                 ))}
               </select>
@@ -377,6 +377,7 @@ export default function CommercialApp() {
                 <div className="card overflow-x-auto p-0 w-full">
                   <table className="data commercial-clusters-table">
                     <colgroup>
+                      <col className="col-type" />
                       <col className="col-road" />
                       <col className="col-num" />
                       <col className="col-num" />
@@ -386,6 +387,7 @@ export default function CommercialApp() {
                     </colgroup>
                     <thead>
                       <tr>
+                        <th>유형</th>
                         <th>도로명</th>
                         <th className="text-right">거래</th>
                         <th className="text-right">평균</th>
@@ -397,13 +399,16 @@ export default function CommercialApp() {
                     <tbody>
                       {clustersQ.data.items.map((row) => (
                         <tr
-                          key={row.cluster_key}
+                          key={`${row.cluster_key}|${row.asset_type}`}
                           className={clsx(
                             "hover:bg-indigo-50 dark:hover:bg-indigo-950/40 cursor-pointer",
-                            selected?.cluster_key === row.cluster_key && "bg-indigo-50 dark:bg-indigo-950/50",
+                            selected?.cluster_key === row.cluster_key && selected?.asset_type === row.asset_type && "bg-indigo-50 dark:bg-indigo-950/50",
                           )}
                           onClick={() => setSelected(row)}
                         >
+                          <td className="text-[10px] whitespace-nowrap text-center">
+                            {commercialAssetTypeLabel(row.asset_type)}
+                          </td>
                           <td className="name">
                             {row.road_name || row.display_label}
                             {!row.is_reliable && <span className="ml-0.5 text-[9px] text-amber-600">n&lt;15</span>}

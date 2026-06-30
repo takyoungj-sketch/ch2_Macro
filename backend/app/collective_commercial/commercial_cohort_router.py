@@ -146,7 +146,9 @@ def cohort_stats_by_year(body: CommercialCohortAnalysisRequest, db: Session = De
         rows = db.execute(
             text(
                 f"""
-                SELECT contract_year AS year, COUNT(*)::int AS count, AVG(unit_price)::float AS mean
+                SELECT contract_year AS year, COUNT(*)::int AS count,
+                       AVG(unit_price)::float AS mean,
+                       PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY unit_price)::float AS median
                 FROM collective_commercial_transactions
                 WHERE {where}
                 GROUP BY contract_year
@@ -160,6 +162,7 @@ def cohort_stats_by_year(body: CommercialCohortAnalysisRequest, db: Session = De
                 year=int(r["year"]),
                 count=int(r["count"]),
                 mean=round(float(r["mean"]), 1) if r["mean"] is not None else None,
+                median=round(float(r["median"]), 1) if r.get("median") is not None else None,
             )
             for r in rows
         ]

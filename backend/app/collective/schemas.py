@@ -105,6 +105,7 @@ class YearlyStatPoint(BaseModel):
     year: int
     count: int
     mean: Optional[float] = None
+    median: Optional[float] = None
 
 
 class YearlyStatsResponse(BaseModel):

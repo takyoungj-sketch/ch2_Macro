@@ -22,7 +22,8 @@ import FloorIndexPanel from "./FloorIndexPanel";
 import HistogramChart from "./HistogramChart";
 import type { CohortTrendMetric } from "./MultiBuildingTrendChart";
 import RollingTrendChart from "./RollingTrendChart";
-import YearlyTrendChart from "./YearlyTrendChart";
+import YearlyTrendChart, { yearlyPointPrice } from "./YearlyTrendChart";
+import LongTermMetricToggle, { longTermPriceLabel, type LongTermPriceMetric } from "./LongTermMetricToggle";
 import type { StatsWindowYears } from "./StatsWindowToggle";
 import { buildAnalysisPeriodParams, formatPeriodLabel, type AnalysisPeriodParams } from "../utils/analysisPeriod";
 import { rollingToTrendSeries, yearlyResponseToTrendSeries } from "../utils/cohortTrendSeries";
@@ -100,6 +101,7 @@ export default function BuildingDetailModal({
   const [txExportLoading, setTxExportLoading] = useState(false);
   const [txExportError, setTxExportError] = useState<string | null>(null);
   const [cohortChartMetric, setCohortChartMetric] = useState<CohortTrendMetric>("mean");
+  const [longTermMetric, setLongTermMetric] = useState<LongTermPriceMetric>("median");
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const dragSession = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
   const experiment = COLLECTIVE_EXPERIMENT_MODE;
@@ -553,6 +555,9 @@ export default function BuildingDetailModal({
                   buildingCount={cohortRunKeys.length}
                   chartTitle="연도별 추이 (꺾은선)"
                   note="만년력 · 롤링 통계 창과 기간·표본이 다를 수 있음"
+                  variant="longTerm"
+                  priceMetric={longTermMetric}
+                  onPriceMetricChange={setLongTermMetric}
                 />
               )}
               {!longTermCohortActive && longTermYearQ.isLoading && (
@@ -568,12 +573,15 @@ export default function BuildingDetailModal({
                       2010–2020 구간 포함 · {longTermYearQ.data?.data_source === "mart" ? "annual mart" : "실시간 집계"}
                     </p>
                   )}
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-2">
-                    만년력 연도별 추이 · 롤링 통계 창({periodLabel ?? "5년"})과 기간·표본이 다릅니다.
-                  </p>
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                      만년력 연도별 추이 · 롤링 통계 창({periodLabel ?? "5년"})과 기간·표본이 다릅니다.
+                    </p>
+                    <LongTermMetricToggle metric={longTermMetric} onChange={setLongTermMetric} />
+                  </div>
                   <div className="modal-card px-2 py-3">
                     <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 px-1 mb-2">추이 (꺾은선)</p>
-                    <YearlyTrendChart points={longTermYears} />
+                    <YearlyTrendChart points={longTermYears} metric={longTermMetric} />
                   </div>
                   <div className="modal-table-wrap">
                     <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 px-3 pt-3 pb-1">연도별 수치</p>
@@ -583,7 +591,7 @@ export default function BuildingDetailModal({
                           <th className="border px-2 py-1.5 text-left font-medium">연도</th>
                           <th className="border px-2 py-1.5 text-right font-medium">건수</th>
                           <th className="border px-2 py-1.5 text-right font-bold text-blue-700 dark:text-blue-400">
-                            평균(만원/㎡)
+                            {longTermPriceLabel(longTermMetric)}(만원/㎡)
                           </th>
                         </tr>
                       </thead>
@@ -595,7 +603,7 @@ export default function BuildingDetailModal({
                               {p.count.toLocaleString("ko-KR")}
                             </td>
                             <td className="border px-2 py-1 text-right tabular-nums text-blue-600 dark:text-blue-400 font-bold">
-                              {p.mean != null ? fmtPrice(p.mean) : "—"}
+                              {yearlyPointPrice(p, longTermMetric) != null ? fmtPrice(yearlyPointPrice(p, longTermMetric)!) : "—"}
                             </td>
                           </tr>
                         ))}

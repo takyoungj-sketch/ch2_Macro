@@ -1,4 +1,5 @@
 import type { YearlyStatPoint } from "../types";
+import type { LongTermPriceMetric } from "./LongTermMetricToggle";
 
 const W = 420;
 const H = 230;
@@ -6,13 +7,18 @@ const PAD_L = 28;
 const PAD_R = 28;
 const PAD_T = 44;
 const PAD_B = 42;
-const LABEL_MEAN_ABOVE = 10;
+const LABEL_PRICE_ABOVE = 10;
 const LABEL_COUNT_BELOW = 12;
 const COUNT_MARKER_STROKE = "#787f89";
 const COUNT_DASH_LINE = "#94a3b8";
 
-function formatMeanLabel(v: number): string {
+function formatPriceLabel(v: number): string {
   return Number(v).toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
+function priceValue(p: YearlyStatPoint, metric: LongTermPriceMetric): number | null {
+  const v = metric === "median" ? p.median : p.mean;
+  return v != null && Number.isFinite(v) ? v : null;
 }
 
 function niceStep(max: number, targetTicks = 4): number {
@@ -28,11 +34,18 @@ function niceStep(max: number, targetTicks = 4): number {
   return step * pow10;
 }
 
-/** 연도별 평균 단가(꺾은선)·거래 건수(점선+점) — 토지 MatrixYearlyTrendChart 와 동일 형식 */
-export default function YearlyTrendChart({ points }: { points: YearlyStatPoint[] }) {
+/** 연도별 평균·중앙값 단가(꺾은선)·거래 건수(점선+점) */
+export default function YearlyTrendChart({
+  points,
+  metric = "median",
+}: {
+  points: YearlyStatPoint[];
+  metric?: LongTermPriceMetric;
+}) {
   const sorted = [...points].sort((a, b) => a.year - b.year);
   if (sorted.length === 0) return null;
 
+  const priceLabel = metric === "median" ? "중앙값" : "평균";
   const innerW = W - PAD_L - PAD_R;
   const innerH = H - PAD_T - PAD_B;
   const n = sorted.length;
@@ -42,37 +55,37 @@ export default function YearlyTrendChart({ points }: { points: YearlyStatPoint[]
   const countTick = niceStep(countMax);
   const countAxisMax = Math.ceil(countMax / countTick) * countTick;
 
-  const meanVals = sorted.map((r) => r.mean).filter((v): v is number => v != null && Number.isFinite(v));
-  const hasMean = meanVals.length > 0;
-  let meanMin = hasMean ? Math.min(...meanVals) : 0;
-  let meanMax = hasMean ? Math.max(...meanVals) : 1;
-  if (hasMean && meanMin === meanMax) {
-    meanMin *= 0.9;
-    meanMax *= 1.1;
+  const priceVals = sorted.map((r) => priceValue(r, metric)).filter((v): v is number => v != null);
+  const hasPrice = priceVals.length > 0;
+  let priceMin = hasPrice ? Math.min(...priceVals) : 0;
+  let priceMax = hasPrice ? Math.max(...priceVals) : 1;
+  if (hasPrice && priceMin === priceMax) {
+    priceMin *= 0.9;
+    priceMax *= 1.1;
   }
-  const meanTick = hasMean ? niceStep(meanMax - meanMin || meanMax, 4) : 1;
-  const meanAxisMin = hasMean ? Math.floor(meanMin / meanTick) * meanTick : 0;
-  const meanAxisMax = hasMean ? Math.ceil(meanMax / meanTick) * meanTick : 1;
+  const priceTick = hasPrice ? niceStep(priceMax - priceMin || priceMax, 4) : 1;
+  const priceAxisMin = hasPrice ? Math.floor(priceMin / priceTick) * priceTick : 0;
+  const priceAxisMax = hasPrice ? Math.ceil(priceMax / priceTick) * priceTick : 1;
 
   const xAt = (i: number) => PAD_L + (n <= 1 ? innerW / 2 : (i / lastI) * innerW);
   const yCount = (c: number) => PAD_T + innerH - (c / countAxisMax) * innerH;
-  const yMean = (m: number) => PAD_T + innerH - ((m - meanAxisMin) / (meanAxisMax - meanAxisMin || 1)) * innerH;
+  const yPrice = (m: number) => PAD_T + innerH - ((m - priceAxisMin) / (priceAxisMax - priceAxisMin || 1)) * innerH;
 
   const countDashPoints = sorted.map((r, i) => `${xAt(i).toFixed(1)},${yCount(r.count).toFixed(1)}`).join(" ");
-  const meanLineRows = sorted.filter((r) => r.mean != null && Number.isFinite(r.mean));
-  const meanPoints = meanLineRows
+  const priceLineRows = sorted.filter((r) => priceValue(r, metric) != null);
+  const pricePoints = priceLineRows
     .map((r) => {
       const idx = sorted.indexOf(r);
-      return `${xAt(idx).toFixed(1)},${yMean(Number(r.mean)).toFixed(1)}`;
+      return `${xAt(idx).toFixed(1)},${yPrice(Number(priceValue(r, metric))).toFixed(1)}`;
     })
     .join(" ");
 
   return (
-    <div className="w-full" role="img" aria-label="연도별 평균 단가 및 거래 건수 추이">
+    <div className="w-full" role="img" aria-label={`연도별 ${priceLabel} 단가 및 거래 건수 추이`}>
       <p className="text-[10px] text-slate-500 mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
         <span className="inline-flex items-center gap-1 font-bold text-blue-600">
           <span className="inline-block w-3 h-0.5 bg-blue-600 rounded" aria-hidden />
-          평균(만원/㎡)
+          {priceLabel}(만원/㎡)
         </span>
         <span className="inline-flex items-center gap-1">
           <svg width={22} height={10} viewBox="0 0 22 10" className="shrink-0 text-slate-500" aria-hidden>
@@ -99,21 +112,22 @@ export default function YearlyTrendChart({ points }: { points: YearlyStatPoint[]
             {r.count.toLocaleString("ko-KR")}
           </text>
         ))}
-        {meanLineRows.length > 0 && (
+        {priceLineRows.length > 0 && (
           <>
-            <polyline fill="none" stroke="#2563eb" strokeWidth={2} strokeLinejoin="round" points={meanPoints} />
-            {meanLineRows.map((r) => {
+            <polyline fill="none" stroke="#2563eb" strokeWidth={2} strokeLinejoin="round" points={pricePoints} />
+            {priceLineRows.map((r) => {
               const idx = sorted.indexOf(r);
+              const pv = Number(priceValue(r, metric));
               return (
-                <circle key={`m-${r.year}`} cx={xAt(idx)} cy={yMean(Number(r.mean))} r={3.5} fill="#fff" stroke="#2563eb" strokeWidth={2} />
+                <circle key={`m-${r.year}`} cx={xAt(idx)} cy={yPrice(pv)} r={3.5} fill="#fff" stroke="#2563eb" strokeWidth={2} />
               );
             })}
-            {meanLineRows.map((r) => {
+            {priceLineRows.map((r) => {
               const idx = sorted.indexOf(r);
-              const cy = yMean(Number(r.mean));
+              const cy = yPrice(Number(priceValue(r, metric)));
               return (
-                <text key={`ml-${r.year}`} x={xAt(idx)} y={cy - LABEL_MEAN_ABOVE} textAnchor="middle" className="fill-slate-800 font-semibold" style={{ fontSize: "10px" }}>
-                  {formatMeanLabel(Number(r.mean))}
+                <text key={`ml-${r.year}`} x={xAt(idx)} y={cy - LABEL_PRICE_ABOVE} textAnchor="middle" className="fill-slate-800 font-semibold" style={{ fontSize: "10px" }}>
+                  {formatPriceLabel(Number(priceValue(r, metric)))}
                 </text>
               );
             })}
@@ -122,4 +136,8 @@ export default function YearlyTrendChart({ points }: { points: YearlyStatPoint[]
       </svg>
     </div>
   );
+}
+
+export function yearlyPointPrice(p: YearlyStatPoint, metric: LongTermPriceMetric): number | null {
+  return priceValue(p, metric);
 }

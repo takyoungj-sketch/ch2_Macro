@@ -217,7 +217,7 @@ def cluster_yearly_from_mart(
     rows = conn.execute(
         text(
             """
-            SELECT display_label, contract_year, count, mean
+            SELECT display_label, contract_year, count, mean, median
             FROM collective_commercial_cluster_annual_stats
             WHERE cluster_key = :ck
             ORDER BY contract_year
@@ -233,6 +233,7 @@ def cluster_yearly_from_mart(
             "year": int(r["contract_year"]),
             "count": int(r["count"] or 0),
             "mean": round(float(r["mean"]), 1) if r["mean"] is not None else None,
+            "median": round(float(r["median"]), 1) if r.get("median") is not None else None,
         }
         for r in rows
     ]
@@ -249,7 +250,8 @@ def cluster_yearly_live(
             SELECT MAX(c.display_label) AS display_label,
                    t.contract_year AS year,
                    COUNT(*)::int AS count,
-                   AVG(t.unit_price)::float AS mean
+                   AVG(t.unit_price)::float AS mean,
+                   PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY t.unit_price)::float AS median
             FROM collective_commercial_transactions t
             LEFT JOIN commercial_clusters c ON c.id = t.cluster_id
             WHERE t.cluster_key = :ck
@@ -271,6 +273,7 @@ def cluster_yearly_live(
             "year": int(r["year"]),
             "count": int(r["count"] or 0),
             "mean": round(float(r["mean"]), 1) if r["mean"] is not None else None,
+            "median": round(float(r["median"]), 1) if r.get("median") is not None else None,
         }
         for r in rows
     ]

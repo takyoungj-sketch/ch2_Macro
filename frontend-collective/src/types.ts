@@ -426,6 +426,7 @@ export interface YearlyStatPoint {
   year: number;
   count: number;
   mean?: number | null;
+  median?: number | null;
 }
 
 export interface YearlyStatsResponse {

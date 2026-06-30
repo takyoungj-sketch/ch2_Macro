@@ -69,6 +69,10 @@ table.data.commercial-clusters-table {
   min-width: 11.2cm;
 }
 
+table.data.commercial-clusters-table col.col-type {
+  width: 1.5cm;
+}
+
 table.data.commercial-clusters-table col.col-road {
   width: 4.5cm;
 }

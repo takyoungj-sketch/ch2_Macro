@@ -324,7 +324,7 @@ export default function CommercialRegressionPanel({
   const regM = useMutation({
     mutationFn: () =>
       useCohort
-        ? runCommercialCohortRegression({ cluster_keys: keys, asset_type: scope.assetType, ...regressionBody })
+        ? runCommercialCohortRegression({ cluster_keys: keys, asset_type: scope.assetType === "all" ? undefined : scope.assetType, ...regressionBody })
         : runCommercialRegression(clusterKey, regressionBody),
   });
 
@@ -332,7 +332,7 @@ export default function CommercialRegressionPanel({
     mutationFn: () => {
       const body = { ...regressionBody, inputs: predictInputs };
       return useCohort
-        ? predictCommercialCohortRegression({ cluster_keys: keys, asset_type: scope.assetType, ...body })
+        ? predictCommercialCohortRegression({ cluster_keys: keys, asset_type: scope.assetType === "all" ? undefined : scope.assetType, ...body })
         : predictCommercialRegression(clusterKey, body);
     },
   });

@@ -7,6 +7,7 @@ export type GenericTrendPoint = {
   xOrder: number;
   count: number;
   mean?: number | null;
+  median?: number | null;
 };
 
 export type TrendSeries = {
@@ -15,7 +16,7 @@ export type TrendSeries = {
   color?: string;
 };
 
-export type CohortTrendMetric = "mean" | "count";
+export type CohortTrendMetric = "mean" | "median" | "count";
 
 const W = 420;
 const H = 240;
@@ -48,6 +49,10 @@ function niceStep(max: number, targetTicks = 4): number {
 
 function metricValue(p: GenericTrendPoint, metric: CohortTrendMetric): number | null {
   if (metric === "count") return p.count;
+  if (metric === "median") {
+    if (p.median == null || !Number.isFinite(p.median)) return null;
+    return p.median;
+  }
   if (p.mean == null || !Number.isFinite(p.mean)) return null;
   return p.mean;
 }
@@ -95,7 +100,8 @@ export default function MultiBuildingTrendChart({
   const yVal = (v: number) => PAD_T + innerH - ((v - axisMin) / (axisMax - axisMin || 1)) * innerH;
 
   const formatLabel = metric === "count" ? formatCountLabel : formatMeanLabel;
-  const metricLabel = metric === "count" ? "거래 건수" : "평균(만원/㎡)";
+  const metricLabel =
+    metric === "count" ? "거래 건수" : metric === "median" ? "중앙값(만원/㎡)" : "평균(만원/㎡)";
 
   return (
     <div className="w-full" role="img" aria-label={`다중 단지 ${metricLabel} 추이`}>

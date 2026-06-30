@@ -100,7 +100,7 @@ export default function CommercialFloorIndexPanel({
       useCohort
         ? runCommercialCohortFloorIndex({
             cluster_keys: keys,
-            asset_type: scope.assetType,
+            asset_type: scope.assetType === "all" ? undefined : scope.assetType,
             ...analysisPeriod,
             contract_year_from: scope.yearFrom === "" ? undefined : scope.yearFrom,
             contract_year_to: scope.yearTo === "" ? undefined : scope.yearTo,

@@ -12,7 +12,8 @@ import {
   fetchCommercialYearlyStats,
 } from "../api/commercialClient";
 import {
-  COMMERCIAL_ASSET_LABELS,
+  commercialAssetTypeLabel,
+  type CommercialAssetSelectorType,
   type CommercialAssetType,
   type CommercialClusterRow,
 } from "../types";
@@ -28,7 +29,8 @@ import CommercialFloorIndexPanel from "./CommercialFloorIndexPanel";
 import CommercialRegressionPanel from "./CommercialRegressionPanel";
 import CommercialTransactionTable from "./CommercialTransactionTable";
 import RollingTrendChart from "./RollingTrendChart";
-import YearlyTrendChart from "./YearlyTrendChart";
+import YearlyTrendChart, { yearlyPointPrice } from "./YearlyTrendChart";
+import LongTermMetricToggle, { longTermPriceLabel, type LongTermPriceMetric } from "./LongTermMetricToggle";
 import type { StatsWindowYears } from "./StatsWindowToggle";
 
 const MAX_COHORT_CLUSTERS = 10;
@@ -46,7 +48,7 @@ function fmtCi(lo: number | null | undefined, hi: number | null | undefined) {
 }
 
 export type CommercialModalScope = {
-  assetType: CommercialAssetType;
+  assetType: CommercialAssetSelectorType;
   addr1: string;
   addr2: string;
   guList: string[];
@@ -108,6 +110,7 @@ export default function CommercialClusterDetailModal({
   const [cohortRunKeys, setCohortRunKeys] = useState<string[]>([]);
   const [cohortRunByPanel, setCohortRunByPanel] = useState<Partial<Record<PanelMode, number>>>({});
   const [cohortChartMetric, setCohortChartMetric] = useState<CohortTrendMetric>("mean");
+  const [longTermMetric, setLongTermMetric] = useState<LongTermPriceMetric>("median");
   const [histScope, setHistScope] = useState<"all" | "single">("all");
   const [histYear, setHistYear] = useState<number | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -116,7 +119,8 @@ export default function CommercialClusterDetailModal({
   const region = regionParams(scope);
   const scopeKey = { ...region, ...analysisPeriod };
 
-  const isShop = scope.assetType === "collective_shop";
+  const effectiveAssetType = (scope.assetType === "all" ? row.asset_type : scope.assetType) as CommercialAssetType;
+  const isShop = effectiveAssetType === "collective_shop";
 
   const cohortKeys = useMemo(
     () => [row.cluster_key, ...cohortExtra.filter((k) => k !== row.cluster_key)].slice(0, MAX_COHORT_CLUSTERS),
@@ -130,11 +134,11 @@ export default function CommercialClusterDetailModal({
   const cohortBody = useMemo(
     () => ({
       cluster_keys: cohortRunKeys,
-      asset_type: scope.assetType,
+      asset_type: scope.assetType === "all" ? undefined : effectiveAssetType,
       experiment,
       ...analysisPeriod,
     }),
-    [cohortRunKeys, scope.assetType, experiment, analysisPeriod],
+    [cohortRunKeys, scope.assetType, effectiveAssetType, experiment, analysisPeriod],
   );
   const peerOptions = useMemo(
     () => peerClusters.filter((c) => c.cluster_key !== row.cluster_key && !cohortExtra.includes(c.cluster_key)),
@@ -144,12 +148,12 @@ export default function CommercialClusterDetailModal({
   const tabs: { id: PanelMode; label: string; shopOnly?: boolean }[] = useMemo(
     () => [
       { id: "trend", label: "롤링 구간" },
-      { id: "long_term", label: "장기 추세" },
       { id: "histogram", label: "단가 분포" },
       { id: "transactions", label: "거래 목록" },
       ...(isShop ? [{ id: "addresses" as const, label: "번지별 요약", shopOnly: true }] : []),
       { id: "floor_index", label: "층·면적 효용지수" },
       { id: "regression", label: "회귀 분석" },
+      { id: "long_term", label: "장기 추세" },
     ],
     [isShop],
   );
@@ -321,7 +325,7 @@ export default function CommercialClusterDetailModal({
             <div className="min-w-0 flex-1">
               <h2 className="text-sm font-bold text-slate-800">{label}</h2>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                {COMMERCIAL_ASSET_LABELS[scope.assetType]} · n={row.count.toLocaleString("ko-KR")} · 평균{" "}
+                {commercialAssetTypeLabel(effectiveAssetType)} · n={row.count.toLocaleString("ko-KR")} · 평균{" "}
                 {fmtPrice(row.mean, 0)} 만원/㎡
                 {[row.addr3, row.addr4].filter(Boolean).length > 0 && (
                   <> · {[row.addr3, row.addr4].filter(Boolean).join(" ")}</>
@@ -521,6 +525,9 @@ export default function CommercialClusterDetailModal({
                   onMetricChange={setCohortChartMetric}
                   buildingCount={cohortRunKeys.length}
                   chartTitle="연도별 장기 추세"
+                  variant="longTerm"
+                  priceMetric={longTermMetric}
+                  onPriceMetricChange={setLongTermMetric}
                 />
               )}
               {!longTermCohortActive && longTermYearQ.isLoading && (
@@ -528,9 +535,21 @@ export default function CommercialClusterDetailModal({
               )}
               {!longTermCohortActive && longTermYearQ.data && longTermYearQ.data.points.length > 0 && (
                 <>
+                  {longTermYearQ.data.points.some((p) => p.year < 2021) && (
+                    <p className="text-[10px] text-indigo-600 mb-1">
+                      2010–2020 구간 포함 · {longTermYearQ.data.data_source === "mart" ? "annual mart" : "실시간 집계"}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <p className="text-[10px] text-slate-500">만년력 연도별 장기 추세</p>
+                    <LongTermMetricToggle metric={longTermMetric} onChange={setLongTermMetric} />
+                  </div>
                   <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3">
                     <p className="text-[10px] font-semibold text-slate-600 px-1 mb-2">연도별 장기 추세</p>
-                    <YearlyTrendChart points={[...longTermYearQ.data.points].sort((a, b) => a.year - b.year)} />
+                    <YearlyTrendChart
+                      points={[...longTermYearQ.data.points].sort((a, b) => a.year - b.year)}
+                      metric={longTermMetric}
+                    />
                   </div>
                   <div className="rounded-lg border border-slate-100 bg-white overflow-hidden">
                     <table className="w-full text-xs border-collapse">
@@ -539,7 +558,7 @@ export default function CommercialClusterDetailModal({
                           <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">연도</th>
                           <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">건수</th>
                           <th className="border border-slate-200 px-2 py-1.5 text-right font-bold text-blue-700">
-                            평균(만원/㎡)
+                            {longTermPriceLabel(longTermMetric)}(만원/㎡)
                           </th>
                         </tr>
                       </thead>
@@ -551,7 +570,7 @@ export default function CommercialClusterDetailModal({
                               {p.count.toLocaleString("ko-KR")}
                             </td>
                             <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-blue-600 font-bold">
-                              {p.mean != null ? fmtPrice(p.mean) : "—"}
+                              {yearlyPointPrice(p, longTermMetric) != null ? fmtPrice(yearlyPointPrice(p, longTermMetric)!) : "—"}
                             </td>
                           </tr>
                         ))}

@@ -105,6 +105,7 @@ class CommercialYearlyStatPoint(BaseModel):
     year: int
     count: int
     mean: Optional[float] = None
+    median: Optional[float] = None
 
 
 class CommercialYearlyStatsResponse(BaseModel):

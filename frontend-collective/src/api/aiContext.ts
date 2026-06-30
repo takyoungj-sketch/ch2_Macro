@@ -167,7 +167,7 @@ export function buildCollectiveYearlyTrendContext(
             year: p.year,
             count: p.count,
             mean: p.mean,
-            median: p.mean,
+            median: p.median ?? p.mean,
           })),
         },
       ],

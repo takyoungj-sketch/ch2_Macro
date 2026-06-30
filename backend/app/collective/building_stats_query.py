@@ -313,7 +313,7 @@ def building_yearly_from_mart(
     rows = conn.execute(
         text(
             """
-            SELECT display_name, contract_year, count, mean
+            SELECT display_name, contract_year, count, mean, median
             FROM collective_building_annual_stats
             WHERE building_key = :bk
             ORDER BY contract_year
@@ -329,6 +329,7 @@ def building_yearly_from_mart(
             "year": int(r["contract_year"]),
             "count": int(r["count"] or 0),
             "mean": round(float(r["mean"]), 1) if r["mean"] is not None else None,
+            "median": round(float(r["median"]), 1) if r.get("median") is not None else None,
         }
         for r in rows
     ]
@@ -345,7 +346,8 @@ def building_yearly_live(
             SELECT MAX(display_name) AS display_name,
                    contract_year AS year,
                    COUNT(*)::int AS count,
-                   AVG(unit_price)::float AS mean
+                   AVG(unit_price)::float AS mean,
+                   PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY unit_price)::float AS median
             FROM collective_transactions
             WHERE building_key = :bk
               AND is_valid = true
@@ -366,6 +368,7 @@ def building_yearly_live(
             "year": int(r["year"]),
             "count": int(r["count"] or 0),
             "mean": round(float(r["mean"]), 1) if r["mean"] is not None else None,
+            "median": round(float(r["median"]), 1) if r.get("median") is not None else None,
         }
         for r in rows
     ]
