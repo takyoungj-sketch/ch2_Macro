@@ -1,6 +1,6 @@
 # 다음 작업 메모
 
-마지막 정리일: 2026-05-17
+마지막 정리일: 2026-06-30
 
 > **큰 결정** 은 [`docs/DECISIONS.md`](docs/DECISIONS.md) 에, **운영 SOP** 는 [`docs/V2_OPERATOR_CHECKLIST.md`](docs/V2_OPERATOR_CHECKLIST.md) 에 둔다. 이 문서는 **지금 손대는 일 + 짧은 백로그** 만 유지한다.
 
@@ -21,10 +21,52 @@
 
 위 4개 끝나면 본 세션의 모든 코드 변경분이 사용자 화면까지 닿은 것.
 
+## 5. 토지 지목 7대분류 + 매트릭스 재구성 (202607)
+
+> **결정:** DECISIONS **D-026** · **설계 SSOT:** [`docs/LAND_JIMOK_GROUP_DESIGN.md`](docs/LAND_JIMOK_GROUP_DESIGN.md)  
+> **실행 시점:** **`cycle_id=202607`** (7월 초) 데이터 업데이트·사전통계 재구축과 **동시**. 원장 Master 재적재는 **불필요**.
+
+### 5.1 확정 분류 (요약)
+
+| # | 대분류 | 지목 |
+|---|--------|------|
+| ① | 농경지 | 전, 답, 과수원 |
+| ② | 산림지 | 임야 |
+| ③ | 개발지 | 대, 공장·학교·주차·주유·창고·양어장·잡종·목장용지 |
+| ④ | 기반시설 | 도로, 철도, 제방, 구거, 수도용지 |
+| ⑤ | 수면 | 하천, 유지 |
+| ⑥ | 특수용도 | 공원, 체육, 유원, 종교, 사적, 묘지, **광천지, 염전** |
+| ⑦ | 기타 | **미매핑·미분류** (광천지·염전은 ⑥으로 확정) |
+
+### 5.2 202607 전 — 코드·DDL (6월 말 ~ 7월 초)
+
+| # | 작업 | 산출 |
+|---|------|------|
+| J1 | `SELECT DISTINCT land_category_resolved` → map 시드 | `db/037_land_jimok_group_map.sql` |
+| J2 | resolved VIEW에 `jimok_group_*` | `db/038_…` |
+| J3 | `build_stats_v2` / `build_upper_stats_v2` (+ annual) group grain | pipeline |
+| J4 | `paid` / `free_v2` / `upper_stats` matrix API | backend |
+| J5 | `MatrixStatsTable` · `PaidMatrixYearlyModal` | frontend |
+| J6 | 로컬 `land_stats_next` 시험 빌드 + integrity 검증 | 로그 |
+
+### 5.3 202607 당일 — 운영
+
+| # | 작업 |
+|---|------|
+| J7 | `run_monthly_cycle.py --cycle-id 202607` (`as_of_month=2026-06-01`) |
+| J8 | `verify_monthly_integrity` · zone×group 표본 대조 |
+| J9 | Promote + `STATS_V2_DEFAULT_AS_OF_MONTH=2026-06-01` ([`LAND_LEDGER_REBUILD_PLAN.md`](docs/LAND_LEDGER_REBUILD_PLAN.md) §12) |
+| J10 | VPS 프론트 배포 (매트릭스 UI) |
+
+**체크리스트:** 설계 문서 §8 와 동일.
+
+---
+
 ## 1. 지금 진행 중
 
 | 우선 | 항목 | 메모 |
 |------|------|------|
+| P0-J | **지목 7대분류 (202607)** | §5 · D-026. **7월 cycle까지 구현 보류**, 설계만 확정. |
 | P0-M | **월간 갱신 재현 SOP** | [`docs/MONTHLY_UPDATE_SOP.md`](docs/MONTHLY_UPDATE_SOP.md), `scripts/monthly/run_monthly_cycle.py` — 반자동 월배치. |
 | P1 | **웹 배포 (프로덕션 / 준프로덕션)** | DECISIONS D-007 의 `API_TOKEN` 옵션을 활성한 채 배포. CORS·도메인·env 점검. |
 | P2 | **`population_jusosagae` 전국 시드** | 리허설이 잡아낸 미적재 1건. SOP §B7: `py -3.13 pipeline/seed_population_csv.py --file ../data/population/<최신_CSV>` (DECISIONS D-004, prefix 미지정 = 전국). |
@@ -52,6 +94,7 @@
 | 12 | backend | `region_codes` 활성/비활성(`is_active`) 갱신 절차 — 행정 개편 대응 | 신규 법정동 코드 자동 반영 |
 | 13 | data/ui | **장기 연도별 추세 (v1)** | [`docs/LONG_TERM_TREND_DESIGN.md`](docs/LONG_TERM_TREND_DESIGN.md) — D-013. P1~P2: `land_annual_stats` + 모달 다중 선. 2010~ backfill은 P3. |
 | 13a | data/pipeline/ui | **토지 원장·사전통계 전면 재구축 (2021~26 CSV)** | [`docs/LAND_LEDGER_REBUILD_PLAN.md`](docs/LAND_LEDGER_REBUILD_PLAN.md) — `land_stats_next` 병렬 DB, 모달 §4-2. **토지만**; 복합·집합 후속. |
+| 13b | data/ui | **토지 지목 7대분류·매트릭스 재구성** | D-026 · [`docs/LAND_JIMOK_GROUP_DESIGN.md`](docs/LAND_JIMOK_GROUP_DESIGN.md) — **202607** cycle에 mart·UI 반영. |
 | 14 | collective | ~~**아파트 재적재 (semantic hash → 원본 행 전량)**~~ ✅ **완료 (2026-06-04)** | 2,288,749건. [`docs/COLLECTIVE_HANDOFF.md`](docs/COLLECTIVE_HANDOFF.md) §적재 정책. |
 | 15 | collective | ~~**연립·다세대 데이터 적재**~~ ✅ **완료 (2026-06-05)** | 552,849건 · `land_area` 포함. [`docs/COLLECTIVE_HANDOFF.md`](docs/COLLECTIVE_HANDOFF.md) |
 | 16 | collective / profile | **Regional Profile · 집합 mart · cohort 회귀** | [`docs/REGIONAL_PROFILE_ARCHITECTURE.md`](docs/REGIONAL_PROFILE_ARCHITECTURE.md) — D-016. `feature/collective-work`: region 공통화 → `building_stats` → `market_stats` → Profile → built A/B. |
@@ -231,6 +274,7 @@ python rebuild_regional_profile_chungbuk.py
 - 결정 기록: [`docs/DECISIONS.md`](docs/DECISIONS.md)
 - 운영 SOP: [`docs/V2_OPERATOR_CHECKLIST.md`](docs/V2_OPERATOR_CHECKLIST.md)
 - **월간 로컬 재현 SOP**: [`docs/MONTHLY_UPDATE_SOP.md`](docs/MONTHLY_UPDATE_SOP.md)
+- **지목 7대분류 설계**: [`docs/LAND_JIMOK_GROUP_DESIGN.md`](docs/LAND_JIMOK_GROUP_DESIGN.md)
 - 갱신 흐름: [`docs/V2_STATS_PRODUCTION.md`](docs/V2_STATS_PRODUCTION.md)
 - 통계 설계: [`docs/V2_STATS_DESIGN.md`](docs/V2_STATS_DESIGN.md)
 - **Twin Region 유사도 엔진(설계안)**: [`docs/TWIN_REGION_SIMILARITY_ENGINE.md`](docs/TWIN_REGION_SIMILARITY_ENGINE.md)

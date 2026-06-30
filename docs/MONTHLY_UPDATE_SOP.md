@@ -15,7 +15,8 @@
 | **`as_of_month` (V2)** | `build_stats_v2.py --as-of YYYY-MM-01` — 해당 **달 말일까지**가 통계 기간 끝으로 해석된다 (`build_stats_v2` 주석·`V2_STATS_DESIGN` 참고). |
 | **기본 `--as-of` 매핑** | *수집 끝 연월이 `cycle`의 **직전 달**과 같다*고 가정할 때: `cycle_id=202605` → 마지막 월 `202604` → **`--as-of 2026-04-01`**. 자동화: `scripts/monthly/cycle_utils.stats_as_of_iso_from_cycle_id`. **실제 수집 끝 월이 다르면 `--v2-as-of`로 수동 지정.** |
 
-> **토지 원장 재구축 중 (2026-06):** `land_stats_next` 는 재구축 배치로 `as_of_month=2026-06-01` 이 올라가 있을 수 있다. 6월 중순 **운영 정상값은 `2026-05-01`** 이다. **Promote·as_of 정상화는 `cycle_id=202607`(7월 초)에 `run_monthly_cycle` 로 일괄 처리** — 상세 [`LAND_LEDGER_REBUILD_PLAN.md`](./LAND_LEDGER_REBUILD_PLAN.md) **§12**.
+> **토지 원장 재구축 중 (2026-06):** `land_stats_next` 는 재구축 배치로 `as_of_month=2026-06-01` 이 올라가 있을 수 있다. 6월 중순 **운영 정상값은 `2026-05-01`** 이다. **Promote·as_of 정상화는 `cycle_id=202607`(7월 초)에 `run_monthly_cycle` 로 일괄 처리** — 상세 [`LAND_LEDGER_REBUILD_PLAN.md`](./LAND_LEDGER_REBUILD_PLAN.md) **§12**.  
+> **202607 추가 작업 (D-026):** 지목 **7대분류** 매트릭스·mart — [`LAND_JIMOK_GROUP_DESIGN.md`](./LAND_JIMOK_GROUP_DESIGN.md) · [`NEXT_STEPS.md`](../NEXT_STEPS.md) §5. 원장 Master 재적재는 **불필요**; V2·상위·(필요 시) annual **재집계**는 cycle에 포함.
 
 ---
 
