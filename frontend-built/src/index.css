@@ -3,34 +3,35 @@
 @tailwind utilities;
 
 body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
-  background: #f1f5f9;
-  color: #0f172a;
-}
-
-.card {
-  @apply bg-white rounded-lg shadow-sm border border-slate-200 p-4;
-}
-
-.btn {
-  @apply px-3 py-1.5 rounded-md text-sm font-medium transition-colors;
-}
-
-.btn-primary {
-  @apply bg-slate-800 text-white hover:bg-slate-700;
-}
-
-.btn-ghost {
-  @apply bg-slate-100 text-slate-700 hover:bg-slate-200;
+  @apply bg-slate-100 text-slate-900 antialiased dark:bg-slate-900 dark:text-slate-100;
 }
 
 .input {
-  @apply border border-slate-300 rounded px-2 py-1 text-sm w-full;
+  @apply w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm
+    dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100;
+}
+
+.card {
+  @apply rounded-lg border border-slate-200 bg-white p-4 shadow-sm
+    dark:border-slate-700 dark:bg-slate-800;
+}
+
+.btn {
+  @apply rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+.btn-primary {
+  @apply bg-slate-800 text-white hover:bg-slate-700
+    dark:bg-slate-600 dark:hover:bg-slate-500;
+}
+
+.btn-ghost {
+  @apply bg-slate-100 text-slate-700 hover:bg-slate-200
+    dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600;
 }
 
 .table-wrap {
-  @apply overflow-auto border border-slate-200 rounded;
+  @apply overflow-auto rounded border border-slate-200 dark:border-slate-700;
 }
 
 .table-wrap-compact {
@@ -39,45 +40,160 @@ body {
 
 table.data th,
 table.data td {
-  @apply px-2 py-1 text-xs border-b border-slate-100 whitespace-nowrap;
+  @apply whitespace-nowrap border-b border-slate-100 px-2 py-1 text-xs
+    dark:border-slate-700;
 }
 
 table.data th {
-  @apply bg-slate-50 sticky top-0 font-semibold text-left;
+  @apply sticky top-0 bg-slate-50 text-left font-semibold
+    dark:bg-slate-800 dark:text-slate-300;
 }
 
 .badge-sig {
-  @apply text-emerald-700 font-medium;
+  @apply font-medium text-emerald-700 dark:text-emerald-400;
 }
 
 .badge-warn {
-  @apply text-amber-700;
+  @apply text-amber-700 dark:text-amber-400;
 }
 
 .layout-sidebar {
-  @apply w-72 xl:w-80 shrink-0 min-h-0 self-stretch bg-white border-r border-slate-200 overflow-y-auto;
+  @apply w-72 shrink-0 self-stretch overflow-y-auto border-r border-slate-200 bg-white
+    dark:border-slate-700 dark:bg-slate-800 xl:w-80;
 }
 
 .layout-main {
-  @apply flex-1 min-w-0 min-h-0 overflow-y-auto bg-slate-50;
+  @apply min-h-0 min-w-0 flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-900;
 }
 
 .modal-shell {
-  @apply bg-white border-slate-200 text-slate-900;
+  @apply border-slate-200 bg-white text-slate-900
+    dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100;
 }
 
 .modal-header {
-  @apply border-b border-slate-100;
+  @apply border-b border-slate-100 dark:border-slate-700;
 }
 
 .modal-table-wrap {
-  @apply rounded-lg border border-slate-100 bg-white overflow-hidden;
+  @apply overflow-hidden rounded-lg border border-slate-100 bg-white
+    dark:border-slate-700 dark:bg-slate-800;
 }
 
 .modal-inner-table th {
-  @apply bg-slate-50 text-slate-600 border-slate-200;
+  @apply border-slate-200 bg-slate-50 text-slate-600
+    dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-300;
 }
 
 .modal-inner-table td {
-  @apply text-slate-800 border-slate-200;
+  @apply border-slate-200 text-slate-800 dark:border-slate-600 dark:text-slate-200;
+}
+
+/* light 전용 Tailwind 유틸 — dark 모드에서 토지·집합과 동일 톤으로 보정 */
+@layer utilities {
+  html.dark .bg-white {
+    background-color: rgb(30 41 59);
+  }
+  html.dark .bg-slate-50 {
+    background-color: rgb(15 23 42);
+  }
+  html.dark .bg-slate-50\/90 {
+    background-color: rgb(15 23 42 / 0.9);
+  }
+  html.dark .bg-slate-50\/60 {
+    background-color: rgb(15 23 42 / 0.6);
+  }
+  html.dark .bg-slate-100 {
+    background-color: rgb(30 41 59);
+  }
+  html.dark .bg-indigo-50 {
+    background-color: rgb(30 27 75);
+  }
+  html.dark .bg-amber-50 {
+    background-color: rgb(69 26 3);
+  }
+  html.dark .bg-red-50 {
+    background-color: rgb(69 10 10);
+  }
+  html.dark .bg-emerald-50 {
+    background-color: rgb(6 78 59);
+  }
+  html.dark .bg-emerald-50\/40 {
+    background-color: rgb(6 78 59 / 0.4);
+  }
+
+  html.dark .text-slate-900 {
+    color: rgb(241 245 249);
+  }
+  html.dark .text-slate-800 {
+    color: rgb(226 232 240);
+  }
+  html.dark .text-slate-700 {
+    color: rgb(203 213 225);
+  }
+  html.dark .text-slate-600 {
+    color: rgb(148 163 184);
+  }
+  html.dark .text-slate-500 {
+    color: rgb(148 163 184);
+  }
+  html.dark .text-slate-400 {
+    color: rgb(100 116 139);
+  }
+  html.dark .text-red-500,
+  html.dark .text-red-600,
+  html.dark .text-red-800 {
+    color: rgb(252 165 165);
+  }
+  html.dark .text-amber-800,
+  html.dark .text-amber-900 {
+    color: rgb(253 230 138);
+  }
+  html.dark .text-emerald-900 {
+    color: rgb(167 243 208);
+  }
+
+  html.dark .border-slate-100 {
+    border-color: rgb(51 65 85);
+  }
+  html.dark .border-slate-200 {
+    border-color: rgb(51 65 85);
+  }
+  html.dark .border-slate-300 {
+    border-color: rgb(71 85 105);
+  }
+  html.dark .border-red-200 {
+    border-color: rgb(185 28 28);
+  }
+  html.dark .border-amber-200 {
+    border-color: rgb(180 83 9);
+  }
+  html.dark .border-emerald-200 {
+    border-color: rgb(6 95 70);
+  }
+
+  html.dark .hover\:bg-white:hover {
+    background-color: rgb(51 65 85);
+  }
+  html.dark .hover\:bg-slate-50:hover {
+    background-color: rgb(51 65 85);
+  }
+  html.dark .hover\:bg-slate-100:hover {
+    background-color: rgb(51 65 85);
+  }
+  html.dark .hover\:text-slate-700:hover {
+    color: rgb(226 232 240);
+  }
+
+  html.dark input,
+  html.dark select,
+  html.dark textarea {
+    background-color: rgb(30 41 59);
+    color: rgb(226 232 240);
+    border-color: rgb(71 85 105);
+  }
+
+  html.dark .shadow-sm {
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.35);
+  }
 }

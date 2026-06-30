@@ -139,13 +139,13 @@ export default function DraggableModalShell({
                 {title}
               </h2>
               {subtitle && (
-                <div className="text-[11px] text-slate-500 mt-0.5">{subtitle}</div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</div>
               )}
             </div>
             <button
               type="button"
               aria-label="닫기"
-              className="text-slate-400 hover:text-slate-700 text-xl leading-none px-1 shrink-0 cursor-pointer"
+              className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-xl leading-none px-1 shrink-0 cursor-pointer"
               onClick={onClose}
             >
               ×
