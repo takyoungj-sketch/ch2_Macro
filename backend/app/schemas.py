@@ -706,3 +706,5 @@ class LandRegressionResponse(BaseModel):
     coefficients: list[LandRegressionCoeff]
     reference_categories: dict[str, str] = {}
     warnings: list[str] = []
+    f_p_value: Optional[float] = None
+    significant_count: Optional[int] = None

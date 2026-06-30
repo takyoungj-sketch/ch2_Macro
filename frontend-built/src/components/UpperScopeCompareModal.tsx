@@ -4,11 +4,11 @@ import {
   ADMIN_LABELS,
   fmtDecimal,
   fmtNum,
-  formatCoefName,
   levelCardTitle,
 } from "../utils/regressionFormat";
 import DraggableModalShell from "./DraggableModalShell";
 import RegressionEquation from "./RegressionEquation";
+import RegressionEffectsTable from "./RegressionEffectsTable";
 
 type Props = {
   open: boolean;
@@ -76,28 +76,11 @@ function ComparisonLevelCard({
       {result.coefficients.length > 0 && (
         <details>
           <summary className="cursor-pointer text-slate-500">계수 상세</summary>
-          <div className="table-wrap max-h-36 mt-1">
-            <table className="data w-full">
-              <thead>
-                <tr>
-                  <th>변수</th>
-                  <th>계수</th>
-                  <th>p</th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.coefficients.map((c) => (
-                  <tr key={c.name}>
-                    <td>{formatCoefName(c.name, assetType)}</td>
-                    <td>{fmtNum(c.estimate, 0)}</td>
-                    <td className={clsx(c.p_value != null && c.p_value < 0.05 && "badge-sig")}>
-                      {fmtDecimal(c.p_value, 4)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <RegressionEffectsTable
+            coefficients={result.coefficients}
+            responseScale={responseScale}
+            assetType={assetType}
+          />
         </details>
       )}
     </div>

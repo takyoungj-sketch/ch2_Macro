@@ -19,6 +19,7 @@ from app.built.time_scope import resolve_latest_as_of
 from app.flat_sido_region import list_addr2_for_sido
 from app.built.region_structure import detect_region_structure
 from app.built.regression.engine import predict_regression, run_regression
+from app.built.regression.selection.service import compare_regression, suggest_regression
 from app.built.transaction_export import (
     MAX_BUILT_TX_EXPORT,
     built_csv_response,
@@ -36,8 +37,11 @@ from app.built.schemas import (
     RegionStructureResponse,
     RegressionPredictRequest,
     RegressionPredictResponse,
+    RegressionCompareResponse,
     RegressionRunRequest,
     RegressionRunResponse,
+    RegressionSelectionRequest,
+    RegressionSuggestResponse,
     ScopeSampleFilterResponse,
 )
 
@@ -650,6 +654,26 @@ def list_ri_regions(
 def regression_run(body: RegressionRunRequest, db: Session = Depends(get_built_db)):
     try:
         return run_regression(db.connection(), body)
+    except ImportError as e:
+        raise HTTPException(status_code=500, detail=f"statsmodels 필요: {e}") from e
+
+
+@router.post("/regression/suggest", response_model=RegressionSuggestResponse)
+def regression_suggest(body: RegressionSelectionRequest, db: Session = Depends(get_built_db)):
+    try:
+        return suggest_regression(db.connection(), body)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except ImportError as e:
+        raise HTTPException(status_code=500, detail=f"statsmodels 필요: {e}") from e
+
+
+@router.post("/regression/compare", response_model=RegressionCompareResponse)
+def regression_compare(body: RegressionSelectionRequest, db: Session = Depends(get_built_db)):
+    try:
+        return compare_regression(db.connection(), body)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except ImportError as e:
         raise HTTPException(status_code=500, detail=f"statsmodels 필요: {e}") from e
 

@@ -11,7 +11,6 @@ import { simpleTableHeadClass } from "../constants/displayUi";
 import type {
   LandRegressionVariables,
   LandRegressionResponse,
-  LandRegressionCoeff,
   LongTermTrendPoint,
   LongTermTrendResponse,
   LongTermTrendSeries,
@@ -34,6 +33,7 @@ import { useAppStore } from "../store";
 import MatrixCellHistogramChart from "./MatrixCellHistogramChart";
 import MatrixCellTransactionTable from "./MatrixCellTransactionTable";
 import MatrixYearlyTrendChart from "./MatrixYearlyTrendChart";
+import LandRegressionResults from "./LandRegressionResults";
 import MultiRegionTrendChart, { type TrendSeries } from "./MultiRegionTrendChart";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import { buildLongTermTrendExplain } from "../constants/longTermTrendExplain";
@@ -554,7 +554,7 @@ export default function PaidMatrixYearlyModal({
       }}
     >
       <div
-        className="fixed left-1/2 top-1/2 bg-white rounded-xl shadow-xl max-w-6xl w-[calc(100%-2rem)] max-h-[88vh] flex flex-col border border-slate-200"
+        className="fixed left-1/2 top-1/2 bg-white rounded-xl shadow-xl max-w-6xl w-[calc(100%-2rem)] min-h-[min(520px,88vh)] max-h-[88vh] flex flex-col border border-slate-200"
         style={{
           transform: `translate(calc(-50% + ${dragOffset.x}px), calc(-50% + ${dragOffset.y}px))`,
         }}
@@ -616,7 +616,7 @@ export default function PaidMatrixYearlyModal({
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto px-4 py-3 space-y-4">
+        <div className="flex-1 min-h-[360px] overflow-auto px-4 py-3 space-y-4 flex flex-col">
           {loading && (
             <p className="text-xs text-slate-400 text-center py-6">
               {isRolling ? "구간별 집계 중…" : "연도별 집계 중…"}
@@ -906,7 +906,7 @@ export default function PaidMatrixYearlyModal({
           )}
 
           {canDetail && panel === "transactions" && filterRequest && (
-            <div className="space-y-2">
+            <div className="space-y-2 flex flex-col flex-1 min-h-0">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0 flex-1 space-y-1">
                   {txLoading && (
@@ -950,10 +950,12 @@ export default function PaidMatrixYearlyModal({
                 <p className="text-xs text-slate-400 text-center py-4">목록 불러오는 중…</p>
               )}
               {!txLoading && !txError && txData && (
-                <MatrixCellTransactionTable
-                  items={txData.items}
-                  truncated={txData.total > txData.items.length}
-                />
+                <div className="flex-1 min-h-0 flex flex-col">
+                  <MatrixCellTransactionTable
+                    items={txData.items}
+                    truncated={txData.total > txData.items.length}
+                  />
+                </div>
               )}
             </div>
           )}
@@ -1062,89 +1064,7 @@ export default function PaidMatrixYearlyModal({
                 <p className="text-xs text-red-500 bg-red-50 rounded p-2">{regError}</p>
               )}
 
-              {regResult && (
-                <div className="space-y-3">
-                  {/* 요약 */}
-                  <div className="flex flex-wrap gap-4 text-xs text-slate-600 bg-white border border-slate-200 rounded-lg p-3">
-                    <span>
-                      <span className="font-medium">n</span> = {regResult.n.toLocaleString("ko-KR")}
-                    </span>
-                    <span>
-                      <span className="font-medium">모델</span> {regResult.model_type === "log" ? "log(단가)" : "선형"}
-                    </span>
-                    <span>
-                      <span className="font-medium">R²</span>{" "}
-                      {regResult.r_squared.toFixed(3)}
-                    </span>
-                    <span>
-                      <span className="font-medium">adj R²</span>{" "}
-                      {regResult.adj_r_squared.toFixed(3)}
-                    </span>
-                    {Object.entries(regResult.reference_categories).map(([k, v]) => (
-                      <span key={k} className="text-slate-400">
-                        기준[{k}]: {v}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* 경고 */}
-                  {regResult.warnings.length > 0 && (
-                    <ul className="text-xs text-amber-700 bg-amber-50 rounded p-2 space-y-0.5">
-                      {regResult.warnings.map((w, i) => (
-                        <li key={i}>⚠ {w}</li>
-                      ))}
-                    </ul>
-                  )}
-
-                  {/* 계수 테이블 */}
-                  <div className="overflow-x-auto rounded-lg border border-slate-100">
-                    <table className="w-full text-[11px] border-collapse min-w-[520px]">
-                      <thead>
-                        <tr className={simpleTableHeadClass("neutral")}>
-                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">변수</th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">계수</th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">SE</th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">t</th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">p-값</th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">유의</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-slate-800">
-                        {regResult.coefficients.map((c: LandRegressionCoeff) => {
-                          const sig =
-                            c.p < 0.001 ? "***" : c.p < 0.01 ? "**" : c.p < 0.05 ? "*" : c.p < 0.1 ? "." : "";
-                          const pRow =
-                            c.p < 0.05 ? "bg-blue-50" : "";
-                          return (
-                            <tr key={c.name} className={pRow}>
-                              <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">{c.label}</td>
-                              <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
-                                {c.coef.toFixed(4)}
-                              </td>
-                              <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-slate-500">
-                                {c.se.toFixed(4)}
-                              </td>
-                              <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-slate-500">
-                                {c.t.toFixed(2)}
-                              </td>
-                              <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
-                                {c.p < 0.0001 ? "<0.0001" : c.p.toFixed(4)}
-                              </td>
-                              <td className="border border-slate-200 px-2 py-1 font-semibold text-blue-700 text-center w-10">
-                                {sig}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  <p className="text-[10px] text-slate-400">
-                    유의수준: *** p&lt;0.001 &nbsp;** p&lt;0.01 &nbsp;* p&lt;0.05 &nbsp;. p&lt;0.1 &nbsp;· p≥0.1
-                    {regResult.model_type === "log" && " · log 모델: 계수는 단가 log 기준 (e^coef ≈ 배율)"}
-                  </p>
-                </div>
-              )}
+              {regResult && <LandRegressionResults data={regResult} />}
             </div>
           )}
         </div>

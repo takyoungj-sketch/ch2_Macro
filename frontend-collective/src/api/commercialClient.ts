@@ -150,6 +150,41 @@ export async function fetchCommercialTransactions(
   return data;
 }
 
+const COMMERCIAL_TX_FETCH_PAGE = 200;
+const COMMERCIAL_TX_LOAD_CAP = 5000;
+
+/** 거래목록 탭: 필터·정렬용 전체 로드 */
+export async function fetchAllCommercialTransactions(
+  clusterKey: string,
+  params?: Omit<Parameters<typeof fetchCommercialTransactions>[1], "page" | "page_size">,
+): Promise<CommercialTransactionListResponse & { truncated?: boolean }> {
+  const first = await fetchCommercialTransactions(clusterKey, {
+    ...params,
+    page: 1,
+    page_size: COMMERCIAL_TX_FETCH_PAGE,
+  });
+  if (first.total <= first.items.length || first.items.length >= COMMERCIAL_TX_LOAD_CAP) {
+    return { ...first, truncated: first.total > first.items.length };
+  }
+  const all = [...first.items];
+  let page = 2;
+  while (all.length < first.total && all.length < COMMERCIAL_TX_LOAD_CAP) {
+    const next = await fetchCommercialTransactions(clusterKey, {
+      ...params,
+      page,
+      page_size: COMMERCIAL_TX_FETCH_PAGE,
+    });
+    all.push(...next.items);
+    if (next.items.length === 0) break;
+    page += 1;
+  }
+  return {
+    ...first,
+    items: all,
+    truncated: all.length < first.total,
+  };
+}
+
 type ClusterScopeParams = {
   addr1?: string;
   addr2?: string;
@@ -349,6 +384,37 @@ export async function fetchCommercialCohortTransactions(
 ): Promise<CommercialCohortTransactionsResponse> {
   const { data } = await api.post<CommercialCohortTransactionsResponse>("/analysis/cohort/transactions", body);
   return data;
+}
+
+/** 코호트 거래목록 탭: 필터·정렬용 전체 로드 */
+export async function fetchAllCommercialCohortTransactions(
+  body: CommercialCohortBody & { contract_year?: number },
+): Promise<CommercialCohortTransactionsResponse & { truncated?: boolean }> {
+  const first = await fetchCommercialCohortTransactions({
+    ...body,
+    page: 1,
+    page_size: COMMERCIAL_TX_FETCH_PAGE,
+  });
+  if (first.total <= first.items.length || first.items.length >= COMMERCIAL_TX_LOAD_CAP) {
+    return { ...first, truncated: first.total > first.items.length };
+  }
+  const all = [...first.items];
+  let page = 2;
+  while (all.length < first.total && all.length < COMMERCIAL_TX_LOAD_CAP) {
+    const next = await fetchCommercialCohortTransactions({
+      ...body,
+      page,
+      page_size: COMMERCIAL_TX_FETCH_PAGE,
+    });
+    all.push(...next.items);
+    if (next.items.length === 0) break;
+    page += 1;
+  }
+  return {
+    ...first,
+    items: all,
+    truncated: all.length < first.total,
+  };
 }
 
 export async function runCommercialCohortRegression(

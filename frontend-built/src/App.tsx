@@ -48,6 +48,7 @@ import type {
 import { EMPTY_SAMPLE_FILTER } from "./types";
 import FocusRegressionCard from "./components/FocusRegressionCard";
 import ModelExploreModal from "./components/ModelExploreModal";
+import StatsWindowToggle, { normalizeStatsWindowYears } from "./components/StatsWindowToggle";
 import UpperScopeCompareModal from "./components/UpperScopeCompareModal";
 import {
   ADMIN_LABELS,
@@ -58,6 +59,10 @@ import {
 
 function riKey(p: RiPick) {
   return `${p.eup}|${p.ri}`;
+}
+
+function hasYearFilter(from: number | "", to: number | ""): boolean {
+  return from !== "" || to !== "";
 }
 
 function parseOptionalNum(s: string): number | undefined {
@@ -744,7 +749,6 @@ export default function App() {
   const [excludeOutliers, setExcludeOutliers] = useState(false);
   const [iqrMultiplier, setIqrMultiplier] = useState<IqrMultiplier>(3);
   const [sampleFilter, setSampleFilter] = useState<SampleFilterState>(EMPTY_SAMPLE_FILTER);
-  const [useRollingWindow, setUseRollingWindow] = useState(true);
   const [windowYears, setWindowYears] = useState<3 | 5>(5);
   const [responseScale, setResponseScale] = useState<ResponseScale>("linear");
 
@@ -758,6 +762,7 @@ export default function App() {
     staleTime: 60_000,
   });
   const asOfMonth = metaQ.data?.as_of_month ?? undefined;
+  const yearFilterActive = hasYearFilter(yearFrom, yearTo);
 
   useEffect(() => {
     setVars(DEFAULT_VARS_BY_TYPE[assetType]);
@@ -766,7 +771,7 @@ export default function App() {
 
   useEffect(() => {
     setSampleFilter(EMPTY_SAMPLE_FILTER);
-  }, [addr1, addr2, guList, leafList, riList, yearFrom, yearTo, useRollingWindow, windowYears]);
+  }, [addr1, addr2, guList, leafList, riList, yearFrom, yearTo, windowYears]);
 
   useEffect(() => {
     if (leafList.length < 2) {
@@ -776,10 +781,10 @@ export default function App() {
 
   const rollingParams = useMemo(
     () =>
-      useRollingWindow && asOfMonth
+      !yearFilterActive && asOfMonth
         ? { as_of_month: asOfMonth, window_years: windowYears }
         : {},
-    [useRollingWindow, asOfMonth, windowYears],
+    [yearFilterActive, asOfMonth, windowYears],
   );
   const sampleApiParams = useMemo(() => sampleFilterToApi(sampleFilter), [sampleFilter]);
   const regionChipScopeParams = useMemo(
@@ -1084,9 +1089,9 @@ export default function App() {
     const parts = [ASSET_LABELS[assetType]];
     if (addr1) parts.push(addr1);
     if (addr2) parts.push(formatScopeAddr2(addr2, addr1));
-    if (useRollingWindow && asOfMonth) parts.push(`롤링 ${windowYears}년 · ${asOfMonth}`);
+    if (!yearFilterActive && asOfMonth) parts.push(`롤링 ${windowYears}년 · ${asOfMonth}`);
     return parts.join(" · ");
-  }, [assetType, addr1, addr2, useRollingWindow, asOfMonth, windowYears]);
+  }, [assetType, addr1, addr2, yearFilterActive, asOfMonth, windowYears]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-slate-100 dark:bg-slate-900">
@@ -1155,47 +1160,6 @@ export default function App() {
                   ))}
                 </select>
               </label>
-              <div className="space-y-2 rounded border border-slate-200 p-2">
-                <label className="flex items-center gap-2 text-xs">
-                  <input
-                    type="checkbox"
-                    checked={useRollingWindow}
-                    onChange={(e) => {
-                      setUseRollingWindow(e.target.checked);
-                    }}
-                  />
-                  <span>롤링 창 (contract_date)</span>
-                </label>
-                {useRollingWindow && (
-                  <div className="flex gap-2 text-xs">
-                    <label className="flex items-center gap-1">
-                      <input
-                        type="radio"
-                        name="window-years"
-                        checked={windowYears === 3}
-                        onChange={() => {
-                          setWindowYears(3);
-                        }}
-                      />
-                      3년
-                    </label>
-                    <label className="flex items-center gap-1">
-                      <input
-                        type="radio"
-                        name="window-years"
-                        checked={windowYears === 5}
-                        onChange={() => {
-                          setWindowYears(5);
-                        }}
-                      />
-                      5년
-                    </label>
-                    {asOfMonth && (
-                      <span className="text-slate-500 ml-auto">기준 {asOfMonth}</span>
-                    )}
-                  </div>
-                )}
-              </div>
               <div className="grid grid-cols-2 gap-2">
                 <label className="text-xs space-y-1 block">
                   <span className="text-slate-500">연도(from)</span>
@@ -1228,6 +1192,9 @@ export default function App() {
                   </select>
                 </label>
               </div>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-snug">
+                연도 미선택: 직전 월말 기준 롤링 {windowYears}년 창. 연도 지정: 해당 연도 거래만 집계(실시간).
+              </p>
               <label className="text-xs space-y-1 block">
                 <span className="text-slate-500">시도</span>
                 <select
@@ -1420,6 +1387,31 @@ export default function App() {
               <p className="text-xs text-slate-400 mt-2">필터 옵션 불러오는 중…</p>
             )}
           </div>
+
+          <StatsWindowToggle
+            value={windowYears}
+            onChange={(y) => setWindowYears(normalizeStatsWindowYears(y))}
+            disabled={yearFilterActive}
+          />
+          {yearFilterActive && (
+            <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-snug">
+              연도가 선택되어 롤링 구간은 적용되지 않습니다.
+            </p>
+          )}
+
+          <button
+            type="button"
+            className="btn btn-primary w-full"
+            disabled={!addr2 || selectionDisabled}
+            title={
+              !!addr2 && leafList.length > 0 && !structureQ.isSuccess
+                ? "지역 구조 확인 중… 잠시 후 다시 시도하세요."
+                : undefined
+            }
+            onClick={() => regM.mutate(regBody)}
+          >
+            {regM.isPending ? "계산 중…" : "통계분석"}
+          </button>
         </aside>
 
         {/* 오른쪽: 회귀 분석 */}
@@ -1449,18 +1441,6 @@ export default function App() {
                         ({fmtNum(txCountQ.data.total)})
                       </span>
                     )}
-                  </button>
-                  <button
-                    className="btn btn-primary shrink-0"
-                    onClick={() => regM.mutate(regBody)}
-                    disabled={selectionDisabled}
-                    title={
-                      !!addr2 && leafList.length > 0 && !structureQ.isSuccess
-                        ? "지역 구조 확인 중… 잠시 후 다시 시도하세요."
-                        : undefined
-                    }
-                  >
-                    {regM.isPending ? "계산 중…" : "통계분석"}
                   </button>
                 </div>
               </div>

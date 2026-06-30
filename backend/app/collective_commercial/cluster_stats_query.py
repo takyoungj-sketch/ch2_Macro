@@ -54,10 +54,12 @@ def _mart_region_where(
 ) -> tuple[str, dict]:
     clauses = ["1=1"]
     params: dict[str, Any] = {}
+    # collective_commercial_cluster_stats 는 사전집계 마트 테이블이므로
+    # beopjungri_code 컬럼이 없다 → conn=None 으로 addr 텍스트 필터만 사용.
     apply_region_filters(
         clauses,
         params,
-        conn=conn,
+        conn=None,
         table="collective_commercial_cluster_stats",
         addr1=addr1,
         addr2=addr2,

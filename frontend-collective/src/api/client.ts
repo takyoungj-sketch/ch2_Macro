@@ -151,6 +151,41 @@ export async function fetchBuildingTransactions(
   return data;
 }
 
+const COLLECTIVE_TX_FETCH_PAGE = 200;
+const COLLECTIVE_TX_LOAD_CAP = 5000;
+
+/** 거래목록 탭: 필터·정렬용 전체 로드 (API page_size 상한 200). */
+export async function fetchAllBuildingTransactions(
+  buildingKey: string,
+  params?: Omit<Parameters<typeof fetchBuildingTransactions>[1], "page" | "page_size">,
+): Promise<{ total: number; items: CollectiveTransactionRow[]; truncated?: boolean }> {
+  const first = await fetchBuildingTransactions(buildingKey, {
+    ...params,
+    page: 1,
+    page_size: COLLECTIVE_TX_FETCH_PAGE,
+  });
+  if (first.total <= first.items.length || first.items.length >= COLLECTIVE_TX_LOAD_CAP) {
+    return { ...first, truncated: first.total > first.items.length };
+  }
+  const all = [...first.items];
+  let page = 2;
+  while (all.length < first.total && all.length < COLLECTIVE_TX_LOAD_CAP) {
+    const next = await fetchBuildingTransactions(buildingKey, {
+      ...params,
+      page,
+      page_size: COLLECTIVE_TX_FETCH_PAGE,
+    });
+    all.push(...next.items);
+    if (next.items.length === 0) break;
+    page += 1;
+  }
+  return {
+    total: first.total,
+    items: all,
+    truncated: all.length < first.total,
+  };
+}
+
 /** 거래목록 CSV(UTF-8 BOM) — 목록 API와 동일 필터·전체 건 */
 export async function downloadBuildingTransactionsCsv(
   buildingKey: string,
@@ -341,6 +376,37 @@ export async function fetchCohortTransactions(
 ): Promise<CohortTransactionsResponse> {
   const { data } = await api.post<CohortTransactionsResponse>("/analysis/cohort/transactions", body);
   return data;
+}
+
+/** 코호트 거래목록 탭: 필터·정렬용 전체 로드 */
+export async function fetchAllCohortTransactions(
+  body: CohortBody & { contract_year?: number },
+): Promise<CohortTransactionsResponse & { truncated?: boolean }> {
+  const first = await fetchCohortTransactions({
+    ...body,
+    page: 1,
+    page_size: COLLECTIVE_TX_FETCH_PAGE,
+  });
+  if (first.total <= first.items.length || first.items.length >= COLLECTIVE_TX_LOAD_CAP) {
+    return { ...first, truncated: first.total > first.items.length };
+  }
+  const all = [...first.items];
+  let page = 2;
+  while (all.length < first.total && all.length < COLLECTIVE_TX_LOAD_CAP) {
+    const next = await fetchCohortTransactions({
+      ...body,
+      page,
+      page_size: COLLECTIVE_TX_FETCH_PAGE,
+    });
+    all.push(...next.items);
+    if (next.items.length === 0) break;
+    page += 1;
+  }
+  return {
+    ...first,
+    items: all,
+    truncated: all.length < first.total,
+  };
 }
 
 /** 코호트 거래목록 CSV — 목록 API와 동일 필터·전체 건 */

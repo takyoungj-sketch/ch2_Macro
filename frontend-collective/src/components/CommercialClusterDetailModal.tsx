@@ -3,12 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { COLLECTIVE_EXPERIMENT_MODE } from "../api/client";
 import {
+  fetchAllCommercialCohortTransactions,
+  fetchAllCommercialTransactions,
   fetchCommercialAddresses,
   fetchCommercialCohortHistogram,
-  fetchCommercialCohortTransactions,
   fetchCommercialHistogram,
   fetchCommercialRollingStats,
-  fetchCommercialTransactions,
   fetchCommercialYearlyStats,
 } from "../api/commercialClient";
 import {
@@ -26,11 +26,11 @@ import type { CohortTrendMetric } from "./MultiBuildingTrendChart";
 import HistogramChart from "./HistogramChart";
 import CommercialFloorIndexPanel from "./CommercialFloorIndexPanel";
 import CommercialRegressionPanel from "./CommercialRegressionPanel";
+import CommercialTransactionTable from "./CommercialTransactionTable";
 import RollingTrendChart from "./RollingTrendChart";
 import YearlyTrendChart from "./YearlyTrendChart";
 import type { StatsWindowYears } from "./StatsWindowToggle";
 
-const TX_PAGE = 25;
 const MAX_COHORT_CLUSTERS = 10;
 
 type PanelMode = "trend" | "long_term" | "histogram" | "transactions" | "addresses" | "floor_index" | "regression";
@@ -43,25 +43,6 @@ function fmtPrice(v: number | null | undefined, digits = 1) {
 function fmtCi(lo: number | null | undefined, hi: number | null | undefined) {
   if (lo == null || hi == null) return "—";
   return `${fmtPrice(lo, 0)}~${fmtPrice(hi, 0)}`;
-}
-
-function fmtRoadWidth(t: { road_width_label?: string | null; road_code?: number | null }) {
-  if (t.road_width_label) return t.road_width_label;
-  if (t.road_code != null) return `${t.road_code}m`;
-  return "—";
-}
-
-function fmtCommercialContractDate(t: {
-  contract_date?: string | null;
-  contract_year?: number | null;
-  contract_month?: number | null;
-}) {
-  if (t.contract_date) return t.contract_date;
-  if (t.contract_year == null) return "—";
-  if (t.contract_month) {
-    return `${t.contract_year}-${String(t.contract_month).padStart(2, "0")}-01`;
-  }
-  return String(t.contract_year);
 }
 
 export type CommercialModalScope = {
@@ -129,7 +110,6 @@ export default function CommercialClusterDetailModal({
   const [cohortChartMetric, setCohortChartMetric] = useState<CohortTrendMetric>("mean");
   const [histScope, setHistScope] = useState<"all" | "single">("all");
   const [histYear, setHistYear] = useState<number | null>(null);
-  const [txPage, setTxPage] = useState(1);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const dragSession = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
 
@@ -240,27 +220,21 @@ export default function CommercialClusterDetailModal({
   });
 
   const txQ = useQuery({
-    queryKey: ["comm-tx-modal", row.cluster_key, scopeKey, txPage],
+    queryKey: ["comm-tx-all", row.cluster_key, scopeKey, analysisPeriod],
     queryFn: () =>
-      fetchCommercialTransactions(row.cluster_key, {
+      fetchAllCommercialTransactions(row.cluster_key, {
         ...region,
         ...analysisPeriod,
         window_years: analysisPeriod.contract_date_from ? undefined : windowYears,
-        page: txPage,
-        page_size: TX_PAGE,
       }),
     enabled: cohortRunForPanel("transactions") === 0 && panel === "transactions",
   });
 
   const cohortTxQ = useQuery({
-    queryKey: ["comm-cohort-tx", cohortRunKeys, cohortRunForPanel("transactions"), txPage, analysisPeriod],
-    queryFn: () =>
-      fetchCommercialCohortTransactions({
-        ...cohortBody,
-        page: txPage,
-        page_size: TX_PAGE,
-      }),
-    enabled: cohortRunForPanel("transactions") > 0 && cohortRunKeys.length > 1 && panel === "transactions",
+    queryKey: ["comm-cohort-tx-all", cohortRunKeys, cohortRunForPanel("transactions"), analysisPeriod],
+    queryFn: () => fetchAllCommercialCohortTransactions(cohortBody),
+    enabled:
+      cohortRunForPanel("transactions") > 0 && cohortRunKeys.length > 1 && panel === "transactions",
   });
 
   const addrQ = useQuery({
@@ -279,7 +253,6 @@ export default function CommercialClusterDetailModal({
     setDragOffset({ x: 0, y: 0 });
     dragSession.current = null;
     setPanel("trend");
-    setTxPage(1);
     setHistScope("all");
     setHistYear(null);
     setCohortExtra([]);
@@ -323,7 +296,6 @@ export default function CommercialClusterDetailModal({
     window.addEventListener("mouseup", onDragEnd);
   };
 
-  const txOffset = (txPage - 1) * TX_PAGE;
   const activeTxQ = txCohortActive ? cohortTxQ : txQ;
   const label = row.road_name || row.display_label;
 
@@ -655,12 +627,16 @@ export default function CommercialClusterDetailModal({
           )}
 
           {panel === "transactions" && (
-            <div className="space-y-2">
-              {activeTxQ.isLoading && <p className="text-xs text-slate-400 text-center py-4">목록 불러오는 중…</p>}
-              {activeTxQ.isError && <p className="text-xs text-red-500 text-center py-4">목록을 불러오지 못했습니다.</p>}
+            <div className="space-y-2 flex flex-col min-h-[360px]">
+              {activeTxQ.isLoading && (
+                <p className="text-xs text-slate-400 text-center py-4">목록 불러오는 중…</p>
+              )}
+              {activeTxQ.isError && (
+                <p className="text-xs text-red-500 text-center py-4">목록을 불러오지 못했습니다.</p>
+              )}
               {activeTxQ.data && (
                 <>
-                  <p className="text-[10px] text-slate-500">
+                  <p className="text-[10px] text-slate-500 shrink-0">
                     {txCohortActive && (
                       <span className="text-indigo-700 mr-1">{cohortRunKeys.length}개 cluster 통합 ·</span>
                     )}
@@ -672,95 +648,11 @@ export default function CommercialClusterDetailModal({
                       </>
                     )}
                   </p>
-                  <div className="overflow-x-auto rounded-lg border border-slate-100">
-                    <table className="w-full text-[11px] border-collapse min-w-[720px]">
-                      <thead>
-                        <tr className="bg-slate-50 text-slate-600">
-                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">계약일</th>
-                          {isShop && (
-                            <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">번지</th>
-                          )}
-                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">동</th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">용도지역</th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">건축물용도</th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">도로폭</th>
-                          {!isShop && (
-                            <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">면적구간</th>
-                          )}
-                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">연면적(㎡)</th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">층</th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">준공</th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">금액(만원)</th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-right font-bold text-blue-700">단가</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-slate-800">
-                        {activeTxQ.data.items.map((t) => (
-                          <tr key={t.id}>
-                            <td className="border border-slate-200 px-2 py-1 tabular-nums whitespace-nowrap">
-                              {fmtCommercialContractDate(t)}
-                            </td>
-                            {isShop && (
-                              <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">
-                                {t.lot_number ?? "—"}
-                              </td>
-                            )}
-                            <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">
-                              {[t.addr3, t.addr4].filter(Boolean).join(" · ") || "—"}
-                            </td>
-                            <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">{t.zone_type ?? "—"}</td>
-                            <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">{t.building_use ?? "—"}</td>
-                            <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">{fmtRoadWidth(t)}</td>
-                            {!isShop && (
-                              <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">
-                                {t.area_bucket_label ?? "—"}
-                              </td>
-                            )}
-                            <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
-                              {fmtPrice(t.gross_area)}
-                            </td>
-                            <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
-                              {t.floor != null ? (Number.isInteger(t.floor) ? t.floor : t.floor.toFixed(1)) : "—"}
-                            </td>
-                            <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
-                              {t.building_year ?? "—"}
-                            </td>
-                            <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
-                              {fmtPrice(t.price, 0)}
-                            </td>
-                            <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-blue-600 font-semibold">
-                              {fmtPrice(t.unit_price)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
-                    <span className="text-slate-400">
-                      {activeTxQ.data.total > 0
-                        ? `${(txOffset + 1).toLocaleString("ko-KR")}–${Math.min(txOffset + activeTxQ.data.items.length, activeTxQ.data.total).toLocaleString("ko-KR")} / ${activeTxQ.data.total.toLocaleString("ko-KR")}`
-                        : "0건"}
-                    </span>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        disabled={txPage <= 1}
-                        onClick={() => setTxPage((p) => Math.max(1, p - 1))}
-                        className="px-2 py-1 rounded border border-slate-200 text-slate-600 disabled:opacity-40 hover:bg-slate-50"
-                      >
-                        이전
-                      </button>
-                      <button
-                        type="button"
-                        disabled={txOffset + TX_PAGE >= activeTxQ.data.total}
-                        onClick={() => setTxPage((p) => p + 1)}
-                        className="px-2 py-1 rounded border border-slate-200 text-slate-600 disabled:opacity-40 hover:bg-slate-50"
-                      >
-                        다음
-                      </button>
-                    </div>
-                  </div>
+                  <CommercialTransactionTable
+                    items={activeTxQ.data.items}
+                    isShop={isShop}
+                    truncated={activeTxQ.data.truncated}
+                  />
                 </>
               )}
             </div>

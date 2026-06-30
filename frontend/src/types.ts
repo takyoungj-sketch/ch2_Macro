@@ -507,6 +507,8 @@ export interface LandRegressionResponse {
   coefficients: LandRegressionCoeff[];
   reference_categories: Record<string, string>;
   warnings: string[];
+  f_p_value?: number | null;
+  significant_count?: number | null;
 }
 
 /** UI: v8 조회 앵커 (충청권 sigungu/eup/beopjungri) */

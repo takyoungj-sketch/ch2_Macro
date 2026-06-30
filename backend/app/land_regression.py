@@ -196,6 +196,8 @@ def run_land_regression(
         coefficients=coefs,
         reference_categories=reference_categories,
         warnings=warnings,
+        f_p_value=float(model.f_pvalue),
+        significant_count=sum(1 for c in coefs if c.name != "const" and c.p < 0.1),
     )
 
 

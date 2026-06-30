@@ -3,12 +3,12 @@ import type { AssetType, RegressionLevelResult, ResponseScale } from "../types";
 import {
   ADMIN_LABELS,
   formatCoefName,
-  fmtCoefInt,
   fmtDecimal,
   fmtNum,
   levelCardTitle,
 } from "../utils/regressionFormat";
 import RegressionEquation from "./RegressionEquation";
+import RegressionEffectsTable from "./RegressionEffectsTable";
 
 type Props = {
   result: RegressionLevelResult;
@@ -57,33 +57,12 @@ export default function FocusRegressionCard({ result, assetType, responseScale }
 
       {result.coefficients.length > 0 && (
         <details className="text-xs">
-          <summary className="cursor-pointer text-slate-600 font-medium">계수 상세</summary>
-          <div className="table-wrap max-h-48 mt-2">
-            <table className="data w-full">
-              <thead>
-                <tr>
-                  <th>변수</th>
-                  <th>계수</th>
-                  <th>SE</th>
-                  <th>t</th>
-                  <th>p</th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.coefficients.map((c) => (
-                  <tr key={c.name}>
-                    <td>{formatCoefName(c.name, assetType)}</td>
-                    <td>{fmtCoefInt(c.estimate)}</td>
-                    <td>{fmtCoefInt(c.std_err)}</td>
-                    <td>{fmtDecimal(c.t_value, 2)}</td>
-                    <td className={clsx(c.p_value != null && c.p_value < 0.05 && "badge-sig")}>
-                      {fmtDecimal(c.p_value, 5)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <summary className="cursor-pointer text-slate-600 dark:text-slate-400 font-medium">계수 상세</summary>
+          <RegressionEffectsTable
+            coefficients={result.coefficients}
+            responseScale={responseScale}
+            assetType={assetType}
+          />
         </details>
       )}
 

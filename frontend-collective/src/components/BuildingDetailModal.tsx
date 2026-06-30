@@ -5,18 +5,19 @@ import {
   COLLECTIVE_EXPERIMENT_MODE,
   downloadBuildingTransactionsCsv,
   downloadCohortTransactionsCsv,
+  fetchAllBuildingTransactions,
+  fetchAllCohortTransactions,
   fetchBuildingHistogram,
   fetchBuildingRollingStats,
-  fetchBuildingTransactions,
   fetchBuildingYearlyStats,
   fetchCohortHistogram,
-  fetchCohortTransactions,
   type BuildingStatsRow,
 } from "../api/client";
-import type { AssetSelectorType, AssetType, CollectiveTransactionRow } from "../types";
+import type { AssetSelectorType, AssetType } from "../types";
 import { assetTypeLabel } from "../types";
 import BuildingRegressionPanel from "./BuildingRegressionPanel";
 import CohortTrendPanel from "./CohortTrendPanel";
+import CollectiveTransactionTable from "./CollectiveTransactionTable";
 import FloorIndexPanel from "./FloorIndexPanel";
 import HistogramChart from "./HistogramChart";
 import type { CohortTrendMetric } from "./MultiBuildingTrendChart";
@@ -25,8 +26,6 @@ import YearlyTrendChart from "./YearlyTrendChart";
 import type { StatsWindowYears } from "./StatsWindowToggle";
 import { buildAnalysisPeriodParams, formatPeriodLabel, type AnalysisPeriodParams } from "../utils/analysisPeriod";
 import { rollingToTrendSeries, yearlyResponseToTrendSeries } from "../utils/cohortTrendSeries";
-
-const TX_PAGE = 25;
 
 type PanelMode = "trend" | "long_term" | "histogram" | "transactions" | "floor_index" | "regression";
 
@@ -44,79 +43,6 @@ const TABS: { id: PanelMode; label: string | ((assetType: AssetType) => string) 
 function fmtPrice(v: number | null | undefined) {
   if (v == null) return "—";
   return v.toLocaleString(undefined, { maximumFractionDigits: 1 });
-}
-
-function fmtContractDate(t: CollectiveTransactionRow) {
-  if (t.contract_date) return t.contract_date;
-  if (t.contract_year == null) return "—";
-  if (t.contract_month) return `${t.contract_year}-${String(t.contract_month).padStart(2, "0")}-01`;
-  return String(t.contract_year);
-}
-
-function dongLabel(assetType: AssetType) {
-  return assetType === "presale" ? "권리" : "동";
-}
-
-function dongCell(t: CollectiveTransactionRow, assetType: AssetType) {
-  return assetType === "presale" ? (t.housing_subtype ?? "—") : (t.dong ?? "—");
-}
-
-function TransactionTable({
-  items,
-  assetType,
-  showBuilding = false,
-}: {
-  items: CollectiveTransactionRow[];
-  assetType: AssetType;
-  showBuilding?: boolean;
-}) {
-  const col = dongLabel(assetType);
-  return (
-    <div className="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-700">
-      <table className="w-full text-[11px] border-collapse min-w-[640px]">
-        <thead>
-          <tr className="bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-            {showBuilding && (
-              <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-left font-medium">단지</th>
-            )}
-            <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-left font-medium">계약일</th>
-            <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-left font-medium">{col}</th>
-            <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-right font-medium">층</th>
-            <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-right font-medium">면적(㎡)</th>
-            <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-right font-medium">금액(만원)</th>
-            <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-right font-bold text-blue-700 dark:text-blue-400">단가</th>
-            <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-left font-medium">매수</th>
-            <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-left font-medium">매도</th>
-            <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-left font-medium">거래유형</th>
-          </tr>
-        </thead>
-        <tbody className="text-slate-800 dark:text-slate-200">
-          {items.map((t) => (
-            <tr key={t.id}>
-              {showBuilding && (
-                <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 whitespace-nowrap">{t.display_name ?? "—"}</td>
-              )}
-              <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 tabular-nums whitespace-nowrap">
-                {fmtContractDate(t)}
-              </td>
-              <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 whitespace-nowrap">{dongCell(t, assetType)}</td>
-              <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 text-right tabular-nums">{t.floor ?? "—"}</td>
-              <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 text-right tabular-nums">
-                {fmtPrice(t.exclusive_area)}
-              </td>
-              <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 text-right tabular-nums">{fmtPrice(t.price)}</td>
-              <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 text-right tabular-nums text-blue-600 dark:text-blue-400 font-semibold">
-                {fmtPrice(t.unit_price)}
-              </td>
-              <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 whitespace-nowrap">{t.buyer_type ?? "—"}</td>
-              <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 whitespace-nowrap">{t.seller_type ?? "—"}</td>
-              <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 whitespace-nowrap">{t.deal_type ?? "—"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
 }
 
 async function txExportErrorMessage(err: unknown): Promise<string> {
@@ -171,7 +97,6 @@ export default function BuildingDetailModal({
   const [cohortRunByPanel, setCohortRunByPanel] = useState<Partial<Record<PanelMode, number>>>({});
   const [histScope, setHistScope] = useState<"all" | "single">("all");
   const [histYear, setHistYear] = useState<number | null>(null);
-  const [txPage, setTxPage] = useState(1);
   const [txExportLoading, setTxExportLoading] = useState(false);
   const [txExportError, setTxExportError] = useState<string | null>(null);
   const [cohortChartMetric, setCohortChartMetric] = useState<CohortTrendMetric>("mean");
@@ -252,14 +177,16 @@ export default function BuildingDetailModal({
   });
 
   const txQ = useQuery({
-    queryKey: ["b-tx", row.building_key, txPage, analysisPeriod],
-    queryFn: () =>
-      fetchBuildingTransactions(row.building_key, {
-        page: txPage,
-        page_size: TX_PAGE,
-        ...analysisPeriod,
-      }),
-    enabled: cohortRunForPanel("transactions") === 0,
+    queryKey: ["b-tx-all", row.building_key, analysisPeriod],
+    queryFn: () => fetchAllBuildingTransactions(row.building_key, analysisPeriod),
+    enabled: cohortRunForPanel("transactions") === 0 && panel === "transactions",
+  });
+
+  const cohortTxQ = useQuery({
+    queryKey: ["cohort-tx-all", cohortRunKeys, cohortRunForPanel("transactions"), analysisPeriod],
+    queryFn: () => fetchAllCohortTransactions(cohortBody),
+    enabled:
+      cohortRunForPanel("transactions") > 0 && cohortRunKeys.length > 1 && panel === "transactions",
   });
 
   const cohortRollingQ = useQuery({
@@ -290,22 +217,10 @@ export default function BuildingDetailModal({
     enabled: cohortRunForPanel("histogram") > 0 && cohortRunKeys.length > 1,
   });
 
-  const cohortTxQ = useQuery({
-    queryKey: ["cohort-tx", cohortRunKeys, cohortRunForPanel("transactions"), txPage, analysisPeriod],
-    queryFn: () =>
-      fetchCohortTransactions({
-        ...cohortBody,
-        page: txPage,
-        page_size: TX_PAGE,
-      }),
-    enabled: cohortRunForPanel("transactions") > 0 && cohortRunKeys.length > 1,
-  });
-
   useEffect(() => {
     setDragOffset({ x: 0, y: 0 });
     dragSession.current = null;
     setPanel("trend");
-    setTxPage(1);
     setTxExportError(null);
     setHistScope("all");
     setCohortExtra([]);
@@ -344,7 +259,6 @@ export default function BuildingDetailModal({
     window.addEventListener("mouseup", onDragEnd);
   };
 
-  const txOffset = (txPage - 1) * TX_PAGE;
 
   const analysis = row.analysis ?? {
     floor_index: row.count >= 50,
@@ -760,7 +674,7 @@ export default function BuildingDetailModal({
           )}
 
           {panel === "transactions" && (
-            <div className="space-y-2">
+            <div className="space-y-2 flex flex-col min-h-[360px]">
               {txCohortActive && cohortTxQ.isLoading && (
                 <p className="text-xs text-slate-400 text-center py-4">코호트 목록 불러오는 중…</p>
               )}
@@ -769,7 +683,7 @@ export default function BuildingDetailModal({
               )}
               {txCohortActive && cohortTxQ.data && (
                 <>
-                  <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="flex flex-wrap items-start justify-between gap-2 shrink-0">
                     <p className="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-2 py-1">
                       {cohortRunKeys.length}개 단지 통합 · 실시간 · 전체 {cohortTxQ.data.total.toLocaleString("ko-KR")}건
                       {yearFrom != null || yearTo != null ? (
@@ -784,39 +698,23 @@ export default function BuildingDetailModal({
                     {txExportButton}
                   </div>
                   {txExportError && <p className="text-[10px] text-red-500">{txExportError}</p>}
-                  <TransactionTable items={cohortTxQ.data.items} assetType={effectiveAssetType} showBuilding />
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
-                    <span className="text-slate-400">
-                      {cohortTxQ.data.total > 0
-                        ? `${(txOffset + 1).toLocaleString("ko-KR")}–${Math.min(txOffset + cohortTxQ.data.items.length, cohortTxQ.data.total).toLocaleString("ko-KR")} / ${cohortTxQ.data.total.toLocaleString("ko-KR")}`
-                        : "0건"}
-                    </span>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        disabled={txPage <= 1}
-                        onClick={() => setTxPage((p) => Math.max(1, p - 1))}
-                        className="px-2 py-1 rounded border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700"
-                      >
-                        이전
-                      </button>
-                      <button
-                        type="button"
-                        disabled={txOffset + TX_PAGE >= cohortTxQ.data.total}
-                        onClick={() => setTxPage((p) => p + 1)}
-                        className="px-2 py-1 rounded border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700"
-                      >
-                        다음
-                      </button>
-                    </div>
-                  </div>
+                  <CollectiveTransactionTable
+                    items={cohortTxQ.data.items}
+                    assetType={effectiveAssetType}
+                    showBuilding
+                    truncated={cohortTxQ.data.truncated}
+                  />
                 </>
               )}
-              {!txCohortActive && txQ.isLoading && <p className="text-xs text-slate-400 text-center py-4">목록 불러오는 중…</p>}
-              {!txCohortActive && txQ.isError && <p className="text-xs text-red-500 text-center py-4">목록을 불러오지 못했습니다.</p>}
+              {!txCohortActive && txQ.isLoading && (
+                <p className="text-xs text-slate-400 text-center py-4">목록 불러오는 중…</p>
+              )}
+              {!txCohortActive && txQ.isError && (
+                <p className="text-xs text-red-500 text-center py-4">목록을 불러오지 못했습니다.</p>
+              )}
               {!txCohortActive && txQ.data && (
                 <>
-                  <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="flex flex-wrap items-start justify-between gap-2 shrink-0">
                     <p className="text-[10px] text-slate-500 dark:text-slate-400">
                       전체 <strong className="text-slate-700 dark:text-slate-200">{txQ.data.total.toLocaleString("ko-KR")}</strong>건
                       {yearFrom != null || yearTo != null ? (
@@ -833,32 +731,11 @@ export default function BuildingDetailModal({
                     {txExportButton}
                   </div>
                   {txExportError && <p className="text-[10px] text-red-500">{txExportError}</p>}
-                  <TransactionTable items={txQ.data.items} assetType={effectiveAssetType} />
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
-                    <span className="text-slate-400">
-                      {txQ.data.total > 0
-                        ? `${(txOffset + 1).toLocaleString("ko-KR")}–${Math.min(txOffset + txQ.data.items.length, txQ.data.total).toLocaleString("ko-KR")} / ${txQ.data.total.toLocaleString("ko-KR")}`
-                        : "0건"}
-                    </span>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        disabled={txPage <= 1}
-                        onClick={() => setTxPage((p) => Math.max(1, p - 1))}
-                        className="px-2 py-1 rounded border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700"
-                      >
-                        이전
-                      </button>
-                      <button
-                        type="button"
-                        disabled={txOffset + TX_PAGE >= txQ.data.total}
-                        onClick={() => setTxPage((p) => p + 1)}
-                        className="px-2 py-1 rounded border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700"
-                      >
-                        다음
-                      </button>
-                    </div>
-                  </div>
+                  <CollectiveTransactionTable
+                    items={txQ.data.items}
+                    assetType={effectiveAssetType}
+                    truncated={txQ.data.truncated}
+                  />
                 </>
               )}
             </div>

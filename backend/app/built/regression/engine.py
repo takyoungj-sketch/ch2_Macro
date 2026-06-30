@@ -406,15 +406,15 @@ def _coef_display_name(name: str) -> str:
     if name in _CONT_LABELS:
         return _CONT_LABELS[name]
     if name.startswith("zone_"):
-        return f"용도지역·{name[5:]}"
+        return name[5:]
     if name.startswith("use_"):
-        return f"건축물용도·{name[4:]}"
+        return name[4:]
     if name.startswith("road_"):
-        return f"도로조건·{name[5:]}"
+        return name[5:]
     if name.startswith("atype_"):
-        return f"유형·{name[6:]}"
+        return name[6:]
     if name.startswith("loc_"):
-        return f"지역·{name[4:]}"
+        return name[4:]
     return name
 
 

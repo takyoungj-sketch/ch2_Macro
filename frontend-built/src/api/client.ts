@@ -10,6 +10,9 @@ import type {
   RegressionRunResponse,
   RegressionPredictRequest,
   RegressionPredictResponse,
+  RegressionSelectionRequest,
+  RegressionSuggestResponse,
+  RegressionCompareResponse,
   ScopeSampleFilterResponse,
 } from "../types";
 
@@ -175,6 +178,34 @@ export async function fetchTransactions(params: TransactionQueryParams) {
   return data;
 }
 
+const BUILT_TX_FETCH_PAGE = 500;
+const BUILT_TX_LOAD_CAP = 5000;
+
+/** 거래목록 모달: 필터·정렬용 전체 로드 (API page_size 상한 500). */
+export async function fetchAllBuiltTransactions(
+  params: Omit<TransactionQueryParams, "page" | "page_size">,
+): Promise<BuiltTransactionListResponse & { truncated?: boolean }> {
+  const first = await fetchTransactions({ ...params, page: 1, page_size: BUILT_TX_FETCH_PAGE });
+  if (first.total <= first.items.length || first.items.length >= BUILT_TX_LOAD_CAP) {
+    return { ...first, truncated: first.total > first.items.length };
+  }
+  const all = [...first.items];
+  let page = 2;
+  while (all.length < first.total && all.length < BUILT_TX_LOAD_CAP) {
+    const next = await fetchTransactions({ ...params, page, page_size: BUILT_TX_FETCH_PAGE });
+    all.push(...next.items);
+    if (next.items.length === 0) break;
+    page += 1;
+  }
+  return {
+    ...first,
+    items: all,
+    page: 1,
+    page_size: all.length,
+    truncated: all.length < first.total,
+  };
+}
+
 /** 거래목록 CSV(UTF-8 BOM) — 목록 API와 동일 필터·전체 건 */
 export async function downloadBuiltTransactionsCsv(
   params: Omit<TransactionQueryParams, "page" | "page_size">,
@@ -190,6 +221,16 @@ export async function downloadBuiltTransactionsCsv(
 
 export async function runRegression(body: RegressionRunRequest) {
   const { data } = await api.post<RegressionRunResponse>("/regression/run", body);
+  return data;
+}
+
+export async function suggestRegression(body: RegressionSelectionRequest) {
+  const { data } = await api.post<RegressionSuggestResponse>("/regression/suggest", body);
+  return data;
+}
+
+export async function compareRegression(body: RegressionSelectionRequest) {
+  const { data } = await api.post<RegressionCompareResponse>("/regression/compare", body);
   return data;
 }
 

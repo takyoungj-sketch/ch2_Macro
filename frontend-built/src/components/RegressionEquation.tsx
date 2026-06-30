@@ -3,9 +3,10 @@ import clsx from "clsx";
 import type { AssetType, RegressionCoeff, ResponseScale } from "../types";
 import {
   EQUATION_SIG_P,
-  formatCoefName,
   formatCoefValue,
   isEquationSignificant,
+  shortCoefName,
+  sortCoefficientsByVariableOrder,
 } from "../utils/regressionFormat";
 
 type Props = {
@@ -37,12 +38,12 @@ export default function RegressionEquation({
   }
 
   const others = coefficients.filter((c) => c.name !== "const");
-  const sig = others
-    .filter((c) => isEquationSignificant(c.p_value))
-    .sort((a, b) => (a.p_value ?? 1) - (b.p_value ?? 1));
-  const nonsig = others
-    .filter((c) => !isEquationSignificant(c.p_value))
-    .sort((a, b) => (a.p_value ?? 1) - (b.p_value ?? 1));
+  const sig = sortCoefficientsByVariableOrder(
+    others.filter((c) => isEquationSignificant(c.p_value)),
+  );
+  const nonsig = sortCoefficientsByVariableOrder(
+    others.filter((c) => !isEquationSignificant(c.p_value)),
+  );
 
   const visible = showAll ? [...sig, ...nonsig] : sig;
   const hiddenCount = nonsig.length;
@@ -56,10 +57,14 @@ export default function RegressionEquation({
         {visible.map((c) => {
           const sign = c.estimate >= 0 ? "+" : "−";
           const mag = formatCoefValue(Math.abs(c.estimate));
-          const label = formatCoefName(c.name, assetType);
+          const label = shortCoefName(c.name, assetType);
           const faded = showAll && !isEquationSignificant(c.p_value);
+          const significant = isEquationSignificant(c.p_value);
           return (
-            <span key={c.name} className={clsx(faded && "opacity-40")}>
+            <span
+              key={c.name}
+              className={clsx(faded && "opacity-40", significant && !faded && "font-semibold")}
+            >
               {" "}
               {sign} {mag}·{label}
             </span>
