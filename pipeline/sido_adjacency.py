@@ -18,7 +18,8 @@ _SIDO_ADJ: dict[str, frozenset[str]] = {
     "26": frozenset({"31", "48"}),  # 부산
     "27": frozenset({"47"}),  # 대구
     "28": frozenset({"41"}),  # 인천
-    "29": frozenset({"46"}),  # 광주
+    "12": frozenset({"44", "45", "48"}),  # 전남광주통합 (구 광주·전남)
+    "29": frozenset({"46"}),  # 광주 (레거시)
     "30": frozenset({"36", "43", "44"}),  # 대전
     "31": frozenset({"26", "47", "48"}),  # 울산
     "36": frozenset({"30", "43", "44"}),  # 세종

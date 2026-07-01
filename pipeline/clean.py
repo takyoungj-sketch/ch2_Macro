@@ -46,6 +46,16 @@ _RE_PAREN_ASCII = re.compile(r"\([^()]*\)")
 _SIDO_NAME_ALIASES: dict[str, str] = {
     "전북특별자치도": "전라북도",
     "강원특별자치도": "강원도",
+    # 2026-07 광주·전남 통합 — 레거시 시도명·구 CSV 호환
+    "광주광역시": "전남광주통합특별시",
+    "전라남도": "전남광주통합특별시",
+}
+
+# 인천 구·군 개편(2023~) — 구 시군구 표기 fallback (신규 MOLIT CSV는 신구명 직접 사용)
+_SIGUNGU_ALIASES: dict[tuple[str, str], list[str]] = {
+    ("인천광역시", "남구"): ["미추홀구"],
+    ("인천광역시", "동구"): ["미추홀구", "부평구", "계양구"],
+    ("인천광역시", "중구"): ["제물포구", "미추홀구"],
 }
 
 # Molit 토지 historical CSV: 시도 생략·구表기 구식 시·군명
@@ -324,6 +334,14 @@ def _register_eup_prefix(
         codes.append(code)
 
 
+def _sigungu_lookup_variants(sn: str, sg: str) -> list[str]:
+    out: list[str] = [sg]
+    for alt in _SIGUNGU_ALIASES.get((sn, sg), []):
+        if alt not in out:
+            out.append(alt)
+    return out
+
+
 def _lookup_by_sigungu_name(
     by_name: dict[tuple, str],
     by_eup_prefix: dict[tuple[str, str, str], list[str]],
@@ -333,14 +351,17 @@ def _lookup_by_sigungu_name(
     bp_k: str,
 ) -> tuple[str, str]:
     for s in _sido_lookup_variants(sn):
-        code = by_name.get((s, sg, eu_k, bp_k), "") or ""
-        if code:
-            return str(code).strip(), ""
-        pref = by_eup_prefix.get((s, sg, bp_k), [])
-        if len(pref) == 1:
-            return pref[0], "eup_prefix"
-        if len(pref) > 1:
-            return pref[0], "eup_prefix_ambiguous"
+        for sg_try in _sigungu_lookup_variants(s, sg):
+            code = by_name.get((s, sg_try, eu_k, bp_k), "") or ""
+            if code:
+                note = "sigungu_alias" if sg_try != sg else ""
+                return str(code).strip(), note
+            pref = by_eup_prefix.get((s, sg_try, bp_k), [])
+            if len(pref) == 1:
+                note = "eup_prefix" if sg_try == sg else "sigungu_alias"
+                return pref[0], note
+            if len(pref) > 1:
+                return pref[0], "eup_prefix_ambiguous"
     return "", ""
 
 
