@@ -32,10 +32,11 @@ log = logging.getLogger(__name__)
 # 시도 이름 → 2자리 코드 매핑 (법정동 코드 첫 2자리)
 SIDO_CODE_MAP = {
     "서울특별시": "11",
+    "전남광주통합특별시": "12",  # 2026-07-01 광주·전남 통합
     "부산광역시": "26",
     "대구광역시": "27",
     "인천광역시": "28",
-    "광주광역시": "29",
+    "광주광역시": "29",  # 통합 이후 레거시(폐지·비활성화 대상)
     "대전광역시": "30",
     "울산광역시": "31",
     "세종특별자치시": "36",
@@ -44,7 +45,7 @@ SIDO_CODE_MAP = {
     "충청북도": "43",
     "충청남도": "44",
     "전북특별자치도": "52",
-    "전라남도": "46",
+    "전라남도": "46",  # 통합 이후 레거시(폐지·비활성화 대상)
     "경상북도": "47",
     "경상남도": "48",
     "제주특별자치도": "50",
@@ -61,7 +62,7 @@ def _find_col(df: pd.DataFrame, candidates: list[str]) -> str | None:
 def _has_beopjungdong_columns(df: pd.DataFrame) -> bool:
     """법정동 마스터용 필수 컬럼이 구분자에 맞게 분리되어 있는지 확인한다."""
     code = _find_col(df, ["법정동코드", "법정동 코드", "code"])
-    name = _find_col(df, ["법정동명칭", "법정동 명칭", "name"])
+    name = _find_col(df, ["법정동명칭", "법정동명", "법정동 명칭", "name"])
     status = _find_col(df, ["폐지여부", "상태", "status"])
     return bool(code and name and status)
 
@@ -73,7 +74,7 @@ def load_beopjungdong_file(file_path: str) -> pd.DataFrame:
     인코딩: UTF-8 BOM / EUC-KR / UTF-8 순으로 시도한다.
     """
     path = Path(file_path)
-    encodings = ("utf-8-sig", "euc-kr", "utf-8")
+    encodings = ("utf-8-sig", "cp949", "euc-kr", "utf-8")
     # CSV(국토부 등)를 먼저 시도한 뒤 기존 탭 텍스트 호환
     separators = (",", "\t")
 
@@ -132,7 +133,7 @@ def parse_beopjungdong(df: pd.DataFrame, sido_filter: str | None) -> list[dict]:
           → 법정동(동) 단위 → beopjungri_code = 8자리 + "00"
     """
     col_code = _find_col(df, ["법정동코드", "법정동 코드", "code"])
-    col_name = _find_col(df, ["법정동명칭", "법정동 명칭", "name"])
+    col_name = _find_col(df, ["법정동명칭", "법정동명", "법정동 명칭", "name"])
     col_status = _find_col(df, ["폐지여부", "상태", "status"])
 
     if not all([col_code, col_name, col_status]):
@@ -242,6 +243,100 @@ def parse_beopjungdong(df: pd.DataFrame, sido_filter: str | None) -> list[dict]:
     return records
 
 
+def _leaf_beopjungri_codes_from_df(
+    df: pd.DataFrame,
+    *,
+    status: str,
+    sido_filter: str | None,
+) -> set[str]:
+    """법정동 마스터에서 리·동 leaf beopjungri_code 집합을 추출한다."""
+    col_code = _find_col(df, ["법정동코드", "법정동 코드", "code"])
+    col_status = _find_col(df, ["폐지여부", "상태", "status"])
+    if not col_code or not col_status:
+        raise RuntimeError("법정동코드·폐지여부 컬럼을 찾을 수 없습니다.")
+
+    work = df[[col_code, col_status]].copy()
+    work.columns = ["code", "status"]
+    work["code"] = work["code"].astype(str).str.strip().str.zfill(10)
+    work = work[work["status"].str.strip() == status].copy()
+
+    if sido_filter:
+        sido_code = SIDO_CODE_MAP.get(sido_filter)
+        if not sido_code:
+            raise ValueError(f"알 수 없는 시도 이름: {sido_filter}")
+        work = work[work["code"].str.startswith(sido_code)]
+
+    eupmyeondong_with_ri: set[str] = set()
+    for code in work["code"]:
+        if code[8:] != "00":
+            eupmyeondong_with_ri.add(code[:8] + "00")
+
+    out: set[str] = set()
+    for code in work["code"]:
+        if code[2:] == "00000000" or code[5:] == "00000":
+            continue
+        li_suffix = code[8:]
+        is_ri_level = li_suffix != "00"
+        is_dong_leaf = (
+            li_suffix == "00" and code[:8] + "00" not in eupmyeondong_with_ri
+        )
+        if is_ri_level or is_dong_leaf:
+            out.add(code)
+    return out
+
+
+def deactivate_beopjungri_codes(codes: set[str], dry_run: bool = False) -> int:
+    """지정 beopjungri_code 를 is_active=FALSE 로 갱신한다."""
+    if not codes:
+        return 0
+    if dry_run:
+        log.info("[DRY RUN] 비활성화 대상 %d건", len(codes))
+        return 0
+
+    engine = get_engine()
+    code_list = sorted(codes)
+    updated = 0
+    batch = 500
+    with engine.begin() as conn:
+        for i in range(0, len(code_list), batch):
+            chunk = code_list[i : i + batch]
+            res = conn.execute(
+                text("""
+                    UPDATE region_codes
+                    SET is_active = FALSE, updated_at = NOW()
+                    WHERE beopjungri_code = ANY(:codes)
+                """),
+                {"codes": chunk},
+            )
+            updated += res.rowcount or 0
+    log.info("region_codes 비활성화 완료: %d건", updated)
+    return updated
+
+
+def retire_sido_codes(sido_codes: list[str], dry_run: bool = False) -> int:
+    """시도 2자리 코드 전체를 is_active=FALSE 로 갱신한다 (통합·폐지 시도용)."""
+    codes = [c.strip().zfill(2)[-2:] for c in sido_codes if c.strip()]
+    if not codes:
+        return 0
+    if dry_run:
+        log.info("[DRY RUN] 시도 비활성화 대상: %s", ", ".join(codes))
+        return 0
+
+    engine = get_engine()
+    with engine.begin() as conn:
+        res = conn.execute(
+            text("""
+                UPDATE region_codes
+                SET is_active = FALSE, updated_at = NOW()
+                WHERE sido_code = ANY(:codes) AND COALESCE(is_active, TRUE)
+            """),
+            {"codes": codes},
+        )
+        n = res.rowcount or 0
+    log.info("시도 코드 비활성화 완료 (%s): %d건", ", ".join(codes), n)
+    return n
+
+
 def upsert_region_codes(records: list[dict], dry_run: bool = False) -> int:
     """region_codes 테이블에 UPSERT 방식으로 적재한다."""
     if dry_run:
@@ -303,16 +398,39 @@ def main() -> None:
         action="store_true",
         help="DB에 실제로 반영하지 않고 결과만 미리 확인",
     )
+    parser.add_argument(
+        "--mark-abolished-inactive",
+        action="store_true",
+        help="마스터 파일에서 폐지된 leaf 법정동코드를 region_codes.is_active=FALSE 로 갱신",
+    )
+    parser.add_argument(
+        "--retire-sido",
+        default="",
+        help="쉼표 구분 시도 2자리 코드(예: 29,46). 해당 시도 전체 비활성화",
+    )
     args = parser.parse_args()
 
     df = load_beopjungdong_file(args.file)
     records = parse_beopjungdong(df, sido_filter=args.sido)
 
-    if not records:
+    if not records and not args.mark_abolished_inactive and not args.retire_sido:
         log.warning("적재할 레코드가 없습니다.")
         return
 
-    upsert_region_codes(records, dry_run=args.dry_run)
+    if records:
+        upsert_region_codes(records, dry_run=args.dry_run)
+
+    if args.mark_abolished_inactive:
+        abolished = _leaf_beopjungri_codes_from_df(
+            df, status="폐지", sido_filter=args.sido
+        )
+        deactivate_beopjungri_codes(abolished, dry_run=args.dry_run)
+
+    if args.retire_sido.strip():
+        retire_sido_codes(
+            [c.strip() for c in args.retire_sido.split(",") if c.strip()],
+            dry_run=args.dry_run,
+        )
 
 
 if __name__ == "__main__":
