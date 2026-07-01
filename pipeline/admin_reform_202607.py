@@ -8,6 +8,7 @@
   4. purge    — 영향 시도 land_transactions(+연결 raw) 삭제
   5. ingest   — collect + clean
   6. stats    — build_stats_v2 · build_upper_stats_v2 (영향 시도만)
+  7. annual   — land_annual_stats · land_annual_upper_stats (영향 시도, 2010~)
 
 사용법:
   cd pipeline
@@ -259,11 +260,24 @@ def step_stats(dry_run: bool, as_of: str, windows: str) -> None:
         )
 
 
+def step_annual(dry_run: bool) -> None:
+    _run([PY, str(ROOT / "reform_annual_long_term.py")], dry_run=dry_run)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="2026-07 행정개편 토지 파이프라인")
     parser.add_argument(
         "--step",
-        choices=["compare", "seed", "sync-raw", "purge", "ingest", "stats", "all"],
+        choices=[
+            "compare",
+            "seed",
+            "sync-raw",
+            "purge",
+            "ingest",
+            "stats",
+            "annual",
+            "all",
+        ],
         default="all",
     )
     parser.add_argument("--dry-run", action="store_true")
@@ -277,7 +291,7 @@ def main() -> None:
     args = parser.parse_args()
 
     steps = (
-        ["compare", "seed", "sync-raw", "purge", "ingest", "stats"]
+        ["compare", "seed", "sync-raw", "purge", "ingest", "stats", "annual"]
         if args.step == "all"
         else [args.step]
     )
@@ -296,6 +310,8 @@ def main() -> None:
             step_ingest(args.dry_run)
         elif step == "stats":
             step_stats(args.dry_run, args.as_of, args.windows)
+        elif step == "annual":
+            step_annual(args.dry_run)
 
 
 if __name__ == "__main__":

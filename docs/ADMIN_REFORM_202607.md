@@ -53,6 +53,7 @@ py admin_reform_202607.py --step all --as-of 2025-12-01
 | `purge` | `land_transactions`·연결 `raw` (sido 12·28·29·46) |
 | `ingest` | `collect.py` + `clean.py` |
 | `stats` | `build_stats_v2` · `build_upper_stats_v2` (sido 12·28) |
+| `annual` | `land_annual_stats` · `land_annual_upper_stats` (sido 12·28, 2010~2026) |
 
 전국 `region_codes` 갱신이 필요하면:
 
@@ -77,6 +78,7 @@ py admin_reform_202607.py --step seed --national-seed
 ## 5. Promote 전 체크리스트
 
 - [ ] `verify_beopjungri_mapping.py` — 인천·전남광주 매칭률 ≥ 99.7%
+- [ ] `land_annual_stats` · `land_annual_upper_stats` — 12·28 연도별 spot check
 - [ ] `land_basic_stats_v2` · `land_upper_stats_v2` — 12·28 샘플 spot check
 - [ ] built/collective `region_codes` sync (land → 복제) — 별도 단계
 - [ ] VPS 배포는 사용자 요청 시 (`deploy-from-windows.ps1`)
@@ -86,5 +88,5 @@ py admin_reform_202607.py --step seed --national-seed
 ## 6. 비범위
 
 - `scripts/monthly/` 시도 목록 — 월간 운영 시 별도 갱신
-- `land_annual_stats` 장기 백필 — 원장 안정 후 Phase 2
+- 전국 `land_annual_stats` 일괄 재빌드 — 영향 시도(12·28)만 `reform_annual_long_term.py`
 - `pipeline/_land_annual.sql` — 커밋 금지 (대용량 덤프)
