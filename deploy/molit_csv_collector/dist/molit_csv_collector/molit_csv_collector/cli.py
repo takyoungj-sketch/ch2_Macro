@@ -33,7 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--regions",
         default="",
-        help="시도 쉼표 구분 (비우면 전국 17개)",
+        help="시도 쉼표 구분 (비우면 전국 16개)",
     )
     p.add_argument("--headless", action="store_true")
     return p
