@@ -9,7 +9,6 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, scrolledtext, ttk
 
 from .config import (
-    DEAL_TYPE_CHOICES,
     DEAL_TYPE_RENT,
     DEAL_TYPE_SALE,
     DEFAULT_MAX_NEW_DOWNLOADS,
@@ -24,12 +23,13 @@ class CollectorApp(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("국토부 실거래 CSV 수집기")
-        self.geometry("820x760")
-        self.minsize(720, 640)
+        self.geometry("820x820")
+        self.minsize(720, 700)
 
         self._worker: threading.Thread | None = None
         self._stop_flag = threading.Event()
         self._log_queue: queue.Queue[tuple[str, str] | None] = queue.Queue()
+        self._type_vars: dict[str, tk.BooleanVar] = {}
         self._region_vars: dict[str, tk.BooleanVar] = {}
 
         self._build_form()
@@ -41,23 +41,28 @@ class CollectorApp(tk.Tk):
         frm.pack(fill=tk.BOTH, expand=True)
 
         row = 0
-        ttk.Label(frm, text="부동산 유형").grid(row=row, column=0, sticky=tk.W, **pad)
-        self._type_labels = [label for _, label in PROPERTY_TYPE_CHOICES]
-        self._type_keys = [key for key, _ in PROPERTY_TYPE_CHOICES]
-        self.type_var = tk.StringVar(value=self._type_labels[0])
-        type_combo = ttk.Combobox(
-            frm,
-            textvariable=self.type_var,
-            values=self._type_labels,
-            state="readonly",
-            width=28,
+        type_hdr = ttk.Frame(frm)
+        type_hdr.grid(row=row, column=0, columnspan=3, sticky=tk.EW, **pad)
+        ttk.Label(type_hdr, text="부동산 유형 (복수 선택 가능)").pack(side=tk.LEFT)
+        ttk.Button(type_hdr, text="전체 선택", command=self._select_all_types).pack(
+            side=tk.LEFT, padx=6
         )
-        type_combo.grid(row=row, column=1, sticky=tk.W, **pad)
-        type_combo.bind("<<ComboboxSelected>>", self._on_type_change)
-        self.type_hint_var = tk.StringVar()
-        ttk.Label(frm, textvariable=self.type_hint_var, foreground="#555").grid(
-            row=row, column=2, sticky=tk.W, **pad
-        )
+        ttk.Button(type_hdr, text="전체 해제", command=self._clear_all_types).pack(side=tk.LEFT)
+
+        row += 1
+        type_box = ttk.Frame(frm)
+        type_box.grid(row=row, column=0, columnspan=3, sticky=tk.EW, **pad)
+        cols = 4
+        for i, (key, label) in enumerate(PROPERTY_TYPE_CHOICES):
+            var = tk.BooleanVar(value=(key == "apartment"))
+            self._type_vars[key] = var
+            ttk.Checkbutton(
+                type_box,
+                text=label,
+                variable=var,
+                command=self._on_type_selection_change,
+                width=12,
+            ).grid(row=i // cols, column=i % cols, sticky=tk.W, padx=2, pady=1)
 
         row += 1
         ttk.Label(frm, text="거래 구분").grid(row=row, column=0, sticky=tk.W, **pad)
@@ -69,7 +74,7 @@ class CollectorApp(tk.Tk):
             text=DEAL_TYPE_SALE,
             variable=self.deal_var,
             value="sale",
-            command=self._on_type_change,
+            command=self._on_type_selection_change,
         )
         self._deal_sale.pack(side=tk.LEFT, padx=(0, 12))
         self._deal_rent = ttk.Radiobutton(
@@ -77,12 +82,18 @@ class CollectorApp(tk.Tk):
             text=DEAL_TYPE_RENT,
             variable=self.deal_var,
             value="rent",
-            command=self._on_type_change,
+            command=self._on_type_selection_change,
         )
         self._deal_rent.pack(side=tk.LEFT)
         self.deal_hint_var = tk.StringVar()
         ttk.Label(deal_frm, textvariable=self.deal_hint_var, foreground="#555").pack(
             side=tk.LEFT, padx=12
+        )
+
+        row += 1
+        self.type_hint_var = tk.StringVar()
+        ttk.Label(frm, textvariable=self.type_hint_var, foreground="#555").grid(
+            row=row, column=0, columnspan=3, sticky=tk.W, **pad
         )
 
         row += 1
@@ -179,37 +190,47 @@ class CollectorApp(tk.Tk):
 
         row += 1
         ttk.Label(frm, text="로그").grid(row=row, column=0, sticky=tk.NW, **pad)
-        self.log_box = scrolledtext.ScrolledText(frm, height=16, wrap=tk.WORD)
+        self.log_box = scrolledtext.ScrolledText(frm, height=14, wrap=tk.WORD)
         self.log_box.grid(row=row, column=1, columnspan=2, sticky=tk.NSEW, **pad)
         self.log_box.tag_configure("fail", foreground="#c0392b")
         self.log_box.tag_configure("info", foreground="#222222")
         frm.rowconfigure(row, weight=1)
         frm.columnconfigure(2, weight=1)
 
-        self._on_type_change()
+        self._on_type_selection_change()
 
-    def _selected_type_key(self) -> str:
-        label = self.type_var.get()
-        try:
-            idx = self._type_labels.index(label)
-        except ValueError:
-            idx = 0
-        return self._type_keys[idx]
+    def _selected_type_keys(self) -> list[str]:
+        return [key for key, var in self._type_vars.items() if var.get()]
 
-    def _selected_property_type(self):
-        return get_property_type(self._selected_type_key(), deal_type=self.deal_var.get())
-
-    def _on_type_change(self, *_args) -> None:
-        pt = get_property_type(self._selected_type_key())
-        if pt.supports_rent:
+    def _on_type_selection_change(self, *_args) -> None:
+        selected = self._selected_type_keys()
+        any_rent = any(get_property_type(k).supports_rent for k in selected)
+        if any_rent:
             self._deal_rent.config(state=tk.NORMAL)
             self.deal_hint_var.set("")
         else:
-            self.deal_var.set("sale")
+            if self.deal_var.get() == "rent":
+                self.deal_var.set("sale")
             self._deal_rent.config(state=tk.DISABLED)
-            self.deal_hint_var.set("(이 유형은 매매만 지원)")
-        pt = self._selected_property_type()
-        self.type_hint_var.set(f"{{시도}}_{pt.label_ko}_{pt.deal_type}_{{기간}}.csv")
+            self.deal_hint_var.set("(선택 유형은 매매만 지원)")
+
+        if not selected:
+            self.type_hint_var.set("유형을 1개 이상 선택하세요.")
+            return
+        labels = [get_property_type(k).label_ko for k in selected]
+        self.type_hint_var.set(
+            f"선택 {len(selected)}유형 · 유형별 순차 수집: {', '.join(labels)}"
+        )
+
+    def _select_all_types(self) -> None:
+        for var in self._type_vars.values():
+            var.set(True)
+        self._on_type_selection_change()
+
+    def _clear_all_types(self) -> None:
+        for var in self._type_vars.values():
+            var.set(False)
+        self._on_type_selection_change()
 
     def _select_all_regions(self) -> None:
         for var in self._region_vars.values():
@@ -245,15 +266,24 @@ class CollectorApp(tk.Tk):
             self._append_log(level, message)
         self.after(200, self._poll_log)
 
-    def _resolve_output_dir(self) -> Path:
-        base = Path(self.output_var.get().strip()).expanduser()
-        pt = self._selected_property_type()
-        return base / pt.output_subdir(
-            int(self.start_year_var.get()),
-            int(self.start_month_var.get()),
-            int(self.end_year_var.get()),
-            int(self.end_month_var.get()),
-        )
+    def _resolve_output_dir(
+        self,
+        base: Path,
+        property_type,
+        *,
+        start_y: int,
+        start_m: int,
+        end_y: int,
+        end_m: int,
+    ) -> Path:
+        return base / property_type.output_subdir(start_y, start_m, end_y, end_m)
+
+    def _property_type_for_key(self, type_key: str):
+        deal = self.deal_var.get()
+        base_pt = get_property_type(type_key)
+        if deal == "rent" and not base_pt.supports_rent:
+            return get_property_type(type_key, deal_type="sale"), True
+        return get_property_type(type_key, deal_type=deal), False
 
     def _start(self) -> None:
         if self._worker and self._worker.is_alive():
@@ -270,6 +300,11 @@ class CollectorApp(tk.Tk):
             messagebox.showerror("입력 오류", "월은 1~12 사이여야 합니다.")
             return
 
+        type_keys = self._selected_type_keys()
+        if not type_keys:
+            messagebox.showerror("입력 오류", "최소 1개 유형을 선택하세요.")
+            return
+
         regions = self._selected_regions()
         if not regions:
             messagebox.showerror("입력 오류", "최소 1개 시도를 선택하세요.")
@@ -280,39 +315,72 @@ class CollectorApp(tk.Tk):
             messagebox.showerror("입력 오류", "신규 다운로드 상한은 1~100 입니다.")
             return
 
-        try:
-            pt = self._selected_property_type()
-        except ValueError as exc:
-            messagebox.showerror("입력 오류", str(exc))
-            return
-
-        output_dir = self._resolve_output_dir()
-        job = DownloadJob(
-            property_type=pt,
-            start_year=start_y,
-            start_month=start_m,
-            end_year=end_y,
-            end_month=end_m,
-            output_dir=output_dir,
-            regions=regions,
-            max_new_downloads=max_new,
-            headless=bool(self.headless_var.get()),
-        )
-
+        base_output = Path(self.output_var.get().strip()).expanduser()
         self._stop_flag.clear()
         self.start_btn.config(state=tk.DISABLED)
         self.stop_btn.config(state=tk.NORMAL)
         self._append_log("info", "=" * 40)
-        self._append_log("info", f"작업 시작 → {output_dir}")
-        self._append_log("info", f"시도 {len(regions)}개: {', '.join(regions)}")
+        self._append_log(
+            "info",
+            f"작업 시작 — 유형 {len(type_keys)}개 순차 수집 · 시도 {len(regions)}개",
+        )
 
         def worker() -> None:
+            remaining = max_new
             try:
-                run_download(
-                    job,
-                    log_level=lambda lvl, msg: self._log_queue.put((lvl, msg)),
-                    should_stop=self._stop_flag.is_set,
-                )
+                for idx, type_key in enumerate(type_keys, start=1):
+                    if self._stop_flag.is_set():
+                        self._log_queue.put(("info", "중지 요청 — 남은 유형 건너뜀"))
+                        break
+                    if remaining <= 0:
+                        self._log_queue.put(
+                            ("info", f"신규 다운로드 상한({max_new}) 도달 — 남은 유형 건너뜀")
+                        )
+                        break
+
+                    try:
+                        pt, forced_sale = self._property_type_for_key(type_key)
+                    except ValueError as exc:
+                        self._log_queue.put(("fail", f"{type_key}: {exc}"))
+                        continue
+
+                    output_dir = self._resolve_output_dir(
+                        base_output,
+                        pt,
+                        start_y=start_y,
+                        start_m=start_m,
+                        end_y=end_y,
+                        end_m=end_m,
+                    )
+                    self._log_queue.put(("info", ""))
+                    self._log_queue.put(
+                        ("info", f"[유형 {idx}/{len(type_keys)}] {pt.label_ko} {pt.deal_type}"),
+                    )
+                    if forced_sale:
+                        self._log_queue.put(
+                            ("info", f"  → {pt.label_ko}은(는) 매매만 지원 (전월세 무시)"),
+                        )
+                    self._log_queue.put(("info", f"  저장 → {output_dir}"))
+
+                    job = DownloadJob(
+                        property_type=pt,
+                        start_year=start_y,
+                        start_month=start_m,
+                        end_year=end_y,
+                        end_month=end_m,
+                        output_dir=output_dir,
+                        regions=regions,
+                        max_new_downloads=remaining,
+                        headless=bool(self.headless_var.get()),
+                    )
+                    result = run_download(
+                        job,
+                        log_level=lambda lvl, msg: self._log_queue.put((lvl, msg)),
+                        should_stop=self._stop_flag.is_set,
+                    )
+                    remaining = max(0, remaining - result.done)
+                    if result.stopped_reason:
+                        break
             except Exception as exc:
                 self._log_queue.put(("fail", f"치명적 오류: {exc}"))
             finally:
@@ -323,7 +391,7 @@ class CollectorApp(tk.Tk):
 
     def _stop(self) -> None:
         self._stop_flag.set()
-        self._append_log("info", "중지 요청 — 현재 파일 처리 후 종료합니다.")
+        self._append_log("info", "중지 요청 — 현재 유형 처리 후 종료합니다.")
 
     def _on_worker_done(self) -> None:
         self.start_btn.config(state=tk.NORMAL)

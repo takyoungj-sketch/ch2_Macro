@@ -92,6 +92,18 @@ def period_file_key(from_date: str, to_date: str) -> str:
     return f"{from_date.replace('-', '')}_{to_date.replace('-', '')}"
 
 
+def _is_multi_year_full_calendar_range(
+    start_year: int,
+    start_month: int,
+    end_year: int,
+    end_month: int,
+) -> bool:
+    """1/1~12/31 달력 연도만 이어지는 장기 구간 — 연도별 파일 유지."""
+    if start_month != 1 or end_month != 12:
+        return False
+    return end_year > start_year
+
+
 def iter_download_periods(
     start_year: int,
     start_month: int,
@@ -103,15 +115,19 @@ def iter_download_periods(
     if not (1 <= start_month <= 12 and 1 <= end_month <= 12):
         raise ValueError("월은 1~12 사이여야 합니다.")
 
+    from_d = date(start_year, start_month, 1)
+    to_d = date(end_year, end_month, monthrange(end_year, end_month)[1])
+    from_s = from_d.isoformat()
+    to_s = to_d.isoformat()
+
+    if not _is_multi_year_full_calendar_range(start_year, start_month, end_year, end_month):
+        return [DownloadPeriod(period_file_key(from_s, to_s), from_s, to_s)]
+
     periods: list[DownloadPeriod] = []
     for year in range(start_year, end_year + 1):
-        m_start = start_month if year == start_year else 1
-        m_end = end_month if year == end_year else 12
-        from_d = date(year, m_start, 1)
-        to_d = date(year, m_end, monthrange(year, m_end)[1])
-        from_s = from_d.isoformat()
-        to_s = to_d.isoformat()
-        periods.append(DownloadPeriod(period_file_key(from_s, to_s), from_s, to_s))
+        y_from = date(year, 1, 1).isoformat()
+        y_to = date(year, 12, 31).isoformat()
+        periods.append(DownloadPeriod(period_file_key(y_from, y_to), y_from, y_to))
     return periods
 
 
