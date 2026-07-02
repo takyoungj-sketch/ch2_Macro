@@ -52,3 +52,21 @@ def stats_as_of_iso_from_cycle_id(cycle_id: str) -> str:
     """`--as-of` CLI 용 YYYY-MM-DD."""
     d = stats_as_of_date_from_cycle_id(cycle_id)
     return d.isoformat()
+
+
+def collection_yyyymm_range_from_cycle_id(cycle_id: str) -> tuple[str, str]:
+    """직전 12개월 수집 가정. 반환 (from_yyyymm, to_yyyymm)."""
+    _validate_cycle_id(cycle_id)
+    to_yyyymm = last_data_yyyymm_from_cycle_id(cycle_id)
+    ty, tm = int(to_yyyymm[:4]), int(to_yyyymm[4:6])
+    months: list[tuple[int, int]] = []
+    y, m = ty, tm
+    for _ in range(12):
+        months.append((y, m))
+        if m == 1:
+            y, m = y - 1, 12
+        else:
+            m -= 1
+    months.reverse()
+    fy, fm = months[0]
+    return f"{fy:04d}{fm:02d}", to_yyyymm
