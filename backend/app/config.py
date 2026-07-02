@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     secret_key: str = "change_me"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
-    cors_origins: str = "http://localhost:5173,http://localhost:5174,http://localhost:5175"
+    cors_origins: str = "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://127.0.0.1:5173,http://127.0.0.1:5176"
     #: 필터 분석 percentile 정렬용 work_mem(MB). 너무 작으면 디스크 스필로 매우 느려질 수 있음.
     paid_analyze_work_mem_mb: int = 192
 
@@ -41,12 +41,14 @@ class Settings(BaseSettings):
     #: 무료 V2 API: 요청에 as_of_month 없을 때. None 이면 요청 시점 기준 직전 달 1일(§3).
     stats_v2_default_as_of_month: Optional[date] = Field(
         default=None,
+        validation_alias="STATS_V2_DEFAULT_AS_OF_MONTH",
         description="고정 시 우선. 미설정 시 동적 직전 달(as_of_month_for_service)",
     )
     #: 로컬·검증: «오늘» 대신 이 날짜로 직전 달 as_of_month 를 계산. 예: 2026-01-01 → 2025-12-01.
     #: stats_v2_default_as_of_month 가 있으면 그쪽이 우선(이 필드는 무시).
     stats_v2_assumed_today: Optional[date] = Field(
         default=None,
+        validation_alias="STATS_V2_ASSUMED_TODAY",
         description="통계 기준일 가정(STATS_V2_ASSUMED_TODAY)",
     )
 
