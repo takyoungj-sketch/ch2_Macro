@@ -50,9 +50,9 @@ _REGION_CODE_LEN: dict[RegionLevel, int] = {
 # land_transactions 의 region 필터 식 — eupmyeondong 컬럼이 없으므로
 # beopjungri_code 앞 8자리를 사용한다(행정코드: 시군구5 + 읍면동3 + 리2).
 _LEVEL_TX_WHERE: dict[RegionLevel, str] = {
-    "sido": "btrim(sido_code::text) = :code",
-    "sigungu": "btrim(sigungu_code::text) = :code",
-    "eupmyeondong": "LEFT(btrim(beopjungri_code::text), 8) = :code",
+    "sido": "sido_code = :code",
+    "sigungu": "sigungu_code = :code",
+    "eupmyeondong": "LEFT(beopjungri_code, 8) = :code",
 }
 
 
@@ -201,7 +201,7 @@ def _fetch_tx_trips_for_upper(
         params: dict = {f"c{i}": s for i, s in enumerate(sgs)}
         params["ps"] = period_start
         params["pe"] = period_end
-        where = f"btrim(sigungu_code::text) IN ({in_clause})"
+        where = f"sigungu_code IN ({in_clause})"
     else:
         where = _LEVEL_TX_WHERE[level]
         params = {"code": code, "ps": period_start, "pe": period_end}
@@ -374,7 +374,7 @@ def _by_year_upper(
         params: dict = {f"c{i}": s for i, s in enumerate(sgs)}
         params["d0"] = y0
         params["d1"] = period_end
-        where = f"btrim(sigungu_code::text) IN ({in_clause})"
+        where = f"sigungu_code IN ({in_clause})"
     else:
         where = _LEVEL_TX_WHERE[level]
         params = {"code": code, "d0": y0, "d1": period_end}
@@ -429,55 +429,62 @@ def _by_year_upper_calendar_reference(
     period_start: date,
     period_end: date,
 ) -> list[YearlyTradeStat]:
+    y0, y1 = int(period_start.year), int(period_end.year)
+    d0, d1 = date(y0, 1, 1), date(y1, 12, 31)
+    if level == "city":
+        sgs = _sigungu_codes_for_city_bucket(db, code)
+        if not sgs:
+            out_empty = [YearlyTradeStat(year=y, count=0) for y in range(y0, y1 + 1)]
+            return attach_population_year_end_for_upper_level(
+                db, level=level, upper_code=code, items=out_empty
+            )
+        in_clause = ", ".join(f":ca{i}" for i in range(len(sgs)))
+        params: dict = {f"ca{i}": s for i, s in enumerate(sgs)}
+        params["d0"] = d0
+        params["d1"] = d1
+        where = f"sigungu_code IN ({in_clause})"
+    else:
+        where = _LEVEL_TX_WHERE[level]
+        params = {"code": code, "d0": d0, "d1": d1}
+
+    rows = db.execute(
+        text(
+            f"""
+            SELECT contract_year::int AS y,
+                   COUNT(*)::int AS cnt,
+                   COALESCE(SUM(total_price_10k), 0) AS sum_price,
+                   COALESCE(SUM(area_sqm), 0) AS sum_area
+            FROM land_transactions
+            WHERE {where}
+              AND is_valid IS TRUE
+              AND contract_date IS NOT NULL
+              AND contract_date >= :d0 AND contract_date <= :d1
+            GROUP BY contract_year
+            ORDER BY contract_year
+            """
+        ),
+        params,
+    ).fetchall()
+    y_map = {int(r.y): r for r in rows}
     items: list[YearlyTradeStat] = []
-
-    def stat_for_calendar_year(y: int) -> YearlyTradeStat:
-        d0, d1 = date(y, 1, 1), date(y, 12, 31)
-        if level == "city":
-            sgs = _sigungu_codes_for_city_bucket(db, code)
-            if not sgs:
-                return YearlyTradeStat(year=y, count=0)
-            in_clause = ", ".join(f":ca{i}" for i in range(len(sgs)))
-            params = {f"ca{i}": s for i, s in enumerate(sgs)}
-            params["d0"] = d0
-            params["d1"] = d1
-            where = f"btrim(sigungu_code::text) IN ({in_clause})"
-        else:
-            where = _LEVEL_TX_WHERE[level]
-            params = {"code": code, "d0": d0, "d1": d1}
-
-        row = db.execute(
-            text(
-                f"""
-                SELECT COUNT(*)::int AS cnt,
-                       COALESCE(SUM(total_price_10k), 0) AS sum_price,
-                       COALESCE(SUM(area_sqm), 0) AS sum_area
-                FROM land_transactions
-                WHERE {where}
-                  AND is_valid IS TRUE
-                  AND contract_date IS NOT NULL
-                  AND contract_date >= :d0 AND contract_date <= :d1
-                """
-            ),
-            params,
-        ).fetchone()
-
+    for y in range(y0, y1 + 1):
+        row = y_map.get(y)
         if row and int(row.cnt or 0) > 0:
             cnt = int(row.cnt)
             sp = float(row.sum_price)
             sa = float(row.sum_area)
             unit = (sp / sa) if sa > 0 else None
-            return YearlyTradeStat(
-                year=y,
-                count=cnt,
-                total_price_10k_sum=sp,
-                area_sqm_sum=sa,
-                unit_price_per_sqm=unit,
+            items.append(
+                YearlyTradeStat(
+                    year=y,
+                    count=cnt,
+                    total_price_10k_sum=sp,
+                    area_sqm_sum=sa,
+                    unit_price_per_sqm=unit,
+                )
             )
-        return YearlyTradeStat(year=y, count=0)
-
-    for y in range(int(period_start.year), int(period_end.year) + 1):
-        items.append(stat_for_calendar_year(y))
+        else:
+            items.append(YearlyTradeStat(year=y, count=0))
     return attach_population_year_end_for_upper_level(
         db, level=level, upper_code=code, items=items
     )

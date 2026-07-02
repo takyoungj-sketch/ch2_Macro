@@ -1,7 +1,7 @@
 """
 무료 통계 V2 API — land_basic_stats_v2 + contract_date 롤링 구간.
 
-- 단건: 사전집계 테이블 조회(빠름) + 연도별 표만 원장 집계
+- 단건: 사전집계 테이블 조회(빠름) + 연도별 표만 원장 집계(인덱스 활용·연도별 1회 GROUP BY)
 - 벌크: v1 bulk 와 같이 복수 지역 원장을 동일 period 로 합쳐 매트릭스 계산
 
 선행: db/007_land_basic_stats_v2.sql + pipeline/build_stats_v2.py 적재
@@ -130,7 +130,7 @@ def _resolve_as_of_month_single(
         text(
             """
             SELECT 1 FROM land_basic_stats_v2
-            WHERE btrim(beopjungri_code::text) = :c
+            WHERE beopjungri_code = :c
               AND as_of_month = :as_of
               AND window_years = :w
               AND zone_type = 'ALL' AND land_category = 'ALL'
@@ -168,9 +168,9 @@ def _split_codes_with_basic_stats_v2(
         return [], []
     stmt = text(
         """
-        SELECT btrim(cast(beopjungri_code AS text)) AS bc
+        SELECT btrim(beopjungri_code::text) AS bc
         FROM land_basic_stats_v2
-        WHERE btrim(cast(beopjungri_code AS text)) = ANY(:codes)
+        WHERE beopjungri_code = ANY(:codes)
           AND as_of_month = :as_of
           AND window_years = :w
           AND zone_type = 'ALL' AND land_category = 'ALL'
@@ -211,7 +211,7 @@ def _combined_bundle_v2_from_transactions(
           AND contract_date IS NOT NULL
           AND contract_date >= :ps
           AND contract_date <= :pe
-          AND btrim(cast(beopjungri_code AS text)) = ANY(:codes)
+          AND beopjungri_code = ANY(:codes)
         """
     )
     raw = db.execute(
@@ -295,7 +295,7 @@ def _by_year_contract_date(
                    COALESCE(SUM(total_price_10k), 0) AS sum_price,
                    COALESCE(SUM(area_sqm), 0) AS sum_area
             FROM land_transactions
-            WHERE btrim(cast(beopjungri_code AS text)) = :code_trim
+            WHERE beopjungri_code = :code_trim
               AND is_valid IS TRUE
               AND contract_date IS NOT NULL
               AND contract_date >= :d0
@@ -342,7 +342,7 @@ def _by_year_bulk_contract_date(
                COALESCE(SUM(total_price_10k), 0) AS sum_price,
                COALESCE(SUM(area_sqm), 0) AS sum_area
         FROM land_transactions
-        WHERE btrim(cast(beopjungri_code AS text)) = ANY(:codes)
+        WHERE beopjungri_code = ANY(:codes)
           AND is_valid IS TRUE
           AND contract_date IS NOT NULL
           AND contract_date >= :d0
@@ -377,10 +377,6 @@ def _by_year_bulk_contract_date(
     return attach_population_year_end(db, region_codes=codes, items=by_year)
 
 
-def _jan_dec_for_calendar_year(y: int) -> tuple[date, date]:
-    return date(y, 1, 1), date(y, 12, 31)
-
-
 def _by_year_calendar_reference_single(
     db: Session,
     code_trim: str,
@@ -389,24 +385,30 @@ def _by_year_calendar_reference_single(
     period_end: date,
 ) -> list[YearlyTradeStat]:
     """참고 표: 각 달력연도별 contract_date 그 연도만 1·1~12·31."""
+    y0, y1 = int(period_start.year), int(period_end.year)
+    d0, d1 = date(y0, 1, 1), date(y1, 12, 31)
+    y_rows = db.execute(
+        text(
+            """
+            SELECT contract_year::int AS y,
+                   COUNT(*)::int AS cnt,
+                   COALESCE(SUM(total_price_10k), 0) AS sum_price,
+                   COALESCE(SUM(area_sqm), 0) AS sum_area
+            FROM land_transactions
+            WHERE beopjungri_code = :code_trim
+              AND is_valid IS TRUE
+              AND contract_date IS NOT NULL
+              AND contract_date >= :d0 AND contract_date <= :d1
+            GROUP BY contract_year
+            ORDER BY contract_year
+            """
+        ),
+        {"code_trim": code_trim, "d0": d0, "d1": d1},
+    ).fetchall()
+    y_map = {int(r.y): r for r in y_rows}
     items: list[YearlyTradeStat] = []
-    for y in range(int(period_start.year), int(period_end.year) + 1):
-        d0, d1 = _jan_dec_for_calendar_year(y)
-        row = db.execute(
-            text(
-                """
-                SELECT COUNT(*)::int AS cnt,
-                       COALESCE(SUM(total_price_10k), 0) AS sum_price,
-                       COALESCE(SUM(area_sqm), 0) AS sum_area
-                FROM land_transactions
-                WHERE btrim(cast(beopjungri_code AS text)) = :code_trim
-                  AND is_valid IS TRUE
-                  AND contract_date IS NOT NULL
-                  AND contract_date >= :d0 AND contract_date <= :d1
-                """
-            ),
-            {"code_trim": code_trim, "d0": d0, "d1": d1},
-        ).fetchone()
+    for y in range(y0, y1 + 1):
+        row = y_map.get(y)
         if row and int(row.cnt or 0) > 0:
             cnt = int(row.cnt)
             sp = float(row.sum_price)
@@ -433,24 +435,30 @@ def _by_year_calendar_reference_bulk(
     period_start: date,
     period_end: date,
 ) -> list[YearlyTradeStat]:
+    y0, y1 = int(period_start.year), int(period_end.year)
+    d0, d1 = date(y0, 1, 1), date(y1, 12, 31)
+    y_rows = db.execute(
+        text(
+            """
+            SELECT contract_year::int AS y,
+                   COUNT(*)::int AS cnt,
+                   COALESCE(SUM(total_price_10k), 0) AS sum_price,
+                   COALESCE(SUM(area_sqm), 0) AS sum_area
+            FROM land_transactions
+            WHERE beopjungri_code = ANY(:codes)
+              AND is_valid IS TRUE
+              AND contract_date IS NOT NULL
+              AND contract_date >= :d0 AND contract_date <= :d1
+            GROUP BY contract_year
+            ORDER BY contract_year
+            """
+        ),
+        {"codes": codes, "d0": d0, "d1": d1},
+    ).fetchall()
+    y_map = {int(r.y): r for r in y_rows}
     items: list[YearlyTradeStat] = []
-    for y in range(int(period_start.year), int(period_end.year) + 1):
-        d0, d1 = _jan_dec_for_calendar_year(y)
-        row = db.execute(
-            text(
-                """
-                SELECT COUNT(*)::int AS cnt,
-                       COALESCE(SUM(total_price_10k), 0) AS sum_price,
-                       COALESCE(SUM(area_sqm), 0) AS sum_area
-                FROM land_transactions
-                WHERE btrim(cast(beopjungri_code AS text)) = ANY(:codes)
-                  AND is_valid IS TRUE
-                  AND contract_date IS NOT NULL
-                  AND contract_date >= :d0 AND contract_date <= :d1
-                """
-            ),
-            {"codes": codes, "d0": d0, "d1": d1},
-        ).fetchone()
+    for y in range(y0, y1 + 1):
+        row = y_map.get(y)
         if row and int(row.cnt or 0) > 0:
             cnt = int(row.cnt)
             sp = float(row.sum_price)
@@ -545,7 +553,7 @@ def get_basic_stats_v2(
                    p_min, p25, median, p75, p_max,
                    period_start, period_end
             FROM land_basic_stats_v2
-            WHERE btrim(cast(beopjungri_code AS text)) = :code
+            WHERE beopjungri_code = :code
               AND as_of_month = :as_of
               AND window_years = :w
             ORDER BY zone_type, land_category
