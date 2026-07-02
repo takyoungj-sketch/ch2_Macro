@@ -19,6 +19,11 @@ def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--cycle-id", required=True)
     p.add_argument("--repo-root", type=Path, default=_REPO)
+    p.add_argument(
+        "--output",
+        type=Path,
+        help="저장 경로 (기본: clean_snapshots/{cycle_id}/collective/collective_tx_counts_after.json)",
+    )
     args = p.parse_args()
 
     eng = get_collective_engine()
@@ -56,7 +61,7 @@ def main() -> None:
     }
     out_dir = args.repo_root / "clean_snapshots" / args.cycle_id / "collective"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out = out_dir / "collective_tx_counts_after.json"
+    out = args.output or (out_dir / "collective_tx_counts_after.json")
     out.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"wrote {out}")
 
