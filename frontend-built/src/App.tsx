@@ -1031,9 +1031,8 @@ export default function App() {
     return buildBuiltRegressionContext(regM.data, {
       regionLabel: aiRegionLabel,
       assetType,
-      responseScale,
     });
-  }, [regM.data, aiRegionLabel, assetType, responseScale]);
+  }, [regM.data, aiRegionLabel, assetType]);
 
   const aiSuggestContext = useMemo(() => {
     if (!suggestM.data) return null;

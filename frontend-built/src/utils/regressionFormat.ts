@@ -104,7 +104,7 @@ function fmtPctFromLog(coef: number): string {
 export function interpretCoefficient(
   c: RegressionCoeff,
   responseScale: ResponseScale,
-  assetType?: AssetType,
+  _assetType?: AssetType,
 ): string {
   const name = c.name;
   const coef = c.estimate;
