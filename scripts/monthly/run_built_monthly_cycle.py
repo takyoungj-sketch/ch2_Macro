@@ -25,6 +25,7 @@ from built_cycle_utils import (  # noqa: E402
     collection_yyyymm_range_from_cycle_id,
     resolve_built_xlsx_paths,
 )
+from cycle_utils import stats_as_of_iso_from_cycle_id  # noqa: E402
 
 log = logging.getLogger(__name__)
 
@@ -193,9 +194,17 @@ def main() -> None:
         phase = "import_molit" if not args.use_legacy_defaults else "import_refined"
         _run_subprocess_timed(phase, cmd, cwd=repo / "pipeline")
         if not args.use_legacy_defaults:
+            as_of = stats_as_of_iso_from_cycle_id(cycle)
             _run_subprocess_timed(
                 "build_scope_stats",
-                [py, str(repo / "pipeline" / "built" / "build_scope_stats.py")],
+                [
+                    py,
+                    str(repo / "pipeline" / "built" / "build_scope_stats.py"),
+                    "--as-of",
+                    as_of,
+                    "--windows",
+                    "3,5",
+                ],
                 cwd=repo / "pipeline",
             )
     else:
