@@ -181,20 +181,40 @@ def list_csv_files(
     year_from: int = 2021,
     year_to: int = 2026,
     sido_prefix: str | None = None,
+    raw_dir: Path | None = None,
 ) -> list[Path]:
-    folder = RAW_BASE / RAW_BASE_DIRS[asset_type]
+    folder = (raw_dir or RAW_BASE) / RAW_BASE_DIRS[asset_type]
     if not folder.is_dir():
         raise FileNotFoundError(f"raw base folder missing: {folder}")
-    label = FILE_LABEL[asset_type]
     paths: list[Path] = []
     for path in sorted(folder.glob("*.csv")):
         if sido_prefix and not path.name.startswith(sido_prefix):
             continue
-        for year in range(year_from, year_to + 1):
-            if f"_{year}.csv" in path.name or path.name.endswith(f"_{year}.csv"):
-                paths.append(path)
-                break
+        from reform_paths_202607 import year_from_csv_name
+
+        year = year_from_csv_name(path.name)
+        if year is not None and year_from <= year <= year_to:
+            paths.append(path)
     return paths
+
+
+def purge_sido_transactions(engine, sido_codes: list[str]) -> int:
+    codes = [c.strip().zfill(2)[-2:] for c in sido_codes if c.strip()]
+    if not codes:
+        return 0
+    with engine.begin() as conn:
+        res = conn.execute(
+            text(
+                """
+                DELETE FROM built_transactions
+                WHERE btrim(sido_code::text) = ANY(:sidos)
+                """
+            ),
+            {"sidos": codes},
+        )
+        n = res.rowcount or 0
+    log.info("purged built_transactions sido %s: %d rows", ", ".join(codes), n)
+    return n
 
 
 def ingest_paths(
@@ -277,6 +297,23 @@ def main() -> None:
     p.add_argument("--year-from", type=int, default=2021)
     p.add_argument("--year-to", type=int, default=2026)
     p.add_argument(
+        "--sido-prefix",
+        action="append",
+        default=[],
+        help="파일명 시도 접두 (반복 가능). 미지정 시 전국",
+    )
+    p.add_argument(
+        "--purge-sido",
+        default="",
+        help="쉼표 구분 시도 2자리 — 해당 거래 DELETE 후 ingest",
+    )
+    p.add_argument(
+        "--paths-file",
+        type=Path,
+        default=None,
+        help="ingest 할 CSV 경로 목록 (한 줄에 하나). 지정 시 raw base 탐색 생략",
+    )
+    p.add_argument(
         "--manifest",
         type=Path,
         default=REPO / "logs" / "built_rebuild_manifest.json",
@@ -298,10 +335,24 @@ def main() -> None:
     if args.truncate:
         truncate_built_transactions(built)
 
+    if args.purge_sido.strip():
+        purge_sido_transactions(
+            built,
+            [c.strip() for c in args.purge_sido.split(",") if c.strip()],
+        )
+
     region_maps = build_region_lookup(built)
-    sido_prefix = "서울특별시" if args.smoke else None
+    sido_prefixes = args.sido_prefix or []
     year_from = 2021 if args.smoke else args.year_from
     year_to = 2021 if args.smoke else args.year_to
+
+    explicit_paths: list[Path] | None = None
+    if args.paths_file and args.paths_file.is_file():
+        explicit_paths = [
+            Path(line.strip())
+            for line in args.paths_file.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
 
     run_all = only_flags == 0
     ingest_log: dict = {"smoke": args.smoke, "ingest": {}}
@@ -309,12 +360,27 @@ def main() -> None:
     for asset_type in ("commercial", "factory", "detached"):
         if not run_all and not getattr(args, f"{asset_type}_only"):
             continue
-        paths = list_csv_files(
-            asset_type,  # type: ignore[arg-type]
-            year_from=year_from,
-            year_to=year_to,
-            sido_prefix=sido_prefix,
-        )
+        if explicit_paths is not None:
+            label = FILE_LABEL[asset_type]  # noqa: F841 — filter by label in filename
+            paths = [p for p in explicit_paths if f"_{FILE_LABEL[asset_type]}_" in p.name]
+        elif sido_prefixes:
+            paths = []
+            for pref in sido_prefixes:
+                paths.extend(
+                    list_csv_files(
+                        asset_type,  # type: ignore[arg-type]
+                        year_from=year_from,
+                        year_to=year_to,
+                        sido_prefix=pref,
+                    )
+                )
+        else:
+            paths = list_csv_files(
+                asset_type,  # type: ignore[arg-type]
+                year_from=year_from,
+                year_to=year_to,
+                sido_prefix="서울특별시" if args.smoke else None,
+            )
         if not paths:
             log.warning("no CSV files for %s", asset_type)
             continue

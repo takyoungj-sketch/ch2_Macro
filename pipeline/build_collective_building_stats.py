@@ -349,6 +349,7 @@ def main() -> None:
     p.add_argument("--addr1", type=str, default=None, help="시도(addr1) 한정 스모크")
     p.add_argument("--skip-annual", action="store_true")
     p.add_argument("--rolling-only", action="store_true")
+    p.add_argument("--annual-only", action="store_true")
     args = p.parse_args()
 
     as_of = parse_as_of_month(args.as_of) if args.as_of else default_as_of_month()
@@ -366,14 +367,16 @@ def main() -> None:
     if not tx_n:
         raise SystemExit("collective_transactions empty — import_refined 먼저 실행")
 
-    rolling_n = build_rolling(
-        engine,
-        as_of_month=as_of,
-        windows=windows,
-        addr1_filter=args.addr1,
-        batch_id=batch_id,
-    )
-    log.info("collective_building_stats upserted ~%s rows (batch %s)", rolling_n, batch_id)
+    rolling_n = 0
+    if not args.annual_only:
+        rolling_n = build_rolling(
+            engine,
+            as_of_month=as_of,
+            windows=windows,
+            addr1_filter=args.addr1,
+            batch_id=batch_id,
+        )
+        log.info("collective_building_stats upserted ~%s rows (batch %s)", rolling_n, batch_id)
 
     annual_n = 0
     if not args.skip_annual and not args.rolling_only:

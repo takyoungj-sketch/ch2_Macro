@@ -302,6 +302,7 @@ def main() -> None:
     p.add_argument("--addr1", type=str, default=None)
     p.add_argument("--skip-annual", action="store_true")
     p.add_argument("--rolling-only", action="store_true")
+    p.add_argument("--annual-only", action="store_true")
     args = p.parse_args()
 
     as_of = parse_as_of_month(args.as_of) if args.as_of else default_as_of_month()
@@ -315,8 +316,10 @@ def main() -> None:
     if not tx_n:
         raise SystemExit("collective_commercial_transactions empty")
 
-    rolling_n = build_rolling(engine, as_of_month=as_of, windows=windows, addr1_filter=args.addr1, batch_id=batch_id)
-    log.info("collective_commercial_cluster_stats upserted ~%s rows", rolling_n)
+    rolling_n = 0
+    if not args.annual_only:
+        rolling_n = build_rolling(engine, as_of_month=as_of, windows=windows, addr1_filter=args.addr1, batch_id=batch_id)
+        log.info("collective_commercial_cluster_stats upserted ~%s rows", rolling_n)
     if not args.rolling_only and not args.skip_annual:
         annual_n = build_annual(engine, addr1_filter=args.addr1, batch_id=batch_id)
         log.info("collective_commercial_cluster_annual_stats upserted ~%s rows", annual_n)

@@ -321,6 +321,32 @@ def insert_transactions(engine, df: pd.DataFrame, id_map: dict[str, int], *, sou
     return n
 
 
+def purge_sido_commercial(engine, sido_codes: list[str]) -> None:
+    codes = [c.strip().zfill(2)[-2:] for c in sido_codes if c.strip()]
+    if not codes:
+        return
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                """
+                DELETE FROM collective_commercial_transactions
+                WHERE btrim(sido_code::text) = ANY(:s)
+                """
+            ),
+            {"s": codes},
+        )
+        conn.execute(
+            text(
+                """
+                DELETE FROM commercial_clusters
+                WHERE btrim(sido_code::text) = ANY(:s)
+                """
+            ),
+            {"s": codes},
+        )
+    log.info("purged collective_commercial sido %s", ", ".join(codes))
+
+
 def purge_asset_type(engine, asset_type: str) -> None:
     with engine.begin() as conn:
         conn.execute(
@@ -374,6 +400,17 @@ def main() -> None:
     p.add_argument("--year-from", type=int, default=2021)
     p.add_argument("--year-to", type=int, default=2026)
     p.add_argument("--refresh-region-codes", action="store_true")
+    p.add_argument(
+        "--paths-file",
+        type=Path,
+        default=None,
+        help="ingest CSV 경로 목록",
+    )
+    p.add_argument(
+        "--purge-sido",
+        default="",
+        help="쉼표 구분 시도 2자리 — commercial DELETE",
+    )
     args = p.parse_args()
 
     engine = get_collective_engine()
@@ -390,32 +427,68 @@ def main() -> None:
 
     region_maps = build_region_lookup(engine)
 
+    if args.purge_sido.strip():
+        purge_sido_commercial(
+            engine, [c.strip() for c in args.purge_sido.split(",") if c.strip()]
+        )
+
+    shop_paths: list[Path] = []
+    factory_paths: list[Path] = []
+    if args.paths_file and args.paths_file.is_file():
+        for line in args.paths_file.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            pth = Path(line)
+            if "_상업업무_" in pth.name:
+                shop_paths.append(pth)
+            elif "_공장창고_" in pth.name:
+                factory_paths.append(pth)
+
     do_shop = not args.factory_only
     do_factory = not args.shop_only
 
     total_tx = 0
     if do_shop:
+        from collective_commercial.molit_raw import load_collective_from_paths
+
+        if shop_paths:
+            shop_loader = lambda: load_collective_from_paths(  # noqa: E731
+                shop_paths, asset_type="collective_shop"
+            )
+        else:
+            shop_loader = lambda: load_collective_shop_raw(  # noqa: E731
+                year_from=args.year_from, year_to=args.year_to
+            )
         n, _ = ingest_asset(
             engine,
-            lambda: load_collective_shop_raw(year_from=args.year_from, year_to=args.year_to),
+            shop_loader,
             source="molit_shop_raw",
             enrich_fn=enrich_commercial_road,
             region_maps=region_maps,
             truncate=args.truncate,
-            purge=True,
+            purge=not bool(args.purge_sido.strip()) and not shop_paths,
         )
         total_tx += n
         log_mapping_coverage(engine, "collective_commercial_transactions", asset_type="collective_shop")
         args.truncate = False
     if do_factory:
+        if factory_paths:
+            factory_loader = lambda: load_collective_from_paths(  # noqa: E731
+                factory_paths, asset_type="collective_factory"
+            )
+        else:
+            factory_loader = lambda: load_collective_factory_raw(  # noqa: E731
+                year_from=args.year_from, year_to=args.year_to
+            )
         n, _ = ingest_asset(
             engine,
-            lambda: load_collective_factory_raw(year_from=args.year_from, year_to=args.year_to),
+            factory_loader,
             source="molit_factory_raw",
             enrich_fn=enrich_commercial_road,
             region_maps=region_maps,
             truncate=False,
-            purge=True,
+            purge=not bool(args.purge_sido.strip()) and not factory_paths,
         )
         total_tx += n
         log_mapping_coverage(engine, "collective_commercial_transactions", asset_type="collective_factory")

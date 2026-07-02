@@ -262,6 +262,26 @@ def list_buildings(
     asset_filter = normalize_asset_type(asset_type)
     as_of_month, _ = latest_mart_snapshot(conn)
     meta: dict = {"data_source": "live", "window_years": window_years}
+
+    def _fetch_live(*, rolling_window: bool) -> list[BuildingStatsRow]:
+        cd_from = cd_to = None
+        if rolling_window and as_of_month is not None:
+            cd_from, cd_to = period_bounds_for_window(as_of_month, window_years)
+        where, params = _base_where(
+            conn=conn,
+            asset_type=normalize_asset_type(asset_type),
+            addr1=addr1,
+            addr2=addr2,
+            addr3=addr3,
+            addr3_list=addr3_list or None,
+            addr4_list=addr4_list or None,
+            contract_year_from=contract_year_from,
+            contract_year_to=contract_year_to,
+            contract_date_from=cd_from,
+            contract_date_to=cd_to,
+        )
+        return list_buildings_live(conn, where, params, asset_type=asset_filter)
+
     mart = list_buildings_from_mart(
         conn,
         asset_type=normalize_asset_type(asset_type),
@@ -275,21 +295,17 @@ def list_buildings(
         contract_year_from=contract_year_from,
         contract_year_to=contract_year_to,
     )
+    use_live = mart is None
+    items: list[BuildingStatsRow] = []
     if mart is not None:
         items, meta = mart
-    else:
-        where, params = _base_where(
-            conn=conn,
-            asset_type=normalize_asset_type(asset_type),
-            addr1=addr1,
-            addr2=addr2,
-            addr3=addr3,
-            addr3_list=addr3_list or None,
-            addr4_list=addr4_list or None,
-            contract_year_from=contract_year_from,
-            contract_year_to=contract_year_to,
+        if not items and contract_year_from is None and contract_year_to is None:
+            use_live = True
+    if use_live:
+        items = _fetch_live(
+            rolling_window=contract_year_from is None and contract_year_to is None
         )
-        items = list_buildings_live(conn, where, params, asset_type=asset_filter)
+        meta = {"data_source": "live", "window_years": window_years}
 
     if sort == "display_name":
         items.sort(key=lambda x: x.display_name)

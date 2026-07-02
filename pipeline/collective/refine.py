@@ -42,9 +42,16 @@ def _normalize_dong(val, *, max_len: int = 64) -> str | None:
     return s or None
 
 
+def _molit_data_frame(df: pd.DataFrame) -> pd.DataFrame:
+    """MOLIT iloc 인덱스는 원본 파일 열만 대상 (_source_key 등 메타 열 제외)."""
+    meta = [c for c in ("_source_key",) if c in df.columns]
+    return df.drop(columns=meta) if meta else df
+
+
 def _get_col(df: pd.DataFrame, idx: int, default=None):
-    if df.shape[1] > idx:
-        return df.iloc[:, idx]
+    work = _molit_data_frame(df)
+    if work.shape[1] > idx:
+        return work.iloc[:, idx]
     if default is not None:
         return pd.Series([default] * len(df), index=df.index)
     return pd.Series([None] * len(df), index=df.index)
@@ -59,8 +66,9 @@ def _extract_raw(df: pd.DataFrame, asset_type: AssetType) -> pd.DataFrame:
     if "_source_key" in df.columns:
         out["_source_key"] = df["_source_key"]
 
-    if df.shape[1] > schema.cancel_col:
-        cancel_val = df.iloc[:, schema.cancel_col].astype(str).str.strip()
+    raw_df = _molit_data_frame(df)
+    if raw_df.shape[1] > schema.cancel_col:
+        cancel_val = raw_df.iloc[:, schema.cancel_col].astype(str).str.strip()
         mask = ~cancel_val.str.match(schema.cancel_regex, na=False)
         out = out.loc[mask].copy()
 

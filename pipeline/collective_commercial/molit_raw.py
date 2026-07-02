@@ -139,6 +139,23 @@ def _load_from_folder(
     return out.reset_index(drop=True)
 
 
+def load_collective_from_paths(
+    paths: list[Path],
+    *,
+    asset_type: CollectiveMolitAsset,
+) -> pd.DataFrame:
+    frames: list[pd.DataFrame] = []
+    for path in paths:
+        part = refine_collective_molit_file(path, asset_type=asset_type)
+        if not part.empty:
+            frames.append(part)
+    if not frames:
+        return pd.DataFrame()
+    out = pd.concat(frames, ignore_index=True)
+    out["unit_price"] = out["price"] / out["gross_area"]
+    return out.reset_index(drop=True)
+
+
 def load_collective_shop_raw(*, year_from: int = 2021, year_to: int = 2026) -> pd.DataFrame:
     return _load_from_folder(
         RAW_BASE_DIRS["commercial"],

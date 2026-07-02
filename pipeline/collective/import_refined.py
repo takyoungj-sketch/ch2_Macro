@@ -194,6 +194,36 @@ def truncate_residential(engine) -> None:
     log.info("truncated residential collective_transactions (4 types)")
 
 
+def purge_sido_transactions(
+    engine,
+    sido_codes: list[str],
+    *,
+    asset_types: tuple[str, ...] | None = None,
+) -> int:
+    codes = [c.strip().zfill(2)[-2:] for c in sido_codes if c.strip()]
+    if not codes:
+        return 0
+    type_clause = ""
+    params: dict = {"sidos": codes}
+    if asset_types:
+        type_clause = "AND asset_type = ANY(:types)"
+        params["types"] = list(asset_types)
+    with engine.begin() as conn:
+        res = conn.execute(
+            text(
+                f"""
+                DELETE FROM collective_transactions
+                WHERE btrim(sido_code::text) = ANY(:sidos)
+                {type_clause}
+                """
+            ),
+            params,
+        )
+        n = res.rowcount or 0
+    log.info("purged collective_transactions sido %s: %d rows", ", ".join(codes), n)
+    return n
+
+
 def sync_region_codes_from_land(collective_engine, land_engine, *, force: bool = False) -> None:
     with collective_engine.connect() as conn:
         n = conn.execute(text("SELECT COUNT(*) FROM region_codes")).scalar()
@@ -420,6 +450,17 @@ def main() -> None:
         metavar="FILENAME",
         help="해당 파일명부터 ingest (이전 파일 스킵, truncate 없이 재개)",
     )
+    p.add_argument(
+        "--paths-file",
+        type=Path,
+        default=None,
+        help="ingest CSV 경로 목록 (한 줄에 하나). 유형별 파일명 필터",
+    )
+    p.add_argument(
+        "--purge-sido",
+        default="",
+        help="쉼표 구분 시도 2자리 — ingest 전 DELETE",
+    )
     args = p.parse_args()
 
     only = sum([args.apartment_only, args.rowhouse_only, args.officetel_only, args.presale_only])
@@ -434,12 +475,27 @@ def main() -> None:
     sync_region_codes_from_land(eng, land, force=args.refresh_region_codes)
     region_maps = build_region_lookup(eng)
 
+    if args.purge_sido.strip():
+        purge_sido_transactions(
+            eng,
+            [c.strip() for c in args.purge_sido.split(",") if c.strip()],
+        )
+
+    def _paths_for_asset(asset: str, default_dir: Path, name_token: str) -> list[Path]:
+        if args.paths_file and args.paths_file.is_file():
+            return [
+                Path(line.strip())
+                for line in args.paths_file.read_text(encoding="utf-8").splitlines()
+                if line.strip() and name_token in Path(line.strip()).name
+            ]
+        return resolve_apartment_paths(default_dir) if asset != "presale" else resolve_presale_paths(default_dir)
+
     if args.truncate_residential and only == 0:
         truncate_residential(eng)
 
     run_all = only == 0
     if run_all or args.apartment_only:
-        apt_paths = resolve_apartment_paths(args.apartment_dir)
+        apt_paths = _paths_for_asset("apartment", args.apartment_dir, "_아파트_매매_")
         if not apt_paths:
             raise SystemExit(f"no apartment files under {args.apartment_dir}")
         ingest_paths(
@@ -447,32 +503,54 @@ def main() -> None:
             "apartment",
             eng,
             region_maps,
-            truncate_type=(run_all or args.apartment_only) and not args.resume_from,
+            truncate_type=(
+                (run_all or args.apartment_only)
+                and not args.resume_from
+                and not args.paths_file
+            ),
             resume_from=args.resume_from if (run_all or args.apartment_only) else None,
         )
         log_mapping_coverage(eng, "collective_transactions", asset_type="apartment")
     if run_all or args.rowhouse_only:
         rh_root = args.rowhouse_dir or args.rowhouse
-        rh_paths = resolve_rowhouse_paths(rh_root)
+        rh_paths = _paths_for_asset("rowhouse", rh_root, "_연립다세대_매매_")
         if not rh_paths:
             raise SystemExit(f"no rowhouse files under {rh_root}")
-        ingest_paths(rh_paths, "rowhouse", eng, region_maps, truncate_type=run_all or args.rowhouse_only)
+        ingest_paths(
+            rh_paths,
+            "rowhouse",
+            eng,
+            region_maps,
+            truncate_type=(run_all or args.rowhouse_only) and not args.paths_file,
+        )
         log_mapping_coverage(eng, "collective_transactions", asset_type="rowhouse")
     if run_all or args.officetel_only:
         ot_root = args.officetel_dir or args.officetel
-        ot_paths = resolve_officetel_paths(ot_root)
+        ot_paths = _paths_for_asset("officetel", ot_root, "_오피스텔_매매_")
         if not ot_paths:
             raise SystemExit(f"no officetel files under {ot_root}")
-        ingest_paths(ot_paths, "officetel", eng, region_maps, truncate_type=run_all or args.officetel_only)
+        ingest_paths(
+            ot_paths,
+            "officetel",
+            eng,
+            region_maps,
+            truncate_type=(run_all or args.officetel_only) and not args.paths_file,
+        )
         log_mapping_coverage(eng, "collective_transactions", asset_type="officetel")
     if run_all or args.presale_only:
-        ps_paths = resolve_presale_paths(args.presale_dir)
+        ps_paths = _paths_for_asset("presale", args.presale_dir, "_분양입주권_매매_")
         if not ps_paths:
             if args.presale_only:
                 raise SystemExit(f"no presale files under {args.presale_dir}")
             log.warning("no presale csv under %s — skip", args.presale_dir)
         else:
-            ingest_paths(ps_paths, "presale", eng, region_maps, truncate_type=run_all or args.presale_only)
+            ingest_paths(
+                ps_paths,
+                "presale",
+                eng,
+                region_maps,
+                truncate_type=(run_all or args.presale_only) and not args.paths_file,
+            )
             log_mapping_coverage(eng, "collective_transactions", asset_type="presale")
 
 
