@@ -38,6 +38,9 @@ logs/
 .DS_Store
 Thumbs.db
 
+# CH2 board runtime data (VPS local)
+deploy/board/data/
+
 # IDE (선택)
 .idea/
 .vscode/*.log

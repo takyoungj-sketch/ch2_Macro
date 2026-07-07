@@ -27,4 +27,9 @@ echo "==> reload nginx"
 sudo nginx -t
 sudo systemctl reload nginx
 
+if [[ -x "$REPO_ROOT/deploy/scripts/redeploy-board.sh" ]]; then
+  echo "==> board service"
+  bash "$REPO_ROOT/deploy/scripts/redeploy-board.sh" main
+fi
+
 echo "OK: hub deployed to $HUB_DEST"

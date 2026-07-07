@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="CH2 DATA 통합 게시판 — 질문, 오류 보고, 기능 개선 건의"
+    />
+    <title>CH2 DATA 게시판</title>
+    <link rel="stylesheet" href="/board/assets/style.css" />
+  </head>
+  <body>
+    <div class="page" id="app">
+      <header class="topbar">
+        <div class="topbar__brand">
+          <a class="topbar__home" href="https://ch2data.com/">CH2 DATA</a>
+          <span class="topbar__sep">/</span>
+          <span class="topbar__title">통합 게시판</span>
+        </div>
+        <p class="topbar__lead">
+          Macro · FieldNote · Viewer 공통 — 질문, 오류 보고, 기능 개선 건의
+        </p>
+      </header>
+
+      <section class="notice" id="auth-notice" hidden>
+        <strong>로그인 준비 중</strong>
+        <span id="auth-notice-text"></span>
+      </section>
+
+      <div id="list-view">
+        <section class="toolbar">
+          <div class="filters" id="filters">
+            <label class="field">
+              <span>제품</span>
+              <select id="filter-product">
+                <option value="">전체</option>
+                <option value="macro">Macro</option>
+                <option value="fieldnote">FieldNote</option>
+                <option value="viewer">Viewer</option>
+                <option value="general">공통</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>유형</span>
+              <select id="filter-category">
+                <option value="">전체</option>
+                <option value="question">질문</option>
+                <option value="bug">오류 보고</option>
+                <option value="feature">기능 개선</option>
+              </select>
+            </label>
+            <button type="button" class="btn btn--ghost" id="refresh-btn">새로고침</button>
+          </div>
+          <button type="button" class="btn btn--primary" id="new-post-btn">글쓰기</button>
+        </section>
+
+        <section class="panel" id="compose-panel" hidden>
+          <h2 class="panel__title">새 글 작성</h2>
+          <form id="compose-form" class="form">
+            <div class="form__row">
+              <label class="field">
+                <span>제품</span>
+                <select name="product" required>
+                  <option value="macro">Macro</option>
+                  <option value="fieldnote">FieldNote</option>
+                  <option value="viewer">Viewer</option>
+                  <option value="general">공통</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>유형</span>
+                <select name="category" required>
+                  <option value="question">질문</option>
+                  <option value="bug">오류 보고</option>
+                  <option value="feature">기능 개선</option>
+                </select>
+              </label>
+            </div>
+            <label class="field">
+              <span>작성자</span>
+              <input name="author_name" type="text" maxlength="80" required placeholder="이름 또는 닉네임" />
+            </label>
+            <label class="field">
+              <span>제목</span>
+              <input name="title" type="text" maxlength="200" required placeholder="제목을 입력하세요" />
+            </label>
+            <label class="field">
+              <span>내용</span>
+              <textarea
+                name="body"
+                rows="8"
+                maxlength="12000"
+                required
+                placeholder="질문 내용, 재현 방법, 개선 아이디어 등을 적어 주세요."
+              ></textarea>
+            </label>
+            <div class="form__actions">
+              <button type="button" class="btn btn--ghost" id="compose-cancel">취소</button>
+              <button type="submit" class="btn btn--primary">등록</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel">
+          <div class="panel__head">
+            <h2 class="panel__title">게시글</h2>
+            <p class="panel__meta" id="list-meta">불러오는 중…</p>
+          </div>
+          <ul class="post-list" id="post-list"></ul>
+          <div class="pager" id="pager" hidden>
+            <button type="button" class="btn btn--ghost" id="prev-page">이전</button>
+            <span id="page-label"></span>
+            <button type="button" class="btn btn--ghost" id="next-page">다음</button>
+          </div>
+          <p class="empty" id="empty-state" hidden>아직 글이 없습니다. 첫 글을 남겨 보세요.</p>
+        </section>
+      </div>
+
+      <div id="detail-view" hidden>
+        <button type="button" class="back-link" id="back-to-list">← 목록으로</button>
+        <article class="detail" id="post-detail"></article>
+        <section class="panel">
+          <h2 class="panel__title">댓글</h2>
+          <ul class="comment-list" id="comment-list"></ul>
+          <form id="comment-form" class="form form--compact">
+            <label class="field">
+              <span>작성자</span>
+              <input name="author_name" type="text" maxlength="80" required />
+            </label>
+            <label class="field">
+              <span>댓글</span>
+              <textarea name="body" rows="4" maxlength="8000" required></textarea>
+            </label>
+            <div class="form__actions">
+              <button type="submit" class="btn btn--primary">댓글 등록</button>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      <footer class="footer">
+        <a href="https://ch2data.com/">ch2data.com</a>
+        <span>·</span>
+        <span>© CH2 DATA</span>
+      </footer>
+    </div>
+
+    <script src="/board/assets/board.js" defer></script>
+  </body>
+</html>
