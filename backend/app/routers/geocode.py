@@ -1,4 +1,8 @@
-"""카카오 Local API 주소 → 좌표 (FieldNote 등 클라이언트용 프록시)."""
+"""카카오 Local API 주소 → 좌표 (FieldNote 등 클라이언트용 프록시).
+
+임시로 CH2 Macro FastAPI(ch2_Macro)에 둔다. Macro 통계와 무관하며,
+이후 ch2data.com 플랫폼 API 또는 FieldNote 전용 서비스로 이전 예정.
+"""
 
 from __future__ import annotations
 
