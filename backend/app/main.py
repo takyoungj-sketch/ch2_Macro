@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import get_db
-from app.routers import free, free_v2, paid, twin_regions, twin_v8, upper_stats
+from app.routers import free, free_v2, geocode, paid, twin_regions, twin_v8, upper_stats
 
 if (settings.built_database_url or "").strip():
     from app.built.router import router as built_router
@@ -95,6 +95,7 @@ async def _api_token_guard(request: Request, call_next):
 # DECISIONS D-001 — V1 통계 엔드포인트(/free/stats/*)는 폐기됨. /free/regions 는 V2로 이전 완료.
 # free.py 는 free_v2.py 가 의존하는 헬퍼 함수 유지 목적으로 존재.
 app.include_router(free.router, prefix="/api")
+app.include_router(geocode.router, prefix="/api")
 app.include_router(free_v2.router, prefix="/api")
 app.include_router(paid.router, prefix="/api")
 app.include_router(upper_stats.router, prefix="/api")

@@ -61,6 +61,8 @@ class Settings(BaseSettings):
     ai_polish_enabled: bool = Field(default=False, validation_alias="AI_POLISH_ENABLED")
     #: CH2 AI — Tavily 웹 검색 (없으면 DuckDuckGo Instant 폴백)
     tavily_api_key: str = Field(default="", validation_alias="TAVILY_API_KEY")
+    #: 카카오 Local API (FieldNote 주소 지오코딩 프록시)
+    kakao_rest_api_key: str = Field(default="", validation_alias="KAKAO_REST_API_KEY")
 
     @property
     def cors_origins_list(self) -> list[str]:
