@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db import get_db
 from app.routers import free, free_v2, geocode, paid, twin_regions, twin_v8, upper_stats
+from app.map.router import router as map_router
 
 if (settings.built_database_url or "").strip():
     from app.built.router import router as built_router
@@ -96,6 +97,7 @@ async def _api_token_guard(request: Request, call_next):
 # free.py 는 free_v2.py 가 의존하는 헬퍼 함수 유지 목적으로 존재.
 app.include_router(free.router, prefix="/api")
 app.include_router(geocode.router, prefix="/api")
+app.include_router(map_router, prefix="/api")
 app.include_router(free_v2.router, prefix="/api")
 app.include_router(paid.router, prefix="/api")
 app.include_router(upper_stats.router, prefix="/api")

@@ -1,7 +1,7 @@
 # CH2 Macro — Map + Region Hub 설계
 
-> **상태:** **설계 진행 중 · 구현 보류**  
-> **구현 시점:** **전국 Regional Profile 재구축** 및 **쌍둥이 도시 찾기** 제품화 이후 (Profile·지도 Hub 동시 도입 권장)  
+> **상태:** **Map-A 구현 진행 중** (지도·경계·인접 복수 선택) · **Profile-B 대기** (카드 API·재구축 데이터)  
+> **구현 시점:** **1단계(Map-A)** — Profile 완료 **전에** 지도 Hub PoC. **2단계(Profile-B)** — `regional_profile` 재구축·Twin 이후 카드 연동  
 > **관련:** [`DECISIONS.md`](./DECISIONS.md) D-010 · [`REGIONAL_PROFILE_ARCHITECTURE.md`](./REGIONAL_PROFILE_ARCHITECTURE.md) · [`REGION_ARCHITECTURE_ROADMAP.md`](./REGION_ARCHITECTURE_ROADMAP.md) · [`TWIN_V8_DESIGN.md`](./TWIN_V8_DESIGN.md)
 
 ---
@@ -29,31 +29,45 @@
 
 ### 1.3 본 문서 범위
 
-| 포함 | 제외 (별도 과제 · 미정) |
+| 포함 (Map-A) | 제외 · 후속 (Profile-B · 별도 과제) |
 |------|-------------------------|
-| 지도 UX·경계·줌·패닝·인접 복수 선택 | Regional Profile **파이프라인 재구축** (선행) |
-| 좌측 `RegionSelector` ↔ 지도 **양방향 동기화** | GeoJSON **수집·적재 SOP** · 인접 **코드 구현** (차후) |
-| 법정동·리까지 **전 행정 레벨** 경계 표시 원칙 | VWorld API 키·쿼터·레이어 상세 (차후) |
+| 지도 UX·경계·줌·패닝·인접 복수 선택 | Regional Profile **파이프라인 재구축** (카드 연동 선행) |
+| 좌측 `RegionSelector` ↔ 지도 **양방향 동기화** | GeoJSON **수집·적재 SOP** (VWorld 프록시로 1차 대체) |
+| 법정동·리까지 **전 행정 레벨** 경계 표시 원칙 | VWorld 쿼터·캐시·shard 최적화 (차후) |
 | 토지 우선 → 복합·집합 **동일 UX 패턴** (원칙만) | 복합·집합 addr 매핑·인접 상세 (토지 PoC 후) |
-| 구현 **보류 조건** | 통계 매트릭스·회귀·차트 (조회 **후** 기존 패널) |
+| **Profile 없이** placeholder 카드·지도 Hub | Hub 카드 **Profile 기본정보** (Profile-B) |
+| 통계 매트릭스·회귀·차트 | 조회 **후** 기존 Free/Paid 패널 (변경 없음) |
 
 > 본 문서는 구상에 따라 **계속 수정**한다.
 
 ---
 
-## 2. 선행 조건 (구현 보류)
+## 2. 구현 단계 — Map-A / Profile-B
 
-아래가 완료되기 전 **Map Hub 프론트·API 구현을 시작하지 않는다.**
+**Profile 재구축을 기다리지 않고** 지도 Hub를 먼저 도입한다. 카드의 Profile 데이터만 2단계로 미룬다.
 
-1. **전국 `regional_profile` 재구축**
-   - grain·feature 정의가 **법정동·리(`beopjungri`)** 선택과 1:1로 맞아야 함
-   - 현재 UI의 읍면동 승격(`resolveProfileRegionFromTier`)은 **임시 동작**이며, Hub SSOT와 불일치 → **Profile 재구축 후 교체**
+### 2.1 Map-A (지금 — Profile 비의존)
 
-2. **쌍둥이 도시 찾기** 제품 경로 정리 (전국 Profile 소비 Twin)
+| 항목 | 내용 |
+|------|------|
+| **목표** | 조회 전 dead screen 해소, 1차 선택 → 지도·경계·클로즈업, 유료 인접 복수 추가 |
+| **베이스맵** | VWorld 위성 타일 (`VITE_VWORLD_API_KEY` / 백엔드 `VWORLD_API_KEY`) |
+| **경계** | 백엔드 `/api/map/boundaries` — VWorld Data API 프록시 |
+| **카드** | `RegionMapCard` placeholder (선택 목록·안내 문구) |
+| **1차 선택** | 좌측 `RegionSelector` only |
+| **추가 선택** | 유료만, 지도 **우클릭** → 인접 검사(`@turf/boolean-touches`) → `tierSelection` 동기화 |
+| **무료** | 지도 열람·클로즈업, 우클릭 추가 불가 |
+| **프로필 탭** | 기존 `ProfilePanel` 유지 (Hub와 분리) |
 
-3. **지역 프로필 기본정보** — Hub 카드에 넣을 필드·API는 Profile 작업 완료 후 구체화
+### 2.2 Profile-B (후속 — 카드·API)
 
-> **참고:** `frontend`에 `react-map-gl` 의존성만 선행 추가되어 있음. **컴포넌트·GeoJSON·VWorld 연동은 미구현.**
+아래 완료 후 Hub 카드를 Profile 데이터로 교체한다.
+
+1. **전국 `regional_profile` 재구축** — grain·feature가 **법정동·리(`beopjungri`)** 와 1:1
+2. **쌍둥이 도시 찾기** 제품 경로 (전국 Profile 소비 Twin)
+3. Hub 카드 필드·API 확정 — 인구·토지 시장 요약 등 (`§4`)
+
+> 현재 UI의 읍면동 승격(`resolveProfileRegionFromTier`)은 **임시**이며, Profile-B에서 `beopjungri` 직접 조회로 교체한다.
 
 ---
 
@@ -76,10 +90,10 @@
 | 제품 | 분석 grain | Hub 1차 적용 | 비고 |
 |------|-----------|-------------|------|
 | **토지** | 법정동·리 | ✅ 우선 PoC | 인구 + 토지 요약 |
-| **복합부동산** | addr + 건물 특성 | 토지 성공 후 | 지도 복수 선택 **동일 UX 패턴** 검토 (addr·인접 상세 **미정**) |
-| **집합부동산** | `building_key` 등 | 토지 성공 후 | 동일 패턴 검토 (**미정**) |
+| **복합부동산** | addr + 건물 특성 | **계획 문서화** | 상세: [`BUILT_MAP_HUB_PLAN.md`](./BUILT_MAP_HUB_PLAN.md) (addr↔코드·Phase Built-M0~M4) |
+| **집합부동산** | `building_key` 등 | 토지·복합 후 | 동일 패턴 검토 (**미정**) |
 
-집합·복합의 지도·Profile 상세는 **토지 PoC 이후** 본 문서에 추가한다.
+복합 지도 이식은 **토지 Map-A 안정화 후** [`BUILT_MAP_HUB_PLAN.md`](./BUILT_MAP_HUB_PLAN.md) Phase를 따른다. 집합은 복합 이후 별도 문서화.
 
 ### 3.3 복수 선택 — 공통 규칙
 
@@ -211,15 +225,17 @@ Profile 재구축 **이후** 기본정보를 표시한다. **구체 필드·문�
 
 ---
 
-## 8. 구현 Phase (보류 — 순서만)
+## 8. 구현 Phase
 
 | Phase | 내용 | 상태 |
 |-------|------|------|
-| **P0** | 전국 `regional_profile` (beop grain) + Twin | **선행** |
-| **P1** | VWorld 연동 + 행정 경계 ingest + join 검증 | 대기 |
-| **P2** | 토지 `RegionMapHub` — 클로즈업·경계·카드·좌측 동기화 | 대기 |
-| **P2b** | 토지 **지도 인접 복수 선택** (우클릭·유료·기존 tier 한도) | 대기 |
-| **P3** | Profile 상세·다크모드·복합·집합 패턴 이식 | 후속 |
+| **Map-A1** | 백엔드 VWorld config + `/api/map/boundaries` 프록시 | **진행** |
+| **Map-A2** | `RegionMapHub` — 타일·경계·15cm fit·highlight·placeholder 카드 | **진행** |
+| **Map-A3** | 유료 우클릭 인접 복수 → `tierSelection` 동기화 | **진행** |
+| **Map-A4** | `App.tsx` 통합 (무료·유료·조회 전 Hub 상시) | **진행** |
+| **Profile-B0** | 전국 `regional_profile` (beop grain) + Twin | 대기 |
+| **Profile-B1** | Hub 카드 Profile API·필드 연동 | 대기 |
+| **Profile-B2** | 복합·집합 동일 UX 패턴 이식 | **복합: 계획 문서화** → [`BUILT_MAP_HUB_PLAN.md`](./BUILT_MAP_HUB_PLAN.md) · 집합: 후속 |
 
 ---
 
@@ -239,7 +255,7 @@ Profile 재구축 **이후** 기본정보를 표시한다. **구체 필드·문�
 - 인접 판정 **구현** (polygon topology vs 사전 테이블)
 - VWorld 레이어·키·쿼터·캐시
 - GeoJSON shard·API 형태
-- 복합·집합: addr 레벨별 인접·복수 선택 상세
+- 복합·집합: addr 레벨별 인접·복수 선택 상세 → **복합은 [`BUILT_MAP_HUB_PLAN.md`](./BUILT_MAP_HUB_PLAN.md) §5·§6 로 이관** (집합 미정)
 - 복수 선택 시 **카드** UI (목록 vs 합산 vs 탭)
 - 비인접 클릭·한도 초과·선택 해제 우클릭 UX
 - 전국 초기 뷰 vs 빈 지도 진입
@@ -255,6 +271,7 @@ Profile 재구축 **이후** 기본정보를 표시한다. **구체 필드·문�
 | [`TWIN_V8_DESIGN.md`](./TWIN_V8_DESIGN.md) | Twin (Profile 소비) |
 | [`UPPER_STATS_DESIGN.md`](./UPPER_STATS_DESIGN.md) | 상위·쌍둥이 (유료) |
 | [`DECISIONS.md`](./DECISIONS.md) D-010 | 행정 레벨·유료 복수 정책 |
+| [`BUILT_MAP_HUB_PLAN.md`](./BUILT_MAP_HUB_PLAN.md) | 복합 Map Hub 이식 계획 (Built-M0~M4) |
 
 ---
 
@@ -264,3 +281,5 @@ Profile 재구축 **이후** 기본정보를 표시한다. **구체 필드·문�
 |------|------|
 | 2026-06-25 | 초안 — Map Hub 범위, beop 경계·카드 규칙, Profile/Twin 선행 후 구현 |
 | 2026-07-09 | 인터랙티브 인접 복수 선택·VWorld·15cm 클로즈업·동일레벨·무료/유료·패닝/우클릭 UX 반영; 복합·집합 원칙 추가 |
+| 2026-07-09 | **Map-A / Profile-B** 2단계 분리 — Profile 선행 없이 지도 Hub PoC 시작; §2·§8 재정의 |
+| 2026-07-11 | 복합 지도 이식 → [`BUILT_MAP_HUB_PLAN.md`](./BUILT_MAP_HUB_PLAN.md) 분리 문서화; §3.2·Profile-B2·§10 갱신 |

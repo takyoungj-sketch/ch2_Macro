@@ -63,6 +63,9 @@ class Settings(BaseSettings):
     tavily_api_key: str = Field(default="", validation_alias="TAVILY_API_KEY")
     #: 카카오 Local API (FieldNote 주소 지오코딩 프록시)
     kakao_rest_api_key: str = Field(default="", validation_alias="KAKAO_REST_API_KEY")
+    #: VWorld 2D API (Map Hub 타일·행정경계 Data API)
+    vworld_api_key: str = Field(default="", validation_alias="VWORLD_API_KEY")
+    vworld_api_domain: str = Field(default="localhost", validation_alias="VWORLD_API_DOMAIN")
 
     @property
     def cors_origins_list(self) -> list[str]:

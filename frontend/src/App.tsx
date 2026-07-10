@@ -1,4 +1,4 @@
-import { useLayoutEffect } from "react";
+import { useLayoutEffect, useState } from "react";
 import {
   UI_FONT_SCALE_STEPS,
   applyColorScheme,
@@ -6,17 +6,15 @@ import {
 } from "./constants/displayUi";
 import { useAppStore } from "./store";
 import RegionSelector from "./components/RegionSelector";
+import RegionMapHub, { type MapPanelMode } from "./components/RegionMapHub";
 import FreeStatsPanel from "./components/FreeStatsPanel";
 import PaidAnalysisPanel from "./components/PaidAnalysisPanel";
 import PaidFilterTable from "./components/PaidFilterTable";
 import ProfilePanel from "./components/ProfilePanel";
 
-function PaidIntro() {
-  return <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm min-h-[12rem]" />;
-}
-
 export default function App() {
   const { viewMode, setViewMode, paidResultView } = useAppStore();
+  const [mapPanelMode, setMapPanelMode] = useState<MapPanelMode>("normal");
   const uiFontScaleStep = useAppStore((s) => s.uiFontScaleStep);
   const bumpUiFontScale = useAppStore((s) => s.bumpUiFontScale);
   const uiColorScheme = useAppStore((s) => s.uiColorScheme);
@@ -36,6 +34,16 @@ export default function App() {
   const fontStepMin = fontIdx <= 0;
   const fontStepMax = fontIdx >= UI_FONT_SCALE_STEPS.length - 1;
   const isDark = uiColorScheme === "dark";
+  const mapExpanded = viewMode !== "profile" && mapPanelMode === "expanded";
+
+  const statsPanel =
+    viewMode === "free" ? (
+      <FreeStatsPanel />
+    ) : paidResultView === "basic" ? (
+      <FreeStatsPanel />
+    ) : paidResultView === "filtered" ? (
+      <PaidAnalysisPanel />
+    ) : null;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col">
@@ -152,17 +160,24 @@ export default function App() {
           {viewMode === "paid" && <PaidFilterTable />}
         </aside>
 
-        <section className="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-900">
-          {viewMode === "free" ? (
-            <FreeStatsPanel />
-          ) : viewMode === "profile" ? (
+        <section
+          className={`flex-1 min-h-0 bg-slate-50 dark:bg-slate-900 overflow-y-auto ${
+            mapExpanded ? "p-4" : "p-6"
+          }`}
+        >
+          {viewMode === "profile" ? (
             <ProfilePanel />
-          ) : paidResultView === "idle" ? (
-            <PaidIntro />
-          ) : paidResultView === "basic" ? (
-            <FreeStatsPanel />
           ) : (
-            <PaidAnalysisPanel />
+            <div className="space-y-6">
+              <RegionMapHub
+                fillHeight={mapPanelMode === "expanded"}
+                mapPanelMode={mapPanelMode}
+                onExpand={() => setMapPanelMode("expanded")}
+                onCollapse={() => setMapPanelMode("collapsed")}
+                onNormal={() => setMapPanelMode("normal")}
+              />
+              {statsPanel}
+            </div>
           )}
         </section>
       </main>

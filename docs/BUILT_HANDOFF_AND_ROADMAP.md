@@ -1,7 +1,8 @@
 # 복합부동산(built) — 작업 인수·로드맵
 
 > **작성:** 2026-06-03 · **대상:** `macro.ch2data.com` 복합부동산 MVP + VPS 통합  
-> **다음 우선 작업:** (1) AI 연동 (2) **2026년 7월 초** 월간 데이터 업데이트 (`cycle_id=202607`)
+> **다음 우선 작업:** (1) AI 연동 (2) **2026년 7월 초** 월간 데이터 업데이트 (`cycle_id=202607`)  
+> **지도 Hub:** 계획 문서화 — [`BUILT_MAP_HUB_PLAN.md`](BUILT_MAP_HUB_PLAN.md) (구현 대기)
 
 ---
 
@@ -197,6 +198,7 @@ py scripts\monthly\compare_built_count_snapshots.py --before ... --after ...
 
 ## 6. 백로그 (우선순위 낮음)
 
+- **Map Hub 이식 (문서화 완료 · 구현 대기):** [`BUILT_MAP_HUB_PLAN.md`](BUILT_MAP_HUB_PLAN.md) — 토지 Map-A UX를 복합에 이식 (`/api/map` 재사용 · addr↔코드 resolve · Built-M0~M4)
 - **원장 재구축 (Phase A — 진행 예정):** [`BUILT_LEDGER_REBUILD_PLAN.md`](BUILT_LEDGER_REBUILD_PLAN.md) — MOLIT raw base 21~26, GUKTO 폐기, `road_width_label`, 주소 B (DECISIONS D-024)
 - **건축물대장 연계** — [`BUILDING_REGISTER_ROADMAP.md`](BUILDING_REGISTER_ROADMAP.md) (구현 보류, 1순위 `building_register_title` 적재)
 - 세 유형 **통합 회귀** (`asset_type` 더미, zone 결측 처리) — Phase B
@@ -211,6 +213,7 @@ py scripts\monthly\compare_built_count_snapshots.py --before ... --after ...
 | 문서/스크립트 | 용도 |
 |---------------|------|
 | [`BUILT_RESEARCH_MVP.md`](BUILT_RESEARCH_MVP.md) | 로컬 개발·API 목록 |
+| [`BUILT_MAP_HUB_PLAN.md`](BUILT_MAP_HUB_PLAN.md) | 복합 Map Hub 이식 계획 (토지 지도 UX) |
 | [`BUILDING_REGISTER_ROADMAP.md`](BUILDING_REGISTER_ROADMAP.md) | 건축물대장 표제부 — 향후 tier 매칭·구조 변수 |
 | [`BUILT_MONTHLY_UPDATE_SOP.md`](BUILT_MONTHLY_UPDATE_SOP.md) | 월간 ingest·Promote |
 | [`deploy/09-macro-built-vps.md`](../deploy/09-macro-built-vps.md) | VPS URL·Nginx·restore |
