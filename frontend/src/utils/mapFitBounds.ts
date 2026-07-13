@@ -62,35 +62,38 @@ export function maxZoomForSelection(
     if (selectedCodes.some(isBeopjungriRiCode)) return 20;
     return 18;
   }
-  return maxZoomForMapLevel(level);
+  switch (level) {
+    case "eupmyeondong":
+      return 17;
+    case "sigungu":
+      return 15;
+    case "sido":
+      return 11;
+    default:
+      return 15;
+  }
 }
 
 /** 행정 레벨별 fit 상한 — 동·리는 더 깊게 확대 */
 export function maxZoomForMapLevel(level: MapAdminLevel | null): number {
-  switch (level) {
-    case "beopjungri":
-      return 18;
-    case "eupmyeondong":
-      return 16;
-    case "sigungu":
-      return 13;
-    case "sido":
-      return 10;
-    default:
-      return 14;
-  }
+  return maxZoomForSelection(level, []);
 }
 
-/** 화면에서 선택 지역 너비가 대략 targetCm 가 되도록 padding 산출 */
+/**
+ * 선택 지역이 지도 너비의 약 78%를 채우도록 padding 산출.
+ * 넓은 패널에서는 cm 목표만으로 너무 작게 보이므로 비율 하한을 둠.
+ */
 export function paddingForTargetWidthCm(
   containerWidthPx: number,
   targetCm = 15,
 ): { top: number; bottom: number; left: number; right: number } {
   const width = Math.max(containerWidthPx, 1);
-  const targetPx = (targetCm / 2.54) * 96;
-  const fillRatio = Math.min(1, targetPx / width);
+  const targetFromCm = (targetCm / 2.54) * 96;
+  const targetFromRatio = width * 0.78;
+  const targetPx = Math.max(targetFromCm, targetFromRatio);
+  const fillRatio = Math.min(0.92, targetPx / width);
   const padX = Math.round((width * (1 - fillRatio)) / 2);
-  const padY = Math.round(padX * 0.35);
+  const padY = Math.round(padX * 0.28);
   return { top: padY, bottom: padY, left: padX, right: padX };
 }
 

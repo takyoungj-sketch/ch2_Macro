@@ -2,7 +2,13 @@
  * 유료 지역 칩 선택 규칙.
  * 시·도·[시]·시군구 행정 칩은 각각 최대 1개.
  * 시군구 미만은 읍·면·동 행정 단위(칩 1개 = 1곳) + 법정동·리 줄(1줄 = 1곳)을 합쳐 아래 한도까지 복수 가능(혼합 허용).
+ *
+ * `LEFT_REGION_MULTI_SELECT = false` 이면 왼쪽 검색/「+ 추가」로 시군구 미만을 늘리지 않음
+ * (앵커 1개 + 지도 인접 추가). true로 되돌리면 기존 「+ 추가 지역 선택」 UI 복구.
  */
+
+/** 왼쪽 RegionSelector에서 시군구 미만 복수 추가 UI. false면 숨김·검색은 교체만. */
+export const LEFT_REGION_MULTI_SELECT = false;
 
 /** 시군구 미만 선택 단위 합계 상한 — 읍·면·동 행정 칩 수 + 법정동·리 줄 수 */
 export const MAX_PAID_SUBSIGUNGU_SELECTIONS = 10;

@@ -32,6 +32,17 @@ class RegionOption(BaseModel):
     min_reliable_count: int = 15
 
 
+class CollectiveMapResolveCodesResponse(BaseModel):
+    """addr 칩 → /api/map/boundaries 용 행정코드."""
+
+    level: Optional[Literal["sido", "sigungu", "eupmyeondong", "beopjungri"]] = None
+    selected_codes: list[str] = Field(default_factory=list)
+    context_sido_code: Optional[str] = None
+    context_sigungu_code: Optional[str] = None
+    labels: dict[str, str] = Field(default_factory=dict)
+    has_selection: bool = False
+
+
 class AnalysisFeatures(BaseModel):
     """고급 분석(효용지수·회귀) 활성화 여부 — 선택 연도 구간 기준."""
 
@@ -57,6 +68,29 @@ class BuildingStatsRow(BaseModel):
     ci_upper: Optional[float] = None
     is_reliable: bool = False
     analysis: AnalysisFeatures = Field(default_factory=AnalysisFeatures)
+
+
+class CollectiveBuildingGeocodeRequest(BaseModel):
+    """선택 건물 지번 → 지도 라벨용 좌표."""
+
+    addr1: str = Field(..., min_length=1)
+    addr2: str = Field(..., min_length=1)
+    jibun_address: Optional[str] = None
+    road_address: Optional[str] = None
+    building_key: Optional[str] = None
+    label: Optional[str] = None
+
+
+class CollectiveBuildingGeocodeResponse(BaseModel):
+    ok: bool
+    query: str
+    longitude: Optional[float] = None
+    latitude: Optional[float] = None
+    matched_name: Optional[str] = None
+    category: Optional[str] = None
+    label: Optional[str] = None
+    building_key: Optional[str] = None
+    error: Optional[str] = None
 
 
 class BuildingListResponse(BaseModel):

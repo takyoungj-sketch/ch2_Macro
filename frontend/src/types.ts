@@ -509,6 +509,45 @@ export interface LandRegressionResponse {
   warnings: string[];
   f_p_value?: number | null;
   significant_count?: number | null;
+  predict_options?: LandPredictOptions | null;
+}
+
+export interface LandPredictContinuous {
+  name: string;
+  label: string;
+  min?: number | null;
+  max?: number | null;
+}
+
+export interface LandPredictOptions {
+  continuous: LandPredictContinuous[];
+  road_conditions: string[];
+  road_reference?: string | null;
+  deal_types: string[];
+  deal_reference?: string | null;
+  beopjungri_names: string[];
+  beopjungri_reference?: string | null;
+  partial_ownership_enabled: boolean;
+}
+
+export interface LandRegressionPredictRequest extends LandRegressionRequest {
+  area_sqm?: number | null;
+  contract_year?: number | null;
+  road_condition?: string | null;
+  deal_type?: string | null;
+  partial_ownership?: boolean;
+  beopjungri_name?: string | null;
+}
+
+export interface LandRegressionPredictResponse {
+  n: number;
+  model_type: "log" | "linear";
+  y_hat: number;
+  pi_lower: number;
+  pi_upper: number;
+  ci_lower: number;
+  ci_upper: number;
+  warnings: string[];
 }
 
 /** UI: v8 조회 앵커 (충청권 sigungu/eup/beopjungri) */

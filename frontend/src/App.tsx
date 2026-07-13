@@ -155,7 +155,7 @@ export default function App() {
       </header>
 
       <main className="flex flex-1 overflow-hidden min-h-0" style={{ zoom: contentZoom }}>
-        <aside className="w-[22rem] min-w-[20rem] border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-y-auto p-4 space-y-3 flex-shrink-0">
+        <aside className="layout-sidebar p-4 space-y-4">
           <RegionSelector />
           {viewMode === "paid" && <PaidFilterTable />}
         </aside>

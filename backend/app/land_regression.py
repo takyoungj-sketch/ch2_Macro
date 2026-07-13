@@ -1,24 +1,29 @@
-"""토지 단가 헤도닉 OLS 회귀 엔진.
+"""토지 단가 헤도닉 OLS 회귀·예측 엔진.
 
 입력: _fetch_matrix_cell_filtered_transactions 결과(list[dict])
-출력: LandRegressionResponse
+출력: LandRegressionResponse / LandRegressionPredictResponse
 """
 
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Optional
 
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 
 if TYPE_CHECKING:
-    from app.schemas import LandRegressionRequest, LandRegressionResponse
+    from app.schemas import (
+        LandRegressionPredictRequest,
+        LandRegressionPredictResponse,
+        LandRegressionRequest,
+        LandRegressionResponse,
+    )
 
 MIN_N = 10  # 절대 최소 (요청 min_n보다 우선 낮게 설정 불가)
 
-# 사람이 읽기 좋은 변수 라벨
 _COEF_LABELS: dict[str, str] = {
     "const": "상수(기준)",
     "log_area": "log(면적)",
@@ -27,35 +32,38 @@ _COEF_LABELS: dict[str, str] = {
 }
 
 
-def _road_label(v: str) -> str:
-    return f"도로:{v}"
+@dataclass
+class _DesignBundle:
+    y_fit: pd.Series
+    X_const: pd.DataFrame
+    model_type: str
+    reference_categories: dict[str, str]
+    warnings: list[str]
+    year_mean: float
+    area_min: float
+    area_max: float
+    year_min: int
+    year_max: int
+    road_cats: list[str] = field(default_factory=list)
+    deal_cats: list[str] = field(default_factory=list)
+    beop_cats: list[str] = field(default_factory=list)
+    use_log_area: bool = False
+    use_area: bool = False
+    use_year: bool = False
+    use_road: bool = False
+    use_deal: bool = False
+    use_partial: bool = False
+    use_beop: bool = False
 
 
-def _deal_label(v: str) -> str:
-    return f"유형:{v}"
-
-
-def _beop_label(v: str) -> str:
-    return f"지역:{v}"
-
-
-def run_land_regression(
-    rows: list[dict],
-    req: "LandRegressionRequest",
-) -> "LandRegressionResponse":
-    from app.schemas import LandRegressionCoeff, LandRegressionResponse
-
+def _prepare_df(rows: list[dict], req: "LandRegressionRequest") -> tuple[pd.DataFrame, list[str]]:
     warnings: list[str] = []
-    min_n = max(MIN_N, int(req.min_n))
-
-    # ── 데이터프레임 생성 ──────────────────────────────────────────────
     df = pd.DataFrame(rows)
     df = df.dropna(subset=["unit_price_per_sqm", "area_sqm"])
     df["unit_price_per_sqm"] = df["unit_price_per_sqm"].astype(float)
     df["area_sqm"] = df["area_sqm"].astype(float)
     df["contract_year"] = df["contract_year"].astype(int)
 
-    # IQR 이상치 제거 (요청 옵션)
     if req.exclude_outliers_iqr:
         px = df["unit_price_per_sqm"].values
         q1, q3 = np.percentile(px, 25), np.percentile(px, 75)
@@ -66,16 +74,11 @@ def run_land_regression(
         df = df[mask].copy()
         if n_removed:
             warnings.append(f"IQR 이상치 {n_removed}건 제외 (배수 {mult})")
+    return df, warnings
 
-    n = len(df)
-    if n < min_n:
-        from fastapi import HTTPException
-        raise HTTPException(
-            status_code=422,
-            detail=f"회귀 최소 표본({min_n}건) 미충족: 현재 {n}건. 필터 조건을 완화해 주세요.",
-        )
 
-    # ── 종속변수 ──────────────────────────────────────────────────────
+def _build_design(df: pd.DataFrame, req: "LandRegressionRequest", base_warnings: list[str]) -> _DesignBundle:
+    warnings = list(base_warnings)
     y = df["unit_price_per_sqm"].copy()
     model_type = req.model_type
     if model_type == "log" and (y <= 0).any():
@@ -83,104 +86,226 @@ def run_land_regression(
         warnings.append("단가 ≤ 0인 행이 있어 선형 모델로 전환했습니다.")
     y_fit = np.log(y) if model_type == "log" else y
 
-    # ── 설계행렬 구성 ─────────────────────────────────────────────────
     X_parts: list[pd.DataFrame] = []
     reference_categories: dict[str, str] = {}
     v = req.variables
 
-    # 면적 (연속)
+    use_log_area = False
+    use_area = False
     if v.area_sqm:
         if v.log_area:
             log_a = np.log(df["area_sqm"].clip(lower=0.01))
             X_parts.append(log_a.rename("log_area").to_frame())
+            use_log_area = True
         else:
             X_parts.append(df[["area_sqm"]].copy())
+            use_area = True
 
-    # 연도 추세 (선형)
+    year_mean = float(df["contract_year"].mean())
+    use_year = False
     if v.year_trend:
-        yr_centered = (df["contract_year"] - df["contract_year"].mean()).rename("year_trend")
+        yr_centered = (df["contract_year"] - year_mean).rename("year_trend")
         X_parts.append(yr_centered.to_frame())
+        use_year = True
 
-    # 도로조건 더미
+    road_cats: list[str] = []
+    use_road = False
     if v.road_condition:
         col = df["road_condition"].fillna("미상").astype(str).str.strip()
         cats = sorted(col.unique())
         if len(cats) >= 2:
             ref = _pick_reference_road(cats)
             reference_categories["도로조건"] = ref
+            road_cats = cats
             dummies = pd.get_dummies(col, prefix="road", drop_first=False)
             ref_col = f"road_{ref}"
             dummies = dummies.drop(columns=[ref_col], errors="ignore")
             dummies.columns = [c.replace(" ", "_") for c in dummies.columns]
             X_parts.append(dummies.astype(float))
+            use_road = True
         else:
             warnings.append("도로조건 범주가 1개 이하 — 더미 제외")
 
-    # 유형 더미 (직거래/중개거래)
+    deal_cats: list[str] = []
+    use_deal = False
     if v.deal_type:
         col = df["deal_type"].fillna("중개거래").astype(str).str.strip()
         cats = sorted(col.unique())
         if len(cats) >= 2:
             ref = "중개거래" if "중개거래" in cats else cats[0]
             reference_categories["거래유형"] = ref
+            deal_cats = cats
             dummies = pd.get_dummies(col, prefix="deal", drop_first=False)
             ref_col = f"deal_{ref}"
             dummies = dummies.drop(columns=[ref_col], errors="ignore")
             X_parts.append(dummies.astype(float))
+            use_deal = True
         else:
             warnings.append("거래유형 범주가 1개 이하 — 더미 제외")
 
-    # 지분 더미
+    use_partial = False
     if v.partial_ownership:
         col = df["partial_ownership_label"].fillna("").astype(str).str.strip()
         has_partial = col.str.len() > 0
         if has_partial.sum() > 0 and (~has_partial).sum() > 0:
             X_parts.append(has_partial.astype(float).rename("partial_own").to_frame())
+            use_partial = True
         else:
             warnings.append("지분 여부 단일값 — 더미 제외")
 
-    # 법정동 고정효과 (복수 법정동 시)
+    beop_cats: list[str] = []
+    use_beop = False
     if v.beopjungri_fe:
         col = df["beopjungri_name"].fillna("미상").astype(str).str.strip()
         n_beop = col.nunique()
         if n_beop >= 2:
             ref = col.value_counts().idxmax()
-            reference_categories["법정동"] = ref
+            reference_categories["법정동"] = str(ref)
             dummies = pd.get_dummies(col, prefix="beop", drop_first=False)
             ref_col = f"beop_{ref}"
             dummies = dummies.drop(columns=[ref_col], errors="ignore")
-            # n < 3 법정동 제외
             small = [c for c in dummies.columns if dummies[c].sum() < 3]
             if small:
                 dummies = dummies.drop(columns=small)
                 warnings.append(f"법정동 FE: {len(small)}개 소수집단 제외")
             if not dummies.empty:
                 X_parts.append(dummies.astype(float))
+                use_beop = True
+                beop_cats = [str(ref)] + [str(c)[len("beop_") :] for c in dummies.columns]
         else:
             warnings.append("법정동이 1개 — FE 제외")
 
     if not X_parts:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=422, detail="투입 변수가 없습니다. 하나 이상의 변수를 선택하세요.")
 
     X = pd.concat(X_parts, axis=1)
-
-    # 완전분리·상수열 제거
     X = X.loc[:, X.nunique() > 1]
-
-    # ── OLS 적합 ─────────────────────────────────────────────────────
     X_const = sm.add_constant(X, has_constant="add")
     aligned_y = y_fit.loc[X_const.index]
-    model = sm.OLS(aligned_y, X_const, missing="drop").fit()
 
-    # ── 계수 추출 ─────────────────────────────────────────────────────
+    # 상수항·분산 제거 후 실제 남은 더미만 예측 옵션에 반영
+    colset = set(X_const.columns)
+    if use_road and road_cats:
+        ref_r = reference_categories.get("도로조건")
+        road_lookup = {r.replace(" ", "_"): r for r in road_cats}
+        rebuilt: list[str] = []
+        if ref_r:
+            rebuilt.append(ref_r)
+        for c in X_const.columns:
+            if not str(c).startswith("road_"):
+                continue
+            raw = str(c)[len("road_") :]
+            rebuilt.append(road_lookup.get(raw, raw.replace("_", " ")))
+        road_cats = rebuilt
+        use_road = any(str(c).startswith("road_") for c in colset) or bool(ref_r)
+    if use_deal and deal_cats:
+        ref_d = reference_categories.get("거래유형")
+        deal_kept = [ref_d] if ref_d else []
+        for c in X_const.columns:
+            if str(c).startswith("deal_"):
+                deal_kept.append(str(c)[len("deal_") :])
+        deal_cats = deal_kept
+        use_deal = any(str(c).startswith("deal_") for c in colset) or bool(ref_d)
+    if use_beop and beop_cats:
+        ref_b = reference_categories.get("법정동")
+        beop_kept = [ref_b] if ref_b else []
+        for c in X_const.columns:
+            if str(c).startswith("beop_"):
+                beop_kept.append(str(c)[len("beop_") :])
+        beop_cats = beop_kept
+        use_beop = any(str(c).startswith("beop_") for c in colset) or bool(ref_b)
+    use_partial = use_partial and "partial_own" in colset
+    use_log_area = use_log_area and "log_area" in colset
+    use_area = use_area and "area_sqm" in colset
+    use_year = use_year and "year_trend" in colset
+
+    return _DesignBundle(
+        y_fit=aligned_y,
+        X_const=X_const,
+        model_type=model_type,
+        reference_categories=reference_categories,
+        warnings=warnings,
+        year_mean=year_mean,
+        area_min=float(df["area_sqm"].min()),
+        area_max=float(df["area_sqm"].max()),
+        year_min=int(df["contract_year"].min()),
+        year_max=int(df["contract_year"].max()),
+        road_cats=road_cats,
+        deal_cats=deal_cats,
+        beop_cats=beop_cats,
+        use_log_area=use_log_area,
+        use_area=use_area,
+        use_year=use_year,
+        use_road=use_road,
+        use_deal=use_deal,
+        use_partial=use_partial,
+        use_beop=use_beop,
+    )
+
+
+def _to_predict_options(bundle: _DesignBundle) -> "Any":
+    from app.schemas import LandPredictContinuous, LandPredictOptions
+
+    continuous: list[LandPredictContinuous] = []
+    if bundle.use_area or bundle.use_log_area:
+        continuous.append(
+            LandPredictContinuous(
+                name="area_sqm",
+                label="면적(㎡)",
+                min=bundle.area_min,
+                max=bundle.area_max,
+            )
+        )
+    if bundle.use_year:
+        continuous.append(
+            LandPredictContinuous(
+                name="contract_year",
+                label="계약연도",
+                min=float(bundle.year_min),
+                max=float(bundle.year_max),
+            )
+        )
+
+    return LandPredictOptions(
+        continuous=continuous,
+        road_conditions=bundle.road_cats,
+        road_reference=bundle.reference_categories.get("도로조건"),
+        deal_types=bundle.deal_cats,
+        deal_reference=bundle.reference_categories.get("거래유형"),
+        beopjungri_names=bundle.beop_cats if bundle.use_beop else [],
+        beopjungri_reference=bundle.reference_categories.get("법정동"),
+        partial_ownership_enabled=bundle.use_partial,
+    )
+
+
+def run_land_regression(
+    rows: list[dict],
+    req: "LandRegressionRequest",
+) -> "LandRegressionResponse":
+    from fastapi import HTTPException
+
+    from app.schemas import LandRegressionCoeff, LandRegressionResponse
+
+    min_n = max(MIN_N, int(req.min_n))
+    df, warnings = _prepare_df(rows, req)
+    n = len(df)
+    if n < min_n:
+        raise HTTPException(
+            status_code=422,
+            detail=f"회귀 최소 표본({min_n}건) 미충족: 현재 {n}건. 필터 조건을 완화해 주세요.",
+        )
+
+    bundle = _build_design(df, req, warnings)
+    model = sm.OLS(bundle.y_fit, bundle.X_const, missing="drop").fit()
+
     coefs: list[LandRegressionCoeff] = []
     for name in model.params.index:
-        label = _make_label(name)
         coefs.append(
             LandRegressionCoeff(
                 name=str(name),
-                label=label,
+                label=_make_label(str(name)),
                 coef=float(model.params[name]),
                 se=float(model.bse[name]),
                 t=float(model.tvalues[name]),
@@ -190,19 +315,147 @@ def run_land_regression(
 
     return LandRegressionResponse(
         n=int(model.nobs),
-        model_type=model_type,
+        model_type=bundle.model_type,  # type: ignore[arg-type]
         r_squared=float(model.rsquared),
         adj_r_squared=float(model.rsquared_adj),
         coefficients=coefs,
-        reference_categories=reference_categories,
-        warnings=warnings,
+        reference_categories=bundle.reference_categories,
+        warnings=bundle.warnings,
         f_p_value=float(model.f_pvalue),
         significant_count=sum(1 for c in coefs if c.name != "const" and c.p < 0.1),
+        predict_options=_to_predict_options(bundle),
+    )
+
+
+def _back_transform(v: float, model_type: str) -> float:
+    if model_type == "log":
+        return float(math.exp(v))
+    return float(v)
+
+
+def _input_to_x_row(bundle: _DesignBundle, req: "LandRegressionPredictRequest") -> pd.DataFrame:
+    from fastapi import HTTPException
+
+    cols = list(bundle.X_const.columns)
+    row: dict[str, float] = {c: 0.0 for c in cols}
+    if "const" in row:
+        row["const"] = 1.0
+
+    if bundle.use_area or bundle.use_log_area:
+        if req.area_sqm is None:
+            raise HTTPException(status_code=400, detail="면적(area_sqm)을 입력해 주세요.")
+        area = float(req.area_sqm)
+        if area <= 0:
+            raise HTTPException(status_code=400, detail="면적은 0보다 커야 합니다.")
+        if bundle.use_log_area and "log_area" in row:
+            row["log_area"] = float(np.log(max(area, 0.01)))
+        if bundle.use_area and "area_sqm" in row:
+            row["area_sqm"] = area
+
+    if bundle.use_year and "year_trend" in row:
+        if req.contract_year is None:
+            raise HTTPException(status_code=400, detail="계약연도를 입력해 주세요.")
+        row["year_trend"] = float(req.contract_year) - bundle.year_mean
+
+    if bundle.use_road:
+        road = (req.road_condition or bundle.reference_categories.get("도로조건") or "").strip()
+        if not road:
+            raise HTTPException(status_code=400, detail="도로조건을 선택해 주세요.")
+        ref = bundle.reference_categories.get("도로조건")
+        if road != ref:
+            key = f"road_{road}".replace(" ", "_")
+            if key not in row:
+                raise HTTPException(status_code=400, detail=f"알 수 없는 도로조건: {road}")
+            row[key] = 1.0
+
+    if bundle.use_deal:
+        deal = (req.deal_type or bundle.reference_categories.get("거래유형") or "").strip()
+        if not deal:
+            raise HTTPException(status_code=400, detail="거래유형을 선택해 주세요.")
+        ref = bundle.reference_categories.get("거래유형")
+        if deal != ref:
+            key = f"deal_{deal}"
+            if key not in row:
+                raise HTTPException(status_code=400, detail=f"알 수 없는 거래유형: {deal}")
+            row[key] = 1.0
+
+    if bundle.use_partial and "partial_own" in row:
+        row["partial_own"] = 1.0 if req.partial_ownership else 0.0
+
+    if bundle.use_beop:
+        beop = (req.beopjungri_name or bundle.reference_categories.get("법정동") or "").strip()
+        if not beop:
+            raise HTTPException(status_code=400, detail="법정동을 선택해 주세요.")
+        ref = bundle.reference_categories.get("법정동")
+        if beop != ref:
+            key = f"beop_{beop}"
+            if key not in row:
+                raise HTTPException(status_code=400, detail=f"알 수 없는 법정동: {beop}")
+            row[key] = 1.0
+
+    return pd.DataFrame([row], columns=cols)
+
+
+def _extrapolation_warnings(bundle: _DesignBundle, req: "LandRegressionPredictRequest") -> list[str]:
+    out: list[str] = []
+    if req.area_sqm is not None:
+        a = float(req.area_sqm)
+        if a < bundle.area_min or a > bundle.area_max:
+            out.append(
+                f"면적 {a:g}㎡ 는 학습 범위({bundle.area_min:g}~{bundle.area_max:g}) 밖 — 외삽"
+            )
+    if req.contract_year is not None and bundle.use_year:
+        y = int(req.contract_year)
+        if y < bundle.year_min or y > bundle.year_max:
+            out.append(
+                f"연도 {y} 는 학습 범위({bundle.year_min}~{bundle.year_max}) 밖 — 외삽"
+            )
+    return out
+
+
+def predict_land_regression(
+    rows: list[dict],
+    req: "LandRegressionPredictRequest",
+) -> "LandRegressionPredictResponse":
+    from fastapi import HTTPException
+
+    from app.schemas import LandRegressionPredictResponse
+
+    min_n = max(MIN_N, int(req.min_n))
+    df, warnings = _prepare_df(rows, req)
+    n = len(df)
+    if n < min_n:
+        raise HTTPException(
+            status_code=422,
+            detail=f"예측 최소 표본({min_n}건) 미충족: 현재 {n}건.",
+        )
+
+    bundle = _build_design(df, req, warnings)
+    model = sm.OLS(bundle.y_fit, bundle.X_const, missing="drop").fit()
+    x_new = _input_to_x_row(bundle, req)
+    frame = model.get_prediction(x_new).summary_frame(alpha=0.05)
+    row = frame.iloc[0]
+
+    warn = list(bundle.warnings)
+    if n < 30:
+        warn.insert(0, f"n={n} — 참고용 (권장 n≥30, 예측구간 넓음)")
+    if bundle.model_type == "log":
+        warn.insert(0, "log(단가) 모형 — 예측값은 exp(ŷ) 역변환 (만원/㎡)")
+    warn.extend(_extrapolation_warnings(bundle, req))
+
+    return LandRegressionPredictResponse(
+        n=int(model.nobs),
+        model_type=bundle.model_type,  # type: ignore[arg-type]
+        y_hat=_back_transform(float(row["mean"]), bundle.model_type),
+        pi_lower=_back_transform(float(row["obs_ci_lower"]), bundle.model_type),
+        pi_upper=_back_transform(float(row["obs_ci_upper"]), bundle.model_type),
+        ci_lower=_back_transform(float(row["mean_ci_lower"]), bundle.model_type),
+        ci_upper=_back_transform(float(row["mean_ci_upper"]), bundle.model_type),
+        warnings=warn,
     )
 
 
 def _pick_reference_road(cats: list[str]) -> str:
-    """도로조건 기준 범주: '8미만' 또는 '세로(불)' 등 가장 낮은 등급 우선."""
     priority = ["8미만", "세로(불)", "맹지", "소로", "세로", "세로(가)", "25미만", "25이상"]
     for p in priority:
         if p in cats:

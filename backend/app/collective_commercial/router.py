@@ -32,7 +32,9 @@ from app.collective.schemas import AnalysisExplain, AnalysisFeatures, FloorIndex
 from app.collective.filters import _col, apply_region_filters
 from app.collective_commercial.tx_rows import apply_commercial_tx_period, commercial_tx_row_dict
 from app.collective.region_structure import detect_region_structure
-from app.collective.schemas import RegionOption, RegionStructureResponse
+from app.collective.resolve_codes import resolve_collective_map_codes
+from app.collective.schemas import CollectiveMapResolveCodesResponse, RegionOption, RegionStructureResponse
+from app.collective_commercial.road_geocode import geocode_commercial_road
 from app.collective_commercial.schemas import (
     CommercialAddressListResponse,
     CommercialAddressRow,
@@ -45,6 +47,8 @@ from app.collective_commercial.schemas import (
     CommercialRegressionPredictResponse,
     CommercialRegressionRequest,
     CommercialRegressionResponse,
+    CommercialRoadGeocodeRequest,
+    CommercialRoadGeocodeResponse,
     CommercialRollingStatPoint,
     CommercialRollingStatsResponse,
     CommercialTransactionListResponse,
@@ -52,6 +56,7 @@ from app.collective_commercial.schemas import (
     CommercialYearlyStatPoint,
     CommercialYearlyStatsResponse,
 )
+from app.config import settings
 from app.stats_utils import compute_stats
 
 from app.collective_commercial.regression.engine import predict_commercial_regression, run_commercial_regression
@@ -275,6 +280,59 @@ def list_leaf_regions(
         params,
     ).mappings().all()
     return [RegionOption(**dict(r)) for r in rows]
+
+
+@router.get("/regions/resolve-codes", response_model=CollectiveMapResolveCodesResponse)
+def resolve_region_codes_for_map(
+    db: Session = Depends(get_collective_db),
+    asset_type: Optional[str] = Query(None),
+    addr1: Optional[str] = Query(None),
+    addr2: Optional[str] = Query(None),
+    gu: list[str] = Query(default=[], description="구(addr3) 이름"),
+    leaf: list[str] = Query(default=[], description="읍·면·동 이름"),
+):
+    """좌측 addr 칩 → VWorld 지도용 행정코드 (집합상가·공장)."""
+    result = resolve_collective_map_codes(
+        db.connection(),
+        asset_type=normalize_asset_type(asset_type),
+        addr1=addr1,
+        addr2=addr2,
+        gu_list=gu,
+        leaf_list=leaf,
+        table="collective_commercial_transactions",
+    )
+    return CollectiveMapResolveCodesResponse(**result)
+
+
+@router.post("/roads/geocode", response_model=CommercialRoadGeocodeResponse)
+def geocode_road_for_map(body: CommercialRoadGeocodeRequest):
+    """선택 도로(cluster) 지오코딩 라벨 (Road-B · VWorld Search)."""
+    key = (settings.vworld_api_key or "").strip()
+    if not key:
+        raise HTTPException(
+            status_code=503,
+            detail="VWORLD_API_KEY가 설정되지 않았습니다.",
+        )
+    result = geocode_commercial_road(
+        api_key=key,
+        addr1=body.addr1,
+        addr2=body.addr2,
+        addr3=body.addr3,
+        addr4=body.addr4,
+        road_name=body.road_name,
+    )
+    label = (body.label or body.road_name or "").strip() or None
+    return CommercialRoadGeocodeResponse(
+        ok=bool(result.get("ok")),
+        query=str(result.get("query") or ""),
+        longitude=result.get("longitude"),
+        latitude=result.get("latitude"),
+        matched_name=result.get("matched_name"),
+        category=result.get("category"),
+        label=label,
+        cluster_key=body.cluster_key,
+        error=result.get("error"),
+    )
 
 
 @router.get("/clusters", response_model=CommercialClusterListResponse)

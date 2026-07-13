@@ -28,6 +28,7 @@ from app.built.transaction_export import (
 )
 from app.built.schemas import (
     BuiltFilterMetaResponse,
+    BuiltMapResolveCodesResponse,
     BuiltScopeStatsRow,
     BuiltTransactionListResponse,
     BuiltTransactionRow,
@@ -44,6 +45,7 @@ from app.built.schemas import (
     RegressionSuggestResponse,
     ScopeSampleFilterResponse,
 )
+from app.built.resolve_codes import resolve_built_map_codes
 
 router = APIRouter(prefix="/built", tags=["복합부동산(연구)"])
 
@@ -614,12 +616,13 @@ def list_ri_regions(
     """선택 읍·면·동 하위 리(addr5) 목록. parent=상위 읍·면."""
     conn = db.connection()
     info = detect_region_structure(conn, addr1, addr2, asset_type)
-    if not info.get("has_ri"):
-        return []
+    # has_ri 메타가 틀려도 leaf 하위 addr5 는 조회 (원장에 있으면 표시)
     effective_leaf = leaf_level or info.get("leaf_level", "addr3")
     leaf_list = addr4_list if effective_leaf == "addr4" else addr3_list
     if not leaf_list and addr4_list:
         leaf_list = addr4_list
+    if not leaf_list:
+        return []
     scope = _chip_scope_kwargs(
         contract_year_from=contract_year_from,
         contract_year_to=contract_year_to,
@@ -648,6 +651,29 @@ def list_ri_regions(
         **scope,
     )
     return [RegionOption(**o) for o in opts]
+
+
+@router.get("/regions/resolve-codes", response_model=BuiltMapResolveCodesResponse)
+def resolve_region_codes_for_map(
+    db: Session = Depends(get_built_db),
+    asset_type: Optional[str] = Query(None),
+    addr1: Optional[str] = Query(None),
+    addr2: Optional[str] = Query(None),
+    gu: list[str] = Query(default=[], description="구(addr3) 이름"),
+    leaf: list[str] = Query(default=[], description="읍·면·동 이름"),
+    ri_pick: list[str] = Query(default=[], description="eup|ri 형식"),
+):
+    """좌측 addr 칩 → VWorld 지도용 행정코드 (Built-M1)."""
+    result = resolve_built_map_codes(
+        db.connection(),
+        asset_type=asset_type,
+        addr1=addr1,
+        addr2=addr2,
+        gu_list=gu,
+        leaf_list=leaf,
+        ri_pick=ri_pick,
+    )
+    return BuiltMapResolveCodesResponse(**result)
 
 
 @router.post("/regression/run", response_model=RegressionRunResponse)

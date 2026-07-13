@@ -26,9 +26,12 @@ LAYER_BY_LEVEL: dict[str, tuple[str, str]] = {
 # 선택 지역 bbox 버퍼(도) — 상위 경계를 넘는 동일 레벨 이웃 보강 (~5km)
 _NEIGHBOR_BUFFER_DEG = 0.05
 _NEIGHBOR_FETCH_SIZE = 500
-# 선택 지역 대비 bbox 면적이 이 배수 초과인 읍·면 등은 지도에 그리면
-# 시내 줌에서 긴 직선·거미줄처럼 보이므로 이웃 후보에서 제외
+# 선택 지역 대비 bbox 면적이 이 배수 초과인 읍·면 등은
+# 선택과 떨어져 있으면 제외(시내 줌 거미줄 방지).
+# 선택과 맞닿거나 겹치면 인접 선택용으로 유지.
 _MAX_CONTEXT_BBOX_AREA_RATIO = 10.0
+# 인접 판정용 선택 bbox 패딩(~200m)
+_PRUNE_KEEP_NEAR_PAD_DEG = 0.002
 
 
 def _first_numeric_depth(coords: Any, depth: int = 0) -> int:
@@ -221,15 +224,28 @@ def feature_bbox_area(feat: dict[str, Any]) -> float:
     return bbox_area(bbox_from_features([feat]))
 
 
+def bboxes_touch_or_overlap(
+    a: tuple[float, float, float, float] | None,
+    b: tuple[float, float, float, float] | None,
+) -> bool:
+    """축정렬 bbox가 겹치거나 변·꼭짓점에서 맞닿으면 True."""
+    if not a or not b:
+        return False
+    aw, as_, ae, an = a
+    bw, bs, be, bn = b
+    return not (ae < bw or be < aw or an < bs or bn < as_)
+
+
 def _prune_oversized_features(
     fc: dict[str, Any],
     *,
     selected: list[str],
     max_ratio: float = _MAX_CONTEXT_BBOX_AREA_RATIO,
+    near_pad_deg: float = _PRUNE_KEEP_NEAR_PAD_DEG,
 ) -> dict[str, Any]:
     """
-    선택 지역보다 훨씬 큰 읍·면 polygon 을 제외.
-    시내 동 줌에서 거대 경계가 화면을 가로지르며 거미줄처럼 보이는 것을 막음.
+    선택 지역보다 훨씬 큰 읍·면 polygon 중, 선택과 떨어진 것만 제외.
+    인접(bbox 접촉·겹침)한 거대 면·읍은 지도 선택용으로 유지.
     """
     features = list(fc.get("features") or [])
     if not features or not selected:
@@ -238,12 +254,15 @@ def _prune_oversized_features(
     selected_feats = [f for f in features if _feature_code(f) in selected_set]
     if not selected_feats:
         return fc
-    sel_area = bbox_area(bbox_from_features(selected_feats))
-    if sel_area <= 0:
+    sel_bbox = bbox_from_features(selected_feats)
+    sel_area = bbox_area(sel_bbox)
+    if sel_area <= 0 or not sel_bbox:
         return fc
+    near_bbox = expand_bbox(sel_bbox, near_pad_deg)
     limit = sel_area * max_ratio
     kept: list[dict[str, Any]] = []
     dropped = 0
+    kept_near_oversized = 0
     for feat in features:
         code = _feature_code(feat)
         if code in selected_set:
@@ -251,13 +270,20 @@ def _prune_oversized_features(
             continue
         area = feature_bbox_area(feat)
         if area > limit:
+            feat_bbox = bbox_from_features([feat])
+            if bboxes_touch_or_overlap(feat_bbox, near_bbox):
+                kept.append(feat)
+                kept_near_oversized += 1
+                continue
             dropped += 1
             continue
         kept.append(feat)
-    if dropped:
+    if dropped or kept_near_oversized:
         _LOG.info(
-            "pruned oversized context features=%d (sel_area=%.6f limit=%.6f) remain=%d",
+            "pruned oversized context features=%d kept_near_oversized=%d "
+            "(sel_area=%.6f limit=%.6f) remain=%d",
             dropped,
+            kept_near_oversized,
             sel_area,
             limit,
             len(kept),
@@ -543,4 +569,73 @@ def fetch_context_collection(
     if selected:
         fc = _prune_oversized_features(fc, selected=selected)
 
+    return fc
+
+
+def parse_bbox_param(raw: str | None) -> tuple[float, float, float, float] | None:
+    """'west,south,east,north' → bbox."""
+    if not raw or not str(raw).strip():
+        return None
+    parts = [p.strip() for p in str(raw).split(",")]
+    if len(parts) != 4:
+        raise ValueError("bbox must be west,south,east,north")
+    try:
+        west, south, east, north = (float(parts[0]), float(parts[1]), float(parts[2]), float(parts[3]))
+    except ValueError as exc:
+        raise ValueError("bbox values must be numbers") from exc
+    if east <= west or north <= south:
+        raise ValueError("bbox east>west and north>south required")
+    return (west, south, east, north)
+
+
+def fetch_viewport_collection(
+    *,
+    api_key: str,
+    domain: str,
+    level: str,
+    bbox: tuple[float, float, float, float],
+    selected_codes: list[str],
+    pad_deg: float = 0.01,
+) -> dict[str, Any]:
+    """
+    Display SSOT — viewport bbox 내 동일 레벨 경계.
+    선택 코드는 뷰 밖이어도 반드시 포함.
+    """
+    selected = [c.strip() for c in selected_codes if c and c.strip()]
+    request_level = level.strip().lower()
+    if request_level not in ("sido", "sigungu", "eupmyeondong", "beopjungri"):
+        raise ValueError(f"unsupported level: {level}")
+
+    # 리는 ADRI, 법정동(…00) 요청은 EMD 레이어
+    if request_level == "beopjungri" and selected and not selected[0].endswith("00"):
+        effective_level = "beopjungri_ri"
+    elif request_level == "beopjungri":
+        effective_level = "eupmyeondong"
+    else:
+        effective_level = request_level
+
+    padded = expand_bbox(bbox, pad_deg)
+    geom = box_geom_filter(padded)
+    fc = fetch_features_soft(
+        api_key=api_key,
+        domain=domain,
+        level=effective_level,
+        geom_filter=geom,
+        size=1000,
+    )
+    _stamp_ch2_codes(
+        fc.get("features") or [],
+        request_level=request_level,
+        effective_level=effective_level,
+    )
+
+    if selected:
+        fc = _ensure_selected_features(
+            api_key=api_key,
+            domain=domain,
+            request_level=request_level,
+            effective_level=effective_level,
+            selected=selected,
+            base_fc=fc,
+        )
     return fc

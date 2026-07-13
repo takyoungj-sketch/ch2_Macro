@@ -167,7 +167,10 @@ def detect_region_structure_for_table(
                    )::int AS gu_like,
                    COUNT(*) FILTER (
                        WHERE addr4 IS NOT NULL AND btrim(addr4::text) <> ''
-                   )::int AS has_a4
+                   )::int AS has_a4,
+                   COUNT(*) FILTER (
+                       WHERE addr5 IS NOT NULL AND btrim(addr5::text) <> ''
+                   )::int AS has_a5
             FROM {table}
             WHERE {where}
             """
@@ -180,17 +183,24 @@ def detect_region_structure_for_table(
             "has_intermediate": False,
             "intermediate_label": None,
             "leaf_level": "addr3",
+            "has_ri": False,
+            "tx_count": 0,
         }
     gu_ratio = int(row.gu_like or 0) / total
     a4_ratio = int(row.has_a4 or 0) / total
+    has_ri = int(row.has_a5 or 0) > 0
     if gu_ratio >= 0.85 and a4_ratio >= 0.25:
         return {
             "has_intermediate": True,
             "intermediate_label": "구",
             "leaf_level": "addr4",
+            "has_ri": has_ri,
+            "tx_count": total,
         }
     return {
         "has_intermediate": False,
         "intermediate_label": None,
         "leaf_level": "addr3",
+        "has_ri": has_ri,
+        "tx_count": total,
     }

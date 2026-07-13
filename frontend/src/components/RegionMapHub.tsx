@@ -8,7 +8,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { Layer, NavigationControl, Source, type MapLayerMouseEvent, type MapRef } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 
-import { fetchMapBoundaries, fetchMapConfig, vworldSatelliteTileUrl } from "../api/mapClient";
+import {
+  boundsToBboxParam,
+  fetchMapBoundaries,
+  fetchMapConfig,
+  fetchMapNeighbors,
+  vworldSatelliteTileUrl,
+} from "../api/mapClient";
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import { MAX_PAID_LEAF_BEOPJUNGRI_PICK } from "../constants/tierPickLimits";
 import { fetchRegions } from "../api/client";
@@ -38,6 +44,16 @@ type ContextMenuState = {
   code: string;
   label: string;
 };
+
+/** Selection 그래프 비교용 — 읍면동은 8자리. */
+function canonAdminCode(level: string | null | undefined, code: string): string {
+  const c = code.trim();
+  if (!c) return c;
+  if (level === "beopjungri" && c.length >= 10 && !c.endsWith("00")) return c;
+  if (c.length >= 10 && c.endsWith("00")) return c.slice(0, 8);
+  if (c.length >= 8) return c.slice(0, 8);
+  return c;
+}
 
 /** 동일 레벨 행정구역 — 경계 접촉·미세 겹침을 인접으로 인정 */
 function shortRegionLabel(props: Record<string, unknown> | null | undefined): string {
@@ -249,6 +265,9 @@ export default function RegionMapHub({
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  /** Display SSOT — 현재 지도 viewport bbox (없으면 레거시 context 1회) */
+  const [viewBbox, setViewBbox] = useState<string | null>(null);
+  const viewBboxTimerRef = useRef<number | null>(null);
   const lastFitKeyRef = useRef("");
   const labelLayerRef = useRef<HTMLDivElement | null>(null);
   const labelNodesRef = useRef<Map<string, { el: HTMLSpanElement; lng: number; lat: number }>>(
@@ -263,20 +282,45 @@ export default function RegionMapHub({
 
   const mapScope = useMemo(() => resolveMapSelectionState(tierSelection, regions), [tierSelection, regions]);
 
+  const selectionKey = mapScope.selectedCodes.join(",");
+
+  useEffect(() => {
+    // 선택 바뀌면 fit용으로 context 1회 → fit 후 viewport 로 전환
+    setViewBbox(null);
+  }, [selectionKey, mapScope.level]);
+
   const configQ = useQuery({
     queryKey: ["map-config"],
     queryFn: fetchMapConfig,
     staleTime: 60_000,
   });
 
+  const syncViewportBbox = useCallback(() => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    try {
+      setViewBbox(boundsToBboxParam(map.getBounds()));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const scheduleViewportBbox = useCallback(() => {
+    if (viewBboxTimerRef.current != null) window.clearTimeout(viewBboxTimerRef.current);
+    viewBboxTimerRef.current = window.setTimeout(() => {
+      syncViewportBbox();
+    }, 280);
+  }, [syncViewportBbox]);
+
   const boundariesQ = useQuery({
     queryKey: [
       "map-boundaries",
-      "v4-ri-labels-hit",
+      "v5-viewport-display",
       mapScope.level,
-      mapScope.selectedCodes.join(","),
+      selectionKey,
       mapScope.contextSidoCode,
       mapScope.contextSigunguCode,
+      viewBbox ?? "context-bootstrap",
     ],
     queryFn: () =>
       fetchMapBoundaries({
@@ -284,6 +328,7 @@ export default function RegionMapHub({
         selected: mapScope.selectedCodes,
         contextSidoCode: mapScope.contextSidoCode,
         contextSigunguCode: mapScope.contextSigunguCode,
+        bbox: viewBbox,
       }),
     enabled: Boolean(mapScope.level && mapScope.hasSelection && configQ.data?.vworld_configured),
     staleTime: 0,
@@ -292,16 +337,54 @@ export default function RegionMapHub({
       const pk = prevQuery.queryKey;
       const sameScope =
         pk[2] === mapScope.level &&
-        pk[3] === mapScope.selectedCodes.join(",") &&
+        pk[3] === selectionKey &&
         pk[4] === mapScope.contextSidoCode &&
         pk[5] === mapScope.contextSigunguCode;
       return sameScope ? prev : undefined;
     },
   });
 
+  const neighborsQ = useQuery({
+    queryKey: ["map-neighbors", mapScope.level, selectionKey],
+    queryFn: () =>
+      fetchMapNeighbors({
+        level: mapScope.level!,
+        codes: mapScope.selectedCodes,
+      }),
+    enabled: Boolean(
+      mapScope.hasSelection &&
+        (mapScope.level === "eupmyeondong" || mapScope.level === "beopjungri") &&
+        configQ.data?.vworld_configured,
+    ),
+    staleTime: 30_000,
+  });
+
+  const neighborSelectableSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const c of neighborsQ.data?.neighbor_codes ?? []) {
+      set.add(canonAdminCode(mapScope.level, c));
+      set.add(c);
+    }
+    return set;
+  }, [neighborsQ.data?.neighbor_codes, mapScope.level]);
+
+  // 전역 edge 수가 아니라, 현재 선택 코드에 이웃 데이터가 있을 때만 그래프 강제
+  const neighborGraphReady = Boolean(
+    neighborsQ.data?.graph_ready &&
+      Object.values(neighborsQ.data?.neighbors_by_code ?? {}).some((arr) => (arr?.length ?? 0) > 0),
+  );
+
   const geojson = boundariesQ.data?.feature_collection ?? null;
 
   const selectedSet = useMemo(() => new Set(mapScope.selectedCodes), [mapScope.selectedCodes]);
+  const selectedCanonSet = useMemo(() => {
+    const s = new Set<string>();
+    for (const c of mapScope.selectedCodes) {
+      s.add(canonAdminCode(mapScope.level, c));
+      s.add(c);
+    }
+    return s;
+  }, [mapScope.selectedCodes, mapScope.level]);
 
   const { fillGeoJson, outlineGeoJson, labelGeoJson } = useMemo((): {
     fillGeoJson: GeoJSON.FeatureCollection | null;
@@ -319,7 +402,17 @@ export default function RegionMapHub({
     for (const feat of geojson.features) {
       const props = (feat.properties ?? {}) as Record<string, unknown>;
       const code = featureAdminCode(props, mapScope.level!);
-      const selected = code ? selectedSet.has(code) : false;
+      const selected = Boolean(
+        code &&
+          (selectedSet.has(code) || selectedCanonSet.has(canonAdminCode(mapScope.level, code))),
+      );
+      const selectable = Boolean(
+        code &&
+          !selected &&
+          neighborGraphReady &&
+          (neighborSelectableSet.has(code) ||
+            neighborSelectableSet.has(canonAdminCode(mapScope.level, code))),
+      );
       const label =
         shortRegionLabel(props) ||
         (code && mapScope.labels[code]
@@ -330,6 +423,7 @@ export default function RegionMapHub({
         ...props,
         ch2_code: code ?? props.ch2_code ?? props.li_cd ?? null,
         ch2_selected: selected ? 1 : 0,
+        ch2_selectable: selectable ? 1 : 0,
         ch2_label: label,
       };
 
@@ -366,7 +460,7 @@ export default function RegionMapHub({
       outlineGeoJson: { type: "FeatureCollection", features: outlineFeatures },
       labelGeoJson: { type: "FeatureCollection", features: labelFeatures },
     };
-  }, [geojson, mapScope.level, mapScope.labels, selectedSet]);
+  }, [geojson, mapScope.level, mapScope.labels, selectedSet, selectedCanonSet, neighborGraphReady, neighborSelectableSet]);
 
   const isRiSelection = useMemo(
     () =>
@@ -375,15 +469,10 @@ export default function RegionMapHub({
     [mapScope.level, mapScope.selectedCodes],
   );
 
-  const fitDataKey = useMemo(
-    () =>
-      [
-        mapScope.level,
-        ...mapScope.selectedCodes,
-        boundariesQ.dataUpdatedAt,
-        geojson?.features.length ?? 0,
-      ].join("|"),
-    [mapScope.level, mapScope.selectedCodes, boundariesQ.dataUpdatedAt, geojson?.features.length],
+  // 선택은 바뀔 때만 fit. viewport 경계 재조회(dataUpdatedAt)로는 카메라를 되돌리지 않음.
+  const selectionFitKey = useMemo(
+    () => [mapScope.level, ...mapScope.selectedCodes].join("|"),
+    [mapScope.level, mapScope.selectedCodes],
   );
 
   const fitToSelection = useCallback(() => {
@@ -392,7 +481,8 @@ export default function RegionMapHub({
 
     const selectedFeats = geojson.features.filter((f) => {
       const code = featureAdminCode(f.properties as Record<string, unknown>, mapScope.level!);
-      return code && selectedSet.has(code);
+      if (!code) return false;
+      return selectedSet.has(code) || selectedCanonSet.has(canonAdminCode(mapScope.level, code));
     });
     const targetFc: GeoJSON.FeatureCollection = {
       type: "FeatureCollection",
@@ -407,20 +497,44 @@ export default function RegionMapHub({
       containerWidthPx: width,
       level: mapScope.level,
       selectedCodes: mapScope.selectedCodes,
-      targetCm: 15,
+      targetCm: 20,
+      duration: 650,
     });
-  }, [geojson, mapReady, mapScope.level, mapScope.selectedCodes, selectedSet]);
+  }, [geojson, mapReady, mapScope.level, mapScope.selectedCodes, selectedSet, selectedCanonSet]);
 
   useEffect(() => {
     if (!mapReady || !boundariesQ.isSuccess || !geojson?.features.length) return;
-    if (lastFitKeyRef.current === fitDataKey) return;
-    lastFitKeyRef.current = fitDataKey;
+    if (lastFitKeyRef.current === selectionFitKey) return;
+
+    const hasSelectedGeom = geojson.features.some((f) => {
+      const code = featureAdminCode(f.properties as Record<string, unknown>, mapScope.level!);
+      if (!code) return false;
+      return selectedSet.has(code) || selectedCanonSet.has(canonAdminCode(mapScope.level, code));
+    });
+    // 선택 polygon이 아직 없으면(뷰포트 응답만) fit 보류
+    if (mapScope.selectedCodes.length > 0 && !hasSelectedGeom) return;
+
+    lastFitKeyRef.current = selectionFitKey;
 
     const t = window.setTimeout(() => {
-      window.requestAnimationFrame(() => fitToSelection());
+      window.requestAnimationFrame(() => {
+        fitToSelection();
+        window.setTimeout(() => syncViewportBbox(), 700);
+      });
     }, 80);
     return () => window.clearTimeout(t);
-  }, [fitDataKey, mapReady, boundariesQ.isSuccess, geojson, fitToSelection]);
+  }, [
+    selectionFitKey,
+    mapReady,
+    boundariesQ.isSuccess,
+    geojson,
+    fitToSelection,
+    syncViewportBbox,
+    mapScope.level,
+    mapScope.selectedCodes.length,
+    selectedSet,
+    selectedCanonSet,
+  ]);
 
   useEffect(() => {
     if (!mapReady || mapPanelMode === "collapsed") return;
@@ -556,7 +670,7 @@ export default function RegionMapHub({
         setMapError("이 구역의 행정코드를 확인할 수 없습니다.");
         return;
       }
-      if (selectedSet.has(code)) {
+      if (selectedSet.has(code) || selectedCanonSet.has(canonAdminCode(mapScope.level, code))) {
         setMapError("이미 선택된 지역입니다.");
         return;
       }
@@ -569,9 +683,22 @@ export default function RegionMapHub({
 
       const selectedFeatures = geojson.features.filter((f) => {
         const c = featureAdminCode(f.properties as Record<string, unknown>, mapScope.level!);
-        return c && selectedSet.has(c);
+        if (!c) return false;
+        return selectedSet.has(c) || selectedCanonSet.has(canonAdminCode(mapScope.level, c));
       });
-      if (!isAdjacentToAnySelected(polygonFeat, selectedFeatures, isRiSelection ? 0.002 : 0.0012)) {
+
+      // Selection SSOT: neighbor_codes 그래프 (없으면 turf 폴백)
+      const canon = canonAdminCode(mapScope.level, code);
+      const inNeighborGraph =
+        neighborSelectableSet.has(code) || neighborSelectableSet.has(canon);
+      if (neighborGraphReady) {
+        if (!inNeighborGraph) {
+          setMapError("인접한 지역만 추가할 수 있습니다. (위상 이웃만 선택 가능)");
+          return;
+        }
+      } else if (
+        !isAdjacentToAnySelected(polygonFeat, selectedFeatures, isRiSelection ? 0.002 : 0.0012)
+      ) {
         setMapError("인접한 지역만 추가할 수 있습니다. (맞닿은 구역을 선택해 주세요)");
         return;
       }
@@ -589,7 +716,17 @@ export default function RegionMapHub({
         label,
       });
     },
-    [geojson, isRiSelection, mapScope.labels, mapScope.level, selectedSet, viewMode],
+    [
+      geojson,
+      isRiSelection,
+      mapScope.labels,
+      mapScope.level,
+      neighborGraphReady,
+      neighborSelectableSet,
+      selectedCanonSet,
+      selectedSet,
+      viewMode,
+    ],
   );
 
   const handleContextMenu = useCallback(
@@ -762,7 +899,10 @@ export default function RegionMapHub({
               map?.dragRotate.disable();
               map?.touchPitch.disable();
               setMapReady(true);
+              scheduleViewportBbox();
             }}
+            onMoveEnd={() => scheduleViewportBbox()}
+            onZoomEnd={() => scheduleViewportBbox()}
             onContextMenu={handleContextMenu}
             onClick={handleMapClick}
             interactiveLayerIds={fillGeoJson ? ["region-fill", "region-outline"] : []}
@@ -812,19 +952,25 @@ export default function RegionMapHub({
                       "case",
                       ["==", ["get", "ch2_selected"], 1],
                       "#facc15",
-                      "#b91c1c",
+                      ["==", ["get", "ch2_selectable"], 1],
+                      "#f97316",
+                      "#ea580c",
                     ],
                     "line-width": [
                       "case",
                       ["==", ["get", "ch2_selected"], 1],
                       isRiSelection ? 4.5 : 4,
+                      ["==", ["get", "ch2_selectable"], 1],
+                      isRiSelection ? 2.4 : 2,
                       isRiSelection ? 1.8 : 1.35,
                     ],
                     "line-opacity": [
                       "case",
                       ["==", ["get", "ch2_selected"], 1],
                       1,
-                      0.9,
+                      ["==", ["get", "ch2_selectable"], 1],
+                      0.95,
+                      0.55,
                     ],
                     "line-opacity-transition": { duration: 0 },
                     "line-width-transition": { duration: 0 },
@@ -879,10 +1025,11 @@ export default function RegionMapHub({
         ) : null}
         {!boundariesQ.isFetching && geojson?.features.length ? (
           <div className="absolute bottom-2 left-2 z-10 text-[11px] bg-white/90 dark:bg-slate-800/90 px-2 py-1 rounded shadow text-slate-600 dark:text-slate-300">
-            행정구역 {geojson.features.length}곳
-            {geojson.features.length > mapScope.selectedCodes.length
-              ? " · 인접 포함"
-              : ""}
+            표시 {geojson.features.length}곳
+            {boundariesQ.data?.mode === "viewport" ? " · viewport" : " · context"}
+            {neighborGraphReady
+              ? ` · 선택가능 ${neighborSelectableSet.size}`
+              : " · 선택 turf폴백"}
           </div>
         ) : null}
       </div>

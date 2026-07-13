@@ -1,5 +1,10 @@
 import type { AiContextPayload } from "@ch2/ai-assistant/aiClient";
-import type { LandRegressionResponse, LongTermTrendResponse, MatrixYearlyStat } from "../types";
+import type {
+  LandRegressionPredictResponse,
+  LandRegressionResponse,
+  LongTermTrendResponse,
+  MatrixYearlyStat,
+} from "../types";
 
 export function buildLandRegressionContext(
   regData: LandRegressionResponse,
@@ -20,6 +25,28 @@ export function buildLandRegressionContext(
       zone_type: opts.zoneType,
       land_category: opts.landCategory,
       model_type: opts.modelType,
+    },
+  };
+}
+
+export function buildLandPredictionContext(
+  predict: LandRegressionPredictResponse,
+  opts: {
+    regionLabel: string;
+    regressionN: number;
+    adjR2: number;
+  },
+): AiContextPayload {
+  return {
+    app: "land",
+    panel: "LandPredict",
+    purpose: "statistics",
+    scope: { region_label: opts.regionLabel },
+    facts: {
+      ...predict,
+      unit: "만원/㎡",
+      regression_n: opts.regressionN,
+      adj_r_squared: opts.adjR2,
     },
   };
 }

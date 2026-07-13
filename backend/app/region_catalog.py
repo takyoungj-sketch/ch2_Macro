@@ -87,8 +87,9 @@ def structure_from_meta_or_detect(
             "tx_count": int(meta.get("tx_count") or 0),
         }
     info = detect_fn(conn, addr1, addr2, asset_type)
-    info["has_ri"] = False
-    info["tx_count"] = 0
+    # 런타임 감지가 has_ri/tx_count 를 넣지 않은 경우만 기본값
+    info.setdefault("has_ri", False)
+    info.setdefault("tx_count", 0)
     return info
 
 

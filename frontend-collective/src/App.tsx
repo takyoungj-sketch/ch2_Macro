@@ -10,8 +10,13 @@ import {
   type BuildingStatsRow,
 } from "./api/client";
 import BuildingDetailModal from "./components/BuildingDetailModal";
+import CollectiveRegionMapHub, { type MapPanelMode } from "./components/CollectiveRegionMapHub";
 import StatsPageHeader from "./components/StatsPageHeader";
-import RegionChipPanel from "./components/RegionChipPanel";
+import RegionChipPanel, {
+  LEFT_REGION_MULTI_SELECT,
+  toggleChipMulti,
+  toggleChipSingle,
+} from "./components/RegionChipPanel";
 import StatsWindowToggle, { normalizeStatsWindowYears, type StatsWindowYears } from "./components/StatsWindowToggle";
 import type { AssetSelectorType, RegionOption } from "./types";
 import { ASSET_SELECTOR_LABELS, assetTypeLabel } from "./types";
@@ -93,6 +98,7 @@ export default function App() {
   const [sort, setSort] = useState("count");
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [selected, setSelected] = useState<BuildingStatsRow | null>(null);
+  const [mapPanelMode, setMapPanelMode] = useState<MapPanelMode>("normal");
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
   const { isDark, toggleUiColorScheme } = useUiColorScheme();
 
@@ -359,7 +365,15 @@ export default function App() {
                 hint={`미선택 시 ${addr2ScopeLabel} 전체`}
                 selected={guList}
                 options={guQ.data ?? []}
-                onToggle={(name) => setGuList((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]))}
+                multiSelect={LEFT_REGION_MULTI_SELECT}
+                onToggle={(name) => {
+                  if (LEFT_REGION_MULTI_SELECT) {
+                    setGuList((prev) => toggleChipMulti(prev, name));
+                    return;
+                  }
+                  setGuList((prev) => toggleChipSingle(prev, name));
+                  setLeafList([]);
+                }}
                 onSelectAll={() => setGuList((guQ.data ?? []).filter((o) => !o.disabled).map((o) => o.name))}
                 onClear={() => {
                   setGuList([]);
@@ -371,11 +385,20 @@ export default function App() {
             {addr2 && structureQ.isSuccess && (
               <RegionChipPanel
                 title="읍·면·동"
-                hint={hasIntermediate ? `${intermediateLabel} 선택 후 좁힐 수 있습니다` : `미선택 시 ${addr2ScopeLabel} 전체`}
+                hint={
+                  hasIntermediate
+                    ? `${intermediateLabel} 선택 후 1개 선택 · 인접은 지도에서 추가`
+                    : `1개 선택(미선택 시 ${addr2ScopeLabel} 전체) · 인접은 지도에서 추가`
+                }
                 selected={leafList}
                 options={visibleLeafOptions}
                 formatLabel={(o) => (o.parent ? `${o.parent} · ${o.name}` : o.name)}
-                onToggle={(name) => setLeafList((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]))}
+                multiSelect={LEFT_REGION_MULTI_SELECT}
+                onToggle={(name) =>
+                  setLeafList((prev) =>
+                    LEFT_REGION_MULTI_SELECT ? toggleChipMulti(prev, name) : toggleChipSingle(prev, name),
+                  )
+                }
                 onSelectAll={() => setLeafList(visibleLeafOptions.filter((o) => !o.disabled).map((o) => o.name))}
                 onClear={() => setLeafList([])}
               />
@@ -406,7 +429,42 @@ export default function App() {
           </div>
         </aside>
 
-        <div className="layout-main p-4">
+        <div className="layout-main">
+          <section className="px-4 pt-4 shrink-0">
+            <CollectiveRegionMapHub
+              scope={{
+                assetType,
+                addr1,
+                addr2,
+                guList,
+                leafList,
+                riPick: [],
+              }}
+              selectedBuildings={
+                selected && scope
+                  ? [
+                      {
+                        buildingKey: selected.building_key,
+                        label: selected.display_name,
+                        jibunAddress: selected.jibun_address || selected.address || null,
+                        roadAddress: selected.road_address || null,
+                        addr1: scope.addr1,
+                        addr2: scope.addr2,
+                      },
+                    ]
+                  : []
+              }
+              fillHeight={mapPanelMode === "expanded"}
+              mapPanelMode={mapPanelMode}
+              onExpand={() => setMapPanelMode("expanded")}
+              onCollapse={() => setMapPanelMode("collapsed")}
+              onNormal={() => setMapPanelMode("normal")}
+              onAddLeaf={(name) => {
+                setLeafList((prev) => (prev.includes(name) ? prev : [...prev, name]));
+              }}
+            />
+          </section>
+          <div className="p-4 pt-2">
           {!scope && (
             <p className="text-sm text-slate-500 dark:text-slate-400">시군구까지 선택한 뒤 「통계분석」을 누르면 건물 목록이 표시됩니다.</p>
           )}
@@ -476,6 +534,7 @@ export default function App() {
               </div>
             </>
           )}
+          </div>
         </div>
       </main>
 

@@ -17,6 +17,19 @@ function isDisabled(o: ChipOption): boolean {
   return Boolean(o.disabled);
 }
 
+/** 왼쪽 지역 칩 복수 UI. false면 「전체」숨김 — 복수는 지도 인접 추가. 코드는 유지. */
+export const LEFT_REGION_MULTI_SELECT = false;
+
+/** 단일 선택: 같은 항목 재클릭 → 빈 배열(전체), 다른 항목 → 그 1개만(기존 클러스터 교체). */
+export function toggleChipSingle(prev: string[], name: string): string[] {
+  if (prev.length === 1 && prev[0] === name) return [];
+  return [name];
+}
+
+export function toggleChipMulti(prev: string[], name: string): string[] {
+  return prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name];
+}
+
 export default function RegionChipPanel({
   title,
   hint,
@@ -26,6 +39,7 @@ export default function RegionChipPanel({
   onToggle,
   onSelectAll,
   onClear,
+  multiSelect = true,
 }: {
   title: string;
   hint: string;
@@ -35,6 +49,8 @@ export default function RegionChipPanel({
   onToggle: (name: string) => void;
   onSelectAll: () => void;
   onClear: () => void;
+  /** false: 「전체」버튼 숨김. onToggle은 호출측에서 single replace 권장. */
+  multiSelect?: boolean;
 }) {
   const label = formatLabel ?? ((o) => o.name);
   const enabledOptions = options.filter((o) => !isDisabled(o));
@@ -51,14 +67,16 @@ export default function RegionChipPanel({
       <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">{hint}</p>
       {densityHint && <p className="text-[10px] text-amber-700 dark:text-amber-400">{densityHint}</p>}
       <div className="flex gap-1">
-        <button
-          type="button"
-          className="btn btn-ghost text-[10px] py-0.5 px-1.5"
-          onClick={onSelectAll}
-          disabled={!enabledOptions.length}
-        >
-          전체
-        </button>
+        {multiSelect && (
+          <button
+            type="button"
+            className="btn btn-ghost text-[10px] py-0.5 px-1.5"
+            onClick={onSelectAll}
+            disabled={!enabledOptions.length}
+          >
+            전체
+          </button>
+        )}
         <button type="button" className="btn btn-ghost text-[10px] py-0.5 px-1.5" onClick={onClear} disabled={!selected.length}>
           해제
         </button>

@@ -2,6 +2,8 @@ import axios from "axios";
 import type {
   FreeStatsV2Response,
   FreeStatsWindowYears,
+  LandRegressionPredictRequest,
+  LandRegressionPredictResponse,
   LandRegressionRequest,
   LandRegressionResponse,
   MatrixCellHistogramRequest,
@@ -169,6 +171,16 @@ export const fetchLandRegression = async (
 ): Promise<LandRegressionResponse> => {
   const { data } = await api.post<LandRegressionResponse>(
     "/paid/matrix-cell-transactions/regression",
+    body
+  );
+  return data;
+};
+
+export const fetchLandRegressionPredict = async (
+  body: LandRegressionPredictRequest
+): Promise<LandRegressionPredictResponse> => {
+  const { data } = await api.post<LandRegressionPredictResponse>(
+    "/paid/matrix-cell-transactions/regression/predict",
     body
   );
   return data;

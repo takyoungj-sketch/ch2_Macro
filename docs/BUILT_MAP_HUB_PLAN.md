@@ -1,6 +1,6 @@
 # 복합부동산(built) — Map Hub 이식 계획
 
-> **상태:** **문서화 완료 · 구현 대기** (토지 Map-A PoC 이후)  
+> **상태:** **Built-M1 구현 중** (열람 PoC) · Built-M2~M3 대기  
 > **관련:** [`MAP_REGION_HUB_DESIGN.md`](./MAP_REGION_HUB_DESIGN.md) · [`BUILT_HANDOFF_AND_ROADMAP.md`](./BUILT_HANDOFF_AND_ROADMAP.md) · [`REGION_ARCHITECTURE_ROADMAP.md`](./REGION_ARCHITECTURE_ROADMAP.md) D-015  
 > **작성:** 2026-07-11 · 토지 Map Hub 적용 가능성 검토 결과 반영
 
@@ -168,10 +168,10 @@ GET /api/built/regions/resolve-codes
 
 | Phase | 내용 | 공수 | 상태 |
 |-------|------|------|------|
-| **Built-M0** | Spike: 복합 앱에서 `/api/map/config`·hardcoded boundaries 호출 · 청주 등 표본 `beopjungri_code` NOT NULL 확인 | ½–1일 | 대기 |
-| **Built-M1** | 열람 PoC: deps·`VITE_VWORLD_API_KEY`·`resolve-codes`·지도 표시·fit·노란 강조 · **추가 선택 없음** · level은 sigungu·eup 우선 | **M** | 대기 |
-| **Built-M2** | 다중 leaf/ri highlight · 구 있는 시(addr2→구 코드) · flat sido · 접기/확대 | **M–L** | 대기 |
-| **Built-M3** | 인접 복수 추가 (제품 규칙 확정 후) · code→이름 칩 · 시군구 이상 안내 문구 | **L** | 대기 |
+| **Built-M0** | Spike: 복합 앱에서 `/api/map/config`·hardcoded boundaries 호출 · 청주 등 표본 `beopjungri_code` NOT NULL 확인 | ½–1일 | **M1에 흡수** |
+| **Built-M1** | 열람 PoC: deps·`VITE_VWORLD_API_KEY`·`resolve-codes`·지도 표시·fit·노란 강조 · **추가 선택 없음** · level은 sigungu·eup 우선 | **M** | **완료** |
+| **Built-M2** | 다중 leaf/ri highlight · 구 있는 시(addr2→구 코드) · flat sido · 접기/확대 | **M–L** | **진행(fit·하이라이트 포함)** |
+| **Built-M3** | 인접 복수 추가 (제품 규칙 확정 후) · code→이름 칩 · 시군구 이상 안내 문구 | **L** | **진행** |
 | **Built-M4** | `shared/map-hub` 추출 · 토지 Hub thin wrapper · 본 문서·`MAP_REGION_HUB_DESIGN` 동기화 · 집합 재사용 준비 | **L** | 대기 |
 
 ### 6.1 Built-M1 성공 기준
@@ -189,7 +189,60 @@ GET /api/built/regions/resolve-codes
 
 ---
 
-## 7. 블로커 · 리스크
+## 7. 추후 검토 — 시군구를 넘는 인접 복수 선택
+
+> **상태:** **보류** (2026-07-11) — 진행 여부는 추후 재검토. 구현하지 않음.  
+> **예시:** 진천군 이월면 선택 후 지도에서 음성군 대소읍 추가
+
+### 7.1 현재 동작
+
+| 항목 | 내용 |
+|------|------|
+| 같은 시군구 안 인접 읍·면·리 | 지도 클릭·우클릭으로 추가 **가능** |
+| **다른 시군구** 하위 행정구역 | **미지원** |
+| 원인 | 선택 SSOT가 `addr2` **단건** + `leafList`/`riList` **이름**. 지도 추가는 이름만 칩에 넣어 `addr2`는 그대로 → `진천군+대소읍`처럼 원장 불일치 |
+| 경계 표시 | 이웃 bbox 고리로 타 시군구 읍 윤곽이 **보일 수는** 있으나, 통계 scope로는 이어지지 않음 |
+
+### 7.2 유의성·서버 부담 (제품 관점)
+
+- 인접 제한은 **이질 시장 합산을 줄여** 회귀·표본 유의성에 유리한 편.
+- 인접 판정 자체는 클라이언트(turf)라 서버 부담은 작고, 선택 scope가 작아지면 회귀 쿼리는 보통 가벼워짐.
+- 다만 **시군구를 넘는** 인접 복수는 “공간적으로 맞닿음”과 “동일 행정·시장 단위”가 어긋날 수 있어, 허용 시 **시도 내·동일 레벨·한도** 등 별도 제품 규칙이 필요.
+
+### 7.3 구현 범위별 공수 (재검토 시)
+
+| 범위 | 공수 | 난이도 | 내용 |
+|------|------|--------|------|
+| **A. 지도만 차단** | S (0.5–1일) | 쉬움 | 추가 feature의 시군구 코드 ≠ 현재 `addr2` 이면 안내 후 거부 (오해 방지) |
+| **B. 시도 내 인접 시군구 하위 복수** | M–L (4–8일) | 중~상 | 선택 모델을 `(addr2, leaf/ri)[]` 또는 코드 목록으로 확장 · resolve/지도 context 다중 |
+| **C. B + 회귀·필터·칩·내보내기 일관** | L (1.5–3주) | 상 | 거래 WHERE `OR` 다중 시군구 · 3-way · 표본 필터 · UI 칩 |
+
+의미 있는 지원은 **B~C**. 핵심 비용은 UI가 아니라 **이름+단건 addr2 → 다중 scope 데이터 모델·쿼리**.
+
+### 7.4 B 착수 시 손댈 곳 (체크리스트)
+
+- [ ] 선택 state: `addr2` 단건 → picks / beop·eup 코드 목록
+- [ ] `resolve-codes` · `/api/map/boundaries` 다중 context
+- [ ] `build_transaction_where` / 회귀 엔진 다중 `addr2` (또는 코드 scope)
+- [ ] 왼쪽 칩: 타 시군구에서 추가된 읍·리 표시·삭제
+- [ ] 동명이읍 · flat sido · 구 있는 시 · D-015 리
+
+### 7.5 왼쪽 복수 정책 (채택: 앵커 1개)
+
+> **상태:** **적용** (2026-07-11) — UI만 단일; 복수 코드·`multiSelect` prop은 유지 (`LEFT_REGION_MULTI_SELECT = false`로 숨김).
+
+| 규칙 | 내용 |
+|------|------|
+| 왼쪽 칩 | 구·읍면동·리 **1개** (재클릭·해제로 빈 = 상위 전체). 「전체 선택」숨김 |
+| 지도 | 인접 leaf/ri만 추가 → 같은 `leafList`/`riList`에 append |
+| 앵커 교체 | 왼쪽에서 다른 1개 고르면 **클러스터 전부 비우고** 새 1개만 |
+| 되돌리기 | `LEFT_REGION_MULTI_SELECT = true` (+ `multiSelect` 기본 동작) |
+
+시군구 횡단 복수(§7)와는 **별개**.
+
+---
+
+## 8. 블로커 · 리스크
 
 | # | 항목 | 심각도 | 대응 |
 |---|------|--------|------|
@@ -199,10 +252,11 @@ GET /api/built/regions/resolve-codes
 | 4 | D-015 리 addr 왜곡 | Medium | 리 지도는 정규화 후 또는 M2에서 제외 |
 | 5 | 코드 NULL / needs_review 행 | Medium | resolve 커버리지 로그 · 부분 highlight 허용 |
 | 6 | 청주·천안 등 의사 시 | Medium | 토지 `cityBucket`과 동등하게 구 코드 전개 |
+| 7 | 시군구 횡단 인접 복수 | — | **§7 보류** — 추후 재검토 |
 
 ---
 
-## 8. 의존 · 환경
+## 9. 의존 · 환경
 
 | 항목 | 비고 |
 |------|------|
@@ -213,7 +267,7 @@ GET /api/built/regions/resolve-codes
 
 ---
 
-## 9. 관련 문서
+## 10. 관련 문서
 
 | 문서 | 관계 |
 |------|------|
@@ -230,3 +284,6 @@ GET /api/built/regions/resolve-codes
 | 일자 | 내용 |
 |------|------|
 | 2026-07-11 | 초안 — 토지 Map Hub → 복합 적용 검토 결과·Phase·resolve-codes·UX 규칙 문서화 |
+| 2026-07-11 | Built-M1 착수 — `GET /regions/resolve-codes`, `BuiltRegionMapHub` 열람 PoC, App 연동 |
+| 2026-07-11 | Built-M2/M3 진행 기록 · fit·지도 인접 복수 |
+| 2026-07-11 | **§7 추가** — 시군구 횡단 인접 복수 선택 보류·공수 검토 기록 |

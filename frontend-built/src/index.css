@@ -58,8 +58,9 @@ table.data th {
 }
 
 .layout-sidebar {
-  @apply w-72 shrink-0 self-stretch overflow-y-auto border-r border-slate-200 bg-white
-    dark:border-slate-700 dark:bg-slate-800 xl:w-80;
+  /* 기존 w-72(18rem)/xl:w-80(20rem) 의 1.5배 */
+  @apply w-[27rem] shrink-0 self-stretch overflow-y-auto border-r border-slate-200 bg-white
+    dark:border-slate-700 dark:bg-slate-800 xl:w-[30rem];
 }
 
 .layout-main {

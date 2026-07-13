@@ -126,3 +126,14 @@ html.dark body {
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.35);
   }
 }
+
+/* 복합·집합과 맞춘 사이드바·폼 — 토지는 검색 UI가 길어 w-80~96 유지 */
+.layout-sidebar {
+  @apply w-80 shrink-0 self-stretch overflow-y-auto border-r border-slate-200 bg-white
+    dark:border-slate-700 dark:bg-slate-800 xl:w-96;
+}
+
+.input {
+  @apply w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm
+    dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100;
+}

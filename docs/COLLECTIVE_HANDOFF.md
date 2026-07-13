@@ -9,6 +9,7 @@ collective_stats
   collective_transactions  (거래 원장, building_key)
 land_stats.region_codes  → sync → collective_stats.region_codes
 /api/collective/*  →  frontend-collective (/collective/)
+/api/map/*         →  Map Region Hub (경계·타일; 상세 [`COLLECTIVE_MAP_HUB_PLAN.md`](COLLECTIVE_MAP_HUB_PLAN.md))
 ```
 
 ## 통일 정제 (canonical)

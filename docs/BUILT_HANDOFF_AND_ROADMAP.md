@@ -198,7 +198,7 @@ py scripts\monthly\compare_built_count_snapshots.py --before ... --after ...
 
 ## 6. 백로그 (우선순위 낮음)
 
-- **Map Hub 이식 (문서화 완료 · 구현 대기):** [`BUILT_MAP_HUB_PLAN.md`](BUILT_MAP_HUB_PLAN.md) — 토지 Map-A UX를 복합에 이식 (`/api/map` 재사용 · addr↔코드 resolve · Built-M0~M4)
+- **Map Hub 이식 (문서화 완료 · 구현 진행 중):** [`BUILT_MAP_HUB_PLAN.md`](BUILT_MAP_HUB_PLAN.md) — 토지 Map-A UX를 복합에 이식. **시군구 횡단 인접 복수는 §7 보류.**
 - **원장 재구축 (Phase A — 진행 예정):** [`BUILT_LEDGER_REBUILD_PLAN.md`](BUILT_LEDGER_REBUILD_PLAN.md) — MOLIT raw base 21~26, GUKTO 폐기, `road_width_label`, 주소 B (DECISIONS D-024)
 - **건축물대장 연계** — [`BUILDING_REGISTER_ROADMAP.md`](BUILDING_REGISTER_ROADMAP.md) (구현 보류, 1순위 `building_register_title` 적재)
 - 세 유형 **통합 회귀** (`asset_type` 더미, zone 결측 처리) — Phase B

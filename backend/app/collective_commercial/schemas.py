@@ -337,3 +337,27 @@ class CommercialCohortFloorIndexResponse(BaseModel):
     explain: Optional[AnalysisExplain] = None
     analysis: AnalysisFeatures = Field(default_factory=AnalysisFeatures)
     diagnostics: Optional[FloorIndexDiagnostics] = None
+
+
+class CommercialRoadGeocodeRequest(BaseModel):
+    """선택 cluster 도로명 → 지도 라벨용 좌표 (Road-B)."""
+
+    addr1: str = Field(..., min_length=1)
+    addr2: str = Field(..., min_length=1)
+    road_name: str = Field(..., min_length=1)
+    addr3: Optional[str] = None
+    addr4: Optional[str] = None
+    cluster_key: Optional[str] = None
+    label: Optional[str] = None
+
+
+class CommercialRoadGeocodeResponse(BaseModel):
+    ok: bool
+    query: str
+    longitude: Optional[float] = None
+    latitude: Optional[float] = None
+    matched_name: Optional[str] = None
+    category: Optional[str] = None
+    label: Optional[str] = None
+    cluster_key: Optional[str] = None
+    error: Optional[str] = None

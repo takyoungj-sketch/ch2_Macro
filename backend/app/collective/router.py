@@ -43,12 +43,17 @@ from app.collective.transaction_export import (
     csv_attachment_response,
 )
 from app.collective.region_structure import detect_region_structure
+from app.collective.resolve_codes import resolve_collective_map_codes
 from app.region_catalog import list_gu_options, list_leaf_options
+from app.collective.building_geocode import geocode_collective_building
 from app.collective.schemas import (
     AnalysisExplain,
     AnalysisFeatures,
     BuildingListResponse,
+    CollectiveBuildingGeocodeRequest,
+    CollectiveBuildingGeocodeResponse,
     CollectiveFilterMeta,
+    CollectiveMapResolveCodesResponse,
     CollectiveRegressionPredictRequest,
     CollectiveRegressionPredictResponse,
     CollectiveRegressionRequest,
@@ -66,6 +71,8 @@ from app.collective.schemas import (
     RollingStatPoint,
     RollingStatsResponse,
 )
+from app.config import settings
+
 router = APIRouter(prefix="/collective", tags=["집합부동산"])
 
 
@@ -231,6 +238,57 @@ def list_addr3(
             leaf_level=info.get("leaf_level", "addr3"),
         )
     return opts
+
+
+@router.get("/regions/resolve-codes", response_model=CollectiveMapResolveCodesResponse)
+def resolve_region_codes_for_map(
+    db: Session = Depends(get_collective_db),
+    asset_type: Optional[str] = Query(None),
+    addr1: Optional[str] = Query(None),
+    addr2: Optional[str] = Query(None),
+    gu: list[str] = Query(default=[], description="구(addr3) 이름"),
+    leaf: list[str] = Query(default=[], description="읍·면·동 이름"),
+):
+    """좌측 addr 칩 → VWorld 지도용 행정코드 (Collective-M1)."""
+    result = resolve_collective_map_codes(
+        db.connection(),
+        asset_type=normalize_asset_type(asset_type),
+        addr1=addr1,
+        addr2=addr2,
+        gu_list=gu,
+        leaf_list=leaf,
+    )
+    return CollectiveMapResolveCodesResponse(**result)
+
+
+@router.post("/buildings/geocode", response_model=CollectiveBuildingGeocodeResponse)
+def geocode_building_for_map(body: CollectiveBuildingGeocodeRequest):
+    """선택 건물 지번 지오코딩 라벨 (VWorld Search · parcel 우선)."""
+    key = (settings.vworld_api_key or "").strip()
+    if not key:
+        raise HTTPException(
+            status_code=503,
+            detail="VWORLD_API_KEY가 설정되지 않았습니다.",
+        )
+    result = geocode_collective_building(
+        api_key=key,
+        addr1=body.addr1,
+        addr2=body.addr2,
+        jibun_address=body.jibun_address,
+        road_address=body.road_address,
+    )
+    label = (body.label or body.jibun_address or body.road_address or "").strip() or None
+    return CollectiveBuildingGeocodeResponse(
+        ok=bool(result.get("ok")),
+        query=str(result.get("query") or ""),
+        longitude=result.get("longitude"),
+        latitude=result.get("latitude"),
+        matched_name=result.get("matched_name"),
+        category=result.get("category"),
+        label=label,
+        building_key=body.building_key,
+        error=result.get("error"),
+    )
 
 
 @router.get("/buildings", response_model=BuildingListResponse)

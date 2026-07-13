@@ -111,6 +111,17 @@ class RegionOption(BaseModel):
     min_reliable_count: int = 15
 
 
+class BuiltMapResolveCodesResponse(BaseModel):
+    """addr 칩 → /api/map/boundaries 용 행정코드."""
+
+    level: Optional[Literal["sido", "sigungu", "eupmyeondong", "beopjungri"]] = None
+    selected_codes: list[str] = Field(default_factory=list)
+    context_sido_code: Optional[str] = None
+    context_sigungu_code: Optional[str] = None
+    labels: dict[str, str] = Field(default_factory=dict)
+    has_selection: bool = False
+
+
 class RiPick(BaseModel):
     """상위 읍·면 + 리(addr5)."""
 

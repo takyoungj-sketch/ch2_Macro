@@ -698,6 +698,26 @@ class LandRegressionCoeff(BaseModel):
     p: float
 
 
+class LandPredictContinuous(BaseModel):
+    """예측 폼용 연속변수 범위."""
+    name: str
+    label: str
+    min: Optional[float] = None
+    max: Optional[float] = None
+
+
+class LandPredictOptions(BaseModel):
+    """회귀 실행 결과의 예측 입력 옵션 (복합 OLS와 동일 패턴)."""
+    continuous: list[LandPredictContinuous] = Field(default_factory=list)
+    road_conditions: list[str] = Field(default_factory=list)
+    road_reference: Optional[str] = None
+    deal_types: list[str] = Field(default_factory=list)
+    deal_reference: Optional[str] = None
+    beopjungri_names: list[str] = Field(default_factory=list)
+    beopjungri_reference: Optional[str] = None
+    partial_ownership_enabled: bool = False
+
+
 class LandRegressionResponse(BaseModel):
     n: int
     model_type: Literal["log", "linear"]
@@ -708,3 +728,25 @@ class LandRegressionResponse(BaseModel):
     warnings: list[str] = []
     f_p_value: Optional[float] = None
     significant_count: Optional[int] = None
+    predict_options: Optional[LandPredictOptions] = None
+
+
+class LandRegressionPredictRequest(LandRegressionRequest):
+    """POST /paid/matrix-cell-transactions/regression/predict — 단가(만원/㎡) 예측."""
+    area_sqm: Optional[float] = None
+    contract_year: Optional[int] = None
+    road_condition: Optional[str] = None
+    deal_type: Optional[str] = None
+    partial_ownership: bool = False
+    beopjungri_name: Optional[str] = None
+
+
+class LandRegressionPredictResponse(BaseModel):
+    n: int
+    model_type: Literal["log", "linear"]
+    y_hat: float
+    pi_lower: float
+    pi_upper: float
+    ci_lower: float
+    ci_upper: float
+    warnings: list[str] = Field(default_factory=list)

@@ -37,6 +37,8 @@ from app.schemas import (
     MatrixCell,
     MatrixCellHistogramRequest,
     MatrixCellHistogramResponse,
+    LandRegressionPredictRequest,
+    LandRegressionPredictResponse,
     LandRegressionRequest,
     LandRegressionResponse,
     MatrixCellTransactionItem,
@@ -1865,3 +1867,21 @@ def matrix_cell_regression(
 
     filtered = _fetch_matrix_cell_filtered_transactions(body, db)
     return run_land_regression(filtered, body)
+
+
+@router.post(
+    "/matrix-cell-transactions/regression/predict",
+    response_model=LandRegressionPredictResponse,
+    summary="매트릭스 칸 토지 단가 OLS 예측 (ŷ · 95% PI/CI)",
+)
+def matrix_cell_regression_predict(
+    body: LandRegressionPredictRequest, db: Session = Depends(get_db)
+):
+    """
+    동일 필터·변수 설정으로 OLS를 재적합 후 한 점 예측.
+    단위: 단가(만원/㎡). log 모형은 exp 역변환.
+    """
+    from app.land_regression import predict_land_regression
+
+    filtered = _fetch_matrix_cell_filtered_transactions(body, db)
+    return predict_land_regression(filtered, body)

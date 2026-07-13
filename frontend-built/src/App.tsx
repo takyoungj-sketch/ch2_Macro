@@ -24,6 +24,7 @@ import {
   isFlatSidoAddr2,
 } from "./utils/flatSidoRegion";
 import BuiltTransactionListModal from "./components/BuiltTransactionListModal";
+import BuiltRegionMapHub, { type MapPanelMode } from "./components/BuiltRegionMapHub";
 import AiAssistantPanel from "./components/AiAssistantPanel";
 import RegressionScatterSection from "./components/RegressionScatterSection";
 import { buildBuiltRegressionContext, buildBuiltPredictionContext, buildBuiltModelSelectionContext } from "./api/aiClient";
@@ -614,6 +615,18 @@ function fmtNum(n?: number | null, digits = 0) {
   });
 }
 
+/** 왼쪽 지역(구·읍면동·리) 칩 복수 UI. false면 「전체 선택」숨김 — 복수는 지도 인접 추가. */
+const LEFT_REGION_MULTI_SELECT = false;
+
+function toggleChipSingle(prev: string[], name: string): string[] {
+  if (prev.length === 1 && prev[0] === name) return [];
+  return [name];
+}
+
+function toggleChipMulti(prev: string[], name: string): string[] {
+  return prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name];
+}
+
 function RegionChipPanel({
   title,
   hint,
@@ -625,6 +638,7 @@ function RegionChipPanel({
   onClear,
   compact = false,
   collapsible = false,
+  multiSelect = true,
 }: {
   title: string;
   hint: string;
@@ -636,6 +650,8 @@ function RegionChipPanel({
   onClear: () => void;
   compact?: boolean;
   collapsible?: boolean;
+  /** false: 「전체 선택」숨김. 용도지역 등 필터 칩은 true 유지. */
+  multiSelect?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const label = formatLabel ?? ((o) => o.name);
@@ -693,9 +709,11 @@ function RegionChipPanel({
           <div className="p-2 space-y-2 border-t border-slate-200 bg-white">
             <p className="text-xs text-slate-500">{hint}</p>
             <div className="flex gap-2">
-              <button type="button" className="btn btn-ghost text-xs" onClick={onSelectAll} disabled={!options.length}>
-                전체 선택
-              </button>
+              {multiSelect && (
+                <button type="button" className="btn btn-ghost text-xs" onClick={onSelectAll} disabled={!options.length}>
+                  전체 선택
+                </button>
+              )}
               <button type="button" className="btn btn-ghost text-xs" onClick={onClear} disabled={!selected.length}>
                 선택 해제
               </button>
@@ -715,9 +733,11 @@ function RegionChipPanel({
           <span className="text-slate-500 font-normal">({selected.length}개 선택)</span>
         </h2>
         <div className="flex gap-2">
-          <button type="button" className="btn btn-ghost" onClick={onSelectAll} disabled={!options.length}>
-            전체 선택
-          </button>
+          {multiSelect && (
+            <button type="button" className="btn btn-ghost" onClick={onSelectAll} disabled={!options.length}>
+              전체 선택
+            </button>
+          )}
           <button type="button" className="btn btn-ghost" onClick={onClear} disabled={!selected.length}>
             선택 해제
           </button>
@@ -751,6 +771,9 @@ export default function App() {
   const [sampleFilter, setSampleFilter] = useState<SampleFilterState>(EMPTY_SAMPLE_FILTER);
   const [windowYears, setWindowYears] = useState<3 | 5>(5);
   const [responseScale, setResponseScale] = useState<ResponseScale>("linear");
+  /** 마지막 「통계분석」에 실제 쓰인 스케일 — 체크만으로 결과 표시가 바뀌지 않게 */
+  const [appliedResponseScale, setAppliedResponseScale] = useState<ResponseScale>("linear");
+  const [mapPanelMode, setMapPanelMode] = useState<MapPanelMode>("normal");
 
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
   const { isDark, toggleUiColorScheme } = useUiColorScheme();
@@ -857,17 +880,34 @@ export default function App() {
   }, [leafList]);
 
   const toggleGu = (name: string) => {
-    setGuList((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]));
+    if (LEFT_REGION_MULTI_SELECT) {
+      setGuList((prev) => toggleChipMulti(prev, name));
+      return;
+    }
+    setGuList((prev) => toggleChipSingle(prev, name));
+    setLeafList([]);
+    setRiList([]);
   };
 
   const toggleLeaf = (name: string) => {
-    setLeafList((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]));
+    if (LEFT_REGION_MULTI_SELECT) {
+      setLeafList((prev) => toggleChipMulti(prev, name));
+      return;
+    }
+    setLeafList((prev) => toggleChipSingle(prev, name));
+    setRiList([]);
   };
 
   const toggleRi = (pick: RiPick) => {
     const key = riKey(pick);
+    if (LEFT_REGION_MULTI_SELECT) {
+      setRiList((prev) =>
+        prev.some((p) => riKey(p) === key) ? prev.filter((p) => riKey(p) !== key) : [...prev, pick],
+      );
+      return;
+    }
     setRiList((prev) =>
-      prev.some((p) => riKey(p) === key) ? prev.filter((p) => riKey(p) !== key) : [...prev, pick],
+      prev.length === 1 && riKey(prev[0]) === key ? [] : [pick],
     );
   };
 
@@ -1003,7 +1043,12 @@ export default function App() {
     ],
   );
 
-  const regM = useMutation({ mutationFn: runRegression });
+  const regM = useMutation({
+    mutationFn: runRegression,
+    onSuccess: (_data, variables) => {
+      setAppliedResponseScale(variables.response_scale ?? "linear");
+    },
+  });
   const suggestM = useMutation({ mutationFn: suggestRegression });
   const compareM = useMutation({ mutationFn: compareRegression });
 
@@ -1013,6 +1058,11 @@ export default function App() {
     setModelExploreOpen(false);
     regM.mutate({ ...regBody, variables: nextVars, response_scale: scale });
   };
+
+  const resultRegBody = useMemo(
+    () => ({ ...regBody, response_scale: appliedResponseScale }),
+    [regBody, appliedResponseScale],
+  );
 
   const selectionDisabled =
     regM.isPending ||
@@ -1081,8 +1131,6 @@ export default function App() {
     riList.length,
     regM.data,
   ]);
-
-  const years = metaQ.data?.contract_years ?? [];
 
   const txModalSummary = useMemo(() => {
     const parts = [ASSET_LABELS[assetType]];
@@ -1159,40 +1207,9 @@ export default function App() {
                   ))}
                 </select>
               </label>
-              <div className="grid grid-cols-2 gap-2">
-                <label className="text-xs space-y-1 block">
-                  <span className="text-slate-500">연도(from)</span>
-                  <select
-                    className="input"
-                    value={yearFrom}
-                    onChange={(e) => setYearFrom(e.target.value ? Number(e.target.value) : "")}
-                  >
-                    <option value="">—</option>
-                    {years.map((y: number) => (
-                      <option key={y} value={y}>
-                        {y}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="text-xs space-y-1 block">
-                  <span className="text-slate-500">연도(to)</span>
-                  <select
-                    className="input"
-                    value={yearTo}
-                    onChange={(e) => setYearTo(e.target.value ? Number(e.target.value) : "")}
-                  >
-                    <option value="">—</option>
-                    {years.map((y: number) => (
-                      <option key={y} value={y}>
-                        {y}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
+              {/* 연도(from/to) UI 숨김 — 상태는 "" 유지 → 롤링 창만 사용. 복구 시 아래 블록 복원 */}
               <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-snug">
-                연도 미선택: 직전 월말 기준 롤링 {windowYears}년 창. 연도 지정: 해당 연도 거래만 집계(실시간).
+                직전 월말 기준 롤링 {windowYears}년 창으로 집계합니다.
               </p>
               <label className="text-xs space-y-1 block">
                 <span className="text-slate-500">시도</span>
@@ -1249,6 +1266,7 @@ export default function App() {
           {addr2 && hasIntermediate && (
             <RegionChipPanel
               compact
+              multiSelect={LEFT_REGION_MULTI_SELECT}
               title={`${intermediateLabel} 선택`}
               hint={`미선택 시 ${addr2ScopeLabel} 전체.`}
               selected={guList}
@@ -1259,6 +1277,8 @@ export default function App() {
               }}
               onClear={() => {
                 setGuList([]);
+                setLeafList([]);
+                setRiList([]);
               }}
             />
           )}
@@ -1266,13 +1286,14 @@ export default function App() {
           {addr2 && (
             <RegionChipPanel
               compact
+              multiSelect={LEFT_REGION_MULTI_SELECT}
               title="읍면동 선택"
               hint={
                 structureQ.isLoading
                   ? "지역 구조 확인 중…"
                   : hasIntermediate
-                    ? `${intermediateLabel} 선택 후 좁힐 수 있습니다.`
-                    : `미선택 시 ${addr2ScopeLabel} 전체.`
+                    ? `${intermediateLabel} 선택 후 1개 · 인접은 지도에서 추가.`
+                    : `1개 선택(미선택 시 ${addr2ScopeLabel} 전체) · 인접은 지도에서 추가.`
               }
               selected={leafList}
               options={visibleLeafOptions}
@@ -1307,20 +1328,22 @@ export default function App() {
                   <span className="text-slate-500 font-normal">({riList.length}개 선택)</span>
                 </h2>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    disabled={!(riQ.data ?? []).length}
-                    onClick={() => {
-                      setRiList(
-                        (riQ.data ?? [])
-                          .filter((o) => o.parent)
-                          .map((o) => ({ eup: o.parent!, ri: o.name })),
-                      );
-                    }}
-                  >
-                    전체 선택
-                  </button>
+                  {LEFT_REGION_MULTI_SELECT && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      disabled={!(riQ.data ?? []).length}
+                      onClick={() => {
+                        setRiList(
+                          (riQ.data ?? [])
+                            .filter((o) => o.parent)
+                            .map((o) => ({ eup: o.parent!, ri: o.name })),
+                        );
+                      }}
+                    >
+                      전체 선택
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="btn btn-ghost"
@@ -1334,8 +1357,9 @@ export default function App() {
                 </div>
               </div>
               <p className="text-xs text-slate-500">
-                선택 읍·면·동 아래 원장에 법정리(addr5)가 있으면 목록이 표시됩니다. 미선택 시 2-way · 리
-                선택 시 3-way(구 · 상위 읍·면 · 리).
+                {LEFT_REGION_MULTI_SELECT
+                  ? "선택 읍·면·동 아래 원장에 법정리(addr5)가 있으면 목록이 표시됩니다. 미선택 시 2-way · 리 선택 시 3-way(구 · 상위 읍·면 · 리)."
+                  : "왼쪽에서 리 1개(또는 해제=읍면동 단위). 인접 리는 지도에서 추가. 미선택 시 2-way · 리 선택 시 3-way."}
               </p>
               <div className="flex flex-wrap gap-2 overflow-y-auto border border-slate-100 rounded p-2 max-h-36">
                 {(riQ.data ?? []).map((o) => {
@@ -1398,6 +1422,80 @@ export default function App() {
             </p>
           )}
 
+          <div className="space-y-2 border-t border-slate-200 pt-3">
+            <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">회귀 변수</p>
+            <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs">
+              {(
+                [
+                  ["gross_area", "연면적"],
+                  ["land_area", "대지면적"],
+                  ["building_age", "연식"],
+                  ["road_width_dummy", "도로조건 더미"],
+                  ...(assetType !== "detached"
+                    ? ([["zone_type_dummy", "용도지역 더미"]] as const)
+                    : []),
+                  [
+                    "building_use_dummy",
+                    assetType === "detached" ? "주택유형 더미" : "건축물용도 더미",
+                  ],
+                  ...(assetType === "all" ? ([["asset_type_dummy", "유형 더미"]] as const) : []),
+                  ...(leafList.length >= 2
+                    ? ([["region_leaf_dummy", "지역(읍·면·동) 더미"]] as const)
+                    : []),
+                ] as const
+              ).map(([key, label]) => (
+                <label key={key} className="flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={vars[key as keyof RegressionVariableSpec]}
+                    onChange={(e) =>
+                      setVars((v) => ({ ...v, [key]: e.target.checked }))
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
+              {vars.region_leaf_dummy && (
+                <span className="text-slate-500 w-full">
+                  읍·면·동 풀링 회귀(하위 scope)에만 적용. 시군구·구 단일 회귀에는 넣지 않습니다.
+                </span>
+              )}
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={responseScale === "log"}
+                  onChange={(e) => setResponseScale(e.target.checked ? "log" : "linear")}
+                />
+                log(금액) semi-log
+              </label>
+              {regM.data && responseScale !== appliedResponseScale && (
+                <span className="text-amber-700 dark:text-amber-400 w-full text-[10px]">
+                  스케일만 바뀌었습니다. 「통계분석」을 다시 실행해야 결과가 갱신됩니다.
+                </span>
+              )}
+              <label className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={excludeOutliers}
+                  onChange={(e) => setExcludeOutliers(e.target.checked)}
+                />
+                IQR 금액 이상치 제외
+              </label>
+              {excludeOutliers &&
+                ([1.5, 2, 3] as const).map((k) => (
+                  <label key={k} className="flex items-center gap-1">
+                    <input
+                      type="radio"
+                      name="iqr-k"
+                      checked={iqrMultiplier === k}
+                      onChange={() => setIqrMultiplier(k)}
+                    />
+                    IQR×{k}
+                  </label>
+                ))}
+            </div>
+          </div>
+
           <button
             type="button"
             className="btn btn-primary w-full"
@@ -1413,8 +1511,33 @@ export default function App() {
           </button>
         </aside>
 
-        {/* 오른쪽: 회귀 분석 */}
+        {/* 오른쪽: 지도 Hub + 회귀 분석 */}
         <div className="layout-main">
+          <section className="px-4 pt-4 shrink-0">
+            <BuiltRegionMapHub
+              scope={{
+                assetType,
+                addr1,
+                addr2,
+                guList,
+                leafList,
+                riPick: riList.map(riKey),
+              }}
+              fillHeight={mapPanelMode === "expanded"}
+              mapPanelMode={mapPanelMode}
+              onExpand={() => setMapPanelMode("expanded")}
+              onCollapse={() => setMapPanelMode("collapsed")}
+              onNormal={() => setMapPanelMode("normal")}
+              onAddLeaf={(name) => {
+                setLeafList((prev) => (prev.includes(name) ? prev : [...prev, name]));
+              }}
+              onAddRi={(pick) => {
+                setRiList((prev) =>
+                  prev.some((p) => riKey(p) === riKey(pick)) ? prev : [...prev, pick],
+                );
+              }}
+            />
+          </section>
           <section className="px-4 py-4 pb-8 shrink-0">
             <div className="card space-y-2">
               <div className="flex items-start justify-between gap-3 sticky top-0 bg-white z-10 py-1 -mx-1 px-1">
@@ -1442,67 +1565,6 @@ export default function App() {
                     )}
                   </button>
                 </div>
-              </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
-                {(
-                  [
-                    ["gross_area", "연면적"],
-                    ["land_area", "대지면적"],
-                    ["building_age", "연식"],
-                    ["road_width_dummy", "도로조건 더미"],
-                    ...(assetType !== "detached"
-                      ? ([["zone_type_dummy", "용도지역 더미"]] as const)
-                      : []),
-                    [
-                      "building_use_dummy",
-                      assetType === "detached" ? "주택유형 더미" : "건축물용도 더미",
-                    ],
-                    ...(assetType === "all" ? ([["asset_type_dummy", "유형 더미"]] as const) : []),
-                    ...(leafList.length >= 2
-                      ? ([["region_leaf_dummy", "지역(읍·면·동) 더미"]] as const)
-                      : []),
-                  ] as const
-                ).map(([key, label]) => (
-                  <label key={key} className="flex items-center gap-1">
-                    <input
-                      type="checkbox"
-                      checked={vars[key as keyof RegressionVariableSpec]}
-                      onChange={(e) =>
-                        setVars((v) => ({ ...v, [key]: e.target.checked }))
-                      }
-                    />
-                    {label}
-                  </label>
-                ))}
-                {vars.region_leaf_dummy && (
-                  <span className="text-slate-500 w-full">
-                    읍·면·동 풀링 회귀(하위 scope)에만 적용. 시군구·구 단일 회귀에는 넣지 않습니다.
-                  </span>
-                )}
-                <label className="flex items-center gap-1">
-                  <input
-                    type="checkbox"
-                    checked={responseScale === "log"}
-                    onChange={(e) => setResponseScale(e.target.checked ? "log" : "linear")}
-                  />
-                  log(금액) semi-log
-                </label>
-                <label className="flex items-center gap-1">
-                  <input type="checkbox" checked={excludeOutliers} onChange={(e) => setExcludeOutliers(e.target.checked)} />
-                  IQR 금액 이상치 제외
-                </label>
-                {excludeOutliers &&
-                  ([1.5, 2, 3] as const).map((k) => (
-                    <label key={k} className="flex items-center gap-1">
-                      <input
-                        type="radio"
-                        name="iqr-k"
-                        checked={iqrMultiplier === k}
-                        onChange={() => setIqrMultiplier(k)}
-                      />
-                      IQR×{k}
-                    </label>
-                  ))}
               </div>
               {regM.isError && (
                 <p className="text-sm text-red-600">{(regM.error as Error).message ?? "회귀 실패"}</p>
@@ -1533,13 +1595,13 @@ export default function App() {
                   <FocusRegressionCard
                     result={regM.data.primary}
                     assetType={assetType}
-                    responseScale={responseScale}
+                    responseScale={appliedResponseScale}
                   />
                   <RegressionScatterSection
                     data={regM.data}
                     regionLabel={aiRegionLabel}
                     assetType={assetType}
-                    responseScale={responseScale}
+                    responseScale={appliedResponseScale}
                   />
                 </div>
               )}
@@ -1550,7 +1612,7 @@ export default function App() {
             <section className="px-4 pb-4 pt-0">
               <PredictPanel
                 regData={regM.data}
-                regBody={regBody}
+                regBody={resultRegBody}
                 vars={vars}
                 assetType={assetType}
                 regionLabel={aiRegionLabel}
@@ -1586,10 +1648,9 @@ export default function App() {
           onClose={() => setUpperCompareOpen(false)}
           regData={regM.data}
           assetType={assetType}
-          responseScale={responseScale}
+          responseScale={appliedResponseScale}
           focusLabel={regM.data.focus_scope_label ?? levelCardTitleFromResult(regM.data.primary)}
         />
-      )}
-    </div>
+      )}    </div>
   );
 }

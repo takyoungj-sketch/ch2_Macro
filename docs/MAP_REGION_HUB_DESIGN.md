@@ -90,20 +90,20 @@
 | 제품 | 분석 grain | Hub 1차 적용 | 비고 |
 |------|-----------|-------------|------|
 | **토지** | 법정동·리 | ✅ 우선 PoC | 인구 + 토지 요약 |
-| **복합부동산** | addr + 건물 특성 | **계획 문서화** | 상세: [`BUILT_MAP_HUB_PLAN.md`](./BUILT_MAP_HUB_PLAN.md) (addr↔코드·Phase Built-M0~M4) |
-| **집합부동산** | `building_key` 등 | 토지·복합 후 | 동일 패턴 검토 (**미정**) |
+| **복합부동산** | addr + 건물 특성 | **Built-M1~M3** | 상세: [`BUILT_MAP_HUB_PLAN.md`](./BUILT_MAP_HUB_PLAN.md) |
+| **집합부동산** | addr + `building_key` | **Collective-M1~M3** | 상세: [`COLLECTIVE_MAP_HUB_PLAN.md`](./COLLECTIVE_MAP_HUB_PLAN.md) (리 API는 후속) |
 
-복합 지도 이식은 **토지 Map-A 안정화 후** [`BUILT_MAP_HUB_PLAN.md`](./BUILT_MAP_HUB_PLAN.md) Phase를 따른다. 집합은 복합 이후 별도 문서화.
+복합·집합 지도 이식은 토지 Map-A와 **동일 `/api/map`** 을 쓰고, 각각 addr→코드 resolve + Hub 어댑터를 둔다.
 
 ### 3.3 복수 선택 — 공통 규칙
 
 | 규칙 | 내용 |
 |------|------|
 | **동일 레벨** | 복수 선택은 **항상 동일 행정구역 레벨**에서만 (시군구끼리, 읍면동끼리, 법정동·리끼리) |
-| **1차 선택** | **왼쪽 `RegionSelector`에서만** (검색·Enter·tier 칩) |
-| **추가 선택** | **유료만** — **지도**에서 인접 지역 추가 |
+| **1차 선택** | **왼쪽 `RegionSelector`에서만** (검색·Enter·tier 칩) — 시군구 미만은 **앵커 1개**(또는 상위 단일). `LEFT_REGION_MULTI_SELECT=false`로 「+ 추가」숨김 |
+| **추가 선택** | **유료만** — **지도**에서 인접 지역 추가 (`tierSelection` 동기화). 왼쪽에서 다른 동·리를 고르면 **클러스터 교체** |
 | **개수·tier** | 기존 `RegionSelector` 로직 준수 (D-010, `MAX_PAID_LEAF_BEOPJUNGRI_PICK` 등) |
-| **인접** | **지도상 옆에 붙어 보이면 인접** (사용자 기준). **코드 구현 방식 미정** |
+| **인접** | **Selection:** `region_neighbors` 위상 그래프 ([`MAP_NEIGHBOR_TOPOLOGY_DESIGN.md`](./MAP_NEIGHBOR_TOPOLOGY_DESIGN.md)). **Display:** viewport bbox |
 | **무료** | 지도 **클로즈업·프로필 열람** 가능, **지도에서 추가 선택 불가** |
 | **혼합 tier** | 상위(시도·시군구) + 하위(법정) **혼합 복수**는 기존 RegionSelector 정책 그대로 |
 
@@ -235,7 +235,7 @@ Profile 재구축 **이후** 기본정보를 표시한다. **구체 필드·문�
 | **Map-A4** | `App.tsx` 통합 (무료·유료·조회 전 Hub 상시) | **진행** |
 | **Profile-B0** | 전국 `regional_profile` (beop grain) + Twin | 대기 |
 | **Profile-B1** | Hub 카드 Profile API·필드 연동 | 대기 |
-| **Profile-B2** | 복합·집합 동일 UX 패턴 이식 | **복합: 계획 문서화** → [`BUILT_MAP_HUB_PLAN.md`](./BUILT_MAP_HUB_PLAN.md) · 집합: 후속 |
+| **Profile-B2** | 복합·집합 동일 UX 패턴 이식 | **복합·집합: M1~M3** → [`BUILT_MAP_HUB_PLAN.md`](./BUILT_MAP_HUB_PLAN.md) · [`COLLECTIVE_MAP_HUB_PLAN.md`](./COLLECTIVE_MAP_HUB_PLAN.md) |
 
 ---
 
@@ -252,10 +252,10 @@ Profile 재구축 **이후** 기본정보를 표시한다. **구체 필드·문�
 
 ## 10. 미정 · 차후 논의
 
-- 인접 판정 **구현** (polygon topology vs 사전 테이블)
+- 인접 판정 **구현** → [`MAP_NEIGHBOR_TOPOLOGY_DESIGN.md`](./MAP_NEIGHBOR_TOPOLOGY_DESIGN.md) (Display≠Selection)
 - VWorld 레이어·키·쿼터·캐시
 - GeoJSON shard·API 형태
-- 복합·집합: addr 레벨별 인접·복수 선택 상세 → **복합은 [`BUILT_MAP_HUB_PLAN.md`](./BUILT_MAP_HUB_PLAN.md) §5·§6 로 이관** (집합 미정)
+- 복합·집합: addr 레벨별 인접·복수 선택 상세 → **복합 [`BUILT_MAP_HUB_PLAN.md`](./BUILT_MAP_HUB_PLAN.md)** · **집합 [`COLLECTIVE_MAP_HUB_PLAN.md`](./COLLECTIVE_MAP_HUB_PLAN.md)** (시군구 넘는 복수는 보류)
 - 복수 선택 시 **카드** UI (목록 vs 합산 vs 탭)
 - 비인접 클릭·한도 초과·선택 해제 우클릭 UX
 - 전국 초기 뷰 vs 빈 지도 진입
@@ -272,6 +272,7 @@ Profile 재구축 **이후** 기본정보를 표시한다. **구체 필드·문�
 | [`UPPER_STATS_DESIGN.md`](./UPPER_STATS_DESIGN.md) | 상위·쌍둥이 (유료) |
 | [`DECISIONS.md`](./DECISIONS.md) D-010 | 행정 레벨·유료 복수 정책 |
 | [`BUILT_MAP_HUB_PLAN.md`](./BUILT_MAP_HUB_PLAN.md) | 복합 Map Hub 이식 계획 (Built-M0~M4) |
+| [`COLLECTIVE_MAP_HUB_PLAN.md`](./COLLECTIVE_MAP_HUB_PLAN.md) | 집합 Map Hub 이식 계획 (Collective-M1~M4) |
 
 ---
 
@@ -283,3 +284,6 @@ Profile 재구축 **이후** 기본정보를 표시한다. **구체 필드·문�
 | 2026-07-09 | 인터랙티브 인접 복수 선택·VWorld·15cm 클로즈업·동일레벨·무료/유료·패닝/우클릭 UX 반영; 복합·집합 원칙 추가 |
 | 2026-07-09 | **Map-A / Profile-B** 2단계 분리 — Profile 선행 없이 지도 Hub PoC 시작; §2·§8 재정의 |
 | 2026-07-11 | 복합 지도 이식 → [`BUILT_MAP_HUB_PLAN.md`](./BUILT_MAP_HUB_PLAN.md) 분리 문서화; §3.2·Profile-B2·§10 갱신 |
+| 2026-07-11 | 집합 Map Hub → [`COLLECTIVE_MAP_HUB_PLAN.md`](./COLLECTIVE_MAP_HUB_PLAN.md); §3.2·Profile-B2·§10 갱신 |
+| 2026-07-11 | 토지 왼쪽 시군구 미만 복수 UI 숨김(`LEFT_REGION_MULTI_SELECT`) — 지도 인접만 추가; §3.3 갱신 |
+| 2026-07-12 | Display(viewport) ≠ Selection(neighbor_codes) — [`MAP_NEIGHBOR_TOPOLOGY_DESIGN.md`](./MAP_NEIGHBOR_TOPOLOGY_DESIGN.md) |

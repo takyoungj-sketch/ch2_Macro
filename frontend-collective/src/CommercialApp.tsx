@@ -10,9 +10,14 @@ import {
   fetchCommercialRegionStructure,
 } from "./api/commercialClient";
 import CommercialClusterDetailModal from "./components/CommercialClusterDetailModal";
+import CollectiveRegionMapHub, { type MapPanelMode } from "./components/CollectiveRegionMapHub";
 import StatsPageHeader from "./components/StatsPageHeader";
 import StatsWindowToggle, { normalizeStatsWindowYears, type StatsWindowYears } from "./components/StatsWindowToggle";
-import RegionChipPanel from "./components/RegionChipPanel";
+import RegionChipPanel, {
+  LEFT_REGION_MULTI_SELECT,
+  toggleChipMulti,
+  toggleChipSingle,
+} from "./components/RegionChipPanel";
 import { useUiColorScheme } from "./hooks/useUiColorScheme";
 import { useUiFontScale } from "./hooks/useUiFontScale";
 import { COMMERCIAL_ASSET_SELECTOR_LABELS, commercialAssetTypeLabel, type CommercialAssetSelectorType, type CommercialClusterRow, type RegionOption } from "./types";
@@ -70,6 +75,7 @@ export default function CommercialApp() {
   const [windowYears, setWindowYears] = useState<StatsWindowYears>(5);
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [selected, setSelected] = useState<CommercialClusterRow | null>(null);
+  const [mapPanelMode, setMapPanelMode] = useState<MapPanelMode>("normal");
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
   const { isDark, toggleUiColorScheme } = useUiColorScheme();
 
@@ -296,7 +302,15 @@ export default function CommercialApp() {
                 hint={`미선택 시 ${addr2} 전체`}
                 selected={guList}
                 options={guQ.data ?? []}
-                onToggle={(name) => setGuList((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]))}
+                multiSelect={LEFT_REGION_MULTI_SELECT}
+                onToggle={(name) => {
+                  if (LEFT_REGION_MULTI_SELECT) {
+                    setGuList((prev) => toggleChipMulti(prev, name));
+                    return;
+                  }
+                  setGuList((prev) => toggleChipSingle(prev, name));
+                  setLeafList([]);
+                }}
                 onSelectAll={() => setGuList((guQ.data ?? []).map((o) => o.name))}
                 onClear={() => {
                   setGuList([]);
@@ -308,11 +322,20 @@ export default function CommercialApp() {
             {addr2 && structureQ.isSuccess && (
               <RegionChipPanel
                 title="읍·면·동"
-                hint={hasIntermediate ? `${intermediateLabel} 선택 후 좁힐 수 있습니다` : "미선택 시 시군구 전체"}
+                hint={
+                  hasIntermediate
+                    ? `${intermediateLabel} 선택 후 1개 선택 · 인접은 지도에서 추가`
+                    : `1개 선택(미선택 시 시군구 전체) · 인접은 지도에서 추가`
+                }
                 selected={leafList}
                 options={visibleLeafOptions}
                 formatLabel={(o) => (o.parent ? `${o.parent} · ${o.name}` : o.name)}
-                onToggle={(name) => setLeafList((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]))}
+                multiSelect={LEFT_REGION_MULTI_SELECT}
+                onToggle={(name) =>
+                  setLeafList((prev) =>
+                    LEFT_REGION_MULTI_SELECT ? toggleChipMulti(prev, name) : toggleChipSingle(prev, name),
+                  )
+                }
                 onSelectAll={() => setLeafList(visibleLeafOptions.map((o) => o.name))}
                 onClear={() => setLeafList([])}
               />
@@ -344,7 +367,44 @@ export default function CommercialApp() {
           </div>
         </aside>
 
-        <div className="layout-main p-4 min-w-0 flex-1">
+        <div className="layout-main min-w-0 flex-1">
+          <section className="px-4 pt-4 shrink-0">
+            <CollectiveRegionMapHub
+              commercial
+              scope={{
+                assetType,
+                addr1,
+                addr2,
+                guList,
+                leafList,
+                riPick: [],
+              }}
+              selectedRoads={
+                selected && scope
+                  ? [
+                      {
+                        clusterKey: selected.cluster_key,
+                        roadName: selected.road_name || selected.display_label,
+                        label: selected.road_name || selected.display_label,
+                        addr1: scope.addr1,
+                        addr2: scope.addr2,
+                        addr3: selected.addr3,
+                        addr4: selected.addr4,
+                      },
+                    ]
+                  : []
+              }
+              fillHeight={mapPanelMode === "expanded"}
+              mapPanelMode={mapPanelMode}
+              onExpand={() => setMapPanelMode("expanded")}
+              onCollapse={() => setMapPanelMode("collapsed")}
+              onNormal={() => setMapPanelMode("normal")}
+              onAddLeaf={(name) => {
+                setLeafList((prev) => (prev.includes(name) ? prev : [...prev, name]));
+              }}
+            />
+          </section>
+          <div className="p-4 pt-2">
             {!scope && (
               <p className="text-sm text-slate-500 dark:text-slate-400">시군구까지 선택한 뒤 「통계분석」을 누르면 도로(cluster) 목록이 표시됩니다.</p>
             )}
@@ -427,6 +487,7 @@ export default function CommercialApp() {
                 </div>
               </>
             )}
+          </div>
         </div>
       </main>
 

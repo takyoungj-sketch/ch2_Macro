@@ -10,6 +10,7 @@ import {
 import { simpleTableHeadClass } from "../constants/displayUi";
 import type {
   LandRegressionVariables,
+  LandRegressionRequest,
   LandRegressionResponse,
   LongTermTrendPoint,
   LongTermTrendResponse,
@@ -34,6 +35,7 @@ import MatrixCellHistogramChart from "./MatrixCellHistogramChart";
 import MatrixCellTransactionTable from "./MatrixCellTransactionTable";
 import MatrixYearlyTrendChart from "./MatrixYearlyTrendChart";
 import LandRegressionResults from "./LandRegressionResults";
+import LandPredictPanel from "./LandPredictPanel";
 import MultiRegionTrendChart, { type TrendSeries } from "./MultiRegionTrendChart";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import { buildLongTermTrendExplain } from "../constants/longTermTrendExplain";
@@ -170,6 +172,7 @@ export default function PaidMatrixYearlyModal({
   const [regLoading, setRegLoading] = useState(false);
   const [regError, setRegError] = useState<string | null>(null);
   const [regResult, setRegResult] = useState<LandRegressionResponse | null>(null);
+  const [regBody, setRegBody] = useState<LandRegressionRequest | null>(null);
   const aiRegressionContext = useMemo(() => {
     if (!regResult) return null;
     const label = scopeNote?.trim() || `${zoneType} × ${landCategory}`;
@@ -1037,15 +1040,18 @@ export default function PaidMatrixYearlyModal({
                       setRegLoading(true);
                       setRegError(null);
                       setRegResult(null);
+                      setRegBody(null);
                       try {
-                        const res = await fetchLandRegression({
+                        const body: LandRegressionRequest = {
                           ...filterRequest,
                           variables: regVars,
                           model_type: regModelType,
                           exclude_outliers_iqr: regExcludeOutlier,
                           outlier_iqr_multiplier: 3,
                           min_n: 15,
-                        });
+                        };
+                        const res = await fetchLandRegression(body);
+                        setRegBody(body);
                         setRegResult(res);
                       } catch (e) {
                         setRegError(parseApiError(e).message);
@@ -1065,6 +1071,15 @@ export default function PaidMatrixYearlyModal({
               )}
 
               {regResult && <LandRegressionResults data={regResult} />}
+
+              {regResult && regBody && (
+                <LandPredictPanel
+                  regResult={regResult}
+                  regBody={regBody}
+                  vars={regBody.variables}
+                  regionLabel={scopeNote?.trim() || `${zoneType} × ${landCategory}`}
+                />
+              )}
             </div>
           )}
         </div>
