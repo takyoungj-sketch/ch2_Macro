@@ -132,10 +132,10 @@ function polygonGeometryToOutline(
 ): GeoJSON.LineString | GeoJSON.MultiLineString | null {
   const lines: [number, number][][] = [];
   if (geometry.type === "Polygon") {
-    for (const ring of geometry.coordinates) lines.push(ring);
+    for (const ring of geometry.coordinates) lines.push(ring as [number, number][]);
   } else {
     for (const poly of geometry.coordinates) {
-      for (const ring of poly) lines.push(ring);
+      for (const ring of poly) lines.push(ring as [number, number][]);
     }
   }
   if (lines.length === 0) return null;
@@ -163,7 +163,7 @@ function polygonLabelPoint(
   geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon,
 ): [number, number] | null {
   if (geometry.type === "Polygon") {
-    const ring = geometry.coordinates[0];
+    const ring = geometry.coordinates[0] as [number, number][] | undefined;
     return ring ? ringBboxCenter(ring) : null;
   }
   let best: [number, number] | null = null;
@@ -885,7 +885,7 @@ export default function RegionMapHub({
             ref={mapRef}
             initialViewState={{ longitude: 127.8, latitude: 36.2, zoom: 6.8, pitch: 0, bearing: 0 }}
             style={{ width: "100%", height: "100%" }}
-            mapStyle={mapStyle}
+            mapStyle={mapStyle as never}
             dragPan
             dragRotate={false}
             touchPitch={false}
@@ -923,7 +923,6 @@ export default function RegionMapHub({
                       isRiSelection ? 0.08 : 0.05,
                     ],
                     "fill-antialias": true,
-                    "fill-opacity-transition": { duration: 0 },
                   }}
                 />
               </Source>
@@ -939,8 +938,6 @@ export default function RegionMapHub({
                     "line-color": "#422006",
                     "line-opacity": 0.9,
                     "line-width": isRiSelection ? 8 : 7,
-                    "line-opacity-transition": { duration: 0 },
-                    "line-width-transition": { duration: 0 },
                   }}
                 />
                 <Layer
@@ -972,9 +969,6 @@ export default function RegionMapHub({
                       0.95,
                       0.55,
                     ],
-                    "line-opacity-transition": { duration: 0 },
-                    "line-width-transition": { duration: 0 },
-                    "line-color-transition": { duration: 0 },
                   }}
                 />
               </Source>

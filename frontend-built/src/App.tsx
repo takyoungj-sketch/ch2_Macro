@@ -502,8 +502,8 @@ export default function App() {
   const [riList, setRiList] = useState<RiPick[]>([]);
   /** 분석 scope (교차 시군구 인접 포함). 왼쪽 앵커 교체 시 리셋. */
   const [analysisUnits, setAnalysisUnits] = useState<BuiltAnalysisUnit[]>([]);
-  const [yearFrom, setYearFrom] = useState<number | "">("");
-  const [yearTo, setYearTo] = useState<number | "">("");
+  const [yearFrom] = useState<number | "">("");
+  const [yearTo] = useState<number | "">("");
   const [txModalOpen, setTxModalOpen] = useState(false);
   const [modelExploreOpen, setModelExploreOpen] = useState(false);
   const [upperCompareOpen, setUpperCompareOpen] = useState(false);
