@@ -79,7 +79,10 @@ def _normalize_features(raw: dict[str, Any]) -> dict[str, Any]:
     response = raw.get("response") or {}
     status = response.get("status")
     if status != "OK":
-        raise ValueError(response.get("status") or "VWorld status not OK")
+        err = response.get("error") if isinstance(response.get("error"), dict) else {}
+        code = err.get("code") or status or "ERROR"
+        text = err.get("text") or "VWorld status not OK"
+        raise ValueError(f"VWorld {code}: {text}")
     result = response.get("result") or {}
     fc = result.get("featureCollection") or {}
     if fc.get("type") != "FeatureCollection":
