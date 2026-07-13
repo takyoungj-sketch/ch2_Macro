@@ -342,6 +342,23 @@ def _sigungu_lookup_variants(sn: str, sg: str) -> list[str]:
     return out
 
 
+def _eup_myeon_name_variants(name: str) -> list[str]:
+    """면↔읍 승격 표기 차이 (예: 대소면 ↔ 대소읍)."""
+    s = (name or "").strip()
+    if not s:
+        return []
+    out = [s]
+    if s.endswith("읍") and len(s) >= 2:
+        alt = s[:-1] + "면"
+        if alt not in out:
+            out.append(alt)
+    elif s.endswith("면") and len(s) >= 2:
+        alt = s[:-1] + "읍"
+        if alt not in out:
+            out.append(alt)
+    return out
+
+
 def _lookup_by_sigungu_name(
     by_name: dict[tuple, str],
     by_eup_prefix: dict[tuple[str, str, str], list[str]],
@@ -352,10 +369,15 @@ def _lookup_by_sigungu_name(
 ) -> tuple[str, str]:
     for s in _sido_lookup_variants(sn):
         for sg_try in _sigungu_lookup_variants(s, sg):
-            code = by_name.get((s, sg_try, eu_k, bp_k), "") or ""
-            if code:
-                note = "sigungu_alias" if sg_try != sg else ""
-                return str(code).strip(), note
+            for eu_try in _eup_myeon_name_variants(eu_k):
+                code = by_name.get((s, sg_try, eu_try, bp_k), "") or ""
+                if code:
+                    note = ""
+                    if sg_try != sg:
+                        note = "sigungu_alias"
+                    elif eu_try != eu_k:
+                        note = "eup_myeon_alias"
+                    return str(code).strip(), note
             pref = by_eup_prefix.get((s, sg_try, bp_k), [])
             if len(pref) == 1:
                 note = "eup_prefix" if sg_try == sg else "sigungu_alias"
@@ -615,6 +637,26 @@ def map_beopjungri_codes(df: pd.DataFrame, region_maps: dict) -> pd.DataFrame:
             s2, s5 = sc2_list[i], sc5_list[i]
             if s2 and s5 and eu_k and bp_k:
                 code = by_code.get((s2, s5, eu_k, bp_k), "") or ""
+
+        # Fallback: 면↔읍 승격 표기 (대소면 ↔ 대소읍)
+        if not code and sn and sg and eu_k:
+            for eu_alt in _eup_myeon_name_variants(eu_k):
+                if eu_alt == eu_k:
+                    continue
+                if bp_k:
+                    code, fb = _lookup_by_sigungu_name(
+                        by_name, by_eup_prefix, sn, sg, eu_alt, bp_k
+                    )
+                    if code:
+                        fallback_note = fb or "eup_myeon_alias"
+                        break
+                if not code:
+                    s2, s5 = sc2_list[i], sc5_list[i]
+                    if s2 and s5 and bp_k:
+                        code = by_code.get((s2, s5, eu_alt, bp_k), "") or ""
+                        if code:
+                            fallback_note = "eup_myeon_alias"
+                            break
 
         # Fallback 1: 시도명 별칭 (전북특별자치도 ↔ 전라북도 등)
         if not code and sn in _SIDO_NAME_ALIASES and sg and eu_k and bp_k:

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import type { AssetType, BuiltTransactionRow } from "../types";
+import { isOnlyDetached, isUnifiedAsset } from "../utils/assetTypes";
 import {
   builtTxAdminCols,
   builtTxBuildingYear,
@@ -35,19 +36,20 @@ function buildCols(assetType: AssetType): ColDef[] {
     { key: "sido", label: "시도", filterType: "select" },
     { key: "sigungu", label: "시군구", filterType: "select" },
     { key: "gu_eup", label: "구·읍", filterType: "select" },
-    { key: "dong_ri", label: "동·리", filterType: "select" },
+    { key: "dong_ri", label: "읍·면·동", filterType: "select" },
+    { key: "ri", label: "리", filterType: "select" },
     { key: "lot", label: "지번", filterType: "text", textPlaceholder: "검색" },
     { key: "road_name", label: "도로명", filterType: "text", textPlaceholder: "검색" },
   ];
-  if (assetType === "all") {
+  if (isUnifiedAsset(assetType)) {
     cols.unshift({ key: "asset_type", label: "유형", filterType: "select" });
   }
-  if (assetType !== "detached") {
+  if (!isOnlyDetached(assetType)) {
     cols.push({ key: "zone_type", label: "용도지역", filterType: "select" });
   }
   cols.push({
     key: "building_use",
-    label: assetType === "detached" ? "주택유형" : "건축물용도",
+    label: isOnlyDetached(assetType) ? "주택유형" : "건축물용도",
     filterType: "select",
   });
   cols.push(
@@ -353,7 +355,8 @@ export default function BuiltTransactionTable({
     return `${sel.size}개 선택`;
   };
 
-  const showZone = assetType !== "detached";
+  const showZone = !isOnlyDetached(assetType);
+  const showAssetCol = isUnifiedAsset(assetType);
 
   return (
     <div className="space-y-2 flex flex-col flex-1 min-h-0">
@@ -552,7 +555,7 @@ export default function BuiltTransactionTable({
                 const byear = builtTxBuildingYear(r);
                 return (
                   <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
-                    {assetType === "all" && (
+                    {showAssetCol && (
                       <td className="border px-2 py-1 whitespace-nowrap">
                         {ASSET_LABELS[r.asset_type] ?? r.asset_type}
                       </td>
@@ -572,6 +575,9 @@ export default function BuiltTransactionTable({
                     <td className="border px-2 py-1 max-w-[88px] truncate" title={admin.dong_ri ?? undefined}>
                       {formatBuiltTxCell(admin.dong_ri)}
                     </td>
+                    <td className="border px-2 py-1 max-w-[88px] truncate" title={admin.ri ?? undefined}>
+                      {formatBuiltTxCell(admin.ri)}
+                    </td>
                     <td className="border px-2 py-1 max-w-[4.5rem] truncate" title={admin.lot ?? undefined}>
                       {formatBuiltTxCell(admin.lot)}
                     </td>
@@ -580,7 +586,7 @@ export default function BuiltTransactionTable({
                     </td>
                     {showZone && (
                       <td className="border px-2 py-1 whitespace-nowrap">
-                        {assetType === "all" && r.asset_type === "detached"
+                        {showAssetCol && r.asset_type === "detached"
                           ? "—"
                           : formatBuiltTxCell(r.zone_type)}
                       </td>

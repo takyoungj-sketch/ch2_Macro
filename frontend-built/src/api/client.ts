@@ -29,6 +29,9 @@ export interface TransactionQueryParams {
   addr3_list?: string[];
   addr4_list?: string[];
   ri_pick?: string[];
+  region_codes?: string[];
+  region_code_level?: "eupmyeondong" | "beopjungri";
+  region_addrs?: string[];
   zone_types?: string[];
   building_uses?: string[];
   road_width_labels?: string[];
@@ -56,6 +59,8 @@ function toSearchParams(params: TransactionQueryParams): string {
       (key === "addr3_list" ||
         key === "addr4_list" ||
         key === "ri_pick" ||
+        key === "region_codes" ||
+        key === "region_addrs" ||
         key === "zone_types" ||
         key === "building_uses" ||
         key === "road_width_labels") &&
@@ -147,6 +152,39 @@ export async function fetchRiRegions(
   return data;
 }
 
+export async function lookupBuiltRegionCode(opts: {
+  assetType?: string;
+  addr1?: string;
+  addr2?: string;
+  leaf?: string;
+  code?: string;
+  level?: "eupmyeondong" | "beopjungri";
+  eup?: string;
+}): Promise<{
+  code: string | null;
+  level: string;
+  addr1?: string | null;
+  addr2?: string | null;
+  leaf?: string | null;
+}> {
+  const params: Record<string, string> = {};
+  if (opts.addr1) params.addr1 = opts.addr1;
+  if (opts.addr2) params.addr2 = opts.addr2;
+  if (opts.leaf) params.leaf = opts.leaf;
+  if (opts.code) params.code = opts.code;
+  if (opts.assetType) params.asset_type = opts.assetType;
+  if (opts.level) params.level = opts.level;
+  if (opts.eup) params.eup = opts.eup;
+  const { data } = await api.get<{
+    code: string | null;
+    level: string;
+    addr1?: string | null;
+    addr2?: string | null;
+    leaf?: string | null;
+  }>("/regions/lookup-code", { params });
+  return data;
+}
+
 export async function fetchScopeSampleFilters(params: {
   asset_type?: string;
   addr1?: string;
@@ -154,6 +192,9 @@ export async function fetchScopeSampleFilters(params: {
   addr3_list?: string[];
   addr4_list?: string[];
   ri_pick?: string[];
+  region_codes?: string[];
+  region_code_level?: "eupmyeondong" | "beopjungri";
+  region_addrs?: string[];
   contract_year_from?: number;
   contract_year_to?: number;
   as_of_month?: string;
@@ -162,7 +203,14 @@ export async function fetchScopeSampleFilters(params: {
   const sp = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value == null || value === "") return;
-    if ((key === "addr3_list" || key === "addr4_list" || key === "ri_pick") && Array.isArray(value)) {
+    if (
+      (key === "addr3_list" ||
+        key === "addr4_list" ||
+        key === "ri_pick" ||
+        key === "region_codes" ||
+        key === "region_addrs") &&
+      Array.isArray(value)
+    ) {
       value.forEach((v) => sp.append(key, v));
       return;
     }

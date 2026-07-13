@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   fetchLongTermTrend,
   fetchMatrixCellHistogram,
@@ -38,12 +37,21 @@ import LandRegressionResults from "./LandRegressionResults";
 import LandPredictPanel from "./LandPredictPanel";
 import MultiRegionTrendChart, { type TrendSeries } from "./MultiRegionTrendChart";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
+import DraggableModalShell from "./DraggableModalShell";
 import { buildLongTermTrendExplain } from "../constants/longTermTrendExplain";
 import {
   buildHistogramExplain,
   buildMatrixCellTrendExplain,
   buildTransactionListExplain,
 } from "../constants/landStatsExplain";
+
+function defaultPaidMatrixModalSize(): { width: number; height: number } {
+  if (typeof window === "undefined") return { width: 1152, height: 640 };
+  return {
+    width: Math.min(1152, window.innerWidth - 32),
+    height: Math.min(Math.round(window.innerHeight * 0.88), Math.max(520, window.innerHeight - 48)),
+  };
+}
 
 function sortMatrixRows(rows: MatrixYearlyStat[]): MatrixYearlyStat[] {
   return [...rows].sort((a, b) => {
@@ -190,63 +198,7 @@ export default function PaidMatrixYearlyModal({
   const [ltError, setLtError] = useState<string | null>(null);
   const [ltData, setLtData] = useState<LongTermTrendResponse | null>(null);
   const [ltMetric, setLtMetric] = useState<LtPriceMetric>("median");
-
-  /** 모달 드래그 이동 (헤더 잡고 끌기) */
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const dragSession = useRef<{
-    startX: number;
-    startY: number;
-    baseX: number;
-    baseY: number;
-  } | null>(null);
-
-  useEffect(() => {
-    if (open) {
-      setDragOffset({ x: 0, y: 0 });
-      dragSession.current = null;
-    }
-  }, [open, zoneType, landCategory]);
-
-  const onDragMove = useCallback((e: MouseEvent) => {
-    const s = dragSession.current;
-    if (!s) return;
-    setDragOffset({
-      x: s.baseX + (e.clientX - s.startX),
-      y: s.baseY + (e.clientY - s.startY),
-    });
-  }, []);
-
-  const onDragEnd = useCallback(() => {
-    dragSession.current = null;
-    window.removeEventListener("mousemove", onDragMove);
-    window.removeEventListener("mouseup", onDragEnd);
-  }, [onDragMove]);
-
-  const onHeaderMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.button !== 0) return;
-      const target = e.target as HTMLElement;
-      if (target.closest("button")) return;
-      e.preventDefault();
-      dragSession.current = {
-        startX: e.clientX,
-        startY: e.clientY,
-        baseX: dragOffset.x,
-        baseY: dragOffset.y,
-      };
-      window.addEventListener("mousemove", onDragMove);
-      window.addEventListener("mouseup", onDragEnd);
-    },
-    [dragOffset.x, dragOffset.y, onDragMove, onDragEnd],
-  );
-
-  useEffect(
-    () => () => {
-      window.removeEventListener("mousemove", onDragMove);
-      window.removeEventListener("mouseup", onDragEnd);
-    },
-    [onDragMove, onDragEnd],
-  );
+  const [defaultSize] = useState(defaultPaidMatrixModalSize);
 
   useEffect(() => {
     if (open) {
@@ -532,94 +484,62 @@ export default function PaidMatrixYearlyModal({
     ],
   );
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [open, onClose]);
-
   if (!open) return null;
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[130] bg-black/35"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="paid-matrix-yearly-title"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        className="fixed left-1/2 top-1/2 bg-white rounded-xl shadow-xl max-w-6xl w-[calc(100%-2rem)] min-h-[min(520px,88vh)] max-h-[88vh] flex flex-col border border-slate-200"
-        style={{
-          transform: `translate(calc(-50% + ${dragOffset.x}px), calc(-50% + ${dragOffset.y}px))`,
-        }}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div
-          className="flex justify-between items-start gap-2 px-4 py-3 border-b border-slate-100 cursor-move select-none"
-          onMouseDown={onHeaderMouseDown}
-        >
-          <div className="min-w-0 flex-1">
-            <h2 id="paid-matrix-yearly-title" className="text-sm font-bold text-slate-800">
-              {isRolling ? "롤링 구간별 평균 변동" : "연도별 평균 변동"}
-            </h2>
-            <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
-              용도 <span className="font-semibold text-slate-700">{zoneType}</span> · 지목{" "}
-              <span className="font-semibold text-slate-700">{landCategory}</span>
-              {scopeNote ? (
-                <span className="block text-[10px] mt-1 text-slate-400">{scopeNote}</span>
-              ) : null}
-            </p>
-            {canDetail && (
-              <div
-                className="mt-2 inline-flex flex-wrap rounded-md border border-slate-200 bg-slate-50 p-0.5 gap-0.5"
-                role="tablist"
-                aria-label="보기 형식"
-              >
-                {detailTabs.map(({ id, label }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    role="tab"
-                    aria-selected={panel === id}
-                    className={`px-2.5 py-1 text-[11px] font-medium rounded transition-colors ${
-                      panel === id
-                        ? "bg-white text-slate-800 shadow-sm border border-slate-100"
-                        : "text-slate-500 hover:text-slate-700"
-                    }`}
-                    onClick={() => setPanel(id)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+  return (
+    <DraggableModalShell
+      open={open}
+      onClose={onClose}
+      titleId="paid-matrix-yearly-title"
+      title={isRolling ? "롤링 구간별 평균 변동" : "연도별 평균 변동"}
+      subtitle={
+        <>
+          용도 <span className="font-semibold text-slate-700">{zoneType}</span> · 지목{" "}
+          <span className="font-semibold text-slate-700">{landCategory}</span>
+          {scopeNote ? (
+            <span className="block text-[10px] mt-1 text-slate-400">{scopeNote}</span>
+          ) : null}
+        </>
+      }
+      headerExtra={
+        canDetail ? (
           <div
-            className="flex items-center gap-2 shrink-0"
-            onMouseDown={(e) => e.stopPropagation()}
+            className="inline-flex flex-wrap rounded-md border border-slate-200 bg-slate-50 p-0.5 gap-0.5"
+            role="tablist"
+            aria-label="보기 형식"
           >
-            {aiPanelContext && <AiAssistantPanel context={aiPanelContext} />}
-            <button
-              type="button"
-              aria-label="닫기"
-              className="shrink-0 text-slate-400 hover:text-slate-700 text-xl leading-none px-1"
-              onClick={onClose}
-            >
-              ×
-            </button>
+            {detailTabs.map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={panel === id}
+                className={`px-2.5 py-1 text-[11px] font-medium rounded transition-colors ${
+                  panel === id
+                    ? "bg-white text-slate-800 shadow-sm border border-slate-100"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+                onClick={() => setPanel(id)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
-        </div>
-
-        <div className="flex-1 min-h-[360px] overflow-auto px-4 py-3 space-y-4 flex flex-col">
+        ) : null
+      }
+      headerActions={aiPanelContext ? <AiAssistantPanel context={aiPanelContext} /> : null}
+      usePortal
+      escapeCapture
+      resizable
+      zClassName="z-[130]"
+      backdropClassName="bg-black/35"
+      defaultWidth={defaultSize.width}
+      defaultHeight={defaultSize.height}
+      minWidth={480}
+      minHeight={360}
+      maxWidthClass="max-w-6xl"
+      bodyClassName="flex-1 min-h-0 overflow-auto px-4 py-3 space-y-4 flex flex-col"
+    >
           {loading && (
             <p className="text-xs text-slate-400 text-center py-6">
               {isRolling ? "구간별 집계 중…" : "연도별 집계 중…"}
@@ -1082,9 +1002,6 @@ export default function PaidMatrixYearlyModal({
               )}
             </div>
           )}
-        </div>
-      </div>
-    </div>,
-    document.body
+    </DraggableModalShell>
   );
 }

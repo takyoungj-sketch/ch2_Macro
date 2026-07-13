@@ -1,5 +1,4 @@
 import { Fragment, useEffect, useMemo, useState, type KeyboardEvent } from "react";
-import { createPortal } from "react-dom";
 import clsx from "clsx";
 import {
   MATRIX_TABLE_TONE,
@@ -8,6 +7,15 @@ import {
 import { buildMatrixLegendExplain, buildMatrixTableExplain } from "../constants/landStatsExplain";
 import type { AnalysisExplain, MatrixCell, StatsResult } from "../types";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
+import DraggableModalShell from "./DraggableModalShell";
+
+function defaultFullscreenSize(): { width: number; height: number } {
+  if (typeof window === "undefined") return { width: 1200, height: 800 };
+  return {
+    width: Math.max(640, window.innerWidth - 16),
+    height: Math.max(400, window.innerHeight - 16),
+  };
+}
 
 /** 고정 레이아웃 (만원/㎡) — 통계 라벨 열 없음 */
 const COL_ZONE_PX = 96; // 이전 대비 용도지역 열 0.6배 (160×0.6)
@@ -607,9 +615,10 @@ export default function MatrixStatsTable({
   byLandCategory = {},
   showEmbeddedLegend = true,
   onPaidMatrixCellClick,
-  suppressEscapeClose = false,
+  suppressEscapeClose: _suppressEscapeClose = false,
 }: Props) {
   const [fullscreen, setFullscreen] = useState(false);
+  const [fullscreenSize] = useState(defaultFullscreenSize);
 
   const cells = matrix ?? [];
   const showHeadingRow = (title ?? "").trim().length > 0 || showEmbeddedLegend;
@@ -682,15 +691,10 @@ export default function MatrixStatsTable({
     if (!fullscreen) return;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const onKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key === "Escape" && !suppressEscapeClose) setFullscreen(false);
-    };
-    window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = prevOverflow;
-      window.removeEventListener("keydown", onKey);
     };
-  }, [fullscreen, suppressEscapeClose]);
+  }, [fullscreen]);
 
   if (cells.length === 0) {
     return (
@@ -741,40 +745,31 @@ export default function MatrixStatsTable({
       {toolbar}
       <MatrixStatsTableGrid {...gridProps} />
 
-      {fullscreen &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-[120] flex flex-col bg-slate-100 dark:bg-slate-950"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="matrix-fullscreen-title"
-          >
-            <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 shadow-sm">
-              <h3
-                id="matrix-fullscreen-title"
-                className="text-sm font-semibold text-slate-800"
-              >
-                {headingText}
-              </h3>
-              <div className="flex flex-wrap items-center gap-2">
-                <MatrixStatsLegend helpExplain={matrixLegendExplainDefault} />
-                <AnalysisHelpPanel explain={matrixTableExplain} />
-                <MatrixFullscreenButton
-                  variant="close"
-                  label="닫기 (Esc)"
-                  onClick={() => setFullscreen(false)}
-                />
-              </div>
-            </header>
-            <div className="min-h-0 flex-1 p-3">
-              <MatrixStatsTableGrid
-                {...gridProps}
-                scrollClassName="h-full overflow-auto overscroll-contain rounded-lg border border-slate-200 bg-white shadow-sm"
-              />
-            </div>
-          </div>,
-          document.body
-        )}
+      <DraggableModalShell
+        open={fullscreen}
+        onClose={() => setFullscreen(false)}
+        titleId="matrix-fullscreen-title"
+        title={headingText}
+        usePortal
+        resizable
+        zClassName="z-[120]"
+        defaultWidth={fullscreenSize.width}
+        defaultHeight={fullscreenSize.height}
+        minWidth={640}
+        minHeight={400}
+        headerActions={
+          <>
+            <MatrixStatsLegend helpExplain={matrixLegendExplainDefault} />
+            <AnalysisHelpPanel explain={matrixTableExplain} />
+          </>
+        }
+        bodyClassName="flex-1 min-h-0 p-3 overflow-hidden"
+      >
+        <MatrixStatsTableGrid
+          {...gridProps}
+          scrollClassName="h-full overflow-auto overscroll-contain rounded-lg border border-slate-200 bg-white shadow-sm"
+        />
+      </DraggableModalShell>
     </div>
   );
 }

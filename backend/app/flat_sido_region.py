@@ -10,10 +10,13 @@ FLAT_SIDO_ADDR2_TOKEN = "__FLAT_SIDO__"
 
 
 def normalize_region_asset_type(asset_type: str | None) -> str | None:
-    """통합(all) 또는 빈 값 — 유형 필터 없음."""
+    """단일 유형만 반환. all·복수(콤마)·빈 값 — 필터 없음."""
     if not asset_type or asset_type == "all":
         return None
-    return asset_type
+    raw = str(asset_type).strip()
+    if "," in raw or "|" in raw:
+        return None
+    return raw
 
 
 def is_flat_sido_addr2(addr2: str | None) -> bool:

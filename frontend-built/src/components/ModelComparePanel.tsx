@@ -35,13 +35,17 @@ function CandidateRow({
   expanded,
   onToggle,
   onAdopt,
+  onPredict,
   adopting,
+  predictActive,
 }: {
   c: ModelCandidate;
   expanded: boolean;
   onToggle: () => void;
   onAdopt: () => void;
+  onPredict?: () => void;
   adopting?: boolean;
+  predictActive?: boolean;
 }) {
   return (
     <div className="border border-slate-200 dark:border-slate-600 rounded-md overflow-hidden">
@@ -66,14 +70,28 @@ function CandidateRow({
           {c.model_comparison && (
             <ModelComparisonCard cmp={c.model_comparison} selected={c.response_scale} />
           )}
-          <button
-            type="button"
-            className="btn btn-primary text-[11px]"
-            disabled={adopting}
-            onClick={onAdopt}
-          >
-            {adopting ? "분석 중…" : "이 모형으로 분석"}
-          </button>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              className="btn btn-primary text-[11px]"
+              disabled={adopting}
+              onClick={onAdopt}
+            >
+              {adopting ? "분석 중…" : "이 모형으로 분석"}
+            </button>
+            {onPredict && (
+              <button
+                type="button"
+                className={clsx(
+                  "btn text-[11px]",
+                  predictActive ? "btn-primary" : "btn-ghost",
+                )}
+                onClick={onPredict}
+              >
+                {predictActive ? "예측 대상" : "이 모형으로 예측"}
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -86,12 +104,16 @@ export function ModelComparePanel({
   adopting,
   aiContext,
   embedded = false,
+  onPredict,
+  predictActiveLabel,
 }: {
   data: RegressionCompareResponse;
   onAdopt: (vars: RegressionVariableSpec, scale: ResponseScale) => void;
   adopting?: boolean;
   aiContext?: AiContextPayload | null;
   embedded?: boolean;
+  onPredict?: (vars: RegressionVariableSpec, scale: ResponseScale, label: string) => void;
+  predictActiveLabel?: string | null;
 }) {
   const [tab, setTab] = useState<RankTab>("aic");
   const [expandedRank, setExpandedRank] = useState<number | null>(1);
@@ -174,16 +196,25 @@ export function ModelComparePanel({
       </div>
 
       <div className="space-y-1.5">
-        {candidates.map((c) => (
-          <CandidateRow
-            key={`${tab}-${c.rank}`}
-            c={c}
-            expanded={expandedRank === c.rank}
-            onToggle={() => setExpandedRank((r) => (r === c.rank ? null : c.rank))}
-            onAdopt={() => onAdopt(c.variables, c.response_scale)}
-            adopting={adopting}
-          />
-        ))}
+        {candidates.map((c) => {
+          const label = `비교 #${c.rank} (${tab.toUpperCase()})`;
+          return (
+            <CandidateRow
+              key={`${tab}-${c.rank}`}
+              c={c}
+              expanded={expandedRank === c.rank}
+              onToggle={() => setExpandedRank((r) => (r === c.rank ? null : c.rank))}
+              onAdopt={() => onAdopt(c.variables, c.response_scale)}
+              onPredict={
+                onPredict
+                  ? () => onPredict(c.variables, c.response_scale, label)
+                  : undefined
+              }
+              adopting={adopting}
+              predictActive={predictActiveLabel === label}
+            />
+          );
+        })}
         {!candidates.length && (
           <p className="text-slate-500">해당 지표로 랭킹할 후보가 없습니다.</p>
         )}

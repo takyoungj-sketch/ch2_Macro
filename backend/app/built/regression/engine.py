@@ -140,9 +140,16 @@ def _build_where(
     params: dict[str, Any] = {}
     apply_asset_type_filter(clauses, params, req.asset_type)
     if include_subregion:
-        from app.region_scope import apply_region_scope
+        from app.region_scope import apply_analysis_region_scope, apply_region_scope
 
-        if req.addr1 and req.addr2:
+        used_units = apply_analysis_region_scope(
+            clauses,
+            params,
+            codes=getattr(req, "region_codes", None) or [],
+            code_level=getattr(req, "region_code_level", None),
+            addr_keys=getattr(req, "region_addrs", None) or [],
+        )
+        if not used_units and req.addr1 and req.addr2:
             apply_region_scope(
                 clauses,
                 params,
@@ -156,7 +163,7 @@ def _build_where(
                 ri_list=req.ri_list,
                 asset_type=req.asset_type,
             )
-        elif req.addr1:
+        elif not used_units and req.addr1:
             clauses.append("addr1 = :addr1")
             params["addr1"] = req.addr1
             from app.built.filters import apply_addr3_filter, apply_addr4_filter, apply_ri_filter
@@ -164,6 +171,28 @@ def _build_where(
             apply_addr3_filter(clauses, params, req.addr3, req.addr3_list)
             apply_addr4_filter(clauses, params, None, req.addr4_list)
             apply_ri_filter(clauses, params, req.ri_list)
+    elif _has_unit_region_scope(req):
+        # wide fetch: 교차 시군구 단위의 상위 시군구 합집합
+        from app.region_scope import parse_region_addr_keys
+
+        triples = parse_region_addr_keys(getattr(req, "region_addrs", None) or [])
+        addr2s = sorted({t[1] for t in triples if t[1]})
+        if req.addr2 and req.addr2 not in addr2s:
+            addr2s.append(req.addr2)
+        if req.addr1:
+            clauses.append("addr1 = :addr1")
+            params["addr1"] = req.addr1
+        if len(addr2s) > 1:
+            clauses.append("addr2 = ANY(:unit_wide_addr2s)")
+            params["unit_wide_addr2s"] = addr2s
+        elif len(addr2s) == 1:
+            from app.flat_sido_region import apply_addr2_scope
+
+            apply_addr2_scope(clauses, params, addr1=req.addr1, addr2=addr2s[0])
+        elif req.addr1 and req.addr2:
+            from app.flat_sido_region import apply_addr2_scope
+
+            apply_addr2_scope(clauses, params, addr1=req.addr1, addr2=req.addr2)
     elif req.addr1 and req.addr2:
         from app.flat_sido_region import apply_addr2_scope
 
@@ -197,7 +226,7 @@ def _fetch_df(conn, req: RegressionRunRequest, *, include_subregion: bool = True
     sql = f"""
         SELECT price, gross_area, land_area, building_age, road_code, road_width_label,
                zone_type, building_use, asset_type, contract_year,
-               addr3, addr4, addr5,
+               addr1, addr2, addr3, addr4, addr5,
                sigungu_code, eupmyeondong_code, beopjungri_code
         FROM built_transactions
         WHERE {where}
@@ -318,7 +347,21 @@ def _prepare_regression_scope(
     return wide_df, req, addr4_city, mode
 
 
+def _has_unit_region_scope(req: RegressionRunRequest) -> bool:
+    codes = [str(c).strip() for c in (getattr(req, "region_codes", None) or []) if str(c).strip()]
+    addrs = [str(a).strip() for a in (getattr(req, "region_addrs", None) or []) if str(a).strip()]
+    return bool(codes or addrs)
+
+
+def _unit_addr_triples(req: RegressionRunRequest) -> list[tuple[str, str, str]]:
+    from app.region_scope import parse_region_addr_keys
+
+    return parse_region_addr_keys(getattr(req, "region_addrs", None) or [])
+
+
 def _has_leaf_selection(req: RegressionRunRequest, addr4_city: bool) -> bool:
+    if _has_unit_region_scope(req):
+        return True
     if addr4_city:
         return bool(effective_addr4_list(None, req.addr4_list))
     return bool(effective_addr3_list(req.addr3, req.addr3_list))
@@ -345,6 +388,9 @@ def _focus_admin_level(req: RegressionRunRequest, addr4_city: bool) -> AdminLeve
     """사용자 최종 선택 행정 층위 = 분석 초점."""
     if req.ri_list:
         return "beopjungri"
+    if _has_unit_region_scope(req):
+        lv = (getattr(req, "region_code_level", None) or "eupmyeondong").strip().lower()
+        return "beopjungri" if lv == "beopjungri" else "eupmyeondong"
     if _has_leaf_selection(req, addr4_city):
         return "eupmyeondong"
     if _has_gu_selection(req, addr4_city):
@@ -481,8 +527,51 @@ def _filter_gu(df: pd.DataFrame, req: RegressionRunRequest) -> pd.DataFrame:
     return df[_norm_col(df, "addr3").isin(set(names))]
 
 
+def _filter_by_region_units(df: pd.DataFrame, req: RegressionRunRequest) -> pd.DataFrame:
+    """region_codes / region_addrs 로 행 필터 (교차 시군구 포함)."""
+    if df.empty or not _has_unit_region_scope(req):
+        return df
+    codes = [str(c).strip() for c in (getattr(req, "region_codes", None) or []) if str(c).strip()]
+    triples = _unit_addr_triples(req)
+    lv = (getattr(req, "region_code_level", None) or "eupmyeondong").strip().lower()
+    mask = pd.Series(False, index=df.index)
+
+    if codes:
+        if lv == "beopjungri" and "beopjungri_code" in df.columns:
+            mask = mask | _norm_col(df, "beopjungri_code").isin(set(codes))
+        else:
+            emd_set: set[str] = set()
+            for c in codes:
+                if len(c) >= 10 and c.endswith("00"):
+                    emd_set.add(c[:8])
+                elif len(c) >= 8:
+                    emd_set.add(c[:8])
+                else:
+                    emd_set.add(c)
+            if "eupmyeondong_code" in df.columns:
+                mask = mask | _norm_col(df, "eupmyeondong_code").isin(emd_set)
+            if "beopjungri_code" in df.columns:
+                mask = mask | _norm_col(df, "beopjungri_code").str.slice(0, 8).isin(emd_set)
+
+    has_a1 = "addr1" in df.columns
+    has_a2 = "addr2" in df.columns
+    for a1, a2, leaf in triples:
+        leaf_ok = (_norm_col(df, "addr3") == leaf) | (_norm_col(df, "addr4") == leaf)
+        if has_a1 and has_a2:
+            row_ok = (_norm_col(df, "addr1") == a1) & (_norm_col(df, "addr2") == a2)
+            mask = mask | (row_ok & leaf_ok)
+        elif has_a2:
+            mask = mask | ((_norm_col(df, "addr2") == a2) & leaf_ok)
+        else:
+            mask = mask | leaf_ok
+
+    return df[mask]
+
+
 def _filter_eup_leaf(df: pd.DataFrame, req: RegressionRunRequest, addr4_city: bool) -> pd.DataFrame:
-    """선택 읍·면·동(복수 합집합)."""
+    """선택 읍·면·동(복수 합집합). region_* 단위가 있으면 그쪽 우선."""
+    if _has_unit_region_scope(req):
+        return _filter_by_region_units(df, req)
     out = df.copy()
     gu = effective_addr3_list(req.addr3, req.addr3_list)
     if addr4_city:
@@ -1074,6 +1163,15 @@ def _gu_label(req: RegressionRunRequest, df: pd.DataFrame) -> str:
 
 
 def _eup_label(req: RegressionRunRequest, addr4_city: bool) -> str:
+    triples = _unit_addr_triples(req)
+    if triples:
+        leaves = [t[2] for t in triples]
+        # 교차 시군구면 시군구명 포함
+        addr2s = {t[1] for t in triples}
+        if len(addr2s) > 1:
+            labeled = [f"{t[1]} {t[2]}" for t in triples]
+            return format_scope_label(labeled, suffix="지역")
+        return format_scope_label(leaves, suffix="읍면동")
     if addr4_city:
         leaves = effective_addr4_list(None, req.addr4_list)
     else:

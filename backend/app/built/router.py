@@ -143,6 +143,9 @@ def scope_sample_filters(
     addr3_list: list[str] = Query(default=[]),
     addr4_list: list[str] = Query(default=[]),
     ri_pick: list[str] = Query(default=[]),
+    region_codes: list[str] = Query(default=[]),
+    region_code_level: Optional[str] = None,
+    region_addrs: list[str] = Query(default=[], description="시도|시군구|읍면동"),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
     as_of_month: Optional[str] = None,
@@ -157,6 +160,9 @@ def scope_sample_filters(
         addr3_list=addr3_list,
         addr4_list=addr4_list,
         ri_pick=ri_pick,
+        region_codes=region_codes,
+        region_code_level=region_code_level,
+        region_addrs=region_addrs,
         contract_year_from=contract_year_from,
         contract_year_to=contract_year_to,
         as_of_month=as_of_month,
@@ -235,6 +241,9 @@ def list_transactions(
     addr3_list: list[str] = Query(default=[]),
     addr4_list: list[str] = Query(default=[]),
     ri_pick: list[str] = Query(default=[], description="eup|ri 형식"),
+    region_codes: list[str] = Query(default=[]),
+    region_code_level: Optional[str] = None,
+    region_addrs: list[str] = Query(default=[], description="시도|시군구|읍면동"),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
     as_of_month: Optional[str] = None,
@@ -262,6 +271,9 @@ def list_transactions(
         addr3_list=addr3_list,
         addr4_list=addr4_list,
         ri_pick=ri_pick,
+        region_codes=region_codes,
+        region_code_level=region_code_level,
+        region_addrs=region_addrs,
         contract_year_from=contract_year_from,
         contract_year_to=contract_year_to,
         as_of_month=as_of_month,
@@ -327,6 +339,9 @@ def export_transactions(
     addr3_list: list[str] = Query(default=[]),
     addr4_list: list[str] = Query(default=[]),
     ri_pick: list[str] = Query(default=[], description="eup|ri 형식"),
+    region_codes: list[str] = Query(default=[]),
+    region_code_level: Optional[str] = None,
+    region_addrs: list[str] = Query(default=[], description="시도|시군구|읍면동"),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
     as_of_month: Optional[str] = None,
@@ -353,6 +368,9 @@ def export_transactions(
         addr3_list=addr3_list,
         addr4_list=addr4_list,
         ri_pick=ri_pick,
+        region_codes=region_codes,
+        region_code_level=region_code_level,
+        region_addrs=region_addrs,
         contract_year_from=contract_year_from,
         contract_year_to=contract_year_to,
         as_of_month=as_of_month,
@@ -405,9 +423,9 @@ def list_scope_stats(
     """사전집계 mart(built_scope_stats) 조회."""
     clauses = ["1=1"]
     params: dict = {}
-    if asset_type and asset_type != "all":
-        clauses.append("asset_type = :asset_type")
-        params["asset_type"] = asset_type
+    from app.built.asset_scope import apply_asset_type_filter
+
+    apply_asset_type_filter(clauses, params, asset_type)
     if addr1:
         clauses.append("addr1 = :addr1")
         params["addr1"] = addr1
@@ -675,6 +693,191 @@ def resolve_region_codes_for_map(
     )
     return BuiltMapResolveCodesResponse(**result)
 
+
+@router.get("/regions/lookup-code")
+def lookup_region_code(
+    db: Session = Depends(get_built_db),
+    addr1: Optional[str] = Query(None),
+    addr2: Optional[str] = Query(None),
+    leaf: Optional[str] = Query(None, description="읍·면·동 또는 리 이름"),
+    code: Optional[str] = Query(None, description="VWorld/지도 행정코드 — 있으면 원장에서 역조회"),
+    level: str = Query("eupmyeondong"),
+    eup: Optional[str] = Query(None, description="리 조회 시 상위 읍·면"),
+    asset_type: Optional[str] = Query(None),
+):
+    """지도 추가 시 VWorld 코드 ↔ 원장 행정코드 정합용."""
+    from app.built.asset_scope import apply_asset_type_filter
+
+    conn = db.connection()
+    lv = (level or "eupmyeondong").strip().lower()
+    params: dict = {}
+    asset_clauses: list[str] = []
+    apply_asset_type_filter(asset_clauses, params, asset_type)
+    asset_sql = f" AND {' AND '.join(asset_clauses)}" if asset_clauses else ""
+
+    # 코드만으로 원장 역조회 (시군구명 없을 때)
+    raw_code = (code or "").strip()
+    if raw_code and not (addr1 and addr2 and leaf):
+        emd = raw_code[:8] if len(raw_code) >= 8 else raw_code
+        if lv == "beopjungri":
+            row = conn.execute(
+                text(
+                    f"""
+                    SELECT btrim(beopjungri_code::text) AS code,
+                           addr1, addr2, addr5 AS leaf, addr4, addr3
+                    FROM built_transactions
+                    WHERE is_valid
+                      AND btrim(beopjungri_code::text) = :code
+                      {asset_sql}
+                    LIMIT 1
+                    """
+                ),
+                {**params, "code": raw_code},
+            ).mappings().first()
+        else:
+            row = conn.execute(
+                text(
+                    f"""
+                    SELECT btrim(eupmyeondong_code::text) AS code,
+                           addr1, addr2,
+                           COALESCE(NULLIF(btrim(addr4), ''), NULLIF(btrim(addr3), '')) AS leaf
+                    FROM built_transactions
+                    WHERE is_valid
+                      AND (
+                        btrim(eupmyeondong_code::text) = :emd
+                        OR LEFT(btrim(COALESCE(beopjungri_code::text, '')), 8) = :emd
+                      )
+                      {asset_sql}
+                    LIMIT 1
+                    """
+                ),
+                {**params, "emd": emd},
+            ).mappings().first()
+        if not row:
+            return {"code": None, "level": lv, "addr1": None, "addr2": None, "leaf": None}
+        return {
+            "code": str(row["code"]) if row.get("code") else None,
+            "level": lv,
+            "addr1": row.get("addr1"),
+            "addr2": row.get("addr2"),
+            "leaf": row.get("leaf"),
+        }
+
+    a1 = (addr1 or "").strip()
+    a2 = (addr2 or "").strip()
+    leaf_name = (leaf or "").strip()
+    if not a1 or not a2 or not leaf_name:
+        return {"code": None, "level": lv, "addr1": None, "addr2": None, "leaf": None}
+    params.update({"a1": a1, "a2": a2, "leaf": leaf_name})
+    if lv == "beopjungri":
+        eup_sql = ""
+        if eup and eup.strip():
+            eup_sql = " AND (addr3 = :eup OR addr4 = :eup)"
+            params["eup"] = eup.strip()
+        row = conn.execute(
+            text(
+                f"""
+                SELECT btrim(beopjungri_code::text) AS code
+                FROM built_transactions
+                WHERE is_valid
+                  AND addr1 = :a1 AND addr2 = :a2
+                  AND addr5 = :leaf
+                  AND beopjungri_code IS NOT NULL
+                  AND btrim(beopjungri_code::text) <> ''
+                  {eup_sql}{asset_sql}
+                GROUP BY 1
+                ORDER BY COUNT(*) DESC
+                LIMIT 1
+                """
+            ),
+            params,
+        ).first()
+        return {
+            "code": str(row.code) if row and row.code else None,
+            "level": "beopjungri",
+            "addr1": a1,
+            "addr2": a2,
+            "leaf": leaf_name,
+        }
+
+    row = conn.execute(
+        text(
+            f"""
+            SELECT btrim(eupmyeondong_code::text) AS code
+            FROM built_transactions
+            WHERE is_valid
+              AND addr1 = :a1 AND addr2 = :a2
+              AND (addr3 = :leaf OR addr4 = :leaf)
+              AND eupmyeondong_code IS NOT NULL
+              AND btrim(eupmyeondong_code::text) <> ''
+              {asset_sql}
+            GROUP BY 1
+            ORDER BY COUNT(*) DESC
+            LIMIT 1
+            """
+        ),
+        params,
+    ).first()
+    if not (row and row.code) and leaf_name.endswith(("읍", "면")) and len(leaf_name) >= 2:
+        alt = leaf_name[:-1] + ("면" if leaf_name.endswith("읍") else "읍")
+        params_alt = {**params, "leaf": alt}
+        row = conn.execute(
+            text(
+                f"""
+                SELECT btrim(eupmyeondong_code::text) AS code
+                FROM built_transactions
+                WHERE is_valid
+                  AND addr1 = :a1 AND addr2 = :a2
+                  AND (addr3 = :leaf OR addr4 = :leaf)
+                  AND eupmyeondong_code IS NOT NULL
+                  AND btrim(eupmyeondong_code::text) <> ''
+                  {asset_sql}
+                GROUP BY 1
+                ORDER BY COUNT(*) DESC
+                LIMIT 1
+                """
+            ),
+            params_alt,
+        ).first()
+    if not (row and row.code):
+        # region_codes 마스터 (면↔읍 포함)
+        rc = conn.execute(
+            text(
+                """
+                SELECT btrim(eupmyeondong_code::text) AS code
+                FROM region_codes
+                WHERE COALESCE(is_active, true)
+                  AND sido_name = :a1 AND sigungu_name = :a2
+                  AND (
+                    eupmyeondong_name = :leaf
+                    OR (
+                      right(:leaf, 1) IN ('읍','면')
+                      AND left(eupmyeondong_name, greatest(length(:leaf)-1, 0))
+                          = left(:leaf, greatest(length(:leaf)-1, 0))
+                      AND right(eupmyeondong_name, 1) IN ('읍','면')
+                    )
+                  )
+                ORDER BY CASE WHEN eupmyeondong_name = :leaf THEN 0 ELSE 1 END
+                LIMIT 1
+                """
+            ),
+            {"a1": a1, "a2": a2, "leaf": leaf_name},
+        ).first()
+        if rc and rc.code:
+            return {
+                "code": str(rc.code),
+                "level": "eupmyeondong",
+                "addr1": a1,
+                "addr2": a2,
+                "leaf": leaf_name,
+            }
+    return {
+        "code": str(row.code) if row and row.code else None,
+        "level": "eupmyeondong",
+        "addr1": a1,
+        "addr2": a2,
+        "leaf": leaf_name,
+    }
 
 @router.post("/regression/run", response_model=RegressionRunResponse)
 def regression_run(body: RegressionRunRequest, db: Session = Depends(get_built_db)):

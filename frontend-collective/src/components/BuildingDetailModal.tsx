@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import {
@@ -18,6 +18,7 @@ import { assetTypeLabel } from "../types";
 import BuildingRegressionPanel from "./BuildingRegressionPanel";
 import CohortTrendPanel from "./CohortTrendPanel";
 import CollectiveTransactionTable from "./CollectiveTransactionTable";
+import DraggableModalShell from "./DraggableModalShell";
 import FloorIndexPanel from "./FloorIndexPanel";
 import HistogramChart from "./HistogramChart";
 import type { CohortTrendMetric } from "./MultiBuildingTrendChart";
@@ -31,6 +32,14 @@ import { rollingToTrendSeries, yearlyResponseToTrendSeries } from "../utils/coho
 type PanelMode = "trend" | "long_term" | "histogram" | "transactions" | "floor_index" | "regression";
 
 const MAX_COHORT_BUILDINGS = 10;
+
+function defaultBuildingDetailSize(): { width: number; height: number } {
+  if (typeof window === "undefined") return { width: 896, height: 640 };
+  return {
+    width: Math.min(896, window.innerWidth - 32),
+    height: Math.min(Math.round(window.innerHeight * 0.85), Math.max(520, window.innerHeight - 48)),
+  };
+}
 
 const TABS: { id: PanelMode; label: string | ((assetType: AssetType) => string) }[] = [
   { id: "trend", label: "롤링 구간" },
@@ -102,8 +111,7 @@ export default function BuildingDetailModal({
   const [txExportError, setTxExportError] = useState<string | null>(null);
   const [cohortChartMetric, setCohortChartMetric] = useState<CohortTrendMetric>("mean");
   const [longTermMetric, setLongTermMetric] = useState<LongTermPriceMetric>("median");
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const dragSession = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
+  const [defaultSize] = useState(defaultBuildingDetailSize);
   const experiment = COLLECTIVE_EXPERIMENT_MODE;
 
   const cohortKeys = useMemo(
@@ -220,8 +228,6 @@ export default function BuildingDetailModal({
   });
 
   useEffect(() => {
-    setDragOffset({ x: 0, y: 0 });
-    dragSession.current = null;
     setPanel("trend");
     setTxExportError(null);
     setHistScope("all");
@@ -240,25 +246,6 @@ export default function BuildingDetailModal({
   const addToCohort = (buildingKey: string) => {
     if (cohortKeys.length >= MAX_COHORT_BUILDINGS) return;
     setCohortExtra((prev) => (prev.includes(buildingKey) ? prev : [...prev, buildingKey]));
-  };
-
-  const onDragMove = (e: MouseEvent) => {
-    const s = dragSession.current;
-    if (!s) return;
-    setDragOffset({ x: s.baseX + (e.clientX - s.startX), y: s.baseY + (e.clientY - s.startY) });
-  };
-
-  const onDragEnd = () => {
-    dragSession.current = null;
-    window.removeEventListener("mousemove", onDragMove);
-    window.removeEventListener("mouseup", onDragEnd);
-  };
-
-  const onHeaderMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest("button")) return;
-    dragSession.current = { startX: e.clientX, startY: e.clientY, baseX: dragOffset.x, baseY: dragOffset.y };
-    window.addEventListener("mousemove", onDragMove);
-    window.addEventListener("mouseup", onDragEnd);
   };
 
 
@@ -306,55 +293,33 @@ export default function BuildingDetailModal({
   );
 
   return (
-    <div
-      className="fixed inset-0 z-[100] bg-black/35"
-      role="dialog"
-      aria-modal="true"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        className="fixed left-1/2 top-1/2 modal-shell rounded-xl shadow-xl max-w-4xl w-[calc(100%-2rem)] max-h-[85vh] flex flex-col border"
-        style={{ transform: `translate(calc(-50% + ${dragOffset.x}px), calc(-50% + ${dragOffset.y}px))` }}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div
-          className="px-4 py-3 modal-header cursor-move select-none shrink-0"
-          onMouseDown={onHeaderMouseDown}
-        >
-          <div className="flex justify-between items-start gap-2">
-            <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-bold">{row.display_name}</h2>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                {assetTypeLabel(effectiveAssetType)} · n={row.count.toLocaleString("ko-KR")} · 평균 {fmtPrice(row.mean)} 만원/㎡
-                {usesMartPeriod && periodLabel && (
-                  <span className="ml-1.5 text-indigo-600 dark:text-indigo-400">
-                    · 분석 {periodLabel}
-                    {statsAsOfLabel ? ` (${statsAsOfLabel})` : ""}
-                  </span>
-                )}
-                {(yearFrom != null || yearTo != null) && (
-                  <span className="ml-1.5 text-indigo-600 dark:text-indigo-400">
-                    · 연도 {yearFrom ?? "…"}–{yearTo ?? "…"}
-                  </span>
-                )}
-                {experiment && (
-                  <span className="ml-1.5 text-indigo-600 font-medium">· 실험 모드</span>
-                )}
-              </p>
-            </div>
-            <button
-              type="button"
-              aria-label="닫기"
-              className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-xl leading-none px-1 shrink-0"
-              onClick={onClose}
-            >
-              ×
-            </button>
-          </div>
+    <DraggableModalShell
+      open={true}
+      onClose={onClose}
+      titleId="building-detail-modal-title"
+      title={row.display_name}
+      subtitle={
+        <>
+          {assetTypeLabel(effectiveAssetType)} · n={row.count.toLocaleString("ko-KR")} · 평균 {fmtPrice(row.mean)}{" "}
+          만원/㎡
+          {usesMartPeriod && periodLabel && (
+            <span className="ml-1.5 text-indigo-600 dark:text-indigo-400">
+              · 분석 {periodLabel}
+              {statsAsOfLabel ? ` (${statsAsOfLabel})` : ""}
+            </span>
+          )}
+          {(yearFrom != null || yearTo != null) && (
+            <span className="ml-1.5 text-indigo-600 dark:text-indigo-400">
+              · 연도 {yearFrom ?? "…"}–{yearTo ?? "…"}
+            </span>
+          )}
+          {experiment && <span className="ml-1.5 text-indigo-600 font-medium">· 실험 모드</span>}
+        </>
+      }
+      headerExtra={
+        <>
           <div
-            className="mt-2 flex flex-wrap gap-0.5 rounded-md border modal-tab-bar p-0.5"
+            className="flex flex-wrap gap-0.5 rounded-md border modal-tab-bar p-0.5"
             role="tablist"
           >
             {TABS.map(({ id, label }) => {
@@ -451,9 +416,18 @@ export default function BuildingDetailModal({
               )}
             </div>
           )}
-        </div>
-
-        <div className="flex-1 overflow-auto px-4 py-3 space-y-4">
+        </>
+      }
+      resizable
+      zClassName="z-[100]"
+      backdropClassName="bg-black/35"
+      defaultWidth={defaultSize.width}
+      defaultHeight={defaultSize.height}
+      maxWidthClass="max-w-4xl"
+      minWidth={480}
+      minHeight={360}
+      bodyClassName="flex-1 min-h-0 overflow-auto px-4 py-3 space-y-4"
+    >
           {panel === "trend" && (
             <>
               {trendCohortActive && cohortRollingQ.isLoading && (
@@ -780,8 +754,6 @@ export default function BuildingDetailModal({
               gateTip={gateTip}
             />
           )}
-        </div>
-      </div>
-    </div>
+    </DraggableModalShell>
   );
 }

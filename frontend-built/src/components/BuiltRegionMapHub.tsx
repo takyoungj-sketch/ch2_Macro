@@ -20,6 +20,11 @@ import {
   fetchMapConfig,
   vworldSatelliteTileUrl,
 } from "../api/mapClient";
+import {
+  analysisUnitLabel,
+  MAX_BUILT_ANALYSIS_UNITS,
+  type BuiltAnalysisUnit,
+} from "../utils/builtAnalysisUnits";
 import { applySelectionFitBounds, boundsFromGeoJson } from "../utils/mapFitBounds";
 import { featureAdminCode, type MapAdminLevel } from "../utils/mapRegionScope";
 
@@ -39,15 +44,15 @@ export type BuiltMapScopeInput = {
 
 type Props = {
   scope: BuiltMapScopeInput;
+  /** 분석 scope 코드 — resolve 결과와 합쳐 하이라이트 */
+  analysisUnits?: BuiltAnalysisUnit[];
   fillHeight?: boolean;
   mapPanelMode?: MapPanelMode;
   onExpand?: () => void;
   onCollapse?: () => void;
   onNormal?: () => void;
-  /** 읍·면·동 칩 추가 (지도 인접 선택) */
-  onAddLeaf?: (name: string) => void;
-  /** 리 칩 추가 */
-  onAddRi?: (pick: BuiltMapRiPick) => void;
+  /** 인접 구역 추가 (동일·교차 시군구) */
+  onAddUnit?: (unit: BuiltAnalysisUnit) => void;
 };
 
 type ContextMenuState = {
@@ -55,9 +60,7 @@ type ContextMenuState = {
   y: number;
   code: string;
   label: string;
-  kind: "leaf" | "ri";
-  leafName?: string;
-  riPick?: BuiltMapRiPick;
+  unit: BuiltAnalysisUnit;
 };
 
 const VWORLD_KEY = (import.meta.env.VITE_VWORLD_API_KEY ?? "").trim();
@@ -257,15 +260,81 @@ function riPickFromProps(props: Record<string, unknown>): BuiltMapRiPick | null 
   return null;
 }
 
+function parentLabelsFromProps(props: Record<string, unknown>): { addr1: string; addr2: string } {
+  let addr1 = String(props.ctp_kor_nm ?? "").trim();
+  let addr2 = String(props.sig_kor_nm ?? "").trim();
+  if (!addr1 || !addr2) {
+    const full = String(props.full_nm ?? "").trim();
+    const parts = full.split(/\s+/).filter(Boolean);
+    // e.g. "충청북도 음성군 대소읍"
+    if (!addr1 && parts[0]) addr1 = parts[0]!;
+    if (!addr2 && parts.length >= 2) addr2 = parts[1]!;
+  }
+  return { addr1, addr2 };
+}
+
+/** 행정코드에서 시도(2자리)만 추출. 숫자가 아니면 빈 문자열. */
+function sidoPrefixFromAdminCode(code: string | null | undefined): string {
+  const raw = String(code ?? "").trim();
+  const m = raw.match(/^(\d{2})/);
+  return m?.[1] ?? "";
+}
+
+function sameSidoName(a: string, b: string): boolean {
+  const x = a.trim();
+  const y = b.trim();
+  if (!x || !y) return false;
+  return x === y || x.startsWith(y) || y.startsWith(x);
+}
+
+function unitFromFeature(
+  props: Record<string, unknown>,
+  code: string,
+  mapLevel: MapAdminLevel,
+  fallbackAddr1: string,
+  _fallbackAddr2: string,
+): BuiltAnalysisUnit | null {
+  const parents = parentLabelsFromProps(props);
+  const raw = String(code ?? "").trim();
+  if (mapLevel === "eupmyeondong") {
+    const name = leafNameFromProps(props);
+    if (!name) return null;
+    let emd = raw;
+    if (emd.length >= 10 && emd.endsWith("00")) emd = emd.slice(0, 8);
+    else if (emd.length > 8 && /^\d+$/.test(emd)) emd = emd.slice(0, 8);
+    return {
+      code: emd,
+      level: "eupmyeondong",
+      name,
+      // 타 시군구 판별용 — 없으면 빈 문자열 (앵커 addr2로 폴백하지 않음)
+      addr1: parents.addr1 || fallbackAddr1,
+      addr2: parents.addr2,
+    };
+  }
+  if (mapLevel === "beopjungri") {
+    const pick = riPickFromProps(props);
+    if (!pick) return null;
+    return {
+      code: raw,
+      level: "beopjungri",
+      name: pick.ri,
+      eup: pick.eup,
+      addr1: parents.addr1 || fallbackAddr1,
+      addr2: parents.addr2,
+    };
+  }
+  return null;
+}
+
 export default function BuiltRegionMapHub({
   scope,
+  analysisUnits = [],
   fillHeight = false,
   mapPanelMode = "normal",
   onExpand,
   onCollapse,
   onNormal,
-  onAddLeaf,
-  onAddRi,
+  onAddUnit,
 }: Props) {
   const mapRef = useRef<MapRef | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -310,8 +379,21 @@ export default function BuiltRegionMapHub({
   });
 
   const mapLevel = (resolveQ.data?.level ?? null) as MapAdminLevel | null;
-  const selectedCodes = resolveQ.data?.selected_codes ?? [];
-  const hasSelection = Boolean(resolveQ.data?.has_selection && mapLevel && selectedCodes.length);
+  const resolveSelected = resolveQ.data?.selected_codes ?? [];
+  const selectedCodes = useMemo(() => {
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const c of [...resolveSelected, ...analysisUnits.map((u) => u.code)]) {
+      const t = String(c ?? "").trim();
+      if (!t || seen.has(t)) continue;
+      seen.add(t);
+      out.push(t);
+    }
+    return out;
+  }, [resolveSelected, analysisUnits]);
+  const hasSelection = Boolean(
+    (resolveQ.data?.has_selection || analysisUnits.length > 0) && mapLevel && selectedCodes.length,
+  );
 
   const boundariesQ = useQuery({
     queryKey: [
@@ -568,8 +650,15 @@ export default function BuiltRegionMapHub({
         setMapError("이 구역의 행정코드를 확인할 수 없습니다.");
         return;
       }
-      if (selectedSet.has(code)) {
+      const already =
+        selectedSet.has(code) ||
+        analysisUnits.some((u) => u.code === code || u.code === code.slice(0, 8));
+      if (already) {
         setMapError("이미 선택된 지역입니다.");
+        return;
+      }
+      if (analysisUnits.length >= MAX_BUILT_ANALYSIS_UNITS) {
+        setMapError(`선택 지역은 최대 ${MAX_BUILT_ANALYSIS_UNITS}개까지입니다.`);
         return;
       }
 
@@ -583,57 +672,64 @@ export default function BuiltRegionMapHub({
         const c = featureAdminCode(f.properties as Record<string, unknown>, mapLevel);
         return c && selectedSet.has(c);
       });
+      if (!selectedFeatures.length) {
+        setMapError("먼저 왼쪽에서 읍·면·동(또는 리)을 선택해 주세요.");
+        return;
+      }
       if (!isAdjacentToAnySelected(polygonFeat, selectedFeatures, isRiSelection ? 0.002 : 0.0012)) {
         setMapError("인접한 지역만 추가할 수 있습니다. (맞닿은 구역을 선택해 주세요)");
         return;
       }
 
       const props = (polygonFeat.properties ?? rawFeat.properties) as Record<string, unknown>;
-      if (mapLevel === "eupmyeondong") {
-        const leafName = leafNameFromProps(props);
-        if (!leafName) {
-          setMapError("읍·면·동 이름을 확인할 수 없습니다.");
-          return;
-        }
-        if (scope.leafList.includes(leafName)) {
-          setMapError("이미 선택된 지역입니다.");
-          return;
-        }
-        setMapError(null);
-        setContextMenu({
-          x: point.x,
-          y: point.y,
-          code,
-          label: leafName,
-          kind: "leaf",
-          leafName,
-        });
+      const unit = unitFromFeature(props, code, mapLevel, scope.addr1, scope.addr2);
+      if (!unit) {
+        setMapError("지역 이름을 확인할 수 없습니다.");
         return;
       }
 
-      if (mapLevel === "beopjungri") {
-        const pick = riPickFromProps(props);
-        if (!pick) {
-          setMapError("리 이름을 확인할 수 없습니다.");
-          return;
-        }
-        const key = `${pick.eup}|${pick.ri}`;
-        if (scope.riPick.includes(key)) {
-          setMapError("이미 선택된 지역입니다.");
-          return;
-        }
-        setMapError(null);
-        setContextMenu({
-          x: point.x,
-          y: point.y,
-          code,
-          label: `${pick.eup} ${pick.ri}`,
-          kind: "ri",
-          riPick: pick,
-        });
+      // 시도 게이트: VWorld 코드 형식이 DB와 어긋날 수 있어
+      // 시도명(ctp / full_nm) 우선, 없으면 숫자 행정코드 앞 2자리
+      const featureCtp = String(props.ctp_kor_nm ?? "").trim();
+      const fullNm = String(props.full_nm ?? "").trim();
+      const scopeSidoName = scope.addr1.trim();
+      const sameByName =
+        sameSidoName(featureCtp, scopeSidoName) ||
+        Boolean(scopeSidoName && fullNm && fullNm.includes(scopeSidoName));
+      const anchorSido =
+        sidoPrefixFromAdminCode(resolveQ.data?.context_sido_code) ||
+        sidoPrefixFromAdminCode(selectedCodes[0]) ||
+        sidoPrefixFromAdminCode(analysisUnits[0]?.code);
+      const unitSido = sidoPrefixFromAdminCode(unit.code);
+      if (!sameByName && anchorSido && unitSido && anchorSido !== unitSido) {
+        setMapError("같은 시도 안의 인접 지역만 추가할 수 있습니다.");
+        return;
       }
+      if (analysisUnits.length && analysisUnits[0]!.level !== unit.level) {
+        setMapError("같은 행정 레벨만 함께 선택할 수 있습니다.");
+        return;
+      }
+
+      setMapError(null);
+      setContextMenu({
+        x: point.x,
+        y: point.y,
+        code: unit.code,
+        label: analysisUnitLabel(unit),
+        unit,
+      });
     },
-    [geojson, isRiSelection, mapLevel, scope.leafList, scope.riPick, selectedSet],
+    [
+      analysisUnits,
+      geojson,
+      isRiSelection,
+      mapLevel,
+      resolveQ.data?.context_sido_code,
+      scope.addr1,
+      scope.addr2,
+      selectedCodes,
+      selectedSet,
+    ],
   );
 
   const handleContextMenu = useCallback(
@@ -668,13 +764,23 @@ export default function BuiltRegionMapHub({
 
   const confirmAddRegion = useCallback(() => {
     if (!contextMenu) return;
-    if (contextMenu.kind === "leaf" && contextMenu.leafName) {
-      onAddLeaf?.(contextMenu.leafName);
-    } else if (contextMenu.kind === "ri" && contextMenu.riPick) {
-      onAddRi?.(contextMenu.riPick);
-    }
+    const unit = contextMenu.unit;
+    const anchorSig = (selectedCodes[0] || analysisUnits[0]?.code || "")
+      .replace(/\D/g, "")
+      .slice(0, 5);
+    const unitSig = unit.code.replace(/\D/g, "").slice(0, 5);
+    const crossParent =
+      Boolean(anchorSig && unitSig && anchorSig !== unitSig) ||
+      Boolean(unit.addr2 && scope.addr2 && unit.addr2 !== scope.addr2);
+    onAddUnit?.({
+      ...unit,
+      crossParent,
+      addr1: unit.addr1 || scope.addr1,
+      // 교차 시군구면 앵커 addr2로 채우지 않음 — 주소 scope 키가 깨짐
+      addr2: unit.addr2 || (crossParent ? "" : scope.addr2),
+    });
     setContextMenu(null);
-  }, [contextMenu, onAddLeaf, onAddRi]);
+  }, [analysisUnits, contextMenu, onAddUnit, scope.addr1, scope.addr2, selectedCodes]);
 
   const showSetupHint = !VWORLD_KEY && !configQ.data?.vworld_configured;
   const upperOnly = mapLevel === "sido" || mapLevel === "sigungu";

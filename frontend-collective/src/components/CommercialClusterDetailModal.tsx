@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { COLLECTIVE_EXPERIMENT_MODE } from "../api/client";
@@ -24,6 +24,7 @@ import {
 } from "../utils/cohortTrendSeries";
 import CohortTrendPanel from "./CohortTrendPanel";
 import type { CohortTrendMetric } from "./MultiBuildingTrendChart";
+import DraggableModalShell from "./DraggableModalShell";
 import HistogramChart from "./HistogramChart";
 import CommercialFloorIndexPanel from "./CommercialFloorIndexPanel";
 import CommercialRegressionPanel from "./CommercialRegressionPanel";
@@ -36,6 +37,14 @@ import type { StatsWindowYears } from "./StatsWindowToggle";
 const MAX_COHORT_CLUSTERS = 10;
 
 type PanelMode = "trend" | "long_term" | "histogram" | "transactions" | "addresses" | "floor_index" | "regression";
+
+function defaultCommercialDetailSize(): { width: number; height: number } {
+  if (typeof window === "undefined") return { width: 896, height: 640 };
+  return {
+    width: Math.min(896, window.innerWidth - 32),
+    height: Math.min(Math.round(window.innerHeight * 0.85), Math.max(520, window.innerHeight - 48)),
+  };
+}
 
 function fmtPrice(v: number | null | undefined, digits = 1) {
   if (v == null) return "—";
@@ -113,8 +122,7 @@ export default function CommercialClusterDetailModal({
   const [longTermMetric, setLongTermMetric] = useState<LongTermPriceMetric>("median");
   const [histScope, setHistScope] = useState<"all" | "single">("all");
   const [histYear, setHistYear] = useState<number | null>(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const dragSession = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
+  const [defaultSize] = useState(defaultCommercialDetailSize);
 
   const region = regionParams(scope);
   const scopeKey = { ...region, ...analysisPeriod };
@@ -254,8 +262,6 @@ export default function CommercialClusterDetailModal({
   }, [sortedYears, histYear]);
 
   useEffect(() => {
-    setDragOffset({ x: 0, y: 0 });
-    dragSession.current = null;
     setPanel("trend");
     setHistScope("all");
     setHistYear(null);
@@ -281,69 +287,29 @@ export default function CommercialClusterDetailModal({
   const histCohortActive = cohortRunForPanel("histogram") > 0;
   const txCohortActive = cohortRunForPanel("transactions") > 0;
 
-  const onDragMove = (e: MouseEvent) => {
-    const s = dragSession.current;
-    if (!s) return;
-    setDragOffset({ x: s.baseX + (e.clientX - s.startX), y: s.baseY + (e.clientY - s.startY) });
-  };
-
-  const onDragEnd = () => {
-    dragSession.current = null;
-    window.removeEventListener("mousemove", onDragMove);
-    window.removeEventListener("mouseup", onDragEnd);
-  };
-
-  const onHeaderMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest("button")) return;
-    dragSession.current = { startX: e.clientX, startY: e.clientY, baseX: dragOffset.x, baseY: dragOffset.y };
-    window.addEventListener("mousemove", onDragMove);
-    window.addEventListener("mouseup", onDragEnd);
-  };
-
   const activeTxQ = txCohortActive ? cohortTxQ : txQ;
   const label = row.road_name || row.display_label;
 
   return (
-    <div
-      className="fixed inset-0 z-[100] bg-black/35"
-      role="dialog"
-      aria-modal="true"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        className="fixed left-1/2 top-1/2 bg-white rounded-xl shadow-xl max-w-4xl w-[calc(100%-2rem)] max-h-[85vh] flex flex-col border border-slate-200"
-        style={{ transform: `translate(calc(-50% + ${dragOffset.x}px), calc(-50% + ${dragOffset.y}px))` }}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div
-          className="px-4 py-3 border-b border-slate-100 cursor-move select-none shrink-0"
-          onMouseDown={onHeaderMouseDown}
-        >
-          <div className="flex justify-between items-start gap-2">
-            <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-bold text-slate-800">{label}</h2>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                {commercialAssetTypeLabel(effectiveAssetType)} · n={row.count.toLocaleString("ko-KR")} · 평균{" "}
-                {fmtPrice(row.mean, 0)} 만원/㎡
-                {[row.addr3, row.addr4].filter(Boolean).length > 0 && (
-                  <> · {[row.addr3, row.addr4].filter(Boolean).join(" ")}</>
-                )}
-                {!row.is_reliable && <span className="ml-1 text-amber-600">· n&lt;15</span>}
-              </p>
-            </div>
-            <button
-              type="button"
-              aria-label="닫기"
-              className="text-slate-400 hover:text-slate-700 text-xl leading-none px-1 shrink-0"
-              onClick={onClose}
-            >
-              ×
-            </button>
-          </div>
+    <DraggableModalShell
+      open={true}
+      onClose={onClose}
+      titleId="commercial-cluster-detail-modal-title"
+      title={label}
+      subtitle={
+        <>
+          {commercialAssetTypeLabel(effectiveAssetType)} · n={row.count.toLocaleString("ko-KR")} · 평균{" "}
+          {fmtPrice(row.mean, 0)} 만원/㎡
+          {[row.addr3, row.addr4].filter(Boolean).length > 0 && (
+            <> · {[row.addr3, row.addr4].filter(Boolean).join(" ")}</>
+          )}
+          {!row.is_reliable && <span className="ml-1 text-amber-600">· n&lt;15</span>}
+        </>
+      }
+      headerExtra={
+        <>
           <div
-            className="mt-2 flex flex-wrap gap-0.5 rounded-md border border-slate-200 bg-slate-50 p-0.5"
+            className="flex flex-wrap gap-0.5 rounded-md border border-slate-200 bg-slate-50 p-0.5"
             role="tablist"
           >
             {tabs.map(({ id, label: tabLabel }) => {
@@ -441,9 +407,18 @@ export default function CommercialClusterDetailModal({
               )}
             </div>
           )}
-        </div>
-
-        <div className="flex-1 overflow-auto px-4 py-3 space-y-4">
+        </>
+      }
+      resizable
+      zClassName="z-[100]"
+      backdropClassName="bg-black/35"
+      defaultWidth={defaultSize.width}
+      defaultHeight={defaultSize.height}
+      maxWidthClass="max-w-4xl"
+      minWidth={480}
+      minHeight={360}
+      bodyClassName="flex-1 min-h-0 overflow-auto px-4 py-3 space-y-4"
+    >
           {panel === "trend" && (
             <>
               {trendCohortActive && cohortRollingQ.isLoading && (
@@ -749,8 +724,6 @@ export default function CommercialClusterDetailModal({
               analysisPeriod={analysisPeriod}
             />
           )}
-        </div>
-      </div>
-    </div>
+    </DraggableModalShell>
   );
 }

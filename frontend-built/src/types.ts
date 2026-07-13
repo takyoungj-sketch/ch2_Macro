@@ -1,4 +1,6 @@
-export type AssetType = "commercial" | "factory" | "detached" | "all";
+export type BuiltAssetKind = "commercial" | "factory" | "detached";
+/** API asset_type: 단일 / "commercial,factory" / "all" */
+export type AssetType = BuiltAssetKind | "all" | (string & {});
 export type ResponseScale = "linear" | "log";
 
 export interface BuiltTransactionRow {
@@ -101,6 +103,11 @@ export interface RegressionRunRequest {
   addr3_list?: string[];
   addr4_list?: string[];
   ri_list?: RiPick[];
+  /** 교차 시군구 인접 복수 — 있으면 leaf addr 필터보다 우선 */
+  region_codes?: string[];
+  region_code_level?: "eupmyeondong" | "beopjungri";
+  /** '시도|시군구|읍면동' — 행정코드 NULL 원장 행 포함 */
+  region_addrs?: string[];
   contract_year_from?: number;
   contract_year_to?: number;
   as_of_month?: string;

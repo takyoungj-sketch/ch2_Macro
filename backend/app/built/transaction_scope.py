@@ -16,7 +16,7 @@ from app.built.filters import (
 from app.built.schemas import RiPick
 from app.built.time_scope import apply_contract_date_window, parse_as_of_month
 from app.flat_sido_region import apply_addr2_scope
-from app.region_scope import apply_region_scope
+from app.region_scope import apply_analysis_region_scope, apply_region_scope
 
 
 def parse_ri_picks(raw: list[str]) -> list[RiPick]:
@@ -41,6 +41,9 @@ def build_transaction_where(
     addr3_list: list[str] | None = None,
     addr4_list: list[str] | None = None,
     ri_pick: list[str] | None = None,
+    region_codes: list[str] | None = None,
+    region_code_level: Optional[str] = None,
+    region_addrs: list[str] | None = None,
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
     as_of_month: Optional[str] = None,
@@ -61,7 +64,16 @@ def build_transaction_where(
     params: dict = {}
     apply_asset_type_filter(clauses, params, asset_type)
     ri_parsed = parse_ri_picks(ri_pick or [])
-    if addr1 and addr2:
+    used_units = apply_analysis_region_scope(
+        clauses,
+        params,
+        codes=region_codes,
+        code_level=region_code_level,
+        addr_keys=region_addrs,
+    )
+    if used_units:
+        pass
+    elif addr1 and addr2:
         apply_region_scope(
             clauses,
             params,

@@ -9,6 +9,7 @@ from typing import Any
 
 from starlette.responses import Response
 
+from app.built.asset_scope import is_unified, parse_asset_types
 from app.collective.transaction_export import csv_attachment_response, safe_filename_part
 
 MAX_BUILT_TX_EXPORT = 50_000
@@ -48,9 +49,11 @@ def built_transactions_csv_bytes(
     *,
     asset_type: str | None,
 ) -> bytes:
-    show_asset = asset_type == "all" or asset_type is None
-    show_zone = asset_type != "detached"
-    use_label = "주택유형" if asset_type == "detached" else "건축물용도"
+    types = parse_asset_types(asset_type)
+    show_asset = asset_type is None or is_unified(asset_type)
+    only_detached = types == ["detached"]
+    show_zone = not only_detached
+    use_label = "주택유형" if only_detached else "건축물용도"
 
     buf = io.StringIO()
     buf.write("\ufeff")

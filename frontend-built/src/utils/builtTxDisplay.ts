@@ -25,21 +25,21 @@ export function builtTxContractSortKey(r: BuiltTransactionRow): number {
   return r.contract_year ?? 0;
 }
 
-/** 시도·시군구·구·읍·동·리·지번 */
+/** 시도·시군구·구/읍면동·읍면동·리·지번 (구 도시: addr3=구, addr4=읍면동, addr5=리) */
 export function builtTxAdminCols(r: BuiltTransactionRow) {
   const sido = r.addr1?.trim() || null;
   const sigungu = r.addr2?.trim() || null;
   const guEup = r.addr3?.trim() || null;
   let dong = r.addr4?.trim() || null;
-  const ri = r.addr5?.trim() || null;
+  let ri = r.addr5?.trim() || null;
   if (guEup && dong && guEup === dong) dong = null;
-  const dongRi =
-    dong || (ri && ri !== guEup && ri !== dong ? ri : null);
+  if (ri && (ri === guEup || ri === dong)) ri = null;
   return {
     sido,
     sigungu,
     gu_eup: guEup,
-    dong_ri: dongRi,
+    dong_ri: dong,
+    ri,
     lot: r.lot_number?.trim() || null,
   };
 }
@@ -59,6 +59,7 @@ export type BuiltTxSortKey =
   | "sigungu"
   | "gu_eup"
   | "dong_ri"
+  | "ri"
   | "lot"
   | "road_name"
   | "zone_type"
@@ -95,6 +96,8 @@ export function builtTxSortValue(
       return admin.gu_eup ?? "";
     case "dong_ri":
       return admin.dong_ri ?? "";
+    case "ri":
+      return admin.ri ?? "";
     case "lot":
       return admin.lot ?? "";
     case "road_name":

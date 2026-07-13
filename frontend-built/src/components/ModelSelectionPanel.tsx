@@ -28,12 +28,16 @@ export function ModelSelectionPanel({
   adopting,
   aiContext,
   embedded = false,
+  onPredict,
+  predictActive,
 }: {
   data: RegressionSuggestResponse;
   onAdopt: (vars: RegressionVariableSpec, scale: ResponseScale) => void;
   adopting?: boolean;
   aiContext?: AiContextPayload | null;
   embedded?: boolean;
+  onPredict?: (vars: RegressionVariableSpec, scale: ResponseScale, label: string) => void;
+  predictActive?: boolean;
 }) {
   const included = data.recommended_blocks.map((id) => BLOCK_LABELS[id] ?? id);
   return (
@@ -62,6 +66,21 @@ export function ModelSelectionPanel({
         >
           {adopting ? "분석 중…" : "이 모형으로 분석"}
           </button>
+          {onPredict && (
+            <button
+              type="button"
+              className={clsx("btn text-xs shrink-0", predictActive ? "btn-primary" : "btn-ghost")}
+              onClick={() =>
+                onPredict(
+                  data.recommended_variables,
+                  data.response_scale,
+                  "추천 모형 (Group Forward)",
+                )
+              }
+            >
+              {predictActive ? "예측 대상" : "이 모형으로 예측"}
+            </button>
+          )}
         </div>
       </div>
 

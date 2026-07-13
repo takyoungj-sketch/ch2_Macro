@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import type { AssetType, RegressionLevelResult, RegressionRunResponse, ResponseScale } from "../types";
+import type { AssetType, RegressionLevelResult, RegressionRunRequest, RegressionRunResponse, RegressionVariableSpec, ResponseScale } from "../types";
 import {
   ADMIN_LABELS,
   fmtDecimal,
@@ -7,6 +7,7 @@ import {
   levelCardTitle,
 } from "../utils/regressionFormat";
 import DraggableModalShell from "./DraggableModalShell";
+import PredictPanel from "./PredictPanel";
 import RegressionEquation from "./RegressionEquation";
 import RegressionEffectsTable from "./RegressionEffectsTable";
 
@@ -14,8 +15,11 @@ type Props = {
   open: boolean;
   onClose: () => void;
   regData: RegressionRunResponse;
+  regBody: RegressionRunRequest;
+  vars: RegressionVariableSpec;
   assetType: AssetType;
   responseScale: ResponseScale;
+  regionLabel: string;
   focusLabel?: string | null;
 };
 
@@ -91,8 +95,11 @@ export default function UpperScopeCompareModal({
   open,
   onClose,
   regData,
+  regBody,
+  vars,
   assetType,
   responseScale,
+  regionLabel,
   focusLabel,
 }: Props) {
   const comparisons = regData.comparisons ?? [];
@@ -118,8 +125,13 @@ export default function UpperScopeCompareModal({
         </>
       }
       maxWidthClass="max-w-2xl"
+      resizable
+      defaultWidth={Math.min(720, typeof window !== "undefined" ? window.innerWidth - 48 : 720)}
+      defaultHeight={Math.min(720, typeof window !== "undefined" ? window.innerHeight - 48 : 720)}
+      minWidth={420}
+      minHeight={320}
     >
-      <div className="space-y-3">
+      <div className="h-full min-h-0 space-y-3">
         <div className="rounded-md border border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/20 dark:border-emerald-800 p-2 text-xs">
           <span className="font-medium text-emerald-900 dark:text-emerald-100">분석 초점 · </span>
           n={fmtNum(regData.primary.n)} · Adj R² {fmtDecimal(regData.primary.adj_r_squared, 4)}
@@ -157,6 +169,18 @@ export default function UpperScopeCompareModal({
             </div>
           </details>
         )}
+
+        <div className="border-t border-slate-200 dark:border-slate-700 pt-3">
+          <PredictPanel
+            embedded
+            regData={regData}
+            regBody={regBody}
+            vars={vars}
+            assetType={assetType}
+            regionLabel={regionLabel}
+            modelHint="초점·상위 scope 중 선택해 예측"
+          />
+        </div>
       </div>
     </DraggableModalShell>
   );

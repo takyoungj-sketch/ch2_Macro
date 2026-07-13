@@ -180,6 +180,22 @@ def _clean_code(val, width: int | None = None) -> str | None:
     return s or None
 
 
+def _eup_myeon_name_variants(name: str) -> list[str]:
+    s = (name or "").strip()
+    if not s:
+        return []
+    out = [s]
+    if s.endswith("읍") and len(s) >= 2:
+        alt = s[:-1] + "면"
+        if alt not in out:
+            out.append(alt)
+    elif s.endswith("면") and len(s) >= 2:
+        alt = s[:-1] + "읍"
+        if alt not in out:
+            out.append(alt)
+    return out
+
+
 def _attach_codes(df: pd.DataFrame, lookup: dict) -> pd.DataFrame:
     sido_c, sg_c, eup_c, bj_c = [], [], [], []
     for _, row in df.iterrows():
@@ -193,10 +209,20 @@ def _attach_codes(df: pd.DataFrame, lookup: dict) -> pd.DataFrame:
         if not hit and a4:
             hit = lookup.get((a1, a2, a3, a4))
         if not hit:
-            # 읍면동만 맞는 첫 beopjungri
-            for (s, g, e, _), codes in lookup.items():
-                if s == a1 and g == a2 and e == a3:
-                    hit = codes
+            for a3_try in _eup_myeon_name_variants(a3):
+                hit = lookup.get((a1, a2, a3_try, ri))
+                if not hit and a4:
+                    hit = lookup.get((a1, a2, a3_try, a4))
+                if hit:
+                    break
+        if not hit:
+            # 읍면동만 맞는 첫 beopjungri (면↔읍 포함)
+            for a3_try in _eup_myeon_name_variants(a3):
+                for (s, g, e, _), codes in lookup.items():
+                    if s == a1 and g == a2 and e == a3_try:
+                        hit = codes
+                        break
+                if hit:
                     break
         if hit:
             sido_c.append(hit[0])

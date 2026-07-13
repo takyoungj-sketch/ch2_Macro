@@ -10,7 +10,8 @@ from pydantic import BaseModel, Field, field_validator
 from app.ai.schemas import AnalysisExplain
 from app.collective.schemas import ModelComparison, ModelMetrics
 
-AssetType = Literal["commercial", "factory", "detached", "all"]
+# 단일 / 통합(all) / 복수("commercial,factory")
+AssetType = str
 ResponseScale = Literal["linear", "log"]
 AdminLevel = Literal["sigungu", "gu", "eupmyeondong", "beopjungri"]
 
@@ -129,6 +130,9 @@ class RiPick(BaseModel):
     ri: str
 
 
+RegionCodeLevel = Literal["eupmyeondong", "beopjungri"]
+
+
 class RegressionVariableSpec(BaseModel):
     gross_area: bool = True
     land_area: bool = True
@@ -149,6 +153,11 @@ class RegressionRunRequest(BaseModel):
     addr3_list: list[str] = Field(default_factory=list)
     addr4_list: list[str] = Field(default_factory=list)
     ri_list: list[RiPick] = Field(default_factory=list)
+    # 교차 시군구 인접 복수: 명시 행정코드 (있으면 addr leaf 필터보다 우선)
+    region_codes: list[str] = Field(default_factory=list)
+    region_code_level: Optional[RegionCodeLevel] = None
+    # '시도|시군구|읍면동' — 코드 NULL 원장 행 포함용
+    region_addrs: list[str] = Field(default_factory=list)
     contract_year_from: Optional[int] = None
     contract_year_to: Optional[int] = None
     as_of_month: Optional[str] = None
