@@ -16,6 +16,7 @@ TOKEN=$(grep '^API_TOKEN=' "$ENV_FILE" | cut -d= -f2- | tr -d '\r')
 if [[ -z "$TOKEN" ]]; then
   echo "WARN: API_TOKEN empty — frontend API calls may fail"
 fi
+VWORLD_KEY=$(grep '^VWORLD_API_KEY=' "$ENV_FILE" | cut -d= -f2- | tr -d '\r' || true)
 
 build_app() {
   local app="$1"
@@ -25,7 +26,12 @@ build_app() {
     return 0
   fi
   echo "==> build $app"
-  echo "VITE_API_TOKEN=$TOKEN" > "$dir/.env"
+  {
+    echo "VITE_API_TOKEN=$TOKEN"
+    if [[ -n "${VWORLD_KEY:-}" ]]; then
+      echo "VITE_VWORLD_API_KEY=$VWORLD_KEY"
+    fi
+  } > "$dir/.env"
   chmod 600 "$dir/.env"
   cd "$dir"
   if [[ -f package-lock.json ]]; then
