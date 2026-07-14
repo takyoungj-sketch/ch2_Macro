@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { fetchCommercialFloorIndex, runCommercialCohortFloorIndex } from "../api/commercialClient";
+import type { CommercialAssetType } from "../types";
 import type { CommercialModalScope } from "./CommercialClusterDetailModal";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 
@@ -103,7 +104,7 @@ export default function CommercialFloorIndexPanel({
             asset_type:
               scope.assetType === "all" || scope.assetType.includes(",")
                 ? undefined
-                : scope.assetType,
+                : (scope.assetType as CommercialAssetType),
             ...analysisPeriod,
             contract_year_from: scope.yearFrom === "" ? undefined : scope.yearFrom,
             contract_year_to: scope.yearTo === "" ? undefined : scope.yearTo,

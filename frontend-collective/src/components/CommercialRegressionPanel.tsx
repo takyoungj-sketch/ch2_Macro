@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { predictCommercialRegression, runCommercialCohortRegression, runCommercialRegression, predictCommercialCohortRegression } from "../api/commercialClient";
 import { buildCommercialRegressionContext } from "../api/aiContext";
 import type {
+  CommercialAssetType,
   CommercialPredictOptions,
   CommercialRegressionPredictInputs,
   CommercialRegressionPredictResponse,
@@ -329,7 +330,7 @@ export default function CommercialRegressionPanel({
             asset_type:
               scope.assetType === "all" || scope.assetType.includes(",")
                 ? undefined
-                : scope.assetType,
+                : (scope.assetType as CommercialAssetType),
             ...regressionBody,
           })
         : runCommercialRegression(clusterKey, regressionBody),
@@ -344,7 +345,7 @@ export default function CommercialRegressionPanel({
             asset_type:
               scope.assetType === "all" || scope.assetType.includes(",")
                 ? undefined
-                : scope.assetType,
+                : (scope.assetType as CommercialAssetType),
             ...body,
           })
         : predictCommercialRegression(clusterKey, body);
