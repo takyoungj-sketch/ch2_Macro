@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import clsx from "clsx";
 import {
   fetchAddr2,
   fetchAddr3WithCounts,
@@ -19,7 +20,7 @@ import RegionChipPanel, {
 } from "./components/RegionChipPanel";
 import StatsWindowToggle, { normalizeStatsWindowYears, type StatsWindowYears } from "./components/StatsWindowToggle";
 import type { AssetSelectorType, RegionOption } from "./types";
-import { ASSET_SELECTOR_LABELS, assetTypeLabel } from "./types";
+import { assetTypeLabel } from "./types";
 import {
   applyYearFrom,
   applyYearTo,
@@ -35,6 +36,13 @@ import {
 } from "./utils/flatSidoRegion";
 import { useUiFontScale } from "./hooks/useUiFontScale";
 import { useUiColorScheme } from "./hooks/useUiColorScheme";
+import {
+  encodeResidentialAssetKinds,
+  RESIDENTIAL_ASSET_KINDS,
+  RESIDENTIAL_KIND_LABELS,
+  toggleResidentialAssetKind,
+  type ResidentialAssetKind,
+} from "./utils/residentialAssetTypes";
 
 type AnalysisScope = {
   assetType: AssetSelectorType;
@@ -59,12 +67,24 @@ function fmtCiCompact(lo: number | null | undefined, hi: number | null | undefin
   return `${fmtPrice(lo)}~${fmtPrice(hi)}`;
 }
 
-function BuildingTableRow({ row, onSelect }: { row: BuildingStatsRow; onSelect: (row: BuildingStatsRow) => void }) {
+function BuildingTableRow({
+  row,
+  highlighted,
+  onSelect,
+}: {
+  row: BuildingStatsRow;
+  highlighted?: boolean;
+  onSelect: (row: BuildingStatsRow) => void;
+}) {
   return (
     <tr
-      className="hover:bg-indigo-50 dark:hover:bg-indigo-950/40 cursor-pointer"
+      className={clsx(
+        "hover:bg-indigo-50 dark:hover:bg-indigo-950/40 cursor-pointer",
+        highlighted && "!bg-yellow-200 dark:!bg-yellow-700/50",
+      )}
       onClick={() => onSelect(row)}
       title={row.display_name}
+      data-building-highlight={highlighted ? "1" : undefined}
     >
       <td className="text-[10px] whitespace-nowrap text-center">{assetTypeLabel(row.asset_type)}</td>
       <td className="name">
@@ -86,8 +106,24 @@ function BuildingTableRow({ row, onSelect }: { row: BuildingStatsRow; onSelect: 
   );
 }
 
+function buildingMatchesQuery(row: BuildingStatsRow, q: string): boolean {
+  if (!q) return false;
+  const hay = [
+    row.display_name,
+    row.jibun_address,
+    row.road_address,
+    row.address,
+    row.asset_type,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return hay.includes(q);
+}
+
 export default function App() {
-  const [assetType, setAssetType] = useState<AssetSelectorType>("apartment");
+  const [assetKinds, setAssetKinds] = useState<ResidentialAssetKind[]>(["apartment"]);
+  const assetType = useMemo(() => encodeResidentialAssetKinds(assetKinds), [assetKinds]);
   const [addr1, setAddr1] = useState("");
   const [addr2, setAddr2] = useState("");
   const [guList, setGuList] = useState<string[]>([]);
@@ -98,6 +134,7 @@ export default function App() {
   const [sort, setSort] = useState("count");
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [selected, setSelected] = useState<BuildingStatsRow | null>(null);
+  const [buildingSearch, setBuildingSearch] = useState("");
   const [mapPanelMode, setMapPanelMode] = useState<MapPanelMode>("normal");
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
   const { isDark, toggleUiColorScheme } = useUiColorScheme();
@@ -182,6 +219,22 @@ export default function App() {
     enabled: scope !== null && !!scope.addr2,
   });
 
+  const buildingSearchQ = buildingSearch.trim().toLowerCase();
+  const buildingMatchCount = useMemo(() => {
+    if (!buildingSearchQ || !buildingsQ.data?.items.length) return 0;
+    return buildingsQ.data.items.filter((row) => buildingMatchesQuery(row, buildingSearchQ)).length;
+  }, [buildingsQ.data?.items, buildingSearchQ]);
+
+  useEffect(() => {
+    setBuildingSearch("");
+  }, [scope]);
+
+  useEffect(() => {
+    if (!buildingSearchQ || buildingMatchCount === 0) return;
+    const el = document.querySelector<HTMLElement>("[data-building-highlight='1']");
+    el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [buildingSearchQ, buildingMatchCount, buildingsQ.data?.items]);
+
   const addr2ScopeLabel = formatScopeAddr2(addr2, addr1) || addr1;
 
   const years = metaQ.data?.contract_years ?? [];
@@ -265,23 +318,36 @@ export default function App() {
         <aside className="layout-sidebar p-4">
           <h2 className="text-sm font-semibold mb-3 text-slate-800 dark:text-slate-100">조건</h2>
           <div className="space-y-3">
-            <label className="text-xs block space-y-1">
-              <span className="text-slate-500 dark:text-slate-400">유형</span>
-              <select
-                className="input"
-                value={assetType}
-                onChange={(e) => {
-                  setAssetType(e.target.value as AssetSelectorType);
-                  resetRegion();
-                }}
-              >
-                {(Object.keys(ASSET_SELECTOR_LABELS) as AssetSelectorType[]).map((t) => (
-                  <option key={t} value={t}>
-                    {ASSET_SELECTOR_LABELS[t]}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="space-y-1">
+              <span className="text-xs text-slate-500 dark:text-slate-400">유형</span>
+              <p className="text-[10px] text-slate-400 leading-snug">
+                기본은 아파트. 필요 시 유형을 추가해 함께 조회합니다.
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {RESIDENTIAL_ASSET_KINDS.map((kind) => {
+                  const on = assetKinds.includes(kind);
+                  return (
+                    <button
+                      key={kind}
+                      type="button"
+                      className={clsx(
+                        "rounded-md border px-2.5 py-1.5 text-xs transition-colors",
+                        on
+                          ? "border-slate-800 bg-slate-800 text-white dark:border-slate-200 dark:bg-slate-200 dark:text-slate-900"
+                          : "border-slate-300 bg-white text-slate-600 hover:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300",
+                      )}
+                      onClick={() => {
+                        setAssetKinds((prev) => toggleResidentialAssetKind(prev, kind));
+                        resetRegion();
+                      }}
+                      aria-pressed={on}
+                    >
+                      {RESIDENTIAL_KIND_LABELS[kind]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 gap-2">
               <label className="text-xs block space-y-1">
@@ -477,24 +543,37 @@ export default function App() {
           {scope && buildingsQ.isError && <p className="text-sm text-red-600">건물 목록을 불러오지 못했습니다.</p>}
           {scope && buildingsQ.data && (
             <>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
-                {scope.addr1}
-                {!isFlatSidoAddr2(scope.addr2) && scope.addr2 ? ` ${scope.addr2}` : ""} · 건물 {buildingsQ.data.total}개
-                {buildingsQ.data.stats_as_of_label && !hasYearFilter(scope.yearFrom, scope.yearTo) && (
-                  <span className="ml-2 text-indigo-600 dark:text-indigo-400">
-                    · {buildingsQ.data.stats_as_of_label}
-                    {buildingsQ.data.window_years ? ` (${buildingsQ.data.window_years}년 창)` : ""}
-                  </span>
-                )}
-                {hasYearFilter(scope.yearFrom, scope.yearTo) && (
-                  <span className="ml-2 text-indigo-600 dark:text-indigo-400">
-                    · 연도 {scope.yearFrom || "…"}–{scope.yearTo || "…"}
-                  </span>
-                )}
-                {buildingsQ.data.data_source === "live" && (
-                  <span className="ml-1 text-amber-700 dark:text-amber-400">· 실시간 집계</span>
-                )}
-              </p>
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <p className="text-xs text-slate-500 dark:text-slate-400 flex-1 min-w-[12rem]">
+                  {scope.addr1}
+                  {!isFlatSidoAddr2(scope.addr2) && scope.addr2 ? ` ${scope.addr2}` : ""} · 건물 {buildingsQ.data.total}개
+                  {buildingsQ.data.stats_as_of_label && !hasYearFilter(scope.yearFrom, scope.yearTo) && (
+                    <span className="ml-2 text-indigo-600 dark:text-indigo-400">
+                      · {buildingsQ.data.stats_as_of_label}
+                      {buildingsQ.data.window_years ? ` (${buildingsQ.data.window_years}년 창)` : ""}
+                    </span>
+                  )}
+                  {hasYearFilter(scope.yearFrom, scope.yearTo) && (
+                    <span className="ml-2 text-indigo-600 dark:text-indigo-400">
+                      · 연도 {scope.yearFrom || "…"}–{scope.yearTo || "…"}
+                    </span>
+                  )}
+                  {buildingsQ.data.data_source === "live" && (
+                    <span className="ml-1 text-amber-700 dark:text-amber-400">· 실시간 집계</span>
+                  )}
+                </p>
+                <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 shrink-0">
+                  <span className="whitespace-nowrap">검색</span>
+                  <input
+                    type="search"
+                    className="input py-1 text-xs w-44 sm:w-56"
+                    value={buildingSearch}
+                    onChange={(e) => setBuildingSearch(e.target.value)}
+                    placeholder="건물명·주소…"
+                    aria-label="검색"
+                  />
+                </label>
+              </div>
               <div className="card overflow-x-auto p-0 w-full">
                 <table className="data buildings-table">
                   <colgroup>
@@ -526,6 +605,7 @@ export default function App() {
                       <BuildingTableRow
                         key={`${row.building_key}|${row.asset_type}`}
                         row={row}
+                        highlighted={buildingMatchesQuery(row, buildingSearchQ)}
                         onSelect={setSelected}
                       />
                     ))}

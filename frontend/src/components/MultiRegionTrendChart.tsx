@@ -22,6 +22,8 @@ export type TrendSeries = {
   label: string;
   points: GenericTrendPoint[];
   color?: string;
+  /** 통합선 등 — 두껍게 */
+  emphasize?: boolean;
 };
 
 export type RegionTrendMetric = "mean" | "median";
@@ -119,7 +121,7 @@ export default function MultiRegionTrendChart({
       </p>
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        className="w-full h-auto max-h-[250px] text-slate-500"
+        className="w-full h-auto max-h-[250px] text-slate-500 [[data-fullscreen]_&]:max-h-[min(58vh,560px)]"
         preserveAspectRatio="xMidYMid meet"
       >
         {allXOrders.map((order) => (
@@ -139,16 +141,24 @@ export default function MultiRegionTrendChart({
           const linePoints = rows
             .map((r) => `${xAt(r.xOrder).toFixed(1)},${yVal(Number(metricValue(r))).toFixed(1)}`)
             .join(" ");
+          const sw = s.emphasize ? 3 : 2;
+          const cr = s.emphasize ? 4.5 : 3.5;
           return (
             <g key={s.label}>
               {rows.length > 1 && (
-                <polyline fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" points={linePoints} />
+                <polyline
+                  fill="none"
+                  stroke={color}
+                  strokeWidth={sw}
+                  strokeLinejoin="round"
+                  points={linePoints}
+                />
               )}
               {rows.map((r) => {
                 const v = Number(metricValue(r));
                 return (
                   <g key={`${s.label}-${r.xOrder}`}>
-                    <circle cx={xAt(r.xOrder)} cy={yVal(v)} r={3.5} fill="#fff" stroke={color} strokeWidth={2} />
+                    <circle cx={xAt(r.xOrder)} cy={yVal(v)} r={cr} fill="#fff" stroke={color} strokeWidth={2} />
                     <text
                       x={xAt(r.xOrder)}
                       y={yVal(v) - LABEL_ABOVE}

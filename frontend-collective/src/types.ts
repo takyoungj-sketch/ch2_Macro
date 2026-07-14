@@ -1,7 +1,8 @@
 export type AssetType = "apartment" | "rowhouse" | "officetel" | "presale";
-export type AssetSelectorType = AssetType | "all";
+/** API: 단일 / "a,b" / "all" */
+export type AssetSelectorType = AssetType | "all" | string;
 export type CommercialAssetType = "collective_shop" | "collective_factory";
-export type CommercialAssetSelectorType = CommercialAssetType | "all";
+export type CommercialAssetSelectorType = CommercialAssetType | "all" | string;
 export type AnyAssetType = AssetType | CommercialAssetType;
 
 export function isCommercialAsset(t: AnyAssetType): t is CommercialAssetType {
@@ -585,7 +586,7 @@ export const ASSET_LABELS: Record<AssetType, string> = {
   presale: "분양권",
 };
 
-export const ASSET_SELECTOR_LABELS: Record<AssetSelectorType, string> = {
+export const ASSET_SELECTOR_LABELS: Record<AssetType | "all", string> = {
   all: "통합",
   ...ASSET_LABELS,
 };
@@ -600,7 +601,7 @@ export const COMMERCIAL_ASSET_LABELS: Record<CommercialAssetType, string> = {
   collective_factory: "집합공장",
 };
 
-export const COMMERCIAL_ASSET_SELECTOR_LABELS: Record<CommercialAssetSelectorType, string> = {
+export const COMMERCIAL_ASSET_SELECTOR_LABELS: Record<CommercialAssetType | "all", string> = {
   all: "통합",
   ...COMMERCIAL_ASSET_LABELS,
 };

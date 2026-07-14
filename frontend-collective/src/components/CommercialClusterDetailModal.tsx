@@ -127,7 +127,11 @@ export default function CommercialClusterDetailModal({
   const region = regionParams(scope);
   const scopeKey = { ...region, ...analysisPeriod };
 
-  const effectiveAssetType = (scope.assetType === "all" ? row.asset_type : scope.assetType) as CommercialAssetType;
+  const effectiveAssetType = (
+    scope.assetType === "all" || scope.assetType.includes(",")
+      ? row.asset_type
+      : scope.assetType
+  ) as CommercialAssetType;
   const isShop = effectiveAssetType === "collective_shop";
 
   const cohortKeys = useMemo(
@@ -142,7 +146,10 @@ export default function CommercialClusterDetailModal({
   const cohortBody = useMemo(
     () => ({
       cluster_keys: cohortRunKeys,
-      asset_type: scope.assetType === "all" ? undefined : effectiveAssetType,
+      asset_type:
+        scope.assetType === "all" || scope.assetType.includes(",")
+          ? undefined
+          : effectiveAssetType,
       experiment,
       ...analysisPeriod,
     }),

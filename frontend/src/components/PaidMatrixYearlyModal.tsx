@@ -13,7 +13,6 @@ import type {
   LandRegressionResponse,
   LongTermTrendPoint,
   LongTermTrendResponse,
-  LongTermTrendSeries,
   MatrixCellHistogramRequest,
   MatrixCellHistogramResponse,
   MatrixCellTransactionsResponse,
@@ -34,11 +33,13 @@ import MatrixCellHistogramChart from "./MatrixCellHistogramChart";
 import MatrixCellTransactionTable from "./MatrixCellTransactionTable";
 import MatrixYearlyTrendChart from "./MatrixYearlyTrendChart";
 import LandRegressionResults from "./LandRegressionResults";
+import LandRegressionScatterSection from "./LandRegressionScatterSection";
 import LandPredictPanel from "./LandPredictPanel";
-import MultiRegionTrendChart, { type TrendSeries } from "./MultiRegionTrendChart";
+import MultiRegionTrendChart from "./MultiRegionTrendChart";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import DraggableModalShell from "./DraggableModalShell";
 import { buildLongTermTrendExplain } from "../constants/longTermTrendExplain";
+import { longTermSeriesToTrendSeries } from "../utils/longTermCombinedTrend";
 import {
   buildHistogramExplain,
   buildMatrixCellTrendExplain,
@@ -122,23 +123,6 @@ function ltPointsToChartRows(
     }));
 }
 
-function longTermSeriesToTrendSeries(
-  series: LongTermTrendSeries[],
-  metric: LtPriceMetric,
-): TrendSeries[] {
-  return series.map((s) => ({
-    label: s.region_name,
-    points: [...s.points]
-      .sort((a, b) => a.year - b.year)
-      .map((p) => ({
-        xLabel: String(p.year),
-        xOrder: p.year,
-        count: p.count,
-        value: metric === "median" ? (p.median ?? null) : (p.mean ?? null),
-      })),
-  }));
-}
-
 /** 매트릭스 칸당 건수는 보통 수백 — fetchAllMatrixCellTransactions 로 100건씩 모아 로드 */
 
 /** 유료 매트릭스 칸: 연도별 추이 + 단가 분포 + 원거래 목록 */
@@ -197,7 +181,7 @@ export default function PaidMatrixYearlyModal({
   const [ltLoading, setLtLoading] = useState(false);
   const [ltError, setLtError] = useState<string | null>(null);
   const [ltData, setLtData] = useState<LongTermTrendResponse | null>(null);
-  const [ltMetric, setLtMetric] = useState<LtPriceMetric>("median");
+  const [ltMetric, setLtMetric] = useState<LtPriceMetric>("mean");
   const [defaultSize] = useState(defaultPaidMatrixModalSize);
 
   useEffect(() => {
@@ -559,7 +543,7 @@ export default function PaidMatrixYearlyModal({
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 leading-relaxed flex-1 min-w-[12rem]">
                   {ltData?.disclaimer ??
-                    "장기 추세: 만년력 연도·용도×지목 기준 · 도로·면적·이상치·지분 필터 미적용 · 지역별 선 분리"}
+                    "장기 추세: 만년력 연도·용도×지목 기준 · 도로·면적·이상치·지분 필터 미적용 · 평균 모드에서 복수지역 가중 통합선"}
                 </p>
                 <div className="flex items-center gap-2 shrink-0">
                   <AnalysisHelpPanel explain={ltExplain} />
@@ -570,8 +554,8 @@ export default function PaidMatrixYearlyModal({
                   >
                   {(
                     [
-                      ["median", "중앙값"],
                       ["mean", "평균"],
+                      ["median", "중앙값"],
                     ] as const
                   ).map(([id, label]) => (
                     <button
@@ -608,7 +592,11 @@ export default function PaidMatrixYearlyModal({
                 ltData.series.length >= 2 && (
                   <div className="space-y-2">
                     <p className="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-2 py-1">
-                      {ltData.series.length}개 지역 비교 · {ltData.year_from}–{ltData.year_to} · {ltPriceLabel}
+                      {ltData.series.length}개 지역 비교 · {ltData.year_from}–{ltData.year_to} ·{" "}
+                      {ltPriceLabel}
+                      {ltMetric === "mean"
+                        ? " · 통합선 = 거래수 가중평균 (Σ n·평균 / Σ n)"
+                        : " · 중앙값은 지역별 선만 (통합선 없음)"}
                     </p>
                     <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3 overflow-x-auto">
                       <p className="text-[10px] font-semibold text-slate-600 px-1 mb-2">연도별 추이 (꺾은선)</p>
@@ -991,6 +979,15 @@ export default function PaidMatrixYearlyModal({
               )}
 
               {regResult && <LandRegressionResults data={regResult} />}
+
+              {regResult && (
+                <LandRegressionScatterSection
+                  data={regResult}
+                  regionLabel={scopeNote?.trim() || `${zoneType} × ${landCategory}`}
+                  zoneType={zoneType}
+                  landCategory={landCategory}
+                />
+              )}
 
               {regResult && regBody && (
                 <LandPredictPanel

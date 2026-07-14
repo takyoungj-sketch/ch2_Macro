@@ -146,8 +146,8 @@ export default function MatrixYearlyTrendChart({
         viewBox={`0 0 ${chartW} ${H}`}
         className={
           scale > 1
-            ? "h-auto max-h-[240px] text-slate-500 shrink-0"
-            : "w-full h-auto max-h-[240px] text-slate-500"
+            ? "h-auto max-h-[240px] text-slate-500 shrink-0 [[data-fullscreen]_&]:max-h-[min(58vh,560px)]"
+            : "w-full h-auto max-h-[240px] text-slate-500 [[data-fullscreen]_&]:max-h-[min(58vh,560px)]"
         }
         width={scale > 1 ? chartW : undefined}
         preserveAspectRatio="xMidYMid meet"

@@ -33,7 +33,11 @@ export function buildLongTermTrendExplain(ctx: LongTermExplainContext): Analysis
   const hints: string[] = [
     `용도×지목: ${ctx.zoneType} · ${ctx.landCategory}`,
     `추세선: 연도별 ${metricLabel}(만원/㎡)`,
-    `지역 단위: ${levelText} — 선 ${ctx.seriesCount ?? ctx.targets.length}개 (합산 1선 없음)`,
+    ctx.metric === "mean" && (ctx.seriesCount ?? ctx.targets.length) >= 2
+      ? `지역 단위: ${levelText} — 지역별 선 + 통합선(거래수 가중평균 Σn·평균/Σn)`
+      : `지역 단위: ${levelText} — 선 ${ctx.seriesCount ?? ctx.targets.length}개${
+          ctx.metric === "median" ? " (중앙값은 통합선 없음)" : ""
+        }`,
   ];
   if (ctx.yearFrom != null && ctx.yearTo != null) {
     hints.push(`표시 연도: ${ctx.yearFrom}~${ctx.yearTo} (만년력 1/1~12/31)`);
@@ -69,7 +73,8 @@ export function buildLongTermTrendExplain(ctx: LongTermExplainContext): Analysis
     ],
     interpretation: [
       "가로축은 calendar_year(만년력), 세로축은 만원/㎡ " + metricLabel + "입니다.",
-      "복수 지역 선택 시 지역마다 선이 분리됩니다 — 한 선으로 합산하지 않습니다.",
+      "복수 지역·평균 모드: 지역별 선과 함께 거래수 가중 통합선(Σ n·지역평균 / Σ n)을 표시합니다. 산술평균 풀과 동일합니다.",
+      "중앙값 모드: 지역별 선만 표시합니다(중앙값은 가중 합산 불가).",
       "거래 건수 n<15 인 연도는 「참고용」으로 표시합니다 (기본통계와 동일 정책).",
       "「선택 연도」 탭(필터분석)은 고급 필터가 반영된 연도별 값, 「장기 추세」는 필터 없는 연도 마트입니다.",
     ],

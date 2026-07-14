@@ -280,6 +280,110 @@ def _to_predict_options(bundle: _DesignBundle) -> "Any":
     )
 
 
+def _subsample_points(xv: pd.Series, yv: pd.Series, *, max_pts: int = 500) -> list:
+    from app.schemas import CorrelationPoint
+
+    step = max(1, len(xv) // max_pts)
+    return [
+        CorrelationPoint(x=float(xv.iloc[i]), y=float(yv.iloc[i]))
+        for i in range(0, len(xv), step)
+    ]
+
+
+def _raw_plot_specs(bundle: _DesignBundle) -> list[tuple[str, str]]:
+    """탐색용 산점도 — 원자료 스케일(면적㎡·계약연도)."""
+    specs: list[tuple[str, str]] = []
+    if bundle.use_area or bundle.use_log_area:
+        specs.append(("area_sqm", "면적"))
+    if bundle.use_year:
+        specs.append(("contract_year", "계약연도"))
+    return specs
+
+
+def _partial_plot_specs(bundle: _DesignBundle) -> list[tuple[str, str]]:
+    """부분회귀도 — 설계행렬 연속 열."""
+    specs: list[tuple[str, str]] = []
+    if bundle.use_log_area:
+        specs.append(("log_area", "log(면적)"))
+    elif bundle.use_area:
+        specs.append(("area_sqm", "면적"))
+    if bundle.use_year:
+        specs.append(("year_trend", "연도 추세"))
+    return specs
+
+
+def _land_correlations(df: pd.DataFrame, bundle: _DesignBundle) -> list:
+    from app.schemas import CorrelationSeries
+
+    out: list = []
+    y = pd.to_numeric(df["unit_price_per_sqm"], errors="coerce")
+    for col, label in _raw_plot_specs(bundle):
+        x = pd.to_numeric(df[col], errors="coerce")
+        m = x.notna() & y.notna()
+        if int(m.sum()) < 2:
+            continue
+        xv, yv = x[m], y[m]
+        r = float(xv.corr(yv)) if float(xv.std()) > 0 else None
+        out.append(
+            CorrelationSeries(
+                variable=col,
+                label=label,
+                pearson_r=r,
+                points=_subsample_points(xv, yv),
+                y_axis_label="단가(만원/㎡)",
+            )
+        )
+    return out
+
+
+def _land_partial_plots(bundle: _DesignBundle) -> list:
+    from app.schemas import PartialRegressionSeries
+
+    y = bundle.y_fit
+    X_const = bundle.X_const
+    X = X_const.drop(columns=["const"], errors="ignore")
+    if len(y) < 10 or X.empty:
+        return []
+
+    model = sm.OLS(y, X_const, missing="drop").fit()
+    y_label = "log(단가) 잔차" if bundle.model_type == "log" else "단가 잔차"
+    out: list = []
+
+    for col, label in _partial_plot_specs(bundle):
+        if col not in X.columns:
+            continue
+        other_cols = [c for c in X.columns if c != col]
+        if not other_cols:
+            # 연속·더미가 이 변수뿐이면 상수만 통제
+            X_other = pd.DataFrame({"const": np.ones(len(X), dtype=float)}, index=X.index)
+        else:
+            X_other = sm.add_constant(X[other_cols], has_constant="add")
+
+        y_res = sm.OLS(y, X_other, missing="drop").fit().resid
+        x_res = sm.OLS(X[col], X_other, missing="drop").fit().resid
+
+        pr2: float | None = None
+        if float(x_res.std()) > 0 and float(y_res.std()) > 0:
+            pr2 = round(float(x_res.corr(y_res) ** 2), 4)
+
+        beta = float(model.params[col]) if col in model.params else None
+        p_val = float(model.pvalues[col]) if col in model.pvalues else None
+
+        out.append(
+            PartialRegressionSeries(
+                variable=col,
+                label=label,
+                points=_subsample_points(x_res, y_res),
+                beta=beta,
+                p_value=p_val,
+                partial_r_squared=pr2,
+                x_axis_label=f"{label} 잔차",
+                y_axis_label=y_label,
+            )
+        )
+    return out
+
+
 def run_land_regression(
     rows: list[dict],
     req: "LandRegressionRequest",
@@ -313,6 +417,11 @@ def run_land_regression(
             )
         )
 
+    # 산점도는 설계행렬과 동일 표본(df ∉ bundle 인덱스 정렬)
+    scatter_df = df.loc[bundle.X_const.index]
+    correlations = _land_correlations(scatter_df, bundle)
+    partial_regressions = _land_partial_plots(bundle)
+
     return LandRegressionResponse(
         n=int(model.nobs),
         model_type=bundle.model_type,  # type: ignore[arg-type]
@@ -324,6 +433,9 @@ def run_land_regression(
         f_p_value=float(model.f_pvalue),
         significant_count=sum(1 for c in coefs if c.name != "const" and c.p < 0.1),
         predict_options=_to_predict_options(bundle),
+        correlations=correlations,
+        partial_regressions=partial_regressions,
+        correlation_n=int(len(scatter_df)),
     )
 
 

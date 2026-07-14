@@ -14,9 +14,15 @@ MIN_LEAF_COUNT = MIN_RELIABLE_COUNT
 
 
 def _asset_clause(asset_type: str | None, *, prefix: str = "t") -> tuple[str, dict]:
+    """단일 `=` / 복수(콤마) `ANY`. all·빈 값 — 필터 없음."""
     if not asset_type or asset_type == "all":
         return "", {}
-    return f" AND {prefix}.asset_type = :asset_type", {"asset_type": asset_type}
+    parts = [p.strip() for p in str(asset_type).replace("|", ",").split(",") if p.strip()]
+    if not parts:
+        return "", {}
+    if len(parts) == 1:
+        return f" AND {prefix}.asset_type = :asset_type", {"asset_type": parts[0]}
+    return f" AND {prefix}.asset_type = ANY(:asset_types)", {"asset_types": parts}
 
 
 def fetch_sigungu_meta(
@@ -39,8 +45,13 @@ def fetch_sigungu_meta(
     }
     asset_sql = ""
     if asset_type and asset_type != "all":
-        asset_sql = " AND (asset_type IS NULL OR asset_type = :asset_type)"
-        params["asset_type"] = asset_type
+        parts = [p.strip() for p in str(asset_type).replace("|", ",").split(",") if p.strip()]
+        if len(parts) == 1:
+            asset_sql = " AND (asset_type IS NULL OR asset_type = :asset_type)"
+            params["asset_type"] = parts[0]
+        elif parts:
+            asset_sql = " AND (asset_type IS NULL OR asset_type = ANY(:asset_types))"
+            params["asset_types"] = parts
     row = conn.execute(
         text(
             f"""

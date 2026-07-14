@@ -718,6 +718,32 @@ class LandPredictOptions(BaseModel):
     partial_ownership_enabled: bool = False
 
 
+class CorrelationPoint(BaseModel):
+    x: float
+    y: float
+
+
+class CorrelationSeries(BaseModel):
+    variable: str
+    label: str
+    pearson_r: Optional[float] = None
+    points: list[CorrelationPoint]
+    y_axis_label: Optional[str] = None
+
+
+class PartialRegressionSeries(BaseModel):
+    """Added-variable plot — 모형 통제변수 제거 후 잔차 vs 잔차."""
+
+    variable: str
+    label: str
+    points: list[CorrelationPoint]
+    beta: Optional[float] = None
+    p_value: Optional[float] = None
+    partial_r_squared: Optional[float] = None
+    x_axis_label: Optional[str] = None
+    y_axis_label: Optional[str] = None
+
+
 class LandRegressionResponse(BaseModel):
     n: int
     model_type: Literal["log", "linear"]
@@ -729,6 +755,9 @@ class LandRegressionResponse(BaseModel):
     f_p_value: Optional[float] = None
     significant_count: Optional[int] = None
     predict_options: Optional[LandPredictOptions] = None
+    correlations: list[CorrelationSeries] = Field(default_factory=list)
+    partial_regressions: list[PartialRegressionSeries] = Field(default_factory=list)
+    correlation_n: Optional[int] = None
 
 
 class LandRegressionPredictRequest(LandRegressionRequest):

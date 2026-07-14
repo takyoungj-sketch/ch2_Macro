@@ -8,6 +8,7 @@ from typing import Any, Optional
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
+from app.collective.asset_scope import COMMERCIAL_ASSET_TYPES, apply_asset_type_filter
 from app.collective.building_stats_query import (
     _rolling_bucket_label,
     _table_exists,
@@ -66,13 +67,17 @@ def _mart_region_where(
         addr3=addr3_list[0] if addr3_list and len(addr3_list) == 1 else None,
         addr3_list=addr3_list,
         addr4_list=addr4_list,
-        asset_type=asset_type,
+        asset_type=None,
         col_prefix=col_prefix,
         valid_sql=None,
     )
-    if asset_type:
-        clauses.append(f"{col_prefix}.asset_type = :asset_type")
-        params["asset_type"] = asset_type
+    apply_asset_type_filter(
+        clauses,
+        params,
+        asset_type,
+        allowed=COMMERCIAL_ASSET_TYPES,
+        col_prefix=col_prefix,
+    )
     return " AND ".join(clauses), params
 
 

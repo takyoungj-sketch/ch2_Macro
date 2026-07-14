@@ -20,7 +20,14 @@ import RegionChipPanel, {
 } from "./components/RegionChipPanel";
 import { useUiColorScheme } from "./hooks/useUiColorScheme";
 import { useUiFontScale } from "./hooks/useUiFontScale";
-import { COMMERCIAL_ASSET_SELECTOR_LABELS, commercialAssetTypeLabel, type CommercialAssetSelectorType, type CommercialClusterRow, type RegionOption } from "./types";
+import { commercialAssetTypeLabel, type CommercialAssetSelectorType, type CommercialClusterRow, type RegionOption } from "./types";
+import {
+  COMMERCIAL_ASSET_KINDS,
+  COMMERCIAL_KIND_LABELS,
+  encodeCommercialAssetKinds,
+  toggleCommercialAssetKind,
+  type CommercialAssetKind,
+} from "./utils/commercialAssetTypes";
 
 function fmtPrice(v: number | null | undefined) {
   if (v == null) return "—";
@@ -63,8 +70,24 @@ function buildRegionPeriodParams(
   return { window_years: windowYears };
 }
 
+function clusterMatchesQuery(row: CommercialClusterRow, q: string): boolean {
+  if (!q) return false;
+  const hay = [
+    row.road_name,
+    row.display_label,
+    row.addr3,
+    row.addr4,
+    row.asset_type,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return hay.includes(q);
+}
+
 export default function CommercialApp() {
-  const [assetType, setAssetType] = useState<CommercialAssetSelectorType>("collective_shop");
+  const [assetKinds, setAssetKinds] = useState<CommercialAssetKind[]>(["collective_shop"]);
+  const assetType = useMemo(() => encodeCommercialAssetKinds(assetKinds), [assetKinds]);
   const [addr1, setAddr1] = useState("");
   const [addr2, setAddr2] = useState("");
   const [guList, setGuList] = useState<string[]>([]);
@@ -75,6 +98,7 @@ export default function CommercialApp() {
   const [windowYears, setWindowYears] = useState<StatsWindowYears>(5);
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [selected, setSelected] = useState<CommercialClusterRow | null>(null);
+  const [clusterSearch, setClusterSearch] = useState("");
   const [mapPanelMode, setMapPanelMode] = useState<MapPanelMode>("normal");
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
   const { isDark, toggleUiColorScheme } = useUiColorScheme();
@@ -151,6 +175,22 @@ export default function CommercialApp() {
     enabled: scope !== null && !!scope.addr2,
   });
 
+  const clusterSearchQ = clusterSearch.trim().toLowerCase();
+  const clusterMatchCount = useMemo(() => {
+    if (!clusterSearchQ || !clustersQ.data?.items.length) return 0;
+    return clustersQ.data.items.filter((row) => clusterMatchesQuery(row, clusterSearchQ)).length;
+  }, [clustersQ.data?.items, clusterSearchQ]);
+
+  useEffect(() => {
+    setClusterSearch("");
+  }, [scope]);
+
+  useEffect(() => {
+    if (!clusterSearchQ || clusterMatchCount === 0) return;
+    const el = document.querySelector<HTMLElement>("[data-cluster-highlight='1']");
+    el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [clusterSearchQ, clusterMatchCount, clustersQ.data?.items]);
+
   const years = metaQ.data?.contract_years ?? [];
   const scopeStale =
     scope !== null &&
@@ -213,23 +253,36 @@ export default function CommercialApp() {
         <aside className="layout-sidebar p-4">
           <h2 className="text-sm font-semibold mb-3 text-slate-800 dark:text-slate-100">조건</h2>
           <div className="space-y-3">
-            <label className="text-xs block space-y-1">
-              <span className="text-slate-500 dark:text-slate-400">유형</span>
-              <select
-                className="input"
-                value={assetType}
-                onChange={(e) => {
-                  setAssetType(e.target.value as CommercialAssetSelectorType);
-                  resetRegion();
-                }}
-              >
-                {(Object.keys(COMMERCIAL_ASSET_SELECTOR_LABELS) as CommercialAssetSelectorType[]).map((t) => (
-                  <option key={t} value={t}>
-                    {COMMERCIAL_ASSET_SELECTOR_LABELS[t]}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="space-y-1">
+              <span className="text-xs text-slate-500 dark:text-slate-400">유형</span>
+              <p className="text-[10px] text-slate-400 leading-snug">
+                기본은 집합상가. 필요 시 공장을 추가해 함께 조회합니다.
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {COMMERCIAL_ASSET_KINDS.map((kind) => {
+                  const on = assetKinds.includes(kind);
+                  return (
+                    <button
+                      key={kind}
+                      type="button"
+                      className={clsx(
+                        "rounded-md border px-2.5 py-1.5 text-xs transition-colors",
+                        on
+                          ? "border-slate-800 bg-slate-800 text-white dark:border-slate-200 dark:bg-slate-200 dark:text-slate-900"
+                          : "border-slate-300 bg-white text-slate-600 hover:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300",
+                      )}
+                      onClick={() => {
+                        setAssetKinds((prev) => toggleCommercialAssetKind(prev, kind));
+                        resetRegion();
+                      }}
+                      aria-pressed={on}
+                    >
+                      {COMMERCIAL_KIND_LABELS[kind]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 gap-2">
               <label className="text-xs block space-y-1">
@@ -417,23 +470,36 @@ export default function CommercialApp() {
             {scope && clustersQ.isError && <p className="text-sm text-red-600">도로 목록을 불러오지 못했습니다.</p>}
             {scope && clustersQ.data && (
               <>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
-                  {scope.addr1} {scope.addr2} · 도로 {clustersQ.data.total}개
-                  {clustersQ.data.stats_as_of_label && !hasYearFilter(scope.yearFrom, scope.yearTo) && (
-                    <span className="ml-2 text-indigo-600 dark:text-indigo-400">
-                      · {clustersQ.data.stats_as_of_label}
-                      {clustersQ.data.window_years ? ` (${clustersQ.data.window_years}년 창)` : ""}
-                    </span>
-                  )}
-                  {hasYearFilter(scope.yearFrom, scope.yearTo) && (
-                    <span className="ml-2 text-indigo-600 dark:text-indigo-400">
-                      · 연도 {scope.yearFrom || "…"}–{scope.yearTo || "…"}
-                    </span>
-                  )}
-                  {clustersQ.data.data_source === "live" && (
-                    <span className="ml-1 text-amber-700 dark:text-amber-400">· 실시간 집계</span>
-                  )}
-                </p>
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 flex-1 min-w-[12rem]">
+                    {scope.addr1} {scope.addr2} · 도로 {clustersQ.data.total}개
+                    {clustersQ.data.stats_as_of_label && !hasYearFilter(scope.yearFrom, scope.yearTo) && (
+                      <span className="ml-2 text-indigo-600 dark:text-indigo-400">
+                        · {clustersQ.data.stats_as_of_label}
+                        {clustersQ.data.window_years ? ` (${clustersQ.data.window_years}년 창)` : ""}
+                      </span>
+                    )}
+                    {hasYearFilter(scope.yearFrom, scope.yearTo) && (
+                      <span className="ml-2 text-indigo-600 dark:text-indigo-400">
+                        · 연도 {scope.yearFrom || "…"}–{scope.yearTo || "…"}
+                      </span>
+                    )}
+                    {clustersQ.data.data_source === "live" && (
+                      <span className="ml-1 text-amber-700 dark:text-amber-400">· 실시간 집계</span>
+                    )}
+                  </p>
+                  <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 shrink-0">
+                    <span className="whitespace-nowrap">검색</span>
+                    <input
+                      type="search"
+                      className="input py-1 text-xs w-44 sm:w-56"
+                      value={clusterSearch}
+                      onChange={(e) => setClusterSearch(e.target.value)}
+                      placeholder="도로명·구·동…"
+                      aria-label="검색"
+                    />
+                  </label>
+                </div>
                 <div className="card overflow-x-auto p-0 w-full">
                   <table className="data commercial-clusters-table">
                     <colgroup>
@@ -457,31 +523,39 @@ export default function CommercialApp() {
                       </tr>
                     </thead>
                     <tbody>
-                      {clustersQ.data.items.map((row) => (
-                        <tr
-                          key={`${row.cluster_key}|${row.asset_type}`}
-                          className={clsx(
-                            "hover:bg-indigo-50 dark:hover:bg-indigo-950/40 cursor-pointer",
-                            selected?.cluster_key === row.cluster_key && selected?.asset_type === row.asset_type && "bg-indigo-50 dark:bg-indigo-950/50",
-                          )}
-                          onClick={() => setSelected(row)}
-                        >
-                          <td className="text-[10px] whitespace-nowrap text-center">
-                            {commercialAssetTypeLabel(row.asset_type)}
-                          </td>
-                          <td className="name">
-                            {row.road_name || row.display_label}
-                            {!row.is_reliable && <span className="ml-0.5 text-[9px] text-amber-600">n&lt;15</span>}
-                          </td>
-                          <td className="num">{row.count}</td>
-                          <td className="num">{fmtPrice(row.mean)}</td>
-                          <td className="num">{fmtPrice(row.median)}</td>
-                          <td className="num text-[10px]">{fmtCi(row.ci_lower, row.ci_upper)}</td>
-                          <td className="col-district text-[10px] text-slate-600 dark:text-slate-300">
-                            {[row.addr3, row.addr4].filter(Boolean).join(" · ") || "—"}
-                          </td>
-                        </tr>
-                      ))}
+                      {clustersQ.data.items.map((row) => {
+                        const highlighted = clusterMatchesQuery(row, clusterSearchQ);
+                        return (
+                          <tr
+                            key={`${row.cluster_key}|${row.asset_type}`}
+                            className={clsx(
+                              "hover:bg-indigo-50 dark:hover:bg-indigo-950/40 cursor-pointer",
+                              highlighted
+                                ? "!bg-yellow-200 dark:!bg-yellow-700/50"
+                                : selected?.cluster_key === row.cluster_key &&
+                                    selected?.asset_type === row.asset_type &&
+                                    "bg-indigo-50 dark:bg-indigo-950/50",
+                            )}
+                            onClick={() => setSelected(row)}
+                            data-cluster-highlight={highlighted ? "1" : undefined}
+                          >
+                            <td className="text-[10px] whitespace-nowrap text-center">
+                              {commercialAssetTypeLabel(row.asset_type)}
+                            </td>
+                            <td className="name">
+                              {row.road_name || row.display_label}
+                              {!row.is_reliable && <span className="ml-0.5 text-[9px] text-amber-600">n&lt;15</span>}
+                            </td>
+                            <td className="num">{row.count}</td>
+                            <td className="num">{fmtPrice(row.mean)}</td>
+                            <td className="num">{fmtPrice(row.median)}</td>
+                            <td className="num text-[10px]">{fmtCi(row.ci_lower, row.ci_upper)}</td>
+                            <td className="col-district text-[10px] text-slate-600 dark:text-slate-300">
+                              {[row.addr3, row.addr4].filter(Boolean).join(" · ") || "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

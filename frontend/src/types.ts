@@ -499,6 +499,30 @@ export interface LandRegressionCoeff {
   p: number;
 }
 
+export interface CorrelationPoint {
+  x: number;
+  y: number;
+}
+
+export interface CorrelationSeries {
+  variable: string;
+  label: string;
+  pearson_r?: number | null;
+  points: CorrelationPoint[];
+  y_axis_label?: string | null;
+}
+
+export interface PartialRegressionSeries {
+  variable: string;
+  label: string;
+  points: CorrelationPoint[];
+  beta?: number | null;
+  p_value?: number | null;
+  partial_r_squared?: number | null;
+  x_axis_label?: string | null;
+  y_axis_label?: string | null;
+}
+
 export interface LandRegressionResponse {
   n: number;
   model_type: "log" | "linear";
@@ -510,6 +534,9 @@ export interface LandRegressionResponse {
   f_p_value?: number | null;
   significant_count?: number | null;
   predict_options?: LandPredictOptions | null;
+  correlations?: CorrelationSeries[];
+  partial_regressions?: PartialRegressionSeries[];
+  correlation_n?: number | null;
 }
 
 export interface LandPredictContinuous {

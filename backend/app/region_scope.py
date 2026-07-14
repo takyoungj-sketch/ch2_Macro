@@ -8,7 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
 from app.built.filters import apply_addr3_filter, apply_addr4_filter, apply_ri_filter
-from app.flat_sido_region import apply_addr2_scope, is_flat_sido_addr2
+from app.flat_sido_region import apply_addr2_scope, apply_region_asset_type_filter, is_flat_sido_addr2
 
 AdminCodeLevel = Literal["eupmyeondong", "beopjungri"]
 
@@ -194,9 +194,7 @@ def expand_beopjungri_codes(
     else:
         clauses.append("t.addr2 = :a2")
         params["a2"] = addr2.strip()
-    if asset_type and asset_type != "all":
-        clauses.append("t.asset_type = :asset_type")
-        params["asset_type"] = asset_type
+    apply_region_asset_type_filter(clauses, params, asset_type, col_prefix="t")
 
     tmp_clauses = list(clauses)
     tmp_params = dict(params)

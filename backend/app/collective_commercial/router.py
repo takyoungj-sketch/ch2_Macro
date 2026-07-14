@@ -11,7 +11,8 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session
 
-from app.collective.building_stats_query import normalize_asset_type, stats_as_of_label, stats_reference_date
+from app.collective.asset_scope import COMMERCIAL_ASSET_TYPES, apply_asset_type_filter
+from app.collective.building_stats_query import stats_as_of_label, stats_reference_date
 from app.v2_stats_windows import period_bounds_for_window
 from app.collective_commercial.cluster_stats_query import (
     cluster_rolling_from_mart,
@@ -88,10 +89,9 @@ def _tx_where(
         f"{_col('unit_price', p)} > 0",
     ]
     params: dict = {}
-    asset_type = normalize_asset_type(asset_type)
-    if asset_type:
-        clauses.append(f"{_col('asset_type', p)} = :asset_type")
-        params["asset_type"] = asset_type
+    apply_asset_type_filter(
+        clauses, params, asset_type, allowed=COMMERCIAL_ASSET_TYPES, col_prefix=p
+    )
     apply_region_filters(
         clauses,
         params,
@@ -229,7 +229,6 @@ def region_structure(
     addr2: str = Query(...),
     asset_type: Optional[str] = Query(None),
 ):
-    asset_type = normalize_asset_type(asset_type)
     info = detect_region_structure(
         db.connection(),
         addr1,
@@ -294,7 +293,7 @@ def resolve_region_codes_for_map(
     """좌측 addr 칩 → VWorld 지도용 행정코드 (집합상가·공장)."""
     result = resolve_collective_map_codes(
         db.connection(),
-        asset_type=normalize_asset_type(asset_type),
+        asset_type=asset_type,
         addr1=addr1,
         addr2=addr2,
         gu_list=gu,
@@ -360,13 +359,12 @@ def list_clusters(
         raise HTTPException(400, "연도(from)는 연도(to) 이하여야 합니다.")
 
     conn = db.connection()
-    asset_filter = normalize_asset_type(asset_type)
     as_of_month, _ = latest_mart_snapshot(conn)
     meta: dict = {"data_source": "live", "window_years": window_years}
 
     mart = list_clusters_from_mart(
         conn,
-        asset_type=asset_filter,
+        asset_type=asset_type,
         addr1=addr1,
         addr2=addr2,
         addr3_list=addr3_list or None,
@@ -381,7 +379,7 @@ def list_clusters(
     else:
         where, params = _tx_where(
             conn=conn,
-            asset_type=asset_filter,
+            asset_type=asset_type,
             addr1=addr1,
             addr2=addr2,
             addr3_list=addr3_list or None,

@@ -8,6 +8,11 @@ from typing import Any, Optional
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
+from app.collective.asset_scope import (
+    RESIDENTIAL_ASSET_TYPES,
+    apply_asset_type_filter,
+    normalize_asset_type as _scope_normalize_asset_type,
+)
 from app.collective.address import split_building_addresses
 from app.collective.analysis_gates import count_recent_transactions, evaluate_analysis_gates
 from app.collective.filters import apply_region_filters
@@ -23,9 +28,8 @@ ASSET_TYPE_ORDER = ("apartment", "rowhouse", "officetel", "presale")
 
 
 def normalize_asset_type(asset_type: Optional[str]) -> Optional[str]:
-    if not asset_type or asset_type == "all":
-        return None
-    return asset_type
+    """단일 유형만 반환. 복수·all → None (하위 호환)."""
+    return _scope_normalize_asset_type(asset_type, allowed=RESIDENTIAL_ASSET_TYPES)
 
 
 def asset_type_sort_key(asset_type: str | None) -> int:
@@ -184,13 +188,17 @@ def _mart_region_where(
         addr3=addr3,
         addr3_list=addr3_list,
         addr4_list=addr4_list,
-        asset_type=asset_type,
+        asset_type=None,
         col_prefix=col_prefix,
         valid_sql=None,
     )
-    if asset_type:
-        clauses.append(f"{col_prefix}.asset_type = :asset_type")
-        params["asset_type"] = asset_type
+    apply_asset_type_filter(
+        clauses,
+        params,
+        asset_type,
+        allowed=RESIDENTIAL_ASSET_TYPES,
+        col_prefix=col_prefix,
+    )
     return " AND ".join(clauses), params
 
 

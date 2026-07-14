@@ -16,6 +16,7 @@ from app.collective.analysis_explain import (
     build_residential_regression_explain,
 )
 from app.collective.analysis_gates import count_recent_transactions, evaluate_analysis_gates
+from app.collective.asset_scope import RESIDENTIAL_ASSET_TYPES, apply_asset_type_filter
 from app.collective.building_stats_query import (
     building_rolling_from_mart,
     building_rolling_live,
@@ -92,10 +93,9 @@ def _base_where(
 ) -> tuple[str, dict]:
     clauses = ["is_valid = true", "unit_price IS NOT NULL", "unit_price > 0"]
     params: dict = {}
-    asset_filter = normalize_asset_type(asset_type)
-    if asset_filter:
-        clauses.append("asset_type = :asset_type")
-        params["asset_type"] = asset_filter
+    apply_asset_type_filter(
+        clauses, params, asset_type, allowed=RESIDENTIAL_ASSET_TYPES
+    )
     apply_region_filters(
         clauses,
         params,
@@ -106,7 +106,7 @@ def _base_where(
         addr3=addr3,
         addr3_list=addr3_list,
         addr4_list=addr4_list,
-        asset_type=normalize_asset_type(asset_type),
+        asset_type=asset_type,
     )
     apply_period_filters(
         clauses,
@@ -138,10 +138,13 @@ def filter_meta(
 
     year_params: dict = {}
     year_asset_sql = ""
-    af = normalize_asset_type(asset_type)
-    if af:
+    apply_asset_type_filter(
+        [], year_params, asset_type, allowed=RESIDENTIAL_ASSET_TYPES
+    )
+    if "asset_type" in year_params:
         year_asset_sql = " AND asset_type = :asset_type"
-        year_params["asset_type"] = af
+    elif "asset_types" in year_params:
+        year_asset_sql = " AND asset_type = ANY(:asset_types)"
     years = db.execute(
         text(
             f"""
@@ -171,7 +174,7 @@ def list_addr2(
         db.connection(),
         table="collective_transactions",
         addr1=addr1,
-        asset_type=normalize_asset_type(asset_type),
+        asset_type=asset_type,
         valid_sql="is_valid = true",
     )
 
@@ -183,7 +186,7 @@ def region_structure(
     addr2: str = Query(...),
     asset_type: Optional[str] = Query(None),
 ):
-    info = detect_region_structure(db.connection(), addr1, addr2, normalize_asset_type(asset_type))
+    info = detect_region_structure(db.connection(), addr1, addr2, asset_type)
     return RegionStructureResponse(**info)
 
 
@@ -197,14 +200,14 @@ def list_leaf_regions(
 ):
     """청주·수원 등: addr3=구, addr4=읍면동."""
     conn = db.connection()
-    info = detect_region_structure(conn, addr1, addr2, normalize_asset_type(asset_type))
+    info = detect_region_structure(conn, addr1, addr2, asset_type)
     opts = list_leaf_options(
         conn,
         table="collective_transactions",
         addr1=addr1,
         addr2=addr2,
         gu_list=addr3_list,
-        asset_type=normalize_asset_type(asset_type),
+        asset_type=asset_type,
         leaf_level=info.get("leaf_level", "addr4"),
     )
     return [RegionOption(**o) for o in opts]
@@ -218,14 +221,14 @@ def list_addr3(
     asset_type: Optional[str] = Query(None),
 ):
     conn = db.connection()
-    info = detect_region_structure(conn, addr1, addr2, normalize_asset_type(asset_type))
+    info = detect_region_structure(conn, addr1, addr2, asset_type)
     if info.get("has_intermediate"):
         opts = list_gu_options(
             conn,
             table="collective_transactions",
             addr1=addr1,
             addr2=addr2,
-            asset_type=normalize_asset_type(asset_type),
+            asset_type=asset_type,
         )
     else:
         opts = list_leaf_options(
@@ -234,7 +237,7 @@ def list_addr3(
             addr1=addr1,
             addr2=addr2,
             gu_list=[],
-            asset_type=normalize_asset_type(asset_type),
+            asset_type=asset_type,
             leaf_level=info.get("leaf_level", "addr3"),
         )
     return opts
@@ -252,7 +255,7 @@ def resolve_region_codes_for_map(
     """좌측 addr 칩 → VWorld 지도용 행정코드 (Collective-M1)."""
     result = resolve_collective_map_codes(
         db.connection(),
-        asset_type=normalize_asset_type(asset_type),
+        asset_type=asset_type,
         addr1=addr1,
         addr2=addr2,
         gu_list=gu,
@@ -327,7 +330,7 @@ def list_buildings(
             cd_from, cd_to = period_bounds_for_window(as_of_month, window_years)
         where, params = _base_where(
             conn=conn,
-            asset_type=normalize_asset_type(asset_type),
+            asset_type=asset_type,
             addr1=addr1,
             addr2=addr2,
             addr3=addr3,
@@ -342,7 +345,7 @@ def list_buildings(
 
     mart = list_buildings_from_mart(
         conn,
-        asset_type=normalize_asset_type(asset_type),
+        asset_type=asset_type,
         addr1=addr1,
         addr2=addr2,
         addr3=addr3,
@@ -743,7 +746,7 @@ def building_floor_index(
     return FloorIndexResponse(
         building_key=building_key,
         display_name=display_name,
-        asset_type=normalize_asset_type(asset_type),
+        asset_type=asset_type,
         dimension=raw["dimension"],
         method=raw.get("method"),
         reference_floor=raw.get("reference_floor"),

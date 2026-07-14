@@ -10,13 +10,38 @@ FLAT_SIDO_ADDR2_TOKEN = "__FLAT_SIDO__"
 
 
 def normalize_region_asset_type(asset_type: str | None) -> str | None:
-    """단일 유형만 반환. all·복수(콤마)·빈 값 — 필터 없음."""
+    """단일 유형만 반환. all·빈 값 — 필터 없음. 복수(콤마)는 원시 문자열 유지(ANY 필터용)."""
     if not asset_type or asset_type == "all":
         return None
     raw = str(asset_type).strip()
-    if "," in raw or "|" in raw:
-        return None
-    return raw
+    return raw or None
+
+
+def apply_region_asset_type_filter(
+    clauses: list[str],
+    params: dict,
+    asset_type: str | None,
+    *,
+    col_prefix: str = "",
+) -> None:
+    """지역 목록·structure용 asset_type — 단일 `=` / 복수 `ANY`."""
+    at = normalize_region_asset_type(asset_type)
+    if not at:
+        return
+    p = f"{col_prefix}." if col_prefix else ""
+    if "," in at or "|" in at:
+        parts = [x.strip() for x in at.replace("|", ",").split(",") if x.strip()]
+        if not parts:
+            return
+        if len(parts) == 1:
+            clauses.append(f"{p}asset_type = :asset_type")
+            params["asset_type"] = parts[0]
+        else:
+            clauses.append(f"{p}asset_type = ANY(:asset_types)")
+            params["asset_types"] = parts
+        return
+    clauses.append(f"{p}asset_type = :asset_type")
+    params["asset_type"] = at
 
 
 def is_flat_sido_addr2(addr2: str | None) -> bool:
@@ -68,10 +93,7 @@ def _table_has_flat_sido(
         valid_sql,
     ]
     params: dict = {"a1": addr1.strip()}
-    asset_type = normalize_region_asset_type(asset_type)
-    if asset_type:
-        clauses.append("asset_type = :asset_type")
-        params["asset_type"] = asset_type
+    apply_region_asset_type_filter(clauses, params, asset_type)
     n = conn.execute(
         text(f"SELECT COUNT(*)::int FROM {table} WHERE {' AND '.join(clauses)}"),
         params,
@@ -95,10 +117,7 @@ def list_addr2_for_sido(
         valid_sql,
     ]
     params: dict = {"a1": addr1.strip()}
-    asset_type = normalize_region_asset_type(asset_type)
-    if asset_type:
-        clauses.append("asset_type = :asset_type")
-        params["asset_type"] = asset_type
+    apply_region_asset_type_filter(clauses, params, asset_type)
     rows = conn.execute(
         text(
             f"""
@@ -129,10 +148,7 @@ def region_scope_clauses(
     """지역 목록 API용 addr1+addr2(+asset_type) WHERE 조각."""
     clauses = [valid_sql]
     params: dict = {}
-    asset_type = normalize_region_asset_type(asset_type)
-    if asset_type:
-        clauses.append("asset_type = :asset_type")
-        params["asset_type"] = asset_type
+    apply_region_asset_type_filter(clauses, params, asset_type)
     apply_addr2_scope(clauses, params, addr1=addr1, addr2=addr2)
     return clauses, params
 
@@ -154,10 +170,7 @@ def detect_region_structure_for_table(
     else:
         clauses.append("addr2 = :a2")
         params["a2"] = addr2.strip()
-    asset_type = normalize_region_asset_type(asset_type)
-    if asset_type:
-        clauses.append("asset_type = :asset_type")
-        params["asset_type"] = asset_type
+    apply_region_asset_type_filter(clauses, params, asset_type)
     where = " AND ".join(clauses)
     row = conn.execute(
         text(

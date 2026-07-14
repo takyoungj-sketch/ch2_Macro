@@ -358,3 +358,51 @@ export function buildHistogramExplain(): AnalysisExplain {
     floor_groups: [],
   };
 }
+
+export const LAND_SCATTER_RAW_HELP: AnalysisExplain = {
+  spec_id: "land.scatter_raw.v1",
+  spec_version: "1.0",
+  title: "상관관계 (통제 전)",
+  summary: "원시 X vs 단가(만원/㎡) 산점도·Pearson r — **실제 거래 분포** 탐색.",
+  formula: "r = corr(X, 단가)",
+  interpretation: [
+    "다른 변수 영향이 섞여 있습니다.",
+    "r과 β가 다르면 **부분회귀도** 탭으로 전환하세요.",
+  ],
+  limitations: ["인과 해석 불가"],
+  interpretation_hints: [],
+  presets: [
+    {
+      id: "why_raw",
+      question: "왜 통제 전도 필요한가요?",
+      answer:
+        "현장 데이터의 **실제 모양**을 먼저 봅니다. 통제 후만 보면 시장 분포 감각이 약해질 수 있어 둘 다 제공합니다.",
+    },
+  ],
+  controls: [],
+  floor_groups: [],
+};
+
+export const LAND_SCATTER_PARTIAL_HELP: AnalysisExplain = {
+  spec_id: "land.scatter_partial.v1",
+  spec_version: "1.0",
+  title: "부분회귀도 (통제 후)",
+  summary: "모형과 동일하게 다른 변수를 제거한 **잔차 vs 잔차**. 기울기 = 회귀 β.",
+  formula: "Y잔차 vs X잔차 (Added Variable Plot)",
+  interpretation: [
+    "회귀 계수표와 **같은 의미**입니다.",
+    "파란 기울기선 = OLS β.",
+    "부분 R² = 통제 후 추가 설명력 참고.",
+  ],
+  limitations: ["연속 변수만", "log 모형은 log(단가) 잔차 공간"],
+  interpretation_hints: [],
+  presets: [
+    {
+      id: "beta_line",
+      question: "파란 기울기선은?",
+      answer: "원점 기준 직선의 기울기가 **회귀 β**와 같습니다.",
+    },
+  ],
+  controls: [],
+  floor_groups: [],
+};

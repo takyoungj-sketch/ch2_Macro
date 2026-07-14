@@ -23,6 +23,8 @@ type Props = {
   maxWidthClass?: string;
   /** 모서리·경계 드래그로 크기 조절 */
   resizable?: boolean;
+  /** 헤더에 전체화면 토글 (브라우저 줌 대신 모달만 확대) */
+  allowFullscreen?: boolean;
   defaultWidth?: number;
   defaultHeight?: number;
   minWidth?: number;
@@ -110,6 +112,7 @@ export default function DraggableModalShell({
   children,
   maxWidthClass = "max-w-3xl",
   resizable = false,
+  allowFullscreen = true,
   defaultWidth,
   defaultHeight,
   minWidth = 360,
@@ -123,11 +126,15 @@ export default function DraggableModalShell({
   const panelRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const resizeRef = useRef<ResizeState | null>(null);
+  const preFullscreenBoxRef = useRef<PanelBox | null>(null);
   const [box, setBox] = useState<PanelBox | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
 
   useEffect(() => {
     if (!open) {
       setBox(null);
+      setFullscreen(false);
+      preFullscreenBoxRef.current = null;
       return;
     }
     if (resizable && (defaultWidth != null || defaultHeight != null)) {
@@ -140,18 +147,46 @@ export default function DraggableModalShell({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      if (fullscreen) {
+        e.preventDefault();
+        e.stopPropagation();
+        setFullscreen(false);
+        setBox((prev) => {
+          const rest = preFullscreenBoxRef.current;
+          preFullscreenBoxRef.current = null;
+          return rest ?? prev;
+        });
+        return;
+      }
+      onClose();
     };
     window.addEventListener("keydown", onKey, escapeCapture);
     return () => window.removeEventListener("keydown", onKey, escapeCapture);
-  }, [open, onClose, escapeCapture]);
+  }, [open, onClose, escapeCapture, fullscreen]);
 
   useEffect(() => {
-    if (!open || !box) return;
+    if (!open || !box || fullscreen) return;
     const onWinResize = () => setBox((prev) => (prev ? clampBox(prev, minWidth, minHeight) : prev));
     window.addEventListener("resize", onWinResize);
     return () => window.removeEventListener("resize", onWinResize);
-  }, [open, box, minWidth, minHeight]);
+  }, [open, box, minWidth, minHeight, fullscreen]);
+
+  useEffect(() => {
+    if (!open || !fullscreen) return;
+    const syncFs = () => {
+      const pad = 8;
+      setBox({
+        x: pad,
+        y: pad,
+        w: Math.max(minWidth, window.innerWidth - pad * 2),
+        h: Math.max(minHeight, window.innerHeight - pad * 2),
+      });
+    };
+    syncFs();
+    window.addEventListener("resize", syncFs);
+    return () => window.removeEventListener("resize", syncFs);
+  }, [open, fullscreen, minWidth, minHeight]);
 
   const ensureBoxFromDom = useCallback((): PanelBox | null => {
     if (box) return box;
@@ -167,8 +202,30 @@ export default function DraggableModalShell({
     return next;
   }, [box, minWidth, minHeight]);
 
+  const toggleFullscreen = useCallback(() => {
+    setFullscreen((fs) => {
+      if (fs) {
+        const rest = preFullscreenBoxRef.current;
+        preFullscreenBoxRef.current = null;
+        if (rest) setBox(rest);
+        return false;
+      }
+      const current = box ?? ensureBoxFromDom();
+      if (current) preFullscreenBoxRef.current = current;
+      const pad = 8;
+      setBox({
+        x: pad,
+        y: pad,
+        w: Math.max(minWidth, window.innerWidth - pad * 2),
+        h: Math.max(minHeight, window.innerHeight - pad * 2),
+      });
+      return true;
+    });
+  }, [box, ensureBoxFromDom, minWidth, minHeight]);
+
   const beginDrag = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (fullscreen) return;
       if (e.button !== 0) return;
       const target = e.target as HTMLElement;
       if (target.closest("button, input, summary, a, label, select, textarea, [data-no-drag]")) return;
@@ -187,7 +244,7 @@ export default function DraggableModalShell({
       e.currentTarget.setPointerCapture(e.pointerId);
       e.preventDefault();
     },
-    [ensureBoxFromDom],
+    [ensureBoxFromDom, fullscreen],
   );
 
   const moveDrag = useCallback(
@@ -221,6 +278,7 @@ export default function DraggableModalShell({
 
   const beginResize = useCallback(
     (edge: ResizeEdge) => (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (fullscreen) return;
       if (e.button !== 0) return;
       e.stopPropagation();
       e.preventDefault();
@@ -238,7 +296,7 @@ export default function DraggableModalShell({
       };
       e.currentTarget.setPointerCapture(e.pointerId);
     },
-    [ensureBoxFromDom],
+    [ensureBoxFromDom, fullscreen],
   );
 
   const moveResize = useCallback(
@@ -312,19 +370,26 @@ export default function DraggableModalShell({
       aria-modal="true"
       aria-labelledby={titleId}
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget && !fullscreen) onClose();
       }}
     >
       <div
         ref={panelRef}
-        className={`fixed modal-shell bg-white dark:bg-slate-800 rounded-xl shadow-xl ${box ? "" : maxWidthClass} ${
+        data-fullscreen={fullscreen ? "true" : undefined}
+        className={`fixed modal-shell bg-white dark:bg-slate-800 shadow-xl ${
+          fullscreen ? "rounded-none" : "rounded-xl"
+        } ${box ? "" : maxWidthClass} ${
           box ? "" : "w-[calc(100%-2rem)] max-h-[85vh]"
-        } flex flex-col border`}
+        } flex flex-col border ${fullscreen ? "text-[15px] leading-relaxed" : ""}`}
         style={panelStyle}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div
-          className="px-4 py-3 modal-header shrink-0 border-b border-slate-200 dark:border-slate-700 cursor-grab active:cursor-grabbing select-none touch-none"
+          className={`px-4 py-3 modal-header shrink-0 border-b border-slate-200 dark:border-slate-700 select-none touch-none ${
+            fullscreen
+              ? "cursor-default"
+              : "cursor-grab active:cursor-grabbing"
+          }`}
           onPointerDown={beginDrag}
           onPointerMove={moveDrag}
           onPointerUp={endDrag}
@@ -332,15 +397,30 @@ export default function DraggableModalShell({
         >
           <div className="flex justify-between items-start gap-2">
             <div className="min-w-0 pointer-events-none">
-              <h2 id={titleId} className="text-sm font-bold">
+              <h2 id={titleId} className={`font-bold ${fullscreen ? "text-base" : "text-sm"}`}>
                 {title}
               </h2>
               {subtitle && (
                 <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</div>
               )}
             </div>
-            <div className="flex items-center gap-2 shrink-0" data-no-drag>
+            <div className="flex items-center gap-1 shrink-0" data-no-drag>
               {headerActions}
+              {allowFullscreen && (
+                <button
+                  type="button"
+                  aria-label={fullscreen ? "전체화면 나가기" : "전체화면"}
+                  title={fullscreen ? "전체화면 나가기" : "전체화면"}
+                  className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-sm leading-none px-1.5 py-0.5 shrink-0 cursor-pointer rounded border border-transparent hover:border-slate-200"
+                  onClick={toggleFullscreen}
+                >
+                  {fullscreen ? "⛶" : "⛶"}
+                  <span className="sr-only">{fullscreen ? "축소" : "확대"}</span>
+                  <span className="ml-0.5 text-[10px] font-medium tabular-nums" aria-hidden>
+                    {fullscreen ? "축소" : "전체"}
+                  </span>
+                </button>
+              )}
               <button
                 type="button"
                 aria-label="닫기"
@@ -357,6 +437,7 @@ export default function DraggableModalShell({
         <div className={bodyClassName}>{children}</div>
 
         {resizable &&
+          !fullscreen &&
           RESIZE_HANDLES.map(({ edge, className, cursor }) => (
             <div
               key={edge}

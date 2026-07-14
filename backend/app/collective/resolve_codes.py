@@ -7,6 +7,7 @@ from typing import Any, Literal, Optional
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
+from app.collective.asset_scope import apply_collective_asset_filter
 from app.collective.filters import apply_region_filters
 from app.collective.region_structure import detect_region_structure
 from app.flat_sido_region import is_flat_sido_addr2
@@ -87,9 +88,7 @@ def resolve_collective_map_codes(
 
     clauses = ["is_valid = true"]
     params: dict[str, Any] = {}
-    if asset_type and asset_type != "all":
-        clauses.append("asset_type = :asset_type")
-        params["asset_type"] = asset_type
+    apply_collective_asset_filter(clauses, params, asset_type)
 
     apply_region_filters(
         clauses,

@@ -17,7 +17,7 @@ export function buildLandRegressionContext(
 ): AiContextPayload {
   return {
     app: "land",
-    panel: "PaidMatrixCell",
+    panel: "LandRegressionTab",
     purpose: "statistics",
     scope: { region_label: opts.regionLabel },
     facts: {
@@ -25,6 +25,30 @@ export function buildLandRegressionContext(
       zone_type: opts.zoneType,
       land_category: opts.landCategory,
       model_type: opts.modelType,
+    },
+  };
+}
+
+export function buildLandScatterContext(
+  regData: LandRegressionResponse,
+  opts: {
+    regionLabel: string;
+    zoneType: string;
+    landCategory: string;
+    activeTab?: "raw" | "partial";
+  },
+): AiContextPayload {
+  return {
+    app: "land",
+    panel: "LandRegressionTab",
+    purpose: "statistics",
+    scope: { region_label: opts.regionLabel },
+    facts: {
+      ...(regData as unknown as Record<string, unknown>),
+      zone_type: opts.zoneType,
+      land_category: opts.landCategory,
+      scatter_tab: opts.activeTab ?? "raw",
+      unit: "만원/㎡",
     },
   };
 }

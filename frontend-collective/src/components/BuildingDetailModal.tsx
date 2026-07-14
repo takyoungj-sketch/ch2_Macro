@@ -94,7 +94,9 @@ export default function BuildingDetailModal({
   peerBuildings?: BuildingStatsRow[];
   onClose: () => void;
 }) {
-  const effectiveAssetType = (assetType === "all" ? row.asset_type : assetType) as AssetType;
+  const effectiveAssetType = (
+    assetType === "all" || assetType.includes(",") ? row.asset_type : assetType
+  ) as AssetType;
   const analysisPeriod: AnalysisPeriodParams = useMemo(
     () => buildAnalysisPeriodParams(yearFrom, yearTo, periodStart, periodEnd),
     [yearFrom, yearTo, periodStart, periodEnd],
@@ -127,7 +129,7 @@ export default function BuildingDetailModal({
   const cohortBody = useMemo(
     () => ({
       building_keys: cohortRunKeys,
-      asset_type: assetType === "all" ? undefined : effectiveAssetType,
+      asset_type: assetType === "all" || assetType.includes(",") ? undefined : effectiveAssetType,
       experiment,
       ...analysisPeriod,
     }),
