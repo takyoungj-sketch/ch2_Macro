@@ -8,6 +8,12 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import {
+  MODAL_FONT_SCALE_STEPS,
+  clampModalFontStep,
+  persistModalFontStep,
+  readStoredModalFontStep,
+} from "@ch2/macro-shell/displayUi";
 
 type Props = {
   open: boolean;
@@ -25,6 +31,8 @@ type Props = {
   resizable?: boolean;
   /** 헤더에 전체화면 토글 (브라우저 줌 대신 모달만 확대) */
   allowFullscreen?: boolean;
+  /** 헤더 A−/A+ — 모달 안 글자·버튼·옵션을 zoom으로 함께 확대 */
+  allowFontScale?: boolean;
   defaultWidth?: number;
   defaultHeight?: number;
   minWidth?: number;
@@ -113,6 +121,7 @@ export default function DraggableModalShell({
   maxWidthClass = "max-w-3xl",
   resizable = false,
   allowFullscreen = true,
+  allowFontScale = true,
   defaultWidth,
   defaultHeight,
   minWidth = 360,
@@ -129,6 +138,19 @@ export default function DraggableModalShell({
   const preFullscreenBoxRef = useRef<PanelBox | null>(null);
   const [box, setBox] = useState<PanelBox | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [fontStep, setFontStep] = useState(readStoredModalFontStep);
+  const modalZoom = MODAL_FONT_SCALE_STEPS[clampModalFontStep(fontStep)];
+  const fontPct = Math.round(modalZoom * 100);
+  const fontStepMin = clampModalFontStep(fontStep) <= 0;
+  const fontStepMax = clampModalFontStep(fontStep) >= MODAL_FONT_SCALE_STEPS.length - 1;
+
+  const bumpFontScale = useCallback((direction: 1 | -1) => {
+    setFontStep((prev) => {
+      const next = clampModalFontStep(prev + direction);
+      persistModalFontStep(next);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!open) {
@@ -380,10 +402,14 @@ export default function DraggableModalShell({
           fullscreen ? "rounded-none" : "rounded-xl"
         } ${box ? "" : maxWidthClass} ${
           box ? "" : "w-[calc(100%-2rem)] max-h-[85vh]"
-        } flex flex-col border ${fullscreen ? "text-[15px] leading-relaxed" : ""}`}
+        } flex flex-col border overflow-hidden`}
         style={panelStyle}
         onMouseDown={(e) => e.stopPropagation()}
       >
+        <div
+          className="flex flex-col flex-1 min-h-0 w-full overflow-hidden"
+          style={allowFontScale ? { zoom: modalZoom } : undefined}
+        >
         <div
           className={`px-4 py-3 modal-header shrink-0 border-b border-slate-200 dark:border-slate-700 select-none touch-none ${
             fullscreen
@@ -406,6 +432,38 @@ export default function DraggableModalShell({
             </div>
             <div className="flex items-center gap-1 shrink-0" data-no-drag>
               {headerActions}
+              {allowFontScale && (
+                <div
+                  className="flex items-center gap-0.5 border border-slate-200 dark:border-slate-600 rounded-md bg-slate-50/90 dark:bg-slate-700/90 p-0.5"
+                  aria-label="모달 글자 크기"
+                  title="모달 글자·버튼 크기"
+                >
+                  <button
+                    type="button"
+                    className="w-7 h-6 rounded text-sm font-semibold leading-none text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-600 disabled:opacity-40"
+                    aria-label="글자 크기 줄이기"
+                    disabled={fontStepMin}
+                    onClick={() => bumpFontScale(-1)}
+                  >
+                    −
+                  </button>
+                  <span
+                    className="min-w-[2.5rem] text-center tabular-nums font-medium text-[10px] text-slate-600 dark:text-slate-300"
+                    aria-live="polite"
+                  >
+                    {fontPct}%
+                  </span>
+                  <button
+                    type="button"
+                    className="w-7 h-6 rounded text-sm font-semibold leading-none text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-600 disabled:opacity-40"
+                    aria-label="글자 크기 키우기"
+                    disabled={fontStepMax}
+                    onClick={() => bumpFontScale(1)}
+                  >
+                    +
+                  </button>
+                </div>
+              )}
               {allowFullscreen && (
                 <button
                   type="button"
@@ -435,6 +493,7 @@ export default function DraggableModalShell({
         </div>
 
         <div className={bodyClassName}>{children}</div>
+        </div>
 
         {resizable &&
           !fullscreen &&

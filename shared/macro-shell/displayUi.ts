@@ -5,6 +5,16 @@ export const UI_FONT_SCALE_STEPS = [
 
 export const UI_FONT_LS_KEY = "ch2_macro_ui_font_step";
 
+/** 모달 전용 — 전체화면에서도 글자·버튼·옵션을 더 키울 수 있게 상한을 높임. */
+export const MODAL_FONT_SCALE_STEPS = [
+  0.875, 1, 1.0625, 1.125, 1.1875, 1.25, 1.375, 1.5, 1.625, 1.75,
+] as const;
+
+export const MODAL_FONT_LS_KEY = "ch2_macro_modal_font_step";
+
+/** MODAL_FONT_SCALE_STEPS에서 100% 위치. */
+export const DEFAULT_MODAL_FONT_SCALE_STEP = 1;
+
 export type UiColorScheme = "light" | "dark";
 
 export const UI_COLOR_SCHEME_LS_KEY = "ch2_macro_ui_color_scheme";
@@ -17,6 +27,12 @@ export const DEFAULT_UI_FONT_SCALE_STEP = 3;
 export function clampFontStep(step: number): number {
   const max = UI_FONT_SCALE_STEPS.length - 1;
   if (!Number.isFinite(step)) return DEFAULT_UI_FONT_SCALE_STEP;
+  return Math.max(0, Math.min(max, Math.round(step)));
+}
+
+export function clampModalFontStep(step: number): number {
+  const max = MODAL_FONT_SCALE_STEPS.length - 1;
+  if (!Number.isFinite(step)) return DEFAULT_MODAL_FONT_SCALE_STEP;
   return Math.max(0, Math.min(max, Math.round(step)));
 }
 
@@ -33,6 +49,24 @@ export function readStoredFontStep(): number {
 export function persistFontStep(step: number): void {
   try {
     localStorage.setItem(UI_FONT_LS_KEY, String(clampFontStep(step)));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function readStoredModalFontStep(): number {
+  try {
+    const raw = localStorage.getItem(MODAL_FONT_LS_KEY);
+    if (raw == null || raw.trim() === "") return DEFAULT_MODAL_FONT_SCALE_STEP;
+    return clampModalFontStep(Number(raw));
+  } catch {
+    return DEFAULT_MODAL_FONT_SCALE_STEP;
+  }
+}
+
+export function persistModalFontStep(step: number): void {
+  try {
+    localStorage.setItem(MODAL_FONT_LS_KEY, String(clampModalFontStep(step)));
   } catch {
     /* ignore */
   }
