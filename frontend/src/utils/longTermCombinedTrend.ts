@@ -42,7 +42,7 @@ export function longTermSeriesToTrendSeries(
   series: LongTermTrendSeries[],
   metric: LtPriceMetric,
 ): TrendSeries[] {
-  const base: TrendSeries[] = series.map((s) => ({
+  return series.map((s) => ({
     label: s.region_name,
     points: [...s.points]
       .sort((a: LongTermTrendPoint, b: LongTermTrendPoint) => a.year - b.year)
@@ -53,9 +53,4 @@ export function longTermSeriesToTrendSeries(
         value: metric === "median" ? (p.median ?? null) : (p.mean ?? null),
       })),
   }));
-  if (metric === "mean") {
-    const combined = buildWeightedMeanCombinedSeries(series);
-    if (combined) base.push(combined);
-  }
-  return base;
 }

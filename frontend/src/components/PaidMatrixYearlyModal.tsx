@@ -39,7 +39,7 @@ import MultiRegionTrendChart from "./MultiRegionTrendChart";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import DraggableModalShell from "./DraggableModalShell";
 import { buildLongTermTrendExplain } from "../constants/longTermTrendExplain";
-import { longTermSeriesToTrendSeries } from "../utils/longTermCombinedTrend";
+import { buildWeightedMeanCombinedSeries, longTermSeriesToTrendSeries } from "../utils/longTermCombinedTrend";
 import {
   buildHistogramExplain,
   buildMatrixCellTrendExplain,
@@ -195,7 +195,7 @@ export default function PaidMatrixYearlyModal({
       setTxError(null);
       setLtData(null);
       setLtError(null);
-      setLtMetric("median");
+      setLtMetric("mean");
     }
   }, [open, zoneType, landCategory]);
 
@@ -397,6 +397,11 @@ export default function PaidMatrixYearlyModal({
 
   const ltPriceLabel = ltMetric === "median" ? "중앙값" : "평균";
 
+  const ltCombinedSeries = useMemo(() => {
+    if (ltMetric !== "mean" || !ltData || ltData.series.length < 2) return null;
+    return buildWeightedMeanCombinedSeries(ltData.series);
+  }, [ltData, ltMetric]);
+
   const ltExplain = useMemo(() => {
     if (!showLongTermTab || !filterRequest) return null;
     const targets = resolveLongTermTargetsForFetch(
@@ -543,7 +548,7 @@ export default function PaidMatrixYearlyModal({
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 leading-relaxed flex-1 min-w-[12rem]">
                   {ltData?.disclaimer ??
-                    "장기 추세: 만년력 연도·용도×지목 기준 · 도로·면적·이상치·지분 필터 미적용 · 평균 모드에서 복수지역 가중 통합선"}
+                    "장기 추세: 만년력 연도·용도×지목 기준 · 도로·면적·이상치·지분 필터 미적용 · 평균 모드에서 복수지역 가중 통합선(아래 별도 칸)"}
                 </p>
                 <div className="flex items-center gap-2 shrink-0">
                   <AnalysisHelpPanel explain={ltExplain} />
@@ -590,21 +595,37 @@ export default function PaidMatrixYearlyModal({
                 !ltError &&
                 ltData &&
                 ltData.series.length >= 2 && (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <p className="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-2 py-1">
                       {ltData.series.length}개 지역 비교 · {ltData.year_from}–{ltData.year_to} ·{" "}
                       {ltPriceLabel}
                       {ltMetric === "mean"
-                        ? " · 통합선 = 거래수 가중평균 (Σ n·평균 / Σ n)"
+                        ? " · 통합(가중평균)은 아래 별도 칸"
                         : " · 중앙값은 지역별 선만 (통합선 없음)"}
                     </p>
                     <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3 overflow-x-auto">
-                      <p className="text-[10px] font-semibold text-slate-600 px-1 mb-2">연도별 추이 (꺾은선)</p>
+                      <p className="text-[10px] font-semibold text-slate-600 px-1 mb-2">
+                        지역별 연도 추이 (꺾은선)
+                      </p>
                       <MultiRegionTrendChart
                         series={longTermSeriesToTrendSeries(ltData.series, ltMetric)}
                         metricLabel={`${ltPriceLabel}(만원/㎡)`}
                       />
                     </div>
+                    {ltCombinedSeries && (
+                      <div className="rounded-lg border border-slate-200 bg-white px-2 py-3 overflow-x-auto">
+                        <p className="text-[10px] font-semibold text-slate-700 px-1 mb-0.5">
+                          통합(거래수 가중평균)
+                        </p>
+                        <p className="text-[10px] text-slate-500 px-1 mb-2">
+                          Σ(n·지역평균) / Σn · 지역별 선과 축·스케일은 독립
+                        </p>
+                        <MultiRegionTrendChart
+                          series={[ltCombinedSeries]}
+                          metricLabel="통합 평균(만원/㎡)"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
               {!ltLoading &&
