@@ -67,6 +67,7 @@ WHERE is_valid = true
   AND contract_date IS NOT NULL
   AND contract_date >= :p_start
   AND contract_date <= :p_end
+  {asset_clause}
   {addr1_clause}
 GROUP BY building_key, asset_type
 """
@@ -88,6 +89,7 @@ WHERE is_valid = true
   AND unit_price IS NOT NULL
   AND unit_price > 0
   AND contract_year IS NOT NULL
+  {asset_clause}
   {addr1_clause}
 GROUP BY building_key, asset_type, contract_year
 """
@@ -261,20 +263,25 @@ def build_rolling(
     windows: list[int],
     addr1_filter: str | None,
     batch_id: str,
+    asset_type: str | None = None,
 ) -> int:
     total = 0
     with engine.connect() as conn:
         addr1_list = [addr1_filter] if addr1_filter else _distinct_addr1(conn)
 
+    asset_clause = "AND asset_type = :asset_type" if asset_type else ""
+
     for window_years in windows:
         ps, pe = period_bounds_for_window(as_of_month, window_years)
-        log.info("window=%sy period=%s..%s", window_years, ps, pe)
+        log.info("window=%sy period=%s..%s asset=%s", window_years, ps, pe, asset_type or "all")
         for addr1 in tqdm(addr1_list, desc=f"w{window_years}"):
             addr1_clause = "AND addr1 = :addr1" if addr1 else ""
-            sql = ROLLING_SQL.format(addr1_clause=addr1_clause)
-            params = {"p_start": ps, "p_end": pe}
+            sql = ROLLING_SQL.format(addr1_clause=addr1_clause, asset_clause=asset_clause)
+            params: dict = {"p_start": ps, "p_end": pe}
             if addr1:
                 params["addr1"] = addr1
+            if asset_type:
+                params["asset_type"] = asset_type
             with engine.connect() as conn:
                 rows = conn.execute(text(sql), params).mappings().all()
             records: list[dict] = []
@@ -296,17 +303,27 @@ def build_rolling(
     return total
 
 
-def build_annual(engine, *, addr1_filter: str | None, batch_id: str) -> int:
+def build_annual(
+    engine,
+    *,
+    addr1_filter: str | None,
+    batch_id: str,
+    asset_type: str | None = None,
+) -> int:
     total = 0
     with engine.connect() as conn:
         addr1_list = [addr1_filter] if addr1_filter else _distinct_addr1(conn)
 
+    asset_clause = "AND asset_type = :asset_type" if asset_type else ""
+
     for addr1 in tqdm(addr1_list, desc="annual"):
         addr1_clause = "AND addr1 = :addr1" if addr1 else ""
-        sql = ANNUAL_SQL.format(addr1_clause=addr1_clause)
-        params = {}
+        sql = ANNUAL_SQL.format(addr1_clause=addr1_clause, asset_clause=asset_clause)
+        params: dict = {}
         if addr1:
             params["addr1"] = addr1
+        if asset_type:
+            params["asset_type"] = asset_type
         with engine.connect() as conn:
             rows = conn.execute(text(sql), params).mappings().all()
         records: list[dict] = []
@@ -347,6 +364,12 @@ def main() -> None:
     p.add_argument("--as-of", type=str, default=None, help="기준월 YYYY-MM-01")
     p.add_argument("--windows", type=str, default="3,5", help="롤링 창(년)")
     p.add_argument("--addr1", type=str, default=None, help="시도(addr1) 한정 스모크")
+    p.add_argument(
+        "--asset-type",
+        type=str,
+        default=None,
+        help="단일 유형만 (예: presale). 미지정 시 전 유형",
+    )
     p.add_argument("--skip-annual", action="store_true")
     p.add_argument("--rolling-only", action="store_true")
     p.add_argument("--annual-only", action="store_true")
@@ -357,13 +380,22 @@ def main() -> None:
     for w in windows:
         if w < 1 or w > 5:
             raise SystemExit("window_years must be 1..5")
+    asset_type = (args.asset_type or "").strip() or None
+    if asset_type and asset_type not in ASSET_TYPES:
+        raise SystemExit(f"asset-type must be one of {ASSET_TYPES}")
 
     engine = get_collective_engine()
     batch_id = str(uuid.uuid4())
 
     with engine.connect() as conn:
         tx_n = conn.execute(text("SELECT COUNT(*) FROM collective_transactions")).scalar()
-    log.info("collective_transactions rows=%s as_of=%s windows=%s", tx_n, as_of, windows)
+    log.info(
+        "collective_transactions rows=%s as_of=%s windows=%s asset=%s",
+        tx_n,
+        as_of,
+        windows,
+        asset_type or "all",
+    )
     if not tx_n:
         raise SystemExit("collective_transactions empty — import_refined 먼저 실행")
 
@@ -375,18 +407,23 @@ def main() -> None:
             windows=windows,
             addr1_filter=args.addr1,
             batch_id=batch_id,
+            asset_type=asset_type,
         )
         log.info("collective_building_stats upserted ~%s rows (batch %s)", rolling_n, batch_id)
 
-    annual_n = 0
     if not args.skip_annual and not args.rolling_only:
-        annual_n = build_annual(engine, addr1_filter=args.addr1, batch_id=batch_id)
+        annual_n = build_annual(
+            engine,
+            addr1_filter=args.addr1,
+            batch_id=batch_id,
+            asset_type=asset_type,
+        )
         log.info("collective_building_annual_stats upserted ~%s rows", annual_n)
 
     with engine.connect() as conn:
         cbs = conn.execute(text("SELECT COUNT(*) FROM collective_building_stats")).scalar()
-        cba = conn.execute(text("SELECT COUNT(*) FROM collective_building_annual_stats")).scalar()
-    log.info("totals: building_stats=%s annual_stats=%s", cbs, cba)
+        cbas = conn.execute(text("SELECT COUNT(*) FROM collective_building_annual_stats")).scalar()
+    log.info("totals: building_stats=%s annual=%s", cbs, cbas)
 
 
 if __name__ == "__main__":

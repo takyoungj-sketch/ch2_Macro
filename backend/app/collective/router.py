@@ -16,8 +16,17 @@ from app.collective.analysis_explain import (
     build_residential_regression_explain,
 )
 from app.collective.analysis_gates import count_recent_transactions, evaluate_analysis_gates
-from app.collective.asset_scope import RESIDENTIAL_ASSET_TYPES, apply_asset_type_filter
+from app.collective.asset_scope import (
+    RESIDENTIAL_ASSET_TYPES,
+    apply_asset_type_filter,
+    includes_presale,
+    is_presale_only,
+    normalize_asset_type,
+    without_presale_asset_param,
+)
+from app.collective.meta_cache import get_ttl_cached
 from app.collective.building_stats_query import (
+    building_addr_meta,
     building_rolling_from_mart,
     building_rolling_live,
     building_yearly_from_mart,
@@ -25,6 +34,8 @@ from app.collective.building_stats_query import (
     latest_mart_snapshot,
     list_buildings_from_mart,
     list_buildings_live,
+    list_presale_lifetime_from_mart,
+    list_related_presale_from_annual,
     normalize_asset_type,
     stats_as_of_label,
     stats_reference_date,
@@ -66,6 +77,8 @@ from app.collective.schemas import (
     HistogramResponse,
     RegionOption,
     RegionStructureResponse,
+    RelatedPresaleCandidate,
+    RelatedPresaleResponse,
     TransactionListResponse,
     YearlyStatPoint,
     YearlyStatsResponse,
@@ -124,12 +137,24 @@ def filter_meta(
     db: Session = Depends(get_collective_db),
     asset_type: Optional[str] = Query(None),
 ):
-    def _distinct(col: str) -> list:
+    def _distinct_addr1() -> list:
         rows = db.execute(
             text(
-                f"""
-                SELECT DISTINCT {col} AS v FROM collective_transactions
-                WHERE {col} IS NOT NULL AND btrim({col}::text) <> ''
+                """
+                SELECT DISTINCT addr1 AS v FROM collective_transactions
+                WHERE addr1 IS NOT NULL AND addr1 <> ''
+                ORDER BY 1
+                """
+            )
+        ).fetchall()
+        return [r.v for r in rows]
+
+    def _distinct_asset_types() -> list:
+        rows = db.execute(
+            text(
+                """
+                SELECT DISTINCT asset_type AS v FROM collective_transactions
+                WHERE asset_type IS NOT NULL AND asset_type <> ''
                 ORDER BY 1
                 """
             )
@@ -145,22 +170,28 @@ def filter_meta(
         year_asset_sql = " AND asset_type = :asset_type"
     elif "asset_types" in year_params:
         year_asset_sql = " AND asset_type = ANY(:asset_types)"
-    years = db.execute(
-        text(
-            f"""
-            SELECT DISTINCT contract_year AS y FROM collective_transactions
-            WHERE contract_year IS NOT NULL
-              AND is_valid = true
-              {year_asset_sql}
-            ORDER BY 1
-            """
-        ),
-        year_params,
-    ).fetchall()
+    # 연도는 유형별·값은 작아 캐시 키에 asset 포함
+    year_cache_key = f"coll:years:{asset_type or 'all'}"
+
+    def _years() -> list[int]:
+        rows = db.execute(
+            text(
+                f"""
+                SELECT DISTINCT contract_year AS y FROM collective_transactions
+                WHERE contract_year IS NOT NULL
+                  AND is_valid = true
+                  {year_asset_sql}
+                ORDER BY 1
+                """
+            ),
+            year_params,
+        ).fetchall()
+        return [int(r.y) for r in rows]
+
     return CollectiveFilterMeta(
-        asset_types=_distinct("asset_type"),
-        contract_years=[int(r.y) for r in years],
-        addr1_list=_distinct("addr1"),
+        asset_types=get_ttl_cached("coll:asset_types", _distinct_asset_types),
+        contract_years=get_ttl_cached(year_cache_key, _years),
+        addr1_list=get_ttl_cached("coll:addr1", _distinct_addr1),
     )
 
 
@@ -306,6 +337,11 @@ def list_buildings(
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
     window_years: int = Query(5, ge=1, le=5),
+    presale_stats_mode: str = Query(
+        "rolling",
+        pattern="^(lifetime|rolling)$",
+        description="분양권 기본=rolling(3/5년, 타유형과 동일). lifetime=전체기간 mart(보조)",
+    ),
     sort: str = Query("count", pattern="^(count|mean|display_name|address)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(100, ge=1, le=500),
@@ -320,17 +356,32 @@ def list_buildings(
         raise HTTPException(400, "연도(from)는 연도(to) 이하여야 합니다.")
 
     conn = db.connection()
-    asset_filter = normalize_asset_type(asset_type)
     as_of_month, _ = latest_mart_snapshot(conn)
+    year_override = contract_year_from is not None or contract_year_to is not None
+    use_presale_lifetime = (
+        includes_presale(asset_type)
+        and not year_override
+        and presale_stats_mode == "lifetime"
+    )
+    use_presale_rolling = (
+        includes_presale(asset_type)
+        and not year_override
+        and presale_stats_mode == "rolling"
+    )
+    presale_only = is_presale_only(asset_type)
     meta: dict = {"data_source": "live", "window_years": window_years}
 
-    def _fetch_live(*, rolling_window: bool) -> list[BuildingStatsRow]:
+    def _fetch_live(
+        *,
+        rolling_window: bool,
+        asset_type_param: Optional[str],
+    ) -> list[BuildingStatsRow]:
         cd_from = cd_to = None
         if rolling_window and as_of_month is not None:
             cd_from, cd_to = period_bounds_for_window(as_of_month, window_years)
         where, params = _base_where(
             conn=conn,
-            asset_type=asset_type,
+            asset_type=asset_type_param,
             addr1=addr1,
             addr2=addr2,
             addr3=addr3,
@@ -341,32 +392,108 @@ def list_buildings(
             contract_date_from=cd_from,
             contract_date_to=cd_to,
         )
-        return list_buildings_live(conn, where, params, asset_type=asset_filter)
+        single = normalize_asset_type(asset_type_param, allowed=RESIDENTIAL_ASSET_TYPES)
+        return list_buildings_live(conn, where, params, asset_type=single)
 
-    mart = list_buildings_from_mart(
-        conn,
-        asset_type=asset_type,
-        addr1=addr1,
-        addr2=addr2,
-        addr3=addr3,
-        addr3_list=addr3_list or None,
-        addr4_list=addr4_list or None,
-        window_years=window_years,
-        as_of_month=as_of_month,
-        contract_year_from=contract_year_from,
-        contract_year_to=contract_year_to,
-    )
-    use_live = mart is None
     items: list[BuildingStatsRow] = []
-    if mart is not None:
-        items, meta = mart
-        if not items and contract_year_from is None and contract_year_to is None:
-            use_live = True
-    if use_live:
-        items = _fetch_live(
-            rolling_window=contract_year_from is None and contract_year_to is None
+    sources: list[str] = []
+
+    # 1) 비분양권 — 기존 3/5년 mart·live
+    non_presale_param = without_presale_asset_param(asset_type)
+    if non_presale_param is not None:
+        mart = list_buildings_from_mart(
+            conn,
+            asset_type=non_presale_param,
+            addr1=addr1,
+            addr2=addr2,
+            addr3=addr3,
+            addr3_list=addr3_list or None,
+            addr4_list=addr4_list or None,
+            window_years=window_years,
+            as_of_month=as_of_month,
+            contract_year_from=contract_year_from,
+            contract_year_to=contract_year_to,
         )
-        meta = {"data_source": "live", "window_years": window_years}
+        use_live = mart is None
+        if mart is not None:
+            part, part_meta = mart
+            if not part and not year_override:
+                use_live = True
+            else:
+                items.extend(part)
+                sources.append(part_meta.get("data_source", "mart"))
+                meta.update(part_meta)
+        if use_live:
+            items.extend(
+                _fetch_live(
+                    rolling_window=not year_override,
+                    asset_type_param=non_presale_param,
+                )
+            )
+            sources.append("live")
+
+    # 2) 분양권 — rolling 3·5(기본, 타유형과 동일) / lifetime(보조) / 연도 live
+    if includes_presale(asset_type):
+        if year_override:
+            items.extend(_fetch_live(rolling_window=False, asset_type_param="presale"))
+            sources.append("live")
+        elif use_presale_lifetime:
+            lt = list_presale_lifetime_from_mart(
+                conn,
+                addr1=addr1,
+                addr2=addr2,
+                addr3=addr3,
+                addr3_list=addr3_list or None,
+                addr4_list=addr4_list or None,
+            )
+            if lt is not None and len(lt[0]) > 0:
+                part, part_meta = lt
+                items.extend(part)
+                sources.append(part_meta.get("data_source", "mart"))
+                if presale_only:
+                    meta.update(part_meta)
+                else:
+                    meta["presale_stats_mode"] = "lifetime"
+            else:
+                items.extend(_fetch_live(rolling_window=False, asset_type_param="presale"))
+                sources.append("live")
+                meta["presale_stats_mode"] = "lifetime"
+        elif use_presale_rolling:
+            mart = list_buildings_from_mart(
+                conn,
+                asset_type="presale",
+                addr1=addr1,
+                addr2=addr2,
+                addr3=addr3,
+                addr3_list=addr3_list or None,
+                addr4_list=addr4_list or None,
+                window_years=window_years,
+                as_of_month=as_of_month,
+                contract_year_from=None,
+                contract_year_to=None,
+            )
+            if mart is not None and mart[0]:
+                part, part_meta = mart
+                items.extend(part)
+                sources.append(part_meta.get("data_source", "mart"))
+                meta["presale_stats_mode"] = "rolling"
+            else:
+                items.extend(
+                    _fetch_live(rolling_window=True, asset_type_param="presale")
+                )
+                sources.append("live")
+                meta["presale_stats_mode"] = "rolling"
+
+    if sources:
+        meta["data_source"] = (
+            "mart"
+            if all(s == "mart" for s in sources)
+            else ("live" if "live" in sources else sources[0])
+        )
+    if presale_only and use_presale_lifetime:
+        meta["window_years"] = None
+    else:
+        meta["window_years"] = window_years
 
     if sort == "display_name":
         items.sort(key=lambda x: x.display_name)
@@ -380,7 +507,11 @@ def list_buildings(
     total = len(items)
     start = (page - 1) * page_size
     page_items = items[start : start + page_size]
-    if as_of_month is not None:
+    if presale_only and use_presale_lifetime:
+        meta.setdefault("period_start", None)
+        meta.setdefault("period_end", None)
+        meta.setdefault("stats_as_of_label", "분양권 전체 거래기간")
+    elif as_of_month is not None:
         ps, pe = period_bounds_for_window(as_of_month, window_years)
         meta.setdefault("period_start", ps.isoformat())
         meta.setdefault("period_end", pe.isoformat())
@@ -388,6 +519,7 @@ def list_buildings(
             meta.setdefault("stats_as_of_label", stats_as_of_label(as_of_month))
             meta.setdefault("stats_reference_date", stats_reference_date(as_of_month).isoformat())
             meta.setdefault("as_of_month", as_of_month.isoformat())
+
     return BuildingListResponse(
         total=total,
         items=page_items,
@@ -398,22 +530,40 @@ def list_buildings(
         window_years=meta.get("window_years", window_years),
         period_start=meta.get("period_start"),
         period_end=meta.get("period_end"),
+        presale_stats_mode=meta.get("presale_stats_mode"),
     )
 
 
 def _get_building_meta(db: Session, building_key: str) -> tuple[str, str]:
-    row = db.execute(
-        text(
-            """
-            SELECT display_name, asset_type FROM collective_transactions
-            WHERE building_key = :bk LIMIT 1
-            """
-        ),
-        {"bk": building_key},
-    ).mappings().first()
-    if not row:
+    meta = building_addr_meta(db.connection(), building_key)
+    if not meta:
         raise HTTPException(404, "건물을 찾을 수 없습니다")
-    return row["display_name"], row["asset_type"]
+    return str(meta["display_name"] or ""), str(meta["asset_type"] or "")
+
+
+@router.get("/buildings/{building_key}/related-presale", response_model=RelatedPresaleResponse)
+def related_presale_annual(
+    building_key: str,
+    db: Session = Depends(get_collective_db),
+    limit: int = Query(20, ge=1, le=50),
+    min_score: float = Query(0.45, ge=0.0, le=1.0),
+):
+    """장기추세용 — 같은 시군구 annual 분양권 후보(이름 유사도). 키 자동 병합 없음."""
+    resolved = list_related_presale_from_annual(
+        db.connection(),
+        building_key,
+        limit=limit,
+        min_score=min_score,
+    )
+    if resolved is None:
+        raise HTTPException(404, "건물을 찾을 수 없습니다")
+    src, candidates = resolved
+    return RelatedPresaleResponse(
+        source_building_key=building_key,
+        source_display_name=str(src.get("display_name") or ""),
+        source_asset_type=str(src.get("asset_type") or ""),
+        candidates=[RelatedPresaleCandidate(**c) for c in candidates],
+    )
 
 
 @router.get("/buildings/{building_key}/transactions", response_model=TransactionListResponse)

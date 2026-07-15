@@ -103,6 +103,8 @@ class BuildingListResponse(BaseModel):
     window_years: Optional[int] = None
     period_start: Optional[str] = None
     period_end: Optional[str] = None
+    # lifetime | rolling — 분양권 목록 모드 (혼합 목록에서도 참고)
+    presale_stats_mode: Optional[str] = None
 
 
 class CollectiveTransactionRow(BaseModel):
@@ -147,6 +149,26 @@ class YearlyStatsResponse(BaseModel):
     display_name: str
     points: list[YearlyStatPoint]
     data_source: Literal["mart", "live"] = "live"
+
+
+class RelatedPresaleCandidate(BaseModel):
+    building_key: str
+    display_name: str
+    addr1: Optional[str] = None
+    addr2: Optional[str] = None
+    addr3: Optional[str] = None
+    addr4: Optional[str] = None
+    year_from: int
+    year_to: int
+    total_count: int
+    score: float
+
+
+class RelatedPresaleResponse(BaseModel):
+    source_building_key: str
+    source_display_name: str
+    source_asset_type: str
+    candidates: list[RelatedPresaleCandidate] = Field(default_factory=list)
 
 
 class RollingStatPoint(BaseModel):

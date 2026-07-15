@@ -10,6 +10,7 @@ import {
   fetchBuildingHistogram,
   fetchBuildingRollingStats,
   fetchBuildingYearlyStats,
+  fetchRelatedPresaleAnnual,
   fetchCohortHistogram,
   type BuildingStatsRow,
 } from "../api/client";
@@ -112,9 +113,13 @@ export default function BuildingDetailModal({
   const [txExportLoading, setTxExportLoading] = useState(false);
   const [txExportError, setTxExportError] = useState<string | null>(null);
   const [cohortChartMetric, setCohortChartMetric] = useState<CohortTrendMetric>("mean");
-  const [longTermMetric, setLongTermMetric] = useState<LongTermPriceMetric>("median");
+  const [longTermMetric, setLongTermMetric] = useState<LongTermPriceMetric>("mean");
   const [defaultSize] = useState(defaultBuildingDetailSize);
+  const [presaleOverlay, setPresaleOverlay] = useState<{ key: string; name: string }[]>([]);
+  const [showPresalePicker, setShowPresalePicker] = useState(false);
   const experiment = COLLECTIVE_EXPERIMENT_MODE;
+  /** 준공 거주유형(아파트·연립·오피스텔) — 분양권 본인 모달에는 불필요 */
+  const canAttachPresaleAnnual = effectiveAssetType !== "presale";
 
   const cohortKeys = useMemo(
     () => [row.building_key, ...cohortExtra.filter((k) => k !== row.building_key)].slice(0, MAX_COHORT_BUILDINGS),
@@ -213,6 +218,35 @@ export default function BuildingDetailModal({
     enabled: cohortRunForPanel("long_term") > 0 && cohortRunKeys.length > 1 && panel === "long_term",
   });
 
+  const relatedPresaleQ = useQuery({
+    queryKey: ["related-presale", row.building_key],
+    queryFn: () => fetchRelatedPresaleAnnual(row.building_key),
+    enabled: showPresalePicker && canAttachPresaleAnnual && panel === "long_term",
+  });
+
+  const presaleOverlayQ = useQuery({
+    queryKey: ["presale-overlay-year", row.building_key, presaleOverlay.map((p) => p.key)],
+    queryFn: async () =>
+      Promise.all(
+        presaleOverlay.map(async (p) => {
+          const data = await fetchBuildingYearlyStats(p.key);
+          return { ...data, display_name: `분양권 · ${p.name || data.display_name}` };
+        }),
+      ),
+    enabled:
+      cohortRunForPanel("long_term") === 0 &&
+      presaleOverlay.length > 0 &&
+      panel === "long_term",
+  });
+
+  const overlayLongTermSeries = useMemo(() => {
+    if (!longTermYearQ.data || !presaleOverlayQ.data?.length) return null;
+    return [
+      yearlyResponseToTrendSeries(longTermYearQ.data),
+      ...presaleOverlayQ.data.map(yearlyResponseToTrendSeries),
+    ];
+  }, [longTermYearQ.data, presaleOverlayQ.data]);
+
   const cohortHistQ = useQuery({
     queryKey: [
       "cohort-hist",
@@ -237,6 +271,8 @@ export default function BuildingDetailModal({
     setCohortRunKeys([]);
     setCohortRunByPanel({});
     setCohortChartMetric("mean");
+    setPresaleOverlay([]);
+    setShowPresalePicker(false);
   }, [row.building_key]);
 
   const runCohortAnalysis = () => {
@@ -512,6 +548,76 @@ export default function BuildingDetailModal({
 
           {panel === "long_term" && (
             <>
+              {canAttachPresaleAnnual && !longTermCohortActive && (
+                <div className="mb-2 rounded border border-slate-200 dark:border-slate-600 bg-slate-50/80 dark:bg-slate-800/40 px-2 py-1.5 text-[10px]">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">과거 분양권 추세</span>
+                    <span className="text-slate-500">
+                      아파트·연립·오피스텔에서 관련 분양권 annual을 겹쳐 봅니다 (자동 병합 없음)
+                    </span>
+                    <button
+                      type="button"
+                      className="ml-auto px-2 py-0.5 rounded border border-slate-300 dark:border-slate-500 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700"
+                      onClick={() => setShowPresalePicker((v) => !v)}
+                    >
+                      {showPresalePicker ? "후보 닫기" : "후보 찾기"}
+                    </button>
+                  </div>
+                  {presaleOverlay.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {presaleOverlay.map((p) => (
+                        <button
+                          key={p.key}
+                          type="button"
+                          className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-500 text-slate-700 dark:text-slate-200"
+                          onClick={() => setPresaleOverlay((prev) => prev.filter((x) => x.key !== p.key))}
+                          title="제거"
+                        >
+                          분양권 · {p.name} ×
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {showPresalePicker && relatedPresaleQ.isLoading && (
+                    <p className="mt-1 text-slate-400">후보 검색 중…</p>
+                  )}
+                  {showPresalePicker && relatedPresaleQ.isError && (
+                    <p className="mt-1 text-amber-700">관련 분양권을 불러오지 못했습니다.</p>
+                  )}
+                  {showPresalePicker && relatedPresaleQ.data && (
+                    <div className="mt-1 max-h-36 overflow-y-auto space-y-0.5">
+                      {relatedPresaleQ.data.candidates.length === 0 ? (
+                        <p className="text-slate-400">같은 시군구에서 이름 유사 분양권 annual이 없습니다.</p>
+                      ) : (
+                        relatedPresaleQ.data.candidates.map((c) => {
+                          const added = presaleOverlay.some((p) => p.key === c.building_key);
+                          return (
+                            <button
+                              key={c.building_key}
+                              type="button"
+                              disabled={added || (presaleOverlay.length + 1 >= MAX_COHORT_BUILDINGS)}
+                              className="w-full text-left px-1.5 py-1 rounded hover:bg-white dark:hover:bg-slate-700 disabled:opacity-40"
+                              onClick={() =>
+                                setPresaleOverlay((prev) =>
+                                  prev.some((p) => p.key === c.building_key)
+                                    ? prev
+                                    : [...prev, { key: c.building_key, name: c.display_name }],
+                                )
+                              }
+                            >
+                              <span className="font-medium text-slate-800 dark:text-slate-100">{c.display_name}</span>
+                              <span className="ml-1 text-slate-500">
+                                {c.year_from}–{c.year_to} · n={c.total_count.toLocaleString("ko-KR")}
+                                {c.addr3 ? ` · ${c.addr3}` : ""}
+                              </span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
               {longTermCohortActive && cohortLongTermQ.isLoading && (
                 <p className="text-xs text-slate-400 text-center py-6">코호트 연도별 집계 중…</p>
               )}
@@ -536,13 +642,32 @@ export default function BuildingDetailModal({
                   onPriceMetricChange={setLongTermMetric}
                 />
               )}
-              {!longTermCohortActive && longTermYearQ.isLoading && (
+              {!longTermCohortActive && overlayLongTermSeries && (
+                <CohortTrendPanel
+                  series={overlayLongTermSeries}
+                  metric={cohortChartMetric}
+                  onMetricChange={setCohortChartMetric}
+                  buildingCount={overlayLongTermSeries.length}
+                  chartTitle="연도별 추이 (본단지 + 분양권)"
+                  note="분양권은 annual mart(2010–) · 키는 분리된 sibling 비교"
+                  variant="longTerm"
+                  priceMetric={longTermMetric}
+                  onPriceMetricChange={setLongTermMetric}
+                />
+              )}
+              {!longTermCohortActive &&
+                !overlayLongTermSeries &&
+                presaleOverlay.length > 0 &&
+                (longTermYearQ.isLoading || presaleOverlayQ.isLoading) && (
+                <p className="text-xs text-slate-400 text-center py-6">본단지·분양권 연도별 집계 중…</p>
+              )}
+              {!longTermCohortActive && !overlayLongTermSeries && !presaleOverlay.length && longTermYearQ.isLoading && (
                 <p className="text-xs text-slate-400 text-center py-6">연도별 집계 중…</p>
               )}
-              {!longTermCohortActive && !longTermYearQ.isLoading && longTermYears.length === 0 && (
+              {!longTermCohortActive && !overlayLongTermSeries && !presaleOverlay.length && !longTermYearQ.isLoading && longTermYears.length === 0 && (
                 <p className="text-xs text-slate-400 text-center py-6">표시할 연도별 데이터가 없습니다.</p>
               )}
-              {!longTermCohortActive && longTermYears.length > 0 && (
+              {!longTermCohortActive && !overlayLongTermSeries && !presaleOverlay.length && longTermYears.length > 0 && (
                 <>
                   {longTermYears.some((p) => p.year < 2021) && (
                     <p className="text-[10px] text-indigo-600 dark:text-indigo-400 mb-1">

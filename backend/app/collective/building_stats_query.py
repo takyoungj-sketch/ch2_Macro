@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date
+from difflib import SequenceMatcher
 from typing import Any, Optional
 
 from sqlalchemy import text
@@ -226,6 +228,97 @@ def _fetch_annual_years(conn: Connection, building_keys: list[str]) -> dict[str,
     return out
 
 
+def list_presale_lifetime_from_mart(
+    conn: Connection,
+    *,
+    addr1: Optional[str],
+    addr2: Optional[str],
+    addr3: Optional[str],
+    addr3_list: list[str] | None,
+    addr4_list: list[str] | None,
+) -> tuple[list[BuildingStatsRow], dict[str, Any]] | None:
+    """분양권 전체기간 mart. 없으면 None → live fallback."""
+    if not _table_exists(conn, "public.collective_presale_lifetime_stats"):
+        return None
+
+    region_sql, params = _mart_region_where(
+        conn,
+        asset_type="presale",
+        addr1=addr1,
+        addr2=addr2,
+        addr3=addr3,
+        addr3_list=addr3_list,
+        addr4_list=addr4_list,
+    )
+    # lifetime 테이블은 asset_type 고정 — 필터에서 중복 제외는 apply가 =presale 넣음 OK
+    addr5_col = "m.addr5"
+    rows = conn.execute(
+        text(
+            f"""
+            SELECT m.building_key, m.display_name, m.asset_type,
+                   m.addr3, m.addr4, {addr5_col}, m.lot_number, m.road_name, m.building_year,
+                   m.count, m.mean, m.median, m.ci_lower, m.ci_upper,
+                   m.period_start, m.period_end, m.snapshot_as_of
+            FROM collective_presale_lifetime_stats m
+            WHERE {region_sql}
+            """
+        ),
+        params,
+    ).mappings().all()
+    if not rows:
+        return [], {
+            "data_source": "mart",
+            "presale_stats_mode": "lifetime",
+            "stats_as_of_label": "분양권 전체 거래기간",
+            "window_years": None,
+            "period_start": None,
+            "period_end": None,
+        }
+
+    years_by_key = _fetch_annual_years(conn, [r["building_key"] for r in rows])
+    items: list[BuildingStatsRow] = []
+    for r in rows:
+        bk = r["building_key"]
+        years = years_by_key.get(bk, [])
+        cnt_recent = count_recent_transactions(
+            years,
+            contract_year_from=None,
+            contract_year_to=None,
+        )
+        gates = evaluate_analysis_gates(int(r["count"] or 0), cnt_recent)
+        items.append(
+            _stats_row_from_parts(
+                dict(r),
+                asset_type="presale",
+                gates=AnalysisFeatures(
+                    floor_index=gates.floor_index_eligible,
+                    regression=gates.regression_eligible,
+                    count_total=gates.count_total,
+                    count_recent=gates.count_recent,
+                    messages=gates.messages,
+                ),
+            )
+        )
+
+    snap = rows[0].get("snapshot_as_of")
+    meta: dict[str, Any] = {
+        "data_source": "mart",
+        "presale_stats_mode": "lifetime",
+        "stats_as_of_label": "분양권 전체 거래기간",
+        "window_years": None,
+        "period_start": None,
+        "period_end": None,
+    }
+    if snap is not None:
+        meta["as_of_month"] = snap.isoformat() if hasattr(snap, "isoformat") else str(snap)
+        try:
+            d = snap if isinstance(snap, date) else date.fromisoformat(str(snap)[:10])
+            meta["stats_reference_date"] = stats_reference_date(d).isoformat()
+        except Exception:
+            pass
+    return items, meta
+
+
 def list_buildings_from_mart(
     conn: Connection,
     *,
@@ -407,6 +500,133 @@ def building_yearly_resolved(
     mart_years = {int(p["year"]) for p in mart[1]}
     source: str = "mart" if all(int(p["year"]) in mart_years for p in points) else "live"
     return display_name, points, source
+
+
+_COMPACT_NAME_RE = re.compile(r"\s+")
+
+
+def _compact_building_name(name: str | None) -> str:
+    return _COMPACT_NAME_RE.sub("", (name or "").strip())
+
+
+def _related_presale_name_score(
+    source_name: str,
+    candidate_name: str,
+    *,
+    same_dong: bool,
+) -> float:
+    """아파트 등 ↔ 분양권 annual 후보 이름 유사도 (키 병합 아님)."""
+    a = _compact_building_name(source_name)
+    b = _compact_building_name(candidate_name)
+    if not a or not b:
+        return 0.0
+    base = 0.28 if same_dong else 0.08
+    if a in b or b in a:
+        return min(1.0, base + 0.7)
+    ratio = SequenceMatcher(None, a, b).ratio()
+    return min(1.0, base + 0.7 * ratio)
+
+
+def building_addr_meta(
+    conn: Connection,
+    building_key: str,
+) -> dict[str, Any] | None:
+    """거래 원장 우선, 없으면 annual mart (장기 분양권 전용 키 지원)."""
+    row = conn.execute(
+        text(
+            """
+            SELECT display_name, asset_type, addr1, addr2, addr3, addr4
+            FROM collective_transactions
+            WHERE building_key = :bk
+            LIMIT 1
+            """
+        ),
+        {"bk": building_key},
+    ).mappings().first()
+    if row:
+        return dict(row)
+    if not _table_exists(conn, "public.collective_building_annual_stats"):
+        return None
+    row = conn.execute(
+        text(
+            """
+            SELECT display_name, asset_type, addr1, addr2, addr3, addr4
+            FROM collective_building_annual_stats
+            WHERE building_key = :bk
+            ORDER BY contract_year DESC
+            LIMIT 1
+            """
+        ),
+        {"bk": building_key},
+    ).mappings().first()
+    return dict(row) if row else None
+
+
+def list_related_presale_from_annual(
+    conn: Connection,
+    building_key: str,
+    *,
+    limit: int = 20,
+    min_score: float = 0.45,
+) -> tuple[dict[str, Any], list[dict[str, Any]]] | None:
+    """같은 시군구(·동) annual 분양권 후보. 키 병합 없이 점수순 제안."""
+    src = building_addr_meta(conn, building_key)
+    if src is None:
+        return None
+    if not src.get("addr1") or not src.get("addr2"):
+        return src, []
+    if not _table_exists(conn, "public.collective_building_annual_stats"):
+        return src, []
+
+    rows = conn.execute(
+        text(
+            """
+            SELECT building_key,
+                   MAX(display_name) AS display_name,
+                   MAX(addr1) AS addr1,
+                   MAX(addr2) AS addr2,
+                   MAX(addr3) AS addr3,
+                   MAX(addr4) AS addr4,
+                   MIN(contract_year)::int AS year_from,
+                   MAX(contract_year)::int AS year_to,
+                   SUM(count)::int AS total_count
+            FROM collective_building_annual_stats
+            WHERE asset_type = 'presale'
+              AND addr1 = :a1
+              AND addr2 = :a2
+              AND building_key <> :bk
+            GROUP BY building_key
+            """
+        ),
+        {"a1": src["addr1"], "a2": src["addr2"], "bk": building_key},
+    ).mappings().all()
+
+    src_name = str(src.get("display_name") or "")
+    src_dong = (src.get("addr3") or "").strip()
+    scored: list[dict[str, Any]] = []
+    for r in rows:
+        same_dong = bool(src_dong) and (r.get("addr3") or "").strip() == src_dong
+        score = _related_presale_name_score(
+            src_name, str(r.get("display_name") or ""), same_dong=same_dong
+        )
+        if score < min_score:
+            continue
+        scored.append(
+            {
+                "building_key": r["building_key"],
+                "display_name": r["display_name"] or "",
+                "addr1": r.get("addr1"),
+                "addr2": r.get("addr2"),
+                "addr3": r.get("addr3"),
+                "addr4": r.get("addr4"),
+                "year_from": int(r["year_from"]),
+                "year_to": int(r["year_to"]),
+                "total_count": int(r["total_count"] or 0),
+                "score": round(score, 3),
+            }
+        )
+    scored.sort(key=lambda x: (-x["score"], -x["total_count"], x["display_name"]))
+    return src, scored[:limit]
 
 
 def list_buildings_live(

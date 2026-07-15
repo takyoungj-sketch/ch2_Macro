@@ -12,6 +12,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session
 
 from app.collective.asset_scope import COMMERCIAL_ASSET_TYPES, apply_asset_type_filter
+from app.collective.meta_cache import get_ttl_cached
 from app.collective.building_stats_query import stats_as_of_label, stats_reference_date
 from app.v2_stats_windows import period_bounds_for_window
 from app.collective_commercial.cluster_stats_query import (
@@ -137,34 +138,43 @@ def _cluster_display_label(db: Session, cluster_key: str) -> str:
 
 @router.get("/meta/filters", response_model=CommercialFilterMeta)
 def filter_meta(db: Session = Depends(get_collective_db)):
-    years = db.execute(
-        text(
-            """
-            SELECT DISTINCT contract_year AS y FROM collective_commercial_transactions
-            WHERE contract_year IS NOT NULL ORDER BY 1
-            """
-        )
-    ).fetchall()
-    addr1 = db.execute(
-        text(
-            """
-            SELECT DISTINCT addr1 AS v FROM collective_commercial_transactions
-            WHERE addr1 IS NOT NULL AND btrim(addr1) <> '' ORDER BY 1
-            """
-        )
-    ).fetchall()
-    types = db.execute(
-        text(
-            """
-            SELECT DISTINCT asset_type AS v FROM collective_commercial_transactions
-            WHERE asset_type IS NOT NULL ORDER BY 1
-            """
-        )
-    ).fetchall()
+    def _years() -> list[int]:
+        rows = db.execute(
+            text(
+                """
+                SELECT DISTINCT contract_year AS y FROM collective_commercial_transactions
+                WHERE contract_year IS NOT NULL ORDER BY 1
+                """
+            )
+        ).fetchall()
+        return [int(r.y) for r in rows]
+
+    def _addr1() -> list:
+        rows = db.execute(
+            text(
+                """
+                SELECT DISTINCT addr1 AS v FROM collective_commercial_transactions
+                WHERE addr1 IS NOT NULL AND addr1 <> '' ORDER BY 1
+                """
+            )
+        ).fetchall()
+        return [r.v for r in rows]
+
+    def _types() -> list:
+        rows = db.execute(
+            text(
+                """
+                SELECT DISTINCT asset_type AS v FROM collective_commercial_transactions
+                WHERE asset_type IS NOT NULL ORDER BY 1
+                """
+            )
+        ).fetchall()
+        return [r.v for r in rows]
+
     return CommercialFilterMeta(
-        asset_types=[r.v for r in types],
-        contract_years=[int(r.y) for r in years],
-        addr1_list=[r.v for r in addr1],
+        asset_types=get_ttl_cached("comm:asset_types", _types),
+        contract_years=get_ttl_cached("comm:years", _years),
+        addr1_list=get_ttl_cached("comm:addr1", _addr1),
     )
 
 

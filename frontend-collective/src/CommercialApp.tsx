@@ -103,7 +103,12 @@ export default function CommercialApp() {
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
   const { isDark, toggleUiColorScheme } = useUiColorScheme();
 
-  const metaQ = useQuery({ queryKey: ["comm-meta"], queryFn: fetchCommercialFilterMeta });
+  const metaQ = useQuery({
+    queryKey: ["comm-meta"],
+    queryFn: fetchCommercialFilterMeta,
+    staleTime: 60_000,
+    placeholderData: (prev) => prev,
+  });
   const addr2Q = useQuery({
     queryKey: ["comm-addr2", addr1],
     queryFn: () => fetchCommercialAddr2(addr1),
@@ -191,7 +196,6 @@ export default function CommercialApp() {
     el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [clusterSearchQ, clusterMatchCount, clustersQ.data?.items]);
 
-  const years = metaQ.data?.contract_years ?? [];
   const scopeStale =
     scope !== null &&
     (scope.assetType !== assetType ||
@@ -284,36 +288,12 @@ export default function CommercialApp() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <label className="text-xs block space-y-1">
-                <span className="text-slate-500 dark:text-slate-400">연도(from)</span>
-                <select className="input" value={yearFrom} onChange={(e) => setYearFrom(e.target.value ? Number(e.target.value) : "")}>
-                  <option value="">—</option>
-                  {years.map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-xs block space-y-1">
-                <span className="text-slate-500 dark:text-slate-400">연도(to)</span>
-                <select className="input" value={yearTo} onChange={(e) => setYearTo(e.target.value ? Number(e.target.value) : "")}>
-                  <option value="">—</option>
-                  {years.map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
             <label className="text-xs block space-y-1">
               <span className="text-slate-500 dark:text-slate-400">시도</span>
               <select
                 className="input"
                 value={addr1}
+                disabled={metaQ.isLoading && !metaQ.data}
                 onChange={(e) => {
                   setAddr1(e.target.value);
                   setAddr2("");
@@ -327,6 +307,9 @@ export default function CommercialApp() {
                   </option>
                 ))}
               </select>
+              {metaQ.isLoading && !metaQ.data && (
+                <span className="text-slate-400 text-[11px]">시도 목록 불러오는 중…</span>
+              )}
             </label>
 
             <label className="text-xs block space-y-1">
@@ -406,13 +389,7 @@ export default function CommercialApp() {
             <StatsWindowToggle
               value={windowYears}
               onChange={(y) => setWindowYears(normalizeStatsWindowYears(y))}
-              disabled={hasYearFilter(yearFrom, yearTo)}
             />
-            {hasYearFilter(yearFrom, yearTo) && (
-              <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-snug">
-                연도가 선택되어 롤링 구간은 적용되지 않습니다.
-              </p>
-            )}
 
             <button type="button" className="btn btn-primary w-full" disabled={!addr2} onClick={runAnalysis}>
               통계분석

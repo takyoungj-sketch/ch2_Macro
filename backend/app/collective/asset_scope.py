@@ -81,6 +81,34 @@ def normalize_asset_type(
     return None
 
 
+def residential_types_selected(asset_type: str | None) -> list[str] | None:
+    """주거 필터 목록. None = 주거 전체."""
+    return parse_asset_types(asset_type, allowed=RESIDENTIAL_ASSET_TYPES)
+
+
+def includes_presale(asset_type: str | None) -> bool:
+    types = residential_types_selected(asset_type)
+    if types is None:
+        return True
+    return "presale" in types
+
+
+def is_presale_only(asset_type: str | None) -> bool:
+    types = residential_types_selected(asset_type)
+    return types == ["presale"]
+
+
+def without_presale_asset_param(asset_type: str | None) -> str | None:
+    """목록 롤링 조회용 — 분양권 제외. 전부만이면 None(스킵)."""
+    types = residential_types_selected(asset_type)
+    if types is None:
+        return ",".join(t for t in _RESIDENTIAL_ORDER if t != "presale")
+    rest = [t for t in types if t != "presale"]
+    if not rest:
+        return None
+    return ",".join(rest)
+
+
 def is_multi_or_all(asset_type: str | None, *, allowed: frozenset[str]) -> bool:
     if not asset_type:
         return False

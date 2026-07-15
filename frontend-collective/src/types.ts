@@ -142,6 +142,7 @@ export interface BuildingListResponse {
   window_years?: number | null;
   period_start?: string | null;
   period_end?: string | null;
+  presale_stats_mode?: "lifetime" | "rolling" | null;
 }
 
 export interface CommercialFilterMeta {

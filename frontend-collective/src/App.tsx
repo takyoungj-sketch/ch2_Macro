@@ -18,15 +18,13 @@ import RegionChipPanel, {
   toggleChipMulti,
   toggleChipSingle,
 } from "./components/RegionChipPanel";
-import StatsWindowToggle, { normalizeStatsWindowYears, type StatsWindowYears } from "./components/StatsWindowToggle";
+import StatsWindowToggle, {
+  normalizeStatsWindowYears,
+  type StatsWindowYears,
+} from "./components/StatsWindowToggle";
 import type { AssetSelectorType, RegionOption } from "./types";
 import { assetTypeLabel } from "./types";
 import {
-  applyYearFrom,
-  applyYearTo,
-  clampYearsToAvailable,
-  filterFromYearOptions,
-  filterToYearOptions,
   hasYearFilter,
 } from "./utils/contractYearRange";
 import {
@@ -140,8 +138,10 @@ export default function App() {
   const { isDark, toggleUiColorScheme } = useUiColorScheme();
 
   const metaQ = useQuery({
-    queryKey: ["coll-meta", assetType],
-    queryFn: () => fetchFilterMeta(assetType),
+    queryKey: ["coll-meta"],
+    queryFn: () => fetchFilterMeta(),
+    staleTime: 60_000,
+    placeholderData: (prev) => prev,
   });
   const addr2Q = useQuery({
     queryKey: ["coll-addr2", addr1, assetType],
@@ -213,6 +213,7 @@ export default function App() {
         contract_year_from: scope.yearFrom === "" ? undefined : scope.yearFrom,
         contract_year_to: scope.yearTo === "" ? undefined : scope.yearTo,
         window_years: scope.windowYears,
+        presale_stats_mode: "rolling",
         sort: scope.sort,
       });
     },
@@ -237,26 +238,6 @@ export default function App() {
 
   const addr2ScopeLabel = formatScopeAddr2(addr2, addr1) || addr1;
 
-  const years = metaQ.data?.contract_years ?? [];
-  const fromYearOptions = useMemo(() => filterFromYearOptions(years, yearTo), [years, yearTo]);
-  const toYearOptions = useMemo(() => filterToYearOptions(years, yearFrom), [years, yearFrom]);
-  const yearFilterActive = hasYearFilter(yearFrom, yearTo);
-
-  useEffect(() => {
-    const next = clampYearsToAvailable(yearFrom, yearTo, years);
-    if (next.from !== yearFrom) setYearFrom(next.from);
-    if (next.to !== yearTo) setYearTo(next.to);
-  }, [years, yearFrom, yearTo]);
-
-  const handleYearFromChange = (value: number | "") => {
-    setYearFrom(value);
-    setYearTo((prev) => applyYearFrom(value, prev));
-  };
-
-  const handleYearToChange = (value: number | "") => {
-    setYearTo(value);
-    setYearFrom((prev) => applyYearTo(prev, value));
-  };
   const scopeStale =
     scope !== null &&
     (scope.assetType !== assetType ||
@@ -349,40 +330,8 @@ export default function App() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <label className="text-xs block space-y-1">
-                <span className="text-slate-500 dark:text-slate-400">연도(from)</span>
-                <select
-                  className="input"
-                  value={yearFrom}
-                  onChange={(e) => handleYearFromChange(e.target.value ? Number(e.target.value) : "")}
-                >
-                  <option value="">—</option>
-                  {fromYearOptions.map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-xs block space-y-1">
-                <span className="text-slate-500 dark:text-slate-400">연도(to)</span>
-                <select
-                  className="input"
-                  value={yearTo}
-                  onChange={(e) => handleYearToChange(e.target.value ? Number(e.target.value) : "")}
-                >
-                  <option value="">—</option>
-                  {toYearOptions.map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
             <p className="text-[10px] text-slate-400 leading-snug">
-              연도 미선택: 직전 월말 기준 롤링 {windowYears}년 창. 연도 지정: 해당 연도 거래만 집계(실시간).
+              직전 월말 기준 롤링 {windowYears}년 창으로 집계합니다.
             </p>
 
             <label className="text-xs block space-y-1">
@@ -390,6 +339,7 @@ export default function App() {
               <select
                 className="input"
                 value={addr1}
+                disabled={metaQ.isLoading && !metaQ.data}
                 onChange={(e) => {
                   setAddr1(e.target.value);
                   setAddr2("");
@@ -403,6 +353,9 @@ export default function App() {
                   </option>
                 ))}
               </select>
+              {metaQ.isLoading && !metaQ.data && (
+                <span className="text-slate-400 text-[11px]">시도 목록 불러오는 중…</span>
+              )}
             </label>
 
             <label className="text-xs block space-y-1">
@@ -483,11 +436,7 @@ export default function App() {
             <StatsWindowToggle
               value={windowYears}
               onChange={(y) => setWindowYears(normalizeStatsWindowYears(y))}
-              disabled={yearFilterActive}
             />
-            {yearFilterActive && (
-              <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-snug">연도가 선택되어 롤링 구간은 적용되지 않습니다.</p>
-            )}
 
             <button type="button" className="btn btn-primary w-full" disabled={!addr2} onClick={runAnalysis}>
               통계분석

@@ -4,15 +4,51 @@ from __future__ import annotations
 
 import hashlib
 import re
+import unicodedata
 
 import pandas as pd
 
+# 분양·입주권(building_key 전용). 원본 building_name / display_name 은 유지.
+_PRESALE_KEY_ASSET = "presale"
+
+# 보수적 브랜드 alias — 키 정규화에만 사용
+_BRAND_ALIAS_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"I[\s\-]?PARK", re.IGNORECASE), "아이파크"),
+)
+
+_JE_DANJI_RE = re.compile(r"제(\d+)단지")
+_WHITESPACE_RE = re.compile(r"\s+")
+
 
 def normalize_name(s: str | None) -> str:
+    """주소·표시용 가벼운 정규화(공백 축소). 원문 형태를 크게 바꾸지 않음."""
     if not s:
         return ""
     t = str(s).strip()
-    t = re.sub(r"\s+", " ", t)
+    t = _WHITESPACE_RE.sub(" ", t)
+    return t
+
+
+def normalize_building_name_for_key(s: str | None, *, asset_type: str) -> str:
+    """building_key 에 넣는 단지명.
+
+    분양권만 강한 규칙(공백 제거·영문 브랜드 alias·단지번호).
+    그 외 유형은 normalize_name 과 동일(기존 키 호환).
+    """
+    base = normalize_name(s)
+    if not base:
+        return ""
+    if asset_type != _PRESALE_KEY_ASSET:
+        return base
+    return _normalize_presale_name_for_key(base)
+
+
+def _normalize_presale_name_for_key(name: str) -> str:
+    t = unicodedata.normalize("NFC", name)
+    t = _WHITESPACE_RE.sub("", t)
+    for pat, repl in _BRAND_ALIAS_PATTERNS:
+        t = pat.sub(repl, t)
+    t = _JE_DANJI_RE.sub(r"\1단지", t)
     return t
 
 
@@ -25,7 +61,11 @@ def _sha256_series(raw: pd.Series) -> pd.Series:
 
 
 def attach_building_identity(df: pd.DataFrame, asset_type: str) -> pd.DataFrame:
-    """building_key·display_name 컬럼을 벡터 연산으로 추가."""
+    """building_key·display_name 컬럼을 벡터 연산으로 추가.
+
+    display_name / building_name 원문 성격은 유지하고,
+    building_key 만 (분양권 시) 정규화된 단지명을 사용한다.
+    """
     out = df.copy()
     a1 = _norm_series(out["addr1"]) if "addr1" in out.columns else pd.Series("", index=out.index)
     a2 = _norm_series(out["addr2"]) if "addr2" in out.columns else pd.Series("", index=out.index)
@@ -35,8 +75,13 @@ def attach_building_identity(df: pd.DataFrame, asset_type: str) -> pd.DataFrame:
     road = _norm_series(out["road_name"]) if "road_name" in out.columns else pd.Series("", index=out.index)
     name = _norm_series(out["building_name"]) if "building_name" in out.columns else pd.Series("", index=out.index)
 
+    if asset_type == _PRESALE_KEY_ASSET:
+        name_for_key = name.map(lambda n: normalize_building_name_for_key(n, asset_type=asset_type))
+    else:
+        name_for_key = name
+
     has_name = name != ""
-    raw_named = asset_type + "|" + a1 + "|" + a2 + "|" + a3 + "|name:" + name
+    raw_named = asset_type + "|" + a1 + "|" + a2 + "|" + a3 + "|name:" + name_for_key
     raw_unnamed = (
         asset_type + "|" + a1 + "|" + a2 + "|" + a3 + "|" + a4 + "|" + lot + "|" + road
     )
@@ -82,7 +127,7 @@ def derive_building_key(
     a2 = normalize_name(addr2)
     a3 = normalize_name(addr3)
     a4 = normalize_name(addr4)
-    name = normalize_name(building_name)
+    name = normalize_building_name_for_key(building_name, asset_type=asset_type)
     if name:
         raw = f"{asset_type}|{a1}|{a2}|{a3}|name:{name}"
     else:

@@ -21,8 +21,8 @@ export default function LongTermMetricToggle({
     >
       {(
         [
-          ["median", "중앙값"],
           ["mean", "평균"],
+          ["median", "중앙값"],
         ] as const
       ).map(([id, label]) => (
         <button

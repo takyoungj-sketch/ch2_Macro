@@ -3,9 +3,11 @@
 > **목표:** 매월 초 **토지 cycle 완료 후** 아파트·연립·오피스텔 정제 xlsx → `collective_stats` 갱신.  
 > **기준 루트:** `C:\ch2\ch2_Macro`
 
-관련: [`MONTHLY_UPDATE_SOP.md`](MONTHLY_UPDATE_SOP.md), [`BUILT_MONTHLY_UPDATE_SOP.md`](BUILT_MONTHLY_UPDATE_SOP.md), [`COLLECTIVE_RESEARCH_MVP.md`](COLLECTIVE_RESEARCH_MVP.md)
+관련: [`MONTHLY_UPDATE_SOP.md`](MONTHLY_UPDATE_SOP.md), [`BUILT_MONTHLY_UPDATE_SOP.md`](BUILT_MONTHLY_UPDATE_SOP.md), [`COLLECTIVE_RESEARCH_MVP.md`](COLLECTIVE_RESEARCH_MVP.md), [`COLLECTIVE_PRESALE_BUILDING_KEY.md`](COLLECTIVE_PRESALE_BUILDING_KEY.md)
 
 > **⚠ CSV Selenium 수집:** historical·backfill 시 [`MOLIT_CSV_COLLECTOR_WARNINGS.md`](MOLIT_CSV_COLLECTOR_WARNINGS.md) — 검증 없는 rename 금지.
+
+> **분양·입주권 키:** 월간 적재 시 `pipeline/collective/building_keys.py` 의 분양권 단지명 정규화가 **반드시** 적용돼야 한다. 규칙·재키·미스매칭 안내 → [`COLLECTIVE_PRESALE_BUILDING_KEY.md`](COLLECTIVE_PRESALE_BUILDING_KEY.md).
 
 ---
 
@@ -67,11 +69,22 @@ py scripts\monthly\compare_collective_count_snapshots.py --before ... --after ..
 - [ ] asset_type별 건수·시도별 diff
 - [ ] `GET /api/collective/buildings?addr1=...&addr2=...` smoke
 - [ ] `backups/collective_stats_pre_promote_202607.dump` 보관
+- [ ] **분양권:** 정규화 코드로 적재됐는지 · 대표 분열 단지(IPARK/공백)가 한 키인지 ([`COLLECTIVE_PRESALE_BUILDING_KEY.md`](COLLECTIVE_PRESALE_BUILDING_KEY.md))
+
+### 4.1 분양권 building_key (매 cycle)
+
+| 할 일 | 비고 |
+|------|------|
+| `building_keys.py` 최신본으로 ingest | 옛 로직만 쓰면 신규월이 다시 키 분열 |
+| alias/규칙 변경 시 | `rekey_presale_building_keys.py --purge-presale-marts` 후 mart 재구축 + **long-term annual 분양권 재ingest** |
+| 목록 통계 | 분양권 기본 = **3/5년 rolling** (타유형과 동일). `lifetime`은 보조 API |
+| 장기 annual | `ingest_collective_long_term_annual.py --asset-type=presale` (필요 시) |
+| 준공유형 연결 | 키 병합 금지 · 모달 `related-presale`(아파트·연립·오피스텔) / sibling |
+| mart 빌드 | `build_collective_presale_lifetime_stats.py` — 보조 mart 유지 · DDL `db/040_….sql` |
 
 ---
 
 ## 5. VPS Promote
-
 로컬 dump → scp → VPS restore (PG 버전 주의, built와 동일 plain SQL 경로).
 
 `BUILT_HANDOFF` §5 Promote 절차 참고 — **collective_stats** 대상.

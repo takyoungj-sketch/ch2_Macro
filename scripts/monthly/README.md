@@ -35,6 +35,7 @@
 - **건수 스냅샷:** `py scripts/monthly/snapshot_collective_tx_counts.py`
 - **스냅샷 비교:** `py scripts/monthly/compare_collective_count_snapshots.py`
 - **SOP:** `docs/COLLECTIVE_MONTHLY_UPDATE_SOP.md`
+- **분양권 building_key 정규화 (월간 필수):** `docs/COLLECTIVE_PRESALE_BUILDING_KEY.md` — ingest가 최신 `building_keys.py`를 쓰는지 확인할 것. alias 변경 시 `pipeline/collective/rekey_presale_building_keys.py`.
 
 `COLLECTIVE_DATABASE_URL` 은 **`pipeline/.env.collective`**.
 

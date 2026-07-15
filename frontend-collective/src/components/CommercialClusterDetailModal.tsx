@@ -119,7 +119,7 @@ export default function CommercialClusterDetailModal({
   const [cohortRunKeys, setCohortRunKeys] = useState<string[]>([]);
   const [cohortRunByPanel, setCohortRunByPanel] = useState<Partial<Record<PanelMode, number>>>({});
   const [cohortChartMetric, setCohortChartMetric] = useState<CohortTrendMetric>("mean");
-  const [longTermMetric, setLongTermMetric] = useState<LongTermPriceMetric>("median");
+  const [longTermMetric, setLongTermMetric] = useState<LongTermPriceMetric>("mean");
   const [histScope, setHistScope] = useState<"all" | "single">("all");
   const [histYear, setHistYear] = useState<number | null>(null);
   const [defaultSize] = useState(defaultCommercialDetailSize);

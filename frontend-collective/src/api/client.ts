@@ -102,6 +102,8 @@ export async function fetchBuildings(params: {
   contract_year_from?: number;
   contract_year_to?: number;
   window_years?: number;
+  /** 분양권: rolling(기본·3/5년) | lifetime(전체기간 보조) */
+  presale_stats_mode?: "lifetime" | "rolling";
   sort?: string;
   page?: number;
   page_size?: number;
@@ -225,6 +227,36 @@ export async function fetchBuildingYearlyStats(
   params?: { contract_date_from?: string; contract_date_to?: string },
 ): Promise<YearlyStatsResponse> {
   const { data } = await api.get<YearlyStatsResponse>(`/buildings/${buildingKey}/stats/by-year`, { params });
+  return data;
+}
+
+export type RelatedPresaleCandidate = {
+  building_key: string;
+  display_name: string;
+  addr1?: string | null;
+  addr2?: string | null;
+  addr3?: string | null;
+  addr4?: string | null;
+  year_from: number;
+  year_to: number;
+  total_count: number;
+  score: number;
+};
+
+export type RelatedPresaleResponse = {
+  source_building_key: string;
+  source_display_name: string;
+  source_asset_type: string;
+  candidates: RelatedPresaleCandidate[];
+};
+
+export async function fetchRelatedPresaleAnnual(
+  buildingKey: string,
+  params?: { limit?: number; min_score?: number },
+): Promise<RelatedPresaleResponse> {
+  const { data } = await api.get<RelatedPresaleResponse>(`/buildings/${buildingKey}/related-presale`, {
+    params,
+  });
   return data;
 }
 
