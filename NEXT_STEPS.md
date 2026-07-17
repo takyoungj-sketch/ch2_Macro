@@ -48,7 +48,7 @@
 | J3 | group mart 병행 집계 | `build_stats_v2` / upper (`--col-axis`) · `db/040` | ✅ 충북 로컬 |
 | J4 | API `matrix_mode` | paid / free_v2 / upper_stats | ✅ |
 | J5 | UI 토글 | MatrixStatsTable 등 | ✅ |
-| J6 | integrity · cycle · Promote | 로그·VPS | 🔄 충북 integrity OK · Promote 대기 |
+| J6 | integrity · cycle · Promote | 로그·VPS | ✅ 전국 group mart 로컬 완료 · Promote 대기 |
 
 ---
 

@@ -201,10 +201,10 @@ CREATE TABLE land_jimok_group_map (
 | J0 | 분류표·제품 정책 문서화 (본 문서) | ✅ 2026-07-17 |
 | J1 | `land_jimok_group_map` 시드 (양어장·목장 → agri 반영) | ✅ DDL + 로컬 적용 |
 | J2 | resolved VIEW `jimok_group_*` | ✅ |
-| J3 | `build_stats_v2` / `build_upper_stats_v2` (+ annual) **group grain 병행** | ✅ `--col-axis group|both` · 충북(43) 로컬 적재 |
+| J3 | `build_stats_v2` / `build_upper_stats_v2` (+ annual) **group grain 병행** | ✅ `--col-axis group|both` · 전국 로컬 적재 |
 | J4 | paid / free_v2 / upper_stats API (`matrix_mode`) | ✅ |
 | J5 | Matrix UI 전환 토글 | ✅ 용도×지목 / 용도×지목군 |
-| J6 | 로컬 시험 빌드 + integrity (zone×group vs 지목 합) | ✅ 충북 sample mismatch=0 |
+| J6 | 로컬 시험 빌드 + integrity (zone×group vs 지목 합) | ✅ 전국 sample mismatch=0 |
 | J7 | 월간 cycle 반영 · Promote · 프론트 배포 | ⬜ |
 
 ---
