@@ -30,7 +30,6 @@ import time
 import uuid
 import warnings
 from datetime import date, datetime, timedelta
-from itertools import product
 
 import pandas as pd
 from sqlalchemy import text
@@ -315,6 +314,43 @@ def parse_col_axes(s: str | None) -> list[str]:
     raise ValueError("--col-axis 는 category | group | both 만 허용합니다.")
 
 
+def _stats_record_v2(
+    *,
+    as_of_month: date,
+    window_years: int,
+    period_start: date,
+    period_end: date,
+    beopjungri_code: str,
+    zone_type: str,
+    land_category: str,
+    col_axis: str,
+    batch_id: str | None,
+    prices,
+) -> dict:
+    stats = compute_stats(prices)
+    return {
+        "as_of_month": as_of_month,
+        "window_years": window_years,
+        "period_start": period_start,
+        "period_end": period_end,
+        "beopjungri_code": beopjungri_code,
+        "zone_type": zone_type,
+        "land_category": land_category,
+        "col_axis": col_axis,
+        "count": stats["count"],
+        "mean": stats["mean"],
+        "std": stats["std"],
+        "ci_lower": stats["ci_lower"],
+        "ci_upper": stats["ci_upper"],
+        "p_min": stats["min"],
+        "p25": stats["p25"],
+        "median": stats["median"],
+        "p75": stats["p75"],
+        "p_max": stats["max"],
+        "batch_id": batch_id,
+    }
+
+
 def build_stats_for_region_v2(
     df: pd.DataFrame,
     beopjungri_code: str,
@@ -326,55 +362,106 @@ def build_stats_for_region_v2(
     batch_id: str | None,
     col_axis: str = "category",
 ) -> list[dict]:
-    """한 법정동/리 × 한 창 에 대해 용도×(지목|지목군) 조합 통계."""
+    """한 법정동/리 × 한 창 에 대해 용도×(지목|지목군) 조합 통계 (groupby)."""
     if col_axis not in ("category", "group"):
         raise ValueError(f"col_axis 는 category|group: {col_axis}")
     land_col = "land_category" if col_axis == "category" else "jimok_group_code"
-    sub = df[df["beopjungri_code"].astype(str).str.strip() == str(beopjungri_code).strip()].copy()
+    bclean = str(beopjungri_code).strip()
+    sub = df[df["beopjungri_code"].astype(str).str.strip() == bclean]
     if sub.empty:
         return []
     if land_col not in sub.columns:
         raise ValueError(f"DataFrame 에 {land_col} 컬럼이 없습니다 (지목군 VIEW·fetch 확인).")
 
-    zone_types = ["ALL"] + sorted(sub["zone_type"].dropna().astype(str).str.strip().unique().tolist())
-    land_vals = ["ALL"] + sorted(sub[land_col].dropna().astype(str).str.strip().unique().tolist())
+    work = sub.loc[:, ["zone_type", land_col, "unit_price_per_sqm"]].copy()
+    work["zone_type"] = work["zone_type"].astype(str).str.strip()
+    work[land_col] = work[land_col].astype(str).str.strip()
+    work = work.dropna(subset=["unit_price_per_sqm"])
+    if work.empty:
+        return []
 
     records: list[dict] = []
-    bclean = str(beopjungri_code).strip()
-    for zone, cat in product(zone_types, land_vals):
-        mask = pd.Series([True] * len(sub), index=sub.index)
-        if zone != "ALL":
-            mask &= sub["zone_type"].astype(str).str.strip() == zone
-        if cat != "ALL":
-            mask &= sub[land_col].astype(str).str.strip() == cat
 
-        prices = sub.loc[mask, "unit_price_per_sqm"].dropna().tolist()
-        stats = compute_stats(prices)
-
+    def emit(zone: str, cat: str, prices) -> None:
         records.append(
-            {
-                "as_of_month": as_of_month,
-                "window_years": window_years,
-                "period_start": period_start,
-                "period_end": period_end,
-                "beopjungri_code": bclean,
-                "zone_type": zone,
-                "land_category": cat,
-                "col_axis": col_axis,
-                "count": stats["count"],
-                "mean": stats["mean"],
-                "std": stats["std"],
-                "ci_lower": stats["ci_lower"],
-                "ci_upper": stats["ci_upper"],
-                "p_min": stats["min"],
-                "p25": stats["p25"],
-                "median": stats["median"],
-                "p75": stats["p75"],
-                "p_max": stats["max"],
-                "batch_id": batch_id,
-            }
+            _stats_record_v2(
+                as_of_month=as_of_month,
+                window_years=window_years,
+                period_start=period_start,
+                period_end=period_end,
+                beopjungri_code=bclean,
+                zone_type=zone,
+                land_category=cat,
+                col_axis=col_axis,
+                batch_id=batch_id,
+                prices=prices,
+            )
         )
 
+    emit("ALL", "ALL", work["unit_price_per_sqm"].to_numpy())
+    for zone, g in work.groupby("zone_type", sort=False):
+        emit(str(zone), "ALL", g["unit_price_per_sqm"].to_numpy())
+    for cat, g in work.groupby(land_col, sort=False):
+        emit("ALL", str(cat), g["unit_price_per_sqm"].to_numpy())
+    for (zone, cat), g in work.groupby(["zone_type", land_col], sort=False):
+        emit(str(zone), str(cat), g["unit_price_per_sqm"].to_numpy())
+    return records
+
+
+def _collect_axis_records_for_window(
+    df_w: pd.DataFrame,
+    *,
+    as_of_month: date,
+    window_years: int,
+    period_start: date,
+    period_end: date,
+    batch_id: str,
+    col_axis: str,
+) -> list[dict]:
+    """시도(또는 스코프) 전체를 groupby 한 번에 집계 — 법정동 루프+마스크 대비 대폭 고속."""
+    land_col = "land_category" if col_axis == "category" else "jimok_group_code"
+    if land_col not in df_w.columns:
+        raise ValueError(f"DataFrame 에 {land_col} 컬럼이 없습니다.")
+
+    work = df_w.loc[
+        :, ["beopjungri_code", "zone_type", land_col, "unit_price_per_sqm"]
+    ].copy()
+    work["beopjungri_code"] = work["beopjungri_code"].astype(str).str.strip()
+    work["zone_type"] = work["zone_type"].astype(str).str.strip()
+    work[land_col] = work[land_col].astype(str).str.strip()
+    work = work.dropna(subset=["unit_price_per_sqm"])
+    work = work[work["beopjungri_code"] != ""]
+    if work.empty:
+        return []
+
+    records: list[dict] = []
+
+    def emit(code: str, zone: str, cat: str, prices) -> None:
+        records.append(
+            _stats_record_v2(
+                as_of_month=as_of_month,
+                window_years=window_years,
+                period_start=period_start,
+                period_end=period_end,
+                beopjungri_code=code,
+                zone_type=zone,
+                land_category=cat,
+                col_axis=col_axis,
+                batch_id=batch_id,
+                prices=prices,
+            )
+        )
+
+    for code, g in work.groupby("beopjungri_code", sort=False):
+        emit(str(code), "ALL", "ALL", g["unit_price_per_sqm"].to_numpy())
+    for (code, zone), g in work.groupby(["beopjungri_code", "zone_type"], sort=False):
+        emit(str(code), str(zone), "ALL", g["unit_price_per_sqm"].to_numpy())
+    for (code, cat), g in work.groupby(["beopjungri_code", land_col], sort=False):
+        emit(str(code), "ALL", str(cat), g["unit_price_per_sqm"].to_numpy())
+    for (code, zone, cat), g in work.groupby(
+        ["beopjungri_code", "zone_type", land_col], sort=False
+    ):
+        emit(str(code), str(zone), str(cat), g["unit_price_per_sqm"].to_numpy())
     return records
 
 
@@ -386,7 +473,7 @@ def collect_records_for_windows(
     batch_id: str,
     col_axes: list[str] | None = None,
 ) -> list[dict]:
-    """한 DataFrame(시도 또는 전체 스코프)에 대해 모든 window·법정동 조합 레코드 생성."""
+    """한 DataFrame(시도 또는 전체 스코프)에 대해 모든 window 조합 레코드 생성."""
     axes = col_axes or ["category"]
     df = df_full.copy()
     if df.empty:
@@ -399,21 +486,18 @@ def collect_records_for_windows(
         if df_w.empty:
             log.warning("window_years=%d 에 해당하는 거래가 없습니다. 건너뜀.", w)
             continue
-        all_codes = sorted(df_w["beopjungri_code"].astype(str).str.strip().unique())
-        for code in all_codes:
-            for axis in axes:
-                total_records.extend(
-                    build_stats_for_region_v2(
-                        df_w,
-                        code,
-                        as_of_month=as_of_month,
-                        window_years=w,
-                        period_start=ps,
-                        period_end=pe,
-                        batch_id=batch_id,
-                        col_axis=axis,
-                    )
+        for axis in axes:
+            total_records.extend(
+                _collect_axis_records_for_window(
+                    df_w,
+                    as_of_month=as_of_month,
+                    window_years=w,
+                    period_start=ps,
+                    period_end=pe,
+                    batch_id=batch_id,
+                    col_axis=axis,
                 )
+            )
     return total_records
 
 

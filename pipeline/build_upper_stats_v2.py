@@ -61,6 +61,90 @@ def _sigungu_to_city_bucket(sigungu_code: str) -> str:
     return str((n // 10) * 10).zfill(5)
 
 
+def _upper_stats_record(
+    *,
+    region_level: str,
+    region_code: str,
+    as_of_month: date,
+    window_years: int,
+    period_start: date,
+    period_end: date,
+    zone_type: str,
+    land_category: str,
+    col_axis: str,
+    batch_id: str | None,
+    prices,
+) -> dict:
+    stats = compute_stats(prices)
+    return {
+        "region_level": region_level,
+        "region_code": region_code,
+        "as_of_month": as_of_month,
+        "window_years": window_years,
+        "period_start": period_start,
+        "period_end": period_end,
+        "zone_type": zone_type,
+        "land_category": land_category,
+        "col_axis": col_axis,
+        "count": stats["count"],
+        "mean": stats["mean"],
+        "std": stats["std"],
+        "ci_lower": stats["ci_lower"],
+        "ci_upper": stats["ci_upper"],
+        "p_min": stats["min"],
+        "p25": stats["p25"],
+        "median": stats["median"],
+        "p75": stats["p75"],
+        "p_max": stats["max"],
+        "batch_id": batch_id,
+    }
+
+
+def _zone_land_records_for_frame(
+    work: pd.DataFrame,
+    *,
+    region_level: str,
+    region_code: str,
+    land_col: str,
+    as_of_month: date,
+    window_years: int,
+    period_start: date,
+    period_end: date,
+    batch_id: str | None,
+    col_axis: str,
+) -> list[dict]:
+    """한 상위지역 프레임에서 zone×land (ALL 포함) groupby 집계."""
+    if work.empty:
+        return []
+    records: list[dict] = []
+
+    def emit(zone: str, cat: str, prices) -> None:
+        records.append(
+            _upper_stats_record(
+                region_level=region_level,
+                region_code=region_code,
+                as_of_month=as_of_month,
+                window_years=window_years,
+                period_start=period_start,
+                period_end=period_end,
+                zone_type=zone,
+                land_category=cat,
+                col_axis=col_axis,
+                batch_id=batch_id,
+                prices=prices,
+            )
+        )
+
+    emit("ALL", "ALL", work["unit_price_per_sqm"].to_numpy())
+    for zone, g in work.groupby("zone_type", sort=False):
+        emit(str(zone), "ALL", g["unit_price_per_sqm"].to_numpy())
+    for cat, g in work.groupby(land_col, sort=False):
+        emit("ALL", str(cat), g["unit_price_per_sqm"].to_numpy())
+    for (zone, cat), g in work.groupby(["zone_type", land_col], sort=False):
+        emit(str(zone), str(cat), g["unit_price_per_sqm"].to_numpy())
+    return records
+
+
 def build_stats_for_upper_city(
     df: pd.DataFrame,
     city_code: str,
@@ -84,46 +168,22 @@ def build_stats_for_upper_city(
     if sub.empty:
         return []
 
-    from itertools import product
-
-    zone_types = ["ALL"] + sorted(sub["zone_type"].dropna().astype(str).str.strip().unique().tolist())
-    land_vals = ["ALL"] + sorted(sub[land_col].dropna().astype(str).str.strip().unique().tolist())
-
-    records: list[dict] = []
-    for zone, cat in product(zone_types, land_vals):
-        mask = pd.Series([True] * len(sub), index=sub.index)
-        if zone != "ALL":
-            mask &= sub["zone_type"].astype(str).str.strip() == zone
-        if cat != "ALL":
-            mask &= sub[land_col].astype(str).str.strip() == cat
-
-        prices = sub.loc[mask, "unit_price_per_sqm"].dropna().tolist()
-        stats = compute_stats(prices)
-        records.append(
-            {
-                "region_level": "city",
-                "region_code": rc,
-                "as_of_month": as_of_month,
-                "window_years": window_years,
-                "period_start": period_start,
-                "period_end": period_end,
-                "zone_type": zone,
-                "land_category": cat,
-                "col_axis": col_axis,
-                "count": stats["count"],
-                "mean": stats["mean"],
-                "std": stats["std"],
-                "ci_lower": stats["ci_lower"],
-                "ci_upper": stats["ci_upper"],
-                "p_min": stats["min"],
-                "p25": stats["p25"],
-                "median": stats["median"],
-                "p75": stats["p75"],
-                "p_max": stats["max"],
-                "batch_id": batch_id,
-            }
-        )
-    return records
+    work = sub.loc[:, ["zone_type", land_col, "unit_price_per_sqm"]].copy()
+    work["zone_type"] = work["zone_type"].astype(str).str.strip()
+    work[land_col] = work[land_col].astype(str).str.strip()
+    work = work.dropna(subset=["unit_price_per_sqm"])
+    return _zone_land_records_for_frame(
+        work,
+        region_level="city",
+        region_code=rc,
+        land_col=land_col,
+        as_of_month=as_of_month,
+        window_years=window_years,
+        period_start=period_start,
+        period_end=period_end,
+        batch_id=batch_id,
+        col_axis=col_axis,
+    )
 
 
 def fetch_transactions_for_upper_union(
@@ -202,45 +262,78 @@ def build_stats_for_upper_region(
     if sub.empty:
         return []
 
-    from itertools import product
+    work = sub.loc[:, ["zone_type", land_col, "unit_price_per_sqm"]].copy()
+    work["zone_type"] = work["zone_type"].astype(str).str.strip()
+    work[land_col] = work[land_col].astype(str).str.strip()
+    work = work.dropna(subset=["unit_price_per_sqm"])
+    return _zone_land_records_for_frame(
+        work,
+        region_level=region_level,
+        region_code=rc,
+        land_col=land_col,
+        as_of_month=as_of_month,
+        window_years=window_years,
+        period_start=period_start,
+        period_end=period_end,
+        batch_id=batch_id,
+        col_axis=col_axis,
+    )
 
-    zone_types = ["ALL"] + sorted(sub["zone_type"].dropna().astype(str).str.strip().unique().tolist())
-    land_vals = ["ALL"] + sorted(sub[land_col].dropna().astype(str).str.strip().unique().tolist())
+
+def _collect_upper_level_axis(
+    df_w: pd.DataFrame,
+    *,
+    region_level: str,
+    region_col: str,
+    land_col: str,
+    as_of_month: date,
+    window_years: int,
+    period_start: date,
+    period_end: date,
+    batch_id: str,
+    col_axis: str,
+) -> list[dict]:
+    """한 level × col_axis 를 시도 스코프 전체 groupby로 집계."""
+    work = df_w.loc[
+        :, [region_col, "zone_type", land_col, "unit_price_per_sqm"]
+    ].copy()
+    work[region_col] = work[region_col].astype(str).str.strip()
+    work["zone_type"] = work["zone_type"].astype(str).str.strip()
+    work[land_col] = work[land_col].astype(str).str.strip()
+    work = work.dropna(subset=["unit_price_per_sqm"])
+    work = work[work[region_col] != ""]
+    if work.empty:
+        return []
 
     records: list[dict] = []
-    for zone, cat in product(zone_types, land_vals):
-        mask = pd.Series([True] * len(sub), index=sub.index)
-        if zone != "ALL":
-            mask &= sub["zone_type"].astype(str).str.strip() == zone
-        if cat != "ALL":
-            mask &= sub[land_col].astype(str).str.strip() == cat
 
-        prices = sub.loc[mask, "unit_price_per_sqm"].dropna().tolist()
-        stats = compute_stats(prices)
+    def emit(code: str, zone: str, cat: str, prices) -> None:
         records.append(
-            {
-                "region_level": region_level,
-                "region_code": rc,
-                "as_of_month": as_of_month,
-                "window_years": window_years,
-                "period_start": period_start,
-                "period_end": period_end,
-                "zone_type": zone,
-                "land_category": cat,
-                "col_axis": col_axis,
-                "count": stats["count"],
-                "mean": stats["mean"],
-                "std": stats["std"],
-                "ci_lower": stats["ci_lower"],
-                "ci_upper": stats["ci_upper"],
-                "p_min": stats["min"],
-                "p25": stats["p25"],
-                "median": stats["median"],
-                "p75": stats["p75"],
-                "p_max": stats["max"],
-                "batch_id": batch_id,
-            }
+            _upper_stats_record(
+                region_level=region_level,
+                region_code=code,
+                as_of_month=as_of_month,
+                window_years=window_years,
+                period_start=period_start,
+                period_end=period_end,
+                zone_type=zone,
+                land_category=cat,
+                col_axis=col_axis,
+                batch_id=batch_id,
+                prices=prices,
+            )
         )
+
+    for code, g in work.groupby(region_col, sort=False):
+        emit(str(code), "ALL", "ALL", g["unit_price_per_sqm"].to_numpy())
+    for (code, zone), g in work.groupby([region_col, "zone_type"], sort=False):
+        emit(str(code), str(zone), "ALL", g["unit_price_per_sqm"].to_numpy())
+    for (code, cat), g in work.groupby([region_col, land_col], sort=False):
+        emit(str(code), "ALL", str(cat), g["unit_price_per_sqm"].to_numpy())
+    for (code, zone, cat), g in work.groupby(
+        [region_col, "zone_type", land_col], sort=False
+    ):
+        emit(str(code), str(zone), str(cat), g["unit_price_per_sqm"].to_numpy())
     return records
 
 
@@ -267,21 +360,22 @@ def collect_upper_records_for_windows(
         if df_w.empty:
             log.warning("upper window_years=%d: 거래 없음, 건너뜀", w)
             continue
-        for level in levels:
-            if level == "city":
-                sg_series = df_w["sigungu_code"].astype(str).str.strip()
-                bucket_to_sigungus: dict[str, set[str]] = {}
-                for s in sg_series.unique():
-                    if not s or not str(s).isdigit() or len(str(s)) != 5:
-                        continue
-                    b = _sigungu_to_city_bucket(s)
-                    if not b:
-                        continue
-                    bucket_to_sigungus.setdefault(b, set()).add(s)
-                for bucket, members in sorted(bucket_to_sigungus.items()):
-                    if len(members) < 2:
-                        continue
-                    for axis in axes:
+        for axis in axes:
+            land_col = "land_category" if axis == "category" else "jimok_group_code"
+            for level in levels:
+                if level == "city":
+                    sg_series = df_w["sigungu_code"].astype(str).str.strip()
+                    bucket_to_sigungus: dict[str, set[str]] = {}
+                    for s in sg_series.unique():
+                        if not s or not str(s).isdigit() or len(str(s)) != 5:
+                            continue
+                        b = _sigungu_to_city_bucket(s)
+                        if not b:
+                            continue
+                        bucket_to_sigungus.setdefault(b, set()).add(s)
+                    for bucket, members in sorted(bucket_to_sigungus.items()):
+                        if len(members) < 2:
+                            continue
                         total.extend(
                             build_stats_for_upper_city(
                                 df_w,
@@ -295,25 +389,22 @@ def collect_upper_records_for_windows(
                                 col_axis=axis,
                             )
                         )
-                continue
+                    continue
 
-            col = LEVEL_COLUMNS[level]
-            codes = sorted(c for c in df_w[col].dropna().astype(str).str.strip().unique() if c)
-            for code in codes:
-                for axis in axes:
-                    total.extend(
-                        build_stats_for_upper_region(
-                            df_w,
-                            level,
-                            code,
-                            as_of_month=as_of_month,
-                            window_years=w,
-                            period_start=ps,
-                            period_end=pe,
-                            batch_id=batch_id,
-                            col_axis=axis,
-                        )
+                total.extend(
+                    _collect_upper_level_axis(
+                        df_w,
+                        region_level=level,
+                        region_col=LEVEL_COLUMNS[level],
+                        land_col=land_col,
+                        as_of_month=as_of_month,
+                        window_years=w,
+                        period_start=ps,
+                        period_end=pe,
+                        batch_id=batch_id,
+                        col_axis=axis,
                     )
+                )
     return total
 
 
