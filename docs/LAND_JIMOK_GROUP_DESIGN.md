@@ -220,8 +220,8 @@ CREATE TABLE land_jimok_group_map (
 [x] paid / free_v2 / upper_stats matrix_mode
 [x] MatrixStatsTable 토글 (용도×지목 | 용도×지목군)
 [ ] land_annual_* group (옵션)
-[x] DATA_INTEGRITY Level 2 group 검증 (충북 sample)
-[ ] cycle + Promote + VPS 프론트 (전국 group mart)
+[x] DATA_INTEGRITY Level 2 group 검증 (전국 sample)
+[ ] cycle + Promote + VPS 프론트
 [ ] (후속) Profile·Twin Feature 검토 — 이번 범위 아님
 ```
 
