@@ -176,6 +176,7 @@ def fetch_transactions_for_window_union(
         SELECT beopjungri_code,
                zone_type_resolved  AS zone_type,
                land_category_resolved AS land_category,
+               COALESCE(jimok_group_code, 'other') AS jimok_group_code,
                unit_price_per_sqm,
                contract_date::date AS contract_date
         FROM land_transactions_resolved
@@ -197,6 +198,7 @@ def fetch_transactions_for_window_union(
             "beopjungri_code",
             "zone_type",
             "land_category",
+            "jimok_group_code",
             "unit_price_per_sqm",
             "contract_date",
         ],
@@ -303,6 +305,16 @@ def log_empty_fetch_diagnostics_v2(
             log.warning("  [%s] %s건", label, int(n or 0))
 
 
+def parse_col_axes(s: str | None) -> list[str]:
+    """--col-axis category|group|both → ['category'] / ['group'] / ['category','group']."""
+    raw = (s or "category").strip().lower()
+    if raw == "both":
+        return ["category", "group"]
+    if raw in ("category", "group"):
+        return [raw]
+    raise ValueError("--col-axis 는 category | group | both 만 허용합니다.")
+
+
 def build_stats_for_region_v2(
     df: pd.DataFrame,
     beopjungri_code: str,
@@ -312,23 +324,29 @@ def build_stats_for_region_v2(
     period_start: date,
     period_end: date,
     batch_id: str | None,
+    col_axis: str = "category",
 ) -> list[dict]:
-    """한 법정동/리 × 한 창 에 대해 용도×지목 조합 통계."""
+    """한 법정동/리 × 한 창 에 대해 용도×(지목|지목군) 조합 통계."""
+    if col_axis not in ("category", "group"):
+        raise ValueError(f"col_axis 는 category|group: {col_axis}")
+    land_col = "land_category" if col_axis == "category" else "jimok_group_code"
     sub = df[df["beopjungri_code"].astype(str).str.strip() == str(beopjungri_code).strip()].copy()
     if sub.empty:
         return []
+    if land_col not in sub.columns:
+        raise ValueError(f"DataFrame 에 {land_col} 컬럼이 없습니다 (지목군 VIEW·fetch 확인).")
 
     zone_types = ["ALL"] + sorted(sub["zone_type"].dropna().astype(str).str.strip().unique().tolist())
-    land_cats = ["ALL"] + sorted(sub["land_category"].dropna().astype(str).str.strip().unique().tolist())
+    land_vals = ["ALL"] + sorted(sub[land_col].dropna().astype(str).str.strip().unique().tolist())
 
     records: list[dict] = []
     bclean = str(beopjungri_code).strip()
-    for zone, cat in product(zone_types, land_cats):
+    for zone, cat in product(zone_types, land_vals):
         mask = pd.Series([True] * len(sub), index=sub.index)
         if zone != "ALL":
             mask &= sub["zone_type"].astype(str).str.strip() == zone
         if cat != "ALL":
-            mask &= sub["land_category"].astype(str).str.strip() == cat
+            mask &= sub[land_col].astype(str).str.strip() == cat
 
         prices = sub.loc[mask, "unit_price_per_sqm"].dropna().tolist()
         stats = compute_stats(prices)
@@ -342,6 +360,7 @@ def build_stats_for_region_v2(
                 "beopjungri_code": bclean,
                 "zone_type": zone,
                 "land_category": cat,
+                "col_axis": col_axis,
                 "count": stats["count"],
                 "mean": stats["mean"],
                 "std": stats["std"],
@@ -365,8 +384,10 @@ def collect_records_for_windows(
     as_of_month: date,
     windows: list[int],
     batch_id: str,
+    col_axes: list[str] | None = None,
 ) -> list[dict]:
     """한 DataFrame(시도 또는 전체 스코프)에 대해 모든 window·법정동 조합 레코드 생성."""
+    axes = col_axes or ["category"]
     df = df_full.copy()
     if df.empty:
         return []
@@ -380,17 +401,19 @@ def collect_records_for_windows(
             continue
         all_codes = sorted(df_w["beopjungri_code"].astype(str).str.strip().unique())
         for code in all_codes:
-            total_records.extend(
-                build_stats_for_region_v2(
-                    df_w,
-                    code,
-                    as_of_month=as_of_month,
-                    window_years=w,
-                    period_start=ps,
-                    period_end=pe,
-                    batch_id=batch_id,
+            for axis in axes:
+                total_records.extend(
+                    build_stats_for_region_v2(
+                        df_w,
+                        code,
+                        as_of_month=as_of_month,
+                        window_years=w,
+                        period_start=ps,
+                        period_end=pe,
+                        batch_id=batch_id,
+                        col_axis=axis,
+                    )
                 )
-            )
     return total_records
 
 
@@ -399,7 +422,7 @@ def upsert_basic_stats_v2(
     *,
     chunk_size: int | None = None,
 ) -> None:
-    """land_basic_stats_v2 UPSERT (db/007 제약과 동일 그레인). 청크 단위 커밋으로 장시간 트랜잭션 완화."""
+    """land_basic_stats_v2 UPSERT (db/040 col_axis 포함 그레인). 청크 단위 커밋으로 장시간 트랜잭션 완화."""
     if not records:
         return
     cs = chunk_size if chunk_size is not None else DEFAULT_UPSERT_CHUNK
@@ -410,18 +433,18 @@ def upsert_basic_stats_v2(
         """
         INSERT INTO land_basic_stats_v2 (
             as_of_month, window_years, period_start, period_end,
-            beopjungri_code, zone_type, land_category,
+            beopjungri_code, zone_type, land_category, col_axis,
             count, mean, std, ci_lower, ci_upper,
             p_min, p25, median, p75, p_max,
             computed_at, batch_id
         ) VALUES (
             :as_of_month, :window_years, :period_start, :period_end,
-            :beopjungri_code, :zone_type, :land_category,
+            :beopjungri_code, :zone_type, :land_category, :col_axis,
             :count, :mean, :std, :ci_lower, :ci_upper,
             :p_min, :p25, :median, :p75, :p_max,
             NOW(), :batch_id
         )
-        ON CONFLICT (as_of_month, window_years, beopjungri_code, zone_type, land_category)
+        ON CONFLICT (as_of_month, window_years, beopjungri_code, zone_type, land_category, col_axis)
         DO UPDATE SET
             period_start = EXCLUDED.period_start,
             period_end = EXCLUDED.period_end,
@@ -484,10 +507,20 @@ def main() -> None:
         default=None,
         help="배치 식별자 (미지정 시 UUID)",
     )
+    parser.add_argument(
+        "--col-axis",
+        type=str,
+        default="category",
+        help="집계 열 축: category(용도×지목, 기본) | group(용도×지목군) | both",
+    )
     args = parser.parse_args()
 
     try:
         sido_filter = parse_sido_code(args.sido_code)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+    try:
+        col_axes = parse_col_axes(args.col_axis)
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
     if sido_filter is None:
@@ -548,9 +581,10 @@ def main() -> None:
     )
 
     log.info(
-        "V2 사전집계 as_of_month=%s mode=%s batch_id=%s windows=%s 긴창=[%s ~ %s] upsert_chunk=%d",
+        "V2 사전집계 as_of_month=%s mode=%s col_axes=%s batch_id=%s windows=%s 긴창=[%s ~ %s] upsert_chunk=%d",
         as_of_month,
         "시도청크" if use_sido_chunking else "단일스코프",
+        col_axes,
         batch_id[:12] + "...",
         windows,
         p_start_min,
@@ -615,7 +649,11 @@ def main() -> None:
             return
         agg_t0 = time.perf_counter()
         total_records = collect_records_for_windows(
-            df_full, as_of_month=as_of_month, windows=windows, batch_id=batch_id
+            df_full,
+            as_of_month=as_of_month,
+            windows=windows,
+            batch_id=batch_id,
+            col_axes=col_axes,
         )
         agg_sec_scope = time.perf_counter() - agg_t0
         cumulative_agg_sec += agg_sec_scope

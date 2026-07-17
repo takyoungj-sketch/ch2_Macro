@@ -147,6 +147,8 @@ interface Props {
   matrix?: MatrixCell[] | null;
   byZone?: Record<string, StatsResult>;
   byLandCategory?: Record<string, StatsResult>;
+  /** 열 축 표시명 (지목 | 지목군) */
+  landAxisLabel?: string;
   /** 무료처럼 범례를 상단별도 배치하면 false */
   showEmbeddedLegend?: boolean;
   /** 유료 전용 — 거래가 있는 칸을 클릭하면 교차 영역별 연도 추이 활성화 */
@@ -221,6 +223,7 @@ interface GridProps {
   cells: MatrixCell[];
   byZone: Record<string, StatsResult>;
   byLandCategory: Record<string, StatsResult>;
+  landAxisLabel: string;
   onPaidMatrixCellClick?: Props["onPaidMatrixCellClick"];
   scrollClassName?: string;
 }
@@ -234,6 +237,7 @@ function MatrixStatsTableGrid({
   cells,
   byZone,
   byLandCategory,
+  landAxisLabel,
   onPaidMatrixCellClick,
   scrollClassName = "max-h-[min(72vh,56rem)] overflow-auto border border-slate-200 rounded-lg overscroll-contain",
 }: GridProps) {
@@ -263,7 +267,7 @@ function MatrixStatsTableGrid({
                 cellZoneCol()
               )}
             >
-              <span className="block leading-tight">용도지역\지목</span>
+              <span className="block leading-tight">용도지역\{landAxisLabel}</span>
             </th>
             {landCategories.map((category, ci) => {
               const catStats = byLandCategory[category];
@@ -589,7 +593,7 @@ function MatrixFullscreenButton({
       title={
         variant === "close"
           ? "전체화면을 닫습니다 (Esc)"
-          : "용도×지목 매트릭스를 화면 전체로 확대합니다"
+          : `용도×${landAxisLabel} 매트릭스를 화면 전체로 확대합니다`
       }
     >
       {variant === "open" ? (
@@ -609,10 +613,11 @@ function MatrixFullscreenButton({
 }
 
 export default function MatrixStatsTable({
-  title = "용도지역 × 지목 분석표",
+  title,
   matrix,
   byZone = {},
   byLandCategory = {},
+  landAxisLabel = "지목",
   showEmbeddedLegend = true,
   onPaidMatrixCellClick,
   suppressEscapeClose: _suppressEscapeClose = false,
@@ -621,8 +626,9 @@ export default function MatrixStatsTable({
   const [fullscreenSize] = useState(defaultFullscreenSize);
 
   const cells = matrix ?? [];
+  const defaultTitle = `용도지역 × ${landAxisLabel} 분석표`;
   const showHeadingRow = (title ?? "").trim().length > 0 || showEmbeddedLegend;
-  const headingText = (title ?? "").trim() || "용도지역 × 지목 분석표";
+  const headingText = (title ?? "").trim() || defaultTitle;
 
   const lookup = useMemo(
     () =>
@@ -684,6 +690,7 @@ export default function MatrixStatsTable({
     cells,
     byZone,
     byLandCategory,
+    landAxisLabel,
     onPaidMatrixCellClick,
   };
 

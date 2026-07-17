@@ -61,12 +61,18 @@ export const fetchRegions = async (params?: {
 
 export const fetchFreeStats = async (
   beopjungri_code: string,
-  opts: { window_years: FreeStatsWindowYears | unknown }
+  opts: {
+    window_years: FreeStatsWindowYears | unknown;
+    matrix_mode?: "category" | "group";
+  }
 ): Promise<FreeStatsV2Response> => {
   const w = normalizeFreeStatsWindowYears(opts.window_years);
   const asOf = viteOptionalV2AsOfMonth();
   const qs = new URLSearchParams({ window_years: String(w) });
   if (asOf) qs.set("as_of_month", asOf);
+  if (opts.matrix_mode && opts.matrix_mode !== "category") {
+    qs.set("matrix_mode", opts.matrix_mode);
+  }
   const { data } = await api.get<FreeStatsV2Response>(
     `/free/v2/stats/${encodeURIComponent(beopjungri_code)}?${qs.toString()}`
   );
@@ -75,7 +81,10 @@ export const fetchFreeStats = async (
 /** 복수 법정동·리 합산 (유료 모드 기본 통계 등) — V2 동일 period 원장 재집계 */
 export const fetchFreeStatsBulk = async (
   region_codes: string[],
-  opts: { window_years: FreeStatsWindowYears | unknown }
+  opts: {
+    window_years: FreeStatsWindowYears | unknown;
+    matrix_mode?: "category" | "group";
+  }
 ): Promise<FreeStatsV2Response> => {
   const window_years = normalizeFreeStatsWindowYears(opts.window_years);
   const asOf = viteOptionalV2AsOfMonth();
@@ -83,6 +92,7 @@ export const fetchFreeStatsBulk = async (
     region_codes,
     window_years,
     ...(asOf ? { as_of_month: asOf } : {}),
+    ...(opts.matrix_mode ? { matrix_mode: opts.matrix_mode } : {}),
   });
   return data;
 };
@@ -213,6 +223,7 @@ export const fetchUpperStats = async (
     window_years: FreeStatsWindowYears | unknown;
     zone_type?: string;
     land_category?: string;
+    matrix_mode?: "category" | "group";
   }
 ): Promise<UpperStatsV2Response> => {
   const w = normalizeFreeStatsWindowYears(opts.window_years);
@@ -220,6 +231,9 @@ export const fetchUpperStats = async (
   const qs = new URLSearchParams({ window_years: String(w) });
   if (opts.zone_type) qs.set("zone_type", opts.zone_type);
   if (opts.land_category) qs.set("land_category", opts.land_category);
+  if (opts.matrix_mode && opts.matrix_mode !== "category") {
+    qs.set("matrix_mode", opts.matrix_mode);
+  }
   if (asOf) qs.set("as_of_month", asOf);
   const { data } = await api.get<UpperStatsV2Response>(
     `/paid/upper-stats/${encodeURIComponent(level)}/${encodeURIComponent(code)}?${qs.toString()}`

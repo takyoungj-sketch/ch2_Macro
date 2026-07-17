@@ -7,6 +7,7 @@ import {
   fetchRegions,
   fetchUpperStats,
 } from "../api/client";
+import { MATRIX_MODE_LABEL, type MatrixMode } from "../constants/jimokGroup";
 import { yearsRangeInclusive } from "../constants/paidFilters";
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import {
@@ -44,6 +45,7 @@ export default function FreeStatsPanel() {
   );
   const { tierSelection } = useAppStore();
 
+  const [matrixMode, setMatrixMode] = useState<MatrixMode>("category");
   const [trendModal, setTrendModal] = useState<{
     zoneType: string;
     landCategory: string;
@@ -98,30 +100,35 @@ export default function FreeStatsPanel() {
           upperSingle!.code,
           paidBasicStatsKick,
           freeStatsWindowYears,
+          matrixMode,
         ]
       : useBulk
-      ? ["freeStatsBulkV2", bulkKey, paidBasicStatsKick, freeStatsWindowYears]
+      ? ["freeStatsBulkV2", bulkKey, paidBasicStatsKick, freeStatsWindowYears, matrixMode]
       : [
           "freeStatsV2",
           resolvedCodes[0] ?? "",
           paidBasicStatsKick,
           viewMode,
           freeStatsWindowYears,
+          matrixMode,
         ],
     queryFn: async () => {
       if (useUpper) {
         const up = await fetchUpperStats(upperSingle!.level, upperSingle!.code, {
           window_years: freeStatsWindowYears,
+          matrix_mode: matrixMode,
         });
         return upperToFreeStatsShape(up);
       }
       if (useBulk) {
         return fetchFreeStatsBulk(resolvedCodes, {
           window_years: freeStatsWindowYears,
+          matrix_mode: matrixMode,
         });
       }
       return fetchFreeStats(resolvedCodes[0]!, {
         window_years: freeStatsWindowYears,
+        matrix_mode: matrixMode,
       });
     },
     enabled,
@@ -226,6 +233,7 @@ export default function FreeStatsPanel() {
         outlier_iqr_multiplier: 3,
         zone_type: zoneType,
         land_category: landCategory,
+        matrix_mode: matrixMode,
       };
 
       setTrendModal({ zoneType, landCategory });
@@ -242,7 +250,7 @@ export default function FreeStatsPanel() {
         setTrendLoading(false);
       }
     },
-    [isPaidBasic, resolvedCodes, data, paidBasicBaseKey, useUpper, upperSingle]
+    [isPaidBasic, resolvedCodes, data, paidBasicBaseKey, useUpper, upperSingle, matrixMode]
   );
 
   if (regionsLoading)
@@ -346,11 +354,30 @@ export default function FreeStatsPanel() {
         <MatrixStatsLegend matchYearlyStatsHeight helpExplain={legendExplain} />
       </div>
 
+      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+        <span className="font-medium text-slate-700">매트릭스</span>
+        {(["category", "group"] as const).map((mode) => (
+          <button
+            key={mode}
+            type="button"
+            onClick={() => setMatrixMode(mode)}
+            className={
+              matrixMode === mode
+                ? "rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-white"
+                : "rounded border border-slate-300 bg-white px-2 py-0.5 hover:bg-slate-50"
+            }
+          >
+            {MATRIX_MODE_LABEL[mode]}
+          </button>
+        ))}
+      </div>
+
       <MatrixStatsTable
         title=""
         matrix={data.matrix ?? []}
         byZone={data.by_zone}
         byLandCategory={data.by_land_category}
+        landAxisLabel={matrixMode === "group" ? "지목군" : "지목"}
         showEmbeddedLegend={false}
         onPaidMatrixCellClick={isPaidBasic ? openMatrixTrend : undefined}
         suppressEscapeClose={trendModal != null}
@@ -363,6 +390,7 @@ export default function FreeStatsPanel() {
         error={trendError}
         zoneType={trendModal?.zoneType ?? ""}
         landCategory={trendModal?.landCategory ?? ""}
+        matrixMode={matrixMode}
         rows={trendRows}
         filterRequest={trendRequest}
       />

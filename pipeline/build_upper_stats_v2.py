@@ -30,6 +30,7 @@ from build_stats_v2 import (
     default_as_of_month,
     distinct_sido_codes_in_period,
     parse_as_of_month,
+    parse_col_axes,
     parse_sido_code,
     period_bounds_for_window,
 )
@@ -70,8 +71,12 @@ def build_stats_for_upper_city(
     period_start: date,
     period_end: date,
     batch_id: str | None,
+    col_axis: str = "category",
 ) -> list[dict]:
-    """자치구형 시: 시군구 코드 여럿을 합쳐 zone×cat 통계."""
+    """자치구형 시: 시군구 코드 여럿을 합쳐 zone×(지목|지목군) 통계."""
+    if col_axis not in ("category", "group"):
+        raise ValueError(f"col_axis 는 category|group: {col_axis}")
+    land_col = "land_category" if col_axis == "category" else "jimok_group_code"
     rc = str(city_code).strip()
     if not sigungu_members:
         return []
@@ -82,15 +87,15 @@ def build_stats_for_upper_city(
     from itertools import product
 
     zone_types = ["ALL"] + sorted(sub["zone_type"].dropna().astype(str).str.strip().unique().tolist())
-    land_cats = ["ALL"] + sorted(sub["land_category"].dropna().astype(str).str.strip().unique().tolist())
+    land_vals = ["ALL"] + sorted(sub[land_col].dropna().astype(str).str.strip().unique().tolist())
 
     records: list[dict] = []
-    for zone, cat in product(zone_types, land_cats):
+    for zone, cat in product(zone_types, land_vals):
         mask = pd.Series([True] * len(sub), index=sub.index)
         if zone != "ALL":
             mask &= sub["zone_type"].astype(str).str.strip() == zone
         if cat != "ALL":
-            mask &= sub["land_category"].astype(str).str.strip() == cat
+            mask &= sub[land_col].astype(str).str.strip() == cat
 
         prices = sub.loc[mask, "unit_price_per_sqm"].dropna().tolist()
         stats = compute_stats(prices)
@@ -104,6 +109,7 @@ def build_stats_for_upper_city(
                 "period_end": period_end,
                 "zone_type": zone,
                 "land_category": cat,
+                "col_axis": col_axis,
                 "count": stats["count"],
                 "mean": stats["mean"],
                 "std": stats["std"],
@@ -141,6 +147,7 @@ def fetch_transactions_for_upper_union(
             btrim(r.eupmyeondong_code::text) AS eupmyeondong_code,
             lt.zone_type_resolved  AS zone_type,
             lt.land_category_resolved AS land_category,
+            COALESCE(lt.jimok_group_code, 'other') AS jimok_group_code,
             lt.unit_price_per_sqm,
             lt.contract_date::date AS contract_date
         FROM land_transactions_resolved lt
@@ -167,6 +174,7 @@ def fetch_transactions_for_upper_union(
             "eupmyeondong_code",
             "zone_type",
             "land_category",
+            "jimok_group_code",
             "unit_price_per_sqm",
             "contract_date",
         ],
@@ -183,7 +191,11 @@ def build_stats_for_upper_region(
     period_start: date,
     period_end: date,
     batch_id: str | None,
+    col_axis: str = "category",
 ) -> list[dict]:
+    if col_axis not in ("category", "group"):
+        raise ValueError(f"col_axis 는 category|group: {col_axis}")
+    land_col = "land_category" if col_axis == "category" else "jimok_group_code"
     col = LEVEL_COLUMNS[region_level]
     rc = str(region_code).strip()
     sub = df[df[col].astype(str).str.strip() == rc]
@@ -193,15 +205,15 @@ def build_stats_for_upper_region(
     from itertools import product
 
     zone_types = ["ALL"] + sorted(sub["zone_type"].dropna().astype(str).str.strip().unique().tolist())
-    land_cats = ["ALL"] + sorted(sub["land_category"].dropna().astype(str).str.strip().unique().tolist())
+    land_vals = ["ALL"] + sorted(sub[land_col].dropna().astype(str).str.strip().unique().tolist())
 
     records: list[dict] = []
-    for zone, cat in product(zone_types, land_cats):
+    for zone, cat in product(zone_types, land_vals):
         mask = pd.Series([True] * len(sub), index=sub.index)
         if zone != "ALL":
             mask &= sub["zone_type"].astype(str).str.strip() == zone
         if cat != "ALL":
-            mask &= sub["land_category"].astype(str).str.strip() == cat
+            mask &= sub[land_col].astype(str).str.strip() == cat
 
         prices = sub.loc[mask, "unit_price_per_sqm"].dropna().tolist()
         stats = compute_stats(prices)
@@ -215,6 +227,7 @@ def build_stats_for_upper_region(
                 "period_end": period_end,
                 "zone_type": zone,
                 "land_category": cat,
+                "col_axis": col_axis,
                 "count": stats["count"],
                 "mean": stats["mean"],
                 "std": stats["std"],
@@ -238,8 +251,10 @@ def collect_upper_records_for_windows(
     windows: list[int],
     batch_id: str,
     levels: list[str] | None = None,
+    col_axes: list[str] | None = None,
 ) -> list[dict]:
     levels = levels or list(LEVEL_COLUMNS.keys())
+    axes = col_axes or ["category"]
     df = df_full.copy()
     if df.empty:
         return []
@@ -266,35 +281,39 @@ def collect_upper_records_for_windows(
                 for bucket, members in sorted(bucket_to_sigungus.items()):
                     if len(members) < 2:
                         continue
-                    total.extend(
-                        build_stats_for_upper_city(
-                            df_w,
-                            bucket,
-                            members,
-                            as_of_month=as_of_month,
-                            window_years=w,
-                            period_start=ps,
-                            period_end=pe,
-                            batch_id=batch_id,
+                    for axis in axes:
+                        total.extend(
+                            build_stats_for_upper_city(
+                                df_w,
+                                bucket,
+                                members,
+                                as_of_month=as_of_month,
+                                window_years=w,
+                                period_start=ps,
+                                period_end=pe,
+                                batch_id=batch_id,
+                                col_axis=axis,
+                            )
                         )
-                    )
                 continue
 
             col = LEVEL_COLUMNS[level]
             codes = sorted(c for c in df_w[col].dropna().astype(str).str.strip().unique() if c)
             for code in codes:
-                total.extend(
-                    build_stats_for_upper_region(
-                        df_w,
-                        level,
-                        code,
-                        as_of_month=as_of_month,
-                        window_years=w,
-                        period_start=ps,
-                        period_end=pe,
-                        batch_id=batch_id,
+                for axis in axes:
+                    total.extend(
+                        build_stats_for_upper_region(
+                            df_w,
+                            level,
+                            code,
+                            as_of_month=as_of_month,
+                            window_years=w,
+                            period_start=ps,
+                            period_end=pe,
+                            batch_id=batch_id,
+                            col_axis=axis,
+                        )
                     )
-                )
     return total
 
 
@@ -308,19 +327,22 @@ def upsert_upper_stats_v2(records: list[dict], *, chunk_size: int | None = None)
         INSERT INTO land_upper_stats_v2 (
             region_level, region_code,
             as_of_month, window_years, period_start, period_end,
-            zone_type, land_category,
+            zone_type, land_category, col_axis,
             count, mean, std, ci_lower, ci_upper,
             p_min, p25, median, p75, p_max,
             computed_at, batch_id
         ) VALUES (
             :region_level, :region_code,
             :as_of_month, :window_years, :period_start, :period_end,
-            :zone_type, :land_category,
+            :zone_type, :land_category, :col_axis,
             :count, :mean, :std, :ci_lower, :ci_upper,
             :p_min, :p25, :median, :p75, :p_max,
             NOW(), :batch_id
         )
-        ON CONFLICT (region_level, region_code, as_of_month, window_years, zone_type, land_category)
+        ON CONFLICT (
+            region_level, region_code, as_of_month, window_years,
+            zone_type, land_category, col_axis
+        )
         DO UPDATE SET
             period_start = EXCLUDED.period_start,
             period_end = EXCLUDED.period_end,
@@ -382,10 +404,20 @@ def main() -> None:
     )
     parser.add_argument("--batch-id", type=str, default=None)
     parser.add_argument("--upsert-chunk", type=int, default=None)
+    parser.add_argument(
+        "--col-axis",
+        type=str,
+        default="category",
+        help="집계 열 축: category | group | both",
+    )
     args = parser.parse_args()
 
     try:
         sido_filter = parse_sido_code(args.sido_code)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+    try:
+        col_axes = parse_col_axes(args.col_axis)
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
 
@@ -407,10 +439,11 @@ def main() -> None:
 
     rows_before = _count_upper_rows(as_of_month, windows)
     log.info(
-        "upper V2 as_of=%s windows=%s levels=%s rows_before=%s",
+        "upper V2 as_of=%s windows=%s levels=%s col_axes=%s rows_before=%s",
         as_of_month,
         windows,
         levels,
+        col_axes,
         rows_before,
     )
 
@@ -434,7 +467,12 @@ def main() -> None:
         if df.empty:
             continue
         recs = collect_upper_records_for_windows(
-            df, as_of_month=as_of_month, windows=windows, batch_id=batch_id, levels=levels
+            df,
+            as_of_month=as_of_month,
+            windows=windows,
+            batch_id=batch_id,
+            levels=levels,
+            col_axes=col_axes,
         )
         upsert_upper_stats_v2(recs, chunk_size=upsert_chunk)
         total_upsert += len(recs)

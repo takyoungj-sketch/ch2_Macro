@@ -48,6 +48,8 @@ export interface UpperStatsV2Response {
   by_zone: Record<string, StatsResult>;
   by_land_category: Record<string, StatsResult>;
   matrix: MatrixCell[];
+  /** category=지목(기본), group=지목군 */
+  matrix_mode?: "category" | "group";
   by_year_calendar_reference?: YearlyTradeStat[];
 }
 
@@ -77,6 +79,8 @@ export interface FreeStatsV2Response {
   by_zone: Record<string, StatsResult>;
   by_land_category: Record<string, StatsResult>;
   matrix: MatrixCell[];
+  /** category=지목(기본), group=지목군 */
+  matrix_mode?: "category" | "group";
   stats_excluded_codes?: string[];
   /** 참고 만년력 연도별(1·1~12·31) 집계 — 연도 필터 칩과 독립 */
   by_year_calendar_reference?: YearlyTradeStat[];
@@ -167,6 +171,8 @@ export interface MatrixYearlyStat {
 export interface MatrixYearlyRequest extends PaidAnalysisRequest {
   zone_type: string;
   land_category: string;
+  /** category=지목 셀, group=지목군 셀 */
+  matrix_mode?: "category" | "group";
 }
 
 export interface MatrixYearlyResponse {

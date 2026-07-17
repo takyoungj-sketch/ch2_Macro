@@ -321,7 +321,10 @@ def _matrix_cell_merged_where(body: MatrixYearlyRequest, db: Session) -> tuple[s
         rolling_contract_pe=roll_pe,
     )
     mtx_sql, mtx_par = _matrix_dimension_sql(
-        "lt", body.zone_type.strip(), body.land_category.strip()
+        "lt",
+        body.zone_type.strip(),
+        body.land_category.strip(),
+        matrix_mode=getattr(body, "matrix_mode", None) or "category",
     )
     merged_params = dict(params)
     merged_params.update(mtx_par)
@@ -329,8 +332,15 @@ def _matrix_cell_merged_where(body: MatrixYearlyRequest, db: Session) -> tuple[s
     return merged_where, merged_params
 
 
-def _matrix_dimension_sql(alias: str, zone_display: str, land_display: str) -> tuple[str, dict]:
+def _matrix_dimension_sql(
+    alias: str,
+    zone_display: str,
+    land_display: str,
+    *,
+    matrix_mode: str = "category",
+) -> tuple[str, dict]:
     """매트릭스 헤더 표시용 키(미지정/기타)와 DB 행 연결."""
+    from app.jimok_group import matrix_mode_to_col_axis, normalize_group_key
 
     param: dict = {}
     zs: list[str] = []
@@ -348,7 +358,17 @@ def _matrix_dimension_sql(alias: str, zone_display: str, land_display: str) -> t
         )
 
     ld = (land_display or "").strip()
-    if ld in ("기타", ""):
+    if matrix_mode_to_col_axis(matrix_mode) == "group":
+        if ld in ("기타", "other", ""):
+            zs.append(
+                f"(COALESCE({alias}.jimok_group_code, 'other') = 'other')"
+            )
+        else:
+            param["mtx_land"] = normalize_group_key(ld)
+            zs.append(
+                f"COALESCE({alias}.jimok_group_code, 'other') = TRIM(:mtx_land)"
+            )
+    elif ld in ("기타", ""):
         zs.append(
             f"({alias}.land_category_resolved IS NULL OR TRIM(BOTH FROM COALESCE({alias}.land_category_resolved::text, '')) = '')"
         )

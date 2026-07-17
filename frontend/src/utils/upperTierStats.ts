@@ -75,6 +75,7 @@ export function upperToFreeStatsShape(up: UpperStatsV2Response): FreeStatsV2Resp
     by_zone: up.by_zone,
     by_land_category: up.by_land_category,
     matrix: up.matrix,
+    matrix_mode: up.matrix_mode,
     stats_excluded_codes: [],
     analysis_base_key: null,
     by_year_calendar_reference: up.by_year_calendar_reference,

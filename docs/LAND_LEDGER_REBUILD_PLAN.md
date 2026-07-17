@@ -386,15 +386,16 @@ py scripts\monthly\run_monthly_cycle.py --cycle-id 202607
 ```
 [ ] 재구축 원장·모달·매핑 검증 (as_of 불일치 인지한 채)
 [ ] 7월 초 전 Promote 금지 (또는 §12.2 예외 시 2026-05-01 재배치)
-[ ] 지목 7대분류 DDL·pipeline·API·UI (D-026, LAND_JIMOK_GROUP_DESIGN.md §6.1)
+[ ] 지목군 7분류 DDL·pipeline·API·UI (D-026, LAND_JIMOK_GROUP_DESIGN.md)
 [ ] 202607 run_monthly_cycle on land_stats_next (group mart 포함)
 [ ] verify_monthly_integrity / verify_v2_national_samples (--as-of-month 2026-06-01)
 [ ] Promote + STATS_V2_DEFAULT_AS_OF_MONTH=2026-06-01 + collective 202607
 ```
 
-### 12.6 지목 7대분류 (D-026)
+### 12.6 지목군 7분류 (D-026)
 
-7월 cycle과 함께 **용도지역 × 지목 대분류** 매트릭스·mart를 반영한다. 원장 재적재는 추가로 필요하지 않다.
+**기본** 매트릭스는 **용도 × 지목** 유지. **옵션**으로 **용도 × 지목군** mart·UI를 병행한다. 원장 재적재 불필요.  
+(2026-07-17: 양어장·목장용지 → 농경지. Profile·Twin 연결은 후속.)
 
 - 설계·분류표·작업 분해: [`LAND_JIMOK_GROUP_DESIGN.md`](./LAND_JIMOK_GROUP_DESIGN.md)
 - 작업계획: [`NEXT_STEPS.md`](../NEXT_STEPS.md) §5

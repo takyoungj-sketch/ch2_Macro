@@ -95,6 +95,8 @@ interface Props {
   error: string | null;
   zoneType: string;
   landCategory: string;
+  /** category=지목, group=지목군 — 헤더 표시용 */
+  matrixMode?: "category" | "group";
   rows: MatrixYearlyStat[];
   /** matrix-yearly 호출과 동일한 필터 본문 (분포·원데이터 API 재사용) */
   filterRequest: MatrixYearlyRequest | null;
@@ -133,6 +135,7 @@ export default function PaidMatrixYearlyModal({
   error,
   zoneType,
   landCategory,
+  matrixMode = "category",
   rows,
   filterRequest,
   scopeNote,
@@ -483,8 +486,14 @@ export default function PaidMatrixYearlyModal({
       title={isRolling ? "롤링 구간별 평균 변동" : "연도별 평균 변동"}
       subtitle={
         <>
-          용도 <span className="font-semibold text-slate-700">{zoneType}</span> · 지목{" "}
+          용도 <span className="font-semibold text-slate-700">{zoneType}</span> ·{" "}
+          {matrixMode === "group" ? "지목군" : "지목"}{" "}
           <span className="font-semibold text-slate-700">{landCategory}</span>
+          {matrixMode === "group" ? (
+            <span className="block text-[10px] mt-1 text-slate-400">
+              용도 × 지목군 모드 — 구성 지목 거래를 원장에서 재집계합니다.
+            </span>
+          ) : null}
           {scopeNote ? (
             <span className="block text-[10px] mt-1 text-slate-400">{scopeNote}</span>
           ) : null}

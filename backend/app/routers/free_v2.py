@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import get_db
+from app.jimok_group import display_land_key, matrix_mode_to_col_axis
 from app.population_query import attach_population_year_end
 from app.routers.free import (
     _MAX_STATS_REGIONS,
@@ -117,6 +118,7 @@ def _resolve_as_of_month_single(
     code_trim: str,
     window_years: int,
     explicit: Optional[date],
+    col_axis: str = "category",
 ) -> date:
     eff = (
         explicit
@@ -133,29 +135,22 @@ def _resolve_as_of_month_single(
             WHERE beopjungri_code = :c
               AND as_of_month = :as_of
               AND window_years = :w
+              AND col_axis = :axis
               AND zone_type = 'ALL' AND land_category = 'ALL'
             LIMIT 1
             """
         ),
-        {"c": code_trim, "as_of": eff, "w": window_years},
+        {"c": code_trim, "as_of": eff, "w": window_years, "axis": col_axis},
     ).fetchone()
     if not row:
         raise HTTPException(
             status_code=404,
             detail=(
-                f"해당 지역에 as_of_month={eff}, window_years={window_years} "
-                "인 V2 집계가 없습니다."
+                f"해당 지역에 as_of_month={eff}, window_years={window_years}, "
+                f"matrix_mode={col_axis} 인 V2 집계가 없습니다."
             ),
         )
     return eff
-
-
-def _resolve_as_of_month_bulk(*, explicit: Optional[date]) -> date:
-    if explicit is not None:
-        return explicit
-    return settings.stats_v2_default_as_of_month or default_as_of_month_for_service(
-        settings.stats_v2_assumed_today
-    )
 
 
 def _split_codes_with_basic_stats_v2(
@@ -163,6 +158,8 @@ def _split_codes_with_basic_stats_v2(
     codes: list[str],
     as_of: date,
     window_years: int,
+    *,
+    col_axis: str = "category",
 ) -> tuple[list[str], list[str]]:
     if not codes:
         return [], []
@@ -173,11 +170,12 @@ def _split_codes_with_basic_stats_v2(
         WHERE beopjungri_code = ANY(:codes)
           AND as_of_month = :as_of
           AND window_years = :w
+          AND col_axis = :axis
           AND zone_type = 'ALL' AND land_category = 'ALL'
         """
     )
     rows = db.execute(
-        stmt, {"codes": codes, "as_of": as_of, "w": window_years}
+        stmt, {"codes": codes, "as_of": as_of, "w": window_years, "axis": col_axis}
     ).fetchall()
     seen = {str(r.bc).strip() for r in rows}
     kept: list[str] = []
@@ -195,16 +193,56 @@ def _split_codes_with_basic_stats_v2(
     return kept, missing
 
 
+def _resolve_as_of_month_bulk(*, explicit: Optional[date]) -> date:
+    if explicit is not None:
+        return explicit
+    return settings.stats_v2_default_as_of_month or default_as_of_month_for_service(
+        settings.stats_v2_assumed_today
+    )
+
+
+def _relabel_land_axis(
+    by_land_category: dict[str, StatsResult],
+    matrix: list[MatrixCell],
+    *,
+    matrix_mode: str,
+) -> tuple[dict[str, StatsResult], list[MatrixCell]]:
+    if matrix_mode_to_col_axis(matrix_mode) != "group":
+        return by_land_category, matrix
+    by_land = {
+        display_land_key(k, matrix_mode=matrix_mode): v
+        for k, v in by_land_category.items()
+    }
+    mtx = [
+        MatrixCell(
+            zone_type=c.zone_type,
+            land_category=display_land_key(c.land_category, matrix_mode=matrix_mode),
+            stats=c.stats,
+        )
+        for c in matrix
+    ]
+    return by_land, mtx
+
+
 def _combined_bundle_v2_from_transactions(
     db: Session,
     codes: list[str],
     period_start: date,
     period_end: date,
+    *,
+    matrix_mode: str = "category",
 ) -> tuple[StatsResult, dict[str, StatsResult], dict[str, StatsResult], list[MatrixCell]]:
+    land_expr = (
+        "COALESCE(jimok_group_code, 'other')"
+        if matrix_mode_to_col_axis(matrix_mode) == "group"
+        else "land_category_resolved"
+    )
     stmt = text(
-        """
-        SELECT zone_type, land_category, unit_price_per_sqm::double precision AS up
-        FROM land_transactions
+        f"""
+        SELECT zone_type_resolved AS zone_type,
+               {land_expr} AS land_category,
+               unit_price_per_sqm::double precision AS up
+        FROM land_transactions_resolved
         WHERE is_valid = TRUE
           AND is_cancelled = FALSE
           AND unit_price_per_sqm IS NOT NULL
@@ -265,6 +303,9 @@ def _combined_bundle_v2_from_transactions(
             MatrixCell(zone_type=zone, land_category=cat, stats=_stats_dict_to_result(st))
         )
 
+    by_land_category, matrix_list = _relabel_land_axis(
+        by_land_category, matrix_list, matrix_mode=matrix_mode
+    )
     return total, by_zone, by_land_category, matrix_list
 
 
@@ -524,6 +565,10 @@ def get_basic_stats_v2(
             "또는 STATS_V2_ASSUMED_TODAY 기준 직전 달 1일, 둘 다 없으면 실제 오늘 기준(§3)."
         ),
     ),
+    matrix_mode: Literal["category", "group"] = Query(
+        "category",
+        description="category=용도×지목(기본), group=용도×지목군",
+    ),
 ):
     _ensure_v2_table(db)
     if as_of_month is not None and as_of_month.day != 1:
@@ -539,9 +584,14 @@ def get_basic_stats_v2(
     if not region:
         raise HTTPException(status_code=404, detail="지역 코드를 찾을 수 없습니다.")
 
+    col_axis = matrix_mode_to_col_axis(matrix_mode)
     code_trim = _dedupe_codes_preserve([beopjungri_code])[0]
     as_of = _resolve_as_of_month_single(
-        db, code_trim=code_trim, window_years=window_years, explicit=as_of_month
+        db,
+        code_trim=code_trim,
+        window_years=window_years,
+        explicit=as_of_month,
+        col_axis=col_axis,
     )
     ps, pe = period_bounds_for_window(as_of, window_years)
 
@@ -556,10 +606,11 @@ def get_basic_stats_v2(
             WHERE beopjungri_code = :code
               AND as_of_month = :as_of
               AND window_years = :w
+              AND col_axis = :axis
             ORDER BY zone_type, land_category
             """
         ),
-        {"code": code_trim, "as_of": as_of, "w": window_years},
+        {"code": code_trim, "as_of": as_of, "w": window_years, "axis": col_axis},
     ).fetchall()
 
     if not rows:
@@ -594,6 +645,9 @@ def get_basic_stats_v2(
         for r in rows
         if r.zone_type != "ALL" and r.land_category != "ALL"
     ]
+    by_land_category, matrix = _relabel_land_axis(
+        by_land_category, matrix, matrix_mode=matrix_mode
+    )
 
     by_year = _by_year_contract_date(db, code_trim, ps, pe)
     by_year_calendar_reference = _by_year_calendar_reference_single(
@@ -614,6 +668,7 @@ def get_basic_stats_v2(
         by_zone=by_zone,
         by_land_category=by_land_category,
         matrix=matrix,
+        matrix_mode=matrix_mode,
         stats_excluded_codes=[],
         analysis_base_key=None,
     )
@@ -644,9 +699,9 @@ def get_basic_stats_v2_bulk(
         )
 
     as_of = _resolve_as_of_month_bulk(explicit=payload.as_of_month)
-
+    # 지역 커버리지는 category grain 기준으로 판정(group mart 미적재 시도도 bulk 원장 재집계 가능)
     kept, stats_excluded_codes = _split_codes_with_basic_stats_v2(
-        db, codes, as_of, payload.window_years
+        db, codes, as_of, payload.window_years, col_axis="category"
     )
     if not kept:
         preview = ", ".join(stats_excluded_codes[:15])
@@ -661,7 +716,7 @@ def get_basic_stats_v2_bulk(
 
     title = _build_region_title(db, kept)
     total, by_zone, by_land_category, matrix = _combined_bundle_v2_from_transactions(
-        db, kept, ps, pe
+        db, kept, ps, pe, matrix_mode=payload.matrix_mode
     )
     by_year = _by_year_bulk_contract_date(db, kept, ps, pe)
     by_year_calendar_reference = _by_year_calendar_reference_bulk(
@@ -682,6 +737,7 @@ def get_basic_stats_v2_bulk(
         by_zone=by_zone,
         by_land_category=by_land_category,
         matrix=matrix,
+        matrix_mode=payload.matrix_mode,
         stats_excluded_codes=stats_excluded_codes,
         analysis_base_key=None,
     )

@@ -1,4 +1,4 @@
--- 지목 대분류(7그룹) 매핑 — D-026 / LAND_JIMOK_GROUP_DESIGN.md
+-- 지목군(7그룹) 매핑 — D-026 / docs/LAND_JIMOK_GROUP_DESIGN.md
 -- Master land_transactions.land_category 는 변경하지 않음.
 
 CREATE TABLE IF NOT EXISTS land_jimok_group_map (
@@ -10,16 +10,21 @@ CREATE TABLE IF NOT EXISTS land_jimok_group_map (
 );
 
 COMMENT ON TABLE land_jimok_group_map IS
-    'DB land_category / land_category_resolved 값 → 7대분류(agri|forest|dev|infra|water|special|other)';
+    'DB land_category / land_category_resolved → 지목군(agri|forest|dev|infra|water|special|other). 2026-07-17: 양어장·목장용지=agri';
 
 TRUNCATE land_jimok_group_map;
 
+-- 분류 SSOT: docs/LAND_JIMOK_GROUP_DESIGN.md (2026-07-17: 양어장·목장용지 → agri)
 INSERT INTO land_jimok_group_map (jimok_key, jimok_label, group_code, group_label, sort_order) VALUES
     -- ① 농경지
     ('전', '전', 'agri', '농경지', 10),
     ('답', '답', 'agri', '농경지', 11),
     ('과', '과수원', 'agri', '농경지', 12),
     ('과수원', '과수원', 'agri', '농경지', 13),
+    ('양', '양어장', 'agri', '농경지', 14),
+    ('양어장', '양어장', 'agri', '농경지', 15),
+    ('목', '목장용지', 'agri', '농경지', 16),
+    ('목장용지', '목장용지', 'agri', '농경지', 17),
     -- ② 산림지
     ('임', '임야', 'forest', '산림지', 20),
     ('임야', '임야', 'forest', '산림지', 21),
@@ -35,12 +40,8 @@ INSERT INTO land_jimok_group_map (jimok_key, jimok_label, group_code, group_labe
     ('주유소용지', '주유소용지', 'dev', '개발지', 38),
     ('창', '창고용지', 'dev', '개발지', 39),
     ('창고용지', '창고용지', 'dev', '개발지', 40),
-    ('양', '양어장', 'dev', '개발지', 41),
-    ('양어장', '양어장', 'dev', '개발지', 42),
     ('잡', '잡종지', 'dev', '개발지', 43),
     ('잡종지', '잡종지', 'dev', '개발지', 44),
-    ('목', '목장용지', 'dev', '개발지', 45),
-    ('목장용지', '목장용지', 'dev', '개발지', 46),
     -- ④ 기반시설
     ('도', '도로', 'infra', '기반시설', 50),
     ('도로', '도로', 'infra', '기반시설', 51),

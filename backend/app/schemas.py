@@ -128,6 +128,10 @@ class FreeStatsV2BulkRequest(BaseModel):
             "STATS_V2_ASSUMED_TODAY·실제 오늘 순(§3)."
         ),
     )
+    matrix_mode: Literal["category", "group"] = Field(
+        "category",
+        description="category=용도×지목(기본), group=용도×지목군",
+    )
 
     @field_validator("window_years", mode="before")
     @classmethod
@@ -187,6 +191,10 @@ class FreeStatsV2Response(BaseModel):
     by_zone: dict[str, StatsResult] = Field(default_factory=dict)
     by_land_category: dict[str, StatsResult] = Field(default_factory=dict)
     matrix: list[MatrixCell] = Field(default_factory=list)
+    matrix_mode: Literal["category", "group"] = Field(
+        "category",
+        description="응답 매트릭스 열 축: category=지목, group=지목군",
+    )
     stats_excluded_codes: list[str] = Field(
         default_factory=list,
         description="요청에 있었으나 해당 as_of_month·window 에서 V2 ALL×ALL 행이 없어 제외된 코드",
@@ -225,6 +233,10 @@ class UpperStatsV2Response(BaseModel):
     by_zone: dict[str, StatsResult] = Field(default_factory=dict)
     by_land_category: dict[str, StatsResult] = Field(default_factory=dict)
     matrix: list[MatrixCell] = Field(default_factory=list)
+    matrix_mode: Literal["category", "group"] = Field(
+        "category",
+        description="응답 매트릭스 열 축: category=지목, group=지목군",
+    )
     by_year_calendar_reference: list[YearlyTradeStat] = Field(
         default_factory=list,
         description="참고: 만년력 1·1~12·31 연도별 집계(by_year 와 다른 정의 가능).",
@@ -438,13 +450,17 @@ class MatrixYearlyStat(BaseModel):
 
 
 class MatrixYearlyRequest(PaidFilters):
-    """동일 필터 + 지역 선택 + 용도×지목."""
+    """동일 필터 + 지역 선택 + 용도×지목(또는 지목군)."""
 
     region_selections: Optional[list[RegionSelectionUnit]] = Field(None)
     region_codes: Optional[list[str]] = Field(None)
 
     zone_type: str = Field(...)
     land_category: str = Field(...)
+    matrix_mode: Literal["category", "group"] = Field(
+        "category",
+        description="category=지목 셀, group=지목군 셀(원장 jimok_group 재집계)",
+    )
 
 
 class MatrixYearlyResponse(BaseModel):

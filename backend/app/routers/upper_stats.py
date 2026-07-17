@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from datetime import date
 from itertools import product
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import get_db
+from app.jimok_group import display_land_key, matrix_mode_to_col_axis
 from app.population_query import attach_population_year_end_for_upper_level
 from app.routers.free import _stats_dict_to_result
 from app.schemas import (
@@ -192,7 +193,13 @@ def _fetch_tx_trips_for_upper(
     code: str,
     period_start: date,
     period_end: date,
+    matrix_mode: str = "category",
 ) -> list[tuple[str, str, float]]:
+    land_expr = (
+        "COALESCE(jimok_group_code, 'other')"
+        if matrix_mode_to_col_axis(matrix_mode) == "group"
+        else "land_category_resolved"
+    )
     if level == "city":
         sgs = _sigungu_codes_for_city_bucket(db, code)
         if not sgs:
@@ -209,8 +216,10 @@ def _fetch_tx_trips_for_upper(
     rows = db.execute(
         text(
             f"""
-            SELECT zone_type, land_category, unit_price_per_sqm::float8 AS up
-            FROM land_transactions
+            SELECT zone_type_resolved AS zone_type,
+                   {land_expr} AS land_category,
+                   unit_price_per_sqm::float8 AS up
+            FROM land_transactions_resolved
             WHERE {where}
               AND is_valid IS TRUE
               AND is_cancelled IS FALSE
@@ -242,9 +251,15 @@ def _compute_upper_bundle_from_transactions(
     code: str,
     period_start: date,
     period_end: date,
+    matrix_mode: str = "category",
 ) -> tuple[StatsResult, dict[str, StatsResult], dict[str, StatsResult], list[MatrixCell]]:
     trips = _fetch_tx_trips_for_upper(
-        db, level=level, code=code, period_start=period_start, period_end=period_end
+        db,
+        level=level,
+        code=code,
+        period_start=period_start,
+        period_end=period_end,
+        matrix_mode=matrix_mode,
     )
     if not trips:
         return StatsResult(count=0), {}, {}, []
@@ -276,11 +291,39 @@ def _compute_upper_bundle_from_transactions(
         )
         for zone, cat in product(zones, cats_sorted)
     ]
+    by_land_category, matrix = _relabel_upper_land_axis(
+        by_land_category, matrix, matrix_mode=matrix_mode
+    )
     return total, by_zone, by_land_category, matrix
+
+
+def _relabel_upper_land_axis(
+    by_land_category: dict[str, StatsResult],
+    matrix: list[MatrixCell],
+    *,
+    matrix_mode: str,
+) -> tuple[dict[str, StatsResult], list[MatrixCell]]:
+    if matrix_mode_to_col_axis(matrix_mode) != "group":
+        return by_land_category, matrix
+    by_land = {
+        display_land_key(k, matrix_mode=matrix_mode): v
+        for k, v in by_land_category.items()
+    }
+    mtx = [
+        MatrixCell(
+            zone_type=c.zone_type,
+            land_category=display_land_key(c.land_category, matrix_mode=matrix_mode),
+            stats=c.stats,
+        )
+        for c in matrix
+    ]
+    return by_land, mtx
 
 
 def _parse_preagg_rows(
     rows: list,
+    *,
+    matrix_mode: str = "category",
 ) -> tuple[StatsResult | None, dict[str, StatsResult], dict[str, StatsResult], list[MatrixCell]]:
     total: Optional[StatsResult] = None
     by_zone: dict[str, StatsResult] = {}
@@ -298,6 +341,9 @@ def _parse_preagg_rows(
             by_land_category[lc] = stats
         else:
             matrix.append(MatrixCell(zone_type=zt, land_category=lc, stats=stats))
+    by_land_category, matrix = _relabel_upper_land_axis(
+        by_land_category, matrix, matrix_mode=matrix_mode
+    )
     return total, by_zone, by_land_category, matrix
 
 
@@ -332,6 +378,7 @@ def _fetch_zone_cat_rows(
     code: str,
     as_of: date,
     window_years: int,
+    col_axis: str = "category",
 ) -> list:
     return db.execute(
         text(
@@ -344,9 +391,16 @@ def _fetch_zone_cat_rows(
               AND btrim(region_code::text) = :code
               AND as_of_month = :as_of
               AND window_years = :w
+              AND col_axis = :axis
             """
         ),
-        {"level": level, "code": code, "as_of": as_of, "w": window_years},
+        {
+            "level": level,
+            "code": code,
+            "as_of": as_of,
+            "w": window_years,
+            "axis": col_axis,
+        },
     ).fetchall()
 
 
@@ -500,6 +554,10 @@ def get_upper_stats(
     code: str,
     window_years: int = Query(5, ge=1, le=5),
     as_of_month: Optional[date] = Query(None),
+    matrix_mode: Literal["category", "group"] = Query(
+        "category",
+        description="category=용도×지목(기본), group=용도×지목군",
+    ),
     db: Session = Depends(get_db),
 ) -> UpperStatsV2Response:
     _ensure_upper_table(db)
@@ -511,12 +569,20 @@ def get_upper_stats(
         )
     as_of = _resolve_as_of(as_of_month)
     period_start, period_end = period_bounds_for_window(as_of, window_years)
+    col_axis = matrix_mode_to_col_axis(matrix_mode)
 
     rows = _fetch_zone_cat_rows(
-        db, level=level, code=code, as_of=as_of, window_years=window_years
+        db,
+        level=level,
+        code=code,
+        as_of=as_of,
+        window_years=window_years,
+        col_axis=col_axis,
     )
     if rows:
-        total, by_zone, by_land_category, matrix = _parse_preagg_rows(rows)
+        total, by_zone, by_land_category, matrix = _parse_preagg_rows(
+            rows, matrix_mode=matrix_mode
+        )
         if total is None:
             raise HTTPException(
                 status_code=404,
@@ -529,13 +595,14 @@ def get_upper_stats(
             code=code,
             period_start=period_start,
             period_end=period_end,
+            matrix_mode=matrix_mode,
         )
     else:
         raise HTTPException(
             status_code=404,
             detail=(
                 f"해당 상위지역 사전집계 없음: level={level} code={code} "
-                f"as_of_month={as_of} window_years={window_years}. "
+                f"as_of_month={as_of} window_years={window_years} matrix_mode={matrix_mode}. "
                 "build_upper_stats_v2.py 적재 여부를 확인하세요."
             ),
         )
@@ -570,4 +637,5 @@ def get_upper_stats(
         by_zone=by_zone,
         by_land_category=by_land_category,
         matrix=matrix,
+        matrix_mode=matrix_mode,
     )
