@@ -45,7 +45,7 @@
 | J0 | 문서·정책 확정 | `LAND_JIMOK_GROUP_DESIGN.md` | ✅ |
 | J1 | map 시드 (양·목→agri) | `db/037_…` | ✅ |
 | J2 | resolved VIEW | `db/038_…` | ✅ |
-| J3 | group mart 병행 집계 | `build_stats_v2` / upper (`--col-axis`) · `db/040` | ✅ 충북 로컬 |
+| J3 | group mart 병행 집계 | `build_stats_v2` / upper (`--col-axis`) · `db/040` | ✅ 전국 로컬 |
 | J4 | API `matrix_mode` | paid / free_v2 / upper_stats | ✅ |
 | J5 | UI 토글 | MatrixStatsTable 등 | ✅ |
 | J6 | integrity · cycle · Promote | 로그·VPS | ✅ 전국 group mart 로컬 완료 · Promote 대기 |
