@@ -580,10 +580,12 @@ function MatrixFullscreenButton({
   onClick,
   label = "전체화면",
   variant = "open",
+  landAxisLabel = "지목",
 }: {
   onClick: () => void;
   label?: string;
   variant?: "open" | "close";
+  landAxisLabel?: string;
 }) {
   return (
     <button
@@ -742,7 +744,10 @@ export default function MatrixStatsTable({
           <MatrixStatsLegend helpExplain={matrixLegendExplainDefault} />
         ) : null}
         <AnalysisHelpPanel explain={matrixTableExplain} />
-        <MatrixFullscreenButton onClick={() => setFullscreen(true)} />
+        <MatrixFullscreenButton
+          onClick={() => setFullscreen(true)}
+          landAxisLabel={landAxisLabel}
+        />
       </div>
     </div>
   );
