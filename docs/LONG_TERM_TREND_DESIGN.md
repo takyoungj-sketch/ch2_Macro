@@ -52,16 +52,17 @@
 
 ### 2.2 설계 원칙
 
+> **플랫폼 공통 SSOT (D-028):** raw / historical / canonical 3계층 — [`REGION_CODE_LAYERS.md`](./REGION_CODE_LAYERS.md).  
+> 장기 추세 마트는 그 중 **canonical** grain만 사용한다.
+
 | 계층 | 규칙 |
 |------|------|
-| **원장** `land_transactions` | ingest 시점 **`beopjungri_code` 보존** (덮어쓰지 않음) |
-| **연도 마트** `land_annual_stats` | **`region_codes` 현행 코드** 기준으로 집계 (remap 후) |
+| **raw** | `land_transactions_raw` 원문 주소·필드 보존 |
+| **historical** | 원장 `beopjungri_code` = ingest 시점 매핑 (Master 불변, D-025) |
+| **canonical** | `region_code_history` → 현행 `region_codes` — **연도 마트·V2 통계 grain** |
 | **이력** `region_code_history` | `from_code → to_code`, `effective_from`/`effective_to`, `change_type` |
 
-선택 컬럼(원장 확장, v2 이후):
-
-- `original_beopjungri_code` — 정제 시점 원코드 (이미 매핑된 경우만)
-- 마트에는 **현행 코드만** 저장 → API는 `region_codes.beopjungri_name` JOIN
+마트에는 **현행(canonical) 코드만** 저장 → API는 `region_codes.beopjungri_name` JOIN.
 
 ### 2.3 집계 시 remap
 

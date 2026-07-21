@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-"""면↔읍 승격으로 region_codes 표기와 거래 원장 표기가 어긋난 건을 수리한다.
+"""[DEPRECATED — D-028] 면↔읍 승격 시 이름만 맞추고 코드는 구코드를 유지하는 수리.
 
-- region_codes: 거래에 쓰인 읍/면 표기로 이름 갱신 (코드는 유지)
-- built_transactions: NULL 행정코드를 마스터에서 백필
-- land_stats.region_codes 도 동일 이름 갱신 (있으면)
+이 패턴은 폐지 코드를 활성 canonical처럼 남겨 GIS 신코드와 통계가 충돌한다
+(예: 대소면→대소읍, 4377034026 vs 4377025626).
 
-Usage:
-  cd backend && python ../pipeline/repair_eup_myeon_promotion.py
-  python ../pipeline/repair_eup_myeon_promotion.py --dry-run
+대체: docs/REGION_CODE_LAYERS.md — region_code_history(구→신) + seed 재적재 +
+canonical grain으로 stats 재빌드. 본 스크립트는 실행하지 말 것.
+
+Usage (legacy only, do not run):
+  cd backend && python ../pipeline/repair_eup_myeon_promotion.py --dry-run
 """
 from __future__ import annotations
 
@@ -149,7 +150,18 @@ def backfill_tx(conn, row, *, dry: bool) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument(
+        "--i-know-this-is-deprecated",
+        action="store_true",
+        help="D-028: 기본 차단. 레거시 강제 실행 시에만 지정",
+    )
     args = ap.parse_args()
+    if not args.i_know_this_is_deprecated:
+        print(
+            "DEPRECATED (D-028): do not run. See docs/REGION_CODE_LAYERS.md. "
+            "Pass --i-know-this-is-deprecated to override."
+        )
+        return 2
     built_eng, land_eng = _engines()
 
     with built_eng.begin() as conn:

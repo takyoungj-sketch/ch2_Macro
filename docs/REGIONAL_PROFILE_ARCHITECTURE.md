@@ -353,7 +353,7 @@ Profile 빌더는 **소스를 몰라도** `market_stats` + `population_stats` �
 | **P0** | **토지 domain 대표시장 추출규칙 구현** | `ALL×ALL` → 2종주거×대·상업×대·공업×공장용지 (Layer 3) |
 | **P0** | **Profile A/B 검증 재설계 — 다중 지역 pooling** | 단일 지역은 절편과 공선 → 효과 0. 복대·가경·봉명·산남·성화… 합쳐 검증 |
 | **P1** | **문서-코드 동기화** | 본 문서가 SSOT. 코드가 앞서지 않게 유지 |
-| **P1** | **region_code SSOT 통일** | 8/10자리 혼용 제거 (Profile·Twin·Population 공통) |
+| **P1** | **region_code SSOT 통일** | 8/10자리 혼용 제거 (Profile·Twin·Population 공통). **canonical만** 사용 — [`REGION_CODE_LAYERS.md`](REGION_CODE_LAYERS.md) / D-028. Profile 착수 전 Phase 1(history·seed·stats) 완료. |
 | **P1** | **`window_years` + `profile_version` 메타 추가** | Layer 4 Data Product 규약 (DDL 025) |
 | **P2** | **DB 접속 환경변수 통일** | `build_regional_profile.py` 등 하드코딩 URL 제거 |
 | **P2** | **Twin→Profile 의존 구조 명문화** | Twin은 `regional_profile` 소비, Feature 재생성 금지 (Layer 5) |

@@ -25,7 +25,8 @@ eupmyeondong_name, sigungu_name, sido_name,
 is_active BOOLEAN
 ```
 - **SSOT**: 토지 파이프라인이 관리. built/collective는 복사본.
-- `is_active`: 현행 법정동. 폐지·분리 코드는 `region_code_history`로 추적.
+- `is_active`: 현행(canonical) 법정동만 TRUE. 폐지 코드는 inactive + `region_code_history`로 구→신 추적.
+- **3계층 (D-028):** raw / historical / canonical — [`REGION_CODE_LAYERS.md`](REGION_CODE_LAYERS.md). 분석·mart는 canonical만.
 
 ### 2-2. `land_transactions` (토지 원장)
 ```sql
