@@ -15,6 +15,7 @@ from region_canonical import (  # noqa: E402
     canonical_select_expr,
     expand_to_ledger_codes,
     lookup_active_admin_codes_by_name,
+    lookup_active_beopjungri_by_ri_picks,
     region_codes_join_on_canonical,
     resolve_to_canonical,
 )
@@ -25,6 +26,7 @@ __all__ = [
     "canonical_select_expr",
     "expand_to_ledger_codes",
     "lookup_active_admin_codes_by_name",
+    "lookup_active_beopjungri_by_ri_picks",
     "region_codes_join_on_canonical",
     "resolve_to_canonical",
 ]

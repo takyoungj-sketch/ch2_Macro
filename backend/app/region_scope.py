@@ -68,7 +68,21 @@ def apply_admin_code_scope(
 
             ledger = expand_to_ledger_codes(conn, cleaned) or cleaned
         params["admin_region_codes"] = ledger
-        clauses.append(f"btrim({p}beopjungri_code::text) = ANY(:admin_region_codes)")
+        # NULL beopjungri 원장(예: 음성 수태리)은 코드 컬럼만으로 못 잡음 →
+        # active region_codes 명칭(addr5)으로도 매칭
+        clauses.append(
+            f"("
+            f"btrim({p}beopjungri_code::text) = ANY(:admin_region_codes)"
+            f" OR EXISTS ("
+            f"  SELECT 1 FROM region_codes _rc_bri"
+            f"  WHERE COALESCE(_rc_bri.is_active, TRUE)"
+            f"    AND btrim(_rc_bri.beopjungri_code::text) = ANY(:admin_region_codes)"
+            f"    AND btrim({p}addr1::text) = btrim(_rc_bri.sido_name::text)"
+            f"    AND btrim({p}addr2::text) = btrim(_rc_bri.sigungu_name::text)"
+            f"    AND btrim(COALESCE({p}addr5::text, '')) = btrim(_rc_bri.beopjungri_name::text)"
+            f")"
+            f")"
+        )
         return True
     return False
 
@@ -142,7 +156,19 @@ def apply_analysis_region_scope(
 
                 ledger = expand_to_ledger_codes(conn, cleaned) or cleaned
             params["admin_region_codes"] = ledger
-            parts.append(f"btrim({p}beopjungri_code::text) = ANY(:admin_region_codes)")
+            parts.append(
+                f"("
+                f"btrim({p}beopjungri_code::text) = ANY(:admin_region_codes)"
+                f" OR EXISTS ("
+                f"  SELECT 1 FROM region_codes _rc_bri"
+                f"  WHERE COALESCE(_rc_bri.is_active, TRUE)"
+                f"    AND btrim(_rc_bri.beopjungri_code::text) = ANY(:admin_region_codes)"
+                f"    AND btrim({p}addr1::text) = btrim(_rc_bri.sido_name::text)"
+                f"    AND btrim({p}addr2::text) = btrim(_rc_bri.sigungu_name::text)"
+                f"    AND btrim(COALESCE({p}addr5::text, '')) = btrim(_rc_bri.beopjungri_name::text)"
+                f")"
+                f")"
+            )
         else:
             emd = []
             for c in cleaned:
@@ -165,9 +191,11 @@ def apply_analysis_region_scope(
         params[f"ru_a2_{i}"] = a2
         leaf_vars = _leaf_name_variants(leaf)
         params[f"ru_leaves_{i}"] = leaf_vars
+        # 읍면동=addr3/addr4, 리=addr5 (Built NULL-code 리 행)
         parts.append(
             f"({p}addr1 = :ru_a1_{i} AND {p}addr2 = :ru_a2_{i} "
-            f"AND ({p}addr3 = ANY(:ru_leaves_{i}) OR {p}addr4 = ANY(:ru_leaves_{i})))"
+            f"AND ({p}addr3 = ANY(:ru_leaves_{i}) OR {p}addr4 = ANY(:ru_leaves_{i}) "
+            f"OR {p}addr5 = ANY(:ru_leaves_{i})))"
         )
 
     if not parts:

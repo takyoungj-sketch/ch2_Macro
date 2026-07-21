@@ -550,6 +550,34 @@ def _filter_by_region_units(
     if codes:
         if lv == "beopjungri" and "beopjungri_code" in df.columns:
             mask = mask | _norm_col(df, "beopjungri_code").isin(set(codes))
+            # NULL beopjungri 원장: region_codes 명칭(addr5)으로 보강
+            if conn is not None and "addr5" in df.columns:
+                try:
+                    from sqlalchemy import text as sa_text
+
+                    nm = conn.execute(
+                        sa_text(
+                            """
+                            SELECT btrim(sido_name::text), btrim(sigungu_name::text),
+                                   btrim(beopjungri_name::text)
+                            FROM region_codes
+                            WHERE COALESCE(is_active, TRUE)
+                              AND btrim(beopjungri_code::text) = ANY(:codes)
+                            """
+                        ),
+                        {"codes": list(codes)},
+                    ).fetchall()
+                    for a1n, a2n, rin in nm:
+                        if not rin:
+                            continue
+                        row_ok = _norm_col(df, "addr5") == rin
+                        if "addr1" in df.columns and a1n:
+                            row_ok = row_ok & (_norm_col(df, "addr1") == a1n)
+                        if "addr2" in df.columns and a2n:
+                            row_ok = row_ok & (_norm_col(df, "addr2") == a2n)
+                        mask = mask | row_ok
+                except Exception:
+                    pass
         else:
             emd_set: set[str] = set()
             for c in codes:
@@ -568,7 +596,11 @@ def _filter_by_region_units(
     has_a1 = "addr1" in df.columns
     has_a2 = "addr2" in df.columns
     for a1, a2, leaf in triples:
-        leaf_ok = (_norm_col(df, "addr3") == leaf) | (_norm_col(df, "addr4") == leaf)
+        leaf_ok = (
+            (_norm_col(df, "addr3") == leaf)
+            | (_norm_col(df, "addr4") == leaf)
+            | (_norm_col(df, "addr5") == leaf)
+        )
         if has_a1 and has_a2:
             row_ok = (_norm_col(df, "addr1") == a1) & (_norm_col(df, "addr2") == a2)
             mask = mask | (row_ok & leaf_ok)

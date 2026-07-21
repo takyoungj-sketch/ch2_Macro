@@ -36,7 +36,6 @@ from app.collective.building_stats_query import (
     list_buildings_live,
     list_presale_lifetime_from_mart,
     list_related_presale_from_annual,
-    normalize_asset_type,
     stats_as_of_label,
     stats_reference_date,
 )

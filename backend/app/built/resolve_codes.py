@@ -145,8 +145,44 @@ def resolve_built_map_codes(
         params,
     ).fetchall()
     codes = [str(r[0]).strip() for r in rows if r and r[0]]
+    labels: dict[str, str] = {}
     if level == "beopjungri":
         codes = resolve_to_canonical(conn, codes)
+        # NULL beopjungri 원장 → region_codes로 선택 리의 canonical 코드 보강
+        if ris:
+            from app.region_canonical import lookup_active_beopjungri_by_ri_picks
+
+            for code, label in lookup_active_beopjungri_by_ri_picks(
+                conn,
+                sido_name=a1 or "",
+                sigungu_name=a2,
+                picks=[(p.eup, p.ri) for p in ris],
+            ):
+                if code not in codes:
+                    codes.append(code)
+                labels[code] = label
+        # 코드만 있는 경우에도 UI name/region_addrs용 라벨 채움
+        missing = [c for c in codes if c not in labels]
+        if missing:
+            rows_lb = conn.execute(
+                text(
+                    """
+                    SELECT btrim(beopjungri_code::text) AS code,
+                           btrim(eupmyeondong_name::text) AS eup,
+                           btrim(beopjungri_name::text) AS ri
+                    FROM region_codes
+                    WHERE COALESCE(is_active, TRUE)
+                      AND btrim(beopjungri_code::text) = ANY(:codes)
+                    """
+                ),
+                {"codes": missing},
+            ).mappings().all()
+            for row in rows_lb:
+                code = str(row["code"]).strip()
+                eup_n = (row.get("eup") or "").strip()
+                ri_n = (row.get("ri") or "").strip()
+                if code and ri_n:
+                    labels[code] = f"{eup_n} {ri_n}".strip()
     elif not codes and level in ("eupmyeondong", "sigungu"):
         # Addr-matched rows may have NULL admin codes — active region_codes by name
         hit = conn.execute(
@@ -182,6 +218,6 @@ def resolve_built_map_codes(
         "selected_codes": codes,
         "context_sido_code": ctx_sido,
         "context_sigungu_code": ctx_sigungu,
-        "labels": {},
+        "labels": labels,
         "has_selection": bool(codes),
     }

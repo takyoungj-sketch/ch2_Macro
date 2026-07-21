@@ -27,11 +27,13 @@ export function analysisUnitLabel(u: BuiltAnalysisUnit): string {
   return name || parent || u.code;
 }
 
-/** API용 '시도|시군구|읍면동' 키 — 코드 NULL 원장 행 포함 */
+/** API용 '시도|시군구|읍면동|리' 키 — 코드 NULL 원장 행 포함 */
 export function unitToAddrKey(u: BuiltAnalysisUnit): string | null {
   const a1 = (u.addr1 || "").trim();
   const a2 = (u.addr2 || "").trim();
-  const leaf = (u.name || "").trim();
+  let leaf = (u.name || "").trim();
+  // resolve 라벨 누락 시 name=code 로 들어오는 경우 addr 매칭에 쓰지 않음
+  if (/^\d{8,10}$/.test(leaf)) leaf = "";
   if (!a1 || !a2 || !leaf) return null;
   return `${a1}|${a2}|${leaf}`;
 }

@@ -235,6 +235,57 @@ def lookup_active_admin_codes_by_name(
     return _norm_codes(str(r[0]) for r in rows)
 
 
+def lookup_active_beopjungri_by_ri_picks(
+    conn: Connection,
+    *,
+    sido_name: str,
+    sigungu_name: str | None,
+    picks: Sequence[tuple[str, str]],
+) -> list[tuple[str, str]]:
+    """(canonical_code, 'eup ri') for active region_codes matching (eup, ri) picks.
+
+    Built ledger often has addr5=리 with NULL beopjungri_code — map resolve still
+    needs a user-facing canonical code.
+    """
+    a1 = (sido_name or "").strip()
+    a2 = (sigungu_name or "").strip()
+    if not a1 or not a2:
+        return []
+    out: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for eup, ri in picks:
+        e = (eup or "").strip()
+        r = (ri or "").strip()
+        if not e or not r:
+            continue
+        row = conn.execute(
+            text(
+                """
+                SELECT btrim(beopjungri_code::text) AS code
+                FROM region_codes
+                WHERE COALESCE(is_active, TRUE)
+                  AND btrim(sido_name::text) = :a1
+                  AND btrim(sigungu_name::text) = :a2
+                  AND btrim(eupmyeondong_name::text) = :eup
+                  AND btrim(beopjungri_name::text) = :ri
+                  AND beopjungri_code IS NOT NULL
+                  AND btrim(beopjungri_code::text) <> ''
+                ORDER BY beopjungri_code
+                LIMIT 1
+                """
+            ),
+            {"a1": a1, "a2": a2, "eup": e, "ri": r},
+        ).first()
+        if not row or not row[0]:
+            continue
+        code = str(row[0]).strip()
+        if code in seen:
+            continue
+        seen.add(code)
+        out.append((code, f"{e} {r}"))
+    return out
+
+
 def region_codes_join_on_canonical(
     tx_alias: str = "lt",
     rc_alias: str = "r",

@@ -792,8 +792,42 @@ def lookup_region_code(
             ),
             params,
         ).first()
+        code = str(row.code).strip() if row and row.code else None
+        if not code:
+            # NULL beopjungri 원장 → active region_codes
+            from app.region_canonical import lookup_active_beopjungri_by_ri_picks
+
+            eup_name = (eup or "").strip() or None
+            if not eup_name:
+                # addr3/4 중 하나를 eup으로 추론하지 못하면 leaf만으로 조회
+                rc = conn.execute(
+                    text(
+                        """
+                        SELECT btrim(beopjungri_code::text) AS code
+                        FROM region_codes
+                        WHERE COALESCE(is_active, TRUE)
+                          AND btrim(sido_name::text) = :a1
+                          AND btrim(sigungu_name::text) = :a2
+                          AND btrim(beopjungri_name::text) = :leaf
+                          AND beopjungri_code IS NOT NULL
+                          AND btrim(beopjungri_code::text) <> ''
+                        ORDER BY beopjungri_code
+                        LIMIT 1
+                        """
+                    ),
+                    {"a1": a1, "a2": a2, "leaf": leaf_name},
+                ).first()
+                code = str(rc.code).strip() if rc and rc.code else None
+            else:
+                found = lookup_active_beopjungri_by_ri_picks(
+                    conn,
+                    sido_name=a1,
+                    sigungu_name=a2,
+                    picks=[(eup_name, leaf_name)],
+                )
+                code = found[0][0] if found else None
         return {
-            "code": str(row.code) if row and row.code else None,
+            "code": code,
             "level": "beopjungri",
             "addr1": a1,
             "addr2": a2,
