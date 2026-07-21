@@ -21,6 +21,7 @@ from app.config import settings
 from app.db import get_db
 from app.jimok_group import display_land_key, matrix_mode_to_col_axis
 from app.population_query import attach_population_year_end
+from app.region_canonical import expand_to_ledger_codes, resolve_to_canonical
 from app.routers.free import (
     _MAX_STATS_REGIONS,
     _build_region_title,
@@ -224,6 +225,12 @@ def _relabel_land_axis(
     return by_land, mtx
 
 
+def _ledger_codes(db: Session, codes: list[str]) -> list[str]:
+    """Master 조회용: canonical(+입력) → historical from_code 포함 확장."""
+    expanded = expand_to_ledger_codes(db, codes)
+    return expanded or list(codes)
+
+
 def _combined_bundle_v2_from_transactions(
     db: Session,
     codes: list[str],
@@ -237,6 +244,7 @@ def _combined_bundle_v2_from_transactions(
         if matrix_mode_to_col_axis(matrix_mode) == "group"
         else "land_category_resolved"
     )
+    ledger = _ledger_codes(db, codes)
     stmt = text(
         f"""
         SELECT zone_type_resolved AS zone_type,
@@ -254,7 +262,7 @@ def _combined_bundle_v2_from_transactions(
     )
     raw = db.execute(
         stmt,
-        {"codes": codes, "ps": period_start, "pe": period_end},
+        {"codes": ledger, "ps": period_start, "pe": period_end},
     ).fetchall()
     trips: list[tuple[str, str, float]] = []
     for r in raw:
@@ -328,6 +336,7 @@ def _by_year_contract_date(
 ) -> list[YearlyTradeStat]:
     """단건 API 연도별 총계 표 — is_valid 만 필터(해제 미필터). 구간은 _yearly_totals_contract_bounds."""
     y0, y1 = _yearly_totals_contract_bounds(period_start, period_end)
+    ledger = _ledger_codes(db, [code_trim])
     y_rows = db.execute(
         text(
             """
@@ -336,7 +345,7 @@ def _by_year_contract_date(
                    COALESCE(SUM(total_price_10k), 0) AS sum_price,
                    COALESCE(SUM(area_sqm), 0) AS sum_area
             FROM land_transactions
-            WHERE beopjungri_code = :code_trim
+            WHERE beopjungri_code = ANY(:codes)
               AND is_valid IS TRUE
               AND contract_date IS NOT NULL
               AND contract_date >= :d0
@@ -345,7 +354,7 @@ def _by_year_contract_date(
             ORDER BY contract_year
             """
         ),
-        {"code_trim": code_trim, "d0": y0, "d1": y1},
+        {"codes": ledger, "d0": y0, "d1": y1},
     ).fetchall()
     y_map = {int(r.y): r for r in y_rows}
     by_year: list[YearlyTradeStat] = []
@@ -376,6 +385,7 @@ def _by_year_bulk_contract_date(
     period_end: date,
 ) -> list[YearlyTradeStat]:
     y0, y1 = _yearly_totals_contract_bounds(period_start, period_end)
+    ledger = _ledger_codes(db, codes)
     y_stmt = text(
         """
         SELECT contract_year::int AS y,
@@ -394,7 +404,7 @@ def _by_year_bulk_contract_date(
     )
     y_rows = db.execute(
         y_stmt,
-        {"codes": codes, "d0": y0, "d1": y1},
+        {"codes": ledger, "d0": y0, "d1": y1},
     ).fetchall()
     y_map = {int(r.y): r for r in y_rows}
     by_year: list[YearlyTradeStat] = []
@@ -428,6 +438,7 @@ def _by_year_calendar_reference_single(
     """참고 표: 각 달력연도별 contract_date 그 연도만 1·1~12·31."""
     y0, y1 = int(period_start.year), int(period_end.year)
     d0, d1 = date(y0, 1, 1), date(y1, 12, 31)
+    ledger = _ledger_codes(db, [code_trim])
     y_rows = db.execute(
         text(
             """
@@ -436,7 +447,7 @@ def _by_year_calendar_reference_single(
                    COALESCE(SUM(total_price_10k), 0) AS sum_price,
                    COALESCE(SUM(area_sqm), 0) AS sum_area
             FROM land_transactions
-            WHERE beopjungri_code = :code_trim
+            WHERE beopjungri_code = ANY(:codes)
               AND is_valid IS TRUE
               AND contract_date IS NOT NULL
               AND contract_date >= :d0 AND contract_date <= :d1
@@ -444,7 +455,7 @@ def _by_year_calendar_reference_single(
             ORDER BY contract_year
             """
         ),
-        {"code_trim": code_trim, "d0": d0, "d1": d1},
+        {"codes": ledger, "d0": d0, "d1": d1},
     ).fetchall()
     y_map = {int(r.y): r for r in y_rows}
     items: list[YearlyTradeStat] = []
@@ -494,7 +505,7 @@ def _by_year_calendar_reference_bulk(
             ORDER BY contract_year
             """
         ),
-        {"codes": codes, "d0": d0, "d1": d1},
+        {"codes": _ledger_codes(db, codes), "d0": d0, "d1": d1},
     ).fetchall()
     y_map = {int(r.y): r for r in y_rows}
     items: list[YearlyTradeStat] = []
@@ -577,15 +588,19 @@ def get_basic_stats_v2(
             detail="as_of_month 는 해당 월 1일(YYYY-MM-01)이어야 합니다.",
         )
 
+    # D-028: GIS/UI 코드 → canonical (원장 코드는 변경하지 않음)
+    code_trim = resolve_to_canonical(
+        db, _dedupe_codes_preserve([beopjungri_code])
+    )[0]
+
     region = db.execute(
         text("SELECT * FROM region_codes WHERE beopjungri_code = :code"),
-        {"code": beopjungri_code},
+        {"code": code_trim},
     ).fetchone()
     if not region:
         raise HTTPException(status_code=404, detail="지역 코드를 찾을 수 없습니다.")
 
     col_axis = matrix_mode_to_col_axis(matrix_mode)
-    code_trim = _dedupe_codes_preserve([beopjungri_code])[0]
     as_of = _resolve_as_of_month_single(
         db,
         code_trim=code_trim,
@@ -655,7 +670,7 @@ def get_basic_stats_v2(
     )
 
     return FreeStatsV2Response(
-        beopjungri_code=beopjungri_code,
+        beopjungri_code=code_trim,
         beopjungri_name=str(region.beopjungri_name),
         as_of_month=as_of,
         stats_reference_date=stats_ui_reference_date(as_of),
@@ -683,7 +698,7 @@ def get_basic_stats_v2_bulk(
     payload: FreeStatsV2BulkRequest, db: Session = Depends(get_db)
 ):
     _ensure_v2_table(db)
-    codes = _dedupe_codes_preserve(payload.region_codes)
+    codes = resolve_to_canonical(db, _dedupe_codes_preserve(payload.region_codes))
     if not codes:
         raise HTTPException(status_code=422, detail="유효한 지역 코드가 없습니다.")
     if len(codes) > _MAX_STATS_REGIONS:

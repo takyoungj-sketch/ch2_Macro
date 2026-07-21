@@ -155,7 +155,13 @@ def fetch_transactions_for_window_union(
     *,
     sido_code: str | None = None,
 ) -> pd.DataFrame:
-    """여러 창을 한 번에 돌릴 때, 가장 긴 구간 [period_start_min, period_end] 만큼만 조회."""
+    """여러 창을 한 번에 돌릴 때, 가장 긴 구간 [period_start_min, period_end] 만큼만 조회.
+
+    D-028: SELECT grain 은 region_code_history 로 canonical resolve.
+    Master `beopjungri_code` 컬럼은 변경하지 않음. 필터는 historical 포함 확장 코드.
+    """
+    from region_canonical import canonical_select_expr, expand_to_ledger_codes
+
     engine = get_engine()
     where_region = ""
     where_sido = ""
@@ -165,20 +171,25 @@ def fetch_transactions_for_window_union(
     }
 
     if sido_code:
-        where_sido = "AND sido_code = :sido"
+        where_sido = "AND lt.sido_code = :sido"
         params["sido"] = sido_code
+
+    code_expr = canonical_select_expr("lt")
+
     if beopjungri_codes:
-        where_region = "AND beopjungri_code = ANY(:codes)"
-        params["codes"] = beopjungri_codes
+        with engine.connect() as conn:
+            ledger_codes = expand_to_ledger_codes(conn, beopjungri_codes)
+        where_region = "AND lt.beopjungri_code = ANY(:codes)"
+        params["codes"] = ledger_codes or list(beopjungri_codes)
 
     query = f"""
-        SELECT beopjungri_code,
+        SELECT {code_expr} AS beopjungri_code,
                zone_type_resolved  AS zone_type,
                land_category_resolved AS land_category,
                COALESCE(jimok_group_code, 'other') AS jimok_group_code,
                unit_price_per_sqm,
                contract_date::date AS contract_date
-        FROM land_transactions_resolved
+        FROM land_transactions_resolved lt
         WHERE is_valid = TRUE
           AND is_cancelled = FALSE
           AND unit_price_per_sqm IS NOT NULL
@@ -569,6 +580,12 @@ def main() -> None:
     )
     parser.add_argument("--region", type=str, default=None, help="특정 법정동/리 코드 (미지정 시 전체)")
     parser.add_argument(
+        "--regions-file",
+        type=str,
+        default=None,
+        help="법정동/리 코드 목록 파일(한 줄에 하나). --region 보다 우선",
+    )
+    parser.add_argument(
         "--sido-code",
         type=str,
         default=None,
@@ -648,7 +665,20 @@ def main() -> None:
             raise SystemExit(f"window_years 는 1~5 만 허용: {w}")
 
     batch_id = args.batch_id or uuid.uuid4().hex
-    codes = [args.region] if args.region else None
+    codes: list[str] | None = None
+    if args.regions_file:
+        from pathlib import Path as _P
+
+        p = _P(args.regions_file)
+        codes = [
+            ln.strip()
+            for ln in p.read_text(encoding="utf-8").splitlines()
+            if ln.strip() and not ln.strip().startswith("#")
+        ]
+        if not codes:
+            raise SystemExit(f"--regions-file 비어 있음: {p}")
+    elif args.region:
+        codes = [args.region]
     upsert_chunk = (
         args.upsert_chunk
         if args.upsert_chunk is not None and args.upsert_chunk > 0

@@ -77,11 +77,10 @@ GIS li_cd / UI 선택 코드
 |-------|------|------|
 | **0** | 본 문서·D-028 확정 | 설계 SSOT |
 | **1a** | 192(+대칭 폐지) **분류 리포트** — `code_reissue` / `rename` / `merge` / `split` / `unresolved` | [`reports/REGION_CODE_PHASE1A_CLASSIFICATION.md`](./reports/REGION_CODE_PHASE1A_CLASSIFICATION.md) |
-| **1b** | 1:1 `code_reissue`만 `region_code_history` 적재 (대소 12리 포함) | DDL 데이터 |
-| **1c** | `region_codes` 전국 재시드 + abolished inactive | 신코드 활성·구코드 비활성 |
-| **1d** | 토지 `land_basic_stats_v2` / upper / (필요 시) annual — **canonical grain** 재빌드 | 대소 UI 정합 |
-| **1e** | GIS→canonical resolve (API·맵 허브) | 선택 코드 단일화 |
-| **2** | built/collective 동일 history 공유 · 분할·흡수 수동 규칙 | 8대 유형 정합 |
+| **1b** | 확정 `code_reissue`만 `region_code_history` 적재 | [`reports/REGION_CODE_PHASE1B_VERIFY.md`](./reports/REGION_CODE_PHASE1B_VERIFY.md) (191건) |
+| **1c–1d** | 영향 canonical `region_codes` upsert + historical deactivate + **부분** `land_basic_stats_v2` 재빌드 | [`reports/REGION_CODE_PHASE2_VERIFY.md`](./reports/REGION_CODE_PHASE2_VERIFY.md) |
+| **1e / Phase 2 API** | GIS→canonical resolve (`app/region_canonical.py`, `free_v2`) | 수태리+신척리 bulk OK |
+| **2** | built/collective 동일 resolver 공유 · 분할·흡수 수동 규칙 | 8대 유형 정합 |
 | **3** | Profile v2 / Twin — canonical SSOT 전제 착수 | D-027 후속 |
 
 Phase 1a에서 `split`/`merge` 미판정은 **자동 seed 대상에서 제외**하고 별도 큐에 둔다.
