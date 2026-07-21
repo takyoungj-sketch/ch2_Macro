@@ -1,0 +1,91 @@
+{
+  "cases": [
+    {
+      "name": "대소읍(음성)",
+      "checks": {
+        "built_no_hist": true,
+        "built_has_canon": true,
+        "collective_no_hist": true,
+        "collective_has_canon": true
+      },
+      "built_resolve_status": 200,
+      "built_resolve": {
+        "level": "eupmyeondong",
+        "codes_sample": [
+          "43770256"
+        ]
+      },
+      "collective_resolve_status": 200,
+      "collective_resolve": {
+        "level": "eupmyeondong",
+        "codes_sample": [
+          "43770256"
+        ]
+      },
+      "built_stats_scope": {
+        "status": 200,
+        "n": 8
+      },
+      "collective_buildings": {
+        "status": 200,
+        "total": 47
+      },
+      "built_tx_list": {
+        "status": 200,
+        "total": 242
+      },
+      "built_lookup_canon_eup": {
+        "status": 200,
+        "body": {
+          "code": null,
+          "level": "eupmyeondong",
+          "addr1": null,
+          "addr2": null,
+          "leaf": null
+        }
+      },
+      "built_lookup_hist_eup": {
+        "status": 200
+      },
+      "market_stats": {
+        "hist_eup_rows": 0,
+        "canon_eup_rows": 7
+      },
+      "resolve_hist_ri": {
+        "in": "4377034026",
+        "out": [
+          "4377025626"
+        ]
+      }
+    },
+    {
+      "name": "화성분구_sample",
+      "checks": {},
+      "built_lookup_canon_eup": {
+        "status": 200,
+        "body": {
+          "code": null,
+          "level": "eupmyeondong",
+          "addr1": null,
+          "addr2": null,
+          "leaf": null
+        }
+      },
+      "built_lookup_hist_eup": {
+        "status": 200
+      },
+      "market_stats": {
+        "hist_eup_rows": 0,
+        "canon_eup_rows": 18
+      },
+      "resolve_hist_ri": {
+        "in": "4159025321",
+        "out": [
+          "4159325021"
+        ]
+      }
+    }
+  ],
+  "ok": true,
+  "errors": []
+}

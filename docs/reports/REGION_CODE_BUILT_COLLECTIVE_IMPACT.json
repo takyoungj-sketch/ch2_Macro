@@ -1,0 +1,500 @@
+{
+  "pairs": 191,
+  "from_codes": 191,
+  "to_codes": 191,
+  "stale_eup_prefixes": 15,
+  "unresolved_excluded": 2,
+  "dbs": {
+    "built_stats": {
+      "db": "built_stats",
+      "tables": {
+        "built_transactions.beopjungri_code": {
+          "historical": {
+            "exists": true,
+            "rows": 6288,
+            "distinct_codes": 169
+          },
+          "canonical": {
+            "exists": true,
+            "rows": 0,
+            "distinct_codes": 0
+          }
+        },
+        "collective_transactions.beopjungri_code": {
+          "historical": {
+            "exists": false
+          },
+          "canonical": {
+            "exists": false
+          }
+        },
+        "collective_commercial_transactions.beopjungri_code": {
+          "historical": {
+            "exists": false
+          },
+          "canonical": {
+            "exists": false
+          }
+        },
+        "market_stats.region_code": {
+          "historical": {
+            "exists": false
+          },
+          "canonical": {
+            "exists": false
+          }
+        },
+        "market_annual_stats.region_code": {
+          "historical": {
+            "exists": false
+          },
+          "canonical": {
+            "exists": false
+          }
+        },
+        "built_annual_stats.region_code": {
+          "historical": {
+            "exists": true,
+            "rows": 0,
+            "distinct_codes": 0
+          },
+          "canonical": {
+            "exists": true,
+            "rows": 0,
+            "distinct_codes": 0
+          }
+        },
+        "built_annual_stats.region_code__stale_eup8": {
+          "historical_eup_prefix": {
+            "exists": true,
+            "rows": 234
+          }
+        },
+        "built_annual_stats.beopjungri_code": {
+          "historical": {
+            "exists": false
+          },
+          "canonical": {
+            "exists": false
+          }
+        },
+        "collective_commercial_region_annual_stats.region_code": {
+          "historical": {
+            "exists": false
+          },
+          "canonical": {
+            "exists": false
+          }
+        },
+        "collective_building_annual_stats.beopjungri_code": {
+          "historical": {
+            "exists": false
+          },
+          "canonical": {
+            "exists": false
+          }
+        },
+        "collective_building_annual_stats.sigungu_code": {
+          "historical": {
+            "exists": false
+          },
+          "canonical": {
+            "exists": false
+          }
+        },
+        "collective_presale_lifetime_stats.beopjungri_code": {
+          "historical": {
+            "exists": false
+          },
+          "canonical": {
+            "exists": false
+          }
+        },
+        "collective_cluster_annual_stats.beopjungri_code": {
+          "historical": {
+            "exists": false
+          },
+          "canonical": {
+            "exists": false
+          }
+        },
+        "collective_commercial_cluster_annual_stats.beopjungri_code": {
+          "historical": {
+            "exists": false
+          },
+          "canonical": {
+            "exists": false
+          }
+        }
+      },
+      "history": {
+        "region_code_history": false,
+        "region_codes": true
+      },
+      "top_hist_built_transactions": [
+        {
+          "code": "4159037022",
+          "n": 176
+        },
+        {
+          "code": "4159026221",
+          "n": 138
+        },
+        {
+          "code": "4159036026",
+          "n": 125
+        },
+        {
+          "code": "4159037023",
+          "n": 123
+        },
+        {
+          "code": "4159037024",
+          "n": 112
+        },
+        {
+          "code": "4159033025",
+          "n": 109
+        },
+        {
+          "code": "4159025925",
+          "n": 107
+        },
+        {
+          "code": "4159034021",
+          "n": 101
+        },
+        {
+          "code": "4159041027",
+          "n": 100
+        },
+        {
+          "code": "4159025924",
+          "n": 92
+        },
+        {
+          "code": "4159025631",
+          "n": 91
+        },
+        {
+          "code": "4159025632",
+          "n": 89
+        },
+        {
+          "code": "4159037029",
+          "n": 82
+        },
+        {
+          "code": "4159041022",
+          "n": 81
+        },
+        {
+          "code": "4159033024",
+          "n": 81
+        }
+      ],
+      "sido_hist_built_transactions": [
+        {
+          "sido": "41",
+          "n": 6288
+        }
+      ]
+    },
+    "collective_stats": {
+      "db": "collective_stats",
+      "tables": {
+        "built_transactions.beopjungri_code": {
+          "historical": {
+            "exists": false
+          },
+          "canonical": {
+            "exists": false
+          }
+        },
+        "collective_transactions.beopjungri_code": {
+          "historical": {
+            "exists": true,
+            "rows": 17901,
+            "distinct_codes": 76
+          },
+          "canonical": {
+            "exists": true,
+            "rows": 0,
+            "distinct_codes": 0
+          }
+        },
+        "collective_commercial_transactions.beopjungri_code": {
+          "historical": {
+            "exists": true,
+            "rows": 1782,
+            "distinct_codes": 42
+          },
+          "canonical": {
+            "exists": true,
+            "rows": 0,
+            "distinct_codes": 0
+          }
+        },
+        "market_stats.region_code": {
+          "historical": {
+            "exists": true,
+            "rows": 0,
+            "distinct_codes": 0
+          },
+          "canonical": {
+            "exists": true,
+            "rows": 0,
+            "distinct_codes": 0
+          }
+        },
+        "market_stats.region_code__stale_eup8": {
+          "historical_eup_prefix": {
+            "exists": true,
+            "rows": 358
+          }
+        },
+        "market_annual_stats.region_code": {
+          "historical": {
+            "exists": true,
+            "rows": 0,
+            "distinct_codes": 0
+          },
+          "canonical": {
+            "exists": true,
+            "rows": 0,
+            "distinct_codes": 0
+          }
+        },
+        "market_annual_stats.region_code__stale_eup8": {
+          "historical_eup_prefix": {
+            "exists": true,
+            "rows": 205
+          }
+        },
+        "built_annual_stats.region_code": {
+          "historical": {
+            "exists": false
+          },
+          "canonical": {
+            "exists": false
+          }
+        },
+        "built_annual_stats.beopjungri_code": {
+          "historical": {
+            "exists": false
+          },
+          "canonical": {
+            "exists": false
+          }
+        },
+        "collective_commercial_region_annual_stats.region_code": {
+          "historical": {
+            "exists": true,
+            "rows": 0,
+            "distinct_codes": 0
+          },
+          "canonical": {
+            "exists": true,
+            "rows": 0,
+            "distinct_codes": 0
+          }
+        },
+        "collective_commercial_region_annual_stats.region_code__stale_eup8": {
+          "historical_eup_prefix": {
+            "exists": true,
+            "rows": 68
+          }
+        },
+        "collective_building_annual_stats.beopjungri_code": {
+          "historical": {
+            "exists": true,
+            "rows": 2956,
+            "distinct_codes": 84
+          },
+          "canonical": {
+            "exists": true,
+            "rows": 0,
+            "distinct_codes": 0
+          }
+        },
+        "collective_building_annual_stats.sigungu_code": {
+          "historical": {
+            "exists": false
+          },
+          "canonical": {
+            "exists": false
+          }
+        },
+        "collective_presale_lifetime_stats.beopjungri_code": {
+          "historical": {
+            "exists": true,
+            "rows": 38,
+            "distinct_codes": 12
+          },
+          "canonical": {
+            "exists": true,
+            "rows": 0,
+            "distinct_codes": 0
+          }
+        },
+        "collective_cluster_annual_stats.beopjungri_code": {
+          "historical": {
+            "exists": false
+          },
+          "canonical": {
+            "exists": false
+          }
+        },
+        "collective_commercial_cluster_annual_stats.beopjungri_code": {
+          "historical": {
+            "exists": false
+          },
+          "canonical": {
+            "exists": false
+          }
+        }
+      },
+      "history": {
+        "region_code_history": false,
+        "region_codes": true
+      },
+      "top_hist_collective_transactions": [
+        {
+          "code": "4159026221",
+          "n": 2469
+        },
+        {
+          "code": "4159025325",
+          "n": 2437
+        },
+        {
+          "code": "4159025324",
+          "n": 1579
+        },
+        {
+          "code": "4159025321",
+          "n": 1188
+        },
+        {
+          "code": "4159026222",
+          "n": 1169
+        },
+        {
+          "code": "4159025939",
+          "n": 1028
+        },
+        {
+          "code": "4159025632",
+          "n": 777
+        },
+        {
+          "code": "4159025323",
+          "n": 739
+        },
+        {
+          "code": "4159025922",
+          "n": 700
+        },
+        {
+          "code": "4159025322",
+          "n": 650
+        },
+        {
+          "code": "4159041021",
+          "n": 472
+        },
+        {
+          "code": "4159025924",
+          "n": 421
+        },
+        {
+          "code": "4159025926",
+          "n": 421
+        },
+        {
+          "code": "4159036024",
+          "n": 337
+        },
+        {
+          "code": "4159025941",
+          "n": 327
+        }
+      ],
+      "sido_hist_collective_transactions": [
+        {
+          "sido": "41",
+          "n": 17901
+        }
+      ],
+      "top_hist_collective_commercial_transactions": [
+        {
+          "code": "4159026221",
+          "n": 252
+        },
+        {
+          "code": "4159025926",
+          "n": 242
+        },
+        {
+          "code": "4159025324",
+          "n": 209
+        },
+        {
+          "code": "4159025321",
+          "n": 169
+        },
+        {
+          "code": "4159025939",
+          "n": 132
+        },
+        {
+          "code": "4159025325",
+          "n": 132
+        },
+        {
+          "code": "4159025925",
+          "n": 123
+        },
+        {
+          "code": "4159036029",
+          "n": 100
+        },
+        {
+          "code": "4159036026",
+          "n": 63
+        },
+        {
+          "code": "4159035025",
+          "n": 49
+        },
+        {
+          "code": "4159033024",
+          "n": 47
+        },
+        {
+          "code": "4159025922",
+          "n": 44
+        },
+        {
+          "code": "4159036025",
+          "n": 25
+        },
+        {
+          "code": "4159033025",
+          "n": 21
+        },
+        {
+          "code": "4159035021",
+          "n": 21
+        }
+      ],
+      "sido_hist_collective_commercial_transactions": [
+        {
+          "sido": "41",
+          "n": 1782
+        }
+      ]
+    }
+  },
+  "land_history_rows": 191
+}

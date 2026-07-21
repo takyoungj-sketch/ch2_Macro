@@ -119,6 +119,122 @@ def canonical_select_expr(alias: str = "lt") -> str:
     )"""
 
 
+def canonical_prefix_expr(alias: str = "lt", n: int = 8) -> str:
+    """Canonical admin prefix (2/5/8) for map/mart grain.
+
+    Prefer remapping via beopjungri history; if beopjungri is NULL (common on
+    Built/Collective addr-only rows), remap eupmyeondong/sigungu/sido code through
+    history using left(from_code, n) → left(to_code, n).
+    """
+    if n not in (2, 5, 8):
+        raise ValueError(f"canonical_prefix_expr n must be 2|5|8, got {n}")
+    a = alias
+    if n == 8:
+        raw = (
+            f"COALESCE(NULLIF(btrim({a}.beopjungri_code::text), ''), "
+            f"NULLIF(btrim({a}.eupmyeondong_code::text), ''), '')"
+        )
+    elif n == 5:
+        raw = (
+            f"COALESCE(NULLIF(btrim({a}.beopjungri_code::text), ''), "
+            f"NULLIF(btrim({a}.sigungu_code::text), ''), '')"
+        )
+    else:
+        raw = (
+            f"COALESCE(NULLIF(btrim({a}.beopjungri_code::text), ''), "
+            f"NULLIF(btrim({a}.sido_code::text), ''), '')"
+        )
+    return f"""COALESCE(
+      (
+        SELECT left(h.to_code, {n})
+        FROM region_code_history h
+        WHERE left(h.from_code, {n}) = left({raw}, {n})
+          AND length(btrim({raw})) >= {n}
+          AND h.change_type IN ({_TYPES_SQL})
+        ORDER BY h.effective_from DESC, h.id DESC
+        LIMIT 1
+      ),
+      CASE WHEN length(btrim({raw})) >= {n} THEN left(btrim({raw}), {n}) ELSE NULL END
+    )"""
+
+
+def lookup_active_admin_codes_by_name(
+    conn: Connection,
+    *,
+    level: str,
+    sido_name: str,
+    sigungu_name: str | None = None,
+    names: Sequence[str] | None = None,
+) -> list[str]:
+    """Active region_codes lookup by address names (NULL admin-code rows on Built/Collective).
+
+    level: eupmyeondong | sigungu
+    """
+    a1 = (sido_name or "").strip()
+    if not a1:
+        return []
+    a2 = (sigungu_name or "").strip() or None
+    labels = _norm_codes(names) if names else []
+
+    if level == "eupmyeondong":
+        if not a2 or not labels:
+            return []
+        rows = conn.execute(
+            text(
+                """
+                SELECT DISTINCT btrim(eupmyeondong_code::text) AS code
+                FROM region_codes
+                WHERE COALESCE(is_active, TRUE)
+                  AND btrim(sido_name::text) = :a1
+                  AND btrim(sigungu_name::text) = :a2
+                  AND btrim(eupmyeondong_name::text) = ANY(:names)
+                  AND eupmyeondong_code IS NOT NULL
+                  AND btrim(eupmyeondong_code::text) <> ''
+                ORDER BY 1
+                """
+            ),
+            {"a1": a1, "a2": a2, "names": labels},
+        ).fetchall()
+    elif level == "sigungu":
+        if labels:
+            rows = conn.execute(
+                text(
+                    """
+                    SELECT DISTINCT btrim(sigungu_code::text) AS code
+                    FROM region_codes
+                    WHERE COALESCE(is_active, TRUE)
+                      AND btrim(sido_name::text) = :a1
+                      AND btrim(sigungu_name::text) = ANY(:names)
+                      AND sigungu_code IS NOT NULL
+                      AND btrim(sigungu_code::text) <> ''
+                    ORDER BY 1
+                    """
+                ),
+                {"a1": a1, "names": labels},
+            ).fetchall()
+        elif a2:
+            rows = conn.execute(
+                text(
+                    """
+                    SELECT DISTINCT btrim(sigungu_code::text) AS code
+                    FROM region_codes
+                    WHERE COALESCE(is_active, TRUE)
+                      AND btrim(sido_name::text) = :a1
+                      AND btrim(sigungu_name::text) = :a2
+                      AND sigungu_code IS NOT NULL
+                      AND btrim(sigungu_code::text) <> ''
+                    ORDER BY 1
+                    """
+                ),
+                {"a1": a1, "a2": a2},
+            ).fetchall()
+        else:
+            return []
+    else:
+        return []
+    return _norm_codes(str(r[0]) for r in rows)
+
+
 def region_codes_join_on_canonical(
     tx_alias: str = "lt",
     rc_alias: str = "r",

@@ -107,20 +107,68 @@ def resolve_built_map_codes(
         ri_pick=[f"{p.eup}|{p.ri}" for p in ris] if ris else None,
     )
     col = _CODE_COL[level]
+    from app.region_canonical import (
+        canonical_prefix_expr,
+        canonical_select_expr,
+        resolve_to_canonical,
+    )
+
+    # D-028: user-facing map grain is always canonical. Built rows often have
+    # NULL beopjungri_code with historical eupmyeondong_code — remap via history.
+    if level == "beopjungri":
+        code_sql = f"({canonical_select_expr('lt')})"
+        filter_sql = (
+            "lt.beopjungri_code IS NOT NULL AND btrim(lt.beopjungri_code::text) <> ''"
+        )
+    elif level == "eupmyeondong":
+        code_sql = f"({canonical_prefix_expr('lt', 8)})"
+        filter_sql = f"({canonical_prefix_expr('lt', 8)}) IS NOT NULL"
+    elif level == "sigungu":
+        code_sql = f"({canonical_prefix_expr('lt', 5)})"
+        filter_sql = f"({canonical_prefix_expr('lt', 5)}) IS NOT NULL"
+    else:
+        code_sql = f"btrim(lt.{col}::text)"
+        filter_sql = f"lt.{col} IS NOT NULL AND btrim(lt.{col}::text) <> ''"
+
     rows = conn.execute(
         text(
             f"""
-            SELECT DISTINCT btrim({col}::text) AS code
-            FROM built_transactions
-            WHERE {where}
-              AND {col} IS NOT NULL
-              AND btrim({col}::text) <> ''
+            SELECT DISTINCT {code_sql} AS code
+            FROM (
+              SELECT * FROM built_transactions
+              WHERE {where}
+            ) lt
+            WHERE {filter_sql}
             ORDER BY 1
             """
         ),
         params,
     ).fetchall()
     codes = [str(r[0]).strip() for r in rows if r and r[0]]
+    if level == "beopjungri":
+        codes = resolve_to_canonical(conn, codes)
+    elif not codes and level in ("eupmyeondong", "sigungu"):
+        # Addr-matched rows may have NULL admin codes — active region_codes by name
+        hit = conn.execute(
+            text(
+                f"""
+                SELECT 1 FROM (
+                  SELECT * FROM built_transactions WHERE {where}
+                ) lt LIMIT 1
+                """
+            ),
+            params,
+        ).first()
+        if hit:
+            from app.region_canonical import lookup_active_admin_codes_by_name
+
+            codes = lookup_active_admin_codes_by_name(
+                conn,
+                level=level,
+                sido_name=a1 or "",
+                sigungu_name=a2,
+                names=addr4_list or addr3_list or leaves,
+            )
 
     ctx_sido = codes[0][:2] if codes else None
     ctx_sigungu: str | None = None

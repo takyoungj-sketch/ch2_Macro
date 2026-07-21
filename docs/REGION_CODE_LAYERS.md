@@ -102,17 +102,26 @@ Phase 1a에서 `split`/`merge` 미판정·**unresolved 2건**(통영 당포리/�
 
 ---
 
-## 7. 공통 모듈 (SSOT)
+## 7. 공통 모듈 · 지역 마스터 (SSOT)
 
 | 경로 | 역할 |
 |------|------|
 | `pipeline/region_canonical.py` | resolve / expand / SQL grain / history map join |
 | `backend/app/region_canonical.py` | 백엔드 re-export (동일 규칙) |
+| `db/046_region_code_history_shared.sql` | Built/Collective용 history DDL |
+| `pipeline/sync_region_code_history.py` | land → built/collective **복제 동기화** (매핑 포크 금지) |
 
-Land / Built / Collective는 **자체 코드 변환 로직을 두지 않는다**. 행정구역 개편 시 history·`region_codes`만 갱신하면 CH2 Macro 전체에 반영된다.
-## 7. 하지 않을 것
+Land / Built / Collective는 **자체 코드 변환 로직을 두지 않는다**.
+
+**운영(현재):** `land_stats.region_code_history` 를 임시 SSOT로 두고 Built·Collective에 동일 행을 동기화한다.  
+**목표(장기):** `region_codes` + `region_code_history` 를 **CH2 Macro 공통 지역 마스터**로 독립 — Land 소유가 아닌 인프라. 동기화는 master→3 DB pull 로 전환.
+
+---
+
+## 8. 하지 않을 것
 
 - 원장 실시간 폴백으로 GIS·통계 불일치 가리기
 - 192건 `is_active=TRUE` 일괄 복구
 - 폐지 코드에 읍 이름만 붙여 canonical로 재사용
 - Profile/Twin을 H코드 기준으로 먼저 빌드
+- Built/Collective에 Land와 **다른** history 매핑을 따로 운영하기

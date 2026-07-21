@@ -528,13 +528,23 @@ def _filter_gu(df: pd.DataFrame, req: RegressionRunRequest) -> pd.DataFrame:
     return df[_norm_col(df, "addr3").isin(set(names))]
 
 
-def _filter_by_region_units(df: pd.DataFrame, req: RegressionRunRequest) -> pd.DataFrame:
+def _filter_by_region_units(
+    df: pd.DataFrame,
+    req: RegressionRunRequest,
+    *,
+    conn=None,
+) -> pd.DataFrame:
     """region_codes / region_addrs 로 행 필터 (교차 시군구 포함)."""
     if df.empty or not _has_unit_region_scope(req):
         return df
     codes = [str(c).strip() for c in (getattr(req, "region_codes", None) or []) if str(c).strip()]
     triples = _unit_addr_triples(req)
     lv = (getattr(req, "region_code_level", None) or "eupmyeondong").strip().lower()
+    # D-028: GIS/canonical → ledger historical expand (beopjungri)
+    if codes and lv == "beopjungri" and conn is not None:
+        from app.region_canonical import expand_to_ledger_codes
+
+        codes = expand_to_ledger_codes(conn, codes) or codes
     mask = pd.Series(False, index=df.index)
 
     if codes:
@@ -552,6 +562,7 @@ def _filter_by_region_units(df: pd.DataFrame, req: RegressionRunRequest) -> pd.D
             if "eupmyeondong_code" in df.columns:
                 mask = mask | _norm_col(df, "eupmyeondong_code").isin(emd_set)
             if "beopjungri_code" in df.columns:
+                # historical eup prefix + canonical eup prefix both
                 mask = mask | _norm_col(df, "beopjungri_code").str.slice(0, 8).isin(emd_set)
 
     has_a1 = "addr1" in df.columns
@@ -569,10 +580,16 @@ def _filter_by_region_units(df: pd.DataFrame, req: RegressionRunRequest) -> pd.D
     return df[mask]
 
 
-def _filter_eup_leaf(df: pd.DataFrame, req: RegressionRunRequest, addr4_city: bool) -> pd.DataFrame:
+def _filter_eup_leaf(
+    df: pd.DataFrame,
+    req: RegressionRunRequest,
+    addr4_city: bool,
+    *,
+    conn=None,
+) -> pd.DataFrame:
     """선택 읍·면·동(복수 합집합). region_* 단위가 있으면 그쪽 우선."""
     if _has_unit_region_scope(req):
-        return _filter_by_region_units(df, req)
+        return _filter_by_region_units(df, req, conn=conn)
     out = df.copy()
     gu = effective_addr3_list(req.addr3, req.addr3_list)
     if addr4_city:
@@ -866,6 +883,7 @@ def _scope_for_level(
     mode: CompareMode,
     *,
     eup_scope: Literal["leaf", "parent"] = "leaf",
+    conn=None,
 ) -> pd.DataFrame:
     if admin_level == "sigungu":
         return _filter_sigungu(wide_df, req)
@@ -874,7 +892,7 @@ def _scope_for_level(
     if admin_level == "eupmyeondong":
         if eup_scope == "parent" and req.ri_list:
             return _filter_parent_eups(wide_df, req.ri_list, addr4_city)
-        return _filter_eup_leaf(wide_df, req, addr4_city)
+        return _filter_eup_leaf(wide_df, req, addr4_city, conn=conn)
     if admin_level == "beopjungri":
         return _filter_ri_picks(wide_df, req.ri_list)
     return _filter_sigungu(wide_df, req)
@@ -1109,10 +1127,12 @@ def _scatter_scope(
     req: RegressionRunRequest,
     addr4_city: bool,
     mode: CompareMode,
+    *,
+    conn=None,
 ) -> tuple[pd.DataFrame, AdminLevel, str]:
     """산점도 scope = 분석 초점과 동일."""
     focus = _focus_admin_level(req, addr4_city)
-    scoped = _scope_for_level(wide_df, req, focus, addr4_city, mode)
+    scoped = _scope_for_level(wide_df, req, focus, addr4_city, mode, conn=conn)
     label = _label_for_level(req, wide_df, focus, addr4_city)
     return scoped, focus, label
 
@@ -1125,8 +1145,11 @@ def _build_scatter_bundle(
     mode: CompareMode,
     unified: bool,
     response_scale: ResponseScale,
+    conn=None,
 ) -> tuple[list[CorrelationSeries], list[PartialRegressionSeries], AdminLevel, str, int]:
-    scatter_df, admin_level, scope_label = _scatter_scope(wide_df, req, addr4_city, mode)
+    scatter_df, admin_level, scope_label = _scatter_scope(
+        wide_df, req, addr4_city, mode, conn=conn
+    )
     region_col = _region_col_for_scatter(req.variables, admin_level, addr4_city)
     corrs = _correlations(scatter_df, req.variables)
     partials = _partial_regression_plots(
@@ -1204,7 +1227,7 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
     )
 
     focus = _focus_admin_level(req, addr4_city)
-    focus_df = _scope_for_level(wide_df, req, focus, addr4_city, mode)
+    focus_df = _scope_for_level(wide_df, req, focus, addr4_city, mode, conn=conn)
     focus_label = _label_for_level(req, wide_df, focus, addr4_city)
     primary = _fit_ols(focus_df, req.variables, focus, focus_label, **fit_kw)
 
@@ -1212,7 +1235,7 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
     for level in _upper_admin_levels(focus, addr4_city):
         eup_scope = _eup_scope_for_level(level, focus, req)
         scoped = _scope_for_level(
-            wide_df, req, level, addr4_city, mode, eup_scope=eup_scope
+            wide_df, req, level, addr4_city, mode, eup_scope=eup_scope, conn=conn
         )
         label = _label_for_level(
             req, wide_df, level, addr4_city, eup_scope=eup_scope
@@ -1222,7 +1245,7 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
         )
 
     corrs, partials, s_level, s_label, s_n = _build_scatter_bundle(
-        wide_df, req, **scatter_kw
+        wide_df, req, conn=conn, **scatter_kw
     )
     return RegressionRunResponse(
         primary=primary,
@@ -1244,7 +1267,7 @@ def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredict
     focus = _focus_admin_level(req, addr4_city)
     eup_scope = _eup_scope_for_level(req.admin_level, focus, req)
     df = _scope_for_level(
-        wide_df, req, req.admin_level, addr4_city, mode, eup_scope=eup_scope
+        wide_df, req, req.admin_level, addr4_city, mode, eup_scope=eup_scope, conn=conn
     )
 
     scope_label = _label_for_level(

@@ -105,20 +105,58 @@ def resolve_collective_map_codes(
 
     col = _CODE_COL[level]
     where = " AND ".join(clauses)
+    from app.region_canonical import (
+        canonical_prefix_expr,
+        canonical_select_expr,
+        resolve_to_canonical,
+    )
+
+    # D-028: user-facing map grain is always canonical (hist eup with NULL beopjungri)
+    if level == "beopjungri":
+        code_sql = f"({canonical_select_expr('t')})"
+        filter_sql = (
+            "t.beopjungri_code IS NOT NULL AND btrim(t.beopjungri_code::text) <> ''"
+        )
+    elif level == "eupmyeondong":
+        code_sql = f"({canonical_prefix_expr('t', 8)})"
+        filter_sql = f"({canonical_prefix_expr('t', 8)}) IS NOT NULL"
+    elif level == "sigungu":
+        code_sql = f"({canonical_prefix_expr('t', 5)})"
+        filter_sql = f"({canonical_prefix_expr('t', 5)}) IS NOT NULL"
+    else:
+        code_sql = f"btrim(t.{col}::text)"
+        filter_sql = f"t.{col} IS NOT NULL AND btrim(t.{col}::text) <> ''"
+
     rows = conn.execute(
         text(
             f"""
-            SELECT DISTINCT btrim({col}::text) AS code
-            FROM {table}
+            SELECT DISTINCT {code_sql} AS code
+            FROM {table} t
             WHERE {where}
-              AND {col} IS NOT NULL
-              AND btrim({col}::text) <> ''
+              AND {filter_sql}
             ORDER BY 1
             """
         ),
         params,
     ).fetchall()
     codes = [str(r[0]).strip() for r in rows if r and r[0]]
+    if level == "beopjungri" and codes:
+        codes = resolve_to_canonical(conn, codes)
+    elif not codes and level in ("eupmyeondong", "sigungu"):
+        hit = conn.execute(
+            text(f"SELECT 1 FROM {table} t WHERE {where} LIMIT 1"),
+            params,
+        ).first()
+        if hit:
+            from app.region_canonical import lookup_active_admin_codes_by_name
+
+            codes = lookup_active_admin_codes_by_name(
+                conn,
+                level=level,
+                sido_name=a1 or "",
+                sigungu_name=a2,
+                names=addr4_list or addr3_list or leaves,
+            )
 
     ctx_sido = codes[0][:2] if codes else None
     ctx_sigungu: str | None = None
