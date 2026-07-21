@@ -80,10 +80,11 @@ GIS li_cd / UI 선택 코드
 | **1b** | 확정 `code_reissue`만 `region_code_history` 적재 | [`reports/REGION_CODE_PHASE1B_VERIFY.md`](./reports/REGION_CODE_PHASE1B_VERIFY.md) (191건) |
 | **1c–1d** | 영향 canonical `region_codes` upsert + historical deactivate + **부분** `land_basic_stats_v2` 재빌드 | [`reports/REGION_CODE_PHASE2_VERIFY.md`](./reports/REGION_CODE_PHASE2_VERIFY.md) |
 | **1e / Phase 2 API** | GIS→canonical resolve (`app/region_canonical.py`, `free_v2`) | 수태리+신척리 bulk OK |
-| **2** | built/collective 동일 resolver 공유 · 분할·흡수 수동 규칙 | 8대 유형 정합 |
+| **1f Land finish** | upper/annual canonical 재빌드(시도 41·43) + UI/API 검증 | [`reports/REGION_CODE_LAND_FINISH_VERIFY.json`](./reports/REGION_CODE_LAND_FINISH_VERIFY.json) · **토지 canonical 전환 완료** |
+| **2** | built/collective **동일** `region_canonical` 공유 (독자 변환 금지) · 분할·흡수 수동 규칙 | market 빌드·region_scope expand 연동됨; mart 전체 재빌드는 다음 갱신 사이클 |
 | **3** | Profile v2 / Twin — canonical SSOT 전제 착수 | D-027 후속 |
 
-Phase 1a에서 `split`/`merge` 미판정은 **자동 seed 대상에서 제외**하고 별도 큐에 둔다.
+Phase 1a에서 `split`/`merge` 미판정·**unresolved 2건**(통영 당포리/삼덕리)은 **자동 seed·통계 제외**하고 별도 큐에 둔다.
 
 ---
 
@@ -96,9 +97,19 @@ Phase 1a에서 `split`/`merge` 미판정은 **자동 seed 대상에서 제외**�
 | history | `4377034026 → 4377025626`, `code_reissue` |
 | GIS 선택 `4377025626` | 사전집계 hit (수태리 통계 표시) |
 | 원장 raw | 주소 문자열 불변 |
+| Master hist tx | `4377034026` 건수 **220 불변** |
+| GIS 수태리+신척리 bulk 3y | count **241**, kept 둘 다 |
 
 ---
 
+## 7. 공통 모듈 (SSOT)
+
+| 경로 | 역할 |
+|------|------|
+| `pipeline/region_canonical.py` | resolve / expand / SQL grain / history map join |
+| `backend/app/region_canonical.py` | 백엔드 re-export (동일 규칙) |
+
+Land / Built / Collective는 **자체 코드 변환 로직을 두지 않는다**. 행정구역 개편 시 history·`region_codes`만 갱신하면 CH2 Macro 전체에 반영된다.
 ## 7. 하지 않을 것
 
 - 원장 실시간 폴백으로 GIS·통계 불일치 가리기

@@ -24,6 +24,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.analysis_base_cache import has_valid_analysis_base_cache
+from app.region_canonical import expand_to_ledger_codes
 from app.routers.upper_stats import _region_name
 from app.matrix_rolling_buckets import (
     chart_bucket_labels_old_first_for_ref_month,
@@ -74,7 +75,9 @@ CACHE_TTL_HOURS = 24
 
 
 def _make_cache_key(req: PaidAnalysisRequest) -> str:
-    payload = json.dumps(_request_stable_payload(req.model_dump()), sort_keys=True)
+    payload = json.dumps(
+        _request_stable_payload(req.model_dump(mode="json")), sort_keys=True
+    )
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
@@ -319,6 +322,7 @@ def _matrix_cell_merged_where(body: MatrixYearlyRequest, db: Session) -> tuple[s
         base_req.area_sqm_max,
         rolling_contract_ps=roll_ps,
         rolling_contract_pe=roll_pe,
+        db=db,
     )
     mtx_sql, mtx_par = _matrix_dimension_sql(
         "lt",
@@ -397,6 +401,7 @@ def _build_conditions(
     area_sqm_max: Optional[float] = None,
     rolling_contract_ps: Optional[date] = None,
     rolling_contract_pe: Optional[date] = None,
+    db: Session | None = None,
 ) -> tuple[list[str], dict]:
     conditions = [
         "lt.is_valid = TRUE",
@@ -419,8 +424,12 @@ def _build_conditions(
         )
         params["base_cache_key"] = base_key
     else:
+        # D-028: GIS/canonical → Master historical expand
+        ledger_codes = list(beopjungri_codes)
+        if db is not None and ledger_codes:
+            ledger_codes = expand_to_ledger_codes(db, ledger_codes) or ledger_codes
         conditions.append("lt.beopjungri_code = ANY(:region_codes)")
-        params["region_codes"] = list(beopjungri_codes)
+        params["region_codes"] = ledger_codes
 
     if rolling_contract_ps is not None and rolling_contract_pe is not None:
         conditions.append("lt.contract_date IS NOT NULL")
@@ -468,8 +477,11 @@ def _build_conditions(
 
 
 def _select_full_query(where_sql: str) -> str:
+    from app.region_canonical import canonical_select_expr
+
+    code_expr = canonical_select_expr("lt")
     return f"""
-        SELECT lt.beopjungri_code,
+        SELECT ({code_expr}) AS beopjungri_code,
                lt.zone_type_resolved  AS zone_type,
                lt.land_category_resolved AS land_category,
                lt.road_condition,
@@ -640,6 +652,7 @@ def _stats_result_from_agg_row(m: dict) -> StatsResult:
         m.get("med_v"),
         m.get("p75_v"),
         m.get("max_v"),
+            db=db,
     )
     return StatsResult(**d)
 
@@ -754,6 +767,7 @@ def _analyze_core_materialized_rows(
         req.exclude_partial,
         req.area_sqm_min,
         req.area_sqm_max,
+        db=db,
     )
 
     query = _select_full_query(" AND ".join(parts))
@@ -847,6 +861,7 @@ def _analyze_core_sql_aggregate(
         req.exclude_partial,
         req.area_sqm_min,
         req.area_sqm_max,
+        db=db,
     )
     where_sql = " AND ".join(parts)
     apx = _AGG_ON_PX
@@ -858,7 +873,18 @@ def _analyze_core_sql_aggregate(
         f"""
         WITH base AS MATERIALIZED (
           SELECT
-            btrim(cast(lt.beopjungri_code AS text)) AS bc,
+            (
+              COALESCE(
+                (
+                  SELECT h.to_code FROM region_code_history h
+                  WHERE h.from_code = btrim(lt.beopjungri_code::text)
+                    AND h.change_type IN ('code_reissue','merge','rename')
+                  ORDER BY h.effective_from DESC, h.id DESC
+                  LIMIT 1
+                ),
+                btrim(lt.beopjungri_code::text)
+              )
+            ) AS bc,
             lt.zone_type_resolved  AS zone_type,
             lt.land_category_resolved AS land_category,
             lt.unit_price_per_sqm::float8 AS px
@@ -1672,7 +1698,7 @@ def _fetch_matrix_cell_filtered_transactions(
     query = text(
         f"""
         SELECT lt.id, lt.contract_year, lt.contract_month, lt.contract_date,
-               lt.beopjungri_code,
+               COALESCE(_rch.to_code, btrim(lt.beopjungri_code::text)) AS beopjungri_code,
                TRIM(BOTH FROM COALESCE(rc.sigungu_name::text, '')) AS sigungu_name,
                TRIM(BOTH FROM COALESCE(rc.eupmyeondong_name::text, '')) AS eupmyeondong_name,
                TRIM(BOTH FROM COALESCE(rc.beopjungri_name::text, '')) AS beopjungri_name,
@@ -1685,7 +1711,16 @@ def _fetch_matrix_cell_filtered_transactions(
                lt.unit_price_per_sqm::float8 AS unit_price_per_sqm,
                TRIM(BOTH FROM COALESCE(lt.road_condition::text, '')) AS road_condition
         FROM land_transactions_resolved lt
-        LEFT JOIN region_codes rc ON rc.beopjungri_code = lt.beopjungri_code
+        LEFT JOIN (
+          SELECT DISTINCT ON (from_code) from_code, to_code
+          FROM region_code_history
+          WHERE change_type IN ('code_reissue','merge','rename')
+          ORDER BY from_code, effective_from DESC, id DESC
+        ) _rch ON _rch.from_code = btrim(lt.beopjungri_code::text)
+        LEFT JOIN region_codes rc
+          ON btrim(rc.beopjungri_code::text) = COALESCE(
+               _rch.to_code, btrim(lt.beopjungri_code::text)
+             )
         WHERE {merged_where}
         ORDER BY lt.contract_year ASC, lt.contract_month ASC, lt.id ASC
         """

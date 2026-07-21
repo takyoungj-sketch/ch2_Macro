@@ -148,6 +148,7 @@ def _build_where(
             codes=getattr(req, "region_codes", None) or [],
             code_level=getattr(req, "region_code_level", None),
             addr_keys=getattr(req, "region_addrs", None) or [],
+            conn=conn,
         )
         if not used_units and req.addr1 and req.addr2:
             apply_region_scope(

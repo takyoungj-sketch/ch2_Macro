@@ -32,10 +32,12 @@ def apply_admin_code_scope(
     codes: list[str] | None,
     level: AdminCodeLevel | str | None,
     col_prefix: str = "",
+    conn: Connection | None = None,
 ) -> bool:
     """
     명시 행정코드 목록으로 지역 필터.
     True면 적용됨 — addr 기반 apply_region_scope 를 건너뛰면 됨.
+    beopjungri: GIS/canonical 입력을 원장 historical 코드로 expand (D-028).
     """
     cleaned = _norm_codes(codes)
     if not cleaned:
@@ -60,7 +62,12 @@ def apply_admin_code_scope(
         )
         return True
     if lv == "beopjungri":
-        params["admin_region_codes"] = cleaned
+        ledger = cleaned
+        if conn is not None:
+            from app.region_canonical import expand_to_ledger_codes
+
+            ledger = expand_to_ledger_codes(conn, cleaned) or cleaned
+        params["admin_region_codes"] = ledger
         clauses.append(f"btrim({p}beopjungri_code::text) = ANY(:admin_region_codes)")
         return True
     return False
@@ -113,12 +120,14 @@ def apply_analysis_region_scope(
     code_level: AdminCodeLevel | str | None = None,
     addr_keys: list[str] | None = None,
     col_prefix: str = "",
+    conn: Connection | None = None,
 ) -> bool:
     """
     교차 시군구 분석 scope.
     - 행정코드 매칭 (매핑된 행)
     - addr1|addr2|leaf 이름 매칭 (코드 NULL 행 포함, 예: 음성 대소읍)
     둘 다 있으면 OR.
+    beopjungri 코드는 canonical → ledger expand (D-028).
     """
     p = f"{col_prefix}." if col_prefix else ""
     parts: list[str] = []
@@ -127,7 +136,12 @@ def apply_analysis_region_scope(
     lv = (code_level or "eupmyeondong").strip().lower()
     if cleaned:
         if lv == "beopjungri":
-            params["admin_region_codes"] = cleaned
+            ledger = cleaned
+            if conn is not None:
+                from app.region_canonical import expand_to_ledger_codes
+
+                ledger = expand_to_ledger_codes(conn, cleaned) or cleaned
+            params["admin_region_codes"] = ledger
             parts.append(f"btrim({p}beopjungri_code::text) = ANY(:admin_region_codes)")
         else:
             emd = []

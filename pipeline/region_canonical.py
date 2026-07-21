@@ -119,6 +119,44 @@ def canonical_select_expr(alias: str = "lt") -> str:
     )"""
 
 
+def region_codes_join_on_canonical(
+    tx_alias: str = "lt",
+    rc_alias: str = "r",
+    *,
+    active_only: bool = True,
+) -> str:
+    """INNER JOIN region_codes … ON canonical(beopjungri) = rc.beopjungri_code.
+
+    Uses a small DISTINCT ON history map (not a per-row correlated subquery)
+    so sido-wide upper/annual rebuilds stay tractable.
+    Hierarchy (sido/sigungu/eup) comes from the *canonical* region_codes row.
+    """
+    a = tx_alias
+    active = f" AND COALESCE({rc_alias}.is_active, TRUE)" if active_only else ""
+    return f"""
+LEFT JOIN (
+  SELECT DISTINCT ON (from_code) from_code, to_code
+  FROM region_code_history
+  WHERE change_type IN ({_TYPES_SQL})
+  ORDER BY from_code, effective_from DESC, id DESC
+) _rch ON _rch.from_code = btrim({a}.beopjungri_code::text)
+INNER JOIN region_codes {rc_alias}
+  ON btrim({rc_alias}.beopjungri_code::text) = COALESCE(
+       _rch.to_code, btrim({a}.beopjungri_code::text)
+     ){active}
+"""
+
+
+def canonical_beopjungri_sql(alias: str = "lt") -> str:
+    """Prefer join-friendly form when history map alias `_rch` is already present.
+
+    Fallback: correlated COALESCE (same as canonical_select_expr).
+    """
+    return (
+        f"COALESCE(_rch.to_code, btrim({alias}.beopjungri_code::text))"
+    )
+
+
 def load_code_reissue_pairs_from_csv(csv_path) -> list[tuple[str, str]]:
     """Return (from_code, to_code) for Phase 1a code_reissue rows."""
     import csv

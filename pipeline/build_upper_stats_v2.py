@@ -192,18 +192,26 @@ def fetch_transactions_for_upper_union(
     *,
     sido_code: str | None = None,
 ) -> pd.DataFrame:
-    """region_codes 조인으로 eupmyeondong_code 확보."""
+    """region_codes 조인으로 eupmyeondong_code 확보.
+
+    D-028: Master beopjungri → canonical 후 region_codes 조인.
+    sido/sigungu/eup 는 canonical 행 기준(분구·면→읍 rollup 정합).
+    """
+    from region_canonical import region_codes_join_on_canonical
+
     engine = get_engine()
     where_sido = ""
     params: dict = {"p_start": period_start_min, "p_end": period_end}
     if sido_code:
-        where_sido = "AND btrim(lt.sido_code::text) = :sido"
+        where_sido = "AND btrim(r.sido_code::text) = :sido"
         params["sido"] = sido_code
+
+    join_sql = region_codes_join_on_canonical("lt", "r", active_only=True)
 
     query = f"""
         SELECT
-            btrim(lt.sido_code::text) AS sido_code,
-            btrim(lt.sigungu_code::text) AS sigungu_code,
+            btrim(r.sido_code::text) AS sido_code,
+            btrim(r.sigungu_code::text) AS sigungu_code,
             btrim(r.eupmyeondong_code::text) AS eupmyeondong_code,
             lt.zone_type_resolved  AS zone_type,
             lt.land_category_resolved AS land_category,
@@ -211,9 +219,7 @@ def fetch_transactions_for_upper_union(
             lt.unit_price_per_sqm,
             lt.contract_date::date AS contract_date
         FROM land_transactions_resolved lt
-        INNER JOIN region_codes r
-            ON btrim(r.beopjungri_code::text) = btrim(lt.beopjungri_code::text)
-           AND COALESCE(r.is_active, TRUE)
+        {join_sql}
         WHERE lt.is_valid = TRUE
           AND lt.is_cancelled = FALSE
           AND lt.unit_price_per_sqm IS NOT NULL

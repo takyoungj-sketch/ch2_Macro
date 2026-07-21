@@ -13,6 +13,7 @@ from region_canonical import (  # noqa: E402
     RESOLVE_CHANGE_TYPES,
     canonical_select_expr,
     expand_to_ledger_codes,
+    region_codes_join_on_canonical,
     resolve_to_canonical,
 )
 
@@ -20,5 +21,6 @@ __all__ = [
     "RESOLVE_CHANGE_TYPES",
     "canonical_select_expr",
     "expand_to_ledger_codes",
+    "region_codes_join_on_canonical",
     "resolve_to_canonical",
 ]

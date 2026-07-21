@@ -47,32 +47,18 @@ ASSET_DOMAINS: dict[str, str] = {
     "presale": "presale_market",
 }
 
-ROLLING_SQL = """
-SELECT
-    btrim(COALESCE(
-        NULLIF(t.eupmyeondong_code::text, ''),
-        NULLIF(rc.eupmyeondong_code::text, ''),
-        substring(btrim(COALESCE(t.beopjungri_code, rc.beopjungri_code)::text) from 1 for 8)
-    )) AS bcode8,
-    btrim(COALESCE(
-        NULLIF(t.sigungu_code::text, ''),
-        NULLIF(rc.sigungu_code::text, ''),
-        substring(btrim(COALESCE(t.beopjungri_code, rc.beopjungri_code)::text) from 1 for 5)
-    )) AS sigungu,
-    btrim(COALESCE(
-        NULLIF(t.sido_code::text, ''),
-        NULLIF(rc.sido_code::text, ''),
-        substring(btrim(COALESCE(t.beopjungri_code, rc.beopjungri_code)::text) from 1 for 2)
-    )) AS sido,
-    t.asset_type,
-    array_agg(t.unit_price ORDER BY t.unit_price) AS prices
-FROM collective_transactions t
+from region_canonical import canonical_select_expr  # noqa: E402
+
+# D-028: region_codes 조인은 canonical beopjungri 기준 (historical PK 잔류 방지)
+_CANON = canonical_select_expr("t")
+_RC_LATERAL = f"""
 LEFT JOIN LATERAL (
     SELECT eupmyeondong_code, sigungu_code, sido_code, beopjungri_code
     FROM region_codes rc
     WHERE COALESCE(rc.is_active, TRUE)
       AND (
-            (t.beopjungri_code IS NOT NULL AND btrim(rc.beopjungri_code::text) = btrim(t.beopjungri_code::text))
+            (t.beopjungri_code IS NOT NULL
+             AND btrim(rc.beopjungri_code::text) = ({_CANON}))
          OR (
             rc.sido_name = t.addr1
             AND (t.addr2 IS NULL OR btrim(t.addr2::text) = '' OR rc.sigungu_name = t.addr2)
@@ -81,56 +67,67 @@ LEFT JOIN LATERAL (
       )
     LIMIT 1
 ) rc ON TRUE
+"""
+
+ROLLING_SQL = f"""
+SELECT
+    btrim(COALESCE(
+        NULLIF(rc.eupmyeondong_code::text, ''),
+        NULLIF(t.eupmyeondong_code::text, ''),
+        substring(({_CANON}) from 1 for 8)
+    )) AS bcode8,
+    btrim(COALESCE(
+        NULLIF(rc.sigungu_code::text, ''),
+        NULLIF(t.sigungu_code::text, ''),
+        substring(({_CANON}) from 1 for 5)
+    )) AS sigungu,
+    btrim(COALESCE(
+        NULLIF(rc.sido_code::text, ''),
+        NULLIF(t.sido_code::text, ''),
+        substring(({_CANON}) from 1 for 2)
+    )) AS sido,
+    t.asset_type,
+    array_agg(t.unit_price ORDER BY t.unit_price) AS prices
+FROM collective_transactions t
+{_RC_LATERAL}
 WHERE t.is_valid = true
   AND t.unit_price IS NOT NULL
   AND t.unit_price > 0
   AND t.contract_date IS NOT NULL
   AND t.contract_date >= :p_start
   AND t.contract_date <= :p_end
-  {addr1_clause}
+  {{addr1_clause}}
 GROUP BY 1, 2, 3, 4
 """
 
-ANNUAL_SQL = """
+ANNUAL_SQL = f"""
 SELECT
     btrim(COALESCE(
-        NULLIF(t.eupmyeondong_code::text, ''),
         NULLIF(rc.eupmyeondong_code::text, ''),
-        substring(btrim(COALESCE(t.beopjungri_code, rc.beopjungri_code)::text) from 1 for 8)
+        NULLIF(t.eupmyeondong_code::text, ''),
+        substring(({_CANON}) from 1 for 8)
     )) AS bcode8,
     btrim(COALESCE(
-        NULLIF(t.sigungu_code::text, ''),
         NULLIF(rc.sigungu_code::text, ''),
-        substring(btrim(COALESCE(t.beopjungri_code, rc.beopjungri_code)::text) from 1 for 5)
+        NULLIF(t.sigungu_code::text, ''),
+        substring(({_CANON}) from 1 for 5)
     )) AS sigungu,
     btrim(COALESCE(
-        NULLIF(t.sido_code::text, ''),
         NULLIF(rc.sido_code::text, ''),
-        substring(btrim(COALESCE(t.beopjungri_code, rc.beopjungri_code)::text) from 1 for 2)
+        NULLIF(t.sido_code::text, ''),
+        substring(({_CANON}) from 1 for 2)
     )) AS sido,
     t.asset_type,
     t.contract_year,
-    array_agg(t.unit_price ORDER BY t.unit_price) AS prices
+    array_agg(t.unit_price ORDER BY t.unit_price) AS prices,
+    SUM(t.price) AS amount_sum
 FROM collective_transactions t
-LEFT JOIN LATERAL (
-    SELECT eupmyeondong_code, sigungu_code, sido_code, beopjungri_code
-    FROM region_codes rc
-    WHERE COALESCE(rc.is_active, TRUE)
-      AND (
-            (t.beopjungri_code IS NOT NULL AND btrim(rc.beopjungri_code::text) = btrim(t.beopjungri_code::text))
-         OR (
-            rc.sido_name = t.addr1
-            AND (t.addr2 IS NULL OR btrim(t.addr2::text) = '' OR rc.sigungu_name = t.addr2)
-            AND rc.eupmyeondong_name = t.addr3
-         )
-      )
-    LIMIT 1
-) rc ON TRUE
+{_RC_LATERAL}
 WHERE t.is_valid = true
   AND t.unit_price IS NOT NULL
   AND t.unit_price > 0
   AND t.contract_year IS NOT NULL
-  {addr1_clause}
+  {{addr1_clause}}
 GROUP BY 1, 2, 3, 4, 5
 """
 
@@ -160,6 +157,7 @@ def _rollup_records(
     calendar_year: int | None = None,
 ) -> list[dict]:
     buckets: dict[tuple[str, str, str], list[float]] = {}
+    amount_buckets: dict[tuple[str, str, str], float] = {}
     for row in rows:
         domain = ASSET_DOMAINS.get(row["asset_type"])
         if not domain:
@@ -167,6 +165,7 @@ def _rollup_records(
         prices = [float(x) for x in (row["prices"] or []) if x is not None]
         if not prices:
             continue
+        row_amount = float(row["amount_sum"]) if row.get("amount_sum") is not None else 0.0
         level_codes = (
             ("eupmyeondong", (row.get("bcode8") or "").strip()),
             ("sigungu", (row.get("sigungu") or "").strip()),
@@ -175,7 +174,9 @@ def _rollup_records(
         for level, rc in level_codes:
             if not rc or not rc.isdigit():
                 continue
-            buckets.setdefault((domain, level, rc), []).extend(prices)
+            key = (domain, level, rc)
+            buckets.setdefault(key, []).extend(prices)
+            amount_buckets[key] = amount_buckets.get(key, 0.0) + row_amount
 
     out: list[dict] = []
     for (domain, level, rc), prices in buckets.items():
@@ -202,6 +203,7 @@ def _rollup_records(
         }
         if calendar_year is not None:
             rec["calendar_year"] = calendar_year
+            rec["amount_sum"] = round(amount_buckets.get((domain, level, rc), 0.0), 2)
         else:
             rec.update(
                 {
@@ -263,10 +265,10 @@ def upsert_market_annual(records: list[dict], engine) -> None:
         """
         INSERT INTO market_annual_stats (
             market_domain, region_level, region_code, calendar_year,
-            count, mean, median, std, computed_at, batch_id
+            count, mean, median, std, amount_sum, computed_at, batch_id
         ) VALUES (
             :market_domain, :region_level, :region_code, :calendar_year,
-            :count, :mean, :median, :std, NOW(), :batch_id
+            :count, :mean, :median, :std, :amount_sum, NOW(), :batch_id
         )
         ON CONFLICT (market_domain, region_level, region_code, calendar_year)
         DO UPDATE SET
@@ -274,12 +276,14 @@ def upsert_market_annual(records: list[dict], engine) -> None:
             mean = EXCLUDED.mean,
             median = EXCLUDED.median,
             std = EXCLUDED.std,
+            amount_sum = EXCLUDED.amount_sum,
             computed_at = NOW(),
             batch_id = EXCLUDED.batch_id
         """
     )
     with engine.begin() as conn:
         for rec in records:
+            rec.setdefault("amount_sum", None)
             conn.execute(sql, rec)
 
 
@@ -361,6 +365,14 @@ def build_annual(engine, *, addr1_filter: str | None, batch_id: str) -> int:
     return total
 
 
+def ensure_amount_column(engine) -> None:
+    ddl_path = REPO / "db" / "044_market_annual_amount.sql"
+    if not ddl_path.is_file():
+        return
+    with engine.begin() as conn:
+        conn.execute(text(ddl_path.read_text(encoding="utf-8")))
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description="집합 market_stats / market_annual_stats")
     p.add_argument("--as-of", type=str, default=None)
@@ -376,6 +388,7 @@ def main() -> None:
 
     engine = get_collective_engine()
     batch_id = str(uuid.uuid4())
+    ensure_amount_column(engine)
 
     with engine.connect() as conn:
         tx_n = conn.execute(text("SELECT COUNT(*) FROM collective_transactions")).scalar()

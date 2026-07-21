@@ -70,6 +70,7 @@ def build_transaction_where(
         codes=region_codes,
         code_level=region_code_level,
         addr_keys=region_addrs,
+        conn=conn,
     )
     if used_units:
         pass
