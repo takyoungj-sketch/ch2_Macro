@@ -233,7 +233,7 @@ Profile 재구축 **이후** 기본정보를 표시한다. **구체 필드·문�
 | **Map-A2** | `RegionMapHub` — 타일·경계·15cm fit·highlight·placeholder 카드 | **진행** |
 | **Map-A3** | 유료 우클릭 인접 복수 → `tierSelection` 동기화 | **진행** |
 | **Map-A4** | `App.tsx` 통합 (무료·유료·조회 전 Hub 상시) | **진행** |
-| **Profile-B0** | 전국 `regional_profile` (beop grain) + Twin | 대기 |
+| **Profile-B0** | 전국 `regional_profile` (beop grain) + Feature Vector SSOT | **D-029 Phase A** — [`REGIONAL_PROFILE_ARCHITECTURE.md`](REGIONAL_PROFILE_ARCHITECTURE.md) §12 |
 | **Profile-B1** | Hub 카드 Profile API·필드 연동 | 대기 |
 | **Profile-B2** | 복합·집합 동일 UX 패턴 이식 | **복합·집합: M1~M3** → [`BUILT_MAP_HUB_PLAN.md`](./BUILT_MAP_HUB_PLAN.md) · [`COLLECTIVE_MAP_HUB_PLAN.md`](./COLLECTIVE_MAP_HUB_PLAN.md) |
 

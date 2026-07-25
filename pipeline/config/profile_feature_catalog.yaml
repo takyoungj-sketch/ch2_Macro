@@ -1,6 +1,76 @@
-# Regional Profile UI feature catalog (SSOT)
-# Frontend: frontend/src/constants/profileFeatureCatalog.ts 와 동기화
+# Regional Profile feature catalog (SSOT)
+# - features: UI/표시용 (frontend-profile · 레거시 동기화)
+# - twin_vector: Twin / 지역비교 Similarity Engine이 읽는 Feature 집합 (D-029)
+# Frontend UI: frontend/src/constants/profileFeatureCatalog.ts 와 features 동기화
 version: "1.0"
+
+# ── D-029 Twin Vector (Phase A 게이트) ─────────────────────────────────────
+# Engine: Catalog → Vector → Weight(profile_weight.yaml) → Similarity
+# Profile에 새 지표를 넣으면 여기 key + (필요 시) 빌더 적재만 추가.
+twin_vector:
+  version: "2.1"
+  features:
+    population:
+      profile_path: population
+      block: population
+      dtype: numeric
+      mask: optional
+      label_ko: 인구
+    market_mix:
+      profile_path: yearly_mix.count_share_by_type
+      block: market_mix
+      dtype: ratio_vector
+      mask_from: market_presence
+      label_ko: 8대 시장 구성비
+    land_top1:
+      profile_path: land_top1
+      block: land_profile
+      dtype: land_top
+      label_ko: 토지 Top1 (용도×지목군)
+    land_top2:
+      profile_path: land_top2
+      block: land_profile
+      dtype: land_top
+      label_ko: 토지 Top2
+    land_top3:
+      profile_path: land_top3
+      block: land_profile
+      dtype: land_top
+      label_ko: 토지 Top3
+    apt_p25:
+      profile_path: apartment_p25
+      block: apartment_profile
+      dtype: numeric
+      unit: manwon_per_sqm
+      window: last_3y
+      mask_from: market_presence.아파트
+      label_ko: 아파트 ㎡당 P25
+    apt_p50:
+      profile_path: apartment_median
+      block: apartment_profile
+      dtype: numeric
+      unit: manwon_per_sqm
+      window: last_3y
+      mask_from: market_presence.아파트
+      label_ko: 아파트 ㎡당 P50
+    apt_p75:
+      profile_path: apartment_p75
+      block: apartment_profile
+      dtype: numeric
+      unit: manwon_per_sqm
+      window: last_3y
+      mask_from: market_presence.아파트
+      label_ko: 아파트 ㎡당 P75
+    market_presence:
+      profile_path: market_presence
+      block: market_mix
+      dtype: mask
+      label_ko: 시장 존재 마스크
+    represent_market:
+      profile_path: dominant_type
+      block: market_mix
+      dtype: categorical
+      label_ko: 대표시장
 
 categories:
   population:
@@ -18,9 +88,24 @@ categories:
   officetel_market:
     label_ko: "오피스텔 시장"
     order: 5
+  presale_market:
+    label_ko: "분양권 시장"
+    order: 6
+  built_market:
+    label_ko: "상업업무·공장창고·단독다가구 시장"
+    order: 7
+  collective_commercial_market:
+    label_ko: "집합상가·집합공장 시장"
+    order: 8
   composition:
     label_ko: "거래 구성"
-    order: 6
+    order: 9
+  jimok_group:
+    label_ko: "지목군 구성 (D-027)"
+    order: 10
+  yearly_mix:
+    label_ko: "3개년 8대 시장유형 (D-027)"
+    order: 11
 
 features:
   population:
@@ -180,6 +265,22 @@ features:
     source_domain: apartment_market
     count_key: apartment_count
     sort_order: 6
+  apartment_p25:
+    category: apartment_market
+    label_ko: "25% 가격"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: apartment_market
+    count_key: apartment_count
+    sort_order: 7
+  apartment_p75:
+    category: apartment_market
+    label_ko: "75% 가격"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: apartment_market
+    count_key: apartment_count
+    sort_order: 8
 
   rowhouse_count:
     category: rowhouse_market
@@ -220,6 +321,22 @@ features:
     source_domain: rowhouse_market
     count_key: rowhouse_count
     sort_order: 5
+  rowhouse_p25:
+    category: rowhouse_market
+    label_ko: "25% 가격"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: rowhouse_market
+    count_key: rowhouse_count
+    sort_order: 6
+  rowhouse_p75:
+    category: rowhouse_market
+    label_ko: "75% 가격"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: rowhouse_market
+    count_key: rowhouse_count
+    sort_order: 7
 
   officetel_count:
     category: officetel_market
@@ -260,6 +377,187 @@ features:
     source_domain: officetel_market
     count_key: officetel_count
     sort_order: 5
+  officetel_p25:
+    category: officetel_market
+    label_ko: "25% 가격"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: officetel_market
+    count_key: officetel_count
+    sort_order: 6
+  officetel_p75:
+    category: officetel_market
+    label_ko: "75% 가격"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: officetel_market
+    count_key: officetel_count
+    sort_order: 7
+
+  presale_count:
+    category: presale_market
+    label_ko: "거래수"
+    value_kind: count
+    source_table: market_stats
+    source_domain: presale_market
+    sort_order: 1
+  presale_mean:
+    category: presale_market
+    label_ko: "평균단가"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: presale_market
+    count_key: presale_count
+    sort_order: 2
+  presale_median:
+    category: presale_market
+    label_ko: "중앙단가"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: presale_market
+    count_key: presale_count
+    sort_order: 3
+  presale_std:
+    category: presale_market
+    label_ko: "표준편차"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: presale_market
+    count_key: presale_count
+    sort_order: 4
+  presale_p25:
+    category: presale_market
+    label_ko: "25% 가격"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: presale_market
+    count_key: presale_count
+    sort_order: 5
+  presale_p75:
+    category: presale_market
+    label_ko: "75% 가격"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: presale_market
+    count_key: presale_count
+    sort_order: 6
+
+  commercial_count:
+    category: built_market
+    label_ko: "거래수 (상업업무)"
+    value_kind: count
+    source_table: market_stats
+    source_domain: commercial_market
+    sort_order: 1
+  commercial_mean:
+    category: built_market
+    label_ko: "평균단가 (상업업무)"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: commercial_market
+    count_key: commercial_count
+    sort_order: 2
+  commercial_median:
+    category: built_market
+    label_ko: "중앙단가 (상업업무)"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: commercial_market
+    count_key: commercial_count
+    sort_order: 3
+  factory_count:
+    category: built_market
+    label_ko: "거래수 (공장창고)"
+    value_kind: count
+    source_table: market_stats
+    source_domain: factory_market
+    sort_order: 10
+  factory_mean:
+    category: built_market
+    label_ko: "평균단가 (공장창고)"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: factory_market
+    count_key: factory_count
+    sort_order: 11
+  factory_median:
+    category: built_market
+    label_ko: "중앙단가 (공장창고)"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: factory_market
+    count_key: factory_count
+    sort_order: 12
+  detached_count:
+    category: built_market
+    label_ko: "거래수 (단독다가구)"
+    value_kind: count
+    source_table: market_stats
+    source_domain: detached_market
+    sort_order: 20
+  detached_mean:
+    category: built_market
+    label_ko: "평균단가 (단독다가구)"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: detached_market
+    count_key: detached_count
+    sort_order: 21
+  detached_median:
+    category: built_market
+    label_ko: "중앙단가 (단독다가구)"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: detached_market
+    count_key: detached_count
+    sort_order: 22
+
+  collective_shop_count:
+    category: collective_commercial_market
+    label_ko: "거래수 (집합상가)"
+    value_kind: count
+    source_table: market_stats
+    source_domain: collective_shop_market
+    sort_order: 1
+  collective_shop_mean:
+    category: collective_commercial_market
+    label_ko: "평균단가 (집합상가)"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: collective_shop_market
+    count_key: collective_shop_count
+    sort_order: 2
+  collective_shop_median:
+    category: collective_commercial_market
+    label_ko: "중앙단가 (집합상가)"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: collective_shop_market
+    count_key: collective_shop_count
+    sort_order: 3
+  collective_factory_count:
+    category: collective_commercial_market
+    label_ko: "거래수 (집합공장)"
+    value_kind: count
+    source_table: market_stats
+    source_domain: collective_factory_market
+    sort_order: 10
+  collective_factory_mean:
+    category: collective_commercial_market
+    label_ko: "평균단가 (집합공장)"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: collective_factory_market
+    count_key: collective_factory_count
+    sort_order: 11
+  collective_factory_median:
+    category: collective_commercial_market
+    label_ko: "중앙단가 (집합공장)"
+    value_kind: money_sqm
+    source_table: market_stats
+    source_domain: collective_factory_market
+    count_key: collective_factory_count
+    sort_order: 12
 
   ratio_residential_zone:
     category: composition
@@ -297,3 +595,37 @@ features:
     value_kind: ratio
     source_table: land_upper_stats_v2
     sort_order: 6
+
+  jimok_group_composition:
+    category: jimok_group
+    label_ko: "지목군 구성비 (7분류)"
+    value_kind: object
+    source_table: land_upper_stats_v2
+    note: "col_axis='group' — key는 jimok_group_share_{agri|forest|dev|infra|water|special|other}"
+    sort_order: 1
+  jimok_group_top3:
+    category: jimok_group
+    label_ko: "지목군 거래량 TOP3"
+    value_kind: list
+    source_table: land_upper_stats_v2
+    note: "[{group, label, count, share}] — 토지 대표시장 카드(§12.4) 입력"
+    sort_order: 2
+  jimok_group_total_count:
+    category: jimok_group
+    label_ko: "지목군 구성 대상 거래건수"
+    value_kind: count
+    source_table: land_upper_stats_v2
+    sort_order: 3
+
+  yearly_mix:
+    category: yearly_mix
+    label_ko: "3개년 8대 시장유형 거래건수·거래액"
+    value_kind: object
+    source_table: "land_annual_stats + built_annual_stats + collective_commercial_region_annual_stats + market_annual_stats"
+    note: >
+      {연도: {8유형: {count, amount}}} + years, totals_by_type, total_count_3y, total_amount_3y,
+      dominant_type, count_share_by_type, amount_share_by_type. 8유형=토지/상가/공장/단독다가구/
+      아파트/오피스텔/연립다세대/분양권 (상가=상업업무+집합상가, 공장=공장창고+집합공장, Profile
+      집계 단계에서만 병합). frontend-profile 5블록(정체성 헤더·3개년 표·시장구성·대표시장·추세)의
+      단일 입력 소스. D-027.
+    sort_order: 1

@@ -1,8 +1,9 @@
 # Regional Profile · 집합부동산 · Market Stats — 통합 설계
 
-> **상태 (2026-06-20):** Phase A/B **구현 완료**, Phase C(코호트) **완료**. **전국 Profile v1.1-national** + **Profile Twin v5** 적재 완료. **하이브리드 Twin v1.2** — [`docs/PROFILE_TWIN_HYBRID.md`](PROFILE_TWIN_HYBRID.md) · D-023. A/B 다중지역 pooling **미구현**.  
+> **상태 (2026-07-25):** D-027 Profile v2 반영. **D-029** Region Profile SSOT + Twin — §12 (Candidate·**Catalog·Weight**·Similarity·Explainability). Phase A→B. 구조 확정 · 이후 튜닝 중심. Twin v8 병행.  
+> **이전 (2026-06-20):** Phase A/B/C 구현, `v1.1-national` + Twin v5·하이브리드 v1.2.  
 > **목적:** CH2 Macro의 **최종 지향점인 Regional Profile DB**를 중심에 두고, 토지·집합·복합·AI가 공유할 **Statistics → Profile → 회귀/쌍둥이** 파이프라인을 정의한다.  
-> **관련:** [`DECISIONS.md`](DECISIONS.md) D-016·D-017, [`REGION_ARCHITECTURE_ROADMAP.md`](REGION_ARCHITECTURE_ROADMAP.md), [`UPPER_STATS_DESIGN.md`](UPPER_STATS_DESIGN.md), [`COLLECTIVE_HANDOFF.md`](COLLECTIVE_HANDOFF.md)
+> **관련:** [`DECISIONS.md`](DECISIONS.md) D-016·D-017·**D-027·D-029**, [`REGION_ARCHITECTURE_ROADMAP.md`](REGION_ARCHITECTURE_ROADMAP.md), [`UPPER_STATS_DESIGN.md`](UPPER_STATS_DESIGN.md), [`COLLECTIVE_HANDOFF.md`](COLLECTIVE_HANDOFF.md), [`TWIN_V8_DESIGN.md`](TWIN_V8_DESIGN.md)
 >
 > **이 문서가 설계 SSOT다.** 코드가 문서보다 앞서가면 안 된다. 구현 변경 시 본 문서를 먼저(또는 동시에) 갱신한다.
 
@@ -346,6 +347,8 @@ Profile 빌더는 **소스를 몰라도** `market_stats` + `population_stats` �
 
 ### 7.0 현행 잔여 작업 — 재우선순위 (2026-06-19, D-017)
 
+> **2026-07-25:** 제품 우선순위는 **[`§12`](#12-region-profile-ssot--twin-on-profile-d-027--d-029-2026-07-25)** (D-029 Phase A→B). 아래 P0/P1은 회귀 A/B·legacy 잔여.
+
 > Phase A/B/C는 구현 완료. 아래는 **Profile을 신뢰 가능한 데이터 제품으로 완성**하기 위한 잔여 작업이다. (실제 빌드 착수는 추후, 본 절은 계획 SSOT.)
 
 | 순위 | 항목 | 비고 |
@@ -451,13 +454,240 @@ Profile 빌더는 **소스를 몰라도** `market_stats` + `population_stats` �
 
 | 문서 | 내용 |
 |------|------|
-| [`DECISIONS.md`](DECISIONS.md) D-016 | 본 아키텍처 채택 |
+| [`DECISIONS.md`](DECISIONS.md) D-016 · **D-027 · D-029** | 아키텍처 · Profile v2 · Region Profile SSOT + Twin-on-Profile |
+| [`TWIN_V8_DESIGN.md`](TWIN_V8_DESIGN.md) | Twin v8 (병행; Phase B 후 Profile Twin으로 전환) |
+| [`PROFILE_TWIN_HYBRID.md`](PROFILE_TWIN_HYBRID.md) | Hybrid Twin v1.2 / v2 기록 |
 | [`COLLECTIVE_HANDOFF.md`](COLLECTIVE_HANDOFF.md) | 집합 MVP·원장·게이트 |
 | [`COLLECTIVE_RESEARCH_MVP.md`](COLLECTIVE_RESEARCH_MVP.md) | 로컬 실행 |
 | [`UPPER_STATS_DESIGN.md`](UPPER_STATS_DESIGN.md) | 쌍둥이 피처 (→ Profile로 흡수) |
 | [`LAND_LEDGER_REBUILD_PLAN.md`](LAND_LEDGER_REBUILD_PLAN.md) | 토지 원장·V2 재구축 |
 | [`LONG_TERM_TREND_DESIGN.md`](LONG_TERM_TREND_DESIGN.md) | 토지 장기 연도 mart |
+| [`REGION_CODE_LAYERS.md`](REGION_CODE_LAYERS.md) | canonical SSOT (D-028) |
+| [`MAP_REGION_HUB_DESIGN.md`](MAP_REGION_HUB_DESIGN.md) | Profile-B0 · 지도 허브 |
 
 ---
 
-*최종 갱신: 2026-06-19 · 설계 검토(Cursor)·재우선순위·Profile Data Product화(GPT 견해) 반영 — D-017*
+## 12. Region Profile SSOT + Twin-on-Profile (D-027 · D-029, 2026-07-25)
+
+> **문서가 설계 SSOT.** 구현은 **Phase A → Phase B**. 코드가 이 절을 앞서지 않는다.  
+> **2026-07-25 검토 반영:** Candidate 분리 · Profile≠Vector · Top1~3 컬럼 · 대표시장 Feature · Similarity Engine · Explainability · `region_scope_master` · **Feature Catalog + Weight YAML**.
+
+### 12.0 목적 · 계층
+
+Region Profile은 제품의 **Core Domain Model**이다. UI·Twin·지역비교·향후 AI가 동일 Profile을 재사용한다.
+
+**DB에 저장하는 것은 Region Profile뿐**이다. Feature Vector는 Twin(·AI) 계산 시 Catalog 기준으로 Profile에서 **투영**하며 **저장하지 않는다.**
+
+```
+Marts (land / built / collective)
+        │
+        ▼
+regional_profile   ← precompute · profile_version 고정 (D-017)
+        │
+        ├─► 지역프로필 UI (/profile/)
+        ├─► Twin · 지역 비교 · 추천 · AI (동일 파이프라인 재사용)
+        └─► …
+
+── Twin / 비교 런타임 (Vector 비저장) ──
+Region Profile
+        ↓
+Candidate Filtering
+        ↓
+Feature Catalog          ← profile_feature_catalog.yaml (twin_vector)
+        ↓
+Feature Vector + Mask
+        ↓
+Weight                   ← profile_weight.yaml
+        ↓
+Similarity Engine        → score + score_detail
+        ↓
+Top-N
+        ↓
+Explainability           ← score_detail 훅
+```
+
+구조는 **확정**. 이후 작업의 중심은 알고리즘·가중치 **튜닝**.
+
+`profile_version`(예: `v2.1-national`)·`as_of_month`·`window_years`는 D-017 **필수 grain**. Catalog·Weight 스키마가 바뀌면 `profile_version` 또는 weight file version을 올린다. Twin 결과에도 동일 키를 기록한다.
+
+### 12.1 이미 반영된 전제 (D-027)
+
+| 항목 | 내용 |
+|------|------|
+| UI | 독립 SPA `frontend-profile` (`/profile/`). 토지 앱 ProfilePanel·`viewMode=profile` **제거** |
+| 데이터 | `v2.0-national` · `yearly_mix` 8대 유형 · 기본정보·시장구성 비중 |
+| 진입 | Macro 헤더「지역프로필」·토지/복합/집합 딥링크 |
+| Twin (현행) | 제품 Twin은 §12.4 (Phase B). Twin v8·Hybrid는 병행 |
+
+### 12.2 Profile 스키마 — 시군구 · 읍면동 · 리 동일
+
+**생성 grain:** `sigungu` · `eupmyeondong` · `beopjungri` (필수).  
+`sido` / `city`는 Profile UI 유지 가능 · **Twin 제외**.
+
+**유지:** 인구, 3년 건수·금액, **대표시장(`dominant_type`)**, 8대 비중·연도별 `yearly_mix`.
+
+| 필드 | 규칙 |
+|------|------|
+| **토지 Top1~3 (컬럼)** | 최근 3년 **용도×지목군** 셀 거래건수 순위. **JSON 배열 대신 순위별 컬럼** (쿼리·Twin 배치 속도). 현행 `jimok_group_top3`(지목군만 합산) **대체**. 해당 순위 없으면 NULL |
+| **아파트 분위** | **최근 3년 · ㎡당 거래단가(만원/㎡)** 의 **P25 / P50 / P75**. 컬럼: `apartment_p25` · `apartment_median` · `apartment_p75`. **해당 grain만**. 없으면 **NULL**. 리→읍면동 승격 **금지**. (거래가 총액 분위 **아님**) |
+| **`market_presence`** | 8유형 0/1 (`totals_by_type.count > 0`). Similarity는 양쪽 1인 feature만 |
+| **`dominant_type`** | 대표시장(토지·아파트·연립…). Profile **저장 + Similarity Feature**(§12.4.3) |
+
+**토지 Top 컬럼 (예시):**
+
+| 순위 | zone | jimok | count | mean |
+|------|------|-------|-------|------|
+| 1 | `land_top1_zone` | `land_top1_jimok` · `land_top1_jimok_code` | `land_top1_count` | `land_top1_mean_manwon_per_sqm` |
+| 2 | `land_top2_*` | … | … | … |
+| 3 | `land_top3_*` | … | … | … |
+
+- 시군구·읍면동: `land_upper_stats_v2` `col_axis='group'`
+- 리: `land_basic_stats_v2` + 지목군 매핑
+- API/UI는 컬럼을 Top3 리스트로 **조립**해 표시 가능 (저장 SSOT는 컬럼)
+
+**NULL ≠ 0**
+
+| 층 | 시장 없음 |
+|----|-----------|
+| yearly_mix 건수·금액 | **0** / 표시 0억원 |
+| 아파트 분위·단가 · Top 빈 순위 | **NULL** |
+| mask | **0** |
+
+금액 표시: 억원·천만 반올림. Phase A 재빌드 **`profile_version=v2.1-national`**.
+
+### 12.3 Feature Catalog · Weight · Vector (비저장)
+
+Feature 키·역할을 **코드에 흩뿌리지 않는다.** Phase A 종료 전 Catalog·Weight YAML을 둔다.
+
+| 파일 | 역할 |
+|------|------|
+| [`pipeline/config/profile_feature_catalog.yaml`](../pipeline/config/profile_feature_catalog.yaml) | Feature SSOT. 기존 UI `features` + **`twin_vector`**(Similarity가 읽는 키 집합) |
+| [`pipeline/config/profile_weight.yaml`](../pipeline/config/profile_weight.yaml) | 블록/키 가중치. 코드에 `0.2/0.3/0.5` 하드코딩 **금지** |
+
+**`twin_vector` 초기 키 (예):**
+
+`population` · `market_mix` · `land_top1` · `land_top2` · `land_top3` · `apt_p25` · `apt_p50` · `apt_p75` · `market_presence` · `represent_market`(`dominant_type`)
+
+Engine 흐름: **Catalog → Vector 생성 → Weight 적용 → Similarity**.  
+예: 오피스텔 분위 추가 → Catalog(+ Profile 빌더가 값 적재)만 확장하면 Engine 루프는 그대로. Weight만 바꿔 실험.
+
+**Weight 예 (`profile_weight.yaml`):**
+
+```yaml
+version: "1.0"
+blocks:
+  population: 0.15
+  market_mix: 0.35
+  land_profile: 0.30
+  apartment_profile: 0.20
+```
+
+Feature Vector = Catalog가 지정한 Profile 필드의 **런타임 투영**. **별도 Vector 테이블 없음.**  
+건물·필지 객체 미포함 (D-016).
+
+> 참고: 동 파일의 기존 `features:` 블록은 UI/표시용 카탈로그다. Twin은 **`twin_vector`만** 소비한다. Phase A에서 키·라벨을 정리·동기화한다.
+
+### 12.4 쌍둥이 (Phase B) — Profile만 소비
+
+#### 12.4.1 파이프라인 (고정)
+
+알고리즘·가중치를 바꿔도 **Candidate · Catalog · Weight 파일 경계는 유지**한다.
+
+```
+① Candidate Filtering
+② Feature Catalog → Feature Vector + Mask
+③ Weight 적용
+④ Similarity Engine
+⑤ Top-N · Explainability
+```
+
+#### 12.4.2 Candidate Filtering (B2 — 별도 단계)
+
+| 순서 | 필터 | 내용 |
+|------|------|------|
+| ① | **동일 행정레벨** | 시군구↔시군구, 읍면동↔읍면동, 리↔리만. 혼합 금지 |
+| ② | **region_scope** | 아래 표 · `region_scope_master` 조회 |
+| ③ | **population** | **±50%** (설정 가능). 인구 NULL → **이 필터만 스킵** |
+| ④ | **대표시장 (선택)** | 동일 `dominant_type`만 / 또는 Candidate에서는 미적용·Similarity에서만 가감점 |
+
+| Level | region_scope 기본 | 인구 |
+|-------|-------------------|------|
+| 시군구 | **전국** (`scope` 제한 없음) | ±50% |
+| 읍면동 | 동일 생활권(수도권·충청·호남·대경·동남·강원·제주). “영남권” 요구 → 대경+동남 **합집합** | ±50% |
+| 리 | **동일 시군구** | ±50% |
+| 시·도 / city | Twin 없음 | — |
+
+**`region_scope_master` (권장 DDL, Phase B):** 코드에 `REGION_GROUPS` 하드코딩 대신 테이블 SSOT.
+
+| 컬럼 | 예 |
+|------|-----|
+| `sido_code` | `11` |
+| `scope_id` | `capital` / `chungcheong` … |
+| `scope_label` | `수도권` |
+| `scheme_version` | `7region-v1` (5권역·생활권 등 스키마 교체 시 version만 변경) |
+
+`pipeline/region_scope.py`는 테이블 로드(+ 부트스트랩용 코드 fallback). Candidate·Twin 코드는 **scope_id만** 참조.
+
+#### 12.4.3 Similarity Engine (모듈 · 인터페이스 고정)
+
+```
+Input:  RegionProfile A, RegionProfile B
+        + catalog (twin_vector) + weights (profile_weight.yaml)
+        + profile_version / as_of / window
+Output: similarity: float
+        score_detail: { feature_key → { score, weight, note } }
+```
+
+구현체 교체 가능: Cosine / Euclidean / Weighted / …  
+가중치는 **항상 YAML**. 엔진 코드에 숫자 상수로 박지 않는다.  
+**초기:** v8 아이디어를 Catalog 키에 재매핑 · **리 아파트 eup proxy 없음**.
+
+**대표시장 Feature:** 동일 `dominant_type` → **가점**, 상이 → **약한 감점** (가감점 크기도 weight 파일 또는 동 파일 `match_bonus` 키). Candidate ④와 중복 하드컷하지 않는 것을 기본으로 한다(후보 풀 유지).
+
+**Explainability:** UI「왜 비슷한가」는 Phase B GA 이후여도 됨. 엔진이 **처음부터 `score_detail`** 를 반환하면 설명 UI는 훅만 붙이면 된다.
+
+예 (표시만):
+
+```
+신림동 → 매탄동  유사도 92%
+  ✓ 연립 비중 유사
+  ✓ 아파트 가격대(㎡당) 유사
+  ✓ 토지 거래구조(Top) 유사
+  ✓ 인구 규모 유사
+```
+
+결과 저장: `twin_neighbor_profile`(가칭) — 순위·지역·유사도·인구·대표시장·`score_detail`·`profile_version`·`weight_version`. v8과 Phase B GA까지 병행.
+
+### 12.5 Twin v8 대비
+
+| 축 | Twin v8 | D-029 |
+|----|---------|-------|
+| 입력 | mart 직접 | **Profile만** (Vector는 Catalog 기준 런타임) |
+| Feature 목록 | 코드 하드코딩 | **`twin_vector` Catalog** |
+| 가중치 | 코드 상수 | **`profile_weight.yaml`** |
+| 리 아파트 | eup proxy | **NULL** |
+| 인구 | 0.6~1.7 | **±50%**, NULL 스킵 |
+| 읍면동 범위 | 충청 Phase1 | **`region_scope_master`** |
+| 파이프라인 | 필터·스코어 혼재 | **Candidate → Catalog → Vector → Weight → Similarity → Top-N** |
+
+### 12.6 Phase · 검증
+
+| Phase | 내용 | 상태 |
+|-------|------|------|
+| **A** | beop · Top1~3 · 아파트(최근3년 ㎡당) · mask · **`twin_vector` Catalog + `profile_weight.yaml`** · API/UI · `v2.1-national` | 📋 문서 · 구현 대기 |
+| **B** | Candidate · `region_scope_master` · Engine(+score_detail, Weight 로드) · Twin 저장 · v8 전환 · 튜닝 | 대기 |
+
+**Phase A 종료 게이트:** Catalog·Weight 파일이 있고 Twin/빌더가 Feature 키를 코드에 하드코딩하지 않을 것.
+
+- [ ] 시군구·읍면동·리 Profile 스키마 동일 · `profile_version` grain
+- [ ] Feature Vector **미저장** · Catalog → Vector → Weight → Similarity
+- [ ] `twin_vector` · `profile_weight.yaml` 존재 (A 종료 전)
+- [ ] 아파트 없는 리: 분위 null, mask=0, yearly_mix count=0
+- [ ] Top1~3 컬럼에 zone+jimok+count+mean
+- [ ] Twin: Candidate → … → Top-N · Profile 외 미참조 · level 혼합 없음 · 시·도 Twin 없음
+- [ ] Similarity Engine이 `score_detail` 반환 (설명 UI 훅)
+
+---
+
+*최종 갱신: 2026-07-25 · D-027·D-029 §12 (Catalog·Weight 반영)*  
+*이전: 2026-06-19 · D-017*

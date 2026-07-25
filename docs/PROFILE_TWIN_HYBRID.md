@@ -1,7 +1,8 @@
 # Regional Profile · Twin — 작업 기록 및 하이브리드 설계
 
 > **상태 (2026-06-20):** Phase 1 전국 Profile + Profile Twin v1 **적재 완료**. UI 연동·하이브리드 Twin은 **v1.2 예정**.  
-> **관련:** [`DECISIONS.md`](DECISIONS.md) D-021·D-022·**D-023**, [`REGIONAL_PROFILE_ARCHITECTURE.md`](REGIONAL_PROFILE_ARCHITECTURE.md), [`TWIN_REGION_SIMILARITY_ENGINE.md`](TWIN_REGION_SIMILARITY_ENGINE.md)
+> **제품 방향 (2026-07-25):** Twin 최종 경로는 **D-029 Profile-only** ([`REGIONAL_PROFILE_ARCHITECTURE.md`](REGIONAL_PROFILE_ARCHITECTURE.md) §12). 본 문서의 Hybrid·v5는 이력·병행 참고.  
+> **관련:** [`DECISIONS.md`](DECISIONS.md) D-021·D-022·**D-023**·**D-029**, [`REGIONAL_PROFILE_ARCHITECTURE.md`](REGIONAL_PROFILE_ARCHITECTURE.md), [`TWIN_REGION_SIMILARITY_ENGINE.md`](TWIN_REGION_SIMILARITY_ENGINE.md), [`TWIN_V8_DESIGN.md`](TWIN_V8_DESIGN.md)
 
 ---
 

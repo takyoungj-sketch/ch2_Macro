@@ -1,0 +1,22 @@
+# Twin / 지역비교 Similarity 가중치 (D-029)
+# Similarity Engine은 이 파일만 읽는다. 코드에 가중치 상수 하드코딩 금지.
+# 실험 시 version을 올리고 twin 결과의 weight_version에 기록한다.
+
+version: "1.0"
+
+# 블록 합 = 1.0 권장 (엔진이 정규화해도 됨)
+blocks:
+  population: 0.15
+  market_mix: 0.35
+  land_profile: 0.30
+  apartment_profile: 0.20
+
+# 대표시장(dominant_type) 가감점 — Similarity Feature
+represent_market:
+  match_bonus: 0.05
+  mismatch_penalty: 0.02
+
+# 인구 Candidate 필터 (Similarity 점수 밖)
+candidate:
+  population_ratio_low: 0.50
+  population_ratio_high: 1.50

@@ -32,6 +32,8 @@
 | D-026 | 2026-06-30 | **토지 지목군(`jimok_group`) 7분류**: 농경지·산림지·개발지·기반시설·수면·특수용도·기타. **원장 Master 불변** — `land_jimok_group_map` + VIEW + **원장 단가 재집계** mart. **UI:** 기본=**용도×지목**, 옵션=**용도×지목군**(대체 아님). Profile·Twin Feature 연결은 후속. 광천지·염전→⑥; **(2026-07-17) 양어장·목장용지→① 농경지**. SSOT: [`LAND_JIMOK_GROUP_DESIGN.md`](LAND_JIMOK_GROUP_DESIGN.md). |
 | D-024 | 2026-06-21 | **복합부동산(일반 3유형) 원장 재구축(Phase A)**: ① **SSOT** = `raw/raw base/{상업업무\|공장창고\|단독다가구}_2021_2026` MOLIT CSV, **GUKTO 무시**. ② 상업·공장 **`유형=일반`**, 단독 전량. ③ **해제 제외**, **semantic hash dedupe** 유지. ④ **`road_width_label`** 원문 저장, **`road_code` 정수 변환 폐기**. ⑤ 주소 표시 ingest 규칙 **B** (리·번지 마스킹·도로명). ⑥ **`region_codes`** = land sync (집합·토지 재구축 동일). ⑦ **Phase A = 원장만**; 회귀는 **총액 linear 기본**(집합 회귀 미참조), log·통합·UI는 Phase B. ⑧ **`as_of_month`+3·5년** = Macro 공통(D-001), mart는 Phase B. 상세: [`docs/BUILT_LEDGER_REBUILD_PLAN.md`](BUILT_LEDGER_REBUILD_PLAN.md). |
 | D-028 | 2026-07-21 | **지역코드 3계층 (raw / historical / canonical)**: ① 원장·raw 원본코드(또는 주소)는 보존. ② 분석·사전집계·GIS 정규화·Profile·Twin은 **현행 canonical만**. ③ 읍·면 승격 시 **이름만 바꾸고 폐지 코드를 활성 canonical로 남기는 수리 금지** (`repair_eup_myeon_promotion` 패턴 폐기). ④ 마스터 존재/폐지 불일치는 **구→현행 건별 매핑**(`region_code_history`); 1:N `split`은 자동 치환 금지. ⑤ Profile·Twin 착수 **전** Phase 1(분류→history→seed→stats 재빌드→GIS resolve) 완료. ⑥ **토지 Land finish(2026-07-21)**: basic+upper+annual canonical, 공통 모듈 `pipeline/region_canonical.py`(Built/Collective 공유). unresolved 2건 제외. Phase 1a: [`docs/reports/REGION_CODE_PHASE1A_CLASSIFICATION.md`](reports/REGION_CODE_PHASE1A_CLASSIFICATION.md). 상세: [`docs/REGION_CODE_LAYERS.md`](REGION_CODE_LAYERS.md). |
+| D-027 | 2026-07-25 | **Regional Profile v2 제품화(소급 기록)**: ① 독립 SPA `frontend-profile` (`/profile/`) — 토지 앱 내장 ProfilePanel·`viewMode=profile` **폐기**. ② `yearly_mix` 8대 시장유형 3개년 건수·금액(상가·공장은 Profile 집계에서만 병합). ③ `jimok_group` 구성·TOP3(지목군 합산 — D-029에서 용도×지목군으로 교체). ④ `profile_version=v2.0-national`. ⑤ Macro 공통 헤더·딥링크. 상세: [`REGIONAL_PROFILE_ARCHITECTURE.md`](REGIONAL_PROFILE_ARCHITECTURE.md) §12.1. |
+| D-029 | 2026-07-25 | **Region Profile SSOT + Twin-on-Profile**: ① DB에는 **`regional_profile`만** (Core Domain). **Feature Vector는 Catalog 기준 런타임 투영·비저장**. ② 시군구·읍면동·리 동일 스키마(시·도/`city` Twin 제외). ③ NULL≠0 — yearly_mix 0; 아파트 **최근3년 ㎡당** P25/P50/P75·없으면 NULL. ④ mask · Top1~3 컬럼 · 대표시장 Feature. ⑤ 파이프라인: **Candidate → Feature Catalog → Vector → Weight → Similarity → Top-N → Explainability**. ⑥ **`profile_feature_catalog.yaml` `twin_vector`** + **`profile_weight.yaml`** (Phase A 종료 전·가중치 코드 하드코딩 금지). ⑦ `region_scope_master` · Similarity Engine(`score_detail`). ⑧ `profile_version` (D-017). ⑨ **Phase A→B** · 이후는 튜닝 중심. Twin v8 병행. 상세: [`REGIONAL_PROFILE_ARCHITECTURE.md`](REGIONAL_PROFILE_ARCHITECTURE.md) **§12**. |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 
@@ -151,5 +153,7 @@
 - 갱신 흐름: `docs/V2_STATS_PRODUCTION.md`
 - 통계 설계 (V2): `docs/V2_STATS_DESIGN.md`
 - 상위단계·쌍둥이 설계: `docs/UPPER_STATS_DESIGN.md`
+- Regional Profile · Twin-on-Profile: `docs/REGIONAL_PROFILE_ARCHITECTURE.md` §12 (D-027·D-029)
+- Twin v8 (병행·후속 전환): `docs/TWIN_V8_DESIGN.md`
 - 정제 정책: `LAND_CLEANING.md`
 - 다음 작업: `NEXT_STEPS.md`

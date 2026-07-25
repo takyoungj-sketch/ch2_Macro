@@ -82,7 +82,7 @@ GIS li_cd / UI 선택 코드
 | **1e / Phase 2 API** | GIS→canonical resolve (`app/region_canonical.py`, `free_v2`) | 수태리+신척리 bulk OK |
 | **1f Land finish** | upper/annual canonical 재빌드(시도 41·43) + UI/API 검증 | [`reports/REGION_CODE_LAND_FINISH_VERIFY.json`](./reports/REGION_CODE_LAND_FINISH_VERIFY.json) · **토지 canonical 전환 완료** |
 | **2** | built/collective **동일** `region_canonical` 공유 (독자 변환 금지) · 분할·흡수 수동 규칙 | market 빌드·region_scope expand 연동됨; mart 전체 재빌드는 다음 갱신 사이클 |
-| **3** | Profile v2 / Twin — canonical SSOT 전제 착수 | D-027 후속 |
+| **3** | Profile v2.1 / Twin-on-Profile — canonical SSOT 전제 · D-029 §12 | D-027·D-029 |
 
 Phase 1a에서 `split`/`merge` 미판정·**unresolved 2건**(통영 당포리/삼덕리)은 **자동 seed·통계 제외**하고 별도 큐에 둔다.
 

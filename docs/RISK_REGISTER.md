@@ -189,14 +189,14 @@ D-001에 의해 2026-06-30 코드 제거 예정이지만 아직 존재. 운영 �
 
 ---
 
-## R-013 🟢 `regional_profile` 미완성 상태
+## R-013 🟢 `regional_profile` · Twin 입력 불일치
 
-**위치:** `pipeline/build_regional_profile.py`, `db/025_regional_profile.sql`
+**위치:** `pipeline/build_regional_profile.py`, Twin v8 / Hybrid 빌더
 
 **설명:**  
-전국 Profile은 충북 파일럿만 완료. `twin_from_profile.py`(v5)의 실 서비스 연결 없음. Twin v8이 Profile을 소비하지 않고 직접 market_stats를 사용.
+전국 Profile(`v2.0-national` 등)은 적재되어 있으나, Twin v8은 여전히 land/market mart를 직접 읽고 리 아파트에 읍면동 proxy를 쓴다. D-017·D-029는 Twin이 Profile만 소비할 것을 요구.
 
-**권장 조치:** Profile 전국 확장 후 Twin v8의 집합 스코어 소스를 Profile로 통합
+**권장 조치:** [`REGIONAL_PROFILE_ARCHITECTURE.md`](REGIONAL_PROFILE_ARCHITECTURE.md) **§12** — Phase A(Profile 스키마·beop·Top1~3) 후 Phase B(Candidate→Similarity Engine). RISK 해소 = Phase B GA.
 
 ---
 

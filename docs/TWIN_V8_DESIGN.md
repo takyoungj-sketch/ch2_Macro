@@ -2,7 +2,10 @@
 
 > **브랜치:** `feature/twin-v8`  
 > **상태:** Phase 1 구현 (충청권)  
-> **기존 Hybrid V2(algo 6/7)와 병행** — A/B 비교 가능
+> **기존 Hybrid V2(algo 6/7)와 병행** — A/B 비교 가능  
+> **제품 방향 (2026-07-25, D-029):** 향후 제품 Twin은 **`regional_profile`만 소비**한다.  
+> 본 문서(v8)는 mart 직접 로드·리 아파트 **읍면동 proxy** 경로이며, Region Profile SSOT([`REGIONAL_PROFILE_ARCHITECTURE.md`](REGIONAL_PROFILE_ARCHITECTURE.md) **§12**) Phase B GA 후 **병행 종료·전환** 대상이다.  
+> Profile Twin 인구 필터는 **±50%**(NULL 시 인구 필터 스킵), 시·도 Twin 없음, 리 단가 승격 금지.
 
 ## 목적
 
@@ -59,3 +62,4 @@ Top-N: 시군구 10 · 읍면동 5 · 리 3
 - `lower_mean` / `mid_mean` / `upper_mean` mart
 - 리 단위 집합 mart
 - 거래량 유사도
+- **(우선) D-029 Phase B — Profile 소비 Twin으로 제품 경로 이전** ([`REGIONAL_PROFILE_ARCHITECTURE.md`](REGIONAL_PROFILE_ARCHITECTURE.md) §12.4 — Candidate → Vector → Similarity Engine)

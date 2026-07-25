@@ -48,7 +48,7 @@
 | J3 | group mart 병행 집계 | `build_stats_v2` / upper (`--col-axis`) · `db/040` | ✅ 전국 로컬 |
 | J4 | API `matrix_mode` | paid / free_v2 / upper_stats | ✅ |
 | J5 | UI 토글 | MatrixStatsTable 등 | ✅ |
-| J6 | integrity · cycle · Promote | 로그·VPS | ✅ 전국 group mart 로컬 완료 · Promote 대기 |
+| J6 | integrity · cycle · Promote | 로그·VPS | ✅ 전국 group mart·annual 로컬 · **월간 §7.1 문서화** · Promote/cycle 배선 잔여 |
 
 ---
 
@@ -56,8 +56,8 @@
 
 | 우선 | 항목 | 메모 |
 |------|------|------|
-| P0-J | **지목군 7분류 (mart·UI)** | §5 · D-026. 기본=용도×지목 / 옵션=용도×지목군. 분류표 확정·DDL 개정 → **J3~J6 구현**. |
-| P0-M | **월간 갱신 재현 SOP** | [`docs/MONTHLY_UPDATE_SOP.md`](docs/MONTHLY_UPDATE_SOP.md), `scripts/monthly/run_monthly_cycle.py` — 반자동 월배치. |
+| P0-J | **지목군 7분류 (mart·UI)** | §5 · D-026. 기본=용도×지목 / 옵션=용도×지목군. |
+| P0-M | **월간 갱신 재현 SOP** | [`MONTHLY_UPDATE_SOP.md`](docs/MONTHLY_UPDATE_SOP.md) — category cycle + **§7.1 용도×지목군(에이전트)**. |
 | P1 | **웹 배포 (프로덕션 / 준프로덕션)** | DECISIONS D-007 의 `API_TOKEN` 옵션을 활성한 채 배포. CORS·도메인·env 점검. |
 | P2 | **`population_jusosagae` 전국 시드** | 리허설이 잡아낸 미적재 1건. SOP §B7: `py -3.13 pipeline/seed_population_csv.py --file ../data/population/<최신_CSV>` (DECISIONS D-004, prefix 미지정 = 전국). |
 | P3 | **2026년 6월 월별 갱신 + dedupe** | [`docs/TRANSACTION_HASH_DEDUPE.md`](docs/TRANSACTION_HASH_DEDUPE.md) — B3 직후 `dedupe_land_transactions.py --execute --rehash` → V2 재집계 → VPS Promote. |
@@ -106,28 +106,25 @@
 | 3 | 회귀·효용지수 주거 패리티 (시점더미·HC3·VIF·log/linear) | ✅ |
 | 4 | 장기 추세 2010~ | ✅ |
 
-## 2b. 집합·Regional Profile (2026-06 — `feature/collective-work`)
+## 2b. 집합·Regional Profile
 
-> **단일 설계 문서:** [`docs/REGIONAL_PROFILE_ARCHITECTURE.md`](docs/REGIONAL_PROFILE_ARCHITECTURE.md)
+> **설계 SSOT:** [`docs/REGIONAL_PROFILE_ARCHITECTURE.md`](docs/REGIONAL_PROFILE_ARCHITECTURE.md) **§12** (D-027 · **D-029**)
 
-| Phase | 내용 |
-|-------|------|
-| A | region 공통화, `building_stats` mart, 모달 mart 연동 |
-| B | `market_stats`, 장기 CSV (`raw/raw long term`), `building_annual_stats` |
-| C | Analysis Cohort — 모달 다중 아파트 + building FE 회귀·효용지수 |
-| D | `regional_profile` + built 지역결합 회귀 검증 (MAPE·Adj R²) |
+| Phase | 내용 | 상태 |
+|-------|------|------|
+| D-027 | 독립 `/profile/` · `yearly_mix` · 토지 내장 ProfilePanel 폐기 | ✅ (코드) · 문서 소급 |
+| **D-029 A** | Profile 확장 — beop · Top1~3 · 아파트(㎡당) · mask · **`twin_vector` Catalog + `profile_weight.yaml`** · UI · `v2.1-national` | 📋 문서 ✅ · **구현 대기** |
+| **D-029 B** | Candidate→Catalog→Weight→Similarity(+score_detail) · `region_scope_master` · Twin · 튜닝 · v8 전환 | 대기 (A 이후) |
 
-**충북 파일럿 (D-021, 2026-06-20 착수)**
+**로컬 UI:** http://127.0.0.1:5177/profile/ · API `GET /api/regional-profile`
+
+**충북/전국 빌드 (참고)**
 
 ```bash
 cd pipeline
-# DDL (최초 1회): db/026_regional_profile_data_product_patch.sql
-python rebuild_regional_profile_chungbuk.py
+python rebuild_regional_profile_national.py --profile-version v2.0-national
+# Phase A 후: v2.1-national (스키마 확장)
 ```
-
-- land domain: `config/land_domain_extraction.yaml` → `build_land_market_stats.py`
-- Profile: `build_regional_profile.py --profile-version v1.0-chungbuk --sido-code 43`
-- UI: 토지 앱 **「지역 프로필」** 탭 · API `GET /api/regional-profile`
 
 ## 3. 상위단계 사전집계 + 쌍둥이 지역 (DECISIONS D-009~D-011)
 
