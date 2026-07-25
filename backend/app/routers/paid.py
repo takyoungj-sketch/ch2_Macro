@@ -24,7 +24,6 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.analysis_base_cache import has_valid_analysis_base_cache
-from app.region_canonical import expand_to_ledger_codes
 from app.routers.upper_stats import _region_name
 from app.matrix_rolling_buckets import (
     chart_bucket_labels_old_first_for_ref_month,
@@ -33,6 +32,7 @@ from app.matrix_rolling_buckets import (
 from app.config import settings
 from app.db import get_db
 from app.population_query import attach_population_year_end
+from app.region_canonical import expand_to_ledger_codes
 from app.schemas import (
     HistogramBin,
     MatrixCell,
@@ -424,7 +424,8 @@ def _build_conditions(
         )
         params["base_cache_key"] = base_key
     else:
-        # D-028: GIS/canonical → Master historical expand
+        # D-028: GIS/canonical 코드 → Master historical 포함 확장
+        # (수태리 4377025626 선택 시 원장 4377034026 거래도 목록·분석에 포함)
         ledger_codes = list(beopjungri_codes)
         if db is not None and ledger_codes:
             ledger_codes = expand_to_ledger_codes(db, ledger_codes) or ledger_codes
@@ -476,14 +477,24 @@ def _build_conditions(
     return conditions, params
 
 
-def _select_full_query(where_sql: str) -> str:
+def _matrix_land_select_expr(*, matrix_mode: str = "category") -> str:
+    """매트릭스 열축 SELECT 식 (alias land_category)."""
+    from app.jimok_group import matrix_mode_to_col_axis
+
+    if matrix_mode_to_col_axis(matrix_mode) == "group":
+        return "COALESCE(NULLIF(BTRIM(lt.jimok_group_code::text), ''), 'other')"
+    return "lt.land_category_resolved"
+
+
+def _select_full_query(where_sql: str, *, matrix_mode: str = "category") -> str:
     from app.region_canonical import canonical_select_expr
 
+    land_expr = _matrix_land_select_expr(matrix_mode=matrix_mode)
     code_expr = canonical_select_expr("lt")
     return f"""
         SELECT ({code_expr}) AS beopjungri_code,
                lt.zone_type_resolved  AS zone_type,
-               lt.land_category_resolved AS land_category,
+               {land_expr} AS land_category,
                lt.road_condition,
                lt.unit_price_per_sqm,
                lt.contract_year::int AS contract_year,
@@ -652,7 +663,6 @@ def _stats_result_from_agg_row(m: dict) -> StatsResult:
         m.get("med_v"),
         m.get("p75_v"),
         m.get("max_v"),
-            db=db,
     )
     return StatsResult(**d)
 
@@ -770,7 +780,10 @@ def _analyze_core_materialized_rows(
         db=db,
     )
 
-    query = _select_full_query(" AND ".join(parts))
+    from app.jimok_group import display_land_key
+
+    matrix_mode = getattr(req, "matrix_mode", None) or "category"
+    query = _select_full_query(" AND ".join(parts), matrix_mode=matrix_mode)
     rows = db.execute(text(query), params).fetchall()
 
     if not rows:
@@ -790,7 +803,8 @@ def _analyze_core_materialized_rows(
         zraw = "" if r.zone_type is None else str(r.zone_type).strip()
         lraw = "" if r.land_category is None else str(r.land_category).strip()
         zt = zraw if zraw else "미지정"
-        lc = lraw if lraw else "기타"
+        lc_raw = lraw if lraw else "기타"
+        lc = display_land_key(lc_raw, matrix_mode=matrix_mode) or "기타"
         matrix_prices[(zt, lc)].append(p)
         try:
             cy = int(r.contract_year)
@@ -863,8 +877,14 @@ def _analyze_core_sql_aggregate(
         req.area_sqm_max,
         db=db,
     )
+    from app.jimok_group import display_land_key
+    from app.region_canonical import canonical_select_expr
+
     where_sql = " AND ".join(parts)
     apx = _AGG_ON_PX
+    matrix_mode = getattr(req, "matrix_mode", None) or "category"
+    land_expr = _matrix_land_select_expr(matrix_mode=matrix_mode)
+    code_expr = canonical_select_expr("lt")
 
     wm_mb = max(32, min(512, int(settings.paid_analyze_work_mem_mb)))
     db.execute(text(f"SET LOCAL work_mem = '{wm_mb}MB'"))
@@ -873,20 +893,9 @@ def _analyze_core_sql_aggregate(
         f"""
         WITH base AS MATERIALIZED (
           SELECT
-            (
-              COALESCE(
-                (
-                  SELECT h.to_code FROM region_code_history h
-                  WHERE h.from_code = btrim(lt.beopjungri_code::text)
-                    AND h.change_type IN ('code_reissue','merge','rename')
-                  ORDER BY h.effective_from DESC, h.id DESC
-                  LIMIT 1
-                ),
-                btrim(lt.beopjungri_code::text)
-              )
-            ) AS bc,
+            ({code_expr}) AS bc,
             lt.zone_type_resolved  AS zone_type,
-            lt.land_category_resolved AS land_category,
+            {land_expr} AS land_category,
             lt.unit_price_per_sqm::float8 AS px
           FROM land_transactions_resolved lt
           WHERE {where_sql}
@@ -942,7 +951,8 @@ def _analyze_core_sql_aggregate(
         if not isinstance(item, dict):
             continue
         zt = (item.get("zt") or "미지정").strip() or "미지정"
-        lc = (item.get("lc") or "기타").strip() or "기타"
+        lc_raw = (item.get("lc") or "기타").strip() or "기타"
+        lc = display_land_key(lc_raw, matrix_mode=matrix_mode) or "기타"
         matrix.append(
             MatrixCell(
                 zone_type=zt,
@@ -1287,8 +1297,34 @@ LONG_TERM_DISCLAIMER = (
     "행정구역 통·폐합·개명 지역은 코드 이력 remap 없이 현행 마트 기준이며, "
     "과거 연도와 현재 선택 지명이 같은 구역을 가리키지 않을 수 있습니다."
 )
+LONG_TERM_DISCLAIMER_GROUP = (
+    "장기 추세는 만년력 연도·용도×지목군 기준입니다. "
+    "도로·면적·이상치·지분 필터는 적용되지 않으며, 평균 모드에서는 "
+    "지역별 선과 거래수 가중 통합선을 별도 칸으로 동시에 볼 수 있습니다. 중앙값 모드는 통합선 없음. "
+    "행정구역 통·폐합·개명 지역은 코드 이력 remap 없이 현행 마트 기준이며, "
+    "과거 연도와 현재 선택 지명이 같은 구역을 가리키지 않을 수 있습니다."
+)
 LONG_TERM_MIN_RELIABLE = 15
 _UPPER_LEVELS = frozenset({"sido", "sigungu", "eupmyeondong", "city"})
+
+
+def _long_term_land_key(land_display: str, *, matrix_mode: str) -> str:
+    from app.jimok_group import matrix_mode_to_col_axis, normalize_group_key
+
+    ld = (land_display or "").strip()
+    if matrix_mode_to_col_axis(matrix_mode) != "group":
+        return ld
+    if ld in ("기타", "other", ""):
+        return "other"
+    return normalize_group_key(ld)
+
+
+def _long_term_disclaimer(matrix_mode: str) -> str:
+    from app.jimok_group import matrix_mode_to_col_axis
+
+    if matrix_mode_to_col_axis(matrix_mode) == "group":
+        return LONG_TERM_DISCLAIMER_GROUP
+    return LONG_TERM_DISCLAIMER
 
 
 def _infer_long_term_level(code: str) -> str:
@@ -1402,9 +1438,14 @@ def _long_term_region_name(db: Session, level: str, code: str) -> str:
     summary="장기 추세 — 연도별 사전집계 조회 (법정동·리 / 상위 행정)",
 )
 def long_term_trend(body: LongTermTrendRequest, db: Session = Depends(get_db)):
+    from app.jimok_group import display_land_key, matrix_mode_to_col_axis
+
     targets = _normalize_long_term_targets(body)
     zt = body.zone_type.strip()
-    lc = body.land_category.strip()
+    matrix_mode = getattr(body, "matrix_mode", None) or "category"
+    col_axis = matrix_mode_to_col_axis(matrix_mode)
+    lc = _long_term_land_key(body.land_category, matrix_mode=matrix_mode)
+    lc_display = display_land_key(lc, matrix_mode=matrix_mode) or lc
 
     beop_codes = _long_term_beop_codes(body, targets, db)
     upper_targets = [(lv, c) for lv, c in targets if lv in _UPPER_LEVELS]
@@ -1422,10 +1463,11 @@ def long_term_trend(body: LongTermTrendRequest, db: Session = Depends(get_db)):
                 SELECT MIN(calendar_year)::int AS y0, MAX(calendar_year)::int AS y1
                 FROM land_annual_stats
                 WHERE zone_type = :zt AND land_category = :lc
+                  AND col_axis = :col_axis
                   AND beopjungri_code = ANY(:codes)
                 """
             ),
-            {"zt": zt, "lc": lc, "codes": beop_codes},
+            {"zt": zt, "lc": lc, "col_axis": col_axis, "codes": beop_codes},
         ).mappings().first()
         if b and b["y0"] is not None:
             y_candidates.extend([int(b["y0"]), int(b["y1"])])
@@ -1437,10 +1479,11 @@ def long_term_trend(body: LongTermTrendRequest, db: Session = Depends(get_db)):
                 SELECT MIN(calendar_year)::int AS y0, MAX(calendar_year)::int AS y1
                 FROM land_annual_upper_stats
                 WHERE zone_type = :zt AND land_category = :lc
+                  AND col_axis = :col_axis
                   AND region_level = :lv AND region_code = :rc
                 """
             ),
-            {"zt": zt, "lc": lc, "lv": lv, "rc": rc},
+            {"zt": zt, "lc": lc, "col_axis": col_axis, "lv": lv, "rc": rc},
         ).mappings().first()
         if b and b["y0"] is not None:
             y_candidates.extend([int(b["y0"]), int(b["y1"])])
@@ -1468,13 +1511,21 @@ def long_term_trend(body: LongTermTrendRequest, db: Session = Depends(get_db)):
                 FROM land_annual_stats las
                 WHERE las.zone_type = :zt
                   AND las.land_category = :lc
+                  AND las.col_axis = :col_axis
                   AND las.beopjungri_code = ANY(:codes)
                   AND las.calendar_year >= :y0
                   AND las.calendar_year <= :y1
                 ORDER BY las.beopjungri_code, las.calendar_year
                 """
             ),
-            {"zt": zt, "lc": lc, "codes": beop_codes, "y0": y_from, "y1": y_to},
+            {
+                "zt": zt,
+                "lc": lc,
+                "col_axis": col_axis,
+                "codes": beop_codes,
+                "y0": y_from,
+                "y1": y_to,
+            },
         ).mappings().all()
 
         by_code: dict[str, list[LongTermTrendPoint]] = defaultdict(list)
@@ -1515,6 +1566,7 @@ def long_term_trend(body: LongTermTrendRequest, db: Session = Depends(get_db)):
                 FROM land_annual_upper_stats
                 WHERE zone_type = :zt
                   AND land_category = :lc
+                  AND col_axis = :col_axis
                   AND region_level = :lv
                   AND region_code = :rc
                   AND calendar_year >= :y0
@@ -1522,7 +1574,15 @@ def long_term_trend(body: LongTermTrendRequest, db: Session = Depends(get_db)):
                 ORDER BY calendar_year
                 """
             ),
-            {"zt": zt, "lc": lc, "lv": lv, "rc": rc, "y0": y_from, "y1": y_to},
+            {
+                "zt": zt,
+                "lc": lc,
+                "col_axis": col_axis,
+                "lv": lv,
+                "rc": rc,
+                "y0": y_from,
+                "y1": y_to,
+            },
         ).mappings().all()
         if not rows:
             continue
@@ -1556,10 +1616,11 @@ def long_term_trend(body: LongTermTrendRequest, db: Session = Depends(get_db)):
 
     return LongTermTrendResponse(
         zone_type=zt,
-        land_category=lc,
+        land_category=lc_display,
+        matrix_mode="group" if col_axis == "group" else "category",
         year_from=y_from,
         year_to=y_to,
-        disclaimer=LONG_TERM_DISCLAIMER,
+        disclaimer=_long_term_disclaimer(matrix_mode),
         series=series,
     )
 
@@ -1695,14 +1756,20 @@ def _fetch_matrix_cell_filtered_transactions(
 ) -> list[dict]:
     """matrix-yearly 와 동일 필터·이상치 정책을 적용한 원거래 행(최신 계약 순)."""
     merged_where, merged_params = _matrix_cell_merged_where(body, db)
+    from app.region_canonical import canonical_select_expr, region_codes_join_on_canonical
+
+    code_expr = canonical_select_expr("lt")
+    join_sql = region_codes_join_on_canonical("lt", "rc", active_only=False)
     query = text(
         f"""
         SELECT lt.id, lt.contract_year, lt.contract_month, lt.contract_date,
-               COALESCE(_rch.to_code, btrim(lt.beopjungri_code::text)) AS beopjungri_code,
+               ({code_expr}) AS beopjungri_code,
                TRIM(BOTH FROM COALESCE(rc.sigungu_name::text, '')) AS sigungu_name,
                TRIM(BOTH FROM COALESCE(rc.eupmyeondong_name::text, '')) AS eupmyeondong_name,
                TRIM(BOTH FROM COALESCE(rc.beopjungri_name::text, '')) AS beopjungri_name,
                NULLIF(TRIM(BOTH FROM COALESCE(lt.lot_display::text, '')), '') AS lot_display,
+               NULLIF(TRIM(BOTH FROM COALESCE(lt.land_category_resolved::text, '')), '')
+                   AS land_category,
                NULLIF(TRIM(BOTH FROM COALESCE(lt.partial_ownership_label::text, '')), '')
                    AS partial_ownership_label,
                NULLIF(TRIM(BOTH FROM COALESCE(lt.deal_type::text, '')), '') AS deal_type,
@@ -1711,16 +1778,7 @@ def _fetch_matrix_cell_filtered_transactions(
                lt.unit_price_per_sqm::float8 AS unit_price_per_sqm,
                TRIM(BOTH FROM COALESCE(lt.road_condition::text, '')) AS road_condition
         FROM land_transactions_resolved lt
-        LEFT JOIN (
-          SELECT DISTINCT ON (from_code) from_code, to_code
-          FROM region_code_history
-          WHERE change_type IN ('code_reissue','merge','rename')
-          ORDER BY from_code, effective_from DESC, id DESC
-        ) _rch ON _rch.from_code = btrim(lt.beopjungri_code::text)
-        LEFT JOIN region_codes rc
-          ON btrim(rc.beopjungri_code::text) = COALESCE(
-               _rch.to_code, btrim(lt.beopjungri_code::text)
-             )
+        {join_sql}
         WHERE {merged_where}
         ORDER BY lt.contract_year ASC, lt.contract_month ASC, lt.id ASC
         """
@@ -1752,6 +1810,7 @@ def _fetch_matrix_cell_filtered_transactions(
                 "eupmyeondong_name": emn or None,
                 "beopjungri_name": nm or None,
                 "lot_display": (m.get("lot_display") or "").strip() or None,
+                "land_category": (m.get("land_category") or "").strip() or None,
                 "partial_ownership_label": (
                     (m.get("partial_ownership_label") or "").strip() or None
                 ),
@@ -1792,21 +1851,29 @@ def _format_tx_contract_date_csv(row: dict) -> str:
     return f"{row['contract_year']}.{row['contract_month']:02d}"
 
 
-def _matrix_cell_transactions_csv_bytes(rows: list[dict]) -> bytes:
+def _matrix_cell_transactions_csv_bytes(
+    rows: list[dict], *, include_land_category: bool = False
+) -> bytes:
     buf = io.StringIO()
     buf.write("\ufeff")
     writer = csv.writer(buf, lineterminator="\n")
-    writer.writerow(
-        ["계약일", "시군구", "읍면동", "동리명", "지번", "면적(㎡)", "금액(만원)", "단가(만원/㎡)", "도로", "지분", "유형"]
-    )
+    header = ["계약일", "시군구", "읍면동", "동리명", "지번"]
+    if include_land_category:
+        header.append("지목")
+    header.extend(["면적(㎡)", "금액(만원)", "단가(만원/㎡)", "도로", "지분", "유형"])
+    writer.writerow(header)
     for c in rows:
-        writer.writerow(
+        row = [
+            _format_tx_contract_date_csv(c),
+            c.get("sigungu_name") or "",
+            c.get("eupmyeondong_name") or "",
+            c.get("beopjungri_name") or "",
+            c.get("lot_display") or "",
+        ]
+        if include_land_category:
+            row.append(c.get("land_category") or "")
+        row.extend(
             [
-                _format_tx_contract_date_csv(c),
-                c.get("sigungu_name") or "",
-                c.get("eupmyeondong_name") or "",
-                c.get("beopjungri_name") or "",
-                c.get("lot_display") or "",
                 "" if c.get("area_sqm") is None else c["area_sqm"],
                 c["total_price_10k"],
                 c["unit_price_per_sqm"],
@@ -1815,6 +1882,7 @@ def _matrix_cell_transactions_csv_bytes(rows: list[dict]) -> bytes:
                 c.get("deal_type") or "",
             ]
         )
+        writer.writerow(row)
     return buf.getvalue().encode("utf-8")
 
 
@@ -1858,6 +1926,7 @@ def matrix_cell_transactions(
             eupmyeondong_name=c.get("eupmyeondong_name"),
             beopjungri_name=c["beopjungri_name"],
             lot_display=c.get("lot_display"),
+            land_category=c.get("land_category"),
             partial_ownership_label=c.get("partial_ownership_label"),
             deal_type=c.get("deal_type"),
             area_sqm=c["area_sqm"],
@@ -1897,7 +1966,14 @@ def matrix_cell_transactions_export(
                 "연도·지역 범위를 줄여 주세요."
             ),
         )
-    payload = _matrix_cell_transactions_csv_bytes(filtered)
+    from app.jimok_group import matrix_mode_to_col_axis
+
+    include_jimok = matrix_mode_to_col_axis(
+        getattr(body, "matrix_mode", None) or "category"
+    ) == "group"
+    payload = _matrix_cell_transactions_csv_bytes(
+        filtered, include_land_category=include_jimok
+    )
     filename = _matrix_cell_export_filename(body)
     return Response(
         content=payload,

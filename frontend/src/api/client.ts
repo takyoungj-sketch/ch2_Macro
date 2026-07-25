@@ -19,8 +19,6 @@ import type {
   RegionItem,
   RegionLevel,
   ProfileSigunguTwinsResponse,
-  ProfileTwinNeighborsResponse,
-  RegionalProfileResponse,
   TwinNeighborsForEupmyeondongResponse,
   TwinNeighborsForSigunguResponse,
   TwinRegionLatestBatch,
@@ -325,79 +323,6 @@ export const fetchProfileTwinSigungu = async (params: {
     window_years: params.window_years ?? 5,
     scope,
     anchor_sigungu_code: code,
-    neighbors: [],
-  };
-};
-
-/** Regional Profile 조회 — v1.1-national 없으면 파일럿 버전 fallback */
-export const fetchRegionalProfile = async (params: {
-  region_level: RegionLevel;
-  region_code: string;
-  profile_version?: string;
-  window_years?: number;
-  as_of_month?: string;
-}): Promise<RegionalProfileResponse> => {
-  const versions = [
-    params.profile_version ?? DEFAULT_PROFILE_VERSION,
-    FALLBACK_PROFILE_VERSION,
-  ].filter((v, i, a) => a.indexOf(v) === i);
-
-  let lastErr: unknown;
-  for (const pv of versions) {
-    try {
-      const { data } = await api.get<RegionalProfileResponse>("/regional-profile", {
-        params: { ...params, profile_version: pv },
-      });
-      return data;
-    } catch (err) {
-      lastErr = err;
-      if (axios.isAxiosError(err) && err.response?.status === 404) continue;
-      throw err;
-    }
-  }
-  throw lastErr;
-};
-
-export const fetchProfileTwinNeighbors = async (params: {
-  eupmyeondong_code: string;
-  profile_version?: string;
-  window_years?: number;
-  top_k?: number;
-  scope?: "adjacent" | "region" | "national";
-}): Promise<ProfileTwinNeighborsResponse> => {
-  const code = params.eupmyeondong_code.trim().slice(0, 8);
-  const scope = params.scope ?? "region";
-  const versions = [
-    params.profile_version ?? DEFAULT_PROFILE_VERSION,
-    FALLBACK_PROFILE_VERSION,
-  ].filter((v, i, a) => a.indexOf(v) === i);
-
-  let last: ProfileTwinNeighborsResponse | null = null;
-  for (const pv of versions) {
-    try {
-      const { data } = await api.get<ProfileTwinNeighborsResponse>(
-        `/regional-profile/twins/${encodeURIComponent(code)}`,
-        {
-          params: {
-            profile_version: pv,
-            window_years: params.window_years,
-            top_k: params.top_k ?? 5,
-            scope,
-          },
-        }
-      );
-      last = data;
-      if (data.neighbors.length > 0) return data;
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 404) continue;
-      throw err;
-    }
-  }
-  return last ?? {
-    profile_version: versions[0]!,
-    window_years: params.window_years ?? 5,
-    scope,
-    anchor_eupmyeondong_code: code,
     neighbors: [],
   };
 };

@@ -22,7 +22,6 @@ import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import { LEFT_REGION_MULTI_SELECT, MAX_PAID_LEAF_BEOPJUNGRI_PICK } from "../constants/tierPickLimits";
 import { cityBucketFromSigungu } from "../utils/cityBucket";
 import { isSejongPseudoSigunguCode } from "../utils/sejongRegion";
-import { resolveProfileRegionFromTier } from "../utils/upperTierStats";
 
 function labelSigunguChip(regions: RegionItem[], code: string): string {
   const c = String(code).trim();
@@ -238,12 +237,6 @@ export default function RegionSelector() {
       return;
     }
 
-    if (viewMode === "profile") {
-      replacePaidLeafBeopjungri(c);
-      finishLeafPick();
-      return;
-    }
-
     const cur = pickedCodes;
     if (leafAlreadySelected(c)) {
       finishLeafPick();
@@ -343,12 +336,6 @@ export default function RegionSelector() {
     }
     const ec = String(eupCode ?? "").trim();
     if (!ec) return;
-
-    if (viewMode === "profile") {
-      replacePaidLeafEupmyeondong(ec);
-      finishLeafPick();
-      return;
-    }
 
     if (paidReplaceLeafWithoutPlus()) {
       replacePaidLeafEupmyeondong(ec);
@@ -521,28 +508,6 @@ export default function RegionSelector() {
 
     kickPaidBasicStatsAnalysis();
     commitStatsDisplayScope(statsScopeKeyFromBeopjungriCodes(resolvedUnionCodes));
-  };
-
-  const commitProfile = () => {
-    setLocalError(null);
-    const target = resolveProfileRegionFromTier(tierSelection);
-    if (!target) {
-      if (tierSelection.beopjungri_codes.length > 1) {
-        setLocalError(
-          "여러 법정동·리가 섞여 있습니다. 같은 읍·면·동 안의 항목만 남기거나, 검색에서 「읍·면·동 포함」을 선택하세요."
-        );
-        return;
-      }
-      if (resolvedUnionCodes.length === 0) {
-        setLocalError("검색에서 지역을 추가해 주세요.");
-        return;
-      }
-      setLocalError(
-        "지역 프로필은 상위 행정구역(시·도·시군구·읍면동)을 하나만 선택할 수 있습니다. 복수 칩은 줄여 주세요."
-      );
-      return;
-    }
-    commitStatsDisplayScope(`profile:${target.level}:${target.code}`);
   };
 
   const suggestionListMaxClass = suggestionsShortHeight ? "max-h-28" : "max-h-52";
@@ -1117,16 +1082,6 @@ export default function RegionSelector() {
           disabled={catalogLoading && regions.length === 0}
         >
           무료 통계 조회
-        </button>
-      ) : viewMode === "profile" ? (
-        <button
-          type="button"
-          onClick={commitProfile}
-          className="w-full py-2 rounded-lg bg-violet-600 text-white text-sm font-semibold
-                     hover:bg-violet-700 disabled:opacity-40 transition-colors"
-          disabled={catalogLoading && regions.length === 0}
-        >
-          프로필 조회
         </button>
       ) : (
         <button

@@ -135,6 +135,8 @@ export interface PaidAnalysisRequest {
   rolling_matrix_period_end?: string | null;
   rolling_bucket_count?: number | null;
   rolling_stats_reference_date?: string | null;
+  /** category=지목, group=지목군(원장 재집계) */
+  matrix_mode?: "category" | "group";
 }
 
 export interface PaidAnalysisResponse {
@@ -191,6 +193,8 @@ export interface LongTermTrendRequest {
   region_targets?: LongTermRegionTarget[];
   zone_type: string;
   land_category: string;
+  /** category=지목 annual, group=지목군 annual */
+  matrix_mode?: "category" | "group";
   year_from?: number | null;
   year_to?: number | null;
 }
@@ -213,6 +217,7 @@ export interface LongTermTrendSeries {
 export interface LongTermTrendResponse {
   zone_type: string;
   land_category: string;
+  matrix_mode?: "category" | "group";
   year_from: number;
   year_to: number;
   disclaimer: string;
@@ -279,6 +284,8 @@ export interface MatrixCellTransactionItem {
   eupmyeondong_name?: string | null;
   beopjungri_name?: string | null;
   lot_display?: string | null;
+  /** 원장 지목 — 지목군 모드 거래목록 열 */
+  land_category?: string | null;
   partial_ownership_label?: string | null;
   deal_type?: string | null;
   area_sqm?: number | null;
@@ -304,47 +311,7 @@ export interface MatrixCellTransactionsResponse {
   items: MatrixCellTransactionItem[];
 }
 
-export type ViewMode = "free" | "paid" | "profile";
-
-/** GET /regional-profile */
-export interface RegionalProfileMeta {
-  profile_version: string;
-  as_of_month: string;
-  window_years: number;
-  region_level: RegionLevel;
-  region_code: string;
-  feature_count?: number | null;
-  builder_version?: string | null;
-  validation_status: string;
-  computed_at?: string | null;
-}
-
-export interface RegionalProfileResponse {
-  meta: RegionalProfileMeta;
-  features: Record<string, number>;
-}
-
-/** GET /regional-profile/twins/{eupmyeondong_code} */
-export interface ProfileTwinNeighborItem {
-  rank: number;
-  twin_eupmyeondong_code: string;
-  twin_eupmyeondong_name: string;
-  twin_sigungu_name: string;
-  twin_sido_name: string;
-  similarity_score: number;
-  detail_scores: Record<string, unknown>;
-}
-
-export interface ProfileTwinNeighborsResponse {
-  profile_version: string;
-  window_years: number;
-  algorithm_version?: number;
-  scope?: string | null;
-  as_of_month?: string | null;
-  batch_key?: string | null;
-  anchor_eupmyeondong_code: string;
-  neighbors: ProfileTwinNeighborItem[];
-}
+export type ViewMode = "free" | "paid";
 
 /** GET /regional-profile/twins-sigungu/{sigungu_code} — hybrid v7 */
 export interface ProfileSigunguTwinItem {

@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@ch2/ai-assistant": path.resolve(__dirname, "../shared/ai-assistant"),
+        "@ch2/macro-shell": path.resolve(__dirname, "../shared/macro-shell"),
         clsx: path.resolve(__dirname, "node_modules/clsx"),
         axios: path.resolve(__dirname, "node_modules/axios"),
       },

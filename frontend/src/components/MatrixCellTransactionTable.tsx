@@ -25,7 +25,7 @@ interface ColDef {
   textPlaceholder?: string;
 }
 
-const COLS: ColDef[] = [
+const BASE_COLS: ColDef[] = [
   { key: "contract_date", label: "계약일", filterType: "select" },
   { key: "sigungu", label: "시군구", filterType: "select" },
   { key: "eupmyeondong", label: "읍·면·동", filterType: "select" },
@@ -39,8 +39,19 @@ const COLS: ColDef[] = [
   { key: "deal_type", label: "유형", filterType: "select" },
 ];
 
-const SELECT_COLS = COLS.filter((c) => c.filterType === "select");
-const TEXT_COLS = COLS.filter((c) => c.filterType === "text");
+const LAND_CATEGORY_COL: ColDef = {
+  key: "land_category",
+  label: "지목",
+  filterType: "select",
+};
+
+function buildCols(showLandCategory: boolean): ColDef[] {
+  if (!showLandCategory) return BASE_COLS;
+  const idx = BASE_COLS.findIndex((c) => c.key === "lot");
+  const next = [...BASE_COLS];
+  next.splice(idx + 1, 0, LAND_CATEGORY_COL);
+  return next;
+}
 
 /** 드롭다운 필터에서 사용하는 표시값 추출 */
 function getSelectDisplayValue(r: MatrixCellTransactionItem, key: LandTxSortKey): string {
@@ -54,6 +65,8 @@ function getSelectDisplayValue(r: MatrixCellTransactionItem, key: LandTxSortKey)
       return admin.eupmyeondong?.trim() || "—";
     case "ri":
       return admin.ri?.trim() || "—";
+    case "land_category":
+      return r.land_category?.trim() || "—";
     case "road":
       return r.road_condition?.trim() || "—";
     case "partial":
@@ -209,10 +222,23 @@ function DropdownPanel({
 export default function MatrixCellTransactionTable({
   items,
   truncated,
+  showLandCategory = false,
 }: {
   items: MatrixCellTransactionItem[];
   truncated?: boolean;
+  /** 지목군 모드에서 원장 지목 열 표시 */
+  showLandCategory?: boolean;
 }) {
+  const cols = useMemo(() => buildCols(showLandCategory), [showLandCategory]);
+  const selectCols = useMemo(
+    () => cols.filter((c) => c.filterType === "select"),
+    [cols],
+  );
+  const textCols = useMemo(
+    () => cols.filter((c) => c.filterType === "text"),
+    [cols],
+  );
+
   /** Select 필터: 포함할 값 집합. undefined = 전체 포함 */
   const [selectFilters, setSelectFilters] = useState<
     Partial<Record<LandTxSortKey, Set<string>>>
@@ -226,6 +252,13 @@ export default function MatrixCellTransactionTable({
   const [page, setPage] = useState(1);
   const [openFilterCol, setOpenFilterCol] = useState<LandTxSortKey | null>(null);
   const dropdownContainerRefs = useRef<Partial<Record<LandTxSortKey, HTMLDivElement | null>>>({});
+
+  useEffect(() => {
+    setSelectFilters({});
+    setTextFilters({});
+    setPage(1);
+    setOpenFilterCol(null);
+  }, [showLandCategory]);
 
   // Escape 키로 드롭다운 닫기
   useEffect(() => {
@@ -243,7 +276,7 @@ export default function MatrixCellTransactionTable({
   // 각 select 열의 전체 고유값
   const distinctValues = useMemo(() => {
     const result: Partial<Record<LandTxSortKey, string[]>> = {};
-    for (const col of SELECT_COLS) {
+    for (const col of selectCols) {
       const vals = new Set<string>();
       for (const item of items) {
         vals.add(getSelectDisplayValue(item, col.key));
@@ -253,7 +286,7 @@ export default function MatrixCellTransactionTable({
       );
     }
     return result;
-  }, [items]);
+  }, [items, selectCols]);
 
   // undefined = 비활성, Set(어떤 크기든) = 활성
   const activeFilterCount =
@@ -264,7 +297,7 @@ export default function MatrixCellTransactionTable({
     let rows = [...items];
 
     // select 필터
-    for (const col of SELECT_COLS) {
+    for (const col of selectCols) {
       const sel = selectFilters[col.key];
       if (sel === undefined) continue;          // 비활성 = 전체 통과
       if (sel.size === 0) { rows = []; break; } // 전체 해제 = 아무것도 없음
@@ -272,7 +305,7 @@ export default function MatrixCellTransactionTable({
     }
 
     // 텍스트 필터
-    for (const col of TEXT_COLS) {
+    for (const col of textCols) {
       const q = textFilters[col.key]?.trim().toLowerCase();
       if (!q) continue;
       rows = rows.filter((r) => {
@@ -293,7 +326,7 @@ export default function MatrixCellTransactionTable({
       compareValues(landTxSortValue(a, sortKey), landTxSortValue(b, sortKey), sortDir),
     );
     return rows;
-  }, [items, selectFilters, textFilters, sortKey, sortDir]);
+  }, [items, selectFilters, textFilters, sortKey, sortDir, selectCols, textCols]);
 
   // 필터 결과 요약 통계
   const filteredStats = useMemo(() => {
@@ -380,7 +413,7 @@ export default function MatrixCellTransactionTable({
   };
 
   const isFilterActive = (key: LandTxSortKey) => {
-    const col = COLS.find((c) => c.key === key);
+    const col = cols.find((c) => c.key === key);
     if (col?.filterType === "select") {
       return selectFilters[key] !== undefined;
     }
@@ -463,10 +496,15 @@ export default function MatrixCellTransactionTable({
 
       {/* ── 테이블 ── */}
       <div className="flex-1 min-h-[280px] overflow-x-auto overflow-y-auto rounded-lg border border-slate-100">
-        <table className="w-full text-[11px] border-collapse min-w-[1040px]">
+        <table
+          className={clsx(
+            "w-full text-[11px] border-collapse",
+            showLandCategory ? "min-w-[1120px]" : "min-w-[1040px]",
+          )}
+        >
           <thead className="sticky top-0 z-10">
             <tr className={simpleTableHeadClass("neutral")}>
-              {COLS.map((col) => {
+              {cols.map((col) => {
                 const filterOn = isFilterActive(col.key);
                 return (
                   <th
@@ -475,6 +513,8 @@ export default function MatrixCellTransactionTable({
                       "border border-slate-200 px-1.5 py-1 font-medium align-top",
                       col.align === "right" ? "text-right" : "text-left",
                       col.bold && "text-blue-700",
+                      col.key === "lot" && "max-w-[50px] w-[50px] px-0.5",
+                      col.key === "partial" && "max-w-[40px] w-[40px] px-0.5",
                     )}
                   >
                     {/* 정렬 버튼 */}
@@ -614,7 +654,7 @@ export default function MatrixCellTransactionTable({
             {pageRows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={COLS.length}
+                  colSpan={cols.length}
                   className="border border-slate-200 px-2 py-6 text-center text-slate-400 align-top h-40"
                 >
                   {activeFilterCount > 0
@@ -649,11 +689,19 @@ export default function MatrixCellTransactionTable({
                       {formatLandTxCell(admin.ri)}
                     </td>
                     <td
-                      className="border border-slate-200 px-2 py-1 max-w-[100px] truncate whitespace-nowrap"
+                      className="border border-slate-200 px-1 py-1 max-w-[50px] w-[50px] truncate whitespace-nowrap"
                       title={r.lot_display?.trim() || undefined}
                     >
                       {formatLandTxCell(r.lot_display)}
                     </td>
+                    {showLandCategory && (
+                      <td
+                        className="border border-slate-200 px-2 py-1 max-w-[72px] truncate whitespace-nowrap"
+                        title={r.land_category?.trim() || undefined}
+                      >
+                        {formatLandTxCell(r.land_category)}
+                      </td>
+                    )}
                     <td className="border border-slate-200 px-2 py-1 text-right tabular-nums whitespace-nowrap">
                       {r.area_sqm != null
                         ? Number(r.area_sqm).toLocaleString("ko-KR", {
@@ -677,7 +725,10 @@ export default function MatrixCellTransactionTable({
                     <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">
                       {r.road_condition ?? "—"}
                     </td>
-                    <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">
+                    <td
+                      className="border border-slate-200 px-0.5 py-1 max-w-[40px] w-[40px] truncate whitespace-nowrap"
+                      title={r.partial_ownership_label?.trim() || undefined}
+                    >
                       {formatLandTxCell(r.partial_ownership_label)}
                     </td>
                     <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">

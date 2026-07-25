@@ -7,6 +7,7 @@ import {
   fetchRegions,
   fetchUpperStats,
 } from "../api/client";
+import { MATRIX_MODE_LABEL, type MatrixMode } from "../constants/jimokGroup";
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import {
   buildFreeStatsExplain,
@@ -27,6 +28,7 @@ import MatrixStatsTable, { MatrixStatsLegend } from "./MatrixStatsTable";
 import PaidMatrixYearlyModal from "./PaidMatrixYearlyModal";
 import YearlyStatsTable from "./YearlyStatsTable";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
+import RegionalProfileLink from "./RegionalProfileLink";
 
 export default function PaidAnalysisPanel() {
   const viewMode = useAppStore((s) => s.viewMode);
@@ -46,8 +48,12 @@ export default function PaidAnalysisPanel() {
   const startedAt = useAppStore((s) => s.paidAnalysisStartedAt);
   const runPaidFilteredAnalysis = useAppStore((s) => s.runPaidFilteredAnalysis);
   const cancelPaidFilteredAnalysis = useAppStore((s) => s.cancelPaidFilteredAnalysis);
+  const setPaidRequest = useAppStore((s) => s.setPaidRequest);
   const paidBulkBeopjungriCodes = useAppStore((s) => s.paidBulkBeopjungriCodes);
   const paidFilteredAnalysisScopeNotice = useAppStore((s) => s.paidFilteredAnalysisScopeNotice);
+
+  const matrixMode: MatrixMode =
+    paidRequest.matrix_mode === "group" ? "group" : "category";
 
   const [trendModal, setTrendModal] = useState<{
     zoneType: string;
@@ -201,6 +207,7 @@ export default function PaidAnalysisPanel() {
         ...base,
         zone_type: zoneType,
         land_category: landCategory,
+        matrix_mode: matrixMode,
       };
 
       setTrendModal({ zoneType, landCategory });
@@ -217,7 +224,34 @@ export default function PaidAnalysisPanel() {
         setTrendLoading(false);
       }
     },
-    [basicData, paidBasicBaseKey, paidRequest, paidRoadExcluded, paidAreaExcluded, codesForPaidMatrix]
+    [
+      basicData,
+      paidBasicBaseKey,
+      paidRequest,
+      paidRoadExcluded,
+      paidAreaExcluded,
+      codesForPaidMatrix,
+      matrixMode,
+      resolvedCodes.length,
+    ]
+  );
+
+  const switchMatrixMode = useCallback(
+    (mode: MatrixMode) => {
+      if (mode === matrixMode) return;
+      closeTrend();
+      setPaidRequest({ matrix_mode: mode });
+      if (codesForPaidMatrix.length > 0 && status === "success") {
+        void runPaidFilteredAnalysis(codesForPaidMatrix);
+      }
+    },
+    [
+      matrixMode,
+      setPaidRequest,
+      codesForPaidMatrix,
+      status,
+      runPaidFilteredAnalysis,
+    ]
   );
 
   const legendExplain = useMemo(() => buildMatrixLegendExplain(), []);
@@ -277,6 +311,7 @@ export default function PaidAnalysisPanel() {
                   {basicData.beopjungri_name}
                 </h2>
                 <AnalysisHelpPanel explain={basicStatsExplain} />
+                <RegionalProfileLink />
               </div>
               <div className="min-w-0 flex-1 basis-[12rem]">
                 <YearlyStatsTable rows={yearlyReferenceRowsPaid} hideTitle />
@@ -363,11 +398,31 @@ export default function PaidAnalysisPanel() {
             </p>
           ) : null}
 
+          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+            <span className="font-medium text-slate-700">매트릭스</span>
+            {(["category", "group"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => switchMatrixMode(mode)}
+                disabled={isLoading}
+                className={
+                  matrixMode === mode
+                    ? "rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-white"
+                    : "rounded border border-slate-300 bg-white px-2 py-0.5 hover:bg-slate-50 disabled:opacity-40"
+                }
+              >
+                {MATRIX_MODE_LABEL[mode]}
+              </button>
+            ))}
+          </div>
+
           <MatrixStatsTable
             title=""
             matrix={result.matrix}
             byZone={result.by_zone}
             byLandCategory={result.by_land_category}
+            landAxisLabel={matrixMode === "group" ? "지목군" : "지목"}
             showEmbeddedLegend={false}
             onPaidMatrixCellClick={openMatrixTrend}
             suppressEscapeClose={trendModal != null}
@@ -382,6 +437,7 @@ export default function PaidAnalysisPanel() {
         error={trendError}
         zoneType={trendModal?.zoneType ?? ""}
         landCategory={trendModal?.landCategory ?? ""}
+        matrixMode={matrixMode}
         rows={trendRows}
         filterRequest={trendRequest}
       />

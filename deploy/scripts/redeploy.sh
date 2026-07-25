@@ -42,6 +42,14 @@ fi
 npm ci
 npm run build
 
+echo "==> frontend profile build"
+cd "$REPO_ROOT/frontend-profile"
+if [[ ! -f .env ]] && [[ -f "$REPO_ROOT/deploy/templates/frontend-profile.env.production.example" ]]; then
+  echo "WARN: frontend-profile/.env missing — copy template and set VITE_API_TOKEN before build"
+fi
+npm ci
+npm run build
+
 echo "==> macro gateway"
 if [[ -x "$REPO_ROOT/deploy/scripts/deploy-macro-gateway.sh" ]]; then
   bash "$REPO_ROOT/deploy/scripts/deploy-macro-gateway.sh"
@@ -57,4 +65,4 @@ echo "==> health"
 sleep 2
 curl -sf "http://127.0.0.1:8000/health" | head -c 800
 echo
-echo "OK: redeploy complete (gateway /, land /land/, built /built/, collective /collective/)"
+echo "OK: redeploy complete (gateway /, land /land/, built /built/, collective /collective/, profile /profile/)"

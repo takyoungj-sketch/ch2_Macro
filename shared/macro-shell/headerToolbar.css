@@ -1,0 +1,342 @@
+/* 헤더 shell — 복합부동산 기준 px 고정 (html font-size·앱별 override와 무관) */
+
+.ch2-macro-stats-header {
+  box-sizing: border-box;
+  flex-shrink: 0;
+  padding: 15px 30px;
+  min-height: 70px;
+  background-color: rgb(255 255 255);
+  border-bottom: 1px solid rgb(226 232 240);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+html.dark .ch2-macro-stats-header {
+  background-color: rgb(30 41 59);
+  border-bottom-color: rgb(51 65 85);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.35);
+}
+
+.ch2-macro-stats-header .macro-header-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+}
+
+.ch2-macro-stats-header .macro-header-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.ch2-macro-stats-header .macro-header-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 4px;
+  min-height: 11px;
+  font-size: 11px;
+  line-height: 11px;
+  color: rgb(100 116 139);
+}
+
+html.dark .ch2-macro-stats-header .macro-header-breadcrumb {
+  color: rgb(148 163 184);
+}
+
+.ch2-macro-stats-header .macro-header-home {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.ch2-macro-stats-header .macro-header-home:hover {
+  color: rgb(51 65 85);
+}
+
+html.dark .ch2-macro-stats-header .macro-header-home:hover {
+  color: rgb(226 232 240);
+}
+
+.ch2-macro-stats-header .macro-header-badge-slot,
+.ch2-macro-stats-header .macro-header-badge-slot * {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 11px;
+  color: rgb(217 119 6);
+}
+
+html.dark .ch2-macro-stats-header .macro-header-badge-slot,
+html.dark .ch2-macro-stats-header .macro-header-badge-slot * {
+  color: rgb(252 211 77);
+}
+
+.ch2-macro-stats-header .macro-header-title h1 {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 20px;
+  line-height: 25px;
+  font-weight: 700;
+  color: rgb(30 41 59);
+}
+
+html.dark .ch2-macro-stats-header .macro-header-title h1 {
+  color: rgb(241 245 249);
+}
+
+/* 헤더 툴바 — px 고정 */
+
+.ch2-macro-stats-header .macro-header-toolbar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.ch2-macro-stats-header .macro-header-nav-cluster {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.ch2-macro-stats-header .macro-profile-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 76px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid rgb(226 232 240);
+  background-color: rgb(248 250 252 / 0.9);
+  color: rgb(71 85 105);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+html.dark .ch2-macro-stats-header .macro-profile-nav {
+  border-color: rgb(71 85 105);
+  background-color: rgb(51 65 85 / 0.9);
+  color: rgb(203 213 225);
+}
+
+.ch2-macro-stats-header .macro-profile-nav:hover {
+  background-color: rgb(255 255 255);
+}
+
+html.dark .ch2-macro-stats-header .macro-profile-nav:hover {
+  background-color: rgb(71 85 105);
+}
+
+.ch2-macro-stats-header .macro-profile-nav.is-active {
+  border-color: rgb(203 213 225);
+  background-color: rgb(255 255 255);
+  color: rgb(30 41 59);
+  font-weight: 600;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+html.dark .ch2-macro-stats-header .macro-profile-nav.is-active {
+  border-color: rgb(100 116 139);
+  background-color: rgb(71 85 105);
+  color: rgb(241 245 249);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.35);
+}
+
+.ch2-macro-stats-header .macro-type-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  box-sizing: border-box;
+  height: 28px;
+  padding: 2px;
+  border-radius: 6px;
+  border: 1px solid rgb(226 232 240);
+  background-color: rgb(248 250 252 / 0.9);
+}
+
+html.dark .ch2-macro-stats-header .macro-type-nav {
+  border-color: rgb(71 85 105);
+  background-color: rgb(51 65 85 / 0.9);
+}
+
+.ch2-macro-stats-header .macro-type-nav-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 24px;
+  min-width: 40px;
+  padding: 0 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  color: rgb(71 85 105);
+  text-decoration: none;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+html.dark .ch2-macro-stats-header .macro-type-nav-item {
+  color: rgb(203 213 225);
+}
+
+.ch2-macro-stats-header .macro-type-nav-item:hover {
+  background-color: rgb(255 255 255);
+}
+
+html.dark .ch2-macro-stats-header .macro-type-nav-item:hover {
+  background-color: rgb(71 85 105);
+}
+
+.ch2-macro-stats-header .macro-type-nav-item.is-active {
+  background-color: rgb(255 255 255);
+  color: rgb(30 41 59);
+  font-weight: 600;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+html.dark .ch2-macro-stats-header .macro-type-nav-item.is-active {
+  background-color: rgb(71 85 105);
+  color: rgb(241 245 249);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.35);
+}
+
+.ch2-macro-stats-header .macro-display-controls {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.ch2-macro-stats-header .macro-theme-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  height: 28px;
+  min-width: 72px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.ch2-macro-stats-header .macro-theme-btn.is-dark {
+  border-color: rgb(71 85 105);
+  background-color: rgb(51 65 85);
+  color: rgb(241 245 249);
+}
+
+.ch2-macro-stats-header .macro-theme-btn.is-dark:hover {
+  background-color: rgb(71 85 105);
+}
+
+.ch2-macro-stats-header .macro-theme-btn.is-light {
+  border-color: rgb(226 232 240);
+  background-color: rgb(248 250 252);
+  color: rgb(71 85 105);
+}
+
+.ch2-macro-stats-header .macro-theme-btn.is-light:hover {
+  background-color: rgb(255 255 255);
+}
+
+.ch2-macro-stats-header .macro-font-label {
+  font-size: 11px;
+  color: rgb(100 116 139);
+  white-space: nowrap;
+}
+
+html.dark .ch2-macro-stats-header .macro-font-label {
+  color: rgb(148 163 184);
+}
+
+.ch2-macro-stats-header .macro-font-stepper {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  box-sizing: border-box;
+  height: 28px;
+  padding: 2px;
+  border-radius: 6px;
+  border: 1px solid rgb(226 232 240);
+  background-color: rgb(248 250 252 / 0.9);
+}
+
+html.dark .ch2-macro-stats-header .macro-font-stepper {
+  border-color: rgb(71 85 105);
+  background-color: rgb(51 65 85 / 0.9);
+}
+
+.ch2-macro-stats-header .macro-font-stepper button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  color: rgb(51 65 85);
+  cursor: pointer;
+  transition: background-color 0.15s, opacity 0.15s;
+}
+
+html.dark .ch2-macro-stats-header .macro-font-stepper button {
+  color: rgb(226 232 240);
+}
+
+.ch2-macro-stats-header .macro-font-stepper button:hover:not(:disabled) {
+  background-color: rgb(255 255 255);
+}
+
+html.dark .ch2-macro-stats-header .macro-font-stepper button:hover:not(:disabled) {
+  background-color: rgb(71 85 105);
+}
+
+.ch2-macro-stats-header .macro-font-stepper button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.ch2-macro-stats-header .macro-font-stepper .macro-font-pct {
+  min-width: 46px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: rgb(71 85 105);
+}
+
+html.dark .ch2-macro-stats-header .macro-font-stepper .macro-font-pct {
+  color: rgb(203 213 225);
+}

@@ -16,7 +16,9 @@
 | **기본 `--as-of` 매핑** | *수집 끝 연월이 `cycle`의 **직전 달**과 같다*고 가정할 때: `cycle_id=202605` → 마지막 월 `202604` → **`--as-of 2026-04-01`**. 자동화: `scripts/monthly/cycle_utils.stats_as_of_iso_from_cycle_id`. **실제 수집 끝 월이 다르면 `--v2-as-of`로 수동 지정.** |
 
 > **토지 원장 재구축 중 (2026-06):** `land_stats_next` 는 재구축 배치로 `as_of_month=2026-06-01` 이 올라가 있을 수 있다. 6월 중순 **운영 정상값은 `2026-05-01`** 이다. **Promote·as_of 정상화는 `cycle_id=202607`(7월 초)에 `run_monthly_cycle` 로 일괄 처리** — 상세 [`LAND_LEDGER_REBUILD_PLAN.md`](./LAND_LEDGER_REBUILD_PLAN.md) **§12**.  
-> **D-026 지목군:** 기본=용도×지목 · 옵션=용도×지목군. [`LAND_JIMOK_GROUP_DESIGN.md`](./LAND_JIMOK_GROUP_DESIGN.md) · [`NEXT_STEPS.md`](../NEXT_STEPS.md) §5. Master 재적재 불필요; group mart는 **원장 단가 재집계**. Profile·Twin 연결은 후속.
+> **D-026 지목군:** 기본=용도×지목 · 옵션=용도×지목군. Master 재적재 불필요; group mart는 **원장 단가 재집계**.  
+> **월간 필수 후속:** 표준 `run_monthly_cycle`(category V2) **이후** §7.1「용도×지목군」을 반드시 수행한다.  
+> SSOT: [`LAND_JIMOK_GROUP_DESIGN.md`](./LAND_JIMOK_GROUP_DESIGN.md) · [`DECISIONS.md`](./DECISIONS.md) D-026. Profile·Twin 연결은 후속.
 
 ---
 
@@ -67,9 +69,10 @@ raw\토지\202605\
 
 1. 운영자: 국토부 등에서 **직전 12개월** 엑셀을 받아 `raw\토지\{cycle_id}\` 에 둔다 (하위 폴더 가능).
 2. **Cursor / 운영자:** `CycleId`(예:`202605`) 지시 후 아래 명령 실행.
-3. 스크립트: **평탄화 → `run_pipeline`(excel + V2, `--v2-as-of`) → 검증용 스냅샷 JSON**.
-4. 운영자: **검증 체크리스트** 및 샘플 육안.
-5. **OK** 후 **Promote** (§7) 로 외부 반영.
+3. 스크립트: **평탄화 → `run_pipeline`(excel + V2 category, `--v2-as-of`) → 검증용 스냅샷 JSON**.
+4. **에이전트/운영자:** **§7.1 용도×지목군** (V2 group + annual 당해 연도 both) — cycle에 미포함, **매월 필수**.
+5. 운영자: **검증 체크리스트** 및 샘플 육안(category + group).
+6. **OK** 후 **Promote** (§9) 로 외부 반영.
 
 ---
 
@@ -124,11 +127,119 @@ py scripts\monthly\run_monthly_cycle.py --cycle-id 202605
 
 ---
 
-## 7. 사전통계 생성 (V2)
+## 7. 사전통계 생성 (V2 · 용도×지목)
 
 - `--with-v2` 로 `build_stats_v2.py` 실행. **`--as-of` 는 반드시 이번 데이터에 맞게 고정**(CLI 또는 `--v2-as-of`).
 - **상위 행정(시도·시군구·읍면동·city 버킷)** 은 `run_monthly_cycle.py` 가 **기본으로** `run_pipeline.py --with-upper-v2` 를 넣어 `build_upper_stats_v2.py` 까지 실행한다. **끄려면** `--skip-upper-v2`.
 - 수동만 필요할 때: `python pipeline/build_upper_stats_v2.py --as-of … --windows 3,5` (전국; 시도 한정은 `--sido-code`).
+- 기본 `--col-axis` 는 **`category`(용도×지목)**. 지목군은 **§7.1** 에서 별도 수행(cycle 스크립트에 아직 미통합).
+
+---
+
+## 7.1 용도×지목군 (D-026) — 월간 필수 · 에이전트 실행 가이드
+
+> **목적:** 다른 에이전트/운영자가 매월 초 category V2 갱신 뒤 **용도×지목군 mart + 장기추세 annual(group)** 을 재현 가능하게 돌린다.  
+> **전제:** §6 `run_monthly_cycle`(또는 동등한 원장·category V2) 가 이번 `as_of` 로 **성공**한 뒤 실행.  
+> **금지:** 지목(category) mart 평균을 합쳐 지목군 평균을 만들지 말 것 — 반드시 **원장 단가 재집계** (`--col-axis group`).
+
+### 7.1.1 선행 DDL (최초 1회 · 스키마 확인)
+
+로컬·VPS DB에 아래가 없으면 `pipeline/` 에서 적용:
+
+| 파일 | 역할 |
+|------|------|
+| `db/037_land_jimok_group_map.sql` | 지목→지목군 맵 |
+| `db/038_land_transactions_resolved_jimok_group.sql` | resolved VIEW + `jimok_group_*` |
+| `db/040_land_stats_col_axis.sql` | V2 `col_axis` |
+| `db/041_land_annual_col_axis.sql` | annual `col_axis` |
+
+```powershell
+cd C:\ch2\ch2_Macro\pipeline
+python -c @"
+from pathlib import Path
+from sqlalchemy import text
+from db_utils import get_engine
+root = Path('..') / 'db'
+for name in ('037_land_jimok_group_map.sql','038_land_transactions_resolved_jimok_group.sql','040_land_stats_col_axis.sql','041_land_annual_col_axis.sql'):
+    p = root / name
+    print('apply', p.name)
+    with get_engine().begin() as c:
+        c.execute(text(p.read_text(encoding='utf-8')))
+print('ddl ok')
+"@
+```
+
+매월: 맵/VIEW가 이미 있으면 **스킵**. `jimok_key` 매핑 변경 시에만 037 재적용 후 **영향 연도·as_of group 재빌드**.
+
+### 7.1.2 V2 지목군 mart (전국 · 이번 as_of)
+
+`AS_OF` = 이번 cycle의 `--v2-as-of` (예: `2026-06-01`).  
+category 를 이번 cycle에서 이미 돌렸으면 **`group`만** (중복 category 재빌드 회피).
+
+```powershell
+cd C:\ch2\ch2_Macro\pipeline
+$env:PYTHONUNBUFFERED="1"
+# 기본통계 V2 — 용도×지목군
+python -u build_stats_v2.py --as-of $AS_OF --windows 3,5 --col-axis group
+# 상위행정 V2 — 용도×지목군
+python -u build_upper_stats_v2.py --as-of $AS_OF --windows 3,5 --col-axis group
+```
+
+- category 와 group을 한 번에: `--col-axis both` (시간↑).  
+- 예상 시간(참고): 전국 group V2 는 환경에 따라 **수십 분~1시간대** (과거 로컬 ~40분대 사례).  
+- 로그 권장: `Tee-Object` 또는 `> logs\jimok_group_v2_{cycle}.log`.
+
+### 7.1.3 장기추세 annual (증분 · category + group)
+
+| 정책 | 내용 |
+|------|------|
+| **매월** | **당해 달력 연도만** UPSERT 재집계 (`--years YYYY`). 전 기간(2010~) `--full` 재빌드 **금지**(초기/복구·맵 대변경 시에만). |
+| **1월 또는 직전 연도 보정 반영 시** | `--years (YYYY-1)-YYYY` 로 직전+당해 연도. |
+| **grain** | `(calendar_year, …, col_axis)` UPSERT — 지정 연도·축만 교체. |
+| **축** | 월간은 `--col-axis both` (지목 + 지목군). group만 보강이면 `--col-axis group`. |
+
+```powershell
+cd C:\ch2\ch2_Macro\pipeline
+$YEAR = (Get-Date).Year   # 또는 수집 계약이 걸친 달력 연도
+python -u build_annual_stats.py --years $YEAR --full --col-axis both --with-upper
+```
+
+- `--full` = **전국 시도** (연도 범위는 `--years`로 제한).  
+- 예상 시간(참고): 당해 연도 both+upper 전국은 **수 십분 이내**가 보통. 2010~전 기간 group은 **~2시간대**(과거 로컬 ~1.9h).
+
+### 7.1.4 검증 (지목군)
+
+```powershell
+cd C:\ch2\ch2_Macro\pipeline
+# as_of·window 는 verify 스크립트 상수 또는 인자 — 이번 AS_OF 와 맞출 것
+python verify_jimok_group_integrity.py
+```
+
+수동/에이전트 체크:
+
+- [ ] `land_basic_stats_v2` / `land_upper_stats_v2` 에 `col_axis='group'` 이고 `as_of_month=$AS_OF` 행 존재 (시도 샘플)
+- [ ] `land_annual_stats` / `land_annual_upper_stats` 에 `col_axis='group'` 이고 `calendar_year=$YEAR` 행 존재
+- [ ] API: free/upper `matrix_mode=group` · 필터분석 토글 · 장기추세 탭(지목군 셀) 404 아님
+- [ ] integrity: zone×group `count` ≈ 소속 지목 category `count` 합 (스크립트 mismatch=0)
+
+### 7.1.5 에이전트 체크리스트 (복붙용)
+
+```
+[ ] cycle_id / AS_OF 확인 (category V2 완료 후)
+[ ] DDL 037·038·040·041 존재 확인 (없으면 적용)
+[ ] build_stats_v2 --col-axis group --as-of AS_OF --windows 3,5
+[ ] build_upper_stats_v2 --col-axis group --as-of AS_OF --windows 3,5
+[ ] build_annual_stats --years YEAR --full --col-axis both --with-upper
+[ ] verify_jimok_group_integrity (또는 동등 count 합 검증)
+[ ] UI/API matrix_mode=group · 장기추세 스모크
+[ ] (Promote 시) group mart·annual 이 dump/재실행에 포함되는지 확인
+```
+
+### 7.1.6 아직 자동화되지 않은 것
+
+- `run_monthly_cycle.py` / `run_pipeline.py` 에 `--col-axis` · annual 단계 **미배선**.  
+  → 매월 **본 절을 수동(또는 에이전트)으로 추가 실행**.  
+- 통합 플래그 추가는 후속 이슈(J7 잔여).
 
 ---
 
@@ -169,6 +280,7 @@ py verify_v2_national_samples.py --base-url http://127.0.0.1:8000 --as-of-month 
 - [ ] **평균 단가 급변** 이슈 — 대표 동 2~3곳 재조회 (프론트·API)  
 - [ ] **`/health.latest_as_of_month`** 의 정책과 `--v2-as-of` 의도 일치 확인  
 - [ ] **`land_transactions` 행폭증·급감** — 직전 월 배치 요약 파일과 비교  
+- [ ] **§7.1 지목군** — `col_axis=group` V2·annual 당해 연도 존재 + integrity/스모크  
 
 ---
 
@@ -210,8 +322,12 @@ pg_dump -h 호스트 -U 유저 -d land_stats -Fc -f C:\ch2\ch2_Macro\backups\lan
 
 | 목적 | 명령 |
 |------|------|
-| 월간 로컬 한 번에 | `py scripts\monthly\run_monthly_cycle.py --cycle-id 202605` |
+| 월간 로컬 한 번에 (category V2) | `py scripts\monthly\run_monthly_cycle.py --cycle-id 202605` |
 | 상위통계 생략(드물게) | `… run_monthly_cycle.py --cycle-id 202605 --skip-upper-v2` |
+| **지목군 V2 (매월 §7.1)** | `py pipeline\build_stats_v2.py --as-of YYYY-MM-01 --windows 3,5 --col-axis group` |
+| **지목군 upper V2** | `py pipeline\build_upper_stats_v2.py --as-of YYYY-MM-01 --windows 3,5 --col-axis group` |
+| **annual 당해연도 both** | `py pipeline\build_annual_stats.py --years YYYY --full --col-axis both --with-upper` |
+| 지목군 integrity | `py pipeline\verify_jimok_group_integrity.py` |
 | 수집 목록만 | `py scripts\monthly\run_monthly_cycle.py --cycle-id 202605 --manifest-only` |
 | 평탄화만 | `py scripts\monthly\flatten_raw_xlsx.py --source raw\토지\202605 --dest clean_snapshots\202605\flat_in` |
 | 시도 건수 스냅샷 | `py scripts\monthly\snapshot_land_tx_counts.py --output clean_snapshots\202605\land_tx_counts_after.json` |
@@ -226,7 +342,9 @@ PowerShell 래퍼: `scripts\monthly\run_monthly_cycle.ps1 -CycleId 202605` (상�
 
 - `docs/V2_OPERATOR_CHECKLIST.md` — 월초 갱신 단일 SOP(전국·검증·백엔드)  
 - `docs/V2_STATS_PRODUCTION.md` — `build_stats_v2` 운영  
-- `docs/DECISIONS.md` — D-007 `API_TOKEN`, D-003 캐시 무효화 등  
+- `docs/LAND_JIMOK_GROUP_DESIGN.md` — 지목군 7분류 · mart/API 정책 (D-026)  
+- `docs/LONG_TERM_TREND_DESIGN.md` — 장기추세 annual · 월간은 **당해 연도 UPSERT**  
+- `docs/DECISIONS.md` — D-007 `API_TOKEN`, D-003 캐시, **D-026 지목군**  
 - `NEXT_STEPS.md` — 백로그(알림·백업 자동화 등)
 
 ---
@@ -235,4 +353,5 @@ PowerShell 래퍼: `scripts\monthly\run_monthly_cycle.ps1 -CycleId 202605` (상�
 
 | 날짜 | 내용 |
 |------|------|
+| 2026-07-17 | **§7.1 용도×지목군 월간 필수** — 에이전트용 DDL·V2 group·annual 증분·검증 체크리스트. 실행 흐름·빠른 참조 반영 |
 | 2026-05-24 | `run_monthly_cycle` 기본에 `build_upper_stats_v2`(상위통계) 포함, `--skip-upper-v2` 로 생략 |

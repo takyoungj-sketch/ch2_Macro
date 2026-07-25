@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # VPS: scp로 코드 반영 후 scope별 frontend 빌드 + backend restart
-# Usage: bash /opt/ch2_Macro/deploy/scripts/vps_apply_scope.sh [built|land|collective|all]
+# Usage: bash /opt/ch2_Macro/deploy/scripts/vps_apply_scope.sh [built|land|collective|profile|all]
 set -euo pipefail
 
 REPO=/opt/ch2_Macro
 SCOPE="${1:-built}"
 ENV_FILE="$REPO/backend/.env"
+NGINX_TEMPLATE="$REPO/deploy/templates/nginx-ch2-macro.conf"
+NGINX_SITE="/etc/nginx/sites-available/ch2-macro"
 
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "ERROR: missing $ENV_FILE" >&2
@@ -40,6 +42,15 @@ build_app() {
   npm run build
 }
 
+apply_nginx() {
+  if [[ -f "$NGINX_TEMPLATE" ]]; then
+    echo "==> nginx site from template"
+    sudo cp "$NGINX_TEMPLATE" "$NGINX_SITE"
+    sudo nginx -t
+    sudo systemctl reload nginx
+  fi
+}
+
 case "$SCOPE" in
   built)
     build_app frontend-built
@@ -50,16 +61,22 @@ case "$SCOPE" in
   collective)
     build_app frontend-collective
     ;;
+  profile)
+    build_app frontend-profile
+    apply_nginx
+    ;;
   all)
     build_app frontend
     build_app frontend-built
     build_app frontend-collective
+    build_app frontend-profile
     if [[ -x "$REPO/deploy/scripts/deploy-macro-gateway.sh" ]]; then
       bash "$REPO/deploy/scripts/deploy-macro-gateway.sh"
     fi
+    apply_nginx
     ;;
   *)
-    echo "ERROR: unknown scope '$SCOPE' (built|land|collective|all)" >&2
+    echo "ERROR: unknown scope '$SCOPE' (built|land|collective|profile|all)" >&2
     exit 1
     ;;
 esac

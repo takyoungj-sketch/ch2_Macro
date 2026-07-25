@@ -4,15 +4,6 @@ import {
   runPaidAnalysis as runPaidAnalysisApi,
 } from "./api/client";
 import {
-  applyColorScheme,
-  clampFontStep,
-  persistColorScheme,
-  persistFontStep,
-  readStoredColorScheme,
-  readStoredFontStep,
-  type UiColorScheme,
-} from "./constants/displayUi";
-import {
   MAX_CITY_TIER_CHIP,
   MAX_PAID_LEAF_BEOPJUNGRI_PICK,
   MAX_SIDO_TIER_CHIP,
@@ -165,15 +156,6 @@ interface AppState {
   togglePaidAreaExclude: (area: string) => void;
   togglePaidYear: (year: number) => void;
   resetPaidExcluded: () => void;
-
-  /** 글자 크기 단계(본문 zoom, localStorage 유지) */
-  uiFontScaleStep: number;
-  bumpUiFontScale: (direction: 1 | -1) => void;
-
-  /** 화면 색상 테마(light | dark, localStorage 유지) */
-  uiColorScheme: UiColorScheme;
-  setUiColorScheme: (scheme: UiColorScheme) => void;
-  toggleUiColorScheme: () => void;
 }
 
 const defaultPaidRequest: PaidAnalysisRequest = {
@@ -192,6 +174,7 @@ const defaultPaidRequest: PaidAnalysisRequest = {
   exclude_outlier: false,
   outlier_iqr_multiplier: 3,
   base_cache_key: null,
+  matrix_mode: "category",
 };
 
 function tierOnlyBeopjungri(codes: readonly string[]): TierCodes {
@@ -218,8 +201,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   regionSegments: [...EMPTY_REGION_SEGMENTS],
   tierSelection: emptyTierCodes(),
   paidSubSigunguPickOrder: [],
-  uiFontScaleStep: readStoredFontStep(),
-  uiColorScheme: readStoredColorScheme(),
   paidRequest: { ...defaultPaidRequest },
   paidRoadExcluded: [],
   paidAreaExcluded: [],
@@ -241,14 +222,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setViewMode: (m) =>
     set((s) => {
-      if (m === "profile") {
-        return {
-          viewMode: m,
-          paidResultView: "idle",
-          statsDisplayScopeKey: null,
-          statsDisplayKick: 0,
-        };
-      }
       if (m !== "free") {
         /**
          * 무료 → 유료 전환은 새 분석 세션의 시작점이다.
@@ -857,26 +830,4 @@ export const useAppStore = create<AppState>((set, get) => ({
     }),
 
   resetPaidExcluded: () => set(defaultPaidFilterState()),
-
-  bumpUiFontScale: (direction) =>
-    set((s) => {
-      const next = clampFontStep(s.uiFontScaleStep + direction);
-      persistFontStep(next);
-      return { uiFontScaleStep: next };
-    }),
-
-  setUiColorScheme: (scheme) => {
-    persistColorScheme(scheme);
-    applyColorScheme(scheme);
-    set({ uiColorScheme: scheme });
-  },
-
-  toggleUiColorScheme: () =>
-    set((s) => {
-      const next: UiColorScheme = s.uiColorScheme === "dark" ? "light" : "dark";
-      persistColorScheme(next);
-      applyColorScheme(next);
-      return { uiColorScheme: next };
-    }),
-
 }));

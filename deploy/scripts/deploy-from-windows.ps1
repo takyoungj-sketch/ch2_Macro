@@ -4,7 +4,7 @@
 #   .\deploy\scripts\deploy-from-windows.ps1 -Scope built
 #   .\deploy\scripts\deploy-from-windows.ps1 -Scope built -SkipPush   # push 이미 한 경우
 param(
-  [ValidateSet("built", "land", "collective", "all")]
+  [ValidateSet("built", "land", "collective", "profile", "all")]
   [string]$Scope = "built",
   [switch]$SkipCommit = $true,
   [switch]$SkipPush,
@@ -45,12 +45,17 @@ try {
   }
 
   if (-not $SkipPush) {
-    Write-Host "==> git push origin main"
-    git push origin main
+    $branch = (git rev-parse --abbrev-ref HEAD).Trim()
+    Write-Host "==> git push -u origin $branch"
+    git push -u origin $branch
     if ($LASTEXITCODE -ne 0) { throw "git push failed" }
   }
 
   Write-Host "==> scp to VPS (scope=$Scope)"
+  if ($Scope -eq "profile" -or $Scope -eq "all") {
+    & ssh -i $Key $VpsHost "mkdir -p /opt/ch2_Macro/frontend-profile /opt/ch2_Macro/deploy/templates"
+    if ($LASTEXITCODE -ne 0) { throw "remote mkdir failed" }
+  }
   switch ($Scope) {
     "built" {
       Invoke-Scp @("backend/app/built", "backend/app/ai", "backend/app/config.py", "backend/app/main.py") "backend/app/"
@@ -67,15 +72,23 @@ try {
       Invoke-Scp @("shared") "."
       Invoke-Scp @("frontend-collective/src") "frontend-collective/"
     }
+    "profile" {
+      Invoke-Scp @("backend/app") "backend/"
+      Invoke-Scp @("shared") "."
+      Invoke-Scp @("frontend-profile/package.json", "frontend-profile/package-lock.json", "frontend-profile/tsconfig.json", "frontend-profile/vite.config.ts", "frontend-profile/tailwind.config.js", "frontend-profile/postcss.config.js", "frontend-profile/index.html", "frontend-profile/src") "frontend-profile/"
+      Invoke-Scp @("deploy/templates/nginx-ch2-macro.conf", "deploy/macro-gateway") "deploy/"
+      Invoke-Scp @("deploy/scripts") "deploy/"
+    }
     "all" {
       Invoke-Scp @("backend/app") "backend/"
       Invoke-Scp @("shared") "."
       # region_canonical SSOT (backend re-export imports pipeline module)
       Invoke-Scp @("pipeline/region_canonical.py") "pipeline/"
-      Invoke-Scp @("frontend/tsconfig.json", "frontend/vite.config.ts", "frontend/src") "frontend/"
+      Invoke-Scp @("frontend/tsconfig.json", "frontend/vite.config.ts", "frontend/tailwind.config.js", "frontend/src") "frontend/"
       Invoke-Scp @("frontend-built/tsconfig.json", "frontend-built/vite.config.ts", "frontend-built/src") "frontend-built/"
-      Invoke-Scp @("frontend-collective/tsconfig.json", "frontend-collective/vite.config.ts", "frontend-collective/src") "frontend-collective/"
-      Invoke-Scp @("deploy/macro-gateway", "deploy/hub", "deploy/scripts") "deploy/"
+      Invoke-Scp @("frontend-collective/tsconfig.json", "frontend-collective/vite.config.ts", "frontend-collective/tailwind.config.js", "frontend-collective/src") "frontend-collective/"
+      Invoke-Scp @("frontend-profile/package.json", "frontend-profile/package-lock.json", "frontend-profile/tsconfig.json", "frontend-profile/vite.config.ts", "frontend-profile/tailwind.config.js", "frontend-profile/postcss.config.js", "frontend-profile/index.html", "frontend-profile/src") "frontend-profile/"
+      Invoke-Scp @("deploy/macro-gateway", "deploy/hub", "deploy/scripts", "deploy/templates") "deploy/"
     }
   }
 

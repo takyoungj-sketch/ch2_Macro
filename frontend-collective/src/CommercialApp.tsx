@@ -9,17 +9,18 @@ import {
   fetchCommercialLeafRegions,
   fetchCommercialRegionStructure,
 } from "./api/commercialClient";
+import { fetchCollectiveMapResolveCodes } from "./api/mapClient";
 import CommercialClusterDetailModal from "./components/CommercialClusterDetailModal";
 import CollectiveRegionMapHub, { type MapPanelMode } from "./components/CollectiveRegionMapHub";
-import StatsPageHeader from "./components/StatsPageHeader";
+import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
+import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
+import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
 import StatsWindowToggle, { normalizeStatsWindowYears, type StatsWindowYears } from "./components/StatsWindowToggle";
 import RegionChipPanel, {
   LEFT_REGION_MULTI_SELECT,
   toggleChipMulti,
   toggleChipSingle,
 } from "./components/RegionChipPanel";
-import { useUiColorScheme } from "./hooks/useUiColorScheme";
-import { useUiFontScale } from "./hooks/useUiFontScale";
 import { commercialAssetTypeLabel, type CommercialAssetSelectorType, type CommercialClusterRow, type RegionOption } from "./types";
 import {
   COMMERCIAL_ASSET_KINDS,
@@ -28,6 +29,7 @@ import {
   toggleCommercialAssetKind,
   type CommercialAssetKind,
 } from "./utils/commercialAssetTypes";
+import { profileHref, resolveCollectiveProfileTarget } from "./utils/profileLink";
 
 function fmtPrice(v: number | null | undefined) {
   if (v == null) return "—";
@@ -180,6 +182,25 @@ export default function CommercialApp() {
     enabled: scope !== null && !!scope.addr2,
   });
 
+  const profileResolveQ = useQuery({
+    queryKey: ["comm-profile-resolve", scope],
+    queryFn: () =>
+      fetchCollectiveMapResolveCodes({
+        assetType: scope!.assetType,
+        addr1: scope!.addr1,
+        addr2: scope!.addr2,
+        gu: scope!.hasIntermediate ? scope!.guList : [],
+        leaf: scope!.leafList,
+        commercial: true,
+      }),
+    enabled: scope !== null && !!scope.addr2,
+    staleTime: 30_000,
+  });
+  const profileTarget = useMemo(
+    () => resolveCollectiveProfileTarget(profileResolveQ.data),
+    [profileResolveQ.data],
+  );
+
   const clusterSearchQ = clusterSearch.trim().toLowerCase();
   const clusterMatchCount = useMemo(() => {
     if (!clusterSearchQ || !clustersQ.data?.items.length) return 0;
@@ -234,17 +255,10 @@ export default function CommercialApp() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-100 dark:bg-slate-900">
-      <StatsPageHeader
+    <div className="h-screen flex flex-col overflow-hidden bg-slate-100 dark:bg-slate-900">
+      <MacroStatsHeader
+        currentApp="collective"
         title="상업·업무 집합부동산"
-        subtitle={
-          <>
-            집합상가 · 집합공장 — 도로(cluster)별 ㎡당 단가 · 95% CI ·{" "}
-            <a href="/collective/residential/" className="underline hover:text-slate-700 dark:hover:text-slate-200">
-              주거형 집합
-            </a>
-          </>
-        }
         fontPct={fontPct}
         fontStepMin={fontStepMin}
         fontStepMax={fontStepMax}
@@ -253,7 +267,8 @@ export default function CommercialApp() {
         onToggleTheme={toggleUiColorScheme}
       />
 
-      <main className="flex flex-1 min-h-0" style={{ zoom: contentZoom }}>
+      <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
+      <main className="flex flex-1 min-h-0">
         <aside className="layout-sidebar p-4">
           <h2 className="text-sm font-semibold mb-3 text-slate-800 dark:text-slate-100">조건</h2>
           <div className="space-y-3">
@@ -465,6 +480,14 @@ export default function CommercialApp() {
                       <span className="ml-1 text-amber-700 dark:text-amber-400">· 실시간 집계</span>
                     )}
                   </p>
+                  {profileTarget && (
+                    <a
+                      href={profileHref(profileTarget)}
+                      className="shrink-0 text-xs font-medium text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white underline"
+                    >
+                      지역 프로필 →
+                    </a>
+                  )}
                   <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 shrink-0">
                     <span className="whitespace-nowrap">검색</span>
                     <input
@@ -554,6 +577,7 @@ export default function CommercialApp() {
           onClose={() => setSelected(null)}
         />
       )}
+      </div>
     </div>
   );
 }

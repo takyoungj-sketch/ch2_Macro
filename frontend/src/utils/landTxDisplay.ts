@@ -57,6 +57,7 @@ export type LandTxSortKey =
   | "eupmyeondong"
   | "ri"
   | "lot"
+  | "land_category"
   | "area"
   | "price"
   | "unit_price"
@@ -79,6 +80,8 @@ export function landTxSortValue(r: MatrixCellTransactionItem, key: LandTxSortKey
       return admin.ri ?? "";
     case "lot":
       return r.lot_display?.trim() ?? "";
+    case "land_category":
+      return r.land_category?.trim() ?? "";
     case "area":
       return r.area_sqm ?? null;
     case "price":

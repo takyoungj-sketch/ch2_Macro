@@ -1,12 +1,15 @@
 // @ts-nocheck — shared 패키지: 각 frontend node_modules 기준으로 tsc 경로가 달라짐
 import type { ReactNode } from "react";
+import "./headerToolbar.css";
 import DisplaySettingsControls from "./DisplaySettingsControls";
+import MacroProfileNavLink from "./MacroProfileNavLink";
 import MacroTypeNav, { type MacroAppKind } from "./MacroTypeNav";
 
 type Props = {
-  currentApp: MacroAppKind;
+  /** stats 앱(토지·복합·집합) 중 현재 페이지. 지역프로필 단독 화면이면 null */
+  currentApp?: MacroAppKind | null;
+  profileActive?: boolean;
   title: string;
-  subtitle?: ReactNode;
   badge?: ReactNode;
   fontPct: number;
   fontStepMin: boolean;
@@ -18,9 +21,9 @@ type Props = {
 };
 
 export default function MacroStatsHeader({
-  currentApp,
+  currentApp = null,
+  profileActive = false,
   title,
-  subtitle,
   badge,
   fontPct,
   fontStepMin,
@@ -31,22 +34,22 @@ export default function MacroStatsHeader({
   rightSlot,
 }: Props) {
   return (
-    <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-3 shadow-sm shrink-0">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-0.5 flex flex-wrap items-center gap-1">
-            <a href="/" className="hover:text-slate-700 dark:hover:text-slate-200">
+    <header className="ch2-macro-stats-header">
+      <div className="macro-header-row">
+        <div className="macro-header-title">
+          <p className="macro-header-breadcrumb">
+            <a href="/" className="macro-header-home">
               CH2 Macro
             </a>
-            {badge}
+            {badge ? <span className="macro-header-badge-slot">{badge}</span> : null}
           </p>
-          <h1 className="text-base font-bold text-slate-800 dark:text-slate-100">{title}</h1>
-          {subtitle ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>
-          ) : null}
+          <h1>{title}</h1>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-3 shrink-0">
-          <MacroTypeNav current={currentApp} />
+        <div className="macro-header-toolbar">
+          <div className="macro-header-nav-cluster">
+            <MacroProfileNavLink active={profileActive} />
+            <MacroTypeNav current={currentApp} />
+          </div>
           <DisplaySettingsControls
             fontPct={fontPct}
             fontStepMin={fontStepMin}

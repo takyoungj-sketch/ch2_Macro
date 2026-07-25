@@ -6,6 +6,8 @@ frontend-built/node_modules/
 frontend-built/dist/
 frontend-collective/node_modules/
 frontend-collective/dist/
+frontend-profile/node_modules/
+frontend-profile/dist/
 __pycache__/
 *.py[cod]
 .venv/

@@ -4,15 +4,18 @@
 
 순서:
   1. land_upper_stats_v2 → market_stats (land_* domain, 전국)
-  2. collective_transactions → market_stats (apartment/rowhouse/officetel, 전국)
-  3. market_stats + population + composition → regional_profile (v1.1-national)
-  4. regional_profile → twin_eupmyeondong_neighbor_mvp (Profile 소비)
+  2. collective_transactions → market_stats (apartment/rowhouse/officetel/presale, 전국)
+  3. built_transactions → market_stats + built_annual_stats (commercial/factory/detached, D-027)
+  4. collective_commercial_transactions → market_stats + region_annual_stats (집합상가·공장, D-027)
+  5. market_stats + population + composition + jimok_group + yearly_mix → regional_profile
+  6. regional_profile → twin_eupmyeondong_neighbor_mvp (Profile 소비)
 
 예:
   cd pipeline
   python rebuild_regional_profile_national.py --dry-run
   python rebuild_regional_profile_national.py --skip-collective --skip-twin
   python rebuild_regional_profile_national.py --windows 5
+  python rebuild_regional_profile_national.py --profile-version v2.0-national
 """
 
 from __future__ import annotations
@@ -46,6 +49,8 @@ def main() -> None:
     p.add_argument("--profile-version", type=str, default=DEFAULT_PROFILE_VERSION)
     p.add_argument("--skip-land", action="store_true")
     p.add_argument("--skip-collective", action="store_true", help="집합 market_stats 생략")
+    p.add_argument("--skip-built", action="store_true", help="상업업무/공장창고/단독다가구 market_stats 생략 (D-027)")
+    p.add_argument("--skip-collective-commercial", action="store_true", help="집합상가/집합공장 market_stats 생략 (D-027)")
     p.add_argument("--skip-profile", action="store_true")
     p.add_argument("--skip-twin", action="store_true")
     p.add_argument(
@@ -74,6 +79,14 @@ def main() -> None:
         cmd = [py, "build_collective_market_stats.py", "--windows", args.windows, *as_of_args]
         if args.collective_rolling_only:
             cmd.append("--rolling-only")
+        _run(cmd, dry_run=args.dry_run)
+
+    if not args.skip_built:
+        cmd = [py, "build_built_market_stats.py", "--windows", args.windows, *as_of_args]
+        _run(cmd, dry_run=args.dry_run)
+
+    if not args.skip_collective_commercial:
+        cmd = [py, "build_collective_commercial_market_stats.py", "--windows", args.windows, *as_of_args]
         _run(cmd, dry_run=args.dry_run)
 
     if not args.skip_profile:

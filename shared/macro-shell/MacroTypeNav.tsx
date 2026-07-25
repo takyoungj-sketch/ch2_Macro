@@ -8,30 +8,19 @@ const NAV_ITEMS: { kind: MacroAppKind; href: string; label: string }[] = [
 ];
 
 type Props = {
-  current: MacroAppKind;
+  current?: MacroAppKind | null;
 };
 
-export default function MacroTypeNav({ current }: Props) {
+export default function MacroTypeNav({ current = null }: Props) {
   return (
-    <nav
-      className="flex items-center gap-0.5 border border-slate-200 dark:border-slate-600 rounded-md p-0.5 bg-slate-50/90 dark:bg-slate-700/90"
-      aria-label="유형 이동"
-    >
+    <nav className="macro-type-nav" aria-label="유형 이동">
       {NAV_ITEMS.map(({ kind, href, label }) =>
         kind === current ? (
-          <span
-            key={kind}
-            className="px-2.5 py-1 text-[11px] font-semibold rounded bg-white dark:bg-slate-600 text-slate-800 dark:text-slate-100 shadow-sm"
-            aria-current="page"
-          >
+          <span key={kind} className="macro-type-nav-item is-active" aria-current="page">
             {label}
           </span>
         ) : (
-          <a
-            key={kind}
-            href={href}
-            className="px-2.5 py-1 text-[11px] font-medium rounded text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-600 transition-colors"
-          >
+          <a key={kind} href={href} className="macro-type-nav-item">
             {label}
           </a>
         ),

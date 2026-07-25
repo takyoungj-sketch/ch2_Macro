@@ -123,6 +123,60 @@ def build_domain_market_record(
     }
 
 
+JIMOK_GROUP_LABELS: dict[str, str] = {
+    "agri": "농경지",
+    "forest": "산림지",
+    "dev": "개발지",
+    "infra": "기반시설",
+    "water": "수면",
+    "special": "특수용도",
+    "other": "기타",
+}
+
+
+def jimok_group_features(
+    rows: list[dict[str, Any]],
+    *,
+    top_n: int = 3,
+) -> dict[str, Any]:
+    """land_upper_stats_v2(col_axis='group') zone×group 행 목록 → 지목군 구성비·TOP N (D-027).
+
+    입력 rows 는 composition_features() 와 동일하게 zone_type<>'ALL' AND land_category<>'ALL'
+    로 필터된 (zone, group_code) 셀 목록이어야 한다(land_category 컬럼에 group_code 저장).
+    """
+    by_group: dict[str, int] = {}
+    total = 0
+    for r in rows:
+        g = str(r.get("land_category") or "").strip()
+        if not g or g == "ALL":
+            continue
+        n = int(r.get("count") or 0)
+        if n <= 0:
+            continue
+        by_group[g] = by_group.get(g, 0) + n
+        total += n
+
+    if total <= 0:
+        return {}
+
+    composition = {f"jimok_group_share_{g}": round(n / total, 6) for g, n in by_group.items()}
+    ranked = sorted(by_group.items(), key=lambda kv: kv[1], reverse=True)[:top_n]
+    top_list = [
+        {
+            "group": g,
+            "label": JIMOK_GROUP_LABELS.get(g, g),
+            "count": n,
+            "share": round(n / total, 6),
+        }
+        for g, n in ranked
+    ]
+    return {
+        "jimok_group_composition": composition,
+        "jimok_group_top3": top_list,
+        "jimok_group_total_count": total,
+    }
+
+
 def composition_features(
     rows: list[dict[str, Any]],
     rules: dict[str, CompositionRule],

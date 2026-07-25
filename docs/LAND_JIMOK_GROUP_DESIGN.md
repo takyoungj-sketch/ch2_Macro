@@ -201,11 +201,11 @@ CREATE TABLE land_jimok_group_map (
 | J0 | 분류표·제품 정책 문서화 (본 문서) | ✅ 2026-07-17 |
 | J1 | `land_jimok_group_map` 시드 (양어장·목장 → agri 반영) | ✅ DDL + 로컬 적용 |
 | J2 | resolved VIEW `jimok_group_*` | ✅ |
-| J3 | `build_stats_v2` / `build_upper_stats_v2` (+ annual) **group grain 병행** | ✅ `--col-axis group|both` · 전국 로컬 적재 |
+| J3 | `build_stats_v2` / `build_upper_stats_v2` (+ annual) **group grain 병행** | ✅ `--col-axis group|both` · 전국 로컬 적재 · annual `041` + `--col-axis` |
 | J4 | paid / free_v2 / upper_stats API (`matrix_mode`) | ✅ |
 | J5 | Matrix UI 전환 토글 | ✅ 용도×지목 / 용도×지목군 |
 | J6 | 로컬 시험 빌드 + integrity (zone×group vs 지목 합) | ✅ 전국 sample mismatch=0 |
-| J7 | 월간 cycle 반영 · Promote · 프론트 배포 | ⬜ |
+| J7 | 월간 cycle 반영 · Promote · 프론트 배포 | 📄 **월간 절차 문서화** [`MONTHLY_UPDATE_SOP.md`](./MONTHLY_UPDATE_SOP.md) **§7.1** (에이전트 실행 가이드). `run_monthly_cycle` 자동 배선·Promote·프론트는 잔여 ⬜ |
 
 ---
 
@@ -219,9 +219,11 @@ CREATE TABLE land_jimok_group_map (
 [x] build_stats_v2 / build_upper_stats_v2 group grain (`--col-axis`, db/040 col_axis)
 [x] paid / free_v2 / upper_stats matrix_mode
 [x] MatrixStatsTable 토글 (용도×지목 | 용도×지목군)
-[ ] land_annual_* group (옵션)
+[x] land_annual_* group (옵션) — db/041 · build_annual_* --col-axis · long-term-trend matrix_mode
 [x] DATA_INTEGRITY Level 2 group 검증 (전국 sample)
-[ ] cycle + Promote + VPS 프론트
+[x] 월간 SOP §7.1 용도×지목군 에이전트 가이드 (증분 annual 정책 포함)
+[ ] run_monthly_cycle / run_pipeline 에 `--col-axis`·annual 자동 배선
+[ ] Promote + VPS 프론트
 [ ] (후속) Profile·Twin Feature 검토 — 이번 범위 아님
 ```
 

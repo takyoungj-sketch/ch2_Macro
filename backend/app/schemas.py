@@ -407,6 +407,10 @@ class PaidAnalysisRequest(PaidAreaSqmBounds):
     rolling_matrix_period_end: Optional[date] = Field(None)
     rolling_bucket_count: Optional[int] = Field(None, ge=1, le=10)
     rolling_stats_reference_date: Optional[date] = Field(None)
+    matrix_mode: Literal["category", "group"] = Field(
+        "category",
+        description="매트릭스 열축: category=지목, group=지목군(원장 jimok_group 재집계)",
+    )
 
     # 다른 PaidFilters · RegionSelectionUnit 와 동일 정책: 프론트 필드명 오타가 조용히 무시되지 않게 422 반환.
     model_config = {"extra": "forbid"}
@@ -481,6 +485,10 @@ class LongTermTrendRequest(BaseModel):
     region_targets: list[LongTermRegionTarget] = Field(default_factory=list, max_length=10)
     zone_type: str = Field(...)
     land_category: str = Field(...)
+    matrix_mode: Literal["category", "group"] = Field(
+        "category",
+        description="category=지목 annual, group=지목군 annual(col_axis=group)",
+    )
     year_from: Optional[int] = Field(None, ge=2000, le=2100)
     year_to: Optional[int] = Field(None, ge=2000, le=2100)
 
@@ -512,6 +520,7 @@ class LongTermTrendSeries(BaseModel):
 class LongTermTrendResponse(BaseModel):
     zone_type: str
     land_category: str
+    matrix_mode: Literal["category", "group"] = "category"
     year_from: int
     year_to: int
     disclaimer: str
@@ -594,6 +603,8 @@ class MatrixCellTransactionItem(BaseModel):
     eupmyeondong_name: Optional[str] = None
     beopjungri_name: Optional[str] = None
     lot_display: Optional[str] = None
+    # 원장 지목(land_category_resolved). 지목군 모드 거래목록 열 표시용.
+    land_category: Optional[str] = None
     partial_ownership_label: Optional[str] = None
     deal_type: Optional[str] = None
     area_sqm: Optional[float] = None

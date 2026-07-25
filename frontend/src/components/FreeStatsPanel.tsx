@@ -30,6 +30,7 @@ import MatrixStatsTable, { MatrixStatsLegend } from "./MatrixStatsTable";
 import PaidMatrixYearlyModal from "./PaidMatrixYearlyModal";
 import YearlyStatsTable from "./YearlyStatsTable";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
+import RegionalProfileLink from "./RegionalProfileLink";
 
 export default function FreeStatsPanel() {
   const viewMode = useAppStore((s) => s.viewMode);
@@ -347,6 +348,7 @@ export default function FreeStatsPanel() {
             {data.beopjungri_name}
           </h2>
           <AnalysisHelpPanel explain={statsExplain} />
+          <RegionalProfileLink />
         </div>
         <div className="min-w-0 flex-1 basis-[12rem]">
           <YearlyStatsTable rows={yearlyRowsFreeReference} hideTitle />

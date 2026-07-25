@@ -107,25 +107,59 @@ def resolve_built_map_codes(
         ri_pick=[f"{p.eup}|{p.ri}" for p in ris] if ris else None,
     )
     col = _CODE_COL[level]
+    history_ready = bool(
+        conn.execute(text("SELECT to_regclass('public.region_code_history')")).scalar()
+    )
     from app.region_canonical import (
         canonical_prefix_expr,
         canonical_select_expr,
         resolve_to_canonical,
     )
 
-    # D-028: user-facing map grain is always canonical. Built rows often have
-    # NULL beopjungri_code with historical eupmyeondong_code — remap via history.
+    # D-028: user-facing map grain is always canonical when history is synced.
+    # Built rows often have NULL beopjungri_code with historical eupmyeondong_code.
+    # If region_code_history is missing (sync not run), fall back to raw ledger codes
+    # so map resolve does not 500.
     if level == "beopjungri":
-        code_sql = f"({canonical_select_expr('lt')})"
+        if history_ready:
+            code_sql = f"({canonical_select_expr('lt')})"
+        else:
+            code_sql = "NULLIF(btrim(lt.beopjungri_code::text), '')"
         filter_sql = (
             "lt.beopjungri_code IS NOT NULL AND btrim(lt.beopjungri_code::text) <> ''"
         )
     elif level == "eupmyeondong":
-        code_sql = f"({canonical_prefix_expr('lt', 8)})"
-        filter_sql = f"({canonical_prefix_expr('lt', 8)}) IS NOT NULL"
+        if history_ready:
+            code_sql = f"({canonical_prefix_expr('lt', 8)})"
+            filter_sql = f"({canonical_prefix_expr('lt', 8)}) IS NOT NULL"
+        else:
+            code_sql = (
+                "CASE WHEN length(btrim(COALESCE("
+                "NULLIF(btrim(lt.beopjungri_code::text), ''), "
+                "NULLIF(btrim(lt.eupmyeondong_code::text), ''), ''))) >= 8 "
+                "THEN left(btrim(COALESCE("
+                "NULLIF(btrim(lt.beopjungri_code::text), ''), "
+                "NULLIF(btrim(lt.eupmyeondong_code::text), ''), '')), 8) "
+                "ELSE NULL END"
+            )
+            filter_sql = f"({code_sql}) IS NOT NULL"
     elif level == "sigungu":
-        code_sql = f"({canonical_prefix_expr('lt', 5)})"
-        filter_sql = f"({canonical_prefix_expr('lt', 5)}) IS NOT NULL"
+        if history_ready:
+            code_sql = f"({canonical_prefix_expr('lt', 5)})"
+            filter_sql = f"({canonical_prefix_expr('lt', 5)}) IS NOT NULL"
+        else:
+            code_sql = (
+                "CASE WHEN length(btrim(COALESCE("
+                "NULLIF(btrim(lt.sigungu_code::text), ''), "
+                "NULLIF(btrim(lt.beopjungri_code::text), ''), "
+                "NULLIF(btrim(lt.eupmyeondong_code::text), ''), ''))) >= 5 "
+                "THEN left(btrim(COALESCE("
+                "NULLIF(btrim(lt.sigungu_code::text), ''), "
+                "NULLIF(btrim(lt.beopjungri_code::text), ''), "
+                "NULLIF(btrim(lt.eupmyeondong_code::text), ''), '')), 5) "
+                "ELSE NULL END"
+            )
+            filter_sql = f"({code_sql}) IS NOT NULL"
     else:
         code_sql = f"btrim(lt.{col}::text)"
         filter_sql = f"lt.{col} IS NOT NULL AND btrim(lt.{col}::text) <> ''"
@@ -147,7 +181,8 @@ def resolve_built_map_codes(
     codes = [str(r[0]).strip() for r in rows if r and r[0]]
     labels: dict[str, str] = {}
     if level == "beopjungri":
-        codes = resolve_to_canonical(conn, codes)
+        if history_ready:
+            codes = resolve_to_canonical(conn, codes)
         # NULL beopjungri 원장 → region_codes로 선택 리의 canonical 코드 보강
         if ris:
             from app.region_canonical import lookup_active_beopjungri_by_ri_picks

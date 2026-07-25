@@ -275,6 +275,7 @@ export default function PaidMatrixYearlyModal({
           region_targets: targets,
           zone_type: zoneType,
           land_category: landCategory,
+          matrix_mode: matrixMode,
         });
         if (!cancelled) setLtData(data);
       } catch (e) {
@@ -289,7 +290,7 @@ export default function PaidMatrixYearlyModal({
     return () => {
       cancelled = true;
     };
-  }, [open, panel, filterRequest, zoneType, landCategory, tierSelection]);
+  }, [open, panel, filterRequest, zoneType, landCategory, tierSelection, matrixMode]);
 
   useEffect(() => {
     if (!open || panel !== "histogram" || !filterRequest) return;
@@ -557,7 +558,9 @@ export default function PaidMatrixYearlyModal({
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 leading-relaxed flex-1 min-w-[12rem]">
                   {ltData?.disclaimer ??
-                    "장기 추세: 만년력 연도·용도×지목 기준 · 도로·면적·이상치·지분 필터 미적용 · 평균 모드에서 복수지역 가중 통합선(아래 별도 칸)"}
+                    (matrixMode === "group"
+                      ? "장기 추세: 만년력 연도·용도×지목군 기준 · 도로·면적·이상치·지분 필터 미적용 · 평균 모드에서 복수지역 가중 통합선(아래 별도 칸)"
+                      : "장기 추세: 만년력 연도·용도×지목 기준 · 도로·면적·이상치·지분 필터 미적용 · 평균 모드에서 복수지역 가중 통합선(아래 별도 칸)")}
                 </p>
                 <div className="flex items-center gap-2 shrink-0">
                   <AnalysisHelpPanel explain={ltExplain} />
@@ -895,6 +898,7 @@ export default function PaidMatrixYearlyModal({
                   <MatrixCellTransactionTable
                     items={txData.items}
                     truncated={txData.total > txData.items.length}
+                    showLandCategory={matrixMode === "group"}
                   />
                 </div>
               )}

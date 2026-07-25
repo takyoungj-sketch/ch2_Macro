@@ -58,7 +58,7 @@ export function tryResolveUniqueRegionSearch(
     return { kind: "beopjungri", row };
   }
 
-  if (viewMode !== "paid" && viewMode !== "profile") return null;
+  if (viewMode !== "paid") return null;
 
   if (eupMyeonQ) {
     /** 행정명이 검색어와 완전 일치하는 eup 코드 중 전국에 하나만 있으면 확정 */

@@ -30,6 +30,10 @@ LAND_REBUILD_DDL = (
     "013_twin_eupmyeondong_neighbor_mvp.sql",
     "014_land_annual_stats.sql",
     "021_land_annual_upper_stats.sql",
+    "037_land_jimok_group_map.sql",
+    "038_land_transactions_resolved_jimok_group.sql",
+    "040_land_stats_col_axis.sql",
+    "041_land_annual_col_axis.sql",
 )
 
 ADMIN_URL = "postgresql+psycopg2://postgres:8972@localhost:5432/postgres"

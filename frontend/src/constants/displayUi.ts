@@ -1,9 +1,12 @@
-/** 글자 크기 단계별 배율(사이드바·우측 본문 레이아웃 `zoom`만 적용, 최상단 헤더는 제외). */
+/** 글자 크기 단계별 배율(앱 셸 전체 `zoom`). */
 export const UI_FONT_SCALE_STEPS = [
-  0.8125, 0.875, 0.9375, 1, 1.0625, 1.125, 1.1875, 1.25,
+  1, 1.0625, 1.125, 1.1875, 1.25, 1.375, 1.5, 1.625, 1.75, 2,
 ] as const;
 
 export const UI_FONT_LS_KEY = "ch2_macro_ui_font_step";
+/** 스키마 버전 — 배포 가독성 상향 시 기존 저장 단계를 1회 보정. */
+export const UI_FONT_LS_SCHEMA_KEY = "ch2_macro_ui_font_step_schema";
+export const UI_FONT_LS_SCHEMA = 4;
 
 /** 모달 전용 — 전체화면에서도 글자·버튼·옵션을 더 키울 수 있게 상한을 높임. */
 export const MODAL_FONT_SCALE_STEPS = [
@@ -19,12 +22,12 @@ export type UiColorScheme = "light" | "dark";
 
 export const UI_COLOR_SCHEME_LS_KEY = "ch2_macro_ui_color_scheme";
 
-export const DEFAULT_UI_COLOR_SCHEME: UiColorScheme = "light";
+export const DEFAULT_UI_COLOR_SCHEME: UiColorScheme = "dark";
+
+/** 기본 100% (UI_FONT_SCALE_STEPS[0]). */
+export const DEFAULT_UI_FONT_SCALE_STEP = 0;
 
 export type UiTableTone = "neutral" | "blueHeaders";
-
-/** 글자 크기 100%에 해당하는 단계 인덱스 (UI_FONT_SCALE_STEPS[3] === 1). */
-export const DEFAULT_UI_FONT_SCALE_STEP = 3;
 
 export function clampFontStep(step: number): number {
   const max = UI_FONT_SCALE_STEPS.length - 1;
@@ -35,8 +38,17 @@ export function clampFontStep(step: number): number {
 export function readStoredFontStep(): number {
   try {
     const raw = localStorage.getItem(UI_FONT_LS_KEY);
-    if (raw == null || raw.trim() === "") return DEFAULT_UI_FONT_SCALE_STEP;
-    return clampFontStep(Number(raw));
+    const schemaRaw = localStorage.getItem(UI_FONT_LS_SCHEMA_KEY);
+    const schema = schemaRaw == null || schemaRaw.trim() === "" ? 0 : Number(schemaRaw);
+    if (raw == null || raw.trim() === "") {
+      localStorage.setItem(UI_FONT_LS_SCHEMA_KEY, String(UI_FONT_LS_SCHEMA));
+      return DEFAULT_UI_FONT_SCALE_STEP;
+    }
+    const step = clampFontStep(Number(raw));
+    if (!Number.isFinite(schema) || schema < UI_FONT_LS_SCHEMA) {
+      localStorage.setItem(UI_FONT_LS_SCHEMA_KEY, String(UI_FONT_LS_SCHEMA));
+    }
+    return step;
   } catch {
     return DEFAULT_UI_FONT_SCALE_STEP;
   }
@@ -77,6 +89,7 @@ export function persistModalFontStep(step: number): void {
 export function readStoredColorScheme(): UiColorScheme {
   try {
     const raw = localStorage.getItem(UI_COLOR_SCHEME_LS_KEY);
+    if (raw == null || raw.trim() === "") return DEFAULT_UI_COLOR_SCHEME;
     return raw === "dark" ? "dark" : "light";
   } catch {
     return DEFAULT_UI_COLOR_SCHEME;

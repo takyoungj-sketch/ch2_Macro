@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { applyColorScheme, readStoredColorScheme } from "./constants/displayUi";
+import { applyColorScheme, readStoredColorScheme } from "@ch2/macro-shell/displayUi";
 import App from "./App";
 import "./index.css";
 

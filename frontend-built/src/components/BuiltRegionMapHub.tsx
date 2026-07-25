@@ -845,11 +845,7 @@ export default function BuiltRegionMapHub({
               : { height: "min(52vh, 28rem)" }
         }
       >
-        {!hasAddr ? (
-          <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-slate-600 bg-slate-100 z-10">
-            좌측에서 시·도·시군구를 선택하면 행정 경계가 표시됩니다.
-          </div>
-        ) : showSetupHint ? (
+        {showSetupHint ? (
           <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-slate-600 bg-slate-100 z-10">
             <div className="space-y-2 max-w-md">
               <p className="font-semibold">VWorld API 키가 필요합니다</p>

@@ -1,0 +1,22 @@
+---
+description: 매월 초 토지 갱신 시 용도×지목군(D-026) mart·annual 필수 절차
+globs: docs/MONTHLY_UPDATE_SOP.md,docs/LAND_JIMOK_GROUP_DESIGN.md,docs/LONG_TERM_TREND_DESIGN.md,pipeline/build_stats_v2.py,pipeline/build_upper_stats_v2.py,pipeline/build_annual_stats.py,pipeline/build_annual_upper_stats.py,scripts/monthly/**
+alwaysApply: false
+---
+
+# 월간 용도×지목군 (D-026)
+
+매월 토지 업데이트 작업이면 **`docs/MONTHLY_UPDATE_SOP.md` §7.1** 을 읽고 그대로 실행한다.
+
+## 필수 순서
+
+1. `run_monthly_cycle` (또는 동등)로 **category V2** 완료
+2. `build_stats_v2.py --col-axis group` + `build_upper_stats_v2.py --col-axis group` (이번 `--as-of`)
+3. `build_annual_stats.py --years {당해연도} --full --col-axis both --with-upper`
+4. `verify_jimok_group_integrity.py` + UI `matrix_mode=group` 스모크
+
+## 규칙
+
+- 지목군 평균 = **원장 단가 재집계**만. category mart 합산 금지.
+- annual은 **당해 연도 UPSERT**만. 매월 2010~ 전면 재빌드 금지.
+- `run_monthly_cycle` 에 group/annual **아직 미배선** — §7.1 수동·에이전트 실행이 정답.

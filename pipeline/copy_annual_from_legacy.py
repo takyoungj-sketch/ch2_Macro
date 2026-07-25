@@ -44,8 +44,19 @@ _LAS_COLS = """
 """.strip()
 
 _LAS_UPSERT = f"""
-INSERT INTO land_annual_stats ({_LAS_COLS})
-SELECT {_LAS_COLS}
+INSERT INTO land_annual_stats (
+    calendar_year, beopjungri_code, zone_type, land_category, col_axis,
+    transaction_count, mean_unit_price, median_unit_price,
+    std_dev, ci95_low, ci95_high,
+    p10, p25, p75, p90, min_price, max_price,
+    period_start, period_end, batch_id, computed_at
+)
+SELECT
+    calendar_year, beopjungri_code, zone_type, land_category, 'category'::varchar(16),
+    transaction_count, mean_unit_price, median_unit_price,
+    std_dev, ci95_low, ci95_high,
+    p10, p25, p75, p90, min_price, max_price,
+    period_start, period_end, batch_id, computed_at
 FROM dblink(
     :conn_str,
     :remote_sql
@@ -71,7 +82,7 @@ FROM dblink(
     batch_id text,
     computed_at timestamp
 )
-ON CONFLICT (calendar_year, beopjungri_code, zone_type, land_category)
+ON CONFLICT (calendar_year, beopjungri_code, zone_type, land_category, col_axis)
 DO UPDATE SET
     transaction_count = EXCLUDED.transaction_count,
     mean_unit_price = EXCLUDED.mean_unit_price,
@@ -100,8 +111,19 @@ _LAU_COLS = """
 """.strip()
 
 _LAU_UPSERT = f"""
-INSERT INTO land_annual_upper_stats ({_LAU_COLS})
-SELECT {_LAU_COLS}
+INSERT INTO land_annual_upper_stats (
+    calendar_year, region_level, region_code, zone_type, land_category, col_axis,
+    transaction_count, mean_unit_price, median_unit_price,
+    std_dev, ci95_low, ci95_high,
+    p10, p25, p75, p90, min_price, max_price,
+    period_start, period_end, batch_id, computed_at
+)
+SELECT
+    calendar_year, region_level, region_code, zone_type, land_category, 'category'::varchar(16),
+    transaction_count, mean_unit_price, median_unit_price,
+    std_dev, ci95_low, ci95_high,
+    p10, p25, p75, p90, min_price, max_price,
+    period_start, period_end, batch_id, computed_at
 FROM dblink(
     :conn_str,
     :remote_sql
@@ -128,7 +150,7 @@ FROM dblink(
     batch_id text,
     computed_at timestamp
 )
-ON CONFLICT (calendar_year, region_level, region_code, zone_type, land_category)
+ON CONFLICT (calendar_year, region_level, region_code, zone_type, land_category, col_axis)
 DO UPDATE SET
     transaction_count = EXCLUDED.transaction_count,
     mean_unit_price = EXCLUDED.mean_unit_price,

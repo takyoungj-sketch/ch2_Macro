@@ -2,6 +2,14 @@
 
 실제 운영 절차·용어는 **`docs/MONTHLY_UPDATE_SOP.md`** 를 본편으로 둔다.
 
+## 용도×지목군 (D-026) — 매월 필수
+
+`run_monthly_cycle` 은 **용도×지목(category) V2** 까지다.  
+지목군 mart·장기추세 annual(group) 은 **문서 §7.1** 을 따라 **별도 실행**한다 (에이전트 체크리스트 포함).
+
+- 본편: [`docs/MONTHLY_UPDATE_SOP.md`](../../docs/MONTHLY_UPDATE_SOP.md) **§7.1**
+- 설계: [`docs/LAND_JIMOK_GROUP_DESIGN.md`](../../docs/LAND_JIMOK_GROUP_DESIGN.md)
+
 ## 진입점
 
 - **통합 실행:**  

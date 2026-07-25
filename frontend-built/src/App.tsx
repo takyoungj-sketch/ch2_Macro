@@ -29,6 +29,7 @@ import {
   unitsToRegionScope,
   type BuiltAnalysisUnit,
 } from "./utils/builtAnalysisUnits";
+import { profileHref, resolveBuiltProfileTarget } from "./utils/profileLink";
 import {
   ASSET_KIND_LABELS,
   assetTypeLabel,
@@ -770,6 +771,7 @@ export default function App() {
   }, [resolveUnitsQ.data, leafList.length, riList.length, addr1, addr2]);
 
   const regionCodeScope = useMemo(() => unitsToRegionScope(analysisUnits), [analysisUnits]);
+  const profileTarget = useMemo(() => resolveBuiltProfileTarget(analysisUnits), [analysisUnits]);
 
   const removeAnalysisUnit = (code: string) => {
     setAnalysisUnits((prev) => {
@@ -1003,23 +1005,7 @@ export default function App() {
       <MacroStatsHeader
         currentApp="built"
         title="복합부동산 통계"
-        badge={
-          <span className="text-amber-600 dark:text-amber-300 text-[10px] font-medium uppercase tracking-wide">
-            beta
-          </span>
-        }
-        subtitle={
-          <>
-            상업·공장·단독다가구 일반(非집합) — 거래 탐색·OLS 회귀 ·{" "}
-            <a
-              href="/collective/commercial/"
-              className="underline hover:text-slate-700 dark:hover:text-slate-200"
-            >
-              집합상가·공장
-            </a>
-            은 별도
-          </>
-        }
+        badge={<span>beta</span>}
         fontPct={fontPct}
         fontStepMin={fontStepMin}
         fontStepMax={fontStepMax}
@@ -1028,7 +1014,8 @@ export default function App() {
         onToggleTheme={toggleUiColorScheme}
       />
 
-      <main className="flex flex-1 min-h-0 overflow-hidden" style={{ zoom: contentZoom }}>
+      <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
+      <main className="flex flex-1 min-h-0 overflow-hidden">
         {/* 왼쪽: 유형·지역·표본 필터 */}
         <aside className="layout-sidebar p-4 space-y-4">
           <div>
@@ -1394,17 +1381,27 @@ export default function App() {
                   <p className="text-[11px] font-semibold text-slate-600">
                     선택 지역 ({analysisUnits.length}/{MAX_BUILT_ANALYSIS_UNITS})
                   </p>
-                  <button
-                    type="button"
-                    className="text-[11px] text-slate-500 hover:text-slate-800"
-                    onClick={() => {
-                      setAnalysisUnits([]);
-                      setLeafList([]);
-                      setRiList([]);
-                    }}
-                  >
-                    모두 지우기
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {profileTarget && (
+                      <a
+                        href={profileHref(profileTarget)}
+                        className="text-[11px] font-medium text-slate-700 hover:text-slate-900 underline"
+                      >
+                        지역 프로필 →
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      className="text-[11px] text-slate-500 hover:text-slate-800"
+                      onClick={() => {
+                        setAnalysisUnits([]);
+                        setLeafList([]);
+                        setRiList([]);
+                      }}
+                    >
+                      모두 지우기
+                    </button>
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {analysisUnits.map((u) => (
@@ -1619,6 +1616,8 @@ export default function App() {
           regionLabel={aiRegionLabel}
           focusLabel={regM.data.focus_scope_label ?? levelCardTitleFromResult(regM.data.primary)}
         />
-      )}    </div>
+      )}
+      </div>
+    </div>
   );
 }
