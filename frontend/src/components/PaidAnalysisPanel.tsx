@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   fetchFreeStats,
@@ -79,6 +79,30 @@ export default function PaidAnalysisPanel() {
   const useUpperPaidBasic = viewMode === "paid" && upperSingle !== null;
 
   const bulkKey = useMemo(() => [...resolvedCodes].slice().sort().join(","), [resolvedCodes]);
+
+  /** 지역 변경 시 매트릭스는 항상 용도×지목(category) — 지목군은 버튼으로만 */
+  const regionScopeKey = useMemo(() => {
+    if (upperSingle != null) {
+      return `upper:${upperSingle.level}:${upperSingle.code}`;
+    }
+    return `beop:${bulkKey}`;
+  }, [upperSingle, bulkKey]);
+  const prevRegionScopeKey = useRef<string | null>(null);
+  useEffect(() => {
+    const prev = prevRegionScopeKey.current;
+    prevRegionScopeKey.current = regionScopeKey;
+    if (prev === null || prev === regionScopeKey) return;
+    setPaidRequest({ matrix_mode: "category" });
+    setTrendModal(null);
+    setTrendRequest(null);
+    setTrendLoading(false);
+    setTrendError(null);
+    setTrendRows([]);
+    if (status === "success" || status === "loading" || status === "error") {
+      cancelPaidFilteredAnalysis();
+    }
+  }, [regionScopeKey, setPaidRequest, cancelPaidFilteredAnalysis, status]);
+
   const useBulkBasic =
     viewMode === "paid" &&
     !useUpperPaidBasic &&

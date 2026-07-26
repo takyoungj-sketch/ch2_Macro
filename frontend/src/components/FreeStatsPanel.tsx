@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   fetchFreeStats,
@@ -69,6 +69,27 @@ export default function FreeStatsPanel() {
 
   /** 단일 상위 행정(시도·시군구·읍면동·city) 선택이면 상위 사전집계 API 사용 — resolveUpperSingleFromTier */
   const upperSingle = useMemo(() => resolveUpperSingleFromTier(tierSelection), [tierSelection]);
+
+  /** 지역 선택이 바뀌면 항상 용도×지목(category)으로 복귀 — 지목군은 버튼으로만 */
+  const regionScopeKey = useMemo(() => {
+    if (upperSingle != null) {
+      return `upper:${upperSingle.level}:${upperSingle.code}`;
+    }
+    return `beop:${statsScopeKeyFromBeopjungriCodes(resolvedCodes)}`;
+  }, [upperSingle, resolvedCodes]);
+  const prevRegionScopeKey = useRef<string | null>(null);
+  useEffect(() => {
+    const prev = prevRegionScopeKey.current;
+    prevRegionScopeKey.current = regionScopeKey;
+    if (prev === null || prev === regionScopeKey) return;
+    setMatrixMode("category");
+    setPaidRequest({ matrix_mode: "category" });
+    setTrendModal(null);
+    setTrendRequest(null);
+    setTrendLoading(false);
+    setTrendError(null);
+    setTrendRows([]);
+  }, [regionScopeKey, setPaidRequest]);
 
   const isPaidBasic = viewMode === "paid" && paidResultView === "basic";
   const useUpper = isPaidBasic && upperSingle != null;

@@ -7,8 +7,10 @@
 `run_monthly_cycle` 은 **용도×지목(category) V2** 까지다.  
 지목군 mart·장기추세 annual(group) 은 **문서 §7.1** 을 따라 **별도 실행**한다 (에이전트 체크리스트 포함).
 
-- 본편: [`docs/MONTHLY_UPDATE_SOP.md`](../../docs/MONTHLY_UPDATE_SOP.md) **§7.1**
+- 본편: [`docs/MONTHLY_UPDATE_SOP.md`](../../docs/MONTHLY_UPDATE_SOP.md) **§7.1** (사고 노트 §7.1.0 · 전국성 검증 포함)
 - 설계: [`docs/LAND_JIMOK_GROUP_DESIGN.md`](../../docs/LAND_JIMOK_GROUP_DESIGN.md)
+- **빼먹으면** 배포 UI에서 `matrix_mode=group` 404 재발. basic+upper **둘 다** `--col-axis group` 전국 빌드.
+- UI: 기본=용도×지목 · 지목군은 버튼만 · 지역 변경 시 용도×지목으로 복귀.
 
 ## 진입점
 

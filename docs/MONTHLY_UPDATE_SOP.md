@@ -140,7 +140,29 @@ py scripts\monthly\run_monthly_cycle.py --cycle-id 202605
 
 > **목적:** 다른 에이전트/운영자가 매월 초 category V2 갱신 뒤 **용도×지목군 mart + 장기추세 annual(group)** 을 재현 가능하게 돌린다.  
 > **전제:** §6 `run_monthly_cycle`(또는 동등한 원장·category V2) 가 이번 `as_of` 로 **성공**한 뒤 실행.  
-> **금지:** 지목(category) mart 평균을 합쳐 지목군 평균을 만들지 말 것 — 반드시 **원장 단가 재집계** (`--col-axis group`).
+> **금지:** 지목(category) mart 평균을 합쳐 지목군 평균을 만들지 말 것 — 반드시 **원장 단가 재집계** (`--col-axis group`).  
+> **UI:** 통계 화면 기본은 항상 **용도×지목**. **용도×지목군**은 매트릭스 버튼을 눌렀을 때만. 지역을 바꾸면 자동으로 용도×지목으로 복귀.
+
+### 7.1.0 운영 사고·주의 (2026-07-26)
+
+배포판에서 「용도×지목군」조회 시  
+`matrix_mode=group … V2 집계가 없습니다`(404) 가 난 사례가 있다.
+
+| 원인 | 내용 |
+|------|------|
+| **부분 적재** | `land_basic_stats_v2` `col_axis=group` 이 일부 시도(예: 41·43)만 있고 **전국 미완료** |
+| **upper 누락** | `land_upper_stats_v2` 에 `col_axis=group` **0행** → 시군구·읍면동 지목군 표 불가 |
+| **월간 자동화 공백** | `run_monthly_cycle` 은 category만 수행 → **§7.1 group을 빼먹으면 재발** |
+
+**조치(전국):** category와 **동일 as_of·windows** 로
+
+1. `build_stats_v2.py --col-axis group`  
+2. `build_upper_stats_v2.py --col-axis group`  
+
+**VPS 실행 시:** `pipeline/.env` 의 `DATABASE_URL`(postgres 로컬 비번)과 `backend/.env`(ch2app)가 다를 수 있다.  
+빌더는 **`backend/.env`를 source** 한 뒤 `backend/.venv` 파이썬으로 돌릴 것. (`STATS_V2_SIDO_CODE` 가 켜져 있으면 전국이 아니라 단일 시도만 돌므로 **unset**.)
+
+검증은 “시도 샘플 몇 건”만 보지 말고, 아래처럼 **ALL×ALL 지역 수 category ≈ group** 을 맞출 것 (§7.1.4).
 
 ### 7.1.1 선행 DDL (최초 1회 · 스키마 확인)
 
@@ -217,9 +239,14 @@ python verify_jimok_group_integrity.py
 
 수동/에이전트 체크:
 
-- [ ] `land_basic_stats_v2` / `land_upper_stats_v2` 에 `col_axis='group'` 이고 `as_of_month=$AS_OF` 행 존재 (시도 샘플)
+- [ ] `land_basic_stats_v2` / `land_upper_stats_v2` 에 `col_axis='group'` 이고 `as_of_month=$AS_OF` 행 존재
+- [ ] **전국성:** `window_years=5`·`zone_type=ALL`·`land_category=ALL` 기준  
+      `COUNT(DISTINCT beopjungri_code)` (basic) 가 **category와 group이 같거나 거의 같음**  
+      (부분 시도만 돌리면 UI에서 대부분 지역이 404)
+- [ ] upper: `region_level='sigungu'` ALL×ALL group 행이 **전국 시군구 규모**로 존재
 - [ ] `land_annual_stats` / `land_annual_upper_stats` 에 `col_axis='group'` 이고 `calendar_year=$YEAR` 행 존재
 - [ ] API: free/upper `matrix_mode=group` · 필터분석 토글 · 장기추세 탭(지목군 셀) 404 아님
+- [ ] UI: 기본=용도×지목 · 버튼으로만 지목군 · **지역 변경 시 용도×지목으로 복귀**
 - [ ] integrity: zone×group `count` ≈ 소속 지목 category `count` 합 (스크립트 mismatch=0)
 
 ### 7.1.5 에이전트 체크리스트 (복붙용)
@@ -227,11 +254,13 @@ python verify_jimok_group_integrity.py
 ```
 [ ] cycle_id / AS_OF 확인 (category V2 완료 후)
 [ ] DDL 037·038·040·041 존재 확인 (없으면 적용)
-[ ] build_stats_v2 --col-axis group --as-of AS_OF --windows 3,5
+[ ] build_stats_v2 --col-axis group --as-of AS_OF --windows 3,5   # 전국 · STATS_V2_SIDO_CODE unset
 [ ] build_upper_stats_v2 --col-axis group --as-of AS_OF --windows 3,5
+[ ] (VPS) DATABASE_URL = backend/.env (ch2app) 사용
+[ ] basic ALL 지역수 category≈group · upper sigungu group 존재
 [ ] build_annual_stats --years YEAR --full --col-axis both --with-upper
 [ ] verify_jimok_group_integrity (또는 동등 count 합 검증)
-[ ] UI/API matrix_mode=group · 장기추세 스모크
+[ ] UI/API matrix_mode=group 스모크 · 지역 변경 시 category 복귀 확인
 [ ] (Promote 시) group mart·annual 이 dump/재실행에 포함되는지 확인
 ```
 
@@ -353,5 +382,6 @@ PowerShell 래퍼: `scripts\monthly\run_monthly_cycle.ps1 -CycleId 202605` (상�
 
 | 날짜 | 내용 |
 |------|------|
+| 2026-07-26 | **§7.1.0** 배포 404 사고(부분 group·upper 0) · VPS `backend/.env` · 전국성 검증 · UI 기본=용도×지목·지역 변경 시 category 복귀 |
 | 2026-07-17 | **§7.1 용도×지목군 월간 필수** — 에이전트용 DDL·V2 group·annual 증분·검증 체크리스트. 실행 흐름·빠른 참조 반영 |
 | 2026-05-24 | `run_monthly_cycle` 기본에 `build_upper_stats_v2`(상위통계) 포함, `--skip-upper-v2` 로 생략 |
