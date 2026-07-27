@@ -170,11 +170,65 @@ def jimok_group_features(
         }
         for g, n in ranked
     ]
-    return {
+    out: dict[str, Any] = {
         "jimok_group_composition": composition,
         "jimok_group_top3": top_list,
         "jimok_group_total_count": total,
     }
+    # D-029: 용도×지목군 Top1~3 (건수·평균단가) — Twin Catalog land_top*
+    out.update(land_zone_jimok_top_features(rows, top_n=top_n))
+    return out
+
+
+def land_zone_jimok_top_features(
+    rows: list[dict[str, Any]],
+    *,
+    top_n: int = 3,
+) -> dict[str, Any]:
+    """zone×jimok_group 셀을 거래건수 순 Top-N → land_top{k}_* feature (D-029).
+
+    rows: zone_type, land_category(=group_code), count, optional mean (만원/㎡).
+    """
+    cells: list[tuple[int, str, str, float | None]] = []
+    for r in rows:
+        z = str(r.get("zone_type") or "").strip()
+        g = str(r.get("land_category") or "").strip()
+        if not z or z == "ALL" or not g or g == "ALL":
+            continue
+        n = int(r.get("count") or 0)
+        if n <= 0:
+            continue
+        mean_raw = r.get("mean")
+        mean_v: float | None
+        try:
+            mean_v = float(mean_raw) if mean_raw is not None else None
+        except (TypeError, ValueError):
+            mean_v = None
+        cells.append((n, z, g, mean_v))
+
+    if not cells:
+        return {}
+
+    cells.sort(key=lambda t: t[0], reverse=True)
+    out: dict[str, Any] = {}
+    for i, (n, z, g, mean_v) in enumerate(cells[:top_n], start=1):
+        out[f"land_top{i}_zone"] = z
+        out[f"land_top{i}_jimok"] = JIMOK_GROUP_LABELS.get(g, g)
+        out[f"land_top{i}_jimok_code"] = g
+        out[f"land_top{i}_count"] = n
+        if mean_v is not None and mean_v == mean_v:
+            out[f"land_top{i}_mean_manwon_per_sqm"] = round(mean_v, 2)
+        # Catalog twin_vector land_top{i} object form
+        top_obj: dict[str, Any] = {
+            "zone": z,
+            "jimok": JIMOK_GROUP_LABELS.get(g, g),
+            "jimok_code": g,
+            "count": n,
+        }
+        if mean_v is not None and mean_v == mean_v:
+            top_obj["mean_manwon_per_sqm"] = round(mean_v, 2)
+        out[f"land_top{i}"] = top_obj
+    return out
 
 
 def composition_features(

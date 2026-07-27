@@ -770,6 +770,7 @@ _REGIONS_DEFAULT_CAP = 500
 def list_regions_v2(
     sigungu_code: str | None = None,
     eupmyeondong_code: str | None = None,
+    beopjungri_code: str | None = None,
     search: str | None = Query(
         None,
         description="이름 또는 코드 부분 검색(ILIKE·동명이명 시 상위 행정구역명 포함으로 구분 가능)",
@@ -784,7 +785,7 @@ def list_regions_v2(
     db: Session = Depends(get_db),
 ):
     """
-    지역 코드 계층 조회. 시군구/읍면동 코드로 하위 항목 필터링 가능.
+    지역 코드 계층 조회. 시군구/읍면동/리 코드로 하위 항목 필터링 가능.
     검색 문자열은 2자 이상 권장(짧으면 과다 매칭·빈 결과).
     """
     where_parts = ["COALESCE(rc.is_active, TRUE) = TRUE"]
@@ -798,6 +799,9 @@ def list_regions_v2(
     if eupmyeondong_code:
         where_parts.append("rc.eupmyeondong_code = :eupmyeondong_code")
         params["eupmyeondong_code"] = eupmyeondong_code
+    if beopjungri_code:
+        where_parts.append("rc.bc_trim = :beopjungri_code")
+        params["beopjungri_code"] = beopjungri_code.strip()
 
     q_raw = (search or "").strip()
     if q_raw:

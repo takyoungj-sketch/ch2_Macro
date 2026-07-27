@@ -1,4 +1,4 @@
-import type { JimokGroupTop3Item, RegionalProfileFeatures, YearlyMix, YearlyMixType } from "../types";
+import type { RegionalProfileFeatures, YearlyMix, YearlyMixType } from "../types";
 import { DOMINANT_TYPE_APP, DOMINANT_TYPE_LABEL, deepLinkTo } from "../utils/deepLinks";
 import { formatAmountManwon, formatInt, formatPercent, formatUnitPrice } from "../utils/format";
 
@@ -27,6 +27,7 @@ const PRICE_PREFIXES: Record<YearlyMixType, { prefix: string; label: string }[]>
   분양권: [{ prefix: "presale", label: "분양권" }],
 };
 
+/** 대표 시장 요약 — 토지 Top3·아파트 분위는 LandProfileCard / ApartmentProfileCard. */
 export default function DominantMarketCard({
   regionLevel,
   regionCode,
@@ -38,6 +39,8 @@ export default function DominantMarketCard({
   const totals = yearlyMix.totals_by_type[dominant];
   const app = DOMINANT_TYPE_APP[dominant];
   const href = deepLinkTo(app, { regionLevel, regionCode });
+  const showDominantPrice =
+    dominant !== "토지" && dominant !== "아파트" && PRICE_PREFIXES[dominant].length > 0;
 
   return (
     <div className="card p-5">
@@ -57,9 +60,7 @@ export default function DominantMarketCard({
         <MetricBox label="거래금액 비중" value={formatPercent(yearlyMix.amount_share_by_type[dominant])} />
       </div>
 
-      {dominant === "토지" ? (
-        <JimokTop3 items={(features.jimok_group_top3 as JimokGroupTop3Item[]) ?? []} />
-      ) : (
+      {showDominantPrice && (
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {PRICE_PREFIXES[dominant].map(({ prefix, label }) => (
             <PriceDistribution key={prefix} label={label} features={features} prefix={prefix} />
@@ -109,30 +110,6 @@ function PriceDistribution({
         <span className="font-semibold">중앙값 {formatUnitPrice(median)}</span>
         <span>75% {formatUnitPrice(p75)}</span>
       </div>
-    </div>
-  );
-}
-
-function JimokTop3({ items }: { items: JimokGroupTop3Item[] }) {
-  if (!items.length) {
-    return <p className="mt-4 text-sm text-slate-400">지목군 통계 없음</p>;
-  }
-  return (
-    <div className="mt-4">
-      <div className="text-sm font-medium">지목군 거래량 TOP {items.length}</div>
-      <ol className="mt-2 space-y-1.5">
-        {items.map((item, i) => (
-          <li key={item.group} className="flex items-center gap-2 text-sm">
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold dark:bg-slate-700">
-              {i + 1}
-            </span>
-            <span className="font-medium">{item.label}</span>
-            <span className="text-slate-500 dark:text-slate-400">
-              {formatInt(item.count)}건 ({formatPercent(item.share, 0)})
-            </span>
-          </li>
-        ))}
-      </ol>
     </div>
   );
 }

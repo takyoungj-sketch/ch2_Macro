@@ -113,8 +113,18 @@
 | Phase | 내용 | 상태 |
 |-------|------|------|
 | D-027 | 독립 `/profile/` · `yearly_mix` · 토지 내장 ProfilePanel 폐기 | ✅ (코드) · 문서 소급 |
-| **D-029 A** | Profile 확장 — beop · Top1~3 · 아파트(㎡당) · mask · **`twin_vector` Catalog + `profile_weight.yaml`** · UI · `v2.1-national` | 📋 문서 ✅ · **구현 대기** |
-| **D-029 B** | Candidate→Catalog→Weight→Similarity(+score_detail) · `region_scope_master` · Twin · 튜닝 · v8 전환 | 대기 (A 이후) |
+| **D-029 A** | Profile 확장 — beop · Top1~3 · 아파트(㎡당) · mask · **`twin_vector` Catalog + `profile_weight.yaml`** · UI · `v2.1-national` | ✅ **코드·전국 재빌드·UI** (23,931 profile rows · `window_years=3`) |
+| **D-029 B** | Candidate→Catalog→Weight→Similarity(+score_detail) · `region_scope_master` · Twin · 튜닝 | ✅ **MVP (2026-07-27~28)** — algo **21** · 전국 Twin · API/UI |
+
+> **MVP 동결 (2026-07-28):** 신규 대형 개발 보류. 실사용 피드백 → Post-MVP 백로그.  
+> **차후 계획 SSOT:** [`docs/REGIONAL_PROFILE_POST_MVP_BACKLOG.md`](docs/REGIONAL_PROFILE_POST_MVP_BACKLOG.md)
+
+**Phase B Preflight (D-030)** — ✅ P1·P2 완료
+
+| # | 항목 | 메모 |
+|---|------|------|
+| P1 | **지역 선택 = 토지** | ✅ P1-a~f (딥링크 · `shared/region-picker` · 검색·URL 동기화 · built/collective) |
+| P2 | **리 아파트 분위** | ✅ 전국 재빌드 (2026-07-27 · market ~18.8k beop rows · profile 23,931) |
 
 **로컬 UI:** http://127.0.0.1:5177/profile/ · API `GET /api/regional-profile`
 
@@ -122,10 +132,39 @@
 
 ```bash
 cd pipeline
-python rebuild_regional_profile_national.py --profile-version v2.0-national
-# Phase A 후: v2.1-national (스키마 확장)
+# Profile only
+python build_regional_profile.py --profile-version v2.1-national --sido-code 43
+# Profile + Profile-native Twin (eup·sigungu·beop, algo 21)
+python rebuild_regional_profile_national.py --profile-version v2.1-national --skip-collective --skip-land
+# Twin only (profile 이미 있을 때)
+python build_twin_profile.py --region-level eupmyeondong
+python build_twin_profile.py --region-level sigungu
+python build_twin_profile.py --region-level beopjungri
+# 스모크
+python verify_profile_twin_smoke.py
 ```
 
+**Twin API (Profile-native v2.1, algo 21)**
+
+```text
+GET /api/regional-profile/twins/{eup8}              # scope=region (기본)
+GET /api/regional-profile/twins-sigungu/{sigungu5}  # scope=national (기본)
+GET /api/regional-profile/twins-beop/{beop10}        # same_sigungu
+```
+
+**Legacy:** hybrid v6/v7는 API fallback만 유지. 신규 배치는 `--twin-mode catalog`(기본).
+
+**피드백·차후 작업:** [`docs/REGIONAL_PROFILE_POST_MVP_BACKLOG.md`](docs/REGIONAL_PROFILE_POST_MVP_BACKLOG.md) (체크리스트 · Phase C/D/E 백로그)
+
+**Phase A 스모크 (재빌드 후)**
+
+```text
+GET /api/regional-profile?region_level=beopjungri&region_code=4311313800&profile_version=v2.1-national&window_years=3
+→ features.land_top1_* · market_presence · yearly_mix (없으면 0)
+→ apartment_* 분위는 해당 grain 표본 없으면 키 없음(NULL)
+```
+
+> **창 정책:** 지역프로필 제품 = **`window_years=3`만**. 토지 분석 mart의 5년과 무관.
 ## 3. 상위단계 사전집계 + 쌍둥이 지역 (DECISIONS D-009~D-011)
 
 > 상세 설계: [`docs/UPPER_STATS_DESIGN.md`](docs/UPPER_STATS_DESIGN.md)

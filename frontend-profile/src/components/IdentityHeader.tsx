@@ -1,4 +1,5 @@
 import type { RegionNameInfo, YearlyMix } from "../types";
+import { cityFullLabel, cityShortLabel } from "@ch2/region-picker";
 import { formatAmountManwon, formatInt, formatPercent } from "../utils/format";
 import { sidoName } from "../utils/sido";
 
@@ -11,16 +12,22 @@ interface Props {
 }
 
 function fullAddressLabel(regionLevel: string, regionCode: string, name: RegionNameInfo | null): string {
-  if (regionLevel === "sido" || regionLevel === "city") return sidoName(regionCode);
+  if (regionLevel === "sido") return sidoName(regionCode);
+  if (regionLevel === "city") return cityFullLabel(name, regionCode);
   if (!name) return regionCode;
   if (regionLevel === "sigungu") return `${name.sido_name} ${name.sigungu_name}`;
+  if (regionLevel === "beopjungri") {
+    return `${name.sido_name} ${name.sigungu_name} ${name.eupmyeondong_name} ${name.beopjungri_name}`;
+  }
   return `${name.sido_name} ${name.sigungu_name} ${name.eupmyeondong_name}`;
 }
 
 function shortLabel(regionLevel: string, regionCode: string, name: RegionNameInfo | null): string {
-  if (regionLevel === "sido" || regionLevel === "city") return sidoName(regionCode);
+  if (regionLevel === "sido") return sidoName(regionCode);
+  if (regionLevel === "city") return cityShortLabel(name, regionCode);
   if (!name) return regionCode;
   if (regionLevel === "sigungu") return name.sigungu_name;
+  if (regionLevel === "beopjungri") return name.beopjungri_name;
   return name.eupmyeondong_name;
 }
 

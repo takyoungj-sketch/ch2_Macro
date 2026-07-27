@@ -14,7 +14,9 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@ch2/macro-shell/*": ["../shared/macro-shell/*"]
+      "@ch2/macro-shell/*": ["../shared/macro-shell/*"],
+      "@ch2/region-picker": ["../shared/region-picker/index.ts"],
+      "@ch2/region-picker/*": ["../shared/region-picker/*"]
     }
   },
   "include": ["src"]

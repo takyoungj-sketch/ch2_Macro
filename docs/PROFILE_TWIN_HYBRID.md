@@ -276,25 +276,38 @@ python build_twin_sigungu_hybrid.py --profile-version v1.1-national --window-yea
 
 ---
 
+## 7. Profile-native Twin v2.1 (D-029 Phase B, 2026-07-27)
+
+**제품 기본 경로.** Hybrid v6/v7·Twin v8은 legacy fallback/병행만.
+
+| grain | 빌더 | 저장 | API |
+|-------|------|------|-----|
+| eup | `build_twin_profile.py --region-level eupmyeondong` | `twin_eupmyeondong_neighbor_mvp` | `GET /api/regional-profile/twins/{eup8}` |
+| sigungu | `--region-level sigungu` | `twin_region_neighbor_mvp` | `GET .../twins-sigungu/{sg5}` |
+| beop | `--region-level beopjungri` | `twin_neighbor_v8` (land_stats DB) | `GET .../twins-beop/{beop10}` |
+
+- **algorithm_version=21** · `detail.algorithm=profile_twin_v2.1`
+- **profile_version=v2.1-national** · **window_years=3**
+- Catalog=`profile_feature_catalog.yaml` `twin_vector` · Weight=`profile_weight.yaml`
+- Candidate scope: eup=`region`(권역) · sigungu=`national` · beop=`same_sigungu`
+- Orchestrator: `rebuild_regional_profile_national.py --twin-mode catalog` (**기본**)
+- 스모크: `python verify_profile_twin_smoke.py`
+
+---
+
 ## 5. 로컬 재현 명령
 
 ```powershell
 cd c:\ch2\ch2_Macro\pipeline
 
-# 전국 Profile (land+profile만, collective 이미 있으면 skip)
-python rebuild_regional_profile_national.py --skip-collective --windows 3,5
+# 전국 Profile + Profile-native Twin (catalog, algo 21)
+python rebuild_regional_profile_national.py --profile-version v2.1-national --skip-collective
 
-# Profile Twin
-python build_twin_from_profile.py --profile-version v1.1-national --window-years 5
+# Twin 스모크
+python verify_profile_twin_smoke.py
 
-# 백엔드 (Twin API)
-cd ..\backend
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8001
-
-# 프론트
-cd ..\frontend
-npm run dev
-# → http://127.0.0.1:5173/land/ → 지역 프로필 → 읍면동 → 프로필 조회
+# Legacy hybrid (fallback 배치만 필요 시)
+python rebuild_regional_profile_national.py --twin-mode legacy --profile-version v1.1-national
 ```
 
 ---

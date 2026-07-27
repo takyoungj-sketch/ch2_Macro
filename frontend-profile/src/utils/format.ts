@@ -18,12 +18,17 @@ export function formatAmountManwon(manwon: number | null | undefined): string {
 }
 
 /**
- * 만원/㎡ 단가 → 억원/㎡ 표시.
- * 거래액과 동일하게 천만 단위 반올림.
+ * ㎡당 단가(만원/㎡) 표시.
+ * 토지·집합 mart UI와 동일하게 만원/㎡ 단위를 사용한다.
+ * (거래액 `formatAmountManwon`의 억원 변환과 혼동하지 않음)
  */
 export function formatUnitPrice(manwonPerSqm: number | null | undefined): string {
   if (manwonPerSqm === null || manwonPerSqm === undefined || Number.isNaN(manwonPerSqm)) return "-";
-  return `${formatEokNumber(manwonToEokTenths(manwonPerSqm))}억원/㎡`;
+  const rounded = Math.round(manwonPerSqm * 10) / 10;
+  const str = Number.isInteger(rounded)
+    ? rounded.toLocaleString("ko-KR")
+    : rounded.toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  return `${str}만원/㎡`;
 }
 
 export function formatYoy(pct: number | null | undefined): string {

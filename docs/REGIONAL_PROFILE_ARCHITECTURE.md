@@ -211,14 +211,14 @@ Layer 5  Regression · 쌍둥이도시 · AI (장기)
 |------|------|-----|
 | `profile_version` | Feature 셋 정의 버전 (Feature 추가/변경 시 증가) | `v1.0` |
 | `as_of_month` | 스냅샷 기준월 | `2026-05-01` |
-| `window_years` | feature 산정 롤링 창 | `5` |
+| `window_years` | feature 산정 롤링 창 | **Profile 제품: `3`** (토지 mart 3·5와 별개) |
 | `feature_count` | 벡터 차원 수 (QA·드리프트 감시) | `38` |
 | `builder_version` | 빌더 코드 버전/날짜 | `2026.06.18` |
 | `validation_status` | A/B 검증 결과 | `PASS` / `PENDING` / `FAIL` |
 
-- **고유 grain = (`profile_version`, `region_level`, `region_code`, `as_of_month`, `window_years`).** → 3년/5년, v1/v2가 **공존**하고 silent overwrite가 없다.
-- 소비자(회귀·쌍둥이·AI)는 항상 **(profile_version, as_of, window)를 명시**해 읽어 재현성을 보장한다.
-- Feature 키에 창을 병기하는 보조 규약도 허용: `land_residential_mean_5y` 등.
+- **고유 grain = (`profile_version`, `region_level`, `region_code`, `as_of_month`, `window_years`).** → version·window가 공존하고 silent overwrite가 없다.
+- **지역프로필 제품 창은 `window_years=3`만** (D-029). 토지/집합 분석 mart의 3·5년과 혼동하지 않는다. 5년 Profile 행은 제품 경로에서 쓰지 않는다.
+- 소비자(회귀·쌍둥이·AI)는 항상 **(profile_version, as_of, window=3)** 를 명시해 읽어 재현성을 보장한다.
 
 ---
 
@@ -508,7 +508,9 @@ Explainability           ← score_detail 훅
 
 구조는 **확정**. 이후 작업의 중심은 알고리즘·가중치 **튜닝**.
 
-`profile_version`(예: `v2.1-national`)·`as_of_month`·`window_years`는 D-017 **필수 grain**. Catalog·Weight 스키마가 바뀌면 `profile_version` 또는 weight file version을 올린다. Twin 결과에도 동일 키를 기록한다.
+`profile_version`(예: `v2.1-national`)·`as_of_month`·**`window_years=3`(제품 SSOT)** 는 D-017 **필수 grain**. Catalog·Weight 스키마가 바뀌면 `profile_version` 또는 weight file version을 올린다. Twin 결과에도 동일 키를 기록한다.
+
+> **창 정책:** 지역프로필·대표시장·Top1~3·아파트 분위·`yearly_mix`·mask는 모두 **최근 3년** 기준. 토지 V2 mart의 5년 창은 분석 앱용이며 Profile 제품 경로에 쓰지 않는다.
 
 ### 12.1 이미 반영된 전제 (D-027)
 
@@ -529,7 +531,7 @@ Explainability           ← score_detail 훅
 | 필드 | 규칙 |
 |------|------|
 | **토지 Top1~3 (컬럼)** | 최근 3년 **용도×지목군** 셀 거래건수 순위. **JSON 배열 대신 순위별 컬럼** (쿼리·Twin 배치 속도). 현행 `jimok_group_top3`(지목군만 합산) **대체**. 해당 순위 없으면 NULL |
-| **아파트 분위** | **최근 3년 · ㎡당 거래단가(만원/㎡)** 의 **P25 / P50 / P75**. 컬럼: `apartment_p25` · `apartment_median` · `apartment_p75`. **해당 grain만**. 없으면 **NULL**. 리→읍면동 승격 **금지**. (거래가 총액 분위 **아님**) |
+| **아파트 분위** | **최근 3년 · ㎡당 거래단가(만원/㎡)** 의 **P25 / P50 / P75**. 컬럼: `apartment_p25` · `apartment_median` · `apartment_p75`. **해당 grain만**. **리(beop):** 동 grain 표본 **`apartment_count >= 15`**(3년)일 때만 저장·표시; 미만·무거래는 **NULL**. **리→읍면동 값 승격(proxy) 금지**. (거래가 총액 분위 **아님**) — Preflight: [`REGIONAL_PROFILE_PHASE_B_PREFLIGHT.md`](REGIONAL_PROFILE_PHASE_B_PREFLIGHT.md) **P2** |
 | **`market_presence`** | 8유형 0/1 (`totals_by_type.count > 0`). Similarity는 양쪽 1인 feature만 |
 | **`dominant_type`** | 대표시장(토지·아파트·연립…). Profile **저장 + Similarity Feature**(§12.4.3) |
 
@@ -665,7 +667,7 @@ Output: similarity: float
 | 입력 | mart 직접 | **Profile만** (Vector는 Catalog 기준 런타임) |
 | Feature 목록 | 코드 하드코딩 | **`twin_vector` Catalog** |
 | 가중치 | 코드 상수 | **`profile_weight.yaml`** |
-| 리 아파트 | eup proxy | **NULL** |
+| 리 아파트 | eup proxy | **beop grain + 표본≥15**, proxy **금지** (Preflight P2) |
 | 인구 | 0.6~1.7 | **±50%**, NULL 스킵 |
 | 읍면동 범위 | 충청 Phase1 | **`region_scope_master`** |
 | 파이프라인 | 필터·스코어 혼재 | **Candidate → Catalog → Vector → Weight → Similarity → Top-N** |
@@ -674,20 +676,30 @@ Output: similarity: float
 
 | Phase | 내용 | 상태 |
 |-------|------|------|
-| **A** | beop · Top1~3 · 아파트(최근3년 ㎡당) · mask · **`twin_vector` Catalog + `profile_weight.yaml`** · API/UI · `v2.1-national` | 📋 문서 · 구현 대기 |
-| **B** | Candidate · `region_scope_master` · Engine(+score_detail, Weight 로드) · Twin 저장 · v8 전환 · 튜닝 | 대기 |
+| **A** | beop · Top1~3 · 아파트(최근3년 ㎡당) · mask · **`twin_vector` Catalog + `profile_weight.yaml`** · API/UI · `v2.1-national` | ✅ 빌더·API·UI·전국 재빌드 (2026-07-27) |
+| **B** | Candidate · `region_scope_master` · Engine(+score_detail, Weight 로드) · Twin 저장 · v8 병행 | ✅ **MVP (2026-07-27~28)** — Post-MVP 백로그: [`REGIONAL_PROFILE_POST_MVP_BACKLOG.md`](REGIONAL_PROFILE_POST_MVP_BACKLOG.md) |
 
 **Phase A 종료 게이트:** Catalog·Weight 파일이 있고 Twin/빌더가 Feature 키를 코드에 하드코딩하지 않을 것.
 
-- [ ] 시군구·읍면동·리 Profile 스키마 동일 · `profile_version` grain
-- [ ] Feature Vector **미저장** · Catalog → Vector → Weight → Similarity
-- [ ] `twin_vector` · `profile_weight.yaml` 존재 (A 종료 전)
-- [ ] 아파트 없는 리: 분위 null, mask=0, yearly_mix count=0
-- [ ] Top1~3 컬럼에 zone+jimok+count+mean
-- [ ] Twin: Candidate → … → Top-N · Profile 외 미참조 · level 혼합 없음 · 시·도 Twin 없음
-- [ ] Similarity Engine이 `score_detail` 반환 (설명 UI 훅)
+- [x] 시군구·읍면동·리 Profile 스키마 동일 · `profile_version` grain
+- [x] Feature Vector **미저장** · Catalog → Vector → Weight → Similarity (Vector는 런타임 투영)
+- [x] `twin_vector` · `profile_weight.yaml` 존재 (A 종료 전)
+- [x] 아파트 없는 리: 분위 null, mask=0, yearly_mix count=0
+- [x] Top1~3 컬럼에 zone+jimok+count+mean
+- [x] UI: Top3·아파트 분위 **대표시장과 독립** (`LandProfileCard` / `ApartmentProfileCard`)
+- [x] Twin: Candidate → … → Top-N · Profile 외 미참조 · level 혼합 없음 · 시·도 Twin 없음 (Phase B)
+- [x] Similarity Engine이 `score_detail` 반환 (설명 UI 훅) (Phase B)
+
+### 12.7 Phase B Preflight (D-030) — ✅ 완료
+
+Phase B Twin Engine 착수 **전** 제품·데이터 정합. **계획 SSOT:** [`REGIONAL_PROFILE_PHASE_B_PREFLIGHT.md`](REGIONAL_PROFILE_PHASE_B_PREFLIGHT.md) · **D-030**.
+
+| # | 항목 | 상태 |
+|---|------|------|
+| **P1** | 지역 선택 — 토지 `RegionSelector`와 tier·검색·딥링크 동일 (beop→eup 승격 **폐기**) | ✅ **P1-a~f 코드** (`shared/region-picker` · 딥링크 · 검색 city/beop · built/collective) |
+| **P2** | 리 grain 아파트 P25/P50/P75 — `market_stats` beop + **count≥15** · eup proxy 금지 | ✅ 전국 재빌드 (2026-07-27) |
 
 ---
 
-*최종 갱신: 2026-07-25 · D-027·D-029 §12 (Catalog·Weight 반영)*  
+*최종 갱신: 2026-07-28 · D-029 Phase A·B **MVP 동결** · Post-MVP: [`REGIONAL_PROFILE_POST_MVP_BACKLOG.md`](REGIONAL_PROFILE_POST_MVP_BACKLOG.md)*  
 *이전: 2026-06-19 · D-017*

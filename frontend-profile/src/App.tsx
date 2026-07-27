@@ -9,7 +9,10 @@ import IdentityHeader from "./components/IdentityHeader";
 import YearlyMixTable from "./components/YearlyMixTable";
 import MarketComposition from "./components/MarketComposition";
 import DominantMarketCard from "./components/DominantMarketCard";
+import LandProfileCard from "./components/LandProfileCard";
+import ApartmentProfileCard from "./components/ApartmentProfileCard";
 import TwinRegionCard from "./components/TwinRegionCard";
+import { cityShortLabel, formatProfileSelectionQuery } from "@ch2/region-picker";
 import RegionSearch, { type RegionSearchResult } from "./components/RegionSearch";
 import { sidoName } from "./utils/sido";
 
@@ -23,7 +26,7 @@ function readSelectionFromUrl(): RegionSelection | null {
   const level = qs.get("region_level") as RegionLevel | null;
   const code = qs.get("region_code");
   if (!level || !code) return null;
-  if (!["sido", "sigungu", "eupmyeondong", "city"].includes(level)) return null;
+  if (!["sido", "sigungu", "eupmyeondong", "beopjungri", "city"].includes(level)) return null;
   return { regionLevel: level, regionCode: code };
 }
 
@@ -36,9 +39,12 @@ function writeSelectionToUrl(sel: RegionSelection) {
 }
 
 function regionShortName(sel: RegionSelection, name: RegionNameInfo | null): string {
-  if (sel.regionLevel === "sido" || sel.regionLevel === "city") return sidoName(sel.regionCode);
+  if (sel.regionLevel === "sido") return sidoName(sel.regionCode);
+  if (sel.regionLevel === "city") return cityShortLabel(name, sel.regionCode);
   if (!name) return sel.regionCode;
-  return sel.regionLevel === "sigungu" ? name.sigungu_name : name.eupmyeondong_name;
+  if (sel.regionLevel === "sigungu") return name.sigungu_name;
+  if (sel.regionLevel === "beopjungri") return name.beopjungri_name;
+  return name.eupmyeondong_name;
 }
 
 export default function App() {
@@ -60,14 +66,20 @@ export default function App() {
   });
 
   const regionNameQuery = useQuery({
-    queryKey: ["region-name", selection?.regionLevel, selection?.regionCode],
+    queryKey: ["region-name", "v2", selection?.regionLevel, selection?.regionCode],
     queryFn: () => resolveRegionName({ regionLevel: selection!.regionLevel, regionCode: selection!.regionCode }),
     enabled: !!selection,
     staleTime: Infinity,
+    retry: 1,
   });
 
   const isSigungu = selection?.regionLevel === "sigungu";
-  const twinEnabled = !!selection && (selection.regionLevel === "eupmyeondong" || selection.regionLevel === "sigungu");
+  const isBeop = selection?.regionLevel === "beopjungri";
+  const twinEnabled =
+    !!selection &&
+    (selection.regionLevel === "eupmyeondong" ||
+      selection.regionLevel === "sigungu" ||
+      selection.regionLevel === "beopjungri");
   const twinQuery = useQuery({
     queryKey: ["profile-twins", selection?.regionLevel, selection?.regionCode],
     queryFn: () => fetchTwinNeighbors({ regionLevel: selection!.regionLevel, regionCode: selection!.regionCode, topK: 5 }),
@@ -77,6 +89,16 @@ export default function App() {
 
   const yearlyMix = profileQuery.data?.features.yearly_mix as YearlyMix | undefined;
   const shortName = selection ? regionShortName(selection, regionNameQuery.data ?? null) : "";
+
+  const searchDisplayQuery = useMemo(() => {
+    if (!selection) return "";
+    return formatProfileSelectionQuery(
+      selection.regionLevel,
+      selection.regionCode,
+      regionNameQuery.data ?? null,
+      sidoName,
+    );
+  }, [selection, regionNameQuery.data]);
 
   const headerNode = useMemo(() => {
     if (!selection) return null;
@@ -107,7 +129,7 @@ export default function App() {
       <div className="flex-1 min-h-0 overflow-y-auto" style={{ zoom: contentZoom }}>
         <div className="mx-auto max-w-5xl px-4 py-6">
           <div className="mb-4 flex justify-end">
-            <RegionSearch onSelect={handleSelect} />
+            <RegionSearch onSelect={handleSelect} displayQuery={searchDisplayQuery} />
           </div>
 
           {!selection && (
@@ -145,15 +167,22 @@ export default function App() {
                 </>
               ) : (
                 <div className="card p-5 text-sm text-slate-400">
-                  8대 시장유형 연도별 데이터(yearly_mix)가 아직 없습니다. Profile v2 재빌드가 필요합니다.
+                  8대 시장유형 연도별 데이터(yearly_mix)가 아직 없습니다.
                 </div>
               )}
+
+              <LandProfileCard features={profileQuery.data.features} />
+              <ApartmentProfileCard
+                regionLevel={selection.regionLevel}
+                features={profileQuery.data.features}
+              />
 
               {twinEnabled && (
                 <TwinRegionCard
                   neighbors={twinQuery.data?.neighbors ?? []}
                   isLoading={twinQuery.isLoading}
                   isSigungu={isSigungu}
+                  isBeop={isBeop}
                 />
               )}
 

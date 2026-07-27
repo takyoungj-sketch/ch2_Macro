@@ -1,14 +1,22 @@
 import type { BuiltAnalysisUnit } from "./builtAnalysisUnits";
 
-export type ProfileLinkTarget = { level: "eupmyeondong" | "sigungu"; code: string };
+export type ProfileLinkTarget = { level: "eupmyeondong" | "sigungu" | "beopjungri"; code: string };
 
 /**
- * 선택된 분석 단위(analysisUnits)를 신규 독립 지역 프로필 앱(/profile/) 대상으로 해석 — D-027 §12.
- * 단일 읍면동(또는 동일 읍면동으로 묶이는 법정동·리 묶음)일 때만 해석, 그 외(교차 시군구·복수 읍면동)는 null.
+ * 선택된 분석 단위(analysisUnits)를 Profile 앱 대상으로 해석 — D-027/D-030.
+ * 단일 beop · 단일 eup(동일 8자) · 그 외 null.
  */
 export function resolveBuiltProfileTarget(units: BuiltAnalysisUnit[]): ProfileLinkTarget | null {
   const withCode = units.filter((u) => u.code && !u.crossParent);
   if (withCode.length === 0) return null;
+
+  if (withCode.length === 1) {
+    const u = withCode[0]!;
+    const digits = u.code.replace(/\D/g, "");
+    if (u.level === "beopjungri" && /^\d{10}$/.test(digits)) {
+      return { level: "beopjungri", code: digits };
+    }
+  }
 
   const eupCodes = new Set(
     withCode.map((u) => {

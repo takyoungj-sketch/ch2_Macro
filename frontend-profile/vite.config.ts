@@ -9,6 +9,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@ch2/macro-shell": path.resolve(__dirname, "../shared/macro-shell"),
+      "@ch2/region-picker": path.resolve(__dirname, "../shared/region-picker"),
     },
   },
   server: {

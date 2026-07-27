@@ -1,10 +1,9 @@
 import type { CollectiveMapResolveCodesResponse } from "../api/mapClient";
 
-export type ProfileLinkTarget = { level: "sigungu" | "eupmyeondong"; code: string };
+export type ProfileLinkTarget = { level: "sigungu" | "eupmyeondong" | "beopjungri"; code: string };
 
 /**
- * 지도 resolve-codes 응답을 신규 독립 지역 프로필 앱(/profile/) 대상으로 해석 — D-027 §12.
- * 단일 시군구/읍면동, 또는 동일 읍면동으로 묶이는 법정동 묶음일 때만 해석.
+ * 지도 resolve-codes 응답을 Profile 앱 대상으로 해석 — D-027/D-030.
  */
 export function resolveCollectiveProfileTarget(
   resolved: CollectiveMapResolveCodesResponse | undefined,
@@ -24,11 +23,10 @@ export function resolveCollectiveProfileTarget(
   }
 
   if (resolved.level === "beopjungri") {
-    const eupCodes = new Set(codes.map((c) => c.slice(0, 8)));
-    if (eupCodes.size !== 1) return null;
-    const eup = [...eupCodes][0]!;
-    if (!/^\d{8}$/.test(eup)) return null;
-    return { level: "eupmyeondong", code: eup };
+    if (codes.length !== 1) return null;
+    const code = codes[0]!.replace(/\D/g, "");
+    if (!/^\d{10}$/.test(code)) return null;
+    return { level: "beopjungri", code };
   }
 
   return null;

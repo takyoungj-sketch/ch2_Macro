@@ -44,6 +44,8 @@ twin_vector:
       unit: manwon_per_sqm
       window: last_3y
       mask_from: market_presence.아파트
+      mask_min_count_from: apartment_count
+      mask_min_count: 15
       label_ko: 아파트 ㎡당 P25
     apt_p50:
       profile_path: apartment_median
@@ -52,6 +54,8 @@ twin_vector:
       unit: manwon_per_sqm
       window: last_3y
       mask_from: market_presence.아파트
+      mask_min_count_from: apartment_count
+      mask_min_count: 15
       label_ko: 아파트 ㎡당 P50
     apt_p75:
       profile_path: apartment_p75
@@ -60,6 +64,8 @@ twin_vector:
       unit: manwon_per_sqm
       window: last_3y
       mask_from: market_presence.아파트
+      mask_min_count_from: apartment_count
+      mask_min_count: 15
       label_ko: 아파트 ㎡당 P75
     market_presence:
       profile_path: market_presence

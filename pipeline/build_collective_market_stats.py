@@ -71,6 +71,7 @@ LEFT JOIN LATERAL (
 
 ROLLING_SQL = f"""
 SELECT
+    btrim(({_CANON})) AS beop,
     btrim(COALESCE(
         NULLIF(rc.eupmyeondong_code::text, ''),
         NULLIF(t.eupmyeondong_code::text, ''),
@@ -97,11 +98,12 @@ WHERE t.is_valid = true
   AND t.contract_date >= :p_start
   AND t.contract_date <= :p_end
   {{addr1_clause}}
-GROUP BY 1, 2, 3, 4
+GROUP BY 1, 2, 3, 4, 5
 """
 
 ANNUAL_SQL = f"""
 SELECT
+    btrim(({_CANON})) AS beop,
     btrim(COALESCE(
         NULLIF(rc.eupmyeondong_code::text, ''),
         NULLIF(t.eupmyeondong_code::text, ''),
@@ -128,7 +130,7 @@ WHERE t.is_valid = true
   AND t.unit_price > 0
   AND t.contract_year IS NOT NULL
   {{addr1_clause}}
-GROUP BY 1, 2, 3, 4, 5
+GROUP BY 1, 2, 3, 4, 5, 6
 """
 
 
@@ -166,10 +168,16 @@ def _rollup_records(
         if not prices:
             continue
         row_amount = float(row["amount_sum"]) if row.get("amount_sum") is not None else 0.0
-        level_codes = (
-            ("eupmyeondong", (row.get("bcode8") or "").strip()),
-            ("sigungu", (row.get("sigungu") or "").strip()),
-            ("sido", (row.get("sido") or "").strip()),
+        beop = (row.get("beop") or "").strip()
+        level_codes: list[tuple[str, str]] = []
+        if beop and beop.isdigit() and len(beop) == 10:
+            level_codes.append(("beopjungri", beop))
+        level_codes.extend(
+            [
+                ("eupmyeondong", (row.get("bcode8") or "").strip()),
+                ("sigungu", (row.get("sigungu") or "").strip()),
+                ("sido", (row.get("sido") or "").strip()),
+            ]
         )
         for level, rc in level_codes:
             if not rc or not rc.isdigit():

@@ -1,6 +1,6 @@
 // backend/app/regional_profile/router.py 응답 스키마와 동일 (D-027 §12)
 
-export type RegionLevel = "sido" | "sigungu" | "eupmyeondong" | "city";
+export type RegionLevel = "sido" | "sigungu" | "eupmyeondong" | "beopjungri" | "city";
 
 export interface RegionalProfileMeta {
   profile_version: string;
@@ -51,12 +51,31 @@ export interface JimokGroupTop3Item {
   share: number;
 }
 
+/** D-029: 용도×지목군 Top1~3 (JSONB flat + object) */
+export interface LandTopItem {
+  zone: string;
+  jimok: string;
+  jimok_code: string;
+  count: number;
+  mean_manwon_per_sqm?: number | null;
+}
+
 export interface RegionalProfileFeatures {
   population?: number;
   yearly_mix?: YearlyMix;
+  dominant_type?: YearlyMixType;
+  market_presence?: Record<string, number>;
   jimok_group_top3?: JimokGroupTop3Item[];
   jimok_group_composition?: Record<string, number>;
   jimok_group_total_count?: number;
+  land_top1?: LandTopItem;
+  land_top2?: LandTopItem;
+  land_top3?: LandTopItem;
+  land_top1_zone?: string;
+  land_top1_jimok?: string;
+  land_top1_jimok_code?: string;
+  land_top1_count?: number;
+  land_top1_mean_manwon_per_sqm?: number;
   apartment_count?: number;
   apartment_mean?: number;
   apartment_median?: number;
@@ -78,6 +97,8 @@ export interface ProfileTwinNeighborItem {
   rank: number;
   twin_eupmyeondong_code?: string;
   twin_eupmyeondong_name?: string;
+  twin_beopjungri_code?: string;
+  twin_beopjungri_name?: string;
   twin_sigungu_code?: string;
   twin_sigungu_name: string;
   twin_sido_name: string;
@@ -91,6 +112,7 @@ export interface ProfileTwinNeighborsResponse {
   algorithm_version?: number;
   scope?: string | null;
   anchor_eupmyeondong_code?: string;
+  anchor_beopjungri_code?: string;
   anchor_sigungu_code?: string;
   neighbors: ProfileTwinNeighborItem[];
 }
