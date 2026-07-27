@@ -113,8 +113,8 @@
 | Phase | 내용 | 상태 |
 |-------|------|------|
 | D-027 | 독립 `/profile/` · `yearly_mix` · 토지 내장 ProfilePanel 폐기 | ✅ (코드) · 문서 소급 |
-| **D-029 A** | Profile 확장 — beop · Top1~3 · 아파트(㎡당) · mask · **`twin_vector` Catalog + `profile_weight.yaml`** · UI · `v2.1-national` | ✅ **코드·전국 재빌드·UI** (23,931 profile rows · `window_years=3`) |
-| **D-029 B** | Candidate→Catalog→Weight→Similarity(+score_detail) · `region_scope_master` · Twin · 튜닝 | ✅ **MVP (2026-07-27~28)** — algo **21** · 전국 Twin · API/UI |
+| **D-029 A** | Profile 확장 — beop · Top1~3 · 아파트(㎡당) · mask · **`twin_vector` Catalog + `profile_weight.yaml`** · UI · `v2.1-national` | ✅ **코드·전국 재빌드·UI·VPS yearly_mix** (23,939 profile rows · `window_years=3`) |
+| **D-029 B** | Candidate→Catalog→Weight→Similarity(+score_detail) · `region_scope_master` · Twin · 튜닝 | ✅ **MVP (2026-07-27~28)** — algo **21** · 전국 Twin · API/UI · **VPS DB 반영** |
 
 > **MVP 동결 (2026-07-28):** 신규 대형 개발 보류. 실사용 피드백 → Post-MVP 백로그.  
 > **차후 계획 SSOT:** [`docs/REGIONAL_PROFILE_POST_MVP_BACKLOG.md`](docs/REGIONAL_PROFILE_POST_MVP_BACKLOG.md)
@@ -143,6 +143,15 @@ python build_twin_profile.py --region-level beopjungri
 # 스모크
 python verify_profile_twin_smoke.py
 ```
+
+**VPS 데이터 반영 (코드 배포와 별도 · 2026-07-28 완료)**
+
+`deploy-from-windows.ps1`는 **코드만** 반영. Profile/Twin/`yearly_mix`는 DB 파이프라인 필요.
+
+1. DDL: `db/045`(land), `044`/`043`(collective), `042`(built) — postgres 적용
+2. Annual mart 백필: `build_collective_market_stats --annual-only`, `build_built_market_stats --annual-only`, `build_collective_commercial_market_stats --annual-only`, 토지 `run_land_annual_amount_backfill.py`(또는 `build_annual_stats --years 2023-2025 --full`)
+3. Profile+Twin: `rebuild_regional_profile_national.py --profile-version v2.1-national --skip-collective --skip-land` (또는 `--skip-twin`으로 Profile만)
+4. 검증: `verify_profile_twin_smoke.py` · `regional_profile`에서 `features ? 'yearly_mix'` 건수
 
 **Twin API (Profile-native v2.1, algo 21)**
 
