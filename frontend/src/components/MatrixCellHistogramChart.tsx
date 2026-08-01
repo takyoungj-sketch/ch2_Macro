@@ -23,9 +23,10 @@ export default function MatrixCellHistogramChart({
   if (bins.length === 0) return null;
 
   const maxC = Math.max(...bins.map((b) => b.count), 1);
-  const innerW = W - PAD_L - PAD_R;
   const innerH = H - PAD_T - PAD_B;
   const n = bins.length;
+  const innerW = Math.max(W - PAD_L - PAD_R, Math.max(0, n - 1) * 44);
+  const chartW = PAD_L + PAD_R + innerW;
   const gap = n > 24 ? 0.5 : n > 14 ? 1 : 2;
   const barW = Math.max((innerW - gap * (n - 1)) / n, 2);
 
@@ -33,10 +34,11 @@ export default function MatrixCellHistogramChart({
   const tickFontPx = n > 20 ? 10 : n > 12 ? 11 : 12;
 
   return (
-    <div className="w-full" role="img" aria-label="단가 분포 히스토그램">
+    <div className="w-full overflow-x-auto" role="img" aria-label="단가 분포 히스토그램">
       <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="w-full h-auto max-h-[300px] text-slate-500"
+        viewBox={`0 0 ${chartW} ${H}`}
+        className={`${chartW > W ? "h-auto shrink-0" : "w-full h-auto"} max-h-[300px] text-slate-500`}
+        width={chartW > W ? chartW : undefined}
         preserveAspectRatio="xMidYMid meet"
       >
         <text x={PAD_L} y={16} className="fill-slate-700 dark:fill-slate-200 text-[11px] font-semibold">

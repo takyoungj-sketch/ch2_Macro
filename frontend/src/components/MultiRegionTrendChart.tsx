@@ -80,7 +80,8 @@ export default function MultiRegionTrendChart({
   }
   const n = allXOrders.length;
   const lastI = Math.max(n - 1, 1);
-  const innerW = W - PAD_L - PAD_R;
+  const innerW = Math.max(W - PAD_L - PAD_R, Math.max(0, n - 1) * 56);
+  const chartW = PAD_L + PAD_R + innerW;
   const innerH = H - PAD_T - PAD_B;
 
   const vals = active.flatMap((s) =>
@@ -103,7 +104,7 @@ export default function MultiRegionTrendChart({
   const yVal = (v: number) => PAD_T + innerH - ((v - axisMin) / (axisMax - axisMin || 1)) * innerH;
 
   return (
-    <div className="w-full" role="img" aria-label={`다중 지역 ${metricLabel} 추이`}>
+    <div className="w-full overflow-x-auto" role="img" aria-label={`다중 지역 ${metricLabel} 추이`}>
       <p className="text-[10px] text-slate-500 mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
         <span className="inline-flex items-center gap-1 font-medium text-slate-600">
           <span className="inline-block w-3 h-0.5 rounded bg-slate-500" aria-hidden />
@@ -120,8 +121,9 @@ export default function MultiRegionTrendChart({
         })}
       </p>
       <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="w-full h-auto max-h-[310px] text-slate-500 [[data-fullscreen]_&]:max-h-[min(58vh,560px)]"
+        viewBox={`0 0 ${chartW} ${H}`}
+        className={`${chartW > W ? "h-auto shrink-0" : "w-full h-auto"} max-h-[310px] text-slate-500 [[data-fullscreen]_&]:max-h-[min(58vh,560px)]`}
+        width={chartW > W ? chartW : undefined}
         preserveAspectRatio="xMidYMid meet"
       >
         {allXOrders.map((order) => (
@@ -161,7 +163,7 @@ export default function MultiRegionTrendChart({
                     <circle cx={xAt(r.xOrder)} cy={yVal(v)} r={cr} fill="#fff" stroke={color} strokeWidth={2} />
                     <text
                       x={xAt(r.xOrder)}
-                      y={yVal(v) - LABEL_ABOVE}
+                      y={yVal(v) - LABEL_ABOVE - (idx % 3) * 14}
                       textAnchor="middle"
                       className="fill-slate-900 dark:fill-white font-bold"
                       style={{ fontSize: n > 5 ? "11px" : "12px" }}

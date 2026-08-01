@@ -77,7 +77,8 @@ export default function MultiBuildingTrendChart({
   }
   const n = allXOrders.length;
   const lastI = Math.max(n - 1, 1);
-  const innerW = W - PAD_L - PAD_R;
+  const innerW = Math.max(W - PAD_L - PAD_R, Math.max(0, n - 1) * 56);
+  const chartW = PAD_L + PAD_R + innerW;
   const innerH = H - PAD_T - PAD_B;
 
   const vals = active.flatMap((s) =>
@@ -104,7 +105,7 @@ export default function MultiBuildingTrendChart({
     metric === "count" ? "거래 건수" : metric === "median" ? "중앙값(만원/㎡)" : "평균(만원/㎡)";
 
   return (
-    <div className="w-full" role="img" aria-label={`다중 단지 ${metricLabel} 추이`}>
+    <div className="w-full overflow-x-auto" role="img" aria-label={`다중 단지 ${metricLabel} 추이`}>
       <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
         <span className="inline-flex items-center gap-1 font-medium text-slate-600 dark:text-slate-300">
           <span
@@ -123,7 +124,12 @@ export default function MultiBuildingTrendChart({
           );
         })}
       </p>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto max-h-[310px] text-slate-500" preserveAspectRatio="xMidYMid meet">
+      <svg
+        viewBox={`0 0 ${chartW} ${H}`}
+        className={`${chartW > W ? "h-auto shrink-0" : "w-full h-auto"} max-h-[310px] text-slate-500`}
+        width={chartW > W ? chartW : undefined}
+        preserveAspectRatio="xMidYMid meet"
+      >
         {allXOrders.map((order) => (
           <text
             key={order}
@@ -153,7 +159,7 @@ export default function MultiBuildingTrendChart({
                     <circle cx={xAt(r.xOrder)} cy={yVal(v)} r={3.5} fill="#fff" stroke={color} strokeWidth={2} />
                     <text
                       x={xAt(r.xOrder)}
-                      y={yVal(v) - LABEL_ABOVE}
+                      y={yVal(v) - LABEL_ABOVE - (idx % 3) * 14}
                       textAnchor="middle"
                       className="fill-slate-900 dark:fill-white font-bold"
                       style={{ fontSize: n > 5 ? "11px" : "12px" }}

@@ -33,7 +33,8 @@ export default function RollingTrendChart({ points }: { points: RollingStatPoint
   const sorted = [...points].sort((a, b) => a.bucket_index - b.bucket_index);
   if (sorted.length === 0) return null;
 
-  const innerW = W - PAD_L - PAD_R;
+  const innerW = Math.max(W - PAD_L - PAD_R, Math.max(0, sorted.length - 1) * 56);
+  const chartW = PAD_L + PAD_R + innerW;
   const innerH = H - PAD_T - PAD_B;
   const n = sorted.length;
   const lastI = Math.max(n - 1, 1);
@@ -68,7 +69,7 @@ export default function RollingTrendChart({ points }: { points: RollingStatPoint
     .join(" ");
 
   return (
-    <div className="w-full" role="img" aria-label="롤링 구간별 평균 단가 및 거래 건수 추이">
+    <div className="w-full overflow-x-auto" role="img" aria-label="롤링 구간별 평균 단가 및 거래 건수 추이">
       <p className="text-[10px] text-slate-500 mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
         <span className="inline-flex items-center gap-1 font-bold text-blue-600">
           <span className="inline-block w-3 h-0.5 bg-blue-600 rounded" aria-hidden />
@@ -82,7 +83,12 @@ export default function RollingTrendChart({ points }: { points: RollingStatPoint
           거래 건수
         </span>
       </p>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto max-h-[300px] text-slate-500" preserveAspectRatio="xMidYMid meet">
+      <svg
+        viewBox={`0 0 ${chartW} ${H}`}
+        className={`${chartW > W ? "h-auto shrink-0" : "w-full h-auto"} max-h-[300px] text-slate-500`}
+        width={chartW > W ? chartW : undefined}
+        preserveAspectRatio="xMidYMid meet"
+      >
         {sorted.map((r, i) => (
           <text
             key={r.bucket_index}

@@ -1049,10 +1049,10 @@ export default function App() {
                       key={kind}
                       type="button"
                       className={clsx(
-                        "rounded-md border px-2.5 py-1.5 text-xs transition-colors",
+                        "rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900",
                         on
-                          ? "border-slate-800 bg-slate-800 text-white dark:border-slate-200 dark:bg-slate-200 dark:text-slate-900"
-                          : "border-slate-300 bg-white text-slate-600 hover:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300",
+                          ? "border-indigo-500 bg-indigo-600 text-white shadow-sm dark:border-indigo-300 dark:bg-indigo-500 dark:text-white"
+                          : "border-slate-300 bg-white text-slate-700 hover:border-indigo-400 hover:bg-indigo-50 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-indigo-400 dark:hover:bg-slate-700",
                       )}
                       onClick={() => setAssetKinds((prev) => toggleAssetKind(prev, kind))}
                       aria-pressed={on}

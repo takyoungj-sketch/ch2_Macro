@@ -60,7 +60,8 @@ export default function MatrixYearlyTrendChart({
 
   const scale = Math.max(1, xSpacingScale);
   const baseInnerW = W - PAD_L - PAD_R;
-  const innerW = baseInnerW * scale;
+  const minReadableInnerW = Math.max(0, sorted.length - 1) * 56;
+  const innerW = Math.max(baseInnerW * scale, minReadableInnerW);
   const chartW = PAD_L + PAD_R + innerW;
   const innerH = H - PAD_T - PAD_B;
   const n = sorted.length;
@@ -118,7 +119,7 @@ export default function MatrixYearlyTrendChart({
   }
 
   return (
-    <div className="w-full" role="img" aria-label="구간별 평균 단가 및 거래 건수 추이 그래프">
+    <div className="w-full overflow-x-auto" role="img" aria-label="구간별 평균 단가 및 거래 건수 추이 그래프">
       <p className="text-[10px] text-slate-500 mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
         <span className="inline-flex items-center gap-1 font-bold text-blue-600">
           <span className="inline-block w-3 h-0.5 bg-blue-600 rounded" aria-hidden />
@@ -145,11 +146,11 @@ export default function MatrixYearlyTrendChart({
       <svg
         viewBox={`0 0 ${chartW} ${H}`}
         className={
-          scale > 1
+          chartW > W
             ? "h-auto max-h-[300px] text-slate-500 shrink-0 [[data-fullscreen]_&]:max-h-[min(58vh,560px)]"
             : "w-full h-auto max-h-[300px] text-slate-500 [[data-fullscreen]_&]:max-h-[min(58vh,560px)]"
         }
-        width={scale > 1 ? chartW : undefined}
+        width={chartW > W ? chartW : undefined}
         preserveAspectRatio="xMidYMid meet"
       >
         {hasMean &&
