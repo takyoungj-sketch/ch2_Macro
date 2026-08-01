@@ -29,12 +29,12 @@ export type TrendSeries = {
 export type RegionTrendMetric = "mean" | "median";
 
 const W = 420;
-const H = 240;
+const H = 280;
 const PAD_L = 28;
 const PAD_R = 28;
-const PAD_T = 44;
-const PAD_B = 42;
-const LABEL_ABOVE = 10;
+const PAD_T = 52;
+const PAD_B = 48;
+const LABEL_ABOVE = 13;
 
 function formatPriceLabel(v: number): string {
   return Number(v).toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -121,7 +121,7 @@ export default function MultiRegionTrendChart({
       </p>
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        className="w-full h-auto max-h-[250px] text-slate-500 [[data-fullscreen]_&]:max-h-[min(58vh,560px)]"
+        className="w-full h-auto max-h-[310px] text-slate-500 [[data-fullscreen]_&]:max-h-[min(58vh,560px)]"
         preserveAspectRatio="xMidYMid meet"
       >
         {allXOrders.map((order) => (
@@ -130,7 +130,7 @@ export default function MultiRegionTrendChart({
             x={xAt(order)}
             y={H - 8}
             textAnchor="middle"
-            className={clsx("fill-slate-600 font-medium", n > 6 ? "text-[7px]" : "text-[8px]")}
+            className={clsx("fill-slate-700 dark:fill-slate-200 font-semibold", n > 6 ? "text-[9px]" : "text-[10px]")}
           >
             {xLabelByOrder.get(order) ?? String(order)}
           </text>
@@ -163,8 +163,8 @@ export default function MultiRegionTrendChart({
                       x={xAt(r.xOrder)}
                       y={yVal(v) - LABEL_ABOVE}
                       textAnchor="middle"
-                      className="fill-slate-800 font-semibold"
-                      style={{ fontSize: n > 5 ? "8px" : "9px" }}
+                      className="fill-slate-900 dark:fill-white font-bold"
+                      style={{ fontSize: n > 5 ? "11px" : "12px" }}
                     >
                       {formatPriceLabel(v)}
                     </text>

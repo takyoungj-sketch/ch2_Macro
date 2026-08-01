@@ -361,3 +361,31 @@ class CommercialRoadGeocodeResponse(BaseModel):
     label: Optional[str] = None
     cluster_key: Optional[str] = None
     error: Optional[str] = None
+
+
+class CommercialRoadMapPointRequest(BaseModel):
+    """도로명 cluster 대표점 지도 라벨 입력."""
+
+    cluster_key: str = Field(..., min_length=1, max_length=200)
+    label: str = Field(..., min_length=1, max_length=200)
+    addr1: str = Field(..., min_length=1)
+    addr2: str = Field(..., min_length=1)
+    road_name: str = Field(..., min_length=1)
+    addr3: Optional[str] = None
+    addr4: Optional[str] = None
+
+
+class CommercialRoadMapPointsRequest(BaseModel):
+    roads: list[CommercialRoadMapPointRequest] = Field(..., min_length=1, max_length=100)
+
+
+class CommercialRoadMapPoint(BaseModel):
+    cluster_key: str
+    label: str
+    longitude: float
+    latitude: float
+
+
+class CommercialRoadMapPointsResponse(BaseModel):
+    points: list[CommercialRoadMapPoint] = Field(default_factory=list)
+    unresolved: list[str] = Field(default_factory=list)

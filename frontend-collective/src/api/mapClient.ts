@@ -137,6 +137,36 @@ export async function geocodeCommercialRoad(
   return data;
 }
 
+export type CommercialRoadMapPointInput = {
+  cluster_key: string;
+  label: string;
+  addr1: string;
+  addr2: string;
+  road_name: string;
+  addr3?: string | null;
+  addr4?: string | null;
+};
+
+export type CommercialRoadMapPointsResponse = {
+  points: Array<{
+    cluster_key: string;
+    label: string;
+    longitude: number;
+    latitude: number;
+  }>;
+  unresolved: string[];
+};
+
+export async function fetchCommercialRoadMapPoints(
+  roads: CommercialRoadMapPointInput[],
+): Promise<CommercialRoadMapPointsResponse> {
+  const { data } = await commercialApi.post<CommercialRoadMapPointsResponse>(
+    "/roads/map-points",
+    { roads: roads.slice(0, 100) },
+  );
+  return data;
+}
+
 export type CollectiveBuildingGeocodeRequest = {
   addr1: string;
   addr2: string;
@@ -157,6 +187,35 @@ export type CollectiveBuildingGeocodeResponse = {
   building_key: string | null;
   error: string | null;
 };
+
+export type CollectiveBuildingMapPointInput = {
+  building_key: string;
+  label: string;
+  addr1: string;
+  addr2: string;
+  jibun_address?: string | null;
+  road_address?: string | null;
+};
+
+export type CollectiveBuildingMapPointsResponse = {
+  points: Array<{
+    building_key: string;
+    label: string;
+    longitude: number;
+    latitude: number;
+  }>;
+  unresolved: string[];
+};
+
+export async function fetchCollectiveBuildingMapPoints(
+  buildings: CollectiveBuildingMapPointInput[],
+): Promise<CollectiveBuildingMapPointsResponse> {
+  const { data } = await collectiveApi.post<CollectiveBuildingMapPointsResponse>(
+    "/buildings/map-points",
+    { buildings: buildings.slice(0, 100) },
+  );
+  return data;
+}
 
 export async function geocodeCollectiveBuilding(
   body: CollectiveBuildingGeocodeRequest,

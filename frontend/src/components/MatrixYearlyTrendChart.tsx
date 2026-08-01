@@ -2,14 +2,14 @@ import type { MatrixYearlyStat } from "../types";
 import { formatMatrixBucketAxisLabel } from "../utils/matrixYearlyLabels";
 
 const W = 420;
-const H = 230;
+const H = 270;
 const PAD_L = 28;
 const PAD_R = 28;
 const PAD_T = 44;
 const PAD_B = 42;
 
-const LABEL_MEAN_ABOVE = 10;
-const LABEL_COUNT_BELOW = 12;
+const LABEL_MEAN_ABOVE = 13;
+const LABEL_COUNT_BELOW = 15;
 
 function formatMeanLabel(v: number): string {
   return Number(v).toLocaleString("ko-KR", {
@@ -146,8 +146,8 @@ export default function MatrixYearlyTrendChart({
         viewBox={`0 0 ${chartW} ${H}`}
         className={
           scale > 1
-            ? "h-auto max-h-[240px] text-slate-500 shrink-0 [[data-fullscreen]_&]:max-h-[min(58vh,560px)]"
-            : "w-full h-auto max-h-[240px] text-slate-500 [[data-fullscreen]_&]:max-h-[min(58vh,560px)]"
+            ? "h-auto max-h-[300px] text-slate-500 shrink-0 [[data-fullscreen]_&]:max-h-[min(58vh,560px)]"
+            : "w-full h-auto max-h-[300px] text-slate-500 [[data-fullscreen]_&]:max-h-[min(58vh,560px)]"
         }
         width={scale > 1 ? chartW : undefined}
         preserveAspectRatio="xMidYMid meet"
@@ -192,7 +192,7 @@ export default function MatrixYearlyTrendChart({
             x={xAt(i)}
             y={H - 8}
             textAnchor="middle"
-            className={`fill-slate-600 font-medium ${n > 6 ? "text-[7.5px]" : "text-[9px]"}`}
+            className={`fill-slate-700 dark:fill-slate-200 font-semibold ${n > 6 ? "text-[9px]" : "text-[10px]"}`}
           >
             {formatMatrixBucketAxisLabel(r)}
           </text>
@@ -232,9 +232,9 @@ export default function MatrixYearlyTrendChart({
               y={yc + LABEL_COUNT_BELOW}
               textAnchor="middle"
               dominantBaseline="hanging"
-              className="fill-slate-400"
-              opacity={0.72}
-              style={{ fontSize: "9px" }}
+              className="fill-slate-700 dark:fill-slate-200 font-semibold"
+              opacity={0.95}
+              style={{ fontSize: "11px" }}
             >
               {r.count.toLocaleString("ko-KR")}
             </text>
@@ -276,8 +276,8 @@ export default function MatrixYearlyTrendChart({
                   y={cy - LABEL_MEAN_ABOVE}
                   textAnchor="middle"
                   dominantBaseline="auto"
-                  className="fill-slate-800 text-[10px] font-semibold tracking-tight"
-                  style={{ fontSize: "10px" }}
+                  className="fill-slate-900 dark:fill-white font-bold tracking-tight"
+                  style={{ fontSize: "12px" }}
                 >
                   {formatMeanLabel(ym)}
                 </text>

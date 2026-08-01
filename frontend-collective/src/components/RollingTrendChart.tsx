@@ -1,13 +1,13 @@
 import type { RollingStatPoint } from "../types";
 
 const W = 420;
-const H = 230;
+const H = 270;
 const PAD_L = 28;
 const PAD_R = 28;
-const PAD_T = 44;
-const PAD_B = 42;
-const LABEL_MEAN_ABOVE = 10;
-const LABEL_COUNT_BELOW = 12;
+const PAD_T = 52;
+const PAD_B = 48;
+const LABEL_MEAN_ABOVE = 13;
+const LABEL_COUNT_BELOW = 15;
 const COUNT_MARKER_STROKE = "#787f89";
 const COUNT_DASH_LINE = "#94a3b8";
 
@@ -82,14 +82,14 @@ export default function RollingTrendChart({ points }: { points: RollingStatPoint
           거래 건수
         </span>
       </p>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto max-h-[240px] text-slate-500" preserveAspectRatio="xMidYMid meet">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto max-h-[300px] text-slate-500" preserveAspectRatio="xMidYMid meet">
         {sorted.map((r, i) => (
           <text
             key={r.bucket_index}
             x={xAt(i)}
             y={H - 8}
             textAnchor="middle"
-            className={`fill-slate-600 font-medium ${n > 4 ? "text-[7px]" : "text-[8px]"}`}
+            className={`fill-slate-700 dark:fill-slate-200 font-semibold ${n > 4 ? "text-[9px]" : "text-[10px]"}`}
           >
             {r.label}
           </text>
@@ -106,9 +106,9 @@ export default function RollingTrendChart({ points }: { points: RollingStatPoint
             x={xAt(i)}
             y={yCount(r.count) + LABEL_COUNT_BELOW}
             textAnchor="middle"
-            className="fill-slate-400"
-            opacity={0.72}
-            style={{ fontSize: n > 4 ? "8px" : "9px" }}
+            className="fill-slate-700 dark:fill-slate-200 font-semibold"
+            opacity={0.95}
+            style={{ fontSize: n > 4 ? "10px" : "11px" }}
           >
             {r.count.toLocaleString("ko-KR")}
           </text>
@@ -139,8 +139,8 @@ export default function RollingTrendChart({ points }: { points: RollingStatPoint
                   x={xAt(idx)}
                   y={cy - LABEL_MEAN_ABOVE}
                   textAnchor="middle"
-                  className="fill-slate-800 font-semibold"
-                  style={{ fontSize: n > 4 ? "9px" : "10px" }}
+                  className="fill-slate-900 dark:fill-white font-bold"
+                  style={{ fontSize: n > 4 ? "11px" : "12px" }}
                 >
                   {formatMeanLabel(Number(r.mean))}
                 </text>

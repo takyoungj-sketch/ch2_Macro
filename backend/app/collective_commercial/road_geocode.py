@@ -10,6 +10,9 @@ import urllib.request
 from functools import lru_cache
 from typing import Any, Optional
 
+from sqlalchemy import text
+from sqlalchemy.engine import Connection
+
 _LOG = logging.getLogger(__name__)
 
 VWORLD_SEARCH_URL = "https://api.vworld.kr/req/search"
@@ -183,3 +186,120 @@ def geocode_commercial_road(
         "category": category,
         "error": None,
     }
+
+
+def resolve_commercial_map_points(
+    conn: Connection,
+    *,
+    api_key: str,
+    roads: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """도로명 cluster 대표점을 지오코딩하고 DB에 캐시한다."""
+    table = conn.execute(
+        text("SELECT to_regclass('public.collective_commercial_map_geocodes')::text")
+    ).scalar()
+    if not table:
+        raise RuntimeError(
+            "collective_commercial_map_geocodes 테이블이 없습니다. "
+            "db/030 적용 필요"
+        )
+
+    keys = [str(item["cluster_key"]).strip() for item in roads]
+    cached = {
+        str(row["cluster_key"]): row
+        for row in conn.execute(
+            text(
+                """
+                SELECT cluster_key, label, longitude, latitude, status
+                FROM collective_commercial_map_geocodes
+                WHERE cluster_key = ANY(:keys)
+                """
+            ),
+            {"keys": keys},
+        ).mappings()
+    }
+
+    points: list[dict[str, Any]] = []
+    unresolved: list[str] = []
+    for item in roads:
+        key = str(item["cluster_key"]).strip()
+        label = str(item.get("label") or item.get("road_name") or key).strip()
+        row = cached.get(key)
+        if row and row["status"] == "ok" and row["longitude"] is not None:
+            points.append(
+                {
+                    "cluster_key": key,
+                    "label": str(row["label"] or label),
+                    "longitude": float(row["longitude"]),
+                    "latitude": float(row["latitude"]),
+                }
+            )
+            continue
+
+        query = build_road_query(
+            addr1=str(item.get("addr1") or ""),
+            addr2=str(item.get("addr2") or ""),
+            addr3=str(item.get("addr3") or ""),
+            addr4=str(item.get("addr4") or ""),
+            road_name=str(item.get("road_name") or ""),
+        )
+        result = geocode_commercial_road(
+            api_key=api_key,
+            addr1=str(item.get("addr1") or ""),
+            addr2=str(item.get("addr2") or ""),
+            addr3=str(item.get("addr3") or ""),
+            addr4=str(item.get("addr4") or ""),
+            road_name=str(item.get("road_name") or ""),
+        )
+        status = "ok" if result.get("ok") else "not_found"
+        conn.execute(
+            text(
+                """
+                INSERT INTO collective_commercial_map_geocodes (
+                    cluster_key, label, normalized_query, longitude, latitude,
+                    matched_name, category, status, error, geocoded_at, updated_at
+                ) VALUES (
+                    :key, :label, :query, :longitude, :latitude, :matched,
+                    :category, :status, :error,
+                    CASE WHEN :ok THEN NOW() ELSE NULL END, NOW()
+                )
+                ON CONFLICT (cluster_key) DO UPDATE SET
+                    label = EXCLUDED.label,
+                    normalized_query = EXCLUDED.normalized_query,
+                    longitude = EXCLUDED.longitude,
+                    latitude = EXCLUDED.latitude,
+                    matched_name = EXCLUDED.matched_name,
+                    category = EXCLUDED.category,
+                    status = EXCLUDED.status,
+                    error = EXCLUDED.error,
+                    geocoded_at = EXCLUDED.geocoded_at,
+                    updated_at = NOW()
+                """
+            ),
+            {
+                "key": key,
+                "label": label,
+                "query": query,
+                "longitude": result.get("longitude"),
+                "latitude": result.get("latitude"),
+                "matched": result.get("matched_name"),
+                "category": result.get("category"),
+                "status": status,
+                "error": result.get("error"),
+                "ok": bool(result.get("ok")),
+            },
+        )
+        if result.get("ok") and result.get("longitude") is not None:
+            points.append(
+                {
+                    "cluster_key": key,
+                    "label": label,
+                    "longitude": float(result["longitude"]),
+                    "latitude": float(result["latitude"]),
+                }
+            )
+        else:
+            unresolved.append(key)
+
+    conn.commit()
+    return points, unresolved
