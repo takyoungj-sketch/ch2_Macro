@@ -1,11 +1,11 @@
 import type { HistogramBin } from "../types";
 
 const W = 520;
-const H = 248;
+const H = 270;
 const PAD_L = 40;
 const PAD_R = 14;
-const PAD_T = 16;
-const PAD_B = 28;
+const PAD_T = 22;
+const PAD_B = 38;
 
 function shortNum(v: number): string {
   if (!Number.isFinite(v)) return "—";
@@ -24,12 +24,12 @@ export default function HistogramChart({ bins }: { bins: HistogramBin[] }) {
   const gap = n > 24 ? 0.5 : n > 14 ? 1 : 2;
   const barW = Math.max((innerW - gap * (n - 1)) / n, 2);
   const labelEvery = n <= 8 ? 1 : n <= 16 ? 2 : Math.ceil(n / 5);
-  const tickFontPx = n > 20 ? 9 : n > 12 ? 10 : 11;
+  const tickFontPx = n > 20 ? 10 : n > 12 ? 11 : 12;
 
   return (
     <div className="w-full" role="img" aria-label="단가 분포 히스토그램">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto max-h-[260px] text-slate-500" preserveAspectRatio="xMidYMid meet">
-        <text x={PAD_L} y={12} className="fill-slate-600 text-[10px] font-medium">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto max-h-[300px] text-slate-500" preserveAspectRatio="xMidYMid meet">
+        <text x={PAD_L} y={16} className="fill-slate-700 dark:fill-slate-200 text-[11px] font-semibold">
           빈도 (건)
         </text>
         {bins.map((b, i) => {
@@ -55,7 +55,7 @@ export default function HistogramChart({ bins }: { bins: HistogramBin[] }) {
           if (i % labelEvery !== 0 && i !== n - 1) return null;
           const x = PAD_L + i * (barW + gap) + barW / 2;
           return (
-            <text key={`l-${i}`} x={x} y={H - 6} textAnchor="middle" className="fill-slate-600" style={{ fontSize: `${tickFontPx}px` }}>
+            <text key={`l-${i}`} x={x} y={H - 8} textAnchor="middle" className="fill-slate-800 dark:fill-white font-semibold" style={{ fontSize: `${tickFontPx}px` }}>
               {shortNum(b.lo)}
             </text>
           );

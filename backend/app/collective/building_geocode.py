@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from sqlalchemy import text
+from sqlalchemy.engine import Connection
+
 from app.collective_commercial.road_geocode import geocode_vworld_cached
 
 
@@ -60,3 +63,130 @@ def geocode_collective_building(
         "category": category,
         "error": None,
     }
+
+
+def _normalize_address(value: str | None) -> str:
+    return " ".join((value or "").split()).strip()
+
+
+def resolve_building_map_points(
+    conn: Connection,
+    *,
+    api_key: str,
+    buildings: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """주소를 지오코딩하고 결과를 DB에 캐시한다.
+
+    지도 최초 조회에서만 VWorld를 호출하고, 이후에는 building_key 캐시를
+    사용한다. 호출량을 제한하기 위해 API 스키마에서 최대 100건을 받는다.
+    """
+    table = conn.execute(
+        text("SELECT to_regclass('public.collective_building_geocodes')::text")
+    ).scalar()
+    if not table:
+        raise RuntimeError("collective_building_geocodes 테이블이 없습니다. db/029 적용 필요")
+
+    keys = [str(item["building_key"]).strip() for item in buildings]
+    cached = {
+        str(row["building_key"]): row
+        for row in conn.execute(
+            text(
+                """
+                SELECT building_key, label, longitude, latitude, status
+                FROM collective_building_geocodes
+                WHERE building_key = ANY(:keys)
+                """
+            ),
+            {"keys": keys},
+        ).mappings()
+    }
+
+    points: list[dict[str, Any]] = []
+    unresolved: list[str] = []
+    for item in buildings:
+        key = str(item["building_key"]).strip()
+        label = _normalize_address(str(item.get("label") or "")) or key
+        row = cached.get(key)
+        if row and row["status"] == "ok" and row["longitude"] is not None:
+            points.append(
+                {
+                    "building_key": key,
+                    "label": str(row["label"] or label),
+                    "longitude": float(row["longitude"]),
+                    "latitude": float(row["latitude"]),
+                }
+            )
+            continue
+
+        jibun = _normalize_address(item.get("jibun_address"))
+        road = _normalize_address(item.get("road_address"))
+        result = geocode_collective_building(
+            api_key=api_key,
+            addr1=_normalize_address(item.get("addr1")),
+            addr2=_normalize_address(item.get("addr2")),
+            jibun_address=jibun or None,
+            road_address=road or None,
+        )
+        status = "ok" if result.get("ok") else "not_found"
+        conn.execute(
+            text(
+                """
+                INSERT INTO collective_building_geocodes (
+                    building_key, label, jibun_address, normalized_address,
+                    longitude, latitude, matched_name, category, status,
+                    error, geocoded_at, updated_at
+                ) VALUES (
+                    :key, :label, :jibun, :normalized, :longitude, :latitude,
+                    :matched, :category, :status, :error,
+                    CASE WHEN :ok THEN NOW() ELSE NULL END, NOW()
+                )
+                ON CONFLICT (building_key) DO UPDATE SET
+                    label = EXCLUDED.label,
+                    jibun_address = EXCLUDED.jibun_address,
+                    normalized_address = EXCLUDED.normalized_address,
+                    longitude = EXCLUDED.longitude,
+                    latitude = EXCLUDED.latitude,
+                    matched_name = EXCLUDED.matched_name,
+                    category = EXCLUDED.category,
+                    status = EXCLUDED.status,
+                    error = EXCLUDED.error,
+                    geocoded_at = EXCLUDED.geocoded_at,
+                    updated_at = NOW()
+                """
+            ),
+            {
+                "key": key,
+                "label": label,
+                "jibun": jibun or None,
+                "normalized": " ".join(
+                    p
+                    for p in (
+                        _normalize_address(item.get("addr1")),
+                        _normalize_address(item.get("addr2")),
+                        jibun or road,
+                    )
+                    if p
+                ),
+                "longitude": result.get("longitude"),
+                "latitude": result.get("latitude"),
+                "matched": result.get("matched_name"),
+                "category": result.get("category"),
+                "status": status,
+                "error": result.get("error"),
+                "ok": bool(result.get("ok")),
+            },
+        )
+        if result.get("ok") and result.get("longitude") is not None:
+            points.append(
+                {
+                    "building_key": key,
+                    "label": label,
+                    "longitude": float(result["longitude"]),
+                    "latitude": float(result["latitude"]),
+                }
+            )
+        else:
+            unresolved.append(key)
+
+    conn.commit()
+    return points, unresolved

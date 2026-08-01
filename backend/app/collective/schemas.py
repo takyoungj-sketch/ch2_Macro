@@ -93,6 +93,35 @@ class CollectiveBuildingGeocodeResponse(BaseModel):
     error: Optional[str] = None
 
 
+class CollectiveBuildingMapPointRequest(BaseModel):
+    """지도 라벨용 건물 주소 입력."""
+
+    building_key: str = Field(..., min_length=1, max_length=200)
+    label: str = Field(..., min_length=1, max_length=200)
+    addr1: str = Field(..., min_length=1)
+    addr2: str = Field(..., min_length=1)
+    jibun_address: Optional[str] = None
+    road_address: Optional[str] = None
+
+
+class CollectiveBuildingMapPointsRequest(BaseModel):
+    """선택 지역 건물들의 좌표를 일괄 조회·캐시."""
+
+    buildings: list[CollectiveBuildingMapPointRequest] = Field(..., min_length=1, max_length=100)
+
+
+class CollectiveBuildingMapPoint(BaseModel):
+    building_key: str
+    label: str
+    longitude: float
+    latitude: float
+
+
+class CollectiveBuildingMapPointsResponse(BaseModel):
+    points: list[CollectiveBuildingMapPoint] = Field(default_factory=list)
+    unresolved: list[str] = Field(default_factory=list)
+
+
 class BuildingListResponse(BaseModel):
     total: int
     items: list[BuildingStatsRow]

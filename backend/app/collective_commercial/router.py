@@ -36,7 +36,10 @@ from app.collective_commercial.tx_rows import apply_commercial_tx_period, commer
 from app.collective.region_structure import detect_region_structure
 from app.collective.resolve_codes import resolve_collective_map_codes
 from app.collective.schemas import CollectiveMapResolveCodesResponse, RegionOption, RegionStructureResponse
-from app.collective_commercial.road_geocode import geocode_commercial_road
+from app.collective_commercial.road_geocode import (
+    geocode_commercial_road,
+    resolve_commercial_map_points,
+)
 from app.collective_commercial.schemas import (
     CommercialAddressListResponse,
     CommercialAddressRow,
@@ -51,6 +54,8 @@ from app.collective_commercial.schemas import (
     CommercialRegressionResponse,
     CommercialRoadGeocodeRequest,
     CommercialRoadGeocodeResponse,
+    CommercialRoadMapPointsRequest,
+    CommercialRoadMapPointsResponse,
     CommercialRollingStatPoint,
     CommercialRollingStatsResponse,
     CommercialTransactionListResponse,
@@ -342,6 +347,28 @@ def geocode_road_for_map(body: CommercialRoadGeocodeRequest):
         cluster_key=body.cluster_key,
         error=result.get("error"),
     )
+
+
+@router.post("/roads/map-points", response_model=CommercialRoadMapPointsResponse)
+def map_points_for_roads(
+    body: CommercialRoadMapPointsRequest,
+    db: Session = Depends(get_collective_db),
+):
+    """선택 지역 도로명 cluster 대표점 — 지오코딩 결과는 DB에 캐시."""
+    if db is None:
+        raise HTTPException(503, "collective_stats DB 미연결")
+    key = (settings.vworld_api_key or "").strip()
+    if not key:
+        raise HTTPException(503, "VWORLD_API_KEY가 설정되지 않았습니다.")
+    try:
+        points, unresolved = resolve_commercial_map_points(
+            db.connection(),
+            api_key=key,
+            roads=[item.model_dump() for item in body.roads],
+        )
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    return CommercialRoadMapPointsResponse(points=points, unresolved=unresolved)
 
 
 @router.get("/clusters", response_model=CommercialClusterListResponse)

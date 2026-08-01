@@ -560,10 +560,9 @@ export default function BuiltRegionMapHub({
       const el = document.createElement("span");
       el.textContent = text;
       el.className = selected
-        ? "absolute left-0 top-0 whitespace-nowrap text-[11px] font-bold leading-none text-amber-900"
-        : "absolute left-0 top-0 whitespace-nowrap text-[11px] font-bold leading-none text-slate-900";
-      el.style.textShadow =
-        "0 0 2px #fff, 0 0 3px #fff, 1px 0 0 #fff, -1px 0 0 #fff, 0 1px 0 #fff, 0 -1px 0 #fff";
+        ? "absolute left-0 top-0 whitespace-nowrap rounded bg-amber-300/95 px-1.5 py-0.5 text-[11px] font-bold leading-none text-slate-950 shadow-md ring-1 ring-amber-950/40"
+        : "absolute left-0 top-0 whitespace-nowrap rounded bg-slate-950/80 px-1.5 py-0.5 text-[11px] font-bold leading-none text-white shadow-md ring-1 ring-white/70";
+      el.style.textShadow = "0 1px 2px rgba(0,0,0,0.9)";
       el.style.willChange = "transform";
       layer.appendChild(el);
       nodes.set(key, { el, lng, lat });

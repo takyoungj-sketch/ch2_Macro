@@ -16,7 +16,9 @@ import MapGL, {
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import {
+  fetchCollectiveBuildingMapPoints,
   fetchCollectiveMapResolveCodes,
+  fetchCommercialRoadMapPoints,
   fetchMapBoundaries,
   fetchMapConfig,
   geocodeCollectiveBuilding,
@@ -41,6 +43,8 @@ export type CommercialRoadLabelInput = {
   addr4?: string | null;
 };
 
+export type CommercialRoadMapInput = CommercialRoadLabelInput;
+
 /** 주거 지도 — 선택 건물 지번 라벨 */
 export type CollectiveBuildingLabelInput = {
   buildingKey: string;
@@ -50,6 +54,8 @@ export type CollectiveBuildingLabelInput = {
   addr1: string;
   addr2: string;
 };
+
+export type CollectiveBuildingMapInput = CollectiveBuildingLabelInput;
 
 export type CollectiveMapScopeInput = {
   assetType: string;
@@ -76,8 +82,12 @@ type Props = {
   commercial?: boolean;
   /** 상업: 선택 도로(cluster) 지오코딩 라벨 */
   selectedRoads?: CommercialRoadLabelInput[];
+  /** 상업: 현재 목록의 도로명 cluster — 확대 시 대표점 라벨 */
+  roadCandidates?: CommercialRoadMapInput[];
   /** 주거: 선택 건물 지번 지오코딩 라벨 */
   selectedBuildings?: CollectiveBuildingLabelInput[];
+  /** 주거: 현재 목록 건물 — 확대 시 건물명 라벨 */
+  buildingCandidates?: CollectiveBuildingMapInput[];
 };
 
 type ContextMenuState = {
@@ -299,11 +309,15 @@ export default function CollectiveRegionMapHub({
   commercial = false,
   selectedRoads = [],
   selectedBuildings = [],
+  buildingCandidates = [],
+  roadCandidates = [],
 }: Props) {
   const mapRef = useRef<MapRef | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const labelLayerRef = useRef<HTMLDivElement | null>(null);
-  const labelNodesRef = useRef<Map<string, { el: HTMLSpanElement; lng: number; lat: number }>>(
+  const labelNodesRef = useRef<
+    Map<string, { el: HTMLSpanElement; lng: number; lat: number; minZoom: number }>
+  >(
     new Map(),
   );
   const lastFitKeyRef = useRef("");
@@ -399,6 +413,28 @@ export default function CollectiveRegionMapHub({
     retry: 1,
   });
 
+  const roadMapPointsQ = useQuery({
+    queryKey: [
+      "collective-commercial-road-map-points",
+      roadCandidates.map((road) => road.clusterKey).join(","),
+    ],
+    queryFn: () =>
+      fetchCommercialRoadMapPoints(
+        roadCandidates.map((road) => ({
+          cluster_key: road.clusterKey,
+          label: road.label,
+          addr1: road.addr1,
+          addr2: road.addr2,
+          road_name: road.roadName,
+          addr3: road.addr3,
+          addr4: road.addr4,
+        })),
+      ),
+    enabled: commercial && roadCandidates.length > 0 && Boolean(configQ.data?.vworld_configured),
+    staleTime: 30 * 60_000,
+    retry: 1,
+  });
+
   const buildingGeocodeQ = useQuery({
     queryKey: [
       "collective-building-geocode",
@@ -425,6 +461,27 @@ export default function CollectiveRegionMapHub({
         (primaryBuilding.jibunAddress || primaryBuilding.roadAddress),
     ),
     staleTime: 10 * 60_000,
+    retry: 1,
+  });
+
+  const buildingMapPointsQ = useQuery({
+    queryKey: [
+      "collective-building-map-points",
+      buildingCandidates.map((b) => b.buildingKey).join(","),
+    ],
+    queryFn: () =>
+      fetchCollectiveBuildingMapPoints(
+        buildingCandidates.map((b) => ({
+          building_key: b.buildingKey,
+          label: b.label,
+          addr1: b.addr1,
+          addr2: b.addr2,
+          jibun_address: b.jibunAddress,
+          road_address: b.roadAddress,
+        })),
+      ),
+    enabled: !commercial && buildingCandidates.length > 0 && Boolean(configQ.data?.vworld_configured),
+    staleTime: 30 * 60_000,
     retry: 1,
   });
 
@@ -605,19 +662,56 @@ export default function CollectiveRegionMapHub({
       const el = document.createElement("span");
       el.textContent = text;
       el.className = selected
-        ? "absolute left-0 top-0 whitespace-nowrap text-[11px] font-bold leading-none text-amber-900"
-        : "absolute left-0 top-0 whitespace-nowrap text-[11px] font-bold leading-none text-slate-900";
+        ? "absolute left-0 top-0 whitespace-nowrap rounded bg-amber-300/95 px-1.5 py-0.5 text-[11px] font-bold leading-none text-slate-950 shadow-md ring-1 ring-amber-950/40"
+        : "absolute left-0 top-0 whitespace-nowrap rounded bg-slate-950/80 px-1.5 py-0.5 text-[11px] font-bold leading-none text-white shadow-md ring-1 ring-white/70";
       el.style.textShadow =
-        "0 0 2px #fff, 0 0 3px #fff, 1px 0 0 #fff, -1px 0 0 #fff, 0 1px 0 #fff, 0 -1px 0 #fff";
+        "0 1px 2px rgba(0,0,0,0.9)";
       el.style.willChange = "transform";
       layer.appendChild(el);
-      nodes.set(key, { el, lng, lat });
+      nodes.set(key, { el, lng, lat, minZoom: 0 });
+    }
+
+    for (const point of buildingMapPointsQ.data?.points ?? []) {
+      const el = document.createElement("span");
+      el.textContent = point.label;
+      el.className =
+        "absolute left-0 top-0 z-10 whitespace-nowrap rounded bg-slate-950/85 px-1.5 py-0.5 text-[12px] font-bold leading-none text-white shadow-md ring-1 ring-white/80";
+      el.style.textShadow = "0 1px 2px rgba(0,0,0,0.95)";
+      el.style.willChange = "transform";
+      layer.appendChild(el);
+      nodes.set(`building:${point.building_key}`, {
+        el,
+        lng: point.longitude,
+        lat: point.latitude,
+        minZoom: 14.5,
+      });
+    }
+
+    for (const point of roadMapPointsQ.data?.points ?? []) {
+      const el = document.createElement("span");
+      el.textContent = point.label;
+      el.className =
+        "absolute left-0 top-0 z-10 whitespace-nowrap rounded bg-slate-950/85 px-1.5 py-0.5 text-[12px] font-bold leading-none text-white shadow-md ring-1 ring-white/80";
+      el.style.textShadow = "0 1px 2px rgba(0,0,0,0.95)";
+      el.style.willChange = "transform";
+      layer.appendChild(el);
+      nodes.set(`road:${point.cluster_key}`, {
+        el,
+        lng: point.longitude,
+        lat: point.latitude,
+        minZoom: 14.5,
+      });
     }
 
     const syncPositions = () => {
       const w = map.getCanvas().clientWidth;
       const h = map.getCanvas().clientHeight;
-      for (const { el, lng, lat } of nodes.values()) {
+      const zoom = map.getZoom();
+      for (const { el, lng, lat, minZoom } of nodes.values()) {
+        if (zoom < minZoom) {
+          el.style.display = "none";
+          continue;
+        }
         const p = map.project([lng, lat]);
         const visible = p.x >= -48 && p.y >= -24 && p.x <= w + 48 && p.y <= h + 24;
         el.style.display = visible ? "" : "none";
@@ -637,7 +731,7 @@ export default function CollectiveRegionMapHub({
       nodes.clear();
       layer.replaceChildren();
     };
-  }, [mapReady, labelGeoJson]);
+  }, [buildingMapPointsQ.data?.points, labelGeoJson, mapReady, roadMapPointsQ.data?.points]);
 
   const tileUrl = useMemo(() => {
     if (VWORLD_KEY) return vworldSatelliteTileUrl(VWORLD_KEY);

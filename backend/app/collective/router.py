@@ -56,13 +56,18 @@ from app.collective.transaction_export import (
 from app.collective.region_structure import detect_region_structure
 from app.collective.resolve_codes import resolve_collective_map_codes
 from app.region_catalog import list_gu_options, list_leaf_options
-from app.collective.building_geocode import geocode_collective_building
+from app.collective.building_geocode import (
+    geocode_collective_building,
+    resolve_building_map_points,
+)
 from app.collective.schemas import (
     AnalysisExplain,
     AnalysisFeatures,
     BuildingListResponse,
     CollectiveBuildingGeocodeRequest,
     CollectiveBuildingGeocodeResponse,
+    CollectiveBuildingMapPointsRequest,
+    CollectiveBuildingMapPointsResponse,
     CollectiveFilterMeta,
     CollectiveMapResolveCodesResponse,
     CollectiveRegressionPredictRequest,
@@ -322,6 +327,28 @@ def geocode_building_for_map(body: CollectiveBuildingGeocodeRequest):
         building_key=body.building_key,
         error=result.get("error"),
     )
+
+
+@router.post("/buildings/map-points", response_model=CollectiveBuildingMapPointsResponse)
+def map_points_for_buildings(
+    body: CollectiveBuildingMapPointsRequest,
+    db: Session = Depends(get_collective_db),
+):
+    """선택 지역 건물명 지도 라벨 좌표 — 지오코딩 결과는 DB에 캐시."""
+    if db is None:
+        raise HTTPException(503, "collective_stats DB 미연결")
+    key = (settings.vworld_api_key or "").strip()
+    if not key:
+        raise HTTPException(503, "VWORLD_API_KEY가 설정되지 않았습니다.")
+    try:
+        points, unresolved = resolve_building_map_points(
+            db.connection(),
+            api_key=key,
+            buildings=[item.model_dump() for item in body.buildings],
+        )
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    return CollectiveBuildingMapPointsResponse(points=points, unresolved=unresolved)
 
 
 @router.get("/buildings", response_model=BuildingListResponse)
