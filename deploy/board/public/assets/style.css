@@ -58,6 +58,25 @@ body {
   line-height: 1.6;
 }
 
+.auth-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.auth-bar__user {
+  font-size: 0.875rem;
+  color: #334155;
+  font-weight: 600;
+}
+
+.btn--sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.875rem;
+}
+
 .notice {
   margin-bottom: 1rem;
   padding: 0.875rem 1rem;

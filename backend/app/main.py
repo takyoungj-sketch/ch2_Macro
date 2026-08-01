@@ -77,7 +77,19 @@ async def _api_token_guard(request: Request, call_next):
         return await call_next(request)
     # 헬스체크·OpenAPI 문서·preflight 는 보호 대상 아님.
     open_paths = {"/health", "/openapi.json", "/docs", "/redoc"}
+    path = request.url.path
     if request.url.path in open_paths or request.method == "OPTIONS":
+        return await call_next(request)
+    # 플랫폼 — OAuth·공개 게시판 읽기·요금제·AI 프록시(device_id)
+    if path.startswith("/api/auth/") or path.startswith("/api/billing/plans"):
+        return await call_next(request)
+    if path.startswith("/api/board/") and request.method == "GET":
+        return await call_next(request)
+    if path.startswith("/api/platform/fieldnote/ai/"):
+        return await call_next(request)
+    if path.startswith("/api/billing/play/rtdn") or path.startswith("/api/billing/toss/webhook"):
+        return await call_next(request)
+    if path == "/api/billing/play/verify":
         return await call_next(request)
     # nginx가 /api/ 프록시 시 X-CH2-Proxy-Token 을 주입(클라이언트 헤더 덮어씀).
     sent = (
@@ -118,6 +130,18 @@ from app.ai.router import router as ai_router
 
 app.include_router(ai_router, prefix="/api")
 _LOG.info("CH2 AI API 활성: /api/ai/*")
+
+if (settings.platform_database_url or "").strip():
+    from app.platform.auth_router import router as platform_auth_router
+    from app.platform.board_router import router as platform_board_router
+    from app.platform.billing_router import router as platform_billing_router
+    from app.platform.fieldnote_ai_router import router as platform_fieldnote_ai_router
+
+    app.include_router(platform_auth_router, prefix="/api")
+    app.include_router(platform_board_router, prefix="/api")
+    app.include_router(platform_billing_router, prefix="/api")
+    app.include_router(platform_fieldnote_ai_router, prefix="/api/platform")
+    _LOG.info("CH2 Platform API 활성: /api/auth/*, /api/board/*, /api/billing/*")
 
 
 # 폐기 일정 헤더 — RFC 8594 Sunset. V1 통계 경로(/free/stats/*)에만 적용.

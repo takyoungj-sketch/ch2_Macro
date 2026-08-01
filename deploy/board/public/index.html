@@ -21,6 +21,11 @@
         <p class="topbar__lead">
           Macro · FieldNote · Viewer 공통 — 질문, 오류 보고, 기능 개선 건의
         </p>
+        <div class="auth-bar" id="auth-bar">
+          <span id="auth-user" class="auth-bar__user" hidden></span>
+          <button type="button" class="btn btn--ghost btn--sm" id="login-btn">Google 로그인</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="logout-btn" hidden>로그아웃</button>
+        </div>
       </header>
 
       <section class="notice" id="auth-notice" hidden>
@@ -77,9 +82,9 @@
                 </select>
               </label>
             </div>
-            <label class="field">
+            <label class="field author-field" hidden>
               <span>작성자</span>
-              <input name="author_name" type="text" maxlength="80" required placeholder="이름 또는 닉네임" />
+              <input name="author_name" type="text" maxlength="80" placeholder="이름 또는 닉네임" />
             </label>
             <label class="field">
               <span>제목</span>
@@ -124,9 +129,9 @@
           <h2 class="panel__title">댓글</h2>
           <ul class="comment-list" id="comment-list"></ul>
           <form id="comment-form" class="form form--compact">
-            <label class="field">
+            <label class="field author-field" hidden>
               <span>작성자</span>
-              <input name="author_name" type="text" maxlength="80" required />
+              <input name="author_name" type="text" maxlength="80" />
             </label>
             <label class="field">
               <span>댓글</span>

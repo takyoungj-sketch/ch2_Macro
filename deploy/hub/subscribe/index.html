@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Macro 구독 | CH2 DATA</title>
+    <meta name="description" content="CH2 Macro 웹 구독 — 토스페이먼츠 연동" />
+    <link rel="stylesheet" href="/style.css" />
+    <style>
+      .plan-grid { display: grid; gap: 1rem; margin-top: 1rem; }
+      @media (min-width: 640px) { .plan-grid { grid-template-columns: repeat(2, 1fr); } }
+      .plan-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        background: #fff;
+      }
+      .plan-card h3 { margin: 0 0 0.5rem; }
+      .plan-card p { margin: 0 0 1rem; color: #475569; }
+      .plan-card button {
+        width: 100%;
+        padding: 0.65rem 1rem;
+        border: 0;
+        border-radius: 8px;
+        background: #2563eb;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .auth-row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin: 1rem 0; }
+      .auth-row button {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        cursor: pointer;
+      }
+      #status { color: #334155; font-size: 0.9375rem; }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero hero--document">
+        <p class="hero__eyebrow">CH2 Macro Pro</p>
+        <h1 class="hero__title">웹 구독</h1>
+        <p class="hero__lead">Google 로그인 후 Macro Pro · 번들 플랜을 결제할 수 있습니다.</p>
+      </header>
+
+      <main class="policy-card">
+        <div class="auth-row">
+          <button type="button" id="login-btn">Google 로그인</button>
+          <button type="button" id="logout-btn" hidden>로그아웃</button>
+          <span id="status">로그인이 필요합니다.</span>
+        </div>
+        <div class="plan-grid" id="plan-grid"></div>
+        <p class="policy-meta" style="margin-top: 1.5rem">
+          결제는 토스페이먼츠 웹 PG와 연동됩니다. 운영 키 연동 전에는 테스트 webhook으로 entitlement가 부여될 수
+          있습니다. 자세한 내용은 <a href="/subscription/">구독 정책</a>을 참고하세요.
+        </p>
+      </main>
+
+      <footer class="footer">
+        <nav class="footer__links">
+          <a href="https://macro.ch2data.com/">Macro 서비스</a>
+          <a href="/refund/">환불 정책</a>
+        </nav>
+        <p>© CH2 DATA</p>
+      </footer>
+    </div>
+    <script>
+      const AUTH = "/api/auth";
+      const BILLING = "/api/billing";
+      let me = null;
+
+      async function refreshAuth() {
+        const res = await fetch(`${AUTH}/status`, { credentials: "include" });
+        const data = await res.json();
+        me = data.logged_in ? data : null;
+        document.getElementById("login-btn").hidden = Boolean(me);
+        document.getElementById("logout-btn").hidden = !me;
+        document.getElementById("status").textContent = me
+          ? `${me.nickname}님 — Macro Pro 구독 가능`
+          : "로그인이 필요합니다.";
+      }
+
+      async function loadPlans() {
+        const res = await fetch(`${BILLING}/plans`);
+        const data = await res.json();
+        const grid = document.getElementById("plan-grid");
+        grid.replaceChildren();
+        for (const plan of data.plans.filter((p) => p.product === "macro" || p.product === "bundle")) {
+          const card = document.createElement("div");
+          card.className = "plan-card";
+          card.innerHTML = `<h3>${plan.product === "bundle" ? "번들" : "Macro"} ${plan.interval === "year" ? "연간" : "월간"}</h3><p>${plan.price.toLocaleString()}원</p>`;
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.textContent = "결제 (토스 연동)";
+          btn.addEventListener("click", () => checkout(plan));
+          card.appendChild(btn);
+          grid.appendChild(card);
+        }
+      }
+
+      async function checkout(plan) {
+        if (!me) {
+          alert("Google 로그인 후 진행해 주세요.");
+          return;
+        }
+        const meRes = await fetch(`${AUTH}/me`, { credentials: "include" });
+        const profile = await meRes.json();
+        const orderId = `macro-${plan.id}-${Date.now()}`;
+        const res = await fetch(`${BILLING}/toss/webhook`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId,
+            product: plan.product,
+            user_id: profile.id,
+            amount: plan.price,
+          }),
+        });
+        if (!res.ok) {
+          alert("결제 처리에 실패했습니다.");
+          return;
+        }
+        alert("구독이 활성화되었습니다. Macro에서 Pro 기능을 이용할 수 있습니다.");
+      }
+
+      document.getElementById("login-btn").addEventListener("click", () => {
+        location.href = `${AUTH}/google/login?state=${encodeURIComponent("/subscribe/")}`;
+      });
+      document.getElementById("logout-btn").addEventListener("click", async () => {
+        await fetch(`${AUTH}/logout`, { method: "POST", credentials: "include" });
+        await refreshAuth();
+      });
+
+      refreshAuth().then(loadPlans);
+    </script>
+  </body>
+</html>

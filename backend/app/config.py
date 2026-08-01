@@ -67,6 +67,20 @@ class Settings(BaseSettings):
     vworld_api_key: str = Field(default="", validation_alias="VWORLD_API_KEY")
     vworld_api_domain: str = Field(default="localhost", validation_alias="VWORLD_API_DOMAIN")
 
+    #: ch2_platform — 통합 회원·게시판·구독 (Macro 통계 DB와 분리)
+    platform_database_url: str = Field(default="", validation_alias="DATABASE_URL_PLATFORM")
+    google_client_id: str = Field(default="", validation_alias="GOOGLE_CLIENT_ID")
+    google_client_secret: str = Field(default="", validation_alias="GOOGLE_CLIENT_SECRET")
+    google_oauth_redirect_uri: str = Field(
+        default="https://ch2data.com/api/auth/google/callback",
+        validation_alias="GOOGLE_OAUTH_REDIRECT_URI",
+    )
+    platform_cookie_domain: str = Field(default=".ch2data.com", validation_alias="PLATFORM_COOKIE_DOMAIN")
+    platform_cookie_secure: bool = Field(default=True, validation_alias="PLATFORM_COOKIE_SECURE")
+    fieldnote_ai_monthly_quota: int = Field(default=50, validation_alias="FIELDNOTE_AI_MONTHLY_QUOTA")
+    #: 토스페이먼츠 웹훅 서명 검증용 (Phase 3)
+    toss_webhook_secret: str = Field(default="", validation_alias="TOSS_WEBHOOK_SECRET")
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",")]

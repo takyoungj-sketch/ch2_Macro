@@ -138,6 +138,7 @@ export default function DraggableModalShell({
   const preFullscreenBoxRef = useRef<PanelBox | null>(null);
   const [box, setBox] = useState<PanelBox | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [minimized, setMinimized] = useState(false);
   const [fontStep, setFontStep] = useState(readStoredModalFontStep);
   const modalZoom = MODAL_FONT_SCALE_STEPS[clampModalFontStep(fontStep)];
   const fontPct = Math.round(modalZoom * 100);
@@ -156,6 +157,7 @@ export default function DraggableModalShell({
     if (!open) {
       setBox(null);
       setFullscreen(false);
+      setMinimized(false);
       preFullscreenBoxRef.current = null;
       return;
     }
@@ -370,24 +372,46 @@ export default function DraggableModalShell({
   if (!open) return null;
 
   const panelStyle: CSSProperties = box
-    ? {
-        left: box.x,
-        top: box.y,
-        width: box.w,
-        height: box.h,
-        maxWidth: "none",
-        maxHeight: "none",
-        transform: "none",
-      }
-    : {
-        left: "50%",
-        top: "50%",
-        transform: "translate(-50%, -50%)",
-      };
+    ? minimized
+      ? {
+          left: 16,
+          bottom: 16,
+          width: "min(420px, calc(100vw - 2rem))",
+          height: "auto",
+          maxWidth: "none",
+          maxHeight: "none",
+          transform: "none",
+        }
+      : {
+          left: box.x,
+          top: box.y,
+          width: box.w,
+          height: box.h,
+          maxWidth: "none",
+          maxHeight: "none",
+          transform: "none",
+        }
+    : minimized
+      ? {
+          left: 16,
+          bottom: 16,
+          width: "min(420px, calc(100vw - 2rem))",
+          height: "auto",
+          maxWidth: "none",
+          maxHeight: "none",
+          transform: "none",
+        }
+      : {
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+        };
 
   const tree = (
     <div
-      className={`fixed inset-0 ${zClassName} ${backdropClassName}`}
+      className={`fixed inset-0 ${zClassName} ${
+        minimized ? "bg-transparent pointer-events-none" : backdropClassName
+      }`}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
@@ -398,18 +422,15 @@ export default function DraggableModalShell({
       <div
         ref={panelRef}
         data-fullscreen={fullscreen ? "true" : undefined}
-        className={`fixed modal-shell bg-white dark:bg-slate-800 shadow-xl ${
+        className={`fixed modal-shell bg-white dark:bg-slate-800 shadow-xl pointer-events-auto ${
           fullscreen ? "rounded-none" : "rounded-xl"
         } ${box ? "" : maxWidthClass} ${
-          box ? "" : "w-[calc(100%-2rem)] max-h-[85vh]"
+          box || minimized ? "" : "w-[calc(100%-2rem)] max-h-[85vh]"
         } flex flex-col border overflow-hidden`}
         style={panelStyle}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div
-          className="flex flex-col flex-1 min-h-0 w-full overflow-hidden"
-          style={allowFontScale ? { zoom: modalZoom } : undefined}
-        >
+        <div className="flex flex-col min-h-0 w-full overflow-hidden">
         <div
           className={`px-4 py-3 modal-header shrink-0 border-b border-slate-200 dark:border-slate-700 select-none touch-none ${
             fullscreen
@@ -432,6 +453,15 @@ export default function DraggableModalShell({
             </div>
             <div className="flex items-center gap-1 shrink-0" data-no-drag>
               {headerActions}
+              <button
+                type="button"
+                aria-label={minimized ? "모달 복원" : "모달 최소화"}
+                title={minimized ? "모달 복원" : "모달 최소화"}
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-sm leading-none px-1.5 py-0.5 shrink-0 cursor-pointer rounded border border-transparent hover:border-slate-200"
+                onClick={() => setMinimized((prev) => !prev)}
+              >
+                {minimized ? "▣" : "−"}
+              </button>
               {allowFontScale && (
                 <div
                   className="flex items-center gap-0.5 border border-slate-200 dark:border-slate-600 rounded-md bg-slate-50/90 dark:bg-slate-700/90 p-0.5"
@@ -492,7 +522,14 @@ export default function DraggableModalShell({
           {headerExtra && <div className="mt-2 pointer-events-auto" data-no-drag>{headerExtra}</div>}
         </div>
 
-        <div className={bodyClassName}>{children}</div>
+        {!minimized && (
+          <div
+            className={bodyClassName}
+            style={allowFontScale ? { zoom: modalZoom } : undefined}
+          >
+            {children}
+          </div>
+        )}
         </div>
 
         {resizable &&

@@ -1,4 +1,5 @@
 const API_BASE = "/api/board";
+const AUTH_BASE = "/api/auth";
 
 const PRODUCT_LABELS = {
   macro: "Macro",
@@ -17,6 +18,11 @@ const state = {
   page: 1,
   totalPages: 1,
   currentPostId: null,
+  auth: {
+    loggedIn: false,
+    nickname: "",
+    role: "member",
+  },
 };
 
 function $(id) {
@@ -49,8 +55,22 @@ function badge(className, label) {
   return `<span class="badge ${className}">${label}</span>`;
 }
 
+function parseError(payload) {
+  if (typeof payload.detail === "string") {
+    return payload.detail;
+  }
+  if (payload.detail && typeof payload.detail.message === "string") {
+    return payload.detail.message;
+  }
+  if (typeof payload.error === "string") {
+    return payload.error;
+  }
+  return "request_failed";
+}
+
 async function api(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(options.headers ?? {}),
@@ -59,10 +79,69 @@ async function api(path, options = {}) {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = payload.error ?? "request_failed";
-    throw new Error(message);
+    throw new Error(parseError(payload));
   }
   return payload;
+}
+
+async function authApi(path, options = {}) {
+  const response = await fetch(`${AUTH_BASE}${path}`, {
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers ?? {}),
+    },
+    ...options,
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(parseError(payload));
+  }
+  return payload;
+}
+
+function updateAuthBar() {
+  const bar = $("auth-bar");
+  const loginBtn = $("login-btn");
+  const logoutBtn = $("logout-btn");
+  const userLabel = $("auth-user");
+  if (!bar) {
+    return;
+  }
+  if (state.auth.loggedIn) {
+    userLabel.textContent = `${state.auth.nickname}님`;
+    userLabel.hidden = false;
+    loginBtn.hidden = true;
+    logoutBtn.hidden = false;
+  } else {
+    userLabel.hidden = true;
+    loginBtn.hidden = false;
+    logoutBtn.hidden = true;
+  }
+  toggleAuthorFields(!state.auth.loggedIn);
+}
+
+function toggleAuthorFields(show) {
+  for (const field of document.querySelectorAll(".author-field")) {
+    field.hidden = !show;
+    const input = field.querySelector("input");
+    if (input) {
+      input.required = show;
+    }
+  }
+}
+
+async function refreshAuthStatus() {
+  try {
+    const status = await authApi("/status");
+    state.auth.loggedIn = Boolean(status.logged_in);
+    state.auth.nickname = status.nickname ?? "";
+    state.auth.role = status.role ?? "member";
+  } catch {
+    state.auth.loggedIn = false;
+    state.auth.nickname = "";
+  }
+  updateAuthBar();
 }
 
 function showListView() {
@@ -185,9 +264,11 @@ async function loadMeta() {
   const meta = await api("/meta");
   const notice = $("auth-notice");
   const noticeText = $("auth-notice-text");
-  if (meta.auth && !meta.auth.enabled) {
+  if (meta.auth && meta.auth.enabled) {
+    notice.hidden = true;
+  } else if (meta.auth) {
     notice.hidden = false;
-    noticeText.textContent = meta.auth.note ?? "";
+    noticeText.textContent = meta.auth.note ?? "Google 로그인 설정 중입니다.";
   }
 }
 
@@ -210,7 +291,22 @@ function bindEvents() {
     loadPosts().catch(showError);
   });
 
+  $("login-btn").addEventListener("click", () => {
+    const next = encodeURIComponent(window.location.pathname + window.location.search || "/board/");
+    window.location.href = `${AUTH_BASE}/google/login?state=${next}`;
+  });
+
+  $("logout-btn").addEventListener("click", () => {
+    authApi("/logout", { method: "POST" })
+      .then(() => refreshAuthStatus())
+      .catch(showError);
+  });
+
   $("new-post-btn").addEventListener("click", () => {
+    if (!state.auth.loggedIn) {
+      window.alert("글쓰기는 Google 로그인 후 이용할 수 있습니다.");
+      return;
+    }
     $("compose-panel").hidden = false;
   });
   $("compose-cancel").addEventListener("click", () => {
@@ -219,9 +315,14 @@ function bindEvents() {
 
   $("compose-form").addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (!state.auth.loggedIn) {
+      showError(new Error("로그인이 필요합니다."));
+      return;
+    }
     const form = event.currentTarget;
     const formData = new FormData(form);
     const payload = Object.fromEntries(formData.entries());
+    delete payload.author_name;
     try {
       const result = await api("/posts", {
         method: "POST",
@@ -241,9 +342,14 @@ function bindEvents() {
     if (!state.currentPostId) {
       return;
     }
+    if (!state.auth.loggedIn) {
+      showError(new Error("로그인이 필요합니다."));
+      return;
+    }
     const form = event.currentTarget;
     const formData = new FormData(form);
     const payload = Object.fromEntries(formData.entries());
+    delete payload.author_name;
     try {
       await api(`/posts/${state.currentPostId}/comments`, {
         method: "POST",
@@ -272,6 +378,7 @@ function showError(error) {
 
 async function boot() {
   bindEvents();
+  await refreshAuthStatus();
   await loadMeta();
   const postId = new URL(window.location.href).searchParams.get("post");
   if (postId) {
