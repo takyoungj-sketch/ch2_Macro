@@ -28,8 +28,8 @@ export default function LandRegressionResults({ data }: { data: LandRegressionRe
       </div>
 
       {Object.keys(data.reference_categories).length > 0 && (
-        <p className="text-[10px] text-slate-500">
-          기준 범주:{" "}
+        <p className="rounded bg-slate-50 px-2 py-1 text-[10px] text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          회귀 기준 범주:{" "}
           {Object.entries(data.reference_categories)
             .map(([k, v]) => `${k}=${v}`)
             .join(" · ")}

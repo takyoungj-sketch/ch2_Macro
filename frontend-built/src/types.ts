@@ -299,6 +299,9 @@ export interface ModelMetrics {
   adj_r_squared?: number | null;
   mape?: number | null;
   rmse?: number | null;
+  cv_mape?: number | null;
+  cv_folds?: number;
+  cv_method?: string | null;
 }
 
 export interface ModelComparison {
@@ -333,6 +336,97 @@ export interface RegressionSelectionRequest extends RegressionRunRequest {
   candidate_blocks?: string[];
   max_candidates?: number;
   ranking_metric?: "aic" | "bic" | "mape" | "adj_r2";
+  profile_version?: string | null;
+  profile_as_of_month?: string | null;
+  profile_window_years?: number | null;
+  profile_twin_neighbors?: ProfileTwinCandidateNeighbor[];
+}
+
+export interface CandidateValidationSummary {
+  candidate_id: string;
+  accepted: boolean;
+  checks: Record<string, boolean>;
+  reasons: string[];
+  warnings: string[];
+}
+
+/** Local 또는 Twin Pooling 후보 하나의 실측 지표 — evaluate_pooling_candidates 결과.
+ *  candidate_id: "local" 또는 "twin_pool_n{k}"(V2 — pool 조합별). */
+export interface PoolingCandidateMetrics {
+  candidate_id: string;
+  label: string;
+  n: number;
+  region_codes: string[];
+  adj_r_squared?: number | null;
+  mape?: number | null;
+  cv_mape?: number | null;
+  cv_folds?: number | null;
+  aic?: number | null;
+  bic?: number | null;
+  joint_f_tests?: Record<string, JointFTest>;
+}
+
+/** 1위·2위 후보 간 성능 격차 기반 신뢰도 — V1 휴리스틱. */
+export interface DecisionConfidence {
+  stars: number;
+  grade: string;
+  metric_gap_pct?: number | null;
+  note?: string | null;
+}
+
+/** Twin 개별 후보 지역의 Pooling hard gate 결과(V2). price_gate=null은 표본 부족으로 생략. */
+export interface TwinGateResult {
+  region_code: string;
+  rank?: number | null;
+  similarity_score?: number | null;
+  price_ratio?: number | null;
+  price_gate?: boolean | null;
+  adjacency_gate: boolean;
+  accepted: boolean;
+  reasons: string[];
+}
+
+/** Local vs Twin Pooling(복수 조합) 실측 비교 — "후보는 제안, Validation이 선택"을 API로 구현. */
+export interface PoolingEvaluation {
+  candidates: PoolingCandidateMetrics[];
+  decision: string;
+  decision_reason: string;
+  decision_confidence?: DecisionConfidence | null;
+  twin_gates: TwinGateResult[];
+}
+
+/**
+ * Regional Profile-native Twin (v21) — GET /api/regional-profile/twins/{eup} · twins-beop/{beop}.
+ * 과거 /api/twin-regions/*(v8) 응답과는 무관하다.
+ */
+export interface ProfileTwinNeighborItem {
+  rank: number;
+  twin_eupmyeondong_code?: string | null;
+  twin_eupmyeondong_name?: string | null;
+  twin_beopjungri_code?: string | null;
+  twin_beopjungri_name?: string | null;
+  twin_sigungu_code?: string | null;
+  twin_sigungu_name: string;
+  twin_sido_name: string;
+  similarity_score: number;
+}
+
+export interface ProfileTwinNeighborsResponse {
+  profile_version: string;
+  window_years: number;
+  algorithm_version: number;
+  scope?: string | null;
+  as_of_month?: string | null;
+  batch_key?: string | null;
+  anchor_eupmyeondong_code?: string | null;
+  anchor_beopjungri_code?: string | null;
+  neighbors: ProfileTwinNeighborItem[];
+}
+
+/** RegressionSelectionRequest.profile_twin_neighbors 원소 — Candidate Provider 정규화 계약. */
+export interface ProfileTwinCandidateNeighbor {
+  region_code: string;
+  similarity_score?: number | null;
 }
 
 export interface RegressionSuggestResponse {
@@ -344,9 +438,23 @@ export interface RegressionSuggestResponse {
   excluded: ExcludedBlock[];
   forward_steps: ForwardStepInfo[];
   n: number;
+  selection_n?: number;
+  candidate_union_variables?: string[];
+  validation_contract_version?: string | null;
+  joint_f_tests?: Record<string, JointFTest>;
+  candidate_validations?: CandidateValidationSummary[];
+  pooling_evaluation?: PoolingEvaluation | null;
   scope_label?: string | null;
   warnings: string[];
   explain?: AnalysisExplain | null;
+}
+
+export interface JointFTest {
+  f_statistic?: number | null;
+  p_value?: number | null;
+  df_restriction?: number | null;
+  df_resid?: number | null;
+  tested: boolean;
 }
 
 export interface ModelCandidate {
@@ -358,13 +466,20 @@ export interface ModelCandidate {
   model_comparison?: ModelComparison | null;
   aic?: number | null;
   bic?: number | null;
+  joint_f_tests?: Record<string, JointFTest>;
 }
 
 export interface RegressionCompareResponse {
   candidates_by_aic: ModelCandidate[];
   candidates_by_bic: ModelCandidate[];
   candidates_by_mape: ModelCandidate[];
+  candidates_by_cv_mape?: ModelCandidate[];
   n: number;
+  selection_n?: number;
+  candidate_union_variables?: string[];
+  validation_contract_version?: string | null;
+  candidate_validations?: CandidateValidationSummary[];
+  pooling_evaluation?: PoolingEvaluation | null;
   scope_label?: string | null;
   total_subsets: number;
   truncated: boolean;

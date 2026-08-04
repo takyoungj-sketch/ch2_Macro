@@ -43,6 +43,7 @@ function toResultsData(data: CommercialRegressionResponse) {
     significant_count: data.significant_count,
     equation: data.equation,
     coefficients: data.coefficients,
+    predict_options: data.predict_options,
   };
 }
 

@@ -31,6 +31,8 @@ class CollectorApp(tk.Tk):
         self._stop_flag = threading.Event()
         self._log_queue: queue.Queue[tuple[str, str] | None] = queue.Queue()
         self._region_vars: dict[str, tk.BooleanVar] = {}
+        self._type_vars: dict[str, tk.BooleanVar] = {}
+        self._type_checks: dict[str, ttk.Checkbutton] = {}
 
         self._build_form()
         self.after(200, self._poll_log)
@@ -42,22 +44,28 @@ class CollectorApp(tk.Tk):
 
         row = 0
         ttk.Label(frm, text="부동산 유형").grid(row=row, column=0, sticky=tk.W, **pad)
-        self._type_labels = [label for _, label in PROPERTY_TYPE_CHOICES]
-        self._type_keys = [key for key, _ in PROPERTY_TYPE_CHOICES]
-        self.type_var = tk.StringVar(value=self._type_labels[0])
-        type_combo = ttk.Combobox(
-            frm,
-            textvariable=self.type_var,
-            values=self._type_labels,
-            state="readonly",
-            width=28,
+        type_hdr = ttk.Frame(frm)
+        type_hdr.grid(row=row, column=1, columnspan=2, sticky=tk.EW, **pad)
+        ttk.Button(type_hdr, text="전체 선택", command=self._select_all_types).pack(
+            side=tk.LEFT
         )
-        type_combo.grid(row=row, column=1, sticky=tk.W, **pad)
-        type_combo.bind("<<ComboboxSelected>>", self._on_type_change)
+        ttk.Button(type_hdr, text="전체 해제", command=self._clear_all_types).pack(
+            side=tk.LEFT, padx=6
+        )
         self.type_hint_var = tk.StringVar()
-        ttk.Label(frm, textvariable=self.type_hint_var, foreground="#555").grid(
-            row=row, column=2, sticky=tk.W, **pad
+        ttk.Label(type_hdr, textvariable=self.type_hint_var, foreground="#555").pack(
+            side=tk.LEFT, padx=8
         )
+
+        row += 1
+        type_box = ttk.Frame(frm)
+        type_box.grid(row=row, column=1, columnspan=2, sticky=tk.EW, **pad)
+        for i, (key, label) in enumerate(PROPERTY_TYPE_CHOICES):
+            var = tk.BooleanVar(value=True)
+            self._type_vars[key] = var
+            check = ttk.Checkbutton(type_box, text=label, variable=var, width=14)
+            self._type_checks[key] = check
+            check.grid(row=i // 3, column=i % 3, sticky=tk.W, padx=2, pady=1)
 
         row += 1
         ttk.Label(frm, text="거래 구분").grid(row=row, column=0, sticky=tk.W, **pad)
@@ -94,7 +102,7 @@ class CollectorApp(tk.Tk):
             period_frm, from_=2006, to=2030, textvariable=self.start_year_var, width=6
         ).pack(side=tk.LEFT, padx=(6, 2))
         ttk.Label(period_frm, text="년").pack(side=tk.LEFT)
-        self.start_month_var = tk.IntVar(value=1)
+        self.start_month_var = tk.StringVar(value="1")
         ttk.Spinbox(
             period_frm, from_=1, to=12, textvariable=self.start_month_var, width=4
         ).pack(side=tk.LEFT, padx=(6, 2))
@@ -105,7 +113,7 @@ class CollectorApp(tk.Tk):
             period_frm, from_=2006, to=2030, textvariable=self.end_year_var, width=6
         ).pack(side=tk.LEFT, padx=(6, 2))
         ttk.Label(period_frm, text="년").pack(side=tk.LEFT)
-        self.end_month_var = tk.IntVar(value=12)
+        self.end_month_var = tk.StringVar(value="12")
         ttk.Spinbox(
             period_frm, from_=1, to=12, textvariable=self.end_month_var, width=4
         ).pack(side=tk.LEFT, padx=(6, 2))
@@ -188,28 +196,41 @@ class CollectorApp(tk.Tk):
 
         self._on_type_change()
 
-    def _selected_type_key(self) -> str:
-        label = self.type_var.get()
-        try:
-            idx = self._type_labels.index(label)
-        except ValueError:
-            idx = 0
-        return self._type_keys[idx]
-
-    def _selected_property_type(self):
-        return get_property_type(self._selected_type_key(), deal_type=self.deal_var.get())
+    def _selected_property_types(self):
+        return [
+            get_property_type(key, deal_type=self.deal_var.get())
+            for key, var in self._type_vars.items()
+            if var.get()
+        ]
 
     def _on_type_change(self, *_args) -> None:
-        pt = get_property_type(self._selected_type_key())
-        if pt.supports_rent:
-            self._deal_rent.config(state=tk.NORMAL)
-            self.deal_hint_var.set("")
+        if self.deal_var.get() == DEAL_TYPE_RENT:
+            unsupported = [
+                key for key in self._type_vars
+                if not get_property_type(key).supports_rent
+            ]
+            for key in unsupported:
+                self._type_vars[key].set(False)
+                self._type_checks[key].config(state=tk.DISABLED)
+            self.deal_hint_var.set("전월세 미지원 유형은 자동 제외")
         else:
-            self.deal_var.set("sale")
-            self._deal_rent.config(state=tk.DISABLED)
-            self.deal_hint_var.set("(이 유형은 매매만 지원)")
-        pt = self._selected_property_type()
-        self.type_hint_var.set(f"{{시도}}_{pt.label_ko}_{pt.deal_type}_{{기간}}.csv")
+            for check in self._type_checks.values():
+                check.config(state=tk.NORMAL)
+            self.deal_hint_var.set("")
+        selected = [label for key, label in PROPERTY_TYPE_CHOICES if self._type_vars[key].get()]
+        self.type_hint_var.set(f"{len(selected)}개 유형 선택" if selected else "유형을 선택하세요")
+
+    def _select_all_types(self) -> None:
+        for key, var in self._type_vars.items():
+            if self.deal_var.get() == DEAL_TYPE_RENT and not get_property_type(key).supports_rent:
+                continue
+            var.set(True)
+        self._on_type_change()
+
+    def _clear_all_types(self) -> None:
+        for var in self._type_vars.values():
+            var.set(False)
+        self._on_type_change()
 
     def _select_all_regions(self) -> None:
         for var in self._region_vars.values():
@@ -245,9 +266,8 @@ class CollectorApp(tk.Tk):
             self._append_log(level, message)
         self.after(200, self._poll_log)
 
-    def _resolve_output_dir(self) -> Path:
+    def _resolve_output_dir(self, pt) -> Path:
         base = Path(self.output_var.get().strip()).expanduser()
-        pt = self._selected_property_type()
         return base / pt.output_subdir(
             int(self.start_year_var.get()),
             int(self.start_month_var.get()),
@@ -281,38 +301,44 @@ class CollectorApp(tk.Tk):
             return
 
         try:
-            pt = self._selected_property_type()
+            property_types = self._selected_property_types()
         except ValueError as exc:
             messagebox.showerror("입력 오류", str(exc))
             return
-
-        output_dir = self._resolve_output_dir()
-        job = DownloadJob(
-            property_type=pt,
-            start_year=start_y,
-            start_month=start_m,
-            end_year=end_y,
-            end_month=end_m,
-            output_dir=output_dir,
-            regions=regions,
-            max_new_downloads=max_new,
-            headless=bool(self.headless_var.get()),
-        )
+        if not property_types:
+            messagebox.showerror("입력 오류", "최소 1개 부동산 유형을 선택하세요.")
+            return
 
         self._stop_flag.clear()
         self.start_btn.config(state=tk.DISABLED)
         self.stop_btn.config(state=tk.NORMAL)
         self._append_log("info", "=" * 40)
-        self._append_log("info", f"작업 시작 → {output_dir}")
+        self._append_log("info", f"작업 시작 → {len(property_types)}개 유형")
         self._append_log("info", f"시도 {len(regions)}개: {', '.join(regions)}")
 
         def worker() -> None:
             try:
-                run_download(
-                    job,
-                    log_level=lambda lvl, msg: self._log_queue.put((lvl, msg)),
-                    should_stop=self._stop_flag.is_set,
-                )
+                for pt in property_types:
+                    if self._stop_flag.is_set():
+                        break
+                    output_dir = self._resolve_output_dir(pt)
+                    self._log_queue.put(("info", f"{pt.label_ko} → {output_dir}"))
+                    job = DownloadJob(
+                        property_type=pt,
+                        start_year=start_y,
+                        start_month=start_m,
+                        end_year=end_y,
+                        end_month=end_m,
+                        output_dir=output_dir,
+                        regions=regions,
+                        max_new_downloads=max_new,
+                        headless=bool(self.headless_var.get()),
+                    )
+                    run_download(
+                        job,
+                        log_level=lambda lvl, msg: self._log_queue.put((lvl, msg)),
+                        should_stop=self._stop_flag.is_set,
+                    )
             except Exception as exc:
                 self._log_queue.put(("fail", f"치명적 오류: {exc}"))
             finally:

@@ -103,16 +103,11 @@ def iter_download_periods(
     if not (1 <= start_month <= 12 and 1 <= end_month <= 12):
         raise ValueError("월은 1~12 사이여야 합니다.")
 
-    periods: list[DownloadPeriod] = []
-    for year in range(start_year, end_year + 1):
-        m_start = start_month if year == start_year else 1
-        m_end = end_month if year == end_year else 12
-        from_d = date(year, m_start, 1)
-        to_d = date(year, m_end, monthrange(year, m_end)[1])
-        from_s = from_d.isoformat()
-        to_s = to_d.isoformat()
-        periods.append(DownloadPeriod(period_file_key(from_s, to_s), from_s, to_s))
-    return periods
+    from_d = date(start_year, start_month, 1)
+    to_d = date(end_year, end_month, monthrange(end_year, end_month)[1])
+    from_s = from_d.isoformat()
+    to_s = to_d.isoformat()
+    return [DownloadPeriod(period_file_key(from_s, to_s), from_s, to_s)]
 
 
 @dataclass(frozen=True)

@@ -127,7 +127,11 @@ export default function PredictPanel({
     if (vars.building_use_dummy && inputs.building_use) body.building_use = inputs.building_use;
     if (vars.road_width_dummy && inputs.road_width_label) body.road_width_label = inputs.road_width_label;
     if (vars.asset_type_dummy && inputs.predict_asset_type) body.predict_asset_type = inputs.predict_asset_type;
-    if (vars.region_leaf_dummy && adminLevel === "eupmyeondong" && inputs.region_leaf) {
+    if (
+      vars.region_leaf_dummy &&
+      (adminLevel === "eupmyeondong" || adminLevel === "beopjungri") &&
+      inputs.region_leaf
+    ) {
       body.region_leaf = inputs.region_leaf;
     }
     predictM.mutate(body);
@@ -282,10 +286,12 @@ export default function PredictPanel({
         )}
 
         {vars.region_leaf_dummy &&
-          adminLevel === "eupmyeondong" &&
+          (adminLevel === "eupmyeondong" || adminLevel === "beopjungri") &&
           (opts?.region_leaves?.length ?? 0) > 0 && (
             <label className="space-y-1 shrink-0">
-              <span className="text-slate-500 block whitespace-nowrap">지역</span>
+              <span className="text-slate-500 block whitespace-nowrap">
+                {adminLevel === "beopjungri" ? "법정리" : "지역"}
+              </span>
               <select
                 className="input !w-[11rem] py-1 text-xs"
                 value={inputs.region_leaf ?? ""}

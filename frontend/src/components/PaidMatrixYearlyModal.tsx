@@ -4,6 +4,7 @@ import {
   fetchMatrixCellHistogram,
   fetchAllMatrixCellTransactions,
   fetchLandRegression,
+  fetchLandRegressionSuggestion,
   downloadMatrixCellTransactionsCsv,
 } from "../api/client";
 import { simpleTableHeadClass } from "../constants/displayUi";
@@ -11,6 +12,7 @@ import type {
   LandRegressionVariables,
   LandRegressionRequest,
   LandRegressionResponse,
+  LandRegressionSuggestResponse,
   LongTermTrendPoint,
   LongTermTrendResponse,
   MatrixCellHistogramRequest,
@@ -167,6 +169,7 @@ export default function PaidMatrixYearlyModal({
   const [regLoading, setRegLoading] = useState(false);
   const [regError, setRegError] = useState<string | null>(null);
   const [regResult, setRegResult] = useState<LandRegressionResponse | null>(null);
+  const [regSuggestion, setRegSuggestion] = useState<LandRegressionSuggestResponse | null>(null);
   const [regBody, setRegBody] = useState<LandRegressionRequest | null>(null);
   const aiRegressionContext = useMemo(() => {
     if (!regResult) return null;
@@ -1005,6 +1008,33 @@ export default function PaidMatrixYearlyModal({
                   >
                     {regLoading ? "계산 중…" : "회귀 실행"}
                   </button>
+                  <button
+                    type="button"
+                    disabled={regLoading}
+                    onClick={async () => {
+                      if (!filterRequest) return;
+                      setRegLoading(true);
+                      setRegError(null);
+                      try {
+                        const body: LandRegressionRequest = {
+                          ...filterRequest,
+                          variables: regVars,
+                          model_type: regModelType,
+                          exclude_outliers_iqr: regExcludeOutlier,
+                          outlier_iqr_multiplier: 3,
+                          min_n: 15,
+                        };
+                        setRegSuggestion(await fetchLandRegressionSuggestion(body));
+                      } catch (e) {
+                        setRegError(parseApiError(e).message);
+                      } finally {
+                        setRegLoading(false);
+                      }
+                    }}
+                    className="px-4 py-1.5 rounded border border-indigo-500 text-indigo-700 text-xs font-semibold hover:bg-indigo-50 disabled:opacity-50"
+                  >
+                    {regLoading ? "계산 중…" : "모형 추천"}
+                  </button>
                 </div>
               </div>
 
@@ -1013,6 +1043,26 @@ export default function PaidMatrixYearlyModal({
               )}
 
               {regResult && <LandRegressionResults data={regResult} />}
+
+              {regSuggestion && (
+                <div className="rounded-lg border border-indigo-200 bg-indigo-50/40 p-3 space-y-2 text-xs">
+                  <div className="font-semibold text-indigo-900">
+                    토지 모형 추천 · 공통 표본 n={regSuggestion.selection_n}
+                  </div>
+                  {regSuggestion.warnings.map((w) => (
+                    <p key={w} className="text-amber-700">⚠ {w}</p>
+                  ))}
+                  <div className="space-y-1">
+                    {regSuggestion.candidates_by_aic.map((candidate) => (
+                      <div key={`aic-${candidate.rank}`} className="rounded border border-indigo-100 bg-white px-2 py-1">
+                        #{candidate.rank} · {candidate.blocks.join(" + ")} · {candidate.model_type}
+                        {" · "}AIC {candidate.aic?.toFixed(1) ?? "—"}
+                        {" · "}MAPE {candidate.mape != null ? `${candidate.mape}%` : "—"}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {regResult && (
                 <LandRegressionScatterSection

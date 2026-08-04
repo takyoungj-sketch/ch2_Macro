@@ -393,6 +393,9 @@ class ModelMetrics(BaseModel):
     adj_r_squared: Optional[float] = None
     mape: Optional[float] = None  # %
     rmse: Optional[float] = None  # 만원
+    cv_mape: Optional[float] = None  # rolling time-split out-of-sample MAPE (%)
+    cv_folds: int = 0
+    cv_method: Optional[str] = None
 
 
 class ModelComparison(BaseModel):
@@ -403,6 +406,17 @@ class ModelComparison(BaseModel):
     metric_basis: Literal["cv", "insample"] = "insample"
     confidence_stars: int = 0  # 0~5
     confidence_label: Optional[str] = None
+
+
+class CollectiveModelCandidate(BaseModel):
+    rank: int
+    blocks: list[str] = Field(default_factory=list)
+    variables: CollectiveRegressionSpec
+    model_type: Literal["log", "linear"]
+    n: int
+    adj_r_squared: Optional[float] = None
+    mape: Optional[float] = None
+    cv_mape: Optional[float] = None
 
 
 class CollectiveRegressionResponse(BaseModel):
@@ -421,6 +435,7 @@ class CollectiveRegressionResponse(BaseModel):
     warnings: list[str] = []
     predict_options: Optional[CollectivePredictOptions] = None
     model_comparison: Optional[ModelComparison] = None
+    model_candidates: list[CollectiveModelCandidate] = Field(default_factory=list)
     explain: Optional[AnalysisExplain] = None
 
 

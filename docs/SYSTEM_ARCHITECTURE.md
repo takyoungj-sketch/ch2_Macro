@@ -1,13 +1,83 @@
 # CH2_MACRO 시스템 아키텍처
 
-> 최종 업데이트: 2026-06-24  
+> 최종 업데이트: 2026-08-02
 > 대상: 새로운 개발자·AI가 저장소만 읽어도 전체 구조를 이해할 수 있도록 작성.
+> **제품 철학:** [CH2_MACRO_VISION.md](./CH2_MACRO_VISION.md) · **후보·검증 상세:** [CANDIDATE_EVALUATION_DESIGN.md](./CANDIDATE_EVALUATION_DESIGN.md)
 
 ---
 
-## 1. 시스템 개요
+## 0. 제품 아키텍처 (상위 흐름)
 
-CH2_MACRO는 **국토부 실거래 데이터를 수집·정제·집계하여 감정평가사에게 토지 거래 통계를 제공**하는 웹 서비스다.
+CH2 Macro는 **지역 지식 기반 후보모형 경쟁 플랫폼**이다. 인프라·DB·앱 구조(§1~)와 별도로, **제품 모듈**은 아래 계층으로 정의한다.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Frontend (토지 · 복합 · 집합 · Profile SPA)                     │
+│  통계 · 회귀 · 모형추천/비교 · AI 패널                             │
+└────────────────────────────┬────────────────────────────────────┘
+                             │ HTTP /api/*
+┌────────────────────────────▼────────────────────────────────────┐
+│  Validation Engine (OS) — 장기 목표                                │
+│  동일 표본 · Time/Spatial Split · Ranking · Decision Confidence  │
+└────────────────────────────▲────────────────────────────────────┘
+                             │ Evaluation Bundle
+┌────────────────────────────┴────────────────────────────────────┐
+│  Candidate Factory (플러그인) — 장기 목표                          │
+│  register_candidate() → fit → predict → validate → metadata      │
+│  Local · Twin Pool · Region Group · Province · National Prior …   │
+└───────┬───────────────────────────────┬─────────────────────────┘
+        │                               │
+        ▼                               ▼
+┌───────────────────┐         ┌───────────────────────────┐
+│ Regression Engine │         │ Regional Profile Engine   │
+│ OLS · 변수블록 ·   │         │ Market Stats → Profile    │
+│ 설계행렬 · 예측    │         │ Twin · Region Group 후보   │
+│ (현재 구현)        │         │ Profile Confidence        │
+└─────────┬─────────┘         └─────────────┬─────────────┘
+          │                                   │
+          └───────────────┬───────────────────┘
+                          ▼
+              ┌───────────────────────┐
+              │  Transactions (원장)   │
+              │  land · built · collective │
+              └───────────────────────┘
+                          ▲
+                          │ Pipeline
+              ┌───────────┴───────────┐
+              │  MOLIT Raw Data       │
+              └───────────────────────┘
+```
+
+### 모듈 역할·경계
+
+| 모듈 | 역할 | 현재 구현 | 장기 목표 |
+|------|------|-----------|-----------|
+| **Regional Profile Engine** | 지역 특성·Feature Vector·Twin·Region Group **후보 제안**, Profile Confidence | `regional_profile` API, Twin v8/hybrid, `frontend-profile` | Profile → Pooling·후보 생성 규칙 연동 |
+| **Candidate Factory** | 다양한 **후보모형** 등록·생성 (회귀 외 Rule/Mixed/Bayesian/ML 수용) | 복합 `model_selection`·`model_compare`, 집합 `model_comparison` (변수블록 후보만) | `register_candidate()` 플러그인, Twin/Province/National 후보 |
+| **Regression Engine** | 거래자료 기반 OLS 적합·설계행렬·예측·부분회귀도 | `built/regression`, `collective/regression`, 토지 회귀 | Profile 변수·Pooling 표본 연동 |
+| **Validation Engine** | **동일 Contract**로 모든 후보 평가·순위·Decision Confidence | in-sample AIC/BIC/MAPE (복합·집합), CV 일부 실험 스크립트 | Rolling Time Split, Spatial Group Validation, Holdout OS |
+| **Ranking / Decision Confidence** | 검증 결과 기반 순위·1위 선택 신뢰도 | UI 탭 비교·사용자 채택 | 상위 후보 간 격차 기반 Confidence |
+| **AI Engine** | Evaluation Bundle·Facts **해설**, 한계 우선 | CH2 AI Router, Reasoning Bundle | 후보비교·Confidence·Joint F-test 설명 |
+
+**불변 원칙:** Profile은 **가설·후보를 제안**하고, Validation이 **최종 판단**한다. ([CH2_MACRO_VISION.md](./CH2_MACRO_VISION.md))
+
+**Candidate Factory 플러그인 계약 (장기):**
+
+```text
+register_candidate()
+fit(selection_sample, fit_sample)
+predict(validation_sample)
+validate() → metrics + metadata
+metadata() → model_type, variables, n, version, failure_reason
+```
+
+후보 유형 예: Local, Local+Profile, Twin Pooling, Region Group, Province Prior, National Prior, Rule-based, Mixed/Bayesian partial pooling, ML (XGBoost 등 — Validation Contract 통과 시).
+
+---
+
+## 1. 시스템 개요 (인프라)
+
+CH2_MACRO는 **국토부 실거래 데이터를 수집·정제·집계하여 감정평가사에게 부동산 거래 통계·회귀 분석을 제공**하는 웹 서비스다.
 
 | 항목 | 내용 |
 |------|------|
@@ -86,12 +156,25 @@ backend/
 │   │   ├── twin_v8.py     # GET /api/twin-v8/*  (v8 신규)
 │   │   └── free.py        # DEPRECATED: V1 라우터
 │   ├── built/             # /api/built/* (복합부동산)
+│   │   └── regression/    # Regression Engine (OLS, model_selection, predict)
 │   ├── collective/        # /api/collective/* (집합)
+│   │   └── regression/    # Regression Engine (코호트 OLS, model_comparison)
 │   ├── collective_commercial/ # /api/commercial/*
-│   └── regional_profile/  # /api/regional-profile/*
+│   └── regional_profile/  # Regional Profile Engine — /api/regional-profile/*
 └── scripts/
     └── clear_analysis_cache.py
 ```
+
+**제품 모듈 ↔ API 매핑 (현재):**
+
+| 모듈 | API·코드 위치 |
+|------|----------------|
+| Regional Profile Engine | `/api/regional-profile/*`, `pipeline/build_regional_profile.py` |
+| Twin (Profile 소비) | `/api/twin-v8/*`, `/api/twin-regions/*`, `pipeline/twin_v8/` |
+| Regression Engine | `/api/built/regression/*`, `/api/collective/regression/*`, 토지 유료 회귀 |
+| Candidate (변수블록) | `built/regression/model_selection.py`, `collective/regression/engine.py` (model_comparison) |
+| Validation Engine | **미구현** — in-sample 지표만; 장기: 공통 `evaluation/` 패키지 |
+| AI Engine | `/api/ai/*`, Reasoning Bundle ([CH2_AI_ARCHITECTURE.md](./CH2_AI_ARCHITECTURE.md)) |
 
 **조건부 활성:** `BUILT_DATABASE_URL` / `COLLECTIVE_DATABASE_URL` 환경변수가 있을 때만 해당 라우터 마운트.
 
@@ -165,6 +248,7 @@ AWS Lightsail VPS (Ubuntu)
 | D-012 | `transaction_hash` semantic hash (순번 미포함) | `TRANSACTION_HASH_DEDUPE.md` |
 | D-016 | Regional Profile 5-Layer 통계 아키텍처 | `REGIONAL_PROFILE_ARCHITECTURE.md` |
 | D-023b | Twin Hybrid v2 (토지·집합·Profile 가중치 블렌딩) | `PROFILE_TWIN_HYBRID.md` |
+| D-031 | 후보모형 경쟁·Validation OS 문서 체계 채택 | `CH2_MACRO_VISION.md`, `CANDIDATE_EVALUATION_DESIGN.md` |
 
 ---
 
@@ -172,8 +256,13 @@ AWS Lightsail VPS (Ubuntu)
 
 | 문서 | 내용 |
 |------|------|
+| [CH2_MACRO_VISION.md](./CH2_MACRO_VISION.md) | **불변 제품 철학** — Profile 제안 · Validation 판단 |
+| [CANDIDATE_EVALUATION_DESIGN.md](./CANDIDATE_EVALUATION_DESIGN.md) | 후보·표본·검증·Confidence 상세 설계 |
+| [CH2_MACRO_IMPLEMENTATION_ROADMAP.md](./CH2_MACRO_IMPLEMENTATION_ROADMAP.md) | V1~V3 구현 순서·완료 게이트 |
+| [CH2_CONSTITUTION.md](./CH2_CONSTITUTION.md) | 제품 헌법 |
+| [REGIONAL_PROFILE_ARCHITECTURE.md](./REGIONAL_PROFILE_ARCHITECTURE.md) | Profile·Market Stats 도메인 SSOT |
 | `README.md` | 빠른 시작, DB 구조 요약 |
-| `DECISIONS.md` | 전체 설계 결정 이력 (D-001~D-024b) |
+| `DECISIONS.md` | 전체 설계 결정 이력 (D-001~D-031) |
 | `NEXT_STEPS.md` | 현재 진행 중·백로그 |
 | `docs/DATA_FLOW.md` | 데이터 흐름 상세 |
 | `docs/DATABASE_SCHEMA.md` | 테이블·컬럼 상세 |
@@ -184,3 +273,4 @@ AWS Lightsail VPS (Ubuntu)
 | `docs/MONTHLY_UPDATE_SOP.md` | 운영 SOP (상세 절차) |
 | `docs/V2_STATS_DESIGN.md` | V2 통계 설계 |
 | `docs/TWIN_V8_DESIGN.md` | Twin v8 알고리즘 설계 |
+| `docs/BUILT_MODEL_SELECTION_DESIGN.md` | 복합 모형 추천·비교 (현재 Candidate 부분 구현) |

@@ -24,13 +24,17 @@ def test_single_full_calendar_year():
     assert periods[0].key == "2020"
 
 
-def test_multi_year_full_calendar_years_split():
+def test_multi_year_full_calendar_range_single_file():
     periods = iter_download_periods(2010, 1, 2012, 12)
-    assert len(periods) == 3
-    assert [p.key for p in periods] == ["2010", "2011", "2012"]
+    assert len(periods) == 1
+    assert periods[0].key == "20100101_20121231"
+    assert periods[0].from_date == "2010-01-01"
+    assert periods[0].to_date == "2012-12-31"
 
 
 def test_partial_multi_year_single_file():
-    periods = iter_download_periods(2024, 3, 2025, 5)
+    periods = iter_download_periods(2025, 8, 2026, 7)
     assert len(periods) == 1
-    assert periods[0].key == "20240301_20250531"
+    assert periods[0].key == "20250801_20260731"
+    assert periods[0].from_date == "2025-08-01"
+    assert periods[0].to_date == "2026-07-31"

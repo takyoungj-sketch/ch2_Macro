@@ -243,6 +243,7 @@ CH2 Macro는 **국토부 실거래가** 기반이다. 원천 한계:
 | [`BUILT_HANDOFF_AND_ROADMAP.md`](BUILT_HANDOFF_AND_ROADMAP.md) | 복합 MVP·월간 배치 |
 | [`BUILT_RESEARCH_MVP.md`](BUILT_RESEARCH_MVP.md) | 복합 API·회귀 변수 |
 | [`docs/DECISIONS.md`](DECISIONS.md) | 착수 시 D-xxx 결정 항목 추가 권장 |
+| [`DATA_ENRICHMENT_RAW_ADDITION_PLAN.md`](DATA_ENRICHMENT_RAW_ADDITION_PLAN.md) | 2026-08-04 재조사 — `raw/raw addition/` 신규 자료(K-apt 시공사, AL_D155 용도지역) 포함 우선순위 재정렬. 이 문서(건축물대장 구조)는 그 안에서 **우선순위 3위(보류 유지)**로 재확인됨 |
 
 ---
 

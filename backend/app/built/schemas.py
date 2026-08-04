@@ -142,6 +142,7 @@ class RegressionVariableSpec(BaseModel):
     zone_type_dummy: bool = True
     building_use_dummy: bool = True
     asset_type_dummy: bool = True
+    # 읍·면·동 초점에서는 addr3/addr4, 법정리 초점에서는 addr5 기준
     region_leaf_dummy: bool = False
 
 
@@ -316,6 +317,10 @@ class RegressionSelectionRequest(RegressionRunRequest):
     candidate_blocks: list[str] = Field(default_factory=list)
     max_candidates: int = 5
     ranking_metric: Literal["aic", "bic", "mape", "adj_r2"] = "aic"
+    profile_version: Optional[str] = None
+    profile_as_of_month: Optional[str] = None
+    profile_window_years: Optional[int] = None
+    profile_twin_neighbors: list[dict[str, object]] = Field(default_factory=list)
 
 
 class ExcludedBlockReason(BaseModel):
@@ -337,6 +342,89 @@ class ForwardStepInfo(BaseModel):
     aic_after: float
 
 
+class CandidateValidationSummary(BaseModel):
+    candidate_id: str
+    accepted: bool
+    checks: dict[str, bool] = Field(default_factory=dict)
+    reasons: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class JointFTest(BaseModel):
+    """더미·변수 블록 전체의 추가 설명력 검정."""
+
+    f_statistic: Optional[float] = None
+    p_value: Optional[float] = None
+    df_restriction: Optional[int] = None
+    df_resid: Optional[int] = None
+    tested: bool = False
+
+
+class PoolingCandidateMetrics(BaseModel):
+    """Local 또는 Twin Pooling 후보(pool 조합별) 하나의 실측 지표.
+
+    candidate_id는 "local" 또는 "twin_pool_n{k}" 형태(V2 — 복수 pool 조합 비교).
+    """
+
+    candidate_id: str
+    label: str
+    n: int
+    region_codes: list[str] = Field(default_factory=list)
+    adj_r_squared: Optional[float] = None
+    mape: Optional[float] = None
+    cv_mape: Optional[float] = None
+    cv_folds: Optional[int] = None
+    aic: Optional[float] = None
+    bic: Optional[float] = None
+    joint_f_tests: dict[str, JointFTest] = Field(default_factory=dict)
+
+
+class DecisionConfidence(BaseModel):
+    """1위·2위 후보 간 성능 격차 기반 신뢰도 — CANDIDATE_EVALUATION_DESIGN §5.4 1차 구현.
+
+    임계값은 초기 휴리스틱이며 운영 데이터가 쌓이면 재보정할 계획이다.
+    """
+
+    stars: int = Field(ge=1, le=5)
+    grade: str
+    metric_gap_pct: Optional[float] = None
+    note: Optional[str] = None
+
+
+class TwinGateResult(BaseModel):
+    """Twin 개별 후보 지역의 Pooling hard gate 결과(V2).
+
+    price_gate=None은 표본 부족으로 가격수준 검증을 생략했다는 뜻이며,
+    이 경우 가격수준 gate는 실패로 간주하지 않는다(데이터 결측을 불합격으로
+    오판하지 않기 위함 — CH2 Macro의 명시적 결측 처리 원칙).
+    """
+
+    region_code: str
+    rank: Optional[int] = None
+    similarity_score: Optional[float] = None
+    price_ratio: Optional[float] = None
+    price_gate: Optional[bool] = None
+    adjacency_gate: bool = True
+    accepted: bool
+    reasons: list[str] = Field(default_factory=list)
+
+
+class PoolingEvaluation(BaseModel):
+    """Local vs Twin Pooling 실측 비교 — '후보는 제안, Validation이 선택'을 API로 구현.
+
+    V2: 검증 통과 Twin 후보에 가격수준·인접성 hard gate를 적용해 걸러내고,
+    남은 Twin으로 복수 pool 조합(상위 1개/상위 3개/전체)을 만들어 Local과
+    함께 경쟁시킨다. decision은 승자 candidate_id("local" 또는
+    "twin_pool_n{k}")를 그대로 담는다.
+    """
+
+    candidates: list[PoolingCandidateMetrics] = Field(default_factory=list)
+    decision: str
+    decision_reason: str
+    decision_confidence: Optional[DecisionConfidence] = None
+    twin_gates: list[TwinGateResult] = Field(default_factory=list)
+
+
 class RegressionSuggestResponse(BaseModel):
     recommended_blocks: list[str]
     recommended_variables: RegressionVariableSpec
@@ -346,6 +434,12 @@ class RegressionSuggestResponse(BaseModel):
     excluded: list[ExcludedBlock]
     forward_steps: list[ForwardStepInfo] = Field(default_factory=list)
     n: int
+    selection_n: int = 0
+    candidate_union_variables: list[str] = Field(default_factory=list)
+    validation_contract_version: Optional[str] = None
+    joint_f_tests: dict[str, JointFTest] = Field(default_factory=dict)
+    candidate_validations: list[CandidateValidationSummary] = Field(default_factory=list)
+    pooling_evaluation: Optional[PoolingEvaluation] = None
     scope_label: Optional[str] = None
     warnings: list[str] = Field(default_factory=list)
     explain: Optional[AnalysisExplain] = None
@@ -360,13 +454,20 @@ class ModelCandidate(BaseModel):
     model_comparison: Optional[ModelComparison] = None
     aic: Optional[float] = None
     bic: Optional[float] = None
+    joint_f_tests: dict[str, JointFTest] = Field(default_factory=dict)
 
 
 class RegressionCompareResponse(BaseModel):
     candidates_by_aic: list[ModelCandidate]
     candidates_by_bic: list[ModelCandidate]
     candidates_by_mape: list[ModelCandidate]
+    candidates_by_cv_mape: list[ModelCandidate] = Field(default_factory=list)
     n: int
+    selection_n: int = 0
+    candidate_union_variables: list[str] = Field(default_factory=list)
+    validation_contract_version: Optional[str] = None
+    candidate_validations: list[CandidateValidationSummary] = Field(default_factory=list)
+    pooling_evaluation: Optional[PoolingEvaluation] = None
     scope_label: Optional[str] = None
     total_subsets: int = 0
     truncated: bool = False

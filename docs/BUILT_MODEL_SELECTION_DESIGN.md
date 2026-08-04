@@ -1,10 +1,12 @@
 # 복합부동산 — 모형 추천·비교 (Group Model Selection) 설계
 
 > **작성:** 2026-06-25  
-> **상태:** **Phase 0 — 설계 SSOT** (코드 착수 전)  
+> **상태:** **Phase 0 — 설계 SSOT** (코드 착수 전) — ⚠️ **원설계 문서, 이후 실구현으로 일부 내용이 낡음(아래 참고)**  
 > **내부 가칭:** ~~최적 회귀식~~ → **모형 추천 / 모형 비교** (UI·문서·AI에 「최적」 금지)  
 > **범위:** `frontend-built` · `backend/app/built/regression` · `/api/built/regression/*`  
 > **관련:** [`DECISIONS.md`](./DECISIONS.md) D-028 · [`CH2_AI_CONSTITUTION.md`](./CH2_AI_CONSTITUTION.md) · [`BUILT_RESEARCH_MVP.md`](./BUILT_RESEARCH_MVP.md) · 집합 `model_comparison` ([`collective/regression/engine.py`](../backend/app/collective/regression/engine.py))
+
+> **⚠️ 2026-08-04 상태 안내:** 이 문서는 **구현 착수 전 원설계**(변수 블록·Group Forward/Best Subset·Archetype)이고, 코드 착수 이후 실제로 구현된 내용(**Rolling Time-Split CV-MAPE, Twin Pooling(V1.5→V2 hard gate), Decision Confidence, Joint F-test, Candidate Validation**)은 이 문서에 반영되어 있지 않다. 아래 §6.1·§8.1에 "CV-MAPE 미구현·장기 과제"라고 적힌 부분은 **더 이상 사실이 아니다** — 최신 구현·현황은 [`CANDIDATE_EVALUATION_DESIGN.md`](./CANDIDATE_EVALUATION_DESIGN.md)와 [`CH2_MACRO_IMPLEMENTATION_ROADMAP.md`](./CH2_MACRO_IMPLEMENTATION_ROADMAP.md)를 SSOT로 참고할 것. 이 문서는 변수 블록·Best Subset·Archetype 정의(§4~§7, §9~§12)는 여전히 유효하다.
 
 ---
 
@@ -123,7 +125,8 @@ VariableSpec 반영 → OLS → 부분회귀도 → 예측
 4. 각 후보: **추천 신뢰도**(높음/보통/낮음) + **reasons[]** (baseline 대비 Δ)
 5. **정답 제시 ✗** — AI·UI는 목적(예측/설명/균형)에 따른 **선택 가이드**만
 
-**우선순위 (출시):** 3후보 + trade-off → AI 설명 → (장기) CV-MAPE
+**우선순위 (출시, 작성 당시):** 3후보 + trade-off → AI 설명 → (장기) CV-MAPE
+**2026-08-04 갱신:** CV-MAPE는 더 이상 "장기"가 아니라 **구현·프로덕션 반영됨** — Rolling Time-Split CV-MAPE + Twin Pooling Decision Confidence, 상세는 [`CANDIDATE_EVALUATION_DESIGN.md`](./CANDIDATE_EVALUATION_DESIGN.md) 참고.
 
 **MAPE 분해 스크립트:** `pipeline/built/verify_mape_decomposition.py` — 구간별 MAPE·worst 거래·common-n 공정 비교.
 
@@ -222,7 +225,8 @@ py pipeline/built/verify_mape_decomposition.py `
 1. **저가 거래:** 분모 `|y|`가 작으면 % 오차 폭주. 복합부동산(소형 상가 등)에서 흔함.  
 2. **IQR:** 켜져 있어도 fence 안의 저가는 남음.  
 3. **y=0만 제외:** 최소 금액 floor 없음.  
-4. **in-sample only:** 복합 selection 경로는 **CV 미구현** (집합 `CV_MIN_N=40`과 다름). Train/Test MAPE로 **과적합 단정 금지**.
+4. **in-sample only (작성 당시):** 복합 selection 경로는 **CV 미구현** (집합 `CV_MIN_N=40`과 다름). Train/Test MAPE로 **과적합 단정 금지**.
+   **2026-08-04 갱신:** 이후 Rolling Time-Split CV-MAPE가 구현되어 in-sample MAPE와 **별도 컬럼**으로 표시된다 — [`CANDIDATE_EVALUATION_DESIGN.md`](./CANDIDATE_EVALUATION_DESIGN.md) 참고. 위 in-sample 전용 경고는 CV-MAPE 미표시 화면(구버전 API 응답)에만 유효.
 
 #### 해석·UI 원칙 (CH2)
 

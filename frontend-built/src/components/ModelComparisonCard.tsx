@@ -31,7 +31,8 @@ export function ModelComparisonCard({
           <tr className="text-slate-500 dark:text-slate-400">
             <th className="text-left font-normal py-0.5">모델</th>
             <th className="text-right font-normal">조정 R²</th>
-            <th className="text-right font-normal">MAPE</th>
+            <th className="text-right font-normal">표본내 MAPE</th>
+            <th className="text-right font-normal">CV-MAPE</th>
             <th className="text-right font-normal">RMSE(만원)</th>
           </tr>
         </thead>
@@ -52,6 +53,7 @@ export function ModelComparisonCard({
                 </td>
                 <td className="text-right tabular-nums">{m?.adj_r_squared?.toFixed(3) ?? "—"}</td>
                 <td className="text-right tabular-nums">{m?.mape != null ? `${m.mape}%` : "—"}</td>
+                <td className="text-right tabular-nums">{m?.cv_mape != null ? `${m.cv_mape}%` : "—"}</td>
                 <td className="text-right tabular-nums">
                   {m?.rmse != null ? Math.round(m.rmse).toLocaleString("ko-KR") : "—"}
                 </td>

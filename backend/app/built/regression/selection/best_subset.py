@@ -26,6 +26,7 @@ class CompareResult:
     by_aic: list[CompareCandidate]
     by_bic: list[CompareCandidate]
     by_mape: list[CompareCandidate]
+    by_cv_mape: list[CompareCandidate]
     total_subsets: int
     truncated: bool
 
@@ -37,6 +38,9 @@ def _rank_candidates(
     if key == "mape":
         valid = [(b, f, c) for b, f, c in scored if f.mape is not None]
         valid.sort(key=lambda x: x[1].mape)  # type: ignore[arg-type]
+    elif key == "cv_mape":
+        valid = [(b, f, c) for b, f, c in scored if f.cv_mape is not None]
+        valid.sort(key=lambda x: x[1].cv_mape)  # type: ignore[arg-type]
     elif key == "bic":
         valid = sorted(scored, key=lambda x: x[1].bic)
     else:
@@ -81,6 +85,7 @@ def run_group_best_subset(
         by_aic=_rank_candidates(scored, "aic"),
         by_bic=_rank_candidates(scored, "bic"),
         by_mape=_rank_candidates(scored, "mape"),
+        by_cv_mape=_rank_candidates(scored, "cv_mape"),
         total_subsets=len(subsets),
         truncated=truncated,
     )

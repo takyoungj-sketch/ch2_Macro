@@ -78,7 +78,11 @@ CH2 AI는 [CH2_AI_CONSTITUTION.md](./CH2_AI_CONSTITUTION.md)에 따라 **통계 
 
 | 문서 | 역할 |
 |------|------|
+| [CH2_MACRO_VISION.md](./CH2_MACRO_VISION.md) | **제품 비전** — Profile 제안 · Validation 판단 · AI 해설 |
 | [CH2_AI_CONSTITUTION.md](./CH2_AI_CONSTITUTION.md) | AI 6대 조항·Router·Bundle |
+| [SYSTEM_ARCHITECTURE.md](./SYSTEM_ARCHITECTURE.md) | Candidate Factory · Validation Engine · 모듈 경계 |
+| [CANDIDATE_EVALUATION_DESIGN.md](./CANDIDATE_EVALUATION_DESIGN.md) | 후보·표본·검증·Confidence 상세 |
+| [CH2_MACRO_IMPLEMENTATION_ROADMAP.md](./CH2_MACRO_IMPLEMENTATION_ROADMAP.md) | V1~V3 구현 순서·완료 게이트 |
 | [DECISIONS.md](./DECISIONS.md) | 구체적 설계 결정 기록 |
 | [REGIONAL_PROFILE_ARCHITECTURE.md](./REGIONAL_PROFILE_ARCHITECTURE.md) | Regional Profile·거시 분석 로드맵 |
 

@@ -517,6 +517,29 @@ export interface ModelMetrics {
   adj_r_squared?: number | null;
   mape?: number | null;
   rmse?: number | null;
+  cv_mape?: number | null;
+  cv_folds?: number;
+  cv_method?: string | null;
+}
+
+export interface CollectiveRegressionSpec {
+  exclusive_area: boolean;
+  building_age: boolean;
+  floor: boolean;
+  dong: boolean;
+  housing_subtype: boolean;
+  floor_mode: string;
+}
+
+export interface CollectiveModelCandidate {
+  rank: number;
+  blocks: string[];
+  variables: CollectiveRegressionSpec;
+  model_type: RegressionModelType;
+  n: number;
+  adj_r_squared?: number | null;
+  mape?: number | null;
+  cv_mape?: number | null;
 }
 
 export interface ModelComparison {
@@ -544,6 +567,7 @@ export interface CollectiveRegressionResponse {
   warnings: string[];
   predict_options?: CollectivePredictOptions | null;
   model_comparison?: ModelComparison | null;
+  model_candidates?: CollectiveModelCandidate[];
   explain?: AnalysisExplain | null;
 }
 

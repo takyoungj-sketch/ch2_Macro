@@ -3,7 +3,9 @@ import type { AiContextPayload } from "@ch2/ai-assistant/aiClient";
 import type { RegressionSuggestResponse, RegressionVariableSpec, ResponseScale } from "../types";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import AiAssistantPanel from "./AiAssistantPanel";
+import { CandidateValidationList } from "./CandidateValidationList";
 import { ModelComparisonCard } from "./ModelComparisonCard";
+import { PoolingEvaluationCard } from "./PoolingEvaluationCard";
 import { BUILT_MODEL_SELECTION_SUGGEST_HELP } from "../utils/builtAnalysisHelp";
 
 const BLOCK_LABELS: Record<string, string> = {
@@ -14,7 +16,7 @@ const BLOCK_LABELS: Record<string, string> = {
   zone_type: "용도지역",
   building_use: "건축물용도",
   asset_type: "유형",
-  region_leaf: "지역(읍·면·동)",
+  region_leaf: "지역(읍·면·동/법정리)",
 };
 
 function fmtMetric(v: number | null | undefined, digits = 3) {
@@ -30,6 +32,7 @@ export function ModelSelectionPanel({
   embedded = false,
   onPredict,
   predictActive,
+  regionNameByCode,
 }: {
   data: RegressionSuggestResponse;
   onAdopt: (vars: RegressionVariableSpec, scale: ResponseScale) => void;
@@ -38,6 +41,7 @@ export function ModelSelectionPanel({
   embedded?: boolean;
   onPredict?: (vars: RegressionVariableSpec, scale: ResponseScale, label: string) => void;
   predictActive?: boolean;
+  regionNameByCode?: Record<string, string>;
 }) {
   const included = data.recommended_blocks.map((id) => BLOCK_LABELS[id] ?? id);
   return (
@@ -92,6 +96,11 @@ export function ModelSelectionPanel({
         </ul>
       )}
 
+      <PoolingEvaluationCard
+        evaluation={data.pooling_evaluation}
+        regionNameByCode={regionNameByCode}
+      />
+
       <div>
         <span className="font-medium text-slate-700 dark:text-slate-200">포함 블록: </span>
         {included.length ? included.join(", ") : "(절편만)"}
@@ -100,8 +109,21 @@ export function ModelSelectionPanel({
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-slate-600 dark:text-slate-400">
         <span>Adj R² {fmtMetric(data.metrics.adj_r_squared)}</span>
         <span>MAPE {data.metrics.mape != null ? `${data.metrics.mape}%` : "—"}</span>
+        <span>CV-MAPE {data.metrics.cv_mape != null ? `${data.metrics.cv_mape}%` : "—"}</span>
         <span>AIC {fmtMetric(data.forward_steps.length ? data.forward_steps[data.forward_steps.length - 1]!.aic_after : undefined, 1)}</span>
       </div>
+
+      {data.joint_f_tests && Object.entries(data.joint_f_tests).some(([, test]) => test.tested) && (
+        <div className="flex flex-wrap gap-x-3 text-[11px] text-slate-500 dark:text-slate-400">
+          {Object.entries(data.joint_f_tests)
+            .filter(([, test]) => test.tested)
+            .map(([block, test]) => (
+              <span key={block}>
+                Joint F({BLOCK_LABELS[block] ?? block}) p={test.p_value?.toFixed(3) ?? "—"}
+              </span>
+            ))}
+        </div>
+      )}
 
       {data.model_comparison && (
         <ModelComparisonCard cmp={data.model_comparison} selected={data.response_scale} />
@@ -141,6 +163,11 @@ export function ModelSelectionPanel({
           </ol>
         </details>
       )}
+
+      <CandidateValidationList
+        validations={data.candidate_validations}
+        poolingEvaluation={data.pooling_evaluation}
+      />
     </div>
   );
 }

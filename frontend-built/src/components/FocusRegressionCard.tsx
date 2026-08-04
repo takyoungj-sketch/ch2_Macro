@@ -51,6 +51,7 @@ export default function FocusRegressionCard({ result, assetType, responseScale }
             responseScale={responseScale}
             assetType={assetType}
             equation={result.equation}
+            predictOptions={result.predict_options}
           />
         </div>
       )}

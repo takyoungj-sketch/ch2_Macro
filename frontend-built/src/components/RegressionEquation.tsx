@@ -1,6 +1,6 @@
 import { useState } from "react";
 import clsx from "clsx";
-import type { AssetType, RegressionCoeff, ResponseScale } from "../types";
+import type { AssetType, PredictOptions, RegressionCoeff, ResponseScale } from "../types";
 import {
   EQUATION_SIG_P,
   formatCoefValue,
@@ -17,6 +17,7 @@ type Props = {
   equation?: string;
   /** 전체보기 토글 표시 (기본 true) */
   showToggle?: boolean;
+  predictOptions?: PredictOptions | null;
 };
 
 export default function RegressionEquation({
@@ -25,6 +26,7 @@ export default function RegressionEquation({
   assetType,
   equation,
   showToggle = true,
+  predictOptions,
 }: Props) {
   const [showAll, setShowAll] = useState(false);
   const dep = responseScale === "log" ? "log(금액)" : "금액";
@@ -47,6 +49,14 @@ export default function RegressionEquation({
 
   const visible = showAll ? [...sig, ...nonsig] : sig;
   const hiddenCount = nonsig.length;
+  const referenceCandidates: Array<[string, string]> = [
+    ["용도지역", predictOptions?.zone_reference ?? ""],
+    ["건축물용도", predictOptions?.building_use_reference ?? ""],
+    ["도로조건", predictOptions?.road_width_reference ?? ""],
+    ["자산유형", predictOptions?.asset_type_reference ?? ""],
+    ["지역", predictOptions?.region_reference ?? ""],
+  ];
+  const references = referenceCandidates.filter(([, value]) => Boolean(value));
 
   return (
     <div className="space-y-1">
@@ -92,6 +102,11 @@ export default function RegressionEquation({
         회귀식 유의 기준 p&lt;{EQUATION_SIG_P}
         {!showAll && hiddenCount > 0 ? " · 기본은 유의 변수만" : showAll ? " · 비유의는 흐림" : ""}
       </p>
+      {references.length > 0 && (
+        <p className="text-[10px] text-slate-500">
+          기준 범주: {references.map(([label, value]) => `${label}=${value}`).join(" · ")}
+        </p>
+      )}
     </div>
   );
 }

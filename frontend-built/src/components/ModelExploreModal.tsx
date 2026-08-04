@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
-import { useMutation, type UseMutationResult } from "@tanstack/react-query";
+import { useMutation, useQuery, type UseMutationResult } from "@tanstack/react-query";
 import type { AiContextPayload } from "@ch2/ai-assistant/aiClient";
 import type {
   AssetType,
   RegressionCompareResponse,
   RegressionRunRequest,
   RegressionRunResponse,
+  RegressionSelectionRequest,
   RegressionSuggestResponse,
   RegressionVariableSpec,
   ResponseScale,
 } from "../types";
-import { runRegression } from "../api/client";
+import { fetchProfileTwinNeighbors, runRegression } from "../api/client";
+import type { ProfileLinkTarget } from "../utils/profileLink";
 import DraggableModalShell from "./DraggableModalShell";
 import { ModelComparePanel } from "./ModelComparePanel";
 import { ModelSelectionPanel } from "./ModelSelectionPanel";
@@ -37,6 +39,8 @@ type Props = {
   aiCompareContext?: AiContextPayload | null;
   assetType: AssetType;
   regionLabel: string;
+  /** 단일 anchor(읍·면·동/법정리)일 때만 존재 — Profile Twin 후보 조회용. */
+  profileTarget?: ProfileLinkTarget | null;
 };
 
 export default function ModelExploreModal({
@@ -51,6 +55,7 @@ export default function ModelExploreModal({
   aiCompareContext,
   assetType,
   regionLabel,
+  profileTarget,
 }: Props) {
   const [tab, setTab] = useState<Tab>("suggest");
   const [predictTarget, setPredictTarget] = useState<PredictTarget | null>(null);
@@ -59,14 +64,51 @@ export default function ModelExploreModal({
     mutationFn: (body: RegressionRunRequest) => runRegression(body),
   });
 
+  const twinLevel =
+    profileTarget?.level === "eupmyeondong" || profileTarget?.level === "beopjungri"
+      ? profileTarget.level
+      : null;
+
+  const twinQ = useQuery({
+    queryKey: ["built-profile-twin", twinLevel, profileTarget?.code],
+    queryFn: () => fetchProfileTwinNeighbors(twinLevel!, profileTarget!.code),
+    enabled: open && Boolean(twinLevel && profileTarget?.code),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const regionNameByCode = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const n of twinQ.data?.neighbors ?? []) {
+      const code = (n.twin_beopjungri_code || n.twin_eupmyeondong_code || "").trim();
+      const name = n.twin_beopjungri_name || n.twin_eupmyeondong_name || n.twin_sigungu_name;
+      if (code && name) map[code] = name;
+    }
+    return map;
+  }, [twinQ.data]);
+
+  const enrichedRegBody: RegressionSelectionRequest = useMemo(() => {
+    const twin = twinQ.data;
+    if (!twin || !twin.neighbors.length) return regBody;
+    return {
+      ...regBody,
+      profile_version: twin.profile_version,
+      profile_as_of_month: twin.as_of_month,
+      profile_window_years: twin.window_years,
+      profile_twin_neighbors: twin.neighbors.map((n) => ({
+        region_code: (n.twin_beopjungri_code || n.twin_eupmyeondong_code || "").trim(),
+        similarity_score: n.similarity_score,
+      })).filter((n) => n.region_code),
+    };
+  }, [regBody, twinQ.data]);
+
   useEffect(() => {
     if (!open) return;
-    suggestM.mutate(regBody);
-    compareM.mutate(regBody);
+    suggestM.mutate(enrichedRegBody);
+    compareM.mutate(enrichedRegBody);
     setPredictTarget(null);
     predictFitM.reset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch on open only
-  }, [open]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Twin 로딩 완료 후 재요청
+  }, [open, enrichedRegBody]);
 
   useEffect(() => {
     if (!open || !suggestM.data || predictTarget) return;
@@ -163,6 +205,7 @@ export default function ModelExploreModal({
                 embedded
                 onPredict={(vars, scale, label) => setPredictTarget({ vars, scale, label })}
                 predictActive={predictTarget?.label === "추천 모형 (Group Forward)"}
+                regionNameByCode={regionNameByCode}
               />
             )}
             {!loading && !suggestM.data && !suggestM.isError && (
@@ -185,6 +228,7 @@ export default function ModelExploreModal({
                 embedded
                 onPredict={(vars, scale, label) => onPredictCandidate(vars, scale, label)}
                 predictActiveLabel={predictTarget?.label}
+                regionNameByCode={regionNameByCode}
               />
             )}
             {!loading && !compareM.data && !compareM.isError && (

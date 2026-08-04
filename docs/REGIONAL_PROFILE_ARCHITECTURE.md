@@ -3,9 +3,9 @@
 > **상태 (2026-07-25):** D-027 Profile v2 반영. **D-029** Region Profile SSOT + Twin — §12 (Candidate·**Catalog·Weight**·Similarity·Explainability). Phase A→B. 구조 확정 · 이후 튜닝 중심. Twin v8 병행.  
 > **이전 (2026-06-20):** Phase A/B/C 구현, `v1.1-national` + Twin v5·하이브리드 v1.2.  
 > **목적:** CH2 Macro의 **최종 지향점인 Regional Profile DB**를 중심에 두고, 토지·집합·복합·AI가 공유할 **Statistics → Profile → 회귀/쌍둥이** 파이프라인을 정의한다.  
-> **관련:** [`DECISIONS.md`](DECISIONS.md) D-016·D-017·**D-027·D-029**, [`REGION_ARCHITECTURE_ROADMAP.md`](REGION_ARCHITECTURE_ROADMAP.md), [`UPPER_STATS_DESIGN.md`](UPPER_STATS_DESIGN.md), [`COLLECTIVE_HANDOFF.md`](COLLECTIVE_HANDOFF.md), [`TWIN_V8_DESIGN.md`](TWIN_V8_DESIGN.md)
+> **관련:** [`DECISIONS.md`](DECISIONS.md) D-016·D-017·**D-027·D-029·D-031**, [`CH2_MACRO_VISION.md`](CH2_MACRO_VISION.md), [`CANDIDATE_EVALUATION_DESIGN.md`](CANDIDATE_EVALUATION_DESIGN.md), [`REGION_ARCHITECTURE_ROADMAP.md`](REGION_ARCHITECTURE_ROADMAP.md), [`UPPER_STATS_DESIGN.md`](UPPER_STATS_DESIGN.md), [`COLLECTIVE_HANDOFF.md`](COLLECTIVE_HANDOFF.md), [`TWIN_V8_DESIGN.md`](TWIN_V8_DESIGN.md)
 >
-> **이 문서가 설계 SSOT다.** 코드가 문서보다 앞서가면 안 된다. 구현 변경 시 본 문서를 먼저(또는 동시에) 갱신한다.
+> **이 문서가 Profile·Market Stats 설계 SSOT다.** 후보모형·Validation·Ranking은 [`CANDIDATE_EVALUATION_DESIGN.md`](CANDIDATE_EVALUATION_DESIGN.md)가 SSOT. 코드가 문서보다 앞서가면 안 된다.
 
 ---
 
@@ -73,6 +73,10 @@ Layer 4  Regional Profile (Feature Vector)
               │
               ▼
 Layer 5  Regression · 쌍둥이도시 · AI (장기)
+              │
+              ▼
+        Candidate Factory · Validation Engine (장기)
+        → 상세: CANDIDATE_EVALUATION_DESIGN.md
 ```
 
 ### Layer 1 — Transactions
@@ -702,4 +706,5 @@ Phase B Twin Engine 착수 **전** 제품·데이터 정합. **계획 SSOT:** [`
 ---
 
 *최종 갱신: 2026-07-28 · D-029 Phase A·B **MVP 동결** · Post-MVP: [`REGIONAL_PROFILE_POST_MVP_BACKLOG.md`](REGIONAL_PROFILE_POST_MVP_BACKLOG.md)*  
+*후보·검증 계층: [`CANDIDATE_EVALUATION_DESIGN.md`](CANDIDATE_EVALUATION_DESIGN.md) · 구현 순서: [`CH2_MACRO_IMPLEMENTATION_ROADMAP.md`](CH2_MACRO_IMPLEMENTATION_ROADMAP.md)*
 *이전: 2026-06-19 · D-017*

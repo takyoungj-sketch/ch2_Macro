@@ -125,9 +125,9 @@ grain/scope: eup|beop|sigungu · region|national|same_sigungu
 
 | # | 항목 | 메모 |
 |---|------|------|
-| E1 | Twin → **회귀 pooling** | D-022 · Top-k 후보 pool |
+| E1 | Twin → **회귀 pooling** | D-022 · Top-k 후보 pool — ✅ V2 구현 (`built/regression/selection/pooling.py::evaluate_pooling_candidates`, 2026-08-03). 가격수준·인접성 hard gate를 통과한 Twin으로 복수 pool 조합(상위 1개/3개/전체)을 만들어 Local과 CV-MAPE/AIC로 실측 경쟁, `pooling_evaluation`으로 API·UI 반영. Profile Confidence gate·GIS 경계 인접(시군구)은 미구현 |
 | E2 | **city grain** Twin 정책 | 대표 sigungu proxy vs city aggregate |
-| E3 | Catalog 확장 | 연립·오피스텔 분위 · built/commercial block |
+| E3 | Catalog 확장 | 연립·오피스텔 분위 · **built/commercial block**. E1이 실사용에 들어가면서 우선순위 상승 — Twin 유사도가 토지(0.30)·아파트(0.20) 중심이라 **상가 가격 수준은 전혀 반영하지 않음** (2026-08-03 논의). **스코프 결정: 상가(commercial)만** — 아파트 블록과 대칭적이고 표본이 가장 안정적. 단독다가구 등 포함은 표본 부족 지역에서 마스킹 복잡도가 커져 보류. **2026-08-04 재우선순위**: V2 실측(옥천읍)에서 "Pool 크기가 클수록 항상 좋아지지 않는다"·"Pooling 품질은 Twin 유사도 품질에 달렸다"가 확인되며 `CH2_MACRO_IMPLEMENTATION_ROADMAP.md` **V3-8**로 다음 착수 후보에 편입. **이 항목(Twin 벡터에 상가 가격분포·층수·연식·규모 추가)과 "회귀 설명변수 확장"(구조·시공사·브랜드·주차·건폐율·용적률·역세권·코너 여부)은 서로 다른 두 트랙**이다 — 전자는 Twin/Pooling 품질, 후자는 built 원장 자체의 설명력을 올린다. 착수는 사용자 승인 후 |
 | E4 | VPS Promote · 월간 파이프라인 | `rebuild_regional_profile_national.py` + smoke |
 
 ---
