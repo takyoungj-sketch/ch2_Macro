@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 
+_PIPELINE_DIR = Path(__file__).resolve().parent
+_BACKEND_ENV = _PIPELINE_DIR.parent / "backend" / ".env"
+
+if _BACKEND_ENV.is_file():
+    load_dotenv(_BACKEND_ENV)
 load_dotenv()
 
 

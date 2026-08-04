@@ -52,13 +52,26 @@ ASSET_DOMAINS: dict[str, str] = {
     "collective_factory": "collective_factory_market",
 }
 
-from region_canonical import canonical_select_expr  # noqa: E402
+from region_canonical import canonical_prefix_coalesce_sql, canonical_select_expr  # noqa: E402
+from region_mapping import region_codes_lateral_sql  # noqa: E402
 
 _CANON = canonical_select_expr("t")
+_RC_LATERAL = region_codes_lateral_sql("t", canon_beop_expr=_CANON)
+_BEOP = "COALESCE(NULLIF(btrim(t.beopjungri_code::text), ''), NULLIF(btrim(rc.beopjungri_code::text), ''))"
+_EUP = "COALESCE(NULLIF(btrim(t.eupmyeondong_code::text), ''), NULLIF(btrim(rc.eupmyeondong_code::text), ''))"
+_SIG = "COALESCE(NULLIF(btrim(t.sigungu_code::text), ''), NULLIF(btrim(rc.sigungu_code::text), ''))"
+_SIDO = "COALESCE(NULLIF(btrim(t.sido_code::text), ''), NULLIF(btrim(rc.sido_code::text), ''))"
 _REGION_CODE_SQL = f"""
-    substring(({_CANON}) from 1 for 8) AS bcode8,
-    substring(({_CANON}) from 1 for 5) AS sigungu,
-    substring(({_CANON}) from 1 for 2) AS sido,
+    {canonical_prefix_coalesce_sql(_BEOP, _EUP, _SIG, _SIDO, 8)} AS bcode8,
+    {canonical_prefix_coalesce_sql(_BEOP, _EUP, _SIG, _SIDO, 5)} AS sigungu,
+    {canonical_prefix_coalesce_sql(_BEOP, _EUP, _SIG, _SIDO, 2)} AS sido,
+"""
+_HAS_REGION = """
+(
+  NULLIF(btrim(t.beopjungri_code::text), '') IS NOT NULL
+  OR NULLIF(btrim(t.eupmyeondong_code::text), '') IS NOT NULL
+  OR rc.beopjungri_code IS NOT NULL
+)
 """
 
 ROLLING_SQL = f"""
@@ -67,9 +80,10 @@ SELECT
     t.asset_type,
     array_agg(t.unit_price ORDER BY t.unit_price) AS unit_prices
 FROM collective_commercial_transactions t
+{_RC_LATERAL}
 WHERE t.is_valid = true
   AND t.unit_price IS NOT NULL AND t.unit_price > 0
-  AND t.beopjungri_code IS NOT NULL AND btrim(t.beopjungri_code::text) <> ''
+  AND {_HAS_REGION}
   AND t.contract_date IS NOT NULL
   AND t.contract_date >= :p_start
   AND t.contract_date <= :p_end
@@ -86,9 +100,10 @@ SELECT
     array_agg(t.unit_price ORDER BY t.unit_price) AS unit_prices,
     SUM(t.price) AS amount_sum
 FROM collective_commercial_transactions t
+{_RC_LATERAL}
 WHERE t.is_valid = true
   AND t.unit_price IS NOT NULL AND t.unit_price > 0
-  AND t.beopjungri_code IS NOT NULL AND btrim(t.beopjungri_code::text) <> ''
+  AND {_HAS_REGION}
   AND t.contract_year IS NOT NULL
   {{sido_clause}}
 GROUP BY 1, 2, 3, 4, 5

@@ -284,30 +284,30 @@ def canonical_select_expr(alias: str = "lt") -> str:
     )"""
 
 
-def canonical_prefix_expr(alias: str = "lt", n: int = 8) -> str:
-    """Canonical admin prefix (2/5/8) for map/mart grain.
-
-    Prefer remapping via beopjungri history; if beopjungri is NULL (common on
-    Built/Collective addr-only rows), remap eupmyeondong/sigungu/sido code through
-    history using left(from_code, n) → left(to_code, n).
-    """
+def canonical_prefix_coalesce_sql(
+    beop_expr: str,
+    eup_expr: str,
+    sigungu_expr: str,
+    sido_expr: str,
+    n: int,
+) -> str:
+    """Canonical admin prefix from arbitrary SQL column expressions (t/rc COALESCE)."""
     if n not in (2, 5, 8):
-        raise ValueError(f"canonical_prefix_expr n must be 2|5|8, got {n}")
-    a = alias
+        raise ValueError(f"canonical_prefix_coalesce_sql n must be 2|5|8, got {n}")
     if n == 8:
         raw = (
-            f"COALESCE(NULLIF(btrim({a}.beopjungri_code::text), ''), "
-            f"NULLIF(btrim({a}.eupmyeondong_code::text), ''), '')"
+            f"COALESCE(NULLIF(btrim(({beop_expr})::text), ''), "
+            f"NULLIF(btrim(({eup_expr})::text), ''), '')"
         )
     elif n == 5:
         raw = (
-            f"COALESCE(NULLIF(btrim({a}.beopjungri_code::text), ''), "
-            f"NULLIF(btrim({a}.sigungu_code::text), ''), '')"
+            f"COALESCE(NULLIF(btrim(({beop_expr})::text), ''), "
+            f"NULLIF(btrim(({sigungu_expr})::text), ''), '')"
         )
     else:
         raw = (
-            f"COALESCE(NULLIF(btrim({a}.beopjungri_code::text), ''), "
-            f"NULLIF(btrim({a}.sido_code::text), ''), '')"
+            f"COALESCE(NULLIF(btrim(({beop_expr})::text), ''), "
+            f"NULLIF(btrim(({sido_expr})::text), ''), '')"
         )
     return f"""COALESCE(
       (
@@ -321,6 +321,23 @@ def canonical_prefix_expr(alias: str = "lt", n: int = 8) -> str:
       ),
       CASE WHEN length(btrim({raw})) >= {n} THEN left(btrim({raw}), {n}) ELSE NULL END
     )"""
+
+
+def canonical_prefix_expr(alias: str = "lt", n: int = 8) -> str:
+    """Canonical admin prefix (2/5/8) for map/mart grain.
+
+    Prefer remapping via beopjungri history; if beopjungri is NULL (common on
+    Built/Collective addr-only rows), remap eupmyeondong/sigungu/sido code through
+    history using left(from_code, n) → left(to_code, n).
+    """
+    a = alias
+    return canonical_prefix_coalesce_sql(
+        f"{a}.beopjungri_code",
+        f"{a}.eupmyeondong_code",
+        f"{a}.sigungu_code",
+        f"{a}.sido_code",
+        n,
+    )
 
 
 def lookup_active_admin_codes_by_name(

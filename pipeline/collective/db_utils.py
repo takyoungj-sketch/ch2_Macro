@@ -12,7 +12,10 @@ from sqlalchemy.engine import Engine
 _PIPELINE_DIR = Path(__file__).resolve().parent.parent
 _COLLECTIVE_ENV = _PIPELINE_DIR / ".env.collective"
 _DEFAULT_ENV = _PIPELINE_DIR / ".env"
+_BACKEND_ENV = _PIPELINE_DIR.parent / "backend" / ".env"
 
+if _BACKEND_ENV.is_file():
+    load_dotenv(_BACKEND_ENV)
 if _COLLECTIVE_ENV.is_file():
     load_dotenv(_COLLECTIVE_ENV)
 else:

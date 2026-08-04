@@ -52,14 +52,19 @@ ASSET_DOMAINS: dict[str, str] = {
     "detached": "detached_market",
 }
 
-from region_canonical import canonical_select_expr  # noqa: E402
+from region_canonical import canonical_prefix_expr  # noqa: E402
 
-# D-028: grain from canonical beopjungri (면→읍·분구 시 t.*_code 잔류 방지)
-_CANON = canonical_select_expr("t")
+# D-028: beopjungri NULL이어도 eupmyeondong_code + history → canonical grain
 _REGION_CODE_SQL = f"""
-    substring(({_CANON}) from 1 for 8) AS bcode8,
-    substring(({_CANON}) from 1 for 5) AS sigungu,
-    substring(({_CANON}) from 1 for 2) AS sido,
+    {canonical_prefix_expr("t", 8)} AS bcode8,
+    {canonical_prefix_expr("t", 5)} AS sigungu,
+    {canonical_prefix_expr("t", 2)} AS sido,
+"""
+_HAS_REGION = """
+(
+  NULLIF(btrim(t.beopjungri_code::text), '') IS NOT NULL
+  OR NULLIF(btrim(t.eupmyeondong_code::text), '') IS NOT NULL
+)
 """
 
 ROLLING_SQL = f"""
@@ -74,7 +79,7 @@ SELECT
 FROM built_transactions t
 WHERE t.is_valid = true
   AND t.price IS NOT NULL AND t.price > 0
-  AND t.beopjungri_code IS NOT NULL AND btrim(t.beopjungri_code::text) <> ''
+  AND {_HAS_REGION}
   AND t.contract_date IS NOT NULL
   AND t.contract_date >= :p_start
   AND t.contract_date <= :p_end
@@ -97,7 +102,7 @@ SELECT
 FROM built_transactions t
 WHERE t.is_valid = true
   AND t.price IS NOT NULL AND t.price > 0
-  AND t.beopjungri_code IS NOT NULL AND btrim(t.beopjungri_code::text) <> ''
+  AND {_HAS_REGION}
   AND t.contract_year IS NOT NULL
   {{sido_clause}}
 GROUP BY 1, 2, 3, 4, 5

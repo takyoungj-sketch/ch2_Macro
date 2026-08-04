@@ -48,26 +48,12 @@ ASSET_DOMAINS: dict[str, str] = {
 }
 
 from region_canonical import canonical_select_expr  # noqa: E402
+from region_mapping import region_codes_lateral_sql  # noqa: E402
 
 # D-028: region_codes 조인은 canonical beopjungri 기준 (historical PK 잔류 방지)
+# D-015: 구(처인구 등)가 addr3·읍면동이 addr4인 시(용인·수원 등)는 eupmyeondong_name=addr4
 _CANON = canonical_select_expr("t")
-_RC_LATERAL = f"""
-LEFT JOIN LATERAL (
-    SELECT eupmyeondong_code, sigungu_code, sido_code, beopjungri_code
-    FROM region_codes rc
-    WHERE COALESCE(rc.is_active, TRUE)
-      AND (
-            (t.beopjungri_code IS NOT NULL
-             AND btrim(rc.beopjungri_code::text) = ({_CANON}))
-         OR (
-            rc.sido_name = t.addr1
-            AND (t.addr2 IS NULL OR btrim(t.addr2::text) = '' OR rc.sigungu_name = t.addr2)
-            AND rc.eupmyeondong_name = t.addr3
-         )
-      )
-    LIMIT 1
-) rc ON TRUE
-"""
+_RC_LATERAL = region_codes_lateral_sql("t", canon_beop_expr=_CANON)
 
 ROLLING_SQL = f"""
 SELECT

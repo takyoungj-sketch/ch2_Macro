@@ -87,6 +87,45 @@ def _load_code_enrichment(engine: Engine) -> dict[str, tuple[str, str, str, str]
     return out
 
 
+def eup_name_sql(alias: str = "t") -> str:
+    """D-015: 구·addr4 grain 읍면동명 (용인 처인구·양지읍 등)."""
+    a = alias
+    return f"""
+CASE
+    WHEN btrim(COALESCE({a}.addr4::text, '')) <> ''
+         AND btrim(COALESCE({a}.addr3::text, '')) LIKE '%구'
+    THEN {a}.addr4
+    ELSE {a}.addr3
+END
+"""
+
+
+def region_codes_lateral_sql(alias: str = "t", *, canon_beop_expr: str) -> str:
+    """LEFT JOIN LATERAL region_codes — beopjungri match or addr name fallback."""
+    a = alias
+    eup = eup_name_sql(a)
+    return f"""
+LEFT JOIN LATERAL (
+    SELECT eupmyeondong_code, sigungu_code, sido_code, beopjungri_code
+    FROM region_codes rc
+    WHERE COALESCE(rc.is_active, TRUE)
+      AND (
+            ({a}.beopjungri_code IS NOT NULL
+             AND btrim(rc.beopjungri_code::text) = ({canon_beop_expr}))
+         OR (
+            rc.sido_name = {a}.addr1
+            AND (
+                rc.sigungu_name = {a}.addr2
+             OR rc.sigungu_name = {a}.addr2 || ' ' || {a}.addr3
+            )
+            AND rc.eupmyeondong_name = ({eup})
+         )
+      )
+    LIMIT 1
+) rc ON TRUE
+"""
+
+
 def attach_beopjungri_codes(
     df: pd.DataFrame,
     engine: Engine,
