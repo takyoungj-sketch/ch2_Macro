@@ -24,7 +24,7 @@ from app.config import settings
 from app.db import get_db
 from app.jimok_group import display_land_key, matrix_mode_to_col_axis
 from app.population_query import attach_population_year_end_for_upper_level
-from app.region_canonical import resolve_to_canonical
+from app.region_canonical import expand_to_ledger_codes, resolve_to_canonical
 from app.routers.free import _stats_dict_to_result
 from app.schemas import (
     MatrixCell,
@@ -49,13 +49,46 @@ _REGION_CODE_LEN: dict[RegionLevel, int] = {
     "city": 5,
 }
 
-# land_transactions 의 region 필터 식 — eupmyeondong 컬럼이 없으므로
-# beopjungri_code 앞 8자리를 사용한다(행정코드: 시군구5 + 읍면동3 + 리2).
-_LEVEL_TX_WHERE: dict[RegionLevel, str] = {
-    "sido": "sido_code = :code",
-    "sigungu": "sigungu_code = :code",
-    "eupmyeondong": "LEFT(beopjungri_code, 8) = :code",
+# land_transactions region 필터 — eupmyeondong 은 beopjungri 8자 prefix.
+# D-028: canonical eup 입력 시 historical prefix(43770340 등)도 ledger expand 로 포함.
+_TX_PREFIX_LEN: dict[RegionLevel, int] = {
+    "sido": 2,
+    "sigungu": 5,
+    "eupmyeondong": 8,
 }
+
+
+def _ledger_prefixes_for_level(
+    db: Session, level: RegionLevel, code: str
+) -> list[str]:
+    canonical = (code or "").strip()
+    if not canonical:
+        return []
+    expanded = expand_to_ledger_codes(db, [canonical]) or [canonical]
+    n = _TX_PREFIX_LEN[level]
+    prefixes: set[str] = set()
+    for c in expanded:
+        cc = str(c).strip()
+        if len(cc) >= n:
+            prefixes.add(cc[:n])
+        elif cc:
+            prefixes.add(cc)
+    if len(canonical) >= n:
+        prefixes.add(canonical[:n])
+    else:
+        prefixes.add(canonical)
+    return sorted(prefixes)
+
+
+def _tx_where_for_level(
+    db: Session, level: RegionLevel, code: str
+) -> tuple[str, dict[str, list[str]]]:
+    codes = _ledger_prefixes_for_level(db, level, code)
+    if level == "sido":
+        return "sido_code = ANY(:tx_codes)", {"tx_codes": codes}
+    if level == "sigungu":
+        return "sigungu_code = ANY(:tx_codes)", {"tx_codes": codes}
+    return "LEFT(beopjungri_code, 8) = ANY(:tx_codes)", {"tx_codes": codes}
 
 
 def _ensure_upper_table(db: Session) -> None:
@@ -211,8 +244,8 @@ def _fetch_tx_trips_for_upper(
         params["pe"] = period_end
         where = f"sigungu_code IN ({in_clause})"
     else:
-        where = _LEVEL_TX_WHERE[level]
-        params = {"code": code, "ps": period_start, "pe": period_end}
+        where, tx_params = _tx_where_for_level(db, level, code)
+        params = {**tx_params, "ps": period_start, "pe": period_end}
 
     rows = db.execute(
         text(
@@ -431,8 +464,8 @@ def _by_year_upper(
         params["d1"] = period_end
         where = f"sigungu_code IN ({in_clause})"
     else:
-        where = _LEVEL_TX_WHERE[level]
-        params = {"code": code, "d0": y0, "d1": period_end}
+        where, tx_params = _tx_where_for_level(db, level, code)
+        params = {**tx_params, "d0": y0, "d1": period_end}
     rows = db.execute(
         text(
             f"""
@@ -499,8 +532,8 @@ def _by_year_upper_calendar_reference(
         params["d1"] = d1
         where = f"sigungu_code IN ({in_clause})"
     else:
-        where = _LEVEL_TX_WHERE[level]
-        params = {"code": code, "d0": d0, "d1": d1}
+        where, tx_params = _tx_where_for_level(db, level, code)
+        params = {**tx_params, "d0": d0, "d1": d1}
 
     rows = db.execute(
         text(
