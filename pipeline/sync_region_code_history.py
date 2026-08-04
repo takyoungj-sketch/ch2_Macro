@@ -29,10 +29,10 @@ from sqlalchemy.engine import Engine
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "pipeline"))
 
-# backend/.env (FastAPI와 동일 SSOT) — pipeline 단독 실행 시에도 DB URL 로드
 from dotenv import load_dotenv
 
-load_dotenv(ROOT / "backend" / ".env")
+load_dotenv(ROOT / "backend" / ".env", override=True)
+load_dotenv(ROOT / "pipeline" / ".env.built")
 load_dotenv()
 
 DDL_PATH = ROOT / "db" / "046_region_code_history_shared.sql"

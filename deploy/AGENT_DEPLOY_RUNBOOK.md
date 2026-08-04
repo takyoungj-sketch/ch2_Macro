@@ -114,6 +114,19 @@ cd c:\ch2\ch2_Macro\backend
 
 mart 재빌드 전(프리마이그레이션)에는 `--allow-historical-mart` 허용. **운영 반영 후**에는 historical_rows=0 이어야 PASS.
 
+**Built ledger eup NULL 보정 (promote 후 대소읍 등 scope=0):**
+
+원장 hash는 있으나 `eupmyeondong_code` NULL인 경우 — 로컬에서 slice export → VPS update-codes:
+
+```powershell
+cd backend
+..\.venv\Scripts\python.exe ..\pipeline\built\sync_ledger_slice.py export `
+  --prefixes 43770340,43770256 --out ..\logs\built_slice_daeso.jsonl
+scp -i LightsailDefaultKey-ap-northeast-2.pem ..\logs\built_slice_daeso.jsonl ubuntu@13.209.203.178:/opt/ch2_Macro/logs/
+ssh -i LightsailDefaultKey-ap-northeast-2.pem ubuntu@13.209.203.178 `
+  "cd /opt/ch2_Macro/backend && .venv/bin/python ../pipeline/built/sync_ledger_slice.py import --in ../logs/built_slice_daeso.jsonl --mode update-codes && sudo systemctl restart ch2-macro-backend"
+```
+
 ### 5.0b API entry-point smoke
 
 ```powershell
