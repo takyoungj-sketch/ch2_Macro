@@ -28,7 +28,11 @@ CREATE TABLE IF NOT EXISTS region_code_history (
 );
 
 COMMENT ON TABLE region_code_history IS
-    '법정동 코드 변경 이력 — 원장 beopjungri_code 보존, 분석·mart 는 to_code(canonical) 사용 (D-028)';
+    '법정동 코드 변경 이력 — from_code=historical, to_code=canonical (D-028). 원장 beopjungri_code 보존, 분석·mart 는 to_code 사용.';
+COMMENT ON COLUMN region_code_history.from_code IS 'historical code (원장·당시 ingest 코드)';
+COMMENT ON COLUMN region_code_history.to_code IS 'canonical code (현행 분석·API·mart grain)';
+COMMENT ON COLUMN region_code_history.effective_from IS 'valid_from — 매핑 유효 시작일';
+COMMENT ON COLUMN region_code_history.effective_to IS 'valid_to — NULL이면 현재 유효';
 
 CREATE INDEX IF NOT EXISTS ix_region_code_history_from
     ON region_code_history (from_code, effective_from);

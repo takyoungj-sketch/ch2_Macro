@@ -42,6 +42,7 @@ from app.schemas import (
     LandRegressionPredictResponse,
     LandRegressionRequest,
     LandRegressionResponse,
+    LandRegressionSuggestResponse,
     MatrixCellTransactionItem,
     MatrixCellTransactionsRequest,
     MatrixCellTransactionsResponse,
@@ -1999,6 +2000,20 @@ def matrix_cell_regression(
 
     filtered = _fetch_matrix_cell_filtered_transactions(body, db)
     return run_land_regression(filtered, body)
+
+
+@router.post(
+    "/matrix-cell-transactions/regression/suggest",
+    response_model=LandRegressionSuggestResponse,
+    summary="토지 회귀 후보모형 추천·비교",
+)
+def matrix_cell_regression_suggest(
+    body: LandRegressionRequest, db: Session = Depends(get_db)
+):
+    from app.land_regression import suggest_land_regression
+
+    filtered = _fetch_matrix_cell_filtered_transactions(body, db)
+    return suggest_land_regression(filtered, body)
 
 
 @router.post(

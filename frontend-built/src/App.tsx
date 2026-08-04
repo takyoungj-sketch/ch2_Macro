@@ -745,10 +745,20 @@ export default function App() {
     }
     const level = data.level === "beopjungri" ? "beopjungri" : "eupmyeondong";
     const addr2Label = formatScopeAddr2(addr2, addr1) || addr2;
-    const local: BuiltAnalysisUnit[] = data.selected_codes.map((code) => {
+    const local: BuiltAnalysisUnit[] = data.selected_codes.map((code, idx) => {
       const label = (data.labels?.[code] || "").trim();
       const parts = label.split(/\s+/).filter(Boolean);
-      const name = parts[parts.length - 1] || code;
+      let name = parts[parts.length - 1] || "";
+      if (!name || /^\d{8,10}$/.test(name)) {
+        name =
+          (leafList.length === data.selected_codes.length
+            ? leafList[idx]
+            : leafList.length === 1
+              ? leafList[0]
+              : "") ||
+          name ||
+          code;
+      }
       const eup = level === "beopjungri" && parts.length >= 2 ? parts[parts.length - 2] : undefined;
       return { code, level, name, addr1, addr2: addr2Label, eup, crossParent: false };
     });
@@ -768,7 +778,7 @@ export default function App() {
       });
       return [...local, ...foreign].slice(0, MAX_BUILT_ANALYSIS_UNITS);
     });
-  }, [resolveUnitsQ.data, leafList.length, riList.length, addr1, addr2]);
+  }, [resolveUnitsQ.data, leafList, riList.length, addr1, addr2]);
 
   const regionCodeScope = useMemo(() => unitsToRegionScope(analysisUnits), [analysisUnits]);
   const profileTarget = useMemo(() => resolveBuiltProfileTarget(analysisUnits), [analysisUnits]);
@@ -1300,8 +1310,13 @@ export default function App() {
                   ...(isUnifiedAsset(assetType)
                     ? ([["asset_type_dummy", "유형 더미"]] as const)
                     : []),
-                  ...(leafList.length >= 2
-                    ? ([["region_leaf_dummy", "지역(읍·면·동) 더미"]] as const)
+                  ...(leafList.length >= 2 || riList.length >= 2
+                    ? ([
+                        [
+                          "region_leaf_dummy",
+                          riList.length >= 2 ? "법정리 더미" : "지역(읍·면·동) 더미",
+                        ],
+                      ] as const)
                     : []),
                 ] as const
               ).map(([key, label]) => (
@@ -1318,7 +1333,9 @@ export default function App() {
               ))}
               {vars.region_leaf_dummy && (
                 <span className="text-slate-500 w-full">
-                  읍·면·동 풀링 회귀(하위 scope)에만 적용. 시군구·구 단일 회귀에는 넣지 않습니다.
+                  {riList.length >= 2
+                    ? "선택한 법정리 간 가격 수준 차이를 통제합니다."
+                    : "읍·면·동 풀링 회귀(하위 scope)에만 적용. 시군구·구 단일 회귀에는 넣지 않습니다."}
                 </span>
               )}
               <label className="flex items-center gap-1">
@@ -1602,6 +1619,7 @@ export default function App() {
         aiCompareContext={aiCompareContext}
         assetType={assetType}
         regionLabel={aiRegionLabel}
+        profileTarget={profileTarget}
       />
 
       {regM.data && (

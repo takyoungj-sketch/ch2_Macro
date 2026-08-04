@@ -4,6 +4,7 @@ import type {
   Addr3Option,
   BuiltFilterMeta,
   BuiltTransactionListResponse,
+  ProfileTwinNeighborsResponse,
   RegionOption,
   RegionStructure,
   RegressionRunRequest,
@@ -19,6 +20,11 @@ import type {
 const _API_TOKEN = (import.meta.env.VITE_API_TOKEN ?? "").trim();
 const api = axios.create({
   baseURL: "/api/built",
+  headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
+});
+// Regional Profile은 복합(built)과 별도 도메인 API — /api/built가 아니라 /api 루트.
+const profileApi = axios.create({
+  baseURL: "/api",
   headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
 });
 
@@ -284,5 +290,21 @@ export async function compareRegression(body: RegressionSelectionRequest) {
 
 export async function predictRegression(body: RegressionPredictRequest) {
   const { data } = await api.post<RegressionPredictResponse>("/regression/predict", body);
+  return data;
+}
+
+/**
+ * Regional Profile-native Twin(v21) 이웃 조회 — 모형추천의 Twin 후보 제안용.
+ * 과거 `/api/twin-regions/*`(v8, 충북 중심)와는 다른 최신 Profile 연동 Twin이다.
+ */
+export async function fetchProfileTwinNeighbors(
+  level: "eupmyeondong" | "beopjungri",
+  code: string,
+  opts?: { topK?: number },
+): Promise<ProfileTwinNeighborsResponse> {
+  const path = level === "beopjungri" ? `/regional-profile/twins-beop/${code}` : `/regional-profile/twins/${code}`;
+  const { data } = await profileApi.get<ProfileTwinNeighborsResponse>(path, {
+    params: { top_k: opts?.topK ?? 5 },
+  });
   return data;
 }

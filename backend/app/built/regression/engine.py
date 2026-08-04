@@ -59,6 +59,22 @@ def _eup_leaf_column(addr4_city: bool) -> str:
     return "addr4" if addr4_city else "addr3"
 
 
+def _region_dummy_column(
+    vars_spec: RegressionVariableSpec,
+    level: AdminLevel | str | None,
+    *,
+    addr4_city: bool,
+) -> str | None:
+    """분석 초점에 맞는 지역 더미 원천 컬럼을 반환한다."""
+    if not vars_spec.region_leaf_dummy:
+        return None
+    if level == "beopjungri":
+        return "addr5"
+    if level == "eupmyeondong":
+        return _eup_leaf_column(addr4_city)
+    return None
+
+
 def _duan_smearing(residuals: np.ndarray) -> float:
     r = np.asarray(residuals, dtype=float)
     r = r[np.isfinite(r)]
@@ -540,11 +556,16 @@ def _filter_by_region_units(
     codes = [str(c).strip() for c in (getattr(req, "region_codes", None) or []) if str(c).strip()]
     triples = _unit_addr_triples(req)
     lv = (getattr(req, "region_code_level", None) or "eupmyeondong").strip().lower()
-    # D-028: GIS/canonical → ledger historical expand (beopjungri)
-    if codes and lv == "beopjungri" and conn is not None:
+    # D-028: GIS/canonical → ledger historical expand
+    if codes and conn is not None:
         from app.region_canonical import expand_to_ledger_codes
 
-        codes = expand_to_ledger_codes(conn, codes) or codes
+        if lv == "beopjungri":
+            codes = expand_to_ledger_codes(conn, codes) or codes
+        elif lv == "eupmyeondong":
+            from app.region_scope import _eupmyeondong_ledger_emd_codes
+
+            codes = _eupmyeondong_ledger_emd_codes(conn, codes)
     mask = pd.Series(False, index=df.index)
 
     if codes:
@@ -579,18 +600,10 @@ def _filter_by_region_units(
                 except Exception:
                     pass
         else:
-            emd_set: set[str] = set()
-            for c in codes:
-                if len(c) >= 10 and c.endswith("00"):
-                    emd_set.add(c[:8])
-                elif len(c) >= 8:
-                    emd_set.add(c[:8])
-                else:
-                    emd_set.add(c)
+            emd_set: set[str] = set(codes)
             if "eupmyeondong_code" in df.columns:
                 mask = mask | _norm_col(df, "eupmyeondong_code").isin(emd_set)
             if "beopjungri_code" in df.columns:
-                # historical eup prefix + canonical eup prefix both
                 mask = mask | _norm_col(df, "beopjungri_code").str.slice(0, 8).isin(emd_set)
 
     has_a1 = "addr1" in df.columns
@@ -954,8 +967,11 @@ def _fit_ols(
         )
 
     region_col = None
-    if vars_spec.region_leaf_dummy and level == "eupmyeondong":
-        region_col = _eup_leaf_column(addr4_city)
+    region_col = _region_dummy_column(
+        vars_spec,
+        level,
+        addr4_city=addr4_city,
+    )
 
     y, X, meta = _build_design_matrix(
         df,
@@ -1005,7 +1021,7 @@ def _fit_ols(
         warn = f"{warn} · {log_note}" if warn else log_note
     if vif_warn:
         warn = f"{warn} · {vif_warn}" if warn else vif_warn
-    if vars_spec.region_leaf_dummy and level == "eupmyeondong":
+    if vars_spec.region_leaf_dummy and level in {"eupmyeondong", "beopjungri"}:
         loc_cols = sum(1 for c in X.columns if str(c).startswith("loc_"))
         if loc_cols == 0:
             ref_note = "지역 1개뿐 — 지역 더미 미적용"
@@ -1090,9 +1106,11 @@ def _region_col_for_scatter(
     admin_level: AdminLevel,
     addr4_city: bool,
 ) -> str | None:
-    if vars_spec.region_leaf_dummy and admin_level == "eupmyeondong":
-        return _eup_leaf_column(addr4_city)
-    return None
+    return _region_dummy_column(
+        vars_spec,
+        admin_level,
+        addr4_city=addr4_city,
+    )
 
 
 def _partial_regression_plots(
@@ -1306,9 +1324,11 @@ def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredict
         req, wide_df, req.admin_level, addr4_city, eup_scope=eup_scope
     )
 
-    region_col = None
-    if req.variables.region_leaf_dummy and req.admin_level == "eupmyeondong":
-        region_col = _eup_leaf_column(addr4_city)
+    region_col = _region_dummy_column(
+        req.variables,
+        req.admin_level,
+        addr4_city=addr4_city,
+    )
 
     y, X, meta = _build_design_matrix(
         df,

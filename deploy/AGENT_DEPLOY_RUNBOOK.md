@@ -100,11 +100,46 @@ sudo systemctl restart ch2-macro-backend
 
 ## 5. 배포 후 검증 (에이전트 필수)
 
+**지역코드(canonical resolver) 변경·mart 재빌드 포함 배포** 시 아래 **5.0 → 5.1 → 5.2** 순서를 따른다.
+
+### 5.0 Canonical resolver 게이트 (로컬 또는 VPS DB)
+
+```powershell
+cd c:\ch2\ch2_Macro\backend
+# mart가 아직 historical grain이면 --allow-historical-mart (경고만)
+..\.venv\Scripts\python.exe ..\pipeline\verify_canonical_resolver_migration.py
+# 기대: docs/reports/REGION_CODE_CANONICAL_VERIFY.md status PASS
+#       mart historical_rows == 0 (canonical mart 재빌드 후)
+```
+
+mart 재빌드 전(프리마이그레이션)에는 `--allow-historical-mart` 허용. **운영 반영 후**에는 historical_rows=0 이어야 PASS.
+
+### 5.0b API entry-point smoke
+
+```powershell
+cd c:\ch2\ch2_Macro\backend
+# 로컬
+..\.venv\Scripts\python.exe ..\pipeline\smoke_region_code_deploy.py
+# 운영 (VPS 내부 또는 외부)
+..\.venv\Scripts\python.exe ..\pipeline\smoke_region_code_deploy.py --base-url https://macro.ch2data.com
+```
+
+커버: land free/v2 · upper-stats · built lookup/resolve/scope · collective resolve · profile · twin · map · region search.  
+user-facing 응답에 historical code(`43770340` 등) **금지**.
+
 ### 5.1 백엔드
 
 ```bash
 ssh -i "c:\ch2\ch2_Macro\LightsailDefaultKey-ap-northeast-2.pem" ubuntu@13.209.203.178 \
   "systemctl is-active ch2-macro-backend && curl -sf http://127.0.0.1:8000/health | head -c 300"
+```
+
+VPS에서 region-code smoke (토큰 필요):
+
+```bash
+ssh -i "c:\ch2\ch2_Macro\LightsailDefaultKey-ap-northeast-2.pem" ubuntu@13.209.203.178 \
+  "cd /opt/ch2_Macro/backend && API_TOKEN=\$(grep '^API_TOKEN=' .env | cut -d= -f2-) \
+   ../pipeline/.venv/bin/python ../pipeline/smoke_region_code_deploy.py --base-url http://127.0.0.1:8000"
 ```
 
 ### 5.2 복합 회귀 (구·동 2-way 스모크)

@@ -24,6 +24,7 @@ from app.config import settings
 from app.db import get_db
 from app.jimok_group import display_land_key, matrix_mode_to_col_axis
 from app.population_query import attach_population_year_end_for_upper_level
+from app.region_canonical import resolve_to_canonical
 from app.routers.free import _stats_dict_to_result
 from app.schemas import (
     MatrixCell,
@@ -562,6 +563,9 @@ def get_upper_stats(
 ) -> UpperStatsV2Response:
     _ensure_upper_table(db)
     code = _validate_code(level, code)
+    # D-028: GIS/UI historical prefix → canonical before mart lookup
+    resolved = resolve_to_canonical(db, [code])
+    code = resolved[0] if resolved else code
     if as_of_month is not None and as_of_month.day != 1:
         raise HTTPException(
             status_code=422,

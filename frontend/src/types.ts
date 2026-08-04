@@ -512,6 +512,27 @@ export interface LandRegressionResponse {
   correlation_n?: number | null;
 }
 
+export interface LandModelCandidate {
+  rank: number;
+  blocks: string[];
+  variables: LandRegressionVariables;
+  model_type: "log" | "linear";
+  aic?: number | null;
+  bic?: number | null;
+  adj_r_squared?: number | null;
+  mape?: number | null;
+  cv_mape?: number | null;
+  n: number;
+}
+
+export interface LandRegressionSuggestResponse {
+  candidates_by_aic: LandModelCandidate[];
+  candidates_by_mape: LandModelCandidate[];
+  n: number;
+  selection_n: number;
+  warnings: string[];
+}
+
 export interface LandPredictContinuous {
   name: string;
   label: string;

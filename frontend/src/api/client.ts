@@ -6,6 +6,7 @@ import type {
   LandRegressionPredictResponse,
   LandRegressionRequest,
   LandRegressionResponse,
+  LandRegressionSuggestResponse,
   MatrixCellHistogramRequest,
   MatrixCellHistogramResponse,
   MatrixCellTransactionsRequest,
@@ -179,6 +180,16 @@ export const fetchLandRegression = async (
 ): Promise<LandRegressionResponse> => {
   const { data } = await api.post<LandRegressionResponse>(
     "/paid/matrix-cell-transactions/regression",
+    body
+  );
+  return data;
+};
+
+export const fetchLandRegressionSuggestion = async (
+  body: LandRegressionRequest
+): Promise<LandRegressionSuggestResponse> => {
+  const { data } = await api.post<LandRegressionSuggestResponse>(
+    "/paid/matrix-cell-transactions/regression/suggest",
     body
   );
   return data;

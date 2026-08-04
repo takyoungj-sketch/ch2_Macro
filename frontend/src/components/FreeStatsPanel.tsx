@@ -92,7 +92,8 @@ export default function FreeStatsPanel() {
   }, [regionScopeKey, setPaidRequest]);
 
   const isPaidBasic = viewMode === "paid" && paidResultView === "basic";
-  const useUpper = isPaidBasic && upperSingle != null;
+  /** 단일 상위 행정(시도·시군구·읍면동·city) — free/paid 공통 upper mart 경로 (D-028) */
+  const useUpper = upperSingle != null && (isPaidBasic || viewMode === "free");
   const useBulk =
     isPaidBasic && shouldUseBulkStats(resolvedCodes.length, upperSingle);
   const bulkKey = useMemo(

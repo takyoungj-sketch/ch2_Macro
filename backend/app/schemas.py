@@ -787,6 +787,27 @@ class LandRegressionResponse(BaseModel):
     correlation_n: Optional[int] = None
 
 
+class LandModelCandidate(BaseModel):
+    rank: int
+    blocks: list[str]
+    variables: LandRegressionVariables
+    model_type: Literal["log", "linear"]
+    aic: Optional[float] = None
+    bic: Optional[float] = None
+    adj_r_squared: Optional[float] = None
+    mape: Optional[float] = None
+    cv_mape: Optional[float] = None
+    n: int
+
+
+class LandRegressionSuggestResponse(BaseModel):
+    candidates_by_aic: list[LandModelCandidate] = Field(default_factory=list)
+    candidates_by_mape: list[LandModelCandidate] = Field(default_factory=list)
+    n: int
+    selection_n: int
+    warnings: list[str] = Field(default_factory=list)
+
+
 class LandRegressionPredictRequest(LandRegressionRequest):
     """POST /paid/matrix-cell-transactions/regression/predict — 단가(만원/㎡) 예측."""
     area_sqm: Optional[float] = None

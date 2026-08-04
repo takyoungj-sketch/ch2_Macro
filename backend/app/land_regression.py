@@ -439,6 +439,90 @@ def run_land_regression(
     )
 
 
+def suggest_land_regression(
+    rows: list[dict],
+    req: "LandRegressionRequest",
+) -> "LandRegressionSuggestResponse":
+    """변수 블록 조합을 동일 complete-case 표본에서 비교한다."""
+    from app.schemas import LandModelCandidate, LandRegressionSuggestResponse
+
+    base, warnings = _prepare_df(rows, req)
+    block_fields = [
+        "area_sqm",
+        "road_condition",
+        "deal_type",
+        "partial_ownership",
+        "year_trend",
+        "beopjungri_fe",
+    ]
+    enabled = [field for field in block_fields if getattr(req.variables, field, False)]
+    if not enabled:
+        raise ValueError("추천 후보 변수를 하나 이상 선택하세요.")
+
+    source_columns = ["unit_price_per_sqm", "area_sqm"]
+    for field in enabled:
+        column = {
+            "road_condition": "road_condition",
+            "deal_type": "deal_type",
+            "partial_ownership": "partial_ownership_label",
+            "year_trend": "contract_year",
+            "beopjungri_fe": "beopjungri_name",
+        }.get(field)
+        if column and column in base.columns:
+            source_columns.append(column)
+    sample = base.dropna(subset=list(dict.fromkeys(source_columns))).copy()
+    selection_n = len(sample)
+    results: list[LandModelCandidate] = []
+    max_subsets = min((1 << len(enabled)) - 1, 64)
+    for mask in range(1, max_subsets + 1):
+        chosen = [enabled[i] for i in range(len(enabled)) if mask & (1 << i)]
+        variables = req.variables.model_copy(
+            update={field: field in chosen for field in block_fields}
+        )
+        candidate_req = req.model_copy(update={"variables": variables})
+        try:
+            bundle = _build_design(sample, candidate_req, [])
+            model = sm.OLS(bundle.y_fit, bundle.X_const, missing="drop").fit()
+        except Exception:
+            continue
+        y_price = sample.loc[bundle.X_const.index, "unit_price_per_sqm"].astype(float).to_numpy()
+        fitted = np.asarray(model.fittedvalues, dtype=float)
+        if bundle.model_type == "log":
+            fitted = np.exp(fitted) * _duan_smearing(model.resid)
+        valid = np.isfinite(y_price) & np.isfinite(fitted) & (y_price != 0)
+        mape = (
+            round(float(np.mean(np.abs(y_price[valid] - fitted[valid]) / np.abs(y_price[valid]))) * 100, 2)
+            if valid.any()
+            else None
+        )
+        results.append(
+            LandModelCandidate(
+                rank=0,
+                blocks=chosen,
+                variables=variables,
+                model_type=bundle.model_type,  # type: ignore[arg-type]
+                aic=float(model.aic),
+                bic=float(model.bic),
+                adj_r_squared=float(model.rsquared_adj),
+                mape=mape,
+                n=int(model.nobs),
+            )
+        )
+
+    def ranked(key: str) -> list[LandModelCandidate]:
+        valid = [candidate for candidate in results if getattr(candidate, key) is not None]
+        valid.sort(key=lambda candidate: float(getattr(candidate, key)))
+        return [candidate.model_copy(update={"rank": i + 1}) for i, candidate in enumerate(valid[:5])]
+
+    return LandRegressionSuggestResponse(
+        candidates_by_aic=ranked("aic"),
+        candidates_by_mape=ranked("mape"),
+        n=selection_n,
+        selection_n=selection_n,
+        warnings=warnings,
+    )
+
+
 def _back_transform(v: float, model_type: str) -> float:
     if model_type == "log":
         return float(math.exp(v))

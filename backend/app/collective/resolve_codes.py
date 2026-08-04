@@ -105,6 +105,9 @@ def resolve_collective_map_codes(
 
     col = _CODE_COL[level]
     where = " AND ".join(clauses)
+    history_ready = bool(
+        conn.execute(text("SELECT to_regclass('public.region_code_history')")).scalar()
+    )
     from app.region_canonical import (
         canonical_prefix_expr,
         canonical_select_expr,
@@ -157,6 +160,9 @@ def resolve_collective_map_codes(
                 sigungu_name=a2,
                 names=addr4_list or addr3_list or leaves,
             )
+
+    if history_ready and codes:
+        codes = resolve_to_canonical(conn, codes)
 
     ctx_sido = codes[0][:2] if codes else None
     ctx_sigungu: str | None = None

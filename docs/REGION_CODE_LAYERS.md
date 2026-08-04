@@ -116,6 +116,51 @@ Land / Built / Collective는 **자체 코드 변환 로직을 두지 않는다**
 **운영(현재):** `land_stats.region_code_history` 를 임시 SSOT로 두고 Built·Collective에 동일 행을 동기화한다.  
 **목표(장기):** `region_codes` + `region_code_history` 를 **CH2 Macro 공통 지역 마스터**로 독립 — Land 소유가 아닌 인프라. 동기화는 master→3 DB pull 로 전환.
 
+### Resolver 계약 (2026-08-04 완성)
+
+| 함수 | 역할 |
+|------|------|
+| `resolve_to_canonical(codes)` | 입력(구코드·신코드·8/10자리) → **canonical** |
+| `expand_to_ledger_codes(canonical_codes)` | canonical → **ledger 조회 집합**(canonical ∪ historical from) |
+| `normalize_result_codes(records_or_codes)` | 원장/API 결과 → canonical (**멱등**) |
+| `is_canonical(code)` | 이미 canonical이면 True |
+
+**파이프라인 (한 줄):**
+
+```
+사용자 선택 → canonical → expand(ledger set) → 원장 조회 → normalize → 분석·API·mart
+```
+
+**금지 규칙:**
+
+- user-facing API·지도·Profile·Twin·통계 key에 **raw historical code 직접 반환 금지**
+- 원장 조회 외 경로에서 DB raw code를 그대로 노출하지 않음 — 반드시 resolver 경유
+- Stateful Resolver 객체·세션 캐시 금지 — DB adapter는 `load_history_snapshot()`만, 변환은 pure core
+- `split`·미해결 코드는 **자동 치환하지 않음** (`merge`·`code_reissue`·`rename`만)
+
+**검증:**
+
+- Property tests: `pipeline/tests/test_region_canonical_contract.py`
+- API contract: `backend/tests/test_region_canonical_api_contract.py`
+- Mart hard gate: `pipeline/verify_canonical_resolver_migration.py` — **historical_rows=0** 필수 (운영). 리포트: `docs/reports/REGION_CODE_CANONICAL_VERIFY.{json,md}` · `RESOLVER_VERSION` 기록
+- API entry-point smoke: `pipeline/smoke_region_code_deploy.py` — land/built/collective/profile/twin/map/search
+
+**`region_code_history` 운영 정책 (read-only):**
+
+- 운영 DB에서 앱 역할은 **SELECT만** — `UPDATE`/`DELETE` 금지
+- 매핑 변경은 **버전 migration SQL** (`db/0xx_…sql`) + `sync_region_code_history.py` 로만
+- 템플릿: `db/047_region_code_history_readonly.sql` (역할명 조정 후 수동 적용)
+
+**배포·mart 갱신 SOP (행정구역 변경 시):**
+
+1. migration SQL로 `region_code_history`에 매핑 1행 추가 (SSOT: land_stats)
+2. `pipeline/sync_region_code_history.py` → built/collective 복제
+3. canonical `region_codes` upsert + historical deactivate
+4. 영향 mart 재빌드 (`rebuild_land_upper_annual_canonical.py` 등)
+5. `verify_canonical_resolver_migration.py` → **PASS** (historical mart 0건)
+6. `smoke_region_code_deploy.py` → **PASS**
+7. 브라우저 spot-check (대소·양지)
+
 ---
 
 ## 8. 하지 않을 것

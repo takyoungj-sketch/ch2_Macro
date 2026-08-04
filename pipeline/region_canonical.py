@@ -4,10 +4,19 @@
 - Does NOT mutate land_transactions.beopjungri_code (historical preserved).
 - split / unresolved: never auto-mapped (no history row, or excluded types).
 - Allowed remap types: code_reissue, merge, rename.
+
+Public contract (stateless — no Resolver object, no session cache):
+  resolve_to_canonical(codes)     — any code → canonical
+  expand_to_ledger_codes(codes)   — canonical → ledger lookup set (canonical ∪ historical)
+  normalize_result_codes(...)     — ledger/API rows → canonical codes (idempotent)
+  is_canonical(code)              — True when code already equals its canonical form
+
+DB-facing wrappers load a history snapshot per call, then delegate to pure core.
 """
 from __future__ import annotations
 
-from typing import Iterable, Sequence
+from dataclasses import dataclass
+from typing import Any, Iterable, Mapping, Sequence, TypeVar
 
 from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine
@@ -16,7 +25,14 @@ from sqlalchemy.orm import Session
 # 1:N split 제외 — 자동 canonical 치환 금지
 RESOLVE_CHANGE_TYPES: tuple[str, ...] = ("code_reissue", "merge", "rename")
 
+# Verify·배포 리포트에 기록 — resolver 계약 변경 시 갱신
+RESOLVER_VERSION = "2026.08"
+
 _TYPES_SQL = ",".join(f"'{t}'" for t in RESOLVE_CHANGE_TYPES)
+
+_ADMIN_PREFIX_LENGTHS: tuple[int, ...] = (2, 5, 8)
+
+T = TypeVar("T")
 
 
 def _norm_codes(codes: Iterable[str] | None) -> list[str]:
@@ -31,6 +47,167 @@ def _norm_codes(codes: Iterable[str] | None) -> list[str]:
     return out
 
 
+@dataclass(frozen=True)
+class RegionCodeHistorySnapshot:
+    """Explicit history map for pure (DB-free) resolver functions."""
+
+    forward: dict[str, str]
+    reverse: dict[str, tuple[str, ...]]
+    prefix_forward: dict[tuple[int, str], str]
+
+
+def build_history_snapshot(
+    rows: Iterable[tuple[str, str, str]],
+) -> RegionCodeHistorySnapshot:
+    """Build snapshot from (from_code, to_code, change_type) tuples."""
+    forward: dict[str, str] = {}
+    reverse_sets: dict[str, set[str]] = {}
+    prefix_forward: dict[tuple[int, str], str] = {}
+
+    for raw_from, raw_to, change_type in rows:
+        if change_type not in RESOLVE_CHANGE_TYPES:
+            continue
+        src = str(raw_from).strip()
+        dst = str(raw_to).strip()
+        if not src or not dst:
+            continue
+        forward[src] = dst
+        reverse_sets.setdefault(dst, set()).add(src)
+        for n in _ADMIN_PREFIX_LENGTHS:
+            if len(src) >= n and len(dst) >= n:
+                old_p = src[:n]
+                new_p = dst[:n]
+                if old_p != new_p:
+                    prefix_forward[(n, old_p)] = new_p
+
+    reverse = {k: tuple(sorted(v)) for k, v in reverse_sets.items()}
+    return RegionCodeHistorySnapshot(
+        forward=forward,
+        reverse=reverse,
+        prefix_forward=prefix_forward,
+    )
+
+
+def load_history_snapshot(conn: Connection | Session) -> RegionCodeHistorySnapshot:
+    """DB adapter: load region_code_history into an explicit snapshot."""
+    rows = conn.execute(
+        text(
+            f"""
+            SELECT DISTINCT ON (from_code)
+                   from_code, to_code, change_type
+            FROM region_code_history
+            WHERE change_type IN ({_TYPES_SQL})
+            ORDER BY from_code, effective_from DESC, id DESC
+            """
+        )
+    ).fetchall()
+    return build_history_snapshot(
+        (str(r.from_code).strip(), str(r.to_code).strip(), str(r.change_type).strip())
+        for r in rows
+    )
+
+
+def _resolve_one_pure(snapshot: RegionCodeHistorySnapshot, code: str) -> str:
+    cc = str(code).strip()
+    if not cc:
+        return cc
+    if cc in snapshot.forward:
+        return snapshot.forward[cc]
+    n = len(cc)
+    if n in _ADMIN_PREFIX_LENGTHS:
+        mapped = snapshot.prefix_forward.get((n, cc))
+        if mapped:
+            return mapped
+    return cc
+
+
+def resolve_to_canonical_pure(
+    snapshot: RegionCodeHistorySnapshot,
+    codes: Sequence[str] | None,
+) -> list[str]:
+    """Pure: map codes through history (identity when unmapped)."""
+    cleaned = _norm_codes(codes)
+    out: list[str] = []
+    seen: set[str] = set()
+    for c in cleaned:
+        canon = _resolve_one_pure(snapshot, c)
+        if canon not in seen:
+            seen.add(canon)
+            out.append(canon)
+    return out
+
+
+def expand_to_ledger_codes_pure(
+    snapshot: RegionCodeHistorySnapshot,
+    codes: Sequence[str] | None,
+) -> list[str]:
+    """Pure: canonical input → ledger lookup set (input ∪ matching historical from_codes)."""
+    cleaned = _norm_codes(codes)
+    if not cleaned:
+        return []
+    result: set[str] = set(cleaned)
+    for code in cleaned:
+        for hist_from in snapshot.reverse.get(code, ()):
+            result.add(hist_from)
+        n = len(code)
+        if n in _ADMIN_PREFIX_LENGTHS:
+            for hist_from, hist_to in snapshot.forward.items():
+                if len(hist_to) >= n and hist_to[:n] == code:
+                    result.add(hist_from)
+                    if len(hist_from) >= n:
+                        result.add(hist_from[:n])
+    return _norm_codes(result)
+
+
+def is_canonical_pure(snapshot: RegionCodeHistorySnapshot, code: str) -> bool:
+    """Pure: True when code equals its canonical resolution."""
+    cc = str(code).strip()
+    if not cc:
+        return False
+    return _resolve_one_pure(snapshot, cc) == cc
+
+
+def normalize_result_codes_pure(
+    snapshot: RegionCodeHistorySnapshot,
+    records_or_codes: Sequence[str] | Sequence[Mapping[str, Any]] | None,
+    *,
+    code_key: str = "code",
+    code_keys: Sequence[str] | None = None,
+) -> list[str] | list[dict[str, Any]]:
+    """Pure: normalize codes to canonical; dedupe code lists; shallow-copy record dicts."""
+    if records_or_codes is None:
+        return []
+    if not records_or_codes:
+        return []
+
+    first = records_or_codes[0]
+    if isinstance(first, str):
+        return resolve_to_canonical_pure(snapshot, records_or_codes)  # type: ignore[arg-type]
+
+    keys = tuple(code_keys) if code_keys else (code_key,)
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for rec in records_or_codes:
+        if not isinstance(rec, Mapping):
+            continue
+        item = dict(rec)
+        primary: str | None = None
+        for k in keys:
+            raw = item.get(k)
+            if raw is None or str(raw).strip() == "":
+                continue
+            canon = _resolve_one_pure(snapshot, str(raw))
+            item[k] = canon
+            if primary is None and k == code_key:
+                primary = canon
+        if primary is not None:
+            if primary in seen:
+                continue
+            seen.add(primary)
+        out.append(item)
+    return out
+
+
 def resolve_to_canonical(
     conn: Connection | Session,
     codes: Sequence[str] | None,
@@ -39,36 +216,8 @@ def resolve_to_canonical(
     cleaned = _norm_codes(codes)
     if not cleaned:
         return []
-    rows = conn.execute(
-        text(
-            f"""
-            SELECT c.code AS input_code,
-                   COALESCE(
-                     (
-                       SELECT h.to_code
-                       FROM region_code_history h
-                       WHERE h.from_code = c.code
-                         AND h.change_type IN ({_TYPES_SQL})
-                       ORDER BY h.effective_from DESC, h.id DESC
-                       LIMIT 1
-                     ),
-                     c.code
-                   ) AS canonical_code
-            FROM unnest(CAST(:codes AS text[])) AS c(code)
-            """
-        ),
-        {"codes": cleaned},
-    ).fetchall()
-    # preserve first-seen order of canonicals
-    out: list[str] = []
-    seen: set[str] = set()
-    by_in = {str(r.input_code).strip(): str(r.canonical_code).strip() for r in rows}
-    for c in cleaned:
-        canon = by_in.get(c, c)
-        if canon not in seen:
-            seen.add(canon)
-            out.append(canon)
-    return out
+    snapshot = load_history_snapshot(conn)
+    return resolve_to_canonical_pure(snapshot, cleaned)
 
 
 def expand_to_ledger_codes(
@@ -83,24 +232,40 @@ def expand_to_ledger_codes(
     cleaned = _norm_codes(codes)
     if not cleaned:
         return []
-    rows = conn.execute(
-        text(
-            f"""
-            SELECT DISTINCT x.code
-            FROM (
-              SELECT unnest(CAST(:codes AS text[])) AS code
-              UNION
-              SELECT h.from_code
-              FROM region_code_history h
-              WHERE h.to_code = ANY(:codes)
-                AND h.change_type IN ({_TYPES_SQL})
-            ) x
-            WHERE x.code IS NOT NULL AND btrim(x.code) <> ''
-            """
-        ),
-        {"codes": cleaned},
-    ).fetchall()
-    return _norm_codes(str(r[0]) for r in rows)
+    snapshot = load_history_snapshot(conn)
+    return expand_to_ledger_codes_pure(snapshot, cleaned)
+
+
+def is_canonical(conn: Connection | Session, code: str) -> bool:
+    """True when code already equals its canonical resolution."""
+    snapshot = load_history_snapshot(conn)
+    return is_canonical_pure(snapshot, code)
+
+
+def normalize_result_codes(
+    conn: Connection | Session,
+    records_or_codes: Sequence[str] | Sequence[Mapping[str, Any]] | None,
+    *,
+    code_key: str = "code",
+    code_keys: Sequence[str] | None = None,
+) -> list[str] | list[dict[str, Any]]:
+    """Normalize user-facing codes to canonical (idempotent). Does not mutate ledger rows."""
+    snapshot = load_history_snapshot(conn)
+    return normalize_result_codes_pure(
+        snapshot,
+        records_or_codes,
+        code_key=code_key,
+        code_keys=code_keys,
+    )
+
+
+def normalize_code(conn: Connection | Session, code: str | None) -> str | None:
+    """Single-code helper: ledger/historical → canonical for API responses."""
+    cc = (code or "").strip()
+    if not cc:
+        return None
+    resolved = resolve_to_canonical(conn, [cc])
+    return resolved[0] if resolved else None
 
 
 def canonical_select_expr(alias: str = "lt") -> str:

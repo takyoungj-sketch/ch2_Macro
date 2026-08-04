@@ -16,6 +16,8 @@ from app.collective.schemas import (
     CollectiveRegressionPredictInputs,
     CollectiveRegressionRequest,
     CollectiveRegressionResponse,
+    CollectiveRegressionSpec,
+    CollectiveModelCandidate,
     ContinuousRange,
     ModelComparison,
     ModelMetrics,
@@ -179,10 +181,14 @@ def _build_model_comparison(
         adj, mape, rmse = _orig_scale_metrics(y.to_numpy(), pred, k_params)
         cmape, crmse = _cv_price_metrics(y.to_numpy(), x_const.to_numpy(), mt)
         cv_mape[mt] = cmape
-        use_mape = cmape if cmape is not None else mape
-        use_rmse = crmse if crmse is not None else rmse
         metrics[mt] = ModelMetrics(
-            model_type=mt, adj_r_squared=adj, mape=use_mape, rmse=use_rmse
+            model_type=mt,
+            adj_r_squared=adj,
+            mape=mape,
+            rmse=rmse,
+            cv_mape=cmape,
+            cv_folds=5 if cmape is not None else 0,
+            cv_method="kfold_random" if cmape is not None else None,
         )
 
     if not metrics:
@@ -191,7 +197,15 @@ def _build_model_comparison(
 
     def _mape_of(mt: str) -> float:
         m = metrics.get(mt)
-        return m.mape if (m and m.mape is not None) else float("inf")
+        if not m:
+            return float("inf")
+        return (
+            m.cv_mape
+            if m.cv_mape is not None
+            else m.mape
+            if m.mape is not None
+            else float("inf")
+        )
 
     if "log" in metrics and "linear" in metrics:
         recommended = "log" if _mape_of("log") <= _mape_of("linear") else "linear"
@@ -699,6 +713,7 @@ def run_building_regression(
     req: CollectiveRegressionRequest,
 ) -> CollectiveRegressionResponse:
     _, _, _, resp = _run_regression_core(df, req, cohort_mode=False)
+    resp.model_candidates = suggest_collective_regression(df, req, cohort_mode=False)
     resp.building_key = building_key
     resp.display_name = display_name
     return resp
@@ -723,11 +738,80 @@ def run_cohort_regression(
         cohort_mode=True,
         building_display_names=names,
     )
+    resp.model_candidates = suggest_collective_regression(
+        df,
+        req,
+        cohort_mode=True,
+        building_display_names=names,
+    )
     if len(building_keys) > 1 and resp.n > 0 and not any("단지 FE" in w for w in resp.warnings):
         resp.warnings.insert(0, f"코호트 {len(building_keys)}개 단지 — 단지 고정효과 적용")
     resp.building_key = building_keys[0] if building_keys else ""
     resp.display_name = display_label
     return resp
+
+
+def suggest_collective_regression(
+    df: pd.DataFrame,
+    req: CollectiveRegressionRequest,
+    *,
+    cohort_mode: bool = False,
+    building_display_names: dict[str, str] | None = None,
+) -> list[CollectiveModelCandidate]:
+    """건물·코호트 회귀의 변수 블록 후보를 비교한다.
+
+    본건 건물 회귀와 코호트 회귀의 기존 경로는 유지하고, 동일 데이터에
+    변수 블록 후보만 추가로 적합해 추천 목록으로 제공한다.
+    """
+    fields = ["exclusive_area", "building_age", "floor", "dong", "housing_subtype"]
+    enabled = [field for field in fields if getattr(req.variables, field, False)]
+    if not enabled:
+        return []
+    scored: list[CollectiveModelCandidate] = []
+    for mask in range(1, min((1 << len(enabled)) - 1, 64) + 1):
+        chosen = [enabled[i] for i in range(len(enabled)) if mask & (1 << i)]
+        variables = req.variables.model_copy(
+            update={field: field in chosen for field in fields}
+        )
+        candidate_req = req.model_copy(update={"variables": variables})
+        try:
+            _, _, _, response = _run_regression_core(
+                df,
+                candidate_req,
+                cohort_mode=cohort_mode,
+                building_display_names=building_display_names,
+            )
+        except Exception:
+            continue
+        if response.n <= 0:
+            continue
+        scored.append(
+            CollectiveModelCandidate(
+                rank=0,
+                blocks=chosen,
+                variables=variables,
+                model_type=response.model_type,
+                n=response.n,
+                adj_r_squared=response.price_adj_r_squared or response.adj_r_squared,
+                mape=response.mape,
+                cv_mape=(
+                    response.model_comparison.log.cv_mape
+                    if response.model_type == "log"
+                    and response.model_comparison
+                    and response.model_comparison.log
+                    else response.model_comparison.linear.cv_mape
+                    if response.model_comparison and response.model_comparison.linear
+                    else None
+                ),
+            )
+        )
+    scored.sort(
+        key=lambda item: (
+            item.cv_mape if item.cv_mape is not None else float("inf"),
+            -(item.adj_r_squared or float("-inf")),
+        )
+    )
+    return [item.model_copy(update={"rank": i + 1}) for i, item in enumerate(scored[:5])]
 
 
 def predict_regression(

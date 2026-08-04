@@ -241,6 +241,32 @@ def resolve_built_map_codes(
                 names=addr4_list or addr3_list or leaves,
             )
 
+    if history_ready and codes:
+        codes = resolve_to_canonical(conn, codes)
+
+    if level == "eupmyeondong" and codes:
+        rows_lb = conn.execute(
+            text(
+                """
+                SELECT DISTINCT ON (btrim(eupmyeondong_code::text))
+                       btrim(eupmyeondong_code::text) AS code,
+                       btrim(eupmyeondong_name::text) AS eup
+                FROM region_codes
+                WHERE COALESCE(is_active, TRUE)
+                  AND btrim(eupmyeondong_code::text) = ANY(:codes)
+                  AND eupmyeondong_name IS NOT NULL
+                  AND btrim(eupmyeondong_name::text) <> ''
+                ORDER BY btrim(eupmyeondong_code::text), beopjungri_code
+                """
+            ),
+            {"codes": list(codes)},
+        ).mappings().all()
+        for row in rows_lb:
+            code = str(row["code"]).strip()
+            eup = (row.get("eup") or "").strip()
+            if code and eup:
+                labels[code] = eup
+
     ctx_sido = codes[0][:2] if codes else None
     ctx_sigungu: str | None = None
     if level in ("eupmyeondong", "beopjungri") and codes:

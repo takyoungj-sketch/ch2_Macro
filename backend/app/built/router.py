@@ -705,10 +705,31 @@ def lookup_region_code(
     eup: Optional[str] = Query(None, description="리 조회 시 상위 읍·면"),
     asset_type: Optional[str] = Query(None),
 ):
-    """지도 추가 시 VWorld 코드 ↔ 원장 행정코드 정합용."""
+    """지도 추가 시 VWorld 코드 ↔ 원장 행정코드 정합용.
+
+    원장 historical code를 조회한 뒤 반드시 canonical로 정규화해 반환한다(D-028).
+    """
     from app.built.asset_scope import apply_asset_type_filter
+    from app.region_canonical import expand_to_ledger_codes, normalize_code, resolve_to_canonical
 
     conn = db.connection()
+
+    def _response(
+        *,
+        raw: str | None,
+        level: str,
+        addr1_val: str | None = None,
+        addr2_val: str | None = None,
+        leaf_val: str | None = None,
+    ) -> dict:
+        return {
+            "code": normalize_code(conn, raw),
+            "level": level,
+            "addr1": addr1_val,
+            "addr2": addr2_val,
+            "leaf": leaf_val,
+        }
+
     lv = (level or "eupmyeondong").strip().lower()
     params: dict = {}
     asset_clauses: list[str] = []
@@ -718,7 +739,10 @@ def lookup_region_code(
     # 코드만으로 원장 역조회 (시군구명 없을 때)
     raw_code = (code or "").strip()
     if raw_code and not (addr1 and addr2 and leaf):
-        emd = raw_code[:8] if len(raw_code) >= 8 else raw_code
+        canonical = resolve_to_canonical(conn, [raw_code])
+        canon = canonical[0] if canonical else raw_code
+        ledger_codes = expand_to_ledger_codes(conn, [canon]) or [raw_code]
+        emd_set = sorted({c[:8] if len(c) >= 8 else c for c in ledger_codes})
         if lv == "beopjungri":
             row = conn.execute(
                 text(
@@ -727,12 +751,12 @@ def lookup_region_code(
                            addr1, addr2, addr5 AS leaf, addr4, addr3
                     FROM built_transactions
                     WHERE is_valid
-                      AND btrim(beopjungri_code::text) = :code
+                      AND btrim(beopjungri_code::text) = ANY(:codes)
                       {asset_sql}
                     LIMIT 1
                     """
                 ),
-                {**params, "code": raw_code},
+                {**params, "codes": ledger_codes},
             ).mappings().first()
         else:
             row = conn.execute(
@@ -744,30 +768,30 @@ def lookup_region_code(
                     FROM built_transactions
                     WHERE is_valid
                       AND (
-                        btrim(eupmyeondong_code::text) = :emd
-                        OR LEFT(btrim(COALESCE(beopjungri_code::text, '')), 8) = :emd
+                        btrim(eupmyeondong_code::text) = ANY(:emds)
+                        OR LEFT(btrim(COALESCE(beopjungri_code::text, '')), 8) = ANY(:emds)
                       )
                       {asset_sql}
                     LIMIT 1
                     """
                 ),
-                {**params, "emd": emd},
+                {**params, "emds": emd_set},
             ).mappings().first()
         if not row:
-            return {"code": None, "level": lv, "addr1": None, "addr2": None, "leaf": None}
-        return {
-            "code": str(row["code"]) if row.get("code") else None,
-            "level": lv,
-            "addr1": row.get("addr1"),
-            "addr2": row.get("addr2"),
-            "leaf": row.get("leaf"),
-        }
+            return _response(raw=None, level=lv)
+        return _response(
+            raw=str(row["code"]) if row.get("code") else None,
+            level=lv,
+            addr1_val=row.get("addr1"),
+            addr2_val=row.get("addr2"),
+            leaf_val=row.get("leaf"),
+        )
 
     a1 = (addr1 or "").strip()
     a2 = (addr2 or "").strip()
     leaf_name = (leaf or "").strip()
     if not a1 or not a2 or not leaf_name:
-        return {"code": None, "level": lv, "addr1": None, "addr2": None, "leaf": None}
+        return _response(raw=None, level=lv)
     params.update({"a1": a1, "a2": a2, "leaf": leaf_name})
     if lv == "beopjungri":
         eup_sql = ""
@@ -826,13 +850,13 @@ def lookup_region_code(
                     picks=[(eup_name, leaf_name)],
                 )
                 code = found[0][0] if found else None
-        return {
-            "code": code,
-            "level": "beopjungri",
-            "addr1": a1,
-            "addr2": a2,
-            "leaf": leaf_name,
-        }
+        return _response(
+            raw=code,
+            level="beopjungri",
+            addr1_val=a1,
+            addr2_val=a2,
+            leaf_val=leaf_name,
+        )
 
     row = conn.execute(
         text(
@@ -898,20 +922,20 @@ def lookup_region_code(
             {"a1": a1, "a2": a2, "leaf": leaf_name},
         ).first()
         if rc and rc.code:
-            return {
-                "code": str(rc.code),
-                "level": "eupmyeondong",
-                "addr1": a1,
-                "addr2": a2,
-                "leaf": leaf_name,
-            }
-    return {
-        "code": str(row.code) if row and row.code else None,
-        "level": "eupmyeondong",
-        "addr1": a1,
-        "addr2": a2,
-        "leaf": leaf_name,
-    }
+            return _response(
+                raw=str(rc.code),
+                level="eupmyeondong",
+                addr1_val=a1,
+                addr2_val=a2,
+                leaf_val=leaf_name,
+            )
+    return _response(
+        raw=str(row.code) if row and row.code else None,
+        level="eupmyeondong",
+        addr1_val=a1,
+        addr2_val=a2,
+        leaf_val=leaf_name,
+    )
 
 @router.post("/regression/run", response_model=RegressionRunResponse)
 def regression_run(body: RegressionRunRequest, db: Session = Depends(get_built_db)):

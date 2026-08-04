@@ -25,6 +25,32 @@ def _norm_codes(codes: list[str] | None) -> list[str]:
     return out
 
 
+def _eupmyeondong_ledger_emd_codes(
+    conn: Connection | None,
+    canonical_codes: list[str],
+) -> list[str]:
+    """canonical eup(8자) → ledger 조회용 8자 prefix 집합 (historical 포함)."""
+    cleaned = _norm_codes(canonical_codes)
+    if not cleaned:
+        return []
+    ledger = list(cleaned)
+    if conn is not None:
+        from app.region_canonical import expand_to_ledger_codes
+
+        ledger = expand_to_ledger_codes(conn, cleaned) or cleaned
+    emd: set[str] = set()
+    for c in ledger:
+        cc = str(c).strip()
+        if len(cc) >= 8:
+            emd.add(cc[:8])
+        elif cc:
+            emd.add(cc)
+    for c in cleaned:
+        if len(c) >= 8:
+            emd.add(c[:8])
+    return _norm_codes(emd)
+
+
 def apply_admin_code_scope(
     clauses: list[str],
     params: dict,
@@ -45,16 +71,9 @@ def apply_admin_code_scope(
     lv = (level or "").strip().lower()
     p = f"{col_prefix}." if col_prefix else ""
     if lv == "eupmyeondong":
-        # 8자 emd (+ 레거시 10자 …00)
-        emd = []
-        for c in cleaned:
-            if len(c) >= 10 and c.endswith("00"):
-                emd.append(c[:8])
-            elif len(c) >= 8:
-                emd.append(c[:8])
-            else:
-                emd.append(c)
-        emd = _norm_codes(emd)
+        emd = _eupmyeondong_ledger_emd_codes(conn, cleaned)
+        if not emd:
+            return False
         params["admin_region_codes"] = emd
         clauses.append(
             f"(btrim({p}eupmyeondong_code::text) = ANY(:admin_region_codes) "
@@ -170,20 +189,13 @@ def apply_analysis_region_scope(
                 f")"
             )
         else:
-            emd = []
-            for c in cleaned:
-                if len(c) >= 10 and c.endswith("00"):
-                    emd.append(c[:8])
-                elif len(c) >= 8:
-                    emd.append(c[:8])
-                else:
-                    emd.append(c)
-            emd = _norm_codes(emd)
-            params["admin_region_codes"] = emd
-            parts.append(
-                f"(btrim({p}eupmyeondong_code::text) = ANY(:admin_region_codes) "
-                f"OR LEFT(btrim(COALESCE({p}beopjungri_code::text, '')), 8) = ANY(:admin_region_codes))"
-            )
+            emd = _eupmyeondong_ledger_emd_codes(conn, cleaned)
+            if emd:
+                params["admin_region_codes"] = emd
+                parts.append(
+                    f"(btrim({p}eupmyeondong_code::text) = ANY(:admin_region_codes) "
+                    f"OR LEFT(btrim(COALESCE({p}beopjungri_code::text, '')), 8) = ANY(:admin_region_codes))"
+                )
 
     triples = parse_region_addr_keys(addr_keys)
     for i, (a1, a2, leaf) in enumerate(triples):
