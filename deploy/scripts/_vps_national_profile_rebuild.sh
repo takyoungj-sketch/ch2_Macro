@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # 전국 market_stats + regional_profile 재빌드 (구·addr4 grain · eup canonical fix)
 set -euo pipefail
-cd /opt/ch2_Macro
-git pull origin main
-cd backend
+cd /opt/ch2_Macro/backend
+
+LOG=/tmp/national_profile_rebuild.log
+exec > >(tee -a "$LOG") 2>&1
+echo "=== $(date -Is) START pid=$$ ==="
 
 echo "=== $(date -Is) collective ledger region code backfill (전국) ==="
 .venv/bin/python ../pipeline/repair_collective_ledger_region_codes.py
