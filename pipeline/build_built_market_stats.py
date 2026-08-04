@@ -52,19 +52,30 @@ ASSET_DOMAINS: dict[str, str] = {
     "detached": "detached_market",
 }
 
-from region_canonical import canonical_prefix_expr  # noqa: E402
+from region_canonical import canonical_prefix_coalesce_sql, canonical_select_expr  # noqa: E402
+from region_mapping import region_codes_lateral_sql  # noqa: E402
 
-# D-028: beopjungri NULL이어도 eupmyeondong_code + history → canonical grain
+# D-028/D-015: beop·eup NULL + 구·addr4(처인구·양지읍) → region_codes LATERAL → canonical grain
+_CANON = canonical_select_expr("t")
+_RC_LATERAL = region_codes_lateral_sql("t", canon_beop_expr=_CANON)
+_BEOP = "COALESCE(NULLIF(btrim(t.beopjungri_code::text), ''), NULLIF(btrim(rc.beopjungri_code::text), ''))"
+_EUP = "COALESCE(NULLIF(btrim(t.eupmyeondong_code::text), ''), NULLIF(btrim(rc.eupmyeondong_code::text), ''))"
+_SIG = "COALESCE(NULLIF(btrim(t.sigungu_code::text), ''), NULLIF(btrim(rc.sigungu_code::text), ''))"
+_SIDO = "COALESCE(NULLIF(btrim(t.sido_code::text), ''), NULLIF(btrim(rc.sido_code::text), ''))"
 _REGION_CODE_SQL = f"""
-    {canonical_prefix_expr("t", 8)} AS bcode8,
-    {canonical_prefix_expr("t", 5)} AS sigungu,
-    {canonical_prefix_expr("t", 2)} AS sido,
+    {canonical_prefix_coalesce_sql(_BEOP, _EUP, _SIG, _SIDO, 8)} AS bcode8,
+    {canonical_prefix_coalesce_sql(_BEOP, _EUP, _SIG, _SIDO, 5)} AS sigungu,
+    {canonical_prefix_coalesce_sql(_BEOP, _EUP, _SIG, _SIDO, 2)} AS sido,
 """
 _HAS_REGION = """
 (
   NULLIF(btrim(t.beopjungri_code::text), '') IS NOT NULL
   OR NULLIF(btrim(t.eupmyeondong_code::text), '') IS NOT NULL
+  OR rc.beopjungri_code IS NOT NULL
 )
+"""
+_SIDO_FILTER = """
+  AND COALESCE(NULLIF(btrim(t.sido_code::text), ''), NULLIF(btrim(rc.sido_code::text), '')) = :sido
 """
 
 ROLLING_SQL = f"""
@@ -77,6 +88,7 @@ SELECT
         ORDER BY t.price
     ) AS unit_prices
 FROM built_transactions t
+{_RC_LATERAL}
 WHERE t.is_valid = true
   AND t.price IS NOT NULL AND t.price > 0
   AND {_HAS_REGION}
@@ -100,6 +112,7 @@ SELECT
     ) AS unit_prices,
     SUM(t.price) AS amount_sum
 FROM built_transactions t
+{_RC_LATERAL}
 WHERE t.is_valid = true
   AND t.price IS NOT NULL AND t.price > 0
   AND {_HAS_REGION}
@@ -266,7 +279,7 @@ def build_rolling(built_eng, coll_eng, *, as_of: date, windows: list[int], sido_
             params = {"p_start": ps, "p_end": pe, "sido": sc}
             with built_eng.connect() as conn:
                 rows = conn.execute(
-                    text(ROLLING_SQL.format(sido_clause="AND t.sido_code = :sido")),
+                    text(ROLLING_SQL.format(sido_clause=_SIDO_FILTER)),
                     params,
                 ).mappings().all()
             records = _rollup_rolling(rows, as_of=as_of, window_years=wy, ps=ps, pe=pe, batch_id=batch_id)
@@ -285,7 +298,7 @@ def build_annual(built_eng, *, sido_filter: str | None, batch_id: str) -> int:
         params = {"sido": sc}
         with built_eng.connect() as conn:
             rows = conn.execute(
-                text(ANNUAL_SQL.format(sido_clause="AND t.sido_code = :sido")),
+                text(ANNUAL_SQL.format(sido_clause=_SIDO_FILTER)),
                 params,
             ).mappings().all()
         rows = [dict(r) for r in rows]

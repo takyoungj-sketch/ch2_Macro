@@ -10,6 +10,9 @@ echo "=== $(date -Is) START pid=$$ ==="
 echo "=== $(date -Is) collective ledger region code backfill (전국) ==="
 .venv/bin/python ../pipeline/repair_collective_ledger_region_codes.py
 
+echo "=== $(date -Is) built ledger region code backfill (전국) ==="
+.venv/bin/python ../pipeline/repair_built_ledger_region_codes.py
+
 echo "=== $(date -Is) national market_stats + profile v2.1 ==="
 .venv/bin/python ../pipeline/rebuild_regional_profile_national.py \
   --skip-land --skip-twin --profile-version v2.1-national

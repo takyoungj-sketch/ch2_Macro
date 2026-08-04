@@ -149,7 +149,15 @@ def attach_beopjungri_codes(
 
     map_in = pd.DataFrame(index=work.index)
     map_in["sigungu_name"] = work.apply(build_sigungu_name_row, axis=1)
-    map_in["eupmyeondong_name"] = ""
+    # D-015: 구·addr4 grain — 용인 처인구·양지읍 등 ingest 시 eupmyeondong_name 보강
+    map_in["eupmyeondong_name"] = work.apply(
+        lambda r: (
+            _s(r.get("addr4"))
+            if _s(r.get("addr3")).endswith("구") and _s(r.get("addr4"))
+            else _s(r.get("addr3"))
+        ),
+        axis=1,
+    )
     map_in["sido_code"] = ""
     map_in["sigungu_code"] = ""
 
