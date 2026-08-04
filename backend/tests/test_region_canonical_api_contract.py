@@ -45,6 +45,23 @@ class TestRegionCanonicalApiContract(unittest.TestCase):
         kept = normalize_result_codes_pure(snap, payload_codes)  # type: ignore[arg-type]
         self.assertEqual(kept, ["4377025626"])
 
+    def test_profile_eup_historical_resolves_to_canonical(self):
+        from app.regional_profile.router import _canonical_profile_code
+
+        snap = build_history_snapshot([("4146136029", "4146126229", "code_reissue")])
+        conn = MagicMock()
+
+        def _fake_resolve(_conn, codes):
+            return resolve_to_canonical_pure(snap, codes)
+
+        with unittest.mock.patch(
+            "app.regional_profile.router.resolve_to_canonical", side_effect=_fake_resolve
+        ):
+            self.assertEqual(
+                _canonical_profile_code(conn, region_level="eupmyeondong", region_code="41461360"),
+                "41461262",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

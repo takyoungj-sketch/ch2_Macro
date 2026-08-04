@@ -12,8 +12,21 @@ from sqlalchemy.orm import Session
 
 from app.collective.db import get_collective_db
 from app.db import get_db
+from app.region_canonical import resolve_to_canonical
 
 router = APIRouter(prefix="/regional-profile", tags=["regional-profile"])
+
+
+def _canonical_profile_code(land_db, *, region_level: str, region_code: str) -> str:
+    """D-028: profile grain keys must be canonical (not historical eup/beop)."""
+    code = region_code.strip()
+    lv = region_level.strip().lower()
+    probe = code[:8] if lv == "eupmyeondong" and len(code) >= 8 else code
+    resolved = resolve_to_canonical(land_db, [probe])
+    out = resolved[0] if resolved else probe
+    if lv == "eupmyeondong":
+        return out[:8]
+    return out
 
 
 class RegionalProfileMeta(BaseModel):
@@ -123,13 +136,16 @@ def get_regional_profile(
     window_years: int = Query(3, ge=1, le=5),
     as_of_month: Optional[date] = Query(None),
     db: Session = Depends(get_collective_db),
+    land_db: Session = Depends(get_db),
 ):
     if db is None:
         raise HTTPException(503, "collective_stats DB 미연결")
     if not _table_exists(db, "regional_profile"):
         raise HTTPException(404, "regional_profile 테이블 없음 — pipeline rebuild 먼저")
 
-    code = region_code.strip()
+    code = _canonical_profile_code(
+        land_db, region_level=region_level, region_code=region_code
+    )
     params: dict[str, Any] = {
         "pv": profile_version,
         "level": region_level,
@@ -303,6 +319,7 @@ def get_profile_twin_neighbors(
         21, ge=5, le=21, description="21=profile-native v2.1, 6=hybrid, 5=profile-only"
     ),
     db: Session = Depends(get_collective_db),
+    land_db: Session = Depends(get_db),
 ):
     """쌍둥이 읍면동 Top-k — profile-native(v21) 기본, hybrid(v6)/v5 fallback.
 
@@ -313,7 +330,9 @@ def get_profile_twin_neighbors(
     if not _table_exists(db, "twin_eupmyeondong_neighbor_mvp"):
         raise HTTPException(404, "twin 테이블 없음 — build_twin_profile.py 실행")
 
-    anchor = eupmyeondong_code.strip()[:8]
+    anchor = _canonical_profile_code(
+        land_db, region_level="eupmyeondong", region_code=eupmyeondong_code
+    )
     if len(anchor) < 8:
         raise HTTPException(400, "eupmyeondong_code 8자리 필요")
 
@@ -491,12 +510,15 @@ def get_profile_twin_beop(
     top_k: int = Query(3, ge=1, le=20),
     algorithm_version: int = Query(21, ge=8, le=21, description="21=profile-native v2.1"),
     db: Session = Depends(get_db),
+    land_db: Session = Depends(get_db),
 ):
     """쌍둥이 법정리 Top-k — profile-native(v21), 동일 시군구 후보만."""
     if not _table_exists(db, "twin_neighbor_v8"):
         raise HTTPException(404, "twin_neighbor_v8 없음 — build_twin_profile.py --region-level beopjungri 실행")
 
-    anchor = beopjungri_code.strip()[:10]
+    anchor = _canonical_profile_code(
+        land_db, region_level="beopjungri", region_code=beopjungri_code
+    )
     if len(anchor) < 10:
         raise HTTPException(400, "beopjungri_code 10자리 필요")
 

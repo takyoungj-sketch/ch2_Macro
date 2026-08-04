@@ -160,7 +160,8 @@ Land / Built / Collective는 **자체 코드 변환 로직을 두지 않는다**
 5. `verify_canonical_resolver_migration.py` → **PASS** (historical mart 0건)
 6. `smoke_region_code_deploy.py` → **PASS**
 7. **upper mart category repair** (부분 canonical rebuild 후 matrix 빈 경우): `pipeline/repair_upper_stats_canonical_category.py`
-8. 브라우저 spot-check (대소·양지)
+8. **regional_profile stale historical row cleanup**: `pipeline/repair_regional_profile_canonical.py` · API는 `resolve_to_canonical` 선행
+9. 브라우저 spot-check (대소·양지)
 
 ---
 
