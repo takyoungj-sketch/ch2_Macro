@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from app.built.regression.engine import _duan_smearing, _insample_mape_pct
+from app.built.regression.engine import _duan_smearing, _insample_mape_pct, _uses_log_y
 from app.built.schemas import ModelComparison, ModelMetrics, ResponseScale
 
 CV_MIN_N = 25
@@ -15,7 +15,7 @@ CV_MIN_N = 25
 
 def _insample_price_pred(model, x_const, scale: ResponseScale) -> np.ndarray:
     fitted = np.asarray(model.fittedvalues, dtype=float)
-    if scale == "log":
+    if _uses_log_y(scale):
         return np.exp(fitted) * _duan_smearing(model.resid.to_numpy())
     return fitted
 

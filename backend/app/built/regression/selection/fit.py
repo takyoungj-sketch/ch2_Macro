@@ -11,6 +11,7 @@ from app.built.regression.engine import (
     _build_design_matrix,
     _duan_smearing,
     _insample_mape_pct,
+    _uses_log_y,
 )
 from app.built.regression.selection.blocks import BlockId, spec_from_blocks
 from app.built.schemas import JointFTest, RegressionVariableSpec, ResponseScale
@@ -69,7 +70,7 @@ def fit_block_subset(
 
     if X.empty:
         y_fit = y_price.copy()
-        if response_scale == "log":
+        if _uses_log_y(response_scale):
             if (y_fit <= 0).any():
                 return None
             y_fit = np.log(y_fit)
@@ -156,12 +157,12 @@ def _rolling_time_cv_mape(
             continue
         y_train = y.loc[train_mask]
         y_test = y.loc[test_mask]
-        if response_scale == "log" and (price.loc[y_train.index] <= 0).any():
+        if _uses_log_y(response_scale) and (price.loc[y_train.index] <= 0).any():
             continue
         try:
             model = sm.OLS(y_train, x_const.loc[y_train.index]).fit()
             pred = np.asarray(model.predict(x_const.loc[y_test.index]), dtype=float)
-            if response_scale == "log":
+            if _uses_log_y(response_scale):
                 pred = np.exp(pred) * _duan_smearing(model.resid.to_numpy())
             # log-scale 예측을 지수화하면 test fold의 범주 조합이 train에 드물게
             # 나타났을 때 극단적으로 큰 예측값(예: price 대비 10^150배)이 나올 수

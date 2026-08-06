@@ -14,6 +14,8 @@ import type {
   RegressionSelectionRequest,
   RegressionSuggestResponse,
   RegressionCompareResponse,
+  RegressionScopeResponse,
+  RegressionRecommendResponse,
   ScopeSampleFilterResponse,
 } from "../types";
 
@@ -275,6 +277,17 @@ export async function downloadBuiltTransactionsCsv(
 
 export async function runRegression(body: RegressionRunRequest) {
   const { data } = await api.post<RegressionRunResponse>("/regression/run", body);
+  return data;
+}
+
+/** analysis_scope SSOT — 기본 통계·모형 추천 공통 scope (R0). */
+export async function resolveRegressionScope(body: RegressionRunRequest) {
+  const { data } = await api.post<RegressionScopeResponse>("/regression/scope", body);
+  return data;
+}
+
+export async function recommendRegression(body: RegressionSelectionRequest) {
+  const { data } = await api.post<RegressionRecommendResponse>("/regression/recommend", body);
   return data;
 }
 

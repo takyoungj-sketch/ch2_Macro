@@ -117,8 +117,11 @@ Provider 목록과 검증 실행은 `candidates/factory.py`의 `generate_candida
 | **C4** | Region Group | Profile 유사도·cluster 그룹 pool | group rows | Region Group |
 | **C5** | Province Prior | 시도 내 hierarchical / prior | province rows | 약함 |
 | **C6** | National Prior | 전국 prior / partial pooling | national sample | 약함 |
+| **C8** | Land-signal augmented | 토지 Signal Layer → `expected_land_value` Feature; Local과 CV 경쟁 | local rows (+ cross-DB lookup) | matrix·Profile·Twin |
 
-**추가 플러그인 (장기):** Rule-based baseline, Mixed/Bayesian partial pooling, ML (XGBoost 등).
+**추가 플러그인 (장기):** Rule-based baseline, Mixed/Bayesian partial pooling, ML (XGBoost 등).  
+**Land Signal 상세:** [`LAND_BUILT_SIGNAL_DESIGN.md`](./LAND_BUILT_SIGNAL_DESIGN.md).  
+**모형 추천 UX (단계형·scope SSOT):** [`CH2_RECOMMENDATION_ENGINE_DESIGN.md`](./CH2_RECOMMENDATION_ENGINE_DESIGN.md) — **2026-08 설계 초안, 미구현**.
 
 ### 3.2 Candidate 메타데이터 (필수 반환)
 

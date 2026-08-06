@@ -168,7 +168,7 @@ PANEL_CAPABILITIES: dict[str, PanelCapability] = {
     "ModelSelectionCard": PanelCapability(
         panel="ModelSelectionCard",
         label="모형 추천·비교",
-        bundle_id="model_selection_diagnostic",
+        bundle_id="recommend_diagnostic",
         blocked_keywords=_TREND_KEYWORDS,
         redirects=(
             (_TREND_KEYWORDS, _REDIRECT_TREND),
@@ -179,6 +179,22 @@ PANEL_CAPABILITIES: dict[str, PanelCapability] = {
             "추천과 모형 비교 차이는?",
             "linear vs log는 어떻게 고르나요?",
             "Forward가 멈춘 이유는?",
+        ),
+    ),
+    "RecommendationCard": PanelCapability(
+        panel="RecommendationCard",
+        label="모형 탐색·판정",
+        bundle_id="recommend_diagnostic",
+        blocked_keywords=_TREND_KEYWORDS,
+        redirects=(
+            (_TREND_KEYWORDS, _REDIRECT_TREND),
+        ),
+        on_screen_questions=(
+            "AI 진단을 요약해 주세요.",
+            "왜 예측이 부적합한가요?",
+            "Twin을 써도 안 되면 어떻게 하나요?",
+            "다음에 무엇을 하면 좋나요?",
+            "설명형 회귀는 어떻게 활용하나요?",
         ),
     ),
     "BuildingRegressionPanel": PanelCapability(

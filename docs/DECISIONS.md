@@ -36,6 +36,12 @@
 | D-029 | 2026-07-25 | **Region Profile SSOT + Twin-on-Profile**: ① DB에는 **`regional_profile`만** (Core Domain). **Feature Vector는 Catalog 기준 런타임 투영·비저장**. ② 시군구·읍면동·리 동일 스키마(시·도/`city` Twin 제외). ③ NULL≠0 — yearly_mix 0; 아파트 **최근3년 ㎡당** P25/P50/P75·없으면 NULL. ④ mask · Top1~3 컬럼 · 대표시장 Feature. ⑤ 파이프라인: **Candidate → Feature Catalog → Vector → Weight → Similarity → Top-N → Explainability**. ⑥ **`profile_feature_catalog.yaml` `twin_vector`** + **`profile_weight.yaml`** (Phase A 종료 전·가중치 코드 하드코딩 금지). ⑦ `region_scope_master` · Similarity Engine(`score_detail`). ⑧ `profile_version` (D-017). ⑨ **제품 `window_years=3`만** (토지 mart 3·5와 분리). ⑩ **Phase A→B** · 이후는 튜닝 중심. Twin v8 병행. 상세: [`REGIONAL_PROFILE_ARCHITECTURE.md`](REGIONAL_PROFILE_ARCHITECTURE.md) **§12**. |
 | D-030 | 2026-07-27 | **Profile Phase B Preflight (구현 대기)**: ① **지역 선택** — 토지 `RegionSelector`와 tier·검색·딥링크 동일; beop 선택 시 Profile도 **`beopjungri` grain 유지**(eup 승격 폐지). ② **리 아파트 분위** — beop grain `market_stats` + **`apartment_count>=15`(3년)** 시 P25/P50/P75; **eup proxy 금지** 유지; Twin `apartment_profile` mask 연동. 상세: [`docs/REGIONAL_PROFILE_PHASE_B_PREFLIGHT.md`](docs/REGIONAL_PROFILE_PHASE_B_PREFLIGHT.md). |
 | D-031 | 2026-08-02 | **후보모형 경쟁 문서 체계 채택**: ① **Vision** [`CH2_MACRO_VISION.md`](CH2_MACRO_VISION.md) — Profile은 가설·Validation이 판단. ② **Architecture** [`SYSTEM_ARCHITECTURE.md`](SYSTEM_ARCHITECTURE.md) §0 Candidate·Validation OS. ③ **상세** [`CANDIDATE_EVALUATION_DESIGN.md`](CANDIDATE_EVALUATION_DESIGN.md). ④ **로드맵** [`CH2_MACRO_IMPLEMENTATION_ROADMAP.md`](CH2_MACRO_IMPLEMENTATION_ROADMAP.md) V1~V3. Profile 도메인 SSOT는 [`REGIONAL_PROFILE_ARCHITECTURE.md`](REGIONAL_PROFILE_ARCHITECTURE.md) 유지. |
+| D-032 | 2026-08-07 | **복합 모형 추천 — 기본 통계 vs 추천 변수 역할 분리**: 기본 통계는 사용자 변수·스케일; **`POST /built/regression/recommend`** 는 SSOT 서버 풀 탐색. 왼쪽 체크와 다른 결과는 **버그가 아님**. SSOT: [`CH2_RECOMMENDATION_ENGINE_DESIGN.md`](CH2_RECOMMENDATION_ENGINE_DESIGN.md). |
+| D-033 | 2026-08-07 | **복합 `analysis_scope` SSOT**: 지역·기간·필터는 `/run`·`/recommend` 공유; **`anchor_region_code`·`region_unit_hints`** 로 anchor·표시명 보존. **`scope_n_tx` / `selection_n` / `fit_n`** 3종 n 라벨. |
+| D-034 | 2026-08-07 | **단계형 Twin pool (식 고정)**: 1단계 Local 최적 **`blocks`+`response_scale` 고정** → 2단계 Profile Twin pool만 확장. **`/regression/suggest`·`/compare` deprecated** — successor `/regression/recommend`. |
+| D-035 | 2026-08-07 | **만족 등급 — 고정 CV % UI 금지**: Excellent~Poor + ★; lookup [`recommendation/satisfaction/built.json`](../backend/app/recommendation/satisfaction/built.json). CV 50% 같은 제품 임계값 **두지 않음**. |
+| D-036 | 2026-08-07 | **「추천」≠ 예측 채택**: UI는 **모형 탐색**·`conclusion.verdict`; CV-MAPE &gt;60 **예측 부적합** 시 adopt는 **검토용**만. |
+| D-037 | 2026-08-07 | **Twin 2단계 사용자 opt-in**: `/recommend` 기본 stage1 only; `run_stage2=true` 또는 UI 「Twin pool 검토」클릭 시 2단계. |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 
@@ -159,6 +165,39 @@
 - **후보·검증 상세:** [`CANDIDATE_EVALUATION_DESIGN.md`](CANDIDATE_EVALUATION_DESIGN.md)
 - **구현 로드맵 V1~V3:** [`CH2_MACRO_IMPLEMENTATION_ROADMAP.md`](CH2_MACRO_IMPLEMENTATION_ROADMAP.md)
 - Regional Profile · Twin-on-Profile: `docs/REGIONAL_PROFILE_ARCHITECTURE.md` §12 (D-027·D-029)
+- **복합 모형 추천 SSOT:** [`CH2_RECOMMENDATION_ENGINE_DESIGN.md`](CH2_RECOMMENDATION_ENGINE_DESIGN.md) (D-032~D-035)
 - Twin v8 (병행·후속 전환): `docs/TWIN_V8_DESIGN.md`
 - 정제 정책: `LAND_CLEANING.md`
 - 다음 작업: `NEXT_STEPS.md`
+
+## D-032 기본 통계 / 모형 추천 변수 분리
+
+- **기본 통계** (`POST /built/regression/run`): 사용자가 체크한 변수·선택한 linear/log/log-log.
+- **모형 추천** (`POST /built/regression/recommend`): 서버 SSOT 블록 풀에서 탐색; 사용자 체크 **무관**.
+- UI: 사이드바 「모형 추천은 아래 체크와 무관」안내.
+
+## D-033 analysis_scope SSOT
+
+- `POST /built/regression/scope` · `/run` · `/recommend` 공통 `analysis_scope` 객체.
+- n 라벨: **거래**(scope_n_tx) · **탐색**(selection_n) · **적합**(fit_n).
+
+## D-034 단계형 Twin · legacy API deprecate
+
+- 1단계: SSOT universe dual rank. 2단계: 1단계 식 고정 + Twin pool.
+- `/regression/suggest`, `/regression/compare`: `Deprecation: true` + JSON `deprecated: true`; successor `/regression/recommend`.
+- 프론트: `RecommendationModal` (구 ModelExploreModal).
+
+## D-035 만족 등급 (고정 CV % 금지)
+
+- lookup JSON per asset_slice; UI는 Excellent~Poor + ★.
+- `proceed_twin`은 grade≤fair 등 **운영 보정** 규칙.
+
+## D-036 탐색 결과 vs 예측 채택
+
+- API `conclusion`: verdict·CV fitness tier·summary_ko.
+- `no_predictive_model` → headline 「예측용 모형으로는 부적합」; 버튼 「검토용으로 적용」.
+
+## D-037 Twin 2단계 opt-in
+
+- `RegressionSelectionRequest.run_stage2` 기본 false.
+- `twin_recommended`일 때만 UI CTA; 극소 n도 **자동 실행하지 않음** (강력 권장 문구만).

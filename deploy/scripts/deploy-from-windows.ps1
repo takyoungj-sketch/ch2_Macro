@@ -58,7 +58,7 @@ try {
   }
   switch ($Scope) {
     "built" {
-      Invoke-Scp @("backend/app/built", "backend/app/ai", "backend/app/config.py", "backend/app/main.py") "backend/app/"
+      Invoke-Scp @("backend/app/built", "backend/app/recommendation", "backend/app/ai", "backend/app/config.py", "backend/app/main.py") "backend/app/"
       Invoke-Scp @("shared") "."
       Invoke-Scp @("frontend-built/src") "frontend-built/"
     }

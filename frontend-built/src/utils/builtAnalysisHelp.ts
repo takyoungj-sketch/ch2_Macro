@@ -137,3 +137,30 @@ export const BUILT_MODEL_SELECTION_COMPARE_HELP: AnalysisExplain = {
     },
   ],
 };
+
+export const BUILT_RECOMMEND_HELP: AnalysisExplain = {
+  spec_id: "built_recommend_static_v1",
+  spec_version: "1",
+  title: "모형 탐색 · 판정",
+  summary:
+    "SSOT 변수 풀에서 Local 탐색 → (선택) Twin pool → **판정·권장 행동**. 예측 채택은 사용자 판단.",
+  interpretation: [
+    "CV-MAPE 적합 등급은 예측 목적 참고.",
+    "예측 부적합이어도 설명형·비교사례·용도×지목 통계는 활용 가능.",
+    "AI Assistant는 표본·Twin·변수 한계를 Facts 기준으로 해석.",
+  ],
+  limitations: ["적정가·투자 판단 아님", "권장 행동은 통계적 적합성 보조"],
+  interpretation_hints: [],
+  presets: [
+    {
+      id: "ai_diagnosis",
+      question: "AI 진단을 요약해 주세요.",
+      answer: "",
+    },
+    {
+      id: "why_unsuitable",
+      question: "왜 예측이 부적합한가요?",
+      answer: "",
+    },
+  ],
+};

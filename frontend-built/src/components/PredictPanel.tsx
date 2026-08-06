@@ -7,6 +7,14 @@ import { buildBuiltPredictionContext } from "../api/aiClient";
 import { predictRegression } from "../api/client";
 import { isOnlyDetached } from "../utils/assetTypes";
 import { BUILT_PREDICTION_HELP } from "../utils/builtAnalysisHelp";
+import {
+  assessmentForName,
+  buildExtrapolationGuidance,
+  extrapolationBadge,
+  inputBorderClass,
+  isTechnicalExtrapolationWarning,
+  shouldHidePrediction,
+} from "../utils/extrapolationPolicy";
 import { ADMIN_LABELS, ASSET_TYPE_LABELS, formatCoefName } from "../utils/regressionFormat";
 import type {
   AssetType,
@@ -58,6 +66,10 @@ type Props = {
   embedded?: boolean;
   /** 상단 안내 (예: 추천 모형 기준) */
   modelHint?: string | null;
+  /** 추천 미리보기 — 채택 예정 식 fit_n */
+  fitN?: number;
+  /** 추천 scope 거래 건수 */
+  scopeNTx?: number;
 };
 
 export default function PredictPanel({
@@ -68,6 +80,8 @@ export default function PredictPanel({
   regionLabel,
   embedded = false,
   modelHint,
+  fitN,
+  scopeNTx,
 }: Props) {
   const levels = useMemo(() => {
     const all = [regData.primary, ...regData.comparisons];
@@ -154,6 +168,18 @@ export default function PredictPanel({
             {embedded ? "예측값" : "다른 변수 고정 · 예측값"}
           </h2>
           {modelHint && <p className="text-[11px] text-slate-500 mt-0.5">{modelHint}</p>}
+          {embedded && (fitN != null || scopeNTx != null) && (
+            <p className="text-[10px] text-slate-400 mt-0.5 tabular-nums">
+              {scopeNTx != null && <>거래 {scopeNTx}</>}
+              {fitN != null && (
+                <>
+                  {scopeNTx != null ? " · " : ""}
+                  적합 {fitN}
+                </>
+              )}
+              <span className="text-slate-300"> — 채택 예정 식 기준</span>
+            </p>
+          )}
           {!embedded && (
             <p className="text-xs text-slate-500 mt-1">
               탐색(통제 전) → 분석(통제 후) → <strong className="text-slate-600">예측</strong> 순으로
@@ -191,25 +217,26 @@ export default function PredictPanel({
           </select>
         </label>
 
-        {(opts?.continuous ?? []).map((c) => (
+        {(opts?.continuous ?? []).map((c) => {
+          const assess = assessmentForName(predictM.data?.continuous_assessments, c.name);
+          const level = assess?.level ?? 0;
+          return (
           <label key={c.name} className="space-y-1 shrink-0">
-            <span
-              className="text-slate-500 block whitespace-nowrap"
-              title={c.min != null && c.max != null ? `${c.min}~${c.max}` : undefined}
-            >
-              {formatCoefName(c.name, assetType)}
+            <span className="text-slate-500 block whitespace-nowrap">
+              {formatCoefName(c.name, assetType, regBody.response_scale)}
             </span>
             <input
-              className="input !w-[8.5rem] py-1 text-xs"
+              className={clsx(
+                "input !w-[8.5rem] py-1 text-xs",
+                predictM.data && inputBorderClass(level),
+              )}
               type="number"
-              title={
-                c.min != null && c.max != null ? `${fmtNum(c.min, 0)}~${fmtNum(c.max, 0)}` : undefined
-              }
               value={inputs[c.name] ?? ""}
               onChange={(e) => setInputs((prev) => ({ ...prev, [c.name]: e.target.value }))}
             />
           </label>
-        ))}
+          );
+        })}
 
         {vars.zone_type_dummy && (opts?.zone_types?.length ?? 0) > 0 && (
           <label className="space-y-1 shrink-0">
@@ -316,39 +343,85 @@ export default function PredictPanel({
         <p className="text-sm text-red-600">{(predictM.error as Error).message ?? "예측 실패"}</p>
       )}
 
-      {predictM.data && (
+      {predictM.data && (() => {
+        const level = predictM.data.extrapolation_level ?? 0;
+        const badge = extrapolationBadge(level);
+        const hidden = predictM.data.y_hat_suppressed || shouldHidePrediction(level, predictM.data.response_scale);
+        const extrapGuidance = buildExtrapolationGuidance(
+          predictM.data.continuous_assessments,
+          level,
+        );
+        const otherWarnings = predictM.data.warnings.filter(
+          (w) => !isTechnicalExtrapolationWarning(w),
+        );
+        return (
         <div
           className={clsx(
             "rounded-lg border p-3 space-y-2",
             embedded
               ? "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-xs"
               : "bg-slate-50 border-slate-200 text-sm",
+            level >= 3 && "border-red-300 dark:border-red-700",
+            level === 2 && "border-amber-300 dark:border-amber-700",
           )}
         >
+          {badge && (
+            <span className={clsx("inline-block text-[10px] font-semibold px-2 py-0.5 rounded", badge.className)}>
+              {badge.label}
+            </span>
+          )}
           <div>
             <span className="text-slate-500 text-xs">예상 금액</span>
-            <div className={clsx("font-bold", embedded ? "text-lg" : "text-xl")}>
-              {fmtNum(Math.round(predictM.data.y_hat))}만원
-            </div>
+            {hidden ? (
+              <div className={clsx("font-medium text-slate-600 dark:text-slate-300", embedded ? "text-sm" : "text-base")}>
+                semi-log 극단 외삽 — 숫자 표시 생략
+                <p className="text-[11px] font-normal text-slate-500 mt-1 leading-snug">
+                  log(금액) 모형은 학습 범위를 크게 벗어나면 exp(ŷ)가 비현실적으로 커질 수 있습니다.
+                  선형·log-log 모형을 시도하거나 입력을 학습 범위 근처로 조정하세요.
+                </p>
+              </div>
+            ) : (
+              <div className={clsx("font-bold", embedded ? "text-lg" : "text-xl")}>
+                {fmtNum(Math.round(predictM.data.y_hat))}만원
+              </div>
+            )}
           </div>
-          <div className="text-xs space-y-1">
-            <div>
-              <span className="font-medium">95% 예측구간 (개별 거래)</span>{" "}
-              {fmtNum(Math.round(predictM.data.pi_lower))} ~ {fmtNum(Math.round(predictM.data.pi_upper))}
-              만원
+          {!hidden && (
+            <div className="text-xs space-y-1">
+              <div>
+                <span className="font-medium">95% 예측구간 (개별 거래)</span>{" "}
+                {fmtNum(Math.round(predictM.data.pi_lower))} ~ {fmtNum(Math.round(predictM.data.pi_upper))}
+                만원
+              </div>
+              <div className="text-slate-500">
+                95% 평균 신뢰구간 {fmtNum(Math.round(predictM.data.ci_lower))} ~{" "}
+                {fmtNum(Math.round(predictM.data.ci_upper))}만원
+              </div>
             </div>
-            <div className="text-slate-500">
-              95% 평균 신뢰구간 {fmtNum(Math.round(predictM.data.ci_lower))} ~{" "}
-              {fmtNum(Math.round(predictM.data.ci_upper))}만원
+          )}
+          {extrapGuidance.length > 0 && (
+            <div className="space-y-1.5">
+              {extrapGuidance.map((line) => (
+                <p
+                  key={line}
+                  className={clsx(
+                    "text-xs leading-relaxed",
+                    level >= 3 ? "text-red-700 dark:text-red-300" : "text-amber-800 dark:text-amber-300",
+                  )}
+                >
+                  {line}
+                </p>
+              ))}
             </div>
-          </div>
-          {predictM.data.warnings.map((w: string) => (
+          )}
+          {otherWarnings.map((w: string) => (
             <p key={w} className="text-xs badge-warn">
               {w}
             </p>
           ))}
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import type {
   CorrelationSeries,
   PartialRegressionSeries,
   RegressionRunResponse,
+  ResponseScale,
 } from "../types";
 import { buildBuiltScatterContext } from "../api/aiContext";
 import AiAssistantPanel from "./AiAssistantPanel";
@@ -160,7 +161,7 @@ export default function RegressionScatterSection({
   data: RegressionRunResponse;
   regionLabel: string;
   assetType: string;
-  responseScale?: "linear" | "log";
+  responseScale?: ResponseScale;
 }) {
   const [tab, setTab] = useState<ScatterTab>("raw");
   const hasRaw = data.correlations.length > 0;

@@ -2,8 +2,10 @@ import type { AiContextPayload, AiPurpose } from "@ch2/ai-assistant/aiClient";
 import type {
   RegressionCompareResponse,
   RegressionPredictResponse,
+  RegressionRecommendResponse,
   RegressionRunResponse,
   RegressionSuggestResponse,
+  ResponseScale,
 } from "../types";
 
 export function buildBuiltModelSelectionContext(
@@ -35,7 +37,7 @@ export function buildBuiltScatterContext(
   opts: {
     regionLabel: string;
     assetType: string;
-    responseScale?: "log" | "linear";
+    responseScale?: ResponseScale;
     activeTab?: "raw" | "partial";
     purpose?: AiPurpose;
   },
@@ -53,6 +55,26 @@ export function buildBuiltScatterContext(
       response_scale: opts.responseScale ?? "linear",
       scatter_tab: opts.activeTab ?? "raw",
     },
+  };
+}
+
+export function buildBuiltRecommendContext(
+  data: RegressionRecommendResponse,
+  opts: {
+    regionLabel: string;
+    assetType: string;
+    purpose?: AiPurpose;
+  },
+): AiContextPayload {
+  return {
+    app: "built",
+    panel: "RecommendationCard",
+    purpose: opts.purpose ?? "statistics",
+    scope: {
+      region_label: opts.regionLabel,
+      asset_type: opts.assetType,
+    },
+    facts: data as unknown as Record<string, unknown>,
   };
 }
 

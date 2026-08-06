@@ -1,5 +1,7 @@
 /** 복합 분석 scope 단위 — 교차 시군구 인접 복수용. */
 
+import type { AnalysisRegionUnitHint } from "../types";
+
 export type BuiltAnalysisLevel = "eupmyeondong" | "beopjungri";
 
 export type BuiltAnalysisUnit = {
@@ -55,4 +57,29 @@ export function unitsToRegionScope(units: BuiltAnalysisUnit[]): {
     ...(codes.length ? { region_codes: codes, region_code_level: level } : { region_code_level: level }),
     ...(region_addrs.length ? { region_addrs } : {}),
   };
+}
+
+/** Twin·내러티브 기준 본 지역 — crossParent 제외 첫 단위. */
+export function resolveBuiltAnchorUnit(units: BuiltAnalysisUnit[]): BuiltAnalysisUnit | null {
+  const withCode = units.filter((u) => u.code && !u.crossParent);
+  return withCode[0] ?? null;
+}
+
+export function anchorRegionCode(units: BuiltAnalysisUnit[]): string | undefined {
+  const anchor = resolveBuiltAnchorUnit(units);
+  if (!anchor?.code) return undefined;
+  const digits = anchor.code.replace(/\D/g, "");
+  return digits || undefined;
+}
+
+export function analysisUnitsToHints(units: BuiltAnalysisUnit[]): AnalysisRegionUnitHint[] {
+  return units.map((u) => ({
+    code: u.code.replace(/\D/g, "") || u.code,
+    level: u.level,
+    name: u.name,
+    addr1: u.addr1,
+    addr2: u.addr2,
+    ...(u.eup ? { eup: u.eup } : {}),
+    cross_parent: Boolean(u.crossParent),
+  }));
 }

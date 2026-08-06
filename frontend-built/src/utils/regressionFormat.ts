@@ -17,8 +17,14 @@ const ASSET_TYPE_LABELS: Record<string, string> = {
 export { ASSET_TYPE_LABELS };
 
 /** statsmodels 변수명 → 표시용 한글 (맥락 유지) */
-export function formatCoefName(name: string, assetType?: AssetType): string {
-  if (COEF_LABELS[name]) return COEF_LABELS[name];
+export function formatCoefName(name: string, assetType?: AssetType, responseScale?: ResponseScale): string {
+  if (COEF_LABELS[name]) {
+    const base = COEF_LABELS[name];
+    if (responseScale === "loglog" && (name === "gross_area" || name === "land_area")) {
+      return `log(${base})`;
+    }
+    return base;
+  }
   if (name.startsWith("zone_")) return `용도지역·${name.slice(5)}`;
   if (name.startsWith("use_")) {
     const prefix = assetType === "detached" ? "주택유형" : "건축물용도";
@@ -34,9 +40,15 @@ export function formatCoefName(name: string, assetType?: AssetType): string {
 }
 
 /** 회귀식·계수표용 짧은 변수명 — 용도지역·제3종… → 제3종… */
-export function shortCoefName(name: string, assetType?: AssetType): string {
+export function shortCoefName(name: string, assetType?: AssetType, responseScale?: ResponseScale): string {
   if (name === "const") return "절편";
-  if (name in COEF_LABELS && name !== "const") return COEF_LABELS[name];
+  if (name in COEF_LABELS && name !== "const") {
+    const base = COEF_LABELS[name];
+    if (responseScale === "loglog" && (name === "gross_area" || name === "land_area")) {
+      return `log(${base})`;
+    }
+    return base;
+  }
   if (name.startsWith("zone_")) return name.slice(5);
   if (name.startsWith("use_")) return name.slice(4);
   if (name.startsWith("road_")) return name.slice(5);
@@ -108,8 +120,9 @@ export function interpretCoefficient(
 ): string {
   const name = c.name;
   const coef = c.estimate;
+  const usesLogY = responseScale === "log" || responseScale === "loglog";
   if (name === "const") {
-    if (responseScale === "log") {
+    if (usesLogY) {
       const approx = Math.exp(coef);
       return `기준 조건 log(금액) 출발점 (대략 ${Math.round(approx).toLocaleString("ko-KR")}만원 수준, 다른 변수·기준 범주 전제)`;
     }
@@ -118,6 +131,12 @@ export function interpretCoefficient(
 
   const unit = unitSuffix(name);
   const step = unit ? `1${unit} ` : "1단위 ";
+
+  if (responseScale === "loglog" && (name === "gross_area" || name === "land_area")) {
+    const pct = (Math.pow(1.01, coef) - 1) * 100;
+    const sign = pct >= 0 ? "+" : "−";
+    return `면적 1% 증가 시 금액 약 ${sign}${Math.abs(pct).toFixed(2)}% (탄력성 ≈ ${coef.toFixed(3)})`;
+  }
 
   if (responseScale === "log") {
     const pct = fmtPctFromLog(coef);

@@ -180,6 +180,8 @@ def _has_facts_narrative(bundle: AiDiagnosticPack) -> bool:
         return bool(d.get("points"))
     if bid == "prediction_explain":
         return d.get("y_hat") is not None
+    if bid == "recommend_diagnostic":
+        return isinstance(d.get("stage1"), dict)
     return bool(d.get("n") or d.get("points") or d.get("y_hat"))
 
 
@@ -202,6 +204,14 @@ def _regression_narrative(
         )
     if bid == "prediction_explain":
         return build_prediction_narrative(
+            diagnostics=bundle.diagnostics,
+            scope_label=str(scope),
+            message=message,
+        )
+    if bid == "recommend_diagnostic" or context.panel == "RecommendationCard":
+        from app.ai.built_recommend_narrative import interpret_built_recommend
+
+        return interpret_built_recommend(
             diagnostics=bundle.diagnostics,
             scope_label=str(scope),
             message=message,

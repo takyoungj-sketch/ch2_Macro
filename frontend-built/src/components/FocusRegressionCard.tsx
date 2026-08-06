@@ -7,6 +7,7 @@ import {
   fmtNum,
   levelCardTitle,
 } from "../utils/regressionFormat";
+import { CvFitnessBadge } from "../utils/recommendationLabels";
 import RegressionEquation from "./RegressionEquation";
 import RegressionEffectsTable from "./RegressionEffectsTable";
 
@@ -28,7 +29,9 @@ export default function FocusRegressionCard({ result, assetType, responseScale }
             {ADMIN_LABELS[result.admin_level] ?? result.admin_level} · 분석 초점
           </p>
         </div>
-        <span className="text-xs text-slate-500">n={fmtNum(result.n)}</span>
+        <span className="text-xs text-slate-500" title="선택 변수 complete-case 표본 (fit_n)">
+          적합 n={fmtNum(result.n)}
+        </span>
       </div>
 
       {result.warning && <p className="text-xs badge-warn">{result.warning}</p>}
@@ -36,8 +39,11 @@ export default function FocusRegressionCard({ result, assetType, responseScale }
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
         <div>R² {fmtDecimal(result.r_squared, 5)}</div>
         <div>Adj R² {fmtDecimal(result.adj_r_squared, 5)}</div>
-        <div title="in-sample · 금액(만원) 원척도">
-          MAPE {result.mape != null ? `${fmtDecimal(result.mape, 2)}%` : "—"}
+        <div className="flex flex-wrap items-center gap-1.5" title="in-sample · 금액(만원) 원척도">
+          <span>
+            MAPE {result.mape != null ? `${fmtDecimal(result.mape, 2)}%` : "—"}
+          </span>
+          {result.mape != null && <CvFitnessBadge cvMape={result.mape} />}
         </div>
         <div>유의 변수 {result.significant_count}개</div>
         <div>F p {fmtDecimal(result.f_p_value, 5)}</div>

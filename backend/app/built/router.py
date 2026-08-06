@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -20,6 +20,8 @@ from app.flat_sido_region import list_addr2_for_sido
 from app.built.region_structure import detect_region_structure
 from app.built.regression.engine import predict_regression, run_regression
 from app.built.regression.selection.service import compare_regression, suggest_regression
+from app.recommendation.adapters.built import recommend_built_regression
+from app.recommendation.scope import resolve_built_analysis_scope
 from app.built.transaction_export import (
     MAX_BUILT_TX_EXPORT,
     built_csv_response,
@@ -41,6 +43,10 @@ from app.built.schemas import (
     RegressionCompareResponse,
     RegressionRunRequest,
     RegressionRunResponse,
+    RegressionScopeResponse,
+    RegressionRecommendResponse,
+    RecommendationStage1,
+    RecommendationSatisfaction,
     RegressionSelectionRequest,
     RegressionSuggestResponse,
     ScopeSampleFilterResponse,
@@ -48,6 +54,13 @@ from app.built.schemas import (
 from app.built.resolve_codes import resolve_built_map_codes
 
 router = APIRouter(prefix="/built", tags=["복합부동산(연구)"])
+
+_RECOMMEND_SUCCESSOR = "/api/built/regression/recommend"
+
+
+def _mark_regression_deprecated(response: Response) -> None:
+    response.headers["Deprecation"] = "true"
+    response.headers["Link"] = f'<{_RECOMMEND_SUCCESSOR}>; rel="successor-version"'
 
 
 def _serialize_tx_row(row) -> BuiltTransactionRow:
@@ -945,8 +958,35 @@ def regression_run(body: RegressionRunRequest, db: Session = Depends(get_built_d
         raise HTTPException(status_code=500, detail=f"statsmodels 필요: {e}") from e
 
 
+@router.post("/regression/scope", response_model=RegressionScopeResponse)
+def regression_scope(body: RegressionRunRequest, db: Session = Depends(get_built_db)):
+    """analysis_scope SSOT — 기본 통계·모형 추천 공통 지역·기간·필터 메타."""
+    try:
+        return RegressionScopeResponse(
+            analysis_scope=resolve_built_analysis_scope(db.connection(), body)
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.post("/regression/recommend", response_model=RegressionRecommendResponse)
+def regression_recommend(body: RegressionSelectionRequest, db: Session = Depends(get_built_db)):
+    """단계형 모형 탐색 — SSOT 풀 1단계; Twin 2단계는 run_stage2=true(사용자 opt-in)."""
+    try:
+        return recommend_built_regression(db.connection(), body)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except ImportError as e:
+        raise HTTPException(status_code=500, detail=f"statsmodels 필요: {e}") from e
+
+
 @router.post("/regression/suggest", response_model=RegressionSuggestResponse)
-def regression_suggest(body: RegressionSelectionRequest, db: Session = Depends(get_built_db)):
+def regression_suggest(
+    body: RegressionSelectionRequest,
+    response: Response,
+    db: Session = Depends(get_built_db),
+):
+    _mark_regression_deprecated(response)
     try:
         return suggest_regression(db.connection(), body)
     except ValueError as e:
@@ -956,7 +996,12 @@ def regression_suggest(body: RegressionSelectionRequest, db: Session = Depends(g
 
 
 @router.post("/regression/compare", response_model=RegressionCompareResponse)
-def regression_compare(body: RegressionSelectionRequest, db: Session = Depends(get_built_db)):
+def regression_compare(
+    body: RegressionSelectionRequest,
+    response: Response,
+    db: Session = Depends(get_built_db),
+):
+    _mark_regression_deprecated(response)
     try:
         return compare_regression(db.connection(), body)
     except ValueError as e:

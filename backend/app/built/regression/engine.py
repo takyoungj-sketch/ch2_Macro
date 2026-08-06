@@ -38,6 +38,7 @@ from app.built.time_scope import apply_contract_date_window, parse_as_of_month
 
 CompareMode = Literal["sigungu_only", "gu_only", "two_way", "three_way"]
 CONTINUOUS_VARS = frozenset({"gross_area", "land_area", "building_age"})
+LOGLOG_X_COLS = frozenset({"gross_area", "land_area"})
 _CONT_LABELS = {
     "gross_area": "연면적",
     "land_area": "대지면적",
@@ -83,6 +84,14 @@ def _duan_smearing(residuals: np.ndarray) -> float:
     return float(np.mean(np.exp(r)))
 
 
+def _uses_log_y(scale: ResponseScale) -> bool:
+    return scale in ("log", "loglog")
+
+
+def _is_loglog(scale: ResponseScale) -> bool:
+    return scale == "loglog"
+
+
 def _insample_mape_pct(
     y_price: np.ndarray,
     model,
@@ -92,7 +101,7 @@ def _insample_mape_pct(
     """적합값 기준 in-sample MAPE(%), 종속은 항상 금액(만원) 원척도."""
     y = np.asarray(y_price, dtype=float)
     fitted = np.asarray(model.fittedvalues, dtype=float)
-    if response_scale == "log":
+    if _uses_log_y(response_scale):
         pred = np.exp(fitted) * _duan_smearing(model.resid.to_numpy())
     else:
         pred = fitted
@@ -117,6 +126,7 @@ class DesignMeta:
     region_leaves: list[str] = field(default_factory=list)
     region_reference: str | None = None
     continuous_ranges: dict[str, tuple[float, float]] = field(default_factory=dict)
+    log_x_columns: frozenset[str] = field(default_factory=frozenset)
     response_scale: ResponseScale = "linear"
 
 
@@ -141,7 +151,7 @@ def _meta_to_predict_options(meta: DesignMeta | None) -> PredictOptions | None:
 
 
 def _back_transform(value: float, scale: ResponseScale) -> float:
-    if scale == "log":
+    if _uses_log_y(scale):
         return float(np.exp(value))
     return float(value)
 
@@ -463,11 +473,14 @@ def _label_for_level(
     return ""
 
 
-def _coef_display_name(name: str) -> str:
+def _coef_display_name(name: str, *, response_scale: ResponseScale = "linear") -> str:
     if name == "const":
         return "절편"
     if name in _CONT_LABELS:
-        return _CONT_LABELS[name]
+        label = _CONT_LABELS[name]
+        if _is_loglog(response_scale) and name in LOGLOG_X_COLS:
+            return f"log({label})"
+        return label
     if name.startswith("zone_"):
         return name[5:]
     if name.startswith("use_"):
@@ -490,7 +503,7 @@ def _format_equation(
     response_scale: ResponseScale,
 ) -> str:
     """회귀식 문자열 — 유의(p<0.1) 변수만 (프론트 전체보기 기본과 동일)."""
-    dep = "log(금액)" if response_scale == "log" else "금액"
+    dep = "log(금액)" if _uses_log_y(response_scale) else "금액"
     intercept = next((c for c in coefs if c.name == "const"), None)
     if intercept is None:
         return f"{dep} = —"
@@ -509,7 +522,7 @@ def _format_equation(
     for c in sig:
         sign = "+" if c.estimate >= 0 else "−"
         mag = _fmt(abs(c.estimate))
-        label = _coef_display_name(c.name)
+        label = _coef_display_name(c.name, response_scale=response_scale)
         parts.append(f" {sign} {mag}·{label}")
     return "".join(parts)
 
@@ -817,14 +830,31 @@ def _build_design_matrix(
 
     meta.feature_columns = list(X.columns)
     mask = y.notna()
-    if response_scale == "log":
+    if _uses_log_y(response_scale):
         mask &= y > 0
+
+    if _is_loglog(response_scale):
+        log_cols: set[str] = set()
+        for col in LOGLOG_X_COLS:
+            if col not in X.columns:
+                continue
+            s = pd.to_numeric(X[col], errors="coerce")
+            mask &= s > 0
+            log_cols.add(col)
+        meta.log_x_columns = frozenset(log_cols)
+
     for c in X.columns:
         mask &= pd.to_numeric(X[c], errors="coerce").notna()
+
+    X_out = X.loc[mask].astype(float).copy()
+    if _is_loglog(response_scale):
+        for col in meta.log_x_columns:
+            X_out[col] = np.log(X_out[col])
+
     y_out = y.loc[mask]
-    if response_scale == "log":
+    if _uses_log_y(response_scale):
         y_out = np.log(y_out.astype(float))
-    return y_out, X.loc[mask].astype(float), meta
+    return y_out, X_out, meta
 
 
 def _input_to_x_row(
@@ -840,7 +870,13 @@ def _input_to_x_row(
         val = getattr(inp, col, None)
         if val is None:
             raise ValueError(f"{_CONT_LABELS.get(col, col)} 값이 필요합니다.")
-        row[col] = float(val)
+        fval = float(val)
+        if col in meta.log_x_columns:
+            if fval <= 0:
+                raise ValueError(f"{_CONT_LABELS.get(col, col)} — log-log 모형은 0보다 큰 값이 필요합니다.")
+            row[col] = float(np.log(fval))
+        else:
+            row[col] = fval
 
     if vars_spec.zone_type_dummy and meta.zone_types:
         z = inp.zone_type or meta.zone_reference or meta.zone_types[0]
@@ -909,15 +945,18 @@ def _extrapolation_warnings(
     meta: DesignMeta,
     inp: RegressionPredictRequest,
 ) -> list[str]:
-    out: list[str] = []
-    for col, (lo, hi) in meta.continuous_ranges.items():
-        val = getattr(inp, col, None)
-        if val is None:
-            continue
-        if val < lo or val > hi:
-            label = _CONT_LABELS.get(col, col)
-            out.append(f"외삽 — {label} 학습범위 [{lo:,.1f}, {hi:,.1f}] 밖 (입력 {val:,.1f})")
-    return out
+    from app.built.regression.extrapolation import assess_prediction
+
+    inputs = {
+        col: getattr(inp, col, None)
+        for col in meta.continuous_ranges
+    }
+    _level, _assessments, warnings = assess_prediction(
+        meta.continuous_ranges,
+        inputs,
+        labels=_CONT_LABELS,
+    )
+    return warnings
 
 
 def _scope_for_level(
@@ -984,7 +1023,7 @@ def _fit_ols(
 
     if n < 10 or X.empty:
         warn = f"n={n} — 회귀 비권장 (권장 n≥30)"
-        if response_scale == "log":
+        if _uses_log_y(response_scale):
             warn += " · log(금액) 모형"
         return RegressionLevelResult(
             admin_level=level,
@@ -1016,8 +1055,11 @@ def _fit_ols(
     warn = None
     if n < 30:
         warn = f"n={n} — 참고용 (권장 n≥30)"
-    if response_scale == "log":
-        log_note = "종속=log(금액) — 계수는 log-선형"
+    if _uses_log_y(response_scale):
+        if _is_loglog(response_scale):
+            log_note = "종속·면적=log — log-log (광평수 외삽에 유리)"
+        else:
+            log_note = "종속=log(금액) — semi-log (극단 외삽 시 exp 폭발 주의)"
         warn = f"{warn} · {log_note}" if warn else log_note
     if vif_warn:
         warn = f"{warn} · {vif_warn}" if warn else vif_warn
@@ -1136,7 +1178,7 @@ def _partial_regression_plots(
 
     X_const = sm.add_constant(X, has_constant="add")
     model = sm.OLS(y, X_const).fit()
-    y_label = "log(금액) 잔차" if response_scale == "log" else "금액 잔차"
+    y_label = "log(금액) 잔차" if _uses_log_y(response_scale) else "금액 잔차"
 
     out: list[PartialRegressionSeries] = []
     for col, label in _continuous_plot_specs(vars_spec):
@@ -1264,6 +1306,8 @@ def _ri_label(ri_list: list[RiPick]) -> str:
 
 
 def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
+    from app.recommendation.scope import built_analysis_scope_from_prepared
+
     wide_df, req, addr4_city, mode = _prepare_regression_scope(conn, req)
     unified = is_unified(req.asset_type)
     scale = req.response_scale
@@ -1297,6 +1341,9 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
     corrs, partials, s_level, s_label, s_n = _build_scatter_bundle(
         wide_df, req, conn=conn, **scatter_kw
     )
+    analysis_scope = built_analysis_scope_from_prepared(
+        req, wide_df=wide_df, addr4_city=addr4_city
+    )
     return RegressionRunResponse(
         primary=primary,
         comparisons=comparisons,
@@ -1307,12 +1354,17 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
         correlation_admin_level=s_level,
         correlation_scope_label=s_label,
         correlation_n=s_n,
+        analysis_scope=analysis_scope,
     )
 
 
 def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredictResponse:
     import statsmodels.api as sm
 
+    from app.built.regression.extrapolation import assess_prediction, should_suppress_y_hat
+    from app.built.schemas import ContinuousExtrapolation
+
+    scale = req.response_scale
     wide_df, req, addr4_city, mode = _prepare_regression_scope(conn, req)
     focus = _focus_admin_level(req, addr4_city)
     eup_scope = _eup_scope_for_level(req.admin_level, focus, req)
@@ -1348,23 +1400,48 @@ def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredict
     x_new_const = sm.add_constant(x_new, has_constant="add")
     frame = model.get_prediction(x_new_const).summary_frame(alpha=0.05)
 
-    warnings = _extrapolation_warnings(meta, req)
+    inputs = {col: getattr(req, col, None) for col in meta.continuous_ranges}
+    extrap_level, assessments, warnings = assess_prediction(
+        meta.continuous_ranges,
+        inputs,
+        labels=_CONT_LABELS,
+    )
     if n < 30:
         warnings.insert(0, f"n={n} — 참고용 (권장 n≥30, 예측구간 넓음)")
-    if req.response_scale == "log":
-        warnings.insert(0, "log(금액) 모형 — 예측값은 exp(ŷ) 역변환")
+    if _is_loglog(scale):
+        warnings.insert(0, "log-log 모형 — 면적·금액 log, 연식·더미는 선형")
+    elif scale == "log":
+        warnings.insert(0, "semi-log — 예측값은 exp(ŷ) 역변환 (극단 외삽 주의)")
 
     row = frame.iloc[0]
-    scale = req.response_scale
+    y_hat = _back_transform(float(row["mean"]), scale)
+    suppressed = should_suppress_y_hat(extrap_level, scale)
+
+    cont_out = [
+        ContinuousExtrapolation(
+            name=a.name,
+            label=a.label,
+            min=a.lo,
+            max=a.hi,
+            value=a.value,
+            level=a.level,
+            bound_ratio=a.bound_ratio,
+        )
+        for a in assessments
+    ]
+
     return RegressionPredictResponse(
         admin_level=req.admin_level,
         scope_label=scope_label,
         n=n,
-        y_hat=_back_transform(float(row["mean"]), scale),
+        y_hat=y_hat,
         pi_lower=_back_transform(float(row["obs_ci_lower"]), scale),
         pi_upper=_back_transform(float(row["obs_ci_upper"]), scale),
         ci_lower=_back_transform(float(row["mean_ci_lower"]), scale),
         ci_upper=_back_transform(float(row["mean_ci_upper"]), scale),
         response_scale=scale,
+        extrapolation_level=extrap_level,
+        y_hat_suppressed=suppressed,
+        continuous_assessments=cont_out,
         warnings=warnings,
     )

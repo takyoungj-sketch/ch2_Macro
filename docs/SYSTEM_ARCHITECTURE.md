@@ -53,8 +53,8 @@ CH2 Macro는 **지역 지식 기반 후보모형 경쟁 플랫폼**이다. 인�
 | 모듈 | 역할 | 현재 구현 | 장기 목표 |
 |------|------|-----------|-----------|
 | **Regional Profile Engine** | 지역 특성·Feature Vector·Twin·Region Group **후보 제안**, Profile Confidence | `regional_profile` API, Twin v8/hybrid, `frontend-profile` | Profile → Pooling·후보 생성 규칙 연동 |
-| **Candidate Factory** | 다양한 **후보모형** 등록·생성 (회귀 외 Rule/Mixed/Bayesian/ML 수용) | 복합 `model_selection`·`model_compare`, 집합 `model_comparison` (변수블록 후보만) | `register_candidate()` 플러그인, Twin/Province/National 후보 |
-| **Regression Engine** | 거래자료 기반 OLS 적합·설계행렬·예측·부분회귀도 | `built/regression`, `collective/regression`, 토지 회귀 | Profile 변수·Pooling 표본 연동 |
+| **Candidate Factory** | 다양한 **후보모형** 등록·생성 (회귀 외 Rule/Mixed/Bayesian/ML 수용) | 복합 `model_selection`·`model_compare`, 집합 `model_comparison` (변수블록 후보만) | `register_candidate()` 플러그인; **장기:** [`CH2_RECOMMENDATION_ENGINE_DESIGN.md`](./CH2_RECOMMENDATION_ENGINE_DESIGN.md) 단계형 UX |
+| **Regression Engine** | 거래자료 기반 OLS 적합·설계행렬·예측·부분회귀도 | `built/regression`, `collective/regression`, 토지 회귀 | Profile 변수·Pooling 표본 연동; **장기:** 토지→복합 Land Signal Feature ([`LAND_BUILT_SIGNAL_DESIGN.md`](./LAND_BUILT_SIGNAL_DESIGN.md)) |
 | **Validation Engine** | **동일 Contract**로 모든 후보 평가·순위·Decision Confidence | in-sample AIC/BIC/MAPE (복합·집합), CV 일부 실험 스크립트 | Rolling Time Split, Spatial Group Validation, Holdout OS |
 | **Ranking / Decision Confidence** | 검증 결과 기반 순위·1위 선택 신뢰도 | UI 탭 비교·사용자 채택 | 상위 후보 간 격차 기반 Confidence |
 | **AI Engine** | Evaluation Bundle·Facts **해설**, 한계 우선 | CH2 AI Router, Reasoning Bundle | 후보비교·Confidence·Joint F-test 설명 |
@@ -71,7 +71,7 @@ validate() → metrics + metadata
 metadata() → model_type, variables, n, version, failure_reason
 ```
 
-후보 유형 예: Local, Local+Profile, Twin Pooling, Region Group, Province Prior, National Prior, Rule-based, Mixed/Bayesian partial pooling, ML (XGBoost 등 — Validation Contract 통과 시).
+후보 유형 예: Local, Local+Profile, Twin Pooling, Region Group, Province Prior, National Prior, **Land-signal augmented (C8)**, Rule-based, Mixed/Bayesian partial pooling, ML (XGBoost 등 — Validation Contract 통과 시). Land Signal: [`LAND_BUILT_SIGNAL_DESIGN.md`](./LAND_BUILT_SIGNAL_DESIGN.md).
 
 ---
 

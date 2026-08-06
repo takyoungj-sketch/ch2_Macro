@@ -3,4 +3,5 @@ export {
   buildBuiltRegressionContext,
   buildBuiltPredictionContext,
   buildBuiltModelSelectionContext,
+  buildBuiltRecommendContext,
 } from "./aiContext";

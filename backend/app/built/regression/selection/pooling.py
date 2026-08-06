@@ -23,12 +23,13 @@ from app.built.regression.candidates.base import CandidateSpec
 from app.built.regression.candidates.factory import fetch_candidate_rows, region_price_levels_from_db
 from app.built.regression.selection.blocks import BlockId
 from app.built.regression.selection.context import SelectionContext, with_complete_case
-from app.built.regression.selection.fit import BlockFitResult, fit_best_scale
+from app.built.regression.selection.fit import BlockFitResult, fit_best_scale, fit_block_subset
 from app.built.schemas import (
     DecisionConfidence,
     PoolingCandidateMetrics,
     PoolingEvaluation,
     RegressionSelectionRequest,
+    ResponseScale,
     TwinGateResult,
 )
 
@@ -166,6 +167,7 @@ def _fit_pool_variant(
     twin_codes: tuple[str, ...],
     admin_level: str,
     region_col: str | None,
+    response_scale: ResponseScale | None = None,
 ) -> PoolingCandidateMetrics | None:
     pool_codes = tuple(dict.fromkeys((*anchor_region_codes, *twin_codes)))
     pooled_rows = fetch_candidate_rows(
@@ -194,13 +196,24 @@ def _fit_pool_variant(
         # pool은 anchor를 포함하므로 정상적으로는 Local 표본 이상이어야 한다.
         return None
 
-    pooled_fit, _cmp = fit_best_scale(
-        pooled_ctx.df,
-        blocks,
-        unified=local_ctx.unified,
-        region_col=region_col,
-        admin_level=admin_level,
-    )
+    if response_scale is not None:
+        pooled_fit = fit_block_subset(
+            pooled_ctx.df,
+            blocks,
+            unified=local_ctx.unified,
+            response_scale=response_scale,
+            region_col=region_col,
+            admin_level=admin_level,
+        )
+        _cmp = None
+    else:
+        pooled_fit, _cmp = fit_best_scale(
+            pooled_ctx.df,
+            blocks,
+            unified=local_ctx.unified,
+            region_col=region_col,
+            admin_level=admin_level,
+        )
     if pooled_fit is None:
         return None
     return _metrics_from_fit(variant_id, label, pooled_fit, pool_codes)
@@ -269,6 +282,7 @@ def evaluate_pooling_candidates(
     twin_region_codes: tuple[str, ...],
     admin_level: str,
     region_col: str | None,
+    fixed_response_scale: ResponseScale | None = None,
 ) -> PoolingEvaluation:
     """Local과 (hard gate를 통과한) Twin pool 조합들을 실측 비교한다."""
     local_metrics = _metrics_from_fit("local", "현재 지역만 (Local)", local_fit, anchor_region_codes)
@@ -320,6 +334,7 @@ def evaluate_pooling_candidates(
             twin_codes=codes,
             admin_level=admin_level,
             region_col=region_col,
+            response_scale=fixed_response_scale,
         )
         if metrics is not None:
             all_candidates.append(metrics)

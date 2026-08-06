@@ -9,10 +9,18 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.ai.schemas import AnalysisExplain
 from app.collective.schemas import ModelComparison, ModelMetrics
+from app.recommendation.models import (
+    AnalysisRegionUnitHint,
+    AnalysisScope,
+    CoefficientNarrative,
+    DiagnosticCheckItem,
+    RecommendationConclusion,
+    TerminationInfo,
+)
 
 # 단일 / 통합(all) / 복수("commercial,factory")
 AssetType = str
-ResponseScale = Literal["linear", "log"]
+ResponseScale = Literal["linear", "log", "loglog"]
 AdminLevel = Literal["sigungu", "gu", "eupmyeondong", "beopjungri"]
 
 
@@ -180,6 +188,9 @@ class RegressionRunRequest(BaseModel):
     leaf_level: Optional[Literal["addr3", "addr4"]] = None
     exclude_outliers_iqr: bool = False
     outlier_iqr_multiplier: float = 3.0
+    # R0 analysis_scope — 프론트 analysisUnits 미러 (필터 로직에는 미사용)
+    anchor_region_code: Optional[str] = None
+    region_unit_hints: list[AnalysisRegionUnitHint] = Field(default_factory=list)
 
     @field_validator("outlier_iqr_multiplier")
     @classmethod
@@ -281,6 +292,67 @@ class RegressionRunResponse(BaseModel):
     correlation_admin_level: Optional[AdminLevel] = None
     correlation_scope_label: Optional[str] = None
     correlation_n: Optional[int] = None
+    analysis_scope: Optional[AnalysisScope] = None
+    explain: Optional[AnalysisExplain] = None
+
+
+class RegressionScopeResponse(BaseModel):
+    analysis_scope: AnalysisScope
+
+
+class RecommendationSatisfaction(BaseModel):
+    grade: str = "pending"
+    stars: int = Field(default=0, ge=0, le=5)
+    cv_mape: Optional[float] = None
+
+
+class RecommendationStage1(BaseModel):
+    candidates_explanatory: list[ModelCandidate] = Field(default_factory=list)
+    candidates_predictive: list[ModelCandidate] = Field(default_factory=list)
+    primary: ModelCandidate
+    alternate: Optional[ModelCandidate] = None
+    selection_n: int = 0
+    fit_n: int = 0
+    candidate_pool: list[str] = Field(default_factory=list)
+    satisfaction: RecommendationSatisfaction = Field(default_factory=RecommendationSatisfaction)
+    total_subsets: int = 0
+    truncated: bool = False
+
+
+class RecommendationPoolCandidate(BaseModel):
+    candidate_id: str
+    label: str
+    n: int
+    region_codes: list[str] = Field(default_factory=list)
+    adj_r_squared: Optional[float] = None
+    mape: Optional[float] = None
+    cv_mape: Optional[float] = None
+    cv_mape_delta: Optional[float] = None
+
+
+class RecommendationStage2(BaseModel):
+    ran: bool = False
+    skipped_reason: Optional[str] = None
+    pools: list[RecommendationPoolCandidate] = Field(default_factory=list)
+    primary: Optional[RecommendationPoolCandidate] = None
+    local_cv_mape: Optional[float] = None
+    twin_gates: list[TwinGateResult] = Field(default_factory=list)
+    decision: str = "local"
+    decision_reason: Optional[str] = None
+    fixed_blocks: list[str] = Field(default_factory=list)
+    fixed_response_scale: ResponseScale = "linear"
+
+
+class RegressionRecommendResponse(BaseModel):
+    analysis_scope: AnalysisScope
+    stage1: RecommendationStage1
+    stage2: Optional[RecommendationStage2] = None
+    termination: TerminationInfo
+    conclusion: RecommendationConclusion
+    diagnostics_checklist: list[DiagnosticCheckItem] = Field(default_factory=list)
+    coefficient_narratives: list[CoefficientNarrative] = Field(default_factory=list)
+    narrative_hints: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
     explain: Optional[AnalysisExplain] = None
 
 
@@ -297,6 +369,16 @@ class RegressionPredictRequest(RegressionRunRequest):
     region_leaf: Optional[str] = None
 
 
+class ContinuousExtrapolation(BaseModel):
+    name: str
+    label: str
+    min: float
+    max: float
+    value: float
+    level: int = 0
+    bound_ratio: float = 1.0
+
+
 class RegressionPredictResponse(BaseModel):
     admin_level: AdminLevel
     scope_label: Optional[str] = None
@@ -307,6 +389,9 @@ class RegressionPredictResponse(BaseModel):
     ci_lower: float
     ci_upper: float
     response_scale: ResponseScale = "linear"
+    extrapolation_level: int = 0
+    y_hat_suppressed: bool = False
+    continuous_assessments: list[ContinuousExtrapolation] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     explain: Optional[AnalysisExplain] = None
 
@@ -321,6 +406,7 @@ class RegressionSelectionRequest(RegressionRunRequest):
     profile_as_of_month: Optional[str] = None
     profile_window_years: Optional[int] = None
     profile_twin_neighbors: list[dict[str, object]] = Field(default_factory=list)
+    run_stage2: bool = False
 
 
 class ExcludedBlockReason(BaseModel):
@@ -426,6 +512,8 @@ class PoolingEvaluation(BaseModel):
 
 
 class RegressionSuggestResponse(BaseModel):
+    deprecated: bool = True
+    successor_path: str = "/built/regression/recommend"
     recommended_blocks: list[str]
     recommended_variables: RegressionVariableSpec
     response_scale: ResponseScale
@@ -455,9 +543,12 @@ class ModelCandidate(BaseModel):
     aic: Optional[float] = None
     bic: Optional[float] = None
     joint_f_tests: dict[str, JointFTest] = Field(default_factory=dict)
+    coefficients: list[RegressionCoeff] = Field(default_factory=list)
 
 
 class RegressionCompareResponse(BaseModel):
+    deprecated: bool = True
+    successor_path: str = "/built/regression/recommend"
     candidates_by_aic: list[ModelCandidate]
     candidates_by_bic: list[ModelCandidate]
     candidates_by_mape: list[ModelCandidate]

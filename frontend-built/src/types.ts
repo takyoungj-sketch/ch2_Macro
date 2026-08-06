@@ -1,7 +1,7 @@
 export type BuiltAssetKind = "commercial" | "factory" | "detached";
 /** API asset_type: 단일 / "commercial,factory" / "all" */
 export type AssetType = BuiltAssetKind | "all" | (string & {});
-export type ResponseScale = "linear" | "log";
+export type ResponseScale = "linear" | "log" | "loglog";
 
 export interface BuiltTransactionRow {
   id: number;
@@ -95,6 +95,192 @@ export interface RiPick {
 
 export type IqrMultiplier = 1.5 | 2 | 3;
 
+export interface AnalysisRegionUnitHint {
+  code: string;
+  level: "eupmyeondong" | "beopjungri";
+  name: string;
+  addr1: string;
+  addr2: string;
+  eup?: string;
+  cross_parent: boolean;
+}
+
+export interface AnalysisTimeScope {
+  as_of_month?: string | null;
+  window_years?: number | null;
+  contract_year_from?: number | null;
+  contract_year_to?: number | null;
+}
+
+export interface AnalysisSampleFilters {
+  zone_types: string[];
+  building_uses: string[];
+  road_width_labels: string[];
+  gross_area_min?: number | null;
+  gross_area_max?: number | null;
+  land_area_min?: number | null;
+  land_area_max?: number | null;
+  building_age_min?: number | null;
+  building_age_max?: number | null;
+  road_code_min?: number | null;
+  road_code_max?: number | null;
+  exclude_outliers_iqr: boolean;
+  outlier_iqr_multiplier: number;
+}
+
+export interface RegionUnitRef {
+  code: string;
+  level: "eupmyeondong" | "beopjungri";
+  name: string;
+  addr1: string;
+  addr2: string;
+  eup?: string | null;
+  cross_parent: boolean;
+}
+
+export interface AnalysisScope {
+  domain: "built";
+  asset_slice: string;
+  region_units: RegionUnitRef[];
+  anchor_unit?: RegionUnitRef | null;
+  time: AnalysisTimeScope;
+  sample_filters: AnalysisSampleFilters;
+  scope_label: string;
+  admin_level: "sigungu" | "gu" | "eupmyeondong" | "beopjungri";
+  region_codes: string[];
+  region_code_level?: "eupmyeondong" | "beopjungri" | null;
+  region_addrs: string[];
+  scope_n_tx: number;
+}
+
+export interface RegressionScopeResponse {
+  analysis_scope: AnalysisScope;
+}
+
+export interface TerminationInfo {
+  stage_reached: number;
+  action: "stop" | "proceed_twin";
+  grade: string;
+  reasons: string[];
+  next_stage_hint?: string | null;
+  recommended_pool?: string | null;
+}
+
+export interface RecommendationSatisfaction {
+  grade: string;
+  stars: number;
+  cv_mape?: number | null;
+}
+
+export interface RecommendationStage1 {
+  candidates_explanatory: ModelCandidate[];
+  candidates_predictive: ModelCandidate[];
+  primary: ModelCandidate;
+  alternate?: ModelCandidate | null;
+  selection_n: number;
+  fit_n: number;
+  candidate_pool: string[];
+  satisfaction: RecommendationSatisfaction;
+  total_subsets: number;
+  truncated: boolean;
+}
+
+export interface RecommendationPoolCandidate {
+  candidate_id: string;
+  label: string;
+  n: number;
+  region_codes: string[];
+  adj_r_squared?: number | null;
+  mape?: number | null;
+  cv_mape?: number | null;
+  cv_mape_delta?: number | null;
+}
+
+export interface RecommendationStage2 {
+  ran: boolean;
+  skipped_reason?: string | null;
+  pools: RecommendationPoolCandidate[];
+  primary?: RecommendationPoolCandidate | null;
+  local_cv_mape?: number | null;
+  twin_gates: TwinGateResult[];
+  decision: string;
+  decision_reason?: string | null;
+  fixed_blocks: string[];
+  fixed_response_scale: ResponseScale;
+}
+
+export type RecommendationVerdict =
+  | "adopt_predictive"
+  | "caution"
+  | "no_predictive_model"
+  | "explanatory_only";
+
+export type RecommendationAdoptMode = "predictive" | "review_only" | "explanatory";
+
+export interface ConclusionBullet {
+  kind: "positive" | "negative" | "neutral";
+  text: string;
+}
+
+export interface RecommendedAction {
+  action_id: string;
+  kind: "do" | "dont" | "optional";
+  label_ko: string;
+}
+
+export interface RecommendationConclusion {
+  verdict: RecommendationVerdict;
+  headline_ko: string;
+  final_verdict_ko: string;
+  final_verdict_tone: "positive" | "warning" | "negative";
+  final_verdict_emoji: string;
+  final_verdict_sublines: string[];
+  bullets: ConclusionBullet[];
+  summary_ko: string;
+  recommended_actions: RecommendedAction[];
+  cv_fitness?: CvFitnessTier | null;
+  cv_mape?: number | null;
+  twin_available: boolean;
+  twin_recommended: boolean;
+  twin_ran: boolean;
+  adopt_mode: RecommendationAdoptMode;
+}
+
+export interface CvFitnessTier {
+  tier: string;
+  label_ko: string;
+  tone: "positive" | "neutral" | "warning" | "negative";
+  max_cv_mape?: number | null;
+}
+
+export interface RegressionRecommendResponse {
+  analysis_scope: AnalysisScope;
+  stage1: RecommendationStage1;
+  stage2?: RecommendationStage2 | null;
+  termination: TerminationInfo;
+  conclusion: RecommendationConclusion;
+  diagnostics_checklist: DiagnosticCheckItem[];
+  coefficient_narratives: CoefficientNarrative[];
+  narrative_hints: string[];
+  warnings: string[];
+  explain?: AnalysisExplain | null;
+}
+
+export interface DiagnosticCheckItem {
+  check_id: string;
+  label_ko: string;
+  status: "ok" | "warn" | "fail";
+  summary_ko: string;
+}
+
+export interface CoefficientNarrative {
+  name: string;
+  label_ko: string;
+  text_ko: string;
+  significant: boolean;
+  is_top_contributor: boolean;
+}
+
 export interface RegressionRunRequest {
   asset_type: AssetType;
   addr1?: string;
@@ -129,6 +315,9 @@ export interface RegressionRunRequest {
   leaf_level?: "addr3" | "addr4";
   exclude_outliers_iqr: boolean;
   outlier_iqr_multiplier?: number;
+  /** R0 — analysis_scope anchor (analysisUnits[0] non-crossParent) */
+  anchor_region_code?: string;
+  region_unit_hints?: AnalysisRegionUnitHint[];
 }
 
 export interface ScopeSampleFilterResponse {
@@ -264,6 +453,7 @@ export interface RegressionRunResponse {
   correlation_admin_level?: "sigungu" | "gu" | "eupmyeondong" | "beopjungri" | null;
   correlation_scope_label?: string | null;
   correlation_n?: number | null;
+  analysis_scope?: AnalysisScope | null;
   explain?: AnalysisExplain | null;
 }
 
@@ -280,6 +470,16 @@ export interface RegressionPredictRequest extends RegressionRunRequest {
   region_leaf?: string;
 }
 
+export interface ContinuousExtrapolation {
+  name: string;
+  label: string;
+  min: number;
+  max: number;
+  value: number;
+  level: number;
+  bound_ratio: number;
+}
+
 export interface RegressionPredictResponse {
   admin_level: "sigungu" | "gu" | "eupmyeondong" | "beopjungri";
   scope_label?: string | null;
@@ -290,6 +490,9 @@ export interface RegressionPredictResponse {
   ci_lower: number;
   ci_upper: number;
   response_scale?: ResponseScale;
+  extrapolation_level?: number;
+  y_hat_suppressed?: boolean;
+  continuous_assessments?: ContinuousExtrapolation[];
   warnings: string[];
   explain?: AnalysisExplain | null;
 }
@@ -340,6 +543,8 @@ export interface RegressionSelectionRequest extends RegressionRunRequest {
   profile_as_of_month?: string | null;
   profile_window_years?: number | null;
   profile_twin_neighbors?: ProfileTwinCandidateNeighbor[];
+  /** R3.5 — true일 때만 Twin 2단계 실행 (기본 false, 사용자 opt-in) */
+  run_stage2?: boolean;
 }
 
 export interface CandidateValidationSummary {
@@ -467,6 +672,7 @@ export interface ModelCandidate {
   aic?: number | null;
   bic?: number | null;
   joint_f_tests?: Record<string, JointFTest>;
+  coefficients?: RegressionCoeff[];
 }
 
 export interface RegressionCompareResponse {

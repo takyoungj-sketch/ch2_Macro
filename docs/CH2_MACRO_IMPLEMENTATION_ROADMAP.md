@@ -186,7 +186,9 @@ reasons)를 추가해 "왜 이 Twin이 빠졌는지" 그대로 노출하고, 프
 | V3-5 | **Decision Confidence 개선** | rank gap 등급(★·A~E)만으로는 "왜 이 등급인지"가 안 보인다는 피드백(2026-08-04) — `metric_gap_pct`에 더해 ①격차 원인 문장("Local과 Twin 차이 X%"), ②(가능하면) CV fold별 승률("5회 중 3회 Local 우세"), ③"차이가 작음 = Twin이 Local과 비슷한 시장을 찾음(성공 신호)" vs "차이가 큼 = Twin 부적합" 해석 문구를 `DecisionConfidence.note`에 구조화해 담는다 |
 | V3-6 | **Evaluation API 통합** | `POST /api/{domain}/evaluation/run` |
 | V3-7 | **Forward Pooling** | 지금은 Twin 상위 1개/3개/전체 **3점**만 비교(`evaluate_pooling_candidates`). Forward Pooling은 변수 forward selection과 동일한 원리로 Twin을 유사도 순으로 하나씩 추가하며 CV-MAPE가 더 개선되지 않는 지점에서 멈춘다(Twin1 → Twin1+2 → Twin1+2+3 → … → Stop). "가능한 만큼 다 pool" 대신 "필요한 만큼만 pool"로 전환 — Top-k를 사용자가 고르는 게 아니라 **알고리즘이 CV-MAPE 기준으로 자동 결정** |
-| V3-8 | **Built Profile 강화** | `REGIONAL_PROFILE_POST_MVP_BACKLOG.md` §5 E3와 연결. 현재 Twin(v21)은 상가 **거래 비중**만 보고 가격 수준·건축물 특성은 전혀 안 본다. 상가 가격분포(P25/median/P75)·평균 층수·평균 연식·평균 규모(전용면적)를 Twin 벡터에 추가해 유사도 자체를 개선한다(→ Pooling 품질 상승). 구조·시공사·브랜드·주차·건폐율·용적률·역세권·코너 여부는 Twin 벡터가 아니라 **회귀 설명변수 자체의 확장**(built 원장 데이터 보강, 장기 과제)로 별도 트랙 — 두 트랙을 문서에서 명확히 구분해야 혼동이 없다. 이 "회귀 설명변수 확장" 트랙의 매칭 가능성 조사·계획은 [`DATA_ENRICHMENT_RAW_ADDITION_PLAN.md`](DATA_ENRICHMENT_RAW_ADDITION_PLAN.md)(2026-08-04, Phase 0 실측 완료) — 집합 시공사(K-apt, 실측 매칭률 57~71%)를 1순위로 Phase 1 착수 제안, 단독다가구 용도지역(AL_D155, 다수결 정확도 62%·완전동질 6.4% — "확정" 아닌 "소프트 신호"로 스코프 축소)을 2순위로 제안 |
+| V3-8 | **Built Profile 강화** | `REGIONAL_PROFILE_POST_MVP_BACKLOG.md` §5 E3와 연결. 현재 Twin(v21)은 상가 **거래 비중**만 보고 가격 수준·건축물 특성은 전혀 안 본다. 상가 가격분포(P25/median/P75)·평균 층수·평균 연식·평균 규모(전용면적)를 Twin 벡터에 추가해 유사도 자체를 개선한다(→ Pooling 품질 상승). 구조·시공사·브랜드·주차·건폐율·용적률·역세권·코너 여부는 Twin 벡터가 아니라 **회귀 설명변수 자체의 확장**(built 원장 데이터 보강, 장기 과제)로 별도 트랙 — 두 트랙을 문서에서 명확히 구분해야 혼동이 없다. 이 "회귀 설명변수 확장" 트랙의 매칭 가능성 조사·계획은 [`DATA_ENRICHMENT_RAW_ADDITION_PLAN.md`](DATA_ENRICHMENT_RAW_ADDITION_PLAN.md)(2026-08-04, Phase 0 실측 완료) — 집합 시공사(K-apt, 실측 매칭률 57~71%)를 1순위로 Phase 1 착수 제안, 단독다가구 용도지역(AL_D155, 다수결 정확度 62%·완전동질 6.4% — "확정" 아닌 "소프트 신호"로 스코프 축소)을 2순위로 제안 |
+| V3-9 | **Land Signal → 복합 Feature** | [`LAND_BUILT_SIGNAL_DESIGN.md`](./LAND_BUILT_SIGNAL_DESIGN.md) — 토지 Signal Feature; **2026-08 구상, 구현 보류** |
+| V3-10 | **CH2 Recommendation Engine UX** | [`CH2_RECOMMENDATION_ENGINE_DESIGN.md`](./CH2_RECOMMENDATION_ENGINE_DESIGN.md) — 기본통계 vs 추천 역할 분리, `analysis_scope` SSOT, 1단계→2단계 Twin, 이중 랭킹, 종료 이유; **2026-08 설계 초안, R0~R3 built 우선** |
 
 ### 완료 게이트
 
@@ -206,6 +208,8 @@ reasons)를 추가해 "왜 이 Twin이 빠졌는지" 그대로 노출하고, 프
 | **원장 매칭·Coverage** | 건축물대장·용도지역 결측 → complete-case 축소 | 지속 |
 | **region_code canonical** | D-028 history layer | V1 전제 |
 | **집합·복합 패리티** | 회귀·model selection·evaluation 동시 | V1~V2 |
+| **Land Signal (토지→복합)** | Feature·Ensemble·Prior — UNION 금지 | V3 — [`LAND_BUILT_SIGNAL_DESIGN.md`](./LAND_BUILT_SIGNAL_DESIGN.md) |
+| **Recommendation Engine UX** | scope SSOT·단계형 추천·종료 이유 | V3 — [`CH2_RECOMMENDATION_ENGINE_DESIGN.md`](./CH2_RECOMMENDATION_ENGINE_DESIGN.md) |
 | **AI Bundle 확장** | Evaluation 결과 필드 추가 | V1~V3 |
 | **월간 파이프라인** | Profile·Twin 갱신 SOP | V2 |
 

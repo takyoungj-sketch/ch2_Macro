@@ -50,6 +50,11 @@ BUNDLE_REGISTRY: dict[str, BundleSpec] = {
         description="Twin·유사 지역 비교",
         panels=("TwinRegionPanel", "ProfilePanel"),
     ),
+    "recommend_diagnostic": BundleSpec(
+        bundle_id="recommend_diagnostic",
+        description="모형 탐색 판정·Twin·권장 행동",
+        panels=("RecommendationCard", "ModelSelectionCard"),
+    ),
 }
 
 PANEL_TO_BUNDLE: dict[str, str] = {}
@@ -88,6 +93,13 @@ SUGGESTED_QUESTIONS: dict[str, list[str]] = {
         "신뢰구간이 넓은 이유는?",
         "Adj R²를 어떻게 봐야 하나요?",
         "VIF가 높으면 어떻게 하나요?",
+    ],
+    "RecommendationCard": [
+        "AI 진단을 요약해 주세요.",
+        "왜 예측이 부적합한가요?",
+        "Twin을 써도 안 되면 어떻게 하나요?",
+        "다음에 무엇을 하면 좋나요?",
+        "설명형 회귀는 어떻게 활용하나요?",
     ],
     "MatrixCard": [
         "용도지역별 차이를 설명해 주세요.",

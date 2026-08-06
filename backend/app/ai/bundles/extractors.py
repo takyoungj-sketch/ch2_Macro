@@ -251,6 +251,37 @@ def build_matrix_cell_snapshot(context: AiContext) -> AiDiagnosticPack:
     )
 
 
+def build_recommend_diagnostic(context: AiContext) -> AiDiagnosticPack:
+    facts = context.facts or {}
+    stage1 = facts.get("stage1") if isinstance(facts.get("stage1"), dict) else {}
+    conclusion = facts.get("conclusion") if isinstance(facts.get("conclusion"), dict) else {}
+    scope = facts.get("analysis_scope") if isinstance(facts.get("analysis_scope"), dict) else {}
+    scope_label = scope.get("scope_label") or context.scope.region_label or "선택 scope"
+    sat = stage1.get("satisfaction") if isinstance(stage1.get("satisfaction"), dict) else {}
+    cv = sat.get("cv_mape") or conclusion.get("cv_mape")
+    summary = [
+        f"scope={scope_label}",
+        f"selection_n={stage1.get('selection_n')}",
+        f"fit_n={stage1.get('fit_n')}",
+    ]
+    if cv is not None:
+        summary.append(f"CV-MAPE={float(cv):.1f}%")
+    if conclusion.get("final_verdict_ko"):
+        summary.append(f"판정={conclusion['final_verdict_ko']}")
+    limitations = [
+        "모형 탐색은 SSOT 변수 풀 탐색 결과이며 예측·적정가 판단을 대체하지 않습니다.",
+        "권장 행동은 통계적 적합성 기준이며 현장 판단을 보조합니다.",
+    ]
+    return AiDiagnosticPack(
+        bundle_id="recommend_diagnostic",
+        panel=context.panel,
+        app=context.app,
+        summary_lines=summary,
+        diagnostics={**facts, "scope_label": scope_label},
+        limitations=limitations,
+    )
+
+
 def build_bundle(context: AiContext) -> AiDiagnosticPack:
     facts = context.facts or {}
     panel = context.panel
@@ -260,6 +291,9 @@ def build_bundle(context: AiContext) -> AiDiagnosticPack:
         if context.explain:
             return build_from_explain(context)
         return build_from_explain(context)
+
+    if panel == "RecommendationCard" or facts.get("conclusion"):
+        return build_recommend_diagnostic(context)
 
     kind = _facts_kind(facts)
     if bid == "prediction_explain" or kind == "prediction":

@@ -1,0 +1,30 @@
+{
+  "min_local_n": 15,
+  "min_fit_n": 10,
+  "proceed_twin_when_grade_at_or_below": "fair",
+  "grades": {
+    "excellent": { "stars": 5, "label_ko": "매우 양호", "max_cv_mape": 22, "min_selection_n": 25 },
+    "good": { "stars": 4, "label_ko": "양호", "max_cv_mape": 35, "min_selection_n": 18 },
+    "fair": { "stars": 3, "label_ko": "보통", "max_cv_mape": 50, "min_selection_n": 12 },
+    "poor": { "stars": 2, "label_ko": "미흡", "max_cv_mape": 999, "min_selection_n": 0 }
+  },
+  "slices": {
+    "factory": {
+      "excellent": { "max_cv_mape": 28 },
+      "good": { "max_cv_mape": 42 },
+      "fair": { "max_cv_mape": 58 }
+    },
+    "detached": {
+      "excellent": { "max_cv_mape": 25 },
+      "good": { "max_cv_mape": 38 }
+    },
+    "commercial": {
+      "excellent": { "max_cv_mape": 22 },
+      "good": { "max_cv_mape": 35 }
+    },
+    "unified": {
+      "excellent": { "max_cv_mape": 24 },
+      "good": { "max_cv_mape": 38 }
+    }
+  }
+}

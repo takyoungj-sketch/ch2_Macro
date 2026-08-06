@@ -15,8 +15,7 @@ import {
   fetchTransactions,
   lookupBuiltRegionCode,
   runRegression,
-  suggestRegression,
-  compareRegression,
+  recommendRegression,
 } from "./api/client";
 import {
   formatAddr2OptionLabel,
@@ -25,6 +24,8 @@ import {
 } from "./utils/flatSidoRegion";
 import {
   analysisUnitLabel,
+  analysisUnitsToHints,
+  anchorRegionCode,
   MAX_BUILT_ANALYSIS_UNITS,
   unitsToRegionScope,
   type BuiltAnalysisUnit,
@@ -45,7 +46,7 @@ import BuiltTransactionListModal from "./components/BuiltTransactionListModal";
 import BuiltRegionMapHub, { type MapPanelMode } from "./components/BuiltRegionMapHub";
 import AiAssistantPanel from "./components/AiAssistantPanel";
 import RegressionScatterSection from "./components/RegressionScatterSection";
-import { buildBuiltRegressionContext, buildBuiltModelSelectionContext } from "./api/aiClient";
+import { buildBuiltRegressionContext } from "./api/aiClient";
 import AnalysisHelpPanel from "./components/AnalysisHelpPanel";
 import { BUILT_REGRESSION_HELP } from "./utils/builtAnalysisHelp";
 import type {
@@ -63,7 +64,7 @@ import type {
 } from "./types";
 import { EMPTY_SAMPLE_FILTER } from "./types";
 import FocusRegressionCard from "./components/FocusRegressionCard";
-import ModelExploreModal from "./components/ModelExploreModal";
+import RecommendationModal from "./components/RecommendationModal";
 import PredictPanel from "./components/PredictPanel";
 import StatsWindowToggle, { normalizeStatsWindowYears } from "./components/StatsWindowToggle";
 import UpperScopeCompareModal from "./components/UpperScopeCompareModal";
@@ -514,8 +515,15 @@ export default function App() {
   const [sampleFilter, setSampleFilter] = useState<SampleFilterState>(EMPTY_SAMPLE_FILTER);
   const [windowYears, setWindowYears] = useState<3 | 5>(5);
   const [responseScale, setResponseScale] = useState<ResponseScale>("linear");
-  /** 마지막 「통계분석」에 실제 쓰인 스케일 — 체크만으로 결과 표시가 바뀌지 않게 */
+  /** 마지막 「통계분석」에 실제 쓰인 스케일 — 선택만으로 결과 표시가 바뀌지 않게 */
   const [appliedResponseScale, setAppliedResponseScale] = useState<ResponseScale>("linear");
+  const canLogLog = vars.gross_area || vars.land_area;
+
+  useEffect(() => {
+    if (responseScale === "loglog" && !canLogLog) {
+      setResponseScale("linear");
+    }
+  }, [canLogLog, responseScale]);
   const [mapPanelMode, setMapPanelMode] = useState<MapPanelMode>("normal");
 
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
@@ -880,6 +888,8 @@ export default function App() {
   });
 
   const regBody: RegressionRunRequest = useMemo(() => {
+    const scopeHints = analysisUnits.length ? analysisUnitsToHints(analysisUnits) : undefined;
+    const anchorCode = analysisUnits.length ? anchorRegionCode(analysisUnits) : undefined;
     return {
       asset_type: assetType,
       addr1: addr1 || undefined,
@@ -887,6 +897,8 @@ export default function App() {
       ...regionFilterParams,
       ri_list: riList.length ? riList : undefined,
       ...regionCodeScope,
+      ...(anchorCode ? { anchor_region_code: anchorCode } : {}),
+      ...(scopeHints?.length ? { region_unit_hints: scopeHints } : {}),
       contract_year_from: yearFrom === "" ? undefined : yearFrom,
       contract_year_to: yearTo === "" ? undefined : yearTo,
       ...rollingParams,
@@ -903,6 +915,7 @@ export default function App() {
     regionFilterParams,
     riList,
     regionCodeScope,
+    analysisUnits,
     yearFrom,
     yearTo,
     rollingParams,
@@ -919,8 +932,7 @@ export default function App() {
       setAppliedResponseScale(variables.response_scale ?? "linear");
     },
   });
-  const suggestM = useMutation({ mutationFn: suggestRegression });
-  const compareM = useMutation({ mutationFn: compareRegression });
+  const recommendM = useMutation({ mutationFn: recommendRegression });
 
   const adoptModel = (nextVars: RegressionVariableSpec, scale: ResponseScale) => {
     setVars(nextVars);
@@ -929,15 +941,30 @@ export default function App() {
     regM.mutate({ ...regBody, variables: nextVars, response_scale: scale });
   };
 
+  const adoptModelPool = (payload: {
+    vars: RegressionVariableSpec;
+    scale: ResponseScale;
+    regionCodes: string[];
+  }) => {
+    setVars(payload.vars);
+    setResponseScale(payload.scale);
+    setModelExploreOpen(false);
+    regM.mutate({
+      ...regBody,
+      variables: payload.vars,
+      response_scale: payload.scale,
+      region_codes: payload.regionCodes,
+      region_code_level: regBody.region_code_level ?? "eupmyeondong",
+    });
+  };
+
   const resultRegBody = useMemo(
     () => ({ ...regBody, response_scale: appliedResponseScale }),
     [regBody, appliedResponseScale],
   );
 
   const selectionDisabled =
-    regM.isPending ||
-    suggestM.isPending ||
-    compareM.isPending ||
+    regM.isPending || recommendM.isPending ||
     (!!addr2 && leafList.length > 0 && !structureQ.isSuccess);
 
   const aiRegionLabel = useMemo(() => {
@@ -953,24 +980,6 @@ export default function App() {
       assetType,
     });
   }, [regM.data, aiRegionLabel, assetType]);
-
-  const aiSuggestContext = useMemo(() => {
-    if (!suggestM.data) return null;
-    return buildBuiltModelSelectionContext(suggestM.data, {
-      regionLabel: aiRegionLabel,
-      assetType,
-      mode: "suggest",
-    });
-  }, [suggestM.data, aiRegionLabel, assetType]);
-
-  const aiCompareContext = useMemo(() => {
-    if (!compareM.data) return null;
-    return buildBuiltModelSelectionContext(compareM.data, {
-      regionLabel: aiRegionLabel,
-      assetType,
-      mode: "compare",
-    });
-  }, [compareM.data, aiRegionLabel, assetType]);
 
   const addr2ScopeLabel = formatScopeAddr2(addr2, addr1) || addr1;
 
@@ -1291,87 +1300,127 @@ export default function App() {
             </p>
           )}
 
-          <div className="space-y-2 border-t border-slate-200 pt-3">
-            <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">회귀 변수</p>
-            <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs">
-              {(
-                [
-                  ["gross_area", "연면적"],
-                  ["land_area", "대지면적"],
-                  ["building_age", "연식"],
-                  ["road_width_dummy", "도로조건 더미"],
-                  ...(isOnlyDetached(assetType)
-                    ? []
-                    : ([["zone_type_dummy", "용도지역 더미"]] as const)),
+          <div className="space-y-3 border-t border-slate-200 pt-3">
+            <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">1. 변수 선택</p>
+              <p className="text-[10px] text-slate-500 leading-snug">
+                「모형 탐색」은 아래 체크와 무관한 SSOT 변수 풀을 서버에서 탐색합니다.
+              </p>
+              <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs">
+                {(
                   [
-                    "building_use_dummy",
-                    isOnlyDetached(assetType) ? "주택유형 더미" : "건축물용도 더미",
-                  ],
-                  ...(isUnifiedAsset(assetType)
-                    ? ([["asset_type_dummy", "유형 더미"]] as const)
-                    : []),
-                  ...(leafList.length >= 2 || riList.length >= 2
-                    ? ([
-                        [
-                          "region_leaf_dummy",
-                          riList.length >= 2 ? "법정리 더미" : "지역(읍·면·동) 더미",
-                        ],
-                      ] as const)
-                    : []),
-                ] as const
-              ).map(([key, label]) => (
-                <label key={key} className="flex items-center gap-1">
-                  <input
-                    type="checkbox"
-                    checked={vars[key as keyof RegressionVariableSpec]}
-                    onChange={(e) =>
-                      setVars((v) => ({ ...v, [key]: e.target.checked }))
-                    }
-                  />
-                  {label}
-                </label>
-              ))}
-              {vars.region_leaf_dummy && (
-                <span className="text-slate-500 w-full">
-                  {riList.length >= 2
-                    ? "선택한 법정리 간 가격 수준 차이를 통제합니다."
-                    : "읍·면·동 풀링 회귀(하위 scope)에만 적용. 시군구·구 단일 회귀에는 넣지 않습니다."}
-                </span>
-              )}
-              <label className="flex items-center gap-1">
-                <input
-                  type="checkbox"
-                  checked={responseScale === "log"}
-                  onChange={(e) => setResponseScale(e.target.checked ? "log" : "linear")}
-                />
-                log(금액) semi-log
-              </label>
-              {regM.data && responseScale !== appliedResponseScale && (
-                <span className="text-amber-700 dark:text-amber-400 w-full text-[10px]">
-                  스케일만 바뀌었습니다. 「통계분석」을 다시 실행해야 결과가 갱신됩니다.
-                </span>
-              )}
-              <label className="flex items-center gap-1">
-                <input
-                  type="checkbox"
-                  checked={excludeOutliers}
-                  onChange={(e) => setExcludeOutliers(e.target.checked)}
-                />
-                IQR 금액 이상치 제외
-              </label>
-              {excludeOutliers &&
-                ([1.5, 2, 3] as const).map((k) => (
-                  <label key={k} className="flex items-center gap-1">
+                    ["gross_area", "연면적"],
+                    ["land_area", "대지면적"],
+                    ["building_age", "연식"],
+                    ["road_width_dummy", "도로조건 더미"],
+                    ...(isOnlyDetached(assetType)
+                      ? []
+                      : ([["zone_type_dummy", "용도지역 더미"]] as const)),
+                    [
+                      "building_use_dummy",
+                      isOnlyDetached(assetType) ? "주택유형 더미" : "건축물용도 더미",
+                    ],
+                    ...(isUnifiedAsset(assetType)
+                      ? ([["asset_type_dummy", "유형 더미"]] as const)
+                      : []),
+                    ...(leafList.length >= 2 || riList.length >= 2
+                      ? ([
+                          [
+                            "region_leaf_dummy",
+                            riList.length >= 2 ? "법정리 더미" : "지역(읍·면·동) 더미",
+                          ],
+                        ] as const)
+                      : []),
+                  ] as const
+                ).map(([key, label]) => (
+                  <label key={key} className="flex items-center gap-1">
                     <input
-                      type="radio"
-                      name="iqr-k"
-                      checked={iqrMultiplier === k}
-                      onChange={() => setIqrMultiplier(k)}
+                      type="checkbox"
+                      checked={vars[key as keyof RegressionVariableSpec]}
+                      onChange={(e) =>
+                        setVars((v) => ({ ...v, [key]: e.target.checked }))
+                      }
                     />
-                    IQR×{k}
+                    {label}
                   </label>
                 ))}
-            </div>
+                {vars.region_leaf_dummy && (
+                  <span className="text-slate-500 w-full text-[10px] leading-snug">
+                    {riList.length >= 2
+                      ? "선택한 법정리 간 가격 수준 차이를 통제합니다."
+                      : "읍·면·동 풀링 회귀(하위 scope)에만 적용. 시군구·구 단일 회귀에는 넣지 않습니다."}
+                  </span>
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">2. 회귀모형 선택</p>
+              <div className="flex flex-col gap-1.5 text-xs">
+                {(
+                  [
+                    ["linear", "선형", "금액 ~ 변수 (기본)"],
+                    ["log", "log (semi-log)", "log(금액) ~ 변수 — % 해석, 극단 외삽 시 exp 폭발 주의"],
+                    ["loglog", "log-log", "log(금액) ~ log(면적) — 광평수 외삽에 유리 (면적 변수 필요)"],
+                  ] as const
+                ).map(([value, label, hint]) => {
+                  const disabled = value === "loglog" && !canLogLog;
+                  return (
+                    <label
+                      key={value}
+                      className={clsx(
+                        "flex items-start gap-2",
+                        disabled && "opacity-50 cursor-not-allowed",
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="response-scale"
+                        className="mt-0.5"
+                        checked={responseScale === value}
+                        disabled={disabled}
+                        onChange={() => setResponseScale(value)}
+                      />
+                      <span>
+                        <span className="font-medium">{label}</span>
+                        <span className="block text-[10px] text-slate-500 leading-snug">{hint}</span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              {regM.data && responseScale !== appliedResponseScale && (
+                <p className="text-amber-700 dark:text-amber-400 text-[10px] leading-snug">
+                  모형만 바뀌었습니다. 「통계분석」을 다시 실행해야 결과가 갱신됩니다.
+                </p>
+              )}
+            </section>
+
+            <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">3. 이상치 제거</p>
+              <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs">
+                <label className="flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={excludeOutliers}
+                    onChange={(e) => setExcludeOutliers(e.target.checked)}
+                  />
+                  IQR 금액 이상치 제외
+                </label>
+                {excludeOutliers &&
+                  ([1.5, 2, 3] as const).map((k) => (
+                    <label key={k} className="flex items-center gap-1">
+                      <input
+                        type="radio"
+                        name="iqr-k"
+                        checked={iqrMultiplier === k}
+                        onChange={() => setIqrMultiplier(k)}
+                      />
+                      IQR×{k}
+                    </label>
+                  ))}
+              </div>
+            </section>
           </div>
 
           <button
@@ -1553,10 +1602,10 @@ export default function App() {
                       type="button"
                       className="btn btn-ghost text-xs shrink-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm shadow-sm"
                       onClick={() => setModelExploreOpen(true)}
-                      disabled={suggestM.isPending || compareM.isPending}
-                      title="Group Forward 추천 · Best Subset 비교"
+                      disabled={recommendM.isPending}
+                      title="SSOT 변수 풀 · Local → (선택) Twin 단계형 탐색"
                     >
-                      {suggestM.isPending || compareM.isPending ? "추천 중…" : "모형추천"}
+                      {recommendM.isPending ? "탐색 중…" : "모형 탐색"}
                     </button>
                     {regM.data.comparisons.length > 0 && (
                       <button
@@ -1607,16 +1656,14 @@ export default function App() {
         summary={txModalSummary}
       />
 
-      <ModelExploreModal
+      <RecommendationModal
         open={modelExploreOpen}
         onClose={() => setModelExploreOpen(false)}
         regBody={regBody}
-        suggestM={suggestM}
-        compareM={compareM}
+        recommendM={recommendM}
         onAdopt={adoptModel}
+        onAdoptPool={adoptModelPool}
         adopting={regM.isPending}
-        aiSuggestContext={aiSuggestContext}
-        aiCompareContext={aiCompareContext}
         assetType={assetType}
         regionLabel={aiRegionLabel}
         profileTarget={profileTarget}

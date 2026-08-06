@@ -29,7 +29,8 @@ export default function RegressionEquation({
   predictOptions,
 }: Props) {
   const [showAll, setShowAll] = useState(false);
-  const dep = responseScale === "log" ? "log(금액)" : "금액";
+  const dep =
+    responseScale === "log" || responseScale === "loglog" ? "log(금액)" : "금액";
   const intercept = coefficients.find((c) => c.name === "const");
 
   if (!intercept && equation) {
@@ -67,7 +68,7 @@ export default function RegressionEquation({
         {visible.map((c) => {
           const sign = c.estimate >= 0 ? "+" : "−";
           const mag = formatCoefValue(Math.abs(c.estimate));
-          const label = shortCoefName(c.name, assetType);
+          const label = shortCoefName(c.name, assetType, responseScale);
           const faded = showAll && !isEquationSignificant(c.p_value);
           const significant = isEquationSignificant(c.p_value);
           return (
