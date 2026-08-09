@@ -43,6 +43,7 @@
 | D-036 | 2026-08-07 | **「추천」≠ 예측 채택**: UI는 **모형 탐색**·`conclusion.verdict`; CV-MAPE &gt;60 **예측 부적합** 시 adopt는 **검토용**만. |
 | D-037 | 2026-08-07 | **Twin 2단계 사용자 opt-in**: `/recommend` 기본 stage1 only; `run_stage2=true` 또는 UI 「Twin pool 검토」클릭 시 2단계. |
 | D-038 | 2026-08-08 | **월간 integrity 검증 grain SSOT**: `verify_monthly_integrity.py` 의 V2 중복 검사 grain은 **DB UNIQUE constraint와 동일**해야 한다 (`col_axis` 등 분석 축 포함). category/group 등 **동일 mart 테이블 내 병행 축** 도입 시 검증 SQL·DDL을 함께 갱신. **`golden_monthly_integrity.json`** 의 `ledger_exact` 등 앵커는 정상적인 거래 추가·삭제 시 **해당 fixture만 명시적으로** 갱신(`--update-golden` 일괄 남용 금지). 2608 cycle: V2 183k false positive = 검증 SQL 누락, 비하동 보녹·답 2→3 = fixture stale. |
+| D-039 | 2026-08-09 | **2608 토지 Promote — 코드 배포와 DB 분리**: git push·`deploy-from-windows.ps1` 만으로는 **토지 7월 미반영**. 필수 순서 = (1) `run_land_cycle_csv.py --cycle-id 202608` 로 **원장 ingest + mart**, (2) `verify_monthly_integrity`, (3) **`land_stats` dump → VPS restore**, (4) `STATS_V2_DEFAULT_AS_OF_MONTH=2026-07-01`. mart-only 재빌드는 **원장에 7월 거래 없으면 무의미**. VPS Promote: PG18 custom dump는 PG16 `pg_restore` 불가 → PG18 bin 또는 `dump_land_for_promote.py` plain SQL.gz. SOP §9.4. |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 

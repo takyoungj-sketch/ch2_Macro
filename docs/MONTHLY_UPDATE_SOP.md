@@ -331,11 +331,26 @@ pg_dump -h 호스트 -U 유저 -d land_stats -Fc -f C:\ch2\ch2_Macro\backups\lan
 
 **초기 권장:** 팀에 DB 운영 경험이 있으면 **A**, 동일 스크립트를 서버에도 두고 싶으면 **B**. **한 팀은 한 가지로 고정**해 Playbook을 줄인다.
 
-### 9.3 앱
+### 9.4 코드 배포 ≠ DB Promote (2608 교훈)
 
-- 백엔드 **재시작** 후 `STATS_V2_DEFAULT_AS_OF_MONTH` 등 `.env` 가 이번 `as_of` 와 합치는지 확인.  
-- 프론트: `VITE_STATS_V2_ASSUMED_TODAY` 등 빌드형 변수 쓰는 경우 rebuild.  
-- 상세: `docs/V2_OPERATOR_CHECKLIST.md` §B8~B9.
+**`deploy-from-windows.ps1` 은 backend·frontend 코드만 반영한다.** `land_stats` 원장·V2 mart 는 **별도 월간 cycle + Promote** 없이는 운영 DB에 7월(또는 이번 `as_of_month`)이 나타나지 않는다.
+
+| 단계 | 무엇이 바뀌는가 | 2608(`cycle_id=202608`) |
+|------|----------------|-------------------------|
+| **① ingest** | `land_transactions` 에 **신규 계약연월** 거래 적재 | `raw/2608 업데이트/토지_202508_202607/*.csv` → `run_land_cycle_csv.py --cycle-id 202608` |
+| **② mart** | `land_basic_stats_v2` 등 **`as_of_month=2026-07-01`** 행 생성 | cycle 스크립트 내 V2·§7.1 group·annual |
+| **③ Promote** | 검증된 **`land_stats` DB** 를 VPS에 restore | 로컬 dump → VPS `promote_restore.sh` (§9.2 안 A) |
+| **④ env** | `STATS_V2_DEFAULT_AS_OF_MONTH=2026-07-01` | Promote 직후 backend 재기동 |
+
+**mart만 재계산(ingest 생략)하면** 원장에 7월 거래가 없을 때 화면에 7월이 **절대** 보이지 않는다.
+
+**Promote dump 호환 (2026-08-09):**
+
+- Windows PG18 **custom `-Fc` dump** → VPS 기본 `/usr/bin/pg_restore`(PG16) **실패** → `/usr/lib/postgresql/18/bin/pg_restore` 사용 또는 **plain SQL `.sql.gz`** ( `transaction_timeout` 등 PG18 전용 GUC 줄 제거 후 `psql` ).
+- 스크립트: `scripts/monthly/dump_land_for_promote.py` → `backups/land_stats_promote_{cycle}.sql.gz`
+- VPS: `deploy/scripts/promote_restore.sh` (PG18 bin·`as_of` 자동·pre-backup은 `/tmp` 경유)
+
+**2608 Promote 완료 (2026-08-09):** 로컬 검증 DB(`as_of=2026-07-01`, 7월 거래 17,985건) → VPS `land_stats` restore → `/health.latest_as_of_month=2026-07-01`.
 
 ---
 
@@ -362,6 +377,7 @@ pg_dump -h 호스트 -U 유저 -d land_stats -Fc -f C:\ch2\ch2_Macro\backups\lan
 | 시도 건수 스냅샷 | `py scripts\monthly\snapshot_land_tx_counts.py --output clean_snapshots\202605\land_tx_counts_after.json` |
 | 스냅샷 비교 | `py scripts\monthly\compare_count_snapshots.py --before … --after …` |
 | **Promote 게이트** | `py pipeline\verify_monthly_integrity.py --as-of YYYY-MM-01` |
+| **Promote dump (VPS 호환)** | `py scripts\monthly\dump_land_for_promote.py` → `backups\land_stats_promote_{cycle}.sql.gz` |
 
 PowerShell 래퍼: `scripts\monthly\run_monthly_cycle.ps1 -CycleId 202605` (상위 생략: `-SkipUpperV2`)
 
@@ -382,6 +398,7 @@ PowerShell 래퍼: `scripts\monthly\run_monthly_cycle.ps1 -CycleId 202605` (상�
 
 | 날짜 | 내용 |
 |------|------|
+| 2026-08-09 | **§9.4 코드 배포 vs DB Promote** — 2608 토지 7월 미노출 원인·ingest→mart→dump→VPS restore 체크리스트·PG18 dump 호환 |
 | 2026-07-26 | **§7.1.0** 배포 404 사고(부분 group·upper 0) · VPS `backend/.env` · 전국성 검증 · UI 기본=용도×지목·지역 변경 시 category 복귀 |
 | 2026-07-17 | **§7.1 용도×지목군 월간 필수** — 에이전트용 DDL·V2 group·annual 증분·검증 체크리스트. 실행 흐름·빠른 참조 반영 |
 | 2026-05-24 | `run_monthly_cycle` 기본에 `build_upper_stats_v2`(상위통계) 포함, `--skip-upper-v2` 로 생략 |

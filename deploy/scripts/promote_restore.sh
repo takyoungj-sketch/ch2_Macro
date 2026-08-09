@@ -6,12 +6,22 @@
 set -euo pipefail
 
 INPUT="${1:?dump path required}"
+# Optional: STATS_V2_DEFAULT_AS_OF_MONTH after restore (default = MAX(as_of_month) from restored DB)
+AS_OF_OVERRIDE="${2:-}"
 TS="$(date +%Y%m%d_%H%M)"
 LOG="/var/backups/ch2/restore_${TS}.log"
 PRE="/tmp/land_stats_vps_pre_promote_${TS}.dump"
+PG18_BIN="/usr/lib/postgresql/18/bin"
+if [[ -x "${PG18_BIN}/pg_dump" ]]; then
+  PG_DUMP="${PG18_BIN}/pg_dump"
+  PG_RESTORE="${PG18_BIN}/pg_restore"
+else
+  PG_DUMP="pg_dump"
+  PG_RESTORE="pg_restore"
+fi
 
-echo "==> VPS pre-promote backup (custom format)"
-sudo -u postgres pg_dump -Fc --no-owner --no-acl -f "$PRE" land_stats
+echo "==> VPS pre-promote backup (custom format, $PG_DUMP)"
+sudo -u postgres "$PG_DUMP" -Fc --no-owner --no-acl -f "$PRE" land_stats
 sudo mv "$PRE" "/var/backups/ch2/land_stats_vps_pre_promote_${TS}.dump"
 ls -lh "/var/backups/ch2/land_stats_vps_pre_promote_${TS}.dump"
 
@@ -38,7 +48,7 @@ elif [[ "$INPUT" == *.sql ]]; then
   filter_pg18_sql < "$INPUT" | sudo -u postgres psql -v ON_ERROR_STOP=1 -d land_stats 2>&1 | tee "$LOG"
   RC=$?
 else
-  sudo -u postgres pg_restore -d land_stats --no-owner --no-acl "$INPUT" 2>&1 | tee "$LOG"
+  sudo -u postgres "$PG_RESTORE" -d land_stats --no-owner --no-acl "$INPUT" 2>&1 | tee "$LOG"
   RC="${PIPESTATUS[0]}"
 fi
 set -e
@@ -56,10 +66,14 @@ GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO ch2app;
 SQL
 
 ENV_FILE="/opt/ch2_Macro/backend/.env"
+if [[ -z "$AS_OF_OVERRIDE" ]]; then
+  AS_OF_OVERRIDE="$(sudo -u postgres psql -d land_stats -t -A -c "SELECT MAX(as_of_month) FROM land_basic_stats_v2;" | tr -d '[:space:]')"
+fi
+echo "==> set STATS_V2_DEFAULT_AS_OF_MONTH=$AS_OF_OVERRIDE"
 if grep -q '^STATS_V2_DEFAULT_AS_OF_MONTH=' "$ENV_FILE"; then
-  sed -i 's/^STATS_V2_DEFAULT_AS_OF_MONTH=.*/STATS_V2_DEFAULT_AS_OF_MONTH=2026-05-01/' "$ENV_FILE"
+  sed -i "s/^STATS_V2_DEFAULT_AS_OF_MONTH=.*/STATS_V2_DEFAULT_AS_OF_MONTH=${AS_OF_OVERRIDE}/" "$ENV_FILE"
 else
-  echo 'STATS_V2_DEFAULT_AS_OF_MONTH=2026-05-01' >> "$ENV_FILE"
+  echo "STATS_V2_DEFAULT_AS_OF_MONTH=${AS_OF_OVERRIDE}" >> "$ENV_FILE"
 fi
 
 echo "==> redeploy"
