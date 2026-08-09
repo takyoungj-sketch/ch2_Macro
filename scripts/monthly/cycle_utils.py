@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from datetime import date
+from pathlib import Path
 
 
 def _validate_cycle_id(cycle_id: str) -> None:
@@ -70,3 +71,62 @@ def collection_yyyymm_range_from_cycle_id(cycle_id: str) -> tuple[str, str]:
     months.reverse()
     fy, fm = months[0]
     return f"{fy:04d}{fm:02d}", to_yyyymm
+
+
+def monthly_csv_bundle_dirs(repo: Path, cycle_id: str) -> list[Path]:
+    """`raw/` 아래 월간 Molit CSV 번들 폴더 후보 (cycle_id 우선, 구 `2607업데이트` fallback)."""
+    _validate_cycle_id(cycle_id)
+    raw = repo / "raw"
+    yymm = f"{cycle_id[2:4]}{cycle_id[4:6]}"  # 202608 → 2608
+    explicit = [
+        raw / f"{yymm} 업데이트",
+        raw / f"{yymm}업데이트",
+    ]
+    scanned = sorted(
+        (d for d in raw.iterdir() if d.is_dir() and d.name.startswith(yymm)),
+        key=lambda p: p.name.lower(),
+    )
+    legacy = raw / "2607업데이트"
+    out: list[Path] = []
+    seen: set[Path] = set()
+    for p in [*explicit, *scanned, legacy]:
+        if p.is_dir() and p not in seen:
+            seen.add(p)
+            out.append(p)
+    return out
+
+
+def resolve_csv_subdir(
+    repo: Path,
+    cycle_id: str,
+    folder_name: str,
+    y_from: str,
+    y_to: str,
+    *,
+    extra_candidates: list[Path] | None = None,
+) -> Path | None:
+    """`{folder_name}_{y_from}_{y_to}` CSV 폴더 — 월간 번들 → legacy 경로 순."""
+    suffix = f"{y_from}_{y_to}"
+    candidates: list[Path] = []
+    for bundle in monthly_csv_bundle_dirs(repo, cycle_id):
+        candidates.append(bundle / f"{folder_name}_{suffix}")
+    if extra_candidates:
+        candidates.extend(extra_candidates)
+    for p in candidates:
+        if p.is_dir() and list(p.glob("*.csv")):
+            return p
+    return None
+
+
+def resolve_land_csv_raw_dir(repo: Path, cycle_id: str, y_from: str, y_to: str) -> Path | None:
+    return resolve_csv_subdir(
+        repo,
+        cycle_id,
+        "토지",
+        y_from,
+        y_to,
+        extra_candidates=[
+            repo / "raw" / "토지" / cycle_id,
+            repo / "raw" / f"토지_{y_from}_{y_to}",
+        ],
+    )

@@ -1,5 +1,15 @@
 export type MapAdminLevel = "sido" | "sigungu" | "eupmyeondong" | "beopjungri";
 
+/** neighbor 그래프·선택 비교용 — 읍면동은 8자리 canonical. */
+export function canonAdminCode(level: string | null | undefined, code: string): string {
+  const c = code.trim();
+  if (!c) return c;
+  if (level === "beopjungri" && c.length >= 10 && !c.endsWith("00")) return c;
+  if (c.length >= 10 && c.endsWith("00")) return c.slice(0, 8);
+  if (c.length >= 8) return c.slice(0, 8);
+  return c;
+}
+
 export type MapSelectionState = {
   level: MapAdminLevel | null;
   selectedCodes: string[];

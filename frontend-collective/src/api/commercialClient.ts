@@ -38,8 +38,22 @@ export async function fetchCommercialFilterMeta(): Promise<CommercialFilterMeta>
   return data;
 }
 
-export async function fetchCommercialAddr2(addr1: string): Promise<string[]> {
-  const { data } = await api.get<string[]>("/regions/addr2", { params: { addr1 } });
+/** 시도 목록 — region_codes SSOT (meta/filters 대기 없이 즉시 표시). */
+export async function fetchCommercialAddr1List(): Promise<string[]> {
+  const { data } = await api.get<string[]>("/regions/addr1");
+  return data;
+}
+
+export async function fetchCommercialAddr2(
+  addr1: string,
+  assetType?: CommercialAssetSelectorType,
+): Promise<string[]> {
+  const { data } = await api.get<string[]>("/regions/addr2", {
+    params: {
+      addr1,
+      asset_type: apiCommercialAssetParam(assetType),
+    },
+  });
   return data;
 }
 

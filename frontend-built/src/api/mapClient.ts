@@ -18,6 +18,17 @@ const builtApi = axios.create({
 export type MapConfigResponse = {
   vworld_configured: boolean;
   tile_base: string;
+  neighbor_graph_ready?: boolean;
+  neighbor_edge_count?: number;
+};
+
+export type MapNeighborsResponse = {
+  level: string;
+  codes: string[];
+  neighbors_by_code: Record<string, string[]>;
+  neighbor_codes: string[];
+  graph_ready: boolean;
+  edge_count: number;
 };
 
 export type MapBoundariesResponse = {
@@ -37,6 +48,20 @@ export type BuiltMapResolveCodesResponse = {
 
 export async function fetchMapConfig(): Promise<MapConfigResponse> {
   const { data } = await mapApi.get<MapConfigResponse>("/map/config");
+  return data;
+}
+
+export async function fetchMapNeighbors(opts: {
+  level: MapAdminLevel;
+  codes: string[];
+}): Promise<MapNeighborsResponse> {
+  const params = new URLSearchParams();
+  params.set("level", opts.level === "beopjungri" ? "beopjungri" : "eupmyeondong");
+  for (const code of opts.codes) {
+    const c = String(code ?? "").trim();
+    if (c) params.append("codes", c);
+  }
+  const { data } = await mapApi.get<MapNeighborsResponse>("/map/neighbors", { params });
   return data;
 }
 

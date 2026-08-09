@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import {
+  fetchCommercialAddr1List,
   fetchCommercialAddr2,
   fetchCommercialAddr3,
   fetchCommercialClusters,
@@ -30,6 +31,11 @@ import {
   type CommercialAssetKind,
 } from "./utils/commercialAssetTypes";
 import { profileHref, resolveCollectiveProfileTarget } from "./utils/profileLink";
+import {
+  formatAddr2OptionLabel,
+  formatScopeAddr2,
+  isFlatSidoAddr2,
+} from "./utils/flatSidoRegion";
 
 function fmtPrice(v: number | null | undefined) {
   if (v == null) return "—";
@@ -105,6 +111,12 @@ export default function CommercialApp() {
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
   const { isDark, toggleUiColorScheme } = useUiColorScheme();
 
+  const addr1Q = useQuery({
+    queryKey: ["comm-addr1"],
+    queryFn: fetchCommercialAddr1List,
+    staleTime: 24 * 60 * 60_000,
+    placeholderData: (prev) => prev,
+  });
   const metaQ = useQuery({
     queryKey: ["comm-meta"],
     queryFn: fetchCommercialFilterMeta,
@@ -112,10 +124,18 @@ export default function CommercialApp() {
     placeholderData: (prev) => prev,
   });
   const addr2Q = useQuery({
-    queryKey: ["comm-addr2", addr1],
-    queryFn: () => fetchCommercialAddr2(addr1),
+    queryKey: ["comm-addr2", addr1, assetType],
+    queryFn: () => fetchCommercialAddr2(addr1, assetType),
     enabled: !!addr1,
   });
+
+  useEffect(() => {
+    if (!addr1 || addr2) return;
+    const opts = addr2Q.data ?? [];
+    if (opts.length === 1 && isFlatSidoAddr2(opts[0])) {
+      setAddr2(opts[0]!);
+    }
+  }, [addr1, addr2, addr2Q.data]);
   const structureQ = useQuery({
     queryKey: ["comm-structure", addr1, addr2, assetType],
     queryFn: () => fetchCommercialRegionStructure(addr1, addr2, assetType),
@@ -230,6 +250,8 @@ export default function CommercialApp() {
       scope.sort !== sort ||
       scope.windowYears !== windowYears);
 
+  const addr2ScopeLabel = formatScopeAddr2(addr2, addr1) || addr1;
+
   const runAnalysis = () => {
     if (!addr2) return;
     setScope({
@@ -308,7 +330,7 @@ export default function CommercialApp() {
               <select
                 className="input"
                 value={addr1}
-                disabled={metaQ.isLoading && !metaQ.data}
+                disabled={addr1Q.isLoading && !addr1Q.data}
                 onChange={(e) => {
                   setAddr1(e.target.value);
                   setAddr2("");
@@ -316,13 +338,13 @@ export default function CommercialApp() {
                 }}
               >
                 <option value="">선택</option>
-                {(metaQ.data?.addr1_list ?? []).map((a) => (
+                {(addr1Q.data ?? metaQ.data?.addr1_list ?? []).map((a) => (
                   <option key={a} value={a}>
                     {a}
                   </option>
                 ))}
               </select>
-              {metaQ.isLoading && !metaQ.data && (
+              {addr1Q.isLoading && !addr1Q.data && (
                 <span className="text-slate-400 text-[11px]">시도 목록 불러오는 중…</span>
               )}
             </label>
@@ -341,7 +363,7 @@ export default function CommercialApp() {
                 <option value="">선택</option>
                 {(addr2Q.data ?? []).map((a) => (
                   <option key={a} value={a}>
-                    {a}
+                    {formatAddr2OptionLabel(a)}
                   </option>
                 ))}
               </select>
@@ -350,7 +372,7 @@ export default function CommercialApp() {
             {addr2 && hasIntermediate && (
               <RegionChipPanel
                 title={`${intermediateLabel} 선택`}
-                hint={`미선택 시 ${addr2} 전체`}
+                hint={`미선택 시 ${addr2ScopeLabel} 전체`}
                 selected={guList}
                 options={guQ.data ?? []}
                 multiSelect={LEFT_REGION_MULTI_SELECT}
@@ -477,7 +499,9 @@ export default function CommercialApp() {
               <>
                 <div className="flex flex-wrap items-center gap-2 mb-2">
                   <p className="text-xs text-slate-500 dark:text-slate-400 flex-1 min-w-[12rem]">
-                    {scope.addr1} {scope.addr2} · 도로 {clustersQ.data.total}개
+                    {scope.addr1}
+                    {addr2ScopeLabel && addr2ScopeLabel !== scope.addr1 ? ` ${addr2ScopeLabel}` : ""} · 도로{" "}
+                    {clustersQ.data.total}개
                     {clustersQ.data.stats_as_of_label && !hasYearFilter(scope.yearFrom, scope.yearTo) && (
                       <span className="ml-2 text-indigo-600 dark:text-indigo-400">
                         · {clustersQ.data.stats_as_of_label}

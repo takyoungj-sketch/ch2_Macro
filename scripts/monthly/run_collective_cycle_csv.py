@@ -25,6 +25,7 @@ if str(_SCRIPT_DIR) not in sys.path:
 
 from cycle_utils import (  # noqa: E402
     collection_yyyymm_range_from_cycle_id,
+    resolve_csv_subdir,
     stats_as_of_iso_from_cycle_id,
 )
 
@@ -52,16 +53,21 @@ def _run(phase: str, cmd: list[str], *, cwd: Path | None = None) -> None:
 
 
 def _resolve_folder(name: str, cycle_id: str, y_from: str, y_to: str) -> Path:
-    suffix = f"{y_from}_{y_to}"
-    candidates = [
-        REPO / "raw" / "2607업데이트" / f"{name}_{suffix}",
-        REPO / "raw" / "집합부동산" / cycle_id / name,
-        REPO / "raw" / "raw base" / f"{name}_2021_2026",
-    ]
-    for p in candidates:
-        if p.is_dir() and list(p.glob("*.csv")):
-            return p
-    raise FileNotFoundError(f"{name}: CSV 폴더 없음 — 후보: {[str(c) for c in candidates]}")
+    found = resolve_csv_subdir(
+        REPO,
+        cycle_id,
+        name,
+        y_from,
+        y_to,
+        extra_candidates=[
+            REPO / "raw" / "집합부동산" / cycle_id / name,
+            REPO / "raw" / "raw base" / f"{name}_2021_2026",
+        ],
+    )
+    if found is None:
+        suffix = f"{y_from}_{y_to}"
+        raise FileNotFoundError(f"{name}: CSV 폴더 없음 — cycle={cycle_id}, suffix={suffix}")
+    return found
 
 
 def _collect_csv_paths(folders: list[Path]) -> list[Path]:

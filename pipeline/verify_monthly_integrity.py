@@ -4,6 +4,10 @@
 
 읽기 전용 — DB 를 변경하지 않는다 (--update-golden 은 fixture JSON 만 갱신).
 
+V2 grain 중복 검사는 `land_basic_stats_v2_grain_uq` 와 동일 grain
+(as_of_month, window_years, beopjungri_code, zone_type, land_category, col_axis) 을 사용한다.
+category/group 등 병행 col_axis 는 정상이며 UNIQUE 위반이 아니다 (D-038).
+
 사용:
     cd pipeline
     python verify_monthly_integrity.py --as-of-month 2026-05-01
@@ -49,12 +53,14 @@ FROM (
 ) s
 """
 
+# grain must match db/040_land_stats_col_axis.sql land_basic_stats_v2_grain_uq
 V2_DUP_GRAIN_SQL = """
 SELECT COUNT(*) FROM (
-  SELECT as_of_month, window_years, beopjungri_code, zone_type, land_category, COUNT(*)
+  SELECT as_of_month, window_years, beopjungri_code, zone_type, land_category,
+         col_axis, COUNT(*)
   FROM land_basic_stats_v2
   WHERE as_of_month = :as_of
-  GROUP BY 1, 2, 3, 4, 5
+  GROUP BY 1, 2, 3, 4, 5, 6
   HAVING COUNT(*) > 1
 ) t
 """

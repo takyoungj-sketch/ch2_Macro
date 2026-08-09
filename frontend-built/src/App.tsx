@@ -21,6 +21,7 @@ import {
   formatAddr2OptionLabel,
   formatScopeAddr2,
   isFlatSidoAddr2,
+  resolveUnitAddr2,
 } from "./utils/flatSidoRegion";
 import {
   analysisUnitLabel,
@@ -780,6 +781,7 @@ export default function App() {
         if (localCodes.has(u.code)) return false;
         if (localKeys.has(`${u.addr2}|${u.name}`.toLowerCase())) return false;
         if (u.crossParent) return true;
+        if (u.addr1 && addr1 && u.addr1.trim() !== addr1.trim()) return true;
         if (u.addr2 && addr2Label && u.addr2 !== addr2Label && u.addr2 !== addr2) return true;
         const sig = u.code.replace(/\D/g, "").slice(0, 5);
         return Boolean(anchorSig && sig && sig !== anchorSig);
@@ -1533,11 +1535,30 @@ export default function App() {
 
                   const anchorSig = (analysisUnits[0]?.code || "").replace(/\D/g, "").slice(0, 5);
                   const unitSig = next.code.replace(/\D/g, "").slice(0, 5);
+                  const unitAddr1 = (next.addr1 || addr1 || "").trim();
+                  const anchorAddr1 = (addr1 || "").trim();
                   const crossParent =
                     Boolean(unit.crossParent) ||
                     Boolean(anchorSig && unitSig && anchorSig !== unitSig) ||
+                    Boolean(
+                      unitAddr1 &&
+                        anchorAddr1 &&
+                        unitAddr1 !== anchorAddr1 &&
+                        !unitAddr1.startsWith(anchorAddr1) &&
+                        !anchorAddr1.startsWith(unitAddr1),
+                    ) ||
                     Boolean(next.addr2 && next.addr2 !== addr2 && next.addr2 !== anchorAddr2);
-                  next = { ...next, crossParent };
+                  next = {
+                    ...next,
+                    crossParent,
+                    addr2: resolveUnitAddr2(
+                      anchorAddr1,
+                      addr2,
+                      unitAddr1,
+                      next.addr2 || "",
+                      crossParent,
+                    ),
+                  };
 
                   setAnalysisUnits((prev) => {
                     if (prev.some((u) => u.code === next.code || (u.name === next.name && u.addr2 === next.addr2))) {

@@ -1,0 +1,109 @@
+{
+  "status": "PASS",
+  "as_of": "2026-06-01",
+  "resolver_version": "2026.08",
+  "generated_at": "2026-08-04T12:55:09.066470+00:00",
+  "history_counts": {
+    "land": 191
+  },
+  "resolver": {
+    "resolver_version": "2026.08",
+    "history_snapshot_rows": 191,
+    "generated_at": "2026-08-04T12:55:09.208762+00:00",
+    "cases": [
+      {
+        "name": "daeso_eup",
+        "eup_resolve": "43770256",
+        "eup_ok": true,
+        "eup_is_canonical_hist": false,
+        "eup_is_canonical_canon": true,
+        "eup_expand_has_hist": true,
+        "eup_converted_codes": 14,
+        "ri_resolve": "4377025626",
+        "ri_ok": true,
+        "ri_is_canonical_hist": false,
+        "ri_is_canonical_canon": true,
+        "ri_expand_has_hist": true,
+        "ri_converted_codes": 2
+      },
+      {
+        "name": "yangji_eup",
+        "eup_resolve": "41461262",
+        "eup_ok": true,
+        "eup_is_canonical_hist": false,
+        "eup_is_canonical_canon": true,
+        "eup_expand_has_hist": true,
+        "eup_converted_codes": 12,
+        "ri_resolve": "4146126229",
+        "ri_ok": true,
+        "ri_is_canonical_hist": false,
+        "ri_is_canonical_canon": true,
+        "ri_expand_has_hist": true,
+        "ri_converted_codes": 2
+      }
+    ],
+    "all_ok": true
+  },
+  "mart_audit": {
+    "as_of": "2026-06-01",
+    "tables": {
+      "land_upper_stats_v2": {
+        "canonical_rows": 0,
+        "historical_rows": 0,
+        "duplicated_grain_keys": 0
+      },
+      "land_annual_stats": {
+        "canonical_rows": 114060,
+        "historical_rows": 0,
+        "duplicated_grain_keys": 0
+      },
+      "land_basic_stats_v2": {
+        "canonical_rows": 21127,
+        "historical_rows": 0
+      }
+    },
+    "gates": {
+      "land_upper_stats_v2.historical": {
+        "historical_rows": 0,
+        "ok": true
+      },
+      "land_annual_stats.historical": {
+        "historical_rows": 0,
+        "ok": true
+      },
+      "land_basic_stats_v2.historical": {
+        "historical_rows": 0,
+        "ok": true
+      }
+    },
+    "pass": true,
+    "failures": [],
+    "orphan_canonical_codes": 0,
+    "pilot": {
+      "daeso_eup": {
+        "upper_canonical_count": 896,
+        "upper_historical_count": 0
+      },
+      "yangji_eup": {
+        "upper_canonical_count": 1871,
+        "upper_historical_count": 0
+      }
+    }
+  },
+  "stable_region_sample": [
+    "5123012700",
+    "4311332023",
+    "4728034028",
+    "5013025029",
+    "5113011600",
+    "4161025933",
+    "4723035032",
+    "4480034027",
+    "1159010200",
+    "5172031031"
+  ],
+  "history_parity_ok": null,
+  "history_from_codes": 191,
+  "history_to_codes": 191,
+  "failures": []
+}

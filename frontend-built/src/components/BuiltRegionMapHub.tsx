@@ -18,15 +18,17 @@ import {
   fetchBuiltMapResolveCodes,
   fetchMapBoundaries,
   fetchMapConfig,
+  fetchMapNeighbors,
   vworldSatelliteTileUrl,
 } from "../api/mapClient";
+import { resolveUnitAddr2 } from "../utils/flatSidoRegion";
 import {
   analysisUnitLabel,
   MAX_BUILT_ANALYSIS_UNITS,
   type BuiltAnalysisUnit,
 } from "../utils/builtAnalysisUnits";
 import { applySelectionFitBounds, boundsFromGeoJson } from "../utils/mapFitBounds";
-import { featureAdminCode, type MapAdminLevel } from "../utils/mapRegionScope";
+import { canonAdminCode, featureAdminCode, type MapAdminLevel } from "../utils/mapRegionScope";
 
 export type MapPanelMode = "normal" | "expanded" | "collapsed";
 
@@ -273,20 +275,6 @@ function parentLabelsFromProps(props: Record<string, unknown>): { addr1: string;
   return { addr1, addr2 };
 }
 
-/** 행정코드에서 시도(2자리)만 추출. 숫자가 아니면 빈 문자열. */
-function sidoPrefixFromAdminCode(code: string | null | undefined): string {
-  const raw = String(code ?? "").trim();
-  const m = raw.match(/^(\d{2})/);
-  return m?.[1] ?? "";
-}
-
-function sameSidoName(a: string, b: string): boolean {
-  const x = a.trim();
-  const y = b.trim();
-  if (!x || !y) return false;
-  return x === y || x.startsWith(y) || y.startsWith(x);
-}
-
 function unitFromFeature(
   props: Record<string, unknown>,
   code: string,
@@ -414,8 +402,47 @@ export default function BuiltRegionMapHub({
     staleTime: 60_000,
   });
 
+  const selectionKey = selectedCodes.join(",");
+
+  const neighborsQ = useQuery({
+    queryKey: ["built-map-neighbors", mapLevel, selectionKey],
+    queryFn: () =>
+      fetchMapNeighbors({
+        level: mapLevel!,
+        codes: selectedCodes,
+      }),
+    enabled: Boolean(
+      hasSelection &&
+        (mapLevel === "eupmyeondong" || mapLevel === "beopjungri") &&
+        configQ.data?.vworld_configured,
+    ),
+    staleTime: 30_000,
+  });
+
+  const neighborSelectableSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const c of neighborsQ.data?.neighbor_codes ?? []) {
+      set.add(canonAdminCode(mapLevel, c));
+      set.add(c);
+    }
+    return set;
+  }, [neighborsQ.data?.neighbor_codes, mapLevel]);
+
+  const neighborGraphReady = Boolean(
+    neighborsQ.data?.graph_ready &&
+      Object.values(neighborsQ.data?.neighbors_by_code ?? {}).some((arr) => (arr?.length ?? 0) > 0),
+  );
+
   const geojson = boundariesQ.data?.feature_collection ?? null;
   const selectedSet = useMemo(() => new Set(selectedCodes), [selectedCodes]);
+  const selectedCanonSet = useMemo(() => {
+    const s = new Set<string>();
+    for (const c of selectedCodes) {
+      s.add(canonAdminCode(mapLevel, c));
+      s.add(c);
+    }
+    return s;
+  }, [selectedCodes, mapLevel]);
   const labels = resolveQ.data?.labels ?? {};
 
   const isRiSelection = useMemo(
@@ -440,7 +467,17 @@ export default function BuiltRegionMapHub({
     for (const feat of geojson.features) {
       const props = (feat.properties ?? {}) as Record<string, unknown>;
       const code = featureAdminCode(props, mapLevel);
-      const selected = code ? selectedSet.has(code) : false;
+      const selected = Boolean(
+        code &&
+          (selectedSet.has(code) || selectedCanonSet.has(canonAdminCode(mapLevel, code))),
+      );
+      const selectable = Boolean(
+        code &&
+          !selected &&
+          neighborGraphReady &&
+          (neighborSelectableSet.has(code) ||
+            neighborSelectableSet.has(canonAdminCode(mapLevel, code))),
+      );
       const label =
         shortRegionLabel(props) ||
         (code && labels[code] ? labels[code].split(/\s+/).pop() : null) ||
@@ -449,6 +486,7 @@ export default function BuiltRegionMapHub({
         ...props,
         ch2_code: code ?? null,
         ch2_selected: selected ? 1 : 0,
+        ch2_selectable: selectable ? 1 : 0,
         ch2_label: label,
       };
       const geom = sanitizePolygonGeometry(feat.geometry);
@@ -472,7 +510,7 @@ export default function BuiltRegionMapHub({
       outlineGeoJson: { type: "FeatureCollection", features: outlineFeatures },
       labelGeoJson: { type: "FeatureCollection", features: labelFeatures },
     };
-  }, [geojson, mapLevel, selectedSet, labels]);
+  }, [geojson, mapLevel, selectedSet, selectedCanonSet, labels, neighborGraphReady, neighborSelectableSet]);
 
   const fitDataKey = useMemo(
     () =>
@@ -492,7 +530,10 @@ export default function BuiltRegionMapHub({
     if (!map || !mapReady || !geojson || !mapLevel) return;
     const selectedFeats = geojson.features.filter((f) => {
       const code = featureAdminCode(f.properties as Record<string, unknown>, mapLevel);
-      return code && selectedSet.has(code);
+      return (
+        code &&
+        (selectedSet.has(code) || selectedCanonSet.has(canonAdminCode(mapLevel, code)))
+      );
     });
     const targetFc: GeoJSON.FeatureCollection = {
       type: "FeatureCollection",
@@ -511,7 +552,7 @@ export default function BuiltRegionMapHub({
       targetCm: 20,
       duration: 650,
     });
-  }, [geojson, mapReady, mapLevel, selectedCodes, selectedSet]);
+  }, [geojson, mapReady, mapLevel, selectedCodes, selectedSet, selectedCanonSet]);
 
   useEffect(() => {
     if (!mapReady || !boundariesQ.isSuccess || !geojson) return;
@@ -651,6 +692,7 @@ export default function BuiltRegionMapHub({
       }
       const already =
         selectedSet.has(code) ||
+        selectedCanonSet.has(canonAdminCode(mapLevel, code)) ||
         analysisUnits.some((u) => u.code === code || u.code === code.slice(0, 8));
       if (already) {
         setMapError("이미 선택된 지역입니다.");
@@ -669,13 +711,26 @@ export default function BuiltRegionMapHub({
 
       const selectedFeatures = geojson.features.filter((f) => {
         const c = featureAdminCode(f.properties as Record<string, unknown>, mapLevel);
-        return c && selectedSet.has(c);
+        if (!c) return false;
+        return selectedSet.has(c) || selectedCanonSet.has(canonAdminCode(mapLevel, c));
       });
       if (!selectedFeatures.length) {
         setMapError("먼저 왼쪽에서 읍·면·동(또는 리)을 선택해 주세요.");
         return;
       }
-      if (!isAdjacentToAnySelected(polygonFeat, selectedFeatures, isRiSelection ? 0.002 : 0.0012)) {
+
+      // Selection SSOT: neighbor_codes 그래프 (없으면 turf 폴백)
+      const canon = canonAdminCode(mapLevel, code);
+      const inNeighborGraph =
+        neighborSelectableSet.has(code) || neighborSelectableSet.has(canon);
+      if (neighborGraphReady) {
+        if (!inNeighborGraph) {
+          setMapError("인접한 지역만 추가할 수 있습니다. (위상 이웃만 선택 가능)");
+          return;
+        }
+      } else if (
+        !isAdjacentToAnySelected(polygonFeat, selectedFeatures, isRiSelection ? 0.002 : 0.0012)
+      ) {
         setMapError("인접한 지역만 추가할 수 있습니다. (맞닿은 구역을 선택해 주세요)");
         return;
       }
@@ -687,23 +742,6 @@ export default function BuiltRegionMapHub({
         return;
       }
 
-      // 시도 게이트: VWorld 코드 형식이 DB와 어긋날 수 있어
-      // 시도명(ctp / full_nm) 우선, 없으면 숫자 행정코드 앞 2자리
-      const featureCtp = String(props.ctp_kor_nm ?? "").trim();
-      const fullNm = String(props.full_nm ?? "").trim();
-      const scopeSidoName = scope.addr1.trim();
-      const sameByName =
-        sameSidoName(featureCtp, scopeSidoName) ||
-        Boolean(scopeSidoName && fullNm && fullNm.includes(scopeSidoName));
-      const anchorSido =
-        sidoPrefixFromAdminCode(resolveQ.data?.context_sido_code) ||
-        sidoPrefixFromAdminCode(selectedCodes[0]) ||
-        sidoPrefixFromAdminCode(analysisUnits[0]?.code);
-      const unitSido = sidoPrefixFromAdminCode(unit.code);
-      if (!sameByName && anchorSido && unitSido && anchorSido !== unitSido) {
-        setMapError("같은 시도 안의 인접 지역만 추가할 수 있습니다.");
-        return;
-      }
       if (analysisUnits.length && analysisUnits[0]!.level !== unit.level) {
         setMapError("같은 행정 레벨만 함께 선택할 수 있습니다.");
         return;
@@ -723,9 +761,11 @@ export default function BuiltRegionMapHub({
       geojson,
       isRiSelection,
       mapLevel,
-      resolveQ.data?.context_sido_code,
+      neighborGraphReady,
+      neighborSelectableSet,
       scope.addr1,
       scope.addr2,
+      selectedCanonSet,
       selectedCodes,
       selectedSet,
     ],
@@ -775,8 +815,7 @@ export default function BuiltRegionMapHub({
       ...unit,
       crossParent,
       addr1: unit.addr1 || scope.addr1,
-      // 교차 시군구면 앵커 addr2로 채우지 않음 — 주소 scope 키가 깨짐
-      addr2: unit.addr2 || (crossParent ? "" : scope.addr2),
+      addr2: resolveUnitAddr2(scope.addr1, scope.addr2, unit.addr1, unit.addr2, crossParent),
     });
     setContextMenu(null);
   }, [analysisUnits, contextMenu, onAddUnit, scope.addr1, scope.addr2, selectedCodes]);
@@ -919,19 +958,25 @@ export default function BuiltRegionMapHub({
                       "case",
                       ["==", ["get", "ch2_selected"], 1],
                       "#facc15",
+                      ["==", ["get", "ch2_selectable"], 1],
+                      "#f97316",
                       "#ea580c",
                     ],
                     "line-width": [
                       "case",
                       ["==", ["get", "ch2_selected"], 1],
                       isRiSelection ? 4.5 : 4,
+                      ["==", ["get", "ch2_selectable"], 1],
+                      isRiSelection ? 2.4 : 2,
                       isRiSelection ? 1.8 : 1.35,
                     ],
                     "line-opacity": [
                       "case",
                       ["==", ["get", "ch2_selected"], 1],
                       1,
-                      0.9,
+                      ["==", ["get", "ch2_selectable"], 1],
+                      0.95,
+                      0.55,
                     ],
                   } as never}
                 />
@@ -953,8 +998,11 @@ export default function BuiltRegionMapHub({
         ) : null}
         {!boundariesQ.isFetching && geojson?.features.length ? (
           <div className="absolute bottom-2 left-2 z-10 text-[11px] bg-white/90 px-2 py-1 rounded shadow text-slate-600">
-            행정구역 {geojson.features.length}곳
+            표시 {geojson.features.length}곳
             {geojson.features.length > selectedCodes.length ? " · 인접 포함" : ""}
+            {neighborGraphReady
+              ? ` · 선택가능 ${neighborSelectableSet.size}`
+              : " · 선택 turf폴백"}
           </div>
         ) : null}
 

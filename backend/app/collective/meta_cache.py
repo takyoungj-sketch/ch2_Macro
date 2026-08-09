@@ -7,7 +7,7 @@ from typing import Callable, TypeVar
 
 T = TypeVar("T")
 
-_DEFAULT_TTL_SEC = 300.0
+_DEFAULT_TTL_SEC = 3600.0
 _store: dict[str, tuple[float, object]] = {}
 
 

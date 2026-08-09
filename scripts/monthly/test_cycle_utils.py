@@ -21,3 +21,13 @@ def test_collection_range_202607() -> None:
 
 def test_stats_as_of_202607() -> None:
     assert stats_as_of_iso_from_cycle_id("202607") == "2026-06-01"
+
+
+def test_collection_range_202608() -> None:
+    y_from, y_to = collection_yyyymm_range_from_cycle_id("202608")
+    assert y_from == "202508"
+    assert y_to == "202607"
+
+
+def test_stats_as_of_202608() -> None:
+    assert stats_as_of_iso_from_cycle_id("202608") == "2026-07-01"

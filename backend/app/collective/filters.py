@@ -29,7 +29,28 @@ def apply_region_filters(
     asset_type: Optional[str] = None,
     col_prefix: str = "",
     valid_sql: str | None = "t.is_valid = true",
+    region_codes: list[str] | None = None,
+    region_code_level: str | None = None,
+    region_addrs: list[str] | None = None,
 ) -> None:
+    from app.region_scope import apply_analysis_region_scope
+
+    prefix = col_prefix.rstrip(".") if col_prefix else ""
+    codes = [str(c).strip() for c in (region_codes or []) if str(c).strip()]
+    addrs = [str(a).strip() for a in (region_addrs or []) if str(a).strip()]
+    if codes or addrs:
+        used = apply_analysis_region_scope(
+            clauses,
+            params,
+            codes=codes or None,
+            code_level=region_code_level or "eupmyeondong",
+            addr_keys=addrs or None,
+            col_prefix=prefix,
+            conn=conn,
+        )
+        if used:
+            return
+
     if conn is not None and addr1 and addr2:
         apply_region_scope(
             clauses,

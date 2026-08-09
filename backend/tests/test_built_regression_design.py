@@ -320,3 +320,38 @@ def test_format_equation_includes_intercept_and_terms():
     assert eq.startswith("금액 = 1,000")
     assert "연면적" in eq
     assert "대지면적" not in eq  # p=0.15 — 회귀식 기본(p<0.1)에서 제외
+
+
+def test_correlations_empty_df_no_columns():
+    from app.built.regression.engine import _correlations
+
+    assert _correlations(pd.DataFrame([]), RegressionVariableSpec()) == []
+
+
+def test_flat_sido_addr2_row_match():
+    from app.built.regression.engine import _addr2_row_match, _filter_by_region_units
+    from app.built.schemas import RegressionRunRequest
+
+    df = pd.DataFrame(
+        {
+            "addr1": ["세종특별자치시", "세종특별자치시"],
+            "addr2": [None, ""],
+            "addr3": ["조치원읍", "연서면"],
+            "addr4": ["", ""],
+            "addr5": ["", ""],
+            "eupmyeondong_code": ["36110250", "36110360"],
+            "price": [100, 200],
+        }
+    )
+    mask = _addr2_row_match(df, "__FLAT_SIDO__")
+    assert mask.all()
+    req = RegressionRunRequest(
+        addr1="세종특별자치시",
+        addr2="__FLAT_SIDO__",
+        region_addrs=["세종특별자치시|연서면|연서면"],
+        region_codes=["36110360"],
+        region_code_level="eupmyeondong",
+    )
+    out = _filter_by_region_units(df, req)
+    assert len(out) == 1
+    assert out.iloc[0]["addr3"] == "연서면"

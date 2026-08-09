@@ -32,6 +32,8 @@ from app.collective.db import get_collective_db
 from app.collective.floor_index_regression import compute_residential_floor_index_regression
 from app.collective.schemas import AnalysisExplain, AnalysisFeatures, FloorIndexCell
 from app.collective.filters import _col, apply_region_filters
+from app.flat_sido_region import list_addr2_for_sido
+from app.region_sido import list_sido_names
 from app.collective_commercial.tx_rows import apply_commercial_tx_period, commercial_tx_row_dict
 from app.collective.region_structure import detect_region_structure
 from app.collective.resolve_codes import resolve_collective_map_codes
@@ -141,6 +143,12 @@ def _cluster_display_label(db: Session, cluster_key: str) -> str:
     return row.label if row and row.label else cluster_key
 
 
+@router.get("/regions/addr1", response_model=list[str])
+def list_addr1(db: Session = Depends(get_collective_db)):
+    """시도 목록 — region_codes SSOT (원장 스캔 없음)."""
+    return list_sido_names(db.connection())
+
+
 @router.get("/meta/filters", response_model=CommercialFilterMeta)
 def filter_meta(db: Session = Depends(get_collective_db)):
     def _years() -> list[int]:
@@ -153,17 +161,6 @@ def filter_meta(db: Session = Depends(get_collective_db)):
             )
         ).fetchall()
         return [int(r.y) for r in rows]
-
-    def _addr1() -> list:
-        rows = db.execute(
-            text(
-                """
-                SELECT DISTINCT addr1 AS v FROM collective_commercial_transactions
-                WHERE addr1 IS NOT NULL AND addr1 <> '' ORDER BY 1
-                """
-            )
-        ).fetchall()
-        return [r.v for r in rows]
 
     def _types() -> list:
         rows = db.execute(
@@ -179,23 +176,23 @@ def filter_meta(db: Session = Depends(get_collective_db)):
     return CommercialFilterMeta(
         asset_types=get_ttl_cached("comm:asset_types", _types),
         contract_years=get_ttl_cached("comm:years", _years),
-        addr1_list=get_ttl_cached("comm:addr1", _addr1),
+        addr1_list=list_sido_names(db.connection()),
     )
 
 
 @router.get("/regions/addr2")
-def list_addr2(db: Session = Depends(get_collective_db), addr1: str = Query(...)):
-    rows = db.execute(
-        text(
-            """
-            SELECT DISTINCT addr2 AS v FROM collective_commercial_transactions
-            WHERE addr1 = :a1 AND addr2 IS NOT NULL AND btrim(addr2) <> ''
-            ORDER BY 1
-            """
-        ),
-        {"a1": addr1},
-    ).fetchall()
-    return [r.v for r in rows]
+def list_addr2(
+    db: Session = Depends(get_collective_db),
+    addr1: str = Query(...),
+    asset_type: Optional[str] = Query(None),
+):
+    return list_addr2_for_sido(
+        db.connection(),
+        table="collective_commercial_transactions",
+        addr1=addr1,
+        asset_type=asset_type,
+        valid_sql="is_valid = true",
+    )
 
 
 @router.get("/regions/addr3")

@@ -8,7 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
 from app.built.filters import apply_addr3_filter, apply_addr4_filter, apply_ri_filter
-from app.flat_sido_region import apply_addr2_scope, apply_region_asset_type_filter, is_flat_sido_addr2
+from app.flat_sido_region import apply_addr2_scope, apply_region_asset_type_filter, flat_sido_addr2_sql, is_flat_sido_addr2
 
 AdminCodeLevel = Literal["eupmyeondong", "beopjungri"]
 
@@ -154,6 +154,7 @@ def apply_analysis_region_scope(
     addr_keys: list[str] | None = None,
     col_prefix: str = "",
     conn: Connection | None = None,
+    emd_code_col: str | None = "eupmyeondong_code",
 ) -> bool:
     """
     교차 시군구 분석 scope.
@@ -192,20 +193,29 @@ def apply_analysis_region_scope(
             emd = _eupmyeondong_ledger_emd_codes(conn, cleaned)
             if emd:
                 params["admin_region_codes"] = emd
+                emd_clause = (
+                    f" OR btrim(COALESCE({p}{emd_code_col}::text, '')) = ANY(:admin_region_codes)"
+                    if emd_code_col
+                    else ""
+                )
                 parts.append(
-                    f"(btrim({p}eupmyeondong_code::text) = ANY(:admin_region_codes) "
-                    f"OR LEFT(btrim(COALESCE({p}beopjungri_code::text, '')), 8) = ANY(:admin_region_codes))"
+                    f"(LEFT(btrim(COALESCE({p}beopjungri_code::text, '')), 8) = ANY(:admin_region_codes)"
+                    f"{emd_clause})"
                 )
 
     triples = parse_region_addr_keys(addr_keys)
     for i, (a1, a2, leaf) in enumerate(triples):
         params[f"ru_a1_{i}"] = a1
-        params[f"ru_a2_{i}"] = a2
         leaf_vars = _leaf_name_variants(leaf)
         params[f"ru_leaves_{i}"] = leaf_vars
+        if is_flat_sido_addr2(a2):
+            addr2_clause = flat_sido_addr2_sql(col_prefix.rstrip(".") if col_prefix else "")
+        else:
+            params[f"ru_a2_{i}"] = a2
+            addr2_clause = f"{p}addr2 = :ru_a2_{i}"
         # 읍면동=addr3/addr4, 리=addr5 (Built NULL-code 리 행)
         parts.append(
-            f"({p}addr1 = :ru_a1_{i} AND {p}addr2 = :ru_a2_{i} "
+            f"({p}addr1 = :ru_a1_{i} AND {addr2_clause} "
             f"AND ({p}addr3 = ANY(:ru_leaves_{i}) OR {p}addr4 = ANY(:ru_leaves_{i}) "
             f"OR {p}addr5 = ANY(:ru_leaves_{i})))"
         )

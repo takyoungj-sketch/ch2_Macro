@@ -42,6 +42,7 @@
 | D-035 | 2026-08-07 | **만족 등급 — 고정 CV % UI 금지**: Excellent~Poor + ★; lookup [`recommendation/satisfaction/built.json`](../backend/app/recommendation/satisfaction/built.json). CV 50% 같은 제품 임계값 **두지 않음**. |
 | D-036 | 2026-08-07 | **「추천」≠ 예측 채택**: UI는 **모형 탐색**·`conclusion.verdict`; CV-MAPE &gt;60 **예측 부적합** 시 adopt는 **검토용**만. |
 | D-037 | 2026-08-07 | **Twin 2단계 사용자 opt-in**: `/recommend` 기본 stage1 only; `run_stage2=true` 또는 UI 「Twin pool 검토」클릭 시 2단계. |
+| D-038 | 2026-08-08 | **월간 integrity 검증 grain SSOT**: `verify_monthly_integrity.py` 의 V2 중복 검사 grain은 **DB UNIQUE constraint와 동일**해야 한다 (`col_axis` 등 분석 축 포함). category/group 등 **동일 mart 테이블 내 병행 축** 도입 시 검증 SQL·DDL을 함께 갱신. **`golden_monthly_integrity.json`** 의 `ledger_exact` 등 앵커는 정상적인 거래 추가·삭제 시 **해당 fixture만 명시적으로** 갱신(`--update-golden` 일괄 남용 금지). 2608 cycle: V2 183k false positive = 검증 SQL 누락, 비하동 보녹·답 2→3 = fixture stale. |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 

@@ -43,6 +43,7 @@ from app.collective.db import get_collective_db
 from app.collective.filters import apply_period_filters, apply_region_filters, apply_year_filters
 from app.v2_stats_windows import period_bounds_for_window
 from app.flat_sido_region import list_addr2_for_sido
+from app.region_sido import list_sido_names
 from app.collective.floor_index_regression import compute_residential_floor_index_regression
 from app.collective.regression.engine import predict_regression, run_building_regression
 from app.collective.transaction_export import (
@@ -107,6 +108,9 @@ def _base_where(
     contract_year_to: Optional[int] = None,
     contract_date_from: Optional[date] = None,
     contract_date_to: Optional[date] = None,
+    region_codes: list[str] | None = None,
+    region_code_level: str | None = None,
+    region_addrs: list[str] | None = None,
 ) -> tuple[str, dict]:
     clauses = ["is_valid = true", "unit_price IS NOT NULL", "unit_price > 0"]
     params: dict = {}
@@ -124,6 +128,9 @@ def _base_where(
         addr3_list=addr3_list,
         addr4_list=addr4_list,
         asset_type=asset_type,
+        region_codes=region_codes,
+        region_code_level=region_code_level,
+        region_addrs=region_addrs,
     )
     apply_period_filters(
         clauses,
@@ -136,23 +143,17 @@ def _base_where(
     return " AND ".join(clauses), params
 
 
+@router.get("/regions/addr1", response_model=list[str])
+def list_addr1(db: Session = Depends(get_collective_db)):
+    """시도 목록 — region_codes SSOT (원장 스캔 없음)."""
+    return list_sido_names(db.connection())
+
+
 @router.get("/meta/filters", response_model=CollectiveFilterMeta)
 def filter_meta(
     db: Session = Depends(get_collective_db),
     asset_type: Optional[str] = Query(None),
 ):
-    def _distinct_addr1() -> list:
-        rows = db.execute(
-            text(
-                """
-                SELECT DISTINCT addr1 AS v FROM collective_transactions
-                WHERE addr1 IS NOT NULL AND addr1 <> ''
-                ORDER BY 1
-                """
-            )
-        ).fetchall()
-        return [r.v for r in rows]
-
     def _distinct_asset_types() -> list:
         rows = db.execute(
             text(
@@ -192,10 +193,11 @@ def filter_meta(
         ).fetchall()
         return [int(r.y) for r in rows]
 
+    conn = db.connection()
     return CollectiveFilterMeta(
         asset_types=get_ttl_cached("coll:asset_types", _distinct_asset_types),
         contract_years=get_ttl_cached(year_cache_key, _years),
-        addr1_list=get_ttl_cached("coll:addr1", _distinct_addr1),
+        addr1_list=list_sido_names(conn),
     )
 
 

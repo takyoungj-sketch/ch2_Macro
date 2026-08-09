@@ -31,7 +31,7 @@
 2. 추가 가능 코드 = `⋃ neighbors(selected_i)` − `selected`  
 3. 런타임: `GET /api/map/neighbors?level=&codes=`  
 4. 테이블이 비어 있으면 **일시적으로** 기존 turf 인접 폴백 (마이그레이션·빌드 전)  
-5. **상위 시군구가 달라도** 위상상 맞닿으면 선택 가능(토지). edge는 시군구 링/시도 빌드로 생성.
+5. **상위 시군구·시도가 달라도** 위상상 맞닿으면 선택 가능(토지·복합). edge는 시군구 링/시도 빌드로 생성.
 
 연쇄 확장: A 선택 → A의 neighbor만 추가 가능 → B 추가 → A∪B의 neighbor로 확장.
 
@@ -58,7 +58,7 @@ region_neighbors (level, code, neighbor_code)  -- 대칭 edge 저장
 | **N2** | 토지 표시 = viewport boundaries | **진행** |
 | **N3** | 전국/권역 neighbor 빌드 파이프라인 | **진행** (`--all --skip-existing`) |
 | **N4** | 리(beopjungri) 그래프 · 복합/집합 이식 | **리 전국 빌드 완료** · Hub 이식 대기 |
-| **N5** | 시군구 횡단 정책(토지 vs 복합) 제품 확정 | 대기 |
+| **N5** | 시군구·시도 횡단 정책(토지 vs 복합) | **복합 = 토지 동일**(위상 인접, 2026-08) |
 
 ---
 

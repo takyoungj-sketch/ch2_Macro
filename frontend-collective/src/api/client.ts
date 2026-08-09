@@ -46,6 +46,12 @@ export async function fetchFilterMeta(assetType?: AssetSelectorType): Promise<Co
   return data;
 }
 
+/** 시도 목록 — region_codes SSOT (meta/filters 대기 없이 즉시 표시). */
+export async function fetchAddr1List(): Promise<string[]> {
+  const { data } = await api.get<string[]>("/regions/addr1");
+  return data;
+}
+
 export async function fetchAddr2(addr1: string, assetType?: AssetSelectorType): Promise<string[]> {
   const { data } = await api.get<string[]>("/regions/addr2", {
     params: { addr1, asset_type: apiAssetParam(assetType) },

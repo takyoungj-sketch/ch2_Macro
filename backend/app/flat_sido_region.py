@@ -101,6 +101,19 @@ def _table_has_flat_sido(
     return int(n or 0) > 0
 
 
+def _addr2_values_look_like_misplaced_flat_leaves(values: list[str]) -> bool:
+    """addr2 칸에 읍·면·동명이 들어간 flat sido 오염 원장 (세종 상가 등)."""
+    cleaned = [v.strip() for v in values if (v or "").strip()]
+    if not cleaned:
+        return False
+    for v in cleaned:
+        if v.endswith("시") or v.endswith("군") or v.endswith("구"):
+            return False
+        if not (v.endswith("읍") or v.endswith("면") or v.endswith("동")):
+            return False
+    return True
+
+
 def list_addr2_for_sido(
     conn: Connection,
     *,
@@ -130,7 +143,12 @@ def list_addr2_for_sido(
         params,
     ).fetchall()
     if rows:
-        return [str(r.v).strip() for r in rows if r.v]
+        vals = [str(r.v).strip() for r in rows if r.v]
+        if vals and _table_has_flat_sido(
+            conn, table=table, addr1=addr1, asset_type=asset_type, valid_sql=valid_sql
+        ) and _addr2_values_look_like_misplaced_flat_leaves(vals):
+            return [FLAT_SIDO_ADDR2_TOKEN]
+        return vals
     if _table_has_flat_sido(
         conn, table=table, addr1=addr1, asset_type=asset_type, valid_sql=valid_sql
     ):

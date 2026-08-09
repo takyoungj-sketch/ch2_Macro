@@ -200,26 +200,27 @@ def _build_where(
             apply_ri_filter(clauses, params, req.ri_list)
     elif _has_unit_region_scope(req):
         # wide fetch: 교차 시군구 단위의 상위 시군구 합집합
+        from app.flat_sido_region import apply_addr2_scope, is_flat_sido_addr2
         from app.region_scope import parse_region_addr_keys
 
-        triples = parse_region_addr_keys(getattr(req, "region_addrs", None) or [])
-        addr2s = sorted({t[1] for t in triples if t[1]})
-        if req.addr2 and req.addr2 not in addr2s:
-            addr2s.append(req.addr2)
         if req.addr1:
             clauses.append("addr1 = :addr1")
             params["addr1"] = req.addr1
-        if len(addr2s) > 1:
-            clauses.append("addr2 = ANY(:unit_wide_addr2s)")
-            params["unit_wide_addr2s"] = addr2s
-        elif len(addr2s) == 1:
-            from app.flat_sido_region import apply_addr2_scope
-
-            apply_addr2_scope(clauses, params, addr1=req.addr1, addr2=addr2s[0])
-        elif req.addr1 and req.addr2:
-            from app.flat_sido_region import apply_addr2_scope
-
+        if req.addr2 and is_flat_sido_addr2(req.addr2):
+            # 세종 등 flat sido — 지도 단위 addr2(읍·면명)와 토큰이 섞여도 원장은 addr2 NULL
             apply_addr2_scope(clauses, params, addr1=req.addr1, addr2=req.addr2)
+        else:
+            triples = parse_region_addr_keys(getattr(req, "region_addrs", None) or [])
+            addr2s = sorted({t[1] for t in triples if t[1]})
+            if req.addr2 and req.addr2 not in addr2s:
+                addr2s.append(req.addr2)
+            if len(addr2s) > 1:
+                clauses.append("addr2 = ANY(:unit_wide_addr2s)")
+                params["unit_wide_addr2s"] = addr2s
+            elif len(addr2s) == 1:
+                apply_addr2_scope(clauses, params, addr1=req.addr1, addr2=addr2s[0])
+            elif req.addr1 and req.addr2:
+                apply_addr2_scope(clauses, params, addr1=req.addr1, addr2=req.addr2)
     elif req.addr1 and req.addr2:
         from app.flat_sido_region import apply_addr2_scope
 
@@ -531,6 +532,21 @@ def _norm_col(df: pd.DataFrame, col: str) -> pd.Series:
     return df[col].astype(str).str.strip()
 
 
+def _ledger_addr2_series(df: pd.DataFrame) -> pd.Series:
+    if "addr2" not in df.columns:
+        return pd.Series("", index=df.index, dtype=str)
+    s = df["addr2"]
+    return s.where(s.notna(), "").astype(str).str.strip()
+
+
+def _addr2_row_match(df: pd.DataFrame, a2: str) -> pd.Series:
+    from app.flat_sido_region import is_flat_sido_addr2
+
+    if is_flat_sido_addr2(a2):
+        return _ledger_addr2_series(df) == ""
+    return _norm_col(df, "addr2") == a2.strip()
+
+
 def _filter_sigungu(df: pd.DataFrame, req: RegressionRunRequest) -> pd.DataFrame:
     return df.copy()
 
@@ -628,10 +644,10 @@ def _filter_by_region_units(
             | (_norm_col(df, "addr5") == leaf)
         )
         if has_a1 and has_a2:
-            row_ok = (_norm_col(df, "addr1") == a1) & (_norm_col(df, "addr2") == a2)
+            row_ok = (_norm_col(df, "addr1") == a1) & _addr2_row_match(df, a2)
             mask = mask | (row_ok & leaf_ok)
         elif has_a2:
-            mask = mask | ((_norm_col(df, "addr2") == a2) & leaf_ok)
+            mask = mask | (_addr2_row_match(df, a2) & leaf_ok)
         else:
             mask = mask | leaf_ok
 
@@ -1122,6 +1138,8 @@ def _subsample_points(xv: pd.Series, yv: pd.Series, *, max_pts: int = 500) -> li
 
 
 def _correlations(df: pd.DataFrame, vars_spec: RegressionVariableSpec) -> list[CorrelationSeries]:
+    if df.empty or "price" not in df.columns:
+        return []
     out: list[CorrelationSeries] = []
     y = pd.to_numeric(df["price"], errors="coerce")
     for col, label in _continuous_plot_specs(vars_spec):

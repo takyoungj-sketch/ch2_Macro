@@ -12,15 +12,14 @@ interface Props {
 
 const fmtInt = (n: number) => n.toLocaleString("ko-KR", { maximumFractionDigits: 0 });
 
-/** 총거래액(만원) — 소수 첫째 자리까지 */
-const fmtManwonSum = (n: number) =>
+const SCALE_10K = 10_000;
+
+/** ÷1만 스케일(억·만㎡) — 소수 첫째 자리까지 */
+const fmtScaled10k = (n: number) =>
   n.toLocaleString("ko-KR", {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   });
-
-const fmtArea = (n: number) =>
-  n.toLocaleString("ko-KR", { maximumFractionDigits: 1, minimumFractionDigits: 0 });
 
 const num = (v: unknown, fallback = 0): number => {
   const x = Number(v);
@@ -32,7 +31,7 @@ const fmtUnit = (n: number | null) =>
     ? "-"
     : n.toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-/** 연도별 전체 거래·총거래액·총면적·가중 단가(만원/㎡) */
+/** 연도별 전체 거래·총거래액(억)·총면적(만㎡)·가중 단가(만원/㎡) */
 export default function YearlyStatsTable({
   title = "연도별 전체 거래",
   hideTitle = false,
@@ -83,21 +82,21 @@ export default function YearlyStatsTable({
             </tr>
             <tr>
               <td className="border border-slate-200 px-2 py-1 text-slate-600 sticky left-0 bg-white z-10">
-                총거래액(만원)
+                총거래액(억)
               </td>
               {list.map((r) => (
                 <td key={`p-${r.year}`} className="border border-slate-200 px-2 py-1 text-right tabular-nums">
-                  {fmtManwonSum(Math.round(num(r.total_price_10k_sum) * 10) / 10)}
+                  {fmtScaled10k(Math.round((num(r.total_price_10k_sum) / SCALE_10K) * 10) / 10)}
                 </td>
               ))}
             </tr>
             <tr>
               <td className="border border-slate-200 px-2 py-1 text-slate-600 sticky left-0 bg-white z-10">
-                총면적(㎡)
+                총면적(만㎡)
               </td>
               {list.map((r) => (
                 <td key={`a-${r.year}`} className="border border-slate-200 px-2 py-1 text-right tabular-nums">
-                  {fmtArea(num(r.area_sqm_sum))}
+                  {fmtScaled10k(Math.round((num(r.area_sqm_sum) / SCALE_10K) * 10) / 10)}
                 </td>
               ))}
             </tr>

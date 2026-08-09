@@ -12,8 +12,10 @@
   1) (선택) DDL 037·038
   2) 계약연월 구간 purge + 배치 raw 태그 purge
   3) collect (CSV) → clean → dedupe
-  4) build_stats_v2 + build_upper_stats_v2
-  5) 스냅샷 JSON
+  4) build_stats_v2 + build_upper_stats_v2 (category)
+  5) build_stats_v2 + build_upper_stats_v2 (group, §7.1)
+  6) build_annual_stats (당해 연도, both) + verify_jimok_group_integrity
+  7) 스냅샷 JSON
 """
 
 from __future__ import annotations
@@ -33,6 +35,7 @@ if str(_SCRIPT_DIR) not in sys.path:
 
 from cycle_utils import (  # noqa: E402
     collection_yyyymm_range_from_cycle_id,
+    resolve_land_csv_raw_dir,
     stats_as_of_iso_from_cycle_id,
 )
 
@@ -55,15 +58,49 @@ def _run(phase: str, cmd: list[str], *, cwd: Path | None = None) -> None:
 
 
 def _default_raw_dir(cycle_id: str, y_from: str, y_to: str) -> Path:
-    candidates = [
-        REPO / "raw" / "2607업데이트" / f"토지_{y_from}_{y_to}",
-        REPO / "raw" / "토지" / cycle_id,
-        REPO / "raw" / f"토지_{y_from}_{y_to}",
-    ]
-    for p in candidates:
-        if p.is_dir() and list(p.glob("*.csv")):
-            return p
-    return candidates[0]
+    found = resolve_land_csv_raw_dir(REPO, cycle_id, y_from, y_to)
+    if found is not None:
+        return found
+    suffix = f"{y_from}_{y_to}"
+    return REPO / "raw" / f"토지_{suffix}"
+
+
+def _annual_year_from_as_of(v2_as: str) -> int:
+    return int(v2_as[:4])
+
+
+def _run_jimok_group_pipeline(v2_as: str) -> None:
+    """§7.1 — group V2 + upper + annual(both) + integrity."""
+    year = _annual_year_from_as_of(v2_as)
+    _run(
+        "build_stats_v2_group",
+        [PY, "build_stats_v2.py", "--as-of", v2_as, "--windows", "3,5", "--col-axis", "group"],
+        cwd=PIPELINE,
+    )
+    _run(
+        "build_upper_stats_v2_group",
+        [PY, "build_upper_stats_v2.py", "--as-of", v2_as, "--windows", "3,5", "--col-axis", "group"],
+        cwd=PIPELINE,
+    )
+    _run(
+        "build_annual_stats",
+        [
+            PY,
+            "build_annual_stats.py",
+            "--years",
+            str(year),
+            "--full",
+            "--col-axis",
+            "both",
+            "--with-upper",
+        ],
+        cwd=PIPELINE,
+    )
+    _run(
+        "verify_jimok_group_integrity",
+        [PY, "verify_jimok_group_integrity.py", "--as-of-month", v2_as],
+        cwd=PIPELINE,
+    )
 
 
 def _apply_ddl(*, dry_run: bool) -> None:
@@ -113,6 +150,11 @@ def main() -> None:
     p.add_argument("--skip-ddl", action="store_true")
     p.add_argument("--skip-dedupe", action="store_true")
     p.add_argument("--skip-stats", action="store_true")
+    p.add_argument(
+        "--skip-jimok-group",
+        action="store_true",
+        help="§7.1 group V2·upper·annual·integrity 생략 (비권장)",
+    )
     p.add_argument("--v2-as-of", help="build_stats_v2 --as-of (기본: cycle 매핑)")
     p.add_argument(
         "--source-year",
@@ -175,7 +217,7 @@ def main() -> None:
                 ],
                 cwd=PIPELINE,
             )
-        log.info("dry-run 완료")
+        log.info("dry-run 완료 (jimok group: build_stats_v2/upper group + annual + verify 예정)")
         return
 
     if not args.skip_ddl:
@@ -237,6 +279,8 @@ def main() -> None:
             [PY, "build_upper_stats_v2.py", "--as-of", v2_as, "--windows", "3,5"],
             cwd=PIPELINE,
         )
+        if not args.skip_jimok_group:
+            _run_jimok_group_pipeline(v2_as)
 
     snap_script = _SCRIPT_DIR / "snapshot_land_tx_counts.py"
     snap_out = REPO / "clean_snapshots" / cycle / "land_tx_counts_after.json"

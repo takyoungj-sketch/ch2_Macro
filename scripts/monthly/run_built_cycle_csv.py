@@ -29,6 +29,7 @@ if str(_SCRIPT_DIR) not in sys.path:
 
 from cycle_utils import (  # noqa: E402
     collection_yyyymm_range_from_cycle_id,
+    resolve_csv_subdir,
     stats_as_of_iso_from_cycle_id,
 )
 
@@ -57,25 +58,25 @@ def _run(phase: str, cmd: list[str], *, cwd: Path | None = None) -> None:
 
 
 def _resolve_raw_dirs(cycle_id: str, y_from: str, y_to: str) -> dict[str, Path]:
-    suffix = f"{y_from}_{y_to}"
-    candidates: dict[str, list[Path]] = {
-        asset: [
-            REPO / "raw" / "2607업데이트" / f"{folder}_{suffix}",
-            REPO / "raw" / "복합부동산" / cycle_id / folder,
-            REPO / "raw" / "raw base" / f"{folder}_2021_2026",
-        ]
-        for asset, folder in BUILT_RAW_DIRS.items()
-    }
     out: dict[str, Path] = {}
-    for asset, paths in candidates.items():
-        for p in paths:
-            if p.is_dir() and list(p.glob("*.csv")):
-                out[asset] = p
-                break
-        else:
+    for asset, folder in BUILT_RAW_DIRS.items():
+        found = resolve_csv_subdir(
+            REPO,
+            cycle_id,
+            folder,
+            y_from,
+            y_to,
+            extra_candidates=[
+                REPO / "raw" / "복합부동산" / cycle_id / folder,
+                REPO / "raw" / "raw base" / f"{folder}_2021_2026",
+            ],
+        )
+        if found is None:
+            suffix = f"{y_from}_{y_to}"
             raise FileNotFoundError(
-                f"{asset}: CSV 폴더 없음 — 후보: {[str(x) for x in paths]}"
+                f"{asset}: CSV 폴더 없음 — cycle={cycle_id}, suffix={suffix}"
             )
+        out[asset] = found
     return out
 
 
@@ -128,7 +129,12 @@ def main() -> None:
         log.info("  %s → %s", asset, d)
 
     if args.dry_run:
-        log.info("dry-run: purge/ingest/stats 생략")
+        _run(
+            "purge_built_contract_window (dry-run)",
+            [PY, str(PIPELINE / "purge_built_contract_window.py"), "--cycle-id", cycle, "--dry-run"],
+            cwd=PIPELINE,
+        )
+        log.info("dry-run: ingest/stats 생략")
         return
 
     cycle_t0 = time.perf_counter()

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import {
+  fetchAddr1List,
   fetchAddr2,
   fetchAddr3WithCounts,
   fetchAllBuildings,
@@ -139,6 +140,12 @@ export default function App() {
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
   const { isDark, toggleUiColorScheme } = useUiColorScheme();
 
+  const addr1Q = useQuery({
+    queryKey: ["coll-addr1"],
+    queryFn: fetchAddr1List,
+    staleTime: 24 * 60 * 60_000,
+    placeholderData: (prev) => prev,
+  });
   const metaQ = useQuery({
     queryKey: ["coll-meta"],
     queryFn: () => fetchFilterMeta(),
@@ -353,7 +360,7 @@ export default function App() {
               <select
                 className="input"
                 value={addr1}
-                disabled={metaQ.isLoading && !metaQ.data}
+                disabled={addr1Q.isLoading && !addr1Q.data}
                 onChange={(e) => {
                   setAddr1(e.target.value);
                   setAddr2("");
@@ -361,13 +368,13 @@ export default function App() {
                 }}
               >
                 <option value="">선택</option>
-                {(metaQ.data?.addr1_list ?? []).map((a) => (
+                {(addr1Q.data ?? metaQ.data?.addr1_list ?? []).map((a) => (
                   <option key={a} value={a}>
                     {a}
                   </option>
                 ))}
               </select>
-              {metaQ.isLoading && !metaQ.data && (
+              {addr1Q.isLoading && !addr1Q.data && (
                 <span className="text-slate-400 text-[11px]">시도 목록 불러오는 중…</span>
               )}
             </label>
