@@ -19,6 +19,7 @@ import type {
   CollectiveRegressionPredictResponse,
   CollectiveRegressionResponse,
   CollectiveTransactionRow,
+  DanjiAttributesResponse,
   FloorIndexResponse,
   HistogramResponse,
   RegionOption,
@@ -273,6 +274,14 @@ export async function fetchBuildingRollingStats(
   const { data } = await api.get<RollingStatsResponse>(`/buildings/${buildingKey}/stats/rolling`, {
     params: { window_years: windowYears },
   });
+  return data;
+}
+
+/** K-apt 단지 속성 (실험) — 미매칭도 200 + 사유로 응답한다. */
+export async function fetchDanjiAttributes(buildingKey: string): Promise<DanjiAttributesResponse> {
+  const { data } = await api.get<DanjiAttributesResponse>(
+    `/buildings/${buildingKey}/danji-attributes`,
+  );
   return data;
 }
 

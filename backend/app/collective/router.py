@@ -61,6 +61,7 @@ from app.collective.building_geocode import (
     geocode_collective_building,
     resolve_building_map_points,
 )
+from app.collective.danji_attributes import fetch_danji_attributes
 from app.collective.schemas import (
     AnalysisExplain,
     AnalysisFeatures,
@@ -76,6 +77,7 @@ from app.collective.schemas import (
     CollectiveRegressionRequest,
     CollectiveRegressionResponse,
     CollectiveTransactionRow,
+    DanjiAttributesResponse,
     FloorIndexCell,
     FloorIndexResponse,
     HistogramBin,
@@ -592,6 +594,24 @@ def related_presale_annual(
         source_asset_type=str(src.get("asset_type") or ""),
         candidates=[RelatedPresaleCandidate(**c) for c in candidates],
     )
+
+
+@router.get(
+    "/buildings/{building_key}/danji-attributes",
+    response_model=DanjiAttributesResponse,
+)
+def building_danji_attributes(
+    building_key: str,
+    db: Session = Depends(get_collective_db),
+    snapshot_ym: Optional[str] = Query(
+        None, description="K-apt 스냅샷 YYYYMM (미지정 시 해당 건물의 최신 스냅샷)"
+    ),
+):
+    """K-apt 단지 속성 — 미매칭도 사유를 담아 200으로 반환(실험 단계)."""
+    payload = fetch_danji_attributes(
+        db.connection(), building_key, snapshot_ym=snapshot_ym
+    )
+    return DanjiAttributesResponse(**payload)
 
 
 @router.get("/buildings/{building_key}/transactions", response_model=TransactionListResponse)

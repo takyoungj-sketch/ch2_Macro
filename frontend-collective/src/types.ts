@@ -604,6 +604,80 @@ export interface CohortTransactionsResponse {
   data_source: "live";
 }
 
+/** K-apt 단지 속성 (실험) — 값과 함께 출처·매칭 신뢰도·제외 사유를 받는다. */
+export interface DanjiMatchInfo {
+  tier: string;
+  tier_label: string;
+  rule: string;
+  reliability: string;
+  usable_for_regression: boolean;
+  danji_code?: string | null;
+  danji_name?: string | null;
+  approved_year?: number | null;
+  building_year?: number | null;
+  year_diff?: number | null;
+  note?: string | null;
+}
+
+export interface DanjiBuilderInfo {
+  raw?: string | null;
+  norm?: string | null;
+  group?: string | null;
+  is_joint: boolean;
+  is_public: boolean;
+  developer_raw?: string | null;
+}
+
+export interface DanjiBrandInfo {
+  name?: string | null;
+  confidence?: string | null;
+  is_public: boolean;
+  detected_from?: string | null;
+}
+
+export interface DanjiScaleInfo {
+  households?: number | null;
+  households_sale?: number | null;
+  households_rent?: number | null;
+  dong_count?: number | null;
+  max_floor?: number | null;
+  parking_total?: number | null;
+  parking_per_household?: number | null;
+}
+
+export interface DanjiStructureInfo {
+  raw?: string | null;
+  group?: string | null;
+}
+
+export interface DanjiClassificationInfo {
+  danji_class?: string | null;
+  supply_type?: string | null;
+}
+
+export interface DanjiQualityFlag {
+  code: string;
+  label: string;
+  detail?: string | null;
+  affected_fields: string[];
+}
+
+export interface DanjiAttributesResponse {
+  building_key: string;
+  snapshot_ym?: string | null;
+  source_label: string;
+  dictionary_version?: string | null;
+  matched: boolean;
+  match: DanjiMatchInfo;
+  builder?: DanjiBuilderInfo | null;
+  brand?: DanjiBrandInfo | null;
+  scale?: DanjiScaleInfo | null;
+  structure?: DanjiStructureInfo | null;
+  classification?: DanjiClassificationInfo | null;
+  quality_flags: DanjiQualityFlag[];
+  notes: string[];
+}
+
 export const ASSET_LABELS: Record<AssetType, string> = {
   apartment: "아파트",
   rowhouse: "연립·다세대",

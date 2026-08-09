@@ -10,11 +10,17 @@ import {
   fetchBuildingHistogram,
   fetchBuildingRollingStats,
   fetchBuildingYearlyStats,
+  fetchDanjiAttributes,
   fetchRelatedPresaleAnnual,
   fetchCohortHistogram,
   type BuildingStatsRow,
 } from "../api/client";
-import type { AssetSelectorType, AssetType } from "../types";
+import type {
+  AssetSelectorType,
+  AssetType,
+  DanjiAttributesResponse,
+  DanjiQualityFlag,
+} from "../types";
 import { assetTypeLabel } from "../types";
 import BuildingRegressionPanel from "./BuildingRegressionPanel";
 import CohortTrendPanel from "./CohortTrendPanel";
@@ -30,7 +36,14 @@ import type { StatsWindowYears } from "./StatsWindowToggle";
 import { buildAnalysisPeriodParams, formatPeriodLabel, type AnalysisPeriodParams } from "../utils/analysisPeriod";
 import { rollingToTrendSeries, yearlyResponseToTrendSeries } from "../utils/cohortTrendSeries";
 
-type PanelMode = "trend" | "long_term" | "histogram" | "transactions" | "floor_index" | "regression";
+type PanelMode =
+  | "trend"
+  | "long_term"
+  | "histogram"
+  | "transactions"
+  | "floor_index"
+  | "regression"
+  | "danji";
 
 const MAX_COHORT_BUILDINGS = 10;
 
@@ -51,9 +64,266 @@ const TABS: { id: PanelMode; label: string | ((assetType: AssetType) => string) 
   { id: "long_term", label: "장기 추세" },
 ];
 
+/** K-apt 단지 속성 — 실험 단계에서만 노출 */
+const DANJI_TAB: { id: PanelMode; label: string } = { id: "danji", label: "단지 정보" };
+
 function fmtPrice(v: number | null | undefined) {
   if (v == null) return "—";
   return v.toLocaleString(undefined, { maximumFractionDigits: 1 });
+}
+
+const DANJI_SECTION_TITLE = "text-[10px] font-semibold text-slate-600 dark:text-slate-300 px-3 pt-3 pb-1";
+const DANJI_TH = "border px-2 py-1.5 text-left font-medium w-[38%]";
+const DANJI_TD = "border px-2 py-1 text-slate-800 dark:text-slate-100";
+
+function danjiText(v: string | null | undefined) {
+  return v == null || v === "" ? "—" : v;
+}
+
+function danjiNumber(v: number | null | undefined, maximumFractionDigits = 0) {
+  if (v == null) return "—";
+  return v.toLocaleString("ko-KR", { maximumFractionDigits });
+}
+
+/** 품질 플래그가 지목한 필드는 값 옆에 경고를 붙여 회귀 결측 처리를 알린다. */
+function DanjiFieldWarning({ flags }: { flags: DanjiQualityFlag[] }) {
+  if (flags.length === 0) return null;
+  const detail = flags.map((f) => (f.detail ? `${f.label}: ${f.detail}` : f.label)).join(" / ");
+  return (
+    <span
+      className="ml-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400"
+      title={`${detail} — 이 값은 회귀에서 결측으로 처리됩니다.`}
+    >
+      ⚠ 결측
+    </span>
+  );
+}
+
+function DanjiBadge({ label, tone }: { label: string; tone: "slate" | "amber" }) {
+  return (
+    <span
+      className={clsx(
+        "ml-1 px-1.5 py-0.5 rounded text-[9px] font-semibold border",
+        tone === "amber"
+          ? "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-300"
+          : "border-slate-300 bg-slate-50 text-slate-600 dark:border-slate-500 dark:bg-slate-700/50 dark:text-slate-200",
+      )}
+    >
+      {label}
+    </span>
+  );
+}
+
+function DanjiNotes({ notes }: { notes: string[] }) {
+  if (notes.length === 0) return null;
+  return (
+    <ul className="space-y-0.5 text-[10px] text-slate-500 dark:text-slate-400">
+      {notes.map((n) => (
+        <li key={n}>· {n}</li>
+      ))}
+    </ul>
+  );
+}
+
+function DanjiAttributesPanel({ data }: { data: DanjiAttributesResponse }) {
+  const { match, builder, brand, scale, structure, classification } = data;
+  const risky = !match.usable_for_regression;
+  const flagsByField = new Map<string, DanjiQualityFlag[]>();
+  for (const flag of data.quality_flags) {
+    for (const field of flag.affected_fields ?? []) {
+      flagsByField.set(field, [...(flagsByField.get(field) ?? []), flag]);
+    }
+  }
+  const fieldFlags = (field: string) => flagsByField.get(field) ?? [];
+
+  const banner = (
+    <div
+      className={clsx(
+        "rounded border px-2 py-1.5 text-[10px] space-y-0.5",
+        risky
+          ? "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/50 dark:bg-amber-500/10 dark:text-amber-300"
+          : "border-slate-200 bg-slate-50/80 text-slate-600 dark:border-slate-600 dark:bg-slate-800/40 dark:text-slate-300",
+      )}
+    >
+      <p>
+        <span className="font-semibold">{data.source_label}</span>
+        <span> · 매칭 {match.tier_label}</span>
+        <span>
+          {" "}
+          (tier {match.tier}/{match.rule})
+        </span>
+        <span> · 신뢰도 {match.reliability}</span>
+        {data.dictionary_version && <span> · 사전 {data.dictionary_version}</span>}
+      </p>
+      {data.matched && (
+        <p>
+          K-apt 단지 {danjiText(match.danji_name)}
+          {match.danji_code ? ` (${match.danji_code})` : ""} · 사용승인{" "}
+          {danjiNumber(match.approved_year)}년 · 실거래 건축 {danjiNumber(match.building_year)}년
+          {match.year_diff != null ? ` (차이 ${match.year_diff}년)` : ""}
+        </p>
+      )}
+      {match.note && <p>{match.note}</p>}
+    </div>
+  );
+
+  if (!data.matched) {
+    return (
+      <div className="space-y-3">
+        {banner}
+        <div className="modal-card px-3 py-3 space-y-1.5">
+          <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+            연결된 K-apt 단지 정보가 없습니다
+          </p>
+          <p className="text-[11px] text-slate-600 dark:text-slate-300">
+            {match.note ?? match.tier_label}
+          </p>
+          {brand?.name && (
+            <p className="text-[11px] text-slate-700 dark:text-slate-200">
+              브랜드 <span className="font-semibold">{brand.name}</span>
+              {brand.confidence && (
+                <DanjiBadge
+                  label={`신뢰도 ${brand.confidence}`}
+                  tone={brand.confidence === "low" ? "amber" : "slate"}
+                />
+              )}
+              {brand.detected_from ? ` · 출처 ${brand.detected_from}` : ""}
+            </p>
+          )}
+          <DanjiNotes notes={data.notes} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {banner}
+
+      {data.quality_flags.length > 0 && (
+        <div className="rounded border border-amber-300 bg-amber-50 px-2 py-1.5 dark:border-amber-500/50 dark:bg-amber-500/10">
+          <p className="text-[10px] font-semibold text-amber-800 dark:text-amber-300">
+            K-apt 원본 이상값 {data.quality_flags.length}건 — 값은 원본 그대로 표시합니다
+          </p>
+          <ul className="mt-1 space-y-0.5 text-[10px] text-amber-800 dark:text-amber-200">
+            {data.quality_flags.map((flag) => (
+              <li key={flag.code}>
+                <span className="font-semibold">{flag.label}</span>
+                {flag.detail ? ` — ${flag.detail}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="modal-table-wrap">
+        <p className={DANJI_SECTION_TITLE}>
+          시공사·브랜드
+          {builder?.is_joint && <DanjiBadge label="공동시공" tone="amber" />}
+          {(builder?.is_public || brand?.is_public) && <DanjiBadge label="공공 공급주체" tone="amber" />}
+        </p>
+        <table className="w-full text-xs border-collapse modal-inner-table">
+          <tbody>
+            <tr>
+              <th className={DANJI_TH}>시공사 원문 (K-apt)</th>
+              <td className={DANJI_TD}>{danjiText(builder?.raw)}</td>
+            </tr>
+            <tr>
+              <th className={DANJI_TH}>시공사 표기 정규화</th>
+              <td className={DANJI_TD}>{danjiText(builder?.norm)}</td>
+            </tr>
+            <tr>
+              <th className={DANJI_TH}>시공사 기업집단 (분석 단위)</th>
+              <td className={DANJI_TD}>{danjiText(builder?.group)}</td>
+            </tr>
+            <tr>
+              <th className={DANJI_TH}>시행사 원문 (K-apt)</th>
+              <td className={DANJI_TD}>{danjiText(builder?.developer_raw)}</td>
+            </tr>
+            <tr>
+              <th className={DANJI_TH}>브랜드</th>
+              <td className={DANJI_TD}>
+                {danjiText(brand?.name)}
+                {brand?.confidence && <DanjiBadge label={`신뢰도 ${brand.confidence}`} tone={brand.confidence === "low" ? "amber" : "slate"} />}
+              </td>
+            </tr>
+            <tr>
+              <th className={DANJI_TH}>브랜드 검출 출처</th>
+              <td className={DANJI_TD}>{danjiText(brand?.detected_from)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div className="modal-table-wrap">
+        <p className={DANJI_SECTION_TITLE}>규모·구조</p>
+        <table className="w-full text-xs border-collapse modal-inner-table">
+          <tbody>
+            <tr>
+              <th className={DANJI_TH}>세대수</th>
+              <td className={clsx(DANJI_TD, "tabular-nums")}>
+                {danjiNumber(scale?.households)}
+                <DanjiFieldWarning flags={fieldFlags("households")} />
+              </td>
+            </tr>
+            <tr>
+              <th className={DANJI_TH}>분양 세대수</th>
+              <td className={clsx(DANJI_TD, "tabular-nums")}>{danjiNumber(scale?.households_sale)}</td>
+            </tr>
+            <tr>
+              <th className={DANJI_TH}>임대 세대수</th>
+              <td className={clsx(DANJI_TD, "tabular-nums")}>{danjiNumber(scale?.households_rent)}</td>
+            </tr>
+            <tr>
+              <th className={DANJI_TH}>동수</th>
+              <td className={clsx(DANJI_TD, "tabular-nums")}>
+                {danjiNumber(scale?.dong_count)}
+                <DanjiFieldWarning flags={fieldFlags("dong_count")} />
+              </td>
+            </tr>
+            <tr>
+              <th className={DANJI_TH}>최고층수</th>
+              <td className={clsx(DANJI_TD, "tabular-nums")}>
+                {danjiNumber(scale?.max_floor)}
+                <DanjiFieldWarning flags={fieldFlags("max_floor")} />
+              </td>
+            </tr>
+            <tr>
+              <th className={DANJI_TH}>총 주차대수</th>
+              <td className={clsx(DANJI_TD, "tabular-nums")}>
+                {danjiNumber(scale?.parking_total)}
+                <DanjiFieldWarning flags={fieldFlags("parking_total")} />
+              </td>
+            </tr>
+            <tr>
+              <th className={DANJI_TH}>세대당 주차</th>
+              <td className={clsx(DANJI_TD, "tabular-nums")}>
+                {danjiNumber(scale?.parking_per_household, 3)}
+                <DanjiFieldWarning flags={fieldFlags("parking_per_household")} />
+              </td>
+            </tr>
+            <tr>
+              <th className={DANJI_TH}>구조</th>
+              <td className={DANJI_TD}>
+                {danjiText(structure?.raw)}
+                {structure?.group && <DanjiBadge label={structure.group} tone="slate" />}
+              </td>
+            </tr>
+            <tr>
+              <th className={DANJI_TH}>단지분류</th>
+              <td className={DANJI_TD}>{danjiText(classification?.danji_class)}</td>
+            </tr>
+            <tr>
+              <th className={DANJI_TH}>공급형태</th>
+              <td className={DANJI_TD}>{danjiText(classification?.supply_type)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <DanjiNotes notes={data.notes} />
+    </div>
+  );
 }
 
 async function txExportErrorMessage(err: unknown): Promise<string> {
@@ -218,6 +488,12 @@ export default function BuildingDetailModal({
     enabled: cohortRunForPanel("long_term") > 0 && cohortRunKeys.length > 1 && panel === "long_term",
   });
 
+  const danjiQ = useQuery({
+    queryKey: ["b-danji-attrs", row.building_key],
+    queryFn: () => fetchDanjiAttributes(row.building_key),
+    enabled: experiment && panel === "danji",
+  });
+
   const relatedPresaleQ = useQuery({
     queryKey: ["related-presale", row.building_key],
     queryFn: () => fetchRelatedPresaleAnnual(row.building_key),
@@ -360,7 +636,7 @@ export default function BuildingDetailModal({
             className="flex flex-wrap gap-0.5 rounded-md border modal-tab-bar p-0.5"
             role="tablist"
           >
-            {TABS.map(({ id, label }) => {
+            {[...TABS, ...(experiment ? [DANJI_TAB] : [])].map(({ id, label }) => {
               const tabLabel = typeof label === "function" ? label(effectiveAssetType) : label;
               const needsGate = id === "floor_index" || id === "regression";
               const eligible =
@@ -864,6 +1140,20 @@ export default function BuildingDetailModal({
               floorIndexEligible={analysis.floor_index}
               gateTip={gateTip}
             />
+          )}
+
+          {panel === "danji" && (
+            <>
+              {danjiQ.isLoading && (
+                <p className="text-xs text-slate-400 text-center py-6">단지 정보 불러오는 중…</p>
+              )}
+              {danjiQ.isError && (
+                <p className="text-xs text-amber-700 dark:text-amber-400 text-center py-6">
+                  단지 정보를 불러오지 못했습니다.
+                </p>
+              )}
+              {danjiQ.data && <DanjiAttributesPanel data={danjiQ.data} />}
+            </>
           )}
 
           {panel === "regression" && (

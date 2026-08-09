@@ -509,3 +509,82 @@ class CohortTransactionsResponse(BaseModel):
     total: int
     items: list[CollectiveTransactionRow]
     data_source: Literal["live"] = "live"
+
+
+class DanjiMatchInfo(BaseModel):
+    """K-apt 매칭 결과와 그 신뢰도 — 값보다 먼저 노출한다."""
+
+    tier: str
+    tier_label: str
+    rule: str
+    reliability: str
+    usable_for_regression: bool = False
+    danji_code: Optional[str] = None
+    danji_name: Optional[str] = None
+    approved_year: Optional[int] = None
+    building_year: Optional[int] = None
+    year_diff: Optional[int] = None
+    note: Optional[str] = None
+
+
+class DanjiBuilderInfo(BaseModel):
+    """원문(raw)·표기정규화(norm)·기업집단(group) 3단 분리 — 원자료 보존."""
+
+    raw: Optional[str] = None
+    norm: Optional[str] = None
+    group: Optional[str] = None
+    is_joint: bool = False
+    is_public: bool = False
+    developer_raw: Optional[str] = None
+
+
+class DanjiBrandInfo(BaseModel):
+    name: Optional[str] = None
+    confidence: Optional[str] = None
+    is_public: bool = False
+    detected_from: Optional[str] = None
+
+
+class DanjiScaleInfo(BaseModel):
+    households: Optional[int] = None
+    households_sale: Optional[int] = None
+    households_rent: Optional[int] = None
+    dong_count: Optional[int] = None
+    max_floor: Optional[int] = None
+    parking_total: Optional[int] = None
+    parking_per_household: Optional[float] = None
+
+
+class DanjiStructureInfo(BaseModel):
+    raw: Optional[str] = None
+    group: Optional[str] = None
+
+
+class DanjiClassificationInfo(BaseModel):
+    danji_class: Optional[str] = None
+    supply_type: Optional[str] = None
+
+
+class DanjiQualityFlag(BaseModel):
+    """K-apt 원본 이상값 — 값은 지우지 않고 사유만 함께 노출한다(설계 §3.1.1)."""
+
+    code: str
+    label: str
+    detail: Optional[str] = None
+    affected_fields: list[str] = Field(default_factory=list)
+
+
+class DanjiAttributesResponse(BaseModel):
+    building_key: str
+    snapshot_ym: Optional[str] = None
+    source_label: str
+    dictionary_version: Optional[str] = None
+    matched: bool = False
+    match: DanjiMatchInfo
+    builder: Optional[DanjiBuilderInfo] = None
+    brand: Optional[DanjiBrandInfo] = None
+    scale: Optional[DanjiScaleInfo] = None
+    structure: Optional[DanjiStructureInfo] = None
+    classification: Optional[DanjiClassificationInfo] = None
+    quality_flags: list[DanjiQualityFlag] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)

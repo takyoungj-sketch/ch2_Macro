@@ -3,6 +3,10 @@
 > **작성:** 2026-08-04 · **상태:** 조사·계획 + **Phase 0 파일럿 실측 완료**, 구현 착수 전(승인 대기)
 > **관련 문서:** [`BUILDING_REGISTER_ROADMAP.md`](BUILDING_REGISTER_ROADMAP.md)(건축물대장 구조 매칭, 2026-06 선행 조사) ·
 > [`REGIONAL_PROFILE_POST_MVP_BACKLOG.md`](REGIONAL_PROFILE_POST_MVP_BACKLOG.md) §5 E3 · [`CH2_MACRO_IMPLEMENTATION_ROADMAP.md`](CH2_MACRO_IMPLEMENTATION_ROADMAP.md) V3-8
+>
+> **2026-08-09 후속:** 집합 시공사(Phase 1)의 활용 목적·모형 설계·단계 계획은
+> [`COLLECTIVE_RESIDENTIAL_VALUATION_EXPANSION_REVIEW.md`](COLLECTIVE_RESIDENTIAL_VALUATION_EXPANSION_REVIEW.md)로 확장 검토됐다.
+> 그 과정에서 매칭률 실측이 갱신됐다(§2.1 하단).
 
 ---
 
@@ -65,6 +69,8 @@ CH2 Macro의 근본 한계는 **국토부 실거래가 단일 원천**이다. �
 1차 시도에서 실패 원인의 상당수(88/500, 17.6%)가 **텍스트 포맷 차이**였다 — K-apt는 시군구를 `고양덕양구`·`고양일산동구`처럼 **붙여서** 표기하는데 CH2 `addr2`는 시(`고양시`)만 담고 구는 `addr3`에 따로 있다. 이 결합 로직만 추가해도 매칭률이 46→57%(고유 매칭), 58→71%(후보 있음)로 뛰었다 — **간단한 정규화 버그 수정만으로도 개선 여지가 크다는 뜻**. 남은 실패(28.0% no_match, 13.4% 후보 다수)는 K-apt 미가입 소규모 단지, 브랜드 표기 차이(예 "아이파크" vs "I-PARK" — `pipeline/collective/building_keys.py`의 기존 `_BRAND_ALIAS_PATTERNS` 재사용 여지), 세종시 등 특수 행정구역 케이스로 추정된다.
 
 **예상 산출**: `builder_brand`(시공사 상위 N개 + 기타) 더미, `structure_name`(RC/철골/기타) 더미 — 회귀 설명변수로 추가. 실측 매칭률(exact+contains 57~71%)은 tier A/B만 회귀에 사용한다는 기존 원칙(§ `BUILDING_REGISTER_ROADMAP.md`)을 적용해도 실사용 가능한 수준.
+
+**매칭률 갱신 (2026-08-09, 아파트 전량 41,832단지 / 332만 거래 실측)**: 위 57~71%는 **단지명 매칭만** 본 값이라 과소평가였다. **아파트 실거래는 지번이 마스킹되지 않으므로** `법정동코드 + 지번` exact 매칭이 가능하고(단지 30.1% / 거래 60.1%), 이름 매칭과 합치면 **거래 기준 82.6%(tier A+B+C)**, 부분일치 포함 **85.4%**까지 올라간다. K-apt 사용승인연도 vs `building_year` 교차검증에서 지번 tier는 96.1% 완전일치·98.3%가 ±1년으로 오탐이 낮다. 단지 기준(44.9%)이 낮은 이유는 미매칭이 거래가 거의 없는 소규모(비의무관리) 단지에 몰려 있기 때문이다. 상세: [`COLLECTIVE_RESIDENTIAL_VALUATION_EXPANSION_REVIEW.md`](COLLECTIVE_RESIDENTIAL_VALUATION_EXPANSION_REVIEW.md) §1.1.
 
 ---
 
