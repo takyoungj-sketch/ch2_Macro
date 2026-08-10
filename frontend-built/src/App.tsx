@@ -65,10 +65,12 @@ import type {
 } from "./types";
 import { EMPTY_SAMPLE_FILTER } from "./types";
 import FocusRegressionCard from "./components/FocusRegressionCard";
-import RecommendationModal from "./components/RecommendationModal";
+import BuiltRegressionAnalysisPanel from "./components/BuiltRegressionAnalysisPanel";
 import PredictPanel from "./components/PredictPanel";
-import StatsWindowToggle, { normalizeStatsWindowYears } from "./components/StatsWindowToggle";
-import UpperScopeCompareModal from "./components/UpperScopeCompareModal";
+import StatsWindowToggle, {
+  normalizeStatsWindowYears,
+  type StatsWindowYears,
+} from "./components/StatsWindowToggle";
 import {
   ADMIN_LABELS,
   formatCoefName,
@@ -508,13 +510,11 @@ export default function App() {
   const [yearFrom] = useState<number | "">("");
   const [yearTo] = useState<number | "">("");
   const [txModalOpen, setTxModalOpen] = useState(false);
-  const [modelExploreOpen, setModelExploreOpen] = useState(false);
-  const [upperCompareOpen, setUpperCompareOpen] = useState(false);
   const [vars, setVars] = useState<RegressionVariableSpec>(() => defaultVarsForKinds(["commercial"]));
   const [excludeOutliers, setExcludeOutliers] = useState(false);
   const [iqrMultiplier, setIqrMultiplier] = useState<IqrMultiplier>(3);
   const [sampleFilter, setSampleFilter] = useState<SampleFilterState>(EMPTY_SAMPLE_FILTER);
-  const [windowYears, setWindowYears] = useState<3 | 5>(5);
+  const [windowYears, setWindowYears] = useState<StatsWindowYears>(5);
   const [responseScale, setResponseScale] = useState<ResponseScale>("linear");
   /** 마지막 「통계분석」에 실제 쓰인 스케일 — 선택만으로 결과 표시가 바뀌지 않게 */
   const [appliedResponseScale, setAppliedResponseScale] = useState<ResponseScale>("linear");
@@ -939,7 +939,6 @@ export default function App() {
   const adoptModel = (nextVars: RegressionVariableSpec, scale: ResponseScale) => {
     setVars(nextVars);
     setResponseScale(scale);
-    setModelExploreOpen(false);
     regM.mutate({ ...regBody, variables: nextVars, response_scale: scale });
   };
 
@@ -950,7 +949,6 @@ export default function App() {
   }) => {
     setVars(payload.vars);
     setResponseScale(payload.scale);
-    setModelExploreOpen(false);
     regM.mutate({
       ...regBody,
       variables: payload.vars,
@@ -1585,7 +1583,7 @@ export default function App() {
               }}
             />
           </section>
-          <section className="px-4 py-4 pb-8 shrink-0">
+          <section id="built-step-regression" className="px-4 py-4 pb-8 shrink-0 scroll-mt-16">
             <div className="card space-y-2">
               <div className="flex items-start justify-between gap-3 sticky top-0 bg-white z-10 py-1 -mx-1 px-1">
                 <div className="min-w-0">
@@ -1618,27 +1616,6 @@ export default function App() {
               )}
               {regM.data && (
                 <div className="relative space-y-2 pt-1">
-                  <div className="absolute top-0 right-0 flex gap-1.5 z-10">
-                    <button
-                      type="button"
-                      className="btn btn-ghost text-xs shrink-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm shadow-sm"
-                      onClick={() => setModelExploreOpen(true)}
-                      disabled={recommendM.isPending}
-                      title="SSOT 변수 풀 · Local → (선택) Twin 단계형 탐색"
-                    >
-                      {recommendM.isPending ? "탐색 중…" : "모형 탐색"}
-                    </button>
-                    {regM.data.comparisons.length > 0 && (
-                      <button
-                        type="button"
-                        className="btn btn-ghost text-xs shrink-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm shadow-sm"
-                        onClick={() => setUpperCompareOpen(true)}
-                        title="분석 초점 vs 상위 행정 scope"
-                      >
-                        상위지역분석
-                      </button>
-                    )}
-                  </div>
                   <FocusRegressionCard
                     result={regM.data.primary}
                     assetType={assetType}
@@ -1656,15 +1633,33 @@ export default function App() {
           </section>
 
           {regM.data && (
-            <section className="px-4 pb-4 pt-0">
-              <PredictPanel
-                regData={regM.data}
-                regBody={resultRegBody}
-                vars={vars}
-                assetType={assetType}
-                regionLabel={aiRegionLabel}
-              />
-            </section>
+            <>
+              <section id="built-step-predict-basic" className="px-4 pb-4 pt-0 scroll-mt-16">
+                <PredictPanel
+                  regData={regM.data}
+                  regBody={resultRegBody}
+                  vars={vars}
+                  assetType={assetType}
+                  regionLabel={aiRegionLabel}
+                />
+              </section>
+
+              <section className="px-4 pb-4 space-y-4">
+                <BuiltRegressionAnalysisPanel
+                  regBody={regBody}
+                  regData={regM.data}
+                  resultRegBody={resultRegBody}
+                  vars={vars}
+                  recommendM={recommendM}
+                  onAdopt={adoptModel}
+                  onAdoptPool={adoptModelPool}
+                  adopting={regM.isPending}
+                  assetType={assetType}
+                  regionLabel={aiRegionLabel}
+                  profileTarget={profileTarget}
+                />
+              </section>
+            </>
           )}
         </div>
       </main>
@@ -1676,33 +1671,6 @@ export default function App() {
         exportParams={txExportParams}
         summary={txModalSummary}
       />
-
-      <RecommendationModal
-        open={modelExploreOpen}
-        onClose={() => setModelExploreOpen(false)}
-        regBody={regBody}
-        recommendM={recommendM}
-        onAdopt={adoptModel}
-        onAdoptPool={adoptModelPool}
-        adopting={regM.isPending}
-        assetType={assetType}
-        regionLabel={aiRegionLabel}
-        profileTarget={profileTarget}
-      />
-
-      {regM.data && (
-        <UpperScopeCompareModal
-          open={upperCompareOpen}
-          onClose={() => setUpperCompareOpen(false)}
-          regData={regM.data}
-          regBody={resultRegBody}
-          vars={vars}
-          assetType={assetType}
-          responseScale={appliedResponseScale}
-          regionLabel={aiRegionLabel}
-          focusLabel={regM.data.focus_scope_label ?? levelCardTitleFromResult(regM.data.primary)}
-        />
-      )}
       </div>
     </div>
   );

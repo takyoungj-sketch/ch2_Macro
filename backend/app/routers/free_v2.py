@@ -39,6 +39,7 @@ from app.schemas import (
 )
 from app.stats_utils import compute_stats
 from app.v2_stats_windows import (
+    UI_WINDOW_YEARS,
     default_as_of_month_for_service,
     period_bounds_for_window,
     stats_ui_reference_date,
@@ -52,23 +53,26 @@ def _parse_v2_window_years_query(
         int | str | list[str] | None,
         Query(
             description=(
-                "롤링 창: 3 또는 5. 생략 시 5. 빈 값·null 문자열·undefined 는 5로 처리."
+                "롤링 창: 3·5·7. 생략 시 5. 빈 값·null 문자열·undefined 는 5로 처리."
             ),
         ),
     ] = 5,
-) -> Literal[3, 5]:
+) -> Literal[3, 5, 7]:
     """쿼리스트링에서 `window_years=` 처럼 빈 값이 올 때 Literal 422를 피한다."""
+    allowed = set(UI_WINDOW_YEARS)
+
+    def _ok(n: int) -> Literal[3, 5, 7]:
+        if n not in allowed:
+            raise HTTPException(
+                status_code=422,
+                detail=f"window_years 는 {sorted(allowed)} 만 허용됩니다.",
+            )
+        return n  # type: ignore[return-value]
+
     if window_years is None:
         return 5
     if isinstance(window_years, int):
-        if window_years == 3:
-            return 3
-        if window_years == 5:
-            return 5
-        raise HTTPException(
-            status_code=422,
-            detail="window_years 는 3 또는 5 만 허용됩니다.",
-        )
+        return _ok(window_years)
     if isinstance(window_years, list):
         window_years = window_years[0] if window_years else None
         if window_years is None:
@@ -76,13 +80,13 @@ def _parse_v2_window_years_query(
     s = str(window_years).strip()
     if s == "" or s.lower() in ("null", "undefined"):
         return 5
-    if s == "3":
-        return 3
-    if s == "5":
-        return 5
+    try:
+        return _ok(int(s))
+    except ValueError:
+        pass
     raise HTTPException(
         status_code=422,
-        detail="window_years 는 3 또는 5 만 허용됩니다.",
+        detail=f"window_years 는 {sorted(allowed)} 만 허용됩니다.",
     )
 
 
@@ -568,7 +572,7 @@ def get_v2_meta_as_of(db: Session = Depends(get_db)):
 def get_basic_stats_v2(
     beopjungri_code: str,
     db: Session = Depends(get_db),
-    window_years: Literal[3, 5] = Depends(_parse_v2_window_years_query),
+    window_years: Literal[3, 5, 7] = Depends(_parse_v2_window_years_query),
     as_of_month: Optional[date] = Query(
         None,
         description=(

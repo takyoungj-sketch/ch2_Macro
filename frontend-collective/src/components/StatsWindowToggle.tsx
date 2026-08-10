@@ -1,7 +1,9 @@
-export type StatsWindowYears = 3 | 5;
+export type StatsWindowYears = 3 | 5 | 7;
 
 export function normalizeStatsWindowYears(v: unknown): StatsWindowYears {
-  return v === 3 ? 3 : 5;
+  if (v === 3 || v === "3") return 3;
+  if (v === 7 || v === "7") return 7;
+  return 5;
 }
 
 export default function StatsWindowToggle({
@@ -36,6 +38,7 @@ export default function StatsWindowToggle({
       <div className="flex gap-0.5 bg-slate-100 dark:bg-slate-700 rounded-lg p-0.5" role="group" aria-label="계약일 기준 롤링 구간">
         {choice("3", "3년", value === 3, () => onChange(3))}
         {choice("5", "5년", value === 5, () => onChange(5))}
+        {choice("7", "7년", value === 7, () => onChange(7))}
       </div>
     </div>
   );

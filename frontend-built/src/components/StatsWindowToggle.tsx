@@ -1,7 +1,9 @@
-export type StatsWindowYears = 3 | 5;
+export type StatsWindowYears = 3 | 5 | 7;
 
 export function normalizeStatsWindowYears(v: unknown): StatsWindowYears {
-  return v === 3 ? 3 : 5;
+  if (v === 3 || v === "3") return 3;
+  if (v === 7 || v === "7") return 7;
+  return 5;
 }
 
 export default function StatsWindowToggle({
@@ -43,6 +45,7 @@ export default function StatsWindowToggle({
       >
         {choice(3, "3년")}
         {choice(5, "5년")}
+        {choice(7, "7년")}
       </div>
     </div>
   );

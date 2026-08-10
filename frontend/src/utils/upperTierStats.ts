@@ -68,7 +68,7 @@ export function upperToFreeStatsShape(up: UpperStatsV2Response): FreeStatsV2Resp
     stats_reference_date: up.stats_reference_date,
     period_start: up.period_start,
     period_end: up.period_end,
-    window_years: up.window_years as 3 | 5,
+    window_years: up.window_years as 3 | 5 | 7,
     total: up.total,
     by_year: up.by_year,
     by_zone: up.by_zone,

@@ -74,12 +74,12 @@ def _run_jimok_group_pipeline(v2_as: str) -> None:
     year = _annual_year_from_as_of(v2_as)
     _run(
         "build_stats_v2_group",
-        [PY, "build_stats_v2.py", "--as-of", v2_as, "--windows", "3,5", "--col-axis", "group"],
+        [PY, "build_stats_v2.py", "--as-of", v2_as, "--windows", "3,5,7", "--col-axis", "group"],
         cwd=PIPELINE,
     )
     _run(
         "build_upper_stats_v2_group",
-        [PY, "build_upper_stats_v2.py", "--as-of", v2_as, "--windows", "3,5", "--col-axis", "group"],
+        [PY, "build_upper_stats_v2.py", "--as-of", v2_as, "--windows", "3,5,7", "--col-axis", "group"],
         cwd=PIPELINE,
     )
     _run(
@@ -271,12 +271,12 @@ def main() -> None:
     if not args.skip_stats:
         _run(
             "build_stats_v2",
-            [PY, "build_stats_v2.py", "--as-of", v2_as, "--windows", "3,5"],
+            [PY, "build_stats_v2.py", "--as-of", v2_as, "--windows", "3,5,7"],
             cwd=PIPELINE,
         )
         _run(
             "build_upper_stats_v2",
-            [PY, "build_upper_stats_v2.py", "--as-of", v2_as, "--windows", "3,5"],
+            [PY, "build_upper_stats_v2.py", "--as-of", v2_as, "--windows", "3,5,7"],
             cwd=PIPELINE,
         )
         if not args.skip_jimok_group:

@@ -121,7 +121,7 @@ def build_for_window(
 def main() -> None:
     p = argparse.ArgumentParser(description="built_scope_stats mart 구축")
     p.add_argument("--as-of", help="YYYY-MM (기본: 원장 MAX contract_date 월)")
-    p.add_argument("--windows", default="3,5", help="쉼표 구분 window_years (기본 3,5)")
+    p.add_argument("--windows", default="3,5,7", help="쉼표 구분 window_years (기본 3,5,7)")
     args = p.parse_args()
 
     windows = [int(w.strip()) for w in args.windows.split(",") if w.strip()]

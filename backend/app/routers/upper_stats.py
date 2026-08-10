@@ -35,6 +35,7 @@ from app.schemas import (
 )
 from app.stats_utils import compute_stats
 from app.v2_stats_windows import (
+    MAX_WINDOW_YEARS,
     default_as_of_month_for_service,
     period_bounds_for_window,
     stats_ui_reference_date,
@@ -586,7 +587,7 @@ def _by_year_upper_calendar_reference(
 def get_upper_stats(
     level: RegionLevel,
     code: str,
-    window_years: int = Query(5, ge=1, le=5),
+    window_years: int = Query(5, ge=1, le=MAX_WINDOW_YEARS),
     as_of_month: Optional[date] = Query(None),
     matrix_mode: Literal["category", "group"] = Query(
         "category",

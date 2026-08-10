@@ -1,6 +1,6 @@
 # V2 무료 통계 — 프로덕션 전국 배치·운영
 
-> **전제 (현재 검증 가정):** 서비스 기준일 **2026-01-01** → 스냅샷 키 **`as_of_month = 2025-12-01`**, 무료 창 **`window_years ∈ {3, 5}`**.  
+> **전제 (현재 검증 가정):** 서비스 기준일 **2026-01-01** → 스냅샷 키 **`as_of_month = 2025-12-01`**, 무료 창 **`window_years ∈ {3, 5, 7}`** (기본 5).  
 > 설계: [V2_STATS_DESIGN.md](./V2_STATS_DESIGN.md)  
 > **운영 체크리스트:** [V2_OPERATOR_CHECKLIST.md](./V2_OPERATOR_CHECKLIST.md)
 
@@ -27,11 +27,11 @@
 | `STATS_V2_SIDO_CODE` | **비우기** | 있으면 해당 시도만 단일 실행 |
 | `STATS_V2_UPSERT_CHUNK` | 선택 (기본 400) | |
 
-### 1.2 프로덕션 명령 (무료 3·5년)
+### 1.2 프로덕션 명령 (무료 3·5·7년)
 
 ```bash
 cd pipeline
-python build_stats_v2.py --as-of 2025-12-01 --windows 3,5
+python build_stats_v2.py --as-of 2025-12-01 --windows 3,5,7
 ```
 
 - **시도 청크:** 긴 창 내 거래가 있는 `sido_code`만 순회, **시도마다 조회→집계→UPSERT 청크 커밋→`gc`**.

@@ -96,8 +96,9 @@
 | `raw/raw long term/오피스텔_2010_2020/` | 동일 |
 | `raw/raw long term/분양입주권_2010_2020/` | 동일 |
 
-- **원장(`collective_transactions`)에는 넣지 않음** — 토지 `land_annual_stats` 패턴과 동일
-- 2021~ 구간은 base 원장에서 annual 집계, 2010~2020은 long term ingest 후 **같은 annual 테이블**에 merge
+- **2010~2018:** 원장에 넣지 않음 — **`collective_building_annual_stats` 장기 추세 전용** (토지 `land_annual_stats` 패턴)
+- **2019·2020:** 7년 롤링 창·거래목록 상세용 — long term CSV에서 **`collective_transactions`에 추가** ([`ROLLING_WINDOW_7Y_PLAN.md`](./ROLLING_WINDOW_7Y_PLAN.md) §2.4·§13). 2010~2018 전량 원장화는 **하지 않음**
+- 2021~ 구간은 base 원장에서 annual·rolling 집계; 2010~2020 annual은 long term ingest 후 **같은 annual 테이블**에 merge
 
 ### 4.3 선행 마스터
 

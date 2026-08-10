@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS regional_profile (
     region_code         VARCHAR(10)     NOT NULL,
     as_of_month         DATE            NOT NULL,
     window_years        SMALLINT        NOT NULL DEFAULT 5
-                        CHECK (window_years >= 1 AND window_years <= 5),
+                        CHECK (window_years >= 1 AND window_years <= 7),
 
     features            JSONB           NOT NULL DEFAULT '{}'::jsonb,
 

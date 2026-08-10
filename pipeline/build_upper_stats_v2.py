@@ -34,7 +34,7 @@ from build_stats_v2 import (
     parse_sido_code,
     period_bounds_for_window,
 )
-from constants import STATS_V2_WINDOW_YEARS_ALL
+from constants import MAX_WINDOW_YEARS, STATS_V2_WINDOW_YEARS_ALL, STATS_V2_WINDOW_YEARS_UI
 from db_utils import get_engine
 from stats import compute_stats
 
@@ -490,7 +490,7 @@ def main() -> None:
     parser.add_argument(
         "--windows",
         type=str,
-        default=",".join(str(x) for x in STATS_V2_WINDOW_YEARS_ALL),
+        default=",".join(str(x) for x in STATS_V2_WINDOW_YEARS_UI),
     )
     parser.add_argument("--sido-code", type=str, default=None, help="시도 2자리 제한")
     parser.add_argument(
@@ -521,8 +521,8 @@ def main() -> None:
     as_of_month = parse_as_of_month(args.as_of) if args.as_of else default_as_of_month()
     windows = sorted({int(x.strip()) for x in args.windows.split(",") if x.strip()})
     for w in windows:
-        if w < 1 or w > 5:
-            raise SystemExit(f"window_years 1~5만 허용: {w}")
+        if w < 1 or w > MAX_WINDOW_YEARS:
+            raise SystemExit(f"window_years 1~{MAX_WINDOW_YEARS}만 허용: {w}")
 
     levels = [x.strip() for x in args.levels.split(",") if x.strip()]
     for lv in levels:

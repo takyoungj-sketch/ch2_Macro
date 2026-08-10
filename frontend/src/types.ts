@@ -54,11 +54,12 @@ export interface UpperStatsV2Response {
 }
 
 /** 무료 통계 V2 API (`/api/free/v2/…`) — 계약일(contract_date) 롤링 창 */
-export type FreeStatsWindowYears = 3 | 5;
+export type FreeStatsWindowYears = 3 | 5 | 7;
 
-/** 쿼리/스토어 값이 비어 있거나 잘못돼도 API에는 3 또는 5만 보냄 (빈 window_years → 422 방지) */
+/** 쿼리/스토어 값이 비어 있거나 잘못돼도 API에는 3·5·7만 보냄 (빈 window_years → 422 방지) */
 export function normalizeFreeStatsWindowYears(v: unknown): FreeStatsWindowYears {
   if (v === 3 || v === "3") return 3;
+  if (v === 7 || v === "7") return 7;
   if (v === 5 || v === "5") return 5;
   return 5;
 }
@@ -127,6 +128,8 @@ export interface PaidAnalysisRequest {
   land_categories?: string[] | null;
   zone_types?: string[] | null;
   exclude_partial: boolean;
+  /** 비어 있지 않으면 해당 거래유형만 포함 (NULL·공백 deal_type → 중개거래로 간주) */
+  deal_types?: string[] | null;
   exclude_outlier: boolean;
   /** 이상치 제외 시 단가 Tukey 펜스 IQR 배수 (1.5 / 2 / 3) */
   outlier_iqr_multiplier: number;

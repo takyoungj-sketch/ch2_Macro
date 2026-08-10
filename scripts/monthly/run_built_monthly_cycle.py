@@ -203,7 +203,7 @@ def main() -> None:
                     "--as-of",
                     as_of,
                     "--windows",
-                    "3,5",
+                    "3,5,7",
                 ],
                 cwd=repo / "pipeline",
             )

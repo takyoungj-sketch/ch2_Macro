@@ -10,6 +10,10 @@ from __future__ import annotations
 import calendar
 from datetime import date, timedelta
 
+# docs/ROLLING_WINDOW_7Y_PLAN.md — UI 3·5(기본)·7, DDL·API 상한
+MAX_WINDOW_YEARS = 7
+UI_WINDOW_YEARS = (3, 5, 7)
+
 
 def last_day_of_month(any_date_in_month: date) -> date:
     y, m = any_date_in_month.year, any_date_in_month.month
@@ -49,8 +53,8 @@ def stats_ui_reference_date(as_of_month: date) -> date:
 def period_bounds_for_window(as_of_month: date, window_years: int) -> tuple[date, date]:
     if as_of_month.day != 1:
         raise ValueError("as_of_month 는 해당 월 1일이어야 합니다.")
-    if window_years < 1 or window_years > 5:
-        raise ValueError("window_years 는 1~5 만 허용됩니다.")
+    if window_years < 1 or window_years > MAX_WINDOW_YEARS:
+        raise ValueError(f"window_years 는 1~{MAX_WINDOW_YEARS} 만 허용됩니다.")
     period_end = last_day_of_month(as_of_month)
     anchor = _anchor_n_calendar_years_before(period_end, window_years)
     period_start = anchor + timedelta(days=1)

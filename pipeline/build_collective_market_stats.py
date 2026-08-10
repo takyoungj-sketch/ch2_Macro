@@ -370,7 +370,7 @@ def ensure_amount_column(engine) -> None:
 def main() -> None:
     p = argparse.ArgumentParser(description="집합 market_stats / market_annual_stats")
     p.add_argument("--as-of", type=str, default=None)
-    p.add_argument("--windows", type=str, default="3,5")
+    p.add_argument("--windows", type=str, default="3,5,7")
     p.add_argument("--addr1", type=str, default=None, help="시도 한정 스모크")
     p.add_argument("--skip-annual", action="store_true")
     p.add_argument("--rolling-only", action="store_true")

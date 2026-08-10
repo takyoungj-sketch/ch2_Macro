@@ -1,5 +1,6 @@
 import { cityBucketFromSigungu, extractCityFirstToken } from "./cityBucket";
 import { formatRegionHierarchyLabel } from "./regionDisplay";
+import { isRetiredSidoCode } from "./retiredSido";
 import {
   isSejongPseudoSigunguCode,
   isSejongRegionRow,
@@ -72,13 +73,16 @@ export function buildFlattenedRegionSuggestions(
   const qN = norm(q);
   if (!qN || hits.length === 0) return [];
 
+  const activeHits = hits.filter((h) => !isRetiredSidoCode(String(h.sido_code ?? "").trim()));
+  if (activeHits.length === 0) return [];
+
   const maxSigungu = opts?.maxSigungu ?? 60;
   const maxAgg = opts?.maxAgg ?? 40;
   const maxBeop = opts?.maxBeop ?? 250;
   const eupMyeonFocused = isEupMyeonUnitNameQuery(rawQuery);
 
   const bySido = new Map<string, RegionNameInfo[]>();
-  for (const h of hits) {
+  for (const h of activeHits) {
     const k = String(h.sido_code ?? "").trim();
     if (!k) continue;
     if (!bySido.has(k)) bySido.set(k, []);
@@ -86,6 +90,7 @@ export function buildFlattenedRegionSuggestions(
   }
   const sidoAggregates: Extract<RegionSearchFlatEntry, { kind: "sido_aggregate" }>[] = [];
   for (const [sidoCode, bucket] of bySido.entries()) {
+    if (isRetiredSidoCode(sidoCode)) continue;
     const sample = bucket[0]!;
     const sdcNn = norm(sidoCode);
     const sdnNn = norm(sample.sido_name ?? "");
@@ -102,7 +107,7 @@ export function buildFlattenedRegionSuggestions(
   sidoAggregates.sort((a, b) => a.primaryLabel.localeCompare(b.primaryLabel, "ko-KR"));
 
   const byCity = new Map<string, { sido: string; codes: Set<string>; sample: RegionNameInfo }>();
-  for (const h of hits) {
+  for (const h of activeHits) {
     const city = extractCityFirstToken(h.sigungu_name);
     if (!city) continue;
     const sd = String(h.sido_code ?? "").trim();
@@ -135,7 +140,7 @@ export function buildFlattenedRegionSuggestions(
   cityAggregates.sort((a, b) => a.primaryLabel.localeCompare(b.primaryLabel, "ko-KR"));
 
   const bySigungu = new Map<string, RegionNameInfo[]>();
-  for (const h of hits) {
+  for (const h of activeHits) {
     const k = String(h.sigungu_code ?? "").trim();
     if (!k) continue;
     if (!bySigungu.has(k)) bySigungu.set(k, []);
@@ -172,7 +177,7 @@ export function buildFlattenedRegionSuggestions(
 
   if (eupMyeonFocused) {
     const byEup = new Map<string, RegionNameInfo[]>();
-    for (const h of hits) {
+    for (const h of activeHits) {
       const k = String(h.eupmyeondong_code ?? "").trim();
       if (!k) continue;
       if (!byEup.has(k)) byEup.set(k, []);
@@ -201,7 +206,7 @@ export function buildFlattenedRegionSuggestions(
 
   if (!eupMyeonFocused) {
     const bySejongEup = new Map<string, RegionNameInfo[]>();
-    for (const h of hits) {
+    for (const h of activeHits) {
       if (!isSejongRegionRow(h)) continue;
       if (!isSejongPseudoSigunguCode(String(h.sigungu_code ?? "").trim())) continue;
       const adminNn = norm(h.sigungu_name ?? "");
@@ -232,7 +237,7 @@ export function buildFlattenedRegionSuggestions(
 
   const beopMap = new Map<string, RegionNameInfo>();
   if (!eupMyeonFocused) {
-    for (const h of hits) {
+    for (const h of activeHits) {
       const codeKey = String(h.beopjungri_code ?? "").trim();
       if (!codeKey) continue;
       const bn = norm(h.beopjungri_name ?? "");

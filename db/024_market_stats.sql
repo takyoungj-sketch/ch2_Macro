@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS market_stats (
 
     as_of_month         DATE            NOT NULL,
     window_years        SMALLINT        NOT NULL
-                        CHECK (window_years >= 1 AND window_years <= 5),
+                        CHECK (window_years >= 1 AND window_years <= 7),
     period_start        DATE            NOT NULL,
     period_end          DATE            NOT NULL,
 

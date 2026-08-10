@@ -1,4 +1,4 @@
-import { AREA_CATEGORIES, ROAD_CONDITIONS } from "../constants/paidFilters";
+import { AREA_CATEGORIES, DEAL_TYPES, ROAD_CONDITIONS } from "../constants/paidFilters";
 import type { PaidAnalysisRequest } from "../types";
 
 /** 면적 직접 범위가 하나라도 있으면 B 모드(면적구분 칩 무시). */
@@ -14,7 +14,8 @@ export function paidUsesCustomAreaSpan(base: PaidAnalysisRequest): boolean {
 export function mergePaidExcludedIntoRequest(
   base: PaidAnalysisRequest,
   roadExcluded: readonly string[],
-  areaExcluded: readonly string[]
+  areaExcluded: readonly string[],
+  dealTypeExcluded: readonly string[] = [],
 ): PaidAnalysisRequest {
   const customArea = paidUsesCustomAreaSpan(base);
   const inclRoads = ROAD_CONDITIONS.filter(
@@ -22,6 +23,9 @@ export function mergePaidExcludedIntoRequest(
   );
   const inclAreas = AREA_CATEGORIES.filter(
     (x) => !areaExcluded.some((e) => e === x)
+  );
+  const inclDealTypes = DEAL_TYPES.filter(
+    (x) => !dealTypeExcluded.some((e) => e === x)
   );
 
   return {
@@ -33,6 +37,8 @@ export function mergePaidExcludedIntoRequest(
       : inclAreas.length >= AREA_CATEGORIES.length
         ? null
         : inclAreas.slice(),
+    deal_types:
+      inclDealTypes.length >= DEAL_TYPES.length ? null : inclDealTypes.slice(),
     land_categories: null,
     zone_types: null,
   };

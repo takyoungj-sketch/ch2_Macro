@@ -12,6 +12,11 @@ import { statsScopeKeyFromBeopjungriCodes } from "../utils/statsScopeKey";
 import type { RegionItem } from "../types";
 import { formatRegionHierarchyLabel } from "../utils/regionDisplay";
 import FreeStatsWindowToggle from "./FreeStatsWindowToggle";
+import AnalysisActionButton from "./AnalysisActionButton";
+import {
+  basicStatsActionLabel,
+  rollingStatsCaption,
+} from "../constants/landAnalysisLabels";
 import { buildFlattenedRegionSuggestions, type RegionSearchFlatEntry } from "../utils/regionSearchSuggest";
 import {
   resolveUnionBeopjungriCodes,
@@ -90,6 +95,7 @@ export default function RegionSelector() {
     removePickedCity,
     replacePaidLeafBeopjungri,
     replacePaidLeafEupmyeondong,
+    freeStatsWindowYears,
   } = useAppStore();
 
   const [localError, setLocalError] = useState<string | null>(null);
@@ -1074,25 +1080,21 @@ export default function RegionSelector() {
       </div>
 
       {viewMode === "free" ? (
-        <button
-          type="button"
+        <AnalysisActionButton
+          primary={basicStatsActionLabel("free")}
+          caption={rollingStatsCaption(freeStatsWindowYears)}
           onClick={commitFree}
-          className="w-full py-2 rounded-lg bg-slate-800 text-white text-sm font-semibold
-                     hover:bg-slate-900 disabled:opacity-40 transition-colors"
           disabled={catalogLoading && regions.length === 0}
-        >
-          무료 통계 조회
-        </button>
+          variant="free"
+        />
       ) : (
-        <button
-          type="button"
+        <AnalysisActionButton
+          primary={basicStatsActionLabel("paid")}
+          caption={rollingStatsCaption(freeStatsWindowYears)}
           onClick={commitPaid}
-          className="w-full py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold
-                     hover:bg-blue-700 disabled:opacity-40 transition-colors"
           disabled={catalogLoading && regions.length === 0}
-        >
-          기본 통계 보기
-        </button>
+          variant="basic"
+        />
       )}
 
     </div>

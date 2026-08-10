@@ -9,6 +9,10 @@ import {
 } from "../api/client";
 import { MATRIX_MODE_LABEL, type MatrixMode } from "../constants/jimokGroup";
 import { yearsRangeInclusive } from "../constants/paidFilters";
+import {
+  basicStatsActionLabel,
+  rollingStatsCaption,
+} from "../constants/landAnalysisLabels";
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import {
   buildFreeStatsExplain,
@@ -295,7 +299,11 @@ export default function FreeStatsPanel() {
     return (
       <div className="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500 text-sm">
         <p>
-          좌측에서 <strong className="text-slate-800">기본 통계 보기</strong>를 눌러 주세요.
+          좌측에서{" "}
+          <strong className="text-slate-800">
+            {basicStatsActionLabel("paid")} · {rollingStatsCaption(freeStatsWindowYears)}
+          </strong>
+          를 눌러 주세요.
         </p>
       </div>
     );
@@ -305,7 +313,9 @@ export default function FreeStatsPanel() {
       <div className="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500 text-sm space-y-2">
         <p>
           <strong className="text-slate-800">
-            {viewMode === "free" ? "무료 통계 조회" : "기본 통계 보기"}
+            {viewMode === "free"
+              ? `${basicStatsActionLabel("free")} · ${rollingStatsCaption(freeStatsWindowYears)}`
+              : `${basicStatsActionLabel("paid")} · ${rollingStatsCaption(freeStatsWindowYears)}`}
           </strong>
           로 데이터를 불러옵니다.
         </p>

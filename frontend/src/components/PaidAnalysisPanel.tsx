@@ -28,6 +28,7 @@ import MatrixStatsTable, { MatrixStatsLegend } from "./MatrixStatsTable";
 import PaidMatrixYearlyModal from "./PaidMatrixYearlyModal";
 import YearlyStatsTable from "./YearlyStatsTable";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
+import { filteredAnalysisResultTitle } from "../constants/landAnalysisLabels";
 import RegionalProfileLink from "./RegionalProfileLink";
 
 export default function PaidAnalysisPanel() {
@@ -38,6 +39,7 @@ export default function PaidAnalysisPanel() {
   const paidRequest = useAppStore((s) => s.paidRequest);
   const paidRoadExcluded = useAppStore((s) => s.paidRoadExcluded);
   const paidAreaExcluded = useAppStore((s) => s.paidAreaExcluded);
+  const paidDealTypeExcluded = useAppStore((s) => s.paidDealTypeExcluded);
   const paidBasicBaseKey = useAppStore((s) => s.paidBasicBaseKey);
   const freeStatsWindowYears = useAppStore((s) =>
     normalizeFreeStatsWindowYears(s.freeStatsWindowYears)
@@ -225,6 +227,7 @@ export default function PaidAnalysisPanel() {
         codesForPaidMatrix,
         paidRoadExcluded,
         paidAreaExcluded,
+        paidDealTypeExcluded,
         cacheKey
       );
       const body: MatrixYearlyRequest = {
@@ -254,6 +257,7 @@ export default function PaidAnalysisPanel() {
       paidRequest,
       paidRoadExcluded,
       paidAreaExcluded,
+      paidDealTypeExcluded,
       codesForPaidMatrix,
       matrixMode,
       resolvedCodes.length,
@@ -400,7 +404,7 @@ export default function PaidAnalysisPanel() {
         <div className="bg-white rounded-xl shadow-sm p-5 space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-1">
-              <h2 className="text-base font-bold text-slate-800">필터 분석 결과</h2>
+              <h2 className="text-base font-bold text-slate-800">{filteredAnalysisResultTitle()}</h2>
               <AnalysisHelpPanel explain={filteredExplain} />
             </div>
             <div className="flex items-center gap-2">

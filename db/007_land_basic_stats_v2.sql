@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS land_basic_stats_v2 (
 
     -- 롤링 창(연 단위 정수 1~5; 실제 일수는 period_start/period_end 로 확정)
     window_years        SMALLINT        NOT NULL
-                        CHECK (window_years >= 1 AND window_years <= 5),
+                        CHECK (window_years >= 1 AND window_years <= 7),
 
     -- contract_date 포함 구간 (V2_STATS_DESIGN.md §4)
     period_start        DATE            NOT NULL,

@@ -298,7 +298,7 @@ def build_annual(engine, *, addr1_filter: str | None, batch_id: str) -> int:
 def main() -> None:
     p = argparse.ArgumentParser(description="집합상가·공장 cluster_stats / cluster_annual_stats")
     p.add_argument("--as-of", type=str, default=None)
-    p.add_argument("--windows", type=str, default="3,5")
+    p.add_argument("--windows", type=str, default="3,5,7")
     p.add_argument("--addr1", type=str, default=None)
     p.add_argument("--skip-annual", action="store_true")
     p.add_argument("--rolling-only", action="store_true")

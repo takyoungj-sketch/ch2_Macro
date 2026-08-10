@@ -4,6 +4,7 @@ import {
   isSejongPseudoSigunguCode,
   uniqueSejongEupCodeForAdminName,
 } from "./sejongRegion";
+import { isRetiredSidoCode } from "./retiredSido";
 import type { RegionNameInfo } from "./types";
 
 export type RegionPickerViewMode = "free" | "paid";
@@ -109,6 +110,7 @@ export function tryResolveUniqueRegionSearch(
   );
   if (sidoCodes.size === 1) {
     const sidoCode = [...sidoCodes][0]!;
+    if (isRetiredSidoCode(sidoCode)) return null;
     return { kind: "sido_aggregate", sidoCode };
   }
 

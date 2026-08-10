@@ -18,6 +18,7 @@ from app.built.transaction_scope import build_transaction_where
 from app.built.time_scope import resolve_latest_as_of
 from app.flat_sido_region import list_addr2_for_sido
 from app.built.region_structure import detect_region_structure
+from app.region_sido import is_retired_sido_name, list_sido_names
 from app.built.regression.engine import predict_regression, run_regression
 from app.built.regression.selection.service import compare_regression, suggest_regression
 from app.recommendation.adapters.built import recommend_built_regression
@@ -141,7 +142,7 @@ def filter_meta(db: Session = Depends(get_built_db)):
         zone_types=_distinct("zone_type"),
         building_uses=_distinct("building_use"),
         road_width_labels=_distinct("road_width_label"),
-        addr1_list=_distinct("addr1"),
+        addr1_list=list_sido_names(conn),
         as_of_month=as_of.strftime("%Y-%m"),
         default_window_years=3,
     )
@@ -477,6 +478,8 @@ def list_addr2(
     addr1: str = Query(...),
     asset_type: Optional[str] = Query(None),
 ):
+    if is_retired_sido_name(addr1):
+        return []
     return list_addr2_for_sido(
         db.connection(),
         table="built_transactions",

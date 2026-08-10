@@ -41,9 +41,9 @@ from app.collective.building_stats_query import (
 )
 from app.collective.db import get_collective_db
 from app.collective.filters import apply_period_filters, apply_region_filters, apply_year_filters
-from app.v2_stats_windows import period_bounds_for_window
+from app.v2_stats_windows import MAX_WINDOW_YEARS, period_bounds_for_window
 from app.flat_sido_region import list_addr2_for_sido
-from app.region_sido import list_sido_names
+from app.region_sido import is_retired_sido_name, list_sido_names
 from app.collective.floor_index_regression import compute_residential_floor_index_regression
 from app.collective.regression.engine import predict_regression, run_building_regression
 from app.collective.transaction_export import (
@@ -209,6 +209,8 @@ def list_addr2(
     addr1: str = Query(...),
     asset_type: Optional[str] = Query(None),
 ):
+    if is_retired_sido_name(addr1):
+        return []
     return list_addr2_for_sido(
         db.connection(),
         table="collective_transactions",
@@ -366,11 +368,11 @@ def list_buildings(
     addr4_list: list[str] = Query(default=[]),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
-    window_years: int = Query(5, ge=1, le=5),
+    window_years: int = Query(5, ge=1, le=MAX_WINDOW_YEARS),
     presale_stats_mode: str = Query(
         "rolling",
         pattern="^(lifetime|rolling)$",
-        description="분양권 기본=rolling(3/5년, 타유형과 동일). lifetime=전체기간 mart(보조)",
+        description="분양권 기본=rolling(3/5/7년, 타유형과 동일). lifetime=전체기간 mart(보조)",
     ),
     sort: str = Query("count", pattern="^(count|mean|display_name|address)$"),
     page: int = Query(1, ge=1),
@@ -428,7 +430,7 @@ def list_buildings(
     items: list[BuildingStatsRow] = []
     sources: list[str] = []
 
-    # 1) 비분양권 — 기존 3/5년 mart·live
+    # 1) 비분양권 — 3/5/7년 mart·live
     non_presale_param = without_presale_asset_param(asset_type)
     if non_presale_param is not None:
         mart = list_buildings_from_mart(
@@ -462,7 +464,7 @@ def list_buildings(
             )
             sources.append("live")
 
-    # 2) 분양권 — rolling 3·5(기본, 타유형과 동일) / lifetime(보조) / 연도 live
+    # 2) 분양권 — rolling 3·5·7(기본 5, 타유형과 동일) / lifetime(보조) / 연도 live
     if includes_presale(asset_type):
         if year_override:
             items.extend(_fetch_live(rolling_window=False, asset_type_param="presale"))
@@ -704,7 +706,7 @@ def building_transactions_export(
 def building_stats_rolling(
     building_key: str,
     db: Session = Depends(get_collective_db),
-    window_years: int = Query(5, ge=1, le=5),
+    window_years: int = Query(5, ge=1, le=MAX_WINDOW_YEARS),
 ):
     conn = db.connection()
     as_of_month, _ = latest_mart_snapshot(conn)

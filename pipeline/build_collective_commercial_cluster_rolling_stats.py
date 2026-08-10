@@ -177,7 +177,7 @@ def build_rolling_buckets(
 def main() -> None:
     p = argparse.ArgumentParser(description="집합상가·공장 cluster_rolling_stats")
     p.add_argument("--as-of", type=str, default=None)
-    p.add_argument("--windows", type=str, default="3,5")
+    p.add_argument("--windows", type=str, default="3,5,7")
     p.add_argument("--addr1", type=str, default=None)
     args = p.parse_args()
 

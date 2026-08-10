@@ -53,7 +53,7 @@ export interface FreeStatsExplainContext {
   data: FreeStatsV2Response;
   viewMode: "free" | "paid";
   isPaidBasic: boolean;
-  windowYears: 3 | 5;
+  windowYears: 3 | 5 | 7;
   useUpper: boolean;
   upperLevelLabel?: string;
 }
@@ -150,6 +150,9 @@ export function buildPaidFilteredExplain(ctx: PaidFilteredExplainContext): Analy
     `표본: ${ctx.result.total.count.toLocaleString("ko-KR")}건`,
     `이상치 제외: ${req.exclude_outlier ? `적용 (IQR×${req.outlier_iqr_multiplier})` : "안 함"}`,
     `지분거래: ${req.exclude_partial ? "제외" : "포함"}`,
+    req.deal_types?.length
+      ? `거래유형: ${req.deal_types.join(", ")}`
+      : "거래유형: 중개거래·직거래 전체",
   ];
   if (ctx.regionLabel) hints.push(`지역: ${ctx.regionLabel}`);
 
@@ -196,6 +199,7 @@ function filterControlsList(req: PaidAnalysisRequest): string[] {
     "포함: is_valid, 해제 제외, 단가 not null",
   ];
   if (req.road_conditions?.length) items.push(`도로: ${req.road_conditions.join(", ")}`);
+  if (req.deal_types?.length) items.push(`거래유형: ${req.deal_types.join(", ")}`);
   if (req.area_categories?.length) items.push(`면적구분: ${req.area_categories.join(", ")}`);
   if (req.area_sqm_min != null || req.area_sqm_max != null) {
     items.push(

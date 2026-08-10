@@ -29,6 +29,7 @@ from build_stats_v2 import (  # noqa: E402
     parse_as_of_month,
     period_bounds_for_window,
 )
+from constants import MAX_WINDOW_YEARS
 from collective.db_utils import get_collective_engine  # noqa: E402
 from stats import compute_stats  # noqa: E402
 
@@ -362,7 +363,7 @@ def build_annual(
 def main() -> None:
     p = argparse.ArgumentParser(description="집합 building_stats / building_annual_stats")
     p.add_argument("--as-of", type=str, default=None, help="기준월 YYYY-MM-01")
-    p.add_argument("--windows", type=str, default="3,5", help="롤링 창(년)")
+    p.add_argument("--windows", type=str, default="3,5,7", help="롤링 창(년)")
     p.add_argument("--addr1", type=str, default=None, help="시도(addr1) 한정 스모크")
     p.add_argument(
         "--asset-type",
@@ -378,8 +379,8 @@ def main() -> None:
     as_of = parse_as_of_month(args.as_of) if args.as_of else default_as_of_month()
     windows = sorted({int(x.strip()) for x in args.windows.split(",") if x.strip()})
     for w in windows:
-        if w < 1 or w > 5:
-            raise SystemExit("window_years must be 1..5")
+        if w < 1 or w > MAX_WINDOW_YEARS:
+            raise SystemExit(f"window_years must be 1..{MAX_WINDOW_YEARS}")
     asset_type = (args.asset_type or "").strip() or None
     if asset_type and asset_type not in ASSET_TYPES:
         raise SystemExit(f"asset-type must be one of {ASSET_TYPES}")

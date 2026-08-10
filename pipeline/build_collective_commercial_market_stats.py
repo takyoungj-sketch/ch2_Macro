@@ -297,7 +297,7 @@ def build_annual(engine, *, sido_filter: str | None, batch_id: str) -> int:
 def main() -> None:
     p = argparse.ArgumentParser(description="집합상가/집합공장 market_stats + region_annual_stats")
     p.add_argument("--as-of", type=str, default=None)
-    p.add_argument("--windows", type=str, default="3,5")
+    p.add_argument("--windows", type=str, default="3,5,7")
     p.add_argument("--sido-code", type=str, default=None, help="시도 2자리 스모크")
     p.add_argument("--rolling-only", action="store_true")
     p.add_argument("--annual-only", action="store_true")

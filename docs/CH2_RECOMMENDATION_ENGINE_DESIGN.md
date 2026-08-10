@@ -23,7 +23,7 @@ CH2 Macro 모형 추천의 경쟁력은 **「더 똑똑한 한 줄의 식」** �
 7. **CH2 Recommendation Engine** — Built 전용이 아닌 토지·집합 확장 골격
 
 **현행 구현과의 관계:** 복합 `Group Forward` · `Best Subset` · `evaluate_pooling_candidates` 는 **엔진 재료**로 유지하되, **UX·scope·단계·설명**은 본 설계로 **재배치**한다.  
-**2026-08 현재 UI**는 왼쪽 변수 체크 = 후보 풀, Twin pool 동시 표시 등 **본 문서와 불일치** — 마이그레이션 대상.
+**2026-08 UI 마이그레이션:** [BUILT_REGRESSION_ANALYSIS_UI.md](./BUILT_REGRESSION_ANALYSIS_UI.md) — 모달 제거·세로 카드 흐름 (P0 구현 중). 왼쪽 변수·회귀모형 선택은 **유지**; Macro 예측형·설명형은 **독립 실행**.
 
 ---
 
@@ -246,25 +246,30 @@ Profile·Twin은 **후보 제안**; Validation(거래자료·CV)이 **판단**. 
 
 ---
 
-## 10. UI 구조 (복합 v1 목표)
+## 10. UI 구조 (복합 v1 — **2026-08-09 갱신**)
+
+> **SSOT:** [BUILT_REGRESSION_ANALYSIS_UI.md](./BUILT_REGRESSION_ANALYSIS_UI.md)
 
 ```text
-[기본 통계]  변수·스케일·선택 인접 — 사용자 주도 · 통계분석
+[왼쪽 사이드바 — 유지]
+  변수 선택 · 회귀모형(linear/log) · scope · 「통계분석」
 
-[모형 추천 모달]
-├── scope 요약 (analysis_scope.scope_label, n_tx)
-├── 단계 진행 표시 (1 Local → 2 Twin)
-├── 탭: [설명형] [예측형]  ← 동일 후보, 다른 1위
-├── 1단계 결과 카드
-├── (조건부) 2단계 Twin 결과
-├── 종료 이유 (termination.reasons)
-├── AI Assistant (§9 내러티브)
-└── [1단계 모형 적용] [2단계 pool 적용]  ← 버튼 분리
-    └── (선택) 예측 미리보기 — **적용할 식** 기준 n 명시
+[오른쪽 세로 흐름]
+  ① 회귀 실험 — 사용자 변수·스케일 결과 (FocusRegressionCard)
+  ② Macro 예측형 — CV-MAPE · 독립 「탐색 실행」 · (opt-in) Twin
+  ③ Macro 설명형 — AIC · 독립 「탐색 실행」 · 계수 해석
+  ④ 상위 지역 — comparisons[] 참고 (인라인 카드)
 ```
+
+**핵심 규칙**
+
+- ②·③ **순서 강제 없음** — recommend API 1회 응답을 두 카드가 각각 primary/alternate 슬라이스로 표시
+- Twin은 ②에서만 CTA; **자동 pool 적용 금지**
+- `RecommendationModal` → **deprecated**; `BuiltRegressionAnalysisPanel` 인라인
 
 **현행 대비 제거·축소**
 
+- 모달 진입 → 본문 세로 카드  
 - Twin top1/3/전체 **동시** 나열 → 2단계 **순차** + 개선폭만  
 - 모달 추천 n vs 예측 n **혼선** → `selection_n` / `fit_n` / `scope_n_tx` **3종 라벨**
 

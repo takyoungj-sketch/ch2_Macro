@@ -134,7 +134,7 @@ def main() -> None:
         str(args.excel_format),
         "--with-v2",
         "--v2-windows",
-        "3,5",
+        "3,5,7",
         "--v2-as-of",
         v2_as,
     ]

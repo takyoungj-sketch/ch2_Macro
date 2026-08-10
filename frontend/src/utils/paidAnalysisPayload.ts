@@ -6,9 +6,15 @@ export function buildPaidPayload(
   regionCodes: string[],
   roadExcluded: readonly string[],
   areaExcluded: readonly string[],
+  dealTypeExcluded: readonly string[] = [],
   baseCacheKey?: string | null
 ): PaidAnalysisRequest {
-  const merged = mergePaidExcludedIntoRequest(paidRequest, roadExcluded, areaExcluded);
+  const merged = mergePaidExcludedIntoRequest(
+    paidRequest,
+    roadExcluded,
+    areaExcluded,
+    dealTypeExcluded,
+  );
   const ys = merged.years;
   const useYears = ys != null && ys.length > 0;
   return {

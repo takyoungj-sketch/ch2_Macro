@@ -40,6 +40,7 @@ export default function FreeStatsWindowToggle({
       <div className="flex gap-0.5 bg-slate-100 rounded-lg p-0.5">
         {choice(3, "3년")}
         {choice(5, "5년")}
+        {choice(7, "7년")}
       </div>
     </div>
   );

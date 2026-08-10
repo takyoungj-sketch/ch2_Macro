@@ -186,7 +186,7 @@ def main() -> None:
         ):
             cmd = [PY, str(PIPELINE / script), "--as-of", as_of]
             if script != "build_collective_presale_lifetime_stats.py":
-                cmd.extend(["--windows", "3,5"])
+                cmd.extend(["--windows", "3,5,7"])
             else:
                 cmd.append("--replace")
             _run(
@@ -197,7 +197,7 @@ def main() -> None:
         if not args.skip_commercial:
             _run(
                 "build_collective_commercial_cluster_stats",
-                [PY, str(PIPELINE / "build_collective_commercial_cluster_stats.py"), "--as-of", as_of, "--windows", "3,5"],
+                [PY, str(PIPELINE / "build_collective_commercial_cluster_stats.py"), "--as-of", as_of, "--windows", "3,5,7"],
                 cwd=PIPELINE,
             )
 

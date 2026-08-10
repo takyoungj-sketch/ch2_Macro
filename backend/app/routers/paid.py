@@ -277,6 +277,7 @@ def _normalize_matrix_yearly_req(req_body: MatrixYearlyRequest) -> PaidAnalysisR
         area_categories=req_body.area_categories,
         land_categories=req_body.land_categories,
         zone_types=req_body.zone_types,
+        deal_types=req_body.deal_types,
         exclude_partial=req_body.exclude_partial,
         exclude_outlier=req_body.exclude_outlier,
         outlier_iqr_multiplier=req_body.outlier_iqr_multiplier,
@@ -319,6 +320,7 @@ def _matrix_cell_merged_where(body: MatrixYearlyRequest, db: Session) -> tuple[s
         base_req.land_categories,
         base_req.zone_types,
         base_req.exclude_partial,
+        base_req.deal_types,
         base_req.area_sqm_min,
         base_req.area_sqm_max,
         rolling_contract_ps=roll_ps,
@@ -398,6 +400,7 @@ def _build_conditions(
     land_categories: Optional[list[str]],
     zone_types: Optional[list[str]],
     exclude_partial: bool,
+    deal_types: Optional[list[str]] = None,
     area_sqm_min: Optional[float] = None,
     area_sqm_max: Optional[float] = None,
     rolling_contract_ps: Optional[date] = None,
@@ -472,6 +475,12 @@ def _build_conditions(
     if zone_types:
         conditions.append("lt.zone_type_resolved = ANY(:zone_types)")
         params["zone_types"] = zone_types
+    if deal_types:
+        conditions.append(
+            "COALESCE(NULLIF(TRIM(BOTH FROM lt.deal_type::text), ''), '중개거래') "
+            "= ANY(:deal_types)"
+        )
+        params["deal_types"] = deal_types
     if exclude_partial:
         conditions.append("lt.is_partial_ownership = FALSE")
 
@@ -776,6 +785,7 @@ def _analyze_core_materialized_rows(
         req.land_categories,
         req.zone_types,
         req.exclude_partial,
+        req.deal_types,
         req.area_sqm_min,
         req.area_sqm_max,
         db=db,
@@ -874,6 +884,7 @@ def _analyze_core_sql_aggregate(
         req.land_categories,
         req.zone_types,
         req.exclude_partial,
+        req.deal_types,
         req.area_sqm_min,
         req.area_sqm_max,
         db=db,

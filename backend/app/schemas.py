@@ -117,9 +117,9 @@ class FreeStatsV2BulkRequest(BaseModel):
     """V2 복수 법정동·리 합산 (원장을 동일 period로 재집계)."""
 
     region_codes: list[str] = Field(..., min_length=1)
-    window_years: Literal[3, 5] = Field(
+    window_years: Literal[3, 5, 7] = Field(
         default=5,
-        description="무료 V2: 3년 또는 5년 롤링 창",
+        description="무료 V2: 3·5·7년 롤링 창",
     )
     as_of_month: Optional[date] = Field(
         None,
@@ -147,9 +147,11 @@ class FreeStatsV2BulkRequest(BaseModel):
                 return 3
             if t == "5":
                 return 5
-        if v in (3, 5):
+            if t == "7":
+                return 7
+        if v in (3, 5, 7):
             return v
-        raise ValueError("window_years 는 3 또는 5 여야 합니다.")
+        raise ValueError("window_years 는 3·5·7 이어야 합니다.")
 
     @model_validator(mode="after")
     def _as_of_first(self) -> FreeStatsV2BulkRequest:
@@ -397,6 +399,10 @@ class PaidAnalysisRequest(PaidAreaSqmBounds):
     area_categories: Optional[list[str]] = Field(None)
     land_categories: Optional[list[str]] = Field(None)
     zone_types: Optional[list[str]] = Field(None)
+    deal_types: Optional[list[str]] = Field(
+        None,
+        description="거래유형 필터(중개거래·직거래). NULL deal_type 은 중개거래로 간주",
+    )
     exclude_partial: bool = Field(False, description="지분거래 제외")
     exclude_outlier: bool = Field(False)
     outlier_iqr_multiplier: OutlierIqrMultiplier = 3.0

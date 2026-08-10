@@ -9,7 +9,10 @@ import {
   MAX_SIDO_TIER_CHIP,
   MAX_SIGUNGU_TIER_CHIP,
 } from "./constants/tierPickLimits";
-import { getDefaultPaidSelectedYears } from "./constants/paidFilters";
+import {
+  getDefaultPaidSelectedYears,
+  getPaidYearButtonYears,
+} from "./constants/paidFilters";
 import type {
   FreeStatsWindowYears,
   PaidAnalysisRequest,
@@ -66,6 +69,8 @@ interface AppState {
   /** 포함 여부 역: 목록에 있으면 API에서 해당 도로값 제외 */
   paidRoadExcluded: string[];
   paidAreaExcluded: string[];
+  /** 포함 여부 역: 목록에 있으면 API에서 해당 거래유형 제외 */
+  paidDealTypeExcluded: string[];
 
   /** 유료: 기본통계(/free 통계 패널) 재조회 틱 — commitStatsDisplayScope 와 함께 증가 */
   paidBasicStatsKick: number;
@@ -154,6 +159,7 @@ interface AppState {
   setPaidRequest: (req: Partial<PaidAnalysisRequest>) => void;
   togglePaidRoadExclude: (road: string) => void;
   togglePaidAreaExclude: (area: string) => void;
+  togglePaidDealTypeExclude: (dealType: string) => void;
   togglePaidYear: (year: number) => void;
   resetPaidExcluded: () => void;
 }
@@ -187,12 +193,13 @@ function tierOnlyBeopjungri(codes: readonly string[]): TierCodes {
 /** 필터 분석 UI·요청을 초기 상태로 (기본 통계 보기 복귀 시) */
 function defaultPaidFilterState(): Pick<
   AppState,
-  "paidRequest" | "paidRoadExcluded" | "paidAreaExcluded"
+  "paidRequest" | "paidRoadExcluded" | "paidAreaExcluded" | "paidDealTypeExcluded"
 > {
   return {
     paidRequest: { ...defaultPaidRequest },
     paidRoadExcluded: [],
     paidAreaExcluded: [],
+    paidDealTypeExcluded: [],
   };
 }
 
@@ -204,6 +211,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   paidRequest: { ...defaultPaidRequest },
   paidRoadExcluded: [],
   paidAreaExcluded: [],
+  paidDealTypeExcluded: [],
   paidBasicStatsKick: 0,
   statsDisplayScopeKey: null,
   statsDisplayKick: 0,
@@ -291,7 +299,30 @@ export const useAppStore = create<AppState>((set, get) => ({
     }),
 
   setFreeStatsWindowYears: (y) =>
-    set({ freeStatsWindowYears: normalizeFreeStatsWindowYears(y) }),
+    set((s) => {
+      const w = normalizeFreeStatsWindowYears(y);
+      const newOptions = getPaidYearButtonYears(w);
+      const optSet = new Set(newOptions);
+      const cur = s.paidRequest.years ?? [];
+      const kept = cur.filter((yr) => optSet.has(yr));
+      let years: number[];
+      if (kept.length > 0) {
+        const minKept = Math.min(...kept);
+        const older = newOptions.filter((yr) => yr < minKept && !kept.includes(yr));
+        years = [...older, ...kept].sort((a, b) => a - b);
+      } else {
+        years = getDefaultPaidSelectedYears(w);
+      }
+      return {
+        freeStatsWindowYears: w,
+        paidRequest: {
+          ...s.paidRequest,
+          years,
+          year_from: null,
+          year_to: null,
+        },
+      };
+    }),
 
   setRegionSegment: (idx, value) =>
     set((s) => {
@@ -759,6 +790,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       codes,
       st.paidRoadExcluded,
       st.paidAreaExcluded,
+      st.paidDealTypeExcluded,
       st.paidBasicBaseKey
     );
     try {
@@ -809,6 +841,14 @@ export const useAppStore = create<AppState>((set, get) => ({
         ? s.paidAreaExcluded.filter((x) => x !== area)
         : [...s.paidAreaExcluded, area];
       return { paidAreaExcluded: ex };
+    }),
+
+  togglePaidDealTypeExclude: (dealType) =>
+    set((s) => {
+      const ex = s.paidDealTypeExcluded.includes(dealType)
+        ? s.paidDealTypeExcluded.filter((x) => x !== dealType)
+        : [...s.paidDealTypeExcluded, dealType];
+      return { paidDealTypeExcluded: ex };
     }),
 
   togglePaidYear: (year) =>

@@ -5,6 +5,8 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
+from app.region_sido import is_retired_sido_name
+
 # API·프론트 공통 토큰 — DB에 저장되지 않음.
 FLAT_SIDO_ADDR2_TOKEN = "__FLAT_SIDO__"
 
@@ -123,6 +125,8 @@ def list_addr2_for_sido(
     valid_sql: str = "TRUE",
 ) -> list[str]:
     """DISTINCT addr2; flat sido 이면 synthetic 토큰 1개 반환."""
+    if is_retired_sido_name(addr1):
+        return []
     clauses = [
         "addr1 = :a1",
         "addr2 IS NOT NULL",

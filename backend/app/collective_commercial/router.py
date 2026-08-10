@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.collective.asset_scope import COMMERCIAL_ASSET_TYPES, apply_asset_type_filter
 from app.collective.meta_cache import get_ttl_cached
 from app.collective.building_stats_query import stats_as_of_label, stats_reference_date
-from app.v2_stats_windows import period_bounds_for_window
+from app.v2_stats_windows import MAX_WINDOW_YEARS, period_bounds_for_window
 from app.collective_commercial.cluster_stats_query import (
     cluster_rolling_from_mart,
     cluster_rolling_live,
@@ -33,7 +33,7 @@ from app.collective.floor_index_regression import compute_residential_floor_inde
 from app.collective.schemas import AnalysisExplain, AnalysisFeatures, FloorIndexCell
 from app.collective.filters import _col, apply_region_filters
 from app.flat_sido_region import list_addr2_for_sido
-from app.region_sido import list_sido_names
+from app.region_sido import is_retired_sido_name, list_sido_names
 from app.collective_commercial.tx_rows import apply_commercial_tx_period, commercial_tx_row_dict
 from app.collective.region_structure import detect_region_structure
 from app.collective.resolve_codes import resolve_collective_map_codes
@@ -186,6 +186,8 @@ def list_addr2(
     addr1: str = Query(...),
     asset_type: Optional[str] = Query(None),
 ):
+    if is_retired_sido_name(addr1):
+        return []
     return list_addr2_for_sido(
         db.connection(),
         table="collective_commercial_transactions",
@@ -205,7 +207,7 @@ def list_addr3(
     contract_year_to: Optional[int] = None,
     contract_date_from: Optional[date] = None,
     contract_date_to: Optional[date] = None,
-    window_years: Optional[int] = Query(None, ge=1, le=5),
+    window_years: Optional[int] = Query(None, ge=1, le=MAX_WINDOW_YEARS),
 ):
     conn = db.connection()
     where, params = _tx_where(
@@ -262,7 +264,7 @@ def list_leaf_regions(
     contract_year_to: Optional[int] = None,
     contract_date_from: Optional[date] = None,
     contract_date_to: Optional[date] = None,
-    window_years: Optional[int] = Query(None, ge=1, le=5),
+    window_years: Optional[int] = Query(None, ge=1, le=MAX_WINDOW_YEARS),
 ):
     conn = db.connection()
     where, params = _tx_where(
@@ -378,7 +380,7 @@ def list_clusters(
     addr4_list: list[str] = Query(default=[]),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
-    window_years: int = Query(5, ge=1, le=5),
+    window_years: int = Query(5, ge=1, le=MAX_WINDOW_YEARS),
     sort: str = Query("count", pattern="^(count|mean|display_label)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(100, ge=1, le=500),
@@ -527,7 +529,7 @@ def list_cluster_addresses(
 def cluster_stats_rolling(
     cluster_key: str,
     db: Session = Depends(get_collective_db),
-    window_years: int = Query(5, ge=1, le=5),
+    window_years: int = Query(5, ge=1, le=MAX_WINDOW_YEARS),
 ):
     conn = db.connection()
     as_of_month, _ = latest_mart_snapshot(conn)
@@ -958,7 +960,7 @@ def list_cluster_transactions(
     contract_year_to: Optional[int] = None,
     contract_date_from: Optional[date] = None,
     contract_date_to: Optional[date] = None,
-    window_years: Optional[int] = Query(None, ge=1, le=5),
+    window_years: Optional[int] = Query(None, ge=1, le=MAX_WINDOW_YEARS),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
 ):

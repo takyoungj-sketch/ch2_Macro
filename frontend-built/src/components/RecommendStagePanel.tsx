@@ -100,7 +100,7 @@ function CoefficientInsights({ items }: { items: CoefficientNarrative[] }) {
   return (
     <details className="rounded-md border border-slate-200 dark:border-slate-700 px-2.5 py-2 text-xs">
       <summary className="cursor-pointer font-semibold text-slate-700 dark:text-slate-200">
-        계수 해석 (설명형 참고)
+        계수 해석
       </summary>
       <ul className="mt-2 space-y-1.5">
         {items.map((c) => (
@@ -165,6 +165,183 @@ function FinalVerdictBanner({ conclusion }: { conclusion: RecommendationConclusi
   );
 }
 
+/** 인라인 Macro 카드 — 예측형·설명형 동일 골격 */
+function MacroModeSummary({
+  mode,
+  conclusion,
+  candidate,
+}: {
+  mode: "predictive" | "explanatory";
+  conclusion: RecommendationConclusion;
+  candidate: ModelCandidate;
+}) {
+  const isPredictive = mode === "predictive";
+  const tone = isPredictive ? (conclusion.final_verdict_tone ?? "warning") : "warning";
+
+  return (
+    <div className={clsx("rounded-lg border px-3 py-2.5 space-y-1", VERDICT_BANNER[tone])}>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+        {isPredictive ? "예측형 판정" : "설명형 판정"}
+      </p>
+      {isPredictive ? (
+        <p className="text-base font-bold leading-snug text-slate-900 dark:text-slate-100">
+          {conclusion.final_verdict_emoji} {conclusion.final_verdict_ko}
+          {conclusion.cv_mape != null && (
+            <span className="ml-2 align-middle text-sm font-semibold">
+              <CvFitnessBadge cvMape={conclusion.cv_mape} fitness={conclusion.cv_fitness} />
+            </span>
+          )}
+        </p>
+      ) : (
+        <p className="text-base font-bold leading-snug text-slate-900 dark:text-slate-100">
+          AIC {candidate.aic?.toFixed(0) ?? "—"}
+          <span className="ml-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
+            Adj.R²{" "}
+            {candidate.metrics.adj_r_squared != null
+              ? candidate.metrics.adj_r_squared.toFixed(3)
+              : "—"}
+          </span>
+        </p>
+      )}
+      <p className="text-xs text-slate-600 dark:text-slate-400 truncate">
+        {blockSummary(candidate.blocks)} · {candidate.response_scale}
+      </p>
+      {conclusion.headline_ko && (
+        <p className="text-xs text-slate-600 dark:text-slate-400">{conclusion.headline_ko}</p>
+      )}
+    </div>
+  );
+}
+
+function ConclusionBullets({ conclusion }: { conclusion: RecommendationConclusion }) {
+  if (!conclusion.bullets.length && !conclusion.summary_ko) return null;
+  return (
+    <div
+      className={clsx(
+        "rounded-md border px-2.5 py-2 text-xs space-y-1",
+        VERDICT_BOX[conclusion.verdict] ?? VERDICT_BOX.caution,
+      )}
+    >
+      {conclusion.bullets.length > 0 && (
+        <ul className="space-y-0.5">
+          {conclusion.bullets.map((b) => (
+            <li
+              key={b.text}
+              className={clsx(
+                b.kind === "negative" && "text-red-800 dark:text-red-300",
+                b.kind === "positive" && "text-emerald-800 dark:text-emerald-300",
+                b.kind === "neutral" && "text-slate-700 dark:text-slate-300",
+              )}
+            >
+              {BULLET_MARK[b.kind]} {b.text}
+            </li>
+          ))}
+        </ul>
+      )}
+      {conclusion.summary_ko && (
+        <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400 pt-1 border-t border-black/5 dark:border-white/10">
+          {conclusion.summary_ko}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ScopeSummaryBox({
+  analysis_scope,
+  stage1,
+  gradeLabel,
+  satStars,
+}: {
+  analysis_scope: RegressionRecommendResponse["analysis_scope"];
+  stage1: RegressionRecommendResponse["stage1"];
+  gradeLabel: string;
+  satStars: string;
+}) {
+  return (
+    <div className="rounded-md bg-slate-50 dark:bg-slate-800/50 px-2.5 py-2 text-xs space-y-1">
+      <p className="font-medium">{analysis_scope.scope_label || "분석 scope"}</p>
+      <ScopeNLabels
+        counts={{
+          scope_n_tx: analysis_scope.scope_n_tx,
+          selection_n: stage1.selection_n,
+          fit_n: stage1.fit_n,
+        }}
+      />
+      <p className="text-slate-600 dark:text-slate-300">
+        만족 등급{" "}
+        <span className="font-medium">
+          {gradeLabel} {satStars}
+        </span>
+      </p>
+      <p className="text-slate-400 text-[11px]">
+        SSOT 풀({stage1.candidate_pool.length}블록) — 왼쪽 변수 체크와 무관
+        {analysis_scope.anchor_unit?.name && <> · anchor {analysis_scope.anchor_unit.name}</>}
+      </p>
+    </div>
+  );
+}
+
+function RankingList({
+  mode,
+  list,
+}: {
+  mode: "predictive" | "explanatory";
+  list: ModelCandidate[];
+}) {
+  const isPredictive = mode === "predictive";
+  return (
+    <div>
+      <p className="text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1.5">
+        {isPredictive ? "예측형 랭킹 (CV-MAPE)" : "설명형 랭킹 (AIC)"}
+      </p>
+      <ul className="space-y-1 max-h-32 overflow-y-auto">
+        {list.map((c) => (
+          <li
+            key={`${mode}-${c.rank}-${c.blocks.join(",")}`}
+            className="text-xs flex gap-2 px-1 py-0.5 border-b border-slate-100 dark:border-slate-800"
+          >
+            <span className="text-indigo-600 w-5">#{c.rank}</span>
+            <span className="flex-1 truncate">{blockSummary(c.blocks)}</span>
+            <span className="text-slate-500 tabular-nums shrink-0">
+              {c.response_scale}
+              {isPredictive
+                ? ` · CV ${c.metrics.cv_mape?.toFixed(1) ?? "—"}%`
+                : ` · AIC ${c.aic?.toFixed(0) ?? "—"}`}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function TerminationLog({
+  termination,
+  twinRan,
+}: {
+  termination: RegressionRecommendResponse["termination"];
+  twinRan?: boolean;
+}) {
+  if (!termination.reasons.length) return null;
+  return (
+    <details className="rounded border border-slate-200 dark:border-slate-700 px-2.5 py-2 text-xs">
+      <summary className="cursor-pointer font-medium text-slate-600 dark:text-slate-300">
+        탐색 로그 ({termination.stage_reached}단계
+        {termination.action === "proceed_twin" && !twinRan ? " · Twin 검토 가능" : ""})
+      </summary>
+      <ol className="list-decimal list-inside space-y-0.5 text-slate-600 dark:text-slate-400 mt-1">
+        {termination.reasons.map((r) => (
+          <li key={r}>{r}</li>
+        ))}
+      </ol>
+      {termination.next_stage_hint && (
+        <p className="mt-1 text-[11px] text-slate-500">{termination.next_stage_hint}</p>
+      )}
+    </details>
+  );
+}
+
 function blockSummary(blocks: string[]) {
   if (!blocks.length) return "(절편만)";
   return blocks.map((b) => BLOCK_LABELS[b] ?? b).join(" · ");
@@ -190,6 +367,7 @@ function CandidateMini({
   onPredict,
   adopting,
   predictActive,
+  rankMode = "predictive",
 }: {
   c: ModelCandidate;
   role: string;
@@ -198,7 +376,17 @@ function CandidateMini({
   onPredict?: () => void;
   adopting?: boolean;
   predictActive?: boolean;
+  rankMode?: "predictive" | "explanatory";
 }) {
+  const metricsLine =
+    rankMode === "explanatory"
+      ? `${c.response_scale} · AIC ${c.aic?.toFixed(0) ?? "—"} · Adj.R² ${
+          c.metrics.adj_r_squared != null ? c.metrics.adj_r_squared.toFixed(3) : "—"
+        } · CV ${c.metrics.cv_mape != null ? `${c.metrics.cv_mape.toFixed(1)}%` : "—"}`
+      : `${c.response_scale} · Adj.R² ${
+          c.metrics.adj_r_squared != null ? c.metrics.adj_r_squared.toFixed(3) : "—"
+        } · CV-MAPE ${c.metrics.cv_mape != null ? `${c.metrics.cv_mape.toFixed(1)}%` : "—"}`;
+
   return (
     <div className="border border-slate-200 dark:border-slate-600 rounded-md p-2 space-y-1.5">
       <div className="flex items-start gap-2">
@@ -207,11 +395,7 @@ function CandidateMini({
         </span>
         <div className="flex-1 min-w-0 text-xs">
           <p className="font-medium truncate">{blockSummary(c.blocks)}</p>
-          <p className="text-slate-500 tabular-nums">
-            {c.response_scale} · Adj.R²{" "}
-            {c.metrics.adj_r_squared != null ? c.metrics.adj_r_squared.toFixed(3) : "—"} · CV-MAPE{" "}
-            {c.metrics.cv_mape != null ? `${c.metrics.cv_mape.toFixed(1)}%` : "—"}
-          </p>
+          <p className="text-slate-500 tabular-nums">{metricsLine}</p>
         </div>
       </div>
       <div className="flex flex-wrap gap-1.5">
@@ -259,6 +443,8 @@ type Props = {
   regionNameByCode?: Record<string, string>;
   onRunTwin?: () => void;
   twinRunning?: boolean;
+  /** full=모달 호환 전체 · predictive/explanatory=인라인 단일 모드 카드 */
+  mode?: "full" | "predictive" | "explanatory";
 };
 
 export default function RecommendStagePanel({
@@ -271,27 +457,218 @@ export default function RecommendStagePanel({
   regionNameByCode = {},
   onRunTwin,
   twinRunning,
+  mode = "full",
 }: Props) {
-  const [tab, setTab] = useState<RankTab>("predictive");
+  const isFull = mode === "full";
+  const isPredictive = mode === "predictive";
+  const isExplanatory = mode === "explanatory";
+  const [tab, setTab] = useState<RankTab>(isExplanatory ? "explanatory" : "predictive");
   const [twinStep, setTwinStep] = useState(0);
   const { stage1, stage2, analysis_scope, termination, warnings, conclusion, diagnostics_checklist, coefficient_narratives } = data;
   const list =
-    tab === "explanatory" ? stage1.candidates_explanatory : stage1.candidates_predictive;
+    tab === "explanatory" || isExplanatory
+      ? stage1.candidates_explanatory
+      : stage1.candidates_predictive;
   const sat = stage1.satisfaction;
   const gradeLabel = GRADE_LABEL[sat.grade] ?? sat.grade;
   const adoptLabel = adoptLabelForMode(conclusion.adopt_mode);
   const predictiveRole = "현재 최적 후보 (예측형)";
   const explanatoryRole = "현재 최적 후보 (설명형)";
+  const explanatoryCandidate = stage1.alternate ?? stage1.primary;
 
   const showTwinResults =
     stage2 && (stage2.ran ? stage2.pools.length > 0 : Boolean(stage2.skipped_reason));
   const visiblePool = stage2?.ran ? stage2.pools[twinStep] : undefined;
+  const inlineMode = isPredictive ? "predictive" : isExplanatory ? "explanatory" : null;
+
+  if (inlineMode) {
+    const modeCandidate = inlineMode === "predictive" ? stage1.primary : explanatoryCandidate;
+    const modeRole =
+      inlineMode === "predictive" ? "최적 후보 (예측형)" : "최적 후보 (설명형)";
+    const modeAdoptLabel =
+      inlineMode === "predictive" ? adoptLabel : "설명형으로 적용";
+
+    return (
+      <div className="space-y-3 text-sm">
+        <MacroModeSummary
+          mode={inlineMode}
+          conclusion={conclusion}
+          candidate={modeCandidate}
+        />
+        <ConclusionBullets conclusion={conclusion} />
+        <ScopeSummaryBox
+          analysis_scope={analysis_scope}
+          stage1={stage1}
+          gradeLabel={gradeLabel}
+          satStars={stars(sat.stars)}
+        />
+        <DiagnosticChecklist items={diagnostics_checklist ?? []} />
+
+        {inlineMode === "explanatory" && !stage1.alternate && (
+          <p className="text-xs text-slate-500">
+            설명형 1위가 예측형과 동일합니다 — 아래 후보를 참고하세요.
+          </p>
+        )}
+
+        <CandidateMini
+          c={modeCandidate}
+          role={modeRole}
+          adoptLabel={modeAdoptLabel}
+          rankMode={inlineMode}
+          onAdopt={() => onAdopt(modeCandidate.variables, modeCandidate.response_scale)}
+          onPredict={
+            onPredict
+              ? () =>
+                  onPredict(
+                    modeCandidate.variables,
+                    modeCandidate.response_scale,
+                    modeRole,
+                  )
+              : undefined
+          }
+          adopting={adopting}
+          predictActive={predictActiveLabel === modeRole}
+        />
+
+        <RankingList mode={inlineMode} list={list} />
+        <CoefficientInsights items={coefficient_narratives ?? []} />
+
+        {inlineMode === "predictive" &&
+          conclusion.twin_recommended &&
+          onRunTwin &&
+          !conclusion.twin_ran && (
+            <div className="rounded-md border border-violet-200 dark:border-violet-900/50 bg-violet-50/40 dark:bg-violet-950/20 p-2.5 space-y-1.5">
+              <p className="text-xs font-medium text-violet-900 dark:text-violet-200">
+                쌍둥이 지역 pool 추가 검토
+              </p>
+              <p className="text-[11px] text-violet-800/90 dark:text-violet-300/90">
+                표본 확대 참고용 — pool 채택은 사용자가 결정합니다.
+              </p>
+              <button
+                type="button"
+                className="px-2.5 py-1 text-xs rounded bg-violet-600 text-white disabled:opacity-50"
+                disabled={twinRunning}
+                onClick={onRunTwin}
+              >
+                {twinRunning ? "Twin pool 계산 중…" : "쌍둥이 지역 추가 검토"}
+              </button>
+            </div>
+          )}
+
+        {inlineMode === "predictive" && showTwinResults && stage2 && (
+          <div className="border-t border-slate-200 dark:border-slate-700 pt-3 space-y-2">
+            <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
+              Twin pool 결과
+              <span className="ml-1 font-normal text-slate-500">
+                — {blockSummary(stage2.fixed_blocks)} · {stage2.fixed_response_scale} 고정
+              </span>
+            </p>
+
+            {!stage2.ran && stage2.skipped_reason && (
+              <p className="text-xs text-slate-500">{stage2.skipped_reason}</p>
+            )}
+
+            {stage2.ran && stage2.pools.length > 0 && visiblePool && (
+              <div className="rounded-md border border-violet-200 dark:border-violet-900/50 bg-violet-50/50 dark:bg-violet-950/20 p-2 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-medium">{visiblePool.label}</p>
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      className="px-1.5 py-0.5 text-[10px] border rounded disabled:opacity-40"
+                      disabled={twinStep <= 0}
+                      onClick={() => setTwinStep((s) => Math.max(0, s - 1))}
+                    >
+                      ←
+                    </button>
+                    <span className="text-[10px] text-slate-500 tabular-nums self-center">
+                      {twinStep + 1}/{stage2.pools.length}
+                    </span>
+                    <button
+                      type="button"
+                      className="px-1.5 py-0.5 text-[10px] border rounded disabled:opacity-40"
+                      disabled={twinStep >= stage2.pools.length - 1}
+                      onClick={() => setTwinStep((s) => Math.min(stage2.pools.length - 1, s + 1))}
+                    >
+                      →
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 tabular-nums flex flex-wrap items-center gap-2">
+                  <span>적합 n={visiblePool.n}</span>
+                  <CvFitnessBadge cvMape={visiblePool.cv_mape} />
+                  {visiblePool.cv_mape_delta != null && visiblePool.cv_mape_delta > 0 && (
+                    <span className="text-emerald-600">
+                      △{visiblePool.cv_mape_delta.toFixed(1)}%p vs Local
+                    </span>
+                  )}
+                  {stage2.local_cv_mape != null &&
+                    visiblePool.cv_mape != null &&
+                    visiblePool.cv_mape > stage2.local_cv_mape + 0.5 && (
+                      <span className="text-red-600">
+                        Local {stage2.local_cv_mape.toFixed(1)}%보다 나쁨
+                      </span>
+                    )}
+                </p>
+                {visiblePool.region_codes.length > 1 && (
+                  <p className="text-[10px] text-slate-500">
+                    pool:{" "}
+                    {visiblePool.region_codes
+                      .map((c) => regionNameByCode[c] ?? c.slice(-8))
+                      .join(" + ")}
+                  </p>
+                )}
+                {onAdoptPool && (
+                  <button
+                    type="button"
+                    className={clsx(
+                      "px-2 py-0.5 text-[11px] rounded disabled:opacity-50",
+                      stage2.primary?.candidate_id === visiblePool.candidate_id
+                        ? "bg-violet-600 text-white"
+                        : "border border-violet-400 text-violet-700 dark:text-violet-300",
+                    )}
+                    disabled={adopting}
+                    onClick={() =>
+                      onAdoptPool({
+                        vars: stage1.primary.variables,
+                        scale: stage2.fixed_response_scale,
+                        regionCodes: visiblePool.region_codes,
+                        label: visiblePool.label,
+                      })
+                    }
+                  >
+                    {stage2.primary?.candidate_id === visiblePool.candidate_id
+                      ? "Twin pool 적용 (검토)"
+                      : "이 pool로 분석 (검토)"}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {stage2.ran && stage2.decision_reason && (
+              <p className="text-[11px] text-slate-500">{stage2.decision_reason}</p>
+            )}
+          </div>
+        )}
+
+        <TerminationLog termination={termination} twinRan={conclusion.twin_ran} />
+
+        {warnings.length > 0 && (
+          <ul className="text-[11px] text-amber-700 dark:text-amber-400 space-y-0.5">
+            {warnings.map((w) => (
+              <li key={w}>⚠ {w}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3 text-sm">
-      <FinalVerdictBanner conclusion={conclusion} />
+      {(isFull || isPredictive) && <FinalVerdictBanner conclusion={conclusion} />}
 
-      {conclusion.bullets.length > 0 && (
+      {(isFull || isPredictive) && conclusion.bullets.length > 0 && (
         <div
           className={clsx(
             "rounded-md border px-2.5 py-2 text-xs space-y-1",
@@ -321,6 +698,7 @@ export default function RecommendStagePanel({
         </div>
       )}
 
+      {isFull && (
       <div className="flex items-center gap-2 text-[11px]">
         <span
           className={clsx(
@@ -344,6 +722,7 @@ export default function RecommendStagePanel({
           ② Twin
         </span>
       </div>
+      )}
 
       <div className="rounded-md bg-slate-50 dark:bg-slate-800/50 px-2.5 py-2 text-xs space-y-1">
         <p className="font-medium">{analysis_scope.scope_label || "분석 scope"}</p>
@@ -366,9 +745,10 @@ export default function RecommendStagePanel({
         </p>
       </div>
 
-      <DiagnosticChecklist items={diagnostics_checklist ?? []} />
-      <CoefficientInsights items={coefficient_narratives ?? []} />
+      {(isFull || isPredictive) && <DiagnosticChecklist items={diagnostics_checklist ?? []} />}
+      {(isFull || isExplanatory) && <CoefficientInsights items={coefficient_narratives ?? []} />}
 
+      {isFull && (
       <div className="grid gap-2 sm:grid-cols-2">
         <CandidateMini
           c={stage1.primary}
@@ -409,8 +789,61 @@ export default function RecommendStagePanel({
           />
         )}
       </div>
+      )}
+
+      {isPredictive && (
+        <CandidateMini
+          c={stage1.primary}
+          role={predictiveRole}
+          adoptLabel={adoptLabel}
+          onAdopt={() => onAdopt(stage1.primary.variables, stage1.primary.response_scale)}
+          onPredict={
+            onPredict
+              ? () =>
+                  onPredict(
+                    stage1.primary.variables,
+                    stage1.primary.response_scale,
+                    predictiveRole,
+                  )
+              : undefined
+          }
+          adopting={adopting}
+          predictActive={predictActiveLabel === predictiveRole}
+        />
+      )}
+
+      {isExplanatory && (
+        <>
+          {!stage1.alternate && (
+            <p className="text-xs text-slate-500">
+              설명형 1위가 예측형과 동일합니다 — 아래 후보를 참고하세요.
+            </p>
+          )}
+          <CandidateMini
+            c={explanatoryCandidate}
+            role={explanatoryRole}
+            adoptLabel="설명형으로 적용"
+            onAdopt={() =>
+              onAdopt(explanatoryCandidate.variables, explanatoryCandidate.response_scale)
+            }
+            onPredict={
+              onPredict
+                ? () =>
+                    onPredict(
+                      explanatoryCandidate.variables,
+                      explanatoryCandidate.response_scale,
+                      explanatoryRole,
+                    )
+                : undefined
+            }
+            adopting={adopting}
+            predictActive={predictActiveLabel === explanatoryRole}
+          />
+        </>
+      )}
 
       <div>
+        {isFull && (
         <div className="flex gap-1 mb-2">
           {(
             [
@@ -433,17 +866,23 @@ export default function RecommendStagePanel({
             </button>
           ))}
         </div>
+        )}
+        {!isFull && (
+          <p className="text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1.5">
+            {isExplanatory ? "설명형 랭킹 (AIC)" : "예측형 랭킹 (CV-MAPE)"}
+          </p>
+        )}
         <ul className="space-y-1 max-h-32 overflow-y-auto">
           {list.map((c) => (
             <li
-              key={`${tab}-${c.rank}-${c.blocks.join(",")}`}
+              key={`${mode}-${tab}-${c.rank}-${c.blocks.join(",")}`}
               className="text-xs flex gap-2 px-1 py-0.5 border-b border-slate-100 dark:border-slate-800"
             >
               <span className="text-indigo-600 w-5">#{c.rank}</span>
               <span className="flex-1 truncate">{blockSummary(c.blocks)}</span>
               <span className="text-slate-500 tabular-nums shrink-0">
                 {c.response_scale}
-                {tab === "predictive"
+                {(tab === "predictive" || isPredictive) && !isExplanatory
                   ? ` · CV ${c.metrics.cv_mape?.toFixed(1) ?? "—"}%`
                   : ` · AIC ${c.aic?.toFixed(0) ?? "—"}`}
               </span>
@@ -452,7 +891,10 @@ export default function RecommendStagePanel({
         </ul>
       </div>
 
-      {conclusion.twin_recommended && onRunTwin && !conclusion.twin_ran && (
+      {(isFull || isPredictive) &&
+        conclusion.twin_recommended &&
+        onRunTwin &&
+        !conclusion.twin_ran && (
         <div className="rounded-md border border-violet-200 dark:border-violet-900/50 bg-violet-50/40 dark:bg-violet-950/20 p-2.5 space-y-1.5">
           <p className="text-xs font-medium text-violet-900 dark:text-violet-200">
             ② Profile Twin pool 추가 검토
@@ -472,7 +914,7 @@ export default function RecommendStagePanel({
         </div>
       )}
 
-      {showTwinResults && stage2 && (
+      {(isFull || isPredictive) && showTwinResults && stage2 && (
         <div className="border-t border-slate-200 dark:border-slate-700 pt-3 space-y-2">
           <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
             ② Twin pool 결과
@@ -568,7 +1010,13 @@ export default function RecommendStagePanel({
         </div>
       )}
 
-      {termination.reasons.length > 0 && (
+      {isExplanatory && conclusion.twin_ran && stage2?.ran && (
+        <p className="text-[11px] text-violet-700 dark:text-violet-300">
+          쌍둥이 지역 pool이 실행되었습니다 — 예측형 카드에서 pool별 CV-MAPE 비교를 확인하세요.
+        </p>
+      )}
+
+      {(isFull || isPredictive) && termination.reasons.length > 0 && (
         <details className="rounded border border-slate-200 dark:border-slate-700 px-2.5 py-2 text-xs">
           <summary className="cursor-pointer font-medium text-slate-600 dark:text-slate-300">
             탐색 로그 ({termination.stage_reached}단계

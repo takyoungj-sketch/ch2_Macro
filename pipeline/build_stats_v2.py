@@ -5,12 +5,12 @@ land_transactions → land_basic_stats_v2
 집계 기준 (docs/V2_STATS_DESIGN.md):
   - 법정동/리 × 용도지역 × 지목 (각 'ALL' 포함)
   - 기준월 as_of_month: 해당 달 1일 저장 (UI는 동일 달 말일까지 반영)
-  - 창 window_years ∈ {1..5}: contract_date 가 [period_start, period_end] (포함)
+  - 창 window_years ∈ {1..7}: contract_date 가 [period_start, period_end] (포함)
   - 해제 제외, is_valid=TRUE, 단가 NOT NULL, contract_date NOT NULL
 
 전국 프로덕션 (무료 3·5년 예시):
   # .env: STATS_V2_ASSUMED_TODAY=2026-01-01 등 — docs/V2_STATS_PRODUCTION.md 참고
-  python build_stats_v2.py --as-of 2025-12-01 --windows 3,5
+  python build_stats_v2.py --as-of 2025-12-01 --windows 3,5,7
 
   --region 또는 --sido-code(또는 STATS_V2_SIDO_CODE) 가 있으면 해당 범위만 1회 조회.
   둘 다 없으면 시도 코드 목록을 조회한 뒤 시도별로 청크 처리(메모리·재시작 안전).
@@ -35,7 +35,7 @@ import pandas as pd
 from sqlalchemy import text
 from tqdm import tqdm
 
-from constants import STATS_V2_WINDOW_YEARS_ALL
+from constants import MAX_WINDOW_YEARS, STATS_V2_WINDOW_YEARS_ALL, STATS_V2_WINDOW_YEARS_UI
 from db_utils import get_engine
 from stats import compute_stats
 
@@ -253,7 +253,7 @@ def _count_v2_batch_rows(as_of_month: date, windows: list[int]) -> int | None:
     engine = get_engine()
     ws = sorted({int(w) for w in windows})
     for w in ws:
-        if w < 1 or w > 5:
+        if w < 1 or w > MAX_WINDOW_YEARS:
             return None
     in_clause = "window_years IN (" + ",".join(str(w) for w in ws) + ")"
     try:
@@ -575,8 +575,8 @@ def main() -> None:
     parser.add_argument(
         "--windows",
         type=str,
-        default=",".join(str(x) for x in STATS_V2_WINDOW_YEARS_ALL),
-        help="창 연수 목록 (쉼표). 예: 1,2,3,4,5 또는 3,5",
+        default=",".join(str(x) for x in STATS_V2_WINDOW_YEARS_UI),
+        help="창 연수 목록 (쉼표). 예: 3,5,7",
     )
     parser.add_argument("--region", type=str, default=None, help="특정 법정동/리 코드 (미지정 시 전체)")
     parser.add_argument(
@@ -661,8 +661,8 @@ def main() -> None:
     except ValueError as exc:
         raise SystemExit(f"--windows 파싱 실패: {args.windows}") from exc
     for w in windows:
-        if w < 1 or w > 5:
-            raise SystemExit(f"window_years 는 1~5 만 허용: {w}")
+        if w < 1 or w > MAX_WINDOW_YEARS:
+            raise SystemExit(f"window_years 는 1~{MAX_WINDOW_YEARS} 만 허용: {w}")
 
     batch_id = args.batch_id or uuid.uuid4().hex
     codes: list[str] | None = None
