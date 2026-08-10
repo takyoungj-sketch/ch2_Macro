@@ -348,6 +348,10 @@ class PaidFilters(PaidAreaSqmBounds):
     )
     land_categories: Optional[list[str]] = Field(None)
     zone_types: Optional[list[str]] = Field(None)
+    deal_types: Optional[list[str]] = Field(
+        None,
+        description="거래유형 필터(중개거래·직거래). NULL deal_type 은 중개거래로 간주",
+    )
     exclude_partial: bool = Field(False, description="지분거래 제외(True일 때 미포함)")
     exclude_outlier: bool = Field(False, description="단가 IQR 기반 이상치 제외 활성화")
     outlier_iqr_multiplier: OutlierIqrMultiplier = 3.0
