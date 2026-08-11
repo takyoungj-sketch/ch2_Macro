@@ -54,7 +54,7 @@ class Settings(BaseSettings):
 
     #: CH2 AI — OpenAI (비어 있으면 템플릿·Explain presets 모드)
     openai_api_key: str = Field(default="", validation_alias="OPENAI_API_KEY")
-    openai_model: str = Field(default="gpt-4o-mini", validation_alias="OPENAI_MODEL")
+    openai_model: str = Field(default="gpt-5-mini", validation_alias="OPENAI_MODEL")
     ai_session_ttl_seconds: int = Field(default=86400, validation_alias="AI_SESSION_TTL_SECONDS")
     ai_rate_limit_per_minute: int = Field(default=30, validation_alias="AI_RATE_LIMIT_PER_MINUTE")
     #: CH2 AI — 템플릿 내러티브 OpenAI polish (OPENAI_API_KEY 필요)
