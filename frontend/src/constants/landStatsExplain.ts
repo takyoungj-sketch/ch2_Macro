@@ -280,6 +280,8 @@ export interface TransactionListExplainContext {
   zoneType: string;
   landCategory: string;
   total?: number;
+  /** 모달에 실제 로드된 건수(1만 상한) */
+  loadedCount?: number;
   excludeOutlier: boolean;
   outlierMultiplier: number;
   filterSummary?: string;
@@ -288,9 +290,16 @@ export interface TransactionListExplainContext {
 export function buildTransactionListExplain(
   ctx: TransactionListExplainContext,
 ): AnalysisExplain {
+  const truncated =
+    ctx.total != null &&
+    ctx.loadedCount != null &&
+    ctx.total > ctx.loadedCount;
   const hints: string[] = [
     `용도×지목: ${ctx.zoneType} · ${ctx.landCategory}`,
     ctx.total != null ? `표본: ${ctx.total.toLocaleString("ko-KR")}건` : "",
+    truncated
+      ? `모달 로드: ${ctx.loadedCount!.toLocaleString("ko-KR")}건 (1만 상한)`
+      : "",
     `이상치 제외: ${ctx.excludeOutlier ? `적용 (IQR×${ctx.outlierMultiplier})` : "안 함"}`,
   ].filter(Boolean);
 
@@ -302,7 +311,8 @@ export function buildTransactionListExplain(
     title: "거래 목록 — 데이터·산출 방법",
     summary:
       "필터분석(또는 매트릭스 칸)과 **동일 조건**을 land_transactions 에 적용한 뒤, " +
-      "최신 계약 순으로 페이지 단위 조회합니다. CSV 내보내기는 동일 필터의 **전체 건**입니다.",
+      "최신 계약 순으로 조회합니다. 모달은 **최대 1만 건**까지 일괄 로드해 필터·정렬합니다. " +
+      "CSV 내보내기는 동일 필터의 **전체 건**입니다.",
     formula: "단가(만원/㎡) = 거래금액(만원) ÷ 계약면적(㎡)",
     reference: "land_transactions + region_codes (beopjungri_name)",
     floor_groups: pipeline.floor_groups,
@@ -312,13 +322,72 @@ export function buildTransactionListExplain(
       ctx.excludeOutlier
         ? `이상치 제외: 해당 칸 단가 IQR×${ctx.outlierMultiplier} 밖 거래 제외`
         : "이상치 제외: 미적용",
+      "모달 목록: 클라이언트 필터·정렬·페이지(100건/페이지)",
     ],
     interpretation: [
       "계약일: contract_date 가 있으면 yyyy-MM-dd, 없으면 연·월(YYYY.MM) 표시.",
       "지번·지분·유형은 정제 단계에서 채운 표시 필드입니다(원본 지번 문자열).",
       "목록은 모달 필터와 동기화되며, 장기추세·기본통계 표본과 다를 수 있습니다.",
+      "집계 탭에서 행을 클릭하면 해당 축 값으로 목록 필터가 적용됩니다.",
     ],
-    limitations: pipeline.limitations,
+    limitations: [
+      ...pipeline.limitations,
+      "모달 목록·집계는 **1만 건 상한** — 초과분은 CSV 또는 필터 범위 축소로 확인.",
+    ],
+    interpretation_hints: hints,
+    presets: pipeline.presets,
+  };
+}
+
+export function buildTransactionAggregateExplain(
+  ctx: TransactionListExplainContext,
+): AnalysisExplain {
+  const truncated =
+    ctx.total != null &&
+    ctx.loadedCount != null &&
+    ctx.total > ctx.loadedCount;
+  const hints: string[] = [
+    `용도×지목: ${ctx.zoneType} · ${ctx.landCategory}`,
+    ctx.total != null ? `DB 표본: ${ctx.total.toLocaleString("ko-KR")}건` : "",
+    truncated
+      ? `집계 대상: ${ctx.loadedCount!.toLocaleString("ko-KR")}건 (로드분만)`
+      : ctx.loadedCount != null
+        ? `집계 대상: ${ctx.loadedCount.toLocaleString("ko-KR")}건`
+        : "",
+    `이상치 제외: ${ctx.excludeOutlier ? `적용 (IQR×${ctx.outlierMultiplier})` : "안 함"}`,
+  ].filter(Boolean);
+
+  const pipeline = buildLedgerPipelineExplain();
+
+  return {
+    spec_id: "land.tx_aggregate.v2",
+    spec_version: "2.0",
+    title: "거래 집계 — 피벗 Lite",
+    summary:
+      "거래 목록과 **동일 API·동일 필터**로 받은 건을 **1축 요약** 또는 **2축 교차표**로 집계합니다. " +
+      "**추가 서버 호출 없음** — 이미 로드된 items 에서만 계산합니다.",
+    formula:
+      "그룹별 건수 · 중앙/평균 단가(만원/㎡) · 면적합(㎡). " +
+      "2축 셀: 건수 + 중앙 단가. 단가 = 거래금액(만원) ÷ 계약면적(㎡).",
+    reference: "land_transactions (모달 bulk load) — docs/LAND_TX_AGGREGATE_DESIGN.md",
+    floor_groups: pipeline.floor_groups,
+    controls: [
+      "1축: 읍·면·동(기본) · 동·리 · 도로 · 거래유형 · 계약연도 · (지목군) 지목",
+      "2축: 행·열 축 선택 + preset (읍·면·동×거래유형·도로·연도·지목)",
+      "정렬: 건수 내림차순 → 라벨 가나다",
+      "1축 행 / 2축 셀·행·열 헤더 클릭 → 거래 목록 필터",
+    ],
+    interpretation: [
+      "**읍·면·동** — 하위 행정구역별 단가·거래량 비교(주 사용).",
+      "**2축 교차** — 동×거래유형 등 조건 조합으로 「이 동만 비싼 이유」 탐색.",
+      "교차표 셀: 위=건수, 아래=중앙 단가(만원/㎡).",
+      "중앙 단가는 소표본에서 평균보다 이상치에 덜 민감합니다.",
+    ],
+    limitations: [
+      "1만 건 상한 — 전체 표본과 집계가 다를 수 있음(CSV·범위 축소 권장).",
+      "2축도 클라이언트 집계 — DB 전수·1만+ 칸은 Phase 2b(서버 GROUP BY) 검토.",
+      "집계는 로드된 건 기준이며 DB 재집계가 아닙니다.",
+    ],
     interpretation_hints: hints,
     presets: pipeline.presets,
   };

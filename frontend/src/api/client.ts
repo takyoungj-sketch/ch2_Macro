@@ -20,15 +20,11 @@ import type {
   RegionItem,
   RegionLevel,
   ProfileSigunguTwinsResponse,
-  TwinNeighborsForEupmyeondongResponse,
-  TwinNeighborsForSigunguResponse,
-  TwinRegionLatestBatch,
-  TwinV8NeighborsResponse,
-  TwinV8RegionLevel,
+  ProfileTwinNeighborsResponse,
   UpperStatsV2Response,
 } from "../types";
 import { normalizeFreeStatsWindowYears } from "../types";
-import { DEFAULT_PROFILE_VERSION, FALLBACK_PROFILE_VERSION } from "../constants/profileVersion";
+import { DEFAULT_PROFILE_VERSION } from "../constants/profileVersion";
 import { filenameFromContentDisposition, saveBlobAsFile } from "../utils/downloadBlob";
 import { viteOptionalV2AsOfMonth } from "../utils/freeStatsV2";
 
@@ -146,33 +142,38 @@ export const fetchMatrixCellTransactions = async (
   return data;
 };
 
-/** 거래목록 탭: 필터·정렬용 전체 로드 (API limit 상한 100씩 페이지). */
-const MATRIX_TX_PAGE_MAX = 100;
+/** 거래목록·집계 탭: 클라이언트 필터/피벗용 bulk 로드 (서버 limit 상한). */
+const MATRIX_TX_BULK_MAX = 10_000;
 
+/**
+ * 매트릭스 칸 거래 전량 로드 — 최대 2회 API 호출.
+ * 1) total 확인 2) limit=min(total, BULK_MAX) 한 번에 fetch
+ * (이전: 100건 페이지 반복 → 요청마다 서버 전체 재조회)
+ */
 export async function fetchAllMatrixCellTransactions(
   body: MatrixCellTransactionsRequest
 ): Promise<MatrixCellTransactionsResponse> {
-  const first = await fetchMatrixCellTransactions({
+  const probe = await fetchMatrixCellTransactions({
     ...body,
     offset: 0,
-    limit: MATRIX_TX_PAGE_MAX,
+    limit: 1,
   });
-  if (first.items.length >= first.total) {
-    return first;
+  const total = probe.total;
+  if (total <= 0) {
+    return { ...probe, items: [], offset: 0, limit: 0 };
   }
-  const all = [...first.items];
-  let offset = MATRIX_TX_PAGE_MAX;
-  while (offset < first.total) {
-    const page = await fetchMatrixCellTransactions({
-      ...body,
-      offset,
-      limit: MATRIX_TX_PAGE_MAX,
-    });
-    all.push(...page.items);
-    offset += MATRIX_TX_PAGE_MAX;
-    if (page.items.length === 0) break;
-  }
-  return { ...first, items: all, offset: 0, limit: all.length };
+  const bulkLimit = Math.min(total, MATRIX_TX_BULK_MAX);
+  const bulk = await fetchMatrixCellTransactions({
+    ...body,
+    offset: 0,
+    limit: bulkLimit,
+  });
+  return {
+    ...bulk,
+    total,
+    offset: 0,
+    limit: bulk.items.length,
+  };
 };
 
 export const fetchLandRegression = async (
@@ -250,50 +251,30 @@ export const fetchUpperStats = async (
   return data;
 };
 
-/** 쌍둥이 지역 MVP — 최신 배치 메타 */
-export const fetchTwinRegionLatestBatch = async (): Promise<TwinRegionLatestBatch> => {
-  const { data } = await api.get<TwinRegionLatestBatch>("/twin-regions/latest-batch");
-  return data;
-};
-
-/** 쌍둥이 지역 MVP — 시군구 코드 기준 유사 시군구 상위 목록 */
-export const fetchTwinNeighborsForSigungu = async (
-  sigunguCode: string,
-): Promise<TwinNeighborsForSigunguResponse> => {
-  const { data } = await api.get<TwinNeighborsForSigunguResponse>(
-    `/twin-regions/neighbors/${encodeURIComponent(sigunguCode)}`,
-  );
-  return data;
-};
-
-/** 쌍둥이 지역 MVP — 읍면동(8자리) 기준 유사 읍면동 상위 목록 */
-export const fetchTwinNeighborsForEupmyeondong = async (
-  eupmyeondongCode: string,
-): Promise<TwinNeighborsForEupmyeondongResponse> => {
-  const { data } = await api.get<TwinNeighborsForEupmyeondongResponse>(
-    `/twin-regions/eupmyeondong/neighbors/${encodeURIComponent(eupmyeondongCode)}`,
-  );
-  return data;
-};
-
-/** Twin v8 — 충청권 쌍둥이 (algorithm_version=8) */
-export const fetchTwinV8Neighbors = async (params: {
-  region_level: TwinV8RegionLevel;
-  region_code: string;
+/** Regional Profile Twin(algo 21) — 읍면동 */
+export const fetchProfileTwinEupmyeondong = async (params: {
+  eupmyeondong_code: string;
+  profile_version?: string;
+  window_years?: number;
   top_k?: number;
-}): Promise<TwinV8NeighborsResponse> => {
-  const level = params.region_level;
-  const code = params.region_code.trim();
-  const qs = new URLSearchParams();
-  if (params.top_k != null) qs.set("top_k", String(params.top_k));
-  const suffix = qs.size > 0 ? `?${qs.toString()}` : "";
-  const { data } = await api.get<TwinV8NeighborsResponse>(
-    `/twin-v8/neighbors/${encodeURIComponent(level)}/${encodeURIComponent(code)}${suffix}`,
+  scope?: "adjacent" | "region" | "national";
+}): Promise<ProfileTwinNeighborsResponse> => {
+  const code = params.eupmyeondong_code.trim().slice(0, 8);
+  const { data } = await api.get<ProfileTwinNeighborsResponse>(
+    `/regional-profile/twins/${encodeURIComponent(code)}`,
+    {
+      params: {
+        profile_version: params.profile_version ?? DEFAULT_PROFILE_VERSION,
+        window_years: params.window_years ?? 3,
+        top_k: params.top_k ?? 5,
+        scope: params.scope ?? "region",
+      },
+    },
   );
   return data;
 };
 
-/** 시군구 hybrid 쌍둥이(algo 7) — /regional-profile/twins-sigungu, 전국 scope 기본 */
+/** Regional Profile Twin(algo 21) — 시군구 */
 export const fetchProfileTwinSigungu = async (params: {
   sigungu_code: string;
   profile_version?: string;
@@ -302,38 +283,16 @@ export const fetchProfileTwinSigungu = async (params: {
   scope?: "adjacent" | "region" | "national";
 }): Promise<ProfileSigunguTwinsResponse> => {
   const code = params.sigungu_code.trim().slice(0, 5);
-  const scope = params.scope ?? "national";
-  const versions = [
-    params.profile_version ?? DEFAULT_PROFILE_VERSION,
-    FALLBACK_PROFILE_VERSION,
-  ].filter((v, i, a) => a.indexOf(v) === i);
-
-  let last: ProfileSigunguTwinsResponse | null = null;
-  for (const pv of versions) {
-    try {
-      const { data } = await api.get<ProfileSigunguTwinsResponse>(
-        `/regional-profile/twins-sigungu/${encodeURIComponent(code)}`,
-        {
-          params: {
-            profile_version: pv,
-            window_years: params.window_years,
-            top_k: params.top_k ?? 10,
-            scope,
-          },
-        }
-      );
-      last = data;
-      if (data.neighbors.length > 0) return data;
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 404) continue;
-      throw err;
-    }
-  }
-  return last ?? {
-    profile_version: versions[0]!,
-    window_years: params.window_years ?? 5,
-    scope,
-    anchor_sigungu_code: code,
-    neighbors: [],
-  };
+  const { data } = await api.get<ProfileSigunguTwinsResponse>(
+    `/regional-profile/twins-sigungu/${encodeURIComponent(code)}`,
+    {
+      params: {
+        profile_version: params.profile_version ?? DEFAULT_PROFILE_VERSION,
+        window_years: params.window_years ?? 3,
+        top_k: params.top_k ?? 10,
+        scope: params.scope ?? "national",
+      },
+    },
+  );
+  return data;
 };
