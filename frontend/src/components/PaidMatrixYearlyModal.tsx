@@ -33,6 +33,7 @@ import { resolveLongTermTargetsForFetch } from "../utils/longTermTargets";
 import { useAppStore } from "../store";
 import MatrixCellHistogramChart from "./MatrixCellHistogramChart";
 import MatrixCellTransactionTable from "./MatrixCellTransactionTable";
+import MatrixCellTransactionAggregate from "./MatrixCellTransactionAggregate";
 import MatrixYearlyTrendChart from "./MatrixYearlyTrendChart";
 import LandRegressionResults from "./LandRegressionResults";
 import LandRegressionScatterSection from "./LandRegressionScatterSection";
@@ -45,8 +46,11 @@ import { buildWeightedMeanCombinedSeries, longTermSeriesToTrendSeries } from "..
 import {
   buildHistogramExplain,
   buildMatrixCellTrendExplain,
+  buildTransactionAggregateExplain,
   buildTransactionListExplain,
 } from "../constants/landStatsExplain";
+import type { LandTxDrillDownFilters } from "../utils/landTxAggregate";
+import type { LandTxSortKey } from "../utils/landTxDisplay";
 
 function defaultPaidMatrixModalSize(): { width: number; height: number } {
   if (typeof window === "undefined") return { width: 1152, height: 640 };
@@ -108,6 +112,7 @@ interface Props {
 
 type PanelMode = "trend" | "longTerm" | "histogram" | "transactions" | "regression";
 type LtPriceMetric = "mean" | "median";
+type TxSubView = "list" | "aggregate";
 
 function ltPointsToChartRows(
   points: LongTermTrendPoint[],
@@ -127,7 +132,7 @@ function ltPointsToChartRows(
     }));
 }
 
-/** 매트릭스 칸당 건수는 보통 수백 — fetchAllMatrixCellTransactions 로 100건씩 모아 로드 */
+/** 매트릭스 칸당 건수는 보통 수백 — fetchAllMatrixCellTransactions 로 최대 1만 건 일괄 로드 */
 
 /** 유료 매트릭스 칸: 연도별 추이 + 단가 분포 + 원거래 목록 */
 export default function PaidMatrixYearlyModal({
@@ -153,6 +158,11 @@ export default function PaidMatrixYearlyModal({
   const [txLoading, setTxLoading] = useState(false);
   const [txError, setTxError] = useState<string | null>(null);
   const [txData, setTxData] = useState<MatrixCellTransactionsResponse | null>(null);
+  const [txSubView, setTxSubView] = useState<TxSubView>("list");
+  const [txExternalFilters, setTxExternalFilters] = useState<
+    Partial<Record<LandTxSortKey, Set<string>>>
+  >({});
+  const [txExternalFilterToken, setTxExternalFilterToken] = useState(0);
 
   // 회귀 탭 state
   const [regVars, setRegVars] = useState<LandRegressionVariables>({
@@ -199,6 +209,9 @@ export default function PaidMatrixYearlyModal({
       setHistError(null);
       setTxData(null);
       setTxError(null);
+      setTxSubView("list");
+      setTxExternalFilters({});
+      setTxExternalFilterToken(0);
       setLtData(null);
       setLtError(null);
       setLtMetric("mean");
@@ -344,15 +357,14 @@ export default function PaidMatrixYearlyModal({
   useEffect(() => {
     if (!open || panel !== "transactions" || !filterRequest) return;
     let cancelled = false;
+    setTxSubView("list");
+    setTxExternalFilters({});
+    setTxExternalFilterToken(0);
     (async () => {
       setTxLoading(true);
       setTxError(null);
       try {
-        const data = await fetchAllMatrixCellTransactions({
-          ...filterRequest,
-          offset: 0,
-          limit: 100,
-        });
+        const data = await fetchAllMatrixCellTransactions(filterRequest);
         if (!cancelled) setTxData(data);
       } catch (e) {
         if (!cancelled) {
@@ -386,6 +398,16 @@ export default function PaidMatrixYearlyModal({
       setTxExportLoading(false);
     }
   }, [filterRequest]);
+
+  const handleAggregateDrillDown = useCallback((filters: LandTxDrillDownFilters) => {
+    setTxExternalFilters(
+      Object.fromEntries(
+        Object.entries(filters).map(([k, v]) => [k, new Set(v)]),
+      ),
+    );
+    setTxExternalFilterToken((t) => t + 1);
+    setTxSubView("list");
+  }, []);
 
   const canDetail = Boolean(filterRequest) && !loading && !error && rows.length > 0;
 
@@ -461,24 +483,28 @@ export default function PaidMatrixYearlyModal({
     [isRolling],
   );
   const histogramExplain = useMemo(() => buildHistogramExplain(), []);
-  const txExplain = useMemo(
-    () =>
-      filterRequest
-        ? buildTransactionListExplain({
-            zoneType,
-            landCategory,
-            total: txData?.total,
-            excludeOutlier: filterRequest.exclude_outlier,
-            outlierMultiplier: filterRequest.outlier_iqr_multiplier,
-          })
-        : null,
-    [
-      filterRequest,
+  const txExplain = useMemo(() => {
+    if (!filterRequest) return null;
+    const base = {
       zoneType,
       landCategory,
-      txData?.total,
-    ],
-  );
+      total: txData?.total,
+      loadedCount: txData?.items.length,
+      excludeOutlier: filterRequest.exclude_outlier,
+      outlierMultiplier: filterRequest.outlier_iqr_multiplier,
+    };
+    if (txSubView === "aggregate") {
+      return buildTransactionAggregateExplain(base);
+    }
+    return buildTransactionListExplain(base);
+  }, [
+    filterRequest,
+    zoneType,
+    landCategory,
+    txData?.total,
+    txData?.items.length,
+    txSubView,
+  ]);
 
   if (!open) return null;
 
@@ -881,7 +907,36 @@ export default function PaidMatrixYearlyModal({
                     <p className="text-[10px] text-red-500">{txExportError}</p>
                   )}
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
+                  {!txLoading && !txError && txData && (
+                    <div
+                      className="inline-flex rounded-md border border-slate-200 bg-slate-50 p-0.5"
+                      role="tablist"
+                      aria-label="거래 보기"
+                    >
+                      {(
+                        [
+                          ["list", "목록"],
+                          ["aggregate", "집계"],
+                        ] as const
+                      ).map(([id, label]) => (
+                        <button
+                          key={id}
+                          type="button"
+                          role="tab"
+                          aria-selected={txSubView === id}
+                          className={`px-2 py-0.5 text-[11px] rounded transition-colors ${
+                            txSubView === id
+                              ? "bg-white text-slate-800 shadow-sm border border-slate-100 font-medium"
+                              : "text-slate-500 hover:text-slate-700"
+                          }`}
+                          onClick={() => setTxSubView(id)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <AnalysisHelpPanel explain={txExplain} />
                   <button
                     type="button"
@@ -898,11 +953,23 @@ export default function PaidMatrixYearlyModal({
               )}
               {!txLoading && !txError && txData && (
                 <div className="flex-1 min-h-0 flex flex-col">
-                  <MatrixCellTransactionTable
-                    items={txData.items}
-                    truncated={txData.total > txData.items.length}
-                    showLandCategory={matrixMode === "group"}
-                  />
+                  {txSubView === "aggregate" ? (
+                    <MatrixCellTransactionAggregate
+                      items={txData.items}
+                      total={txData.total}
+                      truncated={txData.total > txData.items.length}
+                      showLandCategory={matrixMode === "group"}
+                      onDrillDown={handleAggregateDrillDown}
+                    />
+                  ) : (
+                    <MatrixCellTransactionTable
+                      items={txData.items}
+                      truncated={txData.total > txData.items.length}
+                      showLandCategory={matrixMode === "group"}
+                      externalSelectFilters={txExternalFilters}
+                      externalFilterToken={txExternalFilterToken}
+                    />
+                  )}
                 </div>
               )}
             </div>

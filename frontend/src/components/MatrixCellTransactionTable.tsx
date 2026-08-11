@@ -223,11 +223,17 @@ export default function MatrixCellTransactionTable({
   items,
   truncated,
   showLandCategory = false,
+  externalSelectFilters,
+  externalFilterToken = 0,
 }: {
   items: MatrixCellTransactionItem[];
   truncated?: boolean;
   /** 지목군 모드에서 원장 지목 열 표시 */
   showLandCategory?: boolean;
+  /** 집계 탭 드릴다운 — 컬럼 포함 필터 */
+  externalSelectFilters?: Partial<Record<LandTxSortKey, Set<string>>>;
+  /** 변경 시 externalSelectFilters 적용 */
+  externalFilterToken?: number;
 }) {
   const cols = useMemo(() => buildCols(showLandCategory), [showLandCategory]);
   const selectCols = useMemo(
@@ -259,6 +265,20 @@ export default function MatrixCellTransactionTable({
     setPage(1);
     setOpenFilterCol(null);
   }, [showLandCategory]);
+
+  useEffect(() => {
+    if (!externalFilterToken) return;
+    setSelectFilters(
+      externalSelectFilters
+        ? Object.fromEntries(
+            Object.entries(externalSelectFilters).map(([k, v]) => [k, new Set(v)]),
+          )
+        : {},
+    );
+    setTextFilters({});
+    setPage(1);
+    setOpenFilterCol(null);
+  }, [externalFilterToken, externalSelectFilters]);
 
   // Escape 키로 드롭다운 닫기
   useEffect(() => {
@@ -489,7 +509,7 @@ export default function MatrixCellTransactionTable({
         )}
         {truncated && (
           <span className="text-amber-700 text-[10px]">
-            · 상한 초과 — 로드된 건에만 필터 적용
+            · 1만 건 상한 — 로드된 건에만 필터·집계 적용
           </span>
         )}
       </div>
