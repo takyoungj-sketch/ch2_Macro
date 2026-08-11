@@ -54,6 +54,12 @@ html.dark body {
   html.dark .bg-red-50 {
     background-color: rgb(69 10 10);
   }
+  html.dark .bg-blue-50 {
+    background-color: rgb(51 65 85);
+  }
+  html.dark .bg-blue-50\/40 {
+    background-color: rgb(51 65 85 / 0.4);
+  }
 
   html.dark .text-slate-900 {
     color: rgb(241 245 249);
@@ -114,6 +120,18 @@ html.dark body {
   }
   html.dark .hover\:bg-slate-50:hover {
     background-color: rgb(51 65 85);
+  }
+  html.dark .hover\:bg-blue-50:hover {
+    background-color: rgb(51 65 85);
+  }
+  html.dark .hover\:bg-blue-50\/40:hover {
+    background-color: rgb(51 65 85 / 0.4);
+  }
+  html.dark .hover\:bg-blue-50\/50:hover {
+    background-color: rgb(51 65 85 / 0.5);
+  }
+  html.dark .hover\:bg-blue-50\/60:hover {
+    background-color: rgb(51 65 85 / 0.6);
   }
   html.dark .hover\:bg-sky-50\/50:hover {
     background-color: rgb(12 74 110 / 0.5);
