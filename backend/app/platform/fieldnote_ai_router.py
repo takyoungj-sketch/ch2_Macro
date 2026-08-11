@@ -21,6 +21,11 @@ OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions"
 DEFAULT_MONTHLY_QUOTA = 50
 
 
+def _uses_completion_tokens(model: str) -> bool:
+    m = (model or "").strip().lower()
+    return m.startswith("gpt-5") or m.startswith("o1") or m.startswith("o3") or m.startswith("o4")
+
+
 class AiProxyRequest(BaseModel):
     model: str | None = None
     messages: list[dict]
@@ -94,13 +99,20 @@ async def _proxy_openai(
     if not did:
         raise HTTPException(401, detail={"code": "device_required", "message": "X-Device-Id 헤더가 필요합니다."})
     _check_and_increment_quota(db, did)
-    model = body.model or settings.openai_model
-    payload = {
+    # VPS OPENAI_MODEL이 우선 — 앱 body.model이 예전 gpt-4o로 고정돼 있어도 서버 업그레이드가 적용됨
+    model = (settings.openai_model or body.model or "gpt-5-mini").strip()
+    requested_tokens = int(body.max_tokens or max_tokens_default)
+    payload: dict = {
         "model": model,
-        "temperature": body.temperature,
-        "max_tokens": body.max_tokens or max_tokens_default,
         "messages": body.messages,
     }
+    # gpt-5 / o-series: max_tokens 미지원 → max_completion_tokens (+ reasoning 여유)
+    if _uses_completion_tokens(model):
+        payload["max_completion_tokens"] = max(requested_tokens, 4000)
+        payload["reasoning_effort"] = "low"
+    else:
+        payload["temperature"] = body.temperature
+        payload["max_tokens"] = requested_tokens
     if body.response_format:
         payload["response_format"] = body.response_format
     async with httpx.AsyncClient(timeout=120.0) as client:
