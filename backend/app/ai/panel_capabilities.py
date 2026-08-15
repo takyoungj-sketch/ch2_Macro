@@ -66,6 +66,9 @@ _CH2_HELP_KEYWORDS = (
     "회귀",
     "추세",
     "예측",
+    "전환율",
+    "전월세",
+    "전세환산",
 )
 
 _TREND_KEYWORDS = (
@@ -308,6 +311,34 @@ PANEL_CAPABILITIES: dict[str, PanelCapability] = {
         on_screen_questions=(
             "층별 지수를 어떻게 해석하나요?",
             "기준층은 어떻게 정해지나요?",
+        ),
+    ),
+    "RentListCard": PanelCapability(
+        panel="RentListCard",
+        label="주거 전월세",
+        bundle_id="rent_conversion",
+        blocked_keywords=_TREND_KEYWORDS + _COMPARE_KEYWORDS,
+        redirects=(),
+        on_screen_questions=(
+            "왜 단순평균 전환율인가요?",
+            "적용 전환율은 공식값인가요?",
+            "전세전환값은 시세인가요?",
+            "연립은 왜 편차가 큰가요?",
+            "읍면동 전환율이 없을 때는?",
+        ),
+    ),
+    "SangkwonCard": PanelCapability(
+        panel="SangkwonCard",
+        label="상권분석",
+        bundle_id="sangkwon_reb",
+        blocked_keywords=_TREND_KEYWORDS + _COMPARE_KEYWORDS,
+        redirects=(),
+        on_screen_questions=(
+            "임대료와 임대수입이 다른 이유는?",
+            "연간 임대료는 어떻게 환산하나요?",
+            "공실률을 NOI에 곱하면 안 되는 이유는?",
+            "연간 투자수익률은 평균인가요 복리인가요?",
+            "이 상권 공표는 주거 전월세와 같나요?",
         ),
     ),
     "CommercialFloorIndexPanel": PanelCapability(

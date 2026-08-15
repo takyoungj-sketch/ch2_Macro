@@ -5,6 +5,7 @@ export default {
     "./index.html",
     "./src/**/*.{ts,tsx}",
     "../shared/macro-shell/**/*.{js,ts,jsx,tsx}",
+    "../shared/stats-glossary/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {

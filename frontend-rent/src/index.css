@@ -1,0 +1,152 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  font-size: 125%;
+}
+
+body {
+  @apply bg-slate-100 text-slate-900 antialiased dark:bg-slate-900 dark:text-slate-100;
+}
+
+.input {
+  @apply w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm
+    dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100;
+}
+
+table.data {
+  @apply table-fixed text-xs w-full;
+}
+
+table.data th,
+table.data td {
+  @apply px-1.5 py-1 border-b border-slate-100 align-middle text-center
+    dark:border-slate-700;
+}
+
+table.data th {
+  @apply bg-slate-50 font-semibold text-slate-600 text-center
+    dark:bg-slate-800 dark:text-slate-300;
+}
+
+table.data td.num {
+  @apply text-center tabular-nums whitespace-nowrap;
+}
+
+table.data td.name {
+  @apply text-center font-medium text-slate-800 dark:text-slate-100 truncate;
+}
+
+table.data td.lease {
+  @apply text-center tabular-nums leading-snug;
+}
+
+table.data.sangkwon-table col.sk-group {
+  width: 4.6rem;
+}
+
+table.data.sangkwon-table col.sk-metric {
+  width: 11.5rem;
+}
+
+table.data.sangkwon-table td.sk-group {
+  @apply bg-slate-50 font-semibold text-slate-600 text-center align-middle
+    dark:bg-slate-800 dark:text-slate-300;
+}
+
+table.data.sangkwon-table td.sk-metric {
+  @apply text-center whitespace-nowrap;
+}
+
+.layout-sidebar {
+  @apply w-72 shrink-0 border-r border-slate-200 bg-white overflow-y-auto
+    dark:border-slate-700 dark:bg-slate-800;
+}
+
+.card {
+  @apply rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800;
+}
+
+.btn {
+  @apply px-3 py-1.5 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-primary {
+  @apply bg-slate-800 text-white hover:bg-slate-700
+    dark:bg-slate-600 dark:hover:bg-slate-500;
+}
+
+.btn-ghost {
+  @apply bg-slate-100 text-slate-700 hover:bg-slate-200
+    dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600;
+}
+
+.layout-main {
+  @apply flex-1 min-w-0 overflow-auto;
+}
+
+table.data.buildings-table {
+  width: 100%;
+  min-width: 44cm;
+}
+
+table.data.buildings-table col.col-jibun {
+  width: 7cm;
+}
+
+table.data.buildings-table col.col-road {
+  width: 9cm;
+}
+
+table.data.buildings-table col.col-type {
+  width: 2cm;
+}
+
+table.data.buildings-table col.col-name {
+  width: 5.5cm;
+}
+
+table.data.buildings-table col.col-year {
+  width: 2.2cm;
+}
+
+table.data.buildings-table col.col-num {
+  width: 2.4cm;
+}
+
+table.data td.addr {
+  @apply text-center whitespace-normal break-words leading-snug;
+}
+
+.modal-shell {
+  @apply bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100;
+}
+
+.modal-header {
+  @apply border-b border-slate-100 dark:border-slate-700;
+}
+
+.modal-tab-bar {
+  @apply border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/60;
+}
+
+.modal-tab-active {
+  @apply bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm border border-slate-100 dark:border-slate-600;
+}
+
+.modal-tab-idle {
+  @apply text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200;
+}
+
+.modal-table-wrap {
+  @apply rounded-lg border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden;
+}
+
+.modal-inner-table th {
+  @apply bg-slate-50 dark:bg-slate-900/60 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 text-center;
+}
+
+.modal-inner-table td {
+  @apply text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-600 text-center;
+}

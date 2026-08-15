@@ -10,21 +10,21 @@
 flowchart TB
   UI[CH2 Macro UI] -->|AiContext| Chat["POST /api/ai/chat"]
   UI -->|panel purpose| Suggest["GET /api/ai/suggested-questions"]
-  UI -->|explain only| Explain["POST /api/ai/explain"]
   Chat --> Session[(Session Store)]
   Chat --> Classify{Router}
   Classify -->|refusal| Ref[Refusal Template]
-  Classify -->|ch2| Orch[Bundle Orchestrator]
-  Classify -->|explain| Exp[Explain Paraphrase]
-  Classify -->|statistics| KB[Stats KB]
-  Classify -->|opinion| Op[Opinion LLM]
-  Classify -->|web| Web[Web Search + Synthesis]
-  Orch --> Bundle[Reasoning Bundle]
-  Ref --> Val[Response Validator]
-  Exp --> Val
-  KB --> Val
-  Op --> Val
-  Bundle --> Val
+  Classify -->|ch2/explain| Synth[Grounded Dialogue]
+  Classify -->|statistics| Stat[Definition redirect / facts]
+  Classify -->|opinion/web| Other[Opinion / Web LLM]
+  Synth --> PK[Product Knowledge Pack]
+  Synth --> Bundle[Reasoning Bundle]
+  Synth --> LLM[OpenAI synthesis]
+  Synth --> Fallback[Template fallback]
+  LLM --> Val[Response Validator]
+  Stat --> Val
+  Ref --> Val
+  Other --> Val
+  Fallback --> Val
   Val --> Out[AiChatResponse + evidence]
 ```
 
@@ -100,6 +100,11 @@ Orchestrator: `(panel, facts) → bundle_id → AiDiagnosticPack`
 - `trend_diagnostic` — land 매트릭스 연도별 rows · 장기추세 series
 - `prediction_explain` — built predict API (y_hat · PI · CI)
 
+### rent
+
+- `rent_conversion` — 주거 전월세 전환율·환산 P50 (`RentListCard`)
+- `sangkwon_reb` — 부동산원 상업용 임대동향 상권 공표 (`SangkwonCard`). 주거 원장과 섞지 않음.
+
 ### Phase 2 bundles (legacy 메모)
 
 - `matrix_cell_explain` — land matrix cell
@@ -109,8 +114,8 @@ Orchestrator: `(panel, facts) → bundle_id → AiDiagnosticPack`
 ## 5. Router 규칙 (1차: 키워드)
 
 1. **Refusal** — 적정가, 투자, 추천, 오를까, 전망, 싸다, 비싸다 …
-2. **Statistics** — p-value, VIF, OLS, 중심극한, Box-Cox …
-3. **Explain** — 왜 이 결과, 어떻게 해석, 이 화면, 무엇을 보여 …
+2. **Statistics** — 순수 정의 → UI `?` 유도 · 해석형 → explain/ch2 우선
+3. **Explain** — 왜 이 결과, 어떻게 해석/봐, 이번 표본 …
 4. **Opinion** — 로그회귀, 방법론, trade-off, ~가 좋을까 (전망 키워드 없을 때)
 5. **Web** — 금리, 국토부, 정책, 뉴스 … (Tavily · DuckDuckGo, 출처 URL evidence)
 6. **CH2** — default (표본, Adj R², 계수, 신뢰구간 …)
@@ -128,7 +133,8 @@ AI는 **다른 panel의 API를 호출하지 않음**.
 
 ## 7. 프론트 연동
 
-**공통:** `shared/ai-assistant/AiAssistantPanel` — modal · trust badge · 섹션 렌더
+**공통:** `shared/ai-assistant/AiAssistantPanel` — modal · trust badge · 섹션 렌더  
+**Glossary:** `shared/stats-glossary` — 회귀 지표 `?` (built · land · collective)
 
 | 앱 | panel | 트리거 |
 |----|-------|--------|
@@ -148,6 +154,7 @@ AI는 **다른 panel의 API를 호출하지 않음**.
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4o-mini
 AI_POLISH_ENABLED=false
+AI_CASUAL_DIALOGUE_ENABLED=false
 TAVILY_API_KEY=
 AI_SESSION_TTL_SECONDS=86400
 AI_RATE_LIMIT_PER_MINUTE=30
@@ -155,6 +162,7 @@ AI_RATE_LIMIT_PER_MINUTE=30
 
 - **OPENAI_API_KEY** — Opinion·웹 요약·(선택) 템플릿 polish
 - **AI_POLISH_ENABLED=true** — CH2 내러티브 문장 다듬기 (숫자 변경 시 자동 폐기)
+- **AI_CASUAL_DIALOGUE_ENABLED=true** — *(실험)* 인사·짧은 잡담 허용. **사실·수치는 CH2 지식·Bundle만** ( `/api/ai/health` → `casual_dialogue_enabled` )
 - **TAVILY_API_KEY** — 웹 검색 품질 향상 (없으면 DuckDuckGo Instant 폴백)
 
 ---
@@ -167,20 +175,18 @@ AI_RATE_LIMIT_PER_MINUTE=30
 | B | land/collective 연동 · comparison bundle · rate limit · shared UI | ✅ |
 | C | 복합 UI AiAssistantPanel (modal) | ✅ |
 | D | trend/matrix/prediction bundles · 내러티브 확장 | ✅ |
-| E | Web search · OpenAI polish layer | ✅ |
+| F | Grounded Dialogue · Product Knowledge · UI glossary | ✅ |
 
 ---
 
-## 11. Phase E — Web · Polish
+## 11. Phase F — Grounded Dialogue
 
-### Web route
+1. **Product Knowledge Pack** (`backend/app/ai/knowledge/`) — CH2 앱 구조·데이터·Twin/추천 요약
+2. **Grounded synthesis** (`synthesis.py` + `llm.synthesize_grounded_answer`) — in-scope 질문 기본 경로
+3. **Template fallback** — API 키 없음 · numeric drift 시 기존 내러티브 유지
+4. **UI glossary** — `shared/stats-glossary` · 정의형 AI 질문 축소
 
-1. Router `web` 키워드 (금리, 국토부, 정책, 뉴스 …)
-2. `web_search()` — `TAVILY_API_KEY` 우선, 없으면 DuckDuckGo Instant
-3. `OPENAI_API_KEY` 있으면 `synthesize_web_answer`, 없으면 `web_template_answer`
-4. `evidence[]`에 출처 URL · `trust_level=low`
-
-### Polish layer
+### Polish layer (후순위)
 
 - `AI_POLISH_ENABLED=true` + `OPENAI_API_KEY` 필요
 - CH2 템플릿 내러티브(회귀·추세·예측) **위에** 문장만 다듬음
@@ -189,7 +195,38 @@ AI_RATE_LIMIT_PER_MINUTE=30
 
 ---
 
-## 12. 참고
+## 12. 실험 — Casual Dialogue
+
+`AI_CASUAL_DIALOGUE_ENABLED=true` 일 때:
+
+| 유형 | 동작 |
+|------|------|
+| 인사·감사·작별 | `route=casual` — 짧은 응답, CH2 역할 안내 |
+| 날씨·코딩 등 잡담 | `route=casual` — **답하지 않음**, 화면 통계 teaser + CH2 질문 유도 |
+| CH2·통계 질문 | 기존 Grounded Dialogue (+ LLM 시 casual 톤 addon) |
+| 적정가·투자·전망 | **여전히 refusal** |
+
+기본값 `false` — 운영 영향 없음.
+
+---
+
+## 13. 실험 — Open Mode (LLM 능력 테스트)
+
+`AI_OPEN_MODE=true` 일 때 **채팅만** 라우팅·템플릿·refusal·casual을 우회하고 LLM에 직접 연결합니다.
+
+| 항목 | 동작 |
+|------|------|
+| Router / refusal / template | **우회** |
+| Product Knowledge Pack | **미주입** (능력 vs 지식 분리) |
+| 화면 facts | `screen_facts` soft cite — 숫자 invent 금지 |
+| Insight 카드 | **변경 없음** (A/B 비교용) |
+| `route` | `"open"` |
+
+개발·검증 전용. 기본값 `false`. health: `open_mode_enabled`.
+
+---
+
+## 14. 참고
 
 - [BUILT_HANDOFF_AND_ROADMAP.md](./BUILT_HANDOFF_AND_ROADMAP.md) §4 AI (구 초안)
 - `backend/app/collective/analysis_explain.py`

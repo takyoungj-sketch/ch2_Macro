@@ -40,16 +40,17 @@ CH2 AI는 **교수**도 **잡담 챗봇**도 아니다.
     │
     ├─ [금지] 가격판단·투자·전망·추천 → Refusal + Redirect
     │
-    ├─ CH2 Facts      — Bundle JSON (회귀·추세·매트릭스 등)
-    ├─ Explain        — AnalysisExplain layer 자연어화 (재추론 최소)
-    ├─ Statistics     — p-value, VIF, OLS 등 일반 개념
+    ├─ CH2 Facts      — Bundle JSON + Grounded Dialogue 합성 (기본)
+    ├─ Explain        — AnalysisExplain + Bundle · 이번 결과 해석
+    ├─ Statistics     — **정의형** → UI `?` 유도 · **해석형** → Bundle 결합
     ├─ Opinion        — **방법론만** (모델·기법 trade-off)
     └─ Web            — 정책·거시·뉴스 (출처 필수)
 ```
 
-### Explain vs CH2 Facts
+### Explain vs CH2 Facts vs UI Glossary
 
-- **CH2 Facts**: “Adj R²가 얼마?” “표본수?” → API 수치
+- **UI `?` (stats glossary)**: Adj R²·VIF·p-value 등 **기초 정의·공식** — 매번 동일해도 OK
+- **CH2 Facts / Grounded Dialogue**: “이번 표본에서 Adj R²가 중간인 이유?” → Bundle 수치 + Product Knowledge
 - **Explain**: “왜 이 결과가 나왔나?” “이 화면은 무엇?” → `explain.summary`, `limitations`, `presets`
 
 ### Opinion — 허용 / 금지
@@ -151,9 +152,12 @@ CH2 AI는 **교수**도 **잡담 챗봇**도 아니다.
 
 ## 9. LLM 사용 정책
 
-- `OPENAI_API_KEY` 없으면: Explain presets·Refusal·Statistics KB **템플릿**으로 동작
-- LLM 입력: Bundle + Explain + scope (**원시 거래 row 금지**)
-- LLM 출력: `ResponseValidator` 통과 필수
+- `OPENAI_API_KEY` 없으면: **템플릿 폴백** (서비스 중단 없음)
+- **Grounded Dialogue (기본)**: Product Knowledge Pack + Bundle + Explain → LLM **합성**
+- **Polish (후순위)**: 합성 실패 시 `AI_POLISH_ENABLED` 템플릿 다듬기
+- LLM 입력: Product Knowledge + Bundle + Explain + scope (**원시 거래 row 금지**)
+- LLM 출력: 숫자 allowlist(`numbers_preserved`) + `ResponseValidator` 필수
+- 범위 밖(잡담·코딩·일반상식): Refusal — “CH2·통계 분석 범위 밖”
 
 ---
 
@@ -164,7 +168,11 @@ CH2 AI는 **교수**도 **잡담 챗봇**도 아니다.
 | `backend/app/ai/` | AI Gateway |
 | `backend/app/ai/constitution.py` | 시스템 프롬프트·금지 패턴 |
 | `backend/app/ai/bundles/` | bundle_id 레지스트리 |
-| `backend/app/collective/analysis_explain.py` | Explain fact SSOT (집합) |
+| `backend/app/ai/knowledge/` | Product Knowledge Pack |
+| `backend/app/ai/synthesis.py` | Grounded Dialogue 합성 |
+| `shared/stats-glossary/` | UI 지표 `?` glossary |
+| `docs/RENT_CONVERSION_EXPERIMENT.md` | 임대 전환율 실험 종료 · `mean_simple` (D-040) |
+| `docs/REB_COMMERCIAL_RENT_SURVEY.md` | 부동산원 상업용 임대동향 · 상권 공표 정의·CH2 연간 표시 |
 
 ---
 

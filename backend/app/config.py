@@ -27,10 +27,15 @@ class Settings(BaseSettings):
         default="",
         validation_alias="COLLECTIVE_DATABASE_URL",
     )
+    #: rent_stats (주거 전월세 원장). 비어 있으면 임대 라우터 미등록(후속).
+    rent_database_url: str = Field(
+        default="",
+        validation_alias="RENT_DATABASE_URL",
+    )
     secret_key: str = "change_me"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
-    cors_origins: str = "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:5177,http://127.0.0.1:5173,http://127.0.0.1:5176,http://127.0.0.1:5177"
+    cors_origins: str = "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:5177,http://localhost:5178,http://127.0.0.1:5173,http://127.0.0.1:5176,http://127.0.0.1:5177,http://127.0.0.1:5178"
     #: 필터 분석 percentile 정렬용 work_mem(MB). 너무 작으면 디스크 스필로 매우 느려질 수 있음.
     paid_analyze_work_mem_mb: int = 192
 
@@ -59,6 +64,16 @@ class Settings(BaseSettings):
     ai_rate_limit_per_minute: int = Field(default=30, validation_alias="AI_RATE_LIMIT_PER_MINUTE")
     #: CH2 AI — 템플릿 내러티브 OpenAI polish (OPENAI_API_KEY 필요)
     ai_polish_enabled: bool = Field(default=False, validation_alias="AI_POLISH_ENABLED")
+    #: 실험 — 일상 대화 톤·인사 허용 (사실·수치는 CH2 지식·Bundle만)
+    ai_casual_dialogue_enabled: bool = Field(
+        default=True,
+        validation_alias="AI_CASUAL_DIALOGUE_ENABLED",
+    )
+    #: 개발·검증 — 라우팅/템플릿 우회, LLM 우선 (화면 facts는 soft cite만)
+    ai_open_mode: bool = Field(
+        default=False,
+        validation_alias="AI_OPEN_MODE",
+    )
     #: CH2 AI — Tavily 웹 검색 (없으면 DuckDuckGo Instant 폴백)
     tavily_api_key: str = Field(default="", validation_alias="TAVILY_API_KEY")
     #: 카카오 Local API (FieldNote 주소 지오코딩 프록시)
@@ -78,6 +93,25 @@ class Settings(BaseSettings):
     platform_cookie_domain: str = Field(default=".ch2data.com", validation_alias="PLATFORM_COOKIE_DOMAIN")
     platform_cookie_secure: bool = Field(default=True, validation_alias="PLATFORM_COOKIE_SECURE")
     fieldnote_ai_monthly_quota: int = Field(default=50, validation_alias="FIELDNOTE_AI_MONTHLY_QUOTA")
+    #: 단문/장문/주소표 분리 한도 (클라와 맞춤). legacy fieldnote_ai_monthly_quota는 하위호환용.
+    fieldnote_ai_short_monthly_quota: int = Field(
+        default=100, validation_alias="FIELDNOTE_AI_SHORT_MONTHLY_QUOTA"
+    )
+    fieldnote_ai_long_monthly_quota: int = Field(
+        default=50, validation_alias="FIELDNOTE_AI_LONG_MONTHLY_QUOTA"
+    )
+    fieldnote_ai_sheet_monthly_quota: int = Field(
+        default=40, validation_alias="FIELDNOTE_AI_SHEET_MONTHLY_QUOTA"
+    )
+    fieldnote_ai_short_pro_monthly_quota: int = Field(
+        default=500, validation_alias="FIELDNOTE_AI_SHORT_PRO_MONTHLY_QUOTA"
+    )
+    fieldnote_ai_long_pro_monthly_quota: int = Field(
+        default=250, validation_alias="FIELDNOTE_AI_LONG_PRO_MONTHLY_QUOTA"
+    )
+    fieldnote_ai_sheet_pro_monthly_quota: int = Field(
+        default=200, validation_alias="FIELDNOTE_AI_SHEET_PRO_MONTHLY_QUOTA"
+    )
     #: 토스페이먼츠 웹훅 서명 검증용 (Phase 3)
     toss_webhook_secret: str = Field(default="", validation_alias="TOSS_WEBHOOK_SECRET")
 

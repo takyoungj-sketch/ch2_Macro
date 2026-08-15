@@ -3,11 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="CH2 Macro — 토지·복합·집합부동산 실거래 통계" />
-    <title>CH2 Macro — 유형 선택</title>
+    <meta name="description" content="CH2 Macro — 토지·복합·집합 매매와 주거 전월세 통계" />
+    <title>CH2 Macro — 시장 선택</title>
     <link rel="stylesheet" href="style.css" />
     <script>
-      /* 예전 루트(/) 토지 SPA service worker 제거 — 게이트웨이가 안 뜰 때 */
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker.getRegistrations().then(function (rs) {
           rs.forEach(function (r) {
@@ -23,42 +22,71 @@
         <a class="hero__back" href="https://ch2data.com/">← CH2 DATA</a>
         <p class="hero__eyebrow">실거래 통계</p>
         <h1 class="hero__title">CH2 Macro</h1>
-        <p class="hero__lead">분석할 부동산 유형을 선택하세요.</p>
+        <p class="hero__lead" id="hero-lead">매매 또는 임대를 선택하세요.</p>
       </header>
 
-      <main class="grid" aria-label="부동산 유형">
-        <a class="card" href="/land/">
-          <span class="card__badge card__badge--live">이용 가능</span>
-          <h2 class="card__name">토지</h2>
-          <p class="card__desc">토지 매매 실거래 — 단가·분포·V2 통계·필터 분석</p>
-          <span class="card__action">토지 통계 →</span>
-        </a>
+      <div id="view-root">
+        <main class="grid" aria-label="시장">
+          <a class="card" href="#sale">
+            <span class="card__badge card__badge--live">이용 가능</span>
+            <h2 class="card__name">매매</h2>
+            <p class="card__desc">토지 · 복합 · 집합 · 지역 프로필</p>
+            <span class="card__action">매매 통계 →</span>
+          </a>
+          <a class="card" href="/rent/">
+            <span class="card__badge card__badge--beta">베타</span>
+            <h2 class="card__name">임대</h2>
+            <p class="card__desc">주거 전월세 — 전세 · 반전세 · 월세 단가 (전환율 없음)</p>
+            <span class="card__action">전월세 통계 →</span>
+          </a>
+        </main>
+      </div>
 
-        <a class="card" href="/built/">
-          <span class="card__badge card__badge--beta">베타</span>
-          <h2 class="card__name">복합부동산</h2>
-          <p class="card__desc">상업·공장·단독다가구 — 거래 탐색·OLS 회귀·예측</p>
-          <span class="card__action">복합부동산 통계 →</span>
-        </a>
-
-        <a class="card" href="/collective/">
-          <span class="card__badge card__badge--beta">베타</span>
-          <h2 class="card__name">집합부동산</h2>
-          <p class="card__desc">주거형(아파트·오피스텔 등)과 집합상가·집합공장(상업·업무) — 유형별 통계·회귀</p>
-          <span class="card__action">집합부동산 →</span>
-        </a>
-
-        <a class="card" href="/profile/">
-          <span class="card__badge card__badge--beta">베타</span>
-          <h2 class="card__name">지역 프로필</h2>
-          <p class="card__desc">토지·상가·공장·주거 8대 유형을 아우르는 지역 단위 부동산 시장 종합 프로필 + 쌍둥이 지역</p>
-          <span class="card__action">지역 프로필 →</span>
-        </a>
-      </main>
+      <div id="view-sale" hidden>
+        <p class="hero__back-wrap"><a class="hero__back" href="#">← 매매 / 임대</a></p>
+        <main class="grid" aria-label="매매 유형">
+          <a class="card" href="/land/">
+            <span class="card__badge card__badge--live">이용 가능</span>
+            <h2 class="card__name">토지</h2>
+            <p class="card__desc">토지 매매 실거래 — 단가·분포·V2 통계·필터 분석</p>
+            <span class="card__action">토지 통계 →</span>
+          </a>
+          <a class="card" href="/built/">
+            <span class="card__badge card__badge--beta">베타</span>
+            <h2 class="card__name">복합부동산</h2>
+            <p class="card__desc">상업·공장·단독다가구 — 거래 탐색·OLS 회귀·예측</p>
+            <span class="card__action">복합부동산 통계 →</span>
+          </a>
+          <a class="card" href="/collective/">
+            <span class="card__badge card__badge--beta">베타</span>
+            <h2 class="card__name">집합부동산</h2>
+            <p class="card__desc">주거형(아파트·오피스텔 등)과 집합상가·집합공장 — 유형별 통계·회귀</p>
+            <span class="card__action">집합부동산 →</span>
+          </a>
+          <a class="card" href="/profile/">
+            <span class="card__badge card__badge--beta">베타</span>
+            <h2 class="card__name">지역 프로필</h2>
+            <p class="card__desc">토지·상가·공장·주거 8대 유형을 아우르는 지역 단위 종합 프로필</p>
+            <span class="card__action">지역 프로필 →</span>
+          </a>
+        </main>
+      </div>
 
       <footer class="footer">
         <p>© CH2 Macro</p>
       </footer>
     </div>
+    <script>
+      function syncMarketStep() {
+        var sale = location.hash === "#sale";
+        document.getElementById("view-root").hidden = sale;
+        document.getElementById("view-sale").hidden = !sale;
+        document.getElementById("hero-lead").textContent = sale
+          ? "분석할 부동산 유형을 선택하세요."
+          : "매매 또는 임대를 선택하세요.";
+      }
+      window.addEventListener("hashchange", syncMarketStep);
+      syncMarketStep();
+    </script>
   </body>
 </html>

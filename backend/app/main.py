@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import get_db
-from app.routers import free, free_v2, geocode, paid, twin_regions, twin_v8, upper_stats
+from app.routers import free, free_v2, geocode, paid, upper_stats
 from app.map.router import router as map_router
 
 if (settings.built_database_url or "").strip():
@@ -27,6 +27,15 @@ if (settings.collective_database_url or "").strip():
     from app.collective.router import router as collective_router
 else:
     collective_router = None
+
+try:
+    from app.rent.db import resolved_rent_database_url
+
+    rent_router = None
+    if resolved_rent_database_url():
+        from app.rent.router import router as rent_router
+except Exception:  # noqa: BLE001
+    rent_router = None
 
 logging.basicConfig(level=logging.INFO)
 _LOG = logging.getLogger(__name__)
@@ -113,11 +122,17 @@ app.include_router(map_router, prefix="/api")
 app.include_router(free_v2.router, prefix="/api")
 app.include_router(paid.router, prefix="/api")
 app.include_router(upper_stats.router, prefix="/api")
-app.include_router(twin_regions.router, prefix="/api")
-app.include_router(twin_v8.router, prefix="/api")
+# Twin SSOT: /api/regional-profile/twins* (algo 21). Legacy /twin-regions · /twin-v8 제거.
 if built_router is not None:
     app.include_router(built_router, prefix="/api")
     _LOG.info("built_stats API 활성: /api/built/*")
+    try:
+        from app.built.lab_twin_router import router as twin_lab_router
+
+        app.include_router(twin_lab_router, prefix="/api")
+        _LOG.info("Twin Experiment Lab API 활성: /api/built/lab/twin-experiments*")
+    except Exception as exc:  # noqa: BLE001 — optional lab
+        _LOG.warning("Twin Experiment Lab API 로드 실패: %s", exc)
 if collective_router is not None:
     app.include_router(collective_router, prefix="/api")
     _LOG.info("collective_stats API 활성: /api/collective/*")
@@ -125,6 +140,9 @@ if collective_router is not None:
 
     app.include_router(regional_profile_router, prefix="/api")
     _LOG.info("regional_profile API 활성: /api/regional-profile/*")
+if rent_router is not None:
+    app.include_router(rent_router, prefix="/api")
+    _LOG.info("rent_stats API 활성: /api/rent/*")
 
 from app.ai.router import router as ai_router
 
@@ -190,6 +208,24 @@ def _safe_latest_as_of_month(db: Session) -> Optional[date]:
         return None
 
 
+def _approx_table_rows(conn, table: str) -> int | None:
+    """pg_class.reltuples 추정 행수 — /health 전수 COUNT 회피."""
+    try:
+        row = conn.execute(
+            text(
+                """
+                SELECT GREATEST(reltuples::bigint, 0)
+                FROM pg_class
+                WHERE oid = to_regclass(:t)
+                """
+            ),
+            {"t": f"public.{table}"},
+        ).scalar()
+        return int(row) if row is not None else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _safe_built_health() -> Optional[dict]:
     if not (settings.built_database_url or "").strip():
         return None
@@ -200,23 +236,15 @@ def _safe_built_health() -> Optional[dict]:
         if eng is None:
             return None
         with eng.connect() as conn:
-            total = conn.execute(text("SELECT COUNT(*) FROM built_transactions")).scalar()
-            by_type = conn.execute(
-                text(
-                    """
-                    SELECT asset_type, COUNT(*)::bigint AS n
-                    FROM built_transactions
-                    GROUP BY asset_type
-                    ORDER BY asset_type
-                    """
-                )
-            ).mappings().all()
+            conn.execute(text("SELECT 1")).scalar()
             max_year = conn.execute(
                 text("SELECT MAX(contract_year) FROM built_transactions")
             ).scalar()
+            approx = _approx_table_rows(conn, "built_transactions")
         return {
-            "total_transactions": int(total or 0),
-            "by_asset_type": {str(r["asset_type"]): int(r["n"]) for r in by_type},
+            "total_transactions": int(approx) if approx is not None else None,
+            "total_transactions_approx": True,
+            "by_asset_type": {},
             "max_contract_year": int(max_year) if max_year is not None else None,
         }
     except Exception as exc:  # noqa: BLE001
@@ -234,24 +262,17 @@ def _safe_collective_health() -> Optional[dict]:
         if eng is None:
             return None
         with eng.connect() as conn:
-            total = conn.execute(text("SELECT COUNT(*) FROM collective_transactions")).scalar()
-            by_type = conn.execute(
-                text(
-                    """
-                    SELECT asset_type, COUNT(*)::bigint AS n
-                    FROM collective_transactions
-                    GROUP BY asset_type
-                    ORDER BY asset_type
-                    """
-                )
-            ).mappings().all()
-            buildings = conn.execute(
-                text("SELECT COUNT(DISTINCT building_key) FROM collective_transactions")
+            conn.execute(text("SELECT 1")).scalar()
+            max_year = conn.execute(
+                text("SELECT MAX(contract_year) FROM collective_transactions")
             ).scalar()
+            approx = _approx_table_rows(conn, "collective_transactions")
         return {
-            "total_transactions": int(total or 0),
-            "distinct_buildings": int(buildings or 0),
-            "by_asset_type": {str(r["asset_type"]): int(r["n"]) for r in by_type},
+            "total_transactions": int(approx) if approx is not None else None,
+            "total_transactions_approx": True,
+            "distinct_buildings": None,
+            "by_asset_type": {},
+            "max_contract_year": int(max_year) if max_year is not None else None,
         }
     except Exception as exc:  # noqa: BLE001
         _LOG.warning("/health collective_stats 조회 실패: %s", exc)

@@ -29,8 +29,21 @@
 | 토지 | http://localhost:5173/land/ |
 | 토지 재구축 | http://localhost:5176/land/ → API `:8001` (`land_stats_next`) |
 | 집합 | http://localhost:5175/collective/ |
+| 임대 | http://localhost:5178/rent/ · 전환율 실험 종료 [`docs/RENT_CONVERSION_EXPERIMENT.md`](docs/RENT_CONVERSION_EXPERIMENT.md) |
 | API | http://127.0.0.1:8000 |
 | AI | http://127.0.0.1:8000/api/ai/health · 헌법 [`CH2_CONSTITUTION.md`](docs/CH2_CONSTITUTION.md) · AI [`CH2_AI_CONSTITUTION.md`](docs/CH2_AI_CONSTITUTION.md) |
+
+---
+
+## 토지 원장 조회 성능 (재발 금지)
+
+기본통계·매트릭스 모달이 다시 수 초~수십 초로 느려지지 않게:
+
+- **SSOT:** [`docs/LAND_LEDGER_QUERY_PERF.md`](docs/LAND_LEDGER_QUERY_PERF.md)
+- **헬퍼:** `backend/app/ledger_region_sql.py` (`=` / expanding `IN`, `ANY` 금지)
+- **규칙:** `.cursor/rules/land-ledger-query-perf.mdc`
+
+원장 핫패스에 `beopjungri_code = ANY` 또는 롤링 버킷마다 DB 재조회를 넣지 말 것.
 
 ---
 

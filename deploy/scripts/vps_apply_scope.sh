@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # VPS: scp로 코드 반영 후 scope별 frontend 빌드 + backend restart
-# Usage: bash /opt/ch2_Macro/deploy/scripts/vps_apply_scope.sh [built|land|collective|profile|all]
+# Usage: bash /opt/ch2_Macro/deploy/scripts/vps_apply_scope.sh [built|land|collective|profile|rent|all]
 set -euo pipefail
 
 REPO=/opt/ch2_Macro
@@ -65,18 +65,23 @@ case "$SCOPE" in
     build_app frontend-profile
     apply_nginx
     ;;
+  rent)
+    build_app frontend-rent
+    apply_nginx
+    ;;
   all)
     build_app frontend
     build_app frontend-built
     build_app frontend-collective
     build_app frontend-profile
+    build_app frontend-rent
     if [[ -x "$REPO/deploy/scripts/deploy-macro-gateway.sh" ]]; then
       bash "$REPO/deploy/scripts/deploy-macro-gateway.sh"
     fi
     apply_nginx
     ;;
   *)
-    echo "ERROR: unknown scope '$SCOPE' (built|land|collective|profile|all)" >&2
+    echo "ERROR: unknown scope '$SCOPE' (built|land|collective|profile|rent|all)" >&2
     exit 1
     ;;
 esac

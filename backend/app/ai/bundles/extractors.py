@@ -63,6 +63,14 @@ def build_regression_diagnostic(context: AiContext) -> AiDiagnosticPack:
     primary = _primary_level(facts)
     n = primary.get("n")
     adj = primary.get("adj_r_squared") or primary.get("adj_r2")
+    mape = primary.get("mape") or facts.get("mape")
+    cv_mape = primary.get("cv_mape") or facts.get("cv_mape")
+    cv_fitness = primary.get("cv_fitness") or facts.get("cv_fitness")
+    if cv_fitness is None and (cv_mape is not None or mape is not None):
+        from app.recommendation.cv_fitness import lookup_cv_fitness
+
+        tier = lookup_cv_fitness(float(cv_mape if cv_mape is not None else mape))
+        cv_fitness = tier.model_dump()
     raw_coeffs = primary.get("coefficients") or []
     coeffs = _normalize_coefficients(raw_coeffs)
     vif = primary.get("vif") or facts.get("vif") or []
@@ -84,6 +92,12 @@ def build_regression_diagnostic(context: AiContext) -> AiDiagnosticPack:
         summary.append(f"표본 n={n}")
     if adj is not None:
         summary.append(f"Adj R²={_fmt_num(adj)}")
+    if mape is not None:
+        summary.append(f"MAPE={_fmt_num(mape, 1)}%")
+        if isinstance(cv_fitness, dict) and cv_fitness.get("label_ko"):
+            summary.append(f"MAPE등급={cv_fitness['label_ko']}")
+    if cv_mape is not None:
+        summary.append(f"CV-MAPE={_fmt_num(cv_mape, 1)}%")
     if primary.get("scope_label"):
         summary.append(f"scope={primary['scope_label']}")
     summary.extend(coeff_lines[:8])
@@ -133,6 +147,9 @@ def build_regression_diagnostic(context: AiContext) -> AiDiagnosticPack:
             "warnings": warnings,
             "equation": primary.get("equation"),
             "r_squared": primary.get("r_squared"),
+            "mape": mape,
+            "cv_mape": cv_mape,
+            "cv_fitness": cv_fitness,
             "significant_count": primary.get("significant_count"),
         },
         limitations=limitations,
@@ -282,10 +299,73 @@ def build_recommend_diagnostic(context: AiContext) -> AiDiagnosticPack:
     )
 
 
+def build_rent_conversion(context: AiContext) -> AiDiagnosticPack:
+    facts = context.facts or {}
+    scope_label = context.scope.region_label or facts.get("scope_label") or "선택 지역"
+    r = facts.get("r_selected")
+    window = facts.get("window_years")
+    summary = [f"scope={scope_label}"]
+    if window is not None:
+        summary.append(f"{window}년 창")
+    if r is not None:
+        try:
+            summary.append(f"적용 전환율 {float(r):.2f}%")
+        except (TypeError, ValueError):
+            summary.append(f"적용 전환율 {r}")
+    if facts.get("conversion_fallback"):
+        summary.append("동 미달·시군구 fallback")
+    limitations = [
+        "적용 전환율은 CH2 분석용 단순평균이며 한국부동산원 공표값이 아닙니다.",
+        "환산 P50은 비교값이며 시세·적정 전세가 아닙니다.",
+    ]
+    if context.explain and context.explain.limitations:
+        limitations = list(context.explain.limitations)
+    return AiDiagnosticPack(
+        bundle_id="rent_conversion",
+        panel=context.panel,
+        app=context.app,
+        summary_lines=summary,
+        diagnostics={**facts, "scope_label": scope_label},
+        limitations=limitations,
+    )
+
+
+def build_sangkwon_reb(context: AiContext) -> AiDiagnosticPack:
+    facts = context.facts or {}
+    scope_label = context.scope.region_label or facts.get("scope_label") or "선택 시군구"
+    sec = facts.get("sec_nm") or "상권"
+    year = facts.get("year")
+    summary = [f"scope={scope_label}", f"상권={sec}"]
+    if year is not None:
+        summary.append(f"{year}년 연간")
+    limitations = [
+        "한국부동산원 상업용부동산 임대동향조사 상권 공표이며 주거 전월세 원장이 아닙니다.",
+        "임대료(시장 환산월세)와 임대수입(NOI 구성)은 다른 수치입니다.",
+        "공실률을 임대수입·NOI에 다시 곱하지 않습니다.",
+        "연간 수익률은 4분기 복리 연결이며 분기 I+C=T가 연간 합과 같지 않습니다.",
+        "표본 공표이며 개별 물건 가치·투자 판단이 아닙니다.",
+    ]
+    if context.explain and context.explain.limitations:
+        limitations = list(context.explain.limitations)
+    return AiDiagnosticPack(
+        bundle_id="sangkwon_reb",
+        panel=context.panel,
+        app=context.app,
+        summary_lines=summary,
+        diagnostics={**facts, "scope_label": scope_label},
+        limitations=limitations,
+    )
+
+
 def build_bundle(context: AiContext) -> AiDiagnosticPack:
     facts = context.facts or {}
     panel = context.panel
     bid = resolve_bundle_id(panel)
+
+    if panel == "SangkwonCard" or bid == "sangkwon_reb":
+        return build_sangkwon_reb(context)
+    if context.app == "rent" or panel == "RentListCard" or bid == "rent_conversion":
+        return build_rent_conversion(context)
 
     if not facts:
         if context.explain:

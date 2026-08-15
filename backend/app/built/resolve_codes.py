@@ -21,6 +21,22 @@ _CODE_COL: dict[MapAdminLevel, str] = {
 }
 
 
+def keep_emd_codes_matching_leaves(
+    codes: list[str],
+    labels: dict[str, str],
+    leaves: list[str],
+) -> tuple[list[str], dict[str, str]]:
+    """원장 오분류 1건이 다른 읍면동 폴리곤을 같이 선택하지 않게 한다."""
+    if not codes or not leaves or not labels:
+        return codes, labels
+    wanted = set(leaves)
+    matched = [c for c in codes if labels.get(c) in wanted]
+    if not matched:
+        return codes, labels
+    keep = set(matched)
+    return matched, {c: name for c, name in labels.items() if c in keep}
+
+
 def _norm_list(values: list[str] | None) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
@@ -250,12 +266,14 @@ def resolve_built_map_codes(
                 """
                 SELECT DISTINCT ON (btrim(eupmyeondong_code::text))
                        btrim(eupmyeondong_code::text) AS code,
-                       btrim(eupmyeondong_name::text) AS eup
+                       CASE
+                         WHEN btrim(sido_code::text) = '36'
+                         THEN NULLIF(btrim(sigungu_name::text), '')
+                         ELSE NULLIF(btrim(eupmyeondong_name::text), '')
+                       END AS eup
                 FROM region_codes
                 WHERE COALESCE(is_active, TRUE)
                   AND btrim(eupmyeondong_code::text) = ANY(:codes)
-                  AND eupmyeondong_name IS NOT NULL
-                  AND btrim(eupmyeondong_name::text) <> ''
                 ORDER BY btrim(eupmyeondong_code::text), beopjungri_code
                 """
             ),
@@ -266,6 +284,8 @@ def resolve_built_map_codes(
             eup = (row.get("eup") or "").strip()
             if code and eup:
                 labels[code] = eup
+        if leaves:
+            codes, labels = keep_emd_codes_matching_leaves(codes, labels, leaves)
 
     ctx_sido = codes[0][:2] if codes else None
     ctx_sigungu: str | None = None

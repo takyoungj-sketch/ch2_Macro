@@ -8,6 +8,8 @@ frontend-collective/node_modules/
 frontend-collective/dist/
 frontend-profile/node_modules/
 frontend-profile/dist/
+frontend-rent/node_modules/
+frontend-rent/dist/
 __pycache__/
 *.py[cod]
 .venv/
@@ -19,6 +21,7 @@ venv/
 .env.local
 .env.built
 .env.collective
+.env.rent
 !.env.example
 !.env.built.example
 !.env.collective.example
@@ -27,6 +30,7 @@ venv/
 # Local bulk source (엑셀 원본 등 — 레포에 포함하지 않음)
 원본/
 *.xlsx
+임대시장/
 
 # 월간 배치 로컬 아티팩트 (레포 불포함)
 raw/
