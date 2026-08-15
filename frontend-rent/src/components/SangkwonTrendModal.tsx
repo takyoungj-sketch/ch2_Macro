@@ -39,7 +39,7 @@ function fmtPoint(metric: string, v: number) {
   const digits = WON_METRICS.has(metric) ? 1 : Math.abs(v) < 20 ? 2 : 1;
   return v.toLocaleString("ko-KR", {
     maximumFractionDigits: digits,
-    minimumFractionDigits: digits === 0 ? 0 : 1,
+    minimumFractionDigits: 1,
   });
 }
 
