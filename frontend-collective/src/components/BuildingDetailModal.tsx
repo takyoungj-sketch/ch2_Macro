@@ -35,6 +35,9 @@ import LongTermMetricToggle, { longTermPriceLabel, type LongTermPriceMetric } fr
 import type { StatsWindowYears } from "./StatsWindowToggle";
 import { buildAnalysisPeriodParams, formatPeriodLabel, type AnalysisPeriodParams } from "../utils/analysisPeriod";
 import { rollingToTrendSeries, yearlyResponseToTrendSeries } from "../utils/cohortTrendSeries";
+import AnalysisHelpPanel from "./AnalysisHelpPanel";
+import SaleRentJoinPanel from "./SaleRentJoinPanel";
+import { collectiveModalPanelHelp } from "../utils/residentialAnalysisHelp";
 
 type PanelMode =
   | "trend"
@@ -43,7 +46,8 @@ type PanelMode =
   | "transactions"
   | "floor_index"
   | "regression"
-  | "danji";
+  | "danji"
+  | "rent";
 
 const MAX_COHORT_BUILDINGS = 10;
 
@@ -62,6 +66,7 @@ const TABS: { id: PanelMode; label: string | ((assetType: AssetType) => string) 
   { id: "floor_index", label: (t) => (t === "presale" ? "층·권리·면적 효용지수" : "층·동·면적 효용지수") },
   { id: "regression", label: "회귀 분석" },
   { id: "long_term", label: "장기 추세" },
+  { id: "rent", label: "전월세" },
 ];
 
 /** K-apt 단지 속성 — 실험 단계에서만 노출 */
@@ -636,7 +641,9 @@ export default function BuildingDetailModal({
             className="flex flex-wrap gap-0.5 rounded-md border modal-tab-bar p-0.5"
             role="tablist"
           >
-            {[...TABS, ...(experiment ? [DANJI_TAB] : [])].map(({ id, label }) => {
+            {[...TABS, ...(experiment ? [DANJI_TAB] : [])]
+              .filter(({ id }) => id !== "rent" || effectiveAssetType !== "presale")
+              .map(({ id, label }) => {
               const tabLabel = typeof label === "function" ? label(effectiveAssetType) : label;
               const needsGate = id === "floor_index" || id === "regression";
               const eligible =
@@ -664,6 +671,10 @@ export default function BuildingDetailModal({
               );
             })}
           </div>
+          {(() => {
+            const help = collectiveModalPanelHelp(panel);
+            return help ? <AnalysisHelpPanel explain={help} className="ml-1" /> : null;
+          })()}
           {peerBuildings.length > 0 && (
             <div className="mt-2 rounded border border-indigo-100 bg-indigo-50/50 px-2 py-1.5 text-[10px]">
               <div className="flex flex-wrap items-center gap-2">
@@ -1154,6 +1165,14 @@ export default function BuildingDetailModal({
               )}
               {danjiQ.data && <DanjiAttributesPanel data={danjiQ.data} />}
             </>
+          )}
+
+          {panel === "rent" && (
+            <SaleRentJoinPanel
+              buildingKey={row.building_key}
+              assetType={effectiveAssetType}
+              windowYears={windowYears}
+            />
           )}
 
           {panel === "regression" && (

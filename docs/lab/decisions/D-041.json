@@ -1,0 +1,11 @@
+{
+  "id": "D-041",
+  "topic": "Twin은 회귀변수가 아니라 지역시장 비교 엔진",
+  "date": "2026-08-16",
+  "status": "confirmed",
+  "background": "복합 회귀에서 Twin pool을 넣어도 Local보다 CV-MAPE가 일관되게 좋아지지 않았다. 일부 지역은 개선, 중앙값 Lab에서는 악화하는 경우가 많다.",
+  "decision": "Twin score를 회귀 X에 넣지 않는다. Stage2 pool은 Local 대비 CV-MAPE가 ε(0.5%p) 이상 개선될 때만 검토용으로 본다. 자동 채택하지 않는다.",
+  "rationale": "지역 유사성은 시장 비교에는 의미가 있으나, 개별 물건 가격의 설명력을 반드시 개선하지 않는다.",
+  "revisit": "지역별 검증 런이 충분히 쌓이고 Twin pool이 Local을 안정적으로 이기면 Stage2 기본 채택을 재검토.",
+  "related": ["twin"]
+}

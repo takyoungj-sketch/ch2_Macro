@@ -1,8 +1,11 @@
 """
 무료 통계 V2 API — land_basic_stats_v2 + contract_date 롤링 구간.
 
-- 단건: 사전집계 테이블 조회(빠름) + 연도별 표만 원장 집계(인덱스 활용·연도별 1회 GROUP BY)
+- 단건: 사전집계 테이블 조회(빠름) + 연도별 표는 원장 1회 GROUP BY(window·calendar FILTER 동시)
 - 벌크: v1 bulk 와 같이 복수 지역 원장을 동일 period 로 합쳐 매트릭스 계산
+
+핫패스 지역 조건: docs/LAND_LEDGER_QUERY_PERF.md
+(`beopjungri_code = ANY` 금지 · window/calendar 이중 GROUP BY 금지)
 
 선행: db/007_land_basic_stats_v2.sql + pipeline/build_stats_v2.py 적재
 """
@@ -20,6 +23,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db import get_db
 from app.jimok_group import display_land_key, matrix_mode_to_col_axis
+from app.ledger_region_sql import beopjungri_eq_or_in, execute_expanding
 from app.population_query import attach_population_year_end
 from app.region_canonical import expand_to_ledger_codes, resolve_to_canonical
 from app.routers.free import (
@@ -249,8 +253,19 @@ def _combined_bundle_v2_from_transactions(
         else "land_category_resolved"
     )
     ledger = _ledger_codes(db, codes)
-    stmt = text(
-        f"""
+    if not ledger:
+        raise HTTPException(
+            status_code=404,
+            detail="선택 기간·지역에 합산 가능한 거래 단가 데이터가 없습니다.",
+        )
+    region_pred, region_params = beopjungri_eq_or_in(
+        ledger,
+        column="beopjungri_code",
+        eq_key="region_code",
+        in_key="codes",
+        expand_flag="_expand_codes",
+    )
+    sql = f"""
         SELECT zone_type_resolved AS zone_type,
                {land_expr} AS land_category,
                unit_price_per_sqm::double precision AS up
@@ -261,12 +276,12 @@ def _combined_bundle_v2_from_transactions(
           AND contract_date IS NOT NULL
           AND contract_date >= :ps
           AND contract_date <= :pe
-          AND beopjungri_code = ANY(:codes)
+          AND {region_pred}
         """
-    )
-    raw = db.execute(
-        stmt,
-        {"codes": ledger, "ps": period_start, "pe": period_end},
+    raw = execute_expanding(
+        db,
+        sql,
+        {"ps": period_start, "pe": period_end, **region_params},
     ).fetchall()
     trips: list[tuple[str, str, float]] = []
     for r in raw:
@@ -332,54 +347,130 @@ def _yearly_totals_contract_bounds(period_start: date, period_end: date) -> tupl
     return date(period_start.year, 1, 1), period_end
 
 
-def _by_year_contract_date(
-    db: Session,
-    code_trim: str,
-    period_start: date,
-    period_end: date,
+def _year_map_to_stats(
+    y_map: dict[int, tuple[int, float, float]],
+    year_from: int,
+    year_to: int,
 ) -> list[YearlyTradeStat]:
-    """단건 API 연도별 총계 표 — is_valid 만 필터(해제 미필터). 구간은 _yearly_totals_contract_bounds."""
-    y0, y1 = _yearly_totals_contract_bounds(period_start, period_end)
-    ledger = _ledger_codes(db, [code_trim])
-    y_rows = db.execute(
-        text(
-            """
-            SELECT contract_year::int AS y,
-                   COUNT(*)::int AS cnt,
-                   COALESCE(SUM(total_price_10k), 0) AS sum_price,
-                   COALESCE(SUM(area_sqm), 0) AS sum_area
-            FROM land_transactions
-            WHERE beopjungri_code = ANY(:codes)
-              AND is_valid IS TRUE
-              AND contract_date IS NOT NULL
-              AND contract_date >= :d0
-              AND contract_date <= :d1
-            GROUP BY contract_year
-            ORDER BY contract_year
-            """
-        ),
-        {"codes": ledger, "d0": y0, "d1": y1},
-    ).fetchall()
-    y_map = {int(r.y): r for r in y_rows}
-    by_year: list[YearlyTradeStat] = []
-    for y in range(int(period_start.year), int(period_end.year) + 1):
-        r = y_map.get(y)
-        if r:
-            sp = float(r.sum_price)
-            sa = float(r.sum_area)
+    """y_map[y] = (count, sum_price_10k, sum_area_sqm)."""
+    out: list[YearlyTradeStat] = []
+    for y in range(year_from, year_to + 1):
+        row = y_map.get(y)
+        if row and int(row[0] or 0) > 0:
+            cnt, sp, sa = int(row[0]), float(row[1]), float(row[2])
             unit = (sp / sa) if sa > 0 else None
-            by_year.append(
+            out.append(
                 YearlyTradeStat(
                     year=y,
-                    count=int(r.cnt),
+                    count=cnt,
                     total_price_10k_sum=sp,
                     area_sqm_sum=sa,
                     unit_price_per_sqm=unit,
                 )
             )
         else:
-            by_year.append(YearlyTradeStat(year=y, count=0))
-    return attach_population_year_end(db, region_codes=[code_trim], items=by_year)
+            out.append(YearlyTradeStat(year=y, count=0))
+    return out
+
+
+def _fetch_yearly_tx_dual_maps(
+    db: Session,
+    codes: list[str],
+    period_start: date,
+    period_end: date,
+) -> tuple[dict[int, tuple[int, float, float]], dict[int, tuple[int, float, float]]]:
+    """원장 1회 스캔으로 window(period_end 컷) · calendar(연도 전체) 집계.
+
+    이전에는 동일 구간을 두 번 GROUP BY 해 단건 통계가 ~20초까지 늘었다.
+    지역 조건은 ``ledger_region_sql.beopjungri_eq_or_in`` (ANY 금지).
+    """
+    ledger = _ledger_codes(db, codes)
+    if not ledger:
+        return {}, {}
+    y0, y1 = int(period_start.year), int(period_end.year)
+    region_pred, region_params = beopjungri_eq_or_in(
+        ledger,
+        column="beopjungri_code",
+        eq_key="region_code",
+        in_key="codes",
+        expand_flag="_expand_codes",
+    )
+    select_sql = f"""
+            SELECT contract_year::int AS y,
+                   COUNT(*) FILTER (
+                       WHERE contract_date <= :period_end
+                   )::int AS cnt_window,
+                   COALESCE(
+                       SUM(total_price_10k) FILTER (WHERE contract_date <= :period_end),
+                       0
+                   ) AS sum_price_window,
+                   COALESCE(
+                       SUM(area_sqm) FILTER (WHERE contract_date <= :period_end),
+                       0
+                   ) AS sum_area_window,
+                   COUNT(*)::int AS cnt_calendar,
+                   COALESCE(SUM(total_price_10k), 0) AS sum_price_calendar,
+                   COALESCE(SUM(area_sqm), 0) AS sum_area_calendar
+            FROM land_transactions
+            WHERE {region_pred}
+              AND is_valid IS TRUE
+              AND contract_date IS NOT NULL
+              AND contract_year >= :y0
+              AND contract_year <= :y1
+            GROUP BY contract_year
+            ORDER BY contract_year
+    """
+    params: dict = {
+        "period_end": period_end,
+        "y0": y0,
+        "y1": y1,
+        **region_params,
+    }
+    rows = execute_expanding(db, select_sql, params).fetchall()
+    window_map: dict[int, tuple[int, float, float]] = {}
+    calendar_map: dict[int, tuple[int, float, float]] = {}
+    for r in rows:
+        y = int(r.y)
+        window_map[y] = (
+            int(r.cnt_window or 0),
+            float(r.sum_price_window or 0),
+            float(r.sum_area_window or 0),
+        )
+        calendar_map[y] = (
+            int(r.cnt_calendar or 0),
+            float(r.sum_price_calendar or 0),
+            float(r.sum_area_calendar or 0),
+        )
+    return window_map, calendar_map
+
+
+def _by_year_pair(
+    db: Session,
+    codes: list[str],
+    period_start: date,
+    period_end: date,
+) -> tuple[list[YearlyTradeStat], list[YearlyTradeStat]]:
+    """단건·벌크 공통 — by_year(window) + by_year_calendar_reference."""
+    y0, y1 = int(period_start.year), int(period_end.year)
+    window_map, calendar_map = _fetch_yearly_tx_dual_maps(
+        db, codes, period_start, period_end
+    )
+    by_year = _year_map_to_stats(window_map, y0, y1)
+    by_cal = _year_map_to_stats(calendar_map, y0, y1)
+    by_year = attach_population_year_end(db, region_codes=codes, items=by_year)
+    by_cal = attach_population_year_end(db, region_codes=codes, items=by_cal)
+    return by_year, by_cal
+
+
+def _by_year_contract_date(
+    db: Session,
+    code_trim: str,
+    period_start: date,
+    period_end: date,
+) -> list[YearlyTradeStat]:
+    """단건 API 연도별 총계 표 — is_valid 만 필터(해제 미필터)."""
+    by_year, _ = _by_year_pair(db, [code_trim], period_start, period_end)
+    return by_year
 
 
 def _by_year_bulk_contract_date(
@@ -388,48 +479,8 @@ def _by_year_bulk_contract_date(
     period_start: date,
     period_end: date,
 ) -> list[YearlyTradeStat]:
-    y0, y1 = _yearly_totals_contract_bounds(period_start, period_end)
-    ledger = _ledger_codes(db, codes)
-    y_stmt = text(
-        """
-        SELECT contract_year::int AS y,
-               COUNT(*)::int AS cnt,
-               COALESCE(SUM(total_price_10k), 0) AS sum_price,
-               COALESCE(SUM(area_sqm), 0) AS sum_area
-        FROM land_transactions
-        WHERE beopjungri_code = ANY(:codes)
-          AND is_valid IS TRUE
-          AND contract_date IS NOT NULL
-          AND contract_date >= :d0
-          AND contract_date <= :d1
-        GROUP BY contract_year
-        ORDER BY contract_year
-        """
-    )
-    y_rows = db.execute(
-        y_stmt,
-        {"codes": ledger, "d0": y0, "d1": y1},
-    ).fetchall()
-    y_map = {int(r.y): r for r in y_rows}
-    by_year: list[YearlyTradeStat] = []
-    for y in range(int(period_start.year), int(period_end.year) + 1):
-        rr = y_map.get(y)
-        if rr:
-            sp = float(rr.sum_price)
-            sa = float(rr.sum_area)
-            unit = (sp / sa) if sa > 0 else None
-            by_year.append(
-                YearlyTradeStat(
-                    year=y,
-                    count=int(rr.cnt),
-                    total_price_10k_sum=sp,
-                    area_sqm_sum=sa,
-                    unit_price_per_sqm=unit,
-                )
-            )
-        else:
-            by_year.append(YearlyTradeStat(year=y, count=0))
-    return attach_population_year_end(db, region_codes=codes, items=by_year)
+    by_year, _ = _by_year_pair(db, codes, period_start, period_end)
+    return by_year
 
 
 def _by_year_calendar_reference_single(
@@ -440,48 +491,8 @@ def _by_year_calendar_reference_single(
     period_end: date,
 ) -> list[YearlyTradeStat]:
     """참고 표: 각 달력연도별 contract_date 그 연도만 1·1~12·31."""
-    y0, y1 = int(period_start.year), int(period_end.year)
-    d0, d1 = date(y0, 1, 1), date(y1, 12, 31)
-    ledger = _ledger_codes(db, [code_trim])
-    y_rows = db.execute(
-        text(
-            """
-            SELECT contract_year::int AS y,
-                   COUNT(*)::int AS cnt,
-                   COALESCE(SUM(total_price_10k), 0) AS sum_price,
-                   COALESCE(SUM(area_sqm), 0) AS sum_area
-            FROM land_transactions
-            WHERE beopjungri_code = ANY(:codes)
-              AND is_valid IS TRUE
-              AND contract_date IS NOT NULL
-              AND contract_date >= :d0 AND contract_date <= :d1
-            GROUP BY contract_year
-            ORDER BY contract_year
-            """
-        ),
-        {"codes": ledger, "d0": d0, "d1": d1},
-    ).fetchall()
-    y_map = {int(r.y): r for r in y_rows}
-    items: list[YearlyTradeStat] = []
-    for y in range(y0, y1 + 1):
-        row = y_map.get(y)
-        if row and int(row.cnt or 0) > 0:
-            cnt = int(row.cnt)
-            sp = float(row.sum_price)
-            sa = float(row.sum_area)
-            unit = (sp / sa) if sa > 0 else None
-            items.append(
-                YearlyTradeStat(
-                    year=y,
-                    count=cnt,
-                    total_price_10k_sum=sp,
-                    area_sqm_sum=sa,
-                    unit_price_per_sqm=unit,
-                )
-            )
-        else:
-            items.append(YearlyTradeStat(year=y, count=0))
-    return attach_population_year_end(db, region_codes=[code_trim], items=items)
+    _, by_cal = _by_year_pair(db, [code_trim], period_start, period_end)
+    return by_cal
 
 
 def _by_year_calendar_reference_bulk(
@@ -491,47 +502,8 @@ def _by_year_calendar_reference_bulk(
     period_start: date,
     period_end: date,
 ) -> list[YearlyTradeStat]:
-    y0, y1 = int(period_start.year), int(period_end.year)
-    d0, d1 = date(y0, 1, 1), date(y1, 12, 31)
-    y_rows = db.execute(
-        text(
-            """
-            SELECT contract_year::int AS y,
-                   COUNT(*)::int AS cnt,
-                   COALESCE(SUM(total_price_10k), 0) AS sum_price,
-                   COALESCE(SUM(area_sqm), 0) AS sum_area
-            FROM land_transactions
-            WHERE beopjungri_code = ANY(:codes)
-              AND is_valid IS TRUE
-              AND contract_date IS NOT NULL
-              AND contract_date >= :d0 AND contract_date <= :d1
-            GROUP BY contract_year
-            ORDER BY contract_year
-            """
-        ),
-        {"codes": _ledger_codes(db, codes), "d0": d0, "d1": d1},
-    ).fetchall()
-    y_map = {int(r.y): r for r in y_rows}
-    items: list[YearlyTradeStat] = []
-    for y in range(y0, y1 + 1):
-        row = y_map.get(y)
-        if row and int(row.cnt or 0) > 0:
-            cnt = int(row.cnt)
-            sp = float(row.sum_price)
-            sa = float(row.sum_area)
-            unit = (sp / sa) if sa > 0 else None
-            items.append(
-                YearlyTradeStat(
-                    year=y,
-                    count=cnt,
-                    total_price_10k_sum=sp,
-                    area_sqm_sum=sa,
-                    unit_price_per_sqm=unit,
-                )
-            )
-        else:
-            items.append(YearlyTradeStat(year=y, count=0))
-    return attach_population_year_end(db, region_codes=codes, items=items)
+    _, by_cal = _by_year_pair(db, codes, period_start, period_end)
+    return by_cal
 
 
 @router.get(
@@ -668,10 +640,7 @@ def get_basic_stats_v2(
         by_land_category, matrix, matrix_mode=matrix_mode
     )
 
-    by_year = _by_year_contract_date(db, code_trim, ps, pe)
-    by_year_calendar_reference = _by_year_calendar_reference_single(
-        db, code_trim, period_start=ps, period_end=pe
-    )
+    by_year, by_year_calendar_reference = _by_year_pair(db, [code_trim], ps, pe)
 
     return FreeStatsV2Response(
         beopjungri_code=code_trim,
@@ -737,10 +706,7 @@ def get_basic_stats_v2_bulk(
     total, by_zone, by_land_category, matrix = _combined_bundle_v2_from_transactions(
         db, kept, ps, pe, matrix_mode=payload.matrix_mode
     )
-    by_year = _by_year_bulk_contract_date(db, kept, ps, pe)
-    by_year_calendar_reference = _by_year_calendar_reference_bulk(
-        db, kept, period_start=ps, period_end=pe
-    )
+    by_year, by_year_calendar_reference = _by_year_pair(db, kept, ps, pe)
 
     return FreeStatsV2Response(
         beopjungri_code=",".join(kept),

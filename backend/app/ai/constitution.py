@@ -23,9 +23,20 @@ SYSTEM_PERSONALITY = """당신은 CH2 Macro의 통계 분석 어시스턴트입�
 """
 
 ROUTE_PROMPTS: dict[str, str] = {
-    "ch2": "CH2 Facts만 사용. JSON/Bundle 수치를 인용하고 해석하세요. 재계산 금지.",
-    "explain": "AnalysisExplain layer 내용을 자연어로 풀어 설명. 새로운 수치를 만들지 마세요.",
-    "statistics": "일반 통계 개념만 설명. CH2 특정 지역 수치는 언급하지 마세요.",
+    "ch2": (
+        "Grounded Dialogue: CH2 Facts·Product Knowledge·Explain만 사용. "
+        "질문에 직접 답 → 근거 2~4문장 → 한계 1문장. "
+        "JSON/Bundle 수치를 인용하고 재계산 금지. "
+        "기초 정의(Adj R²·VIF 등)는 UI ? 팝업으로 유도."
+    ),
+    "explain": (
+        "AnalysisExplain + Bundle facts로 이번 결과 해석. "
+        "새로운 수치 invent 금지. 정의만 묻으면 UI ? 안내."
+    ),
+    "statistics": (
+        "순수 정의 질문은 UI ? 유도. "
+        "해석형이면 Bundle facts와 결합해 설명."
+    ),
     "opinion": "방법론·모델 trade-off만. '~할 수 있습니다' 수준. 가격·투자·전망 금지.",
     "web": "출처 URL을 evidence에 포함. CH2 내부 수치와 혼동하지 마세요.",
 }
@@ -102,6 +113,8 @@ _EXPLAIN_KEYWORDS = (
     "왜 이 결과",
     "왜 이렇게",
     "어떻게 해석",
+    "어떻게 봐",
+    "어떻게 읽",
     "이 화면",
     "무엇을 보여",
     "무슨 의미",
@@ -109,6 +122,10 @@ _EXPLAIN_KEYWORDS = (
     "한계",
     "주의",
     "이 결과가",
+    "이번",
+    "이 표본",
+    "왜 단순평균",
+    "왜 이 방법",
 )
 
 _OPINION_KEYWORDS = (
@@ -124,6 +141,9 @@ _OPINION_KEYWORDS = (
     "나을까",
     "적합",
     "실험",
+    "전환율",
+    "단순평균",
+    "원점회귀",
 )
 
 _WEB_KEYWORDS = (
@@ -172,6 +192,14 @@ def classify_route(message: str) -> str:
     """refusal | ch2 | explain | statistics | opinion | web"""
     if is_refusal_message(message):
         return "refusal"
+    # 해석형 통계 질문은 explain/ch2 우선 (정의 KB 낭독 방지)
+    from app.ai.stats_kb import is_pure_definition_question
+
+    if _contains_any(message, _STATISTICS_KEYWORDS) and not is_pure_definition_question(message):
+        if _contains_any(message, _EXPLAIN_KEYWORDS) or _contains_any(message, _CH2_KEYWORDS):
+            return "explain"
+    if _contains_any(message, _STATISTICS_KEYWORDS) and is_pure_definition_question(message):
+        return "statistics"
     if _contains_any(message, _STATISTICS_KEYWORDS):
         return "statistics"
     if _contains_any(message, _EXPLAIN_KEYWORDS):

@@ -12,8 +12,7 @@ def normalize_profile_twin_neighbors(
 ) -> list[dict[str, object]]:
     """Profile-native Twin 응답에서 지역코드·유사도만 정규화한다.
 
-    이 함수는 과거 `/api/twin-v8` 응답을 자동 fallback하지 않는다.
-    Profile API의 algorithm_version이 21이 아니면 빈 결과를 반환한다.
+    Profile Twin SSOT는 algorithm_version=21만 허용한다. 그 외는 빈 결과.
     """
 
     if int(payload.get("algorithm_version") or 0) != 21:
@@ -35,6 +34,9 @@ def normalize_profile_twin_neighbors(
         if not isinstance(row, Mapping):
             continue
         code = str(row.get(code_key) or "").strip()
+        # beopjungri 마트 컬럼명은 twin_region_code (API/벤치 별칭 호환)
+        if not code and admin_level == "beopjungri":
+            code = str(row.get("twin_region_code") or "").strip()
         if not code:
             continue
         normalized.append(

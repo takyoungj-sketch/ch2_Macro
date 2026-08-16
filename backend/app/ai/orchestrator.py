@@ -5,7 +5,18 @@ from __future__ import annotations
 from typing import Any
 
 from app.ai.bundles import build_bundle, resolve_bundle_id, suggested_questions
-from app.ai.bundles.comparison import is_comparison_question, narrative_scope_comparison
+from app.ai.bundles.comparison import is_scope_comparison_question, narrative_scope_comparison
+from app.ai.casual_dialogue import (
+    casual_dialogue_enabled,
+    casual_followups,
+    casual_off_topic_answer,
+    casual_smalltalk_answer,
+    casual_unrelated_prompt,
+    is_casual_smalltalk,
+    is_substantive_off_topic,
+    should_auto_explain_screen,
+)
+from app.ai.open_mode import open_mode_enabled, soft_facts_snapshot
 from app.ai.built_explain import (
     built_prediction_explain,
     built_regression_explain_from_facts,
@@ -26,8 +37,10 @@ from app.ai.constitution import (
 )
 from app.ai.llm import (
     chat_completion,
+    casual_synthesis_addon,
     llm_configured,
     numbers_preserved,
+    open_mode_chat_completion,
     polish_enabled,
     polish_template_answer,
     synthesize_web_answer,
@@ -44,14 +57,77 @@ from app.ai.schemas import (
     EvidenceItem,
 )
 from app.ai.sessions import SessionTurn, get_or_create, session_summary
-from app.ai.stats_kb import answer_statistics_question
+from app.ai.stats_kb import (
+    answer_statistics_question,
+    answer_statistics_with_context,
+    is_pure_definition_question,
+)
+from app.ai.synthesis import try_grounded_synthesis
+from app.ai.targeted_qa import (
+    answer_conversion_method_question,
+    is_generic_screen_question,
+    try_targeted_answer,
+)
 from app.ai.validator import ensure_disclaimer, reject_if_user_refusal_topic_in_opinion, validate_answer
 from app.config import settings
 
 
-def _ai_interpretation_label(*, llm_used: bool, polished: bool = False) -> str:
+def _is_targeted_answer(answer: str) -> bool:
+    return answer.strip().startswith("### 답변")
+
+
+def _casual_response(
+    *,
+    session,
+    message: str,
+    ctx: AiContext,
+    scope_label: str,
+    bundle_id: str | None = None,
+    diagnostics: dict[str, Any] | None = None,
+    off_topic: bool = False,
+) -> AiChatResponse:
+    if off_topic:
+        ans = casual_off_topic_answer(
+            message,
+            panel=ctx.panel,
+            app=ctx.app,
+            scope_label=scope_label,
+            diagnostics=diagnostics or {},
+        )
+        label = "CH2 scope boundary"
+    else:
+        ans = casual_smalltalk_answer(message, scope_label=scope_label)
+        label = "CH2 casual dialogue (experiment)"
+
+    resp = AiChatResponse(
+        session_id=session.session_id,
+        route="casual",
+        answer=validate_answer(ans, "ch2"),
+        evidence=[
+            EvidenceItem(
+                type="casual_policy",
+                label=label,
+                confidence="high",
+            ),
+        ],
+        bundle_id=bundle_id,
+        suggested_followups=casual_followups(ctx.panel, ctx.app),
+        disclaimer=SHORT_DISCLAIMER,
+        llm_used=False,
+        trust_level="medium",
+        trust_sources=["CH2 casual experiment"],
+        ai_interpretation=_ai_interpretation_label(llm_used=False),
+    )
+    session.add_turn(SessionTurn(role="user", message=message, route="casual"))
+    session.add_turn(SessionTurn(role="assistant", message=ans[:500], route="casual"))
+    return resp
+
+
+def _ai_interpretation_label(*, llm_used: bool, polished: bool = False, synthesized: bool = False) -> str:
     if llm_used:
         model = settings.openai_model or "GPT"
+        if synthesized:
+            return f"{model} (합성)"
         return f"{model} (polish)" if polished else model
     return "CH2 템플릿"
 
@@ -230,6 +306,10 @@ def _regression_narrative(
 def _explain_answer(
     context: AiContext, message: str, bundle: AiDiagnosticPack
 ) -> tuple[str, list[str] | None, NarrativeResult | None]:
+    targeted = try_targeted_answer(message, bundle.diagnostics)
+    if targeted:
+        return targeted, None, None
+
     ex = _effective_explain(context)
     if ex:
         for preset in ex.presets:
@@ -244,17 +324,24 @@ def _explain_answer(
             if _has_facts_narrative(bundle):
                 nr = _regression_narrative(context, bundle, message)
                 return nr.answer, nr.followups, nr
-        parts = [f"**{ex.title}**", ex.summary]
-        if ex.formula:
-            parts.append(f"공식: {ex.formula}")
-        if ex.interpretation:
-            parts.extend(ex.interpretation[:4])
-        if ex.limitations:
-            parts.append("한계: " + " ".join(ex.limitations[:3]))
-        return "\n\n".join(parts), None, None
-    if _has_facts_narrative(bundle):
+        if is_generic_screen_question(message):
+            parts = [f"**{ex.title}**", ex.summary]
+            if ex.formula:
+                parts.append(f"공식: {ex.formula}")
+            if ex.interpretation:
+                parts.extend(ex.interpretation[:4])
+            if ex.limitations:
+                parts.append("한계: " + " ".join(ex.limitations[:3]))
+            return "\n\n".join(parts), None, None
+    if _has_facts_narrative(bundle) and should_auto_explain_screen(message):
         nr = _regression_narrative(context, bundle, message)
         return nr.answer, nr.followups, nr
+    if not should_auto_explain_screen(message):
+        scope_label = str(context.scope.region_label or bundle.diagnostics.get("scope_label") or "선택 scope")
+        return casual_unrelated_prompt(scope_label=scope_label), casual_followups(context.panel, context.app), None
+    if ex:
+        parts = [f"**{ex.title}**", ex.summary]
+        return "\n\n".join(parts), None, None
     return (
         "현재 화면에 Explain 메타가 없습니다. CH2 Facts(회귀·통계)를 먼저 실행해 주세요.",
         None,
@@ -265,9 +352,15 @@ def _explain_answer(
 def _ch2_template_answer(
     message: str, bundle: AiDiagnosticPack, context: AiContext
 ) -> tuple[str, list[str] | None, NarrativeResult | None]:
-    if _has_facts_narrative(bundle):
+    targeted = try_targeted_answer(message, bundle.diagnostics)
+    if targeted:
+        return targeted, None, None
+    if _has_facts_narrative(bundle) and should_auto_explain_screen(message):
         nr = _regression_narrative(context, bundle, message)
         return nr.answer, nr.followups, nr
+    if not should_auto_explain_screen(message):
+        scope_label = str(context.scope.region_label or bundle.diagnostics.get("scope_label") or "선택 scope")
+        return casual_unrelated_prompt(scope_label=scope_label), casual_followups(context.panel, context.app), None
     lines = [f"**{context.scope.region_label or '선택 지역'}** · `{bundle.bundle_id}`"]
     if bundle.limitations:
         lines.append("⚠ " + bundle.limitations[0])
@@ -372,6 +465,107 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
     session = get_or_create(req.session_id)
     ctx = req.context
 
+    # 전환율 채택 이유(D-040)는 Open Mode에서도 실험 확정문을 우선한다.
+    early_bundle = build_bundle(ctx)
+    locked = answer_conversion_method_question(req.message, early_bundle.diagnostics)
+    if locked:
+        session.add_turn(SessionTurn(role="user", message=req.message, route="opinion"))
+        session.add_turn(SessionTurn(role="assistant", message=locked[:500], route="opinion"))
+        return AiChatResponse(
+            session_id=session.session_id,
+            route="opinion",
+            answer=locked,
+            evidence=[
+                EvidenceItem(
+                    type="ai_opinion",
+                    label="전환율 실험 종료 (D-040, mean_simple)",
+                    confidence="high",
+                )
+            ],
+            bundle_id=early_bundle.bundle_id,
+            suggested_followups=suggested_questions(ctx.panel, ctx.purpose, app=ctx.app)[:4],
+            disclaimer=SHORT_DISCLAIMER,
+            llm_used=False,
+            trust_level="high",
+            trust_sources=["RENT_CONVERSION_EXPERIMENT"],
+        )
+
+    # ── Open Mode: 라우팅/템플릿 우회 → LLM 우선 ─────────────────────────
+    if open_mode_enabled():
+        bundle = early_bundle
+        scope_label = str(
+            ctx.scope.region_label or bundle.diagnostics.get("scope_label") or "선택 scope"
+        )
+        session.push_context(
+            {
+                "panel": ctx.panel,
+                "purpose": ctx.purpose,
+                "scope": ctx.scope.model_dump(),
+                "bundle_id": bundle.bundle_id,
+                "app": ctx.app,
+                "n": bundle.diagnostics.get("n"),
+                "adj_r_squared": bundle.diagnostics.get("adj_r_squared"),
+                "scope_label": scope_label,
+                "open_mode": True,
+            }
+        )
+        facts = soft_facts_snapshot(bundle, scope_label=scope_label)
+        llm_ans = open_mode_chat_completion(
+            user_message=req.message,
+            scope_label=scope_label,
+            screen_facts=facts,
+            session_summary=session_summary(session, max_turns=10),
+        )
+        if llm_ans:
+            answer = llm_ans
+            llm_used = True
+        else:
+            answer = (
+                "### 답변\n\n"
+                "Open Mode인데 LLM 응답을 받지 못했습니다. "
+                "`OPENAI_API_KEY`와 네트워크를 확인한 뒤 다시 시도해 주세요.\n\n"
+                f"참고 — 현재 화면 soft facts: `{facts.get('stats')}`"
+            )
+            llm_used = False
+        resp = AiChatResponse(
+            session_id=session.session_id,
+            route="open",
+            answer=answer,
+            evidence=[
+                EvidenceItem(
+                    type="open_mode",
+                    label="AI Open Mode (routing bypass)",
+                    confidence="medium",
+                ),
+                EvidenceItem(
+                    type="ch2_sample",
+                    label="screen_facts (soft)",
+                    value=scope_label,
+                    confidence="high",
+                ),
+            ],
+            bundle_id=bundle.bundle_id,
+            suggested_followups=suggested_questions(ctx.panel, ctx.purpose, app=ctx.app)[:4],
+            disclaimer="Open Mode (개발·검증): 라우팅/템플릿 우회. 화면 숫자는 soft cite.",
+            llm_used=llm_used,
+            trust_level="medium" if llm_used else "low",
+            trust_sources=["OpenAI (open mode)", "CH2 screen_facts soft"],
+            ai_interpretation=_ai_interpretation_label(llm_used=llm_used),
+        )
+        session.add_turn(
+            SessionTurn(
+                role="user",
+                message=req.message,
+                route="open",
+                bundle_id=bundle.bundle_id,
+                scope_label=scope_label,
+            )
+        )
+        session.add_turn(
+            SessionTurn(role="assistant", message=answer[:500], route="open", bundle_id=bundle.bundle_id)
+        )
+        return resp
+
     route = classify_route(req.message)
     route = reject_if_user_refusal_topic_in_opinion(req.message, route)
 
@@ -381,6 +575,17 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
         session.add_turn(SessionTurn(role="user", message=req.message, route=route))
         session.add_turn(SessionTurn(role="assistant", message=resp.answer[:500], route=route))
         return resp
+
+    scope_label = str(ctx.scope.region_label or "선택 scope")
+
+    # 인사·감사 — 플래그와 무관하게 화면 회귀 내러티브 반복 방지
+    if is_casual_smalltalk(req.message):
+        return _casual_response(
+            session=session,
+            message=req.message,
+            ctx=ctx,
+            scope_label=scope_label,
+        )
 
     bundle = build_bundle(ctx)
     session.push_context(
@@ -397,7 +602,19 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
     )
 
     scope_label = str(ctx.scope.region_label or bundle.diagnostics.get("scope_label") or "선택 scope")
-    if is_comparison_question(req.message):
+
+    if casual_dialogue_enabled() and is_substantive_off_topic(req.message):
+        return _casual_response(
+            session=session,
+            message=req.message,
+            ctx=ctx,
+            scope_label=scope_label,
+            bundle_id=bundle.bundle_id,
+            diagnostics=bundle.diagnostics,
+            off_topic=True,
+        )
+
+    if is_scope_comparison_question(req.message):
         comp = narrative_scope_comparison(session, current_label=scope_label)
         if comp:
             resp = AiChatResponse(
@@ -426,6 +643,7 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
     bundle_id = bundle.bundle_id
     llm_used = False
     polished = False
+    synthesized = False
     disclaimer: str | None = None
     narrative_followups: list[str] | None = None
     narrative_result: NarrativeResult | None = None
@@ -485,57 +703,127 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
         session.add_turn(SessionTurn(role="assistant", message=answer[:500], route=route, bundle_id=bundle_id))
         return resp
     elif route == "statistics":
-        answer = answer_statistics_question(req.message) or (
-            "해당 통계 개념에 대한 CH2 내장 설명이 아직 없습니다. "
-            "p-value, VIF, OLS, Adj R², 신뢰구간 등 키워드로 다시 질문해 보세요."
-        )
+        targeted = try_targeted_answer(req.message, bundle.diagnostics)
+        if targeted:
+            answer = targeted
+        else:
+            answer = (
+                answer_statistics_question(req.message)
+                or answer_statistics_with_context(req.message, bundle.diagnostics)
+                or (
+                    "해당 통계 개념에 대한 CH2 내장 설명이 아직 없습니다. "
+                    "회귀 카드 지표 옆 **`?`** 를 확인하거나, "
+                    "「이 표본에서 설명력이 제한적인 이유는?」처럼 해석형으로 질문해 보세요."
+                )
+            )
+        if (
+            not targeted
+            and _has_facts_narrative(bundle)
+            and llm_configured()
+            and not is_pure_definition_question(req.message)
+        ):
+            syn_ans, syn_fu, syn_nr, syn_used = try_grounded_synthesis(
+                message=req.message,
+                route="statistics",
+                context=ctx,
+                bundle=bundle,
+                template_answer=answer,
+                template_followups=suggested_questions(ctx.panel, ctx.purpose, app=ctx.app),
+                session_summary=session_summary(session),
+            )
+            if syn_used:
+                answer = syn_ans
+                narrative_followups = syn_fu
+                narrative_result = syn_nr
+                llm_used = True
+                synthesized = True
         disclaimer = DEFAULT_DISCLAIMER
     elif route == "explain":
         answer, narrative_followups, narrative_result = _explain_answer(ctx, req.message, bundle)
-        answer, polished = _maybe_polish(
-            answer,
-            message=req.message,
-            route=route,
-            scope_label=scope_label,
-            narrative_result=narrative_result,
-        )
-        if polished:
-            llm_used = True
-        disclaimer = SHORT_DISCLAIMER if _has_facts_narrative(bundle) else DEFAULT_DISCLAIMER
-    elif route == "opinion":
-        answer = _opinion_template(req.message, bundle)
-        if llm_configured():
-            llm_ans = chat_completion(
-                user_message=req.message,
-                route=route,
+        if not _is_targeted_answer(answer):
+            syn_ans, syn_fu, syn_nr, syn_used = try_grounded_synthesis(
+                message=req.message,
+                route="explain",
+                context=ctx,
                 bundle=bundle,
+                template_answer=answer,
+                template_followups=narrative_followups,
+                narrative_result=narrative_result,
                 session_summary=session_summary(session),
             )
-            if llm_ans:
-                answer = llm_ans
+            if syn_used:
+                answer = syn_ans
+                narrative_followups = syn_fu
+                narrative_result = syn_nr
                 llm_used = True
+                synthesized = True
+            else:
+                answer, polished = _maybe_polish(
+                    answer,
+                    message=req.message,
+                    route=route,
+                    scope_label=scope_label,
+                    narrative_result=narrative_result,
+                )
+                if polished:
+                    llm_used = True
+        disclaimer = SHORT_DISCLAIMER if _has_facts_narrative(bundle) else DEFAULT_DISCLAIMER
+    elif route == "opinion":
+        targeted = try_targeted_answer(req.message, bundle.diagnostics)
+        if targeted:
+            answer = targeted
+        else:
+            answer = _opinion_template(req.message, bundle)
+            if llm_configured():
+                llm_ans = chat_completion(
+                    user_message=req.message,
+                    route=route,
+                    bundle=bundle,
+                    session_summary=session_summary(session),
+                )
+                if llm_ans:
+                    answer = llm_ans
+                    llm_used = True
         disclaimer = OPINION_DISCLAIMER
     else:
         answer, narrative_followups, narrative_result = _ch2_template_answer(req.message, bundle, ctx)
-        answer, polished = _maybe_polish(
-            answer,
-            message=req.message,
-            route=route,
-            scope_label=scope_label,
-            narrative_result=narrative_result,
-        )
-        if polished:
-            llm_used = True
-        elif ctx.app != "built" and llm_configured() and not narrative_result:
-            llm_ans = chat_completion(
-                user_message=req.message,
+        if not _is_targeted_answer(answer):
+            syn_ans, syn_fu, syn_nr, syn_used = try_grounded_synthesis(
+                message=req.message,
                 route="ch2",
+                context=ctx,
                 bundle=bundle,
+                template_answer=answer,
+                template_followups=narrative_followups,
+                narrative_result=narrative_result,
                 session_summary=session_summary(session),
             )
-            if llm_ans:
-                answer = llm_ans
+            if syn_used:
+                answer = syn_ans
+                narrative_followups = syn_fu
+                narrative_result = syn_nr
                 llm_used = True
+                synthesized = True
+            else:
+                answer, polished = _maybe_polish(
+                    answer,
+                    message=req.message,
+                    route=route,
+                    scope_label=scope_label,
+                    narrative_result=narrative_result,
+                )
+                if polished:
+                    llm_used = True
+                elif ctx.app != "built" and llm_configured() and not narrative_result:
+                    llm_ans = chat_completion(
+                        user_message=req.message,
+                        route="ch2",
+                        bundle=bundle,
+                        session_summary=session_summary(session),
+                    )
+                    if llm_ans:
+                        answer = llm_ans
+                        llm_used = True
         disclaimer = SHORT_DISCLAIMER if narrative_result or _has_facts_narrative(bundle) else DEFAULT_DISCLAIMER
 
     answer = validate_answer(answer, route)
@@ -556,7 +844,9 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
         llm_used=llm_used,
         trust_level=trust_level,
         trust_sources=trust_sources,
-        ai_interpretation=_ai_interpretation_label(llm_used=llm_used, polished=polished),
+        ai_interpretation=_ai_interpretation_label(
+            llm_used=llm_used, polished=polished, synthesized=synthesized
+        ),
     )
     session.add_turn(
         SessionTurn(
@@ -579,15 +869,33 @@ def handle_explain(req: AiExplainRequest) -> AiChatResponse:
     scope_label = str(ctx.scope.region_label or bundle.diagnostics.get("scope_label") or "선택 scope")
     polished = False
     llm_used = False
-    answer, polished = _maybe_polish(
-        answer,
+    synthesized = False
+    syn_ans, syn_fu, syn_nr, syn_used = try_grounded_synthesis(
         message=msg,
         route="explain",
-        scope_label=scope_label,
+        context=ctx,
+        bundle=bundle,
+        template_answer=answer,
+        template_followups=narrative_followups,
         narrative_result=narrative_result,
+        session_summary="",
     )
-    if polished:
+    if syn_used:
+        answer = syn_ans
+        narrative_followups = syn_fu
+        narrative_result = syn_nr
         llm_used = True
+        synthesized = True
+    else:
+        answer, polished = _maybe_polish(
+            answer,
+            message=msg,
+            route="explain",
+            scope_label=scope_label,
+            narrative_result=narrative_result,
+        )
+        if polished:
+            llm_used = True
     return AiChatResponse(
         session_id="",
         route="explain",
@@ -600,7 +908,9 @@ def handle_explain(req: AiExplainRequest) -> AiChatResponse:
         llm_used=llm_used,
         trust_level=narrative_result.trust_level if narrative_result else None,
         trust_sources=narrative_result.trust_sources if narrative_result else [],
-        ai_interpretation=_ai_interpretation_label(llm_used=llm_used, polished=polished),
+        ai_interpretation=_ai_interpretation_label(
+            llm_used=llm_used, polished=polished, synthesized=synthesized
+        ),
     )
 
 

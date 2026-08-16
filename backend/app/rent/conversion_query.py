@@ -237,6 +237,7 @@ def fetch_building_converted(
     period_start: date,
     period_end: date,
     rates: dict[str, RentConversionRate],
+    building_key: Optional[str] = None,
 ) -> dict[tuple[str, str], tuple[LeaseMetric, LeaseMetric]]:
     """building_key, asset_type → (전세환산, 월세환산) P50."""
     active = {
@@ -266,6 +267,9 @@ def fetch_building_converted(
     if addr3:
         clauses.append("t.addr3 = :addr3")
         params["addr3"] = addr3
+    if building_key:
+        clauses.append("NULLIF(btrim(t.building_key::text), '') = :bk")
+        params["bk"] = building_key
 
     rate_sql = rate_case_sql(active)
     bkey = building_key_sql("t")

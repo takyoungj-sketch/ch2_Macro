@@ -1,7 +1,10 @@
 # 월간 집합부동산(collective) 데이터 업데이트 SOP
 
-> **목표:** 매월 초 **토지 cycle 완료 후** 아파트·연립·오피스텔 정제 xlsx → `collective_stats` 갱신.  
+> **목표:** 매월 초 **토지 cycle 완료 후** 아파트·연립·오피스텔 → `collective_stats` 갱신.  
 > **기준 루트:** `C:\ch2\ch2_Macro`
+>
+> **2026-08 SSOT:** `scripts/monthly/run_collective_cycle_csv.py`. 1페이지: [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md).  
+> xlsx 경로는 복구·레거시. git deploy ≠ 월갱신.
 
 관련: [`MONTHLY_UPDATE_SOP.md`](MONTHLY_UPDATE_SOP.md), [`BUILT_MONTHLY_UPDATE_SOP.md`](BUILT_MONTHLY_UPDATE_SOP.md), [`COLLECTIVE_RESEARCH_MVP.md`](COLLECTIVE_RESEARCH_MVP.md), [`COLLECTIVE_PRESALE_BUILDING_KEY.md`](COLLECTIVE_PRESALE_BUILDING_KEY.md)
 

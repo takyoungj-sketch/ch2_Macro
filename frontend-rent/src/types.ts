@@ -264,6 +264,12 @@ export type SangkwonAnnualResponse = {
   source_file: string;
   latest_year: number | null;
   latest_quarter: number | null;
+  window_label?: string;
+  window_mode?: string;
+  window_start_year?: number | null;
+  window_start_quarter?: number | null;
+  window_end_year?: number | null;
+  window_end_quarter?: number | null;
 };
 
 export type SangkwonSeriesResponse = {

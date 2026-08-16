@@ -33,6 +33,7 @@ export {
   normRegionLabel,
   SEJONG_PSEUDO_SIGUNGU_CODE,
   SEJONG_SIDO_CODE,
+  sejongAdminNameMatchesQuery,
   uniqueSejongEupCodeForAdminName,
 } from "./sejongRegion";
 export type { RegionLevel, RegionNameInfo, RegionSearchResult } from "./types";

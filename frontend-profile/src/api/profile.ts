@@ -6,16 +6,16 @@ import type {
   RegionLevel,
   RegionNameInfo,
   RegionalProfileResponse,
+  RentProfileYearlyResponse,
 } from "../types";
 
-/** D-029 Phase A. 재빌드 전엔 v2.0으로 fallback. */
+/** D-029 — Regional Profile + Twin SSOT */
 export const DEFAULT_PROFILE_VERSION = "v2.1-national";
 export const FALLBACK_PROFILE_VERSION = "v2.0-national";
 export const DEFAULT_WINDOW_YEARS = 3;
 
-// Profile-native Twin v2.1 (D-029 Phase B). legacy hybrid fallback은 API에서 v6/v7.
+/** Profile Twin algo 21 only */
 export const DEFAULT_TWIN_PROFILE_VERSION = "v2.1-national";
-export const LEGACY_TWIN_PROFILE_VERSION = "v1.1-national";
 export const DEFAULT_TWIN_WINDOW_YEARS = 3;
 
 async function getRegionalProfile(
@@ -61,6 +61,32 @@ export async function fetchRegionalProfile(params: {
     }
     throw err;
   }
+}
+
+export async function fetchRentProfileYearly(params: {
+  regionLevel: string;
+  regionCode: string;
+  years?: number[];
+  windowYears?: number;
+}): Promise<RentProfileYearlyResponse> {
+  const qs: Record<string, string | number | number[]> = {
+    region_level: params.regionLevel,
+    region_code: params.regionCode,
+    window_years: params.windowYears ?? DEFAULT_WINDOW_YEARS,
+  };
+  if (params.years?.length) {
+    const { data } = await apiClient.get<RentProfileYearlyResponse>("/rent/profile-yearly", {
+      params: { ...qs, years: params.years },
+      paramsSerializer: {
+        indexes: null,
+      },
+    });
+    return data;
+  }
+  const { data } = await apiClient.get<RentProfileYearlyResponse>("/rent/profile-yearly", {
+    params: qs,
+  });
+  return data;
 }
 
 export async function fetchTwinNeighbors(params: {

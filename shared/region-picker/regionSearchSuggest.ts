@@ -4,6 +4,7 @@ import { isRetiredSidoCode } from "./retiredSido";
 import {
   isSejongPseudoSigunguCode,
   isSejongRegionRow,
+  sejongAdminNameMatchesQuery,
 } from "./sejongRegion";
 import type { RegionNameInfo } from "./types";
 
@@ -204,36 +205,41 @@ export function buildFlattenedRegionSuggestions(
     eupAggregates.sort((a, b) => a.primaryLabel.localeCompare(b.primaryLabel, "ko-KR"));
   }
 
-  if (!eupMyeonFocused) {
-    const bySejongEup = new Map<string, RegionNameInfo[]>();
-    for (const h of activeHits) {
-      if (!isSejongRegionRow(h)) continue;
-      if (!isSejongPseudoSigunguCode(String(h.sigungu_code ?? "").trim())) continue;
-      const adminNn = norm(h.sigungu_name ?? "");
-      if (!(adminNn === qN || adminNn.includes(qN))) continue;
-      const ec = String(h.eupmyeondong_code ?? "").trim();
-      if (!ec) continue;
-      if (!bySejongEup.has(ec)) bySejongEup.set(ec, []);
-      bySejongEup.get(ec)!.push(h);
+  const seenEupCodes = new Set(eupAggregates.map((e) => e.eupCode));
+  const bySejongEup = new Map<string, RegionNameInfo[]>();
+  for (const h of activeHits) {
+    if (!isSejongRegionRow(h)) continue;
+    if (!isSejongPseudoSigunguCode(String(h.sigungu_code ?? "").trim())) continue;
+    if (
+      !sejongAdminNameMatchesQuery(String(h.sigungu_name ?? ""), rawQuery, {
+        allowContains: !eupMyeonFocused,
+      })
+    ) {
+      continue;
     }
-    for (const [eupCode, bucket] of bySejongEup.entries()) {
-      const sample = bucket[0]!;
-      const adminLabel = String(sample.sigungu_name ?? "").trim();
-      const primaryLabel = [sample.sido_name, adminLabel]
-        .map((x) => String(x ?? "").trim())
-        .filter(Boolean)
-        .join(" ");
-      eupAggregates.push({
-        kind: "eup_aggregate",
-        eupCode,
-        primaryLabel,
-        subtitle: `세종 행정동·읍·면 · 하위 법정 ${bucket.length}곳`,
-        countInSample: bucket.length,
-        sample,
-      });
-    }
-    eupAggregates.sort((a, b) => a.primaryLabel.localeCompare(b.primaryLabel, "ko-KR"));
+    const ec = String(h.eupmyeondong_code ?? "").trim();
+    if (!ec || seenEupCodes.has(ec)) continue;
+    if (!bySejongEup.has(ec)) bySejongEup.set(ec, []);
+    bySejongEup.get(ec)!.push(h);
   }
+  for (const [eupCode, bucket] of bySejongEup.entries()) {
+    const sample = bucket[0]!;
+    const adminLabel = String(sample.sigungu_name ?? "").trim();
+    const primaryLabel = [sample.sido_name, adminLabel]
+      .map((x) => String(x ?? "").trim())
+      .filter(Boolean)
+      .join(" ");
+    eupAggregates.push({
+      kind: "eup_aggregate",
+      eupCode,
+      primaryLabel,
+      subtitle: `세종 행정동·읍·면 · 하위 법정 ${bucket.length}곳`,
+      countInSample: bucket.length,
+      sample,
+    });
+    seenEupCodes.add(eupCode);
+  }
+  eupAggregates.sort((a, b) => a.primaryLabel.localeCompare(b.primaryLabel, "ko-KR"));
 
   const beopMap = new Map<string, RegionNameInfo>();
   if (!eupMyeonFocused) {

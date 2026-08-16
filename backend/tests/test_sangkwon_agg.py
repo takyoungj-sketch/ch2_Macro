@@ -6,9 +6,11 @@ from app.rent.sangkwon_agg import (
     SKIP_SHEETS,
     annual_value,
     compound_annual,
+    format_window_label,
     is_aggregate_name,
     metric_from_item,
     parse_quarter_header,
+    rolling_quarter_window,
 )
 
 
@@ -84,6 +86,14 @@ def test_excel_sido_aliases():
     assert excel_sido("충청북도") == "충북"
     assert excel_sido("충청남도") == "충남"
     assert excel_sido("서울특별시") == "서울"
+
+
+def test_rolling_window_ends_at_2026q2():
+    window = rolling_quarter_window(2026, 2)
+    assert window == [(2025, 3), (2025, 4), (2026, 1), (2026, 2)]
+    assert format_window_label(window) == "2025.3Q~2026.2Q"
+    by_pos = {1: 91.4, 2: 91.6, 3: 92.0, 4: 92.2}
+    assert annual_value("rent", by_pos) == pytest.approx((91.4 + 91.6 + 92.0 + 92.2) / 4 * 12 * 0.1)
 
 
 def test_annual_vacancy_mean_and_stock_last():

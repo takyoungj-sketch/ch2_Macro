@@ -1,0 +1,659 @@
+{
+  "version": "1.1",
+  "description": "Twin Lab stratified eup sample — commercial",
+  "defaults": {
+    "asset_type": "commercial",
+    "profile_version": "v2.1-national",
+    "window_years": 3,
+    "contract_year_from": 2019,
+    "contract_year_to": 2025,
+    "lift_delta_pp": 0.5,
+    "twin_top_k": 5,
+    "twin_scope_eup": "region",
+    "twin_scope_beop": "same_sigungu",
+    "sido_prefix": "43",
+    "sample_seed": 42
+  },
+  "cases": [
+    {
+      "case_id": "43130118_dev",
+      "label": "충주시 연수동",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43130118"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "mid",
+        "tx_n": 57
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43111112_dev",
+      "label": "청주시 상당구",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43111112"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "small",
+        "tx_n": 35
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43111340_dev",
+      "label": "청주시 상당구",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43111340"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "small",
+        "tx_n": 35
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43112105_dev",
+      "label": "청주시 서원구",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43112105"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "small",
+        "tx_n": 33
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43113115_dev",
+      "label": "청주시 흥덕구",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43113115"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "large",
+        "tx_n": 130
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43112103_dev",
+      "label": "청주시 서원구",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43112103"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "small",
+        "tx_n": 31
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43113320_dev",
+      "label": "청주시 흥덕구",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43113320"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "small",
+        "tx_n": 39
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43770250_dev",
+      "label": "음성군 음성읍",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43770250"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "mid",
+        "tx_n": 59
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43150107_dev",
+      "label": "제천시 중앙로2가",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43150107"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "small",
+        "tx_n": 31
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43150360_dev",
+      "label": "제천시 백운면",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43150360"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "small",
+        "tx_n": 32
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43113310_dev",
+      "label": "청주시 흥덕구",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43113310"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "mid",
+        "tx_n": 49
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43745250_dev",
+      "label": "증평군 증평읍",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43745250"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "large",
+        "tx_n": 157
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43750250_dev",
+      "label": "진천군 진천읍",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43750250"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "large",
+        "tx_n": 102
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43770253_dev",
+      "label": "음성군 금왕읍",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43770253"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "mid",
+        "tx_n": 74
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43114102_dev",
+      "label": "청주시 청원구",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43114102"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "mid",
+        "tx_n": 84
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43112320_dev",
+      "label": "청주시 서원구",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43112320"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "small",
+        "tx_n": 38
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43750320_dev",
+      "label": "진천군 초평면",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43750320"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "small",
+        "tx_n": 32
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43113114_dev",
+      "label": "청주시 흥덕구",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43113114"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "large",
+        "tx_n": 116
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43130370_dev",
+      "label": "충주시 앙성면",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43130370"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "small",
+        "tx_n": 35
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43150101_dev",
+      "label": "제천시 의림동",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43150101"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "mid",
+        "tx_n": 40
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43112101_dev",
+      "label": "청주시 서원구",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43112101"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "large",
+        "tx_n": 101
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43720250_dev",
+      "label": "보은군 보은읍",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43720250"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "mid",
+        "tx_n": 71
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43130103_dev",
+      "label": "충주시 성서동",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43130103"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "mid",
+        "tx_n": 48
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43770370_dev",
+      "label": "음성군 감곡면",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43770370"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "small",
+        "tx_n": 38
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43800250_dev",
+      "label": "단양군 단양읍",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43800250"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "mid",
+        "tx_n": 60
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43130106_dev",
+      "label": "충주시 용산동",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43130106"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "small",
+        "tx_n": 32
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43113250_dev",
+      "label": "청주시 흥덕구",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43113250"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "small",
+        "tx_n": 36
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43113113_dev",
+      "label": "청주시 흥덕구",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43113113"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "mid",
+        "tx_n": 68
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43150109_holdout",
+      "label": "제천시 화산동",
+      "role": "holdout",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43150109"
+      ],
+      "sample_group": "holdout",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "mid",
+        "tx_n": 76
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43114253_holdout",
+      "label": "청주시 청원구",
+      "role": "holdout",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43114253"
+      ],
+      "sample_group": "holdout",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "large",
+        "tx_n": 133
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43114250_holdout",
+      "label": "청주시 청원구",
+      "role": "holdout",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43114250"
+      ],
+      "sample_group": "holdout",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "large",
+        "tx_n": 126
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43130105_holdout",
+      "label": "충주시 교현동",
+      "role": "holdout",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43130105"
+      ],
+      "sample_group": "holdout",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "mid",
+        "tx_n": 68
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43112310_holdout",
+      "label": "청주시 서원구",
+      "role": "holdout",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43112310"
+      ],
+      "sample_group": "holdout",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "large",
+        "tx_n": 104
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43740250_holdout",
+      "label": "영동군 영동읍",
+      "role": "holdout",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43740250"
+      ],
+      "sample_group": "holdout",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "mid",
+        "tx_n": 98
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43150110_holdout",
+      "label": "제천시 영천동",
+      "role": "holdout",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43150110"
+      ],
+      "sample_group": "holdout",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "small",
+        "tx_n": 31
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43130116_holdout",
+      "label": "충주시 칠금동",
+      "role": "holdout",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43130116"
+      ],
+      "sample_group": "holdout",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "small",
+        "tx_n": 32
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43113104_holdout",
+      "label": "청주시 흥덕구",
+      "role": "holdout",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43113104"
+      ],
+      "sample_group": "holdout",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "small",
+        "tx_n": 31
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43114101_holdout",
+      "label": "청주시 청원구",
+      "role": "holdout",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43114101"
+      ],
+      "sample_group": "holdout",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "mid",
+        "tx_n": 70
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43750330_holdout",
+      "label": "진천군 문백면",
+      "role": "holdout",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43750330"
+      ],
+      "sample_group": "holdout",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "small",
+        "tx_n": 31
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "43750370_holdout",
+      "label": "진천군 광혜원면",
+      "role": "holdout",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "43750370"
+      ],
+      "sample_group": "holdout",
+      "strata": {
+        "basin": "chungbuk",
+        "n_bucket": "mid",
+        "tx_n": 45
+      },
+      "notes": "stratified seed=42"
+    }
+  ]
+}

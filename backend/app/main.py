@@ -140,6 +140,10 @@ if collective_router is not None:
 
     app.include_router(regional_profile_router, prefix="/api")
     _LOG.info("regional_profile API 활성: /api/regional-profile/*")
+    from app.qa_audit.router import router as qa_audit_router
+
+    app.include_router(qa_audit_router, prefix="/api")
+    _LOG.info("QA audit API 활성(관리자·스키마 비공개): /api/admin/qa/*")
 if rent_router is not None:
     app.include_router(rent_router, prefix="/api")
     _LOG.info("rent_stats API 활성: /api/rent/*")

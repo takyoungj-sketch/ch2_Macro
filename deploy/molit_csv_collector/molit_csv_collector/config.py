@@ -37,6 +37,9 @@ RENT_SUPPORTED_KEYS = frozenset({"apartment", "rowhouse", "detached", "officetel
 
 DEFAULT_MAX_NEW_DOWNLOADS = 100
 
+# 국토부 실거래 CSV: 1회 요청 최대 12개월 (전월세·매매 공통). 초과 시 사이트 알림 후 실패.
+MOLIT_MAX_PERIOD_MONTHS = 12
+
 # 거래량 많은 시도 — 서버 CSV 생성·다운로드 10~15분 걸릴 수 있음
 LARGE_VOLUME_REGIONS = frozenset(
     {
@@ -92,22 +95,40 @@ def period_file_key(from_date: str, to_date: str) -> str:
     return f"{from_date.replace('-', '')}_{to_date.replace('-', '')}"
 
 
+def _add_months(year: int, month: int, delta: int) -> tuple[int, int]:
+    idx = year * 12 + (month - 1) + delta
+    return idx // 12, idx % 12 + 1
+
+
 def iter_download_periods(
     start_year: int,
     start_month: int,
     end_year: int,
     end_month: int,
 ) -> list[DownloadPeriod]:
+    """국토부 1회 한도(12개월)에 맞춰 기간을 분할한다.
+
+    달력 연 전체(1~12월)는 파일키가 `{연도}`, 그 외는 `YYYYMMDD_YYYYMMDD`.
+    월간 롤링 12개월(예: 2025-08~2026-07)은 한 구간으로 유지한다.
+    """
     if (start_year, start_month) > (end_year, end_month):
         raise ValueError("시작 기간이 종료보다 늦습니다.")
     if not (1 <= start_month <= 12 and 1 <= end_month <= 12):
         raise ValueError("월은 1~12 사이여야 합니다.")
 
-    from_d = date(start_year, start_month, 1)
-    to_d = date(end_year, end_month, monthrange(end_year, end_month)[1])
-    from_s = from_d.isoformat()
-    to_s = to_d.isoformat()
-    return [DownloadPeriod(period_file_key(from_s, to_s), from_s, to_s)]
+    periods: list[DownloadPeriod] = []
+    y, m = start_year, start_month
+    while (y, m) <= (end_year, end_month):
+        chunk_end_y, chunk_end_m = _add_months(y, m, MOLIT_MAX_PERIOD_MONTHS - 1)
+        if (chunk_end_y, chunk_end_m) > (end_year, end_month):
+            chunk_end_y, chunk_end_m = end_year, end_month
+        from_s = date(y, m, 1).isoformat()
+        to_s = date(
+            chunk_end_y, chunk_end_m, monthrange(chunk_end_y, chunk_end_m)[1]
+        ).isoformat()
+        periods.append(DownloadPeriod(period_file_key(from_s, to_s), from_s, to_s))
+        y, m = _add_months(chunk_end_y, chunk_end_m, 1)
+    return periods
 
 
 @dataclass(frozen=True)

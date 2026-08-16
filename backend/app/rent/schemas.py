@@ -74,6 +74,22 @@ class RentBuildingRow(BaseModel):
     monthly_equiv: LeaseMetric = Field(default_factory=LeaseMetric)
 
 
+class RentSaleJoinResponse(BaseModel):
+    joined: bool
+    reason: str
+    sale_building_key: str = ""
+    rent_building_key: Optional[str] = None
+    asset_type: str = ""
+    as_of_month: Optional[date] = None
+    window_years: int = 5
+    period_start: Optional[date] = None
+    period_end: Optional[date] = None
+    building: Optional[RentBuildingRow] = None
+    conversion: Optional[RentConversionRate] = None
+    conversion_applied: bool = False
+    conversion_fallback: bool = False
+
+
 class RentBuildingListResponse(BaseModel):
     items: list[RentBuildingRow]
     total: int
@@ -228,6 +244,30 @@ class SangkwonAnnualCellRow(BaseModel):
     values: dict[str, Optional[float]] = Field(default_factory=dict)
 
 
+class RentProfileYearCell(BaseModel):
+    count: int = 0
+    deposit_sum: float = 0
+    monthly_sum: float = 0
+
+
+class RentProfileYearType(BaseModel):
+    asset_type: str
+    label: str
+    years: dict[str, RentProfileYearCell] = Field(default_factory=dict)
+    total_count: int = 0
+    total_deposit_sum: float = 0
+    total_monthly_sum: float = 0
+
+
+class RentProfileYearlyResponse(BaseModel):
+    region_level: str
+    region_code: str
+    years: list[int] = Field(default_factory=list)
+    types: list[RentProfileYearType] = Field(default_factory=list)
+    unit_deposit: str = "만원"
+    unit_monthly: str = "만/월"
+
+
 class SangkwonAnnualResponse(BaseModel):
     year: Optional[int] = None
     sec_nm: str
@@ -236,6 +276,12 @@ class SangkwonAnnualResponse(BaseModel):
     source_file: str = ""
     latest_year: Optional[int] = None
     latest_quarter: Optional[int] = None
+    window_label: str = ""
+    window_mode: str = "rolling_4q"
+    window_start_year: Optional[int] = None
+    window_start_quarter: Optional[int] = None
+    window_end_year: Optional[int] = None
+    window_end_quarter: Optional[int] = None
 
 
 class SangkwonSeriesPoint(BaseModel):

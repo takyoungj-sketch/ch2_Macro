@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import clsx from "clsx";
 import {
   fetchCommercialAddr1List,
@@ -30,6 +31,7 @@ import {
   toggleCommercialAssetKind,
   type CommercialAssetKind,
 } from "./utils/commercialAssetTypes";
+import { useCollectiveDeepLink } from "./hooks/useCollectiveDeepLink";
 import { profileHref, resolveCollectiveProfileTarget } from "./utils/profileLink";
 import {
   formatAddr2OptionLabel,
@@ -176,6 +178,18 @@ export default function CommercialApp() {
     const allowed = new Set(visibleLeafOptions.map((o) => o.name));
     setLeafList((prev) => prev.filter((n) => allowed.has(n)));
   }, [hasIntermediate, visibleLeafOptions]);
+
+  useCollectiveDeepLink({
+    addr1,
+    addr2,
+    addr1Options: addr1Q.data ?? [],
+    addr2Options: addr2Q.data ?? [],
+    leafOptions: visibleLeafOptions,
+    setAddr1,
+    setAddr2,
+    setLeafList,
+    setGuList,
+  });
 
   const clustersQ = useQuery({
     queryKey: ["comm-clusters", scope],
@@ -384,7 +398,7 @@ export default function CommercialApp() {
                   setGuList((prev) => toggleChipSingle(prev, name));
                   setLeafList([]);
                 }}
-                onSelectAll={() => setGuList((guQ.data ?? []).map((o) => o.name))}
+                onSelectAll={() => setGuList((guQ.data ?? []).filter((o) => !o.disabled).map((o) => o.name))}
                 onClear={() => {
                   setGuList([]);
                   setLeafList([]);
@@ -409,7 +423,7 @@ export default function CommercialApp() {
                     LEFT_REGION_MULTI_SELECT ? toggleChipMulti(prev, name) : toggleChipSingle(prev, name),
                   )
                 }
-                onSelectAll={() => setLeafList(visibleLeafOptions.map((o) => o.name))}
+                onSelectAll={() => setLeafList(visibleLeafOptions.filter((o) => !o.disabled).map((o) => o.name))}
                 onClear={() => setLeafList([])}
               />
             )}
@@ -551,7 +565,12 @@ export default function CommercialApp() {
                     <thead>
                       <tr>
                         <th>유형</th>
-                        <th>도로명</th>
+                        <th>
+                          <span className="inline-flex items-center gap-1">
+                            도로명
+                            <StatsGlossaryHelp termId="commercial_cluster" size="xs" />
+                          </span>
+                        </th>
                         <th className="text-right">거래</th>
                         <th className="text-right">평균</th>
                         <th className="text-right">중앙</th>

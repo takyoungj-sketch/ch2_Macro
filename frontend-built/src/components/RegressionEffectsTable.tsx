@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import type { AssetType, RegressionCoeff, ResponseScale } from "../types";
 import {
   fmtDecimal,
@@ -39,10 +40,25 @@ export default function RegressionEffectsTable({
         <thead>
           <tr className="text-slate-600 dark:text-slate-300">
             <th className="text-left font-medium py-1">변수</th>
-            <th className="text-left font-medium py-1">계수</th>
-            <th className="text-right font-medium py-1">SE</th>
+            <th className="text-left font-medium py-1">
+              <span className="inline-flex items-center gap-0.5">
+                계수
+                <StatsGlossaryHelp termId="coefficient" size="xs" />
+              </span>
+            </th>
+            <th className="text-right font-medium py-1">
+              <span className="inline-flex items-center justify-end gap-0.5">
+                SE
+                <StatsGlossaryHelp termId="se" size="xs" />
+              </span>
+            </th>
             <th className="text-right font-medium py-1">t</th>
-            <th className="text-right font-medium py-1">p</th>
+            <th className="text-right font-medium py-1">
+              <span className="inline-flex items-center justify-end gap-0.5">
+                p
+                <StatsGlossaryHelp termId="p_value" size="xs" />
+              </span>
+            </th>
           </tr>
         </thead>
         <tbody className="text-slate-800 dark:text-slate-200">{sorted.map(renderRow)}</tbody>

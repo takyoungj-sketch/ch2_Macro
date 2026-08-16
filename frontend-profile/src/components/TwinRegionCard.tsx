@@ -1,3 +1,4 @@
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import type { ProfileTwinNeighborItem } from "../types";
 import { reasonLabel } from "../utils/reasonCodes";
 
@@ -6,6 +7,30 @@ interface Props {
   isLoading: boolean;
   isSigungu: boolean;
   isBeop?: boolean;
+  onOpenTwin?: (regionLevel: "sigungu" | "eupmyeondong" | "beopjungri", regionCode: string) => void;
+}
+
+export function twinNeighborTarget(
+  n: ProfileTwinNeighborItem,
+  isSigungu: boolean,
+  isBeop?: boolean,
+): { level: "sigungu" | "eupmyeondong" | "beopjungri"; code: string } | null {
+  if (isBeop && n.twin_beopjungri_code) {
+    return { level: "beopjungri", code: n.twin_beopjungri_code };
+  }
+  if (isSigungu && n.twin_sigungu_code) {
+    return { level: "sigungu", code: n.twin_sigungu_code };
+  }
+  if (n.twin_eupmyeondong_code) {
+    return { level: "eupmyeondong", code: n.twin_eupmyeondong_code };
+  }
+  if (n.twin_beopjungri_code) {
+    return { level: "beopjungri", code: n.twin_beopjungri_code };
+  }
+  if (n.twin_sigungu_code) {
+    return { level: "sigungu", code: n.twin_sigungu_code };
+  }
+  return null;
 }
 
 type FeatureNote = { score?: number; weight?: number; note?: string };
@@ -47,13 +72,17 @@ function levelTitle(isSigungu: boolean, isBeop?: boolean): string {
   return "읍면동";
 }
 
-export default function TwinRegionCard({ neighbors, isLoading, isSigungu, isBeop }: Props) {
+export default function TwinRegionCard({ neighbors, isLoading, isSigungu, isBeop, onOpenTwin }: Props) {
   return (
     <div className="card p-5">
-      <h2 className="text-lg font-semibold">쌍둥이 지역 — {levelTitle(isSigungu, isBeop)}</h2>
+      <div className="flex items-center gap-2">
+        <h2 className="text-lg font-semibold">쌍둥이 지역 — {levelTitle(isSigungu, isBeop)}</h2>
+        <StatsGlossaryHelp termId="twin_region" size="sm" />
+      </div>
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
         지역 프로필(인구, 8대 유형 구성비, 지목군, 가격분포)을 입력값으로 산출한 유사 지역
         {isBeop ? " · 동일 시군구 내 법정리" : ""}
+        {" · 행을 누르면 해당 지역 프로필로 이동합니다"}
       </p>
 
       {isLoading ? (
@@ -65,15 +94,27 @@ export default function TwinRegionCard({ neighbors, isLoading, isSigungu, isBeop
           {neighbors.map((n) => {
             const tags = explainTags(n);
             const key = n.twin_beopjungri_code ?? n.twin_eupmyeondong_code ?? n.twin_sigungu_code ?? n.rank;
+            const target = twinNeighborTarget(n, isSigungu, isBeop);
+            const open = () => {
+              if (target && onOpenTwin) onOpenTwin(target.level, target.code);
+            };
             return (
-              <li
-                key={`${key}-${n.rank}`}
-                className="rounded-md bg-slate-50 px-3 py-2 dark:bg-slate-900/40"
-              >
+              <li key={`${key}-${n.rank}`}>
+                <button
+                  type="button"
+                  disabled={!target || !onOpenTwin}
+                  onClick={open}
+                  className="w-full rounded-md bg-slate-50 px-3 py-2 text-left dark:bg-slate-900/40 enabled:hover:bg-indigo-50 enabled:dark:hover:bg-indigo-950/40 enabled:cursor-pointer disabled:cursor-default"
+                >
                 <div className="flex items-center justify-between">
                   <div className="font-medium">
                     <span className="mr-1.5 text-xs text-slate-400">#{n.rank}</span>
                     {twinRegionLabel(n)}
+                    {target ? (
+                      <span className="ml-2 text-[11px] font-normal text-indigo-600 dark:text-indigo-300">
+                        프로필 보기 →
+                      </span>
+                    ) : null}
                   </div>
                   <div className="text-sm font-semibold">{(n.similarity_score * 100).toFixed(1)}%</div>
                 </div>
@@ -89,6 +130,7 @@ export default function TwinRegionCard({ neighbors, isLoading, isSigungu, isBeop
                     ))}
                   </div>
                 )}
+                </button>
               </li>
             );
           })}

@@ -10,6 +10,8 @@ frontend-profile/node_modules/
 frontend-profile/dist/
 frontend-rent/node_modules/
 frontend-rent/dist/
+frontend-lab/node_modules/
+frontend-lab/dist/
 __pycache__/
 *.py[cod]
 .venv/

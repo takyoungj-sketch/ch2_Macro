@@ -53,6 +53,12 @@ _BLOCK_SOURCE_COLUMNS: dict[str, tuple[str, ...]] = {
     "zone_type": ("zone_type",),
     "building_use": ("building_use",),
     "asset_type": ("asset_type",),
+    "region_population": ("region_population",),
+    "region_land_p50": ("region_land_p50",),
+    "region_apt_p50": ("region_apt_p50",),
+    "region_apt_n": ("region_apt_n",),
+    "region_comm_p50": ("region_comm_p50",),
+    "region_comm_n": ("region_comm_n",),
 }
 
 

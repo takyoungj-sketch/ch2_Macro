@@ -1,4 +1,4 @@
-﻿import booleanDisjoint from "@turf/boolean-disjoint";
+import booleanDisjoint from "@turf/boolean-disjoint";
 import booleanIntersects from "@turf/boolean-intersects";
 import booleanTouches from "@turf/boolean-touches";
 import bbox from "@turf/bbox";
@@ -18,15 +18,17 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import {
   fetchCollectiveBuildingMapPoints,
   fetchCollectiveMapResolveCodes,
+  fetchCommercialRoadLine,
   fetchCommercialRoadMapPoints,
   fetchMapBoundaries,
   fetchMapConfig,
+  fetchMapNeighbors,
   geocodeCollectiveBuilding,
   geocodeCommercialRoad,
   vworldSatelliteTileUrl,
 } from "../api/mapClient";
 import { applySelectionFitBounds, boundsFromGeoJson } from "../utils/mapFitBounds";
-import { featureAdminCode, type MapAdminLevel } from "../utils/mapRegionScope";
+import { canonAdminCode, featureAdminCode, type MapAdminLevel } from "../utils/mapRegionScope";
 
 export type MapPanelMode = "normal" | "expanded" | "collapsed";
 
@@ -224,6 +226,11 @@ function polygonLabelPoint(
   return best;
 }
 
+function sigunguPrefix(code: string): string {
+  const c = code.trim();
+  return c.length >= 5 ? c.slice(0, 5) : c;
+}
+
 function isAdjacentToAnySelected(
   clicked: GeoJSON.Feature,
   selectedFeatures: GeoJSON.Feature[],
@@ -381,8 +388,47 @@ export default function CollectiveRegionMapHub({
     staleTime: 60_000,
   });
 
+  const selectionKey = selectedCodes.join(",");
+
+  const neighborsQ = useQuery({
+    queryKey: ["collective-map-neighbors", commercial ? "commercial" : "residential", mapLevel, selectionKey],
+    queryFn: () =>
+      fetchMapNeighbors({
+        level: mapLevel!,
+        codes: selectedCodes,
+      }),
+    enabled: Boolean(
+      hasSelection &&
+        (mapLevel === "eupmyeondong" || mapLevel === "beopjungri") &&
+        configQ.data?.vworld_configured,
+    ),
+    staleTime: 30_000,
+  });
+
+  const neighborSelectableSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const c of neighborsQ.data?.neighbor_codes ?? []) {
+      set.add(canonAdminCode(mapLevel, c));
+      set.add(c);
+    }
+    return set;
+  }, [neighborsQ.data?.neighbor_codes, mapLevel]);
+
+  const neighborGraphReady = Boolean(
+    neighborsQ.data?.graph_ready &&
+      Object.values(neighborsQ.data?.neighbors_by_code ?? {}).some((arr) => (arr?.length ?? 0) > 0),
+  );
+
   const geojson = boundariesQ.data?.feature_collection ?? null;
   const selectedSet = useMemo(() => new Set(selectedCodes), [selectedCodes]);
+  const selectedCanonSet = useMemo(() => {
+    const s = new Set<string>();
+    for (const c of selectedCodes) {
+      s.add(canonAdminCode(mapLevel, c));
+      s.add(c);
+    }
+    return s;
+  }, [selectedCodes, mapLevel]);
   const labels = resolveQ.data?.labels ?? {};
 
   const primaryRoad = selectedRoads[0] ?? null;
@@ -505,10 +551,76 @@ export default function CollectiveRegionMapHub({
         }
       : null;
 
+  const selectedAdminBbox = useMemo(() => {
+    if (!geojson?.features?.length) return null;
+    const picked = geojson.features.filter(
+      (f) => Number((f.properties as { ch2_selected?: number } | null)?.ch2_selected) === 1,
+    );
+    if (!picked.length) return null;
+    const b = bbox({ type: "FeatureCollection", features: picked });
+    if (!b.every(Number.isFinite)) return null;
+    return { west: b[0], south: b[1], east: b[2], north: b[3] };
+  }, [geojson]);
+
+  const roadLineQ = useQuery({
+    queryKey: [
+      "commercial-road-line",
+      primaryRoad?.clusterKey,
+      primaryRoad?.roadName,
+      placeMarker?.lng,
+      placeMarker?.lat,
+      selectedAdminBbox?.west,
+      selectedAdminBbox?.south,
+      selectedAdminBbox?.east,
+      selectedAdminBbox?.north,
+    ],
+    queryFn: () =>
+      fetchCommercialRoadLine({
+        cluster_key: primaryRoad!.clusterKey,
+        road_name: primaryRoad!.roadName,
+        label: primaryRoad!.label,
+        addr1: primaryRoad!.addr1,
+        addr2: primaryRoad!.addr2,
+        addr3: primaryRoad!.addr3,
+        addr4: primaryRoad!.addr4,
+        longitude: placeMarker?.lng,
+        latitude: placeMarker?.lat,
+        west: selectedAdminBbox?.west,
+        south: selectedAdminBbox?.south,
+        east: selectedAdminBbox?.east,
+        north: selectedAdminBbox?.north,
+      }),
+    enabled: Boolean(
+      commercial &&
+        primaryRoad?.roadName &&
+        primaryRoad.addr1 &&
+        primaryRoad.addr2 &&
+        (placeMarker || selectedAdminBbox) &&
+        configQ.data?.vworld_configured,
+    ),
+    staleTime: 10 * 60_000,
+    retry: 1,
+  });
+
+  const roadLineFc =
+    commercial && roadLineQ.data?.ok && (roadLineQ.data.feature_collection?.features?.length ?? 0) > 0
+      ? roadLineQ.data.feature_collection
+      : null;
+
   useEffect(() => {
-    if (!mapReady || !placeMarker || mapPanelMode === "collapsed") return;
+    if (!mapReady || mapPanelMode === "collapsed") return;
     const map = mapRef.current?.getMap();
     if (!map) return;
+    if (roadLineFc) {
+      const b = boundsFromGeoJson(roadLineFc);
+      if (b) {
+        const t = window.setTimeout(() => {
+          map.fitBounds(b, { padding: 64, duration: 650, maxZoom: 16, essential: true });
+        }, 120);
+        return () => window.clearTimeout(t);
+      }
+    }
+    if (!placeMarker) return;
     const t = window.setTimeout(() => {
       map.easeTo({
         center: [placeMarker.lng, placeMarker.lat],
@@ -518,7 +630,14 @@ export default function CollectiveRegionMapHub({
       });
     }, 120);
     return () => window.clearTimeout(t);
-  }, [mapReady, mapPanelMode, placeMarker?.lng, placeMarker?.lat, placeMarker?.label]);
+  }, [
+    mapReady,
+    mapPanelMode,
+    roadLineFc,
+    placeMarker?.lng,
+    placeMarker?.lat,
+    placeMarker?.label,
+  ]);
 
   const isRiSelection = useMemo(
     () =>
@@ -542,7 +661,17 @@ export default function CollectiveRegionMapHub({
     for (const feat of geojson.features) {
       const props = (feat.properties ?? {}) as Record<string, unknown>;
       const code = featureAdminCode(props, mapLevel);
-      const selected = code ? selectedSet.has(code) : false;
+      const selected = Boolean(
+        code &&
+          (selectedSet.has(code) || selectedCanonSet.has(canonAdminCode(mapLevel, code))),
+      );
+      const selectable = Boolean(
+        code &&
+          !selected &&
+          neighborGraphReady &&
+          (neighborSelectableSet.has(code) ||
+            neighborSelectableSet.has(canonAdminCode(mapLevel, code))),
+      );
       const label =
         shortRegionLabel(props) ||
         (code && labels[code] ? labels[code].split(/\s+/).pop() : null) ||
@@ -551,6 +680,7 @@ export default function CollectiveRegionMapHub({
         ...props,
         ch2_code: code ?? null,
         ch2_selected: selected ? 1 : 0,
+        ch2_selectable: selectable ? 1 : 0,
         ch2_label: label,
       };
       const geom = sanitizePolygonGeometry(feat.geometry);
@@ -574,7 +704,7 @@ export default function CollectiveRegionMapHub({
       outlineGeoJson: { type: "FeatureCollection", features: outlineFeatures },
       labelGeoJson: { type: "FeatureCollection", features: labelFeatures },
     };
-  }, [geojson, mapLevel, selectedSet, labels]);
+  }, [geojson, mapLevel, selectedSet, selectedCanonSet, labels, neighborGraphReady, neighborSelectableSet]);
 
   const fitDataKey = useMemo(
     () =>
@@ -789,22 +919,43 @@ export default function CollectiveRegionMapHub({
         setMapError("이 구역의 행정코드를 확인할 수 없습니다.");
         return;
       }
-      if (selectedSet.has(code)) {
+      const already =
+        selectedSet.has(code) || selectedCanonSet.has(canonAdminCode(mapLevel, code));
+      if (already) {
         setMapError("이미 선택된 지역입니다.");
+        return;
+      }
+
+      const selectedPrefixes = new Set(
+        selectedCodes.map((c) => sigunguPrefix(c)).filter(Boolean),
+      );
+      if (selectedPrefixes.size > 0 && !selectedPrefixes.has(sigunguPrefix(code))) {
+        setMapError("같은 시군구의 인접 지역만 추가할 수 있습니다.");
         return;
       }
 
       const polygonFeat =
         geojson.features.find((f) => {
           const c = featureAdminCode(f.properties as Record<string, unknown>, mapLevel);
-          return c === code;
+          return c === code || (c && canonAdminCode(mapLevel, c) === canonAdminCode(mapLevel, code));
         }) ?? rawFeat;
 
       const selectedFeatures = geojson.features.filter((f) => {
         const c = featureAdminCode(f.properties as Record<string, unknown>, mapLevel);
-        return c && selectedSet.has(c);
+        if (!c) return false;
+        return selectedSet.has(c) || selectedCanonSet.has(canonAdminCode(mapLevel, c));
       });
-      if (!isAdjacentToAnySelected(polygonFeat, selectedFeatures, isRiSelection ? 0.002 : 0.0012)) {
+      const canon = canonAdminCode(mapLevel, code);
+      const inNeighborGraph =
+        neighborSelectableSet.has(code) || neighborSelectableSet.has(canon);
+      if (neighborGraphReady) {
+        if (!inNeighborGraph) {
+          setMapError("인접한 지역만 추가할 수 있습니다. (위상 이웃만 선택 가능)");
+          return;
+        }
+      } else if (
+        !isAdjacentToAnySelected(polygonFeat, selectedFeatures, isRiSelection ? 0.002 : 0.0012)
+      ) {
         setMapError("인접한 지역만 추가할 수 있습니다. (맞닿은 구역을 선택해 주세요)");
         return;
       }
@@ -854,7 +1005,7 @@ export default function CollectiveRegionMapHub({
         });
       }
     },
-    [geojson, isRiSelection, mapLevel, scope.leafList, scope.riPick, selectedSet],
+    [geojson, isRiSelection, mapLevel, neighborGraphReady, neighborSelectableSet, scope.leafList, scope.riPick, selectedCanonSet, selectedCodes, selectedSet],
   );
 
   const handleContextMenu = useCallback(
@@ -1035,21 +1186,51 @@ export default function CollectiveRegionMapHub({
                       "case",
                       ["==", ["get", "ch2_selected"], 1],
                       "#facc15",
+                      ["==", ["get", "ch2_selectable"], 1],
+                      "#f97316",
                       "#ea580c",
                     ],
                     "line-width": [
                       "case",
                       ["==", ["get", "ch2_selected"], 1],
                       isRiSelection ? 4.5 : 4,
+                      ["==", ["get", "ch2_selectable"], 1],
+                      isRiSelection ? 2.4 : 2,
                       isRiSelection ? 1.8 : 1.35,
                     ],
                     "line-opacity": [
                       "case",
                       ["==", ["get", "ch2_selected"], 1],
                       1,
+                      ["==", ["get", "ch2_selectable"], 1],
+                      0.95,
                       0.9,
                     ],
                   } as never}
+                />
+              </Source>
+            ) : null}
+            {roadLineFc ? (
+              <Source id="commercial-road-line" type="geojson" data={roadLineFc}>
+                <Layer
+                  id="commercial-road-line-halo"
+                  type="line"
+                  layout={{ "line-cap": "round", "line-join": "round" }}
+                  paint={{
+                    "line-color": "#0c4a6e",
+                    "line-width": 8,
+                    "line-opacity": 0.9,
+                  }}
+                />
+                <Layer
+                  id="commercial-road-line"
+                  type="line"
+                  layout={{ "line-cap": "round", "line-join": "round" }}
+                  paint={{
+                    "line-color": "#38bdf8",
+                    "line-width": 5,
+                    "line-opacity": 1,
+                  }}
                 />
               </Source>
             ) : null}
@@ -1082,15 +1263,31 @@ export default function CollectiveRegionMapHub({
             {commercial ? "도로 위치 찾는 중…" : "건물 위치 찾는 중…"}
           </div>
         ) : null}
+        {commercial && roadLineQ.isFetching ? (
+          <div className="absolute top-2 left-2 z-10 text-[11px] bg-white/90 px-2 py-1 rounded shadow">
+            도로 구간 불러오는 중…
+          </div>
+        ) : null}
         {placeRequested && placeGeocodeQ.isSuccess && !placeMarker ? (
           <div className="absolute top-2 left-2 z-10 text-[11px] bg-amber-50 text-amber-800 px-2 py-1 rounded shadow">
             {commercial ? "도로 위치를 찾지 못했습니다." : "건물 위치를 찾지 못했습니다."}
+          </div>
+        ) : null}
+        {commercial &&
+        roadLineQ.isSuccess &&
+        !roadLineFc &&
+        (placeMarker || selectedAdminBbox) ? (
+          <div className="absolute top-10 left-2 z-10 text-[11px] bg-amber-50 text-amber-800 px-2 py-1 rounded shadow">
+            도로 선은 찾지 못해 위치로 표시합니다.
           </div>
         ) : null}
         {!boundariesQ.isFetching && geojson?.features.length ? (
           <div className="absolute bottom-2 left-2 z-10 text-[11px] bg-white/90 px-2 py-1 rounded shadow text-slate-600">
             행정구역 {geojson.features.length}곳
             {geojson.features.length > selectedCodes.length ? " · 인접 포함" : ""}
+            {neighborGraphReady
+              ? ` · 선택가능 ${neighborSelectableSet.size}`
+              : " · 선택 turf폴백"}
           </div>
         ) : null}
 

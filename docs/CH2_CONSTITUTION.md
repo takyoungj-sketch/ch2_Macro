@@ -2,7 +2,8 @@
 
 > CH2 Macro가 **왜 존재하는지**, **무엇을 지향하는지**에 대한 변하지 않는 원칙.  
 > 기능·UI·통계·AI 구현은 이 문서를 따른다.  
-> AI 세부 조항: [CH2_AI_CONSTITUTION.md](./CH2_AI_CONSTITUTION.md)
+> AI 세부 조항: [CH2_AI_CONSTITUTION.md](./CH2_AI_CONSTITUTION.md)  
+> 물음표·AI 설명 체계: [CH2_EXPLAIN_CONSTITUTION.md](./CH2_EXPLAIN_CONSTITUTION.md)
 
 ---
 
@@ -65,6 +66,27 @@ CH2 Macro는 **개별 적정가격 엔진을 대체하지 않는다.**
 
 ---
 
+## 5-1. MVP 범위 (2026-08 중간점검 고정)
+
+**CH2 Macro MVP란:**
+
+> 토지·복합·집합에서 **시장 통계·회귀·예측·한계 노출·AI 해석**을 같은 통계 언어로 제공하고,  
+> **모형 추천은 “목적별 후보 제시”**이며, Twin은 **선택적 보조 pool**이다.  
+> Twin이 Local만으로 한 회귀보다 **검증 지표상 개선**했는지 보여줄 수 있을 때, 비로소 Twin을 “제품 기본”으로 승격한다.
+
+| 기능 | 하는 일 | 하지 않는 일 |
+|------|---------|--------------|
+| **통계** | 수준·분포·추세·표본 n | 적정가 |
+| **회귀** | 통제 후 패턴(계수·Adj R²·VIF) | 인과 단정 |
+| **예측** | 한 점 ŷ + PI/CI · 한계 | 감정·투자 |
+| **모형 추천** | 설명형 / 예측형(·균형) **목적별 후보** | “정답 식” 자동 확정 |
+| **Twin** | 유사 지역 pool · **검증 전제** | 유사=동일 시장 선언 |
+| **AI** | Facts·화면 설명 | 수치 invent · 가격 판단 |
+
+상세·실행 순서: [CH2_MIDCHECK_IMPROVEMENT_PLAN.md](./CH2_MIDCHECK_IMPROVEMENT_PLAN.md)
+
+---
+
 ## 6. AI와의 관계
 
 CH2 AI는 [CH2_AI_CONSTITUTION.md](./CH2_AI_CONSTITUTION.md)에 따라 **통계 분석 어시스턴트**로 동작한다.
@@ -79,12 +101,18 @@ CH2 AI는 [CH2_AI_CONSTITUTION.md](./CH2_AI_CONSTITUTION.md)에 따라 **통계 
 | 문서 | 역할 |
 |------|------|
 | [CH2_MACRO_VISION.md](./CH2_MACRO_VISION.md) | **제품 비전** — Profile 제안 · Validation 판단 · AI 해설 |
+| [CH2_EXPLAIN_CONSTITUTION.md](./CH2_EXPLAIN_CONSTITUTION.md) | 물음표 1차 · AI 2차 설명 체계 |
 | [CH2_AI_CONSTITUTION.md](./CH2_AI_CONSTITUTION.md) | AI 6대 조항·Router·Bundle |
 | [SYSTEM_ARCHITECTURE.md](./SYSTEM_ARCHITECTURE.md) | Candidate Factory · Validation Engine · 모듈 경계 |
 | [CANDIDATE_EVALUATION_DESIGN.md](./CANDIDATE_EVALUATION_DESIGN.md) | 후보·표본·검증·Confidence 상세 |
 | [CH2_MACRO_IMPLEMENTATION_ROADMAP.md](./CH2_MACRO_IMPLEMENTATION_ROADMAP.md) | V1~V3 구현 순서·완료 게이트 |
 | [DECISIONS.md](./DECISIONS.md) | 구체적 설계 결정 기록 |
+| [CH2_ENTITLEMENT.md](./CH2_ENTITLEMENT.md) | 무료/유료 권한 — 5앱 통일 · 토지 전용 무료 탭 없음 (D-043) |
 | [REGIONAL_PROFILE_ARCHITECTURE.md](./REGIONAL_PROFILE_ARCHITECTURE.md) | Regional Profile·거시 분석 로드맵 |
+| [CH2_MIDCHECK_IMPROVEMENT_PLAN.md](./CH2_MIDCHECK_IMPROVEMENT_PLAN.md) | 중간점검 개선안 — 검증·Twin Validation·월간 SSOT |
+| [TWIN_VALIDATION_STATUS.md](./TWIN_VALIDATION_STATUS.md) | Twin Validation 실태·판정 초안 |
+| [MONTHLY_UPDATE_CHECKLIST.md](./MONTHLY_UPDATE_CHECKLIST.md) | 월간 1페이지 체크리스트 |
+| [RENT_CONVERSION_EXPERIMENT.md](./RENT_CONVERSION_EXPERIMENT.md) | 주거 전월세 전환율 실험 종료 · `mean_simple` 확정 (D-040) |
 
 ---
 

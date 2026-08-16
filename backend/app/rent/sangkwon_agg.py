@@ -143,6 +143,31 @@ def parse_number(raw: object) -> Optional[float]:
         return None
 
 
+def rolling_quarter_window(
+    end_year: int,
+    end_quarter: int,
+    n: int = 4,
+) -> list[tuple[int, int]]:
+    """끝 분기부터 과거 n개. 예: (2026, 2) → [(2025, 3), (2025, 4), (2026, 1), (2026, 2)]."""
+    y, q = int(end_year), int(end_quarter)
+    out: list[tuple[int, int]] = []
+    for _ in range(n):
+        out.append((y, q))
+        q -= 1
+        if q < 1:
+            q = 4
+            y -= 1
+    out.reverse()
+    return out
+
+
+def format_window_label(window: list[tuple[int, int]]) -> str:
+    if not window:
+        return ""
+    a, b = window[0], window[-1]
+    return f"{a[0]}.{a[1]}Q~{b[0]}.{b[1]}Q"
+
+
 def _four_quarters(by_quarter: dict[int, Optional[float]]) -> Optional[list[float]]:
     vals = [by_quarter.get(q) for q in (1, 2, 3, 4)]
     if any(v is None for v in vals):

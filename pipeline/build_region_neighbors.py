@@ -405,19 +405,54 @@ def ensure_region_neighbors_table(engine) -> None:
 
 
 def sigungu_already_built(engine, *, level: str, sig5: str) -> bool:
-    """해당 시군구 prefix 코드가 그래프에 있으면 skip 후보."""
+    """시군구 그래프가 카탈로그 대비 충분히 채워졌으면 skip.
+
+    링 빌드만 타고 코드 몇 개만 있는 경우(세종 36110 등)는 재빌드한다.
+    """
+    pref = f"{sig5}%"
     with engine.connect() as conn:
-        n = conn.execute(
+        n_graph = conn.execute(
             text(
                 """
-                SELECT COUNT(*) FROM region_neighbors
+                SELECT COUNT(DISTINCT code) FROM region_neighbors
                 WHERE level = :level
                   AND code LIKE :pref
                 """
             ),
-            {"level": level, "pref": f"{sig5}%"},
+            {"level": level, "pref": pref},
         ).scalar()
-    return int(n or 0) > 0
+        if level == "beopjungri":
+            n_cat = conn.execute(
+                text(
+                    """
+                    SELECT COUNT(DISTINCT TRIM(beopjungri_code))
+                    FROM region_codes
+                    WHERE beopjungri_code IS NOT NULL
+                      AND LENGTH(TRIM(beopjungri_code)) >= 10
+                      AND RIGHT(TRIM(beopjungri_code), 2) <> '00'
+                      AND LEFT(TRIM(beopjungri_code), 5) = :sig5
+                    """
+                ),
+                {"sig5": sig5},
+            ).scalar()
+        else:
+            n_cat = conn.execute(
+                text(
+                    """
+                    SELECT COUNT(DISTINCT TRIM(eupmyeondong_code))
+                    FROM region_codes
+                    WHERE eupmyeondong_code IS NOT NULL
+                      AND LENGTH(TRIM(eupmyeondong_code)) >= 8
+                      AND LEFT(TRIM(eupmyeondong_code), 5) = :sig5
+                    """
+                ),
+                {"sig5": sig5},
+            ).scalar()
+    graph_n = int(n_graph or 0)
+    cat_n = int(n_cat or 0)
+    if cat_n <= 0:
+        return graph_n > 0
+    return graph_n >= max(1, int(0.8 * cat_n))
 
 
 def build_one_sigungu(

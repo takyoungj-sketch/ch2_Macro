@@ -1,0 +1,11 @@
+{
+  "id": "D-040",
+  "topic": "주거 전월세 적용 전환율 = 단순평균",
+  "date": "2026-08-15",
+  "status": "confirmed",
+  "background": "같은 건물 전세·반전세로 건물별 r_b를 구한 뒤 지역 집계 방법을 4가지 비교했다. REB 공표율·5% 고정은 쓰지 않는다.",
+  "decision": "r_selected = mean_simple. 4방법 재실험·연립 전용 산식·전국 validate는 하지 않는다.",
+  "rationale": "서울 hold-out에서 환산 전세 vs 전세 P50 MAPE 중앙값이 단순평균이 가장 낮거나 동등했다. 목적은 금리 추정이 아니라 반전세 비교용 환산이다.",
+  "revisit": "새 창·새 시도에서 hold-out이 단순평균을 뚜렷이 이기면 재검토. 그 전까지 산식 재실험 금지.",
+  "related": ["rent"]
+}

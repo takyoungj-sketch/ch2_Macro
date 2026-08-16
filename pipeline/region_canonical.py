@@ -361,22 +361,40 @@ def lookup_active_admin_codes_by_name(
     if level == "eupmyeondong":
         if not a2 or not labels:
             return []
-        rows = conn.execute(
-            text(
-                """
-                SELECT DISTINCT btrim(eupmyeondong_code::text) AS code
-                FROM region_codes
-                WHERE COALESCE(is_active, TRUE)
-                  AND btrim(sido_name::text) = :a1
-                  AND btrim(sigungu_name::text) = :a2
-                  AND btrim(eupmyeondong_name::text) = ANY(:names)
-                  AND eupmyeondong_code IS NOT NULL
-                  AND btrim(eupmyeondong_code::text) <> ''
-                ORDER BY 1
-                """
-            ),
-            {"a1": a1, "a2": a2, "names": labels},
-        ).fetchall()
+        if a2 == "__FLAT_SIDO__":
+            # 세종 등: 행정 읍·면·동명이 sigungu_name
+            rows = conn.execute(
+                text(
+                    """
+                    SELECT DISTINCT btrim(eupmyeondong_code::text) AS code
+                    FROM region_codes
+                    WHERE COALESCE(is_active, TRUE)
+                      AND btrim(sido_name::text) = :a1
+                      AND btrim(sigungu_name::text) = ANY(:names)
+                      AND eupmyeondong_code IS NOT NULL
+                      AND btrim(eupmyeondong_code::text) <> ''
+                    ORDER BY 1
+                    """
+                ),
+                {"a1": a1, "names": labels},
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                text(
+                    """
+                    SELECT DISTINCT btrim(eupmyeondong_code::text) AS code
+                    FROM region_codes
+                    WHERE COALESCE(is_active, TRUE)
+                      AND btrim(sido_name::text) = :a1
+                      AND btrim(sigungu_name::text) = :a2
+                      AND btrim(eupmyeondong_name::text) = ANY(:names)
+                      AND eupmyeondong_code IS NOT NULL
+                      AND btrim(eupmyeondong_code::text) <> ''
+                    ORDER BY 1
+                    """
+                ),
+                {"a1": a1, "a2": a2, "names": labels},
+            ).fetchall()
     elif level == "sigungu":
         if labels:
             rows = conn.execute(
@@ -440,24 +458,43 @@ def lookup_active_beopjungri_by_ri_picks(
         r = (ri or "").strip()
         if not e or not r:
             continue
-        row = conn.execute(
-            text(
-                """
-                SELECT btrim(beopjungri_code::text) AS code
-                FROM region_codes
-                WHERE COALESCE(is_active, TRUE)
-                  AND btrim(sido_name::text) = :a1
-                  AND btrim(sigungu_name::text) = :a2
-                  AND btrim(eupmyeondong_name::text) = :eup
-                  AND btrim(beopjungri_name::text) = :ri
-                  AND beopjungri_code IS NOT NULL
-                  AND btrim(beopjungri_code::text) <> ''
-                ORDER BY beopjungri_code
-                LIMIT 1
-                """
-            ),
-            {"a1": a1, "a2": a2, "eup": e, "ri": r},
-        ).first()
+        if a2 == "__FLAT_SIDO__":
+            row = conn.execute(
+                text(
+                    """
+                    SELECT btrim(beopjungri_code::text) AS code
+                    FROM region_codes
+                    WHERE COALESCE(is_active, TRUE)
+                      AND btrim(sido_name::text) = :a1
+                      AND btrim(sigungu_name::text) = :eup
+                      AND btrim(beopjungri_name::text) = :ri
+                      AND beopjungri_code IS NOT NULL
+                      AND btrim(beopjungri_code::text) <> ''
+                    ORDER BY beopjungri_code
+                    LIMIT 1
+                    """
+                ),
+                {"a1": a1, "eup": e, "ri": r},
+            ).first()
+        else:
+            row = conn.execute(
+                text(
+                    """
+                    SELECT btrim(beopjungri_code::text) AS code
+                    FROM region_codes
+                    WHERE COALESCE(is_active, TRUE)
+                      AND btrim(sido_name::text) = :a1
+                      AND btrim(sigungu_name::text) = :a2
+                      AND btrim(eupmyeondong_name::text) = :eup
+                      AND btrim(beopjungri_name::text) = :ri
+                      AND beopjungri_code IS NOT NULL
+                      AND btrim(beopjungri_code::text) <> ''
+                    ORDER BY beopjungri_code
+                    LIMIT 1
+                    """
+                ),
+                {"a1": a1, "a2": a2, "eup": e, "ri": r},
+            ).first()
         if not row or not row[0]:
             continue
         code = str(row[0]).strip()

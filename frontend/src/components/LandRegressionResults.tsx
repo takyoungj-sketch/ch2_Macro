@@ -1,4 +1,5 @@
 import type { LandRegressionResponse } from "../types";
+import { MetricWithHelp, StatsGlossaryHelp } from "@ch2/stats-glossary";
 import {
   countSignificantCoefficients,
   fmtDecimal,
@@ -19,12 +20,18 @@ export default function LandRegressionResults({ data }: { data: LandRegressionRe
       ))}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs text-slate-700">
-        <div>R² {fmtDecimal(data.r_squared, 5)}</div>
-        <div>Adj R² {fmtDecimal(data.adj_r_squared, 5)}</div>
+        <MetricWithHelp label="R²" termId="r_squared" value={fmtDecimal(data.r_squared, 5)} />
+        <MetricWithHelp label="Adj R²" termId="adj_r_squared" value={fmtDecimal(data.adj_r_squared, 5)} />
         <div>유의 변수 {sigCount}개</div>
-        {data.f_p_value != null && <div>F p {fmtDecimal(data.f_p_value, 5)}</div>}
-        <div>모델 {modelLabel}</div>
-        <div>n={data.n.toLocaleString("ko-KR")}</div>
+        {data.f_p_value != null && (
+          <MetricWithHelp label="F p" termId="f_p_value" value={fmtDecimal(data.f_p_value, 5)} />
+        )}
+          <div className="flex items-center gap-1">
+            모델 {modelLabel}
+            <StatsGlossaryHelp termId="ols" size="xs" />
+            <StatsGlossaryHelp termId="log_model" size="xs" />
+          </div>
+        <MetricWithHelp label="n=" termId="fit_n" value={data.n.toLocaleString("ko-KR")} />
       </div>
 
       {Object.keys(data.reference_categories).length > 0 && (

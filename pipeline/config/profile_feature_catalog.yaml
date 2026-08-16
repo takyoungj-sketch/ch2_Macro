@@ -67,6 +67,36 @@ twin_vector:
       mask_min_count_from: apartment_count
       mask_min_count: 15
       label_ko: 아파트 ㎡당 P75
+    commercial_p50:
+      profile_path: commercial_median
+      block: commercial_profile
+      dtype: numeric
+      unit: manwon_per_sqm
+      window: last_3y
+      mask_from: market_presence.상가
+      mask_min_count_from: commercial_count
+      mask_min_count: 10
+      label_ko: 상가 ㎡당 P50
+    factory_p50:
+      profile_path: factory_median
+      block: factory_profile
+      dtype: numeric
+      unit: manwon_per_sqm
+      window: last_3y
+      mask_from: market_presence.공장
+      mask_min_count_from: factory_count
+      mask_min_count: 8
+      label_ko: 공장 ㎡당 P50
+    detached_p50:
+      profile_path: detached_median
+      block: detached_profile
+      dtype: numeric
+      unit: manwon_per_sqm
+      window: last_3y
+      mask_from: market_presence.단독다가구
+      mask_min_count_from: detached_count
+      mask_min_count: 10
+      label_ko: 단독 ㎡당 P50
     market_presence:
       profile_path: market_presence
       block: market_mix

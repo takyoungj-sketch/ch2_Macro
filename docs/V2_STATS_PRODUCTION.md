@@ -87,6 +87,7 @@ python verify_v2_national_samples.py --base-url http://127.0.0.1:8000 --as-of-mo
 | 인덱스 | `008` 미적용 시 I/O 병목. |
 | 메모리 | 시도 청크로 완화; 극단적 시도는 향후 시군구 분할 검토. |
 | v1 | **미변경** — `land_basic_stats` / v1 API 훼손 없음. |
+| API 핫패스 | 원장 `ANY` / 이중 스캔 재발 금지 — [LAND_LEDGER_QUERY_PERF.md](./LAND_LEDGER_QUERY_PERF.md) |
 
 ---
 

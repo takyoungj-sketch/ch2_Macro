@@ -37,13 +37,31 @@ from app.built.schemas import (
 from app.built.time_scope import apply_contract_date_window, parse_as_of_month
 
 CompareMode = Literal["sigungu_only", "gu_only", "two_way", "three_way"]
-CONTINUOUS_VARS = frozenset({"gross_area", "land_area", "building_age"})
+CONTINUOUS_VARS = frozenset(
+    {
+        "gross_area",
+        "land_area",
+        "building_age",
+        "region_population",
+        "region_land_p50",
+        "region_apt_p50",
+        "region_apt_n",
+        "region_comm_p50",
+        "region_comm_n",
+    }
+)
 LOGLOG_X_COLS = frozenset({"gross_area", "land_area"})
 _CONT_LABELS = {
     "gross_area": "연면적",
     "land_area": "대지면적",
     "building_age": "연식",
     "road_code": "도로",
+    "region_population": "지역인구",
+    "region_land_p50": "지역토지가격",
+    "region_apt_p50": "지역아파트가격",
+    "region_apt_n": "지역아파트거래량",
+    "region_comm_p50": "지역상가가격",
+    "region_comm_n": "지역상가거래량",
 }
 _ASSET_LABELS = {
     "commercial": "상업",
@@ -776,8 +794,14 @@ def _build_design_matrix(
         ("gross_area", vars_spec.gross_area),
         ("land_area", vars_spec.land_area),
         ("building_age", vars_spec.building_age),
+        ("region_population", vars_spec.region_population),
+        ("region_land_p50", vars_spec.region_land_p50),
+        ("region_apt_p50", vars_spec.region_apt_p50),
+        ("region_apt_n", vars_spec.region_apt_n),
+        ("region_comm_p50", vars_spec.region_comm_p50),
+        ("region_comm_n", vars_spec.region_comm_n),
     ):
-        if not enabled:
+        if not enabled or col not in df.columns:
             continue
         s = pd.to_numeric(df[col], errors="coerce")
         parts.append(pd.DataFrame({col: s}))

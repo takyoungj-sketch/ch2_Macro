@@ -15,7 +15,8 @@
   4) build_stats_v2 + build_upper_stats_v2 (category)
   5) build_stats_v2 + build_upper_stats_v2 (group, §7.1)
   6) build_annual_stats (당해 연도, both) + verify_jimok_group_integrity
-  7) 스냅샷 JSON
+  7) analysis_cache / analysis_base_cache TRUNCATE (Facts First · H2)
+  8) 스냅샷 JSON
 """
 
 from __future__ import annotations
@@ -103,6 +104,15 @@ def _run_jimok_group_pipeline(v2_as: str) -> None:
     )
 
 
+def _truncate_paid_caches() -> None:
+    """Facts First — mart 갱신 후 stale paid 분석 캐시 제거 (run_pipeline 과 동일)."""
+    if str(PIPELINE) not in sys.path:
+        sys.path.insert(0, str(PIPELINE))
+    from run_pipeline import _truncate_paid_caches as truncate_fn  # noqa: WPS433
+
+    truncate_fn()
+
+
 def _apply_ddl(*, dry_run: bool) -> None:
     names = ("037_land_jimok_group_map.sql", "038_land_transactions_resolved_jimok_group.sql")
     for name in names:
@@ -150,6 +160,11 @@ def main() -> None:
     p.add_argument("--skip-ddl", action="store_true")
     p.add_argument("--skip-dedupe", action="store_true")
     p.add_argument("--skip-stats", action="store_true")
+    p.add_argument(
+        "--skip-cache-clear",
+        action="store_true",
+        help="analysis_cache / analysis_base_cache TRUNCATE 생략 (비권장)",
+    )
     p.add_argument(
         "--skip-jimok-group",
         action="store_true",
@@ -281,6 +296,12 @@ def main() -> None:
         )
         if not args.skip_jimok_group:
             _run_jimok_group_pipeline(v2_as)
+
+    # dedupe 안에도 truncate가 있으나, stats 재구축 중 API가 캐시를 다시 채울 수 있음.
+    # cycle 종료 직전 한 번 더 비워 Facts First(H2)를 보장한다.
+    if not args.skip_cache_clear:
+        log.info("[cache-clear] analysis_cache / analysis_base_cache")
+        _truncate_paid_caches()
 
     snap_script = _SCRIPT_DIR / "snapshot_land_tx_counts.py"
     snap_out = REPO / "clean_snapshots" / cycle / "land_tx_counts_after.json"

@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
+from app.built.regression.region_features import (
+    attach_region_features,
+    normalize_region_feature_tier,
+    region_blocks_for_asset,
+)
 from app.built.regression.selection.best_subset import CompareResult, run_group_best_subset
 from app.built.regression.selection.blocks import BlockId, spec_from_blocks
 from app.built.regression.selection.context import (
+    SelectionContext,
     region_col_for_context,
     resolve_selection_context,
     with_complete_case,
@@ -30,6 +36,7 @@ from app.recommendation.satisfaction import (
     lookup_built_satisfaction,
 )
 from app.recommendation.scope import resolve_built_analysis_scope
+from app.recommendation.twin_validation import build_twin_validation_verdict
 from app.recommendation.stage2 import Stage2Input, run_stage2_twin
 from app.recommendation.coef_narrative import build_coefficient_narratives
 from app.recommendation.conclusion import build_recommendation_conclusion
@@ -87,11 +94,38 @@ def _twin_recommended(
     return grade_proceed
 
 
+def _apply_region_features(
+    ctx: SelectionContext,
+    req: RegressionSelectionRequest,
+) -> SelectionContext:
+    if not getattr(req, "include_region_features", False):
+        return ctx
+    pv = (req.profile_version or "v2.1-national").strip() or "v2.1-national"
+    wy = int(req.profile_window_years or req.window_years or 3)
+    tier = normalize_region_feature_tier(getattr(req, "region_feature_tier", None))
+    blocks = region_blocks_for_asset(req.asset_type, tier=tier)
+    df = attach_region_features(
+        ctx.df,
+        profile_version=pv,
+        window_years=wy,
+        block_ids=blocks,
+    )
+    return replace(ctx, df=df)
+
+
 def _build_stage1(conn, req: RegressionSelectionRequest) -> tuple:
     analysis_scope = resolve_built_analysis_scope(conn, req)
 
     ctx = resolve_selection_context(conn, req)
+    ctx = _apply_region_features(ctx, req)
     base_pool = resolve_recommendation_pool(ctx, unified=ctx.unified)
+    if getattr(req, "include_region_features", False):
+        # region 공변량과 leaf 더미는 1차에서 동시 사용하지 않음
+        base_pool = [b for b in base_pool if b != "region_leaf"]
+        tier = normalize_region_feature_tier(getattr(req, "region_feature_tier", None))
+        for b in region_blocks_for_asset(req.asset_type, tier=tier):
+            if b not in base_pool:
+                base_pool.append(b)  # type: ignore[arg-type]
     pool, excluded_blocks = filter_pool_by_coverage(ctx, base_pool)
     if not pool:
         detail = "SSOT 추천 변수 풀이 비어 있습니다."
@@ -196,12 +230,22 @@ def run_recommendation(conn, req: RegressionSelectionRequest) -> RegressionRecom
             ),
         )
     elif req.run_stage2 and not has_twins:
+        skip_reason = "Profile Twin 후보가 전달되지 않았습니다."
         stage2 = RecommendationStage2(
             ran=False,
-            skipped_reason="Profile Twin 후보가 전달되지 않았습니다.",
+            skipped_reason=skip_reason,
             fixed_blocks=list(bundle.primary_raw.blocks),
+            recommended_blocks=list(bundle.primary_raw.blocks),
             fixed_response_scale=bundle.primary_raw.fit.response_scale,
             local_cv_mape=stage1.satisfaction.cv_mape,
+            twin_validation=build_twin_validation_verdict(
+                ran=False,
+                skipped_reason=skip_reason,
+                local_cv_mape=stage1.satisfaction.cv_mape,
+                decision="local",
+                primary=None,
+                pools=[],
+            ),
         )
 
     termination = build_termination_r2(

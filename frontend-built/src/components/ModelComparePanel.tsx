@@ -9,6 +9,7 @@ import type {
 } from "../types";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import AiAssistantPanel from "./AiAssistantPanel";
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import { CandidateValidationList } from "./CandidateValidationList";
 import { ModelComparisonCard } from "./ModelComparisonCard";
 import { PoolingEvaluationCard } from "./PoolingEvaluationCard";
@@ -256,6 +257,12 @@ export function ModelComparePanel({
             {label}
           </button>
         ))}
+        <span className="inline-flex items-center gap-0.5 ml-1">
+          <StatsGlossaryHelp termId="aic" size="xs" />
+          <StatsGlossaryHelp termId="bic" size="xs" />
+          <StatsGlossaryHelp termId="mape" size="xs" />
+          <StatsGlossaryHelp termId="cv_mape" size="xs" />
+        </span>
       </div>
       <p className="text-[11px] text-slate-500 dark:text-slate-400">
         현재 순위 기준: <span className="font-semibold">{rankLabel}</span>

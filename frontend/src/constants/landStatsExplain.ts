@@ -60,12 +60,7 @@ export interface FreeStatsExplainContext {
 
 export function buildFreeStatsExplain(ctx: FreeStatsExplainContext): AnalysisExplain {
   const asOf = statsAsOfLabel(ctx.data) ?? "—";
-  const modeLabel =
-    ctx.viewMode === "free"
-      ? "무료 통계"
-      : ctx.isPaidBasic
-        ? "유료 · 기본 통계 보기"
-        : "유료 통계";
+  const modeLabel = ctx.isPaidBasic ? "기본 통계 보기" : "토지 통계";
   const period = `${ctx.data.period_start?.slice(0, 10) ?? "?"} ~ ${ctx.data.period_end?.slice(0, 10) ?? "?"}`;
 
   const hints = [
@@ -103,9 +98,9 @@ export function buildFreeStatsExplain(ctx: FreeStatsExplainContext): AnalysisExp
       "「YYYY년 M월 말 기준」은 DB에 적재된 최신 V2 스냅샷(as_of_month)을 뜻합니다.",
       `롤링 ${ctx.windowYears}년 창은 기준일 직전 ${ctx.windowYears}년간 contract_date 가 걸친 거래입니다.`,
       "매트릭스에서 n≥15 건은 신뢰 구간(연한 강조), n<5 건은 흐리게 표시됩니다.",
-      ctx.viewMode === "paid" && ctx.isPaidBasic
-        ? "유료 기본통계 보기 후 「필터 분석 실행」을 누르면 연도·도로 등 고급 필터가 적용된 별도 결과로 이동합니다."
-        : "유료 모드에서는 「필터 분석 실행」으로 고급 필터 결과를 볼 수 있습니다.",
+      ctx.isPaidBasic
+        ? "기본통계 보기 후 「필터 분석 실행」을 누르면 연도·도로 등 고급 필터가 적용된 별도 결과로 이동합니다."
+        : "「필터 분석 실행」으로 고급 필터 결과를 볼 수 있습니다.",
     ],
     limitations: [
       "사전집계(V2)에 없는 법정코드는 합산에서 자동 제외될 수 있습니다(amber 안내).",
@@ -431,6 +426,77 @@ export function buildHistogramExplain(): AnalysisExplain {
     floor_groups: [],
   };
 }
+
+/** 셀 모달 · 회귀 탭 */
+export const LAND_REGRESSION_HELP: AnalysisExplain = {
+  spec_id: "land.regression.v1",
+  spec_version: "1.0",
+  title: "토지 셀 회귀 (용도×지목)",
+  summary:
+    "선택한 용도지역×지목 셀·필터 표본에서 단가(또는 log 단가) OLS를 적합합니다. " +
+    "면적·도로·거래유형·지분·연도·법정동 FE 등을 선택해 가격 형성 패턴을 읽습니다.",
+  formula: "단가(또는 log 단가) ~ 면적·도로·거래유형·지분·연도추세·법정동 FE …",
+  interpretation: [
+    "Adj R²·계수·유의성은 이 셀·필터 안의 통계적 패턴입니다.",
+    "로그 모형은 % 변화 해석에 가깝고, 선형은 만원/㎡ 단위입니다.",
+    "산점도로 통제 전(r)과 통제 후(β)를 비교하세요.",
+  ],
+  limitations: ["인과·적정가 아님", "셀 n·필터에 민감", "IQR 제외는 표본을 줄입니다"],
+  interpretation_hints: [],
+  presets: [
+    {
+      id: "log_vs_linear",
+      question: "log와 선형 중 무엇을 쓰나요?",
+      answer:
+        "단가 분포 왜도가 크면 log를, 해석을 만원/㎡로 직관적으로 보고 싶으면 선형을 검토합니다. 둘 다 돌려 비교하는 것이 안전합니다.",
+    },
+  ],
+  controls: [],
+  floor_groups: [],
+};
+
+export const LAND_PREDICT_HELP: AnalysisExplain = {
+  spec_id: "land.predict.v1",
+  spec_version: "1.0",
+  title: "토지 회귀 예측",
+  summary: "적합된 회귀식으로 입력값을 고정한 **한 점 예측**. PI·CI는 불확실성 참고입니다.",
+  formula: "ŷ = Xβ",
+  interpretation: [
+    "PI: 개별 필지 1건 예측 범위.",
+    "CI: 평균 예측 불확실성.",
+    "학습 범위(min~max) 밖 입력은 외삽입니다.",
+  ],
+  limitations: ["적정가·감정 아님", "셀·필터 표본에 종속"],
+  interpretation_hints: [],
+  presets: [
+    {
+      id: "pi_ci",
+      question: "PI와 CI 차이는?",
+      answer: "PI는 개별 거래 변동을 포함하고, CI는 평균 예측값의 정밀도만 봅니다.",
+    },
+  ],
+  controls: [],
+  floor_groups: [],
+};
+
+export const LAND_MODEL_SUGGEST_HELP: AnalysisExplain = {
+  spec_id: "land.model_suggest.v1",
+  spec_version: "1.0",
+  title: "토지 모형 추천",
+  summary:
+    "같은 표본에서 변수 블록 조합을 평가해 **설명형(AIC)** · **예측형(MAPE)** 목적별 후보를 보여 줍니다. 「최적 식」이 아니라 참고이며, Twin Validation은 복합(확장)만 있습니다.",
+  formula: "후보 subset OLS → AIC / MAPE 순위 (깊이: 표준)",
+  interpretation: [
+    "설명형 탭: AIC 상위 — 적합·간결 균형.",
+    "예측형 탭: MAPE 상위 — in-sample 예측 오차 최소화 (CV-MAPE는 복합).",
+    "채택은 사용자가 판단합니다.",
+  ],
+  limitations: ["in-sample 기준", "적정가 아님", "n이 작으면 불안정"],
+  interpretation_hints: [],
+  presets: [],
+  controls: [],
+  floor_groups: [],
+};
 
 export const LAND_SCATTER_RAW_HELP: AnalysisExplain = {
   spec_id: "land.scatter_raw.v1",

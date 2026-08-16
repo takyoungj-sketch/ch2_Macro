@@ -117,6 +117,30 @@ export interface ProfileTwinNeighborsResponse {
   neighbors: ProfileTwinNeighborItem[];
 }
 
+export interface RentProfileYearCell {
+  count: number;
+  deposit_sum: number;
+  monthly_sum: number;
+}
+
+export interface RentProfileYearType {
+  asset_type: string;
+  label: string;
+  years: Record<string, RentProfileYearCell>;
+  total_count: number;
+  total_deposit_sum: number;
+  total_monthly_sum: number;
+}
+
+export interface RentProfileYearlyResponse {
+  region_level: string;
+  region_code: string;
+  years: number[];
+  types: RentProfileYearType[];
+  unit_deposit: string;
+  unit_monthly: string;
+}
+
 export interface RegionNameInfo {
   beopjungri_code: string;
   beopjungri_name: string;

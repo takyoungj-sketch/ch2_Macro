@@ -31,6 +31,7 @@ import {
   unitsToRegionScope,
   type BuiltAnalysisUnit,
 } from "./utils/builtAnalysisUnits";
+import { useBuiltDeepLink } from "./hooks/useBuiltDeepLink";
 import { profileHref, resolveBuiltProfileTarget } from "./utils/profileLink";
 import {
   ASSET_KIND_LABELS,
@@ -626,6 +627,15 @@ export default function App() {
     const allowed = new Set(visibleLeafOptions.map((o) => o.name));
     setLeafList((prev) => prev.filter((n) => allowed.has(n)));
   }, [useAddr4Leaf, visibleLeafOptions]);
+
+  useBuiltDeepLink({
+    assetType,
+    setAddr1,
+    setAddr2,
+    setLeafList,
+    setGuList,
+    leafOptions: visibleLeafOptions,
+  });
 
   useEffect(() => {
     if (!leafList.length) setRiList([]);

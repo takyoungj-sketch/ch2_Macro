@@ -56,7 +56,7 @@
 | **카드** | `RegionMapCard` placeholder (선택 목록·안내 문구) |
 | **1차 선택** | 좌측 `RegionSelector` only |
 | **추가 선택** | 유료만, 지도 **우클릭** → 인접 검사(`@turf/boolean-touches`) → `tierSelection` 동기화 |
-| **무료** | 지도 열람·클로즈업, 우클릭 추가 불가 |
+| **무료** | (목표, D-043) 지도 열람·클로즈업, 우클릭 추가 불가. 토지 전용 무료 탭은 **없음** — [`CH2_ENTITLEMENT.md`](./CH2_ENTITLEMENT.md) |
 | **프로필 탭** | 기존 `ProfilePanel` 유지 (Hub와 분리) |
 
 ### 2.2 Profile-B (후속 — 카드·API)
@@ -104,7 +104,7 @@
 | **추가 선택** | **유료만** — **지도**에서 인접 지역 추가 (`tierSelection` 동기화). 왼쪽에서 다른 동·리를 고르면 **클러스터 교체** |
 | **개수·tier** | 기존 `RegionSelector` 로직 준수 (D-010, `MAX_PAID_LEAF_BEOPJUNGRI_PICK` 등) |
 | **인접** | **Selection:** `region_neighbors` 위상 그래프 ([`MAP_NEIGHBOR_TOPOLOGY_DESIGN.md`](./MAP_NEIGHBOR_TOPOLOGY_DESIGN.md)). **Display:** viewport bbox |
-| **무료** | 지도 **클로즈업·프로필 열람** 가능, **지도에서 추가 선택 불가** |
+| **무료** | (목표, D-043) 지도 **클로즈업·프로필 열람** 가능, **지도에서 추가 선택 불가**. 토지 앱은 현재 종전 유료와 동일 |
 | **혼합 tier** | 상위(시도·시군구) + 하위(법정) **혼합 복수**는 기존 RegionSelector 정책 그대로 |
 
 - **지도:** 선택된 scope polygon **동시 highlight**, 1차 선택 중심 **클로즈업**
@@ -270,7 +270,7 @@ Profile 재구축 **이후** 기본정보를 표시한다. **구체 필드·문�
 | [`REGION_ARCHITECTURE_ROADMAP.md`](./REGION_ARCHITECTURE_ROADMAP.md) | beop vs eup grain, Post-MVP Region |
 | [`TWIN_V8_DESIGN.md`](./TWIN_V8_DESIGN.md) | Twin (Profile 소비) |
 | [`UPPER_STATS_DESIGN.md`](./UPPER_STATS_DESIGN.md) | 상위·쌍둥이 (유료) |
-| [`DECISIONS.md`](./DECISIONS.md) D-010 | 행정 레벨·유료 복수 정책 |
+| [`DECISIONS.md`](./DECISIONS.md) D-010 · D-043 | 유료 복수 한도 · 통일 무료 정책 [`CH2_ENTITLEMENT.md`](./CH2_ENTITLEMENT.md) |
 | [`BUILT_MAP_HUB_PLAN.md`](./BUILT_MAP_HUB_PLAN.md) | 복합 Map Hub 이식 계획 (Built-M0~M4) |
 | [`COLLECTIVE_MAP_HUB_PLAN.md`](./COLLECTIVE_MAP_HUB_PLAN.md) | 집합 Map Hub 이식 계획 (Collective-M1~M4) |
 
@@ -287,3 +287,4 @@ Profile 재구축 **이후** 기본정보를 표시한다. **구체 필드·문�
 | 2026-07-11 | 집합 Map Hub → [`COLLECTIVE_MAP_HUB_PLAN.md`](./COLLECTIVE_MAP_HUB_PLAN.md); §3.2·Profile-B2·§10 갱신 |
 | 2026-07-11 | 토지 왼쪽 시군구 미만 복수 UI 숨김(`LEFT_REGION_MULTI_SELECT`) — 지도 인접만 추가; §3.3 갱신 |
 | 2026-07-12 | Display(viewport) ≠ Selection(neighbor_codes) — [`MAP_NEIGHBOR_TOPOLOGY_DESIGN.md`](./MAP_NEIGHBOR_TOPOLOGY_DESIGN.md) |
+| 2026-08-16 | 토지 무료 탭 제거(D-043). 지도 인접 추가는 종전 유료와 동일. 통일 무료 게이트는 후속 |

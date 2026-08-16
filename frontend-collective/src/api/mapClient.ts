@@ -1,4 +1,4 @@
-﻿import axios from "axios";
+import axios from "axios";
 
 import type { MapAdminLevel } from "../utils/mapRegionScope";
 
@@ -23,6 +23,17 @@ const commercialApi = axios.create({
 export type MapConfigResponse = {
   vworld_configured: boolean;
   tile_base: string;
+  neighbor_graph_ready?: boolean;
+  neighbor_edge_count?: number;
+};
+
+export type MapNeighborsResponse = {
+  level: string;
+  codes: string[];
+  neighbors_by_code: Record<string, string[]>;
+  neighbor_codes: string[];
+  graph_ready: boolean;
+  edge_count: number;
 };
 
 export type MapBoundariesResponse = {
@@ -42,6 +53,20 @@ export type CollectiveMapResolveCodesResponse = {
 
 export async function fetchMapConfig(): Promise<MapConfigResponse> {
   const { data } = await mapApi.get<MapConfigResponse>("/map/config");
+  return data;
+}
+
+export async function fetchMapNeighbors(opts: {
+  level: MapAdminLevel;
+  codes: string[];
+}): Promise<MapNeighborsResponse> {
+  const params = new URLSearchParams();
+  params.set("level", opts.level === "beopjungri" ? "beopjungri" : "eupmyeondong");
+  for (const code of opts.codes) {
+    const c = String(code ?? "").trim();
+    if (c) params.append("codes", c);
+  }
+  const { data } = await mapApi.get<MapNeighborsResponse>("/map/neighbors", { params });
   return data;
 }
 
@@ -156,6 +181,48 @@ export type CommercialRoadMapPointsResponse = {
   }>;
   unresolved: string[];
 };
+
+export type CommercialRoadLineRequest = CommercialRoadGeocodeRequest & {
+  longitude?: number | null;
+  latitude?: number | null;
+  west?: number | null;
+  south?: number | null;
+  east?: number | null;
+  north?: number | null;
+};
+
+export type CommercialRoadLineResponse = {
+  ok: boolean;
+  road_name: string;
+  layer: string;
+  feature_collection: GeoJSON.FeatureCollection;
+  matched_count: number;
+  error: string | null;
+};
+
+export async function fetchCommercialRoadLine(
+  body: CommercialRoadLineRequest,
+): Promise<CommercialRoadLineResponse> {
+  const { data } = await commercialApi.post<CommercialRoadLineResponse>(
+    "/roads/line",
+    {
+      addr1: body.addr1,
+      addr2: body.addr2,
+      road_name: body.road_name,
+      addr3: body.addr3 || undefined,
+      addr4: body.addr4 || undefined,
+      cluster_key: body.cluster_key || undefined,
+      label: body.label || undefined,
+      longitude: body.longitude ?? undefined,
+      latitude: body.latitude ?? undefined,
+      west: body.west ?? undefined,
+      south: body.south ?? undefined,
+      east: body.east ?? undefined,
+      north: body.north ?? undefined,
+    },
+  );
+  return data;
+}
 
 export async function fetchCommercialRoadMapPoints(
   roads: CommercialRoadMapPointInput[],

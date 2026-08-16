@@ -1,4 +1,4 @@
-// build_twin_hybrid.py / build_twin_sigungu_hybrid.py detail_scores.reason_codes (D-023b)
+// Legacy hybrid reason_codes fallback (구 배치 잔존 시). Profile Twin v21은 features.*.note 우선.
 export const REASON_CODE_LABELS: Record<string, string> = {
   LAND_STRUCT_STRONG: "토지 용도·지목 구조가 매우 유사",
   LAND_STRUCT_SIMILAR: "토지 용도·지목 구조가 유사",

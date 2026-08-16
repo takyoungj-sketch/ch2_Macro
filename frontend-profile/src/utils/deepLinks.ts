@@ -1,28 +1,17 @@
+import { buildAppDeepLink, type RegionDeepLinkApp } from "@ch2/macro-shell/regionDeepLink";
 import type { YearlyMixType } from "../types";
 
-export type SourceApp = "land" | "built" | "collective";
-
-const APP_BASE: Record<SourceApp, string> = {
-  land: "/land/",
-  built: "/built/",
-  collective: "/collective/",
-};
+export type SourceApp = "land" | "built" | "collective" | "rent";
 
 /**
  * 지역 프로필 → 개별 분석 앱 딥링크.
- * NOTE: land/built/collective 앱은 아직 region_level/region_code 쿼리파라미터를 읽어
- * 자동 선택하지 않는다(Phase 5 진행 중 — entry-points). 현재는 앱 기본 화면으로 이동하며,
- * 파라미터는 향후 각 앱이 소비할 수 있도록 미리 붙여둔다(하위호환, 무해).
+ * 각 앱이 `region_level` + `region_code` 를 읽어 지역을 미리 고른다.
  */
 export function deepLinkTo(
   app: SourceApp,
   params: { regionLevel: string; regionCode: string },
 ): string {
-  const qs = new URLSearchParams({
-    region_level: params.regionLevel,
-    region_code: params.regionCode,
-  });
-  return `${APP_BASE[app]}?${qs.toString()}`;
+  return buildAppDeepLink(app as RegionDeepLinkApp, params);
 }
 
 export const DOMINANT_TYPE_APP: Record<YearlyMixType, SourceApp> = {

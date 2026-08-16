@@ -124,3 +124,144 @@ export const RESIDENTIAL_REGRESSION_HELP: AnalysisExplain = {
     },
   ],
 };
+
+/** 비주거(도로 cluster) 회귀 — API explain 없을 때 */
+export const COMMERCIAL_REGRESSION_HELP: AnalysisExplain = {
+  ...RESIDENTIAL_REGRESSION_HELP,
+  spec_id: "commercial_regression_explore_static_v1",
+  title: "도로 cluster 가격 형성 분석 (탐색용)",
+  summary:
+    "선택한 도로 cluster 표본·변수에서 가격이 어떻게 형성되는지 읽기 위한 OLS입니다. AVM·적정가가 아닙니다. " +
+    "분석 단위는 건물(단지)이 아니라 도로명 cluster입니다.",
+  formula: "금액(만원) = β₀ + Σ β_k·X_k  (선형 OLS · 기본)",
+  controls: ["연면적", "연식", "층", "용도지역", "건축물용도", "도로폭"],
+  limitations: [
+    "도로 cluster 내 표본 — 건물 단위 해석과 다름",
+    "변수·필터에 따라 결과 변경",
+    "외삽·인과·투자 판단용 아님",
+  ],
+};
+
+export const COLLECTIVE_TREND_HELP: AnalysisExplain = {
+  spec_id: "collective.trend.v1",
+  spec_version: "1.0",
+  title: "단기 추세 (롤링)",
+  summary:
+    "as_of 기준 최근 구간을 롤링 버킷으로 묶어 거래량·단가(또는 금액) 추세를 봅니다. 연도 from/to와 별개로 모달 기본 추세입니다.",
+  interpretation: [
+    "버킷별 건수와 대표 단가(또는 금액)를 함께 봅니다.",
+    "표본이 적은 구간은 변동이 클 수 있습니다.",
+  ],
+  limitations: ["단기 패턴 — 장기 추세 탭과 다름", "단지·cluster·기간에 종속"],
+  interpretation_hints: [],
+  presets: [],
+  controls: [],
+  floor_groups: [],
+};
+
+export const COLLECTIVE_LONG_TERM_HELP: AnalysisExplain = {
+  spec_id: "collective.long_term.v1",
+  spec_version: "1.0",
+  title: "장기 추세 (연도)",
+  summary: "달력 연도별 집계로 2010년대~ 장기 흐름을 봅니다. 단기 롤링 추세와 축이 다릅니다.",
+  interpretation: [
+    "연도별 건수·단가 수준을 비교합니다.",
+    "행정·단지명·데이터 품질 변화로 단절이 있을 수 있습니다.",
+  ],
+  limitations: ["연도 필터와 무관하게 표시되는 경우가 있음", "과거 원장 품질 한계"],
+  interpretation_hints: [],
+  presets: [],
+  controls: [],
+  floor_groups: [],
+};
+
+export const COLLECTIVE_HISTOGRAM_HELP: AnalysisExplain = {
+  spec_id: "collective.histogram.v1",
+  spec_version: "1.0",
+  title: "분포 (히스토그램)",
+  summary: "선택 기간·필터 안 거래의 단가(또는 금액) 분포를 봅니다.",
+  interpretation: ["봉우리·꼬리·이상치를 눈으로 확인합니다.", "회귀 전에 분포 왜도를 가늠할 때 유용합니다."],
+  limitations: ["구간 폭·표본에 따라 모양이 달라집니다."],
+  interpretation_hints: [],
+  presets: [],
+  controls: [],
+  floor_groups: [],
+};
+
+export const COLLECTIVE_TX_LIST_HELP: AnalysisExplain = {
+  spec_id: "collective.tx_list.v1",
+  spec_version: "1.0",
+  title: "거래 목록",
+  summary: "화면에 집계된 표본의 개별 거래 행입니다. 통계·회귀와 같은 정제 규칙을 따릅니다.",
+  interpretation: ["계약일·면적·층·금액 등으로 이상·특수 거래를 확인합니다."],
+  limitations: ["마스킹 번지·신고 오류가 있을 수 있습니다."],
+  interpretation_hints: [],
+  presets: [],
+  controls: [],
+  floor_groups: [],
+};
+
+/** 모달 탭 id → 페이지 설명 */
+export const SALE_RENT_JOIN_HELP: AnalysisExplain = {
+  spec_id: "sale_rent_join_v1",
+  spec_version: "1",
+  title: "매매 건물 × 전월세 조인",
+  summary:
+    "같은 building_key가 임대 원장에도 있을 때만 전세·반전세·월세 원값과 적용 전환율·환산을 보여 줍니다. 원장·목록은 합치지 않습니다.",
+  formula: "정확 키 = 유형|시|시군구|읍면동|name:단지명 해시. 보조 층 없음.",
+  interpretation: [
+    "조인 없음 = 키가 다르거나 임대 거래가 없음.",
+    "환산 P50은 비교용입니다. 그 건물 시세·수익률이 아닙니다.",
+    "창은 매매와 같은 3·5·7년입니다.",
+  ],
+  limitations: [
+    "단독·분양권·비주거 집합·복합은 대상 아님",
+    "시군구 전환율 fallback이면 그 건물 고유 r이 아님",
+  ],
+  interpretation_hints: [],
+  presets: [],
+  controls: [],
+  floor_groups: [],
+};
+
+export function collectiveModalPanelHelp(
+  panel: string,
+): AnalysisExplain | null {
+  switch (panel) {
+    case "trend":
+      return COLLECTIVE_TREND_HELP;
+    case "long_term":
+      return COLLECTIVE_LONG_TERM_HELP;
+    case "histogram":
+      return COLLECTIVE_HISTOGRAM_HELP;
+    case "transactions":
+      return COLLECTIVE_TX_LIST_HELP;
+    case "regression":
+      return RESIDENTIAL_REGRESSION_HELP;
+    case "floor_index":
+      return RESIDENTIAL_FLOOR_INDEX_HELP;
+    case "rent":
+      return SALE_RENT_JOIN_HELP;
+    default:
+      return null;
+  }
+}
+
+export function commercialModalPanelHelp(panel: string): AnalysisExplain | null {
+  switch (panel) {
+    case "trend":
+      return COLLECTIVE_TREND_HELP;
+    case "long_term":
+      return COLLECTIVE_LONG_TERM_HELP;
+    case "histogram":
+      return COLLECTIVE_HISTOGRAM_HELP;
+    case "transactions":
+      return COLLECTIVE_TX_LIST_HELP;
+    case "regression":
+      return COMMERCIAL_REGRESSION_HELP;
+    case "floor_index":
+      return CLUSTER_FLOOR_INDEX_HELP;
+    default:
+      return null;
+  }
+}

@@ -40,6 +40,8 @@ export default function SangkwonPanel({
 }: Props) {
   if (!hits.length) return null;
   const year = annual?.year;
+  const windowLabel = annual?.window_label || (year != null ? `${year}년 연간` : "—");
+  const windowHint = annual?.window_mode === "calendar_year" ? "연간" : "1년 롤링";
   const groups: { label: string; start: number; count: number }[] = [];
   for (let i = 0; i < (annual?.rows.length ?? 0); i++) {
     const label = annual!.rows[i].group_label || "";
@@ -73,8 +75,12 @@ export default function SangkwonPanel({
           })}
         </div>
         {selected && (
-          <button type="button" className="btn text-xs py-1" onClick={onOpenTrend}>
-            2019~ 추세
+          <button
+            type="button"
+            className="ml-auto rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-semibold dark:border-slate-500 dark:bg-slate-800"
+            onClick={onOpenTrend}
+          >
+            추세
           </button>
         )}
       </div>
@@ -82,7 +88,7 @@ export default function SangkwonPanel({
       {annual && (
         <>
           <p className="text-[11px] text-slate-500 mb-1 inline-flex items-center gap-1">
-            한국부동산원 상업용부동산 임대동향조사 · {year ?? "—"}년 연간 · 상권 집계(건물 아님)
+            한국부동산원 상업용부동산 임대동향조사 · {windowLabel} {windowHint} · 상권 집계(건물 아님)
             <StatsGlossaryHelp termId="sangkwon_survey" size="xs" />
             {annual.source_file ? ` · ${annual.source_file}` : ""}
           </p>

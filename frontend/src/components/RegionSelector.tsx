@@ -26,7 +26,7 @@ import {
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import { LEFT_REGION_MULTI_SELECT, MAX_PAID_LEAF_BEOPJUNGRI_PICK } from "../constants/tierPickLimits";
 import { cityBucketFromSigungu } from "../utils/cityBucket";
-import { isSejongPseudoSigunguCode } from "../utils/sejongRegion";
+import { isSejongPseudoSigunguCode, isSejongRegionRow } from "../utils/sejongRegion";
 
 function labelSigunguChip(regions: RegionItem[], code: string): string {
   const c = String(code).trim();
@@ -47,6 +47,12 @@ function labelEupChip(regions: RegionItem[], code: string): string {
   const c = String(code).trim();
   const row = regions.find((r) => String(r.eupmyeondong_code ?? "").trim() === c);
   if (!row) return c;
+  if (isSejongRegionRow(row)) {
+    return [row.sido_name, row.sigungu_name]
+      .map((x) => String(x ?? "").trim())
+      .filter(Boolean)
+      .join(" ");
+  }
   return [row.sido_name, row.sigungu_name, row.eupmyeondong_name]
     .map((x) => String(x ?? "").trim())
     .filter(Boolean)
@@ -80,7 +86,6 @@ export default function RegionSelector() {
     tierSelection,
     paidSubSigunguPickOrder,
     clearTierSelection,
-    applyBeopjungriCodes,
     kickPaidBasicStatsAnalysis,
     commitStatsDisplayScope,
     addPickedBeopjungri,
@@ -146,18 +151,12 @@ export default function RegionSelector() {
 
   const flatSuggestions = useMemo((): RegionSearchFlatEntry[] => {
     if (looseResolve != null) {
-      if (looseResolve.codes.length <= 1) return [];
-      const map = new Map<string, RegionItem>();
-      for (const r of looseResolve.rows) {
-        const c = String(r.beopjungri_code ?? "").trim();
-        if (!c) continue;
-        if (!map.has(c)) map.set(c, r);
-      }
-      return [...map.values()]
-        .sort((a, b) =>
-          formatRegionHierarchyLabel(a).localeCompare(formatRegionHierarchyLabel(b), "ko-KR")
-        )
-        .map((row) => ({ kind: "beopjungri" as const, row }));
+      if (looseResolve.codes.length === 0) return [];
+      return buildFlattenedRegionSuggestions(looseResolve.rows, debouncedSearch, {
+        maxSigungu: 50,
+        maxAgg: 40,
+        maxBeop: 400,
+      });
     }
     return buildFlattenedRegionSuggestions(searchHits, debouncedSearch, {
       maxSigungu: 50,
@@ -236,13 +235,6 @@ export default function RegionSelector() {
     const c = String(r.beopjungri_code ?? "").trim();
     if (!c) return;
 
-    if (viewMode === "free") {
-      addPickedBeopjungri(r.beopjungri_code);
-      setPaidLeafAddGateOpen(true);
-      finishLeafPick();
-      return;
-    }
-
     const cur = pickedCodes;
     if (leafAlreadySelected(c)) {
       finishLeafPick();
@@ -268,12 +260,6 @@ export default function RegionSelector() {
 
   const handlePickSigunguAggregate = (sigunguCode: string) => {
     setLocalError(null);
-    if (viewMode === "free") {
-      setLocalError(
-        "무료 통계는 법정동·리 한 곳만 선택할 수 있습니다. 목록에서 특정 법정단위를 고르거나, 유료에서 「시군구 포함」을 이용해 주세요."
-      );
-      return;
-    }
     const ok = mergePickedSigunguCodes([sigunguCode], regions);
     if (!ok) {
       setLocalError(
@@ -289,12 +275,6 @@ export default function RegionSelector() {
 
   const handlePickSidoAggregate = (sidoCode: string) => {
     setLocalError(null);
-    if (viewMode === "free") {
-      setLocalError(
-        "무료 통계는 법정동·리 한 곳만 선택할 수 있습니다. 유료에서 시·도 단위를 이용해 주세요."
-      );
-      return;
-    }
     const ok = mergePickedSidoCodes([sidoCode], regions);
     if (!ok) {
       setLocalError("추가하지 못했습니다. 이미 있거나 선택 상한을 넘깁니다.");
@@ -308,12 +288,6 @@ export default function RegionSelector() {
 
   const handlePickCityAggregate = (cityCode: string) => {
     setLocalError(null);
-    if (viewMode === "free") {
-      setLocalError(
-        "무료 통계는 법정동·리 한 곳만 선택할 수 있습니다. 유료에서 시 단위를 이용해 주세요."
-      );
-      return;
-    }
     const cc = String(cityCode ?? "").trim();
     if (!cc) {
       setLocalError("시 단위 코드를 알 수 없습니다.");
@@ -334,12 +308,6 @@ export default function RegionSelector() {
 
   const handlePickEupAggregate = (eupCode: string) => {
     setLocalError(null);
-    if (viewMode === "free") {
-      setLocalError(
-        "무료 통계는 법정동·리 한 곳만 선택할 수 있습니다. 목록에서 특정 법정단위를 고르거나, 유료에서 「읍·면 포함」을 이용해 주세요."
-      );
-      return;
-    }
     const ec = String(eupCode ?? "").trim();
     if (!ec) return;
 
@@ -415,21 +383,14 @@ export default function RegionSelector() {
 
         const { eupmyeondongCode, sigunguCode } = commonTierCodesFromLooseRows(rows);
 
-        if (viewMode === "paid") {
-          if (eupmyeondongCode) {
-            setLocalError(null);
-            handlePickEupAggregate(eupmyeondongCode);
-            return;
-          }
-          if (sigunguCode) {
-            setLocalError(null);
-            handlePickSigunguAggregate(sigunguCode);
-            return;
-          }
-        } else if (eupmyeondongCode || sigunguCode) {
-          setLocalError(
-            "무료 통계는 법정동·리 한 곳만 선택할 수 있습니다. 아래 목록에서 특정 법정단위를 고르거나 상세 주소를 덧붙여 주세요."
-          );
+        if (eupmyeondongCode) {
+          setLocalError(null);
+          handlePickEupAggregate(eupmyeondongCode);
+          return;
+        }
+        if (sigunguCode) {
+          setLocalError(null);
+          handlePickSigunguAggregate(sigunguCode);
           return;
         }
 
@@ -459,7 +420,7 @@ export default function RegionSelector() {
         return;
       }
 
-      const resolved = tryResolveUniqueRegionSearch(regions, qLive, viewMode);
+      const resolved = tryResolveUniqueRegionSearch(regions, qLive, "paid");
       if (resolved) {
         setLocalError(null);
         if (resolved.kind === "beopjungri") pickBeopRow(resolved.row);
@@ -480,30 +441,6 @@ export default function RegionSelector() {
     const el = listRef.current?.querySelector<HTMLElement>("[data-hl=true]");
     el?.scrollIntoView({ block: "nearest" });
   }, [highlightIdx]);
-
-  const commitFree = () => {
-    setLocalError(null);
-    if (resolvedUnionCodes.length === 0) {
-      setLocalError("먼저 검색으로 법정동·리 하나를 선택하세요.");
-      return;
-    }
-    if (
-      tierSelection.sigungu_codes.length > 0 ||
-      tierSelection.city_codes.length > 0 ||
-      tierSelection.eupmyeondong_codes.length > 0
-    ) {
-      setLocalError(
-        "무료 모드에서는 시군구·시(자치구 묶음)·읍면 전체 행만 있는 선택을 쓸 수 없습니다. 법정단위 하나를 검색해서 고르세요."
-      );
-      return;
-    }
-    if (resolvedUnionCodes.length > 1 || pickedCodes.length !== 1) {
-      setLocalError("무료 통계는 법정동·리 한 곳만 선택할 수 있습니다. 칩에서 하나만 남기세요.");
-      return;
-    }
-    applyBeopjungriCodes(resolvedUnionCodes);
-    commitStatsDisplayScope(statsScopeKeyFromBeopjungriCodes(resolvedUnionCodes));
-  };
 
   const commitPaid = () => {
     setLocalError(null);
@@ -607,51 +544,6 @@ export default function RegionSelector() {
                     입력한 지명 조합과 맞는 법정동·리가 없습니다. 단어를 나누거나 철자를 확인해 보세요.
                   </p>
                 ) : null}
-                {flatSuggestions.length > 0 && !suggestionsCollapsed && (
-                  <ul
-                    ref={listRef}
-                    role="listbox"
-                    className={`absolute z-20 mt-0.5 ${suggestionListMaxClass} w-full overflow-auto rounded-md border border-slate-200 bg-white shadow-lg text-xs`}
-                  >
-                    {flatSuggestions.map((entry, idx) => {
-                      if (entry.kind !== "beopjungri") return null;
-                      const hl = idx === highlightIdx;
-                      const row = entry.row;
-                      const lbl = formatRegionHierarchyLabel(row);
-                      return (
-                        <Fragment key={`bp-${String(row.beopjungri_code).trim()}`}>
-                          {idx === 0 ? (
-                            <li
-                              className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-500"
-                              aria-hidden
-                            >
-                              법정동·리 (각 줄에 입력한 모든 지명이 경로에 포함된 단위)
-                            </li>
-                          ) : null}
-                          <li role="presentation">
-                            <button
-                              type="button"
-                              role="option"
-                              data-hl={hl ? "true" : undefined}
-                              aria-selected={hl}
-                              className={`w-full text-left px-2 py-1.5 hover:bg-blue-50 ${
-                                hl ? "bg-blue-50" : ""
-                              }`}
-                              onMouseEnter={() => setHighlightIdx(idx)}
-                              onMouseDown={(e) => e.preventDefault()}
-                              onClick={() => pickBeopRow(row)}
-                            >
-                              <span className="text-slate-800 leading-snug block">{lbl}</span>
-                              <span className="text-[11px] text-slate-400 tabular-nums">
-                                {String(row.beopjungri_code).trim()}
-                              </span>
-                            </button>
-                          </li>
-                        </Fragment>
-                      );
-                    })}
-                  </ul>
-                )}
               </>
             ) : (
               <>
@@ -671,7 +563,9 @@ export default function RegionSelector() {
                     시도·자치구 묶음·읍면 상위 카드 또는 법정코드 줄. …읍/…면 이름만 치면 읍면 단위 카드만 뜹니다. 다른 표현으로 시도해 보세요.
                   </p>
                 )}
-                {flatSuggestions.length > 0 && !suggestionsCollapsed && (
+              </>
+            )}
+            {flatSuggestions.length > 0 && !suggestionsCollapsed && (
                   <ul
                     ref={listRef}
                     role="listbox"
@@ -890,8 +784,6 @@ export default function RegionSelector() {
                 })}
                   </ul>
                 )}
-              </>
-            )}
           </div>
         ) : null}
       </div>
@@ -1045,26 +937,6 @@ export default function RegionSelector() {
                 ) : null}
               </span>
             ))}
-            {viewMode === "free"
-              ? pickedCodes.map((code) => (
-                  <span
-                    key={`bp-${code}`}
-                    className="inline-flex items-center gap-1 max-w-full rounded-full border border-slate-200 bg-white pl-2 pr-1 py-1 text-xs text-slate-700"
-                  >
-                    <span className="truncate max-w-[14rem]" title={labelForCode(code)}>
-                      {labelForCode(code)}
-                    </span>
-                    <button
-                      type="button"
-                      className="shrink-0 rounded-full p-0.5 hover:bg-red-50 text-slate-500 hover:text-red-700"
-                      aria-label={`삭제 ${code}`}
-                      onClick={() => removePickedBeopjungri(code)}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))
-              : null}
           </div>
         )}
       </div>
@@ -1079,23 +951,13 @@ export default function RegionSelector() {
         <FreeStatsWindowToggle idPrefix="sidebar-v2" />
       </div>
 
-      {viewMode === "free" ? (
-        <AnalysisActionButton
-          primary={basicStatsActionLabel("free")}
-          caption={rollingStatsCaption(freeStatsWindowYears)}
-          onClick={commitFree}
-          disabled={catalogLoading && regions.length === 0}
-          variant="free"
-        />
-      ) : (
-        <AnalysisActionButton
-          primary={basicStatsActionLabel("paid")}
-          caption={rollingStatsCaption(freeStatsWindowYears)}
-          onClick={commitPaid}
-          disabled={catalogLoading && regions.length === 0}
-          variant="basic"
-        />
-      )}
+      <AnalysisActionButton
+        primary={basicStatsActionLabel("paid")}
+        caption={rollingStatsCaption(freeStatsWindowYears)}
+        onClick={commitPaid}
+        disabled={catalogLoading && regions.length === 0}
+        variant="basic"
+      />
 
     </div>
   );

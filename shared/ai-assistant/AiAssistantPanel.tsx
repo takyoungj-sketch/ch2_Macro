@@ -23,7 +23,7 @@ function renderInline(text: string) {
   return chunks.map((chunk, i) => {
     if (chunk.startsWith("**") && chunk.endsWith("**")) {
       return (
-        <strong key={i} className="font-semibold text-slate-800">
+        <strong key={i} className="font-semibold text-slate-800 dark:text-slate-100">
           {chunk.slice(2, -2)}
         </strong>
       );
@@ -35,24 +35,28 @@ function renderInline(text: string) {
 function AnswerBody({ text }: { text: string }) {
   const sections = useMemo(() => parseSections(text), [text]);
   if (!sections) {
-    return <span className="whitespace-pre-wrap">{renderInline(text)}</span>;
+    return (
+      <span className="whitespace-pre-wrap text-[1em] text-slate-700 dark:text-slate-200">{renderInline(text)}</span>
+    );
   }
   return (
-    <div className="space-y-2.5 mt-1">
+    <div className="space-y-2.5 mt-1 text-[1em] text-slate-700 dark:text-slate-200">
       {sections.map((s: { title: string; body: string }) => {
         const isInsight = s.title.includes("AI Insight");
         const isTable = s.title === "주요 변수" && s.body.includes("|");
         return (
           <div key={s.title}>
             {!isInsight && (
-              <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-0.5">
+              <div className="text-[0.85em] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-0.5">
                 {s.title}
               </div>
             )}
             {isInsight ? (
-              <div className="rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2">
-                <div className="text-[10px] font-semibold text-amber-800 mb-1">💡 AI Insight</div>
-                <div className="text-slate-700 leading-relaxed whitespace-pre-wrap text-[11px]">
+              <div className="rounded-lg border border-amber-200 bg-amber-50/90 px-3 py-2 dark:border-amber-700/80 dark:bg-amber-950/55">
+                <div className="text-[0.85em] font-semibold text-amber-900 dark:text-amber-200 mb-1">
+                  💡 AI Insight
+                </div>
+                <div className="text-slate-800 dark:text-amber-50/95 leading-relaxed whitespace-pre-wrap text-[1em]">
                   {s.body.split("\n").map((line: string, i: number) => (
                     <p key={i}>{renderInline(line)}</p>
                   ))}
@@ -60,28 +64,32 @@ function AnswerBody({ text }: { text: string }) {
               </div>
             ) : isTable ? (
               <div
-                className="prose prose-xs max-w-none text-slate-700 [&_table]:text-[11px] [&_td]:px-2 [&_th]:px-2"
+                className="prose prose-xs max-w-none text-slate-700 dark:text-slate-200 [&_table]:text-[1em] [&_td]:px-2 [&_th]:px-2 [&_p]:text-slate-700 [&_p]:dark:text-slate-200"
                 dangerouslySetInnerHTML={{
                   __html: s.body
                     .split("\n\n")
                     .map((part: string) =>
                       part.startsWith("|")
-                        ? `<table class="border-collapse border border-slate-200 w-full">${part
+                        ? `<table class="border-collapse border border-slate-200 dark:border-slate-600 w-full text-slate-700 dark:text-slate-200">${part
                             .split("\n")
                             .filter((row: string) => !row.match(/^\|[-| ]+\|$/))
                             .map((row: string, ri: number) => {
                               const cells = row.split("|").filter(Boolean);
                               const tag = ri === 0 ? "th" : "td";
-                              return `<tr>${cells.map((c: string) => `<${tag} class="border border-slate-200">${c.trim()}</${tag}>`).join("")}</tr>`;
+                              const cellClass =
+                                tag === "th"
+                                  ? ' class="border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/70 text-slate-700 dark:text-slate-100 font-semibold px-2 py-1"'
+                                  : ' class="border border-slate-200 dark:border-slate-600 px-2 py-1"';
+                              return `<tr>${cells.map((c: string) => `<${tag}${cellClass}>${c.trim()}</${tag}>`).join("")}</tr>`;
                             })
                             .join("")}</table>`
-                        : `<p class="mt-2 text-[11px]">${part.replace(/^- /, "• ")}</p>`,
+                        : `<p class="mt-2 text-[1em] text-slate-700 dark:text-slate-200">${part.replace(/^- /, "• ")}</p>`,
                     )
                     .join(""),
                 }}
               />
             ) : (
-              <div className="whitespace-pre-wrap text-slate-700 leading-relaxed">
+              <div className="whitespace-pre-wrap leading-relaxed text-[1em]">
                 {s.body.split("\n").map((line: string, i: number) => (
                   <p key={i} className={line.startsWith("- ") ? "pl-0" : ""}>
                     {renderInline(line.replace(/^- /, "• "))}
@@ -144,7 +152,7 @@ function TrustBadge({
     <div className="relative shrink-0" ref={ref}>
       <button
         type="button"
-        className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-600"
+        className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200"
         onClick={() => setOpen((v: boolean) => !v)}
         aria-expanded={open}
       >
@@ -153,15 +161,15 @@ function TrustBadge({
         <span className="text-slate-400">{trustLabel(level)}</span>
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-[110] w-56 rounded-lg border border-slate-200 bg-white shadow-lg p-3 text-[10px] text-slate-600 space-y-2">
-          <p className="font-semibold text-slate-800">사용한 데이터</p>
+        <div className="absolute right-0 top-full mt-1 z-[110] w-56 rounded-lg border border-slate-200 bg-white shadow-lg p-3 text-[10px] text-slate-600 space-y-2 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:shadow-black/40">
+          <p className="font-semibold text-slate-800 dark:text-slate-100">사용한 데이터</p>
           <ul className="space-y-0.5">
             {dataSources.map((s) => (
               <li key={s}>{s}</li>
             ))}
           </ul>
-          <div className="border-t border-slate-100 pt-2">
-            <p className="font-semibold text-slate-800 mb-0.5">AI 해석</p>
+          <div className="border-t border-slate-100 dark:border-slate-700 pt-2">
+            <p className="font-semibold text-slate-800 dark:text-slate-100 mb-0.5">AI 해석</p>
             <p>{llmUsed ? aiInterpretation ?? "GPT" : aiInterpretation ?? "CH2 템플릿"}</p>
             <p className="text-slate-400 mt-1">
               {webEvidence?.length
@@ -177,7 +185,7 @@ function TrustBadge({
                         href={w.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
+                        className="text-blue-600 hover:underline dark:text-blue-400"
                       >
                         {w.label}
                       </a>
@@ -189,7 +197,7 @@ function TrustBadge({
               </ul>
             )}
           </div>
-          <p className="text-slate-400 border-t border-slate-100 pt-2">{scopeHint}</p>
+          <p className="text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-700 pt-2">{scopeHint}</p>
         </div>
       )}
     </div>
@@ -214,6 +222,43 @@ function deriveTrustFromContext(context: AiContextPayload): {
   return { level, sources };
 }
 
+const DEFAULT_WIN = { w: 640, h: 560 };
+const MIN_WIN = { w: 360, h: 320 };
+const FONT_SCALES = [0.85, 1, 1.15, 1.3, 1.5] as const;
+const FONT_STORAGE_KEY = "ch2-ai-font-scale";
+const BASE_FONT_PX = 12;
+
+function readStoredFontScale(): number {
+  try {
+    const v = Number(localStorage.getItem(FONT_STORAGE_KEY));
+    if (FONT_SCALES.includes(v as (typeof FONT_SCALES)[number])) return v;
+  } catch {
+    /* ignore */
+  }
+  return 1;
+}
+
+function clampWin(next: { x: number; y: number; w: number; h: number }) {
+  const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+  const w = Math.min(Math.max(next.w, MIN_WIN.w), vw - 16);
+  const h = Math.min(Math.max(next.h, MIN_WIN.h), vh - 16);
+  const x = Math.min(Math.max(next.x, 8), Math.max(8, vw - w - 8));
+  const y = Math.min(Math.max(next.y, 8), Math.max(8, vh - h - 8));
+  return { x, y, w, h };
+}
+
+function defaultWinPos() {
+  const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+  return clampWin({
+    x: Math.max(8, (vw - DEFAULT_WIN.w) / 2),
+    y: Math.max(8, (vh - DEFAULT_WIN.h) / 2),
+    w: DEFAULT_WIN.w,
+    h: DEFAULT_WIN.h,
+  });
+}
+
 function AiAssistantModal({
   open,
   onClose,
@@ -231,8 +276,21 @@ function AiAssistantModal({
   const [suggested, setSuggested] = useState<string[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [lastMeta, setLastMeta] = useState<AiChatResponse | null>(null);
+  const [win, setWin] = useState(defaultWinPos);
+  const [fontScale, setFontScale] = useState(readStoredFontScale);
+  const dragRef = useRef<{
+    mode: "move" | "resize";
+    startX: number;
+    startY: number;
+    orig: { x: number; y: number; w: number; h: number };
+  } | null>(null);
 
   const baseTrust = useMemo(() => deriveTrustFromContext(context), [context]);
+
+  useEffect(() => {
+    if (!open) return;
+    setWin(defaultWinPos());
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -249,6 +307,63 @@ function AiAssistantModal({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onMove = (e: PointerEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      const dx = e.clientX - d.startX;
+      const dy = e.clientY - d.startY;
+      if (d.mode === "move") {
+        setWin(clampWin({ ...d.orig, x: d.orig.x + dx, y: d.orig.y + dy }));
+      } else {
+        setWin(clampWin({ ...d.orig, w: d.orig.w + dx, h: d.orig.h + dy }));
+      }
+    };
+    const onUp = () => {
+      dragRef.current = null;
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, [open]);
+
+  const startDrag = useCallback(
+    (mode: "move" | "resize", e: React.PointerEvent) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      dragRef.current = {
+        mode,
+        startX: e.clientX,
+        startY: e.clientY,
+        orig: { ...win },
+      };
+      document.body.style.userSelect = "none";
+      document.body.style.cursor = mode === "move" ? "grabbing" : "nwse-resize";
+    },
+    [win],
+  );
+
+  const bumpFont = useCallback((dir: -1 | 1) => {
+    setFontScale((cur) => {
+      const idx = FONT_SCALES.findIndex((s) => s === cur);
+      const next = FONT_SCALES[Math.min(FONT_SCALES.length - 1, Math.max(0, (idx < 0 ? 1 : idx) + dir))];
+      try {
+        localStorage.setItem(FONT_STORAGE_KEY, String(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
 
   const runChat = useCallback(
     async (text: string) => {
@@ -288,143 +403,219 @@ function AiAssistantModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-black/35"
+      className="fixed z-[100] modal-shell rounded-xl shadow-2xl border flex flex-col overflow-hidden"
       role="dialog"
-      aria-modal="true"
+      aria-modal="false"
       aria-labelledby="ai-assistant-modal-title"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      style={{ left: win.x, top: win.y, width: win.w, height: win.h }}
     >
       <div
-        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 modal-shell rounded-xl shadow-xl max-w-2xl w-[calc(100%-2rem)] max-h-[85vh] flex flex-col border bg-white border-slate-200"
-        onMouseDown={(e) => e.stopPropagation()}
+        className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 shrink-0 cursor-grab active:cursor-grabbing select-none"
+        onPointerDown={(e) => {
+          const t = e.target as HTMLElement;
+          if (t.closest("button, a, input, textarea, select")) return;
+          startDrag("move", e);
+        }}
       >
-        <div className="px-4 py-3 border-b border-slate-100 shrink-0">
-          <div className="flex justify-between items-start gap-2">
-            <div className="min-w-0">
-              <h2 id="ai-assistant-modal-title" className="text-sm font-bold">
-                통계 분석 어시스턴트
-              </h2>
-              <p className="text-[11px] text-slate-500 mt-0.5 truncate">{scopeHint}</p>
-            </div>
-            <div className="flex items-start gap-2">
-              <TrustBadge
-                level={trustLevel}
-                sources={trustSources}
-                aiInterpretation={lastMeta?.ai_interpretation}
-                llmUsed={lastMeta?.llm_used}
-                scopeHint={scopeHint}
-                webEvidence={webEvidence}
-              />
+        <div className="flex justify-between items-start gap-2">
+          <div className="min-w-0">
+            <h2 id="ai-assistant-modal-title" className="text-sm font-bold text-slate-900 dark:text-slate-100">
+              통계 분석 어시스턴트
+            </h2>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+              {scopeHint}
+              <span className="ml-2 text-slate-400 dark:text-slate-500">· 드래그로 이동</span>
+            </p>
+          </div>
+          <div className="flex items-start gap-2">
+            <div
+              className="flex items-center rounded-full border border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-800 overflow-hidden"
+              title="글자 크기"
+            >
               <button
                 type="button"
-                aria-label="닫기"
-                className="text-slate-400 hover:text-slate-700 text-xl leading-none px-1 shrink-0"
-                onClick={onClose}
+                aria-label="글자 작게"
+                className="px-1.5 py-1 text-[10px] text-slate-600 hover:bg-slate-50 disabled:opacity-40 dark:text-slate-300 dark:hover:bg-slate-700 cursor-pointer"
+                disabled={fontScale <= FONT_SCALES[0]}
+                onClick={() => bumpFont(-1)}
               >
-                ×
+                A−
               </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3 text-xs">
-          <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-slate-500">목적</span>
-            {(
-              [
-                ["statistics", "통계 해석"],
-                ["prediction", "예측"],
-                ["market_analysis", "시장 패턴"],
-                ["methodology", "방법론"],
-              ] as const
-            ).map(([v, label]) => (
+              <span className="px-1 text-[10px] tabular-nums text-slate-400 dark:text-slate-500 border-x border-slate-200 dark:border-slate-600 min-w-[2.25rem] text-center">
+                {Math.round(fontScale * 100)}%
+              </span>
               <button
-                key={v}
                 type="button"
-                className={clsx(
-                  "px-2 py-0.5 rounded border",
-                  purpose === v
-                    ? "bg-slate-800 text-white border-slate-800"
-                    : "bg-white text-slate-600 border-slate-200",
-                )}
-                onClick={() => setPurpose(v)}
+                aria-label="글자 크게"
+                className="px-1.5 py-1 text-[12px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40 dark:text-slate-300 dark:hover:bg-slate-700 cursor-pointer"
+                disabled={fontScale >= FONT_SCALES[FONT_SCALES.length - 1]}
+                onClick={() => bumpFont(1)}
               >
-                {label}
+                A+
               </button>
-            ))}
-          </div>
-
-          {suggested.length > 0 && (
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">
-                다음 질문
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {suggested.map((q: string) => (
-                  <button
-                    key={q}
-                    type="button"
-                    className="text-left px-2 py-1 rounded border border-slate-200 hover:border-slate-400 text-slate-700"
-                    disabled={loading}
-                    onClick={() => runChat(q)}
-                  >
-                    {q}
-                  </button>
-                ))}
-              </div>
             </div>
-          )}
-
-          <div className="min-h-[12rem] max-h-[40vh] overflow-y-auto space-y-3 border border-slate-100 rounded-lg p-3 bg-slate-50/50">
-            {messages.length === 0 && (
-              <p className="text-slate-400 text-center py-8">질문을 선택하거나 입력하세요.</p>
-            )}
-            {messages.map((m: ChatMessage, i: number) => (
-              <div key={i} className={m.role === "user" ? "text-slate-800" : "text-slate-700"}>
-                {m.role === "user" ? (
-                  <>
-                    <span className="font-medium text-slate-500">Q </span>
-                    <span>{m.text}</span>
-                  </>
-                ) : (
-                  <AnswerBody text={m.text} />
-                )}
-              </div>
-            ))}
-          </div>
-
-          {error && <p className="text-red-600">{error}</p>}
-        </div>
-
-        <div className="shrink-0 px-4 py-3 border-t border-slate-100 space-y-2">
-          <form
-            className="flex gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              runChat(input);
-            }}
-          >
-            <input
-              className="input flex-1 text-xs py-1.5 border border-slate-200 rounded px-2"
-              placeholder="질문 입력…"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              disabled={loading}
-              autoFocus
+            <TrustBadge
+              level={trustLevel}
+              sources={trustSources}
+              aiInterpretation={lastMeta?.ai_interpretation}
+              llmUsed={lastMeta?.llm_used}
+              scopeHint={scopeHint}
+              webEvidence={webEvidence}
             />
             <button
-              type="submit"
-              className="btn btn-primary text-xs py-1.5 px-3 rounded bg-slate-800 text-white disabled:opacity-50"
-              disabled={loading || !input.trim()}
+              type="button"
+              aria-label="닫기"
+              className="text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 text-xl leading-none px-1 shrink-0 cursor-pointer"
+              onClick={onClose}
             >
-              {loading ? "…" : "전송"}
+              ×
             </button>
-          </form>
-          <p className="text-[10px] text-slate-400 bg-slate-100 rounded px-2 py-1.5">{PANEL_DISCLAIMER}</p>
+          </div>
         </div>
       </div>
+
+      <div
+        className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3"
+        style={{ fontSize: `${BASE_FONT_PX * fontScale}px` }}
+      >
+        <div className="flex flex-wrap gap-2 items-center text-[0.92em]">
+          <span className="text-slate-500 dark:text-slate-400">목적</span>
+          {(
+            [
+              ["statistics", "통계 해석"],
+              ["prediction", "예측"],
+              ["market_analysis", "시장 패턴"],
+              ["methodology", "방법론"],
+            ] as const
+          ).map(([v, label]) => (
+            <button
+              key={v}
+              type="button"
+              className={clsx(
+                "px-2 py-0.5 rounded border text-[0.92em]",
+                purpose === v
+                  ? "bg-slate-800 text-white border-slate-800 dark:bg-slate-600 dark:border-slate-500"
+                  : "bg-white text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600 dark:hover:border-slate-500",
+              )}
+              onClick={() => setPurpose(v)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {suggested.length > 0 && (
+          <div>
+            <p className="text-[0.85em] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">
+              다음 질문
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {suggested.map((q: string) => (
+                <button
+                  key={q}
+                  type="button"
+                  className="text-left px-2 py-1 rounded border border-slate-200 hover:border-slate-400 text-[0.95em] text-slate-700 dark:border-slate-600 dark:text-slate-200 dark:bg-slate-800/60 dark:hover:border-slate-500 dark:hover:bg-slate-800"
+                  disabled={loading}
+                  onClick={() => runChat(q)}
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="min-h-[8rem] flex-1 overflow-y-auto space-y-0 border border-slate-200 rounded-lg bg-slate-50/80 dark:border-slate-600 dark:bg-slate-900/50 max-h-[calc(100%-0.5rem)]">
+          {messages.length === 0 && (
+            <p className="text-slate-400 dark:text-slate-500 text-center py-8 px-3 text-[1em]">
+              질문을 선택하거나 입력하세요.
+            </p>
+          )}
+          {messages.map((m: ChatMessage, i: number) => (
+            <div
+              key={i}
+              className={clsx(
+                "px-3 py-2.5",
+                i > 0 && "border-t border-slate-200/90 dark:border-slate-600/80",
+                m.role === "user" ? "bg-white/70 dark:bg-slate-800/40" : "bg-transparent",
+              )}
+            >
+              {m.role === "user" ? (
+                <div className="flex gap-2.5">
+                  <div
+                    className="mt-0.5 w-0.5 shrink-0 rounded-full bg-sky-500/80 dark:bg-sky-400/70"
+                    aria-hidden
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[0.85em] font-semibold tracking-wide text-sky-700 dark:text-sky-300 mb-0.5">
+                      질문
+                    </div>
+                    <p className="text-[1.1em] font-medium leading-snug text-slate-900 dark:text-slate-50">
+                      {m.text}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="min-w-0">
+                  <div className="text-[0.85em] font-semibold tracking-wide text-slate-500 dark:text-slate-400 mb-1">
+                    답변
+                  </div>
+                  <div className="text-[1em] leading-relaxed text-slate-700 dark:text-slate-200">
+                    <AnswerBody text={m.text} />
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {error && <p className="text-red-600 dark:text-red-400 text-[1em]">{error}</p>}
+      </div>
+
+      <div
+        className="shrink-0 px-4 py-3 border-t border-slate-100 dark:border-slate-700 space-y-2"
+        style={{ fontSize: `${BASE_FONT_PX * fontScale}px` }}
+      >
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            runChat(input);
+          }}
+        >
+          <input
+            className="input flex-1 text-[1em] py-1.5 border border-slate-200 rounded px-2 dark:border-slate-600"
+            placeholder="질문 입력…"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            disabled={loading}
+            autoFocus
+          />
+          <button
+            type="submit"
+            className="btn btn-primary text-[1em] py-1.5 px-3 rounded disabled:opacity-50"
+            disabled={loading || !input.trim()}
+          >
+            {loading ? "…" : "전송"}
+          </button>
+        </form>
+        <p className="text-[0.85em] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900/70 rounded px-2 py-1.5 border border-transparent dark:border-slate-700">
+          {PANEL_DISCLAIMER}
+        </p>
+      </div>
+
+      <button
+        type="button"
+        aria-label="창 크기 조절"
+        title="드래그하여 크기 조절"
+        className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize touch-none"
+        onPointerDown={(e) => startDrag("resize", e)}
+      >
+        <span
+          className="absolute bottom-1 right-1 h-2.5 w-2.5 border-r-2 border-b-2 border-slate-400/80 dark:border-slate-500"
+          aria-hidden
+        />
+      </button>
     </div>
   );
 }

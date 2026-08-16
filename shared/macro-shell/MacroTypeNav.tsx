@@ -1,5 +1,5 @@
 // @ts-nocheck — shared 패키지: 각 frontend node_modules 기준으로 tsc 경로가 달라짐
-export type MacroAppKind = "land" | "built" | "collective";
+export type MacroAppKind = "land" | "built" | "collective" | "rent";
 
 const NAV_ITEMS: { kind: MacroAppKind; href: string; label: string }[] = [
   { kind: "land", href: "/land/", label: "토지" },

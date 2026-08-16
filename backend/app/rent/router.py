@@ -34,12 +34,14 @@ from app.rent.query import (
     list_addr4,
     list_buildings,
 )
-from app.collective.building_geocode import geocode_collective_building
+from app.collective.building_geocode import geocode_collective_building, resolve_building_map_points
 from app.collective.regression.engine import run_building_regression, run_cohort_regression
 from app.collective.schemas import CollectiveRegressionRequest, CollectiveRegressionResponse
 from app.rent.map_resolve import resolve_rent_map_codes
 from app.rent.tx_query import fetch_regression_rows, list_building_transactions
+from app.rent.profile_yearly import build_profile_yearly_payload, completed_calendar_years
 from app.rent.sangkwon_query import annual_table, import_meta, list_polygons, series_table
+from app.rent.sale_join import JOIN_ASSETS, sale_join
 from app.rent.schemas import (
     RentBuildingGeocodeRequest,
     RentBuildingGeocodeResponse,
@@ -49,8 +51,10 @@ from app.rent.schemas import (
     RentConversionCompareResponse,
     RentFilterMeta,
     RentMapResolveCodesResponse,
+    RentProfileYearlyResponse,
     RentRegionOption,
     RentRegionStructure,
+    RentSaleJoinResponse,
     RentRollingResponse,
     RentTransactionListResponse,
     RentTransactionRow,
@@ -251,6 +255,23 @@ def rent_buildings(
     )
 
 
+@router.get("/sale-join", response_model=RentSaleJoinResponse)
+def rent_sale_join(
+    db: Session = Depends(get_rent_db),
+    sale_building_key: str = Query(..., min_length=8),
+    asset_type: str = Query(...),
+    window_years: int = Query(5, ge=1, le=7),
+):
+    if asset_type not in JOIN_ASSETS and asset_type != "presale":
+        raise HTTPException(400, "invalid asset_type")
+    return sale_join(
+        db,
+        sale_building_key=sale_building_key.strip(),
+        asset_type=asset_type,
+        window_years=window_years,
+    )
+
+
 @router.get("/buildings/{building_key}/rolling", response_model=RentRollingResponse)
 def rent_building_rolling(
     building_key: str,
@@ -325,31 +346,23 @@ def rent_geocode_building(body: RentBuildingGeocodeRequest):
 
 
 @router.post("/buildings/map-points", response_model=RentBuildingMapPointsResponse)
-def rent_map_points(body: RentBuildingMapPointsRequest):
+def rent_map_points(
+    body: RentBuildingMapPointsRequest,
+    db: Session = Depends(get_rent_db),
+):
     key = (settings.vworld_api_key or "").strip()
     if not key:
         raise HTTPException(503, "VWORLD_API_KEY가 설정되지 않았습니다.")
-    points = []
-    unresolved: list[str] = []
-    for item in body.buildings[:80]:
-        result = geocode_collective_building(
+    items = [item.model_dump() for item in body.buildings[:100]]
+    try:
+        points, unresolved = resolve_building_map_points(
+            db.connection(),
             api_key=key,
-            addr1=item.addr1,
-            addr2=item.addr2,
-            jibun_address=item.jibun_address,
-            road_address=item.road_address,
+            buildings=items,
+            table_name="rent_building_geocodes",
         )
-        if result.get("ok") and result.get("longitude") is not None:
-            points.append(
-                {
-                    "building_key": item.building_key,
-                    "label": item.label,
-                    "longitude": result["longitude"],
-                    "latitude": result["latitude"],
-                }
-            )
-        else:
-            unresolved.append(item.building_key)
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
     return RentBuildingMapPointsResponse(points=points, unresolved=unresolved)
 
 
@@ -448,6 +461,34 @@ def _sangkwon_ready(conn) -> bool:
         return import_meta(conn) is not None
     except Exception:  # noqa: BLE001
         return False
+
+
+@router.get("/profile-yearly", response_model=RentProfileYearlyResponse)
+def rent_profile_yearly(
+    db: Session = Depends(get_rent_db),
+    region_level: str = Query(...),
+    region_code: str = Query(...),
+    window_years: int = Query(3, ge=1, le=5),
+    years: list[int] = Query(default=[]),
+):
+    """지역프로필용 주거 전월세 달력 연간. 건수·보증금 합·월세 합(만/월). 환산 없음."""
+    conn = db.connection()
+    ys = sorted({int(y) for y in years if 1990 <= int(y) <= 2100})
+    if not ys:
+        as_of = latest_as_of(conn)
+        if as_of is None:
+            as_of = date.today()
+        ys = completed_calendar_years(as_of, window_years)
+    try:
+        payload = build_profile_yearly_payload(
+            conn,
+            region_level=region_level,
+            region_code=region_code,
+            years=ys,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return RentProfileYearlyResponse(**payload)
 
 
 @router.get("/sangkwon/polygons", response_model=SangkwonPolygonsResponse)

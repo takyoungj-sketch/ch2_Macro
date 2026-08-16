@@ -1,7 +1,8 @@
 # CH2 AI 헌법 (Constitution)
 
 > CH2 Macro AI 연동의 **변하지 않는 원칙**. 구현·프롬프트·UI는 이 문서를 따른다.  
-> 아키텍처 상세: [CH2_AI_ARCHITECTURE.md](./CH2_AI_ARCHITECTURE.md)
+> 아키텍처 상세: [CH2_AI_ARCHITECTURE.md](./CH2_AI_ARCHITECTURE.md)  
+> 물음표·AI 역할 분담: [CH2_EXPLAIN_CONSTITUTION.md](./CH2_EXPLAIN_CONSTITUTION.md)
 
 ---
 
@@ -98,7 +99,7 @@ CH2 AI는 **교수**도 **잡담 챗봇**도 아니다.
 | `matrix_cell_explain` | MatrixCard |
 | `outlier_diagnostic` | (필터/IQR) |
 | `cluster_compare` | 집합 코호트 |
-| `twin_city_compare` | 토지 twin |
+| `twin_city_compare` | 지역프로필 Twin 카드 · 복합 모형추천 Stage2 |
 
 복합 회귀: `regression/run` 응답에서 VIF·상관·계수 slice.
 
@@ -170,7 +171,7 @@ CH2 AI는 **교수**도 **잡담 챗봇**도 아니다.
 | `backend/app/ai/bundles/` | bundle_id 레지스트리 |
 | `backend/app/ai/knowledge/` | Product Knowledge Pack |
 | `backend/app/ai/synthesis.py` | Grounded Dialogue 합성 |
-| `shared/stats-glossary/` | UI 지표 `?` glossary |
+| `shared/stats-glossary/` | UI 지표 `?` glossary — 운영 헌법 [CH2_EXPLAIN_CONSTITUTION.md](./CH2_EXPLAIN_CONSTITUTION.md) |
 | `docs/RENT_CONVERSION_EXPERIMENT.md` | 임대 전환율 실험 종료 · `mean_simple` (D-040) |
 | `docs/REB_COMMERCIAL_RENT_SURVEY.md` | 부동산원 상업용 임대동향 · 상권 공표 정의·CH2 연간 표시 |
 

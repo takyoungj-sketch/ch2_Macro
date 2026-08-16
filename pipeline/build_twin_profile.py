@@ -151,6 +151,7 @@ def _detail_payload(
     window_years: int,
     scope: str,
     as_of: date,
+    twin_profile: str,
 ) -> dict:
     return {
         "algorithm": "profile_twin_v2.1",
@@ -158,6 +159,7 @@ def _detail_payload(
         "window_years": window_years,
         "scope": scope,
         "as_of_month": as_of.isoformat(),
+        "twin_profile": twin_profile,
         "catalog_version": sim.catalog_version,
         "weight_version": sim.weight_version,
         "block_scores": sim.block_scores,
@@ -180,6 +182,7 @@ def _build_twin_rows(
     window_years: int,
     as_of: date,
     weights,
+    twin_profile: str,
 ) -> list[dict]:
     catalog = load_twin_catalog()
     vectors = [
@@ -229,6 +232,7 @@ def _build_twin_rows(
                 window_years=window_years,
                 scope=scope,
                 as_of=as_of,
+                twin_profile=twin_profile,
             )
             scored.append((twin.region_code, sim.similarity, detail))
 
@@ -415,6 +419,12 @@ def main() -> None:
     p.add_argument("--sido-code", type=str, default=None)
     p.add_argument("--top-k", type=int, default=None)
     p.add_argument("--scope", type=str, default=None, choices=(*SCOPES, "same_sigungu"))
+    p.add_argument(
+        "--twin-profile",
+        type=str,
+        default="general",
+        help="general | built_commercial | built_factory | built_detached",
+    )
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--skip-ddl", action="store_true")
     p.add_argument("--skip-scope-ddl", action="store_true")
@@ -429,11 +439,26 @@ def main() -> None:
         args.region_level,
         args.scope or DEFAULT_SCOPE_BY_LEVEL[args.region_level],
     )
-    batch_key = (
-        f"ptwin_{args.region_level}_{scope}_{args.profile_version}_"
-        f"{as_of:%Y%m}_w{args.window_years}_{uuid.uuid4().hex[:8]}"
+    # twin_eupmyeondong_neighbor_mvp.batch_key = varchar(64)
+    _lvl = {"eupmyeondong": "eup", "sigungu": "sg", "beopjungri": "beop"}.get(
+        args.region_level, args.region_level[:6]
     )
-    weights = load_twin_weights()
+    _pv = (
+        args.profile_version.replace("v2.1-national", "v21n")
+        .replace("v2.0-national", "v20n")
+        .replace("v1.1-national", "v11n")
+    )
+    _tp = {
+        "general": "g",
+        "built_commercial": "bc",
+        "built_factory": "bf",
+        "built_detached": "bd",
+        "built_all": "ba",
+    }.get(args.twin_profile, args.twin_profile[:6])
+    batch_key = f"pt_{_lvl}_{scope[:3]}_{_pv}_{_tp}_{as_of:%y%m}_w{args.window_years}_{uuid.uuid4().hex[:6]}"
+    if len(batch_key) > 64:
+        batch_key = batch_key[:64]
+    weights = load_twin_weights(twin_profile=args.twin_profile)
 
     coll = get_collective_engine()
     land = get_land_engine_for_region_copy()
@@ -473,12 +498,14 @@ def main() -> None:
         window_years=args.window_years,
         as_of=as_of,
         weights=weights,
+        twin_profile=args.twin_profile,
     )
 
     log.info(
-        "batch=%s profile=%s level=%s scope=%s anchors=%s twin_rows=%s dry_run=%s",
+        "batch=%s profile=%s twin_profile=%s level=%s scope=%s anchors=%s twin_rows=%s dry_run=%s",
         batch_key,
         args.profile_version,
+        args.twin_profile,
         args.region_level,
         scope,
         len(profiles),

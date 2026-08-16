@@ -134,7 +134,7 @@ AI는 **다른 panel의 API를 호출하지 않음**.
 ## 7. 프론트 연동
 
 **공통:** `shared/ai-assistant/AiAssistantPanel` — modal · trust badge · 섹션 렌더  
-**Glossary:** `shared/stats-glossary` — 회귀 지표 `?` (built · land · collective)
+**Glossary:** `shared/stats-glossary` — 지표 `?` (토지·복합·집합·프로필·임대). 운영 헌법 [CH2_EXPLAIN_CONSTITUTION.md](./CH2_EXPLAIN_CONSTITUTION.md)
 
 | 앱 | panel | 트리거 |
 |----|-------|--------|

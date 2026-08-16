@@ -1,0 +1,28 @@
+---
+description: 계획일지 정리 — 사용자 요청 시에만 표·일지에 기록. 커밋은 하지 않음.
+alwaysApply: true
+---
+
+# 계획일지 정리
+
+사용자가 「계획일지 정리」「이 페이지에 작업 정리」「일지 남겨」라고 하면 Cursor가 파일을 갱신한다. 화면에서 편집하지 않는다. **정리 ≠ 커밋.** 커밋은 따로 요청될 때만.
+
+## 쓸 파일
+
+- 표: `docs/lab/plan.json` — 열은 토지·복합·집합·임대·지역프로필·관리
+- 메모: `docs/lab/journal/YYYY-MM-DD.md`
+- 새 결정만: `docs/DECISIONS.md` + `docs/lab/decisions/D-xxx.json` (소급 금지)
+
+## 할 일
+
+1. 대화 + `git status`로 축마다 한 줄: 한 일 / 중지 지점 / 커밋
+2. 빈 날짜 행 만들지 말 것. 오늘 칸을 채우고, 끝난 날은 `past`로 내린다.
+3. 칸 `status`: `done` | `stopped` | `planned`
+4. 칸 `commit`: `committed` | `needed` | `none` — `git status` 기준. 추측 금지.
+5. 일지 `## 커밋`에 축별 한 줄 (예: `관리: 미커밋 — 랩 4문·계획일지`)
+
+## 하지 말 것
+
+- 정리하면서 `git commit` / push / 배포
+- 채팅을 자동으로 일지에 쌓기
+- 관리 칸만 빼고 다른 축은 적지 않기

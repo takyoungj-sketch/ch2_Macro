@@ -42,6 +42,10 @@ from app.collective_commercial.road_geocode import (
     geocode_commercial_road,
     resolve_commercial_map_points,
 )
+from app.collective_commercial.road_geometry import (
+    VWORLD_ROAD_LAYER,
+    fetch_road_line_collection,
+)
 from app.collective_commercial.schemas import (
     CommercialAddressListResponse,
     CommercialAddressRow,
@@ -56,6 +60,8 @@ from app.collective_commercial.schemas import (
     CommercialRegressionResponse,
     CommercialRoadGeocodeRequest,
     CommercialRoadGeocodeResponse,
+    CommercialRoadLineRequest,
+    CommercialRoadLineResponse,
     CommercialRoadMapPointsRequest,
     CommercialRoadMapPointsResponse,
     CommercialRollingStatPoint,
@@ -368,6 +374,48 @@ def map_points_for_roads(
     except RuntimeError as exc:
         raise HTTPException(503, str(exc)) from exc
     return CommercialRoadMapPointsResponse(points=points, unresolved=unresolved)
+
+
+@router.post("/roads/line", response_model=CommercialRoadLineResponse)
+def road_line_for_map(body: CommercialRoadLineRequest):
+    """선택 도로명 cluster의 VWorld 중심선 (Road-A · LT_L_SPRD)."""
+    key = (settings.vworld_api_key or "").strip()
+    if not key:
+        raise HTTPException(
+            status_code=503,
+            detail="VWORLD_API_KEY가 설정되지 않았습니다.",
+        )
+    domain = (settings.vworld_api_domain or "localhost").strip()
+    try:
+        fc = fetch_road_line_collection(
+            api_key=key,
+            domain=domain,
+            road_name=body.road_name,
+            west=body.west,
+            south=body.south,
+            east=body.east,
+            north=body.north,
+            longitude=body.longitude,
+            latitude=body.latitude,
+        )
+    except ValueError as exc:
+        return CommercialRoadLineResponse(
+            ok=False,
+            road_name=body.road_name.strip(),
+            layer=VWORLD_ROAD_LAYER,
+            feature_collection={"type": "FeatureCollection", "features": []},
+            matched_count=0,
+            error=str(exc),
+        )
+    feats = fc.get("features") or []
+    return CommercialRoadLineResponse(
+        ok=bool(feats),
+        road_name=body.road_name.strip(),
+        layer=VWORLD_ROAD_LAYER,
+        feature_collection=fc,
+        matched_count=len(feats),
+        error=None if feats else "not_found",
+    )
 
 
 @router.get("/clusters", response_model=CommercialClusterListResponse)

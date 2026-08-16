@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
-import { fetchRegionalProfile, fetchTwinNeighbors, resolveRegionName } from "./api/profile";
+import { fetchRegionalProfile, fetchRentProfileYearly, fetchTwinNeighbors, resolveRegionName } from "./api/profile";
+import RentYearlyTable from "./components/RentYearlyTable";
 import type { RegionLevel, RegionNameInfo, YearlyMix } from "./types";
 import IdentityHeader from "./components/IdentityHeader";
 import YearlyMixTable from "./components/YearlyMixTable";
@@ -12,7 +13,8 @@ import DominantMarketCard from "./components/DominantMarketCard";
 import LandProfileCard from "./components/LandProfileCard";
 import ApartmentProfileCard from "./components/ApartmentProfileCard";
 import TwinRegionCard from "./components/TwinRegionCard";
-import { cityShortLabel, formatProfileSelectionQuery } from "@ch2/region-picker";
+import AnalysisLinks from "./components/AnalysisLinks";
+import { cityShortLabel, formatProfileSelectionQuery, isSejongPseudoSigunguCode, isSejongRegionRow } from "@ch2/region-picker";
 import RegionSearch, { type RegionSearchResult } from "./components/RegionSearch";
 import { sidoName } from "./utils/sido";
 
@@ -42,21 +44,31 @@ function regionShortName(sel: RegionSelection, name: RegionNameInfo | null): str
   if (sel.regionLevel === "sido") return sidoName(sel.regionCode);
   if (sel.regionLevel === "city") return cityShortLabel(name, sel.regionCode);
   if (!name) return sel.regionCode;
-  if (sel.regionLevel === "sigungu") return name.sigungu_name;
+  if (sel.regionLevel === "sigungu") {
+    if (isSejongPseudoSigunguCode(sel.regionCode)) return `${name.sido_name || "세종특별자치시"} 전체`;
+    return name.sigungu_name;
+  }
   if (sel.regionLevel === "beopjungri") return name.beopjungri_name;
+  if (isSejongRegionRow(name)) return name.sigungu_name;
   return name.eupmyeondong_name;
 }
 
 export default function App() {
   const [selection, setSelection] = useState<RegionSelection | null>(() => readSelectionFromUrl());
+  const scrollRef = useRef<HTMLDivElement>(null);
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
   const { isDark, toggleUiColorScheme } = useUiColorScheme();
 
-  const handleSelect = useCallback((region: RegionSearchResult) => {
-    const sel: RegionSelection = { regionLevel: region.level, regionCode: region.code };
+  const openRegion = useCallback((regionLevel: RegionLevel, regionCode: string) => {
+    const sel: RegionSelection = { regionLevel, regionCode };
     writeSelectionToUrl(sel);
     setSelection(sel);
+    scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
+
+  const handleSelect = useCallback((region: RegionSearchResult) => {
+    openRegion(region.level, region.code);
+  }, [openRegion]);
 
   const profileQuery = useQuery({
     queryKey: ["regional-profile", selection?.regionLevel, selection?.regionCode],
@@ -88,6 +100,18 @@ export default function App() {
   });
 
   const yearlyMix = profileQuery.data?.features.yearly_mix as YearlyMix | undefined;
+  const rentYears = yearlyMix?.years?.filter((y) => Number.isFinite(y)) ?? [];
+  const rentYearlyQuery = useQuery({
+    queryKey: ["rent-profile-yearly", selection?.regionLevel, selection?.regionCode, rentYears],
+    queryFn: () =>
+      fetchRentProfileYearly({
+        regionLevel: selection!.regionLevel,
+        regionCode: selection!.regionCode,
+        years: rentYears.length ? rentYears : undefined,
+      }),
+    enabled: !!selection && !!profileQuery.data,
+    retry: false,
+  });
   const shortName = selection ? regionShortName(selection, regionNameQuery.data ?? null) : "";
 
   const searchDisplayQuery = useMemo(() => {
@@ -126,7 +150,7 @@ export default function App() {
         onToggleTheme={toggleUiColorScheme}
       />
 
-      <div className="flex-1 min-h-0 overflow-y-auto" style={{ zoom: contentZoom }}>
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto" style={{ zoom: contentZoom }}>
         <div className="mx-auto max-w-5xl px-4 py-6">
           <div className="mb-4 flex justify-end">
             <RegionSearch onSelect={handleSelect} displayQuery={searchDisplayQuery} />
@@ -152,10 +176,30 @@ export default function App() {
           {selection && profileQuery.data && (
             <div className="space-y-5">
               {headerNode}
+              <AnalysisLinks regionLevel={selection.regionLevel} regionCode={selection.regionCode} />
+
+              {yearlyMix ? <YearlyMixTable yearlyMix={yearlyMix} /> : (
+                <div className="card p-5 text-sm text-slate-400">
+                  8대 시장유형 연도별 데이터(yearly_mix)가 아직 없습니다.
+                </div>
+              )}
+
+              {rentYearlyQuery.data ? (
+                <RentYearlyTable
+                  data={rentYearlyQuery.data}
+                  regionLevel={selection.regionLevel}
+                  regionCode={selection.regionCode}
+                />
+              ) : rentYearlyQuery.isError ? (
+                <div className="card p-5 text-sm text-slate-400">
+                  주거 전월세 연간 집계를 불러오지 못했습니다.
+                </div>
+              ) : rentYearlyQuery.isLoading ? (
+                <div className="card p-5 text-sm text-slate-400">주거 전월세를 집계하는 중…</div>
+              ) : null}
 
               {yearlyMix ? (
                 <>
-                  <YearlyMixTable yearlyMix={yearlyMix} />
                   <MarketComposition yearlyMix={yearlyMix} />
                   <DominantMarketCard
                     regionLevel={selection.regionLevel}
@@ -165,15 +209,16 @@ export default function App() {
                     features={profileQuery.data.features}
                   />
                 </>
-              ) : (
-                <div className="card p-5 text-sm text-slate-400">
-                  8대 시장유형 연도별 데이터(yearly_mix)가 아직 없습니다.
-                </div>
-              )}
+              ) : null}
 
-              <LandProfileCard features={profileQuery.data.features} />
+              <LandProfileCard
+                regionLevel={selection.regionLevel}
+                regionCode={selection.regionCode}
+                features={profileQuery.data.features}
+              />
               <ApartmentProfileCard
                 regionLevel={selection.regionLevel}
+                regionCode={selection.regionCode}
                 features={profileQuery.data.features}
               />
 
@@ -183,6 +228,7 @@ export default function App() {
                   isLoading={twinQuery.isLoading}
                   isSigungu={isSigungu}
                   isBeop={isBeop}
+                  onOpenTwin={openRegion}
                 />
               )}
 

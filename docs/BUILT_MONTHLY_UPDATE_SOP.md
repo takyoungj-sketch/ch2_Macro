@@ -1,8 +1,11 @@
 # 월간 복합부동산(built) 데이터 업데이트 SOP
 
-> **목표:** 매월 초 **토지 cycle 완료 후** 상업·공장·단독다가구 정제 xlsx → `built_stats.built_transactions` 갱신, 검증·승인 후 반영.  
+> **목표:** 매월 초 **토지 cycle 완료 후** 상업·공장·단독다가구 → `built_stats.built_transactions` 갱신, 검증·승인 후 반영.  
 > **전제:** 토지와 동일하게 **단순성·재현성·검증·롤백** 우선. 사전통계(V2)는 **당분간 없음** — 회귀는 실시간.  
 > **기준 루트:** `C:\ch2\ch2_Macro`
+>
+> **2026-08 SSOT:** `scripts/monthly/run_built_cycle_csv.py`. 1페이지: [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md).  
+> xlsx/`run_built_monthly_cycle` 은 복구·레거시. git deploy ≠ 월갱신.
 
 관련: [`MONTHLY_UPDATE_SOP.md`](MONTHLY_UPDATE_SOP.md) (토지), [`BUILT_RESEARCH_MVP.md`](BUILT_RESEARCH_MVP.md) (로컬 실행)
 

@@ -118,6 +118,11 @@ class CollectorApp(tk.Tk):
             period_frm, from_=1, to=12, textvariable=self.end_month_var, width=4
         ).pack(side=tk.LEFT, padx=(6, 2))
         ttk.Label(period_frm, text="월").pack(side=tk.LEFT)
+        ttk.Label(
+            period_frm,
+            text="  (국토부 1회 최대 1년 · 긴 기간은 자동 분할)",
+            foreground="#555",
+        ).pack(side=tk.LEFT, padx=(12, 0))
 
         row += 1
         ttk.Label(frm, text="신규 다운로드 상한").grid(row=row, column=0, sticky=tk.W, **pad)

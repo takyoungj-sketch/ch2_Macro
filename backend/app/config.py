@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     #: DECISIONS D-007 — 비어 있으면 인증 미들웨어 비활성. 값이 있으면 비-/health 요청은
     #: `X-Api-Token: <값>` 헤더가 필요하다. 결제·로그인 도입 전 1단 보호용.
     api_token: str = ""
+    #: 관리자 QA 검증 API (`/api/admin/qa/*`). 비어 있으면 통과(로컬).
+    #: 값이 있으면 `X-Qa-Audit-Token` 필요. 공개 앱과 분리.
+    qa_audit_token: str = Field(default="", validation_alias="QA_AUDIT_TOKEN")
 
     #: 무료 V2 API: 요청에 as_of_month 없을 때. None 이면 요청 시점 기준 직전 달 1일(§3).
     stats_v2_default_as_of_month: Optional[date] = Field(

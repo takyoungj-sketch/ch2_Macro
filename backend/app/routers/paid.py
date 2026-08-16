@@ -2,6 +2,9 @@
 유료 동적 분석 API 라우터
 - 복수 지역 단위(beopjungri / eupmyeondong / sigungu)·다중 조건 필터
 - 매트릭스 특정 칸: 계약연도별 평균 단가(만원/㎡) 추이
+
+핫패스 지역 조건·롤링 버킷: docs/LAND_LEDGER_QUERY_PERF.md
+(`beopjungri_code = ANY` 금지 · 롤링은 원장 1회 조회 후 메모리 버킷팅)
 """
 
 from __future__ import annotations
@@ -22,6 +25,17 @@ from fastapi.responses import Response
 from pydantic import ValidationError
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+
+from app.ledger_region_sql import (
+    EXPAND_FILTER_YEARS_FLAG,
+    beopjungri_eq_or_in,
+    execute_expanding,
+)
+
+
+def _paid_execute(db: Session, sql: str, params: dict):
+    """paid 동적 SQL — region_codes / filter_years expanding IN 지원."""
+    return execute_expanding(db, sql, params)
 
 from app.analysis_base_cache import has_valid_analysis_base_cache
 from app.routers.upper_stats import _region_name
@@ -433,8 +447,11 @@ def _build_conditions(
         ledger_codes = list(beopjungri_codes)
         if db is not None and ledger_codes:
             ledger_codes = expand_to_ledger_codes(db, ledger_codes) or ledger_codes
-        conditions.append("lt.beopjungri_code = ANY(:region_codes)")
-        params["region_codes"] = ledger_codes
+        pred, pred_params = beopjungri_eq_or_in(
+            ledger_codes, column="lt.beopjungri_code"
+        )
+        conditions.append(pred)
+        params.update(pred_params)
 
     if rolling_contract_ps is not None and rolling_contract_pe is not None:
         conditions.append("lt.contract_date IS NOT NULL")
@@ -444,8 +461,13 @@ def _build_conditions(
         params["rolling_pe"] = rolling_contract_pe
     elif years is not None and len(years) > 0:
         ys = sorted({int(y) for y in years})
-        conditions.append("lt.contract_year = ANY(:filter_years)")
-        params["filter_years"] = ys
+        if len(ys) == 1:
+            conditions.append("lt.contract_year = :filter_year")
+            params["filter_year"] = ys[0]
+        else:
+            conditions.append("lt.contract_year IN :filter_years")
+            params["filter_years"] = ys
+            params[EXPAND_FILTER_YEARS_FLAG] = True
     else:
         if year_from is not None:
             conditions.append("lt.contract_year >= :year_from")
@@ -795,7 +817,7 @@ def _analyze_core_materialized_rows(
 
     matrix_mode = getattr(req, "matrix_mode", None) or "category"
     query = _select_full_query(" AND ".join(parts), matrix_mode=matrix_mode)
-    rows = db.execute(text(query), params).fetchall()
+    rows = _paid_execute(db, query, dict(params)).fetchall()
 
     if not rows:
         raise HTTPException(status_code=404, detail="해당 조건의 거래 데이터가 없습니다.")
@@ -943,7 +965,7 @@ def _analyze_core_sql_aggregate(
         """
     )
 
-    bundle = db.execute(bundle_sql, params).mappings().one()
+    bundle = _paid_execute(db, bundle_sql.text, dict(params)).mappings().one()
 
     total_d = _json_obj_maybe(bundle["total_json"])
     if not total_d or int(total_d.get("n") or 0) == 0:
@@ -1194,6 +1216,18 @@ def matrix_yearly(body: MatrixYearlyRequest, db: Session = Depends(get_db)):
         buckets = iter_rolling_year_buckets_old_first(rp_e, bc)
         ref_d = body.rolling_stats_reference_date
         chart_labels = chart_bucket_labels_old_first_for_ref_month(ref_d, buckets)
+        # 버킷마다 원장 재조회하면 ANY/SeqScan × N. 전체 기간 1회 조회 후 메모리 버킷팅.
+        roll_sql = (
+            "SELECT lt.contract_date AS d, lt.unit_price_per_sqm::float8 AS px "
+            "FROM land_transactions_resolved lt "
+            f"WHERE {merged_where}"
+        )
+        prow = _paid_execute(db, roll_sql, dict(merged_params)).fetchall()
+        points = [
+            (r.d, float(r.px))
+            for r in prow
+            if r.d is not None and r.px is not None
+        ]
         stat_rows: list[MatrixYearlyStat] = []
         for bi, ((bs_raw, be_raw), chart_label) in enumerate(zip(buckets, chart_labels)):
             bs_eff = bs_raw if bs_raw >= rp_s else rp_s
@@ -1211,17 +1245,7 @@ def matrix_yearly(body: MatrixYearlyRequest, db: Session = Depends(get_db)):
                     )
                 )
                 continue
-            w_extra = merged_where + " AND lt.contract_date >= :buck_ps AND lt.contract_date <= :buck_pe"
-            pb = dict(merged_params)
-            pb["buck_ps"] = bs_eff
-            pb["buck_pe"] = be_eff
-            qry = text(
-                "SELECT lt.unit_price_per_sqm::float8 AS px "
-                "FROM land_transactions_resolved lt "
-                f"WHERE {w_extra}"
-            )
-            prow = db.execute(qry, pb).fetchall()
-            prices_px = [float(r.px) for r in prow if r.px is not None]
+            prices_px = [px for d, px in points if bs_eff <= d <= be_eff]
             if body.exclude_outlier and prices_px:
                 keep = outlier_keep_mask(
                     prices_px, iqr_multiplier=float(body.outlier_iqr_multiplier)
@@ -1252,16 +1276,13 @@ def matrix_yearly(body: MatrixYearlyRequest, db: Session = Depends(get_db)):
             rows=stat_rows,
         )
 
-    query = text(
-        f"""
+    cal_sql = f"""
         SELECT lt.contract_year AS y, lt.unit_price_per_sqm AS px
         FROM land_transactions_resolved lt
         WHERE {merged_where}
         ORDER BY lt.contract_year ASC
         """
-    )
-
-    rows = db.execute(query, merged_params).fetchall()
+    rows = _paid_execute(db, cal_sql, dict(merged_params)).fetchall()
     if not rows:
         raise HTTPException(status_code=404, detail="해당 상세 칸에는 거래가 없습니다.")
 
@@ -1651,8 +1672,7 @@ def matrix_cell_histogram(
     `single` 이면 `histogram_year` 한 해의 표본만 사용한다.
     """
     merged_where, merged_params = _matrix_cell_merged_where(body, db)
-    query = text(
-        f"""
+    hist_sql = f"""
         SELECT lt.contract_date AS cd,
                lt.contract_year AS y,
                lt.unit_price_per_sqm AS px
@@ -1660,8 +1680,7 @@ def matrix_cell_histogram(
         WHERE {merged_where}
         ORDER BY lt.contract_year ASC
         """
-    )
-    rows = db.execute(query, merged_params).fetchall()
+    rows = _paid_execute(db, hist_sql, dict(merged_params)).fetchall()
     if not rows:
         raise HTTPException(status_code=404, detail="해당 상세 칸에는 거래가 없습니다.")
 
@@ -1772,8 +1791,7 @@ def _fetch_matrix_cell_filtered_transactions(
 
     code_expr = canonical_select_expr("lt")
     join_sql = region_codes_join_on_canonical("lt", "rc", active_only=False)
-    query = text(
-        f"""
+    tx_sql = f"""
         SELECT lt.id, lt.contract_year, lt.contract_month, lt.contract_date,
                ({code_expr}) AS beopjungri_code,
                TRIM(BOTH FROM COALESCE(rc.sigungu_name::text, '')) AS sigungu_name,
@@ -1794,8 +1812,7 @@ def _fetch_matrix_cell_filtered_transactions(
         WHERE {merged_where}
         ORDER BY lt.contract_year ASC, lt.contract_month ASC, lt.id ASC
         """
-    )
-    rows = db.execute(query, merged_params).fetchall()
+    rows = _paid_execute(db, tx_sql, dict(merged_params)).fetchall()
     if not rows:
         raise HTTPException(status_code=404, detail="해당 상세 칸에는 거래가 없습니다.")
 

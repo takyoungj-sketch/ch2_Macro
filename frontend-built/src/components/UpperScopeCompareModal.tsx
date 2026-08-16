@@ -1,4 +1,6 @@
 import clsx from "clsx";
+import { MetricWithHelp } from "@ch2/stats-glossary";
+import { AnalysisHelpPanel } from "@ch2/analysis-help";
 import type { AssetType, RegressionLevelResult, RegressionRunRequest, RegressionRunResponse, RegressionVariableSpec, ResponseScale } from "../types";
 import {
   ADMIN_LABELS,
@@ -6,6 +8,7 @@ import {
   fmtNum,
   levelCardTitle,
 } from "../utils/regressionFormat";
+import { BUILT_UPPER_SCOPE_HELP } from "../utils/builtAnalysisHelp";
 import DraggableModalShell from "./DraggableModalShell";
 import PredictPanel from "./PredictPanel";
 import RegressionEquation from "./RegressionEquation";
@@ -59,9 +62,13 @@ function ComparisonLevelCard({
       {result.warning && <p className="badge-warn">{result.warning}</p>}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <div>R² {fmtDecimal(result.r_squared, 4)}</div>
-        <div>Adj R² {fmtDecimal(result.adj_r_squared, 4)}</div>
-        <div>MAPE {result.mape != null ? `${fmtDecimal(result.mape, 1)}%` : "—"}</div>
+        <MetricWithHelp label="R²" termId="r_squared" value={fmtDecimal(result.r_squared, 4)} />
+        <MetricWithHelp label="Adj R²" termId="adj_r_squared" value={fmtDecimal(result.adj_r_squared, 4)} />
+        <MetricWithHelp
+          label="MAPE"
+          termId="mape"
+          value={result.mape != null ? `${fmtDecimal(result.mape, 1)}%` : "—"}
+        />
         <div>유의 {result.significant_count}개</div>
       </div>
 
@@ -133,9 +140,12 @@ export default function UpperScopeCompareModal({
       minHeight={320}
     >
       <div className="h-full min-h-0 space-y-3">
-        <div className="rounded-md border border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/20 dark:border-emerald-800 p-2 text-xs">
-          <span className="font-medium text-emerald-900 dark:text-emerald-100">분석 초점 · </span>
-          n={fmtNum(regData.primary.n)} · Adj R² {fmtDecimal(regData.primary.adj_r_squared, 4)}
+        <div className="flex items-center justify-between gap-2">
+          <div className="rounded-md border border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/20 dark:border-emerald-800 p-2 text-xs flex-1">
+            <span className="font-medium text-emerald-900 dark:text-emerald-100">분석 초점 · </span>
+            n={fmtNum(regData.primary.n)} · Adj R² {fmtDecimal(regData.primary.adj_r_squared, 4)}
+          </div>
+          <AnalysisHelpPanel explain={BUILT_UPPER_SCOPE_HELP} />
         </div>
 
         {!comparisons.length && (

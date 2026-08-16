@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import clsx from "clsx";
 import { fetchCommercialFloorIndex, runCommercialCohortFloorIndex } from "../api/commercialClient";
 import type { CommercialAssetType } from "../types";
@@ -159,8 +160,9 @@ export default function CommercialFloorIndexPanel({
   return (
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[11px] font-medium text-slate-700">
+        <p className="text-[11px] font-medium text-slate-700 inline-flex items-center gap-1">
           {isFactory ? "면적대·층 효용지수" : "층·면적 효용지수"}
+          <StatsGlossaryHelp termId="floor_utility_index" size="xs" />
         </p>
         <AnalysisHelpPanel explain={explain} />
       </div>

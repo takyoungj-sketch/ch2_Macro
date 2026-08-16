@@ -13,6 +13,8 @@ if (Test-Path $Stage) { Remove-Item $Stage -Recurse -Force -ErrorAction Silently
 New-Item -ItemType Directory -Path $Stage -Force | Out-Null
 
 Copy-Item (Join-Path $Root "molit_csv_collector") (Join-Path $Stage "molit_csv_collector") -Recurse
+Get-ChildItem (Join-Path $Stage "molit_csv_collector") -Recurse -Directory -Filter "__pycache__" |
+    Remove-Item -Recurse -Force
 Copy-Item (Join-Path $Root "requirements.txt") $Stage
 Copy-Item (Join-Path $Root "run_gui.bat") $Stage
 Copy-Item (Join-Path $Root "run_collector.py") $Stage

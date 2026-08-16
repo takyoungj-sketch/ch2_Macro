@@ -116,6 +116,7 @@ WHERE t.is_valid = true
   AND t.unit_price > 0
   AND t.contract_year IS NOT NULL
   {{addr1_clause}}
+  {{year_clause}}
 GROUP BY 1, 2, 3, 4, 5, 6
 """
 
@@ -281,6 +282,63 @@ def upsert_market_annual(records: list[dict], engine) -> None:
             conn.execute(sql, rec)
 
 
+def compute_annual_records(
+    engine,
+    *,
+    addr1_filter: str | None,
+    calendar_year: int | None = None,
+    batch_id: str = "qa-readonly",
+) -> list[dict]:
+    """Read-only annual rollup (same SQL + ``_rollup_records`` as ``build_annual``).
+
+    Does **not** INSERT/UPDATE ``market_annual_stats``. QA L3 uses this.
+    """
+    with engine.connect() as conn:
+        addr1_list = [addr1_filter] if addr1_filter else _distinct_addr1(conn)
+
+    out: list[dict] = []
+    for addr1 in addr1_list:
+        addr1_clause = "AND t.addr1 = :addr1" if addr1 else ""
+        year_clause = (
+            "AND t.contract_year = :calendar_year" if calendar_year is not None else ""
+        )
+        params: dict = {}
+        if addr1:
+            params["addr1"] = addr1
+        if calendar_year is not None:
+            params["calendar_year"] = int(calendar_year)
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text(
+                    ANNUAL_SQL.format(
+                        addr1_clause=addr1_clause, year_clause=year_clause
+                    )
+                ),
+                params,
+            ).mappings().all()
+
+        by_year: dict[int, list] = {}
+        for row in rows:
+            cy = int(row["contract_year"])
+            by_year.setdefault(cy, []).append(row)
+
+        for cy, year_rows in by_year.items():
+            out.extend(
+                _rollup_records(
+                    year_rows,
+                    as_of_month=None,
+                    window_years=None,
+                    period_start=None,
+                    period_end=None,
+                    batch_id=batch_id,
+                    calendar_year=cy,
+                )
+            )
+        del rows, by_year
+        gc.collect()
+    return out
+
+
 def build_rolling(
     engine,
     *,
@@ -333,7 +391,7 @@ def build_annual(engine, *, addr1_filter: str | None, batch_id: str) -> int:
             params["addr1"] = addr1
         with engine.connect() as conn:
             rows = conn.execute(
-                text(ANNUAL_SQL.format(addr1_clause=addr1_clause)),
+                text(ANNUAL_SQL.format(addr1_clause=addr1_clause, year_clause="")),
                 params,
             ).mappings().all()
 

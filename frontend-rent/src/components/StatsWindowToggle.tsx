@@ -1,3 +1,5 @@
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
+
 export type StatsWindowYears = 3 | 5 | 7;
 
 export function normalizeStatsWindowYears(v: unknown): StatsWindowYears {
@@ -34,7 +36,10 @@ export default function StatsWindowToggle({
 
   return (
     <div className="space-y-1">
-      <span className="text-xs text-slate-500 dark:text-slate-400">롤링 구간</span>
+      <span className="text-xs text-slate-500 dark:text-slate-400 inline-flex items-center gap-1">
+        롤링 구간
+        <StatsGlossaryHelp termId="rolling_window" size="xs" />
+      </span>
       <div
         className="flex gap-0.5 bg-slate-100 dark:bg-slate-700 rounded-lg p-0.5"
         role="group"

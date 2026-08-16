@@ -54,7 +54,7 @@ cd c:\ch2\ch2_Macro
 # 1) 관련 파일만 git commit
 # 2) 배포
 .\deploy\scripts\deploy-from-windows.ps1 -Scope built
-# -Scope: built | land | collective | all
+# -Scope: built | land | collective | profile | rent | lab | all
 # -SkipPush  # 이미 push 된 경우
 ```
 

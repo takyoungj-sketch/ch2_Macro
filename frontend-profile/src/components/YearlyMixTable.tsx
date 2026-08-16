@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import type { YearlyMix, YearlyMixType, YearlyTypeCell } from "../types";
 import { YEARLY_MIX_TYPES } from "../types";
 import { formatAmountManwon, formatInt, formatYoy } from "../utils/format";
@@ -35,7 +36,10 @@ export default function YearlyMixTable({ yearlyMix }: Props) {
 
   return (
     <div className="card p-5">
-      <h2 className="text-lg font-semibold">3개년 부동산 거래 현황 (8대 시장유형)</h2>
+      <div className="flex items-center gap-2">
+        <h2 className="text-lg font-semibold">3개년 부동산 거래 현황 (8대 시장유형)</h2>
+        <StatsGlossaryHelp termId="yearly_mix" size="sm" />
+      </div>
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
         상가 = 상업업무 + 집합상가, 공장 = 공장창고 + 집합공장 (Profile 집계 단계에서만 병합)
       </p>

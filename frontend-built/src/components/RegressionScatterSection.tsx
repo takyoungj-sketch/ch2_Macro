@@ -87,30 +87,38 @@ function ScatterMini({
   const lineY2 = (beta ?? 0) * lineX2;
 
   return (
-    <div className="card">
-      <div className="text-xs font-semibold mb-0.5">
+    <div className="card !p-2.5">
+      <div className="text-xs font-semibold mb-0.5 text-slate-800 dark:text-slate-100">
         {label}
         {mode === "raw" ? " vs 금액" : " (통제 후)"}
       </div>
-      <div className="text-[10px] text-slate-500 mb-1 min-h-[2rem]">
+      <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 min-h-[2rem]">
         {mode === "raw" ? (
           <>
-            <span className="font-medium text-slate-600">r={fmtDecimal(pearsonR, 3)}</span>
-            <span className="block text-slate-400">실제 거래 분포</span>
+            <span className="font-medium text-slate-700 dark:text-slate-200">
+              r={fmtDecimal(pearsonR, 3)}
+            </span>
+            <span className="block text-slate-400 dark:text-slate-500">실제 거래 분포</span>
           </>
         ) : (
           <>
-            <span className="font-medium text-slate-600">
+            <span className="font-medium text-slate-700 dark:text-slate-200">
               β={fmtCoefInt(beta)} · {fmtP(pValue)}
             </span>
             {partialR2 != null && (
-              <span className="ml-1 text-slate-400">· 부분 R²={fmtDecimal(partialR2, 3)}</span>
+              <span className="ml-1 text-slate-400 dark:text-slate-500">
+                · 부분 R²={fmtDecimal(partialR2, 3)}
+              </span>
             )}
-            <span className="block text-slate-400">다른 변수 통제 후 잔차</span>
+            <span className="block text-slate-400 dark:text-slate-500">다른 변수 통제 후 잔차</span>
           </>
         )}
       </div>
-      <svg width={w} height={h} className="bg-slate-50 rounded border border-slate-100">
+      <svg
+        width={w}
+        height={h}
+        className="rounded border border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-950/90"
+      >
         {mode === "partial" && (
           <>
             <line
@@ -118,7 +126,8 @@ function ScatterMini({
               y1={pad}
               x2={sx(0)}
               y2={h - pad}
-              stroke="#cbd5e1"
+              stroke="currentColor"
+              className="text-slate-300 dark:text-slate-600"
               strokeWidth={1}
               strokeDasharray="3 2"
             />
@@ -127,7 +136,8 @@ function ScatterMini({
               y1={sy(0)}
               x2={w - pad}
               y2={sy(0)}
-              stroke="#cbd5e1"
+              stroke="currentColor"
+              className="text-slate-300 dark:text-slate-600"
               strokeWidth={1}
               strokeDasharray="3 2"
             />
@@ -139,13 +149,20 @@ function ScatterMini({
             y1={sy(lineY1)}
             x2={sx(lineX2)}
             y2={sy(lineY2)}
-            stroke="#2563eb"
-            strokeWidth={1.5}
-            opacity={0.85}
+            stroke="currentColor"
+            className="text-blue-600 dark:text-sky-400"
+            strokeWidth={1.75}
+            opacity={0.9}
           />
         )}
         {points.map((p, i) => (
-          <circle key={i} cx={sx(p.x)} cy={sy(p.y)} r={2.2} fill="#64748b" opacity={0.55} />
+          <circle
+            key={i}
+            cx={sx(p.x)}
+            cy={sy(p.y)}
+            r={2.5}
+            className="fill-slate-500/70 dark:fill-sky-400/85"
+          />
         ))}
       </svg>
     </div>
@@ -204,19 +221,19 @@ export default function RegressionScatterSection({
     tab === "raw" ? data.correlations : (data.partial_regressions ?? []);
 
   return (
-    <div className="space-y-2 rounded-lg border border-slate-200 bg-white/60 p-3">
+    <div className="space-y-2 rounded-lg border border-slate-200 bg-white/60 p-3 dark:border-slate-600 dark:bg-slate-800/55">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-slate-700">
+          <p className="text-xs font-semibold text-slate-700 dark:text-slate-100">
             {tab === "raw" ? "탐색" : "분석"} — 변수별 산점도
           </p>
-          <p className="text-[11px] text-slate-500 mt-0.5">{scopeBits.join(" · ")}</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{scopeBits.join(" · ")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5 shrink-0">
           {aiContext && <AiAssistantPanel context={aiContext} />}
           <AnalysisHelpPanel explain={explain} />
           <div
-            className="inline-flex rounded-md border border-slate-200 bg-slate-50 p-0.5 text-[11px]"
+            className="inline-flex rounded-md border border-slate-200 bg-slate-50 p-0.5 text-[11px] dark:border-slate-600 dark:bg-slate-900/70"
             role="tablist"
             aria-label="산점도 모드"
           >
@@ -226,8 +243,10 @@ export default function RegressionScatterSection({
               aria-selected={tab === "raw"}
               disabled={!hasRaw}
               className={clsx(
-                "px-2.5 py-1 rounded whitespace-nowrap",
-                tab === "raw" ? "bg-white shadow-sm font-medium text-slate-800" : "text-slate-500",
+                "px-2.5 py-1 rounded whitespace-nowrap transition-colors",
+                tab === "raw"
+                  ? "bg-white shadow-sm font-medium text-slate-800 dark:bg-slate-700 dark:text-slate-100 dark:shadow-black/30"
+                  : "text-slate-500 dark:text-slate-400 dark:hover:text-slate-200",
                 !hasRaw && "opacity-40 cursor-not-allowed",
               )}
               onClick={() => setTab("raw")}
@@ -240,10 +259,10 @@ export default function RegressionScatterSection({
               aria-selected={tab === "partial"}
               disabled={!hasPartial}
               className={clsx(
-                "px-2.5 py-1 rounded whitespace-nowrap",
+                "px-2.5 py-1 rounded whitespace-nowrap transition-colors",
                 tab === "partial"
-                  ? "bg-white shadow-sm font-medium text-slate-800"
-                  : "text-slate-500",
+                  ? "bg-white shadow-sm font-medium text-slate-800 dark:bg-slate-700 dark:text-slate-100 dark:shadow-black/30"
+                  : "text-slate-500 dark:text-slate-400 dark:hover:text-slate-200",
                 !hasPartial && "opacity-40 cursor-not-allowed",
               )}
               onClick={() => setTab("partial")}
@@ -254,16 +273,16 @@ export default function RegressionScatterSection({
         </div>
       </div>
 
-      <p className="text-[11px] text-slate-500">
+      <p className="text-[11px] text-slate-500 dark:text-slate-400">
         {tab === "raw" ? (
           <>
-            <strong className="text-slate-600">통제 전</strong> — 현실에서 거래가 어떻게 퍼져 있는지
+            <strong className="text-slate-600 dark:text-slate-200">통제 전</strong> — 현실에서 거래가 어떻게 퍼져 있는지
             봅니다 (Pearson r).{" "}
-            <span className="text-slate-400">탭을 바꿔 r과 β를 비교해 보세요.</span>
+            <span className="text-slate-400 dark:text-slate-500">탭을 바꿔 r과 β를 비교해 보세요.</span>
           </>
         ) : (
           <>
-            <strong className="text-slate-600">통제 후</strong> — 회귀 모형에 포함된 다른 변수·더미
+            <strong className="text-slate-600 dark:text-slate-200">통제 후</strong> — 회귀 모형에 포함된 다른 변수·더미
             영향을 제거한 뒤, 계수 β와 같은 의미의 순수 관계를 봅니다.
           </>
         )}
@@ -294,7 +313,7 @@ export default function RegressionScatterSection({
               ))}
         </div>
       ) : (
-        <p className="text-xs text-slate-400 text-center py-4">
+        <p className="text-xs text-slate-400 dark:text-slate-500 text-center py-4">
           {tab === "partial"
             ? "표본이 부족하거나 연속 변수가 없어 부분회귀도를 만들 수 없습니다."
             : "표시할 산점도가 없습니다."}

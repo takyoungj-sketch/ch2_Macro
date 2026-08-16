@@ -6,6 +6,7 @@ import {
 } from "../constants/displayUi";
 import { buildMatrixLegendExplain, buildMatrixTableExplain } from "../constants/landStatsExplain";
 import type { AnalysisExplain, MatrixCell, StatsResult } from "../types";
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import DraggableModalShell from "./DraggableModalShell";
 
@@ -711,7 +712,13 @@ export default function MatrixStatsTable({
         {showHeadingRow ? (
           <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
             {(title ?? "").trim() ? (
+              <div className="flex items-center gap-1.5">
               <h3 className="text-sm font-semibold text-slate-600">{title}</h3>
+              <StatsGlossaryHelp
+                termId={landAxisLabel === "지목군" ? "jimok_group" : "land_matrix"}
+                size="xs"
+              />
+            </div>
             ) : (
               <div />
             )}
@@ -735,7 +742,13 @@ export default function MatrixStatsTable({
       {showHeadingRow ? (
         <div className="min-w-0">
           {(title ?? "").trim() ? (
-            <h3 className="text-sm font-semibold text-slate-600">{title}</h3>
+            <div className="flex items-center gap-1.5">
+              <h3 className="text-sm font-semibold text-slate-600">{title}</h3>
+              <StatsGlossaryHelp
+                termId={landAxisLabel === "지목군" ? "jimok_group" : "land_matrix"}
+                size="xs"
+              />
+            </div>
           ) : null}
         </div>
       ) : null}

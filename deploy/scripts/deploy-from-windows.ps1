@@ -4,7 +4,7 @@
 #   .\deploy\scripts\deploy-from-windows.ps1 -Scope built
 #   .\deploy\scripts\deploy-from-windows.ps1 -Scope built -SkipPush   # push 이미 한 경우
 param(
-  [ValidateSet("built", "land", "collective", "profile", "rent", "all")]
+  [ValidateSet("built", "land", "collective", "profile", "rent", "lab", "all")]
   [string]$Scope = "built",
   [switch]$SkipCommit = $true,
   [switch]$SkipPush,
@@ -52,8 +52,8 @@ try {
   }
 
   Write-Host "==> scp to VPS (scope=$Scope)"
-  if ($Scope -eq "profile" -or $Scope -eq "rent" -or $Scope -eq "all") {
-    & ssh -i $Key $VpsHost "mkdir -p /opt/ch2_Macro/frontend-profile /opt/ch2_Macro/frontend-rent /opt/ch2_Macro/backend/app/ai/knowledge /opt/ch2_Macro/backend/app/ai/bundles /opt/ch2_Macro/deploy/templates"
+  if ($Scope -eq "profile" -or $Scope -eq "rent" -or $Scope -eq "lab" -or $Scope -eq "all") {
+    & ssh -i $Key $VpsHost "mkdir -p /opt/ch2_Macro/frontend-profile /opt/ch2_Macro/frontend-rent /opt/ch2_Macro/frontend-lab /opt/ch2_Macro/backend/app/ai/knowledge /opt/ch2_Macro/backend/app/ai/bundles /opt/ch2_Macro/deploy/templates"
     if ($LASTEXITCODE -ne 0) { throw "remote mkdir failed" }
   }
   switch ($Scope) {
@@ -79,6 +79,14 @@ try {
       Invoke-Scp @("deploy/templates/nginx-ch2-macro.conf", "deploy/macro-gateway") "deploy/"
       Invoke-Scp @("deploy/scripts") "deploy/"
     }
+    "lab" {
+      Invoke-Scp @("backend/app/qa_audit", "backend/app/config.py", "backend/app/main.py") "backend/app/"
+      Invoke-Scp @("shared") "."
+      Invoke-Scp @("frontend-lab/package.json", "frontend-lab/package-lock.json", "frontend-lab/tsconfig.json", "frontend-lab/vite.config.ts", "frontend-lab/tailwind.config.js", "frontend-lab/postcss.config.js", "frontend-lab/index.html", "frontend-lab/src") "frontend-lab/"
+      Invoke-Scp @("frontend-built/src") "frontend-built/"
+      Invoke-Scp @("frontend-rent/src") "frontend-rent/"
+      Invoke-Scp @("deploy/templates/nginx-ch2-macro.conf") "deploy/templates/"
+    }
     "rent" {
       Invoke-Scp @("backend/app/rent", "backend/app/config.py", "backend/app/main.py") "backend/app/"
       Invoke-Scp @("backend/app/ai/knowledge") "backend/app/ai/"
@@ -99,6 +107,7 @@ try {
       Invoke-Scp @("frontend-collective/tsconfig.json", "frontend-collective/vite.config.ts", "frontend-collective/tailwind.config.js", "frontend-collective/src") "frontend-collective/"
       Invoke-Scp @("frontend-profile/package.json", "frontend-profile/package-lock.json", "frontend-profile/tsconfig.json", "frontend-profile/vite.config.ts", "frontend-profile/tailwind.config.js", "frontend-profile/postcss.config.js", "frontend-profile/index.html", "frontend-profile/src") "frontend-profile/"
       Invoke-Scp @("frontend-rent/package.json", "frontend-rent/tsconfig.json", "frontend-rent/vite.config.ts", "frontend-rent/tailwind.config.js", "frontend-rent/postcss.config.js", "frontend-rent/index.html", "frontend-rent/src") "frontend-rent/"
+      Invoke-Scp @("frontend-lab/package.json", "frontend-lab/package-lock.json", "frontend-lab/tsconfig.json", "frontend-lab/vite.config.ts", "frontend-lab/tailwind.config.js", "frontend-lab/postcss.config.js", "frontend-lab/index.html", "frontend-lab/src") "frontend-lab/"
       Invoke-Scp @("deploy/macro-gateway", "deploy/hub", "deploy/scripts", "deploy/templates") "deploy/"
     }
   }

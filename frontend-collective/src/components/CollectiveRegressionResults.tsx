@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import clsx from "clsx";
+import { MetricWithHelp, StatsGlossaryHelp } from "@ch2/stats-glossary";
+import { ModelRecommendSection } from "@ch2/model-recommend";
 import type {
+  CollectiveModelCandidate,
   CollectivePredictOptions,
   CollectiveRegressionResponse,
   CommercialPredictOptions,
@@ -51,10 +54,25 @@ function EffectsTable({ coefficients }: { coefficients: RegressionCoeff[] }) {
         <thead>
           <tr className="text-slate-600 dark:text-slate-300">
             <th className="text-left font-medium py-1">변수</th>
-            <th className="text-left font-medium py-1">계수</th>
-            <th className="text-right font-medium py-1">SE</th>
+            <th className="text-left font-medium py-1">
+              <span className="inline-flex items-center gap-0.5">
+                계수
+                <StatsGlossaryHelp termId="coefficient" size="xs" />
+              </span>
+            </th>
+            <th className="text-right font-medium py-1">
+              <span className="inline-flex items-center justify-end gap-0.5">
+                SE
+                <StatsGlossaryHelp termId="se" size="xs" />
+              </span>
+            </th>
             <th className="text-right font-medium py-1">t</th>
-            <th className="text-right font-medium py-1">p</th>
+            <th className="text-right font-medium py-1">
+              <span className="inline-flex items-center justify-end gap-0.5">
+                p
+                <StatsGlossaryHelp termId="p_value" size="xs" />
+              </span>
+            </th>
           </tr>
         </thead>
         <tbody className="text-slate-800 dark:text-slate-200">
@@ -133,6 +151,65 @@ function ReferenceCategories({
   );
 }
 
+function CollectiveModelRecommend({
+  candidates,
+  selectionN,
+}: {
+  candidates: CollectiveModelCandidate[];
+  selectionN: number;
+}) {
+  const byAdj = [...candidates].sort(
+    (a, b) => (b.adj_r_squared ?? -Infinity) - (a.adj_r_squared ?? -Infinity),
+  );
+  const byCv = [...candidates].sort((a, b) => {
+    const av = a.cv_mape;
+    const bv = b.cv_mape;
+    if (av == null && bv == null) return a.rank - b.rank;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    return av - bv;
+  });
+
+  const toRow = (c: CollectiveModelCandidate, prefix: string) => ({
+    key: `${prefix}-${c.rank}-${c.blocks.join("+")}-${c.model_type}`,
+    primary: `#${c.rank} · ${c.blocks.join(" + ")} · ${c.model_type}`,
+    metrics: [
+      `Adj R² ${fmtDecimal(c.adj_r_squared, 3)}`,
+      c.cv_mape != null ? `CV-MAPE ${fmtDecimal(c.cv_mape, 2)}%` : "CV-MAPE —",
+      c.mape != null ? `MAPE ${fmtDecimal(c.mape, 2)}%` : null,
+      `n=${c.n.toLocaleString("ko-KR")}`,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+  });
+
+  return (
+    <ModelRecommendSection
+      depth="standard_plus"
+      selectionN={selectionN}
+      limitations="후보 비교(표준+) · Twin Validation 폐쇄 루프는 복합만 · 정답 식 아님 · 소표본 시 불안정"
+      headerExtra={<StatsGlossaryHelp termId="adj_r_squared" size="xs" />}
+      defaultTabId="explanatory"
+      tabs={[
+        {
+          id: "explanatory",
+          label: "설명형 (Adj R²)",
+          optimizeSentence:
+            "이 추천은 Adj R²를 기준으로 정렬한 설명형 후보입니다. 정답 식이 아닙니다.",
+          rows: byAdj.map((c) => toRow(c, "adj")),
+        },
+        {
+          id: "predictive",
+          label: "예측형 (CV-MAPE)",
+          optimizeSentence:
+            "이 추천은 CV-MAPE(낮을수록 좋음) 기준 예측형 후보입니다. Twin pool 검증은 복합과 깊이가 다릅니다.",
+          rows: byCv.map((c) => toRow(c, "cv")),
+        },
+      ]}
+    />
+  );
+}
+
 export function CollectiveRegressionResults({
   data,
   modelType,
@@ -152,31 +229,21 @@ export function CollectiveRegressionResults({
       ))}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs text-slate-700 dark:text-slate-200">
-        <div>R² {fmtDecimal(data.r_squared, 5)}</div>
-        <div>Adj R² {fmtDecimal(data.adj_r_squared, 5)}</div>
-        <div title="in-sample · 금액(만원) 원척도">
-          MAPE {data.mape != null ? `${fmtDecimal(data.mape, 2)}%` : "—"}
-        </div>
+        <MetricWithHelp label="R²" termId="r_squared" value={fmtDecimal(data.r_squared, 5)} />
+        <MetricWithHelp label="Adj R²" termId="adj_r_squared" value={fmtDecimal(data.adj_r_squared, 5)} />
+        <MetricWithHelp
+          label="MAPE"
+          termId="mape"
+          value={data.mape != null ? `${fmtDecimal(data.mape, 2)}%` : "—"}
+          title="in-sample · 금액(만원) 원척도"
+        />
         <div>유의 변수 {sigCount}개</div>
-        <div>F p {fmtDecimal(data.f_p_value, 5)}</div>
-        <div>n={data.n.toLocaleString("ko-KR")}</div>
+        <MetricWithHelp label="F p" termId="f_p_value" value={fmtDecimal(data.f_p_value, 5)} />
+        <MetricWithHelp label="n=" termId="fit_n" value={data.n.toLocaleString("ko-KR")} />
       </div>
 
       {data.model_candidates && data.model_candidates.length > 0 && (
-        <details open className="rounded border border-indigo-200 bg-indigo-50/40 dark:border-indigo-800 dark:bg-indigo-950/20 p-2">
-          <summary className="cursor-pointer text-xs font-semibold text-indigo-800 dark:text-indigo-200">
-            모형 추천 후보 ({data.model_candidates.length}개)
-          </summary>
-          <div className="mt-2 space-y-1 text-[11px]">
-            {data.model_candidates.map((candidate) => (
-              <div key={candidate.rank} className="rounded bg-white/80 dark:bg-slate-900/60 px-2 py-1">
-                #{candidate.rank} · {candidate.blocks.join(" + ")} · {candidate.model_type}
-                {" · "}Adj R² {fmtDecimal(candidate.adj_r_squared, 3)}
-                {" · "}CV-MAPE {candidate.cv_mape != null ? `${fmtDecimal(candidate.cv_mape, 2)}%` : "—"}
-              </div>
-            ))}
-          </div>
-        </details>
+        <CollectiveModelRecommend candidates={data.model_candidates} selectionN={data.n} />
       )}
 
       {(data.equation || data.coefficients.length > 0) && (

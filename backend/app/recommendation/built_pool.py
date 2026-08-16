@@ -5,6 +5,7 @@ from __future__ import annotations
 import pandas as pd
 
 from app.built.regression.engine import _region_dummy_column
+from app.built.regression.region_features import is_region_block
 from app.built.regression.selection.blocks import BlockId, block_label, spec_from_blocks
 from app.built.regression.selection.context import SelectionContext, _BLOCK_SOURCE_COLUMNS
 from app.recommendation.satisfaction import built_min_fit_n
@@ -62,11 +63,21 @@ def filter_pool_by_coverage(
     excluded: list[str] = []
     for block in pool:
         usable = _usable_rows_for_block(ctx, block)
-        if usable >= threshold:
-            kept.append(block)
+        if usable < threshold:
+            label = block_label(block)
+            excluded.append(f"{label}({block}): 유효 {usable}건 (< {threshold})")
             continue
-        label = block_label(block)
-        excluded.append(f"{label}({block}): 유효 {usable}건 (< {threshold})")
+        # 단일 읍면동 Local이면 region 공변량은 상수 → 식별 불가
+        if is_region_block(block):
+            cols = _BLOCK_SOURCE_COLUMNS.get(block, ())
+            col = cols[0] if cols else None
+            if col and col in ctx.df.columns:
+                nuniq = int(pd.to_numeric(ctx.df[col], errors="coerce").nunique(dropna=True))
+                if nuniq < 2:
+                    label = block_label(block)
+                    excluded.append(f"{label}({block}): 상수(지역값 종류 {nuniq})")
+                    continue
+        kept.append(block)
     return kept, excluded
 
 

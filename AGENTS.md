@@ -1,7 +1,7 @@
 # CH2 Macro — Cursor Agent 지침
 
 전역 Git·버전 정책: `~/.cursor/agent.md`  
-**제품 헌법:** [`docs/CH2_CONSTITUTION.md`](docs/CH2_CONSTITUTION.md) · AI: [`docs/CH2_AI_CONSTITUTION.md`](docs/CH2_AI_CONSTITUTION.md)
+**제품 헌법:** [`docs/CH2_CONSTITUTION.md`](docs/CH2_CONSTITUTION.md) · 설명: [`docs/CH2_EXPLAIN_CONSTITUTION.md`](docs/CH2_EXPLAIN_CONSTITUTION.md) · AI: [`docs/CH2_AI_CONSTITUTION.md`](docs/CH2_AI_CONSTITUTION.md)
 
 ---
 
@@ -30,8 +30,9 @@
 | 토지 재구축 | http://localhost:5176/land/ → API `:8001` (`land_stats_next`) |
 | 집합 | http://localhost:5175/collective/ |
 | 임대 | http://localhost:5178/rent/ · 전환율 실험 종료 [`docs/RENT_CONVERSION_EXPERIMENT.md`](docs/RENT_CONVERSION_EXPERIMENT.md) |
+| 관리자 | http://localhost:5179/lab/ · 계획일지·검증로봇·Twin·전환율 [`docs/CH2_LAB_HUB.md`](docs/CH2_LAB_HUB.md) · 정리 규칙 [`.cursor/rules/lab-plan-log.mdc`](.cursor/rules/lab-plan-log.mdc) |
 | API | http://127.0.0.1:8000 |
-| AI | http://127.0.0.1:8000/api/ai/health · 헌법 [`CH2_CONSTITUTION.md`](docs/CH2_CONSTITUTION.md) · AI [`CH2_AI_CONSTITUTION.md`](docs/CH2_AI_CONSTITUTION.md) |
+| AI | http://127.0.0.1:8000/api/ai/health · 헌법 [`CH2_CONSTITUTION.md`](docs/CH2_CONSTITUTION.md) · 설명 [`CH2_EXPLAIN_CONSTITUTION.md`](docs/CH2_EXPLAIN_CONSTITUTION.md) · AI [`CH2_AI_CONSTITUTION.md`](docs/CH2_AI_CONSTITUTION.md) |
 
 ---
 

@@ -1,4 +1,6 @@
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import type { RegionLevel, RegionalProfileFeatures } from "../types";
+import { deepLinkTo } from "../utils/deepLinks";
 import { formatInt, formatUnitPrice } from "../utils/format";
 import {
   APARTMENT_PERCENTILE_MIN_COUNT,
@@ -8,16 +10,25 @@ import {
 
 interface Props {
   regionLevel: RegionLevel;
+  regionCode: string;
   features: RegionalProfileFeatures;
 }
 
-export default function ApartmentProfileCard({ regionLevel, features }: Props) {
+export default function ApartmentProfileCard({ regionLevel, regionCode, features }: Props) {
   const apt = apartmentPercentiles(features);
   const tradeCount = apartmentTradeCount(features);
 
   return (
     <div className="card p-5">
-      <h2 className="text-lg font-semibold">아파트 ㎡당 단가 분포 (최근 3년)</h2>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold">아파트 ㎡당 단가 분포 (최근 3년)</h2>
+          <StatsGlossaryHelp termId="apartment_percentiles" size="sm" />
+        </div>
+        <a href={deepLinkTo("collective", { regionLevel, regionCode })} className="btn btn-primary text-xs">
+          아파트 상세분석 →
+        </a>
+      </div>
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
         P25 · P50(중앙값) · P75 · 쌍둥이 도시 비교 지표 (D-029)
       </p>

@@ -15,6 +15,7 @@ import { CollectiveRegressionResults } from "./CollectiveRegressionResults";
 import type { FloorMode } from "../utils/collectiveRegressionTypes";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
+import { COMMERCIAL_REGRESSION_HELP } from "../utils/residentialAnalysisHelp";
 
 function regionParams(scope: CommercialModalScope) {
   return scope.hasIntermediate
@@ -400,7 +401,11 @@ export default function CommercialRegressionPanel({
         <p className="text-[11px] font-medium text-slate-700">회귀 분석 (탐색용)</p>
         <div className="flex items-center gap-2 shrink-0">
           {aiRegressionContext && <AiAssistantPanel context={aiRegressionContext} />}
-          {regM.data?.explain && <AnalysisHelpPanel explain={regM.data.explain} />}
+          {regM.data?.explain ? (
+            <AnalysisHelpPanel explain={regM.data.explain} />
+          ) : (
+            <AnalysisHelpPanel explain={COMMERCIAL_REGRESSION_HELP} />
+          )}
         </div>
       </div>
 

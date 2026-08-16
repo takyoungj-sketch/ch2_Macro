@@ -147,6 +147,36 @@ body {
   color: #2563eb;
 }
 
+.epigraph {
+  margin: 2.25rem 0 0;
+  padding: 1.25rem 1.35rem 1.15rem;
+  border: 0;
+  border-left: 3px solid #93c5fd;
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 0 10px 10px 0;
+}
+
+.epigraph__quote {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.7;
+  color: #0f172a;
+}
+
+.epigraph__original {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: #64748b;
+}
+
+.epigraph__source {
+  margin: 0.85rem 0 0;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
 .footer {
   margin-top: 2.5rem;
   text-align: center;

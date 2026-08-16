@@ -43,6 +43,7 @@ import {
   toggleResidentialAssetKind,
   type ResidentialAssetKind,
 } from "./utils/residentialAssetTypes";
+import { useCollectiveDeepLink } from "./hooks/useCollectiveDeepLink";
 import { profileHref, resolveCollectiveProfileTarget } from "./utils/profileLink";
 
 type AnalysisScope = {
@@ -173,19 +174,26 @@ export default function App() {
   const hasIntermediate = structureQ.data?.has_intermediate ?? false;
   const intermediateLabel = structureQ.data?.intermediate_label ?? "구";
 
+  const regionPeriod = hasYearFilter(yearFrom, yearTo)
+    ? {
+        contract_year_from: yearFrom === "" ? undefined : yearFrom,
+        contract_year_to: yearTo === "" ? undefined : yearTo,
+      }
+    : undefined;
+
   const guQ = useQuery({
-    queryKey: ["coll-gu", addr1, addr2, assetType],
-    queryFn: () => fetchAddr3WithCounts(addr1, addr2, assetType),
+    queryKey: ["coll-gu", addr1, addr2, assetType, regionPeriod],
+    queryFn: () => fetchAddr3WithCounts(addr1, addr2, assetType, regionPeriod),
     enabled: !!addr1 && !!addr2 && hasIntermediate,
   });
   const flatLeafQ = useQuery({
-    queryKey: ["coll-flat-leaf", addr1, addr2, assetType],
-    queryFn: () => fetchAddr3WithCounts(addr1, addr2, assetType),
+    queryKey: ["coll-flat-leaf", addr1, addr2, assetType, regionPeriod],
+    queryFn: () => fetchAddr3WithCounts(addr1, addr2, assetType, regionPeriod),
     enabled: !!addr1 && !!addr2 && !hasIntermediate && structureQ.isSuccess,
   });
   const leafQ = useQuery({
-    queryKey: ["coll-leaf", addr1, addr2, assetType, guList],
-    queryFn: () => fetchLeafRegions(addr1, addr2, guList, assetType),
+    queryKey: ["coll-leaf", addr1, addr2, assetType, guList, regionPeriod],
+    queryFn: () => fetchLeafRegions(addr1, addr2, guList, assetType, regionPeriod),
     enabled: !!addr1 && !!addr2 && hasIntermediate,
   });
 
@@ -203,6 +211,18 @@ export default function App() {
     const allowed = new Set(visibleLeafOptions.map((o) => o.name));
     setLeafList((prev) => prev.filter((n) => allowed.has(n)));
   }, [hasIntermediate, visibleLeafOptions]);
+
+  useCollectiveDeepLink({
+    addr1,
+    addr2,
+    addr1Options: addr1Q.data ?? [],
+    addr2Options: addr2Q.data ?? [],
+    leafOptions: visibleLeafOptions,
+    setAddr1,
+    setAddr2,
+    setLeafList,
+    setGuList,
+  });
 
   const buildingsQ = useQuery({
     queryKey: ["coll-buildings", scope],

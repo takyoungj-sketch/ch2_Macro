@@ -27,7 +27,7 @@
 |------|------|
 | **재사용** | `GET /api/map/config`, `GET /api/map/boundaries` |
 | **필수 신규** | `GET /api/collective/regions/resolve-codes` · `CollectiveRegionMapHub` |
-| **차이** | 주거: resolve-codes + **건물 지번 라벨** · 상가·공장: commercial resolve + **Road-B 라벨** ([`COLLECTIVE_COMMERCIAL_ROAD_MAP_PLAN.md`](./COLLECTIVE_COMMERCIAL_ROAD_MAP_PLAN.md)) |
+| **차이** | 주거: resolve-codes + **건물 지번 라벨** · 상가·공장: commercial resolve + **Road-B 점 + Road-A 하늘색 도로선** ([`COLLECTIVE_COMMERCIAL_ROAD_MAP_PLAN.md`](./COLLECTIVE_COMMERCIAL_ROAD_MAP_PLAN.md) §5·§8) |
 
 ---
 

@@ -1,3 +1,4 @@
+import { isSejongPseudoSigunguCode } from "./sejongRegion";
 import type { RegionNameInfo } from "./types";
 
 function compact(s: string): string {
@@ -80,8 +81,11 @@ export function commonTierCodesFromLooseRows(rows: readonly RegionNameInfo[]): {
   }
   const eup = new Set(rows.map((r) => String(r.eupmyeondong_code ?? "").trim()).filter(Boolean));
   const sig = new Set(rows.map((r) => String(r.sigungu_code ?? "").trim()).filter(Boolean));
+  const sigunguCode = sig.size === 1 ? [...sig][0]! : null;
   return {
     eupmyeondongCode: eup.size === 1 ? [...eup][0]! : null,
-    sigunguCode: sig.size === 1 ? [...sig][0]! : null,
+    // 세종 36110 은 의사 시군구 — 면이 여러 개여도 코드가 하나라 시 전체로 확정되면 안 됨
+    sigunguCode:
+      sigunguCode && !isSejongPseudoSigunguCode(sigunguCode) ? sigunguCode : null,
   };
 }

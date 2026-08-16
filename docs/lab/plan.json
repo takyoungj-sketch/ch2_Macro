@@ -1,0 +1,101 @@
+{
+  "updated": "2026-08-16",
+  "domains": [
+    { "id": "land", "label": "토지" },
+    { "id": "built", "label": "복합" },
+    { "id": "collective", "label": "집합" },
+    { "id": "rent", "label": "임대" },
+    { "id": "profile", "label": "지역프로필" },
+    { "id": "admin", "label": "관리" }
+  ],
+  "past": [
+    {
+      "date": "2026-08-13",
+      "cells": {
+        "land": {
+          "text": "원장 핫패스 수정 · 월간 체크리스트 · 추천 AIC/MAPE",
+          "status": "done",
+          "commit": "needed"
+        },
+        "built": {
+          "text": "Twin Validation 실측(옥천·봉명 개선 / 진천 Local) · 배지",
+          "status": "done",
+          "commit": "needed"
+        },
+        "collective": {
+          "text": "추천 AdjR²/CV · 비주거 도로선 · 건물 지오코딩",
+          "status": "done",
+          "commit": "needed"
+        },
+        "admin": {
+          "text": "중간점검 · MVP 문장 고정",
+          "status": "done",
+          "commit": "needed"
+        }
+      }
+    },
+    {
+      "date": "2026-08-15",
+      "cells": {
+        "rent": {
+          "text": "전환율 연구 종료 · mean_simple 확정",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-040"
+        }
+      }
+    }
+  ],
+  "today": {
+    "date": "2026-08-16",
+    "cells": {
+      "built": {
+        "text": "Twin≠회귀X 고정 · 실험 랩 · 프로필 딥링크",
+        "status": "done",
+        "commit": "needed",
+        "decision": "D-041"
+      },
+      "collective": {
+        "text": "검증로봇 V1 (집합 주거만)",
+        "status": "done",
+        "commit": "needed",
+        "decision": "D-042"
+      },
+      "rent": {
+        "text": "MVP 운영 반영(본편 커밋) · 프로필 연동 남음",
+        "status": "stopped",
+        "commit": "needed"
+      },
+      "profile": {
+        "text": "주거 전월세 3개년 표 · Twin 행 링크",
+        "status": "done",
+        "commit": "needed"
+      },
+      "admin": {
+        "text": "관리 4문 · 계획일지 표",
+        "status": "done",
+        "commit": "needed"
+      }
+    }
+  },
+  "next": {
+    "cells": {
+      "built": {
+        "text": "임대시장을 회귀에 넣기 — Twin V2 실험으로 분리",
+        "status": "planned",
+        "commit": "none",
+        "decision": "D-041"
+      },
+      "admin": {
+        "text": "QA를 토지·복합으로 확장",
+        "status": "planned",
+        "commit": "none",
+        "decision": "D-042"
+      }
+    }
+  },
+  "common": {
+    "text": "월간 업데이트 때 검증로봇으로 랜덤 검증 자동화 · AI 제한사항",
+    "decision": "D-042"
+  }
+}

@@ -245,6 +245,19 @@ def replace_tables(engine, polygons: list[dict[str, Any]], facts: list[dict[str,
                 bb[3],
             )
         )
+    by_grain: dict[tuple, dict[str, Any]] = {}
+    for r in facts:
+        grain = (
+            r["sec_nm"],
+            r["asset_kind"],
+            r["metric"],
+            r["floor_band"],
+            r["floor_label"],
+            r["year"],
+            r["quarter"],
+        )
+        by_grain[grain] = r
+    facts = list(by_grain.values())
     fact_rows = [
         (
             r["sec_nm"],
@@ -315,13 +328,15 @@ def main() -> int:
     ap.add_argument("--xlsx", type=Path, default=None)
     ap.add_argument("--shp", type=Path, default=DEFAULT_SHP)
     args = ap.parse_args()
-    xlsx = args.xlsx
-    if xlsx is None:
+    files: list[Path]
+    if args.xlsx is not None:
+        files = [args.xlsx]
+    else:
         found = list(DEFAULT_XLSX_DIR.glob("*.xlsx"))
         if not found:
             log.error("xlsx not found in %s", DEFAULT_XLSX_DIR)
             return 1
-        xlsx = found[0]
+        files = [max(found, key=lambda p: p.stat().st_mtime)]
     if not args.shp.exists():
         log.error("shp not found: %s", args.shp)
         return 1
@@ -329,9 +344,13 @@ def main() -> int:
     log.info("polygons %s", args.shp)
     polygons = load_polygons(args.shp)
     log.info("polygons n=%s", len(polygons))
-    log.info("xlsx %s", xlsx)
-    facts = parse_workbook(xlsx)
-    log.info("quarterly rows %s", len(facts))
+    facts: list[dict[str, Any]] = []
+    for xlsx in files:
+        log.info("xlsx %s", xlsx)
+        part = parse_workbook(xlsx)
+        log.info("  quarterly rows %s", len(part))
+        facts.extend(part)
+    log.info("quarterly rows total %s", len(facts))
     if not polygons or not facts:
         log.error("empty import")
         return 1
@@ -340,7 +359,8 @@ def main() -> int:
     engine = get_rent_engine()
     with engine.begin() as conn:
         conn.execute(text(ddl.read_text(encoding="utf-8")))
-    replace_tables(engine, polygons, facts, xlsx.name)
+    source_name = " + ".join(p.name for p in files)
+    replace_tables(engine, polygons, facts, source_name)
     log.info("imported %s polygons, %s quarterly", len(polygons), len(facts))
     return 0
 

@@ -18,12 +18,22 @@ Local 포함 N개 후보를 모두 담는다는 점이 이전 버전과의 주�
 
 from __future__ import annotations
 
+from typing import Literal
+
 from app.built.regression.candidates.adjacency import is_adjacent_region
 from app.built.regression.candidates.base import CandidateSpec
 from app.built.regression.candidates.factory import fetch_candidate_rows, region_price_levels_from_db
-from app.built.regression.selection.blocks import BlockId
+from app.built.regression.region_features import (
+    attach_region_features,
+    is_region_block,
+    normalize_region_feature_tier,
+    region_blocks_for_asset,
+)
+from app.recommendation.built_pool import filter_pool_by_coverage
+from app.built.regression.selection.blocks import BlockId, spec_from_blocks
 from app.built.regression.selection.context import SelectionContext, with_complete_case
 from app.built.regression.selection.fit import BlockFitResult, fit_best_scale, fit_block_subset
+from app.built.regression.selection.best_subset import run_group_best_subset
 from app.built.schemas import (
     DecisionConfidence,
     PoolingCandidateMetrics,
@@ -36,6 +46,7 @@ from app.built.schemas import (
 PRICE_RATIO_MIN = 0.5
 PRICE_RATIO_MAX = 2.0
 _POOL_SIZES = (1, 3)  # + 전체(len(codes))는 항상 포함
+PoolingMode = Literal["diagnose", "optimize"]
 
 
 def accepted_twin_region_codes(
@@ -119,6 +130,39 @@ def _apply_hard_gates(
     return gates
 
 
+def filter_twins_by_hard_gates(
+    conn,
+    *,
+    req: RegressionSelectionRequest,
+    anchor_region_codes: tuple[str, ...],
+    twin_region_codes: tuple[str, ...],
+    admin_level: str,
+) -> tuple[list[TwinGateResult], list[str]]:
+    """Twin hard gate만 적용 — 통과 region_code 목록(순위 유지)을 반환한다."""
+    ordered_twins = _ordered_twin_rows(req.profile_twin_neighbors, set(twin_region_codes))
+    if not ordered_twins:
+        return [], []
+
+    twin_codes = tuple(code for code, _ in ordered_twins)
+    price_levels = region_price_levels_from_db(
+        conn,
+        admin_level=admin_level,
+        region_codes=tuple(dict.fromkeys((*anchor_region_codes, *twin_codes))),
+        asset_type=req.asset_type,
+        contract_year_from=req.contract_year_from,
+        contract_year_to=req.contract_year_to,
+        as_of_month=req.as_of_month,
+        window_years=req.window_years,
+    )
+    gates = _apply_hard_gates(
+        ordered_twins,
+        anchor_region_codes=anchor_region_codes,
+        price_levels=price_levels,
+    )
+    passed = [g.region_code for g in gates if g.accepted]
+    return gates, passed
+
+
 def _pool_variants(gate_passed_codes: list[str]) -> list[tuple[str, str, tuple[str, ...]]]:
     """gate 통과 Twin(순위순) 목록에서 pool 조합을 만든다 — 크기 중복은 생략."""
     total = len(gate_passed_codes)
@@ -139,7 +183,10 @@ def _metrics_from_fit(
     label: str,
     fit: BlockFitResult,
     region_codes: tuple[str, ...],
+    *,
+    blocks: list[BlockId] | list[str] | None = None,
 ) -> PoolingCandidateMetrics:
+    block_list = list(blocks) if blocks is not None else []
     return PoolingCandidateMetrics(
         candidate_id=candidate_id,
         label=label,
@@ -152,6 +199,8 @@ def _metrics_from_fit(
         aic=fit.aic,
         bic=fit.bic,
         joint_f_tests=fit.joint_f_tests,
+        blocks=block_list,
+        response_scale=fit.response_scale,
     )
 
 
@@ -182,6 +231,17 @@ def _fit_pool_variant(
     )
     if pooled_rows.empty:
         return None
+
+    if getattr(req, "include_region_features", False) or any(is_region_block(str(b)) for b in blocks):
+        pv = (req.profile_version or "v2.1-national").strip() or "v2.1-national"
+        wy = int(req.profile_window_years or req.window_years or 3)
+        tier = normalize_region_feature_tier(getattr(req, "region_feature_tier", None))
+        pooled_rows = attach_region_features(
+            pooled_rows,
+            profile_version=pv,
+            window_years=wy,
+            block_ids=region_blocks_for_asset(req.asset_type, tier=tier),
+        )
 
     pooled_ctx = SelectionContext(
         df=pooled_rows,
@@ -216,7 +276,90 @@ def _fit_pool_variant(
         )
     if pooled_fit is None:
         return None
-    return _metrics_from_fit(variant_id, label, pooled_fit, pool_codes)
+    return _metrics_from_fit(variant_id, label, pooled_fit, pool_codes, blocks=blocks)
+
+
+def _research_pool_variant(
+    conn,
+    *,
+    local_ctx: SelectionContext,
+    req: RegressionSelectionRequest,
+    search_pool: list[BlockId] | list[str],
+    variant_id: str,
+    label: str,
+    anchor_region_codes: tuple[str, ...],
+    twin_codes: tuple[str, ...],
+    admin_level: str,
+    region_col: str | None,
+) -> PoolingCandidateMetrics | None:
+    """확장 표본 위에서 stage1과 동일 SSOT 풀로 best-subset 재탐색."""
+    pool_codes = tuple(dict.fromkeys((*anchor_region_codes, *twin_codes)))
+    pooled_rows = fetch_candidate_rows(
+        conn,
+        admin_level=admin_level,
+        region_codes=pool_codes,
+        asset_type=req.asset_type,
+        contract_year_from=req.contract_year_from,
+        contract_year_to=req.contract_year_to,
+        as_of_month=req.as_of_month,
+        window_years=req.window_years,
+    )
+    if pooled_rows.empty:
+        return None
+
+    if getattr(req, "include_region_features", False) or any(
+        is_region_block(str(b)) for b in search_pool
+    ):
+        pv = (req.profile_version or "v2.1-national").strip() or "v2.1-national"
+        wy = int(req.profile_window_years or req.window_years or 3)
+        tier = normalize_region_feature_tier(getattr(req, "region_feature_tier", None))
+        pooled_rows = attach_region_features(
+            pooled_rows,
+            profile_version=pv,
+            window_years=wy,
+            block_ids=region_blocks_for_asset(req.asset_type, tier=tier),
+        )
+
+    probe_ctx = SelectionContext(
+        df=pooled_rows,
+        scope_label=variant_id,
+        admin_level=admin_level,
+        addr4_city=local_ctx.addr4_city,
+        mode=local_ctx.mode,
+        unified=local_ctx.unified,
+    )
+    pool_blocks, _ = filter_pool_by_coverage(probe_ctx, list(search_pool))  # type: ignore[arg-type]
+    if not pool_blocks:
+        return None
+    pool_spec = spec_from_blocks(pool_blocks)
+    pooled_ctx = SelectionContext(
+        df=pooled_rows,
+        scope_label=variant_id,
+        admin_level=admin_level,
+        addr4_city=local_ctx.addr4_city,
+        mode=local_ctx.mode,
+        unified=local_ctx.unified,
+    )
+    pooled_ctx = with_complete_case(pooled_ctx, pool_blocks, region_col=region_col)
+    if pooled_ctx.selection_n < local_ctx.selection_n:
+        return None
+
+    req_for_fit = req.model_copy(update={"variables": pool_spec})
+    result = run_group_best_subset(pooled_ctx, req_for_fit, pool_blocks)
+    if result is None:
+        return None
+    from app.recommendation.ranks import pick_primary_predictive
+
+    primary = pick_primary_predictive(result.by_cv_mape, result.by_mape, result.by_aic)
+    if primary is None:
+        return None
+    return _metrics_from_fit(
+        variant_id,
+        label,
+        primary.fit,
+        pool_codes,
+        blocks=list(primary.blocks),
+    )
 
 
 def _primary_value(c: PoolingCandidateMetrics) -> float | None:
@@ -283,35 +426,36 @@ def evaluate_pooling_candidates(
     admin_level: str,
     region_col: str | None,
     fixed_response_scale: ResponseScale | None = None,
+    mode: PoolingMode = "diagnose",
 ) -> PoolingEvaluation:
-    """Local과 (hard gate를 통과한) Twin pool 조합들을 실측 비교한다."""
-    local_metrics = _metrics_from_fit("local", "현재 지역만 (Local)", local_fit, anchor_region_codes)
+    """Local과 (hard gate를 통과한) Twin pool 조합들을 실측 비교한다.
 
-    ordered_twins = _ordered_twin_rows(req.profile_twin_neighbors, set(twin_region_codes))
-    if not ordered_twins:
+    mode=diagnose: blocks·fixed_response_scale로 식 고정 적합 (suggest·내부 진단).
+    mode=optimize: blocks를 SSOT 탐색 풀로 pool마다 best-subset 재탐색 (recommend stage2).
+    """
+    local_block_list = list(blocks) if mode == "diagnose" else list(local_fit.blocks or blocks)
+    local_metrics = _metrics_from_fit(
+        "local",
+        "현재 지역만 (Local)",
+        local_fit,
+        anchor_region_codes,
+        blocks=local_block_list,
+    )
+
+    gates, gate_passed_codes = filter_twins_by_hard_gates(
+        conn,
+        req=req,
+        anchor_region_codes=anchor_region_codes,
+        twin_region_codes=twin_region_codes,
+        admin_level=admin_level,
+    )
+    if not twin_region_codes or not gates:
         return PoolingEvaluation(
             candidates=[local_metrics],
             decision="local",
             decision_reason="검증을 통과한 Twin 후보가 없어 Local만 사용합니다.",
+            twin_gates=gates,
         )
-
-    twin_codes = tuple(code for code, _ in ordered_twins)
-    price_levels = region_price_levels_from_db(
-        conn,
-        admin_level=admin_level,
-        region_codes=tuple(dict.fromkeys((*anchor_region_codes, *twin_codes))),
-        asset_type=req.asset_type,
-        contract_year_from=req.contract_year_from,
-        contract_year_to=req.contract_year_to,
-        as_of_month=req.as_of_month,
-        window_years=req.window_years,
-    )
-    gates = _apply_hard_gates(
-        ordered_twins,
-        anchor_region_codes=anchor_region_codes,
-        price_levels=price_levels,
-    )
-    gate_passed_codes = [g.region_code for g in gates if g.accepted]
 
     if not gate_passed_codes:
         return PoolingEvaluation(
@@ -323,19 +467,33 @@ def evaluate_pooling_candidates(
 
     all_candidates = [local_metrics]
     for variant_id, label, codes in _pool_variants(gate_passed_codes):
-        metrics = _fit_pool_variant(
-            conn,
-            local_ctx=local_ctx,
-            req=req,
-            blocks=blocks,
-            variant_id=variant_id,
-            label=label,
-            anchor_region_codes=anchor_region_codes,
-            twin_codes=codes,
-            admin_level=admin_level,
-            region_col=region_col,
-            response_scale=fixed_response_scale,
-        )
+        if mode == "optimize":
+            metrics = _research_pool_variant(
+                conn,
+                local_ctx=local_ctx,
+                req=req,
+                search_pool=blocks,
+                variant_id=variant_id,
+                label=label,
+                anchor_region_codes=anchor_region_codes,
+                twin_codes=codes,
+                admin_level=admin_level,
+                region_col=region_col,
+            )
+        else:
+            metrics = _fit_pool_variant(
+                conn,
+                local_ctx=local_ctx,
+                req=req,
+                blocks=blocks,
+                variant_id=variant_id,
+                label=label,
+                anchor_region_codes=anchor_region_codes,
+                twin_codes=codes,
+                admin_level=admin_level,
+                region_col=region_col,
+                response_scale=fixed_response_scale,
+            )
         if metrics is not None:
             all_candidates.append(metrics)
 

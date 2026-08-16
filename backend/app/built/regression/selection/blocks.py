@@ -19,6 +19,12 @@ BlockId = Literal[
     "building_use",
     "asset_type",
     "region_leaf",
+    "region_population",
+    "region_land_p50",
+    "region_apt_p50",
+    "region_apt_n",
+    "region_comm_p50",
+    "region_comm_n",
 ]
 
 
@@ -38,6 +44,12 @@ BLOCKS: tuple[VariableBlock, ...] = (
     VariableBlock("building_use", "건축물용도", "building_use_dummy"),
     VariableBlock("asset_type", "유형", "asset_type_dummy"),
     VariableBlock("region_leaf", "지역(읍·면·동)", "region_leaf_dummy"),
+    VariableBlock("region_population", "지역인구", "region_population"),
+    VariableBlock("region_land_p50", "지역토지가격", "region_land_p50"),
+    VariableBlock("region_apt_p50", "지역아파트가격", "region_apt_p50"),
+    VariableBlock("region_apt_n", "지역아파트거래량", "region_apt_n"),
+    VariableBlock("region_comm_p50", "지역상가가격", "region_comm_p50"),
+    VariableBlock("region_comm_n", "지역상가거래량", "region_comm_n"),
 )
 
 _BLOCK_BY_ID: dict[str, VariableBlock] = {b.block_id: b for b in BLOCKS}

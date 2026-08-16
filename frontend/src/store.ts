@@ -76,7 +76,7 @@ interface AppState {
   paidBasicStatsKick: number;
 
   /**
-   * 기본 통계 패널: 「무료 통계 조회」/「기본 통계 보기」 확정 시점의 법정리 스코프.
+   * 기본 통계 패널: 「기본 통계 보기」 확정 시점의 법정리 스코프.
    * 선택이 바뀌면 키가 어긋나 자동 조회되지 않는다.
    */
   statsDisplayScopeKey: string | null;
@@ -107,13 +107,13 @@ interface AppState {
   setViewMode: (m: ViewMode) => void;
   setRegionSegment: (idx: 0 | 1 | 2 | 3 | 4, value: string) => void;
   applyBeopjungriCodes: (codes: readonly string[]) => void;
-  /** 검색·칩에서 법정단위 추가(무료는 항상 1개로 교체) */
+  /** 검색·칩에서 법정단위 추가 */
   addPickedBeopjungri: (code: string) => void;
   /** 유료·프로필: 시군구 미만 선택을 법정동·리 1곳으로 교체 */
   replacePaidLeafBeopjungri: (code: string) => void;
   /** 유료·프로필: 시군구 미만 선택을 읍·면·동 행정 1곳으로 교체 */
   replacePaidLeafEupmyeondong: (code: string) => void;
-  /** 검색 등에서 법정코드 여러 개를 한 번에 병합(유료; 시군구 미만은 읍·면 칩+법정 줄 합산 최대 10·시도·군구 상위 칩 각 1). 무료는 단건일 때만 반영 가능 */
+  /** 검색 등에서 법정코드 여러 개를 한 번에 병합(시군구 미만은 읍·면 칩+법정 줄 합산 최대 10·시도·군구 상위 칩 각 1) */
   mergePickedBeopjungriCodes: (codes: readonly string[]) => boolean;
   mergePickedSigunguCodes: (
     codes: readonly string[],
@@ -123,7 +123,7 @@ interface AppState {
     codes: readonly string[],
     regions: readonly RegionItem[]
   ) => boolean;
-  /** 시·도(2자리 sido_code) 단독 선택용. 유료 모드 한정. */
+  /** 시·도(2자리 sido_code) 단독 선택용. */
   mergePickedSidoCodes: (
     codes: readonly string[],
     regions: readonly RegionItem[]
@@ -139,6 +139,8 @@ interface AppState {
   removePickedEupmyeondong: (code: string) => void;
   removePickedSido: (code: string) => void;
   clearTierSelection: () => void;
+  /** 프로필 등에서 온 `region_level`+`region_code` 한 곳을 선택 */
+  applyDeepLinkRegion: (level: string, code: string) => void;
 
   /**
    * 기본 통계 패널 갱신. 인자 없으면 현재 tier 그대로.
@@ -204,7 +206,7 @@ function defaultPaidFilterState(): Pick<
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
-  viewMode: "free",
+  viewMode: "paid",
   regionSegments: [...EMPTY_REGION_SEGMENTS],
   tierSelection: emptyTierCodes(),
   paidSubSigunguPickOrder: [],
@@ -228,74 +230,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   paidAnalysisStartedAt: null,
   paidFilteredAnalysisScopeNotice: null,
 
-  setViewMode: (m) =>
-    set((s) => {
-      if (m !== "free") {
-        /**
-         * 무료 → 유료 전환은 새 분석 세션의 시작점이다.
-         * 사용자는 유료에서 지역을 다시 고르길 원하므로 모든 tier 선택과 분석 잔재를 비운다.
-         * (유료 → 유료 안에서 paidResultView 만 바뀌는 경우는 setViewMode 가 아닌 별도 액션.)
-         */
-        if (s.viewMode === "free") {
-          return {
-            viewMode: m,
-            tierSelection: emptyTierCodes(),
-            paidSubSigunguPickOrder: [],
-            regionSegments: [...EMPTY_REGION_SEGMENTS],
-            paidResultView: "idle",
-            paidBasicBaseKey: null,
-            paidBulkBeopjungriCodes: null,
-            paidAnalysisStatus: "idle",
-            paidAnalysisResult: null,
-            paidAnalysisError: null,
-            paidAnalysisStartedAt: null,
-            paidFilteredAnalysisScopeNotice: null,
-            statsDisplayScopeKey: null,
-            statsDisplayKick: 0,
-            paidBasicStatsKick: 0,
-          };
-        }
-        return {
-          viewMode: m,
-          paidResultView: s.paidResultView,
-          statsDisplayScopeKey: null,
-          statsDisplayKick: 0,
-        };
-      }
-      /**
-       * 무료 화면은 단건(법정동·리 1개)만 다룬다.
-       * 유료에서 시군구·읍면동 다중 선택을 한 채로 무료로 돌아오면
-       * resolveUnionBeopjungriCodes 가 1개 초과 코드를 돌려줘 무료 패널 canFetch 가 막혀
-       * 화면이 비어 보이는 문제가 있어, 마지막 법정코드만 보존한다.
-       */
-      const beops = s.tierSelection.beopjungri_codes.filter(Boolean);
-      const lastBeop = beops.length > 0 ? [beops[beops.length - 1]!] : [];
-      const needsTrim =
-        s.tierSelection.sigungu_codes.length > 0 ||
-        s.tierSelection.city_codes.length > 0 ||
-        s.tierSelection.eupmyeondong_codes.length > 0 ||
-        beops.length > 1;
-      const nextTier = needsTrim ? tierOnlyBeopjungri(lastBeop) : s.tierSelection;
-      return {
-        viewMode: m,
-        paidResultView: "idle",
-        tierSelection: nextTier,
-        paidSubSigunguPickOrder: reconcilePaidSubSigunguPickOrder(
-          needsTrim ? [] : s.paidSubSigunguPickOrder,
-          nextTier
-        ),
-        // 유료 잔재 정리(매트릭스/캐시키 등은 무료 모드와 무관)
-        paidBasicBaseKey: null,
-        paidBulkBeopjungriCodes: null,
-        paidAnalysisStatus: "idle",
-        paidAnalysisResult: null,
-        paidAnalysisError: null,
-        paidAnalysisStartedAt: null,
-        paidFilteredAnalysisScopeNotice: null,
-        statsDisplayScopeKey: null,
-        statsDisplayKick: 0,
-        paidBasicStatsKick: 0,
-      };
+  setViewMode: (_m) =>
+    set({
+      // D-043: 토지 제품 무료 모드 제거. viewMode는 항상 paid.
+      viewMode: "paid",
     }),
 
   setFreeStatsWindowYears: (y) =>
@@ -348,13 +286,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => {
       const c = String(code ?? "").trim();
       if (!c) return s;
-      if (s.viewMode === "free") {
-        const nt = tierOnlyBeopjungri([c]);
-        return {
-          tierSelection: nt,
-          paidSubSigunguPickOrder: reconcilePaidSubSigunguPickOrder([{ kind: "beop", code: c }], nt),
-        };
-      }
       const eup = normalizeAndSortCodes(s.tierSelection.eupmyeondong_codes);
       const cur = s.tierSelection.beopjungri_codes.map((x) => x.trim()).filter(Boolean);
       if (cur.includes(c)) return s;
@@ -405,19 +336,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     const uniqIn = [...new Set(incoming.map((c) => String(c ?? "").trim()).filter(Boolean))];
     if (uniqIn.length === 0) return false;
     const s = get();
-    if (s.viewMode === "free") {
-      if (uniqIn.length !== 1) return false;
-      const merged = normalizeAndSortCodes(uniqIn);
-      const nt = tierOnlyBeopjungri(merged);
-      set({
-        tierSelection: nt,
-        paidSubSigunguPickOrder: reconcilePaidSubSigunguPickOrder(
-          merged.map((code) => ({ kind: "beop", code })),
-          nt
-        ),
-      });
-      return true;
-    }
     const mergedAll = normalizeAndSortCodes([...s.tierSelection.beopjungri_codes, ...uniqIn]);
     const eup = normalizeAndSortCodes(s.tierSelection.eupmyeondong_codes);
     if (mergedAll.length + eup.length > MAX_BEOPJUNGRI_PICK) return false;
@@ -447,7 +365,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     const uniqIn = [...new Set(incoming.map((c) => String(c ?? "").trim()).filter(Boolean))];
     if (uniqIn.length === 0) return false;
     const s = get();
-    if (s.viewMode === "free") return false;
     const merged = normalizeAndSortCodes([...s.tierSelection.sigungu_codes, ...uniqIn]);
     if (merged.length > MAX_SIGUNGU_TIER_PICK) return false;
     const next: TierCodes = {
@@ -468,7 +385,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     const uniqIn = [...new Set(incoming.map((c) => String(c ?? "").trim()).filter(Boolean))];
     if (uniqIn.length === 0) return false;
     const s = get();
-    if (s.viewMode === "free") return false;
     const merged = normalizeAndSortCodes([...s.tierSelection.sido_codes, ...uniqIn]);
     if (merged.length > MAX_SIDO_TIER_PICK) return false;
     const next: TierCodes = {
@@ -489,7 +405,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     const uniqIn = [...new Set(incoming.map((c) => String(c ?? "").trim()).filter(Boolean))];
     if (uniqIn.length === 0) return false;
     const s = get();
-    if (s.viewMode === "free") return false;
     const merged = normalizeAndSortCodes([...s.tierSelection.city_codes, ...uniqIn]);
     if (merged.length > MAX_CITY_TIER_PICK) return false;
     const next: TierCodes = {
@@ -510,7 +425,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     const uniqIn = [...new Set(incoming.map((c) => String(c ?? "").trim()).filter(Boolean))];
     if (uniqIn.length === 0) return false;
     const s = get();
-    if (s.viewMode === "free") return false;
     const merged = normalizeAndSortCodes([
       ...s.tierSelection.eupmyeondong_codes,
       ...uniqIn,
@@ -633,6 +547,36 @@ export const useAppStore = create<AppState>((set, get) => ({
       statsDisplayScopeKey: null,
       statsDisplayKick: 0,
       paidBasicStatsKick: 0,
+    }),
+
+  applyDeepLinkRegion: (level, code) =>
+    set(() => {
+      const c = String(code ?? "").trim();
+      if (!c) return {};
+      if (level === "beopjungri") {
+        const nt = tierOnlyBeopjungri([c]);
+        return {
+          viewMode: "paid" as const,
+          paidResultView: "basic" as const,
+          tierSelection: nt,
+          paidSubSigunguPickOrder: reconcilePaidSubSigunguPickOrder([{ kind: "beop", code: c }], nt),
+        };
+      }
+      const nt: TierCodes = { ...emptyTierCodes() };
+      if (level === "eupmyeondong") nt.eupmyeondong_codes = [c];
+      else if (level === "sigungu") nt.sigungu_codes = [c];
+      else if (level === "sido") nt.sido_codes = [c];
+      else if (level === "city") nt.city_codes = [c];
+      else return {};
+      return {
+        viewMode: "paid" as const,
+        paidResultView: "basic" as const,
+        tierSelection: nt,
+        paidSubSigunguPickOrder:
+          level === "eupmyeondong"
+            ? reconcilePaidSubSigunguPickOrder([{ kind: "eup", code: c }], nt)
+            : [],
+      };
     }),
 
   kickPaidBasicStatsAnalysis: (flattenTierToBeops) =>

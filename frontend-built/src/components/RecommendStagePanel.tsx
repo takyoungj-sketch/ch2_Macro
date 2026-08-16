@@ -6,10 +6,14 @@ import type {
   DiagnosticCheckItem,
   ModelCandidate,
   RecommendationConclusion,
+  RecommendationPoolCandidate,
+  RecommendationStage1,
+  RecommendationStage2,
   RecommendedAction,
   RegressionRecommendResponse,
   RegressionVariableSpec,
   ResponseScale,
+  TwinValidationVerdict,
 } from "../types";
 import { CvFitnessBadge, ScopeNLabels } from "../utils/recommendationLabels";
 
@@ -161,6 +165,57 @@ function FinalVerdictBanner({ conclusion }: { conclusion: RecommendationConclusi
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+const TWIN_VAL_BOX: Record<TwinValidationVerdict["verdict"], string> = {
+  improved:
+    "border-emerald-300 bg-emerald-50/70 text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100",
+  tie: "border-amber-300 bg-amber-50/70 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100",
+  worse:
+    "border-rose-300 bg-rose-50/70 text-rose-950 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-100",
+  skipped:
+    "border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-900/40 dark:text-slate-300",
+};
+
+function TwinValidationBanner({ v }: { v: TwinValidationVerdict }) {
+  return (
+    <div className={clsx("rounded-md border px-2.5 py-2 space-y-1", TWIN_VAL_BOX[v.verdict])}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[10px] font-semibold uppercase tracking-wide opacity-70">
+          Twin Validation
+        </span>
+        <span className="text-xs font-bold">{v.label_ko}</span>
+        {v.cv_mape_delta != null && (
+          <span className="text-[11px] tabular-nums opacity-90">
+            ΔCV-MAPE {v.cv_mape_delta > 0 ? "+" : ""}
+            {v.cv_mape_delta.toFixed(2)}%p
+            {v.local_cv_mape != null && v.compared_cv_mape != null
+              ? ` (Local ${v.local_cv_mape.toFixed(2)} → Twin ${v.compared_cv_mape.toFixed(2)})`
+              : ""}
+          </span>
+        )}
+        <span
+          className={clsx(
+            "rounded border px-1.5 py-0.5 text-[10px] font-medium",
+            v.twin_adopt_recommended
+              ? "border-emerald-500/60 bg-white/70 dark:bg-black/20"
+              : "border-current/30 bg-white/50 dark:bg-black/20",
+          )}
+        >
+          {v.verdict === "skipped"
+            ? "판정 보류"
+            : v.twin_adopt_recommended
+              ? "Twin 채택 권고"
+              : "Local 유지 권고"}
+        </span>
+      </div>
+      <p className="text-[11px] leading-relaxed opacity-90">{v.summary_ko}</p>
+      <p className="text-[10px] leading-relaxed opacity-70">
+        Twin은 비슷한 지역을 찾는 비교 도구입니다. 회귀 pool은 Local보다 CV-MAPE가 ε(
+        {v.epsilon_pp}%p) 이상 나을 때만 채택을 권고합니다.
+      </p>
     </div>
   );
 }
@@ -347,6 +402,26 @@ function blockSummary(blocks: string[]) {
   return blocks.map((b) => BLOCK_LABELS[b] ?? b).join(" · ");
 }
 
+function poolFormulaLine(pool: RecommendationPoolCandidate, stage2: RecommendationStage2) {
+  const blocks =
+    pool.blocks?.length ? pool.blocks : stage2.recommended_blocks?.length
+      ? stage2.recommended_blocks
+      : stage2.fixed_blocks;
+  const scale = pool.response_scale ?? stage2.fixed_response_scale;
+  return `${blockSummary(blocks)} · ${scale}`;
+}
+
+function poolAdoptVars(
+  pool: RecommendationPoolCandidate,
+  stage1: RecommendationStage1,
+  stage2: RecommendationStage2,
+) {
+  return {
+    vars: pool.variables ?? stage1.primary.variables,
+    scale: pool.response_scale ?? stage2.fixed_response_scale ?? stage1.primary.response_scale,
+  };
+}
+
 function stars(n: number) {
   return "★".repeat(Math.max(0, Math.min(5, n))) + "☆".repeat(Math.max(0, 5 - Math.min(5, n)));
 }
@@ -490,6 +565,18 @@ export default function RecommendStagePanel({
 
     return (
       <div className="space-y-3 text-sm">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+          <span className="font-semibold text-slate-800 dark:text-slate-100">모형 추천</span>
+          <span
+            className="rounded border border-violet-300 bg-violet-50 dark:border-violet-800 dark:bg-violet-950/40 px-1.5 py-0.5 text-[10px] font-medium text-violet-800 dark:text-violet-200"
+            title="복합: Stage1 목적별 후보 + 선택적 Twin pool (확장)"
+          >
+            깊이: 확장
+          </span>
+          <span className="text-[11px] text-slate-500">
+            설명형/예측형 후보 · Twin은 검증 후 채택
+          </span>
+        </div>
         <MacroModeSummary
           mode={inlineMode}
           conclusion={conclusion}
@@ -542,7 +629,7 @@ export default function RecommendStagePanel({
                 쌍둥이 지역 pool 추가 검토
               </p>
               <p className="text-[11px] text-violet-800/90 dark:text-violet-300/90">
-                표본 확대 참고용 — pool 채택은 사용자가 결정합니다.
+                유사 지역 거래를 더해 모형을 다시 찾습니다. pool 채택은 사용자가 결정합니다.
               </p>
               <button
                 type="button"
@@ -559,10 +646,8 @@ export default function RecommendStagePanel({
           <div className="border-t border-slate-200 dark:border-slate-700 pt-3 space-y-2">
             <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
               Twin pool 결과
-              <span className="ml-1 font-normal text-slate-500">
-                — {blockSummary(stage2.fixed_blocks)} · {stage2.fixed_response_scale} 고정
-              </span>
             </p>
+            {stage2.twin_validation && <TwinValidationBanner v={stage2.twin_validation} />}
 
             {!stage2.ran && stage2.skipped_reason && (
               <p className="text-xs text-slate-500">{stage2.skipped_reason}</p>
@@ -597,18 +682,12 @@ export default function RecommendStagePanel({
                 <p className="text-[11px] text-slate-600 dark:text-slate-400 tabular-nums flex flex-wrap items-center gap-2">
                   <span>적합 n={visiblePool.n}</span>
                   <CvFitnessBadge cvMape={visiblePool.cv_mape} />
+                  <span className="text-slate-500">{poolFormulaLine(visiblePool, stage2)}</span>
                   {visiblePool.cv_mape_delta != null && visiblePool.cv_mape_delta > 0 && (
-                    <span className="text-emerald-600">
-                      △{visiblePool.cv_mape_delta.toFixed(1)}%p vs Local
+                    <span className="text-[10px] text-slate-400">
+                      (Local 대비 △{visiblePool.cv_mape_delta.toFixed(1)}%p)
                     </span>
                   )}
-                  {stage2.local_cv_mape != null &&
-                    visiblePool.cv_mape != null &&
-                    visiblePool.cv_mape > stage2.local_cv_mape + 0.5 && (
-                      <span className="text-red-600">
-                        Local {stage2.local_cv_mape.toFixed(1)}%보다 나쁨
-                      </span>
-                    )}
                 </p>
                 {visiblePool.region_codes.length > 1 && (
                   <p className="text-[10px] text-slate-500">
@@ -628,14 +707,15 @@ export default function RecommendStagePanel({
                         : "border border-violet-400 text-violet-700 dark:text-violet-300",
                     )}
                     disabled={adopting}
-                    onClick={() =>
+                    onClick={() => {
+                      const { vars, scale } = poolAdoptVars(visiblePool, stage1, stage2);
                       onAdoptPool({
-                        vars: stage1.primary.variables,
-                        scale: stage2.fixed_response_scale,
+                        vars,
+                        scale,
                         regionCodes: visiblePool.region_codes,
                         label: visiblePool.label,
-                      })
-                    }
+                      });
+                    }}
                   >
                     {stage2.primary?.candidate_id === visiblePool.candidate_id
                       ? "Twin pool 적용 (검토)"
@@ -666,6 +746,18 @@ export default function RecommendStagePanel({
 
   return (
     <div className="space-y-3 text-sm">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+        <span className="font-semibold text-slate-800 dark:text-slate-100">모형 추천</span>
+        <span
+          className="rounded border border-violet-300 bg-violet-50 dark:border-violet-800 dark:bg-violet-950/40 px-1.5 py-0.5 text-[10px] font-medium text-violet-800 dark:text-violet-200"
+          title="복합: Stage1 목적별 후보 + 선택적 Twin pool (확장)"
+        >
+          깊이: 확장
+        </span>
+        <span className="text-[11px] text-slate-500">
+          설명형/예측형 후보 · Twin은 검증 후 채택
+        </span>
+      </div>
       {(isFull || isPredictive) && <FinalVerdictBanner conclusion={conclusion} />}
 
       {(isFull || isPredictive) && conclusion.bullets.length > 0 && (
@@ -900,8 +992,8 @@ export default function RecommendStagePanel({
             ② Profile Twin pool 추가 검토
           </p>
           <p className="text-[11px] text-violet-800/90 dark:text-violet-300/90">
-            1단계 결과가 충분히 만족스럽지 않을 때, 쌍둥이 지역을 pool에 넣어 표본을 확장합니다.
-            식·스케일은 1단계와 동일하게 고정합니다.
+            1단계 결과가 충분히 만족스럽지 않을 때, 유사 지역 거래를 더해 모형을 다시 찾습니다.
+            pool 채택은 사용자가 결정합니다.
           </p>
           <button
             type="button"
@@ -918,10 +1010,8 @@ export default function RecommendStagePanel({
         <div className="border-t border-slate-200 dark:border-slate-700 pt-3 space-y-2">
           <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
             ② Twin pool 결과
-            <span className="ml-1 font-normal text-slate-500">
-              — {blockSummary(stage2.fixed_blocks)} · {stage2.fixed_response_scale} 고정
-            </span>
           </p>
+          {stage2.twin_validation && <TwinValidationBanner v={stage2.twin_validation} />}
 
           {!stage2.ran && stage2.skipped_reason && (
             <p className="text-xs text-slate-500">{stage2.skipped_reason}</p>
@@ -956,18 +1046,12 @@ export default function RecommendStagePanel({
               <p className="text-[11px] text-slate-600 dark:text-slate-400 tabular-nums flex flex-wrap items-center gap-2">
                 <span>적합 n={visiblePool.n}</span>
                 <CvFitnessBadge cvMape={visiblePool.cv_mape} />
+                <span className="text-slate-500">{poolFormulaLine(visiblePool, stage2)}</span>
                 {visiblePool.cv_mape_delta != null && visiblePool.cv_mape_delta > 0 && (
-                  <span className="text-emerald-600">
-                    △{visiblePool.cv_mape_delta.toFixed(1)}%p vs Local
+                  <span className="text-[10px] text-slate-400">
+                    (Local 대비 △{visiblePool.cv_mape_delta.toFixed(1)}%p)
                   </span>
                 )}
-                {stage2.local_cv_mape != null &&
-                  visiblePool.cv_mape != null &&
-                  visiblePool.cv_mape > stage2.local_cv_mape + 0.5 && (
-                    <span className="text-red-600">
-                      Local {stage2.local_cv_mape.toFixed(1)}%보다 나쁨
-                    </span>
-                  )}
               </p>
               {visiblePool.region_codes.length > 1 && (
                 <p className="text-[10px] text-slate-500">
@@ -987,14 +1071,15 @@ export default function RecommendStagePanel({
                       : "border border-violet-400 text-violet-700 dark:text-violet-300",
                   )}
                   disabled={adopting}
-                  onClick={() =>
+                  onClick={() => {
+                    const { vars, scale } = poolAdoptVars(visiblePool, stage1, stage2);
                     onAdoptPool({
-                      vars: stage1.primary.variables,
-                      scale: stage2.fixed_response_scale,
+                      vars,
+                      scale,
                       regionCodes: visiblePool.region_codes,
                       label: visiblePool.label,
-                    })
-                  }
+                    });
+                  }}
                 >
                   {stage2.primary?.candidate_id === visiblePool.candidate_id
                     ? "2단계 pool 적용 (검토)"

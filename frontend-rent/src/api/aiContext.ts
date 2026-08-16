@@ -89,7 +89,7 @@ export const SANGKWON_REB_EXPLAIN = {
   summary:
     "한국부동산원 상업용부동산 임대동향조사입니다. 행정동이 아니라 상권 단위 표본 공표이며, 주거 전월세 원장·CH2 전환율과 섞지 않습니다.",
   formula:
-    "연간 임대료 = 월단가 평균×12(만원/㎡) · 연간 NOI = 분기 합(만원/㎡) · 연간 수익률 = ∏(1+r_q/100)−1",
+    "기본표는 최신 분기 기준 4분기(1년) 롤링. 임대료 = 월단가 평균×12(만원/㎡) · NOI = 분기 합(만원/㎡) · 수익률 = ∏(1+r_q/100)−1. 추세선만 달력 연간.",
   interpretation: [
     "임대료는 시장 환산월세, 임대수입은 NOI 손익의 받은 수입입니다. 다른 수치입니다.",
     "공실로 못 받은 월세는 이미 임대수입·NOI 금액에 반영되어 있습니다. (1−공실)을 다시 곱하지 마세요.",
@@ -98,7 +98,7 @@ export const SANGKWON_REB_EXPLAIN = {
   ],
   limitations: [
     "표본 공표이며 개별 물건 가치·시세가 아닙니다.",
-    "4분기가 없는 연·지표는 연간 금액·수익률을 비웁니다.",
+    "롤링 창에 4분기가 없으면 금액·수익률을 비웁니다. 추세선은 달력 연간입니다.",
     "상권 전환율은 상업용 공표용입니다. 주거 mean_simple과 다릅니다.",
     "감정평가·적정가·투자 판단을 하지 않습니다.",
   ],
@@ -117,6 +117,7 @@ export function buildSangkwonContext(opts: {
   regionLabel: string;
   secNm: string;
   year: number | null;
+  windowLabel?: string;
   rows: SangkwonAnnualResponse["rows"];
 }): AiContextPayload {
   const compact: Record<string, Record<string, number | null>> = {};
@@ -129,12 +130,13 @@ export function buildSangkwonContext(opts: {
     purpose: "methodology",
     scope: {
       region_label: `${opts.regionLabel} · ${opts.secNm}`,
-      filters: { sec_nm: opts.secNm, year: opts.year ?? "" },
+      filters: { sec_nm: opts.secNm, year: opts.windowLabel || opts.year || "" },
     },
     facts: {
       scope_label: opts.regionLabel,
       sec_nm: opts.secNm,
       year: opts.year,
+      window_label: opts.windowLabel || "",
       source: "reb_commercial_rent_survey",
       annual: compact,
     },

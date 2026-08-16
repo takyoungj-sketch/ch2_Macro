@@ -152,6 +152,13 @@ class RegressionVariableSpec(BaseModel):
     asset_type_dummy: bool = True
     # 읍·면·동 초점에서는 addr3/addr4, 법정리 초점에서는 addr5 기준
     region_leaf_dummy: bool = False
+    # 지역 프로필 공변량 (쌍둥이 로직 보강 · 기본 off)
+    region_population: bool = False
+    region_land_p50: bool = False
+    region_apt_p50: bool = False
+    region_apt_n: bool = False
+    region_comm_p50: bool = False
+    region_comm_n: bool = False
 
 
 class RegressionRunRequest(BaseModel):
@@ -328,6 +335,23 @@ class RecommendationPoolCandidate(BaseModel):
     mape: Optional[float] = None
     cv_mape: Optional[float] = None
     cv_mape_delta: Optional[float] = None
+    blocks: list[str] = Field(default_factory=list)
+    response_scale: Optional[ResponseScale] = None
+    variables: Optional[RegressionVariableSpec] = None
+
+
+class TwinValidationVerdict(BaseModel):
+    """Local vs Twin pool CV-MAPE 판정 (TWIN_VALIDATION_STATUS §2·§4)."""
+
+    verdict: Literal["improved", "tie", "worse", "skipped"]
+    label_ko: str
+    summary_ko: str
+    epsilon_pp: float = 0.5
+    local_cv_mape: Optional[float] = None
+    compared_cv_mape: Optional[float] = None
+    cv_mape_delta: Optional[float] = None
+    compared_candidate_id: Optional[str] = None
+    twin_adopt_recommended: bool = False
 
 
 class RecommendationStage2(BaseModel):
@@ -339,8 +363,13 @@ class RecommendationStage2(BaseModel):
     twin_gates: list[TwinGateResult] = Field(default_factory=list)
     decision: str = "local"
     decision_reason: Optional[str] = None
+    twin_validation: Optional[TwinValidationVerdict] = None
     fixed_blocks: list[str] = Field(default_factory=list)
     fixed_response_scale: ResponseScale = "linear"
+    recommended_blocks: list[str] = Field(default_factory=list)
+    # Lab: Stage2 탐색 풀에 올린 region_* (coverage 전·후 포함 후보 기록)
+    region_candidate_blocks: list[str] = Field(default_factory=list)
+    region_feature_tier: Optional[str] = None
 
 
 class RegressionRecommendResponse(BaseModel):
@@ -407,6 +436,10 @@ class RegressionSelectionRequest(RegressionRunRequest):
     profile_window_years: Optional[int] = None
     profile_twin_neighbors: list[dict[str, object]] = Field(default_factory=list)
     run_stage2: bool = False
+    # Lab/실험: 지역 프로필 공변량을 후보 풀에 추가 (제품 기본 경로 off)
+    include_region_features: bool = False
+    # include_region_features 시 후보 세트: price=가격수준만 · full=가격+인구·거래량
+    region_feature_tier: Literal["price", "full"] = "full"
 
 
 class ExcludedBlockReason(BaseModel):
@@ -463,6 +496,8 @@ class PoolingCandidateMetrics(BaseModel):
     aic: Optional[float] = None
     bic: Optional[float] = None
     joint_f_tests: dict[str, JointFTest] = Field(default_factory=dict)
+    blocks: list[str] = Field(default_factory=list)
+    response_scale: Optional[ResponseScale] = None
 
 
 class DecisionConfidence(BaseModel):

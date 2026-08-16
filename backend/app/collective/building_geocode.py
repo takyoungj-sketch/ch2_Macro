@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 from sqlalchemy.engine import Connection
+
+_GEOCODE_TABLES = frozenset({"collective_building_geocodes", "rent_building_geocodes"})
 
 from app.collective_commercial.road_geocode import geocode_vworld_cached
 
@@ -74,32 +76,38 @@ def resolve_building_map_points(
     *,
     api_key: str,
     buildings: list[dict[str, Any]],
+    table_name: str = "collective_building_geocodes",
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """주소를 지오코딩하고 결과를 DB에 캐시한다.
 
     지도 최초 조회에서만 VWorld를 호출하고, 이후에는 building_key 캐시를
     사용한다. 호출량을 제한하기 위해 API 스키마에서 최대 100건을 받는다.
     """
+    if table_name not in _GEOCODE_TABLES:
+        raise RuntimeError(f"unsupported geocode table: {table_name}")
     table = conn.execute(
-        text("SELECT to_regclass('public.collective_building_geocodes')::text")
+        text("SELECT to_regclass(:reg)::text"),
+        {"reg": f"public.{table_name}"},
     ).scalar()
     if not table:
-        raise RuntimeError("collective_building_geocodes 테이블이 없습니다. db/029 적용 필요")
+        raise RuntimeError(f"{table_name} 테이블이 없습니다. DDL 적용 필요")
 
-    keys = [str(item["building_key"]).strip() for item in buildings]
-    cached = {
-        str(row["building_key"]): row
-        for row in conn.execute(
-            text(
-                """
-                SELECT building_key, label, longitude, latitude, status
-                FROM collective_building_geocodes
-                WHERE building_key = ANY(:keys)
-                """
-            ),
-            {"keys": keys},
-        ).mappings()
-    }
+    keys = [str(item["building_key"]).strip() for item in buildings if str(item.get("building_key") or "").strip()]
+    cached: dict[str, Any] = {}
+    if keys:
+        cached = {
+            str(row["building_key"]): row
+            for row in conn.execute(
+                text(
+                    f"""
+                    SELECT building_key, label, longitude, latitude, status
+                    FROM {table_name}
+                    WHERE building_key IN :keys
+                    """
+                ).bindparams(bindparam("keys", expanding=True)),
+                {"keys": keys},
+            ).mappings()
+        }
 
     points: list[dict[str, Any]] = []
     unresolved: list[str] = []
@@ -130,8 +138,8 @@ def resolve_building_map_points(
         status = "ok" if result.get("ok") else "not_found"
         conn.execute(
             text(
-                """
-                INSERT INTO collective_building_geocodes (
+                f"""
+                INSERT INTO {table_name} (
                     building_key, label, jibun_address, normalized_address,
                     longitude, latitude, matched_name, category, status,
                     error, geocoded_at, updated_at

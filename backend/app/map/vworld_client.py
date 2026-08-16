@@ -106,19 +106,19 @@ def _normalize_features(raw: dict[str, Any]) -> dict[str, Any]:
     return {"type": "FeatureCollection", "features": out_features}
 
 
-def fetch_features(
+def fetch_named_layer_features(
     *,
     api_key: str,
     domain: str,
-    level: str,
+    data: str,
     attr_filter: str | None = None,
     geom_filter: str | None = None,
     size: int = 1000,
 ) -> dict[str, Any]:
-    layer, _ = LAYER_BY_LEVEL.get(level, ("", ""))
+    """VWorld Data API GetFeature — 임의 레이어 ID (`LT_L_SPRD` 등)."""
+    layer = (data or "").strip()
     if not layer:
-        raise ValueError(f"unsupported level: {level}")
-
+        raise ValueError("VWorld data layer is empty")
     params: dict[str, str] = {
         "service": "data",
         "request": "GetFeature",
@@ -128,6 +128,7 @@ def fetch_features(
         "format": "json",
         "size": str(min(max(size, 1), 1000)),
         "crs": "EPSG:4326",
+        "geometry": "true",
     }
     if attr_filter:
         params["attrFilter"] = attr_filter
@@ -146,6 +147,28 @@ def fetch_features(
         raise ValueError(f"VWorld network error: {exc}") from exc
 
     return _normalize_features(raw)
+
+
+def fetch_features(
+    *,
+    api_key: str,
+    domain: str,
+    level: str,
+    attr_filter: str | None = None,
+    geom_filter: str | None = None,
+    size: int = 1000,
+) -> dict[str, Any]:
+    layer, _ = LAYER_BY_LEVEL.get(level, ("", ""))
+    if not layer:
+        raise ValueError(f"unsupported level: {level}")
+    return fetch_named_layer_features(
+        api_key=api_key,
+        domain=domain,
+        data=layer,
+        attr_filter=attr_filter,
+        geom_filter=geom_filter,
+        size=size,
+    )
 
 
 def fetch_features_soft(

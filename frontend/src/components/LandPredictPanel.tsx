@@ -9,8 +9,11 @@ import type {
   LandRegressionResponse,
   LandRegressionVariables,
 } from "../types";
-import { parseApiError } from "../utils/apiError";
 import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
+import { AnalysisHelpPanel } from "@ch2/analysis-help";
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
+import { LAND_PREDICT_HELP } from "../constants/landStatsExplain";
+import { parseApiError } from "../utils/apiError";
 
 function fmtNum(n?: number | null, digits = 2) {
   if (n == null || Number.isNaN(n)) return "—";
@@ -122,7 +125,11 @@ export default function LandPredictPanel({
     <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">예측</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 inline-flex items-center gap-1">
+            예측
+            <AnalysisHelpPanel explain={LAND_PREDICT_HELP} />
+            <StatsGlossaryHelp termId="prediction_interval" size="xs" />
+          </p>
           <h3 className="font-semibold text-sm text-slate-800">다른 변수 고정 · 예측값</h3>
           <p className="text-xs text-slate-500 mt-1">
             회귀 적합 모형으로 단가(만원/㎡)를 예측합니다. OLS 기준 95% 예측구간(PI) —

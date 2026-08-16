@@ -119,6 +119,23 @@ def _tx_join(table: str, asset_type: str | None) -> tuple[str, dict]:
     )
 
 
+def _year_sql(
+    year_from: int | None,
+    year_to: int | None,
+    *,
+    prefix: str = "t",
+) -> tuple[str, dict[str, Any]]:
+    parts: list[str] = []
+    params: dict[str, Any] = {}
+    if year_from is not None:
+        parts.append(f"AND {prefix}.contract_year >= :cy_from")
+        params["cy_from"] = int(year_from)
+    if year_to is not None:
+        parts.append(f"AND {prefix}.contract_year <= :cy_to")
+        params["cy_to"] = int(year_to)
+    return (" ".join(parts), params)
+
+
 def list_gu_options(
     conn: Connection,
     *,
@@ -126,6 +143,8 @@ def list_gu_options(
     addr1: str,
     addr2: str,
     asset_type: str | None,
+    contract_year_from: int | None = None,
+    contract_year_to: int | None = None,
 ) -> list[dict]:
     """구-동 구조: addr3(구) 목록 + 건수."""
     params: dict[str, Any] = {"a1": addr1.strip()}
@@ -135,6 +154,8 @@ def list_gu_options(
         params["a2"] = addr2.strip()
     ac, ap = _asset_clause(asset_type)
     params.update(ap)
+    ys, yp = _year_sql(contract_year_from, contract_year_to)
+    params.update(yp)
     rows = conn.execute(
         text(
             f"""
@@ -144,6 +165,7 @@ def list_gu_options(
               AND t.is_valid = true
               {addr2_sql}
               {ac}
+              {ys}
               AND t.addr3 IS NOT NULL AND btrim(t.addr3::text) <> ''
               AND t.addr3 LIKE '%구'
             GROUP BY t.addr3
@@ -165,6 +187,8 @@ def list_leaf_options(
     asset_type: str | None,
     leaf_level: str,
     check_density: bool = True,
+    contract_year_from: int | None = None,
+    contract_year_to: int | None = None,
 ) -> list[dict]:
     """읍면동(leaf) 목록."""
     params: dict[str, Any] = {"a1": addr1.strip()}
@@ -178,6 +202,8 @@ def list_leaf_options(
         params["gu_list"] = gu_list
     ac, ap = _asset_clause(asset_type)
     params.update(ap)
+    ys, yp = _year_sql(contract_year_from, contract_year_to)
+    params.update(yp)
 
     if leaf_level == "addr4":
         rows = conn.execute(
@@ -190,6 +216,7 @@ def list_leaf_options(
                   {addr2_sql}
                   {gu_sql}
                   {ac}
+                  {ys}
                   AND addr4 IS NOT NULL AND btrim(addr4::text) <> ''
                 GROUP BY addr4, addr3
                 ORDER BY addr3, count DESC, addr4
@@ -207,6 +234,7 @@ def list_leaf_options(
                   AND t.addr1 = :a1
                   {addr2_sql}
                   {ac}
+                  {ys}
                   AND addr3 IS NOT NULL AND btrim(addr3::text) <> ''
                 GROUP BY addr3
                 ORDER BY count DESC, addr3

@@ -47,7 +47,7 @@ BUNDLE_REGISTRY: dict[str, BundleSpec] = {
     ),
     "twin_city_compare": BundleSpec(
         bundle_id="twin_city_compare",
-        description="Twin·유사 지역 비교",
+        description="지역프로필 Twin(algo 21) · 복합 Stage2 검증. 토지 레거시 모달 없음",
         panels=("TwinRegionPanel", "ProfilePanel"),
     ),
     "rent_conversion": BundleSpec(
@@ -123,6 +123,19 @@ SUGGESTED_QUESTIONS: dict[str, list[str]] = {
         "전세전환값은 시세인가요?",
         "연립은 왜 편차가 큰가요?",
         "읍면동 전환율이 없을 때는?",
+    ],
+    "ProfilePanel": [
+        "이 지역 프로필을 요약해 주세요.",
+        "8대 시장 구성은 어떻게 읽나요?",
+        "쌍둥이 지역은 어떻게 고르나요?",
+        "토지 Top3와 아파트 분위는 무엇인가요?",
+        "프로필 3년 창과 토지 롤링 창이 다른 이유는?",
+    ],
+    "TwinRegionPanel": [
+        "이 쌍둥이 지역은 왜 뽑혔나요?",
+        "유사도는 어떤 지표로 계산하나요?",
+        "쌍둥이 지역을 회귀에 넣어도 되나요?",
+        "시군구 Twin과 읍면동 Twin 범위 차이는?",
     ],
     "SangkwonCard": [
         "임대료와 임대수입이 다른 이유는?",

@@ -6,9 +6,9 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-AiApp = Literal["land", "built", "collective"]
+AiApp = Literal["land", "built", "collective", "rent"]
 AiPurpose = Literal["statistics", "prediction", "market_analysis", "methodology"]
-AiRoute = Literal["refusal", "ch2", "explain", "statistics", "opinion", "web"]
+AiRoute = Literal["refusal", "ch2", "explain", "statistics", "opinion", "web", "casual", "open"]
 EvidenceType = Literal[
     "ch2_regression",
     "ch2_sample",
@@ -21,6 +21,8 @@ EvidenceType = Literal[
     "ai_opinion",
     "web",
     "refusal_policy",
+    "casual_policy",
+    "open_mode",
 ]
 EvidenceConfidence = Literal["high", "medium", "low"]
 
@@ -76,6 +78,12 @@ class EvidenceItem(BaseModel):
     confidence: EvidenceConfidence = "medium"
 
 
+class ScreenRedirectHint(BaseModel):
+    panel: str
+    label: str
+    example_question: str
+
+
 class AiChatRequest(BaseModel):
     session_id: Optional[str] = None
     message: str = Field(..., min_length=1, max_length=4000)
@@ -125,3 +133,5 @@ class AiHealthResponse(BaseModel):
     web_search_configured: bool = False
     model: Optional[str] = None
     constitution_version: str = "1"
+    casual_dialogue_enabled: bool = False
+    open_mode_enabled: bool = False

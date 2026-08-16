@@ -381,6 +381,15 @@ def wait_for_new_csv(
     return None
 
 
+def _is_fatal_molit_alert(text: str) -> bool:
+    """사이트 알림 중 재시도해도 같은 요청으로는 진행 불가한 경우."""
+    compact = text.replace(" ", "")
+    return any(
+        marker in compact
+        for marker in ("실패", "1년", "초과할수", "조회기간")
+    )
+
+
 def dismiss_alerts(driver) -> str | None:
     from selenium.common.exceptions import NoAlertPresentException
 
@@ -551,7 +560,7 @@ def _download_one_task(
         alert_text = dismiss_alerts(driver)
         if alert_text:
             _log_fail(log, log_level, f"{tag} 알림: {alert_text}")
-            if "실패" in alert_text:
+            if _is_fatal_molit_alert(alert_text):
                 _record_failure(
                     result, download_dir,
                     region=region, period=period, reason=alert_text,

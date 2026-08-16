@@ -12,6 +12,7 @@ from app.map.neighbors import (
     fetch_neighbor_codes,
     neighbor_edge_count,
     normalize_neighbor_level,
+    selection_graph_usable,
     union_neighbor_codes,
 )
 from app.map.vworld_client import (
@@ -139,6 +140,6 @@ def map_neighbors(
         "codes": canon,
         "neighbors_by_code": by_code,
         "neighbor_codes": union,
-        "graph_ready": edges > 0,
+        "graph_ready": selection_graph_usable(by_code),
         "edge_count": edges,
     }

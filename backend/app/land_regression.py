@@ -32,6 +32,15 @@ _COEF_LABELS: dict[str, str] = {
 }
 
 
+def _duan_smearing(residuals: Any) -> float:
+    """log(y) 모형 역변환 시 Duan smearing (E[exp(e)])."""
+    r = np.asarray(residuals, dtype=float)
+    r = r[np.isfinite(r)]
+    if r.size == 0:
+        return 1.0
+    return float(np.mean(np.exp(r)))
+
+
 @dataclass
 class _DesignBundle:
     y_fit: pd.Series

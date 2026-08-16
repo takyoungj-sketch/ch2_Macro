@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { MetricWithHelp, StatsGlossaryHelp } from "@ch2/stats-glossary";
 import type { AssetType, RegressionLevelResult, ResponseScale } from "../types";
 import {
   ADMIN_LABELS,
@@ -29,29 +30,37 @@ export default function FocusRegressionCard({ result, assetType, responseScale }
             {ADMIN_LABELS[result.admin_level] ?? result.admin_level} · 분석 초점
           </p>
         </div>
-        <span className="text-xs text-slate-500" title="선택 변수 complete-case 표본 (fit_n)">
-          적합 n={fmtNum(result.n)}
-        </span>
+        <MetricWithHelp
+          label="적합 n="
+          termId="fit_n"
+          value={fmtNum(result.n)}
+          title="선택 변수 complete-case 표본 (fit_n)"
+        />
       </div>
 
       {result.warning && <p className="text-xs badge-warn">{result.warning}</p>}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-        <div>R² {fmtDecimal(result.r_squared, 5)}</div>
-        <div>Adj R² {fmtDecimal(result.adj_r_squared, 5)}</div>
+        <MetricWithHelp label="R²" termId="r_squared" value={fmtDecimal(result.r_squared, 5)} />
+        <MetricWithHelp label="Adj R²" termId="adj_r_squared" value={fmtDecimal(result.adj_r_squared, 5)} />
         <div className="flex flex-wrap items-center gap-1.5" title="in-sample · 금액(만원) 원척도">
-          <span>
-            MAPE {result.mape != null ? `${fmtDecimal(result.mape, 2)}%` : "—"}
-          </span>
+          <MetricWithHelp
+            label="MAPE"
+            termId="mape"
+            value={result.mape != null ? `${fmtDecimal(result.mape, 2)}%` : "—"}
+          />
           {result.mape != null && <CvFitnessBadge cvMape={result.mape} />}
         </div>
         <div>유의 변수 {result.significant_count}개</div>
-        <div>F p {fmtDecimal(result.f_p_value, 5)}</div>
+        <MetricWithHelp label="F p" termId="f_p_value" value={fmtDecimal(result.f_p_value, 5)} />
       </div>
 
       {(result.equation || result.coefficients.length > 0) && (
         <div className="space-y-1">
-          <div className="text-xs font-semibold text-slate-600">회귀식</div>
+          <div className="flex items-center gap-1 text-xs font-semibold text-slate-600">
+            회귀식
+            <StatsGlossaryHelp termId="coefficient" size="xs" />
+          </div>
           <RegressionEquation
             coefficients={result.coefficients}
             responseScale={responseScale}
@@ -75,7 +84,10 @@ export default function FocusRegressionCard({ result, assetType, responseScale }
 
       {(result.vif?.length ?? 0) > 0 && (
         <div className="text-xs space-y-1">
-          <div className="font-semibold text-slate-600">다중공선성 (VIF · 연속변수)</div>
+          <div className="flex items-center gap-1 font-semibold text-slate-600">
+            다중공선성 (VIF · 연속변수)
+            <StatsGlossaryHelp termId="vif" size="xs" />
+          </div>
           <div className="flex flex-wrap gap-x-3 gap-y-1">
             {result.vif!.map((v) => (
               <span

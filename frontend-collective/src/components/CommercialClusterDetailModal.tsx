@@ -33,6 +33,8 @@ import RollingTrendChart from "./RollingTrendChart";
 import YearlyTrendChart, { yearlyPointPrice } from "./YearlyTrendChart";
 import LongTermMetricToggle, { longTermPriceLabel, type LongTermPriceMetric } from "./LongTermMetricToggle";
 import type { StatsWindowYears } from "./StatsWindowToggle";
+import AnalysisHelpPanel from "./AnalysisHelpPanel";
+import { commercialModalPanelHelp } from "../utils/residentialAnalysisHelp";
 
 const MAX_COHORT_CLUSTERS = 10;
 
@@ -350,6 +352,10 @@ export default function CommercialClusterDetailModal({
               );
             })}
           </div>
+          {(() => {
+            const help = commercialModalPanelHelp(panel);
+            return help ? <AnalysisHelpPanel explain={help} className="ml-1" /> : null;
+          })()}
           {peerClusters.length > 0 && (
             <div className="mt-2 rounded border border-indigo-100 bg-indigo-50/50 px-2 py-1.5 text-[10px]">
               <div className="flex flex-wrap items-center gap-2">

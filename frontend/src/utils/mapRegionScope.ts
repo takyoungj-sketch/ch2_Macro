@@ -1,5 +1,6 @@
 import type { RegionItem } from "../types";
 import { cityBucketFromSigungu } from "./cityBucket";
+import { isSejongRegionRow } from "./sejongRegion";
 import type { TierCodes } from "./regionTier";
 
 export type MapAdminLevel = "sido" | "sigungu" | "eupmyeondong" | "beopjungri";
@@ -26,12 +27,18 @@ function labelForSigungu(regions: readonly RegionItem[], code: string): string {
 function labelForEup(regions: readonly RegionItem[], code: string): string {
   const row = regions.find((r) => String(r.eupmyeondong_code ?? "").trim() === code);
   if (!row) return code;
+  if (isSejongRegionRow(row)) {
+    return [row.sido_name, row.sigungu_name].filter(Boolean).join(" ");
+  }
   return [row.sido_name, row.sigungu_name, row.eupmyeondong_name].filter(Boolean).join(" ");
 }
 
 function labelForBeop(regions: readonly RegionItem[], code: string): string {
   const row = regions.find((r) => String(r.beopjungri_code ?? "").trim() === code);
   if (!row) return code;
+  if (isSejongRegionRow(row)) {
+    return [row.sido_name, row.sigungu_name, row.beopjungri_name].filter(Boolean).join(" ");
+  }
   return [row.sido_name, row.sigungu_name, row.eupmyeondong_name, row.beopjungri_name]
     .filter(Boolean)
     .join(" ");
@@ -105,14 +112,21 @@ export function resolveMapSelectionState(
   }
 
   if (beop.length > 0 && sido.length === 0 && sigungu.length === 0 && city.length === 0) {
-    for (const c of beop) {
+    const fromEup = eup.length
+      ? regions
+          .filter((r) => eup.includes(String(r.eupmyeondong_code ?? "").trim()))
+          .map((r) => String(r.beopjungri_code ?? "").trim())
+          .filter(Boolean)
+      : [];
+    const selected = normCodes([...beop, ...fromEup]);
+    for (const c of selected) {
       labels[c] = labelForBeop(regions, c);
     }
-    const ctxSigungu = beop[0]?.slice(0, 5) ?? null;
+    const ctxSigungu = selected[0]?.slice(0, 5) ?? null;
     return {
       level: "beopjungri",
-      selectedCodes: beop,
-      contextSidoCode: beop[0]?.slice(0, 2) ?? null,
+      selectedCodes: selected,
+      contextSidoCode: selected[0]?.slice(0, 2) ?? null,
       contextSigunguCode: ctxSigungu,
       labels,
       hasSelection: true,

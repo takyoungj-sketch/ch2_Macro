@@ -1,0 +1,29 @@
+---
+description: 토지 원장 핫패스 — ANY/버킷 N회 조회로 모달·통계가 다시 느려지지 않게
+globs: backend/app/routers/free_v2.py,backend/app/routers/paid.py,backend/app/main.py,backend/app/ledger_region_sql.py,backend/app/region_scope.py,docs/LAND_LEDGER_QUERY_PERF.md
+alwaysApply: false
+---
+
+# 토지 원장 조회 성능 (재발 금지)
+
+SSOT: [`docs/LAND_LEDGER_QUERY_PERF.md`](../../docs/LAND_LEDGER_QUERY_PERF.md)  
+헬퍼: `backend/app/ledger_region_sql.py`
+
+## CRITICAL
+
+`land_transactions` / `land_transactions_resolved` 에서 **선택적 법정동** 조회 시:
+
+| 금지 | 필수 |
+|------|------|
+| `beopjungri_code = ANY(:codes)` | 단건 `=` / 복수 expanding `IN` (`beopjungri_eq_or_in` + `execute_expanding`) |
+| 롤링 버킷마다 `db.execute` | 기간 **1회** fetch → 메모리 버킷팅 |
+| window·calendar **이중** `GROUP BY` | 1회 + `FILTER` |
+| `/health` 전수 `COUNT(*)` | `pg_class.reltuples` 등 |
+
+사고: 단건 stats ~20s · matrix-yearly 롤링 ~45s → 수정 후 ~ms.
+
+## 체크
+
+- 새 SQL에 `beopjungri_code = ANY` 가 원장 테이블에 붙으면 헬퍼로 교체.
+- `matrix_yearly` rolling 경로에 버킷 루프 execute 를 다시 넣지 말 것.
+- 관련 테스트(`test_ledger_region_sql`, `test_paid_region_pred`) 유지.

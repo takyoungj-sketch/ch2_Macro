@@ -2,6 +2,8 @@
 
 from unittest.mock import patch
 
+import pytest
+
 from app.ai.constitution import classify_route, is_refusal_message
 from app.ai.llm import numbers_preserved
 from app.ai.orchestrator import handle_chat
@@ -9,6 +11,17 @@ from app.ai.schemas import AiChatRequest, AiContext, AiScope
 from app.ai.validator import validate_answer
 from app.ai.web_answer import web_template_answer
 from app.ai.web_search import WebHit
+
+
+@pytest.fixture(autouse=True)
+def _disable_open_mode_by_default(monkeypatch):
+    """로컬 .env 의 AI_OPEN_MODE / 실 LLM 호출이 템플릿 경로 테스트를 흔들지 않게."""
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "ai_open_mode", False)
+    monkeypatch.setattr("app.ai.orchestrator.llm_configured", lambda: False)
+    monkeypatch.setattr("app.ai.synthesis.llm_configured", lambda: False)
+    monkeypatch.setattr("app.ai.llm.llm_configured", lambda: False)
 
 
 def test_refusal_appropriate_price():
@@ -24,8 +37,242 @@ def test_opinion_log_regression():
     assert classify_route("복합부동산은 로그회귀가 좋을까?") == "opinion"
 
 
-def test_statistics_pvalue():
+def test_casual_greeting_when_enabled(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "ai_casual_dialogue_enabled", True)
+    monkeypatch.setattr(settings, "ai_open_mode", False)
+    req = AiChatRequest(
+        message="안녕하세요",
+        context=AiContext(
+            app="built",
+            panel="RegressionCard",
+            scope=AiScope(region_label="사천읍"),
+            facts={"primary": {"n": 73, "adj_r_squared": 0.72, "coefficients": []}},
+        ),
+    )
+    resp = handle_chat(req)
+    assert resp.route == "casual"
+    assert "안녕" in resp.answer or "CH2" in resp.answer
+    assert "회귀모형" not in resp.answer
+    assert "주요 변수" not in resp.answer
+
+
+def test_casual_greeting_even_when_flag_disabled(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "ai_casual_dialogue_enabled", False)
+    monkeypatch.setattr(settings, "ai_open_mode", False)
+    req = AiChatRequest(
+        message="안녕하세요",
+        context=AiContext(
+            app="built",
+            panel="RegressionCard",
+            scope=AiScope(region_label="서동 읍·면·동"),
+            facts={
+                "primary": {
+                    "n": 42,
+                    "adj_r_squared": 0.81,
+                    "coefficients": [{"name": "연면적", "coef": 0.5}],
+                }
+            },
+        ),
+    )
+    resp = handle_chat(req)
+    assert resp.route == "casual"
+    assert "회귀모형" not in resp.answer
+    assert "주요 변수" not in resp.answer
+
+
+def test_casual_weather_redirect_when_enabled(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "ai_casual_dialogue_enabled", True)
+    monkeypatch.setattr(settings, "ai_open_mode", False)
+    req = AiChatRequest(
+        message="오늘 날씨 어때?",
+        context=AiContext(
+            app="built",
+            panel="RegressionCard",
+            scope=AiScope(region_label="사천읍"),
+            facts={"primary": {"n": 73, "adj_r_squared": 0.72, "coefficients": []}},
+        ),
+    )
+    resp = handle_chat(req)
+    assert resp.route == "casual"
+    assert "범위" in resp.answer or "CH2" in resp.answer
+
+
+def test_open_mode_bypasses_template(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "ai_open_mode", True)
+
+    def _fake_open(**kwargs):
+        return "### 답변\n\nOpen Mode 테스트 응답입니다. 데이터 수집은 국토부 실거래  orth 후 정제합니다."
+
+    with patch("app.ai.orchestrator.open_mode_chat_completion", side_effect=_fake_open):
+        req = AiChatRequest(
+            message="CH2 Macro는 어떻게 데이터를 수집했나요?",
+            context=AiContext(
+                app="built",
+                panel="RegressionCard",
+                scope=AiScope(region_label="서동 읍면동"),
+                facts={"primary": {"n": 42, "adj_r_squared": 0.55, "coefficients": []}},
+            ),
+        )
+        resp = handle_chat(req)
+    assert resp.route == "open"
+    assert resp.llm_used is True
+    assert "회귀모형" not in resp.answer
+    assert "Open Mode" in resp.answer or "국토부" in resp.answer or "데이터" in resp.answer
+
+
+def test_open_mode_skips_refusal(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "ai_open_mode", True)
+
+    with patch(
+        "app.ai.orchestrator.open_mode_chat_completion",
+        return_value="투자 관련 일반 설명입니다.",
+    ):
+        req = AiChatRequest(
+            message="이 물건은 적정가격인가?",
+            context=AiContext(
+                app="built",
+                panel="RegressionCard",
+                scope=AiScope(region_label="서동"),
+            ),
+        )
+        resp = handle_chat(req)
+    assert resp.route == "open"
+    assert resp.llm_used is True
+    assert "### 요약" not in resp.answer or "scope를 CH2 세션" not in resp.answer
+
+
+def test_log_log_not_scope_comparison():
+    from app.ai.bundles.comparison import is_model_comparison_question, is_scope_comparison_question
+
+    q = "log회귀와 log-log회귀의 차이는 무엇인가요?"
+    assert is_model_comparison_question(q)
+    assert not is_scope_comparison_question(q)
+
+
+def test_chat_log_log_methodology():
+    req = AiChatRequest(
+        message="log회귀와 log-log회귀의 차이는 무엇인가요?",
+        context=AiContext(
+            app="built",
+            panel="RegressionCard",
+            scope=AiScope(region_label="사천읍 읍면동"),
+            facts={
+                "primary": {
+                    "n": 73,
+                    "adj_r_squared": 0.719,
+                    "model_type": "log",
+                    "scope_label": "사천읍 읍면동",
+                    "coefficients": [],
+                },
+            },
+        ),
+    )
+    r1 = handle_chat(req)
+    r2 = handle_chat(
+        AiChatRequest(
+            message="log회귀와 log-log회귀의 차이는 무엇인가요?",
+            context=req.context,
+            session_id=r1.session_id,
+        )
+    )
+    assert "세션 scope" not in r2.answer or "semi-log" in r2.answer.lower() or "Log-log" in r2.answer
+    assert "log(금액)" in r2.answer or "semi-log" in r2.answer.lower()
+    assert r2.bundle_id != "cluster_compare" or "탄력성" in r2.answer
+
+
+def test_scope_comparison_same_label_skipped():
+    from app.ai.bundles.comparison import narrative_scope_comparison
+    from app.ai.sessions import get_or_create
+
+    session = get_or_create(None)
+    snap = {
+        "scope": {"region_label": "사천읍 읍면동"},
+        "n": 73,
+        "adj_r_squared": 0.719,
+        "scope_label": "사천읍 읍면동",
+    }
+    session.push_context(snap)
+    session.push_context(snap)
+    assert narrative_scope_comparison(session, current_label="사천읍 읍면동") is None
+
+
+def test_mape_caution_targeted_answer():
+    from app.ai.targeted_qa import answer_mape_fitness_question
+
+    ans = answer_mape_fitness_question(
+        "mape가 주의란 것은 무엇을 말하나요?",
+        {"mape": 52.3, "n": 120, "cv_fitness": {"tier": "caution", "label_ko": "주의"}},
+    )
+    assert ans and "주의" in ans
+    assert "40%" in ans or "60%" in ans
+    assert "복합부동산 OLS" not in ans
+
+
+def test_chat_mape_caution_not_generic_explain():
+    req = AiChatRequest(
+        message="mape가 주의란 것은 무엇을 말하나요?",
+        context=AiContext(
+            app="built",
+            panel="RegressionCard",
+            scope=AiScope(region_label="영인면"),
+            facts={
+                "primary": {
+                    "n": 120,
+                    "mape": 52.3,
+                    "adj_r_squared": 0.98,
+                    "scope_label": "영인면",
+                    "coefficients": [],
+                },
+            },
+        ),
+    )
+    resp = handle_chat(req)
+    assert resp.route in ("explain", "ch2", "statistics")
+    assert "주의" in resp.answer
+    assert "40%" in resp.answer or "60%" in resp.answer
+    assert "OLS 회귀" not in resp.answer or "### 답변" in resp.answer
+
+
+def test_statistics_pvalue_definition():
     assert classify_route("p-value가 뭐야?") == "statistics"
+
+
+def test_statistics_interpretation_routes_explain():
+    assert classify_route("Adj R²를 어떻게 봐야 하나요?") == "explain"
+
+
+def test_definition_redirect_glossary():
+    from app.ai.stats_kb import answer_statistics_question, is_pure_definition_question
+
+    assert is_pure_definition_question("Adj R²란?")
+    ans = answer_statistics_question("Adj R²란?")
+    assert ans and "?" in ans and "해석" in ans
+
+
+def test_suggested_questions_methodology_purpose():
+    from app.ai.bundles.registry import suggested_questions
+
+    qs = suggested_questions("RegressionCard", purpose="methodology")
+    assert any("로그" in q for q in qs)
+    assert not any("Adj R²란" in q for q in qs)
+
+
+def test_product_knowledge_pack():
+    from app.ai.knowledge.product import product_knowledge_pack
+
+    pack = product_knowledge_pack(app="built", panel="RecommendationCard")
+    assert "Twin" in pack
+    assert "Local" in pack
 
 
 def test_explain_why_result():

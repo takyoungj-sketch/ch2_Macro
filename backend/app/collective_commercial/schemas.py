@@ -389,3 +389,30 @@ class CommercialRoadMapPoint(BaseModel):
 class CommercialRoadMapPointsResponse(BaseModel):
     points: list[CommercialRoadMapPoint] = Field(default_factory=list)
     unresolved: list[str] = Field(default_factory=list)
+
+
+class CommercialRoadLineRequest(BaseModel):
+    """선택 cluster 도로명 → VWorld 도로중심선 (Road-A)."""
+
+    addr1: str = Field(..., min_length=1)
+    addr2: str = Field(..., min_length=1)
+    road_name: str = Field(..., min_length=1)
+    addr3: Optional[str] = None
+    addr4: Optional[str] = None
+    cluster_key: Optional[str] = None
+    label: Optional[str] = None
+    longitude: Optional[float] = None
+    latitude: Optional[float] = None
+    west: Optional[float] = None
+    south: Optional[float] = None
+    east: Optional[float] = None
+    north: Optional[float] = None
+
+
+class CommercialRoadLineResponse(BaseModel):
+    ok: bool
+    road_name: str
+    layer: str
+    feature_collection: dict
+    matched_count: int
+    error: Optional[str] = None

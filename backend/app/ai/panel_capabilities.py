@@ -120,9 +120,9 @@ _REDIRECT_REGRESSION = _RedirectTarget(
 
 _REDIRECT_COMPARE = _RedirectTarget(
     panel="TwinRegionPanel",
-    label="지역 비교 화면",
-    example_question="유사 지역과 비교해 주세요.",
-    benefit="지역·scope 비교",
+    label="지역프로필 쌍둥이",
+    example_question="이 쌍둥이 지역은 왜 뽑혔나요?",
+    benefit="Profile Twin 유사 지역",
 )
 
 _COMPARE_KEYWORDS = (

@@ -132,7 +132,7 @@ def list_profile_versions(db: Session = Depends(get_collective_db)):
 def get_regional_profile(
     region_level: str = Query(..., pattern="^(sido|sigungu|eupmyeondong|beopjungri|city)$"),
     region_code: str = Query(..., min_length=2, max_length=10),
-    profile_version: str = Query("v2.0-national"),
+    profile_version: str = Query("v2.1-national"),
     window_years: int = Query(3, ge=1, le=5),
     as_of_month: Optional[date] = Query(None),
     db: Session = Depends(get_collective_db),
@@ -217,95 +217,97 @@ def get_regional_profile(
     return RegionalProfileResponse(meta=meta, features=feats)
 
 
+PROFILE_TWIN_ALGORITHM = 21
+
+
 def _resolve_twin_batch(
     db: Session,
     *,
     table: str,
-    algorithm_versions: list[int],
     profile_version: str,
     window_years: int,
     scope: str | None,
-) -> tuple[dict | None, int, int]:
-    """최신 batch_key 조회. (batch_row, resolved_window, resolved_algo)."""
+    twin_profile: str = "general",
+) -> tuple[dict | None, int]:
+    """최신 batch_key 조회 (algo 21 only). (batch_row, resolved_window)."""
     window_candidates = [window_years]
-    for alt in (3, 5):
-        if alt not in window_candidates:
-            window_candidates.append(alt)
+    if 3 not in window_candidates:
+        window_candidates.append(3)
 
-    batch_row = None
-    resolved_window = window_years
-    resolved_algo = algorithm_versions[0]
     for wy in window_candidates:
-        for av in algorithm_versions:
-            scope_clause = ""
-            params: dict[str, Any] = {"pv": profile_version, "wy": wy, "av": av}
-            if scope and av in (6, 7, 21):
-                scope_clause = " AND detail_scores->>'scope' = :scope "
-                params["scope"] = scope
-            batch_row = db.execute(
-                text(
-                    f"""
-                    SELECT batch_key, MAX(computed_at) AS computed_at
-                    FROM {table}
-                    WHERE algorithm_version = :av
-                      AND detail_scores->>'profile_version' = :pv
-                      AND (detail_scores->>'window_years')::int = :wy
-                      {scope_clause}
-                    GROUP BY batch_key
-                    ORDER BY computed_at DESC
-                    LIMIT 1
-                    """
-                ),
-                params,
-            ).mappings().first()
-            if batch_row:
-                resolved_window = wy
-                resolved_algo = av
-                return batch_row, resolved_window, resolved_algo
-    return None, resolved_window, resolved_algo
+        scope_clause = ""
+        params: dict[str, Any] = {
+            "pv": profile_version,
+            "wy": wy,
+            "av": PROFILE_TWIN_ALGORITHM,
+            "tp": twin_profile or "general",
+        }
+        if scope:
+            scope_clause = " AND detail_scores->>'scope' = :scope "
+            params["scope"] = scope
+        batch_row = db.execute(
+            text(
+                f"""
+                SELECT batch_key, MAX(computed_at) AS computed_at
+                FROM {table}
+                WHERE algorithm_version = :av
+                  AND detail_scores->>'profile_version' = :pv
+                  AND (detail_scores->>'window_years')::int = :wy
+                  AND COALESCE(detail_scores->>'twin_profile', 'general') = :tp
+                  {scope_clause}
+                GROUP BY batch_key
+                ORDER BY computed_at DESC
+                LIMIT 1
+                """
+            ),
+            params,
+        ).mappings().first()
+        if batch_row:
+            return batch_row, wy
+    return None, window_years
 
 
 def _resolve_beop_twin_batch(
     db: Session,
     *,
-    algorithm_versions: list[int],
     profile_version: str,
     window_years: int,
-) -> tuple[dict | None, int, int]:
-    """twin_neighbor_v8 profile-native beop 배치."""
+    twin_profile: str = "general",
+) -> tuple[dict | None, int]:
+    """beop Twin 배치 — Profile-native(algo 21). 저장 테이블명은 twin_neighbor_v8 유지."""
     scope = "same_sigungu"
     window_candidates = [window_years]
-    for alt in (3, 5):
-        if alt not in window_candidates:
-            window_candidates.append(alt)
+    if 3 not in window_candidates:
+        window_candidates.append(3)
 
-    batch_row = None
-    resolved_window = window_years
-    resolved_algo = algorithm_versions[0]
     for wy in window_candidates:
-        for av in algorithm_versions:
-            batch_row = db.execute(
-                text(
-                    """
-                    SELECT batch_key, MAX(computed_at) AS computed_at
-                    FROM twin_neighbor_v8
-                    WHERE algorithm_version = :av
-                      AND region_level = 'beopjungri'
-                      AND detail_scores->>'profile_version' = :pv
-                      AND (detail_scores->>'window_years')::int = :wy
-                      AND detail_scores->>'scope' = :scope
-                    GROUP BY batch_key
-                    ORDER BY computed_at DESC
-                    LIMIT 1
-                    """
-                ),
-                {"pv": profile_version, "wy": wy, "av": av, "scope": scope},
-            ).mappings().first()
-            if batch_row:
-                resolved_window = wy
-                resolved_algo = av
-                return batch_row, resolved_window, resolved_algo
-    return None, resolved_window, resolved_algo
+        batch_row = db.execute(
+            text(
+                """
+                SELECT batch_key, MAX(computed_at) AS computed_at
+                FROM twin_neighbor_v8
+                WHERE algorithm_version = :av
+                  AND region_level = 'beopjungri'
+                  AND detail_scores->>'profile_version' = :pv
+                  AND (detail_scores->>'window_years')::int = :wy
+                  AND detail_scores->>'scope' = :scope
+                  AND COALESCE(detail_scores->>'twin_profile', 'general') = :tp
+                GROUP BY batch_key
+                ORDER BY computed_at DESC
+                LIMIT 1
+                """
+            ),
+            {
+                "pv": profile_version,
+                "wy": wy,
+                "av": PROFILE_TWIN_ALGORITHM,
+                "scope": scope,
+                "tp": twin_profile or "general",
+            },
+        ).mappings().first()
+        if batch_row:
+            return batch_row, wy
+    return None, window_years
 
 
 @router.get("/twins/{eupmyeondong_code}", response_model=ProfileTwinNeighborsResponse)
@@ -315,13 +317,11 @@ def get_profile_twin_neighbors(
     window_years: int = Query(3, ge=1, le=5),
     top_k: int = Query(3, ge=1, le=20),
     scope: str = Query("region", pattern="^(adjacent|region|national)$"),
-    algorithm_version: int = Query(
-        21, ge=5, le=21, description="21=profile-native v2.1, 6=hybrid, 5=profile-only"
-    ),
+    twin_profile: str = Query("general", pattern="^(general|built_commercial)$"),
     db: Session = Depends(get_collective_db),
     land_db: Session = Depends(get_db),
 ):
-    """쌍둥이 읍면동 Top-k — profile-native(v21) 기본, hybrid(v6)/v5 fallback.
+    """쌍둥이 읍면동 Top-k — Regional Profile 기반 Twin (algo 21)만.
 
     scope: region(권역, 기본) / national(전국) / adjacent.
     """
@@ -336,25 +336,20 @@ def get_profile_twin_neighbors(
     if len(anchor) < 8:
         raise HTTPException(400, "eupmyeondong_code 8자리 필요")
 
-    algo_candidates = [algorithm_version]
-    for fallback in (21, 6, 5):
-        if fallback not in algo_candidates:
-            algo_candidates.append(fallback)
-
-    batch_row, resolved_window, resolved_algo = _resolve_twin_batch(
+    batch_row, resolved_window = _resolve_twin_batch(
         db,
         table="twin_eupmyeondong_neighbor_mvp",
-        algorithm_versions=algo_candidates,
         profile_version=profile_version,
         window_years=window_years,
         scope=scope,
+        twin_profile=twin_profile,
     )
 
     if not batch_row:
         return ProfileTwinNeighborsResponse(
             profile_version=profile_version,
             window_years=window_years,
-            algorithm_version=algorithm_version,
+            algorithm_version=PROFILE_TWIN_ALGORITHM,
             scope=scope,
             anchor_eupmyeondong_code=anchor,
             neighbors=[],
@@ -407,8 +402,8 @@ def get_profile_twin_neighbors(
     return ProfileTwinNeighborsResponse(
         profile_version=profile_version,
         window_years=resolved_window,
-        algorithm_version=resolved_algo,
-        scope=scope if resolved_algo in (6, 21) else None,
+        algorithm_version=PROFILE_TWIN_ALGORITHM,
+        scope=scope,
         as_of_month=as_of,
         batch_key=batch_key,
         anchor_eupmyeondong_code=anchor,
@@ -423,12 +418,10 @@ def get_profile_twin_sigungu(
     window_years: int = Query(3, ge=1, le=5),
     top_k: int = Query(5, ge=1, le=20),
     scope: str = Query("national", pattern="^(adjacent|region|national)$"),
-    algorithm_version: int = Query(
-        21, ge=7, le=21, description="21=profile-native v2.1, 7=hybrid_v2"
-    ),
+    twin_profile: str = Query("general", pattern="^(general|built_commercial)$"),
     db: Session = Depends(get_collective_db),
 ):
-    """쌍둥이 시군구 Top-k — profile-native(v21) 기본, hybrid_v2(v7) fallback."""
+    """쌍둥이 시군구 Top-k — Regional Profile 기반 Twin (algo 21)만."""
     if db is None:
         raise HTTPException(503, "collective_stats DB 미연결")
     if not _table_exists(db, "twin_region_neighbor_mvp"):
@@ -438,18 +431,13 @@ def get_profile_twin_sigungu(
     if len(anchor) < 5:
         raise HTTPException(400, "sigungu_code 5자리 필요")
 
-    algo_candidates = [algorithm_version]
-    for fallback in (21, 7):
-        if fallback not in algo_candidates:
-            algo_candidates.append(fallback)
-
-    batch_row, resolved_window, _resolved_algo = _resolve_twin_batch(
+    batch_row, resolved_window = _resolve_twin_batch(
         db,
         table="twin_region_neighbor_mvp",
-        algorithm_versions=algo_candidates,
         profile_version=profile_version,
         window_years=window_years,
         scope=scope,
+        twin_profile=twin_profile,
     )
 
     if not batch_row:
@@ -508,13 +496,16 @@ def get_profile_twin_beop(
     profile_version: str = Query("v2.1-national"),
     window_years: int = Query(3, ge=1, le=5),
     top_k: int = Query(3, ge=1, le=20),
-    algorithm_version: int = Query(21, ge=8, le=21, description="21=profile-native v2.1"),
+    twin_profile: str = Query("general", pattern="^(general|built_commercial)$"),
     db: Session = Depends(get_db),
     land_db: Session = Depends(get_db),
 ):
-    """쌍둥이 법정리 Top-k — profile-native(v21), 동일 시군구 후보만."""
+    """쌍둥이 법정리 Top-k — Regional Profile 기반 Twin (algo 21), 동일 시군구만."""
     if not _table_exists(db, "twin_neighbor_v8"):
-        raise HTTPException(404, "twin_neighbor_v8 없음 — build_twin_profile.py --region-level beopjungri 실행")
+        raise HTTPException(
+            404,
+            "twin_neighbor_v8 없음 — build_twin_profile.py --region-level beopjungri 실행",
+        )
 
     anchor = _canonical_profile_code(
         land_db, region_level="beopjungri", region_code=beopjungri_code
@@ -522,22 +513,18 @@ def get_profile_twin_beop(
     if len(anchor) < 10:
         raise HTTPException(400, "beopjungri_code 10자리 필요")
 
-    algo_candidates = [algorithm_version]
-    if 21 not in algo_candidates:
-        algo_candidates.append(21)
-
-    batch_row, resolved_window, resolved_algo = _resolve_beop_twin_batch(
+    batch_row, resolved_window = _resolve_beop_twin_batch(
         db,
-        algorithm_versions=algo_candidates,
         profile_version=profile_version,
         window_years=window_years,
+        twin_profile=twin_profile,
     )
 
     if not batch_row:
         return ProfileTwinNeighborsResponse(
             profile_version=profile_version,
             window_years=window_years,
-            algorithm_version=algorithm_version,
+            algorithm_version=PROFILE_TWIN_ALGORITHM,
             scope="same_sigungu",
             anchor_beopjungri_code=anchor,
             neighbors=[],
@@ -591,7 +578,7 @@ def get_profile_twin_beop(
     return ProfileTwinNeighborsResponse(
         profile_version=profile_version,
         window_years=resolved_window,
-        algorithm_version=resolved_algo,
+        algorithm_version=PROFILE_TWIN_ALGORITHM,
         scope="same_sigungu",
         as_of_month=as_of,
         batch_key=batch_key,

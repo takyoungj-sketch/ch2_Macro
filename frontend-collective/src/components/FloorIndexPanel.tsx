@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import clsx from "clsx";
 import { fetchBuildingFloorIndex, runCohortFloorIndex } from "../api/client";
 import type { AssetType } from "../types";
@@ -151,7 +152,10 @@ export default function FloorIndexPanel({
     return (
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-2">
-          <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200">층·동·면적 효용지수</p>
+          <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200 inline-flex items-center gap-1">
+            층·동·면적 효용지수
+            <StatsGlossaryHelp termId="floor_utility_index" size="xs" />
+          </p>
           <AnalysisHelpPanel explain={RESIDENTIAL_FLOOR_INDEX_HELP} />
         </div>
         <p className="text-xs text-slate-400 text-center py-4">효용지수 계산 중…</p>
@@ -165,7 +169,10 @@ export default function FloorIndexPanel({
     return (
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-2">
-          <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200">층·동·면적 효용지수</p>
+          <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200 inline-flex items-center gap-1">
+            층·동·면적 효용지수
+            <StatsGlossaryHelp termId="floor_utility_index" size="xs" />
+          </p>
           <AnalysisHelpPanel explain={RESIDENTIAL_FLOOR_INDEX_HELP} />
         </div>
         <p className="text-xs text-amber-700 text-center py-4">{String(msg)}</p>
@@ -194,7 +201,10 @@ export default function FloorIndexPanel({
   return (
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200">층·동·면적 효용지수</p>
+        <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200 inline-flex items-center gap-1">
+          층·동·면적 효용지수
+          <StatsGlossaryHelp termId="floor_utility_index" size="xs" />
+        </p>
         <AnalysisHelpPanel explain={explain ?? RESIDENTIAL_FLOOR_INDEX_HELP} />
       </div>
 

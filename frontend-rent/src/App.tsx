@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
-import DisplaySettingsControls from "@ch2/macro-shell/DisplaySettingsControls";
+import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
 import { StatsGlossaryHelp } from "@ch2/stats-glossary";
@@ -30,6 +30,7 @@ import SangkwonAnalysisModal, {
 import StatsWindowToggle, {
   type StatsWindowYears,
 } from "./components/StatsWindowToggle";
+import { useRentDeepLink } from "./hooks/useRentDeepLink";
 import {
   RENT_ASSET_KINDS,
   RENT_KIND_LABELS,
@@ -185,6 +186,18 @@ export default function App() {
     return filtered.map((o) => ({ ...o, id: `${o.parent ?? ""}|${o.name}` }));
   }, [hasIntermediate, flatLeafQ.data, leafQ.data, guList]);
 
+  useRentDeepLink({
+    addr1,
+    addr2,
+    addr1Options: addr1List,
+    addr2Options: addr2List.map((o) => o.name),
+    leafOptions,
+    setAddr1,
+    setAddr2,
+    setLeafList,
+    setGuList,
+  });
+
   useEffect(() => {
     const allowed = new Set(leafOptions.map((o) => o.name));
     setLeafList((prev) => prev.filter((n) => allowed.has(n)));
@@ -308,60 +321,16 @@ export default function App() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      <header className="border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 flex items-center justify-between shrink-0">
-        <div>
-          <p className="text-[10px] text-slate-500">
-            <a href="/" className="hover:underline">
-              CH2 Macro
-            </a>
-            <span className="mx-1">/</span>
-            임대
-          </p>
-          <h1 className="text-lg font-semibold">주거 전월세</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="rounded-md border border-indigo-300 px-2 py-1 text-xs font-semibold text-indigo-700 dark:border-indigo-700 dark:text-indigo-300"
-            onClick={() => {
-              setCompareTab("rates");
-              setShowCompare(true);
-            }}
-            disabled={!addr1}
-          >
-            4방안 비교
-          </button>
-          <button
-            type="button"
-            className="rounded-md border border-indigo-300 px-2 py-1 text-xs font-semibold text-indigo-700 dark:border-indigo-700 dark:text-indigo-300"
-            onClick={() => {
-              setCompareTab("validate");
-              setShowCompare(true);
-            }}
-          >
-            검증 결과
-          </button>
-          <button
-            type="button"
-            className="rounded-md border border-indigo-300 px-2 py-1 text-xs font-semibold text-indigo-700 dark:border-indigo-700 dark:text-indigo-300"
-            onClick={() => {
-              setCompareTab("rbdist");
-              setShowCompare(true);
-            }}
-          >
-            r_b 분포
-          </button>
-          <AiAssistantPanel context={aiContext} />
-          <DisplaySettingsControls
-            fontPct={fontPct}
-            fontStepMin={fontStepMin}
-            fontStepMax={fontStepMax}
-            onBump={bumpUiFontScale}
-            isDark={isDark}
-            onToggleTheme={toggleUiColorScheme}
-          />
-        </div>
-      </header>
+      <MacroStatsHeader
+        currentApp="rent"
+        title="임대시장"
+        fontPct={fontPct}
+        fontStepMin={fontStepMin}
+        fontStepMax={fontStepMax}
+        onBumpFont={bumpUiFontScale}
+        isDark={isDark}
+        onToggleTheme={toggleUiColorScheme}
+      />
 
       <div className="flex flex-1 min-h-0 overflow-hidden" style={{ zoom: contentZoom }}>
         <aside className="layout-sidebar p-4 space-y-3">
@@ -392,7 +361,6 @@ export default function App() {
               })}
             </div>
           </div>
-          <StatsWindowToggle value={windowYears} onChange={setWindowYears} />
           <label className="text-xs block space-y-1">
             <span className="text-slate-500">시도</span>
             <select
@@ -482,6 +450,7 @@ export default function App() {
               <option value="name">건물명</option>
             </select>
           </label>
+          <StatsWindowToggle value={windowYears} onChange={setWindowYears} />
           <button type="button" className="btn btn-primary w-full" disabled={!addr2} onClick={runAnalysis}>
             통계분석
           </button>
@@ -493,8 +462,46 @@ export default function App() {
           >
             상권분석
           </button>
+          <div className="grid grid-cols-3 gap-1">
+            <button
+              type="button"
+              className="rounded-md border border-indigo-300 px-1 py-1 text-[10px] font-semibold text-indigo-700 dark:border-indigo-700 dark:text-indigo-300"
+              onClick={() => {
+                setCompareTab("rates");
+                setShowCompare(true);
+              }}
+              disabled={!addr1}
+            >
+              4방안 비교
+            </button>
+            <button
+              type="button"
+              className="rounded-md border border-indigo-300 px-1 py-1 text-[10px] font-semibold text-indigo-700 dark:border-indigo-700 dark:text-indigo-300"
+              onClick={() => {
+                setCompareTab("validate");
+                setShowCompare(true);
+              }}
+            >
+              검증 결과
+            </button>
+            <button
+              type="button"
+              className="rounded-md border border-indigo-300 px-1 py-1 text-[10px] font-semibold text-indigo-700 dark:border-indigo-700 dark:text-indigo-300"
+              onClick={() => {
+                setCompareTab("rbdist");
+                setShowCompare(true);
+              }}
+            >
+              r_b 분포
+            </button>
+          </div>
           <p className="text-[10px] text-slate-400 leading-snug">
             목록은 건물 1행 · r 적용 환산 P50(만원/㎡). 전세/반전세/월세 원값·거래·회귀는 상세.
+            실험 모음은{" "}
+            <a className="underline" href="/lab/?tool=rent">
+              실험 랩
+            </a>
+            .
           </p>
           {addr2 && (
             <p className="text-[10px] text-slate-400 leading-snug">
@@ -530,7 +537,7 @@ export default function App() {
               }
               buildingCandidates={
                 scope && buildingsQ.data
-                  ? buildingsQ.data.items.slice(0, 80).map((row) => ({
+                  ? buildingsQ.data.items.slice(0, 100).map((row) => ({
                       buildingKey: row.building_key,
                       label: row.display_name,
                       jibunAddress: row.jibun_address || null,
@@ -602,16 +609,19 @@ export default function App() {
                       <span className="ml-2 text-amber-600">선택한 유형의 건물이 없음</span>
                     )}
                   </p>
-                  <label className="flex items-center gap-1.5 shrink-0">
-                    <span>검색</span>
-                    <input
-                      type="search"
-                      className="input py-1 w-48"
-                      placeholder="건물명·주소…"
-                      value={buildingSearch}
-                      onChange={(e) => setBuildingSearch(e.target.value)}
-                    />
-                  </label>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <AiAssistantPanel context={aiContext} />
+                    <label className="flex items-center gap-1.5">
+                      <span>검색</span>
+                      <input
+                        type="search"
+                        className="input py-1 w-48"
+                        placeholder="건물명·주소…"
+                        value={buildingSearch}
+                        onChange={(e) => setBuildingSearch(e.target.value)}
+                      />
+                    </label>
+                  </div>
                 </div>
                 {buildingsQ.data.total === 0 && (
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">

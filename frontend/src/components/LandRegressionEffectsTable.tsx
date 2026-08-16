@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import clsx from "clsx";
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import type { LandRegressionCoeff } from "../types";
 import {
   fmtDecimal,
@@ -58,10 +59,25 @@ export default function LandRegressionEffectsTable({
         <thead className="sticky top-0 z-10">
           <tr className="bg-slate-50 text-slate-600">
             <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">변수</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">계수</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">SE</th>
+            <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">
+              <span className="inline-flex items-center gap-0.5">
+                계수
+                <StatsGlossaryHelp termId="coefficient" size="xs" />
+              </span>
+            </th>
+            <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">
+              <span className="inline-flex items-center justify-end gap-0.5">
+                SE
+                <StatsGlossaryHelp termId="se" size="xs" />
+              </span>
+            </th>
             <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">t</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">p</th>
+            <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">
+              <span className="inline-flex items-center justify-end gap-0.5">
+                p
+                <StatsGlossaryHelp termId="p_value" size="xs" />
+              </span>
+            </th>
           </tr>
         </thead>
         <tbody className="text-slate-800">

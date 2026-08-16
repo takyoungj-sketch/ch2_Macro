@@ -1,6 +1,6 @@
 # 위험 요소 레지스터 (Risk Register)
 
-> 최종 업데이트: 2026-06-24  
+> 최종 업데이트: 2026-08-13  
 > AI 아키텍트 관점에서 현재 CH2_MACRO 구조의 **위험 요소**만 비판적으로 정리.  
 > 강점보다 **어디가 위험한가**에 집중.
 
@@ -200,6 +200,27 @@ D-001에 의해 2026-06-30 코드 제거 예정이지만 아직 존재. 운영 �
 
 ---
 
+## R-014 🟠 토지 원장 핫패스 `ANY` / 버킷 N회 조회로 UI 지연 재발
+
+**위치:** `backend/app/routers/free_v2.py`, `backend/app/routers/paid.py`, `backend/app/main.py`
+
+**설명:**  
+`beopjungri_code = ANY(:list)` 가 Parallel Seq Scan 을 유발하고, 롤링 모달이 버킷마다 원장을 재조회하면 단건 통계·셀 모달이 수 초~수십 초로 늘어난다 (2026-08-13 사고: stats ~20s, matrix-yearly ~45s).
+
+**현재 완화:**  
+- 공유 헬퍼 `ledger_region_sql.beopjungri_eq_or_in` / `execute_expanding`  
+- 롤링 `matrix_yearly` 1회 fetch + 메모리 버킷팅  
+- free v2 연도표 1회 + `FILTER`  
+- `/health` `reltuples`  
+- 문서 [`LAND_LEDGER_QUERY_PERF.md`](LAND_LEDGER_QUERY_PERF.md) · 규칙 `.cursor/rules/land-ledger-query-perf.mdc` · 테스트 `test_ledger_region_sql.py`
+
+**잔존 위험:**  
+새 엔드포인트·리팩터가 편의상 `ANY` 또는 버킷 루프 execute 를 다시 넣으면 재발.
+
+**권장 조치:** 원장 핫패스 변경 시 해당 테스트·문서 규칙 준수. `EXPLAIN` 으로 Index Scan 확인.
+
+---
+
 ## 요약 우선순위
 
 | 순위 | 위험 | 조치 시급성 |
@@ -207,7 +228,8 @@ D-001에 의해 2026-06-30 코드 제거 예정이지만 아직 존재. 운영 �
 | 1 | R-001 hash 충돌 재발 | 단위 테스트 즉시 |
 | 2 | R-002 base cache stale | dedupe 후 자동 clear 즉시 |
 | 3 | R-004 수동 갱신 SLA 위험 | 반자동화 단기 |
-| 4 | R-005 MOLIT 컬럼 변경 | 방어 코드 단기 |
-| 5 | R-006 Twin v8 전국 미완료 | 기능 완성 단기 |
-| 6 | R-003 단일 DB 장애 | 인프라 중기 |
-| 7 | R-008 region_codes 비동기 | 스크립트 중기 |
+| 4 | R-014 원장 핫패스 지연 재발 | 규칙·테스트 유지 (회귀 금지) |
+| 5 | R-005 MOLIT 컬럼 변경 | 방어 코드 단기 |
+| 6 | R-006 Twin v8 전국 미완료 | 기능 완성 단기 |
+| 7 | R-003 단일 DB 장애 | 인프라 중기 |
+| 8 | R-008 region_codes 비동기 | 스크립트 중기 |

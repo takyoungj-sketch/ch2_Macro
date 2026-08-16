@@ -854,6 +854,18 @@ export default function CollectiveRegionMapHub({
     }
 
     for (const point of buildingMapPointsQ.data?.points ?? []) {
+      const dot = document.createElement("span");
+      dot.className =
+        "absolute left-0 top-0 z-10 block h-2.5 w-2.5 rounded-full bg-amber-400 shadow ring-2 ring-white/90";
+      dot.style.willChange = "transform";
+      layer.appendChild(dot);
+      nodes.set(`building-dot:${point.building_key}`, {
+        el: dot,
+        lng: point.longitude,
+        lat: point.latitude,
+        minZoom: 11.5,
+      });
+
       const el = document.createElement("span");
       el.textContent = point.label;
       el.className =
@@ -1363,7 +1375,7 @@ export default function CollectiveRegionMapHub({
             경계 불러오는 중…
           </div>
         ) : null}
-        {placePending ? (
+        {placePending || buildingMapPointsQ.isFetching ? (
           <div className="absolute top-2 left-2 z-10 text-[11px] bg-white/90 px-2 py-1 rounded shadow">
             {commercial ? "도로 위치 찾는 중…" : "건물 위치 찾는 중…"}
           </div>

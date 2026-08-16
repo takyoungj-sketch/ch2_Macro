@@ -71,7 +71,8 @@ export default function RegionSearch({ onSelect, displayQuery }: Props) {
     staleTime: Infinity,
   });
 
-  const searchEnabled = debouncedSearch.length >= 2;
+  const searchEnabled =
+    debouncedSearch.length >= 2 && !isLooseMultiSegmentQuery(debouncedSearch);
   const { data: searchHits = [], isFetching: searchLoading } = useQuery({
     queryKey: ["region-search", debouncedSearch],
     queryFn: () => searchRegions(debouncedSearch),
@@ -87,18 +88,12 @@ export default function RegionSearch({ onSelect, displayQuery }: Props) {
 
   const flatSuggestions = useMemo((): RegionSearchFlatEntry[] => {
     if (looseResolve != null) {
-      if (looseResolve.codes.length <= 1) return [];
-      const map = new Map<string, (typeof catalog)[number]>();
-      for (const r of looseResolve.rows) {
-        const c = String(r.beopjungri_code ?? "").trim();
-        if (!c) continue;
-        if (!map.has(c)) map.set(c, r);
-      }
-      return [...map.values()]
-        .sort((a, b) =>
-          formatRegionHierarchyLabel(a).localeCompare(formatRegionHierarchyLabel(b), "ko-KR"),
-        )
-        .map((row) => ({ kind: "beopjungri" as const, row }));
+      if (looseResolve.codes.length === 0) return [];
+      return buildFlattenedRegionSuggestions(looseResolve.rows, debouncedSearch, {
+        maxSigungu: 50,
+        maxAgg: 40,
+        maxBeop: 400,
+      });
     }
     if (!searchEnabled) return [];
     return buildFlattenedRegionSuggestions(searchHits, debouncedSearch, {

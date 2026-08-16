@@ -641,68 +641,6 @@ class MatrixCellTransactionsResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# 쌍둥이 지역 (Twin Region) MVP — twin_region_neighbor_mvp
-# ---------------------------------------------------------------------------
-class TwinRegionLatestBatch(BaseModel):
-    """ twin_region_neighbor_mvp 최신 배치 메타. """
-
-    batch_key: str
-    computed_at: Optional[datetime] = None
-    algorithm_version: int = 1
-    sido_scope_codes: str
-    twin_row_count: int = 0
-
-
-class TwinNeighborItem(BaseModel):
-    rank: int
-    twin_sigungu_code: str
-    twin_sigungu_name: str
-    twin_sido_code: str
-    twin_sido_name: str
-    similarity_score: float
-    detail_scores: dict[str, Any] = Field(default_factory=dict)
-
-
-class TwinNeighborsForSigunguResponse(BaseModel):
-    batch_key: str
-    computed_at: Optional[datetime] = None
-    algorithm_version: int = 1
-    sido_scope_codes: str
-    anchor_sigungu_code: str
-    anchor_sigungu_name: str
-    anchor_sido_code: str
-    anchor_sido_name: str
-    neighbors: list[TwinNeighborItem] = []
-
-
-# twin_eupmyeondong_neighbor_mvp
-class TwinEupmyeondongNeighborItem(BaseModel):
-    rank: int
-    twin_eupmyeondong_code: str
-    twin_eupmyeondong_name: str
-    twin_sigungu_code: str
-    twin_sigungu_name: str
-    twin_sido_code: str
-    twin_sido_name: str
-    similarity_score: float
-    detail_scores: dict[str, Any] = Field(default_factory=dict)
-
-
-class TwinNeighborsForEupmyeondongResponse(BaseModel):
-    batch_key: str
-    computed_at: Optional[datetime] = None
-    algorithm_version: int = 4
-    sido_scope_codes: str
-    anchor_eupmyeondong_code: str
-    anchor_eupmyeondong_name: str
-    anchor_sigungu_code: str
-    anchor_sigungu_name: str
-    anchor_sido_code: str
-    anchor_sido_name: str
-    neighbors: list[TwinEupmyeondongNeighborItem] = []
-
-
-# ---------------------------------------------------------------------------
 # 토지 단가 회귀 분석 (매트릭스 칸 원거래 → 단가 헤도닉 OLS)
 # ---------------------------------------------------------------------------
 

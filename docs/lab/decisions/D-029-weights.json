@@ -1,0 +1,11 @@
+{
+  "id": "D-029-weights",
+  "topic": "Twin 가중치 인구 15 / 구성 35 / 토지 30 / 아파트 20",
+  "date": "2026-07-25",
+  "status": "experimental",
+  "background": "Profile Twin 벡터 가중은 코드 하드코딩 금지, YAML(profile_weight.yaml)이 SSOT다. D-029.",
+  "decision": "general 프로파일 가중을 pop 0.15 / mix 0.35 / land 0.30 / apt 0.20 으로 둔다. 최적값으로 검증된 수치가 아니다.",
+  "rationale": "시장 구성과 토지 신호를 가격보다 앞에 두기 위한 초기 배분. lift 실험으로 고른 값이 아님.",
+  "revisit": "Twin Lab에서 Local 대비 CV-MAPE가 가중 변경에 안정적으로 반응하면 YAML을 한 축씩 조정.",
+  "related": ["twin"]
+}

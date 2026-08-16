@@ -13,7 +13,7 @@
 | D-007 | 2026-05-16 | 배포 직후 노출 보호: 환경변수 **`API_TOKEN`** 을 두면 백엔드가 모든 요청에서 `X-Api-Token` 헤더를 검사한다(없으면 미들웨어는 비활성). 결제·로그인 도입 전 1단 보호. |
 | D-008 | 2026-05-16 | 갱신 절차의 단일 SOP 는 **`docs/V2_OPERATOR_CHECKLIST.md`** 1개. README/NEXT_STEPS 는 그쪽으로 포인터만 둔다. |
 | D-009 | 2026-05-19 | **상위 행정구역 사전집계 도입**: 법정동/리 외에 읍면동·시군구·시도 레벨도 사전집계(`land_upper_stats_v2`)를 구축한다. 단, **한자 병기 beopjungri_code 오류 해소 및 원장 재정제 완료 후** 구축 시작. 설계: `docs/UPPER_STATS_DESIGN.md`. |
-| D-010 | 2026-05-19 | **무료/유료 접근 경계 재정의**: 무료는 법정동/리 단건만. 유료는 단일 모든 레벨(법정동/리·읍면동·시군구·시도). 복수지역 실시간 집계는 유료에서 읍면동/동/리 최대 10개로 제한; 시군구·시도 복수지역 선택은 API·프론트에서 차단. |
+| D-010 | 2026-05-19 | **유료 복수지역 한도**: 유료는 단일 모든 레벨(법정동/리·읍면동·시군구·시도). 복수지역 실시간 집계는 읍면동/동/리 최대 10개; 시군구·시도 복수는 API·프론트에서 차단. ~~무료=법정동/리 단건~~ 은 **D-043에서 폐기**. |
 | D-011 | 2026-05-19 | **쌍둥이 지역 찾기** 유료 기능 설계 확정: 시군구·읍면동 레벨, 가격 통계·거래량·인구·토지 구성 피처 벡터, 가중 유클리드 거리. 상세 설계: `docs/UPPER_STATS_DESIGN.md` §8. |
 | D-012 | 2026-05-19 | **한자 병기·신설 분구 매핑 3단 방어** (`pipeline/clean.py`): ① 괄호 한자 정규화(`_normalize_admin_label`) + 리 주소 파싱(`_parse_address_structured`), ② 시도명 별칭(`전북특별자치도→전라북도` 등)·분구 토큰 drop(`화성시 만세구→화성시`) **fallback**, ③ **동명이리 한자 disambiguation** (정규화 이름이 같은 코드가 2 개 이상인 그룹에서 거래 원장의 괄호 한자와 `region_codes` 의 괄호 한자를 부분 포함 비교로 분기, `mapping_notes='disambiguated_hanja'`). 실측: ① + ② 로 `needs_review` 106,428 → 862 (-99.19%), ③ 으로 기암리·화산리 거래 241건 재분배. 적용 후 영향 단일 코드만 `land_basic_stats_v2` 재빌드 → `pipeline/remap_homonym_targets.py`. |
 | D-013 | 2026-05-30 | **장기 연도별 추세(v1)**: `land_annual_stats` 사전 집계 + 유료 **필터분석 매트릭스 모달**「장기 추세」탭. **복수 지역은 지역별 시리즈**를 한 차트에 표시. **평균 모드**에서는 거래수 가중 통합선(Σn·평균/Σn)을 추가로 표시; **중앙값 모드는 통합선 없음**. 도로·면적·IQR 등 고급 필터 **미적용**. 설계: `docs/LONG_TERM_TREND_DESIGN.md`. |
@@ -44,6 +44,10 @@
 | D-037 | 2026-08-07 | **Twin 2단계 사용자 opt-in**: `/recommend` 기본 stage1 only; `run_stage2=true` 또는 UI 「Twin pool 검토」클릭 시 2단계. |
 | D-038 | 2026-08-08 | **월간 integrity 검증 grain SSOT**: `verify_monthly_integrity.py` 의 V2 중복 검사 grain은 **DB UNIQUE constraint와 동일**해야 한다 (`col_axis` 등 분석 축 포함). category/group 등 **동일 mart 테이블 내 병행 축** 도입 시 검증 SQL·DDL을 함께 갱신. **`golden_monthly_integrity.json`** 의 `ledger_exact` 등 앵커는 정상적인 거래 추가·삭제 시 **해당 fixture만 명시적으로** 갱신(`--update-golden` 일괄 남용 금지). 2608 cycle: V2 183k false positive = 검증 SQL 누락, 비하동 보녹·답 2→3 = fixture stale. |
 | D-039 | 2026-08-09 | **2608 토지 Promote — 코드 배포와 DB 분리**: git push·`deploy-from-windows.ps1` 만으로는 **토지 7월 미반영**. 필수 순서 = (1) `run_land_cycle_csv.py --cycle-id 202608` 로 **원장 ingest + mart**, (2) `verify_monthly_integrity`, (3) **`land_stats` dump → VPS restore**, (4) `STATS_V2_DEFAULT_AS_OF_MONTH=2026-07-01`. mart-only 재빌드는 **원장에 7월 거래 없으면 무의미**. VPS Promote: PG18 custom dump는 PG16 `pg_restore` 불가 → PG18 bin 또는 `dump_land_for_promote.py` plain SQL.gz. SOP §9.4. |
+| D-040 | 2026-08-15 | **주거 전월세 전환율 연구 종료.** `r_selected = mean_simple` 확정. 서울 4방법+hold-out 후 산식 재실험·연립 전용식 금지. REB/5% 고정 아님. SSOT: [`RENT_CONVERSION_EXPERIMENT.md`](RENT_CONVERSION_EXPERIMENT.md). |
+| D-041 | 2026-08-16 | **Twin은 회귀 변수가 아니라 지역시장 비교 엔진.** Twin score를 회귀 X에 넣지 않음. Stage2 pool은 Local 대비 CV-MAPE가 ε 이상 개선될 때만 검토. 카드: [`lab/decisions/D-041.json`](lab/decisions/D-041.json). |
+| D-042 | 2026-08-16 | **지역 QA 검증 엔진.** 숫자는 SQL·생산 빌더가 만들고 LLM은 해석만. 관리자 수동·원장/마트 WRITE 금지. 카드: [`lab/decisions/D-042.json`](lab/decisions/D-042.json). 계획: [`QA_REGION_AUDIT_PLAN.md`](QA_REGION_AUDIT_PLAN.md). |
+| D-043 | 2026-08-16 | **무료/유료 5앱 통일.** 같은 UI·산식. 무료=어느 결이든 **지역 1곳·5년만**. 복수·AI·회귀/추천/Twin pool·CSV 없음. `?` 유지. 모달은 같은 껍데기, 유료 탭은 숨기지 않고 「유료」잠금. 랩은 관리자(유료 아님). 서버 강제. 토지 「무료=법정리」·무료 탭 **제거**. SSOT: [`CH2_ENTITLEMENT.md`](CH2_ENTITLEMENT.md). 카드: [`lab/decisions/D-043.json`](lab/decisions/D-043.json). |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 
@@ -91,14 +95,16 @@
 
 ## D-010 복수지역 제한 정책
 
-| 요청 레벨 | 무료 | 유료 |
-|-----------|------|------|
-| 법정동/리 (10자리) | 단건 1개 | 최대 10개 (실시간 집계) |
-| 읍면동 (8자리) | 불가 | 단건 1개 (사전집계) |
-| 시군구 (5자리) | 불가 | 단건 1개 (사전집계) |
-| 시도 (2자리) | 불가 | 단건 1개 (사전집계) |
+**유료 열만 유효.** 무료=법정동/리 단건은 D-043에서 폐기. 통일 무료는 [`CH2_ENTITLEMENT.md`](CH2_ENTITLEMENT.md) (어느 결이든 1곳·5년).
 
-- `_MAX_STATS_REGIONS`: 무료 1 / 유료 10 (법정동/리 한정).
+| 요청 레벨 | 유료 |
+|-----------|------|
+| 법정동/리 (10자리) | 최대 10개 (실시간 집계) |
+| 읍면동 (8자리) | 단건 1개 (사전집계) |
+| 시군구 (5자리) | 단건 1개 (사전집계) |
+| 시도 (2자리) | 단건 1개 (사전집계) |
+
+- `_MAX_STATS_REGIONS`: 유료 10 (법정동/리 한정).
 - 시군구·시도 복수 선택은 API 422로 차단 (프론트에서도 선택 자체 비활성화).
 
 ## D-012 한자 병기·신설 분구 매핑 3단 방어

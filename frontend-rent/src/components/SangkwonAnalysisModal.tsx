@@ -120,6 +120,7 @@ export default function SangkwonAnalysisModal({ scope, onClose, onAiContext }: P
         regionLabel,
         secNm: selected,
         year: annualQ.data.year,
+        windowLabel: annualQ.data.window_label,
         rows: annualQ.data.rows,
       }),
     );

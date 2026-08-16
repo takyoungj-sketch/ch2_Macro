@@ -1,0 +1,460 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "pilot-commercial-demo",
+  "asset_type": "commercial",
+  "period_years": 5,
+  "contract_year_from": 2019,
+  "contract_year_to": 2025,
+  "region_scope": "region",
+  "anchor_basin": "chungcheong",
+  "profile_version": "v2.1-national",
+  "window_years": 3,
+  "pool_variant": "top3_or_best",
+  "hit_threshold_rel": 0.05,
+  "versions": ["v0", "v1", "v2"],
+  "v1_twin_profile": "general",
+  "v2_twin_profile": "built_commercial",
+  "generated_at": "2026-08-11T15:00:00+00:00",
+  "source": "demo_seed",
+  "notes": "UI/API 스모크용 데모. 실측 벤치(--lab-out)로 교체하세요.",
+  "kpis": {
+    "v0": {
+      "n_regions": 8,
+      "median_cv_mape": 22.4,
+      "mean_cv_mape": 23.1,
+      "median_lift_rel": null,
+      "hit_rate": null,
+      "worsened_rate": null
+    },
+    "v1": {
+      "n_regions": 8,
+      "median_cv_mape": 20.1,
+      "mean_cv_mape": 20.8,
+      "median_lift_rel": 0.082,
+      "mean_lift_rel": 0.091,
+      "hit_rate": 0.625,
+      "worsened_rate": 0.25,
+      "hit_threshold_rel": 0.05
+    },
+    "v2": {
+      "n_regions": 8,
+      "median_cv_mape": 18.6,
+      "mean_cv_mape": 19.2,
+      "median_lift_rel": 0.145,
+      "mean_lift_rel": 0.152,
+      "hit_rate": 0.75,
+      "worsened_rate": 0.125,
+      "hit_threshold_rel": 0.05
+    }
+  },
+  "regions": [
+    {
+      "case_id": "okcheon_eup",
+      "region_code": "43730250",
+      "region_codes": ["43730250"],
+      "region_label": "옥천읍",
+      "admin_level": "eupmyeondong",
+      "role": "primary",
+      "sample_group": "pilot",
+      "winner": "v2",
+      "versions": {
+        "v0": {
+          "cv_mape": 28.4,
+          "n": 22,
+          "blocks": ["gross_area", "building_age", "road_code"],
+          "response_scale": "log",
+          "twins": []
+        },
+        "v1": {
+          "cv_mape": 24.1,
+          "delta_pp": 4.3,
+          "lift_rel": 0.1514,
+          "hit": true,
+          "n": 61,
+          "blocks": ["gross_area", "building_age", "land_area", "road_code"],
+          "response_scale": "log",
+          "twins": [
+            {"region_code": "43730253", "label": "이원면", "similarity": 0.81},
+            {"region_code": "43730310", "label": "안내면", "similarity": 0.77},
+            {"region_code": "43730320", "label": "청산면", "similarity": 0.74}
+          ],
+          "twin_profile": "general",
+          "stage2_ran": true
+        },
+        "v2": {
+          "cv_mape": 21.8,
+          "delta_pp": 6.6,
+          "lift_rel": 0.2324,
+          "hit": true,
+          "n": 58,
+          "blocks": ["gross_area", "building_age", "land_area"],
+          "response_scale": "log",
+          "twins": [
+            {"region_code": "43750250", "label": "진천읍", "similarity": 0.79},
+            {"region_code": "43730253", "label": "이원면", "similarity": 0.76},
+            {"region_code": "43720330", "label": "오송읍", "similarity": 0.72}
+          ],
+          "twin_profile": "built_commercial",
+          "stage2_ran": true
+        }
+      }
+    },
+    {
+      "case_id": "gakyung_eup",
+      "region_code": "43113113",
+      "region_codes": ["43113113"],
+      "region_label": "가경동",
+      "admin_level": "eupmyeondong",
+      "role": "primary",
+      "sample_group": "pilot",
+      "winner": "v2",
+      "versions": {
+        "v0": {
+          "cv_mape": 18.2,
+          "n": 86,
+          "blocks": ["gross_area", "land_area", "building_age", "zone_type_dummy"],
+          "response_scale": "log",
+          "twins": []
+        },
+        "v1": {
+          "cv_mape": 16.9,
+          "delta_pp": 1.3,
+          "lift_rel": 0.0714,
+          "hit": true,
+          "n": 140,
+          "blocks": ["gross_area", "land_area", "building_age", "road_code"],
+          "response_scale": "log",
+          "twins": [
+            {"region_code": "43112111", "label": "봉명동", "similarity": 0.88},
+            {"region_code": "43111101", "label": "상당동", "similarity": 0.84},
+            {"region_code": "43113114", "label": "복대동", "similarity": 0.81}
+          ],
+          "twin_profile": "general",
+          "stage2_ran": true
+        },
+        "v2": {
+          "cv_mape": 15.4,
+          "delta_pp": 2.8,
+          "lift_rel": 0.1538,
+          "hit": true,
+          "n": 132,
+          "blocks": ["gross_area", "land_area", "building_age", "building_use_dummy"],
+          "response_scale": "log",
+          "twins": [
+            {"region_code": "43112111", "label": "봉명동", "similarity": 0.91},
+            {"region_code": "43113114", "label": "복대동", "similarity": 0.86},
+            {"region_code": "30200131", "label": "유성 봉명동", "similarity": 0.71}
+          ],
+          "twin_profile": "built_commercial",
+          "stage2_ran": true
+        }
+      }
+    },
+    {
+      "case_id": "bongmyeong_eup",
+      "region_code": "43112111",
+      "region_codes": ["43112111"],
+      "region_label": "봉명동",
+      "admin_level": "eupmyeondong",
+      "role": "primary",
+      "sample_group": "pilot",
+      "winner": "v1",
+      "versions": {
+        "v0": {
+          "cv_mape": 16.5,
+          "n": 112,
+          "blocks": ["gross_area", "building_age", "road_code"],
+          "response_scale": "linear",
+          "twins": []
+        },
+        "v1": {
+          "cv_mape": 15.1,
+          "delta_pp": 1.4,
+          "lift_rel": 0.0848,
+          "hit": true,
+          "n": 190,
+          "blocks": ["gross_area", "building_age", "land_area", "road_code"],
+          "response_scale": "log",
+          "twins": [
+            {"region_code": "43113113", "label": "가경동", "similarity": 0.87},
+            {"region_code": "43111101", "label": "상당동", "similarity": 0.82},
+            {"region_code": "43113114", "label": "복대동", "similarity": 0.8}
+          ],
+          "twin_profile": "general",
+          "stage2_ran": true
+        },
+        "v2": {
+          "cv_mape": 15.8,
+          "delta_pp": 0.7,
+          "lift_rel": 0.0424,
+          "hit": false,
+          "n": 175,
+          "blocks": ["gross_area", "building_age", "land_area"],
+          "response_scale": "log",
+          "twins": [
+            {"region_code": "43113113", "label": "가경동", "similarity": 0.9},
+            {"region_code": "43111101", "label": "상당동", "similarity": 0.85},
+            {"region_code": "43720330", "label": "오송읍", "similarity": 0.68}
+          ],
+          "twin_profile": "built_commercial",
+          "stage2_ran": true
+        }
+      }
+    },
+    {
+      "case_id": "sangdang_eup",
+      "region_code": "43111101",
+      "region_codes": ["43111101"],
+      "region_label": "상당동",
+      "admin_level": "eupmyeondong",
+      "role": "primary",
+      "sample_group": "pilot",
+      "winner": "v2",
+      "versions": {
+        "v0": {
+          "cv_mape": 21.0,
+          "n": 64,
+          "blocks": ["gross_area", "land_area", "zone_type_dummy"],
+          "response_scale": "log",
+          "twins": []
+        },
+        "v1": {
+          "cv_mape": 20.2,
+          "delta_pp": 0.8,
+          "lift_rel": 0.0381,
+          "hit": false,
+          "n": 98,
+          "blocks": ["gross_area", "land_area", "building_age"],
+          "response_scale": "log",
+          "twins": [
+            {"region_code": "43112111", "label": "봉명동", "similarity": 0.83},
+            {"region_code": "43113113", "label": "가경동", "similarity": 0.8},
+            {"region_code": "43113114", "label": "복대동", "similarity": 0.78}
+          ],
+          "twin_profile": "general",
+          "stage2_ran": true
+        },
+        "v2": {
+          "cv_mape": 17.9,
+          "delta_pp": 3.1,
+          "lift_rel": 0.1476,
+          "hit": true,
+          "n": 105,
+          "blocks": ["gross_area", "land_area", "building_age", "road_code"],
+          "response_scale": "log",
+          "twins": [
+            {"region_code": "43112111", "label": "봉명동", "similarity": 0.86},
+            {"region_code": "43113113", "label": "가경동", "similarity": 0.84},
+            {"region_code": "43113114", "label": "복대동", "similarity": 0.79}
+          ],
+          "twin_profile": "built_commercial",
+          "stage2_ran": true
+        }
+      }
+    },
+    {
+      "case_id": "osong_eup",
+      "region_code": "43720330",
+      "region_codes": ["43720330"],
+      "region_label": "오송읍",
+      "admin_level": "eupmyeondong",
+      "role": "primary",
+      "sample_group": "pilot",
+      "winner": "v2",
+      "versions": {
+        "v0": {
+          "cv_mape": 24.6,
+          "n": 38,
+          "blocks": ["gross_area", "building_age"],
+          "response_scale": "log",
+          "twins": []
+        },
+        "v1": {
+          "cv_mape": 22.0,
+          "delta_pp": 2.6,
+          "lift_rel": 0.1057,
+          "hit": true,
+          "n": 72,
+          "blocks": ["gross_area", "building_age", "land_area"],
+          "response_scale": "log",
+          "twins": [
+            {"region_code": "43750250", "label": "진천읍", "similarity": 0.76},
+            {"region_code": "43730250", "label": "옥천읍", "similarity": 0.73},
+            {"region_code": "43730310", "label": "안내면", "similarity": 0.7}
+          ],
+          "twin_profile": "general",
+          "stage2_ran": true
+        },
+        "v2": {
+          "cv_mape": 20.4,
+          "delta_pp": 4.2,
+          "lift_rel": 0.1707,
+          "hit": true,
+          "n": 80,
+          "blocks": ["gross_area", "building_age", "land_area", "road_code"],
+          "response_scale": "log",
+          "twins": [
+            {"region_code": "43750250", "label": "진천읍", "similarity": 0.8},
+            {"region_code": "43113113", "label": "가경동", "similarity": 0.69},
+            {"region_code": "43730250", "label": "옥천읍", "similarity": 0.68}
+          ],
+          "twin_profile": "built_commercial",
+          "stage2_ran": true
+        }
+      }
+    },
+    {
+      "case_id": "jincheon_eup",
+      "region_code": "43750250",
+      "region_codes": ["43750250"],
+      "region_label": "진천읍",
+      "admin_level": "eupmyeondong",
+      "role": "control",
+      "sample_group": "pilot",
+      "winner": "v0",
+      "versions": {
+        "v0": {
+          "cv_mape": 19.8,
+          "n": 55,
+          "blocks": ["gross_area", "land_area", "building_age", "road_code"],
+          "response_scale": "log",
+          "twins": []
+        },
+        "v1": {
+          "cv_mape": 20.5,
+          "delta_pp": -0.7,
+          "lift_rel": -0.0354,
+          "hit": false,
+          "n": 90,
+          "blocks": ["gross_area", "land_area", "building_age"],
+          "response_scale": "log",
+          "twins": [
+            {"region_code": "43720330", "label": "오송읍", "similarity": 0.75},
+            {"region_code": "43730250", "label": "옥천읍", "similarity": 0.71},
+            {"region_code": "43113113", "label": "가경동", "similarity": 0.66}
+          ],
+          "twin_profile": "general",
+          "stage2_ran": true
+        },
+        "v2": {
+          "cv_mape": 19.9,
+          "delta_pp": -0.1,
+          "lift_rel": -0.0051,
+          "hit": false,
+          "n": 88,
+          "blocks": ["gross_area", "land_area", "building_age", "road_code"],
+          "response_scale": "log",
+          "twins": [
+            {"region_code": "43720330", "label": "오송읍", "similarity": 0.82},
+            {"region_code": "43730250", "label": "옥천읍", "similarity": 0.7},
+            {"region_code": "43112111", "label": "봉명동", "similarity": 0.65}
+          ],
+          "twin_profile": "built_commercial",
+          "stage2_ran": true
+        }
+      }
+    },
+    {
+      "case_id": "okcheon_maam_beop",
+      "region_code": "4373025034",
+      "region_codes": ["4373025034"],
+      "region_label": "옥천읍 마암리",
+      "admin_level": "beopjungri",
+      "role": "primary",
+      "sample_group": "pilot",
+      "winner": "v2",
+      "versions": {
+        "v0": {
+          "cv_mape": 31.2,
+          "n": 14,
+          "blocks": ["gross_area", "building_age"],
+          "response_scale": "log",
+          "twins": []
+        },
+        "v1": {
+          "cv_mape": 26.5,
+          "delta_pp": 4.7,
+          "lift_rel": 0.1506,
+          "hit": true,
+          "n": 40,
+          "blocks": ["gross_area", "building_age", "land_area"],
+          "response_scale": "log",
+          "twins": [
+            {"region_code": "4373025031", "label": "옥천읍 ○○리", "similarity": 0.78},
+            {"region_code": "4373025032", "label": "옥천읍 △△리", "similarity": 0.74},
+            {"region_code": "4373025035", "label": "옥천읍 □□리", "similarity": 0.71}
+          ],
+          "twin_profile": "general",
+          "stage2_ran": true
+        },
+        "v2": {
+          "cv_mape": 24.0,
+          "delta_pp": 7.2,
+          "lift_rel": 0.2308,
+          "hit": true,
+          "n": 42,
+          "blocks": ["gross_area", "building_age", "land_area", "road_code"],
+          "response_scale": "log",
+          "twins": [
+            {"region_code": "4373025031", "label": "옥천읍 ○○리", "similarity": 0.8},
+            {"region_code": "4373025035", "label": "옥천읍 □□리", "similarity": 0.76},
+            {"region_code": "4373025032", "label": "옥천읍 △△리", "similarity": 0.73}
+          ],
+          "twin_profile": "built_commercial",
+          "stage2_ran": true
+        }
+      }
+    },
+    {
+      "case_id": "daejeon_yuseong",
+      "region_code": "30200131",
+      "region_codes": ["30200131"],
+      "region_label": "유성구 봉명동",
+      "admin_level": "eupmyeondong",
+      "role": "control",
+      "sample_group": "pilot",
+      "winner": "v1",
+      "versions": {
+        "v0": {
+          "cv_mape": 17.4,
+          "n": 95,
+          "blocks": ["gross_area", "land_area", "building_age", "zone_type_dummy"],
+          "response_scale": "log",
+          "twins": []
+        },
+        "v1": {
+          "cv_mape": 16.8,
+          "delta_pp": 0.6,
+          "lift_rel": 0.0345,
+          "hit": false,
+          "n": 150,
+          "blocks": ["gross_area", "land_area", "building_age", "road_code"],
+          "response_scale": "log",
+          "twins": [
+            {"region_code": "43112111", "label": "청주 봉명동", "similarity": 0.72},
+            {"region_code": "43113113", "label": "가경동", "similarity": 0.7},
+            {"region_code": "43111101", "label": "상당동", "similarity": 0.68}
+          ],
+          "twin_profile": "general",
+          "stage2_ran": true
+        },
+        "v2": {
+          "cv_mape": 17.1,
+          "delta_pp": 0.3,
+          "lift_rel": 0.0172,
+          "hit": false,
+          "n": 148,
+          "blocks": ["gross_area", "land_area", "building_age"],
+          "response_scale": "log",
+          "twins": [
+            {"region_code": "43112111", "label": "청주 봉명동", "similarity": 0.77},
+            {"region_code": "43113113", "label": "가경동", "similarity": 0.74},
+            {"region_code": "43111101", "label": "상당동", "similarity": 0.7}
+          ],
+          "twin_profile": "built_commercial",
+          "stage2_ran": true
+        }
+      }
+    }
+  ]
+}

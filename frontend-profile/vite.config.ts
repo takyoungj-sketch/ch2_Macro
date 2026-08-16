@@ -10,6 +10,7 @@ export default defineConfig({
     alias: {
       "@ch2/macro-shell": path.resolve(__dirname, "../shared/macro-shell"),
       "@ch2/region-picker": path.resolve(__dirname, "../shared/region-picker"),
+      "@ch2/stats-glossary": path.resolve(__dirname, "../shared/stats-glossary"),
     },
   },
   server: {

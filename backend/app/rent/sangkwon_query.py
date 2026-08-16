@@ -14,6 +14,8 @@ from app.rent.sangkwon_agg import (
     METRIC_GROUPS,
     SERIES_METRICS,
     annual_value,
+    format_window_label,
+    rolling_quarter_window,
 )
 
 
@@ -105,31 +107,9 @@ def fetch_quarterly(
     )
 
 
-def annual_table(
-    conn: Connection,
-    *,
-    sec_nm: str,
-    year: Optional[int] = None,
-) -> dict[str, Any]:
-    meta = import_meta(conn)
-    if meta is None:
-        return {"year": None, "sec_nm": sec_nm, "sido": "", "rows": [], "source_file": ""}
-    y = year or meta.get("latest_year")
-    rows = fetch_quarterly(
-        conn,
-        sec_nm=sec_nm,
-        metrics=MAIN_METRICS,
-        from_year=int(y),
-        include_hidden_bands=False,
-    )
-    rows = [r for r in rows if int(r["year"]) == int(y)]
-    sido = str(rows[0]["sido"]) if rows else ""
-    grouped: dict[tuple, dict[int, Optional[float]]] = defaultdict(dict)
-    for r in rows:
-        key = (r["asset_kind"], r["metric"])
-        grouped[key][int(r["quarter"])] = (
-            float(r["value"]) if r["value"] is not None else None
-        )
+def _table_rows(
+    grouped: dict[tuple, dict[int, Optional[float]]],
+) -> list[dict[str, Any]]:
     out_rows = []
     for group_id, group_label, metrics in METRIC_GROUPS:
         for metric in metrics:
@@ -144,14 +124,104 @@ def annual_table(
                     "values": cells,
                 }
             )
+    return out_rows
+
+
+def annual_table(
+    conn: Connection,
+    *,
+    sec_nm: str,
+    year: Optional[int] = None,
+) -> dict[str, Any]:
+    """기본은 최신 분기 기준 4분기(1년) 롤링. year를 주면 그 해 달력 연간(추세와 동일 식)."""
+    meta = import_meta(conn)
+    empty = {
+        "year": None,
+        "sec_nm": sec_nm,
+        "sido": "",
+        "rows": [],
+        "source_file": "",
+        "window_label": "",
+        "window_mode": "rolling_4q",
+        "window_start_year": None,
+        "window_start_quarter": None,
+        "window_end_year": None,
+        "window_end_quarter": None,
+    }
+    if meta is None:
+        return empty
+
+    if year is not None:
+        y = int(year)
+        rows = fetch_quarterly(
+            conn,
+            sec_nm=sec_nm,
+            metrics=MAIN_METRICS,
+            from_year=y,
+            include_hidden_bands=False,
+        )
+        rows = [r for r in rows if int(r["year"]) == y]
+        sido = str(rows[0]["sido"]) if rows else ""
+        grouped: dict[tuple, dict[int, Optional[float]]] = defaultdict(dict)
+        for r in rows:
+            key = (r["asset_kind"], r["metric"])
+            grouped[key][int(r["quarter"])] = (
+                float(r["value"]) if r["value"] is not None else None
+            )
+        return {
+            "year": y,
+            "sec_nm": sec_nm,
+            "sido": sido,
+            "rows": _table_rows(grouped),
+            "source_file": meta.get("source_file") or "",
+            "latest_year": meta.get("latest_year"),
+            "latest_quarter": meta.get("latest_quarter"),
+            "window_label": f"{y}년 연간",
+            "window_mode": "calendar_year",
+            "window_start_year": y,
+            "window_start_quarter": 1,
+            "window_end_year": y,
+            "window_end_quarter": 4,
+        }
+
+    ey = meta.get("latest_year")
+    eq = meta.get("latest_quarter")
+    if ey is None or eq is None:
+        return {**empty, "source_file": meta.get("source_file") or ""}
+    window = rolling_quarter_window(int(ey), int(eq))
+    wanted = set(window)
+    rows = fetch_quarterly(
+        conn,
+        sec_nm=sec_nm,
+        metrics=MAIN_METRICS,
+        from_year=window[0][0],
+        include_hidden_bands=False,
+    )
+    rows = [r for r in rows if (int(r["year"]), int(r["quarter"])) in wanted]
+    sido = str(rows[0]["sido"]) if rows else ""
+    raw: dict[tuple, dict[tuple[int, int], Optional[float]]] = defaultdict(dict)
+    for r in rows:
+        raw[(r["asset_kind"], r["metric"])][(int(r["year"]), int(r["quarter"]))] = (
+            float(r["value"]) if r["value"] is not None else None
+        )
+    grouped = {}
+    for key, yq in raw.items():
+        grouped[key] = {i + 1: yq.get(window[i]) for i in range(len(window))}
+    label = format_window_label(window)
     return {
-        "year": int(y) if y else None,
+        "year": int(ey),
         "sec_nm": sec_nm,
         "sido": sido,
-        "rows": out_rows,
+        "rows": _table_rows(grouped),
         "source_file": meta.get("source_file") or "",
-        "latest_year": meta.get("latest_year"),
-        "latest_quarter": meta.get("latest_quarter"),
+        "latest_year": int(ey),
+        "latest_quarter": int(eq),
+        "window_label": label,
+        "window_mode": "rolling_4q",
+        "window_start_year": window[0][0],
+        "window_start_quarter": window[0][1],
+        "window_end_year": window[-1][0],
+        "window_end_quarter": window[-1][1],
     }
 
 

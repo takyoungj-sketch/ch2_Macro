@@ -93,3 +93,20 @@ def test_similarity_different_dominant_market_lower():
     same = compute_similarity(a, a, catalog=cat)
     diff = compute_similarity(a, b, catalog=cat)
     assert diff.similarity < same.similarity
+
+
+def test_factory_profile_weight_uses_factory_p50_block():
+    from profile_twin.weight import load_twin_weights
+
+    cat = load_twin_catalog()
+    feats = _sample_features()
+    feats["market_presence"] = {"공장": 1, "토지": 1}
+    feats["factory_count"] = 20
+    feats["factory_median"] = 180.0
+    feats["dominant_type"] = "공장"
+    a = project_profile(feats, region_level="eupmyeondong", region_code="A", catalog=cat)
+    assert a.mask("factory_p50") == 1.0
+    w = load_twin_weights(twin_profile="built_factory")
+    result = compute_similarity(a, a, catalog=cat, weights=w)
+    assert "factory_profile" in result.block_scores
+    assert result.block_scores["factory_profile"] > 0.9

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "./headerToolbar.css";
 import DisplaySettingsControls from "./DisplaySettingsControls";
 import MacroProfileNavLink from "./MacroProfileNavLink";
+import MacroRentNavLink from "./MacroRentNavLink";
 import MacroTypeNav, { type MacroAppKind } from "./MacroTypeNav";
 
 type Props = {
@@ -49,6 +50,7 @@ export default function MacroStatsHeader({
           <div className="macro-header-nav-cluster">
             <MacroProfileNavLink active={profileActive} />
             <MacroTypeNav current={currentApp} />
+            <MacroRentNavLink active={currentApp === "rent"} />
           </div>
           <DisplaySettingsControls
             fontPct={fontPct}

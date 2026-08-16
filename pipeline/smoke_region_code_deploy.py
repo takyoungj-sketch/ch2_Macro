@@ -314,13 +314,14 @@ def _run_profile(report: SmokeReport, base: str, token: str | None) -> None:
         report.add(name, "pass", f"features={meta.get('feature_count')}")
 
 
-def _run_twin_v8(report: SmokeReport, base: str, token: str | None) -> None:
-    name = "twin-v8.neighbors(beop canon)"
+def _run_profile_twins(report: SmokeReport, base: str, token: str | None) -> None:
+    """Regional Profile Twin (algo 21) only."""
+    name = "regional-profile.twins-beop(canon)"
     status, data = _get_json(
         base,
-        f"/api/twin-v8/neighbors/beopjungri/{CANON_RI}",
+        f"/api/regional-profile/twins-beop/{CANON_RI}",
         token=token,
-        params={"top_k": 3},
+        params={"top_k": 3, "profile_version": "v2.1-national", "window_years": 3},
     )
     if status == 404:
         report.add(name, "skip", "no twin batch/anchor")
@@ -331,36 +332,32 @@ def _run_twin_v8(report: SmokeReport, base: str, token: str | None) -> None:
     codes: list[str] = []
     _collect_codes(data, codes)
     err = _assert_no_historical(codes, context=name)
-    anchor = ((data or {}).get("anchor") or {}).get("region_code")
-    if anchor and anchor != CANON_RI:
-        report.add(name, "fail", f"anchor.region_code={anchor}")
+    algo = (data or {}).get("algorithm_version")
+    if algo not in (None, 21):
+        report.add(name, "fail", f"algorithm_version={algo}")
     elif err:
         report.add(name, "fail", err)
     else:
         n = len((data or {}).get("neighbors") or [])
         report.add(name, "pass", f"neighbors={n}")
 
-
-def _run_twin_regions(report: SmokeReport, base: str, token: str | None) -> None:
-    name = "twin-regions.eupmyeondong(canon)"
-    # stable anchor — 청주 가경동
-    anchor = "43113113"
+    name_eup = "regional-profile.twins-eup(canon)"
     status, data = _get_json(
         base,
-        f"/api/twin-regions/eupmyeondong/{anchor}/neighbors",
+        f"/api/regional-profile/twins/{CANON_EUP}",
         token=token,
-        params={"top_k": 3},
+        params={"top_k": 3, "profile_version": "v2.1-national", "window_years": 3},
     )
     if status == 404:
-        report.add(name, "skip", "no eup twin batch")
+        report.add(name_eup, "skip", "no eup twin batch")
         return
     if status != 200:
-        report.add(name, "fail", f"HTTP {status}: {data}")
+        report.add(name_eup, "fail", f"HTTP {status}: {data}")
         return
-    codes: list[str] = []
+    codes = []
     _collect_codes(data, codes)
-    err = _assert_no_historical(codes, context=name)
-    report.add(name, "pass" if not err else "fail", err or "OK")
+    err = _assert_no_historical(codes, context=name_eup)
+    report.add(name_eup, "pass" if not err else "fail", err or "OK")
 
 
 def _run_map_config(report: SmokeReport, base: str, token: str | None) -> None:
@@ -426,8 +423,7 @@ def main() -> int:
     _run_built_scope(report, report.base_url, token)
     _run_collective_resolve(report, report.base_url, token)
     _run_profile(report, report.base_url, token)
-    _run_twin_v8(report, report.base_url, token)
-    _run_twin_regions(report, report.base_url, token)
+    _run_profile_twins(report, report.base_url, token)
     _run_map_config(report, report.base_url, token)
     _run_region_search(report, report.base_url, token)
 

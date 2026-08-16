@@ -117,6 +117,14 @@ table.data th {
   html.dark .bg-amber-50 {
     background-color: rgb(69 26 3);
   }
+  html.dark .bg-amber-50\/80,
+  html.dark .bg-amber-50\/90 {
+    background-color: rgb(69 26 3 / 0.85);
+  }
+  html.dark .bg-slate-50\/50,
+  html.dark .bg-slate-50\/80 {
+    background-color: rgb(15 23 42 / 0.55);
+  }
   html.dark .bg-red-50 {
     background-color: rgb(69 10 10);
   }

@@ -71,7 +71,7 @@ def _land_top_block_score(a: TwinVector, b: TwinVector) -> tuple[float, str]:
     return float(max(0.0, min(1.0, score))), note
 
 
-def _apartment_block_score(a: TwinVector, b: TwinVector) -> tuple[float, str]:
+def _apartment_block_score(a: TwinVector, b: TwinVector) -> tuple[float, str, bool]:
     specs = ("apt_p25", "apt_p50", "apt_p75")
     sims: list[float] = []
     for key in specs:
@@ -88,9 +88,43 @@ def _apartment_block_score(a: TwinVector, b: TwinVector) -> tuple[float, str]:
         if s > 0:
             sims.append(s)
     if not sims:
-        return 0.0, "아파트 분위 mask=0 또는 데이터 없음"
+        return 0.0, "아파트 분위 mask=0 또는 데이터 없음", True
     avg = sum(sims) / len(sims)
-    return avg, f"아파트 ㎡당 분위 sim {avg:.2f} (n={len(sims)})"
+    return avg, f"아파트 ㎡당 분위 sim {avg:.2f} (n={len(sims)})", False
+
+
+def _market_p50_block_score(
+    a: TwinVector,
+    b: TwinVector,
+    *,
+    key: str,
+    label_ko: str,
+) -> tuple[float, str, bool]:
+    if a.mask(key) <= 0 or b.mask(key) <= 0:
+        return 0.0, f"{label_ko} 분위 mask=0 또는 데이터 없음", True
+    va = a.values.get(key)
+    vb = b.values.get(key)
+    try:
+        fa = float(va) if va is not None else None
+        fb = float(vb) if vb is not None else None
+    except (TypeError, ValueError):
+        return 0.0, f"{label_ko} P50 변환 실패", True
+    s = log_price_similarity(fa, fb)
+    if s <= 0:
+        return 0.0, f"{label_ko} P50 sim=0", True
+    return s, f"{label_ko} ㎡당 P50 sim {s:.2f}", False
+
+
+def _commercial_block_score(a: TwinVector, b: TwinVector) -> tuple[float, str, bool]:
+    return _market_p50_block_score(a, b, key="commercial_p50", label_ko="상가")
+
+
+def _factory_block_score(a: TwinVector, b: TwinVector) -> tuple[float, str, bool]:
+    return _market_p50_block_score(a, b, key="factory_p50", label_ko="공장")
+
+
+def _detached_block_score(a: TwinVector, b: TwinVector) -> tuple[float, str, bool]:
+    return _market_p50_block_score(a, b, key="detached_p50", label_ko="단독")
 
 
 def compute_similarity(
@@ -150,19 +184,46 @@ def compute_similarity(
 
     # apartment_profile
     apt_w = wts.blocks.get("apartment_profile", 0.0)
-    apt_score, apt_note = _apartment_block_score(anchor, twin)
-    apt_masked = apt_score <= 0
+    apt_score, apt_note, apt_masked = _apartment_block_score(anchor, twin)
     block_scores["apartment_profile"] = apt_score
     detail["apartment_profile"] = FeatureScoreDetail(
         score=apt_score, weight=apt_w, masked=apt_masked, note=apt_note
     )
 
-    block_weight_sum = sum(wts.blocks.get(b, 0.0) for b in block_scores)
+    # commercial / factory / detached market price blocks (weight>0일 때만)
+    market_block_masked: dict[str, bool] = {}
+    for block_name, weight_key, scorer in (
+        ("commercial_profile", "commercial_profile", _commercial_block_score),
+        ("factory_profile", "factory_profile", _factory_block_score),
+        ("detached_profile", "detached_profile", _detached_block_score),
+    ):
+        bw = wts.blocks.get(weight_key, 0.0)
+        if bw <= 0:
+            continue
+        score, note, masked = scorer(anchor, twin)
+        block_scores[block_name] = score
+        market_block_masked[block_name] = masked
+        detail[block_name] = FeatureScoreDetail(
+            score=score, weight=bw, masked=masked, note=note
+        )
+
+    effective_weights: dict[str, float] = {}
+    for block in block_scores:
+        weight = wts.blocks.get(block, 0.0)
+        if block == "apartment_profile" and apt_masked:
+            weight = 0.0
+        if market_block_masked.get(block):
+            weight = 0.0
+        effective_weights[block] = weight
+
+    block_weight_sum = sum(effective_weights.values())
     if block_weight_sum <= 0:
-        block_weight_sum = 1.0
+        block_weight_sum = sum(wts.blocks.get(b, 0.0) for b in block_scores) or 1.0
+        effective_weights = {b: wts.blocks.get(b, 0.0) for b in block_scores}
 
     weighted = sum(
-        block_scores[b] * (wts.blocks.get(b, 0.0) / block_weight_sum) for b in block_scores
+        block_scores[b] * (effective_weights.get(b, 0.0) / block_weight_sum)
+        for b in block_scores
     )
 
     # represent_market bonus/penalty

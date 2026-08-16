@@ -640,10 +640,6 @@ export default function RegionMapHub({
     (point: { x: number; y: number }, eventFeature?: GeoJSON.Feature | null) => {
       setContextMenu(null);
 
-      if (viewMode === "free") {
-        setMapError("인접 지역 추가는 유료 분석 탭에서만 가능합니다.");
-        return;
-      }
       if (!mapScope.level || !geojson) return;
 
       // 시·도·시군구는 복수 선택 불가 — 인접 추가 UX 차단
@@ -724,7 +720,6 @@ export default function RegionMapHub({
       neighborSelectableSet,
       selectedCanonSet,
       selectedSet,
-      viewMode,
     ],
   );
 

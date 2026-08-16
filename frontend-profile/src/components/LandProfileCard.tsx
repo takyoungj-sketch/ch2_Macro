@@ -1,18 +1,30 @@
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import type { JimokGroupTop3Item, LandTopItem, RegionalProfileFeatures } from "../types";
+import { deepLinkTo } from "../utils/deepLinks";
 import { formatInt, formatPercent, formatUnitPrice } from "../utils/format";
 import { jimokGroupTop3Items, landTopItems } from "../utils/profileFeatures";
 
 interface Props {
   features: RegionalProfileFeatures;
+  regionLevel: string;
+  regionCode: string;
 }
 
-export default function LandProfileCard({ features }: Props) {
+export default function LandProfileCard({ features, regionLevel, regionCode }: Props) {
   const zoneJimokTops = landTopItems(features);
   const jimokOnlyTops = jimokGroupTop3Items(features);
 
   return (
     <div className="card p-5">
-      <h2 className="text-lg font-semibold">토지 거래 구조 (최근 3년)</h2>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold">토지 거래 구조 (최근 3년)</h2>
+          <StatsGlossaryHelp termId="land_top3" size="sm" />
+        </div>
+        <a href={deepLinkTo("land", { regionLevel, regionCode })} className="btn btn-primary text-xs">
+          토지 상세분석 →
+        </a>
+      </div>
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
         용도×지목군 거래건수 Top 3 · 쌍둥이 도시 비교 지표 (D-029)
       </p>

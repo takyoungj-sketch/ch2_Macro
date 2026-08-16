@@ -42,7 +42,7 @@
 ② Macro 예측형 (인라인 카드)
    · 「Macro 예측형 탐색」 버튼 — 사용자가 클릭 시 recommend API
    · CV-MAPE 1위 후보·예측형 랭킹·만족 등급
-   · (선택) 「쌍둥이 지역 추가 검토」→ stage2 Twin
+   · (선택) 「쌍둥이 지역 추가 검토」→ stage2 Twin (유사 지역 거래를 더해 **모형 재탐색**)
 
 ③ Macro 설명형 (인라인 카드)
    · 「Macro 설명형 탐색」 버튼 — ②와 **독립** (순서 강제 없음)
@@ -84,7 +84,9 @@
 
 - **② 예측형 카드**에만 「쌍둥이 지역 추가 검토」 노출
 - Macro `conclusion.twin_recommended` 일 때 안내; **자동 pool 적용 금지**
-- 사용자 클릭 → `run_stage2: true` 재요청 → pool별 CV-MAPE 비교·「이 pool로 분석」
+- 사용자 클릭 → `run_stage2: true` 재요청 → pool별 **재탐색 변수·CV-MAPE** · 「이 pool로 분석」
+- pool 채택 시 해당 pool의 **변수·response_scale·region_codes**가 `/run`에 반영
+- gate/validation 탈락은 decision_reason 한 줄로만 요약 (선택)
 - ③ 설명형은 Twin 결과 **요약 참조**만 (pool UI 중복 없음)
 
 ### 3.4 ④ 상위 지역
@@ -155,8 +157,8 @@ frontend-built/src/components/
 | ② 부제 | CV-MAPE 기준 — SSOT 변수 풀에서 최적 조합 탐색 |
 | ③ 제목 | Macro 설명형 |
 | ③ 부제 | AIC 기준 — 계수 해석·설명력 중심 |
-| Twin CTA | 쌍둥이 지역 추가 검토 |
-| Twin 설명 | 표본 확대 참고용 — pool 채택은 사용자 결정 |
+| Twin CTA | 유사 지역 거래를 더해 모형을 다시 찾습니다 |
+| Twin 설명 | 표본 확대 후 최종 모형 제안 — pool 채택은 사용자 결정 |
 | ④ 제목 | 상위 지역 분석 |
 | ④ 부제 | 분석 초점 vs 상위 행정 scope — 참고용 |
 

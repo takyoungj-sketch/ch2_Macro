@@ -1,5 +1,6 @@
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import type { RegionNameInfo, YearlyMix } from "../types";
-import { cityFullLabel, cityShortLabel } from "@ch2/region-picker";
+import { cityFullLabel, cityShortLabel, isSejongPseudoSigunguCode, isSejongRegionRow } from "@ch2/region-picker";
 import { formatAmountManwon, formatInt, formatPercent } from "../utils/format";
 import { sidoName } from "../utils/sido";
 
@@ -15,10 +16,17 @@ function fullAddressLabel(regionLevel: string, regionCode: string, name: RegionN
   if (regionLevel === "sido") return sidoName(regionCode);
   if (regionLevel === "city") return cityFullLabel(name, regionCode);
   if (!name) return regionCode;
-  if (regionLevel === "sigungu") return `${name.sido_name} ${name.sigungu_name}`;
+  if (regionLevel === "sigungu") {
+    if (isSejongPseudoSigunguCode(regionCode)) return `${name.sido_name || "세종특별자치시"} 전체`;
+    return `${name.sido_name} ${name.sigungu_name}`;
+  }
   if (regionLevel === "beopjungri") {
+    if (isSejongRegionRow(name)) {
+      return `${name.sido_name} ${name.sigungu_name} ${name.beopjungri_name}`;
+    }
     return `${name.sido_name} ${name.sigungu_name} ${name.eupmyeondong_name} ${name.beopjungri_name}`;
   }
+  if (isSejongRegionRow(name)) return `${name.sido_name} ${name.sigungu_name}`;
   return `${name.sido_name} ${name.sigungu_name} ${name.eupmyeondong_name}`;
 }
 
@@ -26,8 +34,12 @@ function shortLabel(regionLevel: string, regionCode: string, name: RegionNameInf
   if (regionLevel === "sido") return sidoName(regionCode);
   if (regionLevel === "city") return cityShortLabel(name, regionCode);
   if (!name) return regionCode;
-  if (regionLevel === "sigungu") return name.sigungu_name;
+  if (regionLevel === "sigungu") {
+    if (isSejongPseudoSigunguCode(regionCode)) return `${name.sido_name || "세종특별자치시"} 전체`;
+    return name.sigungu_name;
+  }
   if (regionLevel === "beopjungri") return name.beopjungri_name;
+  if (isSejongRegionRow(name)) return name.sigungu_name;
   return name.eupmyeondong_name;
 }
 
@@ -40,7 +52,10 @@ export default function IdentityHeader({ regionLevel, regionCode, regionName, po
   return (
     <div className="card p-5">
       <div className="text-xs text-slate-500 dark:text-slate-400">{address}</div>
-      <h1 className="mt-1 text-2xl font-bold">{title} 지역 프로필</h1>
+      <div className="mt-1 flex items-center gap-2">
+        <h1 className="text-2xl font-bold">{title} 지역 프로필</h1>
+        <StatsGlossaryHelp termId="regional_profile" size="sm" />
+      </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatBox label="인구" value={population ? `${formatInt(population)}명` : "-"} />

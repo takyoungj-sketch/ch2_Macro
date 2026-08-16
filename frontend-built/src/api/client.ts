@@ -306,18 +306,26 @@ export async function predictRegression(body: RegressionPredictRequest) {
   return data;
 }
 
-/**
- * Regional Profile-native Twin(v21) 이웃 조회 — 모형추천의 Twin 후보 제안용.
- * 과거 `/api/twin-regions/*`(v8, 충북 중심)와는 다른 최신 Profile 연동 Twin이다.
- */
+/** Regional Profile Twin(algo 21) 이웃 — 모형추천 Twin 후보용. */
 export async function fetchProfileTwinNeighbors(
   level: "eupmyeondong" | "beopjungri",
   code: string,
-  opts?: { topK?: number },
+  opts?: { topK?: number; twinProfile?: "general" | "built_commercial" },
 ): Promise<ProfileTwinNeighborsResponse> {
   const path = level === "beopjungri" ? `/regional-profile/twins-beop/${code}` : `/regional-profile/twins/${code}`;
   const { data } = await profileApi.get<ProfileTwinNeighborsResponse>(path, {
-    params: { top_k: opts?.topK ?? 5 },
+    params: {
+      top_k: opts?.topK ?? 5,
+      twin_profile: opts?.twinProfile ?? "general",
+    },
   });
   return data;
+}
+
+export function twinProfileForBuiltAsset(assetType: string): "general" | "built_commercial" {
+  const normalized = String(assetType || "").toLowerCase();
+  if (normalized === "commercial" || normalized.includes("commercial")) {
+    return "built_commercial";
+  }
+  return "general";
 }

@@ -46,11 +46,13 @@ export default function ConversionComparePanel({
   assetKinds,
   initialTab = "rates",
   onClose,
+  layout = "modal",
 }: {
   addr1: string;
   assetKinds: RentAssetType[];
   initialTab?: "rates" | "validate" | "rbdist";
   onClose: () => void;
+  layout?: "modal" | "page";
 }) {
   const [tab, setTab] = useState<"rates" | "validate" | "rbdist">(initialTab);
   const [windowFilter, setWindowFilter] = useState<StatsWindowYears | 0>(0);
@@ -80,9 +82,15 @@ export default function ConversionComparePanel({
     return all.filter((r) => r.window_years === windowFilter);
   }, [compareQ.data, windowFilter]);
 
+  const shell =
+    layout === "page"
+      ? "w-full max-w-6xl mx-auto p-4 space-y-3"
+      : "fixed inset-0 z-50 flex items-start justify-center bg-slate-900/40 p-4 overflow-y-auto";
+  const inner = layout === "page" ? "card p-4 space-y-3" : "card w-full max-w-6xl my-6 p-4 space-y-3";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/40 p-4 overflow-y-auto">
-      <div className="card w-full max-w-6xl my-6 p-4 space-y-3">
+    <div className={shell}>
+      <div className={inner}>
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">전환율 실험</h2>

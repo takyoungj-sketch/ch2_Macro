@@ -1,3 +1,4 @@
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import { useAppStore } from "../store";
 import type { FreeStatsWindowYears } from "../types";
 import { normalizeFreeStatsWindowYears } from "../types";
@@ -36,7 +37,10 @@ export default function FreeStatsWindowToggle({
       role="group"
       aria-label="계약일 기준 롤링 구간"
     >
-      <span className="text-[11px] text-slate-500 shrink-0">구간</span>
+      <span className="text-[11px] text-slate-500 shrink-0 inline-flex items-center gap-1">
+        구간
+        <StatsGlossaryHelp termId="rolling_window" size="xs" />
+      </span>
       <div className="flex gap-0.5 bg-slate-100 rounded-lg p-0.5">
         {choice(3, "3년")}
         {choice(5, "5년")}

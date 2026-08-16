@@ -8,6 +8,8 @@ from fastapi import APIRouter, Query, Request
 
 from app.ai.bundles.registry import BUNDLE_REGISTRY, suggested_questions
 from app.ai.constitution import CONSTITUTION_VERSION
+from app.ai.casual_dialogue import casual_dialogue_enabled
+from app.ai.open_mode import open_mode_enabled
 from app.ai.llm import llm_configured, polish_enabled, _model
 from app.ai.web_search import web_search_configured
 from app.ai.orchestrator import handle_chat, handle_explain
@@ -32,6 +34,8 @@ def ai_health():
         web_search_configured=web_search_configured(),
         model=_model() if llm_configured() else None,
         constitution_version=CONSTITUTION_VERSION,
+        casual_dialogue_enabled=casual_dialogue_enabled(),
+        open_mode_enabled=open_mode_enabled(),
     )
 
 

@@ -9,7 +9,7 @@ import type {
   RegressionVariableSpec,
   ResponseScale,
 } from "../types";
-import { fetchProfileTwinNeighbors, runRegression } from "../api/client";
+import { fetchProfileTwinNeighbors, runRegression, twinProfileForBuiltAsset } from "../api/client";
 import { buildBuiltRecommendContext } from "../api/aiClient";
 import type { ProfileLinkTarget } from "../utils/profileLink";
 import { BUILT_RECOMMEND_HELP } from "../utils/builtAnalysisHelp";
@@ -65,9 +65,12 @@ export default function RecommendationModal({
       ? profileTarget.level
       : null;
 
+  const twinProfile = twinProfileForBuiltAsset(assetType);
+
   const twinQ = useQuery({
-    queryKey: ["built-profile-twin", twinLevel, profileTarget?.code],
-    queryFn: () => fetchProfileTwinNeighbors(twinLevel!, profileTarget!.code),
+    queryKey: ["built-profile-twin", twinLevel, profileTarget?.code, twinProfile],
+    queryFn: () =>
+      fetchProfileTwinNeighbors(twinLevel!, profileTarget!.code, { twinProfile }),
     enabled: open && Boolean(twinLevel && profileTarget?.code),
     staleTime: 5 * 60 * 1000,
   });

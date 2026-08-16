@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "types": ["vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "@ch2/macro-shell/*": ["../shared/macro-shell/*"]
+    }
+  },
+  "include": [
+    "src",
+    "../frontend-built/src/components/TwinExperimentLab.tsx",
+    "../frontend-built/src/api/twinLabClient.ts",
+    "../frontend-rent/src/components/ConversionComparePanel.tsx",
+    "../frontend-rent/src/api/client.ts",
+    "../frontend-rent/src/types.ts",
+    "../docs/lab/**/*.json"
+  ]
+}

@@ -1,3 +1,4 @@
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import { YEARLY_MIX_TYPES, type YearlyMix } from "../types";
 import { formatPercent } from "../utils/format";
 
@@ -31,7 +32,10 @@ export default function MarketComposition({ yearlyMix }: Props) {
 
   return (
     <div className="card p-5">
-      <h2 className="text-lg font-semibold">지역 시장 구성 (최근 3년 합산)</h2>
+      <div className="flex items-center gap-2">
+        <h2 className="text-lg font-semibold">지역 시장 구성 (최근 3년 합산)</h2>
+        <StatsGlossaryHelp termId="yearly_mix" size="sm" />
+      </div>
       <p className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-sm dark:bg-slate-900/40">
         {describeMarket(yearlyMix)}
       </p>

@@ -164,3 +164,24 @@ export const BUILT_RECOMMEND_HELP: AnalysisExplain = {
     },
   ],
 };
+
+export const BUILT_UPPER_SCOPE_HELP: AnalysisExplain = {
+  spec_id: "built_upper_scope_static_v1",
+  spec_version: "1",
+  title: "상위 scope 비교",
+  summary:
+    "분석 초점(예: 읍면동)과 직계 상위(시군구·시도 등)에서 **같은 변수·모형**으로 회귀한 결과를 나란히 봅니다.",
+  interpretation: [
+    "상위는 표본이 커져 계수가 안정될 수 있으나, 지역 이질성이 섞입니다.",
+    "초점과 상위 계수 부호·크기가 다르면 해상도·구성 차이를 의심하세요.",
+  ],
+  limitations: ["동일 시장이 아님", "인과·적정가 아님"],
+  interpretation_hints: [],
+  presets: [
+    {
+      id: "when",
+      question: "언제 보나요?",
+      answer: "초점 n이 작거나 계수 불안정할 때, 상위 패턴이 같은 방향인지 참고합니다.",
+    },
+  ],
+};

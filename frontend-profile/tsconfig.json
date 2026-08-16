@@ -16,7 +16,9 @@
     "paths": {
       "@ch2/macro-shell/*": ["../shared/macro-shell/*"],
       "@ch2/region-picker": ["../shared/region-picker/index.ts"],
-      "@ch2/region-picker/*": ["../shared/region-picker/*"]
+      "@ch2/region-picker/*": ["../shared/region-picker/*"],
+      "@ch2/stats-glossary": ["../shared/stats-glossary/index.ts"],
+      "@ch2/stats-glossary/*": ["../shared/stats-glossary/*"]
     }
   },
   "include": ["src"]

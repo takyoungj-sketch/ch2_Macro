@@ -1,0 +1,81 @@
+{
+  "version": "1.0",
+  "description": "Twin × 복합 모형추천 lift 벤치 — commercial eup/beop + 대조군",
+  "defaults": {
+    "asset_type": "commercial",
+    "profile_version": "v2.1-national",
+    "window_years": 3,
+    "contract_year_from": 2019,
+    "contract_year_to": 2025,
+    "lift_delta_pp": 0.5,
+    "twin_top_k": 5,
+    "twin_scope_eup": "region",
+    "twin_scope_beop": "same_sigungu"
+  },
+  "cases": [
+    {
+      "case_id": "okcheon_eup",
+      "label": "옥천읍",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": ["43730250"],
+      "notes": "충북 소표본·Twin gate 실측 대표"
+    },
+    {
+      "case_id": "okcheon_maam_beop",
+      "label": "옥천읍 마암리",
+      "role": "primary",
+      "admin_level": "beopjungri",
+      "region_codes": ["4373025034"],
+      "notes": "beop grain Twin + apt/commercial mix"
+    },
+    {
+      "case_id": "gakyung_eup",
+      "label": "가경동",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": ["43113113"],
+      "notes": "청주 흥덕 — 상가 거래 다양"
+    },
+    {
+      "case_id": "bongmyeong_eup",
+      "label": "봉명동",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": ["43112111"],
+      "notes": "청주 상업 밀집"
+    },
+    {
+      "case_id": "sangdang_eup",
+      "label": "상당동",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": ["43111101"],
+      "notes": "청주 원도심 상가"
+    },
+    {
+      "case_id": "osong_eup",
+      "label": "오송읍",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": ["43720330"],
+      "notes": "충북 읍·면형 상가"
+    },
+    {
+      "case_id": "jincheon_eup",
+      "label": "진천읍",
+      "role": "control",
+      "admin_level": "eupmyeondong",
+      "region_codes": ["43750250"],
+      "notes": "대조 — Twin lift 기대 낮을 수 있음"
+    },
+    {
+      "case_id": "daejeon_yuseong",
+      "label": "유성구 봉명동",
+      "role": "control",
+      "admin_level": "eupmyeondong",
+      "region_codes": ["30200131"],
+      "notes": "대조 — 타 권역·표본 충분 가능"
+    }
+  ]
+}

@@ -238,6 +238,8 @@ def list_leaf_regions(
     addr2: str = Query(...),
     addr3_list: list[str] = Query(default=[]),
     asset_type: Optional[str] = Query(None),
+    contract_year_from: Optional[int] = None,
+    contract_year_to: Optional[int] = None,
 ):
     """청주·수원 등: addr3=구, addr4=읍면동."""
     conn = db.connection()
@@ -250,6 +252,8 @@ def list_leaf_regions(
         gu_list=addr3_list,
         asset_type=asset_type,
         leaf_level=info.get("leaf_level", "addr4"),
+        contract_year_from=contract_year_from,
+        contract_year_to=contract_year_to,
     )
     return [RegionOption(**o) for o in opts]
 
@@ -260,6 +264,8 @@ def list_addr3(
     addr1: str = Query(...),
     addr2: str = Query(...),
     asset_type: Optional[str] = Query(None),
+    contract_year_from: Optional[int] = None,
+    contract_year_to: Optional[int] = None,
 ):
     conn = db.connection()
     info = detect_region_structure(conn, addr1, addr2, asset_type)
@@ -270,6 +276,8 @@ def list_addr3(
             addr1=addr1,
             addr2=addr2,
             asset_type=asset_type,
+            contract_year_from=contract_year_from,
+            contract_year_to=contract_year_to,
         )
     else:
         opts = list_leaf_options(
@@ -280,6 +288,8 @@ def list_addr3(
             gu_list=[],
             asset_type=asset_type,
             leaf_level=info.get("leaf_level", "addr3"),
+            contract_year_from=contract_year_from,
+            contract_year_to=contract_year_to,
         )
     return opts
 

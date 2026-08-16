@@ -1,9 +1,10 @@
 # CH2 Macro 구현 로드맵 (V1 ~ V3)
 
-> **상태:** 2026-08-02  
+> **상태:** 2026-08-02 · **중간점검 개선안:** 2026-08-13 [`CH2_MIDCHECK_IMPROVEMENT_PLAN.md`](./CH2_MIDCHECK_IMPROVEMENT_PLAN.md)  
 > **상위:** [CH2_MACRO_VISION.md](./CH2_MACRO_VISION.md) · **상세:** [CANDIDATE_EVALUATION_DESIGN.md](./CANDIDATE_EVALUATION_DESIGN.md)  
 > **원칙:** MVP 기능을 깨지 않고, Validation OS·Candidate Factory를 **단계적으로** 도입한다.
 >
+> **2026-08 중간점검:** 당분간 **기능 추가보다 검증·제품 정의·Twin Validation·월간 SSOT**를 우선한다. 상세는 위 개선안.
 > **현행 실행 순서:** 복합부동산에서 후보 생성·공통 표본·검증 지표·UI를 먼저 안정화한 뒤,
 > 동일 계약을 토지와 집합으로 확장한다. 집합의 본건 건물 회귀와 인접 건물 코호트 회귀는
 > 서로 다른 후보 유형으로 유지하며 기존 사용 흐름을 대체하지 않는다.

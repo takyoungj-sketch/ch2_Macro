@@ -194,6 +194,23 @@ export interface RecommendationPoolCandidate {
   mape?: number | null;
   cv_mape?: number | null;
   cv_mape_delta?: number | null;
+  blocks?: string[];
+  response_scale?: ResponseScale | null;
+  variables?: RegressionVariableSpec | null;
+}
+
+export type TwinValidationVerdictKind = "improved" | "tie" | "worse" | "skipped";
+
+export interface TwinValidationVerdict {
+  verdict: TwinValidationVerdictKind;
+  label_ko: string;
+  summary_ko: string;
+  epsilon_pp: number;
+  local_cv_mape?: number | null;
+  compared_cv_mape?: number | null;
+  cv_mape_delta?: number | null;
+  compared_candidate_id?: string | null;
+  twin_adopt_recommended: boolean;
 }
 
 export interface RecommendationStage2 {
@@ -205,8 +222,10 @@ export interface RecommendationStage2 {
   twin_gates: TwinGateResult[];
   decision: string;
   decision_reason?: string | null;
+  twin_validation?: TwinValidationVerdict | null;
   fixed_blocks: string[];
   fixed_response_scale: ResponseScale;
+  recommended_blocks?: string[];
 }
 
 export type RecommendationVerdict =
@@ -602,7 +621,7 @@ export interface PoolingEvaluation {
 
 /**
  * Regional Profile-native Twin (v21) — GET /api/regional-profile/twins/{eup} · twins-beop/{beop}.
- * 과거 /api/twin-regions/*(v8) 응답과는 무관하다.
+ * Regional Profile Twin algo 21 전용 (`/api/regional-profile/twins*`).
  */
 export interface ProfileTwinNeighborItem {
   rank: number;

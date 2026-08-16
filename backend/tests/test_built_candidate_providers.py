@@ -139,6 +139,15 @@ def test_profile_adapter_accepts_only_profile_native_v21():
     ) == []
 
 
+def test_profile_adapter_accepts_twin_region_code_alias_for_beop():
+    payload = {
+        "algorithm_version": 21,
+        "neighbors": [{"twin_region_code": "4311132033", "similarity_score": 90.0}],
+    }
+    rows = normalize_profile_twin_neighbors(payload, admin_level="beopjungri")
+    assert rows[0]["region_code"] == "4311132033"
+
+
 def test_region_counts_use_built_canonical_column():
     import pandas as pd
 

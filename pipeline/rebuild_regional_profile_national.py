@@ -71,12 +71,6 @@ def main() -> None:
     p.add_argument("--skip-collective-commercial", action="store_true", help="집합상가/집합공장 market_stats 생략 (D-027)")
     p.add_argument("--skip-profile", action="store_true")
     p.add_argument("--skip-twin", action="store_true")
-    p.add_argument(
-        "--twin-mode",
-        choices=("catalog", "legacy", "both"),
-        default="catalog",
-        help="catalog=build_twin_profile(v21), legacy=hybrid v6, both",
-    )
     p.add_argument("--include-extended-land", action="store_true")
     p.add_argument("--collective-rolling-only", action="store_true")
     p.add_argument("--twin-top-k", type=int, default=20)
@@ -124,36 +118,21 @@ def main() -> None:
     if not args.skip_twin:
         twin_levels = ("eupmyeondong", "sigungu", "beopjungri")
         for wy in profile_windows:
-            if args.twin_mode in ("catalog", "both"):
-                for level in twin_levels:
-                    cmd = [
-                        py,
-                        "build_twin_profile.py",
-                        "--profile-version",
-                        args.profile_version,
-                        "--window-years",
-                        str(wy),
-                        "--region-level",
-                        level,
-                        "--top-k",
-                        str(args.twin_top_k),
-                        *as_of_args,
-                    ]
-                    _run(cmd, dry_run=args.dry_run)
-            if args.twin_mode in ("legacy", "both"):
-                for script in ("build_twin_from_profile.py", "build_twin_hybrid.py"):
-                    cmd = [
-                        py,
-                        script,
-                        "--profile-version",
-                        args.profile_version,
-                        "--window-years",
-                        str(wy),
-                        "--top-k",
-                        str(args.twin_top_k),
-                        *as_of_args,
-                    ]
-                    _run(cmd, dry_run=args.dry_run)
+            for level in twin_levels:
+                cmd = [
+                    py,
+                    "build_twin_profile.py",
+                    "--profile-version",
+                    args.profile_version,
+                    "--window-years",
+                    str(wy),
+                    "--region-level",
+                    level,
+                    "--top-k",
+                    str(args.twin_top_k),
+                    *as_of_args,
+                ]
+                _run(cmd, dry_run=args.dry_run)
 
     log.info(
         "전국 regional profile rebuild %s (version=%s market_windows=%s profile_windows=%s)",

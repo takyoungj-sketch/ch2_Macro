@@ -3,6 +3,10 @@
 > **목표:** 매월 초 **전국 토지** 원장·정제·V2 사전통계를 **재현 가능한 절차**로 갱신하고, 검증·승인 후 외부에 반영한다.  
 > **전제:** 완전 무인·증분 갱신 최적화는 후순위. 우선 **단순성·재현성·검증·롤백**을 만족한다.  
 > **기준 루트:** `C:\ch2\ch2_Macro` (다른 PC면 `--repo-root` 로 동일 구조를 맞춘다.)
+>
+> **2026-08 SSOT:** 월간 기본 경로는 **CSV** — `scripts/monthly/run_land_cycle_csv.py`.  
+> 1페이지 체크리스트: [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md).  
+> `run_monthly_cycle.py`(xlsx)는 **복구·레거시**. git deploy ≠ 월갱신 (Promote 필수).
 
 ---
 
@@ -383,6 +387,19 @@ PowerShell 래퍼: `scripts\monthly\run_monthly_cycle.ps1 -CycleId 202605` (상�
 
 ---
 
+## 11.1 임대 상권 — 분기 갱신 (월간과 별개)
+
+한국부동산원 상업용 임대동향은 **분기** 공표다. 토지/복합/집합 월간 CSV 사이클에 묶지 않는다.
+
+1. 새 분기 공식 xlsx를 `임대시장/B.상업용/`에 둔다 (파일이 과거 분기를 포함).
+2. `py pipeline/rent/import_sangkwon.py` — 폴더에서 mtime 최신 xlsx + `상권구획도2024.shp`.
+3. 상권 모달 기본표는 **최신 분기 기준 4분기 롤링**. 추세선은 달력 연간.
+4. `rent_stats` dump 후 VPS Promote. 체크리스트 §4.
+
+SSOT: [`REB_COMMERCIAL_RENT_SURVEY.md`](./REB_COMMERCIAL_RENT_SURVEY.md) §7 · [`RENT_MARKET_PLAN.md`](./RENT_MARKET_PLAN.md) · [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md) §4.
+
+---
+
 ## 12. 관련 문서
 
 - `docs/V2_OPERATOR_CHECKLIST.md` — 월초 갱신 단일 SOP(전국·검증·백엔드)  
@@ -398,6 +415,7 @@ PowerShell 래퍼: `scripts\monthly\run_monthly_cycle.ps1 -CycleId 202605` (상�
 
 | 날짜 | 내용 |
 |------|------|
+| 2026-08-16 | **§11.1 임대 상권 분기 갱신** — 기본표 4분기 롤링, 추세는 연간 |
 | 2026-08-09 | **§9.4 코드 배포 vs DB Promote** — 2608 토지 7월 미노출 원인·ingest→mart→dump→VPS restore 체크리스트·PG18 dump 호환 |
 | 2026-07-26 | **§7.1.0** 배포 404 사고(부분 group·upper 0) · VPS `backend/.env` · 전국성 검증 · UI 기본=용도×지목·지역 변경 시 category 복귀 |
 | 2026-07-17 | **§7.1 용도×지목군 월간 필수** — 에이전트용 DDL·V2 group·annual 증분·검증 체크리스트. 실행 흐름·빠른 참조 반영 |

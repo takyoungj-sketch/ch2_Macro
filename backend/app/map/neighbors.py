@@ -78,6 +78,26 @@ def fetch_neighbor_codes(
     return out
 
 
+def selection_graph_usable(by_code: dict[str, list[str]]) -> bool:
+    """위상 게이트를 쓸 수 있는지 — 선택 코드마다 같은 시도 이웃이 있어야 한다.
+
+    시군구 링 빌드만 타고 남은 불완전 그래프(예: 세종 연동면 → 충북만)를
+    완전한 인접 집합으로 취급하면, 미색인 같은 시도 이웃이 막힌다.
+    """
+    if not by_code:
+        return False
+    for code, nbs in by_code.items():
+        if not nbs:
+            return False
+        c = (code or "").strip()
+        if len(c) < 2:
+            continue
+        prefix = c[:2]
+        if not any(str(nb).startswith(prefix) for nb in nbs):
+            return False
+    return True
+
+
 def union_neighbor_codes(
     db: Session,
     *,

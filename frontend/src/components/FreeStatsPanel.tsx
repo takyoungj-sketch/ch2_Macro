@@ -95,9 +95,9 @@ export default function FreeStatsPanel() {
     setTrendRows([]);
   }, [regionScopeKey, setPaidRequest]);
 
-  const isPaidBasic = viewMode === "paid" && paidResultView === "basic";
-  /** 단일 상위 행정(시도·시군구·읍면동·city) — free/paid 공통 upper mart 경로 (D-028) */
-  const useUpper = upperSingle != null && (isPaidBasic || viewMode === "free");
+  const isPaidBasic = paidResultView === "basic";
+  /** 단일 상위 행정(시도·시군구·읍면동·city) — upper mart 경로 (D-028) */
+  const useUpper = upperSingle != null && isPaidBasic;
   const useBulk =
     isPaidBasic && shouldUseBulkStats(resolvedCodes.length, upperSingle);
   const bulkKey = useMemo(
@@ -113,9 +113,7 @@ export default function FreeStatsPanel() {
     !regionsLoading &&
     (useUpper ||
       useBulk ||
-      (resolvedCodes.length > 0 &&
-        ((viewMode === "free" && resolvedCodes.length === 1) ||
-          (isPaidBasic && resolvedCodes.length === 1))));
+      (resolvedCodes.length > 0 && isPaidBasic && resolvedCodes.length === 1));
 
   const enabled = canFetch && scopeOk;
 
@@ -287,14 +285,6 @@ export default function FreeStatsPanel() {
       </div>
     );
 
-  if (!canFetch && viewMode === "free" && resolvedCodes.length !== 1) {
-    return (
-      <div className="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500 text-sm">
-        <p>좌측에서 지역 조건을 맞춘 뒤 버튼으로 조회해 주세요.</p>
-      </div>
-    );
-  }
-
   if (!canFetch)
     return (
       <div className="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500 text-sm">
@@ -313,9 +303,7 @@ export default function FreeStatsPanel() {
       <div className="bg-white rounded-xl shadow-sm p-6 text-center text-slate-500 text-sm space-y-2">
         <p>
           <strong className="text-slate-800">
-            {viewMode === "free"
-              ? `${basicStatsActionLabel("free")} · ${rollingStatsCaption(freeStatsWindowYears)}`
-              : `${basicStatsActionLabel("paid")} · ${rollingStatsCaption(freeStatsWindowYears)}`}
+            {`${basicStatsActionLabel("paid")} · ${rollingStatsCaption(freeStatsWindowYears)}`}
           </strong>
           로 데이터를 불러옵니다.
         </p>
@@ -365,7 +353,7 @@ export default function FreeStatsPanel() {
             조회 가능합니다. 원천 엑셀·CSV 재적재 후 상위 통계가 채워집니다.
           </p>
         )}
-        {viewMode === "paid" && Boolean(data.stats_excluded_codes?.length) && (
+        {Boolean(data.stats_excluded_codes?.length) && (
           <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 leading-snug">
             사전 집계가 없는 법정코드 {(data.stats_excluded_codes ?? []).length}건은 요청과 함께 보냈지만
             합산 표본에서는 자동으로 제외되었습니다. 예: {(data.stats_excluded_codes ?? [])

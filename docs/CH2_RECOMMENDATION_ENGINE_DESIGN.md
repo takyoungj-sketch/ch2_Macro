@@ -86,15 +86,16 @@ analysis_scope
 │     │
 │     └─ 2단계 필요 ──► (아래)
 │
-└─ 2단계 ─ Twin pool (1단계 **최적 식 고정**, 표본만 확대)
+└─ 2단계 ─ Twin pool (표본 확장 후 **SSOT 풀 재탐색**)
       · anchor = analysis_scope.anchor_unit
       · Profile Twin gate 통과 지역만
-      · pool 조합은 **Forward Pooling**(V3-7) 또는 상위 k — [미완] 초기는 top1/top3/전체
-      · CV-MAPE 등 **재평가** 후 종료 이유 + 최종 제안
+      · pool 조합 top1 / top3 / 전체 — pool마다 stage1과 동일 best-subset
+      · CV-MAPE 기준 최종 pool·변수·스케일 제안 (사용자 채택)
 ```
 
-**1단계에서 고정하는 것:** `recommended_blocks`, `response_scale` (linear | log).  
-**2단계에서 바꾸는 것:** `fit_sample` 지역 pool **만** (변수·스케일 **불변**).
+**1단계에서 고정하는 것:** Local 최적 `recommended_blocks`, `response_scale`.  
+**2단계에서 바꾸는 것:** `fit_sample` 지역 pool **+** pool별 **재탐색된** 변수·스케일.  
+**내부 진단용:** `evaluate_pooling_candidates(mode=diagnose)` — 1단계 식 고정 pooling (suggest 경로).
 
 ### 4.2 2단계 **자동 진입** (예외)
 
