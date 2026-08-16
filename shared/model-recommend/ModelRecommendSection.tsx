@@ -1,3 +1,4 @@
+// @ts-nocheck — shared: 각 frontend node_modules 기준 경로가 달라짐
 import { useState, type ReactNode } from "react";
 
 export type ModelRecommendDepth = "standard" | "standard_plus" | "extended";
