@@ -48,7 +48,7 @@
 | D-041 | 2026-08-16 | **Twin은 회귀 변수가 아니라 지역시장 비교 엔진.** Twin score를 회귀 X에 넣지 않음. Stage2 pool은 Local 대비 CV-MAPE가 ε 이상 개선될 때만 검토. 카드: [`lab/decisions/D-041.json`](lab/decisions/D-041.json). |
 | D-042 | 2026-08-16 | **지역 QA 검증 엔진.** 숫자는 SQL·생산 빌더가 만들고 LLM은 해석만. 관리자 수동·원장/마트 WRITE 금지. 카드: [`lab/decisions/D-042.json`](lab/decisions/D-042.json). 계획: [`QA_REGION_AUDIT_PLAN.md`](QA_REGION_AUDIT_PLAN.md). |
 | D-043 | 2026-08-16 | **무료/유료 5앱 통일.** 같은 UI·산식. 무료=어느 결이든 **지역 1곳·5년만**. 복수·AI·회귀/추천/Twin pool·CSV 없음. `?` 유지. 모달은 같은 껍데기, 유료 탭은 숨기지 않고 「유료」잠금. 랩은 관리자(유료 아님). 서버 강제. 토지 「무료=법정리」·무료 탭 **제거**. SSOT: [`CH2_ENTITLEMENT.md`](CH2_ENTITLEMENT.md). 카드: [`lab/decisions/D-043.json`](lab/decisions/D-043.json). |
-| D-044 | 2026-08-16 | **Twin Engine V2.** V1 마트·카탈로그 유지. 거리 엔진(클러스터·ML 금지). 비교 Twin(구조 0.6/시장 0.4, 권역) · 풀 Twin(구조 0.4/시장 0.6, 시군+인접+n-hop). 인구 \|Δlog\|≤log(2). 지목군 7벡터 주력. 없음≠0점(가격 블록 제외). 신뢰도 별도. 가중 YAML 초기값. SSOT: [`TWIN_ENGINE_V2.md`](TWIN_ENGINE_V2.md). 카드: [`lab/decisions/D-044.json`](lab/decisions/D-044.json). |
+| D-044 | 2026-08-16 | **Twin Engine V2.** V1 마트·카탈로그 유지. 거리 엔진(클러스터·ML 금지). 비교 Twin(구조 0.6/시장 0.4, 권역) · 풀 Twin(구조 0.4/시장 0.6, 시군+인접+n-hop). 인구 \|Δlog\|≤log(2). 지목군 7벡터 주력. 없음≠0점(가격 블록 제외). 신뢰도 별도. 가중 YAML 초기값. **제품 Twin 카드 V1 대체는 보류**(2026-08-16). SSOT: [`TWIN_ENGINE_V2.md`](TWIN_ENGINE_V2.md). 카드: [`lab/decisions/D-044.json`](lab/decisions/D-044.json). |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 
