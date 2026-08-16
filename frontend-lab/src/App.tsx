@@ -4,23 +4,28 @@ import LabHome from "./components/LabHome";
 import PlanLog from "./components/PlanLog";
 import QaAuditPanel from "./components/QaAuditPanel";
 import RentConversionLab from "./components/RentConversionLab";
+import TwinEngineV2Lab from "./components/TwinEngineV2Lab";
 import WhyDecision, { WhyLinks } from "./components/WhyDecision";
 import { TOOL_WHY } from "./labContent";
 
 export type LabTool = "plan" | "qa" | "twin" | "rent";
+export type TwinPane = "v2" | "mape";
 
 type LabParams = {
   tool: LabTool | null;
   why: string | null;
+  twinPane: TwinPane;
 };
 
 function readParams(): LabParams {
   const q = new URLSearchParams(window.location.search);
   const t = q.get("tool");
   const tool = t === "plan" || t === "qa" || t === "twin" || t === "rent" ? t : null;
+  const pane = q.get("pane");
   return {
     tool,
     why: q.get("why") || q.get("decision"),
+    twinPane: pane === "mape" ? "mape" : "v2",
   };
 }
 
@@ -30,6 +35,8 @@ function writeParams(p: LabParams) {
   else url.searchParams.delete("tool");
   if (p.why) url.searchParams.set("why", p.why);
   else url.searchParams.delete("why");
+  if (p.tool === "twin" && p.twinPane === "mape") url.searchParams.set("pane", "mape");
+  else url.searchParams.delete("pane");
   url.searchParams.delete("decision");
   url.searchParams.delete("journal");
   window.history.replaceState({}, "", url.pathname + url.search);
@@ -43,7 +50,10 @@ export default function App() {
   }, [params]);
 
   const setTool = useCallback((tool: LabTool | null) => {
-    setParams((p) => ({ ...p, tool, why: null }));
+    setParams((p) => ({ ...p, tool, why: null, twinPane: tool === "twin" ? p.twinPane : "v2" }));
+  }, []);
+  const setTwinPane = useCallback((twinPane: TwinPane) => {
+    setParams((p) => ({ ...p, twinPane }));
   }, []);
   const setWhy = useCallback((why: string | null) => {
     setParams((p) => ({ ...p, why }));
@@ -67,11 +77,46 @@ export default function App() {
       <>
         <div className="border-b border-amber-200 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-900 px-4 py-1.5">
           <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
-            <WhyLinks ids={TOOL_WHY.twin} onWhy={setWhy} />
-            <span className="text-[11px] text-slate-500">숫자는 실험 API · 가중치는 실험적</span>
+            <div className="flex items-center gap-3">
+              <WhyLinks ids={TOOL_WHY.twin} onWhy={setWhy} />
+              <div className="inline-flex rounded border border-amber-300/80 dark:border-amber-800 p-0.5">
+                <button
+                  type="button"
+                  className={`px-2 py-0.5 text-[11px] rounded ${
+                    params.twinPane === "v2"
+                      ? "bg-amber-800 text-white dark:bg-amber-200 dark:text-amber-950"
+                      : "text-amber-900 dark:text-amber-100"
+                  }`}
+                  onClick={() => setTwinPane("v2")}
+                >
+                  V2 거리
+                </button>
+                <button
+                  type="button"
+                  className={`px-2 py-0.5 text-[11px] rounded ${
+                    params.twinPane === "mape"
+                      ? "bg-amber-800 text-white dark:bg-amber-200 dark:text-amber-950"
+                      : "text-amber-900 dark:text-amber-100"
+                  }`}
+                  onClick={() => setTwinPane("mape")}
+                >
+                  V1 풀 실험
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] text-slate-500">제품 프로필 카드는 아직 V1</span>
+              <button type="button" className="btn btn-ghost text-xs" onClick={back}>
+                관리자로
+              </button>
+            </div>
           </div>
         </div>
-        <TwinExperimentLab onClose={back} closeLabel="관리자로" />
+        {params.twinPane === "v2" ? (
+          <TwinEngineV2Lab />
+        ) : (
+          <TwinExperimentLab onClose={back} closeLabel="관리자로" />
+        )}
         {whyModal}
       </>
     );

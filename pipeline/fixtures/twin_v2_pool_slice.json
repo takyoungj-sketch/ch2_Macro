@@ -1,0 +1,57 @@
+{
+  "version": "1.0",
+  "description": "Twin Engine V2 풀 vs V1 마트 — 아는 동네 슬라이스 (commercial)",
+  "defaults": {
+    "asset_type": "commercial",
+    "profile_version": "v2.1-national",
+    "window_years": 3,
+    "contract_year_from": 2019,
+    "contract_year_to": 2025,
+    "lift_delta_pp": 0.5,
+    "twin_top_k": 5,
+    "twin_scope_eup": "region",
+    "twin_scope_beop": "same_sigungu"
+  },
+  "cases": [
+    {
+      "case_id": "gakyung_eup",
+      "label": "가경동",
+      "role": "primary",
+      "sample_group": "known",
+      "admin_level": "eupmyeondong",
+      "region_codes": ["43113113"]
+    },
+    {
+      "case_id": "bongmyeong_eup",
+      "label": "봉명동",
+      "role": "primary",
+      "sample_group": "known",
+      "admin_level": "eupmyeondong",
+      "region_codes": ["43112111"]
+    },
+    {
+      "case_id": "okcheon_eup",
+      "label": "옥천읍",
+      "role": "primary",
+      "sample_group": "known",
+      "admin_level": "eupmyeondong",
+      "region_codes": ["43730250"]
+    },
+    {
+      "case_id": "naseong_eup",
+      "label": "나성동",
+      "role": "primary",
+      "sample_group": "known",
+      "admin_level": "eupmyeondong",
+      "region_codes": ["36110107"]
+    },
+    {
+      "case_id": "jincheon_eup",
+      "label": "진천읍",
+      "role": "control",
+      "sample_group": "known",
+      "admin_level": "eupmyeondong",
+      "region_codes": ["43750250"]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+# Twin Engine V2 (D-044)
+# Similarity Engine V2만 읽는다. 코드에 가중 상수 하드코딩 금지.
+# 초기값이다. 신성이 아니다. 사람이 Twin을 본 뒤 YAML만 고친다.
+
+version: "2.0"
+engine: v2
+
+# |log(Pa)−log(Pb)| ≤ log(max_ratio). NULL 인구는 탈락.
+population_gate:
+  max_ratio: 2.0
+
+roles:
+  compare:
+    structure_weight: 0.60
+    market_weight: 0.40
+    universe: region
+  pool:
+    structure_weight: 0.40
+    market_weight: 0.60
+    universe: sigungu_adjacent_nhop
+    n_hop: 2
+
+# 구조 층 내부 (합 1.0 권장)
+structure:
+  market_mix: 0.50
+  jimok_group: 0.40
+  land_top_jaccard: 0.10
+
+# 시장 층 내부 (합 1.0 권장). 마스크 실패 항은 평균에서 제외.
+market:
+  land_price: 0.35
+  apt_p50: 0.35
+  apt_spread: 0.20
+  apt_volume: 0.10
+
+masks:
+  apt_min_count: 15

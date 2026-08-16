@@ -14,7 +14,7 @@ const DOORS: { id: LabTool; title: string; desc: string }[] = [
   {
     id: "twin",
     title: "쌍둥이 지역 실험",
-    desc: "Local 대비 Twin pool CV-MAPE. 제품 모형추천과 분리.",
+    desc: "V2 거리(비교/풀)를 눈으로 보고, V1 풀 CV-MAPE는 옆 탭.",
   },
   {
     id: "rent",

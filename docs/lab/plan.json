@@ -50,41 +50,50 @@
     "date": "2026-08-16",
     "cells": {
       "built": {
-        "text": "Twin≠회귀X 고정 · 실험 랩 · 프로필 딥링크",
+        "text": "D-041 고정 · V2 풀 슬라이스(Local/V1/V2) · 제품 대체 보류",
         "status": "done",
-        "commit": "needed",
-        "decision": "D-041"
+        "commit": "committed",
+        "decision": "D-044"
       },
       "collective": {
         "text": "검증로봇 V1 (집합 주거만)",
         "status": "done",
-        "commit": "needed",
+        "commit": "committed",
         "decision": "D-042"
       },
       "rent": {
-        "text": "MVP 운영 반영(본편 커밋) · 프로필 연동 남음",
-        "status": "stopped",
-        "commit": "needed"
+        "text": "MVP 운영 반영",
+        "status": "done",
+        "commit": "committed",
+        "decision": "D-040"
       },
       "profile": {
-        "text": "주거 전월세 3개년 표 · Twin 행 링크",
+        "text": "Twin Engine V2 랩 API·거리 화면 · 제품 카드는 V1",
         "status": "done",
-        "commit": "needed"
+        "commit": "committed",
+        "decision": "D-044"
       },
       "admin": {
-        "text": "관리 4문 · 계획일지 표",
+        "text": "랩 V2 거리 탭 · D-044 · 계획일지",
         "status": "done",
-        "commit": "needed"
+        "commit": "committed",
+        "decision": "D-044"
       }
     }
   },
   "next": {
     "cells": {
-      "built": {
-        "text": "임대시장을 회귀에 넣기 — Twin V2 실험으로 분리",
+      "profile": {
+        "text": "V2가 제품 Twin 카드를 대체할지는 더 보고 결정",
         "status": "planned",
         "commit": "none",
-        "decision": "D-041"
+        "decision": "D-044"
+      },
+      "built": {
+        "text": "풀 우주(인구 문·그래프 폴백) 재검토 — 옥천 전멸",
+        "status": "planned",
+        "commit": "none",
+        "decision": "D-044"
       },
       "admin": {
         "text": "QA를 토지·복합으로 확장",

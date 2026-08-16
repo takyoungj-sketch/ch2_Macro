@@ -585,3 +585,75 @@ def get_profile_twin_beop(
         anchor_beopjungri_code=anchor,
         neighbors=neighbors,
     )
+
+
+class TwinV2NeighborItem(BaseModel):
+    rank: int
+    region_code: str
+    region_name: str = ""
+    sigungu_name: str = ""
+    sido_name: str = ""
+    twin_score: float
+    confidence: float
+    structure_score: float | None = None
+    market_score: float | None = None
+    used_blocks: list[str] = Field(default_factory=list)
+    dropped_blocks: list[str] = Field(default_factory=list)
+    detail: dict[str, Any] = Field(default_factory=dict)
+    v1_similarity: float | None = None
+
+
+class TwinV2Response(BaseModel):
+    engine: str = "v2"
+    weight_version: str
+    role: str
+    region_level: str
+    profile_version: str
+    window_years: int
+    as_of_month: str | None = None
+    anchor: dict[str, Any] = Field(default_factory=dict)
+    weights: dict[str, float] = Field(default_factory=dict)
+    universe: dict[str, Any] = Field(default_factory=dict)
+    neighbors: list[TwinV2NeighborItem] = Field(default_factory=list)
+
+
+@router.get("/twins-v2", response_model=TwinV2Response)
+def get_twins_v2(
+    region_level: str = Query(..., pattern="^(sigungu|eupmyeondong|beopjungri)$"),
+    region_code: str = Query(..., min_length=5, max_length=10),
+    role: str = Query("compare", pattern="^(compare|pool)$"),
+    top_k: int = Query(8, ge=1, le=30),
+    n_hop: int | None = Query(None, ge=0, le=5),
+    profile_version: str = Query("v2.1-national"),
+    window_years: int = Query(3, ge=1, le=5),
+    include_v1: bool = Query(True),
+    db: Session = Depends(get_collective_db),
+    land_db: Session = Depends(get_db),
+):
+    """랩 전용 Twin Engine V2. 제품 프로필 Twin 카드(algo 21)를 바꾸지 않는다."""
+    if db is None:
+        raise HTTPException(503, "collective_stats DB 미연결")
+    if not _table_exists(db, "regional_profile"):
+        raise HTTPException(404, "regional_profile 테이블 없음")
+
+    from app.regional_profile.twin_v2 import rank_twins_v2
+
+    try:
+        payload = rank_twins_v2(
+            db,
+            land_db,
+            region_level=region_level,
+            region_code=region_code,
+            role=role,
+            top_k=top_k,
+            n_hop=n_hop,
+            profile_version=profile_version,
+            window_years=window_years,
+            include_v1=include_v1,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+    return TwinV2Response(**payload)

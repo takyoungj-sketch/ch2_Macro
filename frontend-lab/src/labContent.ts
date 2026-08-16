@@ -150,6 +150,6 @@ export const STATUS_LABEL: Record<DecisionStatus, string> = {
 export const TOOL_WHY: Record<string, string[]> = {
   plan: [],
   qa: ["D-042"],
-  twin: ["D-041", "D-029-weights"],
+  twin: ["D-041", "D-044", "D-029-weights"],
   rent: ["D-040"],
 };

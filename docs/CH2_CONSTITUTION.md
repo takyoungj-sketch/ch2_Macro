@@ -111,6 +111,7 @@ CH2 AI는 [CH2_AI_CONSTITUTION.md](./CH2_AI_CONSTITUTION.md)에 따라 **통계 
 | [REGIONAL_PROFILE_ARCHITECTURE.md](./REGIONAL_PROFILE_ARCHITECTURE.md) | Regional Profile·거시 분석 로드맵 |
 | [CH2_MIDCHECK_IMPROVEMENT_PLAN.md](./CH2_MIDCHECK_IMPROVEMENT_PLAN.md) | 중간점검 개선안 — 검증·Twin Validation·월간 SSOT |
 | [TWIN_VALIDATION_STATUS.md](./TWIN_VALIDATION_STATUS.md) | Twin Validation 실태·판정 초안 |
+| [TWIN_ENGINE_V2.md](./TWIN_ENGINE_V2.md) | Twin 거리 엔진 V2 — 비교/풀 분리 (D-044) |
 | [MONTHLY_UPDATE_CHECKLIST.md](./MONTHLY_UPDATE_CHECKLIST.md) | 월간 1페이지 체크리스트 |
 | [RENT_CONVERSION_EXPERIMENT.md](./RENT_CONVERSION_EXPERIMENT.md) | 주거 전월세 전환율 실험 종료 · `mean_simple` 확정 (D-040) |
 
