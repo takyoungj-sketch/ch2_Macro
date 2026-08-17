@@ -53,12 +53,12 @@ try {
 
   Write-Host "==> scp to VPS (scope=$Scope)"
   if ($Scope -eq "profile" -or $Scope -eq "rent" -or $Scope -eq "lab" -or $Scope -eq "all") {
-    & ssh -i $Key $VpsHost "mkdir -p /opt/ch2_Macro/frontend-profile /opt/ch2_Macro/frontend-rent /opt/ch2_Macro/frontend-lab /opt/ch2_Macro/backend/app/ai/knowledge /opt/ch2_Macro/backend/app/ai/bundles /opt/ch2_Macro/deploy/templates"
+    & ssh -i $Key $VpsHost "mkdir -p /opt/ch2_Macro/frontend-profile /opt/ch2_Macro/frontend-rent /opt/ch2_Macro/frontend-lab /opt/ch2_Macro/docs /opt/ch2_Macro/backend/app/ai/knowledge /opt/ch2_Macro/backend/app/ai/bundles /opt/ch2_Macro/deploy/templates"
     if ($LASTEXITCODE -ne 0) { throw "remote mkdir failed" }
   }
   switch ($Scope) {
     "built" {
-      Invoke-Scp @("backend/app/built", "backend/app/recommendation", "backend/app/ai", "backend/app/config.py", "backend/app/main.py") "backend/app/"
+      Invoke-Scp @("backend/app/built", "backend/app/recommendation", "backend/app/ai", "backend/app/map", "backend/app/config.py", "backend/app/main.py") "backend/app/"
       Invoke-Scp @("shared") "."
       Invoke-Scp @("frontend-built/src") "frontend-built/"
     }
@@ -80,8 +80,9 @@ try {
       Invoke-Scp @("deploy/scripts") "deploy/"
     }
     "lab" {
-      Invoke-Scp @("backend/app/qa_audit", "backend/app/config.py", "backend/app/main.py") "backend/app/"
+      Invoke-Scp @("backend/app/qa_audit", "backend/app/ai", "backend/app/config.py", "backend/app/main.py") "backend/app/"
       Invoke-Scp @("shared") "."
+      Invoke-Scp @("docs/lab") "docs/"
       Invoke-Scp @("frontend-lab/package.json", "frontend-lab/package-lock.json", "frontend-lab/tsconfig.json", "frontend-lab/vite.config.ts", "frontend-lab/tailwind.config.js", "frontend-lab/postcss.config.js", "frontend-lab/index.html", "frontend-lab/src") "frontend-lab/"
       Invoke-Scp @("frontend-built/src") "frontend-built/"
       Invoke-Scp @("frontend-rent/src") "frontend-rent/"

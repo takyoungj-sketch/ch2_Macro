@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-16",
+  "updated": "2026-08-17",
   "domains": [
     { "id": "land", "label": "토지" },
     { "id": "built", "label": "복합" },
@@ -44,45 +44,80 @@
           "decision": "D-040"
         }
       }
+    },
+    {
+      "date": "2026-08-16",
+      "cells": {
+        "built": {
+          "text": "D-041 고정 · V2 풀 슬라이스(Local/V1/V2) · 제품 대체 보류",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-044"
+        },
+        "collective": {
+          "text": "검증로봇 V1 (집합 주거만)",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-042"
+        },
+        "rent": {
+          "text": "MVP 운영 반영",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-040"
+        },
+        "profile": {
+          "text": "Twin Engine V2 랩 API·거리 화면 · 제품 카드는 V1",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-044"
+        },
+        "admin": {
+          "text": "랩 V2 거리 탭 · 운영 배포 · 제품 V1 대체는 보류",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-044"
+        }
+      }
     }
   ],
   "today": {
-    "date": "2026-08-16",
+    "date": "2026-08-17",
     "cells": {
-      "built": {
-        "text": "D-041 고정 · V2 풀 슬라이스(Local/V1/V2) · 제품 대체 보류",
+      "land": {
+        "text": "인접 게이트 시군구 · 지도 추가메뉴 잘림 보정",
         "status": "done",
-        "commit": "committed",
-        "decision": "D-044"
+        "commit": "committed"
+      },
+      "built": {
+        "text": "Macro 작업창(예측·설명 탭, 본문 식 비대체) · 지도 메뉴 클램프 · 오늘 마무리 배포",
+        "status": "done",
+        "commit": "committed"
       },
       "collective": {
-        "text": "검증로봇 V1 (집합 주거만)",
+        "text": "인접 게이트 공유 · 지도 추가메뉴 잘림 보정",
         "status": "done",
-        "commit": "committed",
-        "decision": "D-042"
+        "commit": "committed"
       },
       "rent": {
-        "text": "MVP 운영 반영",
+        "text": "지도 추가메뉴 잘림 보정",
         "status": "done",
-        "commit": "committed",
-        "decision": "D-040"
-      },
-      "profile": {
-        "text": "Twin Engine V2 랩 API·거리 화면 · 제품 카드는 V1",
-        "status": "done",
-        "commit": "committed",
-        "decision": "D-044"
+        "commit": "committed"
       },
       "admin": {
-        "text": "랩 V2 거리 탭 · 운영 배포 · 제품 V1 대체는 보류",
+        "text": "AI 오픈모드·월 장부·랩 5문 · 복합 마무리 커밋·배포 · 계획일지",
         "status": "done",
-        "commit": "committed",
-        "decision": "D-044"
+        "commit": "committed"
       }
     }
   },
   "next": {
     "cells": {
+      "land": {
+        "text": "강동구 등 불완전 읍면동 region_neighbors 재구축 (복합 인접추가는 turf 우회 중)",
+        "status": "planned",
+        "commit": "none"
+      },
       "profile": {
         "text": "V2가 제품 Twin 카드를 대체할지는 더 보고 결정",
         "status": "planned",
@@ -90,7 +125,7 @@
         "decision": "D-044"
       },
       "built": {
-        "text": "풀 우주(인구 문·그래프 폴백) 재검토 — 옥천 전멸",
+        "text": "강동구 등 읍면동 이웃 그래프 재구축 · 풀 우주(옥천 전멸) 재검토",
         "status": "planned",
         "commit": "none",
         "decision": "D-044"

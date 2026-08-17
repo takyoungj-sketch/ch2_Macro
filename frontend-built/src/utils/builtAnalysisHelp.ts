@@ -143,9 +143,12 @@ export const BUILT_RECOMMEND_HELP: AnalysisExplain = {
   spec_version: "1",
   title: "모형 탐색 · 판정",
   summary:
-    "SSOT 변수 풀에서 Local 탐색 → (선택) Twin pool → **판정·권장 행동**. 예측 채택은 사용자 판단.",
+    "SSOT 변수 풀에서 Local 탐색 → (선택) Twin pool → **판정**. 결과는 탐색 창에서만 확인하며 기본 통계 식은 바꾸지 않습니다.",
   interpretation: [
-    "CV-MAPE 적합 등급은 예측 목적 참고.",
+    "한 번 탐색하면 예측형(CV-MAPE 1위)과 설명형(AIC 1위)이 함께 나옵니다.",
+    "예측형 CV-MAPE 적합 등급은 예측 목적 참고.",
+    "설명형 Adj R²는 보조 숫자 — 순위 기준은 AIC.",
+    "「예측 미리보기」는 이 창 안에서만 계산합니다. 왼쪽 변수·기본 통계는 그대로입니다.",
     "예측 부적합이어도 설명형·비교사례·용도×지목 통계는 활용 가능.",
     "AI Assistant는 표본·Twin·변수 한계를 Facts 기준으로 해석.",
   ],

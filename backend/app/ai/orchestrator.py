@@ -34,6 +34,12 @@ from app.ai.constitution import (
     SHORT_DISCLAIMER,
     WEB_DISCLAIMER,
     classify_route,
+    is_refusal_message,
+)
+from app.ai.panel_capabilities import (
+    get_panel_capability,
+    is_out_of_scope_message,
+    out_of_scope_answer,
 )
 from app.ai.llm import (
     chat_completion,
@@ -70,6 +76,21 @@ from app.ai.targeted_qa import (
 )
 from app.ai.validator import ensure_disclaimer, reject_if_user_refusal_topic_in_opinion, validate_answer
 from app.config import settings
+from app.ai.usage_log import AiQuotaExceeded, bind_usage_meta, month_snapshot, reset_usage_meta
+
+
+def _public_quota(snap: dict[str, Any] | None = None) -> dict[str, Any]:
+    s = snap or month_snapshot()
+    return {
+        "month": s["month"],
+        "calls": s["calls"],
+        "call_limit": s["call_limit"],
+        "krw": s["krw"],
+        "budget_krw": s["budget_krw"],
+        "warn": s["warn"],
+        "stopped": s["stopped"],
+        "warning": s.get("warning"),
+    }
 
 
 def _is_targeted_answer(answer: str) -> bool:
@@ -168,47 +189,86 @@ def _web_evidence(hits: list[WebHit]) -> list[EvidenceItem]:
     return items
 
 
-def _refusal_answer(context: AiContext, message: str) -> AiChatResponse:
-    lines = [
-        "CH2는 **시장통계 분석 시스템**입니다.",
-        "감정평가액·적정가격·투자 적합성을 판단하지 않습니다.",
-    ]
-    primary = (context.facts or {}).get("primary") or {}
-    pred = primary.get("prediction") or context.facts.get("prediction")
-    if pred is not None:
-        lines.append(f"현재 화면의 회귀 예측값(API): {pred}")
-        lines.append(
-            "위 값은 동일 scope 거래를 바탕으로 한 **통계적 예측**이며, "
-            "개별 물건의 적정가격을 의미하지 않습니다."
-        )
-    lines.append("가격·투자 판단은 현장 조사와 전문가 판단이 필요합니다.")
+def _related_followups(context: AiContext) -> list[str]:
+    cap = get_panel_capability(context.panel)
+    qs = [q for q in cap.on_screen_questions if str(q).strip()]
+    if not qs:
+        qs = suggested_questions(context.panel, context.purpose, app=context.app)
+    return qs[:4]
 
-    evidence = [
-        EvidenceItem(
-            type="refusal_policy",
-            label="CH2 서비스 정책",
-            confidence="high",
-        ),
+
+def _refusal_answer(context: AiContext, message: str) -> AiChatResponse:
+    followups = _related_followups(context)
+    lines = [
+        "### 안내",
+        "",
+        "이 질문은 **CH2가 답하지 않는 범위**입니다.",
+        "",
+        "CH2는 **시장통계 분석** 시스템입니다. "
+        "감정평가액·적정가격·투자 적합성, 이 모형을 감정평가에 쓸 수 있는지는 판단하지 않습니다.",
+        "화면에 있는 회귀·예측 숫자는 선택 지역 거래의 **통계 패턴**일 뿐, 감정·적정가를 대체하지 않습니다.",
+        "",
+        "가격·투자 판단은 현장 조사와 전문가 판단이 필요합니다.",
+        "",
+        "### 대신 이런 질문을 해 보세요",
+        "",
     ]
-    if pred is not None:
-        evidence.append(
-            EvidenceItem(
-                type="ch2_regression",
-                label="CH2 예측값 (참고)",
-                value=str(pred),
-                confidence="high",
-            )
-        )
+    for q in followups:
+        lines.append(f"- {q}")
+
     return AiChatResponse(
         session_id="",
         route="refusal",
-        answer="\n\n".join(lines),
-        evidence=evidence,
+        answer="\n".join(lines).strip(),
+        evidence=[
+            EvidenceItem(
+                type="refusal_policy",
+                label="CH2 서비스 정책",
+                confidence="high",
+            ),
+        ],
         bundle_id=resolve_bundle_id(context.panel),
-        suggested_followups=suggested_questions(context.panel, context.purpose, app=context.app),
+        suggested_followups=followups,
         disclaimer=REFUSAL_DISCLAIMER,
         llm_used=False,
     )
+
+
+def _out_of_scope_chat(context: AiContext) -> AiChatResponse:
+    followups = _related_followups(context)
+    body = out_of_scope_answer(context.panel, context.app)
+    answer = "\n".join(
+        [
+            "### 안내",
+            "",
+            "이 질문은 **현재 화면의 통계·분석과 관련이 없어** 답하지 않습니다.",
+            "",
+            body,
+        ]
+    )
+    return AiChatResponse(
+        session_id="",
+        route="casual",
+        answer=answer,
+        evidence=[
+            EvidenceItem(
+                type="casual_policy",
+                label="CH2 질문 범위",
+                confidence="high",
+            ),
+        ],
+        bundle_id=resolve_bundle_id(context.panel),
+        suggested_followups=followups,
+        disclaimer=SHORT_DISCLAIMER,
+        llm_used=False,
+    )
+
+
+def _commit_limit_response(session: Any, req: AiChatRequest, resp: AiChatResponse) -> AiChatResponse:
+    resp.session_id = session.session_id
+    session.add_turn(SessionTurn(role="user", message=req.message, route=resp.route))
+    session.add_turn(SessionTurn(role="assistant", message=resp.answer[:500], route=resp.route))
+    return resp
 
 
 def _effective_explain(context: AiContext) -> AnalysisExplain | None:
@@ -490,6 +550,11 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
             trust_sources=["RENT_CONVERSION_EXPERIMENT"],
         )
 
+    if is_refusal_message(req.message):
+        return _commit_limit_response(session, req, _refusal_answer(ctx, req.message))
+    if is_out_of_scope_message(req.message):
+        return _commit_limit_response(session, req, _out_of_scope_chat(ctx))
+
     # ── Open Mode: 라우팅/템플릿 우회 → LLM 우선 ─────────────────────────
     if open_mode_enabled():
         bundle = early_bundle
@@ -509,24 +574,44 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
                 "open_mode": True,
             }
         )
-        facts = soft_facts_snapshot(bundle, scope_label=scope_label)
-        llm_ans = open_mode_chat_completion(
-            user_message=req.message,
+        facts = soft_facts_snapshot(bundle, scope_label=scope_label, context=ctx)
+        meta_tok = bind_usage_meta(
+            route="open",
+            app=ctx.app,
+            panel=ctx.panel,
             scope_label=scope_label,
-            screen_facts=facts,
-            session_summary=session_summary(session, max_turns=10),
         )
-        if llm_ans:
-            answer = llm_ans
-            llm_used = True
-        else:
-            answer = (
-                "### 답변\n\n"
-                "Open Mode인데 LLM 응답을 받지 못했습니다. "
-                "`OPENAI_API_KEY`와 네트워크를 확인한 뒤 다시 시도해 주세요.\n\n"
-                f"참고 — 현재 화면 soft facts: `{facts.get('stats')}`"
+        quota_snap: dict[str, Any] | None = None
+        try:
+            llm_ans = open_mode_chat_completion(
+                user_message=req.message,
+                scope_label=scope_label,
+                screen_facts=facts,
+                session_summary=session_summary(session, max_turns=10),
             )
+        except AiQuotaExceeded as exc:
+            llm_ans = None
+            quota_snap = exc.snapshot
+            answer = exc.user_message
             llm_used = False
+        else:
+            if llm_ans:
+                answer = llm_ans
+                llm_used = True
+            else:
+                answer = (
+                    "### 답변\n\n"
+                    "Open Mode인데 LLM 응답을 받지 못했습니다. "
+                    "`OPENAI_API_KEY`와 네트워크를 확인한 뒤 다시 시도해 주세요.\n\n"
+                    f"참고 — 현재 화면 soft facts: `{facts.get('stats')}`"
+                )
+                llm_used = False
+        finally:
+            reset_usage_meta(meta_tok)
+        if quota_snap is None:
+            quota_snap = month_snapshot()
+        if llm_used and quota_snap.get("warning"):
+            answer = f"> {quota_snap['warning']}\n\n" + answer
         resp = AiChatResponse(
             session_id=session.session_id,
             route="open",
@@ -551,6 +636,7 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
             trust_level="medium" if llm_used else "low",
             trust_sources=["OpenAI (open mode)", "CH2 screen_facts soft"],
             ai_interpretation=_ai_interpretation_label(llm_used=llm_used),
+            quota=_public_quota(quota_snap),
         )
         session.add_turn(
             SessionTurn(

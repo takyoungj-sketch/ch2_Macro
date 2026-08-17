@@ -77,6 +77,12 @@ class Settings(BaseSettings):
         default=False,
         validation_alias="AI_OPEN_MODE",
     )
+    #: 실험 — 서버 전체 월 LLM 호출 상한. 0이면 횟수 한도 없음.
+    ai_monthly_call_limit: int = Field(default=200, validation_alias="AI_MONTHLY_CALL_LIMIT")
+    #: 실험 — 서버 전체 월 추정 원 상한. 0이면 비용 한도 없음.
+    ai_monthly_budget_krw: float = Field(default=10000, validation_alias="AI_MONTHLY_BUDGET_KRW")
+    ai_usd_krw: float = Field(default=1400, validation_alias="AI_USD_KRW")
+    ai_usage_log_dir: str = Field(default="", validation_alias="AI_USAGE_LOG_DIR")
     #: CH2 AI — Tavily 웹 검색 (없으면 DuckDuckGo Instant 폴백)
     tavily_api_key: str = Field(default="", validation_alias="TAVILY_API_KEY")
     #: 카카오 Local API (FieldNote 주소 지오코딩 프록시)

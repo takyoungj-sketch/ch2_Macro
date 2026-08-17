@@ -38,20 +38,19 @@ type Props = {
 
 const META: Record<
   MacroMode,
-  { title: string; subtitle: string; runLabel: string }
+  { title: string; subtitle: string }
 > = {
   predictive: {
     title: "Macro 예측형",
-    subtitle: "CV-MAPE 기준 — SSOT 변수 풀 최적 조합",
-    runLabel: "Macro 예측형 탐색",
+    subtitle: "CV-MAPE 1위 — SSOT 변수 풀. 한 번 탐색하면 설명형도 함께 채워집니다.",
   },
   explanatory: {
     title: "Macro 설명형",
-    subtitle: "AIC 기준 — SSOT 변수 풀 최적 조합",
-    runLabel: "Macro 설명형 탐색",
+    subtitle: "AIC 1위 — 계수 해석용. Adj R²는 참고 숫자입니다.",
   },
 };
 
+/** @deprecated RecommendationModal 탭 창으로 대체. 인라인 이중 카드는 쓰지 않음. */
 export default function MacroModelExploreCard({
   mode,
   sectionId,
@@ -95,7 +94,7 @@ export default function MacroModelExploreCard({
               ? "탐색 중…"
               : showResults
                 ? "다시 탐색"
-                : meta.runLabel}
+                : "Macro 탐색"}
           </button>
         </div>
       </div>
@@ -112,8 +111,8 @@ export default function MacroModelExploreCard({
 
       {!loading && !showResults && !(recommendM.isError && exploring) && (
         <p className="text-xs text-slate-400 py-4">
-          「{meta.runLabel}」을 눌러 SSOT 변수 풀에서 Macro 후보를 확인하세요. 예측형·설명형
-          중 하나를 선택하면 해당 결과만 표시됩니다.
+          「Macro 탐색」을 누르면 SSOT 변수 풀에서 예측형(CV-MAPE)과 설명형(AIC) 후보를 함께
+          찾습니다.
         </p>
       )}
 

@@ -67,7 +67,7 @@ import type {
 import { EMPTY_SAMPLE_FILTER } from "./types";
 import FocusRegressionCard from "./components/FocusRegressionCard";
 import BuiltRegressionAnalysisPanel from "./components/BuiltRegressionAnalysisPanel";
-import PredictPanel from "./components/PredictPanel";
+import PredictPanel, { PredictDraftProvider } from "./components/PredictPanel";
 import StatsWindowToggle, {
   normalizeStatsWindowYears,
   type StatsWindowYears,
@@ -77,6 +77,7 @@ import {
   formatCoefName,
   levelCardTitle,
 } from "./utils/regressionFormat";
+import { builtAnalysisScopeKey } from "./utils/builtAnalysisScopeKey";
 
 function riKey(p: RiPick) {
   return `${p.eup}|${p.ri}`;
@@ -946,28 +947,6 @@ export default function App() {
   });
   const recommendM = useMutation({ mutationFn: recommendRegression });
 
-  const adoptModel = (nextVars: RegressionVariableSpec, scale: ResponseScale) => {
-    setVars(nextVars);
-    setResponseScale(scale);
-    regM.mutate({ ...regBody, variables: nextVars, response_scale: scale });
-  };
-
-  const adoptModelPool = (payload: {
-    vars: RegressionVariableSpec;
-    scale: ResponseScale;
-    regionCodes: string[];
-  }) => {
-    setVars(payload.vars);
-    setResponseScale(payload.scale);
-    regM.mutate({
-      ...regBody,
-      variables: payload.vars,
-      response_scale: payload.scale,
-      region_codes: payload.regionCodes,
-      region_code_level: regBody.region_code_level ?? "eupmyeondong",
-    });
-  };
-
   const resultRegBody = useMemo(
     () => ({ ...regBody, response_scale: appliedResponseScale }),
     [regBody, appliedResponseScale],
@@ -1643,7 +1622,7 @@ export default function App() {
           </section>
 
           {regM.data && (
-            <>
+            <PredictDraftProvider key={builtAnalysisScopeKey(resultRegBody)}>
               <section id="built-step-predict-basic" className="px-4 pb-4 pt-0 scroll-mt-16">
                 <PredictPanel
                   regData={regM.data}
@@ -1661,15 +1640,12 @@ export default function App() {
                   resultRegBody={resultRegBody}
                   vars={vars}
                   recommendM={recommendM}
-                  onAdopt={adoptModel}
-                  onAdoptPool={adoptModelPool}
-                  adopting={regM.isPending}
                   assetType={assetType}
                   regionLabel={aiRegionLabel}
                   profileTarget={profileTarget}
                 />
               </section>
-            </>
+            </PredictDraftProvider>
           )}
         </div>
       </main>

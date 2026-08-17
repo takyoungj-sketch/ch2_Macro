@@ -1,6 +1,6 @@
 # 복합(Built) 회귀 분석 UI — 세로 흐름 설계
 
-> **상태:** P0 구현 완료 (2026-08-09)  
+> **상태:** 2026-08-17 — Macro는 작업 창(탭) · 기본 통계 비대체  
 > **범위:** `frontend-built` 회귀·Macro 탐색·상위지역 UX  
 > **상위:** [CH2_RECOMMENDATION_ENGINE_DESIGN.md](./CH2_RECOMMENDATION_ENGINE_DESIGN.md) · [CH2_CONSTITUTION.md](./CH2_CONSTITUTION.md)
 
@@ -8,12 +8,11 @@
 
 ## 1. 목적
 
-복합 앱의 회귀 분석 화면을 **모달 중심**에서 **세로 분석 흐름**으로 전환한다.
+기본 통계(①)는 사용자가 만든 식. Macro는 **별도 창에서만** 보는 조언이다.
 
-- **Macro는 조언**, **채택·적용은 항상 사용자**
-- 기본 통계(사용자 실험)와 Macro 탐색( SSOT 풀 )의 **역할 분리**를 UI에서 명확히
-- 예측형·설명형을 **독립 실행** — 예측형을 먼저 할 필요 없음
-- Twin(쌍둥이 지역 pool)은 **사용자 opt-in** — Macro가 비교 의견만 제시
+- **Macro 결과는 기본 통계 식·변수·지역을 대체하지 않는다**
+- 예측형·설명형은 **한 번 탐색**으로 함께 채워진다 (탭으로 읽기)
+- Twin(쌍둥이 지역 pool)은 **사용자 opt-in** — 창 안에서만 비교, 본문 `/run`에 적용하지 않음
 
 ---
 
@@ -33,29 +32,25 @@
 ### 2.2 오른쪽 본문 — **세로 카드 흐름**
 
 ```text
-[단계 네비]  ① 회귀실험 · ② Macro 예측형 · ③ Macro 설명형 · ④ 상위지역
+[단계 네비]  ① 회귀실험 · ② Macro 모형 탐색(창) · ③ 상위지역
 
 ① 회귀 실험 (기존 FocusRegressionCard + 산점도)
    · 사용자가 왼쪽에서 고른 변수·스케일 결과
    · regM.data 있을 때만 표시
 
-② Macro 예측형 (인라인 카드)
-   · 「Macro 예측형 탐색」 버튼 — 사용자가 클릭 시 recommend API
-   · CV-MAPE 1위 후보·예측형 랭킹·만족 등급
-   · (선택) 「쌍둥이 지역 추가 검토」→ stage2 Twin (유사 지역 거래를 더해 **모형 재탐색**)
+② Macro 모형 탐색 (진입 카드 → 큰 작업 창)
+   · 본문 「창 열기 / 결과 보기」 한 버튼
+   · 창 안 탭 [예측형 (CV-MAPE)] [설명형 (AIC)]
+   · 한 번 탐색 = 두 탭 동시 채움
+   · 「예측 미리보기」·Twin은 창 안에서만
+   · 기본 통계 식 대체 없음 (「이 후보로 분석」 없음)
 
-③ Macro 설명형 (인라인 카드)
-   · 「Macro 설명형 탐색」 버튼 — ②와 **독립** (순서 강제 없음)
-   · AIC 1위 후보·설명형 랭킹·계수 해석
-   · 동일 recommend 응답의 alternate 슬라이스 표시
-
-④ 상위 지역 분석 (인라인 카드)
+③ 상위 지역 분석 (인라인 카드)
    · ① 회귀 결과의 comparisons[] 기반
-   · comparisons 없으면 안내 문구
    · 참고용 — 초점 vs 직계·상위 scope
 ```
 
-**제거:** `RecommendationModal`, `UpperScopeCompareModal` 진입 버튼 (모달 자체는 deprecated, 점진 제거)
+**창:** `RecommendationModal` (`DraggableModalShell`). 채택으로 본문 `/run`을 덮어쓰지 않는다.
 
 ---
 
@@ -64,32 +59,32 @@
 ### 3.1 ① 회귀 실험
 
 - 선행 조건: addr1 등 scope 최소 조건 + 「통계분석」 실행
-- Macro ②③과 **독립** — ① 없이도 ②③ API 호출 가능 (동일 `regBody` / `analysis_scope`)
-- ① 결과는 사용자 실험의 **기준선(baseline)** 으로 Macro 카드에서 참고 가능 (향후 CV 비교)
+- Macro 창과 **독립** — ① 결과가 있어야 추가분석 블록이 뜬다 (`regM.data`)
+- ① 결과는 사용자 실험의 **기준선(baseline)** — Macro 창의 「내 식 vs Macro」에서 참고
 
-### 3.2 ② Macro 예측형 / ③ Macro 설명형
+### 3.2 ② Macro 모형 탐색 (창)
 
 | 규칙 | 내용 |
 |------|------|
-| 실행 | 각 카드의 「탐색 실행」 — **필수 클릭**, 자동 실행 없음 |
+| 진입 | 본문 「창 열기」 — 결과 없으면 창이 열리며 한 번 탐색 |
 | API | `POST /built/regression/recommend` — **한 번의 응답**에 primary(예측) + alternate(설명) |
-| 표시 | **한 번에 하나만** — 사용자가 탐색한 모드(예측형 **또는** 설명형) 결과만 표시 |
-| 순서 | **없음** — ③만 먼저 열어도 됨 |
-| 재실행 | scope·필터 변경 후 「다시 탐색」 |
-| 채택 | 「이 후보로 분석」→ 왼쪽 변수·스케일 갱신 + `regression/run` 재호출 |
+| 표시 | 창 탭 **예측형 / 설명형** — 같은 응답의 슬라이스 |
+| 본문 | 기본 통계 식·왼쪽 변수·선택 지역을 **덮어쓰지 않음** |
+| 확인 | 「예측 미리보기」는 창 안 embedded PredictPanel |
+| 재실행 | 창 안 「다시 탐색」. scope·필터 변경 시 Macro 리셋 |
 
-**배치:** ① 회귀 실험 **예측창 아래**에 ②③④ 배치 (`regM.data` 있을 때만).
+**배치:** ① 회귀 실험 **예측창 아래**에 Macro 진입 카드 + 상위지역 (`regM.data` 있을 때만).
 
 ### 3.3 Twin (쌍둥이 지역)
 
-- **② 예측형 카드**에만 「쌍둥이 지역 추가 검토」 노출
+- **예측형 탭**에만 「쌍둥이 지역 추가 검토」 노출
 - Macro `conclusion.twin_recommended` 일 때 안내; **자동 pool 적용 금지**
-- 사용자 클릭 → `run_stage2: true` 재요청 → pool별 **재탐색 변수·CV-MAPE** · 「이 pool로 분석」
-- pool 채택 시 해당 pool의 **변수·response_scale·region_codes**가 `/run`에 반영
+- 사용자 클릭 → `run_stage2: true` 재요청 → pool별 **재탐색 변수·CV-MAPE** 를 **창 안에서만** 표시
+- 「이 pool로 분석」으로 본문 `/run`에 region_codes를 넣지 않음
 - gate/validation 탈락은 decision_reason 한 줄로만 요약 (선택)
-- ③ 설명형은 Twin 결과 **요약 참조**만 (pool UI 중복 없음)
+- 설명형 탭은 Twin 결과 **요약 참조**만 (pool UI 중복 없음)
 
-### 3.4 ④ 상위 지역
+### 3.4 ③ 상위 지역
 
 - **opt-in** — 「상위지역 분석」 클릭 시에만 비교·예측 UI 표시 (통계분석만으로 자동 노출 안 함)
 - ① `regression/run` 응답의 `comparisons` 사용 (별도 API 없음)
@@ -102,20 +97,17 @@
 
 ```text
 frontend-built/src/components/
-├── BuiltAnalysisStepNav.tsx       # ①~④ 앵커 네비
-├── BuiltRegressionAnalysisPanel.tsx  # recommend·Twin·predict 상태 orchestration
-├── MacroModelExploreCard.tsx      # ② 또는 ③ 단일 모드 카드
-├── UpperScopeAnalysisCard.tsx     # ④ 인라인
-├── RecommendStagePanel.tsx        # mode: predictive | explanatory | full
-└── (deprecated) RecommendationModal.tsx
+├── BuiltRegressionAnalysisPanel.tsx  # 진입 카드 + 창 open + 상위지역
+├── RecommendationModal.tsx        # Macro 작업 창 (탭·탐색·미리보기)
+├── UpperScopeAnalysisCard.tsx     # ③ 인라인
+└── RecommendStagePanel.tsx        # mode: predictive | explanatory | full
 ```
 
 `App.tsx`:
 
-- 왼쪽 사이드바: 변경 없음
+- 왼쪽 사이드바: 변경 없음 (Macro 채택으로 덮어쓰지 않음)
 - ① 섹션: `id="built-step-regression"`
 - ① 아래: `<BuiltRegressionAnalysisPanel />`
-- `modelExploreOpen` / `upperCompareOpen` state 제거
 
 ---
 
@@ -138,7 +130,7 @@ frontend-built/src/components/
 - [x] `BUILT_REGRESSION_ANALYSIS_UI.md` 작성
 - [x] `BuiltRegressionAnalysisPanel` + 카드 3종
 - [x] `RecommendStagePanel` mode 분기
-- [x] `App.tsx` 모달 제거·인라인 연결
+- [x] `App.tsx` Macro 창 연결 (본문 식 비대체)
 - [x] `CH2_RECOMMENDATION_ENGINE_DESIGN.md` §10 갱신
 
 ### P1 (후속)
@@ -153,14 +145,13 @@ frontend-built/src/components/
 
 | 위치 | 문구 |
 |------|------|
-| ② 제목 | Macro 예측형 |
-| ② 부제 | CV-MAPE 기준 — SSOT 변수 풀에서 최적 조합 탐색 |
-| ③ 제목 | Macro 설명형 |
-| ③ 부제 | AIC 기준 — 계수 해석·설명력 중심 |
-| Twin CTA | 유사 지역 거래를 더해 모형을 다시 찾습니다 |
-| Twin 설명 | 표본 확대 후 최종 모형 제안 — pool 채택은 사용자 결정 |
-| ④ 제목 | 상위 지역 분석 |
-| ④ 부제 | 분석 초점 vs 상위 행정 scope — 참고용 |
+| ② 제목 | Macro 모형 탐색 |
+| ② 부제 | 예측형·설명형 한 탐색 — 창 안에서만 확인 |
+| 탭 | 예측형 (CV-MAPE) / 설명형 (AIC) |
+| Twin CTA | 유사 지역 거래를 더해 이 창에서 모형을 다시 찾습니다 |
+| Twin 설명 | 기본 통계 식은 바꾸지 않습니다 |
+| ③ 제목 | 상위 지역 분석 |
+| ③ 부제 | 분석 초점 vs 상위 행정 scope — 참고용 |
 
 ---
 

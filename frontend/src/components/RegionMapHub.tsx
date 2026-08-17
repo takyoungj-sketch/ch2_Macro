@@ -15,6 +15,7 @@ import {
   fetchMapNeighbors,
   vworldSatelliteTileUrl,
 } from "../api/mapClient";
+import { clampMapMenuPos } from "@ch2/macro-shell";
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import { MAX_PAID_LEAF_BEOPJUNGRI_PICK } from "../constants/tierPickLimits";
 import { fetchRegions } from "../api/client";
@@ -704,9 +705,10 @@ export default function RegionMapHub({
         mapScope.labels[code] ||
         String(props.full_nm ?? props.li_kor_nm ?? props.emd_kor_nm ?? code);
       setMapError(null);
+      const pos = clampMapMenuPos(point.x, point.y, containerRef.current);
       setContextMenu({
-        x: point.x,
-        y: point.y,
+        x: pos.x,
+        y: pos.y,
         code,
         label,
       });

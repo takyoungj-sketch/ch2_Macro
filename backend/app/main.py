@@ -149,9 +149,11 @@ if rent_router is not None:
     _LOG.info("rent_stats API 활성: /api/rent/*")
 
 from app.ai.router import router as ai_router
+from app.ai.usage_router import router as ai_usage_router
 
 app.include_router(ai_router, prefix="/api")
-_LOG.info("CH2 AI API 활성: /api/ai/*")
+app.include_router(ai_usage_router, prefix="/api")
+_LOG.info("CH2 AI API 활성: /api/ai/* · /api/admin/ai-usage")
 
 if (settings.platform_database_url or "").strip():
     from app.platform.auth_router import router as platform_auth_router

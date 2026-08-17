@@ -16,6 +16,7 @@ import MapGL, {
 } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 
+import { clampMapMenuPos } from "@ch2/macro-shell";
 import {
   fetchCollectiveBuildingMapPoints,
   fetchCollectiveMapResolveCodes,
@@ -1025,6 +1026,7 @@ export default function CollectiveRegionMapHub({
       }
 
       const props = (polygonFeat.properties ?? rawFeat.properties) as Record<string, unknown>;
+      const pos = clampMapMenuPos(point.x, point.y, containerRef.current);
       if (mapLevel === "eupmyeondong") {
         const leafName = leafNameFromProps(props);
         if (!leafName) {
@@ -1037,8 +1039,8 @@ export default function CollectiveRegionMapHub({
         }
         setMapError(null);
         setContextMenu({
-          x: point.x,
-          y: point.y,
+          x: pos.x,
+          y: pos.y,
           code,
           label: leafName,
           kind: "leaf",
@@ -1060,8 +1062,8 @@ export default function CollectiveRegionMapHub({
         }
         setMapError(null);
         setContextMenu({
-          x: point.x,
-          y: point.y,
+          x: pos.x,
+          y: pos.y,
           code,
           label: `${pick.eup} ${pick.ri}`,
           kind: "ri",

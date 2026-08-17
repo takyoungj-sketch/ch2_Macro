@@ -255,15 +255,15 @@ export default function LandPredictPanel({
           </div>
           <div className="text-xs space-y-1">
             <div>
-              <span className="font-medium">95% 예측구간 (개별 거래)</span>{" "}
+              <span className="font-medium">95% 평균 신뢰구간</span>{" "}
               <span className="tabular-nums">
-                {fmtNum(data.pi_lower, 2)} ~ {fmtNum(data.pi_upper, 2)} 만원/㎡
+                {fmtNum(data.ci_lower, 2)} ~ {fmtNum(data.ci_upper, 2)} 만원/㎡
               </span>
             </div>
             <div className="text-slate-500">
-              95% 평균 신뢰구간{" "}
+              95% 예측구간 (개별 거래){" "}
               <span className="tabular-nums">
-                {fmtNum(data.ci_lower, 2)} ~ {fmtNum(data.ci_upper, 2)} 만원/㎡
+                {fmtNum(data.pi_lower, 2)} ~ {fmtNum(data.pi_upper, 2)} 만원/㎡
               </span>
             </div>
           </div>

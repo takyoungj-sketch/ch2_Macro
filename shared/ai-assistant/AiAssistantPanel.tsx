@@ -1,12 +1,18 @@
 // @ts-nocheck — shared 패키지: 각 frontend node_modules 기준으로 tsc 경로가 달라짐
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
-import type { AiChatResponse, AiContextPayload, AiPurpose, EvidenceItem } from "./aiClient";
-import { fetchSuggestedQuestions, sendAiChat } from "./aiClient";
+import type { AiChatResponse, AiContextPayload, EvidenceItem } from "./aiClient";
+import { sendAiChat } from "./aiClient";
 
 type ChatMessage = { role: "user" | "assistant"; text: string; meta?: AiChatResponse };
 
 const PANEL_DISCLAIMER = "본 답변은 시장통계 해석이며 감정평가를 대체하지 않습니다.";
+
+const PURPOSE_COPY =
+  "현재 화면에 나온 CH2 데이터·통계·분석 결과를 풀어 설명합니다. 숫자는 CH2가 계산한 값만 인용하고, 회귀를 다시 돌리거나 가격을 정하지 않습니다.";
+
+const LIMITS_COPY =
+  "감정평가·적정가·투자 판단과, 이 화면과 무관한 질문(날씨·시세·잡담 등)에는 답하지 않습니다. 실험 기간 서버 전체 월 200회·1만 원 한도이며, 한도에 닿으면 멈춥니다.";
 
 function parseSections(text: string): { title: string; body: string }[] | null {
   if (!text.includes("### ")) return null;
@@ -268,16 +274,15 @@ function AiAssistantModal({
   onClose: () => void;
   context: AiContextPayload;
 }) {
-  const [purpose, setPurpose] = useState<AiPurpose>(context.purpose);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [suggested, setSuggested] = useState<string[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [lastMeta, setLastMeta] = useState<AiChatResponse | null>(null);
   const [win, setWin] = useState(defaultWinPos);
   const [fontScale, setFontScale] = useState(readStoredFontScale);
+  const chatLogRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
     mode: "move" | "resize";
     startX: number;
@@ -293,11 +298,9 @@ function AiAssistantModal({
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
-    fetchSuggestedQuestions(context.panel, purpose, context.app)
-      .then(setSuggested)
-      .catch(() => setSuggested([]));
-  }, [context.panel, purpose, context.app, open]);
+    const el = chatLogRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages, loading]);
 
   useEffect(() => {
     if (!open) return;
@@ -374,21 +377,17 @@ function AiAssistantModal({
       setMessages((m: ChatMessage[]) => [...m, { role: "user", text: q }]);
       setInput("");
       try {
-        const ctx = { ...context, purpose };
-        const resp = await sendAiChat(q, ctx, sessionId);
+        const resp = await sendAiChat(q, context, sessionId);
         setSessionId(resp.session_id);
         setLastMeta(resp);
         setMessages((m: ChatMessage[]) => [...m, { role: "assistant", text: resp.answer, meta: resp }]);
-        if (resp.suggested_followups?.length) {
-          setSuggested(resp.suggested_followups);
-        }
       } catch (e) {
         setError((e as Error).message ?? "AI 요청 실패");
       } finally {
         setLoading(false);
       }
     },
-    [context, loading, purpose, sessionId],
+    [context, loading, sessionId],
   );
 
   if (!open) return null;
@@ -478,57 +477,29 @@ function AiAssistantModal({
         className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3"
         style={{ fontSize: `${BASE_FONT_PX * fontScale}px` }}
       >
-        <div className="flex flex-wrap gap-2 items-center text-[0.92em]">
-          <span className="text-slate-500 dark:text-slate-400">목적</span>
-          {(
-            [
-              ["statistics", "통계 해석"],
-              ["prediction", "예측"],
-              ["market_analysis", "시장 패턴"],
-              ["methodology", "방법론"],
-            ] as const
-          ).map(([v, label]) => (
-            <button
-              key={v}
-              type="button"
-              className={clsx(
-                "px-2 py-0.5 rounded border text-[0.92em]",
-                purpose === v
-                  ? "bg-slate-800 text-white border-slate-800 dark:bg-slate-600 dark:border-slate-500"
-                  : "bg-white text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600 dark:hover:border-slate-500",
-              )}
-              onClick={() => setPurpose(v)}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="rounded-lg border border-slate-200 bg-white/70 px-3 py-2.5 space-y-2 text-[0.92em] leading-relaxed dark:border-slate-600 dark:bg-slate-800/40">
+          <div>
+            <p className="text-[0.85em] font-semibold tracking-wide text-slate-500 dark:text-slate-400 mb-0.5">
+              목적과 기능
+            </p>
+            <p className="text-slate-700 dark:text-slate-200">{PURPOSE_COPY}</p>
+          </div>
+          <div className="border-t border-slate-200/80 dark:border-slate-600/80 pt-2">
+            <p className="text-[0.85em] font-semibold tracking-wide text-slate-500 dark:text-slate-400 mb-0.5">
+              제한사항 및 사용량
+            </p>
+            <p className="text-slate-700 dark:text-slate-200">{LIMITS_COPY}</p>
+          </div>
         </div>
 
-        {suggested.length > 0 && (
-          <div>
-            <p className="text-[0.85em] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">
-              다음 질문
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {suggested.map((q: string) => (
-                <button
-                  key={q}
-                  type="button"
-                  className="text-left px-2 py-1 rounded border border-slate-200 hover:border-slate-400 text-[0.95em] text-slate-700 dark:border-slate-600 dark:text-slate-200 dark:bg-slate-800/60 dark:hover:border-slate-500 dark:hover:bg-slate-800"
-                  disabled={loading}
-                  onClick={() => runChat(q)}
-                >
-                  {q}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="min-h-[8rem] flex-1 overflow-y-auto space-y-0 border border-slate-200 rounded-lg bg-slate-50/80 dark:border-slate-600 dark:bg-slate-900/50 max-h-[calc(100%-0.5rem)]">
-          {messages.length === 0 && (
+        <div
+          ref={chatLogRef}
+          className="min-h-[8rem] flex-1 overflow-y-auto space-y-0 border border-slate-200 rounded-lg bg-slate-50/80 dark:border-slate-600 dark:bg-slate-900/50 max-h-[calc(100%-0.5rem)]"
+          aria-busy={loading}
+        >
+          {messages.length === 0 && !loading && (
             <p className="text-slate-400 dark:text-slate-500 text-center py-8 px-3 text-[1em]">
-              질문을 선택하거나 입력하세요.
+              질문을 입력하세요.
             </p>
           )}
           {messages.map((m: ChatMessage, i: number) => (
@@ -563,10 +534,53 @@ function AiAssistantModal({
                   <div className="text-[1em] leading-relaxed text-slate-700 dark:text-slate-200">
                     <AnswerBody text={m.text} />
                   </div>
+                  {m.meta?.suggested_followups?.length > 0 &&
+                    (m.meta.route === "refusal" || m.meta.route === "casual") && (
+                      <div className="mt-3">
+                        <p className="text-[0.85em] font-semibold tracking-wide text-slate-500 dark:text-slate-400 mb-1.5">
+                          관련 질문
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {m.meta.suggested_followups.map((q: string) => (
+                            <button
+                              key={q}
+                              type="button"
+                              className="text-left px-2 py-1 rounded border border-slate-200 hover:border-slate-400 text-[0.95em] text-slate-700 dark:border-slate-600 dark:text-slate-200 dark:bg-slate-800/60 dark:hover:border-slate-500 dark:hover:bg-slate-800 disabled:opacity-50"
+                              disabled={loading}
+                              onClick={() => runChat(q)}
+                            >
+                              {q}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                 </div>
               )}
             </div>
           ))}
+          {loading && (
+            <div
+              className={clsx(
+                "px-3 py-2.5",
+                messages.length > 0 && "border-t border-slate-200/90 dark:border-slate-600/80",
+              )}
+              role="status"
+              aria-live="polite"
+            >
+              <div className="text-[0.85em] font-semibold tracking-wide text-slate-500 dark:text-slate-400 mb-1">
+                답변
+              </div>
+              <div className="flex items-center gap-2 text-[1em] text-slate-500 dark:text-slate-400">
+                <span className="inline-flex gap-1" aria-hidden>
+                  <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-bounce [animation-delay:-0.3s]" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-bounce [animation-delay:-0.15s]" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-bounce" />
+                </span>
+                답변중
+              </div>
+            </div>
+          )}
         </div>
 
         {error && <p className="text-red-600 dark:text-red-400 text-[1em]">{error}</p>}
@@ -596,7 +610,7 @@ function AiAssistantModal({
             className="btn btn-primary text-[1em] py-1.5 px-3 rounded disabled:opacity-50"
             disabled={loading || !input.trim()}
           >
-            {loading ? "…" : "전송"}
+            {loading ? "답변중" : "전송"}
           </button>
         </form>
         <p className="text-[0.85em] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900/70 rounded px-2 py-1.5 border border-transparent dark:border-slate-700">

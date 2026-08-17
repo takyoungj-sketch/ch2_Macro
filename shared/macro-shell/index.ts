@@ -16,3 +16,4 @@ export {
   type RegionDeepLinkApp,
   type RegionDeepLinkLevel,
 } from "./regionDeepLink";
+export { clampMapMenuPos } from "./clampMapMenuPos";

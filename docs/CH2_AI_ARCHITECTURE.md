@@ -218,11 +218,15 @@ AI_RATE_LIMIT_PER_MINUTE=30
 |------|------|
 | Router / refusal / template | **우회** |
 | Product Knowledge Pack | **미주입** (능력 vs 지식 분리) |
-| 화면 facts | `screen_facts` soft cite — 숫자 invent 금지 |
+| 화면 facts | `service`·`page`·`scope`·`analysis_type` + 숫자 soft cite. invent 금지 |
 | Insight 카드 | **변경 없음** (A/B 비교용) |
 | `route` | `"open"` |
 
 개발·검증 전용. 기본값 `false`. health: `open_mode_enabled`.
+
+**운영 실험 (2026-08-17):** 로컬과 같이 VPS `AI_OPEN_MODE=true`.  
+주제 울타리는 키워드 목록이 아니라 **현재 화면 컨텍스트**.  
+사용량: 서버 전체 월 200회 + 1만 원, 80% 경고 / 100% 중지. 장부는 관리자 `?tool=ai`. 질문 문장은 저장하지 않는다.
 
 ---
 

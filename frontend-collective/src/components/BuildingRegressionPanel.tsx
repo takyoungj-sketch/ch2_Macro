@@ -206,11 +206,11 @@ function PredictPanel({
           </div>
           <div className="text-[11px] space-y-1 text-slate-700 dark:text-slate-300">
             <div>
-              <span className="font-medium">95% 예측구간 (개별 거래)</span>{" "}
-              {fmtInt(result.pi_lower)} ~ {fmtInt(result.pi_upper)}만원
+              <span className="font-medium">95% 평균 신뢰구간</span>{" "}
+              {fmtInt(result.ci_lower)} ~ {fmtInt(result.ci_upper)}만원
             </div>
             <div className="text-slate-500 dark:text-slate-400">
-              95% 평균 신뢰구간 {fmtInt(result.ci_lower)} ~ {fmtInt(result.ci_upper)}만원
+              95% 예측구간 (개별 거래) {fmtInt(result.pi_lower)} ~ {fmtInt(result.pi_upper)}만원
             </div>
           </div>
           {result.warnings.map((w) => (

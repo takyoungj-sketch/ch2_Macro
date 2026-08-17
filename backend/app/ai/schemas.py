@@ -113,6 +113,7 @@ class AiChatResponse(BaseModel):
     trust_level: Optional[Literal["high", "medium", "low"]] = None
     trust_sources: list[str] = Field(default_factory=list)
     ai_interpretation: Optional[str] = None
+    quota: Optional[dict[str, Any]] = None
 
 
 class AiDiagnosticPack(BaseModel):

@@ -76,17 +76,30 @@ _CASUAL_SYNTHESIS_ADDON = """
 - 여전히 적정가·투자·전망 금지.
 """
 
-_OPEN_MODE_SYSTEM = """당신은 CH2 Macro에 연동된 대화형 AI입니다. (Open Mode — 개발·검증)
+_OPEN_MODE_SYSTEM = """너는 CH2 Macro의 통계 분석 보조 AI다.
 
-목표:
-- 사용자 질문에 **직접·자연스럽게** 답합니다.
-- 통계·방법론·제품·일반 질문까지 폭넓게 대화할 수 있습니다.
-- 연속 대화를 이어가며, 앞 턴의 맥락을 활용합니다.
+CH2 Macro 화면에서 제공하는 통계, 데이터, 분석 결과 및
+그 결과를 이해하기 위해 필요한 통계 개념에 대해서만 답변한다.
 
-화면 facts (soft):
-- 제공된 `screen_facts`에 있는 **숫자·표본·계수**를 인용할 때는 **그대로** 쓰세요.
-- screen_facts에 없는 화면 수치를 **새로 만들지 마세요.**
-- 질문이 화면과 무관하면 facts를 무시해도 됩니다.
+사용자의 질문이 현재 CH2 Macro의 데이터나 분석과 관련되어 있으면
+질문의 표현이 다소 넓더라도 적절히 해석하여 답변한다.
+(예: 이 화면에서 「MAPE가 뭔데?」 → 이번 결과와 붙여 짧게 설명)
+
+판단 기준은 질문의 단어가 아니라 **현재 화면/데이터와 연결되어 있는지**다.
+screen_facts의 service·page·scope·analysis_type을 현재 컨텍스트로 쓴다.
+
+현재 화면과 무관한 일반적인 생활, 투자, 날씨, 정치, 잡담,
+다른 자산 전망, 코딩 공부 등에는 답하지 않는다.
+거절할 때는 한두 문장으로 제한임을 알리고, 이 화면에서 물어볼 수 있는
+통계 질문만 짧게 제안한다. 직전 답변의 결론·요약·Adj R²·MAPE를 복사하지 않는다.
+
+화면 결과를 쉬운 말이나 보고서 문체로 풀어 쓰는 것은 허용한다.
+감정평가액·적정가·투자·매수/매도·가격 전망은 제시하지 않는다.
+CH2를 감정평가로 대체하지 않는다.
+감정평가·적정가 적용 가능 여부 질문에는 화면 분석을 반복하지 말고 제한만 안내한다.
+
+화면에 제공되지 않은 데이터를 임의로 만들어내지 않는다.
+screen_facts에 있는 숫자·표본·계수는 그대로 인용한다.
 
 톤: 한국어 존댓말, 친절하고 명확. 마크다운 가능.
 """
@@ -141,12 +154,27 @@ def _openai_chat(
         method="POST",
     )
     try:
+        from app.ai.usage_log import assert_quota_or_raise, record_llm_call
+
+        assert_quota_or_raise()
         with urlopen(req, timeout=timeout) as resp:
             data = json.loads(resp.read().decode("utf-8"))
         choices = data.get("choices") or []
         if not choices:
             return None
         content = (choices[0].get("message") or {}).get("content")
+        usage = data.get("usage") or {}
+        details = usage.get("prompt_tokens_details") or {}
+        try:
+            record_llm_call(
+                requested_model=model,
+                served_model=str(data.get("model") or "") or None,
+                prompt_tokens=int(usage.get("prompt_tokens") or 0),
+                completion_tokens=int(usage.get("completion_tokens") or 0),
+                cached_tokens=int(details.get("cached_tokens") or 0),
+            )
+        except Exception:
+            _LOG.warning("AI usage log failed", exc_info=True)
         return str(content).strip() if content else None
     except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
         _LOG.warning("OpenAI call failed: %s", exc)

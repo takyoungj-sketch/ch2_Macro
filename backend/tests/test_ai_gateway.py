@@ -6,8 +6,9 @@ import pytest
 
 from app.ai.constitution import classify_route, is_refusal_message
 from app.ai.llm import numbers_preserved
+from app.ai.open_mode import soft_facts_snapshot
 from app.ai.orchestrator import handle_chat
-from app.ai.schemas import AiChatRequest, AiContext, AiScope
+from app.ai.schemas import AiChatRequest, AiContext, AiDiagnosticPack, AiScope
 from app.ai.validator import validate_answer
 from app.ai.web_answer import web_template_answer
 from app.ai.web_search import WebHit
@@ -27,6 +28,8 @@ def _disable_open_mode_by_default(monkeypatch):
 def test_refusal_appropriate_price():
     assert is_refusal_message("이 물건은 적정가격인가?")
     assert classify_route("이 물건은 적정가격인가?") == "refusal"
+    assert is_refusal_message("이 모형을 감정평가에 적용 가능한가?")
+    assert classify_route("이 모형을 감정평가에 적용 가능한가?") == "refusal"
 
 
 def test_refusal_future_price():
@@ -128,15 +131,39 @@ def test_open_mode_bypasses_template(monkeypatch):
     assert "Open Mode" in resp.answer or "국토부" in resp.answer or "데이터" in resp.answer
 
 
-def test_open_mode_skips_refusal(monkeypatch):
+def test_soft_facts_include_ch2_screen_context():
+    bundle = AiDiagnosticPack(
+        bundle_id="regression_diagnostic",
+        panel="RegressionCard",
+        app="built",
+        summary_lines=["표본 n=77"],
+        diagnostics={"n": 77, "adj_r_squared": 0.46, "mape": 36.5},
+        limitations=["표본 주의"],
+    )
+    ctx = AiContext(
+        app="built",
+        panel="RegressionCard",
+        purpose="statistics",
+        scope=AiScope(region_label="본리동 읍면동"),
+    )
+    facts = soft_facts_snapshot(bundle, scope_label="본리동 읍면동", context=ctx)
+    assert facts["service"] == "CH2 Macro"
+    assert facts["page"] == "회귀분석"
+    assert facts["scope"] == "본리동 읍면동"
+    assert facts["analysis_type"] == "RegressionCard"
+    assert facts["app_label"] == "복합부동산"
+    assert facts["stats"]["n"] == 77
+
+
+def test_open_mode_still_refuses_valuation(monkeypatch):
     from app.config import settings
 
     monkeypatch.setattr(settings, "ai_open_mode", True)
 
     with patch(
         "app.ai.orchestrator.open_mode_chat_completion",
-        return_value="투자 관련 일반 설명입니다.",
-    ):
+        return_value="이 호출은 나면 안 됩니다.",
+    ) as llm:
         req = AiChatRequest(
             message="이 물건은 적정가격인가?",
             context=AiContext(
@@ -146,9 +173,13 @@ def test_open_mode_skips_refusal(monkeypatch):
             ),
         )
         resp = handle_chat(req)
-    assert resp.route == "open"
-    assert resp.llm_used is True
-    assert "### 요약" not in resp.answer or "scope를 CH2 세션" not in resp.answer
+    llm.assert_not_called()
+    assert resp.route == "refusal"
+    assert resp.llm_used is False
+    assert "답하지 않는 범위" in resp.answer
+    assert "결론(요약)" not in resp.answer
+    assert resp.suggested_followups
+    assert "대신 이런 질문" in resp.answer
 
 
 def test_log_log_not_scope_comparison():
@@ -286,14 +317,43 @@ def test_chat_refusal_response():
             app="built",
             panel="RegressionCard",
             scope=AiScope(region_label="가경동"),
-            facts={"primary": {"n": 140, "prediction": 97040}},
+            facts={"primary": {"n": 140, "prediction": 97040, "adj_r_squared": 0.87, "mape": 128.1}},
         ),
     )
     resp = handle_chat(req)
     assert resp.route == "refusal"
     assert resp.session_id
     assert any(e.type == "refusal_policy" for e in resp.evidence)
-    assert "적정" not in resp.answer or "판단하지 않습니다" in resp.answer
+    assert "판단하지 않습니다" in resp.answer
+    assert "대신 이런 질문" in resp.answer
+    assert "97040" not in resp.answer
+    assert "128.1" not in resp.answer
+    assert resp.suggested_followups
+
+
+def test_refusal_appraisal_apply_redirect(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "ai_open_mode", True)
+    assert is_refusal_message("이 모형을 감정평가에 적용 가능한가?")
+    req = AiChatRequest(
+        message="이 모형을 감정평가에 적용 가능한가?",
+        context=AiContext(
+            app="built",
+            panel="RegressionCard",
+            scope=AiScope(region_label="길동, 천호동"),
+            facts={"primary": {"n": 111, "adj_r_squared": 0.8729, "mape": 128.1}},
+        ),
+    )
+    with patch("app.ai.orchestrator.open_mode_chat_completion") as llm:
+        resp = handle_chat(req)
+    llm.assert_not_called()
+    assert resp.route == "refusal"
+    assert "감정평가" in resp.answer
+    assert "0.8729" not in resp.answer
+    assert "128.1" not in resp.answer
+    assert resp.suggested_followups
+    assert any("Adj R²" in q or "연식" in q or "로그" in q for q in resp.suggested_followups)
 
 
 def test_chat_regression_bundle():

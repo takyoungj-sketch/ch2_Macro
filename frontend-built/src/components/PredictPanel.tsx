@@ -1,4 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from "react";
 import { useMutation } from "@tanstack/react-query";
 import clsx from "clsx";
 import AiAssistantPanel from "./AiAssistantPanel";
@@ -56,6 +67,53 @@ function defaultPredictInputs(opts?: PredictOptions | null): Record<string, stri
   return out;
 }
 
+type DraftCtx = {
+  draft: Record<string, string>;
+  setDraft: Dispatch<SetStateAction<Record<string, string>>>;
+};
+
+const PredictDraftContext = createContext<DraftCtx | null>(null);
+
+/** 기본통계 예측 입력을 상위지역·추천 미리보기와 공유 */
+export function PredictDraftProvider({ children }: { children: ReactNode }) {
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const value = useMemo(() => ({ draft, setDraft }), [draft]);
+  return <PredictDraftContext.Provider value={value}>{children}</PredictDraftContext.Provider>;
+}
+
+function mergePredictInputs(
+  opts: PredictOptions | null | undefined,
+  draft: Record<string, string> | undefined,
+): Record<string, string> {
+  const base = defaultPredictInputs(opts);
+  if (!draft) return base;
+  const next = { ...base };
+  const keepIfListed = (key: string, listed?: string[]) => {
+    const v = draft[key];
+    if (v == null || v === "") return;
+    if (listed?.length && !listed.includes(v)) return;
+    next[key] = v;
+  };
+  for (const c of opts?.continuous ?? []) {
+    const v = draft[c.name];
+    if (v != null && v !== "") next[c.name] = v;
+  }
+  keepIfListed("zone_type", opts?.zone_types);
+  keepIfListed("building_use", opts?.building_uses);
+  keepIfListed("road_width_label", opts?.road_width_labels);
+  keepIfListed("predict_asset_type", opts?.asset_types);
+  keepIfListed("region_leaf", opts?.region_leaves);
+  return next;
+}
+
+function inputsEqual(a: Record<string, string>, b: Record<string, string>) {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const k of keys) {
+    if ((a[k] ?? "") !== (b[k] ?? "")) return false;
+  }
+  return true;
+}
+
 type Props = {
   regData: RegressionRunResponse;
   regBody: RegressionRunRequest;
@@ -66,10 +124,14 @@ type Props = {
   embedded?: boolean;
   /** 상단 안내 (예: 추천 모형 기준) */
   modelHint?: string | null;
-  /** 추천 미리보기 — 채택 예정 식 fit_n */
+  /** 추천 미리보기 — 이 창 Macro 후보 fit_n */
   fitN?: number;
   /** 추천 scope 거래 건수 */
   scopeNTx?: number;
+  /** 있으면 그 행정 레벨 모형만 사용 (드롭다운 없음) */
+  lockAdminLevel?: string | null;
+  /** 입력이 채워져 있으면 마운트 시 한 번 예측 */
+  autoPredict?: boolean;
 };
 
 export default function PredictPanel({
@@ -82,28 +144,59 @@ export default function PredictPanel({
   modelHint,
   fitN,
   scopeNTx,
+  lockAdminLevel = null,
+  autoPredict = false,
 }: Props) {
+  const draftCtx = useContext(PredictDraftContext);
   const levels = useMemo(() => {
     const all = [regData.primary, ...regData.comparisons];
     return all.filter((l) => l.n >= 10 && l.coefficients.length > 0 && l.predict_options);
   }, [regData]);
 
-  const [adminLevel, setAdminLevel] = useState<string>("sigungu");
-  const selected = levels.find((l) => l.admin_level === adminLevel) ?? levels[0];
-  const [inputs, setInputs] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (!levels.length) return;
+  const focusLevel = useMemo(() => {
     const focus = regData.primary;
-    const pick = levels.find((l) => l.admin_level === focus.admin_level) ?? focus;
-    setAdminLevel(pick.admin_level);
-    setInputs(defaultPredictInputs(pick.predict_options));
-  }, [regData, levels]);
+    return levels.find((l) => l.admin_level === focus.admin_level) ?? levels[0];
+  }, [levels, regData.primary]);
+
+  const selected = useMemo(() => {
+    if (lockAdminLevel) {
+      return (
+        levels.find((l) => l.admin_level === lockAdminLevel) ??
+        [regData.primary, ...regData.comparisons].find(
+          (l) =>
+            l.admin_level === lockAdminLevel &&
+            l.n >= 10 &&
+            l.coefficients.length > 0 &&
+            l.predict_options,
+        ) ??
+        null
+      );
+    }
+    return focusLevel ?? null;
+  }, [lockAdminLevel, levels, regData, focusLevel]);
+
+  const [inputs, setInputs] = useState<Record<string, string>>({});
+  const autoOnce = useRef(false);
+
+  const patchInput = useCallback(
+    (key: string, value: string) => {
+      setInputs((prev) => {
+        const next = { ...prev, [key]: value };
+        draftCtx?.setDraft((d) => ({ ...d, [key]: value }));
+        return next;
+      });
+    },
+    [draftCtx],
+  );
 
   useEffect(() => {
     if (!selected?.predict_options) return;
-    setInputs(defaultPredictInputs(selected.predict_options));
-  }, [adminLevel, selected?.predict_options]);
+    const merged = mergePredictInputs(selected.predict_options, draftCtx?.draft);
+    setInputs((prev) => (inputsEqual(prev, merged) ? prev : merged));
+    if (draftCtx && Object.keys(draftCtx.draft).length === 0) {
+      draftCtx.setDraft(merged);
+    }
+  }, [selected?.admin_level, selected?.predict_options, draftCtx]);
 
   const predictM = useMutation({ mutationFn: predictRegression });
 
@@ -117,22 +210,15 @@ export default function PredictPanel({
     });
   }, [predictM.data, selected, regionLabel, assetType]);
 
-  if (!levels.length) {
-    return embedded ? (
-      <p className="text-xs text-slate-400 text-center py-3">
-        예측 가능한 scope가 없습니다 (n≥10 · 계수 있는 모형 필요).
-      </p>
-    ) : null;
-  }
-
-  const opts = selected?.predict_options;
-
-  const runPredict = () => {
+  const runPredict = useCallback(() => {
+    if (!selected?.predict_options) return;
+    const pOpts = selected.predict_options;
+    const level = selected.admin_level;
     const body: RegressionPredictRequest = {
       ...regBody,
-      admin_level: adminLevel as RegressionPredictRequest["admin_level"],
+      admin_level: level as RegressionPredictRequest["admin_level"],
     };
-    for (const c of opts?.continuous ?? []) {
+    for (const c of pOpts.continuous ?? []) {
       const raw = inputs[c.name];
       if (raw === "" || raw == null) return;
       body[c.name as keyof RegressionPredictRequest] = Number(raw) as never;
@@ -143,13 +229,41 @@ export default function PredictPanel({
     if (vars.asset_type_dummy && inputs.predict_asset_type) body.predict_asset_type = inputs.predict_asset_type;
     if (
       vars.region_leaf_dummy &&
-      (adminLevel === "eupmyeondong" || adminLevel === "beopjungri") &&
+      (level === "eupmyeondong" || level === "beopjungri") &&
       inputs.region_leaf
     ) {
       body.region_leaf = inputs.region_leaf;
     }
     predictM.mutate(body);
-  };
+  }, [selected, regBody, vars, inputs, predictM]);
+
+  useEffect(() => {
+    if (!autoPredict || autoOnce.current || !selected?.predict_options) return;
+    const cont = selected.predict_options.continuous ?? [];
+    if (!cont.length) return;
+    if (!cont.every((c) => String(inputs[c.name] ?? "").trim() !== "")) return;
+    autoOnce.current = true;
+    runPredict();
+  }, [autoPredict, selected, inputs, runPredict]);
+
+  if (lockAdminLevel && !selected) {
+    return embedded ? (
+      <p className="text-xs text-slate-400 text-center py-3">
+        상위 모형으로 예측할 수 없습니다 (n≥10 · 계수 있는 모형 필요).
+      </p>
+    ) : null;
+  }
+
+  if (!levels.length || !selected) {
+    return embedded ? (
+      <p className="text-xs text-slate-400 text-center py-3">
+        예측 가능한 scope가 없습니다 (n≥10 · 계수 있는 모형 필요).
+      </p>
+    ) : null;
+  }
+
+  const opts = selected.predict_options;
+  const level = selected.admin_level;
 
   return (
     <div
@@ -177,7 +291,7 @@ export default function PredictPanel({
                   적합 {fitN}
                 </>
               )}
-              <span className="text-slate-300"> — 채택 예정 식 기준</span>
+              <span className="text-slate-300"> — 이 창의 Macro 후보 기준</span>
             </p>
           )}
           {!embedded && (
@@ -202,20 +316,14 @@ export default function PredictPanel({
       </div>
 
       <div className="flex flex-nowrap items-end gap-2 text-xs overflow-x-auto pb-0.5">
-        <label className="space-y-1 shrink-0">
-          <span className="text-slate-500 block whitespace-nowrap">scope</span>
-          <select
-            className="input !w-[11rem] py-1 text-xs"
-            value={adminLevel}
-            onChange={(e) => setAdminLevel(e.target.value)}
-          >
-            {levels.map((l) => (
-              <option key={l.admin_level} value={l.admin_level}>
-                {ADMIN_LABELS[l.admin_level] ?? l.admin_level} (n={l.n})
-              </option>
-            ))}
-          </select>
-        </label>
+        {selected ? (
+          <div className="space-y-1 shrink-0">
+            <span className="text-slate-500 block whitespace-nowrap">모형</span>
+            <p className="input !w-auto min-w-[11rem] py-1 text-xs bg-slate-50 dark:bg-slate-900/50 text-slate-700 dark:text-slate-200">
+              {ADMIN_LABELS[selected.admin_level] ?? selected.admin_level} (n={selected.n})
+            </p>
+          </div>
+        ) : null}
 
         {(opts?.continuous ?? []).map((c) => {
           const assess = assessmentForName(predictM.data?.continuous_assessments, c.name);
@@ -232,7 +340,7 @@ export default function PredictPanel({
               )}
               type="number"
               value={inputs[c.name] ?? ""}
-              onChange={(e) => setInputs((prev) => ({ ...prev, [c.name]: e.target.value }))}
+              onChange={(e) => patchInput(c.name, e.target.value)}
             />
           </label>
           );
@@ -244,7 +352,7 @@ export default function PredictPanel({
             <select
               className="input !w-[11rem] py-1 text-xs"
               value={inputs.zone_type ?? ""}
-              onChange={(e) => setInputs((prev) => ({ ...prev, zone_type: e.target.value }))}
+              onChange={(e) => patchInput("zone_type", e.target.value)}
             >
               {opts!.zone_types.map((z) => (
                 <option key={z} value={z}>
@@ -264,7 +372,7 @@ export default function PredictPanel({
             <select
               className="input !w-[11rem] py-1 text-xs"
               value={inputs.building_use ?? ""}
-              onChange={(e) => setInputs((prev) => ({ ...prev, building_use: e.target.value }))}
+              onChange={(e) => patchInput("building_use", e.target.value)}
             >
               {opts!.building_uses.map((u) => (
                 <option key={u} value={u}>
@@ -282,7 +390,7 @@ export default function PredictPanel({
             <select
               className="input !w-[11rem] py-1 text-xs"
               value={inputs.road_width_label ?? ""}
-              onChange={(e) => setInputs((prev) => ({ ...prev, road_width_label: e.target.value }))}
+              onChange={(e) => patchInput("road_width_label", e.target.value)}
             >
               {opts!.road_width_labels.map((u) => (
                 <option key={u} value={u}>
@@ -300,7 +408,7 @@ export default function PredictPanel({
             <select
               className="input !w-[11rem] py-1 text-xs"
               value={inputs.predict_asset_type ?? ""}
-              onChange={(e) => setInputs((prev) => ({ ...prev, predict_asset_type: e.target.value }))}
+              onChange={(e) => patchInput("predict_asset_type", e.target.value)}
             >
               {opts!.asset_types.map((u) => (
                 <option key={u} value={u}>
@@ -313,16 +421,16 @@ export default function PredictPanel({
         )}
 
         {vars.region_leaf_dummy &&
-          (adminLevel === "eupmyeondong" || adminLevel === "beopjungri") &&
+          (level === "eupmyeondong" || level === "beopjungri") &&
           (opts?.region_leaves?.length ?? 0) > 0 && (
             <label className="space-y-1 shrink-0">
               <span className="text-slate-500 block whitespace-nowrap">
-                {adminLevel === "beopjungri" ? "법정리" : "지역"}
+                {level === "beopjungri" ? "법정리" : "지역"}
               </span>
               <select
                 className="input !w-[11rem] py-1 text-xs"
                 value={inputs.region_leaf ?? ""}
-                onChange={(e) => setInputs((prev) => ({ ...prev, region_leaf: e.target.value }))}
+                onChange={(e) => patchInput("region_leaf", e.target.value)}
               >
                 {(opts?.region_leaves ?? []).map((u) => (
                   <option key={u} value={u}>
@@ -389,13 +497,12 @@ export default function PredictPanel({
           {!hidden && (
             <div className="text-xs space-y-1">
               <div>
-                <span className="font-medium">95% 예측구간 (개별 거래)</span>{" "}
-                {fmtNum(Math.round(predictM.data.pi_lower))} ~ {fmtNum(Math.round(predictM.data.pi_upper))}
-                만원
+                <span className="font-medium">95% 평균 신뢰구간</span>{" "}
+                {fmtNum(Math.round(predictM.data.ci_lower))} ~ {fmtNum(Math.round(predictM.data.ci_upper))}만원
               </div>
               <div className="text-slate-500">
-                95% 평균 신뢰구간 {fmtNum(Math.round(predictM.data.ci_lower))} ~{" "}
-                {fmtNum(Math.round(predictM.data.ci_upper))}만원
+                95% 예측구간 (개별 거래) {fmtNum(Math.round(predictM.data.pi_lower))} ~{" "}
+                {fmtNum(Math.round(predictM.data.pi_upper))}만원
               </div>
             </div>
           )}

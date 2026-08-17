@@ -261,7 +261,7 @@ function MacroModeSummary({
       <p className="text-xs text-slate-600 dark:text-slate-400 truncate">
         {blockSummary(candidate.blocks)} · {candidate.response_scale}
       </p>
-      {conclusion.headline_ko && (
+      {isPredictive && conclusion.headline_ko && (
         <p className="text-xs text-slate-600 dark:text-slate-400">{conclusion.headline_ko}</p>
       )}
     </div>
@@ -307,11 +307,13 @@ function ScopeSummaryBox({
   stage1,
   gradeLabel,
   satStars,
+  showSatisfaction = true,
 }: {
   analysis_scope: RegressionRecommendResponse["analysis_scope"];
   stage1: RegressionRecommendResponse["stage1"];
   gradeLabel: string;
   satStars: string;
+  showSatisfaction?: boolean;
 }) {
   return (
     <div className="rounded-md bg-slate-50 dark:bg-slate-800/50 px-2.5 py-2 text-xs space-y-1">
@@ -323,12 +325,14 @@ function ScopeSummaryBox({
           fit_n: stage1.fit_n,
         }}
       />
-      <p className="text-slate-600 dark:text-slate-300">
-        만족 등급{" "}
-        <span className="font-medium">
-          {gradeLabel} {satStars}
-        </span>
-      </p>
+      {showSatisfaction && (
+        <p className="text-slate-600 dark:text-slate-300">
+          만족 등급{" "}
+          <span className="font-medium">
+            {gradeLabel} {satStars}
+          </span>
+        </p>
+      )}
       <p className="text-slate-400 text-[11px]">
         SSOT 풀({stage1.candidate_pool.length}블록) — 왼쪽 변수 체크와 무관
         {analysis_scope.anchor_unit?.name && <> · anchor {analysis_scope.anchor_unit.name}</>}
@@ -447,7 +451,7 @@ function CandidateMini({
   c: ModelCandidate;
   role: string;
   adoptLabel?: string;
-  onAdopt: () => void;
+  onAdopt?: () => void;
   onPredict?: () => void;
   adopting?: boolean;
   predictActive?: boolean;
@@ -473,30 +477,34 @@ function CandidateMini({
           <p className="text-slate-500 tabular-nums">{metricsLine}</p>
         </div>
       </div>
-      <div className="flex flex-wrap gap-1.5">
-        <button
-          type="button"
-          className="px-2 py-0.5 text-[11px] rounded bg-indigo-600 text-white disabled:opacity-50"
-          disabled={adopting}
-          onClick={onAdopt}
-        >
-          {adoptLabel ?? "1단계 모형 적용"}
-        </button>
-        {onPredict && (
-          <button
-            type="button"
-            className={clsx(
-              "px-2 py-0.5 text-[11px] rounded border",
-              predictActive
-                ? "border-indigo-500 text-indigo-700 dark:text-indigo-300"
-                : "border-slate-300 dark:border-slate-600 text-slate-600",
-            )}
-            onClick={onPredict}
-          >
-            예측 미리보기
-          </button>
-        )}
-      </div>
+      {(onAdopt || onPredict) && (
+        <div className="flex flex-wrap gap-1.5">
+          {onAdopt && (
+            <button
+              type="button"
+              className="px-2 py-0.5 text-[11px] rounded bg-indigo-600 text-white disabled:opacity-50"
+              disabled={adopting}
+              onClick={onAdopt}
+            >
+              {adoptLabel ?? "1단계 모형 적용"}
+            </button>
+          )}
+          {onPredict && (
+            <button
+              type="button"
+              className={clsx(
+                "px-2 py-0.5 text-[11px] rounded border",
+                predictActive
+                  ? "border-indigo-500 text-indigo-700 dark:text-indigo-300"
+                  : "border-slate-300 dark:border-slate-600 text-slate-600",
+              )}
+              onClick={onPredict}
+            >
+              예측 미리보기
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -510,7 +518,7 @@ export type AdoptPoolPayload = {
 
 type Props = {
   data: RegressionRecommendResponse;
-  onAdopt: (vars: RegressionVariableSpec, scale: ResponseScale) => void;
+  onAdopt?: (vars: RegressionVariableSpec, scale: ResponseScale) => void;
   onAdoptPool?: (payload: AdoptPoolPayload) => void;
   adopting?: boolean;
   onPredict?: (vars: RegressionVariableSpec, scale: ResponseScale, label: string) => void;
@@ -574,7 +582,9 @@ export default function RecommendStagePanel({
             깊이: 확장
           </span>
           <span className="text-[11px] text-slate-500">
-            설명형/예측형 후보 · Twin은 검증 후 채택
+            {inlineMode === "predictive"
+              ? "CV-MAPE 1위 · Twin은 선택"
+              : "AIC 1위 · 예측 판정은 예측형 카드"}
           </span>
         </div>
         <MacroModeSummary
@@ -582,14 +592,23 @@ export default function RecommendStagePanel({
           conclusion={conclusion}
           candidate={modeCandidate}
         />
-        <ConclusionBullets conclusion={conclusion} />
+        {inlineMode === "predictive" && <ConclusionBullets conclusion={conclusion} />}
+        {inlineMode === "explanatory" && (
+          <p className="text-xs text-slate-600 dark:text-slate-400">
+            AIC가 낮을수록 같은 표본에서 설명력과 간결성의 균형이 낫습니다. 예측에 쓸지는 예측형
+            카드의 CV-MAPE 판정을 보세요.
+          </p>
+        )}
         <ScopeSummaryBox
           analysis_scope={analysis_scope}
           stage1={stage1}
           gradeLabel={gradeLabel}
           satStars={stars(sat.stars)}
+          showSatisfaction={inlineMode === "predictive"}
         />
-        <DiagnosticChecklist items={diagnostics_checklist ?? []} />
+        {inlineMode === "predictive" && (
+          <DiagnosticChecklist items={diagnostics_checklist ?? []} />
+        )}
 
         {inlineMode === "explanatory" && !stage1.alternate && (
           <p className="text-xs text-slate-500">
@@ -602,7 +621,11 @@ export default function RecommendStagePanel({
           role={modeRole}
           adoptLabel={modeAdoptLabel}
           rankMode={inlineMode}
-          onAdopt={() => onAdopt(modeCandidate.variables, modeCandidate.response_scale)}
+          onAdopt={
+            onAdopt
+              ? () => onAdopt(modeCandidate.variables, modeCandidate.response_scale)
+              : undefined
+          }
           onPredict={
             onPredict
               ? () =>
@@ -618,7 +641,9 @@ export default function RecommendStagePanel({
         />
 
         <RankingList mode={inlineMode} list={list} />
-        <CoefficientInsights items={coefficient_narratives ?? []} />
+        {inlineMode === "predictive" && (
+          <CoefficientInsights items={coefficient_narratives ?? []} />
+        )}
 
         {inlineMode === "predictive" &&
           conclusion.twin_recommended &&
@@ -629,7 +654,7 @@ export default function RecommendStagePanel({
                 쌍둥이 지역 pool 추가 검토
               </p>
               <p className="text-[11px] text-violet-800/90 dark:text-violet-300/90">
-                유사 지역 거래를 더해 모형을 다시 찾습니다. pool 채택은 사용자가 결정합니다.
+                유사 지역 거래를 더해 이 창에서 모형을 다시 찾습니다. 기본 통계 식은 바꾸지 않습니다.
               </p>
               <button
                 type="button"
@@ -755,7 +780,7 @@ export default function RecommendStagePanel({
           깊이: 확장
         </span>
         <span className="text-[11px] text-slate-500">
-          설명형/예측형 후보 · Twin은 검증 후 채택
+          설명형/예측형 후보 · 이 창에서만 확인
         </span>
       </div>
       {(isFull || isPredictive) && <FinalVerdictBanner conclusion={conclusion} />}
@@ -846,7 +871,11 @@ export default function RecommendStagePanel({
           c={stage1.primary}
           role={predictiveRole}
           adoptLabel={adoptLabel}
-          onAdopt={() => onAdopt(stage1.primary.variables, stage1.primary.response_scale)}
+          onAdopt={
+            onAdopt
+              ? () => onAdopt(stage1.primary.variables, stage1.primary.response_scale)
+              : undefined
+          }
           onPredict={
             onPredict
               ? () =>
@@ -865,7 +894,11 @@ export default function RecommendStagePanel({
             c={stage1.alternate}
             role={explanatoryRole}
             adoptLabel="설명형으로 적용"
-            onAdopt={() => onAdopt(stage1.alternate!.variables, stage1.alternate!.response_scale)}
+            onAdopt={
+              onAdopt
+                ? () => onAdopt(stage1.alternate!.variables, stage1.alternate!.response_scale)
+                : undefined
+            }
             onPredict={
               onPredict
                 ? () =>
@@ -888,7 +921,11 @@ export default function RecommendStagePanel({
           c={stage1.primary}
           role={predictiveRole}
           adoptLabel={adoptLabel}
-          onAdopt={() => onAdopt(stage1.primary.variables, stage1.primary.response_scale)}
+          onAdopt={
+            onAdopt
+              ? () => onAdopt(stage1.primary.variables, stage1.primary.response_scale)
+              : undefined
+          }
           onPredict={
             onPredict
               ? () =>
@@ -915,8 +952,11 @@ export default function RecommendStagePanel({
             c={explanatoryCandidate}
             role={explanatoryRole}
             adoptLabel="설명형으로 적용"
-            onAdopt={() =>
-              onAdopt(explanatoryCandidate.variables, explanatoryCandidate.response_scale)
+            onAdopt={
+              onAdopt
+                ? () =>
+                    onAdopt(explanatoryCandidate.variables, explanatoryCandidate.response_scale)
+                : undefined
             }
             onPredict={
               onPredict
@@ -992,8 +1032,8 @@ export default function RecommendStagePanel({
             ② Profile Twin pool 추가 검토
           </p>
           <p className="text-[11px] text-violet-800/90 dark:text-violet-300/90">
-            1단계 결과가 충분히 만족스럽지 않을 때, 유사 지역 거래를 더해 모형을 다시 찾습니다.
-            pool 채택은 사용자가 결정합니다.
+            1단계 결과가 충분히 만족스럽지 않을 때, 유사 지역 거래를 더해 이 창에서 모형을 다시
+            찾습니다. 기본 통계 식은 바꾸지 않습니다.
           </p>
           <button
             type="button"
@@ -1097,7 +1137,7 @@ export default function RecommendStagePanel({
 
       {isExplanatory && conclusion.twin_ran && stage2?.ran && (
         <p className="text-[11px] text-violet-700 dark:text-violet-300">
-          쌍둥이 지역 pool이 실행되었습니다 — 예측형 카드에서 pool별 CV-MAPE 비교를 확인하세요.
+          쌍둥이 지역 pool이 실행되었습니다 — 예측형 탭에서 pool별 CV-MAPE 비교를 확인하세요.
         </p>
       )}
 

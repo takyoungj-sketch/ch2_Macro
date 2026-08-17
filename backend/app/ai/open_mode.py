@@ -4,15 +4,49 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.ai.schemas import AiDiagnosticPack
+from app.ai.panel_capabilities import get_panel_capability
+from app.ai.schemas import AiContext, AiDiagnosticPack
 from app.config import settings
+
+_APP_LABEL = {
+    "land": "토지",
+    "built": "복합부동산",
+    "collective": "집합",
+    "rent": "임대",
+}
 
 
 def open_mode_enabled() -> bool:
     return bool(settings.ai_open_mode)
 
 
-def soft_facts_snapshot(bundle: AiDiagnosticPack, *, scope_label: str) -> dict[str, Any]:
+def screen_context_block(
+    *,
+    app: str,
+    panel: str,
+    scope_label: str,
+    purpose: str | None = None,
+) -> dict[str, Any]:
+    cap = get_panel_capability(panel)
+    block: dict[str, Any] = {
+        "service": "CH2 Macro",
+        "page": cap.label,
+        "scope": scope_label,
+        "analysis_type": panel,
+        "app": app,
+        "app_label": _APP_LABEL.get(app, app),
+    }
+    if purpose:
+        block["purpose"] = purpose
+    return block
+
+
+def soft_facts_snapshot(
+    bundle: AiDiagnosticPack,
+    *,
+    scope_label: str,
+    context: AiContext | None = None,
+) -> dict[str, Any]:
     """LLM에 넘길 화면 facts — 강제 해석이 아닌 참고 스냅샷."""
     d = bundle.diagnostics or {}
     keys = (
@@ -44,10 +78,17 @@ def soft_facts_snapshot(bundle: AiDiagnosticPack, *, scope_label: str) -> dict[s
                     "significant": c.get("significant"),
                 }
             )
+    app = context.app if context is not None else bundle.app
+    panel = context.panel if context is not None else bundle.panel
+    purpose = context.purpose if context is not None else None
+    ctx_block = screen_context_block(
+        app=app, panel=panel, scope_label=scope_label, purpose=purpose
+    )
     return {
+        **ctx_block,
         "scope_label": scope_label,
-        "panel": bundle.panel,
-        "app": bundle.app,
+        "panel": panel,
+        "app": app,
         "bundle_id": bundle.bundle_id,
         "stats": stats,
         "coefficients": coef_brief,

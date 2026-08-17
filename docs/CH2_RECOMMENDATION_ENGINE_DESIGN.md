@@ -23,7 +23,7 @@ CH2 Macro 모형 추천의 경쟁력은 **「더 똑똑한 한 줄의 식」** �
 7. **CH2 Recommendation Engine** — Built 전용이 아닌 토지·집합 확장 골격
 
 **현행 구현과의 관계:** 복합 `Group Forward` · `Best Subset` · `evaluate_pooling_candidates` 는 **엔진 재료**로 유지하되, **UX·scope·단계·설명**은 본 설계로 **재배치**한다.  
-**2026-08 UI 마이그레이션:** [BUILT_REGRESSION_ANALYSIS_UI.md](./BUILT_REGRESSION_ANALYSIS_UI.md) — 모달 제거·세로 카드 흐름 (P0 구현 중). 왼쪽 변수·회귀모형 선택은 **유지**; Macro 예측형·설명형은 **독립 실행**.
+**2026-08 UI:** [BUILT_REGRESSION_ANALYSIS_UI.md](./BUILT_REGRESSION_ANALYSIS_UI.md) — Macro는 큰 작업 창·탭(예측형/설명형). 왼쪽 변수·기본 통계는 **유지·비대체**.
 
 ---
 
@@ -257,16 +257,15 @@ Profile·Twin은 **후보 제안**; Validation(거래자료·CV)이 **판단**. 
 
 [오른쪽 세로 흐름]
   ① 회귀 실험 — 사용자 변수·스케일 결과 (FocusRegressionCard)
-  ② Macro 예측형 — CV-MAPE · 독립 「탐색 실행」 · (opt-in) Twin
-  ③ Macro 설명형 — AIC · 독립 「탐색 실행」 · 계수 해석
-  ④ 상위 지역 — comparisons[] 참고 (인라인 카드)
+  ② Macro 모형 탐색 — 창 열기 · 탭 예측형/설명형 · 본문 식 비대체
+  ③ 상위 지역 — comparisons[] 참고 (인라인 카드)
 ```
 
 **핵심 규칙**
 
-- ②·③ **순서 강제 없음** — recommend API 1회 응답을 두 카드가 각각 primary/alternate 슬라이스로 표시
-- Twin은 ②에서만 CTA; **자동 pool 적용 금지**
-- `RecommendationModal` → **deprecated**; `BuiltRegressionAnalysisPanel` 인라인
+- recommend API 1회 응답을 창 탭이 primary(예측)/alternate(설명)로 표시
+- Twin은 예측형 탭 CTA; **창 안 비교만**, 본문 pool 적용 없음
+- `RecommendationModal` = Macro 작업 창 (기본 통계와 분리)
 
 **현행 대비 제거·축소**
 

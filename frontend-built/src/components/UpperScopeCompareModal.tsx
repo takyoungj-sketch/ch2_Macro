@@ -181,17 +181,21 @@ export default function UpperScopeCompareModal({
           </details>
         )}
 
-        <div className="border-t border-slate-200 dark:border-slate-700 pt-3">
-          <PredictPanel
-            embedded
-            regData={regData}
-            regBody={regBody}
-            vars={vars}
-            assetType={assetType}
-            regionLabel={regionLabel}
-            modelHint="초점·상위 scope 중 선택해 예측"
-          />
-        </div>
+        {immediate && (
+          <div className="border-t border-slate-200 dark:border-slate-700 pt-3">
+            <PredictPanel
+              embedded
+              regData={regData}
+              regBody={regBody}
+              vars={vars}
+              assetType={assetType}
+              regionLabel={regionLabel}
+              modelHint="상위 지역 모형 · 기본통계에서 넣은 변수를 그대로 씁니다"
+              lockAdminLevel={immediate.admin_level}
+              autoPredict
+            />
+          </div>
+        )}
       </div>
     </DraggableModalShell>
   );

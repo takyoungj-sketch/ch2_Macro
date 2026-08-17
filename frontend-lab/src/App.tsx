@@ -5,10 +5,11 @@ import PlanLog from "./components/PlanLog";
 import QaAuditPanel from "./components/QaAuditPanel";
 import RentConversionLab from "./components/RentConversionLab";
 import TwinEngineV2Lab from "./components/TwinEngineV2Lab";
+import AiUsagePanel from "./components/AiUsagePanel";
 import WhyDecision, { WhyLinks } from "./components/WhyDecision";
 import { TOOL_WHY } from "./labContent";
 
-export type LabTool = "plan" | "qa" | "twin" | "rent";
+export type LabTool = "plan" | "qa" | "twin" | "rent" | "ai";
 export type TwinPane = "v2" | "mape";
 
 type LabParams = {
@@ -20,7 +21,8 @@ type LabParams = {
 function readParams(): LabParams {
   const q = new URLSearchParams(window.location.search);
   const t = q.get("tool");
-  const tool = t === "plan" || t === "qa" || t === "twin" || t === "rent" ? t : null;
+  const tool =
+    t === "plan" || t === "qa" || t === "twin" || t === "rent" || t === "ai" ? t : null;
   const pane = q.get("pane");
   return {
     tool,
@@ -133,6 +135,14 @@ export default function App() {
     return (
       <LabChrome title="검증로봇" whyIds={TOOL_WHY.qa} onWhy={setWhy} onBack={back}>
         <QaAuditPanel onWhy={() => setWhy(TOOL_WHY.qa[0])} />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "ai") {
+    return (
+      <LabChrome title="AI 사용량" whyIds={TOOL_WHY.ai} onWhy={setWhy} onBack={back}>
+        <AiUsagePanel />
         {whyModal}
       </LabChrome>
     );

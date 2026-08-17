@@ -21,6 +21,11 @@ const DOORS: { id: LabTool; title: string; desc: string }[] = [
     title: "전월세 전환율",
     desc: "4방법 r · 서울 검증. 연구는 종료, 적용은 단순평균.",
   },
+  {
+    id: "ai",
+    title: "AI 사용량",
+    desc: "월 호출·추정 원 장부. 질문 내용은 없음. 200회·1만 원 실험 한도.",
+  },
 ];
 
 export default function LabHome({ onOpenTool }: { onOpenTool: (id: LabTool) => void }) {

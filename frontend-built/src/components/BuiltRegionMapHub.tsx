@@ -21,6 +21,7 @@ import {
   fetchMapNeighbors,
   vworldSatelliteTileUrl,
 } from "../api/mapClient";
+import { clampMapMenuPos } from "@ch2/macro-shell";
 import { resolveUnitAddr2 } from "../utils/flatSidoRegion";
 import {
   analysisUnitLabel,
@@ -748,9 +749,10 @@ export default function BuiltRegionMapHub({
       }
 
       setMapError(null);
+      const pos = clampMapMenuPos(point.x, point.y, containerRef.current);
       setContextMenu({
-        x: point.x,
-        y: point.y,
+        x: pos.x,
+        y: pos.y,
         code: unit.code,
         label: analysisUnitLabel(unit),
         unit,

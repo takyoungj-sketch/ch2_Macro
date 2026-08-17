@@ -110,16 +110,16 @@ def casual_off_topic_answer(
     diagnostics: dict[str, Any],
 ) -> str:
     base = out_of_scope_answer(panel, app)
-    teaser = _screen_teaser(diagnostics)
     lines = [
         "### 답변",
         "",
         "그 주제는 **일반 상식·잡담** 영역이라, CH2에 없는 내용은 답하지 않습니다. "
-        "대신 **CH2 Macro 지식**과 **지금 화면 통계**만 근거로 말씀드릴 수 있어요.",
+        "대신 **지금 화면의 통계**에 대해 물어보시면 설명해 드립니다.",
+        "",
+        "---",
+        "",
+        base,
     ]
-    if teaser:
-        lines.extend(["", teaser])
-    lines.extend(["", "---", "", base])
     return "\n".join(lines)
 
 
