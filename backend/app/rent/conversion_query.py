@@ -268,7 +268,7 @@ def fetch_building_converted(
         clauses.append("t.addr3 = :addr3")
         params["addr3"] = addr3
     if building_key:
-        clauses.append("NULLIF(btrim(t.building_key::text), '') = :bk")
+        clauses.append(f"{building_key_sql('t')} = :bk")
         params["bk"] = building_key
 
     rate_sql = rate_case_sql(active)

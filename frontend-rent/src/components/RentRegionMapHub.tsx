@@ -61,6 +61,14 @@ export type CollectiveBuildingLabelInput = {
 
 export type CollectiveBuildingMapInput = CollectiveBuildingLabelInput;
 
+function isMaskedAddress(b: {
+  jibunAddress?: string | null;
+  roadAddress?: string | null;
+  label?: string | null;
+}): boolean {
+  return [b.jibunAddress, b.roadAddress, b.label].some((s) => Boolean(s && s.includes("*")));
+}
+
 export type CollectiveMapScopeInput = {
   assetType: string;
   addr1: string;
@@ -355,6 +363,15 @@ export default function CollectiveRegionMapHub({
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
 
+  const mapSelectedBuildings = useMemo(
+    () => selectedBuildings.filter((b) => !isMaskedAddress(b)),
+    [selectedBuildings],
+  );
+  const mapBuildingCandidates = useMemo(
+    () => buildingCandidates.filter((b) => !isMaskedAddress(b)),
+    [buildingCandidates],
+  );
+
   const hasAddr = Boolean(scope.addr1.trim() && scope.addr2.trim());
 
   const configQ = useQuery({
@@ -455,7 +472,7 @@ export default function CollectiveRegionMapHub({
   const labels = resolveQ.data?.labels ?? {};
 
   const primaryRoad = selectedRoads[0] ?? null;
-  const primaryBuilding = selectedBuildings[0] ?? null;
+  const primaryBuilding = mapSelectedBuildings[0] ?? null;
 
   const roadGeocodeQ = useQuery({
     queryKey: [
@@ -536,11 +553,11 @@ export default function CollectiveRegionMapHub({
   const buildingMapPointsQ = useQuery({
     queryKey: [
       "collective-building-map-points",
-      buildingCandidates.map((b) => b.buildingKey).join(","),
+      mapBuildingCandidates.map((b) => b.buildingKey).join(","),
     ],
     queryFn: () =>
       fetchCollectiveBuildingMapPoints(
-        buildingCandidates.map((b) => ({
+        mapBuildingCandidates.map((b) => ({
           building_key: b.buildingKey,
           label: b.label,
           addr1: b.addr1,
@@ -549,7 +566,7 @@ export default function CollectiveRegionMapHub({
           road_address: b.roadAddress,
         })),
       ),
-    enabled: !commercial && buildingCandidates.length > 0 && Boolean(configQ.data?.vworld_configured),
+    enabled: !commercial && mapBuildingCandidates.length > 0 && Boolean(configQ.data?.vworld_configured),
     staleTime: 30 * 60_000,
     retry: 1,
   });

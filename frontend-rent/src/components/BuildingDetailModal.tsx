@@ -347,6 +347,9 @@ export default function BuildingDetailModal({
             <>
               <p className="text-[11px] text-slate-500">
                 원장 {txQ.data.total.toLocaleString("ko-KR")}건 · 보증금·월세 단위 만원
+                {row.asset_type === "detached" ? (
+                  <> · 단독은 단지명이 없어 읍·면·동+지번(가림) 묶음</>
+                ) : null}
               </p>
               <TransactionTable items={txQ.data.items} />
               {txQ.data.total > 50 && (

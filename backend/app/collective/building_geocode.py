@@ -19,6 +19,11 @@ def _clean(value: str | None) -> str:
     return s
 
 
+def address_is_masked(*parts: str | None) -> bool:
+    """국토부 지번 가림(`1**`)은 필지를 특정할 수 없어 지도에 찍지 않는다."""
+    return any("*" in (p or "") for p in parts)
+
+
 def build_building_query(
     *,
     addr1: str,
@@ -49,6 +54,8 @@ def geocode_collective_building(
     )
     if not query:
         return {"ok": False, "query": query, "error": "empty_query"}
+    if address_is_masked(query, jibun_address, road_address):
+        return {"ok": False, "query": query, "error": "masked_address"}
     # 지번이 있으면 parcel 우선, 도로명만 있으면 road 우선
     jibun = _clean(jibun_address)
     categories = ("parcel", "road") if jibun else ("road", "parcel")
@@ -114,6 +121,11 @@ def resolve_building_map_points(
     for item in buildings:
         key = str(item["building_key"]).strip()
         label = _normalize_address(str(item.get("label") or "")) or key
+        jibun = _normalize_address(item.get("jibun_address"))
+        road = _normalize_address(item.get("road_address"))
+        if address_is_masked(jibun, road, label):
+            unresolved.append(key)
+            continue
         row = cached.get(key)
         if row and row["status"] == "ok" and row["longitude"] is not None:
             points.append(
@@ -126,8 +138,6 @@ def resolve_building_map_points(
             )
             continue
 
-        jibun = _normalize_address(item.get("jibun_address"))
-        road = _normalize_address(item.get("road_address"))
         result = geocode_collective_building(
             api_key=api_key,
             addr1=_normalize_address(item.get("addr1")),

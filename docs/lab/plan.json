@@ -100,12 +100,12 @@
         "commit": "committed"
       },
       "rent": {
-        "text": "지도 추가메뉴 잘림 보정",
+        "text": "단독 유지(원장) · 마스킹 주소 지도 제외 · 거래목록은 마트 주소로 조회",
         "status": "done",
         "commit": "committed"
       },
       "admin": {
-        "text": "AI 오픈모드·월 장부·랩 5문 · 복합 마무리 커밋·배포 · 계획일지",
+        "text": "복합 제외 앱 AI는 후속 · 임대 마무리 커밋·배포 · 계획일지",
         "status": "done",
         "commit": "committed"
       }
@@ -130,8 +130,18 @@
         "commit": "none",
         "decision": "D-044"
       },
+      "rent": {
+        "text": "AI: 화면 통계(표 n·P50·환산칸) 전달 · 질문 직답(전환율 잠금문이 칸 공란을 덮음)",
+        "status": "planned",
+        "commit": "none"
+      },
+      "collective": {
+        "text": "AI 후속 — 화면 통계 전달·질문 직답 (복합 제외 앱 공통)",
+        "status": "planned",
+        "commit": "none"
+      },
       "admin": {
-        "text": "QA를 토지·복합으로 확장",
+        "text": "복합 제외(토지·집합·임대) AI 후속 · QA를 토지·복합으로 확장",
         "status": "planned",
         "commit": "none",
         "decision": "D-042"

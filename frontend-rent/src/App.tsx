@@ -81,18 +81,36 @@ function formatAppliedRate(
   assetKinds: RentAssetType[],
   windowYears: number,
 ): string | null {
-  const active = rates.filter((r) => r.gate_passed && r.r_selected != null);
-  if (!active.length) return null;
-  const scoped =
-    assetKinds.length === 1
-      ? active.filter((r) => r.asset_type === assetKinds[0])
-      : active;
-  const pick = scoped.length ? scoped : active;
-  if (pick.length === 1) {
-    return `적용 전환율 ${windowYears}년 ${pick[0].r_selected!.toFixed(1)}%`;
+  const kinds = assetKinds.length ? assetKinds : RENT_ASSET_KINDS;
+  const anyApplied = kinds.some((kind) => {
+    const r = rates.find((x) => x.asset_type === kind);
+    return Boolean(r?.gate_passed && r.r_selected != null);
+  });
+  if (!anyApplied) return null;
+  const parts = kinds.map((kind) => {
+    const r = rates.find((x) => x.asset_type === kind);
+    const label = RENT_KIND_LABELS[kind];
+    if (r?.gate_passed && r.r_selected != null) {
+      return `${label} ${r.r_selected.toFixed(1)}%`;
+    }
+    return `${label} 미적용`;
+  });
+  return `전환율 ${windowYears}년 ${parts.join(" · ")}`;
+}
+
+function unconvertedVisibleLabels(rows: RentBuildingRow[], rates: RentConversionRate[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const row of rows) {
+    const kind = row.asset_type;
+    if (!kind || seen.has(kind)) continue;
+    seen.add(kind);
+    const r = rates.find((x) => x.asset_type === kind);
+    if (!(r?.gate_passed && r.r_selected != null)) {
+      out.push(assetTypeLabel(kind));
+    }
   }
-  const vals = pick.map((r) => r.r_selected!).sort((a, b) => a - b);
-  return `적용 전환율 ${windowYears}년 ${vals[0].toFixed(1)}~${vals[vals.length - 1].toFixed(1)}%`;
+  return out;
 }
 
 function toggleKind(prev: RentAssetType[], kind: RentAssetType): RentAssetType[] {
@@ -244,13 +262,18 @@ export default function App() {
   }, [buildingSearchQ, buildingMatchCount, items]);
 
   const appliedRateLabel = useMemo(() => {
-    if (!scope || !buildingsQ.data?.conversion_applied) return null;
+    if (!scope) return null;
     return formatAppliedRate(
-      buildingsQ.data.conversion_rates ?? [],
+      buildingsQ.data?.conversion_rates ?? [],
       scope.assetKinds,
       scope.windowYears,
     );
   }, [buildingsQ.data, scope]);
+
+  const unconvertedLabels = useMemo(
+    () => unconvertedVisibleLabels(items, buildingsQ.data?.conversion_rates ?? []),
+    [items, buildingsQ.data?.conversion_rates],
+  );
 
   const rentAiContext = useMemo(
     () =>
@@ -601,6 +624,11 @@ export default function App() {
                     )}
                     {buildingsQ.data.conversion_fallback && (
                       <span className="ml-1 text-amber-600">동 미달·시군구</span>
+                    )}
+                    {buildingsQ.data.conversion_applied && unconvertedLabels.length > 0 && (
+                      <span className="ml-2 text-amber-600">
+                        {unconvertedLabels.join("·")} 전환율 미충족 · 해당 행은 환산 없음
+                      </span>
                     )}
                     {!buildingsQ.data.conversion_applied && buildingsQ.data.total > 0 && (
                       <span className="ml-2 text-amber-600">전환율 미충족(게이트) · 원값만 표시</span>

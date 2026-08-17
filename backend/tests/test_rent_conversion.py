@@ -27,6 +27,16 @@ def test_rate_case_sql_is_searched_case():
     assert "CASE t.asset_type WHEN t.asset_type" not in sql
 
 
+def test_converted_lookup_uses_resolved_building_key():
+    import inspect
+
+    from app.rent.conversion_query import fetch_building_converted
+
+    src = inspect.getsource(fetch_building_converted)
+    assert "building_key_sql" in src
+    assert "NULLIF(btrim(t.building_key::text), '') = :bk" not in src
+
+
 def test_compare_row_schema():
     row = RentConversionCompareRow(
         addr1="서울특별시",
