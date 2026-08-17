@@ -60,17 +60,17 @@ try {
     "built" {
       Invoke-Scp @("backend/app/built", "backend/app/recommendation", "backend/app/ai", "backend/app/map", "backend/app/config.py", "backend/app/main.py") "backend/app/"
       Invoke-Scp @("shared") "."
-      Invoke-Scp @("frontend-built/src") "frontend-built/"
+      Invoke-Scp @("frontend-built/tsconfig.json", "frontend-built/vite.config.ts", "frontend-built/src") "frontend-built/"
     }
     "land" {
       Invoke-Scp @("backend/app") "backend/"
       Invoke-Scp @("shared") "."
-      Invoke-Scp @("frontend/src") "frontend/"
+      Invoke-Scp @("frontend/tsconfig.json", "frontend/vite.config.ts", "frontend/src") "frontend/"
     }
     "collective" {
       Invoke-Scp @("backend/app/collective", "backend/app/collective_commercial", "backend/app/ai", "backend/app/config.py", "backend/app/main.py") "backend/app/"
       Invoke-Scp @("shared") "."
-      Invoke-Scp @("frontend-collective/src") "frontend-collective/"
+      Invoke-Scp @("frontend-collective/tsconfig.json", "frontend-collective/vite.config.ts", "frontend-collective/src") "frontend-collective/"
     }
     "profile" {
       Invoke-Scp @("backend/app") "backend/"
@@ -84,7 +84,7 @@ try {
       Invoke-Scp @("shared") "."
       Invoke-Scp @("docs/lab") "docs/"
       Invoke-Scp @("frontend-lab/package.json", "frontend-lab/package-lock.json", "frontend-lab/tsconfig.json", "frontend-lab/vite.config.ts", "frontend-lab/tailwind.config.js", "frontend-lab/postcss.config.js", "frontend-lab/index.html", "frontend-lab/src") "frontend-lab/"
-      Invoke-Scp @("frontend-built/src") "frontend-built/"
+      Invoke-Scp @("frontend-built/tsconfig.json", "frontend-built/vite.config.ts", "frontend-built/src") "frontend-built/"
       Invoke-Scp @("frontend-rent/src") "frontend-rent/"
       Invoke-Scp @("deploy/templates/nginx-ch2-macro.conf") "deploy/templates/"
     }

@@ -18,6 +18,7 @@
     "baseUrl": ".",
     "paths": {
       "@ch2/ai-assistant/*": ["../shared/ai-assistant/*"],
+      "@ch2/macro-shell": ["../shared/macro-shell/index.ts"],
       "@ch2/macro-shell/*": ["../shared/macro-shell/*"],
       "@ch2/stats-glossary": ["../shared/stats-glossary/index.ts"],
       "@ch2/stats-glossary/*": ["../shared/stats-glossary/*"],

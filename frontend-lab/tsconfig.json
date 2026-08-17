@@ -15,6 +15,7 @@
     "types": ["vite/client"],
     "baseUrl": ".",
     "paths": {
+      "@ch2/macro-shell": ["../shared/macro-shell/index.ts"],
       "@ch2/macro-shell/*": ["../shared/macro-shell/*"],
       "@ch2/stats-glossary": ["../shared/stats-glossary/index.ts"],
       "@ch2/stats-glossary/*": ["../shared/stats-glossary/*"],
