@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-17",
+  "updated": "2026-08-20",
   "domains": [
     { "id": "land", "label": "토지" },
     { "id": "built", "label": "복합" },
@@ -79,35 +79,74 @@
           "decision": "D-044"
         }
       }
+    },
+    {
+      "date": "2026-08-17",
+      "cells": {
+        "land": {
+          "text": "인접 게이트 시군구 · 지도 추가메뉴 잘림 보정",
+          "status": "done",
+          "commit": "committed"
+        },
+        "built": {
+          "text": "Macro 작업창(예측·설명 탭, 본문 식 비대체) · 지도 메뉴 클램프 · 오늘 마무리 배포",
+          "status": "done",
+          "commit": "committed"
+        },
+        "collective": {
+          "text": "인접 게이트 공유 · 지도 추가메뉴 잘림 보정",
+          "status": "done",
+          "commit": "committed"
+        },
+        "rent": {
+          "text": "단독 유지(원장) · 마스킹 주소 지도 제외 · 거래목록은 마트 주소로 조회",
+          "status": "done",
+          "commit": "committed"
+        },
+        "admin": {
+          "text": "복합 제외 앱 AI는 후속 · 임대 마무리 커밋·배포 · 계획일지",
+          "status": "done",
+          "commit": "committed"
+        }
+      }
+    },
+    {
+      "date": "2026-08-19",
+      "cells": {
+        "collective": {
+          "text": "M2는 대전 잠정. 충북 복제·대전 hold-out 고정 전이 — 통합 채택 안 함(13.2%→15.4%)",
+          "status": "done",
+          "commit": "needed",
+          "decision": "D-045"
+        },
+        "admin": {
+          "text": "계획일지·D-045. 커밋 보류",
+          "status": "done",
+          "commit": "needed",
+          "decision": "D-045"
+        }
+      }
     }
   ],
   "today": {
-    "date": "2026-08-17",
+    "date": "2026-08-20",
     "cells": {
-      "land": {
-        "text": "인접 게이트 시군구 · 지도 추가메뉴 잘림 보정",
-        "status": "done",
-        "commit": "committed"
-      },
       "built": {
-        "text": "Macro 작업창(예측·설명 탭, 본문 식 비대체) · 지도 메뉴 클램프 · 오늘 마무리 배포",
+        "text": "표제부로 마스킹 지번 복원 76.4% 확정(도로명·연도 99%) + 구조·용도지역·층수 붙여 hold-out MAPE 33.1%→29.0%. 단독다가구만 착수, 상가 구조는 근거 부족",
         "status": "done",
-        "commit": "committed"
+        "commit": "needed",
+        "decision": "D-046"
       },
       "collective": {
-        "text": "인접 게이트 공유 · 지도 추가메뉴 잘림 보정",
+        "text": "AL_D155 로더 버그 수정 — 관리·농림·자연환경보전(UQB·UQC·UQD) 누락 + 상위 「도시지역」이 세부 덮음. 충북 아파트 용도지역 확보 24.3%→96.8%(new_apt 경로 92.9%→98.4%), 테스트 2건 추가. 마트 재빌드는 미승인",
         "status": "done",
-        "commit": "committed"
-      },
-      "rent": {
-        "text": "단독 유지(원장) · 마스킹 주소 지도 제외 · 거래목록은 마트 주소로 조회",
-        "status": "done",
-        "commit": "committed"
+        "commit": "needed"
       },
       "admin": {
-        "text": "복합 제외 앱 AI는 후속 · 임대 마무리 커밋·배포 · 계획일지",
+        "text": "복원 SSOT 신설 · 2026-06 결론(11%·2.8%) 갱신 · D-046. 커밋 보류",
         "status": "done",
-        "commit": "committed"
+        "commit": "needed",
+        "decision": "D-046"
       }
     }
   },
@@ -125,10 +164,10 @@
         "decision": "D-044"
       },
       "built": {
-        "text": "강동구 등 읍면동 이웃 그래프 재구축 · 풀 우주(옥천 전멸) 재검토",
+        "text": "복원 파이프라인 정식화 승인 대기 (A1·A2만, 충북 전체 확장) → 단독다가구 구조·용도지역·층수 블록 신설 · 강동구 이웃 그래프 · 풀 우주 재검토",
         "status": "planned",
         "commit": "none",
-        "decision": "D-044"
+        "decision": "D-046"
       },
       "rent": {
         "text": "AI: 화면 통계(표 n·P50·환산칸) 전달 · 질문 직답(전환율 잠금문이 칸 공란을 덮음)",
@@ -136,15 +175,16 @@
         "commit": "none"
       },
       "collective": {
-        "text": "AI 후속 — 화면 통계 전달·질문 직답 (복합 제외 앱 공통)",
-        "status": "planned",
-        "commit": "none"
-      },
-      "admin": {
-        "text": "복합 제외(토지·집합·임대) AI 후속 · QA를 토지·복합으로 확장",
+        "text": "복합 회귀실험 UX 차용 — 기초통계 유지, 지역회귀 버튼, 단지 1행 식, 개별 단지 평균예측. 구현 전 설계 · 용도지역 마트 재빌드 승인 판단",
         "status": "planned",
         "commit": "none",
-        "decision": "D-042"
+        "decision": "D-045"
+      },
+      "admin": {
+        "text": "집합 지역회귀(복합 차용) 설계 착수 · 복원 지번 화면 노출 여부 별도 결정 · 집합 신규아파트·복합 복원 모두 미커밋",
+        "status": "planned",
+        "commit": "none",
+        "decision": "D-046"
       }
     }
   },
