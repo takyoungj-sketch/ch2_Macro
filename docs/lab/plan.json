@@ -116,13 +116,13 @@
         "collective": {
           "text": "M2는 대전 잠정. 충북 복제·대전 hold-out 고정 전이 — 통합 채택 안 함(13.2%→15.4%)",
           "status": "done",
-          "commit": "needed",
+          "commit": "committed",
           "decision": "D-045"
         },
         "admin": {
-          "text": "계획일지·D-045. 커밋 보류",
+          "text": "계획일지·D-045",
           "status": "done",
-          "commit": "needed",
+          "commit": "committed",
           "decision": "D-045"
         }
       }
@@ -134,18 +134,18 @@
       "built": {
         "text": "표제부로 마스킹 지번 복원 76.4% 확정(도로명·연도 99%) + 구조·용도지역·층수 붙여 hold-out MAPE 33.1%→29.0%. 단독다가구만 착수, 상가 구조는 근거 부족",
         "status": "done",
-        "commit": "needed",
+        "commit": "committed",
         "decision": "D-046"
       },
       "collective": {
-        "text": "AL_D155 로더 버그 수정 — 관리·농림·자연환경보전(UQB·UQC·UQD) 누락 + 상위 「도시지역」이 세부 덮음. 충북 아파트 용도지역 확보 24.3%→96.8%(new_apt 경로 92.9%→98.4%), 테스트 2건 추가. 마트 재빌드는 미승인",
+        "text": "AL_D155 로더 버그 수정 — 관리·농림·자연환경보전(UQB·UQC·UQD) 누락 + 상위 「도시지역」이 세부 덮음. 충북 아파트 용도지역 확보 24.3%→96.8%(new_apt 경로 92.9%→98.4%), 테스트 2건 추가. 마트 재빌드는 미승인. 지역회귀 타당성 실측 — 144개 시군구 중앙 Adj R² 0.649·hold MAPE 16.8%, 구조·용도지역·시공사는 개선 없음",
         "status": "done",
-        "commit": "needed"
+        "commit": "committed"
       },
       "admin": {
-        "text": "복원 SSOT 신설 · 2026-06 결론(11%·2.8%) 갱신 · D-046. 커밋 보류",
+        "text": "복원 SSOT 신설 · 2026-06 결론(11%·2.8%) 갱신 · D-046 · 축별 3커밋",
         "status": "done",
-        "commit": "needed",
+        "commit": "committed",
         "decision": "D-046"
       }
     }
@@ -175,13 +175,13 @@
         "commit": "none"
       },
       "collective": {
-        "text": "복합 회귀실험 UX 차용 — 기초통계 유지, 지역회귀 버튼, 단지 1행 식, 개별 단지 평균예측. 구현 전 설계 · 용도지역 마트 재빌드 승인 판단",
+        "text": "지역회귀 구현 — 타당성 확인됨(144개 시군구 Adj R² 0.649·hold MAPE 16.8%). 새 마트 없이 building_stats+building_attributes 실시간 조인, 아파트만(속성 A~C 58%). 약한 변수(구조·용도지역·시공사)는 숨기지 않고 블록 기여도·경고와 함께 노출. 비주거는 표본 중앙 9 cluster로 보류",
         "status": "planned",
         "commit": "none",
         "decision": "D-045"
       },
       "admin": {
-        "text": "집합 지역회귀(복합 차용) 설계 착수 · 복원 지번 화면 노출 여부 별도 결정 · 집합 신규아파트·복합 복원 모두 미커밋",
+        "text": "집합 지역회귀(복합 차용) 구현 착수 — 계획 확정(아파트·시군구·한 행=건물, 비주거 보류는 parity 예외로 D-047에 기록) · 복원 지번 화면 노출 여부 별도 결정",
         "status": "planned",
         "commit": "none",
         "decision": "D-046"
