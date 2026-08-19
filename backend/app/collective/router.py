@@ -1089,6 +1089,12 @@ def building_regression_predict(
 from app.collective.cohort_router import router as cohort_router  # noqa: E402
 
 router.include_router(cohort_router)
+from app.collective.hedonic.router import router as hedonic_router  # noqa: E402
+
+router.include_router(hedonic_router)
+from app.collective.new_apt.router import router as new_apt_router  # noqa: E402
+
+router.include_router(new_apt_router)
 from app.collective_commercial.router import router as commercial_router  # noqa: E402
 
 router.include_router(commercial_router)

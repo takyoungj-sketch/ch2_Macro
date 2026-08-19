@@ -1,6 +1,8 @@
 # 집합(주거) 2단계 헤도닉 설계 — 브랜드 프리미엄·단지 가치분석 기반
 
-> **작성:** 2026-08-09 · **상태:** **설계 확정안(승인 대기)** — 이 문서가 구현 SSOT다. 코드 선행 금지.
+> **작성:** 2026-08-09 · **상태:** **트랙 C SSOT** (기존 단지 품질지수·특성회귀).  
+> 프로젝트 상위 목적(신규 예상가·시공사 밸류·기존 프리미엄)은 [`NEW_APARTMENT_REGRESSION_DESIGN.md`](NEW_APARTMENT_REGRESSION_DESIGN.md)가 우선한다.  
+> 이 문서의 \(Q\)는 신규 단지 예측의 입력이 아니다.
 > **상위 검토:** [`COLLECTIVE_RESIDENTIAL_VALUATION_EXPANSION_REVIEW.md`](COLLECTIVE_RESIDENTIAL_VALUATION_EXPANSION_REVIEW.md) §2.1
 > **데이터 보강:** [`DATA_ENRICHMENT_RAW_ADDITION_PLAN.md`](DATA_ENRICHMENT_RAW_ADDITION_PLAN.md) Phase 1
 > **적용 범위:** `asset_type = 'apartment'` (v1). 연립·오피스텔·비주거는 범위 외.

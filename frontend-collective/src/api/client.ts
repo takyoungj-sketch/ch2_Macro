@@ -30,7 +30,7 @@ import type {
 } from "../types";
 
 const _API_TOKEN = (import.meta.env.VITE_API_TOKEN ?? "").trim();
-const api = axios.create({
+export const api = axios.create({
   baseURL: "/api/collective",
   headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
 });

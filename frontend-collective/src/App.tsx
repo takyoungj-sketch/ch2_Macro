@@ -9,10 +9,12 @@ import {
   fetchFilterMeta,
   fetchLeafRegions,
   fetchRegionStructure,
+  COLLECTIVE_EXPERIMENT_MODE,
   type BuildingStatsRow,
 } from "./api/client";
 import { fetchCollectiveMapResolveCodes } from "./api/mapClient";
 import BuildingDetailModal from "./components/BuildingDetailModal";
+import NewApartmentExperimentModal from "./components/NewApartmentExperimentModal";
 import CollectiveRegionMapHub, { type MapPanelMode } from "./components/CollectiveRegionMapHub";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
@@ -136,6 +138,7 @@ export default function App() {
   const [sort, setSort] = useState("count");
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [selected, setSelected] = useState<BuildingStatsRow | null>(null);
+  const [newAptOpen, setNewAptOpen] = useState(false);
   const [buildingSearch, setBuildingSearch] = useState("");
   const [mapPanelMode, setMapPanelMode] = useState<MapPanelMode>("normal");
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
@@ -173,6 +176,8 @@ export default function App() {
   });
   const hasIntermediate = structureQ.data?.has_intermediate ?? false;
   const intermediateLabel = structureQ.data?.intermediate_label ?? "구";
+  const isDaejeonApartment =
+    COLLECTIVE_EXPERIMENT_MODE && assetKinds.includes("apartment") && addr1.includes("대전");
 
   const regionPeriod = hasYearFilter(yearFrom, yearTo)
     ? {
@@ -482,6 +487,17 @@ export default function App() {
             <button type="button" className="btn btn-primary w-full" disabled={!addr2} onClick={runAnalysis}>
               통계분석
             </button>
+            {COLLECTIVE_EXPERIMENT_MODE && assetKinds.includes("apartment") && (
+              <button
+                type="button"
+                className="btn w-full border border-indigo-300 text-indigo-800 bg-indigo-50 hover:bg-indigo-100 dark:border-indigo-500/60 dark:text-indigo-200 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50"
+                disabled={!isDaejeonApartment}
+                title={isDaejeonApartment ? "대전 아파트 신규 가격 실험" : "1차는 대전 아파트만"}
+                onClick={() => setNewAptOpen(true)}
+              >
+                신규아파트 실험
+              </button>
+            )}
           </div>
         </aside>
 
@@ -564,6 +580,15 @@ export default function App() {
                     <span className="ml-1 text-amber-700 dark:text-amber-400">· 실시간 집계</span>
                   )}
                 </p>
+                {isDaejeonApartment && (
+                  <button
+                    type="button"
+                    className="shrink-0 text-xs font-medium text-indigo-700 hover:text-indigo-900 dark:text-indigo-300 dark:hover:text-white underline"
+                    onClick={() => setNewAptOpen(true)}
+                  >
+                    신규아파트 실험
+                  </button>
+                )}
                 {profileTarget && (
                   <a
                     href={profileHref(profileTarget)}
@@ -628,6 +653,7 @@ export default function App() {
         </div>
       </main>
 
+      {newAptOpen && <NewApartmentExperimentModal onClose={() => setNewAptOpen(false)} />}
       {selected && scope && (
         <BuildingDetailModal
           row={selected}
