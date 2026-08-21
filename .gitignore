@@ -60,4 +60,5 @@ tmp_*.csv
 pipeline/_vps_*.sh
 pipeline/_*.py
 pipeline/.env.rebuild
+pipeline/built/_cache/
 data/*.db
