@@ -61,7 +61,7 @@ from app.collective.building_geocode import (
     geocode_collective_building,
     resolve_building_map_points,
 )
-from app.collective.danji_attributes import fetch_danji_attributes
+from app.collective.danji_attributes import attach_danji_list_fields, fetch_danji_attributes
 from app.collective.schemas import (
     AnalysisExplain,
     AnalysisFeatures,
@@ -384,7 +384,7 @@ def list_buildings(
         pattern="^(lifetime|rolling)$",
         description="분양권 기본=rolling(3/5/7년, 타유형과 동일). lifetime=전체기간 mart(보조)",
     ),
-    sort: str = Query("count", pattern="^(count|mean|display_name|address)$"),
+    sort: str = Query("count", pattern="^(count|mean|display_name|address|households)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(100, ge=1, le=500),
 ):
@@ -537,12 +537,16 @@ def list_buildings(
     else:
         meta["window_years"] = window_years
 
+    attach_danji_list_fields(conn, items)
+
     if sort == "display_name":
         items.sort(key=lambda x: x.display_name)
     elif sort == "address":
         items.sort(key=lambda x: (x.jibun_address or "—", x.display_name))
     elif sort == "mean":
         items.sort(key=lambda x: (x.mean or 0), reverse=True)
+    elif sort == "households":
+        items.sort(key=lambda x: (x.households is None, -(x.households or 0), x.display_name))
     else:
         items.sort(key=lambda x: x.count, reverse=True)
 
@@ -1095,6 +1099,9 @@ router.include_router(hedonic_router)
 from app.collective.new_apt.router import router as new_apt_router  # noqa: E402
 
 router.include_router(new_apt_router)
+from app.collective.regional_regression.router import router as regional_regression_router  # noqa: E402
+
+router.include_router(regional_regression_router)
 from app.collective_commercial.router import router as commercial_router  # noqa: E402
 
 router.include_router(commercial_router)

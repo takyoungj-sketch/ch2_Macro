@@ -23,6 +23,12 @@ def test_linear_equation_and_effects():
 
     assert "1㎡" in interpret_coefficient("exclusive_area", "전용면적", 1200.0, model_type="linear")
     assert "만원" in interpret_coefficient("exclusive_area", "전용면적", 1200.0, model_type="linear")
+    dummy = interpret_coefficient("builder_계룡", "시공사 계룡 (기준 대비)", -302.0, model_type="linear")
+    assert "기준 대비" in dummy
+    assert "1단위" not in dummy
+    atype = interpret_coefficient("atype_officetel", "유형 오피스텔 (기준 대비)", -0.2, model_type="log")
+    assert "기준 대비" in atype
+    assert "%" in atype
 
 
 def test_log_percent_effects():
@@ -42,7 +48,9 @@ def test_log_percent_effects():
 def test_short_display_label():
     assert short_display_label("용도지역 제3종일반주거(기준 대비)") == "제3종일반주거"
     assert short_display_label("건축물용도 근린생활시설(기준 대비)") == "근린생활시설"
-    assert short_display_label("층 저층(기준 대비)") == "저층"
+    assert short_display_label("시공사 계룡건설산업 (기준 대비)") == "계룡건설산업"
+    assert short_display_label("구조 SRC (기준 대비)") == "SRC"
+    assert short_display_label("유형 오피스텔 (기준 대비)") == "오피스텔"
 
 
 def test_equation_variable_order():

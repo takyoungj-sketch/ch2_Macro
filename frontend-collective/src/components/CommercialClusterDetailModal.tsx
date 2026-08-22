@@ -681,10 +681,12 @@ export default function CommercialClusterDetailModal({
                         <tr className="bg-slate-50 text-slate-600">
                           <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">번지</th>
                           <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">동</th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">거래</th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">평균</th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">중앙</th>
-                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">95% CI</th>
+                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">거래수</th>
+                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">평균(만원/㎡)</th>
+                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">중앙(만원/㎡)</th>
+                          <th className="border border-slate-200 px-2 py-1.5 text-right font-medium" title="95% 신뢰구간">
+                            신뢰구간(만원/㎡)
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="text-slate-800">

@@ -22,6 +22,18 @@ def coefficient_sort_key(name: str) -> tuple[int, int, str]:
         return (1, 2, name)
     if name == "building_age":
         return (2, 0, name)
+    if name in ("households", "ln_households"):
+        return (2, 1, name)
+    if name == "max_floor":
+        return (3, -1, name)
+    if name == "parking_per_household":
+        return (3, -1, name)
+    if name.startswith("atype_"):
+        return (5, 5, name)
+    if name.startswith("struct_"):
+        return (6, 4, name)
+    if name.startswith("builder_"):
+        return (6, 5, name)
     if name == "floor":
         return (3, 0, name)
     if name.startswith("floor_rel_"):
@@ -61,6 +73,10 @@ _CONTINUOUS = frozenset(
         "building_age",
         "floor",
         "road_code",
+        "households",
+        "ln_households",
+        "max_floor",
+        "parking_per_household",
     }
 )
 
@@ -90,7 +106,9 @@ def _fmt_pct_from_log(coef: float) -> str:
 def _is_continuous(name: str) -> bool:
     if name in _CONTINUOUS:
         return True
-    if name.startswith(("dong_", "rights_", "bld_", "zone_", "use_", "roadw_", "floor_rel", "floor_grp", "floor_")):
+    if name.startswith(
+        ("dong_", "rights_", "bld_", "zone_", "use_", "roadw_", "floor_rel", "floor_grp", "floor_", "struct_", "builder_", "atype_")
+    ):
         return False
     return name not in ("const",)
 
@@ -100,6 +118,12 @@ def _unit_suffix(name: str) -> str:
         return "㎡"
     if name == "building_age":
         return "년"
+    if name == "households":
+        return "세대"
+    if name == "max_floor":
+        return "층"
+    if name == "parking_per_household":
+        return "대"
     if name == "floor":
         return "층"
     if name == "road_code":
@@ -119,7 +143,7 @@ def short_display_label(label: str) -> str:
     for suffix in (" (기준 대비)", "(기준 대비)"):
         if s.endswith(suffix):
             s = s[: -len(suffix)].strip()
-    for prefix in ("용도지역 ", "건축물용도 ", "도로폭 ", "동 ", "권리 ", "단지 "):
+    for prefix in ("용도지역 ", "건축물용도 ", "도로폭 ", "동 ", "권리 ", "단지 ", "시공사 ", "구조 ", "유형 "):
         if s.startswith(prefix) and len(s) > len(prefix):
             s = s[len(prefix):].strip()
             break

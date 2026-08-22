@@ -34,6 +34,7 @@ from collective.danji_brand_dictionary import (  # noqa: E402
     is_public_brand,
     is_public_builder,
     normalize_builder,
+    split_joint_builders,
 )
 from collective.db_utils import get_collective_engine  # noqa: E402
 
@@ -126,6 +127,38 @@ def _quality_flags(row: pd.Series) -> str | None:
     return ",".join(flags) if flags else None
 
 
+def _multi_builder_label(raw: object) -> tuple[str | None, bool]:
+    """D·F: 시공사가 둘 이상이면 첫 회사 + ' 외', 한 곳이면 그 이름만."""
+    if raw is None or (isinstance(raw, float) and pd.isna(raw)):
+        return None, False
+    text = str(raw)
+    parts = split_joint_builders(text)
+    if not parts:
+        n = normalize_builder(text)
+        return (n or None), False
+    if len(parts) == 1:
+        return parts[0], False
+    return f"{parts[0]} 외", True
+
+
+def _apply_multi_builder_labels(out: pd.DataFrame) -> pd.DataFrame:
+    if "match_tier" not in out.columns:
+        return out
+    mask = out["match_tier"].isin(["D", "F"])
+    if not mask.any():
+        return out
+    parsed = out.loc[mask, "builder_raw"].map(_multi_builder_label)
+    out.loc[mask, "builder_norm"] = parsed.map(lambda p: p[0])
+    out.loc[mask, "builder_group"] = parsed.map(lambda p: p[0])
+    out.loc[mask, "builder_is_joint"] = parsed.map(lambda p: p[1])
+    out.loc[mask, "builder_is_public"] = out.loc[mask, "builder_raw"].map(
+        lambda r: is_public_builder(
+            builder_group(None if r is None or (isinstance(r, float) and pd.isna(r)) else str(r))
+        )
+    )
+    return out
+
+
 def _derive(df: pd.DataFrame, names: dict[str, str]) -> pd.DataFrame:
     out = df.copy()
     out["builder_norm"] = out["builder_raw"].map(normalize_builder).replace("", None)
@@ -143,7 +176,7 @@ def _derive(df: pd.DataFrame, names: dict[str, str]) -> pd.DataFrame:
     )
     out["attr_quality_flags"] = out.apply(_quality_flags, axis=1)
     out["dictionary_version"] = DICTIONARY_VERSION
-    return out
+    return _apply_multi_builder_labels(out)
 
 
 def _report(df: pd.DataFrame) -> None:

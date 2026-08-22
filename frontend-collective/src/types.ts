@@ -47,6 +47,10 @@ export interface BuildingStatsRow {
   jibun_address?: string;
   road_address?: string;
   building_year?: number | null;
+  households?: number | null;
+  households_flagged?: boolean;
+  builder_label?: string | null;
+  builder_is_joint?: boolean;
   asset_type: string;
   count: number;
   mean?: number | null;
@@ -617,6 +621,14 @@ export interface DanjiMatchInfo {
   building_year?: number | null;
   year_diff?: number | null;
   note?: string | null;
+  candidates?: DanjiMatchCandidate[];
+}
+
+export interface DanjiMatchCandidate {
+  danji_code?: string | null;
+  danji_name?: string | null;
+  households?: number | null;
+  builder_raw?: string | null;
 }
 
 export interface DanjiBuilderInfo {

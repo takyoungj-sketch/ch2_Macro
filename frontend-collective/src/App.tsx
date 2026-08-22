@@ -13,8 +13,10 @@ import {
   type BuildingStatsRow,
 } from "./api/client";
 import { fetchCollectiveMapResolveCodes } from "./api/mapClient";
+import DualHorizontalScroll from "./components/DualHorizontalScroll";
 import BuildingDetailModal from "./components/BuildingDetailModal";
 import NewApartmentExperimentModal from "./components/NewApartmentExperimentModal";
+import RegionalRegressionModal from "./components/RegionalRegressionModal";
 import CollectiveRegionMapHub, { type MapPanelMode } from "./components/CollectiveRegionMapHub";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
@@ -100,6 +102,28 @@ function BuildingTableRow({
       <td className="num">{fmtPrice(row.median)}</td>
       <td className="num text-[10px]">{fmtCiCompact(row.ci_lower, row.ci_upper)}</td>
       <td className="num">{row.building_year ?? "—"}</td>
+      <td className="num" title={row.households_flagged ? "원본 이상값 — 값은 그대로 표시" : "K-apt 전체 세대수. 없으면 표제부 해당 용도 동 합산"}>
+        {row.households == null ? (
+          "—"
+        ) : (
+          <>
+            {row.households.toLocaleString("ko-KR")}
+            {row.households_flagged ? <span className="ml-0.5 text-[9px] text-amber-600">!</span> : null}
+          </>
+        )}
+      </td>
+      <td
+        className="truncate"
+        title={
+          row.builder_label
+            ? row.builder_is_joint
+              ? `${row.builder_label} · 공동시공, 첫 시공사만 표시`
+              : row.builder_label
+            : undefined
+        }
+      >
+        {row.builder_label ?? "—"}
+      </td>
       <td className="addr truncate" title={row.jibun_address || row.address || undefined}>
         {row.jibun_address ?? row.address ?? "—"}
       </td>
@@ -118,6 +142,7 @@ function buildingMatchesQuery(row: BuildingStatsRow, q: string): boolean {
     row.road_address,
     row.address,
     row.asset_type,
+    row.builder_label,
   ]
     .filter(Boolean)
     .join(" ")
@@ -139,6 +164,7 @@ export default function App() {
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [selected, setSelected] = useState<BuildingStatsRow | null>(null);
   const [newAptOpen, setNewAptOpen] = useState(false);
+  const [regionalOpen, setRegionalOpen] = useState(false);
   const [buildingSearch, setBuildingSearch] = useState("");
   const [mapPanelMode, setMapPanelMode] = useState<MapPanelMode>("normal");
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
@@ -302,6 +328,20 @@ export default function App() {
       scope.yearTo !== yearTo ||
       scope.windowYears !== windowYears ||
       scope.sort !== sort);
+
+  const isApartment = assetKinds.includes("apartment");
+  const regionalReady = Boolean(scope) && !scopeStale && isApartment;
+  const regionalTitle = !isApartment
+    ? "아파트일 때만 사용할 수 있습니다"
+    : !scope
+      ? "「통계분석」을 먼저 실행하세요"
+      : scopeStale
+        ? "조건이 변경되었습니다. 「통계분석」을 다시 실행하세요"
+        : "선택한 지역의 아파트 단지로 식을 만들고 평균단가를 봅니다";
+
+  useEffect(() => {
+    if (!regionalReady) setRegionalOpen(false);
+  }, [regionalReady]);
 
   const runAnalysis = () => {
     if (!addr2) return;
@@ -474,6 +514,7 @@ export default function App() {
               <select className="input" value={sort} onChange={(e) => setSort(e.target.value)}>
                 <option value="count">거래수</option>
                 <option value="mean">평균 단가</option>
+                <option value="households">세대수</option>
                 <option value="display_name">건물명</option>
                 <option value="address">지번 주소</option>
               </select>
@@ -486,6 +527,15 @@ export default function App() {
 
             <button type="button" className="btn btn-primary w-full" disabled={!addr2} onClick={runAnalysis}>
               통계분석
+            </button>
+            <button
+              type="button"
+              className="btn w-full border border-slate-300 bg-white hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!regionalReady}
+              title={regionalTitle}
+              onClick={() => setRegionalOpen(true)}
+            >
+              지역회귀
             </button>
             {COLLECTIVE_EXPERIMENT_MODE && assetKinds.includes("apartment") && (
               <button
@@ -604,12 +654,13 @@ export default function App() {
                     className="input py-1 text-xs w-44 sm:w-56"
                     value={buildingSearch}
                     onChange={(e) => setBuildingSearch(e.target.value)}
-                    placeholder="건물명·주소…"
+                    placeholder="건물명·주소·시공사…"
                     aria-label="검색"
                   />
                 </label>
               </div>
-              <div className="card overflow-x-auto p-0 w-full">
+              <div className="card p-0 w-full">
+                <DualHorizontalScroll>
                 <table className="data buildings-table">
                   <colgroup>
                     <col className="col-type" />
@@ -619,6 +670,8 @@ export default function App() {
                     <col className="col-num" />
                     <col className="col-num" />
                     <col className="col-year" />
+                    <col className="col-hh" />
+                    <col className="col-builder" />
                     <col className="col-jibun" />
                     <col className="col-road" />
                   </colgroup>
@@ -626,13 +679,15 @@ export default function App() {
                     <tr>
                       <th>유형</th>
                       <th>건물명</th>
-                      <th className="text-right">거래</th>
-                      <th className="text-right">평균</th>
-                      <th className="text-right">중앙</th>
-                      <th className="text-right">95% CI</th>
-                      <th className="text-right">신축연도</th>
-                      <th className="col-addr-head">지번 주소</th>
-                      <th className="col-addr-head">도로명 주소</th>
+                      <th>거래수</th>
+                      <th>평균(만원/㎡)</th>
+                      <th>중앙(만원/㎡)</th>
+                      <th title="95% 신뢰구간">신뢰구간(만원/㎡)</th>
+                      <th title="실거래 건축연도">신축연도</th>
+                      <th title="K-apt 전체 세대수. K-apt가 없으면 표제부 해당 용도 동 합산">세대수</th>
+                      <th title="K-apt 시공사 대표 1곳. 공동시공은 첫 회사+외. 표제부만 있으면 없음">시공사</th>
+                      <th>지번 주소</th>
+                      <th>도로명 주소</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -646,14 +701,28 @@ export default function App() {
                     ))}
                   </tbody>
                 </table>
+                </DualHorizontalScroll>
               </div>
             </>
           )}
           </div>
         </div>
       </main>
+      </div>
 
       {newAptOpen && <NewApartmentExperimentModal onClose={() => setNewAptOpen(false)} />}
+      {regionalOpen && scope && (
+        <RegionalRegressionModal
+          addr1={scope.addr1}
+          addr2={scope.addr2}
+          hasIntermediate={scope.hasIntermediate}
+          guList={scope.guList}
+          leafList={scope.leafList}
+          windowYears={scope.windowYears}
+          assetType={scope.assetType}
+          onClose={() => setRegionalOpen(false)}
+        />
+      )}
       {selected && scope && (
         <BuildingDetailModal
           row={selected}
@@ -668,7 +737,6 @@ export default function App() {
           onClose={() => setSelected(null)}
         />
       )}
-      </div>
     </div>
   );
 }

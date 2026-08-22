@@ -153,4 +153,5 @@ export const TOOL_WHY: Record<string, string[]> = {
   twin: ["D-041", "D-044", "D-029-weights"],
   rent: ["D-040"],
   ai: [],
+  parcel: ["D-048"],
 };

@@ -27,6 +27,12 @@ class Settings(BaseSettings):
         default="",
         validation_alias="COLLECTIVE_DATABASE_URL",
     )
+    #: 로컬 대장DB parcel_master. 비어 있으면 collective URL의 형제 DB명을 시도.
+    #: 없거나 연결 실패면 관리자 대장 조회는 503. VPS에 올리지 않는다.
+    parcel_master_database_url: str = Field(
+        default="",
+        validation_alias="PARCEL_MASTER_DATABASE_URL",
+    )
     #: rent_stats (주거 전월세 원장). 비어 있으면 임대 라우터 미등록(후속).
     rent_database_url: str = Field(
         default="",

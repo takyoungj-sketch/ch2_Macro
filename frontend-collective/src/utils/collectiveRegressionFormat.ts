@@ -28,7 +28,7 @@ export function isEquationSignificant(p: number | null | undefined): boolean {
 export function shortDisplayLabel(label: string): string {
   let s = label.trim();
   s = s.replace(/\s*\(기준\s*대비\)\s*$/i, "");
-  const prefixes = ["용도지역 ", "건축물용도 ", "도로폭 ", "동 ", "권리 ", "단지 "];
+  const prefixes = ["용도지역 ", "건축물용도 ", "도로폭 ", "동 ", "권리 ", "단지 ", "시공사 ", "구조 ", "유형 "];
   for (const p of prefixes) {
     if (s.startsWith(p) && s.length > p.length) {
       s = s.slice(p.length).trim();
@@ -48,6 +48,9 @@ export function coefficientSortKey(name: string): [number, number, string] {
   if (name === "gross_area") return [1, 1, name];
   if (name === "land_area") return [1, 2, name];
   if (name === "building_age") return [2, 0, name];
+  if (name === "households" || name === "ln_households") return [2, 1, name];
+  if (name === "max_floor") return [3, -1, name];
+  if (name === "parking_per_household") return [3, -1, name];
   if (name === "floor") return [3, 0, name];
   if (name.startsWith("floor_rel_")) return [3, 1, name];
   if (name.startsWith("floor_grp_")) return [3, 2, name];
@@ -55,10 +58,13 @@ export function coefficientSortKey(name: string): [number, number, string] {
   if (name.startsWith("dong_")) return [4, 0, name];
   if (name.startsWith("addr4_")) return [4, 1, name];
   if (name.startsWith("rights_")) return [5, 0, name];
+  if (name.startsWith("atype_")) return [5, 5, name];
   if (name.startsWith("zone_")) return [6, 0, name];
   if (name.startsWith("use_")) return [6, 1, name];
   if (name.startsWith("roadw_")) return [6, 2, name];
   if (name === "road_code") return [6, 3, name];
+  if (name.startsWith("struct_")) return [6, 4, name];
+  if (name.startsWith("builder_")) return [6, 5, name];
   if (name.startsWith("bld_")) return [9, 0, name];
   return [8, 0, name];
 }

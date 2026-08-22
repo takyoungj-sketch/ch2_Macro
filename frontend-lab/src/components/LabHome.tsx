@@ -26,6 +26,11 @@ const DOORS: { id: LabTool; title: string; desc: string }[] = [
     title: "AI 사용량",
     desc: "월 호출·추정 원 장부. 질문 내용은 없음. 200회·1만 원 실험 한도.",
   },
+  {
+    id: "parcel",
+    title: "대장DB",
+    desc: "로컬 축약대장. 필지·동·용도지역을 찾아 표로 봅니다. 운영에는 없습니다.",
+  },
 ];
 
 export default function LabHome({ onOpenTool }: { onOpenTool: (id: LabTool) => void }) {

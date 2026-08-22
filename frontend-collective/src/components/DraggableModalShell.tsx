@@ -39,7 +39,7 @@ type Props = {
   minHeight?: number;
   zClassName?: string;
   backdropClassName?: string;
-  /** document.body 포털 (토지 연도별 모달 등) */
+  /** document.body 포털. 기본 true — 글자 확대(zoom) 조상의 overflow에 모달이 잘리지 않게 */
   usePortal?: boolean;
   /** Escape를 capture 단계에서 처리 */
   escapeCapture?: boolean;
@@ -128,7 +128,8 @@ export default function DraggableModalShell({
   minHeight = 240,
   zClassName = "z-50",
   backdropClassName = "bg-black/40",
-  usePortal = false,
+  /** document.body 포털 — 글자 확대(zoom) 조상의 overflow에 잘리지 않게 */
+  usePortal = true,
   escapeCapture = false,
   bodyClassName = "flex-1 min-h-0 overflow-y-auto px-4 py-3",
 }: Props) {
@@ -430,7 +431,7 @@ export default function DraggableModalShell({
         style={panelStyle}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="flex flex-col min-h-0 w-full overflow-hidden">
+        <div className="flex flex-col flex-1 min-h-0 h-full w-full overflow-hidden">
         <div
           className={`px-4 py-3 modal-header shrink-0 border-b border-slate-200 dark:border-slate-700 select-none touch-none ${
             fullscreen

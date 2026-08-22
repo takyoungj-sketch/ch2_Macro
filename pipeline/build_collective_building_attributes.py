@@ -26,6 +26,9 @@ from sqlalchemy import create_engine, text
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "pipeline"))
 
+from parcel_master.pnu import pnu_from_tx  # noqa: E402
+from parcel_master.pnu_unique import pnu_unique_skip_reason  # noqa: E402
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(message)s",
@@ -47,10 +50,15 @@ TIER_RULE_MAP: dict[str, tuple[str, str]] = {
     "D_lot_multi": ("D", "lot_multi"),
     "E_contains_unique": ("E", "contains_unique"),
     "F_contains_multi": ("F", "contains_multi"),
+    "P_pnu_unique": ("P", "pnu_unique"),
     "no_match": ("Z", "no_match"),
 }
 
-ATTR_TIERS = frozenset({"A", "B", "C", "E"})
+ATTR_TIERS = frozenset({"A", "B", "C", "E", "P"})
+MULTI_ATTR_TIERS = frozenset({"D", "F"})
+# F는 부분일치라 짧은 실거래명(부평·석수)이 동 안 단지를 전부 삼킨다.
+F_MIN_NAME = 6
+F_MAX_CANDS = 4
 
 BUILDING_SQL = """
 SELECT
@@ -179,6 +187,58 @@ def default_kapt_path() -> Path:
     return Path(matches[-1])
 
 
+def region_map_from_rows(rows) -> dict[tuple[str, str, str], str]:
+    """(시도, 시군구, 법정동명) → 10자리 코드.
+
+    세종처럼 동 이름이 시군구 칸에 있고 법정동명이 비면
+    (시도, '', 동이름) 키도 넣는다. K-apt 동리는 시군구가 비어 있다.
+    """
+    out: dict[tuple[str, str, str], str] = {}
+    for row in rows:
+        sido = _WS.sub("", str(getattr(row, "sido_name", "") or ""))
+        sgg_raw = _WS.sub("", str(getattr(row, "sigungu_name", "") or ""))
+        bj = _WS.sub("", str(getattr(row, "beopjungri_name", "") or ""))
+        code = str(getattr(row, "beopjungri_code", "") or "")
+        if not sido or not code:
+            continue
+        for sgg in sigungu_variants(sgg_raw):
+            out.setdefault((sido, sgg, bj), code)
+        out.setdefault((sido, "", bj), code)
+        if not bj and sgg_raw:
+            out.setdefault((sido, "", sgg_raw), code)
+            for sgg in sigungu_variants(sgg_raw):
+                out.setdefault((sido, sgg, sgg), code)
+    return out
+
+
+def lookup_beopjungri_code(
+    region_map: dict[tuple[str, str, str], str],
+    *,
+    sido: str,
+    sigungu: str = "",
+    dongri: str = "",
+    eupmyeon: str = "",
+) -> str:
+    sido_k = _WS.sub("", str(sido or ""))
+    sgg = _WS.sub("", str(sigungu or ""))
+    dong = _WS.sub("", str(dongri or ""))
+    eup = _WS.sub("", str(eupmyeon or ""))
+    bj = dong or eup
+    for key in (
+        (sido_k, sgg, bj),
+        (sido_k, "", bj),
+        (sido_k, bj, ""),
+        (sido_k, sgg, dong) if dong else None,
+        (sido_k, "", dong) if dong else None,
+    ):
+        if not key or not key[0]:
+            continue
+        code = region_map.get(key)
+        if code:
+            return code
+    return ""
+
+
 def load_region_map(conn) -> dict[tuple[str, str, str], str]:
     df = pd.read_sql(
         text(
@@ -187,14 +247,7 @@ def load_region_map(conn) -> dict[tuple[str, str, str], str]:
         ),
         conn,
     )
-    out: dict[tuple[str, str, str], str] = {}
-    for row in df.itertuples(index=False):
-        sido = _WS.sub("", str(row.sido_name))
-        bj = _WS.sub("", str(row.beopjungri_name))
-        for sgg in sigungu_variants(str(row.sigungu_name)):
-            out.setdefault((sido, sgg, bj), str(row.beopjungri_code))
-        out.setdefault((sido, "", bj), str(row.beopjungri_code))
-    return out
+    return region_map_from_rows(df.itertuples(index=False))
 
 
 def load_kapt(region_map: dict[tuple[str, str, str], str], path: Path) -> pd.DataFrame:
@@ -213,13 +266,15 @@ def load_kapt(region_map: dict[tuple[str, str, str], str], path: Path) -> pd.Dat
 
     codes: list[str] = []
     for row in df.itertuples(index=False):
-        sido = _WS.sub("", str(getattr(row, "시도", "") or ""))
-        sgg = _WS.sub("", str(getattr(row, "시군구", "") or ""))
-        dong = str(getattr(row, "동리", "") or "").strip()
-        eup = str(getattr(row, "읍면", "") or "").strip()
-        bj = _WS.sub("", dong or eup)
-        code = region_map.get((sido, sgg, bj)) or region_map.get((sido, "", bj)) or ""
-        codes.append(code)
+        codes.append(
+            lookup_beopjungri_code(
+                region_map,
+                sido=str(getattr(row, "시도", "") or ""),
+                sigungu=str(getattr(row, "시군구", "") or ""),
+                dongri=str(getattr(row, "동리", "") or ""),
+                eupmyeon=str(getattr(row, "읍면", "") or ""),
+            )
+        )
     df["beopjungri_code"] = codes
     return df
 
@@ -251,6 +306,36 @@ def build_kapt_indexes(kapt: pd.DataFrame) -> tuple[
     return by_lot, by_name, by_core, names_in_bj
 
 
+def build_pnu_index(kapt: pd.DataFrame) -> dict[str, list[int]]:
+    by_pnu: dict[str, list[int]] = {}
+    if "pnu" not in kapt.columns:
+        return by_pnu
+    for idx, row in enumerate(kapt.itertuples(index=False)):
+        pnu = str(getattr(row, "pnu", "") or "").strip()
+        if len(pnu) == 19 and pnu.isdigit():
+            by_pnu.setdefault(pnu, []).append(idx)
+    return by_pnu
+
+
+def attach_kapt_pnu(kapt: pd.DataFrame) -> pd.DataFrame:
+    out = kapt.copy()
+    if "pnu" in out.columns and out["pnu"].notna().any():
+        return out
+    try:
+        from parcel_master.load_kapt_pnu import load_pnu_map
+
+        pnu_df = load_pnu_map()
+        pnu_map = dict(zip(pnu_df["danji_code"], pnu_df["pnu"]))
+        out["pnu"] = out["단지코드"].map(
+            lambda c: pnu_map.get(str(c).strip()) if pd.notna(c) else None
+        )
+        log.info("attached K-apt pnu rows=%s", int(out["pnu"].notna().sum()))
+    except Exception:
+        log.exception("K-apt PNU attach skipped")
+        out["pnu"] = None
+    return out
+
+
 def match_one(
     row,
     *,
@@ -258,55 +343,156 @@ def match_one(
     by_name: dict[tuple[str, str], list[int]],
     by_core: dict[tuple[str, str], list[int]],
     names_in_bj: dict[str, list[tuple[str, int]]],
-) -> tuple[str, int | None]:
+) -> tuple[str, list[int]]:
     bj = str(row.beopjungri_code) if pd.notna(row.beopjungri_code) else ""
     name_key = norm_name(row.display_name)
     name_core = norm_name_core(row.display_name)
     lot_key = norm_lot(row.lot_number)
 
     if name_key and len(by_name.get((bj, name_key), [])) == 1:
-        return "A_name_exact", by_name[(bj, name_key)][0]
+        return "A_name_exact", list(by_name[(bj, name_key)])
     if name_core and len(by_core.get((bj, name_core), [])) == 1:
-        return "B_name_core", by_core[(bj, name_core)][0]
+        return "B_name_core", list(by_core[(bj, name_core)])
     if lot_key and len(by_lot.get((bj, lot_key), [])) == 1:
-        return "C_lot_exact", by_lot[(bj, lot_key)][0]
+        return "C_lot_exact", list(by_lot[(bj, lot_key)])
     if lot_key and len(by_lot.get((bj, lot_key), [])) > 1:
-        return "D_lot_multi", None
+        return "D_lot_multi", list(by_lot[(bj, lot_key)])
     cands = names_in_bj.get(bj, [])
     if name_key and cands:
         hits = [i for nm, i in cands if name_key in nm or nm in name_key]
         if len(hits) == 1:
-            return "E_contains_unique", hits[0]
+            return "E_contains_unique", hits
         if len(hits) > 1:
-            return "F_contains_multi", None
-    return "no_match", None
+            return "F_contains_multi", hits
+    return "no_match", []
+
+
+def _cell(row: pd.Series, *names: str) -> object:
+    for name in names:
+        if name in row.index:
+            val = row[name]
+            if val is not None and not (isinstance(val, float) and pd.isna(val)):
+                return val
+    return None
 
 
 def kapt_row_to_attrs(kapt: pd.DataFrame, idx: int) -> dict[str, Any]:
     row = kapt.iloc[idx]
-    households = parse_int(row.get("세대수"))
-    parking_total = parse_int(row.get("총주차대수"))
+    households = parse_int(_cell(row, "세대수", "households"))
+    parking_total = parse_int(_cell(row, "총주차대수", "parking_total"))
     parking_per = None
     if households and households > 0 and parking_total is not None:
         parking_per = round(Decimal(parking_total) / Decimal(households), 3)
-    approved_year = parse_approved_year(row.get("사용승인일"))
+    approved_year = parse_approved_year(_cell(row, "사용승인일", "approved_date"))
     return {
-        "danji_code": str(row.get("단지코드") or "").strip() or None,
+        "danji_code": _str_or_none(_cell(row, "단지코드", "danji_code")),
+        "danji_name": _str_or_none(_cell(row, "단지명", "danji_name")),
         "approved_year": approved_year,
-        "builder_raw": _str_or_none(row.get("시공사"), max_len=200),
-        "developer_raw": _str_or_none(row.get("시행사"), max_len=200),
-        "structure_raw": _str_or_none(row.get("건물구조"), max_len=60),
-        "structure_group": structure_group(row.get("건물구조")),
+        "builder_raw": _str_or_none(_cell(row, "시공사", "builder_raw"), max_len=500),
+        "developer_raw": _str_or_none(_cell(row, "시행사", "developer_raw"), max_len=500),
+        "structure_raw": _str_or_none(_cell(row, "건물구조", "structure_raw"), max_len=60),
+        "structure_group": structure_group(_cell(row, "건물구조", "structure_raw")),
         "households": households,
-        "households_sale": parse_int(row.get("분양세대수")),
-        "households_rent": parse_int(row.get("임대세대수")),
-        "dong_count": parse_int(row.get("동수")),
-        "max_floor": parse_int(row.get("최고층수")),
+        "households_sale": parse_int(_cell(row, "분양세대수", "households_sale")),
+        "households_rent": parse_int(_cell(row, "임대세대수", "households_rent")),
+        "dong_count": parse_int(_cell(row, "동수", "dong_count")),
+        "max_floor": parse_int(_cell(row, "최고층수", "max_floor")),
         "parking_total": parking_total,
         "parking_per_household": parking_per,
-        "danji_class": _str_or_none(row.get("단지분류")),
-        "supply_type": _str_or_none(row.get("분양형태")),
+        "danji_class": _str_or_none(_cell(row, "단지분류", "danji_class")),
+        "supply_type": _str_or_none(_cell(row, "분양형태", "supply_type")),
     }
+
+
+def order_multi_idxs(kapt: pd.DataFrame, idxs: list[int]) -> list[int]:
+    """복수 후보는 단지명·코드 순. 파일 순서를 대표값으로 쓰지 않는다."""
+
+    def _key(i: int) -> tuple[str, str]:
+        row = kapt.iloc[i]
+        name = str(_cell(row, "단지명", "danji_name") or "")
+        code = str(_cell(row, "단지코드", "danji_code") or "")
+        return (name, code)
+
+    return sorted(idxs, key=_key)
+
+
+def multi_fill_allowed(tier: str, tx_name: object, kapt: pd.DataFrame, idxs: list[int]) -> bool:
+    """D는 같은 지번이라 합산. F는 이름 길이·후보 수 가드가 통과할 때만."""
+    if len(idxs) < 2:
+        return False
+    if tier == "D":
+        return True
+    if tier != "F" or len(idxs) > F_MAX_CANDS:
+        return False
+    tx = norm_name(tx_name)
+    if len(tx) < F_MIN_NAME:
+        return False
+    for i in idxs:
+        kn = norm_name(_cell(kapt.iloc[i], "단지명", "danji_name"))
+        shorter = tx if len(tx) <= len(kn) else kn
+        if len(shorter) < F_MIN_NAME:
+            return False
+    return True
+
+
+def _sum_int(parts: list[dict[str, Any]], key: str) -> int | None:
+    vals = [p.get(key) for p in parts if p.get(key) is not None]
+    if not vals:
+        return None
+    return int(sum(int(v) for v in vals))
+
+
+def _join_unique(parts: list[dict[str, Any]], key: str, *, max_len: int) -> str | None:
+    seen: list[str] = []
+    for p in parts:
+        s = _str_or_none(p.get(key))
+        if s and s not in seen:
+            seen.append(s)
+    if not seen:
+        return None
+    return _str_or_none(", ".join(seen), max_len=max_len)
+
+
+def aggregate_attr_dicts(parts: list[dict[str, Any]]) -> dict[str, Any]:
+    """D·F: 세대·동·주차 합산, 최고층 max, 사용승인은 가장 이른 해, 시공사 원문은 병합."""
+    parts = [p for p in parts if p.get("danji_code")]
+    if not parts:
+        return {}
+    households = _sum_int(parts, "households")
+    parking_total = _sum_int(parts, "parking_total")
+    parking_per = None
+    if households and households > 0 and parking_total is not None:
+        parking_per = round(Decimal(parking_total) / Decimal(households), 3)
+    years = [int(p["approved_year"]) for p in parts if p.get("approved_year") is not None]
+    groups = {p.get("structure_group") for p in parts if p.get("structure_group")}
+    classes = {p.get("danji_class") for p in parts if p.get("danji_class")}
+    supplies = {p.get("supply_type") for p in parts if p.get("supply_type")}
+    floors = [int(p["max_floor"]) for p in parts if p.get("max_floor") is not None]
+    codes = [str(p["danji_code"]) for p in parts]
+    return {
+        "danji_code": codes[0],
+        "match_danji_codes": ",".join(codes),
+        "approved_year": min(years) if years else None,
+        "builder_raw": _join_unique(parts, "builder_raw", max_len=500),
+        "developer_raw": _join_unique(parts, "developer_raw", max_len=500),
+        "structure_raw": _join_unique(parts, "structure_raw", max_len=60),
+        "structure_group": next(iter(groups)) if len(groups) == 1 else None,
+        "households": households,
+        "households_sale": _sum_int(parts, "households_sale"),
+        "households_rent": _sum_int(parts, "households_rent"),
+        "dong_count": _sum_int(parts, "dong_count"),
+        "max_floor": max(floors) if floors else None,
+        "parking_total": parking_total,
+        "parking_per_household": parking_per,
+        "danji_class": next(iter(classes)) if len(classes) == 1 else parts[0].get("danji_class"),
+        "supply_type": next(iter(supplies)) if len(supplies) == 1 else parts[0].get("supply_type"),
+    }
+
+
+def multi_kapt_row_to_attrs(kapt: pd.DataFrame, idxs: list[int]) -> dict[str, Any]:
+    ordered = order_multi_idxs(kapt, idxs)
+    parts = [kapt_row_to_attrs(kapt, i) for i in ordered]
+    return aggregate_attr_dicts(parts)
 
 
 def _str_or_none(value: object, *, max_len: int | None = None) -> str | None:
@@ -354,6 +540,7 @@ def builder_master_rows(kapt: pd.DataFrame, snapshot_ym: str) -> list[dict[str, 
                 "heating_type": _str_or_none(getattr(row, "난방방식", None)),
                 "corridor_type": _str_or_none(getattr(row, "복도유형", None)),
                 "source_file": _str_or_none(getattr(row, "source_file", None)),
+                "pnu": _str_or_none(getattr(row, "pnu", None)),
             }
         )
     return rows
@@ -368,17 +555,36 @@ def attributes_rows(
 ) -> pd.DataFrame:
     kapt_indexed = kapt[kapt["beopjungri_code"] != ""].reset_index(drop=True)
     by_lot, by_name, by_core, names_in_bj = build_kapt_indexes(kapt_indexed)
+    by_pnu = build_pnu_index(kapt_indexed)
 
     out_rows: list[dict[str, Any]] = []
     for row in buildings.itertuples(index=False):
-        tier_key, kapt_idx = match_one(
+        tier_key, kapt_idxs = match_one(
             row,
             by_lot=by_lot,
             by_name=by_name,
             by_core=by_core,
             names_in_bj=names_in_bj,
         )
+        kapt_idx = kapt_idxs[0] if len(kapt_idxs) == 1 else None
         match_tier, match_rule = TIER_RULE_MAP[tier_key]
+        if match_tier not in ATTR_TIERS and match_tier != "D" and by_pnu:
+            pnu = pnu_from_tx(
+                None if pd.isna(row.beopjungri_code) else str(row.beopjungri_code),
+                None if pd.isna(row.lot_number) else str(row.lot_number),
+            )
+            idxs = by_pnu.get(pnu or "", [])
+            if len(idxs) == 1:
+                krow = kapt_indexed.iloc[idxs[0]]
+                skip = pnu_unique_skip_reason(
+                    tx_name=row.display_name,
+                    kapt_name=krow.get("단지명"),
+                    approved_year=parse_approved_year(krow.get("사용승인일")),
+                    building_year=parse_int(row.building_year),
+                )
+                if skip is None:
+                    match_tier, match_rule = TIER_RULE_MAP["P_pnu_unique"]
+                    kapt_idx = idxs[0]
         building_year = parse_int(row.building_year)
         rec: dict[str, Any] = {
             "snapshot_ym": snapshot_ym,
@@ -406,23 +612,40 @@ def attributes_rows(
             "parking_per_household": None,
             "danji_class": None,
             "supply_type": None,
+            "match_danji_codes": None,
             "n_tx": int(row.n_tx),
         }
         if match_tier in ATTR_TIERS and kapt_idx is not None:
             attrs = kapt_row_to_attrs(kapt_indexed, kapt_idx)
             rec.update(attrs)
+            rec.pop("danji_name", None)
             if rec["approved_year"] is not None and building_year is not None:
                 rec["year_diff"] = rec["approved_year"] - building_year
+        elif match_tier in MULTI_ATTR_TIERS and len(kapt_idxs) > 1:
+            if multi_fill_allowed(match_tier, row.display_name, kapt_indexed, kapt_idxs):
+                attrs = multi_kapt_row_to_attrs(kapt_indexed, kapt_idxs)
+                rec.update(attrs)
+                rec.pop("danji_name", None)
+                if rec["approved_year"] is not None and building_year is not None:
+                    rec["year_diff"] = rec["approved_year"] - building_year
         out_rows.append(rec)
     return pd.DataFrame(out_rows)
 
 
 def apply_ddl(engine) -> None:
-    ddl_path = REPO / "db" / "049_collective_building_attributes.sql"
-    ddl = ddl_path.read_text(encoding="utf-8")
-    with engine.begin() as conn:
-        conn.execute(text(ddl))
-    log.info("applied DDL %s", ddl_path.name)
+    for name in (
+        "049_collective_building_attributes.sql",
+        "065_builder_master_pnu.sql",
+        "066_cba_match_danji_codes.sql",
+    ):
+        ddl_path = REPO / "db" / name
+        ddl = ddl_path.read_text(encoding="utf-8")
+        with engine.begin() as conn:
+            for stmt in ddl.split(";"):
+                s = stmt.strip()
+                if s:
+                    conn.execute(text(s))
+        log.info("applied DDL %s", ddl_path.name)
 
 
 def delete_snapshot(engine, snapshot_ym: str, asset_type: str) -> None:
@@ -448,14 +671,14 @@ def insert_builder_master(engine, rows: list[dict[str, Any]]) -> None:
             lot_key, danji_class, supply_type, approved_date, dong_count,
             households, households_sale, households_rent, builder_raw, developer_raw,
             structure_raw, max_floor, basement_floor, parking_total, parking_ground,
-            parking_underground, heating_type, corridor_type, source_file
+            parking_underground, heating_type, corridor_type, source_file, pnu
         ) VALUES (
             :snapshot_ym, :danji_code, :danji_name, :sido_name, :sigungu_name,
             :eupmyeon_name, :dongri_name, :beopjungri_code, :legal_address, :road_address,
             :lot_key, :danji_class, :supply_type, :approved_date, :dong_count,
             :households, :households_sale, :households_rent, :builder_raw, :developer_raw,
             :structure_raw, :max_floor, :basement_floor, :parking_total, :parking_ground,
-            :parking_underground, :heating_type, :corridor_type, :source_file
+            :parking_underground, :heating_type, :corridor_type, :source_file, :pnu
         )
         """
     )
@@ -490,17 +713,22 @@ def insert_attributes(engine, df: pd.DataFrame) -> None:
             approved_year, building_year, year_diff, builder_raw, builder_norm,
             builder_group, developer_raw, brand, structure_raw, structure_group,
             households, households_sale, households_rent, dong_count, max_floor,
-            parking_total, parking_per_household, danji_class, supply_type, n_tx
+            parking_total, parking_per_household, danji_class, supply_type, n_tx,
+            match_danji_codes
         ) VALUES (
             :snapshot_ym, :asset_type, :building_key, :danji_code, :match_tier, :match_rule,
             :approved_year, :building_year, :year_diff, :builder_raw, :builder_norm,
             :builder_group, :developer_raw, :brand, :structure_raw, :structure_group,
             :households, :households_sale, :households_rent, :dong_count, :max_floor,
-            :parking_total, :parking_per_household, :danji_class, :supply_type, :n_tx
+            :parking_total, :parking_per_household, :danji_class, :supply_type, :n_tx,
+            :match_danji_codes
         )
         """
     )
     records = [_sanitize_record(r) for r in df.to_dict(orient="records")]
+    for rec in records:
+        rec.setdefault("match_danji_codes", None)
+        rec.pop("danji_name", None)
     for start in range(0, len(records), DEFAULT_CHUNK):
         chunk = records[start : start + DEFAULT_CHUNK]
         with engine.begin() as conn:
@@ -516,6 +744,8 @@ def _tier_label(tier: str) -> str:
         "D": "D lot_multi",
         "E": "E contains_unique",
         "F": "F contains_multi",
+        "P": "P pnu_unique",
+        "T": "T title_pnu",
         "Z": "Z no_match",
     }
     return labels.get(tier, tier)
@@ -540,7 +770,7 @@ def print_report(
         buildings=("building_key", "count"),
         tx=("n_tx", "sum"),
     )
-    tier_order = ["A", "B", "C", "D", "E", "F", "Z"]
+    tier_order = ["A", "B", "C", "D", "E", "F", "P", "T", "Z"]
     abc_tx = 0
     abce_tx = 0
     for tier in tier_order:
@@ -551,17 +781,17 @@ def print_report(
         tx = int(r.tx)
         if tier in ("A", "B", "C"):
             abc_tx += tx
-        if tier in ("A", "B", "C", "E"):
+        if tier in ("A", "B", "C", "E", "P"):
             abce_tx += tx
         print(
             f"  {_tier_label(tier):22s}  {b:>6,} ({100 * b / total_b:5.1f}%)"
             f"  tx {tx:>10,} ({100 * tx / total_tx:5.1f}%)"
         )
     print(f"\n  A+B+C tx-weighted: {100 * abc_tx / total_tx:.1f}%")
-    print(f"  A+B+C+E tx-weighted: {100 * abce_tx / total_tx:.1f}%")
+    print(f"  A+B+C+E+P tx-weighted: {100 * abce_tx / total_tx:.1f}%")
 
     print("\n=== year_diff (K-apt approved_year - building_year) ===")
-    for tier in ("A", "B", "C", "E"):
+    for tier in ("A", "B", "C", "E", "P"):
         sub = attrs[(attrs["match_tier"] == tier) & attrs["year_diff"].notna()]
         if sub.empty:
             continue
@@ -579,7 +809,7 @@ def print_report(
         how="left",
         suffixes=("", "_b"),
     )
-    merged["matched"] = merged["match_tier"].isin(list(ATTR_TIERS))
+    merged["matched"] = merged["match_tier"].isin(list(ATTR_TIERS | MULTI_ATTR_TIERS))
 
     def bucket(y: float | int | None) -> str:
         if y is None or pd.isna(y):
@@ -632,7 +862,7 @@ def main() -> None:
         region_map = load_region_map(conn)
         buildings = load_buildings(conn, args.asset_type)
 
-    kapt = load_kapt(region_map, kapt_path)
+    kapt = attach_kapt_pnu(load_kapt(region_map, kapt_path))
     log.info("K-apt rows=%s  CH2 buildings=%s", len(kapt), len(buildings))
 
     bm_rows = builder_master_rows(kapt, snapshot_ym)

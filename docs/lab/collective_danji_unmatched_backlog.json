@@ -1,0 +1,934 @@
+{
+  "as_of": "2026-08-22",
+  "snapshot_ym": "202607",
+  "asset_type": "apartment",
+  "policy": {
+    "defer": false,
+    "why": "세대수=후보 합산, 시공사=첫 단지+외, 지역회귀 D·F 포함. 첫째 행 금지.",
+    "later": [],
+    "applied": [
+      "목록 세대수=후보 합산, 시공사=첫 단지+외",
+      "모달에서 후보 행 전부 표시",
+      "지역회귀 hard 표본에 D·F 포함. 시공사 더미는 {첫 시공사} 외"
+    ],
+    "do_not": "첫째 행을 대표값으로 쓰지 않음"
+  },
+  "anchors": [
+    {
+      "why": "청주 서원 분평동 — 목록 공란의 대표 사례. 거래수 상위 25에는 안 들어 있어 따로 적음.",
+      "display_name": "분평주공3",
+      "addr": "충청북도 청주시 서원구 분평동",
+      "lot_number": "1200",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "kapt_candidates": [
+        { "danji_name": "분평주공3-1단지아파트", "households": 480, "builder": "한양건설" },
+        { "danji_name": "분평주공3-2단지아파트", "households": 850, "builder": "한양공영, 삼익건설" }
+      ]
+    },
+    {
+      "display_name": "분평주공4",
+      "addr": "충청북도 청주시 서원구 분평동",
+      "lot_number": "1261",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "kapt_candidates": [
+        { "danji_name": "분평주공4-1단지아파트" },
+        { "danji_name": "분평주공4-2단지아파트" }
+      ]
+    }
+  ],
+  "tier_counts": [
+    {
+      "match_tier": "A",
+      "match_rule": "name_exact",
+      "n_buildings": 5149,
+      "n_tx": 722124
+    },
+    {
+      "match_tier": "B",
+      "match_rule": "name_core",
+      "n_buildings": 218,
+      "n_tx": 25708
+    },
+    {
+      "match_tier": "C",
+      "match_rule": "lot_exact",
+      "n_buildings": 12574,
+      "n_tx": 1996631
+    },
+    {
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_buildings": 249,
+      "n_tx": 77866
+    },
+    {
+      "match_tier": "E",
+      "match_rule": "contains_unique",
+      "n_buildings": 833,
+      "n_tx": 94378
+    },
+    {
+      "match_tier": "F",
+      "match_rule": "contains_multi",
+      "n_buildings": 126,
+      "n_tx": 7692
+    },
+    {
+      "match_tier": "Z",
+      "match_rule": "no_match",
+      "n_buildings": 22683,
+      "n_tx": 398803
+    }
+  ],
+  "n_df": 374,
+  "n_tx_df": 85557,
+  "examples_by_tx": [
+    {
+      "building_key": "974ba2157d5ea6681e625f29b6a5d49987b4f44e961fdcb87b1c6f96432aaa98",
+      "display_name": "성원",
+      "addr1": "경상남도",
+      "addr2": "창원시",
+      "addr3": "성산구",
+      "addr4": "상남동",
+      "lot_number": "45-1",
+      "beopjungri_code": "4812312700",
+      "road_name": "원이대로 774",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 2175,
+      "kapt_candidates": [
+        {
+          "danji_code": "A64177806",
+          "danji_name": "성원토월1단지",
+          "lot_key": "45-1",
+          "households": 1675,
+          "builder_raw": "성원토건(합),(주)성원,성원기업(주)",
+          "road_address": "경상남도 창원시 성산구 원이대로 774"
+        },
+        {
+          "danji_code": "A64177905",
+          "danji_name": "성원아파트2단지",
+          "lot_key": "45-1",
+          "households": 1645,
+          "builder_raw": "성원토건(합),(주)성원,성원기업(주)",
+          "road_address": "경상남도 창원시 성산구 원이대로 774"
+        },
+        {
+          "danji_code": "A64178004",
+          "danji_name": "토월성원3단지",
+          "lot_key": "45-1",
+          "households": 1600,
+          "builder_raw": "성원토건(합),(주)성원",
+          "road_address": "경상남도 창원시 성산구 원이대로 774"
+        },
+        {
+          "danji_code": "A64178103",
+          "danji_name": "성원5단지아파트",
+          "lot_key": "45-1",
+          "households": 1332,
+          "builder_raw": "성원토건(합),(주)성원,성원기업(주)",
+          "road_address": null
+        }
+      ]
+    },
+    {
+      "building_key": "f18ec9cb90afe8d6b23a10ab3d6124b0c5a210f69617a376357f69f94ac99b57",
+      "display_name": "순천두산위브",
+      "addr1": "전남광주통합특별시",
+      "addr2": "순천시",
+      "addr3": "왕지동",
+      "addr4": null,
+      "lot_number": "891",
+      "beopjungri_code": "1215013200",
+      "road_name": "왕지3길 55",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 2121,
+      "kapt_candidates": [
+        {
+          "danji_code": "A54070502",
+          "danji_name": "순천두산위브1단지",
+          "lot_key": "891",
+          "households": 823,
+          "builder_raw": "두산중공업",
+          "road_address": "전라남도 순천시 왕지3길 55"
+        },
+        {
+          "danji_code": "A54070503",
+          "danji_name": "순천두산위브2단지",
+          "lot_key": "891",
+          "households": 494,
+          "builder_raw": "두산중공업",
+          "road_address": "전라남도 순천시 왕지3길 55"
+        }
+      ]
+    },
+    {
+      "building_key": "2ad994ca9919fe467016991276f094dfe98ae89d59a20fcd6fbcd46221e332ce",
+      "display_name": "승기마을,연수1차시영",
+      "addr1": "인천광역시",
+      "addr2": "연수구",
+      "addr3": "연수동",
+      "addr4": null,
+      "lot_number": "582-2",
+      "beopjungri_code": "2818510300",
+      "road_name": "원인재로 212",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 1824,
+      "kapt_candidates": [
+        {
+          "danji_code": "A40676101",
+          "danji_name": "연수시영1차(분양)",
+          "lot_key": "582-2",
+          "households": 370,
+          "builder_raw": "시종합건설본부",
+          "road_address": "인천광역시 연수구 원인재로 212"
+        },
+        {
+          "danji_code": "A40676206",
+          "danji_name": "연수솔밭마을",
+          "lot_key": "582-2",
+          "households": 1200,
+          "builder_raw": "한보철강주식회사",
+          "road_address": "인천광역시 연수구 원인재로 232"
+        },
+        {
+          "danji_code": "A40681703",
+          "danji_name": "연수승기마을",
+          "lot_key": "582-2",
+          "households": 1000,
+          "builder_raw": "코오롱건설",
+          "road_address": "인천광역시 연수구 원인재로 212"
+        },
+        {
+          "danji_code": "A40681704",
+          "danji_name": "연수1차시영임",
+          "lot_key": "582-2",
+          "households": 1000,
+          "builder_raw": "인천시 종합건설본부",
+          "road_address": "인천광역시 연수구 원인재로 212"
+        }
+      ]
+    },
+    {
+      "building_key": "9cf7b38288f5d7d94db13e82a622e3edd89474837c64b1d578e2552cb8249204",
+      "display_name": "주공8단지",
+      "addr1": "인천광역시",
+      "addr2": "남동구",
+      "addr3": "만수동",
+      "addr4": null,
+      "lot_number": "1005",
+      "beopjungri_code": "2820010300",
+      "road_name": "담방로 105",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 1711,
+      "kapt_candidates": [
+        {
+          "danji_code": "A40577003",
+          "danji_name": "만수주공8단지아파트",
+          "lot_key": "1005",
+          "households": 1440,
+          "builder_raw": "대한주택공사",
+          "road_address": "인천광역시 남동구 담방로 105"
+        },
+        {
+          "danji_code": "A40577204",
+          "danji_name": "인천만수7(공단)",
+          "lot_key": "1005",
+          "households": 1466,
+          "builder_raw": "삼부토건, 중앙건설",
+          "road_address": "인천광역시 남동구 담방로 105"
+        }
+      ]
+    },
+    {
+      "building_key": "e48432cc5d0bace04f29cbe536311e50d894714236b2e0d0567c4cd974f09944",
+      "display_name": "하남주공(2단지)",
+      "addr1": "전남광주통합특별시",
+      "addr2": "광산구",
+      "addr3": "우산동",
+      "addr4": null,
+      "lot_number": "1571-1",
+      "beopjungri_code": "1233010900",
+      "road_name": "월곡산정로 12",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 1633,
+      "kapt_candidates": [
+        {
+          "danji_code": "A50675212",
+          "danji_name": "하남주공1단지",
+          "lot_key": "1571-1",
+          "households": 1878,
+          "builder_raw": "광주고속외 5개업체",
+          "road_address": "광주광역시 광산구 월곡산정로 12"
+        },
+        {
+          "danji_code": "A50681508",
+          "danji_name": "하남주공2단지",
+          "lot_key": "1571-1",
+          "households": 1350,
+          "builder_raw": "대한주택공사",
+          "road_address": "광주광역시 광산구 월곡산정로 12"
+        }
+      ]
+    },
+    {
+      "building_key": "40b86ccffcec4905b9fc585c8eab27ef408df5f9c883e26b944720af93137d33",
+      "display_name": "학마을서해",
+      "addr1": "인천광역시",
+      "addr2": "계양구",
+      "addr3": "병방동",
+      "addr4": null,
+      "lot_number": "432-5",
+      "beopjungri_code": "2824510700",
+      "road_name": "장제로 878",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 1503,
+      "kapt_candidates": [
+        {
+          "danji_code": "A40770604",
+          "danji_name": "학마을 서해아파트",
+          "lot_key": "432-5",
+          "households": 1261,
+          "builder_raw": "(주)서해종합건설",
+          "road_address": "인천광역시 계양구 장제로 878"
+        },
+        {
+          "danji_code": "A40770703",
+          "danji_name": "학마을영남아파트",
+          "lot_key": "432-5",
+          "households": 1047,
+          "builder_raw": "(주)영남건설",
+          "road_address": "인천광역시 계양구 장제로 878"
+        }
+      ]
+    },
+    {
+      "building_key": "3610277bc1639e26fd83057eca04d0b23a5177c5c896aef0c0e216e472ca93bb",
+      "display_name": "만수주공2단지",
+      "addr1": "인천광역시",
+      "addr2": "남동구",
+      "addr3": "만수동",
+      "addr4": null,
+      "lot_number": "29",
+      "beopjungri_code": "2820010300",
+      "road_name": "백범로124번길 43",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 1452,
+      "kapt_candidates": [
+        {
+          "danji_code": "A40577102",
+          "danji_name": "만수주공1단지",
+          "lot_key": "29",
+          "households": 516,
+          "builder_raw": "대한주택공사",
+          "road_address": "인천광역시 남동구 만수로 14-26,인천광역시 남동구 만수로 14-25"
+        },
+        {
+          "danji_code": "A40577105",
+          "danji_name": "만수주공2단지아파트",
+          "lot_key": "29",
+          "households": 1920,
+          "builder_raw": "대한주택공사",
+          "road_address": "인천광역시 남동구 백범로124번길 43"
+        }
+      ]
+    },
+    {
+      "building_key": "5156c26b6332a02f8f3c0c011b0ee85a4bf0de9171a23bda480361f6a7ab8e5e",
+      "display_name": "중흥호반",
+      "addr1": "전남광주통합특별시",
+      "addr2": "서구",
+      "addr3": "풍암동",
+      "addr4": null,
+      "lot_number": "1048",
+      "beopjungri_code": "1224012800",
+      "road_name": "풍암순환로 14",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 1438,
+      "kapt_candidates": [
+        {
+          "danji_code": "A50283210",
+          "danji_name": "풍암1차호반아파트",
+          "lot_key": "1048",
+          "households": 525,
+          "builder_raw": "(주)호반건설",
+          "road_address": "광주광역시 서구 풍암순환로 10"
+        },
+        {
+          "danji_code": "A50283213",
+          "danji_name": "풍암중흥2차아파트",
+          "lot_key": "1048",
+          "households": 614,
+          "builder_raw": "(주)중흥주택",
+          "road_address": "광주광역시 서구 풍암순환로 10"
+        }
+      ]
+    },
+    {
+      "building_key": "65fad92caba1c5d8d16a96275a7652bcdfa873badbebeaf8311cc44d5906a104",
+      "display_name": "주공2단지",
+      "addr1": "인천광역시",
+      "addr2": "남동구",
+      "addr3": "논현동",
+      "addr4": null,
+      "lot_number": "563-3",
+      "beopjungri_code": "2820011000",
+      "road_name": "함박뫼로 439",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 1366,
+      "kapt_candidates": [
+        {
+          "danji_code": "A40573603",
+          "danji_name": "논현주공2-2단지",
+          "lot_key": "563-3",
+          "households": 372,
+          "builder_raw": "주택공사",
+          "road_address": "인천광역시 남동구 함박뫼로 439"
+        },
+        {
+          "danji_code": "A40585008",
+          "danji_name": "논현주공2-1단지",
+          "lot_key": "563-3",
+          "households": 880,
+          "builder_raw": "대한주택공사",
+          "road_address": "인천광역시 남동구 함박뫼로 439"
+        }
+      ]
+    },
+    {
+      "building_key": "d3f8621bfb9331f7d096770058f60bbfb32145d35de584fc109399dc580b2597",
+      "display_name": "한화2단지",
+      "addr1": "인천광역시",
+      "addr2": "부평구",
+      "addr3": "산곡동",
+      "addr4": null,
+      "lot_number": "124-23",
+      "beopjungri_code": "2823710300",
+      "road_name": "원적로 361",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 1201,
+      "kapt_candidates": [
+        {
+          "danji_code": "A40377310",
+          "danji_name": "산곡 한화1차 아파트",
+          "lot_key": "124-23",
+          "households": 744,
+          "builder_raw": "(주)한화건설",
+          "road_address": "인천광역시 부평구 원적로 361"
+        },
+        {
+          "danji_code": "A40377312",
+          "danji_name": "산곡 한화2차 아파트",
+          "lot_key": "124-23",
+          "households": 1280,
+          "builder_raw": "(주)한화건설",
+          "road_address": "인천광역시 부평구 원적로 361"
+        }
+      ]
+    },
+    {
+      "building_key": "95a08cca7c009435878efbc8b83e65a4a4e2f66e4dfe999901ceee3275ee1d40",
+      "display_name": "부개주공1",
+      "addr1": "인천광역시",
+      "addr2": "부평구",
+      "addr3": "부개동",
+      "addr4": null,
+      "lot_number": "496-2",
+      "beopjungri_code": "2823710700",
+      "road_name": "길주남로 143",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 1180,
+      "kapt_candidates": [
+        {
+          "danji_code": "A40372911",
+          "danji_name": "인천부개2(공단)",
+          "lot_key": "496-2",
+          "households": 446,
+          "builder_raw": "풍창건설",
+          "road_address": "인천광역시 부평구 길주남로 143"
+        },
+        {
+          "danji_code": "A40375607",
+          "danji_name": "부개 주공1단지 아파트",
+          "lot_key": "496-2",
+          "households": 1044,
+          "builder_raw": "화신종합건설,한진건설,풍창건설,경우전기,한진건설,세원종합조경",
+          "road_address": "인천광역시 부평구 길주남로 143"
+        }
+      ]
+    },
+    {
+      "building_key": "37078b2f1bb0a34f7787b53def741c28c0178259518c2572a33dc3fa70e36177",
+      "display_name": "빛고을파크",
+      "addr1": "전남광주통합특별시",
+      "addr2": "서구",
+      "addr3": "쌍촌동",
+      "addr4": null,
+      "lot_number": "1228-1",
+      "beopjungri_code": "1224011800",
+      "road_name": "화정로 105",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 1157,
+      "kapt_candidates": [
+        {
+          "danji_code": "A50282103",
+          "danji_name": "빛고을파크2단지",
+          "lot_key": "1228-1",
+          "households": 500,
+          "builder_raw": "광주",
+          "road_address": "광주광역시 서구 화정로 105"
+        },
+        {
+          "danji_code": "A50282104",
+          "danji_name": "빛고을파크1차",
+          "lot_key": "1228-1",
+          "households": 600,
+          "builder_raw": "광주시공영개발단",
+          "road_address": "광주광역시 서구 화정로 105"
+        }
+      ]
+    },
+    {
+      "building_key": "48e16d36827d106d2b32058afe946332cbfd9db2c9be7f90893356dc250a3a13",
+      "display_name": "연산주공3단지",
+      "addr1": "전남광주통합특별시",
+      "addr2": "목포시",
+      "addr3": "연산동",
+      "addr4": null,
+      "lot_number": "1260",
+      "beopjungri_code": "1211010300",
+      "road_name": "원산중앙로 87",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 1148,
+      "kapt_candidates": [
+        {
+          "danji_code": "A53037001",
+          "danji_name": "연산주공4단지",
+          "lot_key": "1260",
+          "households": 401,
+          "builder_raw": "대한주택공사",
+          "road_address": "전라남도 목포시 원산중앙로 87"
+        },
+        {
+          "danji_code": "A53037006",
+          "danji_name": "연산주공3단지아파트",
+          "lot_key": "1260",
+          "households": 1050,
+          "builder_raw": "대한주택공사",
+          "road_address": "전라남도 목포시 원산중앙로 87"
+        }
+      ]
+    },
+    {
+      "building_key": "d803eca0028e16b0559241c2d6886f8e044644d26f54d62f1f4ab45f1e32c0d0",
+      "display_name": "미평주공2단지",
+      "addr1": "전남광주통합특별시",
+      "addr2": "여수시",
+      "addr3": "미평동",
+      "addr4": null,
+      "lot_number": "284",
+      "beopjungri_code": "1213012200",
+      "road_name": "미평로 77",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 1074,
+      "kapt_candidates": [
+        {
+          "danji_code": "A55024004",
+          "danji_name": "미평주공2차아파트",
+          "lot_key": "284",
+          "households": 990,
+          "builder_raw": "대한주택공사",
+          "road_address": "전라남도 여수시 미평로 77"
+        },
+        {
+          "danji_code": "A55024005",
+          "danji_name": "여수미평1관리소",
+          "lot_key": "284",
+          "households": 537,
+          "builder_raw": "한국토지주택공사",
+          "road_address": "전라남도 여수시 미평로 77"
+        }
+      ]
+    },
+    {
+      "building_key": "2460e5911d933d9b969d9efab37b321a1088b476d8ce1a366672c9f42f4c695c",
+      "display_name": "대연롯데캐슬레전드1단지",
+      "addr1": "부산광역시",
+      "addr2": "남구",
+      "addr3": "대연동",
+      "addr4": null,
+      "lot_number": "1872",
+      "beopjungri_code": "2629010600",
+      "road_name": "수영로 135",
+      "match_tier": "F",
+      "match_rule": "contains_multi",
+      "n_tx": 973,
+      "kapt_candidates": []
+    },
+    {
+      "building_key": "fd4da0de6d78650cb6602586d635cbc8e1a1d7f87bcb5870493de606164f3314",
+      "display_name": "주공5",
+      "addr1": "인천광역시",
+      "addr2": "부평구",
+      "addr3": "부개동",
+      "addr4": null,
+      "lot_number": "500-1",
+      "beopjungri_code": "2823710700",
+      "road_name": "부개로 11",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 956,
+      "kapt_candidates": [
+        {
+          "danji_code": "A40373105",
+          "danji_name": "부개 주공5단지 아파트",
+          "lot_key": "500-1",
+          "households": 960,
+          "builder_raw": "풍창. 삼협. 기산",
+          "road_address": "인천광역시 부평구 부개로 11"
+        },
+        {
+          "danji_code": "A40373112",
+          "danji_name": "인천부개5임대(공단)",
+          "lot_key": "500-1",
+          "households": 357,
+          "builder_raw": "풍창건설",
+          "road_address": "인천광역시 부평구 부개로 11"
+        }
+      ]
+    },
+    {
+      "building_key": "dcee8b85ebcb9d10f4120d32e9e37aaeb146376a01a86cd90436cb160b22d4cf",
+      "display_name": "월드메르디앙월드시티",
+      "addr1": "울산광역시",
+      "addr2": "북구",
+      "addr3": "매곡동",
+      "addr4": null,
+      "lot_number": "864",
+      "beopjungri_code": "3120010300",
+      "road_name": "매산로 66",
+      "match_tier": "F",
+      "match_rule": "contains_multi",
+      "n_tx": 803,
+      "kapt_candidates": []
+    },
+    {
+      "building_key": "6578da5a0aa2a8b7c9bcc60c7ce76af0dc677af440d2c47792afdd31d7996ddd",
+      "display_name": "라인광장1",
+      "addr1": "전남광주통합특별시",
+      "addr2": "남구",
+      "addr3": "봉선동",
+      "addr4": null,
+      "lot_number": "985",
+      "beopjungri_code": "1227011500",
+      "road_name": "봉선중앙로 103",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 790,
+      "kapt_candidates": [
+        {
+          "danji_code": "A50306007",
+          "danji_name": "라인광장1차",
+          "lot_key": "985",
+          "households": 385,
+          "builder_raw": "우미건설",
+          "road_address": "광주광역시 남구 봉선중앙로 103"
+        },
+        {
+          "danji_code": "A50306010",
+          "danji_name": "라인광장2,3차",
+          "lot_key": "985",
+          "households": 411,
+          "builder_raw": "(주)우미주택",
+          "road_address": "광주광역시 남구 봉선중앙로 103"
+        }
+      ]
+    },
+    {
+      "building_key": "f8dcd7ef1fdc39a500bc41217630ecf6644174952a0687665719c42c2037a529",
+      "display_name": "현대2-1차",
+      "addr1": "인천광역시",
+      "addr2": "계양구",
+      "addr3": "작전동",
+      "addr4": null,
+      "lot_number": "580",
+      "beopjungri_code": "2824510300",
+      "road_name": "효서로 381",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 767,
+      "kapt_candidates": [
+        {
+          "danji_code": "A40706002",
+          "danji_name": "작전 현대2-1차 아파트",
+          "lot_key": "580",
+          "households": 840,
+          "builder_raw": "성호주택(주)",
+          "road_address": "인천광역시 계양구 효서로 381"
+        },
+        {
+          "danji_code": "A40771502",
+          "danji_name": "작전현대2-2차아파트",
+          "lot_key": "580",
+          "households": 904,
+          "builder_raw": "성호주택",
+          "road_address": "인천광역시 계양구 효서로 381"
+        }
+      ]
+    },
+    {
+      "building_key": "21918f8dfb0ddbc9fa8d3070faeaea639c6fa5a494243ff9724c9e38e0e366d0",
+      "display_name": "신안비치1",
+      "addr1": "전남광주통합특별시",
+      "addr2": "목포시",
+      "addr3": "산정동",
+      "addr4": null,
+      "lot_number": "1202",
+      "beopjungri_code": "1211010200",
+      "road_name": "청호로 209",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 749,
+      "kapt_candidates": [
+        {
+          "danji_code": "A53035011",
+          "danji_name": "신안비치1-1",
+          "lot_key": "1202",
+          "households": 330,
+          "builder_raw": "신안건설",
+          "road_address": "전라남도 목포시 청호로 209"
+        },
+        {
+          "danji_code": "A53035014",
+          "danji_name": "신안비치1-2",
+          "lot_key": "1202",
+          "households": 420,
+          "builder_raw": "신안건설",
+          "road_address": "전라남도 목포시 청호로 209"
+        }
+      ]
+    },
+    {
+      "building_key": "07dda34d2815983f7c9a076401fa8ba2fc0abaad2200c81332c6e89f30a1e442",
+      "display_name": "주공7",
+      "addr1": "전남광주통합특별시",
+      "addr2": "순천시",
+      "addr3": "조례동",
+      "addr4": null,
+      "lot_number": "1658",
+      "beopjungri_code": "1215013300",
+      "road_name": "봉화2길 116",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 703,
+      "kapt_candidates": [
+        {
+          "danji_code": "A54032003",
+          "danji_name": "조례주공8단지아파트",
+          "lot_key": "1658",
+          "households": 310,
+          "builder_raw": "lh주택공사",
+          "road_address": "전라남도 순천시 봉화2길 116"
+        },
+        {
+          "danji_code": "A54032020",
+          "danji_name": "조례주공7차아파트",
+          "lot_key": "1658",
+          "households": 490,
+          "builder_raw": "남양건설",
+          "road_address": "전라남도 순천시 봉화2길 116"
+        }
+      ]
+    },
+    {
+      "building_key": "fbc4877a6f2604e3c92158609b5152e61ebac136718ddb6032b845016378b8be",
+      "display_name": "주공4단지",
+      "addr1": "전남광주통합특별시",
+      "addr2": "목포시",
+      "addr3": "상동",
+      "addr4": null,
+      "lot_number": "740",
+      "beopjungri_code": "1211015800",
+      "road_name": "상동로 64",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 700,
+      "kapt_candidates": [
+        {
+          "danji_code": "A53039003",
+          "danji_name": "주공4차",
+          "lot_key": "740",
+          "households": 628,
+          "builder_raw": "주택공사",
+          "road_address": "전라남도 목포시 상동로 64"
+        },
+        {
+          "danji_code": "A53075609",
+          "danji_name": "목포상동3",
+          "lot_key": "740",
+          "households": 1074,
+          "builder_raw": "명지건설",
+          "road_address": "전라남도 목포시 상동로 64"
+        }
+      ]
+    },
+    {
+      "building_key": "38acb6dcc97dd396b49301ad41fca2e20a7d8834a31d28b5c563ca265b3e6c7a",
+      "display_name": "라이프비취2차",
+      "addr1": "인천광역시",
+      "addr2": "제물포구",
+      "addr3": "항동7가",
+      "addr4": null,
+      "lot_number": "27-107",
+      "beopjungri_code": "2812512500",
+      "road_name": "축항대로86번길 47",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 692,
+      "kapt_candidates": [
+        {
+          "danji_code": "A40080101",
+          "danji_name": "비취맨션1단지아파트",
+          "lot_key": "27-107",
+          "households": 546,
+          "builder_raw": "라이프개발(주)",
+          "road_address": "인천광역시 중구 축항대로86번길 47"
+        },
+        {
+          "danji_code": "A40080102",
+          "danji_name": "비취맨션3단지 아파트",
+          "lot_key": "27-107",
+          "households": 608,
+          "builder_raw": "라이프개발(주)",
+          "road_address": "인천광역시 중구 축항대로86번길 47"
+        },
+        {
+          "danji_code": "A40080104",
+          "danji_name": "비취맨션2단지 아파트",
+          "lot_key": "27-107",
+          "households": 854,
+          "builder_raw": "라이프주택건설",
+          "road_address": "인천광역시 중구 축항대로86번길 47"
+        }
+      ]
+    },
+    {
+      "building_key": "3ce6ec2f083cc74e3dca957c6623fc3baa914d658ec63bfe94541b702aee5c61",
+      "display_name": "무선주공2차",
+      "addr1": "전남광주통합특별시",
+      "addr2": "여수시",
+      "addr3": "화장동",
+      "addr4": null,
+      "lot_number": "740",
+      "beopjungri_code": "1213013700",
+      "road_name": "무선2길 39",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 685,
+      "kapt_candidates": [
+        {
+          "danji_code": "A55511003",
+          "danji_name": "무선주공2단지",
+          "lot_key": "740",
+          "households": 742,
+          "builder_raw": "라인건설,삼능건설",
+          "road_address": "전라남도 여수시 무선2길 39"
+        },
+        {
+          "danji_code": "A55571104",
+          "danji_name": "무선주공1단지",
+          "lot_key": "740",
+          "households": 239,
+          "builder_raw": "라인건설",
+          "road_address": "전라남도 여수시 무선2길 39"
+        }
+      ]
+    },
+    {
+      "building_key": "7098c7fd7a29cf45b1fd2881c8b78f17f4139183179bea75343aaa25cf510e2c",
+      "display_name": "창포2주공아파트",
+      "addr1": "경상북도",
+      "addr2": "포항시",
+      "addr3": "북구",
+      "addr4": "창포동",
+      "lot_number": "645",
+      "beopjungri_code": "4711311900",
+      "road_name": "새천년대로1123번길 9",
+      "match_tier": "D",
+      "match_rule": "lot_multi",
+      "n_tx": 670,
+      "kapt_candidates": [
+        {
+          "danji_code": "A79125005",
+          "danji_name": "포항창포1",
+          "lot_key": "645",
+          "households": 984,
+          "builder_raw": "(주)삼익",
+          "road_address": "경상북도 포항시 북구 새천년대로1075번길 10,경상북도 포항시 북구 새천년대로1075번길 6"
+        },
+        {
+          "danji_code": "A79176204",
+          "danji_name": "창포주공2단지(입주자대표회의)",
+          "lot_key": "645",
+          "households": 1844,
+          "builder_raw": "대한주택공사",
+          "road_address": "경상북도 포항시 북구 새천년대로1123번길 9"
+        },
+        {
+          "danji_code": "A79184703",
+          "danji_name": "창포주공 1-1단지",
+          "lot_key": "645",
+          "households": 712,
+          "builder_raw": "대한주택공사",
+          "road_address": "경상북도 포항시 북구 새천년대로1075번길 10"
+        }
+      ]
+    }
+  ],
+  "pnu_unique_hold": {
+    "as_of": "2026-08-22",
+    "why": "pnu_new 22단지 중 유일 PNU라도 목록에 안 넣는 구멍. D·F와 별개. 재건축은 옛 거래에 새 단지 정보를 붙이면 틀리고, 묶음은 분평주공3과 같이 한쪽 이름에 단지 전체를 싣게 된다.",
+    "rebuild": [
+      {
+        "tx_name": "경성맨션2",
+        "addr": "대전 동구 홍도동 23-3",
+        "tx_year": "1985",
+        "kapt_name": "홍도갤러리휴리움아파트",
+        "kapt_approved": "2023-02-28"
+      },
+      {
+        "tx_name": "계룡맨션",
+        "addr": "대전 중구 문화동 1-34",
+        "tx_year": "1978-1979",
+        "kapt_name": "글로리아아파트",
+        "kapt_approved": "2024-04-23"
+      }
+    ],
+    "bundle": [
+      {"tx_name": "남산주공3", "kapt_name": "남산주공2.3차 아파트", "why": "2.3차 합산"},
+      {"tx_name": "남광하우스토리A단지", "kapt_name": "사천남광하우스토리 A, B단지", "why": "A+B 합산"},
+      {"tx_name": "푸르지오캐슬(301~302)", "kapt_name": "청주푸르지오.캐슬아파트", "why": "동 범위 vs 단지 전체 3599세대"},
+      {"tx_name": "문화마을2단지", "kapt_name": "문화마을금호어울림", "why": "우산 이름, 2단지 한쪽"},
+      {"tx_name": "분평계룡리슈빌2단지", "kapt_name": "분평계룡리슈빌1,2단지", "why": "1,2단지 합산"},
+      {"tx_name": "대전역대라수어썸브릿지1단지", "kapt_name": "대라수어썸브릿지 1,2단지아파트", "why": "1,2단지 합산"}
+    ],
+    "fill_rule": "pnu_unique",
+    "fill_tier": "P",
+    "regression": "USABLE_TIERS는 A·B·C·D·F. P는 목록만."
+  }
+}

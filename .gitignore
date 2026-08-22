@@ -61,4 +61,5 @@ pipeline/_vps_*.sh
 pipeline/_*.py
 pipeline/.env.rebuild
 pipeline/built/_cache/
+pipeline/parcel_master/_cache/
 data/*.db

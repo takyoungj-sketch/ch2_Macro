@@ -77,3 +77,4 @@ P3 이후 순서: **P4** 2단계 특성회귀(브랜드·규모) → **P5** API�
 - `builder_group`에 시공사가 아닌 법인이 남는 경우(예: 금호고속) — 단지 30개 미만은 「기타」로 묶임
 - `brand.detected_from`은 현재 고정값「실거래 단지명」(원장 결측 0건)
 - `households_rent`는 NULL이 아니라 0으로 오는 원본 관행
+- **D·F 다중후보 목록 채움은 보류** — 202607 아파트 D 249 + F 126 = 375단지. 앵커는 청주 분평주공3(지번 1200에 3-1/3-2). 백로그 [`docs/lab/collective_danji_unmatched_backlog.md`](lab/collective_danji_unmatched_backlog.md). 축약대장 이후에도 자동으로 안 메워짐. 대응 시 세대수 합산·모달 전 행, 첫째 행 금지, 회귀는 계속 제외

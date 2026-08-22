@@ -60,6 +60,10 @@ class BuildingStatsRow(BaseModel):
     jibun_address: str = ""
     road_address: str = ""
     building_year: Optional[int] = None
+    households: Optional[int] = None
+    households_flagged: bool = False
+    builder_label: Optional[str] = None
+    builder_is_joint: bool = False
     asset_type: str
     count: int
     mean: Optional[float] = None
@@ -511,6 +515,13 @@ class CohortTransactionsResponse(BaseModel):
     data_source: Literal["live"] = "live"
 
 
+class DanjiMatchCandidate(BaseModel):
+    danji_code: Optional[str] = None
+    danji_name: Optional[str] = None
+    households: Optional[int] = None
+    builder_raw: Optional[str] = None
+
+
 class DanjiMatchInfo(BaseModel):
     """K-apt 매칭 결과와 그 신뢰도 — 값보다 먼저 노출한다."""
 
@@ -525,6 +536,7 @@ class DanjiMatchInfo(BaseModel):
     building_year: Optional[int] = None
     year_diff: Optional[int] = None
     note: Optional[str] = None
+    candidates: list[DanjiMatchCandidate] = Field(default_factory=list)
 
 
 class DanjiBuilderInfo(BaseModel):

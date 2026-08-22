@@ -6,10 +6,11 @@ import QaAuditPanel from "./components/QaAuditPanel";
 import RentConversionLab from "./components/RentConversionLab";
 import TwinEngineV2Lab from "./components/TwinEngineV2Lab";
 import AiUsagePanel from "./components/AiUsagePanel";
+import ParcelLabPanel from "./components/ParcelLabPanel";
 import WhyDecision, { WhyLinks } from "./components/WhyDecision";
 import { TOOL_WHY } from "./labContent";
 
-export type LabTool = "plan" | "qa" | "twin" | "rent" | "ai";
+export type LabTool = "plan" | "qa" | "twin" | "rent" | "ai" | "parcel";
 export type TwinPane = "v2" | "mape";
 
 type LabParams = {
@@ -22,7 +23,7 @@ function readParams(): LabParams {
   const q = new URLSearchParams(window.location.search);
   const t = q.get("tool");
   const tool =
-    t === "plan" || t === "qa" || t === "twin" || t === "rent" || t === "ai" ? t : null;
+    t === "plan" || t === "qa" || t === "twin" || t === "rent" || t === "ai" || t === "parcel" ? t : null;
   const pane = q.get("pane");
   return {
     tool,
@@ -143,6 +144,14 @@ export default function App() {
     return (
       <LabChrome title="AI 사용량" whyIds={TOOL_WHY.ai} onWhy={setWhy} onBack={back}>
         <AiUsagePanel />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "parcel") {
+    return (
+      <LabChrome title="대장DB" whyIds={TOOL_WHY.parcel ?? []} onWhy={setWhy} onBack={back}>
+        <ParcelLabPanel />
         {whyModal}
       </LabChrome>
     );

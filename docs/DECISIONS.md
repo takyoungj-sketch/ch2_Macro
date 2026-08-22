@@ -226,3 +226,14 @@
 - `built_transaction_enrichment` 신설, 원장 무수정, 미상은 행을 만들지 않음. 앱 복제 없음.
 - D-046의 "단독다가구만 착수" 갱신 → 세 유형 모두. 착수는 구조 표본 150건 감사 후.
 - 상세: [`BUILT_DATA_ENRICHMENT.md`](BUILT_DATA_ENRICHMENT.md) · [`lab/decisions/D-047.json`](lab/decisions/D-047.json)
+
+## D-048 용도지역 원천은 AL_D155 고정 · 축약대장 착수 조건
+
+- **건축HUB 「지역지구구역」 대장을 쓰지 않는다.** 현행판(1,745MB·810만 행)을 확보해 실측했고 형식은 좋았다(구분 컬럼 명시·전국 18시도·통합 신코드).
+- **내용이 현행 용도지역이 아니다.** 용도지역 행의 **89.4%가 2022년 생성 후 미갱신** — 「건축 인허가 당시」 자료이고 도시계획 변경을 따라가지 않는다.
+- AL_D155 대조: 용도지역을 주는 필지가 서울 55.9%·충북 65.0%이고 그중 불일치가 서울 36.4%·충북 25.3%. **결국 옳은 값은 서울 35.5%·충북 48.5%뿐**(AL_D155는 100%).
+- 「일반주거지역」 63만 행 등 2003년 세분화 이전 라벨이 남고, **제2종을 제1종으로 주는 사례**가 있다 — 용적률이 달라 가격에 직결되는데 라벨만 보면 정상이라 D-047의 대분류 0건 규칙으로도 안 걸린다.
+- **AL_D155 시도별 수집을 계속한다.** 40GB → 411MB 절약은 없다. 검증축으로도 안 쓴다(D-047에서 이미 배제).
+- **착수 조건:** 표제부 3스냅샷·총괄·K-apt는 확보 완료. **`AL_D155`·`AL_D003` 16시도 전부 확보**(2026-08-22 인벤토리). 전남광주 폴더·법정동 모두 통합코드 `12`.
+- **집합 Track B 파일럿** — 로컬 `parcel_master`, 표제부 「집합」 대전·충북 3스냅샷. 대조 JSON [`lab/parcel_master_pilot_contrast.json`](lab/parcel_master_pilot_contrast.json). **pnu_new 22단지:** 약칭 14곳은 `pnu_unique`(tier P)로 목록 세대수·시공사만 채움. 재건축 2·묶음 6은 안 붙임. **pnu_no_kapt:** 표제부 동 합산(tier T) 854단지, 시공사 없음. 지역회귀는 A·B·C 유지. AL_D155 48GB·복합 enrichment는 구조 감사 후.
+- 재현: `pipeline/built/_tmp_shtreg_probe.py` · 상세: [`PARCEL_MASTER_DESIGN.md`](PARCEL_MASTER_DESIGN.md) §6.3·§8.0 · [`lab/decisions/D-048.json`](lab/decisions/D-048.json)

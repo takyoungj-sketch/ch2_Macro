@@ -12,6 +12,7 @@ import {
   fetchCommercialRegionStructure,
 } from "./api/commercialClient";
 import { fetchCollectiveMapResolveCodes } from "./api/mapClient";
+import DualHorizontalScroll from "./components/DualHorizontalScroll";
 import CommercialClusterDetailModal from "./components/CommercialClusterDetailModal";
 import CollectiveRegionMapHub, { type MapPanelMode } from "./components/CollectiveRegionMapHub";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
@@ -551,7 +552,8 @@ export default function CommercialApp() {
                     />
                   </label>
                 </div>
-                <div className="card overflow-x-auto p-0 w-full">
+                <div className="card p-0 w-full">
+                  <DualHorizontalScroll>
                   <table className="data commercial-clusters-table">
                     <colgroup>
                       <col className="col-type" />
@@ -571,11 +573,11 @@ export default function CommercialApp() {
                             <StatsGlossaryHelp termId="commercial_cluster" size="xs" />
                           </span>
                         </th>
-                        <th className="text-right">거래</th>
-                        <th className="text-right">평균</th>
-                        <th className="text-right">중앙</th>
-                        <th className="text-right">95% CI</th>
-                        <th className="col-district">구·동</th>
+                        <th>거래수</th>
+                        <th>평균(만원/㎡)</th>
+                        <th>중앙(만원/㎡)</th>
+                        <th title="95% 신뢰구간">신뢰구간(만원/㎡)</th>
+                        <th>구·동</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -614,12 +616,14 @@ export default function CommercialApp() {
                       })}
                     </tbody>
                   </table>
+                  </DualHorizontalScroll>
                 </div>
               </>
             )}
           </div>
         </div>
       </main>
+      </div>
 
       {selected && scope && (
         <CommercialClusterDetailModal
@@ -633,7 +637,6 @@ export default function CommercialApp() {
           onClose={() => setSelected(null)}
         />
       )}
-      </div>
     </div>
   );
 }

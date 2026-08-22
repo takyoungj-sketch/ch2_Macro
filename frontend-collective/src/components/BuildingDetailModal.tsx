@@ -134,7 +134,7 @@ function DanjiAttributesPanel({ data }: { data: DanjiAttributesResponse }) {
   const { match, builder, brand, scale, structure, classification } = data;
   const risky = !match.usable_for_regression;
   const flagsByField = new Map<string, DanjiQualityFlag[]>();
-  for (const flag of data.quality_flags) {
+  for (const flag of data.quality_flags ?? []) {
     for (const field of flag.affected_fields ?? []) {
       flagsByField.set(field, [...(flagsByField.get(field) ?? []), flag]);
     }
@@ -160,11 +160,20 @@ function DanjiAttributesPanel({ data }: { data: DanjiAttributesResponse }) {
         <span> · 신뢰도 {match.reliability}</span>
         {data.dictionary_version && <span> · 사전 {data.dictionary_version}</span>}
       </p>
-      {data.matched && (
+      {data.matched && match.tier === "T" && (
+        <p>
+          표제부 {danjiNumber(scale?.dong_count)}동 합산 · 사용승인{" "}
+          {danjiNumber(match.approved_year)}년 · 실거래 건축 {danjiNumber(match.building_year)}년
+          {match.year_diff != null ? ` (차이 ${match.year_diff}년)` : ""} · 시공사 없음
+        </p>
+      )}
+      {data.matched && match.tier !== "T" && (
         <p>
           K-apt 단지 {danjiText(match.danji_name)}
-          {match.danji_code ? ` (${match.danji_code})` : ""} · 사용승인{" "}
-          {danjiNumber(match.approved_year)}년 · 실거래 건축 {danjiNumber(match.building_year)}년
+          {match.danji_code ? ` (${match.danji_code})` : ""}
+          {(match.candidates?.length ?? 0) > 1 ? ` 외 ${match.candidates!.length - 1}곳` : ""}
+          {" "}
+          · 사용승인 {danjiNumber(match.approved_year)}년 · 실거래 건축 {danjiNumber(match.building_year)}년
           {match.year_diff != null ? ` (차이 ${match.year_diff}년)` : ""}
         </p>
       )}
@@ -205,10 +214,39 @@ function DanjiAttributesPanel({ data }: { data: DanjiAttributesResponse }) {
     <div className="space-y-3">
       {banner}
 
+      {(match.candidates?.length ?? 0) > 1 && (
+        <div className="modal-table-wrap">
+          <p className={DANJI_SECTION_TITLE}>
+            K-apt 후보 {match.candidates!.length}곳 — 세대수는 합산, 시공사는 첫 단지 + 외
+          </p>
+          <table className="w-full text-xs border-collapse modal-inner-table">
+            <thead>
+              <tr>
+                <th className={DANJI_TH}>단지명</th>
+                <th className={DANJI_TH}>세대수</th>
+                <th className={DANJI_TH}>시공사</th>
+              </tr>
+            </thead>
+            <tbody>
+              {match.candidates!.map((c) => (
+                <tr key={c.danji_code ?? c.danji_name ?? ""}>
+                  <td className={DANJI_TD}>
+                    {danjiText(c.danji_name)}
+                    {c.danji_code ? ` (${c.danji_code})` : ""}
+                  </td>
+                  <td className={clsx(DANJI_TD, "tabular-nums")}>{danjiNumber(c.households)}</td>
+                  <td className={DANJI_TD}>{danjiText(c.builder_raw)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {data.quality_flags.length > 0 && (
         <div className="rounded border border-amber-300 bg-amber-50 px-2 py-1.5 dark:border-amber-500/50 dark:bg-amber-500/10">
           <p className="text-[10px] font-semibold text-amber-800 dark:text-amber-300">
-            K-apt 원본 이상값 {data.quality_flags.length}건 — 값은 원본 그대로 표시합니다
+            원본 이상값 {data.quality_flags.length}건 — 값은 원본 그대로 표시합니다
           </p>
           <ul className="mt-1 space-y-0.5 text-[10px] text-amber-800 dark:text-amber-200">
             {data.quality_flags.map((flag) => (
@@ -230,7 +268,7 @@ function DanjiAttributesPanel({ data }: { data: DanjiAttributesResponse }) {
         <table className="w-full text-xs border-collapse modal-inner-table">
           <tbody>
             <tr>
-              <th className={DANJI_TH}>시공사 원문 (K-apt)</th>
+              <th className={DANJI_TH}>{match.tier === "T" ? "시공사 원문" : "시공사 원문 (K-apt)"}</th>
               <td className={DANJI_TD}>{danjiText(builder?.raw)}</td>
             </tr>
             <tr>
@@ -242,7 +280,7 @@ function DanjiAttributesPanel({ data }: { data: DanjiAttributesResponse }) {
               <td className={DANJI_TD}>{danjiText(builder?.group)}</td>
             </tr>
             <tr>
-              <th className={DANJI_TH}>시행사 원문 (K-apt)</th>
+              <th className={DANJI_TH}>{match.tier === "T" ? "시행사 원문" : "시행사 원문 (K-apt)"}</th>
               <td className={DANJI_TD}>{danjiText(builder?.developer_raw)}</td>
             </tr>
             <tr>
@@ -265,7 +303,9 @@ function DanjiAttributesPanel({ data }: { data: DanjiAttributesResponse }) {
         <table className="w-full text-xs border-collapse modal-inner-table">
           <tbody>
             <tr>
-              <th className={DANJI_TH}>세대수</th>
+              <th className={DANJI_TH}>
+                세대수{(match.candidates?.length ?? 0) > 1 ? " (합산)" : ""}
+              </th>
               <td className={clsx(DANJI_TD, "tabular-nums")}>
                 {danjiNumber(scale?.households)}
                 <DanjiFieldWarning flags={fieldFlags("households")} />
@@ -576,7 +616,7 @@ export default function BuildingDetailModal({
     messages: [],
   };
   const gateTip =
-    analysis.messages.join(" ") ||
+    (analysis.messages ?? []).join(" ") ||
     "선택 연도 구간 거래건수가 부족하여 통계 분석을 제공하지 않습니다.";
 
   const trendCohortActive = cohortRunForPanel("trend") > 0;
@@ -619,7 +659,7 @@ export default function BuildingDetailModal({
       title={row.display_name}
       subtitle={
         <>
-          {assetTypeLabel(effectiveAssetType)} · n={row.count.toLocaleString("ko-KR")} · 평균 {fmtPrice(row.mean)}{" "}
+          {assetTypeLabel(effectiveAssetType)} · n={(row.count ?? 0).toLocaleString("ko-KR")} · 평균 {fmtPrice(row.mean)}{" "}
           만원/㎡
           {usesMartPeriod && periodLabel && (
             <span className="ml-1.5 text-indigo-600 dark:text-indigo-400">

@@ -155,6 +155,11 @@ app.include_router(ai_router, prefix="/api")
 app.include_router(ai_usage_router, prefix="/api")
 _LOG.info("CH2 AI API 활성: /api/ai/* · /api/admin/ai-usage")
 
+from app.parcel_lab.router import router as parcel_lab_router
+
+app.include_router(parcel_lab_router, prefix="/api")
+_LOG.info("대장DB 조회 API 활성(관리자·로컬): /api/admin/parcel/status")
+
 if (settings.platform_database_url or "").strip():
     from app.platform.auth_router import router as platform_auth_router
     from app.platform.board_router import router as platform_board_router

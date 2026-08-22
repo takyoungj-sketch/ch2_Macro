@@ -153,58 +153,43 @@ table.data {
 
 table.data.buildings-table {
   width: 100%;
-  min-width: 44cm;
+  min-width: 50cm;
 }
 
-table.data.buildings-table col.col-jibun {
-  width: 7cm;
+table.data.buildings-table col {
+  width: calc(100% / 11);
 }
 
-table.data.buildings-table col.col-road {
-  width: 9cm;
+table.data.buildings-table th,
+table.data.buildings-table td {
+  @apply text-center;
 }
 
-table.data.buildings-table col.col-type {
-  width: 2cm;
+table.data.buildings-table td.num {
+  @apply text-center tabular-nums;
 }
 
-table.data.buildings-table col.col-name {
-  width: 5.5cm;
+table.data.buildings-table td.addr {
+  @apply text-center truncate whitespace-nowrap;
 }
 
-table.data.buildings-table col.col-year {
-  width: 2.2cm;
-}
-
-table.data.buildings-table col.col-num {
-  width: 2.4cm;
-}
-
-/* 집합상가·공장 — cluster 목록 (buildings-table 대비 칼럼 너비 50%) */
+/* 집합상가·공장 — cluster 목록 (동일 칼럼 너비·가운데 정렬) */
 table.data.commercial-clusters-table {
   width: 100%;
   min-width: 11.2cm;
 }
 
-table.data.commercial-clusters-table col.col-type {
-  width: 1.5cm;
+table.data.commercial-clusters-table col {
+  width: calc(100% / 7);
 }
 
-table.data.commercial-clusters-table col.col-road {
-  width: 4.5cm;
-}
-
-table.data.commercial-clusters-table col.col-num {
-  width: 1.2cm;
-}
-
-table.data.commercial-clusters-table col.col-district {
-  width: 2.75cm;
-}
-
-table.data.commercial-clusters-table th.col-district,
-table.data.commercial-clusters-table td.col-district {
+table.data.commercial-clusters-table th,
+table.data.commercial-clusters-table td {
   @apply text-center;
+}
+
+table.data.commercial-clusters-table td.num {
+  @apply text-center tabular-nums;
 }
 
 table.data th,
@@ -230,17 +215,8 @@ table.data td.addr {
   @apply text-left whitespace-normal break-words leading-snug;
 }
 
-table.data.buildings-table td.addr {
-  @apply text-center;
-}
-
-table.data.buildings-table th.col-addr-head {
-  @apply text-center;
-}
-
-table.data.buildings-table th:first-child,
-table.data.buildings-table th:last-child {
-  @apply text-center;
+.dual-h-scroll-top {
+  height: 14px;
 }
 
 .layout-sidebar {
