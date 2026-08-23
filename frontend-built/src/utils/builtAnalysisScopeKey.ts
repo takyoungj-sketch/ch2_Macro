@@ -28,6 +28,7 @@ export function builtAnalysisScopeKey(body: RegressionRunRequest): string {
     building_age_max: body.building_age_max ?? null,
     exclude_outliers_iqr: body.exclude_outliers_iqr,
     outlier_iqr_multiplier: body.outlier_iqr_multiplier ?? null,
+    include_partial: body.include_partial ?? false,
     anchor_region_code: body.anchor_region_code ?? "",
     leaf_level: body.leaf_level ?? "",
   });

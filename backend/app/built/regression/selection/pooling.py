@@ -153,6 +153,7 @@ def filter_twins_by_hard_gates(
         contract_year_to=req.contract_year_to,
         as_of_month=req.as_of_month,
         window_years=req.window_years,
+        include_partial=bool(getattr(req, "include_partial", False)),
     )
     gates = _apply_hard_gates(
         ordered_twins,
@@ -228,6 +229,7 @@ def _fit_pool_variant(
         contract_year_to=req.contract_year_to,
         as_of_month=req.as_of_month,
         window_years=req.window_years,
+        include_partial=bool(getattr(req, "include_partial", False)),
     )
     if pooled_rows.empty:
         return None
@@ -303,6 +305,7 @@ def _research_pool_variant(
         contract_year_to=req.contract_year_to,
         as_of_month=req.as_of_month,
         window_years=req.window_years,
+        include_partial=bool(getattr(req, "include_partial", False)),
     )
     if pooled_rows.empty:
         return None

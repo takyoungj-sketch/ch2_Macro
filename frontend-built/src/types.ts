@@ -33,6 +33,11 @@ export interface BuiltTransactionRow {
   buyer_type?: string | null;
   seller_type?: string | null;
   road_code?: number | null;
+  is_partial_ownership?: boolean;
+  partial_ownership_label?: string | null;
+  structure_group?: string | null;
+  recovered_lot?: string | null;
+  match_tier?: string | null;
 }
 
 export interface BuiltTransactionListResponse {
@@ -61,6 +66,7 @@ export interface RegressionVariableSpec {
   road_code: boolean;
   zone_type_dummy: boolean;
   building_use_dummy: boolean;
+  structure_dummy: boolean;
   asset_type_dummy: boolean;
   region_leaf_dummy: boolean;
 }
@@ -126,6 +132,7 @@ export interface AnalysisSampleFilters {
   road_code_max?: number | null;
   exclude_outliers_iqr: boolean;
   outlier_iqr_multiplier: number;
+  include_partial?: boolean;
 }
 
 export interface RegionUnitRef {
@@ -151,6 +158,9 @@ export interface AnalysisScope {
   region_code_level?: "eupmyeondong" | "beopjungri" | null;
   region_addrs: string[];
   scope_n_tx: number;
+  include_partial?: boolean;
+  partial_tx_count?: number;
+  partial_n_note?: string | null;
 }
 
 export interface RegressionScopeResponse {
@@ -334,6 +344,7 @@ export interface RegressionRunRequest {
   leaf_level?: "addr3" | "addr4";
   exclude_outliers_iqr: boolean;
   outlier_iqr_multiplier?: number;
+  include_partial?: boolean;
   /** R0 — analysis_scope anchor (analysisUnits[0] non-crossParent) */
   anchor_region_code?: string;
   region_unit_hints?: AnalysisRegionUnitHint[];
@@ -409,15 +420,38 @@ export interface VifEntry {
 export interface PredictOptions {
   zone_types: string[];
   building_uses: string[];
+  structure_groups?: string[];
   road_width_labels: string[];
   asset_types: string[];
   zone_reference?: string | null;
   building_use_reference?: string | null;
+  structure_reference?: string | null;
   road_width_reference?: string | null;
   asset_type_reference?: string | null;
   region_leaves?: string[];
   region_reference?: string | null;
   continuous: { name: string; min?: number | null; max?: number | null }[];
+}
+
+export interface FunnelReason {
+  code: string;
+  label: string;
+  n: number;
+}
+
+export interface FunnelStep {
+  code: string;
+  label: string;
+  n: number;
+  kind: "remain" | "drop";
+  note?: string | null;
+  reasons?: FunnelReason[];
+}
+
+export interface SampleBreakdown {
+  n_pool: number;
+  n_fit: number;
+  funnel: FunnelStep[];
 }
 
 export interface RegressionLevelResult {
@@ -436,6 +470,7 @@ export interface RegressionLevelResult {
   predict_options?: PredictOptions | null;
   warning?: string | null;
   mape?: number | null;
+  sample?: SampleBreakdown | null;
 }
 
 export interface CorrelationPoint {
@@ -474,6 +509,9 @@ export interface RegressionRunResponse {
   correlation_n?: number | null;
   analysis_scope?: AnalysisScope | null;
   explain?: AnalysisExplain | null;
+  include_partial?: boolean;
+  partial_tx_count?: number;
+  partial_n_note?: string | null;
 }
 
 export interface RegressionPredictRequest extends RegressionRunRequest {
@@ -485,6 +523,7 @@ export interface RegressionPredictRequest extends RegressionRunRequest {
   road_width_label?: string;
   zone_type?: string;
   building_use?: string;
+  structure_group?: string;
   predict_asset_type?: string;
   region_leaf?: string;
 }

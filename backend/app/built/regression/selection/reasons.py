@@ -22,6 +22,7 @@ def _p_value_reason(model, block: BlockId) -> ExcludedBlockReason | None:
         "road_width": ("road_",),
         "zone_type": ("zone_",),
         "building_use": ("use_",),
+        "structure": ("struct_",),
         "asset_type": ("atype_",),
         "region_leaf": ("loc_",),
     }

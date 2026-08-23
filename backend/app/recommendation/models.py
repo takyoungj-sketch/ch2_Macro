@@ -67,6 +67,8 @@ class AnalysisSampleFilters(BaseModel):
     road_code_max: Optional[float] = None
     exclude_outliers_iqr: bool = False
     outlier_iqr_multiplier: float = 3.0
+    # D-049: 기본 제외. 목록 필터가 아님.
+    include_partial: bool = False
 
 
 class AnalysisScope(BaseModel):
@@ -82,6 +84,9 @@ class AnalysisScope(BaseModel):
     region_code_level: Optional[RegionCodeLevel] = None
     region_addrs: list[str] = Field(default_factory=list)
     scope_n_tx: int = 0
+    include_partial: bool = False
+    partial_tx_count: int = 0
+    partial_n_note: Optional[str] = None
 
 
 class TerminationInfo(BaseModel):

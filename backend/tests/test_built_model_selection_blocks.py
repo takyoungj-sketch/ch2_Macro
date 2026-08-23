@@ -20,6 +20,7 @@ def test_candidate_blocks_from_spec():
         building_use_dummy=True,
         asset_type_dummy=False,
         region_leaf_dummy=False,
+        structure_dummy=False,
     )
     blocks = candidate_blocks_from_spec(spec, unified=False)
     assert blocks == ["gross_area", "land_area", "road_width", "building_use"]
@@ -35,6 +36,7 @@ def test_candidate_blocks_unified_includes_asset_type():
         building_use_dummy=False,
         asset_type_dummy=True,
         region_leaf_dummy=False,
+        structure_dummy=False,
     )
     blocks = candidate_blocks_from_spec(spec, unified=True)
     assert "asset_type" in blocks
@@ -50,6 +52,7 @@ def test_spec_from_blocks_roundtrip():
         building_use_dummy=False,
         asset_type_dummy=False,
         region_leaf_dummy=False,
+        structure_dummy=False,
     )
     blocks = candidate_blocks_from_spec(spec)
     rebuilt = spec_from_blocks(blocks)

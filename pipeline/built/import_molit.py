@@ -41,6 +41,8 @@ RAW_BASE = REPO / "raw" / "raw base"
 DDL_015 = REPO / "db" / "015_built_transactions.sql"
 DDL_028 = REPO / "db" / "028_built_ledger_rebuild.sql"
 DDL_029 = REPO / "db" / "029_built_scope_stats.sql"
+DDL_067 = REPO / "db" / "067_built_partial_ownership.sql"
+DDL_068 = REPO / "db" / "068_built_transaction_enrichment.sql"
 
 BUILT_PATCH_SQL = """
 ALTER TABLE built_transactions
@@ -63,6 +65,7 @@ INSERT_STMT = text(
         zone_type, building_use, building_scale, land_scale, age_bucket,
         price, gross_area, land_area, building_age,
         road_code, road_width_label, floor, deal_type,
+        is_partial_ownership, partial_ownership_label,
         is_valid, needs_review, mapping_notes
     ) VALUES (
         :transaction_hash, :asset_type, :deal_form,
@@ -73,9 +76,12 @@ INSERT_STMT = text(
         :zone_type, :building_use, :building_scale, :land_scale, :age_bucket,
         :price, :gross_area, :land_area, :building_age,
         :road_code, :road_width_label, :floor, :deal_type,
+        :is_partial_ownership, :partial_ownership_label,
         :is_valid, :needs_review, :mapping_notes
     )
-    ON CONFLICT (transaction_hash) DO NOTHING
+    ON CONFLICT (transaction_hash) DO UPDATE SET
+        is_partial_ownership = EXCLUDED.is_partial_ownership,
+        partial_ownership_label = EXCLUDED.partial_ownership_label
     """
 )
 
@@ -88,11 +94,22 @@ def ensure_schema(engine) -> None:
             conn.execute(text(DDL_028.read_text(encoding="utf-8")))
         if DDL_029.is_file():
             conn.execute(text(DDL_029.read_text(encoding="utf-8")))
+        if DDL_067.is_file():
+            conn.execute(text(DDL_067.read_text(encoding="utf-8")))
+        if DDL_068.is_file():
+            for stmt in DDL_068.read_text(encoding="utf-8").split(";"):
+                s = stmt.strip()
+                if s:
+                    conn.execute(text(s))
     parts = ["015 + built patch"]
     if DDL_028.is_file():
         parts.append(DDL_028.name)
     if DDL_029.is_file():
         parts.append(DDL_029.name)
+    if DDL_067.is_file():
+        parts.append(DDL_067.name)
+    if DDL_068.is_file():
+        parts.append(DDL_068.name)
     log.info("schema ready (%s)", " + ".join(parts))
 
 
@@ -138,6 +155,10 @@ def _row_to_record(row: pd.Series) -> dict:
         "road_width_label": _null_if_nan(row.get("road_width_label")),
         "floor": _null_if_nan(row.get("floor")),
         "deal_type": _null_if_nan(row.get("deal_type")),
+        "is_partial_ownership": bool(row.get("is_partial_ownership"))
+        if pd.notna(row.get("is_partial_ownership"))
+        else False,
+        "partial_ownership_label": _null_if_nan(row.get("partial_ownership_label")),
         "is_valid": True,
         "beopjungri_code": _null_if_nan(row.get("beopjungri_code")),
         "sido_code": _null_if_nan(row.get("sido_code")),

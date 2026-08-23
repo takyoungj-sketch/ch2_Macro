@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { MetricWithHelp, StatsGlossaryHelp } from "@ch2/stats-glossary";
 import type { AssetType, RegressionLevelResult, ResponseScale } from "../types";
+import { CvFitnessBadge, formatPartialNNote } from "../utils/recommendationLabels";
 import {
   ADMIN_LABELS,
   formatCoefName,
@@ -8,17 +9,27 @@ import {
   fmtNum,
   levelCardTitle,
 } from "../utils/regressionFormat";
-import { CvFitnessBadge } from "../utils/recommendationLabels";
 import RegressionEquation from "./RegressionEquation";
 import RegressionEffectsTable from "./RegressionEffectsTable";
+import SampleFunnel from "./SampleFunnel";
 
 type Props = {
   result: RegressionLevelResult;
   assetType: AssetType;
   responseScale: ResponseScale;
+  includePartial?: boolean;
+  partialTxCount?: number | null;
+  partialNNote?: string | null;
 };
 
-export default function FocusRegressionCard({ result, assetType, responseScale }: Props) {
+export default function FocusRegressionCard({
+  result,
+  assetType,
+  responseScale,
+  includePartial = false,
+  partialTxCount,
+  partialNNote,
+}: Props) {
   return (
     <div className="card space-y-3">
       <div className="flex items-center justify-between gap-2">
@@ -37,6 +48,13 @@ export default function FocusRegressionCard({ result, assetType, responseScale }
           title="선택 변수 complete-case 표본 (fit_n)"
         />
       </div>
+      {(partialNNote || partialTxCount != null) && (
+        <p className="text-[11px] text-slate-500">
+          {partialNNote || formatPartialNNote(includePartial, partialTxCount)}
+        </p>
+      )}
+
+      {result.sample && <SampleFunnel sample={result.sample} />}
 
       {result.warning && <p className="text-xs badge-warn">{result.warning}</p>}
 
@@ -78,6 +96,7 @@ export default function FocusRegressionCard({ result, assetType, responseScale }
             coefficients={result.coefficients}
             responseScale={responseScale}
             assetType={assetType}
+            predictOptions={result.predict_options}
           />
         </details>
       )}

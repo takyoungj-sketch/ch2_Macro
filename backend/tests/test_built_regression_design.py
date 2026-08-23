@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from app.built.regression.engine import _build_design_matrix
+from app.built.regression.engine import _build_design_matrix, build_sample_funnel
 from app.built.schemas import RegressionVariableSpec
 
 
@@ -33,6 +33,36 @@ def test_road_width_dummy():
     assert len(y) == 3
     assert meta is not None
     assert any(c.startswith("road_") for c in meta.feature_columns)
+
+
+def test_structure_dummy():
+    df = pd.DataFrame(
+        {
+            "price": [100, 200, 300, 400],
+            "gross_area": [10, 20, 30, 40],
+            "land_area": [5, 5, 5, 5],
+            "building_age": [1, 2, 3, 4],
+            "road_width_label": ["8m"] * 4,
+            "zone_type": ["일반"] * 4,
+            "building_use": ["근린"] * 4,
+            "structure_group": ["RC", "RC", "벽돌", "벽돌"],
+            "asset_type": ["commercial"] * 4,
+        }
+    )
+    spec = RegressionVariableSpec(
+        gross_area=False,
+        land_area=False,
+        building_age=False,
+        road_width_dummy=False,
+        zone_type_dummy=False,
+        building_use_dummy=False,
+        structure_dummy=True,
+    )
+    y, X, meta = _build_design_matrix(df, spec)
+    assert len(y) == 4
+    assert meta is not None
+    assert meta.structure_groups == ["RC", "벽돌"]
+    assert any(c.startswith("struct_") for c in meta.feature_columns)
 
 
 def test_unified_asset_type_dummy():
@@ -355,3 +385,43 @@ def test_flat_sido_addr2_row_match():
     out = _filter_by_region_units(df, req)
     assert len(out) == 1
     assert out.iloc[0]["addr3"] == "연서면"
+
+
+def test_sample_funnel_exclusive_first_reason():
+    """한 행은 첫 사유만 탄다. 금액 결측이 연면적 결측보다 앞선다."""
+    df = pd.DataFrame(
+        {
+            "price": [None, 100, 200, 0, 300, None],
+            "gross_area": [10, None, 30, 40, 50, None],
+            "land_area": [5, 5, None, 5, 5, 5],
+            "building_age": [1, 2, 3, 4, 5, 6],
+            "road_width_label": ["8m"] * 6,
+            "zone_type": ["일반"] * 6,
+            "building_use": ["근린"] * 6,
+            "asset_type": ["commercial"] * 6,
+        }
+    )
+    spec = RegressionVariableSpec(
+        gross_area=True,
+        land_area=True,
+        building_age=False,
+        road_width_dummy=False,
+        zone_type_dummy=False,
+        building_use_dummy=False,
+        structure_dummy=False,
+        asset_type_dummy=False,
+    )
+    y, _X, _meta = _build_design_matrix(df, spec, response_scale="log")
+    sample = build_sample_funnel(df, spec, fitted_index=y.index, response_scale="log")
+    assert sample.n_pool == 6
+    assert sample.n_fit == 1
+    by_code = {s.code: s for s in sample.funnel}
+    assert by_code["price_drop"].n == 3
+    price_n = {r.code: r.n for r in by_code["price_drop"].reasons}
+    assert price_n["no_price"] == 2
+    assert price_n["nonpositive_price"] == 1
+    assert by_code["var_drop"].n == 2
+    var_n = {r.code: r.n for r in by_code["var_drop"].reasons}
+    assert var_n["missing_gross"] == 1
+    assert var_n["missing_land"] == 1
+    assert "missing_gross" not in price_n

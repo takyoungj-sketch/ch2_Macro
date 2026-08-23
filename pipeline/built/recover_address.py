@@ -16,17 +16,19 @@ D-046 규칙을 코드로 고정한다. `docs/BUILT_DATA_ENRICHMENT.md` §3·§1
      정밀도 숫자를 해석할 수 없다.
   3. **A2 판정 출처**: 대지면적을 표제부·총괄표제부·토지대장 중 무엇이 갈랐는지.
      "충북이 청주보다 오른 건 토지대장 덕"이라는 미검증 귀속을 가른다.
-  4. **시점 정합**: --snapshot both 로 2024-09 / 2026-07 대장을 각각 걸어
-     no_gross_match 가 스냅샷 시점차 때문인지 가른다.
+  4. **시점 정합**: 기본 `--snapshot all` + `time_fallback`.
+     거래월에 가장 가까운 과거 표제부로 A1/A2. 실패 시에만 다른 본. 합집합은 대조군.
 
 캐시
   표제부 전국 스캔(3.6GB·806만 행)은 시도 필터 결과를 `_cache/` 에 CSV로 남긴다.
   두 번째 실행부터 초 단위. `--refresh` 로 강제 재생성.
 
 사용
-  python -m built.recover_address --sido 43
-  python -m built.recover_address --sido 43 --snapshot both
-  python -m built.recover_address --sido 43 --no-zone      # AL_D155(2.5GB) 건너뜀
+  python -m built.recover_address --sido 43                 # 기본: 세 본 + time_fallback
+  python -m built.recover_address --sido 43 --snapshot 2026-07  # 최신본만 (구 경로)
+  python -m built.recover_address --sido 43 --no-zone       # AL_D155 건너뜀
+  python -m built.recover_address --sido 43 --apply-enrichment  # 확정 행 DB 적재 (기존 해시 동결)
+  python -m built.recover_address --sido all --apply-enrichment  # 원장 전 시도. 이미 적재된 시도는 건너뜀
 """
 
 from __future__ import annotations
@@ -38,6 +40,7 @@ import math
 import re
 import sys
 from collections import Counter, defaultdict
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -49,6 +52,8 @@ import pandas as pd  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 
 from built.db_utils import get_built_engine  # noqa: E402
+from built.enrichment_rows import apply_enrichment_rows, to_enrichment_records  # noqa: E402
+from built.snapshot_policy import apply_snapshot_policy, policy_coverage  # noqa: E402
 
 RAW = REPO / "raw" / "raw addition"
 BLDRGST_DIR = RAW / "건축물대장(건축허브)"
@@ -212,6 +217,98 @@ def _scan_pipe_file(src: Path, cols: dict[str, int], out: Path, sido: str) -> di
     return {"src": src.name, "rows_read": total, "rows_kept": kept, "rows_short": bad}
 
 
+def _scan_pipe_file_multi(
+    src: Path,
+    cols: dict[str, int],
+    out_by_sido: dict[str, Path],
+) -> dict[str, Any]:
+    """전국 원본 1회 스캔 → 시도별 CSV. 시도마다 3.5GB를 다시 읽지 않는다."""
+    need = max(cols.values())
+    sg = cols["sigungu_code"]
+    files: dict[str, Any] = {}
+    writers: dict[str, Any] = {}
+    kept = {s: 0 for s in out_by_sido}
+    total = bad = 0
+    try:
+        for sido, path in out_by_sido.items():
+            path.parent.mkdir(exist_ok=True)
+            f = path.open("w", encoding="utf-8", newline="")
+            files[sido] = f
+            w = csv.writer(f)
+            w.writerow(list(cols))
+            writers[sido] = w
+        with src.open(encoding="utf-8-sig", errors="replace") as f:
+            for line in f:
+                total += 1
+                parts = line.rstrip("\n").split("|")
+                if len(parts) <= need:
+                    bad += 1
+                    continue
+                w = writers.get(parts[sg][:2])
+                if w is None:
+                    continue
+                w.writerow([parts[i] for i in cols.values()])
+                kept[parts[sg][:2]] += 1
+    finally:
+        for f in files.values():
+            f.close()
+    return {"src": src.name, "rows_read": total, "rows_short": bad, "rows_kept": kept}
+
+
+def warm_register_caches(sidos: list[str], snapshots: list[str], refresh: bool = False) -> None:
+    CACHE.mkdir(exist_ok=True)
+    for snap in snapshots:
+        tag = SNAPSHOTS[snap]
+        need_title = [
+            s for s in sidos if refresh or not (CACHE / f"title_{s}_{snap}.csv").exists()
+        ]
+        if need_title:
+            src = BLDRGST_DIR / f"국토교통부_건축물대장_표제부+({tag})" / "mart_djy_03.txt"
+            print(f"[표제부 일괄] {snap} → {need_title}", flush=True)
+            meta = _scan_pipe_file_multi(
+                src, TITLE_COLS, {s: CACHE / f"title_{s}_{snap}.csv" for s in need_title}
+            )
+            print(f"[표제부 일괄] {snap} read={meta['rows_read']:,}", flush=True)
+        need_summ = [
+            s for s in sidos if refresh or not (CACHE / f"summary_{s}_{snap}.csv").exists()
+        ]
+        if need_summ:
+            src = BLDRGST_DIR / f"국토교통부_건축물대장_총괄표제부+({tag})" / "mart_djy_02.txt"
+            print(f"[총괄 일괄] {snap} → {need_summ}", flush=True)
+            meta = _scan_pipe_file_multi(
+                src, SUMMARY_COLS, {s: CACHE / f"summary_{s}_{snap}.csv" for s in need_summ}
+            )
+            print(f"[총괄 일괄] {snap} read={meta['rows_read']:,}", flush=True)
+
+
+def ledger_sidos(eng) -> list[str]:
+    sql = text(
+        """
+        SELECT sido_code
+        FROM built_transactions
+        WHERE is_valid AND gross_area > 0 AND is_partial_ownership IS NOT TRUE
+          AND sido_code IS NOT NULL AND btrim(sido_code) <> ''
+        GROUP BY 1
+        ORDER BY 1
+        """
+    )
+    with eng.connect() as conn:
+        return [str(r[0]).strip() for r in conn.execute(sql)]
+
+
+def sidos_with_enrichment(eng) -> set[str]:
+    sql = text(
+        """
+        SELECT DISTINCT t.sido_code
+        FROM built_transaction_enrichment e
+        JOIN built_transactions t ON t.transaction_hash = e.transaction_hash
+        WHERE t.sido_code IS NOT NULL
+        """
+    )
+    with eng.connect() as conn:
+        return {str(r[0]).strip() for r in conn.execute(sql)}
+
+
 def load_register(sido: str, snapshot: str, refresh: bool) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
     """표제부·총괄표제부의 시도 필터 결과. 캐시가 있으면 재사용."""
     tag = SNAPSHOTS[snapshot]
@@ -347,8 +444,10 @@ def match_all(tx: pd.DataFrame, parcels: dict, idx: dict) -> pd.DataFrame:
     for r in tx.itertuples(index=False):
         rec: dict[str, Any] = {
             "id": int(r.id),
+            "transaction_hash": (str(getattr(r, "transaction_hash", "") or "").strip() or None),
             "asset_type": r.asset_type,
             "contract_year": to_i(r.contract_year),
+            "contract_month": to_i(getattr(r, "contract_month", None)),
             "tx_road": re.sub(r"\s+", "", nz(r.road_name)),
             "tx_zone": zkey(r.zone_type),
             "tx_age": to_f(r.building_age),
@@ -504,7 +603,7 @@ def load_zone(sido: str, keep: set[str], refresh: bool) -> dict[str, list[str]]:
         if keep <= set(cur):
             print(f"[AL_D155] 캐시 재사용 {len(cur):,}필지", flush=True)
             return cur
-        print(f"[AL_D155] 캐시에 없는 필지 {len(keep - set(cur)):,}건 — 재적재", flush=True)
+        print(f"[AL_D155] 캐시에 없는 필지 {len(keep - set(cur)):,}건 - 재적재", flush=True)
 
     srcs = sorted(ZONE_DIR.glob(f"AL_D155_{sido}_*/*.csv"))
     srcs = [p for p in srcs if "head" not in p.name.lower()]
@@ -872,14 +971,70 @@ def audit_sample(
 
 
 TX_SQL = """
-SELECT id, asset_type, beopjungri_code, lot_number, road_name, zone_type,
-       gross_area, land_area, building_age, contract_year
+SELECT id, transaction_hash, asset_type, beopjungri_code, lot_number, road_name, zone_type,
+       gross_area, land_area, building_age, contract_year, contract_month
 FROM built_transactions
 WHERE is_valid AND gross_area > 0 AND sigungu_code LIKE :sido_like
+  AND is_partial_ownership IS NOT TRUE
 """
 
 
-def run(sido: str, snapshot: str, refresh: bool, use_zone: bool, sample: int = 0) -> dict:
+POLICIES = ("latest", "time", "time_fallback", "union")
+KAIS_SAMPLE = REPO / "docs" / "lab" / "built_kais_recovery_sample.csv"
+
+
+def _lot_tail(parcel: Any) -> str:
+    if not isinstance(parcel, str) or "|" not in parcel:
+        return ""
+    return parcel.split("|", 1)[1].replace("번지", "").strip()
+
+
+def kais_probe(res: pd.DataFrame) -> list[dict[str, Any]]:
+    """KAIS 28건이 이 정책에서 어디로 붙는지. 표본 CSV가 없으면 빈 목록."""
+    if not KAIS_SAMPLE.is_file():
+        return []
+    sample = pd.read_csv(KAIS_SAMPLE, dtype=str)
+    by_id = res.set_index("id", drop=False)
+    out = []
+    for r in sample.itertuples(index=False):
+        try:
+            tid = int(r.id)
+        except (TypeError, ValueError):
+            continue
+        if tid not in by_id.index:
+            continue
+        row = by_id.loc[tid]
+        if isinstance(row, pd.DataFrame):
+            row = row.iloc[0]
+        kais = str(getattr(r, "KAIS_실제지번", "") or "").strip()
+        recovered = _lot_tail(row.get("parcel") if isinstance(row, dict) else row["parcel"])
+        out.append(
+            {
+                "id": tid,
+                "seq": str(getattr(r, "순서", "")),
+                "kais": kais,
+                "parcel": recovered,
+                "snapshot_used": None if not isinstance(row, pd.Series) else row.get("snapshot_used"),
+                "match_kais": bool(
+                    kais and kais != "동일" and recovered == kais.replace("번지", "").strip()
+                )
+                or (kais == "동일" and recovered != ""),
+            }
+        )
+    return out
+
+
+def run(
+    sido: str,
+    snapshot: str,
+    refresh: bool,
+    use_zone: bool,
+    sample: int = 0,
+    policy: str = "time_fallback",
+    compare_policies: bool = True,
+    emit_enrichment: bool = False,
+    apply_enrichment: bool = False,
+) -> dict:
     eng = get_built_engine()
     with eng.connect() as conn:
         tx = pd.read_sql(text(TX_SQL), conn, params={"sido_like": f"{sido}%"})
@@ -904,16 +1059,30 @@ def run(sido: str, snapshot: str, refresh: bool, use_zone: bool, sample: int = 0
         metas[snap] = meta
 
     primary = PRIMARY if PRIMARY in snaps else snaps[-1]
-    res = results[primary]
+    if policy not in POLICIES:
+        raise ValueError(f"unknown policy: {policy}")
+    if len(snaps) == 1:
+        res = results[snaps[0]].copy()
+        res["snapshot_used"] = snaps[0]
+        res["snapshot_via"] = "latest"
+        policy_used = "latest"
+    else:
+        policy_used = policy
+        res = apply_snapshot_policy(results, policy=policy_used, primary=primary)
 
     zone: dict[str, list[str]] = {}
     if use_zone:
         keep = {p for p in res["parcel"].dropna().unique()}
-        for lots in res["rival_lots"].dropna():
-            keep.update(lots)
+        if "rival_lots" in res.columns:
+            for lots in res["rival_lots"].dropna():
+                keep.update(lots)
         zone = load_zone(sido, keep, refresh)
 
-    rep = report(res, zone, {"sido": sido, "primary_snapshot": primary, **metas[primary]})
+    rep = report(
+        res,
+        zone,
+        {"sido": sido, "primary_snapshot": primary, "policy": policy_used, **metas[primary]},
+    )
     if len(snaps) > 1:
         rep["snapshot_compare"] = [
             compare_snapshots(results[s], results[primary], s, primary)
@@ -921,7 +1090,47 @@ def run(sido: str, snapshot: str, refresh: bool, use_zone: bool, sample: int = 0
             if s != primary
         ]
         rep["snapshot_union"] = snapshot_union(results)
-
+        if compare_policies:
+            compare = {}
+            for p in POLICIES:
+                combined = apply_snapshot_policy(results, policy=p, primary=primary)
+                compare[p] = policy_coverage(combined)
+                compare[p]["kais"] = kais_probe(combined)
+            rep["policy_compare"] = compare
+    if emit_enrichment or apply_enrichment:
+        labels = [
+            zone.get(p, []) if isinstance(p, str) else []
+            for p in res["parcel"]
+        ]
+        recs = to_enrichment_records(
+            res,
+            labels,
+            coverage_scope="full" if use_zone else "A1_only",
+            matched_cycle=datetime.now().strftime("%Y%m"),
+        )
+        CACHE.mkdir(exist_ok=True)
+        applied = False
+        apply_stats: dict | None = None
+        if apply_enrichment:
+            apply_stats = apply_enrichment_rows(eng, recs)
+            applied = True
+            print(
+                f"[enrichment 적재] 시도 {apply_stats['attempted']:,} · "
+                f"신규 {apply_stats['inserted']:,} · 동결유지 {apply_stats['already']:,}",
+                flush=True,
+            )
+            rep["enrichment_apply"] = apply_stats
+        epath = CACHE / f"enrichment_{sido}_{snapshot}.json"
+        payload: dict[str, Any] = {
+            "n": len(recs),
+            "applied": applied,
+            "apply": apply_stats,
+        }
+        if not apply_enrichment:
+            payload["rows"] = recs
+        epath.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        rep["enrichment_preview"] = {"path": str(epath), "n": len(recs), "applied": applied}
+        print(f"[enrichment JSON] {epath} · {len(recs):,}행", flush=True)
     if sample:
         path = CACHE / f"audit_sample_{sido}_{sample}.csv"
         audit_sample(res, zone, sample).to_csv(path, index=False, encoding="utf-8-sig")
@@ -930,22 +1139,118 @@ def run(sido: str, snapshot: str, refresh: bool, use_zone: bool, sample: int = 0
     return rep
 
 
-def main() -> None:
+def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description="복합 마스킹 지번 복원 실측")
-    ap.add_argument("--sido", default="43", help="시도 코드 앞 2자리 (기본 43 충북)")
-    ap.add_argument("--snapshot", default=PRIMARY, choices=[*SNAPSHOTS, "both", "all"])
+    ap.add_argument(
+        "--sido",
+        default="43",
+        help="시도 코드 앞 2자리. all 이면 원장 전 시도 (이미 적재된 시도 제외)",
+    )
+    ap.add_argument(
+        "--snapshot",
+        default="all",
+        choices=[*SNAPSHOTS, "both", "all"],
+        help="표제부 본. 기본 all (거래시점 + 실패 시 보조)",
+    )
+    ap.add_argument(
+        "--policy",
+        default="time_fallback",
+        choices=list(POLICIES),
+        help="여러 스냅샷일 때 확정 규칙. 기본 time_fallback. latest·union은 대조군",
+    )
     ap.add_argument("--refresh", action="store_true", help="캐시 무시하고 원본 재스캔")
     ap.add_argument("--no-zone", dest="zone", action="store_false", help="AL_D155 건너뜀")
     ap.add_argument("--sample", type=int, default=0, help="구조 감사용 표본 N건 CSV 추출")
+    ap.add_argument("--no-compare-policies", action="store_true", help="4정책 대조 생략")
+    ap.add_argument(
+        "--emit-enrichment",
+        action="store_true",
+        help="확정 행 JSON 미리보기",
+    )
+    ap.add_argument(
+        "--apply-enrichment",
+        action="store_true",
+        help="확정 행을 built_transaction_enrichment 에 INSERT. 기존 해시는 동결",
+    )
     ap.add_argument("--out", default=None)
-    args = ap.parse_args()
+    return ap
 
-    rep = run(args.sido, args.snapshot, args.refresh, args.zone, args.sample)
+
+def main() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    args = build_parser().parse_args()
+    if args.sido.strip().lower() == "all":
+        eng = get_built_engine()
+        all_sidos = ledger_sidos(eng)
+        done = sidos_with_enrichment(eng)
+        todo = [s for s in all_sidos if s not in done]
+        print(
+            f"[전국] 원장 {all_sidos} · 이미 적재 {sorted(done)} · 이번 {todo}",
+            flush=True,
+        )
+        if args.snapshot == "all":
+            snaps = list(SNAPSHOTS)
+        elif args.snapshot == "both":
+            snaps = ["2024-09", PRIMARY]
+        else:
+            snaps = [args.snapshot]
+        if todo:
+            warm_register_caches(todo, snaps, args.refresh)
+        summary: list[dict[str, Any]] = []
+        for s in todo:
+            print(f"\n======== sido {s} ========", flush=True)
+            try:
+                rep = run(
+                    s,
+                    args.snapshot,
+                    False,
+                    args.zone,
+                    0,
+                    args.policy,
+                    compare_policies=False,
+                    emit_enrichment=args.emit_enrichment or args.apply_enrichment,
+                    apply_enrichment=args.apply_enrichment,
+                )
+                apply = rep.get("enrichment_apply") or {}
+                row: dict[str, Any] = {
+                    "sido": s,
+                    "ok": True,
+                    "n_total": rep.get("n_total"),
+                    "confirmed": (rep.get("overall") or {}).get("confirmed"),
+                    "apply": apply,
+                }
+            except Exception as exc:
+                print(f"[전국] {s} 실패: {exc}", flush=True)
+                row = {"sido": s, "ok": False, "error": str(exc)}
+            summary.append(row)
+            CACHE.mkdir(exist_ok=True)
+            (CACHE / "nationwide_enrich_progress.json").write_text(
+                json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+        out = Path(args.out) if args.out else CACHE / "recover_all.json"
+        CACHE.mkdir(exist_ok=True)
+        out.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        print(f"\nwrote {out}")
+        return
+    rep = run(
+        args.sido,
+        args.snapshot,
+        args.refresh,
+        args.zone,
+        args.sample,
+        args.policy,
+        compare_policies=False if args.apply_enrichment else not args.no_compare_policies,
+        emit_enrichment=args.emit_enrichment or args.apply_enrichment,
+        apply_enrichment=args.apply_enrichment,
+    )
     CACHE.mkdir(exist_ok=True)
     out = Path(args.out) if args.out else CACHE / f"recover_{args.sido}_{args.snapshot}.json"
     out.write_text(json.dumps(rep, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(rep, ensure_ascii=False, indent=2))
     print(f"\nwrote {out}")
+
 
 
 if __name__ == "__main__":

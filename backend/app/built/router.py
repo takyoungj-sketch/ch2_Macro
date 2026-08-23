@@ -23,6 +23,7 @@ from app.built.regression.engine import predict_regression, run_regression
 from app.built.regression.selection.service import compare_regression, suggest_regression
 from app.recommendation.adapters.built import recommend_built_regression
 from app.recommendation.scope import resolve_built_analysis_scope
+from app.built.enrichment_join import wrap_tx_enrichment
 from app.built.transaction_export import (
     MAX_BUILT_TX_EXPORT,
     built_csv_response,
@@ -64,12 +65,31 @@ def _mark_regression_deprecated(response: Response) -> None:
     response.headers["Link"] = f'<{_RECOMMEND_SUCCESSOR}>; rel="successor-version"'
 
 
+def _apply_tx_enrichment_fields(data: dict) -> dict:
+    filled = data.pop("zone_type_filled", None)
+    first = data.pop("zone_type_first", None)
+    data.pop("transaction_hash", None)
+    if filled:
+        data["zone_type"] = filled
+    elif first:
+        data["zone_type"] = first
+    if not data.get("match_tier"):
+        data["match_tier"] = data.pop("match_tier", None)
+    else:
+        data.pop("match_tier", None)
+    for key in ("structure_group", "recovered_lot", "match_tier"):
+        val = data.get(key)
+        if isinstance(val, str) and not val.strip():
+            data[key] = None
+    return data
+
+
 def _serialize_tx_row(row) -> BuiltTransactionRow:
     data = dict(row)
     cd = data.get("contract_date")
     if cd is not None and hasattr(cd, "isoformat"):
         data["contract_date"] = cd.isoformat()
-    return BuiltTransactionRow(**data)
+    return BuiltTransactionRow(**_apply_tx_enrichment_fields(data))
 
 
 def _chip_scope_kwargs(
@@ -306,23 +326,20 @@ def list_transactions(
     )
     total = db.execute(text(f"SELECT COUNT(*) FROM built_transactions WHERE {where}"), params).scalar()
     params.update({"limit": page_size, "offset": (page - 1) * page_size})
-    rows = db.execute(
-        text(
-            f"""
+    inner = f"""
             SELECT id, asset_type, addr1, addr2, addr3, addr4, addr5, lot_number,
                    display_address, road_name, road_width_label, deal_type,
                    trade_year_label, contract_year, contract_month, contract_date,
                    zone_type, building_use,
                    building_scale, land_scale, age_bucket, price,
-                   gross_area, land_area, building_age, road_code
+                   gross_area, land_area, building_age, road_code,
+                   is_partial_ownership, partial_ownership_label, transaction_hash
             FROM built_transactions
             WHERE {where}
             ORDER BY contract_date DESC NULLS LAST, id DESC
             LIMIT :limit OFFSET :offset
-            """
-        ),
-        params,
-    ).mappings().all()
+    """
+    rows = db.execute(text(wrap_tx_enrichment(inner)), params).mappings().all()
     items = [_serialize_tx_row(r) for r in rows]
     return BuiltTransactionListResponse(
         total=int(total or 0),
@@ -338,7 +355,8 @@ _TX_SELECT = """
            trade_year_label, contract_year, contract_month, contract_date,
            zone_type, building_use,
            building_scale, land_scale, age_bucket, price,
-           gross_area, land_area, building_age, road_code
+           gross_area, land_area, building_age, road_code,
+           is_partial_ownership, partial_ownership_label, transaction_hash
     FROM built_transactions
 """
 
@@ -412,16 +430,21 @@ def export_transactions(
         )
     rows = db.execute(
         text(
-            f"""
+            wrap_tx_enrichment(
+                f"""
             {_TX_SELECT}
             WHERE {where}
             ORDER BY contract_date DESC NULLS LAST, id DESC
             """
+            )
         ),
         params,
     ).mappings().all()
     scope_label = "_".join(filter(None, [addr1, addr2])) or "built"
-    payload = built_transactions_csv_bytes([dict(r) for r in rows], asset_type=asset_type)
+    payload = built_transactions_csv_bytes(
+        [_apply_tx_enrichment_fields(dict(r)) for r in rows],
+        asset_type=asset_type,
+    )
     return built_csv_response(payload, export_filename(scope_label=scope_label))
 
 
@@ -459,7 +482,8 @@ def list_scope_stats(
                 f"""
                 SELECT asset_type, addr1, addr2,
                        to_char(as_of_month, 'YYYY-MM') AS as_of_month,
-                       window_years, tx_count, median_price, mean_price
+                       window_years, tx_count, median_price, mean_price,
+                       COALESCE(partial_tx_count, 0) AS partial_tx_count
                 FROM built_scope_stats
                 WHERE {where}
                 ORDER BY addr1, addr2, asset_type, window_years

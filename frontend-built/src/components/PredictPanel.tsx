@@ -55,6 +55,9 @@ function defaultPredictInputs(opts?: PredictOptions | null): Record<string, stri
   if (opts?.building_uses?.length) {
     out.building_use = opts.building_use_reference ?? opts.building_uses[0];
   }
+  if (opts?.structure_groups?.length) {
+    out.structure_group = opts.structure_reference ?? opts.structure_groups[0];
+  }
   if (opts?.road_width_labels?.length) {
     out.road_width_label = opts.road_width_reference ?? opts.road_width_labels[0];
   }
@@ -100,6 +103,7 @@ function mergePredictInputs(
   }
   keepIfListed("zone_type", opts?.zone_types);
   keepIfListed("building_use", opts?.building_uses);
+  keepIfListed("structure_group", opts?.structure_groups);
   keepIfListed("road_width_label", opts?.road_width_labels);
   keepIfListed("predict_asset_type", opts?.asset_types);
   keepIfListed("region_leaf", opts?.region_leaves);
@@ -225,6 +229,7 @@ export default function PredictPanel({
     }
     if (vars.zone_type_dummy && inputs.zone_type) body.zone_type = inputs.zone_type;
     if (vars.building_use_dummy && inputs.building_use) body.building_use = inputs.building_use;
+    if (vars.structure_dummy && inputs.structure_group) body.structure_group = inputs.structure_group;
     if (vars.road_width_dummy && inputs.road_width_label) body.road_width_label = inputs.road_width_label;
     if (vars.asset_type_dummy && inputs.predict_asset_type) body.predict_asset_type = inputs.predict_asset_type;
     if (
@@ -378,6 +383,24 @@ export default function PredictPanel({
                 <option key={u} value={u}>
                   {u}
                   {u === opts!.building_use_reference ? " (기준)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        {vars.structure_dummy && (opts?.structure_groups?.length ?? 0) > 0 && (
+          <label className="space-y-1 shrink-0">
+            <span className="text-slate-500 block whitespace-nowrap">구조</span>
+            <select
+              className="input !w-[11rem] py-1 text-xs"
+              value={inputs.structure_group ?? ""}
+              onChange={(e) => patchInput("structure_group", e.target.value)}
+            >
+              {(opts?.structure_groups ?? []).map((u) => (
+                <option key={u} value={u}>
+                  {u}
+                  {u === opts?.structure_reference ? " (기준)" : ""}
                 </option>
               ))}
             </select>

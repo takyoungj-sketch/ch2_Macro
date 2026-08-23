@@ -54,6 +54,11 @@ class BuiltTransactionRow(BaseModel):
     deal_type: Optional[str] = None
     buyer_type: Optional[str] = None
     seller_type: Optional[str] = None
+    is_partial_ownership: bool = False
+    partial_ownership_label: Optional[str] = None
+    structure_group: Optional[str] = None
+    recovered_lot: Optional[str] = None
+    match_tier: Optional[str] = None
 
 
 class BuiltTransactionListResponse(BaseModel):
@@ -83,6 +88,7 @@ class BuiltScopeStatsRow(BaseModel):
     tx_count: int
     median_price: Optional[float] = None
     mean_price: Optional[float] = None
+    partial_tx_count: int = 0
 
 
 class CategoryCountOption(BaseModel):
@@ -149,6 +155,7 @@ class RegressionVariableSpec(BaseModel):
     road_code: bool = False
     zone_type_dummy: bool = True
     building_use_dummy: bool = True
+    structure_dummy: bool = True
     asset_type_dummy: bool = True
     # 읍·면·동 초점에서는 addr3/addr4, 법정리 초점에서는 addr5 기준
     region_leaf_dummy: bool = False
@@ -195,6 +202,7 @@ class RegressionRunRequest(BaseModel):
     leaf_level: Optional[Literal["addr3", "addr4"]] = None
     exclude_outliers_iqr: bool = False
     outlier_iqr_multiplier: float = 3.0
+    include_partial: bool = False  # D-049 분석 기본 제외. 목록과 분리.
     # R0 analysis_scope — 프론트 analysisUnits 미러 (필터 로직에는 미사용)
     anchor_region_code: Optional[str] = None
     region_unit_hints: list[AnalysisRegionUnitHint] = Field(default_factory=list)
@@ -229,15 +237,40 @@ class ContinuousRange(BaseModel):
     max: Optional[float] = None
 
 
+class FunnelReason(BaseModel):
+    code: str
+    label: str
+    n: int
+
+
+class FunnelStep(BaseModel):
+    """조회 표본 → 적합 표본. drop 은 펼치면 사유별 건수."""
+
+    code: str
+    label: str
+    n: int
+    kind: Literal["remain", "drop"] = "remain"
+    note: Optional[str] = None
+    reasons: list[FunnelReason] = Field(default_factory=list)
+
+
+class SampleBreakdown(BaseModel):
+    n_pool: int
+    n_fit: int
+    funnel: list[FunnelStep] = Field(default_factory=list)
+
+
 class PredictOptions(BaseModel):
     """예측 입력 폼용 — 해당 scope 모형 기준."""
 
     zone_types: list[str] = Field(default_factory=list)
     building_uses: list[str] = Field(default_factory=list)
+    structure_groups: list[str] = Field(default_factory=list)
     road_width_labels: list[str] = Field(default_factory=list)
     asset_types: list[str] = Field(default_factory=list)
     zone_reference: Optional[str] = None
     building_use_reference: Optional[str] = None
+    structure_reference: Optional[str] = None
     road_width_reference: Optional[str] = None
     asset_type_reference: Optional[str] = None
     region_leaves: list[str] = Field(default_factory=list)
@@ -261,6 +294,7 @@ class RegressionLevelResult(BaseModel):
     predict_options: Optional[PredictOptions] = None
     warning: Optional[str] = None
     mape: Optional[float] = None  # in-sample MAPE (%), 원척도 금액(만원)
+    sample: Optional[SampleBreakdown] = None
 
 
 class CorrelationPoint(BaseModel):
@@ -301,6 +335,9 @@ class RegressionRunResponse(BaseModel):
     correlation_n: Optional[int] = None
     analysis_scope: Optional[AnalysisScope] = None
     explain: Optional[AnalysisExplain] = None
+    include_partial: bool = False
+    partial_tx_count: int = 0
+    partial_n_note: Optional[str] = None
 
 
 class RegressionScopeResponse(BaseModel):
@@ -394,6 +431,7 @@ class RegressionPredictRequest(RegressionRunRequest):
     road_width_label: Optional[str] = None
     zone_type: Optional[str] = None
     building_use: Optional[str] = None
+    structure_group: Optional[str] = None
     predict_asset_type: Optional[str] = None
     region_leaf: Optional[str] = None
 

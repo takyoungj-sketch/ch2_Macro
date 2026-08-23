@@ -84,6 +84,7 @@ SELECT
     t.asset_type,
     array_agg(
         CASE WHEN t.gross_area IS NOT NULL AND t.gross_area > 0
+              AND t.is_partial_ownership IS NOT TRUE
              THEN (t.price / t.gross_area) END
         ORDER BY t.price
     ) AS unit_prices
@@ -107,6 +108,7 @@ SELECT
     COUNT(*) AS raw_count,
     array_agg(
         CASE WHEN t.gross_area IS NOT NULL AND t.gross_area > 0
+              AND t.is_partial_ownership IS NOT TRUE
              THEN (t.price / t.gross_area) END
         ORDER BY t.price
     ) AS unit_prices,

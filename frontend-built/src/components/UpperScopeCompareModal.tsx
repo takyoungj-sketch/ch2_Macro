@@ -13,6 +13,7 @@ import DraggableModalShell from "./DraggableModalShell";
 import PredictPanel from "./PredictPanel";
 import RegressionEquation from "./RegressionEquation";
 import RegressionEffectsTable from "./RegressionEffectsTable";
+import SampleFunnel from "./SampleFunnel";
 
 type Props = {
   open: boolean;
@@ -61,6 +62,8 @@ function ComparisonLevelCard({
 
       {result.warning && <p className="badge-warn">{result.warning}</p>}
 
+      {result.sample && <SampleFunnel sample={result.sample} />}
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <MetricWithHelp label="R²" termId="r_squared" value={fmtDecimal(result.r_squared, 4)} />
         <MetricWithHelp label="Adj R²" termId="adj_r_squared" value={fmtDecimal(result.adj_r_squared, 4)} />
@@ -92,6 +95,7 @@ function ComparisonLevelCard({
             coefficients={result.coefficients}
             responseScale={responseScale}
             assetType={assetType}
+            predictOptions={result.predict_options}
           />
         </details>
       )}

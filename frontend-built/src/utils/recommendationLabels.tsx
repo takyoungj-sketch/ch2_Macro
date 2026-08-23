@@ -4,12 +4,22 @@ export type ScopeNCounts = {
   scope_n_tx: number;
   selection_n?: number;
   fit_n?: number;
+  include_partial?: boolean;
+  partial_tx_count?: number | null;
 };
+
+export function formatPartialNNote(includePartial: boolean, partialTxCount?: number | null): string {
+  const n = partialTxCount ?? 0;
+  return `지분 ${n.toLocaleString("ko-KR")}건 ${includePartial ? "포함" : "제외"}`;
+}
 
 export function formatScopeNLine(counts: ScopeNCounts): string {
   const parts = [`거래 ${counts.scope_n_tx}`];
   if (counts.selection_n != null) parts.push(`탐색 ${counts.selection_n}`);
   if (counts.fit_n != null) parts.push(`적합 ${counts.fit_n}`);
+  if (counts.partial_tx_count != null) {
+    parts.push(formatPartialNNote(Boolean(counts.include_partial), counts.partial_tx_count));
+  }
   return parts.join(" · ");
 }
 
@@ -43,10 +53,18 @@ export function ScopeNLabels({ counts, className = "", compact = false }: ScopeN
           <dd className="font-medium">{counts.selection_n}</dd>
         </div>
       )}
-      {counts.fit_n != null && (
+          {counts.fit_n != null && (
         <div>
           <dt className="text-slate-400">적합</dt>
           <dd className="font-medium">{counts.fit_n}</dd>
+        </div>
+      )}
+      {counts.partial_tx_count != null && (
+        <div className="col-span-3">
+          <dt className="text-slate-400">지분</dt>
+          <dd className="font-medium">
+            {formatPartialNNote(Boolean(counts.include_partial), counts.partial_tx_count)}
+          </dd>
         </div>
       )}
     </dl>

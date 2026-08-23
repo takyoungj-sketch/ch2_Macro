@@ -44,6 +44,19 @@ export function builtTxAdminCols(r: BuiltTransactionRow) {
   };
 }
 
+export function builtTxLotHoverTitle(r: BuiltTransactionRow): string | undefined {
+  const recovered = r.recovered_lot?.trim();
+  const tier = r.match_tier?.trim();
+  if (recovered) {
+    return `복원 ${recovered}${tier ? ` · ${tier}` : ""}`;
+  }
+  return r.lot_number?.trim() || undefined;
+}
+
+export function builtTxHasRecoveredLot(r: BuiltTransactionRow): boolean {
+  return Boolean(r.recovered_lot?.trim());
+}
+
 export function builtTxBuildingYear(r: BuiltTransactionRow): number | null {
   if (r.building_year != null) return r.building_year;
   if (r.contract_year != null && r.building_age != null) {
@@ -61,9 +74,11 @@ export type BuiltTxSortKey =
   | "dong_ri"
   | "ri"
   | "lot"
+  | "share"
   | "road_name"
   | "zone_type"
   | "building_use"
+  | "structure_group"
   | "price"
   | "gross_area"
   | "land_area"
@@ -100,12 +115,16 @@ export function builtTxSortValue(
       return admin.ri ?? "";
     case "lot":
       return admin.lot ?? "";
+    case "share":
+      return r.is_partial_ownership ? "지분" : "—";
     case "road_name":
       return r.road_name?.trim() || "";
     case "zone_type":
       return r.zone_type?.trim() || "—";
     case "building_use":
       return r.building_use?.trim() || "—";
+    case "structure_group":
+      return r.structure_group?.trim() || "—";
     case "price":
       return r.price;
     case "gross_area":

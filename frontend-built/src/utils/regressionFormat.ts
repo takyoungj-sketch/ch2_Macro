@@ -1,4 +1,4 @@
-import type { AssetType, RegressionCoeff, ResponseScale } from "../types";
+import type { AssetType, PredictOptions, RegressionCoeff, ResponseScale } from "../types";
 
 const COEF_LABELS: Record<string, string> = {
   const: "절편",
@@ -16,6 +16,47 @@ const ASSET_TYPE_LABELS: Record<string, string> = {
 
 export { ASSET_TYPE_LABELS };
 
+export function formatAssetTypeLabel(value: string | null | undefined): string {
+  if (!value) return "";
+  return ASSET_TYPE_LABELS[value] ?? value;
+}
+
+/** drop_first 기준 범주 — 계수표 하단·회귀식 한 줄용 */
+export function dummyReferenceRows(
+  opts?: PredictOptions | null,
+  assetType?: AssetType,
+): Array<{ key: string; kind: string; value: string; display: string; label: string }> {
+  if (!opts) return [];
+  const useKind = assetType === "detached" ? "주택유형" : "건축물용도";
+  const items: Array<[string, string, string | null | undefined, (v: string) => string]> = [
+    ["zone", "용도지역", opts.zone_reference, (v) => v],
+    ["use", useKind, opts.building_use_reference, (v) => v],
+    ["struct", "구조", opts.structure_reference, (v) => v],
+    ["road", "도로조건", opts.road_width_reference, (v) => v],
+    ["atype", "유형", opts.asset_type_reference, formatAssetTypeLabel],
+    ["loc", "지역", opts.region_reference, (v) => v],
+  ];
+  return items
+    .filter(([, , value]) => Boolean(value))
+    .map(([key, kind, value, fmt]) => {
+      const display = fmt(value!);
+      return { key, kind, value: value!, display, label: `${kind} ${display}` };
+    });
+}
+
+function dummyReferenceDisplay(name: string, opts?: PredictOptions | null): string | null {
+  if (!opts) return null;
+  if (name.startsWith("zone_")) return opts.zone_reference ?? null;
+  if (name.startsWith("use_")) return opts.building_use_reference ?? null;
+  if (name.startsWith("struct_")) return opts.structure_reference ?? null;
+  if (name.startsWith("road_")) return opts.road_width_reference ?? null;
+  if (name.startsWith("atype_")) {
+    return opts.asset_type_reference ? formatAssetTypeLabel(opts.asset_type_reference) : null;
+  }
+  if (name.startsWith("loc_")) return opts.region_reference ?? null;
+  return null;
+}
+
 /** statsmodels 변수명 → 표시용 한글 (맥락 유지) */
 export function formatCoefName(name: string, assetType?: AssetType, responseScale?: ResponseScale): string {
   if (COEF_LABELS[name]) {
@@ -30,6 +71,7 @@ export function formatCoefName(name: string, assetType?: AssetType, responseScal
     const prefix = assetType === "detached" ? "주택유형" : "건축물용도";
     return `${prefix}·${name.slice(4)}`;
   }
+  if (name.startsWith("struct_")) return `구조·${name.slice(7)}`;
   if (name.startsWith("road_")) return `도로조건·${name.slice(5)}`;
   if (name.startsWith("atype_")) {
     const key = name.slice(6);
@@ -51,6 +93,7 @@ export function shortCoefName(name: string, assetType?: AssetType, responseScale
   }
   if (name.startsWith("zone_")) return name.slice(5);
   if (name.startsWith("use_")) return name.slice(4);
+  if (name.startsWith("struct_")) return name.slice(7);
   if (name.startsWith("road_")) return name.slice(5);
   if (name.startsWith("atype_")) {
     const key = name.slice(6);
@@ -71,6 +114,8 @@ export function shortDisplayLabel(label: string): string {
     "건축물용도 ",
     "주택유형·",
     "주택유형 ",
+    "구조·",
+    "구조 ",
     "도로조건·",
     "도로조건 ",
     "도로폭 ",
@@ -117,6 +162,7 @@ export function interpretCoefficient(
   c: RegressionCoeff,
   responseScale: ResponseScale,
   _assetType?: AssetType,
+  predictOptions?: PredictOptions | null,
 ): string {
   const name = c.name;
   const coef = c.estimate;
@@ -131,6 +177,8 @@ export function interpretCoefficient(
 
   const unit = unitSuffix(name);
   const step = unit ? `1${unit} ` : "1단위 ";
+  const ref = dummyReferenceDisplay(name, predictOptions);
+  const vs = ref ? `기준(${ref}) 대비` : "기준 대비";
 
   if (responseScale === "loglog" && (name === "gross_area" || name === "land_area")) {
     const pct = (Math.pow(1.01, coef) - 1) * 100;
@@ -141,11 +189,11 @@ export function interpretCoefficient(
   if (responseScale === "log") {
     const pct = fmtPctFromLog(coef);
     if (isContinuousCoef(name)) return `${step}증가 시 금액 약 ${pct}`;
-    return `기준 대비 약 ${pct}`;
+    return `${vs} 약 ${pct}`;
   }
 
   if (isContinuousCoef(name)) return `${step}증가 시 ${fmtManwon(coef)}`;
-  return `기준 대비 ${fmtManwon(coef)}`;
+  return `${vs} ${fmtManwon(coef)}`;
 }
 
 export function coefficientSortKey(name: string): [number, number, string] {
@@ -156,8 +204,9 @@ export function coefficientSortKey(name: string): [number, number, string] {
   if (name === "road_code") return [2, 1, name];
   if (name.startsWith("zone_")) return [6, 0, name];
   if (name.startsWith("use_")) return [6, 1, name];
-  if (name.startsWith("road_")) return [6, 2, name];
-  if (name.startsWith("atype_")) return [6, 3, name];
+  if (name.startsWith("struct_")) return [6, 2, name];
+  if (name.startsWith("road_")) return [6, 3, name];
+  if (name.startsWith("atype_")) return [6, 4, name];
   if (name.startsWith("loc_")) return [7, 0, name];
   return [8, 0, name];
 }

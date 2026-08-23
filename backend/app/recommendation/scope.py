@@ -137,6 +137,7 @@ def _sample_filters_from_request(req: RegressionRunRequest) -> AnalysisSampleFil
         road_code_max=req.road_code_max,
         exclude_outliers_iqr=req.exclude_outliers_iqr,
         outlier_iqr_multiplier=req.outlier_iqr_multiplier,
+        include_partial=bool(getattr(req, "include_partial", False)),
     )
 
 
@@ -166,22 +167,31 @@ def built_analysis_scope_from_prepared(
     *,
     wide_df,
     addr4_city: bool,
+    partial_tx_count: int = 0,
 ) -> AnalysisScope:
+    from app.built.partial_ownership import format_partial_n_note
+
     focus = _focus_admin_level(req, addr4_city)
     scope_label = _label_for_level(req, wide_df, focus, addr4_city)
     base = scope_from_built_request(req)
+    include_partial = bool(getattr(req, "include_partial", False))
     return base.model_copy(
         update={
             "scope_label": scope_label,
             "admin_level": focus,
             "scope_n_tx": len(wide_df),
+            "include_partial": include_partial,
+            "partial_tx_count": int(partial_tx_count or 0),
+            "partial_n_note": format_partial_n_note(
+                include_partial=include_partial, partial_tx_count=partial_tx_count
+            ),
         }
     )
 
 
 def resolve_built_analysis_scope(conn, req: RegressionRunRequest) -> AnalysisScope:
     """RegressionRunRequest → analysis_scope (엔진과 동일 scope_label·scope_n_tx)."""
-    wide_df, req, addr4_city, _mode = _prepare_regression_scope(conn, req)
+    wide_df, req, addr4_city, _mode, partial_tx_count = _prepare_regression_scope(conn, req)
     return built_analysis_scope_from_prepared(
-        req, wide_df=wide_df, addr4_city=addr4_city
+        req, wide_df=wide_df, addr4_city=addr4_city, partial_tx_count=partial_tx_count
     )

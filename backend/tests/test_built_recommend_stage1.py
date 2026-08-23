@@ -29,7 +29,7 @@ def _ctx(df: pd.DataFrame, *, unified: bool = False) -> SelectionContext:
 def test_default_pool_excludes_asset_type_when_not_unified():
     df = pd.DataFrame({"addr3": ["A", "B"], "price": [1, 2]})
     pool = resolve_recommendation_pool(_ctx(df), unified=False)
-    assert list(DEFAULT_BUILT_CANDIDATE_BLOCKS) == pool[:6]
+    assert list(DEFAULT_BUILT_CANDIDATE_BLOCKS) == pool[: len(DEFAULT_BUILT_CANDIDATE_BLOCKS)]
     assert "asset_type" not in pool
 
 

@@ -13,9 +13,16 @@ export const BUILT_REGRESSION_HELP: AnalysisExplain = {
     "산점도 탭으로 r과 β를 비교하세요.",
     "예측 패널은 변수 고정 후 한 점 예측.",
   ],
-  limitations: ["인과·적정가격 아님", "표본·필터에 민감"],
+  limitations: ["인과·적정가격 아님", "표본·필터에 민감", "지분거래는 중위·회귀에서 기본 제외"],
   interpretation_hints: [],
-  presets: [],
+  presets: [
+    {
+      id: "share_tx",
+      question: "지분거래를 왜 분석에서 빼나요?",
+      answer:
+        "국토부 지분 행은 연면적(건물 전체)과 대지(지분)의 기준이 건마다 다를 수 있습니다. 목록에는 그대로 두고, ㎡당·회귀만 기본에서 뺍니다. 포함할지는 분석 패널에서 고릅니다. 토지 앱은 포함이 기본입니다.",
+    },
+  ],
 };
 
 export const BUILT_SCATTER_RAW_HELP: AnalysisExplain = {

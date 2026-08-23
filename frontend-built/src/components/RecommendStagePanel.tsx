@@ -24,6 +24,7 @@ const BLOCK_LABELS: Record<string, string> = {
   road_width: "도로조건",
   zone_type: "용도지역",
   building_use: "건축물용도",
+  structure: "구조",
   asset_type: "유형",
   region_leaf: "지역(읍·면·동/법정리)",
 };
@@ -323,6 +324,8 @@ function ScopeSummaryBox({
           scope_n_tx: analysis_scope.scope_n_tx,
           selection_n: stage1.selection_n,
           fit_n: stage1.fit_n,
+          include_partial: analysis_scope.include_partial,
+          partial_tx_count: analysis_scope.partial_tx_count,
         }}
       />
       {showSatisfaction && (
@@ -848,6 +851,8 @@ export default function RecommendStagePanel({
             scope_n_tx: analysis_scope.scope_n_tx,
             selection_n: stage1.selection_n,
             fit_n: stage1.fit_n,
+            include_partial: analysis_scope.include_partial,
+            partial_tx_count: analysis_scope.partial_tx_count,
           }}
         />
         <p className="text-slate-600 dark:text-slate-300">

@@ -31,7 +31,7 @@ class SelectionContext:
 
 
 def resolve_selection_context(conn, req: RegressionRunRequest) -> SelectionContext:
-    wide_df, req, addr4_city, mode = _prepare_regression_scope(conn, req)
+    wide_df, req, addr4_city, mode, _partial_tx_count = _prepare_regression_scope(conn, req)
     level = _focus_admin_level(req, addr4_city)
     df = _scope_for_level(wide_df, req, level, addr4_city, mode)
     label = _label_for_level(req, wide_df, level, addr4_city)
@@ -52,6 +52,7 @@ _BLOCK_SOURCE_COLUMNS: dict[str, tuple[str, ...]] = {
     "road_width": ("road_width_label",),
     "zone_type": ("zone_type",),
     "building_use": ("building_use",),
+    "structure": ("structure_group",),
     "asset_type": ("asset_type",),
     "region_population": ("region_population",),
     "region_land_p50": ("region_land_p50",),

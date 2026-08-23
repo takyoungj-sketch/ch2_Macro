@@ -5,6 +5,8 @@ import { isOnlyDetached, isUnifiedAsset } from "../utils/assetTypes";
 import {
   builtTxAdminCols,
   builtTxBuildingYear,
+  builtTxHasRecoveredLot,
+  builtTxLotHoverTitle,
   builtTxSortValue,
   formatBuiltTxCell,
   formatBuiltTxContractDate,
@@ -39,19 +41,19 @@ function buildCols(assetType: AssetType): ColDef[] {
     { key: "dong_ri", label: "읍·면·동", filterType: "select" },
     { key: "ri", label: "리", filterType: "select" },
     { key: "lot", label: "지번", filterType: "text", textPlaceholder: "검색" },
+    { key: "share", label: "지분", filterType: "select" },
     { key: "road_name", label: "도로명", filterType: "text", textPlaceholder: "검색" },
   ];
   if (isUnifiedAsset(assetType)) {
     cols.unshift({ key: "asset_type", label: "유형", filterType: "select" });
   }
-  if (!isOnlyDetached(assetType)) {
-    cols.push({ key: "zone_type", label: "용도지역", filterType: "select" });
-  }
+  cols.push({ key: "zone_type", label: "용도지역", filterType: "select" });
   cols.push({
     key: "building_use",
     label: isOnlyDetached(assetType) ? "주택유형" : "건축물용도",
     filterType: "select",
   });
+  cols.push({ key: "structure_group", label: "구조", filterType: "select" });
   cols.push(
     { key: "price", label: "금액(만)", align: "right", filterType: "sort-only" },
     { key: "gross_area", label: "연면적", align: "right", filterType: "sort-only" },
@@ -355,7 +357,6 @@ export default function BuiltTransactionTable({
     return `${sel.size}개 선택`;
   };
 
-  const showZone = !isOnlyDetached(assetType);
   const showAssetCol = isUnifiedAsset(assetType);
 
   return (
@@ -578,21 +579,32 @@ export default function BuiltTransactionTable({
                     <td className="border px-2 py-1 max-w-[88px] truncate" title={admin.ri ?? undefined}>
                       {formatBuiltTxCell(admin.ri)}
                     </td>
-                    <td className="border px-2 py-1 max-w-[4.5rem] truncate" title={admin.lot ?? undefined}>
-                      {formatBuiltTxCell(admin.lot)}
+                    <td className="border px-2 py-1 max-w-[4.5rem] truncate">
+                      {builtTxHasRecoveredLot(r) ? (
+                        <span
+                          className="border-b border-dotted border-slate-500 cursor-help"
+                          title={builtTxLotHoverTitle(r)}
+                        >
+                          {formatBuiltTxCell(admin.lot)}
+                        </span>
+                      ) : (
+                        <span title={admin.lot ?? undefined}>{formatBuiltTxCell(admin.lot)}</span>
+                      )}
+                    </td>
+                    <td className="border px-2 py-1 whitespace-nowrap">
+                      {r.is_partial_ownership ? "지분" : "—"}
                     </td>
                     <td className="border px-2 py-1 max-w-[9rem] truncate" title={r.road_name ?? undefined}>
                       {formatBuiltTxCell(r.road_name)}
                     </td>
-                    {showZone && (
-                      <td className="border px-2 py-1 whitespace-nowrap">
-                        {showAssetCol && r.asset_type === "detached"
-                          ? "—"
-                          : formatBuiltTxCell(r.zone_type)}
-                      </td>
-                    )}
+                    <td className="border px-2 py-1 whitespace-nowrap">
+                      {formatBuiltTxCell(r.zone_type)}
+                    </td>
                     <td className="border px-2 py-1 whitespace-nowrap">
                       {formatBuiltTxCell(r.building_use)}
+                    </td>
+                    <td className="border px-2 py-1 whitespace-nowrap">
+                      {formatBuiltTxCell(r.structure_group)}
                     </td>
                     <td className="border px-2 py-1 text-right tabular-nums">{fmtNum(r.price)}</td>
                     <td className="border px-2 py-1 text-right tabular-nums">{fmtNum(r.gross_area, 1)}</td>

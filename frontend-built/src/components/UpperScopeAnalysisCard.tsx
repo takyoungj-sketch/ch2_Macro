@@ -16,6 +16,7 @@ import {
 import PredictPanel from "./PredictPanel";
 import RegressionEquation from "./RegressionEquation";
 import RegressionEffectsTable from "./RegressionEffectsTable";
+import SampleFunnel from "./SampleFunnel";
 
 type Props = {
   regData: RegressionRunResponse;
@@ -64,6 +65,8 @@ function ComparisonLevelCard({
 
       {result.warning && <p className="badge-warn">{result.warning}</p>}
 
+      {result.sample && <SampleFunnel sample={result.sample} />}
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div>R² {fmtDecimal(result.r_squared, 4)}</div>
         <div>Adj R² {fmtDecimal(result.adj_r_squared, 4)}</div>
@@ -91,6 +94,7 @@ function ComparisonLevelCard({
             coefficients={result.coefficients}
             responseScale={responseScale}
             assetType={assetType}
+            predictOptions={result.predict_options}
           />
         </details>
       )}

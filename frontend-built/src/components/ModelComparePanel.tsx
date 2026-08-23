@@ -24,6 +24,7 @@ const BLOCK_LABELS: Record<string, string> = {
   road_width: "도로조건",
   zone_type: "용도지역",
   building_use: "건축물용도",
+  structure: "구조",
   asset_type: "유형",
   region_leaf: "지역(읍·면·동/법정리)",
 };

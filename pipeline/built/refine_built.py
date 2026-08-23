@@ -102,6 +102,14 @@ def normalize_lot(val: Any) -> str | None:
     return s[:64] if s else None
 
 
+def parse_partial_ownership(val: Any) -> tuple[bool, str | None]:
+    """상업·공장 지분구분. 라벨에 '지분'이 있으면 True. 금액·면적은 수정하지 않는다."""
+    s = _s(val)
+    if not s:
+        return False, None
+    return ("지분" in s), s[:32]
+
+
 def format_display_address(row: pd.Series) -> str | None:
     parts: list[str] = []
     for c in ("addr3", "addr4", "addr5"):
@@ -173,6 +181,14 @@ def refine_molit_dataframe(df: pd.DataFrame, asset_type: BuiltAssetType) -> pd.D
         out["deal_type"] = _get_col(work, cols["deal_type"]).map(_s).replace("", None)
     else:
         out["deal_type"] = None
+
+    if "share_raw" in cols:
+        flags = _get_col(work, cols["share_raw"]).map(parse_partial_ownership)
+        out["is_partial_ownership"] = flags.map(lambda t: t[0])
+        out["partial_ownership_label"] = flags.map(lambda t: t[1])
+    else:
+        out["is_partial_ownership"] = False
+        out["partial_ownership_label"] = None
 
     cdate, cyear, cmonth = parse_contract_dates(
         _get_col(work, cols["contract_ym"]),

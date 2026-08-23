@@ -40,6 +40,7 @@ def _region_where_clauses(
     contract_year_to: int | None,
     as_of_month: str | None,
     window_years: int | None,
+    include_partial: bool = True,
 ) -> tuple[str | None, list[str], dict[str, object]]:
     """anchor 표본과 무관하게 후보 지역 자체를 조회하기 위한 WHERE 절.
 
@@ -65,6 +66,9 @@ def _region_where_clauses(
             as_of_month=parse_as_of_month(as_of_month),
             window_years=window_years,
         )
+    from app.built.partial_ownership import apply_partial_ownership_filter
+
+    apply_partial_ownership_filter(clauses, include_partial=include_partial)
     return column, clauses, params
 
 
@@ -148,6 +152,7 @@ def region_price_levels_from_db(
     as_of_month: str | None = None,
     window_years: int | None = None,
     min_n: int = 3,
+    include_partial: bool = False,
 ) -> dict[str, float]:
     """지역별 ㎡당 가격 median(price/gross_area) — Twin Pooling 가격수준 hard gate.
 
@@ -165,6 +170,7 @@ def region_price_levels_from_db(
         contract_year_to=contract_year_to,
         as_of_month=as_of_month,
         window_years=window_years,
+        include_partial=include_partial,
     )
     if not column:
         return {}
@@ -200,6 +206,7 @@ def fetch_candidate_rows(
     contract_year_to: int | None = None,
     as_of_month: str | None = None,
     window_years: int | None = None,
+    include_partial: bool = False,
 ) -> pd.DataFrame:
     """anchor 표본과 무관하게 후보 지역 자체의 built 원장 원행을 조회한다.
 
@@ -216,6 +223,7 @@ def fetch_candidate_rows(
         contract_year_to=contract_year_to,
         as_of_month=as_of_month,
         window_years=window_years,
+        include_partial=include_partial,
     )
     if not column:
         return pd.DataFrame()
@@ -223,16 +231,25 @@ def fetch_candidate_rows(
     from sqlalchemy import text
 
     where = " AND ".join(clauses)
-    sql = f"""
+    inner = f"""
         SELECT price, gross_area, land_area, building_age, road_code, road_width_label,
                zone_type, building_use, asset_type, contract_year,
                addr1, addr2, addr3, addr4, addr5,
-               sigungu_code, eupmyeondong_code, beopjungri_code
+               sigungu_code, eupmyeondong_code, beopjungri_code, transaction_hash
         FROM built_transactions
         WHERE {where}
     """
+    from app.built.enrichment_join import wrap_tx_enrichment
+
+    sql = wrap_tx_enrichment(inner)
     rows = conn.execute(text(sql), params).mappings().all()
-    return pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return df
+    if "zone_type_first" in df.columns:
+        df["zone_type"] = df["zone_type_first"]
+        df = df.drop(columns=["zone_type_filled", "zone_type_first"], errors="ignore")
+    return df.drop(columns=["transaction_hash"], errors="ignore")
 
 
 def generate_candidates(

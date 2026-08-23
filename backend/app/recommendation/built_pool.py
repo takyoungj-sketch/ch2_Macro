@@ -17,6 +17,7 @@ DEFAULT_BUILT_CANDIDATE_BLOCKS: tuple[BlockId, ...] = (
     "road_width",
     "zone_type",
     "building_use",
+    "structure",
 )
 
 

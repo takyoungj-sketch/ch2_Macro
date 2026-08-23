@@ -304,6 +304,7 @@ const DEFAULT_VARS_BY_KIND: Record<BuiltAssetKind, RegressionVariableSpec> = {
     road_code: false,
     zone_type_dummy: true,
     building_use_dummy: true,
+    structure_dummy: true,
     asset_type_dummy: false,
     region_leaf_dummy: false,
   },
@@ -315,6 +316,7 @@ const DEFAULT_VARS_BY_KIND: Record<BuiltAssetKind, RegressionVariableSpec> = {
     road_code: false,
     zone_type_dummy: true,
     building_use_dummy: true,
+    structure_dummy: true,
     asset_type_dummy: false,
     region_leaf_dummy: false,
   },
@@ -324,8 +326,9 @@ const DEFAULT_VARS_BY_KIND: Record<BuiltAssetKind, RegressionVariableSpec> = {
     building_age: true,
     road_width_dummy: true,
     road_code: false,
-    zone_type_dummy: false,
+    zone_type_dummy: true,
     building_use_dummy: true,
+    structure_dummy: true,
     asset_type_dummy: false,
     region_leaf_dummy: false,
   },
@@ -339,16 +342,14 @@ const DEFAULT_VARS_MULTI: RegressionVariableSpec = {
   road_code: false,
   zone_type_dummy: true,
   building_use_dummy: true,
+  structure_dummy: true,
   asset_type_dummy: true,
   region_leaf_dummy: false,
 };
 
 function defaultVarsForKinds(kinds: BuiltAssetKind[]): RegressionVariableSpec {
   if (kinds.length >= 2) {
-    return {
-      ...DEFAULT_VARS_MULTI,
-      zone_type_dummy: kinds.some((k) => k !== "detached"),
-    };
+    return { ...DEFAULT_VARS_MULTI };
   }
   return { ...DEFAULT_VARS_BY_KIND[kinds[0] ?? "commercial"] };
 }
@@ -514,6 +515,7 @@ export default function App() {
   const [txModalOpen, setTxModalOpen] = useState(false);
   const [vars, setVars] = useState<RegressionVariableSpec>(() => defaultVarsForKinds(["commercial"]));
   const [excludeOutliers, setExcludeOutliers] = useState(false);
+  const [includePartial, setIncludePartial] = useState(false);
   const [iqrMultiplier, setIqrMultiplier] = useState<IqrMultiplier>(3);
   const [sampleFilter, setSampleFilter] = useState<SampleFilterState>(EMPTY_SAMPLE_FILTER);
   const [windowYears, setWindowYears] = useState<StatsWindowYears>(5);
@@ -920,6 +922,7 @@ export default function App() {
       response_scale: responseScale,
       exclude_outliers_iqr: excludeOutliers,
       outlier_iqr_multiplier: iqrMultiplier,
+      include_partial: includePartial,
     };
   }, [
     assetType,
@@ -937,6 +940,7 @@ export default function App() {
     responseScale,
     excludeOutliers,
     iqrMultiplier,
+    includePartial,
   ]);
 
   const regM = useMutation({
@@ -1302,13 +1306,12 @@ export default function App() {
                     ["land_area", "대지면적"],
                     ["building_age", "연식"],
                     ["road_width_dummy", "도로조건 더미"],
-                    ...(isOnlyDetached(assetType)
-                      ? []
-                      : ([["zone_type_dummy", "용도지역 더미"]] as const)),
+                    ["zone_type_dummy", "용도지역 더미"],
                     [
                       "building_use_dummy",
                       isOnlyDetached(assetType) ? "주택유형 더미" : "건축물용도 더미",
                     ],
+                    ["structure_dummy", "구조 더미"],
                     ...(isUnifiedAsset(assetType)
                       ? ([["asset_type_dummy", "유형 더미"]] as const)
                       : []),
@@ -1386,7 +1389,28 @@ export default function App() {
             </section>
 
             <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
-              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">3. 이상치 제거</p>
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">3. 분석 표본</p>
+              <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs">
+                <label className="flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={includePartial}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        const ok = window.confirm(
+                          "지분거래는 건물 및 토지의 신고면적 기준이 일반 거래와 다를 수 있습니다. 포함하면 일부 면적·단가·회귀 결과가 달라질 수 있습니다.\n\n취소하면 지금처럼 제외합니다.",
+                        );
+                        if (!ok) return;
+                      }
+                      setIncludePartial(e.target.checked);
+                    }}
+                  />
+                  지분거래 포함
+                </label>
+                <span className="text-[10px] text-slate-500 leading-snug">
+                  기본은 제외. 목록에는 지분 행이 그대로 보입니다.
+                </span>
+              </div>
               <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs">
                 <label className="flex items-center gap-1">
                   <input
@@ -1609,6 +1633,9 @@ export default function App() {
                     result={regM.data.primary}
                     assetType={assetType}
                     responseScale={appliedResponseScale}
+                    includePartial={regM.data.include_partial}
+                    partialTxCount={regM.data.partial_tx_count}
+                    partialNNote={regM.data.partial_n_note}
                   />
                   <RegressionScatterSection
                     data={regM.data}

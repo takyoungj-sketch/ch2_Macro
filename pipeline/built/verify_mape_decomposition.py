@@ -429,7 +429,7 @@ def main() -> None:
     req = build_request(args)
     engine = get_built_engine()
     with engine.connect() as conn:
-        wide_df, req, addr4_city, _mode = _prepare_regression_scope(conn, req)
+        wide_df, req, addr4_city, _mode, _partial_tx_count = _prepare_regression_scope(conn, req)
         level = _focus_admin_level(req, addr4_city)
         df = _scope_for_level(wide_df, req, level, addr4_city, _mode)
 

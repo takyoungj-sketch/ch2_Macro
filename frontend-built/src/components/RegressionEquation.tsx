@@ -2,6 +2,7 @@ import { useState } from "react";
 import clsx from "clsx";
 import type { AssetType, PredictOptions, RegressionCoeff, ResponseScale } from "../types";
 import {
+  dummyReferenceRows,
   EQUATION_SIG_P,
   formatCoefValue,
   isEquationSignificant,
@@ -50,14 +51,7 @@ export default function RegressionEquation({
 
   const visible = showAll ? [...sig, ...nonsig] : sig;
   const hiddenCount = nonsig.length;
-  const referenceCandidates: Array<[string, string]> = [
-    ["용도지역", predictOptions?.zone_reference ?? ""],
-    ["건축물용도", predictOptions?.building_use_reference ?? ""],
-    ["도로조건", predictOptions?.road_width_reference ?? ""],
-    ["자산유형", predictOptions?.asset_type_reference ?? ""],
-    ["지역", predictOptions?.region_reference ?? ""],
-  ];
-  const references = referenceCandidates.filter(([, value]) => Boolean(value));
+  const references = dummyReferenceRows(predictOptions, assetType);
 
   return (
     <div className="space-y-1">
@@ -105,7 +99,7 @@ export default function RegressionEquation({
       </p>
       {references.length > 0 && (
         <p className="text-[10px] text-slate-500">
-          기준 범주: {references.map(([label, value]) => `${label}=${value}`).join(" · ")}
+          기준 범주: {references.map((r) => `${r.kind}=${r.display}`).join(" · ")}
         </p>
       )}
     </div>

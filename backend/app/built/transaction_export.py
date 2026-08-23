@@ -52,7 +52,6 @@ def built_transactions_csv_bytes(
     types = parse_asset_types(asset_type)
     show_asset = asset_type is None or is_unified(asset_type)
     only_detached = types == ["detached"]
-    show_zone = not only_detached
     use_label = "주택유형" if only_detached else "건축물용도"
 
     buf = io.StringIO()
@@ -62,29 +61,37 @@ def built_transactions_csv_bytes(
         *(["유형"] if show_asset else []),
         "주소",
         "계약일",
-        *(["용도지역"] if show_zone else []),
+        "용도지역",
         use_label,
+        "구조",
         "금액(만원)",
         "연면적(㎡)",
         "대지면적(㎡)",
         "연식",
         "도로조건",
+        "지분",
+        "복원지번",
+        "매칭등급",
     ]
     writer.writerow(header)
     for r in rows:
         row_asset = str(r.get("asset_type") or "")
-        zone_val = "" if row_asset == "detached" else (r.get("zone_type") or "")
+        share_val = "지분" if r.get("is_partial_ownership") else ""
         line = [
             *( [ASSET_TYPE_LABELS.get(row_asset, row_asset)] if show_asset else [] ),
             r.get("display_address") or "",
             format_contract_date_csv(r),
-            *( [zone_val] if show_zone else [] ),
+            r.get("zone_type") or "",
             r.get("building_use") or "",
+            r.get("structure_group") or "",
             "" if r.get("price") is None else r["price"],
             "" if r.get("gross_area") is None else r["gross_area"],
             "" if r.get("land_area") is None else r["land_area"],
             "" if r.get("building_age") is None else r["building_age"],
             r.get("road_width_label") or "",
+            share_val,
+            r.get("recovered_lot") or "",
+            r.get("match_tier") or "",
         ]
         writer.writerow(line)
     return buf.getvalue().encode("utf-8")

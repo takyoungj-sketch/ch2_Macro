@@ -1,7 +1,8 @@
 import clsx from "clsx";
 import { StatsGlossaryHelp } from "@ch2/stats-glossary";
-import type { AssetType, RegressionCoeff, ResponseScale } from "../types";
+import type { AssetType, PredictOptions, RegressionCoeff, ResponseScale } from "../types";
 import {
+  dummyReferenceRows,
   fmtDecimal,
   interpretCoefficient,
   isEquationSignificant,
@@ -14,19 +15,22 @@ export default function RegressionEffectsTable({
   coefficients,
   responseScale,
   assetType,
+  predictOptions,
 }: {
   coefficients: RegressionCoeff[];
   responseScale: ResponseScale;
   assetType: AssetType;
+  predictOptions?: PredictOptions | null;
 }) {
   const sorted = sortCoefficientsByVariableOrder(coefficients);
+  const refs = dummyReferenceRows(predictOptions, assetType);
 
   const renderRow = (c: RegressionCoeff) => {
     const sig = isEquationSignificant(c.p_value);
     return (
       <tr key={c.name} className={clsx(sig && sigRowClass)}>
         <td>{shortCoefName(c.name, assetType)}</td>
-        <td>{interpretCoefficient(c, responseScale, assetType)}</td>
+        <td>{interpretCoefficient(c, responseScale, assetType, predictOptions)}</td>
         <td className="text-right tabular-nums">{c.std_err?.toFixed(2) ?? "—"}</td>
         <td className="text-right tabular-nums">{c.t_value?.toFixed(2) ?? "—"}</td>
         <td className="text-right tabular-nums">{fmtDecimal(c.p_value, 5)}</td>
@@ -61,7 +65,21 @@ export default function RegressionEffectsTable({
             </th>
           </tr>
         </thead>
-        <tbody className="text-slate-800 dark:text-slate-200">{sorted.map(renderRow)}</tbody>
+        <tbody className="text-slate-800 dark:text-slate-200">
+          {sorted.map(renderRow)}
+          {refs.map((r) => (
+            <tr key={r.key} className="bg-slate-50 dark:bg-slate-800/40 text-slate-600 dark:text-slate-300">
+              <td>
+                {r.label}
+                <span className="ml-1 text-[10px] text-indigo-700 dark:text-indigo-300">기준</span>
+              </td>
+              <td>더미에 넣지 않습니다. 다른 {r.kind} 계수는 이 값 대비입니다.</td>
+              <td className="text-right tabular-nums">—</td>
+              <td className="text-right tabular-nums">—</td>
+              <td className="text-right tabular-nums">—</td>
+            </tr>
+          ))}
+        </tbody>
       </table>
     </div>
   );

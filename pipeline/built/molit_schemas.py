@@ -42,6 +42,7 @@ COMMERCIAL_FACTORY = BuiltMolitSchema(
         "floor": 11,
         "contract_ym": 14,
         "contract_day": 15,
+        "share_raw": 16,
         "building_year": 17,
         "deal_type": 19,
     },

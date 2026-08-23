@@ -1,0 +1,360 @@
+{
+  "as_of": "2026-08-22",
+  "sido": [
+    "30",
+    "43"
+  ],
+  "n_buildings": 2127,
+  "n_tx": 280090,
+  "buckets": {
+    "agree": {
+      "n": 1096,
+      "n_tx": 233168
+    },
+    "pnu_new": {
+      "n": 22,
+      "n_tx": 2499
+    },
+    "conflict": {
+      "n": 1,
+      "n_tx": 108
+    },
+    "pnu_multi_kapt": {
+      "n": 24,
+      "n_tx": 7787
+    },
+    "pnu_no_kapt": {
+      "n": 984,
+      "n_tx": 36528
+    },
+    "tx_pnu_fail": {
+      "n": 0,
+      "n_tx": 0
+    }
+  },
+  "kapt_pnu_vs_lotkey": {
+    "agree": 20273,
+    "diff": 936,
+    "missing": 442
+  },
+  "title_latest_snapshot": [
+    {
+      "sido_code": "30",
+      "n_building": 13921,
+      "n_pnu": 5919
+    },
+    {
+      "sido_code": "43",
+      "n_building": 16264,
+      "n_pnu": 5324
+    }
+  ],
+  "households_title_sum_vs_kapt_unique_pnu": {
+    "n": 1256,
+    "exact": 1127,
+    "within_10pct": 1194,
+    "examples_big_diff": [
+      {
+        "pnu": "4311210100109280000",
+        "name": "푸르지오캐슬",
+        "n_dong": 5,
+        "title_sum": 160,
+        "kapt": 3599,
+        "diff": -3439
+      },
+      {
+        "pnu": "3011010700101780000",
+        "name": "주공아파트",
+        "n_dong": 8,
+        "title_sum": 1016,
+        "kapt": 2146,
+        "diff": -1130
+      },
+      {
+        "pnu": "3017010300101930000",
+        "name": "경남아파트",
+        "n_dong": 4,
+        "title_sum": 464,
+        "kapt": 1475,
+        "diff": -1011
+      },
+      {
+        "pnu": "4313011800112310000",
+        "name": "연수주공영구임대아파트",
+        "n_dong": 9,
+        "title_sum": 1639,
+        "kapt": 630,
+        "diff": 1009
+      },
+      {
+        "pnu": "4311231038103780000",
+        "name": "청주가마힐데스하임",
+        "n_dong": 20,
+        "title_sum": 988,
+        "kapt": 20,
+        "diff": 968
+      },
+      {
+        "pnu": "3011010700102360000",
+        "name": null,
+        "n_dong": 7,
+        "title_sum": 716,
+        "kapt": 1436,
+        "diff": -720
+      },
+      {
+        "pnu": "3011010700102390000",
+        "name": "상가",
+        "n_dong": 14,
+        "title_sum": 1699,
+        "kapt": 2359,
+        "diff": -660
+      },
+      {
+        "pnu": "4311311400133660000",
+        "name": "금호어울림1단지",
+        "n_dong": 18,
+        "title_sum": 648,
+        "kapt": 1234,
+        "diff": -586
+      },
+      {
+        "pnu": "4313011800112270000",
+        "name": "연수주공아파트",
+        "n_dong": 10,
+        "title_sum": 320,
+        "kapt": 860,
+        "diff": -540
+      },
+      {
+        "pnu": "3011011700110010000",
+        "name": "신동아파밀리에아파트3단지",
+        "n_dong": 7,
+        "title_sum": 153,
+        "kapt": 679,
+        "diff": -526
+      }
+    ]
+  },
+  "examples": {
+    "conflict": [
+      {
+        "building_key": "384cca230a29b8e5ac01761f47a50225ff64beb440a2a2e93454aeccbf7af010",
+        "beopjungri_code": "3017010100",
+        "lot_number": "616",
+        "tx_pnu": "3017010100106160000",
+        "match_tier": "B",
+        "addr_danji": "A30284001",
+        "pnu_danji": [
+          "A30221002"
+        ],
+        "n_tx": 108
+      }
+    ],
+    "pnu_new": [
+      {
+        "building_key": "c8db3a27780c2df8622b4246500bd49c2c2bf3380d484aea1a614f4ae5212770",
+        "beopjungri_code": "4313011800",
+        "lot_number": "1227",
+        "tx_pnu": "4313011800112270000",
+        "match_tier": "Z",
+        "addr_danji": null,
+        "pnu_danji": [
+          "A38075717"
+        ],
+        "n_tx": 413
+      },
+      {
+        "building_key": "8b83b4dc794c0cbd3846b04e67dba5be6bfccec01e1ce01570e7af2503278087",
+        "beopjungri_code": "3017010100",
+        "lot_number": "274-1",
+        "tx_pnu": "3017010100102740001",
+        "match_tier": "F",
+        "addr_danji": null,
+        "pnu_danji": [
+          "A30274209"
+        ],
+        "n_tx": 335
+      },
+      {
+        "building_key": "ab973ceec6d71e7e7a1dc7fa7c6bd48429f1df33fccfe6272ee5c7c282443183",
+        "beopjungri_code": "4311410300",
+        "lot_number": "890",
+        "tx_pnu": "4311410300108900000",
+        "match_tier": "Z",
+        "addr_danji": null,
+        "pnu_danji": [
+          "A36081915"
+        ],
+        "n_tx": 276
+      },
+      {
+        "building_key": "0d8756ffde130e0f42f5385a0d44994c843236ec5b902a31022ceba76d1863bd",
+        "beopjungri_code": "4311310400",
+        "lot_number": "577",
+        "tx_pnu": "4311310400105770000",
+        "match_tier": "Z",
+        "addr_danji": null,
+        "pnu_danji": [
+          "A36179902"
+        ],
+        "n_tx": 264
+      },
+      {
+        "building_key": "04f6351c6b916f2467794eb1618d6d3f5d25042ae827ba6723c529f771c78031",
+        "beopjungri_code": "4375037027",
+        "lot_number": "1088",
+        "tx_pnu": "4375037027110880000",
+        "match_tier": "Z",
+        "addr_danji": null,
+        "pnu_danji": [
+          "A10028144"
+        ],
+        "n_tx": 164
+      },
+      {
+        "building_key": "551792cdda028a99a535dffdeb5c9cc81910637ff1075cc9111d463a8cd3f260",
+        "beopjungri_code": "3017011000",
+        "lot_number": "165",
+        "tx_pnu": "3017011000101650000",
+        "match_tier": "Z",
+        "addr_danji": null,
+        "pnu_danji": [
+          "A10027252"
+        ],
+        "n_tx": 131
+      },
+      {
+        "building_key": "5b1e346a8a7ec7701c519ccc47e096180a4d368512ebbf191ac91a7a6f16d2a0",
+        "beopjungri_code": "3011011700",
+        "lot_number": "23-3",
+        "tx_pnu": "3011011700100230003",
+        "match_tier": null,
+        "addr_danji": null,
+        "pnu_danji": [
+          "A10023421"
+        ],
+        "n_tx": 110
+      },
+      {
+        "building_key": "ee5b6e924f0bb64c55cd80469bc011dec7bad329bcc893f2b78eb6b5d11c5314",
+        "beopjungri_code": "4313010500",
+        "lot_number": "1060",
+        "tx_pnu": "4313010500110600000",
+        "match_tier": "Z",
+        "addr_danji": null,
+        "pnu_danji": [
+          "A38095003"
+        ],
+        "n_tx": 110
+      }
+    ],
+    "pnu_multi_kapt": [
+      {
+        "building_key": "52b239f678cd9c3c55357e793f864517de9939ff22c5e2fa49513f0be041ae44",
+        "beopjungri_code": "3017011600",
+        "lot_number": "999",
+        "tx_pnu": "3017011600109990000",
+        "match_tier": "D",
+        "addr_danji": null,
+        "pnu_danji": [
+          "A30275802",
+          "A30275803"
+        ],
+        "n_tx": 958
+      },
+      {
+        "building_key": "076fe55078fb38123b39ca9df178568aad742edf46efeba27c0490d2d8eaf4a9",
+        "beopjungri_code": "3017011600",
+        "lot_number": "1148",
+        "tx_pnu": "3017011600111480000",
+        "match_tier": "D",
+        "addr_danji": null,
+        "pnu_danji": [
+          "A30272301",
+          "A30272306"
+        ],
+        "n_tx": 845
+      },
+      {
+        "building_key": "919bfe7f15b55bd0af956fdc984636107a5024c6e84b8ef23a4138acfadb91bd",
+        "beopjungri_code": "4313011800",
+        "lot_number": "686",
+        "tx_pnu": "4313011800106860000",
+        "match_tier": "D",
+        "addr_danji": null,
+        "pnu_danji": [
+          "A38078103",
+          "A38078104"
+        ],
+        "n_tx": 603
+      },
+      {
+        "building_key": "e75995fa162b823f36c34ab2a1d9bf07a486e53da2c488a05fb77e22b4dc3fb9",
+        "beopjungri_code": "3017011200",
+        "lot_number": "1388",
+        "tx_pnu": "3017011200113880000",
+        "match_tier": "D",
+        "addr_danji": null,
+        "pnu_danji": [
+          "A30212102",
+          "A30277303"
+        ],
+        "n_tx": 460
+      },
+      {
+        "building_key": "e354eb71304eaf01d00b4d37ce54ab682e43a1a60e45eb36d5b767cecc7b8371",
+        "beopjungri_code": "4311210600",
+        "lot_number": "1200",
+        "tx_pnu": "4311210600112000000",
+        "match_tier": "D",
+        "addr_danji": null,
+        "pnu_danji": [
+          "A36176708",
+          "A36176713"
+        ],
+        "n_tx": 447
+      },
+      {
+        "building_key": "c2199b0a2309c0bf7fc49c1c0f9973333a27c93fe147f1afa6b45162b69c6978",
+        "beopjungri_code": "3014011500",
+        "lot_number": "10",
+        "tx_pnu": "3014011500100100000",
+        "match_tier": "D",
+        "addr_danji": null,
+        "pnu_danji": [
+          "A30114003",
+          "A30183303"
+        ],
+        "n_tx": 430
+      },
+      {
+        "building_key": "03c737736fc4c4c047f1e892956242e44abd547eb50be8b276316f8f97f21b95",
+        "beopjungri_code": "4311210700",
+        "lot_number": "314",
+        "tx_pnu": "4311210700103140000",
+        "match_tier": "D",
+        "addr_danji": null,
+        "pnu_danji": [
+          "A36115003",
+          "A36178709"
+        ],
+        "n_tx": 376
+      },
+      {
+        "building_key": "5a5f89b599ce8b4293feaa64814202fcf44193de7f064d7d77b7055320fec33a",
+        "beopjungri_code": "4311210600",
+        "lot_number": "1261",
+        "tx_pnu": "4311210600112610000",
+        "match_tier": "D",
+        "addr_danji": null,
+        "pnu_danji": [
+          "A36176809",
+          "A36176811"
+        ],
+        "n_tx": 346
+      }
+    ]
+  },
+  "note": "매칭 테이블은 바꾸지 않음. pnu_new는 주소 규칙이 못 붙인 단지에 PNU가 유일 K-apt를 가리키는 건. pnu_multi_kapt는 분평주공3류(같은 필지 복수 단지). households 표제부 합은 동 단위 [40]이라 단지 세대수와 다를 수 있음."
+}

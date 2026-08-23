@@ -34,6 +34,7 @@
 | 유형 필터 | 상업·공장: **`유형 = 일반`** (`집합` → `collective_commercial_*`, D-018). 단독: **전량** |
 | 연도 범위 | **2021~2026** (폴더 내 시도별 CSV 전부) |
 | 해제 | **`해제사유발생일`** 이 유효 날짜 패턴인 행 **제외** (집합 `refine.py` cancel regex 패턴 참고) |
+| 지분 | 상업·공장 CSV **`지분구분`(iloc 16)** 적재. 금액·면적은 수정하지 않음. 목록 표시·분석 기본 제외는 **D-049** [`BUILT_SHARE_TRANSACTION_POLICY.md`](BUILT_SHARE_TRANSACTION_POLICY.md). 단독은 원천 칸 없음 |
 | dedupe | **semantic `transaction_hash`** — 기존 `import_refined._tx_hash` 공식 **유지** |
 | 도로 | MOLIT **`도로조건`** → `road_width_label` (원문). **`road_code` = NULL** (컬럼 deprecated, DDL 유지·회귀 Phase B에서 더미 전환) |
 | GUKTO fallback | **제거** (코드 default `molit` only) |

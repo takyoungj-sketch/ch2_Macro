@@ -21,6 +21,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 log = logging.getLogger(__name__)
 
 DDL_029 = REPO / "db" / "029_built_scope_stats.sql"
+DDL_067 = REPO / "db" / "067_built_partial_ownership.sql"
 
 ASSET_TYPES = ("commercial", "factory", "detached", "all")
 DEFAULT_WINDOWS = (3, 5)
@@ -29,14 +30,15 @@ UPSERT_SQL = text(
     """
     INSERT INTO built_scope_stats (
         asset_type, addr1, addr2, as_of_month, window_years,
-        tx_count, median_price, mean_price, updated_at
+        tx_count, partial_tx_count, median_price, mean_price, updated_at
     ) VALUES (
         :asset_type, :addr1, :addr2, :as_of_month, :window_years,
-        :tx_count, :median_price, :mean_price, NOW()
+        :tx_count, :partial_tx_count, :median_price, :mean_price, NOW()
     )
     ON CONFLICT (asset_type, addr1, addr2, as_of_month, window_years)
     DO UPDATE SET
         tx_count = EXCLUDED.tx_count,
+        partial_tx_count = EXCLUDED.partial_tx_count,
         median_price = EXCLUDED.median_price,
         mean_price = EXCLUDED.mean_price,
         updated_at = NOW()
@@ -48,8 +50,10 @@ AGG_SQL_TEMPLATE = """
         addr1,
         COALESCE(addr2, '') AS addr2,
         COUNT(*)::bigint AS tx_count,
-        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price) AS median_price,
-        AVG(price)::numeric(14,2) AS mean_price
+        COUNT(*) FILTER (WHERE is_partial_ownership IS TRUE)::bigint AS partial_tx_count,
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price)
+            FILTER (WHERE is_partial_ownership IS NOT TRUE) AS median_price,
+        AVG(price) FILTER (WHERE is_partial_ownership IS NOT TRUE)::numeric(14,2) AS mean_price
     FROM built_transactions
     WHERE is_valid = true
       AND price IS NOT NULL AND price > 0
@@ -61,10 +65,12 @@ AGG_SQL_TEMPLATE = """
 
 
 def ensure_schema(engine) -> None:
-    if DDL_029.is_file():
-        with engine.begin() as conn:
+    with engine.begin() as conn:
+        if DDL_029.is_file():
             conn.execute(text(DDL_029.read_text(encoding="utf-8")))
-        log.info("schema ready (%s)", DDL_029.name)
+        if DDL_067.is_file():
+            conn.execute(text(DDL_067.read_text(encoding="utf-8")))
+    log.info("schema ready (%s)", ", ".join(p.name for p in (DDL_029, DDL_067) if p.is_file()))
 
 
 def _resolve_as_of(conn, as_of: str | None) -> date:
@@ -110,6 +116,7 @@ def build_for_window(
                     "as_of_month": as_of_month,
                     "window_years": window_years,
                     "tx_count": int(row["tx_count"] or 0),
+                    "partial_tx_count": int(row["partial_tx_count"] or 0),
                     "median_price": row["median_price"],
                     "mean_price": row["mean_price"],
                 },

@@ -21,9 +21,12 @@ from app.built.schemas import (
     CorrelationPoint,
     CorrelationSeries,
     PartialRegressionSeries,
+    FunnelReason,
+    FunnelStep,
     PredictOptions,
     RegressionCoeff,
     RegressionLevelResult,
+    SampleBreakdown,
     RegressionPredictRequest,
     RegressionPredictResponse,
     RegressionRunRequest,
@@ -135,10 +138,12 @@ class DesignMeta:
     feature_columns: list[str] = field(default_factory=list)
     zone_types: list[str] = field(default_factory=list)
     building_uses: list[str] = field(default_factory=list)
+    structure_groups: list[str] = field(default_factory=list)
     road_width_labels: list[str] = field(default_factory=list)
     asset_types: list[str] = field(default_factory=list)
     zone_reference: str | None = None
     building_use_reference: str | None = None
+    structure_reference: str | None = None
     road_width_reference: str | None = None
     asset_type_reference: str | None = None
     region_leaves: list[str] = field(default_factory=list)
@@ -154,10 +159,12 @@ def _meta_to_predict_options(meta: DesignMeta | None) -> PredictOptions | None:
     return PredictOptions(
         zone_types=meta.zone_types,
         building_uses=meta.building_uses,
+        structure_groups=meta.structure_groups,
         road_width_labels=meta.road_width_labels,
         asset_types=meta.asset_types,
         zone_reference=meta.zone_reference,
         building_use_reference=meta.building_use_reference,
+        structure_reference=meta.structure_reference,
         road_width_reference=meta.road_width_reference,
         asset_type_reference=meta.asset_type_reference,
         region_leaves=meta.region_leaves,
@@ -179,6 +186,7 @@ def _build_where(
     *,
     conn=None,
     include_subregion: bool = True,
+    include_partial: bool | None = None,
 ) -> tuple[str, dict]:
     clauses = ["is_valid = true"]
     params: dict[str, Any] = {}
@@ -262,6 +270,10 @@ def _build_where(
     from app.built.filters import apply_sample_filters_from_request
 
     apply_sample_filters_from_request(clauses, params, req)
+    from app.built.partial_ownership import apply_partial_ownership_filter
+
+    flag = bool(getattr(req, "include_partial", False)) if include_partial is None else include_partial
+    apply_partial_ownership_filter(clauses, include_partial=flag)
     return " AND ".join(clauses), params
 
 
@@ -269,16 +281,27 @@ def _fetch_df(conn, req: RegressionRunRequest, *, include_subregion: bool = True
     from sqlalchemy import text
 
     where, params = _build_where(req, conn=conn, include_subregion=include_subregion)
-    sql = f"""
+    inner = f"""
         SELECT price, gross_area, land_area, building_age, road_code, road_width_label,
                zone_type, building_use, asset_type, contract_year,
                addr1, addr2, addr3, addr4, addr5,
-               sigungu_code, eupmyeondong_code, beopjungri_code
+               sigungu_code, eupmyeondong_code, beopjungri_code,
+               is_partial_ownership, transaction_hash
         FROM built_transactions
         WHERE {where}
     """
+    from app.built.enrichment_join import wrap_tx_enrichment
+
+    sql = wrap_tx_enrichment(inner)
     rows = conn.execute(text(sql), params).mappings().all()
-    return pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return df
+    if "zone_type_first" in df.columns:
+        df["zone_type"] = df["zone_type_first"]
+        df = df.drop(columns=["zone_type_filled", "zone_type_first"], errors="ignore")
+    df = df.drop(columns=["transaction_hash"], errors="ignore")
+    return df
 
 
 def _uses_addr4_leaf(df: pd.DataFrame) -> bool:
@@ -382,7 +405,24 @@ def _finalize_addr4_city(
 def _prepare_regression_scope(
     conn,
     req: RegressionRunRequest,
-) -> tuple[pd.DataFrame, RegressionRunRequest, bool, CompareMode]:
+) -> tuple[pd.DataFrame, RegressionRunRequest, bool, CompareMode, int]:
+    from sqlalchemy import text
+
+    where_all, params_all = _build_where(
+        req, conn=conn, include_subregion=False, include_partial=True
+    )
+    partial_tx_count = int(
+        conn.execute(
+            text(
+                f"""
+                SELECT COUNT(*) FROM built_transactions
+                WHERE {where_all} AND is_partial_ownership IS TRUE
+                """
+            ),
+            params_all,
+        ).scalar()
+        or 0
+    )
     wide_df = _fetch_df(conn, req, include_subregion=False)
     if req.exclude_outliers_iqr:
         wide_df = _iqr_filter(wide_df, "price", req.outlier_iqr_multiplier)
@@ -390,7 +430,7 @@ def _prepare_regression_scope(
     req = _normalize_leaf_fields(req, wide_df, addr4_city=addr4_city_hint)
     addr4_city = _finalize_addr4_city(conn, req, wide_df)
     mode = _compare_mode(req, addr4_city)
-    return wide_df, req, addr4_city, mode
+    return wide_df, req, addr4_city, mode, partial_tx_count
 
 
 def _has_unit_region_scope(req: RegressionRunRequest) -> bool:
@@ -504,6 +544,8 @@ def _coef_display_name(name: str, *, response_scale: ResponseScale = "linear") -
         return name[5:]
     if name.startswith("use_"):
         return name[4:]
+    if name.startswith("struct_"):
+        return name[7:]
     if name.startswith("road_"):
         return name[5:]
     if name.startswith("atype_"):
@@ -827,10 +869,7 @@ def _build_design_matrix(
         X = pd.concat([X, d], axis=1)
 
     if vars_spec.zone_type_dummy and "zone_type" in df.columns:
-        zt = df["zone_type"].copy()
-        if unified and "asset_type" in df.columns:
-            zt = zt.where(df["asset_type"].astype(str) != "detached")
-        zt = zt.fillna("(null)").astype(str)
+        zt = df["zone_type"].fillna("(null)").astype(str)
         cats = sorted(zt.unique().tolist())
         if len(cats) > 1 or (len(cats) == 1 and cats[0] != "(null)"):
             meta.zone_types = cats
@@ -845,6 +884,15 @@ def _build_design_matrix(
         meta.building_use_reference = cats[0] if len(cats) > 1 else None
         d = pd.get_dummies(bu, prefix="use", drop_first=True)
         X = pd.concat([X, d], axis=1)
+
+    if vars_spec.structure_dummy and "structure_group" in df.columns:
+        sg = df["structure_group"].fillna("(null)").astype(str)
+        cats = sorted(sg.unique().tolist())
+        if len(cats) > 1 or (len(cats) == 1 and cats[0] != "(null)"):
+            meta.structure_groups = cats
+            meta.structure_reference = cats[0] if len(cats) > 1 else None
+            d = pd.get_dummies(sg, prefix="struct", drop_first=True)
+            X = pd.concat([X, d], axis=1)
 
     if unified and vars_spec.asset_type_dummy and "asset_type" in df.columns:
         at = df["asset_type"].fillna("(null)").astype(str)
@@ -897,6 +945,136 @@ def _build_design_matrix(
     return y_out, X_out, meta
 
 
+_VAR_DROP_ORDER = (
+    "missing_gross",
+    "missing_land",
+    "missing_age",
+    "missing_road",
+    "nonpositive_area",
+    "other",
+)
+_VAR_DROP_LABELS = {
+    "missing_gross": "연면적 결측",
+    "missing_land": "대지면적 결측",
+    "missing_age": "연식 결측",
+    "missing_road": "도로코드 결측",
+    "nonpositive_area": "면적 0 이하 (log-log)",
+    "other": "기타 결측",
+}
+
+
+def _cell_num(row: pd.Series, col: str) -> float:
+    if col not in row.index:
+        return float("nan")
+    return pd.to_numeric(row[col], errors="coerce")
+
+
+def _row_drop_reason(
+    row: pd.Series,
+    vars_spec: RegressionVariableSpec,
+    *,
+    response_scale: ResponseScale,
+) -> tuple[str, str]:
+    """적합에서 빠진 한 행의 첫 사유. 한 행은 한 칸만 탄다."""
+    price = _cell_num(row, "price")
+    if pd.isna(price):
+        return "no_price", "금액 없음"
+    if _uses_log_y(response_scale) and float(price) <= 0:
+        return "nonpositive_price", "금액 0 이하 (로그 모형)"
+    if vars_spec.gross_area:
+        g = _cell_num(row, "gross_area")
+        if pd.isna(g):
+            return "missing_gross", _VAR_DROP_LABELS["missing_gross"]
+        if _is_loglog(response_scale) and float(g) <= 0:
+            return "nonpositive_area", _VAR_DROP_LABELS["nonpositive_area"]
+    if vars_spec.land_area:
+        a = _cell_num(row, "land_area")
+        if pd.isna(a):
+            return "missing_land", _VAR_DROP_LABELS["missing_land"]
+        if _is_loglog(response_scale) and float(a) <= 0:
+            return "nonpositive_area", _VAR_DROP_LABELS["nonpositive_area"]
+    if vars_spec.building_age and pd.isna(_cell_num(row, "building_age")):
+        return "missing_age", _VAR_DROP_LABELS["missing_age"]
+    if vars_spec.road_code and pd.isna(_cell_num(row, "road_code")):
+        return "missing_road", _VAR_DROP_LABELS["missing_road"]
+    return "other", _VAR_DROP_LABELS["other"]
+
+
+def _count_funnel_reasons(pairs: list[tuple[str, str]]) -> list[FunnelReason]:
+    counts: dict[str, int] = {}
+    labels: dict[str, str] = {}
+    seen: list[str] = []
+    for code, label in pairs:
+        if code not in counts:
+            seen.append(code)
+            labels[code] = label
+            counts[code] = 0
+        counts[code] += 1
+    ordered = [c for c in _VAR_DROP_ORDER if c in counts] + [c for c in seen if c not in _VAR_DROP_ORDER]
+    return [FunnelReason(code=c, label=labels[c], n=counts[c]) for c in ordered]
+
+
+def build_sample_funnel(
+    df: pd.DataFrame,
+    vars_spec: RegressionVariableSpec,
+    *,
+    fitted_index: pd.Index,
+    response_scale: ResponseScale,
+) -> SampleBreakdown:
+    """조회 표본에서 적합 표본이 어떻게 남는지. 더미 결측은 (null) 범주로 들어가 탈락하지 않는다."""
+    n_pool = int(len(df))
+    n_fit = int(len(fitted_index))
+    funnel: list[FunnelStep] = [
+        FunnelStep(code="pool", label="조회 표본", n=n_pool, kind="remain"),
+    ]
+    if n_pool == 0:
+        funnel.append(FunnelStep(code="fit", label="적합 표본", n=0, kind="remain"))
+        return SampleBreakdown(n_pool=0, n_fit=0, funnel=funnel)
+
+    dropped = df.loc[df.index.difference(fitted_index)]
+    price_pairs: list[tuple[str, str]] = []
+    var_pairs: list[tuple[str, str]] = []
+    for _, row in dropped.iterrows():
+        code, label = _row_drop_reason(row, vars_spec, response_scale=response_scale)
+        if code in ("no_price", "nonpositive_price"):
+            price_pairs.append((code, label))
+        else:
+            var_pairs.append((code, label))
+
+    if price_pairs:
+        funnel.append(
+            FunnelStep(
+                code="price_drop",
+                label="금액 없음·0 이하",
+                n=len(price_pairs),
+                kind="drop",
+                note="로그 모형은 금액이 0보다 커야 합니다.",
+                reasons=_count_funnel_reasons(price_pairs),
+            )
+        )
+    if var_pairs:
+        funnel.append(
+            FunnelStep(
+                code="var_drop",
+                label="선택 변수 결측",
+                n=len(var_pairs),
+                kind="drop",
+                note="지금 켠 연속변수에 값이 없는 거래입니다. 더미(용도지역·구조 등) 결측은 (null) 범주로 남고 여기서는 빠지지 않습니다.",
+                reasons=_count_funnel_reasons(var_pairs),
+            )
+        )
+    funnel.append(
+        FunnelStep(
+            code="fit",
+            label="적합 표본",
+            n=n_fit,
+            kind="remain",
+            note="선택 변수 complete-case. 회귀식 n과 같습니다.",
+        )
+    )
+    return SampleBreakdown(n_pool=n_pool, n_fit=n_fit, funnel=funnel)
+
+
 def _input_to_x_row(
     meta: DesignMeta,
     vars_spec: RegressionVariableSpec,
@@ -939,6 +1117,18 @@ def _input_to_x_row(
                 row[c] = 0.0
         if meta.building_use_reference and u != meta.building_use_reference:
             key = f"use_{u}"
+            if key in row:
+                row[key] = 1.0
+
+    if vars_spec.structure_dummy and meta.structure_groups:
+        s = inp.structure_group or meta.structure_reference or meta.structure_groups[0]
+        if s not in meta.structure_groups:
+            raise ValueError(f"구조 '{s}' — 모형에 없는 값입니다.")
+        for c in meta.feature_columns:
+            if c.startswith("struct_"):
+                row[c] = 0.0
+        if meta.structure_reference and s != meta.structure_reference:
+            key = f"struct_{s}"
             if key in row:
                 row[key] = 1.0
 
@@ -1043,6 +1233,9 @@ def _fit_ols(
             equation="",
             coefficients=[],
             warning="표본 0건",
+            sample=build_sample_funnel(
+                df, vars_spec, fitted_index=df.index[:0], response_scale=response_scale
+            ),
         )
 
     region_col = None
@@ -1072,6 +1265,9 @@ def _fit_ols(
             equation="",
             coefficients=[],
             warning=warn,
+            sample=build_sample_funnel(
+                df, vars_spec, fitted_index=y.index, response_scale=response_scale
+            ),
         )
 
     vif_entries = _compute_vif(X)
@@ -1137,6 +1333,9 @@ def _fit_ols(
         predict_options=_meta_to_predict_options(meta),
         warning=warn,
         mape=mape,
+        sample=build_sample_funnel(
+            df, vars_spec, fitted_index=y.index, response_scale=response_scale
+        ),
     )
 
 
@@ -1350,7 +1549,7 @@ def _ri_label(ri_list: list[RiPick]) -> str:
 def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
     from app.recommendation.scope import built_analysis_scope_from_prepared
 
-    wide_df, req, addr4_city, mode = _prepare_regression_scope(conn, req)
+    wide_df, req, addr4_city, mode, partial_tx_count = _prepare_regression_scope(conn, req)
     unified = is_unified(req.asset_type)
     scale = req.response_scale
     fit_kw = dict(unified=unified, response_scale=scale, addr4_city=addr4_city)
@@ -1384,8 +1583,11 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
         wide_df, req, conn=conn, **scatter_kw
     )
     analysis_scope = built_analysis_scope_from_prepared(
-        req, wide_df=wide_df, addr4_city=addr4_city
+        req, wide_df=wide_df, addr4_city=addr4_city, partial_tx_count=partial_tx_count
     )
+    from app.built.partial_ownership import format_partial_n_note
+
+    include_partial = bool(getattr(req, "include_partial", False))
     return RegressionRunResponse(
         primary=primary,
         comparisons=comparisons,
@@ -1397,6 +1599,11 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
         correlation_scope_label=s_label,
         correlation_n=s_n,
         analysis_scope=analysis_scope,
+        include_partial=include_partial,
+        partial_tx_count=partial_tx_count,
+        partial_n_note=format_partial_n_note(
+            include_partial=include_partial, partial_tx_count=partial_tx_count
+        ),
     )
 
 
@@ -1407,7 +1614,7 @@ def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredict
     from app.built.schemas import ContinuousExtrapolation
 
     scale = req.response_scale
-    wide_df, req, addr4_city, mode = _prepare_regression_scope(conn, req)
+    wide_df, req, addr4_city, mode, _partial_tx_count = _prepare_regression_scope(conn, req)
     focus = _focus_admin_level(req, addr4_city)
     eup_scope = _eup_scope_for_level(req.admin_level, focus, req)
     df = _scope_for_level(
