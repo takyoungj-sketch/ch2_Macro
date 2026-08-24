@@ -130,6 +130,56 @@ function DanjiNotes({ notes }: { notes: string[] }) {
   );
 }
 
+function DanjiLandPricePanel({
+  landPrice,
+}: {
+  landPrice: DanjiAttributesResponse["land_price"];
+}) {
+  const source =
+    landPrice?.source === "individual_official_land_price"
+      ? "개별공시지가(브이월드)"
+      : danjiText(landPrice?.source);
+  return (
+    <div className="modal-table-wrap">
+      <p className={DANJI_SECTION_TITLE}>
+        토지 가치
+        <DanjiBadge label="최신 대표 필지" tone="slate" />
+      </p>
+      <table className="w-full text-xs border-collapse modal-inner-table">
+        <tbody>
+          <tr>
+            <th className={DANJI_TH}>개별공시지가</th>
+            <td className={clsx(DANJI_TD, "tabular-nums")}>
+              {landPrice?.assessed_land_price == null
+                ? "연결된 값 없음"
+                : `${danjiNumber(landPrice.assessed_land_price)} 원/㎡`}
+            </td>
+          </tr>
+          <tr>
+            <th className={DANJI_TH}>공시 기준연도</th>
+            <td className={clsx(DANJI_TD, "tabular-nums")}>
+              {landPrice?.assessed_land_price_year == null
+                ? "—"
+                : `${danjiNumber(landPrice.assessed_land_price_year)}년`}
+            </td>
+          </tr>
+          <tr>
+            <th className={DANJI_TH}>대표 필지 PNU</th>
+            <td className={DANJI_TD}>{danjiText(landPrice?.representative_pnu)}</td>
+          </tr>
+          <tr>
+            <th className={DANJI_TH}>출처</th>
+            <td className={DANJI_TD}>{source}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p className="px-3 pt-1 text-[10px] text-slate-500 dark:text-slate-400">
+        단지 전체 필지 평균이 아니라 기본통계 대표 필지 1개의 최신 원값입니다.
+      </p>
+    </div>
+  );
+}
+
 function DanjiAttributesPanel({ data }: { data: DanjiAttributesResponse }) {
   const { match, builder, brand, scale, structure, classification } = data;
   const risky = !match.usable_for_regression;
@@ -185,6 +235,7 @@ function DanjiAttributesPanel({ data }: { data: DanjiAttributesResponse }) {
     return (
       <div className="space-y-3">
         {banner}
+        <DanjiLandPricePanel landPrice={data.land_price} />
         <div className="modal-card px-3 py-3 space-y-1.5">
           <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">
             연결된 K-apt 단지 정보가 없습니다
@@ -213,6 +264,7 @@ function DanjiAttributesPanel({ data }: { data: DanjiAttributesResponse }) {
   return (
     <div className="space-y-3">
       {banner}
+      <DanjiLandPricePanel landPrice={data.land_price} />
 
       {(match.candidates?.length ?? 0) > 1 && (
         <div className="modal-table-wrap">

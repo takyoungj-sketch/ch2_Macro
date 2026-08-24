@@ -577,6 +577,13 @@ class DanjiClassificationInfo(BaseModel):
     supply_type: Optional[str] = None
 
 
+class DanjiLandPriceInfo(BaseModel):
+    assessed_land_price: Optional[float] = None
+    assessed_land_price_year: Optional[int] = None
+    representative_pnu: Optional[str] = None
+    source: Optional[str] = None
+
+
 class DanjiQualityFlag(BaseModel):
     """K-apt 원본 이상값 — 값은 지우지 않고 사유만 함께 노출한다(설계 §3.1.1)."""
 
@@ -598,5 +605,6 @@ class DanjiAttributesResponse(BaseModel):
     scale: Optional[DanjiScaleInfo] = None
     structure: Optional[DanjiStructureInfo] = None
     classification: Optional[DanjiClassificationInfo] = None
+    land_price: Optional[DanjiLandPriceInfo] = None
     quality_flags: list[DanjiQualityFlag] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)

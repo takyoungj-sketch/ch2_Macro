@@ -667,6 +667,13 @@ export interface DanjiClassificationInfo {
   supply_type?: string | null;
 }
 
+export interface DanjiLandPriceInfo {
+  assessed_land_price?: number | null;
+  assessed_land_price_year?: number | null;
+  representative_pnu?: string | null;
+  source?: string | null;
+}
+
 export interface DanjiQualityFlag {
   code: string;
   label: string;
@@ -686,6 +693,7 @@ export interface DanjiAttributesResponse {
   scale?: DanjiScaleInfo | null;
   structure?: DanjiStructureInfo | null;
   classification?: DanjiClassificationInfo | null;
+  land_price?: DanjiLandPriceInfo | null;
   quality_flags: DanjiQualityFlag[];
   notes: string[];
 }

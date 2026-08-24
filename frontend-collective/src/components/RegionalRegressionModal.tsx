@@ -43,6 +43,10 @@ const WEAK_VARS: Array<[keyof RegionalRegressionVariables, string, string]> = [
   ["structure", "구조", "실측에서 예측 개선 없음"],
   ["builder", "시공사", "실측에서 예측 개선 없음 · 이 지역 표본이 적으면 기타로 묶임"],
 ];
+const LAND_VAR: [keyof RegionalRegressionVariables, string] = [
+  "assessed_land_price",
+  "개별공시지가",
+];
 
 function fmt(n: number | null | undefined, d = 2) {
   if (n == null || Number.isNaN(n)) return "—";
@@ -74,6 +78,7 @@ export default function RegionalRegressionModal(props: Props) {
     structure: false,
     builder: false,
     asset_type_dummy: unified,
+    assessed_land_price: false,
   });
   const [modelType, setModelType] = useState<"linear" | "log">("log");
   const [weightMode, setWeightMode] = useState<"equal" | "tx">("equal");
@@ -116,7 +121,13 @@ export default function RegionalRegressionModal(props: Props) {
   function applyFitted(row: RegionalRegressionRunResponse["fitted"][number]) {
     setPickKey(fittedKey(row));
     if (row.asset_type) {
-      setInputs((s) => ({ ...s, asset_type: row.asset_type }));
+      setInputs((s) => ({
+        ...s,
+        asset_type: row.asset_type,
+        assessed_land_price: row.assessed_land_price ?? s.assessed_land_price,
+      }));
+    } else if (row.assessed_land_price != null) {
+      setInputs((s) => ({ ...s, assessed_land_price: row.assessed_land_price }));
     }
   }
 
@@ -179,6 +190,18 @@ export default function RegionalRegressionModal(props: Props) {
               <span className="text-[10px] text-slate-500">기준 아파트 · 교차항 없음</span>
             </label>
           )}
+          <label
+            className="flex items-center gap-1 pt-1 border-t border-slate-100 dark:border-slate-700"
+            title="기본 통계에 연결된 최신 대표 필지의 개별공시지가(원/㎡)를 원값으로 사용합니다."
+          >
+            <input
+              type="checkbox"
+              checked={vars[LAND_VAR[0]]}
+              onChange={(e) => setVars((v) => ({ ...v, [LAND_VAR[0]]: e.target.checked }))}
+            />
+            {LAND_VAR[1]}
+            <span className="text-[10px] text-slate-500">최신 대표 필지 · 원값</span>
+          </label>
         </section>
 
         <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-1.5">
@@ -236,6 +259,14 @@ export default function RegionalRegressionModal(props: Props) {
                 {w}
               </p>
             ))}
+
+            {data.n < 20 && (
+              <p className="rounded-md border border-amber-200 bg-amber-50/70 px-2.5 py-2 text-[11px] text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                적합 단지가 20곳 미만입니다. 이 창을 닫고 지도에서 같은 시군구의 인접
+                읍·면·동을 추가한 뒤 지역회귀를 다시 실행하세요. 3·5·7년 창과 선택한
+                유형은 그대로 유지됩니다.
+              </p>
+            )}
 
             <SampleFunnel sample={data.sample} />
 
@@ -431,6 +462,14 @@ export default function RegionalRegressionModal(props: Props) {
                     disabled={!vars.parking}
                     step="0.1"
                   />
+                  {vars.assessed_land_price && (
+                    <NumField
+                      label="개별공시지가 (원/㎡)"
+                      value={inputs.assessed_land_price}
+                      onChange={(n) => setInputs((s) => ({ ...s, assessed_land_price: n }))}
+                      step="1"
+                    />
+                  )}
                 </div>
                 {vars.structure && (data.predict_options.structure_group ?? []).length > 0 && (
                   <DummySelect
@@ -493,6 +532,7 @@ export default function RegionalRegressionModal(props: Props) {
 
 function SampleFunnel({ sample }: { sample: SampleBreakdown }) {
   const steps = sample.funnel ?? [];
+  const [detailStep, setDetailStep] = useState<FunnelStep | null>(null);
   if (!steps.length) {
     return (
       <section className="space-y-1">
@@ -522,25 +562,67 @@ function SampleFunnel({ sample }: { sample: SampleBreakdown }) {
         <ul className="list-none divide-y divide-slate-100 dark:divide-slate-700">
           {grouped ? (
             <>
-              <FunnelRow step={pool!} />
+              <FunnelRow step={pool!} onOpenDetail={setDetailStep} />
               <li>
                 <div className="px-2.5 py-1 text-[10px] font-medium text-slate-500 dark:text-slate-400">
                   {matchHeader}
                 </div>
                 <ul className="list-none">
-                  <FunnelRow step={usable!} tree="branch" />
-                  <FunnelRow step={matchDrop!} tree="end" />
+                  <FunnelRow step={usable!} tree="branch" onOpenDetail={setDetailStep} />
+                  <FunnelRow step={matchDrop!} tree="end" onOpenDetail={setDetailStep} />
                 </ul>
               </li>
               {rest.map((step) => (
-                <FunnelRow key={step.code} step={step} />
+                <FunnelRow key={step.code} step={step} onOpenDetail={setDetailStep} />
               ))}
             </>
           ) : (
-            steps.map((step) => <FunnelRow key={step.code} step={step} />)
+            steps.map((step) => (
+              <FunnelRow key={step.code} step={step} onOpenDetail={setDetailStep} />
+            ))
           )}
         </ul>
       </div>
+      {detailStep && (
+        <DraggableModalShell
+          open
+          onClose={() => setDetailStep(null)}
+          titleId="sample-funnel-detail-title"
+          title={`${detailStep.label} 상세`}
+          subtitle="적합 표본에 들어가지 않은 단지의 첫 번째 탈락 사유"
+          maxWidthClass="max-w-md"
+          resizable
+          defaultWidth={460}
+          defaultHeight={360}
+          minWidth={360}
+          minHeight={240}
+        >
+          <div className="space-y-3 text-xs">
+            <div className="rounded-md bg-slate-50 p-3 dark:bg-slate-800/60">
+              <p className="text-slate-500 dark:text-slate-400">{detailStep.label}</p>
+              <p className="mt-1 text-lg font-semibold tabular-nums">
+                {detailStep.n.toLocaleString("ko-KR")}곳
+              </p>
+            </div>
+            {detailStep.note && (
+              <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                {detailStep.note}
+              </p>
+            )}
+            <ul className="list-none divide-y divide-slate-100 rounded-md border border-slate-200 dark:divide-slate-700 dark:border-slate-600">
+              {detailStep.reasons.map((reason) => (
+                <li key={reason.code} className="flex justify-between gap-3 px-3 py-2">
+                  <span>{reason.label}</span>
+                  <span className="tabular-nums">{reason.n.toLocaleString("ko-KR")}곳</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-[10px] text-slate-400">
+              한 단지가 여러 조건에 해당해도 깔때기에서는 첫 번째 사유 하나로만 집계합니다.
+            </p>
+          </div>
+        </DraggableModalShell>
+      )}
     </section>
   );
 }
@@ -548,9 +630,11 @@ function SampleFunnel({ sample }: { sample: SampleBreakdown }) {
 function FunnelRow({
   step,
   tree,
+  onOpenDetail,
 }: {
   step: FunnelStep;
   tree?: "branch" | "end";
+  onOpenDetail: (step: FunnelStep) => void;
 }) {
   const count = step.n.toLocaleString("ko-KR");
   const prefix = tree === "branch" ? "├─ " : tree === "end" ? "└─ " : "";
@@ -566,26 +650,17 @@ function FunnelRow({
   if (step.kind === "drop" && step.n > 0 && step.reasons.length > 0) {
     return (
       <li>
-        <details>
-          <summary className={clsx(rowClass, "cursor-pointer list-none [&::-webkit-details-marker]:hidden")}>
-            <span>
-              {label}
-              <span className="ml-1 font-normal text-[10px] text-slate-400">펼치기</span>
-            </span>
-            <span className="tabular-nums">{count}</span>
-          </summary>
-          <div className={clsx("pb-2 pt-0.5 space-y-1 bg-slate-50 dark:bg-slate-800/50", tree ? "pl-8 pr-2.5" : "px-2.5")}>
-            {step.note && <p className="text-[10px] text-slate-500">{step.note}</p>}
-            <ul className="list-none space-y-0.5">
-              {step.reasons.map((r) => (
-                <li key={r.code} className="flex justify-between gap-3 text-[11px] text-slate-700 dark:text-slate-200">
-                  <span>{r.label}</span>
-                  <span className="tabular-nums">{r.n.toLocaleString("ko-KR")}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </details>
+        <button
+          type="button"
+          className={clsx(rowClass, "w-full cursor-pointer text-left")}
+          onClick={() => onOpenDetail(step)}
+        >
+          <span>
+            {label}
+            <span className="ml-1 font-normal text-[10px] text-slate-400">상세 보기</span>
+          </span>
+          <span className="tabular-nums">{count}</span>
+        </button>
       </li>
     );
   }

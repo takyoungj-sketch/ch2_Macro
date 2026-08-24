@@ -123,6 +123,27 @@ def test_design_structure_dummies_drop_reference():
     assert "struct_철근콘크리트" not in x.columns
 
 
+def test_assessed_land_price_is_optional_raw_regressor():
+    work = pd.DataFrame(
+        {
+            "median": [800.0, 900.0, 1000.0],
+            "match_tier": ["A", "A", "A"],
+            "n_tx": [10, 10, 10],
+            "households": [100.0, 120.0, 140.0],
+            "max_floor": [10.0, 12.0, 14.0],
+            "building_age": [5.0, 6.0, 7.0],
+            "parking_per_household": [1.0, 1.1, 1.2],
+            "assessed_land_price": [120000.0, 150000.0, np.nan],
+        }
+    )
+    v = RegionalRegressionVariables(assessed_land_price=True)
+    eligible = _eligible_mask(work, v)
+    assert eligible.tolist() == [True, True, False]
+    x, labels, _warn = _design(work.loc[eligible], v)
+    assert x["assessed_land_price"].tolist() == [120000.0, 150000.0]
+    assert labels["assessed_land_price"] == "개별공시지가 (원/㎡, 최신 대표 필지)"
+
+
 def test_design_builder_ref_is_most_frequent():
     work = pd.DataFrame(
         {

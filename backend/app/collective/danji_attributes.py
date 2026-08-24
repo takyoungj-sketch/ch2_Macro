@@ -21,6 +21,7 @@ from app.collective.schemas import BuildingStatsRow
 
 ATTRIBUTES_TABLE = "collective_building_attributes"
 BUILDER_MASTER_TABLE = "builder_master"
+LAND_PRICE_TABLE = "collective_building_assessed_land_price"
 _JOINT_SPLIT_RE = re.compile(r"[,/·]|\s+및\s+")
 _HH_LIST_FLAGS = frozenset({"hh_zero", "scale_inconsistent"})
 
@@ -232,6 +233,44 @@ def _ledger_meta(conn: Connection, building_key: str) -> dict[str, Any] | None:
     return dict(row)
 
 
+def _fetch_assessed_land_price(
+    conn: Connection,
+    building_key: str,
+    asset_type: str | None,
+) -> dict[str, Any] | None:
+    """대표 필지 최신 개별공시지가를 단지정보 탭용으로 조회한다."""
+    if not _table_exists(conn, LAND_PRICE_TABLE):
+        return None
+    where = ["building_key = :bk"]
+    params: dict[str, Any] = {"bk": building_key}
+    if asset_type:
+        where.append("asset_type = :asset_type")
+        params["asset_type"] = asset_type
+    row = conn.execute(
+        text(
+            f"""
+            SELECT assessed_land_price, assessed_land_price_year,
+                   representative_pnu, source
+            FROM {LAND_PRICE_TABLE}
+            WHERE {' AND '.join(where)}
+            ORDER BY assessed_land_price_year DESC
+            LIMIT 1
+            """
+        ),
+        params,
+    ).mappings().first()
+    if not row:
+        return None
+    return {
+        "assessed_land_price": _to_float(row["assessed_land_price"]),
+        "assessed_land_price_year": _to_int(row["assessed_land_price_year"]),
+        "representative_pnu": str(row["representative_pnu"]).strip()
+        if row["representative_pnu"]
+        else None,
+        "source": str(row["source"]).strip() if row["source"] else None,
+    }
+
+
 def _latest_snapshot_ym(conn: Connection) -> str | None:
     value = conn.execute(
         text(f"SELECT MAX(snapshot_ym) FROM {ATTRIBUTES_TABLE}")
@@ -343,6 +382,7 @@ def _unmatched_payload(
     notes: list[str],
     brand: dict[str, Any] | None = None,
     dictionary_version: str | None = None,
+    land_price: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     meta = _tier_meta(tier)
     return {
@@ -370,6 +410,7 @@ def _unmatched_payload(
         "scale": None,
         "structure": None,
         "classification": None,
+        "land_price": land_price,
         "quality_flags": [],
         "notes": notes,
     }
@@ -385,6 +426,7 @@ def fetch_danji_attributes(
     ledger = _ledger_meta(conn, building_key)
     ledger_asset_type = str(ledger["asset_type"]) if ledger else None
     ledger_building_year = _to_int(ledger["building_year"]) if ledger else None
+    land_price = _fetch_assessed_land_price(conn, building_key, ledger_asset_type)
 
     if not _table_exists(conn, ATTRIBUTES_TABLE):
         return _unmatched_payload(
@@ -395,6 +437,7 @@ def fetch_danji_attributes(
             rule="no_match",
             match_note=MATCH_NOTE_NO_MATCH,
             notes=_non_apartment_notes(ledger_asset_type),
+            land_price=land_price,
         )
 
     row = _fetch_row(conn, building_key, snapshot_ym)
@@ -408,6 +451,7 @@ def fetch_danji_attributes(
             rule="no_match",
             match_note=MATCH_NOTE_NO_MATCH,
             notes=_non_apartment_notes(ledger_asset_type),
+            land_price=land_price,
         )
 
     ym = str(row["snapshot_ym"]).strip() if row["snapshot_ym"] else None
@@ -474,6 +518,7 @@ def fetch_danji_attributes(
             notes=notes,
             brand=brand_payload if brand_name else None,
             dictionary_version=row["dictionary_version"],
+            land_price=land_price,
         )
 
     match_note = MATCH_NOTE_YEAR_EXACT if year_diff == 0 else None
@@ -526,6 +571,7 @@ def fetch_danji_attributes(
             "danji_class": row["danji_class"],
             "supply_type": row["supply_type"],
         },
+        "land_price": land_price,
         "quality_flags": flags,
         "notes": notes,
     }

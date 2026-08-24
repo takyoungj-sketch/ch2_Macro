@@ -8,6 +8,7 @@ export type RegionalRegressionVariables = {
   structure: boolean;
   builder: boolean;
   asset_type_dummy: boolean;
+  assessed_land_price: boolean;
 };
 
 export type RegionalRegressionRunRequest = {
@@ -30,6 +31,7 @@ export type RegionalRegressionPredictInputs = {
   structure_group?: string | null;
   builder_group?: string | null;
   asset_type?: string | null;
+  assessed_land_price?: number | null;
 };
 
 export type FunnelReason = {
@@ -78,6 +80,7 @@ export type FittedBuildingRow = {
   y_hat: number;
   ape?: number | null;
   asset_type?: string | null;
+  assessed_land_price?: number | null;
 };
 
 export type RegionalRegressionRunResponse = {

@@ -19,6 +19,7 @@ class RegionalRegressionVariables(BaseModel):
     structure: bool = False
     builder: bool = False
     asset_type_dummy: bool = True
+    assessed_land_price: bool = False
 
 
 class RegionalRegressionRunRequest(BaseModel):
@@ -41,6 +42,7 @@ class RegionalRegressionPredictInputs(BaseModel):
     structure_group: Optional[str] = None
     builder_group: Optional[str] = None
     asset_type: Optional[str] = None
+    assessed_land_price: Optional[float] = None
 
 
 class RegionalRegressionPredictRequest(RegionalRegressionRunRequest):
@@ -95,6 +97,7 @@ class FittedBuildingRow(BaseModel):
     y_hat: float
     ape: Optional[float] = None
     asset_type: Optional[str] = None
+    assessed_land_price: Optional[float] = None
 
 
 class RegionalRegressionRunResponse(BaseModel):

@@ -67,6 +67,7 @@ LABELS = {
     "max_floor": "최고층",
     "building_age": "연식",
     "parking_per_household": "세대당 주차",
+    "assessed_land_price": "개별공시지가 (원/㎡, 최신 대표 필지)",
 }
 
 ModelType = Literal["linear", "log"]
@@ -214,6 +215,9 @@ def load_danji_frame(
         "structure_group",
         "builder_group",
         "attr_quality_flags",
+        "assessed_land_price",
+        "assessed_land_price_year",
+        "assessed_land_price_pnu",
     ]
     if not asset_param:
         meta = {
@@ -238,6 +242,7 @@ def load_danji_frame(
     params["as_of"] = as_of
     params["window_years"] = int(req.window_years)
     params["snap"] = snap
+    land_price_select, land_price_join = _assessed_land_price_sql(conn)
 
     rows = conn.execute(
         text(
@@ -246,12 +251,14 @@ def load_danji_frame(
                    m.building_year, m.addr3, m.addr4, m.asset_type,
                    a.match_tier, a.households, a.max_floor, a.parking_per_household,
                    a.approved_year, a.structure_group, a.builder_group,
-                   a.attr_quality_flags
+                   a.attr_quality_flags,
+                   {land_price_select}
             FROM collective_building_stats m
             LEFT JOIN {ATTRIBUTES_TABLE} a
               ON a.building_key = m.building_key
              AND a.asset_type = m.asset_type
              AND a.snapshot_ym = :snap
+            {land_price_join}
             WHERE m.as_of_month = :as_of
               AND m.window_years = :window_years
               AND {region_sql}
@@ -270,7 +277,13 @@ def load_danji_frame(
         vintage = appr.fillna(by)
         df["building_age"] = as_of_year - vintage
         df.loc[(df["building_age"] < 0) | (df["building_age"] > 80), "building_age"] = np.nan
-        for col in ("households", "max_floor", "parking_per_household", "median"):
+        for col in (
+            "households",
+            "max_floor",
+            "parking_per_household",
+            "assessed_land_price",
+            "median",
+        ):
             df[col] = pd.to_numeric(df[col], errors="coerce")
         df["n_tx"] = pd.to_numeric(df["n_tx"], errors="coerce").fillna(0)
         df["asset_type"] = df["asset_type"].fillna("apartment").astype(str)
@@ -299,6 +312,30 @@ def load_danji_frame(
         "regression_types": selected,
     }
     return df, meta
+
+
+def _assessed_land_price_sql(conn: Connection) -> tuple[str, str]:
+    """공시지가 mart가 아직 없는 환경에서도 기존 회귀를 계속 동작시킨다."""
+    exists = conn.execute(
+        text("SELECT to_regclass(:table_name)"),
+        {"table_name": "public.collective_building_assessed_land_price"},
+    ).scalar()
+    if not exists:
+        return (
+            "NULL::numeric AS assessed_land_price, "
+            "NULL::smallint AS assessed_land_price_year, "
+            "NULL::char(19) AS assessed_land_price_pnu",
+            "",
+        )
+    return (
+        "lp.assessed_land_price, lp.assessed_land_price_year, "
+        "lp.representative_pnu AS assessed_land_price_pnu",
+        """
+            LEFT JOIN collective_building_assessed_land_price lp
+              ON lp.building_key = m.building_key
+             AND lp.asset_type = m.asset_type
+        """,
+    )
 
 
 def _scope_label(req: RegionalRegressionRunRequest) -> str:
@@ -343,6 +380,7 @@ VAR_REASON_ORDER = (
     "building_age_missing",
     "parking_flag",
     "parking_missing",
+    "assessed_land_price_missing",
     "structure_missing",
     "builder_missing",
     "other",
@@ -394,6 +432,9 @@ def _var_drop_reason(row: pd.Series, v: RegionalRegressionVariables) -> tuple[st
             return "parking_flag", "세대당 주차 이상값"
         if pd.isna(row.get("parking_per_household")):
             return "parking_missing", "세대당 주차 결측"
+
+    if v.assessed_land_price and pd.isna(row.get("assessed_land_price")):
+        return "assessed_land_price_missing", "개별공시지가 미매칭"
 
     if v.structure:
         sg = row.get("structure_group")
@@ -562,6 +603,8 @@ def _needed_columns(v: RegionalRegressionVariables) -> list[str]:
         cols.append("building_age")
     if v.parking:
         cols.append("parking_per_household")
+    if v.assessed_land_price:
+        cols.append("assessed_land_price")
     return cols
 
 
@@ -593,6 +636,9 @@ def _design(
     if v.parking:
         x["parking_per_household"] = work["parking_per_household"].astype(float)
         labels["parking_per_household"] = LABELS["parking_per_household"]
+    if v.assessed_land_price:
+        x["assessed_land_price"] = work["assessed_land_price"].astype(float)
+        labels["assessed_land_price"] = LABELS["assessed_land_price"]
 
     if v.asset_type_dummy and "asset_type" in work.columns:
         raw = work["asset_type"].fillna("").astype(str).str.strip()
@@ -837,6 +883,16 @@ def run_regional_regression(
     elif meta.get("dropped_presale"):
         warnings.append("분양권은 권리 가격이라 표본에서 뺐습니다.")
 
+    if v.assessed_land_price:
+        n_land_price = int(df["assessed_land_price"].notna().sum()) if not df.empty else 0
+        if n_land_price == 0:
+            warnings.append("개별공시지가 자료가 아직 적재되지 않아 선택 변수로 사용할 수 없습니다.")
+        elif n_land_price < len(df):
+            warnings.append(
+                f"개별공시지가가 연결된 단지는 {n_land_price}/{len(df)}곳입니다. "
+                "미연결 단지는 깔때기에서 제외됩니다."
+            )
+
     if v.structure:
         warnings.append(WEAK_NOTE["structure"])
     if v.builder:
@@ -934,6 +990,11 @@ def run_regional_regression(
                 y_hat=round(float(yh), 1),
                 ape=round(ape, 1) if ape is not None else None,
                 asset_type=str(r["asset_type"]) if "asset_type" in r and pd.notna(r["asset_type"]) else None,
+                assessed_land_price=(
+                    round(float(r["assessed_land_price"]), 1)
+                    if "assessed_land_price" in r and pd.notna(r["assessed_land_price"])
+                    else None
+                ),
             )
         )
     rows.sort(key=lambda x: x.display_name)
@@ -960,7 +1021,6 @@ def run_regional_regression(
             f"단지 정보가 없는 행 {sample.n_missing_attr}곳은 식에서 빠집니다 "
             f"(풀 {sample.n_pool}곳 중 속성 {sample.n_with_attributes}곳)."
         )
-
     return RegionalRegressionRunResponse(
         n=fitted["n"],
         model_type=req.model_type,
@@ -1009,6 +1069,7 @@ def _block_contrib(
         structure=False,
         builder=False,
         asset_type_dummy=v.asset_type_dummy,
+        assessed_land_price=False,
     )
     x_core, _, _ = _design(work, core)
     fit_core = _fit_ols(
@@ -1029,11 +1090,18 @@ def _block_contrib(
                 in_sample_mape=fit_core.get("mape"),
             )
         )
-        core_hold = fit_core.get("hold_mape") if core_hold is None else core_hold
+        core_hold = fit_core.get("hold_mape")
 
-    for key, label, flag in (
-        ("structure", "구조", v.structure),
-        ("builder", "시공사", v.builder),
+    for key, label, flag, weak, base_note in (
+        (
+            "assessed_land_price",
+            "개별공시지가",
+            v.assessed_land_price,
+            False,
+            "기존 핵심식에 최신 대표 필지 개별공시지가를 원값으로 추가한 비교입니다.",
+        ),
+        ("structure", "구조", v.structure, True, WEAK_NOTE["structure"]),
+        ("builder", "시공사", v.builder, True, WEAK_NOTE["builder"]),
     ):
         if not flag:
             continue
@@ -1048,7 +1116,7 @@ def _block_contrib(
         delta = None
         if hm is not None and core_hold is not None:
             delta = round(float(hm) - float(core_hold), 2)
-        note = WEAK_NOTE[key]
+        note = base_note
         if delta is not None and delta > 0:
             note = f"{note} 이 지역 hold MAPE가 핵심 블록 대비 {delta:.1f}%p 높아졌습니다."
         elif delta is not None and delta < 0:
@@ -1057,7 +1125,7 @@ def _block_contrib(
             BlockContribution(
                 block=key,
                 label=label,
-                weak=True,
+                weak=weak,
                 hold_mape=hm,
                 in_sample_mape=fit.get("mape"),
                 delta_mape_vs_core=delta,
@@ -1096,6 +1164,7 @@ def predict_regional(
         "max_floor": inputs.max_floor,
         "building_age": inputs.building_age,
         "parking_per_household": inputs.parking_per_household,
+        "assessed_land_price": inputs.assessed_land_price,
         "structure_group": inputs.structure_group or struct_ref or "",
         "builder_group": inputs.builder_group or builder_ref or "",
         "asset_type": inputs.asset_type or atype_ref or "apartment",
