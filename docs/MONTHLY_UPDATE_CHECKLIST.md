@@ -26,6 +26,7 @@ py scripts/monthly/verify_monthly_checklist_ready.py
 | 0.2 | 매핑 `as_of` = cycle 직전 달 1일 (예: `2026-08-01`). 수집 끝 월이 다르면 `--v2-as-of` 수동 |
 | 0.3 | 이번 달은 **CSV 경로**로 진행한다 (xlsx `run_monthly_cycle` 쓰지 않음) |
 | 0.4 | 「코드만 배포하면 월이 바뀐다」는 **거짓** — Promote 필수 |
+| 0.5 | 이번 cycle 종류: **실거래 달** / **대장 달**(분기) / **공부 달**(연 1회). 대장·보강 절차는 [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md). 실거래 러너는 **skip-enrich 기본** — `--enrich` 켜지 말 것 |
 
 ---
 
@@ -52,6 +53,7 @@ py scripts/monthly/verify_monthly_checklist_ready.py
 | 2.2 | 건수·beopjungri gate | SOP 기준 | |
 | 2.3 | Dump · Promote | `built_stats` | |
 | 2.4 | Smoke | `/api/built` · 회귀 1 scope | |
+| 2.5 | enrich | 러너 기본 skip. 로컬 UI 동의(D-051)와 운영 `--enrich`는 별개. 운영 적재는 P5. [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md) §3 | |
 
 ---
 
@@ -63,6 +65,7 @@ py scripts/monthly/verify_monthly_checklist_ready.py
 | 3.2 | 분양권 building_key | 분열 단지 스모크 | |
 | 3.3 | Dump · Promote | `collective_stats` | |
 | 3.4 | Smoke | building/cluster 목록 · 회귀 1건 | |
+| 3.5 | enrich | 러너 기본 skip. 신규 키만 `--enrich-new-keys`. 대장 T·공부 공시지가는 수동. [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md) §4 | |
 
 ---
 

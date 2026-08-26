@@ -44,6 +44,8 @@ DDL_029 = REPO / "db" / "029_built_scope_stats.sql"
 DDL_067 = REPO / "db" / "067_built_partial_ownership.sql"
 DDL_068 = REPO / "db" / "068_built_transaction_enrichment.sql"
 
+DDL_069 = REPO / "db" / "069_built_enrichment_orphan.sql"
+
 BUILT_PATCH_SQL = """
 ALTER TABLE built_transactions
     ADD COLUMN IF NOT EXISTS needs_review BOOLEAN NOT NULL DEFAULT FALSE;
@@ -80,8 +82,42 @@ INSERT_STMT = text(
         :is_valid, :needs_review, :mapping_notes
     )
     ON CONFLICT (transaction_hash) DO UPDATE SET
+        asset_type = EXCLUDED.asset_type,
+        deal_form = EXCLUDED.deal_form,
+        addr1 = EXCLUDED.addr1,
+        addr2 = EXCLUDED.addr2,
+        addr3 = EXCLUDED.addr3,
+        addr4 = EXCLUDED.addr4,
+        addr5 = EXCLUDED.addr5,
+        lot_number = EXCLUDED.lot_number,
+        road_name = EXCLUDED.road_name,
+        display_address = EXCLUDED.display_address,
+        beopjungri_code = EXCLUDED.beopjungri_code,
+        sido_code = EXCLUDED.sido_code,
+        sigungu_code = EXCLUDED.sigungu_code,
+        eupmyeondong_code = EXCLUDED.eupmyeondong_code,
+        trade_year_label = EXCLUDED.trade_year_label,
+        contract_year = EXCLUDED.contract_year,
+        contract_month = EXCLUDED.contract_month,
+        contract_date = EXCLUDED.contract_date,
+        zone_type = EXCLUDED.zone_type,
+        building_use = EXCLUDED.building_use,
+        building_scale = EXCLUDED.building_scale,
+        land_scale = EXCLUDED.land_scale,
+        age_bucket = EXCLUDED.age_bucket,
+        price = EXCLUDED.price,
+        gross_area = EXCLUDED.gross_area,
+        land_area = EXCLUDED.land_area,
+        building_age = EXCLUDED.building_age,
+        road_code = EXCLUDED.road_code,
+        road_width_label = EXCLUDED.road_width_label,
+        floor = EXCLUDED.floor,
+        deal_type = EXCLUDED.deal_type,
         is_partial_ownership = EXCLUDED.is_partial_ownership,
-        partial_ownership_label = EXCLUDED.partial_ownership_label
+        partial_ownership_label = EXCLUDED.partial_ownership_label,
+        is_valid = EXCLUDED.is_valid,
+        needs_review = EXCLUDED.needs_review,
+        mapping_notes = EXCLUDED.mapping_notes
     """
 )
 
@@ -101,6 +137,11 @@ def ensure_schema(engine) -> None:
                 s = stmt.strip()
                 if s:
                     conn.execute(text(s))
+        if DDL_069.is_file():
+            for stmt in DDL_069.read_text(encoding="utf-8").split(";"):
+                s = stmt.strip()
+                if s:
+                    conn.execute(text(s))
     parts = ["015 + built patch"]
     if DDL_028.is_file():
         parts.append(DDL_028.name)
@@ -110,6 +151,8 @@ def ensure_schema(engine) -> None:
         parts.append(DDL_067.name)
     if DDL_068.is_file():
         parts.append(DDL_068.name)
+    if DDL_069.is_file():
+        parts.append(DDL_069.name)
     log.info("schema ready (%s)", " + ".join(parts))
 
 
@@ -174,7 +217,23 @@ def _row_to_record(row: pd.Series) -> dict:
     return rec
 
 
-def insert_dataframe(df: pd.DataFrame, engine) -> tuple[int, int]:
+def _append_seen_hashes(path: Path | None, recs: list[dict]) -> None:
+    if path is None or not recs:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as fh:
+        for rec in recs:
+            h = str(rec.get("transaction_hash") or "").strip()
+            if h:
+                fh.write(h + "\n")
+
+
+def insert_dataframe(
+    df: pd.DataFrame,
+    engine,
+    *,
+    seen_hashes_file: Path | None = None,
+) -> tuple[int, int]:
     """Returns (attempted, skipped_by_conflict estimate via batch)."""
     if df.empty:
         return 0, 0
@@ -186,12 +245,14 @@ def insert_dataframe(df: pd.DataFrame, engine) -> tuple[int, int]:
             with engine.begin() as conn:
                 for rec in batch:
                     conn.execute(INSERT_STMT, rec)
+            _append_seen_hashes(seen_hashes_file, batch)
             attempted += len(batch)
             batch.clear()
     if batch:
         with engine.begin() as conn:
             for rec in batch:
                 conn.execute(INSERT_STMT, rec)
+        _append_seen_hashes(seen_hashes_file, batch)
         attempted += len(batch)
     return attempted, 0
 
@@ -243,6 +304,8 @@ def ingest_paths(
     asset_type: BuiltAssetType,
     engine,
     region_maps: dict,
+    *,
+    seen_hashes_file: Path | None = None,
 ) -> dict:
     frames: list[pd.DataFrame] = []
     raw_rows = 0
@@ -260,7 +323,7 @@ def ingest_paths(
     refined_rows = len(df)
     df = attach_beopjungri_codes(df, engine, region_maps=region_maps)
     df = clean_code_columns(df)
-    attempted, _ = insert_dataframe(df, engine)
+    attempted, _ = insert_dataframe(df, engine, seen_hashes_file=seen_hashes_file)
     return {
         "files": len(paths),
         "raw_rows": raw_rows,
@@ -339,6 +402,12 @@ def main() -> None:
         type=Path,
         default=REPO / "logs" / "built_rebuild_manifest.json",
     )
+    p.add_argument(
+        "--seen-hashes-file",
+        type=Path,
+        default=None,
+        help="이번 ingest hash 목록 (한 줄에 하나). 월간 stale purge 용",
+    )
     args = p.parse_args()
 
     only_flags = sum([args.commercial_only, args.factory_only, args.detached_only])
@@ -377,6 +446,10 @@ def main() -> None:
 
     run_all = only_flags == 0
     ingest_log: dict = {"smoke": args.smoke, "ingest": {}}
+    hashes_file = args.seen_hashes_file
+    if hashes_file is not None:
+        hashes_file.parent.mkdir(parents=True, exist_ok=True)
+        hashes_file.write_text("", encoding="utf-8")
 
     for asset_type in ("commercial", "factory", "detached"):
         if not run_all and not getattr(args, f"{asset_type}_only"):
@@ -405,7 +478,9 @@ def main() -> None:
         if not paths:
             log.warning("no CSV files for %s", asset_type)
             continue
-        stats = ingest_paths(paths, asset_type, built, region_maps)  # type: ignore[arg-type]
+        stats = ingest_paths(
+            paths, asset_type, built, region_maps, seen_hashes_file=hashes_file
+        )  # type: ignore[arg-type]
         ingest_log["ingest"][asset_type] = stats
         log_mapping_coverage(built, "built_transactions", asset_type=asset_type)
 

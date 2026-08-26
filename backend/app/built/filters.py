@@ -143,12 +143,12 @@ def apply_sample_filters(
             params[f"{col}_max"] = float(hi)
 
 
-def apply_sample_filters_from_request(clauses: list[str], params: dict, req) -> None:
+def apply_sample_filters_from_request(clauses: list[str], params: dict, req, *, skip_zone: bool = False) -> None:
     """RegressionRunRequest / 동일 필드 객체."""
     apply_sample_filters(
         clauses,
         params,
-        zone_types=list(req.zone_types or []) or None,
+        zone_types=None if skip_zone else (list(req.zone_types or []) or None),
         building_uses=list(req.building_uses or []) or None,
         road_width_labels=list(getattr(req, "road_width_labels", None) or []) or None,
         gross_area_min=getattr(req, "gross_area_min", None),

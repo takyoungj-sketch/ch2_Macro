@@ -22,6 +22,22 @@ from app.qa_audit.report import format_report
 from app.qa_audit.store import insert_run, write_json_log
 from app.qa_audit.verdict import compare_metrics
 
+DOMAINS = ("collective_apt", "built_enriched")
+
+
+def _normalize_domain(domain: str | None) -> str:
+    raw = (domain or DOMAIN).strip()
+    aliases = {
+        "collective": "collective_apt",
+        "apt": "collective_apt",
+        "built": "built_enriched",
+        "built_enrichment": "built_enriched",
+    }
+    raw = aliases.get(raw, raw)
+    if raw not in DOMAINS:
+        raise ValueError(f"지원 domain: collective_apt / built_enriched (받은 값: {domain})")
+    return raw
+
 
 def run_specified(
     engine,
@@ -32,7 +48,20 @@ def run_specified(
     region_level: str | None = None,
     asset_type: str | None = None,
     save_db: bool = False,
+    domain: str | None = None,
 ) -> dict[str, Any]:
+    if _normalize_domain(domain) == "built_enriched":
+        from app.qa_audit.built_enriched import run_specified as _run
+
+        return _run(
+            engine,
+            calendar_year=calendar_year,
+            region_code=region_code,
+            region_name=region_name,
+            region_level=region_level,
+            asset_type=asset_type,
+            save_db=save_db,
+        )
     asset = normalize_asset_type(asset_type)
     with engine.connect() as conn:
         target = lookup_region(
@@ -60,7 +89,19 @@ def run_random(
     n: int = 1,
     save_db: bool = False,
     seed: int | None = None,
+    domain: str | None = None,
 ) -> list[dict[str, Any]]:
+    if _normalize_domain(domain) == "built_enriched":
+        from app.qa_audit.built_enriched import run_random as _run
+
+        return _run(
+            engine,
+            calendar_year=calendar_year,
+            asset_type=asset_type,
+            n=n,
+            save_db=save_db,
+            seed=seed,
+        )
     n = max(1, min(int(n), 3))
     rng = random.Random(seed)
     with engine.connect() as conn:

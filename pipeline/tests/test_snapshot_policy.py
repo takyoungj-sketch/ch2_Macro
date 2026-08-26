@@ -129,3 +129,4 @@ def test_cli_defaults_are_all_and_time_fallback():
     ns = build_parser().parse_args([])
     assert ns.snapshot == "all"
     assert ns.policy == "time_fallback"
+    assert ns.min_year == 2019

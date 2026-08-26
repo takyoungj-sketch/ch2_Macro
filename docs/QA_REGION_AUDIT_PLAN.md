@@ -383,12 +383,14 @@ cd E:\ch2\ch2_Macro
 py scripts/qa/audit_region.py --region "세종특별자치시 나성동" --year 2025
 py scripts/qa/audit_region.py --random --year 2025 --n 2
 py scripts/qa/audit_region.py --region 나성동 --year 2025 --save
+py scripts/qa/audit_region.py --domain built_enriched --region-code 43113 --year 2025 --asset-type commercial
 ```
 
 - 모듈: `backend/app/qa_audit/`
 - L3 읽기 전용: `pipeline/build_collective_market_stats.compute_annual_records`
+- 복합 보강: `backend/app/qa_audit/built_enriched.py` — 원장 WRITE 없음. 대분류 용도지역 0건 실패 (D-047)
 - 런 JSON: `logs/qa_audit/` (git 제외)
-- DB 저장: `--save` → `collective_stats.qa_audit_run` (`db/062_qa_audit_run.sql`)
-- HTTP: `POST /api/admin/qa/specified` · `/random` · `GET /runs` — 헤더 `X-Qa-Audit-Token` (`QA_AUDIT_TOKEN`). 토큰이 비어 있으면 통과(로컬). OpenAPI 비공개.
+- DB 저장: `--save` → 집합은 `collective_stats.qa_audit_run`, 복합은 `built_stats.qa_audit_run`
+- HTTP: `POST /api/admin/qa/specified` · `/random` · `GET /runs` — body/`domain` (`collective_apt` 기본 · `built_enriched`). 헤더 `X-Qa-Audit-Token` (`QA_AUDIT_TOKEN`). 토큰이 비어 있으면 통과(로컬). OpenAPI 비공개.
 - 관리 UI: [`CH2_LAB_HUB.md`](./CH2_LAB_HUB.md) · http://localhost:5179/lab/?tool=qa
 - 공개 게이트웨이·제품 AI에 진입점 없음. 관리 UI는 `/lab/?tool=qa`.

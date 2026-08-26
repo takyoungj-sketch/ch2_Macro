@@ -21,18 +21,42 @@ def _require_token(x_qa_audit_token: str | None) -> None:
         raise HTTPException(status_code=401, detail="X-Qa-Audit-Token 이 없거나 잘못되었습니다.")
 
 
+def _engine_for(domain: str | None):
+    from app.qa_audit.engine import _normalize_domain
+
+    try:
+        d = _normalize_domain(domain)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if d == "built_enriched":
+        from app.built.db import get_built_engine
+
+        engine = get_built_engine()
+        if engine is None:
+            raise HTTPException(status_code=503, detail="BUILT_DATABASE_URL 없음")
+        return engine, d
+    from app.collective.db import get_collective_engine
+
+    engine = get_collective_engine()
+    if engine is None:
+        raise HTTPException(status_code=503, detail="COLLECTIVE_DATABASE_URL 없음")
+    return engine, d
+
+
 class SpecifiedBody(BaseModel):
     calendar_year: int = Field(..., ge=2006, le=2100)
     region_code: str | None = None
     region_name: str | None = None
     region_level: str | None = None
-    asset_type: str | None = "apartment"
+    asset_type: str | None = None
+    domain: str | None = "collective_apt"
     save_db: bool = False
 
 
 class RandomBody(BaseModel):
     calendar_year: int | None = Field(default=None, ge=2006, le=2100)
     asset_type: str | None = None
+    domain: str | None = "collective_apt"
     n: int = Field(1, ge=1, le=3)
     save_db: bool = False
     seed: int | None = None
@@ -44,11 +68,7 @@ def post_specified(
     x_qa_audit_token: str | None = Header(default=None, alias="X-Qa-Audit-Token"),
 ) -> dict[str, Any]:
     _require_token(x_qa_audit_token)
-    from app.collective.db import get_collective_engine
-
-    engine = get_collective_engine()
-    if engine is None:
-        raise HTTPException(status_code=503, detail="COLLECTIVE_DATABASE_URL 없음")
+    engine, domain = _engine_for(body.domain)
     try:
         return run_specified(
             engine,
@@ -58,6 +78,7 @@ def post_specified(
             region_level=body.region_level,
             asset_type=body.asset_type,
             save_db=body.save_db,
+            domain=domain,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -69,38 +90,36 @@ def post_random(
     x_qa_audit_token: str | None = Header(default=None, alias="X-Qa-Audit-Token"),
 ) -> dict[str, Any]:
     _require_token(x_qa_audit_token)
-    from app.collective.db import get_collective_engine
-
-    engine = get_collective_engine()
-    if engine is None:
-        raise HTTPException(status_code=503, detail="COLLECTIVE_DATABASE_URL 없음")
-    runs = run_random(
-        engine,
-        calendar_year=body.calendar_year,
-        asset_type=body.asset_type,
-        n=body.n,
-        save_db=body.save_db,
-        seed=body.seed,
-    )
+    engine, domain = _engine_for(body.domain)
+    try:
+        runs = run_random(
+            engine,
+            calendar_year=body.calendar_year,
+            asset_type=body.asset_type,
+            n=body.n,
+            save_db=body.save_db,
+            seed=body.seed,
+            domain=domain,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"runs": runs, "count": len(runs)}
 
 
 @router.get("/runs")
 def get_runs(
     limit: int = 20,
+    domain: str | None = None,
     x_qa_audit_token: str | None = Header(default=None, alias="X-Qa-Audit-Token"),
 ) -> dict[str, Any]:
     _require_token(x_qa_audit_token)
-    from app.collective.db import get_collective_engine
     from app.qa_audit.store import ensure_table, list_runs
 
-    engine = get_collective_engine()
-    if engine is None:
-        raise HTTPException(status_code=503, detail="COLLECTIVE_DATABASE_URL 없음")
+    engine, domain = _engine_for(domain or "collective_apt")
     try:
         with engine.begin() as conn:
             ensure_table(conn)
-            items = list_runs(conn, limit=min(max(limit, 1), 50))
+            items = list_runs(conn, limit=min(max(limit, 1), 50), domain=domain)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=503, detail=f"qa_audit_run 조회 실패: {exc}") from exc
     return {"items": items}

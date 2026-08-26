@@ -184,6 +184,41 @@ def read_source(
     )
 
 
+def read_source_from_parcel_master(target_pnus: set[str]) -> pd.DataFrame:
+    """parcel_land_price 최신 연도. 거래연도 정합 없음."""
+    from parcel_master.db_utils import get_parcel_engine
+
+    if not target_pnus:
+        return pd.DataFrame(columns=["pnu", "assessed_land_price", "assessed_land_price_year"])
+    eng = get_parcel_engine()
+    records: dict[str, dict[str, Any]] = {}
+    pnus = sorted(target_pnus)
+    sql = text(
+        """
+        SELECT DISTINCT ON (pnu)
+            pnu, price_per_m2 AS assessed_land_price, price_year AS assessed_land_price_year
+        FROM parcel_land_price
+        WHERE pnu IN :pnus
+        ORDER BY pnu, price_year DESC
+        """
+    )
+    with eng.connect() as conn:
+        for i in range(0, len(pnus), 2000):
+            chunk = pnus[i : i + 2000]
+            stmt = sql.bindparams(bindparam("pnus", expanding=True))
+            for row in conn.execute(stmt, {"pnus": chunk}).mappings():
+                pnu = str(row["pnu"]).strip()
+                records[pnu] = {
+                    "pnu": pnu,
+                    "assessed_land_price": float(row["assessed_land_price"]),
+                    "assessed_land_price_year": int(row["assessed_land_price_year"]),
+                }
+    return pd.DataFrame.from_records(
+        list(records.values()),
+        columns=["pnu", "assessed_land_price", "assessed_land_price_year"],
+    )
+
+
 def _apply_ddl(engine) -> None:
     with engine.begin() as conn:
         for statement in DDL.read_text(encoding="utf-8").split(";"):
@@ -256,6 +291,7 @@ def load(
     asset_types: tuple[str, ...],
     *,
     candidates: list[dict[str, Any]] | None = None,
+    source_label: str = "individual_official_land_price",
 ) -> tuple[int, int]:
     price_by_pnu = source.set_index("pnu").to_dict(orient="index")
     if candidates is None:
@@ -266,7 +302,7 @@ def load(
             **candidate,
             "assessed_land_price": price_by_pnu[candidate["pnu"]]["assessed_land_price"],
             "assessed_land_price_year": price_by_pnu[candidate["pnu"]]["assessed_land_price_year"],
-            "source": "individual_official_land_price",
+            "source": source_label,
         }
         for candidate in candidates
         if candidate["pnu"] in price_by_pnu
@@ -302,6 +338,11 @@ def main() -> None:
     parser.add_argument("--input", type=Path, default=DEFAULT_SOURCE_DIR)
     parser.add_argument("--dry-run", action="store_true", help="원천 스캔·매칭 예상만 하고 DB에 쓰지 않음")
     parser.add_argument(
+        "--from-parcel-master",
+        action="store_true",
+        help="공부 달: parcel_land_price 최신 연도로 재파생. CSV 대신",
+    )
+    parser.add_argument(
         "--asset-type",
         action="append",
         dest="asset_types",
@@ -314,14 +355,19 @@ def main() -> None:
         candidates = _representative_pnus(conn, asset_types)
     target_pnus = {row["pnu"] for row in candidates}
 
-    land_engine = get_land_engine_for_region_copy()
-    with land_engine.connect() as conn:
-        old_to_current_bjd = _old_to_current_bjd(conn)
-    source = read_source(
-        args.input,
-        target_pnus=target_pnus,
-        old_to_current_bjd=old_to_current_bjd,
-    )
+    if args.from_parcel_master:
+        source = read_source_from_parcel_master(target_pnus)
+        source_label = "parcel_land_price"
+    else:
+        land_engine = get_land_engine_for_region_copy()
+        with land_engine.connect() as conn:
+            old_to_current_bjd = _old_to_current_bjd(conn)
+        source = read_source(
+            args.input,
+            target_pnus=target_pnus,
+            old_to_current_bjd=old_to_current_bjd,
+        )
+        source_label = "individual_official_land_price"
     if args.dry_run:
         print(
             f"source_pnu_matched={len(source):,} representative_candidates={len(candidates):,} "
@@ -331,7 +377,9 @@ def main() -> None:
         return
 
     _apply_ddl(engine)
-    candidate_count, loaded = load(engine, source, asset_types, candidates=candidates)
+    candidate_count, loaded = load(
+        engine, source, asset_types, candidates=candidates, source_label=source_label
+    )
     print(
         f"source_pnu_matched={len(source):,} representative_candidates={candidate_count:,} "
         f"loaded={loaded:,} asset_types={','.join(asset_types)}",

@@ -1,7 +1,7 @@
 """표제부 「집합」 나머지 시도 + 용도지역 축약 적재.
 
 대전·충북 building/parcel 은 지우지 않는다.
-복합 「일반」 행·원본 48GB 적재·VPS 는 하지 않는다.
+「일반」 은 `python -m parcel_master.load_title_general`. VPS 는 하지 않는다.
 
   cd pipeline
   python -m parcel_master.expand_national

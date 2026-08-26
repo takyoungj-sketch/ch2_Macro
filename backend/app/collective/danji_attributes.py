@@ -620,7 +620,7 @@ def attach_danji_list_fields(conn: Connection, items: list[BuildingStatsRow]) ->
         text(
             f"""
             SELECT building_key, asset_type, households, builder_norm, builder_raw,
-                   builder_is_joint, attr_quality_flags
+                   builder_is_joint, attr_quality_flags, match_tier
             FROM {ATTRIBUTES_TABLE}
             WHERE snapshot_ym = :snap
               AND building_key = ANY(:keys)
@@ -650,5 +650,6 @@ def attach_danji_list_fields(conn: Connection, items: list[BuildingStatsRow]) ->
                     row.get("builder_is_joint"),
                 ),
                 "builder_is_joint": bool(row.get("builder_is_joint")),
+                "match_tier": (str(row.get("match_tier") or "").strip() or None),
             }
         )

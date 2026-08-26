@@ -6,6 +6,7 @@
 >
 > **2026-08 SSOT:** 월간 기본 경로는 **CSV** — `scripts/monthly/run_land_cycle_csv.py`.  
 > 1페이지 체크리스트: [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md).  
+> 축약대장·보강 달력(실거래 달 skip-enrich 기본): [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md).  
 > `run_monthly_cycle.py`(xlsx)는 **복구·레거시**. git deploy ≠ 월갱신 (Promote 필수).
 
 ---

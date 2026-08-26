@@ -76,6 +76,10 @@ def zone_dir() -> Path:
     return _dir_named(RAW_ADD, "토지이용계획csv")
 
 
+def land_price_dir() -> Path:
+    return _dir_named(RAW_ADD, "개별공시지가")
+
+
 def kapt_dir() -> Path:
     return _dir_named(RAW_ADD, "K-apt")
 
@@ -136,3 +140,31 @@ def zone_snapshot(sido: str) -> str:
         return ""
     parts = dirs[-1].name.split("_")
     return parts[3] if len(parts) >= 4 else dirs[-1].name
+
+
+def land_price_csv(sido: str) -> Path | None:
+    root = land_price_dir()
+    dirs = sorted(root.glob(f"AL_D151_{sido}_*"))
+    if not dirs:
+        return None
+    csvs = list(dirs[-1].glob("*.csv"))
+    return csvs[-1] if csvs else None
+
+
+def land_price_snapshot(sido: str) -> str:
+    root = land_price_dir()
+    dirs = sorted(root.glob(f"AL_D151_{sido}_*"))
+    if not dirs:
+        return ""
+    parts = dirs[-1].name.split("_")
+    return parts[3] if len(parts) >= 4 else dirs[-1].name
+
+
+def land_price_sidos() -> tuple[str, ...]:
+    root = land_price_dir()
+    out: list[str] = []
+    for d in sorted(root.glob("AL_D151_*")):
+        parts = d.name.split("_")
+        if len(parts) >= 3 and parts[2].isdigit():
+            out.append(parts[2])
+    return tuple(out)

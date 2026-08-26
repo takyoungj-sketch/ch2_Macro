@@ -140,3 +140,74 @@ def test_officetel_allows_missing_households():
     assert title_fill_skip_reason(agg=agg, building_year=2015, require_households=True) == "no_households"
     assert title_fill_skip_reason(agg=agg, building_year=2015, require_households=False) is None
 
+
+def test_classify_blocks_abc_and_refresh_t_fills():
+    import pandas as pd
+    from parcel_master.apply_title_fill import classify
+    from parcel_master.pnu import pnu_from_tx
+
+    pnu = pnu_from_tx("4313012500", "123")
+    assert pnu
+    title = {
+        pnu: [
+            {
+                "main_purpose": "공동주택",
+                "purpose_detail": "아파트",
+                "households": 40,
+                "floors_above": 10,
+                "approve_date": "20130101",
+                "structure_name": "철근콘크리트구조",
+            }
+        ]
+    }
+    cols = dict(
+        beopjungri_code="4313012500",
+        lot_number="123",
+        display_name="테스트",
+        building_year=2013,
+        n_tx=10,
+        has_attr_row=True,
+    )
+    blocked = classify(
+        pd.DataFrame([{**cols, "building_key": "a", "match_tier": "A"}]),
+        title,
+        set(),
+        kind="apartment",
+        skip_kapt=False,
+    )
+    assert blocked["blocked"][0]["building_key"] == "a"
+    assert blocked["fill"] == []
+
+    for tier in ("B", "C"):
+        got = classify(
+            pd.DataFrame([{**cols, "building_key": tier.lower(), "match_tier": tier}]),
+            title,
+            set(),
+            kind="apartment",
+            skip_kapt=False,
+        )
+        assert got["blocked"][0]["building_key"] == tier.lower()
+        assert got["fill"] == []
+
+    keep = classify(
+        pd.DataFrame([{**cols, "building_key": "t", "match_tier": "T"}]),
+        title,
+        set(),
+        kind="apartment",
+        skip_kapt=False,
+        refresh_t=False,
+    )
+    assert keep["keep_t"][0]["building_key"] == "t"
+    assert keep["fill"] == []
+
+    refresh = classify(
+        pd.DataFrame([{**cols, "building_key": "t", "match_tier": "T"}]),
+        title,
+        set(),
+        kind="apartment",
+        skip_kapt=False,
+        refresh_t=True,
+    )
+    assert refresh["keep_t"] == []
+    assert refresh["fill"][0]["building_key"] == "t"
+

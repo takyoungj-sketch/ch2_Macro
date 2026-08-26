@@ -18,6 +18,9 @@ ZONE_COARSE_LABELS = frozenset(
     }
 )
 
+_COARSE_SQL = ", ".join("'" + x.replace("'", "''") + "'" for x in sorted(ZONE_COARSE_LABELS))
+
+# 결합 키는 '법정동코드|지번'. 호버에는 지번만.
 RECOVERED_LOT_SQL = """
 CASE
   WHEN e.recovered_lot IS NULL THEN NULL
@@ -25,8 +28,6 @@ CASE
   ELSE e.recovered_lot
 END
 """
-
-_COARSE_SQL = ", ".join("'" + x.replace("'", "''") + "'" for x in sorted(ZONE_COARSE_LABELS))
 
 # 원장 한 칸. 대분류면 버리고, 끝의 '지역'만 뗀다 (개발제한구역은 그대로).
 _LEDGER_CANON_SQL = f"""
@@ -90,24 +91,62 @@ def canonical_zone_label(labels: list[str] | None) -> str | None:
     return picked or None
 
 
-def wrap_tx_enrichment(inner_sql: str, *, extra_outer: str = "") -> str:
+def display_recovered_lot(raw: str | None) -> str | None:
+    """결합 키에서 지번만. 칸 값이 아니라 호버용."""
+    if raw is None:
+        return None
+    s = str(raw).strip()
+    if not s:
+        return None
+    if "|" in s:
+        s = s.split("|", 1)[1].strip()
+    return s or None
+
+
+def wrap_tx_enrichment(
+    inner_sql: str,
+    *,
+    extra_outer: str = "",
+    enrich: bool = False,
+    zone_types: list[str] | None = None,
+) -> str:
     """inner_sql 은 transaction_hash 와 zone_type 을 포함해야 한다.
 
-    필터는 원장 별칭 없이 inner 에서 적용한다 (zone_type 모호성 방지).
+    enrich=False(기본): 원장만. 조인하지 않는다 (D-051).
+    enrich=True: LEFT JOIN. zone_types 가 있으면 표시 용도지역(c.canon)으로 거른다.
     """
+    if not enrich:
+        return inner_sql
     extra = f",\n          {extra_outer.strip().rstrip(',')}" if extra_outer.strip() else ""
+    zone_where = ""
+    if zone_types:
+        zone_where = "\n        WHERE c.canon = ANY(:zone_types)"
     return f"""
         SELECT s.*,
                c.canon AS zone_type_filled,
                c.canon AS zone_type_first,
                e.structure_group,
                {RECOVERED_LOT_SQL} AS recovered_lot,
-               e.match_tier AS match_tier
+               e.match_tier AS match_tier,
+               e.match_rule AS match_rule
                {extra}
         FROM ({inner_sql}) s
         LEFT JOIN built_transaction_enrichment e
           ON e.transaction_hash = s.transaction_hash
         CROSS JOIN LATERAL (
           SELECT {ZONE_DISPLAY_SQL} AS canon
-        ) c
+        ) c{zone_where}
     """
+
+
+def apply_wrapped_zone_columns(df):
+    """enrich 조인 결과의 표시 용도지역을 zone_type 칸에 옮긴다."""
+    import pandas as pd
+
+    if not isinstance(df, pd.DataFrame) or df.empty:
+        return df
+    if "zone_type_first" in df.columns:
+        df = df.copy()
+        df["zone_type"] = df["zone_type_first"]
+        df = df.drop(columns=["zone_type_filled", "zone_type_first"], errors="ignore")
+    return df.drop(columns=["transaction_hash", "recovered_lot"], errors="ignore")

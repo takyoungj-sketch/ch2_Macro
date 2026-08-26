@@ -52,6 +52,8 @@
 | D-045 | 2026-08-19 | **신규아파트 M2는 대전 잠정.** 충북 복제 후 같은 대전 hold-out이 13.2%→15.4%로 나빠져 통합 식 채택 안 함. M4 금지. **다음 제품 = 복합 회귀실험 UX 차용**(기초통계 유지, 지역회귀, 단지 1행, 개별 평균예측). 카드: [`lab/decisions/D-045.json`](lab/decisions/D-045.json). |
 | D-046 | 2026-08-20 | **복합 마스킹 지번 복원 = 연면적 완전일치.** 청주 단독다가구 76.4%·상업업무 78.7%·공장창고 60.0% 확정(도로명·사용승인연도 독립 검증 ~99%). **A1·A2만 확정**, B tier(±1%·필지 합산) 폐기. **대지면적 필수 금지**(표제부 보유율 42.6%, 걸면 25%p 손실). 미확정은 다수결·최근접으로 메우지 않고 빈칸. 복원 지번은 화면 노출이 아니라 용도지역·구조·토지 **결합 키**. 2026-06의 11%·2.8% 결론은 재현 불가로 갱신. **보강은 단독다가구만 착수** — 구조·용도지역·층수로 hold-out MAPE 33.1%→29.0%(Adj R² 0.729→0.769). 상가는 41.5%→41.0%로 근거 부족(용도지역이 이미 원천에 있음), 공장은 hold-out 115건으로 판단 불가. SSOT: [`BUILT_MASKED_ADDRESS_RECOVERY.md`](BUILT_MASKED_ADDRESS_RECOVERY.md). 카드: [`lab/decisions/D-046.json`](lab/decisions/D-046.json). |
 | D-049 | 2026-08-23 | **복합 지분거래.** 목록은 전체 표시+지분 열. 건수·금액 합은 포함. 단가·회귀·예측은 기본 제외, 분석 체크 시 포함. 단독은 원천 칸 없음. 토지 앱 기본값은 유지. 복원 매칭에서 지분은 확정하지 않음. SSOT: [`BUILT_SHARE_TRANSACTION_POLICY.md`](BUILT_SHARE_TRANSACTION_POLICY.md). 카드: [`lab/decisions/D-049.json`](lab/decisions/D-049.json). |
+| D-050 | 2026-08-25 | **축약대장 축 승격 · 복합 SQL 이관 게이트 2019+ 75.0%.** 노출은 D-051. 카드: [`lab/decisions/D-050.json`](lab/decisions/D-050.json). |
+| D-051 | 2026-08-26 | **속성 보강 노출.** 동의 4문장 · 표시=필터 · 원장 `zone_type` 미덮기 · 목록 배지. 운영 promote는 P5. 카드: [`lab/decisions/D-051.json`](lab/decisions/D-051.json). |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 
@@ -248,3 +250,24 @@
 - 분석 전용 「지분거래 포함」체크(기본 해제). 면적 표본필터와 분리해 목록을 숨기지 않음. 체크 시 짧은 확인 팝업. n에 제외·포함 건수 표시.
 - 토지 앱(포함이 기본)은 변경 없음. 등기 전용으로 국토부 연면적을 덮어쓰지 않음. 마스킹 복원에서 지분 건은 매칭하지 않음.
 - SSOT: [`BUILT_SHARE_TRANSACTION_POLICY.md`](BUILT_SHARE_TRANSACTION_POLICY.md) · 카드: [`lab/decisions/D-049.json`](lab/decisions/D-049.json)
+
+## D-050 축약대장 축 승격 · 복합 경로 이관 · 2019 게이트
+
+- 축약 DB에 「일반」 표제부·AL_D151을 넣어 4대 원본을 담는다. `parcel_master`는 로컬 전용, 결과만 promote.
+- 복합 매칭 SQL 이관 게이트: **2019+ 498,568행 · 75.0% · A1/A2 동등.** 전 기간 604,422 금지.
+- 보강은 계약 2019년 이후. 2018년 이전 105,854행 DELETE(범위 축소).
+- `ledger_snapshot`으로 미상 재시도 판정. 확정 행 재매칭 금지. 월간 창은 해시 유지 UPSERT. CASCADE로 보강 삭제 금지.
+- 제품 용도지역은 대표 1개. 공시지가 제품은 최신 대표 필지. 원본 삭제는 게이트 후.
+- 노출은 D-051. 월간 SSOT [`PARCEL_MASTER_MONTHLY_UPDATE.md`](PARCEL_MASTER_MONTHLY_UPDATE.md) · 구현 [`PARCEL_MASTER_IMPLEMENTATION.md`](PARCEL_MASTER_IMPLEMENTATION.md) · 카드 [`lab/decisions/D-050.json`](lab/decisions/D-050.json)
+- 보완(같은 날): 명칭은 PNU 부동산 속성 DB. 수요 필지 적재. 저장소 3층(원장/속성/매칭). 주기 독립. 동결 DO NOTHING, 값 변경은 버전 행+승인. 연속 점수·전유부·land_stats 흡수·자동 `is_current`·39M 필지는 범위 밖.
+
+## D-051 속성 보강 노출 — 동의 · 표시=필터 · 원장 미덮기
+
+- 원장 `zone_type`을 UPDATE하지 않는다. 보강은 LEFT JOIN.
+- 기본 끄기. 켜면 목록·CSV·회귀가 **같은 표시 용도지역**을 필터에도 쓴다. 기본통계 마트는 MOLIT-only.
+- 동의 4문장: 2019+ 75.0% · 6~14년 시점 갭 · 대표 용도지역 49.4% · 인증 서울·충북.
+- 목록 배지 「건축물대장 확인」(A1/A2). 복원 지번은 칸에 안 넣음(D-046).
+- 집합 목록: K-apt / 표제부 / 미연결 / 조인주의. 「경고 없음」이 아니다.
+- 운영 promote는 P5. 카드: [`lab/decisions/D-051.json`](lab/decisions/D-051.json)
+
+

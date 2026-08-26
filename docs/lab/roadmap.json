@@ -1,39 +1,36 @@
 {
-  "updated": "2026-08-23",
+  "updated": "2026-08-25",
   "now": {
-    "title": "복합 복원 기본 경로 time_fallback 고정",
-    "note": "CLI 기본 --snapshot all. 합집합·latest는 대조군. enrichment는 JSON 미리보기만 (DB 미적재). D-049 로컬 완료, 운영 DDL·배포는 별도.",
-    "journal": "2026-08-23",
-    "decisions": ["D-047", "D-049"]
+    "title": "문서 확정 · 구현 대기 (P0)",
+    "note": "D-050·월간 SSOT·구현 계획만 씀. 코드 없음. 착수 시 PARCEL_MASTER_IMPLEMENTATION.md P0.",
+    "journal": "2026-08-25",
+    "decisions": ["D-050"]
   },
   "next": {
-    "title": "복합 enrichment 적재 (표제부 조인)",
-    "note": "구조·지번은 표제부. 로드뷰 150건은 게이트 아님. DDL 068 준비됨. D-049 운영 반영은 배포 요청 시.",
-    "journal": "2026-08-23",
-    "decisions": ["D-047", "D-049"]
+    "title": "P0 2019 게이트 · match_tier 버그 · 2018 이전 DELETE",
+    "note": "이어서 P1 일반 표제부 적재, P2 SQL 조인 동등 게이트. 운영 promote는 D-051 후.",
+    "journal": "2026-08-25",
+    "decisions": ["D-050"]
   },
   "then": {
-    "title": "복합 enrichment 화면 램프 · 지분 운영 배포",
-    "note": "지번은 화면 비노출 유지. 용도지역 다중 라벨 UI·회귀 인코딩 미정. 지역지구구역 대체안은 폐기(D-048).",
-    "journal": "2026-08-22",
-    "decisions": ["D-047", "D-048"]
+    "title": "P3 월간 해시 유지 UPSERT · P4 동의 게이트(D-051)",
+    "note": "CASCADE로 보강 삭제 금지. 기본통계는 원장만.",
+    "journal": "2026-08-25",
+    "decisions": ["D-050"]
   },
   "later": {
-    "title": "QA 토지·복합 확장 · 복합 제외 앱 AI · Twin 카드 V1 대체 여부",
-    "note": "QA V1은 집합 주거 × 읍면동 × 달력 연도. 검증로봇에 「채운 용도지역이 상위 분류면 실패」를 0건 조건으로 추가할 것 — 비율 문턱은 충북 0.4%를 통과해버린다. 시공사는 단지 30 문턱 이후. Twin V2 제품 대체는 더 보고 결정.",
+    "title": "QA 토지·복합 확장 · Twin 카드 V1 대체 여부",
+    "note": "검증로봇에 「채운 용도지역이 상위 분류면 실패」 0건 조건. Twin V2 제품 대체는 더 보고 결정.",
     "journal": "2026-08-17",
     "decisions": ["D-042", "D-044"]
   },
   "planned_experiment": {
     "title": "집합 지역회귀 — 최신 대표 필지 개별공시지가 선택 변수",
     "status": "in_progress",
-    "note": "3·5·7년 평균 매매단가를 종속변수로 유지하고, 기본통계표의 대표 필지 1개에 연결한 최신 개별공시지가를 원값 설명변수로 선택 투입한다. 선형/log 종속변수 선택과 공시지가 변환은 분리하며, log 공시지가는 후속 후보로만 둔다.",
+    "note": "코드·마트는 연결됨. 축약 DB parcel_land_price 이관과 기본식 포함 여부는 실험 후. D-050.",
     "steps": [
-      "공식 원천·기준연도 확인",
-      "대표 필지 PNU 연결률·지역/유형 편중 측정",
-      "별도 공시지가 적재·단지 파생값 구축",
-      "지역회귀 체크박스와 결측 표본 깔때기 추가",
-      "기존 식 대비 Adj. R²·holdout MAPE·잔차·표본 감소율 비교"
+      "기존 식 대비 Adj. R²·holdout MAPE·잔차·표본 감소율 비교",
+      "parcel_land_price에서 최신값 파생으로 마트 재정의"
     ],
     "scope": ["apartment", "rowhouse", "officetel"],
     "decision": "실험 결과 후 기본식 포함 여부 결정"

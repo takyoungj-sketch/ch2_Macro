@@ -4,6 +4,7 @@
 > **기준 루트:** `C:\ch2\ch2_Macro`
 >
 > **2026-08 SSOT:** `scripts/monthly/run_collective_cycle_csv.py`. 1페이지: [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md).  
+> 축약·K-apt·공시지가 달력: [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md) §4. 실거래 러너 skip-enrich 기본.
 > xlsx 경로는 복구·레거시. git deploy ≠ 월갱신.
 
 관련: [`MONTHLY_UPDATE_SOP.md`](MONTHLY_UPDATE_SOP.md), [`BUILT_MONTHLY_UPDATE_SOP.md`](BUILT_MONTHLY_UPDATE_SOP.md), [`COLLECTIVE_RESEARCH_MVP.md`](COLLECTIVE_RESEARCH_MVP.md), [`COLLECTIVE_PRESALE_BUILDING_KEY.md`](COLLECTIVE_PRESALE_BUILDING_KEY.md)
@@ -98,3 +99,4 @@ py scripts\monthly\compare_collective_count_snapshots.py --before ... --after ..
 
 - MOLIT Selenium 수집 (`참고/0.수집.ipynb`) 스크립트화 — 2차
 - `contract_month` 정밀 12개월 창
+- 축약 DB enrich · K-apt 월 갱신 · 공시지가 재파생 — [`PARCEL_MASTER_MONTHLY_UPDATE.md`](PARCEL_MASTER_MONTHLY_UPDATE.md) §4·§7

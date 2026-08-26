@@ -53,27 +53,33 @@ def _str(v: str, max_len: int) -> str | None:
     return t[:max_len]
 
 
-def cache_path(sidos: tuple[str, ...], snapshot: str) -> Path:
+def cache_path(sidos: tuple[str, ...], snapshot: str, ledger_kind: str = "집합") -> Path:
     key = tuple(sidos)
+    kind = ledger_kind
     if key == PILOT_SIDO:
-        name = f"title_집합_30_43_{snapshot}.csv"
+        name = f"title_{kind}_30_43_{snapshot}.csv"
     elif set(key) == set(ALL_SIDO):
-        name = f"title_집합_national_{snapshot}.csv"
+        name = f"title_{kind}_national_{snapshot}.csv"
     elif set(key) == set(EXPAND_SIDO):
-        name = f"title_집합_expand_{snapshot}.csv"
+        name = f"title_{kind}_expand_{snapshot}.csv"
     else:
-        name = f"title_집합_{'_'.join(key)}_{snapshot}.csv"
+        name = f"title_{kind}_{'_'.join(key)}_{snapshot}.csv"
     return CACHE / name
 
 
-def scan_snapshot(snapshot: str, sidos: tuple[str, ...], refresh: bool) -> Path:
+def scan_snapshot(
+    snapshot: str,
+    sidos: tuple[str, ...],
+    refresh: bool,
+    ledger_kind: str = "집합",
+) -> Path:
     CACHE.mkdir(exist_ok=True)
-    out = cache_path(sidos, snapshot)
+    out = cache_path(sidos, snapshot, ledger_kind)
     if out.exists() and not refresh:
         print(f"[표제부] 캐시 {out.name}", flush=True)
         return out
     src = title_path(snapshot)
-    print(f"[표제부] 스캔 {snapshot} {src.name} ({src.stat().st_size / 2**30:.1f}GB)", flush=True)
+    print(f"[표제부] 스캔 {snapshot} {src.name} ({src.stat().st_size / 2**30:.1f}GB) kind={ledger_kind}", flush=True)
     kept = total = short = skip_kind = isolated = 0
     want = set(sidos)
     with src.open(encoding="utf-8-sig", errors="replace") as f, out.open(
@@ -94,16 +100,16 @@ def scan_snapshot(snapshot: str, sidos: tuple[str, ...], refresh: bool) -> Path:
             if prefix in ISOLATED_SIDO:
                 isolated += 1
                 continue
-            if parts[TITLE_COLS["ledger_kind"]] != "집합":
+            if parts[TITLE_COLS["ledger_kind"]] != ledger_kind:
                 skip_kind += 1
                 continue
             writer.writerow({k: parts[i] for k, i in TITLE_COLS.items()})
             kept += 1
-            if kept % 20_000 == 0:
+            if kept % 50_000 == 0:
                 print(f"  kept {kept:,}", flush=True)
     print(
-        f"[표제부] {snapshot} read={total:,} kept={kept:,} 일반건너뜀={skip_kind:,} "
-        f"short={short:,} isolated={isolated:,}",
+        f"[표제부] {snapshot} kind={ledger_kind} read={total:,} kept={kept:,} "
+        f"다른구분={skip_kind:,} short={short:,} isolated={isolated:,}",
         flush=True,
     )
     return out
@@ -126,7 +132,7 @@ def _row_from_rec(rec: dict, snapshot: str) -> dict | None:
         "pnu": parts["pnu"],
         "beopjungri_code": parts["beopjungri_code"],
         "sido_code": parts["sido_code"],
-        "ledger_kind": "집합",
+        "ledger_kind": (rec.get("ledger_kind") or "").strip()[:8] or "집합",
         "building_name": _str(rec["building_name"], 200),
         "dong_name": _str(rec["dong_name"], 80),
         "structure_name": _str(rec["struct_name"], 60),
@@ -164,12 +170,15 @@ def iter_building_rows(path: Path, snapshot: str, batch_size: int = 20_000):
 
 
 def apply_schema(engine) -> None:
+    from parcel_master.snapshot import ensure_ledger_snapshot_kind
+
     ddl = SCHEMA.read_text(encoding="utf-8")
     with engine.begin() as conn:
         for stmt in ddl.split(";"):
             s = stmt.strip()
             if s:
                 conn.execute(text(s))
+    ensure_ledger_snapshot_kind(engine)
 
 
 def replace_buildings(
@@ -179,6 +188,7 @@ def replace_buildings(
     snapshot: str,
     *,
     clear: bool,
+    ledger_kind: str = "집합",
 ) -> None:
     from psycopg2.extras import execute_values
 
@@ -188,8 +198,9 @@ def replace_buildings(
         cur = raw.cursor()
         if clear:
             cur.execute(
-                f"DELETE FROM building WHERE snapshot = %s AND sido_code IN ({in_sql})",
-                (snapshot,),
+                f"DELETE FROM building WHERE snapshot = %s AND sido_code IN ({in_sql}) "
+                f"AND ledger_kind = %s",
+                (snapshot, ledger_kind),
             )
         if rows:
             cols = list(rows[0])
@@ -323,24 +334,119 @@ def overlay_land_ledger(engine, sidos: tuple[str, ...]) -> dict:
     return stats
 
 
-def run(sidos: tuple[str, ...], refresh: bool, skip_ledger: bool) -> None:
+def count_buildings(engine, ledger_kind: str | None = None) -> int:
+    with engine.connect() as conn:
+        if ledger_kind is None:
+            return int(conn.execute(text("SELECT COUNT(*) FROM building")).scalar() or 0)
+        return int(
+            conn.execute(
+                text("SELECT COUNT(*) FROM building WHERE ledger_kind = :k"),
+                {"k": ledger_kind},
+            ).scalar()
+            or 0
+        )
+
+
+def _toggle_building_secondary_indexes(engine, *, enable: bool) -> None:
+    with engine.begin() as conn:
+        if enable:
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_building_pnu ON building (pnu)"))
+            conn.execute(
+                text("CREATE INDEX IF NOT EXISTS ix_building_sido_snap ON building (sido_code, snapshot)")
+            )
+            conn.execute(
+                text("CREATE INDEX IF NOT EXISTS ix_building_kind ON building (ledger_kind)")
+            )
+        else:
+            conn.execute(text("DROP INDEX IF EXISTS ix_building_pnu"))
+            conn.execute(text("DROP INDEX IF EXISTS ix_building_sido_snap"))
+            conn.execute(text("DROP INDEX IF EXISTS ix_building_kind"))
+
+
+def run(
+    sidos: tuple[str, ...],
+    refresh: bool,
+    skip_ledger: bool,
+    ledger_kind: str = "집합",
+    *,
+    drop_indexes: bool = False,
+) -> dict:
+    from parcel_master.snapshot import record_building_snapshots, upsert_ledger_snapshot
+
     engine = get_parcel_engine()
     apply_schema(engine)
-    for snap in SNAPSHOTS:
-        cache = scan_snapshot(snap, sidos, refresh)
-        cleared = False
-        for batch in iter_building_rows(cache, snap):
-            replace_buildings(engine, batch, sidos, snap, clear=not cleared)
-            cleared = True
-        if not cleared:
-            print(f"[표제부] {snap} 0행 — 기존 building 유지", flush=True)
-    rebuild_parcels(engine, sidos)
-    if not skip_ledger:
-        overlay_land_ledger(engine, sidos)
+    n_집합_before = count_buildings(engine, "집합")
+    if drop_indexes:
+        print("[표제부] secondary index DROP (적재 후 재생성)", flush=True)
+        _toggle_building_secondary_indexes(engine, enable=False)
+    try:
+        for snap in SNAPSHOTS:
+            cache = scan_snapshot(snap, sidos, refresh, ledger_kind)
+            cleared = False
+            n_batch = 0
+            for batch in iter_building_rows(cache, snap):
+                replace_buildings(
+                    engine,
+                    batch,
+                    sidos,
+                    snap,
+                    clear=not cleared,
+                    ledger_kind=ledger_kind,
+                )
+                cleared = True
+                n_batch += len(batch)
+                if n_batch % 200_000 == 0:
+                    print(f"  inserted {n_batch:,} ({snap} {ledger_kind})", flush=True)
+            if not cleared:
+                print(f"[표제부] {snap} {ledger_kind} 0행 — 기존 building 유지", flush=True)
+        rebuild_parcels(engine, sidos)
+        if not skip_ledger:
+            overlay_land_ledger(engine, sidos)
+            from parcel_master.paths import land_ledger_csv
+
+            for sido in sidos:
+                src = land_ledger_csv(sido)
+                snap = ""
+                if src:
+                    parts = src.parent.name.split("_")
+                    snap = parts[3] if len(parts) >= 4 else src.parent.name
+                with engine.connect() as conn:
+                    n = conn.execute(
+                        text("SELECT COUNT(*) FROM parcel WHERE sido_code = :s"),
+                        {"s": sido},
+                    ).scalar()
+                upsert_ledger_snapshot(
+                    engine,
+                    source="al_d003",
+                    snapshot=snap or "unknown",
+                    sido_code=sido,
+                    row_count=int(n or 0),
+                )
+    finally:
+        if drop_indexes:
+            print("[표제부] secondary index 재생성", flush=True)
+            _toggle_building_secondary_indexes(engine, enable=True)
+    n_집합 = count_buildings(engine, "집합")
+    n_일반 = count_buildings(engine, "일반")
+    n_p = 0
     with engine.connect() as conn:
-        n_b = conn.execute(text("SELECT COUNT(*) FROM building")).scalar()
-        n_p = conn.execute(text("SELECT COUNT(*) FROM parcel")).scalar()
-    print(f"done building={n_b:,} parcel={n_p:,}", flush=True)
+        n_p = int(conn.execute(text("SELECT COUNT(*) FROM parcel")).scalar() or 0)
+    if ledger_kind == "일반" and n_집합 != n_집합_before:
+        raise RuntimeError(
+            f"집합 행이 변했다: before={n_집합_before:,} after={n_집합:,}"
+        )
+    record_building_snapshots(engine, ledger_kind)
+    print(
+        f"done kind={ledger_kind} 집합={n_집합:,} 일반={n_일반:,} parcel={n_p:,}",
+        flush=True,
+    )
+    return {
+        "ledger_kind": ledger_kind,
+        "집합": n_집합,
+        "일반": n_일반,
+        "parcel": n_p,
+        "집합_before": n_집합_before,
+    }
 
 
 def main() -> None:
@@ -348,8 +454,9 @@ def main() -> None:
     p.add_argument("--refresh", action="store_true")
     p.add_argument("--sido", nargs="+", default=list(PILOT_SIDO))
     p.add_argument("--skip-ledger", action="store_true")
+    p.add_argument("--ledger-kind", default="집합", choices=("집합", "일반"))
     args = p.parse_args()
-    run(tuple(args.sido), args.refresh, args.skip_ledger)
+    run(tuple(args.sido), args.refresh, args.skip_ledger, args.ledger_kind)
 
 
 if __name__ == "__main__":

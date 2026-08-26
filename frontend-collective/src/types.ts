@@ -51,6 +51,7 @@ export interface BuildingStatsRow {
   households_flagged?: boolean;
   builder_label?: string | null;
   builder_is_joint?: boolean;
+  match_tier?: string | null;
   asset_type: string;
   count: number;
   mean?: number | null;

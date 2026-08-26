@@ -70,13 +70,14 @@ def built_transactions_csv_bytes(
         "연식",
         "도로조건",
         "지분",
-        "복원지번",
-        "매칭등급",
+        "대장확인",
     ]
     writer.writerow(header)
     for r in rows:
         row_asset = str(r.get("asset_type") or "")
         share_val = "지분" if r.get("is_partial_ownership") else ""
+        tier = str(r.get("match_tier") or "").strip()
+        confirmed = "Y" if tier in ("A1", "A2") else ""
         line = [
             *( [ASSET_TYPE_LABELS.get(row_asset, row_asset)] if show_asset else [] ),
             r.get("display_address") or "",
@@ -90,8 +91,7 @@ def built_transactions_csv_bytes(
             "" if r.get("building_age") is None else r["building_age"],
             r.get("road_width_label") or "",
             share_val,
-            r.get("recovered_lot") or "",
-            r.get("match_tier") or "",
+            confirmed,
         ]
         writer.writerow(line)
     return buf.getvalue().encode("utf-8")

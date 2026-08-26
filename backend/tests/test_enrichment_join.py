@@ -14,7 +14,10 @@ def test_canonical_zone_drops_urban_and_matches_ledger():
 
 
 def test_wrap_sql_strips_coarse_and_지역_suffix():
-    sql = wrap_tx_enrichment("SELECT transaction_hash, zone_type FROM built_transactions")
+    sql = wrap_tx_enrichment(
+        "SELECT transaction_hash, zone_type FROM built_transactions",
+        enrich=True,
+    )
     assert "도시지역" in sql
     assert "regexp_replace(lab, '지역$', '')" in sql
     assert "s.zone_type IN" not in sql

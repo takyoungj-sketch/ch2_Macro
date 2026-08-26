@@ -45,6 +45,7 @@ import {
 } from "./utils/assetTypes";
 import { fetchBuiltMapResolveCodes } from "./api/mapClient";
 import BuiltTransactionListModal from "./components/BuiltTransactionListModal";
+import EnrichConsentModal from "./components/EnrichConsentModal";
 import BuiltRegionMapHub, { type MapPanelMode } from "./components/BuiltRegionMapHub";
 import AiAssistantPanel from "./components/AiAssistantPanel";
 import RegressionScatterSection from "./components/RegressionScatterSection";
@@ -516,6 +517,8 @@ export default function App() {
   const [vars, setVars] = useState<RegressionVariableSpec>(() => defaultVarsForKinds(["commercial"]));
   const [excludeOutliers, setExcludeOutliers] = useState(false);
   const [includePartial, setIncludePartial] = useState(false);
+  const [enrich, setEnrich] = useState(false);
+  const [enrichConsentOpen, setEnrichConsentOpen] = useState(false);
   const [iqrMultiplier, setIqrMultiplier] = useState<IqrMultiplier>(3);
   const [sampleFilter, setSampleFilter] = useState<SampleFilterState>(EMPTY_SAMPLE_FILTER);
   const [windowYears, setWindowYears] = useState<StatsWindowYears>(5);
@@ -848,7 +851,7 @@ export default function App() {
   ]);
 
   const scopeFilterQ = useQuery({
-    queryKey: ["scope-filters", scopeBaseParams],
+    queryKey: ["scope-filters", scopeBaseParams, enrich],
     queryFn: () =>
       fetchScopeSampleFilters({
         asset_type: scopeBaseParams.asset_type,
@@ -864,6 +867,7 @@ export default function App() {
         contract_year_to: scopeBaseParams.contract_year_to,
         as_of_month: scopeBaseParams.as_of_month,
         window_years: scopeBaseParams.window_years,
+        enrich: enrich || undefined,
       }),
   });
 
@@ -893,8 +897,9 @@ export default function App() {
     () => ({
       ...scopeBaseParams,
       ...sampleApiParams,
+      ...(enrich ? { enrich: true } : {}),
     }),
-    [scopeBaseParams, sampleApiParams],
+    [scopeBaseParams, sampleApiParams, enrich],
   );
 
   const txCountQ = useQuery({
@@ -918,11 +923,12 @@ export default function App() {
       contract_year_to: yearTo === "" ? undefined : yearTo,
       ...rollingParams,
       ...sampleApiParams,
-      variables: vars,
+      variables: enrich ? vars : { ...vars, structure_dummy: false },
       response_scale: responseScale,
       exclude_outliers_iqr: excludeOutliers,
       outlier_iqr_multiplier: iqrMultiplier,
       include_partial: includePartial,
+      enrich,
     };
   }, [
     assetType,
@@ -941,6 +947,7 @@ export default function App() {
     excludeOutliers,
     iqrMultiplier,
     includePartial,
+    enrich,
   ]);
 
   const regM = useMutation({
@@ -1075,6 +1082,16 @@ export default function App() {
                 })}
               </div>
             </div>
+              <StatsWindowToggle
+                value={windowYears}
+                onChange={(y) => setWindowYears(normalizeStatsWindowYears(y))}
+                disabled={yearFilterActive}
+              />
+              {yearFilterActive && (
+                <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-snug">
+                  연도가 선택되어 롤링 구간은 적용되지 않습니다.
+                </p>
+              )}
               {/* 연도(from/to) UI 숨김 — 상태는 "" 유지 → 롤링 창만 사용. 복구 시 아래 블록 복원 */}
               <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-snug">
                 직전 월말 기준 롤링 {windowYears}년 창으로 집계합니다.
@@ -1282,17 +1299,6 @@ export default function App() {
             )}
           </div>
 
-          <StatsWindowToggle
-            value={windowYears}
-            onChange={(y) => setWindowYears(normalizeStatsWindowYears(y))}
-            disabled={yearFilterActive}
-          />
-          {yearFilterActive && (
-            <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-snug">
-              연도가 선택되어 롤링 구간은 적용되지 않습니다.
-            </p>
-          )}
-
           <div className="space-y-3 border-t border-slate-200 pt-3">
             <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
               <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">1. 변수 선택</p>
@@ -1325,10 +1331,17 @@ export default function App() {
                       : []),
                   ] as const
                 ).map(([key, label]) => (
-                  <label key={key} className="flex items-center gap-1">
+                  <label
+                    key={key}
+                    className={clsx(
+                      "flex items-center gap-1",
+                      key === "structure_dummy" && !enrich && "opacity-50",
+                    )}
+                  >
                     <input
                       type="checkbox"
-                      checked={vars[key as keyof RegressionVariableSpec]}
+                      checked={Boolean(vars[key as keyof RegressionVariableSpec]) && (key !== "structure_dummy" || enrich)}
+                      disabled={key === "structure_dummy" && !enrich}
                       onChange={(e) =>
                         setVars((v) => ({ ...v, [key]: e.target.checked }))
                       }
@@ -1336,6 +1349,11 @@ export default function App() {
                     {label}
                   </label>
                 ))}
+                {vars.structure_dummy && !enrich && (
+                  <span className="text-slate-500 w-full text-[10px] leading-snug">
+                    구조는 건축물대장 보강을 켜야 쓸 수 있습니다.
+                  </span>
+                )}
                 {vars.region_leaf_dummy && (
                   <span className="text-slate-500 w-full text-[10px] leading-snug">
                     {riList.length >= 2
@@ -1409,6 +1427,25 @@ export default function App() {
                 </label>
                 <span className="text-[10px] text-slate-500 leading-snug">
                   기본은 제외. 목록에는 지분 행이 그대로 보입니다.
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs">
+                <label className="flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={enrich}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setEnrichConsentOpen(true);
+                        return;
+                      }
+                      setEnrich(false);
+                    }}
+                  />
+                  건축물대장 보강
+                </label>
+                <span className="text-[10px] text-slate-500 leading-snug">
+                  기본은 끄기. 켜면 목록·회귀 용도지역이 같아집니다. 원장은 덮지 않습니다.
                 </span>
               </div>
               <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs">
@@ -1683,6 +1720,14 @@ export default function App() {
         assetType={assetType}
         exportParams={txExportParams}
         summary={txModalSummary}
+      />
+      <EnrichConsentModal
+        open={enrichConsentOpen}
+        onCancel={() => setEnrichConsentOpen(false)}
+        onConfirm={() => {
+          setEnrich(true);
+          setEnrichConsentOpen(false);
+        }}
       />
       </div>
     </div>

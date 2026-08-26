@@ -10,10 +10,22 @@ import {
   type QaRun,
 } from "../api/qaClient";
 
-const ASSETS = [
-  { id: "apartment", label: "아파트" },
-  { id: "rowhouse", label: "연립다세대" },
-  { id: "officetel", label: "오피스텔" },
+const ASSETS: Record<string, { id: string; label: string }[]> = {
+  collective_apt: [
+    { id: "apartment", label: "아파트" },
+    { id: "rowhouse", label: "연립다세대" },
+    { id: "officetel", label: "오피스텔" },
+  ],
+  built_enriched: [
+    { id: "commercial", label: "상업" },
+    { id: "factory", label: "공장" },
+    { id: "detached", label: "단독" },
+  ],
+};
+
+const DOMAINS = [
+  { id: "collective_apt", label: "집합 주거" },
+  { id: "built_enriched", label: "복합 보강" },
 ];
 
 function verdictClass(v?: string) {
@@ -29,6 +41,7 @@ function displayVerdict(run: QaRun) {
 
 export default function QaAuditPanel({ onWhy }: { onWhy?: () => void }) {
   const [mode, setMode] = useState<"specified" | "random">("specified");
+  const [domain, setDomain] = useState("collective_apt");
   const [year, setYear] = useState(2025);
   const [assetType, setAssetType] = useState("apartment");
   const [region, setRegion] = useState("세종특별자치시 나성동");
@@ -41,8 +54,8 @@ export default function QaAuditPanel({ onWhy }: { onWhy?: () => void }) {
   const [runs, setRuns] = useState<QaRun[]>([]);
 
   const histQ = useQuery({
-    queryKey: ["qa-runs"],
-    queryFn: () => fetchQaRuns(12),
+    queryKey: ["qa-runs", domain],
+    queryFn: () => fetchQaRuns(12, domain),
     retry: false,
   });
 
@@ -52,12 +65,13 @@ export default function QaAuditPanel({ onWhy }: { onWhy?: () => void }) {
     setError(null);
     try {
       if (mode === "random") {
-        const out = await runRandom({ n, save_db: saveDb });
+        const out = await runRandom({ n, save_db: saveDb, domain });
         setRuns(out.runs);
       } else {
         const out = await runSpecified({
           calendar_year: year,
           asset_type: assetType,
+          domain,
           region_name: regionCode.trim() ? undefined : region.trim() || undefined,
           region_code: regionCode.trim() || undefined,
           save_db: saveDb,
@@ -107,10 +121,33 @@ export default function QaAuditPanel({ onWhy }: { onWhy?: () => void }) {
         </div>
         {mode === "random" && (
           <p className="text-xs text-slate-500">
-            지역·유형·연도를 층화 추첨합니다. V1은 집합 주거(아파트·연립·오피스텔). 토지·복합은 후속.
+            지역·유형·연도를 층화 추첨합니다. 집합 주거 또는 복합 보강을 도메인에서 고릅니다.
           </p>
         )}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
+          <label className="space-y-1">
+            <span className="text-xs text-slate-500">도메인</span>
+            <select
+              className="w-full rounded border border-slate-300 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-900"
+              value={domain}
+              onChange={(e) => {
+                const next = e.target.value;
+                setDomain(next);
+                setAssetType(ASSETS[next]?.[0]?.id ?? "apartment");
+                if (next === "built_enriched") {
+                  setRegion("충청북도 청주시 흥덕구 가경동");
+                } else {
+                  setRegion("세종특별자치시 나성동");
+                }
+              }}
+            >
+              {DOMAINS.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+          </label>
           {mode === "specified" && (
             <>
               <label className="space-y-1">
@@ -129,7 +166,7 @@ export default function QaAuditPanel({ onWhy }: { onWhy?: () => void }) {
                   value={assetType}
                   onChange={(e) => setAssetType(e.target.value)}
                 >
-                  {ASSETS.map((a) => (
+                  {(ASSETS[domain] ?? ASSETS.collective_apt).map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.label}
                     </option>
@@ -233,9 +270,11 @@ export default function QaAuditPanel({ onWhy }: { onWhy?: () => void }) {
 function ResultCard({ run }: { run: QaRun }) {
   const metrics = run.diffs?.metrics || {};
   const n = metrics.n;
+  const nEnriched = metrics.n_enriched;
   const checks = run.diffs?.checks || [];
   const v = displayVerdict(run);
   const typeLabel = run.asset_label || run.asset_type || "";
+  const built = run.domain === "built_enriched";
 
   return (
     <div className="card p-4 space-y-4">
@@ -244,6 +283,7 @@ function ResultCard({ run }: { run: QaRun }) {
         <p className="text-sm mt-1">
           <span className="text-slate-500">대상</span>{" "}
           {run.region_name || run.region_code} · {typeLabel} · {run.period_key}년
+          {built ? " · 복합 보강" : ""}
           {run.trigger === "random" ? " · 랜덤 표본" : ""}
         </p>
         <p className="mt-2 flex items-center gap-2">
@@ -254,10 +294,18 @@ function ResultCard({ run }: { run: QaRun }) {
 
       {n && (
         <div className="grid gap-2 sm:grid-cols-4 text-sm bg-slate-50 dark:bg-slate-900/40 rounded p-3">
-          <EvidenceStat label="원장 유효 거래건수" value={n.l1} suffix="건" />
-          <EvidenceStat label="재계산 (L3)" value={n.l3} suffix="건" />
-          <EvidenceStat label="기존 Mart" value={n.mart} suffix="건" />
-          <EvidenceStat label="차이 (원장−마트)" value={n.delta_l1_mart} suffix="건" />
+          <EvidenceStat label={built ? "원장 유효" : "원장 유효 거래건수"} value={n.l1} suffix="건" />
+          <EvidenceStat label={built ? "해시 유일 재집계" : "재계산 (L3)"} value={n.l3} suffix="건" />
+          <EvidenceStat
+            label={built ? "보강 조인" : "기존 Mart"}
+            value={built ? (nEnriched?.mart ?? n.mart) : n.mart}
+            suffix="건"
+          />
+          <EvidenceStat
+            label={built ? "미연결" : "차이 (원장−마트)"}
+            value={built ? (n.l1 != null && nEnriched?.mart != null ? n.l1 - nEnriched.mart : n.delta_l1_mart) : n.delta_l1_mart}
+            suffix="건"
+          />
         </div>
       )}
 

@@ -37,6 +37,7 @@ export type QaCheck = {
 export type QaRun = {
   verdict?: string;
   verdict_ui?: string;
+  domain?: string;
   region_name?: string;
   region_code?: string;
   region_level?: string;
@@ -70,6 +71,7 @@ export async function runSpecified(body: {
   region_code?: string;
   region_name?: string;
   asset_type?: string;
+  domain?: string;
   save_db?: boolean;
 }): Promise<QaRun> {
   const { data } = await qaApi().post<QaRun>("/specified", body);
@@ -79,6 +81,7 @@ export async function runSpecified(body: {
 export async function runRandom(body: {
   calendar_year?: number;
   asset_type?: string;
+  domain?: string;
   n: number;
   save_db?: boolean;
 }): Promise<{ runs: QaRun[]; count: number }> {
@@ -86,17 +89,18 @@ export async function runRandom(body: {
   return data;
 }
 
-export async function fetchQaRuns(limit = 15) {
+export async function fetchQaRuns(limit = 15, domain?: string) {
   const { data } = await qaApi().get<{
     items: Array<{
       id: number;
       created_at: string;
       trigger: string;
+      domain?: string;
       region_name: string | null;
       region_code: string;
       period_key: string;
       verdict: string;
     }>;
-  }>("/runs", { params: { limit } });
+  }>("/runs", { params: { limit, domain } });
   return data;
 }

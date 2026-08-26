@@ -29,6 +29,7 @@ D-046 규칙을 코드로 고정한다. `docs/BUILT_DATA_ENRICHMENT.md` §3·§1
   python -m built.recover_address --sido 43 --no-zone       # AL_D155 건너뜀
   python -m built.recover_address --sido 43 --apply-enrichment  # 확정 행 DB 적재 (기존 해시 동결)
   python -m built.recover_address --sido all --apply-enrichment  # 원장 전 시도. 이미 적재된 시도는 건너뜀
+  python -m built.recover_address --sido 43 --min-year 2019     # 제품 게이트 (기본값). 2018 이전은 매칭하지 않음
 """
 
 from __future__ import annotations
@@ -180,8 +181,18 @@ def zlabels(zone: dict[str, list[str]], key: Any) -> list[str]:
 
 
 def zone_primary(zone: dict[str, list[str]], key: Any) -> str:
+    """대표 용도지역 = zlabels 의 첫 항. 순서는 order_zone_labels (빈도, 동수는 라벨 문자열)."""
     labels = zlabels(zone, key)
     return labels[0] if labels else ""
+
+
+def order_zone_labels(cnt: Counter, broad: set[str]) -> list[str]:
+    """빈도 내림차순. 동수는 라벨 문자열 오름차순. 대분류는 뒤로.
+
+    Counter.most_common() 은 동수일 때 삽입 순이라 재스캔마다 대표가 바뀔 수 있다.
+    """
+    ordered = [lab for lab, _ in sorted(cnt.items(), key=lambda kv: (-kv[1], kv[0]))]
+    return [x for x in ordered if x not in broad] + [x for x in ordered if x in broad]
 
 
 def zkey(s: Any) -> str:
@@ -594,10 +605,10 @@ def load_zone(sido: str, keep: set[str], refresh: bool) -> dict[str, list[str]]:
 
     하나만 남기면 불일치를 분해할 수 없다. 한 필지가 두 용도지역에 걸치는 경우가 있어서
     원장 라벨이 '첫 번째'가 아니라 '두 번째' 라벨과 맞는 일이 생긴다.
-    반환 리스트는 빈도 내림차순, UQA001('도시지역') 같은 상위 라벨은 맨 뒤.
+    반환 리스트는 빈도 내림차순(동수는 라벨 문자열), UQA001('도시지역') 같은 상위 라벨은 맨 뒤.
     """
     CACHE.mkdir(exist_ok=True)
-    cache = CACHE / f"zone_all_{sido}.json"
+    cache = CACHE / f"zone_all_{sido}_v2.json"
     if cache.exists() and not refresh:
         cur: dict[str, list[str]] = json.loads(cache.read_text(encoding="utf-8"))
         if keep <= set(cur):
@@ -649,7 +660,7 @@ def load_zone(sido: str, keep: set[str], refresh: bool) -> dict[str, list[str]]:
     out: dict[str, list[str]] = {}
     for key, cnt in tally.items():
         broad = coarse.get(key, set())
-        ordered = [x for x, _ in cnt.most_common()]
+        ordered = order_zone_labels(cnt, broad)
         out[key] = [x for x in ordered if x not in broad] + [x for x in ordered if x in broad]
     found = len(out)
     # AL_D155 에 없는 필지도 빈 리스트로 캐시한다. 안 하면 매 실행마다 2.5GB를 다시 읽는다.
@@ -976,6 +987,7 @@ SELECT id, transaction_hash, asset_type, beopjungri_code, lot_number, road_name,
 FROM built_transactions
 WHERE is_valid AND gross_area > 0 AND sigungu_code LIKE :sido_like
   AND is_partial_ownership IS NOT TRUE
+  AND contract_year >= :min_year
 """
 
 
@@ -1034,11 +1046,16 @@ def run(
     compare_policies: bool = True,
     emit_enrichment: bool = False,
     apply_enrichment: bool = False,
+    min_year: int = 2019,
 ) -> dict:
     eng = get_built_engine()
     with eng.connect() as conn:
-        tx = pd.read_sql(text(TX_SQL), conn, params={"sido_like": f"{sido}%"})
-    print(f"[원장] {len(tx):,}건", flush=True)
+        tx = pd.read_sql(
+            text(TX_SQL),
+            conn,
+            params={"sido_like": f"{sido}%", "min_year": min_year},
+        )
+    print(f"[원장] {len(tx):,}건 (contract_year>={min_year})", flush=True)
 
     land_ledger = load_land_ledger(sido, refresh)
     if snapshot == "all":
@@ -1172,6 +1189,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="확정 행을 built_transaction_enrichment 에 INSERT. 기존 해시는 동결",
     )
+    ap.add_argument(
+        "--min-year",
+        type=int,
+        default=2019,
+        help="원장 하한 계약연도. 제품 게이트 2019 (D-050). 연구용으로만 낮춤",
+    )
     ap.add_argument("--out", default=None)
     return ap
 
@@ -1211,6 +1234,7 @@ def main() -> None:
                     compare_policies=False,
                     emit_enrichment=args.emit_enrichment or args.apply_enrichment,
                     apply_enrichment=args.apply_enrichment,
+                    min_year=args.min_year,
                 )
                 apply = rep.get("enrichment_apply") or {}
                 row: dict[str, Any] = {
@@ -1244,6 +1268,7 @@ def main() -> None:
         compare_policies=False if args.apply_enrichment else not args.no_compare_policies,
         emit_enrichment=args.emit_enrichment or args.apply_enrichment,
         apply_enrichment=args.apply_enrichment,
+        min_year=args.min_year,
     )
     CACHE.mkdir(exist_ok=True)
     out = Path(args.out) if args.out else CACHE / f"recover_{args.sido}_{args.snapshot}.json"

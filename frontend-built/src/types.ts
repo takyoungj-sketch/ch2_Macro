@@ -12,6 +12,7 @@ export interface BuiltTransactionRow {
   addr4?: string | null;
   addr5?: string | null;
   lot_number?: string | null;
+  recovered_lot?: string | null;
   display_address?: string | null;
   road_name?: string | null;
   road_width_label?: string | null;
@@ -36,8 +37,10 @@ export interface BuiltTransactionRow {
   is_partial_ownership?: boolean;
   partial_ownership_label?: string | null;
   structure_group?: string | null;
-  recovered_lot?: string | null;
   match_tier?: string | null;
+  match_rule?: string | null;
+  zone_type_ledger?: string | null;
+  zone_source?: string | null;
 }
 
 export interface BuiltTransactionListResponse {
@@ -345,6 +348,7 @@ export interface RegressionRunRequest {
   exclude_outliers_iqr: boolean;
   outlier_iqr_multiplier?: number;
   include_partial?: boolean;
+  enrich?: boolean;
   /** R0 — analysis_scope anchor (analysisUnits[0] non-crossParent) */
   anchor_region_code?: string;
   region_unit_hints?: AnalysisRegionUnitHint[];

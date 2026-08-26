@@ -680,6 +680,7 @@ def insert_builder_master(engine, rows: list[dict[str, Any]]) -> None:
             :structure_raw, :max_floor, :basement_floor, :parking_total, :parking_ground,
             :parking_underground, :heating_type, :corridor_type, :source_file, :pnu
         )
+        ON CONFLICT (snapshot_ym, danji_code) DO NOTHING
         """
     )
     for start in range(0, len(rows), DEFAULT_CHUNK):
@@ -703,6 +704,26 @@ def _sanitize_record(rec: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+def filter_new_attribute_rows(attrs: pd.DataFrame, existing_keys: set[str]) -> pd.DataFrame:
+    if attrs.empty:
+        return attrs
+    return attrs.loc[~attrs["building_key"].astype(str).isin(existing_keys)].copy()
+
+
+def existing_attribute_keys(engine, snapshot_ym: str, asset_type: str) -> set[str]:
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text(
+                """
+                SELECT building_key FROM collective_building_attributes
+                WHERE snapshot_ym = :ym AND asset_type = :at
+                """
+            ),
+            {"ym": snapshot_ym, "at": asset_type},
+        )
+        return {str(r[0]) for r in rows}
+
+
 def insert_attributes(engine, df: pd.DataFrame) -> None:
     if df.empty:
         return
@@ -723,6 +744,7 @@ def insert_attributes(engine, df: pd.DataFrame) -> None:
             :parking_total, :parking_per_household, :danji_class, :supply_type, :n_tx,
             :match_danji_codes
         )
+        ON CONFLICT (snapshot_ym, asset_type, building_key) DO NOTHING
         """
     )
     records = [_sanitize_record(r) for r in df.to_dict(orient="records")]
@@ -843,6 +865,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--kapt-file", default=None, help="K-apt xlsx 경로")
     p.add_argument("--asset-type", default="apartment")
     p.add_argument("--replace", action="store_true", help="해당 snapshot_ym 행 삭제 후 재적재")
+    p.add_argument("--new-keys-only", action="store_true", help="속성 없는 building_key만 INSERT. A·B·C 안 덮음")
     p.add_argument("--dry-run", action="store_true", help="DB 쓰기 없이 리포트만")
     p.add_argument("--apply-ddl", action="store_true", help="DDL 049 적용 후 실행")
     return p.parse_args()
@@ -850,6 +873,8 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    if args.replace and args.new_keys_only:
+        raise SystemExit("--replace 와 --new-keys-only 는 같이 쓰지 않는다")
     kapt_path = Path(args.kapt_file) if args.kapt_file else default_kapt_path()
     snapshot_ym = args.snapshot_ym or infer_snapshot_ym(kapt_path)
     log.info("snapshot_ym=%s  kapt=%s  asset_type=%s", snapshot_ym, kapt_path.name, args.asset_type)
@@ -867,6 +892,11 @@ def main() -> None:
 
     bm_rows = builder_master_rows(kapt, snapshot_ym)
     attrs = attributes_rows(buildings, kapt, snapshot_ym=snapshot_ym, asset_type=args.asset_type)
+    if args.new_keys_only:
+        existed = existing_attribute_keys(engine, snapshot_ym, args.asset_type)
+        before = len(attrs)
+        attrs = filter_new_attribute_rows(attrs, existed)
+        log.info("new-keys-only: keep %s / %s (existing %s)", len(attrs), before, len(existed))
 
     print_report(attrs, kapt, buildings=buildings)
 

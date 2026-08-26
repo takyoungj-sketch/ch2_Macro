@@ -49,6 +49,7 @@ import {
 } from "./utils/residentialAssetTypes";
 import { useCollectiveDeepLink } from "./hooks/useCollectiveDeepLink";
 import { profileHref, resolveCollectiveProfileTarget } from "./utils/profileLink";
+import { collectiveMatchBadge } from "./utils/matchBadge";
 
 type AnalysisScope = {
   assetType: AssetSelectorType;
@@ -96,6 +97,21 @@ function BuildingTableRow({
       <td className="name">
         {row.display_name}
         {!row.is_reliable && <span className="ml-0.5 text-[9px] text-amber-600">n&lt;15</span>}
+        {row.asset_type !== "presale" &&
+          (() => {
+            const badge = collectiveMatchBadge(row.match_tier);
+            return (
+              <span
+                className={clsx(
+                  "ml-0.5 text-[9px]",
+                  badge.tone === "amber" ? "text-amber-600" : "text-slate-500",
+                )}
+                title={`조인 ${row.match_tier || "없음"}`}
+              >
+                {badge.label}
+              </span>
+            );
+          })()}
       </td>
       <td className="num">{row.count}</td>
       <td className="num">{fmtPrice(row.mean)}</td>
@@ -416,6 +432,10 @@ export default function App() {
               </div>
             </div>
 
+            <StatsWindowToggle
+              value={windowYears}
+              onChange={(y) => setWindowYears(normalizeStatsWindowYears(y))}
+            />
             <p className="text-[10px] text-slate-400 leading-snug">
               직전 월말 기준 롤링 {windowYears}년 창으로 집계합니다.
             </p>
@@ -519,11 +539,6 @@ export default function App() {
                 <option value="address">지번 주소</option>
               </select>
             </label>
-
-            <StatsWindowToggle
-              value={windowYears}
-              onChange={(y) => setWindowYears(normalizeStatsWindowYears(y))}
-            />
 
             <button type="button" className="btn btn-primary w-full" disabled={!addr2} onClick={runAnalysis}>
               통계분석

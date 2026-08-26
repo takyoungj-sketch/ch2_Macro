@@ -64,13 +64,11 @@ const TABS: { id: PanelMode; label: string | ((assetType: AssetType) => string) 
   { id: "histogram", label: "단가 분포" },
   { id: "transactions", label: "거래 목록" },
   { id: "floor_index", label: (t) => (t === "presale" ? "층·권리·면적 효용지수" : "층·동·면적 효용지수") },
+  { id: "danji", label: "단지 정보" },
   { id: "regression", label: "회귀 분석" },
   { id: "long_term", label: "장기 추세" },
   { id: "rent", label: "전월세" },
 ];
-
-/** K-apt 단지 속성 — 실험 단계에서만 노출 */
-const DANJI_TAB: { id: PanelMode; label: string } = { id: "danji", label: "단지 정보" };
 
 function fmtPrice(v: number | null | undefined) {
   if (v == null) return "—";
@@ -588,7 +586,7 @@ export default function BuildingDetailModal({
   const danjiQ = useQuery({
     queryKey: ["b-danji-attrs", row.building_key],
     queryFn: () => fetchDanjiAttributes(row.building_key),
-    enabled: experiment && panel === "danji",
+    enabled: panel === "danji",
   });
 
   const relatedPresaleQ = useQuery({
@@ -733,8 +731,8 @@ export default function BuildingDetailModal({
             className="flex flex-wrap gap-0.5 rounded-md border modal-tab-bar p-0.5"
             role="tablist"
           >
-            {[...TABS, ...(experiment ? [DANJI_TAB] : [])]
-              .filter(({ id }) => id !== "rent" || effectiveAssetType !== "presale")
+            {TABS
+              .filter(({ id }) => effectiveAssetType !== "presale" || (id !== "rent" && id !== "danji"))
               .map(({ id, label }) => {
               const tabLabel = typeof label === "function" ? label(effectiveAssetType) : label;
               const needsGate = id === "floor_index" || id === "regression";

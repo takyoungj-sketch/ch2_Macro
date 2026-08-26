@@ -122,7 +122,12 @@ export default function BuiltTransactionListModal({
             {exportError && <p className="text-[11px] text-red-600 shrink-0">{exportError}</p>}
             {items.length > 0 ? (
               <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                <BuiltTransactionTable items={items} assetType={assetType} truncated={truncated} />
+                <BuiltTransactionTable
+                  items={items}
+                  assetType={assetType}
+                  truncated={truncated}
+                  enrich={Boolean(exportParams.enrich)}
+                />
               </div>
             ) : (
               <p className="text-xs text-slate-400 text-center py-6">조건에 맞는 거래가 없습니다.</p>

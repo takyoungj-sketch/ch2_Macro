@@ -24,6 +24,7 @@ from app.built.regression.selection.service import compare_regression, suggest_r
 from app.recommendation.adapters.built import recommend_built_regression
 from app.recommendation.scope import resolve_built_analysis_scope
 from app.built.enrichment_join import wrap_tx_enrichment
+from app.built.enrichment_policy import split_zone_filter
 from app.built.transaction_export import (
     MAX_BUILT_TX_EXPORT,
     built_csv_response,
@@ -65,31 +66,43 @@ def _mark_regression_deprecated(response: Response) -> None:
     response.headers["Link"] = f'<{_RECOMMEND_SUCCESSOR}>; rel="successor-version"'
 
 
-def _apply_tx_enrichment_fields(data: dict) -> dict:
+def _apply_tx_enrichment_fields(data: dict, *, enrich: bool = False) -> dict:
+    from app.built.enrichment_join import canonical_zone_label, display_recovered_lot
+
     filled = data.pop("zone_type_filled", None)
     first = data.pop("zone_type_first", None)
     data.pop("transaction_hash", None)
-    if filled:
-        data["zone_type"] = filled
-    elif first:
-        data["zone_type"] = first
-    if not data.get("match_tier"):
-        data["match_tier"] = data.pop("match_tier", None)
+    ledger = data.get("zone_type")
+    ledger_canon = canonical_zone_label([str(ledger)]) if ledger else None
+    if enrich:
+        display = filled or first
+        data["zone_type_ledger"] = ledger
+        data["recovered_lot"] = display_recovered_lot(data.get("recovered_lot"))
+        if display:
+            data["zone_type"] = display
+            data["zone_source"] = "ledger" if ledger_canon else "title"
+        else:
+            data["zone_source"] = "ledger" if ledger else None
     else:
+        data.pop("structure_group", None)
         data.pop("match_tier", None)
-    for key in ("structure_group", "recovered_lot", "match_tier"):
+        data.pop("match_rule", None)
+        data.pop("recovered_lot", None)
+        data["zone_type_ledger"] = ledger
+        data["zone_source"] = "ledger" if ledger else None
+    for key in ("structure_group", "match_tier", "match_rule", "recovered_lot"):
         val = data.get(key)
         if isinstance(val, str) and not val.strip():
             data[key] = None
     return data
 
 
-def _serialize_tx_row(row) -> BuiltTransactionRow:
+def _serialize_tx_row(row, *, enrich: bool = False) -> BuiltTransactionRow:
     data = dict(row)
     cd = data.get("contract_date")
     if cd is not None and hasattr(cd, "isoformat"):
         data["contract_date"] = cd.isoformat()
-    return BuiltTransactionRow(**_apply_tx_enrichment_fields(data))
+    return BuiltTransactionRow(**_apply_tx_enrichment_fields(data, enrich=enrich))
 
 
 def _chip_scope_kwargs(
@@ -184,6 +197,7 @@ def scope_sample_filters(
     contract_year_to: Optional[int] = None,
     as_of_month: Optional[str] = None,
     window_years: Optional[int] = None,
+    enrich: bool = Query(False),
 ):
     """현재 지역·연도 scope 내 표본 필터 옵션(건수·연속 min/max)."""
     where, params = build_transaction_where(
@@ -203,19 +217,27 @@ def scope_sample_filters(
         window_years=window_years,
     )
     total = int(db.execute(text(f"SELECT COUNT(*) FROM built_transactions WHERE {where}"), params).scalar() or 0)
-    zone_rows = db.execute(
-        text(
-            f"""
+    if enrich:
+        zone_sql = f"""
+            SELECT zone_type_filled AS name, COUNT(*)::int AS count
+            FROM ({wrap_tx_enrichment(
+                f"SELECT transaction_hash, zone_type FROM built_transactions WHERE {where}",
+                enrich=True,
+            )}) q
+            WHERE zone_type_filled IS NOT NULL AND btrim(zone_type_filled::text) <> ''
+            GROUP BY zone_type_filled
+            ORDER BY count DESC, zone_type_filled
+        """
+    else:
+        zone_sql = f"""
             SELECT zone_type AS name, COUNT(*)::int AS count
             FROM built_transactions
             WHERE {where}
               AND zone_type IS NOT NULL AND btrim(zone_type::text) <> ''
             GROUP BY zone_type
             ORDER BY count DESC, zone_type
-            """
-        ),
-        params,
-    ).mappings().all()
+        """
+    zone_rows = db.execute(text(zone_sql), params).mappings().all()
     use_rows = db.execute(
         text(
             f"""
@@ -293,9 +315,11 @@ def list_transactions(
     building_age_max: Optional[float] = None,
     road_code_min: Optional[float] = None,
     road_code_max: Optional[float] = None,
+    enrich: bool = Query(False),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=500),
 ):
+    inner_zones, outer_zones = split_zone_filter(enrich=enrich, zone_types=zone_types)
     where, params = build_transaction_where(
         conn=db.connection(),
         asset_type=asset_type,
@@ -312,7 +336,7 @@ def list_transactions(
         contract_year_to=contract_year_to,
         as_of_month=as_of_month,
         window_years=window_years,
-        zone_types=zone_types or None,
+        zone_types=inner_zones,
         building_uses=building_uses or None,
         road_width_labels=road_width_labels or None,
         gross_area_min=gross_area_min,
@@ -324,9 +348,9 @@ def list_transactions(
         road_code_min=road_code_min,
         road_code_max=road_code_max,
     )
-    total = db.execute(text(f"SELECT COUNT(*) FROM built_transactions WHERE {where}"), params).scalar()
-    params.update({"limit": page_size, "offset": (page - 1) * page_size})
-    inner = f"""
+    if outer_zones:
+        params["zone_types"] = outer_zones
+    base = f"""
             SELECT id, asset_type, addr1, addr2, addr3, addr4, addr5, lot_number,
                    display_address, road_name, road_width_label, deal_type,
                    trade_year_label, contract_year, contract_month, contract_date,
@@ -336,11 +360,20 @@ def list_transactions(
                    is_partial_ownership, partial_ownership_label, transaction_hash
             FROM built_transactions
             WHERE {where}
+    """
+    wrapped = wrap_tx_enrichment(base, enrich=enrich, zone_types=outer_zones)
+    if enrich and outer_zones:
+        total = db.execute(text(f"SELECT COUNT(*) FROM ({wrapped}) q"), params).scalar()
+    else:
+        total = db.execute(text(f"SELECT COUNT(*) FROM built_transactions WHERE {where}"), params).scalar()
+    params.update({"limit": page_size, "offset": (page - 1) * page_size})
+    page_sql = f"""
+            SELECT * FROM ({wrapped}) q
             ORDER BY contract_date DESC NULLS LAST, id DESC
             LIMIT :limit OFFSET :offset
     """
-    rows = db.execute(text(wrap_tx_enrichment(inner)), params).mappings().all()
-    items = [_serialize_tx_row(r) for r in rows]
+    rows = db.execute(text(page_sql), params).mappings().all()
+    items = [_serialize_tx_row(r, enrich=enrich) for r in rows]
     return BuiltTransactionListResponse(
         total=int(total or 0),
         page=page,
@@ -389,8 +422,10 @@ def export_transactions(
     building_age_max: Optional[float] = None,
     road_code_min: Optional[float] = None,
     road_code_max: Optional[float] = None,
+    enrich: bool = Query(False),
 ):
     """목록 API와 동일 필터로 전체 거래를 CSV(UTF-8 BOM)로 반환."""
+    inner_zones, outer_zones = split_zone_filter(enrich=enrich, zone_types=zone_types)
     where, params = build_transaction_where(
         conn=db.connection(),
         asset_type=asset_type,
@@ -407,7 +442,7 @@ def export_transactions(
         contract_year_to=contract_year_to,
         as_of_month=as_of_month,
         window_years=window_years,
-        zone_types=zone_types or None,
+        zone_types=inner_zones,
         building_uses=building_uses or None,
         road_width_labels=road_width_labels or None,
         gross_area_min=gross_area_min,
@@ -419,7 +454,21 @@ def export_transactions(
         road_code_min=road_code_min,
         road_code_max=road_code_max,
     )
-    total = int(db.execute(text(f"SELECT COUNT(*) FROM built_transactions WHERE {where}"), params).scalar() or 0)
+    if outer_zones:
+        params["zone_types"] = outer_zones
+    wrapped = wrap_tx_enrichment(
+        f"""
+            {_TX_SELECT}
+            WHERE {where}
+            ORDER BY contract_date DESC NULLS LAST, id DESC
+            """,
+        enrich=enrich,
+        zone_types=outer_zones,
+    )
+    if enrich and outer_zones:
+        total = int(db.execute(text(f"SELECT COUNT(*) FROM ({wrapped}) q"), params).scalar() or 0)
+    else:
+        total = int(db.execute(text(f"SELECT COUNT(*) FROM built_transactions WHERE {where}"), params).scalar() or 0)
     if total > MAX_BUILT_TX_EXPORT:
         raise HTTPException(
             413,
@@ -428,21 +477,10 @@ def export_transactions(
                 "지역·연도·표본 필터 범위를 줄여 주세요."
             ),
         )
-    rows = db.execute(
-        text(
-            wrap_tx_enrichment(
-                f"""
-            {_TX_SELECT}
-            WHERE {where}
-            ORDER BY contract_date DESC NULLS LAST, id DESC
-            """
-            )
-        ),
-        params,
-    ).mappings().all()
+    rows = db.execute(text(wrapped), params).mappings().all()
     scope_label = "_".join(filter(None, [addr1, addr2])) or "built"
     payload = built_transactions_csv_bytes(
-        [_apply_tx_enrichment_fields(dict(r)) for r in rows],
+        [_apply_tx_enrichment_fields(dict(r), enrich=enrich) for r in rows],
         asset_type=asset_type,
     )
     return built_csv_response(payload, export_filename(scope_label=scope_label))

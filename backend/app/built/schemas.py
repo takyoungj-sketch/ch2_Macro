@@ -59,6 +59,9 @@ class BuiltTransactionRow(BaseModel):
     structure_group: Optional[str] = None
     recovered_lot: Optional[str] = None
     match_tier: Optional[str] = None
+    match_rule: Optional[str] = None
+    zone_type_ledger: Optional[str] = None
+    zone_source: Optional[str] = None
 
 
 class BuiltTransactionListResponse(BaseModel):
@@ -203,6 +206,7 @@ class RegressionRunRequest(BaseModel):
     exclude_outliers_iqr: bool = False
     outlier_iqr_multiplier: float = 3.0
     include_partial: bool = False  # D-049 분석 기본 제외. 목록과 분리.
+    enrich: bool = False  # D-051. 기본 끄기. 켜면 표시 용도지역=필터.
     # R0 analysis_scope — 프론트 analysisUnits 미러 (필터 로직에는 미사용)
     anchor_region_code: Optional[str] = None
     region_unit_hints: list[AnalysisRegionUnitHint] = Field(default_factory=list)

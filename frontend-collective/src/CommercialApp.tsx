@@ -340,6 +340,14 @@ export default function CommercialApp() {
               </div>
             </div>
 
+            <StatsWindowToggle
+              value={windowYears}
+              onChange={(y) => setWindowYears(normalizeStatsWindowYears(y))}
+            />
+            <p className="text-[10px] text-slate-400 leading-snug">
+              직전 월말 기준 롤링 {windowYears}년 창으로 집계합니다.
+            </p>
+
             <label className="text-xs block space-y-1">
               <span className="text-slate-500 dark:text-slate-400">시도</span>
               <select
@@ -437,11 +445,6 @@ export default function CommercialApp() {
                 <option value="display_label">도로명</option>
               </select>
             </label>
-
-            <StatsWindowToggle
-              value={windowYears}
-              onChange={(y) => setWindowYears(normalizeStatsWindowYears(y))}
-            />
 
             <button type="button" className="btn btn-primary w-full" disabled={!addr2} onClick={runAnalysis}>
               통계분석

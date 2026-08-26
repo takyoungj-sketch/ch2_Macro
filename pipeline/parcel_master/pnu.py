@@ -84,6 +84,19 @@ def pnu_from_tx(beopjungri: str | None, lot_number: str | None) -> str | None:
     return make_pnu(code, gbn, bun, ji)
 
 
+def remap_pnu_old_sido(pnu: str, old_to_current_bjd: dict[str, str]) -> str | None:
+    """AL_D151 광주·전남 구코드 29/46 → 통합 12. 매핑이 없으면 앞 10자리를 그대로 둔다."""
+    p = (pnu or "").strip()
+    if len(p) != 19 or not p.isdigit():
+        return None
+    if p[:2] not in {"29", "46"}:
+        return p
+    bjd = old_to_current_bjd.get(p[:10], p[:10])
+    if len(bjd) != 10 or not bjd.isdigit():
+        return p
+    return bjd + p[10:]
+
+
 def split_pnu(pnu: str) -> dict[str, str] | None:
     p = (pnu or "").strip()
     if len(p) != 19 or not p.isdigit():

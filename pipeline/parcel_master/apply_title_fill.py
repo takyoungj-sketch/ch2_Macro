@@ -6,6 +6,8 @@
 
     python -m parcel_master.apply_title_fill
     python -m parcel_master.apply_title_fill --dry-run
+    python -m parcel_master.apply_title_fill --new-keys-only
+    python -m parcel_master.apply_title_fill --refresh-t
     python -m parcel_master.apply_title_fill --types rowhouse,officetel
 """
 
@@ -109,6 +111,7 @@ INSERT_SQL = text(
         :approved_year, :building_year, :year_diff, :structure_raw, :structure_group,
         :households, :dong_count, :max_floor, :n_tx
     )
+    ON CONFLICT (snapshot_ym, asset_type, building_key) DO NOTHING
     """
 )
 
@@ -172,6 +175,7 @@ def classify(
     *,
     kind: TitleKind,
     skip_kapt: bool,
+    refresh_t: bool = False,
 ) -> dict[str, list[dict[str, Any]]]:
     out: dict[str, list[dict[str, Any]]] = {
         "fill": [],
@@ -218,7 +222,7 @@ def classify(
             if tier == "T":
                 out["revert"].append(item)
             continue
-        if tier == "T":
+        if tier == "T" and not refresh_t:
             out["keep_t"].append({"building_key": cand.building_key, "tx_name": cand.display_name})
             continue
         out["fill"].append(_fill_record(cand, agg))  # type: ignore[arg-type]
@@ -239,6 +243,11 @@ def _payloads(fills: list[dict[str, Any]], snapshot_ym: str, asset_type: str) ->
     return upd, ins
 
 
+def filter_fills_new_keys(fills: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """실거래 달: 속성 행이 없는 키만. A·B·C·T 기존 행은 여기 안 들어온다."""
+    return [f for f in fills if not f.get("has_attr_row")]
+
+
 def _exec_many(conn, sql, rows: list[dict[str, Any]]) -> int:
     if not rows:
         return 0
@@ -255,6 +264,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--snapshot-ym", default=None)
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--skip-dictionary", action="store_true")
+    p.add_argument("--new-keys-only", action="store_true", help="속성 없는 키만 INSERT. A·B·C·기존 T 안 덮음")
+    p.add_argument("--refresh-t", action="store_true", help="대장 달: 기존 T를 표제부 신본으로 갱신")
     p.add_argument(
         "--types",
         default=",".join(DEFAULT_TYPES),
@@ -284,7 +295,11 @@ def run(
     dry_run: bool = False,
     skip_dictionary: bool = False,
     types: tuple[TitleKind, ...] = DEFAULT_TYPES,
+    new_keys_only: bool = False,
+    refresh_t: bool = False,
 ) -> None:
+    if new_keys_only and refresh_t:
+        raise SystemExit("--new-keys-only 와 --refresh-t 는 같이 쓰지 않는다")
     coll = get_collective_engine()
     parcel = get_parcel_engine()
     with coll.connect() as conn:
@@ -321,9 +336,12 @@ def run(
             kapt_pnus,
             kind=kind,
             skip_kapt=(kind == "apartment"),
+            refresh_t=refresh_t,
         )
         fills = classified["fill"]
-        reverts = classified["revert"]
+        if new_keys_only:
+            fills = filter_fills_new_keys(fills)
+        reverts = [] if new_keys_only else classified["revert"]
         log.info(
             "%s  fill=%s  keep_t=%s  revert=%s  blocked=%s  has_kapt=%s  "
             "no_title=%s  no_housing=%s  no_hh=%s  rebuild=%s",
@@ -352,6 +370,8 @@ def run(
         if dry_run:
             continue
         upd, ins = _payloads(fills, snapshot_ym, kind)
+        if new_keys_only:
+            upd = []
         with coll.begin() as conn:
             n_upd = _exec_many(conn, UPDATE_SQL, upd)
             n_ins = _exec_many(conn, INSERT_SQL, ins)
@@ -384,6 +404,8 @@ def main() -> None:
         dry_run=args.dry_run,
         skip_dictionary=args.skip_dictionary,
         types=_parse_types(args.types),
+        new_keys_only=args.new_keys_only,
+        refresh_t=args.refresh_t,
     )
 
 

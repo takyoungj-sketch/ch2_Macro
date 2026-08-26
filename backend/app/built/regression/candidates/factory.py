@@ -207,6 +207,7 @@ def fetch_candidate_rows(
     as_of_month: str | None = None,
     window_years: int | None = None,
     include_partial: bool = False,
+    enrich: bool = False,
 ) -> pd.DataFrame:
     """anchor 표본과 무관하게 후보 지역 자체의 built 원장 원행을 조회한다.
 
@@ -239,16 +240,15 @@ def fetch_candidate_rows(
         FROM built_transactions
         WHERE {where}
     """
-    from app.built.enrichment_join import wrap_tx_enrichment
+    from app.built.enrichment_join import apply_wrapped_zone_columns, wrap_tx_enrichment
 
-    sql = wrap_tx_enrichment(inner)
+    sql = wrap_tx_enrichment(inner, enrich=enrich)
     rows = conn.execute(text(sql), params).mappings().all()
     df = pd.DataFrame(rows)
     if df.empty:
         return df
-    if "zone_type_first" in df.columns:
-        df["zone_type"] = df["zone_type_first"]
-        df = df.drop(columns=["zone_type_filled", "zone_type_first"], errors="ignore")
+    if enrich:
+        return apply_wrapped_zone_columns(df)
     return df.drop(columns=["transaction_hash"], errors="ignore")
 
 

@@ -5,6 +5,7 @@
 > **기준 루트:** `C:\ch2\ch2_Macro`
 >
 > **2026-08 SSOT:** `scripts/monthly/run_built_cycle_csv.py`. 1페이지: [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md).  
+> 축약·보강 달력: [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md) — 실거래 달 skip-enrich 기본. 이 SOP의 xlsx 러너 이름으로 월간을 돌리지 말 것.  
 > xlsx/`run_built_monthly_cycle` 은 복구·레거시. git deploy ≠ 월갱신.
 
 관련: [`MONTHLY_UPDATE_SOP.md`](MONTHLY_UPDATE_SOP.md) (토지), [`BUILT_RESEARCH_MVP.md`](BUILT_RESEARCH_MVP.md) (로컬 실행)
@@ -191,3 +192,8 @@ py scripts\monthly\snapshot_built_tx_counts.py `
   --output clean_snapshots\202606\built\built_tx_counts_after.json `
   --cycle-id 202606
 ```
+
+## 11. 미구현 — 축약·enrich
+
+CSV 러너는 마트 뒤 **skip-enrich 기본**. `--enrich`는 D-051 전 운영 적재에 쓰지 않는다. 동결 검증·purge FK는 [`PARCEL_MASTER_MONTHLY_UPDATE.md`](PARCEL_MASTER_MONTHLY_UPDATE.md).
+

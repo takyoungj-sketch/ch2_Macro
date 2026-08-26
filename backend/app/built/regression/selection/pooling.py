@@ -230,6 +230,7 @@ def _fit_pool_variant(
         as_of_month=req.as_of_month,
         window_years=req.window_years,
         include_partial=bool(getattr(req, "include_partial", False)),
+        enrich=bool(getattr(req, "enrich", False)),
     )
     if pooled_rows.empty:
         return None
@@ -306,6 +307,7 @@ def _research_pool_variant(
         as_of_month=req.as_of_month,
         window_years=req.window_years,
         include_partial=bool(getattr(req, "include_partial", False)),
+        enrich=bool(getattr(req, "enrich", False)),
     )
     if pooled_rows.empty:
         return None

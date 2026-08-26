@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-22",
+  "updated": "2026-08-26",
   "domains": [
     { "id": "land", "label": "토지" },
     { "id": "built", "label": "복합" },
@@ -165,27 +165,99 @@
           "decision": "D-047"
         }
       }
+    },
+    {
+      "date": "2026-08-22",
+      "cells": {
+        "built": {
+          "text": "서울 동일 조건 재측정 — 확정률 63.7%·합집합 68.1%, 순수 매칭 오류 충북 0.3%·서울 0.4%로 **두 지역 규칙 인증**. 밤: 충북·서울 감사 150행 칸 의미·검토 순서 안내(A2·공장·n_range 큰 A1 우선). **판정 칸은 비어 있음**",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-047"
+        },
+        "collective": {
+          "text": "D·F 복수 K-apt — 세대수·동·주차 합산, 시공사 `{첫} 외`, 지역회귀 A·B·C·D·F. F는 실거래명 6글자+·후보 4곳 이하. 커밋 `e5e2635` · 운영 배포. VPS fill 262. 분평주공3 1330세대·한양건설 외. P·T·재건축 Z는 회귀 제외",
+          "status": "done",
+          "commit": "committed"
+        },
+        "admin": {
+          "text": "축약대장 설계 `PARCEL_MASTER_DESIGN.md` · 지역지구구역 대체안 폐기(D-048) · 밤 마무리 계획일지. D-048 본문·일정표·enrichment 폐기 문장은 워킹트리",
+          "status": "done",
+          "commit": "needed",
+          "decision": "D-048"
+        }
+      }
+    },
+    {
+      "date": "2026-08-23",
+      "cells": {
+        "built": {
+          "text": "지분거래 D-049 — 목록 전체, 단가·회귀 기본 제외. 복원 기본 경로 time_fallback",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-049"
+        },
+        "admin": {
+          "text": "D-049 카드",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-049"
+        }
+      }
+    },
+    {
+      "date": "2026-08-24",
+      "cells": {
+        "built": {
+          "text": "회귀 기준 범주·적합 깔때기. enrichment 로컬 전국 적재 604,422행(당시 전 기간). 운영 0행",
+          "status": "done",
+          "commit": "committed"
+        }
+      }
+    },
+    {
+      "date": "2026-08-25",
+      "cells": {
+        "built": {
+          "text": "축약·월간 문서 확정. 구현은 안 함. 다음 착수는 P0 (IMPLEMENTATION.md)",
+          "status": "stopped",
+          "commit": "needed",
+          "decision": "D-050"
+        },
+        "collective": {
+          "text": "공시지가 회귀·단지정보 코드는 `10e8445`. 축약 이관 문단은 미커밋",
+          "status": "done",
+          "commit": "needed"
+        },
+        "admin": {
+          "text": "D-050·월간 SSOT·구현 계획·일지 08-23~25. 구현 대기",
+          "status": "stopped",
+          "commit": "needed",
+          "decision": "D-050"
+        }
+      }
     }
   ],
   "today": {
-    "date": "2026-08-22",
+    "date": "2026-08-26",
     "cells": {
       "built": {
-        "text": "서울 동일 조건 재측정 — 확정률 63.7%·합집합 68.1%, 순수 매칭 오류 충북 0.3%·서울 0.4%로 **두 지역 규칙 인증**. 밤: 충북·서울 감사 150행 칸 의미·검토 순서 안내(A2·공장·n_range 큰 A1 우선). **판정 칸은 비어 있음**",
-        "status": "done",
-        "commit": "committed",
-        "decision": "D-047"
-      },
-      "collective": {
-        "text": "D·F 복수 K-apt — 세대수·동·주차 합산, 시공사 `{첫} 외`, 지역회귀 A·B·C·D·F. F는 실거래명 6글자+·후보 4곳 이하. 커밋 `e5e2635` · 운영 배포. VPS fill 262. 분평주공3 1330세대·한양건설 외. P·T·재건축 Z는 회귀 제외",
-        "status": "done",
-        "commit": "committed"
-      },
-      "admin": {
-        "text": "축약대장 설계 `PARCEL_MASTER_DESIGN.md` · 지역지구구역 대체안 폐기(D-048) · 밤 마무리 계획일지. D-048 본문·일정표·enrichment 폐기 문장은 워킹트리",
+        "text": "P0–P3 로컬 완료(게이트 75.0%, apply 안 함). P4 D-051 동의 토글·표시=필터. 운영 0행",
         "status": "done",
         "commit": "needed",
-        "decision": "D-048"
+        "decision": "D-051"
+      },
+      "collective": {
+        "text": "신규 키만 조인. 대장 T·공부 공시지가 수동. 목록 조인 배지",
+        "status": "done",
+        "commit": "needed",
+        "decision": "D-051"
+      },
+      "admin": {
+        "text": "D-051·P0–P4 구현 계획·일지. 커밋·P5 promote 안 함",
+        "status": "done",
+        "commit": "needed",
+        "decision": "D-051"
       }
     }
   },
@@ -203,10 +275,10 @@
         "decision": "D-044"
       },
       "built": {
-        "text": "구조 표본 사람 판정 — 칸 안내는 됨. A2·공장·후보 많은 A1 먼저. 통과율은 `0.937×A1+0.063×A2` 로 재가중. 판정 후 enrichment 착수. 용도지역 다중 라벨 화면·회귀 인코딩은 미정",
+        "text": "P5: 운영 enrichment promote. `--apply-enrichment`·parcel_master dump 금지. 로컬 동의 토글 브라우저 확인",
         "status": "planned",
-        "commit": "none",
-        "decision": "D-047"
+        "commit": "needed",
+        "decision": "D-051"
       },
       "rent": {
         "text": "AI: 화면 통계(표 n·P50·환산칸) 전달 · 질문 직답(전환율 잠금문이 칸 공란을 덮음)",
@@ -214,16 +286,16 @@
         "commit": "none"
       },
       "collective": {
-        "text": "D·F·P·T 적용·배포 완료. 남은 선택: 용도지역 다중 라벨 화면. 재건축·묶음 Z는 안 붙임 유지",
-        "status": "planned",
-        "commit": "none",
-        "decision": "D-045"
-      },
-      "admin": {
-        "text": "계획일지·D-048 본문·일정표 미커밋. 복합 150건 판정은 사용자. 검증로봇 대분류 0건 규칙은 enrichment 때",
+        "text": "D·F 백로그는 축약 DB가 안 푼다. 운영 적재는 P5와 같이",
         "status": "planned",
         "commit": "needed",
-        "decision": "D-048"
+        "decision": "D-051"
+      },
+      "admin": {
+        "text": "P0–P4·D-051 커밋은 요청 때. 내일 P5. parcel_master dump 금지",
+        "status": "planned",
+        "commit": "needed",
+        "decision": "D-051"
       }
     }
   },

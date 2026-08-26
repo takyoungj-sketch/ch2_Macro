@@ -269,7 +269,8 @@ def _build_where(
         )
     from app.built.filters import apply_sample_filters_from_request
 
-    apply_sample_filters_from_request(clauses, params, req)
+    enrich = bool(getattr(req, "enrich", False))
+    apply_sample_filters_from_request(clauses, params, req, skip_zone=enrich)
     from app.built.partial_ownership import apply_partial_ownership_filter
 
     flag = bool(getattr(req, "include_partial", False)) if include_partial is None else include_partial
@@ -290,17 +291,23 @@ def _fetch_df(conn, req: RegressionRunRequest, *, include_subregion: bool = True
         FROM built_transactions
         WHERE {where}
     """
-    from app.built.enrichment_join import wrap_tx_enrichment
+    from app.built.enrichment_join import apply_wrapped_zone_columns, wrap_tx_enrichment
+    from app.built.enrichment_policy import split_zone_filter
 
-    sql = wrap_tx_enrichment(inner)
+    enrich = bool(getattr(req, "enrich", False))
+    _, outer_zones = split_zone_filter(enrich=enrich, zone_types=list(req.zone_types or []))
+    if outer_zones:
+        params = dict(params)
+        params["zone_types"] = outer_zones
+    sql = wrap_tx_enrichment(inner, enrich=enrich, zone_types=outer_zones)
     rows = conn.execute(text(sql), params).mappings().all()
     df = pd.DataFrame(rows)
     if df.empty:
         return df
-    if "zone_type_first" in df.columns:
-        df["zone_type"] = df["zone_type_first"]
-        df = df.drop(columns=["zone_type_filled", "zone_type_first"], errors="ignore")
-    df = df.drop(columns=["transaction_hash"], errors="ignore")
+    if enrich:
+        df = apply_wrapped_zone_columns(df)
+    else:
+        df = df.drop(columns=["transaction_hash"], errors="ignore")
     return df
 
 

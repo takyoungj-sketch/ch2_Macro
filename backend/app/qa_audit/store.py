@@ -122,17 +122,23 @@ def insert_run(conn, run: dict[str, Any]) -> int | None:
     return int(row) if row is not None else None
 
 
-def list_runs(conn, *, limit: int = 20) -> list[dict[str, Any]]:
+def list_runs(conn, *, limit: int = 20, domain: str | None = None) -> list[dict[str, Any]]:
+    where = ""
+    params: dict[str, Any] = {"lim": int(limit)}
+    if domain and str(domain).strip():
+        where = "WHERE domain = :domain"
+        params["domain"] = str(domain).strip()
     rows = execute_sql(
         conn,
-        """
+        f"""
         SELECT id, created_at, trigger, domain, region_level, region_code,
                region_name, period_key, asset_type, verdict
         FROM qa_audit_run
+        {where}
         ORDER BY created_at DESC
         LIMIT :lim
         """,
-        {"lim": int(limit)},
+        params,
     ).mappings().all()
     out: list[dict[str, Any]] = []
     for r in rows:

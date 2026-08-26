@@ -91,6 +91,9 @@ CH2 Macro는 **감정가를 뱉어주는 자동평가(AVM)가 아니라, 사용�
   대표 필지 PNU와 대조한다. 매핑이 중복되면 적재를 중단한다.
 - 대용량 원천은 필요한 세 열만 25만 행 청크로 읽으며, 대표 필지 후보와 매칭되는
   PNU만 보존한다. 실제 적재 전에는 `--dry-run`으로 연결 건수를 확인할 수 있다.
+- **축약 DB 이관(D-050).** 재료의 그레인은 `parcel_master.parcel_land_price (pnu, price_year)`다.
+  현재 마트는 최신값 파생으로 남는다. 거래연도 정합은 하지 않는다. 월간 재파생은
+  공부 달(연 1회). [`PARCEL_MASTER_MONTHLY_UPDATE.md`](PARCEL_MASTER_MONTHLY_UPDATE.md)
 
 **진행 상태 (2026-08-09):**
 

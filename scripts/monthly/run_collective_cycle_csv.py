@@ -92,8 +92,7 @@ def _write_manifest(cycle_id: str, dirs: dict[str, Path], csv_paths: list[Path])
     return path
 
 
-def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="집합부동산 월간 CSV cycle")
     p.add_argument("--cycle-id", required=True, help="YYYYMM (예: 202607)")
     p.add_argument("--dry-run", action="store_true")
@@ -103,7 +102,48 @@ def main() -> None:
     p.add_argument("--skip-stats", action="store_true")
     p.add_argument("--no-refresh-region-codes", action="store_true")
     p.add_argument("--skip-mapping-check", action="store_true")
-    args = p.parse_args()
+    p.add_argument(
+        "--skip-enrich",
+        action="store_true",
+        help="마트 뒤 신규 키 조인 생략. 플래그 없이도 기본은 skip",
+    )
+    p.add_argument(
+        "--enrich-new-keys",
+        action="store_true",
+        help="속성 없는 building_key만 INSERT. A·B·C 안 덮음",
+    )
+    p.add_argument(
+        "--refresh-title-t",
+        action="store_true",
+        help="거절. 대장 달: python -m parcel_master.apply_title_fill --refresh-t",
+    )
+    p.add_argument(
+        "--refresh-land-price",
+        action="store_true",
+        help="거절. 공부 달: python -m collective.import_assessed_land_price --from-parcel-master",
+    )
+    return p
+
+
+def should_run_enrich(*, enrich_new_keys: bool, skip_enrich: bool) -> bool:
+    if skip_enrich:
+        return False
+    return bool(enrich_new_keys)
+
+
+def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    args = build_parser().parse_args()
+    if args.refresh_title_t:
+        raise SystemExit(
+            "실거래 달 러너는 --refresh-title-t 를 받지 않는다. "
+            "대장 달: python -m parcel_master.apply_title_fill --refresh-t"
+        )
+    if args.refresh_land_price:
+        raise SystemExit(
+            "실거래 달 러너는 --refresh-land-price 를 받지 않는다. "
+            "공부 달: python -m collective.import_assessed_land_price --from-parcel-master"
+        )
 
     cycle = args.cycle_id.strip()
     y_from, y_to = collection_yyyymm_range_from_cycle_id(cycle)
@@ -130,7 +170,7 @@ def main() -> None:
                 [PY, str(PIPELINE / "purge_collective_contract_window.py"), "--cycle-id", cycle, "--dry-run"],
                 cwd=PIPELINE,
             )
-        log.info("dry-run: ingest/stats 생략")
+        log.info("dry-run: ingest/stats 생략. skip-enrich 기본")
         return
 
     t0 = time.perf_counter()
@@ -200,6 +240,15 @@ def main() -> None:
                 [PY, str(PIPELINE / "build_collective_commercial_cluster_stats.py"), "--as-of", as_of, "--windows", "3,5,7"],
                 cwd=PIPELINE,
             )
+
+    if should_run_enrich(enrich_new_keys=args.enrich_new_keys, skip_enrich=args.skip_enrich):
+        _run(
+            "enrich_new_keys",
+            [PY, "-m", "collective.enrich_new_keys"],
+            cwd=PIPELINE,
+        )
+    else:
+        log.info("skip-enrich: 신규 키 조인 안 함. A·B·C 유지. 비주거 집합은 속성 테이블 없음")
 
     snap_out = REPO / "clean_snapshots" / cycle / "collective" / "collective_tx_counts_after.json"
     _run(

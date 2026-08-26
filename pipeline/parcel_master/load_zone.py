@@ -71,6 +71,7 @@ def _scan_file(src: Path, keep: set[str]) -> dict[tuple[str, str], dict]:
                         "zone_family": zone_family(label),
                         "is_coarse": is_coarse_label(label),
                         "source": ZONE_SOURCE,
+                        "n_hits": found.get((pnu, label), {}).get("n_hits", 0) + 1,
                     }
                 if n % 20 == 0:
                     print(f"    chunk {n} hits={len(found):,}", flush=True)
@@ -114,6 +115,7 @@ def load_sido(engine, sido: str, refresh: bool) -> dict:
                     rec["is_coarse"],
                     rec["source"],
                     snap,
+                    rec.get("n_hits") or 1,
                 )
                 for rec in found.values()
             ]
@@ -121,13 +123,14 @@ def load_sido(engine, sido: str, refresh: bool) -> dict:
                 cur,
                 """
                 INSERT INTO parcel_zone
-                    (pnu, zone_label, zone_family, is_coarse, source, snapshot)
+                    (pnu, zone_label, zone_family, is_coarse, source, snapshot, n_hits)
                 VALUES %s
                 ON CONFLICT (pnu, zone_label) DO UPDATE SET
                     zone_family = EXCLUDED.zone_family,
                     is_coarse = EXCLUDED.is_coarse,
                     source = EXCLUDED.source,
-                    snapshot = EXCLUDED.snapshot
+                    snapshot = EXCLUDED.snapshot,
+                    n_hits = EXCLUDED.n_hits
                 """,
                 rows,
                 page_size=1000,
@@ -156,11 +159,40 @@ def load_sido(engine, sido: str, refresh: bool) -> dict:
     }
 
 
+def _ensure_n_hits(engine) -> None:
+    with engine.begin() as conn:
+        cols = {
+            str(r[0])
+            for r in conn.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'parcel_zone'"
+                )
+            )
+        }
+        if "n_hits" not in cols:
+            conn.execute(
+                text("ALTER TABLE parcel_zone ADD COLUMN n_hits INTEGER NOT NULL DEFAULT 1")
+            )
+
+
 def run(sidos: tuple[str, ...], refresh: bool) -> None:
+    from parcel_master.snapshot import upsert_ledger_snapshot
+
     engine = get_parcel_engine()
     apply_schema(engine)
+    _ensure_n_hits(engine)
     for sido in sidos:
-        load_sido(engine, sido, refresh)
+        stats = load_sido(engine, sido, refresh)
+        if stats.get("skipped") or stats.get("missing"):
+            continue
+        upsert_ledger_snapshot(
+            engine,
+            source="al_d155",
+            snapshot=zone_snapshot(sido) or "unknown",
+            sido_code=sido,
+            row_count=int(stats.get("labels") or 0),
+        )
     with engine.connect() as conn:
         n = conn.execute(text("SELECT COUNT(*) FROM parcel_zone")).scalar()
         fine = conn.execute(

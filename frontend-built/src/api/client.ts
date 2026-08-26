@@ -57,6 +57,7 @@ export interface TransactionQueryParams {
   window_years?: number;
   page?: number;
   page_size?: number;
+  enrich?: boolean;
 }
 
 function toSearchParams(params: TransactionQueryParams): string {
@@ -207,6 +208,7 @@ export async function fetchScopeSampleFilters(params: {
   contract_year_to?: number;
   as_of_month?: string;
   window_years?: number;
+  enrich?: boolean;
 }): Promise<ScopeSampleFilterResponse> {
   const sp = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {

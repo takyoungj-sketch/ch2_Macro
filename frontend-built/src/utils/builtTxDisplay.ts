@@ -46,15 +46,8 @@ export function builtTxAdminCols(r: BuiltTransactionRow) {
 
 export function builtTxLotHoverTitle(r: BuiltTransactionRow): string | undefined {
   const recovered = r.recovered_lot?.trim();
-  const tier = r.match_tier?.trim();
-  if (recovered) {
-    return `복원 ${recovered}${tier ? ` · ${tier}` : ""}`;
-  }
+  if (recovered) return recovered;
   return r.lot_number?.trim() || undefined;
-}
-
-export function builtTxHasRecoveredLot(r: BuiltTransactionRow): boolean {
-  return Boolean(r.recovered_lot?.trim());
 }
 
 export function builtTxBuildingYear(r: BuiltTransactionRow): number | null {

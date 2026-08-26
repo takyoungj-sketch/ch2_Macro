@@ -1,5 +1,6 @@
 -- D-047: 복합 거래 보강. 원장 UPDATE 금지. 미상은 행을 만들지 않는다.
--- 키는 transaction_hash (월간 purge가 id 를 재발급한다).
+-- 키는 transaction_hash (월간은 해시 유지 UPSERT. id 재발급에 의존하지 않는다).
+-- REFERENCES 는 신규 CREATE 용. 운영은 069 가 FK 를 제거해 고아 보강을 허용한다.
 -- 확정 행은 ON CONFLICT DO NOTHING 으로 동결. 미상만 다음 사이클에서 INSERT.
 -- 적용: psql "$BUILT_DATABASE_URL" -f db/068_built_transaction_enrichment.sql
 

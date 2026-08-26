@@ -9,11 +9,11 @@
 | 문 | `?tool=` | 하는 일 |
 |----|----------|---------|
 | 계획일지 | `plan` | 토지·복합·집합·임대·지역프로필·관리 표. SSOT `docs/lab/plan.json` |
-| 검증로봇 | `qa` | 지정·랜덤 L1–L3 대조 (D-042) |
+| 검증로봇 | `qa` | 집합 L1–L3 (D-042) · 복합 보강 `built_enriched` (D-047) |
 | 쌍둥이 지역 실험 | `twin` | V2 거리(D-044, 기본) · V1 풀 CV-MAPE (`?pane=mape`) |
 | 전월세 전환율 | `rent` | 4방법 r · 서울 검증 (D-040) |
 | AI 사용량 | `ai` | 월 LLM 호출·추정 원 장부. 질문 문장 없음 |
-| 대장DB | `parcel` | 로컬 `parcel_master` 필지·동·용도지역 조회. 읽기 전용. 운영 DB 없음 |
+| 대장DB | `parcel` | 로컬 `parcel_master` 필지·동·용도지역 조회. 읽기 전용. 운영 DB 없음. 설계 [`PARCEL_MASTER_DESIGN.md`](./PARCEL_MASTER_DESIGN.md) · 월간 [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md) |
 
 계획일지 표 규칙:
 

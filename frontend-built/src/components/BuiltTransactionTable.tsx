@@ -5,7 +5,6 @@ import { isOnlyDetached, isUnifiedAsset } from "../utils/assetTypes";
 import {
   builtTxAdminCols,
   builtTxBuildingYear,
-  builtTxHasRecoveredLot,
   builtTxLotHoverTitle,
   builtTxSortValue,
   formatBuiltTxCell,
@@ -13,6 +12,11 @@ import {
   type BuiltTxSortDir,
   type BuiltTxSortKey,
 } from "../utils/builtTxDisplay";
+import {
+  ENRICH_LIST_BADGE,
+  builtMatchHoverTitle,
+  isBuiltTitleMatch,
+} from "../utils/enrichmentConsent";
 
 const PAGE_SIZE = 25;
 
@@ -32,7 +36,7 @@ const ASSET_LABELS: Record<string, string> = {
   detached: "단독",
 };
 
-function buildCols(assetType: AssetType): ColDef[] {
+function buildCols(assetType: AssetType, enrich: boolean): ColDef[] {
   const cols: ColDef[] = [
     { key: "contract_date", label: "계약일", filterType: "select" },
     { key: "sido", label: "시도", filterType: "select" },
@@ -53,7 +57,9 @@ function buildCols(assetType: AssetType): ColDef[] {
     label: isOnlyDetached(assetType) ? "주택유형" : "건축물용도",
     filterType: "select",
   });
-  cols.push({ key: "structure_group", label: "구조", filterType: "select" });
+  if (enrich) {
+    cols.push({ key: "structure_group", label: "구조", filterType: "select" });
+  }
   cols.push(
     { key: "price", label: "금액(만)", align: "right", filterType: "sort-only" },
     { key: "gross_area", label: "연면적", align: "right", filterType: "sort-only" },
@@ -204,12 +210,14 @@ export default function BuiltTransactionTable({
   items,
   assetType,
   truncated,
+  enrich = false,
 }: {
   items: BuiltTransactionRow[];
   assetType: AssetType;
   truncated?: boolean;
+  enrich?: boolean;
 }) {
-  const COLS = useMemo(() => buildCols(assetType), [assetType]);
+  const COLS = useMemo(() => buildCols(assetType, enrich), [assetType, enrich]);
   const SELECT_COLS = useMemo(() => COLS.filter((c) => c.filterType === "select"), [COLS]);
   const TEXT_COLS = useMemo(() => COLS.filter((c) => c.filterType === "text"), [COLS]);
 
@@ -580,16 +588,12 @@ export default function BuiltTransactionTable({
                       {formatBuiltTxCell(admin.ri)}
                     </td>
                     <td className="border px-2 py-1 max-w-[4.5rem] truncate">
-                      {builtTxHasRecoveredLot(r) ? (
-                        <span
-                          className="border-b border-dotted border-slate-500 cursor-help"
-                          title={builtTxLotHoverTitle(r)}
-                        >
-                          {formatBuiltTxCell(admin.lot)}
-                        </span>
-                      ) : (
-                        <span title={admin.lot ?? undefined}>{formatBuiltTxCell(admin.lot)}</span>
-                      )}
+                      <span
+                        className={r.recovered_lot?.trim() ? "cursor-help" : undefined}
+                        title={builtTxLotHoverTitle(r)}
+                      >
+                        {formatBuiltTxCell(admin.lot)}
+                      </span>
                     </td>
                     <td className="border px-2 py-1 whitespace-nowrap">
                       {r.is_partial_ownership ? "지분" : "—"}
@@ -598,14 +602,26 @@ export default function BuiltTransactionTable({
                       {formatBuiltTxCell(r.road_name)}
                     </td>
                     <td className="border px-2 py-1 whitespace-nowrap">
-                      {formatBuiltTxCell(r.zone_type)}
+                      <span title={r.zone_type_ledger ? `원장 ${r.zone_type_ledger}` : undefined}>
+                        {formatBuiltTxCell(r.zone_type)}
+                      </span>
+                      {enrich && isBuiltTitleMatch(r.match_tier) && (
+                        <span
+                          className="ml-1 inline-block rounded border border-slate-300 px-1 text-[9px] text-slate-600 dark:border-slate-500 dark:text-slate-300"
+                          title={builtMatchHoverTitle(r.match_tier, r.match_rule)}
+                        >
+                          {ENRICH_LIST_BADGE}
+                        </span>
+                      )}
                     </td>
                     <td className="border px-2 py-1 whitespace-nowrap">
                       {formatBuiltTxCell(r.building_use)}
                     </td>
-                    <td className="border px-2 py-1 whitespace-nowrap">
-                      {formatBuiltTxCell(r.structure_group)}
-                    </td>
+                    {enrich && (
+                      <td className="border px-2 py-1 whitespace-nowrap">
+                        {formatBuiltTxCell(r.structure_group)}
+                      </td>
+                    )}
                     <td className="border px-2 py-1 text-right tabular-nums">{fmtNum(r.price)}</td>
                     <td className="border px-2 py-1 text-right tabular-nums">{fmtNum(r.gross_area, 1)}</td>
                     <td className="border px-2 py-1 text-right tabular-nums">{fmtNum(r.land_area, 1)}</td>

@@ -64,6 +64,7 @@ class BuildingStatsRow(BaseModel):
     households_flagged: bool = False
     builder_label: Optional[str] = None
     builder_is_joint: bool = False
+    match_tier: Optional[str] = None
     asset_type: str
     count: int
     mean: Optional[float] = None

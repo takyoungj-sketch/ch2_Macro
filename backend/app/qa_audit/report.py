@@ -21,12 +21,15 @@ def format_report(run: dict[str, Any]) -> str:
     ]
     labels = {
         "n": "거래건수",
+        "n_enriched": "보강조인",
         "sum_price": "금액합(만원)",
         "mean_price": "평균단가",
         "median_price": "중위단가",
     }
     for key, label in labels.items():
-        m = metrics.get(key) or {}
+        m = metrics.get(key)
+        if not m:
+            continue
         lines.append(
             f"{label:<12} {_fmt(m.get('l1')):>14} {_fmt(m.get('l3')):>14} "
             f"{_fmt(m.get('mart')):>14} {_fmt(m.get('delta_l1_mart')):>12} "
@@ -43,10 +46,17 @@ def format_report(run: dict[str, Any]) -> str:
     n_m = metrics.get("n") or {}
     if n_m:
         lines.append("")
-        lines.append(
-            f"원장 유효: {n_m.get('l1')}건 · 재계산: {n_m.get('l3')}건 · "
-            f"기존 Mart: {n_m.get('mart')}건 · 차이: {n_m.get('delta_l1_mart')}건"
-        )
+        en = metrics.get("n_enriched") or {}
+        if en:
+            lines.append(
+                f"원장 유효: {n_m.get('l1')}건 · 해시유일: {n_m.get('l3')}건 · "
+                f"보강조인: {en.get('mart') if en.get('mart') is not None else en.get('l3')}건"
+            )
+        else:
+            lines.append(
+                f"원장 유효: {n_m.get('l1')}건 · 재계산: {n_m.get('l3')}건 · "
+                f"기존 Mart: {_fmt(n_m.get('mart'))}건 · 차이: {_fmt(n_m.get('delta_l1_mart'))}건"
+            )
     lines.append("")
     l2 = run.get("l2") or {}
     chain = l2.get("drop_chain") or {}

@@ -1,9 +1,12 @@
 # 복합 데이터 보강 — 충북·서울 실측과 보강 아키텍처
 
-> 상태: **매칭 규칙 2개 지역 인증 통과 · 스키마 확정 · 파이프라인 착수 대기**
-> 측정일: 2026-08-21 (1차) · **2026-08-21 밤 (2차 — 재현 스크립트로 전면 재측정, 서울 동일 조건 추가)**
+> 상태: **매칭 규칙 2개 지역 인증 · 로컬 전국 적재(2019+ 75.0%) · 운영 0행 · 축약 DB 이관 대기**
+> 측정일: 2026-08-21 (1차) · **2026-08-21 밤 (2차)** · 적재 실측 2026-08-25
 > 재현: `python -m built.recover_address --sido 43 --sample 150` ([`pipeline/built/recover_address.py`](../pipeline/built/recover_address.py)) — 기본 `--snapshot all` + `time_fallback`
-> 관련: [`BUILT_MASKED_ADDRESS_RECOVERY.md`](BUILT_MASKED_ADDRESS_RECOVERY.md) · [`lab/decisions/D-046.json`](lab/decisions/D-046.json) · [`lab/decisions/D-047.json`](lab/decisions/D-047.json) · [`CH2_CONSTITUTION.md`](CH2_CONSTITUTION.md)
+> 관련: [`BUILT_MASKED_ADDRESS_RECOVERY.md`](BUILT_MASKED_ADDRESS_RECOVERY.md) · [`lab/decisions/D-046.json`](lab/decisions/D-046.json) · [`lab/decisions/D-047.json`](lab/decisions/D-047.json) · [`lab/decisions/D-050.json`](lab/decisions/D-050.json) · [`CH2_CONSTITUTION.md`](CH2_CONSTITUTION.md)
+> 월간·축약: [`PARCEL_MASTER_MONTHLY_UPDATE.md`](PARCEL_MASTER_MONTHLY_UPDATE.md) · [`PARCEL_MASTER_IMPLEMENTATION.md`](PARCEL_MASTER_IMPLEMENTATION.md)
+
+> **2026-08-25 적재.** 로컬 `built_transaction_enrichment`는 16시도 전 기간 604,422행 / 820,883건 = 73.6%. **계약 2019+는 498,568 / 665,030 = 75.0%**(D-050 게이트). 2018년 이전 105,854행은 삭제 대상. **운영(VPS) 0행.** `coverage_scope='full'`이 16시도에 붙어 있으나 매칭 정확도 인증은 서울·충북뿐이다. 파이프라인은 축약 DB를 보지 않고 원본을 재스캔한다.
 
 > **2차 측정에서 바뀐 것.** 1차 측정은 Ask 모드 메모리 실행이라 스크립트가 남지 않았고, 다섯 가지가 틀렸거나 빠져 있었다.
 > ① 정밀도 98.9%를 매칭 정확도로 읽었으나 **검증축의 판별력을 재지 않았다** — 보정하면 93~97%다(§5).
@@ -377,7 +380,7 @@ built_transaction_enrichment
   evidence           JSON — 대조된 도로명·사용승인연도와 일치 여부
 ```
 
-**키는 `transaction_hash` 다. `built_transactions.id` 를 쓰면 안 된다.** 월간 배치가 최근 12개월 계약분을 DELETE 후 INSERT하고 `id` 는 `BIGSERIAL` 이라 매월 새 번호를 받는다([`scripts/monthly/run_built_cycle_csv.py`](../scripts/monthly/run_built_cycle_csv.py) → [`pipeline/purge_built_contract_window.py`](../pipeline/purge_built_contract_window.py)). `id` 로 묶으면 매월 초에 최근 1년치 보강값이 엉뚱한 거래에 붙는다. `transaction_hash` 는 `uix_built_tx_hash` UNIQUE 이고 `ON CONFLICT (transaction_hash) DO NOTHING` 으로 재삽입을 걸러내므로 사이클을 넘어 안정적이다. 국토부가 가격·면적을 정정하면 해시가 바뀌어 보강 행이 고아가 되는데, 정정된 거래는 다시 매칭해야 하므로 **그게 올바른 동작**이다.
+**키는 `transaction_hash` 다. `built_transactions.id` 를 쓰면 안 된다.** 월간 배치는 최근 12개월을 해시 유지 UPSERT한 뒤 CSV에 없는 해시만 지운다([`scripts/monthly/run_built_cycle_csv.py`](../scripts/monthly/run_built_cycle_csv.py) → [`pipeline/purge_built_contract_window.py`](../pipeline/purge_built_contract_window.py)). `id` 로 묶으면 보강이 엉뚱한 거래에 붙는다. `transaction_hash` 는 `uix_built_tx_hash` UNIQUE 이다. 국토부가 가격·면적을 정정하면 해시가 바뀌어 보강 행이 고아가 되는데, 정정된 거래는 다시 매칭해야 하므로 **그게 올바른 동작**이다.
 
 1차 초안에서 네 가지가 바뀌었다. 모두 이번 실측이 강제한 것이다.
 
@@ -403,10 +406,10 @@ D-046이 "복원 지번은 화면 노출용이 아니라 결합 키"라고 이�
 |---|---|---|
 | 0 | 내부·Lab 전용 | 검증로봇 어댑터 통과 전 |
 | 1 | 회귀·통합분석 변수로만 사용 | 지역별 PASS |
-| 2 | 거래목록에 **용도지역·구조 컬럼 + 출처 표시 동시** | `VITE_BUILT_ENRICHMENT` + 서버 `enrich` 파라미터 |
+| 2 | 거래목록에 **용도지역·구조 컬럼 + 출처 표시 동시** | D-051 사용자 동의 + `enrich=true` |
 | 3 | 복원 지번 노출 | D-046이 "별도 결정"으로 유보 |
 
-**단계 2에서 컬럼을 항상 띄울지, 사용자 토글 뒤에 둘지는 UI 착수 시점에 정한다(2026-08-21 유보).** 회귀는 어느 쪽이든 기존 변수 체크박스에 블록이 추가되는 형태라 사용자가 직접 켜고 끈다 — 이 부분은 정해져 있다. 위 게이트(`VITE_BUILT_ENRICHMENT`)는 배포 제어용이고 사용자 토글과는 별개다.
+**단계 2는 D-051에서 토글 뒤로 고정했다.** 기본 끄기. 켜기 전 동의 4문장. 표시 용도지역 = 필터. 원장 `zone_type`은 UPDATE하지 않는다. `VITE_BUILT_ENRICHMENT` 배포 플래그는 쓰지 않는다.
 
 사용자는 여전히 거래를 100% 본다. 데이터가 확보된 거래만 점점 정보가 풍부해지는 구조다. 78.8%만 보여주고 나머지를 숨기면 오히려 데이터가 고장 난 것처럼 보인다.
 
@@ -414,7 +417,7 @@ D-046이 "복원 지번은 화면 노출용이 아니라 결합 키"라고 이�
 
 표현 수준은 내부와 화면을 분리한다. 내부적으로는 A1/A2/미상을 세밀하게 관리하고, 목록에는 단일 배지(「건축물대장 확인」)만, 상세에서만 근거(「법정동·연면적 일치, 도로명 대조 일치」)를 펼친다. 「AI가 복원한 주소」처럼 과도하게 자신 있는 표현은 쓰지 않는다.
 
-이 패턴은 집합에 이미 있다. `BuildingDetailModal` 의 `DanjiAttributesPanel` 이 배너에 tier·rule·신뢰도를 적고 목록에는 `n<15` 배지만 둔다. 헌법의 「Facts First」와 「한계 노출 — n, 기간, 해상도, 모형 가정을 숨기지 않음」이 같은 방향이다. 다만 빈칸에는 이유("표제부 연면적 일치 없음")를 붙여야 80% 채워진 컬럼이 고장으로 보이지 않는다.
+이 패턴은 집합에 이미 있다. `BuildingDetailModal` 의 `DanjiAttributesPanel` 이 배너에 tier·rule·신뢰도를 적는다. D-051은 목록에도 조인 배지(K-apt / 표제부 / 미연결)를 단다.
 
 ---
 
@@ -435,7 +438,7 @@ D-046이 "복원 지번은 화면 노출용이 아니라 결합 키"라고 이�
 | 1 | **충북에서 매칭 규칙 정확도 인증** — 검증축 판별력, 용도지역 불일치 분해, 스냅샷 시점 정합 | **완료** (§5·§6·§7) |
 | 2 | 검증 결과를 반영해 **enrichment 스키마 확정** + 결정문 | **완료** (§11 · D-047) |
 | 3 | 지번 정답 — KAIS 28건으로 표제부 조인 검증 | **완료.** 위성·로드뷰 구조 감사는 하지 않음. 건축구조는 매칭된 표제부 컬럼 |
-| 4 | 충북 파이프라인화 + `qa_audit` **`built_enriched` 어댑터** | 대기 — 150×2 로드뷰는 게이트 아님 |
+| 4 | 충북 파이프라인화 + `qa_audit` **`built_enriched` 어댑터** | **로컬 어댑터.** `py scripts/qa/audit_region.py --domain built_enriched`. 대분류 용도지역 0건 실패. 150×2 로드뷰는 게이트 아님. 운영 dump는 P5.2 |
 | 5 | 지역 확장 — 지역별 확보 가능 범위(`coverage_scope`)로. 전국은 A1+구조만 | 대기 |
 | 6 | 마트 재계산 비교가 필요한 시점에 `built_stats_next` | 대기 |
 | 7 | 통합 회귀 실험 (D-046 후속) | 대기 |
@@ -480,11 +483,13 @@ python -m built.recover_address --sido 43 --refresh             # 캐시 무시�
 - A1 실패 모드 — 참 필지가 대장에 없어 우연히 연면적이 같은 다른 필지에 붙는 경우. KAIS로 가락·호암을 잡았고 `time_fallback`로 고침. 미아(703-17 세 본 없음)는 잔차
 - 공장 필지 내 동 연면적 합산 — B tier 폐기 근거는 단독다가구 기준이라 공장은 재측정 필요. 공장 실패 40.2%의 본체
 - `exact_multi` 1,232건 — 토지대장 지목·소유구분으로 추가 분리 가능성
-- 전국 확장 시 확정률 — 토지대장 기여분이 충북 2.0%p·서울 3.1%p라 미확보 시도는 그만큼 낮아진다. AL_D155·토지대장은 시도별로 받아야 하고 지금 충북·서울 2곳뿐이다. 남은 15개 시도 확보가 선결
+- 전국 확장 시 확정률 — AL_D155·토지대장 **16시도 확보 완료**(2026-08-22). 로컬 보강 전국 적재됨(§머리). 운영 0행
+- 용도지역 다중 라벨 UI — **대표 1개로 확정**(D-050). 2019+ 거래 기준 복수 필지 49.4%. `zone_labels` 배열은 보관·근거 팝오버용. 안내·동의는 D-051
+- **운영 enrichment 0행** — 로컬 2019+ 75.0%와 괴리. promote는 P5. 로컬 화면 토글은 D-051
+- **`snapshots_matched`** — 문서 초안은 합집합 배열이었으나 코드 `time_fallback`은 **승자 1본**. 정의는 코드에 맞춘다
+- **AL_D155 대분류 라벨 감시** — 검증로봇 0건 조건. 아직 어댑터 없음
 - ~~전국 용도지역 원천 후보~~ — **폐기**. 건축HUB 「지역지구구역」 현행판(1,745MB · 810만 행)을 확보해 실측했으나 이것만으로 채우면 **서울 필지의 35.5%·충북 48.5%만 옳은 값**이 된다(라벨을 주는 필지가 서울 55.9%뿐이고 그중에도 36.4%가 AL_D155와 불일치). 용도지역 행의 89.4%가 2022년 생성 후 갱신되지 않는 「건축 인허가 시점」 자료여서 「일반주거지역」 같은 2003년 이전 구법 라벨이 남고, 제2종을 제1종으로 주는 사례도 있다. **AL_D155 시도별 수집을 계속한다.** 상세는 [`PARCEL_MASTER_DESIGN.md`](PARCEL_MASTER_DESIGN.md) §6.3
 - ~~시군구코드 통합 이슈~~ — 해소. 표제부 2026-07은 통합 신코드를 쓴다(`12` 전남광주 928,704행 · `51` 강원특별 · `52` 전북특별, 구코드 `29`·`42`·`45` 0건, `46` 13건). `built_transactions` 의 sido `12` 와 정합하므로 코드 불일치 손실은 없다
-- 용도지역 다중 라벨 UI — 확정 건의 9%가 복수 용도지역이므로 거래목록·회귀 화면에서 배열을 어떻게 보여줄지 결정 필요(병기 / 「외 N」 / 대표+툴팁). 회귀 변수로 쓸 때 다중 라벨을 어떻게 인코딩할지도 미정
-- **AL_D155 대분류 라벨 감시** — 코드 체계가 시군구 단위로 다르다(§6 말미). 검증로봇에 「채운 용도지역이 상위 분류 라벨이면 실패」를 **0건 조건**으로 넣어야 한다(비율 문턱은 충북 0.4%를 통과해버린다). 새 시군구를 넣을 때마다 확인
 - ~~충북 감사표본 CSV 재생성~~ — 완료. 충북·서울 두 표본 모두 대분류 오염 0건 검증됨
 - 통합 회귀 시 커버리지 편향 — 유형별 81%·79%·56%로 달라 미상 비중이 유형과 상관된다. 유형 더미와 미상 지시자가 섞이면 혼입이 생기므로 tier를 명시적으로 통제해야 한다. 거래목록 표시에는 문제 없음
 - `frontend-built/vite.config.ts` 가 프록시를 `:8000` 으로 하드코딩하고 `VITE_DEV_API_TARGET` 을 읽지 않는다. 병렬 스택을 쓰려면 토지 `frontend/vite.config.ts` 의 `loadEnv` 패턴 이식 필요
@@ -494,61 +499,21 @@ python -m built.recover_address --sido 43 --refresh             # 캐시 무시�
 
 ## 16. 월간 운영 정책 — 무엇을 매월 하고 무엇을 하지 않는가
 
-복합 월간 배치의 SSOT는 `py scripts/monthly/run_built_cycle_csv.py --cycle-id YYYYMM` 이다. 최근 12개 계약월을 purge하고 재적재한 뒤 마트를 UPSERT한다. 보강이 들어가면 이 순서에 한 단계가 추가된다.
+**SSOT는 [`PARCEL_MASTER_MONTHLY_UPDATE.md`](PARCEL_MASTER_MONTHLY_UPDATE.md)다.** 실거래 러너는 `py scripts/monthly/run_built_cycle_csv.py --cycle-id YYYYMM`. enrich는 **skip 기본** (`--enrich`는 D-051 전 운영 금지).
+
+목표 순서(마트는 원장만, enrich는 그 뒤):
 
 ```
-1) purge_built_contract_window        최근 12개월 계약분 DELETE
-2) import_molit                       재적재 (ON CONFLICT (transaction_hash) DO NOTHING)
-3) enrich_built            ← 신설     보강표에 없는 transaction_hash 만 매칭
-4) build_scope_stats                  마트 UPSERT
-5) 스냅샷 · verify_beopjungri_mapping
+1) 최근 12개월 — 해시 유지 UPSERT (통째 DELETE 금지 · FK·동결)
+2) import_molit
+3) build_scope_stats
+4) enrich_built  ← 보강표에 없는 hash · contract_year >= 2019
+5) 동결 검증 = 0 · 고아 수 · 스냅샷
 ```
 
-### 세 가지를 분리한다
+확정 행 재매칭 금지. 미상 재시도는 대장 달에만. 원본 주기는 표제부 분기 · AL_D155/D003/D151 연 1회 · K-apt 월. AL_D151은 월간 SSOT 표.
 
-| 대상 | 매월 하는가 | 이유 |
-|---|---|---|
-| 신규·정정 거래 매칭 | **한다** | 보강표에 해시가 없는 행만. 증분이라 비용이 작다 |
-| 이미 확정된 행 재매칭 | **하지 않는다 — 동결** | 아래 |
-| 미상 행 재시도 | 대장을 새로 받은 달에만 | 커버리지 단조 증가 |
-
-**확정된 행을 다시 매칭하지 않는 것이 이 정책의 핵심이다.** §7에서 측정한 대로 대장 스냅샷이 바뀌면 같은 거래의 매칭 결과가 바뀔 수 있다. 사용자가 지난달 「벽돌구조」로 본 물건이 이번 달 「철골구조」가 되면, 그건 오류율보다 훨씬 심각한 신뢰 파괴다. 값이 흔들리지 않는 것이 값이 많은 것보다 중요하다. `matched_cycle` 컬럼이 동결 기준을 남긴다.
-
-반대로 **미상 행은 새 대장이 올 때마다 다시 시도해도 안전하다.** 빈칸이 채워지는 방향은 사용자에게 개선으로만 보인다. 그리고 건축물대장은 신축뿐 아니라 소급 등재도 계속 늘어난다 — 서울 표제부가 541,087행(2024-09)에서 588,926행(2025-07)으로 8.8% 늘었다. 재시도의 값이 실제로 있다.
-
-이 정책의 부수 효과로 **검증로봇의 회귀 테스트가 자연스럽게 생긴다.** 매월 "확정 행 중 값이 바뀐 건수 = 0" 을 확인하면 된다. 0이 아니면 동결이 깨진 것이다.
-
-### 원본 다운로드 주기
-
-매월 받을 필요가 없다. 표제부 22개월 차이(2024-09 → 2026-07)가 충북 매칭률 1.4%p 차이일 뿐이고, 월 단위로는 0.1%p 미만이다. 서울 표제부 행 수도 588,926(2025-07) → 585,731(2026-07)로 **줄었다** — 신축·소급등재로 늘고 멸실로 줄어서 단조 증가가 아니다.
-
-| 원본 | 주기 | 근거 |
-|---|---|---|
-| 실거래 원장 | 매월 (현행 유지) | — |
-| 건축물대장 표제부·총괄표제부 | **분기 1회** | 월 변화 미미. 신축 물건 거래를 잡는 데 분기면 충분 |
-| 토지이용계획 AL_D155 | **연 1회** | 도시계획 결정은 드물다. §6에서 계열 불일치가 17건 |
-| 토지대장 | **연 1회** | A2 tie-break 전용 |
-
-### 축약 대장 테이블 — 최소 형태로 만든다
-
-지금은 매칭 한 번에 3.5GB 파일을 통째로 훑는다. 서울 3개 스냅샷이 14분 걸렸다. 전국 17개 시도를 분기마다 하면 감당이 안 된다. 그래서 표제부를 **필지 단위로 축약한 테이블**을 먼저 만든다.
-
-> 이 축약 테이블의 설계는 [`PARCEL_MASTER_DESIGN.md`](PARCEL_MASTER_DESIGN.md) 로 확장됐다. 복합만이 아니라 집합 보강까지 같은 필지 테이블 위에서 처리하고, DB는 운영 서버에 올리지 않는 로컬 빌드 타임 자산으로 둔다.
-
-```
-bldrgst_parcel                 -- 건축물대장 필지 축약 (스냅샷별)
-  snapshot        '2026-07'
-  bjd_code        법정동 10자리
-  bun, ji         본번 · 부번
-  gross_areas     NUMERIC[]  이 필지 동별 연면적    ← 매칭 지문
-  structures      TEXT[]     동별 구조명
-  max_floor, approve_year, road_name, land_area, land_area_source
-  PRIMARY KEY (snapshot, bjd_code, bun, ji)
-```
-
-전국 표제부 806만 행을 필지로 묶고 필요한 컬럼만 남기면 수백 MB다. 그러면 매칭이 파일 스캔이 아니라 SQL 조인이 되고, **원본 3.5GB는 축약 후 삭제할 수 있다.** 재현은 축약 테이블의 스냅샷 행이 담당한다.
-
-**전국 필지 마스터의 전면 구축은 아직 하지 않는다.** 현재/이력 이원 테이블, 필지 분할·합병 계보(`region_canonical` 같은 것), 소유자 정보는 「필지 단위 시계열 분석」을 제품으로 낼 때 필요해지는데 지금 요구가 없다. 지금 필요한 것은 「거래를 필지에 붙이기」 하나이고 위 테이블로 끝난다. 나중에 이 테이블에 `valid_from`·`valid_to` 를 얹으면 이력 테이블로 자연히 확장된다.
+초안의 `bldrgst_parcel` 스키마는 쓰지 않는다. 실체는 [`PARCEL_MASTER_DESIGN.md`](PARCEL_MASTER_DESIGN.md)의 `building`(동 단위, 스냅샷 PK). 집합 전국은 적재됨, 복합 「일반」은 0행. 원본 삭제는 2019+ 동등 게이트 후.
 
 ---
 
