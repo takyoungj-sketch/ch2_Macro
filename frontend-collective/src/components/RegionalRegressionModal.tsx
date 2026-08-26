@@ -24,6 +24,9 @@ type Props = {
   hasIntermediate: boolean;
   guList: string[];
   leafList: string[];
+  regionCodes?: string[];
+  regionCodeLevel?: "eupmyeondong" | "beopjungri";
+  regionAddrs?: string[];
   windowYears: StatsWindowYears;
   assetType: string;
   onClose: () => void;
@@ -57,14 +60,22 @@ function fittedKey(row: { building_key: string; asset_type?: string | null }) {
   return row.asset_type ? `${row.building_key}|${row.asset_type}` : row.building_key;
 }
 
-function regionParams(p: Props): Pick<RegionalRegressionRunRequest, "addr3_list" | "addr4_list"> {
-  if (p.hasIntermediate) {
-    return {
-      addr3_list: p.guList.length ? p.guList : undefined,
-      addr4_list: p.leafList.length ? p.leafList : undefined,
-    };
-  }
-  return { addr3_list: p.leafList.length ? p.leafList : undefined };
+function regionParams(p: Props): Pick<
+  RegionalRegressionRunRequest,
+  "addr3_list" | "addr4_list" | "region_codes" | "region_code_level" | "region_addrs"
+> {
+  const addr = p.hasIntermediate
+    ? {
+        addr3_list: p.guList.length ? p.guList : undefined,
+        addr4_list: p.leafList.length ? p.leafList : undefined,
+      }
+    : { addr3_list: p.leafList.length ? p.leafList : undefined };
+  return {
+    ...addr,
+    region_codes: p.regionCodes?.length ? p.regionCodes : undefined,
+    region_code_level: p.regionCodeLevel,
+    region_addrs: p.regionAddrs?.length ? p.regionAddrs : undefined,
+  };
 }
 
 export default function RegionalRegressionModal(props: Props) {
@@ -102,6 +113,9 @@ export default function RegionalRegressionModal(props: Props) {
       props.hasIntermediate,
       props.guList,
       props.leafList,
+      props.regionCodes,
+      props.regionCodeLevel,
+      props.regionAddrs,
       props.windowYears,
       props.assetType,
       vars,

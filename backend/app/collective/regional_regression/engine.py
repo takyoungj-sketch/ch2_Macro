@@ -237,6 +237,10 @@ def load_danji_frame(
         addr3=None,
         addr3_list=req.addr3_list or None,
         addr4_list=req.addr4_list or None,
+        region_codes=req.region_codes or None,
+        region_code_level=req.region_code_level,
+        region_addrs=req.region_addrs or None,
+        emd_code_col=None,
     )
     params["as_of"] = as_of
     params["window_years"] = int(req.window_years)
@@ -343,6 +347,8 @@ def _scope_label(req: RegionalRegressionRunRequest) -> str:
         bits.append("·".join(req.addr3_list[:4]) + ("…" if len(req.addr3_list) > 4 else ""))
     if req.addr4_list:
         bits.append(f"읍면동 {len(req.addr4_list)}곳")
+    if req.region_codes:
+        bits.append(f"인접 {len(req.region_codes)}곳")
     types = _selected_regression_types(req.asset_type)
     if types:
         bits.append("·".join(ASSET_TYPE_LABELS.get(t, t) for t in types))
@@ -860,7 +866,7 @@ def run_regional_regression(
     if v.assessed_land_price:
         n_land_price = int(df["assessed_land_price"].notna().sum()) if not df.empty else 0
         if n_land_price == 0:
-            warnings.append("개별공시지가 자료가 아직 적재되지 않아 선택 변수로 사용할 수 없습니다.")
+            warnings.append("이 지역에 연결된 개별공시지가가 없습니다.")
         elif n_land_price < len(df):
             warnings.append(
                 f"개별공시지가가 연결된 단지는 {n_land_price}/{len(df)}곳입니다. "

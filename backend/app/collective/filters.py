@@ -32,6 +32,7 @@ def apply_region_filters(
     region_codes: list[str] | None = None,
     region_code_level: str | None = None,
     region_addrs: list[str] | None = None,
+    emd_code_col: str | None = "eupmyeondong_code",
 ) -> None:
     from app.region_scope import apply_analysis_region_scope
 
@@ -47,6 +48,7 @@ def apply_region_filters(
             addr_keys=addrs or None,
             col_prefix=prefix,
             conn=conn,
+            emd_code_col=emd_code_col,
         )
         if used:
             return

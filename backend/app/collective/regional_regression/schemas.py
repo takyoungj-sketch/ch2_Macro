@@ -27,6 +27,9 @@ class RegionalRegressionRunRequest(BaseModel):
     addr2: str
     addr3_list: list[str] = Field(default_factory=list)
     addr4_list: list[str] = Field(default_factory=list)
+    region_codes: list[str] = Field(default_factory=list)
+    region_code_level: Optional[str] = None
+    region_addrs: list[str] = Field(default_factory=list)
     window_years: int = 3
     asset_type: str = "apartment"
     variables: RegionalRegressionVariables = Field(default_factory=RegionalRegressionVariables)

@@ -16,6 +16,9 @@ export type RegionalRegressionRunRequest = {
   addr2: string;
   addr3_list?: string[];
   addr4_list?: string[];
+  region_codes?: string[];
+  region_code_level?: string;
+  region_addrs?: string[];
   window_years: number;
   asset_type?: string;
   variables: RegionalRegressionVariables;

@@ -315,6 +315,30 @@ def resolve_region_codes_for_map(
     return CollectiveMapResolveCodesResponse(**result)
 
 
+@router.get("/regions/lookup-code")
+def lookup_region_code_for_map(
+    db: Session = Depends(get_collective_db),
+    addr1: Optional[str] = Query(None),
+    addr2: Optional[str] = Query(None),
+    leaf: Optional[str] = Query(None, description="읍·면·동 또는 리 이름"),
+    code: Optional[str] = Query(None, description="VWorld/지도 행정코드"),
+    level: str = Query("eupmyeondong"),
+    eup: Optional[str] = Query(None, description="리 조회 시 상위 읍·면"),
+):
+    """지도 추가 시 VWorld 코드 ↔ region_codes 정합."""
+    from app.collective.lookup_code import lookup_region_code
+
+    return lookup_region_code(
+        db.connection(),
+        code=code,
+        addr1=addr1,
+        addr2=addr2,
+        leaf=leaf,
+        level=level,
+        eup=eup,
+    )
+
+
 @router.post("/buildings/geocode", response_model=CollectiveBuildingGeocodeResponse)
 def geocode_building_for_map(body: CollectiveBuildingGeocodeRequest):
     """선택 건물 지번 지오코딩 라벨 (VWorld Search · parcel 우선)."""
@@ -376,6 +400,9 @@ def list_buildings(
     addr3: Optional[str] = None,
     addr3_list: list[str] = Query(default=[]),
     addr4_list: list[str] = Query(default=[]),
+    region_codes: list[str] = Query(default=[]),
+    region_code_level: Optional[str] = Query(None),
+    region_addrs: list[str] = Query(default=[], description="시도|시군구|읍면동"),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
     window_years: int = Query(5, ge=1, le=MAX_WINDOW_YEARS),
@@ -412,6 +439,11 @@ def list_buildings(
     )
     presale_only = is_presale_only(asset_type)
     meta: dict = {"data_source": "live", "window_years": window_years}
+    region_kw = {
+        "region_codes": region_codes or None,
+        "region_code_level": region_code_level,
+        "region_addrs": region_addrs or None,
+    }
 
     def _fetch_live(
         *,
@@ -433,6 +465,7 @@ def list_buildings(
             contract_year_to=contract_year_to,
             contract_date_from=cd_from,
             contract_date_to=cd_to,
+            **region_kw,
         )
         single = normalize_asset_type(asset_type_param, allowed=RESIDENTIAL_ASSET_TYPES)
         return list_buildings_live(conn, where, params, asset_type=single)
@@ -455,6 +488,7 @@ def list_buildings(
             as_of_month=as_of_month,
             contract_year_from=contract_year_from,
             contract_year_to=contract_year_to,
+            **region_kw,
         )
         use_live = mart is None
         if mart is not None:
@@ -487,6 +521,7 @@ def list_buildings(
                 addr3=addr3,
                 addr3_list=addr3_list or None,
                 addr4_list=addr4_list or None,
+                **region_kw,
             )
             if lt is not None and len(lt[0]) > 0:
                 part, part_meta = lt
@@ -513,6 +548,7 @@ def list_buildings(
                 as_of_month=as_of_month,
                 contract_year_from=None,
                 contract_year_to=None,
+                **region_kw,
             )
             if mart is not None and mart[0]:
                 part, part_meta = mart

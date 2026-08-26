@@ -84,6 +84,17 @@ def pnu_from_tx(beopjungri: str | None, lot_number: str | None) -> str | None:
     return make_pnu(code, gbn, bun, ji)
 
 
+def remap_pnu_bjd(pnu: str, bjd_map: dict[str, str]) -> str | None:
+    """PNU 앞 10자리(법정동)만 바꾸고 필지 9자리는 유지한다."""
+    p = (pnu or "").strip()
+    if len(p) != 19 or not p.isdigit():
+        return None
+    bjd = bjd_map.get(p[:10], p[:10])
+    if len(bjd) != 10 or not bjd.isdigit():
+        return p
+    return bjd + p[10:]
+
+
 def remap_pnu_old_sido(pnu: str, old_to_current_bjd: dict[str, str]) -> str | None:
     """AL_D151 광주·전남 구코드 29/46 → 통합 12. 매핑이 없으면 앞 10자리를 그대로 둔다."""
     p = (pnu or "").strip()
@@ -91,10 +102,40 @@ def remap_pnu_old_sido(pnu: str, old_to_current_bjd: dict[str, str]) -> str | No
         return None
     if p[:2] not in {"29", "46"}:
         return p
-    bjd = old_to_current_bjd.get(p[:10], p[:10])
-    if len(bjd) != 10 or not bjd.isdigit():
-        return p
-    return bjd + p[10:]
+    return remap_pnu_bjd(p, old_to_current_bjd)
+
+
+# 2026-07 인천 분구. 동 이름만으로 조인하면 동구 금곡동 ≠ 검단 금곡동이 섞인다.
+INCHEON_REFORM_NEW_SG = frozenset({"28290", "28275", "28155", "28125"})
+INCHEON_PRED_SG: dict[str, tuple[str, ...]] = {
+    "28290": ("28260",),  # 검단 ← 서구
+    "28275": ("28260",),  # 서해 ← 서구
+    "28155": ("28110",),  # 영종 ← 중구
+    "28125": ("28140", "28110"),  # 제물포 ← 동구, 없으면 중구
+}
+
+
+def pick_incheon_old_bjd(current_code: str, old_codes: list[str]) -> str | None:
+    """신 법정동 하나에 구 구가 여러 개면 선행 구만 고른다."""
+    current = (current_code or "").strip()
+    prefs = INCHEON_PRED_SG.get(current[:5])
+    if not prefs or len(current) != 10:
+        return None
+    by_sg: dict[str, str] = {}
+    for raw in old_codes:
+        old = (raw or "").strip()
+        if len(old) != 10 or not old.isdigit():
+            continue
+        sg = old[:5]
+        prev = by_sg.get(sg)
+        if prev is not None and prev != old:
+            raise RuntimeError(f"인천 선행 구 {sg} 법정동이 중복입니다: {prev} / {old}")
+        by_sg[sg] = old
+    for sg in prefs:
+        found = by_sg.get(sg)
+        if found:
+            return found
+    return None
 
 
 def split_pnu(pnu: str) -> dict[str, str] | None:

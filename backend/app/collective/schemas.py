@@ -65,6 +65,8 @@ class BuildingStatsRow(BaseModel):
     builder_label: Optional[str] = None
     builder_is_joint: bool = False
     match_tier: Optional[str] = None
+    assessed_land_price: Optional[float] = None
+    assessed_land_price_year: Optional[int] = None
     asset_type: str
     count: int
     mean: Optional[float] = None

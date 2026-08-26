@@ -116,8 +116,13 @@ def list_clusters_from_mart(
     as_of_month: date | None,
     contract_year_from: Optional[int],
     contract_year_to: Optional[int],
+    region_codes: list[str] | None = None,
+    region_addrs: list[str] | None = None,
 ) -> tuple[list[CommercialClusterRow], dict[str, Any]] | None:
     if contract_year_from is not None or contract_year_to is not None:
+        return None
+    # cluster mart 는 행정코드·addr5 없음 — 교차 시군구는 live
+    if region_codes or region_addrs:
         return None
     if as_of_month is None or not _table_exists(conn, "public.collective_commercial_cluster_stats"):
         return None

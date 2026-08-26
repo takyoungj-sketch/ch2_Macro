@@ -30,6 +30,12 @@ import {
 } from "../api/mapClient";
 import { applySelectionFitBounds, boundsFromGeoJson } from "../utils/mapFitBounds";
 import { canonAdminCode, featureAdminCode, type MapAdminLevel } from "../utils/mapRegionScope";
+import {
+  analysisUnitLabel,
+  MAX_COLLECTIVE_ANALYSIS_UNITS,
+  type CollectiveAnalysisUnit,
+} from "../utils/collectiveAnalysisUnits";
+import { resolveUnitAddr2 } from "../utils/flatSidoRegion";
 
 export type MapPanelMode = "normal" | "expanded" | "collapsed";
 
@@ -81,6 +87,9 @@ type Props = {
   onAddLeaf?: (name: string) => void;
   /** 리 칩 추가 */
   onAddRi?: (pick: CollectiveMapRiPick) => void;
+  /** 교차 시군구 포함 분석 단위 (복합과 동일) */
+  analysisUnits?: CollectiveAnalysisUnit[];
+  onAddUnit?: (unit: CollectiveAnalysisUnit) => void;
   /** 집합상가·공장 resolve API */
   commercial?: boolean;
   /** 상업: 선택 도로(cluster) 지오코딩 라벨 */
@@ -98,9 +107,7 @@ type ContextMenuState = {
   y: number;
   code: string;
   label: string;
-  kind: "leaf" | "ri";
-  leafName?: string;
-  riPick?: CollectiveMapRiPick;
+  unit: CollectiveAnalysisUnit;
 };
 
 const VWORLD_KEY = (import.meta.env.VITE_VWORLD_API_KEY ?? "").trim();
@@ -227,11 +234,6 @@ function polygonLabelPoint(
   return best;
 }
 
-function sigunguPrefix(code: string): string {
-  const c = code.trim();
-  return c.length >= 5 ? c.slice(0, 5) : c;
-}
-
 function isAdjacentToAnySelected(
   clicked: GeoJSON.Feature,
   selectedFeatures: GeoJSON.Feature[],
@@ -305,6 +307,55 @@ function riPickFromProps(props: Record<string, unknown>): CollectiveMapRiPick | 
   return null;
 }
 
+function parentLabelsFromProps(props: Record<string, unknown>): { addr1: string; addr2: string } {
+  let addr1 = String(props.ctp_kor_nm ?? "").trim();
+  let addr2 = String(props.sig_kor_nm ?? "").trim();
+  if (!addr1 || !addr2) {
+    const full = String(props.full_nm ?? "").trim();
+    const parts = full.split(/\s+/).filter(Boolean);
+    if (!addr1 && parts[0]) addr1 = parts[0]!;
+    if (!addr2 && parts.length >= 2) addr2 = parts[1]!;
+  }
+  return { addr1, addr2 };
+}
+
+function unitFromFeature(
+  props: Record<string, unknown>,
+  code: string,
+  mapLevel: MapAdminLevel,
+  fallbackAddr1: string,
+): CollectiveAnalysisUnit | null {
+  const parents = parentLabelsFromProps(props);
+  const raw = String(code ?? "").trim();
+  if (mapLevel === "eupmyeondong") {
+    const name = leafNameFromProps(props);
+    if (!name) return null;
+    let emd = raw;
+    if (emd.length >= 10 && emd.endsWith("00")) emd = emd.slice(0, 8);
+    else if (emd.length > 8 && /^\d+$/.test(emd)) emd = emd.slice(0, 8);
+    return {
+      code: emd,
+      level: "eupmyeondong",
+      name,
+      addr1: parents.addr1 || fallbackAddr1,
+      addr2: parents.addr2,
+    };
+  }
+  if (mapLevel === "beopjungri") {
+    const pick = riPickFromProps(props);
+    if (!pick) return null;
+    return {
+      code: raw,
+      level: "beopjungri",
+      name: pick.ri,
+      eup: pick.eup,
+      addr1: parents.addr1 || fallbackAddr1,
+      addr2: parents.addr2,
+    };
+  }
+  return null;
+}
+
 export default function CollectiveRegionMapHub({
   scope,
   fillHeight = false,
@@ -312,8 +363,10 @@ export default function CollectiveRegionMapHub({
   onExpand,
   onCollapse,
   onNormal,
-  onAddLeaf,
-  onAddRi,
+  onAddLeaf: _onAddLeaf,
+  onAddRi: _onAddRi,
+  analysisUnits = [],
+  onAddUnit,
   commercial = false,
   selectedRoads = [],
   selectedBuildings = [],
@@ -367,8 +420,21 @@ export default function CollectiveRegionMapHub({
   });
 
   const mapLevel = (resolveQ.data?.level ?? null) as MapAdminLevel | null;
-  const selectedCodes = resolveQ.data?.selected_codes ?? [];
-  const hasSelection = Boolean(resolveQ.data?.has_selection && mapLevel && selectedCodes.length);
+  const resolveSelected = resolveQ.data?.selected_codes ?? [];
+  const selectedCodes = useMemo(() => {
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const c of [...resolveSelected, ...analysisUnits.map((u) => u.code)]) {
+      const t = String(c ?? "").trim();
+      if (!t || seen.has(t)) continue;
+      seen.add(t);
+      out.push(t);
+    }
+    return out;
+  }, [resolveSelected, analysisUnits]);
+  const hasSelection = Boolean(
+    (resolveQ.data?.has_selection || analysisUnits.length > 0) && mapLevel && selectedCodes.length,
+  );
 
   const boundariesQ = useQuery({
     queryKey: [
@@ -921,17 +987,15 @@ export default function CollectiveRegionMapHub({
         return;
       }
       const already =
-        selectedSet.has(code) || selectedCanonSet.has(canonAdminCode(mapLevel, code));
+        selectedSet.has(code) ||
+        selectedCanonSet.has(canonAdminCode(mapLevel, code)) ||
+        analysisUnits.some((u) => u.code === code || u.code === code.slice(0, 8));
       if (already) {
         setMapError("이미 선택된 지역입니다.");
         return;
       }
-
-      const selectedPrefixes = new Set(
-        selectedCodes.map((c) => sigunguPrefix(c)).filter(Boolean),
-      );
-      if (selectedPrefixes.size > 0 && !selectedPrefixes.has(sigunguPrefix(code))) {
-        setMapError("같은 시군구의 인접 지역만 추가할 수 있습니다.");
+      if (analysisUnits.length >= MAX_COLLECTIVE_ANALYSIS_UNITS) {
+        setMapError(`선택 지역은 최대 ${MAX_COLLECTIVE_ANALYSIS_UNITS}개까지입니다.`);
         return;
       }
 
@@ -946,6 +1010,10 @@ export default function CollectiveRegionMapHub({
         if (!c) return false;
         return selectedSet.has(c) || selectedCanonSet.has(canonAdminCode(mapLevel, c));
       });
+      if (!selectedFeatures.length) {
+        setMapError("먼저 왼쪽에서 읍·면·동(또는 리)을 선택해 주세요.");
+        return;
+      }
       const canon = canonAdminCode(mapLevel, code);
       const inNeighborGraph =
         neighborSelectableSet.has(code) || neighborSelectableSet.has(canon);
@@ -962,52 +1030,38 @@ export default function CollectiveRegionMapHub({
       }
 
       const props = (polygonFeat.properties ?? rawFeat.properties) as Record<string, unknown>;
-      const pos = clampMapMenuPos(point.x, point.y, containerRef.current);
-      if (mapLevel === "eupmyeondong") {
-        const leafName = leafNameFromProps(props);
-        if (!leafName) {
-          setMapError("읍·면·동 이름을 확인할 수 없습니다.");
-          return;
-        }
-        if (scope.leafList.includes(leafName)) {
-          setMapError("이미 선택된 지역입니다.");
-          return;
-        }
-        setMapError(null);
-        setContextMenu({
-          x: pos.x,
-          y: pos.y,
-          code,
-          label: leafName,
-          kind: "leaf",
-          leafName,
-        });
+      const unit = unitFromFeature(props, code, mapLevel, scope.addr1);
+      if (!unit) {
+        setMapError("지역 이름을 확인할 수 없습니다.");
+        return;
+      }
+      if (analysisUnits.length && analysisUnits[0]!.level !== unit.level) {
+        setMapError("같은 행정 레벨만 함께 선택할 수 있습니다.");
         return;
       }
 
-      if (mapLevel === "beopjungri") {
-        const pick = riPickFromProps(props);
-        if (!pick) {
-          setMapError("리 이름을 확인할 수 없습니다.");
-          return;
-        }
-        const key = `${pick.eup}|${pick.ri}`;
-        if (scope.riPick.includes(key)) {
-          setMapError("이미 선택된 지역입니다.");
-          return;
-        }
-        setMapError(null);
-        setContextMenu({
-          x: pos.x,
-          y: pos.y,
-          code,
-          label: `${pick.eup} ${pick.ri}`,
-          kind: "ri",
-          riPick: pick,
-        });
-      }
+      setMapError(null);
+      const pos = clampMapMenuPos(point.x, point.y, containerRef.current);
+      setContextMenu({
+        x: pos.x,
+        y: pos.y,
+        code: unit.code,
+        label: analysisUnitLabel(unit),
+        unit,
+      });
     },
-    [geojson, isRiSelection, mapLevel, neighborGraphReady, neighborSelectableSet, scope.leafList, scope.riPick, selectedCanonSet, selectedCodes, selectedSet],
+    [
+      analysisUnits,
+      geojson,
+      isRiSelection,
+      mapLevel,
+      neighborGraphReady,
+      neighborSelectableSet,
+      scope.addr1,
+      selectedCanonSet,
+      selectedCodes,
+      selectedSet,
+    ],
   );
 
   const handleContextMenu = useCallback(
@@ -1042,13 +1096,22 @@ export default function CollectiveRegionMapHub({
 
   const confirmAddRegion = useCallback(() => {
     if (!contextMenu) return;
-    if (contextMenu.kind === "leaf" && contextMenu.leafName) {
-      onAddLeaf?.(contextMenu.leafName);
-    } else if (contextMenu.kind === "ri" && contextMenu.riPick) {
-      onAddRi?.(contextMenu.riPick);
-    }
+    const unit = contextMenu.unit;
+    const anchorSig = (selectedCodes[0] || analysisUnits[0]?.code || "")
+      .replace(/\D/g, "")
+      .slice(0, 5);
+    const unitSig = unit.code.replace(/\D/g, "").slice(0, 5);
+    const crossParent =
+      Boolean(anchorSig && unitSig && anchorSig !== unitSig) ||
+      Boolean(unit.addr2 && scope.addr2 && unit.addr2 !== scope.addr2);
+    onAddUnit?.({
+      ...unit,
+      crossParent,
+      addr1: unit.addr1 || scope.addr1,
+      addr2: resolveUnitAddr2(scope.addr1, scope.addr2, unit.addr1, unit.addr2, crossParent),
+    });
     setContextMenu(null);
-  }, [contextMenu, onAddLeaf, onAddRi]);
+  }, [analysisUnits, contextMenu, onAddUnit, scope.addr1, scope.addr2, selectedCodes]);
 
   const showSetupHint = !VWORLD_KEY && !configQ.data?.vworld_configured;
   const upperOnly = mapLevel === "sido" || mapLevel === "sigungu";

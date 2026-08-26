@@ -1,10 +1,9 @@
-"""K-apt 없는 필지 — 표제부 해당 용도 동을 합쳐 세대수·층·구조를 채운다.
+"""K-apt 없는 필지 — 표제부 동을 합쳐 세대수·층·구조를 채운다.
 
+조인 키는 PNU다. 용도 문자열은 한 필지에 여러 주거 유형 동이 있을 때만 나눈다.
+해당 유형 글자가 없어도 본체 동이 있으면 붙인다(업무시설·공동주택 오피스텔 등).
 시공사는 표제부에 없다. 첫째 동을 대표값으로 쓰지 않는다.
 부대시설(경비실·주차장 등) 동은 합에서 뺀다.
-지역회귀 hard 표본은 A·B·C 유지 (tier T 는 목록용).
-
-종류별로 다른 동만 합친다 — 같은 필지의 아파트 동을 연립 행에 넣지 않는다.
 """
 
 from __future__ import annotations
@@ -66,6 +65,69 @@ def is_title_dong(kind: TitleKind, main_purpose: object, purpose_detail: object)
     return is_housing_dong(main_purpose, purpose_detail)
 
 
+def is_ancillary_only(main_purpose: object, purpose_detail: object) -> bool:
+    """경비실 등. 아파트-관리사무소처럼 주거 키워드가 같이 있으면 본체로 본다."""
+    main = str(main_purpose or "").strip()
+    detail = str(purpose_detail or "").strip()
+    if not _ANCILLARY.search(detail):
+        return False
+    blob = f"{main} {detail}"
+    if "오피스텔" in blob or _ROWHOUSE_DETAIL.search(blob):
+        return False
+    if any(k in blob for k in _HOUSING_DETAIL):
+        return False
+    return True
+
+
+def _dong_kind_labels(main_purpose: object, purpose_detail: object) -> frozenset[TitleKind]:
+    labels: set[TitleKind] = set()
+    if is_officetel_dong(main_purpose, purpose_detail):
+        labels.add("officetel")
+    if is_rowhouse_dong(main_purpose, purpose_detail):
+        labels.add("rowhouse")
+    if is_housing_dong(main_purpose, purpose_detail):
+        labels.add("apartment")
+    return frozenset(labels)
+
+
+def select_title_dongs(
+    rows: list[dict[str, Any]],
+    kind: TitleKind = "apartment",
+) -> list[dict[str, Any]]:
+    """필지 표제부 행에서 이 실거래 유형에 쓸 동만 고른다.
+
+    1) 유형 글자가 맞는 동
+    2) 없으면 어느 유형에도 안 걸린 본체(업무시설·공동주택 등)
+    3) 그것도 없고 다른 주거 유형이 하나뿐이면 그 동(실거래 유형과 대장 글자가 다른 경우)
+    4) 아파트 동과 다세대 동이 함께 있고 이 유형 글자가 없으면 섞지 않는다
+    """
+    aligned: list[dict[str, Any]] = []
+    untyped: list[dict[str, Any]] = []
+    other_rows: list[dict[str, Any]] = []
+    other_kinds: set[TitleKind] = set()
+    for row in rows:
+        main = row.get("main_purpose")
+        detail = row.get("purpose_detail")
+        if is_ancillary_only(main, detail):
+            continue
+        labels = _dong_kind_labels(main, detail)
+        if kind in labels:
+            aligned.append(row)
+            continue
+        if not labels:
+            untyped.append(row)
+            continue
+        other_rows.append(row)
+        other_kinds |= set(labels)
+    if aligned:
+        return aligned
+    if untyped:
+        return untyped
+    if len(other_kinds) == 1:
+        return other_rows
+    return []
+
+
 def _mode(values: Iterable[Any]) -> Any:
     items = [v for v in values if v is not None and v != ""]
     if not items:
@@ -92,8 +154,8 @@ def aggregate_title_dongs(
     rows: list[dict[str, Any]],
     kind: TitleKind = "apartment",
 ) -> dict[str, Any] | None:
-    """한 필지 표제부 행 → 목록용 합. 해당 용도 동이 없으면 None."""
-    housing = [r for r in rows if is_title_dong(kind, r.get("main_purpose"), r.get("purpose_detail"))]
+    """한 필지 표제부 행 → 목록용 합. 본체 동이 없으면 None."""
+    housing = select_title_dongs(rows, kind=kind)
     if not housing:
         return None
     hh_vals = []
@@ -126,6 +188,57 @@ def aggregate_title_dongs(
         "approved_year": _mode(y for y in years if y is not None),
         "n_dong": len(housing),
     }
+    hh_vals = []
+    for r in housing:
+        v = r.get("households")
+        if v is None:
+            continue
+        try:
+            n = int(v)
+        except (TypeError, ValueError):
+            continue
+        if n > 0:
+            hh_vals.append(n)
+    floors = []
+    for r in housing:
+        v = r.get("floors_above")
+        if v is None:
+            continue
+        try:
+            floors.append(int(v))
+        except (TypeError, ValueError):
+            continue
+    years = [parse_year(r.get("approve_date")) for r in housing]
+    names = [str(r.get("structure_name") or "").strip() for r in housing]
+    return {
+        "households": sum(hh_vals) if hh_vals else None,
+        "dong_count": len(housing),
+        "max_floor": max(floors) if floors else None,
+        "structure_raw": _mode(names),
+        "approved_year": _mode(y for y in years if y is not None),
+        "n_dong": len(housing),
+    }
+
+
+def title_rows_for_pnu(
+    pnu: str | None,
+    by_pnu: dict[str, list[dict[str, Any]]],
+    current_to_old_bjd: dict[str, str] | None = None,
+) -> list[dict[str, Any]]:
+    """신 PNU를 먼저 보고, 없으면 인천 분구 구 PNU를 본다."""
+    from parcel_master.pnu import remap_pnu_bjd
+
+    if not pnu:
+        return []
+    rows = by_pnu.get(pnu) or []
+    if rows:
+        return rows
+    if not current_to_old_bjd:
+        return []
+    old = remap_pnu_bjd(pnu, current_to_old_bjd)
+    if old and old != pnu:
+        return by_pnu.get(old) or []
+    return []
 
 
 def title_fill_skip_reason(

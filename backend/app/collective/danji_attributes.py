@@ -607,8 +607,15 @@ def _households_flagged(raw: Any) -> bool:
 
 
 def attach_danji_list_fields(conn: Connection, items: list[BuildingStatsRow]) -> None:
-    """기본통계 목록에 세대수·시공사 대표 1곳을 붙인다. K-apt 또는 표제부 동 합산. 없으면 그대로 둔다."""
-    if not items or not _table_exists(conn, ATTRIBUTES_TABLE):
+    """기본통계 목록에 세대수·시공사·개별공시지가를 붙인다. 없으면 그대로 둔다."""
+    if not items:
+        return
+    _attach_list_attr_fields(conn, items)
+    _attach_list_land_prices(conn, items)
+
+
+def _attach_list_attr_fields(conn: Connection, items: list[BuildingStatsRow]) -> None:
+    if not _table_exists(conn, ATTRIBUTES_TABLE):
         return
     snap = _latest_snapshot_ym(conn)
     if not snap:
@@ -651,5 +658,43 @@ def attach_danji_list_fields(conn: Connection, items: list[BuildingStatsRow]) ->
                 ),
                 "builder_is_joint": bool(row.get("builder_is_joint")),
                 "match_tier": (str(row.get("match_tier") or "").strip() or None),
+            }
+        )
+
+
+def _attach_list_land_prices(conn: Connection, items: list[BuildingStatsRow]) -> None:
+    if not _table_exists(conn, LAND_PRICE_TABLE):
+        return
+    keys = list({it.building_key for it in items if it.building_key})
+    if not keys:
+        return
+    rows = conn.execute(
+        text(
+            f"""
+            SELECT DISTINCT ON (building_key, asset_type)
+                   building_key, asset_type, assessed_land_price, assessed_land_price_year
+            FROM {LAND_PRICE_TABLE}
+            WHERE building_key = ANY(:keys)
+            ORDER BY building_key, asset_type, assessed_land_price_year DESC NULLS LAST
+            """
+        ),
+        {"keys": keys},
+    ).mappings().all()
+    by_pair: dict[tuple[str, str], dict[str, Any]] = {}
+    by_key: dict[str, dict[str, Any]] = {}
+    for r in rows:
+        d = dict(r)
+        bk = str(d["building_key"])
+        at = str(d.get("asset_type") or "")
+        by_pair[(bk, at)] = d
+        by_key.setdefault(bk, d)
+    for i, it in enumerate(items):
+        row = by_pair.get((it.building_key, it.asset_type)) or by_key.get(it.building_key)
+        if not row:
+            continue
+        items[i] = it.model_copy(
+            update={
+                "assessed_land_price": _to_float(row.get("assessed_land_price")),
+                "assessed_land_price_year": _to_int(row.get("assessed_land_price_year")),
             }
         )

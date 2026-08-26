@@ -94,6 +94,9 @@ def _tx_where(
     contract_date_to: Optional[date] = None,
     window_years: Optional[int] = None,
     col_prefix: str = "",
+    region_codes: list[str] | None = None,
+    region_code_level: str | None = None,
+    region_addrs: list[str] | None = None,
 ) -> tuple[str, dict]:
     p = col_prefix
     valid_sql = f"{p}.is_valid = true" if p else "is_valid = true"
@@ -119,6 +122,9 @@ def _tx_where(
         asset_type=asset_type,
         col_prefix=p,
         valid_sql=valid_sql,
+        region_codes=region_codes,
+        region_code_level=region_code_level,
+        region_addrs=region_addrs,
     )
     apply_commercial_tx_period(
         conn,
@@ -426,6 +432,9 @@ def list_clusters(
     addr2: Optional[str] = None,
     addr3_list: list[str] = Query(default=[]),
     addr4_list: list[str] = Query(default=[]),
+    region_codes: list[str] = Query(default=[]),
+    region_code_level: Optional[str] = Query(None),
+    region_addrs: list[str] = Query(default=[], description="시도|시군구|읍면동"),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
     window_years: int = Query(5, ge=1, le=MAX_WINDOW_YEARS),
@@ -445,6 +454,11 @@ def list_clusters(
     conn = db.connection()
     as_of_month, _ = latest_mart_snapshot(conn)
     meta: dict = {"data_source": "live", "window_years": window_years}
+    region_kw = {
+        "region_codes": region_codes or None,
+        "region_code_level": region_code_level,
+        "region_addrs": region_addrs or None,
+    }
 
     mart = list_clusters_from_mart(
         conn,
@@ -457,6 +471,8 @@ def list_clusters(
         as_of_month=as_of_month,
         contract_year_from=contract_year_from,
         contract_year_to=contract_year_to,
+        region_codes=region_codes or None,
+        region_addrs=region_addrs or None,
     )
     if mart is not None:
         items, meta = mart
@@ -471,6 +487,7 @@ def list_clusters(
             contract_year_from=contract_year_from,
             contract_year_to=contract_year_to,
             col_prefix="t",
+            **region_kw,
         )
         items = list_clusters_live(conn, where, params)
 

@@ -13,6 +13,7 @@ import {
 } from "./api/commercialClient";
 import { fetchCollectiveMapResolveCodes } from "./api/mapClient";
 import DualHorizontalScroll from "./components/DualHorizontalScroll";
+import StatsTableExpandButton from "./components/StatsTableExpandButton";
 import CommercialClusterDetailModal from "./components/CommercialClusterDetailModal";
 import CollectiveRegionMapHub, { type MapPanelMode } from "./components/CollectiveRegionMapHub";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
@@ -34,6 +35,11 @@ import {
 } from "./utils/commercialAssetTypes";
 import { useCollectiveDeepLink } from "./hooks/useCollectiveDeepLink";
 import { profileHref, resolveCollectiveProfileTarget } from "./utils/profileLink";
+import { useCollectiveAnalysisUnits } from "./hooks/useCollectiveAnalysisUnits";
+import {
+  analysisUnitLabel,
+  MAX_COLLECTIVE_ANALYSIS_UNITS,
+} from "./utils/collectiveAnalysisUnits";
 import {
   formatAddr2OptionLabel,
   formatScopeAddr2,
@@ -61,6 +67,9 @@ type AnalysisScope = {
   yearTo: number | "";
   sort: string;
   windowYears: StatsWindowYears;
+  region_codes?: string[];
+  region_code_level?: "eupmyeondong" | "beopjungri";
+  region_addrs?: string[];
 };
 
 function hasYearFilter(from: number | "", to: number | "") {
@@ -103,6 +112,23 @@ export default function CommercialApp() {
   const [addr2, setAddr2] = useState("");
   const [guList, setGuList] = useState<string[]>([]);
   const [leafList, setLeafList] = useState<string[]>([]);
+  const {
+    analysisUnits,
+    setAnalysisUnits,
+    regionCodeScope,
+    profileTarget: unitsProfile,
+    removeAnalysisUnit,
+    addUnit,
+    clearUnits,
+  } = useCollectiveAnalysisUnits({
+    assetType,
+    addr1,
+    addr2,
+    guList,
+    leafList,
+    setLeafList,
+    commercial: true,
+  });
   const [yearFrom, setYearFrom] = useState<number | "">("");
   const [yearTo, setYearTo] = useState<number | "">("");
   const [sort, setSort] = useState("count");
@@ -111,6 +137,7 @@ export default function CommercialApp() {
   const [selected, setSelected] = useState<CommercialClusterRow | null>(null);
   const [clusterSearch, setClusterSearch] = useState("");
   const [mapPanelMode, setMapPanelMode] = useState<MapPanelMode>("normal");
+  const [tableWide, setTableWide] = useState(false);
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
   const { isDark, toggleUiColorScheme } = useUiColorScheme();
 
@@ -207,6 +234,9 @@ export default function CommercialApp() {
         addr1: scope.addr1,
         addr2: scope.addr2,
         ...regionParams,
+        region_codes: scope.region_codes,
+        region_code_level: scope.region_code_level,
+        region_addrs: scope.region_addrs,
         contract_year_from: scope.yearFrom === "" ? undefined : scope.yearFrom,
         contract_year_to: scope.yearTo === "" ? undefined : scope.yearTo,
         window_years: scope.windowYears,
@@ -232,8 +262,8 @@ export default function CommercialApp() {
     staleTime: 30_000,
   });
   const profileTarget = useMemo(
-    () => resolveCollectiveProfileTarget(profileResolveQ.data),
-    [profileResolveQ.data],
+    () => unitsProfile ?? resolveCollectiveProfileTarget(profileResolveQ.data),
+    [unitsProfile, profileResolveQ.data],
   );
 
   const clusterSearchQ = clusterSearch.trim().toLowerCase();
@@ -263,7 +293,9 @@ export default function CommercialApp() {
       scope.yearFrom !== yearFrom ||
       scope.yearTo !== yearTo ||
       scope.sort !== sort ||
-      scope.windowYears !== windowYears);
+      scope.windowYears !== windowYears ||
+      JSON.stringify(scope.region_codes ?? []) !== JSON.stringify(regionCodeScope.region_codes ?? []) ||
+      JSON.stringify(scope.region_addrs ?? []) !== JSON.stringify(regionCodeScope.region_addrs ?? []));
 
   const addr2ScopeLabel = formatScopeAddr2(addr2, addr1) || addr1;
 
@@ -280,6 +312,7 @@ export default function CommercialApp() {
       yearTo,
       sort,
       windowYears,
+      ...regionCodeScope,
     });
     setSelected(null);
   };
@@ -287,6 +320,7 @@ export default function CommercialApp() {
   const resetRegion = () => {
     setGuList([]);
     setLeafList([]);
+    setAnalysisUnits([]);
     setScope(null);
     setSelected(null);
   };
@@ -406,11 +440,13 @@ export default function CommercialApp() {
                   }
                   setGuList((prev) => toggleChipSingle(prev, name));
                   setLeafList([]);
+                  setAnalysisUnits([]);
                 }}
                 onSelectAll={() => setGuList((guQ.data ?? []).filter((o) => !o.disabled).map((o) => o.name))}
                 onClear={() => {
                   setGuList([]);
                   setLeafList([]);
+                  setAnalysisUnits([]);
                 }}
               />
             )}
@@ -427,13 +463,20 @@ export default function CommercialApp() {
                 options={visibleLeafOptions}
                 formatLabel={(o) => (o.parent ? `${o.parent} · ${o.name}` : o.name)}
                 multiSelect={LEFT_REGION_MULTI_SELECT}
-                onToggle={(name) =>
+                onToggle={(name) => {
+                  setAnalysisUnits([]);
                   setLeafList((prev) =>
                     LEFT_REGION_MULTI_SELECT ? toggleChipMulti(prev, name) : toggleChipSingle(prev, name),
-                  )
-                }
-                onSelectAll={() => setLeafList(visibleLeafOptions.filter((o) => !o.disabled).map((o) => o.name))}
-                onClear={() => setLeafList([])}
+                  );
+                }}
+                onSelectAll={() => {
+                  setAnalysisUnits([]);
+                  setLeafList(visibleLeafOptions.filter((o) => !o.disabled).map((o) => o.name));
+                }}
+                onClear={() => {
+                  setAnalysisUnits([]);
+                  setLeafList([]);
+                }}
               />
             )}
 
@@ -454,6 +497,40 @@ export default function CommercialApp() {
 
         <div className="layout-main min-w-0 flex-1">
           <section className="px-4 pt-4 shrink-0">
+            {analysisUnits.length > 0 && (
+              <div className="mb-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-3 py-2">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                    선택 지역 ({analysisUnits.length}/{MAX_COLLECTIVE_ANALYSIS_UNITS})
+                  </p>
+                  <button
+                    type="button"
+                    className="text-[11px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                    onClick={clearUnits}
+                  >
+                    모두 지우기
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {analysisUnits.map((u) => (
+                    <span
+                      key={u.code}
+                      className="inline-flex items-center gap-1 rounded-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-0.5 text-[11px] text-slate-700 dark:text-slate-200"
+                    >
+                      {analysisUnitLabel(u)}
+                      <button
+                        type="button"
+                        className="text-slate-400 hover:text-red-600"
+                        aria-label="제거"
+                        onClick={() => removeAnalysisUnit(u.code)}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             <CollectiveRegionMapHub
               commercial
               scope={{
@@ -464,6 +541,8 @@ export default function CommercialApp() {
                 leafList,
                 riPick: [],
               }}
+              analysisUnits={analysisUnits}
+              onAddUnit={addUnit}
               selectedRoads={
                 selected && scope
                   ? [
@@ -497,9 +576,6 @@ export default function CommercialApp() {
               onExpand={() => setMapPanelMode("expanded")}
               onCollapse={() => setMapPanelMode("collapsed")}
               onNormal={() => setMapPanelMode("normal")}
-              onAddLeaf={(name) => {
-                setLeafList((prev) => (prev.includes(name) ? prev : [...prev, name]));
-              }}
             />
           </section>
           <div className="p-4 pt-2">
@@ -543,6 +619,11 @@ export default function CommercialApp() {
                       지역 프로필 →
                     </a>
                   )}
+                  <StatsTableExpandButton
+                    expanded={tableWide}
+                    onToggle={() => setTableWide((v) => !v)}
+                    title="신뢰구간을 보여 줍니다"
+                  />
                   <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 shrink-0">
                     <span className="whitespace-nowrap">검색</span>
                     <input
@@ -556,15 +637,15 @@ export default function CommercialApp() {
                   </label>
                 </div>
                 <div className="card p-0 w-full">
-                  <DualHorizontalScroll>
-                  <table className="data commercial-clusters-table">
+                  <DualHorizontalScroll key={tableWide ? "wide" : "compact"}>
+                  <table className={clsx("data commercial-clusters-table", tableWide && "is-wide")}>
                     <colgroup>
                       <col className="col-type" />
                       <col className="col-road" />
                       <col className="col-num" />
                       <col className="col-num" />
                       <col className="col-num" />
-                      <col className="col-num" />
+                      {tableWide && <col className="col-num" />}
                       <col className="col-district" />
                     </colgroup>
                     <thead>
@@ -577,9 +658,9 @@ export default function CommercialApp() {
                           </span>
                         </th>
                         <th>거래수</th>
-                        <th>평균(만원/㎡)</th>
                         <th>중앙(만원/㎡)</th>
-                        <th title="95% 신뢰구간">신뢰구간(만원/㎡)</th>
+                        <th>평균(만원/㎡)</th>
+                        {tableWide && <th title="95% 신뢰구간">신뢰구간(만원/㎡)</th>}
                         <th>구·동</th>
                       </tr>
                     </thead>
@@ -608,9 +689,11 @@ export default function CommercialApp() {
                               {!row.is_reliable && <span className="ml-0.5 text-[9px] text-amber-600">n&lt;15</span>}
                             </td>
                             <td className="num">{row.count}</td>
-                            <td className="num">{fmtPrice(row.mean)}</td>
                             <td className="num">{fmtPrice(row.median)}</td>
-                            <td className="num text-[10px]">{fmtCi(row.ci_lower, row.ci_upper)}</td>
+                            <td className="num">{fmtPrice(row.mean)}</td>
+                            {tableWide && (
+                              <td className="num text-[10px]">{fmtCi(row.ci_lower, row.ci_upper)}</td>
+                            )}
                             <td className="col-district text-[10px] text-slate-600 dark:text-slate-300">
                               {[row.addr3, row.addr4].filter(Boolean).join(" · ") || "—"}
                             </td>

@@ -118,6 +118,31 @@ export async function fetchCollectiveMapResolveCodes(opts: {
   return data;
 }
 
+export async function lookupCollectiveRegionCode(opts: {
+  addr1?: string;
+  addr2?: string;
+  leaf?: string;
+  code?: string;
+  level?: "eupmyeondong" | "beopjungri";
+  eup?: string;
+}): Promise<{
+  code: string | null;
+  level: string;
+  addr1?: string | null;
+  addr2?: string | null;
+  leaf?: string | null;
+}> {
+  const params: Record<string, string> = {};
+  if (opts.addr1) params.addr1 = opts.addr1;
+  if (opts.addr2) params.addr2 = opts.addr2;
+  if (opts.leaf) params.leaf = opts.leaf;
+  if (opts.code) params.code = opts.code;
+  if (opts.level) params.level = opts.level;
+  if (opts.eup) params.eup = opts.eup;
+  const { data } = await collectiveApi.get("/regions/lookup-code", { params });
+  return data;
+}
+
 export function vworldSatelliteTileUrl(apiKey: string): string {
   return `https://api.vworld.kr/req/wmts/1.0.0/${encodeURIComponent(apiKey)}/Satellite/{z}/{y}/{x}.jpeg`;
 }

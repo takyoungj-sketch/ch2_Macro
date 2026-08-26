@@ -52,6 +52,8 @@ export interface BuildingStatsRow {
   builder_label?: string | null;
   builder_is_joint?: boolean;
   match_tier?: string | null;
+  assessed_land_price?: number | null;
+  assessed_land_price_year?: number | null;
   asset_type: string;
   count: number;
   mean?: number | null;

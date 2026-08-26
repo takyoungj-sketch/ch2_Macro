@@ -14,6 +14,7 @@ import {
 } from "./api/client";
 import { fetchCollectiveMapResolveCodes } from "./api/mapClient";
 import DualHorizontalScroll from "./components/DualHorizontalScroll";
+import StatsTableExpandButton from "./components/StatsTableExpandButton";
 import BuildingDetailModal from "./components/BuildingDetailModal";
 import NewApartmentExperimentModal from "./components/NewApartmentExperimentModal";
 import RegionalRegressionModal from "./components/RegionalRegressionModal";
@@ -49,6 +50,11 @@ import {
 } from "./utils/residentialAssetTypes";
 import { useCollectiveDeepLink } from "./hooks/useCollectiveDeepLink";
 import { profileHref, resolveCollectiveProfileTarget } from "./utils/profileLink";
+import { useCollectiveAnalysisUnits } from "./hooks/useCollectiveAnalysisUnits";
+import {
+  analysisUnitLabel,
+  MAX_COLLECTIVE_ANALYSIS_UNITS,
+} from "./utils/collectiveAnalysisUnits";
 import { collectiveMatchBadge } from "./utils/matchBadge";
 
 type AnalysisScope = {
@@ -62,6 +68,9 @@ type AnalysisScope = {
   yearTo: number | "";
   windowYears: StatsWindowYears;
   sort: string;
+  region_codes?: string[];
+  region_code_level?: "eupmyeondong" | "beopjungri";
+  region_addrs?: string[];
 };
 
 function fmtPrice(v: number | null | undefined) {
@@ -74,13 +83,27 @@ function fmtCiCompact(lo: number | null | undefined, hi: number | null | undefin
   return `${fmtPrice(lo)}~${fmtPrice(hi)}`;
 }
 
+function fmtLandPrice(v: number | null | undefined) {
+  if (v == null) return "—";
+  return Math.round(v).toLocaleString("ko-KR");
+}
+
+function landPriceTitle(row: BuildingStatsRow): string | undefined {
+  if (row.assessed_land_price == null) return undefined;
+  return row.assessed_land_price_year != null
+    ? `${row.assessed_land_price_year}년 · 원/㎡`
+    : "원/㎡";
+}
+
 function BuildingTableRow({
   row,
   highlighted,
+  wide,
   onSelect,
 }: {
   row: BuildingStatsRow;
   highlighted?: boolean;
+  wide: boolean;
   onSelect: (row: BuildingStatsRow) => void;
 }) {
   return (
@@ -114,9 +137,9 @@ function BuildingTableRow({
           })()}
       </td>
       <td className="num">{row.count}</td>
-      <td className="num">{fmtPrice(row.mean)}</td>
       <td className="num">{fmtPrice(row.median)}</td>
-      <td className="num text-[10px]">{fmtCiCompact(row.ci_lower, row.ci_upper)}</td>
+      <td className="num">{fmtPrice(row.mean)}</td>
+      {wide && <td className="num text-[10px]">{fmtCiCompact(row.ci_lower, row.ci_upper)}</td>}
       <td className="num">{row.building_year ?? "—"}</td>
       <td className="num" title={row.households_flagged ? "원본 이상값 — 값은 그대로 표시" : "K-apt 전체 세대수. 없으면 표제부 해당 용도 동 합산"}>
         {row.households == null ? (
@@ -143,9 +166,16 @@ function BuildingTableRow({
       <td className="addr truncate" title={row.jibun_address || row.address || undefined}>
         {row.jibun_address ?? row.address ?? "—"}
       </td>
-      <td className="addr truncate" title={row.road_address || undefined}>
-        {row.road_address ?? "—"}
-      </td>
+      {wide && (
+        <td className="addr truncate" title={row.road_address || undefined}>
+          {row.road_address ?? "—"}
+        </td>
+      )}
+      {wide && (
+        <td className="num" title={landPriceTitle(row)}>
+          {fmtLandPrice(row.assessed_land_price)}
+        </td>
+      )}
     </tr>
   );
 }
@@ -173,6 +203,22 @@ export default function App() {
   const [addr2, setAddr2] = useState("");
   const [guList, setGuList] = useState<string[]>([]);
   const [leafList, setLeafList] = useState<string[]>([]);
+  const {
+    analysisUnits,
+    setAnalysisUnits,
+    regionCodeScope,
+    profileTarget: unitsProfile,
+    removeAnalysisUnit,
+    addUnit,
+    clearUnits,
+  } = useCollectiveAnalysisUnits({
+    assetType,
+    addr1,
+    addr2,
+    guList,
+    leafList,
+    setLeafList,
+  });
   const [yearFrom, setYearFrom] = useState<number | "">("");
   const [yearTo, setYearTo] = useState<number | "">("");
   const [windowYears, setWindowYears] = useState<StatsWindowYears>(5);
@@ -183,6 +229,7 @@ export default function App() {
   const [regionalOpen, setRegionalOpen] = useState(false);
   const [buildingSearch, setBuildingSearch] = useState("");
   const [mapPanelMode, setMapPanelMode] = useState<MapPanelMode>("normal");
+  const [tableWide, setTableWide] = useState(false);
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
   const { isDark, toggleUiColorScheme } = useUiColorScheme();
 
@@ -286,6 +333,9 @@ export default function App() {
         addr1: scope.addr1,
         addr2: scope.addr2,
         ...regionParams,
+        region_codes: scope.region_codes,
+        region_code_level: scope.region_code_level,
+        region_addrs: scope.region_addrs,
         contract_year_from: scope.yearFrom === "" ? undefined : scope.yearFrom,
         contract_year_to: scope.yearTo === "" ? undefined : scope.yearTo,
         window_years: scope.windowYears,
@@ -310,8 +360,8 @@ export default function App() {
     staleTime: 30_000,
   });
   const profileTarget = useMemo(
-    () => resolveCollectiveProfileTarget(profileResolveQ.data),
-    [profileResolveQ.data],
+    () => unitsProfile ?? resolveCollectiveProfileTarget(profileResolveQ.data),
+    [unitsProfile, profileResolveQ.data],
   );
 
   const buildingSearchQ = buildingSearch.trim().toLowerCase();
@@ -343,7 +393,9 @@ export default function App() {
       scope.yearFrom !== yearFrom ||
       scope.yearTo !== yearTo ||
       scope.windowYears !== windowYears ||
-      scope.sort !== sort);
+      scope.sort !== sort ||
+      JSON.stringify(scope.region_codes ?? []) !== JSON.stringify(regionCodeScope.region_codes ?? []) ||
+      JSON.stringify(scope.region_addrs ?? []) !== JSON.stringify(regionCodeScope.region_addrs ?? []));
 
   const isApartment = assetKinds.includes("apartment");
   const regionalReady = Boolean(scope) && !scopeStale && isApartment;
@@ -372,6 +424,7 @@ export default function App() {
       yearTo,
       windowYears,
       sort,
+      ...regionCodeScope,
     });
     setSelected(null);
   };
@@ -379,6 +432,7 @@ export default function App() {
   const resetRegion = () => {
     setGuList([]);
     setLeafList([]);
+    setAnalysisUnits([]);
     setScope(null);
     setSelected(null);
   };
@@ -498,11 +552,13 @@ export default function App() {
                   }
                   setGuList((prev) => toggleChipSingle(prev, name));
                   setLeafList([]);
+                  setAnalysisUnits([]);
                 }}
                 onSelectAll={() => setGuList((guQ.data ?? []).filter((o) => !o.disabled).map((o) => o.name))}
                 onClear={() => {
                   setGuList([]);
                   setLeafList([]);
+                  setAnalysisUnits([]);
                 }}
               />
             )}
@@ -519,13 +575,20 @@ export default function App() {
                 options={visibleLeafOptions}
                 formatLabel={(o) => (o.parent ? `${o.parent} · ${o.name}` : o.name)}
                 multiSelect={LEFT_REGION_MULTI_SELECT}
-                onToggle={(name) =>
+                onToggle={(name) => {
+                  setAnalysisUnits([]);
                   setLeafList((prev) =>
                     LEFT_REGION_MULTI_SELECT ? toggleChipMulti(prev, name) : toggleChipSingle(prev, name),
-                  )
-                }
-                onSelectAll={() => setLeafList(visibleLeafOptions.filter((o) => !o.disabled).map((o) => o.name))}
-                onClear={() => setLeafList([])}
+                  );
+                }}
+                onSelectAll={() => {
+                  setAnalysisUnits([]);
+                  setLeafList(visibleLeafOptions.filter((o) => !o.disabled).map((o) => o.name));
+                }}
+                onClear={() => {
+                  setAnalysisUnits([]);
+                  setLeafList([]);
+                }}
               />
             )}
 
@@ -568,6 +631,40 @@ export default function App() {
 
         <div className="layout-main">
           <section className="px-4 pt-4 shrink-0">
+            {analysisUnits.length > 0 && (
+              <div className="mb-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-3 py-2">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                    선택 지역 ({analysisUnits.length}/{MAX_COLLECTIVE_ANALYSIS_UNITS})
+                  </p>
+                  <button
+                    type="button"
+                    className="text-[11px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                    onClick={clearUnits}
+                  >
+                    모두 지우기
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {analysisUnits.map((u) => (
+                    <span
+                      key={u.code}
+                      className="inline-flex items-center gap-1 rounded-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-0.5 text-[11px] text-slate-700 dark:text-slate-200"
+                    >
+                      {analysisUnitLabel(u)}
+                      <button
+                        type="button"
+                        className="text-slate-400 hover:text-red-600"
+                        aria-label="제거"
+                        onClick={() => removeAnalysisUnit(u.code)}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             <CollectiveRegionMapHub
               scope={{
                 assetType,
@@ -608,9 +705,8 @@ export default function App() {
               onExpand={() => setMapPanelMode("expanded")}
               onCollapse={() => setMapPanelMode("collapsed")}
               onNormal={() => setMapPanelMode("normal")}
-              onAddLeaf={(name) => {
-                setLeafList((prev) => (prev.includes(name) ? prev : [...prev, name]));
-              }}
+              analysisUnits={analysisUnits}
+              onAddUnit={addUnit}
             />
           </section>
           <div className="p-4 pt-2">
@@ -662,6 +758,11 @@ export default function App() {
                     지역 프로필 →
                   </a>
                 )}
+                <StatsTableExpandButton
+                  expanded={tableWide}
+                  onToggle={() => setTableWide((v) => !v)}
+                  title="신뢰구간·도로명 주소·개별공시지가를 보여 줍니다"
+                />
                 <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 shrink-0">
                   <span className="whitespace-nowrap">검색</span>
                   <input
@@ -675,34 +776,36 @@ export default function App() {
                 </label>
               </div>
               <div className="card p-0 w-full">
-                <DualHorizontalScroll>
-                <table className="data buildings-table">
+                <DualHorizontalScroll key={tableWide ? "wide" : "compact"}>
+                <table className={clsx("data buildings-table", tableWide && "is-wide")}>
                   <colgroup>
                     <col className="col-type" />
                     <col className="col-name" />
                     <col className="col-num" />
                     <col className="col-num" />
                     <col className="col-num" />
-                    <col className="col-num" />
+                    {tableWide && <col className="col-num" />}
                     <col className="col-year" />
                     <col className="col-hh" />
                     <col className="col-builder" />
                     <col className="col-jibun" />
-                    <col className="col-road" />
+                    {tableWide && <col className="col-road" />}
+                    {tableWide && <col className="col-land" />}
                   </colgroup>
                   <thead>
                     <tr>
                       <th>유형</th>
                       <th>건물명</th>
                       <th>거래수</th>
-                      <th>평균(만원/㎡)</th>
                       <th>중앙(만원/㎡)</th>
-                      <th title="95% 신뢰구간">신뢰구간(만원/㎡)</th>
+                      <th>평균(만원/㎡)</th>
+                      {tableWide && <th title="95% 신뢰구간">신뢰구간(만원/㎡)</th>}
                       <th title="실거래 건축연도">신축연도</th>
                       <th title="K-apt 전체 세대수. K-apt가 없으면 표제부 해당 용도 동 합산">세대수</th>
                       <th title="K-apt 시공사 대표 1곳. 공동시공은 첫 회사+외. 표제부만 있으면 없음">시공사</th>
                       <th>지번 주소</th>
-                      <th>도로명 주소</th>
+                      {tableWide && <th>도로명 주소</th>}
+                      {tableWide && <th title="최신 대표 필지 개별공시지가">개별공시지가(원/㎡)</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -710,6 +813,7 @@ export default function App() {
                       <BuildingTableRow
                         key={`${row.building_key}|${row.asset_type}`}
                         row={row}
+                        wide={tableWide}
                         highlighted={buildingMatchesQuery(row, buildingSearchQ)}
                         onSelect={setSelected}
                       />
@@ -733,6 +837,9 @@ export default function App() {
           hasIntermediate={scope.hasIntermediate}
           guList={scope.guList}
           leafList={scope.leafList}
+          regionCodes={scope.region_codes}
+          regionCodeLevel={scope.region_code_level}
+          regionAddrs={scope.region_addrs}
           windowYears={scope.windowYears}
           assetType={scope.assetType}
           onClose={() => setRegionalOpen(false)}

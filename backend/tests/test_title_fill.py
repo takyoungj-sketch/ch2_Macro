@@ -122,6 +122,118 @@ def test_rowhouse_sum_ignores_apartment_dongs():
     assert apt["dong_count"] == 3
 
 
+def test_parcel_fallback_business_facility_officetel():
+    """우주마루: 대장은 업무시설·공동주택, 실거래는 오피스텔."""
+    rows = [
+        {
+            "main_purpose": "업무시설",
+            "purpose_detail": "업무시설, 공동주택",
+            "households": 20,
+            "floors_above": 12,
+            "approve_date": "20190107",
+            "structure_name": "철근콘크리트구조",
+        }
+    ]
+    ot = aggregate_title_dongs(rows, kind="officetel")
+    assert ot is not None
+    assert ot["households"] == 20
+    assert ot["dong_count"] == 1
+    assert ot["max_floor"] == 12
+    rh = aggregate_title_dongs(rows, kind="rowhouse")
+    assert rh is not None
+    assert rh["households"] == 20
+    apt = aggregate_title_dongs(rows, kind="apartment")
+    assert apt is not None
+    assert apt["households"] == 20
+
+
+def test_officetel_uses_sole_apartment_dong():
+    """실거래는 오피스텔, 대장은 공동주택만."""
+    rows = [
+        {
+            "main_purpose": "공동주택",
+            "purpose_detail": "공동주택",
+            "households": 48,
+            "floors_above": 15,
+            "approve_date": "20120101",
+            "structure_name": "철근콘크리트구조",
+        }
+    ]
+    ot = aggregate_title_dongs(rows, kind="officetel")
+    assert ot is not None
+    assert ot["households"] == 48
+    assert ot["dong_count"] == 1
+
+
+def test_mixed_lot_officetel_does_not_blend_apt_and_rowhouse():
+    rows = [
+        {"main_purpose": "공동주택", "purpose_detail": "아파트", "households": 200, "floors_above": 15, "approve_date": "20100101", "structure_name": "철근콘크리트구조"},
+        {"main_purpose": "공동주택", "purpose_detail": "다세대주택", "households": 8, "floors_above": 4, "approve_date": "19980101", "structure_name": "벽돌구조"},
+    ]
+    assert aggregate_title_dongs(rows, kind="officetel") is None
+    rh = aggregate_title_dongs(rows, kind="rowhouse")
+    assert rh is not None
+    assert rh["households"] == 8
+
+
+def test_title_rows_for_pnu_retries_incheon_old():
+    from parcel_master.title_fill import title_rows_for_pnu
+
+    current = "2829010300109820007"
+    old = "2826011300109820007"
+    by_pnu = {old: [{"main_purpose": "업무시설"}]}
+    assert title_rows_for_pnu(current, by_pnu, {"2829010300": "2826011300"}) == by_pnu[old]
+    assert title_rows_for_pnu(current, by_pnu, None) == []
+
+
+def test_classify_fills_officetel_from_incheon_old_pnu():
+    import pandas as pd
+    from parcel_master.apply_title_fill import classify
+    from parcel_master.pnu import pnu_from_tx
+
+    current_pnu = pnu_from_tx("2829010300", "982-7")
+    old_pnu = pnu_from_tx("2826011300", "982-7")
+    assert current_pnu and old_pnu
+    title = {
+        old_pnu: [
+            {
+                "main_purpose": "업무시설",
+                "purpose_detail": "업무시설, 공동주택",
+                "households": 20,
+                "floors_above": 12,
+                "approve_date": "20190107",
+                "structure_name": "철근콘크리트구조",
+            }
+        ]
+    }
+    cands = pd.DataFrame(
+        [
+            {
+                "building_key": "ot",
+                "match_tier": None,
+                "beopjungri_code": "2829010300",
+                "lot_number": "982-7",
+                "display_name": "우주마루",
+                "building_year": 2019,
+                "n_tx": 15,
+                "has_attr_row": False,
+            }
+        ]
+    )
+    got = classify(
+        cands,
+        title,
+        set(),
+        kind="officetel",
+        skip_kapt=False,
+        current_to_old_bjd={"2829010300": "2826011300"},
+    )
+    assert len(got["fill"]) == 1
+    assert got["fill"][0]["households"] == 20
+    assert got["fill"][0]["max_floor"] == 12
+    assert got["no_title"] == []
+
+
 def test_officetel_allows_missing_households():
     agg = aggregate_title_dongs(
         [

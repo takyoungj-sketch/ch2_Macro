@@ -153,11 +153,19 @@ table.data {
 
 table.data.buildings-table {
   width: 100%;
-  min-width: 50cm;
+  min-width: 36cm;
+}
+
+table.data.buildings-table.is-wide {
+  min-width: 54cm;
 }
 
 table.data.buildings-table col {
-  width: calc(100% / 11);
+  width: calc(100% / 9);
+}
+
+table.data.buildings-table.is-wide col {
+  width: calc(100% / 12);
 }
 
 table.data.buildings-table th,
@@ -176,10 +184,18 @@ table.data.buildings-table td.addr {
 /* 집합상가·공장 — cluster 목록 (동일 칼럼 너비·가운데 정렬) */
 table.data.commercial-clusters-table {
   width: 100%;
+  min-width: 9.6cm;
+}
+
+table.data.commercial-clusters-table.is-wide {
   min-width: 11.2cm;
 }
 
 table.data.commercial-clusters-table col {
+  width: calc(100% / 6);
+}
+
+table.data.commercial-clusters-table.is-wide col {
   width: calc(100% / 7);
 }
 

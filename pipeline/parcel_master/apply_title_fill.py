@@ -1,8 +1,9 @@
 """표제부 동 합산(세대수·층·구조)을 단지 속성에 채운다.
 
-아파트: K-apt 없는 Z만. D·F·A·B·C·E·P 는 건드리지 않는다.
+조인 키는 PNU다. 아파트는 K-apt 없는 Z만. D·F·A·B·C·E·P 는 건드리지 않는다.
 연립·오피스텔: 행이 없으면 INSERT (K-apt 대상이 아님). 시공사 없음.
-같은 필지라도 아파트 동과 다세대 동은 유형별로 나눠 합친다.
+한 필지에 아파트 동과 다세대 동이 둘 다 있으면 유형별로 나눈다.
+유형 글자가 없어도 집합 표제부 본체 동이 있으면 붙인다.
 
     python -m parcel_master.apply_title_fill
     python -m parcel_master.apply_title_fill --dry-run
@@ -27,11 +28,12 @@ _PIPELINE = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_PIPELINE))
 
 from parcel_master.db_utils import get_collective_engine, get_parcel_engine  # noqa: E402
-from parcel_master.pnu import pnu_from_tx  # noqa: E402
+from parcel_master.pnu import pick_incheon_old_bjd, pnu_from_tx  # noqa: E402
 from parcel_master.title_fill import (  # noqa: E402
     TitleKind,
     aggregate_title_dongs,
     title_fill_skip_reason,
+    title_rows_for_pnu,
 )
 from build_collective_building_attributes import (  # noqa: E402
     load_buildings,
@@ -57,6 +59,7 @@ SELECT pnu, main_purpose, purpose_detail, households, floors_above,
        structure_name, approve_date
 FROM building
 WHERE snapshot = (SELECT MAX(snapshot) FROM building)
+  AND ledger_kind = '집합'
 """
 
 KAPT_PNU_SQL = """
@@ -137,6 +140,37 @@ REVERT_SQL = text(
 )
 
 
+def _incheon_current_to_old_bjd(conn) -> dict[str, str]:
+    rows = conn.execute(
+        text(
+            """
+            SELECT current.beopjungri_code AS current_code,
+                   old.beopjungri_code AS old_code
+            FROM region_codes current
+            JOIN region_codes old
+              ON old.sido_code = '28'
+             AND old.eupmyeondong_name = current.eupmyeondong_name
+             AND old.beopjungri_name = current.beopjungri_name
+             AND LEFT(TRIM(old.beopjungri_code), 5) IN ('28260', '28110', '28140')
+            WHERE current.sido_code = '28'
+              AND LEFT(TRIM(current.beopjungri_code), 5) IN ('28290', '28275', '28155', '28125')
+              AND COALESCE(current.is_active, TRUE)
+            """
+        )
+    ).mappings().all()
+    grouped: dict[str, list[str]] = {}
+    for row in rows:
+        current = str(row["current_code"]).strip()
+        old = str(row["old_code"]).strip()
+        grouped.setdefault(current, []).append(old)
+    mapping: dict[str, str] = {}
+    for current, olds in grouped.items():
+        old = pick_incheon_old_bjd(current, olds)
+        if old:
+            mapping[current] = old
+    return mapping
+
+
 def _title_by_pnu(conn) -> dict[str, list[dict[str, Any]]]:
     df = pd.read_sql(text(TITLE_SQL), conn)
     out: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -176,6 +210,7 @@ def classify(
     kind: TitleKind,
     skip_kapt: bool,
     refresh_t: bool = False,
+    current_to_old_bjd: dict[str, str] | None = None,
 ) -> dict[str, list[dict[str, Any]]]:
     out: dict[str, list[dict[str, Any]]] = {
         "fill": [],
@@ -204,7 +239,7 @@ def classify(
             else:
                 out["has_kapt"].append({"building_key": cand.building_key})
             continue
-        rows = by_pnu.get(pnu or "", [])
+        rows = title_rows_for_pnu(pnu, by_pnu, current_to_old_bjd)
         agg = aggregate_title_dongs(rows, kind=kind) if rows else None
         skip = title_fill_skip_reason(
             agg=agg,
@@ -310,9 +345,16 @@ def run(
             raise SystemExit("collective_building_attributes empty")
         snapshot_ym = str(snapshot_ym).strip()
         kapt_pnus = {str(r[0]) for r in conn.execute(text(KAPT_PNU_SQL), {"ym": snapshot_ym})}
+        incheon_map = _incheon_current_to_old_bjd(conn)
     with parcel.connect() as conn:
         by_pnu = _title_by_pnu(conn)
-    log.info("snapshot_ym=%s  title_pnu=%s  types=%s", snapshot_ym, len(by_pnu), ",".join(types))
+    log.info(
+        "snapshot_ym=%s  title_pnu=%s  incheon_bjd=%s  types=%s",
+        snapshot_ym,
+        len(by_pnu),
+        len(incheon_map),
+        ",".join(types),
+    )
 
     apartment_changed = False
     for kind in types:
@@ -337,6 +379,7 @@ def run(
             kind=kind,
             skip_kapt=(kind == "apartment"),
             refresh_t=refresh_t,
+            current_to_old_bjd=incheon_map,
         )
         fills = classified["fill"]
         if new_keys_only:

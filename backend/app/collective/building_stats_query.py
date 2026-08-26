@@ -177,6 +177,10 @@ def _mart_region_where(
     addr3_list: list[str] | None,
     addr4_list: list[str] | None,
     col_prefix: str = "m",
+    region_codes: list[str] | None = None,
+    region_code_level: str | None = None,
+    region_addrs: list[str] | None = None,
+    emd_code_col: str | None = None,
 ) -> tuple[str, dict]:
     clauses = ["1=1"]
     params: dict[str, Any] = {}
@@ -193,6 +197,10 @@ def _mart_region_where(
         asset_type=None,
         col_prefix=col_prefix,
         valid_sql=None,
+        region_codes=region_codes,
+        region_code_level=region_code_level,
+        region_addrs=region_addrs,
+        emd_code_col=emd_code_col,
     )
     apply_asset_type_filter(
         clauses,
@@ -236,6 +244,9 @@ def list_presale_lifetime_from_mart(
     addr3: Optional[str],
     addr3_list: list[str] | None,
     addr4_list: list[str] | None,
+    region_codes: list[str] | None = None,
+    region_code_level: str | None = None,
+    region_addrs: list[str] | None = None,
 ) -> tuple[list[BuildingStatsRow], dict[str, Any]] | None:
     """분양권 전체기간 mart. 없으면 None → live fallback."""
     if not _table_exists(conn, "public.collective_presale_lifetime_stats"):
@@ -249,6 +260,10 @@ def list_presale_lifetime_from_mart(
         addr3=addr3,
         addr3_list=addr3_list,
         addr4_list=addr4_list,
+        region_codes=region_codes,
+        region_code_level=region_code_level,
+        region_addrs=region_addrs,
+        emd_code_col=None,
     )
     # lifetime 테이블은 asset_type 고정 — 필터에서 중복 제외는 apply가 =presale 넣음 OK
     addr5_col = "m.addr5"
@@ -332,6 +347,9 @@ def list_buildings_from_mart(
     as_of_month: date | None,
     contract_year_from: Optional[int],
     contract_year_to: Optional[int],
+    region_codes: list[str] | None = None,
+    region_code_level: str | None = None,
+    region_addrs: list[str] | None = None,
 ) -> tuple[list[BuildingStatsRow], dict[str, Any]] | None:
     if contract_year_from is not None or contract_year_to is not None:
         return None
@@ -346,6 +364,10 @@ def list_buildings_from_mart(
         addr3=addr3,
         addr3_list=addr3_list,
         addr4_list=addr4_list,
+        region_codes=region_codes,
+        region_code_level=region_code_level,
+        region_addrs=region_addrs,
+        emd_code_col=None,
     )
     params["as_of"] = as_of_month
     params["window_years"] = window_years

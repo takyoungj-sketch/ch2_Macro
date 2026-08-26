@@ -115,6 +115,9 @@ export async function fetchBuildings(params: {
   addr2?: string;
   addr3_list?: string[];
   addr4_list?: string[];
+  region_codes?: string[];
+  region_code_level?: "eupmyeondong" | "beopjungri";
+  region_addrs?: string[];
   contract_year_from?: number;
   contract_year_to?: number;
   window_years?: number;
