@@ -71,8 +71,9 @@ def test_eligible_mask_drops_thin_tx():
     assert _eligible_mask(df, v).tolist() == [False, True]
 
 
-def test_rowhouse_title_tier_is_usable_apartment_t_is_not():
-    assert _is_usable_tier("apartment", "T") is False
+def test_title_and_pnu_tiers_are_usable():
+    assert _is_usable_tier("apartment", "T") is True
+    assert _is_usable_tier("apartment", "P") is True
     assert _is_usable_tier("apartment", "A") is True
     assert _is_usable_tier("apartment", "D") is True
     assert _is_usable_tier("apartment", "F") is True
@@ -215,7 +216,7 @@ def test_sample_funnel_exclusive_drop_reasons():
     assert sample.n_analysis == 5
     assert _step(sample, "pool").n == 12
     assert _step(sample, "pool").label == "원본 단지"
-    assert _step(sample, "usable").label == "K-apt 매칭 가능"
+    assert _step(sample, "usable").label == "속성 연결됨"
     assert _step(sample, "match_drop").label == "매칭 불확실·불가"
     assert _step(sample, "match_drop").delta is None
     assert _step(sample, "match_drop").n == 3
@@ -243,16 +244,62 @@ def test_sample_funnel_exclusive_drop_reasons():
     }
 
 
-def test_sample_funnel_structure_adds_exclusive_drop():
+def test_eligible_keeps_missing_builder_and_structure():
+    df = pd.DataFrame(
+        {
+            "median": [800, 900],
+            "match_tier": ["T", "A"],
+            "households": [40, 200],
+            "max_floor": [8, 15],
+            "building_age": [12, 10],
+            "parking_per_household": [np.nan, 1.1],
+            "structure_group": ["", "RC"],
+            "builder_group": [None, "한화"],
+            "n_tx": [8, 10],
+            "asset_type": ["apartment", "apartment"],
+        }
+    )
+    v = RegionalRegressionVariables(
+        parking=False,
+        structure=True,
+        builder=True,
+    )
+    assert _eligible_mask(df, v).tolist() == [True, True]
+    v_park = RegionalRegressionVariables(parking=True, structure=True, builder=True)
+    assert _eligible_mask(df, v_park).tolist() == [False, True]
+
+
+def test_design_missing_builder_becomes_misang():
+    work = pd.DataFrame(
+        {
+            "households": [100] * 14,
+            "builder_group": [""] * 8 + ["한화"] * 6,
+        }
+    )
+    v = RegionalRegressionVariables(
+        households=True,
+        max_floor=False,
+        building_age=False,
+        parking=False,
+        structure=False,
+        builder=True,
+    )
+    x, labels, _warn = _design(work, v)
+    assert labels["_builder_ref"] == "(미상)"
+    assert "builder_(미상)" not in x.columns
+    assert "builder_한화" in x.columns
+    assert int(x["builder_한화"].sum()) == 6
+
+
+def test_sample_funnel_structure_missing_stays_in_sample():
     df = _funnel_frame()
     df.loc[0, "structure_group"] = ""
     v = RegionalRegressionVariables(structure=True)
     elig = _eligible_mask(df, v)
     sample = build_sample_funnel(df, v, train_idx=df.index[elig], hold_idx=df.index[:0])
-    assert sample.n_analysis == 4
+    assert sample.n_analysis == 5
     var_n = {r.code: r.n for r in _step(sample, "var_drop").reasons}
-    assert var_n["structure_missing"] == 1
-    assert sum(var_n.values()) == 5
+    assert "structure_missing" not in var_n
     assert _step(sample, "match_drop").n == 3
 
 
@@ -300,7 +347,7 @@ def test_funnel_thin_tx_by_asset_type():
     reasons = {r.code: r.n for r in thin.reasons}
     assert reasons["thin_apartment"] == 1
     assert reasons["thin_rowhouse"] == 1
-    assert _step(sample, "usable").label == "매칭 가능"
+    assert _step(sample, "usable").label == "속성 연결됨"
     assert sample.n_analysis == 3
 
 

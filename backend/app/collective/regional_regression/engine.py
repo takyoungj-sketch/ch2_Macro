@@ -1,6 +1,7 @@
 """집합 지역회귀 엔진 — building_stats ⋈ building_attributes, 단지 1행.
 
 주거 단지 그레인 전용. 비주거(도로명 cluster)는 단지속성이 달라 이 모달을 쓰지 않는다.
+속성이 있으면 출처(K-apt·표제부)로 빼지 않는다. 구조·시공사 결측은 (미상) 더미.
 """
 
 from __future__ import annotations
@@ -40,9 +41,9 @@ from app.collective.regression.engine import _duan_smearing, _orig_scale_metrics
 from app.collective.regression.presentation import enrich_regression_response
 from app.collective.schemas import RegressionCoeff
 
-USABLE_TIERS = frozenset({"A", "B", "C", "D", "F"})
-# 연립·오피스텔은 K-apt가 없어 표제부 T를 허용. 아파트 T·P는 넣지 않는다.
-TITLE_USABLE_TIERS = frozenset({"T", "A", "B", "C", "D", "F"})
+# 값이 있으면 출처(K-apt vs 표제부)로 빼지 않는다. E는 이름 오탐 위험, Z·공란은 속성 없음.
+USABLE_TIERS = frozenset({"A", "B", "C", "D", "F", "T", "P"})
+TITLE_USABLE_TIERS = USABLE_TIERS  # 아파트·연립·오피 동일. 예전 연립 전용 별칭.
 MIN_FIT_N = 20
 MIN_TX = 5
 WEIGHT_N0 = 10.0
@@ -95,12 +96,10 @@ def _is_unified_types(types: list[str]) -> bool:
 
 
 def _is_usable_tier(asset_type: Any, match_tier: Any) -> bool:
+    del asset_type  # 유형과 무관. 시그니처는 테스트·호출부 호환.
     t = "" if match_tier is None or (isinstance(match_tier, float) and np.isnan(match_tier)) else str(match_tier).strip()
-    at = "" if asset_type is None or (isinstance(asset_type, float) and np.isnan(asset_type)) else str(asset_type).strip()
     if not t:
         return False
-    if at in ("rowhouse", "officetel"):
-        return t in TITLE_USABLE_TIERS
     return t in USABLE_TIERS
 
 
@@ -436,16 +435,6 @@ def _var_drop_reason(row: pd.Series, v: RegionalRegressionVariables) -> tuple[st
     if v.assessed_land_price and pd.isna(row.get("assessed_land_price")):
         return "assessed_land_price_missing", "개별공시지가 미매칭"
 
-    if v.structure:
-        sg = row.get("structure_group")
-        if sg is None or str(sg).strip() in ("", "nan", "None"):
-            return "structure_missing", "구조 미확인"
-
-    if v.builder:
-        bg = row.get("builder_group")
-        if bg is None or str(bg).strip() in ("", "nan", "None"):
-            return "builder_missing", "시공사 미확인"
-
     return "other", "기타"
 
 
@@ -541,7 +530,7 @@ def build_sample_funnel(
             label="선택 변수 결측",
             n=n_var_drop,
             kind="drop",
-            note="지금 켠 변수에 값이 없어 빠진 단지입니다. 표제부가 세대수·층·구조를 채우면 여기가 줄어듭니다.",
+            note="세대수·층·연식·주차·공시지가처럼 켠 연속변수에 값이 없어 빠진 단지입니다. 구조·시공사 결측은 미상 더미로 남고 여기서는 빠지지 않습니다.",
             reasons=_count_reasons(var_pairs, preferred=VAR_REASON_ORDER),
         ),
         FunnelStep(
@@ -570,26 +559,15 @@ def build_sample_funnel(
 
 
 def _usable_funnel_label(df: pd.DataFrame) -> str:
-    types: set[str] = set()
-    if "asset_type" in df.columns:
-        types = set(df["asset_type"].dropna().astype(str))
-    if types & {"rowhouse", "officetel"}:
-        return "매칭 가능"
-    return "K-apt 매칭 가능"
+    del df
+    return "속성 연결됨"
 
 
 def _match_drop_note(df: pd.DataFrame) -> str:
-    types: set[str] = set()
-    if "asset_type" in df.columns:
-        types = set(df["asset_type"].dropna().astype(str))
-    if types & {"rowhouse", "officetel"}:
-        return (
-            "아파트는 K-apt 매칭 A·B·C와 복수 단지 합산(D·F)을 넣습니다. "
-            "연립·오피스텔은 표제부 T도 넣습니다. P는 목록만입니다."
-        )
+    del df
     return (
-        "K-apt 매칭 A·B·C와 복수 단지 합산(D·F)을 회귀에 넣습니다. "
-        "P(PNU 유일)·T(표제부 동 합산)는 목록만입니다."
+        "세대수·층·구조 등 속성이 연결된 단지(K-apt A·B·C·D·F, 표제부 T, PNU 유일 P)를 넣습니다. "
+        "E(이름 부분일치 오탐 위험)·Z·단지정보 없음만 제외합니다."
     )
 
 
@@ -847,10 +825,6 @@ def _eligible_mask(df: pd.DataFrame, v: RegionalRegressionVariables) -> pd.Serie
         if col == "median":
             continue
         m = m & df[col].notna()
-    if v.structure:
-        m = m & df["structure_group"].notna() & (df["structure_group"].astype(str).str.strip() != "")
-    if v.builder:
-        m = m & df["builder_group"].notna() & (df["builder_group"].astype(str).str.strip() != "")
     return m
 
 
@@ -897,9 +871,15 @@ def run_regional_regression(
         warnings.append(WEAK_NOTE["structure"])
     if v.builder:
         warnings.append(WEAK_NOTE["builder"])
-        if unified:
-            warnings.append("시공사는 연립·오피스텔 표제부에 없습니다. 켜면 그 유형이 결측으로 빠질 수 있습니다.")
-    if v.parking and unified:
+        warnings.append("시공사 결측은 (미상) 더미로 넣고 단지를 빼지 않습니다.")
+    if v.parking and not df.empty:
+        n_park_na = int(df["parking_per_household"].isna().sum())
+        if n_park_na:
+            warnings.append(
+                f"세대당 주차 값이 없는 단지가 {n_park_na}곳입니다. "
+                "표제부(T)에는 주차 칸이 없어 주차를 켜면 이 단지들은 빠집니다."
+            )
+    elif v.parking and unified:
         warnings.append("세대당 주차는 연립·오피스텔에 거의 없습니다. 켜면 그 유형이 결측으로 빠질 수 있습니다.")
 
     if unified and not v.asset_type_dummy:

@@ -148,12 +148,12 @@ def test_skip_comma_series_in_kapt_name():
     )
 
 
-def test_p_not_in_regression_usable():
+def test_p_usable_in_regional_regression():
     from app.collective.danji_attributes import TIER_META
     from app.collective.regional_regression.engine import USABLE_TIERS
 
     assert TIER_META["P"]["usable"] is False
-    assert "P" not in USABLE_TIERS
+    assert "P" in USABLE_TIERS
     assert "P" in ATTR_TIERS
 
 

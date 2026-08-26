@@ -42,14 +42,17 @@ def test_sum_households_not_first_dong():
     assert agg["approved_year"] == 2013
 
 
-def test_title_tier_not_in_apartment_regression():
+def test_title_tier_usable_in_regional_regression():
     from app.collective.danji_attributes import TIER_META
     from app.collective.regional_regression.engine import USABLE_TIERS, _is_usable_tier
 
+    # 단지정보 탭의 usable 은 매칭 품질. 지역회귀 표본은 값이 있으면 T·P도 넣는다.
     assert TIER_META["T"]["usable"] is False
-    assert "T" not in USABLE_TIERS
-    assert _is_usable_tier("apartment", "T") is False
+    assert "T" in USABLE_TIERS
+    assert _is_usable_tier("apartment", "T") is True
     assert _is_usable_tier("rowhouse", "T") is True
+    assert _is_usable_tier("apartment", "P") is True
+    assert _is_usable_tier("apartment", "E") is False
 
 
 def test_skip_rebuild_and_empty():

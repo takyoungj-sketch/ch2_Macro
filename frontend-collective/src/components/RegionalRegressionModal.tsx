@@ -40,8 +40,8 @@ const CORE_VARS: Array<[keyof RegionalRegressionVariables, string]> = [
   ["parking", "세대당 주차"],
 ];
 const WEAK_VARS: Array<[keyof RegionalRegressionVariables, string, string]> = [
-  ["structure", "구조", "실측에서 예측 개선 없음"],
-  ["builder", "시공사", "실측에서 예측 개선 없음 · 이 지역 표본이 적으면 기타로 묶임"],
+  ["structure", "구조", "결측은 미상 더미 · 실측에서 예측 개선 없음"],
+  ["builder", "시공사", "결측은 미상 더미 · 단지를 빼지 않음"],
 ];
 const LAND_VAR: [keyof RegionalRegressionVariables, string] = [
   "assessed_land_price",
@@ -137,7 +137,7 @@ export default function RegionalRegressionModal(props: Props) {
       onClose={props.onClose}
       titleId="regional-regression-title"
       title="지역회귀"
-      subtitle="한 행 = 단지 · 유형은 기본통계와 같음 · 거래 5건 미만은 제외"
+      subtitle="한 행 = 단지 · 값이 있으면 출처와 무관하게 포함 · 거래 5건 미만은 제외"
       allowFullscreen
       allowFontScale
       resizable
@@ -156,7 +156,15 @@ export default function RegionalRegressionModal(props: Props) {
           <p className="text-xs font-semibold">1. 변수</p>
           <div className="flex flex-wrap gap-x-3 gap-y-1.5">
             {CORE_VARS.map(([key, label]) => (
-              <label key={key} className="flex items-center gap-1">
+              <label
+                key={key}
+                className="flex items-center gap-1"
+                title={
+                  key === "parking"
+                    ? "표제부 단지에는 주차 값이 없어 켜면 빠집니다"
+                    : undefined
+                }
+              >
                 <input
                   type="checkbox"
                   checked={vars[key]}
@@ -219,6 +227,9 @@ export default function RegionalRegressionModal(props: Props) {
         <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-1.5">
           <p className="text-xs font-semibold">3. 관측치 처리</p>
           <p className="text-[11px] text-slate-600 dark:text-slate-300">최소 거래수 5건 — 창 중앙값을 단지 시세로 보기 어려워 제외합니다.</p>
+          <p className="text-[11px] text-slate-600 dark:text-slate-300">
+            구조·시공사 결측은 미상 더미입니다. 세대수·층·연식·주차·공시지가처럼 값이 없는 연속변수만 단지를 뺍니다.
+          </p>
           <label className="flex items-center gap-1.5">
             <input type="radio" checked={weightMode === "equal"} onChange={() => setWeightMode("equal")} />
             단지 균등
@@ -538,7 +549,7 @@ function SampleFunnel({ sample }: { sample: SampleBreakdown }) {
       <section className="space-y-1">
         <p className="text-xs font-semibold">4. 결과</p>
         <p className="text-[11px] text-slate-500">
-          원본 {sample.n_pool} · 매칭 가능 {sample.n_usable_tier} · 최종 {sample.n_fit}
+          원본 {sample.n_pool} · 속성 연결 {sample.n_usable_tier} · 최종 {sample.n_fit}
           {sample.n_hold ? ` · Holdout ${sample.n_hold}` : ""}
         </p>
       </section>
@@ -550,7 +561,7 @@ function SampleFunnel({ sample }: { sample: SampleBreakdown }) {
   const usable = byCode.get("usable");
   const matchDrop = byCode.get("match_drop");
   const grouped = Boolean(pool && usable && matchDrop);
-  const matchHeader = usable?.label === "매칭 가능" ? "매칭" : "K-apt 매칭";
+  const matchHeader = "매칭";
   const rest = grouped
     ? steps.filter((s) => s.code !== "pool" && s.code !== "usable" && s.code !== "match_drop")
     : steps;

@@ -6,6 +6,8 @@ from app.built.router import _apply_tx_enrichment_fields
 def test_notice_has_four_sentences():
     assert len(NOTICE) == 4
     assert "75.0%" in NOTICE[0]
+    assert "14년" not in NOTICE[1]
+    assert "7년 6개월" in NOTICE[1]
     assert "서울" in NOTICE[3] and "충북" in NOTICE[3]
 
 
