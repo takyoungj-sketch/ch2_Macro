@@ -123,8 +123,9 @@ function ReferenceCategories({
 }) {
   if (!options) return null;
   const refs: Array<[string, string]> = [];
-  if ("dong_options" in options && (options.dong_options?.length ?? 0) > 0) {
-    const dongRefs = options.dong_options.filter((o) => o.is_reference).map((o) => o.label);
+  const dongOpts = "dong_options" in options ? options.dong_options : undefined;
+  if (dongOpts && dongOpts.length > 0) {
+    const dongRefs = dongOpts.filter((o) => o.is_reference).map((o) => o.label);
     if (dongRefs.length) refs.push(["동", dongRefs.join(", ")]);
   } else if ("dong_reference" in options && options.dong_reference) {
     refs.push(["동", options.dong_reference]);
