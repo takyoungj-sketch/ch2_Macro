@@ -82,12 +82,14 @@ def create_subscription(
     source: str,
     external_id: str | None,
     period_end: datetime | None,
+    status: str = "active",
+    grant: bool = True,
 ) -> int:
     row = db.execute(
         text(
             """
             INSERT INTO subscriptions (user_id, product, source, external_id, status, current_period_end)
-            VALUES (:uid, :product, :source, :ext, 'active', :end)
+            VALUES (:uid, :product, :source, :ext, :status, :end)
             RETURNING id
             """
         ),
@@ -96,10 +98,40 @@ def create_subscription(
             "product": product,
             "source": source,
             "ext": external_id,
+            "status": status,
             "end": period_end,
         },
     ).mappings().first()
     sub_id = int(row["id"])
+    if grant and status == "active":
+        if product == "bundle":
+            grant_bundle(db, user_id=user_id, expires_at=period_end, source_sub_id=sub_id)
+        elif product in PRODUCTS:
+            upsert_entitlement(
+                db, user_id=user_id, product=product, expires_at=period_end, source_sub_id=sub_id
+            )
+    db.commit()
+    return sub_id
+
+
+def activate_subscription(db: Session, *, external_id: str, source: str = "web_toss") -> int | None:
+    row = db.execute(
+        text(
+            """
+            UPDATE subscriptions
+            SET status = 'active', updated_at = now()
+            WHERE source = :source AND external_id = :ext
+            RETURNING id, user_id, product, current_period_end
+            """
+        ),
+        {"source": source, "ext": external_id},
+    ).mappings().first()
+    if not row:
+        return None
+    sub_id = int(row["id"])
+    product = str(row["product"])
+    period_end = row["current_period_end"]
+    user_id = int(row["user_id"])
     if product == "bundle":
         grant_bundle(db, user_id=user_id, expires_at=period_end, source_sub_id=sub_id)
     elif product in PRODUCTS:

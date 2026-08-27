@@ -127,8 +127,12 @@ class Settings(BaseSettings):
     fieldnote_ai_sheet_pro_monthly_quota: int = Field(
         default=200, validation_alias="FIELDNOTE_AI_SHEET_PRO_MONTHLY_QUOTA"
     )
-    #: 토스페이먼츠 웹훅 서명 검증용 (Phase 3)
+    #: 토스페이먼츠 (Macro 웹). 비어 있으면 /subscribe 결제는 비활성.
+    toss_client_key: str = Field(default="", validation_alias="TOSS_CLIENT_KEY")
+    toss_secret_key: str = Field(default="", validation_alias="TOSS_SECRET_KEY")
     toss_webhook_secret: str = Field(default="", validation_alias="TOSS_WEBHOOK_SECRET")
+    #: True 이면 Play purchase_token 을 Google API 없이 entitlement 부여 (로컬 테스트 전용)
+    play_billing_allow_stub: bool = Field(default=False, validation_alias="PLAY_BILLING_ALLOW_STUB")
 
     @property
     def cors_origins_list(self) -> list[str]:

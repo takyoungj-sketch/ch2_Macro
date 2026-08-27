@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -10,14 +10,18 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.platform.board_policy import (
+    CATEGORIES,
+    PRODUCTS,
+    STATUSES,
+    can_set_status,
+    excerpt_text,
+    like_pattern,
+)
 from app.platform.db import get_platform_db
-from app.platform.deps import CurrentUser, require_user
+from app.platform.deps import CurrentUser, get_optional_user, require_user
 
 router = APIRouter(prefix="/board", tags=["platform-board"])
-
-PRODUCTS = frozenset({"macro", "fieldnote", "viewer", "general"})
-CATEGORIES = frozenset({"question", "bug", "feature"})
-STATUSES = frozenset({"open", "resolved"})
 
 
 class PostCreate(BaseModel):
@@ -26,6 +30,7 @@ class PostCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     body: str = Field(min_length=1, max_length=12000)
     author_name: str | None = Field(default=None, max_length=80)
+    is_pinned: bool = False
 
 
 class CommentCreate(BaseModel):
@@ -33,24 +38,39 @@ class CommentCreate(BaseModel):
     author_name: str | None = Field(default=None, max_length=80)
 
 
-class StatusUpdate(BaseModel):
-    status: Literal["open", "resolved"]
+class PostPatch(BaseModel):
+    status: Literal["open", "checking", "answered", "planned", "done"] | None = None
+    is_pinned: bool | None = None
 
 
-def _post_row_to_api(row: dict, nickname: str) -> dict:
-    return {
+def _post_row_to_api(row: dict, nickname: str, *, include_body: bool) -> dict:
+    out = {
         "id": int(row["id"]),
         "product": row["product"],
         "category": row["category"],
         "title": row["title"],
-        "body": row["body"],
         "author_name": nickname,
         "author_id": int(row["user_id"]),
         "auth_provider": "google",
         "status": row["status"],
+        "is_pinned": bool(row.get("is_pinned")),
+        "comment_count": int(row["comment_count"]) if row.get("comment_count") is not None else 0,
         "created_at": row["created_at"].isoformat().replace("+00:00", "Z"),
         "updated_at": row["updated_at"].isoformat().replace("+00:00", "Z"),
     }
+    if include_body:
+        out["body"] = row["body"]
+    else:
+        out["excerpt"] = excerpt_text(str(row["body"]))
+    return out
+
+
+_LIST_SELECT = """
+            SELECT p.*, u.nickname,
+                   (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) AS comment_count
+            FROM posts p
+            JOIN users u ON u.id = p.user_id
+"""
 
 
 @router.get("/meta")
@@ -62,7 +82,7 @@ def board_meta():
         "statuses": sorted(STATUSES),
         "auth": {
             "enabled": oauth_ready,
-            "providers": ["google", "kakao"],
+            "providers": ["google"] if oauth_ready else [],
             "note": (
                 "Google 로그인으로 글·댓글을 작성할 수 있습니다."
                 if oauth_ready
@@ -75,12 +95,19 @@ def board_meta():
 @router.get("/posts")
 def list_posts(
     db: Session = Depends(get_platform_db),
+    user: CurrentUser | None = Depends(get_optional_user),
     product: str | None = None,
     category: str | None = None,
+    status: str | None = None,
+    q: str | None = None,
+    mine: bool = False,
     page: int = Query(1, ge=1),
     pageSize: int = Query(20, ge=1, le=50),
 ):
-    clauses = ["1=1"]
+    if mine and user is None:
+        raise HTTPException(401, "로그인이 필요합니다.")
+
+    clauses = ["p.is_pinned = FALSE"]
     params: dict = {}
     if product and product in PRODUCTS:
         clauses.append("p.product = :product")
@@ -88,6 +115,15 @@ def list_posts(
     if category and category in CATEGORIES:
         clauses.append("p.category = :category")
         params["category"] = category
+    if status and status in STATUSES:
+        clauses.append("p.status = :status")
+        params["status"] = status
+    if q and q.strip():
+        clauses.append("(p.title ILIKE :q OR p.body ILIKE :q)")
+        params["q"] = like_pattern(q)
+    if mine and user is not None:
+        clauses.append("p.user_id = :uid")
+        params["uid"] = user.id
     where = " AND ".join(clauses)
     total = db.execute(
         text(f"SELECT COUNT(*) FROM posts p WHERE {where}"),
@@ -97,9 +133,7 @@ def list_posts(
     rows = db.execute(
         text(
             f"""
-            SELECT p.*, u.nickname
-            FROM posts p
-            JOIN users u ON u.id = p.user_id
+            {_LIST_SELECT}
             WHERE {where}
             ORDER BY p.created_at DESC
             LIMIT :lim OFFSET :off
@@ -107,9 +141,28 @@ def list_posts(
         ),
         {**params, "lim": pageSize, "off": offset},
     ).mappings().all()
-    items = [_post_row_to_api(dict(r), str(r["nickname"])) for r in rows]
+    items = [_post_row_to_api(dict(r), str(r["nickname"]), include_body=False) for r in rows]
+
+    notices: list[dict] = []
+    if page == 1 and not mine:
+        notice_rows = db.execute(
+            text(
+                f"""
+                {_LIST_SELECT}
+                WHERE p.is_pinned = TRUE
+                ORDER BY p.created_at DESC
+                LIMIT 8
+                """
+            )
+        ).mappings().all()
+        notices = [
+            _post_row_to_api(dict(r), str(r["nickname"]), include_body=False)
+            for r in notice_rows
+        ]
+
     total_pages = max(1, (int(total) + pageSize - 1) // pageSize)
     return {
+        "notices": notices,
         "items": items,
         "total": int(total),
         "page": page,
@@ -122,10 +175,8 @@ def list_posts(
 def get_post(post_id: int, db: Session = Depends(get_platform_db)):
     row = db.execute(
         text(
-            """
-            SELECT p.*, u.nickname
-            FROM posts p
-            JOIN users u ON u.id = p.user_id
+            f"""
+            {_LIST_SELECT}
             WHERE p.id = :id
             """
         ),
@@ -158,7 +209,7 @@ def get_post(post_id: int, db: Session = Depends(get_platform_db)):
         for c in comments
     ]
     return {
-        "post": _post_row_to_api(dict(row), str(row["nickname"])),
+        "post": _post_row_to_api(dict(row), str(row["nickname"]), include_body=True),
         "comments": comment_items,
     }
 
@@ -169,11 +220,12 @@ def create_post(
     user: CurrentUser = Depends(require_user),
     db: Session = Depends(get_platform_db),
 ):
+    pinned = bool(body.is_pinned) if user.role == "admin" else False
     row = db.execute(
         text(
             """
-            INSERT INTO posts (user_id, product, category, title, body, status)
-            VALUES (:uid, :product, :category, :title, :body, 'open')
+            INSERT INTO posts (user_id, product, category, title, body, status, is_pinned)
+            VALUES (:uid, :product, :category, :title, :body, 'open', :pinned)
             RETURNING *
             """
         ),
@@ -183,10 +235,13 @@ def create_post(
             "category": body.category,
             "title": body.title.strip(),
             "body": body.body.strip(),
+            "pinned": pinned,
         },
     ).mappings().first()
     db.commit()
-    return {"post": _post_row_to_api(dict(row), user.nickname)}
+    payload = dict(row)
+    payload["comment_count"] = 0
+    return {"post": _post_row_to_api(payload, user.nickname, include_body=True)}
 
 
 @router.post("/posts/{post_id}/comments")
@@ -230,7 +285,7 @@ def create_comment(
 @router.patch("/posts/{post_id}")
 def patch_post(
     post_id: int,
-    body: StatusUpdate,
+    body: PostPatch,
     user: CurrentUser = Depends(require_user),
     db: Session = Depends(get_platform_db),
 ):
@@ -240,17 +295,41 @@ def patch_post(
     ).mappings().first()
     if not row:
         raise HTTPException(404, "post_not_found")
-    if user.role != "admin" and int(row["user_id"]) != user.id:
+    owner_id = int(row["user_id"])
+    is_author = owner_id == user.id
+    if user.role != "admin" and not is_author:
         raise HTTPException(403, "forbidden")
+
+    sets: list[str] = ["updated_at=now()"]
+    params: dict = {"id": post_id}
+    if body.status is not None:
+        if not can_set_status(role=user.role, is_author=is_author, new_status=body.status):
+            raise HTTPException(403, "status_forbidden")
+        sets.append("status=:st")
+        params["st"] = body.status
+    if body.is_pinned is not None:
+        if user.role != "admin":
+            raise HTTPException(403, "pin_forbidden")
+        sets.append("is_pinned=:pin")
+        params["pin"] = body.is_pinned
+    if body.status is None and body.is_pinned is None:
+        raise HTTPException(400, "empty_patch")
+
     updated = db.execute(
         text(
-            """
-            UPDATE posts SET status=:st, updated_at=now()
+            f"""
+            UPDATE posts SET {", ".join(sets)}
             WHERE id=:id
             RETURNING *
             """
         ),
-        {"st": body.status, "id": post_id},
+        params,
     ).mappings().first()
     db.commit()
-    return {"post": _post_row_to_api(dict(updated), user.nickname)}
+    payload = dict(updated)
+    count = db.execute(
+        text("SELECT COUNT(*) FROM comments WHERE post_id=:id"),
+        {"id": post_id},
+    ).scalar() or 0
+    payload["comment_count"] = int(count)
+    return {"post": _post_row_to_api(payload, user.nickname, include_body=True)}

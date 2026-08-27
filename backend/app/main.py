@@ -89,16 +89,10 @@ async def _api_token_guard(request: Request, call_next):
     path = request.url.path
     if request.url.path in open_paths or request.method == "OPTIONS":
         return await call_next(request)
-    # 플랫폼 — OAuth·공개 게시판 읽기·요금제·AI 프록시(device_id)
-    if path.startswith("/api/auth/") or path.startswith("/api/billing/plans"):
-        return await call_next(request)
-    if path.startswith("/api/board/") and request.method == "GET":
+    # 플랫폼 — 사용자 JWT·웹훅 시크릿으로 보호 (X-Api-Token 과 분리)
+    if path.startswith("/api/auth/") or path.startswith("/api/board/") or path.startswith("/api/billing/"):
         return await call_next(request)
     if path.startswith("/api/platform/fieldnote/ai/"):
-        return await call_next(request)
-    if path.startswith("/api/billing/play/rtdn") or path.startswith("/api/billing/toss/webhook"):
-        return await call_next(request)
-    if path == "/api/billing/play/verify":
         return await call_next(request)
     # nginx가 /api/ 프록시 시 X-CH2-Proxy-Token 을 주입(클라이언트 헤더 덮어씀).
     sent = (

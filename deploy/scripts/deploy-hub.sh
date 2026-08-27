@@ -16,7 +16,12 @@ fi
 
 echo "==> sync hub static files"
 sudo mkdir -p "$HUB_DEST"
-sudo rsync -a --delete "$HUB_SRC/" "$HUB_DEST/"
+sudo rsync -a --delete --exclude board "$HUB_SRC/" "$HUB_DEST/"
+if [[ -d "$REPO_ROOT/deploy/board/public" ]]; then
+  echo "==> sync board UI into hub /board/"
+  sudo mkdir -p "$HUB_DEST/board"
+  sudo rsync -a "$REPO_ROOT/deploy/board/public/" "$HUB_DEST/board/"
+fi
 sudo chown -R www-data:www-data "$HUB_DEST"
 
 echo "==> nginx site ch2data-hub"
@@ -26,10 +31,5 @@ sudo ln -sf "$NGINX_SITE" "$NGINX_ENABLED"
 echo "==> reload nginx"
 sudo nginx -t
 sudo systemctl reload nginx
-
-if [[ -x "$REPO_ROOT/deploy/scripts/redeploy-board.sh" ]]; then
-  echo "==> board service"
-  bash "$REPO_ROOT/deploy/scripts/redeploy-board.sh" main
-fi
 
 echo "OK: hub deployed to $HUB_DEST"

@@ -13,20 +13,39 @@
   <body>
     <div class="page" id="app">
       <header class="topbar">
-        <div class="topbar__brand">
-          <a class="topbar__home" href="https://ch2data.com/">CH2 DATA</a>
-          <span class="topbar__sep">/</span>
-          <span class="topbar__title">통합 게시판</span>
+        <div class="topbar__main">
+          <div class="topbar__brand">
+            <a class="topbar__home" href="https://ch2data.com/">CH2 DATA</a>
+            <span class="topbar__sep">/</span>
+            <span class="topbar__title">통합 게시판</span>
+          </div>
+          <p class="topbar__lead">질문 · 오류 보고 · 기능 개선 건의</p>
         </div>
-        <p class="topbar__lead">
-          Macro · FieldNote · Viewer 공통 — 질문, 오류 보고, 기능 개선 건의
-        </p>
         <div class="auth-bar" id="auth-bar">
-          <span id="auth-user" class="auth-bar__user" hidden></span>
           <button type="button" class="btn btn--ghost btn--sm" id="login-btn">Google 로그인</button>
-          <button type="button" class="btn btn--ghost btn--sm" id="logout-btn" hidden>로그아웃</button>
+          <div class="user-menu" id="user-menu" hidden>
+            <button type="button" class="user-menu__btn" id="user-menu-btn" aria-expanded="false" aria-haspopup="true">
+              <span id="auth-user"></span>
+              <span class="user-menu__caret" aria-hidden="true">▾</span>
+            </button>
+            <div class="user-menu__drop" id="user-menu-drop" hidden>
+              <button type="button" class="user-menu__item" id="mine-btn">내가 쓴 글</button>
+              <button type="button" class="user-menu__item" id="nick-edit-btn">닉네임 변경</button>
+              <button type="button" class="user-menu__item" id="logout-btn">로그아웃</button>
+            </div>
+          </div>
         </div>
       </header>
+
+      <section class="notice" id="nick-prompt" hidden>
+        <strong>닉네임</strong>
+        <span>게시판에 이메일은 보이지 않습니다. 표시 이름을 정할 수 있습니다.</span>
+        <div class="form__actions" style="margin-top: 0.75rem">
+          <input id="nick-input" type="text" maxlength="80" minlength="2" placeholder="닉네임" />
+          <button type="button" class="btn btn--primary btn--sm" id="nick-save">저장</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="nick-skip">나중에</button>
+        </div>
+      </section>
 
       <section class="notice" id="auth-notice" hidden>
         <strong>로그인 준비 중</strong>
@@ -36,26 +55,32 @@
       <div id="list-view">
         <section class="toolbar">
           <div class="filters" id="filters">
-            <label class="field">
-              <span>제품</span>
-              <select id="filter-product">
-                <option value="">전체</option>
-                <option value="macro">Macro</option>
-                <option value="fieldnote">FieldNote</option>
-                <option value="viewer">Viewer</option>
-                <option value="general">공통</option>
-              </select>
+            <select id="filter-product" aria-label="제품">
+              <option value="">전체 제품</option>
+              <option value="macro">Macro</option>
+              <option value="fieldnote">FieldNote</option>
+              <option value="viewer">Viewer</option>
+              <option value="general">공용</option>
+            </select>
+            <select id="filter-category" aria-label="유형">
+              <option value="">전체 유형</option>
+              <option value="question">질문</option>
+              <option value="bug">오류</option>
+              <option value="feature">기능개선</option>
+            </select>
+            <select id="filter-status" aria-label="상태">
+              <option value="">전체 상태</option>
+              <option value="open">접수</option>
+              <option value="checking">확인중</option>
+              <option value="answered">답변완료</option>
+              <option value="planned">개선예정</option>
+              <option value="done">반영완료</option>
+            </select>
+            <label class="search-field">
+              <span class="visually-hidden">제목 및 내용 검색</span>
+              <input id="filter-q" type="search" maxlength="80" placeholder="제목·내용 검색" />
             </label>
-            <label class="field">
-              <span>유형</span>
-              <select id="filter-category">
-                <option value="">전체</option>
-                <option value="question">질문</option>
-                <option value="bug">오류 보고</option>
-                <option value="feature">기능 개선</option>
-              </select>
-            </label>
-            <button type="button" class="btn btn--ghost" id="refresh-btn">새로고침</button>
+            <button type="button" class="chip" id="mine-chip" hidden>내 글 ×</button>
           </div>
           <button type="button" class="btn btn--primary" id="new-post-btn">글쓰기</button>
         </section>
@@ -70,7 +95,7 @@
                   <option value="macro">Macro</option>
                   <option value="fieldnote">FieldNote</option>
                   <option value="viewer">Viewer</option>
-                  <option value="general">공통</option>
+                  <option value="general">공용</option>
                 </select>
               </label>
               <label class="field">
@@ -85,6 +110,13 @@
             <label class="field author-field" hidden>
               <span>작성자</span>
               <input name="author_name" type="text" maxlength="80" placeholder="이름 또는 닉네임" />
+            </label>
+            <label class="field pin-field" id="pin-field" hidden>
+              <span>공지</span>
+              <label class="check-inline">
+                <input name="is_pinned" type="checkbox" value="true" />
+                목록 상단에 고정
+              </label>
             </label>
             <label class="field">
               <span>제목</span>
@@ -107,6 +139,11 @@
           </form>
         </section>
 
+        <section class="panel notice-panel" id="notice-panel" hidden>
+          <h2 class="panel__title">공지</h2>
+          <ul class="post-list post-list--notice" id="notice-list"></ul>
+        </section>
+
         <section class="panel">
           <div class="panel__head">
             <h2 class="panel__title">게시글</h2>
@@ -125,6 +162,20 @@
       <div id="detail-view" hidden>
         <button type="button" class="back-link" id="back-to-list">← 목록으로</button>
         <article class="detail" id="post-detail"></article>
+        <div class="form__actions post-actions" id="post-actions" hidden>
+          <label class="field field--inline" id="status-admin-wrap" hidden>
+            <span>상태</span>
+            <select id="status-select">
+              <option value="open">접수</option>
+              <option value="checking">확인중</option>
+              <option value="answered">답변완료</option>
+              <option value="planned">개선예정</option>
+              <option value="done">반영완료</option>
+            </select>
+          </label>
+          <button type="button" class="btn btn--ghost btn--sm" id="status-author-btn" hidden>답변완료로 표시</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="pin-btn" hidden>공지 고정</button>
+        </div>
         <section class="panel">
           <h2 class="panel__title">댓글</h2>
           <ul class="comment-list" id="comment-list"></ul>

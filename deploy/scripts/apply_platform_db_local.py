@@ -11,7 +11,10 @@ import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SQL_FILE = REPO_ROOT / "db" / "048_ch2_platform.sql"
+SQL_FILES = [
+    REPO_ROOT / "db" / "048_ch2_platform.sql",
+    REPO_ROOT / "db" / "048b_board_support.sql",
+]
 ENV_FILE = REPO_ROOT / "backend" / ".env"
 
 
@@ -41,8 +44,9 @@ def main() -> int:
     if not platform_url:
         print("ERROR: DATABASE_URL_PLATFORM not set in backend/.env", file=sys.stderr)
         return 1
-    if not SQL_FILE.exists():
-        print(f"ERROR: missing {SQL_FILE}", file=sys.stderr)
+    missing = [p for p in SQL_FILES if not p.exists()]
+    if missing:
+        print(f"ERROR: missing {missing[0]}", file=sys.stderr)
         return 1
 
     psql_url = normalize_psycopg_url(platform_url)
@@ -62,12 +66,13 @@ def main() -> int:
     cur.close()
     conn.close()
 
-    print(f"==> apply {SQL_FILE.name}")
-    sql = SQL_FILE.read_text(encoding="utf-8")
     conn = psycopg2.connect(psql_url)
     conn.autocommit = True
     cur = conn.cursor()
-    cur.execute(sql)
+    for sql_file in SQL_FILES:
+        print(f"==> apply {sql_file.name}")
+        sql = sql_file.read_text(encoding="utf-8")
+        cur.execute(sql)
     cur.close()
     conn.close()
 

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>결제 확인 | CH2 DATA</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero hero--document">
+        <h1 class="hero__title">결제 확인</h1>
+        <p class="hero__lead" id="msg">토스 결제 결과를 서버에 확인하는 중입니다…</p>
+      </header>
+    </div>
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const paymentKey = params.get("paymentKey");
+      const orderId = params.get("orderId");
+      const amount = Number(params.get("amount"));
+      const msg = document.getElementById("msg");
+
+      async function run() {
+        if (!paymentKey || !orderId || !amount) {
+          msg.textContent = "결제 정보가 없습니다. 구독 페이지에서 다시 시도해 주세요.";
+          return;
+        }
+        const res = await fetch("/api/billing/toss/confirm", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentKey, orderId, amount }),
+        });
+        if (!res.ok) {
+          msg.textContent = "결제 확인에 실패했습니다. 문의는 통합 게시판으로 남겨 주세요.";
+          return;
+        }
+        msg.textContent = "구독이 활성화되었습니다. Macro Pro를 이용할 수 있습니다.";
+      }
+      run();
+    </script>
+  </body>
+</html>

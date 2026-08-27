@@ -27,6 +27,10 @@
         font-weight: 600;
         cursor: pointer;
       }
+      .plan-card button:disabled {
+        background: #94a3b8;
+        cursor: not-allowed;
+      }
       .auth-row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin: 1rem 0; }
       .auth-row button {
         padding: 0.5rem 1rem;
@@ -36,7 +40,9 @@
         cursor: pointer;
       }
       #status { color: #334155; font-size: 0.9375rem; }
+      #pay-note { margin-top: 1rem; color: #64748b; font-size: 0.9375rem; }
     </style>
+    <script src="https://js.tosspayments.com/v2/standard"></script>
   </head>
   <body>
     <div class="page">
@@ -53,9 +59,10 @@
           <span id="status">로그인이 필요합니다.</span>
         </div>
         <div class="plan-grid" id="plan-grid"></div>
+        <p id="pay-note"></p>
         <p class="policy-meta" style="margin-top: 1.5rem">
-          결제는 토스페이먼츠 웹 PG와 연동됩니다. 운영 키 연동 전에는 테스트 webhook으로 entitlement가 부여될 수
-          있습니다. 자세한 내용은 <a href="/subscription/">구독 정책</a>을 참고하세요.
+          결제는 토스페이먼츠에서 처리합니다. 결제 완료 전에는 권한이 생기지 않습니다.
+          자세한 내용은 <a href="/subscription/">구독 정책</a>을 참고하세요.
         </p>
       </main>
 
@@ -71,6 +78,7 @@
       const AUTH = "/api/auth";
       const BILLING = "/api/billing";
       let me = null;
+      let tossEnabled = false;
 
       async function refreshAuth() {
         const res = await fetch(`${AUTH}/status`, { credentials: "include" });
@@ -79,8 +87,18 @@
         document.getElementById("login-btn").hidden = Boolean(me);
         document.getElementById("logout-btn").hidden = !me;
         document.getElementById("status").textContent = me
-          ? `${me.nickname}님 — Macro Pro 구독 가능`
+          ? `${me.nickname}님 — Macro Pro 구독`
           : "로그인이 필요합니다.";
+      }
+
+      async function loadConfig() {
+        const res = await fetch(`${BILLING}/toss/config`);
+        const data = await res.json();
+        tossEnabled = Boolean(data.enabled);
+        const note = document.getElementById("pay-note");
+        note.textContent = tossEnabled
+          ? "결제 버튼을 누르면 토스페이먼츠 결제창이 열립니다."
+          : "토스 상점 키가 아직 서버에 없습니다. 요금표는 볼 수 있고, 실결제는 키 등록 후 활성화됩니다.";
       }
 
       async function loadPlans() {
@@ -94,7 +112,8 @@
           card.innerHTML = `<h3>${plan.product === "bundle" ? "번들" : "Macro"} ${plan.interval === "year" ? "연간" : "월간"}</h3><p>${plan.price.toLocaleString()}원</p>`;
           const btn = document.createElement("button");
           btn.type = "button";
-          btn.textContent = "결제 (토스 연동)";
+          btn.textContent = tossEnabled ? "토스로 결제" : "결제 준비 중";
+          btn.disabled = !tossEnabled;
           btn.addEventListener("click", () => checkout(plan));
           card.appendChild(btn);
           grid.appendChild(card);
@@ -106,35 +125,40 @@
           alert("Google 로그인 후 진행해 주세요.");
           return;
         }
-        const meRes = await fetch(`${AUTH}/me`, { credentials: "include" });
-        const profile = await meRes.json();
-        const orderId = `macro-${plan.id}-${Date.now()}`;
-        const res = await fetch(`${BILLING}/toss/webhook`, {
+        const res = await fetch(`${BILLING}/toss/prepare`, {
           method: "POST",
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderId,
-            product: plan.product,
-            user_id: profile.id,
-            amount: plan.price,
-          }),
+          body: JSON.stringify({ plan_id: plan.id }),
         });
         if (!res.ok) {
-          alert("결제 처리에 실패했습니다.");
+          const text = await res.text();
+          alert(text || "결제 준비를 시작하지 못했습니다.");
           return;
         }
-        alert("구독이 활성화되었습니다. Macro에서 Pro 기능을 이용할 수 있습니다.");
+        const prepared = await res.json();
+        const tossPayments = TossPayments(prepared.clientKey);
+        const payment = tossPayments.payment({ customerKey: prepared.customerKey });
+        await payment.requestPayment({
+          method: "CARD",
+          amount: { currency: "KRW", value: prepared.amount },
+          orderId: prepared.orderId,
+          orderName: prepared.orderName,
+          successUrl: `${window.location.origin}/subscribe/success.html`,
+          failUrl: `${window.location.origin}/subscribe/fail.html`,
+        });
       }
 
       document.getElementById("login-btn").addEventListener("click", () => {
-        location.href = `${AUTH}/google/login?state=${encodeURIComponent("/subscribe/")}`;
+        const next = encodeURIComponent("/subscribe/");
+        location.href = `${AUTH}/google/login?next=${next}`;
       });
       document.getElementById("logout-btn").addEventListener("click", async () => {
         await fetch(`${AUTH}/logout`, { method: "POST", credentials: "include" });
         await refreshAuth();
       });
 
-      refreshAuth().then(loadPlans);
+      refreshAuth().then(loadConfig).then(loadPlans);
     </script>
   </body>
 </html>

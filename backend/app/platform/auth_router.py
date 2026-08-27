@@ -19,6 +19,7 @@ from app.platform.db import get_platform_db
 from app.platform.deps import CurrentUser, get_optional_user, require_user
 from app.platform.entitlements import list_entitlements
 from app.platform.jwt_util import COOKIE_NAME, create_access_token
+from app.platform.oauth_next import DEFAULT_NEXT, safe_oauth_next
 
 router = APIRouter(prefix="/auth", tags=["platform-auth"])
 _log = logging.getLogger(__name__)
@@ -95,9 +96,10 @@ def _nickname_from_email(email: str) -> str:
 
 
 @router.get("/google/login")
-def google_login(request: Request, next: str = "/board/"):
+def google_login(_request: Request, next: str | None = None, state: str | None = None):
     if not settings.google_client_id:
         raise HTTPException(503, "Google OAuth 미설정")
+    dest = safe_oauth_next(next or state)
     redirect_uri = settings.google_oauth_redirect_uri
     params = {
         "client_id": settings.google_client_id,
@@ -106,7 +108,7 @@ def google_login(request: Request, next: str = "/board/"):
         "scope": "openid email profile",
         "access_type": "online",
         "prompt": "select_account",
-        "state": next,
+        "state": dest,
     }
     url = f"{GOOGLE_AUTH_URL}?{urllib.parse.urlencode(params)}"
     _log_google_authorize_url(url, params)
@@ -116,9 +118,10 @@ def google_login(request: Request, next: str = "/board/"):
 @router.get("/google/callback")
 def google_callback(
     code: str,
-    state: str = "/board/",
+    state: str = DEFAULT_NEXT,
     db: Session = Depends(get_platform_db),
 ):
+    state = safe_oauth_next(state)
     if not settings.google_client_id or not settings.google_client_secret:
         raise HTTPException(503, "Google OAuth 미설정")
     redirect_uri = settings.google_oauth_redirect_uri
@@ -251,4 +254,4 @@ def logout(response: Response):
 def auth_status(user: Annotated[CurrentUser | None, Depends(get_optional_user)]):
     if user is None:
         return {"logged_in": False}
-    return {"logged_in": True, "nickname": user.nickname, "role": user.role}
+    return {"logged_in": True, "id": user.id, "nickname": user.nickname, "role": user.role}
