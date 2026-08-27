@@ -195,7 +195,7 @@ def fetch_parcel_detail(conn: Connection, pnu: str) -> dict[str, Any] | None:
             """
             SELECT mgmt_pk, snapshot, ledger_kind, building_name, dong_name,
                    structure_name, structure_group, main_purpose, purpose_detail,
-                   households, floors_above, floors_below, gross_area, arch_area,
+                   households, ho_cnt, parking_total, floors_above, floors_below, gross_area, arch_area,
                    plat_area, approve_date
             FROM building
             WHERE pnu = :pnu

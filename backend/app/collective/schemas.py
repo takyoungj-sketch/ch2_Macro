@@ -340,6 +340,13 @@ class BuildingFeOption(BaseModel):
     has_fe: bool = False
 
 
+class DongOption(BaseModel):
+    dong: str
+    label: str
+    building_key: Optional[str] = None
+    is_reference: bool = False
+
+
 class CollectivePredictOptions(BaseModel):
     exclusive_area: Optional[ContinuousRange] = None
     building_age: Optional[ContinuousRange] = None
@@ -348,6 +355,7 @@ class CollectivePredictOptions(BaseModel):
     floor_mode: str = "relative"
     dongs: list[str] = Field(default_factory=list)
     dong_reference: Optional[str] = None
+    dong_options: list[DongOption] = Field(default_factory=list)
     housing_subtypes: list[str] = Field(default_factory=list)
     housing_subtype_reference: Optional[str] = None
     buildings: list[BuildingFeOption] = Field(default_factory=list)

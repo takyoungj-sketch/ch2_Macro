@@ -29,6 +29,8 @@ from parcel_master.pnu import pnu_from_title_parts, split_pnu, structure_group
 
 SCHEMA = Path(__file__).with_name("schema.sql")
 NEED = max(TITLE_COLS.values())
+_PARK_KEYS = ("park_mech_in", "park_mech_out", "park_self_in", "park_self_out")
+_CACHE_EXTRA = ("ho_cnt",) + _PARK_KEYS
 
 
 def _num(v: str) -> float | None:
@@ -51,6 +53,22 @@ def _str(v: str, max_len: int) -> str | None:
     if not t:
         return None
     return t[:max_len]
+
+
+def _parking_total_from_rec(rec: dict) -> int | None:
+    total = 0
+    for k in _PARK_KEYS:
+        n = _int(rec.get(k) or "")
+        if n is not None and n > 0:
+            total += n
+    return total if total > 0 else None
+
+
+def _cache_missing_cols(path: Path) -> bool:
+    with path.open(encoding="utf-8") as f:
+        header = f.readline().strip()
+    cols = set(header.split(","))
+    return not set(_CACHE_EXTRA).issubset(cols)
 
 
 def cache_path(sidos: tuple[str, ...], snapshot: str, ledger_kind: str = "집합") -> Path:
@@ -76,8 +94,11 @@ def scan_snapshot(
     CACHE.mkdir(exist_ok=True)
     out = cache_path(sidos, snapshot, ledger_kind)
     if out.exists() and not refresh:
-        print(f"[표제부] 캐시 {out.name}", flush=True)
-        return out
+        if _cache_missing_cols(out):
+            print(f"[표제부] 캐시 컬럼 부족 → 재스캔 {out.name}", flush=True)
+        else:
+            print(f"[표제부] 캐시 {out.name}", flush=True)
+            return out
     src = title_path(snapshot)
     print(f"[표제부] 스캔 {snapshot} {src.name} ({src.stat().st_size / 2**30:.1f}GB) kind={ledger_kind}", flush=True)
     kept = total = short = skip_kind = isolated = 0
@@ -139,7 +160,9 @@ def _row_from_rec(rec: dict, snapshot: str) -> dict | None:
         "structure_group": structure_group(rec["struct_name"]),
         "main_purpose": _str(rec["main_purpose"], 80),
         "purpose_detail": _str(rec["purpose_detail"], 120),
-        "households": _int(rec["households"]),
+        "households": _int(rec.get("households") or ""),
+        "ho_cnt": _int(rec.get("ho_cnt") or ""),
+        "parking_total": _parking_total_from_rec(rec),
         "floors_above": _int(rec["floors_above"]),
         "floors_below": _int(rec["floors_below"]),
         "gross_area": _num(rec["gross_area"]),
@@ -449,13 +472,102 @@ def run(
     }
 
 
+def _flush_ho_parking(cur, rows: list[tuple]) -> int:
+    from psycopg2.extras import execute_values
+
+    cur.execute(
+        """
+        CREATE TEMP TABLE IF NOT EXISTS _ho_park (
+            ho int, park int, pk varchar(32), snap char(7)
+        )
+        """
+    )
+    cur.execute("TRUNCATE _ho_park")
+    execute_values(
+        cur,
+        "INSERT INTO _ho_park (ho, park, pk, snap) VALUES %s",
+        rows,
+        page_size=2000,
+    )
+    cur.execute(
+        """
+        UPDATE building b SET
+            ho_cnt = o.ho,
+            parking_total = o.park
+        FROM _ho_park o
+        WHERE b.mgmt_pk = o.pk AND b.snapshot = o.snap
+        """
+    )
+    return int(cur.rowcount or 0)
+
+
+def backfill_ho_parking(engine) -> dict:
+    """기존 building 행에 호수·주차만 채운다. 전체 캐시 재스캔을 피한다."""
+    apply_schema(engine)
+    stats: dict[str, dict[str, int]] = {}
+    for snapshot in SNAPSHOTS:
+        src = title_path(snapshot)
+        print(f"[표제부] 호수·주차 백필 {snapshot} {src.name}", flush=True)
+        batch: list[tuple] = []
+        n_read = n_cand = n_upd = 0
+        raw = engine.raw_connection()
+        try:
+            cur = raw.cursor()
+            cur.execute("BEGIN")
+            with src.open(encoding="utf-8-sig", errors="replace") as f:
+                for line in f:
+                    n_read += 1
+                    if n_read % 2_000_000 == 0:
+                        print(f"  scanned {n_read:,} cand={n_cand:,} upd={n_upd:,}", flush=True)
+                    parts = line.rstrip("\n").split("|")
+                    if len(parts) <= NEED:
+                        continue
+                    if parts[TITLE_COLS["ledger_kind"]] != "집합":
+                        continue
+                    pk = (parts[TITLE_COLS["pk"]] or "").strip()
+                    if not pk:
+                        continue
+                    ho = _int(parts[TITLE_COLS["ho_cnt"]])
+                    park = 0
+                    for key in _PARK_KEYS:
+                        v = _int(parts[TITLE_COLS[key]])
+                        if v is not None and v > 0:
+                            park += v
+                    if ho is None and park <= 0:
+                        continue
+                    batch.append((ho, park if park > 0 else None, pk, snapshot))
+                    n_cand += 1
+                    if len(batch) >= 20_000:
+                        n_upd += _flush_ho_parking(cur, batch)
+                        batch = []
+            if batch:
+                n_upd += _flush_ho_parking(cur, batch)
+            raw.commit()
+        finally:
+            raw.close()
+        stats[snapshot] = {"read": n_read, "candidates": n_cand, "updated": n_upd}
+        print(
+            f"[표제부] 백필 {snapshot} read={n_read:,} cand={n_cand:,} updated={n_upd:,}",
+            flush=True,
+        )
+    return stats
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--refresh", action="store_true")
     p.add_argument("--sido", nargs="+", default=list(PILOT_SIDO))
     p.add_argument("--skip-ledger", action="store_true")
     p.add_argument("--ledger-kind", default="집합", choices=("집합", "일반"))
+    p.add_argument(
+        "--backfill-counts",
+        action="store_true",
+        help="호수·주차만 기존 building 에 채움 (전체 재적재 없음)",
+    )
     args = p.parse_args()
+    if args.backfill_counts:
+        backfill_ho_parking(get_parcel_engine())
+        return
     run(tuple(args.sido), args.refresh, args.skip_ledger, args.ledger_kind)
 
 

@@ -30,6 +30,8 @@ CREATE TABLE IF NOT EXISTS building (
     main_purpose      VARCHAR(80),
     purpose_detail    VARCHAR(120),
     households        INTEGER,
+    ho_cnt            INTEGER,
+    parking_total     INTEGER,
     floors_above      INTEGER,
     floors_below      INTEGER,
     gross_area        NUMERIC,
@@ -100,3 +102,9 @@ COMMENT ON TABLE parcel_zone IS 'AL_D155 용도지역. 복수 라벨·is_coarse.
 COMMENT ON TABLE ledger_snapshot IS '원본 판본 레지스트리. (source, snapshot, sido_code, kind). 표제부는 kind=집합|일반';
 COMMENT ON TABLE parcel_land_price IS 'AL_D151 필지·연도 이력. 광주·전남 구코드 29/46은 PNU를 12로 맵핑';
 COMMENT ON TABLE match_revision IS '확정 매칭 값 변경용 자리. 적재 없음. 자동 is_current flip 금지';
+
+-- 기존 DB: CREATE IF NOT EXISTS 는 컬럼을 추가하지 않는다.
+ALTER TABLE building ADD COLUMN IF NOT EXISTS ho_cnt INTEGER;
+ALTER TABLE building ADD COLUMN IF NOT EXISTS parking_total INTEGER;
+COMMENT ON COLUMN building.ho_cnt IS '표제부 [66] 호수. 세대수 [40]과 섞지 않음';
+COMMENT ON COLUMN building.parking_total IS '옥내외 기계식+자주식 대수 합 [50]+[52]+[54]+[56]. 면적 열 제외';

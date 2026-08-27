@@ -484,6 +484,13 @@ export interface BuildingFeOption {
   has_fe?: boolean;
 }
 
+export interface DongOption {
+  dong: string;
+  label: string;
+  building_key?: string | null;
+  is_reference?: boolean;
+}
+
 export interface CollectivePredictOptions {
   exclusive_area?: ContinuousRange | null;
   building_age?: ContinuousRange | null;
@@ -492,6 +499,7 @@ export interface CollectivePredictOptions {
   floor_mode?: string;
   dongs?: string[];
   dong_reference?: string | null;
+  dong_options?: DongOption[];
   housing_subtypes?: string[];
   housing_subtype_reference?: string | null;
   buildings?: BuildingFeOption[];

@@ -4,6 +4,7 @@
 해당 유형 글자가 없어도 본체 동이 있으면 붙인다(업무시설·공동주택 오피스텔 등).
 시공사는 표제부에 없다. 첫째 동을 대표값으로 쓰지 않는다.
 부대시설(경비실·주차장 등) 동은 합에서 뺀다.
+오피스텔은 세대수 [40]이 비면 호수 [66]을 쓰고, 주차는 본체 동 대수 4열 합만 쓴다.
 """
 
 from __future__ import annotations
@@ -128,6 +129,26 @@ def select_title_dongs(
     return []
 
 
+def _positive_int(value: object) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return None
+    return n if n > 0 else None
+
+
+def _dong_households(row: dict[str, Any], kind: TitleKind) -> int | None:
+    """제품 세대수. 오피스텔만 [40]이 비면 [66] 호수를 쓴다. 원장 칸은 섞지 않는다."""
+    hh = _positive_int(row.get("households"))
+    if kind != "officetel":
+        return hh
+    if hh:
+        return hh
+    return _positive_int(row.get("ho_cnt"))
+
+
 def _mode(values: Iterable[Any]) -> Any:
     items = [v for v in values if v is not None and v != ""]
     if not items:
@@ -158,17 +179,7 @@ def aggregate_title_dongs(
     housing = select_title_dongs(rows, kind=kind)
     if not housing:
         return None
-    hh_vals = []
-    for r in housing:
-        v = r.get("households")
-        if v is None:
-            continue
-        try:
-            n = int(v)
-        except (TypeError, ValueError):
-            continue
-        if n > 0:
-            hh_vals.append(n)
+    hh_vals = [n for r in housing if (n := _dong_households(r, kind))]
     floors = []
     for r in housing:
         v = r.get("floors_above")
@@ -180,6 +191,10 @@ def aggregate_title_dongs(
             continue
     years = [parse_year(r.get("approve_date")) for r in housing]
     names = [str(r.get("structure_name") or "").strip() for r in housing]
+    parking_total = None
+    if kind == "officetel":
+        park_vals = [n for r in housing if (n := _positive_int(r.get("parking_total")))]
+        parking_total = sum(park_vals) if park_vals else None
     return {
         "households": sum(hh_vals) if hh_vals else None,
         "dong_count": len(housing),
@@ -187,36 +202,7 @@ def aggregate_title_dongs(
         "structure_raw": _mode(names),
         "approved_year": _mode(y for y in years if y is not None),
         "n_dong": len(housing),
-    }
-    hh_vals = []
-    for r in housing:
-        v = r.get("households")
-        if v is None:
-            continue
-        try:
-            n = int(v)
-        except (TypeError, ValueError):
-            continue
-        if n > 0:
-            hh_vals.append(n)
-    floors = []
-    for r in housing:
-        v = r.get("floors_above")
-        if v is None:
-            continue
-        try:
-            floors.append(int(v))
-        except (TypeError, ValueError):
-            continue
-    years = [parse_year(r.get("approve_date")) for r in housing]
-    names = [str(r.get("structure_name") or "").strip() for r in housing]
-    return {
-        "households": sum(hh_vals) if hh_vals else None,
-        "dong_count": len(housing),
-        "max_floor": max(floors) if floors else None,
-        "structure_raw": _mode(names),
-        "approved_year": _mode(y for y in years if y is not None),
-        "n_dong": len(housing),
+        "parking_total": parking_total,
     }
 
 

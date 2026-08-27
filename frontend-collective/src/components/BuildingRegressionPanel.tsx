@@ -43,12 +43,23 @@ function defaultPredictInputs(
   },
 ): CollectiveRegressionPredictInputs {
   if (!opts) return {};
+  const buildingKey =
+    opts.buildings?.find((b) => b.is_reference)?.building_key ?? opts.buildings?.[0]?.building_key;
+  let dong: string | undefined;
+  if (vars.dong) {
+    if (opts.dong_options?.length) {
+      const scoped = opts.dong_options.filter((o) => !o.building_key || o.building_key === buildingKey);
+      dong = scoped.find((o) => o.is_reference)?.dong ?? scoped[0]?.dong;
+    } else {
+      dong = opts.dong_reference ?? opts.dongs?.[0];
+    }
+  }
   return {
-    dong: vars.dong ? opts.dong_reference ?? opts.dongs?.[0] : undefined,
+    dong,
     housing_subtype: vars.housing_subtype
       ? opts.housing_subtype_reference ?? opts.housing_subtypes?.[0]
       : undefined,
-    building_key: opts.buildings?.find((b) => b.is_reference)?.building_key ?? opts.buildings?.[0]?.building_key,
+    building_key: buildingKey,
   };
 }
 
@@ -81,6 +92,17 @@ function PredictPanel({
   result?: CollectiveRegressionPredictResponse;
   error?: string;
 }) {
+  const dongChoices =
+    opts.dong_options?.length
+      ? opts.dong_options.filter(
+          (o) => !o.building_key || o.building_key === inputs.building_key,
+        )
+      : (opts.dongs ?? []).map((d) => ({
+          dong: d,
+          label: d,
+          building_key: null as string | null,
+          is_reference: d === opts.dong_reference,
+        }));
   return (
     <div className="rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/40 p-3 space-y-3">
       <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200">가정 시나리오 (참고)</p>
@@ -129,7 +151,33 @@ function PredictPanel({
             />
           </label>
         )}
-        {vars.dong && (opts.dongs?.length ?? 0) > 0 && (
+        {useCohort && (opts.buildings?.length ?? 0) > 0 && (
+          <label className="space-y-0.5 sm:col-span-2">
+            <span className="text-slate-500 dark:text-slate-400">단지 (FE)</span>
+            <select
+              className="w-full border border-slate-200 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
+              value={inputs.building_key ?? ""}
+              onChange={(e) => {
+                const buildingKey = e.target.value || undefined;
+                const scoped = (opts.dong_options ?? []).filter(
+                  (o) => !o.building_key || o.building_key === buildingKey,
+                );
+                const dong = scoped.find((o) => o.is_reference)?.dong ?? scoped[0]?.dong;
+                setInputs((p) => ({ ...p, building_key: buildingKey, dong }));
+              }}
+            >
+              {opts.buildings!.map((b) => (
+                <option key={b.building_key} value={b.building_key}>
+                  {b.display_name}
+                  {b.is_reference ? " (FE 기준)" : b.has_fe ? "" : " (FE 제외)"}
+                  {" · n="}
+                  {b.count}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {vars.dong && dongChoices.length > 0 && (
           <label className="space-y-0.5">
             <span className="text-slate-500 dark:text-slate-400">동</span>
             <select
@@ -137,10 +185,10 @@ function PredictPanel({
               value={inputs.dong ?? ""}
               onChange={(e) => setInputs((p) => ({ ...p, dong: e.target.value || undefined }))}
             >
-              {opts.dongs!.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                  {d === opts.dong_reference ? " (기준)" : ""}
+              {dongChoices.map((o) => (
+                <option key={`${o.building_key ?? ""}|${o.dong}`} value={o.dong}>
+                  {o.label}
+                  {o.is_reference ? " (기준)" : ""}
                 </option>
               ))}
             </select>
@@ -158,25 +206,6 @@ function PredictPanel({
                 <option key={d} value={d}>
                   {d}
                   {d === opts.housing_subtype_reference ? " (기준)" : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {useCohort && (opts.buildings?.length ?? 0) > 0 && (
-          <label className="space-y-0.5 sm:col-span-2">
-            <span className="text-slate-500 dark:text-slate-400">단지 (FE)</span>
-            <select
-              className="w-full border border-slate-200 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
-              value={inputs.building_key ?? ""}
-              onChange={(e) => setInputs((p) => ({ ...p, building_key: e.target.value || undefined }))}
-            >
-              {opts.buildings!.map((b) => (
-                <option key={b.building_key} value={b.building_key}>
-                  {b.display_name}
-                  {b.is_reference ? " (FE 기준)" : b.has_fe ? "" : " (FE 제외)"}
-                  {" · n="}
-                  {b.count}
                 </option>
               ))}
             </select>
@@ -342,6 +371,7 @@ export default function BuildingRegressionPanel({
       {useCohort && (
         <p className="text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900 rounded px-2 py-1.5">
           {keys.length}개 단지 통합 · 실시간 · 단지 고정효과(거래 최다 단지=기준, n&lt;5 제외)
+          · 동은 단지별로 구분
         </p>
       )}
       {!useCohort && !regressionEligible && (

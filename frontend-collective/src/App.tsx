@@ -142,7 +142,7 @@ function BuildingTableRow({
       <td className="num">{fmtPrice(row.mean)}</td>
       {wide && <td className="num text-[10px]">{fmtCiCompact(row.ci_lower, row.ci_upper)}</td>}
       <td className="num">{row.building_year ?? "—"}</td>
-      <td className="num" title={row.households_flagged ? "원본 이상값 — 값은 그대로 표시" : "K-apt 전체 세대수. 없으면 표제부 해당 용도 동 합산"}>
+      <td className="num" title={row.households_flagged ? "원본 이상값 — 값은 그대로 표시" : "K-apt 전체 세대수. 없으면 표제부 해당 용도 동 합산. 오피스텔은 세대수가 비면 호수"}>
         {row.households == null ? (
           "—"
         ) : (
@@ -802,7 +802,7 @@ export default function App() {
                       <th>평균(만원/㎡)</th>
                       {tableWide && <th title="95% 신뢰구간">신뢰구간(만원/㎡)</th>}
                       <th title="실거래 건축연도">신축연도</th>
-                      <th title="K-apt 전체 세대수. K-apt가 없으면 표제부 해당 용도 동 합산">세대수</th>
+                      <th title="K-apt 전체 세대수. K-apt가 없으면 표제부 해당 용도 동 합산. 오피스텔은 세대수가 비면 호수">세대수</th>
                       <th title="K-apt 시공사 대표 1곳. 공동시공은 첫 회사+외. 표제부만 있으면 없음">시공사</th>
                       <th>지번 주소</th>
                       {tableWide && <th>도로명 주소</th>}

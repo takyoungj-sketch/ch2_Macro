@@ -379,6 +379,8 @@ function DetailBlock({
               <th>동</th>
               <th>주용도</th>
               <th>세대</th>
+              <th>호수</th>
+              <th>주차</th>
               <th>층</th>
               <th>구조</th>
               <th>승인</th>
@@ -396,6 +398,8 @@ function DetailBlock({
                   {b.purpose_detail ? ` · ${b.purpose_detail}` : ""}
                 </td>
                 <td className="num">{fmt(b.households)}</td>
+                <td className="num">{fmt(b.ho_cnt)}</td>
+                <td className="num">{fmt(b.parking_total)}</td>
                 <td className="num">
                   {b.floors_above != null ? `${b.floors_above}` : "—"}
                   {b.floors_below ? `/${b.floors_below}` : ""}

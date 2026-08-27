@@ -67,6 +67,8 @@ export type ParcelBuildingRow = {
   main_purpose?: string | null;
   purpose_detail?: string | null;
   households?: number | null;
+  ho_cnt?: number | null;
+  parking_total?: number | null;
   floors_above?: number | null;
   floors_below?: number | null;
   gross_area?: number | null;

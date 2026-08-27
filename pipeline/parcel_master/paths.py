@@ -54,6 +54,12 @@ TITLE_COLS = {
     "floors_above": 43,
     "floors_below": 44,
     "approve_date": 60,
+    # 대수만. 면적 열 [51][53][55][57] 은 적재하지 않는다.
+    "park_mech_in": 50,
+    "park_mech_out": 52,
+    "park_self_in": 54,
+    "park_self_out": 56,
+    "ho_cnt": 66,
 }
 
 

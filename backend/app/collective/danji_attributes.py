@@ -114,6 +114,11 @@ MATCH_NOTE_TITLE_PNU = (
     "K-apt에 없는 필지입니다. 세대수·층·구조는 표제부에서 같은 용도 동을 합친 값이고, "
     "시공사는 표제부에 없습니다. 지역회귀 hard 표본(A·B·C)에는 넣지 않습니다."
 )
+MATCH_NOTE_TITLE_PNU_OFFICETEL = (
+    "K-apt에 없는 필지입니다. 오피스텔은 표제부 세대수가 비면 호수를 쓰고, "
+    "주차는 본체 동의 옥내외 기계식·자주식 대수를 합칩니다. 시공사는 표제부에 없습니다. "
+    "지역회귀 hard 표본(A·B·C)에는 넣지 않습니다."
+)
 MATCH_NOTE_MULTI = (
     "같은 지번 또는 단지명에 K-apt 단지가 둘 이상입니다. "
     "세대수·동수·주차는 합산하고, 시공사는 첫 단지 기준에 「외」를 붙입니다. "
@@ -525,7 +530,12 @@ def fetch_danji_attributes(
     if rule == "pnu_unique":
         match_note = MATCH_NOTE_PNU_UNIQUE if match_note is None else f"{MATCH_NOTE_PNU_UNIQUE} {match_note}"
     if rule == "title_pnu":
-        match_note = MATCH_NOTE_TITLE_PNU if match_note is None else f"{MATCH_NOTE_TITLE_PNU} {match_note}"
+        title_note = (
+            MATCH_NOTE_TITLE_PNU_OFFICETEL
+            if asset_type == "officetel"
+            else MATCH_NOTE_TITLE_PNU
+        )
+        match_note = title_note if match_note is None else f"{title_note} {match_note}"
     if is_multi:
         match_note = MATCH_NOTE_MULTI if match_note is None else f"{MATCH_NOTE_MULTI} {match_note}"
     return {

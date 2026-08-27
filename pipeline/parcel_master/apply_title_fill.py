@@ -55,8 +55,8 @@ DEFAULT_TYPES: tuple[TitleKind, ...] = ("apartment", "rowhouse", "officetel")
 BATCH = 500
 
 TITLE_SQL = """
-SELECT pnu, main_purpose, purpose_detail, households, floors_above,
-       structure_name, approve_date
+SELECT pnu, main_purpose, purpose_detail, households, ho_cnt, parking_total,
+       floors_above, structure_name, approve_date
 FROM building
 WHERE snapshot = (SELECT MAX(snapshot) FROM building)
   AND ledger_kind = '집합'
@@ -92,8 +92,8 @@ UPDATE_SQL = text(
         households_rent = NULL,
         dong_count = :dong_count,
         max_floor = :max_floor,
-        parking_total = NULL,
-        parking_per_household = NULL,
+        parking_total = :parking_total,
+        parking_per_household = :parking_per_household,
         danji_class = NULL,
         supply_type = NULL,
         n_tx = :n_tx
@@ -108,11 +108,11 @@ INSERT_SQL = text(
     INSERT INTO collective_building_attributes (
         snapshot_ym, asset_type, building_key, danji_code, match_tier, match_rule,
         approved_year, building_year, year_diff, structure_raw, structure_group,
-        households, dong_count, max_floor, n_tx
+        households, dong_count, max_floor, parking_total, parking_per_household, n_tx
     ) VALUES (
         :snapshot_ym, :asset_type, :building_key, NULL, 'T', 'title_pnu',
         :approved_year, :building_year, :year_diff, :structure_raw, :structure_group,
-        :households, :dong_count, :max_floor, :n_tx
+        :households, :dong_count, :max_floor, :parking_total, :parking_per_household, :n_tx
     )
     ON CONFLICT (snapshot_ym, asset_type, building_key) DO NOTHING
     """
@@ -186,6 +186,11 @@ def _fill_record(cand: Any, agg: dict[str, Any]) -> dict[str, Any]:
     if approved is not None and building_year is not None:
         year_diff = int(approved) - int(building_year)
     raw = agg.get("structure_raw") or None
+    hh = agg.get("households")
+    park = agg.get("parking_total")
+    pph = None
+    if hh and park:
+        pph = round(float(park) / float(hh), 3)
     return {
         "building_key": cand.building_key,
         "tx_name": cand.display_name,
@@ -194,9 +199,11 @@ def _fill_record(cand: Any, agg: dict[str, Any]) -> dict[str, Any]:
         "year_diff": year_diff,
         "structure_raw": raw[:60] if isinstance(raw, str) else raw,
         "structure_group": structure_group(raw),
-        "households": agg["households"],
+        "households": hh,
         "dong_count": agg["dong_count"],
         "max_floor": agg.get("max_floor"),
+        "parking_total": park,
+        "parking_per_household": pph,
         "n_tx": int(cand.n_tx),
         "has_attr_row": bool(cand.has_attr_row),
     }
@@ -337,6 +344,9 @@ def run(
         raise SystemExit("--new-keys-only 와 --refresh-t 는 같이 쓰지 않는다")
     coll = get_collective_engine()
     parcel = get_parcel_engine()
+    from parcel_master.load_title_pilot import apply_schema
+
+    apply_schema(parcel)
     with coll.connect() as conn:
         snapshot_ym = snapshot_ym or conn.execute(
             text("SELECT MAX(snapshot_ym) FROM collective_building_attributes")
@@ -356,7 +366,7 @@ def run(
         ",".join(types),
     )
 
-    apartment_changed = False
+    attrs_changed = False
     for kind in types:
         with coll.connect() as conn:
             buildings = load_buildings(conn, kind)
@@ -401,9 +411,10 @@ def run(
         )
         for rec in fills[:12]:
             log.info(
-                "  FILL %s  hh=%s  dong=%s  floor=%s  struct=%s",
+                "  FILL %s  hh=%s  park=%s  dong=%s  floor=%s  struct=%s",
                 rec["tx_name"],
                 rec["households"],
+                rec.get("parking_total"),
                 rec["dong_count"],
                 rec["max_floor"],
                 rec.get("structure_raw"),
@@ -424,13 +435,13 @@ def run(
                 [{"snapshot_ym": snapshot_ym, "asset_type": kind, "building_key": r["building_key"]} for r in reverts],
             )
         log.info("%s  updated=%s  inserted=%s  reverted=%s", kind, n_upd, n_ins, n_rev)
-        if kind == "apartment" and (fills or reverts):
-            apartment_changed = True
+        if fills or reverts:
+            attrs_changed = True
 
     if dry_run:
         log.info("dry-run: DB not changed")
         return
-    if skip_dictionary or not apartment_changed:
+    if skip_dictionary or not attrs_changed:
         return
     with coll.begin() as conn:
         df = _load(conn, snapshot_ym)

@@ -326,3 +326,186 @@ def test_classify_blocks_abc_and_refresh_t_fills():
     assert refresh["keep_t"] == []
     assert refresh["fill"][0]["building_key"] == "t"
 
+
+def test_officetel_uses_ho_cnt_when_households_empty():
+    rows = [
+        {
+            "main_purpose": "업무시설",
+            "purpose_detail": "업무시설(오피스텔)",
+            "households": 0,
+            "ho_cnt": 509,
+            "parking_total": 380,
+            "floors_above": 15,
+            "approve_date": "20170101",
+            "structure_name": "철근콘크리트구조",
+        }
+    ]
+    ot = aggregate_title_dongs(rows, kind="officetel")
+    assert ot is not None
+    assert ot["households"] == 509
+    assert ot["parking_total"] == 380
+    assert ot["dong_count"] == 1
+    assert ot["max_floor"] == 15
+    assert title_fill_skip_reason(agg=ot, building_year=2017, require_households=False) is None
+
+
+def test_officetel_prefers_households_over_ho_cnt():
+    ot = aggregate_title_dongs(
+        [
+            {
+                "main_purpose": "업무시설",
+                "purpose_detail": "오피스텔",
+                "households": 40,
+                "ho_cnt": 509,
+                "parking_total": 100,
+                "floors_above": 12,
+                "approve_date": "20100101",
+                "structure_name": "RC",
+            }
+        ],
+        kind="officetel",
+    )
+    assert ot is not None
+    assert ot["households"] == 40
+    assert ot["parking_total"] == 100
+
+
+def test_apartment_ignores_ho_cnt_and_parking():
+    apt = aggregate_title_dongs(
+        [
+            {
+                "main_purpose": "공동주택",
+                "purpose_detail": "아파트",
+                "households": 0,
+                "ho_cnt": 200,
+                "parking_total": 80,
+                "floors_above": 10,
+                "approve_date": "20100101",
+                "structure_name": "RC",
+            }
+        ]
+    )
+    assert apt is not None
+    assert apt["households"] is None
+    assert apt["parking_total"] is None
+    assert title_fill_skip_reason(agg=apt, building_year=2010) == "no_households"
+
+
+def test_officetel_parking_sums_selected_dongs_only():
+    ot = aggregate_title_dongs(
+        [
+            {
+                "main_purpose": "업무시설",
+                "purpose_detail": "오피스텔",
+                "households": 0,
+                "ho_cnt": 100,
+                "parking_total": 74,
+                "floors_above": 10,
+                "approve_date": "20150101",
+                "structure_name": "RC",
+            },
+            {
+                "main_purpose": "업무시설",
+                "purpose_detail": "오피스텔",
+                "households": 0,
+                "ho_cnt": 50,
+                "parking_total": 306,
+                "floors_above": 15,
+                "approve_date": "20150101",
+                "structure_name": "RC",
+            },
+            {
+                "main_purpose": "제1종근린생활시설",
+                "purpose_detail": "점포",
+                "households": 0,
+                "ho_cnt": 8,
+                "parking_total": 999,
+                "floors_above": 1,
+                "approve_date": "20150101",
+                "structure_name": "RC",
+            },
+        ],
+        kind="officetel",
+    )
+    assert ot is not None
+    assert ot["households"] == 150
+    assert ot["parking_total"] == 380
+    assert ot["dong_count"] == 2
+
+
+def test_classify_officetel_fill_parking_and_ho():
+    import pandas as pd
+    from parcel_master.apply_title_fill import classify
+    from parcel_master.pnu import pnu_from_tx
+
+    pnu = pnu_from_tx("4311311400", "288-66")
+    assert pnu
+    title = {
+        pnu: [
+            {
+                "main_purpose": "업무시설",
+                "purpose_detail": "오피스텔",
+                "households": 0,
+                "ho_cnt": 509,
+                "parking_total": 380,
+                "floors_above": 15,
+                "approve_date": "20170127",
+                "structure_name": "철근콘크리트구조",
+            }
+        ]
+    }
+    cands = pd.DataFrame(
+        [
+            {
+                "building_key": "jiwell",
+                "match_tier": "T",
+                "beopjungri_code": "4311311400",
+                "lot_number": "288-66",
+                "display_name": "지웰에스테이트",
+                "building_year": 2017,
+                "n_tx": 20,
+                "has_attr_row": True,
+            }
+        ]
+    )
+    got = classify(
+        cands,
+        title,
+        set(),
+        kind="officetel",
+        skip_kapt=False,
+        refresh_t=True,
+    )
+    assert len(got["fill"]) == 1
+    rec = got["fill"][0]
+    assert rec["households"] == 509
+    assert rec["parking_total"] == 380
+    assert rec["parking_per_household"] == round(380 / 509, 3)
+    assert rec["max_floor"] == 15
+
+
+def test_officetel_skips_apartment_scale_inconsistent_flag():
+    import pandas as pd
+    from collective.apply_danji_dictionary import _quality_flags
+
+    ot = pd.Series(
+        {
+            "asset_type": "officetel",
+            "households": 509,
+            "dong_count": 1,
+            "max_floor": 15,
+            "parking_per_household": 0.746,
+        }
+    )
+    assert _quality_flags(ot) is None
+    apt = pd.Series(
+        {
+            "asset_type": "apartment",
+            "households": 509,
+            "dong_count": 1,
+            "max_floor": 15,
+            "parking_per_household": 0.746,
+        }
+    )
+    assert "scale_inconsistent" in (_quality_flags(apt) or "")
+

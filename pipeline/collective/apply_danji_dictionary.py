@@ -121,7 +121,15 @@ def _quality_flags(row: pd.Series) -> str | None:
     if pd.notna(pph) and float(pph) > MAX_PLAUSIBLE_PARKING_PER_HOUSEHOLD:
         flags.append("parking_implausible")
     # 세대수 ↔ 동수·층수 정합성. 층수가 이미 자리표시자면 이 검사는 의미가 없다.
-    if floor_ok and pd.notna(hh) and pd.notna(dong) and float(dong) > 0 and float(hh) > 0:
+    # 오피스텔은 호수 밀도가 아파트 층당 세대 상한을 자주 넘긴다 (지웰 509/15).
+    if (
+        str(row.get("asset_type") or "") != "officetel"
+        and floor_ok
+        and pd.notna(hh)
+        and pd.notna(dong)
+        and float(dong) > 0
+        and float(hh) > 0
+    ):
         if float(hh) / (float(dong) * float(floor)) > MAX_HOUSEHOLDS_PER_FLOOR:
             flags.append("scale_inconsistent")
     return ",".join(flags) if flags else None

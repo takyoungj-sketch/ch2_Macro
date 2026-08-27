@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass, field
 
@@ -19,6 +20,7 @@ from app.collective.schemas import (
     CollectiveRegressionSpec,
     CollectiveModelCandidate,
     ContinuousRange,
+    DongOption,
     ModelComparison,
     ModelMetrics,
     RegressionCoeff,
@@ -263,6 +265,91 @@ def _sanitize_key(key: str, prefix: str) -> str:
     return f"{prefix}_{s}" if s else f"{prefix}_unknown"
 
 
+def _clean_dong_values(series: pd.Series) -> pd.Series:
+    return series.astype(str).str.strip()
+
+
+def _dong_cats(series: pd.Series) -> list[str]:
+    return sorted(c for c in series.dropna().unique() if c and c not in ("nan", "None"))
+
+
+def _nested_dong_col(building_key: str, dong: str) -> str:
+    token = hashlib.sha1(f"{building_key}|{dong}".encode("utf-8")).hexdigest()[:12]
+    return f"dong_{token}"
+
+
+def _add_pooled_dong_columns(
+    work: pd.DataFrame,
+    series: pd.Series,
+    meta: RegressionDesignMeta,
+    labels: dict[str, str],
+) -> pd.DataFrame:
+    cats = _dong_cats(series)
+    if len(cats) < 2:
+        return pd.DataFrame(index=work.index)
+    meta.dong_categories = cats
+    meta.dong_reference = cats[0]
+    meta.dong_options = [
+        DongOption(dong=c, label=c, is_reference=(c == cats[0])) for c in cats
+    ]
+    dummies = pd.get_dummies(series, prefix="dong", drop_first=True)
+    if dummies.empty:
+        return pd.DataFrame(index=work.index)
+    for c in dummies.columns:
+        labels[c] = f"동 {c.replace('dong_', '')}"
+    return dummies
+
+
+def _add_nested_dong_columns(
+    work: pd.DataFrame,
+    meta: RegressionDesignMeta,
+    labels: dict[str, str],
+    warnings: list[str],
+) -> pd.DataFrame:
+    """단지마다 동을 따로 두고, 단지별 기준동 1개는 단지 FE에 흡수한다."""
+    keys = work["building_key"].astype(str)
+    dongs = _clean_dong_values(work["dong"])
+    parts: list[pd.DataFrame] = []
+    options: list[DongOption] = []
+    for bk in sorted(keys.unique()):
+        mask = keys == bk
+        series = dongs[mask]
+        cats = _dong_cats(series)
+        if not cats:
+            continue
+        counts = series[series.isin(cats)].value_counts()
+        ref = str(counts.idxmax())
+        meta.dong_reference_by_building[bk] = ref
+        bname = meta.building_labels.get(bk, bk[:12])
+        if len(cats) < 2:
+            warnings.append(f"동 더미 없음 — {bname} 동 1개 (단지 FE에 흡수)")
+        for dong in sorted(cats):
+            is_ref = dong == ref
+            options.append(
+                DongOption(
+                    dong=dong,
+                    label=f"{bname} {dong}",
+                    building_key=bk,
+                    is_reference=is_ref,
+                )
+            )
+            if is_ref:
+                continue
+            col = _nested_dong_col(bk, dong)
+            work[col] = ((keys == bk) & (dongs == dong)).astype(float)
+            parts.append(work[[col]])
+            labels[col] = f"동 {bname} {dong}"
+            meta.dong_fe_map[(bk, dong)] = col
+    meta.dong_options = options
+    meta.dong_categories = [o.label for o in options]
+    ref_labels = [o.label for o in options if o.is_reference]
+    meta.dong_reference = ref_labels[0] if len(ref_labels) == 1 else None
+    if parts:
+        warnings.append("동 더미는 단지별로 구분 (같은 동 번호라도 단지가 다르면 별개)")
+        return pd.concat(parts, axis=1)
+    return pd.DataFrame(index=work.index)
+
+
 @dataclass
 class RegressionDesignMeta:
     column_labels: dict[str, str] = field(default_factory=dict)
@@ -270,6 +357,9 @@ class RegressionDesignMeta:
     max_floor: float | None = None
     dong_reference: str | None = None
     dong_categories: list[str] = field(default_factory=list)
+    dong_options: list[DongOption] = field(default_factory=list)
+    dong_fe_map: dict[tuple[str, str], str] = field(default_factory=dict)
+    dong_reference_by_building: dict[str, str] = field(default_factory=dict)
     housing_subtype_reference: str | None = None
     housing_subtype_categories: list[str] = field(default_factory=list)
     building_reference_key: str | None = None
@@ -453,16 +543,18 @@ def _build_design_matrix(
             meta.continuous_ranges["floor"] = (rng.min, rng.max)
 
     if req.variables.dong and "dong" in work.columns and work["dong"].notna().any():
-        series = work["dong"].astype(str).str.strip()
-        cats = sorted(c for c in series.dropna().unique() if c and c not in ("nan", "None"))
-        if len(cats) >= 2:
-            meta.dong_categories = cats
-            meta.dong_reference = cats[0]
-            dummies = pd.get_dummies(series, prefix="dong", drop_first=True)
-            if not dummies.empty:
-                parts.append(dummies)
-                for c in dummies.columns:
-                    labels[c] = f"동 {c.replace('dong_', '')}"
+        series = _clean_dong_values(work["dong"])
+        nested = (
+            cohort_mode
+            and "building_key" in work.columns
+            and work["building_key"].nunique() > 1
+        )
+        if nested:
+            dong_part = _add_nested_dong_columns(work, meta, labels, warnings)
+        else:
+            dong_part = _add_pooled_dong_columns(work, series, meta, labels)
+        if not dong_part.empty:
+            parts.append(dong_part)
 
     if (
         req.variables.housing_subtype
@@ -505,9 +597,10 @@ def _meta_to_predict_options(meta: RegressionDesignMeta, req: CollectiveRegressi
         lo, hi = meta.continuous_ranges["floor"]
         opts.floor = ContinuousRange(name="floor", min=lo, max=hi)
 
-    if req.variables.dong and meta.dong_categories:
-        opts.dongs = meta.dong_categories
+    if req.variables.dong and (meta.dong_categories or meta.dong_options):
+        opts.dongs = [o.dong for o in meta.dong_options] if meta.dong_options else meta.dong_categories
         opts.dong_reference = meta.dong_reference
+        opts.dong_options = list(meta.dong_options)
 
     if req.variables.housing_subtype and meta.housing_subtype_categories:
         opts.housing_subtypes = meta.housing_subtype_categories
@@ -647,7 +740,14 @@ def _inputs_to_x_row(
 
     if req.variables.dong and inputs.dong is not None:
         dong = str(inputs.dong).strip()
-        if meta.dong_reference and dong != meta.dong_reference:
+        if meta.dong_fe_map:
+            bk = str(inputs.building_key or meta.building_reference_key or "")
+            ref = meta.dong_reference_by_building.get(bk)
+            if dong != ref:
+                col = meta.dong_fe_map.get((bk, dong))
+                if col and col in row:
+                    row[col] = 1.0
+        elif meta.dong_reference and dong != meta.dong_reference:
             col = f"dong_{dong}"
             if col in row:
                 row[col] = 1.0
