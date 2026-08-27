@@ -7,6 +7,7 @@ import type { AssetType } from "../types";
 import { buildAnalysisPeriodParams } from "../utils/analysisPeriod";
 import { RESIDENTIAL_FLOOR_INDEX_HELP } from "../utils/residentialAnalysisHelp";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
+import FloorIndexMethodGuide from "./FloorIndexMethodGuide";
 import { type FloorMode } from "./BuildingRegressionPanel";
 
 const FLOOR_MODE_OPTIONS: { value: FloorMode; label: string }[] = [
@@ -42,6 +43,7 @@ const CONTROL_LABELS: Record<string, string> = {
   relative_floor: "상대 층구간",
   contract_period: "거래시점(반기)",
   building_fixed_effects: "단지 고정효과",
+  shop_floor: "층 구간(1층 기준)",
 };
 
 function dimensionColumnLabel(dim: string) {
@@ -156,7 +158,11 @@ export default function FloorIndexPanel({
             층·동·면적 효용지수
             <StatsGlossaryHelp termId="floor_utility_index" size="xs" />
           </p>
-          <AnalysisHelpPanel explain={RESIDENTIAL_FLOOR_INDEX_HELP} />
+          <AnalysisHelpPanel
+            explain={RESIDENTIAL_FLOOR_INDEX_HELP}
+            buttonLabel="방법"
+            title="층·면적 효용지수 산출 방법"
+          />
         </div>
         <p className="text-xs text-slate-400 text-center py-4">효용지수 계산 중…</p>
       </div>
@@ -173,7 +179,11 @@ export default function FloorIndexPanel({
             층·동·면적 효용지수
             <StatsGlossaryHelp termId="floor_utility_index" size="xs" />
           </p>
-          <AnalysisHelpPanel explain={RESIDENTIAL_FLOOR_INDEX_HELP} />
+          <AnalysisHelpPanel
+            explain={RESIDENTIAL_FLOOR_INDEX_HELP}
+            buttonLabel="방법"
+            title="층·면적 효용지수 산출 방법"
+          />
         </div>
         <p className="text-xs text-amber-700 text-center py-4">{String(msg)}</p>
       </div>
@@ -194,6 +204,7 @@ export default function FloorIndexPanel({
     warnings,
     explain,
     diagnostics,
+    floor_mode: dataFloorMode,
   } = q.data;
 
   const isRegression = method === "regression_semilog";
@@ -205,8 +216,19 @@ export default function FloorIndexPanel({
           층·동·면적 효용지수
           <StatsGlossaryHelp termId="floor_utility_index" size="xs" />
         </p>
-        <AnalysisHelpPanel explain={explain ?? RESIDENTIAL_FLOOR_INDEX_HELP} />
+        <AnalysisHelpPanel
+          explain={explain ?? RESIDENTIAL_FLOOR_INDEX_HELP}
+          buttonLabel="방법"
+          title="층·면적 효용지수 산출 방법"
+        />
       </div>
+
+      <FloorIndexMethodGuide
+        dimension={dimension}
+        floorMode={dataFloorMode ?? (dimension === "floor" ? floorMode : undefined)}
+        isRegression={isRegression}
+        referenceLabel={reference_floor}
+      />
 
       {useCohort && (
         <p className="text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900 rounded px-2 py-1.5">
@@ -266,8 +288,13 @@ export default function FloorIndexPanel({
           </span>
         ) : (
           <span className="text-slate-500 dark:text-slate-400">
-            단지 중앙값 <strong className="text-slate-700 dark:text-slate-200">{fmt(baseline_median)}</strong> 만원/㎡
-            = 100 · n={n_total.toLocaleString("ko-KR")}
+            기준 {reference_floor ?? "구간"}만 100 · 나머지 지수 없음 · n={n_total.toLocaleString("ko-KR")}
+            {baseline_median != null && (
+              <>
+                {" "}
+                · 중앙값 {fmt(baseline_median)} 만원/㎡
+              </>
+            )}
           </span>
         )}
       </div>

@@ -13,6 +13,20 @@ type ChipOption = {
   min_reliable_count?: number;
 };
 
+/**
+ * 청주·수원 등(구→동): 목록에 구가 둘 이상일 때만 `서원구 · 개신동`.
+ * 구를 이미 골랐거나 대구처럼 상위가 없으면 동 이름만.
+ */
+export function formatLeafChipLabel(
+  o: { name: string; parent?: string | null },
+  options: { parent?: string | null }[],
+): string {
+  if (!o.parent) return o.name;
+  const parentCount = new Set(options.map((x) => x.parent).filter(Boolean)).size;
+  if (parentCount > 1) return `${o.parent} · ${o.name}`;
+  return o.name;
+}
+
 function isDisabled(o: ChipOption): boolean {
   return Boolean(o.disabled);
 }

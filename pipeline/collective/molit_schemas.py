@@ -90,7 +90,8 @@ OFFICETEL = MolitSchema(
     },
 )
 
-# 분양입주권 CSV: 15열 — col7·8 매수자/매도자, 해제 col12
+# 분양입주권 CSV: 15열 — col7·8 매수자/매도자, 해제 col12, 거래유형 col13, 중개사소재지 col14.
+# 거래유형이 비어 있으면 적재·표시 모두 공란. col14(주소)는 deal_type으로 쓰지 않는다.
 PRESALE = MolitSchema(
     asset_type="presale",
     building_name_field="building_name",
@@ -109,7 +110,7 @@ PRESALE = MolitSchema(
         "housing_subtype": 11,
         "buyer_type": 7,
         "seller_type": 8,
-        "deal_type": 14,
+        "deal_type": 13,
     },
 )
 

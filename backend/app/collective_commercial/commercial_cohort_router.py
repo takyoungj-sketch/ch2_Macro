@@ -304,13 +304,16 @@ def cohort_floor_index(body: CommercialCohortAnalysisRequest, db: Session = Depe
         dimension=body.dimension,
         floor_mode=body.variables.floor_mode if body.dimension == "floor" else "relative",
     )
-    explain = AnalysisExplain(**build_residential_floor_index_explain(raw=raw, asset_type=str(asset)))
+    explain = AnalysisExplain(**build_residential_floor_index_explain(
+        raw=raw, asset_type=str(asset), scope_kind="cluster"
+    ))
     return CommercialCohortFloorIndexResponse(
         cluster_keys=body.cluster_keys,
         cohort_clusters=summaries,
         asset_type=str(asset),
         dimension=raw["dimension"],
         method=raw.get("method"),
+        floor_mode=raw.get("floor_mode"),
         reference_floor=raw.get("reference_floor"),
         controls=raw.get("controls") or [],
         n_total=raw["n_total"],

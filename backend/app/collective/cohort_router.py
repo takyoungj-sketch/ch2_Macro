@@ -338,6 +338,7 @@ def cohort_floor_index(body: CohortAnalysisRequest, db: Session = Depends(get_co
         asset_type=str(asset),
         dimension=raw["dimension"],
         method=raw.get("method"),
+        floor_mode=raw.get("floor_mode"),
         reference_floor=raw.get("reference_floor"),
         controls=raw.get("controls") or [],
         n_total=raw["n_total"],

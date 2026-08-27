@@ -293,6 +293,7 @@ class FloorIndexResponse(BaseModel):
     asset_type: str
     dimension: str
     method: Optional[str] = None
+    floor_mode: Optional[str] = None
     reference_floor: Optional[str] = None
     controls: list[str] = Field(default_factory=list)
     n_total: int
@@ -473,6 +474,7 @@ class CohortFloorIndexResponse(BaseModel):
     asset_type: str
     dimension: str
     method: Optional[str] = None
+    floor_mode: Optional[str] = None
     reference_floor: Optional[str] = None
     controls: list[str] = Field(default_factory=list)
     n_total: int

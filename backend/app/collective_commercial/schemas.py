@@ -240,7 +240,7 @@ class CommercialFloorIndexResponse(BaseModel):
     display_label: str
     asset_type: str
     dimension: str
-    method: str = "regression_semilog"
+    method: Optional[str] = None
     floor_mode: Optional[str] = None
     reference_floor: Optional[str] = None
     regression_reference_floor: Optional[str] = None
@@ -326,6 +326,7 @@ class CommercialCohortFloorIndexResponse(BaseModel):
     asset_type: str
     dimension: str
     method: Optional[str] = None
+    floor_mode: Optional[str] = None
     reference_floor: Optional[str] = None
     controls: list[str] = Field(default_factory=list)
     n_total: int

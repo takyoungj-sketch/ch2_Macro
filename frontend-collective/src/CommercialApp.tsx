@@ -22,6 +22,7 @@ import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
 import StatsWindowToggle, { normalizeStatsWindowYears, type StatsWindowYears } from "./components/StatsWindowToggle";
 import RegionChipPanel, {
   LEFT_REGION_MULTI_SELECT,
+  formatLeafChipLabel,
   toggleChipMulti,
   toggleChipSingle,
 } from "./components/RegionChipPanel";
@@ -461,7 +462,7 @@ export default function CommercialApp() {
                 }
                 selected={leafList}
                 options={visibleLeafOptions}
-                formatLabel={(o) => (o.parent ? `${o.parent} · ${o.name}` : o.name)}
+                formatLabel={(o) => formatLeafChipLabel(o, visibleLeafOptions)}
                 multiSelect={LEFT_REGION_MULTI_SELECT}
                 onToggle={(name) => {
                   setAnalysisUnits([]);

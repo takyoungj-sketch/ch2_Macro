@@ -6,6 +6,9 @@ import { fetchCommercialFloorIndex, runCommercialCohortFloorIndex } from "../api
 import type { CommercialAssetType } from "../types";
 import type { CommercialModalScope } from "./CommercialClusterDetailModal";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
+import FloorIndexMethodGuide from "./FloorIndexMethodGuide";
+import { COLLECTIVE_EXPERIMENT_MODE } from "../api/client";
+import { CLUSTER_FLOOR_INDEX_HELP } from "../utils/residentialAnalysisHelp";
 
 function fmt(v: number | null | undefined) {
   if (v == null) return "—";
@@ -22,8 +25,12 @@ type Dimension = "floor" | "area";
 
 const CONTROL_LABELS: Record<string, string> = {
   ln_gross_area: "ln(연면적)",
+  ln_exclusive_area: "ln(연면적)",
   building_age: "연식",
   building_use: "건축물용도",
+  shop_floor: "층 구간(1층 기준)",
+  relative_floor: "상대 층구간",
+  contract_period: "거래시점(반기)",
 };
 
 function regionParams(scope: CommercialModalScope) {
@@ -44,17 +51,17 @@ function regionParams(scope: CommercialModalScope) {
 function dimensionHelpText(dim: string, isRegression: boolean, isFactory: boolean) {
   if (dim === "area") {
     if (isFactory) {
-      return "연면적을 100/300/1000㎡ 구간으로 묶어, 도로(cluster) 중앙값 대비 지수(%)를 표시합니다.";
+      return "공장 면적대는 연면적 100/300/1000㎡입니다. 기준은 표본 중앙값 칸=100.";
     }
-    return "연면적을 30㎡ 구간으로 묶어, 도로(cluster) 중앙값 대비 지수(%)를 표시합니다.";
+    return "상가 면적형은 연면적 30㎡ 반올림입니다. 기준은 표본 중앙값 칸=100.";
   }
   if (isRegression) {
-    return "반로그 OLS로 ln(㎡당단가)를 추정합니다. 1층=100% 기준, 연면적·연식·건축물용도를 통제한 뒤 exp(γ)로 지수를 산출합니다.";
+    return "상가·공장 층은 지하·1·2·저·중·고·초고층입니다. 1층=100. 지하를 중층부에 넣지 않습니다.";
   }
   if (isFactory) {
-    return "층별 평균 ㎡당가를 cluster 중앙값 대비 지수(%)로 표시합니다. 층 정보 sparse — 참고용, 면적대 탭을 우선하세요.";
+    return "층 정보가 적으면 지수가 비거나 참고용입니다. 면적대 탭을 우선하세요.";
   }
-  return "층별 평균 ㎡당가를 도로(cluster) 중앙값 대비 지수(%)로 표시합니다.";
+  return "1층=100 기준 층 구간 상대 지수입니다.";
 }
 
 export default function CommercialFloorIndexPanel({
@@ -83,8 +90,8 @@ export default function CommercialFloorIndexPanel({
   const keys = useCohort ? cohortKeys! : [clusterKey];
   const [dimension, setDimension] = useState<Dimension>(isFactory ? "area" : "floor");
   const floorIndexEligible = count >= 50;
-  const experiment = !floorIndexEligible;
-  const gateTip = `${isFactory ? "면적대·층" : "층·면적"} 효용지수: 선택 구간 거래 ${count}건 (최소 50건 권장)`;
+  const experiment = COLLECTIVE_EXPERIMENT_MODE;
+  const gateTip = `${isFactory ? "면적대·층" : "층·면적"} 효용지수: 선택 구간 거래 ${count}건 (최소 50건 필요)`;
 
   const dimensionOptions: { id: Dimension; label: string }[] = isFactory
     ? [
@@ -97,7 +104,16 @@ export default function CommercialFloorIndexPanel({
       ];
 
   const q = useQuery({
-    queryKey: ["comm-floor-index", useCohort ? keys.join("|") : clusterKey, scope, dimension, experiment, isFactory, cohortRunId],
+    queryKey: [
+      "comm-floor-index",
+      useCohort ? keys.join("|") : clusterKey,
+      scope,
+      dimension,
+      experiment,
+      isFactory,
+      cohortRunId,
+      analysisPeriod,
+    ],
     queryFn: () =>
       useCohort
         ? runCommercialCohortFloorIndex({
@@ -120,8 +136,27 @@ export default function CommercialFloorIndexPanel({
             dimension,
             experiment,
           }),
-    enabled: !useCohort || cohortRunId > 0,
+    enabled: (!useCohort || cohortRunId > 0) && (floorIndexEligible || experiment),
   });
+
+  if (!useCohort && !floorIndexEligible && !experiment) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-[11px] font-medium text-slate-700 inline-flex items-center gap-1">
+            {isFactory ? "면적대·층 효용지수" : "층·면적 효용지수"}
+            <StatsGlossaryHelp termId="floor_utility_index" size="xs" />
+          </p>
+          <AnalysisHelpPanel
+            explain={CLUSTER_FLOOR_INDEX_HELP}
+            buttonLabel="방법"
+            title="층·면적 효용지수 산출 방법"
+          />
+        </div>
+        <p className="text-xs text-amber-700 text-center py-6">{gateTip}</p>
+      </div>
+    );
+  }
 
   if (useCohort && cohortRunId === 0) {
     return (
@@ -131,12 +166,44 @@ export default function CommercialFloorIndexPanel({
     );
   }
 
-  if (q.isLoading) return <p className="text-xs text-slate-400 text-center py-6">효용지수 계산 중…</p>;
+  if (q.isLoading) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-[11px] font-medium text-slate-700 inline-flex items-center gap-1">
+            {isFactory ? "면적대·층 효용지수" : "층·면적 효용지수"}
+            <StatsGlossaryHelp termId="floor_utility_index" size="xs" />
+          </p>
+          <AnalysisHelpPanel
+            explain={CLUSTER_FLOOR_INDEX_HELP}
+            buttonLabel="방법"
+            title="층·면적 효용지수 산출 방법"
+          />
+        </div>
+        <p className="text-xs text-slate-400 text-center py-4">효용지수 계산 중…</p>
+      </div>
+    );
+  }
   if (q.isError) {
     const msg =
       (q.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
       "효용지수를 불러오지 못했습니다.";
-    return <p className="text-xs text-amber-700 text-center py-6">{String(msg)}</p>;
+    return (
+      <div className="space-y-3">
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-[11px] font-medium text-slate-700 inline-flex items-center gap-1">
+            {isFactory ? "면적대·층 효용지수" : "층·면적 효용지수"}
+            <StatsGlossaryHelp termId="floor_utility_index" size="xs" />
+          </p>
+          <AnalysisHelpPanel
+            explain={CLUSTER_FLOOR_INDEX_HELP}
+            buttonLabel="방법"
+            title="층·면적 효용지수 산출 방법"
+          />
+        </div>
+        <p className="text-xs text-amber-700 text-center py-4">{String(msg)}</p>
+      </div>
+    );
   }
   if (!q.data) return null;
 
@@ -154,8 +221,7 @@ export default function CommercialFloorIndexPanel({
     explain,
   } = q.data;
 
-  const isRegression = method === "regression_semilog" && dim === "floor";
-  const baselineLabel = isFactory ? "cluster 중앙값" : "도로 중앙값";
+  const isRegression = method === "regression_semilog";
 
   return (
     <div className="space-y-3">
@@ -164,12 +230,25 @@ export default function CommercialFloorIndexPanel({
           {isFactory ? "면적대·층 효용지수" : "층·면적 효용지수"}
           <StatsGlossaryHelp termId="floor_utility_index" size="xs" />
         </p>
-        <AnalysisHelpPanel explain={explain} />
+        <AnalysisHelpPanel
+          explain={explain ?? CLUSTER_FLOOR_INDEX_HELP}
+          buttonLabel="방법"
+          title="층·면적 효용지수 산출 방법"
+        />
       </div>
+
+      <FloorIndexMethodGuide
+        dimension={dimension}
+        floorMode="shop"
+        isCluster
+        isFactory={isFactory}
+        isRegression={isRegression}
+        referenceLabel={reference_floor}
+      />
 
       {!floorIndexEligible && (
         <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded px-2 py-1.5">
-          {gateTip} — 참고용으로 조회 중입니다.
+          {gateTip} — 실험 모드로 조회 중입니다.
         </p>
       )}
 
@@ -212,8 +291,8 @@ export default function CommercialFloorIndexPanel({
           </span>
         ) : (
           <span className="text-slate-500">
-            {baselineLabel} <strong className="text-slate-700">{fmt(baseline_median)}</strong> 만원/㎡ = 100 · n=
-            {n_total.toLocaleString("ko-KR")}
+            기준 {reference_floor ?? "구간"}만 100 · 나머지 지수 없음 · n={n_total.toLocaleString("ko-KR")}
+            {baseline_median != null && <> · 중앙값 {fmt(baseline_median)} 만원/㎡</>}
           </span>
         )}
       </div>

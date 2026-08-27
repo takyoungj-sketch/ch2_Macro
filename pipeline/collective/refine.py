@@ -120,6 +120,9 @@ def _extract_raw(df: pd.DataFrame, asset_type: AssetType) -> pd.DataFrame:
     for col in ("buyer_type", "seller_type", "deal_type"):
         if col in out.columns:
             out[col] = out[col].astype(str).str.strip().replace({"nan": None, "-": None, "None": None})
+    if "deal_type" in out.columns:
+        known = {"중개거래", "직거래"}
+        out["deal_type"] = out["deal_type"].where(out["deal_type"].isin(known), other=None)
     if "dong" not in out.columns:
         out["dong"] = None
     if asset_type == "rowhouse" and "land_area" in out.columns:

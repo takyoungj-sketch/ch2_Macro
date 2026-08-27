@@ -108,6 +108,7 @@ export interface FloorIndexResponse {
   asset_type: string;
   dimension: string;
   method?: string;
+  floor_mode?: string | null;
   reference_floor?: string | null;
   controls?: string[];
   n_total: number;

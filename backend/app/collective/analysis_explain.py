@@ -15,6 +15,7 @@ CONTROL_LABELS: dict[str, str] = {
     "building_age": "연식(경과연수)",
     "building_use": "건축물용도 더미",
     "relative_floor": "상대 층구간 더미",
+    "shop_floor": "층 구간 더미(1층 기준)",
     "contract_period": "거래시점(반기) 더미",
     "building_fixed_effects": "단지 고정효과",
 }
@@ -44,47 +45,104 @@ def _controls_human(codes: list[str]) -> list[str]:
     return [CONTROL_LABELS.get(c, c) for c in codes]
 
 
-def _preset_answers_residential_floor_index() -> list[dict[str, str]]:
+RESIDENTIAL_AREA_GROUP_LINES = [
+    "전용면적을 30㎡ 단위로 반올림합니다. 예: 84㎡ → 90㎡ 면적형.",
+    "기준(100%)은 이 단지(또는 코호트) 전용면적 중앙값이 속한 면적형입니다.",
+    "면적형 탭에서는 ln(전용면적)을 통제에서 빼, 면적 효과를 구간 더미로만 한 번 추정합니다.",
+]
+
+SHOP_AREA_GROUP_LINES = [
+    "연면적을 30㎡ 단위로 반올림한 면적형입니다.",
+    "기준(100%)은 이 도로 cluster 연면적 중앙값이 속한 면적형입니다.",
+    "면적형 탭에서는 ln(연면적)을 통제에서 빼, 규모 효과를 구간 더미로만 추정합니다.",
+]
+
+FACTORY_AREA_GROUP_LINES = [
+    "연면적 100㎡ 미만 · 100~300㎡ · 300~1000㎡ · 1000㎡ 이상.",
+    "기준(100%)은 이 cluster 연면적 중앙값이 속한 면적대입니다.",
+    "공장 규모 프리미엄을 보는 탭입니다. 층 탭은 참고용입니다.",
+]
+
+
+def _preset_answers_residential_floor_index(
+    *,
+    dim: str,
+    asset_type: str,
+    is_cluster: bool,
+    floor_mode: str,
+) -> list[dict[str, str]]:
+    area_word = "연면적" if is_cluster else "전용면적"
+    scope = "도로(또는 상품군) cluster" if is_cluster else "단지(또는 코호트)"
+    floor_how = (
+        "상가는 실무 층 구간입니다. B2 이하=지하심층, B1=지하1층, 1층=화면 기준 100%, 2층, 3~4층=저층, "
+        "5~9층=중층, 10~19층=고층, 20층+=초고층. 지하를 주거처럼 ‘중층부’로 넣지 않습니다."
+        if floor_mode == "shop" or asset_type in ("collective_shop", "collective_factory")
+        else (
+            "주거는 단지 최고층 대비 상대 구간이 기본입니다. 1층, 저층부(최고층의 30% 이하, 1·최상 제외), "
+            "중층부(30~70%), 고층부(70% 초과·최상 제외), 최상층(최고층). "
+            "개별 층 더미·절대 구간(1–5 / 6–15 / 16+)으로 바꿀 수 있습니다."
+        )
+    )
+    area_how = (
+        "집합공장은 연면적 100 / 300 / 1000㎡ 네 구간입니다. 30㎡ 눈금이 아닙니다."
+        if asset_type == "collective_factory"
+        else f"{area_word}을 30㎡로 반올림한 면적형입니다. 기준은 표본 {area_word} 중앙값이 속한 칸입니다."
+    )
     return [
         {
-            "id": "formula",
-            "question": "공식이 어떻게 만들어졌나요?",
+            "id": "how_floor",
+            "question": "층별 지수는 어떻게 나오나요?",
             "answer": (
-                "종속변수 ln(㎡당단가)에 대해 HC3 강건표준오차 OLS 회귀를 추정합니다. "
-                "통제변수는 ln(전용면적), 연식, 거래시점(반기) 더미, (동·면적·권리 탭일 때) 상대 층구간 더미, "
-                "(코호트일 때) 단지 고정효과이며, 여기에 분석 차원(층·동·면적형·권리) 더미를 더합니다. "
-                "단, 면적형 탭은 면적을 더미로 직접 추정하므로 ln(전용면적)을 통제에서 빼 이중 반영을 막습니다. "
-                "거래시점(반기)을 통제해 선택 기간의 시장 추세가 지수에 섞이지 않게 합니다. "
-                "층 탭은 회귀 omitted category를 거래 최다 구간으로 두고, 화면 지수는 1층=100%로 환산합니다."
+                f"{scope} 실거래의 ln(㎡당단가)를 회귀합니다. {floor_how} "
+                f"비슷한 {area_word}·연식·거래시점(반기)을 통제한 뒤, 층 구간 더미 계수 γ를 exp(γ)×100으로 바꿉니다. "
+                "회귀가 식별하는 기준은 거래가 가장 많은 층 구간이고, 화면에는 1층=100으로 다시 맞춥니다. "
+                "표의 ‘평균’은 그 층 원자료 평균이라 지수와 방향이 다를 수 있습니다."
+            ),
+        },
+        {
+            "id": "how_area",
+            "question": "면적별 지수는 어떻게 나오나요?",
+            "answer": (
+                f"{area_how} "
+                f"층 탭과 같은 반로그 회귀이지만, 면적을 연속 변수로 또 넣지 않습니다(이중 반영 방지). "
+                "대신 면적 구간 더미만으로 규모 프리미엄을 봅니다. 층·연식·시점은 통제합니다. "
+                "기준 면적형=100%. 작은 면적이 기준보다 비싸면 지수가 100을 넘을 수 있습니다."
+            ),
+        },
+        {
+            "id": "mean_vs_index",
+            "question": "평균(만원/㎡)과 지수가 다른 이유는요?",
+            "answer": (
+                "평균은 그 칸 거래의 통제 없는 산술평균입니다. "
+                "지수는 ‘비슷한 면적·연식·거래시점’을 맞춘 뒤의 상대 %입니다. "
+                "고층 거래가 최근 상승기에 몰리면 평균은 높아 보여도, 시점을 통제하면 지수는 낮을 수 있습니다."
             ),
         },
         {
             "id": "interpret",
-            "question": "지수를 어떻게 해석하나요?",
+            "question": "100%를 어떻게 읽나요?",
             "answer": (
-                "기준 구간 지수는 100%입니다. "
-                "예: 고층부 112% → 전용면적·연식 등을 통제한 조건에서 기준(1층) 대비 "
-                "㎡당 단가가 약 12% 높은 패턴입니다(반로그 모델). "
-                "95% CI·p-value로 불확실성과 유의성을 함께 보세요."
-            ),
-        },
-        {
-            "id": "limits",
-            "question": "한계점은 무엇인가요?",
-            "answer": (
-                "① 단지(또는 코호트) 내 거래만 사용합니다. "
-                "② 층·동·면적·권리 결측 거래는 해당 탭에서 제외될 수 있습니다. "
-                "③ 구간별 n<5 → 해당 더미·지수 미산출, n<15 → 참고용 표시. "
-                "④ 인과가 아니라 선택 기간·단지 내 상관 패턴입니다."
+                "기준 구간이 100%입니다. 고층부 112%면, 통제한 조건에서 기준(보통 1층 또는 중앙 면적형)보다 "
+                "㎡당 단가가 약 12% 높은 패턴입니다. 95% 구간과 p값을 같이 보세요. "
+                "p는 회귀가 생략한 구간(거래 최다) 대비이며, 화면 1층=100 환산 후에도 그대로입니다."
             ),
         },
         {
             "id": "vs_regression_tab",
             "question": "회귀 분석 탭과 무엇이 다른가요?",
             "answer": (
-                "효용지수 탭은 ln(㎡당단가) 반로그 spec이 고정되어 "
-                "한 차원(층·동·면적·권리)의 상대 지수만 산출합니다. "
-                "회귀 탭은 금액(만원) 수준 OLS로 변수·층 형식을 바꿀 수 있는 탐색용입니다."
+                "이 탭은 ln(㎡당단가) 반로그로 층 또는 면적 한 차원의 상대 지수만 고정 spec으로 냅니다. "
+                "회귀 탭은 금액(만원) OLS이고 변수를 바꿀 수 있는 탐색용입니다. 숫자가 달라도 오류가 아닙니다."
+            ),
+        },
+        {
+            "id": "limits",
+            "question": "언제 숫자를 의심해야 하나요?",
+            "answer": (
+                "칸 n<15는 참고용입니다. 구간 n<5는 지수를 안 냅니다. "
+                "전체 n<50이면 탭을 막거나 실험 모드만 허용합니다. "
+                "회귀를 못 맞추면 기준 칸만 100이고 나머지 지수는 비웁니다. "
+                "단지·도로·기간 안의 패턴이지 적정가나 인과가 아닙니다."
             ),
         },
     ]
@@ -323,7 +381,7 @@ def _floor_index_hints(raw: dict, *, asset_type: str = "collective_shop") -> lis
 
     if raw.get("method") == "regression_semilog":
         if n_reg:
-            line = f"이번 회귀 표본 n={n_reg}건(층·연면적 유효 거래), 전체 n={n_total}건"
+            line = f"이번 회귀 표본 n={n_reg}건(층·면적 유효 거래), 전체 n={n_total}건"
             if r2 is not None:
                 line += f", R²={round(float(r2), 3)}"
             hints.append(line + "입니다.")
@@ -331,7 +389,7 @@ def _floor_index_hints(raw: dict, *, asset_type: str = "collective_shop") -> lis
             hints.append(f"회귀 omitted category는 {reg_ref}(표본 최다)이며, 화면 지수는 {ref}=100% 기준입니다.")
         for cell in raw.get("cells") or []:
             if cell.get("is_reference"):
-                hints.append(f"{ref} 지수 100% — 기준 구간(더미 미포함).")
+                hints.append(f"{ref} 지수 100% — 화면 기준 구간.")
                 continue
             idx = cell.get("index")
             if idx is None:
@@ -345,7 +403,7 @@ def _floor_index_hints(raw: dict, *, asset_type: str = "collective_shop") -> lis
             direction = "낮" if float(idx) < 100 else "높"
             hint = (
                 f"{label} 지수 {idx}%: {ref} 대비 "
-                f"{'면적·연식·용도' if asset_type in ('collective_shop', 'collective_factory') else '전용면적·연식'} 통제 후 "
+                f"{'면적·연식·시점' if asset_type in ('collective_shop', 'collective_factory') else '전용면적·연식·시점'} 통제 후 "
                 f"약 {diff}% {direction}은 수준"
             )
             p = cell.get("p_value")
@@ -355,6 +413,11 @@ def _floor_index_hints(raw: dict, *, asset_type: str = "collective_shop") -> lis
                 else:
                     hint += f" (p={p}, 유의하지 않음 — 참고용)"
             hints.append(hint + ".")
+    elif raw.get("method") == "reference_only":
+        hints.append(
+            f"회귀를 맞출 표본이 부족해 기준({ref})만 100으로 두고 나머지 지수는 비웠습니다. "
+            f"평균 열은 원자료입니다 (n={n_total})."
+        )
     else:
         baseline = raw.get("baseline_median")
         scope = _cluster_scope_label(asset_type)
@@ -525,73 +588,105 @@ def build_residential_floor_index_explain(
     controls_h = _controls_human(controls)
     ref = raw.get("reference_floor") or "1층"
     dim_title = _dimension_title(dim)
-    floor_lines = RESIDENTIAL_FLOOR_GROUP_LINES if dim == "floor" else []
+    is_cluster = scope_kind == "cluster"
+    is_factory = asset_type == "collective_factory"
+    shop_floor = floor_mode == "shop" or asset_type in ("collective_shop", "collective_factory")
+    if dim == "floor":
+        floor_lines = FLOOR_GROUP_LINES if shop_floor else RESIDENTIAL_FLOOR_GROUP_LINES
+    elif dim == "area":
+        if is_factory:
+            floor_lines = FACTORY_AREA_GROUP_LINES
+        elif is_cluster:
+            floor_lines = SHOP_AREA_GROUP_LINES
+        else:
+            floor_lines = RESIDENTIAL_AREA_GROUP_LINES
+    else:
+        floor_lines = []
     floor_mode_label = {
+        "shop": "상가·공장 실무 층 (지하·1·2·저·중·고·초고층)",
         "relative": "상대 층 (1·저·중·고·최상)",
         "dummy": "개별 층 더미",
         "grouped": "절대 구간 (1–5 / 6–15 / 16+)",
     }.get(floor_mode, floor_mode)
-    is_cluster = scope_kind == "cluster"
-    scope_label = "도로 cluster" if is_cluster else "단지(또는 코호트)"
+    scope_label = "상품군 cluster" if is_factory else ("도로 cluster" if is_cluster else "단지(또는 코호트)")
     area_label = "연면적" if is_cluster else "전용면적"
     spec_prefix = "cluster" if is_cluster else "residential"
+    method = raw.get("method") or "regression_semilog"
+    if dim == "floor":
+        how_summary = (
+            f"{scope_label} 실거래 ln(㎡당단가) 반로그 OLS(HC3)입니다. "
+            f"층 구간은 {floor_mode_label}이고, 화면 기준은 {ref}=100%입니다. "
+            f"{area_label}·연식·거래시점을 통제한 뒤 층만 비교합니다."
+        )
+    elif dim == "area":
+        how_summary = (
+            f"{scope_label} 실거래 ln(㎡당단가) 반로그 OLS(HC3)입니다. "
+            + (
+                "면적대는 연면적 100/300/1000㎡ 네 구간입니다. "
+                if is_factory
+                else f"{area_label}을 30㎡로 반올림한 면적형입니다. "
+            )
+            + f"기준은 {ref}=100% (표본 {area_label} 중앙값 칸)입니다. 면적은 구간 더미로만 넣고 연속 ln(면적)은 빼습니다."
+        )
+    else:
+        how_summary = (
+            f"{scope_label} 실거래 ln(㎡당단가) 반로그 OLS(HC3)로 "
+            f"{ref}=100% 기준 {dim_title} 상대 지수를 냅니다."
+        )
+    if method == "reference_only":
+        how_summary += " 이번 결과는 회귀 표본이 부족해 기준 칸만 100이고 나머지 지수는 비었습니다."
 
     return {
-        "spec_id": f"{spec_prefix}_floor_index_regression_{dim}_v1",
-        "spec_version": "1",
-        "title": f"회귀 기반 {dim_title} 효용지수",
-        "summary": (
-            f"{scope_label} 거래에 반로그 OLS(HC3)를 적용해, "
-            f"{ref}=100% 기준 {dim_title} 상대 ㎡당 단가 지수를 산출합니다."
-            + (f" (층 형식: {floor_mode_label})" if dim == "floor" else "")
-            + (f" ({area_label}·연식·거래시점 통제)" if is_cluster else "")
-        ),
+        "spec_id": f"{spec_prefix}_floor_index_regression_{dim}_v2",
+        "spec_version": "2",
+        "title": f"{dim_title} 효용지수 — 이렇게 계산합니다",
+        "summary": how_summary,
         "formula": (
             "ln(㎡당단가) = β₀"
+            + (" + ln(연면적)" if "ln_gross_area" in controls else "")
             + (" + ln(전용면적)" if "ln_exclusive_area" in controls else "")
             + (" + 연식" if "building_age" in controls else "")
             + (" + 거래시점(반기) 더미" if "contract_period" in controls else "")
             + (" + 상대층 더미" if "relative_floor" in controls else "")
+            + (" + 층구간 더미" if "shop_floor" in controls else "")
+            + (" + 용도 더미" if "building_use" in controls else "")
             + (" + 단지 FE" if "building_fixed_effects" in controls else "")
             + " + Σ γ_g·D_g"
         ),
         "index_rule": (
-            "회귀: 지수_g = exp(γ_g) × 100 (omitted = 거래 최다 층). "
-            "화면(층 탭): 1층=100%로 환산"
+            "지수_g = exp(γ_g) × 100. 회귀 omitted = 거래 최다 구간. 층 탭 화면은 1층=100%로 환산."
             if dim == "floor"
-            else f"지수_g = exp(γ_g) × 100  ({ref} = 100%, 더미 없음)"
+            else f"지수_g = exp(γ_g) × 100. 기준 {ref}=100% (면적 구간 더미, ln(면적) 미포함)."
         ),
         "reference": ref,
         "floor_groups": floor_lines,
         "controls": controls_h,
         "interpretation": [
-            (
-                f"지수는 「{', '.join(controls_h)}」을(를) 통제한 뒤의 {dim_title} 간 상대 수준입니다."
-                if controls_h
-                else f"지수는 {dim_title} 간 상대 ㎡당 단가 수준입니다."
-            ),
-            f"100%보다 낮을수록 기준({ref}) 대비 ㎡당 단가가 낮은 패턴입니다.",
-            "95% CI는 HC3 강건표준오차 기반 구간 추정치입니다.",
+            "표의 ‘평균’은 그 칸 원자료 평균, ‘지수’는 면적·연식·시점을 맞춘 뒤의 상대 %입니다. 둘이 어긋날 수 있습니다.",
+            f"100보다 낮으면 기준({ref})보다 ㎡당 단가가 낮은 패턴입니다.",
+            "95% CI는 HC3 강건표준오차입니다. p는 회귀가 생략한 구간(거래 최다) 대비입니다.",
         ],
         "limitations": (
             [
-                "도로 cluster·기간 내 패턴 설명 — 인과 추론 불가",
-                "동일 도로 내 건물·max층·입지 차이 잔존",
-                "구간별 n<5 → 해당 더미·지수 미산출",
-                "셀 n<15 → 참고용 표시",
-                "층·면적 결측 거래는 해당 탭에서 제외될 수 있음",
-                "회귀 기준=거래 최다 층·구간, 화면(층 탭)=1층=100% 환산",
+                "도로·상품군 cluster·기간 안 패턴 — 인과·적정가 아님",
+                "같은 도로 안 건물·입지 차이는 남습니다",
+                "구간 n<5 → 지수 없음, 칸 n<15 → 참고용",
+                "층·면적 없는 거래는 해당 탭에서 빠질 수 있습니다",
             ]
             if is_cluster
             else [
-                "단지·기간 내 패턴 설명 — 인과 추론 불가",
-                "구간별 n<5 → 해당 더미·지수 미산출",
-                "셀 n<15 → 참고용 표시",
-                "층·동·면적·권리 결측 거래는 해당 탭에서 제외될 수 있음",
+                "단지·기간 안 패턴 — 인과·적정가 아님",
+                "구간 n<5 → 지수 없음, 칸 n<15 → 참고용",
+                "층·동·면적·권리 없는 거래는 해당 탭에서 빠질 수 있습니다",
             ]
         ),
         "interpretation_hints": _floor_index_hints(raw, asset_type=asset_type),
-        "presets": _preset_answers_residential_floor_index(),
+        "presets": _preset_answers_residential_floor_index(
+            dim=dim,
+            asset_type=asset_type,
+            is_cluster=is_cluster,
+            floor_mode=floor_mode,
+        ),
     }
 
 

@@ -5,6 +5,14 @@ export function formatCollectiveTxCell(value: string | null | undefined): string
   return t || "—";
 }
 
+const MOLIT_DEAL_TYPES = new Set(["중개거래", "직거래"]);
+
+/** 거래유형: 중개거래·직거래만. 주소·빈값은 공란. */
+export function formatCollectiveDealType(value: string | null | undefined): string {
+  const t = (value ?? "").trim();
+  return MOLIT_DEAL_TYPES.has(t) ? t : "—";
+}
+
 export function formatCollectiveTxContractDate(r: CollectiveTransactionRow): string {
   if (r.contract_date) return r.contract_date;
   if (r.contract_year == null) return "—";
@@ -71,7 +79,7 @@ export function collectiveTxSortValue(
     case "seller_type":
       return r.seller_type?.trim() || "—";
     case "deal_type":
-      return r.deal_type?.trim() || "—";
+      return formatCollectiveDealType(r.deal_type);
     default:
       return null;
   }

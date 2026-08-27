@@ -46,7 +46,7 @@ type PanelCoords = {
 function computePanelCoords(anchor: HTMLElement): PanelCoords {
   const rect = anchor.getBoundingClientRect();
   const width = Math.min(PANEL_MAX_W, window.innerWidth - VIEWPORT_PAD * 2);
-  const maxHeight = Math.min(420, window.innerHeight * 0.55);
+  const maxHeight = Math.min(520, window.innerHeight * 0.62);
 
   let left = rect.right - width;
   left = Math.max(VIEWPORT_PAD, Math.min(left, window.innerWidth - width - VIEWPORT_PAD));
@@ -64,10 +64,12 @@ export default function AnalysisHelpPanel({
   explain,
   className,
   title = "분석 방법·해석·한계 설명",
+  buttonLabel = "?",
 }: {
   explain: AnalysisExplain | null | undefined;
   className?: string;
   title?: string;
+  buttonLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [activePreset, setActivePreset] = useState<string | null>(null);
@@ -250,7 +252,10 @@ export default function AnalysisHelpPanel({
         aria-expanded={open}
         aria-label={title}
         className={clsx(
-          "inline-flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-bold transition-colors shrink-0",
+          "inline-flex items-center justify-center rounded-full border font-bold transition-colors shrink-0",
+          buttonLabel === "?"
+            ? "h-6 w-6 text-[11px]"
+            : "h-6 px-2 w-auto text-[10px] tracking-tight",
           open
             ? "border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-500 dark:bg-indigo-950/50 dark:text-indigo-200"
             : "border-slate-200 bg-white text-slate-500 hover:border-indigo-200 hover:text-indigo-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-indigo-400 dark:hover:text-indigo-300",
@@ -261,7 +266,7 @@ export default function AnalysisHelpPanel({
           setOpen((v) => !v);
         }}
       >
-        ?
+        {buttonLabel}
       </button>
       {panel ? createPortal(panel, document.body) : null}
     </>

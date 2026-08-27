@@ -4,6 +4,7 @@ import type { AssetType, CollectiveTransactionRow } from "../types";
 import {
   collectiveTxDongCell,
   collectiveTxSortValue,
+  formatCollectiveDealType,
   formatCollectiveTxCell,
   formatCollectiveTxContractDate,
   type CollectiveTxSortDir,
@@ -518,7 +519,7 @@ export default function CollectiveTransactionTable({
                     {formatCollectiveTxCell(t.seller_type)}
                   </td>
                   <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 whitespace-nowrap">
-                    {formatCollectiveTxCell(t.deal_type)}
+                    {formatCollectiveDealType(t.deal_type)}
                   </td>
                 </tr>
               ))

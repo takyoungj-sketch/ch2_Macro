@@ -69,12 +69,24 @@ def tx_list_select_sql(conn: Connection) -> str:
     return f"SELECT {', '.join(cols)} FROM collective_transactions"
 
 
+MOLIT_DEAL_TYPES = frozenset({"중개거래", "직거래"})
+
+
+def public_deal_type(_asset_type: str | None, deal_type: Any) -> str | None:
+    """원장에 중개거래·직거래가 있으면 그대로, 없거나 주소 등이 들어 있으면 공란."""
+    raw = str(deal_type).strip() if deal_type is not None else ""
+    if raw in MOLIT_DEAL_TYPES:
+        return raw
+    return None
+
+
 def tx_row_dict(row: Any) -> dict[str, Any]:
     """SQLAlchemy Row → CollectiveTransactionRow kwargs (contract_date ISO)."""
     d = dict(row)
     cd = d.get("contract_date")
     if cd is not None and hasattr(cd, "isoformat"):
         d["contract_date"] = cd.isoformat()
+    d["deal_type"] = public_deal_type(d.get("asset_type"), d.get("deal_type"))
     return d
 
 
@@ -168,7 +180,7 @@ def transactions_csv_bytes(
             "" if r.get("unit_price") is None else r["unit_price"],
             r.get("buyer_type") or "",
             r.get("seller_type") or "",
-            r.get("deal_type") or "",
+            public_deal_type(asset_type, r.get("deal_type")) or "",
         ]
         writer.writerow(line)
     return buf.getvalue().encode("utf-8")

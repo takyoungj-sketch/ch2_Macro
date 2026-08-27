@@ -999,6 +999,7 @@ def building_floor_index(
         asset_type=asset_type,
         dimension=raw["dimension"],
         method=raw.get("method"),
+        floor_mode=raw.get("floor_mode"),
         reference_floor=raw.get("reference_floor"),
         controls=raw.get("controls") or [],
         n_total=raw["n_total"],
