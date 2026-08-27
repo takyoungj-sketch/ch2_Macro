@@ -2,6 +2,7 @@
 
 > **상태:** 제품 정책 SSOT (D-043, 2026-08-16)  
 > **결정:** [`DECISIONS.md`](./DECISIONS.md) D-043 · 카드 [`lab/decisions/D-043.json`](./lab/decisions/D-043.json)  
+> **가격·결제 채널:** [`CH2_SUBSCRIPTION.md`](./CH2_SUBSCRIPTION.md) (D-052). 이 문서는 **무엇을 잠글지**만 정한다.  
 > **대체:** D-010의 「무료 = 법정동/리 단건만」은 **폐기**. 복수지역 한도(유료 시군구 미만 최대 10 등)는 유료 쪽에 유지.
 
 결제·로그인이 없어도 **권한 규칙은 먼저 고정**한다. UI만 숨기고 API가 열려 있으면 안 된다.
@@ -68,4 +69,5 @@
 | [`CH2_CONSTITUTION.md`](./CH2_CONSTITUTION.md) | 제품 정체성. 무료/유료가 다른 통계를 만들지 않음 |
 | [`CH2_EXPLAIN_CONSTITUTION.md`](./CH2_EXPLAIN_CONSTITUTION.md) | `?` 는 티어와 무관하게 1차 설명 |
 | [`DECISIONS.md`](./DECISIONS.md) D-010 | 유료 복수지역 한도(시군구 미만 10 등). 무료 열은 D-043이 대체 |
+| [`CH2_SUBSCRIPTION.md`](./CH2_SUBSCRIPTION.md) D-052 | 월 1만/1.3만, 웹 토스·카카오페이 수단·계좌이체, Play 단독 |
 | [`MAP_REGION_HUB_DESIGN.md`](./MAP_REGION_HUB_DESIGN.md) | 지도 인접 추가는 유료 깊이. 토지 전용 무료 탭은 없음 |

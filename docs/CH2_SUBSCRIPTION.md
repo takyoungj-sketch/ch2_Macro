@@ -1,0 +1,7 @@
+# CH2 구독 — 포인터
+
+> **본문 SSOT:** [`SUBSCRIPTION_POLICY.md`](./SUBSCRIPTION_POLICY.md)  
+> **결정:** [D-052](./DECISIONS.md) · 카드 [`lab/decisions/D-052.json`](./lab/decisions/D-052.json)  
+> **기능 게이트:** [`CH2_ENTITLEMENT.md`](./CH2_ENTITLEMENT.md) (D-043)
+
+구현·코드 SKU는 아직 구 요금표일 수 있다. 결제 스프린트는 SSOT를 따른다.
