@@ -59,7 +59,7 @@ def _log_google_authorize_url(url: str, params: dict[str, str]) -> None:
 
 def _log_google_http_response(label: str, response: httpx.Response) -> None:
     body = response.text or ""
-    logged_body = _redact_oauth_body(body) if label == "token" else body[:2000]
+    logged_body = _redact_oauth_body(body) if "token" in label else body[:2000]
     _log.info(
         "Google OAuth %s endpoint | status=%s body=%s",
         label,
@@ -90,9 +90,73 @@ def _set_session_cookie(response: Response, token: str) -> None:
     )
 
 
+def _nickname_from_seed(seed: str) -> str:
+    local = "".join(ch for ch in (seed or "user") if ch.isalnum() or ch in "._-")[:40] or "user"
+    return f"{local}{secrets.randbelow(9000) + 1000}"
+
+
 def _nickname_from_email(email: str) -> str:
     local = email.split("@")[0][:40] or "user"
-    return f"{local}{secrets.randbelow(9000) + 1000}"
+    return _nickname_from_seed(local)
+
+
+def _oauth_providers() -> dict[str, bool]:
+    kakao_id = (settings.kakao_client_id or settings.kakao_rest_api_key or "").strip()
+    return {
+        "google": bool(settings.google_client_id),
+        "kakao": bool(kakao_id and (settings.kakao_client_secret or "").strip()),
+    }
+
+
+def _kakao_client_id() -> str:
+    return (settings.kakao_client_id or settings.kakao_rest_api_key or "").strip()
+
+
+def _finish_web_or_app_login(*, user_id: int, email: str, nickname: str, role: str, state: str) -> Response:
+    jwt_token = create_access_token(user_id=user_id, email=email, nickname=nickname, role=role)
+    if (state or "").startswith("app:"):
+        app_redirect = state[4:]
+        sep = "&" if "?" in app_redirect else "?"
+        target = f"{app_redirect}{sep}token={urllib.parse.quote(jwt_token)}"
+        return Response(status_code=307, headers={"Location": target})
+    response = Response(status_code=307, headers={"Location": state or DEFAULT_NEXT})
+    _set_session_cookie(response, jwt_token)
+    return response
+
+
+def _get_or_create_oauth_user(
+    db: Session,
+    *,
+    provider: str,
+    sub: str,
+    email: str,
+    nickname_seed: str,
+) -> tuple[int, str, str]:
+    row = db.execute(
+        text("SELECT id, nickname, role FROM users WHERE provider=:p AND provider_sub=:sub"),
+        {"p": provider, "sub": sub},
+    ).mappings().first()
+    if row:
+        return int(row["id"]), str(row["nickname"]), str(row["role"])
+    nickname = _nickname_from_seed(nickname_seed)
+    for _ in range(5):
+        try:
+            ins = db.execute(
+                text(
+                    """
+                    INSERT INTO users (email, provider, provider_sub, nickname, role)
+                    VALUES (:email, :p, :sub, :nick, 'member')
+                    RETURNING id, nickname, role
+                    """
+                ),
+                {"email": email, "p": provider, "sub": sub, "nick": nickname},
+            ).mappings().first()
+            db.commit()
+            return int(ins["id"]), str(ins["nickname"]), str(ins["role"])
+        except Exception:
+            db.rollback()
+            nickname = _nickname_from_seed(nickname_seed)
+    raise HTTPException(500, "회원 생성 실패")
 
 
 @router.get("/google/login")
@@ -157,49 +221,96 @@ def google_callback(
     if not sub or not email:
         raise HTTPException(400, "Google 프로필 불완전")
 
-    row = db.execute(
-        text("SELECT id, email, nickname, role FROM users WHERE provider='google' AND provider_sub=:sub"),
-        {"sub": sub},
-    ).mappings().first()
+    user_id, nickname, role = _get_or_create_oauth_user(
+        db, provider="google", sub=sub, email=email, nickname_seed=email.split("@")[0]
+    )
+    return _finish_web_or_app_login(
+        user_id=user_id, email=email, nickname=nickname, role=role, state=state
+    )
 
-    if row:
-        user_id = int(row["id"])
-        nickname = str(row["nickname"])
-        role = str(row["role"])
-    else:
-        nickname = _nickname_from_email(email)
-        for _ in range(5):
-            try:
-                ins = db.execute(
-                    text(
-                        """
-                        INSERT INTO users (email, provider, provider_sub, nickname, role)
-                        VALUES (:email, 'google', :sub, :nick, 'member')
-                        RETURNING id, nickname, role
-                        """
-                    ),
-                    {"email": email, "sub": sub, "nick": nickname},
-                ).mappings().first()
-                db.commit()
-                user_id = int(ins["id"])
-                nickname = str(ins["nickname"])
-                role = str(ins["role"])
-                break
-            except Exception:
-                db.rollback()
-                nickname = _nickname_from_email(email)
-        else:
-            raise HTTPException(500, "회원 생성 실패")
 
-    jwt_token = create_access_token(user_id=user_id, email=email, nickname=nickname, role=role)
-    if (state or "").startswith("app:"):
-        app_redirect = state[4:]
-        sep = "&" if "?" in app_redirect else "?"
-        target = f"{app_redirect}{sep}token={urllib.parse.quote(jwt_token)}"
-        return Response(status_code=307, headers={"Location": target})
-    response = Response(status_code=307, headers={"Location": state or "/board/"})
-    _set_session_cookie(response, jwt_token)
-    return response
+KAKAO_AUTH_URL = "https://kauth.kakao.com/oauth/authorize"
+KAKAO_TOKEN_URL = "https://kauth.kakao.com/oauth/token"
+KAKAO_USERINFO_URL = "https://kapi.kakao.com/v2/user/me"
+
+
+@router.get("/kakao/login")
+def kakao_login(_request: Request, next: str | None = None, state: str | None = None):
+    client_id = _kakao_client_id()
+    if not client_id or not (settings.kakao_client_secret or "").strip():
+        raise HTTPException(503, "카카오 로그인을 준비 중입니다.")
+    dest = safe_oauth_next(next or state)
+    params = {
+        "client_id": client_id,
+        "redirect_uri": settings.kakao_oauth_redirect_uri,
+        "response_type": "code",
+        "state": dest,
+    }
+    url = f"{KAKAO_AUTH_URL}?{urllib.parse.urlencode(params)}"
+    _log.info(
+        "Kakao OAuth authorize redirect | client_id_suffix=%s redirect_uri=%s",
+        client_id[-6:] if len(client_id) >= 6 else "short",
+        settings.kakao_oauth_redirect_uri,
+    )
+    return Response(status_code=307, headers={"Location": url})
+
+
+@router.get("/kakao/callback")
+def kakao_callback(
+    code: str | None = None,
+    state: str = DEFAULT_NEXT,
+    error: str | None = None,
+    db: Session = Depends(get_platform_db),
+):
+    if error or not code:
+        raise HTTPException(400, "카카오 로그인이 취소되었거나 실패했습니다.")
+    state = safe_oauth_next(state)
+    client_id = _kakao_client_id()
+    secret = (settings.kakao_client_secret or "").strip()
+    if not client_id or not secret:
+        raise HTTPException(503, "카카오 로그인을 준비 중입니다.")
+    with httpx.Client(timeout=30.0) as client:
+        token_res = client.post(
+            KAKAO_TOKEN_URL,
+            data={
+                "grant_type": "authorization_code",
+                "client_id": client_id,
+                "client_secret": secret,
+                "redirect_uri": settings.kakao_oauth_redirect_uri,
+                "code": code,
+            },
+        )
+        _log_google_http_response("kakao-token", token_res)
+        if token_res.status_code >= 400:
+            raise HTTPException(400, "카카오 토큰 교환 실패")
+        tokens = token_res.json()
+        access = tokens.get("access_token")
+        if not access:
+            raise HTTPException(400, "카카오 access_token 없음")
+        user_res = client.get(
+            KAKAO_USERINFO_URL,
+            headers={"Authorization": f"Bearer {access}"},
+        )
+        _log_google_http_response("kakao-userinfo", user_res)
+        if user_res.status_code >= 400:
+            raise HTTPException(400, "카카오 사용자 정보 조회 실패")
+        profile = user_res.json()
+
+    sub = str(profile.get("id") or "")
+    account = profile.get("kakao_account") or {}
+    props = profile.get("properties") or {}
+    kakao_email = str(account.get("email") or "").strip().lower()
+    nick_profile = (account.get("profile") or {}).get("nickname") or props.get("nickname") or ""
+    if not sub:
+        raise HTTPException(400, "카카오 프로필 불완전")
+    email = kakao_email or f"kakao-{sub}@noreply.ch2data.com"
+    seed = str(nick_profile or f"kakao{sub}")
+    user_id, nickname, role = _get_or_create_oauth_user(
+        db, provider="kakao", sub=sub, email=email, nickname_seed=seed
+    )
+    return _finish_web_or_app_login(
+        user_id=user_id, email=email, nickname=nickname, role=role, state=state
+    )
 
 
 @router.get("/me")
@@ -252,6 +363,13 @@ def logout(response: Response):
 
 @router.get("/status")
 def auth_status(user: Annotated[CurrentUser | None, Depends(get_optional_user)]):
+    providers = _oauth_providers()
     if user is None:
-        return {"logged_in": False}
-    return {"logged_in": True, "id": user.id, "nickname": user.nickname, "role": user.role}
+        return {"logged_in": False, "providers": providers}
+    return {
+        "logged_in": True,
+        "id": user.id,
+        "nickname": user.nickname,
+        "role": user.role,
+        "providers": providers,
+    }

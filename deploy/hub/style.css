@@ -17,7 +17,65 @@ body {
 .page {
   max-width: 960px;
   margin: 0 auto;
-  padding: 3rem 1.25rem 2rem;
+  padding: 1.5rem 1.25rem 2rem;
+}
+
+.site-auth {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 2.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.login-actions,
+.user-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.user-actions__name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.btn-auth {
+  appearance: none;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-auth:hover,
+.btn-auth:focus-visible {
+  border-color: #93c5fd;
+}
+
+.btn-auth--kakao {
+  color: #191919;
+  background: #fee500;
+  border-color: #fee500;
+}
+
+.btn-auth--kakao:hover,
+.btn-auth--kakao:focus-visible {
+  background: #f5dc00;
+  border-color: #e6cf00;
+}
+
+.btn-auth--ghost {
+  background: transparent;
+  font-weight: 500;
+  color: #475569;
 }
 
 .hero {
@@ -48,6 +106,12 @@ body {
   font-size: 1rem;
   line-height: 1.6;
   color: #475569;
+}
+
+.hero__lead[lang="en"] {
+  max-width: 36rem;
+  font-style: italic;
+  letter-spacing: 0.02em;
 }
 
 .grid {

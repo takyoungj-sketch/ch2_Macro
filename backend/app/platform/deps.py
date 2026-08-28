@@ -19,6 +19,7 @@ class CurrentUser:
     email: str
     nickname: str
     role: str
+    provider: str = "google"
 
 
 def get_optional_user(
@@ -38,7 +39,7 @@ def get_optional_user(
         return None
     user_id = int(payload["sub"])
     row = db.execute(
-        text("SELECT id, email, nickname, role FROM users WHERE id = :id"),
+        text("SELECT id, email, nickname, role, provider FROM users WHERE id = :id"),
         {"id": user_id},
     ).mappings().first()
     if not row:
@@ -48,6 +49,7 @@ def get_optional_user(
         email=str(row["email"]),
         nickname=str(row["nickname"]),
         role=str(row["role"]),
+        provider=str(row["provider"] or "google"),
     )
 
 

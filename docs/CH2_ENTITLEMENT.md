@@ -69,5 +69,5 @@
 | [`CH2_CONSTITUTION.md`](./CH2_CONSTITUTION.md) | 제품 정체성. 무료/유료가 다른 통계를 만들지 않음 |
 | [`CH2_EXPLAIN_CONSTITUTION.md`](./CH2_EXPLAIN_CONSTITUTION.md) | `?` 는 티어와 무관하게 1차 설명 |
 | [`DECISIONS.md`](./DECISIONS.md) D-010 | 유료 복수지역 한도(시군구 미만 10 등). 무료 열은 D-043이 대체 |
-| [`CH2_SUBSCRIPTION.md`](./CH2_SUBSCRIPTION.md) D-052 | 월 1만/1.3만, 웹 토스·카카오페이 수단·계좌이체, Play 단독 |
+| [`CH2_SUBSCRIPTION.md`](./CH2_SUBSCRIPTION.md) D-052 | 월 1만/1.5만, 웹 토스·카카오페이 수단·계좌이체, Play 단독, 체험 1개월 |
 | [`MAP_REGION_HUB_DESIGN.md`](./MAP_REGION_HUB_DESIGN.md) | 지도 인접 추가는 유료 깊이. 토지 전용 무료 탭은 없음 |

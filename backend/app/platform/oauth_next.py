@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-DEFAULT_NEXT = "/board/"
+DEFAULT_NEXT = "/"
 _APP_SCHEMES = ("ch2fieldnote://",)
 
 

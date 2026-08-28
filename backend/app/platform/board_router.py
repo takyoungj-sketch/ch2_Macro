@@ -51,7 +51,7 @@ def _post_row_to_api(row: dict, nickname: str, *, include_body: bool) -> dict:
         "title": row["title"],
         "author_name": nickname,
         "author_id": int(row["user_id"]),
-        "auth_provider": "google",
+        "auth_provider": str(row.get("provider") or "google"),
         "status": row["status"],
         "is_pinned": bool(row.get("is_pinned")),
         "comment_count": int(row["comment_count"]) if row.get("comment_count") is not None else 0,
@@ -66,7 +66,7 @@ def _post_row_to_api(row: dict, nickname: str, *, include_body: bool) -> dict:
 
 
 _LIST_SELECT = """
-            SELECT p.*, u.nickname,
+            SELECT p.*, u.nickname, u.provider,
                    (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) AS comment_count
             FROM posts p
             JOIN users u ON u.id = p.user_id
@@ -75,17 +75,22 @@ _LIST_SELECT = """
 
 @router.get("/meta")
 def board_meta():
-    oauth_ready = bool(settings.google_client_id)
+    kakao_on = bool(
+        (settings.kakao_client_id or settings.kakao_rest_api_key or "").strip()
+        and (settings.kakao_client_secret or "").strip()
+    )
+    google_on = bool(settings.google_client_id)
+    providers = [p for p, on in (("google", google_on), ("kakao", kakao_on)) if on]
     return {
         "products": sorted(PRODUCTS),
         "categories": sorted(CATEGORIES),
         "statuses": sorted(STATUSES),
         "auth": {
-            "enabled": oauth_ready,
-            "providers": ["google"] if oauth_ready else [],
+            "enabled": bool(providers),
+            "providers": providers,
             "note": (
-                "Google 로그인으로 글·댓글을 작성할 수 있습니다."
-                if oauth_ready
+                "Google 또는 Kakao 로그인으로 글·댓글을 작성할 수 있습니다."
+                if providers
                 else "소셜 로그인 설정 중입니다."
             ),
         },
@@ -187,7 +192,7 @@ def get_post(post_id: int, db: Session = Depends(get_platform_db)):
     comments = db.execute(
         text(
             """
-            SELECT c.*, u.nickname
+            SELECT c.*, u.nickname, u.provider
             FROM comments c
             JOIN users u ON u.id = c.user_id
             WHERE c.post_id = :pid
@@ -203,7 +208,7 @@ def get_post(post_id: int, db: Session = Depends(get_platform_db)):
             "body": c["body"],
             "author_name": str(c["nickname"]),
             "author_id": int(c["user_id"]),
-            "auth_provider": "google",
+            "auth_provider": str(c.get("provider") or "google"),
             "created_at": c["created_at"].isoformat().replace("+00:00", "Z"),
         }
         for c in comments
@@ -241,6 +246,7 @@ def create_post(
     db.commit()
     payload = dict(row)
     payload["comment_count"] = 0
+    payload["provider"] = user.provider
     return {"post": _post_row_to_api(payload, user.nickname, include_body=True)}
 
 
@@ -276,7 +282,7 @@ def create_comment(
             "body": row["body"],
             "author_name": user.nickname,
             "author_id": user.id,
-            "auth_provider": "google",
+            "auth_provider": user.provider,
             "created_at": row["created_at"].isoformat().replace("+00:00", "Z"),
         }
     }

@@ -4,6 +4,7 @@ from app.platform.oauth_next import DEFAULT_NEXT, safe_oauth_next
 
 
 def test_safe_oauth_next_relative():
+    assert safe_oauth_next("/") == "/"
     assert safe_oauth_next("/board/") == "/board/"
     assert safe_oauth_next("/subscribe/") == "/subscribe/"
 

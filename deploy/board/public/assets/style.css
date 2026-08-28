@@ -316,6 +316,25 @@ body {
   border-color: #93c5fd;
 }
 
+.btn--kakao {
+  color: #191919;
+  background: #fee500;
+  border-color: #fee500;
+}
+
+.btn--kakao:hover,
+.btn--kakao:focus-visible {
+  border-color: #e6cf00;
+  background: #f5dc00;
+}
+
+.login-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
 .panel {
   margin-bottom: 1rem;
   padding: 1.25rem;

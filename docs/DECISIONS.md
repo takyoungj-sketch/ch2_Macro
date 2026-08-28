@@ -54,7 +54,7 @@
 | D-049 | 2026-08-23 | **복합 지분거래.** 목록은 전체 표시+지분 열. 건수·금액 합은 포함. 단가·회귀·예측은 기본 제외, 분석 체크 시 포함. 단독은 원천 칸 없음. 토지 앱 기본값은 유지. 복원 매칭에서 지분은 확정하지 않음. SSOT: [`BUILT_SHARE_TRANSACTION_POLICY.md`](BUILT_SHARE_TRANSACTION_POLICY.md). 카드: [`lab/decisions/D-049.json`](lab/decisions/D-049.json). |
 | D-050 | 2026-08-25 | **축약대장 축 승격 · 복합 SQL 이관 게이트 2019+ 75.0%.** 노출은 D-051. 카드: [`lab/decisions/D-050.json`](lab/decisions/D-050.json). |
 | D-051 | 2026-08-26 | **속성 보강 노출.** 동의 4문장 · 표시=필터 · 원장 `zone_type` 미덮기 · 목록 배지. 운영 promote는 P5. 카드: [`lab/decisions/D-051.json`](lab/decisions/D-051.json). |
-| D-052 | 2026-08-27 | **CH2 월 구독.** 1개 1만 · 둘 다 1.3만(둘째 +3천). **연간 없음.** 복수 제품은 웹 한 결제(토스+카카오페이 수단, 계좌이체). Play는 FieldNote 단독만. 동시 과금 금지. SSOT: [`SUBSCRIPTION_POLICY.md`](SUBSCRIPTION_POLICY.md). 카드: [`lab/decisions/D-052.json`](lab/decisions/D-052.json). |
+| D-052 | 2026-08-27 | **CH2 월 구독.** 1개 1만 · 둘 다 **1.5만**(2026-08-28 개정, 기존 1.3만). 연간 없음. 무료체험 1개월. 복수 제품은 웹 한 결제. Play는 FN 단독. **추가는 즉시(이번 기간 요금 그대로), 해지·탈퇴는 만료일까지·환불 없음.** SSOT: [`SUBSCRIPTION_POLICY.md`](SUBSCRIPTION_POLICY.md). |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 
@@ -271,12 +271,12 @@
 - 집합 목록: K-apt / 표제부 / 미연결 / 조인주의. 「경고 없음」이 아니다.
 - 운영 promote는 P5. 카드: [`lab/decisions/D-051.json`](lab/decisions/D-051.json)
 
-## D-052 CH2 월 구독 — 1만/1.3만 · 연간 없음 · 웹+계좌이체
+## D-052 CH2 월 구독 — 1만/1.5만 · 연간 없음 · 웹+계좌이체
 
-- 월만. 1개 10,000원, 둘 다 13,000원. Viewer·FieldNote PC GUI는 무료.
+- 월만. 1개 10,000원, 둘 다 15,000원. Viewer는 무료. 최초 1개월 무료 체험.
 - 복수 제품은 **웹 구독 한 줄**. Play는 FieldNote 단독만. Play+웹 동시 과금 금지.
-- 웹 수단: 토스페이먼츠(카드, **카카오페이는 토스 결제 수단**), **운영자 계좌이체**(입금 확인 후 권한).
-- 해지는 만료일까지 사용. 부분 환불 없음. 둘째 추가는 즉시 사용, 다음 청구 1.3만.
+- 웹 수단: 토스페이먼츠(카드, **카카오페이는 토스 결제 수단**), **운영자 계좌이체**(입금 확인 후 권한). 토스 심사 후 실결제.
+- 해지·탈퇴는 만료일까지 사용. 부분 환불 없음. **제품 추가는 즉시, 이번 기간 요금은 그대로.** 다음 결제일 1.5만.
 - SSOT [`SUBSCRIPTION_POLICY.md`](SUBSCRIPTION_POLICY.md). 카드 [`lab/decisions/D-052.json`](lab/decisions/D-052.json).
 
 

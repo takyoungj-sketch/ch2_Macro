@@ -22,7 +22,10 @@
           <p class="topbar__lead">질문 · 오류 보고 · 기능 개선 건의</p>
         </div>
         <div class="auth-bar" id="auth-bar">
-          <button type="button" class="btn btn--ghost btn--sm" id="login-btn">Google 로그인</button>
+          <div class="login-actions" id="login-actions">
+            <button type="button" class="btn btn--ghost btn--sm" id="login-btn">Google로 계속하기</button>
+            <button type="button" class="btn btn--kakao btn--sm" id="kakao-login-btn" hidden>Kakao로 계속하기</button>
+          </div>
           <div class="user-menu" id="user-menu" hidden>
             <button type="button" class="user-menu__btn" id="user-menu-btn" aria-expanded="false" aria-haspopup="true">
               <span id="auth-user"></span>

@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Macro 구독 | CH2 DATA</title>
-    <meta name="description" content="CH2 Macro 웹 구독 — 토스페이먼츠 연동" />
+    <title>웹 구독 | CH2 DATA</title>
+    <meta name="description" content="CH2 웹 구독 — 카카오페이·카드 (토스페이먼츠)" />
     <link rel="stylesheet" href="/style.css" />
     <style>
       .plan-grid { display: grid; gap: 1rem; margin-top: 1rem; }
@@ -17,19 +17,28 @@
       }
       .plan-card h3 { margin: 0 0 0.5rem; }
       .plan-card p { margin: 0 0 1rem; color: #475569; }
-      .plan-card button {
+      .pay-actions { display: grid; gap: 0.5rem; }
+      .btn-pay {
         width: 100%;
         padding: 0.65rem 1rem;
         border: 0;
         border-radius: 8px;
-        background: #2563eb;
-        color: #fff;
+        font: inherit;
         font-weight: 600;
         cursor: pointer;
       }
-      .plan-card button:disabled {
+      .btn-pay:disabled {
         background: #94a3b8;
+        color: #fff;
         cursor: not-allowed;
+      }
+      .btn-pay--kakao {
+        background: #fee500;
+        color: #191919;
+      }
+      .btn-pay--card {
+        background: #2563eb;
+        color: #fff;
       }
       .auth-row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin: 1rem 0; }
       .auth-row button {
@@ -47,21 +56,22 @@
   <body>
     <div class="page">
       <header class="hero hero--document">
-        <p class="hero__eyebrow">CH2 Macro Pro</p>
+        <p class="hero__eyebrow">CH2 Pro</p>
         <h1 class="hero__title">웹 구독</h1>
-        <p class="hero__lead">Google 로그인 후 Macro Pro · 번들 플랜을 결제할 수 있습니다.</p>
+        <p class="hero__lead">로그인 후 카카오페이 또는 카드로 결제할 수 있습니다.</p>
       </header>
 
       <main class="policy-card">
         <div class="auth-row">
-          <button type="button" id="login-btn">Google 로그인</button>
+          <button type="button" id="login-btn">Google로 계속하기</button>
+          <button type="button" id="kakao-login-btn" hidden>Kakao로 계속하기</button>
           <button type="button" id="logout-btn" hidden>로그아웃</button>
           <span id="status">로그인이 필요합니다.</span>
         </div>
         <div class="plan-grid" id="plan-grid"></div>
         <p id="pay-note"></p>
         <p class="policy-meta" style="margin-top: 1.5rem">
-          결제는 토스페이먼츠에서 처리합니다. 결제 완료 전에는 권한이 생기지 않습니다.
+          카카오페이는 토스페이먼츠 상점의 결제 수단입니다. 결제 완료 전에는 권한이 생기지 않습니다.
           자세한 내용은 <a href="/subscription/">구독 정책</a>을 참고하세요.
         </p>
       </main>
@@ -84,7 +94,9 @@
         const res = await fetch(`${AUTH}/status`, { credentials: "include" });
         const data = await res.json();
         me = data.logged_in ? data : null;
+        const kakaoOn = Boolean(data.providers && data.providers.kakao);
         document.getElementById("login-btn").hidden = Boolean(me);
+        document.getElementById("kakao-login-btn").hidden = Boolean(me) || !kakaoOn;
         document.getElementById("logout-btn").hidden = !me;
         document.getElementById("status").textContent = me
           ? `${me.nickname}님 — Macro Pro 구독`
@@ -97,8 +109,8 @@
         tossEnabled = Boolean(data.enabled);
         const note = document.getElementById("pay-note");
         note.textContent = tossEnabled
-          ? "결제 버튼을 누르면 토스페이먼츠 결제창이 열립니다."
-          : "토스 상점 키가 아직 서버에 없습니다. 요금표는 볼 수 있고, 실결제는 키 등록 후 활성화됩니다.";
+          ? "카카오페이 버튼을 누르면 카카오페이 결제창이 열립니다. 카드는 토스 결제창입니다."
+          : "토스 상점 키가 아직 서버에 없습니다. 카카오페이·카드 모두 키 등록 후 활성화됩니다.";
       }
 
       async function loadPlans() {
@@ -106,23 +118,34 @@
         const data = await res.json();
         const grid = document.getElementById("plan-grid");
         grid.replaceChildren();
-        for (const plan of data.plans.filter((p) => p.product === "macro" || p.product === "bundle")) {
+        for (const plan of data.plans.filter((p) => (p.product === "macro" || p.product === "bundle") && p.interval === "month")) {
           const card = document.createElement("div");
           card.className = "plan-card";
-          card.innerHTML = `<h3>${plan.product === "bundle" ? "번들" : "Macro"} ${plan.interval === "year" ? "연간" : "월간"}</h3><p>${plan.price.toLocaleString()}원</p>`;
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.textContent = tossEnabled ? "토스로 결제" : "결제 준비 중";
-          btn.disabled = !tossEnabled;
-          btn.addEventListener("click", () => checkout(plan));
-          card.appendChild(btn);
+          const title = plan.product === "bundle" ? "Macro + FieldNote" : "Macro";
+          card.innerHTML = `<h3>${title} 월간</h3><p>${plan.price.toLocaleString()}원</p>`;
+          const actions = document.createElement("div");
+          actions.className = "pay-actions";
+          const kakaoBtn = document.createElement("button");
+          kakaoBtn.type = "button";
+          kakaoBtn.className = "btn-pay btn-pay--kakao";
+          kakaoBtn.textContent = tossEnabled ? "카카오페이" : "카카오페이 준비 중";
+          kakaoBtn.disabled = !tossEnabled;
+          kakaoBtn.addEventListener("click", () => checkout(plan, "kakaopay"));
+          const cardBtn = document.createElement("button");
+          cardBtn.type = "button";
+          cardBtn.className = "btn-pay btn-pay--card";
+          cardBtn.textContent = tossEnabled ? "카드" : "카드 준비 중";
+          cardBtn.disabled = !tossEnabled;
+          cardBtn.addEventListener("click", () => checkout(plan, "card"));
+          actions.append(kakaoBtn, cardBtn);
+          card.appendChild(actions);
           grid.appendChild(card);
         }
       }
 
-      async function checkout(plan) {
+      async function checkout(plan, payMethod) {
         if (!me) {
-          alert("Google 로그인 후 진행해 주세요.");
+          alert("로그인 후 진행해 주세요.");
           return;
         }
         const res = await fetch(`${BILLING}/toss/prepare`, {
@@ -139,19 +162,35 @@
         const prepared = await res.json();
         const tossPayments = TossPayments(prepared.clientKey);
         const payment = tossPayments.payment({ customerKey: prepared.customerKey });
-        await payment.requestPayment({
+        const request = {
           method: "CARD",
           amount: { currency: "KRW", value: prepared.amount },
           orderId: prepared.orderId,
           orderName: prepared.orderName,
           successUrl: `${window.location.origin}/subscribe/success.html`,
           failUrl: `${window.location.origin}/subscribe/fail.html`,
-        });
+        };
+        if (payMethod === "kakaopay") {
+          request.flowMode = "DIRECT";
+          request.easyPay = "KAKAOPAY";
+        }
+        try {
+          await payment.requestPayment(request);
+        } catch (err) {
+          if (err && err.code === "USER_CANCEL") {
+            return;
+          }
+          alert((err && err.message) || "결제를 시작하지 못했습니다.");
+        }
       }
 
       document.getElementById("login-btn").addEventListener("click", () => {
         const next = encodeURIComponent("/subscribe/");
         location.href = `${AUTH}/google/login?next=${next}`;
+      });
+      document.getElementById("kakao-login-btn").addEventListener("click", () => {
+        const next = encodeURIComponent("/subscribe/");
+        location.href = `${AUTH}/kakao/login?next=${next}`;
       });
       document.getElementById("logout-btn").addEventListener("click", async () => {
         await fetch(`${AUTH}/logout`, { method: "POST", credentials: "include" });

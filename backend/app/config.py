@@ -105,6 +105,13 @@ class Settings(BaseSettings):
         default="https://ch2data.com/api/auth/google/callback",
         validation_alias="GOOGLE_OAUTH_REDIRECT_URI",
     )
+    #: 카카오 로그인 (지오코딩 KAKAO_REST_API_KEY와 별도. REST 키와 값이 같아도 됨)
+    kakao_client_id: str = Field(default="", validation_alias="KAKAO_CLIENT_ID")
+    kakao_client_secret: str = Field(default="", validation_alias="KAKAO_CLIENT_SECRET")
+    kakao_oauth_redirect_uri: str = Field(
+        default="https://ch2data.com/api/auth/kakao/callback",
+        validation_alias="KAKAO_OAUTH_REDIRECT_URI",
+    )
     platform_cookie_domain: str = Field(default=".ch2data.com", validation_alias="PLATFORM_COOKIE_DOMAIN")
     platform_cookie_secure: bool = Field(default=True, validation_alias="PLATFORM_COOKIE_SECURE")
     fieldnote_ai_monthly_quota: int = Field(default=50, validation_alias="FIELDNOTE_AI_MONTHLY_QUOTA")

@@ -9,10 +9,20 @@
   </head>
   <body>
     <div class="page">
+      <div class="site-auth" id="site-auth">
+        <div class="login-actions" id="login-actions">
+          <button type="button" class="btn-auth btn-auth--google" id="google-login">Google로 계속하기</button>
+          <button type="button" class="btn-auth btn-auth--kakao" id="kakao-login" hidden>Kakao로 계속하기</button>
+        </div>
+        <div class="user-actions" id="user-actions" hidden>
+          <span class="user-actions__name" id="auth-name"></span>
+          <button type="button" class="btn-auth btn-auth--ghost" id="logout-btn">로그아웃</button>
+        </div>
+      </div>
       <header class="hero">
         <p class="hero__eyebrow">부동산 데이터 플랫폼</p>
         <h1 class="hero__title">CH2 DATA</h1>
-        <p class="hero__lead">토지·개발 데이터를 분석하고 기록하는 CH2 서비스 모음</p>
+        <p class="hero__lead" lang="en">Calculators with Human Hearts</p>
       </header>
 
       <main class="grid" aria-label="CH2 서비스">
@@ -57,5 +67,6 @@
         <p>© CH2 DATA</p>
       </footer>
     </div>
+    <script src="/hub-auth.js" defer></script>
   </body>
 </html>

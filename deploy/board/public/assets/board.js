@@ -33,6 +33,7 @@ const state = {
     nickname: "",
     role: "member",
     userId: null,
+    providers: { google: true, kakao: false },
   },
 };
 
@@ -130,15 +131,29 @@ function setUserMenuOpen(open) {
 
 function updateAuthBar() {
   const loginBtn = $("login-btn");
+  const kakaoBtn = $("kakao-login-btn");
+  const loginActions = $("login-actions");
   const userMenu = $("user-menu");
   const userLabel = $("auth-user");
   const pinField = $("pin-field");
   if (state.auth.loggedIn) {
     userLabel.textContent = state.auth.nickname || "사용자";
+    if (loginActions) {
+      loginActions.hidden = true;
+    }
     loginBtn.hidden = true;
+    if (kakaoBtn) {
+      kakaoBtn.hidden = true;
+    }
     userMenu.hidden = false;
   } else {
-    loginBtn.hidden = false;
+    if (loginActions) {
+      loginActions.hidden = false;
+    }
+    loginBtn.hidden = !state.auth.providers.google;
+    if (kakaoBtn) {
+      kakaoBtn.hidden = !state.auth.providers.kakao;
+    }
     userMenu.hidden = true;
     setUserMenuOpen(false);
     state.mine = false;
@@ -193,6 +208,9 @@ async function refreshAuthStatus() {
     state.auth.nickname = status.nickname ?? "";
     state.auth.role = status.role ?? "member";
     state.auth.userId = status.id ?? null;
+    if (status.providers) {
+      state.auth.providers = status.providers;
+    }
   } catch {
     state.auth.loggedIn = false;
     state.auth.nickname = "";
@@ -431,6 +449,13 @@ function bindEvents() {
     const next = encodeURIComponent(window.location.pathname + window.location.search || "/board/");
     window.location.href = `${AUTH_BASE}/google/login?next=${next}`;
   });
+  const kakaoLogin = $("kakao-login-btn");
+  if (kakaoLogin) {
+    kakaoLogin.addEventListener("click", () => {
+      const next = encodeURIComponent(window.location.pathname + window.location.search || "/board/");
+      window.location.href = `${AUTH_BASE}/kakao/login?next=${next}`;
+    });
+  }
 
   $("user-menu-btn").addEventListener("click", (event) => {
     event.stopPropagation();
@@ -567,7 +592,7 @@ function bindEvents() {
 
   $("new-post-btn").addEventListener("click", () => {
     if (!state.auth.loggedIn) {
-      window.alert("글쓰기는 Google 로그인 후 이용할 수 있습니다.");
+      window.alert("글쓰기는 로그인 후 이용할 수 있습니다.");
       return;
     }
     $("compose-panel").hidden = false;
