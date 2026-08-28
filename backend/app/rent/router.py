@@ -41,7 +41,7 @@ from app.rent.map_resolve import resolve_rent_map_codes
 from app.rent.tx_query import fetch_regression_rows, list_building_transactions
 from app.rent.profile_yearly import build_profile_yearly_payload, completed_calendar_years
 from app.rent.sangkwon_query import annual_table, import_meta, list_polygons, series_table
-from app.rent.sale_join import JOIN_ASSETS, sale_join
+from app.rent.sale_join import JOIN_ASSETS, attach_sale_list_metrics, sale_join
 from app.rent.schemas import (
     RentBuildingGeocodeRequest,
     RentBuildingGeocodeResponse,
@@ -227,6 +227,7 @@ def rent_buildings(
         asset_types=kinds,
         sort=sort,
     )
+    items = attach_sale_list_metrics(conn, items, window_years=window_years)
     applied = any(r.gate_passed and r.r_selected for r in rates)
     method = rates[0].method_selected if rates else "mean_simple"
     single_dong = addr3 or (addr3_list[0] if len(addr3_list) == 1 else None)
@@ -235,7 +236,7 @@ def rent_buildings(
     if sort == "jeonse_equiv_median" and applied:
         items.sort(
             key=lambda x: (
-                -(x.jeonse_equiv.median or -1),
+                -(x.jeonse_equiv.mean or x.jeonse_equiv.median or -1),
                 -(x.jeonse_equiv.n),
             )
         )

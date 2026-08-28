@@ -248,7 +248,7 @@ export const STATS_GLOSSARY: Record<string, StatsGlossaryEntry> = {
     label: "전세전환값",
     title: "전세전환값 (만원/㎡)",
     definition:
-      "전세는 보증금/㎡ 그대로, 반전세는 적용 전환율로 전세 상당액을 만든 뒤 건물 P50입니다. 월세(보증금 0)는 같은 r로 환산합니다.",
+      "전세는 보증금/㎡ 그대로, 반전세는 적용 전환율로 전세 상당액을 만든 뒤 건물 평균입니다. 월세(보증금 0)는 같은 r로 환산합니다.",
     formula: "전세환산/㎡ = D + 12M / (r/100)",
     interpretation: [
       "목록에서 전세·반전세·월세를 한 축으로 보기 위한 값입니다.",
@@ -264,10 +264,41 @@ export const STATS_GLOSSARY: Record<string, StatsGlossaryEntry> = {
     label: "월세전환값",
     title: "월세전환값 (만원/㎡)",
     definition:
-      "전세·반전세를 적용 전환율로 월세 상당액으로 맞춘 뒤 건물 P50입니다. 순수월세는 월세/㎡를 씁니다.",
+      "전세·반전세를 적용 전환율로 월세 상당액으로 맞춘 뒤 건물 평균입니다. 순수월세는 월세/㎡를 씁니다.",
     formula: "월세환산/㎡ = M + D × (r/100) / 12",
     interpretation: ["전세전환값과 같은 r, 같은 창을 씁니다."],
     limitations: ["비교용입니다. 실제 월세 시세가 아닙니다."],
+  },
+  sale_unit_mean: {
+    id: "sale_unit_mean",
+    label: "매매가",
+    title: "매매가 (만원/㎡, 평균)",
+    definition:
+      "같은 건물 집합 매매 실거래 단가(만원/㎡)의 평균입니다. 임대 목록과 같은 롤링 창(3·5·7년)을 씁니다. 정확 키로 조인된 아파트·연립·오피스텔만 값이 있습니다.",
+    interpretation: [
+      "전세전환값과 같은 만원/㎡ 축으로 비교하기 위한 값입니다.",
+      "테이블 키우기에서만 보입니다.",
+    ],
+    limitations: [
+      "단독다가구·조인 실패·매매 거래 없음은 빈 칸입니다.",
+      "시세·적정가가 아닙니다. 매매·임대 as_of가 한 달 다를 수 있습니다.",
+    ],
+  },
+  jeonse_to_sale_pct: {
+    id: "jeonse_to_sale_pct",
+    label: "전세가율",
+    title: "전세가율 (%)",
+    definition:
+      "전세전환값 평균(만원/㎡)을 매매가 평균(만원/㎡)으로 나눈 비율입니다.",
+    formula: "전세가율 = 전세전환 평균 / 매매 평균 × 100",
+    interpretation: [
+      "같은 창·같은 건물에서 전세 상당액이 매매 단가의 몇 %인지 보는 비교값입니다.",
+      "테이블 키우기에서만 보입니다.",
+    ],
+    limitations: [
+      "두 평균이 모두 있을 때만 계산합니다. 공식 전세가율 통계가 아닙니다.",
+      "수익률·투자 판단용 지표가 아닙니다.",
+    ],
   },
   sangkwon_survey: {
     id: "sangkwon_survey",

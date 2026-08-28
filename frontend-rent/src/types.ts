@@ -45,6 +45,8 @@ export type RentBuildingRow = {
   monthly: LeaseMetric;
   jeonse_equiv: LeaseMetric;
   monthly_equiv: LeaseMetric;
+  sale?: LeaseMetric;
+  jeonse_to_sale_pct?: number | null;
 };
 
 export type RentBuildingListResponse = {

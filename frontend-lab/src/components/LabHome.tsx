@@ -19,7 +19,7 @@ const DOORS: { id: LabTool; title: string; desc: string }[] = [
   {
     id: "rent",
     title: "전월세 전환율",
-    desc: "4방법 r · 서울 검증. 연구는 종료, 적용은 단순평균.",
+    desc: "4방안 비교 · 검증 결과 · r_b 분포. 연구는 종료, 적용은 단순평균.",
   },
   {
     id: "ai",

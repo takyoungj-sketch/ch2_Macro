@@ -35,6 +35,8 @@ def test_converted_lookup_uses_resolved_building_key():
     src = inspect.getsource(fetch_building_converted)
     assert "building_key_sql" in src
     assert "NULLIF(btrim(t.building_key::text), '') = :bk" not in src
+    assert "AVG(jeonse_equiv)" in src
+    assert "AVG(monthly_equiv)" in src
 
 
 def test_compare_row_schema():

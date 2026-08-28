@@ -1,4 +1,4 @@
-from app.rent.sale_join import JOIN_ASSETS, sale_join
+from app.rent.sale_join import JOIN_ASSETS, apply_sale_metrics, jeonse_to_sale_pct, sale_join
 
 
 class _Conn:
@@ -76,3 +76,31 @@ def test_no_join_when_map_empty():
 
 def test_join_assets():
     assert JOIN_ASSETS == ("apartment", "rowhouse", "officetel")
+
+
+def test_jeonse_to_sale_pct():
+    assert jeonse_to_sale_pct(80, 100) == 80.0
+    assert jeonse_to_sale_pct(None, 100) is None
+    assert jeonse_to_sale_pct(80, 0) is None
+    assert jeonse_to_sale_pct(80, None) is None
+
+
+def test_apply_sale_metrics_sets_ratio():
+    from app.rent.schemas import LeaseMetric, MixedLeaseMetric, RentBuildingRow
+
+    row = RentBuildingRow(
+        building_key="abc",
+        asset_type="apartment",
+        display_name="테스트",
+        jeonse=LeaseMetric(),
+        mixed=MixedLeaseMetric(),
+        monthly=LeaseMetric(),
+        jeonse_equiv=LeaseMetric(n=10, mean=80),
+    )
+    out = apply_sale_metrics([row], {("abc", "apartment"): (12, 100.0)})
+    assert out[0].sale.n == 12
+    assert out[0].sale.mean == 100.0
+    assert out[0].jeonse_to_sale_pct == 80.0
+    skipped = apply_sale_metrics([row], {})
+    assert skipped[0].sale.n == 0
+    assert skipped[0].jeonse_to_sale_pct is None

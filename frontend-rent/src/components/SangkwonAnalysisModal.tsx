@@ -135,7 +135,7 @@ export default function SangkwonAnalysisModal({ scope, onClose, onAiContext }: P
         open
         onClose={onClose}
         titleId="sangkwon-analysis"
-        title="상권분석"
+        title="상권통계"
         subtitle={`${regionLabel} · 한국부동산원 상업용 임대동향 · 주거 전월세와 다른 통계`}
         usePortal
         defaultWidth={980}

@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import date
 from typing import Optional
 
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session
 
@@ -17,6 +18,8 @@ from app.rent.schemas import (
     RentConversionRate,
     RentSaleJoinResponse,
 )
+
+log = logging.getLogger(__name__)
 
 JOIN_ASSETS = ("apartment", "rowhouse", "officetel")
 
@@ -45,6 +48,148 @@ def lookup_rent_key(conn: Connection, *, sale_building_key: str, asset_type: str
     if not row:
         return None
     return str(row["rent_building_key"]).strip() or None
+
+
+def jeonse_to_sale_pct(jeonse_mean: float | None, sale_mean: float | None) -> float | None:
+    """전세전환 평균 / 매매 평균 × 100."""
+    if jeonse_mean is None or sale_mean is None or sale_mean <= 0:
+        return None
+    return round(float(jeonse_mean) / float(sale_mean) * 100.0, 1)
+
+
+def apply_sale_metrics(
+    items: list[RentBuildingRow],
+    sale_by_key: dict[tuple[str, str], tuple[int, float | None]],
+) -> list[RentBuildingRow]:
+    """(rent_key, asset_type) → (n, mean) 을 목록 행에 붙인다."""
+    out: list[RentBuildingRow] = []
+    for row in items:
+        key = (row.building_key, row.asset_type)
+        hit = sale_by_key.get(key)
+        if not hit:
+            out.append(row)
+            continue
+        n, mean = hit
+        sale = LeaseMetric(n=n, mean=mean)
+        out.append(
+            row.model_copy(
+                update={
+                    "sale": sale,
+                    "jeonse_to_sale_pct": jeonse_to_sale_pct(row.jeonse_equiv.mean, mean),
+                }
+            )
+        )
+    return out
+
+
+def attach_sale_list_metrics(
+    rent_conn: Connection,
+    items: list[RentBuildingRow],
+    *,
+    window_years: int,
+) -> list[RentBuildingRow]:
+    """정확 키 맵 + 집합 마트 평균. 실패해도 목록은 그대로."""
+    if not items:
+        return items
+    pairs = [
+        (row.building_key, row.asset_type)
+        for row in items
+        if row.asset_type in JOIN_ASSETS and row.building_key
+    ]
+    if not pairs or not _table_exists(rent_conn, "public.rent_sale_building_map"):
+        return items
+    keys = sorted({k for k, _ in pairs})
+    assets = sorted({a for _, a in pairs})
+    try:
+        stmt = text(
+            """
+            SELECT rent_building_key, sale_building_key, asset_type
+            FROM rent_sale_building_map
+            WHERE tier = 'exact'
+              AND rent_building_key IN :keys
+              AND asset_type IN :assets
+            """
+        ).bindparams(
+            bindparam("keys", expanding=True),
+            bindparam("assets", expanding=True),
+        )
+        map_rows = rent_conn.execute(stmt, {"keys": keys, "assets": assets}).mappings().all()
+    except Exception:
+        log.exception("rent_sale_building_map lookup failed")
+        return items
+    want = set(pairs)
+    sale_keys: dict[tuple[str, str], str] = {}
+    for r in map_rows:
+        rent_k = str(r["rent_building_key"]).strip()
+        asset = r["asset_type"] or ""
+        if (rent_k, asset) not in want:
+            continue
+        sale_k = str(r["sale_building_key"]).strip()
+        if sale_k:
+            sale_keys[(rent_k, asset)] = sale_k
+    if not sale_keys:
+        return items
+
+    try:
+        from app.collective.db import get_collective_engine
+
+        eng = get_collective_engine()
+    except Exception:
+        log.exception("collective engine missing")
+        return items
+    if eng is None:
+        return items
+
+    coll_keys = sorted(set(sale_keys.values()))
+    coll_assets = sorted({a for _, a in sale_keys})
+    try:
+        with eng.connect() as cconn:
+            as_of = cconn.execute(
+                text(
+                    """
+                    SELECT max(as_of_month)
+                    FROM collective_building_stats
+                    WHERE window_years = :w
+                    """
+                ),
+                {"w": window_years},
+            ).scalar()
+            if as_of is None:
+                return items
+            stmt = text(
+                """
+                SELECT building_key, asset_type, count, mean
+                FROM collective_building_stats
+                WHERE as_of_month = :as_of
+                  AND window_years = :w
+                  AND building_key IN :keys
+                  AND asset_type IN :assets
+                """
+            ).bindparams(
+                bindparam("keys", expanding=True),
+                bindparam("assets", expanding=True),
+            )
+            stats = cconn.execute(
+                stmt,
+                {"as_of": as_of, "w": window_years, "keys": coll_keys, "assets": coll_assets},
+            ).mappings().all()
+    except Exception:
+        log.exception("collective_building_stats lookup failed")
+        return items
+
+    by_sale: dict[tuple[str, str], tuple[int, float | None]] = {}
+    for r in stats:
+        sk = str(r["building_key"]).strip()
+        at = r["asset_type"] or ""
+        mean = float(r["mean"]) if r.get("mean") is not None else None
+        by_sale[(sk, at)] = (int(r["count"] or 0), mean)
+
+    sale_by_rent: dict[tuple[str, str], tuple[int, float | None]] = {}
+    for rent_pair, sale_k in sale_keys.items():
+        hit = by_sale.get((sale_k, rent_pair[1]))
+        if hit:
+            sale_by_rent[rent_pair] = hit
+    return apply_sale_metrics(items, sale_by_rent)
 
 
 def _mart_row(

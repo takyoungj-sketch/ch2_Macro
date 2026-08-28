@@ -17,7 +17,7 @@ import type { AiContextPayload } from "@ch2/ai-assistant/aiClient";
 import { buildRentListContext } from "./api/aiContext";
 import AiAssistantPanel from "./components/AiAssistantPanel";
 import BuildingDetailModal from "./components/BuildingDetailModal";
-import ConversionComparePanel from "./components/ConversionComparePanel";
+import DualHorizontalScroll from "./components/DualHorizontalScroll";
 import RegionChipPanel, {
   LEFT_REGION_MULTI_SELECT,
   toggleChipMulti,
@@ -30,6 +30,7 @@ import SangkwonAnalysisModal, {
 import StatsWindowToggle, {
   type StatsWindowYears,
 } from "./components/StatsWindowToggle";
+import StatsTableExpandButton from "./components/StatsTableExpandButton";
 import { useRentDeepLink } from "./hooks/useRentDeepLink";
 import {
   RENT_ASSET_KINDS,
@@ -68,8 +69,9 @@ function fmtUnit(v: number | null | undefined) {
 }
 
 function ConvertedCell({ m }: { m: LeaseMetric }) {
-  if (m.median == null) return <span className="text-slate-400">—</span>;
-  return <span className="font-semibold">{fmtUnit(m.median)}</span>;
+  const v = m.mean ?? m.median;
+  if (v == null) return <span className="text-slate-400">—</span>;
+  return <span className="font-semibold">{fmtUnit(v)}</span>;
 }
 
 function tradeCount(row: RentBuildingRow): number {
@@ -144,9 +146,8 @@ export default function App() {
   const [buildingSearch, setBuildingSearch] = useState("");
   const [selected, setSelected] = useState<RentBuildingRow | null>(null);
   const [mapPanelMode, setMapPanelMode] = useState<MapPanelMode>("normal");
-  const [showCompare, setShowCompare] = useState(false);
-  const [compareTab, setCompareTab] = useState<"rates" | "validate" | "rbdist">("rates");
   const [showSangkwon, setShowSangkwon] = useState(false);
+  const [tableWide, setTableWide] = useState(false);
   const [sangkwonAi, setSangkwonAi] = useState<AiContextPayload | null>(null);
 
   const metaQ = useQuery({
@@ -483,52 +484,14 @@ export default function App() {
             disabled={!addr2}
             onClick={() => setShowSangkwon(true)}
           >
-            상권분석
+            상권통계
           </button>
-          <div className="grid grid-cols-3 gap-1">
-            <button
-              type="button"
-              className="rounded-md border border-indigo-300 px-1 py-1 text-[10px] font-semibold text-indigo-700 dark:border-indigo-700 dark:text-indigo-300"
-              onClick={() => {
-                setCompareTab("rates");
-                setShowCompare(true);
-              }}
-              disabled={!addr1}
-            >
-              4방안 비교
-            </button>
-            <button
-              type="button"
-              className="rounded-md border border-indigo-300 px-1 py-1 text-[10px] font-semibold text-indigo-700 dark:border-indigo-700 dark:text-indigo-300"
-              onClick={() => {
-                setCompareTab("validate");
-                setShowCompare(true);
-              }}
-            >
-              검증 결과
-            </button>
-            <button
-              type="button"
-              className="rounded-md border border-indigo-300 px-1 py-1 text-[10px] font-semibold text-indigo-700 dark:border-indigo-700 dark:text-indigo-300"
-              onClick={() => {
-                setCompareTab("rbdist");
-                setShowCompare(true);
-              }}
-            >
-              r_b 분포
-            </button>
-          </div>
           <p className="text-[10px] text-slate-400 leading-snug">
-            목록은 건물 1행 · r 적용 환산 P50(만원/㎡). 전세/반전세/월세 원값·거래·회귀는 상세.
-            실험 모음은{" "}
-            <a className="underline" href="/lab/?tool=rent">
-              실험 랩
-            </a>
-            .
+            목록은 건물 1행 · r 적용 환산 평균(만원/㎡). 전세/반전세/월세 원값·거래·회귀는 상세.
           </p>
           {addr2 && (
             <p className="text-[10px] text-slate-400 leading-snug">
-              상권분석: {sangkwonScopeLabel({ addr1, addr2, sangkwonGuList })} 공표 · 주거와 별개
+              상권통계: {sangkwonScopeLabel({ addr1, addr2, sangkwonGuList })} 공표 · 주거와 별개
             </p>
           )}
         </aside>
@@ -639,6 +602,11 @@ export default function App() {
                   </p>
                   <div className="flex items-center gap-2 shrink-0">
                     <AiAssistantPanel context={aiContext} />
+                    <StatsTableExpandButton
+                      expanded={tableWide}
+                      onToggle={() => setTableWide((v) => !v)}
+                      title="매매 평균(만원/㎡)과 전세가율을 보여 줍니다"
+                    />
                     <label className="flex items-center gap-1.5">
                       <span>검색</span>
                       <input
@@ -656,13 +624,16 @@ export default function App() {
                     칩 숫자는 선택한 유형의 건물 수입니다. 유형을 더하면 목록이 생깁니다. 전환율 게이트는 목록을 숨기지 않습니다.
                   </p>
                 )}
-                <div className="card overflow-x-auto p-0">
-                  <table className="data buildings-table">
+                <div className="card p-0">
+                  <DualHorizontalScroll key={tableWide ? "wide" : "compact"}>
+                  <table className={clsx("data buildings-table", tableWide && "is-wide")}>
                     <colgroup>
                       <col className="col-type" />
                       <col className="col-name" />
                       <col className="col-num" />
                       <col className="col-num" />
+                      {tableWide && <col className="col-num" />}
+                      {tableWide && <col className="col-num" />}
                       <col className="col-num" />
                       <col className="col-year" />
                       <col className="col-jibun" />
@@ -679,6 +650,22 @@ export default function App() {
                             <StatsGlossaryHelp termId="jeonse_equiv" size="xs" />
                           </span>
                         </th>
+                        {tableWide && (
+                          <th>
+                            <span className="inline-flex items-center justify-center gap-0.5">
+                              매매가
+                              <StatsGlossaryHelp termId="sale_unit_mean" size="xs" />
+                            </span>
+                          </th>
+                        )}
+                        {tableWide && (
+                          <th>
+                            <span className="inline-flex items-center justify-center gap-0.5">
+                              전세가율
+                              <StatsGlossaryHelp termId="jeonse_to_sale_pct" size="xs" />
+                            </span>
+                          </th>
+                        )}
                         <th>
                           <span className="inline-flex items-center justify-center gap-0.5">
                             월세전환값
@@ -693,6 +680,8 @@ export default function App() {
                     <tbody>
                       {items.map((row) => {
                         const n = tradeCount(row);
+                        const saleN = row.sale?.n ?? 0;
+                        const ratio = row.jeonse_to_sale_pct;
                         return (
                           <tr
                             key={`${row.building_key}|${row.asset_type}`}
@@ -719,6 +708,25 @@ export default function App() {
                             <td className="lease">
                               <ConvertedCell m={row.jeonse_equiv} />
                             </td>
+                            {tableWide && (
+                              <td className="lease">
+                                {row.sale?.mean != null ? (
+                                  <>
+                                    <span className="font-semibold">{fmtUnit(row.sale.mean)}</span>
+                                    {saleN > 0 && saleN < 15 && (
+                                      <span className="ml-0.5 text-[9px] text-amber-600">n&lt;15</span>
+                                    )}
+                                  </>
+                                ) : (
+                                  <span className="text-slate-400">—</span>
+                                )}
+                              </td>
+                            )}
+                            {tableWide && (
+                              <td className="num">
+                                {ratio != null ? `${ratio.toFixed(1)}%` : "—"}
+                              </td>
+                            )}
                             <td className="lease">
                               <ConvertedCell m={row.monthly_equiv} />
                             </td>
@@ -734,6 +742,7 @@ export default function App() {
                       })}
                     </tbody>
                   </table>
+                  </DualHorizontalScroll>
                 </div>
               </>
             )}
@@ -762,14 +771,6 @@ export default function App() {
             setSangkwonAi(null);
           }}
           onAiContext={setSangkwonAi}
-        />
-      )}
-      {showCompare && addr1 && (
-        <ConversionComparePanel
-          addr1={addr1}
-          assetKinds={assetKinds}
-          initialTab={compareTab}
-          onClose={() => setShowCompare(false)}
         />
       )}
     </div>

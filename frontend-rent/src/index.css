@@ -91,6 +91,10 @@ table.data.buildings-table {
   min-width: 44cm;
 }
 
+table.data.buildings-table.is-wide {
+  min-width: 54cm;
+}
+
 table.data.buildings-table col.col-jibun {
   width: 7cm;
 }
@@ -117,6 +121,10 @@ table.data.buildings-table col.col-num {
 
 table.data td.addr {
   @apply text-center whitespace-normal break-words leading-snug;
+}
+
+.dual-h-scroll-top {
+  height: 14px;
 }
 
 .modal-shell {

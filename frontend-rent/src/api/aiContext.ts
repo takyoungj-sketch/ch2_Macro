@@ -10,7 +10,7 @@ export const RENT_CONVERSION_EXPLAIN = {
   formula: "r_b = 12M/(J−D) → r = 평균(r_b)",
   interpretation: [
     "2026-08 서울 hold-out에서 단순평균이 4방법 중 MAPE 전부 1위라 확정했습니다.",
-    "환산 P50은 비교값이지 시세·적정 전세가 아닙니다.",
+    "환산 평균은 비교값이지 시세·적정 전세가 아닙니다.",
     "연립 건물 편차는 이질성이며 유형별 산식을 나누지 않습니다.",
   ],
   limitations: [

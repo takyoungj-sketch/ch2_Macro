@@ -45,16 +45,27 @@ export default function ConversionComparePanel({
   addr1,
   assetKinds,
   initialTab = "rates",
+  tab: tabProp,
+  onTabChange,
   onClose,
   layout = "modal",
+  showTabBar = true,
 }: {
   addr1: string;
   assetKinds: RentAssetType[];
   initialTab?: "rates" | "validate" | "rbdist";
+  tab?: "rates" | "validate" | "rbdist";
+  onTabChange?: (tab: "rates" | "validate" | "rbdist") => void;
   onClose: () => void;
   layout?: "modal" | "page";
+  showTabBar?: boolean;
 }) {
-  const [tab, setTab] = useState<"rates" | "validate" | "rbdist">(initialTab);
+  const [tabState, setTabState] = useState<"rates" | "validate" | "rbdist">(initialTab);
+  const tab = tabProp ?? tabState;
+  const setTab = (next: "rates" | "validate" | "rbdist") => {
+    onTabChange?.(next);
+    if (tabProp === undefined) setTabState(next);
+  };
   const [windowFilter, setWindowFilter] = useState<StatsWindowYears | 0>(0);
   const validateQ = useQuery({
     queryKey: ["rent-conv-validate"],
@@ -98,10 +109,13 @@ export default function ConversionComparePanel({
               {addr1} · 연구 종료. 목록 적용은 단순평균(확정). 검증·분포는 서울 1회 리포트.
             </p>
           </div>
-          <button type="button" className="text-sm text-slate-500" onClick={onClose}>
-            닫기
-          </button>
+          {layout !== "page" && (
+            <button type="button" className="text-sm text-slate-500" onClick={onClose}>
+              닫기
+            </button>
+          )}
         </div>
+        {showTabBar && (
         <div className="flex gap-2 text-xs">
           <button
             type="button"
@@ -111,7 +125,7 @@ export default function ConversionComparePanel({
             )}
             onClick={() => setTab("rates")}
           >
-            4방안 r
+            4방안 비교
           </button>
           <button
             type="button"
@@ -134,6 +148,7 @@ export default function ConversionComparePanel({
             r_b 분포
           </button>
         </div>
+        )}
         {tab === "validate" && (
           <div className="space-y-3">
             {validateQ.isLoading && <p className="text-sm text-slate-400">불러오는 중…</p>}

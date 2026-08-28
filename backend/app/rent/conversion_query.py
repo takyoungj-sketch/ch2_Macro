@@ -239,7 +239,7 @@ def fetch_building_converted(
     rates: dict[str, RentConversionRate],
     building_key: Optional[str] = None,
 ) -> dict[tuple[str, str], tuple[LeaseMetric, LeaseMetric]]:
-    """building_key, asset_type → (전세환산, 월세환산) P50."""
+    """building_key, asset_type → (전세환산, 월세환산) 평균·P50."""
     active = {
         at: r.r_selected
         for at, r in rates.items()
@@ -306,6 +306,8 @@ def fetch_building_converted(
             building_key,
             asset_type,
             COUNT(*)::int AS n,
+            AVG(jeonse_equiv) AS jeonse_mean,
+            AVG(monthly_equiv) AS monthly_mean,
             percentile_cont(0.5) WITHIN GROUP (ORDER BY jeonse_equiv) AS jeonse_median,
             percentile_cont(0.5) WITHIN GROUP (ORDER BY monthly_equiv) AS monthly_median
         FROM conv
@@ -318,10 +320,12 @@ def fetch_building_converted(
     for r in rows:
         key = (str(r["building_key"]).strip(), r["asset_type"])
         n = int(r["n"] or 0)
+        j_mean = float(r["jeonse_mean"]) if r.get("jeonse_mean") is not None else None
+        m_mean = float(r["monthly_mean"]) if r.get("monthly_mean") is not None else None
         j_med = float(r["jeonse_median"]) if r.get("jeonse_median") is not None else None
         m_med = float(r["monthly_median"]) if r.get("monthly_median") is not None else None
         out[key] = (
-            LeaseMetric(n=n, median=j_med, mean=None, ci_lower=None, ci_upper=None),
-            LeaseMetric(n=n, median=m_med, mean=None, ci_lower=None, ci_upper=None),
+            LeaseMetric(n=n, mean=j_mean, median=j_med, ci_lower=None, ci_upper=None),
+            LeaseMetric(n=n, mean=m_mean, median=m_med, ci_lower=None, ci_upper=None),
         )
     return out

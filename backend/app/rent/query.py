@@ -9,6 +9,7 @@ from sqlalchemy import bindparam, text
 from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session
 
+from app.collective.address import format_jibun_address
 from app.flat_sido_region import (
     FLAT_SIDO_ADDR2_TOKEN,
     apply_addr2_scope,
@@ -63,8 +64,13 @@ def _metric(n, mean, median, lo, hi) -> LeaseMetric:
 
 
 def _jibun(r: dict) -> str:
-    parts = [r.get("addr3") or "", r.get("addr4") or "", r.get("lot_number") or ""]
-    return " ".join(p for p in parts if p).strip()
+    """매매 목록과 동일: 읍·면·동 + 리(addr5) + 번지."""
+    return format_jibun_address(
+        addr3=r.get("addr3"),
+        addr4=r.get("addr4"),
+        addr5=r.get("addr5"),
+        lot_number=r.get("lot_number"),
+    )
 
 
 def detect_rent_structure(

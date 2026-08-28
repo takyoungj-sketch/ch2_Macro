@@ -72,6 +72,8 @@ class RentBuildingRow(BaseModel):
     monthly: LeaseMetric
     jeonse_equiv: LeaseMetric = Field(default_factory=LeaseMetric)
     monthly_equiv: LeaseMetric = Field(default_factory=LeaseMetric)
+    sale: LeaseMetric = Field(default_factory=LeaseMetric)
+    jeonse_to_sale_pct: Optional[float] = None
 
 
 class RentSaleJoinResponse(BaseModel):
