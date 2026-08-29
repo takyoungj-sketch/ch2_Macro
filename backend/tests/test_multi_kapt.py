@@ -83,10 +83,15 @@ def _bunpyeong3_kapt() -> pd.DataFrame:
 
 def test_match_one_lot_multi_returns_all_idxs():
     kapt = _bunpyeong3_kapt()
-    by_lot, by_name, by_core, names_in_bj = build_kapt_indexes(kapt)
+    by_lot, by_name, by_core, names_in_bj, by_road = build_kapt_indexes(kapt)
     row = SimpleNamespace(beopjungri_code=BJ, display_name="분평주공3", lot_number="1200")
     tier_key, idxs = match_one(
-        row, by_lot=by_lot, by_name=by_name, by_core=by_core, names_in_bj=names_in_bj
+        row,
+        by_lot=by_lot,
+        by_name=by_name,
+        by_core=by_core,
+        names_in_bj=names_in_bj,
+        by_road=by_road,
     )
     assert tier_key == "D_lot_multi"
     assert sorted(idxs) == [0, 1]
@@ -240,7 +245,7 @@ def test_short_name_f_does_not_fill():
     )
     out = attributes_rows(buildings, kapt, snapshot_ym="202607", asset_type="apartment")
     row = out.iloc[0]
-    assert row["match_tier"] == "F"
+    assert row["match_tier"] == "Z"
     assert row["households"] is None or pd.isna(row["households"])
     assert row["danji_code"] is None or pd.isna(row["danji_code"])
     kapt = _bunpyeong3_kapt()

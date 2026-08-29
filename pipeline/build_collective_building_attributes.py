@@ -42,11 +42,27 @@ _IPARK = re.compile(r"I[\s\-]?PARK", re.IGNORECASE)
 _JE = re.compile(r"제(\d+)단지")
 _PAREN = re.compile(r"\(.*?\)")
 _LOT_IN_ADDR = re.compile(r"(?:^|\s)(\d+(?:-\d+)?)-?(?=\s|$)")
+_SIDO_TAILS = (
+    "특별자치시",
+    "특별자치도",
+    "광역시",
+    "특별시",
+    "자치시",
+    "자치도",
+)
+_ROAD_SPACED = re.compile(
+    r"([가-힣A-Za-z0-9]+(?:대로|로|길)(?:\d+번길)?)\s+(\d+(?:-\d+)?)\s*$"
+)
+_ROAD_COMPACT = re.compile(
+    r"([가-힣A-Za-z0-9]+?(?:대로|로|길)(?:\d+번길)?)(\d+(?:-\d+)?)$"
+)
+_ALIAS_MIN_REST = 4
 
 TIER_RULE_MAP: dict[str, tuple[str, str]] = {
     "A_name_exact": ("A", "name_exact"),
     "B_name_core": ("B", "name_core"),
     "C_lot_exact": ("C", "lot_exact"),
+    "C_road_exact": ("C", "road_exact"),
     "D_lot_multi": ("D", "lot_multi"),
     "E_contains_unique": ("E", "contains_unique"),
     "F_contains_multi": ("F", "contains_multi"),
@@ -67,6 +83,7 @@ SELECT
     MAX(display_name) AS display_name,
     MODE() WITHIN GROUP (ORDER BY beopjungri_code) AS beopjungri_code,
     MODE() WITHIN GROUP (ORDER BY lot_number) AS lot_number,
+    MODE() WITHIN GROUP (ORDER BY road_name) AS road_name,
     COUNT(*) AS n_tx,
     MAX(building_year) AS building_year
 FROM collective_transactions
@@ -108,6 +125,89 @@ def lot_from_kapt_addr(addr: object) -> str:
         return ""
     found = _LOT_IN_ADDR.findall(str(addr))
     return norm_lot(found[-1]) if found else ""
+
+
+def _compact_region(value: object) -> str:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return ""
+    return _WS.sub("", unicodedata.normalize("NFC", str(value)).strip())
+
+
+def region_name_prefixes(sido: object = "", sigungu: object = "") -> list[str]:
+    """K-apt 단지명 앞에 붙는 시도·시 접두. 구·군은 넣지 않는다(중구·더샵 충돌)."""
+    out: list[str] = []
+    seen: set[str] = set()
+
+    def add(token: str) -> None:
+        if token and token not in seen:
+            seen.add(token)
+            out.append(token)
+
+    sido_c = _compact_region(sido)
+    if sido_c:
+        add(sido_c)
+        for tail in _SIDO_TAILS:
+            if sido_c.endswith(tail) and len(sido_c) > len(tail):
+                add(sido_c[: -len(tail)])
+                break
+    sgg = _compact_region(sigungu)
+    if sgg:
+        m = re.match(r"^(.+시)", sgg)
+        if m and len(m.group(1)) >= 3:
+            city = m.group(1)
+            add(city)
+            add(city[:-1])
+    return out
+
+
+def name_keys_with_region_aliases(
+    name: object, *, sido: object = "", sigungu: object = ""
+) -> list[str]:
+    keys: list[str] = []
+    seen: set[str] = set()
+
+    def add(token: str) -> None:
+        if token and token not in seen:
+            seen.add(token)
+            keys.append(token)
+
+    add(norm_name(name))
+    add(norm_name_core(name))
+    prefixes = region_name_prefixes(sido, sigungu)
+    for base in list(keys):
+        for prefix in prefixes:
+            if base.startswith(prefix) and len(base) - len(prefix) >= _ALIAS_MIN_REST:
+                add(base[len(prefix) :])
+    return keys
+
+
+def norm_road(value: object) -> str:
+    """도로명+건물번호. '대전광역시 중구 선화서로 115' → '선화서로115'."""
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return ""
+    t = unicodedata.normalize("NFC", str(value)).strip()
+    t = _PAREN.sub("", t)
+    m = _ROAD_SPACED.search(t)
+    if m:
+        return f"{m.group(1)}{m.group(2)}"
+    compact = _WS.sub("", t)
+    m = _ROAD_COMPACT.search(compact)
+    return f"{m.group(1)}{m.group(2)}" if m else ""
+
+
+def _row_str(row: object, *names: str) -> str:
+    for name in names:
+        if hasattr(row, name):
+            val = getattr(row, name)
+            if val is not None and not (isinstance(val, float) and pd.isna(val)):
+                return str(val)
+    return ""
+
+
+def has_danji_code(value: object) -> bool:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return False
+    return bool(str(value).strip())
 
 
 def sigungu_variants(sigungu_name: str) -> list[str]:
@@ -288,22 +388,32 @@ def build_kapt_indexes(kapt: pd.DataFrame) -> tuple[
     dict[tuple[str, str], list[int]],
     dict[tuple[str, str], list[int]],
     dict[str, list[tuple[str, int]]],
+    dict[tuple[str, str], list[int]],
 ]:
     k = kapt[kapt["beopjungri_code"] != ""].copy()
     by_lot: dict[tuple[str, str], list[int]] = {}
     by_name: dict[tuple[str, str], list[int]] = {}
     by_core: dict[tuple[str, str], list[int]] = {}
     names_in_bj: dict[str, list[tuple[str, int]]] = {}
+    by_road: dict[tuple[str, str], list[int]] = {}
     for idx, row in enumerate(k.itertuples(index=False)):
         bj = str(row.beopjungri_code)
         if row.lot_key:
             by_lot.setdefault((bj, row.lot_key), []).append(idx)
+        sido = _row_str(row, "시도", "sido_name")
+        sigungu = _row_str(row, "시군구", "sigungu_name")
+        danji_name = _row_str(row, "단지명", "danji_name") or str(getattr(row, "name_key", "") or "")
+        aliases = name_keys_with_region_aliases(danji_name, sido=sido, sigungu=sigungu)
+        for alias in aliases:
+            by_name.setdefault((bj, alias), []).append(idx)
         if row.name_key:
-            by_name.setdefault((bj, row.name_key), []).append(idx)
             names_in_bj.setdefault(bj, []).append((row.name_key, idx))
         if row.name_core:
             by_core.setdefault((bj, row.name_core), []).append(idx)
-    return by_lot, by_name, by_core, names_in_bj
+        road = norm_road(_row_str(row, "도로명주소", "road_address"))
+        if road:
+            by_road.setdefault((bj, road), []).append(idx)
+    return by_lot, by_name, by_core, names_in_bj, by_road
 
 
 def build_pnu_index(kapt: pd.DataFrame) -> dict[str, list[int]]:
@@ -336,6 +446,62 @@ def attach_kapt_pnu(kapt: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def names_compatible(tx_name: object, kapt_name: object) -> bool:
+    """도로명 유일 매칭용. 짧은 공통어(롯데캐슬·한양)만으로 붙이지 않는다."""
+    tx = norm_name(tx_name)
+    kn = norm_name(kapt_name)
+    if not tx or not kn:
+        return False
+    if tx == kn:
+        return True
+    shorter, longer = (tx, kn) if len(tx) <= len(kn) else (kn, tx)
+    if len(shorter) >= F_MIN_NAME and shorter in longer:
+        return True
+    return False
+
+
+def _kapt_name_for_idx(names_in_bj: dict[str, list[tuple[str, int]]], bj: str, idx: int) -> str:
+    for nm, i in names_in_bj.get(bj, []):
+        if i == idx:
+            return nm
+    return ""
+
+
+def _contains_hit_idxs(name_key: str, cands: list[tuple[str, int]]) -> list[int]:
+    hits: list[int] = []
+    seen: set[int] = set()
+    for nm, idx in cands:
+        if not nm:
+            continue
+        matched = name_key in nm or (nm in name_key and len(nm) >= F_MIN_NAME)
+        if matched and idx not in seen:
+            seen.add(idx)
+            hits.append(idx)
+    return hits
+
+
+def _resolve_contains_hits(
+    name_key: str, cands: list[tuple[str, int]], hits: list[int]
+) -> tuple[str, list[int]]:
+    if len(hits) == 1:
+        return "E_contains_unique", hits
+    idx_to_nm: dict[int, str] = {}
+    for nm, idx in cands:
+        if idx in hits and idx not in idx_to_nm:
+            idx_to_nm[idx] = nm
+    supers = [i for i in hits if name_key in idx_to_nm.get(i, "")]
+    if len(supers) == 1:
+        return "E_contains_unique", supers
+    if len(supers) > 1:
+        longest_i = max(supers, key=lambda i: len(idx_to_nm[i]))
+        longest_nm = idx_to_nm[longest_i]
+        if all(idx_to_nm[i] in longest_nm for i in supers):
+            n_max = sum(1 for i in supers if len(idx_to_nm[i]) == len(longest_nm))
+            if n_max == 1:
+                return "E_contains_unique", [longest_i]
+    return "F_contains_multi", hits
+
+
 def match_one(
     row,
     *,
@@ -343,11 +509,15 @@ def match_one(
     by_name: dict[tuple[str, str], list[int]],
     by_core: dict[tuple[str, str], list[int]],
     names_in_bj: dict[str, list[tuple[str, int]]],
+    by_road: dict[tuple[str, str], list[int]] | None = None,
 ) -> tuple[str, list[int]]:
     bj = str(row.beopjungri_code) if pd.notna(row.beopjungri_code) else ""
     name_key = norm_name(row.display_name)
     name_core = norm_name_core(row.display_name)
     lot_key = norm_lot(row.lot_number)
+    road_key = norm_road(
+        getattr(row, "road_name", None) or getattr(row, "road_address", None)
+    )
 
     if name_key and len(by_name.get((bj, name_key), [])) == 1:
         return "A_name_exact", list(by_name[(bj, name_key)])
@@ -357,13 +527,16 @@ def match_one(
         return "C_lot_exact", list(by_lot[(bj, lot_key)])
     if lot_key and len(by_lot.get((bj, lot_key), [])) > 1:
         return "D_lot_multi", list(by_lot[(bj, lot_key)])
+    if by_road and road_key and len(by_road.get((bj, road_key), [])) == 1:
+        road_idx = by_road[(bj, road_key)][0]
+        kapt_nm = _kapt_name_for_idx(names_in_bj, bj, road_idx)
+        if names_compatible(getattr(row, "display_name", None), kapt_nm):
+            return "C_road_exact", [road_idx]
     cands = names_in_bj.get(bj, [])
     if name_key and cands:
-        hits = [i for nm, i in cands if name_key in nm or nm in name_key]
-        if len(hits) == 1:
-            return "E_contains_unique", hits
-        if len(hits) > 1:
-            return "F_contains_multi", hits
+        hits = _contains_hit_idxs(name_key, cands)
+        if hits:
+            return _resolve_contains_hits(name_key, cands, hits)
     return "no_match", []
 
 
@@ -554,7 +727,7 @@ def attributes_rows(
     asset_type: str,
 ) -> pd.DataFrame:
     kapt_indexed = kapt[kapt["beopjungri_code"] != ""].reset_index(drop=True)
-    by_lot, by_name, by_core, names_in_bj = build_kapt_indexes(kapt_indexed)
+    by_lot, by_name, by_core, names_in_bj, by_road = build_kapt_indexes(kapt_indexed)
     by_pnu = build_pnu_index(kapt_indexed)
 
     out_rows: list[dict[str, Any]] = []
@@ -565,6 +738,7 @@ def attributes_rows(
             by_name=by_name,
             by_core=by_core,
             names_in_bj=names_in_bj,
+            by_road=by_road,
         )
         kapt_idx = kapt_idxs[0] if len(kapt_idxs) == 1 else None
         match_tier, match_rule = TIER_RULE_MAP[tier_key]
@@ -628,6 +802,9 @@ def attributes_rows(
                 rec.pop("danji_name", None)
                 if rec["approved_year"] is not None and building_year is not None:
                     rec["year_diff"] = rec["approved_year"] - building_year
+            elif match_tier == "F":
+                rec["match_tier"] = "Z"
+                rec["match_rule"] = "no_match"
         out_rows.append(rec)
     return pd.DataFrame(out_rows)
 

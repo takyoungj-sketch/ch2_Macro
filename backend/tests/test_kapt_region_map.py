@@ -91,14 +91,19 @@ def test_gajae5_name_matches_despite_lot_mismatch():
     )
     kapt["name_key"] = kapt["danji_name"].map(norm_name)
     kapt["name_core"] = kapt["danji_name"].map(norm_name_core)
-    by_lot, by_name, by_core, names_in_bj = build_kapt_indexes(kapt)
+    by_lot, by_name, by_core, names_in_bj, by_road = build_kapt_indexes(kapt)
     row = SimpleNamespace(
         beopjungri_code="3611011100",
         display_name="가재마을5단지",
         lot_number="690",
     )
     tier_key, idx = match_one(
-        row, by_lot=by_lot, by_name=by_name, by_core=by_core, names_in_bj=names_in_bj
+        row,
+        by_lot=by_lot,
+        by_name=by_name,
+        by_core=by_core,
+        names_in_bj=names_in_bj,
+        by_road=by_road,
     )
     assert tier_key == "A_name_exact"
     assert idx == [0]

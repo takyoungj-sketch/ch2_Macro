@@ -1,6 +1,7 @@
 """표제부 동 합산(세대수·층·구조)을 단지 속성에 채운다.
 
-조인 키는 PNU다. 아파트는 K-apt 없는 Z만. D·F·A·B·C·E·P 는 건드리지 않는다.
+조인 키는 PNU다. 아파트는 K-apt가 채운 행(A·B·C·D·E·P·채워진 F)은 건드리지 않는다.
+빈 F와 Z는 표제부 T로 떨어질 수 있다.
 연립·오피스텔: 행이 없으면 INSERT (K-apt 대상이 아님). 시공사 없음.
 한 필지에 아파트 동과 다세대 동이 둘 다 있으면 유형별로 나눈다.
 유형 글자가 없어도 집합 표제부 본체 동이 있으면 붙인다.
@@ -39,6 +40,7 @@ from build_collective_building_attributes import (  # noqa: E402
     load_buildings,
     parse_int,
     structure_group,
+    has_danji_code,
 )
 from collective.apply_danji_dictionary import (  # noqa: E402
     _derive,
@@ -51,6 +53,16 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 log = logging.getLogger(__name__)
 
 BLOCKED_TIERS = frozenset({"A", "B", "C", "D", "E", "F", "P"})
+
+
+def title_fill_blocked(tier: str | None, danji_code: object = None) -> bool:
+    """Filled K-apt rows must not be overwritten. Empty F is not a match."""
+    t = (tier or "").strip()
+    if t in {"A", "B", "C", "D", "E", "P"}:
+        return True
+    if t == "F" and has_danji_code(danji_code):
+        return True
+    return False
 DEFAULT_TYPES: tuple[TitleKind, ...] = ("apartment", "rowhouse", "officetel")
 BATCH = 500
 
@@ -237,7 +249,7 @@ def classify(
             None if pd.isna(cand.beopjungri_code) else str(cand.beopjungri_code),
             None if pd.isna(cand.lot_number) else str(cand.lot_number),
         )
-        if tier in BLOCKED_TIERS:
+        if title_fill_blocked(tier, getattr(cand, "danji_code", None)):
             out["blocked"].append({"building_key": cand.building_key})
             continue
         if skip_kapt and pnu and pnu in kapt_pnus:
@@ -378,6 +390,7 @@ def run(
         if attrs.empty:
             merged = buildings.copy()
             merged["match_tier"] = None
+            merged["danji_code"] = None
             merged["has_attr_row"] = False
         else:
             merged = buildings.merge(attrs, on="building_key", how="left")

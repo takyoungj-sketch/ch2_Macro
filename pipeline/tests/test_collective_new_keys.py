@@ -36,3 +36,12 @@ def test_filter_fills_new_keys_drops_existing_rows():
 def test_abc_are_blocked_tiers():
     assert {"A", "B", "C"}.issubset(BLOCKED_TIERS)
     assert "T" not in BLOCKED_TIERS
+
+
+def test_empty_f_is_not_title_blocked():
+    from parcel_master.apply_title_fill import title_fill_blocked
+
+    assert title_fill_blocked("F", None) is False
+    assert title_fill_blocked("F", "A10023786") is True
+    assert title_fill_blocked("A", None) is True
+    assert title_fill_blocked("Z", None) is False

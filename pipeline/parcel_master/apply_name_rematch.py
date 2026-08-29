@@ -1,6 +1,7 @@
-"""시공사 없는 T/Z 단지를 법정동 안 유일 단지명으로 K-apt에 붙인다.
+"""시공사 없는 T/Z·빈 F 단지를 법정동 안 유일 단지명·도로명으로 K-apt에 붙인다.
 
-지번이 달라도 이름이 그 동에 하나면 A·B·E. 재건축·묶음은 건너뛴다.
+지번이 달라도 이름(시도 접두 제거)이나 도로명이 그 동에 하나면 A·B·C·E.
+재건축·묶음은 건너뛴다.
 
     python -m parcel_master.apply_name_rematch
     python -m parcel_master.apply_name_rematch --dry-run
@@ -25,6 +26,7 @@ sys.path.insert(0, str(_PIPELINE))
 from build_collective_building_attributes import (  # noqa: E402
     TIER_RULE_MAP,
     build_kapt_indexes,
+    has_danji_code,
     match_one,
     norm_name,
     norm_name_core,
@@ -49,6 +51,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 log = logging.getLogger(__name__)
 
 OPEN_TIERS = frozenset({"T", "Z"})
+NAME_FILL_TIERS = frozenset({"A", "B", "E"})
 E_MIN_NAME = 6
 
 
@@ -62,7 +65,8 @@ def _master_indexed(conn, snapshot_ym: str) -> pd.DataFrame:
     df = pd.read_sql(
         text(
             """
-            SELECT danji_code, danji_name, beopjungri_code, lot_key, approved_date,
+            SELECT danji_code, danji_name, sido_name, sigungu_name, beopjungri_code,
+                   lot_key, road_address, approved_date,
                    builder_raw, developer_raw, structure_raw, households, households_sale,
                    households_rent, dong_count, max_floor, parking_total, danji_class,
                    supply_type
@@ -91,6 +95,7 @@ def _open_candidates(conn, snapshot_ym: str) -> pd.DataFrame:
             SELECT building_key, MAX(display_name) AS display_name,
                    MODE() WITHIN GROUP (ORDER BY beopjungri_code) AS beopjungri_code,
                    MODE() WITHIN GROUP (ORDER BY lot_number) AS lot_number,
+                   MODE() WITHIN GROUP (ORDER BY road_name) AS road_name,
                    COUNT(*) AS n_tx,
                    MAX(building_year) AS building_year
             FROM collective_transactions
@@ -113,8 +118,11 @@ def _open_candidates(conn, snapshot_ym: str) -> pd.DataFrame:
     )
     merged = buildings.merge(attrs, on="building_key", how="left")
     merged["has_attr_row"] = merged["match_tier"].notna()
+    if "danji_code" not in merged.columns:
+        merged["danji_code"] = None
     tier = merged["match_tier"].fillna("Z").astype(str)
-    return merged.loc[tier.isin(OPEN_TIERS)].copy()
+    empty_f = (tier == "F") & ~merged["danji_code"].map(has_danji_code)
+    return merged.loc[tier.isin(OPEN_TIERS) | empty_f].copy()
 
 
 def classify_name_fills(cands: pd.DataFrame, kapt: pd.DataFrame) -> dict[str, list[dict[str, Any]]]:
@@ -124,19 +132,25 @@ def classify_name_fills(cands: pd.DataFrame, kapt: pd.DataFrame) -> dict[str, li
     kapt = kapt[kapt["beopjungri_code"].astype(str).str.strip() != ""].reset_index(drop=True)
     if kapt.empty:
         return out
-    by_lot, by_name, by_core, names_in_bj = build_kapt_indexes(kapt)
+    by_lot, by_name, by_core, names_in_bj, by_road = build_kapt_indexes(kapt)
     for cand in cands.itertuples(index=False):
         row = SimpleNamespace(
             beopjungri_code=cand.beopjungri_code,
             display_name=cand.display_name,
             lot_number=cand.lot_number,
+            road_name=getattr(cand, "road_name", None),
         )
         tier_key, kapt_idxs = match_one(
-            row, by_lot=by_lot, by_name=by_name, by_core=by_core, names_in_bj=names_in_bj
+            row,
+            by_lot=by_lot,
+            by_name=by_name,
+            by_core=by_core,
+            names_in_bj=names_in_bj,
+            by_road=by_road,
         )
         kapt_idx = kapt_idxs[0] if len(kapt_idxs) == 1 else None
         match_tier, match_rule = TIER_RULE_MAP[tier_key]
-        if match_tier not in {"A", "B", "E"} or kapt_idx is None:
+        if match_tier not in NAME_FILL_TIERS or kapt_idx is None:
             out["skip"].append({"building_key": cand.building_key, "tx_name": cand.display_name})
             continue
         master = kapt.iloc[kapt_idx]
@@ -220,7 +234,7 @@ def _write_fills(conn, snapshot_ym: str, fills: list[dict[str, Any]]) -> tuple[i
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="T/Z: unique-name K-apt fill")
+    p = argparse.ArgumentParser(description="T/Z/empty F: unique-name or unique-road K-apt fill")
     p.add_argument("--snapshot-ym", default=None)
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--skip-dictionary", action="store_true")
@@ -240,7 +254,7 @@ def main() -> None:
         kapt = _master_indexed(conn, snapshot_ym)
         cands = _open_candidates(conn, snapshot_ym)
 
-    log.info("snapshot_ym=%s  kapt_indexed=%s  T/Z=%s", snapshot_ym, len(kapt), len(cands))
+    log.info("snapshot_ym=%s  kapt_indexed=%s  T/Z/emptyF=%s", snapshot_ym, len(kapt), len(cands))
     classified = classify_name_fills(cands, kapt)
     fills = classified["fill"]
     log.info(

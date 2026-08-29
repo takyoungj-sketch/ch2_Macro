@@ -152,15 +152,21 @@ def classify_multi_fills(cands: pd.DataFrame, kapt: pd.DataFrame) -> dict[str, l
     kapt = kapt[kapt["beopjungri_code"].astype(str).str.strip() != ""].reset_index(drop=True)
     if kapt.empty:
         return out
-    by_lot, by_name, by_core, names_in_bj = build_kapt_indexes(kapt)
+    by_lot, by_name, by_core, names_in_bj, by_road = build_kapt_indexes(kapt)
     for cand in cands.itertuples(index=False):
         row = SimpleNamespace(
             beopjungri_code=cand.beopjungri_code,
             display_name=cand.display_name,
             lot_number=cand.lot_number,
+            road_name=getattr(cand, "road_name", None),
         )
         tier_key, kapt_idxs = match_one(
-            row, by_lot=by_lot, by_name=by_name, by_core=by_core, names_in_bj=names_in_bj
+            row,
+            by_lot=by_lot,
+            by_name=by_name,
+            by_core=by_core,
+            names_in_bj=names_in_bj,
+            by_road=by_road,
         )
         match_tier, match_rule = TIER_RULE_MAP[tier_key]
         if match_tier not in MULTI_ATTR_TIERS or len(kapt_idxs) < 2:

@@ -27,6 +27,7 @@ from parcel_master.pnu import pnu_from_tx  # noqa: E402
 from parcel_master.pnu_unique import pnu_unique_skip_reason  # noqa: E402
 from build_collective_building_attributes import (  # noqa: E402
     _str_or_none,
+    has_danji_code,
     load_buildings,
     parse_approved_year,
     parse_int,
@@ -166,7 +167,7 @@ def classify_candidates(cands: pd.DataFrame, by_pnu: dict[str, Any]) -> dict[str
     }
     for cand in cands.itertuples(index=False):
         tier = None if pd.isna(cand.match_tier) else str(cand.match_tier).strip()
-        if tier in {"D", "F"}:
+        if tier in {"D", "F"} and has_danji_code(getattr(cand, "danji_code", None)):
             out["skip_d"].append({"building_key": cand.building_key, "tx_name": cand.display_name})
             continue
         pnu = pnu_from_tx(
