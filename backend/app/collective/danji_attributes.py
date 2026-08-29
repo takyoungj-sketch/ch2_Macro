@@ -110,6 +110,10 @@ MATCH_NOTE_PNU_UNIQUE = (
     "주소 규칙으로는 못 붙였고, K-apt 필지고유번호가 이 지번에 하나뿐입니다. "
     "목록 세대수·시공사는 채우지만 지역회귀 hard 표본(A·B·C)에는 넣지 않습니다."
 )
+MATCH_NOTE_TITLE_CLUSTER = (
+    "주소 규칙으로는 못 붙였고, 표제부 단지명으로 묶인 필지에 K-apt가 하나뿐입니다. "
+    "목록 세대수·시공사는 K-apt 값이며, 지역회귀 hard 표본(A·B·C)에는 넣지 않습니다."
+)
 MATCH_NOTE_TITLE_PNU = (
     "K-apt에 없는 필지입니다. 세대수·층·구조는 표제부에서 같은 용도 동을 합친 값이고, "
     "시공사는 표제부에 없습니다. 지역회귀 hard 표본(A·B·C)에는 넣지 않습니다."
@@ -529,6 +533,10 @@ def fetch_danji_attributes(
     match_note = MATCH_NOTE_YEAR_EXACT if year_diff == 0 else None
     if rule == "pnu_unique":
         match_note = MATCH_NOTE_PNU_UNIQUE if match_note is None else f"{MATCH_NOTE_PNU_UNIQUE} {match_note}"
+    if rule == "title_cluster":
+        match_note = (
+            MATCH_NOTE_TITLE_CLUSTER if match_note is None else f"{MATCH_NOTE_TITLE_CLUSTER} {match_note}"
+        )
     if rule == "title_pnu":
         title_note = (
             MATCH_NOTE_TITLE_PNU_OFFICETEL

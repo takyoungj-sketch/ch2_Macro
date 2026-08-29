@@ -103,6 +103,17 @@ COMMENT ON TABLE ledger_snapshot IS '원본 판본 레지스트리. (source, sna
 COMMENT ON TABLE parcel_land_price IS 'AL_D151 필지·연도 이력. 광주·전남 구코드 29/46은 PNU를 12로 맵핑';
 COMMENT ON TABLE match_revision IS '확정 매칭 값 변경용 자리. 적재 없음. 자동 is_current flip 금지';
 
+CREATE TABLE IF NOT EXISTS title_cluster_pnu (
+    snapshot         CHAR(7)      NOT NULL,
+    beopjungri_code  CHAR(10)     NOT NULL,
+    name_key         VARCHAR(200) NOT NULL,
+    pnu              CHAR(19)     NOT NULL,
+    PRIMARY KEY (snapshot, beopjungri_code, name_key, pnu)
+);
+CREATE INDEX IF NOT EXISTS ix_title_cluster_pnu ON title_cluster_pnu (pnu);
+COMMENT ON TABLE title_cluster_pnu IS
+    '표제부 단지명으로 묶인 필지 집합. K-apt 별칭 매칭용. VPS 미적재';
+
 -- 기존 DB: CREATE IF NOT EXISTS 는 컬럼을 추가하지 않는다.
 ALTER TABLE building ADD COLUMN IF NOT EXISTS ho_cnt INTEGER;
 ALTER TABLE building ADD COLUMN IF NOT EXISTS parking_total INTEGER;

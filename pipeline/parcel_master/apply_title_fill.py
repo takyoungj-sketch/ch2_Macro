@@ -79,6 +79,8 @@ SELECT DISTINCT pnu
 FROM builder_master
 WHERE snapshot_ym = :ym AND pnu IS NOT NULL
 """
+# 표제부 클러스터 별칭 PNU는 여기 넣지 않는다. skip_kapt가 T를 Z로 되돌리기 때문.
+# 별칭은 apply_pnu_unique 가 P(title_cluster)로 올린 뒤 title_fill 이 P를 막는다.
 
 ATTR_SQL = """
 SELECT building_key, match_tier, match_rule, danji_code

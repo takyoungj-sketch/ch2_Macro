@@ -1,6 +1,7 @@
-"""주소 미매칭(F·Z) 단지에 PNU 유일 K-apt 속성을 채운다.
+"""주소 미매칭(T·F·Z) 단지에 PNU 유일 K-apt 속성을 채운다.
 
 전체 K-apt xlsx 재빌드 없이 현재 snapshot 의 builder_master.pnu 를 쓴다.
+표제부 단지명 클러스터에 K-apt가 하나면 대표지번이 달라도 같은 단지(title_cluster).
 재건축·묶음은 건너뛴다. 지역회귀 USABLE_TIERS 는 건드리지 않는다.
 
     python -m parcel_master.apply_pnu_unique
@@ -14,6 +15,7 @@ import logging
 import sys
 from decimal import Decimal
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pandas as pd
@@ -22,9 +24,14 @@ from sqlalchemy import text
 _PIPELINE = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_PIPELINE))
 
-from parcel_master.db_utils import get_collective_engine  # noqa: E402
+from parcel_master.db_utils import get_collective_engine, get_parcel_engine  # noqa: E402
 from parcel_master.pnu import pnu_from_tx  # noqa: E402
 from parcel_master.pnu_unique import pnu_unique_skip_reason  # noqa: E402
+from parcel_master.title_cluster import (  # noqa: E402
+    expand_kapt_pnu_map,
+    load_title_clusters,
+    persist_title_clusters,
+)
 from build_collective_building_attributes import (  # noqa: E402
     _str_or_none,
     has_danji_code,
@@ -77,7 +84,8 @@ def _unique_pnu_map(conn, snapshot_ym: str) -> dict[str, Any]:
             """
             SELECT danji_code, danji_name, pnu, approved_date, builder_raw, developer_raw,
                    structure_raw, households, households_sale, households_rent,
-                   dong_count, max_floor, parking_total, danji_class, supply_type
+                   dong_count, max_floor, parking_total, danji_class, supply_type,
+                   sido_name, sigungu_name, beopjungri_code
             FROM builder_master
             WHERE snapshot_ym = :ym AND pnu IS NOT NULL
             """
@@ -89,7 +97,19 @@ def _unique_pnu_map(conn, snapshot_ym: str) -> dict[str, Any]:
         return {}
     counts = df.groupby("pnu").size()
     unique = df[df["pnu"].map(lambda p: int(counts[p]) == 1)]
-    return {str(r.pnu): r for r in unique.itertuples(index=False)}
+    out: dict[str, Any] = {}
+    for r in unique.itertuples(index=False):
+        rec = r._asdict()
+        pnu = str(rec.get("pnu") or "").strip()
+        bj = str(rec.get("beopjungri_code") or "").strip()
+        if bj.lower() in {"nan", "none"}:
+            bj = ""
+        if len(bj) != 10 and len(pnu) == 19:
+            rec["beopjungri_code"] = pnu[:10]
+        else:
+            rec["beopjungri_code"] = bj
+        out[pnu] = SimpleNamespace(**rec)
+    return out
 
 
 def _candidates(conn, snapshot_ym: str) -> pd.DataFrame:
@@ -119,7 +139,7 @@ def _candidates(conn, snapshot_ym: str) -> pd.DataFrame:
     return merged.loc[keep].copy()
 
 
-def _fill_record(cand: Any, master: Any) -> dict[str, Any]:
+def _fill_record(cand: Any, master: Any, *, match_rule: str = "pnu_unique") -> dict[str, Any]:
     attrs = master_to_attrs(master)
     building_year = parse_int(cand.building_year)
     approved = attrs["approved_year"]
@@ -130,7 +150,7 @@ def _fill_record(cand: Any, master: Any) -> dict[str, Any]:
         "building_key": cand.building_key,
         "danji_code": attrs["danji_code"],
         "match_tier": "P",
-        "match_rule": "pnu_unique",
+        "match_rule": match_rule,
         "approved_year": approved,
         "building_year": building_year,
         "year_diff": year_diff,
@@ -155,7 +175,11 @@ def _fill_record(cand: Any, master: Any) -> dict[str, Any]:
     return rec
 
 
-def classify_candidates(cands: pd.DataFrame, by_pnu: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+def classify_candidates(
+    cands: pd.DataFrame,
+    by_pnu: dict[str, Any],
+    rules: dict[str, str] | None = None,
+) -> dict[str, list[dict[str, Any]]]:
     out: dict[str, list[dict[str, Any]]] = {
         "fill": [],
         "keep_p": [],
@@ -210,7 +234,8 @@ def classify_candidates(cands: pd.DataFrame, by_pnu: dict[str, Any]) -> dict[str
         if tier == "P":
             out["keep_p"].append({"building_key": cand.building_key, "tx_name": cand.display_name})
             continue
-        out["fill"].append(_fill_record(cand, master))
+        rule = (rules or {}).get(pnu or "", "pnu_unique")
+        out["fill"].append(_fill_record(cand, master, match_rule=rule))
     return out
 
 
@@ -333,8 +358,30 @@ def main() -> None:
         snapshot_ym = str(snapshot_ym).strip()
         by_pnu = _unique_pnu_map(conn, snapshot_ym)
         cands = _candidates(conn, snapshot_ym)
-    log.info("snapshot_ym=%s  unique_pnu=%s  candidates=%s", snapshot_ym, len(by_pnu), len(cands))
-    classified = classify_candidates(cands, by_pnu)
+    clusters: dict = {}
+    try:
+        parcel = get_parcel_engine()
+        from parcel_master.load_title_pilot import apply_schema
+
+        apply_schema(parcel)
+        with parcel.connect() as pconn:
+            clusters = load_title_clusters(pconn)
+            snap = pconn.execute(text("SELECT MAX(snapshot) FROM building")).scalar()
+        if clusters and not args.dry_run and snap:
+            with parcel.begin() as pconn:
+                persist_title_clusters(pconn, str(snap).strip(), clusters)
+    except Exception:
+        log.exception("title clusters skipped (parcel_master 없거나 스키마 실패)")
+        clusters = {}
+    by_pnu, rules = expand_kapt_pnu_map(by_pnu, clusters)
+    log.info(
+        "snapshot_ym=%s  unique_pnu=%s  candidates=%s  cluster_alias=%s",
+        snapshot_ym,
+        sum(1 for r in rules.values() if r == "pnu_unique"),
+        len(cands),
+        sum(1 for r in rules.values() if r == "title_cluster"),
+    )
+    classified = classify_candidates(cands, by_pnu, rules)
     fills = classified["fill"]
     reverts = classified["revert"]
     log.info(
@@ -348,7 +395,7 @@ def main() -> None:
         len(classified["multi_or_none"]),
     )
     for rec in fills[:30]:
-        log.info("  FILL %s → %s  hh=%s", rec["tx_name"], rec["kapt_name"], rec["households"])
+        log.info("  FILL %s → %s  hh=%s  rule=%s", rec["tx_name"], rec["kapt_name"], rec["households"], rec["match_rule"])
     if len(fills) > 30:
         log.info("  ... %s more", len(fills) - 30)
     for rec in reverts:
