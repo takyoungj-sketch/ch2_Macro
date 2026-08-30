@@ -94,6 +94,22 @@ LIMITATIONS = """
 # Planner 판단 자료. 한 단지 실측 n·계수는 넣지 않는다.
 FUNCTION_CARDS: list[dict[str, Any]] = [
     {
+        "id": "regional_profile",
+        "name": "지역 프로필",
+        "apps": ("profile",),
+        "purpose": "한 지역의 거래 구성·유형 상관·전국 순위·닮은 지역(Twin)을 본다",
+        "good_questions": [
+            "이 지역의 거래 구성을 요약해 주세요",
+            "Twin 유사지역은 무엇을 뜻하나요",
+            "전국 순위는 어떻게 읽나요",
+        ],
+        "strengths": ["유형 간 구성·상관을 한 화면에서 본다"],
+        "cautions": [
+            "순위·Twin은 통계 유사성이지 투자 추천이 아님",
+            "표본이 적은 지역은 구성이 한두 건에 흔들림",
+        ],
+    },
+    {
         "id": "collective_integrated_regression",
         "name": "집합 통합회귀",
         "apps": ("collective",),
@@ -237,6 +253,12 @@ def product_knowledge_pack(*, app: str = "built", panel: str = "") -> str:
                 "지금 화면은 상권분석 모달이다. 주거 전환율·환산 P50이 아니라 "
                 "부동산원 상업용 상권 공표(기본표 4분기 롤링, 추세는 연간)만 인용한다."
             )
+    elif app == "profile":
+        parts.append(format_function_cards(app="profile"))
+        parts.append(
+            "profile: 지역 프로필(거래 구성·Twin 유사지역·전국 순위). "
+            "숫자는 화면 Bundle facts만 인용. 투자·매수 추천 금지."
+        )
     parts.append(LIMITATIONS.strip())
     if app in ("built", "land") and panel:
         extra = format_function_cards(app=app)

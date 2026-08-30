@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchLandRegressionPredict } from "../api/client";
 import { buildLandPredictionContext } from "../api/aiContext";
+import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import type {
   LandPredictOptions,
   LandRegressionPredictRequest,
@@ -9,7 +10,6 @@ import type {
   LandRegressionResponse,
   LandRegressionVariables,
 } from "../types";
-import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
 import { AnalysisHelpPanel } from "@ch2/analysis-help";
 import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import { LAND_PREDICT_HELP } from "../constants/landStatsExplain";
@@ -137,7 +137,7 @@ export default function LandPredictPanel({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5 shrink-0">
-          {aiContext && <AiAssistantPanel context={aiContext} />}
+          <PublishAiContext context={aiContext} />
           <button
             type="button"
             disabled={loading}

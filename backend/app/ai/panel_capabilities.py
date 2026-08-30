@@ -340,6 +340,19 @@ PANEL_CAPABILITIES: dict[str, PanelCapability] = {
             "이 상권 공표는 주거 전월세와 같나요?",
         ),
     ),
+    "RegionalProfile": PanelCapability(
+        panel="RegionalProfile",
+        label="지역 프로필",
+        bundle_id="twin_city_compare",
+        blocked_keywords=_REGRESSION_KEYWORDS,
+        redirects=((_REGRESSION_KEYWORDS, _REDIRECT_REGRESSION),),
+        on_screen_questions=(
+            "이 지역의 거래 구성을 요약해 주세요.",
+            "Twin 유사지역은 무엇을 뜻하나요?",
+            "전국 순위는 어떻게 읽나요?",
+            "유형 상관은 어떻게 보나요?",
+        ),
+    ),
     "CommercialFloorIndexPanel": PanelCapability(
         panel="CommercialFloorIndexPanel",
         label="상가·공장 효용지수",

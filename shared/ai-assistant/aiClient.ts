@@ -7,7 +7,7 @@ const api = axios.create({
   headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
 });
 
-export type AiApp = "land" | "built" | "collective" | "rent";
+export type AiApp = "land" | "built" | "collective" | "rent" | "profile";
 export type AiPurpose = "statistics" | "prediction" | "market_analysis" | "methodology";
 
 export type EvidenceConfidence = "high" | "medium" | "low";
@@ -21,6 +21,16 @@ export interface EvidenceItem {
   confidence: EvidenceConfidence;
 }
 
+export interface AiScreenAction {
+  id: string;
+  kind: "navigate" | "open_ui" | "run_engine";
+  label: string;
+  href?: string | null;
+  ui?: string | null;
+  path_id?: string | null;
+  confirm_message?: string | null;
+}
+
 export interface AiChatResponse {
   session_id: string;
   route: string;
@@ -28,6 +38,7 @@ export interface AiChatResponse {
   evidence: EvidenceItem[];
   bundle_id?: string | null;
   suggested_followups: string[];
+  actions?: AiScreenAction[];
   disclaimer?: string | null;
   llm_used: boolean;
   trust_level?: "high" | "medium" | "low" | null;

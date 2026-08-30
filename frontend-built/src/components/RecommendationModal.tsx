@@ -16,7 +16,7 @@ import { buildBuiltRecommendContext } from "../api/aiClient";
 import { fmtDecimal, fmtNum } from "../utils/regressionFormat";
 import { BUILT_RECOMMEND_HELP } from "../utils/builtAnalysisHelp";
 import type { ProfileLinkTarget } from "../utils/profileLink";
-import AiAssistantPanel from "./AiAssistantPanel";
+import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import DraggableModalShell from "./DraggableModalShell";
 import RecommendStagePanel from "./RecommendStagePanel";
@@ -224,9 +224,7 @@ export default function RecommendationModal({
       headerActions={
         <div className="flex items-center gap-1.5">
           <AnalysisHelpPanel explain={BUILT_RECOMMEND_HELP} />
-          {recommendM.data && aiRecommendContext && (
-            <AiAssistantPanel context={aiRecommendContext} />
-          )}
+          <PublishAiContext context={recommendM.data && aiRecommendContext ? aiRecommendContext : null} />
           <button
             type="button"
             className="btn btn-ghost text-xs"

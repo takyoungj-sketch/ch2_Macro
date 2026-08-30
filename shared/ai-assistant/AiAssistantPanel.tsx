@@ -1,8 +1,16 @@
 // @ts-nocheck — shared 패키지: 각 frontend node_modules 기준으로 tsc 경로가 달라짐
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import clsx from "clsx";
 import type { AiChatResponse, AiContextPayload, EvidenceItem } from "./aiClient";
 import { readAiSessionId, sendAiChat } from "./aiClient";
+import { emptyAiContext, useActiveAiView } from "./ActiveAiView";
+import { setAiChatOpen } from "./aiHost";
+import {
+  applyAiScreenAction,
+  CH2_AI_ENGINE_DONE_EVENT,
+  type AiScreenAction,
+} from "./aiActions";
 
 type ChatMessage = { role: "user" | "assistant"; text: string; meta?: AiChatResponse };
 
@@ -31,6 +39,56 @@ const ENTRY_CHIPS = [
     q: "지금까지 실행한 분석을 정리해 주세요.",
   },
 ];
+
+function ScreenActionButtons({
+  actions,
+  pendingId,
+  onPending,
+}: {
+  actions: AiScreenAction[];
+  pendingId: string | null;
+  onPending: (id: string | null) => void;
+}) {
+  if (!actions?.length) return null;
+  return (
+    <div className="mt-3 space-y-1.5">
+      <p className="text-[0.85em] font-semibold tracking-wide text-slate-500 dark:text-slate-400 mb-1">
+        다음 단계 (기존 화면)
+      </p>
+      {actions.map((a) => {
+        const confirming = pendingId === a.id;
+        return (
+          <div key={a.id}>
+            {confirming && a.confirm_message ? (
+              <p className="text-[0.9em] text-amber-800 dark:text-amber-200 mb-1">{a.confirm_message}</p>
+            ) : null}
+            <button
+              type="button"
+              className="text-left w-full px-3 py-2 rounded-lg border border-sky-300 bg-sky-50/80 hover:border-sky-500 text-[0.95em] text-slate-800 dark:border-sky-600 dark:bg-slate-800 dark:text-slate-100"
+              onClick={() => {
+                if (a.kind === "run_engine" && !confirming) {
+                  onPending(a.id);
+                  return;
+                }
+                onPending(null);
+                if (a.kind === "run_engine") {
+                  try {
+                    sessionStorage.setItem("ch2-ai-expect-interpret", "1");
+                  } catch {
+                    /* ignore */
+                  }
+                }
+                applyAiScreenAction(a);
+              }}
+            >
+              {confirming ? "승인하고 실행" : a.label}
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function parseSections(text: string): { title: string; body: string }[] | null {
   if (!text.includes("### ")) return null;
@@ -277,7 +335,7 @@ function defaultWinPos() {
   const vh = typeof window !== "undefined" ? window.innerHeight : 800;
   return clampWin({
     x: Math.max(8, (vw - DEFAULT_WIN.w) / 2),
-    y: Math.max(8, (vh - DEFAULT_WIN.h) / 2),
+    y: Math.max(78, (vh - DEFAULT_WIN.h) / 2),
     w: DEFAULT_WIN.w,
     h: DEFAULT_WIN.h,
   });
@@ -300,6 +358,7 @@ function AiAssistantModal({
   const [lastMeta, setLastMeta] = useState<AiChatResponse | null>(null);
   const [win, setWin] = useState(defaultWinPos);
   const [fontScale, setFontScale] = useState(readStoredFontScale);
+  const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const chatLogRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
     mode: "move" | "resize";
@@ -321,12 +380,20 @@ function AiAssistantModal({
   }, [messages, loading]);
 
   useEffect(() => {
+    setAiChatOpen(open);
+    return () => setAiChatOpen(false);
+  }, [open]);
+
+  useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      e.stopPropagation();
+      onClose();
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, [open, onClose]);
 
   useEffect(() => {
@@ -408,6 +475,23 @@ function AiAssistantModal({
     [context, loading, sessionId],
   );
 
+  useEffect(() => {
+    if (!open) return;
+    const onDone = () => {
+      try {
+        if (sessionStorage.getItem("ch2-ai-expect-interpret") !== "1") return;
+        sessionStorage.removeItem("ch2-ai-expect-interpret");
+      } catch {
+        return;
+      }
+      window.setTimeout(() => {
+        void runChat("이 화면의 분석 결과를 설명해 주세요.");
+      }, 50);
+    };
+    window.addEventListener(CH2_AI_ENGINE_DONE_EVENT, onDone);
+    return () => window.removeEventListener(CH2_AI_ENGINE_DONE_EVENT, onDone);
+  }, [open, runChat]);
+
   if (!open) return null;
 
   const scopeHint = context.scope?.region_label ?? "현재 scope";
@@ -418,9 +502,10 @@ function AiAssistantModal({
       ?.filter((e: EvidenceItem) => e.type === "web" && e.url)
       .map((e: EvidenceItem) => ({ label: e.label, url: e.url })) ?? [];
 
-  return (
+  return createPortal(
     <div
-      className="fixed z-[100] modal-shell rounded-xl shadow-2xl border flex flex-col overflow-hidden"
+      data-ch2-ai
+      className="fixed z-[150] modal-shell rounded-xl shadow-2xl border flex flex-col overflow-hidden"
       role="dialog"
       aria-modal="false"
       aria-labelledby="ai-assistant-modal-title"
@@ -566,8 +651,14 @@ function AiAssistantModal({
                   <div className="text-[1em] leading-relaxed text-slate-700 dark:text-slate-200">
                     <AnswerBody text={m.text} />
                   </div>
-                  {m.meta?.suggested_followups?.length > 0 &&
-                    (m.meta.route === "refusal" || m.meta.route === "casual") && (
+                  {m.meta?.actions?.length > 0 && (
+                    <ScreenActionButtons
+                      actions={m.meta.actions}
+                      pendingId={pendingActionId}
+                      onPending={setPendingActionId}
+                    />
+                  )}
+                  {m.meta?.suggested_followups?.length > 0 && (
                       <div className="mt-3">
                         <p className="text-[0.85em] font-semibold tracking-wide text-slate-500 dark:text-slate-400 mb-1.5">
                           관련 질문
@@ -662,7 +753,8 @@ function AiAssistantModal({
           aria-hidden
         />
       </button>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -670,21 +762,25 @@ export default function AiAssistantPanel({
   context,
   className,
 }: {
-  context: AiContextPayload;
+  context?: AiContextPayload;
   className?: string;
 }) {
+  const fromView = useActiveAiView();
+  const ctx = context ?? fromView ?? emptyAiContext("built", "RegressionCard");
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <button
-        type="button"
-        className={clsx("btn btn-ghost shrink-0", className)}
-        onClick={() => setOpen(true)}
-      >
-        AI 어시스턴트
-      </button>
-      <AiAssistantModal open={open} onClose={() => setOpen(false)} context={context} />
+      <span data-ch2-ai className="inline-flex shrink-0">
+        <button
+          type="button"
+          className={clsx("btn btn-ghost shrink-0", className)}
+          onClick={() => setOpen(true)}
+        >
+          AI 어시스턴트
+        </button>
+      </span>
+      <AiAssistantModal open={open} onClose={() => setOpen(false)} context={ctx} />
     </>
   );
 }

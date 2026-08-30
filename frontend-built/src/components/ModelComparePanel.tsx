@@ -8,7 +8,7 @@ import type {
   ResponseScale,
 } from "../types";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
-import AiAssistantPanel from "./AiAssistantPanel";
+import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import { CandidateValidationList } from "./CandidateValidationList";
 import { ModelComparisonCard } from "./ModelComparisonCard";
@@ -205,7 +205,7 @@ export function ModelComparePanel({
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <AnalysisHelpPanel explain={data.explain ?? BUILT_MODEL_SELECTION_COMPARE_HELP} />
-          {aiContext && <AiAssistantPanel context={aiContext} />}
+          <PublishAiContext context={aiContext} />
         </div>
       </div>
 

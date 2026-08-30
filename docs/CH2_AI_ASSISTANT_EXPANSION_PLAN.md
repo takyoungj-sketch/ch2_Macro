@@ -1,6 +1,6 @@
 # CH2 AI 어시스턴트 확장 계획
 
-> **상태:** 확정 (2026-08-30) · D-056  
+> **상태:** P3 진행 (2026-08-30) · D-056 · P0–P2 코드 반영, P3 실행 보조(화면 이동·승인 엔진·비교·메모) 구현 중. 코호트 프리필 없음.
 > **헌법:** [`CH2_AI_CONSTITUTION.md`](CH2_AI_CONSTITUTION.md) · [`CH2_EXPLAIN_CONSTITUTION.md`](CH2_EXPLAIN_CONSTITUTION.md) · [`CH2_CONSTITUTION.md`](CH2_CONSTITUTION.md)  
 > **구현:** [`CH2_AI_ARCHITECTURE.md`](CH2_AI_ARCHITECTURE.md)  
 > **결정:** [`DECISIONS.md`](DECISIONS.md) D-056 · [`lab/decisions/D-056.json`](lab/decisions/D-056.json)

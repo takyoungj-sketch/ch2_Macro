@@ -7,11 +7,14 @@ export default defineConfig({
   plugins: [react()],
   base: "/profile/",
   resolve: {
-    alias: {
-      "@ch2/macro-shell": path.resolve(__dirname, "../shared/macro-shell"),
-      "@ch2/region-picker": path.resolve(__dirname, "../shared/region-picker"),
-      "@ch2/stats-glossary": path.resolve(__dirname, "../shared/stats-glossary"),
-    },
+      alias: {
+        "@ch2/macro-shell": path.resolve(__dirname, "../shared/macro-shell"),
+        "@ch2/region-picker": path.resolve(__dirname, "../shared/region-picker"),
+        "@ch2/stats-glossary": path.resolve(__dirname, "../shared/stats-glossary"),
+        "@ch2/ai-assistant": path.resolve(__dirname, "../shared/ai-assistant"),
+        clsx: path.resolve(__dirname, "node_modules/clsx"),
+        axios: path.resolve(__dirname, "node_modules/axios"),
+      },
   },
   server: {
     host: "127.0.0.1",

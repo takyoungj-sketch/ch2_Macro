@@ -12,6 +12,7 @@ import {
   fetchCommercialRegionStructure,
 } from "./api/commercialClient";
 import { fetchCollectiveMapResolveCodes } from "./api/mapClient";
+import { CH2_AI_ACTION_EVENT, type AiScreenAction } from "@ch2/ai-assistant/aiActions";
 import DualHorizontalScroll from "./components/DualHorizontalScroll";
 import StatsTableExpandButton from "./components/StatsTableExpandButton";
 import CommercialClusterDetailModal from "./components/CommercialClusterDetailModal";
@@ -19,6 +20,8 @@ import CollectiveRegionMapHub, { type MapPanelMode } from "./components/Collecti
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
+import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
+import { ActiveAiViewProvider, emptyAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import StatsWindowToggle, { normalizeStatsWindowYears, type StatsWindowYears } from "./components/StatsWindowToggle";
 import RegionChipPanel, {
   LEFT_REGION_MULTI_SELECT,
@@ -136,6 +139,7 @@ export default function CommercialApp() {
   const [windowYears, setWindowYears] = useState<StatsWindowYears>(5);
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [selected, setSelected] = useState<CommercialClusterRow | null>(null);
+  const [aiHint, setAiHint] = useState<string | null>(null);
   const [clusterSearch, setClusterSearch] = useState("");
   const [mapPanelMode, setMapPanelMode] = useState<MapPanelMode>("normal");
   const [tableWide, setTableWide] = useState(false);
@@ -326,7 +330,22 @@ export default function CommercialApp() {
     setSelected(null);
   };
 
+  useEffect(() => {
+    const on = (e: Event) => {
+      const a = (e as CustomEvent<AiScreenAction>).detail;
+      if (!a) return;
+      if (a.ui === "collective_cohort" || a.ui === "collective_integrated") {
+        setAiHint(
+          "목록에서 cluster를 연 다음 코호트에 비교할 도로를 추가하세요. AI가 코호트 구성을 바꾸지 않습니다.",
+        );
+      }
+    };
+    window.addEventListener(CH2_AI_ACTION_EVENT, on);
+    return () => window.removeEventListener(CH2_AI_ACTION_EVENT, on);
+  }, []);
+
   return (
+    <ActiveAiViewProvider fallback={emptyAiContext("collective", "CommercialList")}>
     <div className="h-screen flex flex-col overflow-hidden bg-slate-100 dark:bg-slate-900">
       <MacroStatsHeader
         currentApp="collective"
@@ -337,6 +356,7 @@ export default function CommercialApp() {
         onBumpFont={bumpUiFontScale}
         isDark={isDark}
         onToggleTheme={toggleUiColorScheme}
+        rightSlot={<AiAssistantPanel />}
       />
 
       <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
@@ -588,6 +608,11 @@ export default function CommercialApp() {
                 조건이 변경되었습니다. 「통계분석」을 다시 실행하세요.
               </p>
             )}
+            {aiHint && (
+              <p className="text-xs text-indigo-800 dark:text-indigo-200 mb-2 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded px-2 py-1.5">
+                {aiHint}
+              </p>
+            )}
             {scope && clustersQ.isLoading && <p className="text-sm text-slate-500 dark:text-slate-400">불러오는 중…</p>}
             {scope && clustersQ.isError && <p className="text-sm text-red-600">도로 목록을 불러오지 못했습니다.</p>}
             {scope && clustersQ.data && (
@@ -725,5 +750,6 @@ export default function CommercialApp() {
         />
       )}
     </div>
+    </ActiveAiViewProvider>
   );
 }

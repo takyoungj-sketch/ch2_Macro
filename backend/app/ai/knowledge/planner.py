@@ -52,6 +52,29 @@ def is_memo_request(message: str) -> bool:
     return any(
         k in m
         for k in ("정리해", "정리 해", "보고서로", "분석 메모", "지금까지 분석", "지금까지 실행", "히스토리")
+    ) and "비교" not in m
+
+
+def is_history_compare_question(message: str) -> bool:
+    """P3-4: 이전 History 슬롯 비교. 유형 격차 질문과 구분."""
+    m = message.strip()
+    if any(k in m for k in ("오피스텔", "아파트와", "유형 효과", "용도지역")):
+        if "아까" not in m and "이전 분석" not in m and "슬롯" not in m:
+            return False
+    if any(
+        k in m
+        for k in (
+            "아까와 비교",
+            "이전 분석과",
+            "이전과 비교",
+            "히스토리 비교",
+            "슬롯 비교",
+            "1차와 2차",
+        )
+    ):
+        return True
+    return ("아까" in m or "이전 실행" in m or "방금 전" in m) and any(
+        k in m for k in ("비교", "차이", "달라")
     )
 
 
@@ -236,6 +259,257 @@ def format_plan_answer(plan: dict[str, Any], *, caveats_text: str = "") -> str:
         lines.append(caveats_text)
     lines.append("")
     lines.append(
+        "아래 버튼은 **기존 CH2 화면**으로 보내거나, 승인 후에만 엔진을 돌립니다. "
+        "AI가 코호트 구성을 바꾸거나 계수를 계산하지 않습니다."
+    )
+    lines.append(
         "투자·매수·적정가 판단이 아닙니다. 경로만 제안하며, 계수는 해당 회귀가 성공한 뒤에만 말합니다."
     )
     return "\n".join(lines).strip()
+
+
+def _action(
+    *,
+    aid: str,
+    kind: str,
+    label: str,
+    href: str | None = None,
+    ui: str | None = None,
+    path_id: str | None = None,
+    confirm_message: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "id": aid,
+        "kind": kind,
+        "label": label,
+        "href": href,
+        "ui": ui,
+        "path_id": path_id,
+        "confirm_message": confirm_message,
+    }
+
+
+_RUN_CONFIRM = (
+    "현재 화면에 설정된 단지(또는 cluster)·변수로 CH2 회귀를 실행합니다. "
+    "AI가 조건을 바꾸거나 숫자를 계산하지 않습니다."
+)
+
+_RUN_CONFIRM_BUILT = (
+    "현재 화면에 설정된 지역·변수로 CH2 회귀를 실행합니다. "
+    "AI가 조건을 바꾸거나 숫자를 계산하지 않습니다."
+)
+
+
+def actions_for_plan(plan: dict[str, Any], context: AiContext) -> list[dict[str, Any]]:
+    """P3: 화면 이동(P3-1) · 승인 실행(P3-2). 코호트 프리필 없음."""
+    app = context.app
+    panel = context.panel or ""
+    on_collective = app == "collective" and panel not in ("CollectiveLanding",)
+    on_commercial = "Commercial" in panel
+    on_building = panel in ("BuildingRegressionPanel", "CommercialRegressionPanel") or "RegressionPanel" in panel
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    def add(item: dict[str, Any]) -> None:
+        key = item["id"]
+        if key in seen:
+            return
+        seen.add(key)
+        out.append(item)
+
+    for p in plan.get("paths") or []:
+        pid = p.get("path_id")
+        exe = p.get("executable")
+        if pid == "collective_cohort":
+            if not on_collective:
+                add(
+                    _action(
+                        aid="nav-coll-cohort",
+                        kind="navigate",
+                        label="주거 집합에서 코호트 구성",
+                        href="/collective/residential/",
+                        path_id=pid,
+                    )
+                )
+            else:
+                add(
+                    _action(
+                        aid="ui-coll-cohort",
+                        kind="open_ui",
+                        label="코호트 화면으로 (기존 단지 모달)",
+                        ui="collective_cohort",
+                        path_id=pid,
+                    )
+                )
+        elif pid == "collective_integrated_regression":
+            if not on_collective:
+                add(
+                    _action(
+                        aid="nav-coll-integrated",
+                        kind="navigate",
+                        label="주거 집합에서 통합회귀",
+                        href="/collective/residential/",
+                        path_id=pid,
+                    )
+                )
+            elif exe == "no":
+                add(
+                    _action(
+                        aid="ui-coll-cohort-types",
+                        kind="open_ui",
+                        label="코호트에 비교 유형 추가",
+                        ui="collective_cohort",
+                        path_id=pid,
+                    )
+                )
+            elif on_building and exe != "yes":
+                add(
+                    _action(
+                        aid="run-coll-integrated",
+                        kind="run_engine",
+                        label="현재 설정으로 통합회귀 실행",
+                        ui="collective_integrated",
+                        path_id=pid,
+                        confirm_message=_RUN_CONFIRM,
+                    )
+                )
+            else:
+                add(
+                    _action(
+                        aid="ui-coll-integrated",
+                        kind="open_ui",
+                        label="단지 모달에서 통합회귀",
+                        ui="collective_cohort",
+                        path_id=pid,
+                    )
+                )
+        elif pid == "collective_building_regression":
+            if on_collective:
+                add(
+                    _action(
+                        aid="ui-coll-building",
+                        kind="open_ui",
+                        label="단지 회귀 탭",
+                        ui="collective_cohort",
+                        path_id=pid,
+                    )
+                )
+            else:
+                add(
+                    _action(
+                        aid="nav-coll-building",
+                        kind="navigate",
+                        label="집합에서 단지 회귀",
+                        href="/collective/residential/",
+                        path_id=pid,
+                    )
+                )
+        elif pid == "regional_regression":
+            if on_commercial:
+                continue
+            if on_collective:
+                add(
+                    _action(
+                        aid="ui-coll-regional",
+                        kind="open_ui",
+                        label="지역회귀 모달 열기",
+                        ui="collective_regional",
+                        path_id=pid,
+                    )
+                )
+            else:
+                add(
+                    _action(
+                        aid="nav-coll-regional",
+                        kind="navigate",
+                        label="집합에서 지역회귀",
+                        href="/collective/residential/",
+                        path_id=pid,
+                    )
+                )
+        elif pid == "expand_adjacent":
+            if on_collective and not on_commercial:
+                add(
+                    _action(
+                        aid="ui-coll-expand",
+                        kind="open_ui",
+                        label="지역을 넓혀 지역회귀",
+                        ui="collective_regional",
+                        path_id=pid,
+                    )
+                )
+        elif pid == "profile_twin":
+            if app != "profile":
+                add(
+                    _action(
+                        aid="nav-profile",
+                        kind="navigate",
+                        label="지역 프로필 Twin",
+                        href="/profile/",
+                        path_id=pid,
+                    )
+                )
+            else:
+                add(
+                    _action(
+                        aid="ui-profile-twin",
+                        kind="open_ui",
+                        label="Twin 카드로 이동",
+                        ui="profile_twin",
+                        path_id=pid,
+                    )
+                )
+        elif pid == "built_regression":
+            if app != "built":
+                add(
+                    _action(
+                        aid="nav-built",
+                        kind="navigate",
+                        label="복합 회귀 화면으로",
+                        href="/built/",
+                        path_id=pid,
+                    )
+                )
+            elif exe == "yes":
+                add(
+                    _action(
+                        aid="ui-built-reg",
+                        kind="open_ui",
+                        label="회귀 카드로 이동",
+                        ui="built_regression",
+                        path_id=pid,
+                    )
+                )
+            else:
+                add(
+                    _action(
+                        aid="run-built-reg",
+                        kind="run_engine",
+                        label="현재 설정으로 복합 회귀 실행",
+                        ui="built_regression",
+                        path_id=pid,
+                        confirm_message=_RUN_CONFIRM_BUILT,
+                    )
+                )
+        elif pid == "land_matrix":
+            if app != "land":
+                add(
+                    _action(
+                        aid="nav-land",
+                        kind="navigate",
+                        label="토지 매트릭스로",
+                        href="/land/",
+                        path_id=pid,
+                    )
+                )
+            else:
+                add(
+                    _action(
+                        aid="ui-land-matrix",
+                        kind="open_ui",
+                        label="토지 통계 화면으로",
+                        ui="land_matrix",
+                        path_id=pid,
+                    )
+                )
+    return out

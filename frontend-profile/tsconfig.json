@@ -19,7 +19,9 @@
       "@ch2/region-picker": ["../shared/region-picker/index.ts"],
       "@ch2/region-picker/*": ["../shared/region-picker/*"],
       "@ch2/stats-glossary": ["../shared/stats-glossary/index.ts"],
-      "@ch2/stats-glossary/*": ["../shared/stats-glossary/*"]
+      "@ch2/stats-glossary/*": ["../shared/stats-glossary/*"],
+      "@ch2/ai-assistant": ["../shared/ai-assistant/index.ts"],
+      "@ch2/ai-assistant/*": ["../shared/ai-assistant/*"]
     }
   },
   "include": ["src"]

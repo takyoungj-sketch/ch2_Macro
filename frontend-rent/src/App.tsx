@@ -13,9 +13,9 @@ import {
   fetchRentMeta,
   fetchRentStructure,
 } from "./api/client";
-import type { AiContextPayload } from "@ch2/ai-assistant/aiClient";
 import { buildRentListContext } from "./api/aiContext";
 import AiAssistantPanel from "./components/AiAssistantPanel";
+import { ActiveAiViewProvider, emptyAiContext, PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import BuildingDetailModal from "./components/BuildingDetailModal";
 import DualHorizontalScroll from "./components/DualHorizontalScroll";
 import RegionChipPanel, {
@@ -148,7 +148,6 @@ export default function App() {
   const [mapPanelMode, setMapPanelMode] = useState<MapPanelMode>("normal");
   const [showSangkwon, setShowSangkwon] = useState(false);
   const [tableWide, setTableWide] = useState(false);
-  const [sangkwonAi, setSangkwonAi] = useState<AiContextPayload | null>(null);
 
   const metaQ = useQuery({
     queryKey: ["rent-meta", windowYears],
@@ -292,7 +291,6 @@ export default function App() {
       }),
     [scope, addr1, addr2, windowYears, assetKinds, buildingsQ.data],
   );
-  const aiContext = sangkwonAi ?? rentAiContext;
 
   const scopeStale =
     scope !== null &&
@@ -344,6 +342,7 @@ export default function App() {
   const addr2ScopeLabel = formatScopeAddr2(addr2, addr1) || addr1;
 
   return (
+    <ActiveAiViewProvider fallback={emptyAiContext("rent", "RentListCard")}>
     <div className="h-screen flex flex-col overflow-hidden">
       <MacroStatsHeader
         currentApp="rent"
@@ -354,7 +353,9 @@ export default function App() {
         onBumpFont={bumpUiFontScale}
         isDark={isDark}
         onToggleTheme={toggleUiColorScheme}
+        rightSlot={<AiAssistantPanel />}
       />
+      <PublishAiContext context={rentAiContext} />
 
       <div className="flex flex-1 min-h-0 overflow-hidden" style={{ zoom: contentZoom }}>
         <aside className="layout-sidebar p-4 space-y-3">
@@ -601,7 +602,6 @@ export default function App() {
                     )}
                   </p>
                   <div className="flex items-center gap-2 shrink-0">
-                    <AiAssistantPanel context={aiContext} />
                     <StatsTableExpandButton
                       expanded={tableWide}
                       onToggle={() => setTableWide((v) => !v)}
@@ -768,11 +768,10 @@ export default function App() {
           scope={{ addr1, addr2, sangkwonGuList }}
           onClose={() => {
             setShowSangkwon(false);
-            setSangkwonAi(null);
           }}
-          onAiContext={setSangkwonAi}
         />
       )}
     </div>
+    </ActiveAiViewProvider>
   );
 }

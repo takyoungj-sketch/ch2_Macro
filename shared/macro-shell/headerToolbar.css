@@ -1,6 +1,12 @@
 /* 헤더 shell — 복합부동산 기준 px 고정 (html font-size·앱별 override와 무관) */
 
+:root {
+  --ch2-macro-header-height: 70px;
+}
+
 .ch2-macro-stats-header {
+  position: relative;
+  z-index: 140;
   box-sizing: border-box;
   flex-shrink: 0;
   padding: 15px 30px;

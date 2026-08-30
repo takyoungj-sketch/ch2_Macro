@@ -12,9 +12,9 @@ import {
 } from "react";
 import { useMutation } from "@tanstack/react-query";
 import clsx from "clsx";
-import AiAssistantPanel from "./AiAssistantPanel";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import { buildBuiltPredictionContext } from "../api/aiClient";
+import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import { predictRegression } from "../api/client";
 import { isOnlyDetached } from "../utils/assetTypes";
 import { BUILT_PREDICTION_HELP } from "../utils/builtAnalysisHelp";
@@ -308,7 +308,7 @@ export default function PredictPanel({
         </div>
         <div className="flex flex-wrap items-center gap-1.5 shrink-0">
           <AnalysisHelpPanel explain={predictM.data?.explain ?? BUILT_PREDICTION_HELP} />
-          {aiPredictionContext && <AiAssistantPanel context={aiPredictionContext} />}
+          <PublishAiContext context={aiPredictionContext} />
           <button
             type="button"
             className={clsx("btn btn-primary shrink-0", embedded && "text-xs py-1")}

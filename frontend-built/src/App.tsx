@@ -47,9 +47,16 @@ import { fetchBuiltMapResolveCodes } from "./api/mapClient";
 import BuiltTransactionListModal from "./components/BuiltTransactionListModal";
 import EnrichConsentModal from "./components/EnrichConsentModal";
 import BuiltRegionMapHub, { type MapPanelMode } from "./components/BuiltRegionMapHub";
+import { ActiveAiViewProvider, emptyAiContext, PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
+import {
+  CH2_AI_ACTION_EVENT,
+  notifyAiEngineReady,
+  type AiScreenAction,
+} from "@ch2/ai-assistant/aiActions";
 import AiAssistantPanel from "./components/AiAssistantPanel";
 import RegressionScatterSection from "./components/RegressionScatterSection";
 import { buildBuiltRegressionContext } from "./api/aiClient";
+import { recordAnalysisHistory } from "@ch2/ai-assistant/aiClient";
 import AnalysisHelpPanel from "./components/AnalysisHelpPanel";
 import { BUILT_REGRESSION_HELP } from "./utils/builtAnalysisHelp";
 import type {
@@ -981,6 +988,26 @@ export default function App() {
     });
   }, [regM.data, aiRegionLabel, assetType]);
 
+  useEffect(() => {
+    if (!aiRegressionContext) return;
+    notifyAiEngineReady(recordAnalysisHistory(aiRegressionContext));
+  }, [aiRegressionContext]);
+
+  useEffect(() => {
+    const on = (e: Event) => {
+      const a = (e as CustomEvent<AiScreenAction>).detail;
+      if (!a) return;
+      if (a.ui === "built_regression" || a.kind === "run_engine") {
+        document.getElementById("built-step-regression")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      if (a.kind === "run_engine") {
+        regM.mutate(regBody);
+      }
+    };
+    window.addEventListener(CH2_AI_ACTION_EVENT, on);
+    return () => window.removeEventListener(CH2_AI_ACTION_EVENT, on);
+  }, [regBody]);
+
   const addr2ScopeLabel = formatScopeAddr2(addr2, addr1) || addr1;
 
   const regressionSummaryText = useMemo(() => {
@@ -1020,6 +1047,7 @@ export default function App() {
   }, [assetType, addr1, addr2, yearFilterActive, asOfMonth, windowYears]);
 
   return (
+    <ActiveAiViewProvider fallback={emptyAiContext("built", "RegressionCard")}>
     <div className="h-screen flex flex-col overflow-hidden bg-slate-100 dark:bg-slate-900">
       <MacroStatsHeader
         currentApp="built"
@@ -1031,6 +1059,7 @@ export default function App() {
         onBumpFont={bumpUiFontScale}
         isDark={isDark}
         onToggleTheme={toggleUiColorScheme}
+        rightSlot={<AiAssistantPanel />}
       />
 
       <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
@@ -1644,9 +1673,7 @@ export default function App() {
                   <AnalysisHelpPanel
                     explain={regM.data?.explain ?? BUILT_REGRESSION_HELP}
                   />
-                  {regM.data && aiRegressionContext && (
-                    <AiAssistantPanel context={aiRegressionContext} />
-                  )}
+                  <PublishAiContext context={regM.data ? aiRegressionContext : null} />
                   <button
                     type="button"
                     className="btn btn-ghost shrink-0"
@@ -1731,5 +1758,6 @@ export default function App() {
       />
       </div>
     </div>
+    </ActiveAiViewProvider>
   );
 }

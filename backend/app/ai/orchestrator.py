@@ -61,14 +61,22 @@ from app.ai.schemas import (
     AiExplainRequest,
     AiHistoryRecordRequest,
     AiHistoryRecordResponse,
+    AiScreenAction,
     AnalysisExplain,
     EvidenceItem,
 )
 from app.ai.sessions import SessionTurn, get_or_create, session_summary
 from app.ai.knowledge.caveats import format_caveats_for_prompt
-from app.ai.knowledge.history import format_history_for_prompt, format_memo, maybe_record
+from app.ai.knowledge.history import (
+    format_history_compare,
+    format_history_for_prompt,
+    format_memo,
+    maybe_record,
+)
 from app.ai.knowledge.planner import (
+    actions_for_plan,
     format_plan_answer,
+    is_history_compare_question,
     is_memo_request,
     is_path_intent_question,
     plan_analysis,
@@ -139,10 +147,35 @@ def _planner_or_memo_response(
                 EvidenceItem(type="ch2_history", label="Analysis History", confidence="high"),
             ],
             bundle_id=bundle.bundle_id,
-            suggested_followups=["인접지역을 포함한 분석은?", "이 결과의 한계는?"],
+            suggested_followups=(
+                ["아까와 비교해 주세요", "이 결과의 한계는?"]
+                if session.analysis_history
+                else ["집합에서 회귀를 실행하면 History가 생깁니다."]
+            ),
             disclaimer=SHORT_DISCLAIMER,
             llm_used=False,
             trust_level="high" if session.analysis_history else "medium",
+            trust_sources=["CH2 Analysis History"],
+            ai_interpretation=_ai_interpretation_label(llm_used=False),
+        )
+        session.add_turn(SessionTurn(role="user", message=req.message, route="ch2", bundle_id=bundle.bundle_id))
+        session.add_turn(SessionTurn(role="assistant", message=answer[:500], route="ch2", bundle_id=bundle.bundle_id))
+        return resp
+
+    if is_history_compare_question(req.message):
+        answer = format_history_compare(session.analysis_history)
+        resp = AiChatResponse(
+            session_id=session.session_id,
+            route="ch2",
+            answer=validate_answer(answer, "ch2"),
+            evidence=[
+                EvidenceItem(type="ch2_history", label="Analysis History 비교", confidence="high"),
+            ],
+            bundle_id=bundle.bundle_id,
+            suggested_followups=["지금까지 분석을 정리해 주세요", "이 결과의 한계는?"],
+            disclaimer=SHORT_DISCLAIMER,
+            llm_used=False,
+            trust_level="high" if len(session.analysis_history) >= 2 else "medium",
             trust_sources=["CH2 Analysis History"],
             ai_interpretation=_ai_interpretation_label(llm_used=False),
         )
@@ -155,9 +188,10 @@ def _planner_or_memo_response(
 
     plan = plan_analysis(req.message, ctx)
     template = format_plan_answer(plan, caveats_text=caveats_text)
+    actions = [AiScreenAction.model_validate(a) for a in actions_for_plan(plan, ctx)]
     followups = [
         "지금 화면에서 바로 실행할 수 있나요?",
-        "인접지역을 포함하면 어떻게 되나요?",
+        "아까와 비교해 주세요",
         "지금까지 분석을 정리해 주세요.",
     ]
     syn_ans, syn_fu, _syn_nr, syn_used = try_grounded_synthesis(
@@ -187,6 +221,7 @@ def _planner_or_memo_response(
         ),
         bundle_id=bundle.bundle_id,
         suggested_followups=syn_fu or followups,
+        actions=actions,
         disclaimer=DEFAULT_DISCLAIMER,
         llm_used=bool(syn_used),
         trust_level="medium",

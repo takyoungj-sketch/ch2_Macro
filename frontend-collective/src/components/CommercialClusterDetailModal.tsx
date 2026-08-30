@@ -17,6 +17,7 @@ import {
   type CommercialAssetType,
   type CommercialClusterRow,
 } from "../types";
+import { CH2_AI_ACTION_EVENT, type AiScreenAction } from "@ch2/ai-assistant/aiActions";
 import { buildAnalysisPeriodParams, formatPeriodLabel } from "../utils/analysisPeriod";
 import {
   commercialRollingToTrendSeries,
@@ -285,6 +286,24 @@ export default function CommercialClusterDetailModal({
     setCohortRunKeys([...cohortKeys]);
     setCohortRunByPanel((prev) => ({ ...prev, [panel]: (prev[panel] ?? 0) + 1 }));
   };
+
+  useEffect(() => {
+    const on = (e: Event) => {
+      const a = (e as CustomEvent<AiScreenAction>).detail;
+      if (!a) return;
+      const wantReg =
+        a.ui === "collective_cohort" ||
+        a.ui === "collective_integrated" ||
+        a.kind === "run_engine";
+      if (wantReg) setPanel("regression");
+      if (a.kind === "run_engine" && canRunCohort) {
+        setCohortRunKeys([...cohortKeys]);
+        setCohortRunByPanel((prev) => ({ ...prev, regression: (prev.regression ?? 0) + 1 }));
+      }
+    };
+    window.addEventListener(CH2_AI_ACTION_EVENT, on);
+    return () => window.removeEventListener(CH2_AI_ACTION_EVENT, on);
+  }, [canRunCohort, cohortKeys]);
 
   const addToCohort = (clusterKey: string) => {
     if (cohortKeys.length >= MAX_COHORT_CLUSTERS) return;

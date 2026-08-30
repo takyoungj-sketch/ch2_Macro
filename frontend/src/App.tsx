@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
+import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
+import { ActiveAiViewProvider, emptyAiContext } from "@ch2/ai-assistant/ActiveAiView";
+import { CH2_AI_ACTION_EVENT, type AiScreenAction } from "@ch2/ai-assistant/aiActions";
 import { useLandDeepLink } from "./hooks/useLandDeepLink";
 import { useAppStore } from "./store";
 import RegionSelector from "./components/RegionSelector";
@@ -17,6 +20,16 @@ export default function App() {
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
   const { isDark, toggleUiColorScheme } = useUiColorScheme();
 
+  useEffect(() => {
+    const on = (e: Event) => {
+      const a = (e as CustomEvent<AiScreenAction>).detail;
+      if (a?.ui !== "land_matrix") return;
+      document.getElementById("land-step-analysis")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    window.addEventListener(CH2_AI_ACTION_EVENT, on);
+    return () => window.removeEventListener(CH2_AI_ACTION_EVENT, on);
+  }, []);
+
   const statsPanel =
     paidResultView === "basic" ? (
       <FreeStatsPanel />
@@ -25,6 +38,7 @@ export default function App() {
     ) : null;
 
   return (
+    <ActiveAiViewProvider fallback={emptyAiContext("land", "PaidMatrixCell")}>
     <div className="h-screen flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-900">
       <MacroStatsHeader
         currentApp="land"
@@ -35,6 +49,7 @@ export default function App() {
         onBumpFont={bumpUiFontScale}
         isDark={isDark}
         onToggleTheme={toggleUiColorScheme}
+        rightSlot={<AiAssistantPanel />}
       />
 
       <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
@@ -54,10 +69,11 @@ export default function App() {
                 onNormal={() => setMapPanelMode("normal")}
               />
             </section>
-            {statsPanel ? <div className="p-4 pt-2 pb-8">{statsPanel}</div> : null}
+            {statsPanel ? <div id="land-step-analysis" className="p-4 pt-2 pb-8">{statsPanel}</div> : null}
           </div>
         </main>
       </div>
     </div>
+    </ActiveAiViewProvider>
   );
 }

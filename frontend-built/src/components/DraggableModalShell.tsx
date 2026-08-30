@@ -14,6 +14,7 @@ import {
   persistModalFontStep,
   readStoredModalFontStep,
 } from "@ch2/macro-shell/displayUi";
+import { eventHitsCh2Ai, isAiChatOpen } from "@ch2/ai-assistant/aiHost";
 
 type Props = {
   open: boolean;
@@ -172,6 +173,7 @@ export default function DraggableModalShell({
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      if (isAiChatOpen()) return;
       if (fullscreen) {
         e.preventDefault();
         e.stopPropagation();
@@ -407,16 +409,24 @@ export default function DraggableModalShell({
           transform: "translate(-50%, -50%)",
         };
 
+  const overlayStyle: CSSProperties | undefined = fullscreen
+    ? undefined
+    : { top: "var(--ch2-macro-header-height, 70px)" };
+
   const tree = (
     <div
-      className={`fixed inset-0 ${zClassName} ${
+      className={`fixed ${fullscreen ? "inset-0" : "inset-x-0 bottom-0"} ${zClassName} ${
         minimized ? "bg-transparent pointer-events-none" : backdropClassName
       }`}
+      style={overlayStyle}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !fullscreen) onClose();
+        if (fullscreen) return;
+        if (e.target !== e.currentTarget) return;
+        if (eventHitsCh2Ai(e)) return;
+        onClose();
       }}
     >
       <div

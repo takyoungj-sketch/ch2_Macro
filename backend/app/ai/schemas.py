@@ -6,7 +6,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-AiApp = Literal["land", "built", "collective", "rent"]
+AiApp = Literal["land", "built", "collective", "rent", "profile"]
 AiPurpose = Literal["statistics", "prediction", "market_analysis", "methodology"]
 AiRoute = Literal["refusal", "ch2", "explain", "statistics", "opinion", "web", "casual", "open"]
 EvidenceType = Literal[
@@ -107,6 +107,18 @@ class ScreenRedirectHint(BaseModel):
     example_question: str
 
 
+class AiScreenAction(BaseModel):
+    """P3 실행 보조 — 기존 화면 이동 또는 승인 후 엔진. AI가 숫자를 계산하지 않음."""
+
+    id: str
+    kind: Literal["navigate", "open_ui", "run_engine"]
+    label: str
+    href: Optional[str] = None
+    ui: Optional[str] = None
+    path_id: Optional[str] = None
+    confirm_message: Optional[str] = None
+
+
 class AiChatRequest(BaseModel):
     session_id: Optional[str] = None
     message: str = Field(..., min_length=1, max_length=4000)
@@ -144,6 +156,7 @@ class AiChatResponse(BaseModel):
     evidence: list[EvidenceItem] = Field(default_factory=list)
     bundle_id: Optional[str] = None
     suggested_followups: list[str] = Field(default_factory=list)
+    actions: list[AiScreenAction] = Field(default_factory=list)
     disclaimer: Optional[str] = None
     llm_used: bool = False
     trust_level: Optional[Literal["high", "medium", "low"]] = None

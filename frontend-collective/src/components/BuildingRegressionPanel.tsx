@@ -17,8 +17,13 @@ import { ASSET_LABELS } from "../types";
 import { buildAnalysisPeriodParams } from "../utils/analysisPeriod";
 import { RESIDENTIAL_REGRESSION_HELP } from "../utils/residentialAnalysisHelp";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
-import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
+import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import { recordAnalysisHistory } from "@ch2/ai-assistant/aiClient";
+import {
+  CH2_AI_ACTION_EVENT,
+  notifyAiEngineReady,
+  type AiScreenAction,
+} from "@ch2/ai-assistant/aiActions";
 import { buildCollectiveRegressionContext } from "../api/aiContext";
 import { CollectiveRegressionResults } from "./CollectiveRegressionResults";
 import type { FloorMode } from "../utils/collectiveRegressionTypes";
@@ -445,10 +450,33 @@ export default function BuildingRegressionPanel({
     });
   }, [regM.data, assetType, useCohort]);
 
+  const publishedAiContext = useMemo(
+    () =>
+      aiRegressionContext ?? {
+        app: "collective" as const,
+        panel: "BuildingRegressionPanel",
+        purpose: "statistics" as const,
+        scope: { asset_type: assetType },
+        facts: { cohort: (cohortKeys?.length ?? 0) > 1 },
+      },
+    [aiRegressionContext, assetType, cohortKeys],
+  );
+
   useEffect(() => {
     if (!aiRegressionContext) return;
-    void recordAnalysisHistory(aiRegressionContext);
+    notifyAiEngineReady(recordAnalysisHistory(aiRegressionContext));
   }, [aiRegressionContext]);
+
+  useEffect(() => {
+    const on = (e: Event) => {
+      const a = (e as CustomEvent<AiScreenAction>).detail;
+      if (a?.kind !== "run_engine") return;
+      if ((cohortKeys?.length ?? 0) > 1) return;
+      regM.mutate();
+    };
+    window.addEventListener(CH2_AI_ACTION_EVENT, on);
+    return () => window.removeEventListener(CH2_AI_ACTION_EVENT, on);
+  }, [cohortKeys]);
 
   const predictM = useMutation({
     mutationFn: () => {
@@ -474,9 +502,12 @@ export default function BuildingRegressionPanel({
 
   if (useCohort && cohortRunId === 0) {
     return (
-      <p className="text-xs text-slate-500 text-center py-6">
-        코호트에 아파트를 추가한 뒤 「통합분석」을 누르면 통합 회귀 결과가 표시됩니다.
-      </p>
+      <>
+        <PublishAiContext context={publishedAiContext} />
+        <p className="text-xs text-slate-500 text-center py-6">
+          코호트에 아파트를 추가한 뒤 「통합분석」을 누르면 통합 회귀 결과가 표시됩니다.
+        </p>
+      </>
     );
   }
 
@@ -485,7 +516,7 @@ export default function BuildingRegressionPanel({
       <div className="flex items-start justify-between gap-2">
         <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200">회귀 분석</p>
         <div className="flex items-center gap-2 shrink-0">
-          {aiRegressionContext && <AiAssistantPanel context={aiRegressionContext} />}
+          <PublishAiContext context={publishedAiContext} />
           <AnalysisHelpPanel explain={regM.data?.explain ?? RESIDENTIAL_REGRESSION_HELP} />
         </div>
       </div>

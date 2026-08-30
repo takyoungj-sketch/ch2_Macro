@@ -22,7 +22,7 @@ import type {
   MatrixYearlyStat,
 } from "../types";
 import { parseApiError, parseApiErrorAsync } from "../utils/apiError";
-import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
+import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import {
   buildLandLongTermContext,
   buildLandMatrixTrendContext,
@@ -555,7 +555,6 @@ export default function PaidMatrixYearlyModal({
           </div>
         ) : null
       }
-      headerActions={aiPanelContext ? <AiAssistantPanel context={aiPanelContext} /> : null}
       usePortal
       escapeCapture
       resizable
@@ -568,6 +567,7 @@ export default function PaidMatrixYearlyModal({
       maxWidthClass="max-w-6xl"
       bodyClassName="flex-1 min-h-0 overflow-auto px-4 py-3 space-y-4 flex flex-col"
     >
+          <PublishAiContext context={aiPanelContext} />
           {loading && (
             <p className="text-xs text-slate-400 text-center py-6">
               {isRolling ? "구간별 집계 중…" : "연도별 집계 중…"}

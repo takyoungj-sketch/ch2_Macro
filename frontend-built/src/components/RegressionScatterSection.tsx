@@ -7,7 +7,7 @@ import type {
   ResponseScale,
 } from "../types";
 import { buildBuiltScatterContext } from "../api/aiContext";
-import AiAssistantPanel from "./AiAssistantPanel";
+import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import {
   BUILT_SCATTER_PARTIAL_HELP,
@@ -230,7 +230,7 @@ export default function RegressionScatterSection({
           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{scopeBits.join(" · ")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5 shrink-0">
-          {aiContext && <AiAssistantPanel context={aiContext} />}
+          <PublishAiContext context={aiContext} />
           <AnalysisHelpPanel explain={explain} />
           <div
             className="inline-flex rounded-md border border-slate-200 bg-slate-50 p-0.5 text-[11px] dark:border-slate-600 dark:bg-slate-900/70"

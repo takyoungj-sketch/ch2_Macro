@@ -22,6 +22,7 @@ import type {
   DanjiQualityFlag,
 } from "../types";
 import { assetTypeLabel } from "../types";
+import { CH2_AI_ACTION_EVENT, type AiScreenAction } from "@ch2/ai-assistant/aiActions";
 import BuildingRegressionPanel from "./BuildingRegressionPanel";
 import CohortTrendPanel from "./CohortTrendPanel";
 import CollectiveTransactionTable from "./CollectiveTransactionTable";
@@ -739,6 +740,24 @@ export default function BuildingDetailModal({
     setCohortRunKeys([...cohortKeys]);
     setCohortRunByPanel((prev) => ({ ...prev, [panel]: (prev[panel] ?? 0) + 1 }));
   };
+
+  useEffect(() => {
+    const on = (e: Event) => {
+      const a = (e as CustomEvent<AiScreenAction>).detail;
+      if (!a) return;
+      const wantReg =
+        a.ui === "collective_cohort" ||
+        a.ui === "collective_integrated" ||
+        a.kind === "run_engine";
+      if (wantReg) setPanel("regression");
+      if (a.kind === "run_engine" && canRunCohort) {
+        setCohortRunKeys([...cohortKeys]);
+        setCohortRunByPanel((prev) => ({ ...prev, regression: (prev.regression ?? 0) + 1 }));
+      }
+    };
+    window.addEventListener(CH2_AI_ACTION_EVENT, on);
+    return () => window.removeEventListener(CH2_AI_ACTION_EVENT, on);
+  }, [canRunCohort, cohortKeys]);
 
   const addToCohort = (buildingKey: string) => {
     if (cohortKeys.length >= MAX_COHORT_BUILDINGS) return;

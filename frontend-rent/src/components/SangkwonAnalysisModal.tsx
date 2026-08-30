@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { AiContextPayload } from "@ch2/ai-assistant/aiClient";
 import { fetchSangkwonAnnual, fetchSangkwonPolygons } from "../api/client";
 import { buildSangkwonContext } from "../api/aiContext";
+import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import { fetchCollectiveMapResolveCodes, fetchMapBoundaries } from "../api/mapClient";
 import { formatScopeAddr2 } from "../utils/flatSidoRegion";
 import { filterAdminFeaturesByCodes, sangkwonHitsForAdmin } from "../utils/sangkwonIntersect";
@@ -21,7 +21,6 @@ export type SangkwonAnalysisScope = {
 type Props = {
   scope: SangkwonAnalysisScope;
   onClose: () => void;
-  onAiContext?: (ctx: AiContextPayload | null) => void;
 };
 
 export function sangkwonScopeLabel(scope: SangkwonAnalysisScope): string {
@@ -29,7 +28,7 @@ export function sangkwonScopeLabel(scope: SangkwonAnalysisScope): string {
   return formatScopeAddr2(scope.addr2, scope.addr1) || scope.addr1;
 }
 
-export default function SangkwonAnalysisModal({ scope, onClose, onAiContext }: Props) {
+export default function SangkwonAnalysisModal({ scope, onClose }: Props) {
   const regionLabel = sangkwonScopeLabel(scope);
   const [selected, setSelected] = useState<string | null>(null);
   const [showTrend, setShowTrend] = useState(false);
@@ -109,28 +108,22 @@ export default function SangkwonAnalysisModal({ scope, onClose, onAiContext }: P
     enabled: !!selected,
   });
 
-  useEffect(() => {
-    if (!onAiContext) return;
-    if (!selected || !annualQ.data) {
-      onAiContext(null);
-      return;
-    }
-    onAiContext(
-      buildSangkwonContext({
-        regionLabel,
-        secNm: selected,
-        year: annualQ.data.year,
-        windowLabel: annualQ.data.window_label,
-        rows: annualQ.data.rows,
-      }),
-    );
-    return () => onAiContext(null);
-  }, [onAiContext, selected, annualQ.data, regionLabel]);
+  const sangkwonAiContext = useMemo(() => {
+    if (!selected || !annualQ.data) return null;
+    return buildSangkwonContext({
+      regionLabel,
+      secNm: selected,
+      year: annualQ.data.year,
+      windowLabel: annualQ.data.window_label,
+      rows: annualQ.data.rows,
+    });
+  }, [selected, annualQ.data, regionLabel]);
 
   const loading = resolveQ.isLoading || boundsQ.isLoading || polyQ.isLoading;
 
   return (
     <>
+      <PublishAiContext context={sangkwonAiContext} />
       <DraggableModalShell
         open
         onClose={onClose}

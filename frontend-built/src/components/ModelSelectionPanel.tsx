@@ -2,7 +2,7 @@ import clsx from "clsx";
 import type { AiContextPayload } from "@ch2/ai-assistant/aiClient";
 import type { RegressionSuggestResponse, RegressionVariableSpec, ResponseScale } from "../types";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
-import AiAssistantPanel from "./AiAssistantPanel";
+import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import { CandidateValidationList } from "./CandidateValidationList";
 import { ModelComparisonCard } from "./ModelComparisonCard";
 import { PoolingEvaluationCard } from "./PoolingEvaluationCard";
@@ -62,7 +62,7 @@ export function ModelSelectionPanel({
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <AnalysisHelpPanel explain={data.explain ?? BUILT_MODEL_SELECTION_SUGGEST_HELP} />
-          {aiContext && <AiAssistantPanel context={aiContext} />}
+          <PublishAiContext context={aiContext} />
           <button
           type="button"
           className="btn btn-primary text-xs shrink-0"

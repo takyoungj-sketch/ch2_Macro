@@ -96,11 +96,14 @@ export default function ConversionComparePanel({
   const shell =
     layout === "page"
       ? "w-full max-w-6xl mx-auto p-4 space-y-3"
-      : "fixed inset-0 z-50 flex items-start justify-center bg-slate-900/40 p-4 overflow-y-auto";
+      : "fixed inset-x-0 bottom-0 z-50 flex items-start justify-center bg-slate-900/40 p-4 overflow-y-auto";
   const inner = layout === "page" ? "card p-4 space-y-3" : "card w-full max-w-6xl my-6 p-4 space-y-3";
 
   return (
-    <div className={shell}>
+    <div
+      className={shell}
+      style={layout === "page" ? undefined : { top: "var(--ch2-macro-header-height, 70px)" }}
+    >
       <div className={inner}>
         <div className="flex items-start justify-between gap-3">
           <div>

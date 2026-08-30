@@ -12,6 +12,7 @@ import {
   COLLECTIVE_EXPERIMENT_MODE,
   type BuildingStatsRow,
 } from "./api/client";
+import { CH2_AI_ACTION_EVENT, type AiScreenAction } from "@ch2/ai-assistant/aiActions";
 import { fetchCollectiveMapResolveCodes } from "./api/mapClient";
 import DualHorizontalScroll from "./components/DualHorizontalScroll";
 import StatsTableExpandButton from "./components/StatsTableExpandButton";
@@ -22,6 +23,8 @@ import CollectiveRegionMapHub, { type MapPanelMode } from "./components/Collecti
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
+import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
+import { ActiveAiViewProvider, emptyAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import RegionChipPanel, {
   LEFT_REGION_MULTI_SELECT,
   formatLeafChipLabel,
@@ -252,6 +255,7 @@ export default function App() {
   const [selected, setSelected] = useState<BuildingStatsRow | null>(null);
   const [newAptOpen, setNewAptOpen] = useState(false);
   const [regionalOpen, setRegionalOpen] = useState(false);
+  const [aiHint, setAiHint] = useState<string | null>(null);
   const [buildingSearch, setBuildingSearch] = useState("");
   const [mapPanelMode, setMapPanelMode] = useState<MapPanelMode>("normal");
   const [tableWide, setTableWide] = useState(false);
@@ -436,6 +440,25 @@ export default function App() {
     if (!regionalReady) setRegionalOpen(false);
   }, [regionalReady]);
 
+  useEffect(() => {
+    const on = (e: Event) => {
+      const a = (e as CustomEvent<AiScreenAction>).detail;
+      if (!a) return;
+      if (a.ui === "collective_regional") {
+        setRegionalOpen(true);
+        setAiHint(null);
+        return;
+      }
+      if (a.ui === "collective_cohort" || a.ui === "collective_integrated") {
+        setAiHint(
+          "목록에서 단지를 연 다음 코호트에 비교할 단지를 추가하세요. AI가 코호트 구성을 바꾸지 않습니다.",
+        );
+      }
+    };
+    window.addEventListener(CH2_AI_ACTION_EVENT, on);
+    return () => window.removeEventListener(CH2_AI_ACTION_EVENT, on);
+  }, []);
+
   const runAnalysis = () => {
     if (!addr2) return;
     setScope({
@@ -463,6 +486,7 @@ export default function App() {
   };
 
   return (
+    <ActiveAiViewProvider fallback={emptyAiContext("collective", "BuildingList")}>
     <div className="h-screen flex flex-col overflow-hidden bg-slate-100 dark:bg-slate-900">
       <MacroStatsHeader
         currentApp="collective"
@@ -473,6 +497,7 @@ export default function App() {
         onBumpFont={bumpUiFontScale}
         isDark={isDark}
         onToggleTheme={toggleUiColorScheme}
+        rightSlot={<AiAssistantPanel />}
       />
 
       <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
@@ -743,6 +768,11 @@ export default function App() {
               조건이 변경되었습니다. 「통계분석」을 다시 실행하세요.
             </p>
           )}
+          {aiHint && (
+            <p className="text-xs text-indigo-800 dark:text-indigo-200 mb-2 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded px-2 py-1.5">
+              {aiHint}
+            </p>
+          )}
           {scope && buildingsQ.isLoading && <p className="text-sm text-slate-500 dark:text-slate-400">불러오는 중…</p>}
           {scope && buildingsQ.isError && <p className="text-sm text-red-600">건물 목록을 불러오지 못했습니다.</p>}
           {scope && buildingsQ.data && (
@@ -891,5 +921,6 @@ export default function App() {
         />
       )}
     </div>
+    </ActiveAiViewProvider>
   );
 }

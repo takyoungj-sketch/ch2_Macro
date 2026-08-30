@@ -6,7 +6,7 @@ import type {
   PartialRegressionSeries,
 } from "../types";
 import { buildLandScatterContext } from "../api/aiContext";
-import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
+import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import {
   LAND_SCATTER_PARTIAL_HELP,
@@ -197,7 +197,7 @@ export default function LandRegressionScatterSection({
           <p className="text-[11px] text-slate-500 mt-0.5">{scopeBits.join(" · ")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5 shrink-0">
-          {aiContext && <AiAssistantPanel context={aiContext} />}
+          <PublishAiContext context={aiContext} />
           <AnalysisHelpPanel explain={explain} />
           <div
             className="inline-flex rounded-md border border-slate-200 bg-slate-50 p-0.5 text-[11px]"

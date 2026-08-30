@@ -227,3 +227,67 @@ def format_memo(slots: list[dict[str, Any]]) -> str:
         lines.append("")
     lines.append("한계: 이번 선택 기간·지역 내 패턴입니다. 인과·적정가·투자 판단이 아닙니다.")
     return "\n".join(lines).strip()
+
+
+def format_history_compare(slots: list[dict[str, Any]]) -> str:
+    """P3-4: 슬롯에 있는 부호·n·p만. 신뢰도 % invent 금지."""
+    if len(slots) < 2:
+        return (
+            "비교할 **이전 실행**이 없습니다. "
+            "다른 조건(인접·코호트)으로 회귀가 성공하면 History에 쌓입니다. "
+            "목록 조회만으로는 비교할 수 없습니다."
+        )
+    a, b = slots[-2], slots[-1]
+    lines = [
+        "**실행 비교** (History에 기록된 값만. 없는 비율·신뢰도 증가는 만들지 않습니다.)",
+        "",
+        f"1차: path={a.get('path_id')} · {(a.get('scope') or {}).get('region_label') or '—'} · n={a.get('n')}",
+        f"2차: path={b.get('path_id')} · {(b.get('scope') or {}).get('region_label') or '—'} · n={b.get('n')}",
+    ]
+    adj_a = (a.get("metrics") or {}).get("adj_r_squared")
+    adj_b = (b.get("metrics") or {}).get("adj_r_squared")
+    if adj_a is not None and adj_b is not None:
+        lines.append(f"- Adj R²: {adj_a} → {adj_b}")
+    n_a, n_b = a.get("n"), b.get("n")
+    if n_a is not None and n_b is not None:
+        lines.append(f"- n: {n_a} → {n_b}")
+
+    def _by_name(slot: dict[str, Any]) -> dict[str, dict[str, Any]]:
+        out: dict[str, dict[str, Any]] = {}
+        for c in slot.get("key_coeffs") or []:
+            if isinstance(c, dict) and c.get("name"):
+                out[str(c["name"])] = c
+        return out
+
+    ca, cb = _by_name(a), _by_name(b)
+    for name in list(ca.keys())[:8]:
+        if name not in cb:
+            continue
+        ea, eb = ca[name].get("estimate"), cb[name].get("estimate")
+        pa, pb = ca[name].get("p_value"), cb[name].get("p_value")
+        same_dir = None
+        try:
+            if ea is not None and eb is not None:
+                same_dir = (float(ea) >= 0) == (float(eb) >= 0)
+        except (TypeError, ValueError):
+            same_dir = None
+        dir_txt = "방향은 동일" if same_dir else ("방향이 다름" if same_dir is False else "부호 비교 불가")
+        lines.append(
+            f"- {name}: {ea} (p={pa}) → {eb} (p={pb}) · {dir_txt}"
+        )
+    cids_a = ",".join(a.get("caveat_ids") or []) or "—"
+    cids_b = ",".join(b.get("caveat_ids") or []) or "—"
+    lines.append(f"- caveat: {cids_a} → {cids_b}")
+    rec_a, exe_a = a.get("recommended_path"), a.get("executed_path")
+    rec_b, exe_b = b.get("recommended_path"), b.get("executed_path")
+    if rec_b and exe_b and rec_b != exe_b:
+        lines.append(
+            f"- 2차는 당초 {rec_b}를 검토할 수 있었으나 {exe_b}를 대상으로 분석하였다."
+        )
+    elif rec_a and exe_a and rec_a != exe_a:
+        lines.append(
+            f"- 1차는 당초 {rec_a}를 검토할 수 있었으나 {exe_a}를 대상으로 분석하였다."
+        )
+    lines.append("")
+    lines.append("인과·적정가·투자 판단이 아닙니다.")
+    return "\n".join(lines)

@@ -198,7 +198,8 @@ AI_RATE_LIMIT_PER_MINUTE=30
 | C | 복합 UI AiAssistantPanel (modal) | ✅ |
 | D | trend/matrix/prediction bundles · 내러티브 확장 | ✅ |
 | F | Grounded Dialogue · Product Knowledge · UI glossary | ✅ |
-| G | 5층 계약 P0–P2 (카드·Caveat·Planner 실행 가능성·History 자동) | 진행 (D-056) |
+| G | 5층 계약 P0–P2 (카드·Caveat·Planner 실행 가능성·History 자동) | ✅ (D-056) |
+| H | P3 실행 보조 — 기존 화면 이동·승인 후 엔진·History 비교·메모 후속. 코호트 프리필 없음. AI가 숫자를 계산하지 않음. P5는 같은 사다리(navigate / open_ui, 복합은 승인 실행) | 진행 |
 
 ---
 

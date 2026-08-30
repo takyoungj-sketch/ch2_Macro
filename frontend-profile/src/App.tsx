@@ -1,8 +1,11 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
+import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
+import { ActiveAiViewProvider, emptyAiContext, PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
+import { CH2_AI_ACTION_EVENT, type AiScreenAction } from "@ch2/ai-assistant/aiActions";
 import { fetchNationalRanks, fetchRegionalProfile, fetchRentProfileYearly, fetchTwinNeighbors, resolveRegionName } from "./api/profile";
 import RentYearlyTable from "./components/RentYearlyTable";
 import type { RegionLevel, RegionNameInfo, YearlyMix } from "./types";
@@ -158,7 +161,38 @@ export default function App() {
     );
   }, [selection, regionNameQuery.data, profileQuery.data, yearlyMix]);
 
+  const profileAiContext = useMemo(() => {
+    if (!selection) return null;
+    return {
+      app: "profile" as const,
+      panel: "RegionalProfile",
+      purpose: "market_analysis" as const,
+      scope: { region_label: shortName || selection.regionCode },
+      facts: profileQuery.data
+        ? {
+            profile_version: profileQuery.data.meta.profile_version,
+            as_of_month: profileQuery.data.meta.as_of_month,
+            window_years: profileQuery.data.meta.window_years,
+            region_level: selection.regionLevel,
+            dominant_type: profileQuery.data.features.dominant_type ?? yearlyMix?.dominant_type,
+            total_count_3y: yearlyMix?.total_count_3y,
+          }
+        : {},
+    };
+  }, [selection, shortName, profileQuery.data, yearlyMix]);
+
+  useEffect(() => {
+    const on = (e: Event) => {
+      const a = (e as CustomEvent<AiScreenAction>).detail;
+      if (a?.ui !== "profile_twin") return;
+      document.getElementById("profile-step-twin")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    window.addEventListener(CH2_AI_ACTION_EVENT, on);
+    return () => window.removeEventListener(CH2_AI_ACTION_EVENT, on);
+  }, []);
+
   return (
+    <ActiveAiViewProvider fallback={emptyAiContext("profile", "RegionalProfile")}>
     <div className="h-screen flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-900">
       <MacroStatsHeader
         profileActive
@@ -169,7 +203,9 @@ export default function App() {
         onBumpFont={bumpUiFontScale}
         isDark={isDark}
         onToggleTheme={toggleUiColorScheme}
+        rightSlot={<AiAssistantPanel />}
       />
+      <PublishAiContext context={profileAiContext} />
 
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto" style={{ zoom: contentZoom }}>
         <div className="mx-auto max-w-7xl px-4 py-6">
@@ -260,6 +296,7 @@ export default function App() {
               />
 
               {twinEnabled && (
+                <div id="profile-step-twin">
                 <TwinRegionCard
                   neighbors={twinQuery.data?.neighbors ?? []}
                   isLoading={twinQuery.isLoading}
@@ -267,6 +304,7 @@ export default function App() {
                   isBeop={isBeop}
                   onOpenTwin={openRegion}
                 />
+                </div>
               )}
 
               <div className="pb-4 text-center text-[11px] text-slate-400">
@@ -279,5 +317,6 @@ export default function App() {
         </div>
       </div>
     </div>
+    </ActiveAiViewProvider>
   );
 }
