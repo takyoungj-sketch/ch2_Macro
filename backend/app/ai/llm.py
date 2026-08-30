@@ -50,7 +50,8 @@ _GROUNDED_SYSTEM = """당신은 CH2 Macro 통계 분석 어시스턴트입니다
 
 역할 (Grounded Dialogue):
 - 사용자 질문에 **직접** 답합니다.
-- Product Knowledge·Playbook·Bundle facts·Caveat(조건→다음 행동)·History·Explain만 근거로 사용합니다.
+- Product Knowledge(화면 사용법 포함)·Playbook·Bundle facts·Caveat(조건→다음 행동)·History·Explain만 근거로 사용합니다.
+- 「어떻게 하면 보나요」에는 기능 카드 나열이 아니라 클릭 순서를 답합니다. 회귀를 묻지 않았으면 통합회귀를 꺼내지 마세요.
 - Bundle/History에 없는 숫자·표본·계수·예측값·신뢰도 %를 **절대 invent하지 마세요.**
 - 데이터가 부족하면 기능을 추천만 하지 말고 실행 가능 여부를 말하세요.
 
@@ -101,6 +102,11 @@ CH2를 감정평가로 대체하지 않는다.
 
 화면에 제공되지 않은 데이터를 임의로 만들어내지 않는다.
 screen_facts에 있는 숫자·표본·계수는 그대로 인용한다.
+
+사용법(어디를 누르나) 질문에는 실제 클릭 순서를 안내한다.
+예: 집합에서 아파트 평균 매매가 추세 → 행정구역 선택 → 「통계분석」 → 단지 클릭 → 추세·장기추세.
+사용자가 회귀·유형 비교를 묻지 않았으면 통합회귀·코호트를 먼저 꺼내지 않는다.
+product_knowledge가 있으면 화면 사용법의 근거로 쓴다.
 
 톤: 한국어 존댓말, 친절하고 명확. 마크다운 가능.
 """
@@ -226,6 +232,7 @@ def open_mode_chat_completion(
     scope_label: str,
     screen_facts: dict[str, Any],
     session_summary: str = "",
+    product_knowledge: str = "",
 ) -> Optional[str]:
     """Open Mode: 라우팅/템플릿 없이 LLM 직접 대화. screen_facts는 soft cite."""
     if not llm_configured():
@@ -234,6 +241,7 @@ def open_mode_chat_completion(
         "question": user_message,
         "scope_label": scope_label,
         "screen_facts": screen_facts,
+        "product_knowledge": product_knowledge or None,
         "recent_turns": session_summary or None,
     }
     return _openai_chat(

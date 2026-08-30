@@ -3,7 +3,8 @@
 from app.ai.constitution import classify_route, is_refusal_message
 from app.ai.knowledge.caveats import fire_caveats
 from app.ai.knowledge.history import maybe_record, slot_from_success_bundle
-from app.ai.knowledge.planner import assess_feasibility, detect_intent, plan_analysis
+from app.ai.knowledge.planner import assess_feasibility, detect_intent, is_path_intent_question, plan_analysis
+from app.ai.knowledge.product import is_howto_ui_question
 from app.ai.orchestrator import handle_chat, handle_history_record
 from app.ai.schemas import AiChatRequest, AiContext, AiHistoryRecordRequest, AiScope
 from app.ai.sessions import get_or_create
@@ -343,4 +344,29 @@ def test_chat_compare_two_slots_and_actions(monkeypatch):
     )
     assert path.actions
     assert any(a.kind in ("navigate", "open_ui", "run_engine") for a in path.actions)
+
+
+def test_howto_trend_is_not_playbook_dump(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "ai_open_mode", False)
+    monkeypatch.setattr("app.ai.orchestrator.llm_configured", lambda: False)
+    monkeypatch.setattr("app.ai.synthesis.llm_configured", lambda: False)
+
+    q = "아파트의 평균 판매가의 과거 추세를 알고 싶은데 어떻게 하면 되지?"
+    assert is_howto_ui_question(q)
+    assert not is_path_intent_question(q)
+
+    resp = handle_chat(
+        AiChatRequest(
+            message=q,
+            context=AiContext(app="collective", panel="BuildingList"),
+        )
+    )
+    assert "통계분석" in resp.answer
+    assert "단지" in resp.answer
+    assert "확인된 플레이북" not in resp.answer
+    assert "유형 더미" not in resp.answer
+    assert is_path_intent_question("아파트와 오피스텔 가격 차이를 보고 싶어")
+    assert is_path_intent_question("분석 경로를 추천해 주세요")
 

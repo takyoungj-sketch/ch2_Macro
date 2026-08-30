@@ -81,6 +81,7 @@ from app.ai.knowledge.planner import (
     is_path_intent_question,
     plan_analysis,
 )
+from app.ai.knowledge.product import format_howto_answer, is_howto_ui_question, product_knowledge_excerpt
 from app.ai.stats_kb import (
     answer_statistics_question,
     answer_statistics_with_context,
@@ -183,6 +184,8 @@ def _planner_or_memo_response(
         session.add_turn(SessionTurn(role="assistant", message=answer[:500], route="ch2", bundle_id=bundle.bundle_id))
         return resp
 
+    if is_howto_ui_question(req.message):
+        return None
     if not is_path_intent_question(req.message):
         return None
 
@@ -551,6 +554,11 @@ def _ch2_template_answer(
     targeted = try_targeted_answer(message, bundle.diagnostics)
     if targeted:
         return targeted, None, None
+    if is_howto_ui_question(message):
+        return format_howto_answer(context.app, message), [
+            "단지를 연 다음 추세 탭은 어디에 있나요?",
+            "유형 격차를 보려면 어떻게 하나요?",
+        ], None
     if _has_facts_narrative(bundle) and should_auto_explain_screen(message):
         nr = _regression_narrative(context, bundle, message)
         return nr.answer, nr.followups, nr
@@ -731,6 +739,9 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
                 scope_label=scope_label,
                 screen_facts=facts,
                 session_summary=session_summary(session, max_turns=10),
+                product_knowledge=product_knowledge_excerpt(
+                    app=ctx.app, panel=ctx.panel or "", message=req.message
+                ),
             )
         except AiQuotaExceeded as exc:
             llm_ans = None

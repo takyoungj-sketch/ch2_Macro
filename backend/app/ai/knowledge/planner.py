@@ -17,34 +17,25 @@ _GAP_CMP_HINTS = ("가격 차이", "가격차이", "가격격차", "격차", "�
 
 
 def is_path_intent_question(message: str) -> bool:
-    """목적·경로 질문인가 (이번 결과 Explain과 구분)."""
+    """분석 *방법*을 고르는 질문인가. 화면 사용법·추세 안내는 여기로 보내지 않는다."""
     m = message.strip()
     if any(k in m for k in ("왜 이 결과", "왜 이렇게", "이 화면", "이번 표본", "이 계수")):
         return False
-    # 「요약/설명」은 현재 화면 해석. 격차·경로 질문은 예외.
-    if any(k in m for k in ("요약해", "설명해", "해석해", "풀어 주")):
-        if detect_intent(m) == "apartment_officetel_price_gap":
-            return True
-        return any(
-            k in m
-            for k in ("어떻게 분석", "어떤 분석", "어떤 경로", "어떻게 접근", "보고 싶", "알고 싶")
-        )
-    if detect_intent(m):
+    if detect_intent(m) == "apartment_officetel_price_gap":
         return True
-    path_ask = (
-        "알고 싶",
-        "보고 싶",
-        "분석해",
+    method_ask = (
         "분석 경로",
-        "어떻게 접근",
-        "어떻게 분석",
-        "어떤 분석",
         "어떤 경로",
+        "어떤 분석",
+        "어떻게 분석",
+        "어떻게 접근",
         "어떤 기능",
+        "경로를 추천",
         "통합회귀",
         "코호트",
+        "지역회귀",
     )
-    return any(k in m for k in path_ask)
+    return any(k in m for k in method_ask)
 
 
 def is_memo_request(message: str) -> bool:

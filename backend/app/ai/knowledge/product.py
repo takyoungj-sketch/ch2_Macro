@@ -91,6 +91,114 @@ LIMITATIONS = """
 - 회귀 계수는 조건부 연관이며 인과·적정가를 의미하지 않음
 """
 
+# 화면 사용법 — 플레이북 기능 목록이 아니라 클릭 순서
+UI_HOWTO = """
+화면에서 숫자를 보는 순서 (사용자가 회귀·유형비교를 묻지 않으면 이것을 먼저 안내):
+
+집합(아파트·오피스텔):
+1. 단지가 있는 시·도 / 시·군·구를 고른다
+2. 「통계분석」을 누른다
+3. 목록에서 단지를 클릭한다
+4. 모달의 「추세」「장기추세」에서 평균단가의 과거 흐름과 추세선을 본다
+비주거는 단지가 아니라 도로(cluster)를 클릭한다. 회귀·코호트·유형 더미는 격차를 통제해 비교할 때 쓴다.
+
+복합(단독·상가·공장): 유형·지역을 고르고 「통계분석」을 누르면 회귀·요약 카드가 나온다.
+토지: 지역을 고른 뒤 용도지역×지목 매트릭스와 장기추세를 본다.
+임대: 지역을 고르고 통계분석 후 건물을 연다.
+"""
+
+
+def is_howto_ui_question(message: str) -> bool:
+    """어디를 눌러 결과를 보나 — 분석방법(격차·통합회귀) 질문과 구분."""
+    from app.ai.knowledge.planner import detect_intent
+
+    m = message.strip()
+    if detect_intent(m) == "apartment_officetel_price_gap":
+        return False
+    if any(
+        k in m
+        for k in (
+            "분석 경로",
+            "어떤 경로",
+            "어떤 분석",
+            "어떻게 분석",
+            "통합회귀",
+            "유형 효과",
+            "가격격차",
+            "가격 차이",
+        )
+    ):
+        return False
+    how = any(
+        k in m
+        for k in (
+            "어떻게 하면",
+            "어떻게 보",
+            "어디서 보",
+            "어떻게 확인",
+            "어떻게 찾",
+            "어떻게 알",
+            "보려면",
+            "보는 법",
+            "사용법",
+        )
+    )
+    topic = any(
+        k in m
+        for k in (
+            "추세",
+            "평균",
+            "매매가",
+            "실거래",
+            "과거",
+            "장기",
+            "단지",
+            "아파트",
+            "오피스텔",
+            "통계분석",
+        )
+    )
+    return how or (topic and any(k in m for k in ("알고 싶", "보고 싶", "보고싶", "알고싶")))
+
+
+def format_howto_answer(app: str, message: str) -> str:
+    """LLM이 없을 때도 쓸 화면 안내. 회귀를 먼저 꺼내지 않는다."""
+    m = message.strip()
+    if app == "collective" or any(k in m for k in ("아파트", "오피스텔", "단지")):
+        grain = "도로(cluster)" if any(k in m for k in ("상가", "공장", "cluster", "비주거")) else "단지"
+        return (
+            "해당 아파트(단지)가 있는 **행정구역(시·도 / 시·군·구)**을 선택한 뒤 "
+            "**「통계분석」**을 누르세요. 목록에서 원하는 "
+            f"**{grain}를 클릭**하면 모달에서 **과거 추세**와 **장기추세선**을 볼 수 있습니다.\n\n"
+            "평균 매매가의 흐름만 보려면 이 네 단계면 됩니다. "
+            "면적·연식을 통제해 유형 격차를 보려면 그다음에 회귀·코호트를 쓰면 됩니다."
+        )
+    if app == "built":
+        return (
+            "유형과 지역(행정구역)을 고른 뒤 **「통계분석」**을 누르면 "
+            "선택한 범위의 거래 요약과 회귀 카드를 볼 수 있습니다."
+        )
+    if app == "land":
+        return (
+            "지역을 선택한 뒤 용도지역×지목 **매트릭스**와 **장기추세**에서 "
+            "단가 흐름을 볼 수 있습니다."
+        )
+    if app == "rent":
+        return (
+            "지역을 고르고 **「통계분석」**을 누른 다음 목록에서 건물을 열면 "
+            "전월세 흐름을 볼 수 있습니다."
+        )
+    if app == "profile":
+        return (
+            "지역을 검색해 열면 거래 구성·Twin 유사지역·전국 순위를 볼 수 있습니다. "
+            "단지별 추세는 집합 앱에서 행정구역 → 통계분석 → 단지 클릭 순입니다."
+        )
+    return (
+        "보고 싶은 자산 앱에서 행정구역을 고르고 「통계분석」을 누른 다음 "
+        "목록의 대상(단지·건물·필지)을 클릭하면 됩니다."
+    )
+
+
 # Planner 판단 자료. 한 단지 실측 n·계수는 넣지 않는다.
 FUNCTION_CARDS: list[dict[str, Any]] = [
     {
@@ -260,6 +368,7 @@ def product_knowledge_pack(*, app: str = "built", panel: str = "") -> str:
             "숫자는 화면 Bundle facts만 인용. 투자·매수 추천 금지."
         )
     parts.append(LIMITATIONS.strip())
+    parts.append(UI_HOWTO.strip())
     if app in ("built", "land") and panel:
         extra = format_function_cards(app=app)
         if extra:
@@ -292,6 +401,16 @@ def product_knowledge_excerpt(*, app: str, panel: str, message: str) -> str:
     )
     if panel == "SangkwonCard" or any(k in message or k in lower for k in sangkwon_keys):
         return "\n\n".join([PRODUCT_OVERVIEW.strip(), SANGKWON_REB.strip(), LIMITATIONS.strip()])
+    if is_howto_ui_question(message):
+        return "\n\n".join(
+            [
+                PRODUCT_OVERVIEW.strip(),
+                APP_STRUCTURE.strip(),
+                UI_HOWTO.strip(),
+                format_howto_answer(app, message),
+                LIMITATIONS.strip(),
+            ]
+        )
     if any(k in message for k in ("앱", "복합", "토지", "집합", "화면", "구조")):
         return "\n\n".join([PRODUCT_OVERVIEW.strip(), APP_STRUCTURE.strip(), format_function_cards(app=app)])
     if any(
