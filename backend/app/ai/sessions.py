@@ -26,6 +26,7 @@ class AiSession:
     updated_at: float
     turns: list[SessionTurn] = field(default_factory=list)
     context_snapshots: list[dict[str, Any]] = field(default_factory=list)
+    analysis_history: list[dict[str, Any]] = field(default_factory=list)
 
     def touch(self) -> None:
         self.updated_at = time.time()
@@ -38,6 +39,12 @@ class AiSession:
         self.context_snapshots.append(snapshot)
         if len(self.context_snapshots) > 20:
             self.context_snapshots = self.context_snapshots[-20:]
+        self.touch()
+
+    def push_analysis(self, slot: dict[str, Any], *, max_slots: int = 12) -> None:
+        self.analysis_history.append(slot)
+        if len(self.analysis_history) > max_slots:
+            self.analysis_history = self.analysis_history[-max_slots:]
         self.touch()
 
 
@@ -69,6 +76,14 @@ def get_or_create(session_id: Optional[str]) -> AiSession:
 
 def session_summary(session: AiSession, max_turns: int = 6) -> str:
     lines = []
+    hist = session.analysis_history[-8:]
+    if hist:
+        lines.append("analysis_history:")
+        for i, s in enumerate(hist, start=1):
+            scope = (s.get("scope") or {}).get("region_label") or "—"
+            lines.append(
+                f"  #{i} {s.get('path_id')} n={s.get('n')} scope={scope} caveats={s.get('caveat_ids')}"
+            )
     for t in session.turns[-max_turns:]:
         lines.append(f"{t.role}: {t.message[:200]}")
     return "\n".join(lines)

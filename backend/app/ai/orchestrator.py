@@ -59,10 +59,20 @@ from app.ai.schemas import (
     AiContext,
     AiDiagnosticPack,
     AiExplainRequest,
+    AiHistoryRecordRequest,
+    AiHistoryRecordResponse,
     AnalysisExplain,
     EvidenceItem,
 )
 from app.ai.sessions import SessionTurn, get_or_create, session_summary
+from app.ai.knowledge.caveats import format_caveats_for_prompt
+from app.ai.knowledge.history import format_history_for_prompt, format_memo, maybe_record
+from app.ai.knowledge.planner import (
+    format_plan_answer,
+    is_memo_request,
+    is_path_intent_question,
+    plan_analysis,
+)
 from app.ai.stats_kb import (
     answer_statistics_question,
     answer_statistics_with_context,
@@ -95,6 +105,97 @@ def _public_quota(snap: dict[str, Any] | None = None) -> dict[str, Any]:
 
 def _is_targeted_answer(answer: str) -> bool:
     return answer.strip().startswith("### 답변")
+
+
+def _record_successful_analysis(session: Any, ctx: AiContext, bundle: AiDiagnosticPack, message: str = "") -> None:
+    maybe_record(
+        session,
+        ctx,
+        bundle_id=bundle.bundle_id,
+        diagnostics=bundle.diagnostics or {},
+        message=message,
+    )
+
+
+def _planner_or_memo_response(
+    *,
+    session: Any,
+    req: AiChatRequest,
+    ctx: AiContext,
+    bundle: AiDiagnosticPack,
+) -> AiChatResponse | None:
+    """경로 질문·분석 메모. 해당 없으면 None."""
+    fired = bundle.diagnostics.get("caveats") or []
+    caveats_text = format_caveats_for_prompt(fired) if fired else ""
+    history_text = format_history_for_prompt(session.analysis_history)
+
+    if is_memo_request(req.message):
+        answer = format_memo(session.analysis_history)
+        resp = AiChatResponse(
+            session_id=session.session_id,
+            route="ch2",
+            answer=validate_answer(answer, "ch2"),
+            evidence=[
+                EvidenceItem(type="ch2_history", label="Analysis History", confidence="high"),
+            ],
+            bundle_id=bundle.bundle_id,
+            suggested_followups=["인접지역을 포함한 분석은?", "이 결과의 한계는?"],
+            disclaimer=SHORT_DISCLAIMER,
+            llm_used=False,
+            trust_level="high" if session.analysis_history else "medium",
+            trust_sources=["CH2 Analysis History"],
+            ai_interpretation=_ai_interpretation_label(llm_used=False),
+        )
+        session.add_turn(SessionTurn(role="user", message=req.message, route="ch2", bundle_id=bundle.bundle_id))
+        session.add_turn(SessionTurn(role="assistant", message=answer[:500], route="ch2", bundle_id=bundle.bundle_id))
+        return resp
+
+    if not is_path_intent_question(req.message):
+        return None
+
+    plan = plan_analysis(req.message, ctx)
+    template = format_plan_answer(plan, caveats_text=caveats_text)
+    followups = [
+        "지금 화면에서 바로 실행할 수 있나요?",
+        "인접지역을 포함하면 어떻게 되나요?",
+        "지금까지 분석을 정리해 주세요.",
+    ]
+    syn_ans, syn_fu, _syn_nr, syn_used = try_grounded_synthesis(
+        message=req.message,
+        route="ch2",
+        context=ctx,
+        bundle=bundle,
+        template_answer=template,
+        template_followups=followups,
+        session_summary=session_summary(session),
+        planner_text=template,
+        caveats_text=caveats_text,
+        history_text=history_text,
+    )
+    answer = syn_ans if syn_used else template
+    resp = AiChatResponse(
+        session_id=session.session_id,
+        route="ch2",
+        answer=validate_answer(answer, "ch2"),
+        evidence=[
+            EvidenceItem(type="ch2_playbook", label="CH2 분석 경로 (Playbook)", confidence="medium"),
+        ]
+        + (
+            [EvidenceItem(type="ch2_caveat", label="Caveat", confidence="medium")]
+            if fired
+            else []
+        ),
+        bundle_id=bundle.bundle_id,
+        suggested_followups=syn_fu or followups,
+        disclaimer=DEFAULT_DISCLAIMER,
+        llm_used=bool(syn_used),
+        trust_level="medium",
+        trust_sources=["CH2 Playbook", "Active Context"],
+        ai_interpretation=_ai_interpretation_label(llm_used=bool(syn_used), synthesized=bool(syn_used)),
+    )
+    session.add_turn(SessionTurn(role="user", message=req.message, route="ch2", bundle_id=bundle.bundle_id))
+    session.add_turn(SessionTurn(role="assistant", message=answer[:500], route="ch2", bundle_id=bundle.bundle_id))
+    return resp
 
 
 def _casual_response(
@@ -555,6 +656,13 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
     if is_out_of_scope_message(req.message):
         return _commit_limit_response(session, req, _out_of_scope_chat(ctx))
 
+    _record_successful_analysis(session, ctx, early_bundle, req.message)
+    planner_resp = _planner_or_memo_response(
+        session=session, req=req, ctx=ctx, bundle=early_bundle
+    )
+    if planner_resp:
+        return planner_resp
+
     # ── Open Mode: 라우팅/템플릿 우회 → LLM 우선 ─────────────────────────
     if open_mode_enabled():
         bundle = early_bundle
@@ -1002,3 +1110,23 @@ def handle_explain(req: AiExplainRequest) -> AiChatResponse:
 
 def build_from_explain_or_bundle(ctx: AiContext) -> AiDiagnosticPack:
     return build_bundle(ctx)
+
+
+def handle_history_record(req: AiHistoryRecordRequest) -> AiHistoryRecordResponse:
+    """회귀 성공 등 — 채팅 없이 History 슬롯만 남긴다. 실패 Gate는 recorded=false."""
+    session = get_or_create(req.session_id)
+    ctx = req.context
+    bundle = build_bundle(ctx)
+    slot = maybe_record(
+        session,
+        ctx,
+        bundle_id=bundle.bundle_id,
+        diagnostics=bundle.diagnostics or {},
+        message=req.message or "",
+    )
+    return AiHistoryRecordResponse(
+        session_id=session.session_id,
+        recorded=slot is not None,
+        slot_id=slot.id if slot else None,
+        history_len=len(session.analysis_history),
+    )

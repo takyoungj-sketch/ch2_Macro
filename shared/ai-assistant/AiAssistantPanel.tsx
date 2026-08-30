@@ -2,17 +2,35 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import type { AiChatResponse, AiContextPayload, EvidenceItem } from "./aiClient";
-import { sendAiChat } from "./aiClient";
+import { readAiSessionId, sendAiChat } from "./aiClient";
 
 type ChatMessage = { role: "user" | "assistant"; text: string; meta?: AiChatResponse };
 
 const PANEL_DISCLAIMER = "본 답변은 시장통계 해석이며 감정평가를 대체하지 않습니다.";
 
 const PURPOSE_COPY =
-  "현재 화면에 나온 CH2 데이터·통계·분석 결과를 풀어 설명합니다. 숫자는 CH2가 계산한 값만 인용하고, 회귀를 다시 돌리거나 가격을 정하지 않습니다.";
+  "CH2 데이터와 기능을 이해하고, 분석 목적에 맞는 경로를 제안하며, 엔진이 낸 결과를 해석합니다. 숫자는 CH2가 계산한 값만 인용합니다.";
 
 const LIMITS_COPY =
-  "감정평가·적정가·투자 판단과, 이 화면과 무관한 질문(날씨·시세·잡담 등)에는 답하지 않습니다. 실험 기간 서버 전체 월 200회·1만 원 한도이며, 한도에 닿으면 멈춥니다.";
+  "감정평가·적정가·투자·매수 추천에는 답하지 않습니다. 분석 경로 추천은 가능합니다. 실험 기간 서버 전체 월 200회·1만 원 한도이며, 한도에 닿으면 멈춥니다.";
+
+const ENTRY_CHIPS = [
+  {
+    id: "now",
+    label: "지금 결과가 궁금해",
+    q: "이 화면의 분석 결과를 설명해 주세요.",
+  },
+  {
+    id: "path",
+    label: "이런 분석을 하고 싶어",
+    q: "아파트와 오피스텔 가격 차이를 보고 싶어요.",
+  },
+  {
+    id: "memo",
+    label: "결과를 정리하고 싶어",
+    q: "지금까지 실행한 분석을 정리해 주세요.",
+  },
+];
 
 function parseSections(text: string): { title: string; body: string }[] | null {
   if (!text.includes("### ")) return null;
@@ -274,7 +292,7 @@ function AiAssistantModal({
   onClose: () => void;
   context: AiContextPayload;
 }) {
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(() => readAiSessionId());
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -498,9 +516,23 @@ function AiAssistantModal({
           aria-busy={loading}
         >
           {messages.length === 0 && !loading && (
-            <p className="text-slate-400 dark:text-slate-500 text-center py-8 px-3 text-[1em]">
-              질문을 입력하세요.
-            </p>
+            <div className="px-3 py-4 space-y-3">
+              <p className="text-slate-500 dark:text-slate-400 text-center text-[1em]">
+                무엇을 도와드릴까요?
+              </p>
+              <div className="flex flex-col gap-1.5">
+                {ENTRY_CHIPS.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className="text-left px-3 py-2 rounded-lg border border-slate-200 hover:border-sky-400 hover:bg-sky-50/80 text-[0.95em] text-slate-800 dark:border-slate-600 dark:text-slate-100 dark:hover:border-sky-500 dark:hover:bg-slate-800"
+                    onClick={() => runChat(c.q)}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
           {messages.map((m: ChatMessage, i: number) => (
             <div

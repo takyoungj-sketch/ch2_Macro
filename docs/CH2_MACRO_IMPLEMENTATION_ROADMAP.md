@@ -212,7 +212,7 @@ reasons)를 추가해 "왜 이 Twin이 빠졌는지" 그대로 노출하고, 프
 | **Land Signal (토지→복합)** | Feature·Ensemble·Prior — UNION 금지 | V3 — [`LAND_BUILT_SIGNAL_DESIGN.md`](./LAND_BUILT_SIGNAL_DESIGN.md) |
 | **Recommendation Engine UX** | scope SSOT·단계형 추천·종료 이유 | V3 — [`CH2_RECOMMENDATION_ENGINE_DESIGN.md`](./CH2_RECOMMENDATION_ENGINE_DESIGN.md) |
 | **AI Bundle 확장** | Evaluation 결과 필드 추가 | V1~V3 |
-| **월간 파이프라인** | Profile·Twin 갱신 SOP | V2 |
+| **연간 프로필 파이프라인** | Profile·Twin·rank — 연초 1회 (D-054). 월간 토지/복합/집합과 분리 | V2 |
 
 ---
 

@@ -55,6 +55,10 @@
 | D-050 | 2026-08-25 | **축약대장 축 승격 · 복합 SQL 이관 게이트 2019+ 75.0%.** 노출은 D-051. 카드: [`lab/decisions/D-050.json`](lab/decisions/D-050.json). |
 | D-051 | 2026-08-26 | **속성 보강 노출.** 동의 4문장 · 표시=필터 · 원장 `zone_type` 미덮기 · 목록 배지. 운영 promote는 P5. 카드: [`lab/decisions/D-051.json`](lab/decisions/D-051.json). |
 | D-052 | 2026-08-27 | **CH2 월 구독.** 1개 1만 · 둘 다 **1.5만**(2026-08-28 개정, 기존 1.3만). 연간 없음. 무료체험 1개월. 복수 제품은 웹 한 결제. Play는 FN 단독. **추가는 즉시(이번 기간 요금 그대로), 해지·탈퇴는 만료일까지·환불 없음.** SSOT: [`SUBSCRIPTION_POLICY.md`](SUBSCRIPTION_POLICY.md). |
+| D-053 | 2026-08-29 | **지역프로필 1단계 전국 순위.** 같은 grain 전국(시군구·읍면동·리). 탭=3년 거래액 / 건수 / 액÷인구. 현재 지역 pin. 검색=스크롤. 특화도=구성 막대 %p 배지. Insight·산점도는 이후. SSOT: [`PROFILE_NATIONAL_RANK_PLAN.md`](PROFILE_NATIONAL_RANK_PLAN.md). |
+| D-054 | 2026-08-29 | **지역프로필 = 달력 연도 3년 · 연초 1회.** 토지/복합/집합 월간 롤링과 시계를 섞지 않는다. 전국 순위·Profile Twin도 같은 연간 스냅샷. |
+| D-055 | 2026-08-29 | **거시 상관의 결.** M2·금리 = 전국 총액·유형별 전국 시계열만. 지역 상관 = 인구↔건수·액, 유형↔유형. BOK 뉴스판 금지. CH2 한눈 지표. |
+| D-056 | 2026-08-30 | **CH2 AI 5층 계약.** Planner는 경로+실행 가능성. History=성공 Bundle 자동. Gate≠Caveat. 분석 경로 추천만 허용. 실행 보조는 집합 코호트부터. SSOT: [`CH2_AI_ASSISTANT_EXPANSION_PLAN.md`](CH2_AI_ASSISTANT_EXPANSION_PLAN.md). |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 
@@ -179,7 +183,9 @@
 - **제품 비전:** [`CH2_MACRO_VISION.md`](CH2_MACRO_VISION.md)
 - **후보·검증 상세:** [`CANDIDATE_EVALUATION_DESIGN.md`](CANDIDATE_EVALUATION_DESIGN.md)
 - **구현 로드맵 V1~V3:** [`CH2_MACRO_IMPLEMENTATION_ROADMAP.md`](CH2_MACRO_IMPLEMENTATION_ROADMAP.md)
-- Regional Profile · Twin-on-Profile: `docs/REGIONAL_PROFILE_ARCHITECTURE.md` §12 (D-027·D-029)
+- Regional Profile · Twin-on-Profile: `docs/REGIONAL_PROFILE_ARCHITECTURE.md` §12 (D-027·D-029·D-054)
+- 지역프로필 전국 순위 1단계: [`PROFILE_NATIONAL_RANK_PLAN.md`](PROFILE_NATIONAL_RANK_PLAN.md) (D-053)
+- 지역프로필 시계: 달력 연도 3년 · 연초 1회 (D-054) — [`MONTHLY_UPDATE_CHECKLIST.md`](MONTHLY_UPDATE_CHECKLIST.md) §7
 - **복합 모형 추천 SSOT:** [`CH2_RECOMMENDATION_ENGINE_DESIGN.md`](CH2_RECOMMENDATION_ENGINE_DESIGN.md) (D-032~D-035)
 - Twin v8 (병행·후속 전환): `docs/TWIN_V8_DESIGN.md`
 - 정제 정책: `LAND_CLEANING.md`
@@ -278,5 +284,45 @@
 - 웹 수단: 토스페이먼츠(카드, **카카오페이는 토스 결제 수단**), **운영자 계좌이체**(입금 확인 후 권한). 토스 심사 후 실결제.
 - 해지·탈퇴는 만료일까지 사용. 부분 환불 없음. **제품 추가는 즉시, 이번 기간 요금은 그대로.** 다음 결제일 1.5만.
 - SSOT [`SUBSCRIPTION_POLICY.md`](SUBSCRIPTION_POLICY.md). 카드 [`lab/decisions/D-052.json`](lab/decisions/D-052.json).
+
+## D-053 지역프로필 — 같은 grain 전국 순위 (1단계)
+
+- 빈 공간은 「전국에서 이 지역의 위치」다. 왼쪽 세로 카드, 높이는 3개년 8대시장 표에 맞춘다.
+- 유니버스 = **연 grain의 전국**. 읍면동·리도 시군 안 순위가 아니라 전국. 레벨 혼합 없음. canonical만(D-028).
+- 탭 3개: 3년 총거래액 · 총거래건수 · 총거래액÷최근 인구. 인구 대비 건수는 안 만든다.
+- 현재 지역은 목록 하단 **고정 행**. 카드 검색은 필터가 아니라 해당 순위 스크롤+강조. 하단에 세 위 한 줄.
+- 특화도: 기존 시장 구성 막대에 `전국 평균 대비 ±N%p` 배지. 전국 share는 같은 grain 금액(또는 건수) 가중. 별도 Insight 문장 없음.
+- 구현: 재빌드 때 순위 마트. 읍·리는 가상 스크롤. 요청마다 JSONB 전국 정렬·2만 DOM 금지. 인구 없음은 인구 대비만 `—`.
+- Macro Insight · 한 지역 r 은 이후. 전국 산점도는 순위 카드에 구현 (2026-08-29).
+- SSOT [`PROFILE_NATIONAL_RANK_PLAN.md`](PROFILE_NATIONAL_RANK_PLAN.md). 카드 [`lab/decisions/D-053.json`](lab/decisions/D-053.json).
+
+## D-054 지역프로필 — 달력 연도(만년력) · 연초 1회
+
+- 제품 창은 **완결된 달력 연도 3년**이다. 예: 2026년 초 갱신 → 2023·2024·2025.
+- **매년 초 1회**만 재빌드한다. 직전 해가 닫힌 뒤(통상 1–2월). 월간 토지·복합·집합 사이클에 프로필을 넣지 않는다.
+- 같은 스냅샷을 전국 순위 마트·Profile Twin이 소비한다. 달마다 순위가 바뀌면 안 된다.
+- `as_of_month`는 연간 키(예: `2026-01-01`). 토지 앱 「N월 말 기준」롤링 3·5·7년과 기간이 달라도 정상.
+- 8대 시장 `yearly_mix`는 이미 달력 연도다. 토지 Top·아파트 분위는 연초 빌드 시점 mart를 쓰며, 달력 창과 완전 일치는 후속.
+- 절차 [`MONTHLY_UPDATE_CHECKLIST.md`](MONTHLY_UPDATE_CHECKLIST.md) §7. 카드 [`lab/decisions/D-054.json`](lab/decisions/D-054.json).
+
+## D-055 거시 상관의 결 — 전국 시계열 vs 지역 단면
+
+- **M2·금리** (GDP도 같음): 부동산과 붙일 때는 **전국 총거래액**, 또는 **8대 유형별 전국 거래액·건수** 시계열만. 시군구·읍·리와 r을 만들지 않는다.
+- **지역이 의미 있는 상관:** 같은 grain 전국 단면 — **인구 ↔ 거래건수·거래액**, **유형 ↔ 유형**. 이미 있는 인구×거래 산점도가 그 시작이다.
+- **뉴스판 금지.** 최신 GDP·M2·금리 표가 주인공이 아니다. CH2가 계산한 한눈 지표만 제품으로 둔다. 예: 인구-거래 동조 r, 유형 동조, (이후) 유동성 동조·금리 동조. 공표 원숫자는 출처·기준일 단서.
+- 증감률↔증감률. 거래액 합 ≠ 가격지수. 「금리가 거래를 줄였다」금지.
+- 착수 전: 대표 시장금리 1개, ECOS 등 출처, 전국 월별 총액 마트. 카드 [`lab/decisions/D-055.json`](lab/decisions/D-055.json).
+
+## D-056 CH2 AI — 5층 계약 · History 자동 · Gate vs Caveat
+
+- **역할:** CH2가 계산, AI가 목적·경로, Caveat가 제어, History가 축적, AI가 말로 정리.
+- **Planner:** Intent → 후보 경로 → **현재 화면/데이터로 실행 가능한지** → 순위. 데이터 없는 통합회귀를 「추천」만 하지 않음.
+- **Product Knowledge:** 기능마다 목적·적합한 질문·장점·주의. 매뉴얼이 아니라 판단 자료.
+- **Caveat:** 조건→판단→다음 행동. **숫자를 만들지 않음.** Gate=실행 가능(엔진), Caveat=신뢰·다음 경로.
+- **History:** 질문 시 ❌, 성공 Bundle 자동 ⭕. 실패 Gate·목록/지도/단순통계 없음. `caveat_ids` 유지. `user_override`는 P2 이후.
+- **추천:** 분석 경로 허용 / 투자·매수·적정가 금지.
+- **P3:** 집합 코호트(기존 화면) → 집합 통합회귀(승인) → 해석·비교 → 메모. 그다음 복합/지역/토지.
+- **보고서:** History의 출력. 별도 AI 모드 없음.
+- SSOT [`CH2_AI_ASSISTANT_EXPANSION_PLAN.md`](CH2_AI_ASSISTANT_EXPANSION_PLAN.md). 카드 [`lab/decisions/D-056.json`](lab/decisions/D-056.json).
 
 

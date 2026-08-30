@@ -48,6 +48,24 @@ export interface AiContextPayload {
   explain?: unknown;
 }
 
+const SESSION_STORAGE_KEY = "ch2_ai_session_id";
+
+export function readAiSessionId(): string | null {
+  try {
+    return sessionStorage.getItem(SESSION_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function writeAiSessionId(id: string) {
+  try {
+    sessionStorage.setItem(SESSION_STORAGE_KEY, id);
+  } catch {
+    /* ignore */
+  }
+}
+
 export async function fetchSuggestedQuestions(
   panel: string,
   purpose: AiPurpose = "statistics",
@@ -64,10 +82,25 @@ export async function sendAiChat(
   context: AiContextPayload,
   sessionId?: string | null,
 ): Promise<AiChatResponse> {
+  const sid = sessionId ?? readAiSessionId() ?? undefined;
   const { data } = await api.post<AiChatResponse>("/chat", {
-    session_id: sessionId ?? undefined,
+    session_id: sid,
     message,
     context,
   });
+  if (data?.session_id) writeAiSessionId(data.session_id);
+  return data;
+}
+
+export async function recordAnalysisHistory(
+  context: AiContextPayload,
+  message?: string,
+): Promise<{ session_id: string; recorded: boolean; slot_id?: string | null; history_len: number }> {
+  const { data } = await api.post("/history", {
+    session_id: readAiSessionId() ?? undefined,
+    context,
+    message,
+  });
+  if (data?.session_id) writeAiSessionId(data.session_id);
   return data;
 }

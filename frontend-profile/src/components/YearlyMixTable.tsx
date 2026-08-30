@@ -6,6 +6,7 @@ import { formatAmountManwon, formatInt, formatYoy } from "../utils/format";
 
 interface Props {
   yearlyMix: YearlyMix;
+  className?: string;
 }
 
 function cellOf(yearlyMix: YearlyMix, year: number, type: YearlyMixType): YearlyTypeCell {
@@ -25,7 +26,7 @@ function yearTone(yearIndex: number): string {
     : "bg-white dark:bg-slate-800/40";
 }
 
-export default function YearlyMixTable({ yearlyMix }: Props) {
+export default function YearlyMixTable({ yearlyMix, className }: Props) {
   const years = yearlyMix.years;
   const totalCountByYear = years.map((y) =>
     YEARLY_MIX_TYPES.reduce((sum, t) => sum + cellOf(yearlyMix, y, t).count, 0),
@@ -35,7 +36,7 @@ export default function YearlyMixTable({ yearlyMix }: Props) {
   );
 
   return (
-    <div className="card p-5">
+    <div className={["card p-5", className].filter(Boolean).join(" ")}>
       <div className="flex items-center gap-2">
         <h2 className="text-lg font-semibold">3개년 부동산 거래 현황 (8대 시장유형)</h2>
         <StatsGlossaryHelp termId="yearly_mix" size="sm" />

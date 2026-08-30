@@ -39,6 +39,15 @@ export interface AnalysisFeatures {
   messages: string[];
 }
 
+export interface TypeSibling {
+  asset_type: string;
+  building_key: string;
+  display_name: string;
+  count: number;
+  median?: number | null;
+  mean?: number | null;
+}
+
 export interface BuildingStatsRow {
   building_key: string;
   display_name: string;
@@ -52,6 +61,7 @@ export interface BuildingStatsRow {
   builder_label?: string | null;
   builder_is_joint?: boolean;
   match_tier?: string | null;
+  match_rule?: string | null;
   assessed_land_price?: number | null;
   assessed_land_price_year?: number | null;
   asset_type: string;
@@ -62,6 +72,8 @@ export interface BuildingStatsRow {
   ci_upper?: number | null;
   is_reliable: boolean;
   analysis?: AnalysisFeatures;
+  type_siblings?: TypeSibling[];
+  scale_scope?: "complex" | null;
 }
 
 export interface AnalysisExplainPreset {
@@ -503,6 +515,13 @@ export interface CollectivePredictOptions {
   housing_subtypes?: string[];
   housing_subtype_reference?: string | null;
   buildings?: BuildingFeOption[];
+  households?: ContinuousRange | null;
+  parking_per_household?: ContinuousRange | null;
+  assessed_land_price?: ContinuousRange | null;
+  structure_groups?: string[];
+  structure_reference?: string | null;
+  asset_types?: string[];
+  asset_type_reference?: string | null;
 }
 
 export interface CollectiveRegressionPredictInputs {
@@ -512,6 +531,11 @@ export interface CollectiveRegressionPredictInputs {
   dong?: string | null;
   housing_subtype?: string | null;
   building_key?: string | null;
+  households?: number | null;
+  parking_per_household?: number | null;
+  assessed_land_price?: number | null;
+  structure_group?: string | null;
+  asset_type?: string | null;
 }
 
 export type RegressionModelType = "log" | "linear";
@@ -545,6 +569,11 @@ export interface CollectiveRegressionSpec {
   dong: boolean;
   housing_subtype: boolean;
   floor_mode: string;
+  households?: boolean;
+  parking?: boolean;
+  assessed_land_price?: boolean;
+  structure?: boolean;
+  asset_type_dummy?: boolean;
 }
 
 export interface CollectiveModelCandidate {

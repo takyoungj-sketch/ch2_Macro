@@ -4,27 +4,29 @@ from __future__ import annotations
 
 import re
 
-CONSTITUTION_VERSION = "1"
+CONSTITUTION_VERSION = "2"
 
-SYSTEM_PERSONALITY = """당신은 CH2 Macro의 통계 분석 어시스턴트입니다.
+SYSTEM_PERSONALITY = """당신은 CH2 Macro의 분석 보조 AI입니다.
 
 역할:
-- CH2 API·Reasoning Bundle에서 제공된 수치와 사실만 인용합니다.
-- 시장 통계 패턴을 설명합니다.
-- 표본·모형의 한계를 먼저 말합니다.
+- CH2가 계산한 숫자(Bundle·History)만 인용합니다.
+- 분석 목적에 맞는 경로를 제안하고, 지금 화면에서 실행 가능한지 말합니다.
+- 엔진 결과의 한계를 먼저 말하고, Caveat는 조건→판단→다음 행동만 합니다.
 
+허용: 분석 경로 추천 (통합회귀가 적합, 인접지역 검토 등)
 금지:
-- 가격·투자·적정가격·매수/매도 판단
-- 미래 가격 전망 ("오를 것이다", "내릴 것이다")
-- 감정평가 대체
-- Bundle에 없는 수치를 만들거나 재계산
+- 가격·투자·적정가격·매수/매도·저평가 판단
+- 미래 가격 전망
+- Bundle/History에 없는 수치·신뢰도 % 만들기
+- 실행할 데이터가 없는데 기능만 추천
 
-톤: 간결, 중립, 존댓말. 추측·과장 없음.
+톤: 간결, 중립, 존댓말.
 """
 
 ROUTE_PROMPTS: dict[str, str] = {
     "ch2": (
-        "Grounded Dialogue: CH2 Facts·Product Knowledge·Explain만 사용. "
+        "Grounded Dialogue: CH2 Facts·Product Knowledge·Playbook·Caveat·History만 사용. "
+        "경로 질문이면 실행 가능성을 말하고 없는 계수를 invent하지 않음. "
         "질문에 직접 답 → 근거 2~4문장 → 한계 1문장. "
         "JSON/Bundle 수치를 인용하고 재계산 금지. "
         "기초 정의(Adj R²·VIF 등)는 UI ? 팝업으로 유도."
@@ -78,7 +80,6 @@ _REFUSAL_PATTERNS: list[re.Pattern[str]] = [
         r"투자\s*(?:할|해|가치|추천)",
         r"사(?:도|야)\s*(?:될|할)",
         r"팔(?:아|아야)",
-        r"추천\s*해",
         r"전망",
         r"오를(?:까|것|거)",
         r"내릴(?:까|것|거)",
@@ -86,6 +87,8 @@ _REFUSAL_PATTERNS: list[re.Pattern[str]] = [
         r"하락\s*(?:할|예상)",
         r"매수",
         r"매도",
+        r"저평가",
+        r"고평가",
         r"수익\s*(?:률|기대)",
     ]
 ]
@@ -182,9 +185,40 @@ _CH2_KEYWORDS = (
 )
 
 
+_ANALYSIS_PATH_HINTS = (
+    "분석 경로",
+    "어떻게 분석",
+    "어떻게 접근",
+    "통합회귀",
+    "코호트",
+    "어떤 분석",
+    "어떤 경로",
+    "인접지역",
+    "지역회귀",
+)
+
+_INVESTMENT_RECOMMEND_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(p, re.I)
+    for p in [
+        r"(?:이|저)\s*(?:아파트|오피스텔|단지|물건|집).{0,24}추천",
+        r"매수.{0,8}추천",
+        r"투자.{0,8}추천",
+    ]
+]
+
+
 def is_refusal_message(message: str) -> bool:
     text = message.strip()
-    return any(p.search(text) for p in _REFUSAL_PATTERNS)
+    if any(p.search(text) for p in _INVESTMENT_RECOMMEND_PATTERNS):
+        return True
+    if not any(p.search(text) for p in _REFUSAL_PATTERNS):
+        return False
+    # 「분석 경로를 추천해 줘」는 허용. 매수·적정가는 그대로 거절.
+    if any(h in text for h in _ANALYSIS_PATH_HINTS) and not any(
+        k in text for k in ("매수", "매도", "투자", "적정", "저평가", "고평가", "감정")
+    ):
+        return False
+    return True
 
 
 def _contains_any(text: str, keywords: tuple[str, ...]) -> bool:

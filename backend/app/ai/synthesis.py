@@ -48,6 +48,9 @@ def try_grounded_synthesis(
     template_followups: list[str] | None = None,
     narrative_result: NarrativeResult | None = None,
     session_summary: str = "",
+    planner_text: str = "",
+    caveats_text: str = "",
+    history_text: str = "",
 ) -> tuple[str, list[str] | None, NarrativeResult | None, bool]:
     """
     in-scope 질문: LLM 합성 시도 → 실패 시 템플릿.
@@ -74,6 +77,9 @@ def try_grounded_synthesis(
         purpose=context.purpose,
         session_summary=session_summary,
         template_fallback=template_answer,
+        planner_text=planner_text,
+        caveats_text=caveats_text,
+        history_text=history_text,
     )
     if not synthesized:
         return template_answer, template_followups, narrative_result, False

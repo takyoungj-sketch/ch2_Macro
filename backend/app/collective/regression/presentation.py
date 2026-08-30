@@ -28,6 +28,8 @@ def coefficient_sort_key(name: str) -> tuple[int, int, str]:
         return (3, -1, name)
     if name == "parking_per_household":
         return (3, -1, name)
+    if name == "assessed_land_price":
+        return (3, -2, name)
     if name.startswith("atype_"):
         return (5, 5, name)
     if name.startswith("struct_"):
@@ -77,6 +79,7 @@ _CONTINUOUS = frozenset(
         "ln_households",
         "max_floor",
         "parking_per_household",
+        "assessed_land_price",
     }
 )
 
@@ -124,6 +127,8 @@ def _unit_suffix(name: str) -> str:
         return "층"
     if name == "parking_per_household":
         return "대"
+    if name == "assessed_land_price":
+        return "원/㎡"
     if name == "floor":
         return "층"
     if name == "road_code":

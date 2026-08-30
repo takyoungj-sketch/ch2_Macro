@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.ai.bundles.registry import resolve_bundle_id
+from app.ai.knowledge.caveats import fire_caveats
 from app.ai.prediction_narrative import prediction_diagnostics_from_facts
 from app.ai.schemas import AiContext, AiDiagnosticPack, AnalysisExplain
 from app.ai.trend_narrative import trend_diagnostics_from_facts
@@ -129,6 +130,17 @@ def build_regression_diagnostic(context: AiContext) -> AiDiagnosticPack:
         or facts.get("scope_label")
     )
 
+    n_by_type = facts.get("n_by_type") or facts.get("type_counts") or {}
+    if not isinstance(n_by_type, dict):
+        n_by_type = {}
+    caveats = fire_caveats(
+        n=n,
+        warnings=warnings,
+        n_by_type=n_by_type,
+        adj_r_squared=adj,
+        vif_warning=vif_warn,
+    )
+
     return AiDiagnosticPack(
         bundle_id="regression_diagnostic",
         panel=context.panel,
@@ -136,6 +148,7 @@ def build_regression_diagnostic(context: AiContext) -> AiDiagnosticPack:
         summary_lines=summary,
         diagnostics={
             "n": n,
+            "n_by_type": n_by_type,
             "adj_r_squared": adj,
             "scope_label": scope_label,
             "coefficients": coeffs,
@@ -145,6 +158,7 @@ def build_regression_diagnostic(context: AiContext) -> AiDiagnosticPack:
             "correlations": corrs,
             "correlation_n": facts.get("correlation_n"),
             "warnings": warnings,
+            "caveats": caveats,
             "equation": primary.get("equation"),
             "r_squared": primary.get("r_squared"),
             "mape": mape,

@@ -3,7 +3,7 @@
 > **상태 (2026-07-25):** D-027 Profile v2 반영. **D-029** Region Profile SSOT + Twin — §12 (Candidate·**Catalog·Weight**·Similarity·Explainability). Phase A→B. 구조 확정 · 이후 튜닝 중심. Twin v8 병행.  
 > **이전 (2026-06-20):** Phase A/B/C 구현, `v1.1-national` + Twin v5·하이브리드 v1.2.  
 > **목적:** CH2 Macro의 **최종 지향점인 Regional Profile DB**를 중심에 두고, 토지·집합·복합·AI가 공유할 **Statistics → Profile → 회귀/쌍둥이** 파이프라인을 정의한다.  
-> **관련:** [`DECISIONS.md`](DECISIONS.md) D-016·D-017·**D-027·D-029·D-031**, [`CH2_MACRO_VISION.md`](CH2_MACRO_VISION.md), [`CANDIDATE_EVALUATION_DESIGN.md`](CANDIDATE_EVALUATION_DESIGN.md), [`REGION_ARCHITECTURE_ROADMAP.md`](REGION_ARCHITECTURE_ROADMAP.md), [`UPPER_STATS_DESIGN.md`](UPPER_STATS_DESIGN.md), [`COLLECTIVE_HANDOFF.md`](COLLECTIVE_HANDOFF.md), [`TWIN_V8_DESIGN.md`](TWIN_V8_DESIGN.md)
+> **관련:** [`DECISIONS.md`](DECISIONS.md) D-016·D-017·**D-027·D-029·D-031·D-053·D-054·D-055**, [`CH2_MACRO_VISION.md`](CH2_MACRO_VISION.md), [`CANDIDATE_EVALUATION_DESIGN.md`](CANDIDATE_EVALUATION_DESIGN.md), [`REGION_ARCHITECTURE_ROADMAP.md`](REGION_ARCHITECTURE_ROADMAP.md), [`UPPER_STATS_DESIGN.md`](UPPER_STATS_DESIGN.md), [`COLLECTIVE_HANDOFF.md`](COLLECTIVE_HANDOFF.md), [`TWIN_V8_DESIGN.md`](TWIN_V8_DESIGN.md), [`PROFILE_NATIONAL_RANK_PLAN.md`](PROFILE_NATIONAL_RANK_PLAN.md)
 >
 > **이 문서가 Profile·Market Stats 설계 SSOT다.** 후보모형·Validation·Ranking은 [`CANDIDATE_EVALUATION_DESIGN.md`](CANDIDATE_EVALUATION_DESIGN.md)가 SSOT. 코드가 문서보다 앞서가면 안 된다.
 
@@ -214,8 +214,8 @@ Layer 5  Regression · 쌍둥이도시 · AI (장기)
 | 컬럼 | 의미 | 예 |
 |------|------|-----|
 | `profile_version` | Feature 셋 정의 버전 (Feature 추가/변경 시 증가) | `v1.0` |
-| `as_of_month` | 스냅샷 기준월 | `2026-05-01` |
-| `window_years` | feature 산정 롤링 창 | **Profile 제품: `3`** (토지 mart 3·5와 별개) |
+| `as_of_month` | 연간 스냅샷 키 (D-054) | `2026-01-01` = 2023–2025 달력 마감 후 연초 빌드 |
+| `window_years` | 완결 달력 연도 수 | **제품: `3`** (토지 롤링 3·5·7년과 별개) |
 | `feature_count` | 벡터 차원 수 (QA·드리프트 감시) | `38` |
 | `builder_version` | 빌더 코드 버전/날짜 | `2026.06.18` |
 | `validation_status` | A/B 검증 결과 | `PASS` / `PENDING` / `FAIL` |
@@ -339,7 +339,7 @@ Profile 빌더는 **소스를 몰라도** `market_stats` + `population_stats` �
 | Object Stats | `land_basic_stats_v2` + matrix | `building_stats` |
 | Market Stats | matrix/upper → **`market_stats` land_* domain** | **`market_stats` apartment_* domain** |
 | Region 선택 | `region_codes`, tier | **동일 SSOT·UI** |
-| as_of · window | V2 롤링 3·5년 | **동일 정책** |
+| as_of · window | V2 롤링 3·5·7년 (월간) | 프로필은 **달력 3년 · 연초 1회** (D-054). 집합 분석 mart는 토지와 같이 월간 롤링 |
 | 장기 연도 | `land_annual_stats` 2010–2026 | `building_annual_stats` + market annual |
 | Promote | `land_stats_next` → `land_stats` | **`collective_stats_next`** (병렬 DB 패턴) |
 
@@ -458,7 +458,7 @@ Profile 빌더는 **소스를 몰라도** `market_stats` + `population_stats` �
 
 | 문서 | 내용 |
 |------|------|
-| [`DECISIONS.md`](DECISIONS.md) D-016 · **D-027 · D-029** | 아키텍처 · Profile v2 · Region Profile SSOT + Twin-on-Profile |
+| [`DECISIONS.md`](DECISIONS.md) D-016 · **D-027 · D-029 · D-053** | 아키텍처 · Profile v2 · Twin-on-Profile · 전국 순위 1단계 |
 | [`TWIN_V8_DESIGN.md`](TWIN_V8_DESIGN.md) | Twin v8 (병행; Phase B 후 Profile Twin으로 전환) |
 | [`PROFILE_TWIN_HYBRID.md`](PROFILE_TWIN_HYBRID.md) | Hybrid Twin v1.2 / v2 기록 |
 | [`COLLECTIVE_HANDOFF.md`](COLLECTIVE_HANDOFF.md) | 집합 MVP·원장·게이트 |
@@ -468,6 +468,7 @@ Profile 빌더는 **소스를 몰라도** `market_stats` + `population_stats` �
 | [`LONG_TERM_TREND_DESIGN.md`](LONG_TERM_TREND_DESIGN.md) | 토지 장기 연도 mart |
 | [`REGION_CODE_LAYERS.md`](REGION_CODE_LAYERS.md) | canonical SSOT (D-028) |
 | [`MAP_REGION_HUB_DESIGN.md`](MAP_REGION_HUB_DESIGN.md) | Profile-B0 · 지도 허브 |
+| [`PROFILE_NATIONAL_RANK_PLAN.md`](PROFILE_NATIONAL_RANK_PLAN.md) | 1단계 전국 순위 카드 · 특화도 배지 (D-053) |
 
 ---
 
@@ -703,8 +704,29 @@ Phase B Twin Engine 착수 **전** 제품·데이터 정합. **계획 SSOT:** [`
 | **P1** | 지역 선택 — 토지 `RegionSelector`와 tier·검색·딥링크 동일 (beop→eup 승격 **폐기**) | ✅ **P1-a~f 코드** (`shared/region-picker` · 딥링크 · 검색 city/beop · built/collective) |
 | **P2** | 리 grain 아파트 P25/P50/P75 — `market_stats` beop + **count≥15** · eup proxy 금지 | ✅ 전국 재빌드 (2026-07-27) |
 
+### 12.8 전국 지역 순위 (D-053)
+
+프로필이 「어떤 시장인가」만 답하고 「전국에서 어느 규모인가」는 비어 있다. **1단계**는 왼쪽 「전국 지역 순위」카드 + 시장 구성 **특화도 %p 배지**. 유니버스는 Twin scope가 아니라 **같은 `region_level`의 전국**(읍면동·리 포함).
+
+마트 `regional_profile_rank` · API `GET /api/regional-profile/national-ranks`. 카드 안 **전국 분포 산점도**(로그, 탭 연동)는 같은 payload.
+
+### 12.9 시계 — 달력 연도 · 연초 1회 (D-054)
+
+프로필은 토지 롤링 `as_of`가 아니다. **완결 달력 연도 3년**, **매년 초 1회** 재빌드. Twin·전국 순위도 그 스냅샷만 본다. 월간 CSV 사이클에 넣지 않는다.
+
+### 12.10 거시 상관의 결 (D-055)
+
+두 질문이다. 섞지 않는다.
+
+| 질문 | 결 | 지표 |
+|------|----|------|
+| 유동성·금리는 전국 부동산과 같이 움직였는가 | **전국 시계열** | 총거래액, 유형별 전국 액·건수 ↔ M2·대표 금리 (증감률). 지역 r 없음 · **미착수** |
+| 이 결의 지역들은 인구·유형이 거래를 어떻게 가르는가 | **같은 grain 단면** | 인구↔액·건수 산점도 + 동조 r (**구현**). 유형 비중 동조 행렬 (**구현**) |
+
+화면은 BOK 원표가 아니라 **CH2 한눈 지표**(인구-거래 동조 r, 유형 동조 행렬. 유동성·금리 동조는 이후). 인과 문장·가격지수 대체 금지.
+
 ---
 
-*최종 갱신: 2026-07-28 · D-029 Phase A·B **MVP 동결** · Post-MVP: [`REGIONAL_PROFILE_POST_MVP_BACKLOG.md`](REGIONAL_PROFILE_POST_MVP_BACKLOG.md)*  
+*최종 갱신: 2026-08-29 · D-055 거시 결 · D-054 만년력 · D-053 순위+산점도 · D-029 Phase A·B **MVP 동결** · Post-MVP: [`REGIONAL_PROFILE_POST_MVP_BACKLOG.md`](REGIONAL_PROFILE_POST_MVP_BACKLOG.md)*  
 *후보·검증 계층: [`CANDIDATE_EVALUATION_DESIGN.md`](CANDIDATE_EVALUATION_DESIGN.md) · 구현 순서: [`CH2_MACRO_IMPLEMENTATION_ROADMAP.md`](CH2_MACRO_IMPLEMENTATION_ROADMAP.md)*
 *이전: 2026-06-19 · D-017*

@@ -158,6 +158,7 @@ Profile·Twin·Validation OS·Candidate Factory는 **단계적 도입** ([CH2_MA
 | [CANDIDATE_EVALUATION_DESIGN.md](./CANDIDATE_EVALUATION_DESIGN.md) | 후보·표본·검증·Confidence 상세 |
 | [CH2_MACRO_IMPLEMENTATION_ROADMAP.md](./CH2_MACRO_IMPLEMENTATION_ROADMAP.md) | V1~V3 구현 순서·완료 게이트 |
 | [REGIONAL_PROFILE_ARCHITECTURE.md](./REGIONAL_PROFILE_ARCHITECTURE.md) | Profile·Market Stats 도메인 SSOT |
+| [PROFILE_NATIONAL_RANK_PLAN.md](./PROFILE_NATIONAL_RANK_PLAN.md) | 전국 순위 카드 1단계 (D-053) |
 | [DECISIONS.md](./DECISIONS.md) | 구체적 설계 결정 기록 |
 
 ---

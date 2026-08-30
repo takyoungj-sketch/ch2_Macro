@@ -103,6 +103,7 @@ CH2 AI는 [CH2_AI_CONSTITUTION.md](./CH2_AI_CONSTITUTION.md)에 따라 **통계 
 | [CH2_MACRO_VISION.md](./CH2_MACRO_VISION.md) | **제품 비전** — Profile 제안 · Validation 판단 · AI 해설 |
 | [CH2_EXPLAIN_CONSTITUTION.md](./CH2_EXPLAIN_CONSTITUTION.md) | 물음표 1차 · AI 2차 설명 체계 |
 | [CH2_AI_CONSTITUTION.md](./CH2_AI_CONSTITUTION.md) | AI 6대 조항·Router·Bundle |
+| [CH2_AI_ASSISTANT_EXPANSION_PLAN.md](./CH2_AI_ASSISTANT_EXPANSION_PLAN.md) | AI 5층 계약·Planner 실행 가능성·History (D-056) |
 | [SYSTEM_ARCHITECTURE.md](./SYSTEM_ARCHITECTURE.md) | Candidate Factory · Validation Engine · 모듈 경계 |
 | [CANDIDATE_EVALUATION_DESIGN.md](./CANDIDATE_EVALUATION_DESIGN.md) | 후보·표본·검증·Confidence 상세 |
 | [CH2_MACRO_IMPLEMENTATION_ROADMAP.md](./CH2_MACRO_IMPLEMENTATION_ROADMAP.md) | V1~V3 구현 순서·완료 게이트 |
@@ -110,10 +111,11 @@ CH2 AI는 [CH2_AI_CONSTITUTION.md](./CH2_AI_CONSTITUTION.md)에 따라 **통계 
 | [BUILT_SHARE_TRANSACTION_POLICY.md](./BUILT_SHARE_TRANSACTION_POLICY.md) | 복합 지분거래 — 목록 전체 · 단가·회귀 기본 제외 (D-049) |
 | [CH2_ENTITLEMENT.md](./CH2_ENTITLEMENT.md) | 무료/유료 권한 — 5앱 통일 · 토지 전용 무료 탭 없음 (D-043) |
 | [REGIONAL_PROFILE_ARCHITECTURE.md](./REGIONAL_PROFILE_ARCHITECTURE.md) | Regional Profile·거시 분석 로드맵 |
+| [PROFILE_NATIONAL_RANK_PLAN.md](./PROFILE_NATIONAL_RANK_PLAN.md) | 지역프로필 전국 순위 1단계 (D-053) |
 | [CH2_MIDCHECK_IMPROVEMENT_PLAN.md](./CH2_MIDCHECK_IMPROVEMENT_PLAN.md) | 중간점검 개선안 — 검증·Twin Validation·월간 SSOT |
 | [TWIN_VALIDATION_STATUS.md](./TWIN_VALIDATION_STATUS.md) | Twin Validation 실태·판정 초안 |
 | [TWIN_ENGINE_V2.md](./TWIN_ENGINE_V2.md) | Twin 거리 엔진 V2 — 비교/풀 분리 (D-044) |
-| [MONTHLY_UPDATE_CHECKLIST.md](./MONTHLY_UPDATE_CHECKLIST.md) | 월간 1페이지 체크리스트 |
+| [MONTHLY_UPDATE_CHECKLIST.md](./MONTHLY_UPDATE_CHECKLIST.md) | 월간 1페이지 체크리스트 · 지역프로필은 연간 §7 (D-054) |
 | [RENT_CONVERSION_EXPERIMENT.md](./RENT_CONVERSION_EXPERIMENT.md) | 주거 전월세 전환율 실험 종료 · `mean_simple` 확정 (D-040) |
 
 ---

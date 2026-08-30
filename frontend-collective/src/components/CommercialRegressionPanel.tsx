@@ -15,6 +15,7 @@ import { CollectiveRegressionResults } from "./CollectiveRegressionResults";
 import type { FloorMode } from "../utils/collectiveRegressionTypes";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
+import { recordAnalysisHistory } from "@ch2/ai-assistant/aiClient";
 import { COMMERCIAL_REGRESSION_HELP } from "../utils/residentialAnalysisHelp";
 
 function regionParams(scope: CommercialModalScope) {
@@ -376,6 +377,11 @@ export default function CommercialRegressionPanel({
     });
   }, [regM.data, isShop, useCohort]);
 
+  useEffect(() => {
+    if (!aiRegressionContext) return;
+    void recordAnalysisHistory(aiRegressionContext);
+  }, [aiRegressionContext]);
+
   if (useCohort && cohortRunId === 0) {
     return (
       <p className="text-xs text-slate-500 text-center py-6">
@@ -385,6 +391,7 @@ export default function CommercialRegressionPanel({
   }
 
   const varOptions = (
+    // 세대수·주차·공시지가·구조는 주거 단지(K-apt) 통합회귀 전용. cluster에는 없음.
     [
       ["gross_area", "연면적"],
       ["building_age", "연식"],

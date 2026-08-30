@@ -51,6 +51,7 @@ export function coefficientSortKey(name: string): [number, number, string] {
   if (name === "households" || name === "ln_households") return [2, 1, name];
   if (name === "max_floor") return [3, -1, name];
   if (name === "parking_per_household") return [3, -1, name];
+  if (name === "assessed_land_price") return [3, -2, name];
   if (name === "floor") return [3, 0, name];
   if (name.startsWith("floor_rel_")) return [3, 1, name];
   if (name.startsWith("floor_grp_")) return [3, 2, name];

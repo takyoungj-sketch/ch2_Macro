@@ -262,6 +262,8 @@ collective_building_attributes   (building_key grain — 매칭 결과)
 
 `AGENTS.md`·`.cursor/rules/collective-residential-commercial-parity.mdc`는 집합 작업을 주거·비주거 동시 진행으로 규정한다. **이 트랙은 예외**다 — K-apt는 공동주택 관리 데이터라 비주거 집합(도로명 cluster)에는 대응 원천이 없다. 통계 방식·UI 골격의 동일성 원칙은 유지하되, **단지 속성·브랜드 프리미엄은 주거 전용 기능**으로 문서화한다. 비주거의 대응 항목(구조·연식 등)은 건축물대장 트랙(보류)에 묶여 있다.
 
+같은 지번 아파트·오피스텔 sibling(유형별 거래 칩·모달 비교·오피스텔 K-apt 시공사 복사)도 **주거 전용**이다. 비주거는 지번 단지가 아니라 도로 cluster라 대응 단위가 없고, 상업 앱은 변경하지 않는다.
+
 ---
 
 ## 7. 다음 액션 (승인 필요)

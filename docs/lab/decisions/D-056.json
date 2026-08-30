@@ -1,0 +1,11 @@
+{
+  "id": "D-056",
+  "topic": "CH2 AI 5층 계약 — Planner 실행 가능성, Gate vs Caveat, History 자동 기록",
+  "date": "2026-08-30",
+  "status": "confirmed",
+  "background": "AI가 화면 숫자만 설명하는 단계에서, 목적→경로→실행 요청→해석→메모로 확장한다. 경로만 말하면 데이터가 없는 통합회귀를 추천하는 구멍이 생긴다. History를 질문 시에만 만들면 화면에서 직접 돌린 회귀와 비교할 수 없다.",
+  "decision": "① 5층 유지: Product Knowledge(기능·목적·적합한 질문·주의) → Intent/Playbook → Active Context(지금 실행 가능한가) → Caveat(조건→판단→다음 행동, 숫자 invent 금지) → Analysis History(실행된 분석만). ② History는 질문 시가 아니라 분석 엔진이 유효 Bundle을 반환한 시점에 자동 생성. 실패 Gate·목록/지도/단순통계는 슬롯 없음. ③ n 과소: Gate=실행 가능 여부(엔진), Caveat=신뢰·다음 경로(Planner). AI가 n으로 실행을 막지 않음. caveat_ids를 History에 남김. ④ 추천: 분석 경로 허용, 투자·매수·적정가 금지. ⑤ 실행 보조는 집합 코호트 화면 이동 → 집합 통합회귀 승인 실행 → 해석/비교 → 메모 순. 코호트 필터를 AI가 임의 조작하지 않음. ⑥ 보고서=History 출력, 별도 AI 모드 없음. ⑦ recommended_path/executed_path/user_override는 P2 이후.",
+  "rationale": "CH2가 숫자를 만들고 AI는 목적과 경로를 잡는다. 같은 Bundle/History를 UI 직접 실행과 AI 승인 실행이 공유해야 「아까 회귀와 비교」가 성립한다. Gate와 Caveat를 나누면 소표본을 보고 싶은 사용자를 막지 않으면서 다음 분석을 권고할 수 있다.",
+  "revisit": "P3 딥링크 범위(코호트 조건 프리필). History 슬롯 상한·TTL. 복합/지역/토지 P5. user_override UX.",
+  "related": ["ai", "collective", "CH2_AI_ASSISTANT_EXPANSION_PLAN", "CH2_AI_CONSTITUTION"]
+}

@@ -114,6 +114,11 @@ MATCH_NOTE_TITLE_CLUSTER = (
     "주소 규칙으로는 못 붙였고, 표제부 단지명으로 묶인 필지에 K-apt가 하나뿐입니다. "
     "목록 세대수·시공사는 K-apt 값이며, 지역회귀 hard 표본(A·B·C)에는 넣지 않습니다."
 )
+MATCH_NOTE_KAPT_SAME_PNU = (
+    "같은 지번 아파트와 이름이 같아 K-apt 시공사·단지 규모를 붙입니다. "
+    "세대수는 단지 전체이며 이 유형 재고가 아닙니다. "
+    "지역회귀 hard 표본에는 넣지 않습니다."
+)
 MATCH_NOTE_TITLE_PNU = (
     "K-apt에 없는 필지입니다. 세대수·층·구조는 표제부에서 같은 용도 동을 합친 값이고, "
     "시공사는 표제부에 없습니다. 지역회귀 hard 표본(A·B·C)에는 넣지 않습니다."
@@ -537,6 +542,10 @@ def fetch_danji_attributes(
         match_note = (
             MATCH_NOTE_TITLE_CLUSTER if match_note is None else f"{MATCH_NOTE_TITLE_CLUSTER} {match_note}"
         )
+    if rule == "kapt_same_pnu":
+        match_note = (
+            MATCH_NOTE_KAPT_SAME_PNU if match_note is None else f"{MATCH_NOTE_KAPT_SAME_PNU} {match_note}"
+        )
     if rule == "title_pnu":
         title_note = (
             MATCH_NOTE_TITLE_PNU_OFFICETEL
@@ -645,7 +654,7 @@ def _attach_list_attr_fields(conn: Connection, items: list[BuildingStatsRow]) ->
         text(
             f"""
             SELECT building_key, asset_type, households, builder_norm, builder_raw,
-                   builder_is_joint, attr_quality_flags, match_tier
+                   builder_is_joint, attr_quality_flags, match_tier, match_rule
             FROM {ATTRIBUTES_TABLE}
             WHERE snapshot_ym = :snap
               AND building_key = ANY(:keys)
@@ -665,6 +674,7 @@ def _attach_list_attr_fields(conn: Connection, items: list[BuildingStatsRow]) ->
         row = by_pair.get((it.building_key, it.asset_type)) or by_key.get(it.building_key)
         if not row:
             continue
+        rule = str(row.get("match_rule") or "").strip() or None
         items[i] = it.model_copy(
             update={
                 "households": _to_int(row.get("households")),
@@ -676,6 +686,8 @@ def _attach_list_attr_fields(conn: Connection, items: list[BuildingStatsRow]) ->
                 ),
                 "builder_is_joint": bool(row.get("builder_is_joint")),
                 "match_tier": (str(row.get("match_tier") or "").strip() or None),
+                "match_rule": rule,
+                "scale_scope": "complex" if rule == "kapt_same_pnu" else it.scale_scope,
             }
         )
 

@@ -1,6 +1,7 @@
 # CH2 AI 아키텍처
 
-> 구현 가이드. 헌법: [CH2_AI_CONSTITUTION.md](./CH2_AI_CONSTITUTION.md)
+> 구현 가이드. 헌법: [CH2_AI_CONSTITUTION.md](./CH2_AI_CONSTITUTION.md)  
+> **확장 계획 (의도·이력·분석 메모):** [CH2_AI_ASSISTANT_EXPANSION_PLAN.md](./CH2_AI_ASSISTANT_EXPANSION_PLAN.md)
 
 ---
 
@@ -35,6 +36,7 @@ flowchart TB
 | Method | Path | 설명 |
 |--------|------|------|
 | `POST` | `/api/ai/chat` | 세션 대화 (메인) |
+| `POST` | `/api/ai/history` | 성공 분석 Bundle → History 슬롯 (채팅 없이) |
 | `POST` | `/api/ai/explain` | Explain layer만 자연어화 |
 | `GET` | `/api/ai/suggested-questions` | panel·purpose별 추천 질문 |
 | `GET` | `/api/ai/bundles/{bundle_id}` | Bundle 스키마·필드 설명 (디버그) |
@@ -113,21 +115,41 @@ Orchestrator: `(panel, facts) → bundle_id → AiDiagnosticPack`
 
 ## 5. Router 규칙 (1차: 키워드)
 
-1. **Refusal** — 적정가, 투자, 추천, 오를까, 전망, 싸다, 비싸다 …
-2. **Statistics** — 순수 정의 → UI `?` 유도 · 해석형 → explain/ch2 우선
-3. **Explain** — 왜 이 결과, 어떻게 해석/봐, 이번 표본 …
-4. **Opinion** — 로그회귀, 방법론, trade-off, ~가 좋을까 (전망 키워드 없을 때)
-5. **Web** — 금리, 국토부, 정책, 뉴스 … (Tavily · DuckDuckGo, 출처 URL evidence)
-6. **CH2** — default (표본, Adj R², 계수, 신뢰구간 …)
+1. **Refusal** — 적정가, 투자·매수 추천, 저평가, 오를까, 전망, 싸다, 비싸다 … (**분석 경로 추천은 통과**)
+2. **Path / Intent** — 「가격 차이를 보고 싶어」「어떻게 분석」→ Planner (Playbook + 실행 가능성). Explain dump가 아님
+3. **Statistics** — 순수 정의 → UI `?` 유도 · 해석형 → explain/ch2 우선
+4. **Explain** — 왜 이 결과, 어떻게 해석/봐, 이번 표본 …
+5. **Opinion** — 로그회귀, 방법론, trade-off (전망 키워드 없을 때)
+6. **Web** — 금리, 국토부, 정책, 뉴스 …
+7. **CH2** — default (표본, Adj R², 계수 …)
+8. **Memo** — 「지금까지 정리」→ History만. 슬롯 없으면 실행을 안내
 
 ---
 
-## 6. Screen-bound
+## 6. Screen-bound (숫자의 출처)
 
 `context.panel` → `bundle_id` (registry)
 
-AI는 **다른 panel의 API를 호출하지 않음**.  
-비교 질문은 session `context_stack`의 snapshot diff만 허용.
+**수치**는 현재 Bundle과 session `analysis_history`만.  
+Product Knowledge·Playbook은 화면이 없어도 말한다.  
+다른 panel API를 **몰래** 호출해 숫자를 채우지 않는다.  
+비교는 History 슬롯끼리, 또는 예전 `context_stack` snapshot.
+
+Planner는 Bundle이 얇으면 `executable=unknown`이고, 「이 화면에서 바로 실행할 수 없다」고 말한 뒤 어떤 UI를 열지 안내한다.
+
+---
+
+## 6b. 5층 · History · Caveat
+
+SSOT: [CH2_AI_ASSISTANT_EXPANSION_PLAN.md](./CH2_AI_ASSISTANT_EXPANSION_PLAN.md) · D-056.
+
+- **Product Knowledge:** 기능 카드 (목적 / 적합한 질문 / 장점 / 주의)
+- **Playbook + Planner:** Intent → 후보 → **현재 Context로 실행 가능?** → 순위
+- **Caveat:** 엔진 warnings·n 번역. `조건 → 판단 → 다음 행동`. 신뢰도 % invent 금지
+- **Gate vs Caveat:** Gate=엔진 실행 가능. Caveat=실행된 결과의 신뢰·다음 경로
+- **History:** `POST /api/ai/history` 또는 chat 시 성공 `regression_diagnostic` Bundle. 실패 Gate 없음
+
+슬롯 필드: `intent_id`, `path_id`, `scope`, `n`, `n_by_type`, `metrics`, `key_coeffs`, `warnings`, `caveat_ids`, `source`. P2 이후 `recommended_path` / `executed_path` / `user_override`.
 
 ---
 
@@ -176,6 +198,7 @@ AI_RATE_LIMIT_PER_MINUTE=30
 | C | 복합 UI AiAssistantPanel (modal) | ✅ |
 | D | trend/matrix/prediction bundles · 내러티브 확장 | ✅ |
 | F | Grounded Dialogue · Product Knowledge · UI glossary | ✅ |
+| G | 5층 계약 P0–P2 (카드·Caveat·Planner 실행 가능성·History 자동) | 진행 (D-056) |
 
 ---
 

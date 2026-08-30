@@ -19,6 +19,7 @@ from app.collective.db import get_collective_db
 from app.collective.filters import apply_period_filters, apply_year_filters
 from app.collective.floor_index_regression import compute_residential_floor_index_regression
 from app.collective.regression.engine import predict_regression, run_cohort_regression
+from app.collective.regression.building_attrs import attach_cohort_building_attrs, spec_wants_building_attrs
 from app.collective.transaction_export import (
     MAX_COLLECTIVE_TX_EXPORT,
     export_filename,
@@ -49,6 +50,20 @@ from app.collective.schemas import (
 )
 
 router = APIRouter(prefix="/analysis/cohort", tags=["집합부동산-코호트"])
+
+
+def _cohort_regression_frame(db: Session, body, keys: list[str]) -> tuple[pd.DataFrame, list[CohortBuildingSummary]]:
+    df, summaries = _fetch_cohort_transactions(
+        db,
+        keys,
+        contract_year_from=body.contract_year_from,
+        contract_year_to=body.contract_year_to,
+        contract_date_from=body.contract_date_from,
+        contract_date_to=body.contract_date_to,
+    )
+    if spec_wants_building_attrs(body.variables):
+        df = attach_cohort_building_attrs(db, df)
+    return df, summaries
 
 
 def _fetch_cohort_transactions(
@@ -361,14 +376,8 @@ def cohort_floor_index(body: CohortAnalysisRequest, db: Session = Depends(get_co
 
 @router.post("/regression/run", response_model=CohortRegressionResponse)
 def cohort_regression(body: CohortAnalysisRequest, db: Session = Depends(get_collective_db)):
-    df, summaries = _fetch_cohort_transactions(
-        db,
-        body.building_keys,
-        contract_year_from=body.contract_year_from,
-        contract_year_to=body.contract_year_to,
-        contract_date_from=body.contract_date_from,
-        contract_date_to=body.contract_date_to,
-    )
+    keys = _cohort_keys(body)
+    df, summaries = _cohort_regression_frame(db, body, keys)
     years = [int(y) for y in df["contract_year"].dropna().tolist()]
     cnt_recent = count_recent_transactions(
         years,
@@ -418,14 +427,8 @@ def cohort_regression(body: CohortAnalysisRequest, db: Session = Depends(get_col
 
 @router.post("/regression/predict", response_model=CollectiveRegressionPredictResponse)
 def cohort_regression_predict(body: CohortRegressionPredictRequest, db: Session = Depends(get_collective_db)):
-    df, summaries = _fetch_cohort_transactions(
-        db,
-        body.building_keys,
-        contract_year_from=body.contract_year_from,
-        contract_year_to=body.contract_year_to,
-        contract_date_from=body.contract_date_from,
-        contract_date_to=body.contract_date_to,
-    )
+    keys = _cohort_keys(body)
+    df, summaries = _cohort_regression_frame(db, body, keys)
     years = [int(y) for y in df["contract_year"].dropna().tolist()]
     cnt_recent = count_recent_transactions(
         years,

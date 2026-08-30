@@ -17,6 +17,9 @@ EvidenceType = Literal[
     "ch2_explain",
     "ch2_trend",
     "ch2_matrix",
+    "ch2_playbook",
+    "ch2_caveat",
+    "ch2_history",
     "stats_knowledge",
     "ai_opinion",
     "web",
@@ -49,6 +52,26 @@ class AnalysisExplain(BaseModel):
     limitations: list[str] = Field(default_factory=list)
     interpretation_hints: list[str] = Field(default_factory=list)
     presets: list[AnalysisExplainPreset] = Field(default_factory=list)
+
+
+class AnalysisHistorySlot(BaseModel):
+    """실행된 분석 스냅샷. 채팅 전문이 아님. D-056."""
+
+    id: str
+    at: float = 0
+    intent_id: Optional[str] = None
+    path_id: Optional[str] = None
+    scope: dict[str, Any] = Field(default_factory=dict)
+    n: Optional[Any] = None
+    n_by_type: dict[str, Any] = Field(default_factory=dict)
+    metrics: dict[str, Any] = Field(default_factory=dict)
+    key_coeffs: list[dict[str, Any]] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    caveat_ids: list[str] = Field(default_factory=list)
+    source: str = "engine_bundle"
+    recommended_path: Optional[str] = None
+    executed_path: Optional[str] = None
+    user_override: Optional[str] = None
 
 
 class AiScope(BaseModel):
@@ -88,6 +111,19 @@ class AiChatRequest(BaseModel):
     session_id: Optional[str] = None
     message: str = Field(..., min_length=1, max_length=4000)
     context: AiContext = Field(default_factory=AiContext)
+
+
+class AiHistoryRecordRequest(BaseModel):
+    session_id: Optional[str] = None
+    context: AiContext = Field(default_factory=AiContext)
+    message: Optional[str] = None
+
+
+class AiHistoryRecordResponse(BaseModel):
+    session_id: str
+    recorded: bool
+    slot_id: Optional[str] = None
+    history_len: int = 0
 
 
 class AiExplainRequest(BaseModel):

@@ -2,6 +2,7 @@ import { isAxiosError } from "axios";
 import { cityBucketFromSigungu } from "@ch2/region-picker";
 import { apiClient } from "./client";
 import type {
+  NationalRanksResponse,
   ProfileTwinNeighborsResponse,
   RegionLevel,
   RegionNameInfo,
@@ -61,6 +62,23 @@ export async function fetchRegionalProfile(params: {
     }
     throw err;
   }
+}
+
+export async function fetchNationalRanks(params: {
+  regionLevel: RegionLevel;
+  profileVersion?: string;
+  windowYears?: number;
+  asOfMonth?: string;
+}): Promise<NationalRanksResponse> {
+  const { data } = await apiClient.get<NationalRanksResponse>("/regional-profile/national-ranks", {
+    params: {
+      region_level: params.regionLevel,
+      profile_version: params.profileVersion ?? DEFAULT_PROFILE_VERSION,
+      window_years: params.windowYears ?? DEFAULT_WINDOW_YEARS,
+      ...(params.asOfMonth ? { as_of_month: params.asOfMonth } : {}),
+    },
+  });
+  return data;
 }
 
 export async function fetchRentProfileYearly(params: {

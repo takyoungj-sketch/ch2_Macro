@@ -161,7 +161,8 @@ def _preset_answers_residential_regression(*, asset_type: str, cohort: bool) -> 
                 f"종속변수 금액(만원)에 대해 OLS 회귀입니다({scope}). "
                 f"체크한 변수(전용면적, {age_note}층, {dong_note}{rights_note} 등)만 독립변수로 들어갑니다. "
                 "범주형 변수는 더미화(drop_first)되어 기준 범주 대비 계수로 표시됩니다. "
-                "코호트는 거래 최다 단지를 기준으로 단지 고정효과를 둘 수 있습니다."
+                "코호트는 기본으로 거래 최다 단지 기준 단지 고정효과를 둡니다. "
+                "세대수·주차·공시지가·구조·유형을 켜면 FE 대신 그 변수로 단지 간 차이를 설명합니다."
             ),
         },
         {
@@ -709,6 +710,16 @@ def build_residential_regression_explain(
         active.append("동")
     if v.housing_subtype and asset_type == "presale":
         active.append("권리")
+    if getattr(v, "households", False):
+        active.append("총 세대수")
+    if getattr(v, "parking", False):
+        active.append("세대당 주차")
+    if getattr(v, "assessed_land_price", False):
+        active.append("개별공시지가")
+    if getattr(v, "structure", False):
+        active.append("구조")
+    if getattr(v, "asset_type_dummy", False):
+        active.append("유형")
 
     model_type = getattr(result, "model_type", "linear")
     if model_type == "log":
@@ -752,7 +763,10 @@ def build_residential_regression_explain(
         hints.append(f"⚠ {w}")
 
     if cohort:
-        hints.append("코호트: 거래 최다 단지=단지 FE 기준, n<5 단지는 FE에서 제외됩니다.")
+        if any("단지 FE 생략" in str(w) for w in (result.warnings or [])):
+            hints.append("코호트: 단지 속성으로 단지 간 차이를 설명합니다. 단지 FE는 완전공선이라 쓰지 않습니다.")
+        else:
+            hints.append("코호트: 거래 최다 단지=단지 FE 기준, n<5 단지는 FE에서 제외됩니다.")
 
     floor_lines = RESIDENTIAL_FLOOR_GROUP_LINES if v.floor and v.floor_mode == "relative" else []
 
@@ -779,6 +793,7 @@ def build_residential_regression_explain(
             "사용자 변수 선택에 따라 결과 변경",
             "㎡당 반로그·층 구간 고정 spec ≠ 효용지수 탭",
             "단지(또는 코호트) 내 표본 — 외삽 주의",
+            "단지 속성(세대수 등)과 단지 FE는 완전공선이라 함께 쓰지 않음",
             "인과·투자 판단용 아님",
         ],
         "interpretation_hints": hints,

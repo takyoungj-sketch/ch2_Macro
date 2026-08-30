@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from datetime import date
 from typing import Any, Optional
+import json
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -125,6 +127,45 @@ def list_profile_versions(db: Session = Depends(get_collective_db)):
     return RegionalProfileVersionsResponse(
         profile_versions=versions,
         latest_as_of_month=latest,
+    )
+
+
+@router.get("/national-ranks")
+def get_national_ranks(
+    region_level: str = Query(..., pattern="^(sido|sigungu|eupmyeondong|beopjungri|city)$"),
+    profile_version: str = Query("v2.1-national"),
+    window_years: int = Query(3, ge=1, le=5),
+    as_of_month: Optional[date] = Query(None),
+    db: Session = Depends(get_collective_db),
+):
+    """같은 grain 전국 순위 + 유형 전국 비중. 탭 전환은 클라이언트. D-053."""
+    if db is None:
+        raise HTTPException(503, "collective_stats DB 미연결")
+    if not _table_exists(db, "regional_profile_rank"):
+        raise HTTPException(404, "regional_profile_rank 없음 — build_regional_profile_rank.py 먼저")
+
+    from app.regional_profile.national_ranks import fetch_national_ranks
+
+    payload = fetch_national_ranks(
+        db,
+        profile_version=profile_version,
+        window_years=window_years,
+        region_level=region_level,
+        as_of_month=as_of_month,
+    )
+    if not payload:
+        raise HTTPException(
+            404,
+            detail=(
+                f"전국 순위 없음: {profile_version} {region_level} "
+                f"window={window_years}y"
+            ),
+        )
+    body = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    return Response(
+        content=body,
+        media_type="application/json; charset=utf-8",
+        headers={"Cache-Control": "public, max-age=3600, stale-while-revalidate=86400"},
     )
 
 

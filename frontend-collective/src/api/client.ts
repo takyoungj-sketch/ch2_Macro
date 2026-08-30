@@ -334,6 +334,11 @@ export async function runCohortRegression(body: {
     dong?: boolean;
     housing_subtype?: boolean;
     floor_mode?: "linear" | "dummy" | "grouped" | "relative";
+    households?: boolean;
+    parking?: boolean;
+    assessed_land_price?: boolean;
+    structure?: boolean;
+    asset_type_dummy?: boolean;
   };
 }): Promise<CohortRegressionResponse> {
   const { data } = await api.post<CohortRegressionResponse>("/analysis/cohort/regression/run", {
@@ -366,6 +371,11 @@ type RegressionBody = {
     dong?: boolean;
     housing_subtype?: boolean;
     floor_mode?: "linear" | "dummy" | "grouped" | "relative";
+    households?: boolean;
+    parking?: boolean;
+    assessed_land_price?: boolean;
+    structure?: boolean;
+    asset_type_dummy?: boolean;
   };
 };
 

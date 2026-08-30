@@ -10,6 +10,7 @@
   "amendment_2026-08-22b": "AL_D155·AL_D003 16시도 전부 확보를 인벤토리로 확인했다(폴더 11·12·26·27·28·30·31·36·41·43·44·47·48·50·51·52). Track B 파일럿: 로컬 parcel_master에 표제부 집합 30·43 × 3스냅샷 building 88,773 · parcel 11,411, builder_master.pnu 21,649/21,651. 대전·충북 아파트 대조는 docs/lab/parcel_master_pilot_contrast.json. AL_D155 48GB와 복합 enrichment는 구조 표본 감사 후.",
   "amendment_2026-08-22c": "pnu_new 22단지 이름 확인. 14곳은 match_tier P / match_rule pnu_unique 로 세대수·시공사 목록 채움(회귀 USABLE_TIERS는 A·B·C). 재건축 경성맨션2·계룡맨션은 절대 안 붙임. 묶음 6곳(남산주공3, 남광하우스토리A, 푸르지오캐슬 301~302, 문화마을2단지, 분평계룡리슈빌2단지, 대라수어썸브릿지1단지)은 D/F 백로그와 같이 보류.",
   "amendment_2026-08-22d": "pnu_no_kapt: K-apt 없는 대전·충북 아파트에 표제부 공동주택 동 합산(tier T / title_pnu) 854단지. 시공사 없음. 첫째 동 금지, 경비실·주차장 등 부대시설 제외. 재건축·묶음 8곳은 표제부도 안 붙임. 회귀 A·B·C 유지.",
+  "amendment_2026-08-25": "축 승격은 D-050. 집합 전국 building 1,881,261은 적재됨. 복합 SQL 이관·월간 enrich·원본 삭제는 D-050 게이트(2019+ 75.0%) 후. 착수 조건 표의 「남은 14시도 수집」은 08-22b에서 이미 해소.",
   "related": [
     "built",
     "collective",

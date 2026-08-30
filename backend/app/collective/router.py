@@ -62,6 +62,7 @@ from app.collective.building_geocode import (
     resolve_building_map_points,
 )
 from app.collective.danji_attributes import attach_danji_list_fields, fetch_danji_attributes
+from app.collective.type_siblings import attach_type_siblings
 from app.collective.schemas import (
     AnalysisExplain,
     AnalysisFeatures,
@@ -601,6 +602,21 @@ def list_buildings(
             meta.setdefault("stats_as_of_label", stats_as_of_label(as_of_month))
             meta.setdefault("stats_reference_date", stats_reference_date(as_of_month).isoformat())
             meta.setdefault("as_of_month", as_of_month.isoformat())
+
+    cd_from = cd_to = None
+    if as_of_month is not None and not year_override:
+        cd_from, cd_to = period_bounds_for_window(as_of_month, window_years)
+    attach_type_siblings(
+        conn,
+        page_items,
+        as_of_month=as_of_month,
+        window_years=None if (presale_only and use_presale_lifetime) else window_years,
+        year_override=year_override,
+        contract_year_from=contract_year_from if year_override else None,
+        contract_year_to=contract_year_to if year_override else None,
+        contract_date_from=cd_from,
+        contract_date_to=cd_to,
+    )
 
     return BuildingListResponse(
         total=total,

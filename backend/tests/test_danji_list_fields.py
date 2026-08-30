@@ -30,3 +30,5 @@ def test_building_stats_row_land_price_fields():
     dumped = row.model_dump()
     assert dumped["assessed_land_price"] == 2_150_000
     assert dumped["assessed_land_price_year"] == 2026
+    assert dumped["type_siblings"] == []
+    assert dumped["scale_scope"] is None

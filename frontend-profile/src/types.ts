@@ -89,6 +89,48 @@ export interface RegionalProfileResponse {
   features: RegionalProfileFeatures;
 }
 
+/** D-053 packed tuple: code, name, population, amount_3y, count_3y, rank_amount, rank_count, rank_per_capita */
+export type NationalRankTuple = [
+  string,
+  string,
+  number | null,
+  number,
+  number,
+  number,
+  number,
+  number | null,
+];
+
+export interface NationalShareByType {
+  count: Record<string, number>;
+  amount: Record<string, number>;
+}
+
+export interface TypeCorrMatrix {
+  types: string[];
+  n: number;
+  matrix: (number | null)[][];
+}
+
+export interface TypeCorrBlock {
+  amount?: TypeCorrMatrix;
+  count?: TypeCorrMatrix;
+}
+
+export interface NationalRanksResponse {
+  profile_version: string;
+  as_of_month: string;
+  window_years: number;
+  region_level: RegionLevel;
+  universe_n: number;
+  n_per_capita: number;
+  row_fields: string[];
+  national_share_by_type: NationalShareByType;
+  type_corr?: TypeCorrBlock;
+  rows: NationalRankTuple[];
+  computed_at?: string | null;
+}
+
 export interface TwinDetailScores {
   [key: string]: unknown;
 }

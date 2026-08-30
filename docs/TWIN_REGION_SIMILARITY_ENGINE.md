@@ -277,7 +277,7 @@ Similarity 재계산 시 **pivot를 매번 새로 깊게 파지 않도록** parq
 1. **입력은 `regional_profile`** — `(profile_version, as_of_month, window_years)` 고정 조회. Twin이 Feature를 재집계하지 않음 (§3.3)
 2. `region_codes`(또는 비교 레벨 키)와 인구 매핑 키 무결점 — **8/10자리 SSOT 통일** 전제
 3. 인접 룩업 DDL·시드 방법·검증 쿼리
-4. `build_stats`/월간 순서표(`MONTHLY_UPDATE_SOP`)에서 **Profile 빌드 → Twin** 순서 보장
+4. 연초 순서표([`MONTHLY_UPDATE_CHECKLIST.md`](MONTHLY_UPDATE_CHECKLIST.md) §7, D-054)에서 **Profile 빌드 → Twin·rank** 순서 보장. 월간 토지/복합/집합 사이클에 넣지 않음
 5. parquet 아티팩트 저장 경로(naming 포함)와 로테이션 크기 고려, `profile_version` 포함
 
 ---

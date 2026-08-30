@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-26",
+  "updated": "2026-08-29",
   "domains": [
     { "id": "land", "label": "토지" },
     { "id": "built", "label": "복합" },
@@ -236,28 +236,45 @@
           "decision": "D-050"
         }
       }
+    },
+    {
+      "date": "2026-08-26",
+      "cells": {
+        "built": {
+          "text": "P0–P3 로컬 완료(게이트 75.0%, apply 안 함). P4 D-051 동의 토글·표시=필터. 운영 0행",
+          "status": "done",
+          "commit": "needed",
+          "decision": "D-051"
+        },
+        "collective": {
+          "text": "신규 키만 조인. 대장 T·공부 공시지가 수동. 목록 조인 배지",
+          "status": "done",
+          "commit": "needed",
+          "decision": "D-051"
+        },
+        "admin": {
+          "text": "D-051·P0–P4 구현 계획·일지. 커밋·P5 promote 안 함",
+          "status": "done",
+          "commit": "needed",
+          "decision": "D-051"
+        }
+      }
     }
   ],
   "today": {
-    "date": "2026-08-26",
+    "date": "2026-08-29",
     "cells": {
-      "built": {
-        "text": "P0–P3 로컬 완료(게이트 75.0%, apply 안 함). P4 D-051 동의 토글·표시=필터. 운영 0행",
-        "status": "done",
+      "profile": {
+        "text": "전국 순위+산점도 · D-054 만년력 · D-055 결 · 인구-거래 r · 유형 동조. G3(M2·금리) 전 중지",
+        "status": "stopped",
         "commit": "needed",
-        "decision": "D-051"
-      },
-      "collective": {
-        "text": "신규 키만 조인. 대장 T·공부 공시지가 수동. 목록 조인 배지",
-        "status": "done",
-        "commit": "needed",
-        "decision": "D-051"
+        "decision": "D-053"
       },
       "admin": {
-        "text": "D-051·P0–P4 구현 계획·일지. 커밋·P5 promote 안 함",
+        "text": "D-053·054·055 잠금 · 일지 08-29. 커밋·배포 안 함",
         "status": "done",
         "commit": "needed",
-        "decision": "D-051"
+        "decision": "D-055"
       }
     }
   },
@@ -269,10 +286,10 @@
         "commit": "none"
       },
       "profile": {
-        "text": "V2가 제품 Twin 카드를 대체할지는 더 보고 결정",
+        "text": "요청 시 커밋·배포(DDL 070+rank 재빌드). 다음 코드=G3 전국 월별 총액↔M2·대표금리1개. 로컬 전국 스냅샷 as_of=2026-06-01(7월은 부분)",
         "status": "planned",
-        "commit": "none",
-        "decision": "D-044"
+        "commit": "needed",
+        "decision": "D-055"
       },
       "built": {
         "text": "P5: 운영 enrichment promote. `--apply-enrichment`·parcel_master dump 금지. 로컬 동의 토글 브라우저 확인",
@@ -292,10 +309,10 @@
         "decision": "D-051"
       },
       "admin": {
-        "text": "P0–P4·D-051 커밋은 요청 때. 내일 P5. parcel_master dump 금지",
+        "text": "프로필 커밋·배포는 요청 때. P5 promote는 별도. parcel_master dump 금지",
         "status": "planned",
         "commit": "needed",
-        "decision": "D-051"
+        "decision": "D-055"
       }
     }
   },

@@ -53,6 +53,17 @@ class AnalysisFeatures(BaseModel):
     messages: list[str] = []
 
 
+class TypeSibling(BaseModel):
+    """같은 법정동+지번의 다른 주거 유형(아파트↔오피스텔). 키·중앙값은 합치지 않는다."""
+
+    asset_type: str
+    building_key: str
+    display_name: str
+    count: int
+    median: Optional[float] = None
+    mean: Optional[float] = None
+
+
 class BuildingStatsRow(BaseModel):
     building_key: str
     display_name: str
@@ -65,6 +76,7 @@ class BuildingStatsRow(BaseModel):
     builder_label: Optional[str] = None
     builder_is_joint: bool = False
     match_tier: Optional[str] = None
+    match_rule: Optional[str] = None
     assessed_land_price: Optional[float] = None
     assessed_land_price_year: Optional[int] = None
     asset_type: str
@@ -75,6 +87,8 @@ class BuildingStatsRow(BaseModel):
     ci_upper: Optional[float] = None
     is_reliable: bool = False
     analysis: AnalysisFeatures = Field(default_factory=AnalysisFeatures)
+    type_siblings: list[TypeSibling] = Field(default_factory=list)
+    scale_scope: Optional[Literal["complex"]] = None
 
 
 class CollectiveBuildingGeocodeRequest(BaseModel):
@@ -314,6 +328,13 @@ class CollectiveRegressionSpec(BaseModel):
     dong: bool = True
     housing_subtype: bool = False
     floor_mode: Literal["linear", "dummy", "grouped", "relative"] = "relative"
+    # 단지 속성 — 주거 코호트 통합회귀 전용(기본 off). 단지마다 상수라 FE와 완전공선;
+    # 하나라도 설계에 들어가면 단지 FE를 생략한다. 비주거 cluster에는 K-apt가 없어 미노출.
+    households: bool = False
+    parking: bool = False
+    assessed_land_price: bool = False
+    structure: bool = False
+    asset_type_dummy: bool = False
 
 
 class RegressionCoeff(BaseModel):
@@ -359,6 +380,13 @@ class CollectivePredictOptions(BaseModel):
     housing_subtypes: list[str] = Field(default_factory=list)
     housing_subtype_reference: Optional[str] = None
     buildings: list[BuildingFeOption] = Field(default_factory=list)
+    households: Optional[ContinuousRange] = None
+    parking_per_household: Optional[ContinuousRange] = None
+    assessed_land_price: Optional[ContinuousRange] = None
+    structure_groups: list[str] = Field(default_factory=list)
+    structure_reference: Optional[str] = None
+    asset_types: list[str] = Field(default_factory=list)
+    asset_type_reference: Optional[str] = None
 
 
 class CollectiveRegressionPredictInputs(BaseModel):
@@ -368,6 +396,11 @@ class CollectiveRegressionPredictInputs(BaseModel):
     dong: Optional[str] = None
     housing_subtype: Optional[str] = None
     building_key: Optional[str] = None
+    households: Optional[float] = None
+    parking_per_household: Optional[float] = None
+    assessed_land_price: Optional[float] = None
+    structure_group: Optional[str] = None
+    asset_type: Optional[str] = None
 
 
 class CollectiveRegressionRequest(BaseModel):

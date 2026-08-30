@@ -2,6 +2,7 @@
 
 > **SSOT 경로:** CSV 러너 (`run_*_cycle_csv.py`). xlsx / `run_monthly_cycle` 은 **복구·레거시**.  
 > **원칙:** git/deploy ≠ 월갱신. Facts First — mart 후 **analysis cache 비움** 필수.  
+> **지역프로필은 월간에 넣지 않는다** (D-054). 연초 1회만 아래 §7.  
 > **상위:** [CH2_MIDCHECK_IMPROVEMENT_PLAN.md](./CH2_MIDCHECK_IMPROVEMENT_PLAN.md) · [MONTHLY_UPDATE_SOP.md](./MONTHLY_UPDATE_SOP.md)
 
 ### 사전 점검 (cycle 전 · 코드/문서)
@@ -66,6 +67,7 @@ py scripts/monthly/verify_monthly_checklist_ready.py
 | 3.3 | Dump · Promote | `collective_stats` | |
 | 3.4 | Smoke | building/cluster 목록 · 회귀 1건 | |
 | 3.5 | enrich | 러너 기본 skip. 신규 키만 `--enrich-new-keys`. 대장 T·공부 공시지가는 수동. [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md) §4 | |
+| 3.6 | Regional Profile | **월간에 돌리지 않음** (D-054). 연초 1회만 §7 | |
 
 ---
 
@@ -102,6 +104,21 @@ py scripts/monthly/verify_monthly_checklist_ready.py
 | 날짜 | 증상 | 원인 | 조치 |
 |------|------|------|------|
 | | | | |
+
+---
+
+## 7. 연간 지역프로필 (매년 초 1회 · D-054)
+
+토지/복합/집합 **월간 사이클에 넣지 않는다.** 직전 달력 해가 닫힌 뒤(통상 1–2월) 한 번.
+
+| # | 단계 | 메모 | ✓ |
+|---|------|------|---|
+| 7.1 | 창 | 완결 달력 연도 3년. 예: 2026년 초 → 2023·2024·2025. `as_of` 예: `2026-01-01` | |
+| 7.2 | 빌드 | `rebuild_regional_profile_national.py` (프로필 끝이 rank 마트). Twin도 같은 스냅샷 | |
+| 7.3 | Promote | `collective_stats` dump → VPS. 코드만 배포해서 프로필 숫자가 바뀌지 않음 | |
+| 7.4 | Smoke | `/profile/` 8대 연도표 연도 = 7.1 · 전국 순위 유니버스 · 관악·읍·리 1곳 | |
+
+SSOT [`DECISIONS.md`](./DECISIONS.md) D-054 · [`PROFILE_NATIONAL_RANK_PLAN.md`](./PROFILE_NATIONAL_RANK_PLAN.md) §4.4
 
 ---
 

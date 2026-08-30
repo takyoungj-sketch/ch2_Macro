@@ -38,6 +38,9 @@ import { rollingToTrendSeries, yearlyResponseToTrendSeries } from "../utils/coho
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import SaleRentJoinPanel from "./SaleRentJoinPanel";
 import { collectiveModalPanelHelp } from "../utils/residentialAnalysisHelp";
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
+import { rowFromTypeSibling } from "../utils/typeSibling";
+import type { TypeSibling } from "../types";
 
 type PanelMode =
   | "trend"
@@ -73,6 +76,67 @@ const TABS: { id: PanelMode; label: string | ((assetType: AssetType) => string) 
 function fmtPrice(v: number | null | undefined) {
   if (v == null) return "—";
   return v.toLocaleString(undefined, { maximumFractionDigits: 1 });
+}
+
+function TypeSiblingStrip({
+  row,
+  siblings,
+  onOpen,
+}: {
+  row: BuildingStatsRow;
+  siblings: TypeSibling[];
+  onOpen?: (next: BuildingStatsRow) => void;
+}) {
+  const cards: { assetType: string; name: string; count: number; median: number | null | undefined; current: boolean; open?: () => void }[] = [
+    {
+      assetType: row.asset_type,
+      name: row.display_name,
+      count: row.count,
+      median: row.median,
+      current: true,
+    },
+    ...siblings.map((s) => ({
+      assetType: s.asset_type,
+      name: s.display_name,
+      count: s.count,
+      median: s.median,
+      current: false,
+      open: onOpen ? () => onOpen(rowFromTypeSibling(row, s)) : undefined,
+    })),
+  ];
+  return (
+    <div className="rounded border border-indigo-200 dark:border-indigo-500/40 bg-indigo-50/70 dark:bg-indigo-950/30 px-2 py-1.5 text-[10px]">
+      <div className="flex flex-wrap items-center gap-1 mb-1">
+        <span className="font-semibold text-indigo-900 dark:text-indigo-200">같은 지번 유형별 거래</span>
+        <StatsGlossaryHelp termId="type_stats_vs_complex_scale" size="xs" />
+        <span className="text-slate-500">중앙값은 합치지 않습니다</span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+        {cards.map((c) => (
+          <button
+            key={c.current ? `cur-${row.building_key}` : `sib-${c.assetType}-${c.name}-${c.count}`}
+            type="button"
+            disabled={c.current || !c.open}
+            onClick={c.open}
+            className={clsx(
+              "text-left rounded border px-2 py-1.5",
+              c.current
+                ? "border-indigo-300 bg-white dark:bg-slate-800 dark:border-indigo-400/50"
+                : "border-slate-200 bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-700",
+            )}
+          >
+            <p className="font-semibold text-slate-800 dark:text-slate-100">
+              {assetTypeLabel(c.assetType)}
+              {c.current ? " · 현재" : " · 전환"}
+            </p>
+            <p className="text-slate-600 dark:text-slate-300">
+              n={c.count.toLocaleString("ko-KR")} · 중앙 {fmtPrice(c.median)} 만원/㎡
+            </p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 const DANJI_SECTION_TITLE = "text-[10px] font-semibold text-slate-600 dark:text-slate-300 px-3 pt-3 pb-1";
@@ -152,9 +216,11 @@ function DanjiLandPriceRow({
 function DanjiAttributesPanel({
   data,
   assetType,
+  complexScale = false,
 }: {
   data: DanjiAttributesResponse;
   assetType?: AssetType | string | null;
+  complexScale?: boolean;
 }) {
   const { match, builder, brand, scale, structure, classification } = data;
   const risky = !match.usable_for_regression;
@@ -339,10 +405,24 @@ function DanjiAttributesPanel({
               <th className={DANJI_TH}>
                 세대수
                 {(match.candidates?.length ?? 0) > 1 ? " (합산)" : ""}
-                {assetType === "officetel" && match.tier === "T" ? " (표제부 호수)" : ""}
+                {complexScale || match.rule === "kapt_same_pnu"
+                  ? " (단지 전체)"
+                  : assetType === "officetel" && match.tier === "T"
+                    ? " (표제부 호수)"
+                    : ""}
+                {(complexScale || match.rule === "kapt_same_pnu") && (
+                  <StatsGlossaryHelp termId="type_stats_vs_complex_scale" size="xs" />
+                )}
               </th>
               <td className={clsx(DANJI_TD, "tabular-nums")}>
-                {danjiNumber(scale?.households)}
+                {complexScale || match.rule === "kapt_same_pnu" ? (
+                  <>
+                    단지 전체 {danjiNumber(scale?.households)}세대
+                    <span className="ml-1 text-[10px] text-slate-500">(이 유형 재고가 아님)</span>
+                  </>
+                ) : (
+                  danjiNumber(scale?.households)
+                )}
                 <DanjiFieldWarning flags={fieldFlags("households")} />
               </td>
             </tr>
@@ -434,6 +514,7 @@ export default function BuildingDetailModal({
   statsAsOfLabel,
   peerBuildings = [],
   onClose,
+  onOpenSibling,
 }: {
   row: BuildingStatsRow;
   assetType: AssetSelectorType;
@@ -445,10 +526,12 @@ export default function BuildingDetailModal({
   statsAsOfLabel?: string | null;
   peerBuildings?: BuildingStatsRow[];
   onClose: () => void;
+  onOpenSibling?: (row: BuildingStatsRow) => void;
 }) {
-  const effectiveAssetType = (
-    assetType === "all" || assetType.includes(",") ? row.asset_type : assetType
-  ) as AssetType;
+  const effectiveAssetType = (row.asset_type || (
+    assetType === "all" || String(assetType).includes(",") ? row.asset_type : assetType
+  )) as AssetType;
+  const typeSiblings = row.type_siblings ?? [];
   const analysisPeriod: AnalysisPeriodParams = useMemo(
     () => buildAnalysisPeriodParams(yearFrom, yearTo, periodStart, periodEnd),
     [yearFrom, yearTo, periodStart, periodEnd],
@@ -596,13 +679,32 @@ export default function BuildingDetailModal({
       panel === "long_term",
   });
 
+  const typeSiblingOverlayQ = useQuery({
+    queryKey: ["type-sib-year", row.building_key, typeSiblings.map((s) => s.building_key)],
+    queryFn: async () =>
+      Promise.all(
+        typeSiblings.map(async (s) => {
+          const data = await fetchBuildingYearlyStats(s.building_key);
+          return {
+            ...data,
+            display_name: `${assetTypeLabel(s.asset_type)} · ${s.display_name || data.display_name}`,
+          };
+        }),
+      ),
+    enabled:
+      cohortRunForPanel("long_term") === 0 &&
+      typeSiblings.length > 0 &&
+      panel === "long_term",
+  });
+
   const overlayLongTermSeries = useMemo(() => {
-    if (!longTermYearQ.data || !presaleOverlayQ.data?.length) return null;
+    const extra = [...(typeSiblingOverlayQ.data ?? []), ...(presaleOverlayQ.data ?? [])];
+    if (!longTermYearQ.data || extra.length === 0) return null;
     return [
       yearlyResponseToTrendSeries(longTermYearQ.data),
-      ...presaleOverlayQ.data.map(yearlyResponseToTrendSeries),
+      ...extra.map(yearlyResponseToTrendSeries),
     ];
-  }, [longTermYearQ.data, presaleOverlayQ.data]);
+  }, [longTermYearQ.data, typeSiblingOverlayQ.data, presaleOverlayQ.data]);
 
   const cohortHistQ = useQuery({
     queryKey: [
@@ -829,6 +931,9 @@ export default function BuildingDetailModal({
       minHeight={360}
       bodyClassName="flex-1 min-h-0 overflow-auto px-4 py-3 space-y-4"
     >
+          {typeSiblings.length > 0 && (
+            <TypeSiblingStrip row={row} siblings={typeSiblings} onOpen={onOpenSibling} />
+          )}
           {panel === "trend" && (
             <>
               {trendCohortActive && cohortRollingQ.isLoading && (
@@ -1011,8 +1116,14 @@ export default function BuildingDetailModal({
                   metric={cohortChartMetric}
                   onMetricChange={setCohortChartMetric}
                   buildingCount={overlayLongTermSeries.length}
-                  chartTitle="연도별 추이 (본단지 + 분양권)"
-                  note="분양권은 annual mart(2010–) · 키는 분리된 sibling 비교"
+                  chartTitle={
+                    typeSiblings.length > 0 && presaleOverlay.length > 0
+                      ? "연도별 추이 (본유형 + 같은 지번 유형 + 분양권)"
+                      : typeSiblings.length > 0
+                        ? "연도별 추이 (본유형 + 같은 지번 유형)"
+                        : "연도별 추이 (본단지 + 분양권)"
+                  }
+                  note="유형·분양권은 키를 합치지 않은 sibling 비교 · 중앙값 병합 없음"
                   variant="longTerm"
                   priceMetric={longTermMetric}
                   onPriceMetricChange={setLongTermMetric}
@@ -1020,17 +1131,17 @@ export default function BuildingDetailModal({
               )}
               {!longTermCohortActive &&
                 !overlayLongTermSeries &&
-                presaleOverlay.length > 0 &&
-                (longTermYearQ.isLoading || presaleOverlayQ.isLoading) && (
-                <p className="text-xs text-slate-400 text-center py-6">본단지·분양권 연도별 집계 중…</p>
+                (presaleOverlay.length > 0 || typeSiblings.length > 0) &&
+                (longTermYearQ.isLoading || presaleOverlayQ.isLoading || typeSiblingOverlayQ.isLoading) && (
+                <p className="text-xs text-slate-400 text-center py-6">유형별·분양권 연도별 집계 중…</p>
               )}
-              {!longTermCohortActive && !overlayLongTermSeries && !presaleOverlay.length && longTermYearQ.isLoading && (
+              {!longTermCohortActive && !overlayLongTermSeries && !presaleOverlay.length && !typeSiblings.length && longTermYearQ.isLoading && (
                 <p className="text-xs text-slate-400 text-center py-6">연도별 집계 중…</p>
               )}
-              {!longTermCohortActive && !overlayLongTermSeries && !presaleOverlay.length && !longTermYearQ.isLoading && longTermYears.length === 0 && (
+              {!longTermCohortActive && !overlayLongTermSeries && !presaleOverlay.length && !typeSiblings.length && !longTermYearQ.isLoading && longTermYears.length === 0 && (
                 <p className="text-xs text-slate-400 text-center py-6">표시할 연도별 데이터가 없습니다.</p>
               )}
-              {!longTermCohortActive && !overlayLongTermSeries && !presaleOverlay.length && longTermYears.length > 0 && (
+              {!longTermCohortActive && !overlayLongTermSeries && !presaleOverlay.length && !typeSiblings.length && longTermYears.length > 0 && (
                 <>
                   {longTermYears.some((p) => p.year < 2021) && (
                     <p className="text-[10px] text-indigo-600 dark:text-indigo-400 mb-1">
@@ -1240,7 +1351,11 @@ export default function BuildingDetailModal({
                 </p>
               )}
               {danjiQ.data && (
-                <DanjiAttributesPanel data={danjiQ.data} assetType={effectiveAssetType} />
+                <DanjiAttributesPanel
+                  data={danjiQ.data}
+                  assetType={effectiveAssetType}
+                  complexScale={row.scale_scope === "complex" || typeSiblings.length > 0}
+                />
               )}
             </>
           )}

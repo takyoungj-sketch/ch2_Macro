@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 PRODUCT_OVERVIEW = """
 CH2 Macro는 부동산 거래통계를 정제·축적해 회귀·추세·매트릭스·추천·예측 화면으로 제공하는 시장통계 분석 시스템입니다.
 감정평가·적정가·투자 판단을 하지 않습니다.
@@ -89,6 +91,124 @@ LIMITATIONS = """
 - 회귀 계수는 조건부 연관이며 인과·적정가를 의미하지 않음
 """
 
+# Planner 판단 자료. 한 단지 실측 n·계수는 넣지 않는다.
+FUNCTION_CARDS: list[dict[str, Any]] = [
+    {
+        "id": "collective_integrated_regression",
+        "name": "집합 통합회귀",
+        "apps": ("collective",),
+        "purpose": "서로 다른 유형의 집합부동산 가격수준 비교",
+        "good_questions": [
+            "아파트와 오피스텔 가격차이",
+            "주거용과 비주거용 유형효과",
+            "특정 유형의 상대가격",
+        ],
+        "strengths": ["면적, 연식 등 개별 특성을 통제 가능"],
+        "cautions": [
+            "유형별 표본 부족",
+            "지역적 이질성이 큰 경우",
+            "지나치게 넓은 지역을 하나로 묶는 경우",
+            "유형이 층으로 갈리면 유형 더미에 층 구간이 섞임",
+        ],
+    },
+    {
+        "id": "collective_cohort",
+        "name": "집합 코호트",
+        "apps": ("collective",),
+        "purpose": "같은 단지(주거) 또는 도로 cluster(비주거)를 묶어 동·면적·최근 변화를 본다",
+        "good_questions": [
+            "같은 단지 내 동일 전용면적의 최근 가격 변화",
+            "이 단지와 인접 단지를 같이 보고 싶다",
+        ],
+        "strengths": ["단일 단지 표본 부족 시 통합 분석이 가능"],
+        "cautions": [
+            "주거는 단지 grain, 비주거는 도로 cluster grain — 섞지 않음",
+            "코호트 조건을 AI가 임의로 바꾸지 않음 (사용자가 화면에서 구성)",
+        ],
+    },
+    {
+        "id": "collective_building_regression",
+        "name": "집합 단일 단지 회귀",
+        "apps": ("collective",),
+        "purpose": "한 단지의 층·면적 등 거래 패턴",
+        "good_questions": ["이 단지에서 층이 가격에 어떤 연관이 있나"],
+        "strengths": ["단지 내부 구조 해석"],
+        "cautions": ["표본이 얇으면 게이트 또는 참고용", "유형 간 비교용이 아님"],
+    },
+    {
+        "id": "regional_regression",
+        "name": "지역회귀",
+        "apps": ("collective",),
+        "purpose": "단지에 묶이지 않은 지역 단위에서 유형·규모 효과",
+        "good_questions": ["이 동에서 아파트와 오피스텔 유형 효과", "인접 지역을 포함한 비교"],
+        "strengths": ["코호트에 못 넣는 표본을 지역으로 볼 수 있음"],
+        "cautions": ["지역이 넓으면 이질성", "n 과소 시 확대는 별도 실행"],
+    },
+    {
+        "id": "built_regression",
+        "name": "복합 회귀",
+        "apps": ("built",),
+        "purpose": "단독·상가·공장 등 개별 건물 거래의 규모·연식 패턴",
+        "good_questions": ["연면적이 총액과 어떻게 연관되나"],
+        "strengths": ["선택 변수·로그/선형 trade-off를 화면에서 실험"],
+        "cautions": ["집합 유형 비교용이 아님", "예측값은 적정가가 아님"],
+    },
+    {
+        "id": "land_matrix",
+        "name": "토지 매트릭스·장기추세",
+        "apps": ("land",),
+        "purpose": "용도지역×지목 칸의 단가 수준과 추이",
+        "good_questions": ["이 용도·지목의 단가는?", "장기 추세는?"],
+        "strengths": ["칸별 n과 단가를 같이 봄"],
+        "cautions": ["칸 n이 작으면 불안정", "전망이 아님"],
+    },
+    {
+        "id": "profile_twin",
+        "name": "지역프로필 · Twin",
+        "apps": ("built", "collective", "land"),
+        "purpose": "구조가 닮은 지역을 찾아 비교 맥락을 만든다",
+        "good_questions": ["이 지역과 비슷한 곳은?"],
+        "strengths": ["회귀 변수가 아니라 지역 비교 엔진 (D-041)"],
+        "cautions": ["Bundle 없이 Twin 지역 이름을 나열하지 않음", "유사도 ≠ 자동 채택"],
+    },
+    {
+        "id": "rent_conversion",
+        "name": "주거 전월세 전환율",
+        "apps": ("rent",),
+        "purpose": "반전세↔전세/월세 환산 비교",
+        "good_questions": ["적용 전환율은 어떻게 쓰이나"],
+        "strengths": ["mean_simple 확정 (D-040)"],
+        "cautions": ["시세·적정 전세 아님", "상권 공표와 섞지 않음"],
+    },
+]
+
+
+def format_function_cards(*, app: str = "", intent_hint: str = "") -> str:
+    cards = FUNCTION_CARDS
+    if app:
+        cards = [c for c in FUNCTION_CARDS if app in c["apps"] or not c["apps"]]
+    if intent_hint:
+        h = intent_hint
+        prefer = [
+            c
+            for c in cards
+            if h in c["id"]
+            or h in c["name"]
+            or any(h in q for q in c["good_questions"])
+        ]
+        if prefer:
+            cards = prefer + [c for c in cards if c not in prefer]
+    lines = ["[기능 카드 — 목적 / 적합한 질문 / 장점 / 주의. 표본 숫자는 Bundle만]"]
+    for c in cards[:6]:
+        lines.append(f"## {c['name']}")
+        lines.append(f"목적: {c['purpose']}")
+        lines.append("적합한 질문: " + " · ".join(c["good_questions"]))
+        if c.get("strengths"):
+            lines.append("장점: " + " · ".join(c["strengths"]))
+        lines.append("주의: " + " · ".join(c["cautions"]))
+        lines.append("")
+    return "\n".join(lines).strip()
+
 
 def product_knowledge_pack(*, app: str = "built", panel: str = "") -> str:
     """질문·화면에 맞게 발췌할 수 있는 큐레이션 지식."""
@@ -103,9 +223,11 @@ def product_knowledge_pack(*, app: str = "built", panel: str = "") -> str:
             "셀별 n·Adj R²·모델(log/선형)은 Bundle facts만 인용."
         )
     elif app == "collective":
+        parts.append(format_function_cards(app="collective"))
         parts.append(
             "collective: 단지/코호트 회귀·고정효과(FE). "
-            "주거·비주거는 분석 단위만 다르고 통계 UX는 동일."
+            "주거·비주거는 분석 단위만 다르고 통계 UX는 동일. "
+            "비주거 grain=도로 cluster. K-apt 세대수·주차는 주거 단지 전용."
         )
     elif app == "rent":
         parts.append(RENT_CONVERSION.strip())
@@ -116,13 +238,19 @@ def product_knowledge_pack(*, app: str = "built", panel: str = "") -> str:
                 "부동산원 상업용 상권 공표(기본표 4분기 롤링, 추세는 연간)만 인용한다."
             )
     parts.append(LIMITATIONS.strip())
+    if app in ("built", "land") and panel:
+        extra = format_function_cards(app=app)
+        if extra:
+            parts.append(extra)
     return "\n\n".join(parts)
 
 
 def product_knowledge_excerpt(*, app: str, panel: str, message: str) -> str:
     """LLM 컨텍스트용 — 전체 팩 또는 토픽별 발췌."""
     lower = message.lower()
-    if any(k in lower or k in message for k in ("twin", "쌍둥이", "추천", "stage", "모형")):
+    if any(k in lower or k in message for k in ("twin", "쌍둥이", "stage")) or (
+        "모형" in message and any(k in message for k in ("추천", "탐색", "forward"))
+    ):
         return product_knowledge_pack(app=app, panel=panel or "RecommendationCard")
     if any(k in message for k in ("데이터", "마트", "파이프", "원천", "정제")):
         return "\n\n".join([PRODUCT_OVERVIEW.strip(), DATA_PIPELINE.strip(), LIMITATIONS.strip()])
@@ -143,7 +271,27 @@ def product_knowledge_excerpt(*, app: str, panel: str, message: str) -> str:
     if panel == "SangkwonCard" or any(k in message or k in lower for k in sangkwon_keys):
         return "\n\n".join([PRODUCT_OVERVIEW.strip(), SANGKWON_REB.strip(), LIMITATIONS.strip()])
     if any(k in message for k in ("앱", "복합", "토지", "집합", "화면", "구조")):
-        return "\n\n".join([PRODUCT_OVERVIEW.strip(), APP_STRUCTURE.strip()])
+        return "\n\n".join([PRODUCT_OVERVIEW.strip(), APP_STRUCTURE.strip(), format_function_cards(app=app)])
+    if any(
+        k in message
+        for k in (
+            "통합회귀",
+            "코호트",
+            "유형 효과",
+            "가격 차이",
+            "가격격차",
+            "오피스텔",
+            "어떻게 분석",
+            "어떤 분석",
+        )
+    ):
+        return "\n\n".join(
+            [
+                PRODUCT_OVERVIEW.strip(),
+                format_function_cards(app=app or "collective", intent_hint="통합"),
+                LIMITATIONS.strip(),
+            ]
+        )
     if any(
         k in message
         for k in (

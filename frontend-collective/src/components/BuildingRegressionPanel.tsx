@@ -13,10 +13,12 @@ import type {
   CollectiveRegressionPredictResponse,
   RegressionModelType,
 } from "../types";
+import { ASSET_LABELS } from "../types";
 import { buildAnalysisPeriodParams } from "../utils/analysisPeriod";
 import { RESIDENTIAL_REGRESSION_HELP } from "../utils/residentialAnalysisHelp";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
+import { recordAnalysisHistory } from "@ch2/ai-assistant/aiClient";
 import { buildCollectiveRegressionContext } from "../api/aiContext";
 import { CollectiveRegressionResults } from "./CollectiveRegressionResults";
 import type { FloorMode } from "../utils/collectiveRegressionTypes";
@@ -32,15 +34,28 @@ function fmtInt(v: number | null | undefined) {
   return Math.round(v).toLocaleString("ko-KR");
 }
 
+type RegressionVars = {
+  exclusive_area: boolean;
+  building_age: boolean;
+  floor: boolean;
+  dong: boolean;
+  housing_subtype: boolean;
+  households: boolean;
+  parking: boolean;
+  assessed_land_price: boolean;
+  structure: boolean;
+  asset_type_dummy: boolean;
+};
+
+function midRange(r?: { min?: number | null; max?: number | null } | null): number | undefined {
+  if (!r) return undefined;
+  if (r.min != null && r.max != null) return (r.min + r.max) / 2;
+  return r.min ?? r.max ?? undefined;
+}
+
 function defaultPredictInputs(
   opts: CollectivePredictOptions | null | undefined,
-  vars: {
-    exclusive_area: boolean;
-    building_age: boolean;
-    floor: boolean;
-    dong: boolean;
-    housing_subtype: boolean;
-  },
+  vars: RegressionVars,
 ): CollectiveRegressionPredictInputs {
   if (!opts) return {};
   const buildingKey =
@@ -60,6 +75,15 @@ function defaultPredictInputs(
       ? opts.housing_subtype_reference ?? opts.housing_subtypes?.[0]
       : undefined,
     building_key: buildingKey,
+    households: vars.households ? midRange(opts.households) : undefined,
+    parking_per_household: vars.parking ? midRange(opts.parking_per_household) : undefined,
+    assessed_land_price: vars.assessed_land_price ? midRange(opts.assessed_land_price) : undefined,
+    structure_group: vars.structure
+      ? opts.structure_reference ?? opts.structure_groups?.[0]
+      : undefined,
+    asset_type: vars.asset_type_dummy
+      ? opts.asset_type_reference ?? opts.asset_types?.[0]
+      : undefined,
   };
 }
 
@@ -76,13 +100,7 @@ function PredictPanel({
   error,
 }: {
   opts: CollectivePredictOptions;
-  vars: {
-    exclusive_area: boolean;
-    building_age: boolean;
-    floor: boolean;
-    dong: boolean;
-    housing_subtype: boolean;
-  };
+  vars: RegressionVars;
   floorMode: FloorMode;
   useCohort: boolean;
   inputs: CollectiveRegressionPredictInputs;
@@ -153,7 +171,9 @@ function PredictPanel({
         )}
         {useCohort && (opts.buildings?.length ?? 0) > 0 && (
           <label className="space-y-0.5 sm:col-span-2">
-            <span className="text-slate-500 dark:text-slate-400">단지 (FE)</span>
+            <span className="text-slate-500 dark:text-slate-400">
+              {opts.buildings!.some((b) => b.has_fe) ? "단지 (FE)" : "단지"}
+            </span>
             <select
               className="w-full border border-slate-200 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
               value={inputs.building_key ?? ""}
@@ -169,7 +189,13 @@ function PredictPanel({
               {opts.buildings!.map((b) => (
                 <option key={b.building_key} value={b.building_key}>
                   {b.display_name}
-                  {b.is_reference ? " (FE 기준)" : b.has_fe ? "" : " (FE 제외)"}
+                  {b.is_reference && b.has_fe
+                    ? " (FE 기준)"
+                    : b.has_fe
+                      ? ""
+                      : opts.buildings!.some((x) => x.has_fe)
+                        ? " (FE 제외)"
+                        : ""}
                   {" · n="}
                   {b.count}
                 </option>
@@ -206,6 +232,86 @@ function PredictPanel({
                 <option key={d} value={d}>
                   {d}
                   {d === opts.housing_subtype_reference ? " (기준)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {vars.households && opts.households && (
+          <label className="space-y-0.5">
+            <span className="text-slate-500 dark:text-slate-400">총 세대수</span>
+            <input
+              type="number"
+              className="w-full border border-slate-200 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
+              value={inputs.households ?? ""}
+              onChange={(e) =>
+                setInputs((p) => ({ ...p, households: e.target.value ? Number(e.target.value) : undefined }))
+              }
+            />
+          </label>
+        )}
+        {vars.parking && opts.parking_per_household && (
+          <label className="space-y-0.5">
+            <span className="text-slate-500 dark:text-slate-400">세대당 주차</span>
+            <input
+              type="number"
+              step="0.01"
+              className="w-full border border-slate-200 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
+              value={inputs.parking_per_household ?? ""}
+              onChange={(e) =>
+                setInputs((p) => ({
+                  ...p,
+                  parking_per_household: e.target.value ? Number(e.target.value) : undefined,
+                }))
+              }
+            />
+          </label>
+        )}
+        {vars.assessed_land_price && opts.assessed_land_price && (
+          <label className="space-y-0.5">
+            <span className="text-slate-500 dark:text-slate-400">개별공시지가 (원/㎡)</span>
+            <input
+              type="number"
+              className="w-full border border-slate-200 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
+              value={inputs.assessed_land_price ?? ""}
+              onChange={(e) =>
+                setInputs((p) => ({
+                  ...p,
+                  assessed_land_price: e.target.value ? Number(e.target.value) : undefined,
+                }))
+              }
+            />
+          </label>
+        )}
+        {vars.structure && (opts.structure_groups?.length ?? 0) > 0 && (
+          <label className="space-y-0.5">
+            <span className="text-slate-500 dark:text-slate-400">구조</span>
+            <select
+              className="w-full border border-slate-200 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
+              value={inputs.structure_group ?? ""}
+              onChange={(e) => setInputs((p) => ({ ...p, structure_group: e.target.value || undefined }))}
+            >
+              {opts.structure_groups!.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                  {d === opts.structure_reference ? " (기준)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {vars.asset_type_dummy && (opts.asset_types?.length ?? 0) > 0 && (
+          <label className="space-y-0.5">
+            <span className="text-slate-500 dark:text-slate-400">유형</span>
+            <select
+              className="w-full border border-slate-200 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
+              value={inputs.asset_type ?? ""}
+              onChange={(e) => setInputs((p) => ({ ...p, asset_type: e.target.value || undefined }))}
+            >
+              {opts.asset_types!.map((d) => (
+                <option key={d} value={d}>
+                  {ASSET_LABELS[d as AssetType] ?? d}
+                  {d === opts.asset_type_reference ? " (기준)" : ""}
                 </option>
               ))}
             </select>
@@ -282,17 +388,28 @@ export default function BuildingRegressionPanel({
   const [floorMode, setFloorMode] = useState<FloorMode>("relative");
   const [floorAdvanced, setFloorAdvanced] = useState(false);
   const [modelType, setModelType] = useState<RegressionModelType>("linear");
-  const [vars, setVars] = useState({
+  const [vars, setVars] = useState<RegressionVars>({
     exclusive_area: true,
     building_age: assetType !== "presale",
     floor: true,
     dong: assetType === "apartment" || assetType === "rowhouse",
     housing_subtype: assetType === "presale",
+    households: false,
+    parking: false,
+    assessed_land_price: false,
+    structure: false,
+    asset_type_dummy: false,
   });
   const [predictInputs, setPredictInputs] = useState<CollectiveRegressionPredictInputs>({});
 
   const useCohort = cohortRunId > 0 && (cohortKeys?.length ?? 0) > 1;
   const keys = useCohort ? cohortKeys! : [buildingKey];
+  const attrOn =
+    vars.households ||
+    vars.parking ||
+    vars.assessed_land_price ||
+    vars.structure ||
+    vars.asset_type_dummy;
 
   const periodParams = useMemo(
     () => buildAnalysisPeriodParams(yearFrom, yearTo, periodStart, periodEnd),
@@ -327,6 +444,11 @@ export default function BuildingRegressionPanel({
       cohort: useCohort,
     });
   }, [regM.data, assetType, useCohort]);
+
+  useEffect(() => {
+    if (!aiRegressionContext) return;
+    void recordAnalysisHistory(aiRegressionContext);
+  }, [aiRegressionContext]);
 
   const predictM = useMutation({
     mutationFn: () => {
@@ -370,8 +492,11 @@ export default function BuildingRegressionPanel({
 
       {useCohort && (
         <p className="text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900 rounded px-2 py-1.5">
-          {keys.length}개 단지 통합 · 실시간 · 단지 고정효과(거래 최다 단지=기준, n&lt;5 제외)
-          · 동은 단지별로 구분
+          {keys.length}개 단지 통합 · 실시간 ·{" "}
+          {attrOn
+            ? "단지 속성으로 단지 간 차이 설명 (단지 FE 생략 — 속성은 단지마다 상수라 FE와 같이 넣을 수 없음)"
+            : "단지 고정효과(거래 최다 단지=기준, n<5 제외)"}
+          {" · 동은 단지별로 구분"}
         </p>
       )}
       {!useCohort && !regressionEligible && (
@@ -415,6 +540,50 @@ export default function BuildingRegressionPanel({
           로그(% 해석)
         </label>
       </div>
+
+      {useCohort && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] text-slate-500 dark:text-slate-400">
+            단지 속성 (기본 꺼짐). 켜면 단지 FE 대신 단지 간 차이를 이 변수로 설명합니다.
+            같은 지번 오피스텔 복사(kapt_same_pnu) 세대수·주차는 이 유형 재고가 아니라 빠집니다.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            {(
+              [
+                ["households", "총 세대수"],
+                ["parking", "세대당 주차"],
+                ["assessed_land_price", "개별공시지가"],
+                ["structure", "구조"],
+                ["asset_type_dummy", "유형"],
+              ] as const
+            ).map(([key, label]) => (
+              <label
+                key={key}
+                className="flex items-center gap-2"
+                title={
+                  key === "structure"
+                    ? "시군구 회귀에서는 예측 개선이 약했습니다. 코호트는 단지 간 차이가 있을 때만 식별됩니다."
+                    : key === "asset_type_dummy"
+                      ? "한 건물에서 층으로 유형이 갈리면(예: 저층 오피·고층 아파트) 유형 계수에 층 효과가 섞입니다."
+                      : undefined
+                }
+              >
+                <input
+                  type="checkbox"
+                  checked={vars[key]}
+                  onChange={(e) => setVars((v) => ({ ...v, [key]: e.target.checked }))}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+          {vars.asset_type_dummy && (
+            <p className="text-[10px] text-amber-700 dark:text-amber-300">
+              한 건물에서 층으로 유형이 갈리면 유형 계수에 층 효과가 섞입니다. 같은 층에 두 유형이 있을 때만 순수 유형 효과로 읽으세요.
+            </p>
+          )}
+        </div>
+      )}
 
       {vars.floor && (
         <div className="text-xs space-y-1">

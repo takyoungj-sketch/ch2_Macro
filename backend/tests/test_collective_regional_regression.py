@@ -18,6 +18,7 @@ from app.collective.regional_regression.engine import (
     _is_usable_tier,
     _split_hold,
     _tx_weights,
+    _usable_tier_mask,
     build_sample_funnel,
 )
 from app.collective.regional_regression.schemas import RegionalRegressionVariables
@@ -81,6 +82,19 @@ def test_title_and_pnu_tiers_are_usable():
     assert _is_usable_tier("rowhouse", "T") is True
     assert _is_usable_tier("officetel", "T") is True
     assert _is_usable_tier("rowhouse", "Z") is False
+    assert _is_usable_tier("officetel", "P", "kapt_same_pnu") is False
+    assert _is_usable_tier("apartment", "P", "pnu_unique") is True
+
+
+def test_kapt_same_pnu_excluded_from_usable_mask():
+    df = pd.DataFrame(
+        {
+            "asset_type": ["officetel", "officetel", "apartment"],
+            "match_tier": ["P", "T", "P"],
+            "match_rule": ["kapt_same_pnu", "title_pnu", "pnu_unique"],
+        }
+    )
+    assert _usable_tier_mask(df).tolist() == [False, True, True]
 
 
 def test_fit_ols_recovers_scale_signal():

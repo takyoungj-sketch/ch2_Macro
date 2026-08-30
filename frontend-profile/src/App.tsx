@@ -3,12 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
-import { fetchRegionalProfile, fetchRentProfileYearly, fetchTwinNeighbors, resolveRegionName } from "./api/profile";
+import { fetchNationalRanks, fetchRegionalProfile, fetchRentProfileYearly, fetchTwinNeighbors, resolveRegionName } from "./api/profile";
 import RentYearlyTable from "./components/RentYearlyTable";
 import type { RegionLevel, RegionNameInfo, YearlyMix } from "./types";
 import IdentityHeader from "./components/IdentityHeader";
 import YearlyMixTable from "./components/YearlyMixTable";
+import NationalRankCard from "./components/NationalRankCard";
 import MarketComposition from "./components/MarketComposition";
+import TypeCorrCard from "./components/TypeCorrCard";
 import DominantMarketCard from "./components/DominantMarketCard";
 import LandProfileCard from "./components/LandProfileCard";
 import ApartmentProfileCard from "./components/ApartmentProfileCard";
@@ -100,6 +102,25 @@ export default function App() {
   });
 
   const yearlyMix = profileQuery.data?.features.yearly_mix as YearlyMix | undefined;
+  const rankQuery = useQuery({
+    queryKey: [
+      "national-ranks",
+      selection?.regionLevel,
+      profileQuery.data?.meta.profile_version,
+      profileQuery.data?.meta.window_years,
+      profileQuery.data?.meta.as_of_month,
+    ],
+    queryFn: () =>
+      fetchNationalRanks({
+        regionLevel: selection!.regionLevel,
+        profileVersion: profileQuery.data!.meta.profile_version,
+        windowYears: profileQuery.data!.meta.window_years,
+        asOfMonth: profileQuery.data!.meta.as_of_month,
+      }),
+    enabled: !!selection && !!profileQuery.data,
+    staleTime: 60 * 60 * 1000,
+    retry: false,
+  });
   const rentYears = yearlyMix?.years?.filter((y) => Number.isFinite(y)) ?? [];
   const rentYearlyQuery = useQuery({
     queryKey: ["rent-profile-yearly", selection?.regionLevel, selection?.regionCode, rentYears],
@@ -151,7 +172,7 @@ export default function App() {
       />
 
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto" style={{ zoom: contentZoom }}>
-        <div className="mx-auto max-w-5xl px-4 py-6">
+        <div className="mx-auto max-w-7xl px-4 py-6">
           <div className="mb-4 flex justify-end">
             <RegionSearch onSelect={handleSelect} displayQuery={searchDisplayQuery} />
           </div>
@@ -174,11 +195,23 @@ export default function App() {
           )}
 
           {selection && profileQuery.data && (
-            <div className="space-y-5">
+            <div className="flex flex-col gap-5 xl:flex-row xl:items-start">
+              <aside className="w-full shrink-0 xl:w-[21.5rem]">
+                <NationalRankCard
+                  data={rankQuery.data}
+                  isLoading={rankQuery.isLoading}
+                  isError={rankQuery.isError}
+                  focusCode={selection.regionCode}
+                  focusName={shortName}
+                />
+              </aside>
+              <div className="min-w-0 flex-1 space-y-5">
               {headerNode}
               <AnalysisLinks regionLevel={selection.regionLevel} regionCode={selection.regionCode} />
 
-              {yearlyMix ? <YearlyMixTable yearlyMix={yearlyMix} /> : (
+              {yearlyMix ? (
+                <YearlyMixTable yearlyMix={yearlyMix} />
+              ) : (
                 <div className="card p-5 text-sm text-slate-400">
                   8대 시장유형 연도별 데이터(yearly_mix)가 아직 없습니다.
                 </div>
@@ -200,7 +233,11 @@ export default function App() {
 
               {yearlyMix ? (
                 <>
-                  <MarketComposition yearlyMix={yearlyMix} />
+                  <MarketComposition
+                    yearlyMix={yearlyMix}
+                    nationalShare={rankQuery.data?.national_share_by_type}
+                  />
+                  <TypeCorrCard data={rankQuery.data?.type_corr} />
                   <DominantMarketCard
                     regionLevel={selection.regionLevel}
                     regionCode={selection.regionCode}
@@ -235,6 +272,7 @@ export default function App() {
               <div className="pb-4 text-center text-[11px] text-slate-400">
                 profile_version {profileQuery.data.meta.profile_version} · window {profileQuery.data.meta.window_years}
                 y · as_of {profileQuery.data.meta.as_of_month}
+              </div>
               </div>
             </div>
           )}

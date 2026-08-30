@@ -95,8 +95,14 @@ def _is_unified_types(types: list[str]) -> bool:
     return len(types) >= 2
 
 
-def _is_usable_tier(asset_type: Any, match_tier: Any) -> bool:
+KAPT_SAME_PNU_RULE = "kapt_same_pnu"
+
+
+def _is_usable_tier(asset_type: Any, match_tier: Any, match_rule: Any = None) -> bool:
     del asset_type  # 유형과 무관. 시그니처는 테스트·호출부 호환.
+    rule = "" if match_rule is None or (isinstance(match_rule, float) and np.isnan(match_rule)) else str(match_rule).strip()
+    if rule == KAPT_SAME_PNU_RULE:
+        return False
     t = "" if match_tier is None or (isinstance(match_tier, float) and np.isnan(match_tier)) else str(match_tier).strip()
     if not t:
         return False
@@ -106,10 +112,15 @@ def _is_usable_tier(asset_type: Any, match_tier: Any) -> bool:
 def _usable_tier_mask(df: pd.DataFrame) -> pd.Series:
     if df.empty or "match_tier" not in df.columns:
         return pd.Series(dtype=bool, index=df.index)
+    rules = df["match_rule"] if "match_rule" in df.columns else pd.Series([None] * len(df), index=df.index)
     if "asset_type" not in df.columns:
-        return df["match_tier"].isin(USABLE_TIERS)
+        vals = [
+            _is_usable_tier(None, t, r) for t, r in zip(df["match_tier"], rules)
+        ]
+        return pd.Series(vals, index=df.index)
     vals = [
-        _is_usable_tier(at, t) for at, t in zip(df["asset_type"], df["match_tier"])
+        _is_usable_tier(at, t, r)
+        for at, t, r in zip(df["asset_type"], df["match_tier"], rules)
     ]
     return pd.Series(vals, index=df.index)
 
@@ -207,6 +218,7 @@ def load_danji_frame(
         "building_year",
         "asset_type",
         "match_tier",
+        "match_rule",
         "households",
         "max_floor",
         "parking_per_household",
@@ -252,7 +264,7 @@ def load_danji_frame(
             f"""
             SELECT m.building_key, m.display_name, m.median, m.count AS n_tx,
                    m.building_year, m.addr3, m.addr4, m.asset_type,
-                   a.match_tier, a.households, a.max_floor, a.parking_per_household,
+                   a.match_tier, a.match_rule, a.households, a.max_floor, a.parking_per_household,
                    a.approved_year, a.structure_group, a.builder_group,
                    a.attr_quality_flags,
                    {land_price_select}
@@ -375,7 +387,16 @@ def _pick_dummy_ref(raw: pd.Series) -> str:
     return tied[0] if tied else "(미상)"
 
 
-MATCH_REASON_ORDER = ("no_attr", "tier_Z", "tier_E", "tier_P", "tier_T", "tier_D", "tier_F")
+MATCH_REASON_ORDER = (
+    "no_attr",
+    "tier_Z",
+    "tier_E",
+    "kapt_same_pnu",
+    "tier_P",
+    "tier_T",
+    "tier_D",
+    "tier_F",
+)
 VAR_REASON_ORDER = (
     "no_price",
     "households_flag",
@@ -399,6 +420,14 @@ def _tier_drop_reason(tier: Any) -> tuple[str, str]:
     meta = TIER_META.get(t, {})
     label = meta.get("label") or f"매칭 {t}"
     return f"tier_{t}", f"매칭 {t} · {label}"
+
+
+def _drop_reason_for_row(row: pd.Series) -> tuple[str, str]:
+    rule = row.get("match_rule")
+    r = "" if rule is None or (isinstance(rule, float) and pd.isna(rule)) else str(rule).strip()
+    if r == KAPT_SAME_PNU_RULE:
+        return "kapt_same_pnu", "같은 지번 K-apt 공유 · 단지 전체 세대수"
+    return _tier_drop_reason(row.get("match_tier"))
 
 
 def _var_drop_reason(row: pd.Series, v: RegionalRegressionVariables) -> tuple[str, str]:
@@ -501,7 +530,7 @@ def build_sample_funnel(
     var_drop_mask = after_thin & ~elig
     n_var_drop = int(var_drop_mask.sum())
 
-    match_pairs = [_tier_drop_reason(t) for t in df.loc[~usable, "match_tier"]]
+    match_pairs = [_drop_reason_for_row(row) for _, row in df.loc[~usable].iterrows()]
     var_pairs = [_var_drop_reason(row, v) for _, row in df.loc[var_drop_mask].iterrows()]
     thin_pairs: list[tuple[str, str]] = []
     if n_thin:
@@ -573,7 +602,8 @@ def _match_drop_note(df: pd.DataFrame) -> str:
     del df
     return (
         "세대수·층·구조 등 속성이 연결된 단지(K-apt A·B·C·D·F, 표제부 T, PNU 유일 P)를 넣습니다. "
-        "E(이름 부분일치 오탐 위험)·Z·단지정보 없음만 제외합니다."
+        "E(이름 부분일치 오탐 위험)·Z·단지정보 없음, "
+        "같은 지번 오피스텔 K-apt 공유(kapt_same_pnu, 단지 전체 세대수)는 제외합니다."
     )
 
 

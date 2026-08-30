@@ -29,6 +29,21 @@ from app.collective.schemas import (
 MIN_BUILDING_FE_GROUP = 5
 CV_MIN_N = 40  # 이 이상이면 5-fold 교차검증으로 MAPE/RMSE 산정
 
+_ASSET_TYPE_LABELS = {
+    "apartment": "아파트",
+    "rowhouse": "연립·다세대",
+    "officetel": "오피스텔",
+    "presale": "분양권",
+}
+_ATTR_CONTINUOUS = ("households", "parking_per_household", "assessed_land_price")
+_ATTR_FLAG_COLS: tuple[tuple[str, str, str], ...] = (
+    ("households", "households", "세대수"),
+    ("parking", "parking_per_household", "세대당 주차"),
+    ("assessed_land_price", "assessed_land_price", "개별공시지가"),
+    ("structure", "structure_group", "구조"),
+    ("asset_type_dummy", "asset_type", "유형"),
+)
+
 
 def _duan_smearing(resid: pd.Series | np.ndarray) -> float:
     """로그모델 역변환 편의 보정계수 = mean(exp(residual))."""
@@ -368,6 +383,11 @@ class RegressionDesignMeta:
     building_counts: dict[str, int] = field(default_factory=dict)
     continuous_ranges: dict[str, tuple[float | None, float | None]] = field(default_factory=dict)
     floor_dummy_cols: list[str] = field(default_factory=list)
+    structure_reference: str | None = None
+    structure_dummy_cols: list[str] = field(default_factory=list)
+    asset_type_reference: str | None = None
+    asset_type_dummy_cols: list[str] = field(default_factory=list)
+    used_building_attrs: bool = False
 
 
 def _add_floor_columns(
@@ -477,6 +497,187 @@ def _continuous_range(work: pd.DataFrame, col: str) -> ContinuousRange | None:
     return ContinuousRange(name=col, min=float(s.min()), max=float(s.max()))
 
 
+def _normalize_structure(series: pd.Series) -> pd.Series:
+    s = series.where(series.notna(), "미상").astype(str).str.strip()
+    return s.replace({"": "미상", "nan": "미상", "None": "미상"})
+
+
+def _building_level_values(work: pd.DataFrame, col: str) -> pd.Series:
+    if col not in work.columns:
+        return pd.Series(dtype=object)
+    if col == "structure_group":
+        tmp = work.assign(_v=_normalize_structure(work[col]))
+        col = "_v"
+        work = tmp
+    else:
+        work = work.loc[work[col].notna()]
+        if work.empty:
+            return pd.Series(dtype=object)
+    if "building_key" not in work.columns:
+        return work[col]
+    return work.groupby("building_key")[col].first()
+
+
+def _resolve_entering_attrs(
+    work: pd.DataFrame,
+    req: CollectiveRegressionRequest,
+    warnings: list[str],
+) -> tuple[pd.DataFrame, set[str]]:
+    v = req.variables
+    entering: set[str] = set()
+    for flag, col, label in _ATTR_FLAG_COLS:
+        if not getattr(v, flag, False):
+            continue
+        if col not in work.columns:
+            warnings.append(f"{label} 데이터 없음 — 생략")
+            continue
+        grain = _building_level_values(work, col)
+        n_unique = int(grain.nunique(dropna=True))
+        if n_unique < 2:
+            if "building_key" not in work.columns or work["building_key"].nunique() <= 1:
+                warnings.append(f"{label} — 단지 상수라 단일 단지에서는 식별되지 않습니다")
+            else:
+                warnings.append(f"{label} — 단지 간 차이가 없어 생략")
+            continue
+        entering.add(col)
+
+    drop_cols = [c for c in entering if c in _ATTR_CONTINUOUS]
+    if drop_cols:
+        n0 = len(work)
+        work = work.dropna(subset=drop_cols)
+        dropped = n0 - len(work)
+        if dropped:
+            warnings.append(f"단지 속성 결측 {dropped}건 제외")
+        still: set[str] = set()
+        for col in entering:
+            grain = _building_level_values(work, col)
+            if int(grain.nunique(dropna=True)) >= 2:
+                still.add(col)
+            else:
+                label = next(lb for _, c, lb in _ATTR_FLAG_COLS if c == col)
+                warnings.append(f"{label} — 결측 제외 후 단지 간 차이가 없어 생략")
+        entering = still
+    return work, entering
+
+
+def _add_building_fe(
+    work: pd.DataFrame,
+    meta: RegressionDesignMeta,
+    labels: dict[str, str],
+    parts: list[pd.DataFrame],
+    warnings: list[str],
+) -> None:
+    keys = work["building_key"].astype(str)
+    ref = str(work.groupby("building_key").size().idxmax())
+    meta.building_reference_key = ref
+    ref_name = meta.building_labels.get(ref, ref[:12])
+    warnings.append(f"단지 FE 기준: {ref_name} (거래 최다)")
+    for bk in sorted(keys.unique()):
+        if bk == ref:
+            continue
+        cnt = meta.building_counts.get(bk, 0)
+        bk_name = meta.building_labels.get(bk, bk[:12])
+        if cnt < MIN_BUILDING_FE_GROUP:
+            warnings.append(f"단지 FE 제외 — {bk_name} n={cnt} (최소 {MIN_BUILDING_FE_GROUP}건)")
+            continue
+        col = _sanitize_key(bk, "bld")
+        work[col] = (keys == bk).astype(float)
+        parts.append(work[[col]])
+        labels[col] = f"단지 {bk_name}"
+        meta.building_fe_map[bk] = col
+
+
+def _add_structure_dummies(
+    work: pd.DataFrame,
+    meta: RegressionDesignMeta,
+    labels: dict[str, str],
+    parts: list[pd.DataFrame],
+    warnings: list[str],
+) -> None:
+    raw = _normalize_structure(work["structure_group"])
+    grain = work.assign(_s=raw).groupby("building_key")["_s"].first() if "building_key" in work.columns else raw
+    levels = [str(x) for x in grain.dropna().unique() if str(x)]
+    if len(levels) < 2:
+        warnings.append("구조 범주가 한 종류뿐이라 더미를 넣지 않았습니다")
+        return
+    counts = raw.value_counts()
+    ref = str(counts.idxmax()) if not counts.empty else levels[0]
+    meta.structure_reference = ref
+    dummy_cols: list[str] = []
+    for lv in sorted(levels):
+        if lv == ref:
+            continue
+        col = f"struct_{lv}"
+        work[col] = (raw == lv).astype(float)
+        parts.append(work[[col]])
+        labels[col] = f"구조 {lv} (기준 대비)"
+        dummy_cols.append(col)
+    meta.structure_dummy_cols = dummy_cols
+
+
+def _warn_type_floor_split(work: pd.DataFrame, warnings: list[str]) -> None:
+    """한 건물에서 층으로 유형이 갈리면 유형 계수는 층 효과를 포함함."""
+    if "asset_type" not in work.columns or "floor" not in work.columns:
+        return
+    ranges: dict[str, tuple[float, float]] = {}
+    tmp = work.assign(
+        _at=work["asset_type"].fillna("").astype(str).str.strip(),
+        _fl=pd.to_numeric(work["floor"], errors="coerce"),
+    )
+    for at, g in tmp.groupby("_at"):
+        fl = g["_fl"].dropna()
+        if not at or fl.empty:
+            continue
+        ranges[str(at)] = (float(fl.min()), float(fl.max()))
+    if len(ranges) < 2:
+        return
+    types = list(ranges)
+    overlap = False
+    for i, a in enumerate(types):
+        for b in types[i + 1 :]:
+            lo = max(ranges[a][0], ranges[b][0])
+            hi = min(ranges[a][1], ranges[b][1])
+            if lo <= hi:
+                overlap = True
+    if overlap:
+        return
+    bits = " · ".join(
+        f"{_ASSET_TYPE_LABELS.get(t, t)} {int(lo)}–{int(hi)}층"
+        for t, (lo, hi) in sorted(ranges.items(), key=lambda x: x[1][0])
+    )
+    warnings.append(
+        f"유형이 층으로 갈립니다 ({bits}). 같은 층에 두 유형이 없어 "
+        "유형 계수는 층 구간 차이를 포함합니다. 순수 유형 효과로 읽지 마세요."
+    )
+
+
+def _add_asset_type_dummies(
+    work: pd.DataFrame,
+    meta: RegressionDesignMeta,
+    labels: dict[str, str],
+    parts: list[pd.DataFrame],
+    warnings: list[str],
+) -> None:
+    raw = work["asset_type"].fillna("").astype(str).str.strip()
+    levels = [lv for lv in raw.unique() if lv]
+    if len(levels) < 2:
+        warnings.append("유형이 한 종류뿐이라 더미를 넣지 않았습니다")
+        return
+    counts = raw.value_counts()
+    ref = str(counts.idxmax())
+    meta.asset_type_reference = ref
+    dummy_cols: list[str] = []
+    for lv in sorted(levels):
+        if lv == ref:
+            continue
+        col = f"atype_{lv}"
+        work[col] = (raw == lv).astype(float)
+        parts.append(work[[col]])
+        labels[col] = f"유형 {_ASSET_TYPE_LABELS.get(lv, lv)} (기준 대비)"
+        dummy_cols.append(col)
+    meta.asset_type_dummy_cols = dummy_cols
+
+
 def _build_design_matrix(
     work: pd.DataFrame,
     req: CollectiveRegressionRequest,
@@ -489,31 +690,36 @@ def _build_design_matrix(
     labels: dict[str, str] = {"const": "절편"}
     parts: list[pd.DataFrame] = []
 
+    work, entering_attrs = _resolve_entering_attrs(work, req, warnings)
+    meta.used_building_attrs = bool(entering_attrs)
+    if work.empty:
+        return (
+            pd.Series(dtype=float),
+            pd.DataFrame(),
+            labels,
+            meta,
+            warnings + ["단지 속성 결측으로 표본이 없습니다"],
+        )
+
     display_names = building_display_names or {}
     if "building_key" in work.columns:
         for bk, cnt in work.groupby("building_key").size().items():
             meta.building_counts[str(bk)] = int(cnt)
             meta.building_labels[str(bk)] = display_names.get(str(bk), str(bk))
 
-    if cohort_mode and "building_key" in work.columns and work["building_key"].nunique() > 1:
-        keys = work["building_key"].astype(str)
-        ref = str(work.groupby("building_key").size().idxmax())
-        meta.building_reference_key = ref
-        ref_name = meta.building_labels.get(ref, ref[:12])
-        warnings.append(f"단지 FE 기준: {ref_name} (거래 최다)")
-        for bk in sorted(keys.unique()):
-            if bk == ref:
-                continue
-            cnt = meta.building_counts.get(bk, 0)
-            bk_name = meta.building_labels.get(bk, bk[:12])
-            if cnt < MIN_BUILDING_FE_GROUP:
-                warnings.append(f"단지 FE 제외 — {bk_name} n={cnt} (최소 {MIN_BUILDING_FE_GROUP}건)")
-                continue
-            col = _sanitize_key(bk, "bld")
-            work[col] = (keys == bk).astype(float)
-            parts.append(work[[col]])
-            labels[col] = f"단지 {bk_name}"
-            meta.building_fe_map[bk] = col
+    use_fe = (
+        cohort_mode
+        and "building_key" in work.columns
+        and work["building_key"].nunique() > 1
+        and not entering_attrs
+    )
+    if entering_attrs and cohort_mode and "building_key" in work.columns and work["building_key"].nunique() > 1:
+        names = "·".join(
+            lb for _, col, lb in _ATTR_FLAG_COLS if col in entering_attrs
+        )
+        warnings.append(f"단지 FE 생략 — 단지 속성({names})으로 단지 간 차이를 설명")
+    if use_fe:
+        _add_building_fe(work, meta, labels, parts, warnings)
 
     if req.variables.exclusive_area:
         parts.append(work[["exclusive_area"]].astype(float))
@@ -572,6 +778,30 @@ def _build_design_matrix(
                 for c in dummies.columns:
                     labels[c] = f"권리 {c.replace('rights_', '')}"
 
+    if "households" in entering_attrs:
+        parts.append(work[["households"]].astype(float))
+        labels["households"] = "세대수"
+        rng = _continuous_range(work, "households")
+        if rng:
+            meta.continuous_ranges["households"] = (rng.min, rng.max)
+    if "parking_per_household" in entering_attrs:
+        parts.append(work[["parking_per_household"]].astype(float))
+        labels["parking_per_household"] = "세대당 주차"
+        rng = _continuous_range(work, "parking_per_household")
+        if rng:
+            meta.continuous_ranges["parking_per_household"] = (rng.min, rng.max)
+    if "assessed_land_price" in entering_attrs:
+        parts.append(work[["assessed_land_price"]].astype(float))
+        labels["assessed_land_price"] = "개별공시지가 (원/㎡)"
+        rng = _continuous_range(work, "assessed_land_price")
+        if rng:
+            meta.continuous_ranges["assessed_land_price"] = (rng.min, rng.max)
+    if "structure_group" in entering_attrs:
+        _add_structure_dummies(work, meta, labels, parts, warnings)
+    if "asset_type" in entering_attrs:
+        _add_asset_type_dummies(work, meta, labels, parts, warnings)
+        _warn_type_floor_split(work, warnings)
+
     meta.column_labels = labels
     meta.floor_dummy_cols = floor_dummy_cols
 
@@ -606,7 +836,27 @@ def _meta_to_predict_options(meta: RegressionDesignMeta, req: CollectiveRegressi
         opts.housing_subtypes = meta.housing_subtype_categories
         opts.housing_subtype_reference = meta.housing_subtype_reference
 
-    if meta.building_reference_key:
+    if "households" in meta.continuous_ranges:
+        lo, hi = meta.continuous_ranges["households"]
+        opts.households = ContinuousRange(name="households", min=lo, max=hi)
+    if "parking_per_household" in meta.continuous_ranges:
+        lo, hi = meta.continuous_ranges["parking_per_household"]
+        opts.parking_per_household = ContinuousRange(name="parking_per_household", min=lo, max=hi)
+    if "assessed_land_price" in meta.continuous_ranges:
+        lo, hi = meta.continuous_ranges["assessed_land_price"]
+        opts.assessed_land_price = ContinuousRange(name="assessed_land_price", min=lo, max=hi)
+    if meta.structure_dummy_cols or meta.structure_reference:
+        opts.structure_reference = meta.structure_reference
+        refs = [meta.structure_reference] if meta.structure_reference else []
+        opts.structure_groups = refs + [
+            c.replace("struct_", "", 1) for c in meta.structure_dummy_cols
+        ]
+    if meta.asset_type_dummy_cols or meta.asset_type_reference:
+        opts.asset_type_reference = meta.asset_type_reference
+        refs = [meta.asset_type_reference] if meta.asset_type_reference else []
+        opts.asset_types = refs + [c.replace("atype_", "", 1) for c in meta.asset_type_dummy_cols]
+
+    if len(meta.building_counts) > 1:
         for bk, cnt in sorted(meta.building_counts.items(), key=lambda x: -x[1]):
             opts.buildings.append(
                 BuildingFeOption(
@@ -707,6 +957,9 @@ def _extrapolation_warnings(meta: RegressionDesignMeta, inputs: CollectiveRegres
         ("exclusive_area", inputs.exclusive_area),
         ("building_age", inputs.building_age),
         ("floor", inputs.floor),
+        ("households", inputs.households),
+        ("parking_per_household", inputs.parking_per_household),
+        ("assessed_land_price", inputs.assessed_land_price),
     ]:
         if val is None or key not in meta.continuous_ranges:
             continue
@@ -756,6 +1009,27 @@ def _inputs_to_x_row(
         hs = str(inputs.housing_subtype).strip()
         if meta.housing_subtype_reference and hs != meta.housing_subtype_reference:
             col = f"rights_{hs}"
+            if col in row:
+                row[col] = 1.0
+
+    if "households" in row and inputs.households is not None:
+        row["households"] = float(inputs.households)
+    if "parking_per_household" in row and inputs.parking_per_household is not None:
+        row["parking_per_household"] = float(inputs.parking_per_household)
+    if "assessed_land_price" in row and inputs.assessed_land_price is not None:
+        row["assessed_land_price"] = float(inputs.assessed_land_price)
+
+    if inputs.structure_group is not None and meta.structure_reference:
+        sg = str(inputs.structure_group).strip()
+        if sg != meta.structure_reference:
+            col = f"struct_{sg}"
+            if col in row:
+                row[col] = 1.0
+
+    if inputs.asset_type is not None and meta.asset_type_reference:
+        at = str(inputs.asset_type).strip()
+        if at != meta.asset_type_reference:
+            col = f"atype_{at}"
             if col in row:
                 row[col] = 1.0
 

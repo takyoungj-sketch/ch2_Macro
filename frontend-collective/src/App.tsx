@@ -32,8 +32,10 @@ import StatsWindowToggle, {
   normalizeStatsWindowYears,
   type StatsWindowYears,
 } from "./components/StatsWindowToggle";
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import type { AssetSelectorType, RegionOption } from "./types";
 import { assetTypeLabel } from "./types";
+import { rowFromTypeSibling } from "./utils/typeSibling";
 import {
   hasYearFilter,
 } from "./utils/contractYearRange";
@@ -89,6 +91,14 @@ function fmtLandPrice(v: number | null | undefined) {
   return Math.round(v).toLocaleString("ko-KR");
 }
 
+function householdsCellTitle(row: BuildingStatsRow): string | undefined {
+  if (row.households_flagged) return "원본 이상값 — 값은 그대로 표시";
+  if (row.scale_scope === "complex" || (row.type_siblings?.length ?? 0) > 0) {
+    return "단지 전체 세대수. 이 유형 재고가 아닙니다. 유형별 거래 통계는 별도입니다.";
+  }
+  return "K-apt 전체 세대수. 없으면 표제부 해당 용도 동 합산. 오피스텔은 세대수가 비면 호수";
+}
+
 function landPriceTitle(row: BuildingStatsRow): string | undefined {
   if (row.assessed_land_price == null) return undefined;
   return row.assessed_land_price_year != null
@@ -136,13 +146,27 @@ function BuildingTableRow({
               </span>
             );
           })()}
+        {(row.type_siblings ?? []).map((sib) => (
+          <button
+            key={sib.building_key}
+            type="button"
+            className="ml-1 px-1 py-0 rounded bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 text-[9px] font-medium hover:bg-indigo-100"
+            title={`${assetTypeLabel(sib.asset_type)} 모달 열기 · 중앙값 ${fmtPrice(sib.median)}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(rowFromTypeSibling(row, sib));
+            }}
+          >
+            {assetTypeLabel(sib.asset_type)} {sib.count.toLocaleString("ko-KR")}건 별도
+          </button>
+        ))}
       </td>
       <td className="num">{row.count}</td>
       <td className="num">{fmtPrice(row.median)}</td>
       <td className="num">{fmtPrice(row.mean)}</td>
       {wide && <td className="num text-[10px]">{fmtCiCompact(row.ci_lower, row.ci_upper)}</td>}
       <td className="num">{row.building_year ?? "—"}</td>
-      <td className="num" title={row.households_flagged ? "원본 이상값 — 값은 그대로 표시" : "K-apt 전체 세대수. 없으면 표제부 해당 용도 동 합산. 오피스텔은 세대수가 비면 호수"}>
+      <td className="num" title={householdsCellTitle(row)}>
         {row.households == null ? (
           "—"
         ) : (
@@ -710,7 +734,7 @@ export default function App() {
               onAddUnit={addUnit}
             />
           </section>
-          <div className="p-4 pt-2">
+          <div className="p-4 pt-2 flex-1 min-h-0 overflow-y-auto">
           {!scope && (
             <p className="text-sm text-slate-500 dark:text-slate-400">시군구까지 선택한 뒤 「통계분석」을 누르면 건물 목록이 표시됩니다.</p>
           )}
@@ -802,7 +826,12 @@ export default function App() {
                       <th>평균(만원/㎡)</th>
                       {tableWide && <th title="95% 신뢰구간">신뢰구간(만원/㎡)</th>}
                       <th title="실거래 건축연도">신축연도</th>
-                      <th title="K-apt 전체 세대수. K-apt가 없으면 표제부 해당 용도 동 합산. 오피스텔은 세대수가 비면 호수">세대수</th>
+                      <th title="K-apt 전체 세대수. K-apt가 없으면 표제부 해당 용도 동 합산. 오피스텔은 세대수가 비면 호수">
+                        <span className="inline-flex items-center gap-0.5">
+                          세대수
+                          <StatsGlossaryHelp termId="type_stats_vs_complex_scale" size="xs" />
+                        </span>
+                      </th>
                       <th title="K-apt 시공사 대표 1곳. 공동시공은 첫 회사+외. 표제부만 있으면 없음">시공사</th>
                       <th>지번 주소</th>
                       {tableWide && <th>도로명 주소</th>}
@@ -858,6 +887,7 @@ export default function App() {
           statsAsOfLabel={buildingsQ.data?.stats_as_of_label}
           peerBuildings={buildingsQ.data?.items ?? []}
           onClose={() => setSelected(null)}
+          onOpenSibling={setSelected}
         />
       )}
     </div>

@@ -12,7 +12,7 @@ from app.ai.casual_dialogue import casual_dialogue_enabled
 from app.ai.open_mode import open_mode_enabled
 from app.ai.llm import llm_configured, polish_enabled, _model
 from app.ai.web_search import web_search_configured
-from app.ai.orchestrator import handle_chat, handle_explain
+from app.ai.orchestrator import handle_chat, handle_explain, handle_history_record
 from app.ai.rate_limit import check_ai_rate_limit
 from app.ai.schemas import (
     AiApp,
@@ -20,6 +20,8 @@ from app.ai.schemas import (
     AiChatResponse,
     AiExplainRequest,
     AiHealthResponse,
+    AiHistoryRecordRequest,
+    AiHistoryRecordResponse,
     AiPurpose,
 )
 
@@ -44,6 +46,13 @@ def ai_chat(body: AiChatRequest, request: Request):
     """세션 기반 AI 대화 — Screen-bound + Reasoning Bundle."""
     check_ai_rate_limit(request)
     return handle_chat(body)
+
+
+@router.post("/history", response_model=AiHistoryRecordResponse)
+def ai_history_record(body: AiHistoryRecordRequest, request: Request):
+    """성공한 분석 Bundle을 Analysis History에 자동 기록 (채팅 없이)."""
+    check_ai_rate_limit(request)
+    return handle_history_record(body)
 
 
 @router.post("/explain", response_model=AiChatResponse)

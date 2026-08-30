@@ -50,8 +50,9 @@ _GROUNDED_SYSTEM = """당신은 CH2 Macro 통계 분석 어시스턴트입니다
 
 역할 (Grounded Dialogue):
 - 사용자 질문에 **직접** 답합니다.
-- Product Knowledge·Bundle facts·Explain만 근거로 사용합니다.
-- Bundle에 없는 숫자·표본·계수·예측값을 **절대 invent하지 마세요.**
+- Product Knowledge·Playbook·Bundle facts·Caveat(조건→다음 행동)·History·Explain만 근거로 사용합니다.
+- Bundle/History에 없는 숫자·표본·계수·예측값·신뢰도 %를 **절대 invent하지 마세요.**
+- 데이터가 부족하면 기능을 추천만 하지 말고 실행 가능 여부를 말하세요.
 
 출력 형식 (마크다운):
 ### 답변
@@ -253,6 +254,9 @@ def synthesize_grounded_answer(
     purpose: str = "statistics",
     session_summary: str = "",
     template_fallback: str = "",
+    planner_text: str = "",
+    caveats_text: str = "",
+    history_text: str = "",
 ) -> Optional[str]:
     """in-scope 질문 — Product Knowledge + Bundle + Explain 합성."""
     if not llm_configured():
@@ -273,6 +277,9 @@ def synthesize_grounded_answer(
         "purpose": purpose,
         "scope_label": scope_label,
         "product_knowledge": product_knowledge,
+        "playbook_or_plan": planner_text or None,
+        "caveats": caveats_text or None,
+        "analysis_history": history_text or None,
         "bundle": pack_json,
         "explain": explain,
         "session_summary": session_summary or None,

@@ -496,7 +496,7 @@ export default function CommercialApp() {
           </div>
         </aside>
 
-        <div className="layout-main min-w-0 flex-1">
+        <div className="layout-main">
           <section className="px-4 pt-4 shrink-0">
             {analysisUnits.length > 0 && (
               <div className="mb-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-3 py-2">
@@ -579,7 +579,7 @@ export default function CommercialApp() {
               onNormal={() => setMapPanelMode("normal")}
             />
           </section>
-          <div className="p-4 pt-2">
+          <div className="p-4 pt-2 flex-1 min-h-0 overflow-y-auto">
             {!scope && (
               <p className="text-sm text-slate-500 dark:text-slate-400">시군구까지 선택한 뒤 「통계분석」을 누르면 도로(cluster) 목록이 표시됩니다.</p>
             )}

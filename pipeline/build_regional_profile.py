@@ -833,6 +833,7 @@ def main() -> None:
     p.add_argument("--skip-jimok-group", action="store_true", help="지목군·용도×지목군 Top1~3 (D-029) 생략")
     p.add_argument("--skip-yearly-mix", action="store_true", help="3개년 8대유형 yearly_mix (D-027) 생략")
     p.add_argument("--yearly-mix-years", type=int, default=3, help="yearly_mix 최근 완결 연도 수")
+    p.add_argument("--skip-rank", action="store_true", help="전국 순위 마트 생략 (D-053)")
     p.add_argument("--dry-run", action="store_true")
     args = p.parse_args()
 
@@ -975,6 +976,21 @@ def main() -> None:
         args.window_years,
         sido,
     )
+
+    if not args.skip_rank:
+        try:
+            from build_regional_profile_rank import refresh_regional_profile_rank
+
+            land = get_land_engine_for_region_copy()
+            refresh_regional_profile_rank(
+                coll_eng,
+                land,
+                profile_version=args.profile_version,
+                window_years=args.window_years,
+                as_of=as_of,
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.warning("regional_profile_rank skipped: %s", exc)
 
 
 if __name__ == "__main__":
