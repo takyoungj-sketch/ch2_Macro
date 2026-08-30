@@ -1,13 +1,27 @@
 // @ts-nocheck — shared 패키지: 각 frontend node_modules 기준으로 tsc 경로가 달라짐
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { getGlossaryEntry, type StatsGlossaryEntry } from "./statsGlossary";
+import {
+  boxesEqual,
+  clampBox,
+  persistSize,
+  readStoredSize,
+  ResizeHandles,
+  usePanelDrag,
+  type PanelBox,
+} from "../ui-window/resizableWindow";
 import "./glossaryHelp.css";
 
 const FONT_PX_MIN = 11;
 const FONT_PX_MAX = 18;
 const FONT_PX_DEFAULT = 13;
 const FONT_STORAGE_KEY = "ch2-glossary-font-px";
+const SIZE_STORAGE_KEY = "ch2-glossary-help-win-size";
+const DEFAULT_W = 360;
+const DEFAULT_H = 320;
+const MIN_W = 240;
+const MIN_H = 200;
 
 function readStoredFontPx(): number {
   try {
@@ -76,39 +90,25 @@ function GlossaryBody({ entry }: { entry: StatsGlossaryEntry }) {
   );
 }
 
-function usePopoverPosition(open: boolean, anchorRef: React.RefObject<HTMLElement | null>) {
-  const [style, setStyle] = useState<{ top: number; left: number } | null>(null);
+function defaultGlossarySize(): { w: number; h: number } {
+  const stored = readStoredSize(SIZE_STORAGE_KEY);
+  const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+  return {
+    w: stored?.w ?? Math.min(DEFAULT_W, vw - 16),
+    h: stored?.h ?? Math.min(DEFAULT_H, vh - 16),
+  };
+}
 
-  const update = useCallback(() => {
-    const el = anchorRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const popW = Math.min(360, window.innerWidth - 16);
-    const popH = 320;
-    let left = rect.left + rect.width / 2 - popW / 2;
-    left = Math.max(8, Math.min(left, window.innerWidth - popW - 8));
-    let top = rect.bottom + 6;
-    if (top + popH > window.innerHeight - 8) {
-      top = Math.max(8, rect.top - popH - 6);
-    }
-    setStyle({ top, left });
-  }, [anchorRef]);
-
-  useEffect(() => {
-    if (!open) {
-      setStyle(null);
-      return;
-    }
-    update();
-    window.addEventListener("resize", update);
-    window.addEventListener("scroll", update, true);
-    return () => {
-      window.removeEventListener("resize", update);
-      window.removeEventListener("scroll", update, true);
-    };
-  }, [open, update]);
-
-  return style;
+function placeNearAnchor(anchor: HTMLElement, size: { w: number; h: number }): PanelBox {
+  const rect = anchor.getBoundingClientRect();
+  let left = rect.left + rect.width / 2 - size.w / 2;
+  left = Math.max(8, Math.min(left, window.innerWidth - size.w - 8));
+  let top = rect.bottom + 6;
+  if (top + size.h > window.innerHeight - 8) {
+    top = Math.max(8, rect.top - size.h - 6);
+  }
+  return clampBox({ x: left, y: top, w: size.w, h: size.h }, MIN_W, MIN_H);
 }
 
 export default function StatsGlossaryHelp({
@@ -123,9 +123,43 @@ export default function StatsGlossaryHelp({
   const entry = getGlossaryEntry(termId);
   const [open, setOpen] = useState(false);
   const [fontPx, setFontPx] = useState(FONT_PX_DEFAULT);
+  const [box, setBox] = useState<PanelBox | null>(null);
+  const userPlacedRef = useRef(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
-  const pos = usePopoverPosition(open, anchorRef);
+
+  const { beginMove, beginResize } = usePanelDrag(open, MIN_W, MIN_H, (next) => {
+    userPlacedRef.current = true;
+    setBox(next);
+    persistSize(SIZE_STORAGE_KEY, next);
+  });
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setBox(null);
+      userPlacedRef.current = false;
+      return;
+    }
+    const onViewport = () => {
+      if (userPlacedRef.current) {
+        setBox((prev) => {
+          if (!prev) return prev;
+          const next = clampBox(prev, MIN_W, MIN_H);
+          return boxesEqual(prev, next) ? prev : next;
+        });
+        return;
+      }
+      if (!anchorRef.current) return;
+      setBox(placeNearAnchor(anchorRef.current, defaultGlossarySize()));
+    };
+    onViewport();
+    window.addEventListener("resize", onViewport);
+    window.addEventListener("scroll", onViewport, true);
+    return () => {
+      window.removeEventListener("resize", onViewport);
+      window.removeEventListener("scroll", onViewport, true);
+    };
+  }, [open]);
 
   useEffect(() => {
     setFontPx(readStoredFontPx());
@@ -167,23 +201,38 @@ export default function StatsGlossaryHelp({
   if (!entry) return null;
 
   const popup =
-    open && pos
+    open && box
       ? createPortal(
           <div
             ref={popupRef}
             role="dialog"
             aria-label={`${entry.label} 설명`}
             className="ch2-glossary-popup fixed rounded-lg border border-indigo-200 dark:border-indigo-300 bg-white dark:bg-slate-800 shadow-xl dark:shadow-black/70 ring-1 ring-black/5 dark:ring-indigo-300/60 p-3 text-left font-normal"
-            style={{ position: "fixed", top: pos.top, left: pos.left, zIndex: 10000 }}
+            style={{
+              position: "fixed",
+              top: box.y,
+              left: box.x,
+              width: box.w,
+              height: box.h,
+              zIndex: 10000,
+            }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="ch2-glossary-popup-chrome flex items-start justify-between gap-2 mb-2">
+            <div
+              className="ch2-glossary-popup-chrome flex items-start justify-between gap-2 mb-2 cursor-grab active:cursor-grabbing select-none"
+              onPointerDown={(e) => {
+                const t = e.target as HTMLElement;
+                if (t.closest("button, a, input, textarea, select")) return;
+                beginMove(e, box);
+              }}
+            >
               <div className="min-w-0">
                 <p className="font-semibold text-slate-800 dark:text-white" style={{ fontSize: 14 }}>
                   {entry.title}
                 </p>
                 <p className="text-slate-500 dark:text-slate-300 mt-0.5" style={{ fontSize: 11 }}>
                   {entry.label}
+                  <span className="ml-1.5">· 드래그로 이동 · 모서리로 크기 조절</span>
                 </p>
               </div>
               <div className="flex items-center gap-1 shrink-0">
@@ -224,6 +273,7 @@ export default function StatsGlossaryHelp({
                 이번 결과 해석은 AI 어시스턴트에 질문하세요.
               </p>
             </div>
+            <ResizeHandles onPointerDown={(edge, e) => beginResize(edge, e, box)} />
           </div>,
           document.body,
         )

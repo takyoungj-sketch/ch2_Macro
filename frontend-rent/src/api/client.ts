@@ -164,6 +164,7 @@ export type RentTransactionRow = {
   deposit_per_m2: number | null;
   monthly_per_m2: number | null;
   lease_kind: string;
+  building_year?: number | null;
 };
 
 export async function fetchRentTransactions(params: {
@@ -183,6 +184,37 @@ export async function fetchRentTransactions(params: {
     },
   );
   return data;
+}
+
+const RENT_TX_FETCH_PAGE = 200;
+const RENT_TX_LOAD_CAP = 5000;
+
+/** 거래목록 탭: 필터·정렬용 전체 로드 (API page_size 상한 200). */
+export async function fetchAllRentTransactions(params: {
+  buildingKey: string;
+  assetType?: string;
+}): Promise<{ total: number; items: RentTransactionRow[]; truncated?: boolean }> {
+  const first = await fetchRentTransactions({
+    ...params,
+    page: 1,
+    pageSize: RENT_TX_FETCH_PAGE,
+  });
+  if (first.total <= first.items.length || first.items.length >= RENT_TX_LOAD_CAP) {
+    return { ...first, truncated: first.total > first.items.length };
+  }
+  const all = [...first.items];
+  let page = 2;
+  while (all.length < first.total && all.length < RENT_TX_LOAD_CAP) {
+    const next = await fetchRentTransactions({
+      ...params,
+      page,
+      pageSize: RENT_TX_FETCH_PAGE,
+    });
+    if (!next.items.length) break;
+    all.push(...next.items);
+    page += 1;
+  }
+  return { total: first.total, items: all, truncated: all.length < first.total };
 }
 
 export type RentRegressionResult = {

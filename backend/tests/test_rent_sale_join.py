@@ -92,15 +92,34 @@ def test_apply_sale_metrics_sets_ratio():
         building_key="abc",
         asset_type="apartment",
         display_name="테스트",
-        jeonse=LeaseMetric(),
+        jeonse=LeaseMetric(n=10, mean=50),
         mixed=MixedLeaseMetric(),
         monthly=LeaseMetric(),
-        jeonse_equiv=LeaseMetric(n=10, mean=80),
+        jeonse_equiv=LeaseMetric(n=74, mean=80),
     )
     out = apply_sale_metrics([row], {("abc", "apartment"): (12, 100.0)})
     assert out[0].sale.n == 12
     assert out[0].sale.mean == 100.0
-    assert out[0].jeonse_to_sale_pct == 80.0
+    assert out[0].jeonse_to_sale_pct == 50.0
+    assert out[0].jeonse_equiv_sale_pct == 80.0
     skipped = apply_sale_metrics([row], {})
     assert skipped[0].sale.n == 0
     assert skipped[0].jeonse_to_sale_pct is None
+    assert skipped[0].jeonse_equiv_sale_pct is None
+
+
+def test_apply_sale_metrics_hides_thin_jeonse_ratio():
+    from app.rent.schemas import LeaseMetric, MixedLeaseMetric, RentBuildingRow
+
+    row = RentBuildingRow(
+        building_key="thin",
+        asset_type="apartment",
+        display_name="표본부족",
+        jeonse=LeaseMetric(n=2, mean=90),
+        mixed=MixedLeaseMetric(),
+        monthly=LeaseMetric(),
+        jeonse_equiv=LeaseMetric(n=80, mean=140),
+    )
+    out = apply_sale_metrics([row], {("thin", "apartment"): (20, 100.0)})
+    assert out[0].jeonse_to_sale_pct is None
+    assert out[0].jeonse_equiv_sale_pct == 140.0

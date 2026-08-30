@@ -11,6 +11,13 @@ import {
   CH2_AI_ENGINE_DONE_EVENT,
   type AiScreenAction,
 } from "./aiActions";
+import {
+  clampBox,
+  persistBox,
+  readStoredBox,
+  ResizeHandles,
+  usePanelDrag,
+} from "../ui-window/resizableWindow";
 
 type ChatMessage = { role: "user" | "assistant"; text: string; meta?: AiChatResponse };
 
@@ -308,6 +315,7 @@ const DEFAULT_WIN = { w: 640, h: 560 };
 const MIN_WIN = { w: 360, h: 320 };
 const FONT_SCALES = [0.85, 1, 1.15, 1.3, 1.5] as const;
 const FONT_STORAGE_KEY = "ch2-ai-font-scale";
+const WIN_STORAGE_KEY = "ch2-ai-win-box";
 const BASE_FONT_PX = 12;
 
 function readStoredFontScale(): number {
@@ -321,23 +329,18 @@ function readStoredFontScale(): number {
 }
 
 function clampWin(next: { x: number; y: number; w: number; h: number }) {
-  const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
-  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
-  const w = Math.min(Math.max(next.w, MIN_WIN.w), vw - 16);
-  const h = Math.min(Math.max(next.h, MIN_WIN.h), vh - 16);
-  const x = Math.min(Math.max(next.x, 8), Math.max(8, vw - w - 8));
-  const y = Math.min(Math.max(next.y, 8), Math.max(8, vh - h - 8));
-  return { x, y, w, h };
+  return clampBox(next, MIN_WIN.w, MIN_WIN.h);
 }
 
 function defaultWinPos() {
   const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
   const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+  const stored = readStoredBox(WIN_STORAGE_KEY);
   return clampWin({
-    x: Math.max(8, (vw - DEFAULT_WIN.w) / 2),
-    y: Math.max(78, (vh - DEFAULT_WIN.h) / 2),
-    w: DEFAULT_WIN.w,
-    h: DEFAULT_WIN.h,
+    x: stored?.x ?? Math.max(8, (vw - DEFAULT_WIN.w) / 2),
+    y: stored?.y ?? Math.max(78, (vh - DEFAULT_WIN.h) / 2),
+    w: stored?.w ?? DEFAULT_WIN.w,
+    h: stored?.h ?? DEFAULT_WIN.h,
   });
 }
 
@@ -360,18 +363,27 @@ function AiAssistantModal({
   const [fontScale, setFontScale] = useState(readStoredFontScale);
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const chatLogRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{
-    mode: "move" | "resize";
-    startX: number;
-    startY: number;
-    orig: { x: number; y: number; w: number; h: number };
-  } | null>(null);
 
   const baseTrust = useMemo(() => deriveTrustFromContext(context), [context]);
 
+  const { beginMove, beginResize } = usePanelDrag(open, MIN_WIN.w, MIN_WIN.h, (next) => {
+    setWin(next);
+    persistBox(WIN_STORAGE_KEY, next);
+  });
+
   useEffect(() => {
     if (!open) return;
-    setWin(defaultWinPos());
+    const clamp = () => {
+      setWin((prev) => {
+        const next = clampWin(prev);
+        if (next.x === prev.x && next.y === prev.y && next.w === prev.w && next.h === prev.h) return prev;
+        persistBox(WIN_STORAGE_KEY, next);
+        return next;
+      });
+    };
+    clamp();
+    window.addEventListener("resize", clamp);
+    return () => window.removeEventListener("resize", clamp);
   }, [open]);
 
   useEffect(() => {
@@ -395,50 +407,6 @@ function AiAssistantModal({
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
   }, [open, onClose]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onMove = (e: PointerEvent) => {
-      const d = dragRef.current;
-      if (!d) return;
-      const dx = e.clientX - d.startX;
-      const dy = e.clientY - d.startY;
-      if (d.mode === "move") {
-        setWin(clampWin({ ...d.orig, x: d.orig.x + dx, y: d.orig.y + dy }));
-      } else {
-        setWin(clampWin({ ...d.orig, w: d.orig.w + dx, h: d.orig.h + dy }));
-      }
-    };
-    const onUp = () => {
-      dragRef.current = null;
-      document.body.style.userSelect = "";
-      document.body.style.cursor = "";
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
-    return () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
-    };
-  }, [open]);
-
-  const startDrag = useCallback(
-    (mode: "move" | "resize", e: React.PointerEvent) => {
-      if (e.button !== 0) return;
-      e.preventDefault();
-      dragRef.current = {
-        mode,
-        startX: e.clientX,
-        startY: e.clientY,
-        orig: { ...win },
-      };
-      document.body.style.userSelect = "none";
-      document.body.style.cursor = mode === "move" ? "grabbing" : "nwse-resize";
-    },
-    [win],
-  );
 
   const bumpFont = useCallback((dir: -1 | 1) => {
     setFontScale((cur) => {
@@ -516,7 +484,7 @@ function AiAssistantModal({
         onPointerDown={(e) => {
           const t = e.target as HTMLElement;
           if (t.closest("button, a, input, textarea, select")) return;
-          startDrag("move", e);
+          beginMove(e, win);
         }}
       >
         <div className="flex justify-between items-start gap-2">
@@ -526,7 +494,7 @@ function AiAssistantModal({
             </h2>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
               {scopeHint}
-              <span className="ml-2 text-slate-400 dark:text-slate-500">· 드래그로 이동</span>
+              <span className="ml-2 text-slate-400 dark:text-slate-500">· 드래그로 이동 · 모서리로 크기 조절</span>
             </p>
           </div>
           <div className="flex items-start gap-2">
@@ -741,18 +709,7 @@ function AiAssistantModal({
         </p>
       </div>
 
-      <button
-        type="button"
-        aria-label="창 크기 조절"
-        title="드래그하여 크기 조절"
-        className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize touch-none"
-        onPointerDown={(e) => startDrag("resize", e)}
-      >
-        <span
-          className="absolute bottom-1 right-1 h-2.5 w-2.5 border-r-2 border-b-2 border-slate-400/80 dark:border-slate-500"
-          aria-hidden
-        />
-      </button>
+      <ResizeHandles onPointerDown={(edge, e) => beginResize(edge, e, win)} />
     </div>,
     document.body,
   );

@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-29",
+  "updated": "2026-08-31",
   "domains": [
     { "id": "land", "label": "토지" },
     { "id": "built", "label": "복합" },
@@ -259,60 +259,141 @@
           "decision": "D-051"
         }
       }
+    },
+    {
+      "date": "2026-08-29",
+      "cells": {
+        "profile": {
+          "text": "전국 순위+산점도 · D-054 만년력 · D-055 결 · 인구-거래 r · 유형 동조. G3(M2·금리) 전 중지",
+          "status": "stopped",
+          "commit": "committed",
+          "decision": "D-053"
+        },
+        "admin": {
+          "text": "D-053·054·055 잠금 · 일지 08-29. 08-30 `0284467`에 포함",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-055"
+        }
+      }
+    },
+    {
+      "date": "2026-08-30",
+      "cells": {
+        "land": {
+          "text": "헤더 AI + 분석단계 스크롤. 창 크기조절은 08-31",
+          "status": "stopped",
+          "commit": "committed",
+          "decision": "D-056"
+        },
+        "built": {
+          "text": "헤더 AI + 회귀 스크롤/승인실행. 창 크기조절은 08-31",
+          "status": "stopped",
+          "commit": "committed",
+          "decision": "D-056"
+        },
+        "collective": {
+          "text": "P3 실행보조·사용법=화면순서 커밋. 창 크기조절은 08-31. P4 초안만",
+          "status": "stopped",
+          "commit": "committed",
+          "decision": "D-056"
+        },
+        "rent": {
+          "text": "헤더 AI만. 표 전세/환산 분리는 08-31",
+          "status": "stopped",
+          "commit": "committed",
+          "decision": "D-056"
+        },
+        "profile": {
+          "text": "헤더 AI + Twin 스크롤. 창 크기조절은 08-31. G3 미착수",
+          "status": "stopped",
+          "commit": "committed",
+          "decision": "D-056"
+        },
+        "admin": {
+          "text": "D-056·P3/사용법 커밋. 창·일지는 08-31",
+          "status": "stopped",
+          "commit": "committed",
+          "decision": "D-056"
+        }
+      }
     }
   ],
   "today": {
-    "date": "2026-08-29",
+    "date": "2026-08-31",
     "cells": {
+      "land": {
+        "text": "공유 도움말 창 크기조절 커밋. 임대 배포라 이 앱 프론트는 미재빌드",
+        "status": "done",
+        "commit": "committed",
+        "decision": "D-056"
+      },
+      "built": {
+        "text": "공유 도움말 창 크기조절 커밋. 임대 배포라 이 앱 프론트는 미재빌드",
+        "status": "done",
+        "commit": "committed",
+        "decision": "D-056"
+      },
+      "collective": {
+        "text": "공유 도움말 창 크기조절 커밋. 임대 배포라 이 앱 프론트는 미재빌드",
+        "status": "done",
+        "commit": "committed",
+        "decision": "D-056"
+      },
+      "rent": {
+        "text": "전세보증금·전세가율 vs 환산값·환산가율 분리. 모달 산식·평균. 거래목록 필터. 배포",
+        "status": "done",
+        "commit": "committed"
+      },
       "profile": {
-        "text": "전국 순위+산점도 · D-054 만년력 · D-055 결 · 인구-거래 r · 유형 동조. G3(M2·금리) 전 중지",
-        "status": "stopped",
-        "commit": "needed",
-        "decision": "D-053"
+        "text": "공유 도움말 창 크기조절 커밋. 임대 배포라 이 앱 프론트는 미재빌드",
+        "status": "done",
+        "commit": "committed",
+        "decision": "D-056"
       },
       "admin": {
-        "text": "D-053·054·055 잠금 · 일지 08-29. 커밋·배포 안 함",
+        "text": "일지 08-30·08-31 · 창·임대 표 커밋 · 임대 배포",
         "status": "done",
-        "commit": "needed",
-        "decision": "D-055"
+        "commit": "committed"
       }
     }
   },
   "next": {
     "cells": {
       "land": {
-        "text": "강동구 등 불완전 읍면동 region_neighbors 재구축 (복합 인접추가는 turf 우회 중)",
+        "text": "AI P5 깊게(승인 엔진)는 집합 사다리 후. 강동구 등 region_neighbors 재구축은 별도",
         "status": "planned",
-        "commit": "none"
+        "commit": "none",
+        "decision": "D-056"
       },
       "profile": {
-        "text": "요청 시 커밋·배포(DDL 070+rank 재빌드). 다음 코드=G3 전국 월별 총액↔M2·대표금리1개. 로컬 전국 스냅샷 as_of=2026-06-01(7월은 부분)",
+        "text": "G3 전국 월별 총액↔M2·대표금리1개. 7월 as_of는 별도(지금 부분). AI 창 크기조절은 공유 커밋 때",
         "status": "planned",
-        "commit": "needed",
+        "commit": "none",
         "decision": "D-055"
       },
       "built": {
-        "text": "P5: 운영 enrichment promote. `--apply-enrichment`·parcel_master dump 금지. 로컬 동의 토글 브라우저 확인",
+        "text": "enrichment P5 promote는 별도(`--apply-enrichment` 금지). AI P5 깊게는 집합 사다리 후",
         "status": "planned",
         "commit": "needed",
         "decision": "D-051"
       },
       "rent": {
-        "text": "AI: 화면 통계(표 n·P50·환산칸) 전달 · 질문 직답(전환율 잠금문이 칸 공란을 덮음)",
+        "text": "AI에 전세보증금·전세가율·환산칸 전달. 다른 앱 창 크기조절은 앱별 재빌드",
         "status": "planned",
         "commit": "none"
       },
       "collective": {
-        "text": "D·F 백로그는 축약 DB가 안 푼다. 운영 적재는 P5와 같이",
+        "text": "P4 메모 다듬기·user_override. 코호트 프리필 없음. 공유 창은 이 앱 재빌드 때 반영. D·F 백로그는 축약과 별개",
         "status": "planned",
         "commit": "needed",
-        "decision": "D-051"
+        "decision": "D-056"
       },
       "admin": {
-        "text": "프로필 커밋·배포는 요청 때. P5 promote는 별도. parcel_master dump 금지",
+        "text": "이어서=`CH2_AI_ASSISTANT_EXPANSION_PLAN` §12. P5 promote·parcel_master dump 금지",
         "status": "planned",
         "commit": "needed",
-        "decision": "D-055"
+        "decision": "D-056"
       }
     }
   },

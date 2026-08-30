@@ -199,7 +199,7 @@ AI_RATE_LIMIT_PER_MINUTE=30
 | D | trend/matrix/prediction bundles · 내러티브 확장 | ✅ |
 | F | Grounded Dialogue · Product Knowledge · UI glossary | ✅ |
 | G | 5층 계약 P0–P2 (카드·Caveat·Planner 실행 가능성·History 자동) | ✅ (D-056) |
-| H | P3 실행 보조 — 기존 화면 이동·승인 후 엔진·History 비교·메모 후속. 코호트 프리필 없음. AI가 숫자를 계산하지 않음. P5는 같은 사다리(navigate / open_ui, 복합은 승인 실행) | 진행 |
+| H | P3 실행 보조 — 기존 화면 이동·승인 후 엔진·History 비교·메모 초안. 코호트 프리필 없음. 창 크기조절 2026-08-31 커밋. P5는 같은 사다리(지금은 navigate/open_ui, 복합은 승인 실행) | P3-1~4·P4초안 반영. §12 이어서 |
 
 ---
 

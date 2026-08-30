@@ -50,11 +50,18 @@ def lookup_rent_key(conn: Connection, *, sale_building_key: str, asset_type: str
     return str(row["rent_building_key"]).strip() or None
 
 
-def jeonse_to_sale_pct(jeonse_mean: float | None, sale_mean: float | None) -> float | None:
-    """전세전환 평균 / 매매 평균 × 100."""
-    if jeonse_mean is None or sale_mean is None or sale_mean <= 0:
+JEONSE_SALE_MIN_N = 3
+
+
+def ratio_pct(num: float | None, den: float | None) -> float | None:
+    if num is None or den is None or den <= 0:
         return None
-    return round(float(jeonse_mean) / float(sale_mean) * 100.0, 1)
+    return round(float(num) / float(den) * 100.0, 1)
+
+
+def jeonse_to_sale_pct(jeonse_mean: float | None, sale_mean: float | None) -> float | None:
+    """순수 전세 평균 / 매매 평균 × 100."""
+    return ratio_pct(jeonse_mean, sale_mean)
 
 
 def apply_sale_metrics(
@@ -71,11 +78,17 @@ def apply_sale_metrics(
             continue
         n, mean = hit
         sale = LeaseMetric(n=n, mean=mean)
+        jeonse_pct = (
+            jeonse_to_sale_pct(row.jeonse.mean, mean)
+            if row.jeonse.n >= JEONSE_SALE_MIN_N
+            else None
+        )
         out.append(
             row.model_copy(
                 update={
                     "sale": sale,
-                    "jeonse_to_sale_pct": jeonse_to_sale_pct(row.jeonse_equiv.mean, mean),
+                    "jeonse_to_sale_pct": jeonse_pct,
+                    "jeonse_equiv_sale_pct": ratio_pct(row.jeonse_equiv.mean, mean),
                 }
             )
         )

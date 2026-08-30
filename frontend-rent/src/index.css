@@ -83,16 +83,16 @@ table.data.sangkwon-table td.sk-metric {
 }
 
 .layout-main {
-  @apply flex-1 min-w-0 overflow-auto;
+  @apply flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden;
 }
 
 table.data.buildings-table {
   width: 100%;
-  min-width: 44cm;
+  min-width: 56cm;
 }
 
 table.data.buildings-table.is-wide {
-  min-width: 54cm;
+  min-width: 76cm;
 }
 
 table.data.buildings-table col.col-jibun {
@@ -116,7 +116,11 @@ table.data.buildings-table col.col-year {
 }
 
 table.data.buildings-table col.col-num {
-  width: 2.4cm;
+  width: 3.8cm;
+}
+
+table.data.buildings-table th {
+  @apply align-top py-1.5;
 }
 
 table.data td.addr {

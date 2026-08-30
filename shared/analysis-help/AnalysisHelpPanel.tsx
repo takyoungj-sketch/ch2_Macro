@@ -1,6 +1,5 @@
 // @ts-nocheck — shared: 각 frontend node_modules 기준 경로가 달라짐
 import {
-  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -10,11 +9,24 @@ import {
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 import type { AnalysisExplain } from "./types";
+import {
+  boxesEqual,
+  clampBox,
+  persistSize,
+  readStoredSize,
+  ResizeHandles,
+  usePanelDrag,
+  type PanelBox,
+} from "../ui-window/resizableWindow";
 
 const BACKDROP_Z = 149;
 const PANEL_Z = 150;
-const PANEL_MAX_W = 420;
+const PANEL_DEFAULT_W = 420;
+const PANEL_DEFAULT_H = 520;
+const MIN_W = 280;
+const MIN_H = 240;
 const VIEWPORT_PAD = 12;
+const SIZE_STORAGE_KEY = "ch2-analysis-help-win-size";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -36,28 +48,28 @@ function BulletList({ items }: { items: string[] }) {
   );
 }
 
-type PanelCoords = {
-  top: number;
-  left: number;
-  width: number;
-  maxHeight: number;
-};
-
-function computePanelCoords(anchor: HTMLElement): PanelCoords {
+function computeAnchorPlacement(anchor: HTMLElement, w: number, h: number): PanelBox {
   const rect = anchor.getBoundingClientRect();
-  const width = Math.min(PANEL_MAX_W, window.innerWidth - VIEWPORT_PAD * 2);
-  const maxHeight = Math.min(520, window.innerHeight * 0.62);
-
-  let left = rect.right - width;
-  left = Math.max(VIEWPORT_PAD, Math.min(left, window.innerWidth - width - VIEWPORT_PAD));
+  let left = rect.right - w;
+  left = Math.max(VIEWPORT_PAD, Math.min(left, window.innerWidth - w - VIEWPORT_PAD));
 
   let top = rect.bottom + 6;
-  if (top + maxHeight > window.innerHeight - VIEWPORT_PAD) {
-    const above = rect.top - maxHeight - 6;
+  if (top + h > window.innerHeight - VIEWPORT_PAD) {
+    const above = rect.top - h - 6;
     top = above >= VIEWPORT_PAD ? above : VIEWPORT_PAD;
   }
 
-  return { top, left, width, maxHeight };
+  return clampBox({ x: left, y: top, w, h }, MIN_W, MIN_H);
+}
+
+function defaultHelpSize(): { w: number; h: number } {
+  const stored = readStoredSize(SIZE_STORAGE_KEY);
+  const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+  return {
+    w: stored?.w ?? Math.min(PANEL_DEFAULT_W, vw - VIEWPORT_PAD * 2),
+    h: stored?.h ?? Math.min(PANEL_DEFAULT_H, vh * 0.62),
+  };
 }
 
 export default function AnalysisHelpPanel({
@@ -73,28 +85,44 @@ export default function AnalysisHelpPanel({
 }) {
   const [open, setOpen] = useState(false);
   const [activePreset, setActivePreset] = useState<string | null>(null);
-  const [coords, setCoords] = useState<PanelCoords | null>(null);
+  const [box, setBox] = useState<PanelBox | null>(null);
+  const userPlacedRef = useRef(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const updateCoords = useCallback(() => {
-    if (!anchorRef.current) return;
-    setCoords(computePanelCoords(anchorRef.current));
-  }, []);
+  const { beginMove, beginResize } = usePanelDrag(open, MIN_W, MIN_H, (next) => {
+    userPlacedRef.current = true;
+    setBox(next);
+    persistSize(SIZE_STORAGE_KEY, next);
+  });
 
   useLayoutEffect(() => {
     if (!open) {
-      setCoords(null);
+      setBox(null);
+      userPlacedRef.current = false;
       return;
     }
-    updateCoords();
-    window.addEventListener("resize", updateCoords);
-    window.addEventListener("scroll", updateCoords, true);
-    return () => {
-      window.removeEventListener("resize", updateCoords);
-      window.removeEventListener("scroll", updateCoords, true);
+    const onViewport = () => {
+      if (userPlacedRef.current) {
+        setBox((prev) => {
+          if (!prev) return prev;
+          const next = clampBox(prev, MIN_W, MIN_H);
+          return boxesEqual(prev, next) ? prev : next;
+        });
+        return;
+      }
+      if (!anchorRef.current) return;
+      const size = defaultHelpSize();
+      setBox(computeAnchorPlacement(anchorRef.current, size.w, size.h));
     };
-  }, [open, updateCoords]);
+    onViewport();
+    window.addEventListener("resize", onViewport);
+    window.addEventListener("scroll", onViewport, true);
+    return () => {
+      window.removeEventListener("resize", onViewport);
+      window.removeEventListener("scroll", onViewport, true);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -122,7 +150,7 @@ export default function AnalysisHelpPanel({
   const hints = explain.interpretation_hints ?? [];
 
   const panel =
-    open && coords ? (
+    open && box ? (
       <>
         <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/50" style={{ zIndex: BACKDROP_Z }} aria-hidden />
         <div
@@ -130,21 +158,29 @@ export default function AnalysisHelpPanel({
           role="dialog"
           aria-modal="true"
           aria-label={explain.title}
-          className="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 p-4 space-y-3 overflow-y-auto"
+          className="flex flex-col overflow-hidden rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-2xl ring-1 ring-black/5 dark:ring-white/10"
           style={{
             position: "fixed",
             zIndex: PANEL_Z,
-            top: coords.top,
-            left: coords.left,
-            width: coords.width,
-            maxHeight: coords.maxHeight,
+            top: box.y,
+            left: box.x,
+            width: box.w,
+            height: box.h,
           }}
         >
-          <div className="flex items-start justify-between gap-2">
-            <div>
+          <div
+            className="flex items-start justify-between gap-2 shrink-0 px-4 pt-4 pb-2 cursor-grab active:cursor-grabbing select-none"
+            onPointerDown={(e) => {
+              const t = e.target as HTMLElement;
+              if (t.closest("button, a, input, textarea, select")) return;
+              beginMove(e, box);
+            }}
+          >
+            <div className="min-w-0">
               <p className="text-xs font-semibold text-slate-800 dark:text-slate-100">{explain.title}</p>
               <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
                 spec: {explain.spec_id} · v{explain.spec_version}
+                <span className="ml-1.5">· 드래그로 이동 · 모서리로 크기 조절</span>
               </p>
             </div>
             <button
@@ -156,89 +192,92 @@ export default function AnalysisHelpPanel({
             </button>
           </div>
 
-          <Section title="요약">
-            <p>{explain.summary}</p>
-          </Section>
-
-          {explain.formula && (
-            <Section title="공식">
-              <p className="font-mono text-[10px] bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-600 rounded px-2 py-1.5 whitespace-pre-wrap">
-                {explain.formula}
-              </p>
-              {explain.index_rule && (
-                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">지수: {explain.index_rule}</p>
-              )}
-              {explain.reference && (
-                <p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">기준: {explain.reference}</p>
-              )}
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-3">
+            <Section title="요약">
+              <p>{explain.summary}</p>
             </Section>
-          )}
 
-          {explain.floor_groups && explain.floor_groups.length > 0 && (
-            <Section title="집계 단위">
-              <BulletList items={explain.floor_groups} />
+            {explain.formula && (
+              <Section title="공식">
+                <p className="font-mono text-[10px] bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-600 rounded px-2 py-1.5 whitespace-pre-wrap">
+                  {explain.formula}
+                </p>
+                {explain.index_rule && (
+                  <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">지수: {explain.index_rule}</p>
+                )}
+                {explain.reference && (
+                  <p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">기준: {explain.reference}</p>
+                )}
+              </Section>
+            )}
+
+            {explain.floor_groups && explain.floor_groups.length > 0 && (
+              <Section title="집계 단위">
+                <BulletList items={explain.floor_groups} />
+              </Section>
+            )}
+
+            {explain.controls && explain.controls.length > 0 && (
+              <Section title="포함·제외 조건">
+                <BulletList items={explain.controls} />
+              </Section>
+            )}
+
+            <Section title="해석 방법">
+              <BulletList items={explain.interpretation} />
             </Section>
-          )}
 
-          {explain.controls && explain.controls.length > 0 && (
-            <Section title="포함·제외 조건">
-              <BulletList items={explain.controls} />
-            </Section>
-          )}
-
-          <Section title="해석 방법">
-            <BulletList items={explain.interpretation} />
-          </Section>
-
-          {hints.length > 0 && (
-            <Section title="이번 결과 기준">
-              <ul className="space-y-1">
-                {hints.map((hint) => (
-                  <li
-                    key={hint}
-                    className={clsx(
-                      "text-[11px] pl-2 border-l-2",
-                      hint.startsWith("⚠")
-                        ? "border-amber-400 text-amber-900 dark:text-amber-200"
-                        : "border-indigo-300 text-slate-700 dark:text-slate-200",
-                    )}
-                  >
-                    {hint}
-                  </li>
-                ))}
-              </ul>
-            </Section>
-          )}
-
-          <Section title="한계·주의">
-            <BulletList items={explain.limitations} />
-          </Section>
-
-          {presets.length > 0 && (
-            <Section title="자주 묻는 질문">
-              <div className="space-y-1">
-                {presets.map((p) => (
-                  <div
-                    key={p.id}
-                    className="rounded border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 overflow-hidden"
-                  >
-                    <button
-                      type="button"
-                      className="w-full text-left px-2 py-1.5 text-[11px] font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
-                      onClick={() => setActivePreset(activePreset === p.id ? null : p.id)}
+            {hints.length > 0 && (
+              <Section title="이번 결과 기준">
+                <ul className="space-y-1">
+                  {hints.map((hint) => (
+                    <li
+                      key={hint}
+                      className={clsx(
+                        "text-[11px] pl-2 border-l-2",
+                        hint.startsWith("⚠")
+                          ? "border-amber-400 text-amber-900 dark:text-amber-200"
+                          : "border-indigo-300 text-slate-700 dark:text-slate-200",
+                      )}
                     >
-                      {p.question}
-                    </button>
-                    {activePreset === p.id && (
-                      <p className="px-2 pb-2 text-[11px] text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-600">
-                        {p.answer || "화면 Facts·지표를 함께 확인해 주세요."}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
+                      {hint}
+                    </li>
+                  ))}
+                </ul>
+              </Section>
+            )}
+
+            <Section title="한계·주의">
+              <BulletList items={explain.limitations} />
             </Section>
-          )}
+
+            {presets.length > 0 && (
+              <Section title="자주 묻는 질문">
+                <div className="space-y-1">
+                  {presets.map((p) => (
+                    <div
+                      key={p.id}
+                      className="rounded border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 overflow-hidden"
+                    >
+                      <button
+                        type="button"
+                        className="w-full text-left px-2 py-1.5 text-[11px] font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
+                        onClick={() => setActivePreset(activePreset === p.id ? null : p.id)}
+                      >
+                        {p.question}
+                      </button>
+                      {activePreset === p.id && (
+                        <p className="px-2 pb-2 text-[11px] text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-600">
+                          {p.answer || "화면 Facts·지표를 함께 확인해 주세요."}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+          </div>
+          <ResizeHandles onPointerDown={(edge, e) => beginResize(edge, e, box)} />
         </div>
       </>
     ) : null;

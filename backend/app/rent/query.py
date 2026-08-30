@@ -29,6 +29,7 @@ ASSET_TYPES = ("apartment", "rowhouse", "officetel", "detached")
 _TX_N = "COALESCE(SUM(jeonse_n + mixed_n + monthly_n), 0)::int"
 SORT_KEYS = {
     "jeonse_median": "jeonse_median DESC NULLS LAST, jeonse_n DESC",
+    "jeonse_mean": "jeonse_mean DESC NULLS LAST, jeonse_n DESC",
     "jeonse_equiv_median": "jeonse_median DESC NULLS LAST, jeonse_n DESC",
     "mixed_n": "mixed_n DESC, mixed_monthly_median DESC NULLS LAST",
     "monthly_n": "monthly_n DESC, monthly_median DESC NULLS LAST",

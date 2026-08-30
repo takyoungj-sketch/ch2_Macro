@@ -74,8 +74,86 @@ function ConvertedCell({ m }: { m: LeaseMetric }) {
   return <span className="font-semibold">{fmtUnit(v)}</span>;
 }
 
-function tradeCount(row: RentBuildingRow): number {
-  return (row.jeonse?.n ?? 0) + (row.mixed?.n ?? 0) + (row.monthly?.n ?? 0);
+function Nlt15({ n }: { n: number }) {
+  if (n <= 0 || n >= 15) return null;
+  return <span className="ml-0.5 text-[9px] text-amber-600">n&lt;15</span>;
+}
+
+function MeanWithN({
+  v,
+  n,
+}: {
+  v: number | null | undefined;
+  n: number;
+}) {
+  if (v == null) return <span className="text-slate-400">—</span>;
+  return (
+    <span className="whitespace-nowrap">
+      <span className="font-semibold">{fmtUnit(v)}</span>
+      {n > 0 ? (
+        <span className="ml-0.5 text-slate-400 font-normal">({n.toLocaleString("ko-KR")})</span>
+      ) : null}
+    </span>
+  );
+}
+
+function MonthlyMeanCell({
+  v,
+  mixedN,
+  monthlyN,
+}: {
+  v: number | null | undefined;
+  mixedN: number;
+  monthlyN: number;
+}) {
+  if (v == null) return <span className="text-slate-400">—</span>;
+  return (
+    <span className="whitespace-nowrap">
+      <span className="font-semibold">{fmtUnit(v)}</span>
+      <span className="ml-0.5 text-slate-400 font-normal">
+        ({mixedN.toLocaleString("ko-KR")}, {monthlyN.toLocaleString("ko-KR")})
+      </span>
+    </span>
+  );
+}
+
+function ColTitle({
+  label,
+  unit,
+  termId,
+}: {
+  label: string;
+  unit: string;
+  termId: string;
+}) {
+  return (
+    <span className="inline-flex items-center justify-center gap-0.5 leading-tight text-center">
+      <span>
+        {label}
+        <span className="block font-normal text-[10px] text-slate-400">({unit})</span>
+      </span>
+      <StatsGlossaryHelp termId={termId} size="xs" />
+    </span>
+  );
+}
+
+/** 반전세·순수월세의 월세/㎡만. 보증금·전세는 제외. */
+function monthlyRentMean(row: RentBuildingRow): { mean: number | null; n: number } {
+  let w = 0;
+  let n = 0;
+  const mixN = row.mixed?.n ?? 0;
+  const mixM = row.mixed?.monthly?.mean;
+  if (mixN > 0 && mixM != null) {
+    w += mixM * mixN;
+    n += mixN;
+  }
+  const monN = row.monthly?.n ?? 0;
+  const monM = row.monthly?.mean;
+  if (monN > 0 && monM != null) {
+    w += monM * monN;
+    n += monN;
+  }
+  return { mean: n ? w / n : null, n };
 }
 
 function formatAppliedRate(
@@ -141,7 +219,7 @@ export default function App() {
   const [addr2, setAddr2] = useState("");
   const [guList, setGuList] = useState<string[]>([]);
   const [leafList, setLeafList] = useState<string[]>([]);
-  const [sort, setSort] = useState("jeonse_equiv_median");
+  const [sort, setSort] = useState("jeonse_mean");
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [buildingSearch, setBuildingSearch] = useState("");
   const [selected, setSelected] = useState<RentBuildingRow | null>(null);
@@ -357,7 +435,8 @@ export default function App() {
       />
       <PublishAiContext context={rentAiContext} />
 
-      <div className="flex flex-1 min-h-0 overflow-hidden" style={{ zoom: contentZoom }}>
+      <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
+      <main className="flex flex-1 min-h-0">
         <aside className="layout-sidebar p-4 space-y-3">
           <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">조건</h2>
           <div className="space-y-1">
@@ -470,7 +549,8 @@ export default function App() {
           <label className="text-xs block space-y-1">
             <span className="text-slate-500">정렬</span>
             <select className="input" value={sort} onChange={(e) => setSort(e.target.value)}>
-              <option value="jeonse_equiv_median">전세환산</option>
+              <option value="jeonse_mean">전세보증금</option>
+              <option value="jeonse_equiv_median">전세환산값</option>
               <option value="total_n">거래건수</option>
               <option value="name">건물명</option>
             </select>
@@ -488,7 +568,7 @@ export default function App() {
             상권통계
           </button>
           <p className="text-[10px] text-slate-400 leading-snug">
-            목록은 건물 1행 · r 적용 환산 평균(만원/㎡). 전세/반전세/월세 원값·거래·회귀는 상세.
+            목록은 건물 1행 · 접힌 표는 전세·매매·월세 평균. 환산은 키우기.
           </p>
           {addr2 && (
             <p className="text-[10px] text-slate-400 leading-snug">
@@ -544,7 +624,7 @@ export default function App() {
               }}
             />
           </section>
-          <div className="p-4 pt-2">
+          <div className="p-4 pt-2 flex-1 min-h-0 overflow-y-auto">
             {metaQ.data && (metaQ.data.addr1?.length ?? 0) === 0 && (
               <p className="text-sm text-amber-700">
                 임대 마트가 없습니다. <code>py pipeline/rent/build_building_stats.py</code> 를 실행하세요.
@@ -605,7 +685,7 @@ export default function App() {
                     <StatsTableExpandButton
                       expanded={tableWide}
                       onToggle={() => setTableWide((v) => !v)}
-                      title="매매 평균(만원/㎡)과 전세가율을 보여 줍니다"
+                      title="전세환산값·전세환산가율·월세환산값·도로명을 보여 줍니다"
                     />
                     <label className="flex items-center gap-1.5">
                       <span>검색</span>
@@ -632,56 +712,60 @@ export default function App() {
                       <col className="col-name" />
                       <col className="col-num" />
                       <col className="col-num" />
-                      {tableWide && <col className="col-num" />}
-                      {tableWide && <col className="col-num" />}
                       <col className="col-num" />
+                      <col className="col-num" />
+                      {tableWide && <col className="col-num" />}
+                      {tableWide && <col className="col-num" />}
+                      {tableWide && <col className="col-num" />}
                       <col className="col-year" />
                       <col className="col-jibun" />
-                      <col className="col-road" />
+                      {tableWide && <col className="col-road" />}
                     </colgroup>
                     <thead>
                       <tr>
                         <th>유형</th>
                         <th>건물명</th>
-                        <th>거래건수</th>
                         <th>
-                          <span className="inline-flex items-center justify-center gap-0.5">
-                            전세전환값
-                            <StatsGlossaryHelp termId="jeonse_equiv" size="xs" />
-                          </span>
+                          <ColTitle label="전세보증금" unit="만원/㎡" termId="jeonse_deposit" />
+                        </th>
+                        <th>
+                          <ColTitle label="매매가" unit="만원/㎡" termId="sale_unit_mean" />
+                        </th>
+                        <th>
+                          <ColTitle label="전세가율" unit="%" termId="jeonse_to_sale_pct" />
+                        </th>
+                        <th>
+                          <ColTitle label="월세" unit="만원/㎡" termId="monthly_rent_mean" />
                         </th>
                         {tableWide && (
                           <th>
-                            <span className="inline-flex items-center justify-center gap-0.5">
-                              매매가
-                              <StatsGlossaryHelp termId="sale_unit_mean" size="xs" />
-                            </span>
+                            <ColTitle label="전세환산값" unit="만원/㎡" termId="jeonse_equiv" />
                           </th>
                         )}
                         {tableWide && (
                           <th>
-                            <span className="inline-flex items-center justify-center gap-0.5">
-                              전세가율
-                              <StatsGlossaryHelp termId="jeonse_to_sale_pct" size="xs" />
-                            </span>
+                            <ColTitle label="전세환산가율" unit="%" termId="jeonse_equiv_sale_pct" />
                           </th>
                         )}
-                        <th>
-                          <span className="inline-flex items-center justify-center gap-0.5">
-                            월세전환값
-                            <StatsGlossaryHelp termId="monthly_equiv" size="xs" />
-                          </span>
-                        </th>
+                        {tableWide && (
+                          <th>
+                            <ColTitle label="월세환산값" unit="만원/㎡" termId="monthly_equiv" />
+                          </th>
+                        )}
                         <th>준공</th>
                         <th>지번주소</th>
-                        <th>도로명주소</th>
+                        {tableWide && <th>도로명주소</th>}
                       </tr>
                     </thead>
                     <tbody>
                       {items.map((row) => {
-                        const n = tradeCount(row);
                         const saleN = row.sale?.n ?? 0;
+                        const jeonseN = row.jeonse?.n ?? 0;
+                        const mixedN = row.mixed?.n ?? 0;
+                        const monthlyN = row.monthly?.n ?? 0;
+                        const monthly = monthlyRentMean(row);
                         const ratio = row.jeonse_to_sale_pct;
+                        const equivRatio = row.jeonse_equiv_sale_pct;
                         return (
                           <tr
                             key={`${row.building_key}|${row.asset_type}`}
@@ -699,44 +783,59 @@ export default function App() {
                             <td className="name" title={row.display_name}>
                               {row.display_name}
                             </td>
+                            <td className="lease">
+                              <MeanWithN v={row.jeonse?.mean} n={jeonseN} />
+                            </td>
+                            <td className="lease">
+                              <MeanWithN v={row.sale?.mean} n={saleN} />
+                            </td>
                             <td className="num">
-                              {n ? n.toLocaleString("ko-KR") : "—"}
-                              {n > 0 && n < 15 && (
-                                <span className="ml-0.5 text-[9px] text-amber-600">n&lt;15</span>
+                              {ratio != null ? (
+                                <>
+                                  {ratio.toFixed(1)}%
+                                  <Nlt15 n={jeonseN} />
+                                </>
+                              ) : (
+                                <span className="text-slate-400">—</span>
                               )}
                             </td>
                             <td className="lease">
-                              <ConvertedCell m={row.jeonse_equiv} />
+                              <MonthlyMeanCell
+                                v={monthly.mean}
+                                mixedN={mixedN}
+                                monthlyN={monthlyN}
+                              />
                             </td>
                             {tableWide && (
                               <td className="lease">
-                                {row.sale?.mean != null ? (
-                                  <>
-                                    <span className="font-semibold">{fmtUnit(row.sale.mean)}</span>
-                                    {saleN > 0 && saleN < 15 && (
-                                      <span className="ml-0.5 text-[9px] text-amber-600">n&lt;15</span>
-                                    )}
-                                  </>
+                                <ConvertedCell m={row.jeonse_equiv} />
+                              </td>
+                            )}
+                            {tableWide && (
+                              <td className="num">
+                                {equivRatio != null ? (
+                                  <span className={equivRatio > 100 ? "text-amber-700 dark:text-amber-300" : undefined}>
+                                    {equivRatio.toFixed(1)}%
+                                  </span>
                                 ) : (
                                   <span className="text-slate-400">—</span>
                                 )}
                               </td>
                             )}
                             {tableWide && (
-                              <td className="num">
-                                {ratio != null ? `${ratio.toFixed(1)}%` : "—"}
+                              <td className="lease">
+                                <ConvertedCell m={row.monthly_equiv} />
                               </td>
                             )}
-                            <td className="lease">
-                              <ConvertedCell m={row.monthly_equiv} />
-                            </td>
                             <td className="num">{row.building_year ?? "—"}</td>
                             <td className="addr truncate" title={row.jibun_address}>
                               {row.jibun_address || "—"}
                             </td>
-                            <td className="addr truncate text-slate-500" title={row.road_address}>
-                              {row.road_address || "—"}
-                            </td>
+                            {tableWide && (
+                              <td className="addr truncate text-slate-500" title={row.road_address}>
+                                {row.road_address || "—"}
+                              </td>
+                            )}
                           </tr>
                         );
                       })}
@@ -748,6 +847,7 @@ export default function App() {
             )}
           </div>
         </div>
+      </main>
       </div>
 
       {selected && scope && (
