@@ -28,6 +28,7 @@ py scripts/monthly/verify_monthly_checklist_ready.py
 | 0.3 | 이번 달은 **CSV 경로**로 진행한다 (xlsx `run_monthly_cycle` 쓰지 않음) |
 | 0.4 | 「코드만 배포하면 월이 바뀐다」는 **거짓** — Promote 필수 |
 | 0.5 | 이번 cycle 종류: **실거래 달** / **대장 달**(분기) / **공부 달**(연 1회). 대장·보강 절차는 [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md). 실거래 러너는 **skip-enrich 기본** — `--enrich` 켜지 말 것 |
+| 0.6 | **이 1페이지에 없는 것(의도):** 주거 전월세 원장 월갱신, K-apt 월 파일, 검증로봇 랜덤 샘플. 상권은 분기만 §4. 프로필은 연초만 §7. 칸을 만들기 전까지 월간 완주 범위가 아님 |
 
 ---
 

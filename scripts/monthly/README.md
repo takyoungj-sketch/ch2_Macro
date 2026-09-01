@@ -1,59 +1,44 @@
-# `scripts/monthly/` — 월간 토지 반자동 배치
+# `scripts/monthly/` — 월간 배치
 
-실제 운영 절차·용어는 **`docs/MONTHLY_UPDATE_SOP.md`** 를 본편으로 둔다.
+운영 1페이지: [`docs/MONTHLY_UPDATE_CHECKLIST.md`](../../docs/MONTHLY_UPDATE_CHECKLIST.md)  
+토지 SOP: [`docs/MONTHLY_UPDATE_SOP.md`](../../docs/MONTHLY_UPDATE_SOP.md)  
+xlsx / `run_monthly_cycle*` 는 **복구·레거시**. 매월 아래 CSV 러너로 시작한다.
 
-## 용도×지목군 (D-026) — 매월 필수
+## SSOT 러너 (매월)
 
-`run_monthly_cycle` 은 **용도×지목(category) V2** 까지다.  
-지목군 mart·장기추세 annual(group) 은 **문서 §7.1** 을 따라 **별도 실행**한다 (에이전트 체크리스트 포함).
+```
+py scripts/monthly/run_land_cycle_csv.py --cycle-id YYYYMM
+py scripts/monthly/run_built_cycle_csv.py --cycle-id YYYYMM
+py scripts/monthly/run_collective_cycle_csv.py --cycle-id YYYYMM
+```
 
-- 본편: [`docs/MONTHLY_UPDATE_SOP.md`](../../docs/MONTHLY_UPDATE_SOP.md) **§7.1** (사고 노트 §7.1.0 · 전국성 검증 포함)
-- 설계: [`docs/LAND_JIMOK_GROUP_DESIGN.md`](../../docs/LAND_JIMOK_GROUP_DESIGN.md)
-- **빼먹으면** 배포 UI에서 `matrix_mode=group` 404 재발. basic+upper **둘 다** `--col-axis group` 전국 빌드.
-- UI: 기본=용도×지목 · 지목군은 버튼만 · 지역 변경 시 용도×지목으로 복귀.
+- 토지: V2 windows **3,5,7** · §7.1 group · `analysis_cache` TRUNCATE. `--skip-jimok-group` / `--skip-cache-clear` 비권장.
+- 복합: UPSERT + stale purge + 원장 mart. skip-enrich 기본. `--enrich` 는 D-051 전 운영 적재에 쓰지 않음.
+- 집합: skip-enrich 기본. 신규 키만 `--enrich-new-keys`.
+- `cycle_id` ↔ V2 `--as-of`: `cycle_utils.py`. 수집 끝 월이 직전 달과 다르면 `--v2-as-of`.
+- `DATABASE_URL` / `BUILT_DATABASE_URL` / `COLLECTIVE_DATABASE_URL`: `pipeline/.env` · `.env.built` · `.env.collective`.
 
-## 진입점
+건수 스냅샷: `snapshot_land_tx_counts.py` · `snapshot_built_tx_counts.py` · `snapshot_collective_tx_counts.py`  
+비교: `compare_count_snapshots.py` · `compare_built_count_snapshots.py` · `compare_collective_count_snapshots.py`  
+beopjungri 품질: `verify_beopjungri_mapping.py --cycle-id YYYYMM` (목표 ≥99.7%)  
+분양권 키: [`COLLECTIVE_PRESALE_BUILDING_KEY.md`](../../docs/COLLECTIVE_PRESALE_BUILDING_KEY.md)
 
-- **통합 실행:**  
-  `py scripts/monthly/run_monthly_cycle.py --cycle-id YYYYMM` — **기본적으로** `run_pipeline` 에 `--with-upper-v2`(상위 행정 사전집계) 포함. 끄려면 `--skip-upper-v2`.  
-  또는 `pwsh scripts/monthly/run_monthly_cycle.ps1 -CycleId YYYYMM` (상위 생략: `-SkipUpperV2`)
-- **평탄화만:** `py scripts/monthly/flatten_raw_xlsx.py`
-- **시도별 건수 스냅샷:** `py scripts/monthly/snapshot_land_tx_counts.py`
-- **스냅샷 비교:** `py scripts/monthly/compare_count_snapshots.py`
-- **`cycle_id` ↔ V2 `--as-of` 매핑(기본 규칙):** `scripts/monthly/cycle_utils.py`
+## 용도×지목군 (D-026)
 
-`DATABASE_URL`(및 선택 `STATS_*`)은 기존과 같이 **`pipeline/.env`** 또는 환경 변수를 사용한다.  
-`flatten`/`snapshot*` 은 레포 루트에서 실행해도 `pipeline/` 을 `sys.path` 에 넣어 `db_utils` 를 로드한다.
+CSV 토지 러너가 **기본으로** 수행. 빼먹으면 배포 UI `matrix_mode=group` 404.
 
-## 복합부동산 월간 배치
+xlsx `run_monthly_cycle` 만 돌린 복구에서만 SOP **§7.1** 수동 (`--windows 3,5,7`). 설계: [`LAND_JIMOK_GROUP_DESIGN.md`](../../docs/LAND_JIMOK_GROUP_DESIGN.md).  
+UI: 기본=용도×지목 · 지목군은 버튼만 · 지역 변경 시 용도×지목으로 복귀.
 
-- **통합 실행:**  
-  `py scripts/monthly/run_built_monthly_cycle.py --cycle-id YYYYMM --require-land-cycle`  
-  (토지 cycle **이후** · `--use-legacy-defaults` 로 GUKTO 경로 전환기 ingest)
-- **건수 스냅샷:** `py scripts/monthly/snapshot_built_tx_counts.py`
-- **스냅샷 비교:** `py scripts/monthly/compare_built_count_snapshots.py`
-- **beopjungri 매칭 품질:** `py scripts/monthly/verify_beopjungri_mapping.py --cycle-id YYYYMM` (토지·집합·복합 통합, 목표 ≥99.7%)
-- **SOP:** `docs/BUILT_MONTHLY_UPDATE_SOP.md`
+## 레거시 (xlsx · 복구만)
 
-`BUILT_DATABASE_URL` 은 **`pipeline/.env.built`** (및 `import_refined` 의 built db_utils).
+- 토지: `run_monthly_cycle.py` / `run_monthly_cycle.ps1` — category V2만. 이후 §7.1 수동.
+- 복합: `run_built_monthly_cycle.py` (`--use-legacy-defaults` GUKTO)
+- 집합: `run_collective_monthly_cycle.py`
+- 평탄화: `flatten_raw_xlsx.py`
+- 토지 엑셀 수집: `download_molit_land_xlsx.py` (`selenium>=4.15`)
 
-## 집합부동산 월간 배치
-
-- **통합 실행:**  
-  `py scripts/monthly/run_collective_monthly_cycle.py --cycle-id YYYYMM --require-land-cycle`  
-  (`--use-legacy-defaults` GUKTO 경로)
-- **건수 스냅샷:** `py scripts/monthly/snapshot_collective_tx_counts.py`
-- **스냅샷 비교:** `py scripts/monthly/compare_collective_count_snapshots.py`
-- **SOP:** `docs/COLLECTIVE_MONTHLY_UPDATE_SOP.md`
-- **분양권 building_key 정규화 (월간 필수):** `docs/COLLECTIVE_PRESALE_BUILDING_KEY.md` — ingest가 최신 `building_keys.py`를 쓰는지 확인할 것. alias 변경 시 `pipeline/collective/rekey_presale_building_keys.py`.
-
-`COLLECTIVE_DATABASE_URL` 은 **`pipeline/.env.collective`**.
-
-## 국토부 엑셀 수집 (Selenium · 토지 매매)
-
-- `py -m pip install "selenium>=4.15"`
-- 전국 확장 전 1연치 검증 예:  
-  `py scripts/monthly/download_molit_land_xlsx.py --cycle-id 202605 --limit-regions 1`
+SOP: [`BUILT_MONTHLY_UPDATE_SOP.md`](../../docs/BUILT_MONTHLY_UPDATE_SOP.md) · [`COLLECTIVE_MONTHLY_UPDATE_SOP.md`](../../docs/COLLECTIVE_MONTHLY_UPDATE_SOP.md)
 
 ## 국토부 CSV 수집 (Selenium · 토지 매매 · 2010~2020 backfill)
 

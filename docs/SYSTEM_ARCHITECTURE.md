@@ -266,11 +266,12 @@ AWS Lightsail VPS (Ubuntu)
 | `NEXT_STEPS.md` | 현재 진행 중·백로그 |
 | `docs/DATA_FLOW.md` | 데이터 흐름 상세 |
 | `docs/DATABASE_SCHEMA.md` | 테이블·컬럼 상세 |
-| `docs/MONTHLY_UPDATE_PIPELINE.md` | 월간 갱신 단계별 가이드 |
+| `docs/MONTHLY_UPDATE_CHECKLIST.md` | 월간 1페이지 (CSV 러너 SSOT) |
+| `docs/MONTHLY_UPDATE_PIPELINE.md` | 월간 실패 시나리오 부록 (xlsx 13단계는 레거시) |
 | `docs/DATA_INTEGRITY_CHECKLIST.md` | 무결성 검증 체크리스트 |
 | `docs/RISK_REGISTER.md` | 위험 요소 레지스터 |
 | `docs/ARCHITECTURE_REVIEW_REPORT.md` | 아키텍처 비판적 검토 |
-| `docs/MONTHLY_UPDATE_SOP.md` | 운영 SOP (상세 절차) |
+| `docs/MONTHLY_UPDATE_SOP.md` | 토지 월간 SOP (CSV · windows 3,5,7) |
 | `docs/V2_STATS_DESIGN.md` | V2 통계 설계 |
 | `docs/TWIN_V8_DESIGN.md` | Twin v8 알고리즘 설계 |
 | `docs/BUILT_MODEL_SELECTION_DESIGN.md` | 복합 모형 추천·비교 (현재 Candidate 부분 구현) |

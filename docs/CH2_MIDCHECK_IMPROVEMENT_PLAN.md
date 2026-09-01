@@ -339,3 +339,4 @@ Promote 후 한 표로 확인:
 | 2026-08-13 | P1: `stage2.twin_validation` API + RecommendStagePanel Twin Validation 배지 |
 | 2026-08-13 | ② H3: `ModelRecommendSection` 공유 골격 · 토지 AIC/MAPE · 집합 AdjR²/CV 탭 |
 | 2026-08-13 | 월간 preflight PASS · okcheon twin_validation 실응답 SMOKE_OK |
+| 2026-09-01 | SOP·PIPELINE·scripts/monthly README를 CSV 러너·windows 3,5,7에 맞춤. 체크리스트 0.6(전월세·K-apt·검증로봇은 1페이지 밖) |

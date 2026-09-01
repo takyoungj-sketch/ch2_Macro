@@ -205,7 +205,7 @@ CREATE TABLE land_jimok_group_map (
 | J4 | paid / free_v2 / upper_stats API (`matrix_mode`) | ✅ |
 | J5 | Matrix UI 전환 토글 | ✅ 용도×지목 / 용도×지목군 |
 | J6 | 로컬 시험 빌드 + integrity (zone×group vs 지목 합) | ✅ 전국 sample mismatch=0 |
-| J7 | 월간 cycle 반영 · Promote · 프론트 배포 | 📄 **월간 절차 문서화** [`MONTHLY_UPDATE_SOP.md`](./MONTHLY_UPDATE_SOP.md) **§7.1** (에이전트 실행 가이드). `run_monthly_cycle` 자동 배선·Promote·프론트는 잔여 ⬜ |
+| J7 | 월간 cycle 반영 · Promote · 프론트 배포 | ✅ CSV `run_land_cycle_csv` 가 group·annual 포함. 절차 [`MONTHLY_UPDATE_SOP.md`](./MONTHLY_UPDATE_SOP.md) §7.1 · 체크리스트. Promote는 매 cycle 운영 |
 
 ---
 
@@ -222,8 +222,8 @@ CREATE TABLE land_jimok_group_map (
 [x] land_annual_* group (옵션) — db/041 · build_annual_* --col-axis · long-term-trend matrix_mode
 [x] DATA_INTEGRITY Level 2 group 검증 (전국 sample)
 [x] 월간 SOP §7.1 용도×지목군 에이전트 가이드 (증분 annual 정책 포함)
-[ ] run_monthly_cycle / run_pipeline 에 `--col-axis`·annual 자동 배선
-[ ] Promote + VPS 프론트
+[x] `run_land_cycle_csv` 에 group·annual 배선 (xlsx `run_monthly_cycle` 는 레거시)
+[ ] Promote 는 매 월간 cycle 운영
 [ ] (후속) Profile·Twin Feature 검토 — 이번 범위 아님
 ```
 

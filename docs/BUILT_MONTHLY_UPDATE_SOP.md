@@ -2,9 +2,9 @@
 
 > **목표:** 매월 초 **토지 cycle 완료 후** 상업·공장·단독다가구 → `built_stats.built_transactions` 갱신, 검증·승인 후 반영.  
 > **전제:** 토지와 동일하게 **단순성·재현성·검증·롤백** 우선. 사전통계(V2)는 **당분간 없음** — 회귀는 실시간.  
-> **기준 루트:** `C:\ch2\ch2_Macro`
+> **기준 루트:** 저장소 루트. 예: `C:\ch2\ch2_Macro` · `E:\ch2\ch2_Macro`.
 >
-> **2026-08 SSOT:** `scripts/monthly/run_built_cycle_csv.py`. 1페이지: [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md).  
+> **SSOT:** `scripts/monthly/run_built_cycle_csv.py`. 1페이지: [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md).  
 > 축약·보강 달력: [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md) — 실거래 달 skip-enrich 기본. 이 SOP의 xlsx 러너 이름으로 월간을 돌리지 말 것.  
 > xlsx/`run_built_monthly_cycle` 은 복구·레거시. git deploy ≠ 월갱신.
 
@@ -15,12 +15,12 @@
 ## 1. 실행 순서 (월간)
 
 ```
-1) 토지: run_monthly_cycle.py → 검증 → Promote
-2) 복합부동산: run_built_monthly_cycle.py → 검증 → Promote (built_stats)
-3) (선택) frontend-built / 백엔드 재기동 — 원장만 바뀌면 회귀 API 자동 반영
+1) 토지: run_land_cycle_csv.py → 검증 → Promote (land_stats)
+2) 복합: run_built_cycle_csv.py → 검증 → Promote (built_stats)
+3) 집합: run_collective_cycle_csv.py (체크리스트 §3)
 ```
 
-**토지를 먼저** 돌리는 이유: `region_codes` 행정코드가 land → built 로 동기화되기 때문.
+xlsx `run_built_monthly_cycle.py` 는 **복구**. 토지를 먼저 — `region_codes` 정본이 land.
 
 ---
 
@@ -84,15 +84,24 @@ py scripts\monthly\run_built_monthly_cycle.py --cycle-id 202606 --use-legacy-def
 
 ### 5.1 사전 조건
 
-- [ ] 토지 `run_monthly_cycle.py` 완료 (권장: `--require-land-cycle` 로 강제)
-- [ ] `raw\복합부동산\{cycle_id}\` 에 3종 정제 xlsx (또는 `--use-legacy-defaults`)
+- [ ] 토지 `run_land_cycle_csv.py` 완료 (권장: `--require-land-cycle`)
+- [ ] MOLIT 복합 CSV (`molit_csv_collector` / 체크리스트 경로)
 - [ ] `BUILT_DATABASE_URL` 연결 확인
 
-### 5.2 통합 실행
+xlsx 복구만: `raw\복합부동산\{cycle_id}\` 3종 정제 xlsx 또는 `--use-legacy-defaults`.
+
+### 5.2 통합 실행 (CSV · SSOT)
 
 ```powershell
-cd C:\ch2\ch2_Macro
-py scripts\monthly\run_built_monthly_cycle.py --cycle-id 202606 --require-land-cycle
+py scripts\monthly\run_built_cycle_csv.py --cycle-id YYYYMM
+```
+
+동작: CSV UPSERT → stale hash purge → `build_scope_stats`(원장만) → skip-enrich 기본 → 동결 검증. `--enrich` 는 D-051 전 운영에 쓰지 않음.
+
+### 5.2b xlsx 복구
+
+```powershell
+py scripts\monthly\run_built_monthly_cycle.py --cycle-id YYYYMM --require-land-cycle
 ```
 
 동작:
@@ -101,7 +110,9 @@ py scripts\monthly\run_built_monthly_cycle.py --cycle-id 202606 --require-land-c
 2. `pipeline/built/import_refined.py --refresh-region-codes` (유형별 **truncate 후 재적재**)
 3. `built_tx_counts_after.json` (유형 × 시도 건수)
 
-### 5.3 옵션
+### 5.3 옵션 (xlsx `run_built_monthly_cycle` 복구)
+
+CSV 러너 옵션은 `run_built_cycle_csv.py --help` (`--dry-run`, `--enrich` 등).
 
 | 옵션 | 설명 |
 |------|------|
@@ -150,7 +161,7 @@ pg_dump -h localhost -U postgres -d built_stats -Fc `
 | 방식 | 절차 |
 |------|------|
 | **A (권장)** | 검증된 dump → 서버 restore |
-| **B** | 서버에서 동일 `run_built_monthly_cycle` 재실행 |
+| **B** | 서버에서 동일 `run_built_cycle_csv` 재실행 (xlsx 복구면 `run_built_monthly_cycle`) |
 
 토지 Promote와 **독립** — `built_stats` 만 롤백 가능.
 
@@ -167,12 +178,14 @@ Promote 이전 `pg_dump` 로 `built_stats` 복원 → 백엔드 재기동.
 
 ---
 
-## 9. 로드맵 (미구현)
+## 9. 로드맵 (xlsx 경로 · 참고)
+
+MOLIT **CSV 수집기**가 월간 SSOT다. 아래 B1–B3는 옛 xlsx 러너 잔여.
 
 | 단계 | 내용 |
 |------|------|
-| B1 | 국토부 3종 xlsx **Selenium 수집** (토지 download 스크립트 패턴) |
-| B2 | in-repo **정제** (`COL_MAP`·집합 제외·detached 처리) |
+| B1 | (레거시) 국토부 3종 xlsx Selenium |
+| B2 | (레거시) in-repo 정제 |
 | B3 | `contract_month` / `contract_date` 적재 → 12개월 창 정밀화 |
 | B4 | (선택) 무료용 canonical 회귀 preset 월배치 |
 
@@ -181,16 +194,13 @@ Promote 이전 `pg_dump` 로 `built_stats` 복원 → 백엔드 재기동.
 ## 10. 빠른 참조
 
 ```powershell
-# manifest만 (경로 확인)
-py scripts\monthly\run_built_monthly_cycle.py --cycle-id 202606 --manifest-only
+# SSOT
+py scripts\monthly\run_built_cycle_csv.py --cycle-id YYYYMM --dry-run
+py scripts\monthly\run_built_cycle_csv.py --cycle-id YYYYMM
 
-# 전환기 ingest (GUKTO 기본 경로)
-py scripts\monthly\run_built_monthly_cycle.py --cycle-id 202606 --use-legacy-defaults --refresh-region-codes
-
-# 건수 스냅샷만
-py scripts\monthly\snapshot_built_tx_counts.py `
-  --output clean_snapshots\202606\built\built_tx_counts_after.json `
-  --cycle-id 202606
+# xlsx 복구
+py scripts\monthly\run_built_monthly_cycle.py --cycle-id YYYYMM --manifest-only
+py scripts\monthly\run_built_monthly_cycle.py --cycle-id YYYYMM --use-legacy-defaults --refresh-region-codes
 ```
 
 ## 11. 미구현 — 축약·enrich

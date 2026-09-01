@@ -1,10 +1,10 @@
 # 월간 집합부동산(collective) 데이터 업데이트 SOP
 
 > **목표:** 매월 초 **토지 cycle 완료 후** 아파트·연립·오피스텔 → `collective_stats` 갱신.  
-> **기준 루트:** `C:\ch2\ch2_Macro`
+> **기준 루트:** 저장소 루트. 예: `C:\ch2\ch2_Macro` · `E:\ch2\ch2_Macro`.
 >
-> **2026-08 SSOT:** `scripts/monthly/run_collective_cycle_csv.py`. 1페이지: [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md).  
-> 축약·K-apt·공시지가 달력: [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md) §4. 실거래 러너 skip-enrich 기본.
+> **SSOT:** `scripts/monthly/run_collective_cycle_csv.py`. 1페이지: [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md).  
+> 축약·K-apt·공시지가 달력: [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md) §4. 실거래 러너 skip-enrich 기본.  
 > xlsx 경로는 복구·레거시. git deploy ≠ 월갱신.
 
 관련: [`MONTHLY_UPDATE_SOP.md`](MONTHLY_UPDATE_SOP.md), [`BUILT_MONTHLY_UPDATE_SOP.md`](BUILT_MONTHLY_UPDATE_SOP.md), [`COLLECTIVE_RESEARCH_MVP.md`](COLLECTIVE_RESEARCH_MVP.md), [`COLLECTIVE_PRESALE_BUILDING_KEY.md`](COLLECTIVE_PRESALE_BUILDING_KEY.md)
@@ -18,35 +18,36 @@
 ## 1. 실행 순서
 
 ```
-1) 토지: run_monthly_cycle.py → Promote
-2) (선택) 복합 built: run_built_monthly_cycle.py
-3) 집합: run_collective_monthly_cycle.py → 검증 → Promote collective_stats
+1) 토지: run_land_cycle_csv.py → Promote
+2) 복합: run_built_cycle_csv.py
+3) 집합: run_collective_cycle_csv.py → 검증 → Promote collective_stats
 ```
 
-**토지를 먼저** — `region_codes` 동기화.
+xlsx `run_collective_monthly_cycle.py` 는 **복구**. 토지를 먼저 — `region_codes` 동기화.
 
 ---
 
-## 2. cycle_id=202607 (2026년 7월 초)
-
-| 항목 | 값 |
-|------|-----|
-| cycle_id | `202607` |
-| 수집 연월 (규칙) | `202508` ~ `202606` (직전 12개월, land/built와 동일) |
+## 2. cycle_id (토지·복합과 동일 YYYYMM)
 
 ```powershell
-py scripts\monthly\run_collective_monthly_cycle.py --cycle-id 202607 --require-land-cycle
+py scripts\monthly\run_collective_cycle_csv.py --cycle-id YYYYMM
 ```
 
-전환기 (raw 미구축):
+수집 연월은 `collection_yyyymm_range_from_cycle_id` (직전 12개월). 끝 월이 다르면 러너/`--v2-as-of` 규칙을 토지와 맞춘다.
+
+xlsx 복구:
 
 ```powershell
-py scripts\monthly\run_collective_monthly_cycle.py --cycle-id 202607 --use-legacy-defaults --require-land-cycle
+py scripts\monthly\run_collective_monthly_cycle.py --cycle-id YYYYMM --require-land-cycle
 ```
 
 ---
 
-## 3. raw 디렉터리 (권장)
+## 3. raw 디렉터리
+
+**현행 CSV:** `molit_csv_collector` 출력. 러너가 `cycle_utils.resolve_csv_subdir` 로 아파트·연립·오피스텔·분양·집합상가·집합공장을 찾는다.
+
+xlsx 복구:
 
 ```
 raw\집합부동산\{cycle_id}\
@@ -95,8 +96,9 @@ py scripts\monthly\compare_collective_count_snapshots.py --before ... --after ..
 
 ---
 
-## 6. 미구현 (스켈레ton)
+## 6. 레거시·축약 달력 (1페이지 밖)
 
-- MOLIT Selenium 수집 (`참고/0.수집.ipynb`) 스크립트화 — 2차
-- `contract_month` 정밀 12개월 창
-- 축약 DB enrich · K-apt 월 갱신 · 공시지가 재파생 — [`PARCEL_MASTER_MONTHLY_UPDATE.md`](PARCEL_MASTER_MONTHLY_UPDATE.md) §4·§7
+- xlsx Selenium 수집 — 복구만. 월간은 CSV 수집기.
+- `contract_month` 정밀 12개월 창 — 잔여.
+- 축약 enrich · K-apt 월 갱신 · 공시지가 재파생 — [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md) §4·§7. **체크리스트 완주 범위에 칸을 넣지 않음** (빼는 결정).
+

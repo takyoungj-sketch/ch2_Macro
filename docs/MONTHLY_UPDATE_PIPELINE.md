@@ -1,27 +1,45 @@
-# 월간 갱신 파이프라인 (Monthly Update Pipeline)
+# 월간 갱신 파이프라인 — 실패 시나리오 부록
 
-> 최종 업데이트: 2026-06-24  
-> 운영 SOP(절차 상세)는 `docs/MONTHLY_UPDATE_SOP.md` 참조.  
-> 이 문서는 **각 단계의 역할·실패 시나리오·체크포인트** 중심.
+> **운영 SSOT:** [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md)  
+> **러너:** `run_land_cycle_csv.py` / `run_built_cycle_csv.py` / `run_collective_cycle_csv.py` (토지 V2 windows **3,5,7** · group 포함)  
+> 상세 절차: [`MONTHLY_UPDATE_SOP.md`](./MONTHLY_UPDATE_SOP.md). xlsx `run_monthly_cycle` 은 복구.  
+> **이 문서의 §1 13단계는 토지 xlsx 레거시 단계명이다. 매월 그 순서로 돌리지 말 것.**  
+> 실패 표(오염 CSV, hash, 캐시, needs_review)는 현행 collect/clean에도 유효.  
+> 본문 정리: 2026-09-01 (원문 단계표는 2026-06-24).
 
 ---
 
-## 1. 전체 단계
+## 0. 현행 CSV 흐름 (매월)
 
 ```
-1. Raw Download    국토부 엑셀 수집
-2. Flatten         시도별 xlsx 평탄화
+1. MOLIT CSV 수집 (molit_csv_collector · 검증 포함)
+2. run_land_cycle_csv  — purge → collect/clean/dedupe → V2 3,5,7 category+group → annual → cache TRUNCATE
+3. run_built_cycle_csv  — 토지 이후 · skip-enrich 기본
+4. run_collective_cycle_csv
+5. verify_monthly_integrity · 건수 비교
+6. dump → VPS Promote → 3 DB as_of 스모크 (체크리스트 §5)
+```
+
+지역프로필·Twin mart는 **월간에 넣지 않는다** (D-054, 연초 §7). git/deploy ≠ 월갱신.
+
+---
+
+## 1. 레거시 xlsx 단계 (참고 · 실패 시나리오는 아래)
+
+```
+1. Raw Download    국토부 수집 (현행은 CSV collector)
+2. Flatten         시도별 xlsx 평탄화 (CSV 경로에선 생략)
 3. Collect         raw → land_transactions_raw
 4. Clean           raw → land_transactions (UPSERT)
 5. Dedupe          중복 행 제거
-6. build_stats_v2  → land_basic_stats_v2
+6. build_stats_v2  → land_basic_stats_v2   (현행 windows 3,5,7)
 7. build_upper     → land_upper_stats_v2
-8. build_annual    → land_annual_stats (선택)
-9. build_market    → market_stats (선택, Profile/Twin용)
-10. build_twin     → twin_neighbor_v8 (선택)
+8. build_annual    → land_annual_stats (CSV 러너가 당해 연도)
+9. build_market    → market_stats — 월간 아님 (D-054)
+10. build_twin     → twin_neighbor — 월간 아님 (D-054)
 11. Cache Clear    analysis_cache + analysis_base_cache TRUNCATE
 12. Validation     rehearse + verify_monthly_integrity
-13. Promote        pg_dump → VPS pg_restore
+13. Promote        dump → VPS restore (PG18: sql.gz / promote_restore.sh)
 ```
 
 ---
@@ -101,16 +119,12 @@
 
 **역할:** 원장 → 사전집계 (시도 단위 청크, `ON CONFLICT DO UPDATE`)
 
-**`as_of_month` 결정 규칙:**
-```
-STATS_V2_DEFAULT_AS_OF_MONTH 환경변수가 있으면 그 값
-없으면 실행일 기준 직전 달 1일
-(예: 2026-06-24 실행 → 2026-05-01)
-```
-> **⚠ 주의:** 환경변수를 잘못 설정하면 엉뚱한 기준월로 집계됨.  
-> 갱신 전 반드시 `$env:STATS_V2_DEFAULT_AS_OF_MONTH='2026-MM-01'` 확인.
+**`as_of_month` 결정 규칙:** CSV 러너는 `cycle_utils.stats_as_of_iso_from_cycle_id` (cycle 직전 달 1일). 수집 끝 월이 다르면 `--v2-as-of`.  
+환경변수 `STATS_V2_DEFAULT_AS_OF_MONTH` 는 **Promote 후 백엔드** 기본값이다. 빌드 as_of와 어긋나면 화면 월이 틀린다.
 
-**소요 시간:** build_stats_v2 약 2시간, build_upper_stats_v2 약 2.5시간 (전국, 로컬 기준)
+**windows:** **3,5,7** (체크리스트·CSV 러너). 3,5만 돌리면 7년 표가 비거나 이전 as_of가 남는다.
+
+**소요 시간:** build_stats_v2 약 2시간, build_upper_stats_v2 약 2.5시간 (전국, 로컬 기준). group 축은 추가.
 
 **실패 시나리오:**
 | 시나리오 | 증상 | 대응 |
@@ -121,21 +135,22 @@ STATS_V2_DEFAULT_AS_OF_MONTH 환경변수가 있으면 그 값
 
 ---
 
-### 단계 8~10: 선택적 빌드 (market_stats, twin_v8, annual)
+### 단계 8~10: annual · market_stats · twin
 
-**실행 여부:** 매월 필수 아님. 쌍둥이·Profile 갱신 시에만 실행.
-
-**twin_v8 소요:** 충청권 약 10분, 전국 예상 수 시간
+- **annual:** CSV 토지 러너가 **당해 달력 연도** both(+upper)를 돌린다. 전 기간 `--full` 재빌드 금지.
+- **market_stats / Profile Twin:** **월간 아님** (D-054). 연초 체크리스트 §7.
 
 ---
 
 ### 단계 11: Cache Clear
 
+CSV `run_land_cycle_csv.py` 가 끝에 TRUNCATE. `--skip-cache-clear` 비권장. 수동:
+
 ```powershell
 python backend/scripts/clear_analysis_cache.py --with-base-cache
 ```
 
-**⚠ 필수:** 원장·통계 갱신 후 반드시 실행. 미실행 시 stale 캐시 제공.
+**필수:** 미실행 시 stale 캐시.
 
 ---
 
@@ -155,45 +170,40 @@ python backend/scripts/clear_analysis_cache.py --with-base-cache
 
 ### 단계 13: Promote
 
+Windows PG18 `-Fc` → VPS PG16 `pg_restore` 는 실패할 수 있다. **plain `sql.gz`** + `deploy/scripts/promote_restore.sh` (SOP §9.4).
+
 ```powershell
-# 로컬
-pg_dump -Fc -d land_stats -f backups/land_stats_YYYYMMDD.dump
-scp backups/land_stats_YYYYMMDD.dump vps:/home/ubuntu/
-
-# VPS
-pg_restore -d land_stats_prod /home/ubuntu/land_stats_YYYYMMDD.dump
-sudo systemctl restart ch2macro
-
-# 검증
-curl https://api.ch2data.com/health
+py scripts/monthly/dump_land_for_promote.py
+# VPS restore 후
+curl -sf https://macro.ch2data.com/api/  # 또는 VPS: curl http://127.0.0.1:8000/health
 ```
+
+`STATS_V2_DEFAULT_AS_OF_MONTH` 를 이번 as_of 로 맞춘 뒤 백엔드 재기동.
 
 ---
 
-## 3. 월간 갱신 체크리스트 (요약)
+## 3. 운영 체크리스트
+
+복붙용 1페이지: [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md). 요약:
 
 ```
-[ ] 1. raw/토지/{cycle_id}/ 에 시도별 xlsx 모두 있는가?
-[ ] 2. STATS_V2_DEFAULT_AS_OF_MONTH 환경변수 정확한가?
-[ ] 3. pg_dump 백업 완료했는가?
-[ ] 4. run_monthly_cycle.py 성공 (exit_code=0)?
-[ ] 5. dedupe --dry-run → extra_rows=0?
-[ ] 6. land_transactions 건수 이전 월 대비 합리적?
-[ ] 7. needs_review 비율 < 1%?
-[ ] 8. build_stats_v2 as_of_month 정확한가?
-[ ] 9. analysis_cache TRUNCATE 완료?
-[ ] 10. rehearse_v2_update.py errors=0?
-[ ] 11. /health latest_as_of_month 정확한가?
-[ ] 12. UI에서 「YYYY년 M월 말 기준」 정상 표시?
-[ ] 13. Promote 후 VPS /health 정상?
+[ ] cycle_id YYYYMM · as_of = 직전 달 1일 (또는 --v2-as-of)
+[ ] CSV 수집 (검증 포함 collector)
+[ ] run_land_cycle_csv.py 성공 · cache TRUNCATE 로그
+[ ] run_built_cycle_csv.py · run_collective_cycle_csv.py
+[ ] verify_monthly_integrity · 건수 비교
+[ ] dump → VPS Promote · 3 DB as_of · UI 「N월 말 기준」
 ```
+
+xlsx `run_monthly_cycle` 로 돌리지 말 것.
 
 ---
 
-## 4. 복합부동산·집합부동산 갱신
+## 4. 복합·집합
 
-토지와 **별도 cycle**. 각 SOP 참조:
-- 복합: `docs/BUILT_MONTHLY_UPDATE_SOP.md`, `scripts/monthly/run_built_monthly_cycle.py`
-- 집합: `docs/COLLECTIVE_MONTHLY_UPDATE_SOP.md`, `scripts/monthly/run_collective_monthly_cycle.py`
+토지 **이후**. CSV SSOT:
 
-**공통 주의:** `region_codes`는 land SSOT → built/collective는 land DB에서 복사.
+- 복합: [`BUILT_MONTHLY_UPDATE_SOP.md`](./BUILT_MONTHLY_UPDATE_SOP.md) · `run_built_cycle_csv.py`
+- 집합: [`COLLECTIVE_MONTHLY_UPDATE_SOP.md`](./COLLECTIVE_MONTHLY_UPDATE_SOP.md) · `run_collective_cycle_csv.py`
+
+`region_codes` 는 land 정본 → built/collective 가 복사. xlsx `run_*_monthly_cycle.py` 는 복구.

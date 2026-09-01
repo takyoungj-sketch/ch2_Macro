@@ -2,12 +2,12 @@
 
 > **목표:** 매월 초 **전국 토지** 원장·정제·V2 사전통계를 **재현 가능한 절차**로 갱신하고, 검증·승인 후 외부에 반영한다.  
 > **전제:** 완전 무인·증분 갱신 최적화는 후순위. 우선 **단순성·재현성·검증·롤백**을 만족한다.  
-> **기준 루트:** `C:\ch2\ch2_Macro` (다른 PC면 `--repo-root` 로 동일 구조를 맞춘다.)
+> **기준 루트:** 저장소 루트 (`--repo-root`). 예: `C:\ch2\ch2_Macro` · `E:\ch2\ch2_Macro`.
 >
-> **2026-08 SSOT:** 월간 기본 경로는 **CSV** — `scripts/monthly/run_land_cycle_csv.py`.  
-> 1페이지 체크리스트: [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md).  
+> **운영 SSOT:** 1페이지 [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md).  
+> **매월 러너:** `scripts/monthly/run_land_cycle_csv.py` — V2 windows **3,5,7** · §7.1 group · cache TRUNCATE 포함.  
 > 축약대장·보강 달력(실거래 달 skip-enrich 기본): [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md).  
-> `run_monthly_cycle.py`(xlsx)는 **복구·레거시**. git deploy ≠ 월갱신 (Promote 필수).
+> `run_monthly_cycle.py`(xlsx)는 **복구·레거시** — §5·§6 명령으로 월간을 시작하지 말 것. git deploy ≠ 월갱신 (Promote 필수).
 
 ---
 
@@ -20,10 +20,11 @@
 | **`as_of_month` (V2)** | `build_stats_v2.py --as-of YYYY-MM-01` — 해당 **달 말일까지**가 통계 기간 끝으로 해석된다 (`build_stats_v2` 주석·`V2_STATS_DESIGN` 참고). |
 | **기본 `--as-of` 매핑** | *수집 끝 연월이 `cycle`의 **직전 달**과 같다*고 가정할 때: `cycle_id=202605` → 마지막 월 `202604` → **`--as-of 2026-04-01`**. 자동화: `scripts/monthly/cycle_utils.stats_as_of_iso_from_cycle_id`. **실제 수집 끝 월이 다르면 `--v2-as-of`로 수동 지정.** |
 
-> **토지 원장 재구축 중 (2026-06):** `land_stats_next` 는 재구축 배치로 `as_of_month=2026-06-01` 이 올라가 있을 수 있다. 6월 중순 **운영 정상값은 `2026-05-01`** 이다. **Promote·as_of 정상화는 `cycle_id=202607`(7월 초)에 `run_monthly_cycle` 로 일괄 처리** — 상세 [`LAND_LEDGER_REBUILD_PLAN.md`](./LAND_LEDGER_REBUILD_PLAN.md) **§12**.  
 > **D-026 지목군:** 기본=용도×지목 · 옵션=용도×지목군. Master 재적재 불필요; group mart는 **원장 단가 재집계**.  
-> **월간 필수 후속:** 표준 `run_monthly_cycle`(category V2) **이후** §7.1「용도×지목군」을 반드시 수행한다.  
-> SSOT: [`LAND_JIMOK_GROUP_DESIGN.md`](./LAND_JIMOK_GROUP_DESIGN.md) · [`DECISIONS.md`](./DECISIONS.md) D-026. Profile·Twin 연결은 후속.
+> **월간:** `run_land_cycle_csv` 가 category V2 **와** §7.1 group·annual을 이어서 돌린다. `--skip-jimok-group` 은 비권장. xlsx `run_monthly_cycle` 만 돌린 복구 시에만 §7.1을 수동으로 보강한다.  
+> SSOT: [`LAND_JIMOK_GROUP_DESIGN.md`](./LAND_JIMOK_GROUP_DESIGN.md) · [`DECISIONS.md`](./DECISIONS.md) D-026. Profile·Twin은 연간(D-054), 월간에 넣지 않는다.  
+>
+> **이력 (2026-06 재구축):** `land_stats_next`·당시 as_of 혼선은 [`LAND_LEDGER_REBUILD_PLAN.md`](./LAND_LEDGER_REBUILD_PLAN.md) §12. **지금 cycle의 기준월을 2026-05로 되돌리지 말 것.**
 
 ---
 
@@ -32,24 +33,27 @@
 저장소 루트 기준:
 
 ```
-C:\ch2\ch2_Macro\
-  raw\토지\{cycle_id}\          # 시·도별 xlsx (하위 폴더 허용 — 평탄화 단계에서 처리)
-  clean_snapshots\{cycle_id}\   # manifest, flat_in, land_tx_counts_after.json 등
+{repo}/
+  raw\토지\{cycle_id}\            # 현행: 시도×연월 CSV (molit_csv_collector)
+  raw\토지\{cycle_id}\            # 레거시 복구: 시·도별 xlsx (평탄화)
+  clean_snapshots\{cycle_id}\    # manifest, land_tx_counts_after.json 등
   stats_snapshots\{cycle_id}\    # V2 요약 JSON (스크립트가 기록)
-  logs\                          # 월간 실행 로그(선택)
-  backups\                       # pg_dump 등
-  scripts\monthly\               # 본 SOP 자동화 스크립트
-  pipeline\                       # 기존 수집·정제·통계 파이프라인
-  docs\                          # 본 문서
+  logs\
+  backups\
+  scripts\monthly\
+  pipeline\
+  docs\
 ```
 
-### 2.1 raw 예시
+### 2.1 raw 예시 (CSV · 현행)
+
+수집기는 `raw/토지/{cycle_id}/` 또는 `raw/{cycle}업데이트/토지_{from}_{to}/` 관례를 쓴다. 러너가 `cycle_utils.resolve_land_csv_raw_dir` 로 찾는다.
+
+### 2.2 raw 예시 (xlsx · 레거시)
 
 ```
 raw\토지\202605\
   서울.xlsx
-  경기.xlsx
-  충북.xlsx
   ...
 ```
 
@@ -70,83 +74,70 @@ raw\토지\202605\
 
 ---
 
-## 4. 실행 흐름 (반자동)
+## 4. 실행 흐름 (반자동 · CSV)
 
-1. 운영자: 국토부 등에서 **직전 12개월** 엑셀을 받아 `raw\토지\{cycle_id}\` 에 둔다 (하위 폴더 가능).
-2. **Cursor / 운영자:** `CycleId`(예:`202605`) 지시 후 아래 명령 실행.
-3. 스크립트: **평탄화 → `run_pipeline`(excel + V2 category, `--v2-as-of`) → 검증용 스냅샷 JSON**.
-4. **에이전트/운영자:** **§7.1 용도×지목군** (V2 group + annual 당해 연도 both) — cycle에 미포함, **매월 필수**.
-5. 운영자: **검증 체크리스트** 및 샘플 육안(category + group).
-6. **OK** 후 **Promote** (§9) 로 외부 반영.
+1. 운영자: 국토부 **CSV**(검증 포함 `molit_csv_collector`) — 직전 12개월. [`MOLIT_CSV_COLLECTOR_WARNINGS.md`](MOLIT_CSV_COLLECTOR_WARNINGS.md).
+2. `py scripts/monthly/run_land_cycle_csv.py --cycle-id YYYYMM`  
+   purge → collect/clean/dedupe → V2 **3,5,7** category → §7.1 group·annual → cache TRUNCATE → 스냅샷.
+3. 검증: `verify_monthly_integrity.py` · 건수 비교 · 체크리스트 §1.
+4. **OK** 후 **Promote** (§9). 이어서 복합·집합 CSV 러너 ([`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md) §2–3).
+
+xlsx 복구만: 아래 §5·§6 `run_monthly_cycle.py` 후 **반드시 §7.1 수동** (xlsx cycle은 group 미포함).
 
 ---
 
 ## 5. 수집 단계 (`raw`)
 
-> **⚠ CSV Selenium 수집 치명적 주의:** 이전 다운로드 완료 전 rename·짧은 sleep(2초)은 **시도/연도 오염 CSV**를 만든다.  
-> 반드시 `molit_csv_download_core` / `deploy/molit_csv_collector` **검증 포함 버전** 사용.  
-> 상세: [`docs/MOLIT_CSV_COLLECTOR_WARNINGS.md`](MOLIT_CSV_COLLECTOR_WARNINGS.md)
+**현행:** `deploy/molit_csv_collector` (검증 포함). 이전 다운로드 완료 전 rename·짧은 sleep은 **시도/연도 오염 CSV**. [`MOLIT_CSV_COLLECTOR_WARNINGS.md`](MOLIT_CSV_COLLECTOR_WARNINGS.md).
 
-- **실거래가 엑셀(토지 매매)** 는 국토교통부 페이지에서 브라우저로 받는 형태(**Selenium**)가 보통 안정적이다. 참고 레시피: `참고/0.수집.ipynb` 와 같은 흐름을 스크립트로 옮긴 것이 **`scripts/monthly/download_molit_land_xlsx.py`** 이다.  
-  의존성: `py -m pip install "selenium>=4.15"` (Chrome 설치 필요, Selenium 4 가 드라이버를 관리한다).  
-  예(2026년 5월 초 배치 가정 · **계약일 2025-05-01 ~ 2026-04-30** 전국):  
-  `py scripts/monthly/download_molit_land_xlsx.py --cycle-id 202605`  
-  검증만 할 때 한두 시도: `--limit-regions 1` 또는 `--regions "세종특별자치시"`  
-  **시도당 `--start-date`~`--end-date` 구간을 한 번에 요청**(국토부 UI가 허용하는 범위에서 달력연도 분할 없음); 파일명에 구간 태그가 붙는다(`…_토지_매매_20250501_20260430.xlsx`).  
-- **통합 · 정제(노트북 규격, 템플릿용)** 는 `docs/LAND_NOTEBOOK_EXCEL_PREP.md` 와  
-  `py scripts/monthly/run_land_notebook_excel_prep.py --cycle-id …` 참고 (**DB 적재와 별도 디렉터리** 출력).
-- **성공/실패 기록:** `clean_snapshots\{cycle_id}\raw_manifest.json` — `scripts/monthly/run_monthly_cycle.py` 가 `.xlsx` 목록과 개수 기록.
+아래 엑셀 Selenium·`run_monthly_cycle` 서술은 **복구·레거시**.
+
+- **실거래가 엑셀(토지 매매)** 복구: `scripts/monthly/download_molit_land_xlsx.py` (`selenium>=4.15`).  
+  예: `py scripts/monthly/download_molit_land_xlsx.py --cycle-id 202605`  
+- **통합 · 정제(노트북 규격, 템플릿용)** 는 `docs/LAND_NOTEBOOK_EXCEL_PREP.md` (DB 적재와 별도).
+- **xlsx 성공/실패 기록:** `run_monthly_cycle.py` → `clean_snapshots\{cycle_id}\raw_manifest.json`.
 
 ---
 
-## 6. 통합·정제·DB 업데이트
+## 6. 통합·정제·DB 업데이트 (xlsx 레거시)
+
+**매월은 §4 CSV 러너.** 이 절은 xlsx 복구 전용.
 
 ### 6.1 하위폴더 탐색
 
-- `pipeline/collect.py` 의 `--directory` 는 **직접 자식만** 스캔한다 (`resolve_excel_paths` → `root.iterdir()`).
-- 따라서 깊게 두었으면 **`scripts/monthly/flatten_raw_xlsx.py`** 로 `clean_snapshots\{cycle_id}\flat_in\` 에 평탄화 후 파이프라인에 넘긴다.  
-  **원스톱:** `run_monthly_cycle.py` 가 평탄화까지 수행한다( `--skip-flatten` 으로 생략 가능).
+- `pipeline/collect.py` 의 `--directory` 는 **직접 자식만** 스캔한다.
+- 깊게 두었으면 `flatten_raw_xlsx.py` → `clean_snapshots\{cycle_id}\flat_in\`.  
+  xlsx 원스톱: `run_monthly_cycle.py` (`--skip-flatten` 생략 가능).
 
-### 6.2 파이프라인
-
-엑셀 기준 표준 실행(로컬, `pipeline` 디렉터리가 `DATABASE_URL` 을 읽음):
+### 6.2 파이프라인 (xlsx)
 
 ```powershell
-cd C:\ch2\ch2_Macro
-py scripts\monthly\run_monthly_cycle.py --cycle-id 202605
+py scripts\monthly\run_monthly_cycle.py --cycle-id YYYYMM
 ```
 
-동작 요약:
+동작: manifest → flatten → `run_pipeline` (excel + V2 category, **xlsx 기본 windows는 러너 인자** — 복구 시에도 **3,5,7** 맞출 것) → 건수·V2 요약 JSON. **group은 안 돈다 → §7.1 수동.**
 
-1. `clean_snapshots\{cycle_id}\raw_manifest.json` 작성  
-2. `flatten_raw_xlsx` → `clean_snapshots\{cycle_id}\flat_in\`  
-3. `run_pipeline.py --excel-dir …\flat_in --excel-format auto --with-v2 --v2-windows 3,5 --v2-as-of <매핑>` **및 기본으로** `--with-upper-v2`(상위 행정 사전집계). 생략하려면 `run_monthly_cycle.py --skip-upper-v2`.  
-4. `clean_snapshots\{cycle_id}\land_tx_counts_after.json` — 시도별 `land_transactions` 건수  
-5. `stats_snapshots\{cycle_id}\land_basic_stats_v2_summary.json` — 해당 `as_of` V2 행수 요약  
+### 6.3 `run_pipeline.py`
 
-> **통합 엑셀(`전국통합.xlsx`)** 은 선택. 필요 시 별도 수작업·추후 `COPY`/pandas export 스크립트 추가. 현재 스냅샷은 **JSON 요약 중심**.
-
-### 6.3 `run_pipeline.py` 수정 사항
-
-- **`--v2-as-of YYYY-MM-DD`** 를 지정하면 `build_stats_v2` 에 그대로 전달된다(환경 변수보다 우선).
+- `--v2-as-of YYYY-MM-DD` 는 `build_stats_v2` 에 그대로 (환경 변수보다 우선).
 
 ---
 
 ## 7. 사전통계 생성 (V2 · 용도×지목)
 
-- `--with-v2` 로 `build_stats_v2.py` 실행. **`--as-of` 는 반드시 이번 데이터에 맞게 고정**(CLI 또는 `--v2-as-of`).
-- **상위 행정(시도·시군구·읍면동·city 버킷)** 은 `run_monthly_cycle.py` 가 **기본으로** `run_pipeline.py --with-upper-v2` 를 넣어 `build_upper_stats_v2.py` 까지 실행한다. **끄려면** `--skip-upper-v2`.
-- 수동만 필요할 때: `python pipeline/build_upper_stats_v2.py --as-of … --windows 3,5` (전국; 시도 한정은 `--sido-code`).
-- 기본 `--col-axis` 는 **`category`(용도×지목)**. 지목군은 **§7.1** 에서 별도 수행(cycle 스크립트에 아직 미통합).
+- **CSV:** `run_land_cycle_csv.py` 가 `build_stats_v2` + `build_upper_stats_v2` 를 `--windows 3,5,7` 로 실행한 뒤 §7.1 group을 이어서 돈다.
+- **xlsx 복구:** `run_monthly_cycle.py` 는 category(+upper)만. 끄려면 `--skip-upper-v2`.
+- 수동: `python pipeline/build_upper_stats_v2.py --as-of … --windows 3,5,7`
+- 기본 `--col-axis` 는 **`category`**. 지목군은 §7.1. CSV에서는 자동, xlsx에서는 수동.
 
 ---
 
-## 7.1 용도×지목군 (D-026) — 월간 필수 · 에이전트 실행 가이드
+## 7.1 용도×지목군 (D-026) — CSV는 자동 · xlsx 복구만 수동
 
-> **목적:** 다른 에이전트/운영자가 매월 초 category V2 갱신 뒤 **용도×지목군 mart + 장기추세 annual(group)** 을 재현 가능하게 돌린다.  
-> **전제:** §6 `run_monthly_cycle`(또는 동등한 원장·category V2) 가 이번 `as_of` 로 **성공**한 뒤 실행.  
-> **금지:** 지목(category) mart 평균을 합쳐 지목군 평균을 만들지 말 것 — 반드시 **원장 단가 재집계** (`--col-axis group`).  
-> **UI:** 통계 화면 기본은 항상 **용도×지목**. **용도×지목군**은 매트릭스 버튼을 눌렀을 때만. 지역을 바꾸면 자동으로 용도×지목으로 복귀.
+> **목적:** 용도×지목군 mart + 장기추세 annual(group).  
+> **CSV:** `run_land_cycle_csv.py` 기본 포함. 이 절의 명령은 실패 재실행·xlsx 복구용.  
+> **금지:** 지목(category) mart 평균을 합쳐 지목군 평균을 만들지 말 것 — **원장 단가 재집계** (`--col-axis group`).  
+> **UI:** 기본=용도×지목. 지목군은 매트릭스 버튼만. 지역을 바꾸면 용도×지목으로 복귀.
 
 ### 7.1.0 운영 사고·주의 (2026-07-26)
 
@@ -157,7 +148,7 @@ py scripts\monthly\run_monthly_cycle.py --cycle-id 202605
 |------|------|
 | **부분 적재** | `land_basic_stats_v2` `col_axis=group` 이 일부 시도(예: 41·43)만 있고 **전국 미완료** |
 | **upper 누락** | `land_upper_stats_v2` 에 `col_axis=group` **0행** → 시군구·읍면동 지목군 표 불가 |
-| **월간 자동화 공백** | `run_monthly_cycle` 은 category만 수행 → **§7.1 group을 빼먹으면 재발** |
+| **월간 자동화 공백** | xlsx `run_monthly_cycle` 은 category만 → **§7.1을 빼먹으면 재발**. CSV `run_land_cycle_csv` 는 group 기본 포함 (`--skip-jimok-group` 끄지 말 것) |
 
 **조치(전국):** category와 **동일 as_of·windows** 로
 
@@ -207,9 +198,9 @@ category 를 이번 cycle에서 이미 돌렸으면 **`group`만** (중복 categ
 cd C:\ch2\ch2_Macro\pipeline
 $env:PYTHONUNBUFFERED="1"
 # 기본통계 V2 — 용도×지목군
-python -u build_stats_v2.py --as-of $AS_OF --windows 3,5 --col-axis group
+python -u build_stats_v2.py --as-of $AS_OF --windows 3,5,7 --col-axis group
 # 상위행정 V2 — 용도×지목군
-python -u build_upper_stats_v2.py --as-of $AS_OF --windows 3,5 --col-axis group
+python -u build_upper_stats_v2.py --as-of $AS_OF --windows 3,5,7 --col-axis group
 ```
 
 - category 와 group을 한 번에: `--col-axis both` (시간↑).  
@@ -259,8 +250,8 @@ python verify_jimok_group_integrity.py
 ```
 [ ] cycle_id / AS_OF 확인 (category V2 완료 후)
 [ ] DDL 037·038·040·041 존재 확인 (없으면 적용)
-[ ] build_stats_v2 --col-axis group --as-of AS_OF --windows 3,5   # 전국 · STATS_V2_SIDO_CODE unset
-[ ] build_upper_stats_v2 --col-axis group --as-of AS_OF --windows 3,5
+[ ] build_stats_v2 --col-axis group --as-of AS_OF --windows 3,5,7   # 전국 · STATS_V2_SIDO_CODE unset
+[ ] build_upper_stats_v2 --col-axis group --as-of AS_OF --windows 3,5,7
 [ ] (VPS) DATABASE_URL = backend/.env (ch2app) 사용
 [ ] basic ALL 지역수 category≈group · upper sigungu group 존재
 [ ] build_annual_stats --years YEAR --full --col-axis both --with-upper
@@ -269,11 +260,11 @@ python verify_jimok_group_integrity.py
 [ ] (Promote 시) group mart·annual 이 dump/재실행에 포함되는지 확인
 ```
 
-### 7.1.6 아직 자동화되지 않은 것
+### 7.1.6 CSV vs xlsx
 
-- `run_monthly_cycle.py` / `run_pipeline.py` 에 `--col-axis` · annual 단계 **미배선**.  
-  → 매월 **본 절을 수동(또는 에이전트)으로 추가 실행**.  
-- 통합 플래그 추가는 후속 이슈(J7 잔여).
+- **CSV `run_land_cycle_csv.py`:** group V2·upper·annual(both)·integrity **기본 포함**. `--skip-jimok-group` 비권장.
+- **xlsx `run_monthly_cycle.py`:** category만. 복구 시에만 본 절을 수동 실행.
+- `run_pipeline.py` 에 `--col-axis` 배선은 없어도 된다. 월간 SSOT는 CSV 러너.
 
 ---
 
@@ -371,20 +362,18 @@ pg_dump -h 호스트 -U 유저 -d land_stats -Fc -f C:\ch2\ch2_Macro\backups\lan
 
 | 목적 | 명령 |
 |------|------|
-| 월간 로컬 한 번에 (category V2) | `py scripts\monthly\run_monthly_cycle.py --cycle-id 202605` |
-| 상위통계 생략(드물게) | `… run_monthly_cycle.py --cycle-id 202605 --skip-upper-v2` |
-| **지목군 V2 (매월 §7.1)** | `py pipeline\build_stats_v2.py --as-of YYYY-MM-01 --windows 3,5 --col-axis group` |
-| **지목군 upper V2** | `py pipeline\build_upper_stats_v2.py --as-of YYYY-MM-01 --windows 3,5 --col-axis group` |
-| **annual 당해연도 both** | `py pipeline\build_annual_stats.py --years YYYY --full --col-axis both --with-upper` |
+| **월간 토지 (SSOT)** | `py scripts\monthly\run_land_cycle_csv.py --cycle-id YYYYMM` |
+| 복합 (토지 이후) | `py scripts\monthly\run_built_cycle_csv.py --cycle-id YYYYMM` |
+| 집합 (토지 이후) | `py scripts\monthly\run_collective_cycle_csv.py --cycle-id YYYYMM` |
+| 지목군만 재실행 | `py pipeline\build_stats_v2.py --as-of YYYY-MM-01 --windows 3,5,7 --col-axis group` |
+| 지목군 upper | `py pipeline\build_upper_stats_v2.py --as-of YYYY-MM-01 --windows 3,5,7 --col-axis group` |
+| annual 당해연도 both | `py pipeline\build_annual_stats.py --years YYYY --full --col-axis both --with-upper` |
 | 지목군 integrity | `py pipeline\verify_jimok_group_integrity.py` |
-| 수집 목록만 | `py scripts\monthly\run_monthly_cycle.py --cycle-id 202605 --manifest-only` |
-| 평탄화만 | `py scripts\monthly\flatten_raw_xlsx.py --source raw\토지\202605 --dest clean_snapshots\202605\flat_in` |
-| 시도 건수 스냅샷 | `py scripts\monthly\snapshot_land_tx_counts.py --output clean_snapshots\202605\land_tx_counts_after.json` |
+| 시도 건수 스냅샷 | `py scripts\monthly\snapshot_land_tx_counts.py --output clean_snapshots\{cycle}\land_tx_counts_after.json` |
 | 스냅샷 비교 | `py scripts\monthly\compare_count_snapshots.py --before … --after …` |
 | **Promote 게이트** | `py pipeline\verify_monthly_integrity.py --as-of YYYY-MM-01` |
-| **Promote dump (VPS 호환)** | `py scripts\monthly\dump_land_for_promote.py` → `backups\land_stats_promote_{cycle}.sql.gz` |
-
-PowerShell 래퍼: `scripts\monthly\run_monthly_cycle.ps1 -CycleId 202605` (상위 생략: `-SkipUpperV2`)
+| **Promote dump** | `py scripts\monthly\dump_land_for_promote.py` → `backups\land_stats_promote_{cycle}.sql.gz` |
+| xlsx 복구 (group 없음) | `py scripts\monthly\run_monthly_cycle.py --cycle-id YYYYMM` 후 §7.1 수동 |
 
 ---
 
@@ -403,6 +392,8 @@ SSOT: [`REB_COMMERCIAL_RENT_SURVEY.md`](./REB_COMMERCIAL_RENT_SURVEY.md) §7 · 
 
 ## 12. 관련 문서
 
+- [`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md) — 월간 1페이지  
+- [`MONTHLY_UPDATE_PIPELINE.md`](./MONTHLY_UPDATE_PIPELINE.md) — 실패 시나리오 부록 (xlsx 13단계는 레거시)  
 - `docs/V2_OPERATOR_CHECKLIST.md` — 월초 갱신 단일 SOP(전국·검증·백엔드)  
 - `docs/V2_STATS_PRODUCTION.md` — `build_stats_v2` 운영  
 - `docs/LAND_JIMOK_GROUP_DESIGN.md` — 지목군 7분류 · mart/API 정책 (D-026)  
@@ -416,6 +407,7 @@ SSOT: [`REB_COMMERCIAL_RENT_SURVEY.md`](./REB_COMMERCIAL_RENT_SURVEY.md) §7 · 
 
 | 날짜 | 내용 |
 |------|------|
+| 2026-09-01 | **CSV SSOT 본문 정렬** — 실행 흐름·§7.1·빠른 참조를 `run_land_cycle_csv`·windows **3,5,7**에 맞춤. xlsx는 복구. 2026-06 재구축 as_of 문단은 이력으로 격하 |
 | 2026-08-16 | **§11.1 임대 상권 분기 갱신** — 기본표 4분기 롤링, 추세는 연간 |
 | 2026-08-09 | **§9.4 코드 배포 vs DB Promote** — 2608 토지 7월 미노출 원인·ingest→mart→dump→VPS restore 체크리스트·PG18 dump 호환 |
 | 2026-07-26 | **§7.1.0** 배포 404 사고(부분 group·upper 0) · VPS `backend/.env` · 전국성 검증 · UI 기본=용도×지목·지역 변경 시 category 복귀 |
