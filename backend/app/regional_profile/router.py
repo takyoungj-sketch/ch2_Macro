@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.collective.db import get_collective_db
 from app.db import get_db
 from app.region_canonical import resolve_to_canonical
+from app.regional_profile.national_ranks import is_legal_dong_without_ri_code
 
 router = APIRouter(prefix="/regional-profile", tags=["regional-profile"])
 
@@ -572,9 +573,12 @@ def get_profile_twin_beop(
         )
 
     batch_key = batch_row["batch_key"]
+    # D-057: 리 앵커는 리끼리 비교. 리가 없는 법정동(`…00`)은 후보에서 뺀다.
+    exclude_dong = not is_legal_dong_without_ri_code(anchor)
+    dong_filter = "AND right(btrim(twin_region_code), 2) <> '00'" if exclude_dong else ""
     rows = db.execute(
         text(
-            """
+            f"""
             SELECT rank,
                    twin_region_code,
                    twin_region_name,
@@ -586,6 +590,7 @@ def get_profile_twin_beop(
             WHERE batch_key = :bk
               AND region_level = 'beopjungri'
               AND anchor_region_code = :anchor
+              {dong_filter}
             ORDER BY rank
             LIMIT :top_k
             """
@@ -595,7 +600,7 @@ def get_profile_twin_beop(
 
     as_of = None
     neighbors: list[ProfileTwinNeighborItem] = []
-    for r in rows:
+    for position, r in enumerate(rows, start=1):
         detail = r.get("detail_scores") or {}
         if not isinstance(detail, dict):
             detail = dict(detail)
@@ -606,7 +611,7 @@ def get_profile_twin_beop(
                 pass
         neighbors.append(
             ProfileTwinNeighborItem(
-                rank=int(r["rank"]),
+                rank=position if exclude_dong else int(r["rank"]),
                 twin_beopjungri_code=str(r["twin_region_code"]).strip(),
                 twin_beopjungri_name=str(r["twin_region_name"]),
                 twin_sigungu_name=str(r["twin_sigungu_name"]),

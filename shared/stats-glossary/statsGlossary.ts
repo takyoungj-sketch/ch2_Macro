@@ -573,6 +573,7 @@ export const STATS_GLOSSARY: Record<string, StatsGlossaryEntry> = {
       "유사 ≠ 동일 시장. 자동으로 회귀에 넣지 않습니다.",
       "일반 가중은 토지·아파트가 큽니다. 상가 우세 지역은 복합 쪽 built_commercial 가중과 다를 수 있습니다.",
       "이웃을 많이 넣을수록 좋아지지 않습니다.",
+      "리 Twin 후보에서 리가 없는 법정동(코드가 …00)은 뺍니다. 남은 후보가 없으면 빈 카드로 둡니다.",
     ],
   },
   regional_profile: {

@@ -364,7 +364,7 @@
       "land": {
         "text": "지역선택(법정동·리 칩) 유지. 프로필 딥링크만 리가 없는 …00 → 읍면동",
         "status": "done",
-        "commit": "needed",
+        "commit": "committed",
         "decision": "D-057"
       },
       "built": {
@@ -383,13 +383,13 @@
         "commit": "none"
       },
       "profile": {
-        "text": "리가 없는 동(…00)은 읍면동으로 검색·URL 확정. 가능동 리 칸 중복 제거. 근본 마트는 차후",
+        "text": "리가 없는 동(…00)은 읍면동으로 검색·URL 확정. 가능동 리 칸 중복 제거. 리 전국순위·리 Twin 후보에서 동 제외. 근본 마트는 차후",
         "status": "done",
         "commit": "needed",
         "decision": "D-057"
       },
       "admin": {
-        "text": "D-057 · 순위계획 §9 근본 차후 · 일지 09-03",
+        "text": "D-057(Twin 필터 포함) · 순위계획 §9 근본 차후 · 글로서리 · 일지 09-03",
         "status": "done",
         "commit": "needed",
         "decision": "D-057"
