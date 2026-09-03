@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-31",
+  "updated": "2026-09-03",
   "domains": [
     { "id": "land", "label": "토지" },
     { "id": "built", "label": "복합" },
@@ -317,44 +317,82 @@
           "decision": "D-056"
         }
       }
+    },
+    {
+      "date": "2026-08-31",
+      "cells": {
+        "land": {
+          "text": "공유 도움말 창 크기조절 커밋. 임대 배포라 이 앱 프론트는 미재빌드",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-056"
+        },
+        "built": {
+          "text": "공유 도움말 창 크기조절 커밋. 임대 배포라 이 앱 프론트는 미재빌드",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-056"
+        },
+        "collective": {
+          "text": "공유 도움말 창 크기조절 커밋. 임대 배포라 이 앱 프론트는 미재빌드",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-056"
+        },
+        "rent": {
+          "text": "전세보증금·전세가율 vs 환산값·환산가율 분리. 모달 산식·평균. 거래목록 필터. 배포",
+          "status": "done",
+          "commit": "committed"
+        },
+        "profile": {
+          "text": "공유 도움말 창 크기조절 커밋. 임대 배포라 이 앱 프론트는 미재빌드",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-056"
+        },
+        "admin": {
+          "text": "일지 08-30·08-31 · 창·임대 표 커밋 · 임대 배포",
+          "status": "done",
+          "commit": "committed"
+        }
+      }
     }
   ],
   "today": {
-    "date": "2026-08-31",
+    "date": "2026-09-03",
     "cells": {
       "land": {
-        "text": "공유 도움말 창 크기조절 커밋. 임대 배포라 이 앱 프론트는 미재빌드",
+        "text": "지역선택(법정동·리 칩) 유지. 프로필 딥링크만 리가 없는 …00 → 읍면동",
         "status": "done",
-        "commit": "committed",
-        "decision": "D-056"
+        "commit": "needed",
+        "decision": "D-057"
       },
       "built": {
-        "text": "공유 도움말 창 크기조절 커밋. 임대 배포라 이 앱 프론트는 미재빌드",
+        "text": "이 축 작업 없음",
         "status": "done",
-        "commit": "committed",
-        "decision": "D-056"
+        "commit": "none"
       },
       "collective": {
-        "text": "공유 도움말 창 크기조절 커밋. 임대 배포라 이 앱 프론트는 미재빌드",
+        "text": "이 축 작업 없음",
         "status": "done",
-        "commit": "committed",
-        "decision": "D-056"
+        "commit": "none"
       },
       "rent": {
-        "text": "전세보증금·전세가율 vs 환산값·환산가율 분리. 모달 산식·평균. 거래목록 필터. 배포",
+        "text": "이 축 작업 없음",
         "status": "done",
-        "commit": "committed"
+        "commit": "none"
       },
       "profile": {
-        "text": "공유 도움말 창 크기조절 커밋. 임대 배포라 이 앱 프론트는 미재빌드",
+        "text": "리가 없는 동(…00)은 읍면동으로 검색·URL 확정. 가능동 리 칸 중복 제거. 근본 마트는 차후",
         "status": "done",
-        "commit": "committed",
-        "decision": "D-056"
+        "commit": "needed",
+        "decision": "D-057"
       },
       "admin": {
-        "text": "일지 08-30·08-31 · 창·임대 표 커밋 · 임대 배포",
+        "text": "D-057 · 순위계획 §9 근본 차후 · 일지 09-03",
         "status": "done",
-        "commit": "committed"
+        "commit": "needed",
+        "decision": "D-057"
       }
     }
   },
@@ -367,10 +405,10 @@
         "decision": "D-056"
       },
       "profile": {
-        "text": "G3 전국 월별 총액↔M2·대표금리1개. 7월 as_of는 별도(지금 부분). AI 창 크기조절은 공유 커밋 때",
+        "text": "근본: 리 마트=…00 제외·프로필 beop 행 안 만듦(§9). G3 전국 월별 총액↔M2·대표금리1개. 7월 as_of는 별도",
         "status": "planned",
         "commit": "none",
-        "decision": "D-055"
+        "decision": "D-057"
       },
       "built": {
         "text": "enrichment P5 promote는 별도(`--apply-enrichment` 금지). AI P5 깊게는 집합 사다리 후",

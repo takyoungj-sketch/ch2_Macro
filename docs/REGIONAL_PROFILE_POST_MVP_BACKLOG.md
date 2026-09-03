@@ -58,7 +58,7 @@
 
 ### 3.1 지역 선택 · Profile
 
-- [ ] 토지에서 고른 grain과 Profile URL grain 일치 (beop → beop)
+- [ ] 토지에서 고른 grain과 Profile URL grain 일치 (실제 리 → beop. 리가 없는 동 `…00` → eup, D-057)
 - [ ] loose 주소·Enter (예: `옥천읍 마암리`) 정상 확정
 - [ ] city(청주시 등) · sigungu · eup · beop 각각 population·yearly_mix·Top3·아파트 분위 표시
 - [ ] 아파트 표본 <15 리: 분위 `-` / mask 동작
@@ -173,7 +173,7 @@ GET /api/regional-profile/twins-beop/4373025034?profile_version=v2.1-national&wi
 
 - [`NEXT_STEPS.md`](../NEXT_STEPS.md) §2b — 짧은 운영 메모
 - [`REGIONAL_PROFILE_ARCHITECTURE.md`](REGIONAL_PROFILE_ARCHITECTURE.md) §12 — 설계 SSOT
-- [`PROFILE_NATIONAL_RANK_PLAN.md`](PROFILE_NATIONAL_RANK_PLAN.md) — 전국 순위 1단계 (D-053)
+- [`PROFILE_NATIONAL_RANK_PLAN.md`](PROFILE_NATIONAL_RANK_PLAN.md) — 전국 순위 1단계 (D-053). **§9 리 grain=법정리만**은 차후
 - [`REGIONAL_PROFILE_PHASE_B_PREFLIGHT.md`](REGIONAL_PROFILE_PHASE_B_PREFLIGHT.md) — P1/P2 완료 이력
 
 ---

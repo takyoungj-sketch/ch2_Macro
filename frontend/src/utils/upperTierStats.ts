@@ -1,5 +1,6 @@
 import type { FreeStatsV2Response, RegionLevel, UpperStatsV2Response } from "../types";
 import type { TierCodes } from "./regionTier";
+import { isLegalDongWithoutRi } from "@ch2/region-picker";
 
 /**
  * 단일 상위 행정구역(시·도/시군구/읍면동/의사 시) 단독 선택 여부 — DECISIONS D-009/D-010.
@@ -30,8 +31,9 @@ export function resolveUpperSingleFromTier(
 }
 
 /**
- * Profile 조회용 region 해석 (D-030 P1-a).
- * 상위 행정 단독 선택이면 그대로. 법정리만 있으면 단일 beop → beopjungri grain (eup 승격 폐지).
+ * Profile 조회용 region 해석 (D-030 P1-a, D-057).
+ * 상위 행정 단독 선택이면 그대로. 실제 리(10자리, …00 아님)는 beopjungri.
+ * 리가 없는 법정동(…00)만 읍면동 8자리로 연다 — 토지 칩은 바꾸지 않는다.
  */
 export type ProfileRegionLevel = RegionLevel | "beopjungri";
 
@@ -55,6 +57,10 @@ export function resolveProfileRegionFromTier(
 
   const beop = beops[0]!;
   if (!/^\d{10}$/.test(beop)) return null;
+
+  if (isLegalDongWithoutRi(beop)) {
+    return { level: "eupmyeondong", code: beop.slice(0, 8), escalatedFromBeop: true };
+  }
 
   return { level: "beopjungri", code: beop, escalatedFromBeop: false };
 }

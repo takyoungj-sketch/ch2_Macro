@@ -6,6 +6,12 @@ export {
 } from "./flatEntryToSearchResult";
 export { formatProfileSelectionQuery } from "./formatSelectionLabel";
 export { groupProfileSearchResults } from "./groupSearchResults";
+export {
+  coerceProfileRegionSelection,
+  coerceProfileSearchResult,
+  isLegalDongWithoutRi,
+  remapDongOnlyBeopSuggestions,
+} from "./legalDongWithoutRi";
 export { formatRegionHierarchyLabel } from "./regionDisplay";
 export {
   buildFlattenedRegionSuggestions,

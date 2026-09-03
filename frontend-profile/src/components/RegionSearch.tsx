@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   buildFlattenedRegionSuggestions,
+  coerceProfileSearchResult,
   commonTierCodesFromLooseRows,
   flatEntryToSearchResult,
   formatRegionHierarchyLabel,
   isLooseMultiSegmentQuery,
+  remapDongOnlyBeopSuggestions,
   resolveBeopjungriFromLooseAddressLine,
   resolveLooseAddressViaTokenSearch,
   tryResolveUniqueRegionSearch,
@@ -89,18 +91,22 @@ export default function RegionSearch({ onSelect, displayQuery }: Props) {
   const flatSuggestions = useMemo((): RegionSearchFlatEntry[] => {
     if (looseResolve != null) {
       if (looseResolve.codes.length === 0) return [];
-      return buildFlattenedRegionSuggestions(looseResolve.rows, debouncedSearch, {
+      return remapDongOnlyBeopSuggestions(
+        buildFlattenedRegionSuggestions(looseResolve.rows, debouncedSearch, {
+          maxSigungu: 50,
+          maxAgg: 40,
+          maxBeop: 400,
+        }),
+      );
+    }
+    if (!searchEnabled) return [];
+    return remapDongOnlyBeopSuggestions(
+      buildFlattenedRegionSuggestions(searchHits, debouncedSearch, {
         maxSigungu: 50,
         maxAgg: 40,
         maxBeop: 400,
-      });
-    }
-    if (!searchEnabled) return [];
-    return buildFlattenedRegionSuggestions(searchHits, debouncedSearch, {
-      maxSigungu: 50,
-      maxAgg: 40,
-      maxBeop: 400,
-    });
+      }),
+    );
   }, [looseResolve, searchHits, debouncedSearch, searchEnabled]);
 
   useEffect(() => {
@@ -112,16 +118,18 @@ export default function RegionSearch({ onSelect, displayQuery }: Props) {
     el?.scrollIntoView({ block: "nearest" });
   }, [highlightIdx]);
 
-  const pickResult = (result: RegionSearchResult) => {
+  const pickResult = (result: RegionSearchResult, row?: RegionNameInfo | null) => {
+    const coerced = coerceProfileSearchResult(result, row);
     setLocalError(null);
-    onSelect(result);
-    setQuery(result.label);
+    onSelect(coerced);
+    setQuery(coerced.label);
     setOpen(false);
     setHighlightIdx(-1);
   };
 
   const pickEntry = (entry: RegionSearchFlatEntry) => {
-    pickResult(flatEntryToSearchResult(entry));
+    const row = entry.kind === "beopjungri" ? entry.row : entry.sample;
+    pickResult(flatEntryToSearchResult(entry), row);
   };
 
   const applyLooseResolve = (
@@ -225,7 +233,8 @@ export default function RegionSearch({ onSelect, displayQuery }: Props) {
 
     const resolved = tryResolveUniqueRegionSearch(catalog, qLive, "paid");
     if (resolved) {
-      pickResult(uniquePickToSearchResult(resolved));
+      const row = resolved.kind === "beopjungri" ? resolved.row : null;
+      pickResult(uniquePickToSearchResult(resolved), row);
       return;
     }
 

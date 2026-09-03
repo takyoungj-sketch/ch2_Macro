@@ -19,13 +19,15 @@ import LandProfileCard from "./components/LandProfileCard";
 import ApartmentProfileCard from "./components/ApartmentProfileCard";
 import TwinRegionCard from "./components/TwinRegionCard";
 import AnalysisLinks from "./components/AnalysisLinks";
-import { cityShortLabel, formatProfileSelectionQuery, isSejongPseudoSigunguCode, isSejongRegionRow } from "@ch2/region-picker";
+import { cityShortLabel, coerceProfileRegionSelection, formatProfileSelectionQuery, isSejongPseudoSigunguCode, isSejongRegionRow } from "@ch2/region-picker";
 import RegionSearch, { type RegionSearchResult } from "./components/RegionSearch";
 import { sidoName } from "./utils/sido";
 
 interface RegionSelection {
   regionLevel: RegionLevel;
   regionCode: string;
+  /** 읍면동으로 올린 동의 원래 10자리 — 그 읍면동 프로필이 없으면 되돌린다 (D-057). */
+  coercedFromBeop?: string;
 }
 
 function readSelectionFromUrl(): RegionSelection | null {
@@ -34,7 +36,7 @@ function readSelectionFromUrl(): RegionSelection | null {
   const code = qs.get("region_code");
   if (!level || !code) return null;
   if (!["sido", "sigungu", "eupmyeondong", "beopjungri", "city"].includes(level)) return null;
-  return { regionLevel: level, regionCode: code };
+  return coerceProfileRegionSelection({ regionLevel: level, regionCode: code });
 }
 
 function writeSelectionToUrl(sel: RegionSelection) {
@@ -64,15 +66,30 @@ export default function App() {
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
   const { isDark, toggleUiColorScheme } = useUiColorScheme();
 
-  const openRegion = useCallback((regionLevel: RegionLevel, regionCode: string) => {
-    const sel: RegionSelection = { regionLevel, regionCode };
-    writeSelectionToUrl(sel);
-    setSelection(sel);
-    scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+  useEffect(() => {
+    if (!selection) return;
+    const qs = new URLSearchParams(window.location.search);
+    if (qs.get("region_level") !== selection.regionLevel || qs.get("region_code") !== selection.regionCode) {
+      writeSelectionToUrl(selection);
+    }
+  }, [selection]);
+
+  const openRegion = useCallback(
+    (regionLevel: RegionLevel, regionCode: string, originBeopCode?: string) => {
+      const coerced = coerceProfileRegionSelection({ regionLevel, regionCode });
+      const sel: RegionSelection =
+        coerced.coercedFromBeop || coerced.regionLevel !== "eupmyeondong" || !originBeopCode
+          ? coerced
+          : { ...coerced, coercedFromBeop: originBeopCode };
+      writeSelectionToUrl(sel);
+      setSelection(sel);
+      scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    [],
+  );
 
   const handleSelect = useCallback((region: RegionSearchResult) => {
-    openRegion(region.level, region.code);
+    openRegion(region.level, region.code, region.originBeopCode);
   }, [openRegion]);
 
   const profileQuery = useQuery({
@@ -81,6 +98,13 @@ export default function App() {
     enabled: !!selection,
     retry: false,
   });
+
+  // 읍면동 프로필이 없는 동(전국 3곳)은 원래 10자리로 되돌린다.
+  useEffect(() => {
+    const beop = selection?.coercedFromBeop;
+    if (!beop || !profileQuery.isError) return;
+    setSelection({ regionLevel: "beopjungri", regionCode: beop });
+  }, [selection, profileQuery.isError]);
 
   const regionNameQuery = useQuery({
     queryKey: ["region-name", "v2", selection?.regionLevel, selection?.regionCode],
@@ -108,6 +132,7 @@ export default function App() {
   const rankQuery = useQuery({
     queryKey: [
       "national-ranks",
+      "ri-exclude-dong",
       selection?.regionLevel,
       profileQuery.data?.meta.profile_version,
       profileQuery.data?.meta.window_years,

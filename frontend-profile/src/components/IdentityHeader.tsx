@@ -1,6 +1,6 @@
 import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import type { RegionNameInfo, YearlyMix } from "../types";
-import { cityFullLabel, cityShortLabel, isSejongPseudoSigunguCode, isSejongRegionRow } from "@ch2/region-picker";
+import { cityFullLabel, cityShortLabel, formatRegionHierarchyLabel, isSejongPseudoSigunguCode, isSejongRegionRow } from "@ch2/region-picker";
 import { formatAmountManwon, formatInt, formatPercent } from "../utils/format";
 import { sidoName } from "../utils/sido";
 
@@ -21,10 +21,7 @@ function fullAddressLabel(regionLevel: string, regionCode: string, name: RegionN
     return `${name.sido_name} ${name.sigungu_name}`;
   }
   if (regionLevel === "beopjungri") {
-    if (isSejongRegionRow(name)) {
-      return `${name.sido_name} ${name.sigungu_name} ${name.beopjungri_name}`;
-    }
-    return `${name.sido_name} ${name.sigungu_name} ${name.eupmyeondong_name} ${name.beopjungri_name}`;
+    return formatRegionHierarchyLabel(name);
   }
   if (isSejongRegionRow(name)) return `${name.sido_name} ${name.sigungu_name}`;
   return `${name.sido_name} ${name.sigungu_name} ${name.eupmyeondong_name}`;

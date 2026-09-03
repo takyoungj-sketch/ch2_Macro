@@ -16,4 +16,6 @@ export interface RegionSearchResult {
   code: string;
   label: string;
   sublabel: string;
+  /** 리가 없는 동을 읍면동으로 올렸을 때의 원래 10자리 (프로필 전용, D-057). */
+  originBeopCode?: string;
 }

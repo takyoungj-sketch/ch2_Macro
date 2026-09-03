@@ -17,6 +17,12 @@ from build_regional_profile_rank import (  # noqa: E402
     type_share_corr,
 )
 
+sys.path.insert(0, str(REPO / "backend"))
+from app.regional_profile.national_ranks import (  # noqa: E402
+    drop_legal_dongs_from_beop_ranks,
+    is_legal_dong_without_ri_code,
+)
+
 
 def test_competition_rank_ties():
     assert competition_ranks_desc([10, 8, 8, 1]) == [1, 2, 2, 4]
@@ -122,3 +128,20 @@ def test_type_share_corr_compositional_negative():
 def test_mix_types_eight():
     assert len(MIX_TYPES) == 8
     assert "아파트" in MIX_TYPES
+
+
+def test_drop_legal_dongs_reranks_ri_only():
+    assert is_legal_dong_without_ri_code("4115010100")
+    assert not is_legal_dong_without_ri_code("4373025034")
+    packed = [
+        ["4115010100", "경기 의정부시 가능동", 10000, 300.0, 10, 1, 1, 1],
+        ["4373025034", "충북 옥천군 옥천읍 마암리", 500, 200.0, 8, 2, 2, 2],
+        ["4311325021", "충북 청주시 상당구 남이면 가좌리", 200, 50.0, 3, 3, 3, 3],
+    ]
+    out, n, n_pc = drop_legal_dongs_from_beop_ranks(packed)
+    assert n == 2
+    assert n_pc == 2
+    codes = [r[0] for r in out]
+    assert "4115010100" not in codes
+    assert out[0][0] == "4373025034" and out[0][5] == 1
+    assert out[1][0] == "4311325021" and out[1][5] == 2

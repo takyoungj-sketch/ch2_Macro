@@ -1,4 +1,5 @@
 import { cityFullLabel } from "./cityDisplay";
+import { formatRegionHierarchyLabel } from "./regionDisplay";
 import { isSejongPseudoSigunguCode, isSejongRegionRow } from "./sejongRegion";
 import type { RegionLevel, RegionNameInfo } from "./types";
 
@@ -19,10 +20,7 @@ export function formatProfileSelectionQuery(
     return `${name.sido_name} ${name.sigungu_name} 전체`.trim();
   }
   if (level === "beopjungri") {
-    if (isSejongRegionRow(name)) {
-      return `${name.sido_name} ${name.sigungu_name} ${name.beopjungri_name}`.trim();
-    }
-    return `${name.sido_name} ${name.sigungu_name} ${name.eupmyeondong_name} ${name.beopjungri_name}`.trim();
+    return formatRegionHierarchyLabel(name);
   }
   if (isSejongRegionRow(name)) {
     return `${name.sido_name} ${name.sigungu_name}`.trim();

@@ -1,4 +1,5 @@
 import { cityBucketFromSigungu, extractCityFirstToken } from "./cityBucket";
+import { isLegalDongWithoutRi } from "./legalDongWithoutRi";
 import type { RegionNameInfo, RegionSearchResult } from "./types";
 
 /** `/free/v2/regions` hit → Profile 검색 제안 (토지 tier dedup과 동일 grain). */
@@ -53,8 +54,7 @@ export function groupProfileSearchResults(rows: RegionNameInfo[]): {
       });
     }
     if (r.beopjungri_code && !beopMap.has(r.beopjungri_code)) {
-      const isDongOnly = r.beopjungri_code.endsWith("00") && r.beopjungri_name === r.eupmyeondong_name;
-      if (!isDongOnly) {
+      if (!isLegalDongWithoutRi(r.beopjungri_code, r)) {
         beopMap.set(r.beopjungri_code, {
           level: "beopjungri",
           code: r.beopjungri_code,

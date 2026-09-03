@@ -37,7 +37,7 @@ Phase A(Profile v2.1-national · beop Top3 · UI 분리) 완료 후, Phase B(Pro
 
 ### 1.2 목표 (확정)
 
-1. **동일 grain 유지:** 토지에서 리·읍·면·동·시군구·시·도를 고르면 Profile도 **같은 `region_level` + `region_code`** 로 연다. beop → eup 승격 **폐기**.
+1. **동일 grain 유지:** 토지에서 리·읍·면·동·시군구·시·도를 고르면 Profile도 **같은 `region_level` + `region_code`** 로 연다. beop → eup 승격 **폐기**. **예외 D-057:** 리가 없는 10자리 동(`…00`)만 프로필에서 읍면동 8자리.
 2. **검색·해석 규칙 동일:** 지명만 입력, 법정동코드, loose 주소 한 줄, 동명이 리 disambiguation 등 **토지 `RegionSelector`와 같은 resolver** 사용.
 3. **Profile은 단일 지역:** 복수 tier 칩·「+ 추가」는 Profile 제품에 **넣지 않음** (D-010 복수 집계와 무관).
 4. **URL SSOT:** Profile SPA는 계속 `?region_level=&region_code=` 를 SSOT로 두되, 진입 시 토지 tier와 **1:1 대응**.

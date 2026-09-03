@@ -34,7 +34,7 @@
 | D-028 | 2026-07-21 | **지역코드 3계층 (raw / historical / canonical)**: ① 원장·raw 원본코드(또는 주소)는 보존. ② 분석·사전집계·GIS 정규화·Profile·Twin은 **현행 canonical만**. ③ 읍·면 승격 시 **이름만 바꾸고 폐지 코드를 활성 canonical로 남기는 수리 금지** (`repair_eup_myeon_promotion` 패턴 폐기). ④ 마스터 존재/폐지 불일치는 **구→현행 건별 매핑**(`region_code_history`); 1:N `split`은 자동 치환 금지. ⑤ Profile·Twin 착수 **전** Phase 1(분류→history→seed→stats 재빌드→GIS resolve) 완료. ⑥ **토지 Land finish(2026-07-21)**: basic+upper+annual canonical, 공통 모듈 `pipeline/region_canonical.py`(Built/Collective 공유). unresolved 2건 제외. Phase 1a: [`docs/reports/REGION_CODE_PHASE1A_CLASSIFICATION.md`](reports/REGION_CODE_PHASE1A_CLASSIFICATION.md). ⑦ **Resolver 완성(2026-08-04)**: Stateless pure core(`resolve_to_canonical`·`expand_to_ledger_codes`·`normalize_result_codes`·`is_canonical`); user-facing raw historical 반환 금지; 8자리 eup prefix remap; property/API contract tests + `verify_canonical_resolver_migration.py`. 상세: [`docs/REGION_CODE_LAYERS.md`](REGION_CODE_LAYERS.md). |
 | D-027 | 2026-07-25 | **Regional Profile v2 제품화(소급 기록)**: ① 독립 SPA `frontend-profile` (`/profile/`) — 토지 앱 내장 ProfilePanel·`viewMode=profile` **폐기**. ② `yearly_mix` 8대 시장유형 3개년 건수·금액(상가·공장은 Profile 집계에서만 병합). ③ `jimok_group` 구성·TOP3(지목군 합산 — D-029에서 용도×지목군으로 교체). ④ `profile_version=v2.0-national`. ⑤ Macro 공통 헤더·딥링크. 상세: [`REGIONAL_PROFILE_ARCHITECTURE.md`](REGIONAL_PROFILE_ARCHITECTURE.md) §12.1. |
 | D-029 | 2026-07-25 | **Region Profile SSOT + Twin-on-Profile**: ① DB에는 **`regional_profile`만** (Core Domain). **Feature Vector는 Catalog 기준 런타임 투영·비저장**. ② 시군구·읍면동·리 동일 스키마(시·도/`city` Twin 제외). ③ NULL≠0 — yearly_mix 0; 아파트 **최근3년 ㎡당** P25/P50/P75·없으면 NULL. ④ mask · Top1~3 컬럼 · 대표시장 Feature. ⑤ 파이프라인: **Candidate → Feature Catalog → Vector → Weight → Similarity → Top-N → Explainability**. ⑥ **`profile_feature_catalog.yaml` `twin_vector`** + **`profile_weight.yaml`** (Phase A 종료 전·가중치 코드 하드코딩 금지). ⑦ `region_scope_master` · Similarity Engine(`score_detail`). ⑧ `profile_version` (D-017). ⑨ **제품 `window_years=3`만** (토지 mart 3·5와 분리). ⑩ **Phase A→B** · 이후는 튜닝 중심. Twin v8 병행. 상세: [`REGIONAL_PROFILE_ARCHITECTURE.md`](REGIONAL_PROFILE_ARCHITECTURE.md) **§12**. |
-| D-030 | 2026-07-27 | **Profile Phase B Preflight (구현 대기)**: ① **지역 선택** — 토지 `RegionSelector`와 tier·검색·딥링크 동일; beop 선택 시 Profile도 **`beopjungri` grain 유지**(eup 승격 폐지). ② **리 아파트 분위** — beop grain `market_stats` + **`apartment_count>=15`(3년)** 시 P25/P50/P75; **eup proxy 금지** 유지; Twin `apartment_profile` mask 연동. 상세: [`docs/REGIONAL_PROFILE_PHASE_B_PREFLIGHT.md`](docs/REGIONAL_PROFILE_PHASE_B_PREFLIGHT.md). |
+| D-030 | 2026-07-27 | **Profile Phase B Preflight (구현 대기)**: ① **지역 선택** — 토지 `RegionSelector`와 tier·검색·딥링크 동일; beop 선택 시 Profile도 **`beopjungri` grain 유지**(eup 승격 폐지). **예외 D-057:** 리가 없는 법정동(`…00`)만 프로필에서 읍면동. ② **리 아파트 분위** — beop grain `market_stats` + **`apartment_count>=15`(3년)** 시 P25/P50/P75; **eup proxy 금지** 유지; Twin `apartment_profile` mask 연동. 상세: [`docs/REGIONAL_PROFILE_PHASE_B_PREFLIGHT.md`](docs/REGIONAL_PROFILE_PHASE_B_PREFLIGHT.md). |
 | D-031 | 2026-08-02 | **후보모형 경쟁 문서 체계 채택**: ① **Vision** [`CH2_MACRO_VISION.md`](CH2_MACRO_VISION.md) — Profile은 가설·Validation이 판단. ② **Architecture** [`SYSTEM_ARCHITECTURE.md`](SYSTEM_ARCHITECTURE.md) §0 Candidate·Validation OS. ③ **상세** [`CANDIDATE_EVALUATION_DESIGN.md`](CANDIDATE_EVALUATION_DESIGN.md). ④ **로드맵** [`CH2_MACRO_IMPLEMENTATION_ROADMAP.md`](CH2_MACRO_IMPLEMENTATION_ROADMAP.md) V1~V3. Profile 도메인 SSOT는 [`REGIONAL_PROFILE_ARCHITECTURE.md`](REGIONAL_PROFILE_ARCHITECTURE.md) 유지. |
 | D-032 | 2026-08-07 | **복합 모형 추천 — 기본 통계 vs 추천 변수 역할 분리**: 기본 통계는 사용자 변수·스케일; **`POST /built/regression/recommend`** 는 SSOT 서버 풀 탐색. 왼쪽 체크와 다른 결과는 **버그가 아님**. SSOT: [`CH2_RECOMMENDATION_ENGINE_DESIGN.md`](CH2_RECOMMENDATION_ENGINE_DESIGN.md). |
 | D-033 | 2026-08-07 | **복합 `analysis_scope` SSOT**: 지역·기간·필터는 `/run`·`/recommend` 공유; **`anchor_region_code`·`region_unit_hints`** 로 anchor·표시명 보존. **`scope_n_tx` / `selection_n` / `fit_n`** 3종 n 라벨. |
@@ -59,6 +59,7 @@
 | D-054 | 2026-08-29 | **지역프로필 = 달력 연도 3년 · 연초 1회.** 토지/복합/집합 월간 롤링과 시계를 섞지 않는다. 전국 순위·Profile Twin도 같은 연간 스냅샷. |
 | D-055 | 2026-08-29 | **거시 상관의 결.** M2·금리 = 전국 총액·유형별 전국 시계열만. 지역 상관 = 인구↔건수·액, 유형↔유형. BOK 뉴스판 금지. CH2 한눈 지표. |
 | D-056 | 2026-08-30 | **CH2 AI 5층 계약.** Planner는 경로+실행 가능성. History=성공 Bundle 자동. Gate≠Caveat. 분석 경로 추천만 허용. 실행 보조는 집합 코호트부터. SSOT: [`CH2_AI_ASSISTANT_EXPANSION_PLAN.md`](CH2_AI_ASSISTANT_EXPANSION_PLAN.md). |
+| D-057 | 2026-09-03 | **프로필 리가 없는 동 → 읍면동.** 검색·URL·토지→프로필 링크에서 10자리 `…00`은 `eupmyeondong` 8자리. 토지 지역선택(법정동·리 칩)은 유지. 리 순위 마트에서 동을 빼는 근본은 차후. 카드: [`lab/decisions/D-057.json`](lab/decisions/D-057.json). |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 
@@ -324,5 +325,11 @@
 - **P3:** 집합 코호트(기존 화면) → 집합 통합회귀(승인) → 해석·비교 → 메모. 그다음 복합/지역/토지.
 - **보고서:** History의 출력. 별도 AI 모드 없음.
 - SSOT [`CH2_AI_ASSISTANT_EXPANSION_PLAN.md`](CH2_AI_ASSISTANT_EXPANSION_PLAN.md). 카드 [`lab/decisions/D-056.json`](lab/decisions/D-056.json).
+
+## D-057 프로필 — 리가 없는 법정동은 읍면동
+
+- **저비용:** 프로필 검색·URL·토지→프로필 링크에서 10자리 `…00`(리가 없는 동)은 **`eupmyeondong` 8자리**로 연다. 헤더·검색창은 동명=리명이면 리 이름을 붙이지 않는다. 공유 picker의 토지 Enter·법정동·리 칩은 **그대로**.
+- **하지 않음(차후):** `region_codes` 10자리 동 행 삭제, 프로필 `beopjungri` 행에서 `…00` 제거, 리 순위 마트 유니버스를 실제 리만으로 재적재. SSOT [`PROFILE_NATIONAL_RANK_PLAN.md`](PROFILE_NATIONAL_RANK_PLAN.md) §9.
+- 카드 [`lab/decisions/D-057.json`](lab/decisions/D-057.json).
 
 
