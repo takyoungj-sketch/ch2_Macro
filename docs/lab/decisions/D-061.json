@@ -1,0 +1,11 @@
+{
+  "id": "D-061",
+  "topic": "관리자 /lab/ 만 Nginx Basic Auth",
+  "date": "2026-09-06",
+  "status": "confirmed",
+  "background": "관리자를 VPS에 올리되 게이트웨이에 문을 달지 않고, 주소와 비밀번호로만 들어가게 한다. 기존 macro 사이트 전체 Basic Auth는 제품 화면까지 막았다.",
+  "decision": "https://macro.ch2data.com/lab/ 과 랩 API(/api/regional-profile/lab/, /api/admin/, /api/built/lab/)만 htpasswd. 게이트웨이 카드 없음. 토지·복합·집합·프로필·임대 경로는 이 비밀번호를 쓰지 않는다. 계정은 VPS /etc/nginx/.htpasswd-ch2-lab, git에 비밀번호 없음.",
+  "rationale": "링크를 안 달면 눈에 안 띈다. 화면만 숨기면 JSON이 열린다. 사이트 전체 비밀번호는 일반 사용자와 관리자를 가리지 못한다.",
+  "revisit": "비밀번호 재발급은 setup-ch2-lab-auth.sh + CH2_LAB_AUTH_PASS. 구독 로그인으로 관리자 이메일을 쓸지는 나중에.",
+  "related": ["lab", "deploy"]
+}

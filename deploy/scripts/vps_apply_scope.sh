@@ -44,6 +44,12 @@ build_app() {
 
 apply_nginx() {
   if [[ -f "$NGINX_TEMPLATE" ]]; then
+    echo "==> lab Basic Auth + nginx snippets"
+    sed -i 's/\r$//' "$REPO/deploy/scripts/setup-ch2-lab-auth.sh" 2>/dev/null || true
+    sudo bash "$REPO/deploy/scripts/setup-ch2-lab-auth.sh"
+    sudo cp "$REPO/deploy/templates/nginx-ch2-lab-auth.conf" /etc/nginx/snippets/ch2-lab-auth.conf
+    sudo cp "$REPO/deploy/templates/nginx-ch2-lab-locations.conf" /etc/nginx/snippets/ch2-lab-locations.conf
+    sudo cp "$REPO/deploy/templates/nginx-ch2-lab-api.conf" /etc/nginx/snippets/ch2-lab-api.conf
     echo "==> nginx site from template"
     sudo cp "$NGINX_TEMPLATE" "$NGINX_SITE"
     sudo nginx -t

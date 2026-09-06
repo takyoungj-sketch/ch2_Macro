@@ -76,8 +76,8 @@ sudo nginx -t && sudo systemctl reload nginx
 
 | 계층 | 역할 |
 |------|------|
-| Basic Auth | `/`, `/land/`, `/built/` **정적 파일** (`.htpasswd-ch2`) |
-| `auth_basic off` | `/api/` — 브라우저 비밀번호 반복 방지 |
+| Basic Auth | **`/lab/` · 랩 API만** (`.htpasswd-ch2-lab`, D-061). 게이트웨이·토지·복합 등 제품 경로는 비밀번호 없음 |
+| `auth_basic off` | `/api/` 제품 API — 브라우저 비밀번호 반복 방지. 랩 경로는 예외로 잠금 |
 | `X-CH2-Proxy-Token` | nginx → uvicorn ( [`vps_sync_nginx_api_token.sh`](./scripts/vps_sync_nginx_api_token.sh) ) |
 | `X-Api-Token` | 프론트 빌드 `VITE_API_TOKEN` (이중 보호, 캐시 대비 nginx가 필수) |
 
@@ -137,7 +137,7 @@ bash /opt/ch2_Macro/deploy/scripts/promote_built_restore.sh \
 - [ ] `https://macro.ch2data.com/land/` — 토지 UI, API 200
 - [ ] `https://macro.ch2data.com/built/` — 복합 UI, 회귀 실행
 - [ ] `curl -s http://127.0.0.1:8000/health` — `built_stats.total_transactions` > 0
-- [ ] Basic Auth (`setup-ch2-basic-auth.sh`) macro 사이트 적용
+- [ ] Basic Auth는 **`/lab/`만** (`setup-ch2-lab-auth.sh`). 제품 경로는 사이트 전체 비밀번호 없음
 - [ ] 허브 `ch2data.com` Macro 카드 문구
 
 ---

@@ -80,13 +80,20 @@ try {
       Invoke-Scp @("deploy/scripts") "deploy/"
     }
     "lab" {
-      Invoke-Scp @("backend/app/qa_audit", "backend/app/ai", "backend/app/config.py", "backend/app/main.py") "backend/app/"
+      Invoke-Scp @("backend/app/qa_audit", "backend/app/parcel_lab", "backend/app/regional_profile", "backend/app/ai", "backend/app/config.py", "backend/app/main.py") "backend/app/"
       Invoke-Scp @("shared") "."
       Invoke-Scp @("docs/lab") "docs/"
       Invoke-Scp @("frontend-lab/package.json", "frontend-lab/package-lock.json", "frontend-lab/tsconfig.json", "frontend-lab/vite.config.ts", "frontend-lab/tailwind.config.js", "frontend-lab/postcss.config.js", "frontend-lab/index.html", "frontend-lab/src") "frontend-lab/"
       Invoke-Scp @("frontend-built/tsconfig.json", "frontend-built/vite.config.ts", "frontend-built/src") "frontend-built/"
       Invoke-Scp @("frontend-rent/src") "frontend-rent/"
-      Invoke-Scp @("deploy/templates/nginx-ch2-macro.conf") "deploy/templates/"
+      Invoke-Scp @("deploy/templates") "deploy/"
+      Invoke-Scp @("deploy/scripts/setup-ch2-lab-auth.sh", "deploy/scripts/vps_apply_scope.sh") "deploy/scripts/"
+      & ssh -i $Key $VpsHost "mkdir -p /opt/ch2_Macro/data"
+      Invoke-Scp @(
+        "data/M2 상품별 구성내역(평잔, 계절조정계열)_05145718.csv",
+        "data/시장금리(월,분기,년)_05151819.csv",
+        "data/한국은행 기준금리 및 여수신금리_05152733.csv"
+      ) "data/"
     }
     "rent" {
       Invoke-Scp @("backend/app/rent", "backend/app/config.py", "backend/app/main.py") "backend/app/"

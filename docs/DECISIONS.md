@@ -60,6 +60,10 @@
 | D-055 | 2026-08-29 | **거시 상관의 결.** M2·금리 = 전국 총액·유형별 전국 시계열만. 지역 상관 = 인구↔건수·액, 유형↔유형. BOK 뉴스판 금지. CH2 한눈 지표. |
 | D-056 | 2026-08-30 | **CH2 AI 5층 계약.** Planner는 경로+실행 가능성. History=성공 Bundle 자동. Gate≠Caveat. 분석 경로 추천만 허용. 실행 보조는 집합 코호트부터. SSOT: [`CH2_AI_ASSISTANT_EXPANSION_PLAN.md`](CH2_AI_ASSISTANT_EXPANSION_PLAN.md). |
 | D-057 | 2026-09-03 | **프로필 리가 없는 동 → 읍면동.** 검색·URL·토지→프로필 링크에서 10자리 `…00`은 `eupmyeondong` 8자리. 리 전국순위·리 Twin 카드는 응답에서 `…00`을 빼고 다시 매긴다. 토지 지역선택(법정동·리 칩)은 유지. 리 순위 마트에서 동을 빼는 근본은 차후. 카드: [`lab/decisions/D-057.json`](lab/decisions/D-057.json). |
+| D-058 | 2026-09-03 | **시장 규모의 관계 실험(관리자, 장기).** 제품 유형 동조 8×8 제거. `/lab/?tool=size`. 1차 ① n붕괴·② 시군구 내부 규모·③ 단가(인구보정 없음)·④ 시군구 내부 단가. 카드: [`lab/decisions/D-058.json`](lab/decisions/D-058.json). |
+| D-059 | 2026-09-03 | **일반구 ≠ 시군구 순위.** (D-060에서 개정) 청주 4구 등은 시군구 전국 순위에서 빼고 부모 시(city)를 넣는다. 프로필 검색·URL·토지→프로필은 일반구 → 시. 카드: [`lab/decisions/D-059.json`](lab/decisions/D-059.json). |
+| D-060 | 2026-09-03 | **일반구와 부모 시 = 같은 시군구 체급.** 프로필은 흥덕구를 구로 연다. 시군구 순위에는 청주시와 4구가 함께 있고, 강남구·옥천군과 같은 표다. 구가 있는 시만 14곳 시 전용 표로 나누지 않는다. D-059 개정. 카드: [`lab/decisions/D-060.json`](lab/decisions/D-060.json). |
+| D-061 | 2026-09-06 | **관리자 `/lab/` 만 Nginx Basic Auth.** 게이트웨이 카드 없음. 토지·복합 등 제품 경로는 사이트 전체 비밀번호를 쓰지 않는다. 랩 API(`/api/.../lab/`, `/api/admin/`)도 같은 비밀번호. 카드: [`lab/decisions/D-061.json`](lab/decisions/D-061.json). |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 
@@ -332,5 +336,35 @@
 - **읽기 필터:** 리 전국순위(`/national-ranks`)와 **리 Twin 카드**(`/twins-beop`)는 응답에서 `…00` 동을 뺀 뒤 위를 1부터 다시 매긴다. 마트 행은 그대로 둔다. 앵커 자신이 `…00`인 예외 3곳은 빼지 않는다(그 동의 읍면동 프로필이 없어 되돌아온 경우).
 - **하지 않음(차후):** `region_codes` 10자리 동 행 삭제, 프로필 `beopjungri` 행에서 `…00` 제거, 리 순위 마트 유니버스를 실제 리만으로 재적재. SSOT [`PROFILE_NATIONAL_RANK_PLAN.md`](PROFILE_NATIONAL_RANK_PLAN.md) §9.
 - 카드 [`lab/decisions/D-057.json`](lab/decisions/D-057.json).
+
+## D-058 시장 규모의 관계 — 관리자 실험
+
+- 제품 「유형 동조」8×8(비중)은 **프로필에서 제거**. 실험은 관리자 `?tool=size`. **장기 트랙**(2026-09-05 확인).
+- 같은 체급 전국, log(3년 거래액)·log(3년 건수). 시군구는 D-060 유니버스(일반구+부모 시). 리는 `…00` 제외(D-057).
+- 칸: 함께 큼(로그 r) · 인구 보정 후에도 함께 큼 · 약함(보정 r) · 반대는 보정 r 음수일 때만.
+- 해석: 동조·순수 상관 금지. 규모는 **인구 규모를 보정한 관계**. 단가(③)는 인구 보정하지 않음.
+- 1차 확장(2026-09-05): ① presence(n 붕괴) ② 시군구 내부 규모 ③ ㎡당 P50 상관 ④ 시군구 내부 단가. 스냅샷 [`lab/market_size_run.json`](lab/market_size_run.json) · [`lab/market_size_run2.json`](lab/market_size_run2.json).
+- G3(M2·금리 시계열)는 다른 창. 제품화하지 않음.
+- 카드 [`lab/decisions/D-058.json`](lab/decisions/D-058.json).
+
+## D-059 전국 순위 — 일반구는 부모 시로
+
+- **시군구 유니버스:** 시·군·자치구 + 일반구가 있는 시 전체. 일반구(5자리 끝 ≠ 0)는 목록에서 빼고 부모 city 버킷을 넣는다.
+- **프로필:** 흥덕구 등 → `city` 청주시. 토지 RegionSelector 칩은 그대로.
+- **하지 않음:** `region_codes`에서 일반구 삭제, `level=구` 신설.
+- **개정:** D-060. 카드 [`lab/decisions/D-059.json`](lab/decisions/D-059.json).
+
+## D-060 전국 순위 — 일반구와 부모 시를 같은 시군구 체급에
+
+- **프로필:** 일반구(흥덕구 등)는 `sigungu`로 연다. 시로 올리지 않는다.
+- **시군구 유니버스:** 기존 시군구(일반구 포함) + 일반구가 있는 시의 합(city 버킷). 청주시와 4구가 강남구·옥천군과 한 표.
+- **하지 않음:** 구가 있는 시만 14곳 ‘시 기준’으로 분리.
+- 카드 [`lab/decisions/D-060.json`](lab/decisions/D-060.json).
+
+## D-061 관리자 `/lab/` — VPS Basic Auth
+
+- 주소 `https://macro.ch2data.com/lab/`. 게이트웨이 카드 없음.
+- Nginx 비밀번호는 `/lab/` 과 랩 API만. 제품 경로는 막지 않음.
+- 카드 [`lab/decisions/D-061.json`](lab/decisions/D-061.json).
 
 
