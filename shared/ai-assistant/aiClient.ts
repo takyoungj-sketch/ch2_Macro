@@ -88,17 +88,35 @@ export async function fetchSuggestedQuestions(
   return data.questions ?? [];
 }
 
+export function isAiChatAborted(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { code?: string; name?: string; message?: string };
+  const msg = String(e.message || "").toLowerCase();
+  return (
+    e.code === "ERR_CANCELED" ||
+    e.name === "CanceledError" ||
+    e.name === "AbortError" ||
+    msg === "canceled" ||
+    msg === "cancelled"
+  );
+}
+
 export async function sendAiChat(
   message: string,
   context: AiContextPayload,
   sessionId?: string | null,
+  opts?: { signal?: AbortSignal },
 ): Promise<AiChatResponse> {
   const sid = sessionId ?? readAiSessionId() ?? undefined;
-  const { data } = await api.post<AiChatResponse>("/chat", {
-    session_id: sid,
-    message,
-    context,
-  });
+  const { data } = await api.post<AiChatResponse>(
+    "/chat",
+    {
+      session_id: sid,
+      message,
+      context,
+    },
+    { signal: opts?.signal },
+  );
   if (data?.session_id) writeAiSessionId(data.session_id);
   return data;
 }

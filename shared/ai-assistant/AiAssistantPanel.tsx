@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 import type { AiChatResponse, AiContextPayload, EvidenceItem } from "./aiClient";
-import { readAiSessionId, sendAiChat } from "./aiClient";
+import { isAiChatAborted, readAiSessionId, sendAiChat } from "./aiClient";
 import { emptyAiContext, useActiveAiView } from "./ActiveAiView";
 import { setAiChatOpen } from "./aiHost";
 import {
@@ -357,12 +357,16 @@ function AiAssistantModal({
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stoppedNotice, setStoppedNotice] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [lastMeta, setLastMeta] = useState<AiChatResponse | null>(null);
   const [win, setWin] = useState(defaultWinPos);
   const [fontScale, setFontScale] = useState(readStoredFontScale);
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const chatLogRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const loadingRef = useRef(false);
+  const userStopRef = useRef(false);
 
   const baseTrust = useMemo(() => deriveTrustFromContext(context), [context]);
 
@@ -396,17 +400,26 @@ function AiAssistantModal({
     return () => setAiChatOpen(false);
   }, [open]);
 
+  const stopChat = useCallback(() => {
+    userStopRef.current = true;
+    abortRef.current?.abort();
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       e.preventDefault();
       e.stopPropagation();
+      if (loadingRef.current) {
+        stopChat();
+        return;
+      }
       onClose();
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [open, onClose]);
+  }, [open, onClose, stopChat]);
 
   const bumpFont = useCallback((dir: -1 | 1) => {
     setFontScale((cur) => {
@@ -424,24 +437,42 @@ function AiAssistantModal({
   const runChat = useCallback(
     async (text: string) => {
       const q = text.trim();
-      if (!q || loading) return;
+      if (!q || loadingRef.current) return;
+      userStopRef.current = false;
+      abortRef.current?.abort();
+      const ac = new AbortController();
+      abortRef.current = ac;
+      loadingRef.current = true;
       setLoading(true);
       setError(null);
+      setStoppedNotice(false);
       setMessages((m: ChatMessage[]) => [...m, { role: "user", text: q }]);
       setInput("");
       try {
-        const resp = await sendAiChat(q, context, sessionId);
+        const resp = await sendAiChat(q, context, sessionId, { signal: ac.signal });
+        if (ac.signal.aborted) return;
         setSessionId(resp.session_id);
         setLastMeta(resp);
         setMessages((m: ChatMessage[]) => [...m, { role: "assistant", text: resp.answer, meta: resp }]);
       } catch (e) {
+        if (isAiChatAborted(e) || ac.signal.aborted) {
+          setError(null);
+          if (userStopRef.current) setStoppedNotice(true);
+          return;
+        }
         setError((e as Error).message ?? "AI 요청 실패");
       } finally {
+        if (abortRef.current === ac) abortRef.current = null;
+        loadingRef.current = false;
         setLoading(false);
       }
     },
-    [context, loading, sessionId],
+    [context, sessionId],
   );
+
+  useEffect(() => {
+    if (!open) abortRef.current?.abort();
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -662,19 +693,30 @@ function AiAssistantModal({
               <div className="text-[0.85em] font-semibold tracking-wide text-slate-500 dark:text-slate-400 mb-1">
                 답변
               </div>
-              <div className="flex items-center gap-2 text-[1em] text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-3 text-[1em] text-slate-500 dark:text-slate-400">
                 <span className="inline-flex gap-1" aria-hidden>
                   <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-bounce [animation-delay:-0.3s]" />
                   <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-bounce [animation-delay:-0.15s]" />
                   <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-bounce" />
                 </span>
                 답변중
+                <button
+                  type="button"
+                  aria-label="답변 멈춤"
+                  className="ml-auto px-2.5 py-1 rounded-lg border border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100 text-[0.95em] font-medium dark:border-rose-500 dark:bg-rose-950/50 dark:text-rose-200 dark:hover:bg-rose-900/60"
+                  onClick={stopChat}
+                >
+                  멈춤
+                </button>
               </div>
             </div>
           )}
         </div>
 
         {error && <p className="text-red-600 dark:text-red-400 text-[1em]">{error}</p>}
+        {stoppedNotice && !loading && !error && (
+          <p className="text-slate-500 dark:text-slate-400 text-[1em]">답변을 멈췄습니다.</p>
+        )}
       </div>
 
       <div
@@ -696,13 +738,24 @@ function AiAssistantModal({
             disabled={loading}
             autoFocus
           />
-          <button
-            type="submit"
-            className="btn btn-primary text-[1em] py-1.5 px-3 rounded disabled:opacity-50"
-            disabled={loading || !input.trim()}
-          >
-            {loading ? "답변중" : "전송"}
-          </button>
+          {loading ? (
+            <button
+              type="button"
+              aria-label="답변 멈춤"
+              className="text-[1em] py-1.5 px-3 rounded border border-rose-400 bg-rose-50 text-rose-800 hover:bg-rose-100 font-medium dark:border-rose-500 dark:bg-rose-950/50 dark:text-rose-200 dark:hover:bg-rose-900/60"
+              onClick={stopChat}
+            >
+              멈춤
+            </button>
+          ) : (
+            <button
+              type="submit"
+              className="btn btn-primary text-[1em] py-1.5 px-3 rounded disabled:opacity-50"
+              disabled={!input.trim()}
+            >
+              전송
+            </button>
+          )}
         </form>
         <p className="text-[0.85em] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900/70 rounded px-2 py-1.5 border border-transparent dark:border-slate-700">
           {PANEL_DISCLAIMER}

@@ -72,7 +72,6 @@ from app.ai.sessions import AiSession, SessionTurn, get_or_create, session_summa
 from app.ai.knowledge.caveats import format_caveats_for_prompt
 from app.ai.knowledge.history import (
     format_history_compare,
-    format_history_for_prompt,
     format_memo,
     maybe_record,
 )
@@ -82,14 +81,17 @@ from app.ai.knowledge.planner import (
     is_history_compare_question,
     is_knowledge_source_question,
     is_memo_request,
+    is_nested_admin_scope_question,
     is_path_intent_question,
     plan_analysis,
 )
 from app.ai.knowledge.product import (
     format_howto_answer,
     format_knowledge_source_answer,
+    format_nested_scope_answer,
     is_howto_ui_question,
     product_knowledge_excerpt,
+    skip_llm_for_quota,
 )
 from app.ai.stats_kb import (
     answer_statistics_question,
@@ -145,7 +147,6 @@ def _planner_or_memo_response(
     """경로 질문·분석 메모. 해당 없으면 None."""
     fired = bundle.diagnostics.get("caveats") or []
     caveats_text = format_caveats_for_prompt(fired) if fired else ""
-    history_text = format_history_for_prompt(session.analysis_history)
 
     if is_memo_request(req.message):
         answer = format_memo(session.analysis_history)
@@ -166,6 +167,36 @@ def _planner_or_memo_response(
             llm_used=False,
             trust_level="high" if session.analysis_history else "medium",
             trust_sources=["CH2 Analysis History"],
+            ai_interpretation=_ai_interpretation_label(llm_used=False),
+        )
+        session.add_turn(SessionTurn(role="user", message=req.message, route="ch2", bundle_id=bundle.bundle_id))
+        session.add_turn(SessionTurn(role="assistant", message=answer[:500], route="ch2", bundle_id=bundle.bundle_id))
+        return resp
+
+    if is_nested_admin_scope_question(req.message):
+        answer = format_nested_scope_answer(
+            facts=ctx.facts or {},
+            history=session.analysis_history,
+            message=req.message,
+        )
+        followups = [
+            "상위지역 분석은 어디서 보나요?",
+            "아까와 비교해 주세요",
+            "이 결과의 한계는?",
+        ]
+        resp = AiChatResponse(
+            session_id=session.session_id,
+            route="ch2",
+            answer=validate_answer(answer, "ch2"),
+            evidence=[
+                EvidenceItem(type="ch2_product", label="CH2 행정 계층 (초점 vs 상위)", confidence="high"),
+            ],
+            bundle_id=bundle.bundle_id,
+            suggested_followups=followups,
+            disclaimer=SHORT_DISCLAIMER,
+            llm_used=False,
+            trust_level="high",
+            trust_sources=["CH2 Product Knowledge", "화면 Bundle"],
             ai_interpretation=_ai_interpretation_label(llm_used=False),
         )
         session.add_turn(SessionTurn(role="user", message=req.message, route="ch2", bundle_id=bundle.bundle_id))
@@ -194,7 +225,28 @@ def _planner_or_memo_response(
         return resp
 
     if is_howto_ui_question(req.message):
-        return None
+        answer = format_howto_answer(ctx.app, req.message)
+        resp = AiChatResponse(
+            session_id=session.session_id,
+            route="ch2",
+            answer=validate_answer(answer, "ch2"),
+            evidence=[
+                EvidenceItem(type="ch2_product", label="CH2 화면 사용법", confidence="high"),
+            ],
+            bundle_id=bundle.bundle_id,
+            suggested_followups=[
+                "유형 격차를 보려면 어떻게 하나요?",
+                "이 결과의 한계는?",
+            ],
+            disclaimer=SHORT_DISCLAIMER,
+            llm_used=False,
+            trust_level="high",
+            trust_sources=["CH2 Product Knowledge"],
+            ai_interpretation=_ai_interpretation_label(llm_used=False),
+        )
+        session.add_turn(SessionTurn(role="user", message=req.message, route="ch2", bundle_id=bundle.bundle_id))
+        session.add_turn(SessionTurn(role="assistant", message=answer[:500], route="ch2", bundle_id=bundle.bundle_id))
+        return resp
     if is_knowledge_source_question(req.message):
         answer = format_knowledge_source_answer(app=ctx.app)
         resp = AiChatResponse(
@@ -231,19 +283,7 @@ def _planner_or_memo_response(
         "아까와 비교해 주세요",
         "지금까지 분석을 정리해 주세요.",
     ]
-    syn_ans, syn_fu, _syn_nr, syn_used = try_grounded_synthesis(
-        message=req.message,
-        route="ch2",
-        context=ctx,
-        bundle=bundle,
-        template_answer=template,
-        template_followups=followups,
-        session_summary=session_summary(session),
-        planner_text=template,
-        caveats_text=caveats_text,
-        history_text=history_text,
-    )
-    answer = syn_ans if syn_used else template
+    answer = template
     resp = AiChatResponse(
         session_id=session.session_id,
         route="ch2",
@@ -257,13 +297,13 @@ def _planner_or_memo_response(
             else []
         ),
         bundle_id=bundle.bundle_id,
-        suggested_followups=syn_fu or followups,
+        suggested_followups=followups,
         actions=actions,
         disclaimer=DEFAULT_DISCLAIMER,
-        llm_used=bool(syn_used),
+        llm_used=False,
         trust_level="medium",
         trust_sources=["CH2 Playbook", "Active Context"],
-        ai_interpretation=_ai_interpretation_label(llm_used=bool(syn_used), synthesized=bool(syn_used)),
+        ai_interpretation=_ai_interpretation_label(llm_used=False),
     )
     session.add_turn(SessionTurn(role="user", message=req.message, route="ch2", bundle_id=bundle.bundle_id))
     session.add_turn(SessionTurn(role="assistant", message=answer[:500], route="ch2", bundle_id=bundle.bundle_id))
@@ -1058,6 +1098,7 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
             and _has_facts_narrative(bundle)
             and llm_configured()
             and not is_pure_definition_question(req.message)
+            and not skip_llm_for_quota(req.message)
         ):
             syn_ans, syn_fu, syn_nr, syn_used = try_grounded_synthesis(
                 message=req.message,
@@ -1077,7 +1118,7 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
         disclaimer = DEFAULT_DISCLAIMER
     elif route == "explain":
         answer, narrative_followups, narrative_result = _explain_answer(ctx, req.message, bundle)
-        if not _is_targeted_answer(answer):
+        if not _is_targeted_answer(answer) and not skip_llm_for_quota(req.message):
             syn_ans, syn_fu, syn_nr, syn_used = try_grounded_synthesis(
                 message=req.message,
                 route="explain",
@@ -1111,7 +1152,7 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
             answer = targeted
         else:
             answer = _opinion_template(req.message, bundle)
-            if llm_configured():
+            if llm_configured() and not skip_llm_for_quota(req.message):
                 llm_ans = chat_completion(
                     user_message=req.message,
                     route=route,
@@ -1124,7 +1165,7 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
         disclaimer = OPINION_DISCLAIMER
     else:
         answer, narrative_followups, narrative_result = _ch2_template_answer(req.message, bundle, ctx)
-        if not _is_targeted_answer(answer):
+        if not _is_targeted_answer(answer) and not skip_llm_for_quota(req.message):
             syn_ans, syn_fu, syn_nr, syn_used = try_grounded_synthesis(
                 message=req.message,
                 route="ch2",

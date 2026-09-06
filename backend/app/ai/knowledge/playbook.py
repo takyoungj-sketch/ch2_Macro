@@ -52,10 +52,10 @@ PATHS: dict[str, dict[str, Any]] = {
     },
     "built_type_compare": {
         "id": "built_type_compare",
-        "label": "복합 유형별 통계·회귀 병행",
+        "label": "복합 통합회귀 (유형 더미)",
         "app": "built",
-        "purpose": "상가·단독·공장은 같은 지역·같은 창에서 유형을 바꿔 각각 본다. 집합 통합회귀(유형 더미)가 아님",
-        "requires": ["built_ui"],
+        "purpose": "상업·단독을 같이 고르고 「유형 더미」를 켠 뒤, 계수 표의 기준 유형 대비 값을 읽는다",
+        "requires": ["built_ui", "two_or_more_asset_types", "asset_type_dummy"],
     },
     "built_regression": {
         "id": "built_regression",
@@ -126,7 +126,7 @@ INTENTS: dict[str, dict[str, Any]] = {
         "id": "built_type_price_gap",
         "label": "복합 상가·단독·공장 가격 비교",
         "keywords": ("상가와 단독", "단독과 상가", "복합 유형"),
-        "paths": ["built_type_compare", "built_regression", "profile_twin"],
+        "paths": ["built_type_compare", "built_regression"],
     },
     "built_size_age": {
         "id": "built_size_age",

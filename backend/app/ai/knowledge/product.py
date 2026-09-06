@@ -34,6 +34,15 @@ REGRESSION_LOGIC = """
 - 기초 정의(Adj R²·VIF·p 등)는 UI 지표 옆 ? 팝업 — AI는 이번 결과 해석에 집중
 """
 
+NESTED_ADMIN_SCOPE = """
+복합 회귀의 행정 계층 (History 실행 순서와 다름):
+- 초점(하위): 지금 고른 단위. 대개 읍·면·동. 기본 회귀·예측의 primary.
+- 상위지역: 직계 상위 시·군·구 등 comparisons. 「상위지역 분석」에서 같은 변수식을 더 넓은 표본에 반복한다.
+- 의도: 하위 단위에서 표본·변수가 얇을 때 범위를 넓혀 같은 회귀를 시도한다. 계수가 윗단계에서 같은 방향이면, 그 패턴이 더 넓은 규모에서도 읽힌다는 참고(유사 지역 범위 규모의 간접 힌트)가 된다. Twin 채택·적정가가 아니다.
+- 사용자가 1차=시군구(상위), 2차=읍면동(하위)라고 부르면 이 계층을 가리킨다. 화면은 초점을 먼저 보여 준다.
+- History의 「1차·2차」는 세션에서 성공한 회귀의 실행 순서다. 초점 vs 상위와 같지 않을 수 있다. 둘 다 같은 동이면 동/구 비교가 아니다.
+"""
+
 RECOMMEND_LOGIC = """
 모형 추천·Twin:
 - 기본: Local scope 회귀·CV-MAPE 기반 모형 탐색
@@ -95,39 +104,103 @@ LIMITATIONS = """
 DOMAIN_BY_APP: dict[str, str] = {
     "land": """
 토지:
-- 수집: 국토부 토지 실거래 CSV → 원장 land_transactions (Master는 고치지 않음. 예외는 큐·보정 규칙).
-- 통계: V2 as_of_month + 3·5·7년 창. 용도지역×지목 매트릭스, 지목군, 장기 연도 추세.
-- 바람직: 같은 용도·지목 칸의 단가·건수 추세. 여러 칸을 한 회귀에 억지로 넣지 않음.
-- 한계: 거래액 합 ≠ 가격지수. 시군구에 M2·금리 r를 붙이지 않음.
+- 수집: 국토부 토지 실거래 CSV → 원장 land_transactions (Master 필지는 고치지 않음. 예외는 큐·보정 규칙).
+- 분석 단위: 선택 지역의 용도지역×지목 칸. 개별 건물 회귀가 아님.
+- 통계: V2 as_of_month + 3·5·7년 창. 매트릭스·지목군·장기 연도 추세. 유료 필터는 원장 재집계.
+- 바람직: 같은 용도·지목 칸의 단가·건수 추세. 칸이 얇으면 지목군 또는 상위 행정 단건을 본다.
+- 한계: 거래액 합 ≠ 가격지수. 시군구에 M2·금리 r를 붙이지 않음. 여러 칸을 한 OLS에 억지로 넣지 않음.
 """,
     "built": """
 복합(단독·일반상가·일반공장):
 - 수집: 국토부 상업업무·공장창고·단독다가구 CSV 중 유형=일반(단독은 전량). 집합 상가·집합공장은 여기 없음.
-- 분석 단위: 개별 건물 거래. 화면은 자산유형을 나누어 봄 (상가 회귀와 단독 회귀는 별 실행).
-- 통계: 기본통계·OLS(선형 또는 로그 금액)·모형 추천·예측. 집합의 「유형 더미 통합회귀」가 기본이 아님.
-- 바람직: 상가 vs 단독 가격 차이는 같은 지역·같은 창에서 유형별로 통계·회귀를 나란히 비교. 필요하면 지역프로필 8유형 구성(연간)로 지역의 상가·단독 비중을 봄.
-- 한계: 마스킹 지번·보강 속성은 결합용. 한 식에 상가+단독을 넣어 아파트·오피스텔처럼 유형효과를 읽는 기능이 아님.
+- 분석 단위: 개별 건물 거래. 유형을 2개 이상 고르면 통합 분석(is_unified). 이때 기본으로 「유형 더미」(asset_type_dummy)가 켜진다.
+- 통계: OLS(선형 또는 로그 금액). 유형 더미 계수는 기준 유형(상업이 있으면 상업) 대비 조건부 가격수준.
+- 바람직: 상가 vs 단독 가격수준은 두 유형을 함께 고르고 회귀를 실행한 뒤 계수 표의 유형 더미(예: 단독, 기준 상업 대비)를 읽는다. 면적·연식 등 통제 후의 연관이다.
+- 유형 더미 ≠ 건축물용도 더미. 용도 더미는 같은 유형 안의 용도 구성(근생·숙박 등).
+- 행정 계층: 초점(대개 읍면동)=하위 단위, 「상위지역 분석」=직계 상위 시군구. 하위 n·변수가 얇을 때 같은 식으로 범위를 넓혀 회귀를 시도한다. 계수가 윗단계에서 같은 방향이면 더 넓은 규모의 참고(유사지역 범위의 간접 힌트). Twin 채택·적정가가 아님.
+- History 「1차·2차」는 세션 실행 순서. 초점 vs 상위와 같지 않을 수 있다.
+- 한계: 통합 식의 R²·MAPE가 상업 단독 식보다 좋아 보여도, 유형 간 수준 차이를 더미가 흡수한 결과일 수 있다. 상업만의 적합도와 우열을 단정하지 말 것. 집합 코호트(아파트·오피스텔) 통합회귀와는 다른 화면이다.
 """,
     "collective": """
 집합 주거(아파트·오피스텔 등):
 - 수집: 국토부 집합 주거. 분석 단위=단지(building_key). 코호트에 단지를 모아 통합회귀(유형 더미)로 아파트 vs 오피스텔 가격수준을 면적·연식 통제 비교.
-- 한계: 유형이 하나면 유형 더미 비교가 안 됨. 소표본이면 계수 불안정.
+- 통계: 단지 회귀·코호트 통합회귀·지역회귀·고정효과(FE). K-apt 세대수·주차는 주거 단지 전용.
+- 바람직: 유형 격차는 두 유형이 코호트에 있을 때 유형 더미. 한 단지 안 동·면적은 단지 회귀.
+- 한계: 유형이 하나면 유형 더미 비교가 안 됨. 소표본이면 계수 불안정. 유형이 층으로 갈리면 유형 더미에 층 구간이 섞임.
 
 집합 비주거(집합상가·집합공장):
-- 수집: 국토부 집합 상업·공장. 분석 단위=도로명 cluster (건물 key 분석 없음).
+- 수집: 국토부 집합 상업·공장. 분석 단위=도로명 cluster (건물 key·K-apt 없음).
 - 통계 UX는 주거와 같음. 아파트·오피스텔 통합회귀 플레이북을 여기에 그대로 쓰지 않음.
 """,
     "rent": """
 임대:
-- 주거 전월세: 국토부 원장. 전환율은 단순평균(D-040). 부동산원 공식 전환율이 아님.
-- 상권 모달: 한국부동산원 상업용 임대동향(상권 공표). 주거 원장과 출처·단위가 달라 한 표에 섞지 않음.
-- 바람직: 주거 전월세 단가·전환은 임대 앱, 상업 임대료·공실은 상권 모달.
+- 주거 전월세: 국토부 원장. 전환율은 단순평균(D-040, mean_simple). 부동산원 공식 전월세전환율이 아님.
+- 적용: 지역×유형×3/5/7년. 읍면동 우선, 게이트 미달 시 시군구. 환산 P50은 비교값.
+- 상권 모달: 한국부동산원 상업용 임대동향(상권 공표). 공표 단위는 행정동이 아니라 상권.
+- 바람직: 주거 전월세 단가·전환은 임대 목록, 상업 임대료·공실은 상권 모달.
+- 한계: 주거 원장과 상권 공표는 출처·단위·기간이 다름. 한 표에 섞지 않음. 환산 P50 ≠ 시세·적정 전세.
 """,
     "profile": """
 지역프로필:
-- 토지·복합·집합 마트를 지역 grain으로 묶어 8유형 구성(연간 3년)·인구·Twin.
+- 토지·복합·집합 마트를 지역 grain으로 묶어 8유형 구성(연간 3년)·인구·Twin·전국 순위.
+- 제품 창은 window_years=3만. 토지/집합 분석의 3·5·7년 창과 같지 않음.
 - 상가·공장은 프로필 집계에서만 일반+집합을 합침. 복합/집합 앱의 분석 단위를 바꾸지 않음.
-- 바람직: 「이 지역이 어떤 시장 구성인가」는 프로필. 개별 건물 회귀는 복합·집합 앱.
+- Twin은 regional_profile 벡터를 소비. Feature를 여기서 다시 만들지 않음.
+- 바람직: 「이 지역이 어떤 시장 구성인가」는 프로필. 개별 건물·단지 회귀는 복합·집합 앱.
+- 한계: 리 아파트 분위는 해당 grain만. 읍 값을 리에 넣지 않음(proxy 금지). 표본이 얇으면 구성이 한두 건에 흔들림.
+""",
+}
+
+# 앱마다 「아닌 것」. LLM·템플릿이 다른 화면을 꺼내지 않게 한다.
+NEGATIVE_BY_APP: dict[str, str] = {
+    "land": """
+토지에서 하지 않는 것:
+- 복합 건물 OLS·집합 단지/코호트 회귀가 아님.
+- 여러 용도×지목 칸을 한 식에 UNION하지 않음.
+- 거래액 합·건수 합으로 가격지수·시세를 말하지 않음.
+- 시군구에 M2·금리·거시지표 r를 붙이지 않음.
+- 프로필 Twin 점수와 매트릭스 단가를 한 문장으로 합치지 않음.
+- 「이용」만 말하면 감정평가 이용상황과 혼동됨. 용도지역×지목으로 말함.
+- 지분거래 제외는 유료 옵션(토지 기본은 포함). 몰래 뺀 표본처럼 말하지 않음.
+""",
+    "built": """
+복합에서 하지 않는 것:
+- 집합 아파트·오피스텔 코호트 통합회귀가 아님. 그 화면으로 보내지 않음.
+- 집합상가·집합공장은 복합 원장에 없음.
+- 유형 더미 ≠ 건축물용도 더미.
+- History 1차·2차 ≠ 시군구 vs 읍면동. 실행 순서일 수 있음.
+- Twin 유사도 ≠ 자동 pool 채택·적정가.
+- 통합 식 R²·MAPE가 좋아져도 유형 수준 차이를 더미가 흡수한 결과일 수 있음.
+- 예측 ŷ·PI ≠ 감정·투자 판단.
+""",
+    "collective": """
+집합에서 하지 않는 것:
+- 복합 상가·단독 「유형 더미」화면이 아님.
+- 비주거(도로 cluster)에 아파트·오피스텔 코호트 플레이북을 그대로 쓰지 않음.
+- K-apt 세대수·주차는 주거 단지 전용. 유형 전용 재고로 읽지 않음.
+- 단지 FE와 단지 속성을 한 식에서 동시에 읽지 않음.
+- Twin 채택 ≠ 시세. 인접 확대는 별도 실행.
+- 유형이 층으로 갈리면 유형 더미를 순수 유형 효과로 읽지 않음.
+""",
+    "rent": """
+임대에서 하지 않는 것:
+- 주거 mean_simple ≠ 한국부동산원 주거 전월세전환율·고정 5%.
+- 주거 원장과 상권 공표를 한 표·한 문장으로 섞지 않음.
+- 환산 P50 ≠ 시세·적정 전세.
+- 임대료 × 순영업소득% 로 NOI 금액을 역산하지 않음.
+- 공실률을 유효 임대수입에 다시 곱하지 않음.
+- 상권은 행정동이 아님. 동으로 상권을 만들지 않음.
+- 연간 투자수익률을 매수·가치 판단으로 쓰지 않음.
+""",
+    "profile": """
+지역프로필에서 하지 않는 것:
+- Twin 점수 ≠ 매수·투자 추천. 회귀 pool 자동 채택이 아님.
+- 거래 구성비 ≠ 개별 건물·단지 회귀 계수.
+- 일반+집합 합산은 프로필 집계만. 복합/집합 앱 표본이 아님.
+- 토지/집합 3·5·7년 창과 프로필 3년을 같은 창처럼 말하지 않음.
+- 리 아파트 분위에 읍 값을 넣지 않음(proxy 금지).
+- GDP·M2·뉴스와 구성 숫자를 한 문장으로 합치지 않음.
+- Building stats와 Market stats를 섞지 않음.
 """,
 }
 
@@ -137,10 +210,37 @@ def format_domain_card(app: str) -> str:
     return "[유형별 데이터·통계 방식]\n" + body
 
 
-def format_all_domain_cards() -> str:
+def format_negative_card(app: str) -> str:
+    body = (NEGATIVE_BY_APP.get(app) or NEGATIVE_BY_APP["built"]).strip()
+    return "[혼동 금지]\n" + body
+
+
+def is_cross_app_question(message: str) -> bool:
+    """다섯 앱을 견줘야 하는 질문인가. 기본 발췌는 현재 앱만."""
+    m = message.strip()
+    names = ("토지", "복합", "집합", "임대", "프로필", "지역프로필")
+    if sum(1 for k in names if k in m) >= 2:
+        return True
+    return any(
+        k in m
+        for k in (
+            "유형별 데이터",
+            "앱 차이",
+            "앱마다",
+            "각 유형",
+            "유형이 뭐가",
+            "뭐가 다르",
+            "앱 구조",
+        )
+    )
+
+
+def format_all_domain_cards(*, with_negatives: bool = False) -> str:
     parts = ["[유형별 데이터·통계 방식 — 토지·복합·집합·임대·지역프로필]"]
     for key in ("land", "built", "collective", "rent", "profile"):
         parts.append(DOMAIN_BY_APP[key].strip())
+        if with_negatives:
+            parts.append(NEGATIVE_BY_APP[key].strip())
     return "\n\n".join(parts)
 
 
@@ -151,13 +251,102 @@ def format_knowledge_source_answer(*, app: str) -> str:
         "1. **Product Knowledge** — 유형별 수집·정제·DB·통계 방식·한계 "
         "(토지, 복합, 집합 주거/비주거, 임대, 지역프로필).\n"
         "2. **Playbook** — 질문 의도에 맞는 CH2 화면 경로. "
-        "집합 통합회귀(유형 더미)는 주거 집합의 아파트·오피스텔 비교용입니다. "
-        "복합의 상가·단독 비교에 그대로 쓰지 않습니다.\n"
+        "집합 코호트 통합회귀는 주거 집합(아파트·오피스텔) 화면입니다. "
+        "복합의 상가·단독 비교는 복합 앱에서 유형을 같이 고르고 「유형 더미」 계수를 봅니다.\n"
         "3. **화면 Bundle** — n·계수 등 숫자는 현재 화면에서 엔진이 낸 결과만.\n\n"
-        f"{format_all_domain_cards()}\n\n"
+        f"{format_all_domain_cards(with_negatives=True)}\n\n"
         f"지금 화면 앱(`{app}`)에 맞춰 위 방식 안에서 경로를 고릅니다. "
-        "없는 기능(예: 복합 유형 더미 통합회귀)은 있는 것처럼 만들지 않습니다."
+        "없는 화면을 있는 것처럼 만들지 않습니다."
     )
+
+
+def _scope_level_line(level: dict[str, Any]) -> str:
+    label = str(level.get("scope_label") or "—")
+    admin = str(level.get("admin_level") or "")
+    n = level.get("n")
+    adj = level.get("adj_r_squared") or level.get("adj_r2")
+    bits = [label]
+    if admin:
+        bits.append(admin)
+    if n is not None:
+        bits.append(f"n={n}")
+    if adj is not None:
+        try:
+            bits.append(f"Adj R²={float(adj):.4f}")
+        except (TypeError, ValueError):
+            bits.append(f"Adj R²={adj}")
+    return " · ".join(bits)
+
+
+def format_nested_scope_answer(
+    *,
+    facts: dict[str, Any] | None = None,
+    history: list[dict[str, Any]] | None = None,
+    message: str = "",
+) -> str:
+    """초점 vs 직계 상위 설계 의도. 숫자는 Bundle facts만."""
+    facts = facts if isinstance(facts, dict) else {}
+    want_compare = any(k in (message or "") for k in ("비교", "결과"))
+    lines = [
+        "복합 회귀에서 말하는 1차·2차는 **History 실행 순서**가 아니라, "
+        "행정 계층을 넓혀 같은 회귀를 시도하는 설계입니다.",
+        "",
+        "**하위(초점)** 는 지금 고른 단위입니다. 대개 읍·면·동이고, 기본 회귀·예측의 primary입니다.",
+        "**상위** 는 직계 상위 시·군·구입니다. 화면 「상위지역 분석」이 같은 변수식을 더 넓은 표본에 반복합니다.",
+        "",
+        "의도는 두 가지입니다. 하위 단위에서 표본·변수가 얇을 때 범위를 넓혀 회귀를 시도할 수 있게 하는 것, "
+        "그리고 계수가 윗단계에서도 같은 방향이면 그 패턴이 더 넓은 규모에서도 읽힌다는 **참고**(유사 지역 범위 규모의 간접 힌트)를 얻는 것입니다. "
+        "Twin 채택이나 적정가가 아닙니다.",
+        "",
+        "화면은 초점을 먼저 보여 줍니다. 1차=시군구, 2차=읍면동이라고 부르시면 이 계층과 같습니다.",
+    ]
+    primary = facts.get("primary") if isinstance(facts.get("primary"), dict) else None
+    raw_cmp = facts.get("comparisons")
+    comparisons = [c for c in raw_cmp if isinstance(c, dict)] if isinstance(raw_cmp, list) else []
+    if primary or comparisons:
+        lines.append("")
+        lines.append("지금 화면:")
+        if primary:
+            lines.append(f"- 초점(하위): {_scope_level_line(primary)}")
+        if comparisons:
+            lines.append(f"- 직계 상위: {_scope_level_line(comparisons[0])}")
+            if want_compare:
+                n_p, n_u = primary.get("n") if primary else None, comparisons[0].get("n")
+                if n_p is not None and n_u is not None:
+                    lines.append(
+                        f"  상위 n={n_u} · 초점 n={n_p} 입니다. "
+                        "윗단계 표본이 더 많으면 하위 단위의 얇은 표본을 보완하려는 시도입니다."
+                    )
+        else:
+            lines.append(
+                "- 직계 상위 숫자(comparisons)는 아직 Bundle에 없습니다. "
+                "「상위지역 분석」을 열면 초점과 같은 식을 윗단계에서 볼 수 있습니다."
+            )
+    elif want_compare:
+        lines.append("")
+        lines.append(
+            "지금 화면에 초점 vs 직계 상위 숫자가 없습니다. "
+            "「상위지역 분석」을 연 뒤 같은 질문을 하시면 그 값을 인용합니다."
+        )
+
+    hist = [s for s in (history or []) if isinstance(s, dict)]
+    if len(hist) >= 2:
+        a, b = hist[-2], hist[-1]
+        la = str((a.get("scope") or {}).get("region_label") or "")
+        lb = str((b.get("scope") or {}).get("region_label") or "")
+        lines.append("")
+        if la and lb and la.strip() == lb.strip():
+            lines.append(
+                f"세션 History의 1차·2차는 **실행 순서**입니다. "
+                f"지금 기록된 두 번은 모두 `{la}` 이라 시군구 vs 읍면동 비교가 아닙니다."
+            )
+        else:
+            lines.append(
+                "세션 History의 1차·2차는 성공한 회귀의 **실행 순서**입니다. "
+                "초점 vs 상위지역과 같지 않을 수 있습니다. 실행 순서를 보려면 「아까와 비교해 주세요」라고 물어 주세요."
+            )
+    return "\n".join(lines).strip()
+
 
 # 화면 사용법 — 플레이북 기능 목록이 아니라 클릭 순서
 UI_HOWTO = """
@@ -171,6 +360,8 @@ UI_HOWTO = """
 비주거는 단지가 아니라 도로(cluster)를 클릭한다. 회귀·코호트·유형 더미는 격차를 통제해 비교할 때 쓴다.
 
 복합(단독·상가·공장): 유형·지역을 고르고 「통계분석」을 누르면 회귀·요약 카드가 나온다.
+유형을 2개 이상 고르면 통합회귀가 되고, 「유형 더미」 계수가 기준 유형 대비 가격수준이다.
+읍면동 표본이 얇으면 「상위지역 분석」에서 직계 상위(시군구)에 같은 식을 반복한다. History 1차·2차(실행 순서)와 혼동하지 않는다.
 토지: 지역을 고른 뒤 용도지역×지목 매트릭스와 장기추세를 본다.
 임대: 지역을 고르고 통계분석 후 건물을 연다.
 """
@@ -178,10 +369,16 @@ UI_HOWTO = """
 
 def is_howto_ui_question(message: str) -> bool:
     """어디를 눌러 결과를 보나 — 분석방법(격차·통합회귀) 질문과 구분."""
-    from app.ai.knowledge.planner import detect_intent, is_knowledge_source_question
+    from app.ai.knowledge.planner import (
+        detect_intent,
+        is_knowledge_source_question,
+        is_nested_admin_scope_question,
+    )
 
     m = message.strip()
     if is_knowledge_source_question(m):
+        return False
+    if is_nested_admin_scope_question(m):
         return False
     if detect_intent(m) in ("apartment_officetel_price_gap", "built_type_price_gap"):
         return False
@@ -269,6 +466,29 @@ def format_howto_answer(app: str, message: str) -> str:
     )
 
 
+def skip_llm_for_quota(message: str) -> bool:
+    """제품 설명·사용법·혼동 정정은 LLM 호출 없이 코드가 답한다. 한도(월 200) 보호."""
+    from app.ai.knowledge.planner import (
+        is_history_compare_question,
+        is_knowledge_source_question,
+        is_memo_request,
+        is_nested_admin_scope_question,
+        is_path_intent_question,
+    )
+
+    if is_nested_admin_scope_question(message):
+        return True
+    if is_knowledge_source_question(message):
+        return True
+    if is_howto_ui_question(message):
+        return True
+    if is_memo_request(message) or is_history_compare_question(message):
+        return True
+    if is_path_intent_question(message):
+        return True
+    return False
+
+
 # Planner 판단 자료. 한 단지 실측 n·계수는 넣지 않는다.
 FUNCTION_CARDS: list[dict[str, Any]] = [
     {
@@ -340,14 +560,15 @@ FUNCTION_CARDS: list[dict[str, Any]] = [
     },
     {
         "id": "built_type_compare",
-        "name": "복합 유형별 통계 병행",
+        "name": "복합 통합회귀 (유형 더미)",
         "apps": ("built",),
-        "purpose": "상가·단독·공장을 같은 지역·창에서 유형을 바꿔 각각 비교",
-        "good_questions": ["상가와 단독 가격 차이", "복합에서 유형 비교"],
-        "strengths": ["현재 복합 화면에 있는 통계·회귀를 그대로 씀"],
+        "purpose": "상업·단독·공장을 한 식에 넣고 유형 더미 계수로 기준 유형 대비 가격수준을 본다",
+        "good_questions": ["상가와 단독 가격 차이", "복합에서 유형 비교", "유형 더미 계수는?"],
+        "strengths": ["면적·연식 등을 통제한 뒤 유형 수준 차이를 한 표에서 읽음"],
         "cautions": [
-            "집합 통합회귀(유형 더미)가 아님",
-            "한 식에 상가+단독을 넣어 아파트·오피스텔처럼 유형효과를 읽지 않음",
+            "집합 코호트(아파트·오피스텔) 통합회귀와는 다른 화면",
+            "유형 더미 ≠ 건축물용도 더미",
+            "통합 식 R²·MAPE가 좋아져도 유형 간 수준 차이를 더미가 흡수한 결과일 수 있음",
         ],
     },
     {
@@ -360,13 +581,29 @@ FUNCTION_CARDS: list[dict[str, Any]] = [
         "cautions": ["집합 유형 비교용이 아님", "예측값은 적정가가 아님"],
     },
     {
+        "id": "built_upper_scope",
+        "name": "복합 상위지역 비교",
+        "apps": ("built",),
+        "purpose": "초점(읍면동) 표본이 얇을 때 직계 상위(시군구)에 같은 회귀식을 반복해 패턴이 더 넓은 규모에서도 읽히는지 본다",
+        "good_questions": [
+            "1차와 2차가 의미하는 바는?",
+            "상위와 하위 행정구역을 왜 같이 보나",
+            "읍면동 n이 부족하면?",
+        ],
+        "strengths": ["같은 변수식으로 범위를 넓힘", "계수 방향이 윗단계에서 유지되면 규모 인사이트의 간접 힌트"],
+        "cautions": [
+            "History 1차·2차는 실행 순서이며 구 vs 동이 아닐 수 있음",
+            "유사도·Twin 채택·적정가가 아님",
+        ],
+    },
+    {
         "id": "land_matrix",
         "name": "토지 매트릭스·장기추세",
         "apps": ("land",),
         "purpose": "용도지역×지목 칸의 단가 수준과 추이",
         "good_questions": ["이 용도·지목의 단가는?", "장기 추세는?"],
         "strengths": ["칸별 n과 단가를 같이 봄"],
-        "cautions": ["칸 n이 작으면 불안정", "전망이 아님"],
+        "cautions": ["칸 n이 작으면 불안정", "전망이 아님", "여러 칸을 한 회귀에 넣지 않음", "거래액 합 ≠ 가격지수"],
     },
     {
         "id": "profile_twin",
@@ -417,25 +654,32 @@ def format_function_cards(*, app: str = "", intent_hint: str = "") -> str:
 
 
 def product_knowledge_pack(*, app: str = "built", panel: str = "") -> str:
-    """질문·화면에 맞게 발췌할 수 있는 큐레이션 지식."""
-    parts = [PRODUCT_OVERVIEW.strip(), APP_STRUCTURE.strip(), format_all_domain_cards()]
-    if app == "built":
+    """현재 앱 지식. 다른 앱 전문은 넣지 않음."""
+    key = app if app in DOMAIN_BY_APP else "built"
+    parts = [
+        PRODUCT_OVERVIEW.strip(),
+        APP_STRUCTURE.strip(),
+        format_domain_card(key),
+        format_negative_card(key),
+    ]
+    if key == "built":
         parts.append(REGRESSION_LOGIC.strip())
+        parts.append(NESTED_ADMIN_SCOPE.strip())
         if panel in ("RecommendationCard", "ModelSelectionCard"):
             parts.append(RECOMMEND_LOGIC.strip())
-    elif app == "land":
+    elif key == "land":
         parts.append(
             "land: 용도지역×지목 매트릭스 셀 회귀·장기추세·유료 필지 분석. "
             "셀별 n·Adj R²·모델(log/선형)은 Bundle facts만 인용."
         )
-    elif app == "collective":
+    elif key == "collective":
         parts.append(format_function_cards(app="collective"))
         parts.append(
             "collective: 단지/코호트 회귀·고정효과(FE). "
             "주거·비주거는 분석 단위만 다르고 통계 UX는 동일. "
             "비주거 grain=도로 cluster. K-apt 세대수·주차는 주거 단지 전용."
         )
-    elif app == "rent":
+    elif key == "rent":
         parts.append(RENT_CONVERSION.strip())
         parts.append(SANGKWON_REB.strip())
         if panel == "SangkwonCard":
@@ -443,28 +687,38 @@ def product_knowledge_pack(*, app: str = "built", panel: str = "") -> str:
                 "지금 화면은 상권분석 모달이다. 주거 전환율·환산 P50이 아니라 "
                 "부동산원 상업용 상권 공표(기본표 4분기 롤링, 추세는 연간)만 인용한다."
             )
-    elif app == "profile":
+    elif key == "profile":
         parts.append(format_function_cards(app="profile"))
+        parts.append(RECOMMEND_LOGIC.strip())
         parts.append(
             "profile: 지역 프로필(거래 구성·Twin 유사지역·전국 순위). "
             "숫자는 화면 Bundle facts만 인용. 투자·매수 추천 금지."
         )
     parts.append(LIMITATIONS.strip())
     parts.append(UI_HOWTO.strip())
-    if app in ("built", "land") and panel:
-        extra = format_function_cards(app=app)
+    if key in ("built", "land") and panel:
+        extra = format_function_cards(app=key)
         if extra:
             parts.append(extra)
     return "\n\n".join(parts)
 
 
 def product_knowledge_excerpt(*, app: str, panel: str, message: str) -> str:
-    """LLM 컨텍스트용 — 전체 팩 또는 토픽별 발췌."""
+    """LLM 컨텍스트용 — 기본은 현재 앱 + 네거티브. 전 앱은 유형 차이 질문만."""
     lower = message.lower()
     from app.ai.knowledge.planner import is_knowledge_source_question
 
-    if is_knowledge_source_question(message):
-        return format_knowledge_source_answer(app=app or "built")
+    if is_knowledge_source_question(message) or is_cross_app_question(message):
+        if is_knowledge_source_question(message):
+            return format_knowledge_source_answer(app=app or "built")
+        return "\n\n".join(
+            [
+                PRODUCT_OVERVIEW.strip(),
+                APP_STRUCTURE.strip(),
+                format_all_domain_cards(with_negatives=True),
+                LIMITATIONS.strip(),
+            ]
+        )
     if any(k in lower or k in message for k in ("twin", "쌍둥이", "stage")) or (
         "모형" in message and any(k in message for k in ("추천", "탐색", "forward"))
     ):
@@ -474,7 +728,8 @@ def product_knowledge_excerpt(*, app: str, panel: str, message: str) -> str:
             [
                 PRODUCT_OVERVIEW.strip(),
                 DATA_PIPELINE.strip(),
-                format_all_domain_cards(),
+                format_domain_card(app or "built"),
+                format_negative_card(app or "built"),
                 LIMITATIONS.strip(),
             ]
         )
@@ -493,19 +748,46 @@ def product_knowledge_excerpt(*, app: str, panel: str, message: str) -> str:
         "기타수입",
     )
     if panel == "SangkwonCard" or any(k in message or k in lower for k in sangkwon_keys):
-        return "\n\n".join([PRODUCT_OVERVIEW.strip(), SANGKWON_REB.strip(), LIMITATIONS.strip()])
+        return "\n\n".join(
+            [
+                PRODUCT_OVERVIEW.strip(),
+                format_negative_card("rent"),
+                SANGKWON_REB.strip(),
+                LIMITATIONS.strip(),
+            ]
+        )
     if is_howto_ui_question(message):
         return "\n\n".join(
             [
                 PRODUCT_OVERVIEW.strip(),
-                APP_STRUCTURE.strip(),
+                format_negative_card(app or "built"),
                 UI_HOWTO.strip(),
                 format_howto_answer(app, message),
                 LIMITATIONS.strip(),
             ]
         )
-    if any(k in message for k in ("앱", "복합", "토지", "집합", "화면", "구조")):
-        return "\n\n".join([PRODUCT_OVERVIEW.strip(), APP_STRUCTURE.strip(), format_function_cards(app=app)])
+    if any(
+        k in message
+        for k in (
+            "1차",
+            "2차",
+            "상위지역",
+            "상위행정",
+            "하위행정",
+            "직계 상위",
+            "읍면동",
+            "시군구",
+        )
+    ) and any(k in message for k in ("의미", "뜻", "비교", "결과", "의도", "무엇", "뭐야", "1차", "2차", "상위")):
+        return "\n\n".join(
+            [
+                PRODUCT_OVERVIEW.strip(),
+                NESTED_ADMIN_SCOPE.strip(),
+                format_domain_card(app or "built"),
+                format_negative_card(app or "built"),
+                LIMITATIONS.strip(),
+            ]
+        )
     if any(
         k in message
         for k in (
@@ -524,8 +806,8 @@ def product_knowledge_excerpt(*, app: str, panel: str, message: str) -> str:
         return "\n\n".join(
             [
                 PRODUCT_OVERVIEW.strip(),
-                format_all_domain_cards(),
                 format_domain_card(app or "built"),
+                format_negative_card(app or "built"),
                 format_function_cards(app=app or "built"),
                 LIMITATIONS.strip(),
             ]
@@ -544,5 +826,12 @@ def product_knowledge_excerpt(*, app: str, panel: str, message: str) -> str:
             "반전세",
         )
     ):
-        return "\n\n".join([PRODUCT_OVERVIEW.strip(), RENT_CONVERSION.strip(), LIMITATIONS.strip()])
+        return "\n\n".join(
+            [
+                PRODUCT_OVERVIEW.strip(),
+                format_negative_card("rent"),
+                RENT_CONVERSION.strip(),
+                LIMITATIONS.strip(),
+            ]
+        )
     return product_knowledge_pack(app=app, panel=panel)

@@ -31,10 +31,31 @@ def is_knowledge_source_question(message: str) -> bool:
     return any(k in m for k in _SOURCE_META_HINTS)
 
 
+def is_nested_admin_scope_question(message: str) -> bool:
+    """초점(읍면동) vs 직계 상위(시군구). History 실행 순서(1차·2차 슬롯)와 구분."""
+    m = message.strip()
+    if any(k in m for k in ("아까와", "이전 분석", "히스토리 비교", "슬롯 비교", "이전 실행")):
+        return False
+    first_second = "1차" in m and "2차" in m
+    admin_pair = any(
+        k in m
+        for k in ("상위행정", "하위행정", "시군구", "읍면동", "상위지역", "직계 상위")
+    )
+    if first_second:
+        return True
+    if "상위" in m and "하위" in m:
+        return True
+    if admin_pair and any(k in m for k in ("의미", "뜻", "비교", "결과", "의도", "무엇", "뭐야")):
+        return True
+    return False
+
+
 def is_path_intent_question(message: str, context: AiContext | None = None) -> bool:
     """분석 *방법*을 고르는 질문인가. 화면 사용법·추세 안내·지식 출처는 여기로 보내지 않는다."""
     m = message.strip()
     if is_knowledge_source_question(m):
+        return False
+    if is_nested_admin_scope_question(m):
         return False
     if any(k in m for k in ("왜 이 결과", "왜 이렇게", "이 화면", "이번 표본", "이 계수")):
         return False
@@ -66,7 +87,7 @@ def is_memo_request(message: str) -> bool:
 
 
 def is_history_compare_question(message: str) -> bool:
-    """P3-4: 이전 History 슬롯 비교. 유형 격차 질문과 구분."""
+    """P3-4: 이전 History 슬롯 비교. 유형 격차·행정 계층(초점 vs 상위)과 구분."""
     m = message.strip()
     if any(k in m for k in ("오피스텔", "아파트와", "유형 효과", "용도지역")):
         if "아까" not in m and "이전 분석" not in m and "슬롯" not in m:
@@ -79,10 +100,11 @@ def is_history_compare_question(message: str) -> bool:
             "이전과 비교",
             "히스토리 비교",
             "슬롯 비교",
-            "1차와 2차",
         )
     ):
         return True
+    if is_nested_admin_scope_question(m):
+        return False
     return ("아까" in m or "이전 실행" in m or "방금 전" in m) and any(
         k in m for k in ("비교", "차이", "달라")
     )
@@ -123,7 +145,10 @@ def _asset_types_present(context: AiContext, facts: dict[str, Any]) -> set[str]:
     found: set[str] = set()
     at = (context.scope.asset_type or "").strip().lower()
     if at:
-        found.add(at)
+        if at == "all":
+            found.update({"commercial", "factory", "detached"})
+        else:
+            found.update(p.strip() for p in at.replace("|", ",").split(",") if p.strip())
     nbt = facts.get("n_by_type") or facts.get("type_counts") or {}
     if isinstance(nbt, dict):
         for k, v in nbt.items():
@@ -212,12 +237,18 @@ def assess_feasibility(path_id: str, context: AiContext) -> dict[str, Any]:
     elif path_id == "built_type_compare":
         if app != "built":
             executable = "no"
-            reasons.append("복합 앱에서 유형을 바꿔 같은 지역·같은 창의 통계·회귀를 나란히 보세요.")
+            reasons.append("복합 앱에서 상업·단독 등 유형을 2개 이상 고르고 「유형 더미」를 켠 회귀를 실행하세요.")
         else:
-            executable = "unknown"
-            reasons.append(
-                "상가·단독·공장을 한 식에 넣지 말고, 유형을 바꿔 각각 통계·회귀를 실행한 뒤 요약 카드를 비교하세요."
-            )
+            unified = len(types & {"commercial", "factory", "detached"}) >= 2
+            if unified and has_reg:
+                executable = "yes"
+                reasons.append("지금 화면에 통합회귀 결과가 있으면 계수 표의 유형 더미(기준 유형 대비)를 읽으세요.")
+            else:
+                executable = "unknown"
+                reasons.append(
+                    "상업(일반상가)과 단독다가구를 함께 선택한 뒤 「유형 더미」를 켜고 회귀하세요. "
+                    "계수 표의 단독(기준 상업 대비)이 면적·연식 등을 통제한 가격수준 차이입니다."
+                )
     elif path_id == "built_regression":
         executable = "yes" if app == "built" and has_reg else ("unknown" if app == "built" else "no")
         if executable == "no":
@@ -289,8 +320,10 @@ def format_plan_answer(plan: dict[str, Any], *, caveats_text: str = "") -> str:
     lines.append("")
     if plan.get("intent_id") == "built_type_price_gap":
         lines.append(
-            "복합의 상가·단독·공장은 집합 통합회귀(유형 더미) 대상이 아닙니다. "
-            "같은 지역·같은 기간에서 유형을 바꿔 통계·회귀를 각각 실행한 뒤 요약 카드를 비교하는 것이 맞습니다."
+            "복합에서 상업(일반상가)과 단독다가구를 **함께 고르면 통합회귀**가 됩니다. "
+            "「유형 더미」를 켠 뒤 계수 표에서 기준 유형(상업이 있으면 상업) 대비 값을 읽으세요. "
+            "집합 코호트(아파트·오피스텔) 통합회귀와는 다른 화면입니다. "
+            "통합 식의 R²·MAPE가 상업 단독 식보다 좋아 보여도, 유형 간 수준 차이를 더미가 흡수한 결과일 수 있습니다."
         )
         lines.append("")
     lines.append("CH2 Macro에서는 다음 순서로 접근하는 것이 좋습니다. (숫자는 엔진 실행 후에만 인용합니다.)")
@@ -519,19 +552,30 @@ def actions_for_plan(plan: dict[str, Any], context: AiContext) -> list[dict[str,
                     _action(
                         aid="nav-built-types",
                         kind="navigate",
-                        label="복합에서 유형별 통계 비교",
+                        label="복합에서 유형 더미 통합회귀",
                         href="/built/",
+                        path_id=pid,
+                    )
+                )
+            elif exe == "yes":
+                add(
+                    _action(
+                        aid="ui-built-types",
+                        kind="open_ui",
+                        label="계수 표에서 유형 더미 확인",
+                        ui="built_regression",
                         path_id=pid,
                     )
                 )
             else:
                 add(
                     _action(
-                        aid="ui-built-types",
-                        kind="open_ui",
-                        label="유형을 바꿔 통계·회귀 비교",
+                        aid="run-built-types",
+                        kind="run_engine",
+                        label="유형 더미를 켠 통합회귀 실행",
                         ui="built_regression",
                         path_id=pid,
+                        confirm_message=_RUN_CONFIRM_BUILT,
                     )
                 )
         elif pid == "built_regression":

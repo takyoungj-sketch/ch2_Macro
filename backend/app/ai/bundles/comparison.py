@@ -71,8 +71,12 @@ def is_model_comparison_question(message: str) -> bool:
 
 
 def is_scope_comparison_question(message: str) -> bool:
-    """지역·scope 간 비교 — 모형 비교와 구분."""
+    """지역·scope 간 비교 — 모형 비교·행정 계층(1차/2차)과 구분."""
     if is_model_comparison_question(message):
+        return False
+    from app.ai.knowledge.planner import is_nested_admin_scope_question
+
+    if is_nested_admin_scope_question(message):
         return False
     lower = message.lower()
     keys = ("비교", "차이", "왜 다르", "달라", " vs ", "versus", "다른 scope", "다른 지역")

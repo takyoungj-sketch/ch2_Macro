@@ -120,7 +120,7 @@ Orchestrator: `(panel, facts) → bundle_id → AiDiagnosticPack`
 ## 5. Router 규칙 (1차: 키워드)
 
 1. **Refusal** — 적정가, 투자·매수 추천, 저평가, 오를까, 전망, 싸다, 비싸다 … (**분석 경로 추천은 통과**)
-2. **Path / Intent** — 「가격 차이를 보고 싶어」「어떻게 분석」→ Planner (현재 앱 Playbook + 실행 가능성). 복합 상가·단독은 집합 통합회귀로 보내지 않음. 지식 출처 질문은 Playbook 회피가 아님.
+2. **Path / Intent** — 「가격 차이를 보고 싶어」「어떻게 분석」→ Planner (현재 앱 Playbook + 실행 가능성). 복합 상가·단독은 복합 「유형 더미」 통합회귀. 집합 코호트로 보내지 않음. 지식 출처 질문은 Playbook 회피가 아님.
 3. **Statistics** — 순수 정의 → UI `?` 유도 · 해석형 → explain/ch2 우선
 4. **Explain** — 왜 이 결과, 어떻게 해석/봐, 이번 표본 …
 5. **Opinion** — 로그회귀, 방법론, trade-off (전망 키워드 없을 때)

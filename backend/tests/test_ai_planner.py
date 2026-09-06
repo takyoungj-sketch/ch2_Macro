@@ -393,9 +393,14 @@ def test_built_type_gap_does_not_use_collective_playbook(monkeypatch):
 
     resp = handle_chat(AiChatRequest(message=q, context=ctx))
     assert resp.route == "ch2"
-    assert "집합 통합회귀" not in resp.answer or "대상이 아닙니다" in resp.answer
+    assert "유형 더미" in resp.answer
+    assert "계수" in resp.answer
+    assert "한 식에 넣지 말고" not in resp.answer
+    assert "대상이 아닙니다" not in resp.answer
     assert "확인된 플레이북이 없는" not in resp.answer
-    assert any(a.href == "/built/" or a.ui == "built_regression" for a in (resp.actions or []))
+    assert any(
+        (a.href == "/built/" or a.ui == "built_regression") for a in (resp.actions or [])
+    )
     assert not any(a.href == "/collective/residential/" for a in (resp.actions or []))
 
     apt_on_built = plan_analysis("아파트와 오피스텔 가격 차이를 보고 싶어", ctx)
@@ -409,7 +414,7 @@ def test_built_type_gap_does_not_use_collective_playbook(monkeypatch):
     assert "확인된 플레이북이 없는" not in src_resp.answer
     assert "Product Knowledge" in src_resp.answer
     assert "Playbook" in src_resp.answer
-    assert "집합 통합회귀(유형 더미)는 주거 집합" in src_resp.answer
+    assert "유형 더미" in src_resp.answer
     assert not any(a.href == "/collective/residential/" for a in (src_resp.actions or []))
 
     rec = handle_chat(
@@ -421,3 +426,146 @@ def test_built_type_gap_does_not_use_collective_playbook(monkeypatch):
     assert "주거 집합에서 통합회귀" not in rec.answer
     assert "확인된 플레이북이 없는" not in rec.answer
 
+
+def test_nested_admin_scope_not_history_compare(monkeypatch):
+    from app.ai.bundles.extractors import build_regression_diagnostic
+    from app.ai.knowledge.planner import is_history_compare_question, is_nested_admin_scope_question
+    from app.ai.knowledge.product import format_nested_scope_answer
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "ai_open_mode", False)
+    monkeypatch.setattr("app.ai.orchestrator.llm_configured", lambda: False)
+    monkeypatch.setattr("app.ai.synthesis.llm_configured", lambda: False)
+
+    meaning = "1차와 2차가 의미하는 바는 각각 무엇인가?"
+    compare_q = "1차와 2차의 결과를 비교설명 바람"
+    assert is_nested_admin_scope_question(meaning)
+    assert is_nested_admin_scope_question(compare_q)
+    assert not is_history_compare_question(meaning)
+    assert not is_history_compare_question(compare_q)
+    assert is_history_compare_question("아까와 비교해 주세요")
+    assert not is_nested_admin_scope_question("아까와 비교해 주세요")
+
+    ctx = AiContext(
+        app="built",
+        panel="RegressionCard",
+        scope=AiScope(region_label="간석동"),
+        facts={
+            "primary": {
+                "scope_label": "간석동",
+                "admin_level": "eupmyeondong",
+                "n": 67,
+                "adj_r_squared": 0.8737,
+            },
+            "comparisons": [
+                {
+                    "scope_label": "남동구",
+                    "admin_level": "sigungu",
+                    "n": 259,
+                    "adj_r_squared": 0.9221,
+                }
+            ],
+        },
+    )
+    pack = build_regression_diagnostic(ctx)
+    assert any("남동구" in s for s in pack.summary_lines)
+
+    meaning_resp = handle_chat(AiChatRequest(message=meaning, context=ctx))
+    assert "실행 비교" not in meaning_resp.answer
+    assert "시군구" in meaning_resp.answer
+    assert "읍" in meaning_resp.answer
+    assert "History" in meaning_resp.answer or "실행 순서" in meaning_resp.answer
+    assert "259" not in meaning_resp.answer or "남동구" in meaning_resp.answer
+
+    cmp_resp = handle_chat(AiChatRequest(message=compare_q, context=ctx))
+    assert "실행 비교" not in cmp_resp.answer
+    assert "남동구" in cmp_resp.answer
+    assert "n=259" in cmp_resp.answer
+    assert "n=67" in cmp_resp.answer
+
+    hist_text = format_nested_scope_answer(
+        facts=ctx.facts,
+        history=[
+            {"scope": {"region_label": "간석동 읍면동"}, "n": 259, "path_id": "built_regression"},
+            {"scope": {"region_label": "간석동 읍면동"}, "n": 67, "path_id": "built_regression"},
+        ],
+        message=compare_q,
+    )
+    assert "실행 순서" in hist_text
+    assert "시군구 vs 읍면동 비교가 아닙니다" in hist_text
+
+
+def test_knowledge_pack_is_app_scoped():
+    from app.ai.knowledge.product import (
+        is_cross_app_question,
+        product_knowledge_excerpt,
+        product_knowledge_pack,
+        skip_llm_for_quota,
+    )
+
+    built = product_knowledge_pack(app="built")
+    assert "혼동 금지" in built
+    assert "집합 아파트·오피스텔 코호트" in built
+    assert "mean_simple" not in built
+    assert "window_years=3만" not in built
+
+    land = product_knowledge_pack(app="land")
+    assert "거래액 합" in land
+    assert "M2" in land
+    assert "여러 용도×지목 칸을 한 식에 UNION하지 않음" in land
+    assert "asset_type_dummy" not in land
+
+    profile = product_knowledge_pack(app="profile")
+    assert "proxy 금지" in profile
+    assert "Twin 점수 ≠ 매수" in profile
+
+    rent = product_knowledge_pack(app="rent")
+    assert "mean_simple" in rent
+    assert "주거 원장과 상권 공표" in rent
+
+    gap = product_knowledge_excerpt(
+        app="built", panel="RegressionCard", message="상가와 단독 가격 차이를 어떻게 분석하나요?"
+    )
+    assert "혼동 금지" in gap
+    assert "mean_simple" not in gap
+
+    cross = product_knowledge_excerpt(app="built", panel="", message="토지와 복합은 뭐가 다르나요?")
+    assert is_cross_app_question("토지와 복합은 뭐가 다르나요?")
+    assert "용도지역×지목" in cross
+    assert "asset_type_dummy" in cross
+
+    assert skip_llm_for_quota("1차와 2차가 의미하는 바는 각각 무엇인가?")
+    assert skip_llm_for_quota("분석 경로를 추천해 주세요")
+    assert skip_llm_for_quota("추세는 어떻게 보나요?")
+    assert not skip_llm_for_quota("이번 표본에서 Adj R²가 높은 이유는?")
+
+
+def test_product_questions_skip_llm_even_if_configured(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "ai_open_mode", False)
+    monkeypatch.setattr("app.ai.orchestrator.llm_configured", lambda: True)
+    monkeypatch.setattr("app.ai.synthesis.llm_configured", lambda: True)
+
+    def _boom(*_a, **_k):
+        raise AssertionError("product questions must not call grounded LLM")
+
+    monkeypatch.setattr("app.ai.orchestrator.try_grounded_synthesis", _boom)
+
+    meaning = handle_chat(
+        AiChatRequest(
+            message="1차와 2차가 의미하는 바는 각각 무엇인가?",
+            context=AiContext(app="built", panel="RegressionCard", facts={}),
+        )
+    )
+    assert meaning.llm_used is False
+    assert "시군구" in meaning.answer
+
+    path = handle_chat(
+        AiChatRequest(
+            message="분석 경로를 추천해 주세요",
+            context=AiContext(app="collective", panel="BuildingRegressionPanel"),
+        )
+    )
+    assert path.llm_used is False
+    assert path.actions

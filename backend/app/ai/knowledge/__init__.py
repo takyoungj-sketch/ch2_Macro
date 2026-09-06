@@ -4,6 +4,7 @@ from app.ai.knowledge.caveats import fire_caveats, format_caveats_for_prompt
 from app.ai.knowledge.planner import (
     is_history_compare_question,
     is_memo_request,
+    is_nested_admin_scope_question,
     is_path_intent_question,
     plan_analysis,
 )
@@ -18,4 +19,5 @@ __all__ = [
     "is_path_intent_question",
     "is_memo_request",
     "is_history_compare_question",
+    "is_nested_admin_scope_question",
 ]

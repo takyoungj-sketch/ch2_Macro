@@ -101,6 +101,24 @@ def build_regression_diagnostic(context: AiContext) -> AiDiagnosticPack:
         summary.append(f"CV-MAPE={_fmt_num(cv_mape, 1)}%")
     if primary.get("scope_label"):
         summary.append(f"scope={primary['scope_label']}")
+    raw_cmp = facts.get("comparisons")
+    comparison_snaps: list[dict[str, Any]] = []
+    if isinstance(raw_cmp, list):
+        for i, c in enumerate(raw_cmp[:3]):
+            if not isinstance(c, dict):
+                continue
+            snap = {
+                "scope_label": c.get("scope_label"),
+                "admin_level": c.get("admin_level"),
+                "n": c.get("n"),
+                "adj_r_squared": c.get("adj_r_squared") or c.get("adj_r2"),
+            }
+            comparison_snaps.append(snap)
+            summary.append(
+                f"상위비교[{i}] scope={snap['scope_label'] or '—'} "
+                f"admin={snap['admin_level'] or '—'} n={snap['n']} "
+                f"AdjR2={_fmt_num(snap['adj_r_squared'])}"
+            )
     summary.extend(coeff_lines[:8])
 
     if vif:
@@ -165,6 +183,7 @@ def build_regression_diagnostic(context: AiContext) -> AiDiagnosticPack:
             "cv_mape": cv_mape,
             "cv_fitness": cv_fitness,
             "significant_count": primary.get("significant_count"),
+            "comparisons": comparison_snaps,
         },
         limitations=limitations,
     )
