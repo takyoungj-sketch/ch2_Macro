@@ -1,7 +1,8 @@
 # CH2 AI 아키텍처
 
 > 구현 가이드. 헌법: [CH2_AI_CONSTITUTION.md](./CH2_AI_CONSTITUTION.md)  
-> **확장 계획 (의도·이력·분석 메모):** [CH2_AI_ASSISTANT_EXPANSION_PLAN.md](./CH2_AI_ASSISTANT_EXPANSION_PLAN.md)
+> **확장 계획 (의도·이력·분석 메모):** [CH2_AI_ASSISTANT_EXPANSION_PLAN.md](./CH2_AI_ASSISTANT_EXPANSION_PLAN.md)  
+> **외부조사:** [CH2_AI_EXTERNAL_RESEARCH.md](./CH2_AI_EXTERNAL_RESEARCH.md) (D-062)
 
 ---
 
@@ -16,7 +17,9 @@ flowchart TB
   Classify -->|refusal| Ref[Refusal Template]
   Classify -->|ch2/explain| Synth[Grounded Dialogue]
   Classify -->|statistics| Stat[Definition redirect / facts]
-  Classify -->|opinion/web| Other[Opinion / Web LLM]
+  Classify -->|opinion| Other[Opinion LLM]
+  Classify -->|offer_external| Offer[조사 제안 · 검색 없음]
+  Offer -->|동의| Web[Web LLM + URL]
   Synth --> PK[Product Knowledge Pack]
   Synth --> Bundle[Reasoning Bundle]
   Synth --> LLM[OpenAI synthesis]
@@ -25,6 +28,7 @@ flowchart TB
   Stat --> Val
   Ref --> Val
   Other --> Val
+  Web --> Val
   Fallback --> Val
   Val --> Out[AiChatResponse + evidence]
 ```
@@ -116,13 +120,14 @@ Orchestrator: `(panel, facts) → bundle_id → AiDiagnosticPack`
 ## 5. Router 규칙 (1차: 키워드)
 
 1. **Refusal** — 적정가, 투자·매수 추천, 저평가, 오를까, 전망, 싸다, 비싸다 … (**분석 경로 추천은 통과**)
-2. **Path / Intent** — 「가격 차이를 보고 싶어」「어떻게 분석」→ Planner (Playbook + 실행 가능성). Explain dump가 아님
+2. **Path / Intent** — 「가격 차이를 보고 싶어」「어떻게 분석」→ Planner (현재 앱 Playbook + 실행 가능성). 복합 상가·단독은 집합 통합회귀로 보내지 않음. 지식 출처 질문은 Playbook 회피가 아님.
 3. **Statistics** — 순수 정의 → UI `?` 유도 · 해석형 → explain/ch2 우선
 4. **Explain** — 왜 이 결과, 어떻게 해석/봐, 이번 표본 …
 5. **Opinion** — 로그회귀, 방법론, trade-off (전망 키워드 없을 때)
-6. **Web** — 금리, 국토부, 정책, 뉴스 …
-7. **CH2** — default (표본, Adj R², 계수 …)
-8. **Memo** — 「지금까지 정리」→ History만. 슬롯 없으면 실행을 안내
+6. **offer_external** — 개발사업·뉴스·한국은행 공고 등 원장 밖. 검색하지 않고 조사 여부를 묻는다 (D-062)
+7. **Web** — `external_research` 또는 제안 직후 동의. 스니펫만. CH2와 인과로 합치지 않음
+8. **CH2** — default (표본, Adj R², 계수 …)
+9. **Memo** — 「지금까지 정리」→ History만. 슬롯 없으면 실행을 안내
 
 ---
 
@@ -185,7 +190,7 @@ AI_RATE_LIMIT_PER_MINUTE=30
 - **OPENAI_API_KEY** — Opinion·웹 요약·(선택) 템플릿 polish
 - **AI_POLISH_ENABLED=true** — CH2 내러티브 문장 다듬기 (숫자 변경 시 자동 폐기)
 - **AI_CASUAL_DIALOGUE_ENABLED=true** — *(실험)* 인사·짧은 잡담 허용. **사실·수치는 CH2 지식·Bundle만** ( `/api/ai/health` → `casual_dialogue_enabled` )
-- **TAVILY_API_KEY** — 웹 검색 품질 향상 (없으면 DuckDuckGo Instant 폴백)
+- **TAVILY_API_KEY** — 동의한 외부조사의 검색 품질 (없으면 DuckDuckGo Instant). 기본 대화는 검색하지 않음 (D-062)
 
 ---
 

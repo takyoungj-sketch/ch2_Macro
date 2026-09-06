@@ -64,6 +64,7 @@
 | D-059 | 2026-09-03 | **일반구 ≠ 시군구 순위.** (D-060에서 개정) 청주 4구 등은 시군구 전국 순위에서 빼고 부모 시(city)를 넣는다. 프로필 검색·URL·토지→프로필은 일반구 → 시. 카드: [`lab/decisions/D-059.json`](lab/decisions/D-059.json). |
 | D-060 | 2026-09-03 | **일반구와 부모 시 = 같은 시군구 체급.** 프로필은 흥덕구를 구로 연다. 시군구 순위에는 청주시와 4구가 함께 있고, 강남구·옥천군과 같은 표다. 구가 있는 시만 14곳 시 전용 표로 나누지 않는다. D-059 개정. 카드: [`lab/decisions/D-060.json`](lab/decisions/D-060.json). |
 | D-061 | 2026-09-06 | **관리자 `/lab/` 만 Nginx Basic Auth.** 게이트웨이 카드 없음. 토지·복합 등 제품 경로는 사이트 전체 비밀번호를 쓰지 않는다. 랩 API(`/api/.../lab/`, `/api/admin/`)도 같은 비밀번호. 카드: [`lab/decisions/D-061.json`](lab/decisions/D-061.json). |
+| D-062 | 2026-09-06 | **AI 기본은 CH2만. 웹은 동의한 외부조사.** 키워드로 바로 검색하지 않음. 개발사업 등은 조사 여부를 묻고, 켠 뒤에도 인과 문장 금지. SSOT: [`CH2_AI_EXTERNAL_RESEARCH.md`](CH2_AI_EXTERNAL_RESEARCH.md). 카드: [`lab/decisions/D-062.json`](lab/decisions/D-062.json). |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 
@@ -366,5 +367,11 @@
 - 주소 `https://macro.ch2data.com/lab/`. 게이트웨이 카드 없음.
 - Nginx 비밀번호는 `/lab/` 과 랩 API만. 제품 경로는 막지 않음.
 - 카드 [`lab/decisions/D-061.json`](lab/decisions/D-061.json).
+
+## D-062 AI — 기본 CH2, 웹은 동의한 외부조사
+
+- 키워드로 바로 웹 검색하지 않음. 원장 밖 질문은 조사 여부를 묻는다.
+- 켠 뒤에도 CH2와 외부를 나누고, 가격 인과를 쓰지 않음.
+- SSOT [`CH2_AI_EXTERNAL_RESEARCH.md`](CH2_AI_EXTERNAL_RESEARCH.md). 카드 [`lab/decisions/D-062.json`](lab/decisions/D-062.json).
 
 

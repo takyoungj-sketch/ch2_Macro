@@ -1,0 +1,11 @@
+{
+  "id": "D-062",
+  "topic": "AI 기본은 CH2만. 웹은 동의한 외부조사",
+  "date": "2026-09-06",
+  "status": "confirmed",
+  "background": "키워드(뉴스·정책·금리)에 걸리면 AI가 바로 웹을 검색했다. 사용자는 CH2 숫자와 기사를 구분하기 어렵다. 개발사업은 CH2 원장에 없어 「없습니다」만 하면 자리가 없다. 「웹을 못 한다」는 정체성이 아니다.",
+  "decision": "기본 경로는 웹 검색을 타지 않는다. 원장 밖 질문(개발사업·뉴스·공고 등)은 offer_external로 조사 여부를 묻는다. 사용자가 동의한 뒤에만 route=web. 답은 CH2 칸과 외부 칸을 나눈다. 시기가 겹쳐도 가격 인과를 쓰지 않는다. 인구·화면 「정책」만으로 웹에 보내지 않는다. Insight 원인 카드는 이 결정 범위 밖. SSOT: CH2_AI_EXTERNAL_RESEARCH.md.",
+  "rationale": "Macro AI의 근거는 CH2 통계다. 웹은 켠 조사다. 둘을 한 문장으로 합치면 상관을 인과처럼 읽는다.",
+  "revisit": "P1 답 본문 칸 고정·Tavily. P2 주제 칩. Instant 폴백 품질.",
+  "related": ["ai", "CH2_AI_CONSTITUTION", "CH2_AI_EXTERNAL_RESEARCH"]
+}

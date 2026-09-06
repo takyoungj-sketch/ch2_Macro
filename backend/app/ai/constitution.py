@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-CONSTITUTION_VERSION = "2"
+CONSTITUTION_VERSION = "2.1"
 
 SYSTEM_PERSONALITY = """당신은 CH2 Macro의 분석 보조 AI입니다.
 
@@ -43,7 +43,15 @@ ROUTE_PROMPTS: dict[str, str] = {
         "해석형이면 Bundle facts와 결합해 설명."
     ),
     "opinion": "방법론·모델 trade-off만. '~할 수 있습니다' 수준. 가격·투자·전망 금지.",
-    "web": "출처 URL을 evidence에 포함. CH2 내부 수치와 혼동하지 마세요.",
+    "web": (
+        "제공된 웹 스니펫만 요약. CH2 회귀·예측 수치와 혼동하지 마세요. "
+        "시기가 겹쳐도 그 때문에 가격이 움직였다고 쓰지 마세요. "
+        "출처 URL을 evidence에 포함."
+    ),
+    "offer_external": (
+        "검색하지 마세요. CH2 원장에 없는 정보임을 알리고 외부조사 여부를 물으세요. "
+        "웹을 못 한다고 쓰지 마세요."
+    ),
 }
 
 DEFAULT_DISCLAIMER = (
@@ -53,8 +61,40 @@ DEFAULT_DISCLAIMER = (
 
 WEB_DISCLAIMER = (
     "본 답변은 외부 웹·공공 자료 요약이며 CH2 거래통계와 별개입니다. "
-    "시점·지역에 따라 달라질 수 있으며, 투자·적정가 판단 근거가 아닙니다."
+    "시점·지역에 따라 달라질 수 있으며, 투자·적정가 판단 근거가 아닙니다. "
+    "시기가 겹쳐도 CH2가 그 효과를 측정한 것이 아닙니다."
 )
+
+OFFER_EXTERNAL_DISCLAIMER = (
+    "CH2는 거래 통계를 해석합니다. 외부조사는 동의한 뒤에만 실행합니다."
+)
+
+_CONFIRM_EXACT = frozenset({"네", "예", "응", "좋아요", "그래", "ㅇㅇ", "yes", "ok", "OK"})
+_CONFIRM_PARTS = ("조사해", "조사 해", "찾아줘", "찾아 줘", "외부자료", "외부 자료", "진행해")
+
+
+def is_external_confirm(message: str) -> bool:
+    t = (message or "").strip()
+    if t in _CONFIRM_EXACT:
+        return True
+    return any(p in t for p in _CONFIRM_PARTS)
+
+
+def offer_external_answer(message: str, *, scope_label: str = "") -> str:
+    scope = f" ({scope_label})" if scope_label else ""
+    q = (message or "").strip() or "이 질문"
+    return (
+        "### 요약\n\n"
+        f"「{q}」{scope}은 CH2 **거래 통계 밖**의 정보가 필요합니다.\n\n"
+        "CH2 Macro AI는 기본으로 웹을 검색하지 않습니다. "
+        "거래·단가·회귀 같은 화면 숫자는 CH2가 만들고, "
+        "개발사업·도시계획·공고·뉴스는 원장에 없습니다.\n\n"
+        "**외부자료를 조사할까요?** 동의하면 검색 결과를 CH2 숫자와 **다른 칸**에 둡니다. "
+        "시기가 겹쳐도 그 때문에 가격이 움직였다고 단정하지 않습니다.\n\n"
+        "### 주의\n\n"
+        "- 조사는 망라가 아닙니다. 빠진 자료가 있을 수 있습니다.\n"
+        "- 웹 검색을 못 해서가 아닙니다. CH2 분석과 외부조사를 나눕니다."
+    )
 
 SHORT_DISCLAIMER = "본 답변은 시장통계 해석이며 감정평가를 대체하지 않습니다."
 
@@ -156,16 +196,22 @@ _OPINION_KEYWORDS = (
     "원점회귀",
 )
 
-_WEB_KEYWORDS = (
-    "금리",
+_EXTERNAL_NEED_KEYWORDS = (
+    "개발사업",
+    "개발 사업",
+    "재개발",
+    "재건축",
+    "산업단지",
+    "도시계획",
+    "지구단위",
     "한국은행",
+    "기준금리",
     "국토부",
+    "국토교통",
     "정부정책",
-    "정책",
     "뉴스",
-    "인구",
-    "통계청",
     "논문",
+    "통계청",
 )
 
 _CH2_KEYWORDS = (
@@ -230,7 +276,7 @@ def _contains_any(text: str, keywords: tuple[str, ...]) -> bool:
 
 
 def classify_route(message: str) -> str:
-    """refusal | ch2 | explain | statistics | opinion | web"""
+    """refusal | ch2 | explain | statistics | opinion | offer_external"""
     if is_refusal_message(message):
         return "refusal"
     # 해석형 통계 질문은 explain/ch2 우선 (정의 KB 낭독 방지)
@@ -247,8 +293,8 @@ def classify_route(message: str) -> str:
         return "explain"
     if _contains_any(message, _OPINION_KEYWORDS) and not is_refusal_message(message):
         return "opinion"
-    if _contains_any(message, _WEB_KEYWORDS):
-        return "web"
+    if _contains_any(message, _EXTERNAL_NEED_KEYWORDS):
+        return "offer_external"
     if _contains_any(message, _CH2_KEYWORDS):
         return "ch2"
     return "ch2"

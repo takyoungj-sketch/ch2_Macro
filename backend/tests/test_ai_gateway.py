@@ -579,7 +579,90 @@ def test_built_prediction_narrative():
 
 
 def test_web_route_classify():
-    assert classify_route("기준금리 정책이 뭐야?") == "web"
+    assert classify_route("기준금리 정책이 뭐야?") == "offer_external"
+    assert classify_route("복대동 굵직한 개발사업이 뭐였어?") == "offer_external"
+    assert classify_route("이상치 정책이 뭐야?") != "offer_external"
+    assert classify_route("이상치 정책이 뭐야?") != "web"
+
+
+def test_offer_external_does_not_search():
+    req = AiChatRequest(
+        message="국토부 토지 정책 요약해줘",
+        context=AiContext(
+            app="land",
+            panel="TrendCard",
+            scope=AiScope(region_label="충북 청주시"),
+            facts={"rows": []},
+        ),
+    )
+    with patch("app.ai.orchestrator.web_search") as mock_search:
+        resp = handle_chat(req)
+    mock_search.assert_not_called()
+    assert resp.route == "offer_external"
+    assert "외부자료" in resp.answer or "조사" in resp.answer
+    assert "못 합니다" not in resp.answer
+
+
+@patch("app.ai.orchestrator.web_search")
+def test_web_chat_with_hits(mock_search):
+    mock_search.return_value = [
+        WebHit(
+            title="국토교통부 토지정책",
+            url="https://example.com/molit",
+            snippet="토지 거래 규제 완화 논의.",
+            source="duckduckgo",
+        )
+    ]
+    req = AiChatRequest(
+        message="국토부 토지 정책 요약해줘",
+        external_research=True,
+        context=AiContext(
+            app="land",
+            panel="TrendCard",
+            scope=AiScope(region_label="충북 청주시"),
+            facts={"rows": []},
+        ),
+    )
+    resp = handle_chat(req)
+    assert resp.route == "web"
+    assert resp.evidence
+    assert any(e.url == "https://example.com/molit" for e in resp.evidence)
+    assert "example.com" in resp.answer or "국토" in resp.answer
+
+
+@patch("app.ai.orchestrator.web_search")
+def test_offer_then_confirm_searches(mock_search):
+    mock_search.return_value = [
+        WebHit(
+            title="청주 개발",
+            url="https://example.com/dev",
+            snippet="착공 기사.",
+            source="tavily",
+        )
+    ]
+    ctx = AiContext(
+        app="built",
+        panel="TrendCard",
+        scope=AiScope(region_label="복대동"),
+        facts={"rows": []},
+    )
+    first = handle_chat(
+        AiChatRequest(message="복대동 과거 5년 굵직한 개발사업이 있었나?", context=ctx)
+    )
+    assert first.route == "offer_external"
+    mock_search.assert_not_called()
+    second = handle_chat(
+        AiChatRequest(
+            session_id=first.session_id,
+            message="외부자료를 조사해 주세요",
+            context=ctx,
+        )
+    )
+    assert second.route == "web"
+    mock_search.assert_called()
+    q = mock_search.call_args[0][0]
+    assert "개발사업" in q
+    assert "조사해" not in q
 
 
 def test_web_template_answer():
@@ -595,32 +678,6 @@ def test_web_template_answer():
     assert "### 요약" in ans
     assert "https://example.com/bok" in ans
     assert "청주시" in ans
-
-
-@patch("app.ai.orchestrator.web_search")
-def test_web_chat_with_hits(mock_search):
-    mock_search.return_value = [
-        WebHit(
-            title="국토교통부 토지정책",
-            url="https://example.com/molit",
-            snippet="토지 거래 규제 완화 논의.",
-            source="duckduckgo",
-        )
-    ]
-    req = AiChatRequest(
-        message="국토부 토지 정책 요약해줘",
-        context=AiContext(
-            app="land",
-            panel="TrendCard",
-            scope=AiScope(region_label="충북 청주시"),
-            facts={"rows": []},
-        ),
-    )
-    resp = handle_chat(req)
-    assert resp.route == "web"
-    assert resp.evidence
-    assert any(e.url == "https://example.com/molit" for e in resp.evidence)
-    assert "example.com" in resp.answer or "국토" in resp.answer
 
 
 def test_numbers_preserved_polish_guard():

@@ -8,7 +8,17 @@ from pydantic import BaseModel, Field
 
 AiApp = Literal["land", "built", "collective", "rent", "profile"]
 AiPurpose = Literal["statistics", "prediction", "market_analysis", "methodology"]
-AiRoute = Literal["refusal", "ch2", "explain", "statistics", "opinion", "web", "casual", "open"]
+AiRoute = Literal[
+    "refusal",
+    "ch2",
+    "explain",
+    "statistics",
+    "opinion",
+    "web",
+    "offer_external",
+    "casual",
+    "open",
+]
 EvidenceType = Literal[
     "ch2_regression",
     "ch2_sample",
@@ -18,6 +28,7 @@ EvidenceType = Literal[
     "ch2_trend",
     "ch2_matrix",
     "ch2_playbook",
+    "ch2_product",
     "ch2_caveat",
     "ch2_history",
     "stats_knowledge",
@@ -123,6 +134,7 @@ class AiChatRequest(BaseModel):
     session_id: Optional[str] = None
     message: str = Field(..., min_length=1, max_length=4000)
     context: AiContext = Field(default_factory=AiContext)
+    external_research: bool = False
 
 
 class AiHistoryRecordRequest(BaseModel):

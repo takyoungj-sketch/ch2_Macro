@@ -12,16 +12,33 @@ from app.ai.schemas import AiContext
 
 Executable = Literal["yes", "no", "unknown"]
 
-_GAP_TYPE_HINTS = ("오피스텔", "아파트", "유형")
+_GAP_TYPE_HINTS = ("오피스텔", "아파트")
 _GAP_CMP_HINTS = ("가격 차이", "가격차이", "가격격차", "격차", "차이", "비교", "상대")
+_BUILT_TYPE_HINTS = ("상가", "단독", "다가구", "공장", "복합")
+_SOURCE_META_HINTS = (
+    "플레이북",
+    "제공한 지식",
+    "사전에 제공",
+    "지식에 기반",
+    "소스가 어디",
+    "기반해서 답",
+    "기반해서 답변",
+)
 
 
-def is_path_intent_question(message: str) -> bool:
-    """분석 *방법*을 고르는 질문인가. 화면 사용법·추세 안내는 여기로 보내지 않는다."""
+def is_knowledge_source_question(message: str) -> bool:
     m = message.strip()
+    return any(k in m for k in _SOURCE_META_HINTS)
+
+
+def is_path_intent_question(message: str, context: AiContext | None = None) -> bool:
+    """분석 *방법*을 고르는 질문인가. 화면 사용법·추세 안내·지식 출처는 여기로 보내지 않는다."""
+    m = message.strip()
+    if is_knowledge_source_question(m):
+        return False
     if any(k in m for k in ("왜 이 결과", "왜 이렇게", "이 화면", "이번 표본", "이 계수")):
         return False
-    if detect_intent(m) == "apartment_officetel_price_gap":
+    if detect_intent(m, context) in ("apartment_officetel_price_gap", "built_type_price_gap"):
         return True
     method_ask = (
         "분석 경로",
@@ -30,6 +47,8 @@ def is_path_intent_question(message: str) -> bool:
         "어떻게 분석",
         "어떻게 접근",
         "어떤 기능",
+        "어떤 방식",
+        "어떤 방법",
         "경로를 추천",
         "통합회귀",
         "코호트",
@@ -69,18 +88,30 @@ def is_history_compare_question(message: str) -> bool:
     )
 
 
-def detect_intent(message: str) -> Optional[str]:
+def detect_intent(message: str, context: AiContext | None = None) -> Optional[str]:
     m = message.strip()
     lower = m.lower()
+    app = context.app if context is not None else None
+    mentions_built_types = any(k in m for k in _BUILT_TYPE_HINTS)
+    mentions_compare = any(k in m for k in _GAP_CMP_HINTS + ("방법", "방식"))
+    apt_ot = any(k in m for k in ("오피스텔", "아파트"))
 
-    # 아파트 vs 오피스텔 격차: 유형 힌트 + 비교 힌트
+    # 복합 상가·단독·공장 비교는 집합 아파트·오피스텔 플레이북보다 앞선다.
+    if mentions_built_types and mentions_compare and not apt_ot:
+        return "built_type_price_gap"
+    if "복합" in m and mentions_compare and not apt_ot and ("유형" in m or mentions_built_types):
+        return "built_type_price_gap"
+    if app == "built" and mentions_compare and not apt_ot and ("유형" in m or mentions_built_types):
+        return "built_type_price_gap"
+
+    # 아파트 vs 오피스텔 격차: 유형 이름 + 비교. 맨 단어 「유형」만으로는 집합으로 보내지 않음.
     if any(k in m for k in _GAP_TYPE_HINTS) and any(k in m for k in _GAP_CMP_HINTS):
         return "apartment_officetel_price_gap"
     if "오피스텔" in m and ("아파트" in m or "유형" in m):
         return "apartment_officetel_price_gap"
 
     for iid, spec in INTENTS.items():
-        if iid == "apartment_officetel_price_gap":
+        if iid in ("apartment_officetel_price_gap", "built_type_price_gap"):
             continue
         keys = spec.get("keywords") or ()
         if any(k.lower() in lower or k in m for k in keys):
@@ -178,6 +209,15 @@ def assess_feasibility(path_id: str, context: AiContext) -> dict[str, Any]:
     elif path_id == "profile_twin":
         executable = "unknown"
         reasons.append("지역프로필 앱에서 Twin을 연 뒤에만 유사 지역 이름을 인용할 수 있습니다.")
+    elif path_id == "built_type_compare":
+        if app != "built":
+            executable = "no"
+            reasons.append("복합 앱에서 유형을 바꿔 같은 지역·같은 창의 통계·회귀를 나란히 보세요.")
+        else:
+            executable = "unknown"
+            reasons.append(
+                "상가·단독·공장을 한 식에 넣지 말고, 유형을 바꿔 각각 통계·회귀를 실행한 뒤 요약 카드를 비교하세요."
+            )
     elif path_id == "built_regression":
         executable = "yes" if app == "built" and has_reg else ("unknown" if app == "built" else "no")
         if executable == "no":
@@ -195,13 +235,22 @@ def assess_feasibility(path_id: str, context: AiContext) -> dict[str, Any]:
     }
 
 
+def default_paths_for_app(app: str) -> list[str]:
+    return {
+        "built": ["built_type_compare", "built_regression"],
+        "land": ["land_matrix"],
+        "collective": ["collective_cohort", "collective_integrated_regression"],
+        "profile": ["profile_twin"],
+        "rent": [],
+    }.get(app or "built", ["built_regression"])
+
+
 def plan_analysis(message: str, context: AiContext) -> dict[str, Any]:
-    intent_id = detect_intent(message)
+    intent_id = detect_intent(message, context)
     spec = INTENTS.get(intent_id or "") if intent_id else None
     path_ids: list[str] = list(spec["paths"]) if spec else []
-    if not path_ids and is_path_intent_question(message):
-        # 가까운 기본: 집합 코호트 → 통합회귀
-        path_ids = ["collective_cohort", "collective_integrated_regression"]
+    if not path_ids and is_path_intent_question(message, context):
+        path_ids = default_paths_for_app(context.app)
 
     ranked = []
     for i, pid in enumerate(path_ids):
@@ -224,20 +273,34 @@ def plan_analysis(message: str, context: AiContext) -> dict[str, Any]:
         "intent_label": (spec or {}).get("label"),
         "paths": ranked,
         "unknown_playbook": spec is None,
+        "app": context.app,
     }
 
 
 def format_plan_answer(plan: dict[str, Any], *, caveats_text: str = "") -> str:
     lines: list[str] = []
+    app = plan.get("app") or "built"
     if plan.get("intent_label"):
         lines.append(f"**분석 목적:** {plan['intent_label']}")
     elif plan.get("unknown_playbook"):
         lines.append(
-            "확인된 플레이북이 없는 질문입니다. CH2에 있는 가까운 기능부터 안내합니다."
+            "전용 플레이북 이름이 없는 질문입니다. 지금 앱의 데이터·통계 방식에 맞춰 CH2에서 할 수 있는 경로를 안내합니다."
         )
     lines.append("")
+    if plan.get("intent_id") == "built_type_price_gap":
+        lines.append(
+            "복합의 상가·단독·공장은 집합 통합회귀(유형 더미) 대상이 아닙니다. "
+            "같은 지역·같은 기간에서 유형을 바꿔 통계·회귀를 각각 실행한 뒤 요약 카드를 비교하는 것이 맞습니다."
+        )
+        lines.append("")
     lines.append("CH2 Macro에서는 다음 순서로 접근하는 것이 좋습니다. (숫자는 엔진 실행 후에만 인용합니다.)")
-    for p in plan.get("paths") or []:
+    paths = plan.get("paths") or []
+    if not paths:
+        from app.ai.knowledge.product import format_domain_card
+
+        lines.append(format_domain_card(app))
+        lines.append("이 앱에 단계형 Playbook이 아직 없으면 위 방식·한계를 기준으로 화면 기능을 고르세요.")
+    for p in paths:
         exe = p.get("executable")
         flag = {"yes": "지금 화면에서 결과 있음", "no": "지금 화면에서는 바로 실행 어려움", "unknown": "실행 전·조건 확인 필요"}.get(
             exe, "실행 전"
@@ -447,6 +510,27 @@ def actions_for_plan(plan: dict[str, Any], context: AiContext) -> list[dict[str,
                         kind="open_ui",
                         label="Twin 카드로 이동",
                         ui="profile_twin",
+                        path_id=pid,
+                    )
+                )
+        elif pid == "built_type_compare":
+            if app != "built":
+                add(
+                    _action(
+                        aid="nav-built-types",
+                        kind="navigate",
+                        label="복합에서 유형별 통계 비교",
+                        href="/built/",
+                        path_id=pid,
+                    )
+                )
+            else:
+                add(
+                    _action(
+                        aid="ui-built-types",
+                        kind="open_ui",
+                        label="유형을 바꿔 통계·회귀 비교",
+                        ui="built_regression",
                         path_id=pid,
                     )
                 )

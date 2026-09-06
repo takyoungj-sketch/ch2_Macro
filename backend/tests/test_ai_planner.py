@@ -370,3 +370,54 @@ def test_howto_trend_is_not_playbook_dump(monkeypatch):
     assert is_path_intent_question("아파트와 오피스텔 가격 차이를 보고 싶어")
     assert is_path_intent_question("분석 경로를 추천해 주세요")
 
+
+def test_built_type_gap_does_not_use_collective_playbook(monkeypatch):
+    from app.config import settings
+    from app.ai.knowledge.planner import is_knowledge_source_question
+
+    monkeypatch.setattr(settings, "ai_open_mode", False)
+    monkeypatch.setattr("app.ai.orchestrator.llm_configured", lambda: False)
+    monkeypatch.setattr("app.ai.synthesis.llm_configured", lambda: False)
+
+    q = "복합부동산에서 집합이 아니라 상가와 단독다가구 유형의 가격 차이를 보려면 어떤 방법이 좋나요?"
+    ctx = AiContext(app="built", panel="RegressionCard", facts={})
+    assert detect_intent(q, ctx) == "built_type_price_gap"
+    assert is_path_intent_question(q, ctx)
+    assert not is_howto_ui_question(q)
+
+    plan = plan_analysis(q, ctx)
+    assert plan["intent_id"] == "built_type_price_gap"
+    path_ids = [p["path_id"] for p in plan["paths"]]
+    assert "built_type_compare" in path_ids
+    assert "collective_integrated_regression" not in path_ids
+
+    resp = handle_chat(AiChatRequest(message=q, context=ctx))
+    assert resp.route == "ch2"
+    assert "집합 통합회귀" not in resp.answer or "대상이 아닙니다" in resp.answer
+    assert "확인된 플레이북이 없는" not in resp.answer
+    assert any(a.href == "/built/" or a.ui == "built_regression" for a in (resp.actions or []))
+    assert not any(a.href == "/collective/residential/" for a in (resp.actions or []))
+
+    apt_on_built = plan_analysis("아파트와 오피스텔 가격 차이를 보고 싶어", ctx)
+    assert apt_on_built["intent_id"] == "apartment_officetel_price_gap"
+    assert any(p["path_id"] == "collective_integrated_regression" for p in apt_on_built["paths"])
+
+    src = "위의 답변내용(집합 통합회귀, 지역회귀 등)은 ch2 macro 에서 사전에 제공한 지식에 기반해서 답변한 건가?"
+    assert is_knowledge_source_question(src)
+    assert not is_path_intent_question(src, ctx)
+    src_resp = handle_chat(AiChatRequest(message=src, context=ctx))
+    assert "확인된 플레이북이 없는" not in src_resp.answer
+    assert "Product Knowledge" in src_resp.answer
+    assert "Playbook" in src_resp.answer
+    assert "집합 통합회귀(유형 더미)는 주거 집합" in src_resp.answer
+    assert not any(a.href == "/collective/residential/" for a in (src_resp.actions or []))
+
+    rec = handle_chat(
+        AiChatRequest(message="분석 경로를 추천해 주세요", context=ctx)
+    )
+    rec_paths = " ".join(a.label or "" for a in (rec.actions or []))
+    assert "주거 집합" not in rec_paths
+    assert not any(a.href == "/collective/residential/" for a in (rec.actions or []))
+    assert "주거 집합에서 통합회귀" not in rec.answer
+    assert "확인된 플레이북이 없는" not in rec.answer
+

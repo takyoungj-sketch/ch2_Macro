@@ -29,12 +29,15 @@ from app.ai.prediction_narrative import build_prediction_narrative
 from app.ai.trend_narrative import build_trend_narrative
 from app.ai.constitution import (
     DEFAULT_DISCLAIMER,
+    OFFER_EXTERNAL_DISCLAIMER,
     OPINION_DISCLAIMER,
     REFUSAL_DISCLAIMER,
     SHORT_DISCLAIMER,
     WEB_DISCLAIMER,
     classify_route,
+    is_external_confirm,
     is_refusal_message,
+    offer_external_answer,
 )
 from app.ai.panel_capabilities import (
     get_panel_capability,
@@ -65,7 +68,7 @@ from app.ai.schemas import (
     AnalysisExplain,
     EvidenceItem,
 )
-from app.ai.sessions import SessionTurn, get_or_create, session_summary
+from app.ai.sessions import AiSession, SessionTurn, get_or_create, session_summary
 from app.ai.knowledge.caveats import format_caveats_for_prompt
 from app.ai.knowledge.history import (
     format_history_compare,
@@ -77,11 +80,17 @@ from app.ai.knowledge.planner import (
     actions_for_plan,
     format_plan_answer,
     is_history_compare_question,
+    is_knowledge_source_question,
     is_memo_request,
     is_path_intent_question,
     plan_analysis,
 )
-from app.ai.knowledge.product import format_howto_answer, is_howto_ui_question, product_knowledge_excerpt
+from app.ai.knowledge.product import (
+    format_howto_answer,
+    format_knowledge_source_answer,
+    is_howto_ui_question,
+    product_knowledge_excerpt,
+)
 from app.ai.stats_kb import (
     answer_statistics_question,
     answer_statistics_with_context,
@@ -186,7 +195,32 @@ def _planner_or_memo_response(
 
     if is_howto_ui_question(req.message):
         return None
-    if not is_path_intent_question(req.message):
+    if is_knowledge_source_question(req.message):
+        answer = format_knowledge_source_answer(app=ctx.app)
+        resp = AiChatResponse(
+            session_id=session.session_id,
+            route="ch2",
+            answer=validate_answer(answer, "ch2"),
+            evidence=[
+                EvidenceItem(type="ch2_product", label="CH2 Product Knowledge", confidence="high"),
+                EvidenceItem(type="ch2_playbook", label="CH2 Playbook 역할", confidence="medium"),
+            ],
+            bundle_id=bundle.bundle_id,
+            suggested_followups=[
+                "복합에서 상가와 단독은 어떻게 비교하나요?",
+                "유형별 데이터는 어떻게 들어오나요?",
+                "외부자료를 조사해 주세요",
+            ],
+            disclaimer=SHORT_DISCLAIMER,
+            llm_used=False,
+            trust_level="high",
+            trust_sources=["CH2 Product Knowledge", "CH2 Playbook"],
+            ai_interpretation=_ai_interpretation_label(llm_used=False),
+        )
+        session.add_turn(SessionTurn(role="user", message=req.message, route="ch2", bundle_id=bundle.bundle_id))
+        session.add_turn(SessionTurn(role="assistant", message=answer[:500], route="ch2", bundle_id=bundle.bundle_id))
+        return resp
+    if not is_path_intent_question(req.message, ctx):
         return None
 
     plan = plan_analysis(req.message, ctx)
@@ -665,6 +699,19 @@ def _evidence_for_route(
     return items
 
 
+def _pending_external_query(session: AiSession) -> str | None:
+    turns = session.turns
+    if len(turns) < 2:
+        return None
+    last = turns[-1]
+    if last.role != "assistant" or last.route != "offer_external":
+        return None
+    for t in reversed(turns[:-1]):
+        if t.role == "user":
+            return t.message
+    return None
+
+
 def handle_chat(req: AiChatRequest) -> AiChatResponse:
     session = get_or_create(req.session_id)
     ctx = req.context
@@ -808,6 +855,13 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
 
     route = classify_route(req.message)
     route = reject_if_user_refusal_topic_in_opinion(req.message, route)
+    web_query = req.message.strip()
+    pending = _pending_external_query(session)
+    if req.external_research:
+        route = "web"
+    elif pending and is_external_confirm(req.message):
+        route = "web"
+        web_query = pending
 
     if route == "refusal":
         resp = _refusal_answer(ctx, req.message)
@@ -819,7 +873,7 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
     scope_label = str(ctx.scope.region_label or "선택 scope")
 
     # 인사·감사 — 플래그와 무관하게 화면 회귀 내러티브 반복 방지
-    if is_casual_smalltalk(req.message):
+    if is_casual_smalltalk(req.message) and route not in ("web", "offer_external"):
         return _casual_response(
             session=session,
             message=req.message,
@@ -843,7 +897,11 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
 
     scope_label = str(ctx.scope.region_label or bundle.diagnostics.get("scope_label") or "선택 scope")
 
-    if casual_dialogue_enabled() and is_substantive_off_topic(req.message):
+    if (
+        casual_dialogue_enabled()
+        and is_substantive_off_topic(req.message)
+        and route not in ("web", "offer_external")
+    ):
         return _casual_response(
             session=session,
             message=req.message,
@@ -889,8 +947,47 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
     narrative_result: NarrativeResult | None = None
     scope_label = str(ctx.scope.region_label or bundle.diagnostics.get("scope_label") or "선택 scope")
 
+    if route == "offer_external":
+        answer = offer_external_answer(req.message, scope_label=scope_label)
+        evidence = [
+            EvidenceItem(
+                type="ch2_playbook",
+                label="외부조사 제안 (D-062)",
+                confidence="high",
+            )
+        ]
+        resp = AiChatResponse(
+            session_id=session.session_id,
+            route="offer_external",
+            answer=validate_answer(answer, "offer_external"),
+            evidence=evidence,
+            bundle_id=bundle.bundle_id,
+            suggested_followups=[
+                "외부자료를 조사해 주세요",
+                "이 화면 통계만 이어서 보기",
+            ],
+            disclaimer=OFFER_EXTERNAL_DISCLAIMER,
+            llm_used=False,
+            trust_level="high",
+            trust_sources=["CH2 제품 범위"],
+            ai_interpretation=_ai_interpretation_label(llm_used=False),
+        )
+        session.add_turn(
+            SessionTurn(
+                role="user",
+                message=req.message,
+                route="offer_external",
+                bundle_id=bundle.bundle_id,
+                scope_label=ctx.scope.region_label,
+            )
+        )
+        session.add_turn(
+            SessionTurn(role="assistant", message=answer[:500], route="offer_external", bundle_id=bundle.bundle_id)
+        )
+        return resp
+
     if route == "web":
-        search_q = req.message.strip()
+        search_q = web_query
         if ctx.scope.region_label:
             search_q = f"{ctx.scope.region_label} {search_q}"
         hits = web_search(search_q, max_results=5)

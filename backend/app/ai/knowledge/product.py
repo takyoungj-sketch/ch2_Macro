@@ -91,6 +91,74 @@ LIMITATIONS = """
 - 회귀 계수는 조건부 연관이며 인과·적정가를 의미하지 않음
 """
 
+# 유형별 수집·정제·통계 방식 (경로 제안·출처 질문에 사용). 화면 n은 Bundle만.
+DOMAIN_BY_APP: dict[str, str] = {
+    "land": """
+토지:
+- 수집: 국토부 토지 실거래 CSV → 원장 land_transactions (Master는 고치지 않음. 예외는 큐·보정 규칙).
+- 통계: V2 as_of_month + 3·5·7년 창. 용도지역×지목 매트릭스, 지목군, 장기 연도 추세.
+- 바람직: 같은 용도·지목 칸의 단가·건수 추세. 여러 칸을 한 회귀에 억지로 넣지 않음.
+- 한계: 거래액 합 ≠ 가격지수. 시군구에 M2·금리 r를 붙이지 않음.
+""",
+    "built": """
+복합(단독·일반상가·일반공장):
+- 수집: 국토부 상업업무·공장창고·단독다가구 CSV 중 유형=일반(단독은 전량). 집합 상가·집합공장은 여기 없음.
+- 분석 단위: 개별 건물 거래. 화면은 자산유형을 나누어 봄 (상가 회귀와 단독 회귀는 별 실행).
+- 통계: 기본통계·OLS(선형 또는 로그 금액)·모형 추천·예측. 집합의 「유형 더미 통합회귀」가 기본이 아님.
+- 바람직: 상가 vs 단독 가격 차이는 같은 지역·같은 창에서 유형별로 통계·회귀를 나란히 비교. 필요하면 지역프로필 8유형 구성(연간)로 지역의 상가·단독 비중을 봄.
+- 한계: 마스킹 지번·보강 속성은 결합용. 한 식에 상가+단독을 넣어 아파트·오피스텔처럼 유형효과를 읽는 기능이 아님.
+""",
+    "collective": """
+집합 주거(아파트·오피스텔 등):
+- 수집: 국토부 집합 주거. 분석 단위=단지(building_key). 코호트에 단지를 모아 통합회귀(유형 더미)로 아파트 vs 오피스텔 가격수준을 면적·연식 통제 비교.
+- 한계: 유형이 하나면 유형 더미 비교가 안 됨. 소표본이면 계수 불안정.
+
+집합 비주거(집합상가·집합공장):
+- 수집: 국토부 집합 상업·공장. 분석 단위=도로명 cluster (건물 key 분석 없음).
+- 통계 UX는 주거와 같음. 아파트·오피스텔 통합회귀 플레이북을 여기에 그대로 쓰지 않음.
+""",
+    "rent": """
+임대:
+- 주거 전월세: 국토부 원장. 전환율은 단순평균(D-040). 부동산원 공식 전환율이 아님.
+- 상권 모달: 한국부동산원 상업용 임대동향(상권 공표). 주거 원장과 출처·단위가 달라 한 표에 섞지 않음.
+- 바람직: 주거 전월세 단가·전환은 임대 앱, 상업 임대료·공실은 상권 모달.
+""",
+    "profile": """
+지역프로필:
+- 토지·복합·집합 마트를 지역 grain으로 묶어 8유형 구성(연간 3년)·인구·Twin.
+- 상가·공장은 프로필 집계에서만 일반+집합을 합침. 복합/집합 앱의 분석 단위를 바꾸지 않음.
+- 바람직: 「이 지역이 어떤 시장 구성인가」는 프로필. 개별 건물 회귀는 복합·집합 앱.
+""",
+}
+
+
+def format_domain_card(app: str) -> str:
+    body = (DOMAIN_BY_APP.get(app) or DOMAIN_BY_APP["built"]).strip()
+    return "[유형별 데이터·통계 방식]\n" + body
+
+
+def format_all_domain_cards() -> str:
+    parts = ["[유형별 데이터·통계 방식 — 토지·복합·집합·임대·지역프로필]"]
+    for key in ("land", "built", "collective", "rent", "profile"):
+        parts.append(DOMAIN_BY_APP[key].strip())
+    return "\n\n".join(parts)
+
+
+def format_knowledge_source_answer(*, app: str) -> str:
+    return (
+        "앞선 안내는 외부 웹이 아니라 **CH2에 넣어 둔 지식**을 쓴 것입니다. "
+        "플레이북에 전용 이름이 없다고 출처를 숨기지 않습니다.\n\n"
+        "1. **Product Knowledge** — 유형별 수집·정제·DB·통계 방식·한계 "
+        "(토지, 복합, 집합 주거/비주거, 임대, 지역프로필).\n"
+        "2. **Playbook** — 질문 의도에 맞는 CH2 화면 경로. "
+        "집합 통합회귀(유형 더미)는 주거 집합의 아파트·오피스텔 비교용입니다. "
+        "복합의 상가·단독 비교에 그대로 쓰지 않습니다.\n"
+        "3. **화면 Bundle** — n·계수 등 숫자는 현재 화면에서 엔진이 낸 결과만.\n\n"
+        f"{format_all_domain_cards()}\n\n"
+        f"지금 화면 앱(`{app}`)에 맞춰 위 방식 안에서 경로를 고릅니다. "
+        "없는 기능(예: 복합 유형 더미 통합회귀)은 있는 것처럼 만들지 않습니다."
+    )
+
 # 화면 사용법 — 플레이북 기능 목록이 아니라 클릭 순서
 UI_HOWTO = """
 화면에서 숫자를 보는 순서 (사용자가 회귀·유형비교를 묻지 않으면 이것을 먼저 안내):
@@ -110,10 +178,12 @@ UI_HOWTO = """
 
 def is_howto_ui_question(message: str) -> bool:
     """어디를 눌러 결과를 보나 — 분석방법(격차·통합회귀) 질문과 구분."""
-    from app.ai.knowledge.planner import detect_intent
+    from app.ai.knowledge.planner import detect_intent, is_knowledge_source_question
 
     m = message.strip()
-    if detect_intent(m) == "apartment_officetel_price_gap":
+    if is_knowledge_source_question(m):
+        return False
+    if detect_intent(m) in ("apartment_officetel_price_gap", "built_type_price_gap"):
         return False
     if any(
         k in m
@@ -269,6 +339,18 @@ FUNCTION_CARDS: list[dict[str, Any]] = [
         "cautions": ["지역이 넓으면 이질성", "n 과소 시 확대는 별도 실행"],
     },
     {
+        "id": "built_type_compare",
+        "name": "복합 유형별 통계 병행",
+        "apps": ("built",),
+        "purpose": "상가·단독·공장을 같은 지역·창에서 유형을 바꿔 각각 비교",
+        "good_questions": ["상가와 단독 가격 차이", "복합에서 유형 비교"],
+        "strengths": ["현재 복합 화면에 있는 통계·회귀를 그대로 씀"],
+        "cautions": [
+            "집합 통합회귀(유형 더미)가 아님",
+            "한 식에 상가+단독을 넣어 아파트·오피스텔처럼 유형효과를 읽지 않음",
+        ],
+    },
+    {
         "id": "built_regression",
         "name": "복합 회귀",
         "apps": ("built",),
@@ -336,7 +418,7 @@ def format_function_cards(*, app: str = "", intent_hint: str = "") -> str:
 
 def product_knowledge_pack(*, app: str = "built", panel: str = "") -> str:
     """질문·화면에 맞게 발췌할 수 있는 큐레이션 지식."""
-    parts = [PRODUCT_OVERVIEW.strip(), APP_STRUCTURE.strip()]
+    parts = [PRODUCT_OVERVIEW.strip(), APP_STRUCTURE.strip(), format_all_domain_cards()]
     if app == "built":
         parts.append(REGRESSION_LOGIC.strip())
         if panel in ("RecommendationCard", "ModelSelectionCard"):
@@ -379,12 +461,23 @@ def product_knowledge_pack(*, app: str = "built", panel: str = "") -> str:
 def product_knowledge_excerpt(*, app: str, panel: str, message: str) -> str:
     """LLM 컨텍스트용 — 전체 팩 또는 토픽별 발췌."""
     lower = message.lower()
+    from app.ai.knowledge.planner import is_knowledge_source_question
+
+    if is_knowledge_source_question(message):
+        return format_knowledge_source_answer(app=app or "built")
     if any(k in lower or k in message for k in ("twin", "쌍둥이", "stage")) or (
         "모형" in message and any(k in message for k in ("추천", "탐색", "forward"))
     ):
         return product_knowledge_pack(app=app, panel=panel or "RecommendationCard")
-    if any(k in message for k in ("데이터", "마트", "파이프", "원천", "정제")):
-        return "\n\n".join([PRODUCT_OVERVIEW.strip(), DATA_PIPELINE.strip(), LIMITATIONS.strip()])
+    if any(k in message for k in ("데이터", "마트", "파이프", "원천", "정제", "수집", "원장")):
+        return "\n\n".join(
+            [
+                PRODUCT_OVERVIEW.strip(),
+                DATA_PIPELINE.strip(),
+                format_all_domain_cards(),
+                LIMITATIONS.strip(),
+            ]
+        )
     sangkwon_keys = (
         "상권",
         "상업용",
@@ -424,12 +517,16 @@ def product_knowledge_excerpt(*, app: str, panel: str, message: str) -> str:
             "오피스텔",
             "어떻게 분석",
             "어떤 분석",
+            "어떤 방식",
+            "어떤 방법",
         )
     ):
         return "\n\n".join(
             [
                 PRODUCT_OVERVIEW.strip(),
-                format_function_cards(app=app or "collective", intent_hint="통합"),
+                format_all_domain_cards(),
+                format_domain_card(app or "built"),
+                format_function_cards(app=app or "built"),
                 LIMITATIONS.strip(),
             ]
         )

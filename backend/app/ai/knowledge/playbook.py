@@ -50,6 +50,13 @@ PATHS: dict[str, dict[str, Any]] = {
         "purpose": "구조가 닮은 지역을 찾은 뒤 그 지역에서 회귀를 반복",
         "requires": ["profile_app"],
     },
+    "built_type_compare": {
+        "id": "built_type_compare",
+        "label": "복합 유형별 통계·회귀 병행",
+        "app": "built",
+        "purpose": "상가·단독·공장은 같은 지역·같은 창에서 유형을 바꿔 각각 본다. 집합 통합회귀(유형 더미)가 아님",
+        "requires": ["built_ui"],
+    },
     "built_regression": {
         "id": "built_regression",
         "label": "복합 회귀",
@@ -114,6 +121,12 @@ INTENTS: dict[str, dict[str, Any]] = {
         "label": "토지 용도·지목 시세",
         "keywords": ("용도지역", "지목", "토지 단가"),
         "paths": ["land_matrix"],
+    },
+    "built_type_price_gap": {
+        "id": "built_type_price_gap",
+        "label": "복합 상가·단독·공장 가격 비교",
+        "keywords": ("상가와 단독", "단독과 상가", "복합 유형"),
+        "paths": ["built_type_compare", "built_regression", "profile_twin"],
     },
     "built_size_age": {
         "id": "built_size_age",

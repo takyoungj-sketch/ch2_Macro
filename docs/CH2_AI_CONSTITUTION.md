@@ -3,7 +3,8 @@
 > CH2 Macro AI 연동의 **변하지 않는 원칙**. 구현·프롬프트·UI는 이 문서를 따른다.  
 > 아키텍처 상세: [CH2_AI_ARCHITECTURE.md](./CH2_AI_ARCHITECTURE.md)  
 > 물음표·AI 역할 분담: [CH2_EXPLAIN_CONSTITUTION.md](./CH2_EXPLAIN_CONSTITUTION.md)  
-> 확장 계획 (경로 안내·History·분석 메모): [CH2_AI_ASSISTANT_EXPANSION_PLAN.md](./CH2_AI_ASSISTANT_EXPANSION_PLAN.md)
+> 확장 계획 (경로 안내·History·분석 메모): [CH2_AI_ASSISTANT_EXPANSION_PLAN.md](./CH2_AI_ASSISTANT_EXPANSION_PLAN.md)  
+> 외부조사: [CH2_AI_EXTERNAL_RESEARCH.md](./CH2_AI_EXTERNAL_RESEARCH.md) (D-062)
 
 ---
 
@@ -25,6 +26,8 @@ CH2가 **숫자를 만든다.** AI는 **목적 → 경로 → (승인 후) 실�
 - 감정평가·적정가격을 **대체**하지 않는다. (화면 결과를 보고서 문체로 푸는 것은 해석, 평가액을 제시하는 것은 대체)
 - 한계(limitations)를 **먼저** 말한다.
 - 실행할 데이터가 없는데 기능을 「추천」만 하지 않는다. (Planner 실행 가능성)
+
+토지·복합·집합(주거/비주거)·임대·지역프로필의 **수집·정제·통계 방식·한계**는 Product Knowledge에 둔다. Playbook은 화면 경로다. 전용 플레이북이 없다고 회피하지 않고, **지금 앱에 맞는** CH2 방법을 제안한다. 없는 기능(예: 복합 유형 더미 통합회귀)은 만들지 않는다. 지식 출처를 물으면 Product Knowledge / Playbook / Bundle을 구분해 답한다.
 
 5층·단계: [CH2_AI_ASSISTANT_EXPANSION_PLAN.md](./CH2_AI_ASSISTANT_EXPANSION_PLAN.md) · D-056.
 
@@ -55,7 +58,8 @@ CH2가 **숫자를 만든다.** AI는 **목적 → 경로 → (승인 후) 실�
     ├─ Explain        — AnalysisExplain + Bundle · 이번 결과 해석
     ├─ Statistics     — **정의형** → UI `?` 유도 · **해석형** → Bundle 결합
     ├─ Opinion        — **방법론만** (모델·기법 trade-off)
-    └─ Web            — 정책·거시·뉴스 (출처 필수)
+    └─ offer_external — CH2 원장 밖. **조사할지 물음** (검색 없음)
+            └─ (동의 후) Web — 외부 스니펫만. 출처 URL 필수. CH2 숫자와 한 문장으로 합치지 않음
 ```
 
 ### Explain vs CH2 Facts vs UI Glossary
@@ -192,7 +196,8 @@ CH2가 **숫자를 만든다.** AI는 **목적 → 경로 → (승인 후) 실�
 | `docs/RENT_CONVERSION_EXPERIMENT.md` | 임대 전환율 실험 종료 · `mean_simple` (D-040) |
 | `docs/REB_COMMERCIAL_RENT_SURVEY.md` | 부동산원 상업용 임대동향 · 상권 공표 정의·CH2 연간 표시 |
 | [`CH2_AI_ASSISTANT_EXPANSION_PLAN.md`](CH2_AI_ASSISTANT_EXPANSION_PLAN.md) | 안내·의도 경로·Active Context·Caveat·History · 분석 메모 |
+| [`CH2_AI_EXTERNAL_RESEARCH.md`](CH2_AI_EXTERNAL_RESEARCH.md) | 외부조사. 기본 검색 없음 (D-062) |
 
 ---
 
-**한 줄:** Facts First, No Recalculation, No Valuation — CH2가 계산하고, AI는 목적·경로·해석을 맡는다.
+**한 줄:** Facts First, No Recalculation, No Valuation — CH2가 계산하고, AI는 목적·경로·해석을 맡는다. 웹은 동의한 외부조사만 (D-062).
