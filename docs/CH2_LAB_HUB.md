@@ -17,10 +17,16 @@
 | 대장DB | `parcel` | 로컬 `parcel_master` 필지·동·용도지역 조회. 읽기 전용. 운영 DB 없음. 설계 [`PARCEL_MASTER_DESIGN.md`](./PARCEL_MASTER_DESIGN.md) · 월간 [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md) |
 | 시장 규모의 관계 | `size` | 같은 체급 log 거래액·건수 r + 인구 보정, ① n붕괴 · ② 시군구 내부 규모 · ③ ㎡당 P50(인구보정 없음) · ④ 시군구 내부 단가 (D-058, 장기). 프로필 8×8 없음. G3 시계열 없음 |
 | 유동성·금리 시계열 | `g3` | 전국 연도 M2·CD·기준금리·국고3년 변화 × 8유형 건수·액 YoY (D-055). Insight 아님 |
+| 신규아파트 실험 | `newapt` | 대전 M2 잠정 · 충북 전이 · 학습/검증/오차. 집합 기본통계 버튼 없음. 상품화는 실험 후 (D-045) |
+| 시공사 효과 | `builder` | 공시지가 vs 시군구 FE · within-gu. **다음=브랜드 vs 시공사.** 제품 식 미변경 (D-063·D-065) |
+| 연식=0 잔차 | `age0` | 재고 식 연식=0 vs 실제 신축. **다음=서울·경기 분리.** 전국 공통 프리미엄 미가산 (D-064) |
 
 공개 게이트웨이 **Macro Insight**(6번째 문)는 구상만. 랩 실험 전부를 올리지 않고, 선별 배포. 계획 [`MACRO_INSIGHT_PLAN.md`](./MACRO_INSIGHT_PLAN.md). 구현·결정 카드 없음.
 
 G3 시계열 랩: [`lab/G3_TIMESERIES_LAB.md`](./lab/G3_TIMESERIES_LAB.md) · `?tool=g3`.
+신규아파트 실험: [`NEW_APARTMENT_REGRESSION_DESIGN.md`](./NEW_APARTMENT_REGRESSION_DESIGN.md) · `?tool=newapt`.
+시공사 효과: [`lab/BUILDER_IDENT_LAB.md`](./lab/BUILDER_IDENT_LAB.md) · `?tool=builder`.
+연식=0 잔차: [`lab/AGE0_RESIDUAL_LAB.md`](./lab/AGE0_RESIDUAL_LAB.md) · `?tool=age0`.
 
 계획일지 표 규칙:
 

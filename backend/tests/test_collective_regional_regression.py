@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import statsmodels.api as sm
 
 from app.collective.regional_regression.engine import (
     MIN_FIT_N,
@@ -16,6 +17,10 @@ from app.collective.regional_regression.engine import (
     _fit_ols,
     _flags,
     _is_usable_tier,
+    _newbuild_age0_gap,
+    _opt_num,
+    _opt_str,
+    _price_intervals,
     _split_hold,
     _tx_weights,
     _usable_tier_mask,
@@ -28,6 +33,15 @@ def test_flags_split_csv():
     assert _flags("hh_zero,scale_inconsistent") == {"hh_zero", "scale_inconsistent"}
     assert _flags(None) == set()
     assert _flags(np.nan) == set()
+
+
+def test_opt_num_and_str():
+    assert _opt_num(None) is None
+    assert _opt_num(np.nan) is None
+    assert _opt_num(12.5) == 12.5
+    assert _opt_str(None) is None
+    assert _opt_str("") is None
+    assert _opt_str(" 현대 ") == "현대"
 
 
 def test_collapse_dummy_merges_rare():
@@ -412,5 +426,104 @@ def test_fit_wls_differs_from_equal_when_n_tx_skewed():
     assert tx["n_effective"] < tx["n"]
     assert eq["weight_mode"] == "equal"
     assert tx["weight_mode"] == "tx"
+
+
+def test_newbuild_age0_gap_none_without_age_column():
+    rng = np.random.default_rng(0)
+    n = 30
+    hh = rng.uniform(80, 400, n)
+    work = pd.DataFrame(
+        {
+            "median": np.exp(6.5 + 0.0004 * hh),
+            "households": hh,
+            "building_age": np.full(n, 10.0),
+        }
+    )
+    x = pd.DataFrame({"households": work["households"]})
+    fit = _fit_ols(work, x, model_type="log")
+    assert fit is not None
+    assert _newbuild_age0_gap(work, x, fit, model_type="log") is None
+
+
+def test_newbuild_age0_gap_empty_when_no_young_stock():
+    n = 30
+    work = pd.DataFrame(
+        {
+            "median": np.exp(6.7 - 0.01 * np.arange(10, 40)),
+            "households": np.full(n, 200.0),
+            "building_age": np.arange(10, 40, dtype=float),
+        }
+    )
+    x = pd.DataFrame({"households": work["households"], "building_age": work["building_age"]})
+    fit = _fit_ols(work, x, model_type="log")
+    assert fit is not None
+    gap = _newbuild_age0_gap(work, x, fit, model_type="log")
+    assert gap is not None
+    assert gap.n_0_3 == 0
+    assert gap.median_residual_pct is None
+    assert gap.thin is True
+
+
+def test_newbuild_age0_gap_positive_when_young_above_age0_pred():
+    n = 40
+    age = np.linspace(5, 40, n)
+    hh = np.linspace(80, 400, n)
+    y = np.exp(6.5 + 0.0003 * hh - 0.012 * age)
+    work = pd.DataFrame({"median": y, "households": hh, "building_age": age})
+    x = pd.DataFrame({"households": hh, "building_age": age})
+    fit = _fit_ols(work, x, model_type="log")
+    assert fit is not None
+    x0 = x.copy()
+    x0["building_age"] = 0.0
+    x0c = sm.add_constant(x0, has_constant="add").reindex(columns=fit["x_cols"], fill_value=0.0)
+    raw0 = np.asarray(fit["model"].predict(x0c), dtype=float)
+    yhat0 = np.exp(raw0) * float(fit["smear"])
+    young = work.index[:12]
+    work = work.copy()
+    x = x.copy()
+    work.loc[young, "building_age"] = np.array([1.0, 2.0, 3.0] * 4)
+    x.loc[young, "building_age"] = work.loc[young, "building_age"]
+    work.loc[young, "median"] = yhat0[:12] * 1.4
+    gap = _newbuild_age0_gap(work, x, fit, model_type="log")
+    assert gap is not None
+    assert gap.n_0_3 == 12
+    assert gap.n_0_1 == 4
+    assert gap.median_residual_pct is not None and abs(gap.median_residual_pct - 28.6) < 1.0
+    assert gap.underpred_share_pct == 100.0
+    assert gap.thin is False
+
+
+def test_newbuild_age0_gap_thin_when_few_young():
+    n = 30
+    age = np.array([2.0, 2.0, 2.0] + [20.0] * 27)
+    hh = np.full(n, 180.0)
+    y = np.exp(6.6 - 0.012 * age)
+    work = pd.DataFrame({"median": y, "households": hh, "building_age": age})
+    x = pd.DataFrame({"households": hh, "building_age": age})
+    fit = _fit_ols(work, x, model_type="log")
+    assert fit is not None
+    gap = _newbuild_age0_gap(work, x, fit, model_type="log")
+    assert gap is not None
+    assert gap.n_0_3 == 3
+    assert gap.thin is True
+
+
+def test_price_intervals_pi_wider_than_mean_ci():
+    rng = np.random.default_rng(0)
+    n = 40
+    hh = rng.uniform(80, 400, n)
+    age = rng.uniform(5, 30, n)
+    y = np.exp(6.5 + 0.0003 * hh - 0.01 * age + rng.normal(0, 0.08, n))
+    work = pd.DataFrame({"median": y, "households": hh, "building_age": age})
+    x = pd.DataFrame({"households": hh, "building_age": age})
+    fit = _fit_ols(work, x, model_type="log")
+    assert fit is not None
+    x1 = pd.DataFrame({"households": [200.0], "building_age": [0.0]})
+    x1c = sm.add_constant(x1, has_constant="add").reindex(columns=fit["x_cols"], fill_value=0)
+    y_hat, ci_lo, ci_hi, pi_lo, pi_hi = _price_intervals(
+        fit["model"], x1c, model_type="log", smear=float(fit["smear"])
+    )
+    assert ci_lo is not None and ci_hi is not None and pi_lo is not None and pi_hi is not None
+    assert pi_lo < ci_lo <= y_hat <= ci_hi < pi_hi
 
 

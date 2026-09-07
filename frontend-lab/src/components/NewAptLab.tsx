@@ -2,9 +2,6 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { fetchNewAptExperiment, fetchNewAptRegionCompare, type NewAptCell, type NewAptRegionCompare, type NewAptRegionModel, type NewAptSpecRow } from "../api/newAptClient";
-import AnalysisHelpPanel from "./AnalysisHelpPanel";
-import DraggableModalShell from "./DraggableModalShell";
-import { NEW_APT_EXPERIMENT_HELP } from "../utils/residentialAnalysisHelp";
 
 type Tab = "compare" | "region" | "m2" | "cells" | "validate" | "errors";
 type CellFilter = "m2" | "holdout" | "no_land" | "outlier_y" | "outlier_ape" | "all";
@@ -92,7 +89,7 @@ function zoneLabel(code: string) {
   return map[code] ?? code;
 }
 
-export default function NewApartmentExperimentModal({ onClose }: { onClose: () => void }) {
+export default function NewAptLab() {
   const [tab, setTab] = useState<Tab>("compare");
   const [sample, setSample] = useState<"A-1-land" | "A-2-land">("A-1-land");
   const [cellFilter, setCellFilter] = useState<CellFilter>("m2");
@@ -138,46 +135,37 @@ export default function NewApartmentExperimentModal({ onClose }: { onClose: () =
   const pageRows = filteredCells.slice(page * pageSize, (page + 1) * pageSize);
 
   return (
-    <DraggableModalShell
-      open
-      onClose={onClose}
-      titleId="new-apt-experiment-title"
-      title="신규아파트 실험"
-      subtitle={
-        <>
-          대전 M2는 잠정 기준식 · 충북 복제·전이 실험 · 분양가 단정 아님
-          <AnalysisHelpPanel explain={NEW_APT_EXPERIMENT_HELP} className="ml-1" />
-        </>
-      }
-      allowFullscreen
-      allowFontScale
-      resizable
-      defaultWidth={960}
-      defaultHeight={720}
-      minWidth={640}
-      minHeight={480}
-      headerExtra={
-        <div className="flex flex-wrap gap-0.5 rounded-md border modal-tab-bar p-0.5" role="tablist">
-          {TABS.map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={tab === id}
-              className={clsx(
-                "px-2.5 py-1 text-[11px] font-medium rounded",
-                tab === id
-                  ? "bg-indigo-600 text-white"
-                  : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700",
-              )}
-              onClick={() => setTab(id)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      }
-    >
+    <div className="max-w-[96rem] mx-auto p-4 space-y-3">
+      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+        연구 전용. 집합 기본통계에는 없습니다. 대전 M2는 잠정 기준식이며 분양가 단정이 아닙니다. 시공사 γ 식별은{" "}
+        <a className="underline underline-offset-2" href="?tool=builder">
+          시공사 효과
+        </a>
+        , 연식=0 신축 잔차는{" "}
+        <a className="underline underline-offset-2" href="?tool=age0">
+          연식=0 잔차
+        </a>
+        .
+      </p>
+      <div className="flex flex-wrap gap-0.5 rounded-md border border-slate-200 dark:border-slate-600 p-0.5 w-fit" role="tablist">
+        {TABS.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
+            className={clsx(
+              "px-2.5 py-1 text-[11px] font-medium rounded",
+              tab === id
+                ? "bg-indigo-600 text-white"
+                : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700",
+            )}
+            onClick={() => setTab(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       <div className="text-xs text-slate-700 dark:text-slate-200 space-y-3">
         {query.isLoading && tab !== "region" && <p className="text-slate-500">학습표·검증을 계산하는 중… (약 10초)</p>}
         {query.isError && tab !== "region" && (
@@ -673,7 +661,7 @@ export default function NewApartmentExperimentModal({ onClose }: { onClose: () =
           </>
         )}
       </div>
-    </DraggableModalShell>
+    </div>
   );
 }
 

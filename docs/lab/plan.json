@@ -1,12 +1,30 @@
 {
-  "updated": "2026-09-03",
+  "updated": "2026-09-07",
   "domains": [
-    { "id": "land", "label": "토지" },
-    { "id": "built", "label": "복합" },
-    { "id": "collective", "label": "집합" },
-    { "id": "rent", "label": "임대" },
-    { "id": "profile", "label": "지역프로필" },
-    { "id": "admin", "label": "관리" }
+    {
+      "id": "land",
+      "label": "토지"
+    },
+    {
+      "id": "built",
+      "label": "복합"
+    },
+    {
+      "id": "collective",
+      "label": "집합"
+    },
+    {
+      "id": "rent",
+      "label": "임대"
+    },
+    {
+      "id": "profile",
+      "label": "지역프로필"
+    },
+    {
+      "id": "admin",
+      "label": "관리"
+    }
   ],
   "past": [
     {
@@ -356,16 +374,75 @@
           "commit": "committed"
         }
       }
+    },
+    {
+      "date": "2026-09-03",
+      "cells": {
+        "land": {
+          "text": "지역선택(법정동·리 칩) 유지. 프로필 딥링크만 리가 없는 …00 → 읍면동",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-057"
+        },
+        "profile": {
+          "text": "리가 없는 동(…00)은 읍면동으로 검색·URL 확정. 리 전국순위·리 Twin 후보에서 동 제외. 근본 마트는 차후",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-057"
+        },
+        "admin": {
+          "text": "D-057 Twin 필터 · 순위계획 §9 · 글로서리 · 일지 09-03 (`8d3c146`)",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-057"
+        }
+      }
+    },
+    {
+      "date": "2026-09-05",
+      "cells": {
+        "land": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "built": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "collective": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "rent": {
+          "text": "이 축 오늘 작업 없음. 롤링 추세 as_of 표시 등 워킹트리 잔여",
+          "status": "done",
+          "commit": "needed"
+        },
+        "profile": {
+          "text": "D-060 시군구 분모(일반구+부모 시). 제품 유형동조 제거. D-058 ①n붕괴·②시군구내 규모·③단가(인구보정 없음)·④시군구내 단가 1차. 실험은 장기",
+          "status": "done",
+          "commit": "needed",
+          "decision": "D-058"
+        },
+        "admin": {
+          "text": "D-058/059/060 · 랩 size ①–④ · 스냅샷 run2 · 일지 09-05. 실험 장기 이어감",
+          "status": "done",
+          "commit": "needed",
+          "decision": "D-058"
+        }
+      }
     }
   ],
   "today": {
-    "date": "2026-09-03",
+    "date": "2026-09-07",
     "cells": {
       "land": {
-        "text": "지역선택(법정동·리 칩) 유지. 프로필 딥링크만 리가 없는 …00 → 읍면동",
+        "text": "이 축 작업 없음",
         "status": "done",
-        "commit": "committed",
-        "decision": "D-057"
+        "commit": "none"
       },
       "built": {
         "text": "이 축 작업 없음",
@@ -373,26 +450,27 @@
         "commit": "none"
       },
       "collective": {
-        "text": "이 축 작업 없음",
+        "text": "시공사 식별(D-063)·within-gu(D-065)·연식=0 잔차(D-064) 1차. 예측식 미변경. 랩 이관",
         "status": "done",
-        "commit": "none"
+        "commit": "committed",
+        "decision": "D-065"
       },
       "rent": {
-        "text": "이 축 작업 없음",
+        "text": "이 축 오늘 작업 없음. 롤링 추세 as_of 등 워킹트리 잔여",
         "status": "done",
-        "commit": "none"
+        "commit": "needed"
       },
       "profile": {
-        "text": "리가 없는 동(…00)은 읍면동으로 검색·URL 확정. 가능동 리 칸 중복 제거. 리 전국순위·리 Twin 후보에서 동 제외. 근본 마트는 차후",
+        "text": "이 축 오늘 작업 없음. D-058 장기·D-060 순위 분모는 워킹트리 잔여",
         "status": "done",
         "commit": "needed",
-        "decision": "D-057"
+        "decision": "D-058"
       },
       "admin": {
-        "text": "D-057(Twin 필터 포함) · 순위계획 §9 근본 차후 · 글로서리 · 일지 09-03",
+        "text": "랩 ?tool=builder(구 안·다음 세션)·?tool=age0 · D-063·D-065·D-064 · 스냅샷 · 일지 09-07",
         "status": "done",
-        "commit": "needed",
-        "decision": "D-057"
+        "commit": "committed",
+        "decision": "D-065"
       }
     }
   },
@@ -405,10 +483,10 @@
         "decision": "D-056"
       },
       "profile": {
-        "text": "근본: 리 마트=…00 제외·프로필 beop 행 안 만듦(§9). G3 전국 월별 총액↔M2·대표금리1개. 7월 as_of는 별도",
+        "text": "D-058 시장규모 실험 장기(시·군 분리·집합상가/토지 단가 등은 그때). 제품화·G3 아님. 근본: 리 마트=…00 제외(§9). G3 전국 월별 총액↔M2·대표금리1개. 7월 as_of 별도",
         "status": "planned",
-        "commit": "none",
-        "decision": "D-057"
+        "commit": "needed",
+        "decision": "D-058"
       },
       "built": {
         "text": "enrichment P5 promote는 별도(`--apply-enrichment` 금지). AI P5 깊게는 집합 사다리 후",
@@ -422,16 +500,16 @@
         "commit": "none"
       },
       "collective": {
-        "text": "P4 메모 다듬기·user_override. 코호트 프리필 없음. 공유 창은 이 앱 재빌드 때 반영. D·F 백로그는 축약과 별개",
+        "text": "시공사 브랜드 vs 시공사(D-065). 연식=0 서울·경기 분리(D-064). 제품 식에 γ·신축 k% 넣지 않음",
         "status": "planned",
         "commit": "needed",
-        "decision": "D-056"
+        "decision": "D-065"
       },
       "admin": {
-        "text": "이어서=`CH2_AI_ASSISTANT_EXPANSION_PLAN` §12. P5 promote·parcel_master dump 금지",
+        "text": "시공사 브랜드 분리 · 연식=0 서울·경기(D-065·D-064). D-058 장기 size. P5 promote 금지",
         "status": "planned",
         "commit": "needed",
-        "decision": "D-056"
+        "decision": "D-065"
       }
     }
   },

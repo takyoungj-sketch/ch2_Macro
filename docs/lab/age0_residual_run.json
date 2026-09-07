@@ -1,0 +1,613 @@
+{
+  "run_id": "age0-residual-2026-09-07",
+  "date": "2026-09-07",
+  "decision": "D-064",
+  "status": "experimental",
+  "product_change": false,
+  "resume": {
+    "next_id": "seoul-gyeonggi",
+    "title": "서울·경기 분리",
+    "say": "전국 0~3년 잔차율 −7.9%는 서울(+)과 경기(−)가 섞인 값이다. 두 지역을 나눠 상품·입지 믹스인지 본다.",
+    "do_not": "연식=0 예측에 전국 공통 신축 프리미엄 k%를 더하지 않는다.",
+    "how": "관리자 ?tool=age0 → 다음 실험. 전국 스택 재실행은 age0_residual_lab이 숫자를 덮는다. D-064 유지."
+  },
+  "method": {
+    "note": "시도마다 현재 변수로 1회 적합. 전국 한 식 없음. 잔차만 스택.",
+    "window_years": 5,
+    "model": "log",
+    "weight": "equal",
+    "variables": [
+      "households",
+      "max_floor",
+      "building_age",
+      "parking"
+    ],
+    "as_of_month": "2026-08-01",
+    "as_of_label": "2026년 8월 말 기준",
+    "grain": "단지 1행 · 창 중앙값",
+    "y": "창 중앙 단가(만원/㎡). 잔차율=(y-ŷ)/y",
+    "age0": "적합 후 building_age만 0으로 바꿔 ŷ0",
+    "fit_scope": "시도마다 1회 적합 후 잔차 스택. 전국 한 식 없음",
+    "daejeon_first": "대전은 시 전체 1회 적합(구별 적합 아님)"
+  },
+  "daejeon": {
+    "n_fit": 485,
+    "summary_0_1": {
+      "n": 3,
+      "mean_residual_rate_age0": -4.96,
+      "median_residual_rate_age0": -5.67,
+      "mean_residual_rate_actual_age": -3.5,
+      "underpred_share_age0": 33.3,
+      "mean_y_over_yhat0_minus_1": -4.16,
+      "median_y_over_yhat0_minus_1": -5.37,
+      "mean_y": 685.3,
+      "mean_yhat0": 717.4,
+      "mean_yhat_actual_age": 707.4,
+      "bootstrap_mean_residual_rate_age0_pct": {
+        "mean": -4.96,
+        "ci95": [
+          -14.4,
+          5.18
+        ]
+      },
+      "bootstrap_mean_premium_vs_age0_pct": {
+        "mean": -4.16,
+        "ci95": [
+          -12.58,
+          5.47
+        ]
+      },
+      "wilcoxon_y_minus_yhat0_greater": {
+        "stat": 1.0,
+        "p": 0.875
+      }
+    },
+    "summary_0_3": {
+      "n": 13,
+      "mean_residual_rate_age0": -5.07,
+      "median_residual_rate_age0": -5.67,
+      "mean_residual_rate_actual_age": -2.23,
+      "underpred_share_age0": 46.2,
+      "mean_y_over_yhat0_minus_1": -0.18,
+      "median_y_over_yhat0_minus_1": -5.37,
+      "mean_y": 656.7,
+      "mean_yhat0": 672.7,
+      "mean_yhat_actual_age": 654.1,
+      "bootstrap_mean_residual_rate_age0_pct": {
+        "mean": -5.07,
+        "ci95": [
+          -19.65,
+          7.22
+        ]
+      },
+      "bootstrap_mean_premium_vs_age0_pct": {
+        "mean": -0.18,
+        "ci95": [
+          -11.4,
+          11.64
+        ]
+      },
+      "wilcoxon_y_minus_yhat0_greater": {
+        "stat": 42.0,
+        "p": 0.6065673828125
+      }
+    }
+  },
+  "national": {
+    "sido_sign": {
+      "n_sidos_with_new": 16,
+      "n_mean_residual_positive": 5,
+      "n_mean_residual_negative": 11
+    },
+    "n_fit_total": 17559,
+    "age_counts": {
+      "0_1": 131,
+      "0_3": 744,
+      "4_plus": 16815
+    },
+    "summary_0_1": {
+      "n": 131,
+      "mean_residual_rate_age0": -6.78,
+      "median_residual_rate_age0": -3.49,
+      "mean_residual_rate_actual_age": -5.64,
+      "underpred_share_age0": 46.6,
+      "mean_y_over_yhat0_minus_1": 5.71,
+      "median_y_over_yhat0_minus_1": -3.37,
+      "mean_y": 850.2,
+      "mean_yhat0": 782.4,
+      "mean_yhat_actual_age": 775.7,
+      "bootstrap_mean_residual_rate_age0_pct": {
+        "mean": -6.78,
+        "ci95": [
+          -13.23,
+          -0.6
+        ]
+      },
+      "bootstrap_mean_premium_vs_age0_pct": {
+        "mean": 5.71,
+        "ci95": [
+          -0.95,
+          12.95
+        ]
+      },
+      "wilcoxon_y_minus_yhat0_greater": {
+        "stat": 4269.0,
+        "p": 0.5493623969799603
+      }
+    },
+    "summary_0_3": {
+      "n": 744,
+      "mean_residual_rate_age0": -7.88,
+      "median_residual_rate_age0": -4.98,
+      "mean_residual_rate_actual_age": -4.84,
+      "underpred_share_age0": 43.0,
+      "mean_y_over_yhat0_minus_1": 2.85,
+      "median_y_over_yhat0_minus_1": -4.75,
+      "mean_y": 787.1,
+      "mean_yhat0": 750.5,
+      "mean_yhat_actual_age": 733.2,
+      "bootstrap_mean_residual_rate_age0_pct": {
+        "mean": -7.88,
+        "ci95": [
+          -10.34,
+          -5.55
+        ]
+      },
+      "bootstrap_mean_premium_vs_age0_pct": {
+        "mean": 2.85,
+        "ci95": [
+          0.08,
+          5.55
+        ]
+      },
+      "wilcoxon_y_minus_yhat0_greater": {
+        "stat": 126639.0,
+        "p": 0.9790524199344247
+      }
+    },
+    "summary_4_plus": {
+      "n": 16815,
+      "mean_residual_rate_age0": -54.77,
+      "median_residual_rate_age0": -44.97,
+      "mean_residual_rate_actual_age": -14.68,
+      "underpred_share_age0": 19.3,
+      "mean_y_over_yhat0_minus_1": -21.93,
+      "median_y_over_yhat0_minus_1": -31.02,
+      "mean_y": 572.2,
+      "mean_yhat0": 682.0,
+      "mean_yhat_actual_age": 576.1,
+      "bootstrap_mean_residual_rate_age0_pct": {
+        "mean": -54.77,
+        "ci95": [
+          -55.8,
+          -53.74
+        ]
+      },
+      "bootstrap_mean_premium_vs_age0_pct": {
+        "mean": -21.93,
+        "ci95": [
+          -22.51,
+          -21.35
+        ]
+      },
+      "wilcoxon_y_minus_yhat0_greater": {
+        "stat": 27181228.0,
+        "p": 1.0
+      }
+    }
+  },
+  "sidos": [
+    {
+      "addr1": "경기도",
+      "ok": true,
+      "n_fit": 4458,
+      "adj_r_squared": 0.1264,
+      "n_0_3": 188,
+      "n_0_1": 32,
+      "mean_residual_rate_age0": -19.88,
+      "underpred_share_age0": 31.9,
+      "mean_y_over_yhat0_minus_1": -1.96,
+      "ci_residual_age0": [
+        -26.15,
+        -13.78
+      ],
+      "age_coef": {
+        "coef": -0.002359,
+        "p": 0.0036932832555106754,
+        "t": -2.904773479938571
+      }
+    },
+    {
+      "addr1": "대구광역시",
+      "ok": true,
+      "n_fit": 1019,
+      "adj_r_squared": 0.399,
+      "n_0_3": 92,
+      "n_0_1": 10,
+      "mean_residual_rate_age0": 0.83,
+      "underpred_share_age0": 55.4,
+      "mean_y_over_yhat0_minus_1": 8.01,
+      "ci_residual_age0": [
+        -4.23,
+        5.75
+      ],
+      "age_coef": {
+        "coef": -0.014309,
+        "p": 2.592892289132749e-28,
+        "t": -11.3775947257668
+      }
+    },
+    {
+      "addr1": "서울특별시",
+      "ok": true,
+      "n_fit": 2626,
+      "adj_r_squared": 0.1331,
+      "n_0_3": 62,
+      "n_0_1": 19,
+      "mean_residual_rate_age0": 15.91,
+      "underpred_share_age0": 79.0,
+      "mean_y_over_yhat0_minus_1": 32.81,
+      "ci_residual_age0": [
+        8.54,
+        22.51
+      ],
+      "age_coef": {
+        "coef": -0.0014,
+        "p": 0.11640054170634062,
+        "t": -1.5705817281125076
+      }
+    },
+    {
+      "addr1": "충청남도",
+      "ok": true,
+      "n_fit": 774,
+      "adj_r_squared": 0.6503,
+      "n_0_3": 54,
+      "n_0_1": 11,
+      "mean_residual_rate_age0": -9.32,
+      "underpred_share_age0": 42.6,
+      "mean_y_over_yhat0_minus_1": -5.14,
+      "ci_residual_age0": [
+        -15.18,
+        -3.57
+      ],
+      "age_coef": {
+        "coef": -0.019873,
+        "p": 3.9141656363385856e-38,
+        "t": -13.64788292110862
+      }
+    },
+    {
+      "addr1": "인천광역시",
+      "ok": true,
+      "n_fit": 920,
+      "adj_r_squared": 0.6031,
+      "n_0_3": 53,
+      "n_0_1": 11,
+      "mean_residual_rate_age0": -3.53,
+      "underpred_share_age0": 49.1,
+      "mean_y_over_yhat0_minus_1": 1.37,
+      "ci_residual_age0": [
+        -9.71,
+        2.57
+      ],
+      "age_coef": {
+        "coef": -0.016055,
+        "p": 3.8093825776947866e-59,
+        "t": -17.46081547890622
+      }
+    },
+    {
+      "addr1": "전남광주통합특별시",
+      "ok": true,
+      "n_fit": 1352,
+      "adj_r_squared": 0.5801,
+      "n_0_3": 52,
+      "n_0_1": 11,
+      "mean_residual_rate_age0": -12.01,
+      "underpred_share_age0": 26.9,
+      "mean_y_over_yhat0_minus_1": -0.62,
+      "ci_residual_age0": [
+        -20.75,
+        -3.34
+      ],
+      "age_coef": {
+        "coef": -0.020206,
+        "p": 8.11819401715369e-68,
+        "t": -18.42993945985837
+      }
+    },
+    {
+      "addr1": "경상남도",
+      "ok": true,
+      "n_fit": 1199,
+      "adj_r_squared": 0.5444,
+      "n_0_3": 49,
+      "n_0_1": 12,
+      "mean_residual_rate_age0": -6.94,
+      "underpred_share_age0": 44.9,
+      "mean_y_over_yhat0_minus_1": 2.7,
+      "ci_residual_age0": [
+        -18.58,
+        2.96
+      ],
+      "age_coef": {
+        "coef": -0.017678,
+        "p": 1.926295156216472e-32,
+        "t": -12.219915604828223
+      }
+    },
+    {
+      "addr1": "부산광역시",
+      "ok": true,
+      "n_fit": 1212,
+      "adj_r_squared": 0.4473,
+      "n_0_3": 39,
+      "n_0_1": 3,
+      "mean_residual_rate_age0": 7.71,
+      "underpred_share_age0": 56.4,
+      "mean_y_over_yhat0_minus_1": 17.29,
+      "ci_residual_age0": [
+        0.1,
+        15.43
+      ],
+      "age_coef": {
+        "coef": -0.012607,
+        "p": 1.5710937038277161e-24,
+        "t": -10.450127879957593
+      }
+    },
+    {
+      "addr1": "경상북도",
+      "ok": true,
+      "n_fit": 859,
+      "adj_r_squared": 0.716,
+      "n_0_3": 37,
+      "n_0_1": 5,
+      "mean_residual_rate_age0": -8.27,
+      "underpred_share_age0": 37.8,
+      "mean_y_over_yhat0_minus_1": -4.28,
+      "ci_residual_age0": [
+        -14.82,
+        -1.69
+      ],
+      "age_coef": {
+        "coef": -0.026209,
+        "p": 2.4807375959329353e-52,
+        "t": -16.322134896233088
+      }
+    },
+    {
+      "addr1": "전북특별자치도",
+      "ok": true,
+      "n_fit": 695,
+      "adj_r_squared": 0.6915,
+      "n_0_3": 28,
+      "n_0_1": 4,
+      "mean_residual_rate_age0": -23.13,
+      "underpred_share_age0": 10.7,
+      "mean_y_over_yhat0_minus_1": -16.49,
+      "ci_residual_age0": [
+        -29.59,
+        -16.08
+      ],
+      "age_coef": {
+        "coef": -0.02508,
+        "p": 9.045800634115985e-44,
+        "t": -14.906886705837227
+      }
+    },
+    {
+      "addr1": "강원특별자치도",
+      "ok": true,
+      "n_fit": 679,
+      "adj_r_squared": 0.6994,
+      "n_0_3": 27,
+      "n_0_1": 3,
+      "mean_residual_rate_age0": -5.7,
+      "underpred_share_age0": 51.9,
+      "mean_y_over_yhat0_minus_1": -2.5,
+      "ci_residual_age0": [
+        -13.3,
+        1.29
+      ],
+      "age_coef": {
+        "coef": -0.020758,
+        "p": 8.533545548414538e-34,
+        "t": -12.813595695944704
+      }
+    },
+    {
+      "addr1": "충청북도",
+      "ok": true,
+      "n_fit": 599,
+      "adj_r_squared": 0.7559,
+      "n_0_3": 27,
+      "n_0_1": 6,
+      "mean_residual_rate_age0": -18.72,
+      "underpred_share_age0": 22.2,
+      "mean_y_over_yhat0_minus_1": -10.48,
+      "ci_residual_age0": [
+        -31.29,
+        -7.54
+      ],
+      "age_coef": {
+        "coef": -0.015755,
+        "p": 2.5228769064106005e-23,
+        "t": -10.38398747669282
+      }
+    },
+    {
+      "addr1": "울산광역시",
+      "ok": true,
+      "n_fit": 459,
+      "adj_r_squared": 0.432,
+      "n_0_3": 15,
+      "n_0_1": 1,
+      "mean_residual_rate_age0": 9.01,
+      "underpred_share_age0": 60.0,
+      "mean_y_over_yhat0_minus_1": 18.49,
+      "ci_residual_age0": [
+        -3.51,
+        21.27
+      ],
+      "age_coef": {
+        "coef": -0.024571,
+        "p": 7.524289951554612e-25,
+        "t": -10.9311663258434
+      }
+    },
+    {
+      "addr1": "대전광역시",
+      "ok": true,
+      "n_fit": 485,
+      "adj_r_squared": 0.4288,
+      "n_0_3": 13,
+      "n_0_1": 3,
+      "mean_residual_rate_age0": -5.07,
+      "underpred_share_age0": 46.2,
+      "mean_y_over_yhat0_minus_1": -0.18,
+      "ci_residual_age0": [
+        -18.68,
+        7.01
+      ],
+      "age_coef": {
+        "coef": -0.01404,
+        "p": 1.0861586250054636e-15,
+        "t": -8.297252449004043
+      }
+    },
+    {
+      "addr1": "세종특별자치시",
+      "ok": true,
+      "n_fit": 126,
+      "adj_r_squared": 0.6873,
+      "n_0_3": 6,
+      "n_0_1": 0,
+      "mean_residual_rate_age0": -50.92,
+      "underpred_share_age0": 0.0,
+      "mean_y_over_yhat0_minus_1": -30.48,
+      "ci_residual_age0": [
+        -82.57,
+        -26.24
+      ],
+      "age_coef": {
+        "coef": -0.035507,
+        "p": 1.201825136218089e-11,
+        "t": -7.4959283163575705
+      }
+    },
+    {
+      "addr1": "제주특별자치도",
+      "ok": true,
+      "n_fit": 97,
+      "adj_r_squared": 0.4248,
+      "n_0_3": 2,
+      "n_0_1": 0,
+      "mean_residual_rate_age0": 9.05,
+      "underpred_share_age0": 50.0,
+      "mean_y_over_yhat0_minus_1": 11.82,
+      "ci_residual_age0": [
+        -2.72,
+        20.82
+      ],
+      "age_coef": {
+        "coef": 0.002214,
+        "p": 0.48147064546676144,
+        "t": 0.7068104832051461
+      }
+    }
+  ],
+  "verdict": {
+    "code": "no_national_premium",
+    "label": "전국 공통 신축 프리미엄을 식에 넣을 근거가 부족함",
+    "product_formula": "do_not_add",
+    "choices": [
+      {
+        "id": "sufficient",
+        "label": "전국 k% 신축 프리미엄을 넣을 근거가 충분함",
+        "selected": false,
+        "why": "0~3년 잔차율 평균 −7.9% [−10.3, −5.6]. 과소예측이 아니라 과대예측 쪽. 과소예측 비중 43%."
+      },
+      {
+        "id": "regional_heterogeneity",
+        "label": "효과 방향이 지역마다 달라 추가 검증 필요",
+        "selected": true,
+        "note": "해석용",
+        "why": "서울 +15.9% [8.5, 22.5] 과소, 경기 −19.9% [−26.2, −13.8] 과대. 16개 시도 중 평균 잔차 +는 5곳."
+      },
+      {
+        "id": "insufficient_for_formula",
+        "label": "식에 넣을 근거가 부족함",
+        "selected": true,
+        "note": "식 변경",
+        "why": "연식=0은 재고 식의 0년 슬라이스(what-if)로 두고, ŷ에 k%를 얹지 않음. 대전 n=13은 CI가 0을 포함."
+      }
+    ]
+  },
+  "answers": [
+    {
+      "q": "연식=0이 신축 단가를 체계적으로 과소예측하는가?",
+      "a": "전국 평균으로는 아니오",
+      "evidence": "0~3년 잔차율 평균 −7.88%, bootstrap CI [−10.34, −5.55]. ŷ0이 실제보다 큼."
+    },
+    {
+      "q": "신축이 연식=0 예측보다 비싼가(프리미엄)?",
+      "a": "평균 y/ŷ0−1은 +2.85%이나 중앙값은 −4.75%",
+      "evidence": "평균은 오른쪽 꼬리. Wilcoxon(y>ŷ0) p=0.98. 과소예측 비중 43%."
+    },
+    {
+      "q": "대전도 같은가?",
+      "a": "표본이 작고 CI가 0을 포함",
+      "evidence": "0~3년 n=13, 잔차율 −5.1% [−19.7, +7.2], 과소예측 46%."
+    },
+    {
+      "q": "지역이 연식보다 큰가?",
+      "a": "예",
+      "evidence": "서울 vs 경기 부호가 반대. 입지가 연식 슬라이스를 압도."
+    },
+    {
+      "q": "ŷ에 신축 프리미엄을 얹을 근거가 있는가?",
+      "a": "지금은 없음",
+      "evidence": "전국 공통 k%는 기각. 제품은 해당 실행의 0~3년 격차만 참고 문구로 두고 더하지 않음."
+    }
+  ],
+  "next": [
+    {
+      "id": "seoul-gyeonggi",
+      "status": "planned",
+      "title": "서울·경기 분리",
+      "ask": "과소(서울)와 과대(경기)가 상품·입지 믹스 때문인가.",
+      "gate": "전국 k% 재논의 전."
+    },
+    {
+      "id": "within-sigungu",
+      "status": "planned",
+      "title": "시군구 식에서 0~3년 격차",
+      "ask": "제품 지역회귀(구 안)와 같은 그레인에서 이번 런 격차가 반복되는가.",
+      "gate": "이미 제품 모달이 해당 실행 격차를 보여 줌. 전국 스택과 비교."
+    },
+    {
+      "id": "age-0-1",
+      "status": "planned",
+      "title": "0~1년만",
+      "ask": "준공 직후만 보면 부호가 바뀌는가.",
+      "gate": "전국 0~1년 n=131, 잔차율 −6.8% [−13.2, −0.6]."
+    },
+    {
+      "id": "national-premium",
+      "status": "blocked",
+      "title": "연식=0 예측에 전국 신축 프리미엄 k% 가산",
+      "ask": "하지 않음.",
+      "gate": "D-064. 방향이 지역마다 반대."
+    }
+  ],
+  "limits": [
+    "시도 식 적합 후 잔차 스택. 전국 한 식 없음",
+    "표본 내 적합, hold-out 없음",
+    "잔차율 (y-ŷ)/y. 로그 잔차와 다름",
+    "공시지가·시공사 없음(당시 지역회귀 기본 변수)",
+    "대전 1차는 n=13으로 검정력 부족",
+    "제품 ŷ에 프리미엄을 더하지 않음"
+  ]
+}

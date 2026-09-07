@@ -84,6 +84,21 @@ export type FittedBuildingRow = {
   ape?: number | null;
   asset_type?: string | null;
   assessed_land_price?: number | null;
+  households?: number | null;
+  max_floor?: number | null;
+  building_age?: number | null;
+  parking_per_household?: number | null;
+  structure_group?: string | null;
+  builder_group?: string | null;
+};
+
+export type NewBuildAge0Gap = {
+  n_0_3: number;
+  n_0_1: number;
+  median_residual_pct?: number | null;
+  mean_residual_pct?: number | null;
+  underpred_share_pct?: number | null;
+  thin: boolean;
 };
 
 export type RegionalRegressionRunResponse = {
@@ -116,6 +131,7 @@ export type RegionalRegressionRunResponse = {
   as_of_month?: string | null;
   snapshot_ym?: string | null;
   scope_label?: string | null;
+  newbuild_age0_gap?: NewBuildAge0Gap | null;
 };
 
 export type RegionalRegressionPredictResponse = {
@@ -124,6 +140,10 @@ export type RegionalRegressionPredictResponse = {
   weight_mode?: "equal" | "tx";
   y_hat: number;
   unit: string;
+  ci_lower?: number | null;
+  ci_upper?: number | null;
+  pi_lower?: number | null;
+  pi_upper?: number | null;
   warnings: string[];
   contributions: Array<{
     name: string;

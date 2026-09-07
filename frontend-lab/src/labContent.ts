@@ -154,4 +154,9 @@ export const TOOL_WHY: Record<string, string[]> = {
   rent: ["D-040"],
   ai: [],
   parcel: ["D-048"],
+  size: ["D-058", "D-055"],
+  g3: ["D-055"],
+  newapt: ["D-045"],
+  builder: ["D-063", "D-065", "D-045"],
+  age0: ["D-064", "D-045"],
 };

@@ -7,10 +7,26 @@ import RentConversionLab from "./components/RentConversionLab";
 import TwinEngineV2Lab from "./components/TwinEngineV2Lab";
 import AiUsagePanel from "./components/AiUsagePanel";
 import ParcelLabPanel from "./components/ParcelLabPanel";
+import MarketSizeLab from "./components/MarketSizeLab";
+import MacroTsLab from "./components/MacroTsLab";
+import NewAptLab from "./components/NewAptLab";
+import BuilderIdentLab from "./components/BuilderIdentLab";
+import Age0ResidualLab from "./components/Age0ResidualLab";
 import WhyDecision, { WhyLinks } from "./components/WhyDecision";
 import { TOOL_WHY } from "./labContent";
 
-export type LabTool = "plan" | "qa" | "twin" | "rent" | "ai" | "parcel";
+export type LabTool =
+  | "plan"
+  | "qa"
+  | "twin"
+  | "rent"
+  | "ai"
+  | "parcel"
+  | "size"
+  | "g3"
+  | "newapt"
+  | "builder"
+  | "age0";
 export type TwinPane = "v2" | "mape";
 
 type LabParams = {
@@ -23,7 +39,19 @@ function readParams(): LabParams {
   const q = new URLSearchParams(window.location.search);
   const t = q.get("tool");
   const tool =
-    t === "plan" || t === "qa" || t === "twin" || t === "rent" || t === "ai" || t === "parcel" ? t : null;
+    t === "plan" ||
+    t === "qa" ||
+    t === "twin" ||
+    t === "rent" ||
+    t === "ai" ||
+    t === "parcel" ||
+    t === "size" ||
+    t === "g3" ||
+    t === "newapt" ||
+    t === "builder" ||
+    t === "age0"
+      ? t
+      : null;
   const pane = q.get("pane");
   return {
     tool,
@@ -152,6 +180,46 @@ export default function App() {
     return (
       <LabChrome title="대장DB" whyIds={TOOL_WHY.parcel ?? []} onWhy={setWhy} onBack={back}>
         <ParcelLabPanel />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "size") {
+    return (
+      <LabChrome title="시장 규모의 관계" whyIds={TOOL_WHY.size ?? []} onWhy={setWhy} onBack={back}>
+        <MarketSizeLab />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "g3") {
+    return (
+      <LabChrome title="유동성·금리 시계열" whyIds={TOOL_WHY.g3 ?? []} onWhy={setWhy} onBack={back}>
+        <MacroTsLab />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "newapt") {
+    return (
+      <LabChrome title="신규아파트 실험" whyIds={TOOL_WHY.newapt ?? []} onWhy={setWhy} onBack={back}>
+        <NewAptLab />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "builder") {
+    return (
+      <LabChrome title="시공사 효과" whyIds={TOOL_WHY.builder ?? []} onWhy={setWhy} onBack={back}>
+        <BuilderIdentLab />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "age0") {
+    return (
+      <LabChrome title="연식=0 잔차" whyIds={TOOL_WHY.age0 ?? []} onWhy={setWhy} onBack={back}>
+        <Age0ResidualLab />
         {whyModal}
       </LabChrome>
     );

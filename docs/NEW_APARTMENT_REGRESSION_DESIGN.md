@@ -145,7 +145,7 @@ Phase 0–A2에서 둘을 비교하고, **신규에 가까운 hold-out**(준공 
 - Adj R²가 올라도 hold-out MAPE가 나빠지면, 그 변수는 신규 예측에 도움이 됐다고 보지 않는다.
 - 구 시세를 넣은 뒤 토지 ΔAdj R²가 작다고 **토지가 입지를 설명하지 못한다**고 단정하지 않는다. 구 시세가 입지를 먼저 가져간 것이다.
 
-**화면:** 집합 기본통계(대전 아파트)에서 「신규아파트 실험」. 점추정 + 식·계수·n·경고 + 학습 테이블(토지 조인·이상치·잔차) + 구/연도 hold-out.  
+**화면:** 관리자 랩 `?tool=newapt` (`docs/CH2_LAB_HUB.md`). 점추정 + 식·계수·n·경고 + 학습 테이블(토지 조인·이상치·잔차) + 구/연도 hold-out. 집합 기본통계 메뉴에는 두지 않는다.  
 기존 건물 상세 「회귀 분석」 탭과 섞지 않는다. 「분양가 보장」 문구 금지.
 
 ### 3.3 APE 오차 태깅 (M2 고정 후)
@@ -254,6 +254,18 @@ ln(P) ~ 연도 + 지역(광역 또는 시군구) + ln(토지P50) + ln(세대수)
 
 API: `GET /api/collective/analysis/new-apt/region-compare` · 화면 「충북 확장」 탭.
 
+### 4.3 재고 지역회귀에서 입지·시공사 혼동 (2026-09-07)
+
+트랙 B를 제품에 올리기 전에, **현재 지역회귀** 정의로 전국 단지 1행을 한 번 봤다. 공시지가 ≠ 시군구 FE 대체. γ는 지역 FE 전후 안정성으로 읽는다. **예측식은 바꾸지 않는다.**
+
+랩 SSOT: [`lab/BUILDER_IDENT_LAB.md`](lab/BUILDER_IDENT_LAB.md) · `?tool=builder` · D-063.
+다음 게이트는 **시군구 내부(within-gu) 식별**. 전국 FE 결과만으로 신축식에 γ를 넣지 않는다.
+
+### 4.4 연식=0 잔차 — 신축 프리미엄 (2026-09-07)
+
+재고 지역회귀에 연식=0을 넣어도 전국에서 신축이 체계적으로 과소예측되지 않았다. **전국 공통 k%를 ŷ에 더하지 않는다.** 연식=0은 재고 식의 0년 슬라이스다.
+
+랩 SSOT: [`lab/AGE0_RESIDUAL_LAB.md`](lab/AGE0_RESIDUAL_LAB.md) · `?tool=age0` · D-064.
 
 ---
 
@@ -284,7 +296,7 @@ API: `GET /api/collective/analysis/new-apt/region-compare` · 화면 「충북 �
   → M0·M1-A(토지 본선) vs M1-B(구시세 진단) · M2 · M3
   → M2를 대전 잠정 기준식으로 둠 (충북 복제 전 최종 확정 아님)
   → 구 통째·연도 통째 hold-out
-  → UI: 집합 기본통계 「신규아파트 실험」 (학습 테이블·토지 조인·잔차)
+  → UI: 관리자 랩 「신규아파트 실험」 (학습 테이블·토지 조인·잔차)
   → 충북 M2 복제 + 대전 hold-out 고정 전이
   → 시공사 γ 노출 여부 (대전 vs 대전+충북 안정성)
   → 신축 대단지 hold-out
@@ -299,7 +311,7 @@ API: `GET /api/collective/analysis/new-apt/region-compare` · 화면 「충북 �
 | **A3** | 충북 M2 복제 + 대전 hold-out 고정 전이 (광역 FE) | 통합 평균 MAPE로 채택하지 않음. 대전 테스트가 좋아질 때만 안정화 후보 |
 | **B** | 대전 γ + (필요 시) 대전+충북·지역 FE 나란히 | 단지≥30만 계수 노출. 흔들리면 미노출. **충북 M2 이후** |
 | **C** | 품질지수 mart 빌드·열람 (이미 코드 있음) | mean(Q)≈0, 기존 회귀 엔진 불변. B 교차표는 선택 |
-| **UI** | 집합 기본통계 → 「신규아파트 실험」(아파트). 비교표·충북 확장·오차 패턴 | 식·계수·경고·학습 테이블·hold-out·대전 고정 전이. 기존 회귀 탭과 분리 |
+| **UI** | 관리자 랩 「신규아파트 실험」. 비교표·충북 확장·오차 패턴 | 식·계수·경고·학습 테이블·hold-out·대전 고정 전이. 집합 기본통계와 분리 |
 
 커밋은 UI(또는 리포트)를 T가 본 뒤에. 기존 건물 회귀는 손대지 않음.
 
@@ -316,7 +328,7 @@ API: `GET /api/collective/analysis/new-apt/region-compare` · 화면 「충북 �
 | 블록 L | 트랙 C의 지역 거시. 트랙 A 입지 블록과 섞지 않음 |
 
 트랙 A 마트·비교 파이프라인은 `new_apartment_complex_year` / `pipeline/run_new_apartment_regression.py`다. 품질지수 파이프라인을 A에 억지로 쓰지 않는다.  
-실험 API: `GET /api/collective/analysis/new-apt/experiment` · 지역 비교 `GET /api/collective/analysis/new-apt/region-compare`. 화면은 주거 집합 기본통계에만 둔다 — **비주거 cluster에는 신규아파트 트랙이 없어 쌍 탭을 만들지 않는다** (분석 단위 차이).
+실험 API: `GET /api/collective/analysis/new-apt/experiment` · 지역 비교 `GET /api/collective/analysis/new-apt/region-compare`. 화면은 관리자 랩에만 둔다 — **비주거 cluster에는 신규아파트 트랙이 없어 쌍 탭을 만들지 않는다** (분석 단위 차이).
 
 ---
 

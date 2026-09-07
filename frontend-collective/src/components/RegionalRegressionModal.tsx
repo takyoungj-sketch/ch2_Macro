@@ -7,9 +7,10 @@ import {
   type FunnelStep,
   type RegionalRegressionPredictInputs,
   type RegionalRegressionRunRequest,
-  type RegionalRegressionRunResponse,
   type RegionalRegressionVariables,
   type SampleBreakdown,
+  type FittedBuildingRow,
+  type NewBuildAge0Gap,
 } from "../api/regionalRegressionClient";
 import type { StatsWindowYears } from "./StatsWindowToggle";
 import CollectiveRegressionEquation from "./CollectiveRegressionEquation";
@@ -36,6 +37,25 @@ function regressionKinds(assetType: string) {
   return parseResidentialAssetKinds(assetType).filter((k) => k !== "presale");
 }
 
+const VIRTUAL_KEY = "__virtual__";
+
+function emptyPredictInputs(): RegionalRegressionPredictInputs {
+  return {};
+}
+
+function inputsFromFitted(row: FittedBuildingRow): RegionalRegressionPredictInputs {
+  return {
+    households: row.households ?? undefined,
+    max_floor: row.max_floor ?? undefined,
+    building_age: row.building_age ?? undefined,
+    parking_per_household: row.parking_per_household ?? undefined,
+    assessed_land_price: row.assessed_land_price ?? undefined,
+    asset_type: row.asset_type ?? undefined,
+    structure_group: row.structure_group ?? undefined,
+    builder_group: row.builder_group ?? undefined,
+  };
+}
+
 const CORE_VARS: Array<[keyof RegionalRegressionVariables, string]> = [
   ["households", "세대수"],
   ["max_floor", "최고층"],
@@ -58,6 +78,54 @@ function fmt(n: number | null | undefined, d = 2) {
 
 function fittedKey(row: { building_key: string; asset_type?: string | null }) {
   return row.asset_type ? `${row.building_key}|${row.asset_type}` : row.building_key;
+}
+
+function signedPct(n: number) {
+  const abs = Math.abs(n).toLocaleString("ko-KR", { maximumFractionDigits: 1 });
+  if (n > 0) return `+${abs}%`;
+  if (n < 0) return `−${abs}%`;
+  return "0%";
+}
+
+function NewBuildAge0GapNote({ gap }: { gap: NewBuildAge0Gap }) {
+  if (gap.n_0_3 <= 0) {
+    return (
+      <p>
+        이 식 표본에 준공 0~3년 단지가 없어, 연식=0과 실제 신축의 격차율을 계산하지
+        못했습니다.
+      </p>
+    );
+  }
+  const med = gap.median_residual_pct;
+  const dir =
+    med == null
+      ? ""
+      : med > 0
+        ? "실제가 더 높음(과소예측)"
+        : med < 0
+          ? "실제가 더 낮음(과대예측)"
+          : "중앙은 일치";
+  return (
+    <>
+      <div>
+        같은 식·이 표본의 준공 0~3년 {gap.n_0_3.toLocaleString("ko-KR")}단지
+        {gap.n_0_1 > 0 ? ` (0~1년 ${gap.n_0_1.toLocaleString("ko-KR")})` : ""}에 연식만
+        0으로 넣으면 실제 대비{" "}
+        <MetricWithHelp
+          label="중앙 잔차"
+          termId="newbuild_age0_gap"
+          value={med == null ? "—" : signedPct(med)}
+        />
+        {dir ? ` · ${dir}` : ""}
+        {gap.underpred_share_pct != null
+          ? ` · 과소예측 비율 ${fmt(gap.underpred_share_pct, 0)}%`
+          : ""}
+        {gap.thin ? " · 표본이 적어 참고입니다" : ""}
+        .
+      </div>
+      <p>예측값에 더하는 보정이 아닙니다. 단지마다 편차가 큽니다.</p>
+    </>
+  );
 }
 
 function regionParams(p: Props): Pick<
@@ -93,7 +161,7 @@ export default function RegionalRegressionModal(props: Props) {
   });
   const [modelType, setModelType] = useState<"linear" | "log">("log");
   const [weightMode, setWeightMode] = useState<"equal" | "tx">("equal");
-  const [pickKey, setPickKey] = useState("");
+  const [pickKey, setPickKey] = useState(VIRTUAL_KEY);
   const [inputs, setInputs] = useState<RegionalRegressionPredictInputs>({});
 
   const body = useMemo<RegionalRegressionRunRequest>(
@@ -130,19 +198,20 @@ export default function RegionalRegressionModal(props: Props) {
   });
 
   const data = runM.data;
-  const picked = data?.fitted.find((r) => fittedKey(r) === pickKey);
+  const picked = pickKey !== VIRTUAL_KEY ? data?.fitted.find((r) => fittedKey(r) === pickKey) : undefined;
 
-  function applyFitted(row: RegionalRegressionRunResponse["fitted"][number]) {
-    setPickKey(fittedKey(row));
-    if (row.asset_type) {
-      setInputs((s) => ({
-        ...s,
-        asset_type: row.asset_type,
-        assessed_land_price: row.assessed_land_price ?? s.assessed_land_price,
-      }));
-    } else if (row.assessed_land_price != null) {
-      setInputs((s) => ({ ...s, assessed_land_price: row.assessed_land_price }));
+  function applyTarget(key: string) {
+    if (key === VIRTUAL_KEY || !key) {
+      setPickKey(VIRTUAL_KEY);
+      setInputs(emptyPredictInputs());
+      predM.reset();
+      return;
     }
+    const row = data?.fitted.find((r) => fittedKey(r) === key);
+    if (!row) return;
+    setPickKey(key);
+    setInputs(inputsFromFitted(row));
+    predM.reset();
   }
 
   return (
@@ -262,7 +331,8 @@ export default function RegionalRegressionModal(props: Props) {
           className="btn btn-primary"
           disabled={runM.isPending}
           onClick={() => {
-            setPickKey("");
+            setPickKey(VIRTUAL_KEY);
+            setInputs(emptyPredictInputs());
             predM.reset();
             runM.mutate();
           }}
@@ -433,16 +503,13 @@ export default function RegionalRegressionModal(props: Props) {
                 <p className="text-xs font-semibold">6. 단지 평균단가 예측 (만원/㎡)</p>
                 {data.fitted.length > 0 && (
                   <label className="block space-y-1">
-                    <span className="text-slate-500">학습에 들어간 단지</span>
+                    <span className="text-slate-500">예측 대상</span>
                     <select
                       className="input"
                       value={pickKey}
-                      onChange={(e) => {
-                        const row = data.fitted.find((r) => fittedKey(r) === e.target.value);
-                        if (row) applyFitted(row);
-                      }}
+                      onChange={(e) => applyTarget(e.target.value)}
                     >
-                      <option value="">선택…</option>
+                      <option value={VIRTUAL_KEY}>가상단지 — 변수를 직접 입력</option>
                       {data.fitted.map((r) => (
                         <option key={fittedKey(r)} value={fittedKey(r)}>
                           {r.display_name}
@@ -455,10 +522,17 @@ export default function RegionalRegressionModal(props: Props) {
                     </select>
                   </label>
                 )}
+                {pickKey === VIRTUAL_KEY && (
+                  <p className="text-[11px] text-slate-500">
+                    가상단지입니다. 세대수·최고층·연식 등을 직접 넣은 뒤 예측합니다.
+                  </p>
+                )}
                 {picked && (
                   <p className="text-[11px] text-slate-500">
                     단지 중앙값 {fmt(picked.y, 0)} · 적합값 {fmt(picked.y_hat, 0)}
                     {picked.ape != null ? ` · 오차 ${fmt(picked.ape, 1)}%` : ""}
+                    {" "}
+                    · 아래 칸은 이 단지 값입니다. 바꿔서 what-if 할 수 있습니다.
                   </p>
                 )}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -539,11 +613,50 @@ export default function RegionalRegressionModal(props: Props) {
                   </p>
                 )}
                 {predM.data && (
-                  <div className="rounded-md bg-indigo-50 dark:bg-indigo-950/40 px-3 py-2 space-y-1">
-                    <p className="text-sm font-semibold text-indigo-900 dark:text-indigo-100">
-                      예측 {fmt(predM.data.y_hat, 0)} {predM.data.unit}
+                  <div className="rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 space-y-2">
+                    <div>
+                      <span className="text-slate-500 dark:text-slate-400 text-[10px]">
+                        예상 단가
+                        {predM.data.model_type === "log" ? " · 로그" : " · 선형"}
+                      </span>
+                      <div className="text-lg font-bold text-slate-800 dark:text-slate-100 tabular-nums">
+                        {fmt(predM.data.y_hat, 0)} {predM.data.unit}
+                      </div>
+                    </div>
+                    {predM.data.ci_lower != null && predM.data.ci_upper != null && (
+                      <div className="text-[11px] space-y-1 text-slate-700 dark:text-slate-300">
+                        <div>
+                          <span className="font-medium">95% 평균 신뢰구간</span>{" "}
+                          <span className="tabular-nums">
+                            {fmt(predM.data.ci_lower, 0)} ~ {fmt(predM.data.ci_upper, 0)} {predM.data.unit}
+                          </span>
+                        </div>
+                        {predM.data.pi_lower != null && predM.data.pi_upper != null && (
+                          <div className="text-slate-500 dark:text-slate-400">
+                            95% 예측구간 (개별 단지){" "}
+                            <span className="tabular-nums">
+                              {fmt(predM.data.pi_lower, 0)} ~ {fmt(predM.data.pi_upper, 0)} {predM.data.unit}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <p className="text-[10px] text-slate-500">
+                      단일 정답이 아닙니다. 식을 바꿔 가며 비교하세요.
                     </p>
-                    <p className="text-[10px] text-slate-500">단일 정답이 아닙니다. 식을 바꿔 가며 비교하세요.</p>
+                    {vars.building_age && inputs.building_age != null && inputs.building_age <= 0 && (
+                      <div className="text-[11px] text-slate-600 dark:text-slate-300 space-y-1 leading-snug">
+                        <p>
+                          연식 0은 기존 재고 식의 선형 연식을 연장한 값입니다. 신축 전용 모형이
+                          아니며, 신축 시세가 아닙니다.
+                        </p>
+                        {data.newbuild_age0_gap ? (
+                          <NewBuildAge0GapNote gap={data.newbuild_age0_gap} />
+                        ) : (
+                          <p>연식 변수가 이 식에 없어 격차율을 계산하지 않았습니다.</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </section>

@@ -31,6 +31,31 @@ const DOORS: { id: LabTool; title: string; desc: string }[] = [
     title: "대장DB",
     desc: "로컬 축약대장. 필지·동·용도지역을 찾아 표로 봅니다. 운영에는 없습니다.",
   },
+  {
+    id: "size",
+    title: "시장 규모의 관계",
+    desc: "같은 체급에서 규모·단가가 함께 큰지 봅니다. ① n붕괴 · ② 시군구 내부 · ③ ㎡당 P50 · ④ 내부 단가. 실험만.",
+  },
+  {
+    id: "g3",
+    title: "유동성·금리 시계열",
+    desc: "전국 연도. M2·CD·기준금리·국고3년 변화와 8유형 거래 건수·액 YoY. 실험만.",
+  },
+  {
+    id: "newapt",
+    title: "신규아파트 실험",
+    desc: "대전 M2 잠정식 · 충북 전이 · 학습 테이블. 집합 메뉴가 아님. 상품화 여부는 실험 후.",
+  },
+  {
+    id: "builder",
+    title: "시공사 효과",
+    desc: "1·2차 기록됨. 다음=브랜드 vs 시공사. 전국 공통 γ는 제품 식에 넣지 않음.",
+  },
+  {
+    id: "age0",
+    title: "연식=0 잔차",
+    desc: "1차 기록됨. 다음=서울·경기 분리. 전국 공통 프리미엄은 넣지 않음.",
+  },
 ];
 
 export default function LabHome({ onOpenTool }: { onOpenTool: (id: LabTool) => void }) {

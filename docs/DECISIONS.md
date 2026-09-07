@@ -65,6 +65,9 @@
 | D-060 | 2026-09-03 | **일반구와 부모 시 = 같은 시군구 체급.** 프로필은 흥덕구를 구로 연다. 시군구 순위에는 청주시와 4구가 함께 있고, 강남구·옥천군과 같은 표다. 구가 있는 시만 14곳 시 전용 표로 나누지 않는다. D-059 개정. 카드: [`lab/decisions/D-060.json`](lab/decisions/D-060.json). |
 | D-061 | 2026-09-06 | **관리자 `/lab/` 만 Nginx Basic Auth.** 게이트웨이 카드 없음. 토지·복합 등 제품 경로는 사이트 전체 비밀번호를 쓰지 않는다. 랩 API(`/api/.../lab/`, `/api/admin/`)도 같은 비밀번호. 카드: [`lab/decisions/D-061.json`](lab/decisions/D-061.json). |
 | D-062 | 2026-09-06 | **AI 기본은 CH2만. 웹은 동의한 외부조사.** 키워드로 바로 검색하지 않음. 개발사업 등은 조사 여부를 묻고, 켠 뒤에도 인과 문장 금지. SSOT: [`CH2_AI_EXTERNAL_RESEARCH.md`](CH2_AI_EXTERNAL_RESEARCH.md). 카드: [`lab/decisions/D-062.json`](lab/decisions/D-062.json). |
+| D-063 | 2026-09-07 | **시공사 효과는 있으나 제품 식에는 아직 넣지 않음.** 공시지가≠시군구 FE 대체. γ는 지역 FE 전후 안정성으로 본다. 랩 `?tool=builder`. 카드: [`lab/decisions/D-063.json`](lab/decisions/D-063.json). |
+| D-064 | 2026-09-07 | **연식=0에 전국 공통 신축 프리미엄을 넣지 않음.** 0~3년 잔차율 −7.9%. 서울·경기 부호 반대. 랩 `?tool=age0`. 카드: [`lab/decisions/D-064.json`](lab/decisions/D-064.json). |
+| D-065 | 2026-09-07 | **시공사 within-gu.** 구 안 잔차는 남으나 전국 FE γ와 불일치. 제품 식에 전국 γ 금지. 다음은 브랜드 분리. 랩 `?tool=builder`. 카드: [`lab/decisions/D-065.json`](lab/decisions/D-065.json). |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 
@@ -373,5 +376,31 @@
 - 키워드로 바로 웹 검색하지 않음. 원장 밖 질문은 조사 여부를 묻는다.
 - 켠 뒤에도 CH2와 외부를 나누고, 가격 인과를 쓰지 않음.
 - SSOT [`CH2_AI_EXTERNAL_RESEARCH.md`](CH2_AI_EXTERNAL_RESEARCH.md). 카드 [`lab/decisions/D-062.json`](lab/decisions/D-062.json).
+
+## D-063 시공사 효과 — 식별만, 식에는 아직 넣지 않음
+
+- 1차 판정: **효과가 있으나 추가 검증 필요.** 제품 지역회귀·신규아파트 식에 시공사 변수를 넣지 않음.
+- 개별공시지가는 입지의 일부만 흡수. 시군구 FE|공시 Adj R² +0.29. FE가 있으면 공시 +0.001.
+- 시공사 γ는 공시만이면 커 보이지만 지역 FE 후 중앙 잔존 0.32. 삼성·GS는 사라지고 현대·HDC·LH는 남음.
+- 다음: 시군구 내부 식별 · 브랜드 분리 · LH·부영 믹스 · hold-out.
+- 관리자 `?tool=builder`. SSOT [`lab/BUILDER_IDENT_LAB.md`](lab/BUILDER_IDENT_LAB.md). 스냅샷 [`lab/builder_ident_run.json`](lab/builder_ident_run.json).
+- 카드 [`lab/decisions/D-063.json`](lab/decisions/D-063.json).
+
+## D-064 연식=0 잔차 — 전국 공통 신축 프리미엄을 넣지 않음
+
+- 시도별 재고 지역회귀에 연식=0을 넣은 ŷ0과 실제 신축 단가의 잔차율.
+- 전국 0~3년 n=744, 잔차율 평균 −7.9% [−10.3, −5.6]. 과소예측 비중 43%. 서울 +15.9%, 경기 −19.9%.
+- **ŷ에 k%를 더하지 않음.** 연식=0은 재고 식의 0년 what-if. 제품은 해당 실행 격차만 참고 문구.
+- 관리자 `?tool=age0`. SSOT [`lab/AGE0_RESIDUAL_LAB.md`](lab/AGE0_RESIDUAL_LAB.md). 스냅샷 [`lab/age0_residual_run.json`](lab/age0_residual_run.json).
+- 카드 [`lab/decisions/D-064.json`](lab/decisions/D-064.json).
+
+## D-065 시공사 within-gu — 구 안 잔차는 남으나 전국 γ는 넣지 않음
+
+- 시군구 156곳 각각 핵심+공시지가 log OLS(제품과 동일). 잔차 스택 n=16,806.
+- 현대 +4.2% [2.5, 5.9], HDC +6.1%, LH +13.7%, 포스코 +10.6%는 구 안에서도 남음.
+- 삼성 −2.6%(전국 FE) → +6.7%(구 안). GS −0.5% → +7.4%. 식별이 불안정.
+- 한신 단지 가중 +4.6% vs 구 중앙 +0.4%. 잔차~시공사 Adj R² 0.037.
+- **전국 공통 시공사 변수를 제품에 넣지 않음.** 다음=브랜드 vs 시공사.
+- 카드 [`lab/decisions/D-065.json`](lab/decisions/D-065.json).
 
 

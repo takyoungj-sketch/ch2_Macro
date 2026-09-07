@@ -34,5 +34,19 @@
     ],
     "scope": ["apartment", "rowhouse", "officetel"],
     "decision": "실험 결과 후 기본식 포함 여부 결정"
+  },
+  "builder_ident": {
+    "title": "시공사 효과 식별 (재고 지역회귀)",
+    "status": "in_progress",
+    "note": "within-gu 완료(D-065). 제품 식 미변경. 다음=브랜드 vs 시공사. ?tool=builder",
+    "decision": "D-065",
+    "ssot": "docs/lab/BUILDER_IDENT_LAB.md"
+  },
+  "age0_residual": {
+    "title": "연식=0 잔차 (신축 프리미엄)",
+    "status": "in_progress",
+    "note": "1차 완료. 전국 공통 k% 미가산. 다음=서울·경기 분리. D-064 · ?tool=age0",
+    "decision": "D-064",
+    "ssot": "docs/lab/AGE0_RESIDUAL_LAB.md"
   }
 }

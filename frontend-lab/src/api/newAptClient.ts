@@ -1,6 +1,13 @@
-/** 신규아파트 트랙 A 실험 — 기존 건물 회귀와 분리. */
+/** 신규아파트 트랙 A 실험 — 관리자 랩. 집합 기본통계 메뉴에는 없음. */
 
-import { api } from "./client";
+import axios from "axios";
+
+const _API_TOKEN = (import.meta.env.VITE_API_TOKEN ?? "").trim();
+const api = axios.create({
+  baseURL: "/api/collective",
+  timeout: 120_000,
+  headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
+});
 
 export type NewAptCoef = {
   name: string;

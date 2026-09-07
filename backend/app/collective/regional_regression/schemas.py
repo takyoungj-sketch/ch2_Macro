@@ -101,6 +101,26 @@ class FittedBuildingRow(BaseModel):
     ape: Optional[float] = None
     asset_type: Optional[str] = None
     assessed_land_price: Optional[float] = None
+    households: Optional[float] = None
+    max_floor: Optional[float] = None
+    building_age: Optional[float] = None
+    parking_per_household: Optional[float] = None
+    structure_group: Optional[str] = None
+    builder_group: Optional[str] = None
+
+
+class NewBuildAge0Gap(BaseModel):
+    """현재 식에 연식=0을 넣었을 때, 이 표본 신축(0~3년)의 실제 대비 잔차.
+
+    예측값에 더하는 보정이 아니다. 중앙 잔차율 = (실제 − ŷ₀) / 실제.
+    """
+
+    n_0_3: int
+    n_0_1: int = 0
+    median_residual_pct: Optional[float] = None
+    mean_residual_pct: Optional[float] = None
+    underpred_share_pct: Optional[float] = None
+    thin: bool = True
 
 
 class RegionalRegressionRunResponse(BaseModel):
@@ -125,6 +145,7 @@ class RegionalRegressionRunResponse(BaseModel):
     as_of_month: Optional[str] = None
     snapshot_ym: Optional[str] = None
     scope_label: Optional[str] = None
+    newbuild_age0_gap: Optional[NewBuildAge0Gap] = None
 
 
 class RegionalRegressionPredictResponse(BaseModel):
@@ -133,5 +154,9 @@ class RegionalRegressionPredictResponse(BaseModel):
     weight_mode: Literal["equal", "tx"] = "equal"
     y_hat: float
     unit: str = "만원/㎡"
+    ci_lower: Optional[float] = None
+    ci_upper: Optional[float] = None
+    pi_lower: Optional[float] = None
+    pi_upper: Optional[float] = None
     warnings: list[str] = Field(default_factory=list)
     contributions: list[dict] = Field(default_factory=list)

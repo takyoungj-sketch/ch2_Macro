@@ -31,6 +31,7 @@ from app.collective.regional_regression.schemas import (
     FittedBuildingRow,
     FunnelReason,
     FunnelStep,
+    NewBuildAge0Gap,
     RegionalRegressionPredictInputs,
     RegionalRegressionRunRequest,
     RegionalRegressionRunResponse,
@@ -51,6 +52,8 @@ HOLD_FRAC = 0.25
 HOLD_MIN_N = 40
 DUMMY_MIN = 5
 FITTED_CAP = 400
+NEWBUILD_AGE_MAX = 3.0
+NEWBUILD_GAP_THIN_N = 10
 ASSET_TYPE_ORDER = ("apartment", "rowhouse", "officetel")
 ASSET_TYPE_LABELS = {
     "apartment": "아파트",
@@ -96,6 +99,25 @@ def _is_unified_types(types: list[str]) -> bool:
 
 
 KAPT_SAME_PNU_RULE = "kapt_same_pnu"
+
+
+def _opt_num(v: Any) -> float | None:
+    if v is None or (isinstance(v, float) and np.isnan(v)):
+        return None
+    try:
+        n = float(v)
+    except (TypeError, ValueError):
+        return None
+    if not np.isfinite(n):
+        return None
+    return n
+
+
+def _opt_str(v: Any) -> str | None:
+    if v is None or (isinstance(v, float) and np.isnan(v)):
+        return None
+    s = str(v).strip()
+    return s or None
 
 
 def _is_usable_tier(asset_type: Any, match_tier: Any, match_rule: Any = None) -> bool:
@@ -878,6 +900,81 @@ def _split_hold(index: pd.Index, *, seed: int = 42) -> tuple[pd.Index, pd.Index]
     return train, hold
 
 
+def _newbuild_age0_gap(
+    work: pd.DataFrame,
+    x: pd.DataFrame,
+    fitted: dict[str, Any],
+    *,
+    model_type: ModelType,
+) -> NewBuildAge0Gap | None:
+    """현재 적합식에 연식=0을 넣은 예측 vs 이 표본 0~3년 실제. 보정용이 아님.
+
+    hold 분할과 무관하게 적격 단지 전부에 식을 적용한다(식 계수는 train).
+    연식 변수가 식에 없으면 None.
+    """
+    if "building_age" not in x.columns:
+        return None
+    idx = work.index.intersection(x.index)
+    if len(idx) == 0:
+        return NewBuildAge0Gap(n_0_3=0, n_0_1=0, thin=True)
+    x0 = x.loc[idx].copy()
+    x0["building_age"] = 0.0
+    x0c = sm.add_constant(x0, has_constant="add").reindex(columns=fitted["x_cols"], fill_value=0.0)
+    raw0 = np.asarray(fitted["model"].predict(x0c), dtype=float)
+    smear = float(fitted.get("smear") or 1.0)
+    yhat0 = np.exp(raw0) * smear if model_type == "log" else raw0
+    y = pd.to_numeric(work.loc[idx, "median"], errors="coerce").to_numpy(dtype=float)
+    age = pd.to_numeric(work.loc[idx, "building_age"], errors="coerce").to_numpy(dtype=float)
+    ok = np.isfinite(y) & (y > 0) & np.isfinite(yhat0) & (yhat0 > 0) & np.isfinite(age)
+    y, yhat0, age = y[ok], yhat0[ok], age[ok]
+    m03 = age <= NEWBUILD_AGE_MAX
+    n03 = int(m03.sum())
+    n01 = int((age <= 1).sum())
+    if n03 == 0:
+        return NewBuildAge0Gap(n_0_3=0, n_0_1=n01, thin=True)
+    yy, zz = y[m03], yhat0[m03]
+    err0 = (yy - zz) / yy
+    return NewBuildAge0Gap(
+        n_0_3=n03,
+        n_0_1=n01,
+        median_residual_pct=round(float(np.median(err0) * 100), 1),
+        mean_residual_pct=round(float(err0.mean() * 100), 1),
+        underpred_share_pct=round(float((yy > zz).mean() * 100), 1),
+        thin=n03 < NEWBUILD_GAP_THIN_N,
+    )
+
+
+def _price_intervals(
+    model: Any,
+    x1c: pd.DataFrame,
+    *,
+    model_type: ModelType,
+    smear: float,
+) -> tuple[float, float | None, float | None, float | None, float | None]:
+    """원척도 점추정 + 95% 평균 CI · 개별 PI. 로그식 평균 CI는 Duan smearing."""
+    x_df = x1c.reindex(columns=model.params.index, fill_value=0.0)
+    raw = float(np.asarray(model.predict(x_df), dtype=float)[0])
+    y_hat = float(np.exp(raw) * smear) if model_type == "log" else raw
+    try:
+        row = model.get_prediction(x_df).summary_frame(alpha=0.05).iloc[0]
+        if model_type == "log":
+            ci_lo = float(np.exp(float(row["mean_ci_lower"])) * smear)
+            ci_hi = float(np.exp(float(row["mean_ci_upper"])) * smear)
+            pi_lo = float(np.exp(float(row["obs_ci_lower"])))
+            pi_hi = float(np.exp(float(row["obs_ci_upper"])))
+        else:
+            ci_lo = float(row["mean_ci_lower"])
+            ci_hi = float(row["mean_ci_upper"])
+            pi_lo = float(row["obs_ci_lower"])
+            pi_hi = float(row["obs_ci_upper"])
+    except Exception:  # noqa: BLE001
+        return y_hat, None, None, None, None
+    vals = (ci_lo, ci_hi, pi_lo, pi_hi)
+    if not all(np.isfinite(v) for v in vals):
+        return y_hat, None, None, None, None
+    return y_hat, ci_lo, ci_hi, pi_lo, pi_hi
+
+
 def run_regional_regression(
     conn: Connection,
     req: RegionalRegressionRunRequest,
@@ -1011,6 +1108,12 @@ def run_regional_regression(
                     if "assessed_land_price" in r and pd.notna(r["assessed_land_price"])
                     else None
                 ),
+                households=_opt_num(r.get("households")),
+                max_floor=_opt_num(r.get("max_floor")),
+                building_age=_opt_num(r.get("building_age")),
+                parking_per_household=_opt_num(r.get("parking_per_household")),
+                structure_group=_opt_str(r.get("structure_group")),
+                builder_group=_opt_str(r.get("builder_group")),
             )
         )
     rows.sort(key=lambda x: x.display_name)
@@ -1019,6 +1122,7 @@ def run_regional_regression(
     blocks = _block_contrib(
         work, train_idx, hold_idx, v, req.model_type, req.weight_mode, core_hold=fitted.get("hold_mape")
     )
+    age0_gap = _newbuild_age0_gap(work, x, fitted, model_type=req.model_type)
 
     struct_opts: list[str] = []
     builder_opts: list[str] = []
@@ -1063,6 +1167,7 @@ def run_regional_regression(
         as_of_month=meta.get("as_of_month"),
         snapshot_ym=meta.get("snapshot_ym"),
         scope_label=meta.get("scope_label"),
+        newbuild_age0_gap=age0_gap,
     )
 
 
@@ -1206,8 +1311,12 @@ def predict_regional(
         type_ref=atype_ref,
     )
     x1c = sm.add_constant(x1, has_constant="add").reindex(columns=fitted["x_cols"], fill_value=0)
-    raw = float(np.asarray(fitted["model"].predict(x1c), dtype=float)[0])
-    y_hat = float(np.exp(raw) * fitted["smear"]) if req.model_type == "log" else raw
+    y_hat, ci_lo, ci_hi, pi_lo, pi_hi = _price_intervals(
+        fitted["model"],
+        x1c,
+        model_type=req.model_type,
+        smear=float(fitted.get("smear") or 1.0),
+    )
 
     contrib: list[dict[str, Any]] = []
     params = fitted["model"].params
@@ -1230,6 +1339,10 @@ def predict_regional(
         "weight_mode": req.weight_mode,
         "y_hat": round(y_hat, 1),
         "unit": "만원/㎡",
+        "ci_lower": round(ci_lo, 1) if ci_lo is not None else None,
+        "ci_upper": round(ci_hi, 1) if ci_hi is not None else None,
+        "pi_lower": round(pi_lo, 1) if pi_lo is not None else None,
+        "pi_upper": round(pi_hi, 1) if pi_hi is not None else None,
         "warnings": warnings,
         "contributions": contrib,
     }
