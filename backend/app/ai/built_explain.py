@@ -67,18 +67,19 @@ def built_prediction_explain(*, scope_label: str) -> AnalysisExplain:
         spec_version="1",
         title="복합부동산 회귀 예측",
         summary=(
-            f"**{scope_label}** scope OLS 모형으로 입력 조건의 **통계적 예측금액**과 "
-            "95% 예측구간(PI)·평균 신뢰구간(CI)을 산출합니다. **적정가가 아닙니다.**"
+            f"**{scope_label}** scope OLS 모형으로 입력 조건의 **통계적 추정값**과 "
+            "95% 개별 거래 예측범위(PI)·평균 추정범위(CI)를 산출합니다. AVM·감정평가액이 아닙니다."
         ),
-        formula="ŷ = Xβ (동일 scope 회귀 계수) · PI = 개별 거래 · CI = 평균 예측",
+        formula="ŷ = Xβ (동일 scope 회귀 계수) · PI = 개별 거래 변동 · CI = 평균 가격수준",
         interpretation=[
-            "PI: 이 조건과 유사한 개별 거래 1건이 들어올 법한 범위.",
-            "CI: 평균 예측값의 불확실성(개별 변동 제외).",
-            "n이 작거나 Adj R²가 낮으면 PI가 넓어집니다.",
+            "개별 거래 예측범위: 이 조건의 개별 거래 변동까지 포함한 통계적 범위.",
+            "평균 추정범위: 평균 가격수준의 불확실성(개별 변동 제외).",
+            "실제 대상물건이 반드시 그 범위 안에 있다는 뜻이 아닙니다.",
+            "n이 작거나 Adj R²가 낮으면 범위가 넓어집니다.",
         ],
         limitations=[
             "탐색용 OLS 출력이며 감정·투자 판단이 아닙니다.",
-            "입력값이 scope 밖이면 예측이 불안정할 수 있습니다.",
+            "입력값이 scope 밖이면 추정이 불안정할 수 있습니다.",
         ],
         presets=[
             AnalysisExplainPreset(
@@ -88,7 +89,7 @@ def built_prediction_explain(*, scope_label: str) -> AnalysisExplain:
             ),
             AnalysisExplainPreset(
                 id="pi",
-                question="신뢰구간(PI)이 넓은 이유는?",
+                question="개별 거래 예측범위가 넓은 이유는?",
                 answer="",
             ),
         ],

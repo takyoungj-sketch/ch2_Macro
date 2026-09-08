@@ -6,7 +6,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from app.recommendation.cv_fitness import CvFitnessTier
+from app.recommendation.cv_fitness import CvFitnessTier, MacroDiagnosis
 
 Domain = Literal["built"]
 RegionCodeLevel = Literal["eupmyeondong", "beopjungri"]
@@ -124,18 +124,31 @@ class CoefficientNarrative(BaseModel):
     is_top_contributor: bool = False
 
 
+class PredictiveFitInfo(BaseModel):
+    tier: str = "elevated"
+    label_ko: str = "높은 편"
+    grade: str = "elevated"
+    tone: str = "warning"
+
+
 class RecommendationConclusion(BaseModel):
     verdict: RecommendationVerdict = "caution"
     headline_ko: str = "탐색 결과"
-    final_verdict_ko: str = "주의"
-    final_verdict_tone: Literal["positive", "warning", "negative"] = "warning"
+    final_verdict_ko: str = "높은 편"
+    final_verdict_tone: Literal["positive", "warning", "negative", "neutral"] = "warning"
     final_verdict_emoji: str = "🟡"
     final_verdict_sublines: list[str] = Field(default_factory=list)
     bullets: list[ConclusionBullet] = Field(default_factory=list)
     summary_ko: str = ""
     recommended_actions: list[RecommendedAction] = Field(default_factory=list)
     cv_fitness: Optional[CvFitnessTier] = None
+    predictive_fit: Optional[PredictiveFitInfo] = None
+    macro_diagnosis: Optional[MacroDiagnosis] = None
+    adj_r_squared: Optional[float] = None
+    mape: Optional[float] = None
     cv_mape: Optional[float] = None
+    sample_excluded_n: int = 0
+    excluded_block_notes: list[str] = Field(default_factory=list)
     twin_available: bool = False
     twin_recommended: bool = False
     twin_ran: bool = False

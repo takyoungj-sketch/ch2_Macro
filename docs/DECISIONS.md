@@ -40,12 +40,12 @@
 | D-033 | 2026-08-07 | **복합 `analysis_scope` SSOT**: 지역·기간·필터는 `/run`·`/recommend` 공유; **`anchor_region_code`·`region_unit_hints`** 로 anchor·표시명 보존. **`scope_n_tx` / `selection_n` / `fit_n`** 3종 n 라벨. |
 | D-034 | 2026-08-07 | **단계형 Twin pool (식 고정)**: 1단계 Local 최적 **`blocks`+`response_scale` 고정** → 2단계 Profile Twin pool만 확장. **`/regression/suggest`·`/compare` deprecated** — successor `/regression/recommend`. |
 | D-035 | 2026-08-07 | **만족 등급 — 고정 CV % UI 금지**: Excellent~Poor + ★; lookup [`recommendation/satisfaction/built.json`](../backend/app/recommendation/satisfaction/built.json). CV 50% 같은 제품 임계값 **두지 않음**. |
-| D-036 | 2026-08-07 | **「추천」≠ 예측 채택**: UI는 **모형 탐색**·`conclusion.verdict`; CV-MAPE &gt;60 **예측 부적합** 시 adopt는 **검토용**만. |
+| D-036 | 2026-08-07 | **「추천」≠ 예측 채택**: UI는 **모형 탐색**·`conclusion.verdict`. **D-067**이 60% 예측 부적합 언어를 해석 강도로 대체. |
 | D-037 | 2026-08-07 | **Twin 2단계 사용자 opt-in**: `/recommend` 기본 stage1 only; `run_stage2=true` 또는 UI 「Twin pool 검토」클릭 시 2단계. |
 | D-038 | 2026-08-08 | **월간 integrity 검증 grain SSOT**: `verify_monthly_integrity.py` 의 V2 중복 검사 grain은 **DB UNIQUE constraint와 동일**해야 한다 (`col_axis` 등 분석 축 포함). category/group 등 **동일 mart 테이블 내 병행 축** 도입 시 검증 SQL·DDL을 함께 갱신. **`golden_monthly_integrity.json`** 의 `ledger_exact` 등 앵커는 정상적인 거래 추가·삭제 시 **해당 fixture만 명시적으로** 갱신(`--update-golden` 일괄 남용 금지). 2608 cycle: V2 183k false positive = 검증 SQL 누락, 비하동 보녹·답 2→3 = fixture stale. |
 | D-039 | 2026-08-09 | **2608 토지 Promote — 코드 배포와 DB 분리**: git push·`deploy-from-windows.ps1` 만으로는 **토지 7월 미반영**. 필수 순서 = (1) `run_land_cycle_csv.py --cycle-id 202608` 로 **원장 ingest + mart**, (2) `verify_monthly_integrity`, (3) **`land_stats` dump → VPS restore**, (4) `STATS_V2_DEFAULT_AS_OF_MONTH=2026-07-01`. mart-only 재빌드는 **원장에 7월 거래 없으면 무의미**. VPS Promote: PG18 custom dump는 PG16 `pg_restore` 불가 → PG18 bin 또는 `dump_land_for_promote.py` plain SQL.gz. SOP §9.4. |
 | D-040 | 2026-08-15 | **주거 전월세 전환율 연구 종료.** `r_selected = mean_simple` 확정. 서울 4방법+hold-out 후 산식 재실험·연립 전용식 금지. REB/5% 고정 아님. SSOT: [`RENT_CONVERSION_EXPERIMENT.md`](RENT_CONVERSION_EXPERIMENT.md). |
-| D-041 | 2026-08-16 | **Twin은 회귀 변수가 아니라 지역시장 비교 엔진.** Twin score를 회귀 X에 넣지 않음. Stage2 pool은 Local 대비 CV-MAPE가 ε 이상 개선될 때만 검토. 카드: [`lab/decisions/D-041.json`](lab/decisions/D-041.json). |
+| D-041 | 2026-08-16 | **Twin은 회귀 변수가 아니라 지역시장 비교 엔진.** Twin score를 회귀 X에 넣지 않음. Stage2 채택 규칙은 **D-066**이 대체(탐색/확인 CV·계수 안정). 카드: [`lab/decisions/D-041.json`](lab/decisions/D-041.json). |
 | D-042 | 2026-08-16 | **지역 QA 검증 엔진.** 숫자는 SQL·생산 빌더가 만들고 LLM은 해석만. 관리자 수동·원장/마트 WRITE 금지. 카드: [`lab/decisions/D-042.json`](lab/decisions/D-042.json). 계획: [`QA_REGION_AUDIT_PLAN.md`](QA_REGION_AUDIT_PLAN.md). |
 | D-043 | 2026-08-16 | **무료/유료 5앱 통일.** 같은 UI·산식. 무료=어느 결이든 **지역 1곳·5년만**. 복수·AI·회귀/추천/Twin pool·CSV 없음. `?` 유지. 모달은 같은 껍데기, 유료 탭은 숨기지 않고 「유료」잠금. 랩은 관리자(유료 아님). 서버 강제. 토지 「무료=법정리」·무료 탭 **제거**. SSOT: [`CH2_ENTITLEMENT.md`](CH2_ENTITLEMENT.md). 카드: [`lab/decisions/D-043.json`](lab/decisions/D-043.json). |
 | D-044 | 2026-08-16 | **Twin Engine V2.** V1 마트·카탈로그 유지. 거리 엔진(클러스터·ML 금지). 비교 Twin(구조 0.6/시장 0.4, 권역) · 풀 Twin(구조 0.4/시장 0.6, 시군+인접+n-hop). 인구 \|Δlog\|≤log(2). 지목군 7벡터 주력. 없음≠0점(가격 블록 제외). 신뢰도 별도. 가중 YAML 초기값. **제품 Twin 카드 V1 대체는 보류**(2026-08-16). SSOT: [`TWIN_ENGINE_V2.md`](TWIN_ENGINE_V2.md). 카드: [`lab/decisions/D-044.json`](lab/decisions/D-044.json). |
@@ -68,6 +68,10 @@
 | D-063 | 2026-09-07 | **시공사 효과는 있으나 제품 식에는 아직 넣지 않음.** 공시지가≠시군구 FE 대체. γ는 지역 FE 전후 안정성으로 본다. 랩 `?tool=builder`. 카드: [`lab/decisions/D-063.json`](lab/decisions/D-063.json). |
 | D-064 | 2026-09-07 | **연식=0에 전국 공통 신축 프리미엄을 넣지 않음.** 0~3년 잔차율 −7.9%. 서울·경기 부호 반대. 랩 `?tool=age0`. 카드: [`lab/decisions/D-064.json`](lab/decisions/D-064.json). |
 | D-065 | 2026-09-07 | **시공사 within-gu.** 구 안 잔차는 남으나 전국 FE γ와 불일치. 제품 식에 전국 γ 금지. 다음은 브랜드 분리. 랩 `?tool=builder`. 카드: [`lab/decisions/D-065.json`](lab/decisions/D-065.json). |
+| D-066 | 2026-09-08 | **복합 모형추천 Twin = 지역 구조 후보.** 가격은 선정에서 빼고 확인 CV·계수 안정으로 검증. 접두 실험. 탐색 CV ≠ 최종 성능. 카드: [`lab/decisions/D-066.json`](lab/decisions/D-066.json). |
+| D-067 | 2026-09-08 | **복합 모형추천 CV-MAPE = 해석 강도.** 적합/부적합 없음. Twin은 오차 불합격의 구원이 아님. 구간 표는 **D-068**이 대체. 카드: [`lab/decisions/D-067.json`](lab/decisions/D-067.json). |
+| D-068 | 2026-09-08 | **읽는 강도 4축 + Macro 해석.** CV-MAPE는 1위 선정이자 해석 축(낮음/보통/높은 편/높음). Adj R²·안정성·표본과 같이 읽고, 숨은 점수 없이 종합(분석 한계/활용 가능/안정적/신중 활용/탐색적 활용). 빨강은 분석 한계만. 카드: [`lab/decisions/D-068.json`](lab/decisions/D-068.json). |
+| D-069 | 2026-09-08 | **예측 결과 = 통계적 추정값.** 예상 금액·95% 신뢰/예측구간 라벨을 추정값·평균 추정범위·개별 거래 예측범위로. AVM 선언은 결과 카드 한 번. 복합·토지·집합 동일. 카드: [`lab/decisions/D-069.json`](lab/decisions/D-069.json). |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 

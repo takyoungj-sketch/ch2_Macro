@@ -207,9 +207,13 @@ export interface RecommendationPoolCandidate {
   mape?: number | null;
   cv_mape?: number | null;
   cv_mape_delta?: number | null;
+  confirm_cv_mape?: number | null;
   blocks?: string[];
   response_scale?: ResponseScale | null;
   variables?: RegressionVariableSpec | null;
+  prefix_k?: number;
+  key_coefficients?: Record<string, number>;
+  structure_score?: number | null;
 }
 
 export type TwinValidationVerdictKind = "improved" | "tie" | "worse" | "skipped";
@@ -219,11 +223,32 @@ export interface TwinValidationVerdict {
   label_ko: string;
   summary_ko: string;
   epsilon_pp: number;
+  practical_band_pp?: number | null;
   local_cv_mape?: number | null;
   compared_cv_mape?: number | null;
   cv_mape_delta?: number | null;
+  local_confirm_cv_mape?: number | null;
+  compared_confirm_cv_mape?: number | null;
   compared_candidate_id?: string | null;
   twin_adopt_recommended: boolean;
+  confirm_skipped_reason?: string | null;
+}
+
+export interface TwinExperimentStep {
+  step_id: string;
+  label: string;
+  prefix_k: number;
+  region_codes: string[];
+  n: number;
+  search_cv_mape?: number | null;
+  confirm_cv_mape?: number | null;
+  search_cv_delta?: number | null;
+  key_coefficients?: Record<string, number>;
+  coeff_notes?: string[];
+  stability: "ok" | "warn" | "fail";
+  selected: boolean;
+  search_picked?: boolean;
+  verdict_ko: string;
 }
 
 export interface RecommendationStage2 {
@@ -239,6 +264,10 @@ export interface RecommendationStage2 {
   fixed_blocks: string[];
   fixed_response_scale: ResponseScale;
   recommended_blocks?: string[];
+  local_search_cv_mape?: number | null;
+  local_confirm_cv_mape?: number | null;
+  region_effect?: string | null;
+  twin_experiments?: TwinExperimentStep[];
 }
 
 export type RecommendationVerdict =
@@ -260,18 +289,50 @@ export interface RecommendedAction {
   label_ko: string;
 }
 
+export type CvFitnessTone = "accent" | "elevated" | "high" | "fail" | "neutral";
+
+export interface AxisReading {
+  tier: string;
+  label_ko: string;
+  tone: CvFitnessTone;
+  detail_ko?: string;
+}
+
+export interface MacroDiagnosis {
+  error: AxisReading;
+  explanation: AxisReading;
+  stability: AxisReading;
+  sample: AxisReading;
+  composite: AxisReading;
+  error_one_liner_ko?: string;
+  summary_ko?: string;
+}
+
+export interface PredictiveFitInfo {
+  tier: string;
+  label_ko: string;
+  grade: string;
+  tone: string;
+}
+
 export interface RecommendationConclusion {
   verdict: RecommendationVerdict;
   headline_ko: string;
   final_verdict_ko: string;
-  final_verdict_tone: "positive" | "warning" | "negative";
+  final_verdict_tone: "positive" | "warning" | "negative" | "neutral";
   final_verdict_emoji: string;
   final_verdict_sublines: string[];
   bullets: ConclusionBullet[];
   summary_ko: string;
   recommended_actions: RecommendedAction[];
   cv_fitness?: CvFitnessTier | null;
+  predictive_fit?: PredictiveFitInfo | null;
+  macro_diagnosis?: MacroDiagnosis | null;
+  adj_r_squared?: number | null;
+  mape?: number | null;
   cv_mape?: number | null;
+  sample_excluded_n?: number;
+  excluded_block_notes?: string[];
   twin_available: boolean;
   twin_recommended: boolean;
   twin_ran: boolean;
@@ -281,7 +342,7 @@ export interface RecommendationConclusion {
 export interface CvFitnessTier {
   tier: string;
   label_ko: string;
-  tone: "positive" | "neutral" | "warning" | "negative";
+  tone: CvFitnessTone;
   max_cv_mape?: number | null;
 }
 
@@ -676,6 +737,7 @@ export interface ProfileTwinNeighborItem {
   twin_sigungu_name: string;
   twin_sido_name: string;
   similarity_score: number;
+  detail_scores?: Record<string, unknown> | null;
 }
 
 export interface ProfileTwinNeighborsResponse {
@@ -694,6 +756,8 @@ export interface ProfileTwinNeighborsResponse {
 export interface ProfileTwinCandidateNeighbor {
   region_code: string;
   similarity_score?: number | null;
+  detail_scores?: Record<string, unknown> | null;
+  structure_score?: number | null;
 }
 
 export interface RegressionSuggestResponse {

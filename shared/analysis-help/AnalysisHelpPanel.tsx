@@ -158,7 +158,7 @@ export default function AnalysisHelpPanel({
           role="dialog"
           aria-modal="true"
           aria-label={explain.title}
-          className="flex flex-col overflow-hidden rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-2xl ring-1 ring-black/5 dark:ring-white/10"
+          className="ch2-resize-host flex flex-col overflow-visible rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-2xl ring-1 ring-black/5 dark:ring-white/10"
           style={{
             position: "fixed",
             zIndex: PANEL_Z,

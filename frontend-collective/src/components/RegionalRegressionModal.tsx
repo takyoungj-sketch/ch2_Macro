@@ -15,7 +15,13 @@ import {
 import type { StatsWindowYears } from "./StatsWindowToggle";
 import CollectiveRegressionEquation from "./CollectiveRegressionEquation";
 import DraggableModalShell from "./DraggableModalShell";
-import { MetricWithHelp } from "@ch2/stats-glossary";
+import {
+  ESTIMATE_COPY,
+  MetricWithHelp,
+  StatisticalEstimateCaption,
+  StatisticalEstimateDisclaimer,
+  StatisticalEstimateRangeRow,
+} from "@ch2/stats-glossary";
 import { ASSET_LABELS } from "../types";
 import { parseResidentialAssetKinds } from "../utils/residentialAssetTypes";
 
@@ -612,35 +618,35 @@ export default function RegionalRegressionModal(props: Props) {
                       ?.detail ?? "예측에 실패했습니다."}
                   </p>
                 )}
-                {predM.data && (
+                    {predM.data && (
                   <div className="rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 space-y-2">
                     <div>
                       <span className="text-slate-500 dark:text-slate-400 text-[10px]">
-                        예상 단가
+                        {ESTIMATE_COPY.valueLabel}
                         {predM.data.model_type === "log" ? " · 로그" : " · 선형"}
                       </span>
                       <div className="text-lg font-bold text-slate-800 dark:text-slate-100 tabular-nums">
                         {fmt(predM.data.y_hat, 0)} {predM.data.unit}
                       </div>
+                      <StatisticalEstimateCaption compact />
                     </div>
                     {predM.data.ci_lower != null && predM.data.ci_upper != null && (
-                      <div className="text-[11px] space-y-1 text-slate-700 dark:text-slate-300">
-                        <div>
-                          <span className="font-medium">95% 평균 신뢰구간</span>{" "}
+                      <div className="text-[11px] space-y-1.5 text-slate-700 dark:text-slate-300">
+                        <StatisticalEstimateRangeRow kind="mean" compact>
                           <span className="tabular-nums">
                             {fmt(predM.data.ci_lower, 0)} ~ {fmt(predM.data.ci_upper, 0)} {predM.data.unit}
                           </span>
-                        </div>
+                        </StatisticalEstimateRangeRow>
                         {predM.data.pi_lower != null && predM.data.pi_upper != null && (
-                          <div className="text-slate-500 dark:text-slate-400">
-                            95% 예측구간 (개별 단지){" "}
+                          <StatisticalEstimateRangeRow kind="individual" subject="단지" compact>
                             <span className="tabular-nums">
                               {fmt(predM.data.pi_lower, 0)} ~ {fmt(predM.data.pi_upper, 0)} {predM.data.unit}
                             </span>
-                          </div>
+                          </StatisticalEstimateRangeRow>
                         )}
                       </div>
                     )}
+                    <StatisticalEstimateDisclaimer compact />
                     <p className="text-[10px] text-slate-500">
                       단일 정답이 아닙니다. 식을 바꿔 가며 비교하세요.
                     </p>

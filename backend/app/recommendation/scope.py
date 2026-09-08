@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from app.built.asset_scope import is_unified
 from app.built.regression.engine import (
+    _compare_mode,
     _focus_admin_level,
     _label_for_level,
     _prepare_regression_scope,
+    _scope_for_level,
 )
 from app.built.schemas import RegressionRunRequest
 from app.recommendation.models import (
@@ -168,10 +170,15 @@ def built_analysis_scope_from_prepared(
     wide_df,
     addr4_city: bool,
     partial_tx_count: int = 0,
+    mode: str | None = None,
+    conn=None,
 ) -> AnalysisScope:
     from app.built.partial_ownership import format_partial_n_note
 
     focus = _focus_admin_level(req, addr4_city)
+    compare_mode = mode or _compare_mode(req, addr4_city)
+    # wide_df는 상위 시군구(비교용). 거래 n은 사용자 초점(선택 읍·면·동) 기준.
+    focus_df = _scope_for_level(wide_df, req, focus, addr4_city, compare_mode, conn=conn)
     scope_label = _label_for_level(req, wide_df, focus, addr4_city)
     base = scope_from_built_request(req)
     include_partial = bool(getattr(req, "include_partial", False))
@@ -179,7 +186,7 @@ def built_analysis_scope_from_prepared(
         update={
             "scope_label": scope_label,
             "admin_level": focus,
-            "scope_n_tx": len(wide_df),
+            "scope_n_tx": len(focus_df),
             "include_partial": include_partial,
             "partial_tx_count": int(partial_tx_count or 0),
             "partial_n_note": format_partial_n_note(
@@ -191,7 +198,12 @@ def built_analysis_scope_from_prepared(
 
 def resolve_built_analysis_scope(conn, req: RegressionRunRequest) -> AnalysisScope:
     """RegressionRunRequest → analysis_scope (엔진과 동일 scope_label·scope_n_tx)."""
-    wide_df, req, addr4_city, _mode, partial_tx_count = _prepare_regression_scope(conn, req)
+    wide_df, req, addr4_city, mode, partial_tx_count = _prepare_regression_scope(conn, req)
     return built_analysis_scope_from_prepared(
-        req, wide_df=wide_df, addr4_city=addr4_city, partial_tx_count=partial_tx_count
+        req,
+        wide_df=wide_df,
+        addr4_city=addr4_city,
+        partial_tx_count=partial_tx_count,
+        mode=mode,
+        conn=conn,
     )

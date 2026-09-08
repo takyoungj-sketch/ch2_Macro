@@ -15,12 +15,23 @@ _FITNESS_LABEL_HINTS = (
     "보통",
     "부적합",
     "매우 우수",
+    "높은 편",
+    "낮음",
+    "높음",
+    "상당히 높음",
+    "매우 높음",
+    "보통 이하",
+    "활용 가능",
+    "탐색적 활용",
+    "신중 활용",
+    "안정적",
     "등급",
     "뱃지",
     "배지",
     "적합",
     "라벨",
     "표시",
+    "해석 강도",
 )
 
 _MAPE_HINTS = ("mape", "cv-mape", "cv mape", "cv_mape", "오차")
@@ -41,7 +52,7 @@ def _fmt_mape(v: Any) -> str:
 
 
 def answer_mape_fitness_question(message: str, diagnostics: dict[str, Any]) -> str | None:
-    """MAPE 옆 '주의' 등 CH2 예측 적합 등급 질문."""
+    """MAPE/CV-MAPE 해석 강도 질문."""
     if not _mentions_mape_fitness(message):
         return None
 
@@ -50,7 +61,7 @@ def answer_mape_fitness_question(message: str, diagnostics: dict[str, Any]) -> s
     metric_val = cv_mape if cv_mape is not None else mape
     metric_name = "CV-MAPE" if cv_mape is not None else "MAPE"
 
-    fitness_raw = diagnostics.get("cv_fitness")
+    fitness_raw = diagnostics.get("cv_fitness") or diagnostics.get("predictive_fit")
     if isinstance(fitness_raw, dict) and fitness_raw.get("label_ko"):
         tier_label = str(fitness_raw["label_ko"])
         tier = str(fitness_raw.get("tier") or "")
@@ -61,47 +72,47 @@ def answer_mape_fitness_question(message: str, diagnostics: dict[str, Any]) -> s
     else:
         return (
             "### 답변\n\n"
-            "현재 화면 Bundle에 MAPE 수치가 없습니다. 회귀를 실행한 뒤 "
-            "MAPE 옆 등급 뱃지와 함께 다시 질문해 주세요.\n\n"
+            "현재 화면 Bundle에 MAPE 수치가 없습니다. 회귀·모형 탐색을 실행한 뒤 "
+            "다시 질문해 주세요.\n\n"
             "### 한계\n\n"
-            "등급은 CH2 내부 기준표를 따르며 감정·투자 판단이 아닙니다."
+            "해석 강도는 CH2 내부 구간이며 감정·투자 판단이 아닙니다."
         )
-
-    # 질문에서 특정 라벨을 묻는 경우
-    asked_label = None
-    for hint in _FITNESS_LABEL_HINTS:
-        if hint in message and hint not in ("등급", "뱃지", "배지", "적합", "라벨", "표시"):
-            asked_label = hint
-            break
 
     lines = ["### 답변", ""]
     if metric_val is not None:
         lines.append(
-            f"이번 화면 **{metric_name} {_fmt_mape(metric_val)}** 에 CH2가 붙인 등급은 **「{tier_label}」** 입니다."
+            f"이번 화면 **{metric_name} {_fmt_mape(metric_val)}** 의 해석 강도는 **「{tier_label}」** 입니다."
         )
     else:
-        lines.append(f"이번 화면 등급 라벨은 **「{tier_label}」** 입니다.")
+        lines.append(f"이번 화면 해석 강도 라벨은 **「{tier_label}」** 입니다.")
 
-    if tier == "caution" or asked_label == "주의":
+    lines.append(
+        "이 라벨은 모형이 맞다/틀리다가 아닙니다. "
+        "지역 거래 구조를 어느 강도로 읽을지 정하는 언어입니다. "
+        "개별 물건 가격을 맞히기 위한 AVM 점수가 아닙니다."
+    )
+    if asked_label_is_caution(message) or tier in {"elevated", "caution"} or tier_label == "높은 편":
         lines.append(
-            "「주의」는 **예측 오차(MAPE 계열)가 40% 이상 60% 미만** 구간이라, "
-            "같은 표본 안에서도 예측값이 실제 거래금액과 **꽤 벗어날 수 있음**을 뜻합니다. "
-            "설명형 회귀·패턴 참고는 가능하나, **개별 금액 예측·적정가 판단에는 부적합**에 가깝습니다."
+            "「높은 편」은 CV-MAPE **45% 이상 60% 미만**입니다. "
+            "개별 거래 차이는 크지만 계수 방향·상대 영향은 볼 수 있습니다."
         )
-    elif tier == "unsuitable":
+    elif tier in {"high", "very_high", "unsuitable", "exploratory"} or tier_label in {
+        "높음",
+        "상당히 높음",
+        "매우 높음",
+        "예측 부적합",
+        "탐색적 활용",
+    }:
         lines.append(
-            "「예측 부적합」은 MAPE/CV-MAPE가 **60% 이상**으로, "
-            "이 scope·변수 조합으로는 예측 오차가 매우 큽니다. 모형 단순화·표본 확대·변수 재검토를 권장합니다."
+            "오차가 큰 편이면 예측값으로 읽지 말고 구조 탐색으로 해석하세요. "
+            "분석을 버린다는 뜻이 아닙니다."
         )
-    elif tier in ("excellent", "good"):
+    elif tier == "low" or tier_label == "낮음":
+        lines.append("「낮음」은 CV-MAPE **30% 미만**으로, 구조적 관계가 비교적 안정적입니다.")
+    elif tier == "moderate" or "보통" in tier_label:
         lines.append(
-            f"「{tier_label}」는 CH2 기준에서 **상대적으로 낮은 예측 오차** 구간입니다. "
-            "다만 in-sample MAPE는 표본 밖 일반화를 보장하지 않습니다."
-        )
-    else:
-        lines.append(
-            f"「{tier_label}」는 CH2 **예측 적합 등급표**(CV-MAPE 기준 구간)의 한 단계이며, "
-            "오차 크기에 대한 **참고 라벨**입니다."
+            "「보통」은 CV-MAPE **30% 이상 45% 미만**입니다. "
+            "지역 가격구조 분석에 활용할 수 있습니다."
         )
 
     lines.extend(["", "### 근거", ""])
@@ -109,7 +120,10 @@ def answer_mape_fitness_question(message: str, diagnostics: dict[str, Any]) -> s
         lines.append(f"- in-sample MAPE: {_fmt_mape(mape)}")
     if cv_mape is not None:
         lines.append(f"- CV-MAPE: {_fmt_mape(cv_mape)}")
-    lines.append("- CH2 등급표: <15% 매우 우수 · <25% 우수 · <40% 보통 · <60% 주의 · ≥60% 예측 부적합")
+    lines.append(
+        "- 해석 강도: <30% 낮음 · 30~45% 보통 · 45~60% 높은 편 · ≥60% 높음. "
+        "CV 단독 적부가 아니라 설명력·검증 안정성·표본과 함께 읽습니다."
+    )
     n = diagnostics.get("n")
     if n is not None:
         lines.append(f"- 표본 n={n}건")
@@ -118,10 +132,14 @@ def answer_mape_fitness_question(message: str, diagnostics: dict[str, Any]) -> s
         "",
         "### 한계",
         "",
-        "회귀 카드 MAPE 뱃지는 **CV-MAPE 등급 기준을 참고 표시**할 수 있습니다. "
+        "회귀 카드 MAPE는 표본 안 설명 오차이고, 모형 추천은 CV-MAPE를 봅니다. "
         "감정평가·투자 판단 근거가 아닙니다.",
     ])
     return "\n".join(lines)
+
+
+def asked_label_is_caution(message: str) -> bool:
+    return "주의" in message
 
 
 def answer_model_comparison_question(message: str, diagnostics: dict[str, Any]) -> str | None:

@@ -71,22 +71,25 @@ export const BUILT_SCATTER_PARTIAL_HELP: AnalysisExplain = {
 
 export const BUILT_PREDICTION_HELP: AnalysisExplain = {
   spec_id: "built_prediction_static_v1",
-  spec_version: "1",
+  spec_version: "2",
   title: "복합부동산 회귀 예측",
-  summary: "나머지 변수를 고정한 **한 점 OLS 예측**. PI·CI는 불확실성 참고.",
+  summary:
+    "나머지 변수를 고정한 **한 점 OLS 통계적 추정**. 평균 추정범위(CI)·개별 거래 예측범위(PI)는 모형의 불확실성 참고입니다.",
   formula: "ŷ = Xβ",
   interpretation: [
-    "PI: 개별 거래 1건 예측 범위.",
-    "CI: 평균 예측 불확실성.",
-    "n이 작으면 PI가 넓습니다.",
+    "통계적 추정값: 선택한 거래자료와 회귀모형의 중심값입니다. AVM·감정평가액이 아닙니다.",
+    "95% 평균 추정범위: 이 조건에서 평균적인 가격수준.",
+    "95% 개별 거래 예측범위: 개별 거래 변동까지 포함한 통계적 범위.",
+    "n이 작으면 범위가 넓습니다.",
   ],
-  limitations: ["적정가·감정 아님", "학습 범위 밖 입력은 외삽"],
+  limitations: ["적정가·감정 아님", "학습 범위 밖 입력은 외삽", "범위는 가액을 보증하지 않음"],
   interpretation_hints: [],
   presets: [
     {
       id: "pi",
-      question: "PI와 CI 차이는?",
-      answer: "PI는 **개별 거래** 변동 포함, CI는 **평균 예측값** 불확실성만 반영합니다.",
+      question: "평균 추정범위와 개별 거래 예측범위 차이는?",
+      answer:
+        "평균 추정범위(CI)는 **평균 가격수준**의 불확실성입니다. 개별 거래 예측범위(PI)는 **개별 거래 변동**을 포함해 더 넓습니다. 실제 대상물건이 반드시 그 안에 있다는 뜻이 아닙니다.",
     },
   ],
 };
@@ -150,16 +153,16 @@ export const BUILT_RECOMMEND_HELP: AnalysisExplain = {
   spec_version: "1",
   title: "모형 탐색 · 판정",
   summary:
-    "SSOT 변수 풀에서 Local 탐색 → (선택) Twin pool → **판정**. 결과는 탐색 창에서만 확인하며 기본 통계 식은 바꾸지 않습니다.",
+    "SSOT 변수 풀에서 Local 탐색 → (선택) 지역 구조 Twin 접두 실험 → 탐색 CV와 확인 CV로 판정. 결과는 이 창에서만 확인하며 기본 통계 식은 바꾸지 않습니다.",
   interpretation: [
     "한 번 탐색하면 예측형(CV-MAPE 1위)과 설명형(AIC 1위)이 함께 나옵니다.",
-    "예측형 CV-MAPE 적합 등급은 예측 목적 참고.",
-    "설명형 Adj R²는 보조 숫자 — 순위 기준은 AIC.",
-    "「예측 미리보기」는 이 창 안에서만 계산합니다. 왼쪽 변수·기본 통계는 그대로입니다.",
-    "예측 부적합이어도 설명형·비교사례·용도×지목 통계는 활용 가능.",
-    "AI Assistant는 표본·Twin·변수 한계를 Facts 기준으로 해석.",
+    "예측 오차는 해석 강도입니다(낮음 / 보통 / 높은 편 / 높음). 적합·부적합이 아닙니다.",
+    "읽는 강도는 CV-MAPE만이 아니라 Adj R²·MAPE↔CV 안정성·표본 n을 같이 봅니다.",
+    "Twin은 오차 불합격의 구원이 아니라, Local만으로 구조가 충분히 안 보일 때 추가 검증입니다.",
+    "탐색 CV로 접두를 고르고, 확인 CV와 계수 방향으로 권고합니다. 기본 통계 식은 바꾸지 않습니다.",
+    "「모형 적용 예시」는 이 창 안에서만 계산합니다. 개별 적정가·감정평가액이 아닙니다.",
   ],
-  limitations: ["적정가·투자 판단 아님", "권장 행동은 통계적 적합성 보조"],
+  limitations: ["적정가·투자 판단 아님", "권장 활용은 해석 강도 보조"],
   interpretation_hints: [],
   presets: [
     {
@@ -168,8 +171,8 @@ export const BUILT_RECOMMEND_HELP: AnalysisExplain = {
       answer: "",
     },
     {
-      id: "why_unsuitable",
-      question: "왜 예측이 부적합한가요?",
+      id: "why_error_intensity",
+      question: "예측 오차는 어떻게 읽나요?",
       answer: "",
     },
   ],

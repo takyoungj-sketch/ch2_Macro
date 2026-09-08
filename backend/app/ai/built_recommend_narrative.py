@@ -38,6 +38,71 @@ def _action_lines(actions: list[Any]) -> list[str]:
     return out
 
 
+_COEFF_KO = {"gross_area": "연면적", "land_area": "대지면적", "building_age": "연식"}
+_STAB_KO = {"ok": "양호", "warn": "주의", "fail": "불안정"}
+
+
+def _fmt_cv(v: Any) -> str:
+    try:
+        return f"{float(v):.1f}%"
+    except (TypeError, ValueError):
+        return "—"
+
+
+def _twin_experiment_lines(experiments: list[Any]) -> list[str]:
+    """접두 실험 로그 — '왜 이 Twin인가'에 쓸 수 있는 한 줄씩."""
+    local = next((e for e in experiments if isinstance(e, dict) and e.get("step_id") == "local"), None)
+    local_n = local.get("n") if isinstance(local, dict) else None
+    local_cv = local.get("search_cv_mape") if isinstance(local, dict) else None
+    local_coeffs = local.get("key_coefficients") if isinstance(local, dict) else {}
+    if not isinstance(local_coeffs, dict):
+        local_coeffs = {}
+
+    picked = next((e for e in experiments if isinstance(e, dict) and e.get("search_picked")), None)
+    lines: list[str] = ["", "**Twin 접두 실험 로그**"]
+    for e in experiments:
+        if not isinstance(e, dict) or e.get("step_id") == "local":
+            continue
+        label = e.get("label") or e.get("step_id")
+        n = e.get("n")
+        search = _fmt_cv(e.get("search_cv_mape"))
+        delta = e.get("search_cv_delta")
+        delta_s = f"{float(delta):+.1f}%p" if isinstance(delta, (int, float)) else "—"
+        stab = _STAB_KO.get(str(e.get("stability") or ""), str(e.get("stability") or "—"))
+        verdict = e.get("verdict_ko") or ""
+        mark = " ←탐색" if e.get("search_picked") else ""
+        rec = " ·권고" if e.get("selected") and e.get("prefix_k") else ""
+        lines.append(
+            f"· {label}{mark}{rec}: n={n}, 탐색 CV {search} (Δ {delta_s}), 안정 {stab}"
+            + (f" — {verdict}" if verdict else "")
+        )
+
+    if isinstance(picked, dict) and picked.get("prefix_k"):
+        n0 = local_n if local_n is not None else "?"
+        n1 = picked.get("n")
+        cv0 = _fmt_cv(local_cv)
+        cv1 = _fmt_cv(picked.get("search_cv_mape"))
+        confirm = _fmt_cv(picked.get("confirm_cv_mape"))
+        coeff_bits: list[str] = []
+        tw_coeffs = picked.get("key_coefficients") if isinstance(picked.get("key_coefficients"), dict) else {}
+        for key, ko in _COEFF_KO.items():
+            a = local_coeffs.get(key)
+            b = tw_coeffs.get(key)
+            if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+                coeff_bits.append(f"{ko} {a:+.0f} → {b:+.0f}")
+        why = (
+            f"· 탐색 승자 **{picked.get('label')}**: 분석표본 {n0}건 → {n1}건, "
+            f"탐색 CV {cv0} → {cv1}, 확인 CV {confirm}."
+        )
+        if coeff_bits:
+            why += " 핵심 계수: " + ", ".join(coeff_bits) + "."
+        notes = picked.get("coeff_notes") or []
+        if isinstance(notes, list) and notes:
+            why += " " + " ".join(str(n) for n in notes[:3])
+        lines.append(why)
+    return lines
+
+
 def interpret_built_recommend(
     *,
     diagnostics: dict[str, Any],
@@ -66,36 +131,17 @@ def interpret_built_recommend(
             + (f" (적합 {fit_n}건)" if fit_n is not None else "")
         )
     if cv is not None:
-        fitness = conclusion.get("cv_fitness") if isinstance(conclusion.get("cv_fitness"), dict) else {}
-        flabel = fitness.get("label_ko") or "—"
-        lines.append(f"· CV-MAPE **{float(cv):.1f}%** ({flabel})")
+        pfit = conclusion.get("predictive_fit") if isinstance(conclusion.get("predictive_fit"), dict) else {}
+        flabel = pfit.get("label_ko") or "—"
+        lines.append(f"· 예측 오차 **{flabel}** · CV-MAPE **{float(cv):.1f}%**")
 
     if stage2.get("ran"):
-        local_cv = stage2.get("local_cv_mape")
-        pools = stage2.get("pools") or []
-        best_twin = None
-        if isinstance(pools, list) and pools:
-            cvs = [
-                float(p["cv_mape"])
-                for p in pools
-                if isinstance(p, dict) and p.get("cv_mape") is not None
-            ]
-            best_twin = min(cvs) if cvs else None
-        if local_cv is not None and best_twin is not None:
-            if best_twin > float(local_cv) + 0.5:
-                lines.append(
-                    f"· Twin pool 최저 CV-MAPE **{best_twin:.1f}%** — Local({float(local_cv):.1f}%)보다 "
-                    "개선되지 않았습니다."
-                )
-                lines.append(
-                    "· **표본 부족**보다 **독립변수 설명력 부족** 가능성이 큽니다."
-                )
-            elif best_twin < float(local_cv) - 0.5:
-                lines.append(
-                    f"· Twin pool이 Local 대비 CV-MAPE {float(local_cv) - best_twin:.1f}%p 개선했습니다."
-                )
-            else:
-                lines.append("· Twin pool 추가 후에도 예측력 개선 폭이 제한적입니다.")
+        experiments = stage2.get("twin_experiments") or []
+        tv = stage2.get("twin_validation") if isinstance(stage2.get("twin_validation"), dict) else {}
+        if tv.get("summary_ko"):
+            lines.append(f"· Twin: {tv['summary_ko']}")
+        if isinstance(experiments, list) and experiments:
+            lines.extend(_twin_experiment_lines(experiments))
 
     if blocks:
         lines.append(f"· 현재 변수: **{_block_names(blocks)}**")
@@ -140,9 +186,9 @@ def interpret_built_recommend(
     followups = _dedupe(
         [
             "왜 CV-MAPE가 이렇게 높나요?",
+            "왜 이 Twin을 붙였나요?",
             "Twin을 써도 안 되면 어떻게 하나요?",
             "주요 계수를 설명해 주세요.",
-            "다음에 무엇을 하면 좋나요?",
         ]
     )
     return NarrativeResult(answer=answer, followups=followups)

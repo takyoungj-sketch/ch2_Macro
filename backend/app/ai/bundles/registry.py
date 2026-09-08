@@ -22,7 +22,7 @@ BUNDLE_REGISTRY: dict[str, BundleSpec] = {
     ),
     "prediction_explain": BundleSpec(
         bundle_id="prediction_explain",
-        description="예측값·신뢰구간 해석",
+        description="통계적 추정값·추정범위 해석",
         panels=("PredictionCard", "PredictPanel"),
     ),
     "trend_diagnostic": BundleSpec(
@@ -75,9 +75,10 @@ for spec in BUNDLE_REGISTRY.values():
 
 SUGGESTED_QUESTIONS: dict[str, list[str]] = {
     "PredictionCard": [
+        "통계적 추정값을 설명해 주세요.",
         "예측값과 신뢰구간을 설명해 주세요.",
-        "신뢰구간(PI)이 넓은 이유는?",
-        "예측구간과 평균 신뢰구간 차이는?",
+        "개별 거래 예측범위가 넓은 이유는?",
+        "평균 추정범위와 개별 거래 예측범위 차이는?",
     ],
     "TrendCard": [
         "최근 상승 원인을 통계적으로 설명해 주세요.",
@@ -106,7 +107,7 @@ SUGGESTED_QUESTIONS: dict[str, list[str]] = {
     ],
     "RecommendationCard": [
         "AI 진단을 요약해 주세요.",
-        "왜 예측이 부적합한가요?",
+        "예측 오차는 어떻게 읽나요?",
         "Twin을 써도 안 되면 어떻게 하나요?",
         "다음에 무엇을 하면 좋나요?",
         "설명형 회귀는 어떻게 활용하나요?",
@@ -186,9 +187,9 @@ PURPOSE_QUESTION_OVERRIDES: dict[AiPurpose, dict[str, list[str]]] = {
     },
     "prediction": {
         "PredictionCard": [
-            "예측값과 신뢰구간을 설명해 주세요.",
-            "PI가 넓은 이유는?",
-            "이 scope 예측의 한계는?",
+            "통계적 추정값을 설명해 주세요.",
+            "개별 거래 예측범위가 넓은 이유는?",
+            "이 scope 추정의 한계는?",
         ],
         "RegressionCard": [
             "이 회귀 결과로 예측할 때 주의할 점은?",

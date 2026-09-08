@@ -76,12 +76,12 @@ def _warnings_for_n(n: int, *, compare: bool = False) -> list[str]:
 def _warnings_for_cv_mape(value: float | None) -> list[str]:
     if value is None:
         return []
-    if value >= 70:
+    if value >= 75:
         return [
-            f"CV-MAPE {value:.2f}% — 예측 안정성이 매우 낮습니다. 설명용 결과로만 해석하세요."
+            f"CV-MAPE {value:.2f}% — 개별 가격 설명에는 한계가 큽니다. 구조 탐색으로 해석하세요."
         ]
-    if value >= 50:
-        return [f"CV-MAPE {value:.2f}% — 예측 오차가 클 수 있어 주의가 필요합니다."]
+    if value >= 60:
+        return [f"CV-MAPE {value:.2f}% — 예측값보다 계수 방향·상대 영향을 중심으로 보세요."]
     return []
 
 

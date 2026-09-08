@@ -17,6 +17,12 @@ import { ASSET_LABELS } from "../types";
 import { buildAnalysisPeriodParams } from "../utils/analysisPeriod";
 import { RESIDENTIAL_REGRESSION_HELP } from "../utils/residentialAnalysisHelp";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
+import {
+  ESTIMATE_COPY,
+  StatisticalEstimateCaption,
+  StatisticalEstimateDisclaimer,
+  StatisticalEstimateRangeRow,
+} from "@ch2/stats-glossary";
 import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import { recordAnalysisHistory } from "@ch2/ai-assistant/aiClient";
 import {
@@ -334,30 +340,31 @@ function PredictPanel({
         <div className="rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 space-y-2">
           <div>
             <span className="text-slate-500 dark:text-slate-400 text-[10px]">
-              시나리오 금액 (참고)
+              {ESTIMATE_COPY.valueLabel}
               {result.model_type ? ` · ${result.model_type === "log" ? "로그" : "선형"}` : ""}
             </span>
             <div className="text-lg font-bold text-slate-800 dark:text-slate-100">{fmtInt(result.y_hat)}만원</div>
+            <StatisticalEstimateCaption compact />
             {result.unit_price_hat != null && (
               <div className="text-[11px] text-slate-500 dark:text-slate-400">
                 ㎡당 약 {fmt(result.unit_price_hat)} 만원/㎡
               </div>
             )}
           </div>
-          <div className="text-[11px] space-y-1 text-slate-700 dark:text-slate-300">
-            <div>
-              <span className="font-medium">95% 평균 신뢰구간</span>{" "}
+          <div className="text-[11px] space-y-1.5 text-slate-700 dark:text-slate-300">
+            <StatisticalEstimateRangeRow kind="mean" compact>
               {fmtInt(result.ci_lower)} ~ {fmtInt(result.ci_upper)}만원
-            </div>
-            <div className="text-slate-500 dark:text-slate-400">
-              95% 예측구간 (개별 거래) {fmtInt(result.pi_lower)} ~ {fmtInt(result.pi_upper)}만원
-            </div>
+            </StatisticalEstimateRangeRow>
+            <StatisticalEstimateRangeRow kind="individual" compact>
+              {fmtInt(result.pi_lower)} ~ {fmtInt(result.pi_upper)}만원
+            </StatisticalEstimateRangeRow>
           </div>
           {result.warnings.map((w) => (
             <p key={w} className="text-[10px] text-amber-700 dark:text-amber-300">
               {w}
             </p>
           ))}
+          <StatisticalEstimateDisclaimer compact />
         </div>
       )}
     </div>

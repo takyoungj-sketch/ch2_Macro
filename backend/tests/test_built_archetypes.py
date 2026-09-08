@@ -136,7 +136,7 @@ def test_joint_f_test_is_reported_for_included_block():
 
 def test_high_cv_mape_warns_about_prediction_use():
     assert _warnings_for_cv_mape(71.73)
-    assert "설명용" in _warnings_for_cv_mape(71.73)[0]
+    assert "계수 방향" in _warnings_for_cv_mape(71.73)[0]
     assert _warnings_for_cv_mape(29.3) == []
 
 
@@ -296,7 +296,7 @@ def test_evaluate_pooling_candidates_prefers_lower_cv_mape_pool():
         admin_level="eupmyeondong",
         region_col=None,
     )
-    assert result.decision.startswith("twin_pool")
+    assert result.decision.startswith("twin_prefix")
     assert len(result.candidates) == 2
     pool_metrics = next(c for c in result.candidates if c.candidate_id != "local")
     local_metrics = next(c for c in result.candidates if c.candidate_id == "local")
@@ -307,14 +307,14 @@ def test_evaluate_pooling_candidates_prefers_lower_cv_mape_pool():
     assert result.twin_gates and result.twin_gates[0].accepted is True
 
 
-def test_evaluate_pooling_candidates_rejects_twin_failing_price_gate():
+def test_evaluate_pooling_candidates_does_not_reject_on_price_ratio():
     local_rows = _timed_rows(15, start_year=2018, years=3, seed=1, noise_std=800)
     local_ctx, local_fit = _local_ctx_and_fit(local_rows)
     assert local_fit is not None
 
     anchor_code = "11110250"
     twin_code = "11110251"
-    # twin 가격수준이 anchor의 5배 — hard gate(0.5~2.0) 실패.
+    # 거래가격 비율은 참고만. 표본 행이 없어 적합은 실패해도 문은 통과.
     price_levels = {anchor_code: 100.0, twin_code: 500.0}
 
     result = evaluate_pooling_candidates(
@@ -330,11 +330,11 @@ def test_evaluate_pooling_candidates_rejects_twin_failing_price_gate():
         admin_level="eupmyeondong",
         region_col=None,
     )
-    assert result.decision == "local"
-    assert len(result.candidates) == 1
-    assert result.twin_gates and result.twin_gates[0].accepted is False
+    assert result.twin_gates and result.twin_gates[0].accepted is True
     assert result.twin_gates[0].price_gate is False
     assert result.twin_gates[0].adjacency_gate is True
+    assert result.decision == "local"
+    assert len(result.candidates) == 1
 
 
 def test_evaluate_pooling_candidates_rejects_twin_failing_adjacency_gate():
@@ -397,8 +397,8 @@ def test_evaluate_pooling_candidates_builds_multiple_pool_variants():
         region_col=None,
     )
     variant_ids = {c.candidate_id for c in result.candidates}
-    assert "twin_pool_n1" in variant_ids
-    assert "twin_pool_n3" in variant_ids
-    assert "twin_pool_n5" in variant_ids
+    assert "twin_prefix_k1" in variant_ids
+    assert "twin_prefix_k3" in variant_ids
+    assert "twin_prefix_k5" in variant_ids
     assert len(result.twin_gates) == 5
     assert all(g.accepted for g in result.twin_gates)

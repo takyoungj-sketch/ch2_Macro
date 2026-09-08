@@ -46,6 +46,23 @@ def _normalize_slice(asset_slice: str) -> str:
     return s
 
 
+@dataclass(frozen=True)
+class PredictiveFit:
+    tier: str
+    label_ko: str
+    grade: str
+    tone: str
+
+
+def lookup_predictive_fit(*, cv_mape: float | None, asset_slice: str = "commercial") -> PredictiveFit:
+    """예측 오차 해석 강도 — 유형별 합격선 없음 (D-067). asset_slice는 호환용."""
+    from app.recommendation.cv_fitness import lookup_cv_fitness
+
+    _ = asset_slice
+    t = lookup_cv_fitness(cv_mape)
+    return PredictiveFit(tier=t.tier, label_ko=t.label_ko, grade=t.tier, tone=t.tone)
+
+
 def lookup_built_satisfaction(
     *,
     cv_mape: float | None,

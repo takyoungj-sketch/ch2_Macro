@@ -93,6 +93,23 @@ def test_filter_twins_by_hard_gates_returns_passed_codes():
     assert passed == [twin]
 
 
+def test_filter_twins_price_ratio_does_not_block():
+    anchor = "11110250"
+    twin = "11110251"
+    local_rows = _timed_rows(10, region_code=anchor, start_year=2018, years=3, seed=1, noise_std=100)
+    price_levels = {anchor: 100.0, twin: 400.0}
+    _gates, passed = filter_twins_by_hard_gates(
+        _FakePoolConn(local_rows, price_levels=price_levels),
+        req=RegressionSelectionRequest(
+            profile_twin_neighbors=[{"region_code": twin, "similarity_score": 0.9}]
+        ),
+        anchor_region_codes=(anchor,),
+        twin_region_codes=(twin,),
+        admin_level="eupmyeondong",
+    )
+    assert passed == [twin]
+
+
 def test_evaluate_pooling_optimize_returns_researched_blocks():
     anchor = "11110250"
     twin = "11110251"

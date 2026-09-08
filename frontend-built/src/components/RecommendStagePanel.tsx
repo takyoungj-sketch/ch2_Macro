@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import clsx from "clsx";
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import type {
+  AssetType,
   ConclusionBullet,
   CoefficientNarrative,
   DiagnosticCheckItem,
@@ -13,9 +15,12 @@ import type {
   RegressionRecommendResponse,
   RegressionVariableSpec,
   ResponseScale,
+  TwinExperimentStep,
   TwinValidationVerdict,
 } from "../types";
 import { CvFitnessBadge, ScopeNLabels } from "../utils/recommendationLabels";
+import RegressionEffectsTable from "./RegressionEffectsTable";
+import RegressionEquation from "./RegressionEquation";
 
 const BLOCK_LABELS: Record<string, string> = {
   gross_area: "연면적",
@@ -29,15 +34,6 @@ const BLOCK_LABELS: Record<string, string> = {
   region_leaf: "지역(읍·면·동/법정리)",
 };
 
-const GRADE_LABEL: Record<string, string> = {
-  excellent: "매우 양호",
-  good: "양호",
-  fair: "보통",
-  poor: "미흡",
-  insufficient_cv: "CV 미산출",
-  pending: "평가 중",
-};
-
 const BULLET_MARK: Record<ConclusionBullet["kind"], string> = {
   positive: "✔",
   negative: "✖",
@@ -46,17 +42,26 @@ const BULLET_MARK: Record<ConclusionBullet["kind"], string> = {
 
 const VERDICT_BOX: Record<string, string> = {
   adopt_predictive:
-    "border-emerald-200 bg-emerald-50/80 dark:border-emerald-900/50 dark:bg-emerald-950/20",
+    "border-slate-200 bg-slate-50/80 dark:border-slate-700 dark:bg-slate-800/50",
   caution: "border-amber-200 bg-amber-50/80 dark:border-amber-900/50 dark:bg-amber-950/20",
   no_predictive_model: "border-red-200 bg-red-50/80 dark:border-red-900/50 dark:bg-red-950/20",
   explanatory_only:
     "border-slate-200 bg-slate-50/80 dark:border-slate-700 dark:bg-slate-800/50",
 };
 
-const VERDICT_BANNER: Record<string, string> = {
+const ERROR_BANNER: Record<string, string> = {
+  accent:
+    "border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800/40",
+  elevated:
+    "border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30",
+  high: "border-orange-300 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/30",
+  fail: "border-red-400 bg-red-50 dark:border-red-800 dark:bg-red-950/30",
+  neutral:
+    "border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800/40",
   positive:
-    "border-emerald-400 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30",
-  warning: "border-amber-400 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30",
+    "border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800/40",
+  warning:
+    "border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30",
   negative: "border-red-400 bg-red-50 dark:border-red-800 dark:bg-red-950/30",
 };
 
@@ -125,27 +130,90 @@ function CoefficientInsights({ items }: { items: CoefficientNarrative[] }) {
   );
 }
 
-function FinalVerdictBanner({ conclusion }: { conclusion: RecommendationConclusion }) {
-  const tone = conclusion.final_verdict_tone ?? "warning";
+function DiagnosisTable({
+  conclusion,
+  adj,
+}: {
+  conclusion: RecommendationConclusion;
+  adj?: number | null;
+}) {
+  const d = conclusion.macro_diagnosis;
+  if (!d) return null;
+  const cv = conclusion.cv_mape;
+  const mape = conclusion.mape;
+  const adjShown = adj ?? conclusion.adj_r_squared;
   return (
-    <div className={clsx("rounded-lg border-2 px-3 py-3 space-y-2", VERDICT_BANNER[tone])}>
+    <div className="pt-1">
+      <p className="text-[10px] font-semibold text-slate-500 mb-1">모형 진단</p>
+      <table className="w-full text-[11px] text-left">
+        <tbody className="text-slate-700 dark:text-slate-200">
+          <tr>
+            <th className="py-0.5 pr-2 font-normal text-slate-500">CV-MAPE</th>
+            <td className="tabular-nums">{cv != null ? `${cv.toFixed(1)}%` : "—"}</td>
+            <td className="font-medium">{d.error.label_ko}</td>
+          </tr>
+          <tr>
+            <th className="py-0.5 pr-2 font-normal text-slate-500">Adj R²</th>
+            <td className="tabular-nums">{adjShown != null ? adjShown.toFixed(3) : "—"}</td>
+            <td>설명력 {d.explanation.label_ko}</td>
+          </tr>
+          <tr>
+            <th className="py-0.5 pr-2 font-normal text-slate-500">MAPE → CV</th>
+            <td className="tabular-nums">
+              {mape != null && cv != null ? `${mape.toFixed(1)} → ${cv.toFixed(1)}%` : "—"}
+            </td>
+            <td>검증 안정성 {d.stability.label_ko}</td>
+          </tr>
+          <tr>
+            <th className="py-0.5 pr-2 font-normal text-slate-500">분석 표본</th>
+            <td className="text-slate-600 dark:text-slate-300" colSpan={2}>
+              {d.sample.label_ko}
+              {d.sample.detail_ko ? ` · ${d.sample.detail_ko}` : ""}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function FinalVerdictBanner({ conclusion }: { conclusion: RecommendationConclusion }) {
+  const d = conclusion.macro_diagnosis;
+  const tone = d?.composite.tone ?? conclusion.final_verdict_tone ?? "neutral";
+  const intensity = d?.error.label_ko ?? conclusion.predictive_fit?.label_ko ?? conclusion.final_verdict_ko;
+  const composite = d?.composite.label_ko;
+  return (
+    <div className={clsx("rounded-lg border-2 px-3 py-3 space-y-2", ERROR_BANNER[tone] ?? ERROR_BANNER.neutral)}>
       <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-        최종 판정
+        예측 오차
+        {composite ? ` · Macro 해석 ${composite}` : ""}
       </p>
       <p className="text-xl font-bold leading-tight text-slate-900 dark:text-slate-100">
-        {conclusion.final_verdict_emoji} {conclusion.final_verdict_ko}
-        {conclusion.cv_mape != null && (
-          <span className="ml-2 align-middle">
-            <CvFitnessBadge cvMape={conclusion.cv_mape} fitness={conclusion.cv_fitness} />
-          </span>
+        {conclusion.cv_mape != null ? (
+          <>
+            CV-MAPE {conclusion.cv_mape.toFixed(1)}%
+            <span className="ml-2 text-base font-semibold">· {intensity}</span>
+          </>
+        ) : (
+          intensity
         )}
       </p>
-      {conclusion.final_verdict_sublines.length > 0 && (
-        <ul className="text-sm text-slate-700 dark:text-slate-300 space-y-0.5">
-          {conclusion.final_verdict_sublines.map((line) => (
-            <li key={line}>· {line}</li>
-          ))}
-        </ul>
+      {(d?.error_one_liner_ko || conclusion.headline_ko) && (
+        <p className="text-sm text-slate-700 dark:text-slate-300">
+          {d?.error_one_liner_ko || conclusion.headline_ko}
+        </p>
+      )}
+      <DiagnosisTable conclusion={conclusion} />
+      {(d?.summary_ko || conclusion.summary_ko) && (
+        <div className="pt-1 border-t border-black/10 dark:border-white/10">
+          <p className="text-[10px] font-semibold text-slate-500 mb-0.5">
+            Macro 해석
+            {composite ? ` · ${composite}` : ""}
+          </p>
+          <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+            {d?.summary_ko || conclusion.summary_ko}
+          </p>
+        </div>
       )}
       {conclusion.recommended_actions.length > 0 && (
         <div className="pt-1 border-t border-black/10 dark:border-white/10">
@@ -156,7 +224,7 @@ function FinalVerdictBanner({ conclusion }: { conclusion: RecommendationConclusi
                 key={a.action_id}
                 className={clsx(
                   a.kind === "dont" && "text-red-800 dark:text-red-300",
-                  a.kind === "do" && "text-emerald-800 dark:text-emerald-300",
+                  a.kind === "do" && "text-slate-800 dark:text-slate-200",
                   a.kind === "optional" && "text-slate-700 dark:text-slate-300",
                 )}
               >
@@ -181,16 +249,17 @@ const TWIN_VAL_BOX: Record<TwinValidationVerdict["verdict"], string> = {
 };
 
 function TwinValidationBanner({ v }: { v: TwinValidationVerdict }) {
+  const band = v.practical_band_pp ?? v.epsilon_pp;
   return (
     <div className={clsx("rounded-md border px-2.5 py-2 space-y-1", TWIN_VAL_BOX[v.verdict])}>
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[10px] font-semibold uppercase tracking-wide opacity-70">
-          Twin Validation
+          Twin 검증
         </span>
         <span className="text-xs font-bold">{v.label_ko}</span>
         {v.cv_mape_delta != null && (
           <span className="text-[11px] tabular-nums opacity-90">
-            ΔCV-MAPE {v.cv_mape_delta > 0 ? "+" : ""}
+            탐색 Δ {v.cv_mape_delta > 0 ? "+" : ""}
             {v.cv_mape_delta.toFixed(2)}%p
             {v.local_cv_mape != null && v.compared_cv_mape != null
               ? ` (Local ${v.local_cv_mape.toFixed(2)} → Twin ${v.compared_cv_mape.toFixed(2)})`
@@ -213,10 +282,132 @@ function TwinValidationBanner({ v }: { v: TwinValidationVerdict }) {
         </span>
       </div>
       <p className="text-[11px] leading-relaxed opacity-90">{v.summary_ko}</p>
+      {v.local_confirm_cv_mape != null && v.compared_confirm_cv_mape != null && (
+        <p className="text-[11px] tabular-nums opacity-90">
+          확인 CV Local {v.local_confirm_cv_mape.toFixed(2)}% → Twin {v.compared_confirm_cv_mape.toFixed(2)}%
+        </p>
+      )}
+      {v.confirm_skipped_reason && (
+        <p className="text-[10px] opacity-70">{v.confirm_skipped_reason}</p>
+      )}
       <p className="text-[10px] leading-relaxed opacity-70">
-        Twin은 비슷한 지역을 찾는 비교 도구입니다. 회귀 pool은 Local보다 CV-MAPE가 ε(
-        {v.epsilon_pp}%p) 이상 나을 때만 채택을 권고합니다.
+        Twin은 가격이 비슷한 지역이 아니라 지역 구조(거래 구성·토지 이용·체급)가 닮아 표본을 보탤
+        후보입니다. 구조 순위는 실험 순서일 뿐 유용함의 증명이 아닙니다. 탐색 CV로 접두를 고르고,
+        확인 CV(마지막 연도)와 계수 안정으로 권고합니다. {band}%p는 채택 문턱이 아니라 무시할 흔들림(실질적
+        개선 띠)입니다.
       </p>
+    </div>
+  );
+}
+
+function TwinExperimentTable({
+  steps,
+  regionNameByCode,
+  adoptRecommended = false,
+}: {
+  steps: TwinExperimentStep[];
+  regionNameByCode: Record<string, string>;
+  adoptRecommended?: boolean;
+}) {
+  if (!steps.length) return null;
+  const local = steps.find((s) => s.step_id === "local");
+  const searchWinner = steps.find((s) => s.search_picked);
+  const stabLabel = { ok: "양호", warn: "주의", fail: "불안정" } as const;
+  const coeffKo: Record<string, string> = {
+    gross_area: "연면적",
+    land_area: "대지면적",
+    building_age: "연식",
+  };
+
+  function coeffBits(step: TwinExperimentStep): string | null {
+    const localC = local?.key_coefficients ?? {};
+    const bits: string[] = [];
+    for (const [key, ko] of Object.entries(coeffKo)) {
+      const a = localC[key];
+      const b = step.key_coefficients?.[key];
+      if (a != null && b != null) bits.push(`${ko} ${a >= 0 ? "+" : ""}${Math.round(a)} → ${b >= 0 ? "+" : ""}${Math.round(b)}`);
+    }
+    return bits.length ? bits.join(" · ") : null;
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-[11px] border-collapse">
+          <thead>
+            <tr className="text-slate-500">
+              <th className="py-1 pr-2 font-medium">실험</th>
+              <th className="py-1 pr-2 font-medium">n</th>
+              <th className="py-1 pr-2 font-medium">탐색 CV</th>
+              <th className="py-1 pr-2 font-medium">Δ</th>
+              <th className="py-1 pr-2 font-medium">확인 CV</th>
+              <th className="py-1 pr-2 font-medium">안정</th>
+              <th className="py-1 font-medium">판정</th>
+            </tr>
+          </thead>
+          <tbody>
+            {steps.map((s) => (
+              <tr
+                key={s.step_id}
+                className={clsx(
+                  s.search_picked && "bg-violet-50 dark:bg-violet-950/40",
+                  s.selected && !s.search_picked && "bg-slate-50 dark:bg-slate-800/60",
+                )}
+              >
+                <td className="py-0.5 pr-2">
+                  {s.label}
+                  {s.search_picked ? " ←" : ""}
+                  {s.region_codes.length > 0 && (
+                    <span className="block text-[10px] font-normal text-slate-500">
+                      {s.region_codes.map((c) => regionNameByCode[c] ?? c.slice(-8)).join(" + ")}
+                    </span>
+                  )}
+                </td>
+                <td className="py-0.5 pr-2 tabular-nums">{s.n}</td>
+                <td className="py-0.5 pr-2 tabular-nums">
+                  {s.search_cv_mape != null ? `${s.search_cv_mape.toFixed(1)}%` : "—"}
+                </td>
+                <td className="py-0.5 pr-2 tabular-nums">
+                  {s.search_cv_delta != null ? `${s.search_cv_delta > 0 ? "+" : ""}${s.search_cv_delta.toFixed(1)}` : "—"}
+                </td>
+                <td className="py-0.5 pr-2 tabular-nums">
+                  {s.confirm_cv_mape != null ? `${s.confirm_cv_mape.toFixed(1)}%` : "—"}
+                </td>
+                <td className="py-0.5 pr-2">{stabLabel[s.stability]}</td>
+                <td className="py-0.5 text-slate-600 dark:text-slate-300">{s.verdict_ko}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {searchWinner && searchWinner.prefix_k > 0 && (
+        <div className="rounded-md border border-slate-200 dark:border-slate-700 px-2.5 py-2 text-[11px] space-y-1">
+          <p className="font-semibold text-slate-700 dark:text-slate-200">최종 검증</p>
+          <p className="text-slate-600 dark:text-slate-300">
+            탐색에서 고른 조합: {searchWinner.label}
+            {searchWinner.region_codes.length > 0
+              ? ` (${searchWinner.region_codes.map((c) => regionNameByCode[c] ?? c.slice(-8)).join(" + ")})`
+              : ""}
+          </p>
+          <p className="tabular-nums">
+            탐색 CV {searchWinner.search_cv_mape != null ? `${searchWinner.search_cv_mape.toFixed(1)}%` : "—"}
+            {" · "}
+            확인 CV {searchWinner.confirm_cv_mape != null ? `${searchWinner.confirm_cv_mape.toFixed(1)}%` : "—"}
+          </p>
+          {coeffBits(searchWinner) && (
+            <p className="text-slate-500">핵심 계수 {coeffBits(searchWinner)}</p>
+          )}
+          {searchWinner.coeff_notes && searchWinner.coeff_notes.length > 0 && (
+            <p className="text-slate-500">{searchWinner.coeff_notes.join(" · ")}</p>
+          )}
+          <p className="font-medium text-slate-800 dark:text-slate-100">
+            권고: {adoptRecommended ? "Twin 채택" : "Local 유지"}
+            <span className="ml-1 font-normal text-slate-500">
+              (탐색 CV를 최종 성능으로 쓰지 않습니다)
+            </span>
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -232,45 +423,58 @@ function MacroModeSummary({
   candidate: ModelCandidate;
 }) {
   const isPredictive = mode === "predictive";
-  const tone = isPredictive ? (conclusion.final_verdict_tone ?? "warning") : "warning";
+  const d = conclusion.macro_diagnosis;
+  const cardTone = d?.composite.tone ?? d?.error.tone ?? conclusion.final_verdict_tone ?? "neutral";
+  const errorLabel = d?.error.label_ko ?? conclusion.predictive_fit?.label_ko ?? conclusion.final_verdict_ko;
+  const adj = conclusion.adj_r_squared ?? candidate.metrics.adj_r_squared;
+  const cv = conclusion.cv_mape;
 
   return (
-    <div className={clsx("rounded-lg border px-3 py-2.5 space-y-1", VERDICT_BANNER[tone])}>
+    <div className={clsx("rounded-lg border px-3 py-2.5 space-y-2", ERROR_BANNER[cardTone] ?? ERROR_BANNER.neutral)}>
       <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-        {isPredictive ? "예측형 판정" : "설명형 판정"}
+        {isPredictive
+          ? `예측 오차${d?.composite.label_ko ? ` · Macro 해석 ${d.composite.label_ko}` : ""}`
+          : "설명형"}
       </p>
       {isPredictive ? (
         <p className="text-base font-bold leading-snug text-slate-900 dark:text-slate-100">
-          {conclusion.final_verdict_emoji} {conclusion.final_verdict_ko}
-          {conclusion.cv_mape != null && (
-            <span className="ml-2 align-middle text-sm font-semibold">
-              <CvFitnessBadge cvMape={conclusion.cv_mape} fitness={conclusion.cv_fitness} />
-            </span>
-          )}
+          {cv != null ? `CV-MAPE ${cv.toFixed(1)}%` : "CV 미산출"}
+          <span className="ml-2 text-sm font-semibold">· {errorLabel}</span>
         </p>
       ) : (
         <p className="text-base font-bold leading-snug text-slate-900 dark:text-slate-100">
           AIC {candidate.aic?.toFixed(0) ?? "—"}
           <span className="ml-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
-            Adj.R²{" "}
-            {candidate.metrics.adj_r_squared != null
-              ? candidate.metrics.adj_r_squared.toFixed(3)
-              : "—"}
+            Adj.R² {adj != null ? adj.toFixed(3) : "—"}
           </span>
         </p>
       )}
-      <p className="text-xs text-slate-600 dark:text-slate-400 truncate">
+      <p className="text-xs text-slate-600 dark:text-slate-400">
         {blockSummary(candidate.blocks)} · {candidate.response_scale}
       </p>
-      {isPredictive && conclusion.headline_ko && (
-        <p className="text-xs text-slate-600 dark:text-slate-400">{conclusion.headline_ko}</p>
+      {isPredictive && (d?.error_one_liner_ko || conclusion.headline_ko) && (
+        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+          {d?.error_one_liner_ko || conclusion.headline_ko}
+        </p>
+      )}
+      {isPredictive && <DiagnosisTable conclusion={conclusion} adj={adj} />}
+      {isPredictive && (d?.summary_ko || conclusion.summary_ko) && (
+        <div className="pt-1 border-t border-black/5 dark:border-white/10">
+          <p className="text-[10px] font-semibold text-slate-500 mb-0.5">
+            Macro 해석
+            {d?.composite.label_ko ? ` · ${d.composite.label_ko}` : ""}
+          </p>
+          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            {d?.summary_ko || conclusion.summary_ko}
+          </p>
+        </div>
       )}
     </div>
   );
 }
 
 function ConclusionBullets({ conclusion }: { conclusion: RecommendationConclusion }) {
-  if (!conclusion.bullets.length && !conclusion.summary_ko) return null;
+  if (!conclusion.bullets.length) return null;
   return (
     <div
       className={clsx(
@@ -285,7 +489,7 @@ function ConclusionBullets({ conclusion }: { conclusion: RecommendationConclusio
               key={b.text}
               className={clsx(
                 b.kind === "negative" && "text-red-800 dark:text-red-300",
-                b.kind === "positive" && "text-emerald-800 dark:text-emerald-300",
+                b.kind === "positive" && "text-indigo-800 dark:text-indigo-300",
                 b.kind === "neutral" && "text-slate-700 dark:text-slate-300",
               )}
             >
@@ -294,11 +498,6 @@ function ConclusionBullets({ conclusion }: { conclusion: RecommendationConclusio
           ))}
         </ul>
       )}
-      {conclusion.summary_ko && (
-        <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400 pt-1 border-t border-black/5 dark:border-white/10">
-          {conclusion.summary_ko}
-        </p>
-      )}
     </div>
   );
 }
@@ -306,19 +505,43 @@ function ConclusionBullets({ conclusion }: { conclusion: RecommendationConclusio
 function ScopeSummaryBox({
   analysis_scope,
   stage1,
-  gradeLabel,
-  satStars,
+  conclusion,
   showSatisfaction = true,
 }: {
   analysis_scope: RegressionRecommendResponse["analysis_scope"];
   stage1: RegressionRecommendResponse["stage1"];
-  gradeLabel: string;
-  satStars: string;
+  conclusion: RecommendationConclusion;
   showSatisfaction?: boolean;
 }) {
+  const excluded = conclusion.sample_excluded_n ?? Math.max(0, analysis_scope.scope_n_tx - stage1.selection_n);
+  const pfit = conclusion.predictive_fit;
   return (
     <div className="rounded-md bg-slate-50 dark:bg-slate-800/50 px-2.5 py-2 text-xs space-y-1">
       <p className="font-medium">{analysis_scope.scope_label || "분석 scope"}</p>
+      {showSatisfaction && (
+        <p className="text-slate-700 dark:text-slate-200">
+          예측 오차{" "}
+          <span className="font-semibold">{pfit?.label_ko ?? conclusion.final_verdict_ko}</span>
+          {conclusion.cv_mape != null && (
+            <span className="ml-1 tabular-nums text-slate-500">CV-MAPE {conclusion.cv_mape.toFixed(1)}%</span>
+          )}
+        </p>
+      )}
+      <p className="tabular-nums text-slate-700 dark:text-slate-200">
+        거래 {analysis_scope.scope_n_tx}건 → 분석 {stage1.selection_n}건
+        {excluded > 0 && <span className="text-slate-500"> (제외 {excluded}건)</span>}
+        <span className="text-slate-500"> · 적합 {stage1.fit_n}건</span>
+      </p>
+      {excluded > 0 && conclusion.excluded_block_notes && conclusion.excluded_block_notes.length > 0 && (
+        <details className="text-[11px] text-slate-500">
+          <summary className="cursor-pointer">주요 제외 사유</summary>
+          <ul className="mt-1 list-disc pl-4">
+            {conclusion.excluded_block_notes.map((n) => (
+              <li key={n}>{n}</li>
+            ))}
+          </ul>
+        </details>
+      )}
       <ScopeNLabels
         counts={{
           scope_n_tx: analysis_scope.scope_n_tx,
@@ -328,14 +551,6 @@ function ScopeSummaryBox({
           partial_tx_count: analysis_scope.partial_tx_count,
         }}
       />
-      {showSatisfaction && (
-        <p className="text-slate-600 dark:text-slate-300">
-          만족 등급{" "}
-          <span className="font-medium">
-            {gradeLabel} {satStars}
-          </span>
-        </p>
-      )}
       <p className="text-slate-400 text-[11px]">
         SSOT 풀({stage1.candidate_pool.length}블록) — 왼쪽 변수 체크와 무관
         {analysis_scope.anchor_unit?.name && <> · anchor {analysis_scope.anchor_unit.name}</>}
@@ -347,33 +562,47 @@ function ScopeSummaryBox({
 function RankingList({
   mode,
   list,
+  collapsed = false,
 }: {
   mode: "predictive" | "explanatory";
   list: ModelCandidate[];
+  collapsed?: boolean;
 }) {
   const isPredictive = mode === "predictive";
+  const title = isPredictive ? "예측형 랭킹 (CV-MAPE)" : "설명형 랭킹 (AIC)";
+  const inner = (
+    <ul className="space-y-1 max-h-32 overflow-y-auto">
+      {list.map((c) => (
+        <li
+          key={`${mode}-${c.rank}-${c.blocks.join(",")}`}
+          className="text-xs flex gap-2 px-1 py-0.5 border-b border-slate-100 dark:border-slate-800"
+        >
+          <span className="text-indigo-600 w-5">#{c.rank}</span>
+          <span className="flex-1 truncate">{blockSummary(c.blocks)}</span>
+          <span className="text-slate-500 tabular-nums shrink-0">
+            {c.response_scale}
+            {isPredictive
+              ? ` · CV ${c.metrics.cv_mape?.toFixed(1) ?? "—"}%`
+              : ` · AIC ${c.aic?.toFixed(0) ?? "—"}`}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+  if (collapsed) {
+    return (
+      <details className="rounded border border-slate-200 dark:border-slate-700 px-2.5 py-2">
+        <summary className="cursor-pointer text-xs font-medium text-slate-600 dark:text-slate-300">
+          {title}
+        </summary>
+        <div className="mt-1.5">{inner}</div>
+      </details>
+    );
+  }
   return (
     <div>
-      <p className="text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1.5">
-        {isPredictive ? "예측형 랭킹 (CV-MAPE)" : "설명형 랭킹 (AIC)"}
-      </p>
-      <ul className="space-y-1 max-h-32 overflow-y-auto">
-        {list.map((c) => (
-          <li
-            key={`${mode}-${c.rank}-${c.blocks.join(",")}`}
-            className="text-xs flex gap-2 px-1 py-0.5 border-b border-slate-100 dark:border-slate-800"
-          >
-            <span className="text-indigo-600 w-5">#{c.rank}</span>
-            <span className="flex-1 truncate">{blockSummary(c.blocks)}</span>
-            <span className="text-slate-500 tabular-nums shrink-0">
-              {c.response_scale}
-              {isPredictive
-                ? ` · CV ${c.metrics.cv_mape?.toFixed(1) ?? "—"}%`
-                : ` · AIC ${c.aic?.toFixed(0) ?? "—"}`}
-            </span>
-          </li>
-        ))}
-      </ul>
+      <p className="text-[11px] font-medium text-slate-600 dark:text-slate-300 mb-1.5">{title}</p>
+      {inner}
     </div>
   );
 }
@@ -429,17 +658,86 @@ function poolAdoptVars(
   };
 }
 
-function stars(n: number) {
-  return "★".repeat(Math.max(0, Math.min(5, n))) + "☆".repeat(Math.max(0, 5 - Math.min(5, n)));
-}
-
 function adoptLabelForMode(mode: string) {
-  if (mode === "review_only") return "검토용으로 적용";
+  if (mode === "review_only") return "구조 탐색용으로 적용";
   if (mode === "explanatory") return "설명형으로 적용";
   return "이 후보로 분석";
 }
 
 type RankTab = "explanatory" | "predictive";
+
+function resolveRecommendAssetType(assetType: AssetType | undefined, slice: string): AssetType {
+  if (assetType) return assetType;
+  if (slice && slice !== "unified") return slice as AssetType;
+  return "commercial";
+}
+
+function CandidateEquationBlock({
+  candidate,
+  assetType,
+  narratives,
+}: {
+  candidate: ModelCandidate;
+  assetType: AssetType;
+  narratives?: CoefficientNarrative[];
+}) {
+  const coeffs = candidate.coefficients ?? [];
+  if (!coeffs.length) return null;
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-400">
+        회귀식
+        <StatsGlossaryHelp termId="coefficient" size="xs" />
+      </div>
+      <RegressionEquation
+        coefficients={coeffs}
+        responseScale={candidate.response_scale}
+        assetType={assetType}
+      />
+      <details className="text-xs" open>
+        <summary className="cursor-pointer text-slate-600 dark:text-slate-400 font-medium">
+          계수 상세
+        </summary>
+        <RegressionEffectsTable
+          coefficients={coeffs}
+          responseScale={candidate.response_scale}
+          assetType={assetType}
+        />
+        {narratives && narratives.length > 0 && (
+          <div className="mt-2">
+            <CoefficientInsights items={narratives} />
+          </div>
+        )}
+      </details>
+    </div>
+  );
+}
+
+function TwinOfferCard({
+  twinRunning,
+  onRunTwin,
+}: {
+  twinRunning?: boolean;
+  onRunTwin: () => void;
+}) {
+  return (
+    <div className="rounded-md border border-violet-200 dark:border-violet-900/50 bg-violet-50/40 dark:bg-violet-950/20 p-2.5 space-y-1.5">
+      <p className="text-xs font-medium text-violet-900 dark:text-violet-200">추가 검증 권고</p>
+      <p className="text-[11px] text-violet-800/90 dark:text-violet-300/90">
+        Local만으로 구조적 관계가 충분히 안정적으로 확인되지 않을 수 있습니다. 닮은 거래군을
+        보태면 같은 변수 관계가 유지되는지 비교할 수 있습니다.
+      </p>
+      <button
+        type="button"
+        className="px-2.5 py-1 text-xs rounded bg-violet-600 text-white disabled:opacity-50"
+        disabled={twinRunning}
+        onClick={onRunTwin}
+      >
+        {twinRunning ? "Twin 실험 중…" : "Twin 실험"}
+      </button>
+    </div>
+  );
+}
 
 function CandidateMini({
   c,
@@ -503,7 +801,7 @@ function CandidateMini({
               )}
               onClick={onPredict}
             >
-              예측 미리보기
+              모형 적용 예시
             </button>
           )}
         </div>
@@ -531,6 +829,9 @@ type Props = {
   twinRunning?: boolean;
   /** full=모달 호환 전체 · predictive/explanatory=인라인 단일 모드 카드 */
   mode?: "full" | "predictive" | "explanatory";
+  /** 회귀실험과 같이 계수 아래에 두는 예측창 */
+  predictPanel?: ReactNode;
+  assetType?: AssetType;
 };
 
 export default function RecommendStagePanel({
@@ -544,6 +845,8 @@ export default function RecommendStagePanel({
   onRunTwin,
   twinRunning,
   mode = "full",
+  predictPanel,
+  assetType,
 }: Props) {
   const isFull = mode === "full";
   const isPredictive = mode === "predictive";
@@ -555,12 +858,11 @@ export default function RecommendStagePanel({
     tab === "explanatory" || isExplanatory
       ? stage1.candidates_explanatory
       : stage1.candidates_predictive;
-  const sat = stage1.satisfaction;
-  const gradeLabel = GRADE_LABEL[sat.grade] ?? sat.grade;
   const adoptLabel = adoptLabelForMode(conclusion.adopt_mode);
   const predictiveRole = "현재 최적 후보 (예측형)";
   const explanatoryRole = "현재 최적 후보 (설명형)";
   const explanatoryCandidate = stage1.alternate ?? stage1.primary;
+  const resolvedAssetType = resolveRecommendAssetType(assetType, analysis_scope.asset_slice);
 
   const showTwinResults =
     stage2 && (stage2.ran ? stage2.pools.length > 0 : Boolean(stage2.skipped_reason));
@@ -596,6 +898,12 @@ export default function RecommendStagePanel({
           candidate={modeCandidate}
         />
         {inlineMode === "predictive" && <ConclusionBullets conclusion={conclusion} />}
+        {inlineMode === "predictive" &&
+          conclusion.twin_recommended &&
+          onRunTwin &&
+          !conclusion.twin_ran && (
+            <TwinOfferCard twinRunning={twinRunning} onRunTwin={onRunTwin} />
+          )}
         {inlineMode === "explanatory" && (
           <p className="text-xs text-slate-600 dark:text-slate-400">
             AIC가 낮을수록 같은 표본에서 설명력과 간결성의 균형이 낫습니다. 예측에 쓸지는 예측형
@@ -605,13 +913,9 @@ export default function RecommendStagePanel({
         <ScopeSummaryBox
           analysis_scope={analysis_scope}
           stage1={stage1}
-          gradeLabel={gradeLabel}
-          satStars={stars(sat.stars)}
+          conclusion={conclusion}
           showSatisfaction={inlineMode === "predictive"}
         />
-        {inlineMode === "predictive" && (
-          <DiagnosticChecklist items={diagnostics_checklist ?? []} />
-        )}
 
         {inlineMode === "explanatory" && !stage1.alternate && (
           <p className="text-xs text-slate-500">
@@ -619,63 +923,60 @@ export default function RecommendStagePanel({
           </p>
         )}
 
-        <CandidateMini
-          c={modeCandidate}
-          role={modeRole}
-          adoptLabel={modeAdoptLabel}
-          rankMode={inlineMode}
-          onAdopt={
-            onAdopt
-              ? () => onAdopt(modeCandidate.variables, modeCandidate.response_scale)
-              : undefined
-          }
-          onPredict={
-            onPredict
-              ? () =>
-                  onPredict(
-                    modeCandidate.variables,
-                    modeCandidate.response_scale,
-                    modeRole,
-                  )
-              : undefined
-          }
-          adopting={adopting}
-          predictActive={predictActiveLabel === modeRole}
+        <CandidateEquationBlock
+          candidate={modeCandidate}
+          assetType={resolvedAssetType}
+          narratives={inlineMode === "predictive" ? (coefficient_narratives ?? []) : undefined}
         />
 
-        <RankingList mode={inlineMode} list={list} />
-        {inlineMode === "predictive" && (
-          <CoefficientInsights items={coefficient_narratives ?? []} />
+        {(onAdopt || (onPredict && !predictPanel)) && (
+          <CandidateMini
+            c={modeCandidate}
+            role={modeRole}
+            adoptLabel={modeAdoptLabel}
+            rankMode={inlineMode}
+            onAdopt={
+              onAdopt
+                ? () => onAdopt(modeCandidate.variables, modeCandidate.response_scale)
+                : undefined
+            }
+            onPredict={
+              onPredict && !predictPanel
+                ? () =>
+                    onPredict(
+                      modeCandidate.variables,
+                      modeCandidate.response_scale,
+                      modeRole,
+                    )
+                : undefined
+            }
+            adopting={adopting}
+            predictActive={predictActiveLabel === modeRole}
+          />
         )}
 
-        {inlineMode === "predictive" &&
-          conclusion.twin_recommended &&
-          onRunTwin &&
-          !conclusion.twin_ran && (
-            <div className="rounded-md border border-violet-200 dark:border-violet-900/50 bg-violet-50/40 dark:bg-violet-950/20 p-2.5 space-y-1.5">
-              <p className="text-xs font-medium text-violet-900 dark:text-violet-200">
-                쌍둥이 지역 pool 추가 검토
-              </p>
-              <p className="text-[11px] text-violet-800/90 dark:text-violet-300/90">
-                유사 지역 거래를 더해 이 창에서 모형을 다시 찾습니다. 기본 통계 식은 바꾸지 않습니다.
-              </p>
-              <button
-                type="button"
-                className="px-2.5 py-1 text-xs rounded bg-violet-600 text-white disabled:opacity-50"
-                disabled={twinRunning}
-                onClick={onRunTwin}
-              >
-                {twinRunning ? "Twin pool 계산 중…" : "쌍둥이 지역 추가 검토"}
-              </button>
-            </div>
-          )}
+        {predictPanel}
+
+        {inlineMode === "predictive" && (
+          <DiagnosticChecklist items={diagnostics_checklist ?? []} />
+        )}
 
         {inlineMode === "predictive" && showTwinResults && stage2 && (
           <div className="border-t border-slate-200 dark:border-slate-700 pt-3 space-y-2">
             <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
-              Twin pool 결과
+              Twin 접두 실험
             </p>
             {stage2.twin_validation && <TwinValidationBanner v={stage2.twin_validation} />}
+            {stage2.region_effect && (
+              <p className="text-[11px] text-slate-600 dark:text-slate-300">{stage2.region_effect}</p>
+            )}
+            {stage2.twin_experiments && stage2.twin_experiments.length > 0 && (
+              <TwinExperimentTable
+                steps={stage2.twin_experiments}
+                regionNameByCode={regionNameByCode}
+                adoptRecommended={Boolean(stage2.twin_validation?.twin_adopt_recommended)}
+              />
+            )}
 
             {!stage2.ran && stage2.skipped_reason && (
               <p className="text-xs text-slate-500">{stage2.skipped_reason}</p>
@@ -768,6 +1069,8 @@ export default function RecommendStagePanel({
             ))}
           </ul>
         )}
+
+        <RankingList mode={inlineMode} list={list} collapsed />
       </div>
     );
   }
@@ -787,36 +1090,13 @@ export default function RecommendStagePanel({
         </span>
       </div>
       {(isFull || isPredictive) && <FinalVerdictBanner conclusion={conclusion} />}
-
-      {(isFull || isPredictive) && conclusion.bullets.length > 0 && (
-        <div
-          className={clsx(
-            "rounded-md border px-2.5 py-2 text-xs space-y-1",
-            VERDICT_BOX[conclusion.verdict] ?? VERDICT_BOX.caution,
-          )}
-        >
-          <p className="font-medium text-slate-700 dark:text-slate-200">{conclusion.headline_ko}</p>
-          <ul className="space-y-0.5">
-            {conclusion.bullets.map((b) => (
-              <li
-                key={b.text}
-                className={clsx(
-                  b.kind === "negative" && "text-red-800 dark:text-red-300",
-                  b.kind === "positive" && "text-emerald-800 dark:text-emerald-300",
-                  b.kind === "neutral" && "text-slate-700 dark:text-slate-300",
-                )}
-              >
-                {BULLET_MARK[b.kind]} {b.text}
-              </li>
-            ))}
-          </ul>
-          {conclusion.summary_ko && (
-            <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400 pt-1 border-t border-black/5 dark:border-white/10">
-              {conclusion.summary_ko}
-            </p>
-          )}
-        </div>
-      )}
+      {(isFull || isPredictive) &&
+        conclusion.twin_recommended &&
+        onRunTwin &&
+        !conclusion.twin_ran && (
+          <TwinOfferCard twinRunning={twinRunning} onRunTwin={onRunTwin} />
+        )}
+      {(isFull || isPredictive) && <ConclusionBullets conclusion={conclusion} />}
 
       {isFull && (
       <div className="flex items-center gap-2 text-[11px]">
@@ -844,28 +1124,12 @@ export default function RecommendStagePanel({
       </div>
       )}
 
-      <div className="rounded-md bg-slate-50 dark:bg-slate-800/50 px-2.5 py-2 text-xs space-y-1">
-        <p className="font-medium">{analysis_scope.scope_label || "분석 scope"}</p>
-        <ScopeNLabels
-          counts={{
-            scope_n_tx: analysis_scope.scope_n_tx,
-            selection_n: stage1.selection_n,
-            fit_n: stage1.fit_n,
-            include_partial: analysis_scope.include_partial,
-            partial_tx_count: analysis_scope.partial_tx_count,
-          }}
-        />
-        <p className="text-slate-600 dark:text-slate-300">
-          만족 등급{" "}
-          <span className="font-medium">
-            {gradeLabel} {stars(sat.stars)}
-          </span>
-        </p>
-        <p className="text-slate-400 text-[11px]">
-          SSOT 풀({stage1.candidate_pool.length}블록) — 왼쪽 변수 체크와 무관
-          {analysis_scope.anchor_unit?.name && <> · anchor {analysis_scope.anchor_unit.name}</>}
-        </p>
-      </div>
+      <ScopeSummaryBox
+        analysis_scope={analysis_scope}
+        stage1={stage1}
+        conclusion={conclusion}
+        showSatisfaction={isFull || isPredictive}
+      />
 
       {(isFull || isPredictive) && <DiagnosticChecklist items={diagnostics_checklist ?? []} />}
       {(isFull || isExplanatory) && <CoefficientInsights items={coefficient_narratives ?? []} />}
@@ -1028,35 +1292,22 @@ export default function RecommendStagePanel({
         </ul>
       </div>
 
-      {(isFull || isPredictive) &&
-        conclusion.twin_recommended &&
-        onRunTwin &&
-        !conclusion.twin_ran && (
-        <div className="rounded-md border border-violet-200 dark:border-violet-900/50 bg-violet-50/40 dark:bg-violet-950/20 p-2.5 space-y-1.5">
-          <p className="text-xs font-medium text-violet-900 dark:text-violet-200">
-            ② Profile Twin pool 추가 검토
-          </p>
-          <p className="text-[11px] text-violet-800/90 dark:text-violet-300/90">
-            1단계 결과가 충분히 만족스럽지 않을 때, 유사 지역 거래를 더해 이 창에서 모형을 다시
-            찾습니다. 기본 통계 식은 바꾸지 않습니다.
-          </p>
-          <button
-            type="button"
-            className="px-2.5 py-1 text-xs rounded bg-violet-600 text-white disabled:opacity-50"
-            disabled={twinRunning}
-            onClick={onRunTwin}
-          >
-            {twinRunning ? "Twin pool 계산 중…" : "② Twin pool 검토 실행"}
-          </button>
-        </div>
-      )}
-
       {(isFull || isPredictive) && showTwinResults && stage2 && (
         <div className="border-t border-slate-200 dark:border-slate-700 pt-3 space-y-2">
           <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
-            ② Twin pool 결과
+            Twin 접두 실험
           </p>
           {stage2.twin_validation && <TwinValidationBanner v={stage2.twin_validation} />}
+          {stage2.region_effect && (
+            <p className="text-[11px] text-slate-600 dark:text-slate-300">{stage2.region_effect}</p>
+          )}
+          {stage2.twin_experiments && stage2.twin_experiments.length > 0 && (
+            <TwinExperimentTable
+              steps={stage2.twin_experiments}
+              regionNameByCode={regionNameByCode}
+              adoptRecommended={Boolean(stage2.twin_validation?.twin_adopt_recommended)}
+            />
+          )}
 
           {!stage2.ran && stage2.skipped_reason && (
             <p className="text-xs text-slate-500">{stage2.skipped_reason}</p>

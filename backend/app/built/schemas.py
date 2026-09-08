@@ -17,6 +17,7 @@ from app.recommendation.models import (
     RecommendationConclusion,
     TerminationInfo,
 )
+from app.recommendation.twin_structure import TwinExperimentStep
 
 # 단일 / 통합(all) / 복수("commercial,factory")
 AssetType = str
@@ -376,23 +377,31 @@ class RecommendationPoolCandidate(BaseModel):
     mape: Optional[float] = None
     cv_mape: Optional[float] = None
     cv_mape_delta: Optional[float] = None
+    confirm_cv_mape: Optional[float] = None
     blocks: list[str] = Field(default_factory=list)
     response_scale: Optional[ResponseScale] = None
     variables: Optional[RegressionVariableSpec] = None
+    prefix_k: int = 0
+    key_coefficients: dict[str, float] = Field(default_factory=dict)
+    structure_score: Optional[float] = None
 
 
 class TwinValidationVerdict(BaseModel):
-    """Local vs Twin pool CV-MAPE 판정 (TWIN_VALIDATION_STATUS §2·§4)."""
+    """Local vs Twin 접두 실험 판정. 탐색 CV로 고르고 확인 CV로 권고."""
 
     verdict: Literal["improved", "tie", "worse", "skipped"]
     label_ko: str
     summary_ko: str
     epsilon_pp: float = 0.5
+    practical_band_pp: Optional[float] = None
     local_cv_mape: Optional[float] = None
     compared_cv_mape: Optional[float] = None
     cv_mape_delta: Optional[float] = None
+    local_confirm_cv_mape: Optional[float] = None
+    compared_confirm_cv_mape: Optional[float] = None
     compared_candidate_id: Optional[str] = None
     twin_adopt_recommended: bool = False
+    confirm_skipped_reason: Optional[str] = None
 
 
 class RecommendationStage2(BaseModel):
@@ -411,6 +420,10 @@ class RecommendationStage2(BaseModel):
     # Lab: Stage2 탐색 풀에 올린 region_* (coverage 전·후 포함 후보 기록)
     region_candidate_blocks: list[str] = Field(default_factory=list)
     region_feature_tier: Optional[str] = None
+    local_search_cv_mape: Optional[float] = None
+    local_confirm_cv_mape: Optional[float] = None
+    region_effect: Optional[str] = None
+    twin_experiments: list[TwinExperimentStep] = Field(default_factory=list)
 
 
 class RegressionRecommendResponse(BaseModel):
@@ -522,9 +535,10 @@ class JointFTest(BaseModel):
 
 
 class PoolingCandidateMetrics(BaseModel):
-    """Local 또는 Twin Pooling 후보(pool 조합별) 하나의 실측 지표.
+    """Local 또는 Twin 접두 실험 후보.
 
-    candidate_id는 "local" 또는 "twin_pool_n{k}" 형태(V2 — 복수 pool 조합 비교).
+    candidate_id는 "local" 또는 "twin_prefix_k{k}".
+    cv_mape는 Stage2 optimize에서 탐색 CV(마지막 연도 제외).
     """
 
     candidate_id: str
@@ -535,11 +549,15 @@ class PoolingCandidateMetrics(BaseModel):
     mape: Optional[float] = None
     cv_mape: Optional[float] = None
     cv_folds: Optional[int] = None
+    confirm_cv_mape: Optional[float] = None
+    confirm_cv_folds: Optional[int] = None
     aic: Optional[float] = None
     bic: Optional[float] = None
     joint_f_tests: dict[str, JointFTest] = Field(default_factory=dict)
     blocks: list[str] = Field(default_factory=list)
     response_scale: Optional[ResponseScale] = None
+    prefix_k: int = 0
+    key_coefficients: dict[str, float] = Field(default_factory=dict)
 
 
 class DecisionConfidence(BaseModel):

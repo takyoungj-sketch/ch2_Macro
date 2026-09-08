@@ -1,7 +1,8 @@
-"""진단 체크리스트 — 표본·변수·이상치·지역 (R4)."""
+"""진단 체크리스트 — 표본·변수·이상치·지역 (R4, D-068)."""
 
 from __future__ import annotations
 
+from app.recommendation.cv_fitness import lookup_sample
 from app.recommendation.models import DiagnosticCheckItem, DiagnosticStatus, RecommendationVerdict
 
 
@@ -16,25 +17,21 @@ def build_diagnostics_checklist(
     exclude_outliers_iqr: bool,
     primary_blocks: list[str],
     variable_limit: bool,
+    twin_ran: bool = False,
 ) -> list[DiagnosticCheckItem]:
     items: list[DiagnosticCheckItem] = []
+    _ = verdict
 
-    # 표본
-    if selection_n >= 30 and fit_n >= 20:
-        sample_status: DiagnosticStatus = "ok"
-        sample_summary = f"탐색 {selection_n}건·적합 {fit_n}건 — 회귀 탐색에 무난한 수준입니다."
-    elif selection_n >= 15:
+    sample = lookup_sample(fit_n=fit_n, scope_n_tx=scope_n_tx, selection_n=selection_n)
+    if sample.tier == "insufficient":
+        sample_status: DiagnosticStatus = "fail"
+    elif sample.tier == "caution":
         sample_status = "warn"
-        sample_summary = (
-            f"탐색 {selection_n}건·적합 {fit_n}건 — 가능하나 세부 계수·CV는 불안정할 수 있습니다."
-        )
     else:
-        sample_status = "fail"
-        sample_summary = f"탐색 {selection_n}건 — 표본이 적어 탐색 결과 신뢰도가 낮습니다."
-
-    if scope_n_tx > 0 and selection_n < scope_n_tx * 0.7:
-        sample_status = "warn" if sample_status == "ok" else sample_status
-        sample_summary += f" (거래 {scope_n_tx}건 대비 complete-case 감소)"
+        sample_status = "ok"
+    sample_summary = sample.detail_ko or f"탐색 {selection_n}건·적합 {fit_n}건"
+    if sample.label_ko:
+        sample_summary = f"{sample.label_ko} — {sample_summary}"
 
     items.append(
         DiagnosticCheckItem(
@@ -45,21 +42,31 @@ def build_diagnostics_checklist(
         )
     )
 
-    # 변수 / 예측력
-    if variable_limit or verdict == "no_predictive_model":
-        var_status: DiagnosticStatus = "fail"
+    if cv_mape is not None and cv_mape >= 75:
+        var_status: DiagnosticStatus = "warn"
         var_summary = (
-            "Local·Twin 모두 예측력이 낮아 **현재 독립변수만으로는 가격 설명이 어렵**습니다."
+            "현재 변수로 개별 가격 차이를 많이 남깁니다. "
+            "계수 방향·상대 영향 등 구조 탐색으로 해석하세요."
         )
+        if twin_ran:
+            var_summary += " Twin을 붙여도 오차가 크게 줄지 않았습니다."
+        elif variable_limit:
+            var_summary += " 추가 변수 확보를 검토할 수 있습니다."
     elif cv_mape is not None and cv_mape >= 60:
-        var_status = "fail"
-        var_summary = f"CV-MAPE {cv_mape:.1f}% — 예측 목적에는 부적합한 수준입니다."
-    elif cv_mape is not None and cv_mape >= 40:
         var_status = "warn"
-        var_summary = f"CV-MAPE {cv_mape:.1f}% — 변수 설명력·예측 안정성에 주의가 필요합니다."
+        var_summary = (
+            f"CV-MAPE {cv_mape:.1f}% — 개별 예측값은 거칠고, 구조적 관계는 볼 수 있습니다."
+        )
+        if twin_ran:
+            var_summary += " Twin 실험 결과는 아래 접두 표를 보세요."
+    elif cv_mape is not None and cv_mape >= 45:
+        var_status = "warn"
+        var_summary = (
+            f"CV-MAPE {cv_mape:.1f}% — 개별 거래 차이는 크지만 구조 분석에 활용할 수 있습니다."
+        )
     else:
         var_status = "ok"
-        var_summary = "현재 변수 조합으로 scope 내 설명·예측이 **참고 가능**한 수준입니다."
+        var_summary = "현재 변수 구성에서 일정 수준의 구조적 관계가 확인됩니다."
 
     items.append(
         DiagnosticCheckItem(
@@ -70,7 +77,6 @@ def build_diagnostics_checklist(
         )
     )
 
-    # 이상치
     if exclude_outliers_iqr:
         outlier_status: DiagnosticStatus = "ok"
         outlier_summary = "IQR 이상치 제외가 적용되어 극단 거래 영향을 줄였습니다."
@@ -96,7 +102,6 @@ def build_diagnostics_checklist(
         )
     )
 
-    # 지역 특성
     has_region = "region_leaf" in primary_blocks
     if has_region and cv_mape is not None and cv_mape >= 50:
         reg_status: DiagnosticStatus = "warn"
@@ -109,7 +114,7 @@ def build_diagnostics_checklist(
         reg_summary = "지역 더미 포함 — 세부 지역 간 편차를 반영하지만, 해석·예측 복잡도가 올라갑니다."
     else:
         reg_status = "ok"
-        reg_summary = "지역 더미 없음 — scope 내 **단일 회귀식** 가정에 가깝습니다."
+        reg_summary = "지역 더미 없음 — scope 내 단일 회귀 가정에 가깝습니다."
 
     items.append(
         DiagnosticCheckItem(

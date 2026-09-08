@@ -34,6 +34,8 @@ class BlockFitResult:
     joint_f_tests: dict[str, JointFTest]
     cv_mape: float | None
     cv_folds: int
+    confirm_cv_mape: float | None = None
+    confirm_cv_folds: int = 0
 
 
 def fit_block_subset(
@@ -91,12 +93,13 @@ def fit_block_subset(
         y_price = pd.to_numeric(df["price"], errors="coerce").loc[y.index].astype(float).to_numpy()
 
     mape = _insample_mape_pct(y_price, model, response_scale=response_scale)
-    cv_mape, cv_folds = _rolling_time_cv_mape(
+    cv_mape, cv_folds, confirm_cv, confirm_folds = _rolling_time_cv_mape(
         df,
         spec,
         unified=unified,
         response_scale=response_scale,
         region_col=region_col_use,
+        holdout_last_year=False,
     )
     return BlockFitResult(
         blocks=list(blocks),
@@ -114,7 +117,35 @@ def fit_block_subset(
         joint_f_tests={},
         cv_mape=cv_mape,
         cv_folds=cv_folds,
+        confirm_cv_mape=confirm_cv,
+        confirm_cv_folds=confirm_folds,
     )
+
+
+def rolling_time_cv_split(
+    df: pd.DataFrame,
+    spec: RegressionVariableSpec,
+    *,
+    unified: bool,
+    response_scale: ResponseScale,
+    region_col: str | None,
+) -> tuple[float | None, int, float | None, int, str | None]:
+    """탐색 CV(마지막 연도 제외)와 확인 CV(마지막 연도).
+
+    고유 연도가 3 미만이면 확인을 생략하고 탐색은 기존 롤링과 같다.
+    """
+    search, s_folds, confirm, c_folds = _rolling_time_cv_mape(
+        df,
+        spec,
+        unified=unified,
+        response_scale=response_scale,
+        region_col=region_col,
+        holdout_last_year=True,
+    )
+    skip = None
+    if confirm is None:
+        skip = "확인 CV 생략 — 고유 계약연도가 3년 미만이거나 마지막 연도 fold를 적합할 수 없음"
+    return search, s_folds, confirm, c_folds, skip
 
 
 def _rolling_time_cv_mape(
@@ -124,15 +155,16 @@ def _rolling_time_cv_mape(
     unified: bool,
     response_scale: ResponseScale,
     region_col: str | None,
-) -> tuple[float | None, int]:
+    holdout_last_year: bool = False,
+) -> tuple[float | None, int, float | None, int]:
     """과거 연도로 학습하고 다음 연도를 평가하는 rolling CV-MAPE."""
     import statsmodels.api as sm
 
     if "contract_year" not in df.columns:
-        return None, 0
+        return None, 0, None, 0
     years = sorted(pd.to_numeric(df["contract_year"], errors="coerce").dropna().unique())
     if len(years) < 2:
-        return None, 0
+        return None, 0, None, 0
     try:
         y, X, _ = _build_design_matrix(
             df,
@@ -142,48 +174,55 @@ def _rolling_time_cv_mape(
             region_col=region_col,
         )
     except (KeyError, ValueError, TypeError):
-        return None, 0
+        return None, 0, None, 0
     if y.empty:
-        return None, 0
+        return None, 0, None, 0
     x_const = sm.add_constant(X.astype(float), has_constant="add")
     price = pd.to_numeric(df["price"], errors="coerce").reindex(y.index)
     year_values = pd.to_numeric(df["contract_year"], errors="coerce").reindex(y.index)
-    fold_errors: list[float] = []
-    valid_folds = 0
-    for test_year in years[1:]:
-        train_mask = year_values < test_year
-        test_mask = year_values == test_year
-        if int(train_mask.sum()) < max(5, x_const.shape[1] + 1) or not bool(test_mask.any()):
-            continue
-        y_train = y.loc[train_mask]
-        y_test = y.loc[test_mask]
-        if _uses_log_y(response_scale) and (price.loc[y_train.index] <= 0).any():
-            continue
-        try:
-            model = sm.OLS(y_train, x_const.loc[y_train.index]).fit()
-            pred = np.asarray(model.predict(x_const.loc[y_test.index]), dtype=float)
-            if _uses_log_y(response_scale):
-                pred = np.exp(pred) * _duan_smearing(model.resid.to_numpy())
-            # log-scale 예측을 지수화하면 test fold의 범주 조합이 train에 드물게
-            # 나타났을 때 극단적으로 큰 예측값(예: price 대비 10^150배)이 나올 수
-            # 있다. 이런 수치적 발산은 "예측이 나쁘다"가 아니라 외삽 실패이므로,
-            # train 표본의 관측 가격 범위를 벗어난 예측은 그 범위로 clip한다.
-            train_actual = price.loc[y_train.index].to_numpy(dtype=float)
-            train_actual = train_actual[np.isfinite(train_actual) & (train_actual > 0)]
-            if train_actual.size:
-                pred = np.clip(pred, train_actual.min() * 0.1, train_actual.max() * 10)
-            actual = price.loc[y_test.index].to_numpy(dtype=float)
-            valid = np.isfinite(actual) & np.isfinite(pred) & (actual != 0)
-            if valid.any():
-                fold_errors.extend(
-                    (np.abs(actual[valid] - pred[valid]) / np.abs(actual[valid])).tolist()
-                )
-                valid_folds += 1
-        except (ValueError, np.linalg.LinAlgError):
-            continue
-    if not fold_errors:
-        return None, 0
-    return round(float(np.mean(fold_errors)) * 100, 2), valid_folds
+
+    confirm_year = years[-1] if holdout_last_year and len(years) >= 3 else None
+    search_years = [yr for yr in years[1:] if confirm_year is None or yr != confirm_year]
+
+    def _eval(test_years: list) -> tuple[float | None, int]:
+        fold_errors: list[float] = []
+        valid_folds = 0
+        for test_year in test_years:
+            train_mask = year_values < test_year
+            test_mask = year_values == test_year
+            if int(train_mask.sum()) < max(5, x_const.shape[1] + 1) or not bool(test_mask.any()):
+                continue
+            y_train = y.loc[train_mask]
+            y_test = y.loc[test_mask]
+            if _uses_log_y(response_scale) and (price.loc[y_train.index] <= 0).any():
+                continue
+            try:
+                model = sm.OLS(y_train, x_const.loc[y_train.index]).fit()
+                pred = np.asarray(model.predict(x_const.loc[y_test.index]), dtype=float)
+                if _uses_log_y(response_scale):
+                    pred = np.exp(pred) * _duan_smearing(model.resid.to_numpy())
+                train_actual = price.loc[y_train.index].to_numpy(dtype=float)
+                train_actual = train_actual[np.isfinite(train_actual) & (train_actual > 0)]
+                if train_actual.size:
+                    pred = np.clip(pred, train_actual.min() * 0.1, train_actual.max() * 10)
+                actual = price.loc[y_test.index].to_numpy(dtype=float)
+                valid = np.isfinite(actual) & np.isfinite(pred) & (actual != 0)
+                if valid.any():
+                    fold_errors.extend(
+                        (np.abs(actual[valid] - pred[valid]) / np.abs(actual[valid])).tolist()
+                    )
+                    valid_folds += 1
+            except (ValueError, np.linalg.LinAlgError):
+                continue
+        if not fold_errors:
+            return None, 0
+        return round(float(np.mean(fold_errors)) * 100, 2), valid_folds
+
+    search_mape, search_folds = _eval(search_years)
+    confirm_mape, confirm_folds = (None, 0)
+    if confirm_year is not None:
+        confirm_mape, confirm_folds = _eval([confirm_year])
+    return search_mape, search_folds, confirm_mape, confirm_folds
 
 
 def attach_joint_f_tests(

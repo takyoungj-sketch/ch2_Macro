@@ -96,9 +96,14 @@ def build_regression_diagnostic(context: AiContext) -> AiDiagnosticPack:
     if mape is not None:
         summary.append(f"MAPE={_fmt_num(mape, 1)}%")
         if isinstance(cv_fitness, dict) and cv_fitness.get("label_ko"):
-            summary.append(f"MAPE등급={cv_fitness['label_ko']}")
+            summary.append(f"오차해석={cv_fitness['label_ko']}")
     if cv_mape is not None:
         summary.append(f"CV-MAPE={_fmt_num(cv_mape, 1)}%")
+    macro = primary.get("macro_diagnosis") or facts.get("macro_diagnosis")
+    if isinstance(macro, dict):
+        composite = macro.get("composite") or {}
+        if isinstance(composite, dict) and composite.get("label_ko"):
+            summary.append(f"Macro해석={composite['label_ko']}")
     if primary.get("scope_label"):
         summary.append(f"scope={primary['scope_label']}")
     raw_cmp = facts.get("comparisons")
@@ -182,6 +187,7 @@ def build_regression_diagnostic(context: AiContext) -> AiDiagnosticPack:
             "mape": mape,
             "cv_mape": cv_mape,
             "cv_fitness": cv_fitness,
+            "macro_diagnosis": macro if isinstance(macro, dict) else None,
             "significant_count": primary.get("significant_count"),
             "comparisons": comparison_snaps,
         },
@@ -257,7 +263,7 @@ def build_prediction_diagnostic(context: AiContext) -> AiDiagnosticPack:
     diag = prediction_diagnostics_from_facts(facts, scope_label=str(scope_label))
     summary = [
         f"scope={scope_label}",
-        f"예측={_fmt_num(diag.get('y_hat'), 0)}만원",
+        f"추정={_fmt_num(diag.get('y_hat'), 0)}만원",
     ]
     if diag.get("n") is not None:
         summary.append(f"회귀 n={diag['n']}")
@@ -266,8 +272,8 @@ def build_prediction_diagnostic(context: AiContext) -> AiDiagnosticPack:
             f"PI={_fmt_num(diag['pi_lower'], 0)}~{_fmt_num(diag['pi_upper'], 0)}"
         )
     limitations = [
-        "예측은 동일 scope OLS 모형 출력이며 적정가·투자 판단이 아닙니다.",
-        "PI는 개별 거래 변동을 포함합니다.",
+        "통계적 추정은 동일 scope OLS 모형 출력이며 AVM·감정평가액이 아닙니다.",
+        "개별 거래 예측범위(PI)는 개별 거래 변동을 포함하며 가액을 보증하지 않습니다.",
     ]
     return AiDiagnosticPack(
         bundle_id="prediction_explain",
@@ -316,11 +322,19 @@ def build_recommend_diagnostic(context: AiContext) -> AiDiagnosticPack:
     ]
     if cv is not None:
         summary.append(f"CV-MAPE={float(cv):.1f}%")
+    fitness = conclusion.get("cv_fitness") or conclusion.get("predictive_fit")
+    if isinstance(fitness, dict) and fitness.get("label_ko"):
+        summary.append(f"오차해석={fitness['label_ko']}")
+    diag = conclusion.get("macro_diagnosis")
+    if isinstance(diag, dict):
+        composite = diag.get("composite") or {}
+        if isinstance(composite, dict) and composite.get("label_ko"):
+            summary.append(f"Macro해석={composite['label_ko']}")
     if conclusion.get("final_verdict_ko"):
-        summary.append(f"판정={conclusion['final_verdict_ko']}")
+        summary.append(f"예측오차={conclusion['final_verdict_ko']}")
     limitations = [
         "모형 탐색은 SSOT 변수 풀 탐색 결과이며 예측·적정가 판단을 대체하지 않습니다.",
-        "권장 행동은 통계적 적합성 기준이며 현장 판단을 보조합니다.",
+        "권장 활용은 해석 강도이며 현장 판단을 보조합니다.",
     ]
     return AiDiagnosticPack(
         bundle_id="recommend_diagnostic",

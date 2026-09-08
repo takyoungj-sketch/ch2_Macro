@@ -21,6 +21,7 @@ from app.built.schemas import (
     ResponseScale,
 )
 from app.recommendation.models import AnalysisScope
+from app.recommendation.twin_structure import decide_twin_prefix, key_coefficients_from_fit
 from app.recommendation.twin_validation import (
     build_twin_validation_verdict,
     hard_gate_summary,
@@ -63,9 +64,12 @@ def _pool_candidate(
         mape=m.mape,
         cv_mape=m.cv_mape,
         cv_mape_delta=delta,
+        confirm_cv_mape=m.confirm_cv_mape,
         blocks=list(m.blocks),
         response_scale=m.response_scale,
         variables=variables,
+        prefix_k=int(m.prefix_k or 0),
+        key_coefficients=dict(m.key_coefficients or {}),
     )
 
 
@@ -132,8 +136,41 @@ def run_stage2_twin(conn, inp: Stage2Input) -> RecommendationStage2:
     gate_note = hard_gate_summary(list(pooling.twin_gates))
     skipped_parts = [p for p in (validated.gate_summary, gate_note) if p]
 
+    local_metrics = next((c for c in pooling.candidates if c.candidate_id == "local"), None)
+    prefix_rows = []
+    for c in pooling.candidates:
+        if c.candidate_id == "local":
+            continue
+        prefix_rows.append(
+            {
+                "candidate_id": c.candidate_id,
+                "label": c.label,
+                "prefix_k": int(c.prefix_k or 0),
+                "region_codes": list(c.region_codes),
+                "n": c.n,
+                "search_cv_mape": c.cv_mape,
+                "confirm_cv_mape": c.confirm_cv_mape,
+                "key_coefficients": dict(c.key_coefficients or {}),
+                "blocks": list(c.blocks),
+            }
+        )
+
+    local_search = local_metrics.cv_mape if local_metrics else local_cv
+    local_confirm = local_metrics.confirm_cv_mape if local_metrics else None
+    local_n = int(local_metrics.n) if local_metrics else int(getattr(inp.primary_raw.fit, "n", 0) or 0)
+    local_coeffs = dict(local_metrics.key_coefficients) if local_metrics else key_coefficients_from_fit(inp.primary_raw.fit)
+
+    prefix_decision = decide_twin_prefix(
+        local_n=local_n,
+        local_search_cv=local_search,
+        local_confirm_cv=local_confirm,
+        local_coeffs=local_coeffs,
+        local_blocks=primary_blocks,
+        prefixes=prefix_rows,
+    )
+
     twin_pools = [
-        _pool_candidate(c, local_cv=local_cv)
+        _pool_candidate(c, local_cv=local_search)
         for c in pooling.candidates
         if c.candidate_id != "local"
     ]
@@ -141,17 +178,17 @@ def run_stage2_twin(conn, inp: Stage2Input) -> RecommendationStage2:
     primary_pool: RecommendationPoolCandidate | None = None
     recommended_blocks = primary_blocks
     recommended_scale = scale
-    if pooling.decision != "local":
+    if prefix_decision.decision != "local":
         for c in pooling.candidates:
-            if c.candidate_id == pooling.decision:
-                primary_pool = _pool_candidate(c, local_cv=local_cv)
+            if c.candidate_id == prefix_decision.decision:
+                primary_pool = _pool_candidate(c, local_cv=local_search)
                 if c.blocks:
                     recommended_blocks = list(c.blocks)
                 if c.response_scale:
                     recommended_scale = c.response_scale
                 break
 
-    decision_reason = pooling.decision_reason
+    decision_reason = prefix_decision.decision_reason
     if skipped_parts and decision_reason:
         decision_reason = "; ".join(skipped_parts) + " — " + decision_reason
     elif skipped_parts:
@@ -160,19 +197,20 @@ def run_stage2_twin(conn, inp: Stage2Input) -> RecommendationStage2:
     twin_validation = build_twin_validation_verdict(
         ran=True,
         skipped_reason=None,
-        local_cv_mape=local_cv,
-        decision=pooling.decision,
+        local_cv_mape=local_search,
+        decision=prefix_decision.decision,
         primary=primary_pool,
         pools=twin_pools,
+        prefix=prefix_decision,
     )
 
     return RecommendationStage2(
         ran=True,
         pools=twin_pools,
         primary=primary_pool,
-        local_cv_mape=local_cv,
+        local_cv_mape=local_search,
         twin_gates=list(pooling.twin_gates),
-        decision=pooling.decision,
+        decision=prefix_decision.decision,
         decision_reason=decision_reason,
         twin_validation=twin_validation,
         fixed_blocks=recommended_blocks,
@@ -180,4 +218,8 @@ def run_stage2_twin(conn, inp: Stage2Input) -> RecommendationStage2:
         fixed_response_scale=recommended_scale,
         region_candidate_blocks=region_candidates,
         region_feature_tier=region_tier if region_candidates else None,
+        local_search_cv_mape=local_search,
+        local_confirm_cv_mape=local_confirm,
+        region_effect=prefix_decision.region_effect,
+        twin_experiments=prefix_decision.steps,
     )

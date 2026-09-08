@@ -1,18 +1,19 @@
 // @ts-nocheck — shared: 앱별 tsc 경로가 다름
 import { useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from "react";
+import "./resize-handles.css";
 
 export type PanelBox = { x: number; y: number; w: number; h: number };
 export type ResizeEdge = "n" | "s" | "e" | "w" | "nw" | "ne" | "sw" | "se";
 
 export const RESIZE_HANDLES: { edge: ResizeEdge; className: string; cursor: string }[] = [
-  { edge: "n", className: "left-2 right-2 top-0 h-2", cursor: "ns-resize" },
-  { edge: "s", className: "left-2 right-2 bottom-0 h-2", cursor: "ns-resize" },
-  { edge: "e", className: "top-2 bottom-2 right-0 w-2", cursor: "ew-resize" },
-  { edge: "w", className: "top-2 bottom-2 left-0 w-2", cursor: "ew-resize" },
-  { edge: "nw", className: "left-0 top-0 h-3.5 w-3.5", cursor: "nwse-resize" },
-  { edge: "ne", className: "right-0 top-0 h-3.5 w-3.5", cursor: "nesw-resize" },
-  { edge: "sw", className: "left-0 bottom-0 h-3.5 w-3.5", cursor: "nesw-resize" },
-  { edge: "se", className: "right-0 bottom-0 h-3.5 w-3.5", cursor: "nwse-resize" },
+  { edge: "n", className: "ch2-resize-handle", cursor: "ns-resize" },
+  { edge: "s", className: "ch2-resize-handle", cursor: "ns-resize" },
+  { edge: "e", className: "ch2-resize-handle", cursor: "ew-resize" },
+  { edge: "w", className: "ch2-resize-handle", cursor: "ew-resize" },
+  { edge: "nw", className: "ch2-resize-handle", cursor: "nwse-resize" },
+  { edge: "ne", className: "ch2-resize-handle", cursor: "nesw-resize" },
+  { edge: "sw", className: "ch2-resize-handle", cursor: "nesw-resize" },
+  { edge: "se", className: "ch2-resize-handle", cursor: "nwse-resize" },
 ];
 
 export function clampBox(box: PanelBox, minW: number, minH: number): PanelBox {
@@ -80,21 +81,26 @@ export function ResizeHandles({
           data-resize-handle={edge}
           role="separator"
           aria-label="창 크기 조절"
-          title="드래그하여 크기 조절"
-          className={`absolute z-20 touch-none ${className}`}
+          title="모서리를 드래그하여 크기 조절"
+          className={className}
           style={{ cursor }}
           onPointerDown={(e) => {
             if (e.button !== 0) return;
             e.preventDefault();
             e.stopPropagation();
+            try {
+              e.currentTarget.setPointerCapture(e.pointerId);
+            } catch {
+              /* ignore */
+            }
             onPointerDown(edge, e);
           }}
         />
       ))}
-      <span
-        className="pointer-events-none absolute bottom-1.5 right-1.5 h-2.5 w-2.5 border-r-2 border-b-2 border-slate-400/90 dark:border-slate-400"
-        aria-hidden
-      />
+      <span className="ch2-resize-grip ch2-resize-grip--nw" aria-hidden />
+      <span className="ch2-resize-grip ch2-resize-grip--ne" aria-hidden />
+      <span className="ch2-resize-grip ch2-resize-grip--sw" aria-hidden />
+      <span className="ch2-resize-grip ch2-resize-grip--se" aria-hidden />
     </>
   );
 }

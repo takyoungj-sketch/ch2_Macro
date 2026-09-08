@@ -207,7 +207,7 @@ export default function StatsGlossaryHelp({
             ref={popupRef}
             role="dialog"
             aria-label={`${entry.label} 설명`}
-            className="ch2-glossary-popup fixed rounded-lg border border-indigo-200 dark:border-indigo-300 bg-white dark:bg-slate-800 shadow-xl dark:shadow-black/70 ring-1 ring-black/5 dark:ring-indigo-300/60 p-3 text-left font-normal"
+            className="ch2-glossary-popup ch2-resize-host fixed rounded-lg border border-indigo-200 dark:border-indigo-300 bg-white dark:bg-slate-800 shadow-xl dark:shadow-black/70 ring-1 ring-black/5 dark:ring-indigo-300/60 p-3 text-left font-normal"
             style={{
               position: "fixed",
               top: box.y,

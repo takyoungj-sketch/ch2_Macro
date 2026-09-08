@@ -1,7 +1,7 @@
 """Recommend stage2 Twin neighbor validation — suggest 경로와 공유.
 
-Twin의 제품 역할은 지역시장 비교(발견)이다.
-회귀 pool 자동 채택은 Local 대비 CV-MAPE가 ε 이상 개선될 때만 권고한다.
+Twin은 지역 구조 후보이다. 거래가격으로 고르지 않는다.
+채택 권고는 탐색 CV가 아니라 확인 CV + 계수 안정이다.
 """
 
 from __future__ import annotations
@@ -67,8 +67,45 @@ def build_twin_validation_verdict(
     primary: RecommendationPoolCandidate | None,
     pools: list[RecommendationPoolCandidate],
     epsilon_pp: float = TWIN_VALIDATION_EPSILON_PP,
+    prefix=None,
 ) -> TwinValidationVerdict:
-    """Local CV-MAPE vs Twin pool 비교 → improved|tie|worse|skipped."""
+    """탐색/확인 분리 판정. prefix가 있으면 그것을 SSOT로 쓴다."""
+    if prefix is not None:
+        band = float(getattr(prefix, "practical_band_pp", epsilon_pp) or epsilon_pp)
+        adopt = bool(prefix.adopt_recommended)
+        search_band = prefix.search_band
+        if not ran:
+            verdict = "skipped"
+        elif search_band == "improved" and adopt:
+            verdict = "improved"
+        elif search_band == "worse":
+            verdict = "worse"
+        else:
+            verdict = "tie"
+        compared = None
+        if search_band == "improved":
+            compared = min(
+                (s for s in prefix.steps if s.prefix_k > 0 and s.search_cv_mape is not None),
+                key=lambda s: s.search_cv_mape or 1e9,
+                default=None,
+            )
+        local_step = prefix.steps[0] if prefix.steps else None
+        return TwinValidationVerdict(
+            verdict=verdict,
+            label_ko=_LABEL_KO[verdict],
+            summary_ko=prefix.decision_reason,
+            epsilon_pp=band,
+            practical_band_pp=band,
+            local_cv_mape=local_step.search_cv_mape if local_step else local_cv_mape,
+            compared_cv_mape=compared.search_cv_mape if compared else None,
+            cv_mape_delta=compared.search_cv_delta if compared else None,
+            local_confirm_cv_mape=local_step.confirm_cv_mape if local_step else None,
+            compared_confirm_cv_mape=compared.confirm_cv_mape if compared else None,
+            compared_candidate_id=compared.step_id if compared else None,
+            twin_adopt_recommended=adopt,
+            confirm_skipped_reason=prefix.confirm_skipped_reason,
+        )
+
     if not ran:
         reason = (skipped_reason or "Twin pool 검증을 실행하지 않았습니다.").strip()
         return TwinValidationVerdict(
@@ -76,6 +113,7 @@ def build_twin_validation_verdict(
             label_ko=_LABEL_KO["skipped"],
             summary_ko=reason,
             epsilon_pp=epsilon_pp,
+            practical_band_pp=epsilon_pp,
             local_cv_mape=local_cv_mape,
             twin_adopt_recommended=False,
         )
@@ -216,9 +254,17 @@ def validate_recommend_twin_neighbors(
         for row in filtered
         if str(row.get("region_code") or row.get("twin_region_code") or "").strip()
     )
+    from app.recommendation.twin_structure import rank_neighbors_by_structure
+
+    ranked = rank_neighbors_by_structure(filtered, top_k=5)
+    ranked_codes = tuple(
+        str(row.get("region_code") or "").strip()
+        for row in ranked
+        if str(row.get("region_code") or "").strip()
+    )
     return ValidatedTwinNeighbors(
-        neighbors=filtered,
-        twin_codes=tuple(dict.fromkeys(twin_codes)),
+        neighbors=ranked,
+        twin_codes=ranked_codes,
         rejected_n=rejected,
         gate_summary=summary,
     )
@@ -228,4 +274,4 @@ def hard_gate_summary(gates: list[TwinGateResult]) -> str | None:
     rejected = [g for g in gates if not g.accepted]
     if not rejected:
         return None
-    return f"가격·권역 기준으로 Twin {len(rejected)}곳 제외"
+    return f"인접 기준으로 Twin {len(rejected)}곳 제외"

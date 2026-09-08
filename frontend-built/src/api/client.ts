@@ -317,7 +317,7 @@ export async function fetchProfileTwinNeighbors(
   const path = level === "beopjungri" ? `/regional-profile/twins-beop/${code}` : `/regional-profile/twins/${code}`;
   const { data } = await profileApi.get<ProfileTwinNeighborsResponse>(path, {
     params: {
-      top_k: opts?.topK ?? 5,
+      top_k: opts?.topK ?? 12,
       twin_profile: opts?.twinProfile ?? "general",
     },
   });

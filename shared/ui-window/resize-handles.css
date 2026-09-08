@@ -1,0 +1,122 @@
+/* Tailwind content에 ui-window이 없어도 손잡이가 보이게 한다. */
+
+.ch2-resize-host {
+  position: relative;
+}
+
+.ch2-resize-handle {
+  position: absolute;
+  z-index: 40;
+  touch-action: none;
+  box-sizing: border-box;
+}
+
+.ch2-resize-handle[data-resize-handle="n"] {
+  left: 14px;
+  right: 14px;
+  top: 0;
+  height: 10px;
+  transform: translateY(-50%);
+  cursor: ns-resize;
+}
+
+.ch2-resize-handle[data-resize-handle="s"] {
+  left: 14px;
+  right: 14px;
+  bottom: 0;
+  height: 10px;
+  transform: translateY(50%);
+  cursor: ns-resize;
+}
+
+.ch2-resize-handle[data-resize-handle="e"] {
+  top: 14px;
+  bottom: 14px;
+  right: 0;
+  width: 10px;
+  transform: translateX(50%);
+  cursor: ew-resize;
+}
+
+.ch2-resize-handle[data-resize-handle="w"] {
+  top: 14px;
+  bottom: 14px;
+  left: 0;
+  width: 10px;
+  transform: translateX(-50%);
+  cursor: ew-resize;
+}
+
+.ch2-resize-handle[data-resize-handle="nw"],
+.ch2-resize-handle[data-resize-handle="ne"],
+.ch2-resize-handle[data-resize-handle="sw"],
+.ch2-resize-handle[data-resize-handle="se"] {
+  width: 18px;
+  height: 18px;
+}
+
+.ch2-resize-handle[data-resize-handle="nw"] {
+  left: 0;
+  top: 0;
+  transform: translate(-40%, -40%);
+  cursor: nwse-resize;
+}
+
+.ch2-resize-handle[data-resize-handle="ne"] {
+  right: 0;
+  top: 0;
+  transform: translate(40%, -40%);
+  cursor: nesw-resize;
+}
+
+.ch2-resize-handle[data-resize-handle="sw"] {
+  left: 0;
+  bottom: 0;
+  transform: translate(-40%, 40%);
+  cursor: nesw-resize;
+}
+
+.ch2-resize-handle[data-resize-handle="se"] {
+  right: 0;
+  bottom: 0;
+  transform: translate(40%, 40%);
+  cursor: nwse-resize;
+}
+
+.ch2-resize-grip {
+  pointer-events: none;
+  position: absolute;
+  z-index: 41;
+  width: 11px;
+  height: 11px;
+  border-color: rgb(100 116 139);
+  border-style: solid;
+}
+
+html.dark .ch2-resize-grip {
+  border-color: rgb(148 163 184);
+}
+
+.ch2-resize-grip--se {
+  right: 5px;
+  bottom: 5px;
+  border-width: 0 2px 2px 0;
+}
+
+.ch2-resize-grip--ne {
+  right: 5px;
+  top: 5px;
+  border-width: 2px 2px 0 0;
+}
+
+.ch2-resize-grip--sw {
+  left: 5px;
+  bottom: 5px;
+  border-width: 0 0 2px 2px;
+}
+
+.ch2-resize-grip--nw {
+  left: 5px;
+  top: 5px;
+  border-width: 2px 0 0 2px;
+}

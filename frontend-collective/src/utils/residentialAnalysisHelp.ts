@@ -104,7 +104,7 @@ export const RESIDENTIAL_REGRESSION_HELP: AnalysisExplain = {
   interpretation: [
     "기본(선형): 연속 변수 1단위 증가 시 금액(만원) 변화, 더미는 기준 범주 대비 만원 차이.",
     "로그 옵션: 연속 변수는 대략 % 변화 — 회귀 결과 「쉬운 설명」 참고.",
-    "시나리오 계산은 참고값이며 AVM·적정가가 아닙니다.",
+    "시나리오 계산은 통계적 추정이며 개별 물건의 가격이 아닙니다.",
   ],
   limitations: [
     "변수·층 형식 선택에 따라 결과 변경",

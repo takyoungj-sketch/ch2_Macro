@@ -33,15 +33,15 @@ export default function RegressionEquation({
   const dep =
     responseScale === "log" || responseScale === "loglog" ? "log(금액)" : "금액";
   const intercept = coefficients.find((c) => c.name === "const");
+  const others = coefficients.filter((c) => c.name !== "const");
 
-  if (!intercept && equation) {
-    return <p className="text-sm font-mono leading-relaxed break-words">{equation}</p>;
-  }
-  if (!intercept) {
+  if (!intercept && others.length === 0) {
+    if (equation) {
+      return <p className="text-sm font-mono leading-relaxed break-words">{equation}</p>;
+    }
     return <p className="text-sm text-slate-500">{dep} = —</p>;
   }
 
-  const others = coefficients.filter((c) => c.name !== "const");
   const sig = sortCoefficientsByVariableOrder(
     others.filter((c) => isEquationSignificant(c.p_value)),
   );
@@ -57,7 +57,7 @@ export default function RegressionEquation({
     <div className="space-y-1">
       <p className="text-sm font-mono leading-relaxed break-words">
         <span>
-          {dep} = {formatCoefValue(intercept.estimate)}
+          {dep} = {intercept ? formatCoefValue(intercept.estimate) : "α"}
         </span>
         {visible.map((c) => {
           const sign = c.estimate >= 0 ? "+" : "−";

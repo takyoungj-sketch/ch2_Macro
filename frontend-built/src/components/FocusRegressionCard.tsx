@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { MetricWithHelp, StatsGlossaryHelp } from "@ch2/stats-glossary";
 import type { AssetType, RegressionLevelResult, ResponseScale } from "../types";
-import { CvFitnessBadge, formatPartialNNote } from "../utils/recommendationLabels";
+import { formatPartialNNote } from "../utils/recommendationLabels";
 import {
   ADMIN_LABELS,
   formatCoefName,
@@ -67,7 +67,6 @@ export default function FocusRegressionCard({
             termId="mape"
             value={result.mape != null ? `${fmtDecimal(result.mape, 2)}%` : "—"}
           />
-          {result.mape != null && <CvFitnessBadge cvMape={result.mape} />}
         </div>
         <div>유의 변수 {result.significant_count}개</div>
         <MetricWithHelp label="F p" termId="f_p_value" value={fmtDecimal(result.f_p_value, 5)} />

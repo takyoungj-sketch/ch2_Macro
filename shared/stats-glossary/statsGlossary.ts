@@ -50,18 +50,14 @@ export const STATS_GLOSSARY: Record<string, StatsGlossaryEntry> = {
     definition: "적합(in-sample) 데이터에서 예측값과 실제값의 상대 오차 평균(%)입니다.",
     interpretation: [
       "값이 작을수록 같은 표본 안에서 예측이 실제에 가깝다는 뜻입니다.",
-      "CH2 복합 회귀 카드 MAPE 옆 뱃지(매우 우수·우수·보통·주의·예측 부적합)는 CV-MAPE 등급표를 참고한 **예측 적합 라벨**입니다.",
+      "모형 추천의 해석 강도 구간은 CV-MAPE에만 붙입니다. 회귀 카드 MAPE는 표본 안 설명 오차입니다.",
     ],
     thresholds: [
-      "<15%: 매우 우수",
-      "<25%: 우수",
-      "<40%: 보통",
-      "<60%: 주의 — 예측 오차가 커 개별 금액 예측에 부적합에 가까움",
-      "≥60%: 예측 부적합",
+      "MAPE는 보조 지표입니다. 해석 강도 구간은 CV-MAPE를 보세요.",
     ],
     limitations: [
       "표본 밖(신규 거래) 일반화 성능과 다를 수 있습니다.",
-      "in-sample MAPE와 CV-MAPE는 다릅니다 — 모형 추천 화면은 CV-MAPE를 우선합니다.",
+      "in-sample MAPE와 CV-MAPE는 다릅니다 — 모형 추천은 CV-MAPE를 우선합니다.",
     ],
   },
   cv_mape: {
@@ -71,8 +67,15 @@ export const STATS_GLOSSARY: Record<string, StatsGlossaryEntry> = {
     definition:
       "표본을 나눠 반복 검증한 뒤 평균낸 MAPE(%)입니다. in-sample MAPE보다 일반화 성능에 가깝습니다. CH2 복합 모형추천·Twin 채택은 이 값을 1차로 봅니다.",
     interpretation: [
-      "모형 추천·비교 화면에서 후보 모형 간 상대 비교에 유용합니다.",
+      "모형 추천에서 후보를 비교하고, 결과를 어느 강도로 읽을지 정하는 지표입니다. 합격/부적합이 아닙니다.",
       "값이 낮을수록 검증 fold에서 오차가 작았다는 뜻입니다.",
+      "개별 물건 가격을 맞히기 위한 AVM 점수가 아닙니다.",
+    ],
+    thresholds: [
+      "30% 미만: 낮음 — 구조적 관계가 비교적 안정적",
+      "30% 이상 ~ 45% 미만: 보통 — 지역 가격구조 분석에 활용 가능",
+      "45% 이상 ~ 60% 미만: 높은 편 — 구조적 관계 중심으로 신중히",
+      "60% 이상: 높음 — 가격 예측보다 탐색적 분석. 버리지 않음",
     ],
     limitations: ["표본이 적으면 fold마다 변동이 커질 수 있습니다."],
   },
@@ -194,16 +197,21 @@ export const STATS_GLOSSARY: Record<string, StatsGlossaryEntry> = {
   prediction_interval: {
     id: "prediction_interval",
     label: "PI",
-    title: "예측구간 (Prediction Interval)",
-    definition: "개별 거래 1건의 예측값이 들어갈 것으로 기대되는 구간입니다. 잔차 변동을 포함합니다.",
-    interpretation: ["CI보다 넓습니다. n이 작거나 잔차 분산이 크면 더 넓어집니다."],
-    limitations: ["적정가 구간이 아닙니다.", "학습 범위 밖 입력은 외삽입니다."],
+    title: "개별 거래 예측범위 (Prediction Interval)",
+    definition:
+      "개별 거래 1건의 변동까지 포함한 통계적 범위입니다. 잔차 변동을 넣기 때문에 평균 추정범위(CI)보다 넓습니다.",
+    interpretation: [
+      "실제 대상물건의 가격이 반드시 이 안에 있다는 뜻이 아닙니다.",
+      "n이 작거나 잔차 분산이 크면 더 넓어집니다.",
+    ],
+    limitations: ["적정가·감정평가 구간이 아닙니다.", "학습 범위 밖 입력은 외삽입니다."],
   },
   confidence_interval: {
     id: "confidence_interval",
     label: "CI",
-    title: "신뢰구간 (Confidence Interval)",
-    definition: "평균 예측값(조건부 기대)의 불확실성 구간입니다. 개별 거래 변동은 포함하지 않습니다.",
+    title: "평균 추정범위 (Confidence Interval)",
+    definition:
+      "같은 조건에서 평균적인 가격수준을 추정한 범위입니다. 개별 거래 변동은 포함하지 않습니다.",
     interpretation: ["PI와 구분하세요 — CI는 평균 추정의 정밀도입니다."],
     limitations: ["개별 물건 가격 범위로 해석하지 마세요."],
   },
@@ -566,13 +574,13 @@ export const STATS_GLOSSARY: Record<string, StatsGlossaryEntry> = {
     interpretation: [
       "시군구는 전국, 읍면동은 권역, 법정리는 같은 시군구 안입니다. 시도·시 단위 Twin은 없습니다.",
       "프로필 카드의 %는 ‘닮은 정도’입니다. 행을 누르면 그 지역 프로필로 이동합니다.",
-      "복합 모형추천 Stage2는 이 후보를 표본 pool로 쓸지 CV-MAPE로 따로 판정합니다. 개선일 때만 채택을 권고합니다.",
+      "복합 모형추천 Twin은 가격이 비슷한 지역이 아닙니다. 거래 구성·토지 이용·체급(지역 구조)으로 후보 순서를 정하고, 거래가격은 붙인 뒤 탐색 CV·확인 CV·계수 안정으로만 봅니다.",
       "토지 앱의 옛 「쌍둥이 도시 찾기」 모달은 없습니다. 발견 UI는 /profile/ 만입니다.",
     ],
     limitations: [
       "유사 ≠ 동일 시장. 자동으로 회귀에 넣지 않습니다.",
-      "일반 가중은 토지·아파트가 큽니다. 상가 우세 지역은 복합 쪽 built_commercial 가중과 다를 수 있습니다.",
-      "이웃을 많이 넣을수록 좋아지지 않습니다.",
+      "구조 순위는 실험 순서일 뿐, 그 지역이 가격모형에 유용하다는 증명이 아닙니다.",
+      "탐색 CV로 고른 숫자를 최종 성능으로 보지 않습니다. 확인 CV(마지막 연도)를 함께 봅니다.",
       "리 Twin 후보에서 리가 없는 법정동(코드가 …00)은 뺍니다. 남은 후보가 없으면 빈 카드로 둡니다.",
     ],
   },

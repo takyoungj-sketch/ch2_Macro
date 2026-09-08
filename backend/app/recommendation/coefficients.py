@@ -12,8 +12,6 @@ def coefficients_from_block_fit(fit: BlockFitResult) -> list[RegressionCoeff]:
         return []
     out: list[RegressionCoeff] = []
     for name in model.params.index:
-        if str(name) == "const":
-            continue
         out.append(
             RegressionCoeff(
                 name=str(name),

@@ -30,10 +30,12 @@ from app.recommendation.ranks import (
     pick_alternate_explanatory,
     pick_primary_predictive,
 )
+from app.recommendation.cv_fitness import offer_structure_twin
 from app.recommendation.satisfaction import (
     built_min_fit_n,
     built_min_local_n,
     lookup_built_satisfaction,
+    lookup_predictive_fit,
 )
 from app.recommendation.scope import resolve_built_analysis_scope
 from app.recommendation.twin_validation import build_twin_validation_verdict
@@ -68,30 +70,36 @@ def _warnings_for_n(n: int) -> list[str]:
 def _warnings_for_cv_mape(value: float | None) -> list[str]:
     if value is None:
         return []
-    if value >= 70:
+    if value >= 75:
         return [
-            f"CV-MAPE {value:.2f}% — 예측 안정성이 매우 낮습니다. 설명용 결과로만 해석하세요."
+            f"CV-MAPE {value:.2f}% — 개별 가격 설명에는 한계가 큽니다. 구조 탐색으로 해석하세요."
         ]
-    if value >= 50:
-        return [f"CV-MAPE {value:.2f}% — 예측 오차가 클 수 있어 주의가 필요합니다."]
+    if value >= 60:
+        return [f"CV-MAPE {value:.2f}% — 예측값보다 계수 방향·상대 영향을 중심으로 보세요."]
     return []
 
 
 def _twin_recommended(
     *,
-    grade_proceed: bool,
+    cv_mape: float | None,
+    mape: float | None,
     selection_n: int,
     scope_n_tx: int,
     fit_n: int,
     has_twins: bool,
+    admin_level: str | None = None,
 ) -> bool:
-    if not has_twins:
-        return False
-    if selection_n < built_min_local_n() or scope_n_tx < built_min_local_n():
-        return True
-    if fit_n < built_min_fit_n():
-        return True
-    return grade_proceed
+    return offer_structure_twin(
+        has_twins=has_twins,
+        cv_mape=cv_mape,
+        mape=mape,
+        selection_n=selection_n,
+        scope_n_tx=scope_n_tx,
+        fit_n=fit_n,
+        min_local_n=built_min_local_n(),
+        min_fit_n=built_min_fit_n(),
+        admin_level=admin_level,
+    )
 
 
 def _apply_region_features(
@@ -209,12 +217,18 @@ def run_recommendation(conn, req: RegressionSelectionRequest) -> RegressionRecom
 
     stage2: RecommendationStage2 | None = None
     has_twins = bool(req.profile_twin_neighbors)
+    pred_fit = lookup_predictive_fit(
+        cv_mape=stage1.satisfaction.cv_mape,
+        asset_slice=analysis_scope.asset_slice,
+    )
     twin_recommended = _twin_recommended(
-        grade_proceed=grade.proceed_twin,
+        cv_mape=stage1.satisfaction.cv_mape,
+        mape=primary.metrics.mape,
         selection_n=stage1.selection_n,
         scope_n_tx=analysis_scope.scope_n_tx,
         fit_n=stage1.fit_n,
         has_twins=has_twins,
+        admin_level=analysis_scope.admin_level,
     )
 
     if req.run_stage2 and twin_recommended and has_twins:
@@ -256,17 +270,22 @@ def run_recommendation(conn, req: RegressionSelectionRequest) -> RegressionRecom
         alternate=alternate,
         truncated=stage1.truncated,
         stage2=stage2,
+        proceed_twin=twin_recommended,
     )
 
     conclusion = build_recommendation_conclusion(
         cv_mape=stage1.satisfaction.cv_mape,
+        mape=primary.metrics.mape,
         grade=grade,
+        predictive_fit=pred_fit,
         scope_n_tx=analysis_scope.scope_n_tx,
         selection_n=stage1.selection_n,
         fit_n=stage1.fit_n,
         has_twins=has_twins,
         twin_recommended=twin_recommended,
         stage2=stage2,
+        excluded_blocks=excluded_blocks,
+        adj_r_squared=primary.metrics.adj_r_squared,
     )
 
     coef_narratives = build_coefficient_narratives(
@@ -283,6 +302,7 @@ def run_recommendation(conn, req: RegressionSelectionRequest) -> RegressionRecom
         exclude_outliers_iqr=bool(req.exclude_outliers_iqr),
         primary_blocks=list(primary.blocks),
         variable_limit=conclusion.variable_limit,
+        twin_ran=bool(stage2 and stage2.ran),
     )
 
     return RegressionRecommendResponse(

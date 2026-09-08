@@ -59,14 +59,16 @@ def build_termination_r2(
     alternate: ModelCandidate | None,
     truncated: bool,
     stage2: RecommendationStage2 | None,
+    proceed_twin: bool | None = None,
 ) -> TerminationInfo:
     reasons: list[str] = []
     action: TerminationAction = "stop"
     next_hint: str | None = None
     stage_reached = 1
 
+    want_twin = grade.proceed_twin if proceed_twin is None else proceed_twin
     reasons.append(
-        f"1단계 Local — 등급 {grade.label_ko}({grade.grade}), selection_n={selection_n}"
+        f"1단계 Local — 해석 강도 {grade.label_ko}({grade.grade}), selection_n={selection_n}"
     )
     cv = primary.metrics.cv_mape
     if cv is not None:
@@ -84,7 +86,7 @@ def build_termination_r2(
         )
 
     if stage2 is None:
-        if grade.proceed_twin:
+        if want_twin:
             action = "proceed_twin"
             next_hint = grade.note or "Profile Twin 2단계 검토를 권장합니다."
             reasons.append("Twin 후보 미전달 또는 2단계 미실행")
@@ -100,7 +102,7 @@ def build_termination_r2(
 
     if not stage2.ran:
         reasons.append(stage2.skipped_reason or "2단계 Twin 미실행")
-        if grade.proceed_twin:
+        if want_twin:
             action = "proceed_twin"
             next_hint = "Twin 후보를 확인하세요."
         return TerminationInfo(
@@ -131,7 +133,7 @@ def build_termination_r2(
 
     if stage2.primary and stage2.decision != "local":
         action = "stop"
-    elif grade.proceed_twin and not stage2.pools:
+    elif want_twin and not stage2.pools:
         action = "proceed_twin"
         next_hint = "gate 통과 Twin pool 없음 — scope 확대 검토"
 

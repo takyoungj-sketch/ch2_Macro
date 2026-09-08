@@ -245,7 +245,7 @@ def test_mape_caution_targeted_answer():
         {"mape": 52.3, "n": 120, "cv_fitness": {"tier": "caution", "label_ko": "주의"}},
     )
     assert ans and "주의" in ans
-    assert "40%" in ans or "60%" in ans
+    assert "45%" in ans or "60%" in ans
     assert "복합부동산 OLS" not in ans
 
 
@@ -269,8 +269,8 @@ def test_chat_mape_caution_not_generic_explain():
     )
     resp = handle_chat(req)
     assert resp.route in ("explain", "ch2", "statistics")
-    assert "주의" in resp.answer
-    assert "40%" in resp.answer or "60%" in resp.answer
+    assert "높은 편" in resp.answer
+    assert "45%" in resp.answer or "60%" in resp.answer
     assert "OLS 회귀" not in resp.answer or "### 답변" in resp.answer
 
 

@@ -416,7 +416,7 @@ def _prepare_regression_scope(
     from sqlalchemy import text
 
     where_all, params_all = _build_where(
-        req, conn=conn, include_subregion=False, include_partial=True
+        req, conn=conn, include_subregion=True, include_partial=True
     )
     partial_tx_count = int(
         conn.execute(
@@ -1590,7 +1590,12 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
         wide_df, req, conn=conn, **scatter_kw
     )
     analysis_scope = built_analysis_scope_from_prepared(
-        req, wide_df=wide_df, addr4_city=addr4_city, partial_tx_count=partial_tx_count
+        req,
+        wide_df=wide_df,
+        addr4_city=addr4_city,
+        partial_tx_count=partial_tx_count,
+        mode=mode,
+        conn=conn,
     )
     from app.built.partial_ownership import format_partial_n_note
 

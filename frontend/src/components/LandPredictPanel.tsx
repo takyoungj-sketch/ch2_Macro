@@ -11,7 +11,13 @@ import type {
   LandRegressionVariables,
 } from "../types";
 import { AnalysisHelpPanel } from "@ch2/analysis-help";
-import { StatsGlossaryHelp } from "@ch2/stats-glossary";
+import {
+  ESTIMATE_COPY,
+  StatisticalEstimateCaption,
+  StatisticalEstimateDisclaimer,
+  StatisticalEstimateRangeRow,
+  StatsGlossaryHelp,
+} from "@ch2/stats-glossary";
 import { LAND_PREDICT_HELP } from "../constants/landStatsExplain";
 import { parseApiError } from "../utils/apiError";
 
@@ -130,10 +136,10 @@ export default function LandPredictPanel({
             <AnalysisHelpPanel explain={LAND_PREDICT_HELP} />
             <StatsGlossaryHelp termId="prediction_interval" size="xs" />
           </p>
-          <h3 className="font-semibold text-sm text-slate-800">다른 변수 고정 · 예측값</h3>
+          <h3 className="font-semibold text-sm text-slate-800">다른 변수 고정 · 통계적 추정</h3>
           <p className="text-xs text-slate-500 mt-1">
-            회귀 적합 모형으로 단가(만원/㎡)를 예측합니다. OLS 기준 95% 예측구간(PI) —
-            n이 작으면 구간이 넓습니다.
+            회귀 적합 모형으로 단가(만원/㎡)를 추정합니다. OLS 기준 95% 추정·예측범위 —
+            n이 작으면 범위가 넓습니다.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5 shrink-0">
@@ -250,28 +256,28 @@ export default function LandPredictPanel({
       {data && (
         <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-2 text-sm">
           <div>
-            <span className="text-slate-500 text-xs">예상 단가</span>
+            <span className="text-slate-500 text-xs">{ESTIMATE_COPY.valueLabel}</span>
             <div className="text-xl font-bold tabular-nums">{fmtNum(data.y_hat, 2)} 만원/㎡</div>
+            <StatisticalEstimateCaption />
           </div>
-          <div className="text-xs space-y-1">
-            <div>
-              <span className="font-medium">95% 평균 신뢰구간</span>{" "}
+          <div className="text-xs space-y-1.5">
+            <StatisticalEstimateRangeRow kind="mean">
               <span className="tabular-nums">
                 {fmtNum(data.ci_lower, 2)} ~ {fmtNum(data.ci_upper, 2)} 만원/㎡
               </span>
-            </div>
-            <div className="text-slate-500">
-              95% 예측구간 (개별 거래){" "}
+            </StatisticalEstimateRangeRow>
+            <StatisticalEstimateRangeRow kind="individual">
               <span className="tabular-nums">
                 {fmtNum(data.pi_lower, 2)} ~ {fmtNum(data.pi_upper, 2)} 만원/㎡
               </span>
-            </div>
+            </StatisticalEstimateRangeRow>
           </div>
           {data.warnings.map((w) => (
             <p key={w} className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1">
               {w}
             </p>
           ))}
+          <StatisticalEstimateDisclaimer />
         </div>
       )}
     </div>

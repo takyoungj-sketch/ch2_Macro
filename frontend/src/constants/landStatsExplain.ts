@@ -457,22 +457,25 @@ export const LAND_REGRESSION_HELP: AnalysisExplain = {
 
 export const LAND_PREDICT_HELP: AnalysisExplain = {
   spec_id: "land.predict.v1",
-  spec_version: "1.0",
+  spec_version: "2.0",
   title: "토지 회귀 예측",
-  summary: "적합된 회귀식으로 입력값을 고정한 **한 점 예측**. PI·CI는 불확실성 참고입니다.",
+  summary:
+    "적합된 회귀식으로 입력값을 고정한 **한 점 통계적 추정**. 평균 추정범위(CI)·개별 거래 예측범위(PI)는 모형의 불확실성 참고입니다.",
   formula: "ŷ = Xβ",
   interpretation: [
-    "PI: 개별 필지 1건 예측 범위.",
-    "CI: 평균 예측 불확실성.",
+    "통계적 추정값: 선택한 거래자료와 회귀모형의 중심값입니다. AVM·감정평가액이 아닙니다.",
+    "95% 평균 추정범위: 이 조건에서 평균적인 가격수준.",
+    "95% 개별 거래 예측범위: 개별 거래 변동까지 포함한 통계적 범위.",
     "학습 범위(min~max) 밖 입력은 외삽입니다.",
   ],
-  limitations: ["적정가·감정 아님", "셀·필터 표본에 종속"],
+  limitations: ["적정가·감정 아님", "셀·필터 표본에 종속", "범위는 가액을 보증하지 않음"],
   interpretation_hints: [],
   presets: [
     {
       id: "pi_ci",
-      question: "PI와 CI 차이는?",
-      answer: "PI는 개별 거래 변동을 포함하고, CI는 평균 예측값의 정밀도만 봅니다.",
+      question: "평균 추정범위와 개별 거래 예측범위 차이는?",
+      answer:
+        "평균 추정범위(CI)는 평균 가격수준의 정밀도만 봅니다. 개별 거래 예측범위(PI)는 개별 거래 변동을 포함합니다. 실제 필지 가액이 반드시 그 안에 있다는 뜻이 아닙니다.",
     },
   ],
   controls: [],

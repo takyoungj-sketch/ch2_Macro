@@ -33,7 +33,7 @@ class SelectionContext:
 def resolve_selection_context(conn, req: RegressionRunRequest) -> SelectionContext:
     wide_df, req, addr4_city, mode, _partial_tx_count = _prepare_regression_scope(conn, req)
     level = _focus_admin_level(req, addr4_city)
-    df = _scope_for_level(wide_df, req, level, addr4_city, mode)
+    df = _scope_for_level(wide_df, req, level, addr4_city, mode, conn=conn)
     label = _label_for_level(req, wide_df, level, addr4_city)
     return SelectionContext(
         df=df,

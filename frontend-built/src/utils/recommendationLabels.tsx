@@ -53,7 +53,7 @@ export function ScopeNLabels({ counts, className = "", compact = false }: ScopeN
           <dd className="font-medium">{counts.selection_n}</dd>
         </div>
       )}
-          {counts.fit_n != null && (
+      {counts.fit_n != null && (
         <div>
           <dt className="text-slate-400">적합</dt>
           <dd className="font-medium">{counts.fit_n}</dd>
@@ -71,7 +71,7 @@ export function ScopeNLabels({ counts, className = "", compact = false }: ScopeN
   );
 }
 
-export type CvFitnessTone = "positive" | "neutral" | "warning" | "negative";
+export type CvFitnessTone = "accent" | "elevated" | "high" | "fail" | "neutral";
 
 export interface CvFitnessTier {
   tier: string;
@@ -81,18 +81,22 @@ export interface CvFitnessTier {
 }
 
 const CV_TONE_CLASS: Record<CvFitnessTone, string> = {
-  positive: "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-800",
-  neutral: "bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600",
-  warning: "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-950 dark:text-orange-200 dark:border-orange-800",
-  negative: "bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-200 dark:border-red-800",
+  accent:
+    "bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600",
+  elevated:
+    "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800",
+  high:
+    "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-950 dark:text-orange-200 dark:border-orange-800",
+  fail: "bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-200 dark:border-red-800",
+  neutral:
+    "bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600",
 };
 
 const CV_TIER_BOUNDS: Array<{ max: number; tier: string; label_ko: string; tone: CvFitnessTone }> = [
-  { max: 15, tier: "excellent", label_ko: "매우 우수", tone: "positive" },
-  { max: 25, tier: "good", label_ko: "우수", tone: "positive" },
-  { max: 40, tier: "fair", label_ko: "보통", tone: "neutral" },
-  { max: 60, tier: "caution", label_ko: "주의", tone: "warning" },
-  { max: 9999, tier: "unsuitable", label_ko: "예측 부적합", tone: "negative" },
+  { max: 30, tier: "low", label_ko: "낮음", tone: "accent" },
+  { max: 45, tier: "moderate", label_ko: "보통", tone: "accent" },
+  { max: 60, tier: "elevated", label_ko: "높은 편", tone: "elevated" },
+  { max: 9999, tier: "high", label_ko: "높음", tone: "high" },
 ];
 
 export function lookupCvFitnessClient(cvMape?: number | null): CvFitnessTier | null {
@@ -102,7 +106,7 @@ export function lookupCvFitnessClient(cvMape?: number | null): CvFitnessTier | n
       return { tier: row.tier, label_ko: row.label_ko, tone: row.tone, max_cv_mape: row.max };
     }
   }
-  return { tier: "unsuitable", label_ko: "예측 부적합", tone: "negative" };
+  return { tier: "high", label_ko: "높음", tone: "high" };
 }
 
 export function CvFitnessBadge({
@@ -120,8 +124,8 @@ export function CvFitnessBadge({
   const label = resolved?.label_ko ?? "—";
   return (
     <span
-      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[11px] font-medium tabular-nums ${CV_TONE_CLASS[tone]} ${className}`}
-      title="CV-MAPE 예측 적합 등급"
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[11px] font-medium tabular-nums ${CV_TONE_CLASS[tone] ?? CV_TONE_CLASS.neutral} ${className}`}
+      title="CV-MAPE 해석 강도 (합격/부적합이 아님)"
     >
       {cvMape != null && <span>{cvMape.toFixed(1)}%</span>}
       <span>{label}</span>

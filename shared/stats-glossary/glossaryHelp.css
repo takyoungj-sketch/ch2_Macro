@@ -91,12 +91,12 @@ html.dark .ch2-glossary-font-btn:hover:not(:disabled) {
   background: rgb(51 65 85);
 }
 
-/* 크기(width/height)는 인라인 박스로 조절. ± 는 본문 글자만 변경 */
+/* 크기(width/height)는 인라인 박스로 조절. ± 는 본문 글자만 변경. overflow는 본문만. */
 .ch2-glossary-popup {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
   font-size: 13px;
 }
 

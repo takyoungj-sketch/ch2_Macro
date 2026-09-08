@@ -27,6 +27,12 @@ import {
   shouldHidePrediction,
 } from "../utils/extrapolationPolicy";
 import { ADMIN_LABELS, ASSET_TYPE_LABELS, formatCoefName } from "../utils/regressionFormat";
+import {
+  ESTIMATE_COPY,
+  StatisticalEstimateCaption,
+  StatisticalEstimateDisclaimer,
+  StatisticalEstimateRangeRow,
+} from "@ch2/stats-glossary";
 import type {
   AssetType,
   PredictOptions,
@@ -284,7 +290,7 @@ export default function PredictPanel({
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">예측</p>
           )}
           <h2 className={clsx("font-semibold", embedded ? "text-xs" : "text-sm")}>
-            {embedded ? "예측값" : "다른 변수 고정 · 예측값"}
+            {embedded ? "Macro 모형 적용 예시" : "다른 변수 고정 · 통계적 추정"}
           </h2>
           {modelHint && <p className="text-[11px] text-slate-500 mt-0.5">{modelHint}</p>}
           {embedded && (fitN != null || scopeNTx != null) && (
@@ -302,7 +308,7 @@ export default function PredictPanel({
           {!embedded && (
             <p className="text-xs text-slate-500 mt-1">
               탐색(통제 전) → 분석(통제 후) → <strong className="text-slate-600">예측</strong> 순으로
-              해석하세요. OLS 기준 95% 예측구간(PI) — n이 작으면 구간이 넓습니다.
+              해석하세요. OLS 기준 95% 추정·예측범위 — n이 작으면 범위가 넓습니다.
             </p>
           )}
         </div>
@@ -315,7 +321,7 @@ export default function PredictPanel({
             onClick={runPredict}
             disabled={predictM.isPending}
           >
-            {predictM.isPending ? "계산 중…" : "예측"}
+            {predictM.isPending ? "계산 중…" : embedded ? "예시 계산" : "예측"}
           </button>
         </div>
       </div>
@@ -502,7 +508,7 @@ export default function PredictPanel({
             </span>
           )}
           <div>
-            <span className="text-slate-500 text-xs">예상 금액</span>
+            <span className="text-slate-500 text-xs">{ESTIMATE_COPY.valueLabel}</span>
             {hidden ? (
               <div className={clsx("font-medium text-slate-600 dark:text-slate-300", embedded ? "text-sm" : "text-base")}>
                 semi-log 극단 외삽 — 숫자 표시 생략
@@ -512,21 +518,22 @@ export default function PredictPanel({
                 </p>
               </div>
             ) : (
-              <div className={clsx("font-bold", embedded ? "text-lg" : "text-xl")}>
-                {fmtNum(Math.round(predictM.data.y_hat))}만원
-              </div>
+              <>
+                <div className={clsx("font-bold", embedded ? "text-lg" : "text-xl")}>
+                  {fmtNum(Math.round(predictM.data.y_hat))}만원
+                </div>
+                <StatisticalEstimateCaption compact={embedded} />
+              </>
             )}
           </div>
           {!hidden && (
-            <div className="text-xs space-y-1">
-              <div>
-                <span className="font-medium">95% 평균 신뢰구간</span>{" "}
+            <div className="text-xs space-y-1.5">
+              <StatisticalEstimateRangeRow kind="mean" compact={embedded}>
                 {fmtNum(Math.round(predictM.data.ci_lower))} ~ {fmtNum(Math.round(predictM.data.ci_upper))}만원
-              </div>
-              <div className="text-slate-500">
-                95% 예측구간 (개별 거래) {fmtNum(Math.round(predictM.data.pi_lower))} ~{" "}
-                {fmtNum(Math.round(predictM.data.pi_upper))}만원
-              </div>
+              </StatisticalEstimateRangeRow>
+              <StatisticalEstimateRangeRow kind="individual" compact={embedded}>
+                {fmtNum(Math.round(predictM.data.pi_lower))} ~ {fmtNum(Math.round(predictM.data.pi_upper))}만원
+              </StatisticalEstimateRangeRow>
             </div>
           )}
           {extrapGuidance.length > 0 && (
@@ -549,6 +556,7 @@ export default function PredictPanel({
               {w}
             </p>
           ))}
+          {!hidden && <StatisticalEstimateDisclaimer compact={embedded} />}
         </div>
         );
       })()}

@@ -5,12 +5,9 @@ CH2 Macro 철학("후보는 제안하고 Validation이 선택한다")을 API에�
 적용한 뒤, 통과한 Twin들로 pool 조합(상위 1개 / 상위 3개 / 전체)을 만들어
 Local과 **동일 변수블록**으로 함께 적합·비교한다.
 
-Hard gate (CANDIDATE_EVALUATION_DESIGN §3.3):
-- 가격수준: anchor 대비 ㎡당 가격 median ratio ∈ [0.5, 2.0] — Twin 유사도(v21)는
-  상가 가격 수준을 반영하지 않으므로 별도 검증한다. 표본 부족으로 계산 불가한
-  경우는 실패가 아니라 "생략"으로 처리한다.
-- 인접성: anchor와 같은 시도이거나 인접 시도(`candidates/adjacency.py`) — Twin
-  candidate scope에서 이미 적용되는 규칙의 재검증(이상치 방어).
+Hard gate (D-066):
+- 인접성: anchor와 같은 시도이거나 인접 시도 — 우주 제한.
+- 거래가격·㎡당 중위는 선정 문이 아님. 붙인 뒤 탐색/확인 CV와 계수 안정으로 검증.
 
 V1.5(단일 pool, hard gate 없음)의 후속이며, `PoolingEvaluation.candidates`가
 Local 포함 N개 후보를 모두 담는다는 점이 이전 버전과의 주요 차이다.
@@ -32,7 +29,7 @@ from app.built.regression.region_features import (
 from app.recommendation.built_pool import filter_pool_by_coverage
 from app.built.regression.selection.blocks import BlockId, spec_from_blocks
 from app.built.regression.selection.context import SelectionContext, with_complete_case
-from app.built.regression.selection.fit import BlockFitResult, fit_best_scale, fit_block_subset
+from app.built.regression.selection.fit import BlockFitResult, fit_best_scale, fit_block_subset, rolling_time_cv_split
 from app.built.regression.selection.best_subset import run_group_best_subset
 from app.built.schemas import (
     DecisionConfidence,
@@ -42,10 +39,10 @@ from app.built.schemas import (
     ResponseScale,
     TwinGateResult,
 )
+from app.recommendation.twin_structure import key_coefficients_from_fit
 
 PRICE_RATIO_MIN = 0.5
 PRICE_RATIO_MAX = 2.0
-_POOL_SIZES = (1, 3)  # + 전체(len(codes))는 항상 포함
 PoolingMode = Literal["diagnose", "optimize"]
 
 
@@ -108,13 +105,15 @@ def _apply_hard_gates(
             price_gate = PRICE_RATIO_MIN <= price_ratio <= PRICE_RATIO_MAX
             if not price_gate:
                 reasons.append(
-                    f"가격수준 gate 실패 — anchor 대비 ratio {price_ratio:.2f}"
-                    f"(허용 {PRICE_RATIO_MIN}~{PRICE_RATIO_MAX})"
+                    f"㎡당 중위 비율 {price_ratio:.2f} (참고, 선정 제외 아님)"
                 )
         else:
             reasons.append("가격수준 표본 부족으로 gate 생략")
 
-        accepted = adjacency_ok and price_gate is not False
+        # 거래가격·㎡당 중위는 후보 선정 문이 아니다 (D-066). 인접만 하드 컷.
+        if price_ratio is not None:
+            reasons.append("가격 비율은 참고만 — 선정 기준으로 쓰지 않음")
+        accepted = adjacency_ok
         gates.append(
             TwinGateResult(
                 region_code=code,
@@ -164,18 +163,17 @@ def filter_twins_by_hard_gates(
     return gates, passed
 
 
-def _pool_variants(gate_passed_codes: list[str]) -> list[tuple[str, str, tuple[str, ...]]]:
-    """gate 통과 Twin(순위순) 목록에서 pool 조합을 만든다 — 크기 중복은 생략."""
-    total = len(gate_passed_codes)
-    out: list[tuple[str, str, tuple[str, ...]]] = []
-    seen_sizes: set[int] = set()
-    for size in (*_POOL_SIZES, total):
-        n = min(size, total)
-        if n <= 0 or n in seen_sizes:
-            continue
-        seen_sizes.add(n)
-        label = "Twin Pooling (전체)" if n == total else f"Twin Pooling (상위 {n}개)"
-        out.append((f"twin_pool_n{n}", label, tuple(gate_passed_codes[:n])))
+def _pool_variants(gate_passed_codes: list[str]) -> list[tuple[str, str, tuple[str, ...], int]]:
+    """구조 순위 접두만 실험 — 1위, 1·2위, … (조합 검색 없음)."""
+    out: list[tuple[str, str, tuple[str, ...], int]] = []
+    for k in range(1, len(gate_passed_codes) + 1):
+        codes = tuple(gate_passed_codes[:k])
+        if k == 1:
+            label = "Local + Twin 1위"
+        else:
+            nums = "·".join(str(i) for i in range(1, k + 1))
+            label = f"Local + Twin {nums}위"
+        out.append((f"twin_prefix_k{k}", label, codes, k))
     return out
 
 
@@ -186,6 +184,7 @@ def _metrics_from_fit(
     region_codes: tuple[str, ...],
     *,
     blocks: list[BlockId] | list[str] | None = None,
+    prefix_k: int = 0,
 ) -> PoolingCandidateMetrics:
     block_list = list(blocks) if blocks is not None else []
     return PoolingCandidateMetrics(
@@ -197,12 +196,41 @@ def _metrics_from_fit(
         mape=fit.mape,
         cv_mape=fit.cv_mape,
         cv_folds=fit.cv_folds,
+        confirm_cv_mape=fit.confirm_cv_mape,
+        confirm_cv_folds=fit.confirm_cv_folds,
         aic=fit.aic,
         bic=fit.bic,
         joint_f_tests=fit.joint_f_tests,
         blocks=block_list,
         response_scale=fit.response_scale,
+        prefix_k=prefix_k,
+        key_coefficients=key_coefficients_from_fit(fit),
     )
+
+
+def _attach_search_confirm_cv(
+    metrics: PoolingCandidateMetrics,
+    df,
+    *,
+    unified: bool,
+    region_col: str | None,
+) -> PoolingCandidateMetrics:
+    if not metrics.blocks or metrics.response_scale is None:
+        return metrics
+    spec = spec_from_blocks(metrics.blocks)
+    search, s_folds, confirm, c_folds, _skip = rolling_time_cv_split(
+        df,
+        spec,
+        unified=unified,
+        response_scale=metrics.response_scale,
+        region_col=region_col,
+    )
+    if search is not None:
+        metrics.cv_mape = search
+        metrics.cv_folds = s_folds
+    metrics.confirm_cv_mape = confirm
+    metrics.confirm_cv_folds = c_folds
+    return metrics
 
 
 def _fit_pool_variant(
@@ -294,6 +322,7 @@ def _research_pool_variant(
     twin_codes: tuple[str, ...],
     admin_level: str,
     region_col: str | None,
+    prefix_k: int = 0,
 ) -> PoolingCandidateMetrics | None:
     """확장 표본 위에서 stage1과 동일 SSOT 풀로 best-subset 재탐색."""
     pool_codes = tuple(dict.fromkeys((*anchor_region_codes, *twin_codes)))
@@ -358,12 +387,19 @@ def _research_pool_variant(
     primary = pick_primary_predictive(result.by_cv_mape, result.by_mape, result.by_aic)
     if primary is None:
         return None
-    return _metrics_from_fit(
+    metrics = _metrics_from_fit(
         variant_id,
         label,
         primary.fit,
         pool_codes,
         blocks=list(primary.blocks),
+        prefix_k=prefix_k,
+    )
+    return _attach_search_confirm_cv(
+        metrics,
+        pooled_ctx.df,
+        unified=local_ctx.unified,
+        region_col=region_col,
     )
 
 
@@ -445,7 +481,15 @@ def evaluate_pooling_candidates(
         local_fit,
         anchor_region_codes,
         blocks=local_block_list,
+        prefix_k=0,
     )
+    if mode == "optimize":
+        local_metrics = _attach_search_confirm_cv(
+            local_metrics,
+            local_ctx.df,
+            unified=local_ctx.unified,
+            region_col=region_col,
+        )
 
     gates, gate_passed_codes = filter_twins_by_hard_gates(
         conn,
@@ -466,12 +510,12 @@ def evaluate_pooling_candidates(
         return PoolingEvaluation(
             candidates=[local_metrics],
             decision="local",
-            decision_reason="Twin 후보가 모두 가격수준·인접성 gate에서 제외되어 Local만 사용합니다.",
+            decision_reason="Twin 후보가 인접 시도 문에서 모두 제외되어 Local만 사용합니다.",
             twin_gates=gates,
         )
 
     all_candidates = [local_metrics]
-    for variant_id, label, codes in _pool_variants(gate_passed_codes):
+    for variant_id, label, codes, prefix_k in _pool_variants(gate_passed_codes):
         if mode == "optimize":
             metrics = _research_pool_variant(
                 conn,
@@ -484,6 +528,7 @@ def evaluate_pooling_candidates(
                 twin_codes=codes,
                 admin_level=admin_level,
                 region_col=region_col,
+                prefix_k=prefix_k,
             )
         else:
             metrics = _fit_pool_variant(

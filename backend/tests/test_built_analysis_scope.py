@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import pandas as pd
+
 from app.built.schemas import RegressionRunRequest, RegressionVariableSpec
 from app.recommendation.models import AnalysisRegionUnitHint
 from app.recommendation.scope import (
     _region_units_from_hints,
+    built_analysis_scope_from_prepared,
     resolve_anchor_unit,
     scope_from_built_request,
 )
@@ -101,3 +104,46 @@ def test_scope_from_built_request_carries_filters_and_codes():
     assert scope.anchor_unit.name == "봉명동"
     assert scope.sample_filters.zone_types == ["일반상업"]
     assert scope.region_codes == ["4311210100", "4311210200"]
+
+
+def test_scope_n_tx_uses_focus_leaf_not_wide_parent():
+    """선택 읍·면·동 거래 n — 상위 시군구 wide 건수가 아님."""
+    req = RegressionRunRequest(
+        asset_type="commercial",
+        addr1="충청북도",
+        addr2="충주시",
+        region_addrs=["충청북도|충주시|교현동", "충청북도|충주시|연수동"],
+        region_code_level="eupmyeondong",
+    )
+    wide = pd.DataFrame(
+        {
+            "addr1": ["충청북도"] * 10,
+            "addr2": ["충주시"] * 10,
+            "addr3": ["교현동"] * 3 + ["연수동"] * 4 + ["성서동"] * 3,
+            "addr4": [""] * 10,
+            "addr5": [""] * 10,
+        }
+    )
+    scope = built_analysis_scope_from_prepared(req, wide_df=wide, addr4_city=False)
+    assert len(wide) == 10
+    assert scope.scope_n_tx == 7
+    assert scope.admin_level == "eupmyeondong"
+
+
+def test_scope_n_tx_uses_addr3_list_when_no_region_units():
+    req = RegressionRunRequest(
+        asset_type="commercial",
+        addr1="충청북도",
+        addr2="충주시",
+        addr3_list=["교현동", "연수동"],
+    )
+    wide = pd.DataFrame(
+        {
+            "addr1": ["충청북도"] * 8,
+            "addr2": ["충주시"] * 8,
+            "addr3": ["교현동"] * 2 + ["연수동"] * 3 + ["성서동"] * 3,
+            "addr4": [""] * 8,
+        }
+    )
+    scope = built_analysis_scope_from_prepared(req, wide_df=wide, addr4_city=False)
+    assert scope.scope_n_tx == 5
