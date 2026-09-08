@@ -72,6 +72,8 @@
 | D-067 | 2026-09-08 | **복합 모형추천 CV-MAPE = 해석 강도.** 적합/부적합 없음. Twin은 오차 불합격의 구원이 아님. 구간 표는 **D-068**이 대체. 카드: [`lab/decisions/D-067.json`](lab/decisions/D-067.json). |
 | D-068 | 2026-09-08 | **읽는 강도 4축 + Macro 해석.** CV-MAPE는 1위 선정이자 해석 축(낮음/보통/높은 편/높음). Adj R²·안정성·표본과 같이 읽고, 숨은 점수 없이 종합(분석 한계/활용 가능/안정적/신중 활용/탐색적 활용). 빨강은 분석 한계만. 카드: [`lab/decisions/D-068.json`](lab/decisions/D-068.json). |
 | D-069 | 2026-09-08 | **예측 결과 = 통계적 추정값.** 예상 금액·95% 신뢰/예측구간 라벨을 추정값·평균 추정범위·개별 거래 예측범위로. AVM 선언은 결과 카드 한 번. 복합·토지·집합 동일. 카드: [`lab/decisions/D-069.json`](lab/decisions/D-069.json). |
+| D-070 | 2026-09-08 | **복합 모형추천 척도 = 같은 표본의 linear/log/log-log.** 예측형은 원척도 CV-MAPE, 설명형 AIC는 log(금액) 식끼리만. log-log는 면적 블록이 있을 때만(면적만 log). Twin은 1단계 척도 고정. 카드: [`lab/decisions/D-070.json`](lab/decisions/D-070.json). |
+| D-071 | 2026-09-08 | **복합 Macro 탐색 UI = 4단계 스토리.** ① CV-MAPE TOP 5 → ② #1 회귀실험 → ③ Twin 구조 유지 → ④ 기본 통계·Macro·Twin 비교. 설명형 병렬 탭 없음. 「최적」금지. 카드: [`lab/decisions/D-071.json`](lab/decisions/D-071.json). |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 
@@ -207,7 +209,7 @@
 ## D-032 기본 통계 / 모형 추천 변수 분리
 
 - **기본 통계** (`POST /built/regression/run`): 사용자가 체크한 변수·선택한 linear/log/log-log.
-- **모형 추천** (`POST /built/regression/recommend`): 서버 SSOT 블록 풀에서 탐색; 사용자 체크 **무관**.
+- **모형 추천** (`POST /built/regression/recommend`): 서버 SSOT 블록 풀에서 탐색; 사용자 체크 **무관**. 척도는 **D-070**.
 - UI: 사이드바 「모형 추천은 아래 체크와 무관」안내.
 
 ## D-033 analysis_scope SSOT

@@ -633,6 +633,7 @@ export interface ModelMetrics {
 export interface ModelComparison {
   log?: ModelMetrics | null;
   linear?: ModelMetrics | null;
+  loglog?: ModelMetrics | null;
   recommended: ResponseScale;
   metric_basis: "cv" | "insample";
   confidence_stars: number;

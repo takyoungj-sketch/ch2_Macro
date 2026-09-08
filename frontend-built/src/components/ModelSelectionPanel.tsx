@@ -7,6 +7,7 @@ import { CandidateValidationList } from "./CandidateValidationList";
 import { ModelComparisonCard } from "./ModelComparisonCard";
 import { PoolingEvaluationCard } from "./PoolingEvaluationCard";
 import { BUILT_MODEL_SELECTION_SUGGEST_HELP } from "../utils/builtAnalysisHelp";
+import { formatResponseScale } from "../utils/recommendationLabels";
 
 const BLOCK_LABELS: Record<string, string> = {
   gross_area: "연면적",
@@ -57,7 +58,7 @@ export function ModelSelectionPanel({
         <div>
           <h3 className="font-semibold text-emerald-900 dark:text-emerald-100">추천 모형 (Group Forward)</h3>
           <p className="text-slate-600 dark:text-slate-400 mt-0.5">
-            scope: {data.scope_label ?? "—"} · n={data.n} · scale={data.response_scale}
+            scope: {data.scope_label ?? "—"} · n={data.n} · scale={formatResponseScale(data.response_scale)}
           </p>
         </div>
         <div className="flex items-center gap-1 shrink-0">

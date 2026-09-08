@@ -158,9 +158,11 @@ def interpret_built_model_selection(
             rec = cmp.get("recommended")
         scale = diagnostics.get("response_scale") or rec or "?"
         answer = (
-            f"동일 블록 집합에 **linear(금액)** vs **log(금액) semi-log** 를 표본 내 MAPE 등으로 비교합니다. "
+            f"동일 블록 집합에 **선형(금액)** · **log(금액) semi-log** · **log-log(면적만 log)** 를 "
+            f"같은 표본의 원척도 CV-MAPE로 비교합니다. "
             f"현재 선택/권장 scale: **{scale}**. "
-            "금액 분포가 오른쪽 꼬리면 log가 잔차를 안정화할 **수 있으나** 해석은 β·단위에 주의하세요."
+            "금액 분포가 오른쪽 꼬리면 log 계열이 잔차를 안정화할 **수 있으나** 해석은 β·단위에 주의하세요. "
+            "설명형 AIC는 log(금액) 식끼리만 비교합니다."
         )
         return NarrativeResult(
             answer=answer,
@@ -212,7 +214,7 @@ def suggested_model_selection_followups(mode: str) -> list[str]:
     base = [
         "왜 이 변수 블록이 제외됐나요?",
         "AIC와 BIC 차이는?",
-        "linear vs log는 어떻게 고르나요?",
+        "linear vs log vs log-log는 어떻게 고르나요?",
     ]
     if mode == "suggest":
         base.insert(0, "Forward가 멈춘 이유는?")

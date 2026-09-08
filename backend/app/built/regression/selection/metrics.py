@@ -1,14 +1,17 @@
-"""적합 지표 — AIC/BIC/MAPE · linear/log 비교."""
+"""적합 지표 — AIC/BIC/MAPE · linear/log/log-log 원척도 비교."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 
-from app.built.regression.engine import _duan_smearing, _insample_mape_pct, _uses_log_y
+from app.built.regression.engine import _duan_smearing, _uses_log_y
 from app.built.schemas import ModelComparison, ModelMetrics, ResponseScale
+
+if TYPE_CHECKING:
+    from app.built.regression.selection.fit import BlockFitResult
 
 CV_MIN_N = 25
 
@@ -99,6 +102,59 @@ def build_model_comparison(y_price: pd.Series, x_const: pd.DataFrame) -> ModelCo
         linear=metrics.get("linear"),
         recommended=recommended,
         metric_basis="insample",
+        confidence_stars=stars,
+        confidence_label=label,
+    )
+
+
+def _metrics_from_fit(fit: BlockFitResult) -> ModelMetrics:
+    pred = _insample_price_pred(fit.model, fit.x_const, fit.response_scale)
+    k_params = max(int(fit.n_params) - 1, 0)
+    adj, mape, rmse = _orig_scale_metrics(np.asarray(fit.y_price, dtype=float), pred, k_params)
+    return ModelMetrics(
+        model_type=fit.response_scale,
+        adj_r_squared=adj,
+        mape=mape,
+        rmse=rmse,
+        cv_mape=fit.cv_mape,
+        cv_folds=fit.cv_folds,
+        cv_method="rolling_time" if fit.cv_mape is not None else None,
+    )
+
+
+def build_model_comparison_from_fits(
+    fits: dict[str, BlockFitResult],
+    *,
+    recommended: ResponseScale | None = None,
+) -> ModelComparison | None:
+    """실제 적합 결과로 원척도 비교. log-log는 X가 달라 동일 x_const 재적합을 쓰지 않는다."""
+    if not fits:
+        return None
+    metrics = {scale: _metrics_from_fit(fit) for scale, fit in fits.items()}
+
+    def _cv_of(mt: str) -> float:
+        m = metrics.get(mt)
+        if m is not None and m.cv_mape is not None:
+            return m.cv_mape
+        if m is not None and m.mape is not None:
+            return m.mape
+        return float("inf")
+
+    rec: str
+    if recommended in metrics:
+        rec = recommended
+    else:
+        rec = min(metrics, key=_cv_of)
+    n = int(next(iter(fits.values())).n)
+    rec_metrics = metrics[rec]
+    stars, label = _confidence_rating(rec_metrics.mape, n)
+    basis = "cv" if rec_metrics.cv_mape is not None else "insample"
+    return ModelComparison(
+        log=metrics.get("log"),
+        linear=metrics.get("linear"),
+        loglog=metrics.get("loglog"),
+        recommended=rec,  # type: ignore[arg-type]
+        metric_basis=basis,
         confidence_stars=stars,
         confidence_label=label,
     )

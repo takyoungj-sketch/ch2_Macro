@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
-import clsx from "clsx";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, type UseMutationResult } from "@tanstack/react-query";
 import type {
   AssetType,
-  RegressionLevelResult,
   RegressionRecommendResponse,
   RegressionRunRequest,
   RegressionRunResponse,
@@ -13,17 +11,14 @@ import type {
 } from "../types";
 import { fetchProfileTwinNeighbors, runRegression, twinProfileForBuiltAsset } from "../api/client";
 import { buildBuiltRecommendContext } from "../api/aiClient";
-import { fmtDecimal, fmtNum } from "../utils/regressionFormat";
 import { BUILT_RECOMMEND_HELP } from "../utils/builtAnalysisHelp";
 import type { ProfileLinkTarget } from "../utils/profileLink";
-import { resolveTwinAnchorFromRequest } from "../utils/profileLink";
+import { mapProfileTwinNeighbors, resolveTwinAnchorFromRequest } from "../utils/profileLink";
 import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import DraggableModalShell from "./DraggableModalShell";
 import RecommendStagePanel from "./RecommendStagePanel";
 import PredictPanel from "./PredictPanel";
-
-type MacroTab = "predictive" | "explanatory";
 
 type PredictTarget = {
   vars: RegressionVariableSpec;
@@ -53,9 +48,9 @@ export default function RecommendationModal({
   regionLabel,
   profileTarget,
 }: Props) {
-  const [tab, setTab] = useState<MacroTab>("predictive");
   const [predictTarget, setPredictTarget] = useState<PredictTarget | null>(null);
   const [runStage2, setRunStage2] = useState(false);
+  const launchedTwin = useRef(false);
 
   const predictFitM = useMutation({
     mutationFn: (body: RegressionRunRequest) => runRegression(body),
@@ -86,6 +81,20 @@ export default function RecommendationModal({
     staleTime: 5 * 60 * 1000,
   });
 
+  const twinNeighbors = useMemo(
+    () => mapProfileTwinNeighbors(twinQ.data?.neighbors),
+    [twinQ.data],
+  );
+  const twinEnabled = Boolean(twinLevel && twinAnchor?.code);
+  const twinWaiting = twinEnabled && twinQ.isPending && !twinQ.data;
+  const twinCandidateStatus: "loading" | "ready" | "none" = !twinEnabled
+    ? "none"
+    : twinWaiting
+      ? "loading"
+      : twinNeighbors.length > 0
+        ? "ready"
+        : "none";
+
   const regionNameByCode = useMemo(() => {
     const map: Record<string, string> = {};
     for (const n of twinQ.data?.neighbors ?? []) {
@@ -102,29 +111,23 @@ export default function RecommendationModal({
       ...regBody,
       run_stage2: runStage2,
     };
-    if (!twin || !twin.neighbors.length) return base;
+    if (!twin || !twinNeighbors.length) return base;
     return {
       ...base,
       profile_version: twin.profile_version,
-      profile_as_of_month: twin.as_of_month,
+      profile_as_of_month: twin.as_of_month ?? undefined,
       profile_window_years: twin.window_years,
-      profile_twin_neighbors: twin.neighbors
-        .map((n) => ({
-          region_code: (n.twin_beopjungri_code || n.twin_eupmyeondong_code || "").trim(),
-          similarity_score: n.similarity_score,
-          detail_scores: n.detail_scores ?? null,
-        }))
-        .filter((n) => n.region_code),
+      profile_twin_neighbors: twinNeighbors,
     };
-  }, [regBody, twinQ.data, runStage2]);
+  }, [regBody, twinQ.data, twinNeighbors, runStage2]);
 
   useEffect(() => {
     if (!open) {
       setRunStage2(false);
+      launchedTwin.current = false;
       setPredictTarget(null);
       return;
     }
-    setTab("predictive");
     setPredictTarget(null);
     predictFitM.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 창을 열 때만 미리보기·탭 초기화
@@ -132,19 +135,27 @@ export default function RecommendationModal({
 
   useEffect(() => {
     if (!open || runStage2) return;
-    const twinEnabled = Boolean(twinLevel && twinAnchor?.code);
-    const twinSettled = !twinEnabled || twinQ.isFetched || twinQ.isError;
-    if (!twinSettled) return;
+    if (twinWaiting) return;
     if (recommendM.data || recommendM.isPending || recommendM.isError) return;
     recommendM.mutate({ ...enrichedRegBody, run_stage2: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Twin 이웃이 잡힌 뒤 첫 탐색
-  }, [open, twinQ.isFetched, twinQ.isError]);
+  }, [open, runStage2, twinWaiting, twinNeighbors.length]);
 
   useEffect(() => {
-    if (!open || !runStage2) return;
-    recommendM.mutate(enrichedRegBody);
+    if (!open || !runStage2) {
+      launchedTwin.current = false;
+      return;
+    }
+    if (twinWaiting) return;
+    if (!twinNeighbors.length) {
+      setRunStage2(false);
+      return;
+    }
+    if (launchedTwin.current) return;
+    launchedTwin.current = true;
+    recommendM.mutate({ ...enrichedRegBody, run_stage2: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Twin opt-in 후 재요청
-  }, [open, runStage2, enrichedRegBody]);
+  }, [open, runStage2, twinWaiting, twinNeighbors]);
 
   useEffect(() => {
     if (!open || !predictTarget) return;
@@ -179,29 +190,6 @@ export default function RecommendationModal({
     recommendM.mutate({ ...enrichedRegBody, run_stage2: false });
   };
 
-  useEffect(() => {
-    if (!open || !recommendM.data || tab !== "predictive") return;
-    const c = recommendM.data.stage1.primary;
-    const label = "최적 후보 (예측형)";
-    setPredictTarget((prev) => {
-      if (
-        prev &&
-        prev.label === label &&
-        prev.scale === c.response_scale &&
-        prev.fitN === recommendM.data.stage1.fit_n &&
-        prev.vars === c.variables
-      ) {
-        return prev;
-      }
-      return {
-        vars: c.variables,
-        scale: c.response_scale,
-        label,
-        fitN: recommendM.data.stage1.fit_n,
-      };
-    });
-  }, [open, recommendM.data, tab]);
-
   const resolveFitN = (label: string) => {
     const data = recommendM.data;
     if (!data) return undefined;
@@ -223,7 +211,7 @@ export default function RecommendationModal({
       onClose={onClose}
       titleId="recommendation-modal-title"
       title="Macro 모형 탐색"
-      subtitle="한 번 탐색하면 예측형·설명형이 함께 나옵니다. 이 창에서만 확인하며 기본 통계 식은 바꾸지 않습니다."
+      subtitle="탐색 → 결과 → Twin → 비교. 이 창에서만 확인하며 기본 통계 식은 바꾸지 않습니다."
       maxWidthClass="max-w-4xl"
       resizable
       allowFullscreen
@@ -231,32 +219,6 @@ export default function RecommendationModal({
       defaultHeight={Math.min(780, typeof window !== "undefined" ? window.innerHeight - 48 : 780)}
       minWidth={520}
       minHeight={360}
-      headerExtra={
-        explored ? (
-          <div className="flex gap-1">
-            {(
-              [
-                ["predictive", "예측형 (CV-MAPE)"],
-                ["explanatory", "설명형 (AIC)"],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                className={clsx(
-                  "px-2 py-0.5 text-[11px] rounded border",
-                  tab === key
-                    ? "bg-slate-800 text-white border-slate-800 dark:bg-slate-100 dark:text-slate-900"
-                    : "border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300",
-                )}
-                onClick={() => setTab(key)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        ) : null
-      }
       headerActions={
         <div className="flex items-center gap-1.5">
           <AnalysisHelpPanel explain={BUILT_RECOMMEND_HELP} />
@@ -288,142 +250,58 @@ export default function RecommendationModal({
         )}
 
         {recommendM.data && (
-          <>
-            <MacroVsMineCompare mine={regData.primary} recommend={recommendM.data} />
-            <RecommendStagePanel
-              data={recommendM.data}
-              mode={tab}
-              assetType={assetType}
-              onPredict={
-                tab === "predictive"
-                  ? (vars, scale, label) =>
-                      setPredictTarget({
-                        vars,
-                        scale,
-                        label,
-                        fitN: resolveFitN(label),
-                      })
-                  : undefined
-              }
-              predictActiveLabel={predictTarget?.label ?? null}
-              regionNameByCode={regionNameByCode}
-              onRunTwin={tab === "predictive" ? () => setRunStage2(true) : undefined}
-              twinRunning={recommendM.isPending && runStage2}
-              predictPanel={
-                tab === "predictive" ? (
-                  <div className="border-t border-slate-200 dark:border-slate-700 pt-3 space-y-2">
-                    <h3 className="font-semibold text-sm">이 창의 모형 적용 예시</h3>
-                    {predictFitM.isPending && (
-                      <p className="text-xs text-slate-400 text-center py-2">예측용 모형 적합 중…</p>
-                    )}
-                    {predictFitM.isError && (
-                      <p className="text-sm text-red-600">
-                        {(predictFitM.error as Error).message ?? "예측용 모형 적합 실패"}
-                      </p>
-                    )}
-                    {predictFitM.data && predictRegBody && predictTarget && (
-                      <PredictPanel
-                        embedded
-                        regData={predictFitM.data as RegressionRunResponse}
-                        regBody={predictRegBody}
-                        vars={predictTarget.vars}
-                        assetType={assetType}
-                        regionLabel={regionLabel}
-                        modelHint={`${predictTarget.label} · ${predictTarget.scale}`}
-                        fitN={predictTarget.fitN ?? recommendM.data.stage1.fit_n}
-                        scopeNTx={recommendM.data.analysis_scope.scope_n_tx}
-                      />
-                    )}
-                  </div>
-                ) : undefined
-              }
-            />
-          </>
+          <RecommendStagePanel
+            data={recommendM.data}
+            assetType={assetType}
+            minePrimary={regData.primary}
+            mineScale={regBody.response_scale}
+            onPredict={(vars, scale, label) =>
+              setPredictTarget({
+                vars,
+                scale,
+                label,
+                fitN: resolveFitN(label),
+              })
+            }
+            predictActiveLabel={predictTarget?.label ?? null}
+            regionNameByCode={regionNameByCode}
+            onRunTwin={twinCandidateStatus === "ready" ? () => setRunStage2(true) : undefined}
+            twinRunning={Boolean(runStage2 && (recommendM.isPending || twinWaiting))}
+            twinCandidateStatus={twinCandidateStatus}
+            predictPanel={
+              <div className="mt-2 space-y-2">
+                {predictFitM.isPending && (
+                  <p className="text-xs text-slate-400 text-center py-2">추정용 모형 적합 중…</p>
+                )}
+                {predictFitM.isError && (
+                  <p className="text-sm text-red-600">
+                    {(predictFitM.error as Error).message ?? "추정용 모형 적합 실패"}
+                  </p>
+                )}
+                {predictFitM.data && predictRegBody && predictTarget && (
+                  <PredictPanel
+                    embedded
+                    regData={predictFitM.data as RegressionRunResponse}
+                    regBody={predictRegBody}
+                    vars={predictTarget.vars}
+                    assetType={assetType}
+                    regionLabel={regionLabel}
+                    modelHint={`${predictTarget.label} · ${predictTarget.scale}`}
+                    fitN={predictTarget.fitN ?? recommendM.data.stage1.fit_n}
+                    scopeNTx={recommendM.data.analysis_scope.scope_n_tx}
+                  />
+                )}
+              </div>
+            }
+          />
         )}
 
         {!loading && !recommendM.data && !recommendM.isError && (
           <p className="text-xs text-slate-400 text-center py-6">
-            「Macro 탐색」을 누르면 SSOT 변수 풀에서 예측형(CV-MAPE)과 설명형(AIC) 후보를 함께
-            찾습니다.
+            「Macro 탐색」을 누르면 변수 조합과 척도를 CV-MAPE로 비교해 대표 예측모형을 찾습니다.
           </p>
         )}
       </div>
     </DraggableModalShell>
-  );
-}
-
-function cell(v: string) {
-  return <span className="tabular-nums">{v}</span>;
-}
-
-function MacroVsMineCompare({
-  mine,
-  recommend,
-}: {
-  mine: RegressionLevelResult;
-  recommend: RegressionRecommendResponse;
-}) {
-  const pred = recommend.stage1.primary;
-  const expl = recommend.stage1.alternate ?? recommend.stage1.primary;
-  const predCv = pred.metrics.cv_mape;
-  const predAdj = pred.metrics.adj_r_squared;
-  const explAdj = expl.metrics.adj_r_squared;
-
-  return (
-    <div className="rounded-md border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs space-y-1.5">
-      <p className="font-medium text-slate-700 dark:text-slate-200">내 식 vs Macro</p>
-      <p className="text-[11px] text-slate-500">
-        참고만. 기본 통계는 그대로입니다. 목적과 시험이 다릅니다 — 내 실험은 표본 내 MAPE, Macro 예측형은 탐색
-        CV-MAPE입니다.
-      </p>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="text-slate-500">
-              <th className="py-1 pr-2 font-medium"> </th>
-              <th className="py-1 pr-2 font-medium">내 실험</th>
-              <th className="py-1 pr-2 font-medium">예측형</th>
-              <th className="py-1 font-medium">설명형</th>
-            </tr>
-          </thead>
-          <tbody className="text-slate-800 dark:text-slate-100">
-            <tr>
-              <td className="py-0.5 pr-2 text-slate-500">목적</td>
-              <td className="py-0.5 pr-2">가설 검증</td>
-              <td className="py-0.5 pr-2">예측 탐색</td>
-              <td className="py-0.5">설명 탐색</td>
-            </tr>
-            <tr>
-              <td className="py-0.5 pr-2 text-slate-500">변수</td>
-              <td className="py-0.5 pr-2">왼쪽에서 선택</td>
-              <td className="py-0.5 pr-2">SSOT 풀</td>
-              <td className="py-0.5">SSOT 풀</td>
-            </tr>
-            <tr>
-              <td className="py-0.5 pr-2 text-slate-500">n</td>
-              <td className="py-0.5 pr-2">{cell(fmtNum(mine.n))}</td>
-              <td className="py-0.5 pr-2">{cell(fmtNum(recommend.stage1.fit_n))}</td>
-              <td className="py-0.5">{cell("—")}</td>
-            </tr>
-            <tr>
-              <td className="py-0.5 pr-2 text-slate-500">Adj R²</td>
-              <td className="py-0.5 pr-2">{cell(fmtDecimal(mine.adj_r_squared, 3))}</td>
-              <td className="py-0.5 pr-2">{cell(fmtDecimal(predAdj, 3))}</td>
-              <td className="py-0.5">{cell(fmtDecimal(explAdj, 3))}</td>
-            </tr>
-            <tr>
-              <td className="py-0.5 pr-2 text-slate-500">지표</td>
-              <td className="py-0.5 pr-2">
-                MAPE {mine.mape != null ? `${fmtDecimal(mine.mape, 1)}%` : "—"}
-              </td>
-              <td className="py-0.5 pr-2">
-                CV-MAPE {predCv != null ? `${fmtDecimal(predCv, 1)}%` : "—"}
-              </td>
-              <td className="py-0.5">AIC {expl.aic != null ? fmtNum(Math.round(expl.aic)) : "—"}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
   );
 }

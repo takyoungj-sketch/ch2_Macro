@@ -12,15 +12,18 @@ export function ModelComparisonCard({
   selected: ResponseScale;
 }) {
   const rows: { type: ResponseScale; label: string; m: ModelComparison["log"] }[] = [
-    { type: "log", label: "로그회귀", m: cmp.log },
-    { type: "linear", label: "선형회귀", m: cmp.linear },
-  ];
+    { type: "linear", label: "선형", m: cmp.linear },
+    { type: "log", label: "로그(금액)", m: cmp.log },
+    { type: "loglog", label: "log-log", m: cmp.loglog },
+  ].filter((row): row is { type: ResponseScale; label: string; m: NonNullable<ModelComparison["log"]> } =>
+    Boolean(row.m),
+  );
   const basis = cmp.metric_basis === "cv" ? "교차검증" : "표본내";
   return (
     <div className="rounded-md border border-slate-200 dark:border-slate-600 p-2 space-y-1.5">
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-medium text-slate-700 dark:text-slate-200">
-          모델 비교 ({basis})
+          모델 비교 ({basis} · 원척도)
         </span>
         <span className="text-[11px] text-amber-600 dark:text-amber-400" title={cmp.confidence_label ?? ""}>
           신뢰 {stars(cmp.confidence_stars)} {cmp.confidence_label ?? ""}

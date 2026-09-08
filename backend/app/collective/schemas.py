@@ -438,7 +438,7 @@ class CollectiveRegressionPredictResponse(BaseModel):
 
 class ModelMetrics(BaseModel):
     """단일 모델의 원척도(price) 평가지표."""
-    model_type: Literal["log", "linear"]
+    model_type: Literal["log", "linear", "loglog"]
     adj_r_squared: Optional[float] = None
     mape: Optional[float] = None  # %
     rmse: Optional[float] = None  # 만원
@@ -448,10 +448,11 @@ class ModelMetrics(BaseModel):
 
 
 class ModelComparison(BaseModel):
-    """로그·선형 모델 비교 + 권장·신뢰등급 (P1-B)."""
+    """선형·로그·log-log 원척도 비교 + 권장·신뢰등급 (P1-B)."""
     log: Optional[ModelMetrics] = None
     linear: Optional[ModelMetrics] = None
-    recommended: Literal["log", "linear"] = "log"
+    loglog: Optional[ModelMetrics] = None
+    recommended: Literal["log", "linear", "loglog"] = "log"
     metric_basis: Literal["cv", "insample"] = "insample"
     confidence_stars: int = 0  # 0~5
     confidence_label: Optional[str] = None

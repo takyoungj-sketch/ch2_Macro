@@ -153,4 +153,4 @@ def test_evaluate_pooling_optimize_returns_researched_blocks():
     )
     pool_metrics = next(c for c in result.candidates if c.candidate_id != "local")
     assert pool_metrics.blocks, "optimize mode must return researched blocks"
-    assert pool_metrics.response_scale in {"linear", "log"}
+    assert pool_metrics.response_scale in {"linear", "log", "loglog"}

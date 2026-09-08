@@ -23,7 +23,7 @@ CH2 Macro 모형 추천의 경쟁력은 **「더 똑똑한 한 줄의 식」** �
 7. **CH2 Recommendation Engine** — Built 전용이 아닌 토지·집합 확장 골격
 
 **현행 구현과의 관계:** 복합 `Group Forward` · `Best Subset` · `evaluate_pooling_candidates` 는 **엔진 재료**로 유지하되, **UX·scope·단계·설명**은 본 설계로 **재배치**한다.  
-**2026-08 UI:** [BUILT_REGRESSION_ANALYSIS_UI.md](./BUILT_REGRESSION_ANALYSIS_UI.md) — Macro는 큰 작업 창·탭(예측형/설명형). 왼쪽 변수·기본 통계는 **유지·비대체**.
+**2026-09 UI (D-071):** Macro 창은 탭이 아니라 ① 탐색 → ② #1 회귀 → ③ Twin 구조 → ④ 비교. 왼쪽 변수·기본 통계는 **유지·비대체**.
 
 ---
 
@@ -34,7 +34,7 @@ CH2 Macro 모형 추천의 경쟁력은 **「더 똑똑한 한 줄의 식」** �
 | **주체** | 사용자 | AI **안내** (채택은 항상 사용자) |
 | **식** | 사용자가 만든 식 | AI가 **탐색**한 식 **제안** |
 | **변수** | 사용자가 체크한 블록 **전부** 사용 | **사용자 체크와 무관** — 제품 SSOT 탐색 풀에서 선택 |
-| **회귀 방식** | 선형 / log / log-log (사용자) | 1단계에서 **linear vs log** 자동 (log-log는 도메인별 2순위, [미완] 복합은 Phase 2) |
+| **회귀 방식** | 선형 / log / log-log (사용자) | 1단계 같은 표본에서 **linear · log · log-log** (면적 블록 있을 때만). 예측형=원척도 CV-MAPE, 설명형=log 가족 AIC. Twin은 채택 척도 고정. |
 | **지역 scope** | 사용자 (본·인접·교차 단위) | **`analysis_scope` 동일** |
 | **인접** | 사용자가 칩/지도로 **직접 선택** (이하 **「선택 인접」**) | scope에 포함된 데이터로 1단계 수행 |
 | **Twin** | 기본 통계에는 **없음** | 2단계 **Profile Twin** (이하 **「쌍둥이 지역」**) — anchor = **본 지역** |
@@ -389,7 +389,7 @@ backend/app/recommendation/
 |------|------|
 | 역할 분리 | 기본 통계 = 사용자 변수·스케일 / 모형 추천 = SSOT 풀 탐색 + AI 안내 |
 | scope SSOT | `analysisUnits` → region_codes/addrs; **변수는 추천 scope 밖** |
-| 단계형 | 1 Local 최적 (변수+log) → 2 Twin pool (**식 고정**) |
+| 단계형 | 1 Local 최적 (변수+척도) → 2 Twin pool (**식 고정**) |
 | 이중 랭킹 | **동일** 후보 universe · 설명(AIC/BIC) / 예측(CV-MAPE) 탭 |
 | 등급 | CV 50% 고정 ✗ · Excellent~Poor + ★ (도메인 lookup) |
 | Twin 예외 | n 극소 시 2단계 **자동 진입** (채택 강제 ✗) |
@@ -398,7 +398,7 @@ backend/app/recommendation/
 
 **재사용 (신규 작성 최소화):** `selection/forward.py`, `best_subset.py`, `fit.py`, `pooling.py`, `candidates/*`, `context.with_complete_case`.
 
-**미포함 (v1):** log-log 추천, `/suggest`·`/compare` 즉시 삭제, land/collective adapter.
+**미포함 (v1 당시, D-070에서 개정):** `/suggest`·`/compare` 즉시 삭제, land/collective adapter. log-log 추천은 **D-070**에서 복합 1단계에 포함.
 
 ---
 

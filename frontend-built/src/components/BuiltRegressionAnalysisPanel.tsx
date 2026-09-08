@@ -74,8 +74,8 @@ export default function BuiltRegressionAnalysisPanel({
           <div className="min-w-0">
             <h2 className="font-semibold text-sm">Macro 모형 탐색</h2>
             <p className="text-xs text-slate-500 mt-1">
-              예측형(CV-MAPE)과 설명형(AIC)을 한 번에 찾습니다. 결과는 창 안에서만 보며 기본 통계
-              식은 바꾸지 않습니다.
+              변수 조합과 척도를 CV-MAPE로 탐색합니다. 결과는 창 안에서만 보며 기본 통계 식은 바꾸지
+              않습니다.
             </p>
           </div>
           <button

@@ -1,3 +1,4 @@
+import type { ProfileTwinCandidateNeighbor, ProfileTwinNeighborItem } from "../types";
 import type { BuiltAnalysisUnit } from "./builtAnalysisUnits";
 
 export type ProfileLinkTarget = { level: "eupmyeondong" | "sigungu" | "beopjungri"; code: string };
@@ -73,4 +74,18 @@ export function resolveTwinAnchorFromRequest(opts: {
 
 export function profileHref(target: ProfileLinkTarget): string {
   return `/profile/?region_level=${target.level}&region_code=${target.code}`;
+}
+
+/** Profile Twin API 이웃 → 모형 탐색 요청에 실을 후보. 코드 없는 행은 버린다. */
+export function mapProfileTwinNeighbors(
+  neighbors: ProfileTwinNeighborItem[] | null | undefined,
+): ProfileTwinCandidateNeighbor[] {
+  if (!neighbors?.length) return [];
+  return neighbors
+    .map((n) => ({
+      region_code: (n.twin_beopjungri_code || n.twin_eupmyeondong_code || "").trim(),
+      similarity_score: n.similarity_score,
+      detail_scores: n.detail_scores ?? null,
+    }))
+    .filter((n) => n.region_code);
 }

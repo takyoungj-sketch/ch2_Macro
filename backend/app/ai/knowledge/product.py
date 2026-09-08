@@ -30,7 +30,7 @@ REGRESSION_LOGIC = """
 회귀·진단:
 - complete-case fit_n: 선택 변수 결측 제외 후 적합
 - Adj R²·MAPE·VIF·상관 — 화면 수치 그대로 인용
-- 로그(금액) semi-log vs 선형(총액): 자산·분포에 따라 trade-off
+- 로그(금액) semi-log vs 선형 vs log-log: 같은 표본, 예측형은 원척도 CV-MAPE
 - 기초 정의(Adj R²·VIF·p 등)는 UI 지표 옆 ? 팝업 — AI는 이번 결과 해석에 집중
 """
 

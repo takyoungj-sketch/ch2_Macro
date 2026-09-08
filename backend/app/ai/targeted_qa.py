@@ -167,9 +167,10 @@ def answer_model_comparison_question(message: str, diagnostics: dict[str, Any]) 
             "면적·규모 효과가 **비율 스케일**일 때 해석이 자연스러울 수 있습니다."
         )
         lines.append(
-            "CH2 복합 기본 탐색은 **금액 semi-log** 를 중심으로 하며, "
-            "log-log는 모든 연속변수를 log로 두는 **별 spec** 입니다. "
-            "Adj R²·MAPE·CV-MAPE로 **이 scope 표본** 안에서 상대 비교하는 것이 안전합니다."
+            "CH2 복합 기본 통계는 선형·semi-log·log-log를 사용자가 고릅니다. "
+            "모형 추천은 **같은 표본**에서 세 척도를 적합하고, 예측형은 **원척도 CV-MAPE**로 고릅니다. "
+            "log-log는 연면적·대지 블록이 있을 때만 후보이며, **면적만 log**(연식·더미는 선형) 입니다. "
+            "설명형 AIC는 log(금액) 식끼리만 비교합니다."
         )
     elif asks_log and asks_linear:
         lines.append(
@@ -178,11 +179,11 @@ def answer_model_comparison_question(message: str, diagnostics: dict[str, Any]) 
         )
         lines.append(
             "**로그(금액) semi-log**: log(금액) ~ 변수 — **% 변화** 해석에 가깝고 왜도 큰 금액에 자주 씁니다. "
-            "CH2 모형 추천·비교 화면에서 CV-MAPE로 후보를 고릅니다."
+            "추천은 같은 표본의 선형·semi-log·log-log 중 원척도 CV-MAPE로 고릅니다."
         )
     else:
         lines.append(
-            "CH2에서 **모형 타입(선형·log·변수 조합)** 은 scope·자산유형·분포에 따라 "
+            "CH2에서 **모형 타입(선형·log·log-log·변수 조합)** 은 scope·자산유형·분포에 따라 "
             "Adj R²·MAPE·CV-MAPE trade-off로 비교합니다. "
             "한 타입이 항상 우월하지 않습니다."
         )
@@ -195,7 +196,7 @@ def answer_model_comparison_question(message: str, diagnostics: dict[str, Any]) 
     adj = diagnostics.get("adj_r_squared")
     if adj is not None:
         lines.append(f"- Adj R²={float(adj):.3f}")
-    lines.append("- CH2: 금액 semi-log vs 선형 vs 변수 블록 — CV-MAPE·표본으로 선택")
+    lines.append("- CH2: 선형 vs semi-log vs log-log — 원척도 CV-MAPE·같은 표본")
 
     lines.extend([
         "",

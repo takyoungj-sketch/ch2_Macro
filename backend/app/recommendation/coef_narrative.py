@@ -13,12 +13,15 @@ if TYPE_CHECKING:
 
 
 def _format_amount_won(estimate: float, response_scale: str) -> str:
-    if response_scale == "log":
+    if response_scale in ("log", "loglog"):
         pct = (math.exp(estimate) - 1.0) * 100.0
         if abs(pct) >= 1:
             return f"약 {pct:+.1f}%"
         return f"약 {pct:+.2f}%"
     return f"약 **{abs(estimate):,.0f}만원**"
+
+
+_LOGLOG_ELASTIC = frozenset({"gross_area", "land_area"})
 
 
 def _narrative_line(
@@ -29,6 +32,16 @@ def _narrative_line(
 ) -> str | None:
     label = _human_name(name)
     sig = p_value is not None and p_value < 0.05
+
+    if response_scale == "loglog" and name in _LOGLOG_ELASTIC:
+        direction = "상승" if estimate > 0 else "하락"
+        base = (
+            f"**{label}** 1% 증가가 다른 변수를 통제한 상태에서 거래금액 "
+            f"약 {estimate * 100:+.1f}% {direction}과 연관됩니다."
+        )
+        if not sig:
+            base += " (통계적 유의성은 낮음)"
+        return base
 
     if _is_categorical(name):
         direction = "높" if estimate > 0 else "낮"

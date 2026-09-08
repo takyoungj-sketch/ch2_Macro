@@ -79,6 +79,11 @@ def _warnings_for_cv_mape(value: float | None) -> list[str]:
     return []
 
 
+def _twin_opt_in_allowed(admin_level: str | None) -> bool:
+    """시군구·구에는 Twin을 붙이지 않는다 (D-066). 권고 여부와 별개로 실행 가능 여부."""
+    return (admin_level or "").strip().lower() not in {"sigungu", "gu"}
+
+
 def _twin_recommended(
     *,
     cv_mape: float | None,
@@ -231,7 +236,7 @@ def run_recommendation(conn, req: RegressionSelectionRequest) -> RegressionRecom
         admin_level=analysis_scope.admin_level,
     )
 
-    if req.run_stage2 and twin_recommended and has_twins:
+    if req.run_stage2 and has_twins and _twin_opt_in_allowed(analysis_scope.admin_level):
         stage2 = run_stage2_twin(
             conn,
             Stage2Input(
@@ -245,6 +250,24 @@ def run_recommendation(conn, req: RegressionSelectionRequest) -> RegressionRecom
         )
     elif req.run_stage2 and not has_twins:
         skip_reason = "Profile Twin 후보가 전달되지 않았습니다."
+        stage2 = RecommendationStage2(
+            ran=False,
+            skipped_reason=skip_reason,
+            fixed_blocks=list(bundle.primary_raw.blocks),
+            recommended_blocks=list(bundle.primary_raw.blocks),
+            fixed_response_scale=bundle.primary_raw.fit.response_scale,
+            local_cv_mape=stage1.satisfaction.cv_mape,
+            twin_validation=build_twin_validation_verdict(
+                ran=False,
+                skipped_reason=skip_reason,
+                local_cv_mape=stage1.satisfaction.cv_mape,
+                decision="local",
+                primary=None,
+                pools=[],
+            ),
+        )
+    elif req.run_stage2 and not _twin_opt_in_allowed(analysis_scope.admin_level):
+        skip_reason = "시군구·구 초점에는 Twin 실험을 붙이지 않습니다."
         stage2 = RecommendationStage2(
             ran=False,
             skipped_reason=skip_reason,

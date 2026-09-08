@@ -131,7 +131,7 @@ export const BUILT_MODEL_SELECTION_COMPARE_HELP: AnalysisExplain = {
   spec_version: "1",
   title: "모형 비교 (Group Best Subset)",
   summary: "후보 블록 부분집합을 평가해 **AIC·BIC·MAPE** 탭별 상위 후보 — 사용자 채택.",
-  formula: "2^k−1 subset OLS · subset당 linear/log 중 AIC 최소",
+  formula: "2^k−1 subset OLS · subset당 linear/log/log-log 중 원척도 CV-MAPE 최소 (설명형 AIC는 log 가족만)",
   interpretation: [
     "기준별 1위가 다를 수 있음 — 정답 아님.",
     "카드에서 model_comparison 확인.",
@@ -150,19 +150,18 @@ export const BUILT_MODEL_SELECTION_COMPARE_HELP: AnalysisExplain = {
 
 export const BUILT_RECOMMEND_HELP: AnalysisExplain = {
   spec_id: "built_recommend_static_v1",
-  spec_version: "1",
-  title: "모형 탐색 · 판정",
+  spec_version: "2",
+  title: "Macro 모형 탐색",
   summary:
-    "SSOT 변수 풀에서 Local 탐색 → (선택) 지역 구조 Twin 접두 실험 → 탐색 CV와 확인 CV로 판정. 결과는 이 창에서만 확인하며 기본 통계 식은 바꾸지 않습니다.",
+    "① CV-MAPE로 대표 예측모형을 고르고 → ② 그 식으로 이 지역 거래를 읽고 → ③ Twin으로 구조가 유지되는지 보며 → ④ 기본 통계 식과 비교합니다. 결과는 이 창에서만 확인하며 기본 통계 식은 바꾸지 않습니다.",
   interpretation: [
-    "한 번 탐색하면 예측형(CV-MAPE 1위)과 설명형(AIC 1위)이 함께 나옵니다.",
-    "예측 오차는 해석 강도입니다(낮음 / 보통 / 높은 편 / 높음). 적합·부적합이 아닙니다.",
-    "읽는 강도는 CV-MAPE만이 아니라 Adj R²·MAPE↔CV 안정성·표본 n을 같이 봅니다.",
-    "Twin은 오차 불합격의 구원이 아니라, Local만으로 구조가 충분히 안 보일 때 추가 검증입니다.",
-    "탐색 CV로 접두를 고르고, 확인 CV와 계수 방향으로 권고합니다. 기본 통계 식은 바꾸지 않습니다.",
-    "「모형 적용 예시」는 이 창 안에서만 계산합니다. 개별 적정가·감정평가액이 아닙니다.",
+    "①은 왜 이 식인가만 답합니다. 순위 표에는 CV-MAPE만 둡니다.",
+    "②는 기본 통계 회귀실험과 같은 골격입니다. 식·계수·적합 표본·CV-MAPE를 여기서 읽습니다.",
+    "척도는 선형·log(금액)·log-log를 같은 표본에서 비교합니다. log-log는 면적 블록이 있을 때만, 면적만 log입니다.",
+    "Twin은 예측을 더 좋게 만드는 단계가 아니라, 이 지역 구조가 닮은 지역에서도 나타나는지 보는 실험입니다.",
+    "값 계산은 ② 맨 아래 접이식입니다. 통계적 추정값이며 개별 적정가·AVM이 아닙니다.",
   ],
-  limitations: ["적정가·투자 판단 아님", "권장 활용은 해석 강도 보조"],
+  limitations: ["적정가·투자 판단 아님", "통계적 추정이며 현장 판단을 대체하지 않음"],
   interpretation_hints: [],
   presets: [
     {

@@ -6,7 +6,15 @@ from dataclasses import dataclass
 
 from app.built.regression.selection.blocks import BlockId, enumerate_block_subsets
 from app.built.regression.selection.context import SelectionContext, region_col_for_context
-from app.built.regression.selection.fit import BlockFitResult, fit_best_scale
+from app.built.regression.selection.fit import (
+    BlockFitResult,
+    attach_joint_f_tests,
+    common_scale_frame,
+    fit_scale_candidates,
+    pick_explanatory_scale,
+    pick_predictive_scale,
+)
+from app.built.regression.selection.metrics import build_model_comparison_from_fits
 from app.built.schemas import RegressionRunRequest
 
 MAX_SUBSETS = 128
@@ -66,26 +74,52 @@ def run_group_best_subset(
     truncated = total > MAX_SUBSETS
     subsets = enumerate_block_subsets(candidates, max_count=MAX_SUBSETS)
 
-    scored: list[tuple[list[BlockId], BlockFitResult, object | None]] = []
+    scored_pred: list[tuple[list[BlockId], BlockFitResult, object | None]] = []
+    scored_expl: list[tuple[list[BlockId], BlockFitResult, object | None]] = []
     for blocks in subsets:
-        fit, cmp = fit_best_scale(
+        fits = fit_scale_candidates(
             ctx.df,
             blocks,
             unified=ctx.unified,
             region_col=region_col,
             admin_level=ctx.admin_level,
         )
-        if fit is not None:
-            scored.append((blocks, fit, cmp))
+        if not fits:
+            continue
+        pred = pick_predictive_scale(fits)
+        df_cmp = common_scale_frame(ctx.df, blocks)
+        pred = attach_joint_f_tests(
+            df_cmp,
+            pred,
+            unified=ctx.unified,
+            region_col=region_col,
+            admin_level=ctx.admin_level,
+        )
+        cmp = build_model_comparison_from_fits(fits, recommended=pred.response_scale)
+        scored_pred.append((blocks, pred, cmp))
+        expl = pick_explanatory_scale(fits)
+        if expl is None:
+            continue
+        if expl.response_scale != pred.response_scale:
+            expl = attach_joint_f_tests(
+                df_cmp,
+                expl,
+                unified=ctx.unified,
+                region_col=region_col,
+                admin_level=ctx.admin_level,
+            )
+        else:
+            expl = pred
+        scored_expl.append((blocks, expl, cmp))
 
-    if not scored:
+    if not scored_pred:
         return None
 
     return CompareResult(
-        by_aic=_rank_candidates(scored, "aic"),
-        by_bic=_rank_candidates(scored, "bic"),
-        by_mape=_rank_candidates(scored, "mape"),
-        by_cv_mape=_rank_candidates(scored, "cv_mape"),
+        by_aic=_rank_candidates(scored_expl, "aic"),
+        by_bic=_rank_candidates(scored_expl, "bic"),
+        by_mape=_rank_candidates(scored_pred, "mape"),
+        by_cv_mape=_rank_candidates(scored_pred, "cv_mape"),
         total_subsets=len(subsets),
         truncated=truncated,
     )

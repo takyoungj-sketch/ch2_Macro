@@ -270,6 +270,78 @@ def attach_joint_f_tests(
     return fit
 
 
+LOGLOG_X_BLOCKS = frozenset({"gross_area", "land_area"})
+LOG_FAMILY_SCALES = frozenset({"log", "loglog"})
+
+
+def subset_allows_loglog(blocks: list[BlockId] | list[str]) -> bool:
+    return any(b in LOGLOG_X_BLOCKS for b in blocks)
+
+
+def common_scale_frame(df: pd.DataFrame, blocks: list[BlockId] | list[str]) -> pd.DataFrame:
+    """linear / log / log-log가 같은 행에서 붙도록 양수 가격·면적을 고정한다."""
+    if df.empty:
+        return df
+    out = df
+    if "price" in out.columns:
+        price = pd.to_numeric(out["price"], errors="coerce")
+        out = out.loc[price.notna() & (price > 0)]
+    for col in LOGLOG_X_BLOCKS:
+        if col in blocks and col in out.columns:
+            area = pd.to_numeric(out[col], errors="coerce")
+            out = out.loc[area.notna() & (area > 0)]
+    return out
+
+
+def orig_cv_sort_key(fit: BlockFitResult) -> tuple[int, float, float]:
+    """원척도 CV-MAPE 우선, 없으면 in-sample MAPE, 마지막에 AIC."""
+    if fit.cv_mape is not None:
+        mape = float(fit.mape) if fit.mape is not None else 1e9
+        return (0, float(fit.cv_mape), mape)
+    if fit.mape is not None:
+        return (1, float(fit.mape), 0.0)
+    return (2, float(fit.aic), 0.0)
+
+
+def pick_predictive_scale(fits: dict[str, BlockFitResult]) -> BlockFitResult:
+    return min(fits.values(), key=orig_cv_sort_key)
+
+
+def pick_explanatory_scale(fits: dict[str, BlockFitResult]) -> BlockFitResult | None:
+    """설명형은 같은 y(log 금액)끼리 AIC. 선형 AIC는 섞지 않는다."""
+    family = [fit for scale, fit in fits.items() if scale in LOG_FAMILY_SCALES]
+    if not family:
+        return None
+    return min(family, key=lambda r: r.aic)
+
+
+def fit_scale_candidates(
+    df: pd.DataFrame,
+    blocks: list[BlockId] | list[str],
+    *,
+    unified: bool,
+    region_col: str | None,
+    admin_level: str,
+) -> dict[str, BlockFitResult]:
+    df_cmp = common_scale_frame(df, blocks)
+    scales: list[ResponseScale] = ["linear", "log"]
+    if subset_allows_loglog(blocks):
+        scales.append("loglog")
+    fits: dict[str, BlockFitResult] = {}
+    for scale in scales:
+        result = fit_block_subset(
+            df_cmp,
+            blocks,
+            unified=unified,
+            response_scale=scale,
+            region_col=region_col,
+            admin_level=admin_level,
+        )
+        if result is not None:
+            fits[scale] = result
+    return fits
+
+
 def fit_best_scale(
     df: pd.DataFrame,
     blocks: list[BlockId] | list[str],
@@ -278,33 +350,26 @@ def fit_best_scale(
     region_col: str | None,
     admin_level: str,
 ) -> tuple[BlockFitResult | None, object | None]:
-    """linear·log 중 AIC 최소 scale 선택 + ModelComparison."""
-    from app.built.regression.selection.metrics import build_model_comparison
+    """linear·log·log-log 중 원척도 CV-MAPE 최소 scale + ModelComparison."""
+    from app.built.regression.selection.metrics import build_model_comparison_from_fits
 
-    fits: dict[str, BlockFitResult] = {}
-    for scale in ("linear", "log"):
-        r = fit_block_subset(
-            df,
-            blocks,
-            unified=unified,
-            response_scale=scale,  # type: ignore[arg-type]
-            region_col=region_col,
-            admin_level=admin_level,
-        )
-        if r is not None:
-            fits[scale] = r
+    fits = fit_scale_candidates(
+        df,
+        blocks,
+        unified=unified,
+        region_col=region_col,
+        admin_level=admin_level,
+    )
     if not fits:
         return None, None
-    best = min(fits.values(), key=lambda r: r.aic)
+    best = pick_predictive_scale(fits)
+    df_cmp = common_scale_frame(df, blocks)
     best = attach_joint_f_tests(
-        df,
+        df_cmp,
         best,
         unified=unified,
         region_col=region_col,
         admin_level=admin_level,
     )
-    cmp = None
-    if best.x_const is not None and len(best.x_const):
-        y_s = pd.Series(best.y_price)
-        cmp = build_model_comparison(y_s, best.x_const)
+    cmp = build_model_comparison_from_fits(fits, recommended=best.response_scale)
     return best, cmp

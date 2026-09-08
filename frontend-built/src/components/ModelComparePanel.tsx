@@ -14,6 +14,7 @@ import { CandidateValidationList } from "./CandidateValidationList";
 import { ModelComparisonCard } from "./ModelComparisonCard";
 import { PoolingEvaluationCard } from "./PoolingEvaluationCard";
 import { BUILT_MODEL_SELECTION_COMPARE_HELP } from "../utils/builtAnalysisHelp";
+import { formatResponseScale } from "../utils/recommendationLabels";
 
 type RankTab = "aic" | "bic" | "mape" | "cv_mape";
 
@@ -91,7 +92,7 @@ function CandidateRow({
         <span className="flex-1 min-w-0 truncate">{blockSummary(c.blocks)}</span>
         <span className="text-slate-500 shrink-0 tabular-nums">
           {modelPurpose(rankMetric)} ·{" "}
-          {c.response_scale} ·{" "}
+          {formatResponseScale(c.response_scale)} ·{" "}
           {rankMetric === "cv_mape"
             ? `CV-MAPE ${c.metrics.cv_mape != null ? `${c.metrics.cv_mape}%` : "—"}`
             : `MAPE ${c.metrics.mape != null ? `${c.metrics.mape}%` : "—"}`}

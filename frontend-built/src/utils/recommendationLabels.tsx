@@ -132,3 +132,11 @@ export function CvFitnessBadge({
     </span>
   );
 }
+
+/** 추천·비교 카드에 쓰는 회귀 척도 표시명. */
+export function formatResponseScale(scale?: string | null): string {
+  if (scale === "loglog") return "log-log";
+  if (scale === "log") return "log(금액)";
+  if (scale === "linear") return "선형";
+  return scale ?? "—";
+}

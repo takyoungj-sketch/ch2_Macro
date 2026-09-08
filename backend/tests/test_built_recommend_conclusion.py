@@ -198,6 +198,20 @@ def test_offer_twin_even_without_neighbors_when_cv_high():
     )
 
 
+def test_offer_twin_not_when_cv_low_and_n_ok():
+    assert not offer_structure_twin(
+        has_twins=True,
+        cv_mape=30.0,
+        mape=28.0,
+        selection_n=80,
+        scope_n_tx=90,
+        fit_n=80,
+        min_local_n=15,
+        min_fit_n=10,
+        admin_level="eupmyeondong",
+    )
+
+
 def test_offer_twin_not_at_sigungu():
     assert not offer_structure_twin(
         has_twins=True,

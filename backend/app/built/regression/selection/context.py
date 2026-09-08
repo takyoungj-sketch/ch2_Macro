@@ -89,9 +89,12 @@ def with_complete_case(
         if sample[column].dtype == object:
             sample[column] = sample[column].replace(r"^\s*$", pd.NA, regex=True)
     sample = sample.dropna(subset=available)
-    # log 후보가 함께 존재할 수 있으므로 모든 후보의 공통 표본에서 양수 가격만 허용한다.
+    # linear / log / log-log가 같은 행에서 붙도록 양수 가격·면적만 허용한다.
     if "price" in sample.columns:
         sample = sample[pd.to_numeric(sample["price"], errors="coerce") > 0]
+    for area_col in ("gross_area", "land_area"):
+        if area_col in sample.columns:
+            sample = sample[pd.to_numeric(sample[area_col], errors="coerce") > 0]
     return replace(
         ctx,
         df=ctx.df.loc[sample.index].copy(),

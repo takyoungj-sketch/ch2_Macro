@@ -1,0 +1,11 @@
+{
+  "id": "D-070",
+  "topic": "복합 모형추천 척도: 같은 표본의 linear / log / log-log, 예측형은 원척도 CV",
+  "date": "2026-09-08",
+  "status": "confirmed",
+  "background": "추천은 블록 조합마다 linear vs log를 AIC로 잘랐다. AIC는 y가 다른 식끼리 비교할 수 없고, 기본 통계에 있는 log-log(면적 log)는 추천 탐색에 없었다.",
+  "decision": "블록 조합마다 양수 가격·면적 공통 표본에서 linear·log·log-log를 적합. log-log는 연면적·대지 블록이 있을 때만, 면적만 log(연식·더미는 선형). 예측형 대표 척도=원척도 CV-MAPE(없으면 MAPE). 설명형 대표=log·log-log 중 AIC(선형 AIC와 섞지 않음). Twin 2단계는 1단계 채택 척도 고정. 제곱근·Box-Cox 등 추가 함수형은 넣지 않음.",
+  "rationale": "면적 탄력성 해석이 구조 탐색에 자연스럽고, 척도 선택이 예측 목적 지표와 같아야 한다. 표본이 식마다 달라지면 승자가 왜곡된다.",
+  "revisit": "운영 데이터에서 log-log 채택 빈도와 complete-case n 손실. 설명형에 원척도 Adj R²를 쓸지.",
+  "related": ["D-032", "D-034", "D-066", "D-068"]
+}
