@@ -315,13 +315,19 @@ export async function fetchProfileTwinNeighbors(
   opts?: { topK?: number; twinProfile?: "general" | "built_commercial" },
 ): Promise<ProfileTwinNeighborsResponse> {
   const path = level === "beopjungri" ? `/regional-profile/twins-beop/${code}` : `/regional-profile/twins/${code}`;
-  const { data } = await profileApi.get<ProfileTwinNeighborsResponse>(path, {
-    params: {
-      top_k: opts?.topK ?? 12,
-      twin_profile: opts?.twinProfile ?? "general",
-    },
-  });
-  return data;
+  const preferred = opts?.twinProfile ?? "general";
+  const load = async (twinProfile: "general" | "built_commercial") => {
+    const { data } = await profileApi.get<ProfileTwinNeighborsResponse>(path, {
+      params: {
+        top_k: opts?.topK ?? 12,
+        twin_profile: twinProfile,
+      },
+    });
+    return data;
+  };
+  const first = await load(preferred);
+  if ((first.neighbors?.length ?? 0) > 0 || preferred === "general") return first;
+  return load("general");
 }
 
 export function twinProfileForBuiltAsset(assetType: string): "general" | "built_commercial" {

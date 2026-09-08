@@ -252,6 +252,22 @@ def test_p3_actions_navigate_open_ui_run_engine():
     assert detect_intent("아까와 비교해 주세요") is None
 
 
+def test_profile_twin_executable_when_stage2_ran():
+    ctx = AiContext(
+        app="built",
+        panel="RecommendationCard",
+        facts={"stage2": {"ran": True, "twin_experiments": [{"step_id": "local", "n": 27}]}},
+    )
+    feas = assess_feasibility("profile_twin", ctx)
+    assert feas["executable"] == "yes"
+    assert any("stage2" in r for r in feas["reasons"])
+    plan = plan_analysis("비슷한 지역 twin", ctx)
+    from app.ai.knowledge.planner import actions_for_plan
+
+    acts = actions_for_plan(plan, ctx)
+    assert not any((a.get("href") or "").startswith("/profile/") for a in acts)
+
+
 def test_history_compare_slots_only():
     from app.ai.knowledge.history import format_history_compare
 

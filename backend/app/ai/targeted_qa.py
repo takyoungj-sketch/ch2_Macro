@@ -276,9 +276,140 @@ def answer_conversion_method_question(message: str, diagnostics: dict[str, Any] 
     return "\n".join(lines)
 
 
+_TWIN_NAME_HINTS = ("트윈", "twin", "쌍둥이")
+_TWIN_RESULT_HINTS = (
+    "결과",
+    "볼 수",
+    "볼수",
+    "직접",
+    "못 보",
+    "못보",
+    "없나",
+    "실험",
+    "접두",
+    "후보",
+    "구조 유지",
+    "유사 지역",
+    "유사지역",
+)
+
+
+def _mentions_twin_experiment(message: str) -> bool:
+    m = message.strip()
+    lower = m.lower()
+    if not any(h in m or h in lower for h in _TWIN_NAME_HINTS):
+        return False
+    return any(h in m or h in lower for h in _TWIN_RESULT_HINTS)
+
+
+def _fmt_cv_pct(v: Any) -> str:
+    try:
+        return f"{float(v):.1f}%"
+    except (TypeError, ValueError):
+        return "—"
+
+
+def answer_twin_experiment_question(message: str, diagnostics: dict[str, Any]) -> str | None:
+    """Macro ③ Twin 실험 — Bundle stage2를 직접 인용. Profile로 보내지 않음."""
+    if not _mentions_twin_experiment(message):
+        return None
+
+    from app.ai.built_recommend_narrative import twin_experiment_lines
+
+    stage2 = diagnostics.get("stage2") if isinstance(diagnostics.get("stage2"), dict) else {}
+    lines = ["### 답변", ""]
+
+    if stage2.get("ran"):
+        lines.append(
+            "볼 수 있습니다. 지금 화면 Bundle의 **③ Twin 실험** 숫자입니다. "
+            "지역프로필 Twin 카드(유사지역 목록)와는 별개입니다."
+        )
+        tv = stage2.get("twin_validation") if isinstance(stage2.get("twin_validation"), dict) else {}
+        experiments = stage2.get("twin_experiments") or []
+        local = next(
+            (e for e in experiments if isinstance(e, dict) and e.get("step_id") == "local"),
+            None,
+        )
+        picked = next(
+            (e for e in experiments if isinstance(e, dict) and e.get("search_picked")),
+            None,
+        )
+        primary = stage2.get("primary") if isinstance(stage2.get("primary"), dict) else {}
+        local_n = local.get("n") if isinstance(local, dict) else None
+        twin_n = picked.get("n") if isinstance(picked, dict) else primary.get("n")
+        loc_cv = tv.get("local_cv_mape")
+        if loc_cv is None and isinstance(local, dict):
+            loc_cv = local.get("search_cv_mape")
+        tw_cv = tv.get("compared_cv_mape")
+        if tw_cv is None and isinstance(picked, dict):
+            tw_cv = picked.get("search_cv_mape")
+        bits: list[str] = []
+        if local_n is not None:
+            bits.append(f"Local n={local_n}")
+        if loc_cv is not None:
+            bits.append(f"탐색 CV {_fmt_cv_pct(loc_cv)}")
+        if twin_n is not None:
+            bits.append(f"Twin n={twin_n}")
+        if tw_cv is not None:
+            bits.append(f"탐색 CV {_fmt_cv_pct(tw_cv)}")
+        if bits:
+            lines.append(" · ".join(bits) + ".")
+        if tv.get("summary_ko"):
+            lines.append(str(tv["summary_ko"]))
+        if isinstance(experiments, list) and experiments:
+            lines.extend(twin_experiment_lines(experiments))
+        lines.extend(
+            [
+                "",
+                "### 한계",
+                "",
+                "Twin은 예측을 더 좋게 만드는 단계가 아니라, "
+                "이 지역에서 본 구조가 닮은 표본에서도 유지되는지 보는 실험입니다. "
+                "CV가 낮아져도 자동 채택·적정가가 아닙니다.",
+            ]
+        )
+        return "\n".join(lines)
+
+    if stage2:
+        reason = stage2.get("skipped_reason") or stage2.get("decision_reason")
+        lines.append("지금 Bundle에 Twin 실험은 **실행되지 않았습니다.**")
+        if reason:
+            lines.append(f"이유: {reason}")
+        lines.append(
+            "Macro 탐색 **③ Twin 실험**을 실행하면 Local vs Twin n·CV-MAPE·구조 유지가 "
+            "Bundle `stage2`에 실립니다. 그 뒤에 다시 물어 주시면 그 숫자를 인용합니다."
+        )
+        lines.extend(
+            [
+                "",
+                "### 한계",
+                "",
+                "유사지역 이름 목록만 보려면 지역프로필 Twin 카드입니다.",
+            ]
+        )
+        return "\n".join(lines)
+
+    lines.append(
+        "지금 화면 Bundle에 Twin 실험 결과(`stage2`)가 없습니다. "
+        "복합 Macro 탐색에서 **③ Twin 실험**을 실행한 뒤 같은 질문을 해 주세요."
+    )
+    lines.extend(
+        [
+            "",
+            "### 한계",
+            "",
+            "지역프로필 Twin은 닮은 행정단위 **목록**입니다. "
+            "복합 ③은 그 후보로 회귀를 붙여 본 **실험 결과**입니다.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def try_targeted_answer(message: str, diagnostics: dict[str, Any]) -> str | None:
     """Explain/CH2 경로 — 질문에 맞는 짧은 답 우선."""
     if ans := answer_conversion_method_question(message, diagnostics):
+        return ans
+    if ans := answer_twin_experiment_question(message, diagnostics):
         return ans
     if ans := answer_mape_fitness_question(message, diagnostics):
         return ans

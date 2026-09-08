@@ -45,11 +45,10 @@ NESTED_ADMIN_SCOPE = """
 
 RECOMMEND_LOGIC = """
 모형 추천·Twin:
-- 기본: Local scope 회귀·CV-MAPE 기반 모형 탐색
-- Twin(쌍둥이): 지역프로필 벡터(algo 21)로 닮은 행정단위를 고른다. 발견 UI는 /profile/ 만. 토지 레거시 모달 없음.
-- 복합 모형추천 Stage2: Twin을 표본 pool로 쓸지 CV-MAPE로 판정. 유사도 ≠ 자동 채택.
-- Twin Lab: 실험·벤치마크용 — 제품 기본 추천과 동일 선언 금지
-- stage1/stage2: 표본·설명력·CV 적합도로 후보·권장 행동 제시
+- 복합 Macro 탐색: ① CV-MAPE 대표 예측모형 → ② 그 식의 회귀 → ③ Twin 실험 → ④ 비교.
+- Twin 후보는 지역프로필 벡터(algo 21). 유사지역 **목록**만 보려면 /profile/ Twin 카드.
+- 복합 ③ Twin 실험이 돌면 결과는 지금 화면 Bundle facts.stage2 다 (ran, twin_experiments, Local vs Twin n·CV-MAPE, 구조 유지). 있으면 그 숫자를 인용한다. 「이 패널에서는 Twin을 못 본다」고 하지 말고 Profile로 보내지 않는다.
+- Twin은 예측을 더 좋게 만드는 단계가 아니라, 이 지역에서 본 구조가 닮은 표본에서도 유지되는지 보는 실험. 유사도 ≠ 자동 채택. Twin Lab ≠ 제품 기본.
 """
 
 RENT_CONVERSION = """
@@ -360,6 +359,7 @@ UI_HOWTO = """
 비주거는 단지가 아니라 도로(cluster)를 클릭한다. 회귀·코호트·유형 더미는 격차를 통제해 비교할 때 쓴다.
 
 복합(단독·상가·공장): 유형·지역을 고르고 「통계분석」을 누르면 회귀·요약 카드가 나온다.
+Macro 탐색 ③ Twin 실험이 이미 돌았으면 Local vs Twin 숫자는 그 화면 Bundle에 있다. 지역프로필로 보내지 않는다.
 유형을 2개 이상 고르면 통합회귀가 되고, 「유형 더미」 계수가 기준 유형 대비 가격수준이다.
 읍면동 표본이 얇으면 「상위지역 분석」에서 직계 상위(시군구)에 같은 식을 반복한다. History 1차·2차(실행 순서)와 혼동하지 않는다.
 토지: 지역을 고른 뒤 용도지역×지목 매트릭스와 장기추세를 본다.
@@ -612,7 +612,11 @@ FUNCTION_CARDS: list[dict[str, Any]] = [
         "purpose": "구조가 닮은 지역을 찾아 비교 맥락을 만든다",
         "good_questions": ["이 지역과 비슷한 곳은?"],
         "strengths": ["회귀 변수가 아니라 지역 비교 엔진 (D-041)"],
-        "cautions": ["Bundle 없이 Twin 지역 이름을 나열하지 않음", "유사도 ≠ 자동 채택"],
+        "cautions": [
+            "복합 Macro ③ Twin 실험이 Bundle facts.stage2에 있으면 그 n·CV·구조 유지를 인용한다. Profile로 보내지 않음",
+            "Bundle 없이 Twin 지역 이름을 나열하지 않음",
+            "유사도 ≠ 자동 채택",
+        ],
     },
     {
         "id": "rent_conversion",

@@ -249,6 +249,106 @@ def test_mape_caution_targeted_answer():
     assert "복합부동산 OLS" not in ans
 
 
+def test_twin_experiment_targeted_answer_cites_stage2():
+    from app.ai.targeted_qa import answer_twin_experiment_question
+
+    ans = answer_twin_experiment_question(
+        "너는 트윈실험결과를 볼 수 없나?",
+        {
+            "stage2": {
+                "ran": True,
+                "twin_validation": {
+                    "label_ko": "유지",
+                    "summary_ko": "Twin에서도 주요 변수 방향이 같아 구조는 대체로 유지됩니다.",
+                    "local_cv_mape": 61.2,
+                    "compared_cv_mape": 42.8,
+                },
+                "twin_experiments": [
+                    {
+                        "step_id": "local",
+                        "n": 27,
+                        "search_cv_mape": 61.2,
+                        "key_coefficients": {"gross_area": 10.0, "land_area": 4.0},
+                    },
+                    {
+                        "step_id": "twin_prefix_k5",
+                        "label": "Local + Twin 1-2-3-4-5위",
+                        "n": 127,
+                        "search_cv_mape": 42.8,
+                        "confirm_cv_mape": 55.0,
+                        "search_picked": True,
+                        "prefix_k": 5,
+                        "stability": "ok",
+                        "key_coefficients": {
+                            "gross_area": 9.0,
+                            "land_area": 3.5,
+                            "building_age": -1.0,
+                        },
+                    },
+                ],
+            }
+        },
+    )
+    assert ans
+    assert "볼 수 있습니다" in ans
+    assert "n=27" in ans or "Local n=27" in ans
+    assert "127" in ans
+    assert "61.2" in ans
+    assert "42.8" in ans
+    assert "지역프로필" in ans
+    assert "열람할 수 없" not in ans
+
+
+def test_chat_twin_experiment_not_sent_to_profile(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "ai_open_mode", False)
+    monkeypatch.setattr("app.ai.orchestrator.llm_configured", lambda: False)
+    monkeypatch.setattr("app.ai.synthesis.llm_configured", lambda: False)
+
+    req = AiChatRequest(
+        message="너는 트윈실험결과를 볼 수 없나?",
+        context=AiContext(
+            app="built",
+            panel="RecommendationCard",
+            scope=AiScope(region_label="방어진동"),
+            facts={
+                "analysis_scope": {"scope_label": "방어진동"},
+                "stage1": {"selection_n": 27, "fit_n": 27, "satisfaction": {"cv_mape": 61.2}},
+                "stage2": {
+                    "ran": True,
+                    "twin_validation": {
+                        "label_ko": "유지",
+                        "summary_ko": "Twin에서도 주요 변수 방향이 같아 구조는 대체로 유지됩니다.",
+                        "local_cv_mape": 61.2,
+                        "compared_cv_mape": 42.8,
+                    },
+                    "twin_experiments": [
+                        {"step_id": "local", "n": 27, "search_cv_mape": 61.2},
+                        {
+                            "step_id": "twin_prefix_k5",
+                            "label": "Local + Twin 1-2-3-4-5위",
+                            "n": 127,
+                            "search_cv_mape": 42.8,
+                            "confirm_cv_mape": 55.0,
+                            "search_picked": True,
+                            "prefix_k": 5,
+                            "stability": "ok",
+                        },
+                    ],
+                },
+                "conclusion": {},
+            },
+        ),
+    )
+    resp = handle_chat(req)
+    assert "볼 수 있습니다" in resp.answer
+    assert "61.2" in resp.answer
+    assert "42.8" in resp.answer
+    assert "열람할 수 없" not in resp.answer
+    assert not any((a.href or "").startswith("/profile/") for a in (resp.actions or []))
+
+
 def test_chat_mape_caution_not_generic_explain():
     req = AiChatRequest(
         message="mape가 주의란 것은 무엇을 말하나요?",
@@ -304,6 +404,8 @@ def test_product_knowledge_pack():
     pack = product_knowledge_pack(app="built", panel="RecommendationCard")
     assert "Twin" in pack
     assert "Local" in pack
+    assert "facts.stage2" in pack or "stage2" in pack
+    assert "발견 UI는 /profile/ 만" not in pack
 
 
 def test_explain_why_result():

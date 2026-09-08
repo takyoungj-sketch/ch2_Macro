@@ -232,8 +232,19 @@ def assess_feasibility(path_id: str, context: AiContext) -> dict[str, Any]:
             executable = "no"
             reasons.append("먼저 현재 지역에서 회귀가 성공해야 확대 비교가 가능합니다.")
     elif path_id == "profile_twin":
-        executable = "unknown"
-        reasons.append("지역프로필 앱에서 Twin을 연 뒤에만 유사 지역 이름을 인용할 수 있습니다.")
+        stage2 = facts.get("stage2") if isinstance(facts.get("stage2"), dict) else {}
+        if stage2.get("ran"):
+            executable = "yes"
+            reasons.append(
+                "지금 Macro 탐색 Bundle facts.stage2에 Twin 실험 결과가 있습니다. "
+                "Local vs Twin n·CV-MAPE·구조 유지를 인용하세요. 지역프로필로 보내지 않습니다."
+            )
+        else:
+            executable = "unknown"
+            reasons.append(
+                "지역프로필 Twin은 유사지역 목록입니다. "
+                "복합 Macro ③ Twin 실험이 돌면 Bundle stage2 숫자를 인용합니다."
+            )
     elif path_id == "built_type_compare":
         if app != "built":
             executable = "no"
@@ -391,6 +402,7 @@ def actions_for_plan(plan: dict[str, Any], context: AiContext) -> list[dict[str,
     """P3: 화면 이동(P3-1) · 승인 실행(P3-2). 코호트 프리필 없음."""
     app = context.app
     panel = context.panel or ""
+    facts = context.facts or {}
     on_collective = app == "collective" and panel not in ("CollectiveLanding",)
     on_commercial = "Commercial" in panel
     on_building = panel in ("BuildingRegressionPanel", "CommercialRegressionPanel") or "RegressionPanel" in panel
@@ -526,6 +538,9 @@ def actions_for_plan(plan: dict[str, Any], context: AiContext) -> list[dict[str,
                     )
                 )
         elif pid == "profile_twin":
+            stage2 = facts.get("stage2") if isinstance(facts.get("stage2"), dict) else {}
+            if stage2.get("ran"):
+                continue
             if app != "profile":
                 add(
                     _action(

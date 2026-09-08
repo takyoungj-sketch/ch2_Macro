@@ -332,6 +332,18 @@ def build_recommend_diagnostic(context: AiContext) -> AiDiagnosticPack:
             summary.append(f"Macro해석={composite['label_ko']}")
     if conclusion.get("final_verdict_ko"):
         summary.append(f"예측오차={conclusion['final_verdict_ko']}")
+    stage2 = facts.get("stage2") if isinstance(facts.get("stage2"), dict) else {}
+    if stage2.get("ran"):
+        summary.append("Twin실험=실행")
+        tv = stage2.get("twin_validation") if isinstance(stage2.get("twin_validation"), dict) else {}
+        loc = tv.get("local_cv_mape")
+        cmpv = tv.get("compared_cv_mape")
+        if loc is not None and cmpv is not None:
+            summary.append(f"Twin탐색CV={float(loc):.1f}%→{float(cmpv):.1f}%")
+        if tv.get("label_ko"):
+            summary.append(f"Twin구조={tv['label_ko']}")
+    elif stage2:
+        summary.append("Twin실험=미실행")
     limitations = [
         "모형 탐색은 SSOT 변수 풀 탐색 결과이며 예측·적정가 판단을 대체하지 않습니다.",
         "권장 활용은 해석 강도이며 현장 판단을 보조합니다.",

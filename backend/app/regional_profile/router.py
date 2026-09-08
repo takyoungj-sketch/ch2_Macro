@@ -309,6 +309,48 @@ def _resolve_twin_batch(
     return None, window_years
 
 
+def _eup_twin_rowset(
+    db,
+    *,
+    anchor: str,
+    profile_version: str,
+    window_years: int,
+    scope: str,
+    twin_profile: str,
+    top_k: int,
+) -> tuple[dict | None, int, list]:
+    batch_row, resolved_window = _resolve_twin_batch(
+        db,
+        table="twin_eupmyeondong_neighbor_mvp",
+        profile_version=profile_version,
+        window_years=window_years,
+        scope=scope,
+        twin_profile=twin_profile,
+    )
+    if not batch_row:
+        return None, resolved_window, []
+    rows = db.execute(
+        text(
+            """
+            SELECT rank,
+                   twin_eupmyeondong_code,
+                   twin_eupmyeondong_name,
+                   twin_sigungu_name,
+                   twin_sido_name,
+                   similarity_score,
+                   detail_scores
+            FROM twin_eupmyeondong_neighbor_mvp
+            WHERE batch_key = :bk
+              AND anchor_eupmyeondong_code = :anchor
+            ORDER BY rank
+            LIMIT :top_k
+            """
+        ),
+        {"bk": batch_row["batch_key"], "anchor": anchor, "top_k": top_k},
+    ).mappings().all()
+    return batch_row, resolved_window, list(rows)
+
+
 def _resolve_beop_twin_batch(
     db: Session,
     *,
@@ -378,14 +420,25 @@ def get_profile_twin_neighbors(
     if len(anchor) < 8:
         raise HTTPException(400, "eupmyeondong_code 8자리 필요")
 
-    batch_row, resolved_window = _resolve_twin_batch(
-        db,
-        table="twin_eupmyeondong_neighbor_mvp",
-        profile_version=profile_version,
-        window_years=window_years,
-        scope=scope,
-        twin_profile=twin_profile,
-    )
+    profiles = [twin_profile]
+    if twin_profile != "general":
+        profiles.append("general")
+
+    batch_row = None
+    resolved_window = window_years
+    rows: list = []
+    for tp in profiles:
+        batch_row, resolved_window, rows = _eup_twin_rowset(
+            db,
+            anchor=anchor,
+            profile_version=profile_version,
+            window_years=window_years,
+            scope=scope,
+            twin_profile=tp,
+            top_k=top_k,
+        )
+        if rows:
+            break
 
     if not batch_row:
         return ProfileTwinNeighborsResponse(
@@ -398,25 +451,6 @@ def get_profile_twin_neighbors(
         )
 
     batch_key = batch_row["batch_key"]
-    rows = db.execute(
-        text(
-            """
-            SELECT rank,
-                   twin_eupmyeondong_code,
-                   twin_eupmyeondong_name,
-                   twin_sigungu_name,
-                   twin_sido_name,
-                   similarity_score,
-                   detail_scores
-            FROM twin_eupmyeondong_neighbor_mvp
-            WHERE batch_key = :bk
-              AND anchor_eupmyeondong_code = :anchor
-            ORDER BY rank
-            LIMIT :top_k
-            """
-        ),
-        {"bk": batch_key, "anchor": anchor, "top_k": top_k},
-    ).mappings().all()
 
     as_of = None
     neighbors: list[ProfileTwinNeighborItem] = []
@@ -555,12 +589,51 @@ def get_profile_twin_beop(
     if len(anchor) < 10:
         raise HTTPException(400, "beopjungri_code 10자리 필요")
 
-    batch_row, resolved_window = _resolve_beop_twin_batch(
-        db,
-        profile_version=profile_version,
-        window_years=window_years,
-        twin_profile=twin_profile,
-    )
+    # D-057: 리 앵커는 리끼리 비교. 리가 없는 법정동(`…00`)은 후보에서 뺀다.
+    exclude_dong = not is_legal_dong_without_ri_code(anchor)
+    dong_filter = "AND right(btrim(twin_region_code), 2) <> '00'" if exclude_dong else ""
+
+    profiles = [twin_profile]
+    if twin_profile != "general":
+        profiles.append("general")
+
+    batch_row = None
+    resolved_window = window_years
+    rows: list = []
+    for tp in profiles:
+        batch_row, resolved_window = _resolve_beop_twin_batch(
+            db,
+            profile_version=profile_version,
+            window_years=window_years,
+            twin_profile=tp,
+        )
+        if not batch_row:
+            continue
+        rows = list(
+            db.execute(
+                text(
+                    f"""
+                    SELECT rank,
+                           twin_region_code,
+                           twin_region_name,
+                           twin_sigungu_name,
+                           twin_sido_name,
+                           similarity_score,
+                           detail_scores
+                    FROM twin_neighbor_v8
+                    WHERE batch_key = :bk
+                      AND region_level = 'beopjungri'
+                      AND anchor_region_code = :anchor
+                      {dong_filter}
+                    ORDER BY rank
+                    LIMIT :top_k
+                    """
+                ),
+                {"bk": batch_row["batch_key"], "anchor": anchor, "top_k": top_k},
+            ).mappings().all()
+        )
+        if rows:
+            break
 
     if not batch_row:
         return ProfileTwinNeighborsResponse(
@@ -573,30 +646,6 @@ def get_profile_twin_beop(
         )
 
     batch_key = batch_row["batch_key"]
-    # D-057: 리 앵커는 리끼리 비교. 리가 없는 법정동(`…00`)은 후보에서 뺀다.
-    exclude_dong = not is_legal_dong_without_ri_code(anchor)
-    dong_filter = "AND right(btrim(twin_region_code), 2) <> '00'" if exclude_dong else ""
-    rows = db.execute(
-        text(
-            f"""
-            SELECT rank,
-                   twin_region_code,
-                   twin_region_name,
-                   twin_sigungu_name,
-                   twin_sido_name,
-                   similarity_score,
-                   detail_scores
-            FROM twin_neighbor_v8
-            WHERE batch_key = :bk
-              AND region_level = 'beopjungri'
-              AND anchor_region_code = :anchor
-              {dong_filter}
-            ORDER BY rank
-            LIMIT :top_k
-            """
-        ),
-        {"bk": batch_key, "anchor": anchor, "top_k": top_k},
-    ).mappings().all()
 
     as_of = None
     neighbors: list[ProfileTwinNeighborItem] = []

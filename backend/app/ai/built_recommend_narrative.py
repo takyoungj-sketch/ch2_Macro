@@ -49,7 +49,7 @@ def _fmt_cv(v: Any) -> str:
         return "—"
 
 
-def _twin_experiment_lines(experiments: list[Any]) -> list[str]:
+def twin_experiment_lines(experiments: list[Any]) -> list[str]:
     """접두 실험 로그 — '왜 이 Twin인가'에 쓸 수 있는 한 줄씩."""
     local = next((e for e in experiments if isinstance(e, dict) and e.get("step_id") == "local"), None)
     local_n = local.get("n") if isinstance(local, dict) else None
@@ -141,7 +141,7 @@ def interpret_built_recommend(
         if tv.get("summary_ko"):
             lines.append(f"· Twin: {tv['summary_ko']}")
         if isinstance(experiments, list) and experiments:
-            lines.extend(_twin_experiment_lines(experiments))
+            lines.extend(twin_experiment_lines(experiments))
 
     if blocks:
         lines.append(f"· 현재 변수: **{_block_names(blocks)}**")
