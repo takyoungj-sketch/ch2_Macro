@@ -9,8 +9,10 @@ import { assetTypeLabel } from "../types";
 import DraggableModalShell from "./DraggableModalShell";
 import RentRegressionPanel from "./RentRegressionPanel";
 import RentTransactionTable from "./RentTransactionTable";
+import RollingTrendChart from "./RollingTrendChart";
 
 type PanelMode = "conversion" | "rolling" | "transactions" | "regression";
+type RollingSeriesId = "jeonse" | "mixed_deposit" | "mixed_monthly" | "monthly";
 
 const TABS: { id: PanelMode; label: string }[] = [
   { id: "conversion", label: "전환율" },
@@ -19,13 +21,18 @@ const TABS: { id: PanelMode; label: string }[] = [
   { id: "regression", label: "회귀 분석" },
 ];
 
-function fmtUnit(v: number | null | undefined) {
-  if (v == null) return "—";
-  const digits = Math.abs(v) < 10 ? 1 : 0;
-  return v.toLocaleString("ko-KR", {
-    maximumFractionDigits: digits,
-    minimumFractionDigits: digits === 1 ? 1 : 0,
-  });
+const ROLLING_SERIES: { id: RollingSeriesId; label: string }[] = [
+  { id: "jeonse", label: "전세" },
+  { id: "mixed_deposit", label: "반전세 보증금" },
+  { id: "mixed_monthly", label: "반전세 월세" },
+  { id: "monthly", label: "월세" },
+];
+
+function rollingSeriesValues(p: RentRollingPoint, id: RollingSeriesId): { count: number; median: number | null } {
+  if (id === "jeonse") return { count: p.jeonse.n, median: p.jeonse.median };
+  if (id === "mixed_deposit") return { count: p.mixed.n, median: p.mixed.deposit.median };
+  if (id === "mixed_monthly") return { count: p.mixed.n, median: p.mixed.monthly.median };
+  return { count: p.monthly.n, median: p.monthly.median };
 }
 
 const RB_IDENT_MIN = 1;
@@ -189,16 +196,19 @@ export default function BuildingDetailModal({
   windowYears,
   peers,
   appliedRate,
+  statsAsOfLabel,
   onClose,
 }: {
   row: RentBuildingRow;
   windowYears: StatsWindowYears;
   peers: RentBuildingRow[];
   appliedRate: RentConversionRate | null;
+  statsAsOfLabel?: string | null;
   onClose: () => void;
 }) {
   const [panel, setPanel] = useState<PanelMode>("conversion");
   const [extraKeys, setExtraKeys] = useState<string[]>([]);
+  const [rollingSeries, setRollingSeries] = useState<RollingSeriesId>("jeonse");
 
   const rollingQ = useQuery({
     queryKey: ["rent-rolling", row.building_key, row.asset_type, windowYears],
@@ -244,6 +254,19 @@ export default function BuildingDetailModal({
   }
 
   const n = (row.jeonse?.n ?? 0) + (row.mixed?.n ?? 0) + (row.monthly?.n ?? 0);
+  const rollingPoints = rollingQ.data?.points ?? [];
+  const rollingAsOf = rollingQ.data?.stats_as_of_label || statsAsOfLabel;
+  const rollingChartPoints = useMemo(
+    () =>
+      [...rollingPoints]
+        .sort((a, b) => a.bucket_index - b.bucket_index)
+        .map((p) => {
+          const { count, median } = rollingSeriesValues(p, rollingSeries);
+          return { bucket_index: p.bucket_index, label: p.label, count, mean: median };
+        }),
+    [rollingPoints, rollingSeries],
+  );
+  const rollingSeriesLabel = ROLLING_SERIES.find((s) => s.id === rollingSeries)?.label ?? "전세";
 
   return (
     <DraggableModalShell
@@ -370,43 +393,89 @@ export default function BuildingDetailModal({
       )}
 
       {panel === "rolling" && (
-        <div>
-          <h3 className="text-sm font-semibold mb-1">롤링 추세 (P50)</h3>
-          {rollingQ.isLoading && <p className="text-xs text-slate-400">불러오는 중…</p>}
-          {rollingQ.data && rollingQ.data.length === 0 && (
-            <p className="text-xs text-slate-400">롤링 마트가 없습니다.</p>
+        <div className="space-y-3">
+          {rollingQ.isLoading && (
+            <p className="text-xs text-slate-400 text-center py-6">롤링 구간 집계 중…</p>
           )}
-          {rollingQ.data && rollingQ.data.length > 0 && (
-            <div className="modal-table-wrap overflow-x-auto">
-              <table className="w-full text-xs border-collapse modal-inner-table">
-                <thead>
-                  <tr>
-                    <th className="border px-2 py-1">구간</th>
-                    <th className="border px-2 py-1">전세 P50</th>
-                    <th className="border px-2 py-1">반전세 보/월</th>
-                    <th className="border px-2 py-1">월세 P50</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rollingQ.data.map((p: RentRollingPoint) => (
-                    <tr key={p.bucket_index}>
-                      <td className="border px-2 py-1 text-[10px]">{p.label}</td>
-                      <td className="border px-2 py-1 tabular-nums">
-                        {p.jeonse.n ? `${fmtUnit(p.jeonse.median)} (${p.jeonse.n})` : "—"}
-                      </td>
-                      <td className="border px-2 py-1 tabular-nums">
-                        {p.mixed.n
-                          ? `보 ${fmtUnit(p.mixed.deposit.median)} · 월 ${fmtUnit(p.mixed.monthly.median)} (${p.mixed.n})`
-                          : "—"}
-                      </td>
-                      <td className="border px-2 py-1 tabular-nums">
-                        {p.monthly.n ? `${fmtUnit(p.monthly.median)} (${p.monthly.n})` : "—"}
-                      </td>
-                    </tr>
+          {rollingQ.isError && (
+            <p className="text-xs text-amber-700 dark:text-amber-400 text-center py-6">
+              롤링 추세를 불러오지 못했습니다.
+            </p>
+          )}
+          {rollingQ.data && rollingPoints.length === 0 && (
+            <p className="text-xs text-slate-400 text-center py-6">표시할 롤링 데이터가 없습니다.</p>
+          )}
+          {rollingQ.data && rollingPoints.length > 0 && (
+            <>
+              {rollingAsOf && (
+                <p className="text-[10px] text-indigo-600 dark:text-indigo-400">
+                  {rollingAsOf}
+                  {` · ${rollingQ.data.window_years || windowYears}년 창`}
+                </p>
+              )}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[10px] text-slate-500">
+                  12개월 롤링 버킷 · 만원/㎡ · 전세·반전세·월세를 바꿔 볼 수 있습니다.
+                </p>
+                <div className="inline-flex rounded-md border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 p-0.5 text-[10px]">
+                  {ROLLING_SERIES.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      className={clsx(
+                        "px-2 py-0.5 rounded font-medium whitespace-nowrap",
+                        rollingSeries === s.id
+                          ? "bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-slate-100"
+                          : "text-slate-500 dark:text-slate-400",
+                      )}
+                      onClick={() => setRollingSeries(s.id)}
+                    >
+                      {s.label}
+                    </button>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </div>
+              </div>
+              <div className="modal-card px-2 py-3">
+                <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 px-1 mb-2">
+                  12개월 롤링 버킷 추이 · {rollingSeriesLabel}
+                </p>
+                <RollingTrendChart points={rollingChartPoints} priceLabel="중앙값(만원/㎡)" />
+              </div>
+              <div className="modal-table-wrap">
+                <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 px-3 pt-3 pb-1">
+                  구간별 수치 · {rollingSeriesLabel}
+                </p>
+                <table className="w-full text-xs border-collapse modal-inner-table">
+                  <thead>
+                    <tr>
+                      <th className="border px-2 py-1.5 text-left font-medium">구간</th>
+                      <th className="border px-2 py-1.5 text-right font-medium">건수</th>
+                      <th className="border px-2 py-1.5 text-right font-bold text-blue-700 dark:text-blue-400">
+                        중앙값(만원/㎡)
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...rollingPoints]
+                      .sort((a, b) => a.bucket_index - b.bucket_index)
+                      .map((p) => {
+                        const { count, median } = rollingSeriesValues(p, rollingSeries);
+                        return (
+                          <tr key={p.bucket_index}>
+                            <td className="border px-2 py-1 text-left tabular-nums">{p.label}</td>
+                            <td className="border px-2 py-1 text-right tabular-nums">
+                              {count.toLocaleString("ko-KR")}
+                            </td>
+                            <td className="border px-2 py-1 text-right tabular-nums text-blue-600 dark:text-blue-400 font-bold">
+                              {median != null ? fmtStat(median) : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}

@@ -81,6 +81,16 @@ export default function SangkwonModalMap({
   );
 
   useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      mapRef.current?.getMap()?.resize();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
     const map = mapRef.current?.getMap();
     const el = boxRef.current;
     if (!map || !el) return;
@@ -108,7 +118,7 @@ export default function SangkwonModalMap({
   }, [fitKey, adminFc, sangkwonFc, sangkwonFeatures, selected]);
 
   return (
-    <div ref={boxRef} className="relative h-56 w-full overflow-hidden rounded-lg border border-slate-200 dark:border-slate-600">
+    <div ref={boxRef} className="relative h-full min-h-[14rem] w-full overflow-hidden rounded-lg border border-slate-200 dark:border-slate-600">
       <MapGL
         ref={mapRef}
         initialViewState={{ longitude: 127.8, latitude: 36.2, zoom: 9, pitch: 0, bearing: 0 }}

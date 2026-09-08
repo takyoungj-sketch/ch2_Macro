@@ -860,6 +860,7 @@ export default function App() {
               (r) => r.asset_type === selected.asset_type,
             ) ?? null
           }
+          statsAsOfLabel={buildingsQ.data?.stats_as_of_label}
           onClose={() => setSelected(null)}
         />
       )}

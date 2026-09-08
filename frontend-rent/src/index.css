@@ -151,6 +151,10 @@ table.data td.addr {
   @apply text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200;
 }
 
+.modal-card {
+  @apply rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/40;
+}
+
 .modal-table-wrap {
   @apply rounded-lg border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden;
 }

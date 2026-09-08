@@ -76,6 +76,15 @@ export type RentRollingPoint = {
   monthly: LeaseMetric;
 };
 
+export type RentRollingResponse = {
+  building_key: string;
+  asset_type: string;
+  window_years: number;
+  as_of_month?: string | null;
+  stats_as_of_label?: string | null;
+  points: RentRollingPoint[];
+};
+
 export type RentConversionCompareRow = {
   addr1: string;
   addr2: string;

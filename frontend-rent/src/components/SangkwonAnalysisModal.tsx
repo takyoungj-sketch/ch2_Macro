@@ -131,8 +131,14 @@ export default function SangkwonAnalysisModal({ scope, onClose }: Props) {
         title="상권통계"
         subtitle={`${regionLabel} · 한국부동산원 상업용 임대동향 · 주거 전월세와 다른 통계`}
         usePortal
+        resizable
+        allowFullscreen
+        allowFontScale
         defaultWidth={980}
         defaultHeight={760}
+        minWidth={480}
+        minHeight={360}
+        bodyClassName="flex-1 min-h-0 overflow-hidden px-4 py-3 flex flex-col"
       >
         {loading && <p className="text-sm text-slate-500">상권 경계를 찾는 중…</p>}
         {resolveQ.isError && (
@@ -145,24 +151,28 @@ export default function SangkwonAnalysisModal({ scope, onClose }: Props) {
           </p>
         )}
         {hits.length > 0 && (
-          <div className="space-y-3">
-            <SangkwonModalMap
-              adminFeatures={adminFeatures}
-              sangkwonFeatures={hitPolys}
-              selected={selected}
-              onSelect={setSelected}
-            />
-            <p className="text-[10px] text-slate-400 -mt-1">
+          <div className="flex flex-col gap-2 min-h-0 flex-1 h-full">
+            <div className="min-h-[14rem] h-[40%] shrink-0">
+              <SangkwonModalMap
+                adminFeatures={adminFeatures}
+                sangkwonFeatures={hitPolys}
+                selected={selected}
+                onSelect={setSelected}
+              />
+            </div>
+            <p className="text-[10px] text-slate-400 shrink-0">
               노란 선은 {regionLabel} 경계. 청록은 교차 상권 · 클릭 또는 칩으로 선택.
             </p>
-            <SangkwonPanel
-              hits={hits}
-              selected={selected}
-              onSelect={setSelected}
-              onOpenTrend={() => setShowTrend(true)}
-              annual={annualQ.data}
-              loading={annualQ.isLoading}
-            />
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <SangkwonPanel
+                hits={hits}
+                selected={selected}
+                onSelect={setSelected}
+                onOpenTrend={() => setShowTrend(true)}
+                annual={annualQ.data}
+                loading={annualQ.isLoading}
+              />
+            </div>
           </div>
         )}
       </DraggableModalShell>

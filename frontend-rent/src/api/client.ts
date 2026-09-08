@@ -7,7 +7,7 @@ import type {
   RentRbDistributionReport,
   RentRegionOption,
   RentRegionStructure,
-  RentRollingPoint,
+  RentRollingResponse,
   SangkwonAnnualResponse,
   SangkwonSeriesResponse,
   StatsWindowYears,
@@ -145,11 +145,11 @@ export async function fetchRentRolling(params: {
   assetType: string;
   windowYears: StatsWindowYears;
 }) {
-  const { data } = await api.get<{ points: RentRollingPoint[] }>(
+  const { data } = await api.get<RentRollingResponse>(
     `/buildings/${encodeURIComponent(params.buildingKey)}/rolling`,
     { params: { asset_type: params.assetType, window_years: params.windowYears } },
   );
-  return data.points;
+  return data;
 }
 
 export type RentTransactionRow = {

@@ -152,8 +152,13 @@ export default function SangkwonTrendModal({ name, onClose }: Props) {
       title={`${name} 상권 추세`}
       subtitle="2019년 이후 연간값 · 임대료=평균×12(만원) · NOI=분기 합(만원) · 수익률=복리"
       usePortal
+      resizable
+      allowFullscreen
+      allowFontScale
       defaultWidth={720}
       defaultHeight={640}
+      minWidth={420}
+      minHeight={320}
     >
       {q.isLoading && <p className="text-sm text-slate-500">불러오는 중…</p>}
       {q.data && (

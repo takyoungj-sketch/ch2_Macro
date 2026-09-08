@@ -297,6 +297,8 @@ def rent_building_rolling(
         building_key=building_key,
         asset_type=asset_type,
         window_years=window_years,
+        as_of_month=as_of,
+        stats_as_of_label=_as_of_label(as_of),
         points=points,
     )
 

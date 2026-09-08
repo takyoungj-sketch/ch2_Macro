@@ -123,6 +123,8 @@ class RentRollingResponse(BaseModel):
     building_key: str
     asset_type: str
     window_years: int
+    as_of_month: Optional[date] = None
+    stats_as_of_label: str = ""
     points: list[RentRollingPoint]
 
 
