@@ -1,4 +1,4 @@
-export { cityBucketFromSigungu, extractCityFirstToken } from "./cityBucket";
+export { cityBucketFromSigungu, extractCityFirstToken, isGeneralGuSigungu } from "./cityBucket";
 export { cityFullLabel, cityShortLabel } from "./cityDisplay";
 export {
   flatEntryToSearchResult,

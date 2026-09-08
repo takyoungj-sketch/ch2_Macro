@@ -29,7 +29,7 @@ const COLS = "grid-cols-[2.6rem_minmax(0,1fr)_2.75rem_4.35rem]";
 const GRAIN_LABEL: Record<RegionLevel, string> = {
   sido: "시도",
   city: "시",
-  sigungu: "시군구",
+  sigungu: "시·군·구",
   eupmyeondong: "읍면동",
   beopjungri: "리",
 };

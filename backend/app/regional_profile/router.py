@@ -703,3 +703,77 @@ def get_twins_v2(
         raise HTTPException(404, str(exc)) from exc
 
     return TwinV2Response(**payload)
+
+
+@router.get("/lab/market-size")
+def get_market_size_lab(
+    region_level: str = Query(..., pattern="^(sigungu|eupmyeondong|beopjungri)$"),
+    profile_version: str = Query("v2.1-national"),
+    window_years: int = Query(3, ge=1, le=5),
+    scatter_a: str | None = Query(None),
+    scatter_b: str | None = Query(None),
+    scatter_metric: str = Query("amount", pattern="^(amount|count)$"),
+    db: Session = Depends(get_collective_db),
+):
+    """관리자 전용. 같은 grain 로그 거래규모 횡단면 r. 제품 카드를 바꾸지 않는다."""
+    if db is None:
+        raise HTTPException(503, "collective_stats DB 미연결")
+    if not _table_exists(db, "regional_profile"):
+        raise HTTPException(404, "regional_profile 테이블 없음")
+
+    from app.regional_profile.market_size_lab import compute_market_size
+
+    try:
+        return compute_market_size(
+            db,
+            profile_version=profile_version,
+            window_years=window_years,
+            region_level=region_level,
+            scatter_a=scatter_a,
+            scatter_b=scatter_b,
+            scatter_metric=scatter_metric,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@router.get("/lab/macro-ecos")
+def get_macro_ecos_lab():
+    """관리자 전용. ECOS M2·금리 연도 시계열만."""
+    from app.regional_profile.ecos_csv import load_macro_ecos
+
+    try:
+        return load_macro_ecos()
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.get("/lab/macro-ts")
+def get_macro_ts_lab():
+    """관리자 전용. ECOS + 전국 8유형 연도 건수·액. 제품·Insight 아님."""
+    from app.built.db import get_built_session_factory
+    from app.collective.db import get_collective_session_factory
+    from app.db import SessionLocal
+    from app.regional_profile.macro_ts_lab import compute_macro_ts
+
+    land = SessionLocal()
+    built_factory = get_built_session_factory()
+    coll_factory = get_collective_session_factory()
+    built = built_factory() if built_factory is not None else None
+    coll = coll_factory() if coll_factory is not None else None
+    try:
+        return compute_macro_ts(land_db=land, built_db=built, coll_db=coll)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    finally:
+        land.close()
+        if built is not None:
+            built.close()
+        if coll is not None:
+            coll.close()

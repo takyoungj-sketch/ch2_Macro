@@ -13,7 +13,6 @@ import IdentityHeader from "./components/IdentityHeader";
 import YearlyMixTable from "./components/YearlyMixTable";
 import NationalRankCard from "./components/NationalRankCard";
 import MarketComposition from "./components/MarketComposition";
-import TypeCorrCard from "./components/TypeCorrCard";
 import DominantMarketCard from "./components/DominantMarketCard";
 import LandProfileCard from "./components/LandProfileCard";
 import ApartmentProfileCard from "./components/ApartmentProfileCard";
@@ -77,10 +76,10 @@ export default function App() {
   const openRegion = useCallback(
     (regionLevel: RegionLevel, regionCode: string, originBeopCode?: string) => {
       const coerced = coerceProfileRegionSelection({ regionLevel, regionCode });
-      const sel: RegionSelection =
-        coerced.coercedFromBeop || coerced.regionLevel !== "eupmyeondong" || !originBeopCode
-          ? coerced
-          : { ...coerced, coercedFromBeop: originBeopCode };
+      const sel: RegionSelection = { ...coerced };
+      if (!sel.coercedFromBeop && originBeopCode && sel.regionLevel === "eupmyeondong") {
+        sel.coercedFromBeop = originBeopCode;
+      }
       writeSelectionToUrl(sel);
       setSelection(sel);
       scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
@@ -129,18 +128,20 @@ export default function App() {
   });
 
   const yearlyMix = profileQuery.data?.features.yearly_mix as YearlyMix | undefined;
+  const rankGrain = selection?.regionLevel === "city" ? "sigungu" : selection?.regionLevel;
   const rankQuery = useQuery({
     queryKey: [
       "national-ranks",
       "ri-exclude-dong",
-      selection?.regionLevel,
+      "city-in-sigungu",
+      rankGrain,
       profileQuery.data?.meta.profile_version,
       profileQuery.data?.meta.window_years,
       profileQuery.data?.meta.as_of_month,
     ],
     queryFn: () =>
       fetchNationalRanks({
-        regionLevel: selection!.regionLevel,
+        regionLevel: rankGrain!,
         profileVersion: profileQuery.data!.meta.profile_version,
         windowYears: profileQuery.data!.meta.window_years,
         asOfMonth: profileQuery.data!.meta.as_of_month,
@@ -298,7 +299,6 @@ export default function App() {
                     yearlyMix={yearlyMix}
                     nationalShare={rankQuery.data?.national_share_by_type}
                   />
-                  <TypeCorrCard data={rankQuery.data?.type_corr} />
                   <DominantMarketCard
                     regionLevel={selection.regionLevel}
                     regionCode={selection.regionCode}

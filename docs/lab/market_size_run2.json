@@ -1,0 +1,1658 @@
+{
+  "note": "exp 1-4 presence / within volume / price / within price",
+  "levels": {
+    "sigungu": {
+      "as_of_month": "2026-06-01",
+      "n": 270,
+      "universe_n": 258,
+      "core4_n": 266,
+      "presence": [
+        {
+          "type": "토지",
+          "n_pos": 270,
+          "pct": 1.0
+        },
+        {
+          "type": "상가",
+          "n_pos": 267,
+          "pct": 0.9889
+        },
+        {
+          "type": "공장",
+          "n_pos": 265,
+          "pct": 0.9815
+        },
+        {
+          "type": "단독다가구",
+          "n_pos": 267,
+          "pct": 0.9889
+        },
+        {
+          "type": "아파트",
+          "n_pos": 266,
+          "pct": 0.9852
+        },
+        {
+          "type": "오피스텔",
+          "n_pos": 229,
+          "pct": 0.8481
+        },
+        {
+          "type": "연립다세대",
+          "n_pos": 267,
+          "pct": 0.9889
+        },
+        {
+          "type": "분양권",
+          "n_pos": 230,
+          "pct": 0.8519
+        }
+      ],
+      "elapsed_s": 0.32,
+      "pairs": [
+        {
+          "a": "토지",
+          "b": "상가",
+          "amt_n": 267,
+          "amt_r": 0.6411,
+          "amt_r_pop": 0.2393,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "토지",
+          "b": "공장",
+          "amt_n": 265,
+          "amt_r": 0.6837,
+          "amt_r_pop": 0.473,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "토지",
+          "b": "단독다가구",
+          "amt_n": 267,
+          "amt_r": 0.6973,
+          "amt_r_pop": 0.4453,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "토지",
+          "b": "아파트",
+          "amt_n": 266,
+          "amt_r": 0.5791,
+          "amt_r_pop": -0.0815,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "토지",
+          "b": "오피스텔",
+          "amt_n": 229,
+          "amt_r": 0.4247,
+          "amt_r_pop": -0.0971,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "토지",
+          "b": "연립다세대",
+          "amt_n": 267,
+          "amt_r": 0.5198,
+          "amt_r_pop": 0.0339,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "토지",
+          "b": "분양권",
+          "amt_n": 230,
+          "amt_r": 0.4051,
+          "amt_r_pop": 0.1406,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "상가",
+          "b": "공장",
+          "amt_n": 265,
+          "amt_r": 0.579,
+          "amt_r_pop": 0.0111,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "상가",
+          "b": "단독다가구",
+          "amt_n": 267,
+          "amt_r": 0.8516,
+          "amt_r_pop": 0.4774,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "상가",
+          "b": "아파트",
+          "amt_n": 266,
+          "amt_r": 0.9212,
+          "amt_r_pop": 0.5379,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "상가",
+          "b": "오피스텔",
+          "amt_n": 229,
+          "amt_r": 0.8546,
+          "amt_r_pop": 0.5388,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "상가",
+          "b": "연립다세대",
+          "amt_n": 267,
+          "amt_r": 0.8345,
+          "amt_r_pop": 0.4516,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "상가",
+          "b": "분양권",
+          "amt_n": 230,
+          "amt_r": 0.4977,
+          "amt_r_pop": -0.0411,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "공장",
+          "b": "단독다가구",
+          "amt_n": 265,
+          "amt_r": 0.5383,
+          "amt_r_pop": 0.0107,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "공장",
+          "b": "아파트",
+          "amt_n": 264,
+          "amt_r": 0.5836,
+          "amt_r_pop": -0.0883,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "공장",
+          "b": "오피스텔",
+          "amt_n": 227,
+          "amt_r": 0.4283,
+          "amt_r_pop": -0.112,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "공장",
+          "b": "연립다세대",
+          "amt_n": 265,
+          "amt_r": 0.4613,
+          "amt_r_pop": -0.1457,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "공장",
+          "b": "분양권",
+          "amt_n": 228,
+          "amt_r": 0.3911,
+          "amt_r_pop": 0.086,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "단독다가구",
+          "b": "아파트",
+          "amt_n": 266,
+          "amt_r": 0.7948,
+          "amt_r_pop": 0.0874,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "단독다가구",
+          "b": "오피스텔",
+          "amt_n": 229,
+          "amt_r": 0.6321,
+          "amt_r_pop": 0.0039,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "단독다가구",
+          "b": "연립다세대",
+          "amt_n": 267,
+          "amt_r": 0.7495,
+          "amt_r_pop": 0.293,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "단독다가구",
+          "b": "분양권",
+          "amt_n": 230,
+          "amt_r": 0.4956,
+          "amt_r_pop": 0.1221,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "아파트",
+          "b": "오피스텔",
+          "amt_n": 229,
+          "amt_r": 0.8586,
+          "amt_r_pop": 0.4966,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "아파트",
+          "b": "연립다세대",
+          "amt_n": 266,
+          "amt_r": 0.7958,
+          "amt_r_pop": 0.1649,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "아파트",
+          "b": "분양권",
+          "amt_n": 230,
+          "amt_r": 0.571,
+          "amt_r_pop": 0.0492,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "오피스텔",
+          "b": "연립다세대",
+          "amt_n": 229,
+          "amt_r": 0.7835,
+          "amt_r_pop": 0.4651,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "오피스텔",
+          "b": "분양권",
+          "amt_n": 211,
+          "amt_r": 0.3338,
+          "amt_r_pop": -0.1813,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        },
+        {
+          "a": "연립다세대",
+          "b": "분양권",
+          "amt_n": 230,
+          "amt_r": 0.3019,
+          "amt_r_pop": -0.3121,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null,
+          "within_r_pop": null
+        }
+      ],
+      "price_pairs": [
+        {
+          "a": "상가",
+          "b": "공장",
+          "n": 250,
+          "r": 0.9071,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "상가",
+          "b": "단독다가구",
+          "n": 255,
+          "r": 0.9466,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "상가",
+          "b": "아파트",
+          "n": 254,
+          "r": 0.9066,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "상가",
+          "b": "오피스텔",
+          "n": 215,
+          "r": 0.7344,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "상가",
+          "b": "연립다세대",
+          "n": 255,
+          "r": 0.8314,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "상가",
+          "b": "분양권",
+          "n": 216,
+          "r": 0.8678,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "공장",
+          "b": "단독다가구",
+          "n": 250,
+          "r": 0.8988,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "공장",
+          "b": "아파트",
+          "n": 249,
+          "r": 0.8809,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "공장",
+          "b": "오피스텔",
+          "n": 210,
+          "r": 0.6943,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "공장",
+          "b": "연립다세대",
+          "n": 250,
+          "r": 0.7897,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "공장",
+          "b": "분양권",
+          "n": 211,
+          "r": 0.8418,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "단독다가구",
+          "b": "아파트",
+          "n": 254,
+          "r": 0.8989,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "단독다가구",
+          "b": "오피스텔",
+          "n": 215,
+          "r": 0.7453,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "단독다가구",
+          "b": "연립다세대",
+          "n": 255,
+          "r": 0.8271,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "단독다가구",
+          "b": "분양권",
+          "n": 216,
+          "r": 0.8502,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "아파트",
+          "b": "오피스텔",
+          "n": 215,
+          "r": 0.781,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "아파트",
+          "b": "연립다세대",
+          "n": 254,
+          "r": 0.8862,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "아파트",
+          "b": "분양권",
+          "n": 216,
+          "r": 0.9231,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "오피스텔",
+          "b": "연립다세대",
+          "n": 215,
+          "r": 0.75,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "오피스텔",
+          "b": "분양권",
+          "n": 197,
+          "r": 0.7404,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "연립다세대",
+          "b": "분양권",
+          "n": 216,
+          "r": 0.8792,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        }
+      ],
+      "price_note": "㎡당 P50. 상가=일반상가 commercial_median. 토지 단가 마트 없음. 인구 보정 안 함."
+    },
+    "eupmyeondong": {
+      "as_of_month": "2026-06-01",
+      "n": 5038,
+      "universe_n": 5038,
+      "core4_n": 2509,
+      "presence": [
+        {
+          "type": "토지",
+          "n_pos": 4813,
+          "pct": 0.9553
+        },
+        {
+          "type": "상가",
+          "n_pos": 4283,
+          "pct": 0.8501
+        },
+        {
+          "type": "공장",
+          "n_pos": 2680,
+          "pct": 0.532
+        },
+        {
+          "type": "단독다가구",
+          "n_pos": 4450,
+          "pct": 0.8833
+        },
+        {
+          "type": "아파트",
+          "n_pos": 2765,
+          "pct": 0.5488
+        },
+        {
+          "type": "오피스텔",
+          "n_pos": 1375,
+          "pct": 0.2729
+        },
+        {
+          "type": "연립다세대",
+          "n_pos": 2830,
+          "pct": 0.5617
+        },
+        {
+          "type": "분양권",
+          "n_pos": 875,
+          "pct": 0.1737
+        }
+      ],
+      "elapsed_s": 1.65,
+      "pairs": [
+        {
+          "a": "토지",
+          "b": "상가",
+          "amt_n": 4112,
+          "amt_r": 0.3108,
+          "amt_r_pop": 0.0748,
+          "within_n": 4108,
+          "within_parents": 253,
+          "within_r": 0.3261,
+          "within_r_pop": 0.1107
+        },
+        {
+          "a": "토지",
+          "b": "공장",
+          "amt_n": 2663,
+          "amt_r": 0.4038,
+          "amt_r_pop": 0.289,
+          "within_n": 2628,
+          "within_parents": 234,
+          "within_r": 0.3741,
+          "within_r_pop": 0.3004
+        },
+        {
+          "a": "토지",
+          "b": "단독다가구",
+          "amt_n": 4351,
+          "amt_r": 0.5073,
+          "amt_r_pop": 0.2335,
+          "within_n": 4347,
+          "within_parents": 253,
+          "within_r": 0.4458,
+          "within_r_pop": 0.2115
+        },
+        {
+          "a": "토지",
+          "b": "아파트",
+          "amt_n": 2664,
+          "amt_r": 0.307,
+          "amt_r_pop": -0.228,
+          "within_n": 2614,
+          "within_parents": 225,
+          "within_r": 0.2765,
+          "within_r_pop": -0.1485
+        },
+        {
+          "a": "토지",
+          "b": "오피스텔",
+          "amt_n": 1317,
+          "amt_r": 0.2508,
+          "amt_r_pop": 0.024,
+          "within_n": 1239,
+          "within_parents": 158,
+          "within_r": 0.182,
+          "within_r_pop": 0.0553
+        },
+        {
+          "a": "토지",
+          "b": "연립다세대",
+          "amt_n": 2769,
+          "amt_r": 0.293,
+          "amt_r_pop": -0.0024,
+          "within_n": 2749,
+          "within_parents": 243,
+          "within_r": 0.2327,
+          "within_r_pop": 0.0037
+        },
+        {
+          "a": "토지",
+          "b": "분양권",
+          "amt_n": 870,
+          "amt_r": 0.158,
+          "amt_r_pop": 0.0876,
+          "within_n": 741,
+          "within_parents": 132,
+          "within_r": 0.2254,
+          "within_r_pop": 0.1381
+        },
+        {
+          "a": "상가",
+          "b": "공장",
+          "amt_n": 2474,
+          "amt_r": 0.4322,
+          "amt_r_pop": 0.3131,
+          "within_n": 2442,
+          "within_parents": 235,
+          "within_r": 0.2461,
+          "within_r_pop": 0.1392
+        },
+        {
+          "a": "상가",
+          "b": "단독다가구",
+          "amt_n": 3942,
+          "amt_r": 0.6185,
+          "amt_r_pop": 0.3062,
+          "within_n": 3938,
+          "within_parents": 253,
+          "within_r": 0.5276,
+          "within_r_pop": 0.2096
+        },
+        {
+          "a": "상가",
+          "b": "아파트",
+          "amt_n": 2675,
+          "amt_r": 0.6143,
+          "amt_r_pop": 0.1894,
+          "within_n": 2626,
+          "within_parents": 225,
+          "within_r": 0.4501,
+          "within_r_pop": -0.0341
+        },
+        {
+          "a": "상가",
+          "b": "오피스텔",
+          "amt_n": 1360,
+          "amt_r": 0.59,
+          "amt_r_pop": 0.4954,
+          "within_n": 1280,
+          "within_parents": 158,
+          "within_r": 0.4068,
+          "within_r_pop": 0.2666
+        },
+        {
+          "a": "상가",
+          "b": "연립다세대",
+          "amt_n": 2724,
+          "amt_r": 0.625,
+          "amt_r_pop": 0.3587,
+          "within_n": 2702,
+          "within_parents": 242,
+          "within_r": 0.4448,
+          "within_r_pop": 0.121
+        },
+        {
+          "a": "상가",
+          "b": "분양권",
+          "amt_n": 862,
+          "amt_r": 0.1306,
+          "amt_r_pop": -0.012,
+          "within_n": 731,
+          "within_parents": 131,
+          "within_r": 0.1728,
+          "within_r_pop": 0.0113
+        },
+        {
+          "a": "공장",
+          "b": "단독다가구",
+          "amt_n": 2548,
+          "amt_r": 0.3164,
+          "amt_r_pop": 0.0453,
+          "within_n": 2514,
+          "within_parents": 234,
+          "within_r": 0.2229,
+          "within_r_pop": 0.0639
+        },
+        {
+          "a": "공장",
+          "b": "아파트",
+          "amt_n": 1566,
+          "amt_r": 0.232,
+          "amt_r_pop": 0.0121,
+          "within_n": 1484,
+          "within_parents": 203,
+          "within_r": 0.0744,
+          "within_r_pop": -0.0805
+        },
+        {
+          "a": "공장",
+          "b": "오피스텔",
+          "amt_n": 788,
+          "amt_r": 0.1956,
+          "amt_r_pop": 0.1453,
+          "within_n": 673,
+          "within_parents": 125,
+          "within_r": 0.0677,
+          "within_r_pop": 0.1149
+        },
+        {
+          "a": "공장",
+          "b": "연립다세대",
+          "amt_n": 1681,
+          "amt_r": 0.2585,
+          "amt_r_pop": 0.0401,
+          "within_n": 1625,
+          "within_parents": 217,
+          "within_r": 0.0796,
+          "within_r_pop": -0.0843
+        },
+        {
+          "a": "공장",
+          "b": "분양권",
+          "amt_n": 538,
+          "amt_r": 0.0343,
+          "amt_r_pop": -0.0154,
+          "within_n": 366,
+          "within_parents": 84,
+          "within_r": -0.0565,
+          "within_r_pop": -0.0555
+        },
+        {
+          "a": "단독다가구",
+          "b": "아파트",
+          "amt_n": 2608,
+          "amt_r": 0.4602,
+          "amt_r_pop": -0.233,
+          "within_n": 2558,
+          "within_parents": 225,
+          "within_r": 0.3482,
+          "within_r_pop": -0.3446
+        },
+        {
+          "a": "단독다가구",
+          "b": "오피스텔",
+          "amt_n": 1283,
+          "amt_r": 0.3618,
+          "amt_r_pop": 0.0869,
+          "within_n": 1204,
+          "within_parents": 158,
+          "within_r": 0.2053,
+          "within_r_pop": 0.0061
+        },
+        {
+          "a": "단독다가구",
+          "b": "연립다세대",
+          "amt_n": 2750,
+          "amt_r": 0.5867,
+          "amt_r_pop": 0.2637,
+          "within_n": 2728,
+          "within_parents": 242,
+          "within_r": 0.5072,
+          "within_r_pop": 0.2092
+        },
+        {
+          "a": "단독다가구",
+          "b": "분양권",
+          "amt_n": 840,
+          "amt_r": 0.1346,
+          "amt_r_pop": 0.044,
+          "within_n": 709,
+          "within_parents": 129,
+          "within_r": 0.1344,
+          "within_r_pop": -0.0664
+        },
+        {
+          "a": "아파트",
+          "b": "오피스텔",
+          "amt_n": 1273,
+          "amt_r": 0.5371,
+          "amt_r_pop": 0.3551,
+          "within_n": 1191,
+          "within_parents": 157,
+          "within_r": 0.3743,
+          "within_r_pop": 0.1372
+        },
+        {
+          "a": "아파트",
+          "b": "연립다세대",
+          "amt_n": 2246,
+          "amt_r": 0.5337,
+          "amt_r_pop": 0.0215,
+          "within_n": 2192,
+          "within_parents": 221,
+          "within_r": 0.3899,
+          "within_r_pop": -0.1852
+        },
+        {
+          "a": "아파트",
+          "b": "분양권",
+          "amt_n": 857,
+          "amt_r": 0.1854,
+          "amt_r_pop": 0.0088,
+          "within_n": 726,
+          "within_parents": 130,
+          "within_r": 0.212,
+          "within_r_pop": -0.0275
+        },
+        {
+          "a": "오피스텔",
+          "b": "연립다세대",
+          "amt_n": 1160,
+          "amt_r": 0.4701,
+          "amt_r_pop": 0.2708,
+          "within_n": 1080,
+          "within_parents": 155,
+          "within_r": 0.143,
+          "within_r_pop": -0.0598
+        },
+        {
+          "a": "오피스텔",
+          "b": "분양권",
+          "amt_n": 537,
+          "amt_r": 0.0204,
+          "amt_r_pop": -0.0875,
+          "within_n": 399,
+          "within_parents": 93,
+          "within_r": 0.1066,
+          "within_r_pop": -0.0439
+        },
+        {
+          "a": "연립다세대",
+          "b": "분양권",
+          "amt_n": 753,
+          "amt_r": 0.013,
+          "amt_r_pop": -0.1225,
+          "within_n": 620,
+          "within_parents": 124,
+          "within_r": 0.1133,
+          "within_r_pop": -0.0413
+        }
+      ],
+      "price_pairs": [
+        {
+          "a": "상가",
+          "b": "공장",
+          "n": 2303,
+          "r": 0.6658,
+          "within_n": 2265,
+          "within_parents": 229,
+          "within_r": 0.2381
+        },
+        {
+          "a": "상가",
+          "b": "단독다가구",
+          "n": 3785,
+          "r": 0.7754,
+          "within_n": 3781,
+          "within_parents": 253,
+          "within_r": 0.3489
+        },
+        {
+          "a": "상가",
+          "b": "아파트",
+          "n": 2533,
+          "r": 0.7188,
+          "within_n": 2482,
+          "within_parents": 224,
+          "within_r": 0.2137
+        },
+        {
+          "a": "상가",
+          "b": "오피스텔",
+          "n": 1293,
+          "r": 0.6757,
+          "within_n": 1217,
+          "within_parents": 158,
+          "within_r": 0.185
+        },
+        {
+          "a": "상가",
+          "b": "연립다세대",
+          "n": 2625,
+          "r": 0.7111,
+          "within_n": 2601,
+          "within_parents": 240,
+          "within_r": 0.148
+        },
+        {
+          "a": "상가",
+          "b": "분양권",
+          "n": 807,
+          "r": 0.6634,
+          "within_n": 672,
+          "within_parents": 124,
+          "within_r": 0.1515
+        },
+        {
+          "a": "공장",
+          "b": "단독다가구",
+          "n": 2428,
+          "r": 0.6974,
+          "within_n": 2388,
+          "within_parents": 228,
+          "within_r": 0.2605
+        },
+        {
+          "a": "공장",
+          "b": "아파트",
+          "n": 1458,
+          "r": 0.6382,
+          "within_n": 1359,
+          "within_parents": 191,
+          "within_r": 0.2368
+        },
+        {
+          "a": "공장",
+          "b": "오피스텔",
+          "n": 699,
+          "r": 0.5088,
+          "within_n": 573,
+          "within_parents": 115,
+          "within_r": 0.0984
+        },
+        {
+          "a": "공장",
+          "b": "연립다세대",
+          "n": 1585,
+          "r": 0.5853,
+          "within_n": 1516,
+          "within_parents": 208,
+          "within_r": 0.1433
+        },
+        {
+          "a": "공장",
+          "b": "분양권",
+          "n": 500,
+          "r": 0.6282,
+          "within_n": 336,
+          "within_parents": 78,
+          "within_r": 0.1383
+        },
+        {
+          "a": "단독다가구",
+          "b": "아파트",
+          "n": 2604,
+          "r": 0.7729,
+          "within_n": 2554,
+          "within_parents": 225,
+          "within_r": 0.2883
+        },
+        {
+          "a": "단독다가구",
+          "b": "오피스텔",
+          "n": 1277,
+          "r": 0.6793,
+          "within_n": 1199,
+          "within_parents": 158,
+          "within_r": 0.1325
+        },
+        {
+          "a": "단독다가구",
+          "b": "연립다세대",
+          "n": 2746,
+          "r": 0.7657,
+          "within_n": 2722,
+          "within_parents": 241,
+          "within_r": 0.2426
+        },
+        {
+          "a": "단독다가구",
+          "b": "분양권",
+          "n": 817,
+          "r": 0.6979,
+          "within_n": 685,
+          "within_parents": 125,
+          "within_r": 0.1968
+        },
+        {
+          "a": "아파트",
+          "b": "오피스텔",
+          "n": 1275,
+          "r": 0.7702,
+          "within_n": 1199,
+          "within_parents": 159,
+          "within_r": 0.2934
+        },
+        {
+          "a": "아파트",
+          "b": "연립다세대",
+          "n": 2242,
+          "r": 0.8244,
+          "within_n": 2182,
+          "within_parents": 218,
+          "within_r": 0.3237
+        },
+        {
+          "a": "아파트",
+          "b": "분양권",
+          "n": 835,
+          "r": 0.7979,
+          "within_n": 707,
+          "within_parents": 128,
+          "within_r": 0.2413
+        },
+        {
+          "a": "오피스텔",
+          "b": "연립다세대",
+          "n": 1163,
+          "r": 0.7542,
+          "within_n": 1088,
+          "within_parents": 157,
+          "within_r": 0.2044
+        },
+        {
+          "a": "오피스텔",
+          "b": "분양권",
+          "n": 529,
+          "r": 0.6251,
+          "within_n": 393,
+          "within_parents": 91,
+          "within_r": 0.0782
+        },
+        {
+          "a": "연립다세대",
+          "b": "분양권",
+          "n": 736,
+          "r": 0.7778,
+          "within_n": 600,
+          "within_parents": 119,
+          "within_r": 0.1851
+        }
+      ],
+      "price_note": "㎡당 P50. 상가=일반상가 commercial_median. 토지 단가 마트 없음. 인구 보정 안 함."
+    },
+    "beopjungri": {
+      "as_of_month": "2026-06-01",
+      "n": 15041,
+      "universe_n": 18605,
+      "core4_n": 1130,
+      "presence": [
+        {
+          "type": "토지",
+          "n_pos": 15026,
+          "pct": 0.999
+        },
+        {
+          "type": "상가",
+          "n_pos": 5179,
+          "pct": 0.3443
+        },
+        {
+          "type": "공장",
+          "n_pos": 4881,
+          "pct": 0.3245
+        },
+        {
+          "type": "단독다가구",
+          "n_pos": 12686,
+          "pct": 0.8434
+        },
+        {
+          "type": "아파트",
+          "n_pos": 1373,
+          "pct": 0.0913
+        },
+        {
+          "type": "오피스텔",
+          "n_pos": 243,
+          "pct": 0.0162
+        },
+        {
+          "type": "연립다세대",
+          "n_pos": 1882,
+          "pct": 0.1251
+        },
+        {
+          "type": "분양권",
+          "n_pos": 234,
+          "pct": 0.0156
+        }
+      ],
+      "elapsed_s": 2.97,
+      "pairs": [
+        {
+          "a": "토지",
+          "b": "상가",
+          "amt_n": 5174,
+          "amt_r": 0.5023,
+          "amt_r_pop": 0.322,
+          "within_n": 5174,
+          "within_parents": 145,
+          "within_r": 0.3188,
+          "within_r_pop": 0.1429
+        },
+        {
+          "a": "토지",
+          "b": "공장",
+          "amt_n": 4881,
+          "amt_r": 0.4598,
+          "amt_r_pop": 0.3936,
+          "within_n": 4879,
+          "within_parents": 144,
+          "within_r": 0.2802,
+          "within_r_pop": 0.2513
+        },
+        {
+          "a": "토지",
+          "b": "단독다가구",
+          "amt_n": 12681,
+          "amt_r": 0.5389,
+          "amt_r_pop": 0.2658,
+          "within_n": 12681,
+          "within_parents": 145,
+          "within_r": 0.369,
+          "within_r_pop": 0.1117
+        },
+        {
+          "a": "토지",
+          "b": "아파트",
+          "amt_n": 1373,
+          "amt_r": 0.399,
+          "amt_r_pop": 0.0799,
+          "within_n": 1353,
+          "within_parents": 133,
+          "within_r": 0.3068,
+          "within_r_pop": 0.0389
+        },
+        {
+          "a": "토지",
+          "b": "오피스텔",
+          "amt_n": 243,
+          "amt_r": 0.3451,
+          "amt_r_pop": 0.2198,
+          "within_n": 155,
+          "within_parents": 30,
+          "within_r": 0.3446,
+          "within_r_pop": 0.2661
+        },
+        {
+          "a": "토지",
+          "b": "연립다세대",
+          "amt_n": 1879,
+          "amt_r": 0.32,
+          "amt_r_pop": 0.1301,
+          "within_n": 1871,
+          "within_parents": 141,
+          "within_r": 0.203,
+          "within_r_pop": -0.0219
+        },
+        {
+          "a": "토지",
+          "b": "분양권",
+          "amt_n": 233,
+          "amt_r": 0.3511,
+          "amt_r_pop": 0.2408,
+          "within_n": 140,
+          "within_parents": 32,
+          "within_r": 0.2832,
+          "within_r_pop": 0.24
+        },
+        {
+          "a": "상가",
+          "b": "공장",
+          "amt_n": 2441,
+          "amt_r": 0.3898,
+          "amt_r_pop": 0.3402,
+          "within_n": 2427,
+          "within_parents": 138,
+          "within_r": 0.197,
+          "within_r_pop": 0.1839
+        },
+        {
+          "a": "상가",
+          "b": "단독다가구",
+          "amt_n": 4853,
+          "amt_r": 0.5004,
+          "amt_r_pop": 0.2132,
+          "within_n": 4853,
+          "within_parents": 145,
+          "within_r": 0.397,
+          "within_r_pop": 0.1221
+        },
+        {
+          "a": "상가",
+          "b": "아파트",
+          "amt_n": 1169,
+          "amt_r": 0.4926,
+          "amt_r_pop": -0.0271,
+          "within_n": 1141,
+          "within_parents": 127,
+          "within_r": 0.4171,
+          "within_r_pop": -0.0854
+        },
+        {
+          "a": "상가",
+          "b": "오피스텔",
+          "amt_n": 234,
+          "amt_r": 0.4586,
+          "amt_r_pop": 0.3288,
+          "within_n": 149,
+          "within_parents": 29,
+          "within_r": 0.5548,
+          "within_r_pop": 0.4577
+        },
+        {
+          "a": "상가",
+          "b": "연립다세대",
+          "amt_n": 1510,
+          "amt_r": 0.4003,
+          "amt_r_pop": 0.1447,
+          "within_n": 1496,
+          "within_parents": 137,
+          "within_r": 0.361,
+          "within_r_pop": 0.0838
+        },
+        {
+          "a": "상가",
+          "b": "분양권",
+          "amt_n": 214,
+          "amt_r": 0.1773,
+          "amt_r_pop": -0.0053,
+          "within_n": 120,
+          "within_parents": 28,
+          "within_r": -0.0202,
+          "within_r_pop": -0.1088
+        },
+        {
+          "a": "공장",
+          "b": "단독다가구",
+          "amt_n": 4475,
+          "amt_r": 0.2108,
+          "amt_r_pop": 0.0263,
+          "within_n": 4473,
+          "within_parents": 144,
+          "within_r": 0.0776,
+          "within_r_pop": -0.0069
+        },
+        {
+          "a": "공장",
+          "b": "아파트",
+          "amt_n": 697,
+          "amt_r": 0.1865,
+          "amt_r_pop": 0.1005,
+          "within_n": 633,
+          "within_parents": 91,
+          "within_r": -0.0099,
+          "within_r_pop": 0.0083
+        },
+        {
+          "a": "공장",
+          "b": "오피스텔",
+          "amt_n": 137,
+          "amt_r": 0.1105,
+          "amt_r_pop": 0.0774,
+          "within_n": 87,
+          "within_parents": 20,
+          "within_r": 0.064,
+          "within_r_pop": 0.0665
+        },
+        {
+          "a": "공장",
+          "b": "연립다세대",
+          "amt_n": 911,
+          "amt_r": 0.1132,
+          "amt_r_pop": 0.0021,
+          "within_n": 855,
+          "within_parents": 104,
+          "within_r": 0.0313,
+          "within_r_pop": -0.0372
+        },
+        {
+          "a": "공장",
+          "b": "분양권",
+          "amt_n": 120,
+          "amt_r": 0.1817,
+          "amt_r_pop": 0.1212,
+          "within_n": 42,
+          "within_parents": 10,
+          "within_r": 0.02,
+          "within_r_pop": -0.0782
+        },
+        {
+          "a": "단독다가구",
+          "b": "아파트",
+          "amt_n": 1315,
+          "amt_r": 0.3751,
+          "amt_r_pop": -0.1885,
+          "within_n": 1295,
+          "within_parents": 132,
+          "within_r": 0.3468,
+          "within_r_pop": -0.2105
+        },
+        {
+          "a": "단독다가구",
+          "b": "오피스텔",
+          "amt_n": 231,
+          "amt_r": 0.2311,
+          "amt_r_pop": 0.0661,
+          "within_n": 144,
+          "within_parents": 28,
+          "within_r": 0.3015,
+          "within_r_pop": 0.2586
+        },
+        {
+          "a": "단독다가구",
+          "b": "연립다세대",
+          "amt_n": 1833,
+          "amt_r": 0.4604,
+          "amt_r_pop": 0.206,
+          "within_n": 1826,
+          "within_parents": 141,
+          "within_r": 0.3902,
+          "within_r_pop": 0.0941
+        },
+        {
+          "a": "단독다가구",
+          "b": "분양권",
+          "amt_n": 217,
+          "amt_r": 0.1262,
+          "amt_r_pop": 0.0278,
+          "within_n": 129,
+          "within_parents": 31,
+          "within_r": -0.0019,
+          "within_r_pop": -0.0212
+        },
+        {
+          "a": "아파트",
+          "b": "오피스텔",
+          "amt_n": 214,
+          "amt_r": 0.4257,
+          "amt_r_pop": 0.1756,
+          "within_n": 122,
+          "within_parents": 25,
+          "within_r": 0.4825,
+          "within_r_pop": 0.308
+        },
+        {
+          "a": "아파트",
+          "b": "연립다세대",
+          "amt_n": 972,
+          "amt_r": 0.3034,
+          "amt_r_pop": -0.1792,
+          "within_n": 931,
+          "within_parents": 119,
+          "within_r": 0.2878,
+          "within_r_pop": -0.219
+        },
+        {
+          "a": "아파트",
+          "b": "분양권",
+          "amt_n": 213,
+          "amt_r": 0.1976,
+          "amt_r_pop": -0.1234,
+          "within_n": 119,
+          "within_parents": 28,
+          "within_r": 0.0281,
+          "within_r_pop": -0.1873
+        },
+        {
+          "a": "오피스텔",
+          "b": "연립다세대",
+          "amt_n": 206,
+          "amt_r": 0.1821,
+          "amt_r_pop": 0.0135,
+          "within_n": 129,
+          "within_parents": 26,
+          "within_r": 0.0631,
+          "within_r_pop": -0.1429
+        },
+        {
+          "a": "오피스텔",
+          "b": "분양권",
+          "amt_n": 65,
+          "amt_r": 0.1833,
+          "amt_r_pop": 0.1244,
+          "within_n": 21,
+          "within_parents": 5,
+          "within_r": 0.2717,
+          "within_r_pop": 0.167
+        },
+        {
+          "a": "연립다세대",
+          "b": "분양권",
+          "amt_n": 156,
+          "amt_r": -0.0166,
+          "amt_r_pop": -0.1559,
+          "within_n": 80,
+          "within_parents": 20,
+          "within_r": -0.021,
+          "within_r_pop": -0.2228
+        }
+      ],
+      "price_pairs": [
+        {
+          "a": "상가",
+          "b": "공장",
+          "n": 0,
+          "r": null,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "상가",
+          "b": "단독다가구",
+          "n": 0,
+          "r": null,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "상가",
+          "b": "아파트",
+          "n": 0,
+          "r": null,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "상가",
+          "b": "오피스텔",
+          "n": 0,
+          "r": null,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "상가",
+          "b": "연립다세대",
+          "n": 0,
+          "r": null,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "상가",
+          "b": "분양권",
+          "n": 0,
+          "r": null,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "공장",
+          "b": "단독다가구",
+          "n": 0,
+          "r": null,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "공장",
+          "b": "아파트",
+          "n": 0,
+          "r": null,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "공장",
+          "b": "오피스텔",
+          "n": 0,
+          "r": null,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "공장",
+          "b": "연립다세대",
+          "n": 0,
+          "r": null,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "공장",
+          "b": "분양권",
+          "n": 0,
+          "r": null,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "단독다가구",
+          "b": "아파트",
+          "n": 0,
+          "r": null,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "단독다가구",
+          "b": "오피스텔",
+          "n": 0,
+          "r": null,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "단독다가구",
+          "b": "연립다세대",
+          "n": 0,
+          "r": null,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "단독다가구",
+          "b": "분양권",
+          "n": 0,
+          "r": null,
+          "within_n": 0,
+          "within_parents": 0,
+          "within_r": null
+        },
+        {
+          "a": "아파트",
+          "b": "오피스텔",
+          "n": 196,
+          "r": 0.5502,
+          "within_n": 115,
+          "within_parents": 25,
+          "within_r": 0.4915
+        },
+        {
+          "a": "아파트",
+          "b": "연립다세대",
+          "n": 728,
+          "r": 0.529,
+          "within_n": 669,
+          "within_parents": 102,
+          "within_r": 0.3412
+        },
+        {
+          "a": "아파트",
+          "b": "분양권",
+          "n": 204,
+          "r": 0.4068,
+          "within_n": 113,
+          "within_parents": 27,
+          "within_r": 0.1717
+        },
+        {
+          "a": "오피스텔",
+          "b": "연립다세대",
+          "n": 221,
+          "r": 0.4451,
+          "within_n": 146,
+          "within_parents": 30,
+          "within_r": 0.2682
+        },
+        {
+          "a": "오피스텔",
+          "b": "분양권",
+          "n": 67,
+          "r": 0.3392,
+          "within_n": 25,
+          "within_parents": 7,
+          "within_r": -0.0314
+        },
+        {
+          "a": "연립다세대",
+          "b": "분양권",
+          "n": 164,
+          "r": 0.5217,
+          "within_n": 83,
+          "within_parents": 20,
+          "within_r": 0.2804
+        }
+      ],
+      "price_note": "㎡당 P50. 상가=일반상가 commercial_median. 토지 단가 마트 없음. 인구 보정 안 함."
+    }
+  }
+}

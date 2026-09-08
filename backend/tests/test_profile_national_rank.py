@@ -20,7 +20,9 @@ from build_regional_profile_rank import (  # noqa: E402
 sys.path.insert(0, str(REPO / "backend"))
 from app.regional_profile.national_ranks import (  # noqa: E402
     drop_legal_dongs_from_beop_ranks,
+    is_general_gu_code,
     is_legal_dong_without_ri_code,
+    merge_city_parents_into_sigungu_ranks,
 )
 
 
@@ -145,3 +147,36 @@ def test_drop_legal_dongs_reranks_ri_only():
     assert "4115010100" not in codes
     assert out[0][0] == "4373025034" and out[0][5] == 1
     assert out[1][0] == "4311325021" and out[1][5] == 2
+
+
+def test_general_gu_code():
+    assert is_general_gu_code("43113")
+    assert not is_general_gu_code("11680")
+    assert not is_general_gu_code("43730")
+    assert not is_general_gu_code("43110")
+
+
+def test_merge_keeps_gu_adds_parent_city():
+    sigungu = [
+        ["11680", "서울 강남구", 500000, 800.0, 10, 1, 1, 1],
+        ["43113", "충북 청주시 흥덕구", 250000, 400.0, 8, 2, 2, 2],
+        ["43730", "충북 옥천군", 50000, 50.0, 3, 3, 3, 3],
+    ]
+    city = [
+        ["43110", "충북 청주시", 850000, 900.0, 20, 1, 1, 1],
+        ["43740", "충북 영동군", 80000, 10.0, 2, 2, 2, 2],
+    ]
+    out, n, n_pc = merge_city_parents_into_sigungu_ranks(sigungu, city)
+    codes = [r[0] for r in out]
+    assert n == 4
+    assert "43113" in codes
+    assert "43110" in codes
+    assert "43740" not in codes
+    assert "11680" in codes and "43730" in codes
+    cheongju = next(r for r in out if r[0] == "43110")
+    gangnam = next(r for r in out if r[0] == "11680")
+    heungdeok = next(r for r in out if r[0] == "43113")
+    assert cheongju[5] == 1
+    assert gangnam[5] == 2
+    assert heungdeok[5] == 3
+

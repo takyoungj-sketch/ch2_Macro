@@ -134,7 +134,7 @@ export function buildFlattenedRegionSuggestions(
       sidoCode: info.sido,
       sigunguCodes: codes,
       primaryLabel,
-      subtitle: `시 전체 · 자치구 ${codes.length}개 묶음`,
+      subtitle: `시 전체 · 구 ${codes.length}개 묶음`,
       sample: info.sample,
     });
   }

@@ -149,8 +149,8 @@ SSOT: [`PROFILE_NATIONAL_RANK_PLAN.md`](PROFILE_NATIONAL_RANK_PLAN.md)
 | # | 항목 | 메모 |
 |---|------|------|
 | G1 | 인구-거래 동조 r | ✅ 산점도 로그 Pearson. n&lt;10 숨김 |
-| G2 | 유형 동조 | ✅ 8×8 비중 행렬(금액·건수). mix.type_corr |
-| G3 | 유동성·금리 동조 | **전국** 월별 총액·유형별 총액 ↔ M2·대표 금리 1개. 증감률. 지역 r 없음 |
+| G2 | 유형 동조 | 제품 8×8 제거. 랩 `?tool=size` **장기 실험**(D-058). 1차 ①–④ 스냅샷 `docs/lab/market_size_run2.json`. mix.type_corr 마트는 유지. 공개 Insight 이관은 [`MACRO_INSIGHT_PLAN.md`](./MACRO_INSIGHT_PLAN.md) (구상, 지금은 비공개) |
+| G3 | 유동성·금리 동조 | **전국** 연도 1차(준비 [`lab/G3_TIMESERIES_LAB.md`](./lab/G3_TIMESERIES_LAB.md)). 월별·시차·Insight 목록은 이후. 지역 r 없음 |
 | G4 | 공표 원숫자 | 넣을 거면 출처·기준일 단서만. 주인공 아님 |
 
 ---
