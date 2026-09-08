@@ -278,7 +278,6 @@ export default function CommercialRegressionPanel({
   isShop,
   count,
   cohortKeys,
-  cohortRunId = 0,
   analysisPeriod,
 }: {
   clusterKey: string;
@@ -286,7 +285,6 @@ export default function CommercialRegressionPanel({
   isShop: boolean;
   count: number;
   cohortKeys?: string[];
-  cohortRunId?: number;
   analysisPeriod?: {
     contract_year_from?: number;
     contract_year_to?: number;
@@ -294,7 +292,7 @@ export default function CommercialRegressionPanel({
     contract_date_to?: string;
   };
 }) {
-  const useCohort = cohortRunId > 0 && (cohortKeys?.length ?? 0) > 1;
+  const useCohort = (cohortKeys?.length ?? 0) > 1;
   const keys = useCohort ? cohortKeys! : [clusterKey];
   const [excludeOutliers, setExcludeOutliers] = useState(false);
   const [floorMode, setFloorMode] = useState<FloorMode>("relative");
@@ -360,12 +358,11 @@ export default function CommercialRegressionPanel({
     },
   });
 
+  const cohortKeySig = keys.join("|");
   useEffect(() => {
-    if (useCohort && cohortRunId > 0) {
-      regM.mutate();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- cohortRunId triggers cohort run
-  }, [cohortRunId, keys.join("|")]);
+    regM.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cluster 구성이 바뀌면 이전 식은 무효
+  }, [cohortKeySig]);
 
   useEffect(() => {
     if (regM.data?.predict_options) {
@@ -403,23 +400,11 @@ export default function CommercialRegressionPanel({
     const on = (e: Event) => {
       const a = (e as CustomEvent<AiScreenAction>).detail;
       if (a?.kind !== "run_engine") return;
-      if ((cohortKeys?.length ?? 0) > 1) return;
       regM.mutate();
     };
     window.addEventListener(CH2_AI_ACTION_EVENT, on);
     return () => window.removeEventListener(CH2_AI_ACTION_EVENT, on);
-  }, [cohortKeys]);
-
-  if (useCohort && cohortRunId === 0) {
-    return (
-      <>
-        <PublishAiContext context={publishedAiContext} />
-        <p className="text-xs text-slate-500 text-center py-6">
-          코호트에 cluster를 추가한 뒤 「통합분석」을 누르면 통합 회귀 결과가 표시됩니다.
-        </p>
-      </>
-    );
-  }
+  }, []);
 
   const varOptions = (
     // 세대수·주차·공시지가·구조는 주거 단지(K-apt) 통합회귀 전용. cluster에는 없음.
@@ -446,6 +431,13 @@ export default function CommercialRegressionPanel({
           )}
         </div>
       </div>
+
+      {useCohort && (
+        <p className="text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900 rounded px-2 py-1.5">
+          {keys.length}개 cluster 통합. 변수를 고른 뒤 「
+          {regM.data ? "통합 회귀 다시 실행" : "통합 회귀 실행"}」을 누르세요.
+        </p>
+      )}
 
       {!regressionEligible && (
         <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded px-2 py-1.5">
@@ -511,7 +503,7 @@ export default function CommercialRegressionPanel({
       </label>
 
       <button type="button" className="btn btn-primary text-xs" disabled={regM.isPending} onClick={() => regM.mutate()}>
-        {regM.isPending ? "실행 중…" : "회귀 실행"}
+        {regM.isPending ? "실행 중…" : useCohort ? (regM.data ? "통합 회귀 다시 실행" : "통합 회귀 실행") : "회귀 실행"}
       </button>
 
       {regM.isError && (

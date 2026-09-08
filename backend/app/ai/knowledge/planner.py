@@ -217,7 +217,7 @@ def assess_feasibility(path_id: str, context: AiContext) -> dict[str, Any]:
             reasons.append("집합 코호트/회귀 화면이 열려 있습니다.")
         else:
             executable = "unknown"
-            reasons.append("집합 목록에서 코호트에 단지를 넣은 뒤 「통합분석」을 누르세요.")
+            reasons.append("집합에서 코호트에 단지를 넣으세요. 회귀는 변수를 고른 뒤 「회귀 실행」합니다.")
     elif path_id == "regional_regression":
         if has_reg and "regional" in (context.panel or "").lower():
             executable = "yes"

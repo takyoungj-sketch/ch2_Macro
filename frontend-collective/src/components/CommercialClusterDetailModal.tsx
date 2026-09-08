@@ -296,14 +296,10 @@ export default function CommercialClusterDetailModal({
         a.ui === "collective_integrated" ||
         a.kind === "run_engine";
       if (wantReg) setPanel("regression");
-      if (a.kind === "run_engine" && canRunCohort) {
-        setCohortRunKeys([...cohortKeys]);
-        setCohortRunByPanel((prev) => ({ ...prev, regression: (prev.regression ?? 0) + 1 }));
-      }
     };
     window.addEventListener(CH2_AI_ACTION_EVENT, on);
     return () => window.removeEventListener(CH2_AI_ACTION_EVENT, on);
-  }, [canRunCohort, cohortKeys]);
+  }, []);
 
   const addToCohort = (clusterKey: string) => {
     if (cohortKeys.length >= MAX_COHORT_CLUSTERS) return;
@@ -382,7 +378,7 @@ export default function CommercialClusterDetailModal({
                 <span className="text-slate-600">
                   {cohortKeys.length === 1 ? "단일 cluster" : `${cohortKeys.length}개 cluster`}
                 </span>
-                {canRunCohort && (
+                {canRunCohort && panel !== "regression" && (
                   <button
                     type="button"
                     className="ml-auto px-2 py-0.5 rounded bg-indigo-700 text-white text-[10px] font-semibold hover:bg-indigo-800"
@@ -391,8 +387,11 @@ export default function CommercialClusterDetailModal({
                     통합분석
                   </button>
                 )}
+                {canRunCohort && panel === "regression" && (
+                  <span className="ml-auto text-slate-600">변수를 고른 뒤 아래 「회귀 실행」</span>
+                )}
               </div>
-              {cohortStale && (
+              {cohortStale && panel !== "regression" && (
                 <p className="mt-1 text-amber-700">코호트가 변경되었습니다. 「통합분석」을 다시 실행하세요.</p>
               )}
               {cohortExtra.length > 0 && (
@@ -753,8 +752,7 @@ export default function CommercialClusterDetailModal({
               scope={scope}
               isShop={isShop}
               count={row.count}
-              cohortKeys={cohortRunKeys}
-              cohortRunId={cohortRunForPanel("regression")}
+              cohortKeys={cohortKeys}
               analysisPeriod={analysisPeriod}
             />
           )}

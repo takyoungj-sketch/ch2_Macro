@@ -367,7 +367,6 @@ function PredictPanel({
 export default function BuildingRegressionPanel({
   buildingKey,
   cohortKeys,
-  cohortRunId = 0,
   assetType,
   yearFrom,
   yearTo,
@@ -379,7 +378,6 @@ export default function BuildingRegressionPanel({
 }: {
   buildingKey: string;
   cohortKeys?: string[];
-  cohortRunId?: number;
   assetType: AssetType;
   yearFrom?: number;
   yearTo?: number;
@@ -407,7 +405,7 @@ export default function BuildingRegressionPanel({
   });
   const [predictInputs, setPredictInputs] = useState<CollectiveRegressionPredictInputs>({});
 
-  const useCohort = cohortRunId > 0 && (cohortKeys?.length ?? 0) > 1;
+  const useCohort = (cohortKeys?.length ?? 0) > 1;
   const keys = useCohort ? cohortKeys! : [buildingKey];
   const attrOn =
     vars.households ||
@@ -441,6 +439,12 @@ export default function BuildingRegressionPanel({
 
   const regM = useMutation({ mutationFn: runRegression });
 
+  const cohortKeySig = keys.join("|");
+  useEffect(() => {
+    regM.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 단지 구성이 바뀌면 이전 식은 무효
+  }, [cohortKeySig]);
+
   const aiRegressionContext = useMemo(() => {
     if (!regM.data) return null;
     return buildCollectiveRegressionContext(regM.data, {
@@ -471,12 +475,11 @@ export default function BuildingRegressionPanel({
     const on = (e: Event) => {
       const a = (e as CustomEvent<AiScreenAction>).detail;
       if (a?.kind !== "run_engine") return;
-      if ((cohortKeys?.length ?? 0) > 1) return;
       regM.mutate();
     };
     window.addEventListener(CH2_AI_ACTION_EVENT, on);
     return () => window.removeEventListener(CH2_AI_ACTION_EVENT, on);
-  }, [cohortKeys]);
+  }, []);
 
   const predictM = useMutation({
     mutationFn: () => {
@@ -488,28 +491,10 @@ export default function BuildingRegressionPanel({
   });
 
   useEffect(() => {
-    if (useCohort && cohortRunId > 0) {
-      regM.mutate();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- cohortRunId triggers cohort run
-  }, [cohortRunId, keys.join("|")]);
-
-  useEffect(() => {
     if (regM.data?.predict_options) {
       setPredictInputs(defaultPredictInputs(regM.data.predict_options, vars));
     }
   }, [regM.data, vars]);
-
-  if (useCohort && cohortRunId === 0) {
-    return (
-      <>
-        <PublishAiContext context={publishedAiContext} />
-        <p className="text-xs text-slate-500 text-center py-6">
-          코호트에 아파트를 추가한 뒤 「통합분석」을 누르면 통합 회귀 결과가 표시됩니다.
-        </p>
-      </>
-    );
-  }
 
   return (
     <div className="space-y-3">
@@ -523,7 +508,8 @@ export default function BuildingRegressionPanel({
 
       {useCohort && (
         <p className="text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900 rounded px-2 py-1.5">
-          {keys.length}개 단지 통합 · 실시간 ·{" "}
+          {keys.length}개 단지 통합 · 단지 속성 변수가 추가됩니다. 변수를 고른 뒤 「
+          {regM.data ? "통합 회귀 다시 실행" : "통합 회귀 실행"}」을 누르세요.{" "}
           {attrOn
             ? "단지 속성으로 단지 간 차이 설명 (단지 FE 생략 — 속성은 단지마다 상수라 FE와 같이 넣을 수 없음)"
             : "단지 고정효과(거래 최다 단지=기준, n<5 제외)"}
@@ -655,7 +641,7 @@ export default function BuildingRegressionPanel({
         disabled={regM.isPending}
         onClick={() => regM.mutate()}
       >
-        {regM.isPending ? "실행 중…" : useCohort ? "통합 회귀 다시 실행" : "회귀 실행"}
+        {regM.isPending ? "실행 중…" : useCohort ? (regM.data ? "통합 회귀 다시 실행" : "통합 회귀 실행") : "회귀 실행"}
       </button>
 
       {regM.isError && (
