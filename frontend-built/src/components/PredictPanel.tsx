@@ -289,7 +289,7 @@ export default function PredictPanel({
           {!embedded && (
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">예측</p>
           )}
-          <h2 className={clsx("font-semibold", embedded ? "text-xs" : "text-sm")}>
+          <h2 className="font-semibold text-sm">
             {embedded ? "Macro 모형 적용 예시" : "다른 변수 고정 · 통계적 추정"}
           </h2>
           {modelHint && <p className="text-[11px] text-slate-500 mt-0.5">{modelHint}</p>}

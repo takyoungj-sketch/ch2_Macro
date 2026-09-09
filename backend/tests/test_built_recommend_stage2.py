@@ -1,4 +1,4 @@
-"""R2 — stage2 optimize mode (pool 재탐색, 식 고정 아님)."""
+"""R2 — pooling optimize(Lab 재탐색)와 diagnose(제품 식 고정)."""
 
 from __future__ import annotations
 
@@ -154,3 +154,52 @@ def test_evaluate_pooling_optimize_returns_researched_blocks():
     pool_metrics = next(c for c in result.candidates if c.candidate_id != "local")
     assert pool_metrics.blocks, "optimize mode must return researched blocks"
     assert pool_metrics.response_scale in {"linear", "log", "loglog"}
+
+
+def test_evaluate_pooling_diagnose_keeps_local_blocks():
+    anchor = "11110250"
+    twin = "11110251"
+    local_rows = _timed_rows(12, region_code=anchor, start_year=2018, years=3, seed=1, noise_std=900)
+    twin_rows = _timed_rows(60, region_code=twin, start_year=2018, years=3, seed=2, noise_std=40)
+    all_rows = local_rows + twin_rows
+
+    local_ctx = SelectionContext(
+        df=pd.DataFrame(local_rows),
+        scope_label="local",
+        admin_level="eupmyeondong",
+        addr4_city=False,
+        mode="single",
+        unified=False,
+    )
+    local_ctx = with_complete_case(local_ctx, _POOL, region_col=None)
+    local_fit, _ = fit_best_scale(
+        local_ctx.df, ["land_area"], unified=False, region_col=None, admin_level="eupmyeondong"
+    )
+    assert local_fit is not None
+    local_blocks = list(local_fit.blocks or ["land_area"])
+
+    price_levels = {
+        anchor: sum(r["price"] / r["gross_area"] for r in local_rows) / len(local_rows),
+        twin: sum(r["price"] / r["gross_area"] for r in twin_rows) / len(twin_rows),
+    }
+
+    result = evaluate_pooling_candidates(
+        _FakePoolConn(all_rows, price_levels=price_levels),
+        local_ctx=local_ctx,
+        req=RegressionSelectionRequest(
+            profile_twin_neighbors=[{"region_code": twin, "similarity_score": 0.9}]
+        ),
+        blocks=_POOL,
+        local_fit=local_fit,
+        anchor_region_codes=(anchor,),
+        twin_region_codes=(twin,),
+        admin_level="eupmyeondong",
+        region_col=None,
+        fixed_response_scale=local_fit.response_scale,
+        mode="diagnose",
+    )
+    pool_metrics = next(c for c in result.candidates if c.candidate_id != "local")
+    assert list(pool_metrics.blocks) == local_blocks
+    assert pool_metrics.response_scale == local_fit.response_scale
+    assert pool_metrics.prefix_k >= 1
+    assert pool_metrics.n > local_fit.n

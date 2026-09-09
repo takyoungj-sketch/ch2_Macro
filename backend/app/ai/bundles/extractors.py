@@ -341,7 +341,7 @@ def build_recommend_diagnostic(context: AiContext) -> AiDiagnosticPack:
         if loc is not None and cmpv is not None:
             summary.append(f"Twin탐색CV={float(loc):.1f}%→{float(cmpv):.1f}%")
         if tv.get("label_ko"):
-            summary.append(f"Twin구조={tv['label_ko']}")
+            summary.append(f"Twin판단={tv['label_ko']}")
     elif stage2:
         summary.append("Twin실험=미실행")
     limitations = [

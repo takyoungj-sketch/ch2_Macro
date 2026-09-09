@@ -246,6 +246,7 @@ def _fit_pool_variant(
     admin_level: str,
     region_col: str | None,
     response_scale: ResponseScale | None = None,
+    prefix_k: int = 0,
 ) -> PoolingCandidateMetrics | None:
     pool_codes = tuple(dict.fromkeys((*anchor_region_codes, *twin_codes)))
     pooled_rows = fetch_candidate_rows(
@@ -307,7 +308,20 @@ def _fit_pool_variant(
         )
     if pooled_fit is None:
         return None
-    return _metrics_from_fit(variant_id, label, pooled_fit, pool_codes, blocks=blocks)
+    metrics = _metrics_from_fit(
+        variant_id,
+        label,
+        pooled_fit,
+        pool_codes,
+        blocks=blocks,
+        prefix_k=prefix_k,
+    )
+    return _attach_search_confirm_cv(
+        metrics,
+        pooled_ctx.df,
+        unified=local_ctx.unified,
+        region_col=region_col,
+    )
 
 
 def _research_pool_variant(
@@ -469,27 +483,26 @@ def evaluate_pooling_candidates(
     fixed_response_scale: ResponseScale | None = None,
     mode: PoolingMode = "diagnose",
 ) -> PoolingEvaluation:
-    """Local과 (hard gate를 통과한) Twin pool 조합들을 실측 비교한다.
+    """Local과 Twin 접두 표본을 실측 비교한다.
 
-    mode=diagnose: blocks·fixed_response_scale로 식 고정 적합 (suggest·내부 진단).
-    mode=optimize: blocks를 SSOT 탐색 풀로 pool마다 best-subset 재탐색 (recommend stage2).
+    mode=diagnose (제품 Stage2): Local 식(blocks)·척도를 고정하고 Twin n만 보탠다.
+    mode=optimize: 확장 표본에서 best-subset 재탐색 — 관리자 Lab 전용.
     """
-    local_block_list = list(blocks) if mode == "diagnose" else list(local_fit.blocks or blocks)
+    frozen_blocks = list(local_fit.blocks or blocks)
     local_metrics = _metrics_from_fit(
         "local",
         "현재 지역만 (Local)",
         local_fit,
         anchor_region_codes,
-        blocks=local_block_list,
+        blocks=frozen_blocks,
         prefix_k=0,
     )
-    if mode == "optimize":
-        local_metrics = _attach_search_confirm_cv(
-            local_metrics,
-            local_ctx.df,
-            unified=local_ctx.unified,
-            region_col=region_col,
-        )
+    local_metrics = _attach_search_confirm_cv(
+        local_metrics,
+        local_ctx.df,
+        unified=local_ctx.unified,
+        region_col=region_col,
+    )
 
     gates, gate_passed_codes = filter_twins_by_hard_gates(
         conn,
@@ -535,14 +548,15 @@ def evaluate_pooling_candidates(
                 conn,
                 local_ctx=local_ctx,
                 req=req,
-                blocks=blocks,
+                blocks=frozen_blocks,
                 variant_id=variant_id,
                 label=label,
                 anchor_region_codes=anchor_region_codes,
                 twin_codes=codes,
                 admin_level=admin_level,
                 region_col=region_col,
-                response_scale=fixed_response_scale,
+                response_scale=fixed_response_scale or getattr(local_fit, "response_scale", None),
+                prefix_k=prefix_k,
             )
         if metrics is not None:
             all_candidates.append(metrics)

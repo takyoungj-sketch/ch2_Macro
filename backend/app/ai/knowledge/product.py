@@ -45,10 +45,12 @@ NESTED_ADMIN_SCOPE = """
 
 RECOMMEND_LOGIC = """
 모형 추천·Twin:
-- 복합 Macro 탐색: ① CV-MAPE 대표 예측모형 → ② 그 식의 회귀 → ③ Twin 실험 → ④ 비교.
+- 복합 Macro 탐색: ① CV-MAPE 대표 예측모형 → ② Local 기준선 → ③ Twin(같은 식에 유사 지역 거래만 보탬) → ④ Local vs Twin 선택.
 - Twin 후보는 지역프로필 벡터(algo 21). 유사지역 **목록**만 보려면 /profile/ Twin 카드.
-- 복합 ③ Twin 실험이 돌면 결과는 지금 화면 Bundle facts.stage2 다 (ran, twin_experiments, Local vs Twin n·CV-MAPE, 구조 유지). 있으면 그 숫자를 인용한다. 「이 패널에서는 Twin을 못 본다」고 하지 말고 Profile로 보내지 않는다.
-- Twin은 예측을 더 좋게 만드는 단계가 아니라, 이 지역에서 본 구조가 닮은 표본에서도 유지되는지 보는 실험. 유사도 ≠ 자동 채택. Twin Lab ≠ 제품 기본.
+- 복합 ③ Twin 실험이 돌면 결과는 지금 화면 Bundle facts.stage2 다 (ran, twin_experiments, Local vs Twin n·탐색/확인 CV, 채택 권고). 있으면 그 숫자를 인용한다. 「이 패널에서는 Twin을 못 본다」고 하지 말고 Profile로 보내지 않는다.
+- 제품 Twin은 Local 식·척도를 고정하고 Twin n만 보탠다. 확장 표본에서 식을 다시 고르는 재탐색(optimize)은 관리자 Lab 전용 (D-073).
+- 채택은 확인 CV 개선 + 주요 계수 방향. n만으로 채택하지 않는다. 후보는 거래가격이 아니라 구성·체급 (D-066).
+- Twin이 이겨도 기본 통계 식은 덮지 않는다. 같은 골격의 재적합 식·예측은 이 창 ③에만. 유사도 ≠ 자동 채택. Twin Lab ≠ 제품 기본.
 """
 
 RENT_CONVERSION = """
@@ -613,7 +615,7 @@ FUNCTION_CARDS: list[dict[str, Any]] = [
         "good_questions": ["이 지역과 비슷한 곳은?"],
         "strengths": ["회귀 변수가 아니라 지역 비교 엔진 (D-041)"],
         "cautions": [
-            "복합 Macro ③ Twin 실험이 Bundle facts.stage2에 있으면 그 n·CV·구조 유지를 인용한다. Profile로 보내지 않음",
+            "복합 Macro ③ Twin 실험이 Bundle facts.stage2에 있으면 그 n·탐색/확인 CV·채택 권고를 인용한다. Profile로 보내지 않음",
             "Bundle 없이 Twin 지역 이름을 나열하지 않음",
             "유사도 ≠ 자동 채택",
         ],

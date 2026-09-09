@@ -538,7 +538,7 @@ class PoolingCandidateMetrics(BaseModel):
     """Local 또는 Twin 접두 실험 후보.
 
     candidate_id는 "local" 또는 "twin_prefix_k{k}".
-    cv_mape는 Stage2 optimize에서 탐색 CV(마지막 연도 제외).
+    cv_mape는 Stage2 diagnose에서 탐색 CV(마지막 연도 제외). Lab optimize도 동일 필드.
     """
 
     candidate_id: str

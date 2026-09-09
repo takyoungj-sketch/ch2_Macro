@@ -31,7 +31,7 @@ Profile 필터 → 도메인 유사성(Twin Score) → Twin 후보
 | Orchestration | `backend/app/recommendation/stages.py` | `run_stage2` 시 `run_stage2_twin` |
 | Stage2 | `backend/app/recommendation/stage2.py` | `local_cv_mape`, `pools[].cv_mape`, `cv_mape_delta` (= local − pool), `decision`, `decision_reason` |
 | Neighbor 사전검증 | `backend/app/recommendation/twin_validation.py` | Profile Twin normalize + 표본·계약 `generate_candidates` 게이트 → `twin_codes` |
-| Pool 실측 비교 | `backend/app/built/regression/selection/pooling.py` | `evaluate_pooling_candidates(..., mode="optimize")` — Local vs Twin 조합 적합·순위 |
+| Pool 실측 비교 | `backend/app/built/regression/selection/pooling.py` | `evaluate_pooling_candidates(..., mode="diagnose")` — Local 식 고정, Twin n만 (D-073). `optimize`는 관리자 Lab |
 | Hard gate | 동 파일 + `TwinGateResult` | 가격수준·인접성 등으로 Twin 제외 |
 | UI | `frontend-built/.../RecommendStagePanel.tsx` | Twin pool 카드 · ΔCV-MAPE · decision 문구 |
 

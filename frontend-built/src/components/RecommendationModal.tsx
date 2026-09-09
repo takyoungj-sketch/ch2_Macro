@@ -25,6 +25,7 @@ type PredictTarget = {
   scale: ResponseScale;
   label: string;
   fitN?: number;
+  regionCodes?: string[];
 };
 
 type Props = {
@@ -51,6 +52,7 @@ export default function RecommendationModal({
   const [predictTarget, setPredictTarget] = useState<PredictTarget | null>(null);
   const [runStage2, setRunStage2] = useState(false);
   const launchedTwin = useRef(false);
+  const autoTwinPredictKey = useRef<string | null>(null);
 
   const predictFitM = useMutation({
     mutationFn: (body: RegressionRunRequest) => runRegression(body),
@@ -125,10 +127,12 @@ export default function RecommendationModal({
     if (!open) {
       setRunStage2(false);
       launchedTwin.current = false;
+      autoTwinPredictKey.current = null;
       setPredictTarget(null);
       return;
     }
     setPredictTarget(null);
+    autoTwinPredictKey.current = null;
     predictFitM.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 창을 열 때만 미리보기·탭 초기화
   }, [open]);
@@ -163,9 +167,34 @@ export default function RecommendationModal({
       ...regBody,
       variables: predictTarget.vars,
       response_scale: predictTarget.scale,
+      ...(predictTarget.regionCodes?.length
+        ? { region_codes: predictTarget.regionCodes }
+        : {}),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fit when target changes
   }, [open, predictTarget]);
+
+  useEffect(() => {
+    if (!open) return;
+    const data = recommendM.data;
+    const pool = data?.stage2?.primary;
+    if (!data?.stage2?.ran || !data.stage2.twin_validation?.twin_adopt_recommended || !pool) {
+      return;
+    }
+    const key = `${pool.candidate_id}:${pool.n}:${(pool.region_codes ?? []).join(",")}`;
+    if (autoTwinPredictKey.current === key) return;
+    autoTwinPredictKey.current = key;
+    setPredictTarget({
+      vars: pool.variables ?? data.stage1.primary.variables,
+      scale:
+        pool.response_scale ??
+        data.stage2.fixed_response_scale ??
+        data.stage1.primary.response_scale,
+      label: `Twin 재적합 · ${pool.label}`,
+      fitN: pool.n,
+      regionCodes: pool.region_codes,
+    });
+  }, [open, recommendM.data]);
 
   const predictRegBody = useMemo(() => {
     if (!predictTarget) return null;
@@ -173,6 +202,9 @@ export default function RecommendationModal({
       ...regBody,
       variables: predictTarget.vars,
       response_scale: predictTarget.scale,
+      ...(predictTarget.regionCodes?.length
+        ? { region_codes: predictTarget.regionCodes }
+        : {}),
     };
   }, [regBody, predictTarget]);
 
@@ -187,12 +219,19 @@ export default function RecommendationModal({
 
   const runExplore = () => {
     setRunStage2(false);
+    launchedTwin.current = false;
+    autoTwinPredictKey.current = null;
+    setPredictTarget(null);
     recommendM.mutate({ ...enrichedRegBody, run_stage2: false });
   };
 
-  const resolveFitN = (label: string) => {
+  const resolveFitN = (label: string, optsFitN?: number) => {
+    if (optsFitN != null) return optsFitN;
     const data = recommendM.data;
     if (!data) return undefined;
+    if (label.startsWith("Twin") && data.stage2?.primary?.n) {
+      return data.stage2.primary.n;
+    }
     if (label.includes("pool") && data.stage2?.pools.length) {
       const pool = data.stage2.pools.find((p) => label.includes(p.label));
       if (pool) return pool.n;
@@ -211,7 +250,7 @@ export default function RecommendationModal({
       onClose={onClose}
       titleId="recommendation-modal-title"
       title="Macro 모형 탐색"
-      subtitle="탐색 → 결과 → Twin → 비교. 이 창에서만 확인하며 기본 통계 식은 바꾸지 않습니다."
+      subtitle="탐색 → Local 기준선 → Twin 표본 보강 → 비교. 이 창에서만 확인하며 기본 통계 식은 바꾸지 않습니다."
       maxWidthClass="max-w-4xl"
       resizable
       allowFullscreen
@@ -225,7 +264,7 @@ export default function RecommendationModal({
           <PublishAiContext context={recommendM.data && aiRecommendContext ? aiRecommendContext : null} />
           <button
             type="button"
-            className="btn btn-ghost text-xs"
+            className="btn btn-ghost text-sm"
             disabled={recommendM.isPending}
             onClick={runExplore}
           >
@@ -240,7 +279,7 @@ export default function RecommendationModal({
     >
       <div className="h-full min-h-0 space-y-3">
         {loading && (
-          <p className="text-xs text-slate-400 text-center py-8">Macro 탐색 계산 중…</p>
+          <p className="text-sm text-slate-400 text-center py-8">Macro 탐색 계산 중…</p>
         )}
 
         {recommendM.isError && (
@@ -255,12 +294,13 @@ export default function RecommendationModal({
             assetType={assetType}
             minePrimary={regData.primary}
             mineScale={regBody.response_scale}
-            onPredict={(vars, scale, label) =>
+            onPredict={(vars, scale, label, opts) =>
               setPredictTarget({
                 vars,
                 scale,
                 label,
-                fitN: resolveFitN(label),
+                fitN: resolveFitN(label, opts?.fitN),
+                regionCodes: opts?.regionCodes,
               })
             }
             predictActiveLabel={predictTarget?.label ?? null}
@@ -271,7 +311,7 @@ export default function RecommendationModal({
             predictPanel={
               <div className="mt-2 space-y-2">
                 {predictFitM.isPending && (
-                  <p className="text-xs text-slate-400 text-center py-2">추정용 모형 적합 중…</p>
+                  <p className="text-sm text-slate-400 text-center py-2">추정용 모형 적합 중…</p>
                 )}
                 {predictFitM.isError && (
                   <p className="text-sm text-red-600">
@@ -297,7 +337,7 @@ export default function RecommendationModal({
         )}
 
         {!loading && !recommendM.data && !recommendM.isError && (
-          <p className="text-xs text-slate-400 text-center py-6">
+          <p className="text-sm text-slate-400 text-center py-6">
             「Macro 탐색」을 누르면 변수 조합과 척도를 CV-MAPE로 비교해 대표 예측모형을 찾습니다.
           </p>
         )}

@@ -150,16 +150,18 @@ export const BUILT_MODEL_SELECTION_COMPARE_HELP: AnalysisExplain = {
 
 export const BUILT_RECOMMEND_HELP: AnalysisExplain = {
   spec_id: "built_recommend_static_v1",
-  spec_version: "2",
+  spec_version: "3",
   title: "Macro 모형 탐색",
   summary:
-    "① CV-MAPE로 대표 예측모형을 고르고 → ② 그 식으로 이 지역 거래를 읽고 → ③ Twin으로 구조가 유지되는지 보며 → ④ 기본 통계 식과 비교합니다. 결과는 이 창에서만 확인하며 기본 통계 식은 바꾸지 않습니다.",
+    "① CV-MAPE로 대표 예측모형을 고르고 → ② 그 식을 이 지역 거래의 Local 기준선으로 두고 → ③ 같은 식에 유사 지역 거래를 보태 예측력이 나아지는지 보며 → ④ Local과 Twin 재적합 중 이 창에서 쓸 식을 고릅니다. 기본 통계 식은 바꾸지 않습니다.",
   interpretation: [
     "①은 왜 이 식인가만 답합니다. 순위 표에는 CV-MAPE만 둡니다.",
     "②는 기본 통계 회귀실험과 같은 골격입니다. 식·계수·적합 표본·CV-MAPE를 여기서 읽습니다.",
     "척도는 선형·log(금액)·log-log를 같은 표본에서 비교합니다. log-log는 면적 블록이 있을 때만, 면적만 log입니다.",
-    "Twin은 예측을 더 좋게 만드는 단계가 아니라, 이 지역 구조가 닮은 지역에서도 나타나는지 보는 실험입니다.",
-    "값 계산은 ② 맨 아래 접이식입니다. 통계적 추정값이며 개별 적정가·AVM이 아닙니다.",
+    "③ Twin은 Local과 같은 식·척도에 유사 지역 거래만 보탭니다. 예측오차와 주요 계수 방향을 같이 보고 적용 여부를 판단합니다. 식을 다시 고르지 않습니다.",
+    "판단 순서는 예측력 → 계수 안정 → 표본입니다. n만으로 채택하지 않고, Twin 후보는 거래가격이 아니라 구성·체급으로 고릅니다.",
+    "Twin이 이겨도 기본 통계 식은 덮지 않습니다. 같은 골격의 재적합 식과 예측은 이 창 ③에만 생깁니다.",
+    "값 계산은 ②(Local) 또는 Twin 채택 시 ③입니다. 통계적 추정값이며 개별 적정가·AVM이 아닙니다.",
   ],
   limitations: ["적정가·투자 판단 아님", "통계적 추정이며 현장 판단을 대체하지 않음"],
   interpretation_hints: [],

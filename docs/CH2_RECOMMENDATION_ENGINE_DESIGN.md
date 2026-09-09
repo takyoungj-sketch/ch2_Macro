@@ -23,7 +23,7 @@ CH2 Macro 모형 추천의 경쟁력은 **「더 똑똑한 한 줄의 식」** �
 7. **CH2 Recommendation Engine** — Built 전용이 아닌 토지·집합 확장 골격
 
 **현행 구현과의 관계:** 복합 `Group Forward` · `Best Subset` · `evaluate_pooling_candidates` 는 **엔진 재료**로 유지하되, **UX·scope·단계·설명**은 본 설계로 **재배치**한다.  
-**2026-09 UI (D-071):** Macro 창은 탭이 아니라 ① 탐색 → ② #1 회귀 → ③ Twin 구조 → ④ 비교. 왼쪽 변수·기본 통계는 **유지·비대체**.
+**2026-09 UI (D-071 · D-073):** Macro 창은 탭이 아니라 ① 탐색 → ② Local 기준선 → ③ Twin(식 고정·표본 보강) → ④ Local vs Twin. 왼쪽 변수·기본 통계는 **유지·비대체**.
 
 ---
 
@@ -86,16 +86,16 @@ analysis_scope
 │     │
 │     └─ 2단계 필요 ──► (아래)
 │
-└─ 2단계 ─ Twin pool (표본 확장 후 **SSOT 풀 재탐색**)
-      · anchor = analysis_scope.anchor_unit
-      · Profile Twin gate 통과 지역만
-      · pool 조합 top1 / top3 / 전체 — pool마다 stage1과 동일 best-subset
-      · CV-MAPE 기준 최종 pool·변수·스케일 제안 (사용자 채택)
+└─ 2단계 ─ Twin pool (**식 고정 · Twin n만**, D-073)
+      · Local `blocks` + `response_scale` 유지
+      · Profile Twin gate 통과 지역만 접두로 보탬
+      · 확인 CV·계수 방향으로 채택 권고
+      · 풀 재탐색(`mode=optimize`)은 관리자 Lab 전용
 ```
 
 **1단계에서 고정하는 것:** Local 최적 `recommended_blocks`, `response_scale`.  
-**2단계에서 바꾸는 것:** `fit_sample` 지역 pool **+** pool별 **재탐색된** 변수·스케일.  
-**내부 진단용:** `evaluate_pooling_candidates(mode=diagnose)` — 1단계 식 고정 pooling (suggest 경로).
+**2단계(제품)에서 바꾸는 것:** `fit_sample` 지역 pool만. 변수·척도는 그대로.  
+**Lab:** `evaluate_pooling_candidates(mode=optimize)` — 확장 표본 best-subset 재탐색.
 
 ### 4.2 2단계 **자동 진입** (예외)
 

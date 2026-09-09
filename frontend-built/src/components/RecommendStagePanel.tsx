@@ -62,7 +62,12 @@ type Props = {
   onAdopt?: (vars: RegressionVariableSpec, scale: ResponseScale) => void;
   onAdoptPool?: (payload: AdoptPoolPayload) => void;
   adopting?: boolean;
-  onPredict?: (vars: RegressionVariableSpec, scale: ResponseScale, label: string) => void;
+  onPredict?: (
+    vars: RegressionVariableSpec,
+    scale: ResponseScale,
+    label: string,
+    opts?: { regionCodes?: string[]; fitN?: number },
+  ) => void;
   predictActiveLabel?: string | null;
   regionNameByCode?: Record<string, string>;
   onRunTwin?: () => void;
@@ -148,7 +153,7 @@ function StageSection({
 function CheckChips({ items }: { items: DiagnosticCheckItem[] }) {
   if (!items.length) return null;
   return (
-    <ul className="flex flex-wrap gap-1.5 text-[11px]">
+    <ul className="flex flex-wrap gap-1.5 text-xs">
       {items.map((item) => (
         <li
           key={item.check_id}
@@ -166,8 +171,8 @@ function CoefficientInsights({ items }: { items: CoefficientNarrative[] }) {
   if (!items.length) return null;
   return (
     <div className="mt-2 space-y-1.5">
-      <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">계수 해석</p>
-      <ul className="space-y-1.5 text-xs">
+      <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">계수 해석</p>
+      <ul className="space-y-1.5 text-sm">
         {items.map((c) => (
           <li
             key={c.name}
@@ -191,6 +196,7 @@ export default function RecommendStagePanel({
   onAdoptPool,
   adopting,
   onPredict,
+  predictActiveLabel,
   regionNameByCode = {},
   onRunTwin,
   twinRunning,
@@ -237,6 +243,8 @@ export default function RecommendStagePanel({
     twinSteps.find((s) => s.search_picked && s.step_id !== "local") ??
     twinSteps.find((s) => s.selected && s.step_id !== "local");
   const hold = signsHold(localStep?.key_coefficients, twinStepPick?.key_coefficients);
+  const twinAdopted = Boolean(stage2?.twin_validation?.twin_adopt_recommended);
+  const twinPredictActive = Boolean(predictActiveLabel?.startsWith("Twin"));
   const explanatory = stage1.alternate;
   const explDiffers =
     Boolean(explanatory) &&
@@ -244,7 +252,7 @@ export default function RecommendStagePanel({
       explanatory!.blocks.join(",") !== primary.blocks.join(","));
 
   return (
-    <div className="space-y-1 text-sm">
+    <div className="space-y-1.5 text-base">
       <ScopeNLabels
         counts={{
           scope_n_tx: analysis_scope.scope_n_tx,
@@ -254,13 +262,13 @@ export default function RecommendStagePanel({
           partial_tx_count: analysis_scope.partial_tx_count,
         }}
         compact
-        className="text-[11px] text-slate-500 mb-2"
+        className="text-xs text-slate-500 mb-2"
       />
 
       <StageSection index="①" title="예측형 모형 탐색">
         <CheckChips items={sampleChecks} />
         {warnings.length > 0 && (
-          <ul className="text-[11px] text-amber-700 dark:text-amber-400 space-y-0.5">
+          <ul className="text-xs text-amber-700 dark:text-amber-400 space-y-0.5">
             {warnings.map((w) => (
               <li key={w}>⚠ {w}</li>
             ))}
@@ -268,7 +276,7 @@ export default function RecommendStagePanel({
         )}
 
         <div className="overflow-x-auto rounded-md border border-slate-200 dark:border-slate-700">
-          <table className="w-full text-left text-[11px] border-collapse">
+          <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="text-slate-500 border-b border-slate-200 dark:border-slate-700">
                 <th className="py-1.5 px-2 font-medium">순위</th>
@@ -305,7 +313,7 @@ export default function RecommendStagePanel({
         </div>
 
         <div className="rounded-lg border-2 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/20 px-3 py-3 space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
             대표 예측모형
           </p>
           <p className="text-xl font-bold text-slate-900 dark:text-slate-100">
@@ -316,15 +324,19 @@ export default function RecommendStagePanel({
               {formatResponseScale(primary.response_scale)}
             </span>
           </p>
-          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-            전체 후보 중 교차검증 오차가 가장 낮은 모형입니다. 다음 단계에서 이 식이 이 지역 거래를
-            어떻게 설명하는지 읽습니다.
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            전체 후보 중 교차검증 오차가 가장 낮은 모형입니다. 다음 단계에서 이 지역 거래만의
+            예측 기준선으로 확정합니다.
           </p>
         </div>
       </StageSection>
 
-      <StageSection index="②" title="대표 예측모형의 회귀 결과">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+      <StageSection index="②" title="Local 기준선">
+        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+          이 지역 거래만으로 대표 예측모형이 어느 정도 맞는지입니다. Twin은 이 기준선과 같은 식에
+          유사 지역 표본만 보태 예측력이 나아지는지 봅니다.
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
           <div className="rounded border border-slate-200 dark:border-slate-700 px-2 py-1.5">
             <p className="text-slate-500">척도</p>
             <p className="font-medium">{formatResponseScale(primary.response_scale)}</p>
@@ -350,7 +362,7 @@ export default function RecommendStagePanel({
         </div>
 
         {(conclusion.macro_diagnosis?.summary_ko || conclusion.summary_ko) && (
-          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
             {conclusion.macro_diagnosis?.summary_ko || conclusion.summary_ko}
           </p>
         )}
@@ -363,7 +375,7 @@ export default function RecommendStagePanel({
         />
 
         {explDiffers && explanatory && (
-          <p className="text-[11px] text-slate-500">
+          <p className="text-xs text-slate-500">
             같은 풀에서 AIC로 본 설명형 1위는 {formatResponseScale(explanatory.response_scale)} ·{" "}
             {blockSummary(explanatory.blocks)} 입니다. 이 장의 식은 CV-MAPE 대표 예측모형입니다.
           </p>
@@ -372,7 +384,7 @@ export default function RecommendStagePanel({
         {onAdopt && (
           <button
             type="button"
-            className="px-2.5 py-1 text-xs rounded bg-indigo-600 text-white disabled:opacity-50"
+            className="px-2.5 py-1 text-sm rounded bg-indigo-600 text-white disabled:opacity-50"
             disabled={adopting}
             onClick={() => onAdopt(primary.variables, primary.response_scale)}
           >
@@ -389,27 +401,31 @@ export default function RecommendStagePanel({
               }
             }}
           >
-            <summary className="cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-200">
+            <summary className="cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-200">
               이 모형으로 값 계산해 보기
             </summary>
-            <p className="mt-2 text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+            <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
               통계적 추정값입니다. 지역 거래자료에서 관찰된 변수 간 관계를 이용해 산출한 참고값이며,
               개별 대상물건의 감정평가액이나 AVM 가격이 아닙니다.
             </p>
-            {predictPanel}
+            {(!twinAdopted || !twinPredictActive) && predictPanel}
           </details>
         )}
       </StageSection>
 
       <StageSection index="③" title="Twin 실험">
+        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+          지역 표본에 유사 지역의 거래를 추가했을 때 예측력이 실제로 개선되는지 검증합니다.
+          예측오차뿐 아니라 주요 계수의 방향과 안정성도 함께 확인하여 Twin 적용 여부를 판단합니다.
+        </p>
         <CheckChips items={twinChecks} />
 
         {twinCandidateStatus === "loading" && !conclusion.twin_ran && (
-          <p className="text-xs text-slate-500">유사 지역 후보를 불러오는 중…</p>
+          <p className="text-sm text-slate-500">유사 지역 후보를 불러오는 중…</p>
         )}
 
         {twinCandidateStatus === "none" && !conclusion.twin_ran && (
-          <p className="text-xs text-slate-500">
+          <p className="text-sm text-slate-500">
             {twinBlockedAdmin
               ? "시군구·구 초점에는 Twin 실험을 붙이지 않습니다."
               : "이 지역의 Profile Twin 후보가 없어 실험을 돌릴 수 없습니다."}
@@ -418,12 +434,12 @@ export default function RecommendStagePanel({
 
         {conclusion.twin_recommended && canRunTwin && (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-violet-200 dark:border-violet-800 bg-violet-50/60 dark:bg-violet-950/20 px-2.5 py-2">
-            <p className="text-xs text-violet-900 dark:text-violet-100">
-              Local만으로는 구조가 충분히 안 보일 수 있어 추가 검증을 권합니다.
+            <p className="text-sm text-violet-900 dark:text-violet-100">
+              Local 표본만으로는 예측 기준선이 얇을 수 있어, 유사 지역 거래를 보탠 검증을 권합니다.
             </p>
             <button
               type="button"
-              className="px-2.5 py-1 text-xs rounded bg-violet-600 text-white disabled:opacity-50"
+              className="px-2.5 py-1 text-sm rounded bg-violet-600 text-white disabled:opacity-50"
               disabled={twinRunning}
               onClick={onRunTwin}
             >
@@ -434,13 +450,13 @@ export default function RecommendStagePanel({
 
         {!conclusion.twin_recommended && canRunTwin && (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-violet-200 dark:border-violet-800 px-2.5 py-2">
-            <p className="text-xs text-slate-600 dark:text-slate-300">
-              교차검증 오차가 낮아 Twin은 필수는 아닙니다. 이 지역 구조가 닮은 곳에서도 유지되는지는
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              교차검증 오차가 낮아 Twin은 필수는 아닙니다. 유사 지역 표본을 보태면 예측이 나아지는지는
               실험해 볼 수 있습니다.
             </p>
             <button
               type="button"
-              className="px-2.5 py-1 text-xs rounded border border-violet-400 text-violet-800 dark:text-violet-200 disabled:opacity-50"
+              className="px-2.5 py-1 text-sm rounded border border-violet-400 text-violet-800 dark:text-violet-200 disabled:opacity-50"
               disabled={twinRunning}
               onClick={onRunTwin}
             >
@@ -460,6 +476,9 @@ export default function RecommendStagePanel({
             twinStepIndex={twinStep}
             setTwinStep={setTwinStep}
             onAdoptPool={onAdoptPool}
+            onPredict={onPredict}
+            predictPanel={twinPredictActive ? predictPanel : undefined}
+            predictActiveLabel={predictActiveLabel}
             stage1={stage1}
             adopting={adopting}
           />
@@ -467,6 +486,10 @@ export default function RecommendStagePanel({
       </StageSection>
 
       <StageSection index="④" title="모형 비교">
+        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+          최종적으로 Local과 Twin 재적합 중 무엇을 이 창에서 쓸지 고릅니다. 기본 통계 식은 바꾸지
+          않습니다.
+        </p>
         <ModelCompareTable
           mine={minePrimary ?? null}
           mineScale={mineScale ?? null}
@@ -475,11 +498,12 @@ export default function RecommendStagePanel({
           twinRan={Boolean(stage2?.ran)}
           twinPool={stage2?.primary ?? visiblePool ?? null}
           hold={hold}
+          twinAdopted={Boolean(stage2?.twin_validation?.twin_adopt_recommended)}
         />
       </StageSection>
 
       {termination.reasons.length > 0 && (
-        <details className="rounded border border-slate-200 dark:border-slate-700 px-2.5 py-2 text-xs">
+        <details className="rounded border border-slate-200 dark:border-slate-700 px-2.5 py-2 text-sm">
           <summary className="cursor-pointer font-medium text-slate-600 dark:text-slate-300">
             탐색 로그
           </summary>
@@ -507,7 +531,7 @@ function CandidateEquationBlock({
   if (!coeffs.length) return null;
   return (
     <div className="space-y-1">
-      <div className="flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-400">
+      <div className="flex items-center gap-1 text-sm font-semibold text-slate-600 dark:text-slate-400">
         회귀식
         <StatsGlossaryHelp termId="coefficient" size="xs" />
       </div>
@@ -516,7 +540,7 @@ function CandidateEquationBlock({
         responseScale={candidate.response_scale}
         assetType={assetType}
       />
-      <details className="text-xs" open>
+      <details className="text-sm" open>
         <summary className="cursor-pointer text-slate-600 dark:text-slate-400 font-medium">
           계수 상세
         </summary>
@@ -541,6 +565,9 @@ function TwinStructureResult({
   twinStepIndex,
   setTwinStep,
   onAdoptPool,
+  onPredict,
+  predictPanel,
+  predictActiveLabel,
   stage1,
   adopting,
 }: {
@@ -553,22 +580,36 @@ function TwinStructureResult({
   twinStepIndex: number;
   setTwinStep: (fn: (s: number) => number) => void;
   onAdoptPool?: (payload: AdoptPoolPayload) => void;
+  onPredict?: (
+    vars: RegressionVariableSpec,
+    scale: ResponseScale,
+    label: string,
+    opts?: { regionCodes?: string[]; fitN?: number },
+  ) => void;
+  predictPanel?: ReactNode;
+  predictActiveLabel?: string | null;
   stage1: RecommendationStage1;
   adopting?: boolean;
 }) {
   if (!stage2.ran && stage2.skipped_reason) {
-    return <p className="text-xs text-slate-500">{stage2.skipped_reason}</p>;
+    return <p className="text-sm text-slate-500">{stage2.skipped_reason}</p>;
   }
 
   const twinLabel =
     twinStepPick?.region_codes
       .map((c) => regionNameByCode[c] ?? c.slice(-8))
       .join(" + ") || twinStepPick?.label;
+  const adopted = Boolean(stage2.twin_validation?.twin_adopt_recommended);
+  const twinPredictActive = Boolean(predictActiveLabel?.startsWith("Twin"));
+  const twinCv = twinStepPick?.search_cv_mape ?? visiblePool?.cv_mape;
+  const localCv = localStep?.search_cv_mape ?? stage2.local_cv_mape;
+  const twinConfirm = twinStepPick?.confirm_cv_mape ?? visiblePool?.confirm_cv_mape;
+  const localConfirm = localStep?.confirm_cv_mape ?? stage2.local_confirm_cv_mape;
 
   return (
     <div className="space-y-2 rounded-md border border-violet-200 dark:border-violet-900/50 bg-violet-50/40 dark:bg-violet-950/15 p-2.5">
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-[11px] border-collapse">
+        <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="text-slate-500">
               <th className="py-1 pr-2 font-medium"> </th>
@@ -578,64 +619,99 @@ function TwinStructureResult({
           </thead>
           <tbody className="text-slate-800 dark:text-slate-100">
             <tr>
+              <td className="py-0.5 pr-2 text-slate-500">탐색 CV</td>
+              <td className="py-0.5 pr-2 tabular-nums">
+                {localCv != null ? `${localCv.toFixed(1)}%` : "—"}
+              </td>
+              <td className="py-0.5 tabular-nums">{twinCv != null ? `${twinCv.toFixed(1)}%` : "—"}</td>
+            </tr>
+            <tr>
+              <td className="py-0.5 pr-2 text-slate-500">확인 CV</td>
+              <td className="py-0.5 pr-2 tabular-nums">
+                {localConfirm != null ? `${localConfirm.toFixed(1)}%` : "—"}
+              </td>
+              <td className="py-0.5 tabular-nums">
+                {twinConfirm != null ? `${twinConfirm.toFixed(1)}%` : "—"}
+              </td>
+            </tr>
+            <tr>
               <td className="py-0.5 pr-2 text-slate-500">표본 n</td>
               <td className="py-0.5 pr-2 tabular-nums">{localStep?.n ?? stage1.fit_n}</td>
-              <td className="py-0.5 tabular-nums">
-                {twinStepPick?.n ?? visiblePool?.n ?? "—"}
-              </td>
+              <td className="py-0.5 tabular-nums">{twinStepPick?.n ?? visiblePool?.n ?? "—"}</td>
             </tr>
             <tr>
-              <td className="py-0.5 pr-2 text-slate-500">CV-MAPE</td>
-              <td className="py-0.5 pr-2 tabular-nums">
-                {(localStep?.search_cv_mape ?? stage2.local_cv_mape) != null
-                  ? `${(localStep?.search_cv_mape ?? stage2.local_cv_mape)!.toFixed(1)}%`
-                  : "—"}
-              </td>
-              <td className="py-0.5 tabular-nums">
-                {(twinStepPick?.search_cv_mape ?? visiblePool?.cv_mape) != null
-                  ? `${(twinStepPick?.search_cv_mape ?? visiblePool?.cv_mape)!.toFixed(1)}%`
-                  : "—"}
-              </td>
-            </tr>
-            <tr>
-              <td className="py-0.5 pr-2 text-slate-500">주요 변수</td>
-              <td className="py-0.5 pr-2">{signBits(localStep?.key_coefficients)}</td>
-              <td className="py-0.5">{signBits(twinStepPick?.key_coefficients ?? visiblePool?.key_coefficients)}</td>
-            </tr>
-            <tr>
-              <td className="py-0.5 pr-2 text-slate-500">구조 유지</td>
-              <td className="py-0.5 pr-2">—</td>
+              <td className="py-0.5 pr-2 text-slate-500">판단</td>
+              <td className="py-0.5 pr-2">기준선</td>
               <td className="py-0.5 font-medium">
-                {hold == null ? "—" : hold ? "유지" : "방향이 다름"}
+                {adopted ? "예측력 개선 — 재적합 권고" : "Local 유지"}
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <p className="text-xs leading-relaxed text-slate-700 dark:text-slate-200">
-        {hold === true
-          ? "Twin에서도 주요 변수의 방향이 같아, 이 지역에서 관찰된 구조가 대체로 유지됩니다."
-          : hold === false
-            ? "Twin에서는 일부 변수의 방향이 달라, Local에서 관찰된 관계를 다른 지역에서도 동일하다고 보기 어렵습니다."
-            : "계수 방향을 나란히 비교할 수 있는 변수가 충분하지 않습니다. 표본과 확인 CV를 참고하세요."}
+      <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200">
+        {adopted
+          ? "확인 CV가 Local보다 나아지고 주요 계수 방향이 유지되어, 같은 식을 Twin 표본에 다시 적합하는 것을 권고합니다. 변수 구성은 바뀌지 않습니다."
+          : stage2.decision_reason ||
+            "예측력 개선과 계수 안정을 함께 만족하지 않아 Local 기준선을 유지합니다. Twin이 반드시 식을 좋게 만들지는 않습니다."}
       </p>
-      <p className="text-[10px] text-slate-500 leading-relaxed">
-        Twin은 가격이 비슷한 지역이 아니라 거래 구성·토지 이용·체급이 닮아 구조를 대조할 후보입니다.
+      <p className="text-[11px] text-slate-500 leading-relaxed">
+        후보 지역은 거래 구성·토지 이용·체급으로 고릅니다. 거래가격으로 고르지 않습니다. 판단 순서는
+        예측력 → 계수 안정 → 표본 규모입니다.
       </p>
 
+      {adopted && visiblePool && (
+        <div className="rounded-md border border-violet-300 dark:border-violet-800 bg-white/70 dark:bg-slate-900/40 px-2.5 py-2 space-y-2">
+          <p className="text-sm font-semibold text-violet-900 dark:text-violet-100">
+            Twin 재적합 식 · 예측
+          </p>
+          <p className="text-xs font-medium text-slate-800 dark:text-slate-100">
+            {formatResponseScale(
+              visiblePool.response_scale ?? stage2.fixed_response_scale,
+            )}{" "}
+            · {blockSummary(visiblePool.blocks ?? stage1.primary.blocks)} · n=
+            {visiblePool.n}
+          </p>
+          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            Local과 같은 변수·척도입니다. 계수와 예측구간만 Twin 표본으로 다시 추정합니다.
+          </p>
+          {onPredict && !twinPredictActive && (
+            <button
+              type="button"
+              className="px-2 py-0.5 text-xs rounded border border-violet-400 text-violet-700 dark:text-violet-300"
+              onClick={() => {
+                const { vars, scale } = poolAdoptVars(visiblePool, stage1, stage2);
+                onPredict(vars, scale, `Twin 재적합 · ${visiblePool.label}`, {
+                  regionCodes: visiblePool.region_codes,
+                  fitN: visiblePool.n,
+                });
+              }}
+            >
+              Twin 표본으로 값 계산해 보기
+            </button>
+          )}
+          {twinPredictActive && predictPanel}
+        </div>
+      )}
+
       {stage2.twin_experiments && stage2.twin_experiments.length > 0 && (
-        <details className="text-[11px]">
-          <summary className="cursor-pointer text-slate-500">접두 실험 상세</summary>
+        <details className="text-xs">
+          <summary className="cursor-pointer text-slate-500">접두 실험 상세 · 계수 안정</summary>
           <TwinExperimentTable
             steps={stage2.twin_experiments}
             regionNameByCode={regionNameByCode}
           />
+          <p className="mt-1.5 text-[11px] text-slate-500 leading-relaxed">
+            계수 방향{" "}
+            {hold == null ? "비교 부족" : hold ? "유지" : "일부 다름"}
+            . 부호가 뒤집히면 채택하지 않습니다.
+          </p>
         </details>
       )}
 
       {stage2.ran && stage2.pools.length > 0 && visiblePool && (
-        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
           <span>{visiblePool.label}</span>
           {stage2.pools.length > 1 && (
             <span className="flex gap-1">
@@ -694,7 +770,7 @@ function TwinExperimentTable({
   const stabLabel = { ok: "양호", warn: "주의", fail: "불안정" } as const;
   return (
     <div className="mt-2 overflow-x-auto">
-      <table className="w-full text-left text-[11px] border-collapse">
+      <table className="w-full text-left text-xs border-collapse">
         <thead>
           <tr className="text-slate-500">
             <th className="py-1 pr-2 font-medium">실험</th>
@@ -702,6 +778,7 @@ function TwinExperimentTable({
             <th className="py-1 pr-2 font-medium">탐색 CV</th>
             <th className="py-1 pr-2 font-medium">확인 CV</th>
             <th className="py-1 font-medium">안정</th>
+            <th className="py-1 font-medium">계수 방향</th>
           </tr>
         </thead>
         <tbody>
@@ -710,7 +787,7 @@ function TwinExperimentTable({
               <td className="py-0.5 pr-2">
                 {s.label}
                 {s.region_codes.length > 0 && (
-                  <span className="block text-[10px] text-slate-500">
+                  <span className="block text-[11px] text-slate-500">
                     {s.region_codes.map((c) => regionNameByCode[c] ?? c.slice(-8)).join(" + ")}
                   </span>
                 )}
@@ -723,6 +800,7 @@ function TwinExperimentTable({
                 {s.confirm_cv_mape != null ? `${s.confirm_cv_mape.toFixed(1)}%` : "—"}
               </td>
               <td className="py-0.5">{stabLabel[s.stability]}</td>
+              <td className="py-0.5">{signBits(s.key_coefficients)}</td>
             </tr>
           ))}
         </tbody>
@@ -739,6 +817,7 @@ function ModelCompareTable({
   twinRan,
   twinPool,
   hold,
+  twinAdopted,
 }: {
   mine: RegressionLevelResult | null;
   mineScale: ResponseScale | null;
@@ -747,6 +826,7 @@ function ModelCompareTable({
   twinRan: boolean;
   twinPool: RecommendationPoolCandidate | null;
   hold: boolean | null;
+  twinAdopted?: boolean;
 }) {
   const twinCv = twinPool?.cv_mape;
   const macroCv = primary.metrics.cv_mape;
@@ -754,7 +834,7 @@ function ModelCompareTable({
   return (
     <div className="space-y-2">
       <div className="overflow-x-auto rounded-md border border-slate-200 dark:border-slate-700">
-        <table className="w-full text-left text-[11px] border-collapse">
+        <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="text-slate-500 border-b border-slate-200 dark:border-slate-700">
               <th className="py-1.5 px-2 font-medium"> </th>
@@ -767,14 +847,14 @@ function ModelCompareTable({
             <tr className="border-b border-slate-100 dark:border-slate-800">
               <td className="py-1 px-2 text-slate-500">목적</td>
               <td className="py-1 pr-2">사용자 가설</td>
-              <td className="py-1 pr-2">예측 구조 탐색</td>
-              <td className="py-1 pr-2">구조 비교</td>
+              <td className="py-1 pr-2">Local 기준선</td>
+              <td className="py-1 pr-2">{twinRan ? "예측력 확장" : "실험 전"}</td>
             </tr>
             <tr className="border-b border-slate-100 dark:border-slate-800">
               <td className="py-1 px-2 text-slate-500">변수</td>
               <td className="py-1 pr-2">사용자 선택</td>
               <td className="py-1 pr-2">{blockSummary(primary.blocks)}</td>
-              <td className="py-1 pr-2">{twinRan ? "Macro #1 적용" : "실험 전"}</td>
+              <td className="py-1 pr-2">{twinRan ? "Local 식 고정 · Twin 표본" : "실험 전"}</td>
             </tr>
             <tr className="border-b border-slate-100 dark:border-slate-800">
               <td className="py-1 px-2 text-slate-500">척도</td>
@@ -827,15 +907,15 @@ function ModelCompareTable({
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+      <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
         기본 통계는 표본 내 적합, Macro #1은 교차검증입니다. 숫자를 한 줄로 우열 가리지 않습니다.
         {twinRan
-          ? hold === true
-            ? " Twin에서도 유사한 방향이 보이면, 그 구조를 이 지역에만 묶인 관계로만 보지 않아도 됩니다."
+          ? twinAdopted
+            ? " Twin 재적합이 확인 CV에서 Local을 이겼습니다. 같은 식·다른 표본입니다."
             : hold === false
-              ? " Twin에서 방향이 갈리면, 우선 이 지역 Local 관계로 읽는 것이 안전합니다."
-              : " Twin 결과는 ③에서 구조 유지 여부를 함께 보세요."
-          : " Twin까지 보면 그 구조가 이 지역에 국한된 관계인지, 더 일반적인 거래구조인지 가늠할 수 있습니다."}
+              ? " Twin에서 주요 계수 방향이 갈리면 Local을 유지하는 편이 안전합니다."
+              : " Twin이 Local보다 예측을 좋게 만들지 못하면 Local 기준선이 결론입니다."
+          : " Twin은 같은 식에 유사 지역 거래를 보태 예측력이 나아지는지 보는 실험입니다."}
       </p>
     </div>
   );

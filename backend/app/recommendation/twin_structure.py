@@ -292,8 +292,8 @@ def decide_twin_prefix(
     if not eligible:
         decision.decision = "local"
         decision.decision_reason = (
-            "지역 구조 Twin을 접두로 붙였으나, 탐색 CV의 실질적 개선과 계수 안정을 "
-            "함께 만족하는 조합이 없어 Local을 유지합니다. 표본이 늘었다는 것만으로 "
+            "Local 식을 Twin 표본에 다시 적합했으나, 탐색 CV의 실질적 개선과 계수 안정을 "
+            "함께 만족하는 접두가 없어 Local을 유지합니다. 표본이 늘었다는 것만으로 "
             "채택하지 않습니다."
         )
         decision.search_band = "tie"
@@ -365,8 +365,9 @@ def decide_twin_prefix(
     )
     if confirm_ok:
         decision.decision_reason = (
-            f"{search_txt}. {confirm_note} 핵심 계수 방향이 유지되어 Twin 채택을 권고합니다. "
-            "기본 통계 식은 바꾸지 않습니다."
+            f"{search_txt}. {confirm_note} 핵심 계수 방향이 유지되어 "
+            "같은 식을 Twin 표본에 재적합한 결과를 권고합니다. "
+            "변수 구성은 Local과 같고 계수만 다시 추정합니다. 기본 통계 식은 바꾸지 않습니다."
         )
     else:
         decision.decision = "local"

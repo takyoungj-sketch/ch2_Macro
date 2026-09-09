@@ -1,4 +1,4 @@
-"""Stage2 must re-admit region_* blocks when include_region_features=True."""
+"""Stage2 Twin 제품 경로는 Local 식을 고정하고 표본만 보탠다 (D-073)."""
 
 from __future__ import annotations
 
@@ -13,8 +13,7 @@ def test_region_blocks_for_commercial_nonempty():
     assert any(b.startswith("region_") for b in blocks)
 
 
-def test_stage2_expands_search_pool_with_region_blocks(monkeypatch):
-    """Local stage1 pool lacks region_*; stage2 must append them before pooling."""
+def test_stage2_pooling_uses_frozen_local_blocks(monkeypatch):
     captured: dict = {}
 
     def fake_validate(conn, *, req, admin_level, search_pool, anchor_df):
@@ -29,6 +28,8 @@ def test_stage2_expands_search_pool_with_region_blocks(monkeypatch):
 
     def fake_evaluate(_conn, **kwargs):
         captured["eval_blocks"] = list(kwargs["blocks"])
+        captured["mode"] = kwargs.get("mode")
+        captured["scale"] = kwargs.get("fixed_response_scale")
 
         class P:
             decision = "local"
@@ -72,13 +73,14 @@ def test_stage2_expands_search_pool_with_region_blocks(monkeypatch):
     inp = Stage2Input(
         ctx=Ctx(),  # type: ignore[arg-type]
         req=req,
-        blocks=["gross_area", "land_area"],  # no region_*
+        blocks=["gross_area", "land_area"],
         primary_raw=Primary(),  # type: ignore[arg-type]
         analysis_scope=Scope(),  # type: ignore[arg-type]
         region_col=None,
     )
     run_stage2_twin(None, inp)
-    assert "region_land_p50" in captured["search_pool"]
-    assert "region_land_p50" in captured["eval_blocks"]
-    assert "region_population" not in captured["search_pool"]
-    assert "gross_area" in captured["search_pool"]
+    assert captured["eval_blocks"] == ["gross_area"]
+    assert captured["mode"] == "diagnose"
+    assert captured["scale"] == "log"
+    assert "region_land_p50" not in captured["eval_blocks"]
+    assert "region_land_p50" not in captured["search_pool"]

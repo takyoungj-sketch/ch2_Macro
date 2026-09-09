@@ -73,8 +73,9 @@
 | D-068 | 2026-09-08 | **읽는 강도 4축 + Macro 해석.** CV-MAPE는 1위 선정이자 해석 축(낮음/보통/높은 편/높음). Adj R²·안정성·표본과 같이 읽고, 숨은 점수 없이 종합(분석 한계/활용 가능/안정적/신중 활용/탐색적 활용). 빨강은 분석 한계만. 카드: [`lab/decisions/D-068.json`](lab/decisions/D-068.json). |
 | D-069 | 2026-09-08 | **예측 결과 = 통계적 추정값.** 예상 금액·95% 신뢰/예측구간 라벨을 추정값·평균 추정범위·개별 거래 예측범위로. AVM 선언은 결과 카드 한 번. 복합·토지·집합 동일. 카드: [`lab/decisions/D-069.json`](lab/decisions/D-069.json). |
 | D-070 | 2026-09-08 | **복합 모형추천 척도 = 같은 표본의 linear/log/log-log.** 예측형은 원척도 CV-MAPE, 설명형 AIC는 log(금액) 식끼리만. log-log는 면적 블록이 있을 때만(면적만 log). Twin은 1단계 척도 고정. 카드: [`lab/decisions/D-070.json`](lab/decisions/D-070.json). |
-| D-071 | 2026-09-08 | **복합 Macro 탐색 UI = 4단계 스토리.** ① CV-MAPE TOP 5 → ② #1 회귀실험 → ③ Twin 구조 유지 → ④ 기본 통계·Macro·Twin 비교. 설명형 병렬 탭 없음. 「최적」금지. 카드: [`lab/decisions/D-071.json`](lab/decisions/D-071.json). |
+| D-071 | 2026-09-08 | **복합 Macro 탐색 UI = 4단계 스토리.** ① CV-MAPE TOP 5 → ② #1 회귀실험 → ③ Twin 구조 유지 → ④ 기본 통계·Macro·Twin 비교. 설명형 병렬 탭 없음. 「최적」금지. **③ 목적은 D-073이 대체.** 카드: [`lab/decisions/D-071.json`](lab/decisions/D-071.json). |
 | D-072 | 2026-09-09 | **5앱 공유 형식은 동일 적용.** 탭 크기·필터 확인 UX·모달 크롬 등 형식은 토지·복합·집합·임대·지역프로필에 같이. 도메인 내용(열·산식)은 달라도 됨. 랩 제외. 카드: [`lab/decisions/D-072.json`](lab/decisions/D-072.json). |
+| D-073 | 2026-09-10 | **복합 제품 Twin = 식 고정 + Twin 표본.** Local 식·척도를 유지하고 유사 지역 거래만 보태 확인 CV·계수 방향을 본다. 확장 표본 재탐색은 관리자 Lab. D-071 ③ 「구조 유지」를 대체. D-066(가격으로 후보 금지·n만으로 채택 금지)은 유지. 카드: [`lab/decisions/D-073.json`](lab/decisions/D-073.json). |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 
@@ -409,5 +410,14 @@
 - 한신 단지 가중 +4.6% vs 구 중앙 +0.4%. 잔차~시공사 Adj R² 0.037.
 - **전국 공통 시공사 변수를 제품에 넣지 않음.** 다음=브랜드 vs 시공사.
 - 카드 [`lab/decisions/D-065.json`](lab/decisions/D-065.json).
+
+## D-073 복합 제품 Twin — 식 고정 + Twin 표본
+
+- 제품 Stage2(`mode=diagnose`): Local `blocks`·척도 고정, Twin n만 보탬.
+- 재탐색(`mode=optimize`)은 관리자 Lab.
+- 판단: 예측력(확인 CV) → 계수 방향·안정 → 표본. n만으로 채택 금지. 후보는 가격이 아니라 구성·체급 (D-066).
+- Twin이 이겨도 기본 통계 식은 덮지 않음. 재적합 식·예측은 Macro 창 ③.
+- D-071의 ③ 목적(구조 유지)을 대체. 4단계 골격은 유지.
+- 카드 [`lab/decisions/D-073.json`](lab/decisions/D-073.json).
 
 

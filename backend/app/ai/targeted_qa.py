@@ -289,6 +289,8 @@ _TWIN_RESULT_HINTS = (
     "접두",
     "후보",
     "구조 유지",
+    "예측력",
+    "재적합",
     "유사 지역",
     "유사지역",
 )
@@ -363,9 +365,9 @@ def answer_twin_experiment_question(message: str, diagnostics: dict[str, Any]) -
                 "",
                 "### 한계",
                 "",
-                "Twin은 예측을 더 좋게 만드는 단계가 아니라, "
-                "이 지역에서 본 구조가 닮은 표본에서도 유지되는지 보는 실험입니다. "
-                "CV가 낮아져도 자동 채택·적정가가 아닙니다.",
+                "Twin은 Local과 같은 식에 유사 지역 거래를 보태 예측력이 나아지는지 보는 실험입니다. "
+                "확인 CV와 주요 계수 방향을 같이 봅니다. CV가 낮아져도 자동 채택·적정가가 아닙니다. "
+                "기본 통계 식은 바꾸지 않습니다.",
             ]
         )
         return "\n".join(lines)
@@ -376,7 +378,7 @@ def answer_twin_experiment_question(message: str, diagnostics: dict[str, Any]) -
         if reason:
             lines.append(f"이유: {reason}")
         lines.append(
-            "Macro 탐색 **③ Twin 실험**을 실행하면 Local vs Twin n·CV-MAPE·구조 유지가 "
+            "Macro 탐색 **③ Twin 실험**을 실행하면 Local vs Twin n·탐색/확인 CV·채택 권고가 "
             "Bundle `stage2`에 실립니다. 그 뒤에 다시 물어 주시면 그 숫자를 인용합니다."
         )
         lines.extend(

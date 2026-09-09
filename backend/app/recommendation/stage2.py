@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from app.built.regression.region_features import (
     is_region_block,
     normalize_region_feature_tier,
-    region_blocks_for_asset,
 )
 from app.built.regression.selection.blocks import BlockId, spec_from_blocks
 from app.built.regression.selection.context import SelectionContext
@@ -74,18 +73,12 @@ def _pool_candidate(
 
 
 def run_stage2_twin(conn, inp: Stage2Input) -> RecommendationStage2:
-    search_pool = list(inp.blocks)
-    # Stage1 Local-only에서는 region_*가 상수로 풀에서 빠진다.
-    # Twin 다지역 표본에서는 다시 후보로 넣어 RT 축이 식별 가능하게 한다.
+    # 제품 Twin은 Local 최적식을 고정하고 표본만 보탠다 (D-073).
+    # region_* 프로파일 공변량을 풀에 다시 넣어 재탐색하지 않는다. Lab RT는 별 트랙.
     region_tier = normalize_region_feature_tier(getattr(inp.req, "region_feature_tier", None))
-    region_candidates: list[str] = []
-    if getattr(inp.req, "include_region_features", False):
-        for b in region_blocks_for_asset(inp.req.asset_type, tier=region_tier):
-            if b not in search_pool:
-                search_pool.append(b)  # type: ignore[arg-type]
-        region_candidates = [b for b in search_pool if is_region_block(str(b))]
     scale: ResponseScale = inp.primary_raw.fit.response_scale
     primary_blocks = list(inp.primary_raw.blocks)
+    region_candidates = [b for b in primary_blocks if is_region_block(str(b))]
     local_cv = inp.primary_raw.fit.cv_mape
     anchor_codes = _anchor_codes(inp.analysis_scope, inp.req)
 
@@ -93,7 +86,7 @@ def run_stage2_twin(conn, inp: Stage2Input) -> RecommendationStage2:
         conn,
         req=inp.req,
         admin_level=inp.ctx.admin_level,
-        search_pool=search_pool,
+        search_pool=list(inp.blocks),
         anchor_df=inp.ctx.df,
     )
     twin_codes = validated.twin_codes
@@ -124,13 +117,14 @@ def run_stage2_twin(conn, inp: Stage2Input) -> RecommendationStage2:
         conn,
         local_ctx=inp.ctx,
         req=req_for_pool,
-        blocks=search_pool,
+        blocks=primary_blocks,
         local_fit=inp.primary_raw.fit,
         anchor_region_codes=anchor_codes,
         twin_region_codes=twin_codes,
         admin_level=inp.ctx.admin_level,
         region_col=inp.region_col,
-        mode="optimize",
+        fixed_response_scale=scale,
+        mode="diagnose",
     )
 
     gate_note = hard_gate_summary(list(pooling.twin_gates))

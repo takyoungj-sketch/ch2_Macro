@@ -237,7 +237,7 @@ def assess_feasibility(path_id: str, context: AiContext) -> dict[str, Any]:
             executable = "yes"
             reasons.append(
                 "지금 Macro 탐색 Bundle facts.stage2에 Twin 실험 결과가 있습니다. "
-                "Local vs Twin n·CV-MAPE·구조 유지를 인용하세요. 지역프로필로 보내지 않습니다."
+                "Local vs Twin n·탐색/확인 CV·채택 권고를 인용하세요. 지역프로필로 보내지 않습니다."
             )
         else:
             executable = "unknown"
