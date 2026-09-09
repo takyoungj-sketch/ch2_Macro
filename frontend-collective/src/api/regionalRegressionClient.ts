@@ -24,6 +24,7 @@ export type RegionalRegressionRunRequest = {
   variables: RegionalRegressionVariables;
   model_type: "linear" | "log";
   weight_mode: "equal" | "tx";
+  min_tx?: 2 | 3 | 5;
 };
 
 export type RegionalRegressionPredictInputs = {

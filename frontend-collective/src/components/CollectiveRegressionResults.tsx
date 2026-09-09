@@ -1,9 +1,7 @@
 import { useMemo, useState } from "react";
 import clsx from "clsx";
 import { MetricWithHelp, StatsGlossaryHelp } from "@ch2/stats-glossary";
-import { ModelRecommendSection } from "@ch2/model-recommend";
 import type {
-  CollectiveModelCandidate,
   CollectivePredictOptions,
   CollectiveRegressionResponse,
   CommercialPredictOptions,
@@ -113,7 +111,6 @@ type RegressionResultData = Pick<
   | "equation"
   | "coefficients"
   | "predict_options"
-  | "model_candidates"
 >;
 
 function ReferenceCategories({
@@ -161,65 +158,6 @@ function ReferenceCategories({
   );
 }
 
-function CollectiveModelRecommend({
-  candidates,
-  selectionN,
-}: {
-  candidates: CollectiveModelCandidate[];
-  selectionN: number;
-}) {
-  const byAdj = [...candidates].sort(
-    (a, b) => (b.adj_r_squared ?? -Infinity) - (a.adj_r_squared ?? -Infinity),
-  );
-  const byCv = [...candidates].sort((a, b) => {
-    const av = a.cv_mape;
-    const bv = b.cv_mape;
-    if (av == null && bv == null) return a.rank - b.rank;
-    if (av == null) return 1;
-    if (bv == null) return -1;
-    return av - bv;
-  });
-
-  const toRow = (c: CollectiveModelCandidate, prefix: string) => ({
-    key: `${prefix}-${c.rank}-${c.blocks.join("+")}-${c.model_type}`,
-    primary: `#${c.rank} · ${c.blocks.join(" + ")} · ${c.model_type}`,
-    metrics: [
-      `Adj R² ${fmtDecimal(c.adj_r_squared, 3)}`,
-      c.cv_mape != null ? `CV-MAPE ${fmtDecimal(c.cv_mape, 2)}%` : "CV-MAPE —",
-      c.mape != null ? `MAPE ${fmtDecimal(c.mape, 2)}%` : null,
-      `n=${c.n.toLocaleString("ko-KR")}`,
-    ]
-      .filter(Boolean)
-      .join(" · "),
-  });
-
-  return (
-    <ModelRecommendSection
-      depth="standard_plus"
-      selectionN={selectionN}
-      limitations="후보 비교(표준+) · Twin Validation 폐쇄 루프는 복합만 · 정답 식 아님 · 소표본 시 불안정"
-      headerExtra={<StatsGlossaryHelp termId="adj_r_squared" size="xs" />}
-      defaultTabId="explanatory"
-      tabs={[
-        {
-          id: "explanatory",
-          label: "설명형 (Adj R²)",
-          optimizeSentence:
-            "이 추천은 Adj R²를 기준으로 정렬한 설명형 후보입니다. 정답 식이 아닙니다.",
-          rows: byAdj.map((c) => toRow(c, "adj")),
-        },
-        {
-          id: "predictive",
-          label: "예측형 (CV-MAPE)",
-          optimizeSentence:
-            "이 추천은 CV-MAPE(낮을수록 좋음) 기준 예측형 후보입니다. Twin pool 검증은 복합과 깊이가 다릅니다.",
-          rows: byCv.map((c) => toRow(c, "cv")),
-        },
-      ]}
-    />
-  );
-}
-
 export function CollectiveRegressionResults({
   data,
   modelType,
@@ -251,10 +189,6 @@ export function CollectiveRegressionResults({
         <MetricWithHelp label="F p" termId="f_p_value" value={fmtDecimal(data.f_p_value, 5)} />
         <MetricWithHelp label="n=" termId="fit_n" value={data.n.toLocaleString("ko-KR")} />
       </div>
-
-      {data.model_candidates && data.model_candidates.length > 0 && (
-        <CollectiveModelRecommend candidates={data.model_candidates} selectionN={data.n} />
-      )}
 
       {(data.equation || data.coefficients.length > 0) && (
         <div className="space-y-1">

@@ -102,8 +102,7 @@ interface DropdownPanelProps {
   colKey: BuiltTxSortKey;
   allValues: string[];
   included: Set<string> | undefined;
-  onToggle: (val: string) => void;
-  onToggleAll: () => void;
+  onApply: (next: Set<string> | undefined) => void;
   onClose: () => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
 }
@@ -112,12 +111,14 @@ function DropdownPanel({
   colKey,
   allValues,
   included,
-  onToggle,
-  onToggleAll,
+  onApply,
   onClose,
   containerRef,
 }: DropdownPanelProps) {
   const [search, setSearch] = useState("");
+  const [draft, setDraft] = useState<Set<string> | undefined>(() =>
+    included === undefined ? undefined : new Set(included),
+  );
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -136,12 +137,30 @@ function DropdownPanel({
 
   const q = search.trim().toLowerCase();
   const filtered = q ? allValues.filter((v) => v.toLowerCase().includes(q)) : allValues;
-  const isAllSelected = included === undefined;
+  const isAllSelected = draft === undefined;
 
   const isChecked = (val: string) => {
-    if (included === undefined) return true;
-    if (included.size === 0) return false;
-    return included.has(val);
+    if (draft === undefined) return true;
+    if (draft.size === 0) return false;
+    return draft.has(val);
+  };
+
+  const toggleVal = (val: string) => {
+    setDraft((cur) => {
+      let next: Set<string>;
+      if (cur === undefined) {
+        next = new Set(allValues.filter((v) => v !== val));
+      } else {
+        next = new Set(cur);
+        if (next.has(val)) next.delete(val);
+        else next.add(val);
+      }
+      return next.size >= allValues.length ? undefined : next;
+    });
+  };
+
+  const toggleAll = () => {
+    setDraft((cur) => (cur === undefined ? new Set<string>() : undefined));
   };
 
   return (
@@ -164,7 +183,7 @@ function DropdownPanel({
           <input
             type="checkbox"
             checked={isAllSelected}
-            onChange={onToggleAll}
+            onChange={toggleAll}
             className="accent-blue-600 w-3 h-3"
           />
           <span className="font-semibold text-slate-700 dark:text-slate-200">전체 선택</span>
@@ -185,7 +204,7 @@ function DropdownPanel({
               <input
                 type="checkbox"
                 checked={isChecked(val)}
-                onChange={() => onToggle(val)}
+                onChange={() => toggleVal(val)}
                 className="accent-blue-600 w-3 h-3 shrink-0"
               />
               <span className="truncate text-slate-800 dark:text-slate-100">{val}</span>
@@ -193,10 +212,20 @@ function DropdownPanel({
           ))
         )}
       </div>
-      <div className="px-2 py-1.5 border-t border-slate-100 dark:border-slate-700 flex justify-end">
+      <div className="px-2 py-1.5 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-1">
         <button
           type="button"
           onClick={onClose}
+          className="text-[10px] px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+        >
+          취소
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            onApply(draft === undefined ? undefined : new Set(draft));
+            onClose();
+          }}
           className="text-[10px] px-2 py-0.5 rounded bg-blue-600 text-white hover:bg-blue-700"
         >
           확인
@@ -314,33 +343,13 @@ export default function BuiltTransactionTable({
     }
   };
 
-  const toggleSelectValue = (key: BuiltTxSortKey, val: string) => {
+  const applySelectFilter = (key: BuiltTxSortKey, next: Set<string> | undefined) => {
     setPage(1);
     setSelectFilters((prev) => {
-      const allVals = distinctValues[key] ?? [];
-      const cur = prev[key];
-      let next: Set<string>;
-      if (cur === undefined) {
-        next = new Set(allVals.filter((v) => v !== val));
-      } else {
-        next = new Set(cur);
-        if (next.has(val)) next.delete(val);
-        else next.add(val);
-      }
-      const nextFilters = { ...prev };
-      if (next.size >= allVals.length) delete nextFilters[key];
-      else nextFilters[key] = next;
-      return nextFilters;
-    });
-  };
-
-  const toggleAllValues = (key: BuiltTxSortKey) => {
-    setPage(1);
-    setSelectFilters((prev) => {
-      const next = { ...prev };
-      if (prev[key] === undefined) next[key] = new Set<string>();
-      else delete next[key];
-      return next;
+      const copy = { ...prev };
+      if (next === undefined) delete copy[key];
+      else copy[key] = next;
+      return copy;
     });
   };
 
@@ -463,8 +472,7 @@ export default function BuiltTransactionTable({
                             colKey={col.key}
                             allValues={distinctValues[col.key] ?? []}
                             included={selectFilters[col.key]}
-                            onToggle={(val) => toggleSelectValue(col.key, val)}
-                            onToggleAll={() => toggleAllValues(col.key)}
+                            onApply={(next) => applySelectFilter(col.key, next)}
                             onClose={() => setOpenFilterCol(null)}
                             containerRef={{
                               current: dropdownContainerRefs.current[col.key] ?? null,

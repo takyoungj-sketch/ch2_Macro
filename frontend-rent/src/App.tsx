@@ -120,17 +120,22 @@ function MonthlyMeanCell({
 function ColTitle({
   label,
   unit,
+  countUnit,
   termId,
 }: {
   label: string;
   unit: string;
+  /** 칸의 괄호 값 단위. 예: 건 = 거래수 */
+  countUnit?: string;
   termId: string;
 }) {
   return (
     <span className="inline-flex items-center justify-center gap-0.5 leading-tight text-center">
       <span>
         {label}
-        <span className="block font-normal text-[10px] text-slate-400">({unit})</span>
+        <span className="block font-normal text-[10px] text-slate-400">
+          ({unit}){countUnit ? ` (${countUnit})` : ""}
+        </span>
       </span>
       <StatsGlossaryHelp termId={termId} size="xs" />
     </span>
@@ -726,16 +731,16 @@ export default function App() {
                         <th>유형</th>
                         <th>건물명</th>
                         <th>
-                          <ColTitle label="전세보증금" unit="만원/㎡" termId="jeonse_deposit" />
+                          <ColTitle label="전세보증금" unit="만원/㎡" countUnit="건" termId="jeonse_deposit" />
                         </th>
                         <th>
-                          <ColTitle label="매매가" unit="만원/㎡" termId="sale_unit_mean" />
+                          <ColTitle label="매매가" unit="만원/㎡" countUnit="건" termId="sale_unit_mean" />
                         </th>
                         <th>
                           <ColTitle label="전세가율" unit="%" termId="jeonse_to_sale_pct" />
                         </th>
                         <th>
-                          <ColTitle label="월세" unit="만원/㎡" termId="monthly_rent_mean" />
+                          <ColTitle label="월세" unit="만원/㎡" countUnit="건" termId="monthly_rent_mean" />
                         </th>
                         {tableWide && (
                           <th>

@@ -1087,7 +1087,6 @@ def run_building_regression(
     req: CollectiveRegressionRequest,
 ) -> CollectiveRegressionResponse:
     _, _, _, resp = _run_regression_core(df, req, cohort_mode=False)
-    resp.model_candidates = suggest_collective_regression(df, req, cohort_mode=False)
     resp.building_key = building_key
     resp.display_name = display_name
     return resp
@@ -1112,12 +1111,6 @@ def run_cohort_regression(
         cohort_mode=True,
         building_display_names=names,
     )
-    resp.model_candidates = suggest_collective_regression(
-        df,
-        req,
-        cohort_mode=True,
-        building_display_names=names,
-    )
     if len(building_keys) > 1 and resp.n > 0 and not any("단지 FE" in w for w in resp.warnings):
         resp.warnings.insert(0, f"코호트 {len(building_keys)}개 단지 — 단지 고정효과 적용")
     resp.building_key = building_keys[0] if building_keys else ""
@@ -1136,6 +1129,7 @@ def suggest_collective_regression(
 
     본건 건물 회귀와 코호트 회귀의 기존 경로는 유지하고, 동일 데이터에
     변수 블록 후보만 추가로 적합해 추천 목록으로 제공한다.
+    집합 회귀 결과 UI에서는 호출하지 않는다.
     """
     fields = ["exclusive_area", "building_age", "floor", "dong", "housing_subtype"]
     enabled = [field for field in fields if getattr(req.variables, field, False)]

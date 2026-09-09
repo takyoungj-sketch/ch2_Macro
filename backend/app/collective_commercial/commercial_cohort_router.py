@@ -351,7 +351,7 @@ def cohort_regression(body: CommercialCohortAnalysisRequest, db: Session = Depen
         contract_year_to=body.contract_year_to,
     )
     gates = evaluate_analysis_gates(len(df), cnt_recent)
-    if not gates.regression_eligible and not body.experiment:
+    if not gates.regression_eligible:
         raise HTTPException(
             403,
             detail="; ".join(gates.messages) if gates.messages else "코호트 회귀 최소 표본 미달",
@@ -407,7 +407,7 @@ def cohort_regression_predict(
         contract_year_to=body.contract_year_to,
     )
     gates = evaluate_analysis_gates(len(df), cnt_recent)
-    if not gates.regression_eligible and not body.experiment:
+    if not gates.regression_eligible:
         raise HTTPException(
             403,
             detail="; ".join(gates.messages) if gates.messages else "코호트 회귀 예측 최소 표본 미달",

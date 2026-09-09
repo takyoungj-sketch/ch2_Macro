@@ -86,6 +86,48 @@ def test_eligible_mask_drops_thin_tx():
     assert _eligible_mask(df, v).tolist() == [False, True]
 
 
+def test_eligible_mask_min_tx_option():
+    df = pd.DataFrame(
+        {
+            "median": [800, 900, 850],
+            "match_tier": ["A", "A", "A"],
+            "households": [200, 180, 160],
+            "max_floor": [15, 12, 10],
+            "building_age": [10, 8, 6],
+            "parking_per_household": [1.1, 1.0, 0.9],
+            "n_tx": [2, 3, 5],
+            "asset_type": ["apartment"] * 3,
+        }
+    )
+    v = RegionalRegressionVariables()
+    assert _eligible_mask(df, v).tolist() == [False, False, True]
+    assert _eligible_mask(df, v, min_tx=3).tolist() == [False, True, True]
+    assert _eligible_mask(df, v, min_tx=2).tolist() == [True, True, True]
+
+
+def test_sample_funnel_uses_min_tx():
+    df = pd.DataFrame(
+        {
+            "median": [800.0, 900.0],
+            "match_tier": ["A", "A"],
+            "households": [200.0, 180.0],
+            "max_floor": [15.0, 12.0],
+            "building_age": [10.0, 8.0],
+            "parking_per_household": [1.1, 1.0],
+            "n_tx": [3, 5],
+            "asset_type": ["apartment", "apartment"],
+        }
+    )
+    v = RegionalRegressionVariables(parking=False, households=False, max_floor=False, building_age=False)
+    sample5 = build_sample_funnel(df, v, train_idx=df.index[[1]], hold_idx=df.index[:0], min_tx=5)
+    assert _step(sample5, "thin_tx").label == "최소 거래수 미달(<5)"
+    assert _step(sample5, "thin_tx").n == 1
+    sample3 = build_sample_funnel(df, v, train_idx=df.index, hold_idx=df.index[:0], min_tx=3)
+    assert _step(sample3, "thin_tx").label == "최소 거래수 미달(<3)"
+    assert _step(sample3, "thin_tx").n == 0
+    assert sample3.n_analysis == 2
+
+
 def test_title_and_pnu_tiers_are_usable():
     assert _is_usable_tier("apartment", "T") is True
     assert _is_usable_tier("apartment", "P") is True

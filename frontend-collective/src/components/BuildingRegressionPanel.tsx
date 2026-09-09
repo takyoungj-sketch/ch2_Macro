@@ -15,8 +15,14 @@ import type {
 } from "../types";
 import { ASSET_LABELS } from "../types";
 import { buildAnalysisPeriodParams } from "../utils/analysisPeriod";
+import {
+  canRunRegression,
+  isRegressionRecommended,
+  regressionRunLabel,
+} from "../utils/analysisGates";
 import { RESIDENTIAL_REGRESSION_HELP } from "../utils/residentialAnalysisHelp";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
+import RegressionSampleHint from "./RegressionSampleHint";
 import {
   ESTIMATE_COPY,
   StatisticalEstimateCaption,
@@ -380,8 +386,9 @@ export default function BuildingRegressionPanel({
   periodStart,
   periodEnd,
   experiment = false,
-  gateTip,
-  regressionEligible = true,
+  countTotal,
+  countRecent,
+  gateMessages,
 }: {
   buildingKey: string;
   cohortKeys?: string[];
@@ -391,8 +398,9 @@ export default function BuildingRegressionPanel({
   periodStart?: string | null;
   periodEnd?: string | null;
   experiment?: boolean;
-  gateTip?: string;
-  regressionEligible?: boolean;
+  countTotal?: number | null;
+  countRecent?: number | null;
+  gateMessages?: string[];
 }) {
   const [excludeOutliers, setExcludeOutliers] = useState(false);
   const [floorMode, setFloorMode] = useState<FloorMode>("relative");
@@ -414,6 +422,8 @@ export default function BuildingRegressionPanel({
 
   const useCohort = (cohortKeys?.length ?? 0) > 1;
   const keys = useCohort ? cohortKeys! : [buildingKey];
+  const canRun = useCohort || canRunRegression(countTotal);
+  const recommended = useCohort || isRegressionRecommended(countTotal);
   const attrOn =
     vars.households ||
     vars.parking ||
@@ -482,11 +492,12 @@ export default function BuildingRegressionPanel({
     const on = (e: Event) => {
       const a = (e as CustomEvent<AiScreenAction>).detail;
       if (a?.kind !== "run_engine") return;
+      if (!canRun) return;
       regM.mutate();
     };
     window.addEventListener(CH2_AI_ACTION_EVENT, on);
     return () => window.removeEventListener(CH2_AI_ACTION_EVENT, on);
-  }, []);
+  }, [canRun]);
 
   const predictM = useMutation({
     mutationFn: () => {
@@ -523,11 +534,12 @@ export default function BuildingRegressionPanel({
           {" · 동은 단지별로 구분"}
         </p>
       )}
-      {!useCohort && !regressionEligible && (
-        <p className="text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900 rounded px-2 py-1.5">
-          {gateTip ?? "권장 표본 기준 미달"} — 실험 단계에서는 아래 옵션으로 실행할 수 있습니다.
-        </p>
-      )}
+      <RegressionSampleHint
+        useCohort={useCohort}
+        countTotal={countTotal}
+        countRecent={countRecent}
+        messages={gateMessages}
+      />
 
       <p className="text-[10px] text-slate-500 dark:text-slate-400">
         변수가 시세에 어떤 방향·크기로 작용하는지 탐색합니다. 기본은 선형(만원). % 해석은 로그 옵션.
@@ -645,10 +657,16 @@ export default function BuildingRegressionPanel({
       <button
         type="button"
         className="btn btn-primary text-xs"
-        disabled={regM.isPending}
+        disabled={regM.isPending || !canRun}
         onClick={() => regM.mutate()}
       >
-        {regM.isPending ? "실행 중…" : useCohort ? (regM.data ? "통합 회귀 다시 실행" : "통합 회귀 실행") : "회귀 실행"}
+        {regressionRunLabel({
+          pending: regM.isPending,
+          useCohort,
+          hasResult: Boolean(regM.data),
+          canRun,
+          recommended,
+        })}
       </button>
 
       {regM.isError && (

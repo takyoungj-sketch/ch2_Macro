@@ -28,6 +28,12 @@ import {
   type AiScreenAction,
 } from "@ch2/ai-assistant/aiActions";
 import { COMMERCIAL_REGRESSION_HELP } from "../utils/residentialAnalysisHelp";
+import {
+  canRunRegression,
+  isRegressionRecommended,
+  regressionRunLabel,
+} from "../utils/analysisGates";
+import RegressionSampleHint from "./RegressionSampleHint";
 
 function regionParams(scope: CommercialModalScope) {
   return scope.hasIntermediate
@@ -301,6 +307,8 @@ export default function CommercialRegressionPanel({
 }) {
   const useCohort = (cohortKeys?.length ?? 0) > 1;
   const keys = useCohort ? cohortKeys! : [clusterKey];
+  const canRun = useCohort || canRunRegression(count);
+  const recommended = useCohort || isRegressionRecommended(count);
   const [excludeOutliers, setExcludeOutliers] = useState(false);
   const [floorMode, setFloorMode] = useState<FloorMode>("relative");
   const [floorAdvanced, setFloorAdvanced] = useState(false);
@@ -316,11 +324,6 @@ export default function CommercialRegressionPanel({
   });
   const [predictInputs, setPredictInputs] = useState<CommercialRegressionPredictInputs>({});
 
-  const regressionEligible = count >= 30;
-  const gateTip =
-    `회귀 분석: 선택 구간 거래 ${count}건 (최소 30건 필요)` +
-    (count >= 15 ? "" : " · 최근 3년 15건 이상도 권장");
-
   const regressionBody = useMemo(
     () => ({
       ...regionParams(scope),
@@ -328,11 +331,10 @@ export default function CommercialRegressionPanel({
       contract_year_to: scope.yearTo === "" ? undefined : scope.yearTo,
       ...(analysisPeriod ?? {}),
       exclude_outliers_iqr: excludeOutliers,
-      experiment: !regressionEligible,
       model_type: modelType,
       variables: { ...vars, floor_mode: floorMode },
     }),
-    [scope, analysisPeriod, excludeOutliers, regressionEligible, modelType, vars, floorMode],
+    [scope, analysisPeriod, excludeOutliers, modelType, vars, floorMode],
   );
 
   const regM = useMutation({
@@ -407,11 +409,12 @@ export default function CommercialRegressionPanel({
     const on = (e: Event) => {
       const a = (e as CustomEvent<AiScreenAction>).detail;
       if (a?.kind !== "run_engine") return;
+      if (!canRun) return;
       regM.mutate();
     };
     window.addEventListener(CH2_AI_ACTION_EVENT, on);
     return () => window.removeEventListener(CH2_AI_ACTION_EVENT, on);
-  }, []);
+  }, [canRun]);
 
   const varOptions = (
     // 세대수·주차·공시지가·구조는 주거 단지(K-apt) 통합회귀 전용. cluster에는 없음.
@@ -446,11 +449,7 @@ export default function CommercialRegressionPanel({
         </p>
       )}
 
-      {!regressionEligible && (
-        <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded px-2 py-1.5">
-          {gateTip} — 표본이 적어도 참고용으로 실행할 수 있습니다.
-        </p>
-      )}
+      <RegressionSampleHint useCohort={useCohort} countTotal={count} />
 
       <p className="text-[10px] text-slate-500 dark:text-slate-400">
         변수가 시세에 어떤 방향·크기로 작용하는지 탐색합니다. 기본은 선형(만원). % 해석은 로그 옵션.
@@ -509,8 +508,19 @@ export default function CommercialRegressionPanel({
         IQR 이상치 제외
       </label>
 
-      <button type="button" className="btn btn-primary text-xs" disabled={regM.isPending} onClick={() => regM.mutate()}>
-        {regM.isPending ? "실행 중…" : useCohort ? (regM.data ? "통합 회귀 다시 실행" : "통합 회귀 실행") : "회귀 실행"}
+      <button
+        type="button"
+        className="btn btn-primary text-xs"
+        disabled={regM.isPending || !canRun}
+        onClick={() => regM.mutate()}
+      >
+        {regressionRunLabel({
+          pending: regM.isPending,
+          useCohort,
+          hasResult: Boolean(regM.data),
+          canRun,
+          recommended,
+        })}
       </button>
 
       {regM.isError && (

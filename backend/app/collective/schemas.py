@@ -44,7 +44,7 @@ class CollectiveMapResolveCodesResponse(BaseModel):
 
 
 class AnalysisFeatures(BaseModel):
-    """고급 분석(효용지수·회귀) 활성화 여부 — 선택 연도 구간 기준."""
+    """고급 분석 게이트. 효용지수 n≥50. 회귀 실행 n≥15(권장 30, 최근 3년 15는 경고)."""
 
     floor_index: bool = False
     regression: bool = False

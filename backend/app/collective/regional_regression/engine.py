@@ -519,6 +519,7 @@ def build_sample_funnel(
     *,
     train_idx: pd.Index,
     hold_idx: pd.Index,
+    min_tx: int = MIN_TX,
 ) -> SampleBreakdown:
     """원본 → 매칭 → 변수 결측 → 분석 표본 → 학습/hold. hold 는 탈락이 아니다."""
     n_pool = int(len(df))
@@ -539,14 +540,14 @@ def build_sample_funnel(
 
     has_attr = df["match_tier"].notna()
     usable = _usable_tier_mask(df)
-    elig = _eligible_mask(df, v)
+    elig = _eligible_mask(df, v, min_tx=min_tx)
     n_usable = int(usable.sum())
     n_analysis = int(elig.sum())
     n_fit = int(len(train_idx))
     n_hold = int(len(hold_idx))
 
     n_tx = pd.to_numeric(df["n_tx"], errors="coerce").fillna(0) if "n_tx" in df.columns else pd.Series(0, index=df.index)
-    thin = usable & (n_tx < MIN_TX)
+    thin = usable & (n_tx < min_tx)
     n_thin = int(thin.sum())
     after_thin = usable & ~thin
     var_drop_mask = after_thin & ~elig
@@ -561,7 +562,7 @@ def build_sample_funnel(
                 label = ASSET_TYPE_LABELS.get(at, at)
                 thin_pairs.extend([(f"thin_{at}", label)] * int(cnt))
         else:
-            thin_pairs.append(("thin_tx", f"거래 {MIN_TX}건 미만"))
+            thin_pairs.append(("thin_tx", f"거래 {min_tx}건 미만"))
 
     funnel = [
         FunnelStep(code="pool", label="원본 단지", n=n_pool, kind="remain"),
@@ -576,7 +577,7 @@ def build_sample_funnel(
         ),
         FunnelStep(
             code="thin_tx",
-            label=f"최소 거래수 미달(<{MIN_TX})",
+            label=f"최소 거래수 미달(<{min_tx})",
             n=n_thin,
             kind="drop",
             note="창 중앙값을 단지 시세로 보기 어렵습니다. 유형과 관계없이 제외합니다.",
@@ -869,7 +870,12 @@ def _fit_ols(
     }
 
 
-def _eligible_mask(df: pd.DataFrame, v: RegionalRegressionVariables) -> pd.Series:
+def _eligible_mask(
+    df: pd.DataFrame,
+    v: RegionalRegressionVariables,
+    *,
+    min_tx: int = MIN_TX,
+) -> pd.Series:
     if df.empty:
         return pd.Series(dtype=bool, index=df.index)
     n_tx = pd.to_numeric(df["n_tx"], errors="coerce").fillna(0) if "n_tx" in df.columns else pd.Series(0, index=df.index)
@@ -877,7 +883,7 @@ def _eligible_mask(df: pd.DataFrame, v: RegionalRegressionVariables) -> pd.Serie
         df["median"].notna()
         & (df["median"] > 0)
         & _usable_tier_mask(df)
-        & (n_tx >= MIN_TX)
+        & (n_tx >= min_tx)
     )
     for col in _needed_columns(v):
         if col == "median":
@@ -1021,7 +1027,14 @@ def run_regional_regression(
             "아파트·오피스텔 가격 수준 차이를 통제하지 않습니다."
         )
 
-    elig = _eligible_mask(df, v) if not df.empty else pd.Series(dtype=bool)
+    min_tx = int(req.min_tx)
+    if min_tx < MIN_TX and req.weight_mode == "equal":
+        warnings.append(
+            f"최소 거래수 {min_tx}건은 시세가 얇은 단지를 넣습니다. "
+            "거래수 가중을 쓰면 거래가 많은 단지에 더 무게가 갑니다."
+        )
+
+    elig = _eligible_mask(df, v, min_tx=min_tx) if not df.empty else pd.Series(dtype=bool)
     work = df.loc[elig].copy() if not df.empty else df
     if unified and v.asset_type_dummy and not work.empty and "asset_type" in work.columns:
         if work["asset_type"].astype(str).nunique() < 2:
@@ -1030,12 +1043,13 @@ def run_regional_regression(
             )
     train_idx, hold_idx = _split_hold(work.index)
 
-    sample = build_sample_funnel(df, v, train_idx=train_idx, hold_idx=hold_idx)
+    sample = build_sample_funnel(df, v, train_idx=train_idx, hold_idx=hold_idx, min_tx=min_tx)
 
     if len(train_idx) < MIN_FIT_N:
         warnings.append(
             f"적합 단지가 {len(train_idx)}곳뿐입니다. 최소 {MIN_FIT_N}곳이 필요합니다. "
-            "지역을 넓히거나 변수를 줄여 보세요."
+            "결측으로 빠지는 연속변수를 끄거나, 최소 거래수를 낮추거나, "
+            "같은 시군구의 인접 읍·면·동을 추가해 보세요."
         )
         return RegionalRegressionRunResponse(
             n=len(train_idx),
@@ -1268,7 +1282,7 @@ def predict_regional(
 
     df, _ = load_danji_frame(conn, req)
     v = req.variables
-    work = df.loc[_eligible_mask(df, v)].copy()
+    work = df.loc[_eligible_mask(df, v, min_tx=int(req.min_tx))].copy()
     train_idx, _hold = _split_hold(work.index)
     x, labels, _ = _design(work, v)
     fitted = _fit_ols(
@@ -1290,7 +1304,7 @@ def predict_regional(
         "builder_group": inputs.builder_group or builder_ref or "",
         "asset_type": inputs.asset_type or atype_ref or "apartment",
         "median": 1.0,  # unused
-        "n_tx": MIN_TX,
+        "n_tx": int(req.min_tx),
     }
     one = pd.DataFrame([row])
     struct_levels = sorted(_collapse_dummy(work["structure_group"]).unique().tolist()) if v.structure else []

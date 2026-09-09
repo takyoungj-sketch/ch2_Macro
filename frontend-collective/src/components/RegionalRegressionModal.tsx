@@ -77,6 +77,53 @@ const LAND_VAR: [keyof RegionalRegressionVariables, string] = [
   "개별공시지가",
 ];
 
+const MIN_TX_OPTIONS = [5, 3, 2] as const;
+type MinTx = (typeof MIN_TX_OPTIONS)[number];
+
+const VAR_DROP_TO_KEY: Record<string, keyof RegionalRegressionVariables> = {
+  households_flag: "households",
+  households_missing: "households",
+  max_floor_flag: "max_floor",
+  max_floor_missing: "max_floor",
+  building_age_missing: "building_age",
+  parking_flag: "parking",
+  parking_missing: "parking",
+  assessed_land_price_missing: "assessed_land_price",
+};
+
+const VAR_KEY_LABEL: Partial<Record<keyof RegionalRegressionVariables, string>> = {
+  households: "세대수",
+  max_floor: "최고층",
+  building_age: "연식",
+  parking: "세대당 주차",
+  assessed_land_price: "개별공시지가",
+};
+
+function funnelStep(sample: SampleBreakdown, code: string): FunnelStep | undefined {
+  return (sample.funnel ?? []).find((s) => s.code === code);
+}
+
+function missingVarsStillOn(
+  vars: RegionalRegressionVariables,
+  sample: SampleBreakdown,
+): Array<keyof RegionalRegressionVariables> {
+  const step = funnelStep(sample, "var_drop");
+  if (!step?.n) return [];
+  const keys = new Set<keyof RegionalRegressionVariables>();
+  for (const r of step.reasons) {
+    const k = VAR_DROP_TO_KEY[r.code];
+    if (k && vars[k]) keys.add(k);
+  }
+  return [...keys];
+}
+
+function turnOffVars(
+  vars: RegionalRegressionVariables,
+  keys: Array<keyof RegionalRegressionVariables>,
+): RegionalRegressionVariables {
+  return { ...vars, ...Object.fromEntries(keys.map((k) => [k, false])) };
+}
+
 function fmt(n: number | null | undefined, d = 2) {
   if (n == null || Number.isNaN(n)) return "—";
   return n.toLocaleString("ko-KR", { maximumFractionDigits: d });
@@ -167,6 +214,7 @@ export default function RegionalRegressionModal(props: Props) {
   });
   const [modelType, setModelType] = useState<"linear" | "log">("log");
   const [weightMode, setWeightMode] = useState<"equal" | "tx">("equal");
+  const [minTx, setMinTx] = useState<MinTx>(5);
   const [pickKey, setPickKey] = useState(VIRTUAL_KEY);
   const [inputs, setInputs] = useState<RegionalRegressionPredictInputs>({});
 
@@ -180,6 +228,7 @@ export default function RegionalRegressionModal(props: Props) {
       variables: vars,
       model_type: modelType,
       weight_mode: weightMode,
+      min_tx: minTx,
     }),
     [
       props.addr1,
@@ -195,10 +244,13 @@ export default function RegionalRegressionModal(props: Props) {
       vars,
       modelType,
       weightMode,
+      minTx,
     ],
   );
 
-  const runM = useMutation({ mutationFn: () => runRegionalRegression(body) });
+  const runM = useMutation({
+    mutationFn: (req: RegionalRegressionRunRequest) => runRegionalRegression(req),
+  });
   const predM = useMutation({
     mutationFn: () => predictRegionalRegression({ ...body, inputs }),
   });
@@ -226,7 +278,7 @@ export default function RegionalRegressionModal(props: Props) {
       onClose={props.onClose}
       titleId="regional-regression-title"
       title="지역회귀"
-      subtitle="한 행 = 단지 · 값이 있으면 출처와 무관하게 포함 · 거래 5건 미만은 제외"
+      subtitle={`한 행 = 단지 · 값이 있으면 출처와 무관하게 포함 · 거래 ${minTx}건 미만은 제외`}
       allowFullscreen
       allowFontScale
       resizable
@@ -315,7 +367,22 @@ export default function RegionalRegressionModal(props: Props) {
 
         <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-1.5">
           <p className="text-xs font-semibold">3. 관측치 처리</p>
-          <p className="text-[11px] text-slate-600 dark:text-slate-300">최소 거래수 5건 — 창 중앙값을 단지 시세로 보기 어려워 제외합니다.</p>
+          <p className="text-[11px] text-slate-600 dark:text-slate-300">
+            최소 거래수 — 창 중앙값을 단지 시세로 보기 어려운 단지를 제외합니다. 기본은 5건입니다.
+          </p>
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
+            {MIN_TX_OPTIONS.map((n) => (
+              <label key={n} className="flex items-center gap-1.5">
+                <input type="radio" checked={minTx === n} onChange={() => setMinTx(n)} />
+                {n}건 미만 제외{n === 5 ? " (기본)" : ""}
+              </label>
+            ))}
+          </div>
+          {minTx < 5 && (
+            <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-snug">
+              {minTx}건까지 넣으면 시세가 얇은 단지가 들어갑니다. 거래수 가중을 권합니다.
+            </p>
+          )}
           <p className="text-[11px] text-slate-600 dark:text-slate-300">
             구조·시공사 결측은 미상 더미입니다. 세대수·층·연식·주차·공시지가처럼 값이 없는 연속변수만 단지를 뺍니다.
           </p>
@@ -340,7 +407,7 @@ export default function RegionalRegressionModal(props: Props) {
             setPickKey(VIRTUAL_KEY);
             setInputs(emptyPredictInputs());
             predM.reset();
-            runM.mutate();
+            runM.mutate(body);
           }}
         >
           {runM.isPending ? "적합 중…" : "회귀 실행"}
@@ -362,11 +429,21 @@ export default function RegionalRegressionModal(props: Props) {
             ))}
 
             {data.n < 20 && (
-              <p className="rounded-md border border-amber-200 bg-amber-50/70 px-2.5 py-2 text-[11px] text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
-                적합 단지가 20곳 미만입니다. 이 창을 닫고 지도에서 같은 시군구의 인접
-                읍·면·동을 추가한 뒤 지역회귀를 다시 실행하세요. 3·5·7년 창과 선택한
-                유형은 그대로 유지됩니다.
-              </p>
+              <LowSampleHint
+                n={data.n}
+                vars={vars}
+                sample={data.sample}
+                minTx={minTx}
+                pending={runM.isPending}
+                onTurnOffMissing={(keys) => {
+                  const nextVars = turnOffVars(vars, keys);
+                  setVars(nextVars);
+                  setPickKey(VIRTUAL_KEY);
+                  setInputs(emptyPredictInputs());
+                  predM.reset();
+                  runM.mutate({ ...body, variables: nextVars });
+                }}
+              />
             )}
 
             <SampleFunnel sample={data.sample} />
@@ -671,6 +748,65 @@ export default function RegionalRegressionModal(props: Props) {
         )}
       </div>
     </DraggableModalShell>
+  );
+}
+
+function LowSampleHint({
+  n,
+  vars,
+  sample,
+  minTx,
+  pending,
+  onTurnOffMissing,
+}: {
+  n: number;
+  vars: RegionalRegressionVariables;
+  sample: SampleBreakdown;
+  minTx: MinTx;
+  pending: boolean;
+  onTurnOffMissing: (keys: Array<keyof RegionalRegressionVariables>) => void;
+}) {
+  const dropKeys = missingVarsStillOn(vars, sample);
+  const dropLabels = dropKeys.map((k) => VAR_KEY_LABEL[k] ?? k);
+  const thinN = funnelStep(sample, "thin_tx")?.n ?? 0;
+
+  return (
+    <div className="rounded-md border border-amber-200 bg-amber-50/70 px-2.5 py-2 text-[11px] text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200 space-y-1.5">
+      <p>적합 단지가 {n.toLocaleString("ko-KR")}곳으로, 최소 20곳이 필요합니다. 같은 지역에서 먼저 표본을 늘려 보세요.</p>
+      <ol className="list-decimal pl-4 space-y-1 leading-snug">
+        <li>
+          {dropKeys.length > 0 ? (
+            <div className="space-y-1.5">
+              <p>
+                결측으로 단지가 빠진 연속변수({dropLabels.join("·")})를 끄고 다시 실행하세요. 식의 의미가
+                바뀝니다.
+              </p>
+              <button
+                type="button"
+                className="btn btn-primary text-[11px] px-3 py-1.5"
+                disabled={pending}
+                onClick={() => onTurnOffMissing(dropKeys)}
+              >
+                {dropLabels.join("·")} 끄고 다시 실행
+              </button>
+            </div>
+          ) : (
+            <>결측으로 빠지는 연속변수가 없거나 이미 꺼져 있습니다.</>
+          )}
+        </li>
+        <li>
+          {thinN > 0 && minTx > 2
+            ? `거래 ${minTx}건 미만으로 ${thinN.toLocaleString("ko-KR")}단지가 빠졌습니다. 위의 최소 거래수를 3 또는 2로 낮춘 뒤 다시 실행하세요. 낮추면 거래수 가중을 권합니다.`
+            : minTx === 2
+              ? "최소 거래수는 이미 2건입니다. 1건 단지는 창 중앙값이 아니라 그 거래 하나라서 넣지 않습니다."
+              : "거래가 적은 단지를 더 넣으려면 위의 최소 거래수를 3 또는 2로 낮출 수 있습니다. 기본 5건은 유지하는 편이 안전합니다."}
+        </li>
+        <li>
+          그래도 부족하면 이 창을 닫고 지도에서 같은 시군구의 인접 읍·면·동을 추가한 뒤 다시 실행하세요.
+          3·5·7년 창과 선택한 유형은 그대로 유지됩니다.
+        </li>
+      </ol>
+    </div>
   );
 }
 

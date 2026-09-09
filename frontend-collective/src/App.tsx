@@ -55,6 +55,7 @@ import {
 import { useCollectiveDeepLink } from "./hooks/useCollectiveDeepLink";
 import { profileHref, resolveCollectiveProfileTarget } from "./utils/profileLink";
 import { useCollectiveAnalysisUnits } from "./hooks/useCollectiveAnalysisUnits";
+import { useCollectiveScopeStale } from "./hooks/useCollectiveScopeStale";
 import {
   analysisUnitLabel,
   MAX_COLLECTIVE_ANALYSIS_UNITS,
@@ -327,7 +328,11 @@ export default function App() {
   useEffect(() => {
     if (!hasIntermediate) return;
     const allowed = new Set(visibleLeafOptions.map((o) => o.name));
-    setLeafList((prev) => prev.filter((n) => allowed.has(n)));
+    setLeafList((prev) => {
+      const next = prev.filter((n) => allowed.has(n));
+      if (next.length === prev.length && next.every((n, i) => n === prev[i])) return prev;
+      return next;
+    });
   }, [hasIntermediate, visibleLeafOptions]);
 
   useCollectiveDeepLink({
@@ -406,20 +411,23 @@ export default function App() {
 
   const addr2ScopeLabel = formatScopeAddr2(addr2, addr1) || addr1;
 
-  const scopeStale =
-    scope !== null &&
-    (scope.assetType !== assetType ||
-      scope.addr1 !== addr1 ||
-      scope.addr2 !== addr2 ||
-      scope.hasIntermediate !== hasIntermediate ||
-      JSON.stringify(scope.guList) !== JSON.stringify(guList) ||
-      JSON.stringify(scope.leafList) !== JSON.stringify(leafList) ||
-      scope.yearFrom !== yearFrom ||
-      scope.yearTo !== yearTo ||
-      scope.windowYears !== windowYears ||
-      scope.sort !== sort ||
-      JSON.stringify(scope.region_codes ?? []) !== JSON.stringify(regionCodeScope.region_codes ?? []) ||
-      JSON.stringify(scope.region_addrs ?? []) !== JSON.stringify(regionCodeScope.region_addrs ?? []));
+  const liveFilters = {
+    assetType,
+    addr1,
+    addr2,
+    hasIntermediate,
+    guList,
+    leafList,
+    yearFrom,
+    yearTo,
+    windowYears,
+    sort,
+  };
+  const { scopeStale, markRegionScopeCaptured } = useCollectiveScopeStale(
+    scope,
+    liveFilters,
+    regionCodeScope,
+  );
 
   const isApartment = assetKinds.includes("apartment");
   const regionalReady = Boolean(scope) && !scopeStale && isApartment;
@@ -455,7 +463,8 @@ export default function App() {
   }, []);
 
   const runAnalysis = () => {
-    if (!addr2) return;
+    if (!addr2 || !structureQ.isSuccess) return;
+    markRegionScopeCaptured(regionCodeScope);
     setScope({
       assetType,
       addr1,
@@ -648,7 +657,12 @@ export default function App() {
               </select>
             </label>
 
-            <button type="button" className="btn btn-primary w-full" disabled={!addr2} onClick={runAnalysis}>
+            <button
+              type="button"
+              className="btn btn-primary w-full"
+              disabled={!addr2 || !structureQ.isSuccess}
+              onClick={runAnalysis}
+            >
               통계분석
             </button>
             <button

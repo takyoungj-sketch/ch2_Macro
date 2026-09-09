@@ -822,7 +822,7 @@ def cluster_regression(
             contract_year_to=body.contract_year_to,
         ),
     )
-    if not gates.regression_eligible and not body.experiment:
+    if not gates.regression_eligible:
         raise HTTPException(
             403,
             detail="; ".join(gates.messages) if gates.messages else "회귀 분석 최소 표본 미달",
@@ -890,7 +890,7 @@ def cluster_regression_predict(
             contract_year_to=body.contract_year_to,
         ),
     )
-    if not gates.regression_eligible and not body.experiment:
+    if not gates.regression_eligible:
         raise HTTPException(
             403,
             detail="; ".join(gates.messages) if gates.messages else "회귀 예측 최소 표본 미달",

@@ -110,6 +110,7 @@ export const RESIDENTIAL_REGRESSION_HELP: AnalysisExplain = {
     "변수·층 형식 선택에 따라 결과 변경",
     "효용지수 탭과 수치 불일치가 정상",
     "단지·기간 내 표본 — 외삽·인과·투자 판단용 아님",
+    "권장 n≥30, 실행 하한 n≥15. 최근 3년 15건은 경고만이며 식은 선택한 창 전체입니다.",
   ],
   interpretation_hints: [],
   presets: [
@@ -136,6 +137,7 @@ export const COMMERCIAL_REGRESSION_HELP: AnalysisExplain = {
     "도로 cluster 내 표본 — 건물 단위 해석과 다름",
     "변수·필터에 따라 결과 변경",
     "외삽·인과·투자 판단용 아님",
+    "권장 n≥30, 실행 하한 n≥15.",
   ],
 };
 
@@ -190,7 +192,10 @@ export const COLLECTIVE_TX_LIST_HELP: AnalysisExplain = {
   spec_version: "1.0",
   title: "거래 목록",
   summary: "화면에 집계된 표본의 개별 거래 행입니다. 통계·회귀와 같은 정제 규칙을 따릅니다.",
-  interpretation: ["계약일·면적·층·금액 등으로 이상·특수 거래를 확인합니다."],
+  interpretation: [
+    "계약일 필터는 연도 단위입니다. 셀에는 계약일을 그대로 보여 줍니다.",
+    "집계 탭에서 동·연도 등으로 묶어 본 뒤 셀을 누르면 그 구간만 목록에 남습니다.",
+  ],
   limitations: ["마스킹 번지·신고 오류가 있을 수 있습니다."],
   interpretation_hints: [],
   presets: [],

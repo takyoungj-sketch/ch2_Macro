@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { COLLECTIVE_EXPERIMENT_MODE } from "../api/client";
@@ -30,12 +30,24 @@ import HistogramChart from "./HistogramChart";
 import CommercialFloorIndexPanel from "./CommercialFloorIndexPanel";
 import CommercialRegressionPanel from "./CommercialRegressionPanel";
 import CommercialTransactionTable from "./CommercialTransactionTable";
+import TransactionAggregatePanel, { TxListSubViewToggle, type TxSubView } from "./TransactionAggregatePanel";
 import RollingTrendChart from "./RollingTrendChart";
 import YearlyTrendChart, { yearlyPointPrice } from "./YearlyTrendChart";
 import LongTermMetricToggle, { longTermPriceLabel, type LongTermPriceMetric } from "./LongTermMetricToggle";
 import type { StatsWindowYears } from "./StatsWindowToggle";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import { commercialModalPanelHelp } from "../utils/residentialAnalysisHelp";
+import { regressionTabTitle, regressionTabWarns } from "../utils/analysisGates";
+import {
+  commercialTxAggregateDimensions,
+  commercialTxArea,
+  commercialTxCrossPresets,
+  commercialTxDimensionValue,
+  commercialTxDrillDownKey,
+  commercialTxUnitPrice,
+} from "../utils/commercialTxAggregate";
+import type { CommercialTxSortKey } from "../utils/commercialTxDisplay";
+import type { TxDrillDownFilters } from "../utils/txAggregate";
 
 const MAX_COHORT_CLUSTERS = 10;
 
@@ -125,6 +137,11 @@ export default function CommercialClusterDetailModal({
   const [longTermMetric, setLongTermMetric] = useState<LongTermPriceMetric>("mean");
   const [histScope, setHistScope] = useState<"all" | "single">("all");
   const [histYear, setHistYear] = useState<number | null>(null);
+  const [txSubView, setTxSubView] = useState<TxSubView>("list");
+  const [txExternalFilters, setTxExternalFilters] = useState<
+    Partial<Record<CommercialTxSortKey, Set<string>>>
+  >({});
+  const [txExternalFilterToken, setTxExternalFilterToken] = useState(0);
   const [defaultSize] = useState(defaultCommercialDetailSize);
 
   const region = regionParams(scope);
@@ -312,6 +329,24 @@ export default function CommercialClusterDetailModal({
   const txCohortActive = cohortRunForPanel("transactions") > 0;
 
   const activeTxQ = txCohortActive ? cohortTxQ : txQ;
+
+  useEffect(() => {
+    setTxSubView("list");
+    setTxExternalFilters({});
+    setTxExternalFilterToken(0);
+  }, [row.cluster_key]);
+
+  const handleTxDrillDown = useCallback((filters: TxDrillDownFilters<CommercialTxSortKey>) => {
+    setTxExternalFilters(
+      Object.fromEntries(Object.entries(filters).map(([k, v]) => [k, new Set(v)])),
+    );
+    setTxExternalFilterToken((t) => t + 1);
+    setTxSubView("list");
+  }, []);
+
+  const txAggDimensions = useMemo(() => commercialTxAggregateDimensions(isShop), [isShop]);
+  const txAggPresets = useMemo(() => commercialTxCrossPresets(isShop), [isShop]);
+
   const label = row.road_name || row.display_label;
 
   return (
@@ -333,36 +368,37 @@ export default function CommercialClusterDetailModal({
       headerExtra={
         <>
           <div
-            className="flex flex-wrap gap-0.5 rounded-md border border-slate-200 bg-slate-50 p-0.5"
+            className="flex flex-wrap gap-0.5 rounded-md border modal-tab-bar p-0.5"
             role="tablist"
           >
             {tabs.map(({ id, label: tabLabel }) => {
               const showWarn =
-                (id === "regression" && row.count < 30) || (id === "floor_index" && row.count < 50);
+                (id === "regression" && regressionTabWarns(row.count)) ||
+                (id === "floor_index" && row.count < 50);
+              const tabTitle =
+                id === "regression"
+                  ? regressionTabTitle(row.count)
+                  : showWarn
+                    ? "표본 50건 미만 — 참고용 조회 가능"
+                    : undefined;
               return (
                 <button
                   key={id}
                   type="button"
                   role="tab"
                   aria-selected={panel === id}
-                  title={
-                    showWarn
-                      ? id === "floor_index"
-                        ? "표본 50건 미만 — 참고용 조회 가능"
-                        : "표본 30건 미만 — 참고용 실행 가능"
-                      : undefined
-                  }
+                  title={tabTitle}
                   className={clsx(
-                    "px-2 py-1 text-[11px] font-medium rounded transition-colors whitespace-nowrap",
+                    "px-3 py-1.5 text-sm font-medium rounded transition-colors whitespace-nowrap",
                     panel === id
-                      ? "bg-white text-slate-800 shadow-sm border border-slate-100"
-                      : "text-slate-500 hover:text-slate-700",
+                      ? "modal-tab-active"
+                      : "modal-tab-idle",
                     showWarn && panel !== id && "text-amber-700",
                   )}
                   onClick={() => setPanel(id)}
                 >
                   {tabLabel}
-                  {showWarn && <span className="ml-0.5 text-[9px]">*</span>}
+                  {showWarn && <span className="ml-0.5 text-xs">*</span>}
                 </button>
               );
             })}
@@ -372,7 +408,7 @@ export default function CommercialClusterDetailModal({
             return help ? <AnalysisHelpPanel explain={help} className="ml-1" /> : null;
           })()}
           {peerClusters.length > 0 && (
-            <div className="mt-2 rounded border border-indigo-100 bg-indigo-50/50 px-2 py-1.5 text-[10px]">
+            <div className="mt-2 rounded border border-indigo-100 bg-indigo-50/50 px-2 py-1.5 text-xs">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-semibold text-indigo-800">분석 코호트</span>
                 <span className="text-slate-600">
@@ -381,7 +417,7 @@ export default function CommercialClusterDetailModal({
                 {canRunCohort && panel !== "regression" && (
                   <button
                     type="button"
-                    className="ml-auto px-2 py-0.5 rounded bg-indigo-700 text-white text-[10px] font-semibold hover:bg-indigo-800"
+                    className="ml-auto px-2 py-0.5 rounded bg-indigo-700 text-white text-xs font-semibold hover:bg-indigo-800"
                     onClick={runCohortAnalysis}
                   >
                     통합분석
@@ -405,7 +441,7 @@ export default function CommercialClusterDetailModal({
                       <button
                         key={k}
                         type="button"
-                        className="px-1.5 py-0.5 rounded bg-white border border-indigo-200 text-indigo-700"
+                        className="px-2 py-1 rounded bg-white border border-indigo-200 text-indigo-800 text-sm font-medium"
                         onClick={() => setCohortExtra((prev) => prev.filter((x) => x !== k))}
                       >
                         {peerLabel} ×
@@ -415,10 +451,10 @@ export default function CommercialClusterDetailModal({
                 </div>
               )}
               {peerOptions.length > 0 && (
-                <label className="mt-1 flex items-center gap-1 text-slate-600">
-                  <span>+ cluster 추가</span>
+                <label className="mt-1.5 flex flex-wrap items-center gap-1.5 text-slate-600">
+                  <span className="shrink-0">+ cluster 추가</span>
                   <select
-                    className="text-[10px] border border-slate-200 rounded px-1 py-0.5 max-w-[180px]"
+                    className="text-sm border border-slate-200 rounded px-1.5 py-1 min-w-[12rem] max-w-full w-[min(100%,22rem)] bg-white"
                     defaultValue=""
                     onChange={(e) => {
                       const v = e.target.value;
@@ -661,23 +697,47 @@ export default function CommercialClusterDetailModal({
               )}
               {activeTxQ.data && (
                 <>
-                  <p className="text-[10px] text-slate-500 shrink-0">
-                    {txCohortActive && (
-                      <span className="text-indigo-700 mr-1">{cohortRunKeys.length}개 cluster 통합 ·</span>
-                    )}
-                    전체 <strong className="text-slate-700">{activeTxQ.data.total.toLocaleString("ko-KR")}</strong>건
-                    {(scope.yearFrom !== "" || scope.yearTo !== "") && (
-                      <>
-                        {" "}
-                        · 연도 {scope.yearFrom || "…"}–{scope.yearTo || "…"}
-                      </>
-                    )}
-                  </p>
-                  <CommercialTransactionTable
-                    items={activeTxQ.data.items}
-                    isShop={isShop}
-                    truncated={activeTxQ.data.truncated}
-                  />
+                  <div className="flex flex-wrap items-start justify-between gap-2 shrink-0">
+                    <p className="text-[10px] text-slate-500">
+                      {txCohortActive && (
+                        <span className="text-indigo-700 mr-1">{cohortRunKeys.length}개 cluster 통합 ·</span>
+                      )}
+                      전체 <strong className="text-slate-700">{activeTxQ.data.total.toLocaleString("ko-KR")}</strong>건
+                      {(scope.yearFrom !== "" || scope.yearTo !== "") && (
+                        <>
+                          {" "}
+                          · 연도 {scope.yearFrom || "…"}–{scope.yearTo || "…"}
+                        </>
+                      )}
+                    </p>
+                    <TxListSubViewToggle value={txSubView} onChange={setTxSubView} />
+                  </div>
+                  {txSubView === "aggregate" ? (
+                    <TransactionAggregatePanel
+                      items={activeTxQ.data.items}
+                      total={activeTxQ.data.total}
+                      truncated={Boolean(activeTxQ.data.truncated)}
+                      dimensions={txAggDimensions}
+                      presets={txAggPresets}
+                      defaultDimension="dong"
+                      defaultRow="dong"
+                      defaultCol="contract_year"
+                      defaultPresetId="dong_year"
+                      dimensionValue={commercialTxDimensionValue}
+                      unitPrice={commercialTxUnitPrice}
+                      area={commercialTxArea}
+                      drillDownKey={commercialTxDrillDownKey}
+                      onDrillDown={handleTxDrillDown}
+                    />
+                  ) : (
+                    <CommercialTransactionTable
+                      items={activeTxQ.data.items}
+                      isShop={isShop}
+                      truncated={activeTxQ.data.truncated}
+                      externalSelectFilters={txExternalFilters}
+                      externalFilterToken={txExternalFilterToken}
+                    />
+                  )}
                 </>
               )}
             </div>

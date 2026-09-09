@@ -46,13 +46,15 @@ export function useCollectiveAnalysisUnits(opts: {
   });
 
   useEffect(() => {
-    const data = resolveUnitsQ.data;
-    if (!data?.selected_codes?.length) {
-      if (!leafList.length) {
-        setAnalysisUnits((prev) => prev.filter((u) => u.crossParent));
-      }
+    if (!leafList.length) {
+      setAnalysisUnits((prev) => {
+        const next = prev.filter((u) => u.crossParent);
+        return next.length === prev.length && next.every((u, i) => u === prev[i]) ? prev : next;
+      });
       return;
     }
+    const data = resolveUnitsQ.data;
+    if (!data?.selected_codes?.length) return;
     const level = data.level === "beopjungri" ? "beopjungri" : "eupmyeondong";
     const addr2Label = formatScopeAddr2(addr2, addr1) || addr2;
     const local: CollectiveAnalysisUnit[] = data.selected_codes.map((code, idx) => {
@@ -85,7 +87,25 @@ export function useCollectiveAnalysisUnits(opts: {
         const sig = u.code.replace(/\D/g, "").slice(0, 5);
         return Boolean(anchorSig && sig && sig !== anchorSig);
       });
-      return [...local, ...foreign].slice(0, MAX_COLLECTIVE_ANALYSIS_UNITS);
+      const next = [...local, ...foreign].slice(0, MAX_COLLECTIVE_ANALYSIS_UNITS);
+      if (
+        next.length === prev.length &&
+        next.every((u, i) => {
+          const p = prev[i]!;
+          return (
+            u.code === p.code &&
+            u.level === p.level &&
+            u.name === p.name &&
+            u.addr1 === p.addr1 &&
+            u.addr2 === p.addr2 &&
+            u.eup === p.eup &&
+            Boolean(u.crossParent) === Boolean(p.crossParent)
+          );
+        })
+      ) {
+        return prev;
+      }
+      return next;
     });
   }, [resolveUnitsQ.data, leafList, addr1, addr2]);
 

@@ -290,7 +290,7 @@ export default function BuildingDetailModal({
               role="tab"
               aria-selected={panel === id}
               className={clsx(
-                "px-2 py-1 text-[11px] font-medium rounded transition-colors whitespace-nowrap",
+                "px-3 py-1.5 text-sm font-medium rounded transition-colors whitespace-nowrap",
                 panel === id ? "modal-tab-active" : "modal-tab-idle",
               )}
               onClick={() => setPanel(id)}

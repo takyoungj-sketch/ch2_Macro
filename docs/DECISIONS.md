@@ -74,6 +74,7 @@
 | D-069 | 2026-09-08 | **예측 결과 = 통계적 추정값.** 예상 금액·95% 신뢰/예측구간 라벨을 추정값·평균 추정범위·개별 거래 예측범위로. AVM 선언은 결과 카드 한 번. 복합·토지·집합 동일. 카드: [`lab/decisions/D-069.json`](lab/decisions/D-069.json). |
 | D-070 | 2026-09-08 | **복합 모형추천 척도 = 같은 표본의 linear/log/log-log.** 예측형은 원척도 CV-MAPE, 설명형 AIC는 log(금액) 식끼리만. log-log는 면적 블록이 있을 때만(면적만 log). Twin은 1단계 척도 고정. 카드: [`lab/decisions/D-070.json`](lab/decisions/D-070.json). |
 | D-071 | 2026-09-08 | **복합 Macro 탐색 UI = 4단계 스토리.** ① CV-MAPE TOP 5 → ② #1 회귀실험 → ③ Twin 구조 유지 → ④ 기본 통계·Macro·Twin 비교. 설명형 병렬 탭 없음. 「최적」금지. 카드: [`lab/decisions/D-071.json`](lab/decisions/D-071.json). |
+| D-072 | 2026-09-09 | **5앱 공유 형식은 동일 적용.** 탭 크기·필터 확인 UX·모달 크롬 등 형식은 토지·복합·집합·임대·지역프로필에 같이. 도메인 내용(열·산식)은 달라도 됨. 랩 제외. 카드: [`lab/decisions/D-072.json`](lab/decisions/D-072.json). |
 
 ## D-001 V1·V2 단일화 — 폐기 일정
 

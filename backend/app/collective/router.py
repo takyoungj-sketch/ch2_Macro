@@ -1073,7 +1073,7 @@ def building_regression(
         contract_year_to=body.contract_year_to,
     )
     gates = evaluate_analysis_gates(len(rows), cnt_recent, suggest_cohort=True)
-    if not gates.regression_eligible and not body.experiment:
+    if not gates.regression_eligible:
         raise HTTPException(
             403,
             detail="; ".join(gates.messages) if gates.messages else "회귀 분석 최소 표본 미달",
@@ -1129,7 +1129,7 @@ def building_regression_predict(
         contract_year_to=body.contract_year_to,
     )
     gates = evaluate_analysis_gates(len(rows), cnt_recent, suggest_cohort=True)
-    if not gates.regression_eligible and not body.experiment:
+    if not gates.regression_eligible:
         raise HTTPException(
             403,
             detail="; ".join(gates.messages) if gates.messages else "회귀 예측 최소 표본 미달",

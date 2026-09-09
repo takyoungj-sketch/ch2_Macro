@@ -233,7 +233,7 @@ export default function RegressionScatterSection({
           <PublishAiContext context={aiContext} />
           <AnalysisHelpPanel explain={explain} />
           <div
-            className="inline-flex rounded-md border border-slate-200 bg-slate-50 p-0.5 text-[11px] dark:border-slate-600 dark:bg-slate-900/70"
+            className="inline-flex rounded-md border border-slate-200 bg-slate-50 p-0.5 text-sm dark:border-slate-600 dark:bg-slate-900/70"
             role="tablist"
             aria-label="산점도 모드"
           >
@@ -243,7 +243,7 @@ export default function RegressionScatterSection({
               aria-selected={tab === "raw"}
               disabled={!hasRaw}
               className={clsx(
-                "px-2.5 py-1 rounded whitespace-nowrap transition-colors",
+                "px-3 py-1.5 rounded whitespace-nowrap transition-colors",
                 tab === "raw"
                   ? "bg-white shadow-sm font-medium text-slate-800 dark:bg-slate-700 dark:text-slate-100 dark:shadow-black/30"
                   : "text-slate-500 dark:text-slate-400 dark:hover:text-slate-200",
@@ -259,7 +259,7 @@ export default function RegressionScatterSection({
               aria-selected={tab === "partial"}
               disabled={!hasPartial}
               className={clsx(
-                "px-2.5 py-1 rounded whitespace-nowrap transition-colors",
+                "px-3 py-1.5 rounded whitespace-nowrap transition-colors",
                 tab === "partial"
                   ? "bg-white shadow-sm font-medium text-slate-800 dark:bg-slate-700 dark:text-slate-100 dark:shadow-black/30"
                   : "text-slate-500 dark:text-slate-400 dark:hover:text-slate-200",

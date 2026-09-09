@@ -60,3 +60,9 @@
 주거용·비주거용 집합은 **분석 단위만 다름**(건물/단지 vs 도로명 cluster). **통계 방식·UI·UX는 동일**하게 유지한다.
 
 집합 관련 작업 시 **기본으로 주거 + 비주거를 동시에** 수정한다. 상세: `.cursor/rules/collective-residential-commercial-parity.mdc`
+
+---
+
+## 5앱 형식 패리티
+
+탭 글자·필터 UX·모달 크롬처럼 **형식이면** 토지·복합·집합·임대·지역프로필에 **같이** 적용한다. 랩 제외. 상세: `.cursor/rules/five-app-format-parity.mdc` · 결정 D-072

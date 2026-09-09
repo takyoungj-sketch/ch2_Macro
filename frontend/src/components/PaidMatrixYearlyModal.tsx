@@ -3,16 +3,10 @@ import {
   fetchLongTermTrend,
   fetchMatrixCellHistogram,
   fetchAllMatrixCellTransactions,
-  fetchLandRegression,
-  fetchLandRegressionSuggestion,
   downloadMatrixCellTransactionsCsv,
 } from "../api/client";
 import { simpleTableHeadClass } from "../constants/displayUi";
 import type {
-  LandRegressionVariables,
-  LandRegressionRequest,
-  LandRegressionResponse,
-  LandRegressionSuggestResponse,
   LongTermTrendPoint,
   LongTermTrendResponse,
   MatrixCellHistogramRequest,
@@ -26,7 +20,6 @@ import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import {
   buildLandLongTermContext,
   buildLandMatrixTrendContext,
-  buildLandRegressionContext,
 } from "../api/aiContext";
 import { formatMatrixBucketAxisLabel } from "../utils/matrixYearlyLabels";
 import { resolveLongTermTargetsForFetch } from "../utils/longTermTargets";
@@ -35,9 +28,6 @@ import MatrixCellHistogramChart from "./MatrixCellHistogramChart";
 import MatrixCellTransactionTable from "./MatrixCellTransactionTable";
 import MatrixCellTransactionAggregate from "./MatrixCellTransactionAggregate";
 import MatrixYearlyTrendChart from "./MatrixYearlyTrendChart";
-import LandRegressionResults from "./LandRegressionResults";
-import LandRegressionScatterSection from "./LandRegressionScatterSection";
-import LandPredictPanel from "./LandPredictPanel";
 import MultiRegionTrendChart from "./MultiRegionTrendChart";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import DraggableModalShell from "./DraggableModalShell";
@@ -110,7 +100,7 @@ interface Props {
   scopeNote?: string;
 }
 
-type PanelMode = "trend" | "longTerm" | "histogram" | "transactions" | "regression";
+type PanelMode = "trend" | "longTerm" | "histogram" | "transactions";
 type LtPriceMetric = "mean" | "median";
 type TxSubView = "list" | "aggregate";
 
@@ -164,33 +154,6 @@ export default function PaidMatrixYearlyModal({
   >({});
   const [txExternalFilterToken, setTxExternalFilterToken] = useState(0);
 
-  // 회귀 탭 state
-  const [regVars, setRegVars] = useState<LandRegressionVariables>({
-    area_sqm: true,
-    log_area: true,
-    road_condition: true,
-    deal_type: true,
-    partial_ownership: false,
-    year_trend: true,
-    beopjungri_fe: false,
-  });
-  const [regModelType, setRegModelType] = useState<"log" | "linear">("log");
-  const [regExcludeOutlier, setRegExcludeOutlier] = useState(false);
-  const [regLoading, setRegLoading] = useState(false);
-  const [regError, setRegError] = useState<string | null>(null);
-  const [regResult, setRegResult] = useState<LandRegressionResponse | null>(null);
-  const [regSuggestion, setRegSuggestion] = useState<LandRegressionSuggestResponse | null>(null);
-  const [regBody, setRegBody] = useState<LandRegressionRequest | null>(null);
-  const aiRegressionContext = useMemo(() => {
-    if (!regResult) return null;
-    const label = scopeNote?.trim() || `${zoneType} × ${landCategory}`;
-    return buildLandRegressionContext(regResult, {
-      regionLabel: label,
-      zoneType,
-      landCategory,
-      modelType: regModelType,
-    });
-  }, [regResult, scopeNote, zoneType, landCategory, regModelType]);
   const [txExportLoading, setTxExportLoading] = useState(false);
   const [txExportError, setTxExportError] = useState<string | null>(null);
 
@@ -231,12 +194,8 @@ export default function PaidMatrixYearlyModal({
     [filterRequest, rows],
   );
 
-  /** 만년력 연도(필터 분석)에서만 장기 추세 — 기본통계 롤링 창과 기간 축이 다름 */
-  const showLongTermTab = !isRolling;
-
   const aiPanelContext = useMemo(() => {
     const label = scopeNote?.trim() || `${zoneType} × ${landCategory}`;
-    if (panel === "regression" && aiRegressionContext) return aiRegressionContext;
     if (panel === "trend" && sortedRows.length > 0) {
       return buildLandMatrixTrendContext(sortedRows, {
         regionLabel: label,
@@ -248,13 +207,7 @@ export default function PaidMatrixYearlyModal({
       return buildLandLongTermContext(ltData, { regionLabel: label });
     }
     return null;
-  }, [panel, aiRegressionContext, sortedRows, ltData, scopeNote, zoneType, landCategory]);
-
-  useEffect(() => {
-    if (!showLongTermTab && panel === "longTerm") {
-      setPanel("trend");
-    }
-  }, [showLongTermTab, panel]);
+  }, [panel, sortedRows, ltData, scopeNote, zoneType, landCategory]);
 
   useEffect(() => {
     if (sortedRows.length === 0) return;
@@ -416,13 +369,10 @@ export default function PaidMatrixYearlyModal({
       { id: "trend", label: isRolling ? "롤링 구간" : "선택 연도" },
       { id: "histogram", label: "단가 분포" },
       { id: "transactions", label: "거래 목록" },
-      { id: "regression", label: "회귀 분석" },
+      { id: "longTerm", label: "장기 추세" },
     ];
-    if (showLongTermTab) {
-      tabs.push({ id: "longTerm", label: "장기 추세" });
-    }
     return tabs;
-  }, [isRolling, showLongTermTab]);
+  }, [isRolling]);
 
   const ltPriceLabel = ltMetric === "median" ? "중앙값" : "평균";
 
@@ -432,7 +382,7 @@ export default function PaidMatrixYearlyModal({
   }, [ltData, ltMetric]);
 
   const ltExplain = useMemo(() => {
-    if (!showLongTermTab || !filterRequest) return null;
+    if (!filterRequest) return null;
     const targets = resolveLongTermTargetsForFetch(
       tierSelection,
       filterRequest.region_codes ?? [],
@@ -458,7 +408,6 @@ export default function PaidMatrixYearlyModal({
       referenceOnlyYears,
     });
   }, [
-    showLongTermTab,
     filterRequest,
     tierSelection,
     zoneType,
@@ -542,7 +491,7 @@ export default function PaidMatrixYearlyModal({
                 type="button"
                 role="tab"
                 aria-selected={panel === id}
-                className={`px-2.5 py-1 text-[11px] font-medium rounded transition-colors ${
+                className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
                   panel === id
                     ? "bg-white text-slate-800 shadow-sm border border-slate-100"
                     : "text-slate-500 hover:text-slate-700"
@@ -582,14 +531,14 @@ export default function PaidMatrixYearlyModal({
             </p>
           )}
 
-          {canDetail && showLongTermTab && panel === "longTerm" && (
+          {canDetail && panel === "longTerm" && (
             <div className="space-y-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 leading-relaxed flex-1 min-w-[12rem]">
                   {ltData?.disclaimer ??
                     (matrixMode === "group"
-                      ? "장기 추세: 만년력 연도·용도×지목군 기준 · 도로·면적·이상치·지분 필터 미적용 · 평균 모드에서 복수지역 가중 통합선(아래 별도 칸)"
-                      : "장기 추세: 만년력 연도·용도×지목 기준 · 도로·면적·이상치·지분 필터 미적용 · 평균 모드에서 복수지역 가중 통합선(아래 별도 칸)")}
+                      ? `장기 추세: 만년력 연도·용도×지목군 기준${isRolling ? " · 롤링 창과 기간 축이 다름" : ""} · 도로·면적·이상치·지분 필터 미적용 · 평균 모드에서 복수지역 가중 통합선(아래 별도 칸)`
+                      : `장기 추세: 만년력 연도·용도×지목 기준${isRolling ? " · 롤링 창과 기간 축이 다름" : ""} · 도로·면적·이상치·지분 필터 미적용 · 평균 모드에서 복수지역 가중 통합선(아래 별도 칸)`)}
                 </p>
                 <div className="flex items-center gap-2 shrink-0">
                   <AnalysisHelpPanel explain={ltExplain} />
@@ -608,7 +557,7 @@ export default function PaidMatrixYearlyModal({
                       key={id}
                       type="button"
                       aria-pressed={ltMetric === id}
-                      className={`px-2.5 py-1 text-[11px] font-medium rounded transition-colors ${
+                      className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
                         ltMetric === id
                           ? "bg-white text-slate-800 shadow-sm border border-slate-100"
                           : "text-slate-500 hover:text-slate-700"
@@ -975,181 +924,6 @@ export default function PaidMatrixYearlyModal({
             </div>
           )}
 
-          {/* ── 회귀 분석 탭 ── */}
-          {canDetail && panel === "regression" && filterRequest && (
-            <div className="space-y-4">
-              {/* 변수 선택 */}
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
-                <p className="text-xs font-semibold text-slate-600">투입 변수 선택</p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                  {(
-                    [
-                      ["area_sqm", "면적(㎡)"],
-                      ["road_condition", "도로조건"],
-                      ["deal_type", "거래유형"],
-                      ["partial_ownership", "지분여부"],
-                      ["year_trend", "연도추세"],
-                      ["beopjungri_fe", "법정동 FE"],
-                    ] as [keyof LandRegressionVariables, string][]
-                  ).map(([key, label]) => (
-                    <label key={key} className="flex items-center gap-1.5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={regVars[key]}
-                        onChange={(e) =>
-                          setRegVars((v) => ({ ...v, [key]: e.target.checked }))
-                        }
-                        className="accent-blue-600"
-                      />
-                      <span>{label}</span>
-                    </label>
-                  ))}
-                </div>
-                {regVars.area_sqm && (
-                  <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={regVars.log_area}
-                      onChange={(e) =>
-                        setRegVars((v) => ({ ...v, log_area: e.target.checked }))
-                      }
-                      className="accent-blue-600"
-                    />
-                    <span className="text-slate-500">면적 로그 변환 (log area)</span>
-                  </label>
-                )}
-                <div className="flex flex-wrap gap-4 text-xs">
-                  <span className="text-slate-500 font-medium">종속변수:</span>
-                  {(["log", "linear"] as const).map((mt) => (
-                    <label key={mt} className="flex items-center gap-1.5 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="regModelType"
-                        value={mt}
-                        checked={regModelType === mt}
-                        onChange={() => setRegModelType(mt)}
-                        className="accent-blue-600"
-                      />
-                      <span>{mt === "log" ? "log(단가)" : "단가(선형)"}</span>
-                    </label>
-                  ))}
-                  <label className="flex items-center gap-1.5 cursor-pointer ml-4">
-                    <input
-                      type="checkbox"
-                      checked={regExcludeOutlier}
-                      onChange={(e) => setRegExcludeOutlier(e.target.checked)}
-                      className="accent-blue-600"
-                    />
-                    <span className="text-slate-500">IQR 이상치 제외</span>
-                  </label>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={regLoading}
-                    onClick={async () => {
-                      if (!filterRequest) return;
-                      setRegLoading(true);
-                      setRegError(null);
-                      setRegResult(null);
-                      setRegBody(null);
-                      try {
-                        const body: LandRegressionRequest = {
-                          ...filterRequest,
-                          variables: regVars,
-                          model_type: regModelType,
-                          exclude_outliers_iqr: regExcludeOutlier,
-                          outlier_iqr_multiplier: 3,
-                          min_n: 15,
-                        };
-                        const res = await fetchLandRegression(body);
-                        setRegBody(body);
-                        setRegResult(res);
-                      } catch (e) {
-                        setRegError(parseApiError(e).message);
-                      } finally {
-                        setRegLoading(false);
-                      }
-                    }}
-                    className="px-4 py-1.5 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {regLoading ? "계산 중…" : "회귀 실행"}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={regLoading}
-                    onClick={async () => {
-                      if (!filterRequest) return;
-                      setRegLoading(true);
-                      setRegError(null);
-                      try {
-                        const body: LandRegressionRequest = {
-                          ...filterRequest,
-                          variables: regVars,
-                          model_type: regModelType,
-                          exclude_outliers_iqr: regExcludeOutlier,
-                          outlier_iqr_multiplier: 3,
-                          min_n: 15,
-                        };
-                        setRegSuggestion(await fetchLandRegressionSuggestion(body));
-                      } catch (e) {
-                        setRegError(parseApiError(e).message);
-                      } finally {
-                        setRegLoading(false);
-                      }
-                    }}
-                    className="px-4 py-1.5 rounded border border-indigo-500 text-indigo-700 text-xs font-semibold hover:bg-indigo-50 disabled:opacity-50"
-                  >
-                    {regLoading ? "계산 중…" : "모형 추천"}
-                  </button>
-                </div>
-              </div>
-
-              {regError && (
-                <p className="text-xs text-red-500 bg-red-50 rounded p-2">{regError}</p>
-              )}
-
-              {regResult && <LandRegressionResults data={regResult} />}
-
-              {regSuggestion && (
-                <div className="rounded-lg border border-indigo-200 bg-indigo-50/40 p-3 space-y-2 text-xs">
-                  <div className="font-semibold text-indigo-900">
-                    토지 모형 추천 · 공통 표본 n={regSuggestion.selection_n}
-                  </div>
-                  {regSuggestion.warnings.map((w) => (
-                    <p key={w} className="text-amber-700">⚠ {w}</p>
-                  ))}
-                  <div className="space-y-1">
-                    {regSuggestion.candidates_by_aic.map((candidate) => (
-                      <div key={`aic-${candidate.rank}`} className="rounded border border-indigo-100 bg-white px-2 py-1">
-                        #{candidate.rank} · {candidate.blocks.join(" + ")} · {candidate.model_type}
-                        {" · "}AIC {candidate.aic?.toFixed(1) ?? "—"}
-                        {" · "}MAPE {candidate.mape != null ? `${candidate.mape}%` : "—"}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {regResult && (
-                <LandRegressionScatterSection
-                  data={regResult}
-                  regionLabel={scopeNote?.trim() || `${zoneType} × ${landCategory}`}
-                  zoneType={zoneType}
-                  landCategory={landCategory}
-                />
-              )}
-
-              {regResult && regBody && (
-                <LandPredictPanel
-                  regResult={regResult}
-                  regBody={regBody}
-                  vars={regBody.variables}
-                  regionLabel={scopeNote?.trim() || `${zoneType} × ${landCategory}`}
-                />
-              )}
-            </div>
-          )}
     </DraggableModalShell>
   );
 }

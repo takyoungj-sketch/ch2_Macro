@@ -35,6 +35,7 @@ class RegionalRegressionRunRequest(BaseModel):
     variables: RegionalRegressionVariables = Field(default_factory=RegionalRegressionVariables)
     model_type: Literal["linear", "log"] = "log"
     weight_mode: Literal["equal", "tx"] = "equal"
+    min_tx: Literal[2, 3, 5] = 5
 
 
 class RegionalRegressionPredictInputs(BaseModel):

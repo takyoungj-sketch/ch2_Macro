@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import {
@@ -26,6 +26,7 @@ import { CH2_AI_ACTION_EVENT, type AiScreenAction } from "@ch2/ai-assistant/aiAc
 import BuildingRegressionPanel from "./BuildingRegressionPanel";
 import CohortTrendPanel from "./CohortTrendPanel";
 import CollectiveTransactionTable from "./CollectiveTransactionTable";
+import TransactionAggregatePanel, { TxListSubViewToggle, type TxSubView } from "./TransactionAggregatePanel";
 import DraggableModalShell from "./DraggableModalShell";
 import FloorIndexPanel from "./FloorIndexPanel";
 import HistogramChart from "./HistogramChart";
@@ -35,10 +36,22 @@ import YearlyTrendChart, { yearlyPointPrice } from "./YearlyTrendChart";
 import LongTermMetricToggle, { longTermPriceLabel, type LongTermPriceMetric } from "./LongTermMetricToggle";
 import type { StatsWindowYears } from "./StatsWindowToggle";
 import { buildAnalysisPeriodParams, formatPeriodLabel, type AnalysisPeriodParams } from "../utils/analysisPeriod";
+import {
+  collectiveTxAggregateDimensions,
+  collectiveTxArea,
+  collectiveTxCrossPresets,
+  collectiveTxDimensionValue,
+  collectiveTxDrillDownKey,
+  collectiveTxUnitPrice,
+  type CollectiveTxAggregateDim,
+} from "../utils/collectiveTxAggregate";
+import type { CollectiveTxSortKey } from "../utils/collectiveTxDisplay";
+import type { TxDrillDownFilters } from "../utils/txAggregate";
 import { rollingToTrendSeries, yearlyResponseToTrendSeries } from "../utils/cohortTrendSeries";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import SaleRentJoinPanel from "./SaleRentJoinPanel";
 import { collectiveModalPanelHelp } from "../utils/residentialAnalysisHelp";
+import { regressionTabTitle, regressionTabWarns } from "../utils/analysisGates";
 import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import { rowFromTypeSibling } from "../utils/typeSibling";
 import type { TypeSibling } from "../types";
@@ -547,6 +560,11 @@ export default function BuildingDetailModal({
   const [histYear, setHistYear] = useState<number | null>(null);
   const [txExportLoading, setTxExportLoading] = useState(false);
   const [txExportError, setTxExportError] = useState<string | null>(null);
+  const [txSubView, setTxSubView] = useState<TxSubView>("list");
+  const [txExternalFilters, setTxExternalFilters] = useState<
+    Partial<Record<CollectiveTxSortKey, Set<string>>>
+  >({});
+  const [txExternalFilterToken, setTxExternalFilterToken] = useState(0);
   const [cohortChartMetric, setCohortChartMetric] = useState<CohortTrendMetric>("mean");
   const [longTermMetric, setLongTermMetric] = useState<LongTermPriceMetric>("mean");
   const [defaultSize] = useState(defaultBuildingDetailSize);
@@ -763,11 +781,13 @@ export default function BuildingDetailModal({
 
   const analysis = row.analysis ?? {
     floor_index: row.count >= 50,
-    regression: row.count >= 30,
+    regression: row.count >= 15,
     count_total: row.count,
     count_recent: 0,
     messages: [],
   };
+  const countTotal = analysis.count_total ?? row.count;
+  const countRecent = row.analysis?.count_recent;
   const gateTip =
     (analysis.messages ?? []).join(" ") ||
     "선택 연도 구간 거래건수가 부족하여 통계 분석을 제공하지 않습니다.";
@@ -776,6 +796,36 @@ export default function BuildingDetailModal({
   const longTermCohortActive = cohortRunForPanel("long_term") > 0;
   const histCohortActive = cohortRunForPanel("histogram") > 0;
   const txCohortActive = cohortRunForPanel("transactions") > 0;
+  const activeTxQ = txCohortActive ? cohortTxQ : txQ;
+
+  useEffect(() => {
+    setTxSubView("list");
+    setTxExternalFilters({});
+    setTxExternalFilterToken(0);
+  }, [row.building_key]);
+
+  const handleTxDrillDown = useCallback((filters: TxDrillDownFilters<CollectiveTxSortKey>) => {
+    setTxExternalFilters(
+      Object.fromEntries(Object.entries(filters).map(([k, v]) => [k, new Set(v)])),
+    );
+    setTxExternalFilterToken((t) => t + 1);
+    setTxSubView("list");
+  }, []);
+
+  const txDimValue = useCallback(
+    (item: Parameters<typeof collectiveTxDimensionValue>[0], dim: CollectiveTxAggregateDim) =>
+      collectiveTxDimensionValue(item, dim, effectiveAssetType),
+    [effectiveAssetType],
+  );
+
+  const txAggDimensions = useMemo(
+    () => collectiveTxAggregateDimensions(effectiveAssetType, txCohortActive),
+    [effectiveAssetType, txCohortActive],
+  );
+  const txAggPresets = useMemo(
+    () => collectiveTxCrossPresets(effectiveAssetType, txCohortActive),
+    [effectiveAssetType, txCohortActive],
+  );
 
   const handleTxExport = async () => {
     setTxExportLoading(true);
@@ -838,19 +888,23 @@ export default function BuildingDetailModal({
               .filter(({ id }) => effectiveAssetType !== "presale" || (id !== "rent" && id !== "danji"))
               .map(({ id, label }) => {
               const tabLabel = typeof label === "function" ? label(effectiveAssetType) : label;
-              const needsGate = id === "floor_index" || id === "regression";
-              const eligible =
-                id === "floor_index" ? analysis.floor_index : id === "regression" ? analysis.regression : true;
-              const showWarn = needsGate && !eligible && !experiment;
+              const showWarn =
+                id === "floor_index"
+                  ? !analysis.floor_index && !experiment
+                  : id === "regression"
+                    ? regressionTabWarns(countTotal, countRecent)
+                    : false;
+              const tabTitle =
+                id === "regression" ? regressionTabTitle(countTotal, countRecent) : showWarn ? gateTip : undefined;
               return (
                 <button
                   key={id}
                   type="button"
                   role="tab"
                   aria-selected={panel === id}
-                  title={showWarn ? gateTip : undefined}
+                  title={tabTitle}
                   className={clsx(
-                    "px-2 py-1 text-[11px] font-medium rounded transition-colors whitespace-nowrap",
+                    "px-3 py-1.5 text-sm font-medium rounded transition-colors whitespace-nowrap",
                     panel === id
                       ? "modal-tab-active"
                       : "modal-tab-idle",
@@ -859,7 +913,7 @@ export default function BuildingDetailModal({
                   onClick={() => setPanel(id)}
                 >
                   {tabLabel}
-                  {showWarn && <span className="ml-0.5 text-[9px]">*</span>}
+                  {showWarn && <span className="ml-0.5 text-xs">*</span>}
                 </button>
               );
             })}
@@ -869,7 +923,7 @@ export default function BuildingDetailModal({
             return help ? <AnalysisHelpPanel explain={help} className="ml-1" /> : null;
           })()}
           {peerBuildings.length > 0 && (
-            <div className="mt-2 rounded border border-indigo-100 bg-indigo-50/50 px-2 py-1.5 text-[10px]">
+            <div className="mt-2 rounded border border-indigo-100 bg-indigo-50/50 px-2 py-1.5 text-xs">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-semibold text-indigo-800">분석 코호트</span>
                 <span className="text-slate-600">
@@ -878,7 +932,7 @@ export default function BuildingDetailModal({
                 {canRunCohort && panel !== "regression" && (
                   <button
                     type="button"
-                    className="ml-auto px-2 py-0.5 rounded bg-indigo-700 text-white text-[10px] font-semibold hover:bg-indigo-800 disabled:opacity-50"
+                    className="ml-auto px-2 py-0.5 rounded bg-indigo-700 text-white text-xs font-semibold hover:bg-indigo-800 disabled:opacity-50"
                     title="현재 탭 기준 실시간 통합 분석"
                     onClick={runCohortAnalysis}
                   >
@@ -903,7 +957,7 @@ export default function BuildingDetailModal({
                       <button
                         key={k}
                         type="button"
-                        className="px-1.5 py-0.5 rounded bg-white border border-indigo-200 text-indigo-700"
+                        className="px-2 py-1 rounded bg-white border border-indigo-200 text-indigo-800 text-sm font-medium"
                         onClick={() => setCohortExtra((prev) => prev.filter((x) => x !== k))}
                         title="코호트에서 제거"
                       >
@@ -914,10 +968,10 @@ export default function BuildingDetailModal({
                 </div>
               )}
               {peerOptions.length > 0 && (
-                <label className="mt-1 flex items-center gap-1 text-slate-600">
-                  <span>+ 단지 추가</span>
+                <label className="mt-1.5 flex flex-wrap items-center gap-1.5 text-slate-600">
+                  <span className="shrink-0">+ 단지 추가</span>
                   <select
-                    className="text-[10px] border border-slate-200 rounded px-1 py-0.5 max-w-[180px]"
+                    className="text-sm border border-slate-200 rounded px-1.5 py-1 min-w-[12rem] max-w-full w-[min(100%,22rem)] bg-white"
                     defaultValue=""
                     onChange={(e) => {
                       const v = e.target.value;
@@ -1276,67 +1330,84 @@ export default function BuildingDetailModal({
 
           {panel === "transactions" && (
             <div className="space-y-2 flex flex-col min-h-[360px]">
-              {txCohortActive && cohortTxQ.isLoading && (
-                <p className="text-xs text-slate-400 text-center py-4">코호트 목록 불러오는 중…</p>
+              {activeTxQ.isLoading && (
+                <p className="text-xs text-slate-400 text-center py-4">
+                  {txCohortActive ? "코호트 목록 불러오는 중…" : "목록 불러오는 중…"}
+                </p>
               )}
-              {txCohortActive && cohortTxQ.isError && (
-                <p className="text-xs text-amber-700 text-center py-4">통합 거래 목록을 불러오지 못했습니다.</p>
+              {activeTxQ.isError && (
+                <p className="text-xs text-amber-700 dark:text-amber-400 text-center py-4">
+                  {txCohortActive ? "통합 거래 목록을 불러오지 못했습니다." : "목록을 불러오지 못했습니다."}
+                </p>
               )}
-              {txCohortActive && cohortTxQ.data && (
+              {activeTxQ.data && (
                 <>
                   <div className="flex flex-wrap items-start justify-between gap-2 shrink-0">
-                    <p className="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-2 py-1">
-                      {cohortRunKeys.length}개 단지 통합 · 실시간 · 전체 {cohortTxQ.data.total.toLocaleString("ko-KR")}건
-                      {yearFrom != null || yearTo != null ? (
-                        <span>
-                          {" "}
-                          · 연도 {yearFrom ?? "…"}–{yearTo ?? "…"}
-                        </span>
-                      ) : usesMartPeriod && periodLabel ? (
-                        <span> · 분석 {periodLabel}</span>
-                      ) : null}
-                    </p>
-                    {txExportButton}
-                  </div>
-                  {txExportError && <p className="text-[10px] text-red-500">{txExportError}</p>}
-                  <CollectiveTransactionTable
-                    items={cohortTxQ.data.items}
-                    assetType={effectiveAssetType}
-                    showBuilding
-                    truncated={cohortTxQ.data.truncated}
-                  />
-                </>
-              )}
-              {!txCohortActive && txQ.isLoading && (
-                <p className="text-xs text-slate-400 text-center py-4">목록 불러오는 중…</p>
-              )}
-              {!txCohortActive && txQ.isError && (
-                <p className="text-xs text-red-500 text-center py-4">목록을 불러오지 못했습니다.</p>
-              )}
-              {!txCohortActive && txQ.data && (
-                <>
-                  <div className="flex flex-wrap items-start justify-between gap-2 shrink-0">
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                      전체 <strong className="text-slate-700 dark:text-slate-200">{txQ.data.total.toLocaleString("ko-KR")}</strong>건
-                      {yearFrom != null || yearTo != null ? (
-                        <span>
-                          {" "}
-                          · 연도 {yearFrom ?? "…"}–{yearTo ?? "…"}
-                        </span>
-                      ) : usesMartPeriod && periodLabel ? (
-                        <span> · 분석 {periodLabel}</span>
+                    <p
+                      className={
+                        txCohortActive
+                          ? "text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-2 py-1"
+                          : "text-[10px] text-slate-500 dark:text-slate-400"
+                      }
+                    >
+                      {txCohortActive ? (
+                        <>
+                          {cohortRunKeys.length}개 단지 통합 · 실시간 · 전체{" "}
+                          {activeTxQ.data.total.toLocaleString("ko-KR")}건
+                        </>
                       ) : (
+                        <>
+                          전체{" "}
+                          <strong className="text-slate-700 dark:text-slate-200">
+                            {activeTxQ.data.total.toLocaleString("ko-KR")}
+                          </strong>
+                          건
+                        </>
+                      )}
+                      {yearFrom != null || yearTo != null ? (
+                        <span>
+                          {" "}
+                          · 연도 {yearFrom ?? "…"}–{yearTo ?? "…"}
+                        </span>
+                      ) : usesMartPeriod && periodLabel ? (
+                        <span> · 분석 {periodLabel}</span>
+                      ) : txCohortActive ? null : (
                         " (전체 연도)"
                       )}
                     </p>
-                    {txExportButton}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <TxListSubViewToggle value={txSubView} onChange={setTxSubView} />
+                      {txExportButton}
+                    </div>
                   </div>
                   {txExportError && <p className="text-[10px] text-red-500">{txExportError}</p>}
-                  <CollectiveTransactionTable
-                    items={txQ.data.items}
-                    assetType={effectiveAssetType}
-                    truncated={txQ.data.truncated}
-                  />
+                  {txSubView === "aggregate" ? (
+                    <TransactionAggregatePanel
+                      items={activeTxQ.data.items}
+                      total={activeTxQ.data.total}
+                      truncated={Boolean(activeTxQ.data.truncated)}
+                      dimensions={txAggDimensions}
+                      presets={txAggPresets}
+                      defaultDimension="dong"
+                      defaultRow="dong"
+                      defaultCol="contract_year"
+                      defaultPresetId="dong_year"
+                      dimensionValue={txDimValue}
+                      unitPrice={collectiveTxUnitPrice}
+                      area={collectiveTxArea}
+                      drillDownKey={collectiveTxDrillDownKey}
+                      onDrillDown={handleTxDrillDown}
+                    />
+                  ) : (
+                    <CollectiveTransactionTable
+                      items={activeTxQ.data.items}
+                      assetType={effectiveAssetType}
+                      showBuilding={txCohortActive}
+                      truncated={activeTxQ.data.truncated}
+                      externalSelectFilters={txExternalFilters}
+                      externalFilterToken={txExternalFilterToken}
+                    />
+                  )}
                 </>
               )}
             </div>
@@ -1396,8 +1467,9 @@ export default function BuildingDetailModal({
               periodStart={periodStart ?? undefined}
               periodEnd={periodEnd ?? undefined}
               experiment={experiment}
-              regressionEligible={analysis.regression}
-              gateTip={gateTip}
+              countTotal={countTotal}
+              countRecent={countRecent}
+              gateMessages={analysis.messages}
             />
           )}
     </DraggableModalShell>
