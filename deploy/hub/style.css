@@ -157,6 +157,20 @@ body {
 .card--soon {
   opacity: 0.72;
   background: #f1f5f9;
+  cursor: default;
+}
+
+button.card {
+  width: 100%;
+  margin: 0;
+  font: inherit;
+  text-align: left;
+  appearance: none;
+}
+
+.card--soon:focus-visible {
+  outline: 2px solid #94a3b8;
+  outline-offset: 2px;
 }
 
 .card__badge {
@@ -204,6 +218,22 @@ body {
 
 .card--soon .card__desc {
   color: #64748b;
+}
+
+.card--soon .card__action {
+  color: #64748b;
+}
+
+.card__soon-msg {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.card__soon-msg[hidden] {
+  display: none;
 }
 
 .board-banner {

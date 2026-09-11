@@ -1,13 +1,46 @@
-"""OAuth state/next — 상대 경로만 허용 (오픈 리다이렉트 방지)."""
+"""OAuth state/next — 상대 경로와 Viewer 복귀 URL만 허용 (오픈 리다이렉트 방지)."""
 
 from __future__ import annotations
 
+from urllib.parse import urlparse
+
 DEFAULT_NEXT = "/"
 _APP_SCHEMES = ("ch2fieldnote://",)
+_VIEWER_HOST = "viewer.ch2data.com"
+_VIEWER_PATHS = frozenset(
+    {
+        "/",
+        "/download",
+        "/download/",
+        "/intro",
+        "/intro/",
+        "/mobile",
+        "/mobile/",
+    }
+)
+
+
+def _viewer_return_url(value: str) -> str | None:
+    parsed = urlparse(value)
+    if parsed.scheme != "https":
+        return None
+    host = (parsed.hostname or "").lower()
+    if host != _VIEWER_HOST:
+        return None
+    if parsed.username or parsed.password or parsed.port:
+        return None
+    if parsed.query or parsed.fragment:
+        return None
+    path = parsed.path or "/"
+    if path not in _VIEWER_PATHS:
+        return None
+    if path.endswith("/") and path != "/":
+        path = path.rstrip("/")
+    return f"https://{_VIEWER_HOST}{path}"
 
 
 def safe_oauth_next(value: str | None) -> str:
-    """Google state / login next 값을 안전한 복귀 경로로 정규화."""
+    """Google/Kakao state · login next 값을 안전한 복귀 경로로 정규화."""
     v = (value or DEFAULT_NEXT).strip()
     if not v:
         return DEFAULT_NEXT
@@ -16,6 +49,9 @@ def safe_oauth_next(value: str | None) -> str:
         if rest.startswith(_APP_SCHEMES):
             return v
         return DEFAULT_NEXT
+    if v.startswith("https://"):
+        allowed = _viewer_return_url(v)
+        return allowed if allowed else DEFAULT_NEXT
     if v.startswith("//") or "://" in v:
         return DEFAULT_NEXT
     if not v.startswith("/"):
