@@ -20,6 +20,7 @@
 | 신규아파트 실험 | `newapt` | 대전 M2 잠정 · 충북 전이 · 학습/검증/오차. 집합 기본통계 버튼 없음. 상품화는 실험 후 (D-045) |
 | 시공사 효과 | `builder` | 공시지가 vs 시군구 FE · within-gu. **다음=브랜드 vs 시공사.** 제품 식 미변경 (D-063·D-065) |
 | 연식=0 잔차 | `age0` | 재고 식 연식=0 vs 실제 신축. **다음=서울·경기 분리.** 전국 공통 프리미엄 미가산 (D-064) |
+| 모형추천 Twin 벤치 | `recommend-twin` | Local / Twin1 / Twin2 × 지역더미 전후. 실험 Twin은 1위만. 제품 식 미변경. [`lab/RECOMMEND_TWIN_BENCH_LAB.md`](./lab/RECOMMEND_TWIN_BENCH_LAB.md) |
 
 공개 게이트웨이 **Macro Insight**(6번째 문)는 구상만. 랩 실험 전부를 올리지 않고, 선별 배포. 계획 [`MACRO_INSIGHT_PLAN.md`](./MACRO_INSIGHT_PLAN.md). 구현·결정 카드 없음.
 
@@ -27,6 +28,7 @@ G3 시계열 랩: [`lab/G3_TIMESERIES_LAB.md`](./lab/G3_TIMESERIES_LAB.md) · `?
 신규아파트 실험: [`NEW_APARTMENT_REGRESSION_DESIGN.md`](./NEW_APARTMENT_REGRESSION_DESIGN.md) · `?tool=newapt`.
 시공사 효과: [`lab/BUILDER_IDENT_LAB.md`](./lab/BUILDER_IDENT_LAB.md) · `?tool=builder`.
 연식=0 잔차: [`lab/AGE0_RESIDUAL_LAB.md`](./lab/AGE0_RESIDUAL_LAB.md) · `?tool=age0`.
+모형추천 Twin 벤치: [`lab/RECOMMEND_TWIN_BENCH_LAB.md`](./lab/RECOMMEND_TWIN_BENCH_LAB.md) · `?tool=recommend-twin`.
 
 계획일지 표 규칙:
 

@@ -268,6 +268,10 @@ export interface RecommendationStage2 {
   local_confirm_cv_mape?: number | null;
   region_effect?: string | null;
   twin_experiments?: TwinExperimentStep[];
+  inspect_pool?: RecommendationPoolCandidate | null;
+  research?: RecommendationPoolCandidate | null;
+  research_ran?: boolean;
+  research_skipped_reason?: string | null;
 }
 
 export type RecommendationVerdict =
@@ -669,6 +673,8 @@ export interface RegressionSelectionRequest extends RegressionRunRequest {
   profile_twin_neighbors?: ProfileTwinCandidateNeighbor[];
   /** R3.5 — true일 때만 Twin 2단계 실행 (기본 false, 사용자 opt-in) */
   run_stage2?: boolean;
+  /** Twin 실험2 — Local + Twin 1위 표본에서 예측형 식 재탐색 (확인용) */
+  run_stage2_research?: boolean;
 }
 
 export interface CandidateValidationSummary {

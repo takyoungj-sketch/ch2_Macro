@@ -1,0 +1,3527 @@
+{
+  "run_id": "recommend-twin-bench-2026-09-11",
+  "date": "2026-09-11",
+  "decision": [
+    "D-066",
+    "D-073"
+  ],
+  "status": "experimental",
+  "product_change": false,
+  "resume": {
+    "next_id": "product-follow",
+    "title": "스냅샷을 읽고 제품 반영 여부를 결정한다",
+    "say": "실험 Twin은 1위만. 제품 Twin1(통과 Twin 전체)과 표본이 다르다. 더미·Twin1 축소는 이 표를 본 뒤에만.",
+    "do_not": "전국 전수, 기본 통계 식 덮기, 제품 Twin1을 1위로 축소, 지역 더미를 Stage2 기본으로 켜기.",
+    "how": "관리자 ?tool=recommend-twin. 공업·단독 빈 칸은 실패가 아니라 결과다."
+  },
+  "method": {
+    "note": "읍면동 · 창 5년 · 시나리오 연면적 120 · 대지 250 · 연식 10 · 도로 12미터미만 · 용도 기준범주.",
+    "window_years": 5,
+    "fixtures": [
+      "twin_bench_commercial_chungbuk12.json",
+      "twin_bench_factory_chungbuk8.json",
+      "twin_bench_detached_chungbuk8.json"
+    ],
+    "twin1_sample": "local + structure rank-1 only",
+    "dummy": "region_leaf on Twin columns only; predict uses anchor intercept"
+  },
+  "summary": {
+    "commercial": {
+      "n_cases": 12,
+      "n_ok": 12,
+      "n_error": 0,
+      "n_twin_rank1": 12,
+      "n_twin1_search_lt_local": 2,
+      "n_twin1_confirm_lt_local": 5,
+      "n_twin2_confirm_lt_twin1": 5,
+      "n_twin1_dummy_yhat": 1
+    },
+    "factory": {
+      "n_cases": 8,
+      "n_ok": 8,
+      "n_error": 0,
+      "n_twin_rank1": 7,
+      "n_twin1_search_lt_local": 1,
+      "n_twin1_confirm_lt_local": 1,
+      "n_twin2_confirm_lt_twin1": 6,
+      "n_twin1_dummy_yhat": 0
+    },
+    "detached": {
+      "n_cases": 8,
+      "n_ok": 8,
+      "n_error": 0,
+      "n_twin_rank1": 8,
+      "n_twin1_search_lt_local": 3,
+      "n_twin1_confirm_lt_local": 5,
+      "n_twin2_confirm_lt_twin1": 5,
+      "n_twin1_dummy_yhat": 0
+    }
+  },
+  "rows": [
+    {
+      "case_id": "43130118_dev",
+      "label": "충주시 연수동",
+      "asset_type": "commercial",
+      "region_code": "43130118",
+      "sample_group": "dev",
+      "tx_n": 57,
+      "rank1_region_code": "43112106",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 62,
+        "mean": 119004.0,
+        "p50": 83750.0
+      },
+      "twin_profile": "built_commercial",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "building_age",
+        "road_width",
+        "zone_type",
+        "building_use"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 62,
+          "search_cv_mape": 32.14,
+          "confirm_cv_mape": 38.52,
+          "y_hat": 46094.88384102902,
+          "ci_lower": 30053.517456667505,
+          "ci_upper": 70698.49043066257,
+          "pi_lower": 23379.982829327186,
+          "pi_upper": 90878.52338594307,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 84,
+          "search_cv_mape": 53.2,
+          "confirm_cv_mape": 59.8,
+          "y_hat": 25616.021654621454,
+          "ci_lower": 12167.831952113676,
+          "ci_upper": 53927.48420527373,
+          "pi_lower": 9563.033043574662,
+          "pi_upper": 68616.36495660951,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 84,
+          "search_cv_mape": 48.64,
+          "confirm_cv_mape": 48.39,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43130118' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 84,
+          "search_cv_mape": 30.49,
+          "confirm_cv_mape": 47.72,
+          "y_hat": 33865.48884347918,
+          "ci_lower": 28189.507881965797,
+          "ci_upper": 40684.33331330067,
+          "pi_lower": 15562.112825518012,
+          "pi_upper": 73696.37705795499,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 84,
+          "search_cv_mape": 30.49,
+          "confirm_cv_mape": 47.72,
+          "y_hat": 33865.48884347918,
+          "ci_lower": 28189.507881965797,
+          "ci_upper": 40684.33331330067,
+          "pi_lower": 15562.112825518012,
+          "pi_upper": 73696.37705795499,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43113115_dev",
+      "label": "청주시 흥덕구",
+      "asset_type": "commercial",
+      "region_code": "43113115",
+      "sample_group": "dev",
+      "tx_n": 130,
+      "rank1_region_code": "43114103",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 126,
+        "mean": 113183.3,
+        "p50": 85000.0
+      },
+      "twin_profile": "built_commercial",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "building_age",
+        "road_width",
+        "zone_type"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 126,
+          "search_cv_mape": 23.67,
+          "confirm_cv_mape": 21.8,
+          "y_hat": 63879.49249170626,
+          "ci_lower": 48074.91756393565,
+          "ci_upper": 84879.80360176618,
+          "pi_lower": 31638.803993882055,
+          "pi_upper": 128974.20401185246,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 203,
+          "search_cv_mape": 25.21,
+          "confirm_cv_mape": 17.94,
+          "y_hat": 69939.9800690393,
+          "ci_lower": 55270.81279811779,
+          "ci_upper": 88502.422244534,
+          "pi_lower": 34306.81758934611,
+          "pi_upper": 142583.92808713004,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 203,
+          "search_cv_mape": 25.88,
+          "confirm_cv_mape": 17.66,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43113115' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 203,
+          "search_cv_mape": 25.21,
+          "confirm_cv_mape": 17.94,
+          "y_hat": 69939.9800690393,
+          "ci_lower": 55270.81279811779,
+          "ci_upper": 88502.422244534,
+          "pi_lower": 34306.81758934611,
+          "pi_upper": 142583.92808713004,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 203,
+          "search_cv_mape": 25.21,
+          "confirm_cv_mape": 17.94,
+          "y_hat": 69939.9800690393,
+          "ci_lower": 55270.81279811779,
+          "ci_upper": 88502.422244534,
+          "pi_lower": 34306.81758934611,
+          "pi_upper": 142583.92808713004,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43770250_dev",
+      "label": "음성군 음성읍",
+      "asset_type": "commercial",
+      "region_code": "43770250",
+      "sample_group": "dev",
+      "tx_n": 59,
+      "rank1_region_code": "43130335",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 63,
+        "mean": 56339.1,
+        "p50": 30000.0
+      },
+      "twin_profile": "built_commercial",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "building_age",
+        "road_width",
+        "zone_type",
+        "building_use"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 63,
+          "search_cv_mape": 41.1,
+          "confirm_cv_mape": 32.34,
+          "y_hat": 11283.16902178477,
+          "ci_lower": 4224.912762848732,
+          "ci_upper": 30133.14364586364,
+          "pi_lower": 3127.844866265861,
+          "pi_upper": 40702.11555157812,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 86,
+          "search_cv_mape": 53.28,
+          "confirm_cv_mape": 34.86,
+          "y_hat": 24403.902857744302,
+          "ci_lower": 9384.92355192727,
+          "ci_upper": 63458.212674297116,
+          "pi_lower": 6569.361532900035,
+          "pi_upper": 90655.76185868944,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 86,
+          "search_cv_mape": 53.95,
+          "confirm_cv_mape": 36.24,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43770250' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 86,
+          "search_cv_mape": 53.28,
+          "confirm_cv_mape": 34.86,
+          "y_hat": 24403.902857744302,
+          "ci_lower": 9384.92355192727,
+          "ci_upper": 63458.212674297116,
+          "pi_lower": 6569.361532900035,
+          "pi_upper": 90655.76185868944,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 86,
+          "search_cv_mape": 53.28,
+          "confirm_cv_mape": 34.86,
+          "y_hat": 24403.902857744302,
+          "ci_lower": 9384.92355192727,
+          "ci_upper": 63458.212674297116,
+          "pi_lower": 6569.361532900035,
+          "pi_upper": 90655.76185868944,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43745250_dev",
+      "label": "증평군 증평읍",
+      "asset_type": "commercial",
+      "region_code": "43745250",
+      "sample_group": "dev",
+      "tx_n": 157,
+      "rank1_region_code": "43750250",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 148,
+        "mean": 56954.8,
+        "p50": 30900.0
+      },
+      "twin_profile": "built_commercial",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "zone_type"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 148,
+          "search_cv_mape": 33.52,
+          "confirm_cv_mape": 23.28,
+          "y_hat": 12568.451823133075,
+          "ci_lower": 9322.76197267226,
+          "ci_upper": 16944.11824451397,
+          "pi_lower": 4987.9847275968405,
+          "pi_upper": 31669.299297659134,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 256,
+          "search_cv_mape": 40.02,
+          "confirm_cv_mape": 32.84,
+          "y_hat": 13223.811058086494,
+          "ci_lower": 11027.738805039036,
+          "ci_upper": 15857.210801915764,
+          "pi_lower": 5273.388866753287,
+          "pi_upper": 33160.683446361094,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 256,
+          "search_cv_mape": 36.87,
+          "confirm_cv_mape": 34.69,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43745250' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "zone_type",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 250,
+          "search_cv_mape": 39.59,
+          "confirm_cv_mape": 28.01,
+          "y_hat": 14146.14473301035,
+          "ci_lower": 11837.644114628252,
+          "ci_upper": 16904.83417726575,
+          "pi_lower": 5857.496331877165,
+          "pi_upper": 34163.64253072365,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 250,
+          "search_cv_mape": 39.59,
+          "confirm_cv_mape": 28.01,
+          "y_hat": 14146.14473301035,
+          "ci_lower": 11837.644114628252,
+          "ci_upper": 16904.83417726575,
+          "pi_lower": 5857.496331877165,
+          "pi_upper": 34163.64253072365,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43750250_dev",
+      "label": "진천군 진천읍",
+      "asset_type": "commercial",
+      "region_code": "43750250",
+      "sample_group": "dev",
+      "tx_n": 102,
+      "rank1_region_code": "43750253",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 102,
+        "mean": 66737.6,
+        "p50": 40000.0
+      },
+      "twin_profile": "built_commercial",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "building_age",
+        "road_width",
+        "zone_type"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 102,
+          "search_cv_mape": 41.09,
+          "confirm_cv_mape": 25.92,
+          "y_hat": 12242.736741235065,
+          "ci_lower": 5134.383280215017,
+          "ci_upper": 29192.328413181913,
+          "pi_lower": 3831.743814429853,
+          "pi_upper": 39116.55115113409,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 146,
+          "search_cv_mape": 40.82,
+          "confirm_cv_mape": 28.1,
+          "y_hat": 11797.294698828595,
+          "ci_lower": 6172.944278618543,
+          "ci_upper": 22546.15559921364,
+          "pi_lower": 4025.5381732176497,
+          "pi_upper": 34573.30578479262,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 146,
+          "search_cv_mape": 41.08,
+          "confirm_cv_mape": 28.66,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43750250' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 146,
+          "search_cv_mape": 40.82,
+          "confirm_cv_mape": 28.1,
+          "y_hat": 11797.294698828595,
+          "ci_lower": 6172.944278618543,
+          "ci_upper": 22546.15559921364,
+          "pi_lower": 4025.5381732176497,
+          "pi_upper": 34573.30578479262,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 146,
+          "search_cv_mape": 40.82,
+          "confirm_cv_mape": 28.1,
+          "y_hat": 11797.294698828595,
+          "ci_lower": 6172.944278618543,
+          "ci_upper": 22546.15559921364,
+          "pi_lower": 4025.5381732176497,
+          "pi_upper": 34573.30578479262,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43770253_dev",
+      "label": "음성군 금왕읍",
+      "asset_type": "commercial",
+      "region_code": "43770253",
+      "sample_group": "dev",
+      "tx_n": 74,
+      "rank1_region_code": "43114250",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 68,
+        "mean": 72717.5,
+        "p50": 50000.0
+      },
+      "twin_profile": "built_commercial",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "building_age",
+        "zone_type"
+      ],
+      "stage1_scale": "linear",
+      "columns": {
+        "local": {
+          "n": 68,
+          "search_cv_mape": 66.9,
+          "confirm_cv_mape": 23.61,
+          "y_hat": 18934.950653609038,
+          "ci_lower": -1343.1702015617448,
+          "ci_upper": 39213.071508779816,
+          "pi_lower": -67592.6701576543,
+          "pi_upper": 105462.57146487237,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "building_age",
+            "zone_type"
+          ],
+          "response_scale": "linear"
+        },
+        "twin1": {
+          "n": 196,
+          "search_cv_mape": 73.26,
+          "confirm_cv_mape": 22.29,
+          "y_hat": 31738.400844676842,
+          "ci_lower": 23064.81478283465,
+          "ci_upper": 40411.986906519036,
+          "pi_lower": -37302.734648971804,
+          "pi_upper": 100779.53633832549,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "building_age",
+            "zone_type"
+          ],
+          "response_scale": "linear"
+        },
+        "twin1_dummy": {
+          "n": 196,
+          "search_cv_mape": 75.01,
+          "confirm_cv_mape": 25.87,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43770253' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "building_age",
+            "zone_type",
+            "region_leaf"
+          ],
+          "response_scale": "linear"
+        },
+        "twin2": {
+          "n": 184,
+          "search_cv_mape": 46.3,
+          "confirm_cv_mape": 19.53,
+          "y_hat": 17435.19307003146,
+          "ci_lower": 5069.1239579200055,
+          "ci_upper": 59968.14438012015,
+          "pi_lower": 3281.007055238982,
+          "pi_upper": 92650.19924412544,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 184,
+          "search_cv_mape": 46.3,
+          "confirm_cv_mape": 19.53,
+          "y_hat": 17435.19307003146,
+          "ci_lower": 5069.1239579200055,
+          "ci_upper": 59968.14438012015,
+          "pi_lower": 3281.007055238982,
+          "pi_upper": 92650.19924412544,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43114102_dev",
+      "label": "청주시 청원구",
+      "asset_type": "commercial",
+      "region_code": "43114102",
+      "sample_group": "dev",
+      "tx_n": 84,
+      "rank1_region_code": "43112103",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 91,
+        "mean": 77055.4,
+        "p50": 33700.0
+      },
+      "twin_profile": "built_commercial",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "building_age",
+        "road_width",
+        "zone_type",
+        "building_use"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 91,
+          "search_cv_mape": 42.63,
+          "confirm_cv_mape": 31.05,
+          "y_hat": 116280.17153074981,
+          "ci_lower": 49723.40931152022,
+          "ci_upper": 271925.80875760573,
+          "pi_lower": 38448.58739113181,
+          "pi_upper": 351666.45145301864,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 118,
+          "search_cv_mape": 39.92,
+          "confirm_cv_mape": 33.82,
+          "y_hat": 49296.78225325511,
+          "ci_lower": 24549.78555877872,
+          "ci_upper": 98989.57099671471,
+          "pi_lower": 17544.407011349937,
+          "pi_upper": 138515.52457445298,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 118,
+          "search_cv_mape": 41.48,
+          "confirm_cv_mape": 33.14,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43114102' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 118,
+          "search_cv_mape": 39.15,
+          "confirm_cv_mape": 38.64,
+          "y_hat": 35278.68126544469,
+          "ci_lower": 15049.38426123216,
+          "ci_upper": 82700.0846164146,
+          "pi_lower": 10042.924980615817,
+          "pi_upper": 123926.58057598295,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "log"
+        },
+        "twin2_dummy": {
+          "n": 118,
+          "search_cv_mape": 39.15,
+          "confirm_cv_mape": 38.64,
+          "y_hat": 35278.68126544469,
+          "ci_lower": 15049.38426123216,
+          "ci_upper": 82700.0846164146,
+          "pi_lower": 10042.924980615817,
+          "pi_upper": 123926.58057598295,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "log"
+        }
+      }
+    },
+    {
+      "case_id": "43113114_dev",
+      "label": "청주시 흥덕구",
+      "asset_type": "commercial",
+      "region_code": "43113114",
+      "sample_group": "dev",
+      "tx_n": 116,
+      "rank1_region_code": "43113113",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 113,
+        "mean": 145404.3,
+        "p50": 120000.0
+      },
+      "twin_profile": "built_commercial",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "building_age",
+        "road_width",
+        "zone_type",
+        "building_use"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 113,
+          "search_cv_mape": 28.32,
+          "confirm_cv_mape": 33.53,
+          "y_hat": 48711.30310532988,
+          "ci_lower": 21152.65759147505,
+          "ci_upper": 112174.60690025083,
+          "pi_lower": 16729.77588140943,
+          "pi_upper": 141830.4146474567,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 179,
+          "search_cv_mape": 31.37,
+          "confirm_cv_mape": 24.14,
+          "y_hat": 48668.57543451913,
+          "ci_lower": 22523.568065675612,
+          "ci_upper": 105162.3005697357,
+          "pi_lower": 17700.393215797038,
+          "pi_upper": 133817.94437829504,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 179,
+          "search_cv_mape": 31.62,
+          "confirm_cv_mape": 21.74,
+          "y_hat": 48668.57543451913,
+          "ci_lower": 22523.568065675612,
+          "ci_upper": 105162.3005697357,
+          "pi_lower": 17700.393215797038,
+          "pi_upper": 133817.94437829504,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 179,
+          "search_cv_mape": 29.97,
+          "confirm_cv_mape": 23.95,
+          "y_hat": 61467.7285201115,
+          "ci_lower": 35476.21946514995,
+          "ci_upper": 106501.81181604546,
+          "pi_lower": 26276.774216590336,
+          "pi_upper": 143787.8796795628,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 179,
+          "search_cv_mape": 29.97,
+          "confirm_cv_mape": 23.95,
+          "y_hat": 61467.7285201115,
+          "ci_lower": 35476.21946514995,
+          "ci_upper": 106501.81181604546,
+          "pi_lower": 26276.774216590336,
+          "pi_upper": 143787.8796795628,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43150109_holdout",
+      "label": "제천시 화산동",
+      "asset_type": "commercial",
+      "region_code": "43150109",
+      "sample_group": "holdout",
+      "tx_n": 76,
+      "rank1_region_code": "43130127",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 77,
+        "mean": 46937.4,
+        "p50": 23814.0
+      },
+      "twin_profile": "built_commercial",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "building_age",
+        "road_width",
+        "zone_type",
+        "building_use"
+      ],
+      "stage1_scale": "log",
+      "columns": {
+        "local": {
+          "n": 77,
+          "search_cv_mape": 41.56,
+          "confirm_cv_mape": 17.23,
+          "y_hat": 23640.216346201672,
+          "ci_lower": 13684.152579170743,
+          "ci_upper": 40839.929667686265,
+          "pi_lower": 8333.320876079266,
+          "pi_upper": 67063.27971834417,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "log"
+        },
+        "twin1": {
+          "n": 130,
+          "search_cv_mape": 67.85,
+          "confirm_cv_mape": 14.24,
+          "y_hat": 18726.810108651003,
+          "ci_lower": 5794.7347172076625,
+          "ci_upper": 60519.32210185175,
+          "pi_lower": 3854.048803773699,
+          "pi_upper": 90993.5070106251,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "log"
+        },
+        "twin1_dummy": {
+          "n": 130,
+          "search_cv_mape": 68.93,
+          "confirm_cv_mape": 18.34,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43150109' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use",
+            "region_leaf"
+          ],
+          "response_scale": "log"
+        },
+        "twin2": {
+          "n": 130,
+          "search_cv_mape": 35.53,
+          "confirm_cv_mape": 15.88,
+          "y_hat": 17049.665435979554,
+          "ci_lower": 14775.811223361896,
+          "ci_upper": 19673.4437848818,
+          "pi_lower": 7299.457155036371,
+          "pi_upper": 39823.65884266738,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 130,
+          "search_cv_mape": 35.53,
+          "confirm_cv_mape": 15.88,
+          "y_hat": 17049.665435979554,
+          "ci_lower": 14775.811223361896,
+          "ci_upper": 19673.4437848818,
+          "pi_lower": 7299.457155036371,
+          "pi_upper": 39823.65884266738,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43114253_holdout",
+      "label": "청주시 청원구",
+      "asset_type": "commercial",
+      "region_code": "43114253",
+      "sample_group": "holdout",
+      "tx_n": 133,
+      "rank1_region_code": "43745250",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 134,
+        "mean": 147673.7,
+        "p50": 82000.0
+      },
+      "twin_profile": "built_commercial",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "building_age",
+        "road_width",
+        "zone_type",
+        "building_use"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 134,
+          "search_cv_mape": 32.41,
+          "confirm_cv_mape": 45.52,
+          "y_hat": 16018.856752240894,
+          "ci_lower": 7439.841351117072,
+          "ci_upper": 34490.489721301026,
+          "pi_lower": 5544.007595855424,
+          "pi_upper": 46284.88818100554,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 282,
+          "search_cv_mape": 38.75,
+          "confirm_cv_mape": 37.33,
+          "y_hat": 16084.811438733665,
+          "ci_lower": 8465.657139113911,
+          "ci_upper": 30561.261195453673,
+          "pi_lower": 5812.839591503721,
+          "pi_upper": 44508.56675931236,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 282,
+          "search_cv_mape": 39.56,
+          "confirm_cv_mape": 35.8,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43114253' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 282,
+          "search_cv_mape": 36.04,
+          "confirm_cv_mape": 41.0,
+          "y_hat": 14701.581234234034,
+          "ci_lower": 12747.794265438615,
+          "ci_upper": 16954.814792764908,
+          "pi_lower": 6383.709841992347,
+          "pi_upper": 33857.50545318119,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 282,
+          "search_cv_mape": 36.04,
+          "confirm_cv_mape": 41.0,
+          "y_hat": 14701.581234234034,
+          "ci_lower": 12747.794265438615,
+          "ci_upper": 16954.814792764908,
+          "pi_lower": 6383.709841992347,
+          "pi_upper": 33857.50545318119,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43114250_holdout",
+      "label": "청주시 청원구",
+      "asset_type": "commercial",
+      "region_code": "43114250",
+      "sample_group": "holdout",
+      "tx_n": 126,
+      "rank1_region_code": "43770253",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 116,
+        "mean": 69042.9,
+        "p50": 41400.0
+      },
+      "twin_profile": "built_commercial",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "building_age",
+        "road_width",
+        "zone_type"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 116,
+          "search_cv_mape": 24.13,
+          "confirm_cv_mape": 14.79,
+          "y_hat": 17621.452033673548,
+          "ci_lower": 14282.629230283086,
+          "ci_upper": 21740.78503113975,
+          "pi_lower": 9817.366948117546,
+          "pi_upper": 31629.211112924542,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 184,
+          "search_cv_mape": 72.69,
+          "confirm_cv_mape": 20.45,
+          "y_hat": 15558.259130628585,
+          "ci_lower": 10725.567927905942,
+          "ci_upper": 22568.44847777188,
+          "pi_lower": 5038.634245248324,
+          "pi_upper": 48040.68233451585,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 184,
+          "search_cv_mape": 74.47,
+          "confirm_cv_mape": 19.39,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43114250' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 184,
+          "search_cv_mape": 46.3,
+          "confirm_cv_mape": 19.53,
+          "y_hat": 17435.19307003146,
+          "ci_lower": 5069.1239579200055,
+          "ci_upper": 59968.14438012015,
+          "pi_lower": 3281.007055238982,
+          "pi_upper": 92650.19924412544,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 184,
+          "search_cv_mape": 46.3,
+          "confirm_cv_mape": 19.53,
+          "y_hat": 17435.19307003146,
+          "ci_lower": 5069.1239579200055,
+          "ci_upper": 59968.14438012015,
+          "pi_lower": 3281.007055238982,
+          "pi_upper": 92650.19924412544,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43130105_holdout",
+      "label": "충주시 교현동",
+      "asset_type": "commercial",
+      "region_code": "43130105",
+      "sample_group": "holdout",
+      "tx_n": 68,
+      "rank1_region_code": "43130106",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 65,
+        "mean": 51572.6,
+        "p50": 30000.0
+      },
+      "twin_profile": "built_commercial",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "road_width",
+        "zone_type"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 65,
+          "search_cv_mape": 28.26,
+          "confirm_cv_mape": 14.83,
+          "y_hat": 35093.05382250251,
+          "ci_lower": 24851.413435231418,
+          "ci_upper": 49555.427895427056,
+          "pi_lower": 17096.07211735896,
+          "pi_upper": 72035.40194116274,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "road_width",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 102,
+          "search_cv_mape": 42.03,
+          "confirm_cv_mape": 18.83,
+          "y_hat": 32134.448156796458,
+          "ci_lower": 24549.52414826711,
+          "ci_upper": 42062.84211886566,
+          "pi_lower": 13818.801182111296,
+          "pi_upper": 74725.92916949911,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "road_width",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 102,
+          "search_cv_mape": 42.62,
+          "confirm_cv_mape": 13.34,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43130105' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "road_width",
+            "zone_type",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 99,
+          "search_cv_mape": 36.82,
+          "confirm_cv_mape": 20.46,
+          "y_hat": 38083.735241424794,
+          "ci_lower": 32767.815506628223,
+          "ci_upper": 44262.05615218879,
+          "pi_lower": 18330.814761799,
+          "pi_upper": 79122.00896609794,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "land_area",
+            "building_age",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 99,
+          "search_cv_mape": 36.82,
+          "confirm_cv_mape": 20.46,
+          "y_hat": 38083.735241424794,
+          "ci_lower": 32767.815506628223,
+          "ci_upper": 44262.05615218879,
+          "pi_lower": 18330.814761799,
+          "pi_upper": 79122.00896609794,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "land_area",
+            "building_age",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43114310_dev",
+      "label": "청주시 청원구",
+      "asset_type": "factory",
+      "region_code": "43114310",
+      "sample_group": "dev",
+      "tx_n": 119,
+      "rank1_region_code": "44200370",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 104,
+        "mean": 78497.5,
+        "p50": 40542.0
+      },
+      "twin_profile": "general",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "building_use"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 104,
+          "search_cv_mape": 34.3,
+          "confirm_cv_mape": 15.95,
+          "y_hat": 8298.679934632113,
+          "ci_lower": 6381.064477833783,
+          "ci_upper": 10792.570565098678,
+          "pi_lower": 3555.8762503806643,
+          "pi_upper": 19367.403083865243,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 177,
+          "search_cv_mape": 36.65,
+          "confirm_cv_mape": 31.11,
+          "y_hat": 7601.91265754466,
+          "ci_lower": 6062.439474938254,
+          "ci_upper": 9532.313896383484,
+          "pi_lower": 3137.1158168864317,
+          "pi_upper": 18421.084660588982,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 177,
+          "search_cv_mape": 36.44,
+          "confirm_cv_mape": 32.56,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43114310' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_use",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 142,
+          "search_cv_mape": 36.62,
+          "confirm_cv_mape": 28.99,
+          "y_hat": 7601.91265754466,
+          "ci_lower": 6062.439474938254,
+          "ci_upper": 9532.313896383484,
+          "pi_lower": 3137.1158168864317,
+          "pi_upper": 18421.084660588982,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 142,
+          "search_cv_mape": 36.62,
+          "confirm_cv_mape": 28.99,
+          "y_hat": 7601.91265754466,
+          "ci_lower": 6062.439474938254,
+          "ci_upper": 9532.313896383484,
+          "pi_lower": 3137.1158168864317,
+          "pi_upper": 18421.084660588982,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43770253_dev",
+      "label": "음성군 금왕읍",
+      "asset_type": "factory",
+      "region_code": "43770253",
+      "sample_group": "dev",
+      "tx_n": 105,
+      "rank1_region_code": "44270380",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 88,
+        "mean": 153278.1,
+        "p50": 91861.5
+      },
+      "twin_profile": "general",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "building_age",
+        "zone_type",
+        "building_use"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 88,
+          "search_cv_mape": 24.34,
+          "confirm_cv_mape": 27.65,
+          "y_hat": 10927.425744799843,
+          "ci_lower": 8402.05070141869,
+          "ci_upper": 14211.84394756773,
+          "pi_lower": 5528.81795433248,
+          "pi_upper": 21597.497764335625,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 118,
+          "search_cv_mape": 27.06,
+          "confirm_cv_mape": 49.03,
+          "y_hat": 9453.77349366398,
+          "ci_lower": 7413.8571406219735,
+          "ci_upper": 12054.971059505177,
+          "pi_lower": 4456.017651664271,
+          "pi_upper": 20056.884926414867,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 118,
+          "search_cv_mape": 26.4,
+          "confirm_cv_mape": 61.18,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43770253' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "zone_type",
+            "building_use",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 115,
+          "search_cv_mape": 26.99,
+          "confirm_cv_mape": 47.53,
+          "y_hat": 11659.522321347444,
+          "ci_lower": 7100.410953651321,
+          "ci_upper": 19145.998963917868,
+          "pi_lower": 4882.26637151984,
+          "pi_upper": 27844.53989545024,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 115,
+          "search_cv_mape": 26.99,
+          "confirm_cv_mape": 47.53,
+          "y_hat": 11659.522321347444,
+          "ci_lower": 7100.410953651321,
+          "ci_upper": 19145.998963917868,
+          "pi_lower": 4882.26637151984,
+          "pi_upper": 27844.53989545024,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43750253_dev",
+      "label": "진천군 덕산읍",
+      "asset_type": "factory",
+      "region_code": "43750253",
+      "sample_group": "dev",
+      "tx_n": 69,
+      "rank1_region_code": "44270253",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 66,
+        "mean": 307266.7,
+        "p50": 173545.0
+      },
+      "twin_profile": "general",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "land_area",
+        "building_age",
+        "zone_type",
+        "building_use"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 66,
+          "search_cv_mape": 28.34,
+          "confirm_cv_mape": 16.3,
+          "y_hat": 7318.938442453053,
+          "ci_lower": 5437.729062327518,
+          "ci_upper": 9850.961552227252,
+          "pi_lower": 3639.6289730630388,
+          "pi_upper": 14717.670488081736,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "land_area",
+            "building_age",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 101,
+          "search_cv_mape": 36.62,
+          "confirm_cv_mape": 38.85,
+          "y_hat": 8688.338260253651,
+          "ci_lower": 6441.545442698701,
+          "ci_upper": 11718.806053002381,
+          "pi_lower": 3773.156216479785,
+          "pi_upper": 20006.386535200025,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "land_area",
+            "building_age",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 101,
+          "search_cv_mape": 38.01,
+          "confirm_cv_mape": 39.55,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43750253' — 모형에 없는 값입니다.",
+          "blocks": [
+            "land_area",
+            "building_age",
+            "zone_type",
+            "building_use",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 100,
+          "search_cv_mape": 36.44,
+          "confirm_cv_mape": 35.24,
+          "y_hat": 8600.629296337545,
+          "ci_lower": 6508.763444641026,
+          "ci_upper": 11364.80453194583,
+          "pi_lower": 3718.8939111675736,
+          "pi_upper": 19890.544355376893,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "land_area",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 100,
+          "search_cv_mape": 36.44,
+          "confirm_cv_mape": 35.24,
+          "y_hat": 8600.629296337545,
+          "ci_lower": 6508.763444641026,
+          "ci_upper": 11364.80453194583,
+          "pi_lower": 3718.8939111675736,
+          "pi_upper": 19890.544355376893,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "land_area",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43113250_dev",
+      "label": "청주시 흥덕구",
+      "asset_type": "factory",
+      "region_code": "43113250",
+      "sample_group": "dev",
+      "tx_n": 53,
+      "rank1_region_code": "44800256",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 34,
+        "mean": 190709.7,
+        "p50": 40500.0
+      },
+      "twin_profile": "general",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "land_area",
+        "building_age",
+        "road_width",
+        "zone_type",
+        "building_use"
+      ],
+      "stage1_scale": "log",
+      "columns": {
+        "local": {
+          "n": 34,
+          "search_cv_mape": 39.85,
+          "confirm_cv_mape": 53.64,
+          "y_hat": 3651.0325052342505,
+          "ci_lower": 1023.7400727977816,
+          "ci_upper": 13020.920747829468,
+          "pi_lower": 676.7819922000533,
+          "pi_upper": 19696.20720986442,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "log"
+        },
+        "twin1": {
+          "n": 46,
+          "search_cv_mape": 74.8,
+          "confirm_cv_mape": 31.46,
+          "y_hat": 17711.93785951945,
+          "ci_lower": 2569.5056456937386,
+          "ci_upper": 122090.6999232451,
+          "pi_lower": 1657.822153284869,
+          "pi_upper": 189231.84378847672,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "log"
+        },
+        "twin1_dummy": {
+          "n": 46,
+          "search_cv_mape": 70.4,
+          "confirm_cv_mape": 56.42,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43113250' — 모형에 없는 값입니다.",
+          "blocks": [
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use",
+            "region_leaf"
+          ],
+          "response_scale": "log"
+        },
+        "twin2": {
+          "n": 46,
+          "search_cv_mape": 54.97,
+          "confirm_cv_mape": 9.73,
+          "y_hat": 58531.338004693265,
+          "ci_lower": 20361.344538065812,
+          "ci_upper": 168255.95786245112,
+          "pi_lower": 10423.395868859363,
+          "pi_upper": 328675.7570874596,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 46,
+          "search_cv_mape": 54.97,
+          "confirm_cv_mape": 9.73,
+          "y_hat": 58531.338004693265,
+          "ci_lower": 20361.344538065812,
+          "ci_upper": 168255.95786245112,
+          "pi_lower": 10423.395868859363,
+          "pi_upper": 328675.7570874596,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43130250_dev",
+      "label": "충주시 주덕읍",
+      "asset_type": "factory",
+      "region_code": "43130250",
+      "sample_group": "dev",
+      "tx_n": 49,
+      "rank1_region_code": "44790250",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 38,
+        "mean": 101312.4,
+        "p50": 42470.5
+      },
+      "twin_profile": "general",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "land_area",
+        "building_use"
+      ],
+      "stage1_scale": "linear",
+      "columns": {
+        "local": {
+          "n": 38,
+          "search_cv_mape": 54.14,
+          "confirm_cv_mape": 44.81,
+          "y_hat": 63719.74908557948,
+          "ci_lower": 27083.90211787299,
+          "ci_upper": 100355.59605328598,
+          "pi_lower": -80376.25815016986,
+          "pi_upper": 207815.7563213288,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "land_area",
+            "building_use"
+          ],
+          "response_scale": "linear"
+        },
+        "twin1": {
+          "n": 62,
+          "search_cv_mape": 61.35,
+          "confirm_cv_mape": 45.56,
+          "y_hat": 64254.292465969826,
+          "ci_lower": 30274.981314913704,
+          "ci_upper": 98233.60361702595,
+          "pi_lower": -69522.12977220464,
+          "pi_upper": 198030.7147041443,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "land_area",
+            "building_use"
+          ],
+          "response_scale": "linear"
+        },
+        "twin1_dummy": {
+          "n": 62,
+          "search_cv_mape": 66.64,
+          "confirm_cv_mape": 37.53,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43130250' — 모형에 없는 값입니다.",
+          "blocks": [
+            "land_area",
+            "building_use",
+            "region_leaf"
+          ],
+          "response_scale": "linear"
+        },
+        "twin2": {
+          "n": 46,
+          "search_cv_mape": 49.48,
+          "confirm_cv_mape": 41.81,
+          "y_hat": 7261.855758943751,
+          "ci_lower": 4046.4793746924383,
+          "ci_upper": 13032.205080178552,
+          "pi_lower": 2304.2529232355805,
+          "pi_upper": 22885.746843126864,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 46,
+          "search_cv_mape": 49.48,
+          "confirm_cv_mape": 41.81,
+          "y_hat": 7261.855758943751,
+          "ci_lower": 4046.4793746924383,
+          "ci_upper": 13032.205080178552,
+          "pi_lower": 2304.2529232355805,
+          "pi_upper": 22885.746843126864,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43112310_dev",
+      "label": "청주시 서원구",
+      "asset_type": "factory",
+      "region_code": "43112310",
+      "sample_group": "dev",
+      "tx_n": 47,
+      "rank1_region_code": null,
+      "rank1_skipped_reason": "Twin 후보 5개 중 5개는 표본·계약 검증에서 제외",
+      "local_obs": {
+        "n": 43,
+        "mean": 96472.5,
+        "p50": 59400.0
+      },
+      "twin_profile": "general",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "zone_type",
+        "building_use"
+      ],
+      "stage1_scale": "linear",
+      "columns": {
+        "local": {
+          "n": 43,
+          "search_cv_mape": 55.02,
+          "confirm_cv_mape": 50.49,
+          "y_hat": 17673.7522957751,
+          "ci_lower": -8023.383525183046,
+          "ci_upper": 43370.888116733244,
+          "pi_lower": -78414.64034394134,
+          "pi_upper": 113762.14493549155,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "linear"
+        },
+        "twin1": {
+          "n": null,
+          "search_cv_mape": null,
+          "confirm_cv_mape": null,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": "Twin 후보 5개 중 5개는 표본·계약 검증에서 제외",
+          "predict_skipped_reason": null,
+          "blocks": [],
+          "response_scale": null
+        },
+        "twin1_dummy": {
+          "n": null,
+          "search_cv_mape": null,
+          "confirm_cv_mape": null,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": "Twin 후보 5개 중 5개는 표본·계약 검증에서 제외",
+          "predict_skipped_reason": null,
+          "blocks": [],
+          "response_scale": null
+        },
+        "twin2": {
+          "n": null,
+          "search_cv_mape": null,
+          "confirm_cv_mape": null,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": "Twin 후보 5개 중 5개는 표본·계약 검증에서 제외",
+          "predict_skipped_reason": null,
+          "blocks": [],
+          "response_scale": null
+        },
+        "twin2_dummy": {
+          "n": null,
+          "search_cv_mape": null,
+          "confirm_cv_mape": null,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": "Twin 후보 5개 중 5개는 표본·계약 검증에서 제외",
+          "predict_skipped_reason": null,
+          "blocks": [],
+          "response_scale": null
+        }
+      }
+    },
+    {
+      "case_id": "43770350_holdout",
+      "label": "음성군 삼성면",
+      "asset_type": "factory",
+      "region_code": "43770350",
+      "sample_group": "holdout",
+      "tx_n": 106,
+      "rank1_region_code": "44270310",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 92,
+        "mean": 153952.4,
+        "p50": 112730.0
+      },
+      "twin_profile": "general",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "building_age",
+        "road_width",
+        "zone_type"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 92,
+          "search_cv_mape": 32.52,
+          "confirm_cv_mape": 15.75,
+          "y_hat": 11293.542045239954,
+          "ci_lower": 7400.303303600866,
+          "ci_upper": 17234.981688594005,
+          "pi_lower": 4878.370046195558,
+          "pi_upper": 26144.816961367884,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 103,
+          "search_cv_mape": 48.68,
+          "confirm_cv_mape": 60.93,
+          "y_hat": 10767.488829604225,
+          "ci_lower": 6616.475098511009,
+          "ci_upper": 17522.74647292831,
+          "pi_lower": 3798.8412923562996,
+          "pi_upper": 30519.520762537206,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 103,
+          "search_cv_mape": 35.03,
+          "confirm_cv_mape": 27.75,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43770350' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 103,
+          "search_cv_mape": 46.13,
+          "confirm_cv_mape": 43.19,
+          "y_hat": -13898.856413976842,
+          "ci_lower": -57257.76529652281,
+          "ci_upper": 29460.052468569127,
+          "pi_lower": -272092.3064013631,
+          "pi_upper": 244294.59357340945,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "linear"
+        },
+        "twin2_dummy": {
+          "n": 103,
+          "search_cv_mape": 46.13,
+          "confirm_cv_mape": 43.19,
+          "y_hat": -13898.856413976842,
+          "ci_lower": -57257.76529652281,
+          "ci_upper": 29460.052468569127,
+          "pi_lower": -272092.3064013631,
+          "pi_upper": 244294.59357340945,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "linear"
+        }
+      }
+    },
+    {
+      "case_id": "43750350_holdout",
+      "label": "진천군 이월면",
+      "asset_type": "factory",
+      "region_code": "43750350",
+      "sample_group": "holdout",
+      "tx_n": 68,
+      "rank1_region_code": "44710390",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 64,
+        "mean": 224892.9,
+        "p50": 106727.5
+      },
+      "twin_profile": "general",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "building_age",
+        "road_width",
+        "zone_type",
+        "building_use"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 64,
+          "search_cv_mape": 38.76,
+          "confirm_cv_mape": 20.02,
+          "y_hat": 8703.352868074217,
+          "ci_lower": 4685.792017561577,
+          "ci_upper": 16165.53847510161,
+          "pi_lower": 3405.475907608872,
+          "pi_upper": 22243.10293224238,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 133,
+          "search_cv_mape": 36.07,
+          "confirm_cv_mape": 28.46,
+          "y_hat": 9653.976467375916,
+          "ci_lower": 6643.576745200608,
+          "ci_upper": 14028.47670872112,
+          "pi_lower": 4330.014655819015,
+          "pi_upper": 21524.006046353552,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 133,
+          "search_cv_mape": 35.67,
+          "confirm_cv_mape": 24.41,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43750350' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 133,
+          "search_cv_mape": 36.07,
+          "confirm_cv_mape": 28.46,
+          "y_hat": 9653.976467375916,
+          "ci_lower": 6643.576745200608,
+          "ci_upper": 14028.47670872112,
+          "pi_lower": 4330.014655819015,
+          "pi_upper": 21524.006046353552,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 133,
+          "search_cv_mape": 36.07,
+          "confirm_cv_mape": 28.46,
+          "y_hat": 9653.976467375916,
+          "ci_lower": 6643.576745200608,
+          "ci_upper": 14028.47670872112,
+          "pi_lower": 4330.014655819015,
+          "pi_upper": 21524.006046353552,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43112101_dev",
+      "label": "청주시 서원구",
+      "asset_type": "detached",
+      "region_code": "43112101",
+      "sample_group": "dev",
+      "tx_n": 674,
+      "rank1_region_code": "44131113",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 663,
+        "mean": 25481.2,
+        "p50": 20000.0
+      },
+      "twin_profile": "general",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 663,
+          "search_cv_mape": 30.56,
+          "confirm_cv_mape": 34.17,
+          "y_hat": 28265.99152485535,
+          "ci_lower": 26730.513006998615,
+          "ci_upper": 29889.67240075072,
+          "pi_lower": 12273.232121636915,
+          "pi_upper": 65098.27802202719,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 877,
+          "search_cv_mape": 31.02,
+          "confirm_cv_mape": 31.84,
+          "y_hat": 29409.121581893887,
+          "ci_lower": 28128.829367678463,
+          "ci_upper": 30747.686685192428,
+          "pi_lower": 12797.935574118941,
+          "pi_upper": 67580.93344114679,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 877,
+          "search_cv_mape": 31.12,
+          "confirm_cv_mape": 34.25,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43112101' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 853,
+          "search_cv_mape": 30.87,
+          "confirm_cv_mape": 28.88,
+          "y_hat": 27326.63868287114,
+          "ci_lower": 22537.53073392726,
+          "ci_upper": 33133.40713852311,
+          "pi_lower": 11898.22063883673,
+          "pi_upper": 62761.080364130605,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 853,
+          "search_cv_mape": 30.87,
+          "confirm_cv_mape": 28.88,
+          "y_hat": 27326.63868287114,
+          "ci_lower": 22537.53073392726,
+          "ci_upper": 33133.40713852311,
+          "pi_lower": 11898.22063883673,
+          "pi_upper": 62761.080364130605,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43112102_dev",
+      "label": "청주시 서원구",
+      "asset_type": "detached",
+      "region_code": "43112102",
+      "sample_group": "dev",
+      "tx_n": 344,
+      "rank1_region_code": "30110118",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 346,
+        "mean": 40224.5,
+        "p50": 26350.0
+      },
+      "twin_profile": "general",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "building_age",
+        "road_width",
+        "building_use"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 346,
+          "search_cv_mape": 27.23,
+          "confirm_cv_mape": 30.18,
+          "y_hat": 31688.409473808577,
+          "ci_lower": 25015.24486859138,
+          "ci_upper": 40141.73358105152,
+          "pi_lower": 16484.726979507566,
+          "pi_upper": 60914.28121485075,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 583,
+          "search_cv_mape": 33.31,
+          "confirm_cv_mape": 32.3,
+          "y_hat": 31015.74596301878,
+          "ci_lower": 24436.808637424958,
+          "ci_upper": 39365.880869126646,
+          "pi_lower": 13496.002884060892,
+          "pi_upper": 71278.62270825634,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 583,
+          "search_cv_mape": 33.45,
+          "confirm_cv_mape": 31.72,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43112102' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "building_use",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 583,
+          "search_cv_mape": 31.67,
+          "confirm_cv_mape": 27.68,
+          "y_hat": 25239.22567044146,
+          "ci_lower": 20137.19501864746,
+          "ci_upper": 31633.924777188626,
+          "pi_lower": 11390.987024833581,
+          "pi_upper": 55923.030291817755,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "road_width",
+            "building_use"
+          ],
+          "response_scale": "log"
+        },
+        "twin2_dummy": {
+          "n": 583,
+          "search_cv_mape": 31.67,
+          "confirm_cv_mape": 27.68,
+          "y_hat": 25239.22567044146,
+          "ci_lower": 20137.19501864746,
+          "ci_upper": 31633.924777188626,
+          "pi_lower": 11390.987024833581,
+          "pi_upper": 55923.030291817755,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "road_width",
+            "building_use"
+          ],
+          "response_scale": "log"
+        }
+      }
+    },
+    {
+      "case_id": "43150250_dev",
+      "label": "제천시 봉양읍",
+      "asset_type": "detached",
+      "region_code": "43150250",
+      "sample_group": "dev",
+      "tx_n": 308,
+      "rank1_region_code": "44810360",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 319,
+        "mean": 17144.0,
+        "p50": 17000.0
+      },
+      "twin_profile": "general",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "building_age"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 319,
+          "search_cv_mape": 53.48,
+          "confirm_cv_mape": 63.01,
+          "y_hat": 12641.55608306665,
+          "ci_lower": 11004.979375931147,
+          "ci_upper": 14521.51201217474,
+          "pi_lower": 4639.367397923827,
+          "pi_upper": 34446.27823026817,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 485,
+          "search_cv_mape": 49.09,
+          "confirm_cv_mape": 60.62,
+          "y_hat": 14792.551474048601,
+          "ci_lower": 13471.51279431582,
+          "ci_upper": 16243.133377322427,
+          "pi_lower": 5497.78676435129,
+          "pi_upper": 39801.39435949859,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 485,
+          "search_cv_mape": 48.27,
+          "confirm_cv_mape": 59.17,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43150250' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 477,
+          "search_cv_mape": 49.13,
+          "confirm_cv_mape": 60.05,
+          "y_hat": 13408.89045226484,
+          "ci_lower": 9360.110123489725,
+          "ci_upper": 19208.998696460323,
+          "pi_lower": 4701.9485899385245,
+          "pi_upper": 38239.11293832117,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 477,
+          "search_cv_mape": 49.13,
+          "confirm_cv_mape": 60.05,
+          "y_hat": 13408.89045226484,
+          "ci_lower": 9360.110123489725,
+          "ci_upper": 19208.998696460323,
+          "pi_lower": 4701.9485899385245,
+          "pi_upper": 38239.11293832117,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43130370_dev",
+      "label": "충주시 앙성면",
+      "asset_type": "detached",
+      "region_code": "43130370",
+      "sample_group": "dev",
+      "tx_n": 257,
+      "rank1_region_code": "44800320",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 257,
+        "mean": 16277.8,
+        "p50": 14000.0
+      },
+      "twin_profile": "general",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "building_age",
+        "road_width"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 257,
+          "search_cv_mape": 51.99,
+          "confirm_cv_mape": 52.24,
+          "y_hat": 13007.830692876729,
+          "ci_lower": 5035.862418649745,
+          "ci_upper": 33599.73829068866,
+          "pi_lower": 3411.1854456172377,
+          "pi_upper": 49602.59769868046,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 387,
+          "search_cv_mape": 65.28,
+          "confirm_cv_mape": 43.36,
+          "y_hat": 17651.46593726029,
+          "ci_lower": 9662.366657450253,
+          "ci_upper": 32246.16295160133,
+          "pi_lower": 4751.915221500287,
+          "pi_upper": 65568.1415199763,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 387,
+          "search_cv_mape": 60.88,
+          "confirm_cv_mape": 49.76,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43130370' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 387,
+          "search_cv_mape": 65.28,
+          "confirm_cv_mape": 43.36,
+          "y_hat": 17651.46593726029,
+          "ci_lower": 9662.366657450253,
+          "ci_upper": 32246.16295160133,
+          "pi_lower": 4751.915221500287,
+          "pi_upper": 65568.1415199763,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 387,
+          "search_cv_mape": 65.28,
+          "confirm_cv_mape": 43.36,
+          "y_hat": 17651.46593726029,
+          "ci_lower": 9662.366657450253,
+          "ci_upper": 32246.16295160133,
+          "pi_lower": 4751.915221500287,
+          "pi_upper": 65568.1415199763,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43740380_dev",
+      "label": "영동군 학산면",
+      "asset_type": "detached",
+      "region_code": "43740380",
+      "sample_group": "dev",
+      "tx_n": 141,
+      "rank1_region_code": "44790370",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 139,
+        "mean": 7331.0,
+        "p50": 5300.0
+      },
+      "twin_profile": "general",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "building_age",
+        "road_width"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 139,
+          "search_cv_mape": 91.62,
+          "confirm_cv_mape": 63.21,
+          "y_hat": 6387.119803421147,
+          "ci_lower": 2819.17034424003,
+          "ci_upper": 14470.675554105912,
+          "pi_lower": 1298.5206405284846,
+          "pi_upper": 31416.750808559616,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 188,
+          "search_cv_mape": 86.73,
+          "confirm_cv_mape": 92.91,
+          "y_hat": 4006.9128100623852,
+          "ci_lower": 2146.826183391012,
+          "ci_upper": 7478.644704287088,
+          "pi_lower": 901.5083919597869,
+          "pi_upper": 17809.429629977545,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 188,
+          "search_cv_mape": 87.07,
+          "confirm_cv_mape": 93.27,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43740380' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 188,
+          "search_cv_mape": 86.73,
+          "confirm_cv_mape": 92.91,
+          "y_hat": 4006.9128100623852,
+          "ci_lower": 2146.826183391012,
+          "ci_upper": 7478.644704287088,
+          "pi_lower": 901.5083919597869,
+          "pi_upper": 17809.429629977545,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 188,
+          "search_cv_mape": 86.73,
+          "confirm_cv_mape": 92.91,
+          "y_hat": 4006.9128100623852,
+          "ci_lower": 2146.826183391012,
+          "ci_upper": 7478.644704287088,
+          "pi_lower": 901.5083919597869,
+          "pi_upper": 17809.429629977545,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43130385_dev",
+      "label": "충주시 중앙탑면",
+      "asset_type": "detached",
+      "region_code": "43130385",
+      "sample_group": "dev",
+      "tx_n": 138,
+      "rank1_region_code": "43770330",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 137,
+        "mean": 23794.2,
+        "p50": 16000.0
+      },
+      "twin_profile": "general",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "land_area",
+        "building_age",
+        "building_use"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 137,
+          "search_cv_mape": 49.51,
+          "confirm_cv_mape": 104.9,
+          "y_hat": 66411.90373299914,
+          "ci_lower": 50601.773115357246,
+          "ci_upper": 87161.78674977261,
+          "pi_lower": 24373.641955278017,
+          "pi_upper": 180955.35191391697,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "land_area",
+            "building_age",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 220,
+          "search_cv_mape": 56.72,
+          "confirm_cv_mape": 55.65,
+          "y_hat": 62049.027643228445,
+          "ci_lower": 51830.914528718495,
+          "ci_upper": 74281.57242598667,
+          "pi_lower": 20432.32593136254,
+          "pi_upper": 188430.91307389806,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "land_area",
+            "building_age",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 220,
+          "search_cv_mape": 54.41,
+          "confirm_cv_mape": 53.67,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43130385' — 모형에 없는 값입니다.",
+          "blocks": [
+            "land_area",
+            "building_age",
+            "building_use",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 216,
+          "search_cv_mape": 44.59,
+          "confirm_cv_mape": 46.94,
+          "y_hat": 26652.947733703717,
+          "ci_lower": 21200.188547197507,
+          "ci_upper": 33508.1747652404,
+          "pi_lower": 10198.363570949881,
+          "pi_upper": 69656.23631217307,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "building_age",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 216,
+          "search_cv_mape": 44.59,
+          "confirm_cv_mape": 46.94,
+          "y_hat": 26652.947733703717,
+          "ci_lower": 21200.188547197507,
+          "ci_upper": 33508.1747652404,
+          "pi_lower": 10198.363570949881,
+          "pi_upper": 69656.23631217307,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "building_age",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43730250_holdout",
+      "label": "옥천군 옥천읍",
+      "asset_type": "detached",
+      "region_code": "43730250",
+      "sample_group": "holdout",
+      "tx_n": 388,
+      "rank1_region_code": "44810250",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 422,
+        "mean": 18762.5,
+        "p50": 13690.0
+      },
+      "twin_profile": "general",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "land_area",
+        "building_age",
+        "road_width"
+      ],
+      "stage1_scale": "loglog",
+      "columns": {
+        "local": {
+          "n": 422,
+          "search_cv_mape": 49.7,
+          "confirm_cv_mape": 49.88,
+          "y_hat": 18497.01852402268,
+          "ci_lower": 11014.793398764583,
+          "ci_upper": 31061.834924331168,
+          "pi_lower": 5827.567883574012,
+          "pi_upper": 58710.546339994915,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1": {
+          "n": 915,
+          "search_cv_mape": 48.05,
+          "confirm_cv_mape": 47.84,
+          "y_hat": 16260.588902356016,
+          "ci_lower": 12309.50214751575,
+          "ci_upper": 21479.8899486593,
+          "pi_lower": 5600.935136555481,
+          "pi_upper": 47207.60819487567,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin1_dummy": {
+          "n": 915,
+          "search_cv_mape": 46.73,
+          "confirm_cv_mape": 47.96,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43730250' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "region_leaf"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2": {
+          "n": 915,
+          "search_cv_mape": 47.95,
+          "confirm_cv_mape": 47.78,
+          "y_hat": 19908.983803516305,
+          "ci_lower": 13655.299725852354,
+          "ci_upper": 29026.652219011154,
+          "pi_lower": 6660.48599173454,
+          "pi_upper": 59510.31750243972,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 915,
+          "search_cv_mape": 47.95,
+          "confirm_cv_mape": 47.78,
+          "y_hat": 19908.983803516305,
+          "ci_lower": 13655.299725852354,
+          "ci_upper": 29026.652219011154,
+          "pi_lower": 6660.48599173454,
+          "pi_upper": 59510.31750243972,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "building_use"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    },
+    {
+      "case_id": "43800250_holdout",
+      "label": "단양군 단양읍",
+      "asset_type": "detached",
+      "region_code": "43800250",
+      "sample_group": "holdout",
+      "tx_n": 196,
+      "rank1_region_code": "43130335",
+      "rank1_skipped_reason": null,
+      "local_obs": {
+        "n": 204,
+        "mean": 18821.9,
+        "p50": 16000.0
+      },
+      "twin_profile": "general",
+      "neighbor_n": 5,
+      "stage1_blocks": [
+        "gross_area",
+        "building_age",
+        "building_use"
+      ],
+      "stage1_scale": "linear",
+      "columns": {
+        "local": {
+          "n": 204,
+          "search_cv_mape": 62.41,
+          "confirm_cv_mape": 18.77,
+          "y_hat": 42095.46915120209,
+          "ci_lower": 33335.88512868053,
+          "ci_upper": 50855.053173723645,
+          "pi_lower": 23977.88220217066,
+          "pi_upper": 60213.056100233516,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "building_age",
+            "building_use"
+          ],
+          "response_scale": "linear"
+        },
+        "twin1": {
+          "n": 409,
+          "search_cv_mape": 62.71,
+          "confirm_cv_mape": 37.85,
+          "y_hat": 20055.990581231632,
+          "ci_lower": 15868.681246935372,
+          "ci_upper": 24243.299915527892,
+          "pi_lower": -2295.9650834123204,
+          "pi_upper": 42407.94624587559,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "building_age",
+            "building_use"
+          ],
+          "response_scale": "linear"
+        },
+        "twin1_dummy": {
+          "n": 409,
+          "search_cv_mape": 62.51,
+          "confirm_cv_mape": 32.21,
+          "y_hat": null,
+          "ci_lower": null,
+          "ci_upper": null,
+          "pi_lower": null,
+          "pi_upper": null,
+          "skipped_reason": null,
+          "predict_skipped_reason": "지역 '43800250' — 모형에 없는 값입니다.",
+          "blocks": [
+            "gross_area",
+            "building_age",
+            "building_use",
+            "region_leaf"
+          ],
+          "response_scale": "linear"
+        },
+        "twin2": {
+          "n": 403,
+          "search_cv_mape": 58.63,
+          "confirm_cv_mape": 40.51,
+          "y_hat": 17477.815043653227,
+          "ci_lower": 11333.320676482397,
+          "ci_upper": 26953.619986597183,
+          "pi_lower": 5564.043658991992,
+          "pi_upper": 54901.44172511619,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "building_age",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        },
+        "twin2_dummy": {
+          "n": 403,
+          "search_cv_mape": 58.63,
+          "confirm_cv_mape": 40.51,
+          "y_hat": 17477.815043653227,
+          "ci_lower": 11333.320676482397,
+          "ci_upper": 26953.619986597183,
+          "pi_lower": 5564.043658991992,
+          "pi_upper": 54901.44172511619,
+          "skipped_reason": null,
+          "predict_skipped_reason": null,
+          "blocks": [
+            "gross_area",
+            "building_age",
+            "road_width"
+          ],
+          "response_scale": "loglog"
+        }
+      }
+    }
+  ],
+  "reading": {
+    "n": 28,
+    "errors": 0,
+    "notes": [
+      "상업 12동 모두 Twin 1위 통과. Twin1 확인 CV가 Local보다 낮은 동은 5/12, 탐색 CV는 2/12.",
+      "공업 Twin 1위 7/8. Twin1이 Local 확인 CV를 이긴 동은 1. Twin2 확인이 Twin1보다 낮은 동은 6/7.",
+      "단독 8동 모두 Twin 1위. Twin1 확인 5/8, Twin2 확인 6/8이 Local보다 낮음.",
+      "Twin1+더미 예측은 거의 스킵(상업 11/12 · 공업 7/7 · 단독 8/8). 초점 동이 재적합 표본의 지역 더미에 없음. CV 비교는 가능.",
+      "Twin2+더미는 재탐색이 region_leaf를 고르지 않아 Twin2와 식이 같았음.",
+      "제품 Twin1(통과 Twin 전체)과 지역 더미 기본값은 바꾸지 않음."
+    ]
+  }
+}

@@ -419,5 +419,6 @@
 - Twin이 이겨도 기본 통계 식은 덮지 않음. 재적합 식·예측은 Macro 창 ③.
 - D-071의 ③ 목적(구조 유지)을 대체. 4단계 골격은 유지.
 - 카드 [`lab/decisions/D-073.json`](lab/decisions/D-073.json).
+- 재검토(region_leaf를 Twin 표본에서만) 실험 계획: [`lab/RECOMMEND_TWIN_BENCH_LAB.md`](lab/RECOMMEND_TWIN_BENCH_LAB.md).
 
 

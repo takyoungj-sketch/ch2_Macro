@@ -55,6 +55,14 @@ _DEFAULT_MIN_N = {
 }
 
 
+def is_general_gu_code(code: str) -> bool:
+    """일반구(비자치구): 시군구 5자리이면서 끝이 0이 아님. 수원 장안구 41111."""
+    c = str(code or "").strip()
+    if len(c) >= 5 and c[:5].isdigit():
+        return not c[:5].endswith("0")
+    return False
+
+
 def _basin(code: str) -> str:
     return _BASIN.get(str(code)[:2], "other")
 
@@ -174,6 +182,7 @@ def to_fixture(
     holdout: list[dict[str, Any]],
     sido_prefix: str | None,
     seed: int,
+    exclude_general_gu: bool = False,
 ) -> dict[str, Any]:
     cases: list[dict[str, Any]] = []
     for group, rows in (("dev", dev), ("holdout", holdout)):
@@ -197,7 +206,8 @@ def to_fixture(
             )
     return {
         "version": "1.1",
-        "description": f"Twin Lab stratified eup sample — {asset_type}",
+        "description": f"Twin Lab stratified eup sample — {asset_type}"
+        + (" · 일반구 산하 제외" if exclude_general_gu else ""),
         "defaults": {
             "asset_type": asset_type,
             "profile_version": "v2.1-national",
@@ -210,6 +220,8 @@ def to_fixture(
             "twin_scope_beop": "same_sigungu",
             "sido_prefix": sido_prefix,
             "sample_seed": seed,
+            "admin_level": "eupmyeondong",
+            "exclude_general_gu": exclude_general_gu,
         },
         "cases": cases,
     }
@@ -225,6 +237,11 @@ def main() -> None:
     p.add_argument("--n", type=int, default=60, help="목표 읍면동 수")
     p.add_argument("--holdout-frac", type=float, default=0.3)
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument(
+        "--exclude-general-gu",
+        action="store_true",
+        help="시군구 5자리 끝이 0이 아닌 일반구 산하 읍면동을 제외",
+    )
     p.add_argument("--out", type=Path, required=True)
     args = p.parse_args()
 
@@ -245,6 +262,14 @@ def main() -> None:
             min_n=min_n,
         )
 
+    if args.exclude_general_gu:
+        before = len(rows)
+        rows = [r for r in rows if not is_general_gu_code(r["eup_code"])]
+        print(
+            f"exclude general-gu: {before} → {len(rows)}",
+            flush=True,
+        )
+
     print(f"eligible eup={len(rows)} min_n={min_n} sido={sido or 'ALL'}", flush=True)
     if len(rows) < 5:
         raise SystemExit("eligible 읍면동 부족 — min-n 또는 sido-prefix 조정")
@@ -260,6 +285,7 @@ def main() -> None:
         holdout=holdout,
         sido_prefix=sido,
         seed=args.seed,
+        exclude_general_gu=bool(args.exclude_general_gu),
     )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(fixture, ensure_ascii=False, indent=2), encoding="utf-8")

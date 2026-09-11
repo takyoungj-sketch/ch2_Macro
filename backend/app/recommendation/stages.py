@@ -236,7 +236,7 @@ def run_recommendation(conn, req: RegressionSelectionRequest) -> RegressionRecom
         admin_level=analysis_scope.admin_level,
     )
 
-    if req.run_stage2 and has_twins and _twin_opt_in_allowed(analysis_scope.admin_level):
+    if (req.run_stage2 or req.run_stage2_research) and has_twins and _twin_opt_in_allowed(analysis_scope.admin_level):
         stage2 = run_stage2_twin(
             conn,
             Stage2Input(
@@ -248,7 +248,7 @@ def run_recommendation(conn, req: RegressionSelectionRequest) -> RegressionRecom
                 region_col=bundle.region_col,
             ),
         )
-    elif req.run_stage2 and not has_twins:
+    elif (req.run_stage2 or req.run_stage2_research) and not has_twins:
         skip_reason = "Profile Twin 후보가 전달되지 않았습니다."
         stage2 = RecommendationStage2(
             ran=False,
@@ -266,7 +266,7 @@ def run_recommendation(conn, req: RegressionSelectionRequest) -> RegressionRecom
                 pools=[],
             ),
         )
-    elif req.run_stage2 and not _twin_opt_in_allowed(analysis_scope.admin_level):
+    elif (req.run_stage2 or req.run_stage2_research) and not _twin_opt_in_allowed(analysis_scope.admin_level):
         skip_reason = "시군구·구 초점에는 Twin 실험을 붙이지 않습니다."
         stage2 = RecommendationStage2(
             ran=False,

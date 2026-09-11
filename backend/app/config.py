@@ -94,6 +94,7 @@ class Settings(BaseSettings):
     #: 카카오 Local API (FieldNote 주소 지오코딩 프록시)
     kakao_rest_api_key: str = Field(default="", validation_alias="KAKAO_REST_API_KEY")
     #: VWorld 2D API (Map Hub 타일·행정경계 Data API)
+    #: 운영키는 신청 시 등록한 서비스URL과 VWORLD_API_DOMAIN이 같아야 한다. localhost면 INCORRECT_KEY.
     vworld_api_key: str = Field(default="", validation_alias="VWORLD_API_KEY")
     vworld_api_domain: str = Field(default="localhost", validation_alias="VWORLD_API_DOMAIN")
 

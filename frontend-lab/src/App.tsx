@@ -12,6 +12,7 @@ import MacroTsLab from "./components/MacroTsLab";
 import NewAptLab from "./components/NewAptLab";
 import BuilderIdentLab from "./components/BuilderIdentLab";
 import Age0ResidualLab from "./components/Age0ResidualLab";
+import RecommendTwinBenchLab from "./components/RecommendTwinBenchLab";
 import WhyDecision, { WhyLinks } from "./components/WhyDecision";
 import { TOOL_WHY } from "./labContent";
 
@@ -26,7 +27,8 @@ export type LabTool =
   | "g3"
   | "newapt"
   | "builder"
-  | "age0";
+  | "age0"
+  | "recommend-twin";
 export type TwinPane = "v2" | "mape";
 
 type LabParams = {
@@ -49,7 +51,8 @@ function readParams(): LabParams {
     t === "g3" ||
     t === "newapt" ||
     t === "builder" ||
-    t === "age0"
+    t === "age0" ||
+    t === "recommend-twin"
       ? t
       : null;
   const pane = q.get("pane");
@@ -220,6 +223,14 @@ export default function App() {
     return (
       <LabChrome title="연식=0 잔차" whyIds={TOOL_WHY.age0 ?? []} onWhy={setWhy} onBack={back}>
         <Age0ResidualLab />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "recommend-twin") {
+    return (
+      <LabChrome title="모형추천 Twin 벤치" whyIds={TOOL_WHY["recommend-twin"] ?? []} onWhy={setWhy} onBack={back}>
+        <RecommendTwinBenchLab />
         {whyModal}
       </LabChrome>
     );

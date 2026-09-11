@@ -30,6 +30,7 @@ def map_config(db: Session = Depends(get_db)):
     edges = neighbor_edge_count(db)
     return {
         "vworld_configured": bool(key),
+        "vworld_domain": (settings.vworld_api_domain or "").strip(),
         "tile_base": "https://api.vworld.kr/req/wmts/1.0.0",
         "neighbor_graph_ready": edges > 0,
         "neighbor_edge_count": edges,

@@ -424,6 +424,12 @@ class RecommendationStage2(BaseModel):
     local_confirm_cv_mape: Optional[float] = None
     region_effect: Optional[str] = None
     twin_experiments: list[TwinExperimentStep] = Field(default_factory=list)
+    # Twin1 예측용: Local 식 + region_leaf · 쌍둥이 1위 표본 (채택 여부와 무관)
+    inspect_pool: Optional[RecommendationPoolCandidate] = None
+    # Twin 실험2: Local + Twin 1위 표본에서 예측형 식을 다시 고름 (확인용)
+    research: Optional[RecommendationPoolCandidate] = None
+    research_ran: bool = False
+    research_skipped_reason: Optional[str] = None
 
 
 class RegressionRecommendResponse(BaseModel):
@@ -491,6 +497,7 @@ class RegressionSelectionRequest(RegressionRunRequest):
     profile_window_years: Optional[int] = None
     profile_twin_neighbors: list[dict[str, object]] = Field(default_factory=list)
     run_stage2: bool = False
+    run_stage2_research: bool = False
     # Lab/실험: 지역 프로필 공변량을 후보 풀에 추가 (제품 기본 경로 off)
     include_region_features: bool = False
     # include_region_features 시 후보 세트: price=가격수준만 · full=가격+인구·거래량
