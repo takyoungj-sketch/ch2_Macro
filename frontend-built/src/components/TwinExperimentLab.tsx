@@ -11,12 +11,14 @@ import {
 
 type TabId = "overview" | "compare" | "region";
 
-const VERSION_ORDER: TwinLabVersionKey[] = ["r0", "r1", "t1", "rt", "v0", "v1", "v2", "v3", "v2x"];
+const VERSION_ORDER: TwinLabVersionKey[] = ["r0", "r1", "t1", "fp", "rnd", "rt", "v0", "v1", "v2", "v3", "v2x"];
 
 const VERSION_LABELS: Partial<Record<TwinLabVersionKey, string>> = {
   r0: "R0 Local",
   r1: "R1 참고(식별불가)",
-  t1: "T1 +Twin",
+  t1: "T1 +프로필 1위",
+  fp: "FP +지문 1위",
+  rnd: "RND +무작위",
   rt: "RT +지역+Twin",
   v0: "V0",
   v1: "V1",
@@ -288,7 +290,7 @@ export default function TwinExperimentLab({
               CH2 Macro 쌍둥이 로직 보강
             </h1>
             <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
-              Twin Experiment Lab · V0 Local 대비 Twin lift · 제품 UI와 분리 ·{" "}
+              Twin Experiment Lab · V0 Local 대비 Twin lift · Fingerprint 재순위는 실험 목록 · 제품 UI와 분리 ·{" "}
               <code className="text-[10px]">?lab=twin</code>
             </p>
           </div>

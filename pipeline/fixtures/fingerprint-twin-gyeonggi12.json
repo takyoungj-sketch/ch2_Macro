@@ -1,0 +1,1448 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "fingerprint-twin-gyeonggi12",
+  "asset_type": "commercial",
+  "period_years": 7,
+  "contract_year_from": 2019,
+  "contract_year_to": 2025,
+  "region_scope": "pool_rerank",
+  "anchor_basin": "gyeonggi",
+  "versions": [
+    "r0",
+    "t1",
+    "fp",
+    "rnd"
+  ],
+  "hit_threshold_rel": 0.05,
+  "generated_at": "2026-09-12T02:29:49.784937+00:00",
+  "source": "bench_fingerprint_twin",
+  "notes": "공통식=시군구 log(연면적)+log(대지)+도로. Twin 우주는 V2 풀. t1=프로필 1위, fp=지문 1위, rnd=같은 우주 무작위. cv_mape 칸은 확인 CV(없으면 탐색 CV). 제품 Twin 선정은 바꾸지 않음.",
+  "fingerprint_spec": {
+    "grain": "sigungu",
+    "formula": "ln(price) ~ ln(gross)+ln(land)+road_dummy",
+    "n_min": 50,
+    "intercept_in_distance": false
+  },
+  "fp_fit_errors": {},
+  "summary": {
+    "n_cases": 12,
+    "n_fingerprint_fitted": 11,
+    "n_same_pick": 8,
+    "n_winner_fp": 0,
+    "n_winner_t1": 1,
+    "n_winner_r0": 9,
+    "n_winner_rnd": 2
+  },
+  "kpis": {
+    "r0": {
+      "n_regions": 12,
+      "median_cv_mape": 24.33,
+      "mean_cv_mape": 25.59,
+      "median_lift_rel": null,
+      "hit_rate": null,
+      "worsened_rate": null
+    },
+    "t1": {
+      "n_regions": 11,
+      "median_cv_mape": 35.46,
+      "mean_cv_mape": 173.49,
+      "median_lift_rel": -0.5823,
+      "mean_lift_rel": -37.8642,
+      "hit_rate": 0.0909,
+      "worsened_rate": 0.8182,
+      "hit_threshold_rel": 0.05
+    },
+    "fp": {
+      "n_regions": 11,
+      "median_cv_mape": 35.46,
+      "mean_cv_mape": 168.27,
+      "median_lift_rel": -0.4094,
+      "mean_lift_rel": -37.7795,
+      "hit_rate": 0.0909,
+      "worsened_rate": 0.8182,
+      "hit_threshold_rel": 0.05
+    },
+    "rnd": {
+      "n_regions": 11,
+      "median_cv_mape": 27.77,
+      "mean_cv_mape": 68.37,
+      "median_lift_rel": -0.3542,
+      "mean_lift_rel": -2.0381,
+      "hit_rate": 0.1818,
+      "worsened_rate": 0.8182,
+      "hit_threshold_rel": 0.05
+    }
+  },
+  "kpis_by_sample_group": {
+    "all": {
+      "t1": {
+        "n_regions": 11,
+        "median_cv_mape": 35.46,
+        "mean_cv_mape": 173.49,
+        "median_lift_rel": -0.5823,
+        "mean_lift_rel": -37.8642,
+        "hit_rate": 0.0909,
+        "worsened_rate": 0.8182,
+        "hit_threshold_rel": 0.05
+      },
+      "fp": {
+        "n_regions": 11,
+        "median_cv_mape": 35.46,
+        "mean_cv_mape": 168.27,
+        "median_lift_rel": -0.4094,
+        "mean_lift_rel": -37.7795,
+        "hit_rate": 0.0909,
+        "worsened_rate": 0.8182,
+        "hit_threshold_rel": 0.05
+      },
+      "rnd": {
+        "n_regions": 11,
+        "median_cv_mape": 27.77,
+        "mean_cv_mape": 68.37,
+        "median_lift_rel": -0.3542,
+        "mean_lift_rel": -2.0381,
+        "hit_rate": 0.1818,
+        "worsened_rate": 0.8182,
+        "hit_threshold_rel": 0.05
+      },
+      "r0": {
+        "n_regions": 12,
+        "median_cv_mape": 24.33,
+        "mean_cv_mape": 25.59,
+        "median_lift_rel": null,
+        "hit_rate": null,
+        "worsened_rate": null
+      }
+    },
+    "dev": {
+      "t1": {
+        "n_regions": 7,
+        "median_cv_mape": 31.11,
+        "mean_cv_mape": 45.66,
+        "median_lift_rel": -0.4202,
+        "mean_lift_rel": -0.9195,
+        "hit_rate": 0.0,
+        "worsened_rate": 0.8571,
+        "hit_threshold_rel": 0.05
+      },
+      "fp": {
+        "n_regions": 7,
+        "median_cv_mape": 31.11,
+        "mean_cv_mape": 40.55,
+        "median_lift_rel": -0.4094,
+        "mean_lift_rel": -0.8395,
+        "hit_rate": 0.0,
+        "worsened_rate": 0.8571,
+        "hit_threshold_rel": 0.05
+      },
+      "rnd": {
+        "n_regions": 7,
+        "median_cv_mape": 26.94,
+        "mean_cv_mape": 86.89,
+        "median_lift_rel": -0.3542,
+        "mean_lift_rel": -1.4885,
+        "hit_rate": 0.1429,
+        "worsened_rate": 0.8571,
+        "hit_threshold_rel": 0.05
+      },
+      "r0": {
+        "n_regions": 8,
+        "median_cv_mape": 24.33,
+        "mean_cv_mape": 26.07,
+        "median_lift_rel": null,
+        "hit_rate": null,
+        "worsened_rate": null
+      }
+    },
+    "holdout": {
+      "t1": {
+        "n_regions": 4,
+        "median_cv_mape": 63.8,
+        "mean_cv_mape": 397.2,
+        "median_lift_rel": -2.5528,
+        "mean_lift_rel": -102.5174,
+        "hit_rate": 0.25,
+        "worsened_rate": 0.75,
+        "hit_threshold_rel": 0.05
+      },
+      "fp": {
+        "n_regions": 4,
+        "median_cv_mape": 52.98,
+        "mean_cv_mape": 391.79,
+        "median_lift_rel": -2.367,
+        "mean_lift_rel": -102.4245,
+        "hit_rate": 0.25,
+        "worsened_rate": 0.75,
+        "hit_threshold_rel": 0.05
+      },
+      "rnd": {
+        "n_regions": 4,
+        "median_cv_mape": 34.855,
+        "mean_cv_mape": 35.96,
+        "median_lift_rel": -0.6011,
+        "mean_lift_rel": -2.9998,
+        "hit_rate": 0.25,
+        "worsened_rate": 0.75,
+        "hit_threshold_rel": 0.05
+      },
+      "r0": {
+        "n_regions": 4,
+        "median_cv_mape": 18.37,
+        "mean_cv_mape": 24.62,
+        "median_lift_rel": null,
+        "hit_rate": null,
+        "worsened_rate": null
+      }
+    }
+  },
+  "regions": [
+    {
+      "case_id": "41220320_dev",
+      "region_code": "41220320",
+      "region_codes": [
+        "41220320"
+      ],
+      "region_label": "평택시 서탄면",
+      "admin_level": "eupmyeondong",
+      "role": "primary",
+      "sample_group": "dev",
+      "twin_meta": {
+        "engine": "v2",
+        "twin_profile": "engine_v2",
+        "role": "pool",
+        "weight_version": "2.0",
+        "profile_version": "v2.1-national",
+        "as_of_month": "2026-07-01",
+        "universe": {
+          "kind": "sigungu_adjacent_nhop",
+          "size": 117,
+          "after_population_gate": 27,
+          "gated_out_population": 90,
+          "n_hop": 2,
+          "graph_used": true,
+          "fallback": null,
+          "scope_label": "수도권"
+        }
+      },
+      "versions": {
+        "r0": {
+          "cv_mape": 18.89,
+          "n": 66,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "zone_type"
+          ],
+          "response_scale": "linear",
+          "twins": [],
+          "metric": "confirm_cv_mape"
+        },
+        "t1": {
+          "cv_mape": 52.61,
+          "delta_pp": -33.72,
+          "lift_rel": -1.7851,
+          "hit": false,
+          "n": 139,
+          "twins": [
+            {
+              "region_code": "41550360",
+              "similarity_score": 0.5550393584174037,
+              "label": "양성면"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "profile_rank1"
+        },
+        "fp": {
+          "cv_mape": 59.6,
+          "delta_pp": -40.71,
+          "lift_rel": -2.1551,
+          "hit": false,
+          "n": 103,
+          "twins": [
+            {
+              "region_code": "41220340",
+              "similarity_score": 0.55316750681972,
+              "label": "오성면"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "fingerprint_rank1",
+          "curve_r": 1.0,
+          "beta_cosine": 1.0,
+          "fp_distance": 0.0,
+          "parent_sigungu": "41220",
+          "anchor_parent": "41220",
+          "anchor_fp_n": 1288
+        },
+        "rnd": {
+          "cv_mape": 25.58,
+          "delta_pp": -6.69,
+          "lift_rel": -0.3542,
+          "hit": false,
+          "n": 97,
+          "twins": [
+            {
+              "region_code": "41550310",
+              "similarity_score": 0.5545340055670419,
+              "label": "보개면"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "random_from_same_universe"
+        }
+      },
+      "winner": "r0",
+      "same_pick": false
+    },
+    {
+      "case_id": "41480250_dev",
+      "region_code": "41480250",
+      "region_codes": [
+        "41480250"
+      ],
+      "region_label": "파주시 문산읍",
+      "admin_level": "eupmyeondong",
+      "role": "primary",
+      "sample_group": "dev",
+      "twin_meta": {
+        "engine": "v2",
+        "twin_profile": "engine_v2",
+        "role": "pool",
+        "weight_version": "2.0",
+        "profile_version": "v2.1-national",
+        "as_of_month": "2026-07-01",
+        "universe": {
+          "kind": "sigungu_adjacent_nhop",
+          "size": 25,
+          "after_population_gate": 7,
+          "gated_out_population": 18,
+          "n_hop": 2,
+          "graph_used": false,
+          "fallback": "same_sigungu_no_graph",
+          "scope_label": "수도권"
+        }
+      },
+      "versions": {
+        "r0": {
+          "cv_mape": 22.39,
+          "n": 94,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "zone_type"
+          ],
+          "response_scale": "loglog",
+          "twins": [],
+          "metric": "confirm_cv_mape"
+        },
+        "t1": {
+          "cv_mape": 23.77,
+          "delta_pp": -1.38,
+          "lift_rel": -0.0616,
+          "hit": false,
+          "n": 204,
+          "twins": [
+            {
+              "region_code": "41480262",
+              "similarity_score": 0.7262200952906901,
+              "label": "조리읍"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "profile_rank1"
+        },
+        "fp": {
+          "cv_mape": 23.77,
+          "delta_pp": -1.38,
+          "lift_rel": -0.0616,
+          "hit": false,
+          "n": 204,
+          "twins": [
+            {
+              "region_code": "41480262",
+              "similarity_score": 0.7262200952906901,
+              "label": "조리읍"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "fingerprint_rank1",
+          "curve_r": 1.0,
+          "beta_cosine": 1.0,
+          "fp_distance": 0.0,
+          "parent_sigungu": "41480",
+          "anchor_parent": "41480",
+          "anchor_fp_n": 1607
+        },
+        "rnd": {
+          "cv_mape": 26.94,
+          "delta_pp": -4.55,
+          "lift_rel": -0.2032,
+          "hit": false,
+          "n": 176,
+          "twins": [
+            {
+              "region_code": "41480101",
+              "similarity_score": 0.6300707232769385,
+              "label": "금촌동"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "random_from_same_universe"
+        }
+      },
+      "winner": "r0",
+      "same_pick": true
+    },
+    {
+      "case_id": "41360259_dev",
+      "region_code": "41360259",
+      "region_codes": [
+        "41360259"
+      ],
+      "region_label": "남양주시 진건읍",
+      "admin_level": "eupmyeondong",
+      "role": "primary",
+      "sample_group": "dev",
+      "twin_meta": {
+        "engine": "v2",
+        "twin_profile": "engine_v2",
+        "role": "pool",
+        "weight_version": "2.0",
+        "profile_version": "v2.1-national",
+        "as_of_month": "2026-07-01",
+        "universe": {
+          "kind": "sigungu_adjacent_nhop",
+          "size": 14,
+          "after_population_gate": 4,
+          "gated_out_population": 10,
+          "n_hop": 2,
+          "graph_used": false,
+          "fallback": "same_sigungu_no_graph",
+          "scope_label": "수도권"
+        }
+      },
+      "versions": {
+        "r0": {
+          "cv_mape": 21.42,
+          "n": 78,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width"
+          ],
+          "response_scale": "linear",
+          "twins": [],
+          "metric": "confirm_cv_mape"
+        },
+        "t1": {
+          "cv_mape": 25.32,
+          "delta_pp": -3.9,
+          "lift_rel": -0.1821,
+          "hit": false,
+          "n": 132,
+          "twins": [
+            {
+              "region_code": "41360103",
+              "similarity_score": 0.7424742312968238,
+              "label": "금곡동"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "profile_rank1"
+        },
+        "fp": {
+          "cv_mape": 25.32,
+          "delta_pp": -3.9,
+          "lift_rel": -0.1821,
+          "hit": false,
+          "n": 132,
+          "twins": [
+            {
+              "region_code": "41360103",
+              "similarity_score": 0.7424742312968238,
+              "label": "금곡동"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "fingerprint_rank1",
+          "curve_r": 1.0,
+          "beta_cosine": 1.0,
+          "fp_distance": 0.0,
+          "parent_sigungu": "41360",
+          "anchor_parent": "41360",
+          "anchor_fp_n": 1481
+        },
+        "rnd": {
+          "cv_mape": 35.24,
+          "delta_pp": -13.82,
+          "lift_rel": -0.6452,
+          "hit": false,
+          "n": 120,
+          "twins": [
+            {
+              "region_code": "41360310",
+              "similarity_score": 0.6288535688355322,
+              "label": "별내면"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "random_from_same_universe"
+        }
+      },
+      "winner": "r0",
+      "same_pick": true
+    },
+    {
+      "case_id": "41650370_dev",
+      "region_code": "41650370",
+      "region_codes": [
+        "41650370"
+      ],
+      "region_label": "포천시 일동면",
+      "admin_level": "eupmyeondong",
+      "role": "primary",
+      "sample_group": "dev",
+      "twin_meta": {
+        "engine": "v2",
+        "twin_profile": "engine_v2",
+        "role": "pool",
+        "weight_version": "2.0",
+        "profile_version": "v2.1-national",
+        "as_of_month": "2026-07-01",
+        "universe": {
+          "kind": "sigungu_adjacent_nhop",
+          "size": 20,
+          "after_population_gate": 12,
+          "gated_out_population": 8,
+          "n_hop": 2,
+          "graph_used": true,
+          "fallback": null,
+          "scope_label": "수도권"
+        }
+      },
+      "versions": {
+        "r0": {
+          "cv_mape": 46.02,
+          "n": 79,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "building_use"
+          ],
+          "response_scale": "linear",
+          "twins": [],
+          "metric": "confirm_cv_mape"
+        },
+        "t1": {
+          "cv_mape": 107.66,
+          "delta_pp": -61.64,
+          "lift_rel": -1.3394,
+          "hit": false,
+          "n": 176,
+          "twins": [
+            {
+              "region_code": "41820325",
+              "similarity_score": 0.6283947241913119,
+              "label": "청평면"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "profile_rank1"
+        },
+        "fp": {
+          "cv_mape": 64.86,
+          "delta_pp": -18.84,
+          "lift_rel": -0.4094,
+          "hit": false,
+          "n": 115,
+          "twins": [
+            {
+              "region_code": "41650380",
+              "similarity_score": 0.5529783478099469,
+              "label": "이동면"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "fingerprint_rank1",
+          "curve_r": 1.0,
+          "beta_cosine": 1.0,
+          "fp_distance": 0.0,
+          "parent_sigungu": "41650",
+          "anchor_parent": "41650",
+          "anchor_fp_n": 1284
+        },
+        "rnd": {
+          "cv_mape": 458.11,
+          "delta_pp": -412.09,
+          "lift_rel": -8.9546,
+          "hit": false,
+          "n": 122,
+          "twins": [
+            {
+              "region_code": "41650104",
+              "similarity_score": 0.5193787183855959,
+              "label": "선단동"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "random_from_same_universe"
+        }
+      },
+      "winner": "r0",
+      "same_pick": false
+    },
+    {
+      "case_id": "41550310_dev",
+      "region_code": "41550310",
+      "region_codes": [
+        "41550310"
+      ],
+      "region_label": "안성시 보개면",
+      "admin_level": "eupmyeondong",
+      "role": "primary",
+      "sample_group": "dev",
+      "twin_meta": {
+        "engine": "v2",
+        "twin_profile": "engine_v2",
+        "role": "pool",
+        "weight_version": "2.0",
+        "profile_version": "v2.1-national",
+        "as_of_month": "2026-07-01",
+        "universe": {
+          "kind": "sigungu_adjacent_nhop",
+          "size": 36,
+          "after_population_gate": 13,
+          "gated_out_population": 23,
+          "n_hop": 2,
+          "graph_used": false,
+          "fallback": "same_sigungu_no_graph",
+          "scope_label": "수도권"
+        }
+      },
+      "versions": {
+        "r0": {
+          "cv_mape": 34.03,
+          "n": 30,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_use"
+          ],
+          "response_scale": "linear",
+          "twins": [],
+          "metric": "confirm_cv_mape"
+        },
+        "t1": {
+          "cv_mape": 48.33,
+          "delta_pp": -14.3,
+          "lift_rel": -0.4202,
+          "hit": false,
+          "n": 99,
+          "twins": [
+            {
+              "region_code": "41550390",
+              "similarity_score": 0.7328430362924997,
+              "label": "일죽면"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "profile_rank1"
+        },
+        "fp": {
+          "cv_mape": 48.33,
+          "delta_pp": -14.3,
+          "lift_rel": -0.4202,
+          "hit": false,
+          "n": 99,
+          "twins": [
+            {
+              "region_code": "41550390",
+              "similarity_score": 0.7328430362924997,
+              "label": "일죽면"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "fingerprint_rank1",
+          "curve_r": 1.0,
+          "beta_cosine": 1.0,
+          "fp_distance": 0.0,
+          "parent_sigungu": "41550",
+          "anchor_parent": "41550",
+          "anchor_fp_n": 817
+        },
+        "rnd": {
+          "cv_mape": 14.91,
+          "delta_pp": 19.12,
+          "lift_rel": 0.5619,
+          "hit": true,
+          "n": 75,
+          "twins": [
+            {
+              "region_code": "41550340",
+              "similarity_score": 0.5749078607038168,
+              "label": "미양면"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "random_from_same_universe"
+        }
+      },
+      "winner": "rnd",
+      "same_pick": true
+    },
+    {
+      "case_id": "41590262_dev",
+      "region_code": "41590262",
+      "region_codes": [
+        "41590262"
+      ],
+      "region_label": "화성시 만세구",
+      "admin_level": "eupmyeondong",
+      "role": "primary",
+      "sample_group": "dev",
+      "twin_meta": {
+        "engine": "v2",
+        "twin_profile": "engine_v2",
+        "role": "pool",
+        "weight_version": "2.0",
+        "profile_version": "v2.1-national",
+        "as_of_month": "2026-07-01",
+        "universe": {
+          "kind": "sigungu_adjacent_nhop",
+          "size": 8,
+          "after_population_gate": 0,
+          "gated_out_population": 8,
+          "n_hop": 2,
+          "graph_used": false,
+          "fallback": "same_sigungu_no_graph",
+          "scope_label": "수도권"
+        }
+      },
+      "versions": {
+        "r0": {
+          "cv_mape": 26.27,
+          "n": 135,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "zone_type"
+          ],
+          "response_scale": "linear",
+          "twins": [],
+          "metric": "confirm_cv_mape"
+        },
+        "t1": {
+          "cv_mape": null,
+          "delta_pp": null,
+          "lift_rel": null,
+          "hit": false,
+          "n": null,
+          "twins": [],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": "v2_pool_empty (population_gate_out=8)",
+          "arm": "profile_rank1"
+        },
+        "fp": {
+          "cv_mape": null,
+          "delta_pp": null,
+          "lift_rel": null,
+          "hit": false,
+          "n": null,
+          "twins": [],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": "v2_pool_empty (population_gate_out=8)",
+          "arm": "fingerprint_rank1",
+          "curve_r": null,
+          "beta_cosine": null,
+          "fp_distance": null,
+          "parent_sigungu": null,
+          "anchor_parent": "41590",
+          "anchor_fp_n": 2339
+        },
+        "rnd": {
+          "cv_mape": null,
+          "delta_pp": null,
+          "lift_rel": null,
+          "hit": false,
+          "n": null,
+          "twins": [],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": "v2_pool_empty (population_gate_out=8)",
+          "arm": "random_from_same_universe"
+        }
+      },
+      "winner": "r0",
+      "same_pick": false
+    },
+    {
+      "case_id": "41500330_dev",
+      "region_code": "41500330",
+      "region_codes": [
+        "41500330"
+      ],
+      "region_label": "이천시 호법면",
+      "admin_level": "eupmyeondong",
+      "role": "primary",
+      "sample_group": "dev",
+      "twin_meta": {
+        "engine": "v2",
+        "twin_profile": "engine_v2",
+        "role": "pool",
+        "weight_version": "2.0",
+        "profile_version": "v2.1-national",
+        "as_of_month": "2026-07-01",
+        "universe": {
+          "kind": "sigungu_adjacent_nhop",
+          "size": 101,
+          "after_population_gate": 33,
+          "gated_out_population": 68,
+          "n_hop": 2,
+          "graph_used": true,
+          "fallback": null,
+          "scope_label": "수도권"
+        }
+      },
+      "versions": {
+        "r0": {
+          "cv_mape": 8.51,
+          "n": 27,
+          "blocks": [
+            "land_area",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog",
+          "twins": [],
+          "metric": "confirm_cv_mape"
+        },
+        "t1": {
+          "cv_mape": 31.11,
+          "delta_pp": -22.6,
+          "lift_rel": -2.6557,
+          "hit": false,
+          "n": 299,
+          "twins": [
+            {
+              "region_code": "41610330",
+              "similarity_score": 0.6972566906191141,
+              "label": "도척면"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "profile_rank1"
+        },
+        "fp": {
+          "cv_mape": 31.11,
+          "delta_pp": -22.6,
+          "lift_rel": -2.6557,
+          "hit": false,
+          "n": 299,
+          "twins": [
+            {
+              "region_code": "41610330",
+              "similarity_score": 0.6972566906191141,
+              "label": "도척면"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "fingerprint_rank1",
+          "curve_r": 0.92917,
+          "beta_cosine": 0.904088,
+          "fp_distance": 0.07083,
+          "parent_sigungu": "41610",
+          "anchor_parent": "41500",
+          "anchor_fp_n": 530
+        },
+        "rnd": {
+          "cv_mape": 15.19,
+          "delta_pp": -6.68,
+          "lift_rel": -0.785,
+          "hit": false,
+          "n": 61,
+          "twins": [
+            {
+              "region_code": "41550310",
+              "similarity_score": 0.6830268007519678,
+              "label": "보개면"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "random_from_same_universe"
+        }
+      },
+      "winner": "r0",
+      "same_pick": true
+    },
+    {
+      "case_id": "41480320_dev",
+      "region_code": "41480320",
+      "region_codes": [
+        "41480320"
+      ],
+      "region_label": "파주시 탄현면",
+      "admin_level": "eupmyeondong",
+      "role": "primary",
+      "sample_group": "dev",
+      "twin_meta": {
+        "engine": "v2",
+        "twin_profile": "engine_v2",
+        "role": "pool",
+        "weight_version": "2.0",
+        "profile_version": "v2.1-national",
+        "as_of_month": "2026-07-01",
+        "universe": {
+          "kind": "sigungu_adjacent_nhop",
+          "size": 25,
+          "after_population_gate": 7,
+          "gated_out_population": 18,
+          "n_hop": 2,
+          "graph_used": false,
+          "fallback": "same_sigungu_no_graph",
+          "scope_label": "수도권"
+        }
+      },
+      "versions": {
+        "r0": {
+          "cv_mape": 31.06,
+          "n": 234,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width"
+          ],
+          "response_scale": "loglog",
+          "twins": [],
+          "metric": "confirm_cv_mape"
+        },
+        "t1": {
+          "cv_mape": 30.83,
+          "delta_pp": 0.23,
+          "lift_rel": 0.0074,
+          "hit": false,
+          "n": 321,
+          "twins": [
+            {
+              "region_code": "41480310",
+              "similarity_score": 0.5524444295518502,
+              "label": "월롱면"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "profile_rank1"
+        },
+        "fp": {
+          "cv_mape": 30.83,
+          "delta_pp": 0.23,
+          "lift_rel": 0.0074,
+          "hit": false,
+          "n": 321,
+          "twins": [
+            {
+              "region_code": "41480310",
+              "similarity_score": 0.5524444295518502,
+              "label": "월롱면"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "fingerprint_rank1",
+          "curve_r": 1.0,
+          "beta_cosine": 1.0,
+          "fp_distance": 0.0,
+          "parent_sigungu": "41480",
+          "anchor_parent": "41480",
+          "anchor_fp_n": 1607
+        },
+        "rnd": {
+          "cv_mape": 32.28,
+          "delta_pp": -1.22,
+          "lift_rel": -0.0393,
+          "hit": false,
+          "n": 283,
+          "twins": [
+            {
+              "region_code": "41480256",
+              "similarity_score": 0.25964394849452943,
+              "label": "법원읍"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "random_from_same_universe"
+        }
+      },
+      "winner": "t1",
+      "same_pick": true
+    },
+    {
+      "case_id": "41360250_holdout",
+      "region_code": "41360250",
+      "region_codes": [
+        "41360250"
+      ],
+      "region_label": "남양주시 와부읍",
+      "admin_level": "eupmyeondong",
+      "role": "holdout",
+      "sample_group": "holdout",
+      "twin_meta": {
+        "engine": "v2",
+        "twin_profile": "engine_v2",
+        "role": "pool",
+        "weight_version": "2.0",
+        "profile_version": "v2.1-national",
+        "as_of_month": "2026-07-01",
+        "universe": {
+          "kind": "sigungu_adjacent_nhop",
+          "size": 14,
+          "after_population_gate": 6,
+          "gated_out_population": 8,
+          "n_hop": 2,
+          "graph_used": false,
+          "fallback": "same_sigungu_no_graph",
+          "scope_label": "수도권"
+        }
+      },
+      "versions": {
+        "r0": {
+          "cv_mape": 30.32,
+          "n": 87,
+          "blocks": [
+            "gross_area",
+            "land_area",
+            "building_age",
+            "road_width",
+            "zone_type"
+          ],
+          "response_scale": "loglog",
+          "twins": [],
+          "metric": "confirm_cv_mape"
+        },
+        "t1": {
+          "cv_mape": 27.85,
+          "delta_pp": 2.47,
+          "lift_rel": 0.0815,
+          "hit": true,
+          "n": 107,
+          "twins": [
+            {
+              "region_code": "41360101",
+              "similarity_score": 0.7033439278722101,
+              "label": "호평동"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "profile_rank1"
+        },
+        "fp": {
+          "cv_mape": 27.85,
+          "delta_pp": 2.47,
+          "lift_rel": 0.0815,
+          "hit": true,
+          "n": 107,
+          "twins": [
+            {
+              "region_code": "41360101",
+              "similarity_score": 0.7033439278722101,
+              "label": "호평동"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "fingerprint_rank1",
+          "curve_r": 1.0,
+          "beta_cosine": 1.0,
+          "fp_distance": 0.0,
+          "parent_sigungu": "41360",
+          "anchor_parent": "41360",
+          "anchor_fp_n": 1481
+        },
+        "rnd": {
+          "cv_mape": 27.77,
+          "delta_pp": 2.55,
+          "lift_rel": 0.0841,
+          "hit": true,
+          "n": 378,
+          "twins": [
+            {
+              "region_code": "41360253",
+              "similarity_score": 0.6356840468828899,
+              "label": "진접읍"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "random_from_same_universe"
+        }
+      },
+      "winner": "rnd",
+      "same_pick": true
+    },
+    {
+      "case_id": "41590124_holdout",
+      "region_code": "41590124",
+      "region_codes": [
+        "41590124"
+      ],
+      "region_label": "화성시 효행구",
+      "admin_level": "eupmyeondong",
+      "role": "holdout",
+      "sample_group": "holdout",
+      "twin_meta": {
+        "engine": "v2",
+        "twin_profile": "engine_v2",
+        "role": "pool",
+        "weight_version": "2.0",
+        "profile_version": "v2.1-national",
+        "as_of_month": "2026-07-01",
+        "universe": {
+          "kind": "sigungu_adjacent_nhop",
+          "size": 21,
+          "after_population_gate": 8,
+          "gated_out_population": 13,
+          "n_hop": 2,
+          "graph_used": false,
+          "fallback": "same_sigungu_no_graph",
+          "scope_label": "수도권"
+        }
+      },
+      "versions": {
+        "r0": {
+          "cv_mape": 3.53,
+          "n": 29,
+          "blocks": [
+            "land_area",
+            "building_age"
+          ],
+          "response_scale": "loglog",
+          "twins": [],
+          "metric": "confirm_cv_mape"
+        },
+        "t1": {
+          "cv_mape": 1433.34,
+          "delta_pp": -1429.81,
+          "lift_rel": -405.0453,
+          "hit": false,
+          "n": 105,
+          "twins": [
+            {
+              "region_code": "41590126",
+              "similarity_score": 0.6960618105352918,
+              "label": "안녕동"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "profile_rank1"
+        },
+        "fp": {
+          "cv_mape": 1433.34,
+          "delta_pp": -1429.81,
+          "lift_rel": -405.0453,
+          "hit": false,
+          "n": 105,
+          "twins": [
+            {
+              "region_code": "41590126",
+              "similarity_score": 0.6960618105352918,
+              "label": "안녕동"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "fingerprint_rank1",
+          "curve_r": 1.0,
+          "beta_cosine": 1.0,
+          "fp_distance": 0.0,
+          "parent_sigungu": "41590",
+          "anchor_parent": "41590",
+          "anchor_fp_n": 2339
+        },
+        "rnd": {
+          "cv_mape": 41.94,
+          "delta_pp": -38.41,
+          "lift_rel": -10.881,
+          "hit": false,
+          "n": 52,
+          "twins": [
+            {
+              "region_code": "41590125",
+              "similarity_score": 0.5838347377973001,
+              "label": "송산동"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "random_from_same_universe"
+        }
+      },
+      "winner": "r0",
+      "same_pick": true
+    },
+    {
+      "case_id": "41220330_holdout",
+      "region_code": "41220330",
+      "region_codes": [
+        "41220330"
+      ],
+      "region_label": "평택시 고덕면",
+      "admin_level": "eupmyeondong",
+      "role": "holdout",
+      "sample_group": "holdout",
+      "twin_meta": {
+        "engine": "v2",
+        "twin_profile": "engine_v2",
+        "role": "pool",
+        "weight_version": "2.0",
+        "profile_version": "v2.1-national",
+        "as_of_month": "2026-07-01",
+        "universe": {
+          "kind": "sigungu_adjacent_nhop",
+          "size": 65,
+          "after_population_gate": 25,
+          "gated_out_population": 40,
+          "n_hop": 2,
+          "graph_used": true,
+          "fallback": null,
+          "scope_label": "수도권"
+        }
+      },
+      "versions": {
+        "r0": {
+          "cv_mape": 58.23,
+          "n": 32,
+          "blocks": [
+            "land_area",
+            "zone_type",
+            "building_use"
+          ],
+          "response_scale": "loglog",
+          "twins": [],
+          "metric": "confirm_cv_mape"
+        },
+        "t1": {
+          "cv_mape": 92.14,
+          "delta_pp": -33.91,
+          "lift_rel": -0.5823,
+          "hit": false,
+          "n": 52,
+          "twins": [
+            {
+              "region_code": "41370112",
+              "similarity_score": 0.6794494070000606,
+              "label": "양산동"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "profile_rank1"
+        },
+        "fp": {
+          "cv_mape": 70.5,
+          "delta_pp": -12.27,
+          "lift_rel": -0.2107,
+          "hit": false,
+          "n": 92,
+          "twins": [
+            {
+              "region_code": "41220117",
+              "similarity_score": 0.6712407429439606,
+              "label": "합정동"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "fingerprint_rank1",
+          "curve_r": 1.0,
+          "beta_cosine": 1.0,
+          "fp_distance": 0.0,
+          "parent_sigungu": "41220",
+          "anchor_parent": "41220",
+          "anchor_fp_n": 1288
+        },
+        "rnd": {
+          "cv_mape": 60.21,
+          "delta_pp": -1.98,
+          "lift_rel": -0.034,
+          "hit": false,
+          "n": 47,
+          "twins": [
+            {
+              "region_code": "41370108",
+              "similarity_score": 0.6214712357868923,
+              "label": "수청동"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "random_from_same_universe"
+        }
+      },
+      "winner": "r0",
+      "same_pick": false
+    },
+    {
+      "case_id": "41670350_holdout",
+      "region_code": "41670350",
+      "region_codes": [
+        "41670350"
+      ],
+      "region_label": "여주시 대신면",
+      "admin_level": "eupmyeondong",
+      "role": "holdout",
+      "sample_group": "holdout",
+      "twin_meta": {
+        "engine": "v2",
+        "twin_profile": "engine_v2",
+        "role": "pool",
+        "weight_version": "2.0",
+        "profile_version": "v2.1-national",
+        "as_of_month": "2026-07-01",
+        "universe": {
+          "kind": "sigungu_adjacent_nhop",
+          "size": 21,
+          "after_population_gate": 12,
+          "gated_out_population": 9,
+          "n_hop": 2,
+          "graph_used": false,
+          "fallback": "same_sigungu_no_graph",
+          "scope_label": "수도권"
+        }
+      },
+      "versions": {
+        "r0": {
+          "cv_mape": 6.42,
+          "n": 29,
+          "blocks": [
+            "gross_area"
+          ],
+          "response_scale": "loglog",
+          "twins": [],
+          "metric": "confirm_cv_mape"
+        },
+        "t1": {
+          "cv_mape": 35.46,
+          "delta_pp": -29.04,
+          "lift_rel": -4.5234,
+          "hit": false,
+          "n": 65,
+          "twins": [
+            {
+              "region_code": "41670345",
+              "similarity_score": 0.5554422635702958,
+              "label": "세종대왕면"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "profile_rank1"
+        },
+        "fp": {
+          "cv_mape": 35.46,
+          "delta_pp": -29.04,
+          "lift_rel": -4.5234,
+          "hit": false,
+          "n": 65,
+          "twins": [
+            {
+              "region_code": "41670345",
+              "similarity_score": 0.5554422635702958,
+              "label": "세종대왕면"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "fingerprint_rank1",
+          "curve_r": 1.0,
+          "beta_cosine": 1.0,
+          "fp_distance": 0.0,
+          "parent_sigungu": "41670",
+          "anchor_parent": "41670",
+          "anchor_fp_n": 495
+        },
+        "rnd": {
+          "cv_mape": 13.92,
+          "delta_pp": -7.5,
+          "lift_rel": -1.1682,
+          "hit": false,
+          "n": 58,
+          "twins": [
+            {
+              "region_code": "41670310",
+              "similarity_score": 0.5547880872314762,
+              "label": "점동면"
+            }
+          ],
+          "stage2_ran": true,
+          "metric": "confirm_cv_mape",
+          "note": null,
+          "arm": "random_from_same_universe"
+        }
+      },
+      "winner": "r0",
+      "same_pick": true
+    }
+  ]
+}

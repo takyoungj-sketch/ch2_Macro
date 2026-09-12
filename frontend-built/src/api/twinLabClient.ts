@@ -6,7 +6,7 @@ const labApi = axios.create({
   headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
 });
 
-export type TwinLabVersionKey = "v0" | "v1" | "v2" | "v3" | "v2x" | "r0" | "r1" | "t1" | "rt";
+export type TwinLabVersionKey = "v0" | "v1" | "v2" | "v3" | "v2x" | "r0" | "r1" | "t1" | "rt" | "fp" | "rnd";
 
 export type TwinLabTwin = {
   region_code?: string | null;

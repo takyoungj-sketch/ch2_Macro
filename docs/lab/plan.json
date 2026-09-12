@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-07",
+  "updated": "2026-09-12",
   "domains": [
     {
       "id": "land",
@@ -434,10 +434,48 @@
           "decision": "D-058"
         }
       }
+    },
+    {
+      "date": "2026-09-07",
+      "cells": {
+        "land": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "built": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "collective": {
+          "text": "시공사 식별(D-063)·within-gu(D-065)·연식=0 잔차(D-064) 1차. 예측식 미변경. 랩 이관",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-065"
+        },
+        "rent": {
+          "text": "이 축 오늘 작업 없음. 롤링 추세 as_of 등 워킹트리 잔여",
+          "status": "done",
+          "commit": "needed"
+        },
+        "profile": {
+          "text": "이 축 오늘 작업 없음. D-058 장기·D-060 순위 분모는 워킹트리 잔여",
+          "status": "done",
+          "commit": "needed",
+          "decision": "D-058"
+        },
+        "admin": {
+          "text": "랩 ?tool=builder(구 안·다음 세션)·?tool=age0 · D-063·D-065·D-064 · 스냅샷 · 일지 09-07",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-065"
+        }
+      }
     }
   ],
   "today": {
-    "date": "2026-09-07",
+    "date": "2026-09-12",
     "cells": {
       "land": {
         "text": "이 축 작업 없음",
@@ -445,32 +483,31 @@
         "commit": "none"
       },
       "built": {
+        "text": "Fingerprint Twin 1차(충북12·경기12). 같은 무게 pooling은 Local 확인 CV를 자주 해침. 제품 선정 미변경. 다음은 붙임(절편 분리·무게 제한)",
+        "status": "stopped",
+        "commit": "needed",
+        "decision": "D-073"
+      },
+      "collective": {
         "text": "이 축 작업 없음",
         "status": "done",
         "commit": "none"
       },
-      "collective": {
-        "text": "시공사 식별(D-063)·within-gu(D-065)·연식=0 잔차(D-064) 1차. 예측식 미변경. 랩 이관",
-        "status": "done",
-        "commit": "committed",
-        "decision": "D-065"
-      },
       "rent": {
-        "text": "이 축 오늘 작업 없음. 롤링 추세 as_of 등 워킹트리 잔여",
+        "text": "이 축 작업 없음",
         "status": "done",
-        "commit": "needed"
+        "commit": "none"
       },
       "profile": {
-        "text": "이 축 오늘 작업 없음. D-058 장기·D-060 순위 분모는 워킹트리 잔여",
+        "text": "이 축 작업 없음",
         "status": "done",
-        "commit": "needed",
-        "decision": "D-058"
+        "commit": "none"
       },
       "admin": {
-        "text": "랩 ?tool=builder(구 안·다음 세션)·?tool=age0 · D-063·D-065·D-064 · 스냅샷 · 일지 09-07",
-        "status": "done",
-        "commit": "committed",
-        "decision": "D-065"
+        "text": "랩 twin mape에 fp/rnd·충북12·경기12 JSON. 일지. 다음은 붙임 실험·ΔMAPE 표시. 새 문·새 D 없음",
+        "status": "stopped",
+        "commit": "needed",
+        "decision": "D-073"
       }
     }
   },
@@ -489,10 +526,10 @@
         "decision": "D-058"
       },
       "built": {
-        "text": "enrichment P5 promote는 별도(`--apply-enrichment` 금지). AI P5 깊게는 집합 사다리 후",
+        "text": "Twin 붙임 실험: Local / 단순 pooling / Twin 절편 분리 / Twin 무게 제한(0.25 또는 n≤Local). Twin은 프로필 1위 고정. 계층 베이즈·지문 가중치는 그 다음. 제품 선정 미변경",
         "status": "planned",
         "commit": "needed",
-        "decision": "D-051"
+        "decision": "D-073"
       },
       "rent": {
         "text": "AI에 전세보증금·전세가율·환산칸 전달. 다른 앱 창 크기조절은 앱별 재빌드",
@@ -506,10 +543,10 @@
         "decision": "D-065"
       },
       "admin": {
-        "text": "시공사 브랜드 분리 · 연식=0 서울·경기(D-065·D-064). D-058 장기 size. P5 promote 금지",
+        "text": "붙임 실험 결과를 mape에 이어서. Δ CV-MAPE(%p) 표시. Fingerprint 가중·새 문·새 D 없음. 시공사 브랜드·연식=0 서울경기는 별도",
         "status": "planned",
         "commit": "needed",
-        "decision": "D-065"
+        "decision": "D-073"
       }
     }
   },
