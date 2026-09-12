@@ -7,6 +7,7 @@ REPO_ROOT="/opt/ch2_Macro"
 SQL_FILES=(
   "$REPO_ROOT/db/048_ch2_platform.sql"
   "$REPO_ROOT/db/048b_board_support.sql"
+  "$REPO_ROOT/db/048c_board_secret.sql"
 )
 ENV_FILE="$REPO_ROOT/backend/.env"
 

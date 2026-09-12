@@ -122,6 +122,14 @@
               </label>
             </label>
             <label class="field">
+              <span>비밀글</span>
+              <label class="check-inline">
+                <input name="is_secret" type="checkbox" value="true" />
+                본문은 작성자와 관리자만 보기
+              </label>
+              <span class="field-hint">제목은 목록에 공개됩니다. 주소·엑셀 내용이 있으면 비밀글로 올려 주세요.</span>
+            </label>
+            <label class="field">
               <span>제목</span>
               <input name="title" type="text" maxlength="200" required placeholder="제목을 입력하세요" />
             </label>
@@ -152,6 +160,12 @@
             <h2 class="panel__title">게시글</h2>
             <p class="panel__meta" id="list-meta">불러오는 중…</p>
           </div>
+          <div class="board-table__head" aria-hidden="true">
+            <span>제목</span>
+            <span>작성자</span>
+            <span>날짜</span>
+            <span>댓글</span>
+          </div>
           <ul class="post-list" id="post-list"></ul>
           <div class="pager" id="pager" hidden>
             <button type="button" class="btn btn--ghost" id="prev-page">이전</button>
@@ -178,10 +192,37 @@
           </label>
           <button type="button" class="btn btn--ghost btn--sm" id="status-author-btn" hidden>답변완료로 표시</button>
           <button type="button" class="btn btn--ghost btn--sm" id="pin-btn" hidden>공지 고정</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="edit-post-btn" hidden>글 수정</button>
+          <button type="button" class="btn btn--danger btn--sm" id="delete-post-btn" hidden>글 삭제</button>
         </div>
+        <section class="panel" id="edit-post-panel" hidden>
+          <h2 class="panel__title">글 수정</h2>
+          <form id="edit-post-form" class="form">
+            <label class="field">
+              <span>비밀글</span>
+              <label class="check-inline">
+                <input name="is_secret" type="checkbox" value="true" />
+                본문은 작성자와 관리자만 보기
+              </label>
+            </label>
+            <label class="field">
+              <span>제목</span>
+              <input name="title" type="text" maxlength="200" required />
+            </label>
+            <label class="field">
+              <span>내용</span>
+              <textarea name="body" rows="8" maxlength="12000" required></textarea>
+            </label>
+            <div class="form__actions">
+              <button type="button" class="btn btn--ghost" id="edit-post-cancel">취소</button>
+              <button type="submit" class="btn btn--primary">저장</button>
+            </div>
+          </form>
+        </section>
         <section class="panel">
           <h2 class="panel__title">댓글</h2>
           <ul class="comment-list" id="comment-list"></ul>
+          <p class="empty" id="comment-locked" hidden>비밀글의 댓글은 작성자와 관리자만 볼 수 있습니다.</p>
           <form id="comment-form" class="form form--compact">
             <label class="field author-field" hidden>
               <span>작성자</span>
@@ -196,6 +237,16 @@
             </div>
           </form>
         </section>
+        <nav class="post-nav" id="post-nav" hidden>
+          <a class="post-nav__row" id="nav-newer" href="#">
+            <span class="post-nav__label">다음글</span>
+            <span class="post-nav__title" id="nav-newer-title"></span>
+          </a>
+          <a class="post-nav__row" id="nav-older" href="#">
+            <span class="post-nav__label">이전글</span>
+            <span class="post-nav__title" id="nav-older-title"></span>
+          </a>
+        </nav>
       </div>
 
       <footer class="footer">

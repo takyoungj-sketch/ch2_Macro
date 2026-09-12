@@ -391,16 +391,32 @@ body {
   padding: 0;
 }
 
+.board-table__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 7rem 4.75rem 2.75rem;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.04em;
+}
+
+.board-table__head span:last-child {
+  text-align: right;
+}
+
 .post-item + .post-item {
   border-top: 1px solid #e2e8f0;
 }
 
 .post-item {
-  padding: 0.65rem 0;
+  padding: 0;
 }
 
 .post-item--notice {
-  padding: 0.55rem 0;
+  background: transparent;
 }
 
 .notice-panel {
@@ -408,15 +424,12 @@ body {
   border-color: #fde68a;
 }
 
-.post-item__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.35rem 0.45rem;
-}
-
 .post-item__link {
-  display: block;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 7rem 4.75rem 2.75rem;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.55rem 0;
   text-decoration: none;
   color: inherit;
 }
@@ -426,12 +439,51 @@ body {
   color: #2563eb;
 }
 
+.post-item__main .badge {
+  flex-shrink: 0;
+}
+
+.post-item__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.45rem;
+}
+
 .post-item__meta {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
   align-items: center;
   margin-bottom: 0.4rem;
+}
+
+.post-item__title {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.post-item__author,
+.post-item__date,
+.post-item__cmt {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.post-item__cmt {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .badge {
@@ -469,28 +521,6 @@ body {
   background: #e2e8f0;
 }
 
-.post-item__title {
-  margin: 0;
-  font-size: 0.9375rem;
-  line-height: 1.4;
-  color: #0f172a;
-  font-weight: 700;
-}
-
-.post-item__excerpt,
-.post-item__info {
-  margin: 0.2rem 0 0;
-  font-size: 0.8125rem;
-  line-height: 1.45;
-  color: #64748b;
-}
-
-.post-item__info {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 0.75rem;
-}
-
 .badge--status-open {
   color: #475569;
   background: #e2e8f0;
@@ -519,6 +549,107 @@ body {
 .badge--pin {
   color: #92400e;
   background: #fde68a;
+}
+
+.badge--secret {
+  color: #9f1239;
+  background: #ffe4e6;
+}
+
+.field-hint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #64748b;
+}
+
+.field span.field-hint {
+  letter-spacing: 0;
+  text-transform: none;
+  color: #64748b;
+  font-weight: 400;
+}
+
+.btn--danger {
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  background: #fff;
+}
+
+.btn--danger:hover,
+.btn--danger:focus-visible {
+  background: #fef2f2;
+}
+
+.comment-item__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.comment-item__actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.comment-edit-input {
+  width: 100%;
+  min-height: 4.5rem;
+  margin-top: 0.35rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.post-nav {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.post-nav__row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.4rem 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.post-nav__row[hidden] {
+  display: none;
+}
+
+.post-nav__row:hover .post-nav__title,
+.post-nav__row:focus-visible .post-nav__title {
+  color: #2563eb;
+}
+
+.post-nav__label {
+  flex: 0 0 3.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.post-nav__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.detail__body--hidden {
+  color: #64748b;
+  font-style: italic;
 }
 
 .pager {
@@ -627,5 +758,29 @@ body {
 
   .search-field {
     flex-basis: 100%;
+  }
+
+  .board-table__head {
+    display: none;
+  }
+
+  .post-item__link {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem 0.65rem;
+  }
+
+  .post-item__main {
+    flex: 1 1 100%;
+  }
+
+  .post-item__author,
+  .post-item__date,
+  .post-item__cmt {
+    flex: 0 0 auto;
+  }
+
+  .post-item__cmt {
+    margin-left: auto;
   }
 }

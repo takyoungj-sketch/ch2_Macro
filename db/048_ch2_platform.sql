@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS posts (
     body        TEXT NOT NULL,
     status      VARCHAR(32) NOT NULL DEFAULT 'open',
     is_pinned   BOOLEAN NOT NULL DEFAULT FALSE,
+    is_secret   BOOLEAN NOT NULL DEFAULT FALSE,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT posts_product_chk CHECK (product IN ('macro', 'fieldnote', 'viewer', 'general')),

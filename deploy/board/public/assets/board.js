@@ -26,6 +26,7 @@ const state = {
   page: 1,
   totalPages: 1,
   currentPostId: null,
+  currentPost: null,
   mine: false,
   searchTimer: null,
   auth: {
@@ -54,12 +55,15 @@ function formatDate(value) {
   return `${yy}.${mm}.${dd} ${hh}:${mi}`;
 }
 
-function excerpt(text, max = 80) {
-  const normalized = String(text ?? "").replace(/\s+/g, " ").trim();
-  if (normalized.length <= max) {
-    return normalized;
+function formatDateShort(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
   }
-  return `${normalized.slice(0, max)}…`;
+  const yy = String(date.getFullYear()).slice(2);
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yy}.${mm}.${dd}`;
 }
 
 function badge(className, label) {
@@ -72,6 +76,10 @@ function statusBadge(status, isPinned) {
   }
   const label = STATUS_LABELS[status] ?? status;
   return badge(`badge--status badge--status-${status}`, label);
+}
+
+function secretBadge(isSecret) {
+  return isSecret ? badge("badge--secret", "비밀") : "";
 }
 
 function parseError(payload) {
@@ -224,6 +232,11 @@ function showListView() {
   $("list-view").hidden = false;
   $("detail-view").hidden = true;
   state.currentPostId = null;
+  state.currentPost = null;
+  const editPanel = $("edit-post-panel");
+  if (editPanel) {
+    editPanel.hidden = true;
+  }
   const url = new URL(window.location.href);
   url.searchParams.delete("post");
   window.history.replaceState({}, "", url);
@@ -241,21 +254,19 @@ function showDetailView(postId) {
 function renderPostItem(post, { notice = false } = {}) {
   const li = document.createElement("li");
   li.className = notice ? "post-item post-item--notice" : "post-item";
-  const bodyPreview = post.excerpt || excerpt(post.body || "");
   const comments = Number(post.comment_count || 0);
   li.innerHTML = `
     <a class="post-item__link" href="?post=${post.id}">
-      <div class="post-item__head">
+      <div class="post-item__main">
         ${badge("badge--product", PRODUCT_LABELS[post.product] ?? post.product)}
         ${badge(`badge--${post.category}`, CATEGORY_LABELS[post.category] ?? post.category)}
         ${statusBadge(post.status, post.is_pinned)}
+        ${secretBadge(post.is_secret)}
         <h3 class="post-item__title">${escapeHtml(post.title)}</h3>
       </div>
-      <p class="post-item__excerpt">${escapeHtml(bodyPreview)}</p>
-      <p class="post-item__info">
-        <span>${escapeHtml(post.author_name)} · ${formatDate(post.created_at)}</span>
-        <span>댓글 ${comments}</span>
-      </p>
+      <span class="post-item__author">${escapeHtml(post.author_name)}</span>
+      <span class="post-item__date">${escapeHtml(formatDateShort(post.created_at))}</span>
+      <span class="post-item__cmt">${comments}</span>
     </a>
   `;
   li.querySelector("a").addEventListener("click", (event) => {
@@ -323,14 +334,19 @@ async function loadPosts() {
 }
 
 function renderPostDetail(post, comments) {
+  const bodyHidden = Boolean(post.body_hidden);
+  const bodyHtml = bodyHidden
+    ? `<div class="detail__body detail__body--hidden">${escapeHtml("작성자와 관리자만 볼 수 있습니다.")}</div>`
+    : `<div class="detail__body">${escapeHtml(post.body || "")}</div>`;
   $("post-detail").innerHTML = `
     <div class="post-item__head">
       ${badge("badge--product", PRODUCT_LABELS[post.product] ?? post.product)}
       ${badge(`badge--${post.category}`, CATEGORY_LABELS[post.category] ?? post.category)}
       ${statusBadge(post.status, post.is_pinned)}
+      ${secretBadge(post.is_secret)}
     </div>
     <h1 class="detail__title">${escapeHtml(post.title)}</h1>
-    <div class="detail__body">${escapeHtml(post.body)}</div>
+    ${bodyHtml}
     <p class="detail__info">${escapeHtml(post.author_name)} · ${formatDate(post.created_at)}</p>
   `;
 
@@ -339,10 +355,18 @@ function renderPostDetail(post, comments) {
   const statusSelect = $("status-select");
   const authorBtn = $("status-author-btn");
   const pinBtn = $("pin-btn");
+  const editBtn = $("edit-post-btn");
+  const deleteBtn = $("delete-post-btn");
+  const editPanel = $("edit-post-panel");
+  if (editPanel) {
+    editPanel.hidden = true;
+  }
   const isAdmin = state.auth.loggedIn && state.auth.role === "admin";
   const isAuthor =
     state.auth.loggedIn && Number(post.author_id) === Number(state.auth.userId);
-  const showActions = isAdmin || isAuthor;
+  const canDelete = Boolean(post.can_delete) || isAdmin || isAuthor;
+  const canEdit = Boolean(post.can_edit) || isAdmin || isAuthor;
+  const showActions = isAdmin || isAuthor || canDelete || canEdit;
   actions.hidden = !showActions;
 
   if (isAdmin) {
@@ -367,8 +391,33 @@ function renderPostDetail(post, comments) {
     authorBtn.hidden = true;
   }
 
+  if (canEdit && !bodyHidden) {
+    editBtn.hidden = false;
+    editBtn.dataset.postId = String(post.id);
+  } else {
+    editBtn.hidden = true;
+  }
+
+  if (canDelete) {
+    deleteBtn.hidden = false;
+    deleteBtn.dataset.postId = String(post.id);
+  } else {
+    deleteBtn.hidden = true;
+  }
+
+  const commentForm = $("comment-form");
+  const commentLocked = $("comment-locked");
+  const canComment = !bodyHidden && post.can_comment !== false;
+  commentForm.hidden = !canComment;
+  if (commentLocked) {
+    commentLocked.hidden = !bodyHidden;
+  }
+
   const commentList = $("comment-list");
   commentList.replaceChildren();
+  if (bodyHidden) {
+    return;
+  }
   if (!comments.length) {
     const empty = document.createElement("li");
     empty.className = "comment-item";
@@ -380,8 +429,28 @@ function renderPostDetail(post, comments) {
   for (const comment of comments) {
     const li = document.createElement("li");
     li.className = "comment-item";
+    const canDeleteComment = Boolean(comment.can_delete);
+    const canEditComment = Boolean(comment.can_edit);
+    const actions = [];
+    if (canEditComment) {
+      actions.push(
+        `<button type="button" class="btn btn--ghost btn--sm comment-edit" data-comment-id="${comment.id}">수정</button>`
+      );
+    }
+    if (canDeleteComment) {
+      actions.push(
+        `<button type="button" class="btn btn--danger btn--sm comment-delete" data-comment-id="${comment.id}">삭제</button>`
+      );
+    }
+    const actionsHtml = actions.length
+      ? `<div class="comment-item__actions">${actions.join("")}</div>`
+      : "";
+    li.dataset.body = comment.body;
     li.innerHTML = `
-      <p class="comment-item__meta">${escapeHtml(comment.author_name)} · ${formatDate(comment.created_at)}</p>
+      <div class="comment-item__head">
+        <p class="comment-item__meta">${escapeHtml(comment.author_name)} · ${formatDate(comment.created_at)}</p>
+        ${actionsHtml}
+      </div>
       <div class="comment-item__body">${escapeHtml(comment.body)}</div>
     `;
     commentList.appendChild(li);
@@ -390,8 +459,34 @@ function renderPostDetail(post, comments) {
 
 async function loadPost(postId) {
   const data = await api(`/posts/${postId}`);
+  state.currentPost = data.post;
   renderPostDetail(data.post, data.comments);
+  renderNeighbors(data.neighbors);
   showDetailView(postId);
+}
+
+function renderNeighbors(neighbors) {
+  const nav = $("post-nav");
+  const newerLink = $("nav-newer");
+  const olderLink = $("nav-older");
+  if (!nav || !newerLink || !olderLink) {
+    return;
+  }
+  const newer = neighbors && neighbors.newer;
+  const older = neighbors && neighbors.older;
+  nav.hidden = !newer && !older;
+  newerLink.hidden = !newer;
+  olderLink.hidden = !older;
+  if (newer) {
+    newerLink.href = `?post=${newer.id}`;
+    newerLink.dataset.postId = String(newer.id);
+    $("nav-newer-title").textContent = newer.title;
+  }
+  if (older) {
+    olderLink.href = `?post=${older.id}`;
+    olderLink.dataset.postId = String(older.id);
+    $("nav-older-title").textContent = older.title;
+  }
 }
 
 async function loadMeta() {
@@ -590,6 +685,148 @@ function bindEvents() {
     }
   });
 
+  $("delete-post-btn").addEventListener("click", async () => {
+    const postId = $("delete-post-btn").dataset.postId;
+    if (!postId) {
+      return;
+    }
+    if (!window.confirm("이 글을 삭제할까요? 댓글도 함께 지워집니다.")) {
+      return;
+    }
+    try {
+      await api(`/posts/${postId}`, { method: "DELETE" });
+      showListView();
+      await loadPosts();
+    } catch (error) {
+      showError(error);
+    }
+  });
+
+  $("edit-post-btn").addEventListener("click", () => {
+    const post = state.currentPost;
+    const panel = $("edit-post-panel");
+    const form = $("edit-post-form");
+    if (!post || !panel || !form) {
+      return;
+    }
+    form.querySelector('[name="title"]').value = post.title || "";
+    form.querySelector('[name="body"]').value = post.body || "";
+    form.querySelector('[name="is_secret"]').checked = Boolean(post.is_secret);
+    panel.hidden = false;
+    panel.scrollIntoView({ block: "nearest" });
+  });
+  $("edit-post-cancel").addEventListener("click", () => {
+    $("edit-post-panel").hidden = true;
+  });
+  $("edit-post-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const postId = state.currentPostId;
+    if (!postId) {
+      return;
+    }
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    try {
+      await api(`/posts/${postId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          title: String(formData.get("title") || "").trim(),
+          body: String(formData.get("body") || "").trim(),
+          is_secret: formData.get("is_secret") === "true",
+        }),
+      });
+      $("edit-post-panel").hidden = true;
+      await loadPost(postId);
+    } catch (error) {
+      showError(error);
+    }
+  });
+
+  $("nav-newer").addEventListener("click", (event) => {
+    event.preventDefault();
+    const postId = $("nav-newer").dataset.postId;
+    if (postId) {
+      loadPost(Number(postId)).catch(showError);
+    }
+  });
+  $("nav-older").addEventListener("click", (event) => {
+    event.preventDefault();
+    const postId = $("nav-older").dataset.postId;
+    if (postId) {
+      loadPost(Number(postId)).catch(showError);
+    }
+  });
+
+  $("comment-list").addEventListener("click", async (event) => {
+    const btn = event.target.closest("button");
+    if (!btn || !state.currentPostId) {
+      return;
+    }
+    const commentId = btn.dataset.commentId;
+    if (btn.classList.contains("comment-delete")) {
+      if (!commentId) {
+        return;
+      }
+      if (!window.confirm("이 댓글을 삭제할까요?")) {
+        return;
+      }
+      try {
+        await api(`/posts/${state.currentPostId}/comments/${commentId}`, {
+          method: "DELETE",
+        });
+        await loadPost(state.currentPostId);
+      } catch (error) {
+        showError(error);
+      }
+      return;
+    }
+    if (btn.classList.contains("comment-edit")) {
+      const item = btn.closest(".comment-item");
+      const bodyEl = item && item.querySelector(".comment-item__body");
+      if (!item || !bodyEl || bodyEl.querySelector("textarea")) {
+        return;
+      }
+      const ta = document.createElement("textarea");
+      ta.className = "comment-edit-input";
+      ta.maxLength = 8000;
+      ta.value = item.dataset.body || "";
+      const actions = document.createElement("div");
+      actions.className = "form__actions";
+      actions.innerHTML = `
+        <button type="button" class="btn btn--ghost btn--sm comment-edit-cancel">취소</button>
+        <button type="button" class="btn btn--primary btn--sm comment-edit-save" data-comment-id="${commentId}">저장</button>
+      `;
+      bodyEl.replaceChildren(ta, actions);
+      ta.focus();
+      return;
+    }
+    if (btn.classList.contains("comment-edit-cancel")) {
+      await loadPost(state.currentPostId).catch(showError);
+      return;
+    }
+    if (btn.classList.contains("comment-edit-save")) {
+      if (!commentId) {
+        return;
+      }
+      const item = btn.closest(".comment-item");
+      const ta = item && item.querySelector(".comment-edit-input");
+      const nextBody = ta ? ta.value.trim() : "";
+      if (!nextBody) {
+        showError(new Error("댓글 내용을 입력해 주세요."));
+        return;
+      }
+      try {
+        await api(`/posts/${state.currentPostId}/comments/${commentId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ body: nextBody }),
+        });
+        await loadPost(state.currentPostId);
+      } catch (error) {
+        showError(error);
+      }
+    }
+  });
+
   $("new-post-btn").addEventListener("click", () => {
     if (!state.auth.loggedIn) {
       window.alert("글쓰기는 로그인 후 이용할 수 있습니다.");
@@ -612,6 +849,7 @@ function bindEvents() {
     const payload = Object.fromEntries(formData.entries());
     delete payload.author_name;
     payload.is_pinned = formData.get("is_pinned") === "true";
+    payload.is_secret = formData.get("is_secret") === "true";
     try {
       const result = await api("/posts", {
         method: "POST",
