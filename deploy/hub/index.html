@@ -26,26 +26,28 @@
       </header>
 
       <main class="grid" aria-label="CH2 서비스">
-        <a class="card card--live" href="https://macro.ch2data.com/">
-          <span class="card__badge card__badge--live">이용 가능</span>
+        <button type="button" class="card card--soon" data-soon-product="Macro">
+          <span class="card__badge card__badge--soon">준비 중</span>
           <h2 class="card__name">CH2 Macro</h2>
-          <p class="card__desc">토지·복합부동산 실거래 통계</p>
-          <span class="card__action">서비스 들어가기 →</span>
-        </a>
+          <p class="card__desc">부동산 실거래 통계</p>
+          <span class="card__action">준비중</span>
+          <span class="card__soon-msg" hidden>준비 중입니다.</span>
+        </button>
 
-        <a class="card card--live" href="https://viewer.ch2data.com/">
+        <a class="card card--live" href="https://viewer.ch2data.com/download">
           <span class="card__badge card__badge--live">이용 가능</span>
           <h2 class="card__name">CH2 Viewer</h2>
-          <p class="card__desc">엑셀·지도 연동 (Windows)</p>
-          <span class="card__action">다운로드 →</span>
+          <p class="card__desc">엑셀 연동 뷰어</p>
+          <span class="card__action">로그인 후 다운로드 →</span>
         </a>
 
-        <a class="card card--live" href="https://fieldnote.ch2data.com/">
-          <span class="card__badge card__badge--live">이용 가능</span>
+        <button type="button" class="card card--soon" data-soon-product="FieldNote">
+          <span class="card__badge card__badge--soon">준비 중</span>
           <h2 class="card__name">CH2 FieldNote</h2>
-          <p class="card__desc">현장조사 PC GUI (웹)</p>
-          <span class="card__action">서비스 들어가기 →</span>
-        </a>
+          <p class="card__desc">현장조사 지원 앱</p>
+          <span class="card__action">준비중</span>
+          <span class="card__soon-msg" hidden>준비 중입니다.</span>
+        </button>
       </main>
 
       <section class="board-banner" aria-label="통합 게시판">
@@ -62,7 +64,6 @@
           <a href="/terms/">이용약관</a>
           <a href="/refund/">환불 정책</a>
           <a href="/subscription/">구독 정책</a>
-          <a href="/subscribe/">Macro 구독</a>
         </nav>
         <p>© CH2 DATA</p>
       </footer>

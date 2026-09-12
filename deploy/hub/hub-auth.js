@@ -61,4 +61,13 @@
   }
 
   refresh();
+
+  document.querySelectorAll("[data-soon-product]").forEach((el) => {
+    el.addEventListener("click", () => {
+      const msg = el.querySelector(".card__soon-msg");
+      if (msg) {
+        msg.hidden = false;
+      }
+    });
+  });
 })();

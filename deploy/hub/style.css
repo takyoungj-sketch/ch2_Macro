@@ -131,6 +131,15 @@ body {
     transform 0.15s ease;
 }
 
+button.card {
+  width: 100%;
+  margin: 0;
+  font: inherit;
+  text-align: left;
+  appearance: none;
+  cursor: pointer;
+}
+
 .card--live:hover {
   border-color: #93c5fd;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
@@ -192,6 +201,23 @@ body {
 
 .card--soon .card__desc {
   color: #64748b;
+}
+
+.card--soon:focus-visible {
+  outline: 2px solid #94a3b8;
+  outline-offset: 2px;
+}
+
+.card__soon-msg {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.card__soon-msg[hidden] {
+  display: none;
 }
 
 .board-banner {
