@@ -170,7 +170,6 @@ function updateAuthBar() {
     pinField.hidden = !(state.auth.loggedIn && state.auth.role === "admin");
   }
   updateMineChip();
-  toggleAuthorFields(!state.auth.loggedIn);
 }
 
 function updateMineChip() {
@@ -197,16 +196,6 @@ function maybeShowNickPrompt() {
   }
   $("nick-input").value = state.auth.nickname || "";
   panel.hidden = false;
-}
-
-function toggleAuthorFields(show) {
-  for (const field of document.querySelectorAll(".author-field")) {
-    field.hidden = !show;
-    const input = field.querySelector("input");
-    if (input) {
-      input.required = show;
-    }
-  }
 }
 
 async function refreshAuthStatus() {
@@ -847,7 +836,6 @@ function bindEvents() {
     const form = event.currentTarget;
     const formData = new FormData(form);
     const payload = Object.fromEntries(formData.entries());
-    delete payload.author_name;
     payload.is_pinned = formData.get("is_pinned") === "true";
     payload.is_secret = formData.get("is_secret") === "true";
     try {
@@ -876,7 +864,6 @@ function bindEvents() {
     const form = event.currentTarget;
     const formData = new FormData(form);
     const payload = Object.fromEntries(formData.entries());
-    delete payload.author_name;
     try {
       await api(`/posts/${state.currentPostId}/comments`, {
         method: "POST",
