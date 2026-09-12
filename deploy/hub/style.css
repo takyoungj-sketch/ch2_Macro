@@ -60,18 +60,6 @@ body {
   border-color: #93c5fd;
 }
 
-.btn-auth--kakao {
-  color: #191919;
-  background: #fee500;
-  border-color: #fee500;
-}
-
-.btn-auth--kakao:hover,
-.btn-auth--kakao:focus-visible {
-  background: #f5dc00;
-  border-color: #e6cf00;
-}
-
 .btn-auth--ghost {
   background: transparent;
   font-weight: 500;
