@@ -8,9 +8,12 @@ import re
 import secrets
 import time
 from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+
+_KST = timezone(timedelta(hours=9))
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +76,18 @@ def too_many_events(visitor_id: str) -> bool:
 
 def record_hit(visitor_id: str) -> None:
     _hits[visitor_id].append(time.monotonic())
+
+
+def kst_day_windows(now: datetime | None = None) -> tuple[datetime, datetime]:
+    """KST 오늘 0시·어제 0시를 UTC로 반환."""
+    current = datetime.now(_KST) if now is None else now
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=_KST)
+    else:
+        current = current.astimezone(_KST)
+    today = current.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday = today - timedelta(days=1)
+    return today.astimezone(timezone.utc), yesterday.astimezone(timezone.utc)
 
 
 def insert_event(

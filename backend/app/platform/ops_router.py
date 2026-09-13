@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
@@ -19,6 +19,7 @@ from app.platform.ops_events import (
     VID_COOKIE,
     VID_MAX_AGE,
     insert_event,
+    kst_day_windows,
     new_visitor_id,
     normalize_visitor_id,
     parse_event,
@@ -27,7 +28,6 @@ from app.platform.ops_events import (
 )
 
 router = APIRouter(prefix="/ops", tags=["platform-ops"])
-_KST = timezone(timedelta(hours=9))
 
 
 class EventIn(BaseModel):
@@ -142,10 +142,73 @@ def pixel_event(
     return response
 
 
-def _today_start_utc() -> datetime:
-    now = datetime.now(_KST)
-    start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    return start.astimezone(timezone.utc)
+def _event_bucket(
+    db: Session,
+    event_name: str,
+    *,
+    start: datetime | None = None,
+    end: datetime | None = None,
+) -> dict[str, int]:
+    clauses = ["event_name = :name"]
+    params: dict = {"name": event_name}
+    if start is not None:
+        clauses.append("occurred_at >= :start")
+        params["start"] = start
+    if end is not None:
+        clauses.append("occurred_at < :end")
+        params["end"] = end
+    row = db.execute(
+        text(
+            f"""
+            SELECT COUNT(*) AS events,
+                   COUNT(DISTINCT visitor_id) AS visitors
+            FROM ops_events
+            WHERE {" AND ".join(clauses)}
+            """
+        ),
+        params,
+    ).mappings().first()
+    return {
+        "events": int(row["events"] or 0) if row else 0,
+        "visitors": int(row["visitors"] or 0) if row else 0,
+    }
+
+
+def _ticket_count(
+    db: Session,
+    *,
+    start: datetime | None = None,
+    end: datetime | None = None,
+) -> int:
+    clauses = ["TRUE"]
+    params: dict = {}
+    if start is not None:
+        clauses.append("created_at >= :start")
+        params["start"] = start
+    if end is not None:
+        clauses.append("created_at < :end")
+        params["end"] = end
+    n = db.execute(
+        text(f"SELECT COUNT(*) FROM posts WHERE {' AND '.join(clauses)}"),
+        params,
+    ).scalar() or 0
+    return int(n)
+
+
+def _traffic_slice(
+    db: Session,
+    *,
+    start: datetime | None = None,
+    end: datetime | None = None,
+) -> dict[str, int]:
+    views = _event_bucket(db, "page_view", start=start, end=end)
+    downloads = _event_bucket(db, "download", start=start, end=end)
+    return {
+        "visitors": views["visitors"],
+        "page_views": views["events"],
+        "downloads": downloads["events"],
+        "tickets": _ticket_count(db, start=start, end=end),
+    }
 
 
 @router.get("/dashboard")
@@ -153,17 +216,14 @@ def ops_dashboard(
     db: Session = Depends(get_platform_db),
     _admin: CurrentUser = Depends(require_admin),
 ):
-    today = _today_start_utc()
+    today, yesterday = kst_day_windows()
     open_n = db.execute(
         text("SELECT COUNT(*) FROM posts WHERE status = 'open' AND is_pinned = FALSE")
     ).scalar() or 0
     checking_n = db.execute(
         text("SELECT COUNT(*) FROM posts WHERE status = 'checking' AND is_pinned = FALSE")
     ).scalar() or 0
-    today_n = db.execute(
-        text("SELECT COUNT(*) FROM posts WHERE created_at >= :today"),
-        {"today": today},
-    ).scalar() or 0
+    today_n = _ticket_count(db, start=today)
     recent = db.execute(
         text(
             """
@@ -195,5 +255,10 @@ def ops_dashboard(
             "checking": int(checking_n),
             "today": int(today_n),
             "recent": items,
-        }
+        },
+        "traffic": {
+            "today": _traffic_slice(db, start=today),
+            "yesterday": _traffic_slice(db, start=yesterday, end=today),
+            "total": _traffic_slice(db),
+        },
     }

@@ -41,7 +41,7 @@
               <span class="topbar__sep">/</span>
               <span class="topbar__title">ADMIN</span>
             </div>
-            <p class="topbar__lead">미답변과 최근 접수를 먼저 봅니다.</p>
+            <p class="topbar__lead">미답변과 방문·다운로드를 먼저 봅니다.</p>
           </div>
           <div class="auth-bar">
             <span id="admin-user"></span>
@@ -68,6 +68,48 @@
               <strong id="stat-today">-</strong>
               <span>오늘 접수</span>
             </div>
+          </section>
+          <section class="panel">
+            <div class="panel__head">
+              <h2 class="panel__title">오늘의 현황</h2>
+              <p class="panel__meta" id="traffic-note">방문은 2026-09-13 밤부터 수집합니다. Viewer 다운로드는 이번 반영부터입니다.</p>
+            </div>
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>지표</th>
+                  <th>오늘</th>
+                  <th>어제</th>
+                  <th>누적</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>방문자</td>
+                  <td id="tr-visitors-today">-</td>
+                  <td id="tr-visitors-yesterday">-</td>
+                  <td id="tr-visitors-total">-</td>
+                </tr>
+                <tr>
+                  <td>페이지뷰</td>
+                  <td id="tr-pv-today">-</td>
+                  <td id="tr-pv-yesterday">-</td>
+                  <td id="tr-pv-total">-</td>
+                </tr>
+                <tr>
+                  <td>Viewer 다운로드</td>
+                  <td id="tr-dl-today">-</td>
+                  <td id="tr-dl-yesterday">-</td>
+                  <td id="tr-dl-total">-</td>
+                </tr>
+                <tr>
+                  <td>고객의 소리</td>
+                  <td id="tr-tk-today">-</td>
+                  <td id="tr-tk-yesterday">-</td>
+                  <td id="tr-tk-total">-</td>
+                </tr>
+              </tbody>
+            </table>
           </section>
           <section class="panel">
             <div class="panel__head">

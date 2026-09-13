@@ -22,6 +22,19 @@ def test_parse_event_rejects_unknown_or_absolute_path():
     assert parsed["path"] is None
 
 
+def test_kst_day_windows_are_utc_midnight_kst():
+    from datetime import datetime, timezone
+
+    from app.platform.ops_events import kst_day_windows
+
+    now = datetime(2026, 9, 13, 22, 0, tzinfo=timezone.utc)
+    today, yesterday = kst_day_windows(now)
+    assert today.tzinfo is not None
+    assert (today - yesterday).total_seconds() == 24 * 3600
+    assert today.hour == 15
+    assert today.minute == 0
+
+
 def test_visitor_id_shape():
     vid = new_visitor_id()
     assert normalize_visitor_id(vid) == vid

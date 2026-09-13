@@ -144,12 +144,36 @@ async function refreshAuth() {
   return true;
 }
 
+function formatCount(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) {
+    return "0";
+  }
+  return n.toLocaleString("ko-KR");
+}
+
 async function loadDash() {
   const data = await api(OPS_BASE, "/dashboard");
   const tickets = data.tickets || {};
-  $("stat-open").textContent = String(tickets.open ?? 0);
-  $("stat-checking").textContent = String(tickets.checking ?? 0);
-  $("stat-today").textContent = String(tickets.today ?? 0);
+  $("stat-open").textContent = formatCount(tickets.open);
+  $("stat-checking").textContent = formatCount(tickets.checking);
+  $("stat-today").textContent = formatCount(tickets.today);
+  const traffic = data.traffic || {};
+  const today = traffic.today || {};
+  const yesterday = traffic.yesterday || {};
+  const total = traffic.total || {};
+  $("tr-visitors-today").textContent = formatCount(today.visitors);
+  $("tr-visitors-yesterday").textContent = formatCount(yesterday.visitors);
+  $("tr-visitors-total").textContent = formatCount(total.visitors);
+  $("tr-pv-today").textContent = formatCount(today.page_views);
+  $("tr-pv-yesterday").textContent = formatCount(yesterday.page_views);
+  $("tr-pv-total").textContent = formatCount(total.page_views);
+  $("tr-dl-today").textContent = formatCount(today.downloads);
+  $("tr-dl-yesterday").textContent = formatCount(yesterday.downloads);
+  $("tr-dl-total").textContent = formatCount(total.downloads);
+  $("tr-tk-today").textContent = formatCount(today.tickets);
+  $("tr-tk-yesterday").textContent = formatCount(yesterday.tickets);
+  $("tr-tk-total").textContent = formatCount(total.tickets);
   const body = $("recent-body");
   body.replaceChildren();
   const rows = tickets.recent || [];
