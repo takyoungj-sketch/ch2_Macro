@@ -15,6 +15,7 @@ from app.platform.board_policy import (
     PRODUCTS,
     SECRET_EXCERPT,
     STATUSES,
+    can_access_post,
     can_delete_comment,
     can_delete_post,
     can_edit_comment,
@@ -32,12 +33,13 @@ router = APIRouter(prefix="/board", tags=["platform-board"])
 
 class PostCreate(BaseModel):
     product: Literal["macro", "fieldnote", "viewer", "general"]
-    category: Literal["question", "bug", "feature"]
+    category: Literal["question", "bug", "feature", "data", "other"]
     title: str = Field(min_length=1, max_length=200)
     body: str = Field(min_length=1, max_length=12000)
     author_name: str | None = Field(default=None, max_length=80)
     is_pinned: bool = False
     is_secret: bool = False
+    want_reply: bool = True
 
 
 class CommentCreate(BaseModel):
@@ -136,28 +138,40 @@ def _neighbor_item(row) -> dict | None:
     return {"id": int(row["id"]), "title": str(row["title"])}
 
 
-def _post_neighbors(db: Session, *, post_id: int, created_at) -> dict:
+def _visibility_sql(user: CurrentUser | None) -> tuple[str, dict]:
+    if user and user.role == "admin":
+        return "TRUE", {}
+    if user is not None:
+        return "user_id = :vid", {"vid": user.id}
+    return "FALSE", {}
+
+
+def _post_neighbors(db: Session, *, post_id: int, created_at, user: CurrentUser | None) -> dict:
+    vis_sql, vis_params = _visibility_sql(user)
+    params = {"ts": created_at, "id": post_id, **vis_params}
     newer = db.execute(
         text(
-            """
+            f"""
             SELECT id, title FROM posts
             WHERE (created_at, id) > (:ts, :id)
+              AND ({vis_sql})
             ORDER BY created_at ASC, id ASC
             LIMIT 1
             """
         ),
-        {"ts": created_at, "id": post_id},
+        params,
     ).mappings().first()
     older = db.execute(
         text(
-            """
+            f"""
             SELECT id, title FROM posts
             WHERE (created_at, id) < (:ts, :id)
+              AND ({vis_sql})
             ORDER BY created_at DESC, id DESC
             LIMIT 1
             """
         ),
-        {"ts": created_at, "id": post_id},
+        params,
     ).mappings().first()
     return {"newer": _neighbor_item(newer), "older": _neighbor_item(older)}
 
@@ -178,11 +192,12 @@ def board_meta():
             "enabled": bool(providers),
             "providers": providers,
             "note": (
-                "Google 또는 Kakao 로그인으로 글·댓글을 작성할 수 있습니다."
+                "Google 또는 Kakao 로그인 후 의견을 보낼 수 있습니다."
                 if providers
                 else "소셜 로그인 설정 중입니다."
             ),
         },
+        "voice": True,
     }
 
 
@@ -198,14 +213,27 @@ def list_posts(
     page: int = Query(1, ge=1),
     pageSize: int = Query(20, ge=1, le=50),
 ):
-    if mine and user is None:
-        raise HTTPException(401, "로그인이 필요합니다.")
+    if user is None:
+        return {
+            "notices": [],
+            "items": [],
+            "total": 0,
+            "page": page,
+            "pageSize": pageSize,
+            "totalPages": 1,
+        }
 
-    clauses = ["p.is_pinned = FALSE"]
+    is_admin = user.role == "admin"
+    clauses: list[str] = []
     params: dict = {
-        "viewer_id": user.id if user else 0,
-        "is_admin": bool(user and user.role == "admin"),
+        "viewer_id": user.id,
+        "is_admin": is_admin,
     }
+    vis_sql, vis_params = _visibility_sql(user)
+    clauses.append(f"({vis_sql})")
+    params.update(vis_params)
+    if is_admin:
+        clauses.append("p.is_pinned = FALSE")
     if product and product in PRODUCTS:
         clauses.append("p.product = :product")
         params["product"] = product
@@ -256,7 +284,7 @@ def list_posts(
     ]
 
     notices: list[dict] = []
-    if page == 1 and not mine:
+    if page == 1 and is_admin and not mine:
         notice_rows = db.execute(
             text(
                 f"""
@@ -300,6 +328,12 @@ def get_post(
     ).mappings().first()
     if not row:
         raise HTTPException(404, "post_not_found")
+    if not can_access_post(
+        role=user.role if user else None,
+        user_id=user.id if user else None,
+        author_id=int(row["user_id"]),
+    ):
+        raise HTTPException(404, "post_not_found")
     can_see = _can_see_body(dict(row), user)
     comment_items: list[dict] = []
     if can_see:
@@ -319,7 +353,7 @@ def get_post(
     return {
         "post": _post_row_to_api(dict(row), str(row["nickname"]), include_body=True, user=user),
         "comments": comment_items,
-        "neighbors": _post_neighbors(db, post_id=post_id, created_at=row["created_at"]),
+        "neighbors": _post_neighbors(db, post_id=post_id, created_at=row["created_at"], user=user),
     }
 
 
@@ -330,6 +364,9 @@ def create_post(
     db: Session = Depends(get_platform_db),
 ):
     pinned = bool(body.is_pinned) if user.role == "admin" else False
+    content = body.body.strip()
+    if body.want_reply is False:
+        content = "[답변을 원하지 않습니다]\n\n" + content
     row = db.execute(
         text(
             """
@@ -343,9 +380,9 @@ def create_post(
             "product": body.product,
             "category": body.category,
             "title": body.title.strip(),
-            "body": body.body.strip(),
+            "body": content,
             "pinned": pinned,
-            "secret": bool(body.is_secret),
+            "secret": True,
         },
     ).mappings().first()
     db.commit()
@@ -367,6 +404,12 @@ def create_comment(
         {"id": post_id},
     ).mappings().first()
     if not post:
+        raise HTTPException(404, "post_not_found")
+    if not can_access_post(
+        role=user.role,
+        user_id=user.id,
+        author_id=int(post["user_id"]),
+    ):
         raise HTTPException(404, "post_not_found")
     if not _can_see_body(dict(post), user):
         raise HTTPException(403, "비밀글에는 댓글을 달 수 없습니다.")
@@ -529,7 +572,7 @@ def patch_post(
         params["body"] = content
     if body.is_secret is not None:
         sets.append("is_secret=:secret")
-        params["secret"] = bool(body.is_secret)
+        params["secret"] = True
     if (
         body.status is None
         and body.is_pinned is None

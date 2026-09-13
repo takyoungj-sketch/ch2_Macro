@@ -26,11 +26,11 @@ CREATE TABLE IF NOT EXISTS posts (
     body        TEXT NOT NULL,
     status      VARCHAR(32) NOT NULL DEFAULT 'open',
     is_pinned   BOOLEAN NOT NULL DEFAULT FALSE,
-    is_secret   BOOLEAN NOT NULL DEFAULT FALSE,
+    is_secret   BOOLEAN NOT NULL DEFAULT TRUE,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT posts_product_chk CHECK (product IN ('macro', 'fieldnote', 'viewer', 'general')),
-    CONSTRAINT posts_category_chk CHECK (category IN ('question', 'bug', 'feature')),
+    CONSTRAINT posts_category_chk CHECK (category IN ('question', 'bug', 'feature', 'data', 'other')),
     CONSTRAINT posts_status_chk CHECK (status IN ('open', 'checking', 'answered', 'planned', 'done'))
 );
 

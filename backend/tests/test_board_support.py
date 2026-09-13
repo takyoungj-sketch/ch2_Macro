@@ -49,7 +49,14 @@ def test_can_delete_post_and_comment():
     assert not can_delete_comment(role="member", user_id=9, author_id=1)
 
 
-def test_can_edit_matches_delete():
+def test_can_access_post_is_author_or_admin_only():
+    from app.platform.board_policy import can_access_post
+
+    assert can_access_post(role="admin", user_id=9, author_id=1)
+    assert can_access_post(role="member", user_id=1, author_id=1)
+    assert not can_access_post(role="member", user_id=9, author_id=1)
+    assert not can_access_post(role=None, user_id=None, author_id=1)
+
     from app.platform.board_policy import can_edit_comment, can_edit_post
 
     assert can_edit_post(role="admin", user_id=9, author_id=1)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 PRODUCTS = frozenset({"macro", "fieldnote", "viewer", "general"})
-CATEGORIES = frozenset({"question", "bug", "feature"})
+CATEGORIES = frozenset({"question", "bug", "feature", "data", "other"})
 STATUSES = frozenset({"open", "checking", "answered", "planned", "done"})
 AUTHOR_STATUSES = frozenset({"open", "answered"})
 EXCERPT_LEN = 80
@@ -63,3 +63,12 @@ def can_edit_post(*, role: str, user_id: int, author_id: int) -> bool:
 
 def can_edit_comment(*, role: str, user_id: int, author_id: int) -> bool:
     return can_delete_comment(role=role, user_id=user_id, author_id=author_id)
+
+
+def can_access_post(*, role: str | None, user_id: int | None, author_id: int) -> bool:
+    """비공개 고객의 소리 — 작성자와 관리자만 목록·본문·제목에 접근."""
+    if role == "admin":
+        return True
+    if user_id is not None and int(user_id) == int(author_id):
+        return True
+    return False

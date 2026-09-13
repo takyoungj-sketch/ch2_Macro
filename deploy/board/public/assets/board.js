@@ -2,16 +2,18 @@ const API_BASE = "/api/board";
 const AUTH_BASE = "/api/auth";
 
 const PRODUCT_LABELS = {
-  macro: "Macro",
-  fieldnote: "FieldNote",
-  viewer: "Viewer",
-  general: "공용",
+  macro: "CH2 Macro",
+  fieldnote: "CH2 FieldNote",
+  viewer: "CH2 Viewer",
+  general: "기타",
 };
 
 const CATEGORY_LABELS = {
-  question: "질문",
-  bug: "오류",
-  feature: "기능개선",
+  question: "사용 문의",
+  bug: "오류 신고",
+  feature: "기능 개선",
+  data: "데이터",
+  other: "기타",
 };
 
 const STATUS_LABELS = {
@@ -78,8 +80,31 @@ function statusBadge(status, isPinned) {
   return badge(`badge--status badge--status-${status}`, label);
 }
 
-function secretBadge(isSecret) {
-  return isSecret ? badge("badge--secret", "비밀") : "";
+function secretBadge(_isSecret) {
+  return "";
+}
+
+function isAdmin() {
+  return state.auth.loggedIn && state.auth.role === "admin";
+}
+
+function updateVoiceLayout() {
+  const gate = $("login-gate");
+  const compose = $("compose-panel");
+  const toolbar = $("admin-toolbar");
+  const heading = $("list-heading");
+  if (gate) {
+    gate.hidden = state.auth.loggedIn;
+  }
+  if (compose) {
+    compose.hidden = !state.auth.loggedIn;
+  }
+  if (toolbar) {
+    toolbar.hidden = !isAdmin();
+  }
+  if (heading) {
+    heading.textContent = isAdmin() ? "접수 목록" : "내가 보낸 의견";
+  }
 }
 
 function parseError(payload) {
@@ -169,6 +194,7 @@ function updateAuthBar() {
   if (pinField) {
     pinField.hidden = !(state.auth.loggedIn && state.auth.role === "admin");
   }
+  updateVoiceLayout();
   updateMineChip();
 }
 
@@ -314,7 +340,7 @@ async function loadPosts() {
   $("pager").hidden = data.totalPages <= 1;
   $("prev-page").disabled = data.page <= 1;
   $("next-page").disabled = data.page >= data.totalPages;
-  $("empty-state").hidden = data.items.length > 0 || notices.length > 0;
+  $("empty-state").hidden = !state.auth.loggedIn || data.items.length > 0 || notices.length > 0;
   $("list-meta").textContent = `총 ${data.total}건`;
 
   for (const post of data.items) {
@@ -410,7 +436,7 @@ function renderPostDetail(post, comments) {
   if (!comments.length) {
     const empty = document.createElement("li");
     empty.className = "comment-item";
-    empty.innerHTML = `<p class="comment-item__meta">아직 댓글이 없습니다.</p>`;
+    empty.innerHTML = `<p class="comment-item__meta">아직 답변이 없습니다.</p>`;
     commentList.appendChild(empty);
     return;
   }
@@ -700,7 +726,6 @@ function bindEvents() {
     }
     form.querySelector('[name="title"]').value = post.title || "";
     form.querySelector('[name="body"]').value = post.body || "";
-    form.querySelector('[name="is_secret"]').checked = Boolean(post.is_secret);
     panel.hidden = false;
     panel.scrollIntoView({ block: "nearest" });
   });
@@ -824,7 +849,7 @@ function bindEvents() {
     $("compose-panel").hidden = false;
   });
   $("compose-cancel").addEventListener("click", () => {
-    $("compose-panel").hidden = true;
+    $("compose-form").reset();
   });
 
   $("compose-form").addEventListener("submit", async (event) => {
@@ -835,16 +860,21 @@ function bindEvents() {
     }
     const form = event.currentTarget;
     const formData = new FormData(form);
-    const payload = Object.fromEntries(formData.entries());
-    payload.is_pinned = formData.get("is_pinned") === "true";
-    payload.is_secret = formData.get("is_secret") === "true";
+    const payload = {
+      product: String(formData.get("product") || ""),
+      category: String(formData.get("category") || ""),
+      title: String(formData.get("title") || "").trim(),
+      body: String(formData.get("body") || "").trim(),
+      is_pinned: formData.get("is_pinned") === "true",
+      is_secret: true,
+      want_reply: formData.get("no_reply") !== "true",
+    };
     try {
       const result = await api("/posts", {
         method: "POST",
         body: JSON.stringify(payload),
       });
       form.reset();
-      $("compose-panel").hidden = true;
       await loadPosts();
       await loadPost(result.post.id);
     } catch (error) {
