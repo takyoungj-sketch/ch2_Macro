@@ -179,6 +179,65 @@ body {
   margin-bottom: 0.25rem;
 }
 
+.ticket-no {
+  font-variant-numeric: tabular-nums;
+  color: #64748b;
+  font-weight: 600;
+  margin-right: 0.35rem;
+}
+
+.staff-login__toggle {
+  display: inline-block;
+  margin-top: 0.65rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #64748b;
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.staff-login {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+  margin-top: 0.65rem;
+}
+
+.staff-login[hidden] {
+  display: none;
+}
+
+.staff-login input[type="password"] {
+  min-width: 12rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+
+.staff-login__error {
+  flex: 1 1 100%;
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.8125rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .toolbar {
   display: flex;
   flex-wrap: wrap;

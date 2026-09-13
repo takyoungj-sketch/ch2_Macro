@@ -114,6 +114,8 @@ class Settings(BaseSettings):
     )
     platform_cookie_domain: str = Field(default=".ch2data.com", validation_alias="PLATFORM_COOKIE_DOMAIN")
     platform_cookie_secure: bool = Field(default=True, validation_alias="PLATFORM_COOKIE_SECURE")
+    #: 고객의 소리 관리자 비밀번호 로그인. 비어 있으면 비활성. git에 값을 넣지 말 것.
+    platform_staff_password: str = Field(default="", validation_alias="PLATFORM_STAFF_PASSWORD")
     fieldnote_ai_monthly_quota: int = Field(default=50, validation_alias="FIELDNOTE_AI_MONTHLY_QUOTA")
     #: 단문/장문/주소표 분리 한도 (클라와 맞춤). legacy fieldnote_ai_monthly_quota는 하위호환용.
     fieldnote_ai_short_monthly_quota: int = Field(

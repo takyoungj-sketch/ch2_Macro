@@ -23,6 +23,12 @@ echo "==> copy board UI to $HUB_DEST/board"
 sudo mkdir -p "$HUB_DEST/board"
 sudo rsync -a "$BOARD_SRC/" "$HUB_DEST/board/"
 sudo chown -R www-data:www-data "$HUB_DEST/board"
+if [[ -d "$REPO_ROOT/deploy/admin/public" ]]; then
+  echo "==> copy admin UI to $HUB_DEST/admin"
+  sudo mkdir -p "$HUB_DEST/admin"
+  sudo rsync -a "$REPO_ROOT/deploy/admin/public/" "$HUB_DEST/admin/"
+  sudo chown -R www-data:www-data "$HUB_DEST/admin"
+fi
 
 echo "==> restart backend (platform routes)"
 sudo systemctl restart ch2-macro-backend

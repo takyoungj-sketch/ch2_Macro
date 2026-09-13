@@ -1,0 +1,80 @@
+.admin-nav {
+  display: flex;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+}
+
+.admin-nav a {
+  color: #475569;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  padding-bottom: 0.2rem;
+  border-bottom: 2px solid transparent;
+}
+
+.admin-nav a.is-active {
+  color: #0f172a;
+  border-bottom-color: #2563eb;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.stat-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+}
+
+.stat-card strong {
+  display: block;
+  font-size: 1.5rem;
+  color: #0f172a;
+}
+
+.stat-card span {
+  color: #64748b;
+  font-size: 0.8125rem;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.admin-table th,
+.admin-table td {
+  text-align: left;
+  padding: 0.55rem 0.4rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.admin-table a {
+  color: #0f172a;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.admin-table a:hover {
+  text-decoration: underline;
+}
+
+.ticket-no {
+  font-variant-numeric: tabular-nums;
+  color: #64748b;
+  font-weight: 600;
+  margin-right: 0.35rem;
+}
+
+@media (max-width: 720px) {
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
+}

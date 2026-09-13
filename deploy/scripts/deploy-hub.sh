@@ -16,11 +16,16 @@ fi
 
 echo "==> sync hub static files"
 sudo mkdir -p "$HUB_DEST"
-sudo rsync -a --delete --exclude board "$HUB_SRC/" "$HUB_DEST/"
+sudo rsync -a --delete --exclude board --exclude admin "$HUB_SRC/" "$HUB_DEST/"
 if [[ -d "$REPO_ROOT/deploy/board/public" ]]; then
   echo "==> sync board UI into hub /board/"
   sudo mkdir -p "$HUB_DEST/board"
   sudo rsync -a "$REPO_ROOT/deploy/board/public/" "$HUB_DEST/board/"
+fi
+if [[ -d "$REPO_ROOT/deploy/admin/public" ]]; then
+  echo "==> sync admin UI into hub /admin/"
+  sudo mkdir -p "$HUB_DEST/admin"
+  sudo rsync -a "$REPO_ROOT/deploy/admin/public/" "$HUB_DEST/admin/"
 fi
 sudo chown -R www-data:www-data "$HUB_DEST"
 

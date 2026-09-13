@@ -32,7 +32,7 @@
               <span class="user-menu__caret" aria-hidden="true">▾</span>
             </button>
             <div class="user-menu__drop" id="user-menu-drop" hidden>
-              <button type="button" class="user-menu__item" id="mine-btn">내가 보낸 의견</button>
+              <button type="button" class="user-menu__item" id="mine-btn">내 고객의 소리</button>
               <button type="button" class="user-menu__item" id="nick-edit-btn">닉네임 변경</button>
               <button type="button" class="user-menu__item" id="logout-btn">로그아웃</button>
             </div>
@@ -66,6 +66,16 @@
         <section class="notice" id="login-gate">
           <strong>로그인이 필요합니다</strong>
           <span>Google 또는 Kakao로 로그인한 뒤 의견을 보낼 수 있습니다. 답변은 로그인 계정으로 드립니다.</span>
+        </section>
+
+        <section class="notice" id="admin-hint" hidden>
+          <strong>운영 화면</strong>
+          <span>접수 처리와 답변은 <a href="/admin/">관리자 페이지</a>에서 합니다.</span>
+        </section>
+
+        <section class="notice" id="submit-success" hidden>
+          <strong>접수가 완료되었습니다.</strong>
+          <span id="submit-success-text"></span>
         </section>
 
         <section class="panel" id="compose-panel" hidden>
@@ -151,7 +161,7 @@
               <option value="checking">확인중</option>
               <option value="answered">답변완료</option>
               <option value="planned">개선예정</option>
-              <option value="done">반영완료</option>
+              <option value="done">처리완료</option>
             </select>
             <label class="search-field">
               <span class="visually-hidden">제목 및 내용 검색</span>
@@ -169,14 +179,14 @@
 
         <section class="panel">
           <div class="panel__head">
-            <h2 class="panel__title" id="list-heading">내가 보낸 의견</h2>
+            <h2 class="panel__title" id="list-heading">내 고객의 소리</h2>
             <p class="panel__meta" id="list-meta">불러오는 중…</p>
           </div>
           <div class="board-table__head" id="list-table-head" aria-hidden="true">
+            <span>문의번호</span>
             <span>제목</span>
-            <span>작성자</span>
+            <span>상태</span>
             <span>날짜</span>
-            <span>답변</span>
           </div>
           <ul class="post-list" id="post-list"></ul>
           <div class="pager" id="pager" hidden>
@@ -184,7 +194,7 @@
             <span id="page-label"></span>
             <button type="button" class="btn btn--ghost" id="next-page">다음</button>
           </div>
-          <p class="empty" id="empty-state" hidden>아직 보낸 의견이 없습니다.</p>
+          <p class="empty" id="empty-state" hidden>아직 보낸 고객의 소리가 없습니다.</p>
         </section>
       </div>
 
@@ -199,7 +209,7 @@
               <option value="checking">확인중</option>
               <option value="answered">답변완료</option>
               <option value="planned">개선예정</option>
-              <option value="done">반영완료</option>
+              <option value="done">처리완료</option>
             </select>
           </label>
           <button type="button" class="btn btn--ghost btn--sm" id="status-author-btn" hidden>답변완료로 표시</button>
@@ -231,11 +241,11 @@
           <p class="empty" id="comment-locked" hidden>이 의견의 답변은 작성자와 관리자만 볼 수 있습니다.</p>
           <form id="comment-form" class="form form--compact">
             <label class="field">
-              <span>답변</span>
+              <span>추가로 남길 내용</span>
               <textarea name="body" rows="4" maxlength="8000" required></textarea>
             </label>
             <div class="form__actions">
-              <button type="submit" class="btn btn--primary">답변 등록</button>
+              <button type="submit" class="btn btn--primary">등록</button>
             </div>
           </form>
         </section>

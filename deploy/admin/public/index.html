@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>CH2 DATA ADMIN</title>
+    <link rel="stylesheet" href="/board/assets/style.css" />
+    <link rel="stylesheet" href="/admin/assets/admin.css" />
+  </head>
+  <body>
+    <div class="page" id="app">
+      <section class="panel" id="login-view">
+        <h1 class="panel__title">CH2 DATA ADMIN</h1>
+        <p class="voice-intro" style="margin: 0 0 1rem; padding: 0; border: 0">
+          운영 비밀번호로 들어갑니다. 일반 회원 로그인과 화면이 다릅니다.
+        </p>
+        <form id="staff-login-form" class="form">
+          <label class="field">
+            <span>비밀번호</span>
+            <input
+              id="staff-password"
+              type="password"
+              name="password"
+              autocomplete="current-password"
+              required
+            />
+          </label>
+          <p class="staff-login__error" id="staff-login-error" hidden></p>
+          <div class="form__actions">
+            <button type="submit" class="btn btn--primary">관리 시작</button>
+          </div>
+        </form>
+      </section>
+
+      <div id="app-view" hidden>
+        <header class="topbar">
+          <div class="topbar__main">
+            <div class="topbar__brand">
+              <a class="topbar__home" href="https://ch2data.com/">CH2 DATA</a>
+              <span class="topbar__sep">/</span>
+              <span class="topbar__title">ADMIN</span>
+            </div>
+            <p class="topbar__lead">미답변과 최근 접수를 먼저 봅니다.</p>
+          </div>
+          <div class="auth-bar">
+            <span id="admin-user"></span>
+            <button type="button" class="btn btn--ghost btn--sm" id="logout-btn">로그아웃</button>
+          </div>
+        </header>
+
+        <nav class="admin-nav" aria-label="관리 메뉴">
+          <a href="#/" id="nav-dash">현황</a>
+          <a href="#/tickets" id="nav-tickets">고객의 소리</a>
+        </nav>
+
+        <div id="dash-view">
+          <section class="stat-grid" id="stat-grid">
+            <div class="stat-card">
+              <strong id="stat-open">-</strong>
+              <span>미답변</span>
+            </div>
+            <div class="stat-card">
+              <strong id="stat-checking">-</strong>
+              <span>확인중</span>
+            </div>
+            <div class="stat-card">
+              <strong id="stat-today">-</strong>
+              <span>오늘 접수</span>
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel__head">
+              <h2 class="panel__title">최근 고객의 소리</h2>
+              <a class="back-link" href="#/tickets">전체 보기</a>
+            </div>
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>상태</th>
+                  <th>제품</th>
+                  <th>유형</th>
+                  <th>제목</th>
+                  <th>접수</th>
+                </tr>
+              </thead>
+              <tbody id="recent-body"></tbody>
+            </table>
+            <p class="empty" id="recent-empty" hidden>아직 접수된 티켓이 없습니다.</p>
+          </section>
+        </div>
+
+        <div id="tickets-view" hidden>
+          <section class="toolbar">
+            <div class="filters">
+              <select id="filter-status" aria-label="상태">
+                <option value="">전체</option>
+                <option value="open">신규</option>
+                <option value="checking">확인중</option>
+                <option value="answered">답변완료</option>
+                <option value="planned">개선예정</option>
+                <option value="done">처리완료</option>
+              </select>
+              <select id="filter-product" aria-label="제품">
+                <option value="">전체 제품</option>
+                <option value="macro">Macro</option>
+                <option value="viewer">Viewer</option>
+                <option value="fieldnote">FieldNote</option>
+                <option value="general">기타</option>
+              </select>
+              <label class="search-field">
+                <span class="visually-hidden">검색</span>
+                <input id="filter-q" type="search" maxlength="80" placeholder="제목·내용 검색" />
+              </label>
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel__head">
+              <h2 class="panel__title">접수 목록</h2>
+              <p class="panel__meta" id="list-meta">불러오는 중…</p>
+            </div>
+            <ul class="post-list" id="ticket-list"></ul>
+            <div class="pager" id="pager" hidden>
+              <button type="button" class="btn btn--ghost" id="prev-page">이전</button>
+              <span id="page-label"></span>
+              <button type="button" class="btn btn--ghost" id="next-page">다음</button>
+            </div>
+            <p class="empty" id="list-empty" hidden>해당하는 티켓이 없습니다.</p>
+          </section>
+        </div>
+
+        <div id="detail-view" hidden>
+          <button type="button" class="back-link" id="back-to-list">← 목록</button>
+          <article class="detail" id="ticket-detail"></article>
+          <div class="form__actions post-actions">
+            <label class="field field--inline">
+              <span>상태</span>
+              <select id="status-select">
+                <option value="open">신규</option>
+                <option value="checking">확인중</option>
+                <option value="answered">답변완료</option>
+                <option value="planned">개선예정</option>
+                <option value="done">처리완료</option>
+              </select>
+            </label>
+          </div>
+          <section class="panel">
+            <h2 class="panel__title">답변</h2>
+            <ul class="comment-list" id="comment-list"></ul>
+            <form id="reply-form" class="form form--compact">
+              <label class="field">
+                <span>답변 내용</span>
+                <textarea name="body" rows="5" maxlength="8000" required></textarea>
+              </label>
+              <div class="form__actions">
+                <button type="submit" class="btn btn--primary">답변 등록</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      </div>
+
+      <footer class="footer">
+        <a href="https://ch2data.com/">ch2data.com</a>
+        <span>·</span>
+        <span>운영 전용</span>
+      </footer>
+    </div>
+    <script src="/admin/assets/admin.js" defer></script>
+  </body>
+</html>

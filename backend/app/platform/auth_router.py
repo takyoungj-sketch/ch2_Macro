@@ -10,6 +10,7 @@ from typing import Annotated
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -20,6 +21,16 @@ from app.platform.deps import CurrentUser, get_optional_user, require_user
 from app.platform.entitlements import list_entitlements
 from app.platform.jwt_util import COOKIE_NAME, create_access_token
 from app.platform.oauth_next import DEFAULT_NEXT, safe_oauth_next
+from app.platform.staff_login import (
+    STAFF_SESSION_MINUTES,
+    clear_failures,
+    client_ip,
+    passwords_match,
+    record_failure,
+    staff_password_configured,
+    too_many_attempts,
+)
+from app.platform.ops_events import VID_COOKIE, insert_event, new_visitor_id, normalize_visitor_id
 
 router = APIRouter(prefix="/auth", tags=["platform-auth"])
 _log = logging.getLogger(__name__)
@@ -72,12 +83,16 @@ class NicknameUpdate(BaseModel):
     nickname: str = Field(min_length=2, max_length=80)
 
 
+class StaffLoginBody(BaseModel):
+    password: str = Field(min_length=1, max_length=200)
+
+
 def _cookie_domain() -> str | None:
     d = (settings.platform_cookie_domain or "").strip()
     return d or None
 
 
-def _set_session_cookie(response: Response, token: str) -> None:
+def _set_session_cookie(response: Response, token: str, *, max_age: int | None = None) -> None:
     response.set_cookie(
         key=COOKIE_NAME,
         value=token,
@@ -85,7 +100,7 @@ def _set_session_cookie(response: Response, token: str) -> None:
         secure=settings.platform_cookie_secure,
         samesite="lax",
         domain=_cookie_domain(),
-        max_age=settings.access_token_expire_minutes * 60,
+        max_age=settings.access_token_expire_minutes * 60 if max_age is None else max_age,
         path="/",
     )
 
@@ -105,6 +120,7 @@ def _oauth_providers() -> dict[str, bool]:
     return {
         "google": bool(settings.google_client_id),
         "kakao": bool(kakao_id and (settings.kakao_client_secret or "").strip()),
+        "staff": staff_password_configured(settings.platform_staff_password),
     }
 
 
@@ -353,6 +369,55 @@ def update_me(
         db.rollback()
         raise HTTPException(409, "닉네임이 이미 사용 중입니다.") from exc
     return {"nickname": nick}
+
+
+@router.post("/staff-login")
+def staff_login(
+    body: StaffLoginBody,
+    request: Request,
+    db: Session = Depends(get_platform_db),
+):
+    expected = (settings.platform_staff_password or "").strip()
+    if not staff_password_configured(expected):
+        raise HTTPException(404, "찾을 수 없습니다.")
+    ip = client_ip(request)
+    if too_many_attempts(ip):
+        raise HTTPException(429, "잠시 후 다시 시도해 주세요.")
+    if not passwords_match(expected, body.password.strip()):
+        record_failure(ip)
+        raise HTTPException(401, "비밀번호가 올바르지 않습니다.")
+    row = db.execute(
+        text("SELECT id, email, nickname, role FROM users WHERE role = 'admin' ORDER BY id LIMIT 1"),
+    ).mappings().first()
+    if not row:
+        raise HTTPException(503, "관리자 계정이 없습니다.")
+    clear_failures(ip)
+    jwt_token = create_access_token(
+        user_id=int(row["id"]),
+        email=str(row["email"]),
+        nickname=str(row["nickname"]),
+        role=str(row["role"]),
+        expire_minutes=STAFF_SESSION_MINUTES,
+    )
+    payload = {
+        "ok": True,
+        "id": int(row["id"]),
+        "nickname": str(row["nickname"]),
+        "role": str(row["role"]),
+    }
+    response = JSONResponse(payload)
+    _set_session_cookie(response, jwt_token, max_age=STAFF_SESSION_MINUTES * 60)
+    vid = normalize_visitor_id(request.cookies.get(VID_COOKIE)) or new_visitor_id()
+    insert_event(
+        db,
+        product="admin",
+        event_name="login",
+        visitor_id=vid,
+        user_id=int(row["id"]),
+        path="/admin/",
+    )
+    _log.info("staff-login ok user_id=%s ip=%s", row["id"], ip)
+    return response
 
 
 @router.post("/logout")

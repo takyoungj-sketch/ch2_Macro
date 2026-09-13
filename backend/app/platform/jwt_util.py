@@ -13,8 +13,16 @@ COOKIE_NAME = "ch2_session"
 ALGORITHM = settings.algorithm
 
 
-def create_access_token(*, user_id: int, email: str, nickname: str, role: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
+def create_access_token(
+    *,
+    user_id: int,
+    email: str,
+    nickname: str,
+    role: str,
+    expire_minutes: int | None = None,
+) -> str:
+    minutes = settings.access_token_expire_minutes if expire_minutes is None else expire_minutes
+    expire = datetime.now(timezone.utc) + timedelta(minutes=minutes)
     payload: dict[str, Any] = {
         "sub": str(user_id),
         "email": email,

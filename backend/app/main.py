@@ -92,7 +92,7 @@ async def _api_token_guard(request: Request, call_next):
     if request.url.path in open_paths or request.method == "OPTIONS":
         return await call_next(request)
     # 플랫폼 — 사용자 JWT·웹훅 시크릿으로 보호 (X-Api-Token 과 분리)
-    if path.startswith("/api/auth/") or path.startswith("/api/board/") or path.startswith("/api/billing/"):
+    if path.startswith("/api/auth/") or path.startswith("/api/board/") or path.startswith("/api/billing/") or path.startswith("/api/ops/"):
         return await call_next(request)
     if path.startswith("/api/platform/fieldnote/ai/"):
         return await call_next(request)
@@ -161,12 +161,14 @@ if (settings.platform_database_url or "").strip():
     from app.platform.board_router import router as platform_board_router
     from app.platform.billing_router import router as platform_billing_router
     from app.platform.fieldnote_ai_router import router as platform_fieldnote_ai_router
+    from app.platform.ops_router import router as platform_ops_router
 
     app.include_router(platform_auth_router, prefix="/api")
     app.include_router(platform_board_router, prefix="/api")
     app.include_router(platform_billing_router, prefix="/api")
+    app.include_router(platform_ops_router, prefix="/api")
     app.include_router(platform_fieldnote_ai_router, prefix="/api/platform")
-    _LOG.info("CH2 Platform API 활성: /api/auth/*, /api/board/*, /api/billing/*")
+    _LOG.info("CH2 Platform API 활성: /api/auth/*, /api/board/*, /api/billing/*, /api/ops/*")
 
 
 # 폐기 일정 헤더 — RFC 8594 Sunset. V1 통계 경로(/free/stats/*)에만 적용.

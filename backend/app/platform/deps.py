@@ -57,3 +57,9 @@ def require_user(user: CurrentUser | None = Depends(get_optional_user)) -> Curre
     if user is None:
         raise HTTPException(401, "로그인이 필요합니다.")
     return user
+
+
+def require_admin(user: CurrentUser = Depends(require_user)) -> CurrentUser:
+    if user.role != "admin":
+        raise HTTPException(403, "관리자만 이용할 수 있습니다.")
+    return user

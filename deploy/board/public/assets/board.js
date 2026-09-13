@@ -21,7 +21,7 @@ const STATUS_LABELS = {
   checking: "확인중",
   answered: "답변완료",
   planned: "개선예정",
-  done: "반영완료",
+  done: "처리완료",
 };
 
 const state = {
@@ -29,7 +29,7 @@ const state = {
   totalPages: 1,
   currentPostId: null,
   currentPost: null,
-  mine: false,
+  mine: true,
   searchTimer: null,
   auth: {
     loggedIn: false,
@@ -42,6 +42,10 @@ const state = {
 
 function $(id) {
   return document.getElementById(id);
+}
+
+function ticketNo(id) {
+  return `#${String(id).padStart(4, "0")}`;
 }
 
 function formatDate(value) {
@@ -100,10 +104,14 @@ function updateVoiceLayout() {
     compose.hidden = !state.auth.loggedIn;
   }
   if (toolbar) {
-    toolbar.hidden = !isAdmin();
+    toolbar.hidden = true;
   }
   if (heading) {
-    heading.textContent = isAdmin() ? "접수 목록" : "내가 보낸 의견";
+    heading.textContent = "내 고객의 소리";
+  }
+  const adminHint = $("admin-hint");
+  if (adminHint) {
+    adminHint.hidden = !isAdmin();
   }
 }
 
@@ -189,10 +197,10 @@ function updateAuthBar() {
     }
     userMenu.hidden = true;
     setUserMenuOpen(false);
-    state.mine = false;
+    state.mine = true;
   }
   if (pinField) {
-    pinField.hidden = !(state.auth.loggedIn && state.auth.role === "admin");
+    pinField.hidden = true;
   }
   updateVoiceLayout();
   updateMineChip();
@@ -203,7 +211,7 @@ function updateMineChip() {
   if (!chip) {
     return;
   }
-  chip.hidden = !state.mine;
+  chip.hidden = true;
 }
 
 const NICK_PROMPT_KEY = "ch2-board-nick-prompted";
@@ -214,6 +222,10 @@ function maybeShowNickPrompt() {
     return;
   }
   if (!state.auth.loggedIn) {
+    panel.hidden = true;
+    return;
+  }
+  if (state.auth.role === "admin") {
     panel.hidden = true;
     return;
   }
@@ -273,13 +285,13 @@ function renderPostItem(post, { notice = false } = {}) {
   li.innerHTML = `
     <a class="post-item__link" href="?post=${post.id}">
       <div class="post-item__main">
+        <span class="ticket-no">${escapeHtml(post.ticket_no || ticketNo(post.id))}</span>
         ${badge("badge--product", PRODUCT_LABELS[post.product] ?? post.product)}
         ${badge(`badge--${post.category}`, CATEGORY_LABELS[post.category] ?? post.category)}
         ${statusBadge(post.status, post.is_pinned)}
         ${secretBadge(post.is_secret)}
         <h3 class="post-item__title">${escapeHtml(post.title)}</h3>
       </div>
-      <span class="post-item__author">${escapeHtml(post.author_name)}</span>
       <span class="post-item__date">${escapeHtml(formatDateShort(post.created_at))}</span>
       <span class="post-item__cmt">${comments}</span>
     </a>
@@ -317,9 +329,7 @@ async function loadPosts() {
   if (q) {
     params.set("q", q);
   }
-  if (state.mine) {
-    params.set("mine", "true");
-  }
+  params.set("mine", "true");
 
   $("list-meta").textContent = "불러오는 중…";
   const data = await api(`/posts?${params.toString()}`);
@@ -360,7 +370,7 @@ function renderPostDetail(post, comments) {
       ${statusBadge(post.status, post.is_pinned)}
       ${secretBadge(post.is_secret)}
     </div>
-    <h1 class="detail__title">${escapeHtml(post.title)}</h1>
+    <h1 class="detail__title"><span class="ticket-no">${escapeHtml(post.ticket_no || ticketNo(post.id))}</span> ${escapeHtml(post.title)}</h1>
     ${bodyHtml}
     <p class="detail__info">${escapeHtml(post.author_name)} · ${formatDate(post.created_at)}</p>
   `;
@@ -376,28 +386,17 @@ function renderPostDetail(post, comments) {
   if (editPanel) {
     editPanel.hidden = true;
   }
-  const isAdmin = state.auth.loggedIn && state.auth.role === "admin";
   const isAuthor =
     state.auth.loggedIn && Number(post.author_id) === Number(state.auth.userId);
-  const canDelete = Boolean(post.can_delete) || isAdmin || isAuthor;
-  const canEdit = Boolean(post.can_edit) || isAdmin || isAuthor;
-  const showActions = isAdmin || isAuthor || canDelete || canEdit;
+  const canDelete = Boolean(post.can_delete) || isAuthor;
+  const canEdit = Boolean(post.can_edit) || isAuthor;
+  const showActions = isAuthor || canDelete || canEdit;
   actions.hidden = !showActions;
 
-  if (isAdmin) {
-    adminWrap.hidden = false;
-    statusSelect.value = post.status;
-    statusSelect.dataset.postId = String(post.id);
-    pinBtn.hidden = false;
-    pinBtn.dataset.postId = String(post.id);
-    pinBtn.dataset.pinned = post.is_pinned ? "1" : "0";
-    pinBtn.textContent = post.is_pinned ? "공지 해제" : "공지 고정";
-  } else {
-    adminWrap.hidden = true;
-    pinBtn.hidden = true;
-  }
+  adminWrap.hidden = true;
+  pinBtn.hidden = true;
 
-  if (!isAdmin && isAuthor && (post.status === "open" || post.status === "answered")) {
+  if (isAuthor && (post.status === "open" || post.status === "answered")) {
     authorBtn.hidden = false;
     authorBtn.dataset.postId = String(post.id);
     authorBtn.dataset.status = post.status;
@@ -875,6 +874,13 @@ function bindEvents() {
         body: JSON.stringify(payload),
       });
       form.reset();
+      const ticket = result.post.ticket_no || ticketNo(result.post.id);
+      const success = $("submit-success");
+      const successText = $("submit-success-text");
+      if (success && successText) {
+        success.hidden = false;
+        successText.textContent = `문의번호: ${ticket}`;
+      }
       await loadPosts();
       await loadPost(result.post.id);
     } catch (error) {
@@ -920,8 +926,22 @@ function showError(error) {
   window.alert(message);
 }
 
+function trackOps(product, eventName) {
+  fetch("/api/ops/event", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      product,
+      event_name: eventName,
+      path: window.location.pathname,
+    }),
+  }).catch(() => {});
+}
+
 async function boot() {
   bindEvents();
+  trackOps("board", "page_view");
   await refreshAuthStatus();
   await loadMeta();
   const postId = new URL(window.location.href).searchParams.get("post");

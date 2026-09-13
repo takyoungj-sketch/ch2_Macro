@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -24,9 +24,11 @@ from app.platform.board_policy import (
     can_view_secret_body,
     excerpt_text,
     like_pattern,
+    ticket_no,
 )
 from app.platform.db import get_platform_db
 from app.platform.deps import CurrentUser, get_optional_user, require_user
+from app.platform.ops_events import VID_COOKIE, insert_event, new_visitor_id, normalize_visitor_id
 
 router = APIRouter(prefix="/board", tags=["platform-board"])
 
@@ -79,6 +81,7 @@ def _post_row_to_api(
     can_see = _can_see_body(row, user)
     out = {
         "id": int(row["id"]),
+        "ticket_no": ticket_no(int(row["id"])),
         "product": row["product"],
         "category": row["category"],
         "title": row["title"],
@@ -360,6 +363,7 @@ def get_post(
 @router.post("/posts")
 def create_post(
     body: PostCreate,
+    request: Request,
     user: CurrentUser = Depends(require_user),
     db: Session = Depends(get_platform_db),
 ):
@@ -389,6 +393,16 @@ def create_post(
     payload = dict(row)
     payload["comment_count"] = 0
     payload["provider"] = user.provider
+    vid = normalize_visitor_id(request.cookies.get(VID_COOKIE)) or new_visitor_id()
+    ops_product = body.product if body.product in {"macro", "fieldnote", "viewer"} else "board"
+    insert_event(
+        db,
+        product=ops_product,
+        event_name="ticket_create",
+        visitor_id=vid,
+        user_id=user.id,
+        path="/board/",
+    )
     return {"post": _post_row_to_api(payload, user.nickname, include_body=True, user=user)}
 
 
@@ -427,6 +441,16 @@ def create_comment(
         text("UPDATE posts SET updated_at=now() WHERE id=:id"),
         {"id": post_id},
     )
+    if user.role == "admin":
+        db.execute(
+            text(
+                """
+                UPDATE posts SET status='answered', updated_at=now()
+                WHERE id=:id AND status IN ('open', 'checking')
+                """
+            ),
+            {"id": post_id},
+        )
     db.commit()
     payload = dict(row)
     payload["provider"] = user.provider

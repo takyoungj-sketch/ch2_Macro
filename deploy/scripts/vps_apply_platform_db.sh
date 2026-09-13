@@ -9,6 +9,7 @@ SQL_FILES=(
   "$REPO_ROOT/db/048b_board_support.sql"
   "$REPO_ROOT/db/048c_board_secret.sql"
   "$REPO_ROOT/db/048d_board_voice.sql"
+  "$REPO_ROOT/db/048e_ops_events.sql"
 )
 ENV_FILE="$REPO_ROOT/backend/.env"
 

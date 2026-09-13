@@ -10,6 +10,10 @@ EXCERPT_LEN = 80
 SECRET_EXCERPT = "작성자와 관리자만 볼 수 있습니다."
 
 
+def ticket_no(post_id: int) -> str:
+    return f"#{int(post_id):04d}"
+
+
 def excerpt_text(body: str, max_len: int = EXCERPT_LEN) -> str:
     normalized = " ".join(str(body or "").split())
     if len(normalized) <= max_len:

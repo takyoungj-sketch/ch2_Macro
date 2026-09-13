@@ -88,6 +88,7 @@ def _secret_row():
 def test_secret_list_hides_excerpt_from_strangers():
     out = _post_row_to_api(_secret_row(), "nick", include_body=False, user=None)
     assert out["excerpt"] == SECRET_EXCERPT
+    assert out["ticket_no"] == "#0001"
     assert "secret-body" not in str(out)
     assert out["is_secret"] is True
     assert out["can_delete"] is False
@@ -111,3 +112,11 @@ def test_secret_detail_author_and_admin_see_body():
     assert as_admin["body"] == "secret-body-xyz"
     assert as_admin["can_delete"] is True
     assert as_admin["can_edit"] is True
+
+
+def test_ticket_no_pads_id():
+    from app.platform.board_policy import ticket_no
+
+    assert ticket_no(1) == "#0001"
+    assert ticket_no(47) == "#0047"
+    assert ticket_no(10047) == "#10047"
