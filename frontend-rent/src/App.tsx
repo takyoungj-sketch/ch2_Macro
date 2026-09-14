@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
+import CollapsibleLeftSidebar from "@ch2/macro-shell/CollapsibleLeftSidebar";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
@@ -442,7 +443,10 @@ export default function App() {
 
       <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
       <main className="flex flex-1 min-h-0">
-        <aside className="layout-sidebar p-4 space-y-3">
+        <CollapsibleLeftSidebar
+          storageKey="rent"
+          className="layout-sidebar p-4 space-y-3"
+        >
           <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">조건</h2>
           <div className="space-y-1">
             <span className="text-xs text-slate-500">유형</span>
@@ -580,7 +584,7 @@ export default function App() {
               상권통계: {sangkwonScopeLabel({ addr1, addr2, sangkwonGuList })} 공표 · 주거와 별개
             </p>
           )}
-        </aside>
+        </CollapsibleLeftSidebar>
 
         <div className="layout-main">
           <section className="px-4 pt-4 shrink-0">

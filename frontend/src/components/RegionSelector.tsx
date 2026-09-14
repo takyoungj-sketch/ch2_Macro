@@ -458,7 +458,7 @@ export default function RegionSelector() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-2">
-        <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">지역 입력</h2>
+        <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">지역 입력</h2>
         <button
           type="button"
           onClick={() => {
@@ -467,14 +467,14 @@ export default function RegionSelector() {
             setSearchInput("");
             setLocalError(null);
           }}
-          className="text-xs text-slate-500 underline underline-offset-2 hover:text-red-600 shrink-0"
+          className="text-sm text-slate-500 underline underline-offset-2 hover:text-red-600 shrink-0"
         >
           초기화
         </button>
       </div>
 
       <div className="space-y-1.5">
-        <label className="block text-xs font-medium text-slate-500 dark:text-slate-400" htmlFor="region-search">
+        <label className="block text-sm font-medium text-slate-500 dark:text-slate-400" htmlFor="region-search">
           지역 이름·코드 검색
         </label>
         <input
@@ -488,13 +488,13 @@ export default function RegionSelector() {
           onChange={(e) => setSearchInput(e.target.value)}
           onKeyDown={onSearchKeyDown}
           disabled={catalogLoading}
-          className="input"
+          className="input text-base"
         />
         {viewMode === "paid" &&
         strictUpperTierChipCount === 0 &&
         paidSubSigunguSelections >= 1 &&
         (!LEFT_REGION_MULTI_SELECT || !paidLeafAddGateOpen) ? (
-          <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">
+          <p className="text-sm text-slate-500 dark:text-slate-400 leading-snug">
             {LEFT_REGION_MULTI_SELECT ? (
               <>
                 다른 지역을 검색·선택하면 현재 선택이 <strong>바뀝니다</strong>. 이어서 추가하려면 아래 「+ 추가
@@ -515,14 +515,14 @@ export default function RegionSelector() {
                 <button
                   type="button"
                   onClick={() => setSuggestionsShortHeight((s) => !s)}
-                  className="text-xs text-slate-500 underline underline-offset-2 hover:text-slate-800"
+                  className="text-sm text-slate-500 underline underline-offset-2 hover:text-slate-800"
                 >
                   {suggestionsShortHeight ? "목록 크게" : "목록 낮게"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setSuggestionsCollapsed((c) => !c)}
-                  className="text-xs text-slate-500 underline underline-offset-2 hover:text-slate-800"
+                  className="text-sm text-slate-500 underline underline-offset-2 hover:text-slate-800"
                 >
                   {suggestionsCollapsed
                     ? `펼치기 (${flatSuggestions.length})`
@@ -531,16 +531,16 @@ export default function RegionSelector() {
               </div>
             ) : null}
             {suggestionsCollapsed && flatSuggestions.length > 0 ? (
-              <p className="text-xs text-slate-500 py-0.5 text-right">
+              <p className="text-sm text-slate-500 py-0.5 text-right">
                 후보 {flatSuggestions.length}건 · 「펼치기」로 목록 표시
               </p>
             ) : null}
             {isLooseMultiSegmentQuery(debouncedSearch) ? (
               <>
                 {catalogLoading && regions.length === 0 ? (
-                  <p className="text-xs text-slate-400 py-1">지역 목록 불러오는 중…</p>
+                  <p className="text-sm text-slate-400 py-1">지역 목록 불러오는 중…</p>
                 ) : looseResolve && looseResolve.codes.length === 0 ? (
-                  <p className="text-xs text-slate-500 py-1">
+                  <p className="text-sm text-slate-500 py-1">
                     입력한 지명 조합과 맞는 법정동·리가 없습니다. 단어를 나누거나 철자를 확인해 보세요.
                   </p>
                 ) : null}
@@ -548,18 +548,18 @@ export default function RegionSelector() {
             ) : (
               <>
                 {(searchFetching || catalogLoading) && (
-                  <p className="text-xs text-slate-400 py-1">검색 중…</p>
+                  <p className="text-sm text-slate-400 py-1">검색 중…</p>
                 )}
                 {(searchError || catalogError) && !searchFetching && !catalogLoading && (
-                  <p className="text-xs text-red-500 py-1">
+                  <p className="text-sm text-red-500 py-1">
                     지역 API에 연결하지 못했습니다. 백엔드(포트 8000) 실행 여부를 확인하세요.
                   </p>
                 )}
                 {!searchError && !searchFetching && searchHits.length === 0 && (
-                  <p className="text-xs text-slate-500 py-1">일치 결과가 없습니다.</p>
+                  <p className="text-sm text-slate-500 py-1">일치 결과가 없습니다.</p>
                 )}
                 {!searchFetching && searchHits.length > 0 && flatSuggestions.length === 0 && (
-                  <p className="text-xs text-slate-500 py-1">
+                  <p className="text-sm text-slate-500 py-1">
                     시도·자치구 묶음·읍면 상위 카드 또는 법정코드 줄. …읍/…면 이름만 치면 읍면 단위 카드만 뜹니다. 다른 표현으로 시도해 보세요.
                   </p>
                 )}
@@ -569,7 +569,7 @@ export default function RegionSelector() {
                   <ul
                     ref={listRef}
                     role="listbox"
-                    className={`absolute z-20 mt-0.5 ${suggestionListMaxClass} w-full overflow-auto rounded-md border border-slate-200 bg-white shadow-lg text-xs`}
+                    className={`absolute z-20 mt-0.5 ${suggestionListMaxClass} w-full overflow-auto rounded-md border border-slate-200 bg-white shadow-lg text-sm`}
                   >
                     {flatSuggestions.map((entry, idx) => {
                   const hl = idx === highlightIdx;
@@ -594,7 +594,7 @@ export default function RegionSelector() {
                       <Fragment key={`sid-${entry.sidoCode}`}>
                         {showSidoHeader ? (
                           <li
-                            className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-500"
+                            className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50 px-2 py-1 text-sm font-semibold text-slate-500"
                             aria-hidden
                           >
                             시·도 (클릭 시 시도 전체 사전집계로 한 줄 분석)
@@ -613,14 +613,14 @@ export default function RegionSelector() {
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={() => handlePickSidoAggregate(entry.sidoCode)}
                           >
-                            <span className="text-violet-900 text-[11px] font-semibold uppercase tracking-tight">
+                            <span className="text-violet-900 text-sm font-semibold uppercase tracking-tight">
                               [시·도]
                             </span>
                             <span className="text-slate-800 leading-snug block">
                               {entry.primaryLabel}
                             </span>
-                            <span className="text-[11px] text-slate-400">{entry.subtitle}</span>
-                            <span className="text-[11px] text-slate-400 tabular-nums block">
+                            <span className="text-sm text-slate-400">{entry.subtitle}</span>
+                            <span className="text-sm text-slate-400 tabular-nums block">
                               코드 {entry.sidoCode}
                             </span>
                           </button>
@@ -634,7 +634,7 @@ export default function RegionSelector() {
                       <Fragment key={`city-${entry.sidoCode}-${entry.cityName}`}>
                         {showCityHeader ? (
                           <li
-                            className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-500"
+                            className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50 px-2 py-1 text-sm font-semibold text-slate-500"
                             aria-hidden
                           >
                             시 (자치구를 묶어 한 번에 선택)
@@ -653,13 +653,13 @@ export default function RegionSelector() {
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={() => handlePickCityAggregate(entry.cityCode)}
                           >
-                            <span className="text-indigo-900 text-[11px] font-semibold uppercase tracking-tight">
+                            <span className="text-indigo-900 text-sm font-semibold uppercase tracking-tight">
                               [시]
                             </span>
                             <span className="text-slate-800 leading-snug block">
                               {entry.primaryLabel}
                             </span>
-                            <span className="text-[11px] text-slate-400">{entry.subtitle}</span>
+                            <span className="text-sm text-slate-400">{entry.subtitle}</span>
                           </button>
                         </li>
                       </Fragment>
@@ -671,7 +671,7 @@ export default function RegionSelector() {
                       <Fragment key={`sgg-${entry.sigunguCode}`}>
                         {showSigunguHeader ? (
                           <li
-                            className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-500"
+                            className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50 px-2 py-1 text-sm font-semibold text-slate-500"
                             aria-hidden
                           >
                             시·군·구 포함 (클릭 시 시군구 한 줄로 선택 — 분석 때 하위 법정 포함)
@@ -692,14 +692,14 @@ export default function RegionSelector() {
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={() => handlePickSigunguAggregate(entry.sigunguCode)}
                           >
-                            <span className="text-blue-900 text-[11px] font-semibold uppercase tracking-tight">
+                            <span className="text-blue-900 text-sm font-semibold uppercase tracking-tight">
                               [시군구 포함]
                             </span>
                             <span className="text-slate-800 leading-snug block">
                               {entry.primaryLabel}
                             </span>
-                            <span className="text-[11px] text-slate-400">{entry.subtitle}</span>
-                            <span className="text-[11px] text-slate-400 tabular-nums block">
+                            <span className="text-sm text-slate-400">{entry.subtitle}</span>
+                            <span className="text-sm text-slate-400 tabular-nums block">
                               코드 {entry.sigunguCode}
                             </span>
                           </button>
@@ -713,7 +713,7 @@ export default function RegionSelector() {
                       <Fragment key={`eup-${entry.eupCode}`}>
                         {showEupHeader ? (
                           <li
-                            className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-500"
+                            className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50 px-2 py-1 text-sm font-semibold text-slate-500"
                             aria-hidden
                           >
                             읍·면 (행정 단위 한 줄 · 사전집계 eup 키)
@@ -732,14 +732,14 @@ export default function RegionSelector() {
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={() => handlePickEupAggregate(entry.eupCode)}
                           >
-                            <span className="text-emerald-800 text-[11px] font-semibold uppercase tracking-tight">
+                            <span className="text-emerald-800 text-sm font-semibold uppercase tracking-tight">
                               [읍·면 행정]
                             </span>
                             <span className="text-slate-800 leading-snug block">
                               {entry.primaryLabel}
                             </span>
-                            <span className="text-[11px] text-slate-400">{entry.subtitle}</span>
-                            <span className="text-[11px] text-slate-400 tabular-nums block">
+                            <span className="text-sm text-slate-400">{entry.subtitle}</span>
+                            <span className="text-sm text-slate-400 tabular-nums block">
                               코드 {entry.eupCode}
                             </span>
                           </button>
@@ -754,7 +754,7 @@ export default function RegionSelector() {
                     <Fragment key={`bp-${String(row.beopjungri_code).trim()}`}>
                       {showBeopHeader ? (
                         <li
-                          className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-500"
+                          className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50 px-2 py-1 text-sm font-semibold text-slate-500"
                           aria-hidden
                         >
                           법정동·리 · 법정코드 줄
@@ -774,7 +774,7 @@ export default function RegionSelector() {
                           onClick={() => pickBeopRow(row)}
                         >
                           <span className="text-slate-800 leading-snug block">{lbl}</span>
-                          <span className="text-[11px] text-slate-400 tabular-nums">
+                          <span className="text-sm text-slate-400 tabular-nums">
                             {String(row.beopjungri_code).trim()}
                           </span>
                         </button>
@@ -802,7 +802,7 @@ export default function RegionSelector() {
               inputRef.current?.focus();
             }}
             disabled={paidLeafAddGateOpen}
-            className="w-full py-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 text-xs font-semibold text-slate-700 dark:text-slate-200
+            className="w-full py-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 text-sm font-semibold text-slate-700 dark:text-slate-200
                        hover:bg-slate-100 hover:border-slate-400 disabled:opacity-50 disabled:pointer-events-none transition-colors"
           >
             {paidLeafAddGateOpen
@@ -814,10 +814,10 @@ export default function RegionSelector() {
 
       {viewMode === "paid" && strictUpperTierChipCount === 0 && paidUnifiedSubSigunguRows.length > 0 ? (
         <div className="rounded-lg border border-slate-100 bg-white px-3 py-2.5 space-y-1.5">
-          <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
             선택한 지역 ({paidSubSigunguSelections}/{MAX_PAID_LEAF_BEOPJUNGRI_PICK}) — 시군구 미만
           </p>
-          <ol className="list-decimal list-inside space-y-1.5 text-xs text-slate-800 dark:text-slate-200 marker:text-slate-400">
+          <ol className="list-decimal list-inside space-y-1.5 text-sm text-slate-800 dark:text-slate-200 marker:text-slate-400">
             {paidUnifiedSubSigunguRows.map((entry) => {
               const label =
                 entry.kind === "eup"
@@ -828,7 +828,7 @@ export default function RegionSelector() {
                   <span className="leading-snug inline align-middle">{label}</span>
                   <button
                     type="button"
-                    className="ml-1 align-middle shrink-0 rounded-full p-0.5 hover:bg-red-50 text-xs text-slate-500 hover:text-red-700"
+                    className="ml-1 align-middle shrink-0 rounded-full p-0.5 hover:bg-red-50 text-sm text-slate-500 hover:text-red-700"
                     aria-label={`${label} 삭제`}
                     onClick={() =>
                       entry.kind === "eup"
@@ -846,7 +846,7 @@ export default function RegionSelector() {
       ) : null}
 
       <div className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5 space-y-1.5">
-        <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
           {viewMode === "paid" ? "선택된 지역" : "선택"}{" "}
           <span className="font-normal text-slate-500">
             항목 {selectionChipCount} · 합산 법정 {resolvedCount}곳
@@ -857,7 +857,7 @@ export default function RegionSelector() {
             {tierSelection.sido_codes.map((code) => (
               <span
                 key={`sid-${code}`}
-                className="inline-flex items-center gap-1 max-w-full rounded-full border border-violet-200 bg-white pl-2 pr-1 py-1 text-xs text-violet-950"
+                className="inline-flex items-center gap-1 max-w-full rounded-full border border-violet-200 bg-white pl-2 pr-1 py-1 text-sm text-violet-950"
               >
                 <span className="truncate max-w-[14rem]" title={`시도 ${code}`}>
                   [시·도] {labelSidoChip(regions, code)}
@@ -877,7 +877,7 @@ export default function RegionSelector() {
             {tierSelection.city_codes.map((code) => (
               <span
                 key={`city-${code}`}
-                className="inline-flex items-center gap-1 max-w-full rounded-full border border-indigo-200 bg-white pl-2 pr-1 py-1 text-xs text-indigo-950"
+                className="inline-flex items-center gap-1 max-w-full rounded-full border border-indigo-200 bg-white pl-2 pr-1 py-1 text-sm text-indigo-950"
               >
                 <span className="truncate max-w-[14rem]" title={`의사 시(자치구 묶음) ${code}`}>
                   [시] {labelCityChip(regions, code)}
@@ -897,7 +897,7 @@ export default function RegionSelector() {
             {tierSelection.sigungu_codes.map((code) => (
               <span
                 key={`sgg-${code}`}
-                className="inline-flex items-center gap-1 max-w-full rounded-full border border-blue-200 bg-white pl-2 pr-1 py-1 text-xs text-blue-950"
+                className="inline-flex items-center gap-1 max-w-full rounded-full border border-blue-200 bg-white pl-2 pr-1 py-1 text-sm text-blue-950"
               >
                 <span className="truncate max-w-[14rem]" title={`시군구 ${code}`}>
                   [시군구] {labelSigunguChip(regions, code)}
@@ -920,7 +920,7 @@ export default function RegionSelector() {
             ).map((code) => (
               <span
                 key={`eup-${code}`}
-                className="inline-flex items-center gap-1 max-w-full rounded-full border border-emerald-200 bg-white pl-2 pr-1 py-1 text-xs text-emerald-950"
+                className="inline-flex items-center gap-1 max-w-full rounded-full border border-emerald-200 bg-white pl-2 pr-1 py-1 text-sm text-emerald-950"
               >
                 <span className="truncate max-w-[14rem]" title={`읍면동 ${code}`}>
                   [읍·면·동] {labelEupChip(regions, code)}
@@ -942,7 +942,7 @@ export default function RegionSelector() {
       </div>
 
       {localError ? (
-        <p className="text-xs text-red-600 leading-snug" role="alert">
+        <p className="text-sm text-red-600 leading-snug" role="alert">
           {localError}
         </p>
       ) : null}

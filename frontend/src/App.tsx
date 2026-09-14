@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import CollapsibleLeftSidebar from "@ch2/macro-shell/CollapsibleLeftSidebar";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
@@ -54,10 +55,13 @@ export default function App() {
 
       <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
         <main className="flex flex-1 overflow-hidden min-h-0">
-          <aside className="layout-sidebar p-4 space-y-4">
+          <CollapsibleLeftSidebar
+            storageKey="land"
+            className="layout-sidebar p-4 space-y-4"
+          >
             <RegionSelector />
             <PaidFilterTable />
-          </aside>
+          </CollapsibleLeftSidebar>
 
           <div className="layout-main">
             <section className="px-4 pt-4 shrink-0">

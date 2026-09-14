@@ -534,7 +534,7 @@ export default function PaidMatrixYearlyModal({
           {canDetail && panel === "longTerm" && (
             <div className="space-y-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 leading-relaxed flex-1 min-w-[12rem]">
+                <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 leading-relaxed flex-1 min-w-[12rem]">
                   {ltData?.disclaimer ??
                     (matrixMode === "group"
                       ? `장기 추세: 만년력 연도·용도×지목군 기준${isRolling ? " · 롤링 창과 기간 축이 다름" : ""} · 도로·면적·이상치·지분 필터 미적용 · 평균 모드에서 복수지역 가중 통합선(아래 별도 칸)`

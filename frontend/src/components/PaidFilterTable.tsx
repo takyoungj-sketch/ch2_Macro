@@ -99,13 +99,13 @@ export default function PaidFilterTable() {
   };
 
   return (
-    <div className="border border-slate-200 rounded-xl bg-white text-xs text-slate-700 overflow-hidden">
+    <div className="border border-slate-200 rounded-xl bg-white text-sm text-slate-700 overflow-hidden">
       <table className="w-full border-collapse">
         <tbody>
           <tr className="border-b border-slate-100 align-top">
-            <th className="w-[6.75rem] align-top px-2 py-2 bg-slate-50 text-[11px] font-semibold text-slate-600 text-left leading-snug">
+            <th className="w-[6.75rem] align-top px-2 py-2 bg-slate-50 text-sm font-semibold text-slate-600 text-left leading-snug">
               연도
-              <span className="block font-normal text-slate-400 text-[10px] mt-0.5">만년력</span>
+              <span className="block font-normal text-slate-400 text-sm mt-0.5">만년력</span>
             </th>
             <td className="px-2 py-2">
               <div className="flex flex-wrap gap-1">
@@ -119,7 +119,7 @@ export default function PaidFilterTable() {
                       onClick={() => togglePaidYear(y)}
                       disabled={on && selectedYears.length <= 1}
                       title={String(y)}
-                      className={`min-w-[2.35rem] px-1 py-1 rounded text-[11px] font-semibold border transition-colors ${
+                      className={`min-w-[2.35rem] px-1 py-1 rounded text-sm font-semibold border transition-colors ${
                         on
                           ? "bg-blue-600 text-white border-blue-600"
                           : "bg-white text-slate-500 border-slate-300 hover:border-blue-400"
@@ -134,7 +134,7 @@ export default function PaidFilterTable() {
           </tr>
 
           <tr className="border-b border-slate-100 align-top">
-            <th className="align-top px-2 py-2 bg-slate-50 text-[11px] font-semibold text-slate-600 text-left leading-snug">
+            <th className="align-top px-2 py-2 bg-slate-50 text-sm font-semibold text-slate-600 text-left leading-snug">
               도로조건
             </th>
             <td className="px-2 py-1.5">
@@ -147,7 +147,7 @@ export default function PaidFilterTable() {
           </tr>
 
           <tr className="border-b border-slate-100 align-top">
-            <th className="align-top px-2 py-2 bg-slate-50 text-[11px] font-semibold text-slate-600 text-left leading-snug">
+            <th className="align-top px-2 py-2 bg-slate-50 text-sm font-semibold text-slate-600 text-left leading-snug">
               면적구분
             </th>
             <td className="px-2 py-1.5">
@@ -159,7 +159,7 @@ export default function PaidFilterTable() {
                 />
               </div>
               {customAreaSpan && (
-                <p className="text-[10px] text-amber-800 mt-1 leading-snug">
+                <p className="text-sm text-amber-800 mt-1 leading-snug">
                   면적(㎡) 직접 범위를 쓰는 동안에는 광소·정상·광대 구분이 적용되지 않습니다.
                 </p>
               )}
@@ -167,12 +167,12 @@ export default function PaidFilterTable() {
           </tr>
 
           <tr className="border-b border-slate-100 align-top">
-            <th className="align-top px-2 py-2 bg-slate-50 text-[11px] font-semibold text-slate-600 text-left leading-snug">
+            <th className="align-top px-2 py-2 bg-slate-50 text-sm font-semibold text-slate-600 text-left leading-snug">
               면적(㎡) 범위
             </th>
             <td className="px-2 py-2 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <label className="flex items-center gap-1 text-[11px] text-slate-600">
+                <label className="flex items-center gap-1 text-sm text-slate-600">
                   <span className="text-slate-500 w-8 shrink-0">최소</span>
                   <input
                     type="number"
@@ -191,11 +191,11 @@ export default function PaidFilterTable() {
                         area_sqm_min: Number.isFinite(n) ? n : null,
                       });
                     }}
-                    className="w-24 rounded border border-slate-200 px-1.5 py-0.5 text-[11px] tabular-nums"
+                    className="w-24 rounded border border-slate-200 px-1.5 py-0.5 text-sm tabular-nums"
                   />
                 </label>
                 <span className="text-slate-300">~</span>
-                <label className="flex items-center gap-1 text-[11px] text-slate-600">
+                <label className="flex items-center gap-1 text-sm text-slate-600">
                   <span className="text-slate-500 w-8 shrink-0">최대</span>
                   <input
                     type="number"
@@ -214,12 +214,12 @@ export default function PaidFilterTable() {
                         area_sqm_max: Number.isFinite(n) ? n : null,
                       });
                     }}
-                    className="w-24 rounded border border-slate-200 px-1.5 py-0.5 text-[11px] tabular-nums"
+                    className="w-24 rounded border border-slate-200 px-1.5 py-0.5 text-sm tabular-nums"
                   />
                 </label>
                 <button
                   type="button"
-                  className="text-[10px] text-blue-600 underline-offset-2 hover:underline"
+                  className="text-sm text-blue-600 underline-offset-2 hover:underline"
                   onClick={() => setPaidRequest({ area_sqm_min: null, area_sqm_max: null })}
                 >
                   범위 지우기
@@ -229,11 +229,11 @@ export default function PaidFilterTable() {
           </tr>
 
           <tr className="border-b border-slate-100 align-top">
-            <th className="align-top px-2 py-2 bg-slate-50 text-[11px] font-semibold text-slate-600 text-left">
+            <th className="align-top px-2 py-2 bg-slate-50 text-sm font-semibold text-slate-600 text-left">
               지분거래
             </th>
             <td className="px-2 py-2">
-              <label className="flex items-center gap-1.5 text-[11px] text-slate-600 cursor-pointer">
+              <label className="flex items-center gap-1.5 text-sm text-slate-600 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={paidRequest.exclude_partial}
@@ -248,7 +248,7 @@ export default function PaidFilterTable() {
           </tr>
 
           <tr className="border-b border-slate-100 align-top">
-            <th className="align-top px-2 py-2 bg-slate-50 text-[11px] font-semibold text-slate-600 text-left leading-snug">
+            <th className="align-top px-2 py-2 bg-slate-50 text-sm font-semibold text-slate-600 text-left leading-snug">
               거래유형
             </th>
             <td className="px-2 py-2">
@@ -262,7 +262,7 @@ export default function PaidFilterTable() {
                       onClick={() => togglePaidDealTypeExclude(dt)}
                       disabled={on && selectedDealTypes.length <= 1}
                       title={dt}
-                      className={`px-2 py-1 rounded text-[11px] font-semibold border transition-colors ${
+                      className={`px-2 py-1 rounded text-sm font-semibold border transition-colors ${
                         on
                           ? "bg-blue-600 text-white border-blue-600"
                           : "bg-white text-slate-500 border-slate-300 hover:border-blue-400"
@@ -277,11 +277,11 @@ export default function PaidFilterTable() {
           </tr>
 
           <tr className="border-b border-slate-100 align-top">
-            <th className="px-2 py-2 bg-slate-50 text-[11px] font-semibold text-slate-600 text-left whitespace-nowrap">
+            <th className="px-2 py-2 bg-slate-50 text-sm font-semibold text-slate-600 text-left whitespace-nowrap">
               이상치
             </th>
             <td className="px-2 py-2 space-y-2">
-              <label className="flex items-center gap-1.5 text-[11px] text-slate-600 cursor-pointer">
+              <label className="flex items-center gap-1.5 text-sm text-slate-600 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={paidRequest.exclude_outlier}
@@ -298,11 +298,11 @@ export default function PaidFilterTable() {
                 }`}
                 aria-disabled={!paidRequest.exclude_outlier}
               >
-                <span className="text-[10px] text-slate-500 shrink-0">IQR 배수 k:</span>
+                <span className="text-sm text-slate-500 shrink-0">IQR 배수 k:</span>
                 {([1.5, 2, 3] as const).map((k) => (
                   <label
                     key={k}
-                    className={`inline-flex items-center gap-0.5 text-[11px] cursor-pointer ${paidRequest.outlier_iqr_multiplier === k ? "text-blue-700 font-semibold" : "text-slate-600"}`}
+                    className={`inline-flex items-center gap-0.5 text-sm cursor-pointer ${paidRequest.outlier_iqr_multiplier === k ? "text-blue-700 font-semibold" : "text-slate-600"}`}
                   >
                     <input
                       type="radio"
@@ -322,7 +322,7 @@ export default function PaidFilterTable() {
           <tr className="border-t border-slate-200 bg-slate-50/80">
             <td colSpan={2} className="p-3">
               {filterError ? (
-                <p className="text-[11px] text-red-600 mb-2">{filterError}</p>
+                <p className="text-sm text-red-600 mb-2">{filterError}</p>
               ) : null}
               <AnalysisActionButton
                 primary={filteredAnalysisActionLabel}
@@ -357,7 +357,7 @@ function IncludeToggleGrid({
         return (
           <label
             key={opt}
-            className={`inline-flex items-center gap-1 text-[10px] text-slate-700 cursor-pointer select-none ${included && includedCount <= 1 ? "opacity-90" : ""}`}
+            className={`inline-flex items-center gap-1 text-sm text-slate-700 cursor-pointer select-none ${included && includedCount <= 1 ? "opacity-90" : ""}`}
           >
             <input
               type="checkbox"

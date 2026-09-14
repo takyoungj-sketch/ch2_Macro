@@ -20,7 +20,7 @@ export default function FreeStatsWindowToggle({
         id={`${idPrefix}-win-${y}`}
         aria-pressed={active}
         onClick={() => setWindowYears(y)}
-        className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-colors ${
+        className={`px-3 py-1 rounded-md text-sm font-semibold transition-colors ${
           active
             ? "bg-white text-blue-700 shadow-sm"
             : "text-slate-500 hover:text-slate-700"
@@ -37,7 +37,7 @@ export default function FreeStatsWindowToggle({
       role="group"
       aria-label="계약일 기준 롤링 구간"
     >
-      <span className="text-[11px] text-slate-500 shrink-0 inline-flex items-center gap-1">
+      <span className="text-sm text-slate-500 shrink-0 inline-flex items-center gap-1">
         구간
         <StatsGlossaryHelp termId="rolling_window" size="xs" />
       </span>

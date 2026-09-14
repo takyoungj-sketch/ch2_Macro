@@ -18,6 +18,7 @@ import StatsTableExpandButton from "./components/StatsTableExpandButton";
 import BuildingDetailModal from "./components/BuildingDetailModal";
 import RegionalRegressionModal from "./components/RegionalRegressionModal";
 import CollectiveRegionMapHub, { type MapPanelMode } from "./components/CollectiveRegionMapHub";
+import CollapsibleLeftSidebar from "@ch2/macro-shell/CollapsibleLeftSidebar";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
@@ -506,7 +507,7 @@ export default function App() {
 
       <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
       <main className="flex flex-1 min-h-0">
-        <aside className="layout-sidebar p-4">
+        <CollapsibleLeftSidebar storageKey="collective" className="layout-sidebar p-4">
           <h2 className="text-sm font-semibold mb-3 text-slate-800 dark:text-slate-100">조건</h2>
           <div className="space-y-3">
             <div className="space-y-1">
@@ -675,7 +676,7 @@ export default function App() {
               지역회귀
             </button>
           </div>
-        </aside>
+        </CollapsibleLeftSidebar>
 
         <div className="layout-main">
           <section className="px-4 pt-4 shrink-0">

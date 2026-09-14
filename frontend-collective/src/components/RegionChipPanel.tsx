@@ -95,7 +95,7 @@ export default function RegionChipPanel({
           해제
         </button>
       </div>
-      <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto border border-slate-100 dark:border-slate-700 rounded p-1.5">
+      <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto border border-slate-100 dark:border-slate-700 rounded p-1.5">
         {options.map((o) => {
           const disabled = isDisabled(o);
           return (
@@ -103,7 +103,7 @@ export default function RegionChipPanel({
               key={o.id ?? o.name}
               title={disabled ? `거래 ${minN}건 미만` : undefined}
               className={clsx(
-                "flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded border",
+                "flex items-center gap-0.5 text-sm px-2 py-1 rounded border",
                 disabled
                   ? "opacity-45 cursor-not-allowed bg-slate-50 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700"
                   : "cursor-pointer",
@@ -129,7 +129,7 @@ export default function RegionChipPanel({
             </label>
           );
         })}
-        {!options.length && <span className="text-[10px] text-slate-400">항목 없음</span>}
+        {!options.length && <span className="text-sm text-slate-400">항목 없음</span>}
       </div>
     </div>
   );

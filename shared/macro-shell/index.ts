@@ -2,6 +2,7 @@ export * from "./displayUi";
 export { default as DisplaySettingsControls } from "./DisplaySettingsControls";
 export { default as MacroProfileNavLink } from "./MacroProfileNavLink";
 export { default as MacroRentNavLink } from "./MacroRentNavLink";
+export { default as CollapsibleLeftSidebar } from "./CollapsibleLeftSidebar";
 export { default as MacroStatsHeader } from "./MacroStatsHeader";
 export { default as MacroTypeNav } from "./MacroTypeNav";
 export type { MacroAppKind } from "./MacroTypeNav";

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
+import CollapsibleLeftSidebar from "@ch2/macro-shell/CollapsibleLeftSidebar";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
@@ -58,7 +59,12 @@ import RegressionScatterSection from "./components/RegressionScatterSection";
 import { buildBuiltRegressionContext } from "./api/aiClient";
 import { recordAnalysisHistory } from "@ch2/ai-assistant/aiClient";
 import AnalysisHelpPanel from "./components/AnalysisHelpPanel";
-import { BUILT_REGRESSION_HELP } from "./utils/builtAnalysisHelp";
+import {
+  BUILT_REGRESSION_HELP,
+  BUILT_RESPONSE_SCALE_HELP,
+  BUILT_SAMPLE_HELP,
+  BUILT_VAR_SELECT_HELP,
+} from "./utils/builtAnalysisHelp";
 import type {
   Addr3Option,
   AssetType,
@@ -1065,7 +1071,10 @@ export default function App() {
       <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
       <main className="flex flex-1 min-h-0 overflow-hidden">
         {/* 왼쪽: 유형·지역·표본 필터 */}
-        <aside className="layout-sidebar p-4 space-y-4">
+        <CollapsibleLeftSidebar
+          storageKey="built"
+          className="layout-sidebar p-4 space-y-4"
+        >
           <div>
             <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-3">유형 · 지역</h2>
             {metaQ.isError && (
@@ -1330,9 +1339,9 @@ export default function App() {
 
           <div className="space-y-3 border-t border-slate-200 pt-3">
             <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
-              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">1. 변수 선택</p>
-              <p className="text-[10px] text-slate-500 leading-snug">
-                「모형 탐색」은 아래 체크와 무관한 SSOT 변수 풀을 서버에서 탐색합니다.
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 inline-flex items-center gap-1">
+                1. 변수 선택
+                <AnalysisHelpPanel explain={BUILT_VAR_SELECT_HELP} title="변수 선택 설명" />
               </p>
               <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs">
                 {(
@@ -1378,52 +1387,39 @@ export default function App() {
                     {label}
                   </label>
                 ))}
-                {vars.structure_dummy && !enrich && (
-                  <span className="text-slate-500 w-full text-[10px] leading-snug">
-                    구조는 건축물대장 보강을 켜야 쓸 수 있습니다.
-                  </span>
-                )}
-                {vars.region_leaf_dummy && (
-                  <span className="text-slate-500 w-full text-[10px] leading-snug">
-                    {riList.length >= 2
-                      ? "선택한 법정리 간 가격 수준 차이를 통제합니다."
-                      : "읍·면·동 풀링 회귀(하위 scope)에만 적용. 시군구·구 단일 회귀에는 넣지 않습니다."}
-                  </span>
-                )}
               </div>
             </section>
 
             <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
-              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">2. 회귀모형 선택</p>
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 inline-flex items-center gap-1">
+                2. 회귀모형 선택
+                <AnalysisHelpPanel explain={BUILT_RESPONSE_SCALE_HELP} title="회귀모형 선택 설명" />
+              </p>
               <div className="flex flex-col gap-1.5 text-xs">
                 {(
                   [
-                    ["linear", "선형", "금액 ~ 변수 (기본)"],
-                    ["log", "log (semi-log)", "log(금액) ~ 변수 — % 해석, 극단 외삽 시 exp 폭발 주의"],
-                    ["loglog", "log-log", "log(금액) ~ log(면적) — 광평수 외삽에 유리 (면적 변수 필요)"],
+                    ["linear", "선형"],
+                    ["log", "log"],
+                    ["loglog", "log-log"],
                   ] as const
-                ).map(([value, label, hint]) => {
+                ).map(([value, label]) => {
                   const disabled = value === "loglog" && !canLogLog;
                   return (
                     <label
                       key={value}
                       className={clsx(
-                        "flex items-start gap-2",
+                        "flex items-center gap-2",
                         disabled && "opacity-50 cursor-not-allowed",
                       )}
                     >
                       <input
                         type="radio"
                         name="response-scale"
-                        className="mt-0.5"
                         checked={responseScale === value}
                         disabled={disabled}
                         onChange={() => setResponseScale(value)}
                       />
-                      <span>
-                        <span className="font-medium">{label}</span>
-                        <span className="block text-[10px] text-slate-500 leading-snug">{hint}</span>
-                      </span>
+                      <span className="font-medium">{label}</span>
                     </label>
                   );
                 })}
@@ -1436,7 +1432,10 @@ export default function App() {
             </section>
 
             <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
-              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">3. 분석 표본</p>
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 inline-flex items-center gap-1">
+                3. 분석 표본
+                <AnalysisHelpPanel explain={BUILT_SAMPLE_HELP} title="분석 표본 설명" />
+              </p>
               <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs">
                 <label className="flex items-center gap-1">
                   <input
@@ -1454,9 +1453,6 @@ export default function App() {
                   />
                   지분거래 포함
                 </label>
-                <span className="text-[10px] text-slate-500 leading-snug">
-                  기본은 제외. 목록에는 지분 행이 그대로 보입니다.
-                </span>
               </div>
               <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs">
                 <label className="flex items-center gap-1">
@@ -1473,9 +1469,6 @@ export default function App() {
                   />
                   건축물대장 보강
                 </label>
-                <span className="text-[10px] text-slate-500 leading-snug">
-                  기본은 끄기. 켜면 목록·회귀 용도지역이 같아집니다. 원장은 덮지 않습니다.
-                </span>
               </div>
               <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs">
                 <label className="flex items-center gap-1">
@@ -1515,7 +1508,7 @@ export default function App() {
           >
             {regM.isPending ? "계산 중…" : "통계분석"}
           </button>
-        </aside>
+        </CollapsibleLeftSidebar>
 
         {/* 오른쪽: 지도 Hub + 회귀 분석 */}
         <div className="layout-main">
