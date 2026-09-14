@@ -511,14 +511,14 @@ export default function CommercialClusterDetailModal({
               {!trendCohortActive && rollingQ.data && rollingQ.data.points.length > 0 && (
                 <>
                   {(rollingQ.data.stats_as_of_label || statsAsOfLabel || periodLabel) && (
-                    <p className="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-2 py-1">
+                    <p className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-2 py-1">
                       {rollingQ.data.stats_as_of_label || statsAsOfLabel}
                       {windowYears ? ` · ${windowYears}년 창` : ""}
                       {periodLabel ? ` · ${periodLabel}` : ""}
                     </p>
                   )}
                   <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3">
-                    <p className="text-[10px] font-semibold text-slate-600 px-1 mb-2">12개월 롤링 구간 추이</p>
+                    <p className="text-xs font-semibold text-slate-600 px-1 mb-2">12개월 롤링 구간 추이</p>
                     <RollingTrendChart points={rollingQ.data.points} />
                   </div>
                   <div className="rounded-lg border border-slate-100 bg-white overflow-hidden">
@@ -578,16 +578,16 @@ export default function CommercialClusterDetailModal({
               {!longTermCohortActive && longTermYearQ.data && longTermYearQ.data.points.length > 0 && (
                 <>
                   {longTermYearQ.data.points.some((p) => p.year < 2021) && (
-                    <p className="text-[10px] text-indigo-600 mb-1">
+                    <p className="text-xs text-indigo-600 mb-1">
                       2010–2020 구간 포함 · {longTermYearQ.data.data_source === "mart" ? "annual mart" : "실시간 집계"}
                     </p>
                   )}
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                    <p className="text-[10px] text-slate-500">만년력 연도별 장기 추세</p>
+                    <p className="text-xs text-slate-500">만년력 연도별 장기 추세</p>
                     <LongTermMetricToggle metric={longTermMetric} onChange={setLongTermMetric} />
                   </div>
                   <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3">
-                    <p className="text-[10px] font-semibold text-slate-600 px-1 mb-2">연도별 장기 추세</p>
+                    <p className="text-xs font-semibold text-slate-600 px-1 mb-2">연도별 장기 추세</p>
                     <YearlyTrendChart
                       points={[...longTermYearQ.data.points].sort((a, b) => a.year - b.year)}
                       metric={longTermMetric}
@@ -659,7 +659,7 @@ export default function CommercialClusterDetailModal({
               )}
               {histCohortActive && cohortHistQ.data && (
                 <>
-                  <p className="text-[10px] text-indigo-700">
+                  <p className="text-xs text-indigo-700">
                     {cohortRunKeys.length}개 cluster 통합 · 실시간 · n={cohortHistQ.data.n.toLocaleString("ko-KR")}건
                   </p>
                   <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-2">
@@ -670,8 +670,7 @@ export default function CommercialClusterDetailModal({
               {!histCohortActive && histQ.isError && <p className="text-xs text-red-500 text-center py-4">분포를 불러오지 못했습니다.</p>}
               {!histCohortActive && histQ.data && (
                 <>
-                  <p className="text-[10px] text-slate-500">
-                    표본 수 <strong className="text-slate-700">{histQ.data.n.toLocaleString("ko-KR")}</strong>건
+                  <p className="text-xs text-slate-500">
                     {histScope === "single" && histYear != null && (
                       <>
                         {" "}

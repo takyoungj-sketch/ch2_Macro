@@ -5,10 +5,10 @@ const W = 420;
 const H = 270;
 const PAD_L = 28;
 const PAD_R = 28;
-const PAD_T = 52;
-const PAD_B = 48;
-const LABEL_PRICE_ABOVE = 13;
-const LABEL_COUNT_BELOW = 15;
+const PAD_T = 56;
+const PAD_B = 52;
+const LABEL_PRICE_ABOVE = 16;
+const LABEL_COUNT_BELOW = 18;
 const COUNT_MARKER_STROKE = "#787f89";
 const COUNT_DASH_LINE = "#94a3b8";
 
@@ -83,7 +83,7 @@ export default function YearlyTrendChart({
 
   return (
     <div className="w-full overflow-x-auto" role="img" aria-label={`연도별 ${priceLabel} 단가 및 거래 건수 추이`}>
-      <p className="text-[10px] text-slate-500 mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+      <p className="text-xs text-slate-500 mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
         <span className="inline-flex items-center gap-1 font-bold text-blue-600">
           <span className="inline-block w-3 h-0.5 bg-blue-600 rounded" aria-hidden />
           {priceLabel}(만원/㎡)
@@ -103,7 +103,7 @@ export default function YearlyTrendChart({
         preserveAspectRatio="xMidYMid meet"
       >
         {sorted.map((r, i) => (
-          <text key={r.year} x={xAt(i)} y={H - 8} textAnchor="middle" className={`fill-slate-700 dark:fill-slate-200 font-semibold ${n > 6 ? "text-[9px]" : "text-[10px]"}`}>
+          <text key={r.year} x={xAt(i)} y={H - 8} textAnchor="middle" className={`fill-slate-700 dark:fill-slate-200 font-semibold ${n > 6 ? "text-[12px]" : "text-[13px]"}`}>
             {r.year}
           </text>
         ))}
@@ -114,7 +114,7 @@ export default function YearlyTrendChart({
           <circle key={`c-${r.year}`} cx={xAt(i)} cy={yCount(r.count)} r={3.5} fill="#fff" stroke={COUNT_MARKER_STROKE} strokeWidth={2} />
         ))}
         {sorted.map((r, i) => (
-          <text key={`cl-${r.year}`} x={xAt(i)} y={yCount(r.count) + LABEL_COUNT_BELOW} textAnchor="middle" className="fill-slate-700 dark:fill-slate-200 font-semibold" opacity={0.95} style={{ fontSize: "11px" }}>
+          <text key={`cl-${r.year}`} x={xAt(i)} y={yCount(r.count) + LABEL_COUNT_BELOW} textAnchor="middle" className="fill-slate-700 dark:fill-slate-200 font-semibold" opacity={0.95} style={{ fontSize: "13px" }}>
             {r.count.toLocaleString("ko-KR")}
           </text>
         ))}
@@ -132,7 +132,7 @@ export default function YearlyTrendChart({
               const idx = sorted.indexOf(r);
               const cy = yPrice(Number(priceValue(r, metric)));
               return (
-                <text key={`ml-${r.year}`} x={xAt(idx)} y={cy - LABEL_PRICE_ABOVE} textAnchor="middle" className="fill-slate-900 dark:fill-white font-bold" style={{ fontSize: "12px" }}>
+                <text key={`ml-${r.year}`} x={xAt(idx)} y={cy - LABEL_PRICE_ABOVE} textAnchor="middle" className="fill-slate-900 dark:fill-white font-bold" style={{ fontSize: "14px" }}>
                   {formatPriceLabel(Number(priceValue(r, metric)))}
                 </text>
               );

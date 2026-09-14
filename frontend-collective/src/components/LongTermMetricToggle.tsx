@@ -15,7 +15,7 @@ export default function LongTermMetricToggle({
 }) {
   return (
     <div
-      className="inline-flex rounded-md border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 p-0.5 text-[10px]"
+      className="inline-flex rounded-md border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 p-0.5 text-xs"
       role="group"
       aria-label="장기 추세선 기준"
     >

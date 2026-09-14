@@ -92,7 +92,7 @@ function ScatterMini({
         {label}
         {mode === "raw" ? " vs 금액" : " (통제 후)"}
       </div>
-      <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 min-h-[2rem]">
+      <div className="text-xs text-slate-500 dark:text-slate-400 mb-1 min-h-[2rem]">
         {mode === "raw" ? (
           <>
             <span className="font-medium text-slate-700 dark:text-slate-200">

@@ -408,16 +408,16 @@ export default function BuildingDetailModal({
           {rollingQ.data && rollingPoints.length > 0 && (
             <>
               {rollingAsOf && (
-                <p className="text-[10px] text-indigo-600 dark:text-indigo-400">
+                <p className="text-xs text-indigo-600 dark:text-indigo-400">
                   {rollingAsOf}
                   {` · ${rollingQ.data.window_years || windowYears}년 창`}
                 </p>
               )}
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[10px] text-slate-500">
+                <p className="text-xs text-slate-500">
                   12개월 롤링 버킷 · 만원/㎡ · 전세·반전세·월세를 바꿔 볼 수 있습니다.
                 </p>
-                <div className="inline-flex rounded-md border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 p-0.5 text-[10px]">
+                <div className="inline-flex rounded-md border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 p-0.5 text-xs">
                   {ROLLING_SERIES.map((s) => (
                     <button
                       key={s.id}
@@ -436,13 +436,13 @@ export default function BuildingDetailModal({
                 </div>
               </div>
               <div className="modal-card px-2 py-3">
-                <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 px-1 mb-2">
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 px-1 mb-2">
                   12개월 롤링 버킷 추이 · {rollingSeriesLabel}
                 </p>
                 <RollingTrendChart points={rollingChartPoints} priceLabel="중앙값(만원/㎡)" />
               </div>
               <div className="modal-table-wrap">
-                <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 px-3 pt-3 pb-1">
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 px-3 pt-3 pb-1">
                   구간별 수치 · {rollingSeriesLabel}
                 </p>
                 <table className="w-full text-xs border-collapse modal-inner-table">

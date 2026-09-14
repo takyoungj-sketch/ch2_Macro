@@ -18,6 +18,12 @@ import {
   usePanelDrag,
   type PanelBox,
 } from "../ui-window/resizableWindow";
+import {
+  HELP_FONT_PX_DEFAULT,
+  HelpFontStepper,
+  persistHelpFontPx,
+  readStoredHelpFontPx,
+} from "../ui-window/helpFont";
 
 const BACKDROP_Z = 149;
 const PANEL_Z = 150;
@@ -31,8 +37,10 @@ const SIZE_STORAGE_KEY = "ch2-analysis-help-win-size";
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-1">
-      <h4 className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">{title}</h4>
-      <div className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">{children}</div>
+      <h4 className="font-semibold text-slate-700 dark:text-slate-200" style={{ fontSize: "1.05em" }}>
+        {title}
+      </h4>
+      <div className="text-slate-600 dark:text-slate-300 leading-relaxed">{children}</div>
     </section>
   );
 }
@@ -85,6 +93,7 @@ export default function AnalysisHelpPanel({
 }) {
   const [open, setOpen] = useState(false);
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  const [fontPx, setFontPx] = useState(HELP_FONT_PX_DEFAULT);
   const [box, setBox] = useState<PanelBox | null>(null);
   const userPlacedRef = useRef(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
@@ -137,6 +146,7 @@ export default function AnalysisHelpPanel({
 
   useEffect(() => {
     if (!open) return;
+    setFontPx(readStoredHelpFontPx());
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
@@ -183,30 +193,46 @@ export default function AnalysisHelpPanel({
                 <span className="ml-1.5">· 드래그로 이동 · 모서리로 크기 조절</span>
               </p>
             </div>
-            <button
-              type="button"
-              className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 shrink-0"
-              onClick={() => setOpen(false)}
-            >
-              닫기
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <HelpFontStepper
+                value={fontPx}
+                onChange={(next) => {
+                  setFontPx(next);
+                  persistHelpFontPx(next);
+                }}
+              />
+              <button
+                type="button"
+                className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                onClick={() => setOpen(false)}
+              >
+                닫기
+              </button>
+            </div>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-3">
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-3" style={{ fontSize: fontPx }}>
             <Section title="요약">
               <p>{explain.summary}</p>
             </Section>
 
             {explain.formula && (
               <Section title="공식">
-                <p className="font-mono text-[10px] bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-600 rounded px-2 py-1.5 whitespace-pre-wrap">
+                <p
+                  className="font-mono bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-600 rounded px-2 py-1.5 whitespace-pre-wrap"
+                  style={{ fontSize: "0.92em" }}
+                >
                   {explain.formula}
                 </p>
                 {explain.index_rule && (
-                  <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">지수: {explain.index_rule}</p>
+                  <p className="mt-1 text-slate-500 dark:text-slate-400" style={{ fontSize: "0.92em" }}>
+                    지수: {explain.index_rule}
+                  </p>
                 )}
                 {explain.reference && (
-                  <p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">기준: {explain.reference}</p>
+                  <p className="mt-0.5 text-slate-500 dark:text-slate-400" style={{ fontSize: "0.92em" }}>
+                    기준: {explain.reference}
+                  </p>
                 )}
               </Section>
             )}
@@ -234,7 +260,7 @@ export default function AnalysisHelpPanel({
                     <li
                       key={hint}
                       className={clsx(
-                        "text-[11px] pl-2 border-l-2",
+                        "pl-2 border-l-2",
                         hint.startsWith("⚠")
                           ? "border-amber-400 text-amber-900 dark:text-amber-200"
                           : "border-indigo-300 text-slate-700 dark:text-slate-200",
@@ -261,13 +287,13 @@ export default function AnalysisHelpPanel({
                     >
                       <button
                         type="button"
-                        className="w-full text-left px-2 py-1.5 text-[11px] font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
+                        className="w-full text-left px-2 py-1.5 font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
                         onClick={() => setActivePreset(activePreset === p.id ? null : p.id)}
                       >
                         {p.question}
                       </button>
                       {activePreset === p.id && (
-                        <p className="px-2 pb-2 text-[11px] text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-600">
+                        <p className="px-2 pb-2 text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-600">
                           {p.answer || "화면 Facts·지표를 함께 확인해 주세요."}
                         </p>
                       )}

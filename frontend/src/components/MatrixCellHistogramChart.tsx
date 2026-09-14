@@ -4,8 +4,8 @@ const W = 520;
 const H = 270;
 const PAD_L = 40;
 const PAD_R = 14;
-const PAD_T = 22;
-const PAD_B = 38;
+const PAD_T = 36;
+const PAD_B = 44;
 
 function shortNum(v: number): string {
   if (!Number.isFinite(v)) return "—";
@@ -31,7 +31,8 @@ export default function MatrixCellHistogramChart({
   const barW = Math.max((innerW - gap * (n - 1)) / n, 2);
 
   const labelEvery = n <= 8 ? 1 : n <= 16 ? 2 : Math.ceil(n / 5);
-  const tickFontPx = n > 20 ? 10 : n > 12 ? 11 : 12;
+  const tickFontPx = n > 20 ? 12 : n > 12 ? 13 : 14;
+  const countFontPx = n > 16 ? 11 : 13;
 
   return (
     <div className="w-full overflow-x-auto" role="img" aria-label="단가 분포 히스토그램">
@@ -41,7 +42,7 @@ export default function MatrixCellHistogramChart({
         width={chartW > W ? chartW : undefined}
         preserveAspectRatio="xMidYMid meet"
       >
-        <text x={PAD_L} y={16} className="fill-slate-700 dark:fill-slate-200 text-[11px] font-semibold">
+        <text x={PAD_L} y={16} className="fill-slate-700 dark:fill-slate-200 text-[13px] font-semibold">
           빈도 (건)
         </text>
         {bins.map((b, i) => {
@@ -49,18 +50,30 @@ export default function MatrixCellHistogramChart({
           const x = PAD_L + i * (barW + gap);
           const y = PAD_T + innerH - h;
           return (
-            <rect
-              key={`b-${i}`}
-              x={x}
-              y={y}
-              width={barW}
-              height={Math.max(h, b.count > 0 ? 1.5 : 0)}
-              fill="#93c5fd"
-              stroke="#2563eb"
-              strokeOpacity={0.55}
-              strokeWidth={0.6}
-              rx={1}
-            />
+            <g key={`b-${i}`}>
+              <rect
+                x={x}
+                y={y}
+                width={barW}
+                height={Math.max(h, b.count > 0 ? 1.5 : 0)}
+                fill="#93c5fd"
+                stroke="#2563eb"
+                strokeOpacity={0.55}
+                strokeWidth={0.6}
+                rx={1}
+              />
+              {b.count > 0 && (
+                <text
+                  x={x + barW / 2}
+                  y={y - 4}
+                  textAnchor="middle"
+                  className="fill-slate-800 dark:fill-white font-semibold"
+                  style={{ fontSize: `${countFontPx}px` }}
+                >
+                  {b.count.toLocaleString("ko-KR")}
+                </text>
+              )}
+            </g>
           );
         })}
         {bins.map((b, i) => {

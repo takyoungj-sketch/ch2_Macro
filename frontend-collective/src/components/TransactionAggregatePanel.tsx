@@ -378,7 +378,7 @@ export default function TransactionAggregatePanel<T, D extends string, K extends
                       <div className="font-medium text-slate-700 dark:text-slate-200 truncate max-w-[72px]" title={col}>
                         {col}
                       </div>
-                      <div className="text-[9px] text-slate-400 font-normal tabular-nums">
+                      <div className="text-[11px] text-slate-400 font-normal tabular-nums">
                         {(crossTab.colTotals[col]?.count ?? 0).toLocaleString("ko-KR")}건
                       </div>
                     </th>
@@ -397,7 +397,7 @@ export default function TransactionAggregatePanel<T, D extends string, K extends
                       <div className="truncate max-w-[120px]" title={row}>
                         {row}
                       </div>
-                      <div className="text-[9px] text-slate-400 font-normal tabular-nums">
+                      <div className="text-[11px] text-slate-400 font-normal tabular-nums">
                         {(crossTab.rowTotals[row]?.count ?? 0).toLocaleString("ko-KR")}건
                       </div>
                     </td>

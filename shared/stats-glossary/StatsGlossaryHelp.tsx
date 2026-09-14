@@ -11,27 +11,19 @@ import {
   usePanelDrag,
   type PanelBox,
 } from "../ui-window/resizableWindow";
+import {
+  HELP_FONT_PX_DEFAULT,
+  HelpFontStepper,
+  persistHelpFontPx,
+  readStoredHelpFontPx,
+} from "../ui-window/helpFont";
 import "./glossaryHelp.css";
 
-const FONT_PX_MIN = 11;
-const FONT_PX_MAX = 18;
-const FONT_PX_DEFAULT = 13;
-const FONT_STORAGE_KEY = "ch2-glossary-font-px";
 const SIZE_STORAGE_KEY = "ch2-glossary-help-win-size";
 const DEFAULT_W = 360;
 const DEFAULT_H = 320;
 const MIN_W = 240;
 const MIN_H = 200;
-
-function readStoredFontPx(): number {
-  try {
-    const n = Number(localStorage.getItem(FONT_STORAGE_KEY));
-    if (Number.isFinite(n) && n >= FONT_PX_MIN && n <= FONT_PX_MAX) return n;
-  } catch {
-    /* ignore */
-  }
-  return FONT_PX_DEFAULT;
-}
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -122,7 +114,7 @@ export default function StatsGlossaryHelp({
 }) {
   const entry = getGlossaryEntry(termId);
   const [open, setOpen] = useState(false);
-  const [fontPx, setFontPx] = useState(FONT_PX_DEFAULT);
+  const [fontPx, setFontPx] = useState(HELP_FONT_PX_DEFAULT);
   const [box, setBox] = useState<PanelBox | null>(null);
   const userPlacedRef = useRef(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
@@ -162,20 +154,9 @@ export default function StatsGlossaryHelp({
   }, [open]);
 
   useEffect(() => {
-    setFontPx(readStoredFontPx());
-  }, []);
-
-  const bumpFont = (delta: number) => {
-    setFontPx((prev) => {
-      const next = Math.min(FONT_PX_MAX, Math.max(FONT_PX_MIN, prev + delta));
-      try {
-        localStorage.setItem(FONT_STORAGE_KEY, String(next));
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  };
+    if (!open) return;
+    setFontPx(readStoredHelpFontPx());
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -236,27 +217,13 @@ export default function StatsGlossaryHelp({
                 </p>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  className="ch2-glossary-font-btn"
-                  aria-label="글자 작게"
-                  disabled={fontPx <= FONT_PX_MIN}
-                  onClick={() => bumpFont(-1)}
-                >
-                  −
-                </button>
-                <span className="tabular-nums text-slate-500 dark:text-slate-300 w-5 text-center" style={{ fontSize: 11 }}>
-                  {fontPx}
-                </span>
-                <button
-                  type="button"
-                  className="ch2-glossary-font-btn"
-                  aria-label="글자 크게"
-                  disabled={fontPx >= FONT_PX_MAX}
-                  onClick={() => bumpFont(1)}
-                >
-                  +
-                </button>
+                <HelpFontStepper
+                  value={fontPx}
+                  onChange={(next) => {
+                    setFontPx(next);
+                    persistHelpFontPx(next);
+                  }}
+                />
                 <button
                   type="button"
                   className="text-slate-400 hover:text-slate-600 dark:text-slate-300 dark:hover:text-white ml-0.5"

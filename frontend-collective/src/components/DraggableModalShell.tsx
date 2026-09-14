@@ -459,7 +459,7 @@ export default function DraggableModalShell({
                 {title}
               </h2>
               {subtitle && (
-                <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</div>
               )}
             </div>
             <div className="flex items-center gap-1 shrink-0" data-no-drag>
@@ -489,7 +489,7 @@ export default function DraggableModalShell({
                     −
                   </button>
                   <span
-                    className="min-w-[2.5rem] text-center tabular-nums font-medium text-[10px] text-slate-600 dark:text-slate-300"
+                    className="min-w-[2.5rem] text-center tabular-nums font-medium text-xs text-slate-600 dark:text-slate-300"
                     aria-live="polite"
                   >
                     {fontPct}%
@@ -515,7 +515,7 @@ export default function DraggableModalShell({
                 >
                   {fullscreen ? "⛶" : "⛶"}
                   <span className="sr-only">{fullscreen ? "축소" : "확대"}</span>
-                  <span className="ml-0.5 text-[10px] font-medium tabular-nums" aria-hidden>
+                  <span className="ml-0.5 text-xs font-medium tabular-nums" aria-hidden>
                     {fullscreen ? "축소" : "전체"}
                   </span>
                 </button>

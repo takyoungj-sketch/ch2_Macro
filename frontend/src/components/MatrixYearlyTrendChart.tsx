@@ -5,11 +5,11 @@ const W = 420;
 const H = 270;
 const PAD_L = 28;
 const PAD_R = 28;
-const PAD_T = 44;
-const PAD_B = 42;
+const PAD_T = 48;
+const PAD_B = 48;
 
-const LABEL_MEAN_ABOVE = 13;
-const LABEL_COUNT_BELOW = 15;
+const LABEL_MEAN_ABOVE = 16;
+const LABEL_COUNT_BELOW = 18;
 
 function formatMeanLabel(v: number): string {
   return Number(v).toLocaleString("ko-KR", {
@@ -120,7 +120,7 @@ export default function MatrixYearlyTrendChart({
 
   return (
     <div className="w-full overflow-x-auto" role="img" aria-label="구간별 평균 단가 및 거래 건수 추이 그래프">
-      <p className="text-[10px] text-slate-500 mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+      <p className="text-xs text-slate-500 mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
         <span className="inline-flex items-center gap-1 font-bold text-blue-600">
           <span className="inline-block w-3 h-0.5 bg-blue-600 rounded" aria-hidden />
           평균(만원/㎡)
@@ -193,7 +193,7 @@ export default function MatrixYearlyTrendChart({
             x={xAt(i)}
             y={H - 8}
             textAnchor="middle"
-            className={`fill-slate-700 dark:fill-slate-200 font-semibold ${n > 6 ? "text-[9px]" : "text-[10px]"}`}
+            className={`fill-slate-700 dark:fill-slate-200 font-semibold ${n > 6 ? "text-[12px]" : "text-[13px]"}`}
           >
             {formatMatrixBucketAxisLabel(r)}
           </text>
@@ -235,7 +235,7 @@ export default function MatrixYearlyTrendChart({
               dominantBaseline="hanging"
               className="fill-slate-700 dark:fill-slate-200 font-semibold"
               opacity={0.95}
-              style={{ fontSize: "11px" }}
+              style={{ fontSize: "13px" }}
             >
               {r.count.toLocaleString("ko-KR")}
             </text>
@@ -278,7 +278,7 @@ export default function MatrixYearlyTrendChart({
                   textAnchor="middle"
                   dominantBaseline="auto"
                   className="fill-slate-900 dark:fill-white font-bold tracking-tight"
-                  style={{ fontSize: "12px" }}
+                  style={{ fontSize: "14px" }}
                 >
                   {formatMeanLabel(ym)}
                 </text>

@@ -15,7 +15,7 @@ export interface ScatterRow {
 
 type ScatterPt = { code: string; name: string; x: number; y: number; px: number; py: number };
 
-const PAD = { l: 48, r: 8, t: 8, b: 26 };
+const PAD = { l: 56, r: 8, t: 8, b: 32 };
 
 function useIsDark() {
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
@@ -128,7 +128,7 @@ export default function NationalScatter({ rows, tab, focusCode, onPick }: Props)
 
     const ink = dark ? "#94a3b8" : "#64748b";
     const faint = dark ? "rgba(148,163,184,0.22)" : "rgba(100,116,139,0.28)";
-    ctx.font = "10px ui-sans-serif, system-ui, sans-serif";
+    ctx.font = "13px ui-sans-serif, system-ui, sans-serif";
     ctx.fillStyle = ink;
     ctx.strokeStyle = dark ? "rgba(148,163,184,0.25)" : "rgba(148,163,184,0.45)";
     ctx.lineWidth = 1;
@@ -136,7 +136,7 @@ export default function NationalScatter({ rows, tab, focusCode, onPick }: Props)
     const { pts, xMin, xMax, yMin, yMax } = layout;
     if (!pts.length) {
       ctx.fillStyle = dark ? "#94a3b8" : "#94a3b8";
-      ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
+      ctx.font = "13px ui-sans-serif, system-ui, sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText("그릴 점이 없습니다", cssW / 2, cssH / 2);
@@ -233,11 +233,11 @@ export default function NationalScatter({ rows, tab, focusCode, onPick }: Props)
   return (
     <div className="mt-2">
       <div className="flex items-center gap-1">
-        <h3 className="text-[11px] font-medium text-slate-600 dark:text-slate-300">전국 분포</h3>
+        <h3 className="text-[13px] font-medium text-slate-600 dark:text-slate-300">전국 분포</h3>
         <StatsGlossaryHelp termId="national_scatter" size="xs" />
         <StatsGlossaryHelp termId="pop_trade_corr" size="xs" />
       </div>
-      <p className="text-[10px] leading-snug text-slate-400">
+      <p className="text-xs leading-snug text-slate-400">
         가로 인구 · 세로 {yHead} · 로그 · {raw.length.toLocaleString("ko-KR")}점
         {corr != null ? ` · 동조 r ${formatCorr(corr, raw.length)}` : ""}
         {!focusOnPlot && focusCode ? " · 현재 지역은 인구 없어 점 없음" : ""}
@@ -257,7 +257,7 @@ export default function NationalScatter({ rows, tab, focusCode, onPick }: Props)
         />
         {hover && (
           <div
-            className="pointer-events-none absolute z-10 max-w-[11rem] rounded border border-slate-200 bg-white px-1.5 py-1 text-[10px] shadow-sm dark:border-slate-600 dark:bg-slate-800"
+            className="pointer-events-none absolute z-10 max-w-[11rem] rounded border border-slate-200 bg-white px-1.5 py-1 text-xs shadow-sm dark:border-slate-600 dark:bg-slate-800"
             style={{
               left: Math.min(hover.px + 8, cssW - 140),
               top: Math.max(4, hover.py - 36),

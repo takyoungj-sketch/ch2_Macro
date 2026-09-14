@@ -22,9 +22,9 @@ const W = 420;
 const H = 280;
 const PAD_L = 28;
 const PAD_R = 28;
-const PAD_T = 52;
-const PAD_B = 48;
-const LABEL_ABOVE = 13;
+const PAD_T = 56;
+const PAD_B = 52;
+const LABEL_ABOVE = 16;
 
 function formatMeanLabel(v: number): string {
   return Number(v).toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -106,7 +106,7 @@ export default function MultiBuildingTrendChart({
 
   return (
     <div className="w-full overflow-x-auto" role="img" aria-label={`다중 단지 ${metricLabel} 추이`}>
-      <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+      <p className="text-xs text-slate-500 dark:text-slate-400 mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
         <span className="inline-flex items-center gap-1 font-medium text-slate-600 dark:text-slate-300">
           <span
             className="inline-block w-3 h-0.5 rounded bg-slate-500"
@@ -136,7 +136,7 @@ export default function MultiBuildingTrendChart({
             x={xAt(order)}
             y={H - 8}
             textAnchor="middle"
-            className={clsx("fill-slate-700 dark:fill-slate-200 font-semibold", n > 6 ? "text-[9px]" : "text-[10px]")}
+            className={clsx("fill-slate-700 dark:fill-slate-200 font-semibold", n > 6 ? "text-[12px]" : "text-[13px]")}
           >
             {xLabelByOrder.get(order) ?? String(order)}
           </text>
@@ -162,7 +162,7 @@ export default function MultiBuildingTrendChart({
                       y={yVal(v) - LABEL_ABOVE - (idx % 3) * 14}
                       textAnchor="middle"
                       className="fill-slate-900 dark:fill-white font-bold"
-                      style={{ fontSize: n > 5 ? "11px" : "12px" }}
+                      style={{ fontSize: n > 5 ? "13px" : "14px" }}
                     >
                       {formatLabel(v)}
                     </text>

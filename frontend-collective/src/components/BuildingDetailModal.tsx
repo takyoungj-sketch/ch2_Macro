@@ -1042,17 +1042,17 @@ export default function BuildingDetailModal({
               {!trendCohortActive && panel === "trend" && rollingQ.data && rollingQ.data.points.length > 0 && (
                 <>
                   {rollingQ.data.stats_as_of_label && (
-                    <p className="text-[10px] text-indigo-600 dark:text-indigo-400 mb-1">
+                    <p className="text-xs text-indigo-600 dark:text-indigo-400 mb-1">
                       {rollingQ.data.stats_as_of_label}
                       {rollingQ.data.window_years ? ` · ${rollingQ.data.window_years}년 창` : ""}
                     </p>
                   )}
                   <div className="modal-card px-2 py-3">
-                    <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 px-1 mb-2">12개월 롤링 버킷 추이</p>
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 px-1 mb-2">12개월 롤링 버킷 추이</p>
                     <RollingTrendChart points={rollingQ.data.points} />
                   </div>
                   <div className="modal-table-wrap">
-                    <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 px-3 pt-3 pb-1">구간별 수치</p>
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 px-3 pt-3 pb-1">구간별 수치</p>
                     <table className="w-full text-xs border-collapse modal-inner-table">
                       <thead>
                         <tr>
@@ -1216,7 +1216,7 @@ export default function BuildingDetailModal({
               {!longTermCohortActive && !overlayLongTermSeries && !presaleOverlay.length && !typeSiblings.length && longTermYears.length > 0 && (
                 <>
                   {longTermYears.some((p) => p.year < 2021) && (
-                    <p className="text-[10px] text-indigo-600 dark:text-indigo-400 mb-1">
+                    <p className="text-xs text-indigo-600 dark:text-indigo-400 mb-1">
                       2010–2020 구간 포함 · {longTermYearQ.data?.data_source === "mart" ? "annual mart" : "실시간 집계"}
                     </p>
                   )}
@@ -1227,11 +1227,11 @@ export default function BuildingDetailModal({
                     <LongTermMetricToggle metric={longTermMetric} onChange={setLongTermMetric} />
                   </div>
                   <div className="modal-card px-2 py-3">
-                    <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 px-1 mb-2">추이 (꺾은선)</p>
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 px-1 mb-2">추이 (꺾은선)</p>
                     <YearlyTrendChart points={longTermYears} metric={longTermMetric} />
                   </div>
                   <div className="modal-table-wrap">
-                    <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 px-3 pt-3 pb-1">연도별 수치</p>
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 px-3 pt-3 pb-1">연도별 수치</p>
                     <table className="w-full text-xs border-collapse modal-inner-table">
                       <thead>
                         <tr>
@@ -1296,7 +1296,7 @@ export default function BuildingDetailModal({
               )}
               {histCohortActive && cohortHistQ.data && (
                 <>
-                  <p className="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-2 py-1">
+                  <p className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-2 py-1">
                     {cohortRunKeys.length}개 단지 통합 · 실시간 · n={cohortHistQ.data.n.toLocaleString("ko-KR")}건
                   </p>
                   <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-2">
@@ -1308,8 +1308,7 @@ export default function BuildingDetailModal({
               {!histCohortActive && histQ.isError && <p className="text-xs text-red-500 text-center py-4">분포를 불러오지 못했습니다.</p>}
               {!histCohortActive && histQ.data && (
                 <>
-                  <p className="text-[10px] text-slate-500">
-                    표본 수 <strong className="text-slate-700">{histQ.data.n.toLocaleString("ko-KR")}</strong>건
+                  <p className="text-xs text-slate-500">
                     {histScope === "single" && histYear != null && (
                       <>
                         {" "}

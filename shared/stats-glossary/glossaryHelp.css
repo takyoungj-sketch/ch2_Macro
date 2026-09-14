@@ -97,7 +97,7 @@ html.dark .ch2-glossary-font-btn:hover:not(:disabled) {
   display: flex;
   flex-direction: column;
   overflow: visible;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .ch2-glossary-popup-chrome {

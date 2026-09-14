@@ -469,12 +469,12 @@ export default function PaidMatrixYearlyModal({
           {matrixMode === "group" ? "지목군" : "지목"}{" "}
           <span className="font-semibold text-slate-700">{landCategory}</span>
           {matrixMode === "group" ? (
-            <span className="block text-[10px] mt-1 text-slate-400">
+            <span className="block text-xs mt-1 text-slate-400">
               용도 × 지목군 모드 — 구성 지목 거래를 원장에서 재집계합니다.
             </span>
           ) : null}
           {scopeNote ? (
-            <span className="block text-[10px] mt-1 text-slate-400">{scopeNote}</span>
+            <span className="block text-xs mt-1 text-slate-400">{scopeNote}</span>
           ) : null}
         </>
       }
@@ -586,7 +586,7 @@ export default function PaidMatrixYearlyModal({
                 ltData &&
                 ltData.series.length >= 2 && (
                   <div className="space-y-3">
-                    <p className="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-2 py-1">
+                    <p className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-2 py-1">
                       {ltData.series.length}개 지역 비교 · {ltData.year_from}–{ltData.year_to} ·{" "}
                       {ltPriceLabel}
                       {ltMetric === "mean"
@@ -594,7 +594,7 @@ export default function PaidMatrixYearlyModal({
                         : " · 중앙값은 지역별 선만 (통합선 없음)"}
                     </p>
                     <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3 overflow-x-auto">
-                      <p className="text-[10px] font-semibold text-slate-600 px-1 mb-2">
+                      <p className="text-xs font-semibold text-slate-600 px-1 mb-2">
                         지역별 연도 추이 (꺾은선)
                       </p>
                       <MultiRegionTrendChart
@@ -604,7 +604,7 @@ export default function PaidMatrixYearlyModal({
                     </div>
                     {ltCombinedSeries && (
                       <div className="rounded-lg border border-slate-200 bg-white px-2 py-3 overflow-x-auto">
-                        <p className="text-[10px] font-semibold text-slate-700 px-1 mb-0.5">
+                        <p className="text-xs font-semibold text-slate-700 px-1 mb-0.5">
                           통합(거래수 가중평균)
                         </p>
                         <p className="text-[10px] text-slate-500 px-1 mb-2">
@@ -692,13 +692,13 @@ export default function PaidMatrixYearlyModal({
             <>
               <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3">
                 <div className="flex items-center gap-1 px-1 mb-2">
-                  <p className="text-[10px] font-semibold text-slate-600">추이 (꺾은선)</p>
+                  <p className="text-xs font-semibold text-slate-600">추이 (꺾은선)</p>
                   <AnalysisHelpPanel explain={trendExplain} />
                 </div>
                 <MatrixYearlyTrendChart rows={sortedRows} />
               </div>
               <div className="rounded-lg border border-slate-100 bg-white overflow-hidden">
-                <p className="text-[10px] font-semibold text-slate-600 px-3 pt-3 pb-1">
+                <p className="text-xs font-semibold text-slate-600 px-3 pt-3 pb-1">
                   {isRolling
                     ? "구간별 수치 (같은 조건 요약 집계)"
                     : "연도별 수치 (같은 조건 요약 집계)"}
@@ -783,7 +783,7 @@ export default function PaidMatrixYearlyModal({
               )}
               {!histLoading && !histError && histData && (
                 <>
-                  <p className="text-[10px] text-slate-500 leading-relaxed">
+                  <p className="text-xs text-slate-500 leading-relaxed">
                     표본 수 <strong className="text-slate-700">{histData.n.toLocaleString("ko-KR")}</strong>
                     건 · 이상치 제외{" "}
                     <strong className="text-slate-700">{histData.exclude_outlier ? "적용" : "안 함"}</strong>

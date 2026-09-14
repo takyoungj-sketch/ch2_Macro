@@ -33,7 +33,7 @@ const MAIN_CHART_METRICS = [
 ];
 
 const WON_METRICS = new Set(["rent", "floor_rent", "noi_per_m2"]);
-const LABEL_DY = [-12, 14, -22, 22, -30];
+const LABEL_DY = [-16, 18, -28, 28, -38];
 
 function fmtPoint(metric: string, v: number) {
   const digits = WON_METRICS.has(metric) ? 1 : Math.abs(v) < 20 ? 2 : 1;
@@ -54,7 +54,7 @@ function LineChart({
 }) {
   const w = 560;
   const h = 200;
-  const pad = { l: 44, r: 18, t: 28, b: 24 };
+  const pad = { l: 52, r: 18, t: 32, b: 30 };
   const nums = series.flatMap((s) => s.values.filter((v): v is number => v != null));
   const min = nums.length ? Math.min(...nums) : 0;
   const max = nums.length ? Math.max(...nums) : 1;
@@ -66,20 +66,20 @@ function LineChart({
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-52">
       <line x1={pad.l} y1={h - pad.b} x2={w - pad.r} y2={h - pad.b} stroke="#94a3b8" />
       <line x1={pad.l} y1={pad.t} x2={pad.l} y2={h - pad.b} stroke="#94a3b8" />
-      <text x={4} y={pad.t + 8} className="fill-slate-500 dark:fill-slate-400" fontSize="10">
+      <text x={4} y={pad.t + 8} className="fill-slate-500 dark:fill-slate-400" fontSize="13">
         {max.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}
       </text>
-      <text x={4} y={h - pad.b} className="fill-slate-500 dark:fill-slate-400" fontSize="10">
+      <text x={4} y={h - pad.b} className="fill-slate-500 dark:fill-slate-400" fontSize="13">
         {min.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}
       </text>
       {years.map((yr, i) => (
         <text
           key={yr}
           x={x(i)}
-          y={h - 4}
+          y={h - 6}
           textAnchor="middle"
           className="fill-slate-500 dark:fill-slate-400"
-          fontSize="9"
+          fontSize="12"
         >
           {yr}
         </text>
@@ -104,7 +104,7 @@ function LineChart({
                     y={y(v) + dy}
                     textAnchor="middle"
                     fill={color}
-                    fontSize="8"
+                    fontSize="12"
                     fontWeight="600"
                   >
                     {fmtPoint(metric, v)}

@@ -87,7 +87,7 @@ function ScatterMini({
         {label}
         {mode === "raw" ? " vs 단가" : " (통제 후)"}
       </div>
-      <div className="text-[10px] text-slate-500 mb-1 min-h-[2rem]">
+      <div className="text-xs text-slate-500 mb-1 min-h-[2rem]">
         {mode === "raw" ? (
           <>
             <span className="font-medium text-slate-600">r={fmtDecimal(pearsonR, 3)}</span>

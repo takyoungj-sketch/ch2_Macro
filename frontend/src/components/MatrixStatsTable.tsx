@@ -99,7 +99,7 @@ export function MatrixStatsLegend({
       <table
         className={clsx(
           "table-fixed border-collapse border border-slate-200 bg-white leading-tight text-slate-600",
-          matchYearlyStatsHeight ? "h-full w-full text-[11px]" : "text-[9px]",
+          matchYearlyStatsHeight ? "h-full w-full text-[13px]" : "text-xs",
         )}
         style={{ width: matchYearlyStatsHeight ? 280 : 236 }}
         aria-label="매트릭스 셀 구조 범례"
@@ -321,7 +321,7 @@ function MatrixStatsTableGrid({
                     title={`${zone} ${fmtCount(zoneCount)}건 · 평균 ${zoneMean}`}
                   >
                     <div className="line-clamp-2 break-all text-center">{zone}</div>
-                    <div className="mt-0.5 text-[10px] font-normal leading-tight text-sky-800/85">
+                    <div className="mt-0.5 text-xs font-normal leading-tight text-sky-800/85">
                       {fmtCount(zoneCount)}건
                     </div>
                     <div className="mt-px text-[11px] font-bold tabular-nums leading-tight text-blue-600">
@@ -481,7 +481,7 @@ function MatrixStatsTableGrid({
                           {...insight}
                           className={clsx(
                             cellLeftCat(ci),
-                            "px-1 py-0 align-middle text-right tabular-nums font-semibold truncate text-slate-700 text-[10px]",
+                            "px-1 py-0 align-middle text-right tabular-nums font-semibold truncate text-slate-700 text-xs",
                             faint,
                             cellHl(stats?.is_reliable),
                             insight.role &&
