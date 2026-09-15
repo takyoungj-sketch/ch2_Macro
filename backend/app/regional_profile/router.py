@@ -802,20 +802,21 @@ def get_macro_ecos_lab():
 
 
 @router.get("/lab/macro-ts")
-def get_macro_ts_lab():
-    """관리자 전용. ECOS + 전국 8유형 연도 건수·액. 제품·Insight 아님."""
+def get_macro_ts_lab(grain: str = Query("calendar_year")):
+    """관리자 전용. ECOS + 전국 8유형 건수·액. 제품·Insight 아님. grain=calendar_year|calendar_month."""
     from app.built.db import get_built_session_factory
     from app.collective.db import get_collective_session_factory
     from app.db import SessionLocal
     from app.regional_profile.macro_ts_lab import compute_macro_ts
 
+    g = "calendar_month" if grain in {"month", "calendar_month"} else "calendar_year"
     land = SessionLocal()
     built_factory = get_built_session_factory()
     coll_factory = get_collective_session_factory()
     built = built_factory() if built_factory is not None else None
     coll = coll_factory() if coll_factory is not None else None
     try:
-        return compute_macro_ts(land_db=land, built_db=built, coll_db=coll)
+        return compute_macro_ts(land_db=land, built_db=built, coll_db=coll, grain=g)
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:

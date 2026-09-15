@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-12",
+  "updated": "2026-09-14",
   "domains": [
     {
       "id": "land",
@@ -472,10 +472,47 @@
           "decision": "D-065"
         }
       }
+    },
+    {
+      "date": "2026-09-12",
+      "cells": {
+        "land": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "built": {
+          "text": "Fingerprint Twin 1차(충북12·경기12). 같은 무게 pooling은 Local 확인 CV를 자주 해침. 제품 선정 미변경. 다음은 붙임(절편 분리·무게 제한)",
+          "status": "stopped",
+          "commit": "needed",
+          "decision": "D-073"
+        },
+        "collective": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "rent": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "profile": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "admin": {
+          "text": "랩 twin mape에 fp/rnd·충북12·경기12 JSON. 일지. 다음은 붙임 실험·ΔMAPE 표시. 새 문·새 D 없음",
+          "status": "stopped",
+          "commit": "needed",
+          "decision": "D-073"
+        }
+      }
     }
   ],
   "today": {
-    "date": "2026-09-12",
+    "date": "2026-09-14",
     "cells": {
       "land": {
         "text": "이 축 작업 없음",
@@ -483,8 +520,8 @@
         "commit": "none"
       },
       "built": {
-        "text": "Fingerprint Twin 1차(충북12·경기12). 같은 무게 pooling은 Local 확인 CV를 자주 해침. 제품 선정 미변경. 다음은 붙임(절편 분리·무게 제한)",
-        "status": "stopped",
+        "text": "이 축 오늘 작업 없음. Fingerprint 붙임은 다음",
+        "status": "done",
         "commit": "needed",
         "decision": "D-073"
       },
@@ -499,15 +536,16 @@
         "commit": "none"
       },
       "profile": {
-        "text": "이 축 작업 없음",
-        "status": "done",
-        "commit": "none"
-      },
-      "admin": {
-        "text": "랩 twin mape에 fp/rnd·충북12·경기12 JSON. 일지. 다음은 붙임 실험·ΔMAPE 표시. 새 문·새 D 없음",
+        "text": "G3 월 시차 로컬 완료(전년동월 0/1/3/6, ?tool=g3). 연·월 합 대조·영속 마트 안 함. Insight 없음. 미커밋",
         "status": "stopped",
         "commit": "needed",
-        "decision": "D-073"
+        "decision": "D-055"
+      },
+      "admin": {
+        "text": "계획일지 09-14. G3 중지점=연월합 대조(느리면 월 마트). 새 문·새 D 없음. 미커밋",
+        "status": "stopped",
+        "commit": "needed",
+        "decision": "D-055"
       }
     }
   },
@@ -520,10 +558,10 @@
         "decision": "D-056"
       },
       "profile": {
-        "text": "D-058 시장규모 실험 장기(시·군 분리·집합상가/토지 단가 등은 그때). 제품화·G3 아님. 근본: 리 마트=…00 제외(§9). G3 전국 월별 총액↔M2·대표금리1개. 7월 as_of 별도",
+        "text": "G3 다음=연도합 vs 월합 대조. 월 API가 느리면 얇은 월 마트. 시군구 r·Insight·MoM 아님. D-058 시장규모는 장기. 리 마트=…00 제외는 차후",
         "status": "planned",
         "commit": "needed",
-        "decision": "D-058"
+        "decision": "D-055"
       },
       "built": {
         "text": "Twin 붙임 실험: Local / 단순 pooling / Twin 절편 분리 / Twin 무게 제한(0.25 또는 n≤Local). Twin은 프로필 1위 고정. 계층 베이즈·지문 가중치는 그 다음. 제품 선정 미변경",
@@ -543,10 +581,10 @@
         "decision": "D-065"
       },
       "admin": {
-        "text": "붙임 실험 결과를 mape에 이어서. Δ CV-MAPE(%p) 표시. Fingerprint 가중·새 문·새 D 없음. 시공사 브랜드·연식=0 서울경기는 별도",
+        "text": "G3는 연월합 대조부터(?tool=g3). Fingerprint 붙임은 mape에 이어서. 새 문·새 D 없음",
         "status": "planned",
         "commit": "needed",
-        "decision": "D-073"
+        "decision": "D-055"
       }
     }
   },

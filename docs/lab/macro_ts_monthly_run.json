@@ -1,0 +1,1497 @@
+{
+  "lab": "macro_ts",
+  "as_of": "2026-09-13",
+  "grain": "calendar_month",
+  "periods": [
+    "2010-01",
+    "2026-08"
+  ],
+  "n_periods": 200,
+  "lags": [
+    0,
+    1,
+    3,
+    6
+  ],
+  "sources": {
+    "rates": "시장금리(월,분기,년)_13214734.csv",
+    "policy": "한국은행 기준금리 및 여수신금리_13214821.csv",
+    "m2": "M2 상품별 구성내역(평잔, 계절조정계열)_13214503.csv",
+    "rates_frequency": "month",
+    "policy_frequency": "month",
+    "m2_frequency": "month",
+    "rates_dir": "한은 월간"
+  },
+  "coverage_notes": [],
+  "missing": [],
+  "pairs_count_cd_m2": [
+    {
+      "type": "토지",
+      "cd_91_count_lag0": {
+        "n": 188,
+        "r": -0.5514,
+        "lag": 0
+      },
+      "cd_91_amount_lag0": {
+        "n": 188,
+        "r": -0.5703,
+        "lag": 0
+      },
+      "cd_91_count_lag1": {
+        "n": 187,
+        "r": -0.5638,
+        "lag": 1
+      },
+      "cd_91_amount_lag1": {
+        "n": 187,
+        "r": -0.5796,
+        "lag": 1
+      },
+      "cd_91_count_lag3": {
+        "n": 185,
+        "r": -0.5635,
+        "lag": 3
+      },
+      "cd_91_amount_lag3": {
+        "n": 185,
+        "r": -0.5771,
+        "lag": 3
+      },
+      "cd_91_count_lag6": {
+        "n": 182,
+        "r": -0.5199,
+        "lag": 6
+      },
+      "cd_91_amount_lag6": {
+        "n": 182,
+        "r": -0.5408,
+        "lag": 6
+      },
+      "bok_base_count_lag0": {
+        "n": 188,
+        "r": -0.5346,
+        "lag": 0
+      },
+      "bok_base_amount_lag0": {
+        "n": 188,
+        "r": -0.5624,
+        "lag": 0
+      },
+      "bok_base_count_lag1": {
+        "n": 187,
+        "r": -0.541,
+        "lag": 1
+      },
+      "bok_base_amount_lag1": {
+        "n": 187,
+        "r": -0.5622,
+        "lag": 1
+      },
+      "bok_base_count_lag3": {
+        "n": 185,
+        "r": -0.5538,
+        "lag": 3
+      },
+      "bok_base_amount_lag3": {
+        "n": 185,
+        "r": -0.5615,
+        "lag": 3
+      },
+      "bok_base_count_lag6": {
+        "n": 182,
+        "r": -0.5263,
+        "lag": 6
+      },
+      "bok_base_amount_lag6": {
+        "n": 182,
+        "r": -0.5396,
+        "lag": 6
+      },
+      "ktb_3y_count_lag0": {
+        "n": 188,
+        "r": -0.427,
+        "lag": 0
+      },
+      "ktb_3y_amount_lag0": {
+        "n": 188,
+        "r": -0.4389,
+        "lag": 0
+      },
+      "ktb_3y_count_lag1": {
+        "n": 187,
+        "r": -0.4745,
+        "lag": 1
+      },
+      "ktb_3y_amount_lag1": {
+        "n": 187,
+        "r": -0.4798,
+        "lag": 1
+      },
+      "ktb_3y_count_lag3": {
+        "n": 185,
+        "r": -0.5319,
+        "lag": 3
+      },
+      "ktb_3y_amount_lag3": {
+        "n": 185,
+        "r": -0.5261,
+        "lag": 3
+      },
+      "ktb_3y_count_lag6": {
+        "n": 182,
+        "r": -0.5652,
+        "lag": 6
+      },
+      "ktb_3y_amount_lag6": {
+        "n": 182,
+        "r": -0.5632,
+        "lag": 6
+      },
+      "m2_count_lag0": {
+        "n": 186,
+        "r": 0.3219,
+        "lag": 0
+      },
+      "m2_amount_lag0": {
+        "n": 186,
+        "r": 0.3317,
+        "lag": 0
+      },
+      "m2_count_lag1": {
+        "n": 186,
+        "r": 0.2985,
+        "lag": 1
+      },
+      "m2_amount_lag1": {
+        "n": 186,
+        "r": 0.2892,
+        "lag": 1
+      },
+      "m2_count_lag3": {
+        "n": 185,
+        "r": 0.2371,
+        "lag": 3
+      },
+      "m2_amount_lag3": {
+        "n": 185,
+        "r": 0.2059,
+        "lag": 3
+      },
+      "m2_count_lag6": {
+        "n": 182,
+        "r": 0.1049,
+        "lag": 6
+      },
+      "m2_amount_lag6": {
+        "n": 182,
+        "r": 0.0604,
+        "lag": 6
+      }
+    },
+    {
+      "type": "상가",
+      "cd_91_count_lag0": {
+        "n": 188,
+        "r": -0.0698,
+        "lag": 0
+      },
+      "cd_91_amount_lag0": {
+        "n": 188,
+        "r": -0.0595,
+        "lag": 0
+      },
+      "cd_91_count_lag1": {
+        "n": 187,
+        "r": -0.0524,
+        "lag": 1
+      },
+      "cd_91_amount_lag1": {
+        "n": 187,
+        "r": -0.043,
+        "lag": 1
+      },
+      "cd_91_count_lag3": {
+        "n": 185,
+        "r": -0.0187,
+        "lag": 3
+      },
+      "cd_91_amount_lag3": {
+        "n": 185,
+        "r": -0.0144,
+        "lag": 3
+      },
+      "cd_91_count_lag6": {
+        "n": 182,
+        "r": 0.0252,
+        "lag": 6
+      },
+      "cd_91_amount_lag6": {
+        "n": 182,
+        "r": 0.0283,
+        "lag": 6
+      },
+      "bok_base_count_lag0": {
+        "n": 188,
+        "r": -0.0713,
+        "lag": 0
+      },
+      "bok_base_amount_lag0": {
+        "n": 188,
+        "r": -0.0591,
+        "lag": 0
+      },
+      "bok_base_count_lag1": {
+        "n": 187,
+        "r": -0.0454,
+        "lag": 1
+      },
+      "bok_base_amount_lag1": {
+        "n": 187,
+        "r": -0.0391,
+        "lag": 1
+      },
+      "bok_base_count_lag3": {
+        "n": 185,
+        "r": -0.0052,
+        "lag": 3
+      },
+      "bok_base_amount_lag3": {
+        "n": 185,
+        "r": 0.0011,
+        "lag": 3
+      },
+      "bok_base_count_lag6": {
+        "n": 182,
+        "r": 0.0272,
+        "lag": 6
+      },
+      "bok_base_amount_lag6": {
+        "n": 182,
+        "r": 0.029,
+        "lag": 6
+      },
+      "ktb_3y_count_lag0": {
+        "n": 188,
+        "r": -0.2554,
+        "lag": 0
+      },
+      "ktb_3y_amount_lag0": {
+        "n": 188,
+        "r": -0.2419,
+        "lag": 0
+      },
+      "ktb_3y_count_lag1": {
+        "n": 187,
+        "r": -0.2584,
+        "lag": 1
+      },
+      "ktb_3y_amount_lag1": {
+        "n": 187,
+        "r": -0.2396,
+        "lag": 1
+      },
+      "ktb_3y_count_lag3": {
+        "n": 185,
+        "r": -0.2383,
+        "lag": 3
+      },
+      "ktb_3y_amount_lag3": {
+        "n": 185,
+        "r": -0.2211,
+        "lag": 3
+      },
+      "ktb_3y_count_lag6": {
+        "n": 182,
+        "r": -0.1377,
+        "lag": 6
+      },
+      "ktb_3y_amount_lag6": {
+        "n": 182,
+        "r": -0.12,
+        "lag": 6
+      },
+      "m2_count_lag0": {
+        "n": 186,
+        "r": -0.0385,
+        "lag": 0
+      },
+      "m2_amount_lag0": {
+        "n": 186,
+        "r": -0.0636,
+        "lag": 0
+      },
+      "m2_count_lag1": {
+        "n": 186,
+        "r": -0.0622,
+        "lag": 1
+      },
+      "m2_amount_lag1": {
+        "n": 186,
+        "r": -0.0845,
+        "lag": 1
+      },
+      "m2_count_lag3": {
+        "n": 185,
+        "r": -0.104,
+        "lag": 3
+      },
+      "m2_amount_lag3": {
+        "n": 185,
+        "r": -0.1205,
+        "lag": 3
+      },
+      "m2_count_lag6": {
+        "n": 182,
+        "r": -0.1517,
+        "lag": 6
+      },
+      "m2_amount_lag6": {
+        "n": 182,
+        "r": -0.1621,
+        "lag": 6
+      }
+    },
+    {
+      "type": "공장",
+      "cd_91_count_lag0": {
+        "n": 188,
+        "r": -0.0657,
+        "lag": 0
+      },
+      "cd_91_amount_lag0": {
+        "n": 188,
+        "r": -0.0719,
+        "lag": 0
+      },
+      "cd_91_count_lag1": {
+        "n": 187,
+        "r": -0.0474,
+        "lag": 1
+      },
+      "cd_91_amount_lag1": {
+        "n": 187,
+        "r": -0.0553,
+        "lag": 1
+      },
+      "cd_91_count_lag3": {
+        "n": 185,
+        "r": -0.0118,
+        "lag": 3
+      },
+      "cd_91_amount_lag3": {
+        "n": 185,
+        "r": -0.0288,
+        "lag": 3
+      },
+      "cd_91_count_lag6": {
+        "n": 182,
+        "r": 0.0373,
+        "lag": 6
+      },
+      "cd_91_amount_lag6": {
+        "n": 182,
+        "r": 0.0154,
+        "lag": 6
+      },
+      "bok_base_count_lag0": {
+        "n": 188,
+        "r": -0.0714,
+        "lag": 0
+      },
+      "bok_base_amount_lag0": {
+        "n": 188,
+        "r": -0.0867,
+        "lag": 0
+      },
+      "bok_base_count_lag1": {
+        "n": 187,
+        "r": -0.0477,
+        "lag": 1
+      },
+      "bok_base_amount_lag1": {
+        "n": 187,
+        "r": -0.0606,
+        "lag": 1
+      },
+      "bok_base_count_lag3": {
+        "n": 185,
+        "r": -0.0006,
+        "lag": 3
+      },
+      "bok_base_amount_lag3": {
+        "n": 185,
+        "r": -0.0196,
+        "lag": 3
+      },
+      "bok_base_count_lag6": {
+        "n": 182,
+        "r": 0.038,
+        "lag": 6
+      },
+      "bok_base_amount_lag6": {
+        "n": 182,
+        "r": 0.0173,
+        "lag": 6
+      },
+      "ktb_3y_count_lag0": {
+        "n": 188,
+        "r": -0.2268,
+        "lag": 0
+      },
+      "ktb_3y_amount_lag0": {
+        "n": 188,
+        "r": -0.2002,
+        "lag": 0
+      },
+      "ktb_3y_count_lag1": {
+        "n": 187,
+        "r": -0.2326,
+        "lag": 1
+      },
+      "ktb_3y_amount_lag1": {
+        "n": 187,
+        "r": -0.2109,
+        "lag": 1
+      },
+      "ktb_3y_count_lag3": {
+        "n": 185,
+        "r": -0.2176,
+        "lag": 3
+      },
+      "ktb_3y_amount_lag3": {
+        "n": 185,
+        "r": -0.211,
+        "lag": 3
+      },
+      "ktb_3y_count_lag6": {
+        "n": 182,
+        "r": -0.1236,
+        "lag": 6
+      },
+      "ktb_3y_amount_lag6": {
+        "n": 182,
+        "r": -0.1366,
+        "lag": 6
+      },
+      "m2_count_lag0": {
+        "n": 186,
+        "r": -0.0324,
+        "lag": 0
+      },
+      "m2_amount_lag0": {
+        "n": 186,
+        "r": -0.0027,
+        "lag": 0
+      },
+      "m2_count_lag1": {
+        "n": 186,
+        "r": -0.0647,
+        "lag": 1
+      },
+      "m2_amount_lag1": {
+        "n": 186,
+        "r": -0.0345,
+        "lag": 1
+      },
+      "m2_count_lag3": {
+        "n": 185,
+        "r": -0.1034,
+        "lag": 3
+      },
+      "m2_amount_lag3": {
+        "n": 185,
+        "r": -0.0762,
+        "lag": 3
+      },
+      "m2_count_lag6": {
+        "n": 182,
+        "r": -0.1458,
+        "lag": 6
+      },
+      "m2_amount_lag6": {
+        "n": 182,
+        "r": -0.1281,
+        "lag": 6
+      }
+    },
+    {
+      "type": "단독다가구",
+      "cd_91_count_lag0": {
+        "n": 188,
+        "r": -0.1072,
+        "lag": 0
+      },
+      "cd_91_amount_lag0": {
+        "n": 188,
+        "r": -0.0943,
+        "lag": 0
+      },
+      "cd_91_count_lag1": {
+        "n": 187,
+        "r": -0.0865,
+        "lag": 1
+      },
+      "cd_91_amount_lag1": {
+        "n": 187,
+        "r": -0.074,
+        "lag": 1
+      },
+      "cd_91_count_lag3": {
+        "n": 185,
+        "r": -0.0515,
+        "lag": 3
+      },
+      "cd_91_amount_lag3": {
+        "n": 185,
+        "r": -0.0412,
+        "lag": 3
+      },
+      "cd_91_count_lag6": {
+        "n": 182,
+        "r": 0.0001,
+        "lag": 6
+      },
+      "cd_91_amount_lag6": {
+        "n": 182,
+        "r": 0.0069,
+        "lag": 6
+      },
+      "bok_base_count_lag0": {
+        "n": 188,
+        "r": -0.1141,
+        "lag": 0
+      },
+      "bok_base_amount_lag0": {
+        "n": 188,
+        "r": -0.1045,
+        "lag": 0
+      },
+      "bok_base_count_lag1": {
+        "n": 187,
+        "r": -0.0859,
+        "lag": 1
+      },
+      "bok_base_amount_lag1": {
+        "n": 187,
+        "r": -0.0759,
+        "lag": 1
+      },
+      "bok_base_count_lag3": {
+        "n": 185,
+        "r": -0.0378,
+        "lag": 3
+      },
+      "bok_base_amount_lag3": {
+        "n": 185,
+        "r": -0.03,
+        "lag": 3
+      },
+      "bok_base_count_lag6": {
+        "n": 182,
+        "r": 0.0045,
+        "lag": 6
+      },
+      "bok_base_amount_lag6": {
+        "n": 182,
+        "r": 0.0112,
+        "lag": 6
+      },
+      "ktb_3y_count_lag0": {
+        "n": 188,
+        "r": -0.2816,
+        "lag": 0
+      },
+      "ktb_3y_amount_lag0": {
+        "n": 188,
+        "r": -0.2574,
+        "lag": 0
+      },
+      "ktb_3y_count_lag1": {
+        "n": 187,
+        "r": -0.287,
+        "lag": 1
+      },
+      "ktb_3y_amount_lag1": {
+        "n": 187,
+        "r": -0.262,
+        "lag": 1
+      },
+      "ktb_3y_count_lag3": {
+        "n": 185,
+        "r": -0.275,
+        "lag": 3
+      },
+      "ktb_3y_amount_lag3": {
+        "n": 185,
+        "r": -0.2525,
+        "lag": 3
+      },
+      "ktb_3y_count_lag6": {
+        "n": 182,
+        "r": -0.1801,
+        "lag": 6
+      },
+      "ktb_3y_amount_lag6": {
+        "n": 182,
+        "r": -0.1643,
+        "lag": 6
+      },
+      "m2_count_lag0": {
+        "n": 186,
+        "r": -0.0435,
+        "lag": 0
+      },
+      "m2_amount_lag0": {
+        "n": 186,
+        "r": -0.0375,
+        "lag": 0
+      },
+      "m2_count_lag1": {
+        "n": 186,
+        "r": -0.0689,
+        "lag": 1
+      },
+      "m2_amount_lag1": {
+        "n": 186,
+        "r": -0.063,
+        "lag": 1
+      },
+      "m2_count_lag3": {
+        "n": 185,
+        "r": -0.119,
+        "lag": 3
+      },
+      "m2_amount_lag3": {
+        "n": 185,
+        "r": -0.1117,
+        "lag": 3
+      },
+      "m2_count_lag6": {
+        "n": 182,
+        "r": -0.1763,
+        "lag": 6
+      },
+      "m2_amount_lag6": {
+        "n": 182,
+        "r": -0.1638,
+        "lag": 6
+      }
+    },
+    {
+      "type": "아파트",
+      "cd_91_count_lag0": {
+        "n": 188,
+        "r": -0.089,
+        "lag": 0
+      },
+      "cd_91_amount_lag0": {
+        "n": 188,
+        "r": -0.0594,
+        "lag": 0
+      },
+      "cd_91_count_lag1": {
+        "n": 187,
+        "r": -0.0539,
+        "lag": 1
+      },
+      "cd_91_amount_lag1": {
+        "n": 187,
+        "r": -0.0253,
+        "lag": 1
+      },
+      "cd_91_count_lag3": {
+        "n": 185,
+        "r": 0.0015,
+        "lag": 3
+      },
+      "cd_91_amount_lag3": {
+        "n": 185,
+        "r": 0.026,
+        "lag": 3
+      },
+      "cd_91_count_lag6": {
+        "n": 182,
+        "r": 0.0764,
+        "lag": 6
+      },
+      "cd_91_amount_lag6": {
+        "n": 182,
+        "r": 0.0942,
+        "lag": 6
+      },
+      "bok_base_count_lag0": {
+        "n": 188,
+        "r": -0.1037,
+        "lag": 0
+      },
+      "bok_base_amount_lag0": {
+        "n": 188,
+        "r": -0.0755,
+        "lag": 0
+      },
+      "bok_base_count_lag1": {
+        "n": 187,
+        "r": -0.0643,
+        "lag": 1
+      },
+      "bok_base_amount_lag1": {
+        "n": 187,
+        "r": -0.0356,
+        "lag": 1
+      },
+      "bok_base_count_lag3": {
+        "n": 185,
+        "r": 0.0087,
+        "lag": 3
+      },
+      "bok_base_amount_lag3": {
+        "n": 185,
+        "r": 0.0351,
+        "lag": 3
+      },
+      "bok_base_count_lag6": {
+        "n": 182,
+        "r": 0.0784,
+        "lag": 6
+      },
+      "bok_base_amount_lag6": {
+        "n": 182,
+        "r": 0.099,
+        "lag": 6
+      },
+      "ktb_3y_count_lag0": {
+        "n": 188,
+        "r": -0.2481,
+        "lag": 0
+      },
+      "ktb_3y_amount_lag0": {
+        "n": 188,
+        "r": -0.2134,
+        "lag": 0
+      },
+      "ktb_3y_count_lag1": {
+        "n": 187,
+        "r": -0.249,
+        "lag": 1
+      },
+      "ktb_3y_amount_lag1": {
+        "n": 187,
+        "r": -0.2147,
+        "lag": 1
+      },
+      "ktb_3y_count_lag3": {
+        "n": 185,
+        "r": -0.232,
+        "lag": 3
+      },
+      "ktb_3y_amount_lag3": {
+        "n": 185,
+        "r": -0.2041,
+        "lag": 3
+      },
+      "ktb_3y_count_lag6": {
+        "n": 182,
+        "r": -0.134,
+        "lag": 6
+      },
+      "ktb_3y_amount_lag6": {
+        "n": 182,
+        "r": -0.1127,
+        "lag": 6
+      },
+      "m2_count_lag0": {
+        "n": 186,
+        "r": -0.0798,
+        "lag": 0
+      },
+      "m2_amount_lag0": {
+        "n": 186,
+        "r": -0.0729,
+        "lag": 0
+      },
+      "m2_count_lag1": {
+        "n": 186,
+        "r": -0.1047,
+        "lag": 1
+      },
+      "m2_amount_lag1": {
+        "n": 186,
+        "r": -0.0944,
+        "lag": 1
+      },
+      "m2_count_lag3": {
+        "n": 185,
+        "r": -0.1542,
+        "lag": 3
+      },
+      "m2_amount_lag3": {
+        "n": 185,
+        "r": -0.1383,
+        "lag": 3
+      },
+      "m2_count_lag6": {
+        "n": 182,
+        "r": -0.2086,
+        "lag": 6
+      },
+      "m2_amount_lag6": {
+        "n": 182,
+        "r": -0.186,
+        "lag": 6
+      }
+    },
+    {
+      "type": "오피스텔",
+      "cd_91_count_lag0": {
+        "n": 188,
+        "r": -0.127,
+        "lag": 0
+      },
+      "cd_91_amount_lag0": {
+        "n": 188,
+        "r": -0.1086,
+        "lag": 0
+      },
+      "cd_91_count_lag1": {
+        "n": 187,
+        "r": -0.1038,
+        "lag": 1
+      },
+      "cd_91_amount_lag1": {
+        "n": 187,
+        "r": -0.0838,
+        "lag": 1
+      },
+      "cd_91_count_lag3": {
+        "n": 185,
+        "r": -0.0725,
+        "lag": 3
+      },
+      "cd_91_amount_lag3": {
+        "n": 185,
+        "r": -0.0525,
+        "lag": 3
+      },
+      "cd_91_count_lag6": {
+        "n": 182,
+        "r": -0.0256,
+        "lag": 6
+      },
+      "cd_91_amount_lag6": {
+        "n": 182,
+        "r": -0.0007,
+        "lag": 6
+      },
+      "bok_base_count_lag0": {
+        "n": 188,
+        "r": -0.1342,
+        "lag": 0
+      },
+      "bok_base_amount_lag0": {
+        "n": 188,
+        "r": -0.1182,
+        "lag": 0
+      },
+      "bok_base_count_lag1": {
+        "n": 187,
+        "r": -0.1119,
+        "lag": 1
+      },
+      "bok_base_amount_lag1": {
+        "n": 187,
+        "r": -0.0917,
+        "lag": 1
+      },
+      "bok_base_count_lag3": {
+        "n": 185,
+        "r": -0.0665,
+        "lag": 3
+      },
+      "bok_base_amount_lag3": {
+        "n": 185,
+        "r": -0.0433,
+        "lag": 3
+      },
+      "bok_base_count_lag6": {
+        "n": 182,
+        "r": -0.0241,
+        "lag": 6
+      },
+      "bok_base_amount_lag6": {
+        "n": 182,
+        "r": 0.0016,
+        "lag": 6
+      },
+      "ktb_3y_count_lag0": {
+        "n": 188,
+        "r": -0.273,
+        "lag": 0
+      },
+      "ktb_3y_amount_lag0": {
+        "n": 188,
+        "r": -0.2659,
+        "lag": 0
+      },
+      "ktb_3y_count_lag1": {
+        "n": 187,
+        "r": -0.2724,
+        "lag": 1
+      },
+      "ktb_3y_amount_lag1": {
+        "n": 187,
+        "r": -0.264,
+        "lag": 1
+      },
+      "ktb_3y_count_lag3": {
+        "n": 185,
+        "r": -0.2538,
+        "lag": 3
+      },
+      "ktb_3y_amount_lag3": {
+        "n": 185,
+        "r": -0.2507,
+        "lag": 3
+      },
+      "ktb_3y_count_lag6": {
+        "n": 182,
+        "r": -0.1868,
+        "lag": 6
+      },
+      "ktb_3y_amount_lag6": {
+        "n": 182,
+        "r": -0.1802,
+        "lag": 6
+      },
+      "m2_count_lag0": {
+        "n": 186,
+        "r": 0.0035,
+        "lag": 0
+      },
+      "m2_amount_lag0": {
+        "n": 186,
+        "r": -0.014,
+        "lag": 0
+      },
+      "m2_count_lag1": {
+        "n": 186,
+        "r": -0.0227,
+        "lag": 1
+      },
+      "m2_amount_lag1": {
+        "n": 186,
+        "r": -0.0404,
+        "lag": 1
+      },
+      "m2_count_lag3": {
+        "n": 185,
+        "r": -0.0809,
+        "lag": 3
+      },
+      "m2_amount_lag3": {
+        "n": 185,
+        "r": -0.0942,
+        "lag": 3
+      },
+      "m2_count_lag6": {
+        "n": 182,
+        "r": -0.1378,
+        "lag": 6
+      },
+      "m2_amount_lag6": {
+        "n": 182,
+        "r": -0.1478,
+        "lag": 6
+      }
+    },
+    {
+      "type": "연립다세대",
+      "cd_91_count_lag0": {
+        "n": 188,
+        "r": -0.1467,
+        "lag": 0
+      },
+      "cd_91_amount_lag0": {
+        "n": 188,
+        "r": -0.0951,
+        "lag": 0
+      },
+      "cd_91_count_lag1": {
+        "n": 187,
+        "r": -0.1271,
+        "lag": 1
+      },
+      "cd_91_amount_lag1": {
+        "n": 187,
+        "r": -0.0756,
+        "lag": 1
+      },
+      "cd_91_count_lag3": {
+        "n": 185,
+        "r": -0.0907,
+        "lag": 3
+      },
+      "cd_91_amount_lag3": {
+        "n": 185,
+        "r": -0.0424,
+        "lag": 3
+      },
+      "cd_91_count_lag6": {
+        "n": 182,
+        "r": -0.0309,
+        "lag": 6
+      },
+      "cd_91_amount_lag6": {
+        "n": 182,
+        "r": 0.0099,
+        "lag": 6
+      },
+      "bok_base_count_lag0": {
+        "n": 188,
+        "r": -0.1599,
+        "lag": 0
+      },
+      "bok_base_amount_lag0": {
+        "n": 188,
+        "r": -0.1103,
+        "lag": 0
+      },
+      "bok_base_count_lag1": {
+        "n": 187,
+        "r": -0.1315,
+        "lag": 1
+      },
+      "bok_base_amount_lag1": {
+        "n": 187,
+        "r": -0.0823,
+        "lag": 1
+      },
+      "bok_base_count_lag3": {
+        "n": 185,
+        "r": -0.0798,
+        "lag": 3
+      },
+      "bok_base_amount_lag3": {
+        "n": 185,
+        "r": -0.0339,
+        "lag": 3
+      },
+      "bok_base_count_lag6": {
+        "n": 182,
+        "r": -0.0283,
+        "lag": 6
+      },
+      "bok_base_amount_lag6": {
+        "n": 182,
+        "r": 0.01,
+        "lag": 6
+      },
+      "ktb_3y_count_lag0": {
+        "n": 188,
+        "r": -0.2903,
+        "lag": 0
+      },
+      "ktb_3y_amount_lag0": {
+        "n": 188,
+        "r": -0.2448,
+        "lag": 0
+      },
+      "ktb_3y_count_lag1": {
+        "n": 187,
+        "r": -0.2996,
+        "lag": 1
+      },
+      "ktb_3y_amount_lag1": {
+        "n": 187,
+        "r": -0.2504,
+        "lag": 1
+      },
+      "ktb_3y_count_lag3": {
+        "n": 185,
+        "r": -0.2935,
+        "lag": 3
+      },
+      "ktb_3y_amount_lag3": {
+        "n": 185,
+        "r": -0.2422,
+        "lag": 3
+      },
+      "ktb_3y_count_lag6": {
+        "n": 182,
+        "r": -0.2071,
+        "lag": 6
+      },
+      "ktb_3y_amount_lag6": {
+        "n": 182,
+        "r": -0.1562,
+        "lag": 6
+      },
+      "m2_count_lag0": {
+        "n": 186,
+        "r": -0.0317,
+        "lag": 0
+      },
+      "m2_amount_lag0": {
+        "n": 186,
+        "r": -0.0432,
+        "lag": 0
+      },
+      "m2_count_lag1": {
+        "n": 186,
+        "r": -0.0641,
+        "lag": 1
+      },
+      "m2_amount_lag1": {
+        "n": 186,
+        "r": -0.0714,
+        "lag": 1
+      },
+      "m2_count_lag3": {
+        "n": 185,
+        "r": -0.1201,
+        "lag": 3
+      },
+      "m2_amount_lag3": {
+        "n": 185,
+        "r": -0.1213,
+        "lag": 3
+      },
+      "m2_count_lag6": {
+        "n": 182,
+        "r": -0.1827,
+        "lag": 6
+      },
+      "m2_amount_lag6": {
+        "n": 182,
+        "r": -0.1753,
+        "lag": 6
+      }
+    },
+    {
+      "type": "분양권",
+      "cd_91_count_lag0": {
+        "n": 188,
+        "r": 0.0115,
+        "lag": 0
+      },
+      "cd_91_amount_lag0": {
+        "n": 188,
+        "r": -0.0005,
+        "lag": 0
+      },
+      "cd_91_count_lag1": {
+        "n": 187,
+        "r": 0.0402,
+        "lag": 1
+      },
+      "cd_91_amount_lag1": {
+        "n": 187,
+        "r": 0.0256,
+        "lag": 1
+      },
+      "cd_91_count_lag3": {
+        "n": 185,
+        "r": 0.083,
+        "lag": 3
+      },
+      "cd_91_amount_lag3": {
+        "n": 185,
+        "r": 0.0676,
+        "lag": 3
+      },
+      "cd_91_count_lag6": {
+        "n": 182,
+        "r": 0.1393,
+        "lag": 6
+      },
+      "cd_91_amount_lag6": {
+        "n": 182,
+        "r": 0.132,
+        "lag": 6
+      },
+      "bok_base_count_lag0": {
+        "n": 188,
+        "r": 0.0076,
+        "lag": 0
+      },
+      "bok_base_amount_lag0": {
+        "n": 188,
+        "r": -0.0069,
+        "lag": 0
+      },
+      "bok_base_count_lag1": {
+        "n": 187,
+        "r": 0.0504,
+        "lag": 1
+      },
+      "bok_base_amount_lag1": {
+        "n": 187,
+        "r": 0.0331,
+        "lag": 1
+      },
+      "bok_base_count_lag3": {
+        "n": 185,
+        "r": 0.1085,
+        "lag": 3
+      },
+      "bok_base_amount_lag3": {
+        "n": 185,
+        "r": 0.0869,
+        "lag": 3
+      },
+      "bok_base_count_lag6": {
+        "n": 182,
+        "r": 0.1474,
+        "lag": 6
+      },
+      "bok_base_amount_lag6": {
+        "n": 182,
+        "r": 0.132,
+        "lag": 6
+      },
+      "ktb_3y_count_lag0": {
+        "n": 188,
+        "r": -0.2072,
+        "lag": 0
+      },
+      "ktb_3y_amount_lag0": {
+        "n": 188,
+        "r": -0.1959,
+        "lag": 0
+      },
+      "ktb_3y_count_lag1": {
+        "n": 187,
+        "r": -0.2075,
+        "lag": 1
+      },
+      "ktb_3y_amount_lag1": {
+        "n": 187,
+        "r": -0.1974,
+        "lag": 1
+      },
+      "ktb_3y_count_lag3": {
+        "n": 185,
+        "r": -0.1756,
+        "lag": 3
+      },
+      "ktb_3y_amount_lag3": {
+        "n": 185,
+        "r": -0.1652,
+        "lag": 3
+      },
+      "ktb_3y_count_lag6": {
+        "n": 182,
+        "r": -0.0622,
+        "lag": 6
+      },
+      "ktb_3y_amount_lag6": {
+        "n": 182,
+        "r": -0.0533,
+        "lag": 6
+      },
+      "m2_count_lag0": {
+        "n": 186,
+        "r": -0.1184,
+        "lag": 0
+      },
+      "m2_amount_lag0": {
+        "n": 186,
+        "r": -0.1,
+        "lag": 0
+      },
+      "m2_count_lag1": {
+        "n": 186,
+        "r": -0.1326,
+        "lag": 1
+      },
+      "m2_amount_lag1": {
+        "n": 186,
+        "r": -0.1133,
+        "lag": 1
+      },
+      "m2_count_lag3": {
+        "n": 185,
+        "r": -0.1681,
+        "lag": 3
+      },
+      "m2_amount_lag3": {
+        "n": 185,
+        "r": -0.1523,
+        "lag": 3
+      },
+      "m2_count_lag6": {
+        "n": 182,
+        "r": -0.1931,
+        "lag": 6
+      },
+      "m2_amount_lag6": {
+        "n": 182,
+        "r": -0.1807,
+        "lag": 6
+      }
+    },
+    {
+      "type": "합계",
+      "cd_91_count_lag0": {
+        "n": 188,
+        "r": -0.3482,
+        "lag": 0
+      },
+      "cd_91_amount_lag0": {
+        "n": 188,
+        "r": -0.2101,
+        "lag": 0
+      },
+      "cd_91_count_lag1": {
+        "n": 187,
+        "r": -0.3101,
+        "lag": 1
+      },
+      "cd_91_amount_lag1": {
+        "n": 187,
+        "r": -0.1754,
+        "lag": 1
+      },
+      "cd_91_count_lag3": {
+        "n": 185,
+        "r": -0.2307,
+        "lag": 3
+      },
+      "cd_91_amount_lag3": {
+        "n": 185,
+        "r": -0.1096,
+        "lag": 3
+      },
+      "cd_91_count_lag6": {
+        "n": 182,
+        "r": -0.112,
+        "lag": 6
+      },
+      "cd_91_amount_lag6": {
+        "n": 182,
+        "r": -0.0196,
+        "lag": 6
+      },
+      "bok_base_count_lag0": {
+        "n": 188,
+        "r": -0.3524,
+        "lag": 0
+      },
+      "bok_base_amount_lag0": {
+        "n": 188,
+        "r": -0.2183,
+        "lag": 0
+      },
+      "bok_base_count_lag1": {
+        "n": 187,
+        "r": -0.3099,
+        "lag": 1
+      },
+      "bok_base_amount_lag1": {
+        "n": 187,
+        "r": -0.1759,
+        "lag": 1
+      },
+      "bok_base_count_lag3": {
+        "n": 185,
+        "r": -0.2284,
+        "lag": 3
+      },
+      "bok_base_amount_lag3": {
+        "n": 185,
+        "r": -0.102,
+        "lag": 3
+      },
+      "bok_base_count_lag6": {
+        "n": 182,
+        "r": -0.1156,
+        "lag": 6
+      },
+      "bok_base_amount_lag6": {
+        "n": 182,
+        "r": -0.0159,
+        "lag": 6
+      },
+      "ktb_3y_count_lag0": {
+        "n": 188,
+        "r": -0.4689,
+        "lag": 0
+      },
+      "ktb_3y_amount_lag0": {
+        "n": 188,
+        "r": -0.3626,
+        "lag": 0
+      },
+      "ktb_3y_count_lag1": {
+        "n": 187,
+        "r": -0.4827,
+        "lag": 1
+      },
+      "ktb_3y_amount_lag1": {
+        "n": 187,
+        "r": -0.3688,
+        "lag": 1
+      },
+      "ktb_3y_count_lag3": {
+        "n": 185,
+        "r": -0.4733,
+        "lag": 3
+      },
+      "ktb_3y_amount_lag3": {
+        "n": 185,
+        "r": -0.3561,
+        "lag": 3
+      },
+      "ktb_3y_count_lag6": {
+        "n": 182,
+        "r": -0.3773,
+        "lag": 6
+      },
+      "ktb_3y_amount_lag6": {
+        "n": 182,
+        "r": -0.2537,
+        "lag": 6
+      },
+      "m2_count_lag0": {
+        "n": 186,
+        "r": -0.0472,
+        "lag": 0
+      },
+      "m2_amount_lag0": {
+        "n": 186,
+        "r": -0.0692,
+        "lag": 0
+      },
+      "m2_count_lag1": {
+        "n": 186,
+        "r": -0.0847,
+        "lag": 1
+      },
+      "m2_amount_lag1": {
+        "n": 186,
+        "r": -0.1015,
+        "lag": 1
+      },
+      "m2_count_lag3": {
+        "n": 185,
+        "r": -0.1672,
+        "lag": 3
+      },
+      "m2_amount_lag3": {
+        "n": 185,
+        "r": -0.1722,
+        "lag": 3
+      },
+      "m2_count_lag6": {
+        "n": 182,
+        "r": -0.2777,
+        "lag": 6
+      },
+      "m2_amount_lag6": {
+        "n": 182,
+        "r": -0.2594,
+        "lag": 6
+      }
+    }
+  ],
+  "note": "전년동월 YoY. 금리 %p · M2·거래 %. 전국만. 시군구 r·인과 없음. 원장 GROUP BY 요청 시."
+}

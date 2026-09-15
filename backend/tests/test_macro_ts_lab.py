@@ -16,6 +16,14 @@ def test_lag_pearson_shifts_right():
     left = {2010: 1.0, 2011: 2.0, 2012: 3.0, 2013: 4.0}
     right = {2010: 0.0, 2011: 1.0, 2012: 2.0, 2013: 3.0}
     # lag 1: (1,1), (2,2), (3,3) — right[t+1]
-    out = _lag_pearson(left, right, 1)
+    out = _lag_pearson(left, right, 1, grain="year")
+    assert out["n"] == 3
+    assert out["r"] is not None and out["r"] > 0.99
+
+
+def test_lag_pearson_month_lag3():
+    left = {201001: 1.0, 201004: 2.0, 201007: 3.0}
+    right = {201004: 1.0, 201007: 2.0, 201010: 3.0}
+    out = _lag_pearson(left, right, 3, grain="month")
     assert out["n"] == 3
     assert out["r"] is not None and out["r"] > 0.99

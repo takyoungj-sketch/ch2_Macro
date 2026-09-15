@@ -39,7 +39,7 @@ const DOORS: { id: LabTool; title: string; desc: string }[] = [
   {
     id: "g3",
     title: "유동성·금리 시계열",
-    desc: "전국 연도. M2·CD·기준금리·국고3년 변화와 8유형 거래 건수·액 YoY. 실험만.",
+    desc: "연·월 로컬 완료. 다음=연월합 대조. 전년동월·시차 0/1/3/6. Insight 아님.",
   },
   {
     id: "newapt",

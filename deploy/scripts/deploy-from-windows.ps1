@@ -91,9 +91,8 @@ try {
       Invoke-Scp @("deploy/scripts/setup-ch2-lab-auth.sh", "deploy/scripts/vps_apply_scope.sh") "deploy/scripts/"
       & ssh -i $Key $VpsHost "mkdir -p /opt/ch2_Macro/data"
       Invoke-Scp @(
-        "data/M2 상품별 구성내역(평잔, 계절조정계열)_05145718.csv",
-        "data/시장금리(월,분기,년)_05151819.csv",
-        "data/한국은행 기준금리 및 여수신금리_05152733.csv"
+        "data/한은 연간",
+        "data/한은 월간"
       ) "data/"
     }
     "rent" {
@@ -118,6 +117,11 @@ try {
       Invoke-Scp @("frontend-rent/package.json", "frontend-rent/tsconfig.json", "frontend-rent/vite.config.ts", "frontend-rent/tailwind.config.js", "frontend-rent/postcss.config.js", "frontend-rent/index.html", "frontend-rent/src") "frontend-rent/"
       Invoke-Scp @("frontend-lab/package.json", "frontend-lab/package-lock.json", "frontend-lab/tsconfig.json", "frontend-lab/vite.config.ts", "frontend-lab/tailwind.config.js", "frontend-lab/postcss.config.js", "frontend-lab/index.html", "frontend-lab/src") "frontend-lab/"
       Invoke-Scp @("deploy/macro-gateway", "deploy/hub", "deploy/scripts", "deploy/templates") "deploy/"
+      & ssh -i $Key $VpsHost "mkdir -p /opt/ch2_Macro/data"
+      Invoke-Scp @(
+        "data/한은 연간",
+        "data/한은 월간"
+      ) "data/"
     }
   }
 

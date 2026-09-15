@@ -7,8 +7,9 @@ const api = axios.create({
   headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
 });
 
-export type MacroPoint = { year: number; v: number };
+export type MacroPoint = { year?: number; month?: string; v: number };
 export type MacroCorr = { n: number; r: number | null; lag: number };
+export type MacroGrain = "calendar_year" | "calendar_month";
 
 export type MacroRate = {
   id: string;
@@ -34,9 +35,11 @@ export type MacroPairRow = {
 export type MacroTsResponse = {
   lab: string;
   note: string;
-  grain: string;
+  grain: MacroGrain | string;
   default_rate: string;
   years: number[];
+  periods?: string[];
+  lags?: number[];
   rates: Record<string, MacroRate>;
   m2: { values: MacroPoint[]; yoy_pct: MacroPoint[]; unit: string } | null;
   missing: string[];
@@ -47,7 +50,9 @@ export type MacroTsResponse = {
   sources: Record<string, string | null>;
 };
 
-export async function fetchMacroTs(): Promise<MacroTsResponse> {
-  const { data } = await api.get<MacroTsResponse>("/regional-profile/lab/macro-ts");
+export async function fetchMacroTs(grain: MacroGrain = "calendar_year"): Promise<MacroTsResponse> {
+  const { data } = await api.get<MacroTsResponse>("/regional-profile/lab/macro-ts", {
+    params: { grain },
+  });
   return data;
 }
