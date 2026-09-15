@@ -162,7 +162,7 @@ export default function MultiBuildingTrendChart({
                       y={yVal(v) - LABEL_ABOVE - (idx % 3) * 14}
                       textAnchor="middle"
                       className="fill-slate-900 dark:fill-white font-bold"
-                      style={{ fontSize: n > 5 ? "13px" : "14px" }}
+                      style={{ fontSize: n > 5 ? "14px" : "15px" }}
                     >
                       {formatLabel(v)}
                     </text>

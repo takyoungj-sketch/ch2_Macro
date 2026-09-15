@@ -114,7 +114,7 @@ export default function RollingTrendChart({ points }: { points: RollingStatPoint
             textAnchor="middle"
             className="fill-slate-700 dark:fill-slate-200 font-semibold"
             opacity={0.95}
-            style={{ fontSize: n > 4 ? "13px" : "14px" }}
+            style={{ fontSize: n > 4 ? "14px" : "15px" }}
           >
             {r.count.toLocaleString("ko-KR")}
           </text>
@@ -146,7 +146,7 @@ export default function RollingTrendChart({ points }: { points: RollingStatPoint
                   y={cy - LABEL_MEAN_ABOVE}
                   textAnchor="middle"
                   className="fill-slate-900 dark:fill-white font-bold"
-                  style={{ fontSize: n > 4 ? "13px" : "14px" }}
+                  style={{ fontSize: n > 4 ? "14px" : "15px" }}
                 >
                   {formatMeanLabel(Number(r.mean))}
                 </text>

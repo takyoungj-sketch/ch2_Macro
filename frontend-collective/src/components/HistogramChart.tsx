@@ -25,8 +25,8 @@ export default function HistogramChart({ bins }: { bins: HistogramBin[] }) {
   const gap = n > 24 ? 0.5 : n > 14 ? 1 : 2;
   const barW = Math.max((innerW - gap * (n - 1)) / n, 2);
   const labelEvery = n <= 8 ? 1 : n <= 16 ? 2 : Math.ceil(n / 5);
-  const tickFontPx = n > 20 ? 12 : n > 12 ? 13 : 14;
-  const countFontPx = n > 16 ? 11 : 13;
+  const tickFontPx = n > 20 ? 13 : n > 12 ? 14 : 15;
+  const countFontPx = n > 16 ? 13 : 14;
 
   return (
     <div className="w-full overflow-x-auto" role="img" aria-label="단가 분포 히스토그램">

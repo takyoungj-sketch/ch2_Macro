@@ -283,3 +283,24 @@ table.data td.addr {
 .modal-select {
   @apply border border-slate-200 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100;
 }
+
+/*
+ * html { font-size: 125% } 인데 text-[10px] 등은 px 고정이라 안내·표만 작게 남는다.
+ * 심층분석 모달(주거·비주거)에서 xs·sm 스케일로 맞춘다.
+ */
+.modal-shell .text-\[10px\] {
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+.modal-shell .text-\[11px\] {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+.modal-shell .text-\[12px\] {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+.modal-shell .text-xs {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}

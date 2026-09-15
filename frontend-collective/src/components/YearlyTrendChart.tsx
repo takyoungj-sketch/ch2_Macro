@@ -114,7 +114,7 @@ export default function YearlyTrendChart({
           <circle key={`c-${r.year}`} cx={xAt(i)} cy={yCount(r.count)} r={3.5} fill="#fff" stroke={COUNT_MARKER_STROKE} strokeWidth={2} />
         ))}
         {sorted.map((r, i) => (
-          <text key={`cl-${r.year}`} x={xAt(i)} y={yCount(r.count) + LABEL_COUNT_BELOW} textAnchor="middle" className="fill-slate-700 dark:fill-slate-200 font-semibold" opacity={0.95} style={{ fontSize: "13px" }}>
+          <text key={`cl-${r.year}`} x={xAt(i)} y={yCount(r.count) + LABEL_COUNT_BELOW} textAnchor="middle" className="fill-slate-700 dark:fill-slate-200 font-semibold" opacity={0.95} style={{ fontSize: "14px" }}>
             {r.count.toLocaleString("ko-KR")}
           </text>
         ))}
