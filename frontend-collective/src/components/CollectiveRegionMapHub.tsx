@@ -863,7 +863,6 @@ export default function CollectiveRegionMapHub({
         : "absolute left-0 top-0 whitespace-nowrap rounded bg-slate-950/80 px-1.5 py-0.5 text-[11px] font-bold leading-none text-white shadow-md ring-1 ring-white/70";
       el.style.textShadow =
         "0 1px 2px rgba(0,0,0,0.9)";
-      el.style.willChange = "transform";
       layer.appendChild(el);
       nodes.set(key, { el, lng, lat, minZoom: 0 });
     }
@@ -874,7 +873,6 @@ export default function CollectiveRegionMapHub({
       el.className =
         "absolute left-0 top-0 z-10 whitespace-nowrap rounded bg-slate-950/85 px-1.5 py-0.5 text-[12px] font-bold leading-none text-white shadow-md ring-1 ring-white/80";
       el.style.textShadow = "0 1px 2px rgba(0,0,0,0.95)";
-      el.style.willChange = "transform";
       layer.appendChild(el);
       nodes.set(`building:${point.building_key}`, {
         el,
@@ -890,7 +888,6 @@ export default function CollectiveRegionMapHub({
       el.className =
         "absolute left-0 top-0 z-10 whitespace-nowrap rounded bg-slate-950/85 px-1.5 py-0.5 text-[12px] font-bold leading-none text-white shadow-md ring-1 ring-white/80";
       el.style.textShadow = "0 1px 2px rgba(0,0,0,0.95)";
-      el.style.willChange = "transform";
       layer.appendChild(el);
       nodes.set(`road:${point.cluster_key}`, {
         el,
@@ -1165,7 +1162,7 @@ export default function CollectiveRegionMapHub({
 
       <div
         ref={containerRef}
-        className={`relative rounded-xl overflow-hidden border border-slate-200 bg-slate-200 ${
+        className={`relative z-0 isolate contain-paint overflow-hidden rounded-xl border border-slate-200 bg-slate-200 ${
           mapPanelMode === "collapsed" ? "hidden" : ""
         }`}
         style={

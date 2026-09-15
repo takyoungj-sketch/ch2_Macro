@@ -23,7 +23,7 @@ import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
 import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
-import { ActiveAiViewProvider, emptyAiContext } from "@ch2/ai-assistant/ActiveAiView";
+import { ActiveAiViewProvider, emptyAiContext, PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import RegionChipPanel, {
   LEFT_REGION_MULTI_SELECT,
   formatLeafChipLabel,
@@ -55,6 +55,7 @@ import {
 } from "./utils/residentialAssetTypes";
 import { useCollectiveDeepLink } from "./hooks/useCollectiveDeepLink";
 import { profileHref, resolveCollectiveProfileTarget } from "./utils/profileLink";
+import { buildCollectiveListContext } from "./api/aiContext";
 import { useCollectiveAnalysisUnits } from "./hooks/useCollectiveAnalysisUnits";
 import { useCollectiveScopeStale } from "./hooks/useCollectiveScopeStale";
 import {
@@ -394,6 +395,21 @@ export default function App() {
     [unitsProfile, profileResolveQ.data],
   );
 
+  const listAiContext = useMemo(() => {
+    if (!scope || !buildingsQ.data) return null;
+    const regionLabel = [scope.addr1, formatScopeAddr2(scope.addr2, scope.addr1)]
+      .filter(Boolean)
+      .join(" ");
+    return buildCollectiveListContext({
+      regionLabel,
+      assetType: scope.assetType,
+      windowYears: buildingsQ.data.window_years ?? scope.windowYears,
+      total: buildingsQ.data.total,
+      first: buildingsQ.data.items[0] ?? null,
+      sort: scope.sort,
+    });
+  }, [scope, buildingsQ.data]);
+
   const buildingSearchQ = buildingSearch.trim().toLowerCase();
   const buildingMatchCount = useMemo(() => {
     if (!buildingSearchQ || !buildingsQ.data?.items.length) return 0;
@@ -504,8 +520,9 @@ export default function App() {
         onToggleTheme={toggleUiColorScheme}
         rightSlot={<AiAssistantPanel />}
       />
+      {listAiContext ? <PublishAiContext context={listAiContext} /> : null}
 
-      <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
+      <div className="relative z-0 isolate flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
       <main className="flex flex-1 min-h-0">
         <CollapsibleLeftSidebar storageKey="collective" className="layout-sidebar p-4">
           <h2 className="text-sm font-semibold mb-3 text-slate-800 dark:text-slate-100">조건</h2>

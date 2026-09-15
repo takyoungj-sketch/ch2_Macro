@@ -1,6 +1,7 @@
 import type { AiContextPayload, AiPurpose } from "@ch2/ai-assistant/aiClient";
 import type {
   AssetType,
+  BuildingStatsRow,
   CollectiveRegressionResponse,
   CommercialFloorIndexResponse,
   CommercialHistogramResponse,
@@ -15,6 +16,7 @@ import type {
   YearlyStatPoint,
   YearlyStatsResponse,
 } from "../types";
+import { assetTypeLabel, commercialAssetTypeLabel } from "../types";
 
 function rollingPointsToRows(points: RollingStatPoint[]) {
   return points.map((p) => ({
@@ -33,6 +35,102 @@ function yearlyPointsToRows(points: YearlyStatPoint[]) {
     mean: p.mean,
     mean_unit_price_per_sqm: p.mean,
   }));
+}
+
+export function buildCollectiveListContext(opts: {
+  regionLabel: string;
+  assetType: string;
+  windowYears: number;
+  total: number;
+  first?: BuildingStatsRow | null;
+  sort?: string;
+}): AiContextPayload {
+  const first = opts.first;
+  return {
+    app: "collective",
+    panel: "BuildingList",
+    purpose: "statistics",
+    scope: {
+      region_label: opts.regionLabel,
+      asset_type: opts.assetType,
+      filters: { window_years: opts.windowYears },
+    },
+    facts: {
+      screen: "building_list",
+      list_n: opts.total,
+      window_years: opts.windowYears,
+      region_label: opts.regionLabel,
+      list_sort: opts.sort ?? "count",
+      first_row: first
+        ? {
+            name: first.display_name,
+            asset_label: assetTypeLabel(first.asset_type),
+            count: first.count,
+            median: first.median,
+            mean: first.mean,
+            ci_lower: first.ci_lower,
+            ci_upper: first.ci_upper,
+            is_reliable: first.is_reliable,
+            building_year: first.building_year,
+            households: first.households,
+            extra: first.builder_label ? `시공사 ${first.builder_label}` : undefined,
+          }
+        : null,
+    },
+  };
+}
+
+export function buildCommercialListContext(opts: {
+  regionLabel: string;
+  assetType: string;
+  windowYears: number;
+  total: number;
+  first?: {
+    display_label?: string | null;
+    road_name?: string | null;
+    asset_type?: string | null;
+    count?: number | null;
+    median?: number | null;
+    mean?: number | null;
+    ci_lower?: number | null;
+    ci_upper?: number | null;
+    is_reliable?: boolean;
+  } | null;
+  sort?: string;
+}): AiContextPayload {
+  const first = opts.first;
+  return {
+    app: "collective",
+    panel: "CommercialList",
+    purpose: "statistics",
+    scope: {
+      region_label: opts.regionLabel,
+      asset_type: opts.assetType,
+      filters: { window_years: opts.windowYears },
+    },
+    facts: {
+      screen: "commercial_list",
+      list_n: opts.total,
+      window_years: opts.windowYears,
+      region_label: opts.regionLabel,
+      list_sort: opts.sort ?? "count",
+      first_row: first
+        ? {
+            name: first.road_name || first.display_label,
+            asset_label: first.asset_type
+              ? commercialAssetTypeLabel(first.asset_type)
+              : undefined,
+            count: first.count,
+            median: first.median,
+            mean: first.mean,
+            ci_lower: first.ci_lower,
+            ci_upper: first.ci_upper,
+            is_reliable: first.is_reliable !== false,
+            extra: first.is_reliable === false ? "n<15 (표본 얇음)" : undefined,
+          }
+        : null,
+    },
+  };
 }
 
 export function buildCollectiveRegressionContext(

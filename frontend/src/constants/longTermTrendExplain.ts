@@ -58,7 +58,10 @@ export function buildLongTermTrendExplain(ctx: LongTermExplainContext): Analysis
       "도로·면적·이상치·지분 등 고급 필터는 적용하지 않습니다.",
     formula:
       "단가(만원/㎡) = 거래금액(만원) ÷ 계약면적(㎡)\n" +
-      `연도 y 의 ${metricLabel} = 해당 연도·지역·용도×지목 표본의 ${metricLabel === "중앙값" ? "median(unit_price_per_sqm)" : "mean(unit_price_per_sqm)"}`,
+      (ctx.metric === "median"
+        ? "연도 y 의 중앙값 = 그해 해당 지역·용도×지목 단가를 작은 순으로 줄 세운 가운데 값.\n" +
+          "건수가 홀수면 가운데 1건, 짝수면 가운데 2건의 평균(보간). 소수 첫째 자리로 반올림."
+        : "연도 y 의 평균 = 해당 연도·지역·용도×지목 표본의 mean(unit_price_per_sqm)"),
     reference:
       "집계 원장: land_transactions (is_valid=true, is_cancelled=false, 단가 not null)",
     floor_groups: [
@@ -75,6 +78,7 @@ export function buildLongTermTrendExplain(ctx: LongTermExplainContext): Analysis
       "가로축은 calendar_year(만년력), 세로축은 만원/㎡ " + metricLabel + "입니다.",
       "복수 지역·평균 모드: 위 칸에 지역별 선, 아래 칸에 거래수 가중 통합선(Σ n·지역평균 / Σ n)을 동시에 표시합니다. 산술평균 풀과 동일합니다.",
       "중앙값 모드: 지역별 선만 표시합니다(중앙값은 가중 합산 불가).",
+      "중앙값은 실제 한 건의 단가와 다를 수 있습니다. 짝수 건이면 가운데 두 단가의 평균입니다. 지분 거래도 포함합니다.",
       "거래 건수 n<15 인 연도는 「참고용」으로 표시합니다 (기본통계와 동일 정책).",
       "「선택 연도」·「롤링 구간」 탭은 고급 필터가 반영된 값, 「장기 추세」는 필터 없는 연도 마트입니다.",
     ],
@@ -115,6 +119,15 @@ export function buildLongTermTrendExplain(ctx: LongTermExplainContext): Analysis
         answer:
           "기본은 중앙값(극단값에 덜 민감). 평균은 소수 대형 거래의 영향을 더 받습니다. " +
           "토글로 전환할 수 있으며, 표와 차트가 함께 바뀝니다.",
+      },
+      {
+        id: "median-interp",
+        question: "추세선 숫자가 실제 거래 단가와 다른 이유는?",
+        answer:
+          "중앙값은 그해 표본을 줄 세운 가운데입니다. 건수가 홀수면 가운데 1건의 단가이고, " +
+          "짝수면 가운데 두 단가의 평균(보간)이라 화면에 나온 값이 어느 한 건과도 같지 않을 수 있습니다. " +
+          "장기 추세는 지분 거래를 빼지 않습니다. 지분과 완전 거래가 섞이면 그 중간으로 보일 수 있습니다. " +
+          "n<15인 연도는 참고용입니다.",
       },
       {
         id: "admin-boundary",

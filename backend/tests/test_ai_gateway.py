@@ -788,3 +788,103 @@ def test_numbers_preserved_polish_guard():
     bad = "### 요약\n\n표본 **100건**."
     assert numbers_preserved(template, ok)
     assert not numbers_preserved(template, bad)
+
+
+def test_collective_building_list_explains_basic_stats():
+    resp = handle_chat(
+        AiChatRequest(
+            message="이 화면의 분석 결과를 설명해 주세요.",
+            context=AiContext(
+                app="collective",
+                panel="BuildingList",
+                scope=AiScope(region_label="청주 흥덕구"),
+                facts={
+                    "screen": "building_list",
+                    "list_n": 12,
+                    "window_years": 5,
+                    "first_row": {
+                        "name": "가경 아이파크",
+                        "asset_label": "아파트",
+                        "count": 8,
+                        "median": 420,
+                        "mean": 435,
+                    },
+                },
+            ),
+        )
+    )
+    assert resp.llm_used is False
+    assert "단지" in resp.answer
+    assert "지역회귀" in resp.answer
+    assert "가경 아이파크" in resp.answer
+    assert "435" in resp.answer
+    assert "420" in resp.answer
+    assert "첫 행" in resp.answer
+    assert "이상치" in resp.answer
+    assert "Explain" not in resp.answer
+    assert "비어" not in resp.answer
+    assert "가경 아이파크" in resp.answer
+    assert resp.suggested_followups
+
+
+def test_land_matrix_explains_basic_stats():
+    resp = handle_chat(
+        AiChatRequest(
+            message="지금 기본통계화면의 결과에 대해 설명해줘.",
+            context=AiContext(
+                app="land",
+                panel="PaidMatrixCell",
+                scope=AiScope(region_label="청주 가경동"),
+                facts={
+                    "screen": "land_matrix",
+                    "tx_count": 88,
+                    "window_years": 5,
+                    "matrix_mode": "category",
+                    "top_cell": {
+                        "zone_type": "제2종일반주거지역",
+                        "land_category": "대",
+                        "is_top_left": True,
+                        "count": 353,
+                        "mean": 17.0,
+                        "median": 16.2,
+                        "std": 3.4,
+                        "is_reliable": True,
+                    },
+                },
+            ),
+        )
+    )
+    assert resp.llm_used is False
+    assert "용도지역" in resp.answer
+    assert "지목" in resp.answer
+    assert "(1,1)" in resp.answer
+    assert "353" in resp.answer
+    assert "17.0" in resp.answer
+    assert "16.2" in resp.answer
+    assert "3.4" in resp.answer
+    assert "이상치" in resp.answer
+    assert "칸을 클릭" in resp.answer
+    assert "Explain" not in resp.answer
+    assert "회귀를 먼저" not in resp.answer
+
+
+def test_regression_results_still_use_engine_numbers():
+    resp = handle_chat(
+        AiChatRequest(
+            message="이 화면의 분석 결과를 설명해 주세요.",
+            context=AiContext(
+                app="built",
+                panel="RegressionCard",
+                scope=AiScope(region_label="사천읍"),
+                facts={
+                    "primary": {
+                        "n": 73,
+                        "adj_r_squared": 0.72,
+                        "coefficients": [{"name": "연식", "coef": -0.02, "p": 0.01}],
+                    }
+                },
+            ),
+        )
+    )
+    assert "73" in resp.answer or "0.72" in resp.answer or "연식" in resp.answer
+    assert "단지별 거래 요약" not in resp.answer

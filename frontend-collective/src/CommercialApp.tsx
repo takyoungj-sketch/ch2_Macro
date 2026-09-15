@@ -22,7 +22,7 @@ import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
 import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
-import { ActiveAiViewProvider, emptyAiContext } from "@ch2/ai-assistant/ActiveAiView";
+import { ActiveAiViewProvider, emptyAiContext, PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import StatsWindowToggle, { normalizeStatsWindowYears, type StatsWindowYears } from "./components/StatsWindowToggle";
 import RegionChipPanel, {
   LEFT_REGION_MULTI_SELECT,
@@ -40,6 +40,7 @@ import {
 } from "./utils/commercialAssetTypes";
 import { useCollectiveDeepLink } from "./hooks/useCollectiveDeepLink";
 import { profileHref, resolveCollectiveProfileTarget } from "./utils/profileLink";
+import { buildCommercialListContext } from "./api/aiContext";
 import { useCollectiveAnalysisUnits } from "./hooks/useCollectiveAnalysisUnits";
 import { useCollectiveScopeStale } from "./hooks/useCollectiveScopeStale";
 import {
@@ -277,6 +278,21 @@ export default function CommercialApp() {
     [unitsProfile, profileResolveQ.data],
   );
 
+  const listAiContext = useMemo(() => {
+    if (!scope || !clustersQ.data) return null;
+    const regionLabel = [scope.addr1, formatScopeAddr2(scope.addr2, scope.addr1)]
+      .filter(Boolean)
+      .join(" ");
+    return buildCommercialListContext({
+      regionLabel,
+      assetType: scope.assetType,
+      windowYears: clustersQ.data.window_years ?? scope.windowYears,
+      total: clustersQ.data.total,
+      first: clustersQ.data.items[0] ?? null,
+      sort: scope.sort,
+    });
+  }, [scope, clustersQ.data]);
+
   const clusterSearchQ = clusterSearch.trim().toLowerCase();
   const clusterMatchCount = useMemo(() => {
     if (!clusterSearchQ || !clustersQ.data?.items.length) return 0;
@@ -368,8 +384,9 @@ export default function CommercialApp() {
         onToggleTheme={toggleUiColorScheme}
         rightSlot={<AiAssistantPanel />}
       />
+      {listAiContext ? <PublishAiContext context={listAiContext} /> : null}
 
-      <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
+      <div className="relative z-0 isolate flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
       <main className="flex flex-1 min-h-0">
         <CollapsibleLeftSidebar
           storageKey="collective-commercial"

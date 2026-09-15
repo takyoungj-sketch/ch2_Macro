@@ -14,7 +14,7 @@ import {
   persistModalFontStep,
   readStoredModalFontStep,
 } from "../constants/displayUi";
-import { eventHitsCh2Ai, isAiChatOpen } from "@ch2/ai-assistant/aiHost";
+import { isAiChatOpen, shouldIgnoreModalDismiss, CH2_AI_OPEN_ATTR } from "@ch2/ai-assistant/aiHost";
 
 type Props = {
   open: boolean;
@@ -140,6 +140,7 @@ export default function DraggableModalShell({
   const [box, setBox] = useState<PanelBox | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [minimized, setMinimized] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const [fontStep, setFontStep] = useState(readStoredModalFontStep);
   const modalZoom = MODAL_FONT_SCALE_STEPS[clampModalFontStep(fontStep)];
   const fontPct = Math.round(modalZoom * 100);
@@ -190,6 +191,21 @@ export default function DraggableModalShell({
     window.addEventListener("keydown", onKey, escapeCapture);
     return () => window.removeEventListener("keydown", onKey, escapeCapture);
   }, [open, onClose, escapeCapture, fullscreen]);
+
+  useEffect(() => {
+    if (!open) {
+      setAiOpen(false);
+      return;
+    }
+    const sync = () => setAiOpen(isAiChatOpen());
+    sync();
+    const mo = new MutationObserver(sync);
+    mo.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: [CH2_AI_OPEN_ATTR],
+    });
+    return () => mo.disconnect();
+  }, [open]);
 
   useEffect(() => {
     if (!open || !box || fullscreen) return;
@@ -416,16 +432,16 @@ export default function DraggableModalShell({
   const tree = (
     <div
       className={`fixed ${fullscreen ? "inset-0" : "inset-x-0 bottom-0"} ${zClassName} ${
-        minimized ? "bg-transparent pointer-events-none" : backdropClassName
-      }`}
+        minimized || aiOpen ? "pointer-events-none" : ""
+      } ${minimized ? "bg-transparent" : backdropClassName}`}
       style={overlayStyle}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
       onMouseDown={(e) => {
-        if (fullscreen) return;
+        if (fullscreen || aiOpen) return;
         if (e.target !== e.currentTarget) return;
-        if (eventHitsCh2Ai(e)) return;
+        if (shouldIgnoreModalDismiss(e)) return;
         onClose();
       }}
     >

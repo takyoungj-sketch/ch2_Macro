@@ -18,6 +18,7 @@ import {
   ResizeHandles,
   usePanelDrag,
 } from "../ui-window/resizableWindow";
+import "./aiAssistantPanel.css";
 
 type ChatMessage = { role: "user" | "assistant"; text: string; meta?: AiChatResponse };
 
@@ -316,7 +317,7 @@ const MIN_WIN = { w: 360, h: 320 };
 const FONT_SCALES = [0.85, 1, 1.15, 1.3, 1.5] as const;
 const FONT_STORAGE_KEY = "ch2-ai-font-scale";
 const WIN_STORAGE_KEY = "ch2-ai-win-box";
-const BASE_FONT_PX = 12;
+const BASE_FONT_PX = 16;
 
 function readStoredFontScale(): number {
   try {
@@ -504,14 +505,14 @@ function AiAssistantModal({
   return createPortal(
     <div
       data-ch2-ai
-      className="fixed z-[150] modal-shell rounded-xl shadow-2xl border flex flex-col overflow-hidden"
+      className="ch2-ai-modal fixed z-[400] isolate rounded-xl flex flex-col overflow-hidden"
       role="dialog"
       aria-modal="false"
       aria-labelledby="ai-assistant-modal-title"
       style={{ left: win.x, top: win.y, width: win.w, height: win.h }}
     >
       <div
-        className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 shrink-0 cursor-grab active:cursor-grabbing select-none"
+        className="ch2-ai-modal-header px-4 py-3 shrink-0 cursor-grab active:cursor-grabbing select-none"
         onPointerDown={(e) => {
           const t = e.target as HTMLElement;
           if (t.closest("button, a, input, textarea, select")) return;
@@ -520,10 +521,10 @@ function AiAssistantModal({
       >
         <div className="flex justify-between items-start gap-2">
           <div className="min-w-0">
-            <h2 id="ai-assistant-modal-title" className="text-sm font-bold text-slate-900 dark:text-slate-100">
+            <h2 id="ai-assistant-modal-title" className="ch2-ai-modal-title font-bold text-slate-900 dark:text-indigo-50">
               통계 분석 어시스턴트
             </h2>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+            <p className="ch2-ai-modal-sub text-slate-600 dark:text-indigo-200/80 mt-0.5 truncate">
               {scopeHint}
               <span className="ml-2 text-slate-400 dark:text-slate-500">· 드래그로 이동 · 모서리로 크기 조절</span>
             </p>
@@ -720,7 +721,7 @@ function AiAssistantModal({
       </div>
 
       <div
-        className="shrink-0 px-4 py-3 border-t border-slate-100 dark:border-slate-700 space-y-2"
+        className="ch2-ai-modal-footer shrink-0 px-4 py-3 space-y-2"
         style={{ fontSize: `${BASE_FONT_PX * fontScale}px` }}
       >
         <form

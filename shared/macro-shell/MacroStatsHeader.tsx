@@ -1,5 +1,5 @@
 // @ts-nocheck — shared 패키지: 각 frontend node_modules 기준으로 tsc 경로가 달라짐
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import "./headerToolbar.css";
 import DisplaySettingsControls from "./DisplaySettingsControls";
 import MacroProfileNavLink from "./MacroProfileNavLink";
@@ -34,8 +34,27 @@ export default function MacroStatsHeader({
   onToggleTheme,
   rightSlot,
 }: Props) {
+  const headerRef = useRef(null);
+
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const sync = () => {
+      const h = Math.ceil(el.getBoundingClientRect().height);
+      document.documentElement.style.setProperty("--ch2-macro-header-height", `${h}px`);
+    };
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    window.addEventListener("resize", sync);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", sync);
+    };
+  }, []);
+
   return (
-    <header className="ch2-macro-stats-header">
+    <header ref={headerRef} className="ch2-macro-stats-header">
       <div className="macro-header-row">
         <div className="macro-header-title">
           <p className="macro-header-breadcrumb">

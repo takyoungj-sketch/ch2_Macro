@@ -259,9 +259,10 @@ PANEL_CAPABILITIES: dict[str, PanelCapability] = {
         blocked_keywords=_TREND_KEYWORDS + ("회귀계수", "vif", "ols"),
         redirects=((_TREND_KEYWORDS, _REDIRECT_TREND),),
         on_screen_questions=(
-            "이 결과를 어떻게 해석하나요?",
-            "용도지역별 차이를 설명해 주세요.",
-            "신뢰구간이 넓은 이유는?",
+            "이 표의 칸은 무엇을 뜻하나요?",
+            "칸을 클릭하면 무엇이 나오나요?",
+            "필터 분석과 무엇이 다른가요?",
+            "n이 작은 칸은 어떻게 읽나요?",
         ),
     ),
     "LongTermTrendPanel": PanelCapability(
@@ -363,6 +364,44 @@ PANEL_CAPABILITIES: dict[str, PanelCapability] = {
             "층별 지수를 어떻게 해석하나요?",
             "기준층은 어떻게 정해지나요?",
             "면적형 지수는 어떻게 봐야 하나요?",
+        ),
+    ),
+    "BuildingList": PanelCapability(
+        panel="BuildingList",
+        label="집합 기본통계 목록",
+        bundle_id="list_overview",
+        blocked_keywords=(),
+        redirects=(),
+        on_screen_questions=(
+            "이 표의 열은 무엇을 뜻하나요?",
+            "단지를 클릭하면 무엇이 나오나요?",
+            "지역회귀는 언제 쓰나요?",
+            "세대수는 어떻게 읽나요?",
+            "데이터가 어떻게 만들어지나요?",
+        ),
+    ),
+    "CommercialList": PanelCapability(
+        panel="CommercialList",
+        label="집합 비주거 기본통계",
+        bundle_id="list_overview",
+        blocked_keywords=(),
+        redirects=(),
+        on_screen_questions=(
+            "도로명 열은 무엇을 뜻하나요?",
+            "도로를 클릭하면 무엇이 나오나요?",
+            "n이 작으면 어떻게 읽나요?",
+            "주거 단지 표와 무엇이 다른가요?",
+        ),
+    ),
+    "CollectiveLanding": PanelCapability(
+        panel="CollectiveLanding",
+        label="집합 유형 선택",
+        bundle_id="list_overview",
+        blocked_keywords=(),
+        redirects=(),
+        on_screen_questions=(
+            "주거와 상업·업무는 무엇이 다른가요?",
+            "통계분석은 어디서 하나요?",
         ),
     ),
 }

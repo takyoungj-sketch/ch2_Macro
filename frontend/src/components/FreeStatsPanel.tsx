@@ -35,6 +35,8 @@ import PaidMatrixYearlyModal from "./PaidMatrixYearlyModal";
 import YearlyStatsTable from "./YearlyStatsTable";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import RegionalProfileLink from "./RegionalProfileLink";
+import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
+import { buildLandMatrixOverviewContext } from "../api/aiContext";
 
 export default function FreeStatsPanel() {
   const viewMode = useAppStore((s) => s.viewMode);
@@ -344,6 +346,17 @@ export default function FreeStatsPanel() {
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-5 space-y-5">
+        <PublishAiContext
+          context={buildLandMatrixOverviewContext({
+            regionLabel: data.beopjungri_name,
+            windowYears: freeStatsWindowYears,
+            txCount: data.total?.count ?? 0,
+            matrixMode,
+            matrix: data.matrix ?? [],
+            byZone: data.by_zone,
+            byLandCategory: data.by_land_category,
+          })}
+        />
         {useUpper &&
           upperSingle?.level === "eupmyeondong" &&
           upperSingle.code.startsWith("361101") &&

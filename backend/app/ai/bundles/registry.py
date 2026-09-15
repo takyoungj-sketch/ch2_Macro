@@ -65,6 +65,11 @@ BUNDLE_REGISTRY: dict[str, BundleSpec] = {
         description="모형 탐색 판정·Twin·권장 행동",
         panels=("RecommendationCard", "ModelSelectionCard"),
     ),
+    "list_overview": BundleSpec(
+        bundle_id="list_overview",
+        description="기본통계 목록·매트릭스 화면 안내",
+        panels=("BuildingList", "CommercialList", "CollectiveLanding"),
+    ),
 }
 
 PANEL_TO_BUNDLE: dict[str, str] = {}
@@ -93,10 +98,26 @@ SUGGESTED_QUESTIONS: dict[str, list[str]] = {
         "모델 비교 권장값은?",
     ],
     "PaidMatrixCell": [
-        "이 결과를 어떻게 해석하나요?",
-        "면적 계수는 어떻게 봐야 하나요?",
-        "신뢰구간이 넓은 이유는?",
-        "표본수가 적으면 어떤 문제가 생기나요?",
+        "이 표의 칸은 무엇을 뜻하나요?",
+        "칸을 클릭하면 무엇이 나오나요?",
+        "필터 분석과 무엇이 다른가요?",
+        "n이 작은 칸은 어떻게 읽나요?",
+    ],
+    "BuildingList": [
+        "이 표의 열은 무엇을 뜻하나요?",
+        "단지를 클릭하면 무엇이 나오나요?",
+        "지역회귀는 언제 쓰나요?",
+        "세대수는 어떻게 읽나요?",
+    ],
+    "CommercialList": [
+        "도로명 열은 무엇을 뜻하나요?",
+        "도로를 클릭하면 무엇이 나오나요?",
+        "n<15은 어떻게 읽나요?",
+        "주거 단지 표와 무엇이 다른가요?",
+    ],
+    "CollectiveLanding": [
+        "주거와 상업·업무는 무엇이 다른가요?",
+        "통계분석은 어디서 하나요?",
     ],
     "RegressionCard": [
         "이 결과를 어떻게 해석하나요?",

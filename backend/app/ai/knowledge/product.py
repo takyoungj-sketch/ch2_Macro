@@ -484,6 +484,10 @@ def skip_llm_for_quota(message: str) -> bool:
         return True
     if is_howto_ui_question(message):
         return True
+    from app.ai.knowledge.screen_guides import is_screen_orientation_question
+
+    if is_screen_orientation_question(message):
+        return True
     if is_memo_request(message) or is_history_compare_question(message):
         return True
     if is_path_intent_question(message):
@@ -771,6 +775,13 @@ def product_knowledge_excerpt(*, app: str, panel: str, message: str) -> str:
                 format_howto_answer(app, message),
                 LIMITATIONS.strip(),
             ]
+        )
+    from app.ai.knowledge.screen_guides import format_screen_guide, is_screen_orientation_question
+    from app.ai.schemas import AiContext as _AiCtx
+
+    if is_screen_orientation_question(message):
+        return format_screen_guide(
+            _AiCtx(app=app or "built", panel=panel or "RegressionCard")
         )
     if any(
         k in message

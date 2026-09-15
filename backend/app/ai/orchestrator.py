@@ -93,6 +93,12 @@ from app.ai.knowledge.product import (
     product_knowledge_excerpt,
     skip_llm_for_quota,
 )
+from app.ai.knowledge.screen_guides import (
+    format_screen_guide,
+    is_screen_orientation_question,
+    screen_guide_followups,
+    should_use_screen_guide,
+)
 from app.ai.stats_kb import (
     answer_statistics_question,
     answer_statistics_with_context,
@@ -246,6 +252,28 @@ def _planner_or_memo_response(
         )
         session.add_turn(SessionTurn(role="user", message=req.message, route="ch2", bundle_id=bundle.bundle_id))
         session.add_turn(SessionTurn(role="assistant", message=answer[:500], route="ch2", bundle_id=bundle.bundle_id))
+        return resp
+    if is_screen_orientation_question(req.message) and should_use_screen_guide(
+        ctx, _has_facts_narrative(bundle)
+    ):
+        answer = format_screen_guide(ctx)
+        resp = AiChatResponse(
+            session_id=session.session_id,
+            route="explain",
+            answer=validate_answer(answer, "explain"),
+            evidence=[
+                EvidenceItem(type="ch2_product", label="CH2 기본통계 화면 안내", confidence="high"),
+            ],
+            bundle_id=bundle.bundle_id,
+            suggested_followups=screen_guide_followups(ctx),
+            disclaimer=SHORT_DISCLAIMER,
+            llm_used=False,
+            trust_level="high",
+            trust_sources=["CH2 Product Knowledge", "Active Context"],
+            ai_interpretation=_ai_interpretation_label(llm_used=False),
+        )
+        session.add_turn(SessionTurn(role="user", message=req.message, route="explain", bundle_id=bundle.bundle_id))
+        session.add_turn(SessionTurn(role="assistant", message=answer[:500], route="explain", bundle_id=bundle.bundle_id))
         return resp
     if is_knowledge_source_question(req.message):
         answer = format_knowledge_source_answer(app=ctx.app)
@@ -531,6 +559,8 @@ def _has_facts_narrative(bundle: AiDiagnosticPack) -> bool:
         return d.get("y_hat") is not None
     if bid == "recommend_diagnostic":
         return isinstance(d.get("stage1"), dict)
+    if bid == "list_overview":
+        return False
     return bool(d.get("n") or d.get("points") or d.get("y_hat"))
 
 
@@ -597,7 +627,7 @@ def _explain_answer(
             if _has_facts_narrative(bundle):
                 nr = _regression_narrative(context, bundle, message)
                 return nr.answer, nr.followups, nr
-        if is_generic_screen_question(message):
+        if is_generic_screen_question(message) or is_screen_orientation_question(message):
             parts = [f"**{ex.title}**", ex.summary]
             if ex.formula:
                 parts.append(f"공식: {ex.formula}")
@@ -615,11 +645,7 @@ def _explain_answer(
     if ex:
         parts = [f"**{ex.title}**", ex.summary]
         return "\n\n".join(parts), None, None
-    return (
-        "현재 화면에 Explain 메타가 없습니다. CH2 Facts(회귀·통계)를 먼저 실행해 주세요.",
-        None,
-        None,
-    )
+    return format_screen_guide(context), screen_guide_followups(context), None
 
 
 def _ch2_template_answer(
@@ -633,6 +659,10 @@ def _ch2_template_answer(
             "단지를 연 다음 추세 탭은 어디에 있나요?",
             "유형 격차를 보려면 어떻게 하나요?",
         ], None
+    if is_screen_orientation_question(message) and should_use_screen_guide(
+        context, _has_facts_narrative(bundle)
+    ):
+        return format_screen_guide(context), screen_guide_followups(context), None
     if _has_facts_narrative(bundle) and should_auto_explain_screen(message):
         nr = _regression_narrative(context, bundle, message)
         return nr.answer, nr.followups, nr

@@ -429,9 +429,13 @@ def is_generic_screen_question(message: str) -> bool:
         "한눈",
         "전체 설명",
         "화면 설명",
+        "기본통계",
+        "기본 통계",
+        "이 표",
+        "이 목록",
     )
     if any(g in message for g in generic):
         return True
-    if re.match(r"^(이\s*)?결과를?\s*(설명|소개)", message.strip()):
+    if re.search(r"결과를?\s*(설명|소개)", message):
         return True
     return False

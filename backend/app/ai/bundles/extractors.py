@@ -416,6 +416,29 @@ def build_sangkwon_reb(context: AiContext) -> AiDiagnosticPack:
     )
 
 
+def build_list_overview(context: AiContext) -> AiDiagnosticPack:
+    facts = context.facts or {}
+    scope_label = context.scope.region_label or facts.get("region_label") or facts.get("scope_label")
+    summary = [
+        f"screen={facts.get('screen') or context.panel}",
+        f"scope={scope_label or '선택 지역'}",
+    ]
+    if facts.get("list_n") is not None:
+        summary.append(f"목록={facts.get('list_n')}개")
+    if facts.get("tx_count") is not None:
+        summary.append(f"거래={facts.get('tx_count')}건")
+    if facts.get("window_years") is not None:
+        summary.append(f"창={facts.get('window_years')}년")
+    return AiDiagnosticPack(
+        bundle_id="list_overview",
+        panel=context.panel,
+        app=context.app,
+        summary_lines=summary,
+        diagnostics={**facts, "scope_label": scope_label},
+        limitations=["기본통계 목록·매트릭스 요약이며 회귀 계수·예측값이 아닙니다."],
+    )
+
+
 def build_bundle(context: AiContext) -> AiDiagnosticPack:
     facts = context.facts or {}
     panel = context.panel
@@ -425,6 +448,12 @@ def build_bundle(context: AiContext) -> AiDiagnosticPack:
         return build_sangkwon_reb(context)
     if context.app == "rent" or panel == "RentListCard" or bid == "rent_conversion":
         return build_rent_conversion(context)
+    if (
+        panel in ("BuildingList", "CommercialList", "CollectiveLanding")
+        or bid == "list_overview"
+        or facts.get("screen") in ("building_list", "commercial_list", "land_matrix")
+    ):
+        return build_list_overview(context)
 
     if not facts:
         if context.explain:
