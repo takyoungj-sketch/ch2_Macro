@@ -5,6 +5,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
+from app.collective.meta_cache import get_ttl_cached
 from app.region_sido import is_retired_sido_name
 
 # API·프론트 공통 토큰 — DB에 저장되지 않음.
@@ -124,40 +125,47 @@ def list_addr2_for_sido(
     asset_type: str | None = None,
     valid_sql: str = "TRUE",
 ) -> list[str]:
-    """DISTINCT addr2; flat sido 이면 synthetic 토큰 1개 반환."""
+    """DISTINCT addr2; flat sido 이면 synthetic 토큰 1개 반환. 1시간 TTL."""
     if is_retired_sido_name(addr1):
         return []
-    clauses = [
-        "addr1 = :a1",
-        "addr2 IS NOT NULL",
-        "btrim(addr2::text) <> ''",
-        valid_sql,
-    ]
-    params: dict = {"a1": addr1.strip()}
-    apply_region_asset_type_filter(clauses, params, asset_type)
-    rows = conn.execute(
-        text(
-            f"""
-            SELECT DISTINCT btrim(addr2::text) AS v
-            FROM {table}
-            WHERE {' AND '.join(clauses)}
-            ORDER BY 1
-            """
-        ),
-        params,
-    ).fetchall()
-    if rows:
-        vals = [str(r.v).strip() for r in rows if r.v]
-        if vals and _table_has_flat_sido(
-            conn, table=table, addr1=addr1, asset_type=asset_type, valid_sql=valid_sql
-        ) and _addr2_values_look_like_misplaced_flat_leaves(vals):
+    a1 = addr1.strip()
+    cache_key = f"addr2:{table}:{a1}:{asset_type or ''}:{valid_sql}"
+
+    def _load() -> list[str]:
+        clauses = [
+            "addr1 = :a1",
+            "addr2 IS NOT NULL",
+            "btrim(addr2::text) <> ''",
+            valid_sql,
+        ]
+        params: dict = {"a1": a1}
+        apply_region_asset_type_filter(clauses, params, asset_type)
+        rows = conn.execute(
+            text(
+                f"""
+                SELECT DISTINCT btrim(addr2::text) AS v
+                FROM {table}
+                WHERE {' AND '.join(clauses)}
+                ORDER BY 1
+                """
+            ),
+            params,
+        ).fetchall()
+        if rows:
+            vals = [str(r.v).strip() for r in rows if r.v]
+            # 시·군·구면 COUNT 스캔을 건너뛴다 (경기 등에서 두 번째 seq scan 방지).
+            if vals and _addr2_values_look_like_misplaced_flat_leaves(vals) and _table_has_flat_sido(
+                conn, table=table, addr1=a1, asset_type=asset_type, valid_sql=valid_sql
+            ):
+                return [FLAT_SIDO_ADDR2_TOKEN]
+            return vals
+        if _table_has_flat_sido(
+            conn, table=table, addr1=a1, asset_type=asset_type, valid_sql=valid_sql
+        ):
             return [FLAT_SIDO_ADDR2_TOKEN]
-        return vals
-    if _table_has_flat_sido(
-        conn, table=table, addr1=addr1, asset_type=asset_type, valid_sql=valid_sql
-    ):
-        return [FLAT_SIDO_ADDR2_TOKEN]
-    return []
+        return []
+
+    return get_ttl_cached(cache_key, _load)
 
 
 def region_scope_clauses(
