@@ -221,6 +221,47 @@ def test_chat_log_log_methodology():
     assert r2.bundle_id != "cluster_compare" or "탄력성" in r2.answer
 
 
+def test_loglog_prediction_is_methodology_not_playbook():
+    from app.ai.constitution import is_statistical_methodology_question
+    from app.ai.knowledge.planner import is_path_intent_question
+    from app.ai.targeted_qa import answer_log_prediction_construction_question
+
+    q = "log-log 회귀식에서 예측값을 어떤 방식으로 만들지?"
+    ctx = AiContext(app="built", panel="RegressionCard", facts={})
+    assert is_statistical_methodology_question(q)
+    assert not is_path_intent_question(q, ctx)
+    assert classify_route(q) == "opinion"
+    targeted = answer_log_prediction_construction_question(q, {"model_type": "loglog", "n": 73})
+    assert targeted
+    assert "smear" in targeted.lower() or "역변환" in targeted or "exp" in targeted.lower()
+    assert "플레이북" not in targeted
+
+    resp = handle_chat(
+        AiChatRequest(
+            message=q,
+            context=AiContext(
+                app="built",
+                panel="RegressionCard",
+                scope=AiScope(region_label="사천읍 읍면동"),
+                facts={
+                    "primary": {
+                        "n": 73,
+                        "adj_r_squared": 0.719,
+                        "model_type": "loglog",
+                        "scope_label": "사천읍 읍면동",
+                        "coefficients": [],
+                    },
+                },
+            ),
+        )
+    )
+    assert "전용 플레이북" not in resp.answer
+    assert "유형 더미를 켠 통합회귀" not in resp.answer
+    blob = resp.answer.lower()
+    assert "smear" in blob or "역변환" in resp.answer or "exp" in blob
+    assert resp.route == "opinion"
+
+
 def test_scope_comparison_same_label_skipped():
     from app.ai.bundles.comparison import narrative_scope_comparison
     from app.ai.sessions import get_or_create

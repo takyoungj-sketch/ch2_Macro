@@ -208,6 +208,77 @@ def answer_model_comparison_question(message: str, diagnostics: dict[str, Any]) 
     return "\n".join(lines)
 
 
+def answer_log_prediction_construction_question(
+    message: str, diagnostics: dict[str, Any]
+) -> str | None:
+    """log / log-log 예측값 구성(역변환·smearing). 플레이북 경로가 아님."""
+    lower = message.lower()
+    mentions_log = (
+        "log-log" in lower
+        or "loglog" in lower
+        or "로그로그" in message
+        or "로그회귀" in message
+        or "로그 회귀" in message
+        or "semi-log" in lower
+        or "반로그" in message
+        or "회귀식" in message
+    )
+    construction = any(
+        k in message or k in lower
+        for k in (
+            "예측값",
+            "예측을",
+            "만들",
+            "역변환",
+            "재변환",
+            "smear",
+            "smearing",
+            "duan",
+            "편향",
+            "bias",
+        )
+    )
+    if not (mentions_log and construction):
+        return None
+
+    model_type = diagnostics.get("model_type")
+    n = diagnostics.get("n")
+    lines = [
+        "### 답변",
+        "",
+        "log-log(및 로그 종속) 회귀가 만드는 것은 **Y 자체가 아니라 ln(Y)의 조건부 평균**입니다. "
+        "가장 단순한 원척도 환산은 Ŷ = exp(ln Ŷ) 이지만, Jensen 부등식 때문에 이 값은 보통 "
+        "**Y의 평균보다 작습니다**(재변환 편향).",
+        "",
+        "CH2 복합·집합 등 log(금액) 계열의 원척도 예측은 **Duan smearing**을 씁니다.",
+        "",
+        "Ŷ_원척도 = exp(ŷ_log) × mean(exp(ê))",
+        "",
+        "ê는 로그 식의 잔차입니다. 정규성 가정이 약해도 쓸 수 있는 비모수 보정입니다. "
+        "CH2 log-log는 **금액과 면적만 log**이고 연식·더미는 선형입니다. "
+        "이 예측값은 시장통계 적합값이며 감정·적정가가 아닙니다.",
+        "",
+        "### 근거",
+        "",
+        "- CH2 엔진: 원척도 Ŷ = exp(ŷ) × Duan smearing",
+        "- log-log = 면적만 log (연식·더미는 선형)",
+    ]
+    if model_type is not None:
+        lines.append(f"- 현재 화면 model_type: `{model_type}`")
+    if n is not None:
+        lines.append(f"- 표본 n={n}건")
+    lines.extend(
+        [
+            "",
+            "### 한계",
+            "",
+            "방법론 설명입니다. 이번 표본의 적정가·투자 판단을 만들지 않습니다. "
+            "앱·화면 경고문에 단순 exp만 적힌 경우에는 그 엔진 표기를 따릅니다.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 _CONVERSION_HINTS = (
     "전환율",
     "전세환산",
@@ -414,6 +485,8 @@ def try_targeted_answer(message: str, diagnostics: dict[str, Any]) -> str | None
     if ans := answer_twin_experiment_question(message, diagnostics):
         return ans
     if ans := answer_mape_fitness_question(message, diagnostics):
+        return ans
+    if ans := answer_log_prediction_construction_question(message, diagnostics):
         return ans
     if ans := answer_model_comparison_question(message, diagnostics):
         return ans

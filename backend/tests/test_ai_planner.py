@@ -385,6 +385,7 @@ def test_howto_trend_is_not_playbook_dump(monkeypatch):
     assert "유형 더미" not in resp.answer
     assert is_path_intent_question("아파트와 오피스텔 가격 차이를 보고 싶어")
     assert is_path_intent_question("분석 경로를 추천해 주세요")
+    assert not is_path_intent_question("log-log 회귀식에서 예측값을 어떤 방식으로 만들지?")
 
 
 def test_built_type_gap_does_not_use_collective_playbook(monkeypatch):

@@ -11,16 +11,18 @@ SYSTEM_PERSONALITY = """당신은 CH2 Macro의 분석 보조 AI입니다.
 역할:
 - CH2가 계산한 숫자(Bundle·History)만 인용합니다.
 - 「어디를 눌러 보나」 같은 사용법에는 실제 클릭 순서를 안내합니다. 회귀·코호트 목록으로 바꾸지 않습니다.
-- 분석 방법(유형 격차 등)을 물으면 경로와 지금 화면에서 실행 가능한지를 말합니다.
+- 분석 경로(유형 격차·어느 화면)를 물으면 경로와 지금 화면에서 실행 가능한지를 말합니다.
+- 통계 방법론(log-log 예측 역변환 등)은 플레이북이 없다고 회피하지 않습니다. 제한은 적정가·투자·전망뿐입니다.
 - 엔진 결과의 한계를 말하고, Caveat는 조건→판단→다음 행동만 합니다.
 - 복합 「1차·2차」는 기본이 초점(읍면동) vs 직계 상위(시군구)입니다. History 실행 순서 비교는 「아까와 비교」입니다.
 
-허용: 화면 사용법 안내, 분석 경로 제안 (통합회귀가 적합, 인접지역 검토 등)
+허용: 화면 사용법 안내, 분석 경로 제안, 통계 방법론 설명
 금지:
 - 가격·투자·적정가격·매수/매도·저평가 판단
 - 미래 가격 전망
 - Bundle/History에 없는 수치·신뢰도 % 만들기
 - 묻지 않은 회귀·코호트를 기본 답으로 내기
+- 전용 플레이북이 없다는 이유로 통계 질문을 경로 안내로 바꾸기
 
 톤: 간결, 중립, 존댓말. 처음 온 사람도 따라 할 수 있게.
 """
@@ -44,7 +46,10 @@ ROUTE_PROMPTS: dict[str, str] = {
         "순수 정의 질문은 UI ? 유도. "
         "해석형이면 Bundle facts와 결합해 설명."
     ),
-    "opinion": "방법론·모델 trade-off만. '~할 수 있습니다' 수준. 가격·투자·전망 금지.",
+    "opinion": (
+        "방법론·모델 trade-off·로그 예측 역변환 등. "
+        "플레이북이 없다고 회피하지 않음. '~할 수 있습니다' 수준. 가격·투자·전망 금지."
+    ),
     "web": (
         "제공된 웹 스니펫만 요약. CH2 회귀·예측 수치와 혼동하지 마세요. "
         "시기가 겹쳐도 그 때문에 가격이 움직였다고 쓰지 마세요. "
@@ -184,6 +189,14 @@ _OPINION_KEYWORDS = (
     "로그회귀",
     "로그 회귀",
     "선형회귀",
+    "log-log",
+    "loglog",
+    "로그로그",
+    "역변환",
+    "재변환",
+    "smear",
+    "smearing",
+    "duan",
     "방법론",
     "trade-off",
     "트레이드",
@@ -277,10 +290,41 @@ def _contains_any(text: str, keywords: tuple[str, ...]) -> bool:
     return any(k.lower() in lower for k in keywords)
 
 
+def is_statistical_methodology_question(message: str) -> bool:
+    """모형 내부(역변환·탄력성·log-log 예측 구성). 화면 경로 질문이 아님."""
+    m = (message or "").strip()
+    if not m:
+        return False
+    lower = m.lower()
+    if any(
+        k in lower
+        for k in (
+            "log-log",
+            "loglog",
+            "semi-log",
+            "smear",
+            "smearing",
+            "duan",
+            "jensen",
+        )
+    ):
+        return True
+    if any(k in m for k in ("로그로그", "반로그", "역변환", "재변환", "방법론")):
+        return True
+    if any(k in m for k in ("회귀식", "로그회귀", "로그 회귀")) and any(
+        k in m for k in ("예측", "만들", "방식", "편향")
+    ):
+        return True
+    return False
+
+
 def classify_route(message: str) -> str:
     """refusal | ch2 | explain | statistics | opinion | offer_external"""
     if is_refusal_message(message):
         return "refusal"
+    # 네거티브: 제한(적정가·투자·전망)만 거절. 방법론은 플레이북 유무와 무관하게 Opinion.
+    if is_statistical_methodology_question(message):
+        return "opinion"
     # 해석형 통계 질문은 explain/ch2 우선 (정의 KB 낭독 방지)
     from app.ai.stats_kb import is_pure_definition_question
 

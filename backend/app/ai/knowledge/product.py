@@ -31,6 +31,7 @@ REGRESSION_LOGIC = """
 - complete-case fit_n: 선택 변수 결측 제외 후 적합
 - Adj R²·MAPE·VIF·상관 — 화면 수치 그대로 인용
 - 로그(금액) semi-log vs 선형 vs log-log: 같은 표본, 예측형은 원척도 CV-MAPE
+- log(금액)·log-log 원척도 예측: Ŷ = exp(ŷ_log) × Duan smearing(잔차 exp의 평균). 단순 exp(ŷ)만 쓰면 재변환 편향(Jensen)으로 평균이 작아짐. log-log는 면적만 log(연식·더미는 선형)
 - 기초 정의(Adj R²·VIF·p 등)는 UI 지표 옆 ? 팝업 — AI는 이번 결과 해석에 집중
 """
 
@@ -763,6 +764,18 @@ def product_knowledge_excerpt(*, app: str, panel: str, message: str) -> str:
                 PRODUCT_OVERVIEW.strip(),
                 format_negative_card("rent"),
                 SANGKWON_REB.strip(),
+                LIMITATIONS.strip(),
+            ]
+        )
+    from app.ai.constitution import is_statistical_methodology_question
+
+    if is_statistical_methodology_question(message):
+        return "\n\n".join(
+            [
+                PRODUCT_OVERVIEW.strip(),
+                REGRESSION_LOGIC.strip(),
+                format_domain_card(app or "built"),
+                format_negative_card(app or "built"),
                 LIMITATIONS.strip(),
             ]
         )

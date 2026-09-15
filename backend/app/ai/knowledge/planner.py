@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, Optional
 
+from app.ai.constitution import is_statistical_methodology_question
 from app.ai.knowledge.playbook import INTENTS, path_meta
 from app.ai.schemas import AiContext
 
@@ -51,11 +52,13 @@ def is_nested_admin_scope_question(message: str) -> bool:
 
 
 def is_path_intent_question(message: str, context: AiContext | None = None) -> bool:
-    """분석 *방법*을 고르는 질문인가. 화면 사용법·추세 안내·지식 출처는 여기로 보내지 않는다."""
+    """화면 *경로*를 고르는 질문인가. 통계 방법론·사용법·지식 출처는 여기로 보내지 않는다."""
     m = message.strip()
     if is_knowledge_source_question(m):
         return False
     if is_nested_admin_scope_question(m):
+        return False
+    if is_statistical_methodology_question(m):
         return False
     if any(k in m for k in ("왜 이 결과", "왜 이렇게", "이 화면", "이번 표본", "이 계수")):
         return False
@@ -68,8 +71,6 @@ def is_path_intent_question(message: str, context: AiContext | None = None) -> b
         "어떻게 분석",
         "어떻게 접근",
         "어떤 기능",
-        "어떤 방식",
-        "어떤 방법",
         "경로를 추천",
         "통합회귀",
         "코호트",
