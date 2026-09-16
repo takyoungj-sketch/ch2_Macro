@@ -22,14 +22,15 @@ def test_list_addr2_ttl_cache_skips_second_scan():
     clear_meta_cache()
     n = {"q": 0}
 
-    class Row:
-        def __init__(self, v: str):
-            self.v = v
-
     class Conn:
-        def execute(self, *args, **kwargs):
+        def execute(self, stmt, *args, **kwargs):
             n["q"] += 1
-            return SimpleNamespace(fetchall=lambda: [Row("청주시")])
+            sql = str(stmt)
+            if "to_regclass" in sql:
+                return SimpleNamespace(scalar=lambda: True)
+            if "region_sigungu_meta" in sql:
+                return SimpleNamespace(fetchall=lambda: [SimpleNamespace(addr2_token="청주시")])
+            raise AssertionError(f"ledger DISTINCT should not run: {sql}")
 
     conn = Conn()
     kwargs = dict(
@@ -41,9 +42,9 @@ def test_list_addr2_ttl_cache_skips_second_scan():
     first = list_addr2_for_sido(conn, **kwargs)
     second = list_addr2_for_sido(conn, **kwargs)
     assert first == second == ["청주시"]
-    assert n["q"] == 1
-    list_addr2_for_sido(conn, table="collective_transactions", addr1="경기도", asset_type="apartment", valid_sql="is_valid = true")
     assert n["q"] == 2
+    list_addr2_for_sido(conn, table="collective_transactions", addr1="경기도", asset_type="apartment", valid_sql="is_valid = true")
+    assert n["q"] == 4
 
 
 def test_list_addr2_sejong_commercial_flat_token():

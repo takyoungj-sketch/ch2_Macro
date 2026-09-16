@@ -54,6 +54,7 @@ export default function RegionChipPanel({
   onSelectAll,
   onClear,
   multiSelect = true,
+  countsReady = true,
 }: {
   title: string;
   hint: string;
@@ -65,12 +66,13 @@ export default function RegionChipPanel({
   onClear: () => void;
   /** false: 「전체」버튼 숨김. onToggle은 호출측에서 single replace 권장. */
   multiSelect?: boolean;
+  countsReady?: boolean;
 }) {
   const label = formatLabel ?? ((o) => o.name);
-  const enabledOptions = options.filter((o) => !isDisabled(o));
+  const enabledOptions = options.filter((o) => !countsReady || !isDisabled(o));
   const minN = options.find((o) => o.min_reliable_count)?.min_reliable_count ?? 15;
   const densityHint =
-    options.some((o) => isDisabled(o)) ? `회색 항목은 거래 ${minN}건 미만으로 선택 불가` : null;
+    countsReady && options.some((o) => isDisabled(o)) ? `회색 항목은 거래 ${minN}건 미만으로 선택 불가` : null;
 
   return (
     <div className="space-y-1.5">
@@ -97,7 +99,7 @@ export default function RegionChipPanel({
       </div>
       <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto border border-slate-100 dark:border-slate-700 rounded p-1.5">
         {options.map((o) => {
-          const disabled = isDisabled(o);
+          const disabled = countsReady && isDisabled(o);
           return (
             <label
               key={o.id ?? o.name}
@@ -123,9 +125,11 @@ export default function RegionChipPanel({
                 }}
               />
               {label(o)}
-              <span className={clsx("opacity-70", selected.includes(o.name) && !disabled && "text-slate-300")}>
-                ({fmtNum(o.count)})
-              </span>
+              {countsReady && (
+                <span className={clsx("opacity-70", selected.includes(o.name) && !disabled && "text-slate-300")}>
+                  ({fmtNum(o.count)})
+                </span>
+              )}
             </label>
           );
         })}

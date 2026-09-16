@@ -116,9 +116,16 @@ export async function fetchAddr3WithCounts(
   addr2: string,
   assetType?: string,
   scope?: RegionChipScopeParams,
+  namesOnly = false,
 ): Promise<Addr3Option[]> {
-  const qs = toSearchParams({ ...scope, addr1, addr2, asset_type: assetType });
-  const { data } = await api.get<Addr3Option[]>(`/regions/addr3?${qs}&with_counts=true`);
+  const qs = toSearchParams({
+    ...(namesOnly ? {} : scope),
+    addr1,
+    addr2,
+    asset_type: assetType,
+  });
+  const extra = namesOnly ? "names_only=true" : "with_counts=true";
+  const { data } = await api.get<Addr3Option[]>(`/regions/addr3?${qs}&${extra}`);
   return data;
 }
 
@@ -128,9 +135,18 @@ export async function fetchLeafRegions(
   guList: string[],
   assetType?: string,
   scope?: RegionChipScopeParams,
+  namesOnly = false,
 ): Promise<RegionOption[]> {
-  const sp = new URLSearchParams(toSearchParams({ ...scope, addr1, addr2, asset_type: assetType }));
+  const sp = new URLSearchParams(
+    toSearchParams({
+      ...(namesOnly ? {} : scope),
+      addr1,
+      addr2,
+      asset_type: assetType,
+    }),
+  );
   guList.forEach((g) => sp.append("addr3_list", g));
+  if (namesOnly) sp.set("names_only", "true");
   const { data } = await api.get<RegionOption[]>(`/regions/leaf?${sp.toString()}`);
   return data;
 }

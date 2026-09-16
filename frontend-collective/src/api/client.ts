@@ -79,9 +79,16 @@ export async function fetchAddr3WithCounts(
     contract_year_from?: number;
     contract_year_to?: number;
   },
+  namesOnly = false,
 ): Promise<RegionOption[]> {
   const { data } = await api.get<RegionOption[]>("/regions/addr3", {
-    params: { addr1, addr2, asset_type: apiAssetParam(assetType), ...period },
+    params: {
+      addr1,
+      addr2,
+      asset_type: apiAssetParam(assetType),
+      names_only: namesOnly || undefined,
+      ...(namesOnly ? {} : period),
+    },
   });
   return data;
 }
@@ -95,6 +102,7 @@ export async function fetchLeafRegions(
     contract_year_from?: number;
     contract_year_to?: number;
   },
+  namesOnly = false,
 ): Promise<RegionOption[]> {
   const { data } = await api.get<RegionOption[]>("/regions/leaf", {
     params: {
@@ -102,7 +110,8 @@ export async function fetchLeafRegions(
       addr2,
       asset_type: apiAssetParam(assetType),
       addr3_list: addr3List.length ? addr3List : undefined,
-      ...period,
+      names_only: namesOnly || undefined,
+      ...(namesOnly ? {} : period),
     },
     paramsSerializer: { indexes: null },
   });

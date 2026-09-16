@@ -125,13 +125,18 @@ def list_addr2_for_sido(
     asset_type: str | None = None,
     valid_sql: str = "TRUE",
 ) -> list[str]:
-    """DISTINCT addr2; flat sido 이면 synthetic 토큰 1개 반환. 1시간 TTL."""
+    """시군구 목록: region_sigungu_meta 우선, 없으면 DISTINCT. flat sido면 synthetic 토큰. 1시간 TTL."""
     if is_retired_sido_name(addr1):
         return []
     a1 = addr1.strip()
     cache_key = f"addr2:{table}:{a1}:{asset_type or ''}:{valid_sql}"
 
     def _load() -> list[str]:
+        from app.region_catalog import list_addr2_from_meta
+
+        meta_vals = list_addr2_from_meta(conn, table=table, addr1=a1, asset_type=asset_type)
+        if meta_vals:
+            return meta_vals
         clauses = [
             "addr1 = :a1",
             "addr2 IS NOT NULL",

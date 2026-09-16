@@ -68,13 +68,15 @@ export async function fetchCommercialAddr3(
     contract_date_to?: string;
     window_years?: number;
   },
+  namesOnly = false,
 ): Promise<RegionOption[]> {
   const { data } = await api.get<RegionOption[]>("/regions/addr3", {
     params: {
       addr1,
       addr2,
       asset_type: apiCommercialAssetParam(assetType),
-      ...period,
+      names_only: namesOnly || undefined,
+      ...(namesOnly ? {} : period),
     },
   });
   return data;
@@ -103,6 +105,7 @@ export async function fetchCommercialLeafRegions(
     contract_date_to?: string;
     window_years?: number;
   },
+  namesOnly = false,
 ): Promise<RegionOption[]> {
   const { data } = await api.get<RegionOption[]>("/regions/leaf", {
     params: {
@@ -110,7 +113,8 @@ export async function fetchCommercialLeafRegions(
       addr2,
       asset_type: apiCommercialAssetParam(assetType),
       addr3_list: addr3List.length ? addr3List : undefined,
-      ...period,
+      names_only: namesOnly || undefined,
+      ...(namesOnly ? {} : period),
     },
     paramsSerializer: { indexes: null },
   });

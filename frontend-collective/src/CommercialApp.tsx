@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import clsx from "clsx";
 import {
@@ -52,6 +52,11 @@ import {
   formatScopeAddr2,
   isFlatSidoAddr2,
 } from "./utils/flatSidoRegion";
+import {
+  mergeRegionChipOptions,
+  orderedSidoPrefetchList,
+  REGION_LIST_STALE_MS,
+} from "./utils/regionListCache";
 
 function fmtPrice(v: number | null | undefined) {
   if (v == null) return "—";
@@ -113,6 +118,7 @@ function clusterMatchesQuery(row: CommercialClusterRow, q: string): boolean {
 }
 
 export default function CommercialApp() {
+  const qc = useQueryClient();
   const [assetKinds, setAssetKinds] = useState<CommercialAssetKind[]>(["collective_shop"]);
   const assetType = useMemo(() => encodeCommercialAssetKinds(assetKinds), [assetKinds]);
   const [addr1, setAddr1] = useState("");
@@ -165,7 +171,27 @@ export default function CommercialApp() {
     queryKey: ["comm-addr2", addr1, assetType],
     queryFn: () => fetchCommercialAddr2(addr1, assetType),
     enabled: !!addr1,
+    staleTime: REGION_LIST_STALE_MS,
   });
+
+  useEffect(() => {
+    const sidos = addr1Q.data ?? [];
+    if (!sidos.length) return;
+    let cancelled = false;
+    (async () => {
+      for (const sido of orderedSidoPrefetchList(sidos)) {
+        if (cancelled) return;
+        await qc.prefetchQuery({
+          queryKey: ["comm-addr2", sido, assetType],
+          queryFn: () => fetchCommercialAddr2(sido, assetType),
+          staleTime: REGION_LIST_STALE_MS,
+        });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [qc, assetType, addr1Q.data]);
 
   useEffect(() => {
     if (!addr1 || addr2) return;
@@ -178,36 +204,75 @@ export default function CommercialApp() {
     queryKey: ["comm-structure", addr1, addr2, assetType],
     queryFn: () => fetchCommercialRegionStructure(addr1, addr2, assetType),
     enabled: !!addr1 && !!addr2,
+    staleTime: REGION_LIST_STALE_MS,
   });
   const hasIntermediate = structureQ.data?.has_intermediate ?? false;
   const intermediateLabel = structureQ.data?.intermediate_label ?? "구";
+  const chipsReady = !!addr1 && !!addr2 && structureQ.isSuccess;
 
   const regionPeriod = buildRegionPeriodParams(yearFrom, yearTo, windowYears);
 
-  const guQ = useQuery({
+  const guNamesQ = useQuery({
+    queryKey: ["comm-gu-names", addr1, addr2, assetType],
+    queryFn: () => fetchCommercialAddr3(addr1, addr2, assetType, undefined, true),
+    enabled: chipsReady && hasIntermediate,
+    staleTime: REGION_LIST_STALE_MS,
+  });
+  const guCountsQ = useQuery({
     queryKey: ["comm-gu", addr1, addr2, assetType, regionPeriod],
     queryFn: () => fetchCommercialAddr3(addr1, addr2, assetType, regionPeriod),
-    enabled: !!addr1 && !!addr2 && hasIntermediate,
+    enabled: chipsReady && hasIntermediate,
+    staleTime: REGION_LIST_STALE_MS,
   });
-  const flatLeafQ = useQuery({
+  const guOptions = useMemo(
+    () => mergeRegionChipOptions(guNamesQ.data, guCountsQ.data),
+    [guNamesQ.data, guCountsQ.data],
+  );
+
+  const flatLeafNamesQ = useQuery({
+    queryKey: ["comm-flat-leaf-names", addr1, addr2, assetType],
+    queryFn: () => fetchCommercialAddr3(addr1, addr2, assetType, undefined, true),
+    enabled: chipsReady && !hasIntermediate,
+    staleTime: REGION_LIST_STALE_MS,
+  });
+  const flatLeafCountsQ = useQuery({
     queryKey: ["comm-flat-leaf", addr1, addr2, assetType, regionPeriod],
     queryFn: () => fetchCommercialAddr3(addr1, addr2, assetType, regionPeriod),
-    enabled: !!addr1 && !!addr2 && !hasIntermediate && structureQ.isSuccess,
+    enabled: chipsReady && !hasIntermediate,
+    staleTime: REGION_LIST_STALE_MS,
   });
-  const leafQ = useQuery({
+  const leafNamesQ = useQuery({
+    queryKey: ["comm-leaf-names", addr1, addr2, assetType, guList],
+    queryFn: () => fetchCommercialLeafRegions(addr1, addr2, guList, assetType, undefined, true),
+    enabled: chipsReady && hasIntermediate,
+    staleTime: REGION_LIST_STALE_MS,
+  });
+  const leafCountsQ = useQuery({
     queryKey: ["comm-leaf", addr1, addr2, assetType, guList, regionPeriod],
     queryFn: () => fetchCommercialLeafRegions(addr1, addr2, guList, assetType, regionPeriod),
-    enabled: !!addr1 && !!addr2 && hasIntermediate,
+    enabled: chipsReady && hasIntermediate,
+    staleTime: REGION_LIST_STALE_MS,
   });
 
   const visibleLeafOptions = useMemo(() => {
     if (!hasIntermediate) {
-      return (flatLeafQ.data ?? []).map((o: RegionOption) => ({ ...o, id: o.name }));
+      return mergeRegionChipOptions(flatLeafNamesQ.data, flatLeafCountsQ.data).map((o: RegionOption) => ({
+        ...o,
+        id: o.name,
+      }));
     }
-    const opts = leafQ.data ?? [];
+    const opts = mergeRegionChipOptions(leafNamesQ.data, leafCountsQ.data);
     const filtered = !guList.length ? opts : opts.filter((o) => o.parent && guList.includes(o.parent));
     return filtered.map((o) => ({ ...o, id: `${o.parent ?? ""}|${o.name}` }));
-  }, [hasIntermediate, flatLeafQ.data, leafQ.data, guList]);
+  }, [
+    hasIntermediate,
+    flatLeafNamesQ.data,
+    flatLeafCountsQ.data,
+    leafNamesQ.data,
+    leafCountsQ.data,
+    guList,
+  ]);
+  const leafCountsReady = hasIntermediate ? leafCountsQ.isSuccess : flatLeafCountsQ.isSuccess;
 
   useEffect(() => {
     if (!hasIntermediate) return;
@@ -482,7 +547,8 @@ export default function CommercialApp() {
                 title={`${intermediateLabel} 선택`}
                 hint={`미선택 시 ${addr2ScopeLabel} 전체`}
                 selected={guList}
-                options={guQ.data ?? []}
+                options={guOptions}
+                countsReady={guCountsQ.isSuccess}
                 multiSelect={LEFT_REGION_MULTI_SELECT}
                 onToggle={(name) => {
                   if (LEFT_REGION_MULTI_SELECT) {
@@ -493,7 +559,7 @@ export default function CommercialApp() {
                   setLeafList([]);
                   setAnalysisUnits([]);
                 }}
-                onSelectAll={() => setGuList((guQ.data ?? []).filter((o) => !o.disabled).map((o) => o.name))}
+                onSelectAll={() => setGuList(guOptions.filter((o) => !o.disabled).map((o) => o.name))}
                 onClear={() => {
                   setGuList([]);
                   setLeafList([]);
@@ -512,6 +578,7 @@ export default function CommercialApp() {
                 }
                 selected={leafList}
                 options={visibleLeafOptions}
+                countsReady={leafCountsReady}
                 formatLabel={(o) => formatLeafChipLabel(o, visibleLeafOptions)}
                 multiSelect={LEFT_REGION_MULTI_SELECT}
                 onToggle={(name) => {

@@ -14,6 +14,7 @@ from app.built.region_counts import (
     list_leaf_options_scoped,
     list_ri_options_scoped,
 )
+from app.region_catalog import list_gu_names, list_leaf_names
 from app.built.transaction_scope import build_transaction_where
 from app.built.time_scope import resolve_latest_as_of
 from app.flat_sido_region import list_addr2_for_sido
@@ -569,6 +570,7 @@ def list_addr3(
     addr2: str = Query(...),
     asset_type: Optional[str] = Query(None),
     with_counts: bool = Query(False),
+    names_only: bool = Query(False),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
     as_of_month: Optional[str] = None,
@@ -585,25 +587,32 @@ def list_addr3(
     road_code_min: Optional[float] = None,
     road_code_max: Optional[float] = None,
 ):
-    """flat 시군구: 읍면동 목록. 구가 있는 시: 구 목록. 건수는 거래목록과 동일 scope."""
+    """flat 시군구: 읍면동 목록. 구가 있는 시: 구 목록. 건수는 연·롤링만(표본 필터 제외)."""
     conn = db.connection()
     info = detect_region_structure(conn, addr1, addr2, asset_type)
+    if names_only:
+        if info.get("has_intermediate"):
+            return list_gu_names(
+                conn,
+                table="built_transactions",
+                addr1=addr1,
+                addr2=addr2,
+                asset_type=asset_type,
+            )
+        return list_leaf_names(
+            conn,
+            table="built_transactions",
+            addr1=addr1,
+            addr2=addr2,
+            gu_list=[],
+            asset_type=asset_type,
+            leaf_level=info.get("leaf_level", "addr3"),
+        )
     scope = _chip_scope_kwargs(
         contract_year_from=contract_year_from,
         contract_year_to=contract_year_to,
         as_of_month=as_of_month,
         window_years=window_years,
-        zone_types=zone_types,
-        building_uses=building_uses,
-        road_width_labels=road_width_labels,
-        gross_area_min=gross_area_min,
-        gross_area_max=gross_area_max,
-        land_area_min=land_area_min,
-        land_area_max=land_area_max,
-        building_age_min=building_age_min,
-        building_age_max=building_age_max,
-        road_code_min=road_code_min,
-        road_code_max=road_code_max,
     )
     if info.get("has_intermediate"):
         opts = list_gu_options_scoped(
@@ -635,6 +644,7 @@ def list_leaf_regions(
     addr2: str = Query(...),
     addr3_list: list[str] = Query(default=[]),
     asset_type: Optional[str] = Query(None),
+    names_only: bool = Query(False),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
     as_of_month: Optional[str] = None,
@@ -655,22 +665,24 @@ def list_leaf_regions(
     conn = db.connection()
     info = detect_region_structure(conn, addr1, addr2, asset_type)
     leaf_level = info.get("leaf_level", "addr4")
+    if names_only:
+        return [
+            RegionOption(**o)
+            for o in list_leaf_names(
+                conn,
+                table="built_transactions",
+                addr1=addr1,
+                addr2=addr2,
+                gu_list=addr3_list,
+                asset_type=asset_type,
+                leaf_level=leaf_level,
+            )
+        ]
     scope = _chip_scope_kwargs(
         contract_year_from=contract_year_from,
         contract_year_to=contract_year_to,
         as_of_month=as_of_month,
         window_years=window_years,
-        zone_types=zone_types,
-        building_uses=building_uses,
-        road_width_labels=road_width_labels,
-        gross_area_min=gross_area_min,
-        gross_area_max=gross_area_max,
-        land_area_min=land_area_min,
-        land_area_max=land_area_max,
-        building_age_min=building_age_min,
-        building_age_max=building_age_max,
-        road_code_min=road_code_min,
-        road_code_max=road_code_max,
     )
     opts = list_leaf_options_scoped(
         conn,

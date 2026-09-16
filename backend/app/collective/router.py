@@ -56,7 +56,7 @@ from app.collective.transaction_export import (
 )
 from app.collective.region_structure import detect_region_structure
 from app.collective.resolve_codes import resolve_collective_map_codes
-from app.region_catalog import list_gu_options, list_leaf_options
+from app.region_catalog import list_gu_names, list_gu_options, list_leaf_names, list_leaf_options
 from app.collective.building_geocode import (
     geocode_collective_building,
     resolve_building_map_points,
@@ -239,12 +239,24 @@ def list_leaf_regions(
     addr2: str = Query(...),
     addr3_list: list[str] = Query(default=[]),
     asset_type: Optional[str] = Query(None),
+    names_only: bool = Query(False),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
 ):
     """청주·수원 등: addr3=구, addr4=읍면동."""
     conn = db.connection()
     info = detect_region_structure(conn, addr1, addr2, asset_type)
+    if names_only:
+        opts = list_leaf_names(
+            conn,
+            table="collective_transactions",
+            addr1=addr1,
+            addr2=addr2,
+            gu_list=addr3_list,
+            asset_type=asset_type,
+            leaf_level=info.get("leaf_level", "addr4"),
+        )
+        return [RegionOption(**o) for o in opts]
     opts = list_leaf_options(
         conn,
         table="collective_transactions",
@@ -265,11 +277,30 @@ def list_addr3(
     addr1: str = Query(...),
     addr2: str = Query(...),
     asset_type: Optional[str] = Query(None),
+    names_only: bool = Query(False),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
 ):
     conn = db.connection()
     info = detect_region_structure(conn, addr1, addr2, asset_type)
+    if names_only:
+        if info.get("has_intermediate"):
+            return list_gu_names(
+                conn,
+                table="collective_transactions",
+                addr1=addr1,
+                addr2=addr2,
+                asset_type=asset_type,
+            )
+        return list_leaf_names(
+            conn,
+            table="collective_transactions",
+            addr1=addr1,
+            addr2=addr2,
+            gu_list=[],
+            asset_type=asset_type,
+            leaf_level=info.get("leaf_level", "addr3"),
+        )
     if info.get("has_intermediate"):
         opts = list_gu_options(
             conn,

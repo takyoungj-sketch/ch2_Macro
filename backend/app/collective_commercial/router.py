@@ -215,6 +215,7 @@ def list_addr3(
     addr1: str = Query(...),
     addr2: str = Query(...),
     asset_type: Optional[str] = Query(None),
+    names_only: bool = Query(False),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
     contract_date_from: Optional[date] = None,
@@ -222,6 +223,30 @@ def list_addr3(
     window_years: Optional[int] = Query(None, ge=1, le=MAX_WINDOW_YEARS),
 ):
     conn = db.connection()
+    if names_only:
+        cache_key = f"chip-names:comm-addr3:{addr1}:{addr2}:{asset_type or ''}"
+
+        def _load_names() -> list[dict]:
+            where_n, params_n = _tx_where(
+                conn=conn,
+                asset_type=asset_type,
+                addr1=addr1,
+                addr2=addr2,
+            )
+            name_rows = db.execute(
+                text(
+                    f"""
+                    SELECT DISTINCT addr3 AS name
+                    FROM collective_commercial_transactions
+                    WHERE {where_n} AND addr3 IS NOT NULL AND btrim(addr3) <> ''
+                    ORDER BY 1
+                    """
+                ),
+                params_n,
+            ).mappings().all()
+            return [{"name": r["name"], "count": 0} for r in name_rows]
+
+        return get_ttl_cached(cache_key, _load_names)
     where, params = _tx_where(
         conn=conn,
         asset_type=asset_type,
@@ -272,6 +297,7 @@ def list_leaf_regions(
     addr2: str = Query(...),
     addr3_list: list[str] = Query(default=[]),
     asset_type: Optional[str] = Query(None),
+    names_only: bool = Query(False),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
     contract_date_from: Optional[date] = None,
@@ -279,6 +305,33 @@ def list_leaf_regions(
     window_years: Optional[int] = Query(None, ge=1, le=MAX_WINDOW_YEARS),
 ):
     conn = db.connection()
+    if names_only:
+        gu_key = ",".join(sorted(addr3_list or []))
+        cache_key = f"chip-names:comm-leaf:{addr1}:{addr2}:{gu_key}:{asset_type or ''}"
+
+        def _load_leaf_names() -> list[dict]:
+            where_n, params_n = _tx_where(
+                conn=conn,
+                asset_type=asset_type,
+                addr1=addr1,
+                addr2=addr2,
+                addr3_list=addr3_list or None,
+            )
+            name_rows = db.execute(
+                text(
+                    f"""
+                    SELECT DISTINCT addr4 AS name, addr3 AS parent
+                    FROM collective_commercial_transactions
+                    WHERE {where_n}
+                      AND addr4 IS NOT NULL AND btrim(addr4::text) <> ''
+                    ORDER BY addr3, addr4
+                    """
+                ),
+                params_n,
+            ).mappings().all()
+            return [{"name": r["name"], "count": 0, "parent": r.get("parent")} for r in name_rows]
+
+        return get_ttl_cached(cache_key, _load_leaf_names)
     where, params = _tx_where(
         conn=conn,
         asset_type=asset_type,

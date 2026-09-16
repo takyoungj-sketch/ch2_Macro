@@ -7,8 +7,14 @@ from typing import Any, Optional
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
+from app.collective.meta_cache import get_ttl_cached
 from app.flat_sido_region import FLAT_SIDO_ADDR2_TOKEN, is_flat_sido_addr2
 from app.stats_utils import MIN_RELIABLE_COUNT
+
+_TABLE_DOMAIN = {
+    "built_transactions": "built",
+    "collective_transactions": "collective",
+}
 
 MIN_LEAF_COUNT = MIN_RELIABLE_COUNT
 
@@ -75,6 +81,166 @@ def fetch_sigungu_meta(
     if row:
         return dict(row)
     return None
+
+
+def list_addr2_from_meta(
+    conn: Connection,
+    *,
+    table: str,
+    addr1: str,
+    asset_type: str | None,
+) -> list[str] | None:
+    """시군구 목록을 region_sigungu_meta에서 읽는다. 없거나 비면 None → 원장 DISTINCT."""
+    domain = _TABLE_DOMAIN.get(table)
+    if not domain:
+        return None
+    exists = conn.execute(text("SELECT to_regclass('public.region_sigungu_meta') IS NOT NULL")).scalar()
+    if not exists:
+        return None
+    a1 = addr1.strip()
+    params: dict[str, Any] = {"d": domain, "a1": a1}
+
+    def _tokens(asset_sql: str, extra: dict[str, Any]) -> list[str]:
+        rows = conn.execute(
+            text(
+                f"""
+                SELECT addr2_token
+                FROM region_sigungu_meta
+                WHERE asset_domain = :d
+                  AND sido_name = :a1
+                  AND tx_count > 0
+                  {asset_sql}
+                ORDER BY addr2_token
+                """
+            ),
+            {**params, **extra},
+        ).fetchall()
+        return [str(r.addr2_token).strip() for r in rows if r.addr2_token]
+
+    at = (asset_type or "").strip()
+    if at and at != "all":
+        parts = [p.strip() for p in at.replace("|", ",").split(",") if p.strip()]
+        if len(parts) == 1:
+            typed = _tokens("AND asset_type = :asset_type", {"asset_type": parts[0]})
+            if typed:
+                return typed
+        elif parts:
+            typed = _tokens("AND asset_type = ANY(:asset_types)", {"asset_types": parts})
+            if typed:
+                return typed
+    untyped = _tokens("AND asset_type IS NULL", {})
+    return untyped or None
+
+
+def list_gu_names(
+    conn: Connection,
+    *,
+    table: str,
+    addr1: str,
+    addr2: str,
+    asset_type: str | None,
+) -> list[dict]:
+    """구 이름만 — COUNT 없음. 1시간 TTL."""
+    a1 = addr1.strip()
+    a2 = addr2.strip()
+    cache_key = f"chip-names:gu:{table}:{a1}:{a2}:{asset_type or ''}"
+
+    def _load() -> list[dict]:
+        params: dict[str, Any] = {"a1": a1}
+        addr2_sql = ""
+        if not is_flat_sido_addr2(addr2):
+            addr2_sql = " AND t.addr2 = :a2"
+            params["a2"] = a2
+        ac, ap = _asset_clause(asset_type)
+        params.update(ap)
+        rows = conn.execute(
+            text(
+                f"""
+                SELECT DISTINCT t.addr3 AS name
+                FROM {table} t
+                WHERE t.addr1 = :a1
+                  AND t.is_valid = true
+                  {addr2_sql}
+                  {ac}
+                  AND t.addr3 IS NOT NULL AND btrim(t.addr3::text) <> ''
+                  AND t.addr3 LIKE '%구'
+                ORDER BY 1
+                """
+            ),
+            params,
+        ).mappings().all()
+        return [_option_row({"name": r["name"], "count": 0}, check_density=False) for r in rows]
+
+    return get_ttl_cached(cache_key, _load)
+
+
+def list_leaf_names(
+    conn: Connection,
+    *,
+    table: str,
+    addr1: str,
+    addr2: str,
+    gu_list: list[str],
+    asset_type: str | None,
+    leaf_level: str,
+) -> list[dict]:
+    """읍면동 이름만 — COUNT 없음. 1시간 TTL."""
+    a1 = addr1.strip()
+    a2 = addr2.strip()
+    gu_key = ",".join(sorted(gu_list or []))
+    cache_key = f"chip-names:leaf:{table}:{a1}:{a2}:{gu_key}:{leaf_level}:{asset_type or ''}"
+
+    def _load() -> list[dict]:
+        params: dict[str, Any] = {"a1": a1}
+        addr2_sql = ""
+        if not is_flat_sido_addr2(addr2):
+            addr2_sql = "AND t.addr2 = :a2"
+            params["a2"] = a2
+        gu_sql = ""
+        if gu_list:
+            gu_sql = "AND t.addr3 = ANY(:gu_list)"
+            params["gu_list"] = gu_list
+        ac, ap = _asset_clause(asset_type)
+        params.update(ap)
+        if leaf_level == "addr4":
+            rows = conn.execute(
+                text(
+                    f"""
+                    SELECT DISTINCT addr4 AS name, addr3 AS parent
+                    FROM {table} t
+                    WHERE t.is_valid = true
+                      AND t.addr1 = :a1
+                      {addr2_sql}
+                      {gu_sql}
+                      {ac}
+                      AND addr4 IS NOT NULL AND btrim(addr4::text) <> ''
+                    ORDER BY addr3, addr4
+                    """
+                ),
+                params,
+            ).mappings().all()
+            return [
+                _option_row({"name": r["name"], "count": 0}, parent=r.get("parent"), check_density=False)
+                for r in rows
+            ]
+        rows = conn.execute(
+            text(
+                f"""
+                SELECT DISTINCT addr3 AS name
+                FROM {table} t
+                WHERE t.is_valid = true
+                  AND t.addr1 = :a1
+                  {addr2_sql}
+                  {ac}
+                  AND addr3 IS NOT NULL AND btrim(addr3::text) <> ''
+                ORDER BY 1
+                """
+            ),
+            params,
+        ).mappings().all()
+        return [_option_row({"name": r["name"], "count": 0}, check_density=False) for r in rows]
+
+    return get_ttl_cached(cache_key, _load)
 
 
 def structure_from_meta_or_detect(

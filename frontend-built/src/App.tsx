@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import CollapsibleLeftSidebar from "@ch2/macro-shell/CollapsibleLeftSidebar";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
@@ -24,6 +24,11 @@ import {
   isFlatSidoAddr2,
   resolveUnitAddr2,
 } from "./utils/flatSidoRegion";
+import {
+  mergeRegionChipOptions,
+  orderedSidoPrefetchList,
+  REGION_LIST_STALE_MS,
+} from "./utils/regionListCache";
 import {
   analysisUnitLabel,
   analysisUnitsToHints,
@@ -400,6 +405,7 @@ function RegionChipPanel({
   compact = false,
   collapsible = false,
   multiSelect = true,
+  countsReady = true,
 }: {
   title: string;
   hint: string;
@@ -413,6 +419,7 @@ function RegionChipPanel({
   collapsible?: boolean;
   /** false: 「전체 선택」숨김. 용도지역 등 필터 칩은 true 유지. */
   multiSelect?: boolean;
+  countsReady?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const label = formatLabel ?? ((o) => o.name);
@@ -442,9 +449,11 @@ function RegionChipPanel({
             onChange={() => onToggle(o.name)}
           />
           {label(o)}
-          <span className={clsx("opacity-70", selected.includes(o.name) && "text-slate-300")}>
-            ({fmtNum(o.count)})
-          </span>
+          {countsReady && (
+            <span className={clsx("opacity-70", selected.includes(o.name) && "text-slate-300")}>
+              ({fmtNum(o.count)})
+            </span>
+          )}
         </label>
       ))}
       {options.length === 0 && <span className="text-xs text-slate-400">항목 없음</span>}
@@ -515,6 +524,7 @@ function levelCardTitleFromResult(result: RegressionLevelResult): string {
 }
 
 export default function App() {
+  const qc = useQueryClient();
   const [assetKinds, setAssetKinds] = useState<BuiltAssetKind[]>(["commercial"]);
   const assetType = useMemo(() => encodeAssetKinds(assetKinds), [assetKinds]);
   const [addr1, setAddr1] = useState("");
@@ -582,20 +592,39 @@ export default function App() {
     [yearFilterActive, asOfMonth, windowYears],
   );
   const sampleApiParams = useMemo(() => sampleFilterToApi(sampleFilter), [sampleFilter]);
-  const regionChipScopeParams = useMemo(
+  const regionChipCountParams = useMemo(
     () => ({
       contract_year_from: yearFrom === "" ? undefined : yearFrom,
       contract_year_to: yearTo === "" ? undefined : yearTo,
       ...rollingParams,
-      ...sampleApiParams,
     }),
-    [yearFrom, yearTo, rollingParams, sampleApiParams],
+    [yearFrom, yearTo, rollingParams],
   );
   const addr2Q = useQuery({
     queryKey: ["addr2", addr1, assetType],
     queryFn: () => fetchAddr2(addr1, assetType),
     enabled: !!addr1,
+    staleTime: REGION_LIST_STALE_MS,
   });
+
+  useEffect(() => {
+    const sidos = metaQ.data?.addr1_list ?? [];
+    if (!sidos.length) return;
+    let cancelled = false;
+    (async () => {
+      for (const sido of orderedSidoPrefetchList(sidos)) {
+        if (cancelled) return;
+        await qc.prefetchQuery({
+          queryKey: ["addr2", sido, assetType],
+          queryFn: () => fetchAddr2(sido, assetType),
+          staleTime: REGION_LIST_STALE_MS,
+        });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [qc, assetType, metaQ.data?.addr1_list]);
 
   useEffect(() => {
     if (!addr1 || addr2) return;
@@ -608,38 +637,78 @@ export default function App() {
     queryKey: ["region-structure", addr1, addr2, assetType],
     queryFn: () => fetchRegionStructure(addr1, addr2, assetType),
     enabled: !!addr1 && !!addr2,
+    staleTime: REGION_LIST_STALE_MS,
   });
   const hasIntermediate = structureQ.data?.has_intermediate ?? false;
   const intermediateLabel = structureQ.data?.intermediate_label ?? "구";
   const leafLevel = structureQ.data?.leaf_level ?? "addr3";
   const useAddr4Leaf = leafLevel === "addr4";
+  const chipsReady = !!addr1 && !!addr2 && structureQ.isSuccess;
 
-  const guQ = useQuery({
-    queryKey: ["gu", addr1, addr2, assetType, regionChipScopeParams],
-    queryFn: () => fetchAddr3WithCounts(addr1, addr2, assetType, regionChipScopeParams),
-    enabled: !!addr1 && !!addr2 && useAddr4Leaf,
+  const guNamesQ = useQuery({
+    queryKey: ["gu-names", addr1, addr2, assetType],
+    queryFn: () => fetchAddr3WithCounts(addr1, addr2, assetType, undefined, true),
+    enabled: chipsReady && useAddr4Leaf,
+    staleTime: REGION_LIST_STALE_MS,
+  });
+  const guCountsQ = useQuery({
+    queryKey: ["gu", addr1, addr2, assetType, regionChipCountParams],
+    queryFn: () => fetchAddr3WithCounts(addr1, addr2, assetType, regionChipCountParams),
+    enabled: chipsReady && useAddr4Leaf,
+    staleTime: REGION_LIST_STALE_MS,
+  });
+  const guOptions = useMemo(
+    () => mergeRegionChipOptions(guNamesQ.data, guCountsQ.data),
+    [guNamesQ.data, guCountsQ.data],
+  );
+
+  const flatLeafNamesQ = useQuery({
+    queryKey: ["flat-leaf-names", addr1, addr2, assetType],
+    queryFn: () => fetchAddr3WithCounts(addr1, addr2, assetType, undefined, true),
+    enabled: chipsReady && !useAddr4Leaf,
+    staleTime: REGION_LIST_STALE_MS,
+  });
+  const flatLeafCountsQ = useQuery({
+    queryKey: ["flat-leaf", addr1, addr2, assetType, regionChipCountParams],
+    queryFn: () => fetchAddr3WithCounts(addr1, addr2, assetType, regionChipCountParams),
+    enabled: chipsReady && !useAddr4Leaf,
+    staleTime: REGION_LIST_STALE_MS,
   });
 
-  const flatLeafQ = useQuery({
-    queryKey: ["flat-leaf", addr1, addr2, assetType, regionChipScopeParams],
-    queryFn: () => fetchAddr3WithCounts(addr1, addr2, assetType, regionChipScopeParams),
-    enabled: !!addr1 && !!addr2 && !useAddr4Leaf,
+  const leafNamesQ = useQuery({
+    queryKey: ["leaf-names", addr1, addr2, assetType, guList],
+    queryFn: () => fetchLeafRegions(addr1, addr2, guList, assetType, undefined, true),
+    enabled: chipsReady && useAddr4Leaf,
+    staleTime: REGION_LIST_STALE_MS,
   });
-
-  const leafQ = useQuery({
-    queryKey: ["leaf", addr1, addr2, assetType, guList, regionChipScopeParams],
-    queryFn: () => fetchLeafRegions(addr1, addr2, guList, assetType, regionChipScopeParams),
-    enabled: !!addr1 && !!addr2 && useAddr4Leaf,
+  const leafCountsQ = useQuery({
+    queryKey: ["leaf", addr1, addr2, assetType, guList, regionChipCountParams],
+    queryFn: () => fetchLeafRegions(addr1, addr2, guList, assetType, regionChipCountParams),
+    enabled: chipsReady && useAddr4Leaf,
+    staleTime: REGION_LIST_STALE_MS,
   });
 
   const visibleLeafOptions = useMemo(() => {
     if (!useAddr4Leaf) {
-      return (flatLeafQ.data ?? []).map((o: Addr3Option) => ({ ...o, id: o.name, parent: null }));
+      return mergeRegionChipOptions(flatLeafNamesQ.data, flatLeafCountsQ.data).map((o: Addr3Option) => ({
+        ...o,
+        id: o.name,
+        parent: null,
+      }));
     }
-    const opts = leafQ.data ?? [];
+    const opts = mergeRegionChipOptions(leafNamesQ.data, leafCountsQ.data);
     const filtered = !guList.length ? opts : opts.filter((o) => o.parent && guList.includes(o.parent));
     return filtered.map((o) => ({ ...o, id: `${o.parent ?? ""}|${o.name}` }));
-  }, [useAddr4Leaf, flatLeafQ.data, leafQ.data, guList]);
+  }, [
+    useAddr4Leaf,
+    flatLeafNamesQ.data,
+    flatLeafCountsQ.data,
+    leafNamesQ.data,
+    leafCountsQ.data,
+    guList,
+  ]);
+
+  const leafCountsReady = useAddr4Leaf ? leafCountsQ.isSuccess : flatLeafCountsQ.isSuccess;
 
   useEffect(() => {
     if (!useAddr4Leaf) return;
@@ -703,7 +772,7 @@ export default function App() {
   }, [guList, leafList, visibleLeafOptions]);
 
   const riQ = useQuery({
-    queryKey: ["ri", addr1, addr2, assetType, leafLevel, guList, inferredGuList, leafList, regionChipScopeParams],
+    queryKey: ["ri", addr1, addr2, assetType, leafLevel, guList, inferredGuList, leafList, regionChipCountParams],
     queryFn: () =>
       fetchRiRegions(addr1, addr2, {
         leafLevel,
@@ -712,7 +781,7 @@ export default function App() {
           : leafList,
         addr4List: useAddr4Leaf ? leafList : undefined,
         assetType,
-        scope: regionChipScopeParams,
+        scope: regionChipCountParams,
       }),
     enabled: !!addr1 && !!addr2 && leafList.length > 0 && structureQ.isSuccess,
   });
@@ -1194,10 +1263,11 @@ export default function App() {
               title={`${intermediateLabel} 선택`}
               hint={`미선택 시 ${addr2ScopeLabel} 전체.`}
               selected={guList}
-              options={guQ.data ?? []}
+              options={guOptions}
+              countsReady={guCountsQ.isSuccess}
               onToggle={toggleGu}
               onSelectAll={() => {
-                setGuList((guQ.data ?? []).map((o) => o.name));
+                setGuList(guOptions.map((o) => o.name));
               }}
               onClear={() => {
                 setGuList([]);
@@ -1222,6 +1292,7 @@ export default function App() {
               }
               selected={leafList}
               options={visibleLeafOptions}
+              countsReady={leafCountsReady}
               formatLabel={(o) => {
                 const parent = (o as RegionOption).parent;
                 return parent ? `${parent} · ${o.name}` : o.name;
@@ -1242,7 +1313,7 @@ export default function App() {
             <p className="text-xs text-red-600">읍·면·동 목록을 불러오지 못했습니다.</p>
           )}
 
-          {addr2 && (flatLeafQ.isLoading || leafQ.isLoading) && !visibleLeafOptions.length && (
+          {addr2 && (flatLeafNamesQ.isLoading || leafNamesQ.isLoading) && !visibleLeafOptions.length && (
             <p className="text-xs text-slate-400">읍·면·동 목록 불러오는 중…</p>
           )}
 
