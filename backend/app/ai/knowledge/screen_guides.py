@@ -521,6 +521,37 @@ def _insight(context: AiContext) -> str:
     return "\n".join(lines)
 
 
+def _insight_02(context: AiContext) -> str:
+    facts = context.facts or {}
+    as_of = facts.get("as_of")
+    n = facts.get("n")
+    years = facts.get("window_years") or 3
+    lines = [
+        "### 이 화면은",
+        "Macro Insight 2번입니다. 같은 시군구에서 부동산 유형의 거래 규모가 함께 큰지, ㎡당 가격 수준이 함께 높은지를 봅니다.",
+        "시간에 따라 같이 오르내리는 관계(1번)가 아닙니다.",
+        "통계 기초만 있는 사람에게 쉬운 말로 설명합니다.",
+    ]
+    if as_of:
+        lines.append(f"자료 기준월은 {as_of}입니다.")
+    if n is not None:
+        lines.append(f"시군구 수는 {n}곳입니다. 최근 {years}년 거래 합입니다.")
+    lines.extend(
+        [
+            "",
+            "### 어떻게 읽나",
+            "- 히트맵 칸은 두 유형의 로그 거래규모(또는 단가) 상관계수입니다. 구성비 행렬이 아닙니다.",
+            "- 인구 보정은 큰 도시에 여러 유형이 같이 있는 효과를 줄입니다.",
+            "- 거래규모와 거래건수, 규모와 단가는 질문이 다릅니다.",
+            "- 표에 없는 숫자를 만들지 않습니다.",
+            "",
+            "### 한계",
+            "상관계수는 함께 나타난 정도입니다. 인과나 동조 판정이 아닙니다. 자세한 내용은 화면의 「이 분석의 한계」를 따릅니다.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def _fallback(context: AiContext) -> str:
     scope = _scope_line(context)
     lines = [
@@ -557,6 +588,8 @@ def format_screen_guide(context: AiContext) -> str:
         return _rent_list(context)
     if panel in ("RegionalProfile", "TwinRegionPanel", "ProfilePanel") or app == "profile":
         return _profile(context)
+    if panel == "Insight02":
+        return _insight_02(context)
     if panel in ("Insight01", "InsightHome") or app == "insight":
         return _insight(context)
     if app == "built":
@@ -603,6 +636,13 @@ def screen_guide_followups(context: AiContext) -> list[str]:
         return [
             "Twin 유사지역은 무엇을 뜻하나요?",
             "단지 추세는 어디서 보나요?",
+        ]
+    if panel == "Insight02":
+        return [
+            "이 숫자는 시간에 따라 같이 움직인다는 뜻인가요?",
+            "인구 보정은 무엇을 빼나요?",
+            "거래규모와 거래건수는 왜 다른가요?",
+            "가격 수준 표는 규모 표와 같은가요?",
         ]
     if app == "insight" or panel in ("Insight01", "InsightHome"):
         return [

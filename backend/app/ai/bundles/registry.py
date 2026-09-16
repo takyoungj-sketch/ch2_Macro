@@ -70,6 +70,11 @@ BUNDLE_REGISTRY: dict[str, BundleSpec] = {
         description="Macro Insight 1번 — 전국 월 금리·M2 × 거래",
         panels=("Insight01", "InsightHome"),
     ),
+    "insight_macro_02": BundleSpec(
+        bundle_id="insight_macro_02",
+        description="Macro Insight 2번 — 시군구 유형 규모·단가 상관",
+        panels=("Insight02",),
+    ),
     "list_overview": BundleSpec(
         bundle_id="list_overview",
         description="기본통계 목록·매트릭스 화면 안내",
@@ -183,6 +188,13 @@ SUGGESTED_QUESTIONS: dict[str, list[str]] = {
         "한 달 뒤는 무슨 뜻인가요?",
         "금리가 거래를 줄인 건가요?",
     ],
+    "Insight02": [
+        "이 숫자는 시간에 따라 같이 움직인다는 뜻인가요?",
+        "인구 보정은 무엇을 빼나요?",
+        "거래규모와 거래건수는 왜 다른가요?",
+        "가격 수준 표는 규모 표와 같은가요?",
+        "같이 크면 원인이 있는 건가요?",
+    ],
     "InsightHome": [
         "Macro Insight는 무엇인가요?",
         "이 창은 분석 앱인가요?",
@@ -272,8 +284,11 @@ def suggested_questions(
             "신뢰구간이 넓은 이유는?",
             "이 칸의 표본을 설명해 주세요.",
         ]
-    if app == "insight" and panel in ("Insight01", "InsightHome"):
-        base = list(SUGGESTED_QUESTIONS.get(panel, SUGGESTED_QUESTIONS["Insight01"]))
+    if app == "insight":
+        if panel == "Insight02":
+            base = list(SUGGESTED_QUESTIONS["Insight02"])
+        elif panel in ("Insight01", "InsightHome"):
+            base = list(SUGGESTED_QUESTIONS.get(panel, SUGGESTED_QUESTIONS["Insight01"]))
     suffix = PURPOSE_SUFFIX.get(purpose, "")
     if suffix and purpose == "statistics":
         return base[:6]

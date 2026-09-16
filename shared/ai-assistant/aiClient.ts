@@ -7,7 +7,7 @@ const api = axios.create({
   headers: _API_TOKEN ? { "X-Api-Token": _API_TOKEN } : undefined,
 });
 
-export type AiApp = "land" | "built" | "collective" | "rent" | "profile";
+export type AiApp = "land" | "built" | "collective" | "rent" | "profile" | "insight";
 export type AiPurpose = "statistics" | "prediction" | "market_analysis" | "methodology";
 
 export type EvidenceConfidence = "high" | "medium" | "low";

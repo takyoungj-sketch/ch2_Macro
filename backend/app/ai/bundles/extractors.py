@@ -472,11 +472,46 @@ def build_insight_macro(context: AiContext) -> AiDiagnosticPack:
     )
 
 
+def build_insight_macro_02(context: AiContext) -> AiDiagnosticPack:
+    facts = context.facts or {}
+    types = facts.get("types") or []
+    summary = [
+        "Macro Insight 02 — 시군구 단면, 유형 로그 규모·㎡당 P50",
+        "grain=sigungu",
+    ]
+    if facts.get("as_of"):
+        summary.append(f"as_of={facts.get('as_of')}")
+    if facts.get("n") is not None:
+        summary.append(f"n={facts.get('n')}")
+    if facts.get("window_years") is not None:
+        summary.append(f"창={facts.get('window_years')}년")
+    if types:
+        summary.append(f"유형={len(types)}개")
+    limitations = list(
+        (context.explain.limitations if context.explain and context.explain.limitations else None)
+        or [
+            "시군구 한 시점의 상관입니다. 시간에 따라 같이 움직인다는 뜻이 아닙니다.",
+            "상관이지 인과가 아닙니다. 결론이 아닙니다.",
+            "구성비 행렬이 아닙니다. 표에 없는 상관계수를 만들지 않습니다.",
+        ]
+    )
+    return AiDiagnosticPack(
+        bundle_id="insight_macro_02",
+        panel=context.panel,
+        app=context.app,
+        summary_lines=summary,
+        diagnostics={**facts, "scope_label": context.scope.region_label or "전국"},
+        limitations=limitations,
+    )
+
+
 def build_bundle(context: AiContext) -> AiDiagnosticPack:
     facts = context.facts or {}
     panel = context.panel
     bid = resolve_bundle_id(panel)
 
+    if panel == "Insight02" or bid == "insight_macro_02":
+        return build_insight_macro_02(context)
     if panel in ("Insight01", "InsightHome") or bid == "insight_macro_01" or context.app == "insight":
         return build_insight_macro(context)
     if panel == "SangkwonCard" or bid == "sangkwon_reb":

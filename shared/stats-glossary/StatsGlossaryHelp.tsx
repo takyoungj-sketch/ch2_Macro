@@ -255,11 +255,7 @@ export default function StatsGlossaryHelp({
           title={`${entry.label} 설명`}
           aria-expanded={open}
           aria-label={`${entry.label} 용어 설명`}
-          className={
-            open
-              ? "ch2-glossary-help-btn border-indigo-400 bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200 dark:border-indigo-500"
-              : "ch2-glossary-help-btn border-slate-400 bg-white text-slate-600 hover:border-indigo-300 hover:text-indigo-600 dark:border-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:hover:border-indigo-300 dark:hover:text-white"
-          }
+          className="ch2-glossary-help-btn"
           onClick={(e) => {
             e.stopPropagation();
             setOpen((v) => !v);

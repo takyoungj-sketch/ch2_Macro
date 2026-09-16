@@ -22,7 +22,7 @@
 | 연식=0 잔차 | `age0` | 재고 식 연식=0 vs 실제 신축. **다음=서울·경기 분리.** 전국 공통 프리미엄 미가산 (D-064) |
 | 모형추천 Twin 벤치 | `recommend-twin` | Local / Twin1 / Twin2 × 지역더미 전후. 실험 Twin은 1위만. 제품 식은 Twin1=1위+더미, Twin2=확인용 재탐색. [`lab/RECOMMEND_TWIN_BENCH_LAB.md`](./lab/RECOMMEND_TWIN_BENCH_LAB.md) |
 
-공개 게이트웨이 **Macro Insight**(6번째 문)는 `/insight/`. 1번(금리·시중 돈과 거래) 본문 구현 중. SSOT [`MACRO_INSIGHT_01.md`](./MACRO_INSIGHT_01.md). 결정 카드 없음.
+공개 게이트웨이 **Macro Insight**(6번째 문)는 `/insight/`. 1번(금리·시중 돈과 거래) [`MACRO_INSIGHT_01.md`](./MACRO_INSIGHT_01.md) · 2번(유형 규모·단가 상관) [`MACRO_INSIGHT_02.md`](./MACRO_INSIGHT_02.md). 결정 카드 없음. 랩 `?tool=size`는 실험실로 남긴다.
 
 G3 시계열 랩: [`lab/G3_TIMESERIES_LAB.md`](./lab/G3_TIMESERIES_LAB.md) · `?tool=g3`.  
 G3·Insight 월 합 출처 수정: [`lab/MACRO_TS_RAW_MONTH_MART.md`](./lab/MACRO_TS_RAW_MONTH_MART.md) (원장 대신 raw CSV 전국 월 마트).

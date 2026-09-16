@@ -418,6 +418,20 @@ PANEL_CAPABILITIES: dict[str, PanelCapability] = {
             "금리가 거래를 줄인 건가요?",
         ),
     ),
+    "Insight02": PanelCapability(
+        panel="Insight02",
+        label="Macro Insight 2번",
+        bundle_id="insight_macro_02",
+        blocked_keywords=(),
+        redirects=(),
+        on_screen_questions=(
+            "이 숫자는 시간에 따라 같이 움직인다는 뜻인가요?",
+            "인구 보정은 무엇을 빼나요?",
+            "거래규모와 거래건수는 왜 다른가요?",
+            "가격 수준 표는 규모 표와 같은가요?",
+            "같이 크면 원인이 있는 건가요?",
+        ),
+    ),
     "InsightHome": PanelCapability(
         panel="InsightHome",
         label="Macro Insight",

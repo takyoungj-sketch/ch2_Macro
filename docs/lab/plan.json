@@ -573,16 +573,16 @@
         "commit": "none"
       },
       "profile": {
-        "text": "G3 월=CSV 마트, 연=월 합(미완결연 제외). Insight #1 본문을 마트 r에 맞춤. 커밋·배포",
+        "text": "G3 월 마트·연 롤업. Insight #2 시군구 3년 규모·단가 상관 공개(D-058). 커밋·배포",
         "status": "done",
         "commit": "committed",
-        "decision": "D-055"
+        "decision": "D-058"
       },
       "admin": {
-        "text": "계획일지 09-16. Insight+G3 커밋·푸시·배포. 새 D 없음",
+        "text": "Insight #2 FAQ·용어 ? 다크모드. 계획일지. 커밋·푸시·배포. 새 D 없음",
         "status": "done",
         "commit": "committed",
-        "decision": "D-055"
+        "decision": "D-058"
       }
     }
   },
@@ -595,10 +595,10 @@
         "decision": "D-056"
       },
       "profile": {
-        "text": "공개 본문 연 각주 검토. 단가 P50. 지분 제외는 실험만. 시군구 r·MoM 아님",
+        "text": "#2 시·군 분리·⑤ live 숫자·창 1·3·7년. #1 연 각주·시계열 단가 P50. 지분 제외는 실험만",
         "status": "planned",
         "commit": "none",
-        "decision": "D-055"
+        "decision": "D-058"
       },
       "built": {
         "text": "Twin 붙임 실험: Local / 단순 pooling / Twin 절편 분리 / Twin 무게 제한(0.25 또는 n≤Local). Twin은 프로필 1위 고정. 계층 베이즈·지문 가중치는 그 다음. 제품 선정 미변경",

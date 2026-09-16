@@ -594,17 +594,29 @@ def compute_market_size(
     scatter = None
     sa = (scatter_a or "").strip()
     sb = (scatter_b or "").strip()
-    metric = scatter_metric if scatter_metric in ("amount", "count") else "amount"
-    if sa in MIX_TYPES and sb in MIX_TYPES and sa != sb:
-        src = amounts if metric == "amount" else counts
-        scatter = {
-            "a": sa,
-            "b": sb,
-            "metric": metric,
-            "log": True,
-            "points": _scatter_points(bundle, left=src[sa], right=src[sb], use_log=True),
-            "n_positive": sum(1 for x, y in zip(src[sa], src[sb]) if x > 0 and y > 0),
-        }
+    metric = scatter_metric if scatter_metric in ("amount", "count", "price") else "amount"
+    if sa != sb:
+        if metric in ("amount", "count") and sa in MIX_TYPES and sb in MIX_TYPES:
+            src = amounts if metric == "amount" else counts
+            scatter = {
+                "a": sa,
+                "b": sb,
+                "metric": metric,
+                "log": True,
+                "points": _scatter_points(bundle, left=src[sa], right=src[sb], use_log=True),
+                "n_positive": sum(1 for x, y in zip(src[sa], src[sb]) if x > 0 and y > 0),
+            }
+        elif metric == "price" and sa in PRICE_TYPES and sb in PRICE_TYPES:
+            left = [v if v is not None else 0.0 for v in prices[sa]]
+            right = [v if v is not None else 0.0 for v in prices[sb]]
+            scatter = {
+                "a": sa,
+                "b": sb,
+                "metric": metric,
+                "log": True,
+                "points": _scatter_points(bundle, left=left, right=right, use_log=True),
+                "n_positive": sum(1 for x, y in zip(left, right) if x > 0 and y > 0),
+            }
 
     as_of = bundle["as_of_month"]
     price_missing = _missing_price_types(prices)

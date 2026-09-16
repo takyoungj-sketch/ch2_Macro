@@ -907,6 +907,38 @@ export const STATS_GLOSSARY: Record<string, StatsGlossaryEntry> = {
     interpretation: ["건수보다 약하거나 다를 수 있습니다. 가격 수준이 섞이기 때문입니다."],
     limitations: ["집값·지가 지수가 아닙니다."],
   },
+  insight_cross: {
+    id: "insight_cross",
+    label: "시군구 단면",
+    title: "한 시점의 시군구 비교",
+    definition:
+      "최근 몇 년 거래를 한 창으로 모은 뒤, 시군구끼리 유형의 크고 작음을 비교합니다. 달력 월을 따라 같이 움직였는지는 보지 않습니다.",
+    interpretation: [
+      "칸의 숫자는 「이 시군구에서 이 유형이 크면 저 유형도 큰가」입니다.",
+      "금리·유동성과 거래의 시간 관계(1번)와 질문이 다릅니다.",
+    ],
+    limitations: ["시계열 동조가 아닙니다. 인과가 아닙니다."],
+  },
+  insight_pop_adj: {
+    id: "insight_pop_adj",
+    label: "인구 보정",
+    title: "인구 규모를 뺀 상관",
+    definition:
+      "유형의 로그 거래규모에서 로그 인구로 설명되는 부분을 뺀 뒤, 남은 값끼리 상관계수를 다시 붙입니다.",
+    interpretation: [
+      "겉보기 상관이 커도 보정 후 작아지면, 큰 도시에 여러 유형이 같이 있는 효과에 가깝습니다.",
+      "보정 후에도 남으면 인구만으로는 설명이 덜 됩니다.",
+    ],
+    limitations: ["인구 외의 체급·입지는 남아 있을 수 있습니다. 인과가 아닙니다."],
+  },
+  insight_p50: {
+    id: "insight_p50",
+    label: "㎡당 중앙값",
+    title: "㎡당 중앙값 (P50)",
+    definition: "그 시군구·유형에서 거래 단가의 가운데 값입니다. 거래액을 더한 시장 규모가 아닙니다.",
+    interpretation: ["같이 비싼가의 질문입니다. 같이 큰가의 질문과 표를 섞어 읽지 않습니다."],
+    limitations: ["토지 유형 단가 마트가 없습니다. 상가는 일반상가입니다. 인구 보정을 하지 않습니다."],
+  },
 };
 
 export function getGlossaryEntry(id: string): StatsGlossaryEntry | undefined {
