@@ -12,6 +12,8 @@ frontend-rent/node_modules/
 frontend-rent/dist/
 frontend-lab/node_modules/
 frontend-lab/dist/
+frontend-insight/node_modules/
+frontend-insight/dist/
 __pycache__/
 *.py[cod]
 .venv/

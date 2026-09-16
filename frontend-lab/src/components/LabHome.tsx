@@ -39,7 +39,7 @@ const DOORS: { id: LabTool; title: string; desc: string }[] = [
   {
     id: "g3",
     title: "유동성·금리 시계열",
-    desc: "연·월 로컬 완료. 다음=연월합 대조. 전년동월·시차 0/1/3/6. Insight 아님.",
+    desc: "연·월 로컬 완료. 다음=연월합 대조. 전년동월·시차 0/1/3/6. Insight 공개 본문 없음.",
   },
   {
     id: "newapt",
