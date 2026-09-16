@@ -1,4 +1,4 @@
-from app.regional_profile.macro_ts_lab import _lag_pearson, _merge_mix
+from app.regional_profile.macro_ts_lab import _lag_pearson, _merge_mix, _rollup_calendar_year
 
 
 def test_merge_shop_adds_built_and_collective():
@@ -19,6 +19,22 @@ def test_lag_pearson_shifts_right():
     out = _lag_pearson(left, right, 1, grain="year")
     assert out["n"] == 3
     assert out["r"] is not None and out["r"] > 0.99
+
+
+def test_rollup_calendar_year_sums_and_drops_partial():
+    month = {
+        "아파트": {
+            201001: {"count": 1.0, "amount": 10.0},
+            201002: {"count": 2.0, "amount": 20.0},
+            **{201000 + m: {"count": 1.0, "amount": 1.0} for m in range(3, 13)},
+            201101: {"count": 9.0, "amount": 90.0},
+        }
+    }
+    notes: list[str] = []
+    out = _rollup_calendar_year(month, notes)
+    assert out["아파트"][2010]["count"] == 13.0
+    assert 2011 not in out["아파트"]
+    assert any("2011" in n for n in notes)
 
 
 def test_lag_pearson_month_lag3():

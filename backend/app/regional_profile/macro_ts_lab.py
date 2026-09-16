@@ -108,6 +108,52 @@ def _clip_open_month(dst: KeyMap, notes: list[str], *, today: date | None = None
     return dst
 
 
+def _fetch_national_month(db: Session | None, notes: list[str]) -> dict[str, KeyMap]:
+    out: dict[str, KeyMap] = {name: {} for name in MIX_TYPES}
+    if not _table_ok(db, "national_month"):
+        notes.append("national_month 없음")
+        out["합계"] = {}
+        return out
+    assert db is not None
+    rows = db.execute(
+        text("SELECT mix_type, ym, n, amount_10k FROM national_month")
+    ).mappings().all()
+    for r in rows:
+        name = str(r["mix_type"] or "")
+        if name not in out:
+            continue
+        _add(out[name], int(r["ym"]), r["n"] or 0, r["amount_10k"] or 0)
+    for name in list(out):
+        out[name] = _clip_open_month(out[name], notes)
+    total: KeyMap = {}
+    for part in out.values():
+        for y, cell in part.items():
+            _add(total, y, cell["count"], cell["amount"])
+    out["합계"] = total
+    if not total:
+        notes.append("national_month 비어 있음")
+    return out
+
+
+def _rollup_calendar_year(month_mixed: dict[str, KeyMap], notes: list[str]) -> dict[str, KeyMap]:
+    """월(yyyymm)을 달력연도로 더한다. 12개월이 안 찬 해는 빼서 부분 연 YoY를 만들지 않는다."""
+    out: dict[str, KeyMap] = {}
+    incomplete: set[int] = set()
+    for name, by_ym in month_mixed.items():
+        months: dict[int, int] = {}
+        acc: KeyMap = {}
+        for ym, cell in by_ym.items():
+            y = int(ym) // 100
+            _add(acc, y, cell["count"], cell["amount"])
+            months[y] = months.get(y, 0) + 1
+        dropped = [y for y in acc if months.get(y, 0) < 12]
+        incomplete.update(dropped)
+        out[name] = {y: acc[y] for y in acc if months.get(y, 0) >= 12}
+    if incomplete:
+        notes.append("미완결연 제외 " + ", ".join(str(y) for y in sorted(incomplete)))
+    return out
+
+
 def _fetch_land(db: Session | None, notes: list[str]) -> KeyMap:
     out: KeyMap = {}
     if not _table_ok(db, "land_annual_stats"):
@@ -347,6 +393,7 @@ def compute_macro_ts(
     land_db: Session | None,
     built_db: Session | None,
     coll_db: Session | None,
+    macro_ts_db: Session | None = None,
     data_dir=None,
     grain: Literal["calendar_year", "calendar_month"] | Grain = "calendar_year",
 ) -> dict[str, Any]:
@@ -355,42 +402,24 @@ def compute_macro_ts(
     notes: list[str] = list(ecos.get("coverage_notes") or [])
     lags = LAGS_MONTH if freq == "month" else LAGS_YEAR
 
+    month_mixed = _fetch_national_month(macro_ts_db, notes)
     if freq == "month":
-        land = _fetch_land_month(land_db, notes)
-        built = _fetch_built_month(built_db, notes)
-        cc = _fetch_coll_month(
-            coll_db,
-            table="collective_commercial_transactions",
-            domain_col="asset_type",
-            notes=notes,
-        )
-        market = _fetch_coll_month(
-            coll_db,
-            table="collective_transactions",
-            domain_col="asset_type",
-            notes=notes,
-        )
+        mixed = month_mixed
+        if mixed.get("합계") and "월 거래는 국토부 CSV 전국 합" not in "".join(notes):
+            notes.append("월 거래는 국토부 CSV 전국 합. 제품 원장과 행이 다를 수 있음.")
         note = (
             "전국 달력월. 금리·M2·거래는 전년동월 변화. 시차 0/1/3/6개월. "
-            "수준 상관은 추세 주의. 인과 아님."
+            "거래는 국토부 CSV 월 합. 수준 상관은 추세 주의. 인과 아님."
         )
     else:
-        land = _fetch_land(land_db, notes)
-        built = _fetch_sido_annual(
-            built_db, table="built_annual_stats", domain_col="asset_type", notes=notes
+        mixed = _rollup_calendar_year(month_mixed, notes)
+        if mixed.get("합계") and "연 거래는 국토부 CSV 월 합" not in "".join(notes):
+            notes.append("연 거래는 국토부 CSV 월 합을 달력연도로 더한 값. 제품 연 마트와 행이 다를 수 있음.")
+        note = (
+            "전국 달력연도. 금리 변화(%p)·M2 YoY ↔ 거래 건수/액 YoY. "
+            "거래는 국토부 CSV 월 합을 연으로 더한 값. 수준 상관은 추세 주의. 인과 아님."
         )
-        cc = _fetch_sido_annual(
-            coll_db,
-            table="collective_commercial_region_annual_stats",
-            domain_col="asset_type",
-            notes=notes,
-        )
-        market = _fetch_sido_annual(
-            coll_db, table="market_annual_stats", domain_col="market_domain", notes=notes
-        )
-        note = "전국 달력연도. 금리 변화(%p)·M2 YoY ↔ 거래 건수/액 YoY. 수준 상관은 추세 주의. 인과 아님."
 
-    mixed = _merge_mix(land, built, cc, market)
     types_out = {name: _pack_series(by_k, grain=freq) for name, by_k in mixed.items()}
     pairs = _pair_rows(types_out, ecos=ecos, grain=freq, lags=lags)
 

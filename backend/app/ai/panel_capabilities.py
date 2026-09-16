@@ -404,6 +404,31 @@ PANEL_CAPABILITIES: dict[str, PanelCapability] = {
             "통계분석은 어디서 하나요?",
         ),
     ),
+    "Insight01": PanelCapability(
+        panel="Insight01",
+        label="Macro Insight 1번",
+        bundle_id="insight_macro_01",
+        blocked_keywords=(),
+        redirects=(),
+        on_screen_questions=(
+            "상관계수가 뭔가요?",
+            "왜 금액 그래프만 보면 안 되나요?",
+            "합계는 모든 부동산인가요?",
+            "한 달 뒤는 무슨 뜻인가요?",
+            "금리가 거래를 줄인 건가요?",
+        ),
+    ),
+    "InsightHome": PanelCapability(
+        panel="InsightHome",
+        label="Macro Insight",
+        bundle_id="insight_macro_01",
+        blocked_keywords=(),
+        redirects=(),
+        on_screen_questions=(
+            "Macro Insight는 무엇인가요?",
+            "이 창은 분석 앱인가요?",
+        ),
+    ),
 }
 
 _DEFAULT_CAPABILITY = PANEL_CAPABILITIES["RegressionCard"]

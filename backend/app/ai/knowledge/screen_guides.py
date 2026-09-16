@@ -491,6 +491,36 @@ def _profile(context: AiContext) -> str:
     return "\n".join(lines)
 
 
+def _insight(context: AiContext) -> str:
+    facts = context.facts or {}
+    as_of = facts.get("as_of")
+    start = facts.get("period_start")
+    end = facts.get("period_end")
+    lines = [
+        "### 이 화면은",
+        "Macro Insight 1번입니다. 금리와 유동성(M2)의 변화가 전국 부동산 거래와 어떤 관계를 보이는지 월별 자료로 살펴봅니다.",
+        "통계 기초만 있는 사람에게 쉬운 말로 설명합니다.",
+    ]
+    if start and end:
+        lines.append(f"기간은 {start}부터 {end}까지, 전국 달력 월입니다.")
+    if as_of:
+        lines.append(f"자료 기준일은 {as_of}입니다.")
+    lines.extend(
+        [
+            "",
+            "### 어떻게 읽나",
+            "- 앞의 네 그래프는 시장의 흐름입니다. 여기서 관계를 해석하지 않습니다.",
+            "- 관계는 전년동월 변화와 아래 상관계수 표로 봅니다.",
+            "- 전체 거래(합계)는 유형별 규모가 달라 개별 유형을 그대로 대표하지 않습니다.",
+            "- 표에 없는 숫자를 만들지 않습니다.",
+            "",
+            "### 한계",
+            "상관계수는 함께 나타난 정도입니다. 인과나 미래 예측이 아닙니다. 자세한 내용은 화면의 「이 분석의 한계」를 따릅니다.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def _fallback(context: AiContext) -> str:
     scope = _scope_line(context)
     lines = [
@@ -527,6 +557,8 @@ def format_screen_guide(context: AiContext) -> str:
         return _rent_list(context)
     if panel in ("RegionalProfile", "TwinRegionPanel", "ProfilePanel") or app == "profile":
         return _profile(context)
+    if panel in ("Insight01", "InsightHome") or app == "insight":
+        return _insight(context)
     if app == "built":
         return _built_basic(context)
     if app == "collective":
@@ -571,6 +603,13 @@ def screen_guide_followups(context: AiContext) -> list[str]:
         return [
             "Twin 유사지역은 무엇을 뜻하나요?",
             "단지 추세는 어디서 보나요?",
+        ]
+    if app == "insight" or panel in ("Insight01", "InsightHome"):
+        return [
+            "상관계수가 뭔가요?",
+            "왜 금액 그래프만 보면 안 되나요?",
+            "합계는 모든 부동산인가요?",
+            "금리가 거래를 줄인 건가요?",
         ]
     if app == "built":
         return [

@@ -65,6 +65,11 @@ BUNDLE_REGISTRY: dict[str, BundleSpec] = {
         description="모형 탐색 판정·Twin·권장 행동",
         panels=("RecommendationCard", "ModelSelectionCard"),
     ),
+    "insight_macro_01": BundleSpec(
+        bundle_id="insight_macro_01",
+        description="Macro Insight 1번 — 전국 월 금리·M2 × 거래",
+        panels=("Insight01", "InsightHome"),
+    ),
     "list_overview": BundleSpec(
         bundle_id="list_overview",
         description="기본통계 목록·매트릭스 화면 안내",
@@ -171,6 +176,17 @@ SUGGESTED_QUESTIONS: dict[str, list[str]] = {
         "기준층은 어떻게 정해지나요?",
         "회귀 omitted category는 무엇인가요?",
     ],
+    "Insight01": [
+        "상관계수가 뭔가요?",
+        "왜 금액 그래프만 보면 안 되나요?",
+        "합계는 모든 부동산인가요?",
+        "한 달 뒤는 무슨 뜻인가요?",
+        "금리가 거래를 줄인 건가요?",
+    ],
+    "InsightHome": [
+        "Macro Insight는 무엇인가요?",
+        "이 창은 분석 앱인가요?",
+    ],
 }
 
 PURPOSE_SUFFIX: dict[AiPurpose, str] = {
@@ -256,6 +272,8 @@ def suggested_questions(
             "신뢰구간이 넓은 이유는?",
             "이 칸의 표본을 설명해 주세요.",
         ]
+    if app == "insight" and panel in ("Insight01", "InsightHome"):
+        base = list(SUGGESTED_QUESTIONS.get(panel, SUGGESTED_QUESTIONS["Insight01"]))
     suffix = PURPOSE_SUFFIX.get(purpose, "")
     if suffix and purpose == "statistics":
         return base[:6]

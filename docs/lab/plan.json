@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-14",
+  "updated": "2026-09-16",
   "domains": [
     {
       "id": "land",
@@ -509,10 +509,48 @@
           "decision": "D-073"
         }
       }
+    },
+    {
+      "date": "2026-09-14",
+      "cells": {
+        "land": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "built": {
+          "text": "이 축 오늘 작업 없음. Fingerprint 붙임은 다음",
+          "status": "done",
+          "commit": "needed",
+          "decision": "D-073"
+        },
+        "collective": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "rent": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "profile": {
+          "text": "G3 월 시차 로컬 완료(전년동월 0/1/3/6, ?tool=g3). 연·월 합 대조·영속 마트 안 함. Insight 없음. 미커밋",
+          "status": "stopped",
+          "commit": "needed",
+          "decision": "D-055"
+        },
+        "admin": {
+          "text": "계획일지 09-14. G3 중지점=연월합 대조(느리면 월 마트). 새 문·새 D 없음. 미커밋",
+          "status": "stopped",
+          "commit": "needed",
+          "decision": "D-055"
+        }
+      }
     }
   ],
   "today": {
-    "date": "2026-09-14",
+    "date": "2026-09-16",
     "cells": {
       "land": {
         "text": "이 축 작업 없음",
@@ -520,10 +558,9 @@
         "commit": "none"
       },
       "built": {
-        "text": "이 축 오늘 작업 없음. Fingerprint 붙임은 다음",
+        "text": "이 축 작업 없음",
         "status": "done",
-        "commit": "needed",
-        "decision": "D-073"
+        "commit": "none"
       },
       "collective": {
         "text": "이 축 작업 없음",
@@ -536,15 +573,15 @@
         "commit": "none"
       },
       "profile": {
-        "text": "G3 월 시차 로컬 완료(전년동월 0/1/3/6, ?tool=g3). 연·월 합 대조·영속 마트 안 함. Insight 없음. 미커밋",
-        "status": "stopped",
-        "commit": "needed",
+        "text": "G3 월=CSV 마트, 연=월 합(미완결연 제외). Insight #1 본문을 마트 r에 맞춤. 커밋·배포",
+        "status": "done",
+        "commit": "committed",
         "decision": "D-055"
       },
       "admin": {
-        "text": "계획일지 09-14. G3 중지점=연월합 대조(느리면 월 마트). 새 문·새 D 없음. 미커밋",
-        "status": "stopped",
-        "commit": "needed",
+        "text": "계획일지 09-16. Insight+G3 커밋·푸시·배포. 새 D 없음",
+        "status": "done",
+        "commit": "committed",
         "decision": "D-055"
       }
     }
@@ -558,9 +595,9 @@
         "decision": "D-056"
       },
       "profile": {
-        "text": "G3 다음=연도합 vs 월합 대조. 월 API가 느리면 얇은 월 마트. 시군구 r·Insight·MoM 아님. D-058 시장규모는 장기. 리 마트=…00 제외는 차후",
+        "text": "공개 본문 연 각주 검토. 단가 P50. 지분 제외는 실험만. 시군구 r·MoM 아님",
         "status": "planned",
-        "commit": "needed",
+        "commit": "none",
         "decision": "D-055"
       },
       "built": {
@@ -581,7 +618,7 @@
         "decision": "D-065"
       },
       "admin": {
-        "text": "G3는 연월합 대조부터(?tool=g3). Fingerprint 붙임은 mape에 이어서. 새 문·새 D 없음",
+        "text": "결정 카드는 카피 굳은 뒤. Fingerprint 붙임은 mape 트랙",
         "status": "planned",
         "commit": "needed",
         "decision": "D-055"

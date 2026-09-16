@@ -158,6 +158,11 @@ app.include_router(ai_router, prefix="/api")
 app.include_router(ai_usage_router, prefix="/api")
 _LOG.info("CH2 AI API 활성: /api/ai/* · /api/admin/ai-usage")
 
+from app.insight.router import router as insight_router
+
+app.include_router(insight_router, prefix="/api")
+_LOG.info("Macro Insight API 활성: /api/insight/*")
+
 from app.parcel_lab.router import router as parcel_lab_router
 
 app.include_router(parcel_lab_router, prefix="/api")

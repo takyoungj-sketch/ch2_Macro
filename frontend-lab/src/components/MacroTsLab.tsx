@@ -228,7 +228,7 @@ function DualLines({
 }
 
 export default function MacroTsLab() {
-  const [grain, setGrain] = useState<MacroGrain>("calendar_year");
+  const [grain, setGrain] = useState<MacroGrain>("calendar_month");
   const [lag, setLag] = useState(0);
   const q = useQuery({
     queryKey: ["lab-macro-ts", grain],
@@ -280,8 +280,8 @@ export default function MacroTsLab() {
     <div className="max-w-6xl mx-auto px-4 py-4 space-y-4 pb-10">
       <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
         전국에서 금리·M2의 <strong>전년{isMonth ? "동월" : ""} 변화</strong>와 8유형 거래 건수·액 YoY를 봅니다.
-        시군구 상관·인과 문장이 아닙니다. 월 주기에서 시차 0/1/3/6개월을 봅니다. 그래프는{" "}
-        <strong>전년 대비</strong>만 그립니다.
+        시군구 상관·인과 문장이 아닙니다. 거래는 국토부 CSV 전국 합(실험 마트)이고, 연도는 그 월을 달력연도로 더한 값입니다.
+        월 주기에서 시차 0/1/3/6개월을 봅니다. 그래프는 <strong>전년 대비</strong>만 그립니다.
       </p>
 
       <div className="flex flex-wrap items-center gap-2">

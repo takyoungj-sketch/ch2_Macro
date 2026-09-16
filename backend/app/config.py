@@ -38,6 +38,11 @@ class Settings(BaseSettings):
         default="",
         validation_alias="RENT_DATABASE_URL",
     )
+    #: G3·Insight 전국 월 마트 (원장과 분리). 비어 있으면 land_stats 형제 macro_ts_stats 시도.
+    macro_ts_database_url: str = Field(
+        default="",
+        validation_alias="MACRO_TS_DATABASE_URL",
+    )
     secret_key: str = "change_me"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60

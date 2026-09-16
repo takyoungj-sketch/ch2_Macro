@@ -439,11 +439,46 @@ def build_list_overview(context: AiContext) -> AiDiagnosticPack:
     )
 
 
+def build_insight_macro(context: AiContext) -> AiDiagnosticPack:
+    facts = context.facts or {}
+    as_of = facts.get("as_of")
+    grain = facts.get("grain") or "calendar_month"
+    types = facts.get("types") or []
+    summary = [
+        "Macro Insight 01 — 전국 월, 금리·시중 돈 × 거래",
+        f"grain={grain}",
+    ]
+    if as_of:
+        summary.append(f"as_of={as_of}")
+    if types:
+        summary.append(f"유형={len(types)}개")
+    if facts.get("period_start") and facts.get("period_end"):
+        summary.append(f"기간={facts.get('period_start')}–{facts.get('period_end')}")
+    limitations = list(
+        (context.explain.limitations if context.explain and context.explain.limitations else None)
+        or [
+            "상관이지 인과가 아닙니다. 결론이 아닙니다.",
+            "전국 월만. 시군구 r가 없습니다.",
+            "표에 없는 상관계수를 만들지 않습니다.",
+        ]
+    )
+    return AiDiagnosticPack(
+        bundle_id="insight_macro_01",
+        panel=context.panel,
+        app=context.app,
+        summary_lines=summary,
+        diagnostics={**facts, "scope_label": context.scope.region_label or "전국"},
+        limitations=limitations,
+    )
+
+
 def build_bundle(context: AiContext) -> AiDiagnosticPack:
     facts = context.facts or {}
     panel = context.panel
     bid = resolve_bundle_id(panel)
 
+    if panel in ("Insight01", "InsightHome") or bid == "insight_macro_01" or context.app == "insight":
+        return build_insight_macro(context)
     if panel == "SangkwonCard" or bid == "sangkwon_reb":
         return build_sangkwon_reb(context)
     if context.app == "rent" or panel == "RentListCard" or bid == "rent_conversion":

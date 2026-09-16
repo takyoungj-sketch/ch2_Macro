@@ -836,6 +836,77 @@ export const STATS_GLOSSARY: Record<string, StatsGlossaryEntry> = {
       "창 중앙값·거래 5건 이상인 단지만 들어갑니다.",
     ],
   },
+  insight_yoy: {
+    id: "insight_yoy",
+    label: "작년 같은 달",
+    title: "작년 같은 달과 비교",
+    definition:
+      "올해 3월을 작년 3월과 비교하는 방식입니다. 해가 갈수록 커지는 금액만 보면 같이 늘어난 것처럼 보일 수 있어, 그 영향을 줄입니다.",
+    interpretation: [
+      "금리 변화는 %포인트, 시중 돈·거래는 %로 봅니다.",
+      "이 글의 상관계수는 이 변화끼리 붙인 값입니다.",
+    ],
+    limitations: [
+      "장기적으로 「얼마인가」의 관계와 다를 수 있습니다.",
+      "앞의 수준 그래프와 같은 증거가 아닙니다.",
+    ],
+  },
+  insight_level: {
+    id: "insight_level",
+    label: "수준 그래프",
+    title: "그때 얼마였나 (수준)",
+    definition: "그달에 금리·시중 돈·거래 건수·거래액이 얼마였는지를 그린 입구입니다.",
+    interpretation: [
+      "흐름을 눈으로 익히기 위한 그림입니다.",
+      "같이 올라가 보여도 관계의 증거가 아닙니다. 그래프마다 세로축 단위가 다릅니다.",
+    ],
+    limitations: ["이중축으로 시중 돈과 거래액을 한 장에 겹치지 않습니다."],
+  },
+  insight_lag: {
+    id: "insight_lag",
+    label: "시차",
+    title: "같은 달 · 한 달 뒤 · 세 달 뒤 · 여섯 달 뒤",
+    definition:
+      "왼쪽(금리 또는 시중 돈)의 그달과, 오른쪽(거래)의 그달 또는 몇 달 뒤를 짝 지어 상관계수를 본 것입니다.",
+    interpretation: [
+      "「몇 달 뒤까지 붙어 있나」를 찾아 본 탐색입니다.",
+      "금리가 먼저 움직이고 거래가 따라간다는 증거가 아닙니다.",
+    ],
+    limitations: ["경제적 원인이 발생한 시점을 정하지 않습니다."],
+  },
+  insight_total: {
+    id: "insight_total",
+    label: "전체 거래",
+    title: "전체 거래 (합계)",
+    definition:
+      "여덟 유형 거래 건수(또는 액)를 더한 값입니다. 유형마다 규모가 달라 합계는 규모가 큰 유형의 움직임에 더 가깝습니다.",
+    interpretation: ["모든 부동산 시장을 똑같이 대표하지 않습니다. 아파트와 토지의 비중이 큽니다."],
+    limitations: ["단순 합입니다. 유형별 가중을 다시 맞춘 지수가 아닙니다."],
+  },
+  insight_m2: {
+    id: "insight_m2",
+    label: "시중 돈",
+    title: "시중 돈 (M2)",
+    definition: "한국은행이 발표하는 시중에 풀린 돈의 한 지표입니다. 평잔·계절 보정 계열을 씁니다.",
+    interpretation: ["이 글에서는 작년 같은 달보다 몇 % 달라졌는지를 거래와 붙여 봅니다."],
+    limitations: ["한은 원표 해설이 이 글의 주인공이 아닙니다. 돈이 늘면 거래가 는다고 읽지 않습니다."],
+  },
+  insight_cd: {
+    id: "insight_cd",
+    label: "CD 금리",
+    title: "CD(91일) 금리",
+    definition: "이 글의 대표 시장금리입니다. 양도성예금증서 91일물.",
+    interpretation: ["본실험은 CD입니다. 국고 3년·기준금리는 확인용입니다."],
+    limitations: ["확인용 금리가 합계에서 더 크게 나와도 본문의 주인공을 바꾸지 않습니다."],
+  },
+  insight_amount: {
+    id: "insight_amount",
+    label: "거래액",
+    title: "거래액 (집값 지수가 아님)",
+    definition: "그달 거래 건수와 그때의 가격이 섞여 더해진 합입니다.",
+    interpretation: ["건수보다 약하거나 다를 수 있습니다. 가격 수준이 섞이기 때문입니다."],
+    limitations: ["집값·지가 지수가 아닙니다."],
+  },
 };
 
 export function getGlossaryEntry(id: string): StatsGlossaryEntry | undefined {

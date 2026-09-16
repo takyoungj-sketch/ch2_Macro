@@ -16,15 +16,16 @@
 | AI 사용량 | `ai` | 월 LLM 호출·추정 원 장부. 질문 문장 없음 |
 | 대장DB | `parcel` | 로컬 `parcel_master` 필지·동·용도지역 조회. 읽기 전용. 운영 DB 없음. 설계 [`PARCEL_MASTER_DESIGN.md`](./PARCEL_MASTER_DESIGN.md) · 월간 [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md) |
 | 시장 규모의 관계 | `size` | 같은 체급 log 거래액·건수 r + 인구 보정, ① n붕괴 · ② 시군구 내부 규모 · ③ ㎡당 P50(인구보정 없음) · ④ 시군구 내부 단가 (D-058, 장기). 프로필 8×8 없음. G3 시계열 없음 |
-| 유동성·금리 시계열 | `g3` | 전국 연도·월 로컬 완료. 다음=연·월 합 대조. M2·CD·기준금리·국고3년 전년(동월) × 8유형 건수·액 YoY, 월 시차 0/1/3/6 (D-055). Insight 아님 |
+| 유동성·금리 시계열 | `g3` | 월·연 모두 국토부 CSV 전국 합 마트(2026-09-16). 연은 월 합, 미완결연 제외. M2·CD·기준금리·국고3년 전년(동월) × 8유형 건수·액 YoY, 월 시차 0/1/3/6 (D-055). Insight #1은 월 |
 | 신규아파트 실험 | `newapt` | 대전 M2 잠정 · 충북 전이 · 학습/검증/오차. 집합 기본통계 버튼 없음. 상품화는 실험 후 (D-045) |
 | 시공사 효과 | `builder` | 공시지가 vs 시군구 FE · within-gu. **다음=브랜드 vs 시공사.** 제품 식 미변경 (D-063·D-065) |
 | 연식=0 잔차 | `age0` | 재고 식 연식=0 vs 실제 신축. **다음=서울·경기 분리.** 전국 공통 프리미엄 미가산 (D-064) |
 | 모형추천 Twin 벤치 | `recommend-twin` | Local / Twin1 / Twin2 × 지역더미 전후. 실험 Twin은 1위만. 제품 식은 Twin1=1위+더미, Twin2=확인용 재탐색. [`lab/RECOMMEND_TWIN_BENCH_LAB.md`](./lab/RECOMMEND_TWIN_BENCH_LAB.md) |
 
-공개 게이트웨이 **Macro Insight**(6번째 문)는 `/insight/` 빈 창. FAQ 본문은 아직 없음. 계획 [`MACRO_INSIGHT_PLAN.md`](./MACRO_INSIGHT_PLAN.md). 결정 카드 없음.
+공개 게이트웨이 **Macro Insight**(6번째 문)는 `/insight/`. 1번(금리·시중 돈과 거래) 본문 구현 중. SSOT [`MACRO_INSIGHT_01.md`](./MACRO_INSIGHT_01.md). 결정 카드 없음.
 
-G3 시계열 랩: [`lab/G3_TIMESERIES_LAB.md`](./lab/G3_TIMESERIES_LAB.md) · `?tool=g3`.
+G3 시계열 랩: [`lab/G3_TIMESERIES_LAB.md`](./lab/G3_TIMESERIES_LAB.md) · `?tool=g3`.  
+G3·Insight 월 합 출처 수정: [`lab/MACRO_TS_RAW_MONTH_MART.md`](./lab/MACRO_TS_RAW_MONTH_MART.md) (원장 대신 raw CSV 전국 월 마트).
 신규아파트 실험: [`NEW_APARTMENT_REGRESSION_DESIGN.md`](./NEW_APARTMENT_REGRESSION_DESIGN.md) · `?tool=newapt`.
 시공사 효과: [`lab/BUILDER_IDENT_LAB.md`](./lab/BUILDER_IDENT_LAB.md) · `?tool=builder`.
 연식=0 잔차: [`lab/AGE0_RESIDUAL_LAB.md`](./lab/AGE0_RESIDUAL_LAB.md) · `?tool=age0`.

@@ -1,10 +1,10 @@
 # G3 시계열 랩 — 1차 준비 (연도)
 
-> **작성:** 2026-09-05 · **2차:** 2026-09-13  
-> **상태:** 랩 연도 1차 + 월 시차(전년동월, 0/1/3/6). Insight FAQ #1은 방법·한계만. r 표 없음.  
+> **작성:** 2026-09-05 · **2차:** 2026-09-13 · **월 마트:** 2026-09-16  
+> **상태:** 랩 연도 1차 + 월(국토부 CSV `national_month`). Insight #1은 같은 월 계산.  
 > **코드:** `ecos_csv.py` · `macro_ts_lab.py` · `GET /api/regional-profile/lab/macro-ts?grain=calendar_month` · `?tool=g3`
 
-관리자에서 숫자를 돌린다. 공개 `/insight/` 는 빈 창. FAQ #1 후보는 [`MACRO_INSIGHT_PLAN.md`](../MACRO_INSIGHT_PLAN.md) §3.1.
+관리자 `?tool=g3`에서 숫자를 돌린다. 공개 본문은 [`MACRO_INSIGHT_01.md`](../MACRO_INSIGHT_01.md). 월 거래 출처 [`MACRO_TS_RAW_MONTH_MART.md`](./MACRO_TS_RAW_MONTH_MART.md).
 
 ---
 
@@ -42,7 +42,7 @@ COFIX는 주담대 질문용, 1차에 넣지 않는다.
 
 2025는 연평균 잠정일 수 있다. 본문에 기준일을 남긴다.
 
-**없는 것:** COFIX, 전국 8유형 **영속 월 마트**(요청 시 원장 GROUP BY), 단가 P50.
+**없는 것:** COFIX, 단가 P50. 월 거래는 제품 원장 GROUP BY가 아니라 [`MACRO_TS_RAW_MONTH_MART.md`](./MACRO_TS_RAW_MONTH_MART.md) 실험 마트.
 
 ---
 
@@ -67,8 +67,7 @@ COFIX는 주담대 질문용, 1차에 넣지 않는다.
 
 | 있음 | 다음 |
 |------|------|
-| ECOS 연도 + **월** (`data/한은 월간/`) · 랩 `?tool=g3` 주기·시차 칩 | 커버리지 감사 스냅샷. 단가·Insight 아님 |
-| 전국 8유형 **연도** 건수·액 | 연도 1차 유지 |
+| ECOS 연도 + **월** (`data/한은 월간/`) · 랩 `?tool=g3` 주기·시차 칩. 월·연 거래=`national_month`(연은 월 합) | 단가. Insight 본문은 월 |
 
 스모크: http://localhost:5179/lab/?tool=g3 · API `GET /api/regional-profile/lab/macro-ts`
 
@@ -97,16 +96,16 @@ ECOS 월 CSV는 `data/한은 월간/`에 있음. 로더가 그 폴더를 보고,
 
 | # | 무엇 | 상태 |
 |---|------|------|
-| 3 | 전국 월 합 | 원장 GROUP BY (시군구 행 없음). 연도 마트를 월로 확장하지 않음 |
-| 4 | 커버리지 | 이번 달(미완결) 제외. 연·월 합 대조는 다음 |
+| 3 | 전국 월 합 | **2026-09-16:** 원장 GROUP BY → `macro_ts_stats.national_month` (국토부 CSV) |
+| 4 | 커버리지 | 이번 달(미완결) 제외. 연은 12개월 미만 해 제외. 건수·액 연 합=월 합 |
 | 5 | 화면 | `?tool=g3` 연/월 · 시차 칩 |
-| 6 | 스냅샷 JSON | `docs/lab/macro_ts_monthly_run.json` (Pearson만, 전 시계열 아님) |
+| 6 | 스냅샷 JSON | `docs/lab/macro_ts_monthly_run.json` (Pearson만, 전 시계열 아님). **2026-09-16 마트 재계산** |
 
-요청마다 전국 GROUP BY를 한 번씩 한다. 느리면 그때 얇은 마트를 둔다.
+월 거래는 `national_month` 조회. 원장 GROUP BY를 매 요청에 돌리지 않는다.
 
 ### 하지 않음 (2차도)
 
-시군구×금리 r, COFIX, 단가 P50, Insight r 표, 연도 1차 식을 월 MoM으로 바꾸기, 토지·복합·집합 연도 마트를 월로 재설계.
+시군구×금리 r, COFIX, 단가 P50, 연도 1차 식을 월 MoM으로 바꾸기, 토지·복합·집합 연도 마트를 월로 재설계.
 
 ---
 
@@ -115,8 +114,22 @@ ECOS 월 CSV는 `data/한은 월간/`에 있음. 로더가 그 폴더를 보고,
 보는 곳: http://127.0.0.1:5179/lab/?tool=g3 · API `GET /api/regional-profile/lab/macro-ts?grain=calendar_month`  
 스냅샷: `docs/lab/macro_ts_monthly_run.json` · ECOS 월 `data/한은 월간/`
 
-**이미 됨:** 전년동월 YoY, 시차 0/1/3/6, 원장 GROUP BY, 칩, 단위 테스트 10. 코드는 워킹트리(미커밋).
+**이미 됨(당시):** 전년동월 YoY, 시차 0/1/3/6, 원장 GROUP BY, 칩.
 
-**이어서:** 연도 마트 합 vs 월 합 대조. 월 API가 느리면 얇은 월 마트. 그 전엔 새 문·새 D-xxx·Insight r 표 없음. FAQ #1은 방법·한계만.
+**이어서(당시):** 원장 GROUP BY 월 합은 2010~2018 집합·복합이 비어 실험 출처로 쓰지 않는다. 수정안 [`MACRO_TS_RAW_MONTH_MART.md`](./MACRO_TS_RAW_MONTH_MART.md).
 
-**실측 한 줄 (CD 91일 × 건수 YoY):** 연도 토지 −0.67 n=15 · 합계 −0.44. 월 토지 −0.55 n=188 · 합계 −0.35(시차 길수록 약해짐) · 상가·공장 ≈0.
+**실측(원장 시절, 폐기):** 월 CD×건수 같은 달 토지 −0.55 n=188 · 합계 −0.35 · 상가·공장 ≈0.
+
+---
+
+## 8. 월 마트 재계산 (2026-09-16)
+
+월 grain은 `macro_ts_stats.national_month`만 본다. 연도 grain은 같은 표를 달력연도로 더고, 12개월이 안 찬 해(지금 2026)는 뺀다. ECOS 금리·M2는 연·월 각각 `data/` · `data/한은 월간/`. 랩 기본 칩은 **월**.
+
+스냅샷: `docs/lab/macro_ts_monthly_run.json` · `docs/lab/macro_ts_yearly_run.json` (`as_of` 2026-09-16). 화면 http://127.0.0.1:5179/lab/?tool=g3
+
+**실측 월 (CD 91일 × 건수 YoY, 같은 달, n=186):** 오피스텔 −0.59 · 연립다세대 −0.56 · 토지 −0.51 · 합계 −0.50 · 단독 −0.48 · 공장 −0.46 · 상가 −0.41 · 아파트 −0.28 · 분양권 +0.04. 합계는 시차 1·3·6에 −0.47 · −0.40 · −0.28. M2×합계 건수는 ≈0, 토지 +0.35.
+
+**실측 연 (CD 91일 × 건수 YoY, 같은 해, n=15, 2010–2025):** 연립다세대 −0.73 · 오피스텔 −0.71 · 합계 −0.67 · 토지 −0.66 · 단독 −0.56 · 공장 −0.55 · 상가 −0.48 · 아파트 −0.36 · 분양권 ≈0. 아파트 2018 연 건수 = 월 합 505,946.
+
+건수·액의 연 합은 월 합과 같다(부분 연 제외). 상관계수는 전년 대비 변화의 grain이 달라 연과 월이 다를 수 있다.

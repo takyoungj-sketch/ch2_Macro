@@ -807,16 +807,25 @@ def get_macro_ts_lab(grain: str = Query("calendar_year")):
     from app.built.db import get_built_session_factory
     from app.collective.db import get_collective_session_factory
     from app.db import SessionLocal
+    from app.macro_ts.db import get_macro_ts_session_factory
     from app.regional_profile.macro_ts_lab import compute_macro_ts
 
     g = "calendar_month" if grain in {"month", "calendar_month"} else "calendar_year"
     land = SessionLocal()
     built_factory = get_built_session_factory()
     coll_factory = get_collective_session_factory()
+    mts_factory = get_macro_ts_session_factory()
     built = built_factory() if built_factory is not None else None
     coll = coll_factory() if coll_factory is not None else None
+    mts = mts_factory() if mts_factory is not None else None
     try:
-        return compute_macro_ts(land_db=land, built_db=built, coll_db=coll, grain=g)
+        return compute_macro_ts(
+            land_db=land,
+            built_db=built,
+            coll_db=coll,
+            macro_ts_db=mts,
+            grain=g,
+        )
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
@@ -827,3 +836,5 @@ def get_macro_ts_lab(grain: str = Query("calendar_year")):
             built.close()
         if coll is not None:
             coll.close()
+        if mts is not None:
+            mts.close()

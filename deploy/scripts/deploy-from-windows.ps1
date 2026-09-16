@@ -81,7 +81,7 @@ try {
       Invoke-Scp @("deploy/scripts") "deploy/"
     }
     "lab" {
-      Invoke-Scp @("backend/app/qa_audit", "backend/app/parcel_lab", "backend/app/regional_profile", "backend/app/ai", "backend/app/config.py", "backend/app/main.py") "backend/app/"
+      Invoke-Scp @("backend/app/qa_audit", "backend/app/parcel_lab", "backend/app/regional_profile", "backend/app/insight", "backend/app/macro_ts", "backend/app/ai", "backend/app/config.py", "backend/app/main.py") "backend/app/"
       Invoke-Scp @("shared") "."
       Invoke-Scp @("docs/lab") "docs/"
       Invoke-Scp @("frontend-lab/package.json", "frontend-lab/package-lock.json", "frontend-lab/tsconfig.json", "frontend-lab/vite.config.ts", "frontend-lab/tailwind.config.js", "frontend-lab/postcss.config.js", "frontend-lab/index.html", "frontend-lab/src") "frontend-lab/"
@@ -106,10 +106,16 @@ try {
       Invoke-Scp @("deploy/scripts") "deploy/"
     }
     "insight" {
+      Invoke-Scp @("backend/app/insight", "backend/app/macro_ts", "backend/app/regional_profile", "backend/app/ai", "backend/app/config.py", "backend/app/main.py") "backend/app/"
       Invoke-Scp @("shared") "."
       Invoke-Scp @("frontend-insight/package.json", "frontend-insight/package-lock.json", "frontend-insight/tsconfig.json", "frontend-insight/vite.config.ts", "frontend-insight/tailwind.config.js", "frontend-insight/postcss.config.js", "frontend-insight/index.html", "frontend-insight/src") "frontend-insight/"
       Invoke-Scp @("deploy/templates", "deploy/macro-gateway") "deploy/"
       Invoke-Scp @("deploy/scripts") "deploy/"
+      & ssh -i $Key $VpsHost "mkdir -p /opt/ch2_Macro/data"
+      Invoke-Scp @(
+        "data/한은 연간",
+        "data/한은 월간"
+      ) "data/"
     }
     "all" {
       Invoke-Scp @("backend/app") "backend/"

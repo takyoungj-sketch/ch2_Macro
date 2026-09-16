@@ -6,7 +6,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-AiApp = Literal["land", "built", "collective", "rent", "profile"]
+AiApp = Literal["land", "built", "collective", "rent", "profile", "insight"]
 AiPurpose = Literal["statistics", "prediction", "market_analysis", "methodology"]
 AiRoute = Literal[
     "refusal",
