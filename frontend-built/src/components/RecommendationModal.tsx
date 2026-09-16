@@ -373,7 +373,7 @@ export default function RecommendationModal({
       onClose={onClose}
       titleId="recommendation-modal-title"
       title="Macro 모형 탐색"
-      subtitle="탐색 → Local 기준선 → Twin 표본 보강 → 비교. 이 창에서만 확인하며 기본 통계 식은 바꾸지 않습니다."
+      subtitle="탐색 → Local 기준선 → Twin1 → Twin2 → 비교. 이 창에서만 확인하며 기본 통계 식은 바꾸지 않습니다."
       maxWidthClass="max-w-4xl"
       resizable
       allowFullscreen

@@ -240,15 +240,19 @@ export default function RecommendStagePanel({
   const emptyTwinSkip = Boolean(
     stage2?.skipped_reason?.includes("Profile Twin 후보가 전달되지"),
   );
-  const showTwinResults =
+  const twin1Done = Boolean(
     stage2 &&
-    (stage2.ran
-      ? stage2.pools.length > 0
-      : Boolean(stage2.skipped_reason) && !emptyTwinSkip);
+      (stage2.ran ||
+        stage2.inspect_pool ||
+        (Boolean(stage2.skipped_reason) && !emptyTwinSkip)),
+  );
+  const showTwinResults = twin1Done;
   const canRunTwin = twinCandidateStatus === "ready" && Boolean(onRunTwin) && !conclusion.twin_ran;
   const adminLevel = (analysis_scope.admin_level || "").toLowerCase();
   const twinBlockedAdmin = adminLevel === "sigungu" || adminLevel === "gu";
-  const visiblePool = stage2?.ran ? stage2.pools[twinStep] : undefined;
+  const visiblePool = stage2?.ran
+    ? (stage2.pools?.[twinStep] ?? stage2.inspect_pool ?? undefined)
+    : undefined;
   const inspectPool = stage2?.inspect_pool ?? visiblePool;
   const twinSteps = stage2?.twin_experiments ?? [];
   const localStep = twinSteps.find((s) => s.step_id === "local");
@@ -424,7 +428,7 @@ export default function RecommendStagePanel({
         )}
       </StageSection>
 
-      <StageSection index="③" title="Twin 실험">
+      <StageSection index="③" title="Twin 실험1">
         <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
           Local 식은 ②에 그대로 둡니다. Twin 실험1은 쌍둥이 1위 거래만 보태고, Local에 지역 더미가
           있었든 없었든 지역 더미를 넣어 다시 적합합니다. 예측오차와 계수 방향으로 적용 여부를
@@ -502,17 +506,34 @@ export default function RecommendStagePanel({
             adopting={adopting}
           />
         )}
+      </StageSection>
 
-        {conclusion.twin_ran && onRunTwinResearch && !stage2?.research_ran && (
+      <StageSection index="④" title="Twin 실험2">
+        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+          Twin 1위만 보탠 표본에서 예측형 식을 다시 고릅니다. 출시 전 확인용이며 기본 통계 식은 바꾸지
+          않습니다.
+        </p>
+
+        {!twin1Done && (
+          <p className="text-sm text-slate-500">
+            Twin 실험1을 실행하면 그 1위 표본으로 Twin 실험2를 돌릴 수 있습니다.
+          </p>
+        )}
+
+        {twinResearchRunning && !stage2?.research_ran && (
+          <p className="text-sm text-amber-800 dark:text-amber-200">Twin 실험2를 계산 중…</p>
+        )}
+
+        {twin1Done && onRunTwinResearch && !stage2?.research_ran && (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 px-2.5 py-2">
             <p className="text-sm text-amber-950 dark:text-amber-100">
-              Twin 실험2 · Twin 1위만 보탠 표본에서 예측형 식을 다시 고릅니다. 출시 전 확인용이며 기본 통계
-              식은 바꾸지 않습니다.
+              Twin1과 같은 1위 표본에서 CV-MAPE로 식을 다시 고릅니다. Local 식은 ②에, Twin1 식은 ③에
+              그대로 둡니다.
             </p>
             <button
               type="button"
               className="px-2.5 py-1 text-sm rounded bg-amber-600 text-white disabled:opacity-50"
-              disabled={twinResearchRunning}
+              disabled={twinResearchRunning || !stage2?.ran}
               onClick={onRunTwinResearch}
             >
               {twinResearchRunning ? "Twin 실험2 중…" : "Twin 실험2"}
@@ -532,10 +553,10 @@ export default function RecommendStagePanel({
         )}
       </StageSection>
 
-      <StageSection index="④" title="모형 비교">
+      <StageSection index="⑤" title="모형 비교">
         <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-          기본 회귀실험 · Local · Twin1을 나란히 봅니다. Twin 실험2를 돌리면 Twin2 열도 붙습니다.
-          기본 통계 식은 바꾸지 않습니다.
+          기본 회귀실험 · Local · Twin1 · Twin2를 나란히 봅니다. 아직 돌리지 않은 열은 비워 둡니다. 기본
+          통계 식은 바꾸지 않습니다.
         </p>
         <ModelCompareTable
           mine={minePrimary ?? null}
@@ -653,9 +674,10 @@ function TwinStructureResult({
   const adopted = Boolean(stage2.twin_validation?.twin_adopt_recommended);
   const predictPool = inspectPool ?? visiblePool;
   const twin1PredictActive = Boolean(twin1PredictActiveLabel?.startsWith("Twin 재적합"));
-  const twinCv = twinStepPick?.search_cv_mape ?? visiblePool?.cv_mape;
+  const twinCv = twinStepPick?.search_cv_mape ?? visiblePool?.cv_mape ?? inspectPool?.cv_mape;
   const localCv = localStep?.search_cv_mape ?? stage2.local_cv_mape;
-  const twinConfirm = twinStepPick?.confirm_cv_mape ?? visiblePool?.confirm_cv_mape;
+  const twinConfirm =
+    twinStepPick?.confirm_cv_mape ?? visiblePool?.confirm_cv_mape ?? inspectPool?.confirm_cv_mape;
   const localConfirm = localStep?.confirm_cv_mape ?? stage2.local_confirm_cv_mape;
 
   return (
@@ -689,7 +711,7 @@ function TwinStructureResult({
             <tr>
               <td className="py-0.5 pr-2 text-slate-500">표본 n</td>
               <td className="py-0.5 pr-2 tabular-nums">{localStep?.n ?? stage1.fit_n}</td>
-              <td className="py-0.5 tabular-nums">{twinStepPick?.n ?? visiblePool?.n ?? "—"}</td>
+              <td className="py-0.5 tabular-nums">{twinStepPick?.n ?? visiblePool?.n ?? inspectPool?.n ?? "—"}</td>
             </tr>
             <tr>
               <td className="py-0.5 pr-2 text-slate-500">판단</td>
@@ -751,7 +773,7 @@ function TwinStructureResult({
       )}
 
       {stage2.twin_experiments && stage2.twin_experiments.length > 0 && (
-        <details className="text-xs">
+        <details className="text-xs" open>
           <summary className="cursor-pointer text-slate-500">접두 실험 상세 · 계수 안정</summary>
           <TwinExperimentTable
             steps={stage2.twin_experiments}
@@ -1007,7 +1029,7 @@ function ModelCompareTable({
   const twinCv = twinPool?.cv_mape;
   const macroCv = primary.metrics.cv_mape;
   const twin2Cv = twin2Pool?.cv_mape;
-  const showTwin2 = Boolean(twin2Ran);
+  const showTwin2 = true;
 
   return (
     <div className="space-y-2">
@@ -1018,8 +1040,8 @@ function ModelCompareTable({
               <th className="py-1.5 px-2 font-medium"> </th>
               <th className="py-1.5 pr-2 font-medium">기본 회귀실험</th>
               <th className="py-1.5 pr-2 font-medium">Macro #1</th>
-              <th className="py-1.5 pr-2 font-medium">{showTwin2 ? "Twin1" : "Twin"}</th>
-              {showTwin2 && <th className="py-1.5 pr-2 font-medium">Twin2</th>}
+              <th className="py-1.5 pr-2 font-medium">Twin1</th>
+              <th className="py-1.5 pr-2 font-medium">Twin2</th>
             </tr>
           </thead>
           <tbody className="text-slate-800 dark:text-slate-100">
@@ -1028,7 +1050,9 @@ function ModelCompareTable({
               <td className="py-1 pr-2">사용자 가설</td>
               <td className="py-1 pr-2">Local 기준선</td>
               <td className="py-1 pr-2">{twinRan ? "예측력 확장" : "실험 전"}</td>
-              {showTwin2 && <td className="py-1 pr-2">{twin2Pool ? "예측형 재탐색" : "산출 불가"}</td>}
+              <td className="py-1 pr-2">
+                {twin2Ran ? (twin2Pool ? "예측형 재탐색" : "산출 불가") : "실험 전"}
+              </td>
             </tr>
             <tr className="border-b border-slate-100 dark:border-slate-800">
               <td className="py-1 px-2 text-slate-500">변수</td>
@@ -1122,11 +1146,11 @@ function ModelCompareTable({
               ? " Twin1에서 주요 계수 방향이 갈리면 Local을 유지하는 편이 안전합니다."
               : " Twin1이 Local보다 예측을 좋게 만들지 못하면 Local 기준선이 결론입니다."
           : " Twin은 같은 식에 유사 지역 거래를 보태 예측력이 나아지는지 보는 실험입니다."}
-        {showTwin2
+        {twin2Ran
           ? twin2Pool
             ? " Twin2는 Local + Twin 1위 표본에서 예측형 식을 다시 고른 확인용입니다. Twin1과 표본은 같고 Twin1은 지역 더미를 넣습니다. 기본 통계 식은 바꾸지 않습니다."
             : " Twin2 식을 다시 고를 수 없었습니다."
-          : null}
+          : ""}
       </p>
     </div>
   );

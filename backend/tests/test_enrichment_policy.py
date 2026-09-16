@@ -1,14 +1,16 @@
 from app.built.enrichment_join import wrap_tx_enrichment
-from app.built.enrichment_policy import NOTICE, split_zone_filter
+from app.built.enrichment_policy import MATCH_RATE, NOTICE, split_zone_filter
 from app.built.router import _apply_tx_enrichment_fields
 
 
-def test_notice_has_four_sentences():
-    assert len(NOTICE) == 4
-    assert "75.0%" in NOTICE[0]
-    assert "14년" not in NOTICE[1]
-    assert "7년 6개월" in NOTICE[1]
-    assert "서울" in NOTICE[3] and "충북" in NOTICE[3]
+def test_notice_explains_enrich_and_unmatched_passthrough():
+    body = " ".join(NOTICE)
+    assert "구조" in body
+    assert "용도지역" in body
+    assert "그대로" in body
+    assert "75.0%" in MATCH_RATE
+    assert "현재 매칭률" in MATCH_RATE
+    assert "14년" not in body
 
 
 def test_split_zone_moves_to_outer_when_enrich():
