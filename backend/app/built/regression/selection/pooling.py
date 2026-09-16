@@ -129,6 +129,43 @@ def _apply_hard_gates(
     return gates
 
 
+def research_full_twin_pool(
+    conn,
+    *,
+    local_ctx: SelectionContext,
+    req: RegressionSelectionRequest,
+    search_pool: list[BlockId] | list[str],
+    anchor_region_codes: tuple[str, ...],
+    twin_region_codes: tuple[str, ...],
+    admin_level: str,
+    region_col: str | None,
+) -> PoolingCandidateMetrics | None:
+    """Local+통과 Twin 1위 표본에서 Stage1과 같은 예측형 풀로 식을 다시 고른다."""
+    _gates, passed = filter_twins_by_hard_gates(
+        conn,
+        req=req,
+        anchor_region_codes=anchor_region_codes,
+        twin_region_codes=twin_region_codes,
+        admin_level=admin_level,
+    )
+    if not passed:
+        return None
+    rank1 = (passed[0],)
+    return _research_pool_variant(
+        conn,
+        local_ctx=local_ctx,
+        req=req,
+        search_pool=search_pool,
+        variant_id="twin_research",
+        label="Local + Twin 1위 · 재탐색",
+        anchor_region_codes=anchor_region_codes,
+        twin_codes=rank1,
+        admin_level=admin_level,
+        region_col=region_col,
+        prefix_k=1,
+    )
+
+
 def filter_twins_by_hard_gates(
     conn,
     *,
@@ -482,13 +519,18 @@ def evaluate_pooling_candidates(
     region_col: str | None,
     fixed_response_scale: ResponseScale | None = None,
     mode: PoolingMode = "diagnose",
+    twin_blocks: list[BlockId] | list[str] | None = None,
+    twin_region_col: str | None = None,
 ) -> PoolingEvaluation:
     """Local과 Twin 접두 표본을 실측 비교한다.
 
-    mode=diagnose (제품 Stage2): Local 식(blocks)·척도를 고정하고 Twin n만 보탠다.
+    mode=diagnose (제품 Stage2): Twin 적합은 twin_blocks(없으면 Local 식)와 척도를
+    고정하고 Twin n만 보탠다. Local 후보는 local_fit 그대로.
     mode=optimize: 확장 표본에서 best-subset 재탐색 — 관리자 Lab 전용.
     """
     frozen_blocks = list(local_fit.blocks or blocks)
+    diagnose_blocks = list(twin_blocks) if twin_blocks is not None else frozen_blocks
+    diagnose_region_col = region_col if twin_region_col is None else twin_region_col
     local_metrics = _metrics_from_fit(
         "local",
         "현재 지역만 (Local)",
@@ -548,13 +590,13 @@ def evaluate_pooling_candidates(
                 conn,
                 local_ctx=local_ctx,
                 req=req,
-                blocks=frozen_blocks,
+                blocks=diagnose_blocks,
                 variant_id=variant_id,
                 label=label,
                 anchor_region_codes=anchor_region_codes,
                 twin_codes=codes,
                 admin_level=admin_level,
-                region_col=region_col,
+                region_col=diagnose_region_col,
                 response_scale=fixed_response_scale or getattr(local_fit, "response_scale", None),
                 prefix_k=prefix_k,
             )

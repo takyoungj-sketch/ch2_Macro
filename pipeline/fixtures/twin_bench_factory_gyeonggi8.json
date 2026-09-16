@@ -1,0 +1,149 @@
+{
+  "version": "1.1",
+  "description": "Twin Lab stratified eup sample — factory · 일반구 산하 제외",
+  "defaults": {
+    "asset_type": "factory",
+    "profile_version": "v2.1-national",
+    "window_years": 3,
+    "contract_year_from": 2019,
+    "contract_year_to": 2025,
+    "lift_delta_pp": 0.5,
+    "twin_top_k": 5,
+    "twin_scope_eup": "region",
+    "twin_scope_beop": "same_sigungu",
+    "sido_prefix": "41",
+    "sample_seed": 42,
+    "admin_level": "eupmyeondong",
+    "exclude_general_gu": true
+  },
+  "cases": [
+    {
+      "case_id": "41550390_dev",
+      "label": "안성시 일죽면",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "41550390"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "gyeonggi",
+        "n_bucket": "mid",
+        "tx_n": 98
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "41590340_dev",
+      "label": "화성시 만세구",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "41590340"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "gyeonggi",
+        "n_bucket": "mid",
+        "tx_n": 77
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "41590370_dev",
+      "label": "화성시 만세구",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "41590370"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "gyeonggi",
+        "n_bucket": "large",
+        "tx_n": 226
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "41450113_dev",
+      "label": "하남시 감북동",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "41450113"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "gyeonggi",
+        "n_bucket": "small",
+        "tx_n": 30
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "41590120_dev",
+      "label": "화성시 병점구",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "41590120"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "gyeonggi",
+        "n_bucket": "small",
+        "tx_n": 25
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "41570256_dev",
+      "label": "김포시 양촌읍",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "41570256"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "gyeonggi",
+        "n_bucket": "large",
+        "tx_n": 261
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "41220259_holdout",
+      "label": "평택시 청북읍",
+      "role": "holdout",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "41220259"
+      ],
+      "sample_group": "holdout",
+      "strata": {
+        "basin": "gyeonggi",
+        "n_bucket": "large",
+        "tx_n": 153
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "41550310_holdout",
+      "label": "안성시 보개면",
+      "role": "holdout",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "41550310"
+      ],
+      "sample_group": "holdout",
+      "strata": {
+        "basin": "gyeonggi",
+        "n_bucket": "mid",
+        "tx_n": 67
+      },
+      "notes": "stratified seed=42"
+    }
+  ]
+}

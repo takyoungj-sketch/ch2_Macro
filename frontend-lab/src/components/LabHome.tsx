@@ -56,6 +56,11 @@ const DOORS: { id: LabTool; title: string; desc: string }[] = [
     title: "연식=0 잔차",
     desc: "1차 기록됨. 다음=서울·경기 분리. 전국 공통 프리미엄은 넣지 않음.",
   },
+  {
+    id: "recommend-twin",
+    title: "모형추천 Twin 벤치",
+    desc: "Local / Twin1 / Twin2 × 지역더미 전후. 실험 Twin은 1위만. 제품 식 미변경.",
+  },
 ];
 
 export default function LabHome({ onOpenTool }: { onOpenTool: (id: LabTool) => void }) {

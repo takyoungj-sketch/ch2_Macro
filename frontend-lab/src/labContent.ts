@@ -159,4 +159,5 @@ export const TOOL_WHY: Record<string, string[]> = {
   newapt: ["D-045"],
   builder: ["D-063", "D-065", "D-045"],
   age0: ["D-064", "D-045"],
+  "recommend-twin": ["D-066", "D-073"],
 };

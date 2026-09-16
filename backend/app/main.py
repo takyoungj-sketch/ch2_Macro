@@ -129,6 +129,13 @@ if built_router is not None:
         _LOG.info("Twin Experiment Lab API 활성: /api/built/lab/twin-experiments*")
     except Exception as exc:  # noqa: BLE001 — optional lab
         _LOG.warning("Twin Experiment Lab API 로드 실패: %s", exc)
+    try:
+        from app.built.lab_recommend_twin_router import router as recommend_twin_bench_router
+
+        app.include_router(recommend_twin_bench_router, prefix="/api")
+        _LOG.info("Recommend Twin Bench Lab API 활성: /api/built/lab/recommend-twin-bench*")
+    except Exception as exc:  # noqa: BLE001 — optional lab
+        _LOG.warning("Recommend Twin Bench Lab API 로드 실패: %s", exc)
 if collective_router is not None:
     app.include_router(collective_router, prefix="/api")
     _LOG.info("collective_stats API 활성: /api/collective/*")

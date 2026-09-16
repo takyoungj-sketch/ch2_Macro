@@ -1,0 +1,149 @@
+{
+  "version": "1.1",
+  "description": "Twin Lab stratified eup sample — detached · 일반구 산하 제외",
+  "defaults": {
+    "asset_type": "detached",
+    "profile_version": "v2.1-national",
+    "window_years": 3,
+    "contract_year_from": 2019,
+    "contract_year_to": 2025,
+    "lift_delta_pp": 0.5,
+    "twin_top_k": 5,
+    "twin_scope_eup": "region",
+    "twin_scope_beop": "same_sigungu",
+    "sido_prefix": "41",
+    "sample_seed": 42,
+    "admin_level": "eupmyeondong",
+    "exclude_general_gu": true
+  },
+  "cases": [
+    {
+      "case_id": "41830410_dev",
+      "label": "양평군 개군면",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "41830410"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "gyeonggi",
+        "n_bucket": "large",
+        "tx_n": 341
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "41360259_dev",
+      "label": "남양주시 진건읍",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "41360259"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "gyeonggi",
+        "n_bucket": "mid",
+        "tx_n": 63
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "41650400_dev",
+      "label": "포천시 관인면",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "41650400"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "gyeonggi",
+        "n_bucket": "mid",
+        "tx_n": 92
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "41610330_dev",
+      "label": "광주시 도척면",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "41610330"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "gyeonggi",
+        "n_bucket": "large",
+        "tx_n": 198
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "41610350_dev",
+      "label": "광주시 남종면",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "41610350"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "gyeonggi",
+        "n_bucket": "mid",
+        "tx_n": 61
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "41360340_dev",
+      "label": "남양주시 수동면",
+      "role": "primary",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "41360340"
+      ],
+      "sample_group": "dev",
+      "strata": {
+        "basin": "gyeonggi",
+        "n_bucket": "large",
+        "tx_n": 482
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "41650101_holdout",
+      "label": "포천시 신읍동",
+      "role": "holdout",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "41650101"
+      ],
+      "sample_group": "holdout",
+      "strata": {
+        "basin": "gyeonggi",
+        "n_bucket": "large",
+        "tx_n": 104
+      },
+      "notes": "stratified seed=42"
+    },
+    {
+      "case_id": "41430105_holdout",
+      "label": "의왕시 오전동",
+      "role": "holdout",
+      "admin_level": "eupmyeondong",
+      "region_codes": [
+        "41430105"
+      ],
+      "sample_group": "holdout",
+      "strata": {
+        "basin": "gyeonggi",
+        "n_bucket": "mid",
+        "tx_n": 50
+      },
+      "notes": "stratified seed=42"
+    }
+  ]
+}
