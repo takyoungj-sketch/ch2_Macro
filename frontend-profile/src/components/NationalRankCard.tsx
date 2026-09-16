@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import type { NationalRankTuple, NationalRanksResponse, RegionLevel } from "../types";
 import NationalScatter from "./NationalScatter";
@@ -25,6 +25,39 @@ interface RankRow {
 
 const ROW_H = 30;
 const COLS = "grid-cols-[2.6rem_minmax(0,1fr)_2.75rem_4.35rem]";
+const NAME_FONT = '12px ui-sans-serif, system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
+
+function maxNameWidthPx(names: string[]): number {
+  if (typeof document === "undefined" || names.length === 0) return 0;
+  const ctx = document.createElement("canvas").getContext("2d");
+  if (!ctx) return 0;
+  ctx.font = NAME_FONT;
+  let max = 0;
+  for (const n of names) {
+    const w = ctx.measureText(n).width;
+    if (w > max) max = w;
+  }
+  return Math.ceil(max) + 28;
+}
+
+function RankName({
+  name,
+  extra,
+  shift,
+}: {
+  name: string;
+  extra?: ReactNode;
+  shift: number;
+}) {
+  return (
+    <div className="min-w-0 overflow-hidden" title={name}>
+      <div className="whitespace-nowrap" style={{ transform: `translateX(-${shift}px)` }}>
+        {name}
+        {extra}
+      </div>
+    </div>
+  );
+}
 
 const GRAIN_LABEL: Record<RegionLevel, string> = {
   sido: "시도",
@@ -100,12 +133,19 @@ export default function NationalRankCard({ data, isLoading, isError, focusCode, 
   const [highlightCode, setHighlightCode] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const nameColRef = useRef<HTMLDivElement>(null);
+  const nameBarRef = useRef<HTMLDivElement>(null);
   const [listH, setListH] = useState(360);
   const [scrollTop, setScrollTop] = useState(0);
+  const [nameColW, setNameColW] = useState(0);
+  const [nameShift, setNameShift] = useState(0);
 
   const rows = useMemo(() => (data?.rows ?? []).map(parseRow), [data]);
   const sorted = useMemo(() => sortRows(rows, tab), [rows, tab]);
   const focus = useMemo(() => rows.find((r) => r.code === focusCode) ?? null, [rows, focusCode]);
+  const nameMaxW = useMemo(() => maxNameWidthPx(rows.map((r) => r.name)), [rows]);
+  const nameInnerW = Math.max(nameMaxW, nameColW);
+  const nameOverflows = nameMaxW > nameColW + 1;
 
   const q = query.trim();
   const suggestions = useMemo(() => {
@@ -124,6 +164,33 @@ export default function NationalRankCard({ data, isLoading, isError, focusCode, 
     setListH(el.clientHeight);
     return () => ro.disconnect();
   }, [data]);
+
+  useEffect(() => {
+    const el = nameColRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setNameColW(el.clientWidth));
+    ro.observe(el);
+    setNameColW(el.clientWidth);
+    return () => ro.disconnect();
+  }, [data]);
+
+  useEffect(() => {
+    const maxShift = Math.max(0, nameInnerW - nameColW);
+    setNameShift((x) => Math.min(x, maxShift));
+  }, [nameInnerW, nameColW]);
+
+  useEffect(() => {
+    const list = listRef.current;
+    const bar = nameBarRef.current;
+    if (!list || !bar || !nameOverflows) return;
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+      e.preventDefault();
+      bar.scrollLeft += e.deltaX;
+    };
+    list.addEventListener("wheel", onWheel, { passive: false });
+    return () => list.removeEventListener("wheel", onWheel);
+  }, [data, nameOverflows]);
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -237,7 +304,7 @@ export default function NationalRankCard({ data, isLoading, isError, focusCode, 
 
       <div className={`mt-2 grid ${COLS} gap-x-1 px-0.5 text-[10px] font-medium text-slate-500 dark:text-slate-400`}>
         <div>순위</div>
-        <div>지역</div>
+        <div ref={nameColRef}>지역</div>
         <div className="text-right">인구</div>
         <div className="text-right">{valueHead}</div>
       </div>
@@ -270,9 +337,7 @@ export default function NationalRankCard({ data, isLoading, isError, focusCode, 
                   }`}
                 >
                   <div className="tabular-nums text-slate-500">{formatRankNum(rankOf(row, tab))}</div>
-                  <div className="truncate" title={row.name}>
-                    {row.name}
-                  </div>
+                  <RankName name={row.name} shift={nameShift} />
                   <div className="text-right tabular-nums text-slate-500">{formatPopMan(row.population)}</div>
                   <div className="truncate text-right tabular-nums">{valueOf(row, tab)}</div>
                 </div>
@@ -287,14 +352,30 @@ export default function NationalRankCard({ data, isLoading, isError, focusCode, 
           <div className="mt-1 border-t border-dashed border-slate-300 dark:border-slate-600" />
           <div className={`grid ${COLS} items-center gap-x-1 bg-amber-50 px-0.5 py-1 text-xs font-medium dark:bg-amber-900/25`}>
             <div className="tabular-nums">{formatRankNum(rankOf(focus, tab))}</div>
-            <div className="truncate" title={focus.name}>
-              {focus.name}
-              <span className="ml-0.5 text-[9px] font-normal text-amber-700 dark:text-amber-300">현재</span>
-            </div>
+            <RankName
+              name={focus.name}
+              shift={nameShift}
+              extra={<span className="ml-0.5 text-[9px] font-normal text-amber-700 dark:text-amber-300">현재</span>}
+            />
             <div className="text-right tabular-nums">{formatPopMan(focus.population)}</div>
             <div className="truncate text-right tabular-nums">{valueOf(focus, tab)}</div>
           </div>
         </>
+      )}
+
+      {nameOverflows && (
+        <div className={`grid ${COLS} gap-x-1 px-0.5`}>
+          <div />
+          <div
+            ref={nameBarRef}
+            className="h-3 overflow-x-auto overflow-y-hidden [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5"
+            onScroll={(e) => setNameShift(e.currentTarget.scrollLeft)}
+          >
+            <div style={{ width: nameInnerW, height: 1 }} />
+          </div>
+          <div />
+          <div />
+        </div>
       )}
 
       {!isLoading && !isError && data && (
