@@ -108,7 +108,7 @@ try {
     "insight" {
       Invoke-Scp @("shared") "."
       Invoke-Scp @("frontend-insight/package.json", "frontend-insight/package-lock.json", "frontend-insight/tsconfig.json", "frontend-insight/vite.config.ts", "frontend-insight/tailwind.config.js", "frontend-insight/postcss.config.js", "frontend-insight/index.html", "frontend-insight/src") "frontend-insight/"
-      Invoke-Scp @("deploy/templates/nginx-ch2-macro.conf", "deploy/macro-gateway") "deploy/"
+      Invoke-Scp @("deploy/templates", "deploy/macro-gateway") "deploy/"
       Invoke-Scp @("deploy/scripts") "deploy/"
     }
     "all" {
