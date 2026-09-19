@@ -17,6 +17,7 @@ import PredictPanel from "./PredictPanel";
 import RegressionEquation from "./RegressionEquation";
 import RegressionEffectsTable from "./RegressionEffectsTable";
 import SampleFunnel from "./SampleFunnel";
+import UpperScopeModelDiff from "./UpperScopeModelDiff";
 
 type Props = {
   regData: RegressionRunResponse;
@@ -32,11 +33,15 @@ type Props = {
 
 function ComparisonLevelCard({
   result,
+  focus,
+  focusTitle,
   assetType,
   responseScale,
   emphasized,
 }: {
   result: RegressionLevelResult;
+  focus: RegressionLevelResult;
+  focusTitle: string;
   assetType: AssetType;
   responseScale: ResponseScale;
   emphasized?: boolean;
@@ -56,7 +61,7 @@ function ComparisonLevelCard({
             {levelCardTitle(result.scope_label, result.admin_level)}
           </h3>
           <p className="text-slate-500 mt-0.5">
-            {ADMIN_LABELS[result.admin_level] ?? result.admin_level}
+            {ADMIN_LABELS[result.admin_level] ?? result.admin_level} 재적합
             {emphasized && " · 직계 상위"}
           </p>
         </div>
@@ -67,12 +72,22 @@ function ComparisonLevelCard({
 
       {result.sample && <SampleFunnel sample={result.sample} />}
 
+      <UpperScopeModelDiff
+        focus={focus}
+        upper={result}
+        assetType={assetType}
+        focusTitle={focusTitle}
+      />
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div>R² {fmtDecimal(result.r_squared, 4)}</div>
         <div>Adj R² {fmtDecimal(result.adj_r_squared, 4)}</div>
         <div>MAPE {result.mape != null ? `${fmtDecimal(result.mape, 1)}%` : "—"}</div>
         <div>유의 {result.significant_count}개</div>
       </div>
+      <p className="text-slate-500">
+        위 지표는 이 단계 표본 안에서만 유효합니다. 초점 수치와 나란히 두고 우열을 가리지 마세요.
+      </p>
 
       {(result.equation || result.coefficients.length > 0) && (
         <div className="space-y-1">
@@ -124,9 +139,10 @@ export default function UpperScopeAnalysisCard({
     <section id="built-step-upper" className="card scroll-mt-16 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="font-semibold text-sm">상위 지역 분석</h2>
+          <h2 className="font-semibold text-sm">상위지역 재적합</h2>
           <p className="text-xs text-slate-500 mt-1">
-            분석 초점 vs 상위 행정 scope — 참고용입니다.
+            같은 모형을 넓히는 것이 아니라, 상위 행정 단위 표본에서 회귀를 <strong>다시</strong>{" "}
+            적합합니다. 표본과 변수 구성이 달라지므로 참고용입니다.
           </p>
         </div>
         <button
@@ -134,13 +150,14 @@ export default function UpperScopeAnalysisCard({
           className={clsx("btn text-xs shrink-0", opened ? "btn-ghost" : "btn-primary")}
           onClick={onOpen}
         >
-          {opened ? "다시 보기" : "상위지역 분석"}
+          {opened ? "다시 보기" : "상위지역 재적합"}
         </button>
       </div>
 
       {!opened && (
         <p className="text-xs text-slate-400 py-2">
-          「상위지역 분석」을 눌러 초점·상위 scope 비교를 확인하세요.
+          「상위지역 재적합」을 눌러 상위 단위에서 다시 적합한 결과와 초점과의 모형 차이를
+          확인하세요.
         </p>
       )}
 
@@ -158,13 +175,15 @@ export default function UpperScopeAnalysisCard({
 
           {!comparisons.length && (
             <p className="text-xs text-slate-400 text-center py-4">
-              상위 scope 비교가 없습니다 (시·군 단일 선택 등).
+              재적합할 상위 단위가 없습니다 (시·군을 초점으로 고른 경우 등).
             </p>
           )}
 
           {immediate && (
             <ComparisonLevelCard
               result={immediate}
+              focus={regData.primary}
+              focusTitle={focusTitle}
               assetType={assetType}
               responseScale={responseScale}
               emphasized
@@ -174,13 +193,15 @@ export default function UpperScopeAnalysisCard({
           {wider.length > 0 && (
             <details className="group">
               <summary className="cursor-pointer text-xs font-medium text-slate-600">
-                더 넓은 scope ({wider.length}개)
+                더 넓은 단위 재적합 ({wider.length}개)
               </summary>
               <div className="mt-2 space-y-2">
                 {wider.map((c, i) => (
                   <ComparisonLevelCard
                     key={`${c.admin_level}-${i}`}
                     result={c}
+                    focus={regData.primary}
+                    focusTitle={focusTitle}
                     assetType={assetType}
                     responseScale={responseScale}
                   />
@@ -198,7 +219,7 @@ export default function UpperScopeAnalysisCard({
                 vars={vars}
                 assetType={assetType}
                 regionLabel={regionLabel}
-                modelHint="상위 지역 모형 · 기본통계에서 넣은 변수를 그대로 씁니다"
+                modelHint={`${ADMIN_LABELS[immediate.admin_level] ?? immediate.admin_level} 재적합 모형 · 기본통계 변수 중 이 단계에서 추정 가능한 것만 씁니다`}
                 lockAdminLevel={immediate.admin_level}
                 autoPredict
               />

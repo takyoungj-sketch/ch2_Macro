@@ -9,7 +9,11 @@ from app.built.regression.region_features import (
     normalize_region_feature_tier,
     region_blocks_for_asset,
 )
-from app.built.regression.selection.best_subset import CompareResult, run_group_best_subset
+from app.built.regression.selection.best_subset import (
+    MAX_SUBSETS as MAX_COMPARE_SUBSETS,
+    CompareResult,
+    run_group_best_subset,
+)
 from app.built.regression.selection.blocks import BlockId, spec_from_blocks
 from app.built.regression.selection.context import (
     SelectionContext,
@@ -49,7 +53,6 @@ from app.recommendation.termination import (
 )
 
 MIN_SELECTION_N = 30
-MAX_COMPARE_SUBSETS = 128
 
 
 @dataclass(frozen=True)
@@ -126,6 +129,18 @@ def _apply_region_features(
     return replace(ctx, df=df)
 
 
+def _confirm_note(fit) -> str | None:
+    """확인 CV가 없을 때의 이유. 있으면 None.
+
+    후보 적합 단계에서 마지막 연도를 이미 홀드아웃해 두므로(D-074) 여기서 다시
+    계산하지 않는다. 예전에는 1위 모형만 따로 재계산했는데, 그 랭킹 CV가 마지막
+    연도를 포함하고 있어 확인이 확인이 아니었다.
+    """
+    if fit.confirm_cv_mape is not None:
+        return None
+    return "확인 CV 생략 — 고유 계약연도가 3년 미만이거나 마지막 연도 fold를 적합할 수 없음"
+
+
 def _build_stage1(conn, req: RegressionSelectionRequest) -> tuple:
     analysis_scope = resolve_built_analysis_scope(conn, req)
 
@@ -169,6 +184,7 @@ def _build_stage1(conn, req: RegressionSelectionRequest) -> tuple:
         selection_n=ctx.selection_n,
         asset_slice=analysis_scope.asset_slice,
     )
+    primary_fit = primary_raw.fit
 
     stage1 = RecommendationStage1(
         candidates_explanatory=[candidate_from_compare(c) for c in result.by_aic],
@@ -184,9 +200,15 @@ def _build_stage1(conn, req: RegressionSelectionRequest) -> tuple:
             grade=grade.grade,
             stars=grade.stars,
             cv_mape=cv_mape,
+            label_ko=grade.label_ko,
         ),
         total_subsets=result.total_subsets,
         truncated=result.truncated,
+        primary_confirm_cv_mape=primary_fit.confirm_cv_mape,
+        primary_confirm_cv_folds=primary_fit.confirm_cv_folds,
+        primary_confirm_note=_confirm_note(primary_fit),
+        primary_cv_extreme_rate=primary_fit.cv_search.extreme_rate,
+        primary_cv_median_ape=primary_fit.cv_search.median_ape,
     )
 
     bundle = _Stage1Bundle(

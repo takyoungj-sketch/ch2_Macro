@@ -70,3 +70,51 @@ def test_enumerate_block_subsets():
     assert len(subs) == 7  # 2^3 - 1
     assert ["gross_area"] in subs
     assert cands in subs
+
+
+def test_enumerate_block_subsets_ascending_size():
+    """블록 수 오름차순 — 상한에 걸려도 특정 블록이 통째로 빠지지 않는다."""
+    cands = ["gross_area", "land_area", "building_age", "zone_type"]
+    subs = enumerate_block_subsets(cands)
+    sizes = [len(s) for s in subs]
+    assert sizes == sorted(sizes)
+    assert [s for s in subs if len(s) == 1] == [[c] for c in cands]
+
+
+def test_enumerate_block_subsets_cap_keeps_every_block():
+    cands = [f"b{i}" for i in range(9)]
+    subs = enumerate_block_subsets(cands, max_count=20)
+    assert len(subs) == 20
+    covered = {b for s in subs for b in s}
+    assert covered == set(cands)
+
+
+def test_estimable_columns_drops_constant_dummy():
+    """학습 fold에 없는 범주의 더미는 계수를 추정할 수 없어 빠진다."""
+    import pandas as pd
+
+    from app.built.regression.selection.fit import _estimable_columns
+
+    frame = pd.DataFrame(
+        {
+            "const": [1.0, 1.0, 1.0, 1.0],
+            "gross_area": [30.0, 45.0, 52.0, 61.0],
+            "zone_Z9": [0.0, 0.0, 0.0, 0.0],
+        }
+    )
+    assert _estimable_columns(frame) == ["const", "gross_area"]
+
+
+def test_estimable_columns_skips_collinear_fold():
+    import pandas as pd
+
+    from app.built.regression.selection.fit import _estimable_columns
+
+    frame = pd.DataFrame(
+        {
+            "const": [1.0, 1.0, 1.0],
+            "use_a": [1.0, 0.0, 1.0],
+            "use_b": [0.0, 1.0, 0.0],
+        }
+    )
+    assert _estimable_columns(frame) == []

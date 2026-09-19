@@ -353,6 +353,7 @@ class RecommendationSatisfaction(BaseModel):
     grade: str = "pending"
     stars: int = Field(default=0, ge=0, le=5)
     cv_mape: Optional[float] = None
+    label_ko: Optional[str] = None
 
 
 class RecommendationStage1(BaseModel):
@@ -366,6 +367,16 @@ class RecommendationStage1(BaseModel):
     satisfaction: RecommendationSatisfaction = Field(default_factory=RecommendationSatisfaction)
     total_subsets: int = 0
     truncated: bool = False
+    # 1위 모형만 마지막 연도를 떼어 다시 잰 CV. 탐색 CV는 수백 조합의 최소값이라
+    # 낙관적이므로, 고를 때 쓴 지표와 보고하는 지표를 분리한다.
+    primary_confirm_cv_mape: Optional[float] = None
+    primary_confirm_cv_folds: int = 0
+    primary_confirm_note: Optional[str] = None
+    # 안정성 진단 (D-074). 순위에는 쓰지 않는다. extreme_rate가 높으면 학습 범위를
+    # 크게 벗어난 예측이 많다는 뜻이고, median과 평균이 크게 벌어지면 소수 관측이
+    # 지표를 끌고 있다는 뜻이다.
+    primary_cv_extreme_rate: Optional[float] = None
+    primary_cv_median_ape: Optional[float] = None
 
 
 class RecommendationPoolCandidate(BaseModel):
@@ -478,6 +489,8 @@ class RegressionPredictResponse(BaseModel):
     pi_upper: float
     ci_lower: float
     ci_upper: float
+    # log 계열에서 점추정·평균CI에 곱한 Duan smearing 계수 (D-074). 선형이면 None.
+    duan_factor: Optional[float] = None
     response_scale: ResponseScale = "linear"
     extrapolation_level: int = 0
     y_hat_suppressed: bool = False

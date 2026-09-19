@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import CollapsibleLeftSidebar from "@ch2/macro-shell/CollapsibleLeftSidebar";
@@ -77,6 +77,7 @@ import type {
   RegionOption,
   RegressionLevelResult,
   RegressionRunRequest,
+  RegressionSelectionRequest,
   RegressionVariableSpec,
   ResponseScale,
   RiPick,
@@ -96,7 +97,7 @@ import {
   formatCoefName,
   levelCardTitle,
 } from "./utils/regressionFormat";
-import { builtAnalysisScopeKey } from "./utils/builtAnalysisScopeKey";
+import { builtAnalysisScopeKey, builtRegressionRequestKey } from "./utils/builtAnalysisScopeKey";
 
 function riKey(p: RiPick) {
   return `${p.eup}|${p.ri}`;
@@ -314,13 +315,16 @@ function SampleFilterPanel({
   );
 }
 
+/** 백엔드 회귀 게이트와 같은 숫자 — engine._fit_ols: n<10 빈 식, n<30 참고용 */
+const MIN_REGRESSION_N_FIT = 10;
+const MIN_REGRESSION_N_RECOMMENDED = 30;
+
 const DEFAULT_VARS_BY_KIND: Record<BuiltAssetKind, RegressionVariableSpec> = {
   commercial: {
     gross_area: true,
     land_area: true,
     building_age: true,
     road_width_dummy: true,
-    road_code: false,
     zone_type_dummy: true,
     building_use_dummy: true,
     structure_dummy: true,
@@ -332,7 +336,6 @@ const DEFAULT_VARS_BY_KIND: Record<BuiltAssetKind, RegressionVariableSpec> = {
     land_area: true,
     building_age: true,
     road_width_dummy: true,
-    road_code: false,
     zone_type_dummy: true,
     building_use_dummy: true,
     structure_dummy: true,
@@ -344,7 +347,6 @@ const DEFAULT_VARS_BY_KIND: Record<BuiltAssetKind, RegressionVariableSpec> = {
     land_area: true,
     building_age: true,
     road_width_dummy: true,
-    road_code: false,
     zone_type_dummy: true,
     building_use_dummy: true,
     structure_dummy: true,
@@ -358,7 +360,6 @@ const DEFAULT_VARS_MULTI: RegressionVariableSpec = {
   land_area: true,
   building_age: true,
   road_width_dummy: true,
-  road_code: false,
   zone_type_dummy: true,
   building_use_dummy: true,
   structure_dummy: true,
@@ -546,15 +547,26 @@ export default function App() {
   const [sampleFilter, setSampleFilter] = useState<SampleFilterState>(EMPTY_SAMPLE_FILTER);
   const [windowYears, setWindowYears] = useState<StatsWindowYears>(5);
   const [responseScale, setResponseScale] = useState<ResponseScale>("linear");
-  /** 마지막 「통계분석」에 실제 쓰인 스케일 — 선택만으로 결과 표시가 바뀌지 않게 */
-  const [appliedResponseScale, setAppliedResponseScale] = useState<ResponseScale>("linear");
-  const canLogLog = vars.gross_area || vars.land_area;
+  /** 마지막 「통계분석」에 실제 쓰인 요청 — 선택만으로 결과 표시가 바뀌지 않게 */
+  const [appliedBody, setAppliedBody] = useState<RegressionRunRequest | null>(null);
+  /** 대장보강이 꺼져 있으면 구조 더미는 쓸 수 없다 — 체크 표시·요청이 같은 값을 본다 */
+  const effectiveVars = useMemo<RegressionVariableSpec>(
+    () => (enrich ? vars : { ...vars, structure_dummy: false }),
+    [vars, enrich],
+  );
+  const canLogLog = effectiveVars.gross_area || effectiveVars.land_area;
+  const [loglogReverted, setLoglogReverted] = useState(false);
 
   useEffect(() => {
     if (responseScale === "loglog" && !canLogLog) {
       setResponseScale("linear");
+      setLoglogReverted(true);
     }
   }, [canLogLog, responseScale]);
+
+  useEffect(() => {
+    if (canLogLog) setLoglogReverted(false);
+  }, [canLogLog]);
   const [mapPanelMode, setMapPanelMode] = useState<MapPanelMode>("normal");
 
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
@@ -579,10 +591,10 @@ export default function App() {
   }, [addr1, addr2, guList, leafList, riList, yearFrom, yearTo]);
 
   useEffect(() => {
-    if (leafList.length < 2) {
+    if (leafList.length < 2 && riList.length < 2) {
       setVars((v) => (v.region_leaf_dummy ? { ...v, region_leaf_dummy: false } : v));
     }
-  }, [leafList.length]);
+  }, [leafList.length, riList.length]);
 
   const rollingParams = useMemo(
     () =>
@@ -1005,7 +1017,7 @@ export default function App() {
       contract_year_to: yearTo === "" ? undefined : yearTo,
       ...rollingParams,
       ...sampleApiParams,
-      variables: enrich ? vars : { ...vars, structure_dummy: false },
+      variables: effectiveVars,
       response_scale: responseScale,
       exclude_outliers_iqr: excludeOutliers,
       outlier_iqr_multiplier: iqrMultiplier,
@@ -1024,7 +1036,7 @@ export default function App() {
     yearTo,
     rollingParams,
     sampleApiParams,
-    vars,
+    effectiveVars,
     responseScale,
     excludeOutliers,
     iqrMultiplier,
@@ -1034,16 +1046,52 @@ export default function App() {
 
   const regM = useMutation({
     mutationFn: runRegression,
-    onSuccess: (_data, variables) => {
-      setAppliedResponseScale(variables.response_scale ?? "linear");
+    onSuccess: (_data, sent) => {
+      setAppliedBody(sent);
     },
   });
-  const recommendM = useMutation({ mutationFn: recommendRegression });
+  /** Macro 탐색은 수십 초 걸릴 수 있어, 창을 닫거나 다시 돌릴 때 앞 요청을 끊는다. */
+  const recommendAbort = useRef<AbortController | null>(null);
+  const recommendM = useMutation({
+    mutationFn: (body: RegressionSelectionRequest) => {
+      recommendAbort.current?.abort();
+      const controller = new AbortController();
+      recommendAbort.current = controller;
+      return recommendRegression(body, controller.signal);
+    },
+  });
+  const cancelRecommend = useCallback(() => {
+    recommendAbort.current?.abort();
+    recommendAbort.current = null;
+  }, []);
 
-  const resultRegBody = useMemo(
-    () => ({ ...regBody, response_scale: appliedResponseScale }),
-    [regBody, appliedResponseScale],
+  /** 예측·상위지역·산점도는 화면에 뜬 결과와 같은 조건을 써야 한다 */
+  const resultRegBody = appliedBody ?? regBody;
+  const appliedResponseScale = resultRegBody.response_scale ?? "linear";
+  const appliedVars = resultRegBody.variables ?? effectiveVars;
+
+  /** 결과를 받은 뒤 선택이 바뀌었는가 — 바뀌면 화면 숫자는 예전 조건이다 */
+  const regressionStale = useMemo(
+    () =>
+      Boolean(
+        regM.data &&
+          appliedBody &&
+          builtRegressionRequestKey(appliedBody) !== builtRegressionRequestKey(regBody),
+      ),
+    [regM.data, appliedBody, regBody],
   );
+
+  const scopeTxTotal = txCountQ.data?.total ?? null;
+  const sampleGateNote = useMemo(() => {
+    if (scopeTxTotal == null) return null;
+    if (scopeTxTotal < MIN_REGRESSION_N_FIT) {
+      return `거래 ${fmtNum(scopeTxTotal)}건 — ${MIN_REGRESSION_N_FIT}건 미만이면 회귀식이 나오지 않습니다. 통계 창을 3·5·7년으로 넓혀 보세요.`;
+    }
+    if (scopeTxTotal < MIN_REGRESSION_N_RECOMMENDED) {
+      return `거래 ${fmtNum(scopeTxTotal)}건 — 권장 ${MIN_REGRESSION_N_RECOMMENDED}건 미만입니다. 결측을 뺀 적합 표본은 더 줄 수 있습니다.`;
+    }
+    return null;
+  }, [scopeTxTotal]);
 
   const selectionDisabled =
     regM.isPending || recommendM.isPending ||
@@ -1449,7 +1497,7 @@ export default function App() {
                   >
                     <input
                       type="checkbox"
-                      checked={Boolean(vars[key as keyof RegressionVariableSpec]) && (key !== "structure_dummy" || enrich)}
+                      checked={Boolean(effectiveVars[key as keyof RegressionVariableSpec])}
                       disabled={key === "structure_dummy" && !enrich}
                       onChange={(e) =>
                         setVars((v) => ({ ...v, [key]: e.target.checked }))
@@ -1459,6 +1507,9 @@ export default function App() {
                   </label>
                 ))}
               </div>
+              <p className="text-[10px] leading-snug text-slate-500 dark:text-slate-400">
+                추가분석의 Macro 모형 탐색은 이 선택과 별개로 후보를 만듭니다.
+              </p>
             </section>
 
             <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
@@ -1478,6 +1529,7 @@ export default function App() {
                   return (
                     <label
                       key={value}
+                      title={disabled ? "연면적 또는 대지면적이 있어야 씁니다." : undefined}
                       className={clsx(
                         "flex items-center gap-2",
                         disabled && "opacity-50 cursor-not-allowed",
@@ -1488,16 +1540,19 @@ export default function App() {
                         name="response-scale"
                         checked={responseScale === value}
                         disabled={disabled}
-                        onChange={() => setResponseScale(value)}
+                        onChange={() => {
+                          setResponseScale(value);
+                          setLoglogReverted(false);
+                        }}
                       />
                       <span className="font-medium">{label}</span>
                     </label>
                   );
                 })}
               </div>
-              {regM.data && responseScale !== appliedResponseScale && (
+              {loglogReverted && (
                 <p className="text-amber-700 dark:text-amber-400 text-[10px] leading-snug">
-                  모형만 바뀌었습니다. 「통계분석」을 다시 실행해야 결과가 갱신됩니다.
+                  면적 변수를 껐으므로 log-log를 쓸 수 없어 선형으로 되돌렸습니다.
                 </p>
               )}
             </section>
@@ -1566,19 +1621,35 @@ export default function App() {
             </section>
           </div>
 
-          <button
-            type="button"
-            className="btn btn-primary w-full"
-            disabled={!addr2 || selectionDisabled}
-            title={
-              !!addr2 && leafList.length > 0 && !structureQ.isSuccess
-                ? "지역 구조 확인 중… 잠시 후 다시 시도하세요."
-                : undefined
-            }
-            onClick={() => regM.mutate(regBody)}
-          >
-            {regM.isPending ? "계산 중…" : "통계분석"}
-          </button>
+          <div className="space-y-1.5">
+            {regressionStale && (
+              <p className="text-amber-700 dark:text-amber-400 text-[10px] leading-snug">
+                선택이 바뀌었습니다. 「통계분석」을 다시 실행해야 오른쪽 결과가 갱신됩니다.
+              </p>
+            )}
+            <button
+              type="button"
+              className="btn btn-primary w-full"
+              disabled={!addr2 || selectionDisabled}
+              title={
+                !!addr2 && leafList.length > 0 && !structureQ.isSuccess
+                  ? "지역 구조 확인 중… 잠시 후 다시 시도하세요."
+                  : undefined
+              }
+              onClick={() => regM.mutate(regBody)}
+            >
+              {regM.isPending
+                ? "계산 중…"
+                : scopeTxTotal != null && scopeTxTotal < MIN_REGRESSION_N_RECOMMENDED
+                  ? "참고용으로 통계분석"
+                  : "통계분석"}
+            </button>
+            {sampleGateNote && (
+              <p className="text-amber-700 dark:text-amber-400 text-[10px] leading-snug">
+                {sampleGateNote}
+              </p>
+            )}
+          </div>
         </CollapsibleLeftSidebar>
 
         {/* 오른쪽: 지도 Hub + 회귀 분석 */}
@@ -1755,6 +1826,11 @@ export default function App() {
               {regM.isError && (
                 <p className="text-sm text-red-600">{(regM.error as Error).message ?? "회귀 실패"}</p>
               )}
+              {regressionStale && (
+                <p className="text-xs badge-warn">
+                  왼쪽 선택이 바뀌었습니다. 아래 숫자는 마지막 「통계분석」 조건입니다.
+                </p>
+              )}
               {regM.data && (
                 <div className="relative space-y-2 pt-1">
                   <FocusRegressionCard
@@ -1782,7 +1858,7 @@ export default function App() {
                 <PredictPanel
                   regData={regM.data}
                   regBody={resultRegBody}
-                  vars={vars}
+                  vars={appliedVars}
                   assetType={assetType}
                   regionLabel={aiRegionLabel}
                 />
@@ -1793,8 +1869,9 @@ export default function App() {
                   regBody={regBody}
                   regData={regM.data}
                   resultRegBody={resultRegBody}
-                  vars={vars}
+                  vars={appliedVars}
                   recommendM={recommendM}
+                  onCancelRecommend={cancelRecommend}
                   assetType={assetType}
                   regionLabel={aiRegionLabel}
                   profileTarget={profileTarget}

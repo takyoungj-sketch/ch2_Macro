@@ -17,7 +17,9 @@ from app.built.regression.selection.fit import (
 from app.built.regression.selection.metrics import build_model_comparison_from_fits
 from app.built.schemas import RegressionRunRequest
 
-MAX_SUBSETS = 128
+# 제품 SSOT 풀은 최대 9블록(기본 7 + 유형 + 지역) = 511 조합이라 자르지 않는다.
+# 랩의 지역 공변량 풀처럼 더 넓을 때만 잘리고, 그때는 블록 수가 작은 조합이 남는다.
+MAX_SUBSETS = 511
 TOP_K = 5
 
 
@@ -87,39 +89,48 @@ def run_group_best_subset(
         if not fits:
             continue
         pred = pick_predictive_scale(fits)
-        df_cmp = common_scale_frame(ctx.df, blocks)
-        pred = attach_joint_f_tests(
-            df_cmp,
-            pred,
-            unified=ctx.unified,
-            region_col=region_col,
-            admin_level=ctx.admin_level,
-        )
         cmp = build_model_comparison_from_fits(fits, recommended=pred.response_scale)
         scored_pred.append((blocks, pred, cmp))
         expl = pick_explanatory_scale(fits)
         if expl is None:
             continue
-        if expl.response_scale != pred.response_scale:
-            expl = attach_joint_f_tests(
-                df_cmp,
-                expl,
-                unified=ctx.unified,
-                region_col=region_col,
-                admin_level=ctx.admin_level,
-            )
-        else:
+        if expl.response_scale == pred.response_scale:
             expl = pred
         scored_expl.append((blocks, expl, cmp))
 
     if not scored_pred:
         return None
 
-    return CompareResult(
+    result = CompareResult(
         by_aic=_rank_candidates(scored_expl, "aic"),
         by_bic=_rank_candidates(scored_expl, "bic"),
         by_mape=_rank_candidates(scored_pred, "mape"),
         by_cv_mape=_rank_candidates(scored_pred, "cv_mape"),
-        total_subsets=len(subsets),
+        total_subsets=total,
         truncated=truncated,
     )
+    _attach_joint_f_to_ranked(ctx, result, region_col=region_col)
+    return result
+
+
+def _attach_joint_f_to_ranked(
+    ctx: SelectionContext,
+    result: CompareResult,
+    *,
+    region_col: str | None,
+) -> None:
+    """랭킹에 오른 후보만 Joint F를 붙인다 — 순위 산정에는 쓰이지 않는다."""
+    done: set[tuple[tuple[BlockId, ...], str]] = set()
+    for ranking in (result.by_cv_mape, result.by_mape, result.by_aic, result.by_bic):
+        for candidate in ranking:
+            key = (tuple(candidate.blocks), candidate.fit.response_scale)
+            if key in done:
+                continue
+            done.add(key)
+            attach_joint_f_tests(
+                common_scale_frame(ctx.df, candidate.blocks),
+                candidate.fit,
+                unified=ctx.unified,
+                region_col=region_col,
+                admin_level=ctx.admin_level,
+            )

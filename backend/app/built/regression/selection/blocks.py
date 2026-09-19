@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import combinations
 from typing import Literal
 
 from app.built.schemas import RegressionVariableSpec
@@ -113,15 +114,20 @@ def enumerate_block_subsets(
     *,
     max_count: int | None = None,
 ) -> list[list[BlockId]]:
-    """공집합 제외, 전체 포함 — 2^k - 1 subsets (max_count로 상한)."""
+    """공집합 제외 — 2^k - 1 subsets (max_count로 상한).
+
+    블록 수 오름차순으로 낸다. 비트마스크 순서로 내면 상한에 걸릴 때
+    뒤쪽 블록이 단독 조합으로만 평가되거나 아예 빠진다.
+    """
     n = len(candidates)
     if n == 0:
         return []
     total = (1 << n) - 1
     limit = total if max_count is None else min(total, max_count)
     out: list[list[BlockId]] = []
-    for mask in range(1, 1 << n):
-        if len(out) >= limit:
-            break
-        out.append(mask_to_blocks(mask, candidates))
+    for size in range(1, n + 1):
+        for combo in combinations(range(n), size):
+            if len(out) >= limit:
+                return out
+            out.append([candidates[i] for i in combo])
     return out

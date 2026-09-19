@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from app.built.regression.selection.best_subset import run_group_best_subset
+from app.built.regression.selection.best_subset import (
+    MAX_SUBSETS as MAX_COMPARE_SUBSETS,
+    run_group_best_subset,
+)
 from app.built.regression.candidates import (
     CandidateContext,
     CandidateSpec,
@@ -44,7 +47,6 @@ from app.built.schemas import (
 )
 
 MIN_SELECTION_N = 30
-MAX_COMPARE_SUBSETS = 128
 
 
 def _resolve_candidates(req: RegressionSelectionRequest, unified: bool) -> list[BlockId]:

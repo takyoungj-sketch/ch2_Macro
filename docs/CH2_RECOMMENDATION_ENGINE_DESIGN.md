@@ -137,11 +137,14 @@ analysis_scope
 한 번 생성한 **후보 집합**을 **두 기준**으로 정렬만 다르게 보여 준다.
 
 ```text
-candidate_universe  (예: 블록 subset × linear/log, 최대 128)
+candidate_universe  (블록 subset × linear/log/log-log, subset 최대 511)
         │
-        ├── explanatory_rank  → AIC 1위, BIC 1위, … (설명형 탭)
-        └── predictive_rank   → CV-MAPE 1위, MAPE 1위, … (예측형 탭)
+        ├── explanatory_rank  → AIC 1위, BIC 1위, … (② 각주)
+        └── predictive_rank   → CV-MAPE 1위, MAPE 1위, … (① 순위표)
 ```
+
+subset 상한 511 = 제품 후보 블록 최대 9개(2⁹−1). 블록 수 오름차순으로 열거해
+상한에 걸려도 특정 블록이 통째로 빠지지 않는다 (`selection/best_subset.py`).
 
 **UI 카피 (예):**  
 > 「같은 후보 120개 중, **설명**에서는 AIC 1위, **예측**에서는 CV-MAPE 1위가 다릅니다.」
@@ -428,7 +431,7 @@ backend/app/recommendation/
 |---|------|------|
 | R1-1 | `DEFAULT_BUILT_CANDIDATE_BLOCKS` — §6.1 SSOT | `recommendation/adapters/built.py` |
 | R1-2 | `resolve_recommendation_pool(blocks, scope, unified, region_leaf≥2)` | region_leaf 조건부 |
-| R1-3 | `run_stage1_local()` — Best Subset universe (≤128) **한 번** | `recommendation/stages.py` |
+| R1-3 | `run_stage1_local()` — Best Subset universe (≤511) **한 번** | `recommendation/stages.py` |
 | R1-4 | `rank_explanatory` (AIC/BIC top-k) + `rank_predictive` (CV-MAPE/MAPE top-k) | `recommendation/ranks.py` |
 | R1-5 | `primary` = predictive #1; `alternate` = explanatory #1 | 응답 스키마 |
 | R1-6 | `RegressionRecommendResponse` schema | `built/schemas.py` |

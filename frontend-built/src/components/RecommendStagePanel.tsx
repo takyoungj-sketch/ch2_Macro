@@ -230,6 +230,7 @@ export default function RecommendStagePanel({
     coefficient_narratives,
   } = data;
   const primary = stage1.primary;
+  const extremeRate = stage1.primary_cv_extreme_rate ?? 0;
   const ranking = stage1.candidates_predictive ?? [];
   const resolvedAssetType = resolveRecommendAssetType(assetType, analysis_scope.asset_slice);
   const checks = diagnostics_checklist ?? [];
@@ -338,11 +339,64 @@ export default function RecommendStagePanel({
             <span className="ml-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
               {formatResponseScale(primary.response_scale)}
             </span>
+            {stage1.satisfaction.label_ko && (
+              <span className="ml-2 text-sm font-medium text-slate-500 dark:text-slate-400">
+                {stage1.satisfaction.label_ko}
+                {stage1.satisfaction.stars > 0 && ` ${"★".repeat(stage1.satisfaction.stars)}`}
+              </span>
+            )}
           </p>
+          <p className="text-sm text-slate-700 dark:text-slate-200">
+            {stage1.primary_confirm_cv_mape != null ? (
+              <>
+                마지막 연도로 확인:{" "}
+                <span className="font-semibold tabular-nums">
+                  {stage1.primary_confirm_cv_mape.toFixed(1)}%
+                </span>
+                {stage1.primary_confirm_cv_folds
+                  ? ` (거래 ${stage1.primary_confirm_cv_folds}개 연도)`
+                  : ""}
+              </>
+            ) : (
+              <span className="text-slate-500 dark:text-slate-400">
+                {stage1.primary_confirm_note ?? "마지막 연도 확인 CV 없음"}
+              </span>
+            )}
+          </p>
+          {(stage1.primary_cv_extreme_rate != null || stage1.primary_cv_median_ape != null) && (
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              {stage1.primary_cv_median_ape != null && (
+                <>
+                  중위 오차{" "}
+                  <span className="font-semibold tabular-nums">
+                    {stage1.primary_cv_median_ape.toFixed(1)}%
+                  </span>
+                </>
+              )}
+              {stage1.primary_cv_extreme_rate != null && (
+                <span className={extremeRate > 0 ? "text-amber-700 dark:text-amber-400" : ""}>
+                  {stage1.primary_cv_median_ape != null ? " · " : ""}
+                  범위 밖 예측{" "}
+                  <span className="font-semibold tabular-nums">
+                    {(stage1.primary_cv_extreme_rate * 100).toFixed(1)}%
+                  </span>
+                </span>
+              )}
+            </p>
+          )}
           <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-            전체 후보 중 교차검증 오차가 가장 낮은 모형입니다. 다음 단계에서 이 지역 거래만의
-            예측 기준선으로 확정합니다.
+            전체 후보 중 교차검증 오차가 가장 낮은 모형입니다. 위 CV-MAPE는 마지막 연도를 떼어
+            놓고 후보를 고를 때 쓴 값이라 낙관적이므로, 고르는 데 전혀 쓰지 않은 마지막 연도로 한
+            번 더 확인합니다. 오차는 예측을 자르지 않은 값이라, 크게 틀린 예측이 있으면 그대로
+            반영됩니다. 다음 단계에서 이 지역 거래만의 예측 기준선으로 확정합니다.
           </p>
+          {extremeRate > 0.05 && (
+            <p className="text-sm text-amber-700 dark:text-amber-400 leading-relaxed">
+              이 모형의 예측 {(extremeRate * 100).toFixed(0)}%가 학습 거래 가격 범위를 한 자릿수
+              이상 벗어났습니다. 평균 오차가 낮아도 개별 예측이 불안정할 수 있으니, 예상값은 입력
+              조건이 실제 거래 범위 안에 있는지 함께 확인하세요.
+            </p>
+          )}
         </div>
       </StageSection>
 

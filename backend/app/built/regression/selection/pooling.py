@@ -455,7 +455,14 @@ def _research_pool_variant(
 
 
 def _primary_value(c: PoolingCandidateMetrics) -> float | None:
-    return c.cv_mape if c.cv_mape is not None else c.aic
+    """Twin 판정에 쓰는 유일한 지표 — 탐색 CV-MAPE.
+
+    예전에는 CV가 없을 때 AIC로 대체했는데, AIC는 표본이 다르면 비교할 수 없다.
+    로그우도가 n에 따라 커지므로 pool(n이 큼)이 구조적으로 불리해지고, CV-MAPE(%)와
+    AIC를 한 정렬 키에 섞어 쓰기도 했다. D-073의 「예측력으로 판정, n만으로 채택 금지」에
+    따라 예측력 지표가 없으면 판정하지 않는다 (Local 유지).
+    """
+    return c.cv_mape
 
 
 def _rank_candidates(candidates: list[PoolingCandidateMetrics]) -> list[PoolingCandidateMetrics]:
@@ -493,15 +500,13 @@ def _decision_confidence(a: float, b: float) -> DecisionConfidence:
 def _decision_reason(ranked: list[PoolingCandidateMetrics]) -> str:
     winner = ranked[0]
     winner_value = _primary_value(winner)
-    metric_name = "CV-MAPE" if winner.cv_mape is not None else "AIC"
-    unit = "%" if winner.cv_mape is not None else ""
     if len(ranked) < 2 or winner_value is None:
         return f"{winner.label}만 적합 가능해 선택합니다."
     runner = ranked[1]
     runner_value = _primary_value(runner)
     return (
-        f"{metric_name} 기준 {winner.label}({winner_value:.2f}{unit})이 "
-        f"{runner.label}({runner_value:.2f}{unit})보다 우수해 선택합니다. "
+        f"CV-MAPE 기준 {winner.label}({winner_value:.2f}%)이 "
+        f"{runner.label}({runner_value:.2f}%)보다 우수해 선택합니다. "
         f"(Local + Twin Pooling {len(ranked) - 1}개 조합 중 비교)"
     )
 
@@ -612,12 +617,24 @@ def evaluate_pooling_candidates(
         )
 
     ranked = _rank_candidates(all_candidates)
-    confidence = None
     ranked_values = [c for c in ranked if _primary_value(c) is not None]
-    if len(ranked_values) >= 2:
-        confidence = _decision_confidence(
-            _primary_value(ranked_values[0]), _primary_value(ranked_values[1])
+    if len(ranked_values) < 2:
+        # 양쪽 탐색 CV가 있어야 예측력을 견줄 수 있다. 마지막 연도를 홀드아웃하면
+        # 얇은 Local은 fold를 못 만들 수 있고(D-074), 그때는 판정하지 않는다.
+        missing = [c.label for c in all_candidates if _primary_value(c) is None]
+        return PoolingEvaluation(
+            candidates=all_candidates,
+            decision="local",
+            decision_reason=(
+                f"{', '.join(missing)}의 탐색 CV를 낼 수 없어(표본·연도 부족) "
+                "Twin 채택 여부를 판정하지 않고 Local을 유지합니다."
+            ),
+            twin_gates=gates,
         )
+
+    confidence = _decision_confidence(
+        _primary_value(ranked_values[0]), _primary_value(ranked_values[1])
+    )
 
     return PoolingEvaluation(
         candidates=all_candidates,

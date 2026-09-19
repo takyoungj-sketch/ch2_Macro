@@ -33,3 +33,17 @@ export function builtAnalysisScopeKey(body: RegressionRunRequest): string {
     leaf_level: body.leaf_level ?? "",
   });
 }
+
+/** scope + 변수·척도·보강 — 화면에 뜬 결과가 지금 선택으로 나온 것인지 비교용 */
+export function builtRegressionRequestKey(body: RegressionRunRequest): string {
+  const enabled = Object.entries(body.variables ?? {})
+    .filter(([, on]) => on)
+    .map(([name]) => name)
+    .sort();
+  return JSON.stringify({
+    scope: builtAnalysisScopeKey(body),
+    variables: enabled,
+    response_scale: body.response_scale ?? "linear",
+    enrich: body.enrich ?? false,
+  });
+}

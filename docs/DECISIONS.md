@@ -421,4 +421,20 @@
 - 카드 [`lab/decisions/D-073.json`](lab/decisions/D-073.json).
 - 재검토(region_leaf를 Twin 표본에서만) 실험 계획: [`lab/RECOMMEND_TWIN_BENCH_LAB.md`](lab/RECOMMEND_TWIN_BENCH_LAB.md). 제품 Twin1은 1위+지역더미, Twin2는 같은 1위 표본 재탐색(확인용).
 
+## D-074 복합 회귀엔진 — 역변환·CV/holdout·clipping 지표 정의
+
+- **Duan 통일:** 모든 log 계열의 원척도 **점추정·평균 CI에 smearing 적용**. **PI는 미적용**(분위수는 단조변환 보존). 표시값은 조건부 평균. smearing 계수는 fold의 **train 잔차만**.
+- **holdout 분리:** 마지막 연도는 Final Holdout. 랭킹은 마지막 연도 제외 rolling CV, 확인 CV는 그 연도만.
+- **clipping:** 공식 CV-MAPE에 **쓰지 않음**. 경계는 판정에만 써서 극단 예측 비율·최악·중위 오차를 **안정성 진단**으로 기록.
+- **숫자가 나빠지는 것은 버그가 아니다.** 62.5% → 44.7% → 38.1%와 달라져도 회귀 아님. 완료 후 Local·Upper·Twin 전부 재실행한 값이 새 기준선. 만족도 등급 재보정 검토.
+- 계획 [`BUILT_ENGINE_CONSISTENCY_PLAN.md`](BUILT_ENGINE_CONSISTENCY_PLAN.md). 카드 [`lab/decisions/D-074.json`](lab/decisions/D-074.json).
+
+## D-075 가격시점 보정은 회귀식 밖 별도 계층
+
+- 회귀는 **물건 구조만**. 거래시점 → 가격지수 → 기준시점 환산은 **별도 계층**. 결과 = 회귀 추정값 × 시점 보정.
+- **연도 더미를 넣지 않음.** 학습에 없는 연도는 계수 추정 불가이고, 얇은 국소 표본의 자유도를 쓴다.
+- 지수 추정 단위는 **시군구.** 구조는 국소, 시간은 광역 — 상위지역 재적합·Twin과 같은 논리. 얇은 시군구 처리(시도 승격 vs 최소 n 게이트)는 착수 시 결정.
+- **제약:** 지수는 **holdout 이전 데이터로만** 추정. D-074 분리 완료 후 착수.
+- 카드 [`lab/decisions/D-075.json`](lab/decisions/D-075.json).
+
 

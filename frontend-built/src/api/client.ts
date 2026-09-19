@@ -304,8 +304,15 @@ export async function resolveRegressionScope(body: RegressionRunRequest) {
   return data;
 }
 
-export async function recommendRegression(body: RegressionSelectionRequest) {
-  const { data } = await api.post<RegressionRecommendResponse>("/regression/recommend", body);
+export async function recommendRegression(
+  body: RegressionSelectionRequest,
+  signal?: AbortSignal,
+) {
+  const { data } = await api.post<RegressionRecommendResponse>(
+    "/regression/recommend",
+    body,
+    { signal },
+  );
   return data;
 }
 

@@ -158,9 +158,35 @@ def test_region_dummy_skipped_at_sigungu():
 
     sig = _fit_ols(df, spec, "sigungu", "test")
     assert not any(c.name.startswith("loc_") for c in sig.coefficients)
+    # 상위지역 재적합이 초점과 다른 사양이라는 사실을 화면·AI가 볼 수 있어야 한다.
+    assert "지역 더미 제외" in (sig.warning or "")
 
     eup = _fit_ols(df, spec, "eupmyeondong", "test")
     assert any(c.name.startswith("loc_") for c in eup.coefficients)
+    assert "지역 더미 제외" not in (eup.warning or "")
+
+
+def test_region_dummy_drop_note_only_when_requested():
+    """지역 더미를 고르지 않았으면 상위 단계에 제외 안내를 붙이지 않는다."""
+    rows = [
+        {
+            "price": 100 + i * 50,
+            "gross_area": 10 + i * 5,
+            "land_area": 5,
+            "building_age": 1 + i,
+            "road_width_label": "8m",
+            "zone_type": "일반",
+            "building_use": "근린",
+            "asset_type": "commercial",
+            "addr3": ["동A", "동B"][i % 2],
+        }
+        for i in range(12)
+    ]
+    spec = RegressionVariableSpec(gross_area=True, region_leaf_dummy=False)
+    from app.built.regression.engine import _fit_ols
+
+    sig = _fit_ols(pd.DataFrame(rows), spec, "sigungu", "test")
+    assert "지역 더미" not in (sig.warning or "")
 
 
 def test_fit_ols_reports_mape():

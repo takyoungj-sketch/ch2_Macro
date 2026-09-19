@@ -66,7 +66,6 @@ export interface RegressionVariableSpec {
   land_area: boolean;
   building_age: boolean;
   road_width_dummy: boolean;
-  road_code: boolean;
   zone_type_dummy: boolean;
   building_use_dummy: boolean;
   structure_dummy: boolean;
@@ -183,6 +182,7 @@ export interface RecommendationSatisfaction {
   grade: string;
   stars: number;
   cv_mape?: number | null;
+  label_ko?: string | null;
 }
 
 export interface RecommendationStage1 {
@@ -196,6 +196,14 @@ export interface RecommendationStage1 {
   satisfaction: RecommendationSatisfaction;
   total_subsets: number;
   truncated: boolean;
+  /** 선택에 쓰지 않은 마지막 연도로 잰 CV — 탐색 CV의 낙관 편향 확인용 */
+  primary_confirm_cv_mape?: number | null;
+  primary_confirm_cv_folds?: number;
+  primary_confirm_note?: string | null;
+  /** 학습 가격 범위를 크게 벗어난 예측 비율 — 성능이 아니라 안정성 진단 (D-074) */
+  primary_cv_extreme_rate?: number | null;
+  /** 중위 오차. 평균과 크게 벌어지면 소수 거래가 지표를 끌고 있다는 뜻 */
+  primary_cv_median_ape?: number | null;
 }
 
 export interface RecommendationPoolCandidate {
@@ -408,7 +416,6 @@ export interface RegressionRunRequest {
   road_code_max?: number;
   variables: RegressionVariableSpec;
   response_scale?: ResponseScale;
-  compare_admin_levels?: boolean;
   leaf_level?: "addr3" | "addr4";
   exclude_outliers_iqr: boolean;
   outlier_iqr_multiplier?: number;

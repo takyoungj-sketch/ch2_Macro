@@ -17,6 +17,27 @@ from app.built.regression.selection.blocks import BlockId, spec_from_blocks
 from app.built.schemas import JointFTest, RegressionVariableSpec, ResponseScale
 
 
+@dataclass(frozen=True)
+class CvPhase:
+    """한 평가 구간(탐색 또는 확인)의 CV 결과와 안정성 진단.
+
+    `mape`는 clip하지 않은 raw 예측으로 계산한 공식 성능 지표다 (D-074). clip 경계는
+    계속 계산하되 판정에만 써서 `extreme_rate`로 남긴다. 크게 실패한 예측을 잘라내면
+    실패를 덜 실패한 것처럼 만들기 때문에, 안정성은 성능과 분리해 따로 본다.
+    """
+
+    mape: float | None = None
+    folds: int = 0
+    # 학습 관측 가격의 ×0.1~×10 밖으로 나간 예측 비율. 높으면 예측이 불안정한 후보다.
+    extreme_rate: float | None = None
+    max_ape: float | None = None
+    # 폭발한 몇 건에 면역인 보조 지표. 평균 순위와 크게 엇갈리면 D-074를 재검토한다.
+    median_ape: float | None = None
+
+
+_EMPTY_CV = CvPhase()
+
+
 @dataclass
 class BlockFitResult:
     blocks: list[BlockId]
@@ -36,6 +57,9 @@ class BlockFitResult:
     cv_folds: int
     confirm_cv_mape: float | None = None
     confirm_cv_folds: int = 0
+    # 탐색·확인 구간의 안정성 진단. 순위에는 쓰지 않는다.
+    cv_search: CvPhase = _EMPTY_CV
+    cv_confirm: CvPhase = _EMPTY_CV
 
 
 def fit_block_subset(
@@ -46,6 +70,7 @@ def fit_block_subset(
     response_scale: ResponseScale,
     region_col: str | None,
     admin_level: str,
+    with_cv: bool = True,
 ) -> BlockFitResult | None:
     import statsmodels.api as sm
 
@@ -93,14 +118,20 @@ def fit_block_subset(
         y_price = pd.to_numeric(df["price"], errors="coerce").loc[y.index].astype(float).to_numpy()
 
     mape = _insample_mape_pct(y_price, model, response_scale=response_scale)
-    cv_mape, cv_folds, confirm_cv, confirm_folds = _rolling_time_cv_mape(
-        df,
-        spec,
-        unified=unified,
-        response_scale=response_scale,
-        region_col=region_col_use,
-        holdout_last_year=False,
-    )
+    search = _EMPTY_CV
+    confirm = _EMPTY_CV
+    if with_cv:
+        # 마지막 연도는 Final Holdout으로 선택에서 떼어 둔다 (D-074). 랭킹은 탐색 CV,
+        # 확인은 그 마지막 연도로만. 이전에는 마지막 연도가 랭킹 CV에 포함된 채
+        # 같은 연도로 「확인」해서 확인이 확인이 아니었다.
+        search, confirm = _rolling_time_cv_mape(
+            df,
+            spec,
+            unified=unified,
+            response_scale=response_scale,
+            region_col=region_col_use,
+            holdout_last_year=True,
+        )
     return BlockFitResult(
         blocks=list(blocks),
         variables=spec,
@@ -115,10 +146,12 @@ def fit_block_subset(
         x_const=x_const,
         y_price=y_price,
         joint_f_tests={},
-        cv_mape=cv_mape,
-        cv_folds=cv_folds,
-        confirm_cv_mape=confirm_cv,
-        confirm_cv_folds=confirm_folds,
+        cv_mape=search.mape,
+        cv_folds=search.folds,
+        confirm_cv_mape=confirm.mape,
+        confirm_cv_folds=confirm.folds,
+        cv_search=search,
+        cv_confirm=confirm,
     )
 
 
@@ -134,7 +167,7 @@ def rolling_time_cv_split(
 
     고유 연도가 3 미만이면 확인을 생략하고 탐색은 기존 롤링과 같다.
     """
-    search, s_folds, confirm, c_folds = _rolling_time_cv_mape(
+    search, confirm = _rolling_time_cv_mape(
         df,
         spec,
         unified=unified,
@@ -143,9 +176,34 @@ def rolling_time_cv_split(
         holdout_last_year=True,
     )
     skip = None
-    if confirm is None:
+    if confirm.mape is None:
         skip = "확인 CV 생략 — 고유 계약연도가 3년 미만이거나 마지막 연도 fold를 적합할 수 없음"
-    return search, s_folds, confirm, c_folds, skip
+    return search.mape, search.folds, confirm.mape, confirm.folds, skip
+
+
+def _estimable_columns(x_train: pd.DataFrame) -> list[str]:
+    """학습 fold에서 계수를 추정할 수 있는 열만 고른다.
+
+    설계행렬을 전체 표본에서 만들기 때문에, 학습 fold에 한 번도 나오지 않는
+    범주의 더미는 전부 0인 열이 된다. 그대로 두면 statsmodels가 pinv로 축퇴된
+    해를 조용히 내놓으므로 그런 열을 먼저 뺀다. 뺀 뒤에도 공선이 남으면 (예:
+    더미가 fold를 완전 분할해 상수와 겹칠 때) 빈 목록을 돌려 fold를 건너뛴다.
+    """
+    varying = [
+        column
+        for column in x_train.columns
+        if column == "const" or x_train[column].nunique(dropna=False) > 1
+    ]
+    if not varying:
+        return []
+    matrix = x_train.loc[:, varying].to_numpy(dtype=float)
+    # 면적(수십~수백)과 더미(0/1)가 섞여 있으면 특이값 범위가 커져 rank 판정
+    # 허용오차가 느슨해진다. 열 노름으로 정규화해 척도 영향을 뺀다.
+    norms = np.linalg.norm(matrix, axis=0)
+    norms[norms == 0.0] = 1.0
+    if np.linalg.matrix_rank(matrix / norms) < len(varying):
+        return []
+    return varying
 
 
 def _rolling_time_cv_mape(
@@ -156,15 +214,26 @@ def _rolling_time_cv_mape(
     response_scale: ResponseScale,
     region_col: str | None,
     holdout_last_year: bool = False,
-) -> tuple[float | None, int, float | None, int]:
-    """과거 연도로 학습하고 다음 연도를 평가하는 rolling CV-MAPE."""
+) -> tuple[CvPhase, CvPhase]:
+    """과거 연도로 학습하고 다음 연도를 평가하는 rolling CV-MAPE.
+
+    MAPE는 fold 평균이 아니라 **거래 가중 평균**이다. fold마다의 개별 오차를 모두
+    모아 한 번에 평균하므로 거래가 많은 연도가 지표를 더 끌어당긴다.
+
+    예측은 **clip하지 않는다** (D-074). 학습 관측 범위를 크게 벗어난 예측은 실제로
+    실패한 예측이므로 지표에 그대로 반영하고, 대신 그 비율을 `extreme_rate`로 남겨
+    안정성 진단에 쓴다. 역변환 보정 계수는 그 fold의 **train 잔차만** 쓴다.
+
+    설계행렬은 전체 표본에서 한 번 만들고 연도로만 나눈다. 따라서 학습 fold에
+    없는 범주의 더미 열이 생길 수 있어, fold마다 추정 불가 열을 빼고 적합한다.
+    """
     import statsmodels.api as sm
 
     if "contract_year" not in df.columns:
-        return None, 0, None, 0
+        return _EMPTY_CV, _EMPTY_CV
     years = sorted(pd.to_numeric(df["contract_year"], errors="coerce").dropna().unique())
     if len(years) < 2:
-        return None, 0, None, 0
+        return _EMPTY_CV, _EMPTY_CV
     try:
         y, X, _ = _build_design_matrix(
             df,
@@ -174,9 +243,9 @@ def _rolling_time_cv_mape(
             region_col=region_col,
         )
     except (KeyError, ValueError, TypeError):
-        return None, 0, None, 0
+        return _EMPTY_CV, _EMPTY_CV
     if y.empty:
-        return None, 0, None, 0
+        return _EMPTY_CV, _EMPTY_CV
     x_const = sm.add_constant(X.astype(float), has_constant="add")
     price = pd.to_numeric(df["price"], errors="coerce").reindex(y.index)
     year_values = pd.to_numeric(df["contract_year"], errors="coerce").reindex(y.index)
@@ -184,8 +253,10 @@ def _rolling_time_cv_mape(
     confirm_year = years[-1] if holdout_last_year and len(years) >= 3 else None
     search_years = [yr for yr in years[1:] if confirm_year is None or yr != confirm_year]
 
-    def _eval(test_years: list) -> tuple[float | None, int]:
+    def _eval(test_years: list) -> CvPhase:
         fold_errors: list[float] = []
+        extreme_hits = 0
+        scored = 0
         valid_folds = 0
         for test_year in test_years:
             train_mask = year_values < test_year
@@ -196,15 +267,17 @@ def _rolling_time_cv_mape(
             y_test = y.loc[test_mask]
             if _uses_log_y(response_scale) and (price.loc[y_train.index] <= 0).any():
                 continue
+            columns = _estimable_columns(x_const.loc[y_train.index])
+            if not columns:
+                continue
             try:
-                model = sm.OLS(y_train, x_const.loc[y_train.index]).fit()
-                pred = np.asarray(model.predict(x_const.loc[y_test.index]), dtype=float)
+                model = sm.OLS(y_train, x_const.loc[y_train.index, columns]).fit()
+                pred = np.asarray(
+                    model.predict(x_const.loc[y_test.index, columns]), dtype=float
+                )
                 if _uses_log_y(response_scale):
+                    # 보정 계수는 학습 fold의 잔차만으로 — validation 잔차를 쓰면 누수다.
                     pred = np.exp(pred) * _duan_smearing(model.resid.to_numpy())
-                train_actual = price.loc[y_train.index].to_numpy(dtype=float)
-                train_actual = train_actual[np.isfinite(train_actual) & (train_actual > 0)]
-                if train_actual.size:
-                    pred = np.clip(pred, train_actual.min() * 0.1, train_actual.max() * 10)
                 actual = price.loc[y_test.index].to_numpy(dtype=float)
                 valid = np.isfinite(actual) & np.isfinite(pred) & (actual != 0)
                 if valid.any():
@@ -212,17 +285,31 @@ def _rolling_time_cv_mape(
                         (np.abs(actual[valid] - pred[valid]) / np.abs(actual[valid])).tolist()
                     )
                     valid_folds += 1
+                    # 성능에는 개입하지 않고, 학습 범위를 한 자릿수 이상 벗어난 예측만 센다.
+                    train_actual = price.loc[y_train.index].to_numpy(dtype=float)
+                    train_actual = train_actual[np.isfinite(train_actual) & (train_actual > 0)]
+                    scored += int(valid.sum())
+                    if train_actual.size:
+                        lo = train_actual.min() * 0.1
+                        hi = train_actual.max() * 10
+                        pred_valid = pred[valid]
+                        extreme_hits += int(((pred_valid < lo) | (pred_valid > hi)).sum())
             except (ValueError, np.linalg.LinAlgError):
                 continue
         if not fold_errors:
-            return None, 0
-        return round(float(np.mean(fold_errors)) * 100, 2), valid_folds
+            return _EMPTY_CV
+        errors = np.asarray(fold_errors, dtype=float)
+        return CvPhase(
+            mape=round(float(np.mean(errors)) * 100, 2),
+            folds=valid_folds,
+            extreme_rate=round(extreme_hits / scored, 4) if scored else None,
+            max_ape=round(float(np.max(errors)) * 100, 2),
+            median_ape=round(float(np.median(errors)) * 100, 2),
+        )
 
-    search_mape, search_folds = _eval(search_years)
-    confirm_mape, confirm_folds = (None, 0)
-    if confirm_year is not None:
-        confirm_mape, confirm_folds = _eval([confirm_year])
-    return search_mape, search_folds, confirm_mape, confirm_folds
+    search = _eval(search_years)
+    confirm = _eval([confirm_year]) if confirm_year is not None else _EMPTY_CV
+    return search, confirm
 
 
 def attach_joint_f_tests(
@@ -244,6 +331,7 @@ def attach_joint_f_tests(
             response_scale=fit.response_scale,
             region_col=region_col,
             admin_level=admin_level,
+            with_cv=False,  # compare_f_test는 model만 쓴다
         )
         if reduced is None:
             results[block] = JointFTest(tested=False)

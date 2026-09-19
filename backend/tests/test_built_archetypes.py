@@ -271,10 +271,11 @@ def test_evaluate_pooling_candidates_without_twin_codes_keeps_local():
 
 
 def test_evaluate_pooling_candidates_prefers_lower_cv_mape_pool():
-    # local: 표본이 작고 잡음이 커서 CV-MAPE가 나쁘다.
-    local_rows = _timed_rows(15, start_year=2018, years=3, seed=1, noise_std=1200)
+    # local: 잡음이 커서 CV-MAPE가 나쁘다. 마지막 연도를 홀드아웃해도(D-074) 탐색 fold를
+    # 만들 수 있을 만큼은 있어야 예측력을 견줄 수 있으므로 5개 연도 60건으로 둔다.
+    local_rows = _timed_rows(60, start_year=2016, years=5, seed=1, noise_std=1200)
     # twin: 동일한 관계식이지만 잡음이 훨씬 작다 — pool하면 표본이 커지고 CV-MAPE가 개선돼야 한다.
-    twin_rows = _timed_rows(80, start_year=2018, years=3, seed=2, noise_std=50)
+    twin_rows = _timed_rows(80, start_year=2016, years=5, seed=2, noise_std=50)
 
     local_ctx, local_fit = _local_ctx_and_fit(local_rows)
     assert local_fit is not None
@@ -305,6 +306,42 @@ def test_evaluate_pooling_candidates_prefers_lower_cv_mape_pool():
     assert result.decision_confidence is not None
     assert 1 <= result.decision_confidence.stars <= 5
     assert result.twin_gates and result.twin_gates[0].accepted is True
+
+
+def test_pooling_declines_to_judge_when_local_has_no_search_cv():
+    """양쪽 탐색 CV가 없으면 AIC로 판정하지 않고 Local을 유지한다 (D-074).
+
+    AIC는 로그우도가 n에 따라 커져 표본이 다른 모형끼리 비교할 수 없다. 마지막 연도를
+    홀드아웃하면 얇은 Local은 fold를 못 만들 수 있어 이 경로가 실제로 자주 나온다.
+    """
+    # 3개 연도 15건 — 마지막 연도를 떼면 학습 fold가 한 해(5건)뿐이라 탐색 CV가 없다.
+    local_rows = _timed_rows(15, start_year=2018, years=3, seed=1, noise_std=1200)
+    twin_rows = _timed_rows(80, start_year=2018, years=3, seed=2, noise_std=50)
+
+    local_ctx, local_fit = _local_ctx_and_fit(local_rows)
+    assert local_fit is not None
+    assert local_fit.cv_mape is None
+
+    anchor_code = "11110250"
+    twin_code = "11110251"
+    price_levels = {anchor_code: _median_psqm(local_rows), twin_code: _median_psqm(twin_rows)}
+
+    result = evaluate_pooling_candidates(
+        _FakePoolConn(local_rows + twin_rows, price_levels=price_levels),
+        local_ctx=local_ctx,
+        req=RegressionSelectionRequest(
+            profile_twin_neighbors=[{"region_code": twin_code, "similarity_score": 0.9}]
+        ),
+        blocks=_POOL_BLOCKS,
+        local_fit=local_fit,
+        anchor_region_codes=(anchor_code,),
+        twin_region_codes=(twin_code,),
+        admin_level="eupmyeondong",
+        region_col=None,
+    )
+    assert result.decision == "local"
+    assert "판정하지 않고" in result.decision_reason
+    assert result.decision_confidence is None
 
 
 def test_evaluate_pooling_candidates_does_not_reject_on_price_ratio():

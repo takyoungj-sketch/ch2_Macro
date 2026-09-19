@@ -1320,6 +1320,11 @@ def _fit_ols(
         elif meta and meta.region_reference:
             ref_note = f"지역 더미 기준={meta.region_reference}"
             warn = f"{warn} · {ref_note}" if warn else ref_note
+    elif vars_spec.region_leaf_dummy:
+        # 시군구·구는 그 단위 자체가 표본 경계라 지역 간 차이를 담을 열이 없다.
+        # 초점과 사양이 달라지므로 화면·AI가 우열 비교로 읽지 않도록 사실을 남긴다.
+        drop_note = "지역 더미 제외 — 이 단계가 표본 경계 (초점과 변수 구성 다름)"
+        warn = f"{warn} · {drop_note}" if warn else drop_note
 
     y_price = pd.to_numeric(df["price"], errors="coerce").loc[y.index].to_numpy()
     mape = _insample_mape_pct(y_price, model, response_scale=response_scale)
@@ -1669,13 +1674,26 @@ def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredict
     )
     if n < 30:
         warnings.insert(0, f"n={n} — 참고용 (권장 n≥30, 예측구간 넓음)")
+    row = frame.iloc[0]
+    # log 계열 역변환 (D-074): 점추정·평균CI는 Duan smearing으로 평균 하향편향을 보정한다.
+    # exp(ŷ)만 쓰면 조건부 중앙값에 가깝고, MAPE·CV-MAPE는 이미 보정값 기준으로 계산되므로
+    # 화면 숫자와 그 옆의 오차율이 서로 다른 추정량을 가리키게 된다.
+    # 예측구간은 분위수여서 단조변환에 보존되므로 보정하지 않는다 (집합 엔진과 동일).
+    duan = _duan_smearing(model.resid.to_numpy()) if _uses_log_y(scale) else None
+    smear = duan if duan is not None else 1.0
+
     if _is_loglog(scale):
         warnings.insert(0, "log-log 모형 — 면적·금액 log, 연식·더미는 선형")
     elif scale == "log":
-        warnings.insert(0, "semi-log — 예측값은 exp(ŷ) 역변환 (극단 외삽 주의)")
+        warnings.insert(0, "semi-log — 금액만 log (극단 외삽 주의)")
+    if duan is not None:
+        warnings.insert(
+            1,
+            f"역변환 평균 보정 ×{duan:.3f} — 추정값은 exp(ŷ)에 이 계수를 곱한 조건부 평균입니다. "
+            "예측구간은 분위수여서 보정하지 않으므로 추정값이 구간의 가운데는 아닙니다.",
+        )
 
-    row = frame.iloc[0]
-    y_hat = _back_transform(float(row["mean"]), scale)
+    y_hat = _back_transform(float(row["mean"]), scale) * smear
     suppressed = should_suppress_y_hat(extrap_level, scale)
 
     cont_out = [
@@ -1698,8 +1716,9 @@ def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredict
         y_hat=y_hat,
         pi_lower=_back_transform(float(row["obs_ci_lower"]), scale),
         pi_upper=_back_transform(float(row["obs_ci_upper"]), scale),
-        ci_lower=_back_transform(float(row["mean_ci_lower"]), scale),
-        ci_upper=_back_transform(float(row["mean_ci_upper"]), scale),
+        ci_lower=_back_transform(float(row["mean_ci_lower"]), scale) * smear,
+        ci_upper=_back_transform(float(row["mean_ci_upper"]), scale) * smear,
+        duan_factor=duan,
         response_scale=scale,
         extrapolation_level=extrap_level,
         y_hat_suppressed=suppressed,

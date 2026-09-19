@@ -36,7 +36,7 @@
 | **회귀식 사전통계 DB** | [`BUILT_MONTHLY_UPDATE_SOP.md`](./BUILT_MONTHLY_UPDATE_SOP.md) — 회귀는 **실시간 OLS**. 월간 배치는 `built_transactions` 원장만 |
 | UI/API/AI **「최적」** 용어 | 「다른 모형은 틀림」으로 읽힘 · No Valuation·감정 실무와 충돌 |
 | **개별 더미** 수준 탐색 | `road_8m`만 생존 등 — 해석 깨짐 |
-| Brute Force (더미 조합) | 그룹 7개(2⁷=128)만 — **개별 컬럼** 2²⁰ 등은 금지 |
+| Brute Force (더미 조합) | 그룹 최대 9개(2⁹−1=511)만 — **개별 컬럼** 2²⁰ 등은 금지 |
 | LASSO **기본 UI** | λ·0 계수 설명 부담 — **고급/실험** 옵션만 (Phase D 이후) |
 | LLM이 변수 선택 **대신 결정** | 헌법 **No Recalculation** · Facts First |
 
@@ -80,7 +80,7 @@ VariableSpec 반영 → OLS → 부분회귀도 → 예측
 |------|------|
 | **변수 블록 (block)** | 사용자 토글 1개 = OLS 설계행렬의 **연속 1컬럼 또는 더미 묶음 전체** |
 | **Group Forward** | 빈 모델에서 **블록 단위** forward add · AIC/BIC 개선 없으면 중단 |
-| **Group Best Subset** | 후보 블록 부분집합 **전수(≤128)** · 지표별 상위 k개 |
+| **Group Best Subset** | 후보 블록 부분집합 **전수(≤511)** · 지표별 상위 k개 |
 | **추천** | Forward 1안 + `excluded[]` 사유 — **채택은 사용자** |
 | **모형 비교** | Best Subset **3~5 후보** 나란히 — **정답 아님** |
 | **`model_comparison`** | 동일 블록 집합에 대해 **linear vs log** 지표 비교 (집합 패리티) |
@@ -116,7 +116,7 @@ VariableSpec 반영 → OLS → 부분회귀도 → 예측
 > **2026-06 변경:** AIC Forward **단일 1안 ✗** → Best Subset pool에서 **목적별 3후보 ✓**  
 > Forward는 **제외 사유 참고**만 (AIC greedy — 정답 아님).
 
-1. 후보 블록 `C`의 부분집합 Best Subset (≤128) 적합
+1. 후보 블록 `C`의 부분집합 Best Subset (≤511) 적합
 2. **baseline** = 현재 사용자 ☑ 변수 블록 (동일 scope·IQR)
 3. pool에서 3종 pick (블록집합 중복 최소화):
    - **설명형** — Adj R²(log) 최대

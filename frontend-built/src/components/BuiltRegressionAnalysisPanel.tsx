@@ -26,6 +26,7 @@ type Props = {
   assetType: AssetType;
   regionLabel: string;
   profileTarget?: ProfileLinkTarget | null;
+  onCancelRecommend?: () => void;
 };
 
 export default function BuiltRegressionAnalysisPanel({
@@ -37,6 +38,7 @@ export default function BuiltRegressionAnalysisPanel({
   assetType,
   regionLabel,
   profileTarget,
+  onCancelRecommend,
 }: Props) {
   const [upperOpened, setUpperOpened] = useState(false);
   const [macroOpen, setMacroOpen] = useState(false);
@@ -45,6 +47,7 @@ export default function BuiltRegressionAnalysisPanel({
   useEffect(() => {
     setUpperOpened(false);
     setMacroOpen(false);
+    onCancelRecommend?.();
     recommendM.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 지역·기간·필터가 바뀔 때만 Macro 리셋
   }, [scopeKey]);
@@ -65,7 +68,7 @@ export default function BuiltRegressionAnalysisPanel({
           추가분석
         </h2>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          기본 회귀·예측과 별도 — Macro 모형 탐색·상위지역 비교
+          기본 회귀·예측과 별도 — Macro 모형 탐색·상위지역 재적합
         </p>
       </div>
 
@@ -90,7 +93,10 @@ export default function BuiltRegressionAnalysisPanel({
 
       <RecommendationModal
         open={macroOpen}
-        onClose={() => setMacroOpen(false)}
+        onClose={() => {
+          onCancelRecommend?.();
+          setMacroOpen(false);
+        }}
         regBody={regBody}
         regData={regData}
         recommendM={recommendM}

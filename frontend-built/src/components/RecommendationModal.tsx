@@ -56,6 +56,7 @@ export default function RecommendationModal({
   const [runTwinResearch, setRunTwinResearch] = useState(false);
   const [heldData, setHeldData] = useState<RegressionRecommendResponse | null>(null);
   const [localBaseline, setLocalBaseline] = useState<RegressionRecommendResponse | null>(null);
+  const launchedStage1 = useRef(false);
   const launchedTwin = useRef(false);
   const launchedResearch = useRef(false);
   const autoResearchPredictKey = useRef<string | null>(null);
@@ -140,6 +141,7 @@ export default function RecommendationModal({
     if (!open) {
       setRunStage2(false);
       setRunTwinResearch(false);
+      launchedStage1.current = false;
       launchedTwin.current = false;
       launchedResearch.current = false;
       autoResearchPredictKey.current = null;
@@ -163,7 +165,9 @@ export default function RecommendationModal({
   useEffect(() => {
     if (!open || runStage2) return;
     if (twinWaiting) return;
-    if (recommendM.data || recommendM.isPending || recommendM.isError) return;
+    // 실패·취소 상태를 게이트로 쓰면 창을 다시 열어도 영구히 막힌다. 열린 세션마다 한 번.
+    if (launchedStage1.current || recommendM.data || recommendM.isPending) return;
+    launchedStage1.current = true;
     recommendM.mutate({ ...enrichedRegBody, run_stage2: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Twin 이웃이 잡힌 뒤 첫 탐색
   }, [open, runStage2, twinWaiting, twinNeighbors.length]);
@@ -316,6 +320,7 @@ export default function RecommendationModal({
   const runExplore = () => {
     setRunStage2(false);
     setRunTwinResearch(false);
+    launchedStage1.current = true;
     launchedTwin.current = false;
     launchedResearch.current = false;
     autoResearchPredictKey.current = null;
@@ -526,7 +531,9 @@ export default function RecommendationModal({
 
         {!loading && !panelData && !recommendM.isError && !runStage2 && !runTwinResearch && (
           <p className="text-sm text-slate-400 text-center py-6">
-            「Macro 탐색」을 누르면 변수 조합과 척도를 CV-MAPE로 비교해 대표 예측모형을 찾습니다.
+            {twinWaiting
+              ? "쌍둥이 지역 후보를 불러온 뒤 탐색을 시작합니다…"
+              : "변수 조합과 척도를 CV-MAPE로 비교해 대표 예측모형을 찾습니다. 창을 열면 자동으로 시작하고, 「다시 탐색」으로 다시 돌립니다."}
           </p>
         )}
         {twin1Pending && !panelData && (

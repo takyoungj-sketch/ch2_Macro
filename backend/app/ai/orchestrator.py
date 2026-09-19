@@ -186,7 +186,7 @@ def _planner_or_memo_response(
             message=req.message,
         )
         followups = [
-            "상위지역 분석은 어디서 보나요?",
+            "상위지역 재적합은 어디서 보나요?",
             "아까와 비교해 주세요",
             "이 결과의 한계는?",
         ]
