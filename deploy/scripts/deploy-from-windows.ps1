@@ -167,38 +167,32 @@ echo
 echo "==> collective commercial meta/filters"
 curl -sf "${HDR[@]}" http://127.0.0.1:8000/api/collective/commercial/meta/filters | head -c 120
 echo
+
+echo "==> built regression 가경동"
+BODY='{"asset_type":"commercial","addr1":"충청북도","addr2":"청주시","addr4_list":["가경동"],"leaf_level":"addr4","variables":{"gross_area":true,"land_area":true,"building_age":true,"road_code":true,"zone_type_dummy":true,"building_use_dummy":true},"exclude_outliers_iqr":false}'
+curl -sf --max-time 90 "${HDR[@]}" -H "Content-Type: application/json" \
+  -d "$BODY" http://127.0.0.1:8000/api/built/regression/run > /tmp/built_reg_smoke.json
+python3 - <<'PY'
+import json
+d = json.load(open("/tmp/built_reg_smoke.json"))
+p = d["primary"]
+print("primary:", p.get("admin_level"), p.get("scope_label"))
+if p.get("admin_level") != "eupmyeondong":
+    raise SystemExit("FAIL: expected primary.admin_level=eupmyeondong")
+if "가경" not in (p.get("scope_label") or ""):
+    raise SystemExit("FAIL: expected 가경 in primary.scope_label")
+gu = [c for c in (d.get("comparisons") or []) if c.get("admin_level") == "gu"]
+if not gu or "흥덕" not in (gu[0].get("scope_label") or ""):
+    raise SystemExit("FAIL: expected 흥덕구 in comparisons")
+res = p.get("residuals") or {}
+if not res.get("n"):
+    raise SystemExit("FAIL: expected primary.residuals")
+print("residuals n:", res.get("n"), "bias_pct:", res.get("bias_pct"))
+print("OK")
+PY
 VERIFY
 '@
     if ($LASTEXITCODE -ne 0) { throw "VPS smoke verify failed" }
-
-    Write-Host "==> verify production built regression (gu vs dong)"
-    python -c @"
-import json, urllib.request, ssl
-body = {
-  'asset_type': 'commercial',
-  'addr1': '충청북도', 'addr2': '청주시',
-  'addr4_list': ['가경동'], 'leaf_level': 'addr4',
-  'variables': {
-    'gross_area': True, 'land_area': True, 'building_age': True,
-    'road_code': True, 'zone_type_dummy': True, 'building_use_dummy': True,
-  },
-  'exclude_outliers_iqr': False,
-}
-req = urllib.request.Request(
-  'https://macro.ch2data.com/api/built/regression/run',
-  data=json.dumps(body).encode(),
-  headers={'Content-Type': 'application/json'},
-  method='POST',
-)
-with urllib.request.urlopen(req, context=ssl.create_default_context(), timeout=30) as r:
-  d = json.load(r)
-p = d['primary']
-print('primary:', p['admin_level'], p['scope_label'])
-if p['admin_level'] != 'gu':
-  raise SystemExit('VERIFY FAIL: expected admin_level=gu')
-print('OK')
-"@
-    if ($LASTEXITCODE -ne 0) { throw "production verify failed" }
   }
 
   Write-Host ""
