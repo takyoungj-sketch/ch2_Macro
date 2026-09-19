@@ -144,8 +144,8 @@ try {
 
   if (-not $SkipVerify) {
     Write-Host "==> verify production (health + land + built + collective)"
-    & ssh -i $Key $VpsHost @'
-bash -s <<'VERIFY'
+    # PowerShell here-string is CRLF; strip CR on the VPS or bash sees `VERIFY\r`.
+    $verifyBash = @'
 set -euo pipefail
 ENV=/opt/ch2_Macro/backend/.env
 TOKEN=$(grep '^API_TOKEN=' "$ENV" | cut -d= -f2- | tr -d '\r')
@@ -169,14 +169,14 @@ curl -sf "${HDR[@]}" http://127.0.0.1:8000/api/collective/commercial/meta/filter
 echo
 
 echo "==> built regression 가경동"
-BODY='{"asset_type":"commercial","addr1":"충청북도","addr2":"청주시","addr4_list":["가경동"],"leaf_level":"addr4","variables":{"gross_area":true,"land_area":true,"building_age":true,"road_code":true,"zone_type_dummy":true,"building_use_dummy":true},"exclude_outliers_iqr":false}'
+BODY='{"asset_type":"commercial","addr1":"충청북도","addr2":"청주시","addr4_list":["가경동"],"leaf_level":"addr4","window_years":5,"variables":{"gross_area":true,"land_area":true,"building_age":true,"road_width_dummy":true,"zone_type_dummy":true,"building_use_dummy":true,"structure_dummy":true},"exclude_outliers_iqr":false}'
 curl -sf --max-time 90 "${HDR[@]}" -H "Content-Type: application/json" \
   -d "$BODY" http://127.0.0.1:8000/api/built/regression/run > /tmp/built_reg_smoke.json
 python3 - <<'PY'
 import json
 d = json.load(open("/tmp/built_reg_smoke.json"))
 p = d["primary"]
-print("primary:", p.get("admin_level"), p.get("scope_label"))
+print("primary:", p.get("admin_level"), p.get("scope_label"), "n=", p.get("n"))
 if p.get("admin_level") != "eupmyeondong":
     raise SystemExit("FAIL: expected primary.admin_level=eupmyeondong")
 if "가경" not in (p.get("scope_label") or ""):
@@ -190,8 +190,8 @@ if not res.get("n"):
 print("residuals n:", res.get("n"), "bias_pct:", res.get("bias_pct"))
 print("OK")
 PY
-VERIFY
 '@
+    $verifyBash | & ssh -i $Key $VpsHost "tr -d '\r' | bash"
     if ($LASTEXITCODE -ne 0) { throw "VPS smoke verify failed" }
   }
 

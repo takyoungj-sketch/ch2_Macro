@@ -165,9 +165,11 @@ body = {
     "asset_type": "commercial",
     "addr1": "충청북도", "addr2": "청주시",
     "addr4_list": ["가경동"], "leaf_level": "addr4",
+    "window_years": 5,
     "variables": {
         "gross_area": True, "land_area": True, "building_age": True,
-        "road_code": True, "zone_type_dummy": True, "building_use_dummy": True,
+        "road_width_dummy": True, "zone_type_dummy": True,
+        "building_use_dummy": True, "structure_dummy": True,
     },
     "exclude_outliers_iqr": False,
 }
