@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-16",
+  "updated": "2026-09-19",
   "domains": [
     {
       "id": "land",
@@ -547,10 +547,47 @@
           "decision": "D-055"
         }
       }
+    },
+    {
+      "date": "2026-09-16",
+      "cells": {
+        "land": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "built": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "collective": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "rent": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "profile": {
+          "text": "G3 월 마트·연 롤업. Insight #2 시군구 3년 규모·단가 상관 공개(D-058). 커밋·배포",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-058"
+        },
+        "admin": {
+          "text": "Insight #2 FAQ·용어 ? 다크모드. 계획일지. 커밋·푸시·배포. 새 D 없음",
+          "status": "done",
+          "commit": "committed",
+          "decision": "D-058"
+        }
+      }
     }
   ],
   "today": {
-    "date": "2026-09-16",
+    "date": "2026-09-19",
     "cells": {
       "land": {
         "text": "이 축 작업 없음",
@@ -558,9 +595,10 @@
         "commit": "none"
       },
       "built": {
-        "text": "이 축 작업 없음",
+        "text": "엔진 지표 정의 정리 P1~P3 배포·운영 실측. P3b Twin의 AIC 대체 경로 제거. P3c 등급 입력=탐색·확인 중 나쁜 쪽. 중위 APE 전환은 전수 31후보 실증으로 기각. P4 가격시점 보정 계층 신규 — 구현 후 기본 off로 보류. P5 잔차 진단 신규. P6 onAdopt 연결 — 확인 후 왼쪽 변수·척도만 옮기고 통계분석은 자동 실행하지 않음. Twin 식 적용은 지역 범위를 바꿔 연결하지 않음. 미커밋",
         "status": "done",
-        "commit": "none"
+        "commit": "needed",
+        "decision": "D-075"
       },
       "collective": {
         "text": "이 축 작업 없음",
@@ -573,16 +611,15 @@
         "commit": "none"
       },
       "profile": {
-        "text": "G3 월 마트·연 롤업. Insight #2 시군구 3년 규모·단가 상관 공개(D-058). 커밋·배포",
+        "text": "이 축 작업 없음",
         "status": "done",
-        "commit": "committed",
-        "decision": "D-058"
+        "commit": "none"
       },
       "admin": {
-        "text": "Insight #2 FAQ·용어 ? 다크모드. 계획일지. 커밋·푸시·배포. 새 D 없음",
+        "text": "D-074 보강(등급 입력·중위 기각) · D-075 on_hold(설계 유효·제품 반영 보류) · D-076 신규(잔차 진단). 엔진 정합성 계획문서 §7 P5 구현·§12 판단 근거·8년/5년 대조표·잘못된 첫 측정 경고. AI 지식에 잔차 진단 규칙 추가하고 시점 보정은 실제 동작(보정 없음)으로 되돌림. 배포 런북 §5.2 기대값 수정. 계획일지 09-19. 미커밋",
         "status": "done",
-        "commit": "committed",
-        "decision": "D-058"
+        "commit": "needed",
+        "decision": "D-075"
       }
     }
   },
@@ -601,10 +638,10 @@
         "decision": "D-058"
       },
       "built": {
-        "text": "Twin 붙임 실험: Local / 단순 pooling / Twin 절편 분리 / Twin 무게 제한(0.25 또는 n≤Local). Twin은 프로필 1위 고정. 계층 베이즈·지문 가중치는 그 다음. 제품 선정 미변경",
+        "text": "등급 구간(max_cv_mape) 재보정은 P4가 빠졌으므로 P1~P3 기준선으로 본다. P5가 연식 비선형과 지역 잔차의 진입 조건을 만들었으나, 공간모형 전에 지역 더미·Twin을 먼저 쓴다. 계약연도 축 치우침은 시점 미통제의 비용이므로 창 길이 논의 때 근거로 쓴다. P4 재검토 조건은 창 늘리기 또는 시도 단위·외부 지수로 잡음 줄이기. Twin 붙임 실험(단순 pooling·절편 분리·무게 제한)은 그 다음",
         "status": "planned",
         "commit": "needed",
-        "decision": "D-073"
+        "decision": "D-075"
       },
       "rent": {
         "text": "AI에 전세보증금·전세가율·환산칸 전달. 다른 앱 창 크기조절은 앱별 재빌드",
@@ -618,10 +655,9 @@
         "decision": "D-065"
       },
       "admin": {
-        "text": "결정 카드는 카피 굳은 뒤. Fingerprint 붙임은 mape 트랙",
+        "text": "운영 반영은 별도 요청 시. 결정 카드는 카피 굳은 뒤. Fingerprint 붙임은 mape 트랙",
         "status": "planned",
-        "commit": "needed",
-        "decision": "D-055"
+        "commit": "none"
       }
     }
   },

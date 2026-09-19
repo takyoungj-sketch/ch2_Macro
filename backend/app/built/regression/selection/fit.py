@@ -11,8 +11,10 @@ from app.built.regression.engine import (
     _build_design_matrix,
     _duan_smearing,
     _insample_mape_pct,
+    _insample_pred_price,
     _uses_log_y,
 )
+from app.built.regression.price_index import TimeAdjuster, deflate_prices
 from app.built.regression.selection.blocks import BlockId, spec_from_blocks
 from app.built.schemas import JointFTest, RegressionVariableSpec, ResponseScale
 
@@ -71,10 +73,16 @@ def fit_block_subset(
     region_col: str | None,
     admin_level: str,
     with_cv: bool = True,
+    time_adjuster: TimeAdjuster | None = None,
 ) -> BlockFitResult | None:
     import statsmodels.api as sm
 
     spec = spec_from_blocks(blocks)
+    # 최종 적합은 창 전체 지수로 기준시점(창의 마지막 연도)까지 환산한 가격에 맞춘다.
+    # 그래야 계수가 시간 추세를 흡수하지 않고 구조만 설명한다 (D-075).
+    df_nominal = df
+    if time_adjuster is not None:
+        df = deflate_prices(df, time_adjuster.full())
     y_raw = pd.to_numeric(df["price"], errors="coerce")
     region_col_use = (
         region_col
@@ -117,20 +125,25 @@ def fit_block_subset(
             return None
         y_price = pd.to_numeric(df["price"], errors="coerce").loc[y.index].astype(float).to_numpy()
 
-    mape = _insample_mape_pct(y_price, model, response_scale=response_scale)
+    mape = _insample_mape_pct(
+        y_price, _insample_pred_price(model, response_scale=response_scale)
+    )
     search = _EMPTY_CV
     confirm = _EMPTY_CV
     if with_cv:
         # 마지막 연도는 Final Holdout으로 선택에서 떼어 둔다 (D-074). 랭킹은 탐색 CV,
         # 확인은 그 마지막 연도로만. 이전에는 마지막 연도가 랭킹 CV에 포함된 채
         # 같은 연도로 「확인」해서 확인이 확인이 아니었다.
+        # CV에는 환산 전 원본을 넘긴다 — fold마다 학습 연도만으로 지수를 다시 추정해야
+        # holdout 연도가 전처리로 새지 않는다 (D-075).
         search, confirm = _rolling_time_cv_mape(
-            df,
+            df_nominal,
             spec,
             unified=unified,
             response_scale=response_scale,
             region_col=region_col_use,
             holdout_last_year=True,
+            time_adjuster=time_adjuster,
         )
     return BlockFitResult(
         blocks=list(blocks),
@@ -162,6 +175,7 @@ def rolling_time_cv_split(
     unified: bool,
     response_scale: ResponseScale,
     region_col: str | None,
+    time_adjuster: TimeAdjuster | None = None,
 ) -> tuple[float | None, int, float | None, int, str | None]:
     """탐색 CV(마지막 연도 제외)와 확인 CV(마지막 연도).
 
@@ -174,6 +188,7 @@ def rolling_time_cv_split(
         response_scale=response_scale,
         region_col=region_col,
         holdout_last_year=True,
+        time_adjuster=time_adjuster,
     )
     skip = None
     if confirm.mape is None:
@@ -214,6 +229,7 @@ def _rolling_time_cv_mape(
     response_scale: ResponseScale,
     region_col: str | None,
     holdout_last_year: bool = False,
+    time_adjuster: TimeAdjuster | None = None,
 ) -> tuple[CvPhase, CvPhase]:
     """과거 연도로 학습하고 다음 연도를 평가하는 rolling CV-MAPE.
 
@@ -223,6 +239,12 @@ def _rolling_time_cv_mape(
     예측은 **clip하지 않는다** (D-074). 학습 관측 범위를 크게 벗어난 예측은 실제로
     실패한 예측이므로 지표에 그대로 반영하고, 대신 그 비율을 `extreme_rate`로 남겨
     안정성 진단에 쓴다. 역변환 보정 계수는 그 fold의 **train 잔차만** 쓴다.
+
+    `time_adjuster`를 주면 fold마다 **그 fold의 학습 연도만으로** 지수를 추정해 학습
+    가격을 마지막 학습 연도 수준으로 환산한다 (D-075). 평가 연도의 실제 가격은 **손대지
+    않는다** — 그 해의 지수는 예측 시점에 알 수 없기 때문이다. 따라서 CV-MAPE는 계속
+    「실제 거래가 대비 몇 % 틀렸나」로 읽히고, 보정의 이득은 학습 수준이 평가 연도에 더
+    가까워지는 데서 나온다(창 5년 평균 수준 → 직전 연도 수준).
 
     설계행렬은 전체 표본에서 한 번 만들고 연도로만 나눈다. 따라서 학습 fold에
     없는 범주의 더미 열이 생길 수 있어, fold마다 추정 불가 열을 빼고 적합한다.
@@ -270,6 +292,18 @@ def _rolling_time_cv_mape(
             columns = _estimable_columns(x_const.loc[y_train.index])
             if not columns:
                 continue
+            if time_adjuster is not None:
+                train_years = sorted(
+                    int(v) for v in year_values.loc[y_train.index].dropna().unique()
+                )
+                fold_index = time_adjuster.for_train_years(train_years)
+                if fold_index.available:
+                    # y는 이미 척도 변환된 값이므로 X를 다시 만들지 않고 y만 옮긴다.
+                    factors = year_values.loc[y_train.index].map(fold_index.factor).fillna(1.0)
+                    if _uses_log_y(response_scale):
+                        y_train = y_train + np.log(factors.to_numpy(dtype=float))
+                    else:
+                        y_train = y_train * factors.to_numpy(dtype=float)
             try:
                 model = sm.OLS(y_train, x_const.loc[y_train.index, columns]).fit()
                 pred = np.asarray(
@@ -319,6 +353,7 @@ def attach_joint_f_tests(
     unified: bool,
     region_col: str | None,
     admin_level: str,
+    time_adjuster: TimeAdjuster | None = None,
 ) -> BlockFitResult:
     """각 포함 블록을 제거한 nested model과 Joint F-test를 계산한다."""
     results: dict[str, JointFTest] = {}
@@ -332,6 +367,7 @@ def attach_joint_f_tests(
             region_col=region_col,
             admin_level=admin_level,
             with_cv=False,  # compare_f_test는 model만 쓴다
+            time_adjuster=time_adjuster,
         )
         if reduced is None:
             results[block] = JointFTest(tested=False)
@@ -410,6 +446,7 @@ def fit_scale_candidates(
     unified: bool,
     region_col: str | None,
     admin_level: str,
+    time_adjuster: TimeAdjuster | None = None,
 ) -> dict[str, BlockFitResult]:
     df_cmp = common_scale_frame(df, blocks)
     scales: list[ResponseScale] = ["linear", "log"]
@@ -424,6 +461,7 @@ def fit_scale_candidates(
             response_scale=scale,
             region_col=region_col,
             admin_level=admin_level,
+            time_adjuster=time_adjuster,
         )
         if result is not None:
             fits[scale] = result
@@ -437,6 +475,7 @@ def fit_best_scale(
     unified: bool,
     region_col: str | None,
     admin_level: str,
+    time_adjuster: TimeAdjuster | None = None,
 ) -> tuple[BlockFitResult | None, object | None]:
     """linear·log·log-log 중 원척도 CV-MAPE 최소 scale + ModelComparison."""
     from app.built.regression.selection.metrics import build_model_comparison_from_fits
@@ -447,6 +486,7 @@ def fit_best_scale(
         unified=unified,
         region_col=region_col,
         admin_level=admin_level,
+        time_adjuster=time_adjuster,
     )
     if not fits:
         return None, None
@@ -458,6 +498,7 @@ def fit_best_scale(
         unified=unified,
         region_col=region_col,
         admin_level=admin_level,
+        time_adjuster=time_adjuster,
     )
     cmp = build_model_comparison_from_fits(fits, recommended=best.response_scale)
     return best, cmp

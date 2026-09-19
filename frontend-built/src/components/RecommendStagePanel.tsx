@@ -343,6 +343,7 @@ export default function RecommendStagePanel({
               <span className="ml-2 text-sm font-medium text-slate-500 dark:text-slate-400">
                 {stage1.satisfaction.label_ko}
                 {stage1.satisfaction.stars > 0 && ` ${"★".repeat(stage1.satisfaction.stars)}`}
+                {stage1.satisfaction.grade_basis === "confirm" && " (마지막 연도 기준)"}
               </span>
             )}
           </p>
@@ -451,14 +452,25 @@ export default function RecommendStagePanel({
         )}
 
         {onAdopt && (
-          <button
-            type="button"
-            className="px-2.5 py-1 text-sm rounded bg-indigo-600 text-white disabled:opacity-50"
-            disabled={adopting}
-            onClick={() => onAdopt(primary.variables, primary.response_scale)}
-          >
-            기본 통계에 이 식 적용
-          </button>
+          <div className="space-y-1">
+            <button
+              type="button"
+              className="px-2.5 py-1 text-sm rounded bg-indigo-600 text-white disabled:opacity-50"
+              disabled={adopting}
+              onClick={() => {
+                const ok = window.confirm(
+                  "이 추천식을 기본 통계에 적용하시겠습니까?\n\n왼쪽 변수 선택과 회귀모형만 바뀝니다. 오른쪽 숫자는 「통계분석」을 다시 눌러야 갱신됩니다.",
+                );
+                if (!ok) return;
+                onAdopt(primary.variables, primary.response_scale);
+              }}
+            >
+              기본 통계에 이 식 적용
+            </button>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              확인 후에만 왼쪽 선택이 바뀝니다. 통계분석은 자동으로 실행하지 않습니다.
+            </p>
+          </div>
         )}
 
         {onPredict && (

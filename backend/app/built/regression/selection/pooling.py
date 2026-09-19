@@ -29,6 +29,7 @@ from app.built.regression.region_features import (
 from app.recommendation.built_pool import filter_pool_by_coverage
 from app.built.regression.selection.blocks import BlockId, spec_from_blocks
 from app.built.regression.selection.context import SelectionContext, with_complete_case
+from app.built.regression.price_index import TimeAdjuster, last_complete_year
 from app.built.regression.selection.fit import BlockFitResult, fit_best_scale, fit_block_subset, rolling_time_cv_split
 from app.built.regression.selection.best_subset import run_group_best_subset
 from app.built.schemas import (
@@ -245,12 +246,28 @@ def _metrics_from_fit(
     )
 
 
+def _pool_adjuster(
+    local_ctx: SelectionContext, pooled_rows, req_as_of: str | None = None
+) -> TimeAdjuster | None:
+    """pool 후보의 시점 보정 지수원.
+
+    pool은 anchor + Twin이라 여러 시군구가 섞이므로 anchor의 시군구 지수를 그대로 쓸 수
+    없다. 대신 pool 자기 표본에서 지수를 세운다. Local은 시군구 지수, pool은 pool 지수로
+    각자 창의 **같은 마지막 연도**까지 환산하므로 두 CV-MAPE는 계속 비교 가능하다.
+    한쪽만 보정하면 Twin 판정이 보정 효과를 모형 차이로 잘못 읽는다.
+    """
+    if local_ctx.time_adjuster is None:
+        return None
+    return TimeAdjuster(pooled_rows, max_complete_year=last_complete_year(req_as_of))
+
+
 def _attach_search_confirm_cv(
     metrics: PoolingCandidateMetrics,
     df,
     *,
     unified: bool,
     region_col: str | None,
+    time_adjuster: TimeAdjuster | None = None,
 ) -> PoolingCandidateMetrics:
     if not metrics.blocks or metrics.response_scale is None:
         return metrics
@@ -261,6 +278,7 @@ def _attach_search_confirm_cv(
         unified=unified,
         response_scale=metrics.response_scale,
         region_col=region_col,
+        time_adjuster=time_adjuster,
     )
     if search is not None:
         metrics.cv_mape = search
@@ -319,6 +337,7 @@ def _fit_pool_variant(
         addr4_city=local_ctx.addr4_city,
         mode=local_ctx.mode,
         unified=local_ctx.unified,
+        time_adjuster=_pool_adjuster(local_ctx, pooled_rows, req.as_of_month),
     )
     pooled_ctx = with_complete_case(pooled_ctx, list(blocks), region_col=region_col)
     if pooled_ctx.selection_n < local_ctx.selection_n:
@@ -333,6 +352,7 @@ def _fit_pool_variant(
             response_scale=response_scale,
             region_col=region_col,
             admin_level=admin_level,
+            time_adjuster=pooled_ctx.time_adjuster,
         )
         _cmp = None
     else:
@@ -342,6 +362,7 @@ def _fit_pool_variant(
             unified=local_ctx.unified,
             region_col=region_col,
             admin_level=admin_level,
+            time_adjuster=pooled_ctx.time_adjuster,
         )
     if pooled_fit is None:
         return None
@@ -358,6 +379,7 @@ def _fit_pool_variant(
         pooled_ctx.df,
         unified=local_ctx.unified,
         region_col=region_col,
+        time_adjuster=pooled_ctx.time_adjuster,
     )
 
 
@@ -424,6 +446,7 @@ def _research_pool_variant(
         addr4_city=local_ctx.addr4_city,
         mode=local_ctx.mode,
         unified=local_ctx.unified,
+        time_adjuster=_pool_adjuster(local_ctx, pooled_rows, req.as_of_month),
     )
     pooled_ctx = with_complete_case(pooled_ctx, pool_blocks, region_col=region_col)
     if pooled_ctx.selection_n < local_ctx.selection_n:
@@ -451,6 +474,7 @@ def _research_pool_variant(
         pooled_ctx.df,
         unified=local_ctx.unified,
         region_col=region_col,
+        time_adjuster=pooled_ctx.time_adjuster,
     )
 
 
@@ -549,6 +573,7 @@ def evaluate_pooling_candidates(
         local_ctx.df,
         unified=local_ctx.unified,
         region_col=region_col,
+        time_adjuster=local_ctx.time_adjuster,
     )
 
     gates, gate_passed_codes = filter_twins_by_hard_gates(

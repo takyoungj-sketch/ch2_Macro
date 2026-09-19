@@ -38,6 +38,7 @@ from app.recommendation.cv_fitness import offer_structure_twin
 from app.recommendation.satisfaction import (
     built_min_fit_n,
     built_min_local_n,
+    grade_cv_basis,
     lookup_built_satisfaction,
     lookup_predictive_fit,
 )
@@ -178,13 +179,15 @@ def _build_stage1(conn, req: RegressionSelectionRequest) -> tuple:
     primary = candidate_from_compare(primary_raw)
     alternate = candidate_from_compare(alternate_raw) if alternate_raw else None
 
-    cv_mape = primary.metrics.cv_mape
+    primary_fit = primary_raw.fit
+    grade_cv, grade_basis = grade_cv_basis(
+        primary.metrics.cv_mape, primary_fit.confirm_cv_mape
+    )
     grade = lookup_built_satisfaction(
-        cv_mape=cv_mape,
+        cv_mape=grade_cv,
         selection_n=ctx.selection_n,
         asset_slice=analysis_scope.asset_slice,
     )
-    primary_fit = primary_raw.fit
 
     stage1 = RecommendationStage1(
         candidates_explanatory=[candidate_from_compare(c) for c in result.by_aic],
@@ -199,8 +202,9 @@ def _build_stage1(conn, req: RegressionSelectionRequest) -> tuple:
         satisfaction=RecommendationSatisfaction(
             grade=grade.grade,
             stars=grade.stars,
-            cv_mape=cv_mape,
+            cv_mape=grade_cv,
             label_ko=grade.label_ko,
+            grade_basis=grade_basis,
         ),
         total_subsets=result.total_subsets,
         truncated=result.truncated,

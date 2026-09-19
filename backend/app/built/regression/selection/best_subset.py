@@ -85,6 +85,7 @@ def run_group_best_subset(
             unified=ctx.unified,
             region_col=region_col,
             admin_level=ctx.admin_level,
+            time_adjuster=ctx.time_adjuster,
         )
         if not fits:
             continue
@@ -133,4 +134,5 @@ def _attach_joint_f_to_ranked(
                 unified=ctx.unified,
                 region_col=region_col,
                 admin_level=ctx.admin_level,
+                time_adjuster=ctx.time_adjuster,
             )

@@ -206,6 +206,11 @@ class RegressionRunRequest(BaseModel):
     leaf_level: Optional[Literal["addr3", "addr4"]] = None
     exclude_outliers_iqr: bool = False
     outlier_iqr_multiplier: float = 3.0
+    # 시점 보정 (D-075) — **기본 off, 제품 경로에서 쓰지 않는다.**
+    # 켜면 시군구 지수로 거래가를 기준시점 수준으로 환산한 뒤 적합한다. 5년 창 실측에서
+    # adj R²·MAPE 개선 근거가 없는데 가격 수준은 20~37% 움직였고, 그 이동은 CV로 검증할
+    # 방법이 없다. 창을 늘리거나 시도 단위로 지수 잡음을 줄인 뒤 재검토한다.
+    time_adjust: bool = False
     include_partial: bool = False  # D-049 분석 기본 제외. 목록과 분리.
     enrich: bool = False  # D-051. 기본 끄기. 켜면 표시 용도지역=필터.
     # R0 analysis_scope — 프론트 analysisUnits 미러 (필터 로직에는 미사용)
@@ -283,6 +288,96 @@ class PredictOptions(BaseModel):
     continuous: list[ContinuousRange] = Field(default_factory=list)
 
 
+class CorrelationPoint(BaseModel):
+    x: float
+    y: float
+
+
+class ResidualGroup(BaseModel):
+    """한 집단(용도지역 하나, 연식 구간 하나 등)의 잔차 요약."""
+
+    label: str
+    n: int
+    bias_pct: float  # 중위 부호 오차. 양수 = 모형이 과소평가
+    # 그 집단 중위 − 나머지 표본 중위. **화면에서 읽어야 할 숫자.** 전체가 공통으로 가진
+    # 치우침이 빠져 있어 「이 집단만 다르게 틀리는 정도」를 나타낸다.
+    excess_bias_pct: float = 0.0
+    mape_pct: float  # 평균 절대 오차 = 그 집단의 MAPE (화면 상단 MAPE와 같은 정의)
+    p_value: Optional[float] = None  # 그 집단 vs 나머지 Mann–Whitney (양측)
+    # p < 0.05. False면 나머지와 다르게 틀린다고 볼 근거가 없다는 뜻.
+    significant: bool = False
+
+
+class ResidualGroupSet(BaseModel):
+    """한 축(지역·용도지역·연식 구간 …)의 집단별 편향."""
+
+    key: str
+    label: str
+    groups: list[ResidualGroup] = Field(default_factory=list)
+    omitted_n: int = 0  # 최소 건수 미달·분류 불가·상한 초과로 표에서 빠진 건수
+    trimmed: bool = False
+
+
+class ResidualScaleBin(BaseModel):
+    """적합값 분위별 오차 산포 — 이분산을 숫자로 확인하는 쪽."""
+
+    label: str
+    n: int
+    fitted_median: float
+    abs_pct_median: float
+    spread_pct: float
+
+
+class InfluentialTransaction(BaseModel):
+    """Cook 거리 상위 거래 — 「이 몇 건이 결과를 끌고 있다」."""
+
+    rank: int
+    label: str
+    contract_year: Optional[int] = None
+    zone_type: Optional[str] = None
+    price: float
+    predicted: float
+    error_pct: Optional[float] = None
+    gross_area: Optional[float] = None
+    land_area: Optional[float] = None
+    building_age: Optional[float] = None
+    cooks_d: float
+    leverage: Optional[float] = None
+
+
+class CoefficientShift(BaseModel):
+    """영향 상위 거래를 뺀 재적합에서의 계수 변화.
+
+    변화 크기는 **표준오차 배수**(`shift_se`)로 잰다. 계수 스케일이 서로 다르고 0 근처
+    계수는 백분율이 폭발한다. 1 SE를 넘으면 소수 거래가 계수를 실질적으로 끌고 있다는 뜻.
+    """
+
+    name: str
+    before: float
+    after: float
+    shift_se: Optional[float] = None
+    shift_pct: Optional[float] = None
+
+
+class ResidualDiagnostics(BaseModel):
+    """잔차 진단 (P5). 초점 모형에만 붙는다 — 상위 비교에는 이 화면이 없다."""
+
+    n: int
+    residual_definition: str
+    bias_pct: float  # 중위 오차% — 치우침은 이걸로 읽는다
+    mean_bias_pct: Optional[float] = None  # 평균 오차% (참고). 작은 거래 쪽으로 끌린다
+    bias_note: Optional[str] = None
+    points: list[CorrelationPoint] = Field(default_factory=list)  # x=예측금액, y=오차%
+    scale_bins: list[ResidualScaleBin] = Field(default_factory=list)
+    het_p_value: Optional[float] = None
+    het_note: Optional[str] = None
+    groups: list[ResidualGroupSet] = Field(default_factory=list)
+    influential: list[InfluentialTransaction] = Field(default_factory=list)
+    refit_shifts: list[CoefficientShift] = Field(default_factory=list)
+    refit_note: Optional[str] = None
+    warning: Optional[str] = None
+
+
 class RegressionLevelResult(BaseModel):
     admin_level: AdminLevel
     scope_label: Optional[str] = None
@@ -300,11 +395,7 @@ class RegressionLevelResult(BaseModel):
     warning: Optional[str] = None
     mape: Optional[float] = None  # in-sample MAPE (%), 원척도 금액(만원)
     sample: Optional[SampleBreakdown] = None
-
-
-class CorrelationPoint(BaseModel):
-    x: float
-    y: float
+    residuals: Optional[ResidualDiagnostics] = None  # 초점 모형만 (P5)
 
 
 class CorrelationSeries(BaseModel):
@@ -352,8 +443,11 @@ class RegressionScopeResponse(BaseModel):
 class RecommendationSatisfaction(BaseModel):
     grade: str = "pending"
     stars: int = Field(default=0, ge=0, le=5)
+    # 등급 판정에 쓴 CV — 탐색·확인 중 나쁜 쪽 (D-074)
     cv_mape: Optional[float] = None
     label_ko: Optional[str] = None
+    # 어느 쪽이 나빴는지: "search" | "confirm"
+    grade_basis: Optional[str] = None
 
 
 class RecommendationStage1(BaseModel):
@@ -491,6 +585,8 @@ class RegressionPredictResponse(BaseModel):
     ci_upper: float
     # log 계열에서 점추정·평균CI에 곱한 Duan smearing 계수 (D-074). 선형이면 None.
     duan_factor: Optional[float] = None
+    # 추정값의 기준시점 (D-075). 시점 보정을 못 했으면 None — 창 기간의 명목 평균 수준.
+    price_base_year: Optional[int] = None
     response_scale: ResponseScale = "linear"
     extrapolation_level: int = 0
     y_hat_suppressed: bool = False

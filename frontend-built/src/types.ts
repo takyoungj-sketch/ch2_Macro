@@ -181,8 +181,11 @@ export interface TerminationInfo {
 export interface RecommendationSatisfaction {
   grade: string;
   stars: number;
+  /** 등급 판정에 쓴 CV — 탐색·확인 중 나쁜 쪽 (D-074) */
   cv_mape?: number | null;
   label_ko?: string | null;
+  /** 어느 쪽이 나빴는지 */
+  grade_basis?: "search" | "confirm" | null;
 }
 
 export interface RecommendationStage1 {
@@ -530,6 +533,86 @@ export interface SampleBreakdown {
   funnel: FunnelStep[];
 }
 
+export interface CorrelationPoint {
+  x: number;
+  y: number;
+}
+
+/** 잔차 진단 (P5) — 집단별 요약 한 줄. */
+export interface ResidualGroup {
+  label: string;
+  n: number;
+  /** 중위 오차%. 양수 = 모형이 과소평가. */
+  bias_pct: number;
+  /** 나머지 표본 대비 초과 편향(%p). **화면에서 읽어야 할 숫자.** */
+  excess_bias_pct: number;
+  /** 평균 절대 오차 = 그 집단의 MAPE. */
+  mape_pct: number;
+  /** 그 집단 vs 나머지 Mann–Whitney (양측). */
+  p_value?: number | null;
+  significant: boolean;
+}
+
+export interface ResidualGroupSet {
+  key: string;
+  label: string;
+  groups: ResidualGroup[];
+  omitted_n: number;
+  trimmed: boolean;
+}
+
+export interface ResidualScaleBin {
+  label: string;
+  n: number;
+  fitted_median: number;
+  abs_pct_median: number;
+  spread_pct: number;
+}
+
+export interface InfluentialTransaction {
+  rank: number;
+  label: string;
+  contract_year?: number | null;
+  zone_type?: string | null;
+  price: number;
+  predicted: number;
+  error_pct?: number | null;
+  gross_area?: number | null;
+  land_area?: number | null;
+  building_age?: number | null;
+  cooks_d: number;
+  leverage?: number | null;
+}
+
+export interface CoefficientShift {
+  name: string;
+  before: number;
+  after: number;
+  /** 표준오차 배수. 1을 넘으면 소수 거래가 계수를 끌고 있다는 뜻. */
+  shift_se?: number | null;
+  shift_pct?: number | null;
+}
+
+export interface ResidualDiagnostics {
+  n: number;
+  residual_definition: string;
+  /** 중위 오차% — 치우침은 이걸로 읽는다. */
+  bias_pct: number;
+  /** 평균 오차%. 작은 거래 쪽으로 끌리므로 참고값. */
+  mean_bias_pct?: number | null;
+  bias_note?: string | null;
+  /** x=예측금액, y=오차%. */
+  points: CorrelationPoint[];
+  scale_bins: ResidualScaleBin[];
+  het_p_value?: number | null;
+  het_note?: string | null;
+  groups: ResidualGroupSet[];
+  influential: InfluentialTransaction[];
+  refit_shifts: CoefficientShift[];
+  refit_note?: string | null;
+  warning?: string | null;
+}
+
 export interface RegressionLevelResult {
   admin_level: "sigungu" | "gu" | "eupmyeondong" | "beopjungri";
   scope_label?: string | null;
@@ -547,11 +630,8 @@ export interface RegressionLevelResult {
   warning?: string | null;
   mape?: number | null;
   sample?: SampleBreakdown | null;
-}
-
-export interface CorrelationPoint {
-  x: number;
-  y: number;
+  /** 초점 모형만 (P5). 상위 비교에는 없다. */
+  residuals?: ResidualDiagnostics | null;
 }
 
 export interface CorrelationSeries {

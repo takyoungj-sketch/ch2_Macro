@@ -7,6 +7,7 @@ import type {
   RegressionRunResponse,
   RegressionSelectionRequest,
   RegressionVariableSpec,
+  ResponseScale,
 } from "../types";
 import { builtAnalysisScopeKey } from "../utils/builtAnalysisScopeKey";
 import type { ProfileLinkTarget } from "../utils/profileLink";
@@ -27,6 +28,8 @@ type Props = {
   regionLabel: string;
   profileTarget?: ProfileLinkTarget | null;
   onCancelRecommend?: () => void;
+  /** 확인 후 왼쪽 변수·척도만 옮긴다. 통계분석은 돌리지 않는다. */
+  onAdopt?: (vars: RegressionVariableSpec, scale: ResponseScale) => void;
 };
 
 export default function BuiltRegressionAnalysisPanel({
@@ -39,6 +42,7 @@ export default function BuiltRegressionAnalysisPanel({
   regionLabel,
   profileTarget,
   onCancelRecommend,
+  onAdopt,
 }: Props) {
   const [upperOpened, setUpperOpened] = useState(false);
   const [macroOpen, setMacroOpen] = useState(false);
@@ -77,8 +81,8 @@ export default function BuiltRegressionAnalysisPanel({
           <div className="min-w-0">
             <h2 className="font-semibold text-sm">Macro 모형 탐색</h2>
             <p className="text-xs text-slate-500 mt-1">
-              변수 조합과 척도를 CV-MAPE로 탐색합니다. 결과는 창 안에서만 보며 기본 통계 식은 바꾸지
-              않습니다.
+              변수 조합과 척도를 CV-MAPE로 탐색합니다. 추천식을 쓰려면 창 안에서 「기본 통계에 이
+              식 적용」을 누른 뒤, 왼쪽 「통계분석」을 다시 실행하세요.
             </p>
           </div>
           <button
@@ -103,6 +107,14 @@ export default function BuiltRegressionAnalysisPanel({
         assetType={assetType}
         regionLabel={regionLabel}
         profileTarget={profileTarget}
+        onAdopt={
+          onAdopt
+            ? (vars, scale) => {
+                onAdopt(vars, scale);
+                setMacroOpen(false);
+              }
+            : undefined
+        }
       />
 
       <UpperScopeAnalysisCard

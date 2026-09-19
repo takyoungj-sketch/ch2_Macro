@@ -35,6 +35,7 @@ from app.built.regression.engine import (  # noqa: E402
     _fit_ols,
     _focus_admin_level,
     _insample_mape_pct,
+    _insample_pred_price,
     _prepare_regression_scope,
     _scope_for_level,
 )
@@ -232,7 +233,9 @@ def decompose_mape(
         )
 
     rmse = round(float(np.sqrt(np.mean((y - p) ** 2))), 1) if len(y) else None
-    engine_mape = _insample_mape_pct(y_price, model, response_scale=response_scale)
+    engine_mape = _insample_mape_pct(
+        y_price, _insample_pred_price(model, response_scale=response_scale)
+    )
 
     return MapeDecomposition(
         label=label,

@@ -46,6 +46,7 @@ def run_group_forward(
         unified=ctx.unified,
         region_col=region_col,
         admin_level=ctx.admin_level,
+        time_adjuster=ctx.time_adjuster,
     )
     if current is None:
         return None
@@ -64,6 +65,7 @@ def run_group_forward(
                 unified=ctx.unified,
                 region_col=region_col,
                 admin_level=ctx.admin_level,
+                time_adjuster=ctx.time_adjuster,
             )
             if trial is None:
                 continue
@@ -93,6 +95,7 @@ def run_group_forward(
         unified=ctx.unified,
         region_col=region_col,
         admin_level=ctx.admin_level,
+        time_adjuster=ctx.time_adjuster,
     )
 
     return ForwardResult(

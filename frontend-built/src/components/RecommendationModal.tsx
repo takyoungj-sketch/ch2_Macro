@@ -37,6 +37,8 @@ type Props = {
   assetType: AssetType;
   regionLabel: string;
   profileTarget?: ProfileLinkTarget | null;
+  /** 대표 예측모형의 변수·척도만 기본 통계에 옮긴다. 통계분석은 호출하지 않는다. */
+  onAdopt?: (vars: RegressionVariableSpec, scale: ResponseScale) => void;
 };
 
 export default function RecommendationModal({
@@ -48,6 +50,7 @@ export default function RecommendationModal({
   assetType,
   regionLabel,
   profileTarget,
+  onAdopt,
 }: Props) {
   const [predictTarget, setPredictTarget] = useState<PredictTarget | null>(null);
   const [twin1Target, setTwin1Target] = useState<PredictTarget | null>(null);
@@ -378,7 +381,7 @@ export default function RecommendationModal({
       onClose={onClose}
       titleId="recommendation-modal-title"
       title="Macro 모형 탐색"
-      subtitle="탐색 → Local 기준선 → Twin1 → Twin2 → 비교. 이 창에서만 확인하며 기본 통계 식은 바꾸지 않습니다."
+      subtitle="탐색 → Local 기준선 → Twin1 → Twin2 → 비교. 식을 쓰려면 「기본 통계에 이 식 적용」 후 왼쪽에서 「통계분석」을 다시 실행하세요."
       maxWidthClass="max-w-4xl"
       resizable
       allowFullscreen
@@ -422,6 +425,7 @@ export default function RecommendationModal({
             assetType={assetType}
             minePrimary={regData.primary}
             mineScale={regBody.response_scale}
+            onAdopt={onAdopt}
             onPredict={(vars, scale, label, opts) => {
               const target = {
                 vars,

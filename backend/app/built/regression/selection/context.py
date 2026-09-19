@@ -15,6 +15,7 @@ from app.built.regression.engine import (
     _region_col_for_scatter,
     _scope_for_level,
 )
+from app.built.regression.price_index import TimeAdjuster, last_complete_year
 from app.built.schemas import AdminLevel, RegressionRunRequest, ResponseScale
 
 
@@ -28,6 +29,9 @@ class SelectionContext:
     unified: bool
     sample_columns: tuple[str, ...] = ()
     selection_n: int = 0
+    # 시점 보정 지수원 (D-075) — **기본 None(보정 없음).** `time_adjust`를 켠 실험 경로에서만
+    # 채워진다. 국소 표본은 연도별로 너무 얇아 지수를 못 세우므로 항상 시군구 표본에서 추정한다.
+    time_adjuster: TimeAdjuster | None = None
 
 
 def resolve_selection_context(conn, req: RegressionRunRequest) -> SelectionContext:
@@ -42,6 +46,11 @@ def resolve_selection_context(conn, req: RegressionRunRequest) -> SelectionConte
         addr4_city=addr4_city,
         mode=mode,
         unified=is_unified(req.asset_type),
+        time_adjuster=(
+            TimeAdjuster(wide_df, max_complete_year=last_complete_year(req.as_of_month))
+            if getattr(req, "time_adjust", False)
+            else None
+        ),
     )
 
 

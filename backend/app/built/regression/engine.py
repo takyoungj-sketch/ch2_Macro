@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -38,6 +38,9 @@ from app.built.schemas import (
 )
 
 from app.built.time_scope import apply_contract_date_window, parse_as_of_month
+
+if TYPE_CHECKING:
+    from app.built.regression.price_index import YearIndex
 
 CompareMode = Literal["sigungu_only", "gu_only", "two_way", "three_way"]
 CONTINUOUS_VARS = frozenset(
@@ -113,19 +116,24 @@ def _is_loglog(scale: ResponseScale) -> bool:
     return scale == "loglog"
 
 
+def _insample_pred_price(model, *, response_scale: ResponseScale) -> np.ndarray:
+    """적합값을 원척도 금액(만원)으로. log 종속이면 Duan 보정을 건다.
+
+    MAPE와 잔차 진단(P5)이 **같은 예측값**을 써야 집단별 MAPE가 화면 상단 MAPE와 맞는다.
+    """
+    fitted = np.asarray(model.fittedvalues, dtype=float)
+    if _uses_log_y(response_scale):
+        return np.exp(fitted) * _duan_smearing(model.resid.to_numpy())
+    return fitted
+
+
 def _insample_mape_pct(
     y_price: np.ndarray,
-    model,
-    *,
-    response_scale: ResponseScale,
+    pred_price: np.ndarray,
 ) -> float | None:
     """적합값 기준 in-sample MAPE(%), 종속은 항상 금액(만원) 원척도."""
     y = np.asarray(y_price, dtype=float)
-    fitted = np.asarray(model.fittedvalues, dtype=float)
-    if _uses_log_y(response_scale):
-        pred = np.exp(fitted) * _duan_smearing(model.resid.to_numpy())
-    else:
-        pred = fitted
+    pred = np.asarray(pred_price, dtype=float)
     mask = np.isfinite(y) & np.isfinite(pred) & (y != 0)
     if not mask.any():
         return None
@@ -1228,10 +1236,18 @@ def _fit_ols(
     unified: bool = False,
     response_scale: ResponseScale = "linear",
     addr4_city: bool = False,
+    year_index: "YearIndex | None" = None,
+    with_residuals: bool = False,
 ) -> RegressionLevelResult:
     import statsmodels.api as sm
 
     level = admin_level or "sigungu"
+    # 거래가를 기준시점 수준으로 환산한 뒤 적합한다 (D-075). 계수가 시간 추세를 흡수하지
+    # 않게 하는 것이 목적이고, 적합에 쓰는 표본만 환산한다 — 산점도·거래목록은 명목가 유지.
+    if year_index is not None:
+        from app.built.regression.price_index import deflate_prices
+
+        df = deflate_prices(df, year_index)
     if df.empty:
         return RegressionLevelResult(
             admin_level=level,
@@ -1327,7 +1343,27 @@ def _fit_ols(
         warn = f"{warn} · {drop_note}" if warn else drop_note
 
     y_price = pd.to_numeric(df["price"], errors="coerce").loc[y.index].to_numpy()
-    mape = _insample_mape_pct(y_price, model, response_scale=response_scale)
+    pred_price = _insample_pred_price(model, response_scale=response_scale)
+    mape = _insample_mape_pct(y_price, pred_price)
+
+    # 잔차 진단은 초점 모형만 (P5). 상위 행정층 비교에는 이 화면이 없고, 그쪽 n은
+    # 수만 건까지 가므로 영향도 계산을 매번 돌릴 이유가 없다.
+    residuals = None
+    if with_residuals:
+        from app.built.regression.residuals import build_residual_diagnostics
+
+        try:
+            residuals = build_residual_diagnostics(
+                df,
+                model,
+                y_price=y_price,
+                pred_price=pred_price,
+                fitted_index=y.index,
+                leaf_col=_eup_leaf_column(addr4_city),
+                unified=unified,
+            )
+        except Exception:  # noqa: BLE001 — 진단 실패가 회귀 결과를 막으면 안 된다
+            residuals = None
 
     return RegressionLevelResult(
         admin_level=level,
@@ -1348,6 +1384,7 @@ def _fit_ols(
         sample=build_sample_funnel(
             df, vars_spec, fitted_index=y.index, response_scale=response_scale
         ),
+        residuals=residuals,
     )
 
 
@@ -1558,13 +1595,33 @@ def _ri_label(ri_list: list[RiPick]) -> str:
     return format_scope_label(names, suffix="리")
 
 
+def _window_year_index(wide_df: pd.DataFrame, req: RegressionRunRequest) -> "YearIndex | None":
+    """창 전체 시군구 지수. **기본 off**라 제품 경로에서는 None이다 (D-075 보류)."""
+    if not getattr(req, "time_adjust", False):
+        return None
+    from app.built.regression.price_index import estimate_year_index, last_complete_year
+
+    index = estimate_year_index(
+        wide_df, max_complete_year=last_complete_year(req.as_of_month)
+    )
+    return index if index.available else None
+
+
 def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
     from app.recommendation.scope import built_analysis_scope_from_prepared
 
     wide_df, req, addr4_city, mode, partial_tx_count = _prepare_regression_scope(conn, req)
     unified = is_unified(req.asset_type)
     scale = req.response_scale
-    fit_kw = dict(unified=unified, response_scale=scale, addr4_city=addr4_city)
+    # 시군구 표본 하나로 지수를 세워 focus·상위 비교에 같은 기준시점을 쓴다 (D-075).
+    # 수준별로 따로 세우면 비교 대상끼리 기준시점이 어긋난다.
+    year_index = _window_year_index(wide_df, req)
+    fit_kw = dict(
+        unified=unified,
+        response_scale=scale,
+        addr4_city=addr4_city,
+        year_index=year_index,
+    )
 
     scatter_kw = dict(
         addr4_city=addr4_city,
@@ -1576,7 +1633,9 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
     focus = _focus_admin_level(req, addr4_city)
     focus_df = _scope_for_level(wide_df, req, focus, addr4_city, mode, conn=conn)
     focus_label = _label_for_level(req, wide_df, focus, addr4_city)
-    primary = _fit_ols(focus_df, req.variables, focus, focus_label, **fit_kw)
+    primary = _fit_ols(
+        focus_df, req.variables, focus, focus_label, with_residuals=True, **fit_kw
+    )
 
     comparisons: list[RegressionLevelResult] = []
     for level in _upper_admin_levels(focus, addr4_city):
@@ -1648,6 +1707,14 @@ def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredict
         addr4_city=addr4_city,
     )
 
+    # 예상값을 기준시점(창의 마지막 연도) 수준으로 내놓는다 (D-075). 보정 전에는 창 5년치
+    # 명목가에 함께 맞춘 계수여서, 상승장에서는 예상값이 과거 수준으로 낮게 나왔다.
+    year_index = _window_year_index(wide_df, req)
+    if year_index is not None:
+        from app.built.regression.price_index import deflate_prices
+
+        df = deflate_prices(df, year_index)
+
     y, X, meta = _build_design_matrix(
         df,
         req.variables,
@@ -1692,6 +1759,14 @@ def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredict
             f"역변환 평균 보정 ×{duan:.3f} — 추정값은 exp(ŷ)에 이 계수를 곱한 조건부 평균입니다. "
             "예측구간은 분위수여서 보정하지 않으므로 추정값이 구간의 가운데는 아닙니다.",
         )
+    if year_index is not None:
+        note = (
+            f"{year_index.base_year}년 기준 — 과거 거래가를 시군구 가격지수로 "
+            f"{year_index.base_year}년 수준으로 환산한 뒤 적합했습니다."
+        )
+        if year_index.shrink_keep_ratio < 0.3:
+            note += " 연도별 거래가 얇아 보정 폭은 작습니다."
+        warnings.insert(0, note)
 
     y_hat = _back_transform(float(row["mean"]), scale) * smear
     suppressed = should_suppress_y_hat(extrap_level, scale)
@@ -1719,6 +1794,7 @@ def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredict
         ci_lower=_back_transform(float(row["mean_ci_lower"]), scale) * smear,
         ci_upper=_back_transform(float(row["mean_ci_upper"]), scale) * smear,
         duan_factor=duan,
+        price_base_year=year_index.base_year if year_index is not None else None,
         response_scale=scale,
         extrapolation_level=extrap_level,
         y_hat_suppressed=suppressed,

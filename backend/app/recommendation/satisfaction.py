@@ -63,6 +63,30 @@ def lookup_predictive_fit(*, cv_mape: float | None, asset_slice: str = "commerci
     return PredictiveFit(tier=t.tier, label_ko=t.label_ko, grade=t.tier, tone=t.tone)
 
 
+def grade_cv_basis(
+    search_cv: float | None,
+    confirm_cv: float | None,
+) -> tuple[float | None, str | None]:
+    """등급에 쓸 CV와 그 근거 (D-074).
+
+    **두 값 중 나쁜 쪽**을 쓴다. 탐색 CV만 쓰면 수백 후보의 최소값으로 등급을 주게 되고,
+    운영 실측에서 해운대구는 확인 CV 79.8%인데 탐색 48.8%로 「보통 ★★★」이 나왔다.
+    확인 CV만 쓰면 fold가 1개라 그 해의 난이도에 등급이 흔들리고, 계약연도가 부족한
+    지역은 등급 자체를 못 준다.
+
+    나쁜 쪽으로 기울이는 비대칭은 의도한 것이다. 이 제품은 추정값을 정답으로 내세우지
+    않으므로, 등급이 실제보다 좋게 보이는 쪽보다 나쁘게 보이는 쪽이 낫다.
+    """
+    values = [v for v in (search_cv, confirm_cv) if v is not None]
+    if not values:
+        return None, None
+    worst = max(values)
+    if search_cv is not None and confirm_cv is not None:
+        basis = "confirm" if confirm_cv >= search_cv else "search"
+        return worst, basis
+    return worst, "confirm" if confirm_cv is not None else "search"
+
+
 def lookup_built_satisfaction(
     *,
     cv_mape: float | None,

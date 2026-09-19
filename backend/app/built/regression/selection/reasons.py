@@ -70,6 +70,7 @@ def build_excluded_reasons(
                 response_scale=base.response_scale,
                 region_col=region_col,
                 admin_level=ctx.admin_level,
+                time_adjuster=ctx.time_adjuster,
             )
             if trial is not None:
                 delta_aic = trial.aic - base.aic
