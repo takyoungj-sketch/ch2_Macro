@@ -179,11 +179,20 @@ req = urllib.request.Request(
 )
 with urllib.request.urlopen(req, context=ssl.create_default_context(), timeout=30) as r:
     d = json.load(r)
-assert d["primary"]["admin_level"] == "gu"
-assert "흥덕" in d["primary"]["scope_label"] or d["primary"]["scope_label"] == "흥덕구"
+# 초점 = 사용자가 고른 단위(가경동). 흥덕구는 comparisons[]에 상위로 붙는다.
+assert d["primary"]["admin_level"] == "eupmyeondong"
+assert "가경" in d["primary"]["scope_label"]
+gu = [c for c in d.get("comparisons", []) if c.get("admin_level") == "gu"]
+assert gu and "흥덕" in gu[0]["scope_label"]
 ```
 
-**기대:** `primary.admin_level == "gu"`, scope **흥덕구** (시군구·청주시 아님).
+**기대:** `primary` = **가경동**(`eupmyeondong`), `comparisons[]`에 **흥덕구**(`gu`)와
+청주시(`sigungu`). 운영 URL은 `X-Api-Token` 헤더가 필요하므로, 토큰 없이 돌리려면
+VPS 안에서 `http://127.0.0.1:8000`으로 호출한다 (§5.1 패턴).
+
+> 2026-09-19 수정: 이전 기대값은 `primary.admin_level == "gu"`였다. 상위지역 재적합 설계
+> (`docs/BUILT_REGRESSION_ANALYSIS_UI.md`)에서 초점은 **사용자가 고른 단위**이고 상위는
+> 비교로 분리됐으므로, 옛 기대값은 정상 동작에서 실패한다.
 
 ### 5.3 브라우저
 
