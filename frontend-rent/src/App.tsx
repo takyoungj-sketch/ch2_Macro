@@ -28,6 +28,7 @@ import RentRegionMapHub, { type MapPanelMode } from "./components/RentRegionMapH
 import SangkwonAnalysisModal, {
   sangkwonScopeLabel,
 } from "./components/SangkwonAnalysisModal";
+import SangkwonNoticeModal from "./components/SangkwonNoticeModal";
 import StatsWindowToggle, {
   type StatsWindowYears,
 } from "./components/StatsWindowToggle";
@@ -58,6 +59,7 @@ type AnalysisScope = {
   windowYears: StatsWindowYears;
   sort: string;
   sangkwonGuList: string[];
+  includeSangkwon: boolean;
 };
 
 function fmtUnit(v: number | null | undefined) {
@@ -167,7 +169,8 @@ function formatAppliedRate(
   assetKinds: RentAssetType[],
   windowYears: number,
 ): string | null {
-  const kinds = assetKinds.length ? assetKinds : RENT_ASSET_KINDS;
+  if (!assetKinds.length) return null;
+  const kinds = assetKinds;
   const anyApplied = kinds.some((kind) => {
     const r = rates.find((x) => x.asset_type === kind);
     return Boolean(r?.gate_passed && r.r_selected != null);
@@ -201,8 +204,7 @@ function unconvertedVisibleLabels(rows: RentBuildingRow[], rates: RentConversion
 
 function toggleKind(prev: RentAssetType[], kind: RentAssetType): RentAssetType[] {
   if (prev.includes(kind)) {
-    const next = prev.filter((k) => k !== kind);
-    return next.length ? next : prev;
+    return prev.filter((k) => k !== kind);
   }
   return [...prev, kind];
 }
@@ -231,6 +233,8 @@ export default function App() {
   const [selected, setSelected] = useState<RentBuildingRow | null>(null);
   const [mapPanelMode, setMapPanelMode] = useState<MapPanelMode>("normal");
   const [showSangkwon, setShowSangkwon] = useState(false);
+  const [sangkwonOn, setSangkwonOn] = useState(false);
+  const [sangkwonNoticeOpen, setSangkwonNoticeOpen] = useState(false);
   const [tableWide, setTableWide] = useState(false);
 
   const metaQ = useQuery({
@@ -325,7 +329,7 @@ export default function App() {
         sort: scope.sort,
       });
     },
-    enabled: scope !== null && !!scope.addr2,
+    enabled: scope !== null && !!scope.addr2 && scope.assetKinds.length > 0,
   });
 
   const items = buildingsQ.data?.items ?? [];
@@ -385,7 +389,8 @@ export default function App() {
       JSON.stringify(scope.leafList) !== JSON.stringify(leafList) ||
       scope.hasIntermediate !== hasIntermediate ||
       scope.windowYears !== windowYears ||
-      scope.sort !== sort);
+      scope.sort !== sort ||
+      scope.includeSangkwon !== sangkwonOn);
 
   const sangkwonGuList = useMemo(() => {
     if (!hasIntermediate) return [];
@@ -410,9 +415,10 @@ export default function App() {
       windowYears,
       sort,
       sangkwonGuList,
+      includeSangkwon: sangkwonOn,
     });
     setSelected(null);
-    setShowSangkwon(false);
+    setShowSangkwon(sangkwonOn);
   };
 
   const resetRegion = () => {
@@ -421,6 +427,15 @@ export default function App() {
     setScope(null);
     setSelected(null);
     setShowSangkwon(false);
+  };
+
+  const toggleSangkwonType = () => {
+    if (sangkwonOn) {
+      setSangkwonOn(false);
+      setShowSangkwon(false);
+      return;
+    }
+    setSangkwonNoticeOpen(true);
   };
 
   const addr2ScopeLabel = formatScopeAddr2(addr2, addr1) || addr1;
@@ -472,6 +487,18 @@ export default function App() {
                   </button>
                 );
               })}
+              <button
+                type="button"
+                className={clsx(
+                  "rounded-md border px-2 py-1 text-xs font-semibold",
+                  sangkwonOn
+                    ? "border-teal-600 bg-teal-600 text-white"
+                    : "border-slate-300 bg-white dark:border-slate-500 dark:bg-slate-800",
+                )}
+                onClick={toggleSangkwonType}
+              >
+                상권통계
+              </button>
             </div>
           </div>
           <label className="text-xs block space-y-1">
@@ -565,23 +592,28 @@ export default function App() {
             </select>
           </label>
           <StatsWindowToggle value={windowYears} onChange={setWindowYears} />
-          <button type="button" className="btn btn-primary w-full" disabled={!addr2} onClick={runAnalysis}>
-            통계분석
-          </button>
           <button
             type="button"
-            className="btn btn-ghost w-full"
-            disabled={!addr2}
-            onClick={() => setShowSangkwon(true)}
+            className="btn btn-primary w-full"
+            disabled={!addr2 || (!assetKinds.length && !sangkwonOn)}
+            onClick={runAnalysis}
           >
-            상권통계
+            통계분석
           </button>
           <p className="text-[10px] text-slate-400 leading-snug">
             목록은 건물 1행 · 접힌 표는 전세·매매·월세 평균. 환산은 키우기.
+            {sangkwonOn && assetKinds.length
+              ? " 상권은 시군구(구) 기준이며 통계분석 때 모달로 엽니다. 주거 목록은 그대로입니다."
+              : sangkwonOn
+                ? " 상권은 시군구(구) 기준입니다. 통계분석 때 모달만 엽니다."
+                : !assetKinds.length
+                  ? " 주거 유형 또는 상권통계를 선택하세요."
+                  : ""}
           </p>
-          {addr2 && (
+          {addr2 && sangkwonOn && (
             <p className="text-[10px] text-slate-400 leading-snug">
-              상권통계: {sangkwonScopeLabel({ addr1, addr2, sangkwonGuList })} 공표 · 주거와 별개
+              상권: {sangkwonScopeLabel({ addr1, addr2, sangkwonGuList })} · 시군구(구) 기준 ·
+              부동산원 대표 상권만
             </p>
           )}
         </CollapsibleLeftSidebar>
@@ -646,12 +678,18 @@ export default function App() {
             )}
             {!scope && (
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                시군구까지 선택한 뒤 「통계분석」을 누르면 건물 목록이 표시됩니다.
+                시군구까지 선택한 뒤 「통계분석」을 누르면 건물 목록이 표시됩니다. 주거 유형을 모두
+                끄고 상권통계만 켜면 부동산원 공표만 모달로 열립니다.
               </p>
             )}
             {scopeStale && (
               <p className="text-xs text-amber-700 dark:text-amber-300 mb-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded px-2 py-1">
                 조건이 변경되었습니다. 「통계분석」을 다시 실행하세요.
+              </p>
+            )}
+            {scope && !scope.assetKinds.length && scope.includeSangkwon && (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                주거 유형을 켜면 건물 목록이 표시됩니다. 상권통계는 모달로 열립니다.
               </p>
             )}
             {scope && buildingsQ.isLoading && <p className="text-sm text-slate-400">불러오는 중…</p>}
@@ -881,6 +919,14 @@ export default function App() {
           }}
         />
       )}
+      <SangkwonNoticeModal
+        open={sangkwonNoticeOpen}
+        onCancel={() => setSangkwonNoticeOpen(false)}
+        onConfirm={() => {
+          setSangkwonNoticeOpen(false);
+          setSangkwonOn(true);
+        }}
+      />
     </div>
     </ActiveAiViewProvider>
   );

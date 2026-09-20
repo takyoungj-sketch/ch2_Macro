@@ -145,10 +145,15 @@ export default function SangkwonAnalysisModal({ scope, onClose }: Props) {
           <p className="text-sm text-red-600">시군구 경계를 불러오지 못했습니다.</p>
         )}
         {!loading && !hits.length && (
-          <p className="text-sm text-slate-500">
-            {regionLabel}에 교차하는 상권 공표가 없습니다. 상권은 동 단위가 아니라 시군구(구) 기준으로
-            찾습니다.
-          </p>
+          <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-3 py-3 space-y-2 text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+            <p className="font-medium">
+              {regionLabel} 인근에는 부동산원 대표 상권이 없습니다.
+            </p>
+            <p>
+              상권통계는 읍·면·동이 아니라 시군구(구) 경계 기준입니다. 해당 시군구와 겹치는
+              공표 상권이 없으면 오류가 아니라 인근에 상권이 없는 것입니다.
+            </p>
+          </div>
         )}
         {hits.length > 0 && (
           <div className="flex flex-col gap-2 min-h-0 flex-1 h-full">
