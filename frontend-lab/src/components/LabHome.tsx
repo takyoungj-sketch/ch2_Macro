@@ -61,6 +61,11 @@ const DOORS: { id: LabTool; title: string; desc: string }[] = [
     title: "모형추천 Twin 벤치",
     desc: "Local / Twin1 / Twin2 × 지역더미 전후. 실험 Twin은 1위만. 제품 식 미변경.",
   },
+  {
+    id: "area-elasticity",
+    title: "토지 면적 탄성",
+    desc: "1차 기록됨. 다음=적격칸 전수. 전국 한 β·제품 식은 넣지 않음.",
+  },
 ];
 
 export default function LabHome({ onOpenTool }: { onOpenTool: (id: LabTool) => void }) {

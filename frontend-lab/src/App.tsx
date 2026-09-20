@@ -13,6 +13,7 @@ import NewAptLab from "./components/NewAptLab";
 import BuilderIdentLab from "./components/BuilderIdentLab";
 import Age0ResidualLab from "./components/Age0ResidualLab";
 import RecommendTwinBenchLab from "./components/RecommendTwinBenchLab";
+import LandAreaElasticityLab from "./components/LandAreaElasticityLab";
 import WhyDecision, { WhyLinks } from "./components/WhyDecision";
 import { TOOL_WHY } from "./labContent";
 
@@ -28,7 +29,8 @@ export type LabTool =
   | "newapt"
   | "builder"
   | "age0"
-  | "recommend-twin";
+  | "recommend-twin"
+  | "area-elasticity";
 export type TwinPane = "v2" | "mape";
 
 type LabParams = {
@@ -52,7 +54,8 @@ function readParams(): LabParams {
     t === "newapt" ||
     t === "builder" ||
     t === "age0" ||
-    t === "recommend-twin"
+    t === "recommend-twin" ||
+    t === "area-elasticity"
       ? t
       : null;
   const pane = q.get("pane");
@@ -231,6 +234,14 @@ export default function App() {
     return (
       <LabChrome title="모형추천 Twin 벤치" whyIds={TOOL_WHY["recommend-twin"] ?? []} onWhy={setWhy} onBack={back}>
         <RecommendTwinBenchLab />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "area-elasticity") {
+    return (
+      <LabChrome title="토지 면적 탄성" whyIds={TOOL_WHY["area-elasticity"] ?? []} onWhy={setWhy} onBack={back}>
+        <LandAreaElasticityLab />
         {whyModal}
       </LabChrome>
     );

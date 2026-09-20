@@ -1,0 +1,2085 @@
+{
+  "run_id": "land-area-elasticity-screen",
+  "date": "2026-09-21",
+  "status": "phase1_fit",
+  "product_change": false,
+  "window_years": 5,
+  "as_of_month": "2026-08-01",
+  "period_start": "2021-09-01",
+  "period_end": "2026-08-31",
+  "area_max_sqm": 10000000.0,
+  "selection": "n_and_area_spectrum_only",
+  "summary": {
+    "n_cells": 794,
+    "n_eligible": 369,
+    "n_phase1": 24,
+    "by_type": {
+      "metro_gu": {
+        "cells": 201,
+        "eligible": 40,
+        "phase1": 5
+      },
+      "prov_city": {
+        "cells": 12,
+        "eligible": 10,
+        "phase1": 4
+      },
+      "urban_rural": {
+        "cells": 206,
+        "eligible": 99,
+        "phase1": 5
+      },
+      "gun": {
+        "cells": 246,
+        "eligible": 143,
+        "phase1": 5
+      },
+      "cap_city": {
+        "cells": 129,
+        "eligible": 77,
+        "phase1": 5
+      }
+    }
+  },
+  "phase1": [
+    {
+      "sido_code": "11",
+      "sido_name": "서울특별시",
+      "sigungu_code": "11170",
+      "sigungu_name": "용산구",
+      "land_category": "대",
+      "region_type": "metro_gu",
+      "n": 747,
+      "area_p10": 3.0,
+      "area_p50": 21.0,
+      "area_p75": 86.0,
+      "area_p90": 236.14,
+      "p90_p50": 11.2448,
+      "n_ge_300": 54,
+      "n_ge_500": 26,
+      "n_ge_1000": 3,
+      "n_ge_3000": 0,
+      "n_ge_5000": 0,
+      "n_dongs": 31,
+      "dong_n_median": 8.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "better",
+      "b_preview": "B_ok"
+    },
+    {
+      "sido_code": "11",
+      "sido_name": "서울특별시",
+      "sigungu_code": "11110",
+      "sigungu_name": "종로구",
+      "land_category": "대",
+      "region_type": "metro_gu",
+      "n": 757,
+      "area_p10": 3.3,
+      "area_p50": 34.9,
+      "area_p75": 119.0,
+      "area_p90": 315.36,
+      "p90_p50": 9.0361,
+      "n_ge_300": 79,
+      "n_ge_500": 46,
+      "n_ge_1000": 13,
+      "n_ge_3000": 4,
+      "n_ge_5000": 3,
+      "n_dongs": 70,
+      "dong_n_median": 6.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "better",
+      "b_preview": "B_skip"
+    },
+    {
+      "sido_code": "11",
+      "sido_name": "서울특별시",
+      "sigungu_code": "11200",
+      "sigungu_name": "성동구",
+      "land_category": "대",
+      "region_type": "metro_gu",
+      "n": 234,
+      "area_p10": 6.63,
+      "area_p50": 43.0,
+      "area_p75": 138.1,
+      "area_p90": 330.42,
+      "p90_p50": 7.6842,
+      "n_ge_300": 28,
+      "n_ge_500": 14,
+      "n_ge_1000": 8,
+      "n_ge_3000": 3,
+      "n_ge_5000": 1,
+      "n_dongs": 14,
+      "dong_n_median": 15.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "good",
+      "b_preview": "B_ok"
+    },
+    {
+      "sido_code": "28",
+      "sido_name": "인천광역시",
+      "sigungu_code": "28275",
+      "sigungu_name": "서해구",
+      "land_category": "대",
+      "region_type": "metro_gu",
+      "n": 265,
+      "area_p10": 47.08,
+      "area_p50": 319.0,
+      "area_p75": 533.6,
+      "area_p90": 1994.44,
+      "p90_p50": 6.2522,
+      "n_ge_300": 143,
+      "n_ge_500": 72,
+      "n_ge_1000": 47,
+      "n_ge_3000": 24,
+      "n_ge_5000": 18,
+      "n_dongs": 11,
+      "dong_n_median": 12.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "good",
+      "b_preview": "B_ok"
+    },
+    {
+      "sido_code": "11",
+      "sido_name": "서울특별시",
+      "sigungu_code": "11440",
+      "sigungu_name": "마포구",
+      "land_category": "대",
+      "region_type": "metro_gu",
+      "n": 290,
+      "area_p10": 7.0,
+      "area_p50": 49.35,
+      "area_p75": 133.2,
+      "area_p90": 301.13,
+      "p90_p50": 6.1019,
+      "n_ge_300": 33,
+      "n_ge_500": 15,
+      "n_ge_1000": 4,
+      "n_ge_3000": 0,
+      "n_ge_5000": 0,
+      "n_dongs": 24,
+      "dong_n_median": 10.5,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "good",
+      "b_preview": "B_ok"
+    },
+    {
+      "sido_code": "41",
+      "sido_name": "경기도",
+      "sigungu_code": "41117",
+      "sigungu_name": "수원시 영통구",
+      "land_category": "대",
+      "region_type": "cap_city",
+      "n": 230,
+      "area_p10": 5.64,
+      "area_p50": 32.36,
+      "area_p75": 72.75,
+      "area_p90": 568.12,
+      "p90_p50": 17.5562,
+      "n_ge_300": 35,
+      "n_ge_500": 28,
+      "n_ge_1000": 17,
+      "n_ge_3000": 15,
+      "n_ge_5000": 15,
+      "n_dongs": 6,
+      "dong_n_median": 11.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "good",
+      "b_preview": "B_ok"
+    },
+    {
+      "sido_code": "41",
+      "sido_name": "경기도",
+      "sigungu_code": "41131",
+      "sigungu_name": "성남시 수정구",
+      "land_category": "대",
+      "region_type": "cap_city",
+      "n": 226,
+      "area_p10": 16.5,
+      "area_p50": 66.45,
+      "area_p75": 253.025,
+      "area_p90": 1049.0,
+      "p90_p50": 15.7863,
+      "n_ge_300": 47,
+      "n_ge_500": 32,
+      "n_ge_1000": 25,
+      "n_ge_3000": 11,
+      "n_ge_5000": 7,
+      "n_dongs": 16,
+      "dong_n_median": 8.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "good",
+      "b_preview": "B_ok"
+    },
+    {
+      "sido_code": "41",
+      "sido_name": "경기도",
+      "sigungu_code": "41290",
+      "sigungu_name": "과천시",
+      "land_category": "대",
+      "region_type": "cap_city",
+      "n": 112,
+      "area_p10": 23.0,
+      "area_p50": 229.85,
+      "area_p75": 331.5,
+      "area_p90": 1663.7,
+      "p90_p50": 7.2382,
+      "n_ge_300": 38,
+      "n_ge_500": 23,
+      "n_ge_1000": 15,
+      "n_ge_3000": 3,
+      "n_ge_5000": 1,
+      "n_dongs": 6,
+      "dong_n_median": 19.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "ok",
+      "b_preview": "B_ok"
+    },
+    {
+      "sido_code": "41",
+      "sido_name": "경기도",
+      "sigungu_code": "41463",
+      "sigungu_name": "용인시 기흥구",
+      "land_category": "답",
+      "region_type": "cap_city",
+      "n": 239,
+      "area_p10": 27.0,
+      "area_p50": 331.0,
+      "area_p75": 1032.0,
+      "area_p90": 2228.4,
+      "p90_p50": 6.7323,
+      "n_ge_300": 132,
+      "n_ge_500": 95,
+      "n_ge_1000": 62,
+      "n_ge_3000": 11,
+      "n_ge_5000": 5,
+      "n_dongs": 16,
+      "dong_n_median": 10.5,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "good",
+      "b_preview": "B_ok"
+    },
+    {
+      "sido_code": "41",
+      "sido_name": "경기도",
+      "sigungu_code": "41113",
+      "sigungu_name": "수원시 권선구",
+      "land_category": "전",
+      "region_type": "cap_city",
+      "n": 263,
+      "area_p10": 13.6,
+      "area_p50": 330.0,
+      "area_p75": 910.5,
+      "area_p90": 1720.2,
+      "p90_p50": 5.2127,
+      "n_ge_300": 139,
+      "n_ge_500": 110,
+      "n_ge_1000": 58,
+      "n_ge_3000": 6,
+      "n_ge_5000": 1,
+      "n_dongs": 14,
+      "dong_n_median": 22.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "good",
+      "b_preview": "B_ok"
+    },
+    {
+      "sido_code": "51",
+      "sido_name": "강원특별자치도",
+      "sigungu_code": "51210",
+      "sigungu_name": "속초시",
+      "land_category": "대",
+      "region_type": "prov_city",
+      "n": 531,
+      "area_p10": 7.0,
+      "area_p50": 67.5,
+      "area_p75": 162.0,
+      "area_p90": 345.0,
+      "p90_p50": 5.1111,
+      "n_ge_300": 62,
+      "n_ge_500": 31,
+      "n_ge_1000": 8,
+      "n_ge_3000": 1,
+      "n_ge_5000": 0,
+      "n_dongs": 13,
+      "dong_n_median": 50.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "better",
+      "b_preview": "B_ok"
+    },
+    {
+      "sido_code": "12",
+      "sido_name": "전남광주통합특별시",
+      "sigungu_code": "12110",
+      "sigungu_name": "목포시",
+      "land_category": "대",
+      "region_type": "prov_city",
+      "n": 868,
+      "area_p10": 12.28,
+      "area_p50": 89.15,
+      "area_p75": 230.8,
+      "area_p90": 446.89,
+      "p90_p50": 5.0128,
+      "n_ge_300": 141,
+      "n_ge_500": 79,
+      "n_ge_1000": 31,
+      "n_ge_3000": 10,
+      "n_ge_5000": 4,
+      "n_dongs": 44,
+      "dong_n_median": 5.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "better",
+      "b_preview": "B_skip"
+    },
+    {
+      "sido_code": "51",
+      "sido_name": "강원특별자치도",
+      "sigungu_code": "51190",
+      "sigungu_name": "태백시",
+      "land_category": "대",
+      "region_type": "prov_city",
+      "n": 259,
+      "area_p10": 19.0,
+      "area_p50": 117.0,
+      "area_p75": 271.5,
+      "area_p90": 585.2,
+      "p90_p50": 5.0017,
+      "n_ge_300": 61,
+      "n_ge_500": 31,
+      "n_ge_1000": 12,
+      "n_ge_3000": 3,
+      "n_ge_5000": 0,
+      "n_dongs": 16,
+      "dong_n_median": 5.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "good",
+      "b_preview": "B_skip"
+    },
+    {
+      "sido_code": "51",
+      "sido_name": "강원특별자치도",
+      "sigungu_code": "51170",
+      "sigungu_name": "동해시",
+      "land_category": "전",
+      "region_type": "prov_city",
+      "n": 572,
+      "area_p10": 42.2,
+      "area_p50": 409.0,
+      "area_p75": 945.25,
+      "area_p90": 1586.1,
+      "p90_p50": 3.878,
+      "n_ge_300": 339,
+      "n_ge_500": 242,
+      "n_ge_1000": 125,
+      "n_ge_3000": 7,
+      "n_ge_5000": 2,
+      "n_dongs": 34,
+      "dong_n_median": 12.5,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "better",
+      "b_preview": "B_ok"
+    },
+    {
+      "sido_code": "48",
+      "sido_name": "경상남도",
+      "sigungu_code": "48129",
+      "sigungu_name": "창원시 진해구",
+      "land_category": "대",
+      "region_type": "urban_rural",
+      "n": 714,
+      "area_p10": 7.0,
+      "area_p50": 86.0,
+      "area_p75": 228.8,
+      "area_p90": 422.4,
+      "p90_p50": 4.9116,
+      "n_ge_300": 105,
+      "n_ge_500": 60,
+      "n_ge_1000": 19,
+      "n_ge_3000": 5,
+      "n_ge_5000": 2,
+      "n_dongs": 42,
+      "dong_n_median": 6.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "better",
+      "b_preview": "B_skip"
+    },
+    {
+      "sido_code": "48",
+      "sido_name": "경상남도",
+      "sigungu_code": "48129",
+      "sigungu_name": "창원시 진해구",
+      "land_category": "전",
+      "region_type": "urban_rural",
+      "n": 398,
+      "area_p10": 30.7,
+      "area_p50": 294.0,
+      "area_p75": 723.75,
+      "area_p90": 1167.0,
+      "p90_p50": 3.9694,
+      "n_ge_300": 192,
+      "n_ge_500": 143,
+      "n_ge_1000": 66,
+      "n_ge_3000": 3,
+      "n_ge_5000": 2,
+      "n_dongs": 31,
+      "dong_n_median": 10.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "better",
+      "b_preview": "B_ok"
+    },
+    {
+      "sido_code": "48",
+      "sido_name": "경상남도",
+      "sigungu_code": "48310",
+      "sigungu_name": "거제시",
+      "land_category": "대",
+      "region_type": "urban_rural",
+      "n": 855,
+      "area_p10": 10.0,
+      "area_p50": 127.0,
+      "area_p75": 324.0,
+      "area_p90": 594.9,
+      "p90_p50": 4.6843,
+      "n_ge_300": 232,
+      "n_ge_500": 116,
+      "n_ge_1000": 26,
+      "n_ge_3000": 0,
+      "n_ge_5000": 0,
+      "n_dongs": 22,
+      "dong_n_median": 33.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "better",
+      "b_preview": "B_ok"
+    },
+    {
+      "sido_code": "48",
+      "sido_name": "경상남도",
+      "sigungu_code": "48310",
+      "sigungu_name": "거제시",
+      "land_category": "답",
+      "region_type": "urban_rural",
+      "n": 2716,
+      "area_p10": 65.5,
+      "area_p50": 557.0,
+      "area_p75": 1107.0,
+      "area_p90": 1891.0,
+      "p90_p50": 3.395,
+      "n_ge_300": 1781,
+      "n_ge_500": 1445,
+      "n_ge_1000": 767,
+      "n_ge_3000": 60,
+      "n_ge_5000": 5,
+      "n_dongs": 21,
+      "dong_n_median": 48.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "better",
+      "b_preview": "B_ok"
+    },
+    {
+      "sido_code": "48",
+      "sido_name": "경상남도",
+      "sigungu_code": "48125",
+      "sigungu_name": "창원시 마산합포구",
+      "land_category": "대",
+      "region_type": "urban_rural",
+      "n": 667,
+      "area_p10": 10.0,
+      "area_p50": 99.0,
+      "area_p75": 254.55,
+      "area_p90": 428.0,
+      "p90_p50": 4.3232,
+      "n_ge_300": 132,
+      "n_ge_500": 53,
+      "n_ge_1000": 11,
+      "n_ge_3000": 2,
+      "n_ge_5000": 1,
+      "n_dongs": 47,
+      "dong_n_median": 4.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "better",
+      "b_preview": "B_skip"
+    },
+    {
+      "sido_code": "47",
+      "sido_name": "경상북도",
+      "sigungu_code": "47940",
+      "sigungu_name": "울릉군",
+      "land_category": "전",
+      "region_type": "gun",
+      "n": 307,
+      "area_p10": 117.8,
+      "area_p50": 992.0,
+      "area_p75": 2672.5,
+      "area_p90": 7334.0,
+      "p90_p50": 7.3931,
+      "n_ge_300": 229,
+      "n_ge_500": 184,
+      "n_ge_1000": 149,
+      "n_ge_3000": 70,
+      "n_ge_5000": 39,
+      "n_dongs": 3,
+      "dong_n_median": 83.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "better",
+      "b_preview": "B_skip"
+    },
+    {
+      "sido_code": "51",
+      "sido_name": "강원특별자치도",
+      "sigungu_code": "51780",
+      "sigungu_name": "철원군",
+      "land_category": "전",
+      "region_type": "gun",
+      "n": 1384,
+      "area_p10": 104.0,
+      "area_p50": 669.0,
+      "area_p75": 1773.75,
+      "area_p90": 4013.4,
+      "p90_p50": 5.9991,
+      "n_ge_300": 995,
+      "n_ge_500": 816,
+      "n_ge_1000": 540,
+      "n_ge_3000": 202,
+      "n_ge_5000": 108,
+      "n_dongs": 7,
+      "dong_n_median": 201.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "better",
+      "b_preview": "B_ok"
+    },
+    {
+      "sido_code": "41",
+      "sido_name": "경기도",
+      "sigungu_code": "41800",
+      "sigungu_name": "연천군",
+      "land_category": "전",
+      "region_type": "gun",
+      "n": 2176,
+      "area_p10": 95.0,
+      "area_p50": 723.0,
+      "area_p75": 1883.25,
+      "area_p90": 3713.5,
+      "p90_p50": 5.1362,
+      "n_ge_300": 1617,
+      "n_ge_500": 1318,
+      "n_ge_1000": 908,
+      "n_ge_3000": 298,
+      "n_ge_5000": 108,
+      "n_dongs": 10,
+      "dong_n_median": 254.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "better",
+      "b_preview": "B_ok"
+    },
+    {
+      "sido_code": "51",
+      "sido_name": "강원특별자치도",
+      "sigungu_code": "51800",
+      "sigungu_name": "양구군",
+      "land_category": "전",
+      "region_type": "gun",
+      "n": 2225,
+      "area_p10": 257.6,
+      "area_p50": 1781.0,
+      "area_p75": 4375.7,
+      "area_p90": 8113.08,
+      "p90_p50": 4.5554,
+      "n_ge_300": 1963,
+      "n_ge_500": 1791,
+      "n_ge_1000": 1472,
+      "n_ge_3000": 797,
+      "n_ge_5000": 480,
+      "n_dongs": 5,
+      "dong_n_median": 233.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "better",
+      "b_preview": "B_ok"
+    },
+    {
+      "sido_code": "51",
+      "sido_name": "강원특별자치도",
+      "sigungu_code": "51770",
+      "sigungu_name": "정선군",
+      "land_category": "전",
+      "region_type": "gun",
+      "n": 2606,
+      "area_p10": 193.5,
+      "area_p50": 1214.5,
+      "area_p75": 2734.75,
+      "area_p90": 5482.5,
+      "p90_p50": 4.5142,
+      "n_ge_300": 2222,
+      "n_ge_500": 1941,
+      "n_ge_1000": 1442,
+      "n_ge_3000": 586,
+      "n_ge_5000": 293,
+      "n_dongs": 9,
+      "dong_n_median": 280.0,
+      "eligible": true,
+      "gate_reasons": [],
+      "n_tier": "better",
+      "b_preview": "B_ok"
+    }
+  ],
+  "phase1_fits": [
+    {
+      "sido_name": "서울특별시",
+      "sigungu_name": "용산구",
+      "sigungu_code": "11170",
+      "land_category": "대",
+      "region_type": "metro_gu",
+      "n_screen": 747,
+      "n_raw": 747,
+      "n_tier": "better",
+      "A": {
+        "beta": 0.0331,
+        "se": 0.0179,
+        "p": 0.0658,
+        "n": 747,
+        "r2": 0.048
+      },
+      "A_robust": {
+        "beta": 0.0361,
+        "se": 0.0177,
+        "p": 0.0419,
+        "n": 700
+      },
+      "B": {
+        "beta": -0.0006,
+        "se": 0.016,
+        "p": 0.9693,
+        "status": "ok",
+        "n": 747
+      },
+      "C": {
+        "log_area": {
+          "beta": -0.1383,
+          "se": 0.0647,
+          "p": 0.0327
+        },
+        "log_area_sq": {
+          "beta": 0.0264,
+          "se": 0.0096,
+          "p": 0.006
+        },
+        "turning": {
+          "area_star": 13.8,
+          "in_range": true,
+          "beta2_sig": true,
+          "beta2": 0.0264,
+          "p2": 0.006
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 1813.85,
+        "mid": 1566.85,
+        "high": 2085.5
+      },
+      "notes": [
+        "beop_dropped_small=4"
+      ]
+    },
+    {
+      "sido_name": "서울특별시",
+      "sigungu_name": "종로구",
+      "sigungu_code": "11110",
+      "land_category": "대",
+      "region_type": "metro_gu",
+      "n_screen": 757,
+      "n_raw": 757,
+      "n_tier": "better",
+      "A": {
+        "beta": -0.1505,
+        "se": 0.0244,
+        "p": 0.0,
+        "n": 757,
+        "r2": 0.308
+      },
+      "A_robust": {
+        "beta": -0.1497,
+        "se": 0.0244,
+        "p": 0.0,
+        "n": 700
+      },
+      "B": "B_skip",
+      "C": {
+        "log_area": {
+          "beta": 0.0756,
+          "se": 0.0854,
+          "p": 0.3761
+        },
+        "log_area_sq": {
+          "beta": -0.0309,
+          "se": 0.0112,
+          "p": 0.0059
+        },
+        "turning": {
+          "area_star": 3.4,
+          "in_range": true,
+          "beta2_sig": true,
+          "beta2": -0.0309,
+          "p2": 0.0059
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 1190.5,
+        "mid": 1205.3,
+        "high": 969.2
+      },
+      "notes": []
+    },
+    {
+      "sido_name": "서울특별시",
+      "sigungu_name": "성동구",
+      "sigungu_code": "11200",
+      "land_category": "대",
+      "region_type": "metro_gu",
+      "n_screen": 234,
+      "n_raw": 234,
+      "n_tier": "good",
+      "A": {
+        "beta": 0.0407,
+        "se": 0.0411,
+        "p": 0.3238,
+        "n": 234,
+        "r2": 0.207
+      },
+      "A_robust": {
+        "beta": 0.0632,
+        "se": 0.0394,
+        "p": 0.1104,
+        "n": 223
+      },
+      "B": {
+        "beta": 0.004,
+        "se": 0.0391,
+        "p": 0.9186,
+        "status": "ok",
+        "n": 234
+      },
+      "C": {
+        "log_area": {
+          "beta": 0.2216,
+          "se": 0.1362,
+          "p": 0.1051
+        },
+        "log_area_sq": {
+          "beta": -0.0224,
+          "se": 0.0161,
+          "p": 0.1648
+        },
+        "turning": {
+          "area_star": null,
+          "in_range": false,
+          "beta2_sig": false,
+          "beta2": -0.0224,
+          "p2": 0.1648
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 1166.7,
+        "mid": 1645.3,
+        "high": 1696.2
+      },
+      "notes": [
+        "beop_dropped_small=2"
+      ]
+    },
+    {
+      "sido_name": "인천광역시",
+      "sigungu_name": "서해구",
+      "sigungu_code": "28275",
+      "land_category": "대",
+      "region_type": "metro_gu",
+      "n_screen": 265,
+      "n_raw": 265,
+      "n_tier": "good",
+      "A": {
+        "beta": 0.0717,
+        "se": 0.0251,
+        "p": 0.0046,
+        "n": 265,
+        "r2": 0.124
+      },
+      "A_robust": {
+        "beta": 0.0281,
+        "se": 0.0249,
+        "p": 0.2602,
+        "n": 238
+      },
+      "B": {
+        "beta": 0.0689,
+        "se": 0.0279,
+        "p": 0.0142,
+        "status": "ok",
+        "n": 265
+      },
+      "C": {
+        "log_area": {
+          "beta": 0.4102,
+          "se": 0.0745,
+          "p": 0.0
+        },
+        "log_area_sq": {
+          "beta": -0.0298,
+          "se": 0.0062,
+          "p": 0.0
+        },
+        "turning": {
+          "area_star": 963.9,
+          "in_range": true,
+          "beta2_sig": true,
+          "beta2": -0.0298,
+          "p2": 0.0
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 198.0,
+        "mid": 240.9,
+        "high": 314.6
+      },
+      "notes": []
+    },
+    {
+      "sido_name": "서울특별시",
+      "sigungu_name": "마포구",
+      "sigungu_code": "11440",
+      "land_category": "대",
+      "region_type": "metro_gu",
+      "n_screen": 290,
+      "n_raw": 290,
+      "n_tier": "good",
+      "A": {
+        "beta": 0.0393,
+        "se": 0.027,
+        "p": 0.1463,
+        "n": 290,
+        "r2": 0.162
+      },
+      "A_robust": {
+        "beta": 0.0468,
+        "se": 0.0276,
+        "p": 0.0903,
+        "n": 278
+      },
+      "B": {
+        "beta": 0.0175,
+        "se": 0.0261,
+        "p": 0.5026,
+        "status": "ok",
+        "n": 290
+      },
+      "C": {
+        "log_area": {
+          "beta": -0.1686,
+          "se": 0.0975,
+          "p": 0.0848
+        },
+        "log_area_sq": {
+          "beta": 0.0287,
+          "se": 0.0129,
+          "p": 0.0273
+        },
+        "turning": {
+          "area_star": 18.9,
+          "in_range": true,
+          "beta2_sig": true,
+          "beta2": 0.0287,
+          "p2": 0.0273
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 1148.9,
+        "mid": 1362.3,
+        "high": 1949.9
+      },
+      "notes": [
+        "beop_dropped_small=4"
+      ]
+    },
+    {
+      "sido_name": "경기도",
+      "sigungu_name": "수원시 영통구",
+      "sigungu_code": "41117",
+      "land_category": "대",
+      "region_type": "cap_city",
+      "n_screen": 230,
+      "n_raw": 230,
+      "n_tier": "good",
+      "A": {
+        "beta": -0.6484,
+        "se": 0.0325,
+        "p": 0.0,
+        "n": 230,
+        "r2": 0.648
+      },
+      "A_robust": {
+        "beta": -0.6484,
+        "se": 0.0325,
+        "p": 0.0,
+        "n": 230
+      },
+      "B": {
+        "beta": -0.6635,
+        "se": 0.0322,
+        "p": 0.0,
+        "status": "ok",
+        "n": 230
+      },
+      "C": {
+        "log_area": {
+          "beta": 0.7041,
+          "se": 0.0765,
+          "p": 0.0
+        },
+        "log_area_sq": {
+          "beta": -0.1148,
+          "se": 0.0063,
+          "p": 0.0
+        },
+        "turning": {
+          "area_star": 21.5,
+          "in_range": true,
+          "beta2_sig": true,
+          "beta2": -0.1148,
+          "p2": 0.0
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 1127.75,
+        "mid": 1112.7,
+        "high": 392.4
+      },
+      "notes": []
+    },
+    {
+      "sido_name": "경기도",
+      "sigungu_name": "성남시 수정구",
+      "sigungu_code": "41131",
+      "land_category": "대",
+      "region_type": "cap_city",
+      "n_screen": 226,
+      "n_raw": 226,
+      "n_tier": "good",
+      "A": {
+        "beta": 0.0712,
+        "se": 0.0388,
+        "p": 0.0682,
+        "n": 226,
+        "r2": 0.087
+      },
+      "A_robust": {
+        "beta": 0.0833,
+        "se": 0.0386,
+        "p": 0.0319,
+        "n": 222
+      },
+      "B": {
+        "beta": 0.0904,
+        "se": 0.0341,
+        "p": 0.0085,
+        "status": "ok",
+        "n": 226
+      },
+      "C": {
+        "log_area": {
+          "beta": 0.4106,
+          "se": 0.1404,
+          "p": 0.0038
+        },
+        "log_area_sq": {
+          "beta": -0.0336,
+          "se": 0.0134,
+          "p": 0.0127
+        },
+        "turning": {
+          "area_star": 451.1,
+          "in_range": true,
+          "beta2_sig": true,
+          "beta2": -0.0336,
+          "p2": 0.0127
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 529.65,
+        "mid": 1109.9,
+        "high": 543.0
+      },
+      "notes": [
+        "beop_dropped_small=2"
+      ]
+    },
+    {
+      "sido_name": "경기도",
+      "sigungu_name": "과천시",
+      "sigungu_code": "41290",
+      "land_category": "대",
+      "region_type": "cap_city",
+      "n_screen": 112,
+      "n_raw": 112,
+      "n_tier": "ok",
+      "A": {
+        "beta": -0.0767,
+        "se": 0.0452,
+        "p": 0.0922,
+        "n": 112,
+        "r2": 0.197
+      },
+      "A_robust": {
+        "beta": 0.0361,
+        "se": 0.0367,
+        "p": 0.3268,
+        "n": 111
+      },
+      "B": {
+        "beta": -0.134,
+        "se": 0.042,
+        "p": 0.0019,
+        "status": "ok",
+        "n": 112
+      },
+      "C": {
+        "log_area": {
+          "beta": 0.5242,
+          "se": 0.1763,
+          "p": 0.0037
+        },
+        "log_area_sq": {
+          "beta": -0.0614,
+          "se": 0.0175,
+          "p": 0.0007
+        },
+        "turning": {
+          "area_star": 71.4,
+          "in_range": true,
+          "beta2_sig": true,
+          "beta2": -0.0614,
+          "p2": 0.0007
+        },
+        "status": "note"
+      },
+      "tercile_median_unit_price": {
+        "low": 373.45,
+        "mid": 663.8,
+        "high": 748.7
+      },
+      "notes": [
+        "beop_dropped_small=1"
+      ]
+    },
+    {
+      "sido_name": "경기도",
+      "sigungu_name": "용인시 기흥구",
+      "sigungu_code": "41463",
+      "land_category": "답",
+      "region_type": "cap_city",
+      "n_screen": 239,
+      "n_raw": 239,
+      "n_tier": "good",
+      "A": {
+        "beta": -0.0599,
+        "se": 0.0285,
+        "p": 0.0365,
+        "n": 239,
+        "r2": 0.085
+      },
+      "A_robust": {
+        "beta": -0.0085,
+        "se": 0.0263,
+        "p": 0.7468,
+        "n": 222
+      },
+      "B": {
+        "beta": -0.0392,
+        "se": 0.0268,
+        "p": 0.1445,
+        "status": "ok",
+        "n": 239
+      },
+      "C": {
+        "log_area": {
+          "beta": 0.0079,
+          "se": 0.1246,
+          "p": 0.9495
+        },
+        "log_area_sq": {
+          "beta": -0.0066,
+          "se": 0.0118,
+          "p": 0.5768
+        },
+        "turning": {
+          "area_star": null,
+          "in_range": false,
+          "beta2_sig": false,
+          "beta2": -0.0066,
+          "p2": 0.5768
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 114.85,
+        "mid": 111.0,
+        "high": 98.0
+      },
+      "notes": [
+        "beop_dropped_small=1"
+      ]
+    },
+    {
+      "sido_name": "경기도",
+      "sigungu_name": "수원시 권선구",
+      "sigungu_code": "41113",
+      "land_category": "전",
+      "region_type": "cap_city",
+      "n_screen": 263,
+      "n_raw": 263,
+      "n_tier": "good",
+      "A": {
+        "beta": -0.111,
+        "se": 0.0272,
+        "p": 0.0001,
+        "n": 263,
+        "r2": 0.136
+      },
+      "A_robust": {
+        "beta": -0.1036,
+        "se": 0.0264,
+        "p": 0.0001,
+        "n": 255
+      },
+      "B": {
+        "beta": -0.0565,
+        "se": 0.0215,
+        "p": 0.009,
+        "status": "ok",
+        "n": 263
+      },
+      "C": {
+        "log_area": {
+          "beta": 0.0338,
+          "se": 0.1136,
+          "p": 0.7665
+        },
+        "log_area_sq": {
+          "beta": -0.0155,
+          "se": 0.0118,
+          "p": 0.1904
+        },
+        "turning": {
+          "area_star": null,
+          "in_range": false,
+          "beta2_sig": false,
+          "beta2": -0.0155,
+          "p2": 0.1904
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 131.9,
+        "mid": 94.6,
+        "high": 75.4
+      },
+      "notes": [
+        "beop_dropped_small=1"
+      ]
+    },
+    {
+      "sido_name": "강원특별자치도",
+      "sigungu_name": "속초시",
+      "sigungu_code": "51210",
+      "land_category": "대",
+      "region_type": "prov_city",
+      "n_screen": 531,
+      "n_raw": 531,
+      "n_tier": "better",
+      "A": {
+        "beta": -0.1292,
+        "se": 0.0256,
+        "p": 0.0,
+        "n": 531,
+        "r2": 0.182
+      },
+      "A_robust": {
+        "beta": -0.1129,
+        "se": 0.0255,
+        "p": 0.0,
+        "n": 508
+      },
+      "B": {
+        "beta": -0.0633,
+        "se": 0.0239,
+        "p": 0.0084,
+        "status": "ok",
+        "n": 531
+      },
+      "C": {
+        "log_area": {
+          "beta": 0.0523,
+          "se": 0.0944,
+          "p": 0.5803
+        },
+        "log_area_sq": {
+          "beta": -0.0242,
+          "se": 0.0121,
+          "p": 0.0464
+        },
+        "turning": {
+          "area_star": 2.9,
+          "in_range": false,
+          "beta2_sig": true,
+          "beta2": -0.0242,
+          "p2": 0.0464
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 142.6,
+        "mid": 160.0,
+        "high": 111.7
+      },
+      "notes": []
+    },
+    {
+      "sido_name": "전남광주통합특별시",
+      "sigungu_name": "목포시",
+      "sigungu_code": "12110",
+      "land_category": "대",
+      "region_type": "prov_city",
+      "n_screen": 868,
+      "n_raw": 868,
+      "n_tier": "better",
+      "A": {
+        "beta": 0.0004,
+        "se": 0.0174,
+        "p": 0.9802,
+        "n": 868,
+        "r2": 0.27
+      },
+      "A_robust": {
+        "beta": 0.0122,
+        "se": 0.0169,
+        "p": 0.4696,
+        "n": 817
+      },
+      "B": "B_skip",
+      "C": {
+        "log_area": {
+          "beta": 0.041,
+          "se": 0.0649,
+          "p": 0.5278
+        },
+        "log_area_sq": {
+          "beta": -0.0047,
+          "se": 0.0073,
+          "p": 0.5166
+        },
+        "turning": {
+          "area_star": null,
+          "in_range": false,
+          "beta2_sig": false,
+          "beta2": -0.0047,
+          "p2": 0.5166
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 34.3,
+        "mid": 30.8,
+        "high": 65.4
+      },
+      "notes": []
+    },
+    {
+      "sido_name": "강원특별자치도",
+      "sigungu_name": "태백시",
+      "sigungu_code": "51190",
+      "land_category": "대",
+      "region_type": "prov_city",
+      "n_screen": 259,
+      "n_raw": 259,
+      "n_tier": "good",
+      "A": {
+        "beta": -0.2344,
+        "se": 0.0455,
+        "p": 0.0,
+        "n": 259,
+        "r2": 0.182
+      },
+      "A_robust": {
+        "beta": -0.1903,
+        "se": 0.0432,
+        "p": 0.0,
+        "n": 236
+      },
+      "B": "B_skip",
+      "C": {
+        "log_area": {
+          "beta": -0.0369,
+          "se": 0.1809,
+          "p": 0.8384
+        },
+        "log_area_sq": {
+          "beta": -0.0221,
+          "se": 0.0196,
+          "p": 0.2603
+        },
+        "turning": {
+          "area_star": null,
+          "in_range": false,
+          "beta2_sig": false,
+          "beta2": -0.0221,
+          "p2": 0.2603
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 20.8,
+        "mid": 16.1,
+        "high": 11.85
+      },
+      "notes": []
+    },
+    {
+      "sido_name": "강원특별자치도",
+      "sigungu_name": "동해시",
+      "sigungu_code": "51170",
+      "land_category": "전",
+      "region_type": "prov_city",
+      "n_screen": 572,
+      "n_raw": 572,
+      "n_tier": "better",
+      "A": {
+        "beta": -0.1187,
+        "se": 0.0257,
+        "p": 0.0,
+        "n": 572,
+        "r2": 0.18
+      },
+      "A_robust": {
+        "beta": -0.1062,
+        "se": 0.026,
+        "p": 0.0001,
+        "n": 546
+      },
+      "B": {
+        "beta": -0.0867,
+        "se": 0.0213,
+        "p": 0.0001,
+        "status": "ok",
+        "n": 572
+      },
+      "C": {
+        "log_area": {
+          "beta": 0.1422,
+          "se": 0.1293,
+          "p": 0.2722
+        },
+        "log_area_sq": {
+          "beta": -0.0255,
+          "se": 0.0124,
+          "p": 0.0401
+        },
+        "turning": {
+          "area_star": 16.2,
+          "in_range": false,
+          "beta2_sig": true,
+          "beta2": -0.0255,
+          "p2": 0.0401
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 21.2,
+        "mid": 15.95,
+        "high": 13.5
+      },
+      "notes": [
+        "beop_dropped_small=3"
+      ]
+    },
+    {
+      "sido_name": "경상남도",
+      "sigungu_name": "창원시 진해구",
+      "sigungu_code": "48129",
+      "land_category": "대",
+      "region_type": "urban_rural",
+      "n_screen": 714,
+      "n_raw": 714,
+      "n_tier": "better",
+      "A": {
+        "beta": -0.0211,
+        "se": 0.0131,
+        "p": 0.1077,
+        "n": 714,
+        "r2": 0.121
+      },
+      "A_robust": {
+        "beta": -0.014,
+        "se": 0.0119,
+        "p": 0.2386,
+        "n": 661
+      },
+      "B": "B_skip",
+      "C": {
+        "log_area": {
+          "beta": -0.0426,
+          "se": 0.0473,
+          "p": 0.3683
+        },
+        "log_area_sq": {
+          "beta": 0.0028,
+          "se": 0.0059,
+          "p": 0.6364
+        },
+        "turning": {
+          "area_star": null,
+          "in_range": false,
+          "beta2_sig": false,
+          "beta2": 0.0028,
+          "p2": 0.6364
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 101.9,
+        "mid": 95.5,
+        "high": 94.9
+      },
+      "notes": []
+    },
+    {
+      "sido_name": "경상남도",
+      "sigungu_name": "창원시 진해구",
+      "sigungu_code": "48129",
+      "land_category": "전",
+      "region_type": "urban_rural",
+      "n_screen": 398,
+      "n_raw": 398,
+      "n_tier": "better",
+      "A": {
+        "beta": -0.1824,
+        "se": 0.0307,
+        "p": 0.0,
+        "n": 398,
+        "r2": 0.299
+      },
+      "A_robust": {
+        "beta": -0.1854,
+        "se": 0.0309,
+        "p": 0.0,
+        "n": 388
+      },
+      "B": {
+        "beta": -0.1,
+        "se": 0.0276,
+        "p": 0.0003,
+        "status": "ok",
+        "n": 398
+      },
+      "C": {
+        "log_area": {
+          "beta": -0.3406,
+          "se": 0.1364,
+          "p": 0.0129
+        },
+        "log_area_sq": {
+          "beta": 0.0164,
+          "se": 0.0138,
+          "p": 0.2348
+        },
+        "turning": {
+          "area_star": null,
+          "in_range": false,
+          "beta2_sig": false,
+          "beta2": 0.0164,
+          "p2": 0.2348
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 58.0,
+        "mid": 19.8,
+        "high": 20.4
+      },
+      "notes": [
+        "beop_dropped_small=5"
+      ]
+    },
+    {
+      "sido_name": "경상남도",
+      "sigungu_name": "거제시",
+      "sigungu_code": "48310",
+      "land_category": "대",
+      "region_type": "urban_rural",
+      "n_screen": 855,
+      "n_raw": 855,
+      "n_tier": "better",
+      "A": {
+        "beta": 0.0385,
+        "se": 0.0209,
+        "p": 0.0661,
+        "n": 855,
+        "r2": 0.318
+      },
+      "A_robust": {
+        "beta": 0.0247,
+        "se": 0.0201,
+        "p": 0.2181,
+        "n": 749
+      },
+      "B": {
+        "beta": 0.0602,
+        "se": 0.0196,
+        "p": 0.0022,
+        "status": "ok",
+        "n": 855
+      },
+      "C": {
+        "log_area": {
+          "beta": -0.3352,
+          "se": 0.0883,
+          "p": 0.0002
+        },
+        "log_area_sq": {
+          "beta": 0.0459,
+          "se": 0.0105,
+          "p": 0.0
+        },
+        "turning": {
+          "area_star": 38.4,
+          "in_range": true,
+          "beta2_sig": true,
+          "beta2": 0.0459,
+          "p2": 0.0
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 32.6,
+        "mid": 31.45,
+        "high": 42.65
+      },
+      "notes": [
+        "beop_dropped_small=12"
+      ]
+    },
+    {
+      "sido_name": "경상남도",
+      "sigungu_name": "거제시",
+      "sigungu_code": "48310",
+      "land_category": "답",
+      "region_type": "urban_rural",
+      "n_screen": 2716,
+      "n_raw": 2716,
+      "n_tier": "better",
+      "A": {
+        "beta": -0.2441,
+        "se": 0.0154,
+        "p": 0.0,
+        "n": 2716,
+        "r2": 0.175
+      },
+      "A_robust": {
+        "beta": -0.1386,
+        "se": 0.0132,
+        "p": 0.0,
+        "n": 2398
+      },
+      "B": {
+        "beta": -0.0768,
+        "se": 0.0107,
+        "p": 0.0,
+        "status": "ok",
+        "n": 2716
+      },
+      "C": {
+        "log_area": {
+          "beta": -0.2022,
+          "se": 0.0769,
+          "p": 0.0086
+        },
+        "log_area_sq": {
+          "beta": -0.004,
+          "se": 0.0071,
+          "p": 0.5784
+        },
+        "turning": {
+          "area_star": null,
+          "in_range": false,
+          "beta2_sig": false,
+          "beta2": -0.004,
+          "p2": 0.5784
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 18.9,
+        "mid": 12.9,
+        "high": 8.05
+      },
+      "notes": []
+    },
+    {
+      "sido_name": "경상남도",
+      "sigungu_name": "창원시 마산합포구",
+      "sigungu_code": "48125",
+      "land_category": "대",
+      "region_type": "urban_rural",
+      "n_screen": 667,
+      "n_raw": 667,
+      "n_tier": "better",
+      "A": {
+        "beta": -0.2417,
+        "se": 0.0284,
+        "p": 0.0,
+        "n": 667,
+        "r2": 0.234
+      },
+      "A_robust": {
+        "beta": -0.2398,
+        "se": 0.0279,
+        "p": 0.0,
+        "n": 626
+      },
+      "B": "B_skip",
+      "C": {
+        "log_area": {
+          "beta": -0.0861,
+          "se": 0.1227,
+          "p": 0.4833
+        },
+        "log_area_sq": {
+          "beta": -0.0189,
+          "se": 0.0145,
+          "p": 0.1928
+        },
+        "turning": {
+          "area_star": null,
+          "in_range": false,
+          "beta2_sig": false,
+          "beta2": -0.0189,
+          "p2": 0.1928
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 80.5,
+        "mid": 58.0,
+        "high": 29.3
+      },
+      "notes": []
+    },
+    {
+      "sido_name": "경상북도",
+      "sigungu_name": "울릉군",
+      "sigungu_code": "47940",
+      "land_category": "전",
+      "region_type": "gun",
+      "n_screen": 307,
+      "n_raw": 307,
+      "n_tier": "better",
+      "A": {
+        "beta": -0.2331,
+        "se": 0.0374,
+        "p": 0.0,
+        "n": 307,
+        "r2": 0.178
+      },
+      "A_robust": {
+        "beta": -0.1897,
+        "se": 0.036,
+        "p": 0.0,
+        "n": 286
+      },
+      "B": {
+        "beta": -0.229,
+        "se": 0.0352,
+        "p": 0.0,
+        "status": "ok",
+        "n": 307
+      },
+      "C": {
+        "log_area": {
+          "beta": 0.2839,
+          "se": 0.181,
+          "p": 0.1178
+        },
+        "log_area_sq": {
+          "beta": -0.0411,
+          "se": 0.0141,
+          "p": 0.0038
+        },
+        "turning": {
+          "area_star": 31.7,
+          "in_range": false,
+          "beta2_sig": true,
+          "beta2": -0.0411,
+          "p2": 0.0038
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 20.45,
+        "mid": 10.5,
+        "high": 6.95
+      },
+      "notes": []
+    },
+    {
+      "sido_name": "강원특별자치도",
+      "sigungu_name": "철원군",
+      "sigungu_code": "51780",
+      "land_category": "전",
+      "region_type": "gun",
+      "n_screen": 1384,
+      "n_raw": 1384,
+      "n_tier": "better",
+      "A": {
+        "beta": -0.1515,
+        "se": 0.017,
+        "p": 0.0,
+        "n": 1384,
+        "r2": 0.14
+      },
+      "A_robust": {
+        "beta": -0.0985,
+        "se": 0.0149,
+        "p": 0.0,
+        "n": 1238
+      },
+      "B": {
+        "beta": -0.076,
+        "se": 0.0127,
+        "p": 0.0,
+        "status": "ok",
+        "n": 1384
+      },
+      "C": {
+        "log_area": {
+          "beta": 0.3758,
+          "se": 0.09,
+          "p": 0.0
+        },
+        "log_area_sq": {
+          "beta": -0.0434,
+          "se": 0.0073,
+          "p": 0.0
+        },
+        "turning": {
+          "area_star": 75.7,
+          "in_range": false,
+          "beta2_sig": true,
+          "beta2": -0.0434,
+          "p2": 0.0
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 4.8,
+        "mid": 4.25,
+        "high": 3.0
+      },
+      "notes": [
+        "beop_dropped_small=4"
+      ]
+    },
+    {
+      "sido_name": "경기도",
+      "sigungu_name": "연천군",
+      "sigungu_code": "41800",
+      "land_category": "전",
+      "region_type": "gun",
+      "n_screen": 2176,
+      "n_raw": 2176,
+      "n_tier": "better",
+      "A": {
+        "beta": -0.258,
+        "se": 0.0134,
+        "p": 0.0,
+        "n": 2176,
+        "r2": 0.255
+      },
+      "A_robust": {
+        "beta": -0.2074,
+        "se": 0.0131,
+        "p": 0.0,
+        "n": 2021
+      },
+      "B": {
+        "beta": -0.135,
+        "se": 0.0106,
+        "p": 0.0,
+        "status": "ok",
+        "n": 2176
+      },
+      "C": {
+        "log_area": {
+          "beta": 0.4934,
+          "se": 0.0742,
+          "p": 0.0
+        },
+        "log_area_sq": {
+          "beta": -0.0628,
+          "se": 0.0061,
+          "p": 0.0
+        },
+        "turning": {
+          "area_star": 50.8,
+          "in_range": false,
+          "beta2_sig": true,
+          "beta2": -0.0628,
+          "p2": 0.0
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 10.0,
+        "mid": 7.9,
+        "high": 4.5
+      },
+      "notes": [
+        "beop_dropped_small=4"
+      ]
+    },
+    {
+      "sido_name": "강원특별자치도",
+      "sigungu_name": "양구군",
+      "sigungu_code": "51800",
+      "land_category": "전",
+      "region_type": "gun",
+      "n_screen": 2225,
+      "n_raw": 2225,
+      "n_tier": "better",
+      "A": {
+        "beta": -0.3761,
+        "se": 0.0174,
+        "p": 0.0,
+        "n": 2225,
+        "r2": 0.298
+      },
+      "A_robust": {
+        "beta": -0.2716,
+        "se": 0.017,
+        "p": 0.0,
+        "n": 2033
+      },
+      "B": {
+        "beta": -0.1651,
+        "se": 0.0133,
+        "p": 0.0,
+        "status": "ok",
+        "n": 2225
+      },
+      "C": {
+        "log_area": {
+          "beta": -0.2103,
+          "se": 0.1217,
+          "p": 0.0841
+        },
+        "log_area_sq": {
+          "beta": -0.0119,
+          "se": 0.0087,
+          "p": 0.1689
+        },
+        "turning": {
+          "area_star": null,
+          "in_range": false,
+          "beta2_sig": false,
+          "beta2": -0.0119,
+          "p2": 0.1689
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 2.1,
+        "mid": 0.6,
+        "high": 0.3
+      },
+      "notes": [
+        "beop_dropped_small=1"
+      ]
+    },
+    {
+      "sido_name": "강원특별자치도",
+      "sigungu_name": "정선군",
+      "sigungu_code": "51770",
+      "land_category": "전",
+      "region_type": "gun",
+      "n_screen": 2606,
+      "n_raw": 2606,
+      "n_tier": "better",
+      "A": {
+        "beta": -0.2236,
+        "se": 0.0131,
+        "p": 0.0,
+        "n": 2606,
+        "r2": 0.197
+      },
+      "A_robust": {
+        "beta": -0.1404,
+        "se": 0.0124,
+        "p": 0.0,
+        "n": 2381
+      },
+      "B": {
+        "beta": -0.18,
+        "se": 0.0125,
+        "p": 0.0,
+        "status": "ok",
+        "n": 2606
+      },
+      "C": {
+        "log_area": {
+          "beta": -0.2498,
+          "se": 0.0837,
+          "p": 0.0029
+        },
+        "log_area_sq": {
+          "beta": 0.002,
+          "se": 0.0062,
+          "p": 0.7508
+        },
+        "turning": {
+          "area_star": null,
+          "in_range": false,
+          "beta2_sig": false,
+          "beta2": 0.002,
+          "p2": 0.7508
+        },
+        "status": "ok"
+      },
+      "tercile_median_unit_price": {
+        "low": 2.8,
+        "mid": 2.2,
+        "high": 1.5
+      },
+      "notes": []
+    }
+  ],
+  "phase1_fit_summary": {
+    "n_fits": 24,
+    "beta_a_median": -0.124,
+    "share_negative": 0.708,
+    "raw_robust_sign_match": 0.958,
+    "turning_in_range_given_sig": 0.615
+  },
+  "cells_csv": "land_area_elasticity_screen.csv",
+  "resume": {
+    "next_id": "eligible-all",
+    "title": "적격칸 전수(2차)",
+    "say": "1차 음수 71%는 스펙트럼이 넓은 칸만 골랐을 수 있다. 같은 식을 적격 369칸에 반복한다.",
+    "do_not": "전국 한 β를 본결과로 내지 않는다. 제품 토지 회귀·매트릭스 기본값을 바꾸지 않는다. turning이 10㎡대면 광평 전환으로 읽지 않는다.",
+    "how": "관리자 ?tool=area-elasticity → 다음 실험. 재실행은 python -m app.land_lab.area_elasticity_screen."
+  },
+  "verdict": {
+    "code": "cell_heterogeneous",
+    "label": "칸마다 다르다. 전국 한 β·제품 식 변경은 하지 않는다.",
+    "choices": [
+      {
+        "id": "national-beta",
+        "label": "전국 한 β를 본결과로 쓴다",
+        "selected": false,
+        "why": "유형·지목 부호가 갈림. 군 전은 음수, 서울 대지는 섞임."
+      },
+      {
+        "id": "product-formula",
+        "label": "토지 회귀 기본 식에 면적 탄성을 넣는다",
+        "selected": false,
+        "why": "1차는 대표칸 24곳. 2차 전수 전."
+      },
+      {
+        "id": "keep-cells",
+        "label": "시군구×지목 칸으로 계속 잰다",
+        "selected": true,
+        "why": "같은 시에서도 대지와 답이 갈림(거제)."
+      }
+    ]
+  },
+  "answers": [
+    {
+      "q": "면적효과가 있는가",
+      "a": "칸마다 다름. β_A 중위 −0.124, 음수 71%",
+      "evidence": "1차 24칸. Raw/Robust 부호 일치 96%(과천 대지만 갈림)."
+    },
+    {
+      "q": "지역·지목마다 다른가",
+      "a": "있다. 군 전은 전부 음수. 서울 대지는 부호가 갈림",
+      "evidence": "용산 A+ / B≈0은 입지 착시 후보. 거제 대지(+) vs 답(−)."
+    },
+    {
+      "q": "선형인가 비선형인가",
+      "a": "제곱항이 유의한 칸이 있으나 광평 U자로 단정하지 않음",
+      "evidence": "turning이 극소필지(용산 13.8㎡)에 붙는 경우가 있음."
+    },
+    {
+      "q": "어느 면적에서 방향이 바뀌는가",
+      "a": "범위 안 turning 8/13(유의 시). P10 근처면 광평 전환이 아님",
+      "evidence": "표시 조건은 β₂ 유의 그리고 면적* ∈ [P10, P90]."
+    }
+  ],
+  "next": [
+    {
+      "id": "eligible-all",
+      "status": "planned",
+      "title": "적격칸 전수",
+      "ask": "1차 음수 71%가 스펙트럼 넓은 칸 편향인가",
+      "gate": "같은 식 · 적격 369칸. 단가·β로 고르지 않음"
+    },
+    {
+      "id": "zone-split",
+      "status": "planned",
+      "title": "용도지역 분할",
+      "ask": "주거계 대지와 농림 대지를 한 표본에 두면 섞이는가",
+      "gate": "2차 표가 안정된 뒤"
+    },
+    {
+      "id": "turning-floor",
+      "status": "planned",
+      "title": "turning P10 근처 제외",
+      "ask": "극소필지 꺾임을 광평 전환과 같은 칸에 두면 안 되는가",
+      "gate": "2차 후 규칙 검토"
+    },
+    {
+      "id": "product-formula",
+      "status": "blocked",
+      "title": "제품 식·지도",
+      "ask": "매트릭스·Insight에 면적 탄성을 넣는가",
+      "gate": "2차 전수 전 금지. D-xxx 없음"
+    }
+  ],
+  "limits": [
+    "1차는 유형당 스펙트럼이 넓은 칸이라 음수 비율이 전 적격칸보다 클 수 있다.",
+    "면적 IQR을 쓰지 않았다. 단가만 Raw vs Robust.",
+    "turning point가 P10 근처면 광평 희소 가설의 증거가 아니다.",
+    "제품 토지 회귀·매트릭스 기본값은 바꾸지 않았다."
+  ]
+}
