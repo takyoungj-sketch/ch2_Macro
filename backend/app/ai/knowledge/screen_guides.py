@@ -552,6 +552,36 @@ def _insight_02(context: AiContext) -> str:
     return "\n".join(lines)
 
 
+def _insight_03(context: AiContext) -> str:
+    facts = context.facts or {}
+    start = facts.get("period_start")
+    end = facts.get("period_end")
+    n = facts.get("n_eligible")
+    lines = [
+        "### 이 화면은",
+        "Macro Insight 3번입니다. 같은 연립·다세대 건물 안에서 1층과 윗층의 가격이 다른지, 승강기가 있으면 그 차이가 달라지는지를 봅니다.",
+        "아파트 단지 층 효용지수가 아닙니다. 통계 기초만 있는 사람에게 쉬운 말로 설명합니다.",
+    ]
+    if start and end:
+        lines.append(f"기간은 {start}부터 {end}까지, 전국 실거래입니다.")
+    if n is not None:
+        lines.append(f"층별 비교가 가능한 건물은 {n}개입니다.")
+    lines.extend(
+        [
+            "",
+            "### 어떻게 읽나",
+            "- 본체는 같은 건물 안 비교입니다. 1층=100 표가 상대 기준입니다.",
+            "- 승강기×최상층 약 +13.5%는 없는 건물 대비 기울기가 달라진 정도입니다. 있는 최상층이 1층보다 13.5% 비싸다는 뜻이 아닙니다. 1층을 100으로 두면 있는 동의 최상은 약 111(약 +11%)입니다.",
+            "- 건물 사이 약 +26%는 다른 질문입니다. 13.5에 더하지 않습니다.",
+            "- 표에 없는 퍼센트를 만들지 않습니다.",
+            "",
+            "### 한계",
+            "인과가 아닙니다. 승강기를 설치하면 가격이 오른다는 실험이 아닙니다. 자세한 내용은 화면의 「이 분석의 한계」를 따릅니다.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def _fallback(context: AiContext) -> str:
     scope = _scope_line(context)
     lines = [
@@ -567,6 +597,37 @@ def _fallback(context: AiContext) -> str:
             "목록이나 칸을 클릭하면 추세·회귀 등 추가 분석을 열 수 있습니다.",
             "",
             "감정평가·적정가·투자 추천은 하지 않습니다.",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _insight_04(context: AiContext) -> str:
+    facts = context.facts or {}
+    start = facts.get("period_start")
+    end = facts.get("period_end")
+    n = facts.get("n_comparable")
+    lines = [
+        "### 이 화면은",
+        "Macro Insight 4번입니다. 같은 시군구·같은 지목 안에서 상대적으로 큰 필지와 일반 필지의 ㎡당 가격이 다른지, 그 관계가 지목·체급에 따라 달라지는지를 봅니다.",
+        "토지 회귀의 면적 계수가 아닙니다. 전국 광평 할인율이 아닙니다. 통계 기초만 있는 사람에게 쉬운 말로 설명합니다.",
+    ]
+    if start and end:
+        lines.append(f"기간은 {start}부터 {end}까지, 전국 토지 실거래입니다.")
+    if n is not None:
+        lines.append(f"비교한 그룹은 {n}개입니다.")
+    lines.extend(
+        [
+            "",
+            "### 어떻게 읽나",
+            "- 본체는 같은 시군구·지목 안 비교입니다. 광평은 그 그룹의 P90 이상이지 전국 1,000㎡가 아닙니다.",
+            "- 함께 보면 낮게 나타난 그룹이 많습니다. 그룹별 차이를 요약하면 약 −20%이나 「전국에서 20% 낮다」가 아닙니다.",
+            "- 나누면 전·답은 낮게, 도시 대지는 높게가 나타나기도 합니다. 대지는 클수록 비싸다는 뜻이 아닙니다.",
+            "- 초소형은 다른 질문입니다. 본문 표에 더하지 않습니다.",
+            "- 표에 없는 퍼센트를 만들지 않습니다.",
+            "",
+            "### 한계",
+            "인과가 아닙니다. 큰 땅을 나누면 단가가 오른다는 실험이 아닙니다. 자세한 내용은 화면의 「이 분석의 한계」를 따릅니다.",
         ]
     )
     return "\n".join(lines)
@@ -588,6 +649,10 @@ def format_screen_guide(context: AiContext) -> str:
         return _rent_list(context)
     if panel in ("RegionalProfile", "TwinRegionPanel", "ProfilePanel") or app == "profile":
         return _profile(context)
+    if panel == "Insight04":
+        return _insight_04(context)
+    if panel == "Insight03":
+        return _insight_03(context)
     if panel == "Insight02":
         return _insight_02(context)
     if panel in ("Insight01", "InsightHome") or app == "insight":
@@ -636,6 +701,20 @@ def screen_guide_followups(context: AiContext) -> list[str]:
         return [
             "Twin 유사지역은 무엇을 뜻하나요?",
             "단지 추세는 어디서 보나요?",
+        ]
+    if panel == "Insight04":
+        return [
+            "약 −20%는 전국 광평 할인율인가요?",
+            "대지는 큰 땅일수록 비싼가요?",
+            "광평은 1,000㎡ 이상인가요?",
+            "토지 회귀 면적 계수와 같은가요?",
+        ]
+    if panel == "Insight03":
+        return [
+            "1층=100은 시세 100인가요?",
+            "승강기를 설치하면 13% 오르나요?",
+            "26%와 13.5%를 더하면 되나요?",
+            "아파트 층 지수와 같은가요?",
         ]
     if panel == "Insight02":
         return [

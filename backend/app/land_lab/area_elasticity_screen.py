@@ -36,7 +36,18 @@ from app.region_sido import is_retired_sido_code, is_retired_sido_name
 
 ROOT = Path(__file__).resolve().parents[3]
 OUT = ROOT / "docs" / "lab" / "land_area_elasticity_screen.json"
-KEEP_LAB_KEYS = ("verdict", "answers", "next", "limits", "resume")
+KEEP_LAB_KEYS = (
+    "verdict",
+    "answers",
+    "next",
+    "limits",
+    "resume",
+    "phase2",
+    "phase2_rows",
+    "phase2_csv",
+    "phase3",
+    "phase3_csv",
+)
 
 
 def period_bounds_for_window(as_of_month: date, window_years: int) -> tuple[date, date]:

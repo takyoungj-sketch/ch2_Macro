@@ -505,11 +505,75 @@ def build_insight_macro_02(context: AiContext) -> AiDiagnosticPack:
     )
 
 
+def build_insight_macro_03(context: AiContext) -> AiDiagnosticPack:
+    facts = context.facts or {}
+    summary = [
+        "Macro Insight 03 — 연립·다세대 건물 안 층×승강기",
+        "grain=building_within",
+    ]
+    if facts.get("as_of"):
+        summary.append(f"as_of={facts.get('as_of')}")
+    if facts.get("period_start") and facts.get("period_end"):
+        summary.append(f"기간={facts.get('period_start')}–{facts.get('period_end')}")
+    if facts.get("n_eligible") is not None:
+        summary.append(f"적격={facts.get('n_eligible')}")
+    limitations = list(
+        (context.explain.limitations if context.explain and context.explain.limitations else None)
+        or [
+            "건물 안 층 비교입니다. 인과가 아닙니다. 결론이 아닙니다.",
+            "13.5와 26을 더하지 않습니다. +13.5%는 있는 최상층이 1층보다 13.5% 비싸다는 뜻이 아닙니다. 아파트 층 지수가 아닙니다.",
+            "표에 없는 퍼센트를 만들지 않습니다.",
+        ]
+    )
+    return AiDiagnosticPack(
+        bundle_id="insight_macro_03",
+        panel=context.panel,
+        app=context.app,
+        summary_lines=summary,
+        diagnostics={**facts, "scope_label": context.scope.region_label or "전국"},
+        limitations=limitations,
+    )
+
+
+def build_insight_macro_04(context: AiContext) -> AiDiagnosticPack:
+    facts = context.facts or {}
+    summary = [
+        "Macro Insight 04 — 토지 비교 그룹 안 면적×㎡당 가격",
+        "grain=cell_within",
+    ]
+    if facts.get("as_of"):
+        summary.append(f"as_of={facts.get('as_of')}")
+    if facts.get("period_start") and facts.get("period_end"):
+        summary.append(f"기간={facts.get('period_start')}–{facts.get('period_end')}")
+    if facts.get("n_comparable") is not None:
+        summary.append(f"비교그룹={facts.get('n_comparable')}")
+    limitations = list(
+        (context.explain.limitations if context.explain and context.explain.limitations else None)
+        or [
+            "같은 시군구·지목 그룹 안 비교입니다. 인과가 아닙니다. 결론이 아닙니다.",
+            "약 −20%는 전국 광평 할인율이 아닙니다. 토지 회귀 면적 계수와 같지 않습니다.",
+            "대지는 클수록 비싸다고 쓰지 않습니다. 표에 없는 퍼센트를 만들지 않습니다.",
+        ]
+    )
+    return AiDiagnosticPack(
+        bundle_id="insight_macro_04",
+        panel=context.panel,
+        app=context.app,
+        summary_lines=summary,
+        diagnostics={**facts, "scope_label": context.scope.region_label or "전국"},
+        limitations=limitations,
+    )
+
+
 def build_bundle(context: AiContext) -> AiDiagnosticPack:
     facts = context.facts or {}
     panel = context.panel
     bid = resolve_bundle_id(panel)
 
+    if panel == "Insight04" or bid == "insight_macro_04":
+        return build_insight_macro_04(context)
+    if panel == "Insight03" or bid == "insight_macro_03":
+        return build_insight_macro_03(context)
     if panel == "Insight02" or bid == "insight_macro_02":
         return build_insight_macro_02(context)
     if panel in ("Insight01", "InsightHome") or bid == "insight_macro_01" or context.app == "insight":

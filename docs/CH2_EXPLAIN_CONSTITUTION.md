@@ -255,7 +255,7 @@ CH2 Macro는 결과보다 **데이터와 결과가 만들어지는 과정**을 �
 
 glossary 권장 필드: `definition`(의미·데이터) · `formula`(계산) · `interpretation`(해석) · `limitations`(한계). CH2 고유 지표는 정의에 **출처·기간·단위**를 넣는다.
 
-CH2 고유 termId: `regional_profile` · `yearly_mix` · `land_top3` · `apartment_percentiles` · `twin_region` · `rolling_window` · `jimok_group` · `land_matrix` · `floor_utility_index` · `commercial_cluster` · 임대·상권 항목.
+CH2 고유 termId: `regional_profile` · `yearly_mix` · `land_top3` · `apartment_percentiles` · `twin_region` · `rolling_window` · `jimok_group` · `land_matrix` · `floor_utility_index` · `commercial_cluster` · `insight_within_building` · `insight_floor_index_100` · 임대·상권 항목.
 
 ---
 

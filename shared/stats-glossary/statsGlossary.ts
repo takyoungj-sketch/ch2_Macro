@@ -939,6 +939,54 @@ export const STATS_GLOSSARY: Record<string, StatsGlossaryEntry> = {
     interpretation: ["같이 비싼가의 질문입니다. 같이 큰가의 질문과 표를 섞어 읽지 않습니다."],
     limitations: ["토지 유형 단가 마트가 없습니다. 상가는 일반상가입니다. 인구 보정을 하지 않습니다."],
   },
+  insight_within_building: {
+    id: "insight_within_building",
+    label: "같은 건물 안 비교",
+    title: "같은 건물 안 비교",
+    definition:
+      "그 건물의 1층과 그 건물의 윗층만 비교합니다. 입지·지은 해가 다른 건물끼리 층을 붙이지 않습니다.",
+    interpretation: [
+      "서울 4층과 군 1층을 직접 비교하지 않습니다.",
+      "건물마다 다른 값은 빼고, 그 건물 안의 층 차이만 봅니다.",
+    ],
+    limitations: ["건물 전체가 다른 건물보다 비싼지는 다른 질문입니다."],
+  },
+  insight_floor_index_100: {
+    id: "insight_floor_index_100",
+    label: "1층=100",
+    title: "1층=100 (상대 기준)",
+    definition:
+      "그 건물 1층의 ㎡당 가격을 100으로 둔 상대값입니다. 시장에서 100만 원이라는 뜻이 아닙니다.",
+    interpretation: [
+      "97이면 1층보다 낮고, 111이면 1층보다 높습니다.",
+      "승강기 있는 동이 없는 동보다 통째로 비싸다는 표가 아닙니다.",
+    ],
+    limitations: ["제품의 아파트 층 효용지수(상대 층, 거래 50건 이상)와 같은 산식이 아닙니다."],
+  },
+  insight_same_cell: {
+    id: "insight_same_cell",
+    label: "같은 시군구·지목 안 비교",
+    title: "같은 시군구·지목 안 비교",
+    definition:
+      "그 시군구의 그 지목 안에서, 상대적으로 큰 필지와 일반적인 크기 필지의 ㎡당 가격만 비교합니다. 다른 지역·다른 지목을 붙이지 않습니다.",
+    interpretation: [
+      "서울 대지와 군 전을 직접 비교하지 않습니다.",
+      "그룹마다 다른 가격 수준은 빼고, 그 그룹 안의 면적 차이만 봅니다.",
+    ],
+    limitations: ["그 시군구 전체가 다른 시군구보다 비싼지는 다른 질문입니다."],
+  },
+  insight_relative_large: {
+    id: "insight_relative_large",
+    label: "광평 (상대적 대형)",
+    title: "광평 = 그 비교 그룹에서 상대적으로 큰 필지",
+    definition:
+      "같은 시군구·지목 안에서 면적이 상위 10%(P90 이상)인 필지입니다. 전국 공통의 1,000㎡ 같은 고정 기준이 아닙니다.",
+    interpretation: [
+      "서울 대지에서는 200~330㎡대인 경우도 있습니다.",
+      "군 전·답의 광평과 서울 대지의 광평은 절대 ㎡가 다릅니다.",
+    ],
+    limitations: ["토지 회귀의 면적 계수와 같은 산식이 아닙니다. 전국 할인율이 아닙니다."],
+  },
 };
 
 export function getGlossaryEntry(id: string): StatsGlossaryEntry | undefined {

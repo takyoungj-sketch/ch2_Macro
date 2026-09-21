@@ -18,6 +18,13 @@ AREA_MAX_SQM = 10_000_000.0
 WINDOW_YEARS = 5
 PHASE1_PER_TYPE = 5
 
+# 2차 단가 비교. 선정은 n만. 단가·Δ 금지.
+TINY_FLOOR_SQM = {"대": 10.0, "전": 30.0, "답": 30.0, "임야": 30.0}
+PHASE2_N_BODY_MIN = 30
+PHASE2_N_LARGE_MIN = 20
+PHASE2_N_TINY_MIN = 20
+PHASE2_N_BOOT = 1000
+
 # 지방 도농복합시. 수도권 시는 cap_city가 우선이라 여기 있어도 수도권에서는 안 탄다.
 URBAN_RURAL_CITIES = frozenset(
     {

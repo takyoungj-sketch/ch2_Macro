@@ -64,7 +64,12 @@ const DOORS: { id: LabTool; title: string; desc: string }[] = [
   {
     id: "area-elasticity",
     title: "토지 면적 탄성",
-    desc: "1차 기록됨. 다음=적격칸 전수. 전국 한 β·제품 식은 넣지 않음.",
+    desc: "1–3차 정리. 차후=용도지역 분할. Insight·제품 식은 보류.",
+  },
+  {
+    id: "rowhouse-floor",
+    title: "연립·다세대 층·승강기",
+    desc: "3차 기록. 최상×승강기 가산이 체급·연식·수도권에서 모인다. 제품 층 식 미변경.",
   },
 ];
 

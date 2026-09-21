@@ -21,9 +21,10 @@
 | 시공사 효과 | `builder` | 공시지가 vs 시군구 FE · within-gu. **다음=브랜드 vs 시공사.** 제품 식 미변경 (D-063·D-065) |
 | 연식=0 잔차 | `age0` | 재고 식 연식=0 vs 실제 신축. **다음=서울·경기 분리.** 전국 공통 프리미엄 미가산 (D-064) |
 | 모형추천 Twin 벤치 | `recommend-twin` | Local / Twin1 / Twin2 × 지역더미 전후. 실험 Twin은 1위만. 제품 식은 Twin1=1위+더미, Twin2=확인용 재탐색. [`lab/RECOMMEND_TWIN_BENCH_LAB.md`](./lab/RECOMMEND_TWIN_BENCH_LAB.md) |
-| 토지 면적 탄성 | `area-elasticity` | 시군구×지목 log 단가~log 면적 β. **다음=적격칸 전수.** 전국 한 β·제품 식 미변경 |
+| 토지 면적 탄성 | `area-elasticity` | 1–3차 정리(교차표). **차후=용도지역 분할.** Insight 4번 본문. 제품 식 미변경 |
+| 연립·다세대 층·승강기 | `rowhouse-floor` | 3차 기록. **최상×승강기 가산 합의.** 제품 층 식 미변경 |
 
-공개 게이트웨이 **Macro Insight**(6번째 문)는 `/insight/`. 1번(금리·시중 돈과 거래) [`MACRO_INSIGHT_01.md`](./MACRO_INSIGHT_01.md) · 2번(유형 규모·단가 상관) [`MACRO_INSIGHT_02.md`](./MACRO_INSIGHT_02.md). 결정 카드 없음. 랩 `?tool=size`는 실험실로 남긴다.
+공개 게이트웨이 **Macro Insight**(6번째 문)는 `/insight/`. 1번(금리·시중 돈과 거래) [`MACRO_INSIGHT_01.md`](./MACRO_INSIGHT_01.md) · 2번(유형 규모·단가 상관) [`MACRO_INSIGHT_02.md`](./MACRO_INSIGHT_02.md) · 3번(연립·다세대 층×승강기) [`MACRO_INSIGHT_03.md`](./MACRO_INSIGHT_03.md) · 4번(토지 면적×㎡당 가격) [`MACRO_INSIGHT_04.md`](./MACRO_INSIGHT_04.md). 결정 카드 없음. 랩 `?tool=size`는 실험실로 남긴다.
 
 G3 시계열 랩: [`lab/G3_TIMESERIES_LAB.md`](./lab/G3_TIMESERIES_LAB.md) · `?tool=g3`.  
 G3·Insight 월 합 출처 수정: [`lab/MACRO_TS_RAW_MONTH_MART.md`](./lab/MACRO_TS_RAW_MONTH_MART.md) (원장 대신 raw CSV 전국 월 마트).
@@ -31,7 +32,8 @@ G3·Insight 월 합 출처 수정: [`lab/MACRO_TS_RAW_MONTH_MART.md`](./lab/MACR
 시공사 효과: [`lab/BUILDER_IDENT_LAB.md`](./lab/BUILDER_IDENT_LAB.md) · `?tool=builder`.
 연식=0 잔차: [`lab/AGE0_RESIDUAL_LAB.md`](./lab/AGE0_RESIDUAL_LAB.md) · `?tool=age0`.
 모형추천 Twin 벤치: [`lab/RECOMMEND_TWIN_BENCH_LAB.md`](./lab/RECOMMEND_TWIN_BENCH_LAB.md) · `?tool=recommend-twin`.
-토지 면적 탄성(광평수): [`lab/LAND_AREA_ELASTICITY_LAB.md`](./lab/LAND_AREA_ELASTICITY_LAB.md) · `?tool=area-elasticity` — 1차 기록. 제품 식 미변경.
+토지 면적 탄성(광평수): [`lab/LAND_AREA_ELASTICITY_LAB.md`](./lab/LAND_AREA_ELASTICITY_LAB.md) · `?tool=area-elasticity` — 1–3차 정리. 차후=용도지역 분할. 공개 기록은 Insight #4. 제품 식 미변경.
+연립·다세대 층·승강기: [`lab/ROWHOUSE_FLOOR_ELEVATOR_LAB.md`](./lab/ROWHOUSE_FLOOR_ELEVATOR_LAB.md) · `?tool=rowhouse-floor` — 3차 최상×승강기 가산 합의. 공개 기록은 Insight #3. 제품 층 식 미변경.
 
 계획일지 표 규칙:
 

@@ -1,6 +1,8 @@
 import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import { INSIGHT_01 } from "../copy/insight01";
 import { INSIGHT_02 } from "../copy/insight02";
+import { INSIGHT_03 } from "../copy/insight03";
+import { INSIGHT_04 } from "../copy/insight04";
 
 const homeCtx = {
   app: "insight" as const,
@@ -49,6 +51,30 @@ export default function InsightHome() {
                 {INSIGHT_02.listTitle}
               </p>
               <p className="text-sm text-slate-500 mt-1">{INSIGHT_02.listSub}</p>
+            </a>
+          </li>
+          <li>
+            <a
+              href="/insight/?q=3"
+              className="block card p-4 hover:border-slate-400 dark:hover:border-slate-500"
+            >
+              <p className="text-xs text-slate-500 mb-1">3</p>
+              <p className="font-semibold text-slate-900 dark:text-slate-50 leading-snug">
+                {INSIGHT_03.listTitle}
+              </p>
+              <p className="text-sm text-slate-500 mt-1">{INSIGHT_03.listSub}</p>
+            </a>
+          </li>
+          <li>
+            <a
+              href="/insight/?q=4"
+              className="block card p-4 hover:border-slate-400 dark:hover:border-slate-500"
+            >
+              <p className="text-xs text-slate-500 mb-1">4</p>
+              <p className="font-semibold text-slate-900 dark:text-slate-50 leading-snug">
+                {INSIGHT_04.listTitle}
+              </p>
+              <p className="text-sm text-slate-500 mt-1">{INSIGHT_04.listSub}</p>
             </a>
           </li>
         </ol>

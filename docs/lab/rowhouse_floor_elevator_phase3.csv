@@ -1,0 +1,15 @@
+﻿group,slice,ok,n,n_buildings,n_elev_yes,n_elev_no,dir_theta_mid,pct_theta_mid,p_theta_mid,dir_theta_top,pct_theta_top,p_theta_top,reason
+pooled,all,True,20139,975,401,574,ns,-0.0013,0.8094,plus,0.1351,0.0,
+floor,4,True,18505,914,352,562,ns,-0.0069,0.2134,plus,0.1333,0.0,
+floor,5,True,1289,54,42,12,ns,0.0206,0.4561,plus,0.1074,0.0068,
+floor,6plus,False,345,7,7,0,na,,,na,,,one_arm
+cap,capital,True,9200,479,192,287,minus,-0.0199,0.0059,plus,0.1017,0.0,
+cap,noncapital,True,10939,496,209,287,ns,0.0145,0.0584,plus,0.1618,0.0,
+age,old,True,9495,470,21,449,ns,0.0179,0.4295,plus,0.1425,0.0,
+age,new,True,10644,505,380,125,ns,-0.0134,0.0686,plus,0.0875,0.0,
+n,10,True,20139,975,401,574,ns,-0.0013,0.8094,plus,0.1351,0.0,
+n,20,True,10968,310,145,165,ns,-0.0009,0.9103,plus,0.1444,0.0,
+n,30,True,6737,133,62,71,ns,0.0025,0.809,plus,0.1591,0.0,
+n,50,True,3607,47,20,27,ns,0.0129,0.3602,plus,0.1472,0.0,
+purpose,연립,True,7349,263,110,153,ns,-0.0106,0.2277,plus,0.1731,0.0,
+purpose,다세대,True,4351,289,89,200,ns,-0.0071,0.5594,plus,0.0775,0.0,

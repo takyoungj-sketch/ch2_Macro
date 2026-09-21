@@ -75,6 +75,16 @@ BUNDLE_REGISTRY: dict[str, BundleSpec] = {
         description="Macro Insight 2번 — 시군구 유형 규모·단가 상관",
         panels=("Insight02",),
     ),
+    "insight_macro_03": BundleSpec(
+        bundle_id="insight_macro_03",
+        description="Macro Insight 3번 — 연립·다세대 층×승강기",
+        panels=("Insight03",),
+    ),
+    "insight_macro_04": BundleSpec(
+        bundle_id="insight_macro_04",
+        description="Macro Insight 4번 — 토지 면적×㎡당 가격",
+        panels=("Insight04",),
+    ),
     "list_overview": BundleSpec(
         bundle_id="list_overview",
         description="기본통계 목록·매트릭스 화면 안내",
@@ -195,6 +205,20 @@ SUGGESTED_QUESTIONS: dict[str, list[str]] = {
         "가격 수준 표는 규모 표와 같은가요?",
         "같이 크면 원인이 있는 건가요?",
     ],
+    "Insight03": [
+        "1층=100은 시세 100인가요?",
+        "승강기를 설치하면 13% 오르나요?",
+        "26%와 13.5%를 더하면 되나요?",
+        "아파트 층 지수와 같은가요?",
+        "이 숫자를 단지 가격에 써도 되나요?",
+    ],
+    "Insight04": [
+        "약 −20%는 전국 광평 할인율인가요?",
+        "대지는 큰 땅일수록 비싼가요?",
+        "광평은 1,000㎡ 이상인가요?",
+        "토지 회귀 면적 계수와 같은가요?",
+        "같은 동 안에서도 남나요?",
+    ],
     "InsightHome": [
         "Macro Insight는 무엇인가요?",
         "이 창은 분석 앱인가요?",
@@ -285,7 +309,11 @@ def suggested_questions(
             "이 칸의 표본을 설명해 주세요.",
         ]
     if app == "insight":
-        if panel == "Insight02":
+        if panel == "Insight04":
+            base = list(SUGGESTED_QUESTIONS["Insight04"])
+        elif panel == "Insight03":
+            base = list(SUGGESTED_QUESTIONS["Insight03"])
+        elif panel == "Insight02":
             base = list(SUGGESTED_QUESTIONS["Insight02"])
         elif panel in ("Insight01", "InsightHome"):
             base = list(SUGGESTED_QUESTIONS.get(panel, SUGGESTED_QUESTIONS["Insight01"]))

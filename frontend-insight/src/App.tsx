@@ -4,6 +4,8 @@ import { ActiveAiViewProvider, emptyAiContext } from "@ch2/ai-assistant/ActiveAi
 import InsightHome from "./pages/InsightHome";
 import Insight01 from "./pages/Insight01";
 import Insight02 from "./pages/Insight02";
+import Insight03 from "./pages/Insight03";
+import Insight04 from "./pages/Insight04";
 
 function readQ(): string | null {
   return new URLSearchParams(window.location.search).get("q");
@@ -18,7 +20,8 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  const panel = q === "1" ? "Insight01" : q === "2" ? "Insight02" : "InsightHome";
+  const panel =
+    q === "1" ? "Insight01" : q === "2" ? "Insight02" : q === "3" ? "Insight03" : q === "4" ? "Insight04" : "InsightHome";
 
   return (
     <ActiveAiViewProvider fallback={emptyAiContext("insight", panel, { regionLabel: "전국" })}>
@@ -42,7 +45,17 @@ export default function App() {
             <AiAssistantPanel />
           </div>
         </header>
-        {q === "1" ? <Insight01 /> : q === "2" ? <Insight02 /> : <InsightHome />}
+        {q === "1" ? (
+          <Insight01 />
+        ) : q === "2" ? (
+          <Insight02 />
+        ) : q === "3" ? (
+          <Insight03 />
+        ) : q === "4" ? (
+          <Insight04 />
+        ) : (
+          <InsightHome />
+        )}
       </div>
     </ActiveAiViewProvider>
   );

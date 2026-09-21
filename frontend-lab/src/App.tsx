@@ -14,6 +14,7 @@ import BuilderIdentLab from "./components/BuilderIdentLab";
 import Age0ResidualLab from "./components/Age0ResidualLab";
 import RecommendTwinBenchLab from "./components/RecommendTwinBenchLab";
 import LandAreaElasticityLab from "./components/LandAreaElasticityLab";
+import RowhouseFloorElevatorLab from "./components/RowhouseFloorElevatorLab";
 import WhyDecision, { WhyLinks } from "./components/WhyDecision";
 import { TOOL_WHY } from "./labContent";
 
@@ -30,7 +31,8 @@ export type LabTool =
   | "builder"
   | "age0"
   | "recommend-twin"
-  | "area-elasticity";
+  | "area-elasticity"
+  | "rowhouse-floor";
 export type TwinPane = "v2" | "mape";
 
 type LabParams = {
@@ -55,7 +57,8 @@ function readParams(): LabParams {
     t === "builder" ||
     t === "age0" ||
     t === "recommend-twin" ||
-    t === "area-elasticity"
+    t === "area-elasticity" ||
+    t === "rowhouse-floor"
       ? t
       : null;
   const pane = q.get("pane");
@@ -242,6 +245,14 @@ export default function App() {
     return (
       <LabChrome title="토지 면적 탄성" whyIds={TOOL_WHY["area-elasticity"] ?? []} onWhy={setWhy} onBack={back}>
         <LandAreaElasticityLab />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "rowhouse-floor") {
+    return (
+      <LabChrome title="연립·다세대 층·승강기" whyIds={TOOL_WHY["rowhouse-floor"] ?? []} onWhy={setWhy} onBack={back}>
+        <RowhouseFloorElevatorLab />
         {whyModal}
       </LabChrome>
     );

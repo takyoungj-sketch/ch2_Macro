@@ -11,7 +11,25 @@ from app.land_lab.area_elasticity import (
     spectrum_key,
 )
 from app.land_lab.area_elasticity_fit import fit_cell
+from app.land_lab.area_elasticity_gap import (
+    assign_bins,
+    build_eligible_fetch_sql,
+    comparable_ok,
+    compare_cell,
+    delta_median,
+    direction_from_ci,
+    tiny_aux_ok,
+    tiny_floor_sqm,
+)
 from app.land_lab.area_elasticity_screen import build_screen_sql
+from app.land_lab.area_elasticity_where import (
+    build_where_fetch_sql,
+    compose_group,
+    type_category_crosstab,
+    vs_cell_direction,
+    within_dong_large,
+    zone_bucket,
+)
 from app.ledger_region_sql import beopjungri_eq_or_in
 from app.region_canonical import region_codes_join_on_canonical
 
@@ -248,7 +266,18 @@ def test_screen_sql_no_any_on_beopjungri():
     assert "beopjungri_code = ANY" not in compact
 
 
-def test_cell_fetch_pattern_uses_eq_or_expanding_in():
+def test_eligible_fetch_sql_no_any_on_beopjungri():
+    pred, params = beopjungri_eq_or_in(
+        ["11170", "11110"],
+        column="btrim(r.sigungu_code::text)",
+    )
+    join = region_codes_join_on_canonical("lt", "r", active_only=True)
+    sql = build_eligible_fetch_sql(join, pred)
+    compact = " ".join(sql.split()).upper()
+    assert "ANY(" not in compact
+    assert "= ANY" not in compact
+    assert "IN :REGION_CODES" in compact
+    assert params.get("_expand_region_codes") is True
     sql, params = beopjungri_eq_or_in(["1111010100"], column="lt.beopjungri_code")
     assert sql == "lt.beopjungri_code = :region_code"
     sql, params = beopjungri_eq_or_in(
@@ -281,3 +310,156 @@ def test_fit_cell_recovers_negative_beta():
     assert out["B"] != "B_skip"
     assert out["B"]["beta"] < 0
     assert out["A_robust"]["beta"] < 0
+
+
+def test_tiny_floor_and_bins_exclude_scraps():
+    assert tiny_floor_sqm("대") == 10.0
+    assert tiny_floor_sqm("전") == 30.0
+    area = np.array(
+        [3.0] * 8 + [12.0] * 10 + [40.0] * 40 + [80.0] * 10 + [400.0] * 22,
+        dtype=float,
+    )
+    bins = assign_bins(area, land_category="대")
+    assert bins["n_below_floor"] == 8
+    tiny_areas = area[bins["tiny"]]
+    assert tiny_areas.size
+    assert tiny_areas.min() >= 10.0
+    assert not comparable_ok(n_body=29, n_large=20)
+    assert comparable_ok(n_body=30, n_large=20)
+    assert not tiny_aux_ok(n_tiny=19)
+    assert tiny_aux_ok(n_tiny=20)
+
+
+def test_direction_from_ci_and_median_delta():
+    assert direction_from_ci(-0.27, -0.12) == "lower"
+    assert direction_from_ci(-0.42, 0.05) == "neutral"
+    assert direction_from_ci(0.04, 0.18) == "higher"
+    body = np.full(40, 1000.0)
+    large = np.full(25, 800.0)
+    assert abs(delta_median(large, body) - (-0.2)) < 1e-9
+
+
+def test_compare_cell_large_lower_tiny_aux_optional():
+    rows = []
+    for i in range(140):
+        rows.append({"area_sqm": 50.0 + i, "unit_price_per_sqm": 100.0})
+    for i in range(50):
+        rows.append({"area_sqm": 500.0 + i, "unit_price_per_sqm": 80.0})
+    for _ in range(60):
+        rows.append({"area_sqm": 3.0, "unit_price_per_sqm": 200.0})
+    out = compare_cell(rows, land_category="대", sigungu_code="11170", n_boot=200)
+    assert out["comparable"] is True
+    assert out["n_below_floor"] == 60
+    assert out["tiny_aux"] is False
+    assert out["tiny"]["direction"] == "skip"
+    assert out["large"]["direction"] == "lower"
+    assert out["large"]["ci_hi"] < 0
+    assert out["large"]["delta_median"] is not None
+    assert out["large"]["delta_median"] < -0.1
+    assert comparable_ok(n_body=out["n_body"], n_large=out["n_large"]) is True
+
+
+def test_compare_cell_skips_thin_large_tail():
+    rows = [{"area_sqm": 50.0 + i, "unit_price_per_sqm": 100.0} for i in range(80)]
+    out = compare_cell(rows, land_category="대", sigungu_code="11110", n_boot=50)
+    assert out["comparable"] is False
+    assert "n_large" in (out["skip_reason"] or "")
+
+
+def test_zone_bucket_urban_vs_farm():
+    assert zone_bucket("제2종일반주거지역") == "urban"
+    assert zone_bucket("농림지역") == "non_urban"
+    assert zone_bucket("계획관리지역") == "non_urban"
+    assert zone_bucket("자연환경보전지역") == "non_urban"
+    assert zone_bucket("") == "unknown"
+
+
+def test_where_fetch_sql_no_any():
+    pred, params = beopjungri_eq_or_in(
+        ["11170", "11110"],
+        column="btrim(r.sigungu_code::text)",
+    )
+    join = region_codes_join_on_canonical("lt", "r", active_only=True)
+    sql = build_where_fetch_sql(join, pred)
+    compact = " ".join(sql.split()).upper()
+    assert "ANY(" not in compact
+    assert "= ANY" not in compact
+    assert params.get("_expand_region_codes") is True
+
+
+def test_within_dong_skips_when_large_only_in_other_dong():
+    rows = []
+    for i in range(140):
+        rows.append(
+            {
+                "area_sqm": 50.0 + i,
+                "unit_price_per_sqm": 100.0,
+                "beopjungri_code": "dong_body",
+            }
+        )
+    for i in range(50):
+        rows.append(
+            {
+                "area_sqm": 500.0 + i,
+                "unit_price_per_sqm": 40.0,
+                "beopjungri_code": "dong_large",
+            }
+        )
+    out = within_dong_large(rows, land_category="대", sigungu_code="11170", n_boot=80)
+    assert out["direction"] == "skip"
+    assert out["reason"] in {"no_overlap_dong", "thin_overlap"}
+
+
+def test_within_dong_keeps_lower_when_both_in_same_dong():
+    rows = []
+    for i in range(140):
+        rows.append(
+            {
+                "area_sqm": 50.0 + i,
+                "unit_price_per_sqm": 100.0,
+                "beopjungri_code": "same",
+            }
+        )
+    for i in range(50):
+        rows.append(
+            {
+                "area_sqm": 500.0 + i,
+                "unit_price_per_sqm": 80.0,
+                "beopjungri_code": "same",
+            }
+        )
+    out = within_dong_large(rows, land_category="대", sigungu_code="11170", n_boot=120)
+    assert out["direction"] == "lower"
+    assert out["n_dongs_both"] == 1
+    assert vs_cell_direction("lower", out) == "same"
+
+
+def test_compose_group_does_not_drop_by_delta():
+    rows = [
+        {"region_type": "gun", "land_category": "전", "n": 100, "p90_p50": 3.0, "large": {"delta_median": -0.8}},
+        {"region_type": "gun", "land_category": "전", "n": 120, "p90_p50": 4.0, "large": {"delta_median": -0.05}},
+        {"region_type": "metro_gu", "land_category": "대", "n": 200, "p90_p50": 2.2, "large": {"delta_median": 0.4}},
+    ]
+    g = compose_group(rows)
+    assert g["n"] == 3
+    assert g["by_category"]["전"] == 2
+    assert g["share_farm"] == 0.667
+
+
+def test_type_category_crosstab_skips_and_counts():
+    rows = [
+        {"region_type": "metro_gu", "land_category": "대", "large": {"direction": "higher"}},
+        {"region_type": "metro_gu", "land_category": "대", "large": {"direction": "lower"}},
+        {"region_type": "metro_gu", "land_category": "대", "large": {"direction": "neutral"}},
+        {"region_type": "metro_gu", "land_category": "대", "large": {"direction": "skip"}},
+        {"region_type": "gun", "land_category": "전", "large": {"direction": "lower"}},
+    ]
+    xt = type_category_crosstab(rows)
+    dae = xt["metro_gu"]["대"]
+    assert dae["n"] == 3
+    assert dae["lower"] == 1
+    assert dae["neutral"] == 1
+    assert dae["higher"] == 1
+    assert "전" not in xt["metro_gu"]
+    assert xt["gun"]["전"]["lower"] == 1
+    assert xt["gun"]["전"]["n"] == 1
