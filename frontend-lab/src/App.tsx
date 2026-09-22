@@ -5,6 +5,7 @@ import PlanLog from "./components/PlanLog";
 import QaAuditPanel from "./components/QaAuditPanel";
 import RentConversionLab from "./components/RentConversionLab";
 import TwinEngineV2Lab from "./components/TwinEngineV2Lab";
+import TwinScopeExperimentLab from "./components/TwinScopeExperimentLab";
 import AiUsagePanel from "./components/AiUsagePanel";
 import ParcelLabPanel from "./components/ParcelLabPanel";
 import MarketSizeLab from "./components/MarketSizeLab";
@@ -37,7 +38,7 @@ export type LabTool =
   | "rowhouse-floor"
   | "macro-scale"
   | "road-jimok";
-export type TwinPane = "v2" | "mape";
+export type TwinPane = "v2" | "mape" | "scope";
 
 type LabParams = {
   tool: LabTool | null;
@@ -71,7 +72,7 @@ function readParams(): LabParams {
   return {
     tool,
     why: q.get("why") || q.get("decision"),
-    twinPane: pane === "mape" ? "mape" : "v2",
+    twinPane: pane === "mape" ? "mape" : pane === "scope" ? "scope" : "v2",
   };
 }
 
@@ -81,8 +82,9 @@ function writeParams(p: LabParams) {
   else url.searchParams.delete("tool");
   if (p.why) url.searchParams.set("why", p.why);
   else url.searchParams.delete("why");
-  if (p.tool === "twin" && p.twinPane === "mape") url.searchParams.set("pane", "mape");
-  else url.searchParams.delete("pane");
+  if (p.tool === "twin" && (p.twinPane === "mape" || p.twinPane === "scope")) {
+    url.searchParams.set("pane", p.twinPane);
+  } else url.searchParams.delete("pane");
   url.searchParams.delete("decision");
   url.searchParams.delete("journal");
   window.history.replaceState({}, "", url.pathname + url.search);
@@ -148,6 +150,17 @@ export default function App() {
                 >
                   V1 풀 실험
                 </button>
+                <button
+                  type="button"
+                  className={`px-2 py-0.5 text-[11px] rounded ${
+                    params.twinPane === "scope"
+                      ? "bg-amber-800 text-white dark:bg-amber-200 dark:text-amber-950"
+                      : "text-amber-900 dark:text-amber-100"
+                  }`}
+                  onClick={() => setTwinPane("scope")}
+                >
+                  권역 확장
+                </button>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -160,6 +173,8 @@ export default function App() {
         </div>
         {params.twinPane === "v2" ? (
           <TwinEngineV2Lab />
+        ) : params.twinPane === "scope" ? (
+          <TwinScopeExperimentLab />
         ) : (
           <TwinExperimentLab onClose={back} closeLabel="관리자로" />
         )}

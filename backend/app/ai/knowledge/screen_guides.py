@@ -694,6 +694,30 @@ def _insight_06(context: AiContext) -> str:
     return "\n".join(lines)
 
 
+def _insight_07(context: AiContext) -> str:
+    lines = [
+        "### 이 화면은",
+        "Macro Insight 7번입니다. 지역프로필 카드가 쌍둥이 지역을 고르는 방법을 설명합니다.",
+        "통계 기초만 있는 사람에게 쉬운 말로 설명합니다.",
+        "",
+        "### 어떻게 읽나",
+        "- 지역프로필이 쌍둥이를 고르는 주체가 아닙니다. 쌍둥이 찾기가 지역프로필의 항목을 비교합니다.",
+        "- 읍·면·동은 같은 권역, 시·군·구는 전국, 리는 같은 시·군·구 안입니다. 인구 관문은 기준 지역 대비 0.5~2배입니다. 10만 명이면 5만~20만 명입니다. 인구가 비면 관문은 통과합니다.",
+        "- 가중치는 인구 15%, 8대 유형 구성 35%, 토지 30%, 아파트 20%입니다. 가장 많은 거래 유형이 같으면 0.05를 더하고 다르면 0.02를 뺍니다. 최종 점수는 0~1로 조정합니다.",
+        "- 토지는 거래가 많은 용도×지목군 조합 셋입니다. 이름 겹침 60%, 공통 조합의 평균 단가 40%입니다. 거래 건수는 조합을 고를 때만 씁니다.",
+        "- 카드의 퍼센트는 가중 종합 유사도입니다. 그 비율만큼 같은 지역이라는 뜻이 아닙니다.",
+        "- P25·P50·P75는 낮은·가운데·높은 가격대입니다. n=3은 그 지점 세 개입니다. 거래 3건이 아닙니다.",
+        "- 본문은 결측 처리의 항목별 차이를 풀지 않습니다. 물어보면 이렇게 답합니다. 인구·8대 구성·토지가 비면 그 항목은 0점이고 가중치는 남습니다. 아파트 거래가 15건 미만이거나 없으면 그 가중치를 빼고 나머지를 다시 나눕니다.",
+        "- 임대는 지금 점수에 없습니다. 가격 분석에 자동으로 넣지 않습니다.",
+        "- CV-MAPE는 복합 회귀에서 지역마다 줄어드는지를 본 확인입니다. 모든 지역에서 줄었다고 말하지 않습니다. 토지·임대 통계와의 유사 비교는 아직 하지 않은 추가 확인입니다.",
+        "- 관리자 권역 확장 표의 비율을 본문 숫자로 만들지 않습니다.",
+        "",
+        "### 한계",
+        "화면의 「이 글의 한계」를 따릅니다. 관리자 실험 표를 공개 글의 통계로 말하지 않습니다.",
+    ]
+    return "\n".join(lines)
+
+
 def format_screen_guide(context: AiContext) -> str:
     """LLM 없이 기본 화면을 설명하고 다음 분석을 유도한다."""
     app = context.app
@@ -710,6 +734,8 @@ def format_screen_guide(context: AiContext) -> str:
         return _rent_list(context)
     if panel in ("RegionalProfile", "TwinRegionPanel", "ProfilePanel") or app == "profile":
         return _profile(context)
+    if panel == "Insight07":
+        return _insight_07(context)
     if panel == "Insight06":
         return _insight_06(context)
     if panel == "Insight05":
@@ -766,6 +792,14 @@ def screen_guide_followups(context: AiContext) -> list[str]:
         return [
             "Twin 유사지역은 무엇을 뜻하나요?",
             "단지 추세는 어디서 보나요?",
+        ]
+    if panel == "Insight07":
+        return [
+            "91.4%면 그 지역과 91.4% 같나요?",
+            "읍면동은 전국에서 찾나요?",
+            "n=3은 거래가 3건인가요?",
+            "임대도 보나요?",
+            "이 점수로 가격을 맞추나요?",
         ]
     if panel == "Insight06":
         return [

@@ -626,11 +626,41 @@ def build_insight_macro_05(context: AiContext) -> AiDiagnosticPack:
     )
 
 
+def build_insight_macro_07(context: AiContext) -> AiDiagnosticPack:
+    facts = context.facts or {}
+    summary = [
+        "Macro Insight 07 — 지역프로필 카드가 쌍둥이 지역을 고르는 방법",
+        "algorithm=21",
+        "읍면동=권역 시군구=전국 리=같은시군구",
+    ]
+    if facts.get("window_years"):
+        summary.append(f"window_years={facts.get('window_years')}")
+    limitations = list(
+        (context.explain.limitations if context.explain and context.explain.limitations else None)
+        or [
+            "이 점수는 두 지역이 실제로 같은 시장이라는 뜻이 아닙니다. 가격분석에 자동으로 포함되지 않습니다.",
+            "읍면동은 같은 권역에서 비교합니다. 카드의 퍼센트는 가중 종합 유사도입니다.",
+            "임대는 지금 선정에 없습니다. CV-MAPE는 지역마다 확인하며, 모든 지역에서 줄었다고 말하지 않습니다.",
+            "n=3은 비교한 아파트 가격 지점의 개수입니다. 거래 3건이 아닙니다.",
+        ]
+    )
+    return AiDiagnosticPack(
+        bundle_id="insight_macro_07",
+        panel=context.panel,
+        app=context.app,
+        summary_lines=summary,
+        diagnostics={**facts, "scope_label": context.scope.region_label or "전국"},
+        limitations=limitations,
+    )
+
+
 def build_bundle(context: AiContext) -> AiDiagnosticPack:
     facts = context.facts or {}
     panel = context.panel
     bid = resolve_bundle_id(panel)
 
+    if panel == "Insight07" or bid == "insight_macro_07":
+        return build_insight_macro_07(context)
     if panel == "Insight06" or bid == "insight_macro_06":
         return build_insight_macro_06(context)
     if panel == "Insight05" or bid == "insight_macro_05":

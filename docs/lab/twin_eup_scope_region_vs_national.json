@@ -1,0 +1,595 @@
+{
+  "question": "algo 21 점수를 유지하고 읍면동 후보만 전국으로 넓히면 1위 점수가 오르는가",
+  "profile_version": "v2.1-national",
+  "as_of_month": "2026-06-01",
+  "window_years": 3,
+  "twin_profile": "general",
+  "weight_version": "1.0",
+  "catalog_version": "2.1",
+  "stored_batch_key": "ptwin_eupmyeondong_region_v2.1-national_202606_w3_38998141",
+  "seed": 21,
+  "per_tercile": 10000,
+  "n_profiles": 5038,
+  "stored_region_top_match": {
+    "checked": 5037,
+    "matched": 2143,
+    "code_match": 4567
+  },
+  "elapsed_sec": 302.6,
+  "summary": {
+    "n_scored": 5038,
+    "n_with_both_tops": 5037,
+    "median_region_score": 0.8538366719476123,
+    "median_national_score": 0.877083775088246,
+    "median_lift": 0.00020580933199665363,
+    "share_lift_ge_0_05": 0.19336906889021244,
+    "share_lift_ge_0_10": 0.05896366885050625,
+    "share_national_outside": 0.5578717490569783,
+    "by_region": {
+      "강원권": {
+        "n": 293,
+        "median_region_score": 0.8629620953966639,
+        "median_national_score": 0.910482034746324,
+        "median_lift": 0.03258650792564732,
+        "share_lift_ge_0_05": 0.3822525597269625,
+        "share_lift_ge_0_10": 0.10580204778156997,
+        "share_national_outside": 0.8225255972696246
+      },
+      "대경권": {
+        "n": 734,
+        "median_region_score": 0.8683222774123611,
+        "median_national_score": 0.9008781813212416,
+        "median_lift": 0.011583626360605281,
+        "share_lift_ge_0_05": 0.2329700272479564,
+        "share_lift_ge_0_10": 0.08446866485013624,
+        "share_national_outside": 0.7125340599455041
+      },
+      "동남권": {
+        "n": 795,
+        "median_region_score": 0.8658461787504023,
+        "median_national_score": 0.895015557967247,
+        "median_lift": 0.011660473576826647,
+        "share_lift_ge_0_05": 0.22641509433962265,
+        "share_lift_ge_0_10": 0.05660377358490566,
+        "share_national_outside": 0.690566037735849
+      },
+      "수도권": {
+        "n": 1396,
+        "median_region_score": 0.8532755687079845,
+        "median_national_score": 0.8626162506779121,
+        "median_lift": 0.0,
+        "share_lift_ge_0_05": 0.1017191977077364,
+        "share_lift_ge_0_10": 0.03724928366762178,
+        "share_national_outside": 0.2707736389684814
+      },
+      "제주권": {
+        "n": 74,
+        "median_region_score": 0.831848504292462,
+        "median_national_score": 0.8594377291820321,
+        "median_lift": 0.020921847685718253,
+        "share_lift_ge_0_05": 0.3287671232876712,
+        "share_lift_ge_0_10": 0.1506849315068493,
+        "share_national_outside": 0.6351351351351351
+      },
+      "충청권": {
+        "n": 719,
+        "median_region_score": 0.8925654782817835,
+        "median_national_score": 0.9228370397938832,
+        "median_lift": 0.006618901646832875,
+        "share_lift_ge_0_05": 0.21557719054242003,
+        "share_lift_ge_0_10": 0.06397774687065369,
+        "share_national_outside": 0.5632823365785814
+      },
+      "호남권": {
+        "n": 1027,
+        "median_region_score": 0.824373274479497,
+        "median_national_score": 0.8399791556921229,
+        "median_lift": 0.003888948979378415,
+        "share_lift_ge_0_05": 0.18500486854917234,
+        "share_lift_ge_0_10": 0.04868549172346641,
+        "share_national_outside": 0.6494644595910418
+      }
+    },
+    "largest_lifts": [
+      {
+        "anchor_code": "26110138",
+        "anchor_name": "남포동3가",
+        "sigungu_name": "중구",
+        "sido_name": "부산광역시",
+        "region": "동남권",
+        "population": 8.0,
+        "n_national": 279,
+        "n_region": 12,
+        "region_top": {
+          "code": "31140114",
+          "name": "황성동",
+          "sigungu_name": "남구",
+          "sido_name": "울산광역시",
+          "region": "동남권",
+          "score": 0.14666666666666667
+        },
+        "national_top": {
+          "code": "11140119",
+          "name": "봉래동1가",
+          "sigungu_name": "중구",
+          "sido_name": "서울특별시",
+          "region": "수도권",
+          "score": 0.9202265285497276
+        },
+        "lift": 0.773559861883061,
+        "national_outside_region": true,
+        "stored_region_top_code": "31140114",
+        "stored_region_top_score": 0.1133333333,
+        "stored_match": false
+      },
+      {
+        "anchor_code": "43111102",
+        "anchor_name": "북문로1가",
+        "sigungu_name": "청주시 상당구",
+        "sido_name": "충청북도",
+        "region": "충청권",
+        "population": 67.0,
+        "n_national": 424,
+        "n_region": 28,
+        "region_top": {
+          "code": "30200134",
+          "name": "자운동",
+          "sigungu_name": "유성구",
+          "sido_name": "대전광역시",
+          "region": "충청권",
+          "score": 0.17349902010460289
+        },
+        "national_top": {
+          "code": "51230103",
+          "name": "읍상동",
+          "sigungu_name": "삼척시",
+          "sido_name": "강원특별자치도",
+          "region": "강원권",
+          "score": 0.6722014925373134
+        },
+        "lift": 0.49870247243271054,
+        "national_outside_region": true,
+        "stored_region_top_code": "30200134",
+        "stored_region_top_score": 0.1347992161,
+        "stored_match": false
+      },
+      {
+        "anchor_code": "30230113",
+        "anchor_name": "문평동",
+        "sigungu_name": "대덕구",
+        "sido_name": "대전광역시",
+        "region": "충청권",
+        "population": 15.0,
+        "n_national": 87,
+        "n_region": 5,
+        "region_top": {
+          "code": "43113136",
+          "name": "외북동",
+          "sigungu_name": "청주시 흥덕구",
+          "sido_name": "충청북도",
+          "region": "충청권",
+          "score": 0.18618942297854696
+        },
+        "national_top": {
+          "code": "48123132",
+          "name": "성산동",
+          "sigungu_name": "창원시 성산구",
+          "sido_name": "경상남도",
+          "region": "동남권",
+          "score": 0.66328125
+        },
+        "lift": 0.4770918270214531,
+        "national_outside_region": true,
+        "stored_region_top_code": "43113136",
+        "stored_region_top_score": 0.1449515384,
+        "stored_match": false
+      },
+      {
+        "anchor_code": "47190124",
+        "anchor_name": "시미동",
+        "sigungu_name": "구미시",
+        "sido_name": "경상북도",
+        "region": "대경권",
+        "population": 12.0,
+        "n_national": 564,
+        "n_region": 5,
+        "region_top": {
+          "code": "47111111",
+          "name": "장흥동",
+          "sigungu_name": "포항시 남구",
+          "sido_name": "경상북도",
+          "region": "대경권",
+          "score": 0.2074142113488867
+        },
+        "national_top": {
+          "code": "48123129",
+          "name": "웅남동",
+          "sigungu_name": "창원시 성산구",
+          "sido_name": "경상남도",
+          "region": "동남권",
+          "score": 0.6433017292819266
+        },
+        "lift": 0.4358875179330399,
+        "national_outside_region": true,
+        "stored_region_top_code": "47111111",
+        "stored_region_top_score": 0.1619313691,
+        "stored_match": false
+      },
+      {
+        "anchor_code": "48121120",
+        "anchor_name": "사화동",
+        "sigungu_name": "창원시 의창구",
+        "sido_name": "경상남도",
+        "region": "동남권",
+        "population": 2.0,
+        "n_national": 93,
+        "n_region": 2,
+        "region_top": {
+          "code": "48123115",
+          "name": "창곡동",
+          "sigungu_name": "창원시 성산구",
+          "sido_name": "경상남도",
+          "region": "동남권",
+          "score": 0.12078853276552769
+        },
+        "national_top": {
+          "code": "12210124",
+          "name": "선교동",
+          "sigungu_name": "동구",
+          "sido_name": "전남광주통합특별시",
+          "region": "호남권",
+          "score": 0.47182819003757687
+        },
+        "lift": 0.35103965727204917,
+        "national_outside_region": true,
+        "stored_region_top_code": "48123115",
+        "stored_region_top_score": 0.0926308262,
+        "stored_match": false
+      },
+      {
+        "anchor_code": "52111104",
+        "anchor_name": "중앙동4가",
+        "sigungu_name": "전주시 완산구",
+        "sido_name": "전북특별자치도",
+        "region": "호남권",
+        "population": 310.0,
+        "n_national": 929,
+        "n_region": 305,
+        "region_top": {
+          "code": "52111113",
+          "name": "다가동1가",
+          "sigungu_name": "전주시 완산구",
+          "sido_name": "전북특별자치도",
+          "region": "호남권",
+          "score": 0.5957285534862958
+        },
+        "national_top": {
+          "code": "48125117",
+          "name": "부림동",
+          "sigungu_name": "창원시 마산합포구",
+          "sido_name": "경상남도",
+          "region": "동남권",
+          "score": 0.9263657898012015
+        },
+        "lift": 0.3306372363149057,
+        "national_outside_region": true,
+        "stored_region_top_code": "52111113",
+        "stored_region_top_score": 0.4725828428,
+        "stored_match": false
+      },
+      {
+        "anchor_code": "50110101",
+        "anchor_name": "일도일동",
+        "sigungu_name": "제주시",
+        "sido_name": "제주특별자치도",
+        "region": "제주권",
+        "population": 2072.0,
+        "n_national": 1970,
+        "n_region": 27,
+        "region_top": {
+          "code": "50110119",
+          "name": "오라일동",
+          "sigungu_name": "제주시",
+          "sido_name": "제주특별자치도",
+          "region": "제주권",
+          "score": 0.5126250570355018
+        },
+        "national_top": {
+          "code": "41115129",
+          "name": "북수동",
+          "sigungu_name": "수원시 팔달구",
+          "sido_name": "경기도",
+          "region": "수도권",
+          "score": 0.8369530577526275
+        },
+        "lift": 0.32432800071712575,
+        "national_outside_region": true,
+        "stored_region_top_code": "50110119",
+        "stored_region_top_score": 0.4061000456,
+        "stored_match": false
+      },
+      {
+        "anchor_code": "51110107",
+        "anchor_name": "옥천동",
+        "sigungu_name": "춘천시",
+        "sido_name": "강원특별자치도",
+        "region": "강원권",
+        "population": 732.0,
+        "n_national": 1415,
+        "n_region": 46,
+        "region_top": {
+          "code": "51190105",
+          "name": "문곡동",
+          "sigungu_name": "태백시",
+          "sido_name": "강원특별자치도",
+          "region": "강원권",
+          "score": 0.6248044624186633
+        },
+        "national_top": {
+          "code": "43130102",
+          "name": "성남동",
+          "sigungu_name": "충주시",
+          "sido_name": "충청북도",
+          "region": "충청권",
+          "score": 0.9404153116932481
+        },
+        "lift": 0.3156108492745848,
+        "national_outside_region": true,
+        "stored_region_top_code": "51190105",
+        "stored_region_top_score": 0.5098435699,
+        "stored_match": false
+      }
+    ],
+    "smallest_lifts": [
+      {
+        "anchor_code": "52800410",
+        "anchor_name": "줄포면",
+        "sigungu_name": "부안군",
+        "sido_name": "전북특별자치도",
+        "region": "호남권",
+        "population": 2361.0,
+        "n_national": 1897,
+        "n_region": 740,
+        "region_top": {
+          "code": "52180320",
+          "name": "입암면",
+          "sigungu_name": "정읍시",
+          "sido_name": "전북특별자치도",
+          "region": "호남권",
+          "score": 1.0
+        },
+        "national_top": {
+          "code": "43720350",
+          "name": "삼승면",
+          "sigungu_name": "보은군",
+          "sido_name": "충청북도",
+          "region": "충청권",
+          "score": 1.0
+        },
+        "lift": 0.0,
+        "national_outside_region": true,
+        "stored_region_top_code": "52210250",
+        "stored_region_top_score": 0.8189865304,
+        "stored_match": false
+      },
+      {
+        "anchor_code": "52800400",
+        "anchor_name": "하서면",
+        "sigungu_name": "부안군",
+        "sido_name": "전북특별자치도",
+        "region": "호남권",
+        "population": 2330.0,
+        "n_national": 1896,
+        "n_region": 734,
+        "region_top": {
+          "code": "52140430",
+          "name": "삼기면",
+          "sigungu_name": "익산시",
+          "sido_name": "전북특별자치도",
+          "region": "호남권",
+          "score": 1.0
+        },
+        "national_top": {
+          "code": "41500380",
+          "name": "율면",
+          "sigungu_name": "이천시",
+          "sido_name": "경기도",
+          "region": "수도권",
+          "score": 1.0
+        },
+        "lift": 0.0,
+        "national_outside_region": true,
+        "stored_region_top_code": "52140430",
+        "stored_region_top_score": 0.8270353551,
+        "stored_match": false
+      },
+      {
+        "anchor_code": "52800390",
+        "anchor_name": "상서면",
+        "sigungu_name": "부안군",
+        "sido_name": "전북특별자치도",
+        "region": "호남권",
+        "population": 1971.0,
+        "n_national": 1881,
+        "n_region": 744,
+        "region_top": {
+          "code": "52210440",
+          "name": "황산면",
+          "sigungu_name": "김제시",
+          "sido_name": "전북특별자치도",
+          "region": "호남권",
+          "score": 1.0
+        },
+        "national_top": {
+          "code": "43130360",
+          "name": "노은면",
+          "sigungu_name": "충주시",
+          "sido_name": "충청북도",
+          "region": "충청권",
+          "score": 1.0
+        },
+        "lift": 0.0,
+        "national_outside_region": true,
+        "stored_region_top_code": "52210440",
+        "stored_region_top_score": 0.8321819019,
+        "stored_match": false
+      },
+      {
+        "anchor_code": "52800370",
+        "anchor_name": "진서면",
+        "sigungu_name": "부안군",
+        "sido_name": "전북특별자치도",
+        "region": "호남권",
+        "population": 2083.0,
+        "n_national": 1932,
+        "n_region": 763,
+        "region_top": {
+          "code": "52210440",
+          "name": "황산면",
+          "sigungu_name": "김제시",
+          "sido_name": "전북특별자치도",
+          "region": "호남권",
+          "score": 1.0
+        },
+        "national_top": {
+          "code": "43111310",
+          "name": "낭성면",
+          "sigungu_name": "청주시 상당구",
+          "sido_name": "충청북도",
+          "region": "충청권",
+          "score": 1.0
+        },
+        "lift": 0.0,
+        "national_outside_region": true,
+        "stored_region_top_code": "52800400",
+        "stored_region_top_score": 0.8247891231,
+        "stored_match": false
+      },
+      {
+        "anchor_code": "52800350",
+        "anchor_name": "보안면",
+        "sigungu_name": "부안군",
+        "sido_name": "전북특별자치도",
+        "region": "호남권",
+        "population": 2162.0,
+        "n_national": 1896,
+        "n_region": 733,
+        "region_top": {
+          "code": "52180380",
+          "name": "정우면",
+          "sigungu_name": "정읍시",
+          "sido_name": "전북특별자치도",
+          "region": "호남권",
+          "score": 1.0
+        },
+        "national_top": {
+          "code": "47170350",
+          "name": "일직면",
+          "sigungu_name": "안동시",
+          "sido_name": "경상북도",
+          "region": "대경권",
+          "score": 1.0
+        },
+        "lift": 0.0,
+        "national_outside_region": true,
+        "stored_region_top_code": "52180380",
+        "stored_region_top_score": 0.8367572879,
+        "stored_match": false
+      },
+      {
+        "anchor_code": "52800330",
+        "anchor_name": "행안면",
+        "sigungu_name": "부안군",
+        "sido_name": "전북특별자치도",
+        "region": "호남권",
+        "population": 2000.0,
+        "n_national": 1912,
+        "n_region": 756,
+        "region_top": {
+          "code": "52800320",
+          "name": "동진면",
+          "sigungu_name": "부안군",
+          "sido_name": "전북특별자치도",
+          "region": "호남권",
+          "score": 0.9566109469683152
+        },
+        "national_top": {
+          "code": "52800320",
+          "name": "동진면",
+          "sigungu_name": "부안군",
+          "sido_name": "전북특별자치도",
+          "region": "호남권",
+          "score": 0.9566109469683152
+        },
+        "lift": 0.0,
+        "national_outside_region": false,
+        "stored_region_top_code": "52800320",
+        "stored_region_top_score": 0.7752887576,
+        "stored_match": false
+      },
+      {
+        "anchor_code": "52800320",
+        "anchor_name": "동진면",
+        "sigungu_name": "부안군",
+        "sido_name": "전북특별자치도",
+        "region": "호남권",
+        "population": 2463.0,
+        "n_national": 1930,
+        "n_region": 749,
+        "region_top": {
+          "code": "52800330",
+          "name": "행안면",
+          "sigungu_name": "부안군",
+          "sido_name": "전북특별자치도",
+          "region": "호남권",
+          "score": 0.9566109469683152
+        },
+        "national_top": {
+          "code": "52800330",
+          "name": "행안면",
+          "sigungu_name": "부안군",
+          "sido_name": "전북특별자치도",
+          "region": "호남권",
+          "score": 0.9566109469683152
+        },
+        "lift": 0.0,
+        "national_outside_region": false,
+        "stored_region_top_code": "52800330",
+        "stored_region_top_score": 0.7752887576,
+        "stored_match": false
+      },
+      {
+        "anchor_code": "52800310",
+        "anchor_name": "주산면",
+        "sigungu_name": "부안군",
+        "sido_name": "전북특별자치도",
+        "region": "호남권",
+        "population": 1695.0,
+        "n_national": 1808,
+        "n_region": 730,
+        "region_top": {
+          "code": "52180370",
+          "name": "이평면",
+          "sigungu_name": "정읍시",
+          "sido_name": "전북특별자치도",
+          "region": "호남권",
+          "score": 1.0
+        },
+        "national_top": {
+          "code": "43720325",
+          "name": "장안면",
+          "sigungu_name": "보은군",
+          "sido_name": "충청북도",
+          "region": "충청권",
+          "score": 1.0
+        },
+        "lift": 0.0,
+        "national_outside_region": true,
+        "stored_region_top_code": "52190370",
+        "stored_region_top_score": 0.8141301001,
+        "stored_match": false
+      }
+    ]
+  },
+  "note": "전수 5038곳 재계산. 행 원본은 스크립트로 다시 만들 수 있다."
+}

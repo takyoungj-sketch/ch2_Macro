@@ -11,7 +11,7 @@
 |----|----------|---------|
 | 계획일지 | `plan` | 토지·복합·집합·임대·지역프로필·관리 표. SSOT `docs/lab/plan.json` |
 | 검증로봇 | `qa` | 집합 L1–L3 (D-042) · 복합 보강 `built_enriched` (D-047) |
-| 쌍둥이 지역 실험 | `twin` | V2 거리(D-044, 기본) · V1 풀 CV-MAPE (`?pane=mape`) · Fingerprint 재순위 `fingerprint-twin-chungbuk12`·`fingerprint-twin-gyeonggi12`(다음=붙임 실험, [`lab/FINGERPRINT_TWIN_LAB.md`](./lab/FINGERPRINT_TWIN_LAB.md)) |
+| 쌍둥이 지역 실험 | `twin` | V2 거리(D-044, 기본) · V1 풀 CV-MAPE (`?pane=mape`) · 읍면동 권역 확장 기록 (`?pane=scope`, 카드 범위는 권역 유지) · Fingerprint 재순위 `fingerprint-twin-chungbuk12`·`fingerprint-twin-gyeonggi12`(다음=붙임 실험, [`lab/FINGERPRINT_TWIN_LAB.md`](./lab/FINGERPRINT_TWIN_LAB.md)) |
 | 전월세 전환율 | `rent` | 4방법 r · 서울 검증 (D-040) |
 | AI 사용량 | `ai` | 월 LLM 호출·추정 원 장부. 질문 문장 없음 |
 | 대장DB | `parcel` | 로컬 `parcel_master` 필지·동·용도지역 조회. 읽기 전용. 운영 DB 없음. 설계 [`PARCEL_MASTER_DESIGN.md`](./PARCEL_MASTER_DESIGN.md) · 월간 [`PARCEL_MASTER_MONTHLY_UPDATE.md`](./PARCEL_MASTER_MONTHLY_UPDATE.md) |
@@ -26,7 +26,7 @@
 | 연 거래액 규모·구성 | `macro-scale` | GDP·M2·주식 대비 연 거래액 비율 + 8유형 구성. G3와 별문. Insight 5번 본문 |
 | 도로 지목 상대가격 | `road-jimok` | 읍면동×용도에서 도로/대·전·답 중앙단가 비. 공개는 Insight 6번. 도시 전체 %는 본문에 없음 |
 
-공개 게이트웨이 **Macro Insight**(6번째 문)는 `/insight/`. 1번(금리·시중 돈과 거래) [`MACRO_INSIGHT_01.md`](./MACRO_INSIGHT_01.md) · 2번(유형 규모·단가 상관) [`MACRO_INSIGHT_02.md`](./MACRO_INSIGHT_02.md) · 3번(연립·다세대 층×승강기) [`MACRO_INSIGHT_03.md`](./MACRO_INSIGHT_03.md) · 4번(토지 면적×㎡당 가격) [`MACRO_INSIGHT_04.md`](./MACRO_INSIGHT_04.md) · 5번(연 거래액/GDP·M2·주식·유형 구성) [`MACRO_INSIGHT_05.md`](./MACRO_INSIGHT_05.md). 결정 카드 없음. 랩 `?tool=size`는 실험실로 남긴다.
+공개 게이트웨이 **Macro Insight**(6번째 문)는 `/insight/`. 1번(금리·시중 돈과 거래) [`MACRO_INSIGHT_01.md`](./MACRO_INSIGHT_01.md) · 2번(유형 규모·단가 상관) [`MACRO_INSIGHT_02.md`](./MACRO_INSIGHT_02.md) · 3번(연립·다세대 층×승강기) [`MACRO_INSIGHT_03.md`](./MACRO_INSIGHT_03.md) · 4번(토지 면적×㎡당 가격) [`MACRO_INSIGHT_04.md`](./MACRO_INSIGHT_04.md) · 5번(연 거래액/GDP·M2·주식·유형 구성) [`MACRO_INSIGHT_05.md`](./MACRO_INSIGHT_05.md) · 6번(도로 지목 상대가격) [`MACRO_INSIGHT_06.md`](./MACRO_INSIGHT_06.md) · 7번(쌍둥이 지역을 고르는 방법) [`MACRO_INSIGHT_07.md`](./MACRO_INSIGHT_07.md). 결정 카드 없음. 랩 `?tool=size`는 실험실로 남긴다.
 
 G3 시계열 랩: [`lab/G3_TIMESERIES_LAB.md`](./lab/G3_TIMESERIES_LAB.md) · `?tool=g3`.  
 G3·Insight 월 합 출처 수정: [`lab/MACRO_TS_RAW_MONTH_MART.md`](./lab/MACRO_TS_RAW_MONTH_MART.md) (원장 대신 raw CSV 전국 월 마트).

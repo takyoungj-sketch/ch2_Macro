@@ -5,6 +5,7 @@ import ExpHelp, { type ExpHelpDoc } from "./ExpHelp";
 import LabResume from "./LabResume";
 
 type Choice = { id: string; label: string; selected: boolean; why: string };
+type TypeCounts = { eligible: number; ident_45: number; n_ge_50: number };
 type Answer = { q: string; a: string; evidence: string };
 type NextItem = { id: string; status: string; title: string; ask: string; gate: string };
 type Fit = {
@@ -142,6 +143,7 @@ type Run = {
     };
   };
   phase3_csv?: string;
+  verdict: { label: string; choices: Choice[] };
   answers: Answer[];
   next: NextItem[];
   limits: string[];

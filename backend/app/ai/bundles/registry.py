@@ -95,6 +95,11 @@ BUNDLE_REGISTRY: dict[str, BundleSpec] = {
         description="Macro Insight 6번 — 도로 지목 상대가격",
         panels=("Insight06",),
     ),
+    "insight_macro_07": BundleSpec(
+        bundle_id="insight_macro_07",
+        description="Macro Insight 7번 — 쌍둥이 지역을 고르는 방법",
+        panels=("Insight07",),
+    ),
     "list_overview": BundleSpec(
         bundle_id="list_overview",
         description="기본통계 목록·매트릭스 화면 안내",
@@ -243,6 +248,13 @@ SUGGESTED_QUESTIONS: dict[str, list[str]] = {
         "논·밭과 비교하면 왜 더 높은가요?",
         "토지 회귀식과 같은 숫자인가요?",
     ],
+    "Insight07": [
+        "91.4%면 그 지역과 91.4% 같나요?",
+        "읍면동은 전국에서 찾나요?",
+        "n=3은 거래가 3건인가요?",
+        "임대도 보나요?",
+        "이 점수로 가격을 맞추나요?",
+    ],
     "InsightHome": [
         "Macro Insight는 무엇인가요?",
         "이 창은 분석 앱인가요?",
@@ -337,6 +349,8 @@ def suggested_questions(
             base = list(SUGGESTED_QUESTIONS["Insight05"])
         elif panel == "Insight06":
             base = list(SUGGESTED_QUESTIONS["Insight06"])
+        elif panel == "Insight07":
+            base = list(SUGGESTED_QUESTIONS["Insight07"])
         elif panel == "Insight04":
             base = list(SUGGESTED_QUESTIONS["Insight04"])
         elif panel == "Insight03":

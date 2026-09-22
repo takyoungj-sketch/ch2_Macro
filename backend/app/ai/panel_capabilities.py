@@ -460,6 +460,20 @@ PANEL_CAPABILITIES: dict[str, PanelCapability] = {
             "합계는 모든 부동산인가요?",
         ),
     ),
+    "Insight07": PanelCapability(
+        panel="Insight07",
+        label="Macro Insight 7번",
+        bundle_id="insight_macro_07",
+        blocked_keywords=(),
+        redirects=(),
+        on_screen_questions=(
+            "91.4%면 그 지역과 91.4% 같나요?",
+            "읍면동은 전국에서 찾나요?",
+            "n=3은 거래가 3건인가요?",
+            "임대도 보나요?",
+            "이 점수로 가격을 맞추나요?",
+        ),
+    ),
     "Insight06": PanelCapability(
         panel="Insight06",
         label="Macro Insight 6번",

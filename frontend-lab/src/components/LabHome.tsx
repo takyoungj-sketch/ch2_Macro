@@ -14,7 +14,7 @@ const DOORS: { id: LabTool; title: string; desc: string }[] = [
   {
     id: "twin",
     title: "쌍둥이 지역 실험",
-    desc: "V2 거리(비교/풀)를 눈으로 보고, V1 풀·Fingerprint 재순위는 옆 탭.",
+    desc: "V2 거리, V1 풀, 읍면동 권역 확장 기록. 카드의 읍면동 범위는 권역을 유지.",
   },
   {
     id: "rent",
