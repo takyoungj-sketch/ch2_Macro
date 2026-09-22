@@ -2,7 +2,7 @@
 
 > **작성:** 2026-09-16  
 > **상태:** 로컬 마트 적재·게이트 통과(2026-09-16). 결정 카드 없음(확정 후 D-xxx).  
-> **부모:** [`G3_TIMESERIES_LAB.md`](./G3_TIMESERIES_LAB.md) · [`MACRO_INSIGHT_01.md`](../MACRO_INSIGHT_01.md) · D-055 · D-027(상가·공장 = 일반+집합)
+> **부모:** [`G3_TIMESERIES_LAB.md`](./G3_TIMESERIES_LAB.md) · [`MACRO_INSIGHT_01.md`](../MACRO_INSIGHT_01.md) · [`MACRO_INSIGHT_05.md`](../MACRO_INSIGHT_05.md) (연 합 재사용, 실험 전) · D-055 · D-027(상가·공장 = 일반+집합)
 
 이 문서가 **금리·유동성 실험의 거래 건수·액 출처**를 고치는 SSOT다. 제품 5앱 원장은 건드리지 않는다.
 
@@ -11,7 +11,8 @@
 ## 0. 한 줄
 
 Insight #1·G3 월 실험은 **정제 원장 GROUP BY를 쓰지 않는다.**  
-국토부 CSV(`raw long term` 2010~2020 + `raw base` 2021~)에서 **전국·달력월·8유형 건수·액만** 쌓은 실험 DB를 쓴다.
+국토부 CSV(`raw long term` 2010~2020 + `raw base` 2021~)에서 **전국·달력월·8유형 건수·액만** 쌓은 실험 DB를 쓴다.  
+같은 마트의 **연 합**은 Insight #5(연 규모·구성, 실험 전) 분자로 재사용한다. G3 연 r 표와 5번의 비율은 다른 질문이다.
 
 ---
 

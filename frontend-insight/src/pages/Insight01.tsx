@@ -419,6 +419,13 @@ export default function Insight01() {
           </ul>
           <p>{INSIGHT_01.close}</p>
           <p className="text-xs text-slate-500">{INSIGHT_01.next}</p>
+          {INSIGHT_01.relatedHref ? (
+            <p>
+              <a href={INSIGHT_01.relatedHref} className="text-slate-800 underline dark:text-slate-200">
+                {INSIGHT_01.relatedLink}
+              </a>
+            </p>
+          ) : null}
         </section>
       </article>
     </>

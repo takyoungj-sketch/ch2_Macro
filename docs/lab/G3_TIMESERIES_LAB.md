@@ -81,6 +81,7 @@ COFIX는 주담대 질문용, 1차에 넣지 않는다.
 - 「금리가 거래를 줄였다」
 - Insight r 표·게이트웨이에서 `/lab/` 연결
 - `/lab/` 공개
+- GDP·주식 대비 연 거래액 규모·유형 구성 (다른 랩 [`MACRO_ANNUAL_SCALE_LAB.md`](./MACRO_ANNUAL_SCALE_LAB.md). G3 탭으로 붙이지 않음)
 
 ---
 

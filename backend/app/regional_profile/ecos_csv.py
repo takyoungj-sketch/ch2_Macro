@@ -16,6 +16,8 @@ _REPO = Path(__file__).resolve().parents[3]
 _DATA = _REPO / "data"
 
 _YEAR_COL = re.compile(r"^\d{4}$")
+# 2010 · 2025 p)
+_YEAR_COL_FLEX = re.compile(r"^(\d{4})(?:\s*p\s*\)?)?$", re.IGNORECASE)
 # 2010/01 · 2010-1 · 잠정 2026/06 p)
 _MONTH_COL = re.compile(r"^(\d{4})[./\-](\d{1,2})(?:\s*p\s*\)?)?$", re.IGNORECASE)
 
@@ -132,6 +134,61 @@ def parse_ecos_wide(path: Path) -> dict[str, Any]:
         "frequency": freq,
         "series": series,
     }
+
+
+def parse_ecos_calendar_years(path: Path) -> dict[str, Any]:
+    """달력 연 열만 읽는다. 월 열은 무시. `2025 p)`는 year=2025, provisional.
+
+    주식시장 CSV처럼 월·연이 한 장에 있어도 연 시계열을 쓴다.
+    같은 해에 확정 열과 잠정 열이 같이 있으면 확정을 남긴다.
+    """
+    with path.open(encoding="utf-8-sig", newline="") as f:
+        rows = list(csv.reader(f))
+    if not rows:
+        raise ValueError(f"빈 CSV: {path.name}")
+    header = [h.strip() for h in rows[0]]
+    if len(header) < 5 or header[1] != "계정항목":
+        raise ValueError(f"ECOS 가로형이 아님: {path.name}")
+    year_idx: list[tuple[int, int, bool]] = []
+    for i, col in enumerate(header[4:], start=4):
+        c = col.strip()
+        if _MONTH_COL.match(c):
+            continue
+        m = _YEAR_COL_FLEX.match(c)
+        if not m:
+            continue
+        year_idx.append((i, int(m.group(1)), bool(re.search(r"p\s*\)?", c, re.I))))
+    if not year_idx:
+        raise ValueError(f"연 열 없음: {path.name}")
+    series: dict[str, dict[str, Any]] = {}
+    for row in rows[1:]:
+        if len(row) < 4:
+            continue
+        name = (row[1] or "").strip()
+        if not name:
+            continue
+        unit = (row[2] or "").strip()
+        by_year: dict[int, dict[str, Any]] = {}
+        for i, year, prov in year_idx:
+            v = _parse_num(row[i] if i < len(row) else "")
+            if v is None:
+                continue
+            prev = by_year.get(year)
+            if prev is not None and (not prev["provisional"]) and prov:
+                continue
+            by_year[year] = {"year": year, "v": v, "provisional": prov}
+        points = [by_year[y] for y in sorted(by_year)]
+        series[name] = {"unit": unit, "points": points}
+    return {
+        "path": str(path),
+        "file": path.name,
+        "frequency": "year",
+        "series": series,
+    }
+
+
+def find_named_series(parsed: dict[str, Any], match: str) -> dict[str, Any] | None:
+    return _find_series(parsed, match)
 
 
 def _find_series(parsed: dict[str, Any], match: str) -> dict[str, Any] | None:

@@ -565,11 +565,42 @@ def build_insight_macro_04(context: AiContext) -> AiDiagnosticPack:
     )
 
 
+def build_insight_macro_05(context: AiContext) -> AiDiagnosticPack:
+    facts = context.facts or {}
+    summary = [
+        "Macro Insight 05 — 연 거래액 vs GDP·M2·주식·유형 구성",
+        "grain=calendar_year",
+    ]
+    if facts.get("as_of"):
+        summary.append(f"as_of={facts.get('as_of')}")
+    if facts.get("year_start") and facts.get("year_end"):
+        summary.append(f"기간={facts.get('year_start')}–{facts.get('year_end')}")
+    limitations = list(
+        (context.explain.limitations if context.explain and context.explain.limitations else None)
+        or [
+            "거래액/GDP는 부동산이 경제에서 차지하는 비중이 아닙니다. 기존 자산의 거래액을 그해 GDP와 비교한 규모 지표입니다.",
+            "거래액/M2는 시중 돈이 부동산으로 이동했다는 뜻이 아닙니다. M2는 잔액이고 거래액은 그해 발생한 거래액입니다.",
+            "주식 대비는 대체 투자의 증거가 아닙니다. 1번의 월 동조와 다른 질문입니다.",
+            "표에 없는 퍼센트를 만들지 않습니다. 인과·전망 금지.",
+        ]
+    )
+    return AiDiagnosticPack(
+        bundle_id="insight_macro_05",
+        panel=context.panel,
+        app=context.app,
+        summary_lines=summary,
+        diagnostics={**facts, "scope_label": context.scope.region_label or "전국"},
+        limitations=limitations,
+    )
+
+
 def build_bundle(context: AiContext) -> AiDiagnosticPack:
     facts = context.facts or {}
     panel = context.panel
     bid = resolve_bundle_id(panel)
 
+    if panel == "Insight05" or bid == "insight_macro_05":
+        return build_insight_macro_05(context)
     if panel == "Insight04" or bid == "insight_macro_04":
         return build_insight_macro_04(context)
     if panel == "Insight03" or bid == "insight_macro_03":

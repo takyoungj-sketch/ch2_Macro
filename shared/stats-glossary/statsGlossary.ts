@@ -888,7 +888,10 @@ export const STATS_GLOSSARY: Record<string, StatsGlossaryEntry> = {
     label: "시중 돈",
     title: "시중 돈 (M2)",
     definition: "한국은행이 발표하는 시중에 풀린 돈의 한 지표입니다. 평잔·계절 보정 계열을 씁니다.",
-    interpretation: ["이 글에서는 작년 같은 달보다 몇 % 달라졌는지를 거래와 붙여 봅니다."],
+    interpretation: [
+      "1번 글에서는 작년 같은 달보다 몇 % 달라졌는지를 거래와 붙여 봅니다.",
+      "5번 글에서는 그해 잔액을 거래액과 비교하는 분모로 씁니다.",
+    ],
     limitations: ["한은 원표 해설이 이 글의 주인공이 아닙니다. 돈이 늘면 거래가 는다고 읽지 않습니다."],
   },
   insight_cd: {
@@ -986,6 +989,66 @@ export const STATS_GLOSSARY: Record<string, StatsGlossaryEntry> = {
       "군 전·답의 광평과 서울 대지의 광평은 절대 ㎡가 다릅니다.",
     ],
     limitations: ["토지 회귀의 면적 계수와 같은 산식이 아닙니다. 전국 할인율이 아닙니다."],
+  },
+  insight_nominal_gdp: {
+    id: "insight_nominal_gdp",
+    label: "명목 GDP",
+    title: "명목 국내총생산",
+    definition:
+      "그해 국내에서 새로 만든 부가가치를 당시 가격으로 더한 값입니다. 기존 집·땅이 팔린 금액이 아닙니다.",
+    interpretation: [
+      "이 글에서는 부동산 거래액을 나누는 분모 중 하나로만 씁니다.",
+      "건설업이 경제에서 차지하는 비중과는 다른 숫자입니다.",
+    ],
+    limitations: ["거래액 나누기 GDP를 부동산의 GDP 기여도로 읽지 않습니다."],
+  },
+  insight_turnover_vs_gdp: {
+    id: "insight_turnover_vs_gdp",
+    label: "거래액 / GDP",
+    title: "실거래 총액 vs 그해 산출",
+    definition:
+      "부동산 거래액이 그해 GDP에 비해 어느 정도 규모였는지를 보여주는 지표입니다. 기존 자산의 거래액을 그해 생산된 GDP와 비교합니다.",
+    interpretation: [
+      "부동산이 GDP에서 차지하는 비중이나 부동산이 만들어낸 부가가치를 의미하지 않습니다.",
+      "한 해의 비율을 전국 공통 비중으로 읽지 않습니다.",
+    ],
+    limitations: ["GDP 기여도·건설업 비중이 아닙니다."],
+  },
+  insight_turnover_vs_m2: {
+    id: "insight_turnover_vs_m2",
+    label: "거래액 / M2",
+    title: "실거래 총액 vs 시중 돈 잔액",
+    definition:
+      "그해 부동산 거래액을 시중 돈(M2) 잔액으로 나눈 비율입니다. 두 시장 규모를 비교한 지표입니다.",
+    interpretation: [
+      "M2는 잔액이고 거래액은 그해 발생한 거래액입니다.",
+      "시중 돈이 부동산으로 이동했다는 뜻이 아닙니다.",
+    ],
+    limitations: ["자금 이동·유동성 유입의 증거가 아닙니다."],
+  },
+  insight_stock_turnover: {
+    id: "insight_stock_turnover",
+    label: "주식 거래대금",
+    title: "코스피+코스닥 거래대금",
+    definition:
+      "그해 유가증권시장과 코스닥에서 주식이 거래된 금액의 합입니다. 시가총액이나 거래 주 수가 아닙니다.",
+    interpretation: [
+      "부동산 거래액과 같은 ‘회전’ 숫자를 나란히 보기 위해 씁니다.",
+      "주식 거래가 커진 해에는 부동산 거래가 그대로여도 비율이 작아질 수 있습니다.",
+    ],
+    limitations: ["대체 투자나 자금 이동의 증거가 아닙니다."],
+  },
+  insight_type_mix_year: {
+    id: "insight_type_mix_year",
+    label: "유형 구성비",
+    title: "그해 여덟 유형 거래액의 몫",
+    definition:
+      "그해 여덟 유형을 더한 거래액에서 각 유형이 차지하는 비율입니다. 시군구마다 유형 비중을 본 표가 아닙니다.",
+    interpretation: [
+      "규모가 큰 유형에 합계가 기울 수 있습니다.",
+      "해가 바뀌면 몫도 달라질 수 있습니다.",
+    ],
+    limitations: ["모든 부동산의 구성이 아닙니다. 여덟 유형만 더했습니다."],
   },
 };
 

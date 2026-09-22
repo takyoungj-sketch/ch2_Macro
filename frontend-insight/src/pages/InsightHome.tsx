@@ -3,6 +3,7 @@ import { INSIGHT_01 } from "../copy/insight01";
 import { INSIGHT_02 } from "../copy/insight02";
 import { INSIGHT_03 } from "../copy/insight03";
 import { INSIGHT_04 } from "../copy/insight04";
+import { INSIGHT_05 } from "../copy/insight05";
 
 const homeCtx = {
   app: "insight" as const,
@@ -75,6 +76,18 @@ export default function InsightHome() {
                 {INSIGHT_04.listTitle}
               </p>
               <p className="text-sm text-slate-500 mt-1">{INSIGHT_04.listSub}</p>
+            </a>
+          </li>
+          <li>
+            <a
+              href="/insight/?q=5"
+              className="block card p-4 hover:border-slate-400 dark:hover:border-slate-500"
+            >
+              <p className="text-xs text-slate-500 mb-1">5</p>
+              <p className="font-semibold text-slate-900 dark:text-slate-50 leading-snug">
+                {INSIGHT_05.listTitle}
+              </p>
+              <p className="text-sm text-slate-500 mt-1">{INSIGHT_05.listSub}</p>
             </a>
           </li>
         </ol>

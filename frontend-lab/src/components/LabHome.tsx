@@ -71,6 +71,11 @@ const DOORS: { id: LabTool; title: string; desc: string }[] = [
     title: "연립·다세대 층·승강기",
     desc: "3차 기록. 최상×승강기 가산이 체급·연식·수도권에서 모인다. 제품 층 식 미변경.",
   },
+  {
+    id: "macro-scale",
+    title: "연 거래액 규모·구성",
+    desc: "GDP·M2·주식 거래대금 대비 연 거래액 비율과 8유형 구성. G3(월 r)와 다른 문. Insight #5 본문.",
+  },
 ];
 
 export default function LabHome({ onOpenTool }: { onOpenTool: (id: LabTool) => void }) {

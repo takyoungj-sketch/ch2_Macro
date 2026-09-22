@@ -446,6 +446,20 @@ PANEL_CAPABILITIES: dict[str, PanelCapability] = {
             "이 숫자를 단지 가격에 써도 되나요?",
         ),
     ),
+    "Insight05": PanelCapability(
+        panel="Insight05",
+        label="Macro Insight 5번",
+        bundle_id="insight_macro_05",
+        blocked_keywords=(),
+        redirects=(),
+        on_screen_questions=(
+            "부동산이 GDP의 몇 퍼센트인가요?",
+            "시중 돈이 부동산으로 간 건가요?",
+            "주식이 대체된 건가요?",
+            "1번 글과 무엇이 다른가요?",
+            "합계는 모든 부동산인가요?",
+        ),
+    ),
     "Insight04": PanelCapability(
         panel="Insight04",
         label="Macro Insight 4번",

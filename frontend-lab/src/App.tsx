@@ -15,6 +15,7 @@ import Age0ResidualLab from "./components/Age0ResidualLab";
 import RecommendTwinBenchLab from "./components/RecommendTwinBenchLab";
 import LandAreaElasticityLab from "./components/LandAreaElasticityLab";
 import RowhouseFloorElevatorLab from "./components/RowhouseFloorElevatorLab";
+import MacroAnnualScaleLab from "./components/MacroAnnualScaleLab";
 import WhyDecision, { WhyLinks } from "./components/WhyDecision";
 import { TOOL_WHY } from "./labContent";
 
@@ -32,7 +33,8 @@ export type LabTool =
   | "age0"
   | "recommend-twin"
   | "area-elasticity"
-  | "rowhouse-floor";
+  | "rowhouse-floor"
+  | "macro-scale";
 export type TwinPane = "v2" | "mape";
 
 type LabParams = {
@@ -58,7 +60,8 @@ function readParams(): LabParams {
     t === "age0" ||
     t === "recommend-twin" ||
     t === "area-elasticity" ||
-    t === "rowhouse-floor"
+    t === "rowhouse-floor" ||
+    t === "macro-scale"
       ? t
       : null;
   const pane = q.get("pane");
@@ -253,6 +256,14 @@ export default function App() {
     return (
       <LabChrome title="연립·다세대 층·승강기" whyIds={TOOL_WHY["rowhouse-floor"] ?? []} onWhy={setWhy} onBack={back}>
         <RowhouseFloorElevatorLab />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "macro-scale") {
+    return (
+      <LabChrome title="연 거래액 규모·구성" whyIds={TOOL_WHY["macro-scale"] ?? []} onWhy={setWhy} onBack={back}>
+        <MacroAnnualScaleLab />
         {whyModal}
       </LabChrome>
     );

@@ -338,3 +338,313 @@ export function DualLine({
     </svg>
   );
 }
+
+export const MIX_TYPE_COLOR: Record<string, string> = {
+  토지: "#a16207",
+  상가: "#0369a1",
+  공장: "#4b5563",
+  단독다가구: "#7c3aed",
+  아파트: "#dc2626",
+  오피스텔: "#0891b2",
+  연립다세대: "#ea580c",
+  분양권: "#65a30d",
+};
+
+export type YearDomain = { ticks: number[]; lo: number; hi: number };
+
+export function yearDomainFromMaps(maps: Map<number, number>[], forceZero = true): YearDomain {
+  const pts: number[] = [];
+  for (const m of maps) {
+    for (const v of m.values()) pts.push(v);
+  }
+  if (pts.length < 1) return { ticks: [0, 1], lo: 0, hi: 1 };
+  const min = forceZero ? Math.min(0, ...pts) : Math.min(...pts);
+  return axisDomain(min, Math.max(...pts));
+}
+
+export function YearSingleLine({
+  years,
+  values,
+  label,
+  formatY = fmtPct,
+  color = "#1e293b",
+  domain,
+  showValues = false,
+}: {
+  years: number[];
+  values: Map<number, number>;
+  label: string;
+  formatY?: AxisFmt;
+  color?: string;
+  domain?: YearDomain;
+  showValues?: boolean;
+}) {
+  const w = 920;
+  const h = showValues ? 280 : 220;
+  const pad = { l: 88, r: showValues ? 36 : 16, t: showValues ? 44 : 28, b: 36 };
+  const pts = years.map((y) => values.get(y)).filter((v): v is number => v != null);
+  if (years.length < 2 || pts.length < 2) {
+    return <p className="text-sm text-slate-500">점이 부족합니다.</p>;
+  }
+  const dom = domain ?? axisDomain(Math.min(...pts), Math.max(...pts));
+  const innerW = w - pad.l - pad.r;
+  const innerH = h - pad.t - pad.b;
+  const x0 = years[0];
+  const dx = years[years.length - 1] - x0 || 1;
+  const span = dom.hi - dom.lo || 1;
+  const toX = (y: number) => pad.l + ((y - x0) / dx) * innerW;
+  const toY = (v: number) => pad.t + (1 - (v - dom.lo) / span) * innerH;
+  const keyed = years.filter((y) => values.has(y));
+  const d = keyed.map((y, i) => `${i === 0 ? "M" : "L"} ${toX(y)} ${toY(values.get(y)!)}`).join(" ");
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-auto" role="img" aria-label={label}>
+      <text x={pad.l} y={16} className="fill-slate-700 dark:fill-slate-200" fontSize={12}>
+        {label}
+      </text>
+      {dom.ticks.map((v) => {
+        const y = toY(v);
+        return (
+          <g key={v}>
+            <line
+              x1={pad.l}
+              x2={w - pad.r}
+              y1={y}
+              y2={y}
+              className="stroke-slate-200 dark:stroke-slate-700"
+              strokeWidth={1}
+            />
+            <text x={pad.l - 8} y={y + 4} textAnchor="end" className="fill-slate-500" fontSize={11}>
+              {formatY(v)}
+            </text>
+          </g>
+        );
+      })}
+      <path d={d} fill="none" stroke={color} strokeWidth={2} />
+      {keyed.map((y) => {
+        const v = values.get(y)!;
+        const x = toX(y);
+        const py = toY(v);
+        const nearTop = py < pad.t + 18;
+        return (
+          <g key={y}>
+            <circle cx={x} cy={py} r={2.5} fill={color} />
+            {showValues ? (
+              <text
+                x={x}
+                y={nearTop ? py + 14 : py - 8}
+                textAnchor="middle"
+                fontSize={9}
+                fill={color}
+              >
+                {formatY(v)}
+              </text>
+            ) : null}
+          </g>
+        );
+      })}
+      {years.map((y) =>
+        y % 2 === 0 ? (
+          <text key={`x-${y}`} x={toX(y)} y={h - 10} textAnchor="middle" className="fill-slate-500" fontSize={11}>
+            {y}
+          </text>
+        ) : null,
+      )}
+    </svg>
+  );
+}
+
+export function YearMultiLine({
+  years,
+  series,
+  label,
+  formatY = fmtPct,
+  domain,
+  showValues = false,
+}: {
+  years: number[];
+  series: { key: string; label: string; values: Map<number, number>; color: string }[];
+  label: string;
+  formatY?: AxisFmt;
+  domain?: YearDomain;
+  showValues?: boolean;
+}) {
+  const w = 920;
+  const h = showValues ? 340 : 260;
+  const pad = { l: 88, r: 36, t: showValues ? 56 : 28, b: 36 };
+  const maps = series.map((s) => s.values);
+  const pts = maps.flatMap((m) => years.map((y) => m.get(y)).filter((v): v is number => v != null));
+  if (years.length < 2 || pts.length < 2) {
+    return <p className="text-sm text-slate-500">점이 부족합니다.</p>;
+  }
+  const dom = domain ?? yearDomainFromMaps(maps, true);
+  const innerW = w - pad.l - pad.r;
+  const innerH = h - pad.t - pad.b;
+  const x0 = years[0];
+  const dx = years[years.length - 1] - x0 || 1;
+  const span = dom.hi - dom.lo || 1;
+  const toX = (y: number) => pad.l + ((y - x0) / dx) * innerW;
+  const toY = (v: number) => pad.t + (1 - (v - dom.lo) / span) * innerH;
+  return (
+    <div>
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-auto" role="img" aria-label={label}>
+        <text x={pad.l} y={16} className="fill-slate-700 dark:fill-slate-200" fontSize={12}>
+          {label}
+        </text>
+        {dom.ticks.map((v) => {
+          const y = toY(v);
+          return (
+            <g key={v}>
+              <line
+                x1={pad.l}
+                x2={w - pad.r}
+                y1={y}
+                y2={y}
+                className="stroke-slate-200 dark:stroke-slate-700"
+                strokeWidth={1}
+              />
+              <text x={pad.l - 8} y={y + 4} textAnchor="end" className="fill-slate-500" fontSize={11}>
+                {formatY(v)}
+              </text>
+            </g>
+          );
+        })}
+        {series.map((s) => {
+          const keyed = years.filter((y) => s.values.has(y));
+          const d = keyed
+            .map((y, i) => `${i === 0 ? "M" : "L"} ${toX(y)} ${toY(s.values.get(y)!)}`)
+            .join(" ");
+          return <path key={s.key} d={d} fill="none" stroke={s.color} strokeWidth={2} />;
+        })}
+        {series.map((s, si) =>
+          years
+            .filter((y) => s.values.has(y))
+            .map((y) => {
+              const v = s.values.get(y)!;
+              const x = toX(y);
+              const py = toY(v);
+              const nearTop = py < pad.t + 22;
+              const stagger = si * 11;
+              return (
+                <g key={`${s.key}-${y}`}>
+                  <circle cx={x} cy={py} r={2.5} fill={s.color} />
+                  {showValues ? (
+                    <text
+                      x={x}
+                      y={nearTop ? py + 12 + stagger : py - 8 - stagger}
+                      textAnchor="middle"
+                      fontSize={8}
+                      fill={s.color}
+                    >
+                      {formatY(v)}
+                    </text>
+                  ) : null}
+                </g>
+              );
+            }),
+        )}
+        {years.map((y) =>
+          y % 2 === 0 ? (
+            <text key={`x-${y}`} x={toX(y)} y={h - 10} textAnchor="middle" className="fill-slate-500" fontSize={11}>
+              {y}
+            </text>
+          ) : null,
+        )}
+      </svg>
+      <ul className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[11px] text-slate-600 dark:text-slate-300">
+        {series.map((s) => (
+          <li key={s.key} className="inline-flex items-center gap-1">
+            <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: s.color }} />
+            {s.label}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export function YearMixStack({
+  years,
+  share,
+  label = "유형 구성비",
+  formatY = fmtPct,
+  domain,
+}: {
+  years: number[];
+  share: Record<string, { year: number; v: number }[]>;
+  label?: string;
+  formatY?: AxisFmt;
+  domain?: YearDomain;
+}) {
+  const types = Object.keys(MIX_TYPE_COLOR).filter((t) => share[t]?.length);
+  const maps = Object.fromEntries(
+    types.map((t) => [t, new Map(share[t].map((p) => [p.year, p.v] as const))]),
+  ) as Record<string, Map<number, number>>;
+  const pctDom: YearDomain = { ticks: [0, 25, 50, 75, 100], lo: 0, hi: 100 };
+  const dom = domain ?? pctDom;
+  const w = 920;
+  const h = 260;
+  const pad = { l: domain ? 88 : 56, r: 16, t: 28, b: 36 };
+  const innerW = w - pad.l - pad.r;
+  const innerH = h - pad.t - pad.b;
+  const gap = 4;
+  const bw = Math.max(6, innerW / years.length - gap);
+  const span = dom.hi - dom.lo || 1;
+  const toY = (v: number) => pad.t + (1 - (v - dom.lo) / span) * innerH;
+  return (
+    <div>
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-auto" role="img" aria-label={label}>
+        {label ? (
+          <text x={pad.l} y={16} className="fill-slate-700 dark:fill-slate-200" fontSize={12}>
+            {label}
+          </text>
+        ) : null}
+        {dom.ticks.map((v) => {
+          const y = toY(v);
+          return (
+            <g key={v}>
+              <line
+                x1={pad.l}
+                x2={w - pad.r}
+                y1={y}
+                y2={y}
+                className="stroke-slate-200 dark:stroke-slate-700"
+                strokeWidth={1}
+              />
+              <text x={pad.l - 8} y={y + 4} textAnchor="end" className="fill-slate-500" fontSize={11}>
+                {formatY(v)}
+              </text>
+            </g>
+          );
+        })}
+        {years.map((year, i) => {
+          const x = pad.l + (i + 0.5) * (innerW / years.length) - bw / 2;
+          let acc = 0;
+          return (
+            <g key={year}>
+              {types.map((t) => {
+                const v = maps[t].get(year) ?? 0;
+                const bh = (v / span) * innerH;
+                const y = pad.t + innerH - acc - bh;
+                acc += bh;
+                return <rect key={t} x={x} y={y} width={bw} height={Math.max(0, bh)} fill={MIX_TYPE_COLOR[t]} />;
+              })}
+              {year % 2 === 0 ? (
+                <text x={x + bw / 2} y={h - 10} textAnchor="middle" className="fill-slate-500" fontSize={11}>
+                  {year}
+                </text>
+              ) : null}
+            </g>
+          );
+        })}
+      </svg>
+      <ul className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[11px] text-slate-600 dark:text-slate-300">
+        {types.map((t) => (
+          <li key={t} className="inline-flex items-center gap-1">
+            <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: MIX_TYPE_COLOR[t] }} />
+            {t}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}

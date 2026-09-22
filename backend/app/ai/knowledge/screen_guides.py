@@ -633,6 +633,40 @@ def _insight_04(context: AiContext) -> str:
     return "\n".join(lines)
 
 
+def _insight_05(context: AiContext) -> str:
+    facts = context.facts or {}
+    start = facts.get("year_start")
+    end = facts.get("year_end")
+    n = facts.get("n_years")
+    lines = [
+        "### 이 화면은",
+        "Macro Insight 5번입니다. 한 해 전국 부동산 거래액이 명목 GDP·시중 돈(M2)·주식 거래대금 대비 얼마나 큰지, 여덟 유형 구성이 어떻게 바뀌었는지를 봅니다.",
+        "1번의 월 전년동월 상관이 아닙니다. 거래액/GDP는 규모 비교이지 GDP 기여도가 아닙니다. 통계 기초만 있는 사람에게 쉬운 말로 설명합니다.",
+    ]
+    if start and end:
+        lines.append(f"기간은 {start}년부터 {end}년까지, 완결 연입니다.")
+    if n is not None:
+        lines.append(f"비교한 해는 {n}개입니다.")
+    lines.extend(
+        [
+            "",
+            "### 어떻게 읽나",
+            "- 먼저 부동산 거래액·명목 GDP·M2·주식 거래대금의 총액을 같은 조 원으로 봅니다. 선의 높이를 관계의 증거로 읽지 않습니다.",
+            "- 그다음 세로축 비율은 거래액÷분모입니다. 부동산이 GDP에서 차지하는 비중·부가가치가 아닙니다.",
+            "- M2는 이 글에서 시중 돈 잔액(분모)입니다. 거래액/M2는 두 시장 규모를 비교한 지표이며, 시중 돈이 부동산으로 이동했다는 뜻이 아닙니다.",
+            "- 주식은 거래대금입니다. 시가총액·거래량(주)이 아닙니다.",
+            "- 유형은 먼저 각 유형 거래액(조 원)을 보고, 그다음 그해 여덟 유형 합의 구성비를 봅니다. 시군구 구성비 8×8이 아닙니다.",
+            "- 같은 해 동조는 전년 대비 r로 봅니다. 수준 r는 장기 추세의 영향을 받을 수 있습니다. n이 작아 안정적 관계로 읽지 않습니다.",
+            "- 표에 없는 퍼센트를 만들지 않습니다.",
+            "",
+            "### 한계",
+            "인과가 아닙니다. 시중 돈이 부동산으로 갔다, 주식이 대체됐다라고 쓰지 않습니다. 자세한 내용은 화면의 「이 분석의 한계」를 따릅니다.",
+            "다음 실험은 시중 유동성의 구성 변화와 부동산 유형 구성이 함께 움직였는지이며, 이 화면이 말하지 않습니다.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def format_screen_guide(context: AiContext) -> str:
     """LLM 없이 기본 화면을 설명하고 다음 분석을 유도한다."""
     app = context.app
@@ -649,6 +683,8 @@ def format_screen_guide(context: AiContext) -> str:
         return _rent_list(context)
     if panel in ("RegionalProfile", "TwinRegionPanel", "ProfilePanel") or app == "profile":
         return _profile(context)
+    if panel == "Insight05":
+        return _insight_05(context)
     if panel == "Insight04":
         return _insight_04(context)
     if panel == "Insight03":
@@ -701,6 +737,14 @@ def screen_guide_followups(context: AiContext) -> list[str]:
         return [
             "Twin 유사지역은 무엇을 뜻하나요?",
             "단지 추세는 어디서 보나요?",
+        ]
+    if panel == "Insight05":
+        return [
+            "부동산이 GDP의 몇 퍼센트인가요?",
+            "시중 돈이 부동산으로 간 건가요?",
+            "주식이 대체된 건가요?",
+            "일정한 관계가 성립하나요?",
+            "1번 글과 무엇이 다른가요?",
         ]
     if panel == "Insight04":
         return [

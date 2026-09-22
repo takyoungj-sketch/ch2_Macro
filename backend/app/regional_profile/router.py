@@ -801,6 +801,34 @@ def get_macro_ecos_lab():
         raise HTTPException(400, str(exc)) from exc
 
 
+@router.get("/lab/macro-annual-scale")
+def get_macro_annual_scale_lab():
+    """관리자 전용. 연 거래액 / GDP·M2·주식 + 유형 구성. 제품·Insight 아님. G3와 별문."""
+    from app.macro_ts.annual_scale import (
+        OUT,
+        compute_annual_scale,
+        fetch_national_month_rows,
+    )
+    from app.macro_ts.db import get_macro_ts_session_factory
+
+    factory = get_macro_ts_session_factory()
+    db = factory() if factory is not None else None
+    try:
+        rows = fetch_national_month_rows(db)
+        if rows:
+            return compute_annual_scale(month_rows=rows)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    finally:
+        if db is not None:
+            db.close()
+    if OUT.is_file():
+        return json.loads(OUT.read_text(encoding="utf-8"))
+    raise HTTPException(404, "national_month 없음, 스냅샷도 없음")
+
+
 @router.get("/lab/macro-ts")
 def get_macro_ts_lab(grain: str = Query("calendar_year")):
     """관리자 전용. ECOS + 전국 8유형 건수·액. 제품·Insight 아님. grain=calendar_year|calendar_month."""
