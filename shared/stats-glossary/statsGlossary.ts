@@ -978,6 +978,18 @@ export const STATS_GLOSSARY: Record<string, StatsGlossaryEntry> = {
     ],
     limitations: ["그 시군구 전체가 다른 시군구보다 비싼지는 다른 질문입니다."],
   },
+  insight_jimok_road: {
+    id: "insight_jimok_road",
+    label: "지목 도로",
+    title: "대장의 지목이 도로인 땅",
+    definition:
+      "토지대장의 지목란이 도로인 필지입니다. 그 땅이 길에 얼마나 접해 있는지, 평가에서 말하는 사도·공도와는 다른 칸입니다.",
+    interpretation: [
+      "이 글의 비율은 그 지목의 거래가격을 같은 동네의 다른 지목과 나눈 값입니다.",
+      "길에 접한 폭은 따로 맞출 수 있는 조건이고, 지목 그 자체가 아닙니다.",
+    ],
+    limitations: ["3분의 1은 이 지목을 감정평가 도로와 같다고 둔 결과가 아닙니다."],
+  },
   insight_relative_large: {
     id: "insight_relative_large",
     label: "광평 (상대적 대형)",

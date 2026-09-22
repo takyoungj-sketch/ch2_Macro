@@ -460,6 +460,20 @@ PANEL_CAPABILITIES: dict[str, PanelCapability] = {
             "합계는 모든 부동산인가요?",
         ),
     ),
+    "Insight06": PanelCapability(
+        panel="Insight06",
+        label="Macro Insight 6번",
+        bundle_id="insight_macro_06",
+        blocked_keywords=(),
+        redirects=(),
+        on_screen_questions=(
+            "도로 땅은 대지의 3분의 1인가요?",
+            "도시에서는 몇 %인가요?",
+            "지목 도로는 평가에서 말하는 도로인가요?",
+            "논·밭과 비교하면 왜 더 높은가요?",
+            "토지 회귀식과 같은 숫자인가요?",
+        ),
+    ),
     "Insight04": PanelCapability(
         panel="Insight04",
         label="Macro Insight 4번",

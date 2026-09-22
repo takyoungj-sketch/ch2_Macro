@@ -667,6 +667,33 @@ def _insight_05(context: AiContext) -> str:
     return "\n".join(lines)
 
 
+def _insight_06(context: AiContext) -> str:
+    facts = context.facts or {}
+    lines = [
+        "### 이 화면은",
+        "Macro Insight 6번입니다. 같은 읍·면·동, 같은 용도지역에서 지목 도로의 ㎡당 가운데 가격이 다른 지목의 몇 %인지를 봅니다.",
+        "도시 전체를 하나의 퍼센트로 말하지 않습니다. 3분의 1은 눈금입니다. 통계 기초만 있는 사람에게 쉬운 말로 설명합니다.",
+    ]
+    if facts.get("period_start") and facts.get("period_end"):
+        lines.append(f"기간은 {facts.get('period_start')}부터 {facts.get('period_end')}까지입니다.")
+    lines.extend(
+        [
+            "",
+            "### 어떻게 읽나",
+            "- 주거지역 대지, 녹지지역 대지, 계획관리지역 대지, 밭(지목 전), 논(지목 답)을 따로 봅니다.",
+            "- 숫자는 전국 도로 가격을 전국 대지 가격으로 나눈 값이 아닙니다. 동네마다 도로 가운데 ÷ 비교 땅 가운데를 구한 뒤, 그 비율들의 가운데입니다.",
+            "- 밭·논 비율이 높은 것은 도로가 대지보다 비싸다는 뜻이 아닙니다. 비교하는 밭·논의 가격이 낮을 수 있습니다.",
+            "- 회귀 열은 땅 크기·접한 길의 폭·계약 연도를 함께 본 참고값입니다. 단순 비교의 가운데 값과 같은 종류의 숫자가 아니고, 새로운 도로 가격 비율로 말하지 않습니다. 주거·녹지 각각의 회귀는 아직 없습니다.",
+            "- 지목 도로는 대장의 지목입니다. 평가의 사도·공도, 접한 길의 폭과 다른 말입니다.",
+            "- 표에 없는 퍼센트를 만들지 않습니다. 도시 전체를 하나의 퍼센트로 말하지 않습니다. 3분의 1이 틀렸다고 쓰지 않습니다. 이번 자료에서 하나의 비율만으로 거래를 설명하기 어렵다고 말합니다.",
+            "",
+            "### 한계",
+            "인과가 아닙니다. 한 해만 자른 표는 이 화면에 없습니다. 자세한 내용은 화면의 「이 글의 한계」를 따릅니다.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def format_screen_guide(context: AiContext) -> str:
     """LLM 없이 기본 화면을 설명하고 다음 분석을 유도한다."""
     app = context.app
@@ -683,6 +710,8 @@ def format_screen_guide(context: AiContext) -> str:
         return _rent_list(context)
     if panel in ("RegionalProfile", "TwinRegionPanel", "ProfilePanel") or app == "profile":
         return _profile(context)
+    if panel == "Insight06":
+        return _insight_06(context)
     if panel == "Insight05":
         return _insight_05(context)
     if panel == "Insight04":
@@ -737,6 +766,14 @@ def screen_guide_followups(context: AiContext) -> list[str]:
         return [
             "Twin 유사지역은 무엇을 뜻하나요?",
             "단지 추세는 어디서 보나요?",
+        ]
+    if panel == "Insight06":
+        return [
+            "도로 땅은 대지의 3분의 1인가요?",
+            "도시에서는 몇 %인가요?",
+            "지목 도로는 평가에서 말하는 도로인가요?",
+            "논·밭과 비교하면 왜 더 높은가요?",
+            "토지 회귀식과 같은 숫자인가요?",
         ]
     if panel == "Insight05":
         return [

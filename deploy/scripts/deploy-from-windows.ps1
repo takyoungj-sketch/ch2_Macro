@@ -53,7 +53,7 @@ try {
 
   Write-Host "==> scp to VPS (scope=$Scope)"
   if ($Scope -eq "profile" -or $Scope -eq "rent" -or $Scope -eq "lab" -or $Scope -eq "insight" -or $Scope -eq "all") {
-    & ssh -i $Key $VpsHost "mkdir -p /opt/ch2_Macro/frontend-profile /opt/ch2_Macro/frontend-rent /opt/ch2_Macro/frontend-lab /opt/ch2_Macro/frontend-insight /opt/ch2_Macro/docs /opt/ch2_Macro/backend/app/ai/knowledge /opt/ch2_Macro/backend/app/ai/bundles /opt/ch2_Macro/deploy/templates"
+    & ssh -i $Key $VpsHost "mkdir -p /opt/ch2_Macro/frontend-profile /opt/ch2_Macro/frontend-rent /opt/ch2_Macro/frontend-lab /opt/ch2_Macro/frontend-insight /opt/ch2_Macro/docs/lab /opt/ch2_Macro/backend/app/ai/knowledge /opt/ch2_Macro/backend/app/ai/bundles /opt/ch2_Macro/deploy/templates"
     if ($LASTEXITCODE -ne 0) { throw "remote mkdir failed" }
   }
   switch ($Scope) {
@@ -109,6 +109,7 @@ try {
       Invoke-Scp @("backend/app/insight", "backend/app/macro_ts", "backend/app/regional_profile", "backend/app/ai", "backend/app/config.py", "backend/app/main.py") "backend/app/"
       Invoke-Scp @("shared") "."
       Invoke-Scp @("frontend-insight/package.json", "frontend-insight/package-lock.json", "frontend-insight/tsconfig.json", "frontend-insight/vite.config.ts", "frontend-insight/tailwind.config.js", "frontend-insight/postcss.config.js", "frontend-insight/index.html", "frontend-insight/src") "frontend-insight/"
+      Invoke-Scp @("docs/lab/land_road_jimok_ratio_public.json", "docs/lab/macro_annual_scale_screen.json") "docs/lab/"
       Invoke-Scp @("deploy/templates", "deploy/macro-gateway") "deploy/"
       Invoke-Scp @("deploy/scripts") "deploy/"
       & ssh -i $Key $VpsHost "mkdir -p /opt/ch2_Macro/data"

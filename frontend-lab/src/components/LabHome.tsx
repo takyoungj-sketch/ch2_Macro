@@ -76,6 +76,11 @@ const DOORS: { id: LabTool; title: string; desc: string }[] = [
     title: "연 거래액 규모·구성",
     desc: "GDP·M2·주식 거래대금 대비 연 거래액 비율과 8유형 구성. G3(월 r)와 다른 문. Insight #5 본문.",
   },
+  {
+    id: "road-jimok",
+    title: "도로 지목 상대가격",
+    desc: "읍면동×용도에서 도로/대·전·답 중앙단가 비의 분포. 1차는 관찰. 제품 식 미변경.",
+  },
 ];
 
 export default function LabHome({ onOpenTool }: { onOpenTool: (id: LabTool) => void }) {

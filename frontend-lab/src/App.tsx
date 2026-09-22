@@ -16,6 +16,7 @@ import RecommendTwinBenchLab from "./components/RecommendTwinBenchLab";
 import LandAreaElasticityLab from "./components/LandAreaElasticityLab";
 import RowhouseFloorElevatorLab from "./components/RowhouseFloorElevatorLab";
 import MacroAnnualScaleLab from "./components/MacroAnnualScaleLab";
+import LandRoadJimokRatioLab from "./components/LandRoadJimokRatioLab";
 import WhyDecision, { WhyLinks } from "./components/WhyDecision";
 import { TOOL_WHY } from "./labContent";
 
@@ -34,7 +35,8 @@ export type LabTool =
   | "recommend-twin"
   | "area-elasticity"
   | "rowhouse-floor"
-  | "macro-scale";
+  | "macro-scale"
+  | "road-jimok";
 export type TwinPane = "v2" | "mape";
 
 type LabParams = {
@@ -61,7 +63,8 @@ function readParams(): LabParams {
     t === "recommend-twin" ||
     t === "area-elasticity" ||
     t === "rowhouse-floor" ||
-    t === "macro-scale"
+    t === "macro-scale" ||
+    t === "road-jimok"
       ? t
       : null;
   const pane = q.get("pane");
@@ -264,6 +267,14 @@ export default function App() {
     return (
       <LabChrome title="연 거래액 규모·구성" whyIds={TOOL_WHY["macro-scale"] ?? []} onWhy={setWhy} onBack={back}>
         <MacroAnnualScaleLab />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "road-jimok") {
+    return (
+      <LabChrome title="도로 지목 상대가격" whyIds={TOOL_WHY["road-jimok"] ?? []} onWhy={setWhy} onBack={back}>
+        <LandRoadJimokRatioLab />
         {whyModal}
       </LabChrome>
     );
