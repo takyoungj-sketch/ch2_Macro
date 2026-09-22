@@ -992,7 +992,7 @@ def building_floor_index(
     building_key: str,
     db: Session = Depends(get_collective_db),
     dimension: str = Query("floor", pattern="^(floor|dong|area|rights)$"),
-    floor_mode: str = Query("relative", pattern="^(relative|dummy|grouped|linear)$"),
+    floor_mode: str = Query("relative", pattern="^(relative|dummy|grouped|linear|rowhouse)$"),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
     contract_date_from: Optional[date] = None,
@@ -1048,6 +1048,7 @@ def building_floor_index(
         method=raw.get("method"),
         floor_mode=raw.get("floor_mode"),
         reference_floor=raw.get("reference_floor"),
+        regression_reference_floor=raw.get("regression_reference_floor"),
         controls=raw.get("controls") or [],
         n_total=raw["n_total"],
         n_regression=raw.get("n_regression"),
@@ -1090,7 +1091,8 @@ def building_regression(
     rows = db.execute(
         text(
             f"""
-            SELECT price, unit_price, exclusive_area, building_age, floor, dong, housing_subtype, contract_year
+            SELECT price, unit_price, exclusive_area, building_age, floor, dong, housing_subtype,
+                   contract_year, contract_month
             FROM collective_transactions
             WHERE {where}
             """
@@ -1146,7 +1148,8 @@ def building_regression_predict(
     rows = db.execute(
         text(
             f"""
-            SELECT price, unit_price, exclusive_area, building_age, floor, dong, housing_subtype, contract_year
+            SELECT price, unit_price, exclusive_area, building_age, floor, dong, housing_subtype,
+                   contract_year, contract_month
             FROM collective_transactions
             WHERE {where}
             """

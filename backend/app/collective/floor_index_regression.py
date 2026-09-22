@@ -12,7 +12,15 @@ import statsmodels.api as sm
 from app.collective.analysis_gates import MIN_RELIABLE_BUILDING_STATS
 from app.collective.area_buckets import label_for_gross_area
 from app.collective.floor_index import _area_bucket, _area_label, _dong_label
-from app.collective.regression.engine import _REL_FLOOR_LABELS, _floor_group_label, relative_floor_group
+from app.collective.regression.engine import (
+    _FACTORY_FLOOR_LABELS,
+    _REL_FLOOR_LABELS,
+    _ROWHOUSE_FLOOR_LABELS,
+    _factory_floor_code,
+    _floor_group_label,
+    relative_floor_group,
+    rowhouse_floor_group,
+)
 from app.collective_commercial.floor_index_regression import SHOP_FLOOR_GROUPS, shop_floor_group
 from app.stats_utils import _rnd_price
 
@@ -46,7 +54,16 @@ GROUPED_FLOOR_GROUPS: list[tuple[str, str, float]] = [
 
 GROUPED_FLOOR_LABELS: dict[str, str] = {code: label for label, code, _ in GROUPED_FLOOR_GROUPS}
 
-FLOOR_INDEX_MODES = frozenset({"relative", "dummy", "grouped"})
+FACTORY_FLOOR_SPECS: list[tuple[str, str, float]] = [
+    (_FACTORY_FLOOR_LABELS[code], code, sort)
+    for code, sort in (("fac_b", -1), ("fac_1", 1), ("fac_2", 2), ("fac_3p", 3))
+]
+ROWHOUSE_FLOOR_SPECS: list[tuple[str, str, float]] = [
+    ("1층", "floor_rh_1", 1),
+    ("중간층", "floor_rh_mid", 2),
+    ("최상층", "floor_rh_top", 3),
+]
+FLOOR_INDEX_MODES = frozenset({"relative", "dummy", "grouped", "rowhouse", "shop", "factory"})
 
 
 def _ensure_building_age(work: pd.DataFrame) -> None:
@@ -119,9 +136,30 @@ def _shop_floor_index_code(floor: object) -> str | None:
     return f"shop_{grp[1]}"
 
 
+def _factory_floor_index_code(floor: object) -> str | None:
+    return _factory_floor_code(floor)
+
+
+def _rowhouse_floor_code(row: pd.Series, max_by_bk: dict[str, float]) -> str | None:
+    fl = row.get("floor")
+    if fl is None or (isinstance(fl, float) and pd.isna(fl)):
+        return None
+    try:
+        f = float(fl)
+    except (TypeError, ValueError):
+        return None
+    bk = str(row.get("building_key", "__single__"))
+    mx = max_by_bk.get(bk, f)
+    return rowhouse_floor_group(f, mx)
+
+
 def _display_reference_for_mode(floor_mode: str) -> tuple[str, str]:
     if floor_mode == "shop":
         return SHOP_DISPLAY_CODE, "1층"
+    if floor_mode == "factory":
+        return "fac_1", "1층"
+    if floor_mode == "rowhouse":
+        return "floor_rh_1", "1층"
     if floor_mode == "grouped":
         return "floor_grp_1-5", "1–5층"
     if floor_mode == "dummy":
@@ -140,6 +178,20 @@ def _build_floor_dimension_groups(
         work = work.copy()
         work["index_group_code"] = work["floor"].apply(_shop_floor_index_code)
         work["index_group_label"] = work["index_group_code"].map(SHOP_FLOOR_LABELS)
+        return specs, work, warnings
+
+    if floor_mode == "factory":
+        specs = list(FACTORY_FLOOR_SPECS)
+        work = work.copy()
+        work["index_group_code"] = work["floor"].apply(_factory_floor_index_code)
+        work["index_group_label"] = work["index_group_code"].map(_FACTORY_FLOOR_LABELS)
+        return specs, work, warnings
+
+    if floor_mode == "rowhouse":
+        specs = list(ROWHOUSE_FLOOR_SPECS)
+        work = work.copy()
+        work["index_group_code"] = work["floor_index_code"]
+        work["index_group_label"] = work["floor_index_code"].map(_ROWHOUSE_FLOOR_LABELS)
         return specs, work, warnings
 
     mode = floor_mode if floor_mode in FLOOR_INDEX_MODES else "relative"
@@ -216,6 +268,10 @@ def _label_for_code(code: str, group_specs: list[tuple[str, str, float | None]] 
             return label
     if code in SHOP_FLOOR_LABELS:
         return SHOP_FLOOR_LABELS[code]
+    if code in _FACTORY_FLOOR_LABELS:
+        return _FACTORY_FLOOR_LABELS[code]
+    if code in _ROWHOUSE_FLOOR_LABELS:
+        return _ROWHOUSE_FLOOR_LABELS[code]
     return GROUPED_FLOOR_LABELS.get(code, code)
 
 
@@ -392,13 +448,27 @@ def _add_floor_control_dummies(
     parts: list[pd.DataFrame],
     controls: list[str],
     *,
-    shop: bool = False,
+    floor_mode: str = "relative",
 ) -> None:
-    """층 구간을 통제변수로 (1층 기준). 상가·공장은 지하·1·2층 구간."""
+    """층 구간을 통제변수로. 기준은 그 유형의 1층(또는 1층 상대칸)."""
     if "floor_index_code" not in reg.columns:
         return
-    groups = SHOP_FLOOR_SPECS if shop else RESIDENTIAL_FLOOR_GROUPS
-    ref = SHOP_DISPLAY_CODE if shop else REFERENCE_FLOOR_CODE
+    if floor_mode == "shop":
+        groups: list[tuple[str, str, float | None]] = list(SHOP_FLOOR_SPECS)
+        ref = SHOP_DISPLAY_CODE
+        control_name = "shop_floor"
+    elif floor_mode == "factory":
+        groups = list(FACTORY_FLOOR_SPECS)
+        ref = "fac_1"
+        control_name = "factory_floor"
+    elif floor_mode == "rowhouse":
+        groups = list(ROWHOUSE_FLOOR_SPECS)
+        ref = "floor_rh_1"
+        control_name = "rowhouse_floor"
+    else:
+        groups = list(RESIDENTIAL_FLOOR_GROUPS)
+        ref = REFERENCE_FLOOR_CODE
+        control_name = "relative_floor"
     added = False
     for _, code, _ in groups:
         if code == ref:
@@ -409,7 +479,7 @@ def _add_floor_control_dummies(
             parts.append(reg[[col]])
             added = True
     if added:
-        controls.append("shop_floor" if shop else "relative_floor")
+        controls.append(control_name)
 
 
 def _add_building_fe(
@@ -467,11 +537,16 @@ def compute_residential_floor_index_regression(
     is_commercial = asset_type in COMMERCIAL_ASSET_TYPES
     effective_dim = dimension
     effective_floor_mode = floor_mode if floor_mode in FLOOR_INDEX_MODES else "relative"
-    if is_commercial and dimension == "floor":
-        effective_floor_mode = "shop"
-    if dimension == "floor" and floor_mode == "linear" and not is_commercial:
-        warnings.append("층 선형은 효용지수 탭에서 지원하지 않습니다. 상대·개별·구간 중 선택하세요.")
-        effective_floor_mode = "relative"
+    if dimension == "floor":
+        if asset_type == "collective_shop" and effective_floor_mode in ("relative", "shop"):
+            effective_floor_mode = "shop"
+        elif asset_type == "collective_factory" and effective_floor_mode in ("relative", "shop", "factory"):
+            effective_floor_mode = "factory"
+        elif asset_type == "rowhouse" and effective_floor_mode == "relative":
+            effective_floor_mode = "rowhouse"
+        elif floor_mode == "linear":
+            warnings.append("층 선형은 효용지수 탭에서 지원하지 않습니다. 상대·개별·구간 중 선택하세요.")
+            effective_floor_mode = "rowhouse" if asset_type == "rowhouse" else "relative"
 
     work = df.dropna(subset=["unit_price"]).copy()
     work = work[work["unit_price"].astype(float) > 0]
@@ -480,9 +555,18 @@ def compute_residential_floor_index_regression(
         return _empty_result(dimension, warnings=["유효 거래가 없습니다."])
 
     _ensure_building_age(work)
-    if is_commercial:
+    if asset_type == "collective_shop":
+        control_floor_mode = "shop"
         work["floor_index_code"] = work["floor"].apply(_shop_floor_index_code)
+    elif asset_type == "collective_factory":
+        control_floor_mode = "factory"
+        work["floor_index_code"] = work["floor"].apply(_factory_floor_index_code)
+    elif asset_type == "rowhouse":
+        control_floor_mode = "rowhouse"
+        max_by_bk = _max_floor_by_building(work)
+        work["floor_index_code"] = work.apply(lambda r: _rowhouse_floor_code(r, max_by_bk), axis=1)
     else:
+        control_floor_mode = "relative"
         max_by_bk = _max_floor_by_building(work)
         work["floor_index_code"] = work.apply(lambda r: _relative_floor_code(r, max_by_bk), axis=1)
 
@@ -536,14 +620,15 @@ def compute_residential_floor_index_regression(
         codes: list[str] = []
         labels: list[str] = []
         area_meta: dict[str, tuple[str, float | None]] = {}
-        factory_area = asset_type == "collective_factory"
+        ledger_area = asset_type in ("collective_factory", "collective_shop")
+        area_prefix = "fac" if asset_type == "collective_factory" else "shop"
         for _, row in work.iterrows():
             ea = row.get("exclusive_area")
             if ea is None or (isinstance(ea, float) and pd.isna(ea)) or float(ea) <= 0:
                 code, lbl, sort_v = "area_missing", "—", None
-            elif factory_area:
+            elif ledger_area:
                 lbl, sort_v = label_for_gross_area(asset_type, float(ea))
-                code = f"area_fac_{int(sort_v) if sort_v is not None else 'x'}"
+                code = f"area_{area_prefix}_{int(sort_v) if sort_v is not None else 'x'}"
             else:
                 bucket = _area_bucket(float(ea))
                 lbl = _area_label(bucket)
@@ -558,9 +643,9 @@ def compute_residential_floor_index_regression(
         if valid.empty:
             return _empty_result(effective_dim, warnings=["면적 정보가 있는 거래가 없습니다."])
         med = float(valid["exclusive_area"].astype(float).median())
-        if factory_area:
+        if ledger_area:
             ref_lbl, ref_sort = label_for_gross_area(asset_type, med)
-            reference_code = f"area_fac_{int(ref_sort) if ref_sort is not None else 'x'}"
+            reference_code = f"area_{area_prefix}_{int(ref_sort) if ref_sort is not None else 'x'}"
             reference_label = ref_lbl
         else:
             ref_bucket = _area_bucket(med)
@@ -709,7 +794,7 @@ def compute_residential_floor_index_regression(
     _add_time_dummies(reg, parts, controls)
 
     if effective_dim != "floor":
-        _add_floor_control_dummies(reg, parts, controls, shop=is_commercial)
+        _add_floor_control_dummies(reg, parts, controls, floor_mode=control_floor_mode)
 
     if is_commercial:
         _add_building_use_dummies(reg, parts, controls)

@@ -309,6 +309,7 @@ class FloorIndexResponse(BaseModel):
     method: Optional[str] = None
     floor_mode: Optional[str] = None
     reference_floor: Optional[str] = None
+    regression_reference_floor: Optional[str] = None
     controls: list[str] = Field(default_factory=list)
     n_total: int
     n_regression: Optional[int] = None
@@ -327,7 +328,8 @@ class CollectiveRegressionSpec(BaseModel):
     floor: bool = True
     dong: bool = True
     housing_subtype: bool = False
-    floor_mode: Literal["linear", "dummy", "grouped", "relative"] = "relative"
+    floor_mode: Literal["linear", "dummy", "grouped", "relative", "rowhouse", "shop", "factory"] = "relative"
+    contract_period: bool = True
     # 단지 속성 — 주거 코호트 통합회귀 전용(기본 off). 단지마다 상수라 FE와 완전공선;
     # 하나라도 설계에 들어가면 단지 FE를 생략한다. 비주거 cluster에는 K-apt가 없어 미노출.
     households: bool = False
@@ -518,6 +520,7 @@ class CohortFloorIndexResponse(BaseModel):
     method: Optional[str] = None
     floor_mode: Optional[str] = None
     reference_floor: Optional[str] = None
+    regression_reference_floor: Optional[str] = None
     controls: list[str] = Field(default_factory=list)
     n_total: int
     n_regression: Optional[int] = None

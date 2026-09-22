@@ -41,9 +41,11 @@ const CONTROL_LABELS: Record<string, string> = {
   ln_gross_area: "ln(연면적)",
   building_age: "연식",
   relative_floor: "상대 층구간",
+  rowhouse_floor: "연립 층구간",
   contract_period: "거래시점(반기)",
   building_fixed_effects: "단지 고정효과",
-  shop_floor: "층 구간(1층 기준)",
+  shop_floor: "상가 층구간",
+  factory_floor: "공장 층구간",
 };
 
 function dimensionColumnLabel(dim: string) {
@@ -71,7 +73,9 @@ function dimensionHelpText(dim: string, isRegression: boolean, floorMode?: Floor
       ? "개별 층 더미로 산출합니다."
       : floorMode === "grouped"
         ? "절대 층 구간(1–5 / 6–15 / 16+)으로 산출합니다."
-        : "단지 max층 대비 상대 구간(1층·저·중·고·최상층)입니다.";
+        : floorMode === "rowhouse"
+          ? "1층·중간층·최상층입니다. 최상층은 그 건물의 거래 최고층입니다."
+          : "그 단지 최고층 대비 상대 구간(1층·저·중·고·최상층)입니다. 단지가 여럿이면 단지마다 나눕니다.";
   return `${base} ${modeHint}`;
 }
 
@@ -101,7 +105,15 @@ export default function FloorIndexPanel({
   gateTip?: string;
 }) {
   const [dimension, setDimension] = useState<Dimension>("floor");
-  const [floorMode, setFloorMode] = useState<FloorMode>("relative");
+  const [floorMode, setFloorMode] = useState<FloorMode>(assetType === "rowhouse" ? "rowhouse" : "relative");
+  const floorModeOptions: { value: FloorMode; label: string }[] =
+    assetType === "rowhouse"
+      ? [
+          { value: "rowhouse", label: "1층·중간·최상" },
+          { value: "dummy", label: "개별 층 더미" },
+          { value: "grouped", label: "절대 구간 (1–5 / 6–15 / 16+)" },
+        ]
+      : FLOOR_MODE_OPTIONS;
   const toggles = DIMENSION_OPTIONS.filter((o) => !o.show || o.show(assetType));
 
   const useCohort = cohortRunId > 0 && (cohortKeys?.length ?? 0) > 1;
@@ -205,6 +217,7 @@ export default function FloorIndexPanel({
     explain,
     diagnostics,
     floor_mode: dataFloorMode,
+    regression_reference_floor,
   } = q.data;
 
   const isRegression = method === "regression_semilog";
@@ -307,15 +320,21 @@ export default function FloorIndexPanel({
             value={floorMode}
             onChange={(e) => setFloorMode(e.target.value as FloorMode)}
           >
-            {FLOOR_MODE_OPTIONS.map((o) => (
+            {floorModeOptions.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>
             ))}
           </select>
           <p className="text-[10px] text-slate-500 dark:text-slate-400">
-            회귀 분석 탭과 동일한 층 더미 방식입니다. 회귀 기준은 거래 최다 구간, 화면 100%는 표본이 있는
-            {floorMode === "grouped" ? " 1–5층" : " 1층"}(또는 회귀 기준)입니다.
+            화면 100은 표본이 있는
+            {floorMode === "grouped" ? " 1–5층" : " 1층"}
+            입니다. p는 회귀에서 뺀 구간
+            {regression_reference_floor ? ` (${regression_reference_floor})` : " (거래가 가장 많은 칸)"}
+            과의 차이이고, 그 칸의 p는 없습니다.
+            {assetType === "rowhouse"
+              ? " 최상층은 그 건물의 거래 최고층입니다."
+              : " 상대층은 단지마다 그 단지의 최고층으로 나눕니다."}
           </p>
         </div>
       )}

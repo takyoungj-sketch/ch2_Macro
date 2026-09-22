@@ -314,7 +314,7 @@ export async function runCohortFloorIndex(body: {
   contract_date_from?: string;
   contract_date_to?: string;
   dimension?: "floor" | "dong" | "area" | "rights";
-  variables?: { floor_mode?: "relative" | "dummy" | "grouped" | "linear" };
+  variables?: { floor_mode?: string };
   experiment?: boolean;
 }): Promise<CohortFloorIndexResponse> {
   const { data } = await api.post<CohortFloorIndexResponse>("/analysis/cohort/floor-index", {
@@ -342,7 +342,7 @@ export async function runCohortRegression(body: {
     floor?: boolean;
     dong?: boolean;
     housing_subtype?: boolean;
-    floor_mode?: "linear" | "dummy" | "grouped" | "relative";
+    floor_mode?: string;
     households?: boolean;
     parking?: boolean;
     assessed_land_price?: boolean;
@@ -379,7 +379,7 @@ type RegressionBody = {
     floor?: boolean;
     dong?: boolean;
     housing_subtype?: boolean;
-    floor_mode?: "linear" | "dummy" | "grouped" | "relative";
+    floor_mode?: string;
     households?: boolean;
     parking?: boolean;
     assessed_land_price?: boolean;
@@ -503,7 +503,7 @@ export async function fetchBuildingFloorIndex(
   buildingKey: string,
   params?: {
     dimension?: "floor" | "dong" | "area" | "rights";
-    floor_mode?: "relative" | "dummy" | "grouped" | "linear";
+    floor_mode?: string;
     contract_year_from?: number;
     contract_year_to?: number;
     contract_date_from?: string;
@@ -537,7 +537,8 @@ export async function runBuildingRegression(
       floor?: boolean;
       dong?: boolean;
       housing_subtype?: boolean;
-      floor_mode?: "linear" | "dummy" | "grouped" | "relative";
+      floor_mode?: string;
+      contract_period?: boolean;
     };
   },
 ): Promise<CollectiveRegressionResponse> {

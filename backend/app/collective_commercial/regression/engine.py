@@ -9,12 +9,15 @@ import pandas as pd
 import statsmodels.api as sm
 
 from app.collective.regression.engine import (
+    _add_contract_period_columns,
     _add_floor_columns,
     _duan_smearing,
     _floor_row_for_predict,
     _sanitize_key,
     count_significant_coefficients,
     fit_model_price_metrics,
+    resolve_product_floor_mode,
+    row_max_floors,
 )
 from app.collective.regression.presentation import enrich_regression_response
 from app.collective.schemas import ContinuousRange
@@ -100,7 +103,10 @@ def _build_design_matrix(
     cluster_display_labels: dict[str, str] | None = None,
 ) -> tuple[pd.Series, pd.DataFrame, dict[str, str], CommercialRegressionDesignMeta, list[str]]:
     warnings: list[str] = []
-    meta = CommercialRegressionDesignMeta(floor_mode=req.variables.floor_mode)
+    asset_type = "collective_shop" if is_shop else "collective_factory"
+    meta = CommercialRegressionDesignMeta(
+        floor_mode=resolve_product_floor_mode(asset_type, req.variables.floor_mode)
+    )
     labels: dict[str, str] = {"const": "절편"}
     parts: list[pd.DataFrame] = []
 
@@ -153,9 +159,10 @@ def _build_design_matrix(
 
     floor_dummy_cols: list[str] = []
     if req.variables.floor and work["floor"].notna().any():
-        meta.max_floor = float(work["floor"].astype(float).max())
+        maxes = row_max_floors(work)
+        meta.max_floor = float(maxes.max()) if maxes.notna().any() else None
         floor_part, floor_labels, floor_dummy_cols = _add_floor_columns(
-            work, req.variables.floor_mode, max_floor=meta.max_floor
+            work, meta.floor_mode, max_floor=meta.max_floor
         )
         if not floor_part.empty:
             parts.append(floor_part)
@@ -163,6 +170,12 @@ def _build_design_matrix(
         rng = _continuous_range(work, "floor")
         if rng:
             meta.continuous_ranges["floor"] = rng
+
+    if getattr(req.variables, "contract_period", False):
+        period_part, period_labels = _add_contract_period_columns(work)
+        if not period_part.empty:
+            parts.append(period_part)
+            labels.update(period_labels)
 
     if req.variables.zone_type:
         zone_part, zone_labels, zone_cats, zone_ref = _add_cat_dummies(
@@ -213,7 +226,7 @@ def _meta_to_predict_options(
     meta: CommercialRegressionDesignMeta,
     req: CommercialRegressionRequest,
 ) -> CommercialPredictOptions:
-    opts = CommercialPredictOptions(floor_mode=req.variables.floor_mode, max_floor=meta.max_floor)
+    opts = CommercialPredictOptions(floor_mode=meta.floor_mode, max_floor=meta.max_floor)
 
     if req.variables.gross_area and "gross_area" in meta.continuous_ranges:
         lo, hi = meta.continuous_ranges["gross_area"]
@@ -296,7 +309,7 @@ def _inputs_to_x_row(
 
     if req.variables.floor and meta.floor_dummy_cols:
         mx = float(meta.max_floor or inputs.floor or 1)
-        floor_vals = _floor_row_for_predict(inputs.floor, req.variables.floor_mode, mx, meta.floor_dummy_cols)
+        floor_vals = _floor_row_for_predict(inputs.floor, meta.floor_mode, mx, meta.floor_dummy_cols)
         for c, v in floor_vals.items():
             if c in row:
                 row[c] = v

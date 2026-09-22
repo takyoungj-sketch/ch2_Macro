@@ -355,6 +355,7 @@ def cohort_floor_index(body: CohortAnalysisRequest, db: Session = Depends(get_co
         method=raw.get("method"),
         floor_mode=raw.get("floor_mode"),
         reference_floor=raw.get("reference_floor"),
+        regression_reference_floor=raw.get("regression_reference_floor"),
         controls=raw.get("controls") or [],
         n_total=raw["n_total"],
         n_regression=raw.get("n_regression"),

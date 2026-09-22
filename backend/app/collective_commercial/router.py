@@ -855,7 +855,8 @@ def cluster_regression(
         text(
             f"""
             SELECT price, unit_price, gross_area, land_area, building_age, building_year, floor,
-                   zone_type, building_use, road_width_label, road_code, addr4, contract_year,
+                   zone_type, building_use, road_width_label, road_code, addr4,
+                   contract_year, contract_month,
                    asset_type
             FROM collective_commercial_transactions
             WHERE cluster_key = :cluster_key AND {where}
@@ -923,7 +924,8 @@ def cluster_regression_predict(
         text(
             f"""
             SELECT price, unit_price, gross_area, land_area, building_age, building_year, floor,
-                   zone_type, building_use, road_width_label, road_code, addr4, contract_year,
+                   zone_type, building_use, road_width_label, road_code, addr4,
+                   contract_year, contract_month,
                    asset_type
             FROM collective_commercial_transactions
             WHERE cluster_key = :cluster_key AND {where}
@@ -970,7 +972,7 @@ def cluster_floor_index(
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
     dimension: str = Query("floor", pattern="^(floor|area)$"),
-    floor_mode: str = Query("relative", pattern="^(relative|dummy|grouped)$"),
+    floor_mode: str = Query("relative", pattern="^(relative|dummy|grouped|shop|factory)$"),
     experiment: bool = Query(False, description="표본 게이트 우회"),
 ):
     import pandas as pd

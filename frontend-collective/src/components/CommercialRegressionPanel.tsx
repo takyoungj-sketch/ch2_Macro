@@ -74,6 +74,7 @@ type CommercialVars = {
   building_use: boolean;
   road_width: boolean;
   road_code: boolean;
+  contract_period: boolean;
 };
 
 function midRange(min?: number | null, max?: number | null): number | undefined {
@@ -310,7 +311,7 @@ export default function CommercialRegressionPanel({
   const canRun = useCohort || canRunRegression(count);
   const recommended = useCohort || isRegressionRecommended(count);
   const [excludeOutliers, setExcludeOutliers] = useState(false);
-  const [floorMode, setFloorMode] = useState<FloorMode>("relative");
+  const [floorMode, setFloorMode] = useState<FloorMode>(isShop ? "shop" : "factory");
   const [floorAdvanced, setFloorAdvanced] = useState(false);
   const [modelType, setModelType] = useState<RegressionModelType>("linear");
   const [vars, setVars] = useState<CommercialVars>({
@@ -321,6 +322,7 @@ export default function CommercialRegressionPanel({
     building_use: true,
     road_width: isShop,
     road_code: !isShop,
+    contract_period: true,
   });
   const [predictInputs, setPredictInputs] = useState<CommercialRegressionPredictInputs>({});
 
@@ -425,6 +427,7 @@ export default function CommercialRegressionPanel({
       ["zone_type", "용도지역"],
       ["building_use", "건축물용도"],
       ...(isShop ? ([["road_width", "도로폭"]] as const) : ([["road_code", "도로폭(m)"]] as const)),
+      ["contract_period", "거래시점(반기)"],
     ] as const
   );
 
@@ -453,6 +456,7 @@ export default function CommercialRegressionPanel({
 
       <p className="text-[10px] text-slate-500 dark:text-slate-400">
         변수가 시세에 어떤 방향·크기로 작용하는지 탐색합니다. 기본은 선형(만원). % 해석은 로그 옵션.
+        거래시점(반기)은 기본으로 켜 두고 끌 수 있습니다. 층 % 지수는 「효용지수」 탭을 참고하세요.
         도로(cluster) 내 거래만 사용합니다.
       </p>
 
@@ -479,7 +483,9 @@ export default function CommercialRegressionPanel({
 
       {vars.floor && (
         <div className="text-xs space-y-1">
-          <span className="text-slate-600 dark:text-slate-400 font-medium">층 구간 · 상대 기본</span>
+          <span className="text-slate-600 dark:text-slate-400 font-medium">
+            {isShop ? "층 구간 · 상가(지하·1·2·저·중·고·초고) 기본" : "층 구간 · 지하·1·2·3층 이상 기본"}
+          </span>
           {!floorAdvanced ? (
             <button
               type="button"
@@ -494,7 +500,11 @@ export default function CommercialRegressionPanel({
               value={floorMode}
               onChange={(e) => setFloorMode(e.target.value as FloorMode)}
             >
-              <option value="relative">상대 층 (1·저·중·고·최상)</option>
+              {isShop ? (
+                <option value="shop">상가 층 (지하·1·2·저·중·고·초고)</option>
+              ) : (
+                <option value="factory">공장·창고 (지하·1·2·3층 이상)</option>
+              )}
               <option value="dummy">개별 층 더미</option>
               <option value="grouped">절대 구간 (1–5 / 6–15 / 16+)</option>
               <option value="linear">층 선형</option>

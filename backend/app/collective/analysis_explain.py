@@ -15,7 +15,9 @@ CONTROL_LABELS: dict[str, str] = {
     "building_age": "연식(경과연수)",
     "building_use": "건축물용도 더미",
     "relative_floor": "상대 층구간 더미",
-    "shop_floor": "층 구간 더미(1층 기준)",
+    "shop_floor": "상가 층 구간 더미(1층 기준)",
+    "factory_floor": "공장 층 구간 더미(1층 기준)",
+    "rowhouse_floor": "연립 층 구간 더미(1층 기준)",
     "contract_period": "거래시점(반기) 더미",
     "building_fixed_effects": "단지 고정효과",
 }
@@ -32,12 +34,25 @@ FLOOR_GROUP_LINES = [
 ]
 
 RESIDENTIAL_FLOOR_GROUP_LINES = [
-    "1층 → 화면 지수 100% (표시 기준)",
-    "회귀 omitted category → 거래 최다 층 구간 (표본 n≥5)",
-    "저층부 → 단지 max층 대비 하위 30% (1·최상층 제외)",
-    "중층부 → max층 대비 30~70%",
-    "고층부 → max층 대비 70% 초과 (최상층 제외)",
-    "최상층 → 단지 최고층",
+    "아파트·오피스텔·분양권: 그 단지 최고층 대비 1층·저층부·중층부·고층부·최상층.",
+    "코호트는 표본 전체 최고층이 아니라 단지마다 그 단지의 최고층으로 나눕니다.",
+    "1층 → 화면 지수 100% (표시 기준). p는 거래가 가장 많은 구간 대비입니다.",
+    "저층부 → 그 단지 최고층 대비 하위 30% (1·최상층 제외)",
+    "중층부 → 최고층 대비 30~70%",
+    "고층부 → 최고층 대비 70% 초과 (최상층 제외)",
+    "최상층 → 그 단지 최고층",
+]
+
+ROWHOUSE_FLOOR_GROUP_LINES = [
+    "연립·다세대 기본: 1층 · 중간층(2층~최고층 바로 아래) · 최상층(그 건물 거래 최고층).",
+    "4~5층에 아파트용 저·중·고를 쓰지 않습니다. 표본이 충분하면 개별 층으로 바꿀 수 있습니다.",
+    "화면 100은 1층입니다. p는 거래가 가장 많은 칸 대비이고, 그 칸의 p는 없습니다.",
+]
+
+FACTORY_FLOOR_GROUP_LINES = [
+    "공장·창고: 지하 · 1층 · 2층 · 3층 이상. 상가의 고층·초고층 구간을 쓰지 않습니다.",
+    "층 정보가 적으면 면적대 탭을 우선합니다.",
+    "화면 100은 1층입니다. p는 거래가 가장 많은 칸 대비입니다.",
 ]
 
 
@@ -52,8 +67,8 @@ RESIDENTIAL_AREA_GROUP_LINES = [
 ]
 
 SHOP_AREA_GROUP_LINES = [
-    "연면적을 30㎡ 단위로 반올림한 면적형입니다.",
-    "기준(100%)은 이 도로 cluster 연면적 중앙값이 속한 면적형입니다.",
+    "연면적 구간은 거래 목록과 같습니다. 35㎡ 미만 · 35~50 · 50~100 · 100~300 · 300㎡ 이상.",
+    "기준(100%)은 이 도로 cluster 연면적 중앙값이 속한 구간입니다.",
     "면적형 탭에서는 ln(연면적)을 통제에서 빼, 규모 효과를 구간 더미로만 추정합니다.",
 ]
 
@@ -73,21 +88,36 @@ def _preset_answers_residential_floor_index(
 ) -> list[dict[str, str]]:
     area_word = "연면적" if is_cluster else "전용면적"
     scope = "도로(또는 상품군) cluster" if is_cluster else "단지(또는 코호트)"
-    floor_how = (
-        "상가는 실무 층 구간입니다. B2 이하=지하심층, B1=지하1층, 1층=화면 기준 100%, 2층, 3~4층=저층, "
-        "5~9층=중층, 10~19층=고층, 20층+=초고층. 지하를 주거처럼 ‘중층부’로 넣지 않습니다."
-        if floor_mode == "shop" or asset_type in ("collective_shop", "collective_factory")
-        else (
-            "주거는 단지 최고층 대비 상대 구간이 기본입니다. 1층, 저층부(최고층의 30% 이하, 1·최상 제외), "
-            "중층부(30~70%), 고층부(70% 초과·최상 제외), 최상층(최고층). "
-            "개별 층 더미·절대 구간(1–5 / 6–15 / 16+)으로 바꿀 수 있습니다."
+    if floor_mode == "factory" or asset_type == "collective_factory":
+        floor_how = (
+            "공장·창고는 지하·1층·2층·3층 이상입니다. 상가의 고층·초고층 구간을 쓰지 않습니다. "
+            "화면 100은 1층이고, p는 거래가 가장 많은 칸 대비입니다."
         )
-    )
-    area_how = (
-        "집합공장은 연면적 100 / 300 / 1000㎡ 네 구간입니다. 30㎡ 눈금이 아닙니다."
-        if asset_type == "collective_factory"
-        else f"{area_word}을 30㎡로 반올림한 면적형입니다. 기준은 표본 {area_word} 중앙값이 속한 칸입니다."
-    )
+    elif floor_mode == "shop" or asset_type == "collective_shop":
+        floor_how = (
+            "상가는 지하심층(B2 이하)·지하1층·1층·2층·저층(3~4)·중층(5~9)·고층(10~19)·초고층(20+)입니다. "
+            "지하를 주거 중층부로 넣지 않습니다. 화면 100은 1층이고, p는 거래가 가장 많은 칸 대비입니다."
+        )
+    elif floor_mode == "rowhouse" or asset_type == "rowhouse":
+        floor_how = (
+            "연립·다세대 기본은 1층·중간층·최상층입니다. 최상층은 그 건물의 거래 최고층입니다. "
+            "아파트용 저·중·고를 쓰지 않습니다. 화면 100은 1층이고, p는 거래가 가장 많은 칸 대비입니다."
+        )
+    else:
+        floor_how = (
+            "아파트는 그 단지 최고층 대비 1층·저층부·중층부·고층부·최상층입니다. "
+            "여러 단지를 합치면 단지마다 그 단지의 최고층으로 나눕니다. "
+            "화면 100은 1층이고, p는 거래가 가장 많은 칸 대비입니다. 그 칸의 p는 없습니다."
+        )
+    if asset_type == "collective_factory":
+        area_how = "집합공장은 연면적 100 / 300 / 1000㎡ 네 구간입니다. 30㎡ 눈금이 아닙니다."
+    elif asset_type == "collective_shop" or (is_cluster and dim == "area"):
+        area_how = (
+            "상가 면적구간은 거래 목록과 같습니다. 35㎡ 미만 · 35~50 · 50~100 · 100~300 · 300㎡ 이상. "
+            f"기준은 표본 {area_word} 중앙값이 속한 칸입니다."
+        )
+    else:
+        area_how = f"{area_word}을 30㎡로 반올림한 면적형입니다. 기준은 표본 {area_word} 중앙값이 속한 칸입니다."
     return [
         {
             "id": "how_floor",
@@ -513,7 +543,7 @@ def build_commercial_floor_index_explain(
             "spec_id": spec_id,
             "spec_version": "1",
             "title": "면적형별 단순 효용지수",
-            "summary": "30㎡ 구간별 평균 ㎡당 단가를 도로 중앙값 대비 비율(%)로 표시합니다.",
+            "summary": "거래 목록과 같은 면적구간(35㎡ 미만·35~50·50~100·100~300·300㎡ 이상)의 평균 ㎡당 단가를 도로 중앙값 대비 비율(%)로 표시합니다.",
             "formula": "지수 = (면적구간 평균 ㎡당단가 / 도로 중앙값 ㎡당단가) × 100",
             "index_rule": "기준 = 도로 전체 ㎡당 단가 중앙값 (100%)",
             "reference": "도로 중앙값",
@@ -525,7 +555,7 @@ def build_commercial_floor_index_explain(
             ],
             "limitations": [
                 "통제변수 없음",
-                "구간 경계(30㎡)에 민감할 수 있음",
+                "구간 경계(35·50·100·300㎡)에 민감할 수 있음",
                 "집합상가 층별 회귀 효용지수와 다른 방법론",
             ],
             "interpretation_hints": _floor_index_hints(raw, asset_type=asset_type),
@@ -591,21 +621,29 @@ def build_residential_floor_index_explain(
     dim_title = _dimension_title(dim)
     is_cluster = scope_kind == "cluster"
     is_factory = asset_type == "collective_factory"
-    shop_floor = floor_mode == "shop" or asset_type in ("collective_shop", "collective_factory")
     if dim == "floor":
-        floor_lines = FLOOR_GROUP_LINES if shop_floor else RESIDENTIAL_FLOOR_GROUP_LINES
+        if floor_mode == "factory" or (is_factory and floor_mode != "shop"):
+            floor_lines = FACTORY_FLOOR_GROUP_LINES
+        elif floor_mode == "shop" or asset_type == "collective_shop":
+            floor_lines = FLOOR_GROUP_LINES
+        elif floor_mode == "rowhouse" or asset_type == "rowhouse":
+            floor_lines = ROWHOUSE_FLOOR_GROUP_LINES
+        else:
+            floor_lines = RESIDENTIAL_FLOOR_GROUP_LINES
     elif dim == "area":
         if is_factory:
             floor_lines = FACTORY_AREA_GROUP_LINES
-        elif is_cluster:
+        elif is_cluster or asset_type == "collective_shop":
             floor_lines = SHOP_AREA_GROUP_LINES
         else:
             floor_lines = RESIDENTIAL_AREA_GROUP_LINES
     else:
         floor_lines = []
     floor_mode_label = {
-        "shop": "상가·공장 실무 층 (지하·1·2·저·중·고·초고층)",
-        "relative": "상대 층 (1·저·중·고·최상)",
+        "shop": "상가 층 (지하·1·2·저·중·고·초고층)",
+        "factory": "공장·창고 층 (지하·1·2·3층 이상)",
+        "rowhouse": "연립·다세대 (1층·중간·최상)",
+        "relative": "아파트 상대층 (단지별 최고층 대비 1·저·중·고·최상)",
         "dummy": "개별 층 더미",
         "grouped": "절대 구간 (1–5 / 6–15 / 16+)",
     }.get(floor_mode, floor_mode)
@@ -625,7 +663,11 @@ def build_residential_floor_index_explain(
             + (
                 "면적대는 연면적 100/300/1000㎡ 네 구간입니다. "
                 if is_factory
-                else f"{area_label}을 30㎡로 반올림한 면적형입니다. "
+                else (
+                    "면적구간은 35㎡ 미만·35~50·50~100·100~300·300㎡ 이상입니다. "
+                    if asset_type == "collective_shop" or is_cluster
+                    else f"{area_label}을 30㎡로 반올림한 면적형입니다. "
+                )
             )
             + f"기준은 {ref}=100% (표본 {area_label} 중앙값 칸)입니다. 면적은 구간 더미로만 넣고 연속 ln(면적)은 빼습니다."
         )
@@ -665,7 +707,7 @@ def build_residential_floor_index_explain(
         "interpretation": [
             "표의 ‘평균’은 그 칸 원자료 평균, ‘지수’는 면적·연식·시점을 맞춘 뒤의 상대 %입니다. 둘이 어긋날 수 있습니다.",
             f"100보다 낮으면 기준({ref})보다 ㎡당 단가가 낮은 패턴입니다.",
-            "95% CI는 HC3 강건표준오차입니다. p는 회귀가 생략한 구간(거래 최다) 대비입니다.",
+            "95% CI는 HC3 강건표준오차입니다. 화면의 100과 p는 다른 기준입니다. p는 회귀가 뺀 구간(거래 최다) 대비이고, 그 칸의 p는 없습니다.",
         ],
         "limitations": (
             [
@@ -706,6 +748,8 @@ def build_residential_regression_explain(
         active.append("연식")
     if v.floor:
         active.append(f"층 ({v.floor_mode})")
+    if getattr(v, "contract_period", False):
+        active.append("거래시점(반기)")
     if v.dong and asset_type in ("apartment", "rowhouse"):
         active.append("동")
     if v.housing_subtype and asset_type == "presale":
@@ -768,7 +812,14 @@ def build_residential_regression_explain(
         else:
             hints.append("코호트: 거래 최다 단지=단지 FE 기준, n<5 단지는 FE에서 제외됩니다.")
 
-    floor_lines = RESIDENTIAL_FLOOR_GROUP_LINES if v.floor and v.floor_mode == "relative" else []
+    if not v.floor:
+        floor_lines = []
+    elif asset_type == "rowhouse" or v.floor_mode == "rowhouse":
+        floor_lines = ROWHOUSE_FLOOR_GROUP_LINES
+    elif v.floor_mode == "relative":
+        floor_lines = RESIDENTIAL_FLOOR_GROUP_LINES
+    else:
+        floor_lines = []
 
     return {
         "spec_id": f"residential_regression_explore_{asset_type}_v1",
@@ -777,7 +828,8 @@ def build_residential_regression_explain(
         "summary": (
             "선택한 표본·변수에서 가격이 어떻게 형성되는지 읽기 위한 OLS입니다. "
             "AVM·적정가가 아닙니다. 기본은 선형(만원), 로그는 % 변화 옵션. "
-            "「층·동·면적 효용지수」 탭과는 별도 spec입니다."
+            "거래시점(반기)은 선택 항목이고 기본으로 켜 둡니다. "
+            "층 % 지수는 「효용지수」 탭입니다."
         ),
         "formula": formula,
         "index_rule": None,
@@ -817,6 +869,8 @@ def build_commercial_regression_explain(
         active.append("연식")
     if v.floor:
         active.append(f"층 ({v.floor_mode})")
+    if getattr(v, "contract_period", False):
+        active.append("거래시점(반기)")
     if v.zone_type:
         active.append("용도지역")
     if v.building_use:
@@ -870,7 +924,8 @@ def build_commercial_regression_explain(
         "title": "도로(cluster) 가격 형성 분석 (탐색용)",
         "summary": (
             "선택한 표본·변수에서 가격 형성 패턴을 읽기 위한 OLS입니다. "
-            "AVM·적정가가 아닙니다. 기본은 선형(만원), 로그는 % 변화 옵션입니다."
+            "AVM·적정가가 아닙니다. 기본은 선형(만원), 로그는 % 변화 옵션입니다. "
+            "거래시점(반기)은 선택 항목이고 기본으로 켜 둡니다. 층 % 지수는 효용지수 탭입니다."
         ),
         "formula": formula,
         "index_rule": None,

@@ -28,7 +28,8 @@ const CONTROL_LABELS: Record<string, string> = {
   ln_exclusive_area: "ln(연면적)",
   building_age: "연식",
   building_use: "건축물용도",
-  shop_floor: "층 구간(1층 기준)",
+  shop_floor: "상가 층구간",
+  factory_floor: "공장 층구간",
   relative_floor: "상대 층구간",
   contract_period: "거래시점(반기)",
 };
@@ -53,10 +54,12 @@ function dimensionHelpText(dim: string, isRegression: boolean, isFactory: boolea
     if (isFactory) {
       return "공장 면적대는 연면적 100/300/1000㎡입니다. 기준은 표본 중앙값 칸=100.";
     }
-    return "상가 면적형은 연면적 30㎡ 반올림입니다. 기준은 표본 중앙값 칸=100.";
+    return "상가 면적구간은 거래 목록과 같습니다. 35㎡ 미만 · 35~50 · 50~100 · 100~300 · 300㎡ 이상. 기준은 표본 중앙값 칸=100.";
   }
   if (isRegression) {
-    return "상가·공장 층은 지하·1·2·저·중·고·초고층입니다. 1층=100. 지하를 중층부에 넣지 않습니다.";
+    return isFactory
+      ? "공장·창고 층은 지하·1·2·3층 이상입니다. 화면 100은 1층입니다. p는 거래가 가장 많은 칸 대비입니다."
+      : "상가 층은 지하·1·2·저·중·고·초고층입니다. 화면 100은 1층입니다. p는 거래가 가장 많은 칸 대비이고, 지하를 중층부에 넣지 않습니다.";
   }
   if (isFactory) {
     return "층 정보가 적으면 지수가 비거나 참고용입니다. 면적대 탭을 우선하세요.";
@@ -219,6 +222,8 @@ export default function CommercialFloorIndexPanel({
     r_squared,
     warnings,
     explain,
+    diagnostics,
+    regression_reference_floor,
   } = q.data;
 
   const isRegression = method === "regression_semilog";
@@ -239,7 +244,7 @@ export default function CommercialFloorIndexPanel({
 
       <FloorIndexMethodGuide
         dimension={dimension}
-        floorMode="shop"
+        floorMode={isFactory ? "factory" : "shop"}
         isCluster
         isFactory={isFactory}
         isRegression={isRegression}
@@ -300,6 +305,34 @@ export default function CommercialFloorIndexPanel({
       {isRegression && controls && controls.length > 0 && (
         <p className="text-[10px] text-slate-500">
           통제변수: {controls.map((c) => CONTROL_LABELS[c] ?? c).join(", ")}
+        </p>
+      )}
+
+      {isRegression && dimension === "floor" && (
+        <p className="text-[10px] text-slate-500">
+          화면 100은 {reference_floor ?? "1층"}입니다. p는 회귀에서 뺀 구간
+          {regression_reference_floor ? ` (${regression_reference_floor})` : " (거래가 가장 많은 칸)"}
+          과의 차이이고, 그 칸의 p는 없습니다.
+        </p>
+      )}
+
+      {isRegression && diagnostics && diagnostics.max_vif != null && (
+        <p className="text-[10px] text-slate-500">
+          공선성 진단: 최대 VIF{" "}
+          <strong
+            className={clsx(
+              diagnostics.max_vif >= 10
+                ? "text-rose-600"
+                : diagnostics.max_vif >= 5
+                  ? "text-amber-600"
+                  : "text-slate-700",
+            )}
+          >
+            {fmt(diagnostics.max_vif)}
+          </strong>
+          {diagnostics.max_vif_term && <> ({CONTROL_LABELS[diagnostics.max_vif_term] ?? diagnostics.max_vif_term})</>}
+          {diagnostics.condition_number != null && <> · 조건수 {fmt(diagnostics.condition_number)}</>}
+          {diagnostics.max_vif < 5 && <> · 양호</>}
         </p>
       )}
 

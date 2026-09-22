@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from app.collective.analysis_gates import MIN_RELIABLE_BUILDING_STATS
-from app.collective.area_buckets import FACTORY_BUCKET_ORDER, label_for_gross_area, shop_fixed_bucket_label
+from app.collective.area_buckets import FACTORY_BUCKET_ORDER, label_for_gross_area
 from app.stats_utils import _rnd_price
 
 AREA_BUCKET_M2 = 30
@@ -89,7 +89,7 @@ def compute_floor_index(
                         key, sort_val = label_for_gross_area(asset_type, fv)
                         area_sort[key] = sort_val
                     elif asset_type == "collective_shop":
-                        key, sort_val = shop_fixed_bucket_label(fv)
+                        key, sort_val = label_for_gross_area(asset_type, fv)
                         area_sort[key] = sort_val
                     else:
                         bucket = _area_bucket(fv)

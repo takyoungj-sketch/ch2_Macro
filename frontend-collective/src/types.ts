@@ -122,6 +122,7 @@ export interface FloorIndexResponse {
   method?: string;
   floor_mode?: string | null;
   reference_floor?: string | null;
+  regression_reference_floor?: string | null;
   controls?: string[];
   n_total: number;
   n_regression?: number | null;

@@ -252,7 +252,7 @@ export async function fetchCommercialFloorIndex(
   clusterKey: string,
   params?: ClusterScopeParams & {
     dimension?: "floor" | "area";
-    floor_mode?: "relative" | "dummy" | "grouped";
+    floor_mode?: string;
     experiment?: boolean;
   },
 ): Promise<CommercialFloorIndexResponse> {
@@ -280,7 +280,8 @@ export async function runCommercialRegression(
       building_use?: boolean;
       road_width?: boolean;
       road_code?: boolean;
-      floor_mode?: "linear" | "dummy" | "grouped" | "relative";
+      floor_mode?: string;
+      contract_period?: boolean;
     };
   },
 ): Promise<CommercialRegressionResponse> {
@@ -323,7 +324,8 @@ export async function predictCommercialRegression(
       building_use?: boolean;
       road_width?: boolean;
       road_code?: boolean;
-      floor_mode?: "linear" | "dummy" | "grouped" | "relative";
+      floor_mode?: string;
+      contract_period?: boolean;
     };
   },
 ): Promise<CommercialRegressionPredictResponse> {

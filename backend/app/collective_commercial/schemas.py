@@ -158,7 +158,8 @@ class CommercialRegressionSpec(BaseModel):
     road_width: bool = True
     road_code: bool = False
     addr4: bool = False
-    floor_mode: Literal["linear", "dummy", "grouped", "relative"] = "relative"
+    floor_mode: Literal["linear", "dummy", "grouped", "relative", "shop", "factory"] = "relative"
+    contract_period: bool = True
 
 
 class CommercialRegressionRequest(BaseModel):

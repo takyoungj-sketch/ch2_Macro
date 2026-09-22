@@ -267,6 +267,58 @@ def relative_floor_group(floor: float, max_floor: float) -> str:
     return "floor_rel_mid"
 
 
+def rowhouse_floor_group(floor: float, max_floor: float) -> str | None:
+    """연립·다세대 기본 칸. 1층 / 중간(2~최고-1) / 최상. 최고층은 그 건물의 거래 최대 층."""
+    if pd.isna(floor) or pd.isna(max_floor):
+        return None
+    f = float(floor)
+    mx = float(max_floor)
+    if f < 1 or mx < 1:
+        return None
+    if f == 1:
+        return "floor_rh_1"
+    if mx >= 2 and f == mx:
+        return "floor_rh_top"
+    if 1 < f < mx:
+        return "floor_rh_mid"
+    return None
+
+
+_ROWHOUSE_FLOOR_LABELS: dict[str, str] = {
+    "floor_rh_1": "1층",
+    "floor_rh_mid": "중간층",
+    "floor_rh_top": "최상층",
+}
+
+
+def resolve_product_floor_mode(asset_type: str | None, floor_mode: str | None) -> str:
+    """유형별 기본 층 구간. 사용자가 고른 개별·절대·선형은 유지한다."""
+    mode = floor_mode or "relative"
+    if asset_type == "rowhouse" and mode == "relative":
+        return "rowhouse"
+    if asset_type == "collective_shop" and mode == "relative":
+        return "shop"
+    if asset_type == "collective_factory" and mode in ("relative", "shop"):
+        return "factory"
+    return mode
+
+
+def row_max_floors(work: pd.DataFrame, fallback: float | None = None) -> pd.Series:
+    """상대층 분모. 단지가 둘 이상이면 단지별 최고층, 하나면 그 표본의 최고층."""
+    fl = pd.to_numeric(work["floor"], errors="coerce") if "floor" in work.columns else pd.Series(np.nan, index=work.index)
+    if "building_key" in work.columns:
+        keys = work["building_key"].astype(str)
+        if keys.nunique(dropna=True) > 1:
+            return fl.groupby(keys).transform("max")
+    if fallback is not None and pd.notna(fallback):
+        mx = float(fallback)
+    elif fl.notna().any():
+        mx = float(fl.max())
+    else:
+        mx = 1.0
+    return pd.Series(mx, index=work.index)
+
+
 def _floor_group_label(floor: float) -> str:
     if floor <= 5:
         return "floor_grp_1-5"
@@ -370,6 +422,7 @@ class RegressionDesignMeta:
     column_labels: dict[str, str] = field(default_factory=dict)
     floor_mode: str = "relative"
     max_floor: float | None = None
+    max_floor_by_building: dict[str, float] = field(default_factory=dict)
     dong_reference: str | None = None
     dong_categories: list[str] = field(default_factory=list)
     dong_options: list[DongOption] = field(default_factory=list)
@@ -390,6 +443,93 @@ class RegressionDesignMeta:
     used_building_attrs: bool = False
 
 
+def _shop_floor_code(floor: object) -> str | None:
+    from app.collective_commercial.floor_index_regression import shop_floor_group
+
+    grp = shop_floor_group(floor)
+    if grp is None:
+        return None
+    return f"shop_{grp[1]}"
+
+
+def _factory_floor_code(floor: object) -> str | None:
+    if floor is None or (isinstance(floor, float) and pd.isna(floor)):
+        return None
+    try:
+        f = float(floor)
+    except (TypeError, ValueError):
+        return None
+    if f < 1:
+        return "fac_b"
+    if f == 1:
+        return "fac_1"
+    if f == 2:
+        return "fac_2"
+    if f >= 3:
+        return "fac_3p"
+    return None
+
+
+_FACTORY_FLOOR_LABELS: dict[str, str] = {
+    "fac_b": "지하",
+    "fac_1": "1층",
+    "fac_2": "2층",
+    "fac_3p": "3층 이상",
+}
+
+
+def _labeled_floor_dummies(
+    codes: pd.Series,
+    label_map: dict[str, str],
+) -> tuple[pd.DataFrame, dict[str, str], list[str]]:
+    valid = codes.dropna()
+    if valid.nunique() < 2:
+        return pd.DataFrame(index=codes.index), {}, []
+    dummies = pd.get_dummies(codes, prefix="", prefix_sep="", drop_first=True)
+    missing = codes.isna()
+    if missing.any() and not dummies.empty:
+        dummies.loc[missing, :] = np.nan
+    labels = {c: f"{label_map.get(c, c)} (기준 대비)" for c in dummies.columns}
+    return dummies, labels, list(dummies.columns)
+
+
+def _add_contract_period_columns(work: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str]]:
+    """반기 더미. 거래가 가장 많은 반기를 뺀다. 반기가 하나면 열을 만들지 않는다."""
+    if "contract_year" not in work.columns:
+        return pd.DataFrame(index=work.index), {}
+    months = (
+        work["contract_month"]
+        if "contract_month" in work.columns
+        else pd.Series(np.nan, index=work.index)
+    )
+    codes: list[str | None] = []
+    for year, month in zip(work["contract_year"], months):
+        if year is None or (isinstance(year, float) and pd.isna(year)):
+            codes.append(None)
+            continue
+        y = int(year)
+        if month is None or (isinstance(month, float) and pd.isna(month)):
+            codes.append(str(y))
+        else:
+            codes.append(f"{y}H{1 if int(month) <= 6 else 2}")
+    series = pd.Series(codes, index=work.index)
+    counts = series.dropna().value_counts()
+    if len(counts) < 2:
+        return pd.DataFrame(index=work.index), {}
+    ref = str(counts.idxmax())
+    out = pd.DataFrame(index=work.index)
+    labels: dict[str, str] = {}
+    for code, cnt in counts.items():
+        if str(code) == ref or int(cnt) < 5:
+            continue
+        col = f"time_{code}"
+        out[col] = (series == code).astype(float)
+        labels[col] = f"거래시점 {code} (최다 반기 대비)"
+    if out.empty:
+        return pd.DataFrame(index=work.index), {}
+    return out, labels
+
+
 def _add_floor_columns(
     work: pd.DataFrame,
     mode: str,
@@ -398,7 +538,7 @@ def _add_floor_columns(
 ) -> tuple[pd.DataFrame, dict[str, str], list[str]]:
     """Returns dummies, labels, dummy column names (excl. reference)."""
     labels: dict[str, str] = {}
-    if not work["floor"].notna().any():
+    if "floor" not in work.columns or not work["floor"].notna().any():
         return pd.DataFrame(index=work.index), labels, []
 
     if mode == "linear":
@@ -410,14 +550,34 @@ def _add_floor_columns(
     fl = work["floor"].astype(float)
 
     if mode == "relative":
-        mx = float(max_floor if max_floor is not None else fl.max())
-        grp = fl.apply(lambda x: relative_floor_group(x, mx) if pd.notna(x) else "floor_rel_mid")
-        dummies = pd.get_dummies(grp, prefix="", prefix_sep="", drop_first=True)
-        dummy_cols = list(dummies.columns)
-        for c in dummies.columns:
-            base = _REL_FLOOR_LABELS.get(c, c)
-            labels[c] = f"{base} (기준 대비)"
-        return dummies, labels, dummy_cols
+        maxes = row_max_floors(work, max_floor)
+        grp = pd.Series(
+            [
+                relative_floor_group(f, m) if pd.notna(f) else "floor_rel_mid"
+                for f, m in zip(fl, maxes)
+            ],
+            index=work.index,
+        )
+        return _labeled_floor_dummies(grp, _REL_FLOOR_LABELS)
+
+    if mode == "rowhouse":
+        maxes = row_max_floors(work, max_floor)
+        grp = pd.Series(
+            [rowhouse_floor_group(f, m) if pd.notna(f) else None for f, m in zip(fl, maxes)],
+            index=work.index,
+        )
+        return _labeled_floor_dummies(grp, _ROWHOUSE_FLOOR_LABELS)
+
+    if mode == "shop":
+        from app.collective_commercial.floor_index_regression import SHOP_FLOOR_GROUPS
+
+        label_map = {f"shop_{code}": label for label, code, _ in SHOP_FLOOR_GROUPS}
+        grp = fl.map(_shop_floor_code)
+        return _labeled_floor_dummies(grp, label_map)
+
+    if mode == "factory":
+        grp = fl.map(_factory_floor_code)
+        return _labeled_floor_dummies(grp, _FACTORY_FLOOR_LABELS)
 
     if mode == "grouped":
         grp = fl.apply(lambda x: _floor_group_label(x) if pd.notna(x) else "floor_grp_unknown")
@@ -463,6 +623,21 @@ def _floor_row_for_predict(
     if mode == "relative":
         code = relative_floor_group(f, max_floor)
         if code in out:
+            out[code] = 1.0
+        return out
+    if mode == "rowhouse":
+        code = rowhouse_floor_group(f, max_floor)
+        if code and code in out:
+            out[code] = 1.0
+        return out
+    if mode == "shop":
+        code = _shop_floor_code(f)
+        if code and code in out:
+            out[code] = 1.0
+        return out
+    if mode == "factory":
+        code = _factory_floor_code(f)
+        if code and code in out:
             out[code] = 1.0
         return out
     if mode == "grouped":
@@ -686,7 +861,9 @@ def _build_design_matrix(
     building_display_names: dict[str, str] | None = None,
 ) -> tuple[pd.Series, pd.DataFrame, dict[str, str], RegressionDesignMeta, list[str]]:
     warnings: list[str] = []
-    meta = RegressionDesignMeta(floor_mode=req.variables.floor_mode)
+    meta = RegressionDesignMeta(
+        floor_mode=resolve_product_floor_mode(req.asset_type, req.variables.floor_mode)
+    )
     labels: dict[str, str] = {"const": "절편"}
     parts: list[pd.DataFrame] = []
 
@@ -737,9 +914,14 @@ def _build_design_matrix(
 
     floor_dummy_cols: list[str] = []
     if req.variables.floor and work["floor"].notna().any():
-        meta.max_floor = float(work["floor"].astype(float).max())
+        maxes = row_max_floors(work)
+        meta.max_floor = float(maxes.max()) if maxes.notna().any() else None
+        if "building_key" in work.columns:
+            for bk, mx in zip(work["building_key"].astype(str), maxes):
+                if pd.notna(mx):
+                    meta.max_floor_by_building[bk] = float(mx)
         floor_part, floor_labels, floor_dummy_cols = _add_floor_columns(
-            work, req.variables.floor_mode, max_floor=meta.max_floor
+            work, meta.floor_mode, max_floor=meta.max_floor
         )
         if not floor_part.empty:
             parts.append(floor_part)
@@ -747,6 +929,12 @@ def _build_design_matrix(
         rng = _continuous_range(work, "floor")
         if rng:
             meta.continuous_ranges["floor"] = (rng.min, rng.max)
+
+    if getattr(req.variables, "contract_period", False):
+        period_part, period_labels = _add_contract_period_columns(work)
+        if not period_part.empty:
+            parts.append(period_part)
+            labels.update(period_labels)
 
     if req.variables.dong and "dong" in work.columns and work["dong"].notna().any():
         series = _clean_dong_values(work["dong"])
@@ -815,7 +1003,7 @@ def _build_design_matrix(
 
 
 def _meta_to_predict_options(meta: RegressionDesignMeta, req: CollectiveRegressionRequest) -> CollectivePredictOptions:
-    opts = CollectivePredictOptions(floor_mode=req.variables.floor_mode, max_floor=meta.max_floor)
+    opts = CollectivePredictOptions(floor_mode=meta.floor_mode, max_floor=meta.max_floor)
 
     if req.variables.exclusive_area and "exclusive_area" in meta.continuous_ranges:
         lo, hi = meta.continuous_ranges["exclusive_area"]
@@ -985,8 +1173,11 @@ def _inputs_to_x_row(
 
     floor_dummy_cols = meta.floor_dummy_cols
     if req.variables.floor and floor_dummy_cols:
-        mx = float(meta.max_floor or inputs.floor or 1)
-        floor_vals = _floor_row_for_predict(inputs.floor, req.variables.floor_mode, mx, floor_dummy_cols)
+        bk = str(inputs.building_key) if inputs.building_key else ""
+        mx = meta.max_floor_by_building.get(bk)
+        if mx is None:
+            mx = float(meta.max_floor or inputs.floor or 1)
+        floor_vals = _floor_row_for_predict(inputs.floor, meta.floor_mode, mx, floor_dummy_cols)
         for c, v in floor_vals.items():
             if c in row:
                 row[c] = v

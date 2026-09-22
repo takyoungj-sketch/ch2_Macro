@@ -62,6 +62,7 @@ type RegressionVars = {
   assessed_land_price: boolean;
   structure: boolean;
   asset_type_dummy: boolean;
+  contract_period: boolean;
 };
 
 function midRange(r?: { min?: number | null; max?: number | null } | null): number | undefined {
@@ -403,7 +404,6 @@ export default function BuildingRegressionPanel({
   gateMessages?: string[];
 }) {
   const [excludeOutliers, setExcludeOutliers] = useState(false);
-  const [floorMode, setFloorMode] = useState<FloorMode>("relative");
   const [floorAdvanced, setFloorAdvanced] = useState(false);
   const [modelType, setModelType] = useState<RegressionModelType>("linear");
   const [vars, setVars] = useState<RegressionVars>({
@@ -417,7 +417,9 @@ export default function BuildingRegressionPanel({
     assessed_land_price: false,
     structure: false,
     asset_type_dummy: false,
+    contract_period: true,
   });
+  const [floorMode, setFloorMode] = useState<FloorMode>(assetType === "rowhouse" ? "rowhouse" : "relative");
   const [predictInputs, setPredictInputs] = useState<CollectiveRegressionPredictInputs>({});
 
   const useCohort = (cohortKeys?.length ?? 0) > 1;
@@ -556,6 +558,7 @@ export default function BuildingRegressionPanel({
               ? ([["dong", "동"]] as const)
               : []),
             ...(assetType === "presale" ? ([["housing_subtype", "권리"]] as const) : []),
+            ["contract_period", "거래시점(반기)"],
           ] as const
         ).map(([key, label]) => (
           <label key={key} className="flex items-center gap-2">
@@ -624,7 +627,9 @@ export default function BuildingRegressionPanel({
       {vars.floor && (
         <div className="text-xs space-y-1">
           <span className="text-slate-600 dark:text-slate-400 font-medium">
-            층 구간 · 상대(1·저·중·고·최상) 기본
+            {assetType === "rowhouse"
+              ? "층 구간 · 1층·중간·최상 기본"
+              : "층 구간 · 단지별 최고층 대비 상대층 기본"}
           </span>
           {!floorAdvanced ? (
             <button
@@ -640,7 +645,11 @@ export default function BuildingRegressionPanel({
               value={floorMode}
               onChange={(e) => setFloorMode(e.target.value as FloorMode)}
             >
-              <option value="relative">상대 층 (1·최상·저·중·고 / max층)</option>
+              {assetType === "rowhouse" ? (
+                <option value="rowhouse">1층·중간·최상 (그 건물 최고층)</option>
+              ) : (
+                <option value="relative">상대 층 (단지별 최고층 대비 1·저·중·고·최상)</option>
+              )}
               <option value="dummy">층별 더미 (개별 층)</option>
               <option value="grouped">절대 구간 (1–5 / 6–15 / 16+)</option>
               <option value="linear">층 선형</option>
