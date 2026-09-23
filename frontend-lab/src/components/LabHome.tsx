@@ -81,6 +81,11 @@ const DOORS: { id: LabTool; title: string; desc: string }[] = [
     title: "도로 지목 상대가격",
     desc: "읍면동×용도에서 도로/대·전·답 중앙단가 비의 분포. 1차는 관찰. 제품 식 미변경.",
   },
+  {
+    id: "floor-utility",
+    title: "층 효용 기록",
+    desc: "아파트·오피스텔·집합상가. 질문은 나누고 숫자는 더하지 않음. 아파트·상가는 종료. 오피스텔은 차이 찾기 중지.",
+  },
 ];
 
 export default function LabHome({ onOpenTool }: { onOpenTool: (id: LabTool) => void }) {

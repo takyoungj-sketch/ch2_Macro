@@ -1,0 +1,86 @@
+{
+  "base_equal": 55.2,
+  "base_weighted": 68.1,
+  "note": "exp(beta)*100은 2차의 55.2·68.1을 대체하지 않는다. 새 층 지수가 아니다.",
+  "n_trades_in": 3864,
+  "n_age_dropped": 117,
+  "n_regression": 3747,
+  "n_clusters": 89,
+  "use_reference": "판매",
+  "use_other_n": 91,
+  "fits": [
+    {
+      "ok": true,
+      "weight": "trade",
+      "n_trades": 3747,
+      "n_clusters": 89,
+      "n_clusters_both_floors": 89,
+      "controls_kept": [
+        "ln_a",
+        "age",
+        "use_0",
+        "use_1",
+        "use_2",
+        "use_3",
+        "use_4"
+      ],
+      "uses_kept": [
+        "기타",
+        "숙박",
+        "업무",
+        "제1종근린생활",
+        "제2종근린생활"
+      ],
+      "gamma": -0.4919,
+      "se": 0.043,
+      "p": 0.0,
+      "index": 61.1,
+      "ci95": [
+        56.2,
+        66.5
+      ],
+      "includes_100": false,
+      "pct_vs_1f": -38.9
+    },
+    {
+      "ok": true,
+      "weight": "cluster",
+      "n_trades": 3747,
+      "n_clusters": 89,
+      "n_clusters_both_floors": 89,
+      "controls_kept": [
+        "ln_a",
+        "age",
+        "use_0",
+        "use_1",
+        "use_2",
+        "use_3",
+        "use_4"
+      ],
+      "uses_kept": [
+        "기타",
+        "숙박",
+        "업무",
+        "제1종근린생활",
+        "제2종근린생활"
+      ],
+      "gamma": -0.5728,
+      "se": 0.0513,
+      "p": 0.0,
+      "index": 56.4,
+      "ci95": [
+        51.0,
+        62.4
+      ],
+      "includes_100": false,
+      "pct_vs_1f": -43.6
+    }
+  ],
+  "index_gap_trade_minus_cluster": 4.7,
+  "as_of": "2026-08-01",
+  "period_start": "2021-09-01",
+  "period_end": "2026-08-31",
+  "area_band": 0.2,
+  "phase2_f2_clusters": 89,
+  "question": "1층 대비 2층 차이가 면적·연식·용도로 설명되는가. 같은 도로 안."
+}

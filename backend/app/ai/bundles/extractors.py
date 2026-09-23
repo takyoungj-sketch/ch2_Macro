@@ -535,6 +535,36 @@ def build_insight_macro_03(context: AiContext) -> AiDiagnosticPack:
     )
 
 
+def build_insight_macro_10(context: AiContext) -> AiDiagnosticPack:
+    facts = context.facts or {}
+    summary = [
+        "Macro Insight 10 — 집합상가 도로 안 1층과 2층",
+        "grain=cluster_within",
+    ]
+    if facts.get("as_of"):
+        summary.append(f"as_of={facts.get('as_of')}")
+    if facts.get("period_start") and facts.get("period_end"):
+        summary.append(f"기간={facts.get('period_start')}–{facts.get('period_end')}")
+    if facts.get("n_roads_area") is not None:
+        summary.append(f"연면적맞춤={facts.get('n_roads_area')}")
+    limitations = list(
+        (context.explain.limitations if context.explain and context.explain.limitations else None)
+        or [
+            "같은 도로 안 2층 비교입니다. 2층이 낮은 원인을 말하지 않습니다.",
+            "연면적을 맞춘 가운데값은 55와 68입니다. 연식·용도를 맞춘 비율은 56과 61이고, 55·68을 바꾸지 않습니다.",
+            "이 100은 그 도로의 1층입니다. 아파트 108, 오피스텔 저층=100과 더하지 않습니다. 표에 없는 퍼센트를 만들지 않습니다. 제품 층 식을 바꾸지 않습니다.",
+        ]
+    )
+    return AiDiagnosticPack(
+        bundle_id="insight_macro_10",
+        panel=context.panel,
+        app=context.app,
+        summary_lines=summary,
+        diagnostics={**facts, "scope_label": context.scope.region_label or "전국"},
+        limitations=limitations,
+    )
+
+
 def build_insight_macro_08(context: AiContext) -> AiDiagnosticPack:
     facts = context.facts or {}
     summary = [
@@ -689,6 +719,8 @@ def build_bundle(context: AiContext) -> AiDiagnosticPack:
     panel = context.panel
     bid = resolve_bundle_id(panel)
 
+    if panel == "Insight10" or bid == "insight_macro_10":
+        return build_insight_macro_10(context)
     if panel == "Insight08" or bid == "insight_macro_08":
         return build_insight_macro_08(context)
     if panel == "Insight07" or bid == "insight_macro_07":

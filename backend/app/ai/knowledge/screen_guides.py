@@ -718,6 +718,36 @@ def _insight_07(context: AiContext) -> str:
     return "\n".join(lines)
 
 
+def _insight_10(context: AiContext) -> str:
+    facts = context.facts or {}
+    start = facts.get("period_start")
+    end = facts.get("period_end")
+    n_area = facts.get("n_roads_area")
+    lines = [
+        "### 이 화면은",
+        "Macro Insight 10번입니다. 같은 집합상가 도로 안에서 1층을 100으로 두고, 2층이 그 1층보다 낮은지를 봅니다.",
+        "아파트 층 글이 아니고, 층 효용지수를 어떻게 계산하는지를 설명하는 글도 아닙니다.",
+    ]
+    if start and end:
+        lines.append(f"기간은 {start}부터 {end}까지, 전국 집합상가 실거래입니다.")
+    if n_area is not None:
+        lines.append(f"연면적을 맞춘 도로는 {n_area}곳입니다.")
+    lines.extend(
+        [
+            "",
+            "### 어떻게 읽나",
+            "- 1층=100은 시세가 아닙니다. 그 도로 안의 1층입니다. 아파트 108, 오피스텔 저층=100과 더하지 않습니다.",
+            "- 처음 2층 가운데값은 41과 44 근처입니다. 도로마다 차이는 있고, 사분위는 32.2–55.7입니다. 연면적을 맞추면 55와 68입니다. 둘 다 적고 하나를 고르지 않습니다.",
+            "- 연식과 용도, 그 도로를 함께 고려하면 61과 56입니다. 95% 구간은 56.2–66.5와 51.0–62.4로, 둘 다 100보다 낮습니다. 55·68을 이 숫자로 바꾸지 않습니다. 회귀는 맞춘 값이 아니라 함께 고려한 결과입니다.",
+            "- 왜 2층이 낮은지는 말하지 않습니다. 10층 이상과 수도권 밖 지수는 표에 없습니다. 표에 없는 퍼센트를 만들지 않습니다.",
+            "",
+            "### 한계",
+            "원인은 말하지 않습니다. 전국 평균 2층 지수가 아닙니다. 제품 층 지수 화면은 바꾸지 않았습니다. 자세한 내용은 화면의 「이 분석의 한계」를 따릅니다.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def _insight_08(context: AiContext) -> str:
     facts = context.facts or {}
     start = facts.get("period_start")
@@ -765,6 +795,8 @@ def format_screen_guide(context: AiContext) -> str:
         return _rent_list(context)
     if panel in ("RegionalProfile", "TwinRegionPanel", "ProfilePanel") or app == "profile":
         return _profile(context)
+    if panel == "Insight10":
+        return _insight_10(context)
     if panel == "Insight08":
         return _insight_08(context)
     if panel == "Insight07":
@@ -825,6 +857,14 @@ def screen_guide_followups(context: AiContext) -> list[str]:
         return [
             "Twin 유사지역은 무엇을 뜻하나요?",
             "단지 추세는 어디서 보나요?",
+        ]
+    if panel == "Insight10":
+        return [
+            "1층=100은 시세 100인가요?",
+            "55와 68 중 어느 쪽인가요?",
+            "왜 2층이 싼가요?",
+            "아파트 108과 더하면 되나요?",
+            "다른 지역도 같나요?",
         ]
     if panel == "Insight08":
         return [

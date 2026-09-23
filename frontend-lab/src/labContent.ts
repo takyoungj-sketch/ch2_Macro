@@ -164,4 +164,5 @@ export const TOOL_WHY: Record<string, string[]> = {
   "rowhouse-floor": [],
   "macro-scale": ["D-055"],
   "road-jimok": [],
+  "floor-utility": [],
 };
