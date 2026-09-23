@@ -1,0 +1,1462 @@
+{
+  "as_of": "2026-08-01",
+  "period_start": "2021-09-01",
+  "period_end": "2026-08-31",
+  "asset": "apartment",
+  "officetel": "closed_at_phase0",
+  "buildings_eligible": 6959,
+  "buildings_fit": 6958,
+  "buildings_failed": 1,
+  "index_outside_50_200": {
+    "low": 0,
+    "mid": 0,
+    "high": 0,
+    "top": 4
+  },
+  "note": "1층=100은 단지마다. p50은 동일가중, w_p50은 거래건수 가중. p10–p90은 가운데 80%. 전국 평균 지수는 없음.",
+  "distribution": {
+    "by_tier": [
+      {
+        "key": "metro",
+        "label": "수도권",
+        "bins": {
+          "low": {
+            "key": "low",
+            "label": "low",
+            "buildings": 2767,
+            "txns": 487330,
+            "p10": 100.7,
+            "p50": 105.8,
+            "p90": 111.5,
+            "w_p50": 106.0,
+            "share_above_100": 0.922
+          },
+          "mid": {
+            "key": "mid",
+            "label": "mid",
+            "buildings": 2887,
+            "txns": 496488,
+            "p10": 102.5,
+            "p50": 108.5,
+            "p90": 114.6,
+            "w_p50": 108.8,
+            "share_above_100": 0.958
+          },
+          "high": {
+            "key": "high",
+            "label": "high",
+            "buildings": 2869,
+            "txns": 495190,
+            "p10": 102.6,
+            "p50": 109.4,
+            "p90": 115.7,
+            "w_p50": 109.7,
+            "share_above_100": 0.951
+          },
+          "top": {
+            "key": "top",
+            "label": "top",
+            "buildings": 1280,
+            "txns": 250502,
+            "p10": 99.3,
+            "p50": 107.7,
+            "p90": 115.1,
+            "w_p50": 108.3,
+            "share_above_100": 0.887
+          }
+        }
+      },
+      {
+        "key": "metro_city",
+        "label": "광역시",
+        "bins": {
+          "low": {
+            "key": "low",
+            "label": "low",
+            "buildings": 930,
+            "txns": 164851,
+            "p10": 99.8,
+            "p50": 105.7,
+            "p90": 111.9,
+            "w_p50": 105.9,
+            "share_above_100": 0.894
+          },
+          "mid": {
+            "key": "mid",
+            "label": "mid",
+            "buildings": 963,
+            "txns": 167453,
+            "p10": 103.1,
+            "p50": 109.8,
+            "p90": 116.4,
+            "w_p50": 110.1,
+            "share_above_100": 0.956
+          },
+          "high": {
+            "key": "high",
+            "label": "high",
+            "buildings": 961,
+            "txns": 167336,
+            "p10": 103.6,
+            "p50": 111.2,
+            "p90": 118.2,
+            "w_p50": 111.5,
+            "share_above_100": 0.954
+          },
+          "top": {
+            "key": "top",
+            "label": "top",
+            "buildings": 453,
+            "txns": 90079,
+            "p10": 100.0,
+            "p50": 109.4,
+            "p90": 117.4,
+            "w_p50": 110.2,
+            "share_above_100": 0.901
+          }
+        }
+      },
+      {
+        "key": "other_urban",
+        "label": "기타 도시",
+        "bins": {
+          "low": {
+            "key": "low",
+            "label": "low",
+            "buildings": 2041,
+            "txns": 345354,
+            "p10": 99.6,
+            "p50": 105.3,
+            "p90": 111.9,
+            "w_p50": 105.8,
+            "share_above_100": 0.882
+          },
+          "mid": {
+            "key": "mid",
+            "label": "mid",
+            "buildings": 2288,
+            "txns": 369210,
+            "p10": 101.2,
+            "p50": 108.7,
+            "p90": 116.0,
+            "w_p50": 109.6,
+            "share_above_100": 0.929
+          },
+          "high": {
+            "key": "high",
+            "label": "high",
+            "buildings": 2284,
+            "txns": 368789,
+            "p10": 100.5,
+            "p50": 109.7,
+            "p90": 117.4,
+            "w_p50": 110.6,
+            "share_above_100": 0.905
+          },
+          "top": {
+            "key": "top",
+            "label": "top",
+            "buildings": 1398,
+            "txns": 249285,
+            "p10": 93.4,
+            "p50": 107.8,
+            "p90": 117.8,
+            "w_p50": 108.5,
+            "share_above_100": 0.824
+          }
+        }
+      },
+      {
+        "key": "nonurban",
+        "label": "비도시",
+        "bins": {
+          "low": {
+            "key": "low",
+            "label": "low",
+            "buildings": 657,
+            "txns": 116355,
+            "p10": 99.0,
+            "p50": 104.9,
+            "p90": 111.4,
+            "w_p50": 105.1,
+            "share_above_100": 0.869
+          },
+          "mid": {
+            "key": "mid",
+            "label": "mid",
+            "buildings": 763,
+            "txns": 125914,
+            "p10": 99.2,
+            "p50": 108.2,
+            "p90": 115.9,
+            "w_p50": 108.5,
+            "share_above_100": 0.883
+          },
+          "high": {
+            "key": "high",
+            "label": "high",
+            "buildings": 760,
+            "txns": 125746,
+            "p10": 95.2,
+            "p50": 109.1,
+            "p90": 117.3,
+            "w_p50": 109.5,
+            "share_above_100": 0.857
+          },
+          "top": {
+            "key": "top",
+            "label": "top",
+            "buildings": 492,
+            "txns": 86853,
+            "p10": 84.1,
+            "p50": 107.3,
+            "p90": 118.6,
+            "w_p50": 108.8,
+            "share_above_100": 0.766
+          }
+        }
+      },
+      {
+        "key": "sejong",
+        "label": "세종",
+        "bins": {
+          "low": {
+            "key": "low",
+            "label": "low",
+            "buildings": 53,
+            "txns": 9826,
+            "p10": 99.3,
+            "p50": 106.6,
+            "p90": 112.6,
+            "w_p50": 107.6,
+            "share_above_100": 0.887
+          },
+          "mid": {
+            "key": "mid",
+            "label": "mid",
+            "buildings": 56,
+            "txns": 10028,
+            "p10": 102.3,
+            "p50": 109.4,
+            "p90": 117.3,
+            "w_p50": 111.4,
+            "share_above_100": 0.911
+          },
+          "high": {
+            "key": "high",
+            "label": "high",
+            "buildings": 56,
+            "txns": 10028,
+            "p10": 103.0,
+            "p50": 111.5,
+            "p90": 119.0,
+            "w_p50": 112.7,
+            "share_above_100": 0.929
+          },
+          "top": {
+            "key": "top",
+            "label": "top",
+            "buildings": 9,
+            "txns": 1332,
+            "p10": 101.5,
+            "p50": 107.0,
+            "p90": 112.1,
+            "w_p50": 107.0,
+            "share_above_100": 0.889
+          }
+        }
+      }
+    ],
+    "capital_summary": [
+      {
+        "key": "metro",
+        "label": "수도권",
+        "bins": {
+          "low": {
+            "key": "low",
+            "label": "low",
+            "buildings": 2767,
+            "txns": 487330,
+            "p10": 100.7,
+            "p50": 105.8,
+            "p90": 111.5,
+            "w_p50": 106.0,
+            "share_above_100": 0.922
+          },
+          "mid": {
+            "key": "mid",
+            "label": "mid",
+            "buildings": 2887,
+            "txns": 496488,
+            "p10": 102.5,
+            "p50": 108.5,
+            "p90": 114.6,
+            "w_p50": 108.8,
+            "share_above_100": 0.958
+          },
+          "high": {
+            "key": "high",
+            "label": "high",
+            "buildings": 2869,
+            "txns": 495190,
+            "p10": 102.6,
+            "p50": 109.4,
+            "p90": 115.7,
+            "w_p50": 109.7,
+            "share_above_100": 0.951
+          },
+          "top": {
+            "key": "top",
+            "label": "top",
+            "buildings": 1280,
+            "txns": 250502,
+            "p10": 99.3,
+            "p50": 107.7,
+            "p90": 115.1,
+            "w_p50": 108.3,
+            "share_above_100": 0.887
+          }
+        }
+      },
+      {
+        "key": "non_metro",
+        "label": "비수도권",
+        "bins": {
+          "low": {
+            "key": "low",
+            "label": "low",
+            "buildings": 3628,
+            "txns": 626560,
+            "p10": 99.5,
+            "p50": 105.3,
+            "p90": 111.8,
+            "w_p50": 105.7,
+            "share_above_100": 0.883
+          },
+          "mid": {
+            "key": "mid",
+            "label": "mid",
+            "buildings": 4014,
+            "txns": 662577,
+            "p10": 101.4,
+            "p50": 108.9,
+            "p90": 116.1,
+            "w_p50": 109.6,
+            "share_above_100": 0.927
+          },
+          "high": {
+            "key": "high",
+            "label": "high",
+            "buildings": 4005,
+            "txns": 661871,
+            "p10": 100.7,
+            "p50": 109.9,
+            "p90": 117.6,
+            "w_p50": 110.6,
+            "share_above_100": 0.908
+          },
+          "top": {
+            "key": "top",
+            "label": "top",
+            "buildings": 2343,
+            "txns": 426217,
+            "p10": 93.4,
+            "p50": 108.1,
+            "p90": 117.9,
+            "w_p50": 109.0,
+            "share_above_100": 0.827
+          }
+        }
+      }
+    ],
+    "by_band": [
+      {
+        "key": "le15",
+        "label": "≤15층",
+        "bins": {
+          "low": {
+            "key": "low",
+            "label": "low",
+            "buildings": 2853,
+            "txns": 412034,
+            "p10": 99.3,
+            "p50": 105.2,
+            "p90": 111.6,
+            "w_p50": 105.6,
+            "share_above_100": 0.875
+          },
+          "mid": {
+            "key": "mid",
+            "label": "mid",
+            "buildings": 3361,
+            "txns": 457354,
+            "p10": 100.1,
+            "p50": 108.0,
+            "p90": 115.3,
+            "w_p50": 108.7,
+            "share_above_100": 0.902
+          },
+          "high": {
+            "key": "high",
+            "label": "high",
+            "buildings": 3348,
+            "txns": 456469,
+            "p10": 98.2,
+            "p50": 109.0,
+            "p90": 116.7,
+            "w_p50": 109.7,
+            "share_above_100": 0.873
+          },
+          "top": {
+            "key": "top",
+            "label": "top",
+            "buildings": 2417,
+            "txns": 369558,
+            "p10": 91.7,
+            "p50": 106.8,
+            "p90": 116.5,
+            "w_p50": 107.6,
+            "share_above_100": 0.796
+          }
+        }
+      },
+      {
+        "key": "m16_25",
+        "label": "16–25층",
+        "bins": {
+          "low": {
+            "key": "low",
+            "label": "low",
+            "buildings": 2978,
+            "txns": 530420,
+            "p10": 100.3,
+            "p50": 105.9,
+            "p90": 111.9,
+            "w_p50": 106.1,
+            "share_above_100": 0.913
+          },
+          "mid": {
+            "key": "mid",
+            "label": "mid",
+            "buildings": 2979,
+            "txns": 530477,
+            "p10": 103.5,
+            "p50": 109.4,
+            "p90": 116.1,
+            "w_p50": 109.7,
+            "share_above_100": 0.974
+          },
+          "high": {
+            "key": "high",
+            "label": "high",
+            "buildings": 2966,
+            "txns": 529431,
+            "p10": 104.1,
+            "p50": 110.3,
+            "p90": 117.1,
+            "w_p50": 110.5,
+            "share_above_100": 0.974
+          },
+          "top": {
+            "key": "top",
+            "label": "top",
+            "buildings": 1058,
+            "txns": 249669,
+            "p10": 102.3,
+            "p50": 109.6,
+            "p90": 118.1,
+            "w_p50": 109.8,
+            "share_above_100": 0.95
+          }
+        }
+      },
+      {
+        "key": "ge26",
+        "label": "≥26층",
+        "bins": {
+          "low": {
+            "key": "low",
+            "label": "low",
+            "buildings": 617,
+            "txns": 181262,
+            "p10": 101.6,
+            "p50": 105.7,
+            "p90": 110.5,
+            "w_p50": 105.7,
+            "share_above_100": 0.951
+          },
+          "mid": {
+            "key": "mid",
+            "label": "mid",
+            "buildings": 617,
+            "txns": 181262,
+            "p10": 104.1,
+            "p50": 108.9,
+            "p90": 114.5,
+            "w_p50": 108.9,
+            "share_above_100": 0.979
+          },
+          "high": {
+            "key": "high",
+            "label": "high",
+            "buildings": 616,
+            "txns": 181189,
+            "p10": 105.1,
+            "p50": 110.0,
+            "p90": 116.5,
+            "w_p50": 109.9,
+            "share_above_100": 0.981
+          },
+          "top": {
+            "key": "top",
+            "label": "top",
+            "buildings": 157,
+            "txns": 58824,
+            "p10": 103.9,
+            "p50": 109.6,
+            "p90": 117.0,
+            "w_p50": 109.0,
+            "share_above_100": 0.968
+          }
+        }
+      }
+    ]
+  },
+  "composition": {
+    "top_equal": {
+      "outcome": "top",
+      "weighted": false,
+      "n_buildings": 3632,
+      "reference": "수도권 · ≤15층 · 연식 11–20",
+      "coefs": [
+        {
+          "name": "tier_metro_city",
+          "coef": 2.38,
+          "se": 0.53,
+          "p": 0.0
+        },
+        {
+          "name": "tier_other_urban",
+          "coef": 0.11,
+          "se": 0.38,
+          "p": 0.7713
+        },
+        {
+          "name": "tier_nonurban",
+          "coef": -3.61,
+          "se": 0.53,
+          "p": 0.0
+        },
+        {
+          "name": "tier_sejong",
+          "coef": -2.77,
+          "se": 3.24,
+          "p": 0.3921
+        },
+        {
+          "name": "band_m16_25",
+          "coef": 1.03,
+          "se": 0.4,
+          "p": 0.01
+        },
+        {
+          "name": "band_ge26",
+          "coef": -0.91,
+          "se": 0.91,
+          "p": 0.3179
+        },
+        {
+          "name": "age_le10",
+          "coef": -1.27,
+          "se": 0.69,
+          "p": 0.0664
+        },
+        {
+          "name": "age_a21_30",
+          "coef": -3.35,
+          "se": 0.5,
+          "p": 0.0
+        },
+        {
+          "name": "age_ge31",
+          "coef": -10.17,
+          "se": 0.53,
+          "p": 0.0
+        }
+      ]
+    },
+    "top_weighted": {
+      "outcome": "top",
+      "weighted": true,
+      "n_buildings": 3632,
+      "reference": "수도권 · ≤15층 · 연식 11–20",
+      "coefs": [
+        {
+          "name": "tier_metro_city",
+          "coef": 2.02,
+          "se": 0.48,
+          "p": 0.0
+        },
+        {
+          "name": "tier_other_urban",
+          "coef": 0.98,
+          "se": 0.36,
+          "p": 0.0061
+        },
+        {
+          "name": "tier_nonurban",
+          "coef": -1.76,
+          "se": 0.5,
+          "p": 0.0005
+        },
+        {
+          "name": "tier_sejong",
+          "coef": -3.36,
+          "se": 3.38,
+          "p": 0.3205
+        },
+        {
+          "name": "band_m16_25",
+          "coef": 1.22,
+          "se": 0.36,
+          "p": 0.0007
+        },
+        {
+          "name": "band_ge26",
+          "coef": -0.13,
+          "se": 0.67,
+          "p": 0.8483
+        },
+        {
+          "name": "age_le10",
+          "coef": -1.64,
+          "se": 0.57,
+          "p": 0.004
+        },
+        {
+          "name": "age_a21_30",
+          "coef": -2.72,
+          "se": 0.45,
+          "p": 0.0
+        },
+        {
+          "name": "age_ge31",
+          "coef": -7.6,
+          "se": 0.51,
+          "p": 0.0
+        }
+      ]
+    },
+    "low_equal": {
+      "outcome": "low",
+      "weighted": false,
+      "n_buildings": 6448,
+      "reference": "수도권 · ≤15층 · 연식 11–20",
+      "coefs": [
+        {
+          "name": "tier_metro_city",
+          "coef": -0.12,
+          "se": 0.19,
+          "p": 0.5338
+        },
+        {
+          "name": "tier_other_urban",
+          "coef": -0.17,
+          "se": 0.15,
+          "p": 0.2555
+        },
+        {
+          "name": "tier_nonurban",
+          "coef": -0.42,
+          "se": 0.22,
+          "p": 0.0535
+        },
+        {
+          "name": "tier_sejong",
+          "coef": 0.88,
+          "se": 0.69,
+          "p": 0.2028
+        },
+        {
+          "name": "band_m16_25",
+          "coef": 0.91,
+          "se": 0.14,
+          "p": 0.0
+        },
+        {
+          "name": "band_ge26",
+          "coef": 1.94,
+          "se": 0.26,
+          "p": 0.0
+        },
+        {
+          "name": "age_le10",
+          "coef": -0.33,
+          "se": 0.22,
+          "p": 0.1207
+        },
+        {
+          "name": "age_a21_30",
+          "coef": 1.92,
+          "se": 0.17,
+          "p": 0.0
+        },
+        {
+          "name": "age_ge31",
+          "coef": 1.6,
+          "se": 0.19,
+          "p": 0.0
+        }
+      ]
+    },
+    "low_weighted": {
+      "outcome": "low",
+      "weighted": true,
+      "n_buildings": 6448,
+      "reference": "수도권 · ≤15층 · 연식 11–20",
+      "coefs": [
+        {
+          "name": "tier_metro_city",
+          "coef": -0.16,
+          "se": 0.17,
+          "p": 0.3479
+        },
+        {
+          "name": "tier_other_urban",
+          "coef": 0.02,
+          "se": 0.13,
+          "p": 0.876
+        },
+        {
+          "name": "tier_nonurban",
+          "coef": -0.6,
+          "se": 0.2,
+          "p": 0.0021
+        },
+        {
+          "name": "tier_sejong",
+          "coef": 1.51,
+          "se": 0.6,
+          "p": 0.0116
+        },
+        {
+          "name": "band_m16_25",
+          "coef": 0.82,
+          "se": 0.13,
+          "p": 0.0
+        },
+        {
+          "name": "band_ge26",
+          "coef": 1.74,
+          "se": 0.21,
+          "p": 0.0
+        },
+        {
+          "name": "age_le10",
+          "coef": -0.38,
+          "se": 0.18,
+          "p": 0.0306
+        },
+        {
+          "name": "age_a21_30",
+          "coef": 2.05,
+          "se": 0.15,
+          "p": 0.0
+        },
+        {
+          "name": "age_ge31",
+          "coef": 1.51,
+          "se": 0.18,
+          "p": 0.0
+        }
+      ]
+    }
+  },
+  "height_on_index": {
+    "top_equal": {
+      "outcome": "top",
+      "weighted": false,
+      "n_buildings": 3632,
+      "reference": "최고층은 15층 기준 1층당 지수 점. 지역 기준=수도권, 연식 11–20",
+      "coefs": [
+        {
+          "name": "height_c",
+          "coef": 0.61,
+          "se": 0.03,
+          "p": 0.0
+        },
+        {
+          "name": "tier_metro_city",
+          "coef": 1.79,
+          "se": 0.51,
+          "p": 0.0004
+        },
+        {
+          "name": "tier_other_urban",
+          "coef": 1.15,
+          "se": 0.36,
+          "p": 0.0016
+        },
+        {
+          "name": "tier_nonurban",
+          "coef": -1.49,
+          "se": 0.51,
+          "p": 0.0035
+        },
+        {
+          "name": "tier_sejong",
+          "coef": -1.51,
+          "se": 3.1,
+          "p": 0.6255
+        },
+        {
+          "name": "age_le10",
+          "coef": -4.02,
+          "se": 0.65,
+          "p": 0.0
+        },
+        {
+          "name": "age_a21_30",
+          "coef": -2.49,
+          "se": 0.48,
+          "p": 0.0
+        },
+        {
+          "name": "age_ge31",
+          "coef": -6.72,
+          "se": 0.52,
+          "p": 0.0
+        }
+      ]
+    },
+    "top_weighted": {
+      "outcome": "top",
+      "weighted": true,
+      "n_buildings": 3632,
+      "reference": "최고층은 15층 기준 1층당 지수 점. 지역 기준=수도권, 연식 11–20",
+      "coefs": [
+        {
+          "name": "height_c",
+          "coef": 0.38,
+          "se": 0.03,
+          "p": 0.0
+        },
+        {
+          "name": "tier_metro_city",
+          "coef": 1.75,
+          "se": 0.47,
+          "p": 0.0002
+        },
+        {
+          "name": "tier_other_urban",
+          "coef": 1.66,
+          "se": 0.35,
+          "p": 0.0
+        },
+        {
+          "name": "tier_nonurban",
+          "coef": -0.39,
+          "se": 0.49,
+          "p": 0.4327
+        },
+        {
+          "name": "tier_sejong",
+          "coef": -3.17,
+          "se": 3.31,
+          "p": 0.3391
+        },
+        {
+          "name": "age_le10",
+          "coef": -3.34,
+          "se": 0.55,
+          "p": 0.0
+        },
+        {
+          "name": "age_a21_30",
+          "coef": -1.8,
+          "se": 0.45,
+          "p": 0.0001
+        },
+        {
+          "name": "age_ge31",
+          "coef": -5.49,
+          "se": 0.51,
+          "p": 0.0
+        }
+      ]
+    },
+    "low_equal": {
+      "outcome": "low",
+      "weighted": false,
+      "n_buildings": 6448,
+      "reference": "최고층은 15층 기준 1층당 지수 점. 지역 기준=수도권, 연식 11–20",
+      "coefs": [
+        {
+          "name": "height_c",
+          "coef": 0.13,
+          "se": 0.01,
+          "p": 0.0
+        },
+        {
+          "name": "tier_metro_city",
+          "coef": -0.18,
+          "se": 0.19,
+          "p": 0.3271
+        },
+        {
+          "name": "tier_other_urban",
+          "coef": -0.16,
+          "se": 0.15,
+          "p": 0.2875
+        },
+        {
+          "name": "tier_nonurban",
+          "coef": -0.35,
+          "se": 0.22,
+          "p": 0.1126
+        },
+        {
+          "name": "tier_sejong",
+          "coef": 0.99,
+          "se": 0.68,
+          "p": 0.1478
+        },
+        {
+          "name": "age_le10",
+          "coef": -0.41,
+          "se": 0.21,
+          "p": 0.0573
+        },
+        {
+          "name": "age_a21_30",
+          "coef": 2.01,
+          "se": 0.17,
+          "p": 0.0
+        },
+        {
+          "name": "age_ge31",
+          "coef": 1.68,
+          "se": 0.19,
+          "p": 0.0
+        }
+      ]
+    },
+    "low_weighted": {
+      "outcome": "low",
+      "weighted": true,
+      "n_buildings": 6448,
+      "reference": "최고층은 15층 기준 1층당 지수 점. 지역 기준=수도권, 연식 11–20",
+      "coefs": [
+        {
+          "name": "height_c",
+          "coef": 0.12,
+          "se": 0.01,
+          "p": 0.0
+        },
+        {
+          "name": "tier_metro_city",
+          "coef": -0.23,
+          "se": 0.17,
+          "p": 0.1629
+        },
+        {
+          "name": "tier_other_urban",
+          "coef": 0.04,
+          "se": 0.13,
+          "p": 0.7436
+        },
+        {
+          "name": "tier_nonurban",
+          "coef": -0.51,
+          "se": 0.2,
+          "p": 0.0089
+        },
+        {
+          "name": "tier_sejong",
+          "coef": 1.63,
+          "se": 0.59,
+          "p": 0.006
+        },
+        {
+          "name": "age_le10",
+          "coef": -0.44,
+          "se": 0.17,
+          "p": 0.0112
+        },
+        {
+          "name": "age_a21_30",
+          "coef": 2.17,
+          "se": 0.16,
+          "p": 0.0
+        },
+        {
+          "name": "age_ge31",
+          "coef": 1.62,
+          "se": 0.18,
+          "p": 0.0
+        }
+      ]
+    }
+  },
+  "fe": {
+    "region": {
+      "n": 1161252,
+      "n_buildings": 6958,
+      "coefs": {
+        "d_low": {
+          "gamma": 0.0514,
+          "index": 105.3,
+          "se": 0.001,
+          "p": 0.0
+        },
+        "d_low__metro_city": {
+          "gamma": -0.003,
+          "index": 99.7,
+          "se": 0.0023,
+          "p": 0.1933
+        },
+        "d_low__other_urban": {
+          "gamma": -0.0125,
+          "index": 98.8,
+          "se": 0.002,
+          "p": 0.0
+        },
+        "d_low__nonurban": {
+          "gamma": -0.0243,
+          "index": 97.6,
+          "se": 0.0041,
+          "p": 0.0
+        },
+        "d_low__sejong": {
+          "gamma": 0.0049,
+          "index": 100.5,
+          "se": 0.0089,
+          "p": 0.5767
+        },
+        "d_mid": {
+          "gamma": 0.0769,
+          "index": 108.0,
+          "se": 0.0011,
+          "p": 0.0
+        },
+        "d_mid__metro_city": {
+          "gamma": 0.0123,
+          "index": 101.2,
+          "se": 0.0024,
+          "p": 0.0
+        },
+        "d_mid__other_urban": {
+          "gamma": 0.0009,
+          "index": 100.1,
+          "se": 0.0022,
+          "p": 0.6796
+        },
+        "d_mid__nonurban": {
+          "gamma": -0.0103,
+          "index": 99.0,
+          "se": 0.004,
+          "p": 0.0098
+        },
+        "d_mid__sejong": {
+          "gamma": 0.0158,
+          "index": 101.6,
+          "se": 0.0096,
+          "p": 0.0986
+        },
+        "d_high": {
+          "gamma": 0.0821,
+          "index": 108.6,
+          "se": 0.0012,
+          "p": 0.0
+        },
+        "d_high__metro_city": {
+          "gamma": 0.0203,
+          "index": 102.1,
+          "se": 0.0027,
+          "p": 0.0
+        },
+        "d_high__other_urban": {
+          "gamma": 0.0022,
+          "index": 100.2,
+          "se": 0.0024,
+          "p": 0.36
+        },
+        "d_high__nonurban": {
+          "gamma": -0.0119,
+          "index": 98.8,
+          "se": 0.0049,
+          "p": 0.0147
+        },
+        "d_high__sejong": {
+          "gamma": 0.025,
+          "index": 102.5,
+          "se": 0.0103,
+          "p": 0.0151
+        },
+        "d_top": {
+          "gamma": 0.0622,
+          "index": 106.4,
+          "se": 0.0021,
+          "p": 0.0
+        },
+        "d_top__metro_city": {
+          "gamma": 0.0195,
+          "index": 102.0,
+          "se": 0.0046,
+          "p": 0.0
+        },
+        "d_top__other_urban": {
+          "gamma": -0.0115,
+          "index": 98.9,
+          "se": 0.004,
+          "p": 0.0042
+        },
+        "d_top__nonurban": {
+          "gamma": -0.0369,
+          "index": 96.4,
+          "se": 0.009,
+          "p": 0.0
+        },
+        "d_top__sejong": {
+          "gamma": 0.059,
+          "index": 106.1,
+          "se": 0.0301,
+          "p": 0.0498
+        },
+        "ln_a": {
+          "gamma": -0.1837,
+          "index": 83.2,
+          "se": 0.0074,
+          "p": 0.0
+        },
+        "p_2025H1": {
+          "gamma": -0.0478,
+          "index": 95.3,
+          "se": 0.0015,
+          "p": 0.0
+        },
+        "p_2025H2": {
+          "gamma": -0.0293,
+          "index": 97.1,
+          "se": 0.0011,
+          "p": 0.0
+        },
+        "p_2024H1": {
+          "gamma": -0.0582,
+          "index": 94.3,
+          "se": 0.0022,
+          "p": 0.0
+        },
+        "p_2024H2": {
+          "gamma": -0.0476,
+          "index": 95.4,
+          "se": 0.0019,
+          "p": 0.0
+        },
+        "p_2023H1": {
+          "gamma": -0.0766,
+          "index": 92.6,
+          "se": 0.0027,
+          "p": 0.0
+        },
+        "p_2023H2": {
+          "gamma": -0.0463,
+          "index": 95.5,
+          "se": 0.0022,
+          "p": 0.0
+        },
+        "p_2022H1": {
+          "gamma": 0.0765,
+          "index": 107.9,
+          "se": 0.003,
+          "p": 0.0
+        },
+        "p_2021H2": {
+          "gamma": 0.0752,
+          "index": 107.8,
+          "se": 0.0031,
+          "p": 0.0
+        },
+        "p_2022H2": {
+          "gamma": 0.0051,
+          "index": 100.5,
+          "se": 0.0037,
+          "p": 0.1715
+        },
+        "p_2026H2": {
+          "gamma": 0.0157,
+          "index": 101.6,
+          "se": 0.0013,
+          "p": 0.0
+        }
+      },
+      "reference": "수도권의 1층 대비. θ는 그 계층이 수도권과 다른 정도."
+    },
+    "band": {
+      "n": 1161252,
+      "n_buildings": 6958,
+      "coefs": {
+        "d_low": {
+          "gamma": 0.0317,
+          "index": 103.2,
+          "se": 0.0015,
+          "p": 0.0
+        },
+        "d_low__m16_25": {
+          "gamma": 0.0262,
+          "index": 102.7,
+          "se": 0.0018,
+          "p": 0.0
+        },
+        "d_low__ge26": {
+          "gamma": 0.0247,
+          "index": 102.5,
+          "se": 0.0025,
+          "p": 0.0
+        },
+        "d_mid": {
+          "gamma": 0.0678,
+          "index": 107.0,
+          "se": 0.0014,
+          "p": 0.0
+        },
+        "d_mid__m16_25": {
+          "gamma": 0.0225,
+          "index": 102.3,
+          "se": 0.0019,
+          "p": 0.0
+        },
+        "d_mid__ge26": {
+          "gamma": 0.0185,
+          "index": 101.9,
+          "se": 0.0026,
+          "p": 0.0
+        },
+        "d_high": {
+          "gamma": 0.0717,
+          "index": 107.4,
+          "se": 0.0018,
+          "p": 0.0
+        },
+        "d_high__m16_25": {
+          "gamma": 0.0264,
+          "index": 102.7,
+          "se": 0.0022,
+          "p": 0.0
+        },
+        "d_high__ge26": {
+          "gamma": 0.0264,
+          "index": 102.7,
+          "se": 0.0031,
+          "p": 0.0
+        },
+        "d_top": {
+          "gamma": 0.0359,
+          "index": 103.7,
+          "se": 0.0028,
+          "p": 0.0
+        },
+        "d_top__m16_25": {
+          "gamma": 0.0555,
+          "index": 105.7,
+          "se": 0.0035,
+          "p": 0.0
+        },
+        "d_top__ge26": {
+          "gamma": 0.0599,
+          "index": 106.2,
+          "se": 0.0057,
+          "p": 0.0
+        },
+        "ln_a": {
+          "gamma": -0.1839,
+          "index": 83.2,
+          "se": 0.0074,
+          "p": 0.0
+        },
+        "p_2025H1": {
+          "gamma": -0.0479,
+          "index": 95.3,
+          "se": 0.0015,
+          "p": 0.0
+        },
+        "p_2025H2": {
+          "gamma": -0.0293,
+          "index": 97.1,
+          "se": 0.0011,
+          "p": 0.0
+        },
+        "p_2024H1": {
+          "gamma": -0.0582,
+          "index": 94.3,
+          "se": 0.0022,
+          "p": 0.0
+        },
+        "p_2024H2": {
+          "gamma": -0.0475,
+          "index": 95.4,
+          "se": 0.0019,
+          "p": 0.0
+        },
+        "p_2023H1": {
+          "gamma": -0.0767,
+          "index": 92.6,
+          "se": 0.0027,
+          "p": 0.0
+        },
+        "p_2023H2": {
+          "gamma": -0.0463,
+          "index": 95.5,
+          "se": 0.0022,
+          "p": 0.0
+        },
+        "p_2022H1": {
+          "gamma": 0.0765,
+          "index": 107.9,
+          "se": 0.003,
+          "p": 0.0
+        },
+        "p_2021H2": {
+          "gamma": 0.0752,
+          "index": 107.8,
+          "se": 0.0031,
+          "p": 0.0
+        },
+        "p_2022H2": {
+          "gamma": 0.0051,
+          "index": 100.5,
+          "se": 0.0037,
+          "p": 0.1755
+        },
+        "p_2026H2": {
+          "gamma": 0.0157,
+          "index": 101.6,
+          "se": 0.0013,
+          "p": 0.0
+        }
+      },
+      "reference": "≤15층 단지의 1층 대비. θ는 더 높은 대역이 ≤15층과 다른 정도."
+    },
+    "height": {
+      "n": 1161252,
+      "n_buildings": 6958,
+      "coefs": {
+        "d_low": {
+          "gamma": 0.0374,
+          "index": 103.8,
+          "se": 0.0011,
+          "p": 0.0
+        },
+        "d_low__h": {
+          "gamma": 0.0034,
+          "index": 100.3,
+          "se": 0.0002,
+          "p": 0.0
+        },
+        "d_mid": {
+          "gamma": 0.0725,
+          "index": 107.5,
+          "se": 0.001,
+          "p": 0.0
+        },
+        "d_mid__h": {
+          "gamma": 0.003,
+          "index": 100.3,
+          "se": 0.0002,
+          "p": 0.0
+        },
+        "d_high": {
+          "gamma": 0.0754,
+          "index": 107.8,
+          "se": 0.0013,
+          "p": 0.0
+        },
+        "d_high__h": {
+          "gamma": 0.0039,
+          "index": 100.4,
+          "se": 0.0002,
+          "p": 0.0
+        },
+        "d_top": {
+          "gamma": 0.052,
+          "index": 105.3,
+          "se": 0.0018,
+          "p": 0.0
+        },
+        "d_top__h": {
+          "gamma": 0.008,
+          "index": 100.8,
+          "se": 0.0004,
+          "p": 0.0
+        },
+        "ln_a": {
+          "gamma": -0.1841,
+          "index": 83.2,
+          "se": 0.0074,
+          "p": 0.0
+        },
+        "p_2025H1": {
+          "gamma": -0.0479,
+          "index": 95.3,
+          "se": 0.0015,
+          "p": 0.0
+        },
+        "p_2025H2": {
+          "gamma": -0.0293,
+          "index": 97.1,
+          "se": 0.0011,
+          "p": 0.0
+        },
+        "p_2024H1": {
+          "gamma": -0.0583,
+          "index": 94.3,
+          "se": 0.0022,
+          "p": 0.0
+        },
+        "p_2024H2": {
+          "gamma": -0.0475,
+          "index": 95.4,
+          "se": 0.0019,
+          "p": 0.0
+        },
+        "p_2023H1": {
+          "gamma": -0.0767,
+          "index": 92.6,
+          "se": 0.0027,
+          "p": 0.0
+        },
+        "p_2023H2": {
+          "gamma": -0.0463,
+          "index": 95.5,
+          "se": 0.0022,
+          "p": 0.0
+        },
+        "p_2022H1": {
+          "gamma": 0.0765,
+          "index": 107.9,
+          "se": 0.003,
+          "p": 0.0
+        },
+        "p_2021H2": {
+          "gamma": 0.0753,
+          "index": 107.8,
+          "se": 0.0031,
+          "p": 0.0
+        },
+        "p_2022H2": {
+          "gamma": 0.005,
+          "index": 100.5,
+          "se": 0.0037,
+          "p": 0.1794
+        },
+        "p_2026H2": {
+          "gamma": 0.0157,
+          "index": 101.6,
+          "se": 0.0013,
+          "p": 0.0
+        }
+      },
+      "reference": "최고층 15에서 1층 대비. __h 는 최고층이 1층 늘 때 γ의 변화."
+    }
+  }
+}

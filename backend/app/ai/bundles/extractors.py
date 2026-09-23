@@ -535,6 +535,36 @@ def build_insight_macro_03(context: AiContext) -> AiDiagnosticPack:
     )
 
 
+def build_insight_macro_08(context: AiContext) -> AiDiagnosticPack:
+    facts = context.facts or {}
+    summary = [
+        "Macro Insight 08 — 아파트 단지 안 층 효용, 지역·높이",
+        "grain=building_within",
+    ]
+    if facts.get("as_of"):
+        summary.append(f"as_of={facts.get('as_of')}")
+    if facts.get("period_start") and facts.get("period_end"):
+        summary.append(f"기간={facts.get('period_start')}–{facts.get('period_end')}")
+    if facts.get("n_eligible") is not None:
+        summary.append(f"적격={facts.get('n_eligible')}")
+    limitations = list(
+        (context.explain.limitations if context.explain and context.explain.limitations else None)
+        or [
+            "단지 안 비교입니다. 지역이나 높이가 가격의 원인이라고 말하지 않습니다. 전국 평균 지수 하나가 아닙니다.",
+            "비도시 최상 차이는 높이를 함께 보면 크게 줄어듭니다. 세 칸으로만 나누면 2.4%가 남고, 최고층을 연속으로 보면 0.8%까지 줄어 없다와 구분되지 않습니다.",
+            "글 맨 끝의 오피스텔은 저층=100입니다. 1층=100, 108과 더하지 않습니다. 고층 차이는 2포인트 안입니다. 표에 없는 퍼센트를 만들지 않습니다. 제품 층 식을 바꾸지 않습니다.",
+        ]
+    )
+    return AiDiagnosticPack(
+        bundle_id="insight_macro_08",
+        panel=context.panel,
+        app=context.app,
+        summary_lines=summary,
+        diagnostics={**facts, "scope_label": context.scope.region_label or "전국"},
+        limitations=limitations,
+    )
+
+
 def build_insight_macro_04(context: AiContext) -> AiDiagnosticPack:
     facts = context.facts or {}
     summary = [
@@ -659,6 +689,8 @@ def build_bundle(context: AiContext) -> AiDiagnosticPack:
     panel = context.panel
     bid = resolve_bundle_id(panel)
 
+    if panel == "Insight08" or bid == "insight_macro_08":
+        return build_insight_macro_08(context)
     if panel == "Insight07" or bid == "insight_macro_07":
         return build_insight_macro_07(context)
     if panel == "Insight06" or bid == "insight_macro_06":

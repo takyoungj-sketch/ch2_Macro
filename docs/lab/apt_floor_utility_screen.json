@@ -1,0 +1,444 @@
+{
+  "as_of": "2026-08-01",
+  "period_start": "2021-09-01",
+  "period_end": "2026-08-31",
+  "window_years": 5,
+  "gate": {
+    "n_min": 50,
+    "n_1_min": 5,
+    "other_bin_min": 5,
+    "max_floor_min": 2,
+    "report_min_buildings": 30,
+    "basement": "excluded",
+    "price": "not aggregated"
+  },
+  "region_rule": "세종 → 수도권(읍·면 포함) → 광역시 → 그 밖 동(기타 도시) → 그 밖 읍·면·리(비도시)",
+  "by_asset": {
+    "apartment": {
+      "funnel": {
+        "buildings": 40880,
+        "max_floor_ge2": 40531,
+        "n_ge50": 12301,
+        "n50_n1_0": 1525,
+        "n50_n1_1_to_4": 3817,
+        "n1_ge5": 6959,
+        "eligible": 6959,
+        "eligible_txns": 1169205
+      },
+      "tiers": [
+        {
+          "key": "metro",
+          "label": "수도권",
+          "buildings": 2888,
+          "txns": 496539,
+          "reportable": true
+        },
+        {
+          "key": "metro_city",
+          "label": "광역시",
+          "buildings": 963,
+          "txns": 167453,
+          "reportable": true
+        },
+        {
+          "key": "other_urban",
+          "label": "기타 도시",
+          "buildings": 2289,
+          "txns": 369271,
+          "reportable": true
+        },
+        {
+          "key": "nonurban",
+          "label": "비도시",
+          "buildings": 763,
+          "txns": 125914,
+          "reportable": true
+        },
+        {
+          "key": "sejong",
+          "label": "세종",
+          "buildings": 56,
+          "txns": 10028,
+          "reportable": true
+        }
+      ],
+      "bands": [
+        {
+          "key": "le15",
+          "label": "≤15층",
+          "buildings": 3363,
+          "txns": 457466,
+          "reportable": true
+        },
+        {
+          "key": "m16_25",
+          "label": "16–25층",
+          "buildings": 2979,
+          "txns": 530477,
+          "reportable": true
+        },
+        {
+          "key": "ge26",
+          "label": "≥26층",
+          "buildings": 617,
+          "txns": 181262,
+          "reportable": true
+        }
+      ],
+      "alt_bands": [
+        {
+          "key": "le20",
+          "label": "≤20층",
+          "buildings": 5111,
+          "txns": 745466,
+          "reportable": true
+        },
+        {
+          "key": "m21_30",
+          "label": "21–30층",
+          "buildings": 1693,
+          "txns": 365319,
+          "reportable": true
+        },
+        {
+          "key": "ge31",
+          "label": "≥31층",
+          "buildings": 155,
+          "txns": 58420,
+          "reportable": true
+        }
+      ],
+      "cross": [
+        {
+          "key": "metro|le15",
+          "label": "metro|le15",
+          "buildings": 1073,
+          "txns": 142736,
+          "reportable": true,
+          "tier": "metro",
+          "tier_label": "수도권",
+          "band": "le15",
+          "band_label": "≤15층"
+        },
+        {
+          "key": "metro|m16_25",
+          "label": "metro|m16_25",
+          "buildings": 1475,
+          "txns": 252376,
+          "reportable": true,
+          "tier": "metro",
+          "tier_label": "수도권",
+          "band": "m16_25",
+          "band_label": "16–25층"
+        },
+        {
+          "key": "metro|ge26",
+          "label": "metro|ge26",
+          "buildings": 340,
+          "txns": 101427,
+          "reportable": true,
+          "tier": "metro",
+          "tier_label": "수도권",
+          "band": "ge26",
+          "band_label": "≥26층"
+        },
+        {
+          "key": "metro_city|le15",
+          "label": "metro_city|le15",
+          "buildings": 365,
+          "txns": 49260,
+          "reportable": true,
+          "tier": "metro_city",
+          "tier_label": "광역시",
+          "band": "le15",
+          "band_label": "≤15층"
+        },
+        {
+          "key": "metro_city|m16_25",
+          "label": "metro_city|m16_25",
+          "buildings": 481,
+          "txns": 85057,
+          "reportable": true,
+          "tier": "metro_city",
+          "tier_label": "광역시",
+          "band": "m16_25",
+          "band_label": "16–25층"
+        },
+        {
+          "key": "metro_city|ge26",
+          "label": "metro_city|ge26",
+          "buildings": 117,
+          "txns": 33136,
+          "reportable": true,
+          "tier": "metro_city",
+          "tier_label": "광역시",
+          "band": "ge26",
+          "band_label": "≥26층"
+        },
+        {
+          "key": "other_urban|le15",
+          "label": "other_urban|le15",
+          "buildings": 1426,
+          "txns": 196899,
+          "reportable": true,
+          "tier": "other_urban",
+          "tier_label": "기타 도시",
+          "band": "le15",
+          "band_label": "≤15층"
+        },
+        {
+          "key": "other_urban|m16_25",
+          "label": "other_urban|m16_25",
+          "buildings": 772,
+          "txns": 144776,
+          "reportable": true,
+          "tier": "other_urban",
+          "tier_label": "기타 도시",
+          "band": "m16_25",
+          "band_label": "16–25층"
+        },
+        {
+          "key": "other_urban|ge26",
+          "label": "other_urban|ge26",
+          "buildings": 91,
+          "txns": 27596,
+          "reportable": true,
+          "tier": "other_urban",
+          "tier_label": "기타 도시",
+          "band": "ge26",
+          "band_label": "≥26층"
+        },
+        {
+          "key": "nonurban|le15",
+          "label": "nonurban|le15",
+          "buildings": 490,
+          "txns": 67597,
+          "reportable": true,
+          "tier": "nonurban",
+          "tier_label": "비도시",
+          "band": "le15",
+          "band_label": "≤15층"
+        },
+        {
+          "key": "nonurban|m16_25",
+          "label": "nonurban|m16_25",
+          "buildings": 227,
+          "txns": 44893,
+          "reportable": true,
+          "tier": "nonurban",
+          "tier_label": "비도시",
+          "band": "m16_25",
+          "band_label": "16–25층"
+        },
+        {
+          "key": "nonurban|ge26",
+          "label": "nonurban|ge26",
+          "buildings": 46,
+          "txns": 13424,
+          "reportable": true,
+          "tier": "nonurban",
+          "tier_label": "비도시",
+          "band": "ge26",
+          "band_label": "≥26층"
+        },
+        {
+          "key": "sejong|le15",
+          "label": "sejong|le15",
+          "buildings": 9,
+          "txns": 974,
+          "reportable": false,
+          "tier": "sejong",
+          "tier_label": "세종",
+          "band": "le15",
+          "band_label": "≤15층"
+        },
+        {
+          "key": "sejong|m16_25",
+          "label": "sejong|m16_25",
+          "buildings": 24,
+          "txns": 3375,
+          "reportable": false,
+          "tier": "sejong",
+          "tier_label": "세종",
+          "band": "m16_25",
+          "band_label": "16–25층"
+        },
+        {
+          "key": "sejong|ge26",
+          "label": "sejong|ge26",
+          "buildings": 23,
+          "txns": 5679,
+          "reportable": false,
+          "tier": "sejong",
+          "tier_label": "세종",
+          "band": "ge26",
+          "band_label": "≥26층"
+        }
+      ],
+      "metro_legal_split": {
+        "buildings": {
+          "dong": 2669,
+          "eup_myeon_ri": 219,
+          "other": 0
+        },
+        "txns": {
+          "dong": 462858,
+          "eup_myeon_ri": 33681,
+          "other": 0
+        },
+        "note": "수도권 안의 동/읍·면 참고. 본표 계층은 시도가 먼저다."
+      },
+      "nonurban_open": true,
+      "sejong_own_row": true
+    },
+    "officetel": {
+      "funnel": {
+        "buildings": 11140,
+        "max_floor_ge2": 11054,
+        "n_ge50": 1012,
+        "n50_n1_0": 979,
+        "n50_n1_1_to_4": 22,
+        "n1_ge5": 11,
+        "eligible": 11,
+        "eligible_txns": 1554
+      },
+      "tiers": [
+        {
+          "key": "metro",
+          "label": "수도권",
+          "buildings": 9,
+          "txns": 1394,
+          "reportable": false
+        },
+        {
+          "key": "metro_city",
+          "label": "광역시",
+          "buildings": 1,
+          "txns": 73,
+          "reportable": false
+        },
+        {
+          "key": "other_urban",
+          "label": "기타 도시",
+          "buildings": 1,
+          "txns": 87,
+          "reportable": false
+        }
+      ],
+      "bands": [
+        {
+          "key": "le15",
+          "label": "≤15층",
+          "buildings": 10,
+          "txns": 1483,
+          "reportable": false
+        },
+        {
+          "key": "m16_25",
+          "label": "16–25층",
+          "buildings": 0,
+          "txns": 0,
+          "reportable": false
+        },
+        {
+          "key": "ge26",
+          "label": "≥26층",
+          "buildings": 1,
+          "txns": 71,
+          "reportable": false
+        }
+      ],
+      "alt_bands": [
+        {
+          "key": "le20",
+          "label": "≤20층",
+          "buildings": 10,
+          "txns": 1483,
+          "reportable": false
+        },
+        {
+          "key": "m21_30",
+          "label": "21–30층",
+          "buildings": 0,
+          "txns": 0,
+          "reportable": false
+        },
+        {
+          "key": "ge31",
+          "label": "≥31층",
+          "buildings": 1,
+          "txns": 71,
+          "reportable": false
+        }
+      ],
+      "cross": [
+        {
+          "key": "metro|le15",
+          "label": "metro|le15",
+          "buildings": 8,
+          "txns": 1323,
+          "reportable": false,
+          "tier": "metro",
+          "tier_label": "수도권",
+          "band": "le15",
+          "band_label": "≤15층"
+        },
+        {
+          "key": "metro|ge26",
+          "label": "metro|ge26",
+          "buildings": 1,
+          "txns": 71,
+          "reportable": false,
+          "tier": "metro",
+          "tier_label": "수도권",
+          "band": "ge26",
+          "band_label": "≥26층"
+        },
+        {
+          "key": "metro_city|le15",
+          "label": "metro_city|le15",
+          "buildings": 1,
+          "txns": 73,
+          "reportable": false,
+          "tier": "metro_city",
+          "tier_label": "광역시",
+          "band": "le15",
+          "band_label": "≤15층"
+        },
+        {
+          "key": "other_urban|le15",
+          "label": "other_urban|le15",
+          "buildings": 1,
+          "txns": 87,
+          "reportable": false,
+          "tier": "other_urban",
+          "tier_label": "기타 도시",
+          "band": "le15",
+          "band_label": "≤15층"
+        }
+      ],
+      "metro_legal_split": {
+        "buildings": {
+          "dong": 8,
+          "eup_myeon_ri": 1,
+          "other": 0
+        },
+        "txns": {
+          "dong": 1343,
+          "eup_myeon_ri": 51,
+          "other": 0
+        },
+        "note": "수도권 안의 동/읍·면 참고. 본표 계층은 시도가 먼저다."
+      },
+      "nonurban_open": false,
+      "sejong_own_row": false
+    }
+  },
+  "decisions": {
+    "nonurban_experiment1": "open",
+    "sejong": "own_row",
+    "officetel_nonurban": "closed",
+    "officetel_sejong": "excluded",
+    "note": "가격 계수 없음. 보고 최소는 적격 단지 30곳. 15/16층은 단절이 아니다."
+  }
+}

@@ -718,6 +718,37 @@ def _insight_07(context: AiContext) -> str:
     return "\n".join(lines)
 
 
+def _insight_08(context: AiContext) -> str:
+    facts = context.facts or {}
+    start = facts.get("period_start")
+    end = facts.get("period_end")
+    n = facts.get("n_eligible")
+    lines = [
+        "### 이 화면은",
+        "Macro Insight 8번입니다. 같은 아파트 단지 안에서 1층을 100으로 두고, 윗층이 지역과 건물 높이에 따라 다른지를 봅니다.",
+        "연립·다세대 승강기 글이 아니고, 층 효용지수를 어떻게 계산하는지를 설명하는 글도 아닙니다.",
+    ]
+    if start and end:
+        lines.append(f"기간은 {start}부터 {end}까지, 전국 아파트 실거래입니다.")
+    if n is not None:
+        lines.append(f"층 비교가 되는 단지는 {n}개입니다.")
+    lines.extend(
+        [
+            "",
+            "### 어떻게 읽나",
+            "- 1층=100은 시세가 아닙니다. 그 단지 안의 상대값입니다.",
+            "- 최상층 지수는 지역에 관계없이 대체로 108 안팎에 모입니다. 가운데값입니다.",
+            "- 비도시 최상 차이는 높이를 함께 보면 크게 줄어듭니다. 세 칸으로만 나누면 2.4%가 남고, 최고층을 연속으로 보면 0.8%까지 줄어 없다와 구분되지 않습니다.",
+            "- 높은 단지일수록 최상층 지수가 높은 경향은 지역을 함께 고려해도 남습니다. 광역시는 높이를 맞춰도 수도권보다 조금 큽니다.",
+            "- 글 맨 끝의 오피스텔은 저층=100입니다. 앞의 1층=100, 108과 더하지 않습니다. 고층 차이는 2포인트 안입니다. 26층 이상 최상은 23곳이라 적지 않습니다. 표에 없는 오피스텔 퍼센트를 만들지 않습니다.",
+            "",
+            "### 한계",
+            "지역이나 높이가 가격의 원인이라고 말하지 않습니다. 가운데값과 ④의 %를 한 숫자로 섞지 않습니다. ④의 %는 최상층 거래가 많은 단지가 더 실린 차이입니다. 제품 층 지수 화면은 바꾸지 않았습니다. 자세한 내용은 화면의 「이 분석의 한계」를 따릅니다.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def format_screen_guide(context: AiContext) -> str:
     """LLM 없이 기본 화면을 설명하고 다음 분석을 유도한다."""
     app = context.app
@@ -734,6 +765,8 @@ def format_screen_guide(context: AiContext) -> str:
         return _rent_list(context)
     if panel in ("RegionalProfile", "TwinRegionPanel", "ProfilePanel") or app == "profile":
         return _profile(context)
+    if panel == "Insight08":
+        return _insight_08(context)
     if panel == "Insight07":
         return _insight_07(context)
     if panel == "Insight06":
@@ -792,6 +825,14 @@ def screen_guide_followups(context: AiContext) -> list[str]:
         return [
             "Twin 유사지역은 무엇을 뜻하나요?",
             "단지 추세는 어디서 보나요?",
+        ]
+    if panel == "Insight08":
+        return [
+            "1층=100은 시세 100인가요?",
+            "비도시 최상층이 더 싼가요?",
+            "26층부터 달라지나요?",
+            "오피스텔도 같나요?",
+            "가운데값과 ④의 %는 같은 숫자인가요?",
         ]
     if panel == "Insight07":
         return [

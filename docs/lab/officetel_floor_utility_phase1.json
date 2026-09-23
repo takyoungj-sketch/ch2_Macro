@@ -1,0 +1,419 @@
+{
+  "as_of": "2026-08-01",
+  "period_start": "2021-09-01",
+  "period_end": "2026-08-31",
+  "reference": "low",
+  "interest_points": 10.0,
+  "note": "저층=100. 회귀 없음. 1층=100 아님. 가격 원자료는 저장하지 않음.",
+  "by_asset": {
+    "officetel": {
+      "buildings": 828,
+      "cells": [
+        {
+          "band": "le15",
+          "band_label": "≤15층",
+          "bin": "mid",
+          "bin_label": "중층",
+          "n": 401,
+          "equal": 102.18,
+          "weighted": 102.19
+        },
+        {
+          "band": "le15",
+          "band_label": "≤15층",
+          "bin": "high",
+          "bin_label": "고층",
+          "n": 400,
+          "equal": 103.56,
+          "weighted": 103.46
+        },
+        {
+          "band": "le15",
+          "band_label": "≤15층",
+          "bin": "top",
+          "bin_label": "최상",
+          "n": 277,
+          "equal": 104.0,
+          "weighted": 104.16
+        },
+        {
+          "band": "le15",
+          "band_label": "≤15층",
+          "bin": "top_over_high",
+          "bin_label": "최상/고층",
+          "n": 276,
+          "equal": 100.01,
+          "weighted": 100.02
+        },
+        {
+          "band": "m16_25",
+          "band_label": "16–25층",
+          "bin": "mid",
+          "bin_label": "중층",
+          "n": 292,
+          "equal": 102.62,
+          "weighted": 102.31
+        },
+        {
+          "band": "m16_25",
+          "band_label": "16–25층",
+          "bin": "high",
+          "bin_label": "고층",
+          "n": 291,
+          "equal": 104.65,
+          "weighted": 104.42
+        },
+        {
+          "band": "m16_25",
+          "band_label": "16–25층",
+          "bin": "top",
+          "bin_label": "최상",
+          "n": 140,
+          "equal": 105.24,
+          "weighted": 104.46
+        },
+        {
+          "band": "m16_25",
+          "band_label": "16–25층",
+          "bin": "top_over_high",
+          "bin_label": "최상/고층",
+          "n": 140,
+          "equal": 100.18,
+          "weighted": 100.13
+        },
+        {
+          "band": "ge26",
+          "band_label": "≥26층",
+          "bin": "mid",
+          "bin_label": "중층",
+          "n": 135,
+          "equal": 102.35,
+          "weighted": 102.33
+        },
+        {
+          "band": "ge26",
+          "band_label": "≥26층",
+          "bin": "high",
+          "bin_label": "고층",
+          "n": 135,
+          "equal": 105.0,
+          "weighted": 104.96
+        },
+        {
+          "band": "ge26",
+          "band_label": "≥26층",
+          "bin": "top",
+          "bin_label": "최상",
+          "n": 23,
+          "equal": 106.34,
+          "weighted": 106.34
+        },
+        {
+          "band": "ge26",
+          "band_label": "≥26층",
+          "bin": "top_over_high",
+          "bin_label": "최상/고층",
+          "n": 23,
+          "equal": 101.78,
+          "weighted": 101.78
+        }
+      ]
+    },
+    "apartment": {
+      "buildings": 11674,
+      "cells": [
+        {
+          "band": "le15",
+          "band_label": "≤15층",
+          "bin": "mid",
+          "bin_label": "중층",
+          "n": 4068,
+          "equal": 103.45,
+          "weighted": 103.43
+        },
+        {
+          "band": "le15",
+          "band_label": "≤15층",
+          "bin": "high",
+          "bin_label": "고층",
+          "n": 4054,
+          "equal": 104.4,
+          "weighted": 104.29
+        },
+        {
+          "band": "le15",
+          "band_label": "≤15층",
+          "bin": "top",
+          "bin_label": "최상",
+          "n": 2449,
+          "equal": 102.97,
+          "weighted": 102.44
+        },
+        {
+          "band": "le15",
+          "band_label": "≤15층",
+          "bin": "top_over_high",
+          "bin_label": "최상/고층",
+          "n": 2447,
+          "equal": 98.57,
+          "weighted": 98.24
+        },
+        {
+          "band": "m16_25",
+          "band_label": "16–25층",
+          "bin": "mid",
+          "bin_label": "중층",
+          "n": 5651,
+          "equal": 103.22,
+          "weighted": 103.27
+        },
+        {
+          "band": "m16_25",
+          "band_label": "16–25층",
+          "bin": "high",
+          "bin_label": "고층",
+          "n": 5614,
+          "equal": 103.97,
+          "weighted": 104.0
+        },
+        {
+          "band": "m16_25",
+          "band_label": "16–25층",
+          "bin": "top",
+          "bin_label": "최상",
+          "n": 1450,
+          "equal": 103.28,
+          "weighted": 103.31
+        },
+        {
+          "band": "m16_25",
+          "band_label": "16–25층",
+          "bin": "top_over_high",
+          "bin_label": "최상/고층",
+          "n": 1449,
+          "equal": 99.36,
+          "weighted": 99.32
+        },
+        {
+          "band": "ge26",
+          "band_label": "≥26층",
+          "bin": "mid",
+          "bin_label": "중층",
+          "n": 1955,
+          "equal": 103.05,
+          "weighted": 102.9
+        },
+        {
+          "band": "ge26",
+          "band_label": "≥26층",
+          "bin": "high",
+          "bin_label": "고층",
+          "n": 1947,
+          "equal": 104.22,
+          "weighted": 103.9
+        },
+        {
+          "band": "ge26",
+          "band_label": "≥26층",
+          "bin": "top",
+          "bin_label": "최상",
+          "n": 281,
+          "equal": 104.39,
+          "weighted": 103.8
+        },
+        {
+          "band": "ge26",
+          "band_label": "≥26층",
+          "bin": "top_over_high",
+          "bin_label": "최상/고층",
+          "n": 281,
+          "equal": 100.4,
+          "weighted": 100.39
+        }
+      ]
+    }
+  },
+  "compare": [
+    {
+      "band": "le15",
+      "band_label": "≤15층",
+      "bin": "mid",
+      "bin_label": "중층",
+      "off_n": 401,
+      "apt_n": 4068,
+      "off_equal": 102.18,
+      "apt_equal": 103.45,
+      "diff_equal": -1.27,
+      "off_weighted": 102.19,
+      "apt_weighted": 103.43,
+      "diff_weighted": -1.24,
+      "flag": "record"
+    },
+    {
+      "band": "le15",
+      "band_label": "≤15층",
+      "bin": "high",
+      "bin_label": "고층",
+      "off_n": 400,
+      "apt_n": 4054,
+      "off_equal": 103.56,
+      "apt_equal": 104.4,
+      "diff_equal": -0.84,
+      "off_weighted": 103.46,
+      "apt_weighted": 104.29,
+      "diff_weighted": -0.83,
+      "flag": "record"
+    },
+    {
+      "band": "le15",
+      "band_label": "≤15층",
+      "bin": "top",
+      "bin_label": "최상",
+      "off_n": 277,
+      "apt_n": 2449,
+      "off_equal": 104.0,
+      "apt_equal": 102.97,
+      "diff_equal": 1.03,
+      "off_weighted": 104.16,
+      "apt_weighted": 102.44,
+      "diff_weighted": 1.72,
+      "flag": "record"
+    },
+    {
+      "band": "le15",
+      "band_label": "≤15층",
+      "bin": "top_over_high",
+      "bin_label": "최상/고층",
+      "off_n": 276,
+      "apt_n": 2447,
+      "off_equal": 100.01,
+      "apt_equal": 98.57,
+      "diff_equal": 1.44,
+      "off_weighted": 100.02,
+      "apt_weighted": 98.24,
+      "diff_weighted": 1.78,
+      "flag": "record"
+    },
+    {
+      "band": "m16_25",
+      "band_label": "16–25층",
+      "bin": "mid",
+      "bin_label": "중층",
+      "off_n": 292,
+      "apt_n": 5651,
+      "off_equal": 102.62,
+      "apt_equal": 103.22,
+      "diff_equal": -0.6,
+      "off_weighted": 102.31,
+      "apt_weighted": 103.27,
+      "diff_weighted": -0.96,
+      "flag": "record"
+    },
+    {
+      "band": "m16_25",
+      "band_label": "16–25층",
+      "bin": "high",
+      "bin_label": "고층",
+      "off_n": 291,
+      "apt_n": 5614,
+      "off_equal": 104.65,
+      "apt_equal": 103.97,
+      "diff_equal": 0.68,
+      "off_weighted": 104.42,
+      "apt_weighted": 104.0,
+      "diff_weighted": 0.42,
+      "flag": "record"
+    },
+    {
+      "band": "m16_25",
+      "band_label": "16–25층",
+      "bin": "top",
+      "bin_label": "최상",
+      "off_n": 140,
+      "apt_n": 1450,
+      "off_equal": 105.24,
+      "apt_equal": 103.28,
+      "diff_equal": 1.96,
+      "off_weighted": 104.46,
+      "apt_weighted": 103.31,
+      "diff_weighted": 1.15,
+      "flag": "record"
+    },
+    {
+      "band": "m16_25",
+      "band_label": "16–25층",
+      "bin": "top_over_high",
+      "bin_label": "최상/고층",
+      "off_n": 140,
+      "apt_n": 1449,
+      "off_equal": 100.18,
+      "apt_equal": 99.36,
+      "diff_equal": 0.82,
+      "off_weighted": 100.13,
+      "apt_weighted": 99.32,
+      "diff_weighted": 0.81,
+      "flag": "record"
+    },
+    {
+      "band": "ge26",
+      "band_label": "≥26층",
+      "bin": "mid",
+      "bin_label": "중층",
+      "off_n": 135,
+      "apt_n": 1955,
+      "off_equal": 102.35,
+      "apt_equal": 103.05,
+      "diff_equal": -0.7,
+      "off_weighted": 102.33,
+      "apt_weighted": 102.9,
+      "diff_weighted": -0.57,
+      "flag": "record"
+    },
+    {
+      "band": "ge26",
+      "band_label": "≥26층",
+      "bin": "high",
+      "bin_label": "고층",
+      "off_n": 135,
+      "apt_n": 1947,
+      "off_equal": 105.0,
+      "apt_equal": 104.22,
+      "diff_equal": 0.78,
+      "off_weighted": 104.96,
+      "apt_weighted": 103.9,
+      "diff_weighted": 1.06,
+      "flag": "record"
+    },
+    {
+      "band": "ge26",
+      "band_label": "≥26층",
+      "bin": "top",
+      "bin_label": "최상",
+      "off_n": 23,
+      "apt_n": 281,
+      "off_equal": 106.34,
+      "apt_equal": 104.39,
+      "diff_equal": null,
+      "off_weighted": 106.34,
+      "apt_weighted": 103.8,
+      "diff_weighted": null,
+      "flag": "closed"
+    },
+    {
+      "band": "ge26",
+      "band_label": "≥26층",
+      "bin": "top_over_high",
+      "bin_label": "최상/고층",
+      "off_n": 23,
+      "apt_n": 281,
+      "off_equal": 101.78,
+      "apt_equal": 100.4,
+      "diff_equal": null,
+      "off_weighted": 101.78,
+      "apt_weighted": 100.39,
+      "diff_weighted": null,
+      "flag": "closed"
+    }
+  ],
+  "phase2_bins": []
+}

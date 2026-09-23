@@ -26,7 +26,7 @@
 | 연 거래액 규모·구성 | `macro-scale` | GDP·M2·주식 대비 연 거래액 비율 + 8유형 구성. G3와 별문. Insight 5번 본문 |
 | 도로 지목 상대가격 | `road-jimok` | 읍면동×용도에서 도로/대·전·답 중앙단가 비. 공개는 Insight 6번. 도시 전체 %는 본문에 없음 |
 
-공개 게이트웨이 **Macro Insight**(6번째 문)는 `/insight/`. 1번(금리·시중 돈과 거래) [`MACRO_INSIGHT_01.md`](./MACRO_INSIGHT_01.md) · 2번(유형 규모·단가 상관) [`MACRO_INSIGHT_02.md`](./MACRO_INSIGHT_02.md) · 3번(연립·다세대 층×승강기) [`MACRO_INSIGHT_03.md`](./MACRO_INSIGHT_03.md) · 4번(토지 면적×㎡당 가격) [`MACRO_INSIGHT_04.md`](./MACRO_INSIGHT_04.md) · 5번(연 거래액/GDP·M2·주식·유형 구성) [`MACRO_INSIGHT_05.md`](./MACRO_INSIGHT_05.md) · 6번(도로 지목 상대가격) [`MACRO_INSIGHT_06.md`](./MACRO_INSIGHT_06.md) · 7번(쌍둥이 지역을 고르는 방법) [`MACRO_INSIGHT_07.md`](./MACRO_INSIGHT_07.md). 결정 카드 없음. 랩 `?tool=size`는 실험실로 남긴다.
+공개 게이트웨이 **Macro Insight**(6번째 문)는 `/insight/`. 1번(금리·시중 돈과 거래) [`MACRO_INSIGHT_01.md`](./MACRO_INSIGHT_01.md) · 2번(유형 규모·단가 상관) [`MACRO_INSIGHT_02.md`](./MACRO_INSIGHT_02.md) · 3번(연립·다세대 층×승강기) [`MACRO_INSIGHT_03.md`](./MACRO_INSIGHT_03.md) · 4번(토지 면적×㎡당 가격) [`MACRO_INSIGHT_04.md`](./MACRO_INSIGHT_04.md) · 5번(연 거래액/GDP·M2·주식·유형 구성) [`MACRO_INSIGHT_05.md`](./MACRO_INSIGHT_05.md) · 6번(도로 지목 상대가격) [`MACRO_INSIGHT_06.md`](./MACRO_INSIGHT_06.md) · 7번(쌍둥이 지역을 고르는 방법) [`MACRO_INSIGHT_07.md`](./MACRO_INSIGHT_07.md) · 8번(아파트 윗층과 지역·높이) [`MACRO_INSIGHT_08.md`](./MACRO_INSIGHT_08.md). 결정 카드 없음. 랩 `?tool=size`는 실험실로 남긴다.
 
 G3 시계열 랩: [`lab/G3_TIMESERIES_LAB.md`](./lab/G3_TIMESERIES_LAB.md) · `?tool=g3`.  
 G3·Insight 월 합 출처 수정: [`lab/MACRO_TS_RAW_MONTH_MART.md`](./lab/MACRO_TS_RAW_MONTH_MART.md) (원장 대신 raw CSV 전국 월 마트).
@@ -38,6 +38,7 @@ G3·Insight 월 합 출처 수정: [`lab/MACRO_TS_RAW_MONTH_MART.md`](./lab/MACR
 연립·다세대 층·승강기: [`lab/ROWHOUSE_FLOOR_ELEVATOR_LAB.md`](./lab/ROWHOUSE_FLOOR_ELEVATOR_LAB.md) · `?tool=rowhouse-floor` — 3차 최상×승강기 가산 합의. 공개 기록은 Insight #3. 제품 층 식 미변경.
 연 거래액 규모(GDP·M2·주식·유형 구성): [`lab/MACRO_ANNUAL_SCALE_LAB.md`](./lab/MACRO_ANNUAL_SCALE_LAB.md) · `?tool=macro-scale`. 공개 기록은 Insight #5. G3와 문을 섞지 않음.
 도로 지목 상대가격: [`lab/LAND_ROAD_JIMOK_RATIO_LAB.md`](./lab/LAND_ROAD_JIMOK_RATIO_LAB.md). 랩 `?tool=road-jimok`. 공개는 [`MACRO_INSIGHT_06.md`](./MACRO_INSIGHT_06.md) `/insight/?q=6`. 제품 토지 식 미변경.
+아파트 층 효용(지역·높이): [`lab/APT_FLOOR_UTILITY_LAB.md`](./lab/APT_FLOOR_UTILITY_LAB.md). 공개는 [`MACRO_INSIGHT_08.md`](./MACRO_INSIGHT_08.md) `/insight/?q=8`. 오피스텔 층 효용은 [`lab/OFFICETEL_FLOOR_UTILITY_LAB.md`](./lab/OFFICETEL_FLOOR_UTILITY_LAB.md). 1차 기록. 저층=100 차이는 2포인트 안. 공개는 #8 맨 끝. 1층=100과 섞지 않음. #9 산출 설명과 다른 문. 제품 층 식 미변경.
 
 계획일지 표 규칙:
 
