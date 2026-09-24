@@ -535,6 +535,32 @@ def build_insight_macro_03(context: AiContext) -> AiDiagnosticPack:
     )
 
 
+def build_insight_macro_11(context: AiContext) -> AiDiagnosticPack:
+    facts = context.facts or {}
+    summary = [
+        "Macro Insight 11 — 2021–2025 소득·자본과 이름이 다른 세 번째 줄",
+        "상업 세 번째 줄은 투자수익률, 주거는 소득+자본, 코스피는 KODEX KOSPI TR",
+    ]
+    if facts.get("as_of"):
+        summary.append(f"as_of={facts.get('as_of')}")
+    limitations = list(
+        (context.explain.limitations if context.explain and context.explain.limitations else None)
+        or [
+            "오피스 소득과 아파트 월세환산은 같은 순영업소득이 아닙니다.",
+            "투자수익률, 소득+자본, KODEX KOSPI TR을 한 총수익으로 부르지 않습니다.",
+            "KODEX는 KRX 총수익 원지수가 아닙니다. 표에 없는 퍼센트를 만들지 않습니다.",
+        ]
+    )
+    return AiDiagnosticPack(
+        bundle_id="insight_macro_11",
+        panel=context.panel,
+        app=context.app,
+        summary_lines=summary,
+        diagnostics={**facts, "scope_label": context.scope.region_label or "전국"},
+        limitations=limitations,
+    )
+
+
 def build_insight_macro_10(context: AiContext) -> AiDiagnosticPack:
     facts = context.facts or {}
     summary = [
@@ -719,6 +745,8 @@ def build_bundle(context: AiContext) -> AiDiagnosticPack:
     panel = context.panel
     bid = resolve_bundle_id(panel)
 
+    if panel == "Insight11" or bid == "insight_macro_11":
+        return build_insight_macro_11(context)
     if panel == "Insight10" or bid == "insight_macro_10":
         return build_insight_macro_10(context)
     if panel == "Insight08" or bid == "insight_macro_08":

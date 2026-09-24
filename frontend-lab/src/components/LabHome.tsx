@@ -86,6 +86,11 @@ const DOORS: { id: LabTool; title: string; desc: string }[] = [
     title: "층 효용 기록",
     desc: "아파트·오피스텔·집합상가. 질문은 나누고 숫자는 더하지 않음. 아파트·상가는 종료. 오피스텔은 차이 찾기 중지.",
   },
+  {
+    id: "yield-compare",
+    title: "수익률 비교",
+    desc: "전국 2021–2025. 상업 공표 오피스·상가, 주거 임대료/매매가, 국고채, 코스피 종가. 오피스텔은 오피스가 아님. 공개 글은 다음.",
+  },
 ];
 
 export default function LabHome({ onOpenTool }: { onOpenTool: (id: LabTool) => void }) {

@@ -718,6 +718,32 @@ def _insight_07(context: AiContext) -> str:
     return "\n".join(lines)
 
 
+def _insight_11(context: AiContext) -> str:
+    facts = context.facts or {}
+    lines = [
+        "### 이 화면은",
+        "Macro Insight 11번입니다. 2021년부터 2025년까지 전국의 소득과 자본을 연간으로 비교합니다.",
+        "금리 변화와 거래 변화를 보는 1번이 아니고, 거래대금과 GDP를 보는 5번도 아닙니다.",
+    ]
+    if facts.get("as_of"):
+        lines.append(f"표의 마지막 해는 {facts.get('as_of')}입니다.")
+    lines.extend(
+        [
+            "",
+            "### 어떻게 읽나",
+            "- 오피스는 상업용 오피스입니다. 오피스텔이 아닙니다. 상가 세 유형은 평균하지 않습니다.",
+            "- 주거 소득의 대표값은 월세환산입니다. 현금 월세와 경비 10%는 대표 줄이 아닙니다.",
+            "- 상업 세 번째 줄은 투자수익률(네 분기 복리)입니다. 주거는 소득+자본입니다. 코스피는 KODEX KOSPI TR입니다. 셋을 한 총수익으로 부르지 않습니다.",
+            "- 코스피 가격수익률은 자본입니다. 배당수익률은 그해 수준입니다. KODEX는 KRX 총수익 원지수가 아닙니다.",
+            "- 어느 자산이 더 나은 투자였는지는 말하지 않습니다. 표에 없는 퍼센트를 만들지 않습니다.",
+            "",
+            "### 한계",
+            "오피스 소득과 아파트 월세환산은 정의가 다릅니다. 단독다가구는 이 표에 없습니다. 자세한 내용은 화면의 「이 분석의 한계」를 따릅니다.",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def _insight_10(context: AiContext) -> str:
     facts = context.facts or {}
     start = facts.get("period_start")
@@ -795,6 +821,8 @@ def format_screen_guide(context: AiContext) -> str:
         return _rent_list(context)
     if panel in ("RegionalProfile", "TwinRegionPanel", "ProfilePanel") or app == "profile":
         return _profile(context)
+    if panel == "Insight11":
+        return _insight_11(context)
     if panel == "Insight10":
         return _insight_10(context)
     if panel == "Insight08":
@@ -857,6 +885,14 @@ def screen_guide_followups(context: AiContext) -> list[str]:
         return [
             "Twin 유사지역은 무엇을 뜻하나요?",
             "단지 추세는 어디서 보나요?",
+        ]
+    if panel == "Insight11":
+        return [
+            "투자수익률과 소득+자본은 같은 숫자인가요?",
+            "아파트 현금 월세가 국고채보다 낮은가요?",
+            "KODEX는 KRX 총수익 지수인가요?",
+            "오피스는 오피스텔인가요?",
+            "어느 쪽이 더 나은 투자인가요?",
         ]
     if panel == "Insight10":
         return [

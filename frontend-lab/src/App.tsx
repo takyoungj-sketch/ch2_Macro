@@ -19,6 +19,7 @@ import RowhouseFloorElevatorLab from "./components/RowhouseFloorElevatorLab";
 import MacroAnnualScaleLab from "./components/MacroAnnualScaleLab";
 import LandRoadJimokRatioLab from "./components/LandRoadJimokRatioLab";
 import FloorUtilityLab from "./components/FloorUtilityLab";
+import YieldCompareLab from "./components/YieldCompareLab";
 import WhyDecision, { WhyLinks } from "./components/WhyDecision";
 import { TOOL_WHY } from "./labContent";
 
@@ -39,7 +40,8 @@ export type LabTool =
   | "rowhouse-floor"
   | "macro-scale"
   | "road-jimok"
-  | "floor-utility";
+  | "floor-utility"
+  | "yield-compare";
 export type TwinPane = "v2" | "mape" | "scope";
 
 type LabParams = {
@@ -68,7 +70,8 @@ function readParams(): LabParams {
     t === "rowhouse-floor" ||
     t === "macro-scale" ||
     t === "road-jimok" ||
-    t === "floor-utility"
+    t === "floor-utility" ||
+    t === "yield-compare"
       ? t
       : null;
   const pane = q.get("pane");
@@ -301,6 +304,14 @@ export default function App() {
     return (
       <LabChrome title="층 효용 기록" whyIds={TOOL_WHY["floor-utility"] ?? []} onWhy={setWhy} onBack={back}>
         <FloorUtilityLab />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "yield-compare") {
+    return (
+      <LabChrome title="수익률 비교" whyIds={TOOL_WHY["yield-compare"] ?? []} onWhy={setWhy} onBack={back}>
+        <YieldCompareLab />
         {whyModal}
       </LabChrome>
     );
