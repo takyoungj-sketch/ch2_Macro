@@ -535,6 +535,32 @@ def build_insight_macro_03(context: AiContext) -> AiDiagnosticPack:
     )
 
 
+def build_insight_macro_12(context: AiContext) -> AiDiagnosticPack:
+    facts = context.facts or {}
+    summary = [
+        "Macro Insight 12 — 상권과 읍면동 경계가 겹치는 아파트",
+        "임대료는 나란하고, 투자수익률 상관은 0.20–0.35입니다.",
+    ]
+    if facts.get("as_of"):
+        summary.append(f"as_of={facts.get('as_of')}")
+    limitations = list(
+        (context.explain.limitations if context.explain and context.explain.limitations else None)
+        or [
+            "겹치는 읍면동 전체의 실거래입니다. 상권 안 아파트만이 아닙니다.",
+            "가까운 단지의 읍면동 상관과 경계 겹침 상관을 한 숫자로 부르지 않습니다.",
+            "어느 상권이 더 나은 투자인지는 말하지 않습니다. 표에 없는 상관계수를 만들지 않습니다.",
+        ]
+    )
+    return AiDiagnosticPack(
+        bundle_id="insight_macro_12",
+        panel=context.panel,
+        app=context.app,
+        summary_lines=summary,
+        diagnostics={**facts, "scope_label": context.scope.region_label or "전국"},
+        limitations=limitations,
+    )
+
+
 def build_insight_macro_11(context: AiContext) -> AiDiagnosticPack:
     facts = context.facts or {}
     summary = [
@@ -745,6 +771,8 @@ def build_bundle(context: AiContext) -> AiDiagnosticPack:
     panel = context.panel
     bid = resolve_bundle_id(panel)
 
+    if panel == "Insight12" or bid == "insight_macro_12":
+        return build_insight_macro_12(context)
     if panel == "Insight11" or bid == "insight_macro_11":
         return build_insight_macro_11(context)
     if panel == "Insight10" or bid == "insight_macro_10":

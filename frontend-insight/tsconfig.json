@@ -23,5 +23,5 @@
       "@ch2/stats-glossary/*": ["../shared/stats-glossary/*"]
     }
   },
-  "include": ["src", "../shared/macro-shell/displayUi.ts", "../docs/lab/macro_annual_scale_screen.json", "../docs/lab/land_road_jimok_ratio_public.json"]
+  "include": ["src", "../shared/macro-shell/displayUi.ts", "../docs/lab/macro_annual_scale_screen.json", "../docs/lab/land_road_jimok_ratio_public.json", "../docs/lab/sangkwon_apt_yield.json"]
 }

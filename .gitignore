@@ -65,3 +65,4 @@ pipeline/.env.rebuild
 pipeline/built/_cache/
 pipeline/parcel_master/_cache/
 data/*.db
+data/cache/

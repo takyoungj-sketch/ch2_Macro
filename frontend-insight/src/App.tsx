@@ -12,6 +12,7 @@ import Insight07 from "./pages/Insight07";
 import Insight08 from "./pages/Insight08";
 import Insight10 from "./pages/Insight10";
 import Insight11 from "./pages/Insight11";
+import Insight12 from "./pages/Insight12";
 
 function readQ(): string | null {
   return new URLSearchParams(window.location.search).get("q");
@@ -47,7 +48,9 @@ export default function App() {
                       ? "Insight10"
                       : q === "11"
                         ? "Insight11"
-                        : "InsightHome";
+                        : q === "12"
+                          ? "Insight12"
+                          : "InsightHome";
 
   return (
     <ActiveAiViewProvider fallback={emptyAiContext("insight", panel, { regionLabel: "전국" })}>
@@ -91,6 +94,8 @@ export default function App() {
           <Insight10 />
         ) : q === "11" ? (
           <Insight11 />
+        ) : q === "12" ? (
+          <Insight12 />
         ) : (
           <InsightHome />
         )}

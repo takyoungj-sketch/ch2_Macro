@@ -109,7 +109,7 @@ try {
       Invoke-Scp @("backend/app/insight", "backend/app/macro_ts", "backend/app/regional_profile", "backend/app/ai", "backend/app/config.py", "backend/app/main.py") "backend/app/"
       Invoke-Scp @("shared") "."
       Invoke-Scp @("frontend-insight/package.json", "frontend-insight/package-lock.json", "frontend-insight/tsconfig.json", "frontend-insight/vite.config.ts", "frontend-insight/tailwind.config.js", "frontend-insight/postcss.config.js", "frontend-insight/index.html", "frontend-insight/src") "frontend-insight/"
-      Invoke-Scp @("docs/lab/land_road_jimok_ratio_public.json", "docs/lab/macro_annual_scale_screen.json") "docs/lab/"
+      Invoke-Scp @("docs/lab/land_road_jimok_ratio_public.json", "docs/lab/macro_annual_scale_screen.json", "docs/lab/sangkwon_apt_yield.json") "docs/lab/"
       Invoke-Scp @("deploy/templates", "deploy/macro-gateway") "deploy/"
       Invoke-Scp @("deploy/scripts") "deploy/"
       & ssh -i $Key $VpsHost "mkdir -p /opt/ch2_Macro/data"

@@ -20,6 +20,7 @@ import MacroAnnualScaleLab from "./components/MacroAnnualScaleLab";
 import LandRoadJimokRatioLab from "./components/LandRoadJimokRatioLab";
 import FloorUtilityLab from "./components/FloorUtilityLab";
 import YieldCompareLab from "./components/YieldCompareLab";
+import SangkwonAptYieldLab from "./components/SangkwonAptYieldLab";
 import WhyDecision, { WhyLinks } from "./components/WhyDecision";
 import { TOOL_WHY } from "./labContent";
 
@@ -41,7 +42,8 @@ export type LabTool =
   | "macro-scale"
   | "road-jimok"
   | "floor-utility"
-  | "yield-compare";
+  | "yield-compare"
+  | "sangkwon-apt";
 export type TwinPane = "v2" | "mape" | "scope";
 
 type LabParams = {
@@ -71,7 +73,8 @@ function readParams(): LabParams {
     t === "macro-scale" ||
     t === "road-jimok" ||
     t === "floor-utility" ||
-    t === "yield-compare"
+    t === "yield-compare" ||
+    t === "sangkwon-apt"
       ? t
       : null;
   const pane = q.get("pane");
@@ -304,6 +307,14 @@ export default function App() {
     return (
       <LabChrome title="층 효용 기록" whyIds={TOOL_WHY["floor-utility"] ?? []} onWhy={setWhy} onBack={back}>
         <FloorUtilityLab />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "sangkwon-apt") {
+    return (
+      <LabChrome title="상권과 아파트" whyIds={TOOL_WHY["sangkwon-apt"] ?? []} onWhy={setWhy} onBack={back}>
+        <SangkwonAptYieldLab />
         {whyModal}
       </LabChrome>
     );

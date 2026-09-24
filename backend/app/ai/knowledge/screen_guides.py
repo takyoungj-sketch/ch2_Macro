@@ -718,6 +718,25 @@ def _insight_07(context: AiContext) -> str:
     return "\n".join(lines)
 
 
+def _insight_12(context: AiContext) -> str:
+    lines = [
+        "### 이 화면은",
+        "Macro Insight 12번입니다. 2021년부터 2025년까지 상권 수익률과, 상권 도형이 겹치는 읍면동의 아파트 수익률·임대료를 비교합니다.",
+        "전국 수익률을 금리·주식과 보는 11번이 아닙니다.",
+        "",
+        "### 어떻게 읽나",
+        "- 오피스·중대형·소규모·집합을 평균하지 않습니다.",
+        "- 아파트 자본은 ㎡당 매매가 평균의 전년 대비입니다. 매매가격지수가 아닙니다.",
+        "- 임대료는 임대료끼리, 투자수익률은 상권 투자수익률과 아파트 소득+자본끼리 봅니다.",
+        "- 가까운 단지의 읍면동 상관은 경계 겹침 전의 대리 값입니다. 두 값을 한 상관으로 부르지 않습니다.",
+        "- 어느 상권이 더 나은 투자인지는 말하지 않습니다. 표에 없는 상관계수를 만들지 않습니다.",
+        "",
+        "### 한계",
+        "아파트 칸은 겹치는 읍면동 전체입니다. 2024년 3분기 상권 구획 변경이 있습니다. 화면의 「4. 한계」를 따릅니다.",
+    ]
+    return "\n".join(lines)
+
+
 def _insight_11(context: AiContext) -> str:
     facts = context.facts or {}
     lines = [
@@ -821,6 +840,8 @@ def format_screen_guide(context: AiContext) -> str:
         return _rent_list(context)
     if panel in ("RegionalProfile", "TwinRegionPanel", "ProfilePanel") or app == "profile":
         return _profile(context)
+    if panel == "Insight12":
+        return _insight_12(context)
     if panel == "Insight11":
         return _insight_11(context)
     if panel == "Insight10":
@@ -885,6 +906,13 @@ def screen_guide_followups(context: AiContext) -> list[str]:
         return [
             "Twin 유사지역은 무엇을 뜻하나요?",
             "단지 추세는 어디서 보나요?",
+        ]
+    if panel == "Insight12":
+        return [
+            "임대료 상관과 투자수익률 상관은 같은 비교인가요?",
+            "1km 상관은 왜 본 분석이 아닌가요?",
+            "상권 안 아파트만으로 보면 어떤가요?",
+            "어느 상권이 더 나은 투자인가요?",
         ]
     if panel == "Insight11":
         return [

@@ -27,6 +27,7 @@
 | 도로 지목 상대가격 | `road-jimok` | 읍면동×용도에서 도로/대·전·답 중앙단가 비. 공개는 Insight 6번. 도시 전체 %는 본문에 없음 |
 | 층 효용 기록 | `floor-utility` | 아파트(종료, Insight 8)·오피스텔(저층=100, 차이 2포인트 안, 8번 맨 끝)·집합상가(종료, Insight 10). 숫자는 서로 더하지 않음. 제품 층 식 미변경 |
 | 수익률 비교 | `yield-compare` | 전국 2021–2025 표. 상업 오피스·상가 공표, 주거 월세환산, 국고 3년, KODEX KOSPI TR. 공개는 #11 |
+| 상권과 아파트 | `sangkwon-apt` | 2021–2025 상권 수익률과 경계가 겹치는 읍면동 아파트. 공개 `/insight/?q=12` |
 
 공개 게이트웨이 **Macro Insight**(6번째 문)는 `/insight/`. 1번(금리·시중 돈과 거래) [`MACRO_INSIGHT_01.md`](./MACRO_INSIGHT_01.md) · 2번(유형 규모·단가 상관) [`MACRO_INSIGHT_02.md`](./MACRO_INSIGHT_02.md) · 3번(연립·다세대 층×승강기) [`MACRO_INSIGHT_03.md`](./MACRO_INSIGHT_03.md) · 4번(토지 면적×㎡당 가격) [`MACRO_INSIGHT_04.md`](./MACRO_INSIGHT_04.md) · 5번(연 거래액/GDP·M2·주식·유형 구성) [`MACRO_INSIGHT_05.md`](./MACRO_INSIGHT_05.md) · 6번(도로 지목 상대가격) [`MACRO_INSIGHT_06.md`](./MACRO_INSIGHT_06.md) · 7번(쌍둥이 지역을 고르는 방법) [`MACRO_INSIGHT_07.md`](./MACRO_INSIGHT_07.md) · 8번(아파트 윗층과 지역·높이) [`MACRO_INSIGHT_08.md`](./MACRO_INSIGHT_08.md) · 10번(집합상가 도로의 1층과 2층) [`MACRO_INSIGHT_10.md`](./MACRO_INSIGHT_10.md). 결정 카드 없음. 랩 `?tool=size`는 실험실로 남긴다.
 
