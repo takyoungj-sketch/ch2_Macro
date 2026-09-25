@@ -21,11 +21,13 @@ function YearTable({
   rows,
   totalHeader,
   annualHeader,
+  unit = "%",
 }: {
   caption: string;
   rows: { label: string; values: readonly number[]; total?: number; annual?: number }[];
   totalHeader?: string;
   annualHeader?: string;
+  unit?: string;
 }) {
   const years = INSIGHT_11_SNAP.years;
   return (
@@ -36,10 +38,10 @@ function YearTable({
           <tr>
             <th className="text-left">항목</th>
             {years.map((year) => (
-              <th key={year}>{year}</th>
+              <th key={year}>{year} ({unit})</th>
             ))}
-            {totalHeader ? <th>{totalHeader}</th> : null}
-            {annualHeader ? <th>{annualHeader}</th> : null}
+            {totalHeader ? <th>{totalHeader} ({unit})</th> : null}
+            {annualHeader ? <th>{annualHeader} ({unit})</th> : null}
           </tr>
         </thead>
         <tbody>
@@ -244,26 +246,27 @@ export default function Insight11() {
             <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-50">{copy.s1Title}</h4>
             <Prose lines={copy.s1} />
             <YearTable
-              caption="소득(%). 국고채 3년과 코스피 배당수익률은 그해 수준입니다."
+              caption="소득수익률과 금리 수준(%). 국고채 3년과 코스피 배당수익률은 그해 수준을 보여주는 참고값입니다."
               rows={[
-                { label: "오피스", values: snap.officeIncome },
-                { label: "중대형 상가", values: snap.midIncome },
-                { label: "소규모 상가", values: snap.smallIncome },
-                { label: "집합 상가", values: snap.strataIncome },
-                { label: "아파트 월세환산", values: snap.aptConverted },
-                { label: "연립다세대 월세환산", values: snap.rowConverted },
-                { label: "오피스텔 월세환산", values: snap.offiConverted },
-                { label: "국고채 3년", values: snap.ktb },
-                { label: "코스피 배당수익률", values: snap.dividend },
+                { label: "오피스 소득수익률", values: snap.officeIncome },
+                { label: "중대형 상가 소득수익률", values: snap.midIncome },
+                { label: "소규모 상가 소득수익률", values: snap.smallIncome },
+                { label: "집합 상가 소득수익률", values: snap.strataIncome },
+                { label: "아파트 월세환산 소득수익률", values: snap.aptConverted },
+                { label: "연립다세대 월세환산 소득수익률", values: snap.rowConverted },
+                { label: "오피스텔 월세환산 소득수익률", values: snap.offiConverted },
+                { label: "국고채 3년 금리", values: snap.ktb },
+                { label: "코스피 배당수익률(배당 수준)", values: snap.dividend },
               ]}
             />
             <YearTable
-              caption="소득에서 국고채 3년을 뺀 차이(%포인트)."
+              caption="소득수익률에서 국고채 3년 금리를 뺀 차이(%포인트). 양수이면 소득수익률이 국고채보다 높다는 뜻입니다."
+              unit="%포인트"
               rows={[
-                { label: "오피스", values: snap.spreadOffice },
-                { label: "집합 상가", values: snap.spreadStrata },
-                { label: "아파트 현금 월세", values: snap.spreadAptCash },
-                { label: "아파트 월세환산", values: snap.spreadAptConv },
+                { label: "오피스 소득수익률 − 국고채 3년", values: snap.spreadOffice },
+                { label: "집합 상가 소득수익률 − 국고채 3년", values: snap.spreadStrata },
+                { label: "아파트 현금 월세 소득수익률 − 국고채 3년", values: snap.spreadAptCash },
+                { label: "아파트 월세환산 소득수익률 − 국고채 3년", values: snap.spreadAptConv },
               ]}
             />
           </section>
@@ -271,15 +274,15 @@ export default function Insight11() {
             <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-50">{copy.s2Title}</h4>
             <Prose lines={copy.s2} />
             <YearTable
-              caption="자본(%). 코스피는 가격수익률입니다."
+              caption="자본수익률(%). 주거는 매매가격지수 변동률이고, 코스피는 배당을 포함하지 않은 가격수익률입니다."
               rows={[
-                { label: "오피스", values: snap.officeCap },
-                { label: "중대형 상가", values: snap.midCap },
-                { label: "소규모 상가", values: snap.smallCap },
-                { label: "집합 상가", values: snap.strataCap },
-                { label: "아파트 매매가격지수", values: snap.aptCap },
-                { label: "연립다세대 매매가격지수", values: snap.rowCap },
-                { label: "오피스텔 매매가격지수", values: snap.offiCap },
+                { label: "오피스 자본수익률", values: snap.officeCap },
+                { label: "중대형 상가 자본수익률", values: snap.midCap },
+                { label: "소규모 상가 자본수익률", values: snap.smallCap },
+                { label: "집합 상가 자본수익률", values: snap.strataCap },
+                { label: "아파트 매매가격지수 변동률", values: snap.aptCap },
+                { label: "연립다세대 매매가격지수 변동률", values: snap.rowCap },
+                { label: "오피스텔 매매가격지수 변동률", values: snap.offiCap },
                 { label: "코스피 가격수익률", values: snap.kospiPrice },
               ]}
             />
@@ -288,7 +291,7 @@ export default function Insight11() {
             <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-50">{copy.s3Title}</h4>
             <Prose lines={copy.s3} />
             <YearTable
-              caption="연간 투자성과(%). 5년 누적은 그 줄의 연간 값을 복리로 이은 값이고, 연평균은 그 누적을 한 해로 나눈 값입니다. 상업은 공표 투자수익률, 주거는 소득+자본, 코스피는 KODEX KOSPI TR입니다."
+              caption="연간 투자성과(%). 상업용은 공표 투자수익률, 주거용은 소득+자본, 코스피는 KODEX KOSPI TR입니다. 5년 누적과 연평균도 각 줄의 정의를 그대로 따릅니다."
               totalHeader="5년 누적"
               annualHeader="연평균"
               rows={[
@@ -296,10 +299,10 @@ export default function Insight11() {
                 { label: "중대형 상가 투자수익률", values: snap.midInv, total: snap.fiveYear.mid, annual: snap.annualAvg.mid },
                 { label: "소규모 상가 투자수익률", values: snap.smallInv, total: snap.fiveYear.small, annual: snap.annualAvg.small },
                 { label: "집합 상가 투자수익률", values: snap.strataInv, total: snap.fiveYear.strata, annual: snap.annualAvg.strata },
-                { label: "아파트 소득+자본", values: snap.aptSum, total: snap.fiveYear.apt, annual: snap.annualAvg.apt },
-                { label: "연립다세대 소득+자본", values: snap.rowSum, total: snap.fiveYear.row, annual: snap.annualAvg.row },
-                { label: "오피스텔 소득+자본", values: snap.offiSum, total: snap.fiveYear.officetel, annual: snap.annualAvg.officetel },
-                { label: "KODEX KOSPI TR", values: snap.kospiTr, total: snap.fiveYear.kospi, annual: snap.annualAvg.kospi },
+                { label: "아파트 월세환산 소득+자본", values: snap.aptSum, total: snap.fiveYear.apt, annual: snap.annualAvg.apt },
+                { label: "연립다세대 월세환산 소득+자본", values: snap.rowSum, total: snap.fiveYear.row, annual: snap.annualAvg.row },
+                { label: "오피스텔 월세환산 소득+자본", values: snap.offiSum, total: snap.fiveYear.officetel, annual: snap.annualAvg.officetel },
+                { label: "KODEX KOSPI TR 연간수익률", values: snap.kospiTr, total: snap.fiveYear.kospi, annual: snap.annualAvg.kospi },
               ]}
             />
             <ReturnChart rows={propertyRows} />
