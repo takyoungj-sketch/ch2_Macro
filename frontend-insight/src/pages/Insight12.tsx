@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import { INSIGHT_12, INSIGHT_12_SNAP } from "../copy/insight12";
 import yieldSnap from "../../../docs/lab/sangkwon_apt_yield.json";
@@ -47,16 +48,17 @@ function num(v: number | null | undefined, digits = 2): string {
   return v.toLocaleString("ko-KR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
-function RankTable({ rows }: { rows: RankRow[] }) {
+function RankTable({ rows, showAll }: { rows: RankRow[]; showAll: boolean }) {
+  const visibleRows = showAll ? rows : rows.slice(0, 10);
   return (
-    <div className="max-h-[640px] overflow-auto">
+    <div className="overflow-x-auto">
       <table className="w-full text-[12px] whitespace-nowrap">
         <thead className="sticky top-0 z-10 bg-white dark:bg-slate-900">
           <tr className="text-right text-slate-500">
             <th className="py-1 pr-3 text-left font-medium">상권</th>
-            <th className="py-1 px-2 font-medium">소득(%)</th>
-            <th className="py-1 px-2 font-medium">자본(%)</th>
-            <th className="py-1 px-2 font-medium">투자(%)</th>
+            <th className="py-1 px-2 font-medium">상권 소득(%)</th>
+            <th className="py-1 px-2 font-medium">상권 자본(%)</th>
+            <th className="py-1 px-2 font-medium">상권 투자수익률(%)</th>
             <th className="py-1 px-2 font-medium">아파트 소득(%)</th>
             <th className="py-1 px-2 font-medium">아파트 자본(%)</th>
             <th className="py-1 px-2 font-medium">아파트 소득+자본(%)</th>
@@ -67,7 +69,7 @@ function RankTable({ rows }: { rows: RankRow[] }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {visibleRows.map((row) => (
             <tr key={`${row.asset_kind}-${row.sec_nm}`} className="border-t border-slate-100 text-right dark:border-slate-800">
               <td className="py-1 pr-3 text-left">
                 {row.sec_nm}
@@ -93,6 +95,8 @@ function RankTable({ rows }: { rows: RankRow[] }) {
 
 export default function Insight12() {
   const prose = "space-y-3 text-sm leading-relaxed text-slate-700 dark:text-slate-200";
+  const [selectedKind, setSelectedKind] = useState<(typeof KINDS)[number]["key"]>("office");
+  const [showAll, setShowAll] = useState(false);
   const aiContext = {
     app: "insight" as const,
     panel: "Insight12",
@@ -124,43 +128,54 @@ export default function Insight12() {
         </p>
         <header className="space-y-3">
           <h2 className="text-xl font-bold leading-snug">{copy.listTitle}</h2>
-          <p className="text-sm text-slate-500">{copy.listSub}</p>
+          <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">{copy.listDescription}</p>
+          <p className="text-sm text-slate-500">{copy.listPeriod}</p>
         </header>
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.summaryTitle}</h3>
           <p className="text-sm font-medium text-slate-800 dark:text-slate-100 leading-relaxed">{copy.lead}</p>
+          <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-50">{copy.keyFindingTitle}</h4>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
+              <p className="text-xs text-slate-500">임대료 상관</p>
+              <p className="mt-1 text-lg font-semibold">0.65–0.84</p>
+              <p className="text-xs text-slate-500">네 유형</p>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
+              <p className="text-xs text-slate-500">투자수익률 상관</p>
+              <p className="mt-1 text-lg font-semibold">0.20–0.35</p>
+              <p className="text-xs text-slate-500">네 유형</p>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
+              <p className="text-xs text-slate-500">비교 단위</p>
+              <p className="mt-1 text-lg font-semibold">5년 평균</p>
+              <p className="text-xs text-slate-500">2021–2025</p>
+            </div>
+          </div>
         </section>
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.seeTitle}</h3>
-          <ul className="list-disc ml-5 space-y-1.5">
-            {copy.see.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
+          <p>{copy.methodLead}</p>
+          <details className="rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700">
+            <summary className="cursor-pointer font-medium">계산 방법 자세히 보기</summary>
+            <ul className="mt-3 list-disc space-y-1.5 pl-5">
+              {copy.see.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </details>
         </section>
         <section className="space-y-8">
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.bodyTitle}</h3>
-          <p className="text-sm text-slate-600 dark:text-slate-300">{copy.rankNote}</p>
-          {KINDS.map((kind) => {
-            const part = (yieldSnap.rows as RankRow[]).filter((row) => row.asset_kind === kind.key);
-            return (
-              <section key={kind.key} className="space-y-2">
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-                  {kind.label} · {part.length}곳
-                </h4>
-                <RankTable rows={part} />
-              </section>
-            );
-          })}
           <div className="overflow-x-auto">
             <table className="w-full text-sm whitespace-nowrap">
               <thead>
                 <tr className="text-left text-slate-500">
                   <th className="py-1 pr-3 font-medium">유형</th>
-                  <th className="py-1 pr-3 font-medium">임대료</th>
-                  <th className="py-1 pr-3 font-medium">투자</th>
-                  <th className="py-1 pr-3 font-medium">소득</th>
-                  <th className="py-1 pr-3 font-medium">자본</th>
+                  <th className="py-1 pr-3 font-medium">임대료 상관</th>
+                  <th className="py-1 pr-3 font-medium">투자수익률 상관</th>
+                  <th className="py-1 pr-3 font-medium">소득수익률 상관</th>
+                  <th className="py-1 pr-3 font-medium">자본수익률 상관</th>
                 </tr>
               </thead>
               <tbody>
@@ -179,6 +194,52 @@ export default function Insight12() {
               괄호 안 숫자는 해당 상관계수 계산에 사용된 상권 수입니다. 각 값은 상권별 2021–2025년 평균끼리의 상관입니다.
             </p>
           </div>
+          <section className="space-y-3">
+            <div>
+              <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-50">유형별 상권 순위</h4>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{copy.rankNote}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {KINDS.map((kind) => (
+                <button
+                  key={kind.key}
+                  type="button"
+                  className={`rounded-full border px-3 py-1.5 text-sm ${
+                    selectedKind === kind.key
+                      ? "border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900"
+                      : "border-slate-300 text-slate-700 dark:border-slate-600 dark:text-slate-200"
+                  }`}
+                  onClick={() => {
+                    setSelectedKind(kind.key);
+                    setShowAll(false);
+                  }}
+                >
+                  {kind.label}
+                </button>
+              ))}
+            </div>
+            {(() => {
+              const kind = KINDS.find((item) => item.key === selectedKind) ?? KINDS[0];
+              const part = (yieldSnap.rows as RankRow[]).filter((row) => row.asset_kind === kind.key);
+              return (
+                <>
+                  <h5 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
+                    {kind.label} · {part.length}곳
+                  </h5>
+                  <RankTable rows={part} showAll={showAll} />
+                  {part.length > 10 && (
+                    <button
+                      type="button"
+                      className="rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600"
+                      onClick={() => setShowAll((value) => !value)}
+                    >
+                      {showAll ? "상위 10개만 보기" : `전체 ${part.length}곳 보기`}
+                    </button>
+                  )}
+                </>
+              );
+            })()}
+          </section>
           <section className={prose}>
             <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-50">{copy.s1Title}</h4>
             <Prose lines={copy.s1} />
