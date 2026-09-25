@@ -96,29 +96,29 @@ export default function Insight10() {
           <table className="data w-full max-w-lg text-[13px]">
             <thead>
               <tr>
-                <th className="text-left">2층</th>
-                <th>도로 하나 = 1</th>
-                <th>거래가 많은 도로</th>
+                <th className="text-left">구분</th>
+                <th>클러스터별 동일가중 가운데값<br />(1층=100)</th>
+                <th>전체 거래 수 가중 가운데값<br />(1층=100)</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td>1층 = 100</td>
+                <td>2층 상대가격지수</td>
                 <td>{snap.first.equal}</td>
                 <td>{snap.first.weighted}</td>
               </tr>
             </tbody>
           </table>
           <p className="text-slate-600 dark:text-slate-300">
-            사분위 {snap.first.p25}–{snap.first.p75}. 도로 {snap.roadsFirst.toLocaleString("ko-KR")}곳.
+            사분위 {snap.first.p25}–{snap.first.p75}. 도로 클러스터 {snap.roadsFirst.toLocaleString("ko-KR")}곳.
           </p>
           <table className="data w-full max-w-lg text-[13px]">
             <thead>
               <tr>
                 <th className="text-left">1층 거래</th>
-                <th>도로 하나 = 1</th>
-                <th>거래가 많은 도로</th>
-                <th>도로 수</th>
+                <th>클러스터별 동일가중 가운데값<br />(1층=100)</th>
+                <th>전체 거래 수 가중 가운데값<br />(1층=100)</th>
+                <th>클러스터 수</th>
               </tr>
             </thead>
             <tbody>
@@ -141,15 +141,15 @@ export default function Insight10() {
           <table className="data w-full max-w-lg text-[13px]">
             <thead>
               <tr>
-                <th className="text-left">2층</th>
-                <th>도로 하나 = 1</th>
-                <th>거래가 많은 도로</th>
+                <th className="text-left">구분</th>
+                <th>클러스터별 동일가중 가운데값<br />(1층=100)</th>
+                <th>전체 거래 수 가중 가운데값<br />(1층=100)</th>
                 <th>p25–p75</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td>연면적 ±20%</td>
+                <td>2층 상대가격지수<br />(연면적 ±20%)</td>
                 <td>{snap.area.equal}</td>
                 <td>{snap.area.weighted}</td>
                 <td>
@@ -158,7 +158,7 @@ export default function Insight10() {
               </tr>
             </tbody>
           </table>
-          <p className="text-slate-600 dark:text-slate-300">도로 {snap.roadsArea}곳. 1층 = 100.</p>
+          <p className="text-slate-600 dark:text-slate-300">도로 클러스터 {snap.roadsArea}곳. 1층 = 100.</p>
           <Prose lines={copy.s3} />
         </section>
 
@@ -168,9 +168,9 @@ export default function Insight10() {
           <table className="data w-full max-w-lg text-[13px]">
             <thead>
               <tr>
-                <th className="text-left">가중</th>
-                <th>1층 대비</th>
-                <th>95% 구간</th>
+                <th className="text-left">가중 방식</th>
+                <th>회귀 결과<br />(1층=100)</th>
+                <th>95% 신뢰구간</th>
               </tr>
             </thead>
             <tbody>
