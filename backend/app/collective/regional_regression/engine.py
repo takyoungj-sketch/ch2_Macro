@@ -285,7 +285,7 @@ def load_danji_frame(
         text(
             f"""
             SELECT m.building_key, m.display_name, m.median, m.count AS n_tx,
-                   m.building_year, m.addr3, m.addr4, m.asset_type,
+                   m.building_year, m.addr1, m.addr2, m.addr3, m.addr4, m.asset_type,
                    a.match_tier, a.match_rule, a.households, a.max_floor, a.parking_per_household,
                    a.approved_year, a.structure_group, a.builder_group,
                    a.attr_quality_flags,
@@ -383,6 +383,10 @@ def _scope_label(req: RegionalRegressionRunRequest) -> str:
         bits.append(f"읍면동 {len(req.addr4_list)}곳")
     if req.region_codes:
         bits.append(f"인접 {len(req.region_codes)}곳")
+    elif req.region_addrs:
+        n_addr = len([a for a in req.region_addrs if str(a).strip()])
+        if n_addr:
+            bits.append(f"선택 읍면동 {n_addr}곳")
     types = _selected_regression_types(req.asset_type)
     if types:
         bits.append("·".join(ASSET_TYPE_LABELS.get(t, t) for t in types))
@@ -645,6 +649,93 @@ def _needed_columns(v: RegionalRegressionVariables) -> list[str]:
     return cols
 
 
+def _region_key(addr1: str, addr2: str, leaf: str) -> str:
+    return f"{addr1}|{addr2}|{leaf}"
+
+
+def _leaf_names_match(leaf: str, names: set[str]) -> bool:
+    cands = {leaf}
+    if leaf.endswith("읍") and len(leaf) >= 2:
+        cands.add(leaf[:-1] + "면")
+    elif leaf.endswith("면") and len(leaf) >= 2:
+        cands.add(leaf[:-1] + "읍")
+    return bool(cands & names)
+
+
+def assign_region_groups(df: pd.DataFrame, keys: list[str]) -> pd.Series:
+    """요청한 읍면동 키로 각 행을 묶는다. 안 맞으면 첫 키(기준 지역)에 둔다."""
+    from app.flat_sido_region import is_flat_sido_addr2
+    from app.region_scope import parse_region_addr_keys
+
+    triples = parse_region_addr_keys(keys)
+    if not triples or df.empty:
+        return pd.Series("", index=df.index, dtype=object)
+    ref = _region_key(*triples[0])
+    addr1 = df["addr1"].fillna("").astype(str).str.strip() if "addr1" in df.columns else pd.Series("", index=df.index)
+    addr2 = df["addr2"].fillna("").astype(str).str.strip() if "addr2" in df.columns else pd.Series("", index=df.index)
+    addr3 = df["addr3"].fillna("").astype(str).str.strip() if "addr3" in df.columns else pd.Series("", index=df.index)
+    addr4 = df["addr4"].fillna("").astype(str).str.strip() if "addr4" in df.columns else pd.Series("", index=df.index)
+    out: list[str] = []
+    for i in df.index:
+        names = {addr3.at[i], addr4.at[i]} - {""}
+        hit = ref
+        for a1, a2, leaf in triples:
+            if addr1.at[i] != a1:
+                continue
+            if not is_flat_sido_addr2(a2) and addr2.at[i] != a2:
+                continue
+            if _leaf_names_match(leaf, names):
+                hit = _region_key(a1, a2, leaf)
+                break
+        out.append(hit)
+    return pd.Series(out, index=df.index, dtype=object)
+
+
+def _region_label(key: str) -> str:
+    return " ".join(part for part in str(key).split("|") if part and part != "__FLAT_SIDO__")
+
+
+def _prepare_region_dummy(
+    work: pd.DataFrame,
+    req: RegionalRegressionRunRequest,
+) -> tuple[list[str], str | None, list[str]]:
+    """지역 더미를 쓸 때 기준 키와 수준, 경고를 만든다. work['region_group'] 을 채운다."""
+    if not req.region_dummy:
+        return [], None, []
+    keys = [str(k).strip() for k in req.region_addrs if str(k).strip()]
+    from app.region_scope import parse_region_addr_keys
+
+    triples = parse_region_addr_keys(keys)
+    if len(triples) < 2:
+        return [], None, ["지역 더미는 읍면동이 둘 이상일 때만 넣습니다. 이번 식에는 넣지 않았습니다."]
+    if work.empty or "addr1" not in work.columns:
+        return [], None, ["지역을 나눌 주소가 없어 지역 더미를 넣지 않았습니다."]
+    grouped = assign_region_groups(work, keys)
+    work["region_group"] = grouped
+    ref = _region_key(*triples[0])
+    levels = [_region_key(*t) for t in triples]
+    warnings: list[str] = []
+    counts = grouped.value_counts()
+    n_ref = int(counts.get(ref, 0))
+    if n_ref < DUMMY_MIN:
+        warnings.append(
+            f"기준 읍면동 적합 단지가 {n_ref}곳이라 그 지역 절편이 얇습니다."
+        )
+    present = [lv for lv in levels if int(counts.get(lv, 0)) > 0 and lv != ref]
+    if not present:
+        work.drop(columns=["region_group"], inplace=True)
+        return [], None, ["고른 지역에 적합 단지가 없어 지역 더미를 넣지 않았습니다."]
+    for lv in levels:
+        if lv == ref:
+            continue
+        n_lv = int(counts.get(lv, 0))
+        if n_lv == 0:
+            warnings.append(f"{_region_label(lv)} 적합 단지가 없어 그 지역 절편은 빠집니다.")
+        elif n_lv < DUMMY_MIN:
+            warnings.append(f"{_region_label(lv)} 적합 단지가 {n_lv}곳이라 그 지역 절편이 얇습니다.")
+    return [lv for lv in levels if lv == ref or int(counts.get(lv, 0)) > 0], ref, warnings
+
+
 def _design(
     work: pd.DataFrame,
     v: RegionalRegressionVariables,
@@ -655,6 +746,8 @@ def _design(
     builder_ref: str | None = None,
     type_levels: list[str] | None = None,
     type_ref: str | None = None,
+    region_levels: list[str] | None = None,
+    region_ref: str | None = None,
 ) -> tuple[pd.DataFrame, dict[str, str], list[str]]:
     """X (no const), name→label, warnings."""
     x = pd.DataFrame(index=work.index)
@@ -676,6 +769,21 @@ def _design(
     if v.assessed_land_price:
         x["assessed_land_price"] = work["assessed_land_price"].astype(float)
         labels["assessed_land_price"] = LABELS["assessed_land_price"]
+
+    if region_levels and region_ref and "region_group" in work.columns:
+        raw_region = work["region_group"].fillna("").astype(str).str.strip()
+        raw_region = raw_region.where(raw_region.isin(region_levels), region_ref)
+        region_used = 0
+        for lv in region_levels:
+            if lv == region_ref:
+                continue
+            region_used += 1
+            col = f"region_{region_used}"
+            x[col] = (raw_region == lv).astype(float)
+            labels[col] = f"지역 {_region_label(lv)} (기준 대비)"
+        if region_used:
+            labels["_region_ref"] = _region_label(region_ref)
+            labels["_region_ref_key"] = region_ref
 
     if v.asset_type_dummy and "asset_type" in work.columns:
         raw = work["asset_type"].fillna("").astype(str).str.strip()
@@ -769,6 +877,8 @@ def _reference_categories(labels: dict[str, str]) -> dict[str, str]:
         out["builder_group"] = labels["_builder_ref"]
     if labels.get("_atype_ref"):
         out["asset_type"] = labels["_atype_ref"]
+    if labels.get("_region_ref"):
+        out["region"] = labels["_region_ref"]
     return out
 
 
@@ -1062,7 +1172,14 @@ def run_regional_regression(
             scope_label=meta.get("scope_label"),
         )
 
-    x, labels, d_warn = _design(work, v)
+    region_levels, region_ref, region_warns = _prepare_region_dummy(work, req)
+    warnings.extend(region_warns)
+    x, labels, d_warn = _design(
+        work,
+        v,
+        region_levels=region_levels or None,
+        region_ref=region_ref,
+    )
     warnings.extend(d_warn)
     fitted = _fit_ols(
         work,
@@ -1128,6 +1245,7 @@ def run_regional_regression(
                 parking_per_household=_opt_num(r.get("parking_per_household")),
                 structure_group=_opt_str(r.get("structure_group")),
                 builder_group=_opt_str(r.get("builder_group")),
+                region_group=_opt_str(r.get("region_group")) if req.region_dummy else None,
             )
         )
     rows.sort(key=lambda x: x.display_name)
@@ -1284,7 +1402,13 @@ def predict_regional(
     v = req.variables
     work = df.loc[_eligible_mask(df, v, min_tx=int(req.min_tx))].copy()
     train_idx, _hold = _split_hold(work.index)
-    x, labels, _ = _design(work, v)
+    region_levels, region_ref, _region_warns = _prepare_region_dummy(work, req)
+    x, labels, _ = _design(
+        work,
+        v,
+        region_levels=region_levels or None,
+        region_ref=region_ref,
+    )
     fitted = _fit_ols(
         work, x, model_type=req.model_type, weight_mode=req.weight_mode, train_idx=train_idx, hold_idx=None
     )
@@ -1303,6 +1427,7 @@ def predict_regional(
         "structure_group": inputs.structure_group or struct_ref or "",
         "builder_group": inputs.builder_group or builder_ref or "",
         "asset_type": inputs.asset_type or atype_ref or "apartment",
+        "region_group": inputs.region_group or region_ref or "",
         "median": 1.0,  # unused
         "n_tx": int(req.min_tx),
     }
@@ -1323,6 +1448,8 @@ def predict_regional(
         builder_ref=builder_ref,
         type_levels=type_levels or None,
         type_ref=atype_ref,
+        region_levels=region_levels or None,
+        region_ref=region_ref,
     )
     x1c = sm.add_constant(x1, has_constant="add").reindex(columns=fitted["x_cols"], fill_value=0)
     y_hat, ci_lo, ci_hi, pi_lo, pi_hi = _price_intervals(

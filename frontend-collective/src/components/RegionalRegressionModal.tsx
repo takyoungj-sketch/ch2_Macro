@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import {
+  fetchAptTwins,
   predictRegionalRegression,
   runRegionalRegression,
+  type AptTwinPlace,
   type FunnelStep,
   type RegionalRegressionPredictInputs,
   type RegionalRegressionRunRequest,
@@ -22,8 +24,11 @@ import {
   StatisticalEstimateDisclaimer,
   StatisticalEstimateRangeRow,
 } from "@ch2/stats-glossary";
+import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import { ASSET_LABELS } from "../types";
 import { parseResidentialAssetKinds } from "../utils/residentialAssetTypes";
+import { APT_TWIN_REGION_HELP } from "../utils/residentialAnalysisHelp";
+import { FLAT_SIDO_ADDR2_TOKEN } from "../utils/flatSidoRegion";
 
 type Props = {
   addr1: string;
@@ -59,6 +64,7 @@ function inputsFromFitted(row: FittedBuildingRow): RegionalRegressionPredictInpu
     asset_type: row.asset_type ?? undefined,
     structure_group: row.structure_group ?? undefined,
     builder_group: row.builder_group ?? undefined,
+    region_group: row.region_group ?? undefined,
   };
 }
 
@@ -199,6 +205,193 @@ function regionParams(p: Props): Pick<
   };
 }
 
+type AnchorChoice = { key: string; code?: string; label: string };
+
+function anchorChoices(p: Props): AnchorChoice[] {
+  const addrs = (p.regionAddrs ?? []).map((s) => s.trim()).filter(Boolean);
+  const codes = p.regionCodes ?? [];
+  if (addrs.length) {
+    return addrs.map((key, i) => ({
+      key,
+      code: codes.length === addrs.length ? codes[i] : undefined,
+      label: key
+        .split("|")
+        .map((part) => part.trim())
+        .filter((part) => part && part !== FLAT_SIDO_ADDR2_TOKEN)
+        .join(" "),
+    }));
+  }
+  if (p.leafList.length) {
+    return p.leafList.map((leaf) => ({
+      key: `${p.addr1}|${p.addr2}|${leaf}`,
+      label: [p.addr2 === FLAT_SIDO_ADDR2_TOKEN ? p.addr1 : p.addr2, leaf].filter(Boolean).join(" "),
+    }));
+  }
+  return [];
+}
+
+function josaEun(word: string): "은" | "는" {
+  const last = [...word].pop() ?? "";
+  const code = last.charCodeAt(0);
+  if (code >= 0xac00 && code <= 0xd7a3) return (code - 0xac00) % 28 === 0 ? "는" : "은";
+  return "은";
+}
+
+function splitAddrKey(key: string): { addr1: string; addr2: string; addr4: string } | null {
+  const parts = key.split("|").map((s) => s.trim());
+  if (parts.length < 3 || !parts[0] || !parts[2]) return null;
+  return { addr1: parts[0], addr2: parts[1] ?? "", addr4: parts[2] };
+}
+
+function TwinRegionPanel(props: {
+  windowYears: number;
+  extraTypeLabel: string;
+  choices: AnchorChoice[];
+  anchorKey: string;
+  onAnchorKey: (key: string) => void;
+  scopeAnchors: AptTwinPlace[];
+  scopeKey: string;
+  onScopeKey: (key: string) => void;
+  scopeLoading: boolean;
+  scopeError: string | null;
+  listLoading: boolean;
+  listError: string | null;
+  asOfLabel: string;
+  anchorLabel: string;
+  twins: AptTwinPlace[];
+  checked: string[];
+  onToggle: (regionAddr: string) => void;
+  regionDummy: boolean;
+  onRegionDummy: (on: boolean) => void;
+  canRun: boolean;
+  pending: boolean;
+  onRun: () => void;
+}) {
+  return (
+    <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
+      <div className="flex flex-wrap items-center gap-1">
+        <p className="text-xs font-semibold">쌍둥이 지역</p>
+        <AnalysisHelpPanel explain={APT_TWIN_REGION_HELP} />
+      </div>
+      <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug">
+        기준 읍면동의 아파트 재고 구성과 아파트 가격분포로 1위부터 5위까지 골랐습니다.
+        {props.asOfLabel ? ` 목록 기준은 ${props.asOfLabel}의 3년 창입니다.` : " 목록은 최근 3년 창입니다."}
+        {props.windowYears === 3
+          ? " 식의 통계 창도 3년입니다."
+          : ` 식은 이 화면의 ${props.windowYears}년 창으로 맞춥니다.`}
+        {" "}
+        변수, 모형, 최소 거래수는 지역회귀 탭과 같습니다.
+      </p>
+      {props.extraTypeLabel && (
+        <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug">
+          {`${props.extraTypeLabel}${josaEun(props.extraTypeLabel)} 순위에 쓰지 않았습니다. 통합회귀를 실행하면 고른 지역의 ${props.extraTypeLabel} 단지도 같은 식에 들어갑니다.`}
+        </p>
+      )}
+      <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug">
+        이 식은 기준 읍면동과 체크한 지역의 단지를 한 식으로 합쳐 돌려 보는 탐색입니다. 미래 가격의 정답을
+        보장하지 않습니다. 그 지역만의 식은 지역회귀 탭에 있습니다.
+      </p>
+
+      {props.choices.length > 1 && (
+        <label className="block space-y-1">
+          <span className="text-[11px] text-slate-500">기준 읍면동</span>
+          <select
+            className="input"
+            value={props.anchorKey}
+            onChange={(e) => props.onAnchorKey(e.target.value)}
+          >
+            {props.choices.map((choice) => (
+              <option key={choice.key} value={choice.key}>
+                {choice.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {props.choices.length === 0 && (
+        <label className="block space-y-1">
+          <span className="text-[11px] text-slate-500">기준 읍면동</span>
+          <select
+            className="input"
+            value={props.scopeKey}
+            onChange={(e) => props.onScopeKey(e.target.value)}
+            disabled={props.scopeLoading || props.scopeAnchors.length === 0}
+          >
+            {props.scopeAnchors.length === 0 && <option value="">읍면동을 찾는 중…</option>}
+            {props.scopeAnchors.map((row) => (
+              <option key={row.region_addr} value={row.region_addr}>
+                {row.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {props.scopeError && <p className="text-red-600">{props.scopeError}</p>}
+      {props.listError && <p className="text-red-600">{props.listError}</p>}
+      {props.listLoading && (
+        <p className="text-[11px] text-slate-500">전국 아파트 단지를 읽어 순위를 계산하고 있습니다.</p>
+      )}
+      {!props.listLoading && props.anchorLabel && (
+        <p className="text-[11px] text-slate-500">기준: {props.anchorLabel}</p>
+      )}
+      {!props.listLoading && !props.listError && props.twins.length > 0 && (
+        <div className="modal-table-wrap">
+          <table className="data w-full text-[11px]">
+            <thead>
+              <tr>
+                <th className="text-left w-8">선택</th>
+                <th className="text-right">순위</th>
+                <th className="text-left">지역</th>
+                <th className="text-right" title="순위 계산에 쓴 아파트 적격 단지 수">
+                  아파트 단지 수
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {props.twins.map((row) => (
+                <tr key={row.region_addr}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={props.checked.includes(row.region_addr)}
+                      onChange={() => props.onToggle(row.region_addr)}
+                      aria-label={`${row.rank}위 ${row.label}`}
+                    />
+                  </td>
+                  <td className="text-right tabular-nums">{row.rank}</td>
+                  <td>{row.label}</td>
+                  <td className="text-right tabular-nums">{row.n_complexes.toLocaleString("ko-KR")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {!props.listLoading && !props.listError && props.anchorLabel && props.twins.length === 0 && (
+        <p className="text-[11px] text-slate-500">가격분포로 남길 아파트 후보가 없습니다.</p>
+      )}
+      <label className="flex items-start gap-1.5">
+        <input
+          type="checkbox"
+          className="mt-0.5"
+          checked={props.regionDummy}
+          onChange={(e) => props.onRegionDummy(e.target.checked)}
+        />
+        <span>
+          지역 더미
+          <span className="block text-[10px] text-slate-500 leading-snug">
+            기울기는 지역이 공유하고, 절편만 지역마다 나눕니다. 기준은 이 읍면동입니다. 가상단지 예측도 그
+            절편을 씁니다. 기본은 꺼져 있습니다.
+          </span>
+        </span>
+      </label>
+      <button type="button" className="btn btn-primary" disabled={!props.canRun || props.pending} onClick={props.onRun}>
+        {props.pending ? "적합 중…" : "통합회귀 실행"}
+      </button>
+    </section>
+  );
+}
+
 export default function RegionalRegressionModal(props: Props) {
   const kinds = regressionKinds(props.assetType);
   const unified = kinds.length >= 2;
@@ -248,14 +441,90 @@ export default function RegionalRegressionModal(props: Props) {
     ],
   );
 
+  const showTwin = kinds.includes("apartment");
+  const [tab, setTab] = useState<"local" | "twin">("local");
+  const effectiveTab = showTwin && tab === "twin" ? "twin" : "local";
+  const choices = useMemo(
+    () => anchorChoices(props),
+    [props.addr1, props.addr2, props.leafList, props.regionAddrs, props.regionCodes],
+  );
+  const choiceKey = choices.map((c) => `${c.key}\t${c.code ?? ""}`).join("\n");
+  const [anchorKey, setAnchorKey] = useState("");
+  const [scopeKey, setScopeKey] = useState("");
+  const [checked, setChecked] = useState<string[]>([]);
+  const [regionDummy, setRegionDummy] = useState(false);
+  useEffect(() => {
+    setAnchorKey(choices[0]?.key ?? "");
+    setChecked([]);
+  }, [choiceKey]);
+
+  const explicit = choices.find((c) => c.key === anchorKey) ?? choices[0];
+  const explicitParts = explicit ? splitAddrKey(explicit.key) : null;
+  const scopeQ = useQuery({
+    queryKey: ["apt-twin-scope", props.addr1, props.addr2],
+    queryFn: () => fetchAptTwins({ addr1: props.addr1, addr2: props.addr2 }),
+    enabled: showTwin && effectiveTab === "twin" && choices.length === 0,
+    staleTime: 10 * 60 * 1000,
+  });
+  const scopeAnchors = scopeQ.data?.scope_anchors ?? [];
+  useEffect(() => {
+    const first = scopeQ.data?.scope_anchors?.[0]?.region_addr;
+    if (choices.length > 0 || !first) return;
+    setScopeKey((cur) => cur || first);
+  }, [choices.length, scopeQ.data]);
+  const scopePlace = scopeAnchors.find((row) => row.region_addr === scopeKey) ?? null;
+  const twinQueryArgs = explicitParts
+    ? {
+        addr1: explicitParts.addr1,
+        addr2: explicitParts.addr2,
+        addr4: explicitParts.addr4,
+        region_code: explicit?.code,
+      }
+    : scopePlace
+      ? { addr1: scopePlace.addr1, addr2: scopePlace.addr2, addr4: scopePlace.addr4 }
+      : null;
+  const twinQ = useQuery({
+    queryKey: ["apt-twin-list", twinQueryArgs],
+    queryFn: () => fetchAptTwins(twinQueryArgs!),
+    enabled: showTwin && effectiveTab === "twin" && twinQueryArgs != null && !!twinQueryArgs.addr4,
+    staleTime: 10 * 60 * 1000,
+  });
+  const anchorAddr = twinQ.data?.anchor?.region_addr ?? "";
+  useEffect(() => {
+    setChecked([]);
+  }, [anchorAddr]);
+
+  const twinRequest = useMemo<RegionalRegressionRunRequest | null>(() => {
+    const anchor = twinQ.data?.anchor;
+    const pickedTwins = (twinQ.data?.twins ?? []).filter((row) => checked.includes(row.region_addr));
+    if (!anchor || pickedTwins.length === 0) return null;
+    return {
+      addr1: anchor.addr1,
+      addr2: anchor.addr2,
+      window_years: props.windowYears,
+      asset_type: props.assetType,
+      variables: vars,
+      model_type: modelType,
+      weight_mode: weightMode,
+      min_tx: minTx,
+      region_dummy: regionDummy,
+      region_addrs: [anchor.region_addr, ...pickedTwins.map((row) => row.region_addr)],
+    };
+  }, [twinQ.data, checked, regionDummy, props.windowYears, props.assetType, vars, modelType, weightMode, minTx]);
+
   const runM = useMutation({
     mutationFn: (req: RegionalRegressionRunRequest) => runRegionalRegression(req),
   });
+  const twinRun = useMutation({
+    mutationFn: (req: RegionalRegressionRunRequest) => runRegionalRegression(req),
+  });
+  const runShown = effectiveTab === "twin" ? twinRun : runM;
   const predM = useMutation({
-    mutationFn: () => predictRegionalRegression({ ...body, inputs }),
+    mutationFn: (req: RegionalRegressionRunRequest) =>
+      predictRegionalRegression({ ...req, inputs }),
   });
 
-  const data = runM.data;
+  const data = runShown.data;
   const picked = pickKey !== VIRTUAL_KEY ? data?.fitted.find((r) => fittedKey(r) === pickKey) : undefined;
 
   function applyTarget(key: string) {
@@ -292,6 +561,36 @@ export default function RegionalRegressionModal(props: Props) {
           {data?.scope_label ?? `${props.addr1} · ${props.addr2} · ${props.windowYears}년 창`}
           {data?.as_of_month ? ` · 기준 ${data.as_of_month.slice(0, 7)}` : ""}
         </p>
+
+        {showTwin && (
+          <div className="flex flex-wrap gap-0.5 rounded-md border modal-tab-bar p-0.5" role="tablist">
+            {(
+              [
+                ["local", "지역회귀"],
+                ["twin", "쌍둥이지역"],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={effectiveTab === id}
+                className={clsx(
+                  "px-3 py-1.5 text-sm font-medium rounded transition-colors whitespace-nowrap",
+                  effectiveTab === id ? "modal-tab-active" : "modal-tab-idle",
+                )}
+                onClick={() => {
+                  setTab(id);
+                  setPickKey(VIRTUAL_KEY);
+                  setInputs(emptyPredictInputs());
+                  predM.reset();
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
           <p className="text-xs font-semibold">1. 변수</p>
@@ -399,23 +698,81 @@ export default function RegionalRegressionModal(props: Props) {
           </p>
         </section>
 
-        <button
-          type="button"
-          className="btn btn-primary"
-          disabled={runM.isPending}
-          onClick={() => {
-            setPickKey(VIRTUAL_KEY);
-            setInputs(emptyPredictInputs());
-            predM.reset();
-            runM.mutate(body);
-          }}
-        >
-          {runM.isPending ? "적합 중…" : "회귀 실행"}
-        </button>
+        {effectiveTab === "local" && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={runM.isPending}
+            onClick={() => {
+              setPickKey(VIRTUAL_KEY);
+              setInputs(emptyPredictInputs());
+              predM.reset();
+              runM.mutate(body);
+            }}
+          >
+            {runM.isPending ? "적합 중…" : "회귀 실행"}
+          </button>
+        )}
 
-        {runM.isError && (
+        {effectiveTab === "twin" && (
+          <TwinRegionPanel
+            windowYears={props.windowYears}
+            extraTypeLabel={kinds
+              .filter((k) => k !== "apartment")
+              .map((k) => ASSET_LABELS[k] ?? k)
+              .join("·")}
+            choices={choices}
+            anchorKey={anchorKey}
+            onAnchorKey={(key) => {
+              setAnchorKey(key);
+              setChecked([]);
+            }}
+            scopeAnchors={scopeAnchors}
+            scopeKey={scopeKey}
+            onScopeKey={(key) => {
+              setScopeKey(key);
+              setChecked([]);
+            }}
+            scopeLoading={scopeQ.isFetching}
+            scopeError={
+              scopeQ.isError
+                ? ((scopeQ.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+                  "기준 읍면동을 불러오지 못했습니다.")
+                : null
+            }
+            listLoading={twinQ.isFetching}
+            listError={
+              twinQ.isError
+                ? ((twinQ.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+                  "쌍둥이 지역을 계산하지 못했습니다.")
+                : null
+            }
+            asOfLabel={twinQ.data?.as_of_label ?? ""}
+            anchorLabel={twinQ.data?.anchor?.label ?? ""}
+            twins={twinQ.data?.twins ?? []}
+            checked={checked}
+            onToggle={(regionAddr) =>
+              setChecked((cur) =>
+                cur.includes(regionAddr) ? cur.filter((k) => k !== regionAddr) : [...cur, regionAddr],
+              )
+            }
+            regionDummy={regionDummy}
+            onRegionDummy={setRegionDummy}
+            canRun={twinRequest != null}
+            pending={twinRun.isPending}
+            onRun={() => {
+              if (!twinRequest) return;
+              setPickKey(VIRTUAL_KEY);
+              setInputs(emptyPredictInputs());
+              predM.reset();
+              twinRun.mutate(twinRequest);
+            }}
+          />
+        )}
+
+        {runShown.isError && (
           <p className="text-red-600">
-            {(runM.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+            {(runShown.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
               "지역회귀를 실행하지 못했습니다."}
           </p>
         )}
@@ -434,14 +791,16 @@ export default function RegionalRegressionModal(props: Props) {
                 vars={vars}
                 sample={data.sample}
                 minTx={minTx}
-                pending={runM.isPending}
+                pending={runShown.isPending}
                 onTurnOffMissing={(keys) => {
                   const nextVars = turnOffVars(vars, keys);
+                  const base = effectiveTab === "twin" ? twinRequest : body;
+                  if (!base) return;
                   setVars(nextVars);
                   setPickKey(VIRTUAL_KEY);
                   setInputs(emptyPredictInputs());
                   predM.reset();
-                  runM.mutate({ ...body, variables: nextVars });
+                  runShown.mutate({ ...base, variables: nextVars });
                 }}
               />
             )}
@@ -684,8 +1043,8 @@ export default function RegionalRegressionModal(props: Props) {
                 <button
                   type="button"
                   className="btn"
-                  disabled={predM.isPending}
-                  onClick={() => predM.mutate()}
+                  disabled={predM.isPending || (effectiveTab === "twin" && !twinRequest)}
+                  onClick={() => predM.mutate(effectiveTab === "twin" && twinRequest ? twinRequest : body)}
                 >
                   {predM.isPending ? "계산 중…" : "이 값으로 예측"}
                 </button>
@@ -802,8 +1161,9 @@ function LowSampleHint({
               : "거래가 적은 단지를 더 넣으려면 위의 최소 거래수를 3 또는 2로 낮출 수 있습니다. 기본 5건은 유지하는 편이 안전합니다."}
         </li>
         <li>
-          그래도 부족하면 이 창을 닫고 지도에서 같은 시군구의 인접 읍·면·동을 추가한 뒤 다시 실행하세요.
-          3·5·7년 창과 선택한 유형은 그대로 유지됩니다.
+          그래도 부족하면 이 창을 닫고 지도에서 같은 시군구의 인접 읍·면·동을 추가한 뒤 다시
+          실행하거나, 쌍둥이지역 탭에서 지역을 고르고 통합회귀를 실행해 보세요. 3·5·7년 창과
+          선택한 유형은 그대로 유지됩니다.
         </li>
       </ol>
     </div>
@@ -956,6 +1316,7 @@ function FunnelRow({
 function referenceRows(refs?: Record<string, string>) {
   if (!refs) return [];
   const order: Array<[string, string]> = [
+    ["region", "지역"],
     ["asset_type", "유형"],
     ["structure_group", "구조"],
     ["builder_group", "시공사"],
@@ -974,8 +1335,13 @@ function ReferenceCategoriesLine({ refs }: { refs?: Record<string, string> }) {
   if (!parts.length) return null;
   return (
     <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
-      기준 범주: {parts.map((p) => `${p.kind}=${labelRef(refs?.[p.key])}`).join(" · ")}
-      . 이 지역에서 표본이 가장 많은 군이며, 식의 유형·시공사·구조 계수는 이 값 대비입니다.
+      기준 범주: {parts.map((p) => `${p.kind}=${labelRef(refs?.[p.key])}`).join(" · ")}.
+      {refs?.region
+        ? " 지역 더미의 기준은 이 읍면동입니다. 다른 지역 계수는 이 절편 대비이고, 가상단지 예측도 이 절편을 씁니다."
+        : ""}
+      {parts.some((p) => p.key !== "region")
+        ? " 유형·시공사·구조 계수는 이 표본에서 가장 많은 범주 대비입니다."
+        : ""}
     </p>
   );
 }

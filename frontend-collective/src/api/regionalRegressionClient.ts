@@ -25,6 +25,7 @@ export type RegionalRegressionRunRequest = {
   model_type: "linear" | "log";
   weight_mode: "equal" | "tx";
   min_tx?: 2 | 3 | 5;
+  region_dummy?: boolean;
 };
 
 export type RegionalRegressionPredictInputs = {
@@ -36,6 +37,7 @@ export type RegionalRegressionPredictInputs = {
   builder_group?: string | null;
   asset_type?: string | null;
   assessed_land_price?: number | null;
+  region_group?: string | null;
 };
 
 export type FunnelReason = {
@@ -91,6 +93,7 @@ export type FittedBuildingRow = {
   parking_per_household?: number | null;
   structure_group?: string | null;
   builder_group?: string | null;
+  region_group?: string | null;
 };
 
 export type NewBuildAge0Gap = {
@@ -154,6 +157,36 @@ export type RegionalRegressionPredictResponse = {
     product: number;
   }>;
 };
+
+export type AptTwinPlace = {
+  rank: number | null;
+  label: string;
+  addr1: string;
+  addr2: string;
+  addr4: string;
+  region_addr: string;
+  n_complexes: number;
+};
+
+export type AptTwinListResponse = {
+  as_of_label: string;
+  anchor: AptTwinPlace | null;
+  twins: AptTwinPlace[];
+  scope_anchors: AptTwinPlace[];
+};
+
+export async function fetchAptTwins(body: {
+  addr1: string;
+  addr2?: string;
+  addr4?: string;
+  region_code?: string;
+}): Promise<AptTwinListResponse> {
+  const { data } = await api.post<AptTwinListResponse>(
+    "/analysis/regional-regression/apt-twins",
+    body,
+  );
+  return data;
+}
 
 export async function runRegionalRegression(
   body: RegionalRegressionRunRequest,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.collective.db import get_collective_db
@@ -28,6 +29,51 @@ def regional_regression_run(
         raise HTTPException(400, detail="통계 창은 3·5·7년만 지원합니다")
     try:
         return run_regional_regression(db.connection(), body)
+    except RuntimeError as exc:
+        raise HTTPException(404, detail=str(exc)) from exc
+
+
+class AptTwinRequest(BaseModel):
+    addr1: str
+    addr2: str
+    addr4: str
+
+
+class AptTwinListRequest(BaseModel):
+    addr1: str
+    addr2: str = ""
+    addr4: str = ""
+    region_code: str = ""
+
+
+@router.post("/apt-twins")
+def apt_twin_list(body: AptTwinListRequest, db: Session = Depends(get_collective_db)):
+    """지역회귀 모달의 쌍둥이지역 탭. 아파트 재고·가격분포로 1–5위."""
+    if not body.addr1.strip():
+        raise HTTPException(400, detail="시·도를 선택하세요")
+    from app.collective.regional_regression.apt_twin_lab import list_display_twins
+
+    try:
+        return list_display_twins(
+            db.connection(),
+            addr1=body.addr1,
+            addr2=body.addr2,
+            addr4=body.addr4,
+            region_code=body.region_code,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(404, detail=str(exc)) from exc
+
+
+@router.post("/apt-twin")
+def apt_twin_run(body: AptTwinRequest, db: Session = Depends(get_collective_db)):
+    """관리자 실험. 아파트 재고 쌍둥이 1곳의 계수와 기준지역 CV-MAPE."""
+    if not body.addr1.strip() or not body.addr2.strip() or not body.addr4.strip():
+        raise HTTPException(400, detail="시도, 시군구, 읍면동을 입력하세요")
+    from app.collective.regional_regression.apt_twin_lab import run_anchor
+
+    try:
+        return run_anchor(db.connection(), addr1=body.addr1, addr2=body.addr2, addr4=body.addr4)
     except RuntimeError as exc:
         raise HTTPException(404, detail=str(exc)) from exc
 

@@ -13,6 +13,7 @@ from app.collective.regional_regression.engine import (
     _asset_type_ref,
     _collapse_dummy,
     _design,
+    assign_region_groups,
     _eligible_mask,
     _fit_ols,
     _flags,
@@ -567,5 +568,34 @@ def test_price_intervals_pi_wider_than_mean_ci():
     )
     assert ci_lo is not None and ci_hi is not None and pi_lo is not None and pi_hi is not None
     assert pi_lo < ci_lo <= y_hat <= ci_hi < pi_hi
+
+
+def test_region_dummy_anchor_is_reference_intercept():
+    keys = ["충청북도|증평군|증평읍", "충청북도|충주시|연수동"]
+    work = pd.DataFrame(
+        [
+            {"addr1": "충청북도", "addr2": "증평군", "addr3": "", "addr4": "증평읍", "households": 100.0},
+            {"addr1": "충청북도", "addr2": "충주시", "addr3": "", "addr4": "연수동", "households": 200.0},
+        ]
+    )
+    groups = assign_region_groups(work, keys)
+    assert list(groups) == keys
+    work["region_group"] = groups
+    v = RegionalRegressionVariables(
+        households=True,
+        max_floor=False,
+        building_age=False,
+        parking=False,
+        structure=False,
+        builder=False,
+        asset_type_dummy=False,
+        assessed_land_price=False,
+    )
+    x, labels, warns = _design(work, v, region_levels=keys, region_ref=keys[0])
+    assert warns == []
+    assert x.loc[0, "region_1"] == 0
+    assert x.loc[1, "region_1"] == 1
+    assert "연수동" in labels["region_1"]
+    assert labels["_region_ref"] == "충청북도 증평군 증평읍"
 
 

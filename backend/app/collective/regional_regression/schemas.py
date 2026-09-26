@@ -36,6 +36,7 @@ class RegionalRegressionRunRequest(BaseModel):
     model_type: Literal["linear", "log"] = "log"
     weight_mode: Literal["equal", "tx"] = "equal"
     min_tx: Literal[2, 3, 5] = 5
+    region_dummy: bool = False
 
 
 class RegionalRegressionPredictInputs(BaseModel):
@@ -47,6 +48,7 @@ class RegionalRegressionPredictInputs(BaseModel):
     builder_group: Optional[str] = None
     asset_type: Optional[str] = None
     assessed_land_price: Optional[float] = None
+    region_group: Optional[str] = None
 
 
 class RegionalRegressionPredictRequest(RegionalRegressionRunRequest):
@@ -108,6 +110,7 @@ class FittedBuildingRow(BaseModel):
     parking_per_household: Optional[float] = None
     structure_group: Optional[str] = None
     builder_group: Optional[str] = None
+    region_group: Optional[str] = None
 
 
 class NewBuildAge0Gap(BaseModel):
