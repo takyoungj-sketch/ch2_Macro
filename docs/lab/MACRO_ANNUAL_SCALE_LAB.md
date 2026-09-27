@@ -1,7 +1,7 @@
 # 연 거래액 규모·구성 랩 (GDP · M2 · 주식)
 
 > **작성:** 2026-09-22  
-> **상태:** 1차 랩. 스냅샷 `docs/lab/macro_annual_scale_screen.json`. Insight 5번 본문(`/insight/?q=5`).  
+> **상태:** 1차 랩. 스냅샷 `docs/lab/macro_annual_scale_screen.json`. Insight 5번 본문(`/insight/?q=1`).  
 > **부모:** [`MACRO_INSIGHT_PLAN.md`](../MACRO_INSIGHT_PLAN.md) #5 · [`MACRO_INSIGHT_05.md`](../MACRO_INSIGHT_05.md)  
 > **거래 출처:** [`MACRO_TS_RAW_MONTH_MART.md`](./MACRO_TS_RAW_MONTH_MART.md) (`national_month` 연 합)  
 > **화면:** http://localhost:5179/lab/?tool=macro-scale  
@@ -119,6 +119,6 @@ G3·Insight #1(월 전년동월, 금리·M2 **변화**와 거래 **변화**의 r
 1. 단위 환산 스모크: 2010·2024 한 해, GDP·M2·주식·8유형 액이 같은 십억 원인지. **완료.**
 2. 완결 연 시계열 JSON 스냅샷 `docs/lab/macro_annual_scale_screen.json`. **완료.**
 3. 랩 `?tool=macro-scale` — §4 순서. **완료.**
-4. `/insight/?q=5` · [`MACRO_INSIGHT_05.md`](../MACRO_INSIGHT_05.md) 공개 칸. **완료.**
+4. `/insight/?q=1` · [`MACRO_INSIGHT_05.md`](../MACRO_INSIGHT_05.md) 공개 칸. **완료.**
 
 **지금 안 함:** 결정 JSON. M2 상품 구성. 금리. 원 금액 이중축.

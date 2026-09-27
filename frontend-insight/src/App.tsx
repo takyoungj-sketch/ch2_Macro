@@ -13,6 +13,7 @@ import Insight08 from "./pages/Insight08";
 import Insight10 from "./pages/Insight10";
 import Insight11 from "./pages/Insight11";
 import Insight12 from "./pages/Insight12";
+import { insightPanel } from "./insightOrder";
 
 function readQ(): string | null {
   return new URLSearchParams(window.location.search).get("q");
@@ -27,30 +28,7 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  const panel =
-    q === "1"
-      ? "Insight01"
-      : q === "2"
-        ? "Insight02"
-        : q === "3"
-          ? "Insight03"
-          : q === "4"
-            ? "Insight04"
-            : q === "5"
-              ? "Insight05"
-              : q === "6"
-                ? "Insight06"
-                : q === "7"
-                  ? "Insight07"
-                  : q === "8"
-                    ? "Insight08"
-                    : q === "10"
-                      ? "Insight10"
-                      : q === "11"
-                        ? "Insight11"
-                        : q === "12"
-                          ? "Insight12"
-                          : "InsightHome";
+  const panel = insightPanel(q);
 
   return (
     <ActiveAiViewProvider fallback={emptyAiContext("insight", panel, { regionLabel: "전국" })}>
@@ -75,27 +53,27 @@ export default function App() {
           </div>
         </header>
         {q === "1" ? (
-          <Insight01 />
-        ) : q === "2" ? (
-          <Insight02 />
-        ) : q === "3" ? (
-          <Insight03 />
-        ) : q === "4" ? (
-          <Insight04 />
-        ) : q === "5" ? (
           <Insight05 />
+        ) : q === "2" ? (
+          <Insight01 />
+        ) : q === "3" ? (
+          <Insight02 />
+        ) : q === "4" ? (
+          <Insight11 />
+        ) : q === "5" ? (
+          <Insight12 />
         ) : q === "6" ? (
-          <Insight06 />
-        ) : q === "7" ? (
           <Insight07 />
+        ) : q === "7" ? (
+          <Insight04 />
         ) : q === "8" ? (
+          <Insight06 />
+        ) : q === "9" ? (
           <Insight08 />
         ) : q === "10" ? (
-          <Insight10 />
+          <Insight03 />
         ) : q === "11" ? (
-          <Insight11 />
-        ) : q === "12" ? (
-          <Insight12 />
+          <Insight10 />
         ) : (
           <InsightHome />
         )}

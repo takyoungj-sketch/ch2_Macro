@@ -44,8 +44,8 @@ export default function Insight07() {
             {copy.listTitle}
             <StatsGlossaryHelp termId="twin_region" size="sm" />
           </h2>
-          <p className="text-sm text-slate-500">{copy.listSub}</p>
-          <p className="text-sm font-medium text-slate-800 dark:text-slate-100 leading-relaxed">{copy.lead}</p>
+          <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">{copy.listSub}</p>
+          <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200">{copy.lead}</p>
           <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200">{copy.leadNext}</p>
         </header>
 
@@ -62,12 +62,16 @@ export default function Insight07() {
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.s1Title}</h3>
           <p>{copy.s1Body}</p>
           <p>{copy.s1Scope}</p>
+          <p>{copy.s1ScopeNext}</p>
           <p>{copy.s1Pop}</p>
+          <p>{copy.s1PopEx}</p>
+          <p>{copy.s1After}</p>
         </section>
 
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.s2Title}</h3>
           <p>{copy.s2Lead}</p>
+          <p>{copy.s2LeadNext}</p>
           <div className="overflow-x-auto">
             <table className="data w-full text-[13px]">
               <thead>
@@ -88,47 +92,68 @@ export default function Insight07() {
               </tbody>
             </table>
           </div>
+          <p>{copy.s2After}</p>
         </section>
 
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.s3Title}</h3>
+          <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-50">{copy.s3PopTitle}</h4>
           <p>{copy.s3Pop}</p>
+          <p>{copy.s3PopNext}</p>
+          <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-50">{copy.s3MixTitle}</h4>
           <p>{copy.s3Mix}</p>
+          <p>{copy.s3MixList}</p>
+          <p>{copy.s3MixEx}</p>
+          <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-50">{copy.s3LandTitle}</h4>
           <p>{copy.s3Land}</p>
+          <p>{copy.s3LandHow}</p>
+          <p>{copy.s3LandCount}</p>
+          <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-50">{copy.s3AptTitle}</h4>
           <p>{copy.s3Apt}</p>
+          <p>{copy.s3AptPlain}</p>
+          <p>{copy.s3AptN}</p>
           <p>{copy.s3Rep}</p>
           <p>{copy.s3Clamp}</p>
         </section>
 
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.s4Title}</h3>
-          <p>{copy.s4Body}</p>
+          {copy.s4.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
         </section>
 
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.limitsTitle}</h3>
-          <ul className="list-disc ml-5 space-y-1.5">
+          <div className="space-y-2">
             {copy.limits.map((line) => (
-              <li key={line}>{line}</li>
+              <p key={line}>{line}</p>
             ))}
-          </ul>
+          </div>
         </section>
 
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.checkTitle}</h3>
+          <p>{copy.checkLead}</p>
           <p className="font-medium text-slate-900 dark:text-slate-50">{copy.checkedTitle}</p>
-          <p>{copy.checked}</p>
+          {copy.checked.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
           <p className="font-medium text-slate-900 dark:text-slate-50">{copy.toCheckTitle}</p>
-          <p>{copy.toCheck}</p>
+          {copy.toCheck.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
         </section>
 
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.nextTitle}</h3>
+          <p>{copy.nextLead}</p>
           <ul className="list-disc ml-5 space-y-1.5">
             {copy.next.map((line) => (
               <li key={line}>{line}</li>
             ))}
           </ul>
+          <p>{copy.nextAfter}</p>
         </section>
 
         <section className={prose}>

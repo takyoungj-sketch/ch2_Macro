@@ -233,7 +233,7 @@ export default function YieldCompareLab() {
         resume={{
           next_id: "yield-compare-screen",
           title: "표는 관리자에 있고, 공개는 11번이다",
-          say: "전국 2021–2025. 오피스는 상업 공표이고 오피스텔은 주거 실거래다. 주거 세 번째 줄은 소득+자본이다. 공개 글은 /insight/?q=11.",
+          say: "전국 2021–2025. 오피스는 상업 공표이고 오피스텔은 주거 실거래다. 주거 세 번째 줄은 소득+자본이다. 공개 글은 /insight/?q=4.",
           do_not: "오피스와 오피스텔을 한 줄로 부르기. 상가 세 유형을 평균하기. 주거를 분기로 쪼개 상업 복리와 같은 식이라고 적기. 코스피 종가 수익률에 배당수익률을 더하기. #1·#5에 붙이기.",
           how: "docs/lab/YIELD_COMPARE_LAB.md · docs/lab/yield_compare_national.json · python -m app.yield_compare.build",
         }}

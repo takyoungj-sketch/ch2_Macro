@@ -68,7 +68,7 @@ export default function Insight03() {
             <span className="mx-1.5 text-slate-300">·</span>
             {periodLabel}
           </p>
-          <p className="text-sm font-medium text-slate-800 dark:text-slate-100 leading-relaxed">{copy.lead}</p>
+          <p className="text-sm leading-relaxed text-slate-800 dark:text-slate-100">{copy.lead}</p>
           <div className={prose}>
             <Prose lines={copy.intro} />
           </div>
@@ -78,8 +78,8 @@ export default function Insight03() {
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.seeTitle}</h3>
           <ul className="list-disc ml-5 space-y-1.5">
             <li>
-              <Term id="insight_within_building">같은 건물 안 비교</Term>
-              입니다. {copy.see[0]}
+              <Term id="insight_within_building">같은 건물 안에서</Term> 1층과 그 건물의 윗층을 비교합니다. 입지가
+              다른 집끼리 비교하지 않습니다.
             </li>
             <li>{copy.see[1]}</li>
             <li>{copy.see[2]}</li>
@@ -89,13 +89,14 @@ export default function Insight03() {
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.s1Title}</h3>
           <p>{copy.s1Lead}</p>
-          <p>{copy.s1Body}</p>
+          <p>{copy.s1GateLead}</p>
           <ul className="list-disc ml-5 space-y-1">
             {copy.s1Gates.map((g) => (
               <li key={g}>{g}</li>
             ))}
           </ul>
-          <p className="text-slate-600 dark:text-slate-300">{copy.s1Note}</p>
+          <p>{copy.s1After}</p>
+          <p>{copy.s1Note}</p>
         </section>
 
         <section className={prose}>
@@ -106,10 +107,11 @@ export default function Insight03() {
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.s3Title}</h3>
           <p>{copy.s3Lead}</p>
+          <p>{copy.s3Result}</p>
           <p>
             {copy.s3ThetaLabel}: {fmtPct1(snap.pctThetaTop)}
           </p>
-          <p className="text-slate-600 dark:text-slate-300">{copy.s3ThetaHint}</p>
+          <Prose lines={copy.s3ThetaHint} />
           <table className="data w-full max-w-md text-[13px]">
             <thead>
               <tr>
@@ -138,8 +140,6 @@ export default function Insight03() {
               </tr>
             </tbody>
           </table>
-          <p className="text-slate-600 dark:text-slate-300">{copy.sketchCaption}</p>
-          <p className="text-[11px] text-slate-500">{copy.sketchRound}</p>
           <Prose lines={copy.s3After} />
         </section>
 
@@ -162,12 +162,11 @@ export default function Insight03() {
               ))}
             </tbody>
           </table>
-          <p>{copy.s4Close}</p>
+          <Prose lines={copy.s4After} />
         </section>
 
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.s5Title}</h3>
-          <p className="font-medium">{copy.s5Lead}</p>
           <Prose lines={copy.s5} />
         </section>
 
@@ -187,7 +186,7 @@ export default function Insight03() {
               <li key={f}>{f}</li>
             ))}
           </ul>
-          <p>{copy.close}</p>
+          <Prose lines={copy.close} />
         </section>
 
         <section className={prose}>

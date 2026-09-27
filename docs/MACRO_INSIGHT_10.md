@@ -3,7 +3,7 @@
 > **작성:** 2026-09-23  
 > **상태:** 구현. 결정 카드 없음. 실험은 **결론이 아니다.** 제품 층 식은 바꾸지 않았다.  
 > **부모:** [`MACRO_INSIGHT_PLAN.md`](./MACRO_INSIGHT_PLAN.md) · 실험 [`lab/SHOP_FLOOR_UTILITY_LAB.md`](./lab/SHOP_FLOOR_UTILITY_LAB.md)  
-> **화면:** `/insight/?q=10`. `/lab/` 링크 없음.  
+> **화면:** `/insight/?q=11`. `/lab/` 링크 없음.  
 > **설명:** [`CH2_EXPLAIN_CONSTITUTION.md`](./CH2_EXPLAIN_CONSTITUTION.md) · [`CH2_AI_CONSTITUTION.md`](./CH2_AI_CONSTITUTION.md)
 
 이 문서가 **10번 본문·카피 결·숫자 출처·AI 설명**의 SSOT다. 코드가 이 문서를 앞서지 않는다.

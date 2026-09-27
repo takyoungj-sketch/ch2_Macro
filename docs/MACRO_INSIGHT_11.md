@@ -3,7 +3,7 @@
 > **작성:** 2026-09-24  
 > **상태:** 구현. 결정 카드 없음. 어느 자산이 더 나은 투자였는지는 말하지 않는다.  
 > **부모:** [`MACRO_INSIGHT_PLAN.md`](./MACRO_INSIGHT_PLAN.md) · 표 [`lab/YIELD_COMPARE_LAB.md`](./lab/YIELD_COMPARE_LAB.md)  
-> **화면:** `/insight/?q=11`. `/lab/` 링크 없음.  
+> **화면:** `/insight/?q=4`. `/lab/` 링크 없음.  
 > **설명:** [`CH2_EXPLAIN_CONSTITUTION.md`](./CH2_EXPLAIN_CONSTITUTION.md) · [`CH2_AI_CONSTITUTION.md`](./CH2_AI_CONSTITUTION.md)
 
 이 문서가 **11번 본문·카피 결·숫자 출처·AI 설명**의 SSOT다. 코드가 이 문서를 앞서지 않는다.

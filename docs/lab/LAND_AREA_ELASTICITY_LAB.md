@@ -1,7 +1,7 @@
 # 토지 면적 탄성(광평수) 랩
 
 > **작성:** 2026-09-21  
-> **상태:** 1–3차 랩 정리(교차표). **일시 정지.** 차후=용도지역 분할. Insight 4번 본문(`/insight/?q=4`). 제품 토지 회귀·매트릭스 기본값 미변경.  
+> **상태:** 1–3차 랩 정리(교차표). **일시 정지.** 차후=용도지역 분할. Insight 4번 본문(`/insight/?q=7`). 제품 토지 회귀·매트릭스 기본값 미변경.  
 > **성격:** 랩 실험. 1차=유형별 대표칸 회귀. 2차=적격 369를 모집단으로 비교가능칸 단가 비교. 3차=그 차이의 지역 구성·유형×지목 교차표.  
 > **원장:** `land_transactions_resolved` · 조회는 [`LAND_LEDGER_QUERY_PERF.md`](../LAND_LEDGER_QUERY_PERF.md) (`ANY` 금지)  
 > **스냅샷:** [`land_area_elasticity_screen.json`](./land_area_elasticity_screen.json) · 전 칸 표 [`land_area_elasticity_screen.csv`](./land_area_elasticity_screen.csv)  

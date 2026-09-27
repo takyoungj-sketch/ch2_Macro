@@ -372,7 +372,7 @@ def compute_annual_scale(
         "resume": {
             "next_id": "hold",
             "title": "1차 유지",
-            "say": "공개 본문은 /insight/?q=5. 이 랩은 스냅샷 재계산·단위 게이트. M2 상품 구성은 다른 실험.",
+            "say": "공개 본문은 /insight/?q=1. 이 랩은 스냅샷 재계산·단위 게이트. M2 상품 구성은 다른 실험.",
             "do_not": "원 금액 이중축, 금리, GDP 기여도 문장, #1에 연 그래프, M2 상품을 이 랩에 붙이기.",
             "how": "docs/MACRO_INSIGHT_05.md · python -m app.macro_ts.annual_scale",
         },

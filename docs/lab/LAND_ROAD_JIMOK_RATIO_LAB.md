@@ -1,7 +1,7 @@
 # 도로 지목 상대가격 랩 (대 · 전 · 답)
 
 > **작성:** 2026-09-22  
-> **상태:** 1차 분포 + 2차(칸 안 회귀, 연도별 \(r\)). 화면 `?tool=road-jimok`. 공개 본문 [`MACRO_INSIGHT_06.md`](../MACRO_INSIGHT_06.md) `/insight/?q=6`. 도시 전체 하나의 퍼센트와 연도별 표는 공개 본문에 넣지 않음.  
+> **상태:** 1차 분포 + 2차(칸 안 회귀, 연도별 \(r\)). 화면 `?tool=road-jimok`. 공개 본문 [`MACRO_INSIGHT_06.md`](../MACRO_INSIGHT_06.md) `/insight/?q=8`. 도시 전체 하나의 퍼센트와 연도별 표는 공개 본문에 넣지 않음.  
 > **부모:** [`MACRO_INSIGHT_PLAN.md`](../MACRO_INSIGHT_PLAN.md) #6 (랩 1차, 공개 전)  
 > **원장:** `land_transactions_resolved` · 조회는 [`LAND_LEDGER_QUERY_PERF.md`](../LAND_LEDGER_QUERY_PERF.md) (`ANY` 금지)  
 > **지목 코드:** [`LAND_JIMOK_GROUP_DESIGN.md`](../LAND_JIMOK_GROUP_DESIGN.md) · `pipeline/constants.py`  

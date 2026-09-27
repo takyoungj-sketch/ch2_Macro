@@ -11,9 +11,8 @@ import {
   type Insight02Pair,
   type Insight02Response,
   type Insight02ScatterResponse,
-  type SizeCorr,
 } from "../api/insightClient";
-import { INSIGHT_02, SIZE_GROUPS, formatAsOfMonth, pairLabel } from "../copy/insight02";
+import { INSIGHT_02, formatAsOfMonth, pairLabel } from "../copy/insight02";
 
 function Term({ id, children }: { id: string; children: ReactNode }) {
   return (
@@ -41,18 +40,6 @@ function pairKey(a: string, b: string): string {
 function findPair(pairs: Insight02Pair[], a: string, b: string): Insight02Pair | undefined {
   const k = pairKey(a, b);
   return pairs.find((p) => pairKey(p.a, p.b) === k);
-}
-
-type ReadKind = "survive" | "apparent" | "reverse" | "weak" | "missing";
-
-function readKind(block: SizeCorr | null | undefined): ReadKind {
-  if (!block || block.r == null) return "missing";
-  const r = block.r;
-  const rp = block.r_pop;
-  if (rp != null && rp <= SIZE_GROUPS.reversePop) return "reverse";
-  if (rp != null && rp >= SIZE_GROUPS.survivePop) return "survive";
-  if (r >= SIZE_GROUPS.apparentR && (rp == null || rp < SIZE_GROUPS.apparentPop)) return "apparent";
-  return "weak";
 }
 
 function Seg({
@@ -180,66 +167,6 @@ export default function Insight02() {
 
   const sizeHit = data ? findPair(data.pairs, picked.a, picked.b) : undefined;
   const sizeBlock = sizeHit?.amount ?? null;
-  const kind = readKind(sizeBlock);
-
-  const groups = useMemo(() => {
-    const pairs = data?.pairs ?? [];
-    const scored = pairs.map((p) => ({ p, block: p.amount })).filter((x) => x.block.r != null);
-    const survive = scored
-      .filter((x) => x.block.r_pop != null && (x.block.r_pop as number) >= SIZE_GROUPS.survivePop)
-      .sort((a, b) => (b.block.r_pop ?? 0) - (a.block.r_pop ?? 0))
-      .slice(0, 5);
-    const apparent = scored
-      .filter(
-        (x) =>
-          (x.block.r as number) >= SIZE_GROUPS.apparentR &&
-          (x.block.r_pop == null || x.block.r_pop < SIZE_GROUPS.apparentPop),
-      )
-      .sort((a, b) => (b.block.r as number) - (a.block.r as number))
-      .slice(0, 5);
-    const taken = new Set([...survive, ...apparent].map((x) => pairKey(x.p.a, x.p.b)));
-    const reverse = scored
-      .filter((x) => !taken.has(pairKey(x.p.a, x.p.b)))
-      .filter(
-        (x) =>
-          (x.block.r_pop != null && (x.block.r_pop as number) <= SIZE_GROUPS.reversePop) ||
-          ((x.block.r as number) < 0.35 &&
-            (x.block.r_pop == null || Math.abs(x.block.r_pop) < SIZE_GROUPS.apparentPop)),
-      )
-      .sort((a, b) => (a.block.r_pop ?? 1) - (b.block.r_pop ?? 1))
-      .slice(0, 5);
-    return { survive, apparent, reverse };
-  }, [data]);
-
-  const diverge = useMemo(() => {
-    const pairs = data?.pairs ?? [];
-    return pairs
-      .filter((p) => p.amount.r != null && p.count.r != null)
-      .map((p) => ({
-        p,
-        gap: Math.abs((p.amount.r as number) - (p.count.r as number)),
-        signFlip:
-          ((p.amount.r as number) > 0.05 && (p.count.r as number) < -0.05) ||
-          ((p.amount.r as number) < -0.05 && (p.count.r as number) > 0.05),
-      }))
-      .filter((x) => x.signFlip || x.gap >= SIZE_GROUPS.divergeAbs)
-      .sort((a, b) => b.gap - a.gap)
-      .slice(0, 5);
-  }, [data]);
-
-  const priceHighlights = useMemo(() => {
-    const pairs = data?.pairs ?? [];
-    const prices = data?.price_pairs ?? [];
-    return prices
-      .filter((pp) => pp.r != null && pp.r >= 0.7)
-      .map((pp) => {
-        const size = findPair(pairs, pp.a, pp.b);
-        return { pp, size };
-      })
-      .filter((x) => x.size?.amount.r_pop != null && (x.size.amount.r_pop as number) < SIZE_GROUPS.apparentPop)
-      .sort((a, b) => (b.pp.r as number) - (a.pp.r as number))
-      .slice(0, 3);
-  }, [data]);
 
   const priceHit = pricePicked
     ? data?.price_pairs.find((p) => pairKey(p.a, p.b) === pairKey(pricePicked.a, pricePicked.b))
@@ -263,18 +190,22 @@ export default function Insight02() {
 
         <header className="space-y-3">
           <h2 className="text-xl font-bold leading-snug">{INSIGHT_02.listTitle}</h2>
-          <p className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-            <span className="rounded bg-amber-100 px-2 py-0.5 font-medium text-amber-950 dark:bg-amber-900/40 dark:text-amber-100">
-              최근 {years}년
-            </span>
-            <span className="text-slate-500">전국 · 시군구{asOf ? ` · 기준월 ${asOf}` : ""}</span>
-            {data ? <span className="text-slate-500">· n={data.n}</span> : null}
+          <p className="text-sm text-slate-500">
+            {INSIGHT_02.listSub}
+          </p>
+          <p className="text-sm text-slate-500">
+            최근 {years}년 · 전국 · 시·군·구
+            {asOf ? ` · 기준월 ${asOf}` : ""}
+            {data ? ` · n=${data.n}` : ""}
           </p>
           <div className={prose}>
             <Prose lines={INSIGHT_02.intro} />
+            <p>{INSIGHT_02.basis}</p>
             <p>
-              {INSIGHT_02.basis} <Term id="pearson_r">상관계수</Term> ·{" "}
-              <Term id="insight_cross">시군구 단면</Term> · <Term id="insight_pop_adj">인구 보정</Term>
+              <Term id="pearson_r">상관계수</Term>는 두 변수가 함께 움직이는 정도를 나타내고,{" "}
+              <Term id="insight_cross">시·군·구</Term> 단위는 분석의 공간 단위입니다.{" "}
+              <Term id="insight_pop_adj">인구 보정</Term>은 지역의 인구 규모 때문에 생길 수 있는 관계를 줄여서 보는
+              방법입니다.
             </p>
           </div>
         </header>
@@ -286,6 +217,9 @@ export default function Insight02() {
 
         <section className="space-y-3">
           <h3 className="text-base font-semibold">① {INSIGHT_02.heatmapTitle}</h3>
+          <div className={prose}>
+            <Prose lines={INSIGHT_02.s1Before} />
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <Seg
               options={[
@@ -301,19 +235,21 @@ export default function Insight02() {
               <CorrHeatmap types={types} getR={getSizeR} selected={picked} onSelect={pickSize} />
             </div>
           ) : null}
-          <p className="text-xs text-slate-500">{INSIGHT_02.heatmapCaption}</p>
+          <div className={prose}>
+            <p className="font-medium text-slate-900 dark:text-slate-50">{INSIGHT_02.s1ExampleTitle}</p>
+            <Prose lines={INSIGHT_02.s1Example} />
+          </div>
 
           <div className="card p-4 space-y-3">
             <p className="text-sm font-medium">{pairLabel(picked.a, picked.b)}</p>
             {sizeBlock ? (
               <p className="text-sm tabular-nums text-slate-700 dark:text-slate-200">
-                {INSIGHT_02.beforeAfter} {fmtSigned(sizeBlock.r)}
+                원래 {fmtSigned(sizeBlock.r)}
                 <span className="mx-2 text-slate-400">→</span>
-                {INSIGHT_02.afterPop} {fmtSigned(sizeBlock.r_pop)}
+                인구 보정 {fmtSigned(sizeBlock.r_pop)}
                 <span className="ml-2 text-xs text-slate-500">n={sizeBlock.n}</span>
               </p>
             ) : null}
-            <p className="text-sm text-slate-600 dark:text-slate-300">{INSIGHT_02.reads[kind]}</p>
             {scatterErr ? <p className="text-sm text-red-600">{scatterErr}</p> : null}
             {sizeScatter ? (
               <SizeScatter
@@ -330,76 +266,74 @@ export default function Insight02() {
           </div>
         </section>
 
-        <section className="space-y-4">
+        <section className={prose}>
           <h3 className="text-base font-semibold">② {INSIGHT_02.patternTitle}</h3>
-          <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200">{INSIGHT_02.patternLead}</p>
-          {(
-            [
-              ["survive", INSIGHT_02.surviveTitle, INSIGHT_02.surviveBody, INSIGHT_02.surviveTag, groups.survive],
-              ["apparent", INSIGHT_02.apparentTitle, INSIGHT_02.apparentBody, INSIGHT_02.apparentTag, groups.apparent],
-              ["reverse", INSIGHT_02.reverseTitle, INSIGHT_02.reverseBody, INSIGHT_02.reverseTag, groups.reverse],
-            ] as const
-          ).map(([key, title, body, tag, rows]) => (
-            <div key={key} className="card p-4 space-y-3">
-              <p className="text-sm font-medium">{title}</p>
-              <p className="text-sm text-slate-600 dark:text-slate-300">{body}</p>
-              {rows.length === 0 ? (
-                <p className="text-sm text-slate-500">{INSIGHT_02.emptyGroup}</p>
-              ) : (
-                <ul className="grid gap-2 sm:grid-cols-2">
-                  {rows.map(({ p, block }) => (
-                    <li key={`${p.a}|${p.b}`}>
-                      <button
-                        type="button"
-                        className="w-full rounded border border-slate-200 dark:border-slate-600 px-3 py-2 text-left hover:border-slate-400"
-                        onClick={() => pickSize(p.a, p.b)}
-                      >
-                        <p className="text-sm font-medium text-slate-900 dark:text-slate-50">
-                          {pairLabel(p.a, p.b)}
-                        </p>
-                        <p className="text-xs text-slate-500 mt-0.5">{tag}</p>
-                        <p className="text-xs tabular-nums text-slate-600 dark:text-slate-300 mt-1">
-                          {fmtSigned(block.r)} → {fmtSigned(block.r_pop)}
-                        </p>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ))}
-        </section>
-
-        <section className="space-y-3">
-          <h3 className="text-base font-semibold">③ {INSIGHT_02.contrastTitle}</h3>
-          <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200">{INSIGHT_02.contrastLead}</p>
-          <p className="text-xs text-slate-500">{INSIGHT_02.contrastHint}</p>
-          <ul className="grid gap-2 sm:grid-cols-2">
-            {diverge.map(({ p }) => (
-              <li key={`${p.a}|${p.b}`}>
-                <button
-                  type="button"
-                  className="card w-full p-4 text-left hover:border-slate-400"
-                  onClick={() => pickSize(p.a, p.b)}
-                >
-                  <p className="text-sm font-medium">{pairLabel(p.a, p.b)}</p>
-                  <p className="mt-2 text-sm tabular-nums text-slate-700 dark:text-slate-200">
-                    규모 {fmtSigned(p.amount.r)}
-                  </p>
-                  <p className="text-sm tabular-nums text-slate-700 dark:text-slate-200">
-                    건수 {fmtSigned(p.count.r)}
-                  </p>
-                </button>
-              </li>
+          <p>{INSIGHT_02.patternLead}</p>
+          <p className="font-medium text-slate-900 dark:text-slate-50">{INSIGHT_02.surviveTitle}</p>
+          <p>{INSIGHT_02.surviveLead}</p>
+          <ul className="list-disc ml-5 space-y-1">
+            {INSIGHT_02.survivePairs.map((line) => (
+              <li key={line}>{line}</li>
             ))}
           </ul>
+          <Prose lines={INSIGHT_02.surviveAfter} />
+          <p className="font-medium text-slate-900 dark:text-slate-50">{INSIGHT_02.apparentTitle}</p>
+          <p>{INSIGHT_02.apparentLead}</p>
+          <ul className="list-disc ml-5 space-y-1">
+            {INSIGHT_02.apparentPairs.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+          <Prose lines={INSIGHT_02.apparentAfter} />
+          <p className="font-medium text-slate-900 dark:text-slate-50">{INSIGHT_02.reverseTitle}</p>
+          <p>{INSIGHT_02.reverseLead}</p>
+          <ul className="list-disc ml-5 space-y-1">
+            {INSIGHT_02.reversePairs.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+          <Prose lines={INSIGHT_02.reverseAfter} />
+        </section>
+
+        <section className={prose}>
+          <h3 className="text-base font-semibold">③ {INSIGHT_02.contrastTitle}</h3>
+          <Prose lines={INSIGHT_02.s3} />
+          <table className="data w-full max-w-md text-[13px]">
+            <thead>
+              <tr>
+                <th className="text-left">유형</th>
+                <th>거래규모</th>
+                <th>거래건수</th>
+              </tr>
+            </thead>
+            <tbody>
+              {INSIGHT_02.s3Rows.map((row) => (
+                <tr key={row.pair}>
+                  <td className="text-left">{row.pair}</td>
+                  <td>{row.amount}</td>
+                  <td>{row.count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <Prose lines={INSIGHT_02.s3After} />
         </section>
 
         <section className="space-y-3">
           <h3 className="text-base font-semibold">④ {INSIGHT_02.priceTitle}</h3>
-          <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200">
-            {INSIGHT_02.priceLead} <Term id="insight_p50">㎡당 중앙값</Term>
-          </p>
+          <div className={prose}>
+            <p>
+              이번에는 거래규모가 아니라 시·군·구별 유형의 <Term id="insight_p50">㎡당 가격 중위값(P50)</Term>을
+              비교했습니다.
+            </p>
+            <Prose lines={INSIGHT_02.s4.slice(1, 5)} />
+            <p>{INSIGHT_02.s4[5]}</p>
+            <ul className="list-disc ml-5 space-y-1">
+              {INSIGHT_02.s4High.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </div>
           {data ? (
             <div className="card p-3">
               <CorrHeatmap
@@ -430,48 +364,53 @@ export default function Insight02() {
               <p className="text-xs text-slate-500">{INSIGHT_02.scatterCaptionPrice}</p>
             </div>
           ) : null}
-          {priceHighlights.length > 0 ? (
-            <ul className="grid gap-2 sm:grid-cols-2">
-              {priceHighlights.map(({ pp, size }) => (
-                <li key={`${pp.a}|${pp.b}`}>
-                  <button
-                    type="button"
-                    className="card w-full p-4 text-left hover:border-slate-400"
-                    onClick={() => setPricePicked({ a: pp.a, b: pp.b })}
-                  >
-                    <p className="text-sm font-medium">{pairLabel(pp.a, pp.b)}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{INSIGHT_02.priceHighlightTag}</p>
-                    <p className="text-xs tabular-nums text-slate-600 dark:text-slate-300 mt-1">
-                      규모 {fmtSigned(size?.amount.r ?? null)} → {fmtSigned(size?.amount.r_pop ?? null)} · 단가{" "}
-                      {fmtSigned(pp.r)}
-                    </p>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200">{INSIGHT_02.priceClose}</p>
+          <div className={prose}>
+            <Prose lines={INSIGHT_02.s4After} />
+          </div>
         </section>
 
-        <details className="card p-4 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
-          <summary className="cursor-pointer font-medium text-slate-900 dark:text-slate-50">
-            ⑤ {INSIGHT_02.withinTitle}
-          </summary>
-          <div className="mt-3 space-y-2">
-            <p>{INSIGHT_02.withinLead}</p>
-            <Prose lines={INSIGHT_02.withinBody} />
-          </div>
-        </details>
+        <section className={prose}>
+          <h3 className="text-base font-semibold">⑤ {INSIGHT_02.withinTitle}</h3>
+          <Prose lines={INSIGHT_02.within} />
+        </section>
 
         <section className={prose}>
-          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">이 분석의 한계</h3>
+          <h3 className="text-base font-semibold">{INSIGHT_02.patternsTitle}</h3>
+          <ol className="list-decimal ml-5 space-y-2">
+            {INSIGHT_02.patterns.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ol>
+          <Prose lines={INSIGHT_02.patternsAfter} />
+        </section>
+
+        <section className={prose}>
+          <h3 className="text-base font-semibold">{INSIGHT_02.limitsTitle}</h3>
           <ul className="list-disc pl-5 space-y-1">
             {INSIGHT_02.limits.map((line) => (
               <li key={line}>{line}</li>
             ))}
           </ul>
-          <p>{INSIGHT_02.close}</p>
-          <p className="text-xs text-slate-500">{INSIGHT_02.next}</p>
+          <Prose lines={INSIGHT_02.close} />
+        </section>
+
+        <section className={prose}>
+          <h3 className="text-base font-semibold">{INSIGHT_02.nextTitle}</h3>
+          <ul className="list-disc pl-5 space-y-1">
+            {INSIGHT_02.next.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </section>
+
+        <section className={prose}>
+          <h3 className="text-base font-semibold">{INSIGHT_02.relatedTitle}</h3>
+          <Prose lines={INSIGHT_02.related} />
+          <p>
+            <a href={INSIGHT_02.relatedHref} className="text-slate-800 underline dark:text-slate-200">
+              {INSIGHT_02.relatedLink}
+            </a>
+          </p>
         </section>
       </article>
     </>

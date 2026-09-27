@@ -69,7 +69,7 @@ export default function Insight04() {
             <span className="mx-1.5 text-slate-300">·</span>
             {periodLabel}
           </p>
-          <p className="text-sm font-medium text-slate-800 dark:text-slate-100 leading-relaxed">{copy.lead}</p>
+          <p className="text-sm leading-relaxed text-slate-800 dark:text-slate-100">{copy.lead}</p>
           <div className={prose}>
             <Prose lines={copy.intro} />
           </div>
@@ -79,8 +79,8 @@ export default function Insight04() {
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.seeTitle}</h3>
           <ul className="list-disc ml-5 space-y-1.5">
             <li>
-              <Term id="insight_same_cell">같은 시군구·같은 지목 안에서</Term> 비교합니다. 같은 시군구·같은 지목
-              안에서만 비교하므로 서울 대지와 군 전을 직접 비교하지 않습니다.
+              <Term id="insight_same_cell">같은 시·군·구·같은 지목 안에서</Term> 비교합니다. 따라서 서울의 대지와
+              군 지역의 전을 직접 비교하지 않습니다.
             </li>
             <li>{copy.see[1]}</li>
             <li>{copy.see[2]}</li>
@@ -90,23 +90,25 @@ export default function Insight04() {
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.s1Title}</h3>
           <p>{copy.s1Lead}</p>
-          <p>{copy.s1Body}</p>
+          <Prose lines={copy.s1Body} />
+          <p>{copy.s1GateLead}</p>
           <ul className="list-disc ml-5 space-y-1">
             {copy.s1Gates.map((g) => (
               <li key={g}>{g}</li>
             ))}
           </ul>
-          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-600 dark:bg-slate-800/60">
-            <p>
-              이 글에서 「<Term id="insight_relative_large">광평</Term>」{copy.largeBoxRest}
-            </p>
-          </div>
-          <p className="text-slate-600 dark:text-slate-300">{copy.s1Note}</p>
+          <p>
+            여기서 ‘<Term id="insight_relative_large">광평</Term>’은 전국에서 공통으로 정해 놓은 고정 면적을 뜻하지
+            않습니다. 같은 시·군·구·지목 안에서 상대적으로 큰 필지, 즉 면적 기준 상위 10%(P90 이상)에 해당하는
+            필지를 뜻합니다.
+          </p>
+          <p>{copy.s1Large[1]}</p>
+          <p>{copy.s1Note}</p>
         </section>
 
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.s2Title}</h3>
-          <p>{copy.s2[0]}</p>
+          <p>{copy.s2Before}</p>
           <table className="data w-full max-w-md text-[13px]">
             <thead>
               <tr>
@@ -133,9 +135,8 @@ export default function Insight04() {
               </tr>
             </tbody>
           </table>
-          <p className="text-slate-600 dark:text-slate-300">{copy.s2TableCaption}</p>
-          <p>{copy.s2[1]}</p>
-          <p>{copy.s2[2]}</p>
+          <Prose lines={copy.s2Caption} />
+          <Prose lines={copy.s2After} />
         </section>
 
         <section className={prose}>
@@ -173,27 +174,23 @@ export default function Insight04() {
 
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.s4Title}</h3>
-          <p>{copy.s4Lead}</p>
           <Prose lines={copy.s4} />
         </section>
 
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.s5Title}</h3>
-          <p className="font-medium">{copy.s5Lead}</p>
-          <p>{copy.s5}</p>
-          <details className="text-slate-600 dark:text-slate-300">
-            <summary className="cursor-pointer text-sm">{copy.s5DetailLabel}</summary>
-            <p className="mt-2">{copy.s5Detail}</p>
-          </details>
+          <Prose lines={copy.s5} />
         </section>
 
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.patternsTitle}</h3>
+          <p>{copy.patternsLead}</p>
           <ol className="list-decimal ml-5 space-y-2">
             {copy.patterns.map((p) => (
               <li key={p}>{p}</li>
             ))}
           </ol>
+          <p>{copy.patternsClose}</p>
         </section>
 
         <section className={prose}>

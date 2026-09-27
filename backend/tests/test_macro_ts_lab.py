@@ -1,4 +1,9 @@
-from app.regional_profile.macro_ts_lab import _lag_pearson, _merge_mix, _rollup_calendar_year
+from app.regional_profile.macro_ts_lab import (
+    _clip_partial_tail,
+    _lag_pearson,
+    _merge_mix,
+    _rollup_calendar_year,
+)
 
 
 def test_merge_shop_adds_built_and_collective():
@@ -35,6 +40,28 @@ def test_rollup_calendar_year_sums_and_drops_partial():
     assert out["아파트"][2010]["count"] == 13.0
     assert 2011 not in out["아파트"]
     assert any("2011" in n for n in notes)
+
+
+def test_clip_partial_tail_drops_only_a_thin_last_month():
+    def cell(n: float) -> dict[str, float]:
+        return {"count": n, "amount": n * 10}
+
+    full = {
+        "아파트": {202604: cell(100), 202605: cell(90), 202606: cell(20)},
+        "합계": {202604: cell(100), 202605: cell(90), 202606: cell(20)},
+    }
+    notes: list[str] = []
+    out = _clip_partial_tail(full, notes)
+    assert 202606 not in out["합계"]
+    assert 202605 in out["아파트"]
+    assert any("2026-06" in n for n in notes)
+
+    real = {
+        "합계": {202007: cell(100), 202008: cell(74)},
+    }
+    kept: list[str] = []
+    assert 202008 in _clip_partial_tail(real, kept)["합계"]
+    assert kept == []
 
 
 def test_lag_pearson_month_lag3():

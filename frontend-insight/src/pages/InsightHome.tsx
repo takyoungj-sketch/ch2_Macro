@@ -26,6 +26,20 @@ const homeCtx = {
   },
 };
 
+const homeItems = [
+  { q: "1", copy: INSIGHT_05 },
+  { q: "2", copy: INSIGHT_01 },
+  { q: "3", copy: INSIGHT_02 },
+  { q: "4", copy: INSIGHT_11 },
+  { q: "5", copy: INSIGHT_12 },
+  { q: "6", copy: INSIGHT_07 },
+  { q: "7", copy: INSIGHT_04 },
+  { q: "8", copy: INSIGHT_06 },
+  { q: "9", copy: INSIGHT_08 },
+  { q: "10", copy: INSIGHT_03 },
+  { q: "11", copy: INSIGHT_10 },
+];
+
 export default function InsightHome() {
   return (
     <>
@@ -36,138 +50,20 @@ export default function InsightHome() {
           기록이며, 같은 질문에 분석을 더하면 내용이 이어질 수 있습니다.
         </p>
         <ol className="space-y-3">
-          <li>
-            <a
-              href="/insight/?q=1"
-              className="block card p-4 hover:border-slate-400 dark:hover:border-slate-500"
-            >
-              <p className="text-xs text-slate-500 mb-1">1</p>
-              <p className="font-semibold text-slate-900 dark:text-slate-50 leading-snug">
-                {INSIGHT_01.listTitle}
-              </p>
-              <p className="text-sm text-slate-500 mt-1">{INSIGHT_01.listSub}</p>
-            </a>
-          </li>
-          <li>
-            <a
-              href="/insight/?q=2"
-              className="block card p-4 hover:border-slate-400 dark:hover:border-slate-500"
-            >
-              <p className="text-xs text-slate-500 mb-1">2</p>
-              <p className="font-semibold text-slate-900 dark:text-slate-50 leading-snug">
-                {INSIGHT_02.listTitle}
-              </p>
-              <p className="text-sm text-slate-500 mt-1">{INSIGHT_02.listSub}</p>
-            </a>
-          </li>
-          <li>
-            <a
-              href="/insight/?q=3"
-              className="block card p-4 hover:border-slate-400 dark:hover:border-slate-500"
-            >
-              <p className="text-xs text-slate-500 mb-1">3</p>
-              <p className="font-semibold text-slate-900 dark:text-slate-50 leading-snug">
-                {INSIGHT_03.listTitle}
-              </p>
-              <p className="text-sm text-slate-500 mt-1">{INSIGHT_03.listSub}</p>
-            </a>
-          </li>
-          <li>
-            <a
-              href="/insight/?q=4"
-              className="block card p-4 hover:border-slate-400 dark:hover:border-slate-500"
-            >
-              <p className="text-xs text-slate-500 mb-1">4</p>
-              <p className="font-semibold text-slate-900 dark:text-slate-50 leading-snug">
-                {INSIGHT_04.listTitle}
-              </p>
-              <p className="text-sm text-slate-500 mt-1">{INSIGHT_04.listSub}</p>
-            </a>
-          </li>
-          <li>
-            <a
-              href="/insight/?q=5"
-              className="block card p-4 hover:border-slate-400 dark:hover:border-slate-500"
-            >
-              <p className="text-xs text-slate-500 mb-1">5</p>
-              <p className="font-semibold text-slate-900 dark:text-slate-50 leading-snug">
-                {INSIGHT_05.listTitle}
-              </p>
-              <p className="text-sm text-slate-500 mt-1">{INSIGHT_05.listSub}</p>
-            </a>
-          </li>
-          <li>
-            <a
-              href="/insight/?q=6"
-              className="block card p-4 hover:border-slate-400 dark:hover:border-slate-500"
-            >
-              <p className="text-xs text-slate-500 mb-1">6</p>
-              <p className="font-semibold text-slate-900 dark:text-slate-50 leading-snug">
-                {INSIGHT_06.listTitle}
-              </p>
-              <p className="text-sm text-slate-500 mt-1">{INSIGHT_06.listSub}</p>
-            </a>
-          </li>
-          <li>
-            <a
-              href="/insight/?q=7"
-              className="block card p-4 hover:border-slate-400 dark:hover:border-slate-500"
-            >
-              <p className="text-xs text-slate-500 mb-1">7</p>
-              <p className="font-semibold text-slate-900 dark:text-slate-50 leading-snug">
-                {INSIGHT_07.listTitle}
-              </p>
-              <p className="text-sm text-slate-500 mt-1">{INSIGHT_07.listSub}</p>
-            </a>
-          </li>
-          <li>
-            <a
-              href="/insight/?q=8"
-              className="block card p-4 hover:border-slate-400 dark:hover:border-slate-500"
-            >
-              <p className="text-xs text-slate-500 mb-1">8</p>
-              <p className="font-semibold text-slate-900 dark:text-slate-50 leading-snug">
-                {INSIGHT_08.listTitle}
-              </p>
-              <p className="text-sm text-slate-500 mt-1">{INSIGHT_08.listSub}</p>
-            </a>
-          </li>
-          <li>
-            <a
-              href="/insight/?q=10"
-              className="block card p-4 hover:border-slate-400 dark:hover:border-slate-500"
-            >
-              <p className="text-xs text-slate-500 mb-1">10</p>
-              <p className="font-semibold text-slate-900 dark:text-slate-50 leading-snug">
-                {INSIGHT_10.listTitle}
-              </p>
-              <p className="text-sm text-slate-500 mt-1">{INSIGHT_10.listSub}</p>
-            </a>
-          </li>
-          <li>
-            <a
-              href="/insight/?q=11"
-              className="block card p-4 hover:border-slate-400 dark:hover:border-slate-500"
-            >
-              <p className="text-xs text-slate-500 mb-1">11</p>
-              <p className="font-semibold text-slate-900 dark:text-slate-50 leading-snug">
-                {INSIGHT_11.listTitle}
-              </p>
-              <p className="text-sm text-slate-500 mt-1">{INSIGHT_11.listSub}</p>
-            </a>
-          </li>
-          <li>
-            <a
-              href="/insight/?q=12"
-              className="block card p-4 hover:border-slate-400 dark:hover:border-slate-500"
-            >
-              <p className="text-xs text-slate-500 mb-1">12</p>
-              <p className="font-semibold text-slate-900 dark:text-slate-50 leading-snug">
-                {INSIGHT_12.listTitle}
-              </p>
-              <p className="text-sm text-slate-500 mt-1">{INSIGHT_12.listSub}</p>
-            </a>
-          </li>
+          {homeItems.map((item) => (
+            <li key={item.q}>
+              <a
+                href={`/insight/?q=${item.q}`}
+                className="block card p-4 hover:border-slate-400 dark:hover:border-slate-500"
+              >
+                <p className="text-xs text-slate-500 mb-1">{item.q}</p>
+                <p className="font-semibold text-slate-900 dark:text-slate-50 leading-snug">
+                  {item.copy.listTitle}
+                </p>
+                <p className="text-sm text-slate-500 mt-1">{item.copy.listSub}</p>
+              </a>
+            </li>
+          ))}
         </ol>
       </main>
     </>

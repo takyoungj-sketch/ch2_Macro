@@ -50,7 +50,7 @@ function AptRecord() {
           title: "아파트 층 효용은 다시 맞추지 않는다",
           say: "공개는 Insight 8번. 최상 가운데값은 지역과 관계없이 108 안팎. 비도시 차이는 높이 세 칸에서 −2.4%, 최고층 연속에서 −0.8%로 없다와 구분되지 않는다.",
           do_not: "식을 다시 맞추기. 오피스텔 저층=100이나 집합상가 2층을 108에 더하기. 제품 층 식을 이 기록으로 바꾸기.",
-          how: "docs/lab/APT_FLOOR_UTILITY_LAB.md · 화면 /insight/?q=8",
+          how: "docs/lab/APT_FLOOR_UTILITY_LAB.md · 화면 /insight/?q=9",
         }}
       />
       <RecordTable

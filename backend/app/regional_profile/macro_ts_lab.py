@@ -96,6 +96,24 @@ def _add(dst: KeyMap, key: int, count: float, amount: float) -> None:
     cell["amount"] += float(amount)
 
 
+def _clip_partial_tail(mixed: dict[str, KeyMap], notes: list[str]) -> dict[str, KeyMap]:
+    """끝달 합계 건수가 직전 달의 절반에 못 미치면 집계가 덜 된 달으로 보고 뺀다.
+
+    실제 월의 최저 비율은 0.7 근처다. 0.5는 그 아래의 미확정 끝달만 건진다.
+    """
+    total = mixed.get("합계") or {}
+    if len(total) < 2:
+        return mixed
+    last = max(total)
+    prev = max(k for k in total if k < last)
+    prev_n = float(total[prev]["count"])
+    last_n = float(total[last]["count"])
+    if prev_n <= 0 or last_n >= 0.5 * prev_n:
+        return mixed
+    notes.append(f"미확정월 제외 {ym_str(last)}")
+    return {name: {k: v for k, v in by_k.items() if k != last} for name, by_k in mixed.items()}
+
+
 def _clip_open_month(dst: KeyMap, notes: list[str], *, today: date | None = None) -> KeyMap:
     if not dst:
         return dst
@@ -404,7 +422,7 @@ def compute_macro_ts(
 
     month_mixed = _fetch_national_month(macro_ts_db, notes)
     if freq == "month":
-        mixed = month_mixed
+        mixed = _clip_partial_tail(month_mixed, notes)
         if mixed.get("합계") and "월 거래는 국토부 CSV 전국 합" not in "".join(notes):
             notes.append("월 거래는 국토부 CSV 전국 합. 제품 원장과 행이 다를 수 있음.")
         note = (

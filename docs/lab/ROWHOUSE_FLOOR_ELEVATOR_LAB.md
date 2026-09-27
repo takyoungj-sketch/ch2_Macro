@@ -328,5 +328,5 @@ n=20,139 · 건물 975 (유 401 / 무 574).
 ## 12. 다음
 
 1. ~~계획~~ · ~~0차~~ · ~~실험 1~~ · ~~표제부 승강기~~ · ~~2b~~ · ~~2a 균형~~ · ~~실험 3~~
-2. 공개 실험 기록: Macro Insight `#3` [`MACRO_INSIGHT_03.md`](../MACRO_INSIGHT_03.md) (`/insight/?q=3`). 제품 층 칸은 그대로.
+2. 공개 실험 기록: Macro Insight `#3` [`MACRO_INSIGHT_03.md`](../MACRO_INSIGHT_03.md) (`/insight/?q=10`). 제품 층 칸은 그대로.
 3. 2a δ 매칭·제품 반영은 추가 검증 후.

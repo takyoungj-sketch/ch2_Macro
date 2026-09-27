@@ -1,7 +1,7 @@
 # 수익률 비교 랩 (상업 공표 · 주거 임대료/매매가 · 금리 · 코스피)
 
 > **작성:** 2026-09-24  
-> **상태:** 스냅샷과 관리자 표. 공개는 [`MACRO_INSIGHT_11.md`](../MACRO_INSIGHT_11.md) `/insight/?q=11`. 숫자 `docs/lab/yield_compare_national.json`. 화면 `?tool=yield-compare`. 재실행은 `backend`에서 `python -m app.yield_compare.build`.  
+> **상태:** 스냅샷과 관리자 표. 공개는 [`MACRO_INSIGHT_11.md`](../MACRO_INSIGHT_11.md) `/insight/?q=4`. 숫자 `docs/lab/yield_compare_national.json`. 화면 `?tool=yield-compare`. 재실행은 `backend`에서 `python -m app.yield_compare.build`.  
 > **부모:** [`MACRO_INSIGHT_PLAN.md`](../MACRO_INSIGHT_PLAN.md) #11  
 > **상업 정의:** [`REB_COMMERCIAL_RENT_SURVEY.md`](../REB_COMMERCIAL_RENT_SURVEY.md) §5.2 · 연간 복리 `compound_annual`  
 > **하지 않음:** Insight #1·#5 본문에 붙이기. 전월세 전환율을 소득수익률로 쓰기. 매매 마트에 수익률 열 저장.

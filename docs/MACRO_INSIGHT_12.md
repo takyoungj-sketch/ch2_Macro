@@ -2,7 +2,7 @@
 
 > 상권의 임대료와 수익률이 해당 상권과 겹치는 읍면동 및 인근 아파트의 임대료와 수익률과 어떤 관계를 보이는지 분석합니다.
 
-> **상태:** 공개 `/insight/?q=12`  
+> **상태:** 공개 `/insight/?q=5`  
 > **숫자:** `docs/lab/sangkwon_apt_yield.json` · 문장 `frontend-insight/src/copy/insight12.ts`  
 > **랩:** [`lab/SANGKWON_APT_YIELD_LAB.md`](./lab/SANGKWON_APT_YIELD_LAB.md)
 

@@ -1,7 +1,7 @@
 # 집합상가 층 효용 랩
 
 > **작성:** 2026-09-23  
-> **상태:** **종료.** 1–3차와 2층 연식·용도 회귀까지 기록. 통제한 뒤에도 2층은 100 아래. 공개는 [`MACRO_INSIGHT_10.md`](../MACRO_INSIGHT_10.md) `/insight/?q=10`. 제품 층 식 미변경.  
+> **상태:** **종료.** 1–3차와 2층 연식·용도 회귀까지 기록. 통제한 뒤에도 2층은 100 아래. 공개는 [`MACRO_INSIGHT_10.md`](../MACRO_INSIGHT_10.md) `/insight/?q=11`. 제품 층 식 미변경.  
 > **성격:** 같은 도로 안에서 1층 대비 층 단가 차이를 뽑을 수 있는지를 본다. 아파트 1층=100 지수나 오피스텔 저층=100을 그대로 쓰는 실험이 아니다.  
 > **원장:** `collective_stats.collective_commercial_transactions` (`asset_type=collective_shop`)  
 > **단위:** `cluster_key` (도로 클러스터). 건물이 아니다.  

@@ -49,12 +49,9 @@ export default function Insight08() {
 
         <header className="space-y-3">
           <h2 className="text-xl font-bold leading-snug">{copy.listTitle}</h2>
-          <p className="text-sm text-slate-500">
-            {copy.listSub}
-            <span className="mx-1.5 text-slate-300">·</span>
-            {periodLabel}
-          </p>
-          <p className="text-sm font-medium text-slate-800 dark:text-slate-100 leading-relaxed">{copy.lead}</p>
+          <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">{copy.listSub}</p>
+          <p className="text-sm text-slate-500">{periodLabel}</p>
+          <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200">{copy.lead}</p>
           <div className={prose}>
             <Prose lines={copy.intro} />
           </div>
@@ -72,6 +69,7 @@ export default function Insight08() {
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.s1Title}</h3>
           <p>{copy.s1Lead}</p>
+          <p>{copy.s1GateLead}</p>
           <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-600 dark:bg-slate-800/60">
             <ul className="list-disc ml-5 space-y-1">
               {copy.s1Gates.map((g) => (
@@ -85,7 +83,7 @@ export default function Insight08() {
 
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.s2Title}</h3>
-          <p>{copy.s2Lead}</p>
+          <Prose lines={copy.s2Before} />
           <table className="data w-full text-[13px]">
             <thead>
               <tr>
@@ -108,16 +106,17 @@ export default function Insight08() {
               ))}
             </tbody>
           </table>
-          <p className="text-slate-600 dark:text-slate-300">1층은 100입니다. {copy.s2Note}</p>
+          <Prose lines={copy.s2After} />
         </section>
 
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.s3Title}</h3>
+          <p>{copy.s3Lead}</p>
           <table className="data w-full max-w-md text-[13px]">
             <thead>
               <tr>
                 <th className="text-left">최고층</th>
-                <th>최상층 가운데값</th>
+                <th>최상층 가운뎃값</th>
                 <th>단지 수</th>
               </tr>
             </thead>
@@ -136,11 +135,11 @@ export default function Insight08() {
 
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.s4Title}</h3>
-          <p>{copy.s4Lead}</p>
+          <Prose lines={copy.s4Before} />
           <table className="data w-full text-[13px]">
             <thead>
               <tr>
-                <th className="text-left">식</th>
+                <th className="text-left">방식</th>
                 <th>비도시 최상</th>
                 <th>광역시 최상</th>
                 <th>기타 도시 최상</th>
@@ -164,30 +163,24 @@ export default function Insight08() {
 
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.patternsTitle}</h3>
-          <ol className="list-decimal ml-5 space-y-2">
+          <p>{copy.patternsLead}</p>
+          <p>{copy.patternsMore}</p>
+          <ul className="list-disc ml-5 space-y-2">
             {copy.patterns.map((p) => (
               <li key={p}>{p}</li>
             ))}
-          </ol>
+          </ul>
         </section>
 
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.limitsTitle}</h3>
-          <ul className="list-disc ml-5 space-y-1.5">
-            {copy.limits.map((f) => (
-              <li key={f}>{f}</li>
-            ))}
-          </ul>
+          <Prose lines={copy.limits} />
           <p>{copy.close}</p>
         </section>
 
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.nextTitle}</h3>
-          <ul className="list-disc ml-5 space-y-1.5">
-            {copy.next.map((f) => (
-              <li key={f}>{f}</li>
-            ))}
-          </ul>
+          <p>{copy.next}</p>
         </section>
 
         <section className={prose}>
@@ -219,7 +212,8 @@ export default function Insight08() {
               ))}
             </tbody>
           </table>
-          <p className="text-slate-600 dark:text-slate-300">저층 = 100. 차이는 오피스텔 − 아파트. 최상/고층 100은 고층과 같다는 뜻입니다.</p>
+          <p className="text-slate-600 dark:text-slate-300">{copy.otCaption}</p>
+          <p>{copy.otAfter}</p>
         </section>
 
         <section className={prose}>

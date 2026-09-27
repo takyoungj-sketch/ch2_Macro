@@ -21,17 +21,17 @@
 | 시공사 효과 | `builder` | 공시지가 vs 시군구 FE · within-gu. **다음=브랜드 vs 시공사.** 제품 식 미변경 (D-063·D-065) |
 | 연식=0 잔차 | `age0` | 재고 식 연식=0 vs 실제 신축. **다음=서울·경기 분리.** 전국 공통 프리미엄 미가산 (D-064) |
 | 모형추천 Twin 벤치 | `recommend-twin` | Local / Twin1 / Twin2 × 지역더미 전후. 실험 Twin은 1위만. 제품 식은 Twin1=1위+더미, Twin2=확인용 재탐색. [`lab/RECOMMEND_TWIN_BENCH_LAB.md`](./lab/RECOMMEND_TWIN_BENCH_LAB.md) |
-| 토지 면적 탄성 | `area-elasticity` | 1–3차 정리(교차표). **차후=용도지역 분할.** Insight 4번 본문. 제품 식 미변경 |
+| 토지 면적 탄성 | `area-elasticity` | 1–3차 정리(교차표). **차후=용도지역 분할.** Insight 7번 본문. 제품 식 미변경 |
 | 연립·다세대 층·승강기 | `rowhouse-floor` | 3차 기록. **최상×승강기 가산 합의.** 제품 층 식 미변경 |
-| 연 거래액 규모·구성 | `macro-scale` | GDP·M2·주식 대비 연 거래액 비율 + 8유형 구성. G3와 별문. Insight 5번 본문 |
-| 도로 지목 상대가격 | `road-jimok` | 읍면동×용도에서 도로/대·전·답 중앙단가 비. 공개는 Insight 6번. 도시 전체 %는 본문에 없음 |
-| 층 효용 기록 | `floor-utility` | 아파트(종료, Insight 8)·오피스텔(저층=100, 차이 2포인트 안, 8번 맨 끝)·집합상가(종료, Insight 10). 숫자는 서로 더하지 않음. 제품 층 식 미변경 |
-| 수익률 비교 | `yield-compare` | 전국 2021–2025 표. 상업 오피스·상가 공표, 주거 월세환산, 국고 3년, KODEX KOSPI TR. 공개는 #11 |
-| 상권과 아파트 | `sangkwon-apt` | 2021–2025 상권 수익률과 경계가 겹치는 읍면동 아파트. 공개 `/insight/?q=12` |
+| 연 거래액 규모·구성 | `macro-scale` | GDP·M2·주식 대비 연 거래액 비율 + 8유형 구성. G3와 별문. Insight 1번 본문 |
+| 도로 지목 상대가격 | `road-jimok` | 읍면동×용도에서 도로/대·전·답 중앙단가 비. 공개는 Insight 8번. 도시 전체 %는 본문에 없음 |
+| 층 효용 기록 | `floor-utility` | 아파트(종료, Insight 9)·오피스텔(저층=100, 차이 2포인트 안, 9번 맨 끝)·집합상가(종료, Insight 11). 숫자는 서로 더하지 않음. 제품 층 식 미변경 |
+| 수익률 비교 | `yield-compare` | 전국 2021–2025 표. 상업 오피스·상가 공표, 주거 월세환산, 국고 3년, KODEX KOSPI TR. 공개는 #4 |
+| 상권과 아파트 | `sangkwon-apt` | 2021–2025 상권 수익률과 경계가 겹치는 읍면동 아파트. 공개 `/insight/?q=5` |
 | 아파트 쌍둥이 지역회귀 | `apt-twin` | 설계 1차. 한 읍면동의 아파트 재고 쌍둥이·표준화 계수·기준지역 CV-MAPE. [`lab/APT_TWIN_REGRESSION_LAB.md`](./lab/APT_TWIN_REGRESSION_LAB.md) |
 | 토지 쌍둥이 | `land-twin` | A~D는 후보 20곳. E는 대표 10칸 구성비로 전국. 식은 미고정. [`lab/LAND_TWIN_LAB.md`](./lab/LAND_TWIN_LAB.md) |
 
-공개 게이트웨이 **Macro Insight**(6번째 문)는 `/insight/`. 1번(금리·시중 돈과 거래) [`MACRO_INSIGHT_01.md`](./MACRO_INSIGHT_01.md) · 2번(유형 규모·단가 상관) [`MACRO_INSIGHT_02.md`](./MACRO_INSIGHT_02.md) · 3번(연립·다세대 층×승강기) [`MACRO_INSIGHT_03.md`](./MACRO_INSIGHT_03.md) · 4번(토지 면적×㎡당 가격) [`MACRO_INSIGHT_04.md`](./MACRO_INSIGHT_04.md) · 5번(연 거래액/GDP·M2·주식·유형 구성) [`MACRO_INSIGHT_05.md`](./MACRO_INSIGHT_05.md) · 6번(도로 지목 상대가격) [`MACRO_INSIGHT_06.md`](./MACRO_INSIGHT_06.md) · 7번(쌍둥이 지역을 고르는 방법) [`MACRO_INSIGHT_07.md`](./MACRO_INSIGHT_07.md) · 8번(아파트 윗층과 지역·높이) [`MACRO_INSIGHT_08.md`](./MACRO_INSIGHT_08.md) · 10번(집합상가 도로의 1층과 2층) [`MACRO_INSIGHT_10.md`](./MACRO_INSIGHT_10.md). 결정 카드 없음. 랩 `?tool=size`는 실험실로 남긴다.
+공개 게이트웨이 **Macro Insight**(6번째 문)는 `/insight/`. 1번(경제지표(GDP, M2, 주식거래액)와 부동산의 관계) [`MACRO_INSIGHT_05.md`](./MACRO_INSIGHT_05.md) · 2번(부동산 거래와 금리, 유동성과의 관계) [`MACRO_INSIGHT_01.md`](./MACRO_INSIGHT_01.md) · 3번(부동산 유형별 상관관계) [`MACRO_INSIGHT_02.md`](./MACRO_INSIGHT_02.md) · 4번(상업용, 주거용 부동산의 수익률 분석) [`MACRO_INSIGHT_11.md`](./MACRO_INSIGHT_11.md) · 5번(상권 수익률과 아파트 수익률의 상관관계 분석) [`MACRO_INSIGHT_12.md`](./MACRO_INSIGHT_12.md) · 6번(쌍둥이 지역 찾기 로직) [`MACRO_INSIGHT_07.md`](./MACRO_INSIGHT_07.md) · 7번(광평수 토지의 가격효과) [`MACRO_INSIGHT_04.md`](./MACRO_INSIGHT_04.md) · 8번(도로 지목의 가격배율 검토) [`MACRO_INSIGHT_06.md`](./MACRO_INSIGHT_06.md) · 9번(아파트(오피스텔)의 층별효용지수 검토) [`MACRO_INSIGHT_08.md`](./MACRO_INSIGHT_08.md) · 10번(연립다세대의 층별효용지수 검토) [`MACRO_INSIGHT_03.md`](./MACRO_INSIGHT_03.md) · 11번(집합상가의 층별효용지수 검토) [`MACRO_INSIGHT_10.md`](./MACRO_INSIGHT_10.md). 결정 카드 없음. 파일명의 숫자는 예전 번호다.
 
 G3 시계열 랩: [`lab/G3_TIMESERIES_LAB.md`](./lab/G3_TIMESERIES_LAB.md) · `?tool=g3`.  
 G3·Insight 월 합 출처 수정: [`lab/MACRO_TS_RAW_MONTH_MART.md`](./lab/MACRO_TS_RAW_MONTH_MART.md) (원장 대신 raw CSV 전국 월 마트).
@@ -39,12 +39,12 @@ G3·Insight 월 합 출처 수정: [`lab/MACRO_TS_RAW_MONTH_MART.md`](./lab/MACR
 시공사 효과: [`lab/BUILDER_IDENT_LAB.md`](./lab/BUILDER_IDENT_LAB.md) · `?tool=builder`.
 연식=0 잔차: [`lab/AGE0_RESIDUAL_LAB.md`](./lab/AGE0_RESIDUAL_LAB.md) · `?tool=age0`.
 모형추천 Twin 벤치: [`lab/RECOMMEND_TWIN_BENCH_LAB.md`](./lab/RECOMMEND_TWIN_BENCH_LAB.md) · `?tool=recommend-twin`.
-토지 면적 탄성(광평수): [`lab/LAND_AREA_ELASTICITY_LAB.md`](./lab/LAND_AREA_ELASTICITY_LAB.md) · `?tool=area-elasticity` — 1–3차 정리. 차후=용도지역 분할. 공개 기록은 Insight #4. 제품 식 미변경.
-연립·다세대 층·승강기: [`lab/ROWHOUSE_FLOOR_ELEVATOR_LAB.md`](./lab/ROWHOUSE_FLOOR_ELEVATOR_LAB.md) · `?tool=rowhouse-floor` — 3차 최상×승강기 가산 합의. 공개 기록은 Insight #3. 제품 층 식 미변경.
-연 거래액 규모(GDP·M2·주식·유형 구성): [`lab/MACRO_ANNUAL_SCALE_LAB.md`](./lab/MACRO_ANNUAL_SCALE_LAB.md) · `?tool=macro-scale`. 공개 기록은 Insight #5. G3와 문을 섞지 않음.
-도로 지목 상대가격: [`lab/LAND_ROAD_JIMOK_RATIO_LAB.md`](./lab/LAND_ROAD_JIMOK_RATIO_LAB.md). 랩 `?tool=road-jimok`. 공개는 [`MACRO_INSIGHT_06.md`](./MACRO_INSIGHT_06.md) `/insight/?q=6`. 제품 토지 식 미변경.
-아파트·오피스텔·집합상가 층 효용 기록 창: `?tool=floor-utility`. 아파트는 [`lab/APT_FLOOR_UTILITY_LAB.md`](./lab/APT_FLOOR_UTILITY_LAB.md), 공개 [`MACRO_INSIGHT_08.md`](./MACRO_INSIGHT_08.md) `/insight/?q=8`. 오피스텔은 [`lab/OFFICETEL_FLOOR_UTILITY_LAB.md`](./lab/OFFICETEL_FLOOR_UTILITY_LAB.md). 저층=100, 차이는 2포인트 안, 공개는 #8 맨 끝. 집합상가는 [`lab/SHOP_FLOOR_UTILITY_LAB.md`](./lab/SHOP_FLOOR_UTILITY_LAB.md), 공개 [`MACRO_INSIGHT_10.md`](./MACRO_INSIGHT_10.md) `/insight/?q=10`. 세 숫자는 더하지 않음. 제품 층 식 미변경.
-수익률 비교: [`lab/YIELD_COMPARE_LAB.md`](./lab/YIELD_COMPARE_LAB.md) · `?tool=yield-compare`. 스냅샷 [`lab/yield_compare_national.json`](./lab/yield_compare_national.json). 공개 [`MACRO_INSIGHT_11.md`](./MACRO_INSIGHT_11.md) `/insight/?q=11`. #1·#5와 문을 섞지 않음.
+토지 면적 탄성(광평수): [`lab/LAND_AREA_ELASTICITY_LAB.md`](./lab/LAND_AREA_ELASTICITY_LAB.md) · `?tool=area-elasticity` — 1–3차 정리. 차후=용도지역 분할. 공개 기록은 Insight #7. 제품 식 미변경.
+연립·다세대 층·승강기: [`lab/ROWHOUSE_FLOOR_ELEVATOR_LAB.md`](./lab/ROWHOUSE_FLOOR_ELEVATOR_LAB.md) · `?tool=rowhouse-floor` — 3차 최상×승강기 가산 합의. 공개 기록은 Insight #10. 제품 층 식 미변경.
+연 거래액 규모(GDP·M2·주식·유형 구성): [`lab/MACRO_ANNUAL_SCALE_LAB.md`](./lab/MACRO_ANNUAL_SCALE_LAB.md) · `?tool=macro-scale`. 공개 기록은 Insight #1. G3와 문을 섞지 않음.
+도로 지목 상대가격: [`lab/LAND_ROAD_JIMOK_RATIO_LAB.md`](./lab/LAND_ROAD_JIMOK_RATIO_LAB.md). 랩 `?tool=road-jimok`. 공개는 [`MACRO_INSIGHT_06.md`](./MACRO_INSIGHT_06.md) `/insight/?q=8`. 제품 토지 식 미변경.
+아파트·오피스텔·집합상가 층 효용 기록 창: `?tool=floor-utility`. 아파트는 [`lab/APT_FLOOR_UTILITY_LAB.md`](./lab/APT_FLOOR_UTILITY_LAB.md), 공개 [`MACRO_INSIGHT_08.md`](./MACRO_INSIGHT_08.md) `/insight/?q=9`. 오피스텔은 [`lab/OFFICETEL_FLOOR_UTILITY_LAB.md`](./lab/OFFICETEL_FLOOR_UTILITY_LAB.md). 저층=100, 차이는 2포인트 안, 공개는 #9 맨 끝. 집합상가는 [`lab/SHOP_FLOOR_UTILITY_LAB.md`](./lab/SHOP_FLOOR_UTILITY_LAB.md), 공개 [`MACRO_INSIGHT_10.md`](./MACRO_INSIGHT_10.md) `/insight/?q=11`. 세 숫자는 더하지 않음. 제품 층 식 미변경.
+수익률 비교: [`lab/YIELD_COMPARE_LAB.md`](./lab/YIELD_COMPARE_LAB.md) · `?tool=yield-compare`. 스냅샷 [`lab/yield_compare_national.json`](./lab/yield_compare_national.json). 공개 [`MACRO_INSIGHT_11.md`](./MACRO_INSIGHT_11.md) `/insight/?q=4`. #2·#1와 문을 섞지 않음.
 아파트 쌍둥이 지역회귀(설계): [`lab/APT_TWIN_REGRESSION_LAB.md`](./lab/APT_TWIN_REGRESSION_LAB.md). 화면 없음. 아파트 재고만으로 선정하고, 핵심 5변수의 표준화 계수를 비교한 뒤 기준 지역 CV-MAPE로 통합을 본다. 제품 식 미변경.
 토지 쌍둥이: [`lab/LAND_TWIN_LAB.md`](./lab/LAND_TWIN_LAB.md) · `?tool=land-twin`. A~D는 지목 비중 후보 20곳. E는 고정 10칸의 건수×중위 구성비로 전국 시군구를 줄 세운다. 가격과 대표액 비율은 E 순위 밖. 식은 미고정. 토지 통계 모달 탭은 아직 없음. 제품 토지 식 미변경.
 계획일지 표 규칙:

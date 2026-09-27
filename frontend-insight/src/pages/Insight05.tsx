@@ -131,9 +131,9 @@ export default function Insight05() {
           <p className="text-sm text-slate-500">
             {copy.listMeta}
             <span className="mx-1.5 text-slate-300">·</span>
-            {snap.yearStart}–{snap.yearEnd}
+            {snap.yearStart}~{snap.yearEnd}
           </p>
-          <p className="text-sm font-medium text-slate-800 dark:text-slate-100 leading-relaxed">{copy.lead}</p>
+          <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200">{copy.lead}</p>
           <div className={prose}>
             <Prose lines={copy.intro} />
           </div>
@@ -142,21 +142,31 @@ export default function Insight05() {
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.s1Title}</h3>
           <Prose lines={copy.s1Body} />
+          <ul className="list-disc ml-5 space-y-1.5">
+            <li>
+              그해 <Term id="insight_nominal_gdp">명목 GDP</Term>
+            </li>
+            <li>
+              그해 <Term id="insight_m2">시중 돈(M2)</Term> 잔액
+            </li>
+            <li>
+              그해 <Term id="insight_stock_turnover">주식 거래대금</Term>
+            </li>
+          </ul>
+          <p>{copy.s1Next}</p>
+          <p>{copy.s1Questions}</p>
           <p>
-            분모의{" "}
-            <Term id="insight_nominal_gdp">명목 GDP</Term>,{" "}
-            <Term id="insight_m2">시중 돈(M2)</Term>,{" "}
-            <Term id="insight_stock_turnover">주식 거래대금</Term>은 각각 다른 질문입니다. 비율은{" "}
-            <Term id="insight_turnover_vs_gdp">거래액 / GDP</Term>,{" "}
-            <Term id="insight_turnover_vs_m2">거래액 / M2</Term>
-            처럼 규모를 비교한 지표로 읽습니다.
+            <Term id="insight_turnover_vs_gdp">거래액 ÷ GDP</Term>는 한 해 부동산 거래액이 그해 경제 규모에 비해 어느
+            정도였는지를 보는 값이고, <Term id="insight_turnover_vs_m2">거래액 ÷ M2</Term>는 부동산 거래액과 시중에
+            존재하는 돈의 규모를 비교하는 값입니다. 거래액 ÷ 주식 거래대금은 같은 기간 주식시장 거래와 부동산 거래의
+            상대적인 규모를 보는 데 사용했습니다.
           </p>
         </section>
 
         <section className="space-y-4">
           <div className={prose}>
             <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.sLevelsTitle}</h3>
-            <Prose lines={copy.sLevelsLead} />
+            <Prose lines={copy.sLevelsBefore} />
           </div>
           <YearSingleLine
             years={years}
@@ -202,6 +212,9 @@ export default function Insight05() {
             domain={levelDom}
             showValues
           />
+          <div className={prose}>
+            <Prose lines={copy.sLevelsAfter} />
+          </div>
         </section>
 
         <section className="space-y-4">
@@ -246,7 +259,7 @@ export default function Insight05() {
         <section className="space-y-4">
           <div className={prose}>
             <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.s3Title}</h3>
-            <p>{copy.s3AmountLead}</p>
+            <Prose lines={copy.s3Before} />
           </div>
           <YearMixStack
             years={years}
@@ -264,8 +277,9 @@ export default function Insight05() {
           />
           <div className={prose}>
             <p>
-              <Term id="insight_type_mix_year">유형 구성비</Term>. {copy.s3Lead}
+              아래의 <Term id="insight_type_mix_year">유형 구성비</Term>는 조금 다른 그림을 보여줍니다.
             </p>
+            <Prose lines={copy.s3ShareBefore.slice(1)} />
           </div>
           <YearMixStack years={years} share={snap.mixShare} label={copy.s3ShareLabel} />
         </section>
@@ -273,6 +287,7 @@ export default function Insight05() {
         <section className="space-y-3">
           <div className={prose}>
             <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.sCorrTitle}</h3>
+            <p>{copy.sCorrBefore}</p>
             <p>
               <Term id="pearson_r">상관계수 r</Term>. {copy.sCorrLead}
             </p>
@@ -305,7 +320,9 @@ export default function Insight05() {
               </tr>
             </tbody>
           </table>
-          <p className="text-sm text-slate-600 dark:text-slate-300">{copy.sCorrCaption}</p>
+          <div className={prose}>
+            <Prose lines={copy.sCorrAfter} />
+          </div>
         </section>
 
         <section className="space-y-3">
@@ -333,11 +350,13 @@ export default function Insight05() {
 
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.patternsTitle}</h3>
-          <ol className="list-decimal ml-5 space-y-2">
+          <p>{copy.patternsLead}</p>
+          <ul className="list-disc ml-5 space-y-1.5">
             {copy.patterns.map((p) => (
               <li key={p}>{p}</li>
             ))}
-          </ol>
+          </ul>
+          <Prose lines={copy.patternsClose} />
         </section>
 
         <section className={prose}>
@@ -347,11 +366,14 @@ export default function Insight05() {
               <li key={f}>{f}</li>
             ))}
           </ul>
-          <p>{copy.close}</p>
+          {copy.close.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
         </section>
 
         <section className={prose}>
           <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{copy.nextTitle}</h3>
+          <p>{copy.nextLead}</p>
           <ul className="list-disc ml-5 space-y-1.5">
             {copy.next.map((f) => (
               <li key={f}>{f}</li>

@@ -1,7 +1,7 @@
 # 상권 수익률과 인근 아파트 (실험 계획)
 
 > **작성:** 2026-09-24  
-> **상태:** 스냅샷·관리자 표·공개 글 `/insight/?q=12`. 숫자 `docs/lab/sangkwon_apt_yield.json`. 화면 `?tool=sangkwon-apt`. 재실행은 `backend`에서 `python -m app.sangkwon_apt_yield.build`. 읍면동 경계 캐시는 `data/cache/emd_wgs84.jsonl`.  
+> **상태:** 스냅샷·관리자 표·공개 글 `/insight/?q=5`. 숫자 `docs/lab/sangkwon_apt_yield.json`. 화면 `?tool=sangkwon-apt`. 재실행은 `backend`에서 `python -m app.sangkwon_apt_yield.build`. 읍면동 경계 캐시는 `data/cache/emd_wgs84.jsonl`.  
 > **부모:** [`MACRO_INSIGHT_PLAN.md`](../MACRO_INSIGHT_PLAN.md) #12 · 전국 비교는 [`YIELD_COMPARE_LAB.md`](./YIELD_COMPARE_LAB.md) #11  
 > **상업 정의:** [`REB_COMMERCIAL_RENT_SURVEY.md`](../REB_COMMERCIAL_RENT_SURVEY.md). 상권은 행정동이 아니다.  
 > **하지 않음:** #11 본문에 붙이기. 상권 수익률을 유형 평균으로 만들기. 아파트 자본을 지역 매매가격지수로 쓰기. 매매 마트에 수익률 열 저장.

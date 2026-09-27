@@ -105,7 +105,9 @@ export default function Insight01() {
   const cd = data?.rates?.cd_91;
   const base = data?.rates?.bok_base;
   const total = data?.series?.["합계"];
-  const periodLabel = formatPeriodRange(data?.period_start, data?.period_end);
+  const tradeStart = total?.count?.[0]?.month;
+  const tradeEnd = total?.count?.[total.count.length - 1]?.month;
+  const periodLabel = formatPeriodRange(tradeStart || data?.period_start, tradeEnd || data?.period_end);
 
   const totalCountRs = useMemo(() => {
     const row = data?.pairs.find((p) => p.type === "합계");
@@ -122,9 +124,21 @@ export default function Insight01() {
       ? `전체 거래건수의 상관계수는 같은 달 ${fmtSigned(totalCountRs[0])}에서 1개월 뒤 ${fmtSigned(totalCountRs[1])}, 3개월 뒤 ${fmtSigned(totalCountRs[3])}, 6개월 뒤 ${fmtSigned(totalCountRs[6])}로 낮아졌습니다.`
       : "전체 거래건수의 상관계수는 아래 표 1의 합계 행에서 시차가 길어질수록 작아지는 모습을 보입니다.";
 
+  const aptM2Lag6 = useMemo(() => {
+    const row = data?.pairs.find((p) => p.type === "아파트");
+    return pairCell(row, "m2_count_lag6")?.r ?? null;
+  }, [data]);
+
+  const pattern3 =
+    aptM2Lag6 != null
+      ? INSIGHT_01.patterns[2].body.replace("{aptLag6}", fmtSigned(aptM2Lag6))
+      : INSIGHT_01.patterns[2].body.replace("{aptLag6}", "더 낮은 값");
+
   const levelKeys = useMemo(() => {
     if (!data || !cd || !total) return [];
-    return unionKeys(toMap(cd.values), toMap(data.m2?.values ?? []), toMap(total.count), toMap(total.amount));
+    const keys = unionKeys(toMap(cd.values), toMap(data.m2?.values ?? []), toMap(total.count), toMap(total.amount));
+    const tradeMax = Math.max(...toMap(total.count).keys());
+    return Number.isFinite(tradeMax) ? keys.filter((k) => k <= tradeMax) : keys;
   }, [data, cd, total]);
 
   const yoyRate = useMemo(() => {
@@ -173,6 +187,7 @@ export default function Insight01() {
             전국 · 월별
             {periodLabel ? ` · ${periodLabel}` : ""}
           </p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">{INSIGHT_01.coverage}</p>
           <div className={prose}>
             <Prose lines={INSIGHT_01.intro} />
           </div>
@@ -376,7 +391,7 @@ export default function Insight01() {
                 {data.rates.ktb_3y ? (
                   <CorrTable
                     title="국고 3년 × 거래건수"
-                    lead="본문의 기준 금리는 CD 91일물입니다. 국고 3년은 같은 방법으로 함께 본 확인용 결과입니다."
+                    lead="본문의 기준 금리는 CD 91일물입니다. 국고 3년은 같은 방법으로 함께 본 확인용 결과입니다. 대부분 유형은 CD와 같은 방향이고, 분양권은 같은 달에도 음의 상관입니다."
                     pairs={data.pairs}
                     types={types}
                     lags={lags}
@@ -404,7 +419,7 @@ export default function Insight01() {
             {INSIGHT_01.patterns.map((item, i) => (
               <li key={item.title}>
                 <p className="font-medium text-slate-800 dark:text-slate-100">{item.title}</p>
-                <p className="mt-1">{i === 1 ? pattern2 : item.body}</p>
+                <p className="mt-1">{i === 1 ? pattern2 : i === 2 ? pattern3 : item.body}</p>
               </li>
             ))}
           </ol>
