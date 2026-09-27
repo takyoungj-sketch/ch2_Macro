@@ -21,6 +21,8 @@ import LandRoadJimokRatioLab from "./components/LandRoadJimokRatioLab";
 import FloorUtilityLab from "./components/FloorUtilityLab";
 import YieldCompareLab from "./components/YieldCompareLab";
 import SangkwonAptYieldLab from "./components/SangkwonAptYieldLab";
+import AptTwinRegressionLab from "./components/AptTwinRegressionLab";
+import LandTwinLab from "./components/LandTwinLab";
 import WhyDecision, { WhyLinks } from "./components/WhyDecision";
 import { TOOL_WHY } from "./labContent";
 
@@ -43,7 +45,9 @@ export type LabTool =
   | "road-jimok"
   | "floor-utility"
   | "yield-compare"
-  | "sangkwon-apt";
+  | "sangkwon-apt"
+  | "apt-twin"
+  | "land-twin";
 export type TwinPane = "v2" | "mape" | "scope";
 
 type LabParams = {
@@ -74,7 +78,9 @@ function readParams(): LabParams {
     t === "road-jimok" ||
     t === "floor-utility" ||
     t === "yield-compare" ||
-    t === "sangkwon-apt"
+    t === "sangkwon-apt" ||
+    t === "apt-twin" ||
+    t === "land-twin"
       ? t
       : null;
   const pane = q.get("pane");
@@ -315,6 +321,22 @@ export default function App() {
     return (
       <LabChrome title="상권과 아파트" whyIds={TOOL_WHY["sangkwon-apt"] ?? []} onWhy={setWhy} onBack={back}>
         <SangkwonAptYieldLab />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "apt-twin") {
+    return (
+      <LabChrome title="아파트 쌍둥이 지역회귀" whyIds={TOOL_WHY["apt-twin"] ?? []} onWhy={setWhy} onBack={back}>
+        <AptTwinRegressionLab />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "land-twin") {
+    return (
+      <LabChrome title="토지 쌍둥이" whyIds={TOOL_WHY["land-twin"] ?? []} onWhy={setWhy} onBack={back}>
+        <LandTwinLab />
         {whyModal}
       </LabChrome>
     );

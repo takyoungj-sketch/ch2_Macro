@@ -167,4 +167,6 @@ export const TOOL_WHY: Record<string, string[]> = {
   "floor-utility": [],
   "yield-compare": [],
   "sangkwon-apt": [],
+  "apt-twin": [],
+  "land-twin": [],
 };

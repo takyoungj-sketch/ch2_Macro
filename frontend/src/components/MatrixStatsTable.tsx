@@ -7,6 +7,12 @@ import {
 import { buildMatrixLegendExplain, buildMatrixTableExplain } from "../constants/landStatsExplain";
 import type { AnalysisExplain, MatrixCell, StatsResult } from "../types";
 import { StatsGlossaryHelp } from "@ch2/stats-glossary";
+import {
+  meanBandClass,
+  meanBandTitle,
+  meanEmphasisByColumn,
+  type MeanCountBand,
+} from "../utils/matrixMeanEmphasis";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import DraggableModalShell from "./DraggableModalShell";
 
@@ -114,7 +120,7 @@ export function MatrixStatsLegend({
               rowSpan={2}
               className={clsx(
                 cellClass,
-                "font-bold text-blue-700 leading-tight",
+                "matrix-mean-mid leading-tight",
               )}
             >
               평균
@@ -225,6 +231,7 @@ interface GridProps {
   byZone: Record<string, StatsResult>;
   byLandCategory: Record<string, StatsResult>;
   landAxisLabel: string;
+  meanBands: Map<string, MeanCountBand>;
   onPaidMatrixCellClick?: Props["onPaidMatrixCellClick"];
   scrollClassName?: string;
 }
@@ -239,6 +246,7 @@ function MatrixStatsTableGrid({
   byZone,
   byLandCategory,
   landAxisLabel,
+  meanBands,
   onPaidMatrixCellClick,
   scrollClassName = "max-h-[min(72vh,56rem)] overflow-auto border border-slate-200 rounded-lg overscroll-contain",
 }: GridProps) {
@@ -268,7 +276,11 @@ function MatrixStatsTableGrid({
                 cellZoneCol()
               )}
             >
-              <span className="block leading-tight">용도지역\{landAxisLabel}</span>
+              <span className="block leading-tight">
+                용도지역
+                <br />
+                \{landAxisLabel}
+              </span>
             </th>
             {landCategories.map((category, ci) => {
               const catStats = byLandCategory[category];
@@ -283,17 +295,15 @@ function MatrixStatsTableGrid({
                     thMain,
                     cellLeftCat(ci)
                   )}
-                  title={`${category} ${fmtCount(catCount)}건 · 평균 ${catMean}`}
+                  title={`${category} ${fmtCount(catCount)}건 · 평균 ${fmtMeanMan(catMean)}`}
                 >
-                  <span className="flex flex-col items-center gap-px leading-tight">
+                  <span className="flex flex-col items-center gap-0.5 leading-tight">
                     <span className="block truncate w-full text-sm font-semibold text-sky-950">
                       {category}
                     </span>
-                    <span className="text-[11px] text-sky-800/85 font-normal">
-                      {fmtCount(catCount)}건
-                    </span>
-                    <span className="text-[11px] font-bold tabular-nums text-blue-600">
-                      {catMean}
+                    <span className="flex max-w-full items-baseline justify-center gap-1.5 whitespace-nowrap">
+                      <span className="matrix-head-count">{fmtCount(catCount)}건</span>
+                      <span className="matrix-head-mean">{fmtMeanMan(catMean)}</span>
                     </span>
                   </span>
                 </th>
@@ -318,15 +328,11 @@ function MatrixStatsTableGrid({
                       "sticky left-0 z-10 bg-sky-100 px-1 py-1 align-middle text-center text-sm font-semibold text-sky-950",
                       cellZoneCol()
                     )}
-                    title={`${zone} ${fmtCount(zoneCount)}건 · 평균 ${zoneMean}`}
+                    title={`${zone} ${fmtCount(zoneCount)}건 · 평균 ${fmtMeanMan(zoneMean)}`}
                   >
                     <div className="line-clamp-2 break-all text-center">{zone}</div>
-                    <div className="mt-0.5 text-xs font-normal leading-tight text-sky-800/85">
-                      {fmtCount(zoneCount)}건
-                    </div>
-                    <div className="mt-px text-[11px] font-bold tabular-nums leading-tight text-blue-600">
-                      {zoneMean}
-                    </div>
+                    <div className="mt-0.5 matrix-head-count">{fmtCount(zoneCount)}건</div>
+                    <div className="matrix-head-mean">{fmtMeanMan(zoneMean)}</div>
                   </th>
                   {landCategories.map((category, ci) => {
                     const stats = lookup.get(`${zone}|||${category}`);
@@ -398,7 +404,10 @@ function MatrixStatsTableGrid({
                           {...insight}
                           className={clsx(
                             cellLeftCat(ci),
-                            "px-1 py-0 align-middle text-right font-bold tabular-nums leading-tight truncate text-blue-600 text-[1.0625rem]",
+                            "px-1 py-0 align-middle text-right tabular-nums leading-tight truncate text-[1.0625rem]",
+                            deal
+                              ? meanBandClass(meanBands.get(`${zone}|||${category}`))
+                              : "matrix-mean-mid",
                             faint,
                             cellHl(stats?.is_reliable),
                             insight.role &&
@@ -406,7 +415,13 @@ function MatrixStatsTableGrid({
                           )}
                           title={
                             deal
-                              ? `평균: ${fmtD1(stats!.mean)} · 클릭: 연도별 추이`
+                              ? [
+                                  `평균: ${fmtD1(stats!.mean)}`,
+                                  meanBandTitle(meanBands.get(`${zone}|||${category}`)),
+                                  insight.role ? "클릭: 연도별 추이" : "",
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · ")
                               : "평균"
                           }
                         >
@@ -669,6 +684,15 @@ export default function MatrixStatsTable({
     [cells, byLandCategory]
   );
 
+  const meanBands = useMemo(
+    () =>
+      meanEmphasisByColumn(zones, landCategories, (zone, category) => {
+        const stats = lookup.get(`${zone}|||${category}`);
+        return stats?.count ?? 0;
+      }),
+    [zones, landCategories, lookup],
+  );
+
   const leftColWidths = useMemo(() => {
     return landCategories.map((category) => {
       let w = COL_VALUE_PX;
@@ -694,6 +718,7 @@ export default function MatrixStatsTable({
     byZone,
     byLandCategory,
     landAxisLabel,
+    meanBands,
     onPaidMatrixCellClick,
   };
 
@@ -831,4 +856,8 @@ function fmtMarginalMean(
   const count = stats?.count ?? fallbackCount;
   if (count < 1 || stats?.mean == null) return "-";
   return fmtD1(stats.mean);
+}
+
+function fmtMeanMan(mean: string): string {
+  return mean === "-" ? "-" : `${mean}만`;
 }

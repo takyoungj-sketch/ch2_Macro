@@ -164,9 +164,12 @@ app.include_router(insight_router, prefix="/api")
 _LOG.info("Macro Insight API 활성: /api/insight/*")
 
 from app.parcel_lab.router import router as parcel_lab_router
+from app.land_lab.twin_router import router as land_twin_router
 
 app.include_router(parcel_lab_router, prefix="/api")
+app.include_router(land_twin_router, prefix="/api")
 _LOG.info("대장DB 조회 API 활성(관리자·로컬): /api/admin/parcel/status")
+_LOG.info("토지 쌍둥이 실험 API 활성(관리자): /api/admin/land-twin")
 
 if (settings.platform_database_url or "").strip():
     from app.platform.auth_router import router as platform_auth_router

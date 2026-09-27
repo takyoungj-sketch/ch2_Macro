@@ -173,3 +173,48 @@ html.dark body {
 .modal-header {
   @apply border-b border-slate-100 dark:border-slate-700;
 }
+
+/* 용도×지목 평균: 같은 지목 열의 거래수 분위. 가격 높낮이가 아님. */
+.matrix-mean-high {
+  color: rgb(30 64 175);
+  font-weight: 700;
+}
+.matrix-mean-mid {
+  color: rgb(37 99 235);
+  font-weight: 700;
+}
+.matrix-mean-low {
+  color: rgb(100 116 139);
+  font-weight: 400;
+}
+html.dark .matrix-mean-high {
+  color: rgb(103 232 249);
+}
+html.dark .matrix-mean-mid {
+  color: rgb(96 165 250);
+}
+html.dark .matrix-mean-low {
+  color: rgb(100 116 139);
+  font-weight: 400;
+}
+
+/* 행·열 머리의 건수·평균. 같은 크기, 어두운 배경에서도 읽히게. */
+.matrix-head-count,
+.matrix-head-mean {
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+.matrix-head-count {
+  color: rgb(12 74 110);
+}
+.matrix-head-mean {
+  color: rgb(29 78 216);
+}
+html.dark .matrix-head-count {
+  color: rgb(224 242 254);
+}
+html.dark .matrix-head-mean {
+  color: rgb(125 211 252);
+}

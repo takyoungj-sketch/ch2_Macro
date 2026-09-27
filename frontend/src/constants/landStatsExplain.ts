@@ -209,7 +209,7 @@ function filterControlsList(req: PaidAnalysisRequest): string[] {
 export function buildMatrixLegendExplain(): AnalysisExplain {
   return {
     spec_id: "land.matrix_legend.v1",
-    spec_version: "1.0",
+    spec_version: "1.1",
     title: "용도×지목 매트릭스 — 셀 수치 의미",
     summary:
       "각 용도지역(행) × 지목(열) 교차 칸은 **5개 가격 통계 행**으로 구성됩니다. " +
@@ -217,7 +217,7 @@ export function buildMatrixLegendExplain(): AnalysisExplain {
     formula: "단가(만원/㎡) = 거래금액(만원) ÷ 계약면적(㎡)",
     floor_groups: [
       "1행: 거래수(n) · 최소(min)",
-      "2~3행: 평균(mean, 파란 굵게) · 25%분위(p25) / 중위(median, 굵게)",
+      "2~3행: 평균(같은 지목 열의 거래수 분위별 파랑) · 25%분위(p25) / 중위(median, 굵게)",
       "4행: 표준편차(std) · 75%분위(p75)",
       "5행: 95% 신뢰구간(평균 t-구간) · 최대(max)",
     ],
@@ -226,6 +226,7 @@ export function buildMatrixLegendExplain(): AnalysisExplain {
       "평균·중위·분위는 모두 **만원/㎡** 단위입니다.",
       "거래수 0이면 「—」 표시(0으로 두지 않음).",
       "n≥15: 신뢰 구간 강조(연한 녹색 배경), n<5: 흐린 표시.",
+      "평균 숫자의 진하기는 같은 지목 열 안에서 거래가 많은 정도입니다. 상위 30%는 진한 파랑, 중간 40%는 기본 파랑, 하위 30%는 회청색입니다. 가격의 높낮이나 표본이 충분하다는 뜻은 아닙니다. 그 열에서 거래가 있는 칸이 5곳 미만이면 모두 기본 파랑입니다. 15건 이상인 옅은 녹색 배경이 표본 기준입니다.",
       "행·열 머리(용도지역·지목)의 건수·평균은 해당 축 **전체 합산**입니다.",
     ],
     limitations: [

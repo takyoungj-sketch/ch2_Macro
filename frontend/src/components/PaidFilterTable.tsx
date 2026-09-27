@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchRegions } from "../api/client";
 import {
   AREA_CATEGORIES,
+  AREA_CATEGORY_LABELS,
   DEAL_TYPES,
   getPaidYearButtonYears,
   ROAD_CONDITIONS,
@@ -154,6 +155,7 @@ export default function PaidFilterTable() {
               <div className={customAreaSpan ? "opacity-45 pointer-events-none" : ""}>
                 <IncludeToggleGrid
                   options={AREA_CATEGORIES}
+                  labels={AREA_CATEGORY_LABELS}
                   excluded={paidAreaExcluded}
                   onToggle={togglePaidAreaExclude}
                 />
@@ -342,10 +344,12 @@ export default function PaidFilterTable() {
 
 function IncludeToggleGrid({
   options,
+  labels,
   excluded,
   onToggle,
 }: {
   options: readonly string[];
+  labels?: Readonly<Record<string, string>>;
   excluded: readonly string[];
   onToggle: (value: string) => void;
 }) {
@@ -366,7 +370,7 @@ function IncludeToggleGrid({
               onChange={() => onToggle(opt)}
               className="rounded border-slate-300 shrink-0"
             />
-            <span>{opt}</span>
+            <span>{labels?.[opt] ?? opt}</span>
           </label>
         );
       })}

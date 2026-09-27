@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-21",
+  "updated": "2026-09-27",
   "domains": [
     {
       "id": "land",
@@ -621,13 +621,83 @@
           "decision": "D-075"
         }
       }
+    },
+    {
+      "date": "2026-09-21",
+      "cells": {
+        "land": {
+          "text": "면적 탄성 1–3차 랩 정리(유형×지목 교차표). 높게=도시체급×대지, 전·답은 체급 불문 낮게. Insight·제품 식·4차 회귀 보류. 중지=용도지역 분할 재개",
+          "status": "stopped",
+          "commit": "committed"
+        },
+        "built": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "collective": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "rent": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "profile": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "admin": {
+          "text": "랩 3차 교차표·일시정지 · 계획일지 09-21. 새 D 없음. 랩 코드는 커밋됨. 일지 파일은 워킹트리",
+          "status": "done",
+          "commit": "needed"
+        }
+      }
+    },
+    {
+      "date": "2026-09-23",
+      "cells": {
+        "land": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "built": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "collective": {
+          "text": "층별효용·회귀를 유형별 층 구간과 단지별 최고층으로 나눔. 아파트 상대층 식은 유지. 주거·비주거 같이. 커밋 6b0c99d, 집합 배포. 다음=아파트 층 효용 실험 0차",
+          "status": "done",
+          "commit": "committed"
+        },
+        "rent": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "profile": {
+          "text": "Insight #7 쌍둥이 지역 글 공개. 카드 범위는 권역 유지. 커밋 4e7daa1, insight·랩 배포",
+          "status": "done",
+          "commit": "committed"
+        },
+        "admin": {
+          "text": "아파트·오피스텔 층 효용 실험 계획만 문서화. 미실행. 제품 식·#9 산출 설명과 문 분리. 새 D 없음",
+          "status": "stopped",
+          "commit": "needed"
+        }
+      }
     }
   ],
   "today": {
-    "date": "2026-09-21",
+    "date": "2026-09-27",
     "cells": {
       "land": {
-        "text": "면적 탄성(광평수) 1차: 적격 표 794칸·369 통과, 유형별 24칸 A/B/C. β_A 중위 −0.124·음수 71%. 전국 한 β·제품 식 미변경. 랩 ?tool=area-elasticity",
+        "text": "매트릭스 평균을 같은 지목 열의 거래건수 상·중·하위로 표시. 헤더 건수·평균 크기 맞춤, 평균에 만. 면적구분에 광소·광대 범위. 쌍둥이지역 탭은 넣지 않음",
         "status": "done",
         "commit": "committed"
       },
@@ -652,7 +722,7 @@
         "commit": "none"
       },
       "admin": {
-        "text": "랩 문 ?tool=area-elasticity · 계획일지 09-21. 새 D 없음",
+        "text": "토지 쌍둥이 실험창 A~E. E는 대표 10칸 구성비로 전국, 가격·규모는 순위 밖. 식 미고정. 모달 탭 없음. 새 D 없음",
         "status": "done",
         "commit": "committed"
       }
@@ -661,7 +731,7 @@
   "next": {
     "cells": {
       "land": {
-        "text": "면적 탄성 2차: 적격 369칸 전수. 전국 한 β·제품 식 미변경",
+        "text": "면적 탄성 이어서: 주거계 vs 농림 대지. 쌍둥이지역 탭은 E 보고 결정, 제품 미추가",
         "status": "planned",
         "commit": "none"
       },
@@ -683,9 +753,9 @@
         "commit": "none"
       },
       "collective": {
-        "text": "시공사 브랜드 vs 시공사(D-065). 연식=0 서울·경기 분리(D-064). 제품 식에 γ·신축 k% 넣지 않음",
+        "text": "이어서: 아파트 층 효용 실험 0차(적격 단지 수, 가격 계수 없음). 계획 docs/lab/APT_FLOOR_UTILITY_LAB.md. 제품 식 미변경. 그 다음 시공사 브랜드 vs 시공사(D-065), 연식=0 서울·경기(D-064)",
         "status": "planned",
-        "commit": "needed",
+        "commit": "none",
         "decision": "D-065"
       },
       "admin": {

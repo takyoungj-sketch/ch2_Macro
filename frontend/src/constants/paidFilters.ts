@@ -6,6 +6,13 @@ export const ROAD_CONDITIONS = ["25이상", "25미만", "12미만", "8미만", "
 
 export const AREA_CATEGORIES = ["광소", "정상", "광대"] as const;
 
+/** 계약면적 기준. pipeline/constants.py AREA_CATEGORIES 와 같다. */
+export const AREA_CATEGORY_LABELS: Record<(typeof AREA_CATEGORIES)[number], string> = {
+  광소: "광소(30㎡ 미만)",
+  정상: "정상",
+  광대: "광대(3000㎡ 이상)",
+};
+
 export const DEAL_TYPES = ["중개거래", "직거래"] as const;
 
 /**
