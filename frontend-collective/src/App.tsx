@@ -13,7 +13,7 @@ import {
 } from "./api/client";
 import { CH2_AI_ACTION_EVENT, type AiScreenAction } from "@ch2/ai-assistant/aiActions";
 import { fetchCollectiveMapResolveCodes } from "./api/mapClient";
-import DualHorizontalScroll from "./components/DualHorizontalScroll";
+import BuildingStatsTable, { buildingMatchesQuery } from "./components/BuildingStatsTable";
 import StatsTableExpandButton from "./components/StatsTableExpandButton";
 import BuildingDetailModal from "./components/BuildingDetailModal";
 import RegionalRegressionModal from "./components/RegionalRegressionModal";
@@ -34,10 +34,7 @@ import StatsWindowToggle, {
   normalizeStatsWindowYears,
   type StatsWindowYears,
 } from "./components/StatsWindowToggle";
-import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import type { AssetSelectorType, RegionOption } from "./types";
-import { assetTypeLabel } from "./types";
-import { rowFromTypeSibling } from "./utils/typeSibling";
 import {
   hasYearFilter,
 } from "./utils/contractYearRange";
@@ -67,8 +64,6 @@ import {
   analysisUnitLabel,
   MAX_COLLECTIVE_ANALYSIS_UNITS,
 } from "./utils/collectiveAnalysisUnits";
-import { collectiveMatchBadge } from "./utils/matchBadge";
-
 type AnalysisScope = {
   assetType: AssetSelectorType;
   addr1: string;
@@ -84,151 +79,6 @@ type AnalysisScope = {
   region_code_level?: "eupmyeondong" | "beopjungri";
   region_addrs?: string[];
 };
-
-function fmtPrice(v: number | null | undefined) {
-  if (v == null) return "—";
-  return v.toLocaleString(undefined, { maximumFractionDigits: 0 });
-}
-
-function fmtCiCompact(lo: number | null | undefined, hi: number | null | undefined) {
-  if (lo == null || hi == null) return "—";
-  return `${fmtPrice(lo)}~${fmtPrice(hi)}`;
-}
-
-function fmtLandPrice(v: number | null | undefined) {
-  if (v == null) return "—";
-  return Math.round(v).toLocaleString("ko-KR");
-}
-
-function householdsCellTitle(row: BuildingStatsRow): string | undefined {
-  if (row.households_flagged) return "원본 이상값 — 값은 그대로 표시";
-  if (row.scale_scope === "complex" || (row.type_siblings?.length ?? 0) > 0) {
-    return "단지 전체 세대수. 이 유형 재고가 아닙니다. 유형별 거래 통계는 별도입니다.";
-  }
-  return "K-apt 전체 세대수. 없으면 표제부 해당 용도 동 합산. 오피스텔은 세대수가 비면 호수";
-}
-
-function landPriceTitle(row: BuildingStatsRow): string | undefined {
-  if (row.assessed_land_price == null) return undefined;
-  return row.assessed_land_price_year != null
-    ? `${row.assessed_land_price_year}년 · 원/㎡`
-    : "원/㎡";
-}
-
-function BuildingTableRow({
-  row,
-  highlighted,
-  wide,
-  onSelect,
-}: {
-  row: BuildingStatsRow;
-  highlighted?: boolean;
-  wide: boolean;
-  onSelect: (row: BuildingStatsRow) => void;
-}) {
-  return (
-    <tr
-      className={clsx(
-        "hover:bg-indigo-50 dark:hover:bg-indigo-950/40 cursor-pointer",
-        highlighted && "!bg-yellow-200 dark:!bg-yellow-700/50",
-      )}
-      onClick={() => onSelect(row)}
-      title={row.display_name}
-      data-building-highlight={highlighted ? "1" : undefined}
-    >
-      <td className="text-[10px] whitespace-nowrap text-center">{assetTypeLabel(row.asset_type)}</td>
-      <td className="name">
-        {row.display_name}
-        {!row.is_reliable && <span className="ml-0.5 text-[9px] text-amber-600">n&lt;15</span>}
-        {row.asset_type !== "presale" &&
-          (() => {
-            const badge = collectiveMatchBadge(row.match_tier);
-            return (
-              <span
-                className={clsx(
-                  "ml-0.5 text-[9px]",
-                  badge.tone === "amber" ? "text-amber-600" : "text-slate-500",
-                )}
-                title={`조인 ${row.match_tier || "없음"}`}
-              >
-                {badge.label}
-              </span>
-            );
-          })()}
-        {(row.type_siblings ?? []).map((sib) => (
-          <button
-            key={sib.building_key}
-            type="button"
-            className="ml-1 px-1 py-0 rounded bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 text-[9px] font-medium hover:bg-indigo-100"
-            title={`${assetTypeLabel(sib.asset_type)} 모달 열기 · 중앙값 ${fmtPrice(sib.median)}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect(rowFromTypeSibling(row, sib));
-            }}
-          >
-            {assetTypeLabel(sib.asset_type)} {sib.count.toLocaleString("ko-KR")}건 별도
-          </button>
-        ))}
-      </td>
-      <td className="num">{row.count}</td>
-      <td className="num">{fmtPrice(row.median)}</td>
-      <td className="num">{fmtPrice(row.mean)}</td>
-      {wide && <td className="num text-[10px]">{fmtCiCompact(row.ci_lower, row.ci_upper)}</td>}
-      <td className="num">{row.building_year ?? "—"}</td>
-      <td className="num" title={householdsCellTitle(row)}>
-        {row.households == null ? (
-          "—"
-        ) : (
-          <>
-            {row.households.toLocaleString("ko-KR")}
-            {row.households_flagged ? <span className="ml-0.5 text-[9px] text-amber-600">!</span> : null}
-          </>
-        )}
-      </td>
-      <td
-        className="truncate"
-        title={
-          row.builder_label
-            ? row.builder_is_joint
-              ? `${row.builder_label} · 공동시공, 첫 시공사만 표시`
-              : row.builder_label
-            : undefined
-        }
-      >
-        {row.builder_label ?? "—"}
-      </td>
-      <td className="addr truncate" title={row.jibun_address || row.address || undefined}>
-        {row.jibun_address ?? row.address ?? "—"}
-      </td>
-      {wide && (
-        <td className="addr truncate" title={row.road_address || undefined}>
-          {row.road_address ?? "—"}
-        </td>
-      )}
-      {wide && (
-        <td className="num" title={landPriceTitle(row)}>
-          {fmtLandPrice(row.assessed_land_price)}
-        </td>
-      )}
-    </tr>
-  );
-}
-
-function buildingMatchesQuery(row: BuildingStatsRow, q: string): boolean {
-  if (!q) return false;
-  const hay = [
-    row.display_name,
-    row.jibun_address,
-    row.road_address,
-    row.address,
-    row.asset_type,
-    row.builder_label,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  return hay.includes(q);
-}
 
 export default function App() {
   const qc = useQueryClient();
@@ -257,7 +107,6 @@ export default function App() {
   const [yearFrom, setYearFrom] = useState<number | "">("");
   const [yearTo, setYearTo] = useState<number | "">("");
   const [windowYears, setWindowYears] = useState<StatsWindowYears>(5);
-  const [sort, setSort] = useState("count");
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [selected, setSelected] = useState<BuildingStatsRow | null>(null);
   const [regionalOpen, setRegionalOpen] = useState(false);
@@ -436,7 +285,7 @@ export default function App() {
         contract_year_to: scope.yearTo === "" ? undefined : scope.yearTo,
         window_years: scope.windowYears,
         presale_stats_mode: "rolling",
-        sort: scope.sort,
+        sort: "count",
       });
     },
     enabled: scope !== null && !!scope.addr2,
@@ -503,7 +352,7 @@ export default function App() {
     yearFrom,
     yearTo,
     windowYears,
-    sort,
+    sort: "count",
   };
   const { scopeStale, markRegionScopeCaptured } = useCollectiveScopeStale(
     scope,
@@ -557,7 +406,7 @@ export default function App() {
       yearFrom,
       yearTo,
       windowYears,
-      sort,
+      sort: "count",
       ...regionCodeScope,
     });
     setSelected(null);
@@ -588,7 +437,7 @@ export default function App() {
       {listAiContext ? <PublishAiContext context={listAiContext} /> : null}
 
       <div className="relative z-0 isolate flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
-      <main className="flex flex-1 min-h-0">
+      <main className="flex flex-1 min-h-0 overflow-hidden">
         <CollapsibleLeftSidebar storageKey="collective" className="layout-sidebar p-4">
           <h2 className="text-sm font-semibold mb-3 text-slate-800 dark:text-slate-100">조건</h2>
           <div className="space-y-3">
@@ -731,17 +580,6 @@ export default function App() {
               />
             )}
 
-            <label className="text-xs block space-y-1">
-              <span className="text-slate-500 dark:text-slate-400">정렬</span>
-              <select className="input" value={sort} onChange={(e) => setSort(e.target.value)}>
-                <option value="count">거래수</option>
-                <option value="mean">평균 단가</option>
-                <option value="households">세대수</option>
-                <option value="display_name">건물명</option>
-                <option value="address">지번 주소</option>
-              </select>
-            </label>
-
             <button
               type="button"
               className="btn btn-primary w-full"
@@ -842,7 +680,7 @@ export default function App() {
               onAddUnit={addUnit}
             />
           </section>
-          <div className="p-4 pt-2 flex-1 min-h-0 overflow-y-auto">
+          <div className="p-4 pt-2 pb-8">
           {!scope && (
             <p className="text-sm text-slate-500 dark:text-slate-400">시군구까지 선택한 뒤 「통계분석」을 누르면 건물 목록이 표시됩니다.</p>
           )}
@@ -904,58 +742,12 @@ export default function App() {
                   />
                 </label>
               </div>
-              <div className="card p-0 w-full">
-                <DualHorizontalScroll key={tableWide ? "wide" : "compact"}>
-                <table className={clsx("data buildings-table", tableWide && "is-wide")}>
-                  <colgroup>
-                    <col className="col-type" />
-                    <col className="col-name" />
-                    <col className="col-num" />
-                    <col className="col-num" />
-                    <col className="col-num" />
-                    {tableWide && <col className="col-num" />}
-                    <col className="col-year" />
-                    <col className="col-hh" />
-                    <col className="col-builder" />
-                    <col className="col-jibun" />
-                    {tableWide && <col className="col-road" />}
-                    {tableWide && <col className="col-land" />}
-                  </colgroup>
-                  <thead>
-                    <tr>
-                      <th>유형</th>
-                      <th>건물명</th>
-                      <th>거래수</th>
-                      <th>중앙(만원/㎡)</th>
-                      <th>평균(만원/㎡)</th>
-                      {tableWide && <th title="95% 신뢰구간">신뢰구간(만원/㎡)</th>}
-                      <th title="실거래 건축연도">신축연도</th>
-                      <th title="K-apt 전체 세대수. K-apt가 없으면 표제부 해당 용도 동 합산. 오피스텔은 세대수가 비면 호수">
-                        <span className="inline-flex items-center gap-0.5">
-                          세대수
-                          <StatsGlossaryHelp termId="type_stats_vs_complex_scale" size="xs" />
-                        </span>
-                      </th>
-                      <th title="K-apt 시공사 대표 1곳. 공동시공은 첫 회사+외. 표제부만 있으면 없음">시공사</th>
-                      <th>지번 주소</th>
-                      {tableWide && <th>도로명 주소</th>}
-                      {tableWide && <th title="최신 대표 필지 개별공시지가">개별공시지가(원/㎡)</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {buildingsQ.data.items.map((row) => (
-                      <BuildingTableRow
-                        key={`${row.building_key}|${row.asset_type}`}
-                        row={row}
-                        wide={tableWide}
-                        highlighted={buildingMatchesQuery(row, buildingSearchQ)}
-                        onSelect={setSelected}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-                </DualHorizontalScroll>
-              </div>
+              <BuildingStatsTable
+                items={buildingsQ.data.items}
+                wide={tableWide}
+                highlightQuery={buildingSearchQ}
+                onSelect={setSelected}
+              />
             </>
           )}
           </div>

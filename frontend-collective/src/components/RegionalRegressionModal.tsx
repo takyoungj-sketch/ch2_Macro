@@ -243,6 +243,22 @@ function splitAddrKey(key: string): { addr1: string; addr2: string; addr4: strin
   return { addr1: parts[0], addr2: parts[1] ?? "", addr4: parts[2] };
 }
 
+/** 순위 기준 읍면동을 앞에 두고, 이미 고른 읍면동과 체크한 쌍둥이를 중복 없이 붙인다. */
+export function twinPoolRegionAddrs(selected: string[], anchor: string, twins: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const push = (raw: string) => {
+    const key = raw.trim();
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    out.push(key);
+  };
+  push(anchor);
+  for (const key of selected) push(key);
+  for (const key of twins) push(key);
+  return out;
+}
+
 function TwinRegionPanel(props: {
   windowYears: number;
   extraTypeLabel: string;
@@ -288,8 +304,8 @@ function TwinRegionPanel(props: {
         </p>
       )}
       <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug">
-        이 식은 기준 읍면동과 체크한 지역의 단지를 한 식으로 합쳐 돌려 보는 탐색입니다. 미래 가격의 정답을
-        보장하지 않습니다. 그 지역만의 식은 지역회귀 탭에 있습니다.
+        이 식은 이미 고른 읍면동 전부와 체크한 쌍둥이 지역의 단지를 한 식으로 합칩니다. 쌍둥이 순위만 기준
+        읍면동으로 고릅니다. 미래 가격의 정답을 보장하지 않습니다. 그 지역만의 식은 지역회귀 탭에 있습니다.
       </p>
 
       {props.choices.length > 1 && (
@@ -508,9 +524,13 @@ export default function RegionalRegressionModal(props: Props) {
       weight_mode: weightMode,
       min_tx: minTx,
       region_dummy: regionDummy,
-      region_addrs: [anchor.region_addr, ...pickedTwins.map((row) => row.region_addr)],
+      region_addrs: twinPoolRegionAddrs(
+        choices.map((choice) => choice.key),
+        anchor.region_addr,
+        pickedTwins.map((row) => row.region_addr),
+      ),
     };
-  }, [twinQ.data, checked, regionDummy, props.windowYears, props.assetType, vars, modelType, weightMode, minTx]);
+  }, [twinQ.data, checked, choices, regionDummy, props.windowYears, props.assetType, vars, modelType, weightMode, minTx]);
 
   const runM = useMutation({
     mutationFn: (req: RegionalRegressionRunRequest) => runRegionalRegression(req),

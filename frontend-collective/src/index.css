@@ -173,6 +173,11 @@ table.data.buildings-table td {
   @apply text-center;
 }
 
+table.data.buildings-table th {
+  overflow: visible;
+  vertical-align: top;
+}
+
 table.data.buildings-table td.num {
   @apply text-center tabular-nums;
 }
@@ -202,6 +207,11 @@ table.data.commercial-clusters-table.is-wide col {
 table.data.commercial-clusters-table th,
 table.data.commercial-clusters-table td {
   @apply text-center;
+}
+
+table.data.commercial-clusters-table th {
+  overflow: visible;
+  vertical-align: top;
 }
 
 table.data.commercial-clusters-table td.num {
@@ -241,7 +251,7 @@ table.data td.addr {
 }
 
 .layout-main {
-  @apply flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden;
+  @apply min-h-0 min-w-0 flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-900;
 }
 
 .modal-shell {

@@ -18,12 +18,12 @@ import { buildRentListContext } from "./api/aiContext";
 import AiAssistantPanel from "./components/AiAssistantPanel";
 import { ActiveAiViewProvider, emptyAiContext, PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import BuildingDetailModal from "./components/BuildingDetailModal";
-import DualHorizontalScroll from "./components/DualHorizontalScroll";
 import RegionChipPanel, {
   LEFT_REGION_MULTI_SELECT,
   toggleChipMulti,
   toggleChipSingle,
 } from "./components/RegionChipPanel";
+import RentBuildingStatsTable, { buildingMatchesQuery } from "./components/RentBuildingStatsTable";
 import RentRegionMapHub, { type MapPanelMode } from "./components/RentRegionMapHub";
 import SangkwonAnalysisModal, {
   sangkwonScopeLabel,
@@ -38,7 +38,6 @@ import {
   RENT_ASSET_KINDS,
   RENT_KIND_LABELS,
   assetTypeLabel,
-  type LeaseMetric,
   type RentAssetType,
   type RentBuildingRow,
   type RentConversionRate,
@@ -61,108 +60,6 @@ type AnalysisScope = {
   sangkwonGuList: string[];
   includeSangkwon: boolean;
 };
-
-function fmtUnit(v: number | null | undefined) {
-  if (v == null) return "—";
-  const digits = Math.abs(v) < 10 ? 1 : 0;
-  return v.toLocaleString("ko-KR", {
-    maximumFractionDigits: digits,
-    minimumFractionDigits: digits === 1 ? 1 : 0,
-  });
-}
-
-function ConvertedCell({ m }: { m: LeaseMetric }) {
-  const v = m.mean ?? m.median;
-  if (v == null) return <span className="text-slate-400">—</span>;
-  return <span className="font-semibold">{fmtUnit(v)}</span>;
-}
-
-function Nlt15({ n }: { n: number }) {
-  if (n <= 0 || n >= 15) return null;
-  return <span className="ml-0.5 text-[9px] text-amber-600">n&lt;15</span>;
-}
-
-function MeanWithN({
-  v,
-  n,
-}: {
-  v: number | null | undefined;
-  n: number;
-}) {
-  if (v == null) return <span className="text-slate-400">—</span>;
-  return (
-    <span className="whitespace-nowrap">
-      <span className="font-semibold">{fmtUnit(v)}</span>
-      {n > 0 ? (
-        <span className="ml-0.5 text-slate-400 font-normal">({n.toLocaleString("ko-KR")})</span>
-      ) : null}
-    </span>
-  );
-}
-
-function MonthlyMeanCell({
-  v,
-  mixedN,
-  monthlyN,
-}: {
-  v: number | null | undefined;
-  mixedN: number;
-  monthlyN: number;
-}) {
-  if (v == null) return <span className="text-slate-400">—</span>;
-  return (
-    <span className="whitespace-nowrap">
-      <span className="font-semibold">{fmtUnit(v)}</span>
-      <span className="ml-0.5 text-slate-400 font-normal">
-        ({mixedN.toLocaleString("ko-KR")}, {monthlyN.toLocaleString("ko-KR")})
-      </span>
-    </span>
-  );
-}
-
-function ColTitle({
-  label,
-  unit,
-  countUnit,
-  termId,
-}: {
-  label: string;
-  unit: string;
-  /** 칸의 괄호 값 단위. 예: 건 = 거래수 */
-  countUnit?: string;
-  termId: string;
-}) {
-  return (
-    <span className="inline-flex items-center justify-center gap-0.5 leading-tight text-center">
-      <span>
-        {label}
-        <span className="block font-normal text-[10px] text-slate-400">
-          ({unit}){countUnit ? ` (${countUnit})` : ""}
-        </span>
-      </span>
-      <StatsGlossaryHelp termId={termId} size="xs" />
-    </span>
-  );
-}
-
-/** 반전세·순수월세의 월세/㎡만. 보증금·전세는 제외. */
-function monthlyRentMean(row: RentBuildingRow): { mean: number | null; n: number } {
-  let w = 0;
-  let n = 0;
-  const mixN = row.mixed?.n ?? 0;
-  const mixM = row.mixed?.monthly?.mean;
-  if (mixN > 0 && mixM != null) {
-    w += mixM * mixN;
-    n += mixN;
-  }
-  const monN = row.monthly?.n ?? 0;
-  const monM = row.monthly?.mean;
-  if (monN > 0 && monM != null) {
-    w += monM * monN;
-    n += monN;
-  }
-  return { mean: n ? w / n : null, n };
-}
 
 function formatAppliedRate(
   rates: RentConversionRate[],
@@ -209,15 +106,6 @@ function toggleKind(prev: RentAssetType[], kind: RentAssetType): RentAssetType[]
   return [...prev, kind];
 }
 
-function buildingMatchesQuery(row: RentBuildingRow, q: string): boolean {
-  if (!q) return false;
-  const hay = [row.display_name, row.jibun_address, row.road_address, row.asset_type]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  return hay.includes(q);
-}
-
 export default function App() {
   const { isDark, toggleUiColorScheme } = useUiColorScheme();
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
@@ -227,7 +115,6 @@ export default function App() {
   const [addr2, setAddr2] = useState("");
   const [guList, setGuList] = useState<string[]>([]);
   const [leafList, setLeafList] = useState<string[]>([]);
-  const [sort, setSort] = useState("jeonse_mean");
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [buildingSearch, setBuildingSearch] = useState("");
   const [selected, setSelected] = useState<RentBuildingRow | null>(null);
@@ -326,7 +213,7 @@ export default function App() {
         addr4List: scope.hasIntermediate && scope.leafList.length ? scope.leafList : undefined,
         assetTypes: scope.assetKinds,
         windowYears: scope.windowYears,
-        sort: scope.sort,
+        sort: "jeonse_mean",
       });
     },
     enabled: scope !== null && !!scope.addr2 && scope.assetKinds.length > 0,
@@ -389,7 +276,6 @@ export default function App() {
       JSON.stringify(scope.leafList) !== JSON.stringify(leafList) ||
       scope.hasIntermediate !== hasIntermediate ||
       scope.windowYears !== windowYears ||
-      scope.sort !== sort ||
       scope.includeSangkwon !== sangkwonOn);
 
   const sangkwonGuList = useMemo(() => {
@@ -413,7 +299,7 @@ export default function App() {
       hasIntermediate,
       assetKinds: [...assetKinds],
       windowYears,
-      sort,
+      sort: "jeonse_mean",
       sangkwonGuList,
       includeSangkwon: sangkwonOn,
     });
@@ -457,7 +343,7 @@ export default function App() {
       <PublishAiContext context={rentAiContext} />
 
       <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
-      <main className="flex flex-1 min-h-0">
+      <main className="flex flex-1 min-h-0 overflow-hidden">
         <CollapsibleLeftSidebar
           storageKey="rent"
           className="layout-sidebar p-4 space-y-3"
@@ -582,15 +468,6 @@ export default function App() {
               onClear={() => setLeafList([])}
             />
           )}
-          <label className="text-xs block space-y-1">
-            <span className="text-slate-500">정렬</span>
-            <select className="input" value={sort} onChange={(e) => setSort(e.target.value)}>
-              <option value="jeonse_mean">전세보증금</option>
-              <option value="jeonse_equiv_median">전세환산값</option>
-              <option value="total_n">거래건수</option>
-              <option value="name">건물명</option>
-            </select>
-          </label>
           <StatsWindowToggle value={windowYears} onChange={setWindowYears} />
           <button
             type="button"
@@ -665,7 +542,7 @@ export default function App() {
               }}
             />
           </section>
-          <div className="p-4 pt-2 flex-1 min-h-0 overflow-y-auto">
+          <div className="p-4 pt-2 pb-8">
             {metaQ.data && (metaQ.data.addr1?.length ?? 0) === 0 && (
               <p className="text-sm text-amber-700">
                 임대 마트가 없습니다. <code>py pipeline/rent/build_building_stats.py</code> 를 실행하세요.
@@ -751,145 +628,12 @@ export default function App() {
                     칩 숫자는 선택한 유형의 건물 수입니다. 유형을 더하면 목록이 생깁니다. 전환율 게이트는 목록을 숨기지 않습니다.
                   </p>
                 )}
-                <div className="card p-0">
-                  <DualHorizontalScroll key={tableWide ? "wide" : "compact"}>
-                  <table className={clsx("data buildings-table", tableWide && "is-wide")}>
-                    <colgroup>
-                      <col className="col-type" />
-                      <col className="col-name" />
-                      <col className="col-num" />
-                      <col className="col-num" />
-                      <col className="col-num" />
-                      <col className="col-num" />
-                      {tableWide && <col className="col-num" />}
-                      {tableWide && <col className="col-num" />}
-                      {tableWide && <col className="col-num" />}
-                      <col className="col-year" />
-                      <col className="col-jibun" />
-                      {tableWide && <col className="col-road" />}
-                    </colgroup>
-                    <thead>
-                      <tr>
-                        <th>유형</th>
-                        <th>건물명</th>
-                        <th>
-                          <ColTitle label="전세보증금" unit="만원/㎡" countUnit="건" termId="jeonse_deposit" />
-                        </th>
-                        <th>
-                          <ColTitle label="매매가" unit="만원/㎡" countUnit="건" termId="sale_unit_mean" />
-                        </th>
-                        <th>
-                          <ColTitle label="전세가율" unit="%" termId="jeonse_to_sale_pct" />
-                        </th>
-                        <th>
-                          <ColTitle label="월세" unit="만원/㎡" countUnit="건" termId="monthly_rent_mean" />
-                        </th>
-                        {tableWide && (
-                          <th>
-                            <ColTitle label="전세환산값" unit="만원/㎡" termId="jeonse_equiv" />
-                          </th>
-                        )}
-                        {tableWide && (
-                          <th>
-                            <ColTitle label="전세환산가율" unit="%" termId="jeonse_equiv_sale_pct" />
-                          </th>
-                        )}
-                        {tableWide && (
-                          <th>
-                            <ColTitle label="월세환산값" unit="만원/㎡" termId="monthly_equiv" />
-                          </th>
-                        )}
-                        <th>준공</th>
-                        <th>지번주소</th>
-                        {tableWide && <th>도로명주소</th>}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map((row) => {
-                        const saleN = row.sale?.n ?? 0;
-                        const jeonseN = row.jeonse?.n ?? 0;
-                        const mixedN = row.mixed?.n ?? 0;
-                        const monthlyN = row.monthly?.n ?? 0;
-                        const monthly = monthlyRentMean(row);
-                        const ratio = row.jeonse_to_sale_pct;
-                        const equivRatio = row.jeonse_equiv_sale_pct;
-                        return (
-                          <tr
-                            key={`${row.building_key}|${row.asset_type}`}
-                            className={clsx(
-                              "hover:bg-indigo-50 dark:hover:bg-indigo-950/40 cursor-pointer",
-                              buildingMatchesQuery(row, buildingSearchQ) &&
-                                "!bg-yellow-200 dark:!bg-yellow-700/50",
-                            )}
-                            data-building-highlight={
-                              buildingMatchesQuery(row, buildingSearchQ) ? "1" : undefined
-                            }
-                            onClick={() => setSelected(row)}
-                          >
-                            <td className="text-[10px] text-center">{assetTypeLabel(row.asset_type)}</td>
-                            <td className="name" title={row.display_name}>
-                              {row.display_name}
-                            </td>
-                            <td className="lease">
-                              <MeanWithN v={row.jeonse?.mean} n={jeonseN} />
-                            </td>
-                            <td className="lease">
-                              <MeanWithN v={row.sale?.mean} n={saleN} />
-                            </td>
-                            <td className="num">
-                              {ratio != null ? (
-                                <>
-                                  {ratio.toFixed(1)}%
-                                  <Nlt15 n={jeonseN} />
-                                </>
-                              ) : (
-                                <span className="text-slate-400">—</span>
-                              )}
-                            </td>
-                            <td className="lease">
-                              <MonthlyMeanCell
-                                v={monthly.mean}
-                                mixedN={mixedN}
-                                monthlyN={monthlyN}
-                              />
-                            </td>
-                            {tableWide && (
-                              <td className="lease">
-                                <ConvertedCell m={row.jeonse_equiv} />
-                              </td>
-                            )}
-                            {tableWide && (
-                              <td className="num">
-                                {equivRatio != null ? (
-                                  <span className={equivRatio > 100 ? "text-amber-700 dark:text-amber-300" : undefined}>
-                                    {equivRatio.toFixed(1)}%
-                                  </span>
-                                ) : (
-                                  <span className="text-slate-400">—</span>
-                                )}
-                              </td>
-                            )}
-                            {tableWide && (
-                              <td className="lease">
-                                <ConvertedCell m={row.monthly_equiv} />
-                              </td>
-                            )}
-                            <td className="num">{row.building_year ?? "—"}</td>
-                            <td className="addr truncate" title={row.jibun_address}>
-                              {row.jibun_address || "—"}
-                            </td>
-                            {tableWide && (
-                              <td className="addr truncate text-slate-500" title={row.road_address}>
-                                {row.road_address || "—"}
-                              </td>
-                            )}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  </DualHorizontalScroll>
-                </div>
+                <RentBuildingStatsTable
+                  items={items}
+                  wide={tableWide}
+                  highlightQuery={buildingSearchQ}
+                  onSelect={setSelected}
+                />
               </>
             )}
           </div>

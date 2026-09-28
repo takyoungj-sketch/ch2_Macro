@@ -148,6 +148,25 @@ export async function fetchCommercialClusters(params: {
   return data;
 }
 
+/** API page_size 상한(500)을 넘는 도로 목록을 모두 조회 */
+export async function fetchAllCommercialClusters(
+  params: Omit<Parameters<typeof fetchCommercialClusters>[0], "page" | "page_size">,
+): Promise<CommercialClusterListResponse> {
+  const pageSize = 500;
+  let page = 1;
+  let meta: CommercialClusterListResponse | null = null;
+  const items: CommercialClusterListResponse["items"] = [];
+  while (true) {
+    const batch = await fetchCommercialClusters({ ...params, page, page_size: pageSize });
+    if (!meta) meta = batch;
+    items.push(...batch.items);
+    if (items.length >= batch.total || batch.items.length < pageSize) {
+      return { ...(meta ?? batch), items, total: batch.total };
+    }
+    page += 1;
+  }
+}
+
 export async function fetchCommercialTransactions(
   clusterKey: string,
   params?: {

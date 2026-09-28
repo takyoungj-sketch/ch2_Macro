@@ -7,18 +7,16 @@ import type { StatsWindowYears } from "./StatsWindowToggle";
 import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import { assetTypeLabel } from "../types";
 import DraggableModalShell from "./DraggableModalShell";
-import RentRegressionPanel from "./RentRegressionPanel";
 import RentTransactionTable from "./RentTransactionTable";
 import RollingTrendChart from "./RollingTrendChart";
 
-type PanelMode = "conversion" | "rolling" | "transactions" | "regression";
+type PanelMode = "conversion" | "rolling" | "transactions";
 type RollingSeriesId = "jeonse" | "mixed_deposit" | "mixed_monthly" | "monthly";
 
 const TABS: { id: PanelMode; label: string }[] = [
   { id: "conversion", label: "전환율" },
   { id: "rolling", label: "롤링 구간" },
   { id: "transactions", label: "거래 목록" },
-  { id: "regression", label: "회귀 분석" },
 ];
 
 const ROLLING_SERIES: { id: RollingSeriesId; label: string }[] = [
@@ -305,16 +303,6 @@ export default function BuildingDetailModal({
       resizable
       maxWidthClass="max-w-4xl"
     >
-      {identifiablePeers.length > 0 && panel === "regression" && (
-        <div className="mb-3 space-y-1">
-          <h3 className="text-sm font-semibold">인접·동일권 건물 추가</h3>
-          <p className="text-[10px] text-slate-400">
-            같은 목록에서 건물을 더하면 통합 회귀에 함께 들어갑니다.
-          </p>
-          <PeerPicker peers={identifiablePeers} extraKeys={extraKeys} onToggle={togglePeer} />
-        </div>
-      )}
-
       {panel === "conversion" && (
         <div className="space-y-3">
           <section className="space-y-2">
@@ -375,7 +363,7 @@ export default function BuildingDetailModal({
           <section className="rounded-lg border border-slate-200 dark:border-slate-700 p-3 space-y-2">
             <h3 className="text-sm font-semibold">인접·동일권 건물 추가</h3>
             <p className="text-[10px] text-slate-400">
-              같은 목록에서 건물을 고르면 이 건물과 함께 단순평균합니다. 회귀 탭에도 같이 들어갑니다.
+              같은 목록에서 전환율이 계산되는 건물을 고르면 이 건물과 함께 단순평균합니다.
             </p>
             <p className="text-xs">
               선택 풀({poolRows.length}동) 평균{" "}
@@ -498,13 +486,6 @@ export default function BuildingDetailModal({
         </div>
       )}
 
-      {panel === "regression" && (
-        <RentRegressionPanel
-          buildingKey={row.building_key}
-          extraKeys={extraKeys}
-          assetType={String(row.asset_type)}
-        />
-      )}
     </DraggableModalShell>
   );
 }

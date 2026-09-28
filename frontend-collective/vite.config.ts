@@ -10,6 +10,7 @@ export default defineConfig({
       "@ch2/ai-assistant": path.resolve(__dirname, "../shared/ai-assistant"),
       "@ch2/macro-shell": path.resolve(__dirname, "../shared/macro-shell"),
       "@ch2/stats-glossary": path.resolve(__dirname, "../shared/stats-glossary"),
+      "@ch2/stats-table-filter": path.resolve(__dirname, "../shared/stats-table-filter"),
       "@ch2/analysis-help": path.resolve(__dirname, "../shared/analysis-help"),
       "@ch2/model-recommend": path.resolve(__dirname, "../shared/model-recommend"),
       clsx: path.resolve(__dirname, "node_modules/clsx"),

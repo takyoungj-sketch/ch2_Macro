@@ -61,6 +61,9 @@ export default function RentConversionLab({ onBack }: { onBack: () => void }) {
         <p className="text-xs text-slate-500">
           연구 종료 · 적용은 단순평균(mean_simple). 검증·분포는 서울 1회 리포트. 근거는 상단 D-040.
         </p>
+        <p className="text-xs text-amber-800 dark:text-amber-200">
+          2026-09-28. 임대 건물 회귀 탭은 숨김. 추가 목록이 전환율 r_b가 되는 건물만 보여, 전세가 많아도 월세 중앙값이 0.0으로 반올림되면 회귀에서도 빠졌다. 회귀는 전세만 쓴다.
+        </p>
       </div>
       <ConversionComparePanel
         addr1={addr1}

@@ -1,19 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import clsx from "clsx";
 import {
+  fetchAllCommercialClusters,
   fetchCommercialAddr1List,
   fetchCommercialAddr2,
   fetchCommercialAddr3,
-  fetchCommercialClusters,
   fetchCommercialFilterMeta,
   fetchCommercialLeafRegions,
   fetchCommercialRegionStructure,
 } from "./api/commercialClient";
 import { fetchCollectiveMapResolveCodes } from "./api/mapClient";
 import { CH2_AI_ACTION_EVENT, type AiScreenAction } from "@ch2/ai-assistant/aiActions";
-import DualHorizontalScroll from "./components/DualHorizontalScroll";
+import CommercialClusterTable, { clusterMatchesQuery } from "./components/CommercialClusterTable";
 import StatsTableExpandButton from "./components/StatsTableExpandButton";
 import CommercialClusterDetailModal from "./components/CommercialClusterDetailModal";
 import CollectiveRegionMapHub, { type MapPanelMode } from "./components/CollectiveRegionMapHub";
@@ -30,7 +29,7 @@ import RegionChipPanel, {
   toggleChipMulti,
   toggleChipSingle,
 } from "./components/RegionChipPanel";
-import { commercialAssetTypeLabel, type CommercialAssetSelectorType, type CommercialClusterRow, type RegionOption } from "./types";
+import { type CommercialAssetSelectorType, type CommercialClusterRow, type RegionOption } from "./types";
 import {
   COMMERCIAL_ASSET_KINDS,
   COMMERCIAL_KIND_LABELS,
@@ -57,16 +56,6 @@ import {
   orderedSidoPrefetchList,
   REGION_LIST_STALE_MS,
 } from "./utils/regionListCache";
-
-function fmtPrice(v: number | null | undefined) {
-  if (v == null) return "—";
-  return v.toLocaleString(undefined, { maximumFractionDigits: 0 });
-}
-
-function fmtCi(lo: number | null | undefined, hi: number | null | undefined) {
-  if (lo == null || hi == null) return "—";
-  return `${fmtPrice(lo)}~${fmtPrice(hi)}`;
-}
 
 type AnalysisScope = {
   assetType: CommercialAssetSelectorType;
@@ -102,21 +91,6 @@ function buildRegionPeriodParams(
   return { window_years: windowYears };
 }
 
-function clusterMatchesQuery(row: CommercialClusterRow, q: string): boolean {
-  if (!q) return false;
-  const hay = [
-    row.road_name,
-    row.display_label,
-    row.addr3,
-    row.addr4,
-    row.asset_type,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  return hay.includes(q);
-}
-
 export default function CommercialApp() {
   const qc = useQueryClient();
   const [assetKinds, setAssetKinds] = useState<CommercialAssetKind[]>(["collective_shop"]);
@@ -144,7 +118,6 @@ export default function CommercialApp() {
   });
   const [yearFrom, setYearFrom] = useState<number | "">("");
   const [yearTo, setYearTo] = useState<number | "">("");
-  const [sort, setSort] = useState("count");
   const [windowYears, setWindowYears] = useState<StatsWindowYears>(5);
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [selected, setSelected] = useState<CommercialClusterRow | null>(null);
@@ -306,7 +279,7 @@ export default function CommercialApp() {
             addr4_list: scope.leafList.length ? scope.leafList : undefined,
           }
         : { addr3_list: scope.leafList.length ? scope.leafList : undefined };
-      return fetchCommercialClusters({
+      return fetchAllCommercialClusters({
         asset_type: scope.assetType,
         addr1: scope.addr1,
         addr2: scope.addr2,
@@ -317,8 +290,7 @@ export default function CommercialApp() {
         contract_year_from: scope.yearFrom === "" ? undefined : scope.yearFrom,
         contract_year_to: scope.yearTo === "" ? undefined : scope.yearTo,
         window_years: scope.windowYears,
-        sort: scope.sort,
-        page_size: 500,
+        sort: "count",
       });
     },
     enabled: scope !== null && !!scope.addr2,
@@ -384,7 +356,7 @@ export default function CommercialApp() {
     yearFrom,
     yearTo,
     windowYears,
-    sort,
+    sort: "count",
   };
   const { scopeStale, markRegionScopeCaptured } = useCollectiveScopeStale(
     scope,
@@ -406,7 +378,7 @@ export default function CommercialApp() {
       hasIntermediate,
       yearFrom,
       yearTo,
-      sort,
+      sort: "count",
       windowYears,
       ...regionCodeScope,
     });
@@ -452,7 +424,7 @@ export default function CommercialApp() {
       {listAiContext ? <PublishAiContext context={listAiContext} /> : null}
 
       <div className="relative z-0 isolate flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
-      <main className="flex flex-1 min-h-0">
+      <main className="flex flex-1 min-h-0 overflow-hidden">
         <CollapsibleLeftSidebar
           storageKey="collective-commercial"
           className="layout-sidebar p-4"
@@ -598,15 +570,6 @@ export default function CommercialApp() {
               />
             )}
 
-            <label className="text-xs block space-y-1">
-              <span className="text-slate-500 dark:text-slate-400">정렬</span>
-              <select className="input" value={sort} onChange={(e) => setSort(e.target.value)}>
-                <option value="count">거래수</option>
-                <option value="mean">평균 단가</option>
-                <option value="display_label">도로명</option>
-              </select>
-            </label>
-
             <button
               type="button"
               className="btn btn-primary w-full"
@@ -701,7 +664,7 @@ export default function CommercialApp() {
               onNormal={() => setMapPanelMode("normal")}
             />
           </section>
-          <div className="p-4 pt-2 flex-1 min-h-0 overflow-y-auto">
+          <div className="p-4 pt-2 pb-8">
             {!scope && (
               <p className="text-sm text-slate-500 dark:text-slate-400">시군구까지 선택한 뒤 「통계분석」을 누르면 도로(cluster) 목록이 표시됩니다.</p>
             )}
@@ -764,74 +727,13 @@ export default function CommercialApp() {
                     />
                   </label>
                 </div>
-                <div className="card p-0 w-full">
-                  <DualHorizontalScroll key={tableWide ? "wide" : "compact"}>
-                  <table className={clsx("data commercial-clusters-table", tableWide && "is-wide")}>
-                    <colgroup>
-                      <col className="col-type" />
-                      <col className="col-road" />
-                      <col className="col-num" />
-                      <col className="col-num" />
-                      <col className="col-num" />
-                      {tableWide && <col className="col-num" />}
-                      <col className="col-district" />
-                    </colgroup>
-                    <thead>
-                      <tr>
-                        <th>유형</th>
-                        <th>
-                          <span className="inline-flex items-center gap-1">
-                            도로명
-                            <StatsGlossaryHelp termId="commercial_cluster" size="xs" />
-                          </span>
-                        </th>
-                        <th>거래수</th>
-                        <th>중앙(만원/㎡)</th>
-                        <th>평균(만원/㎡)</th>
-                        {tableWide && <th title="95% 신뢰구간">신뢰구간(만원/㎡)</th>}
-                        <th>구·동</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {clustersQ.data.items.map((row) => {
-                        const highlighted = clusterMatchesQuery(row, clusterSearchQ);
-                        return (
-                          <tr
-                            key={`${row.cluster_key}|${row.asset_type}`}
-                            className={clsx(
-                              "hover:bg-indigo-50 dark:hover:bg-indigo-950/40 cursor-pointer",
-                              highlighted
-                                ? "!bg-yellow-200 dark:!bg-yellow-700/50"
-                                : selected?.cluster_key === row.cluster_key &&
-                                    selected?.asset_type === row.asset_type &&
-                                    "bg-indigo-50 dark:bg-indigo-950/50",
-                            )}
-                            onClick={() => setSelected(row)}
-                            data-cluster-highlight={highlighted ? "1" : undefined}
-                          >
-                            <td className="text-[10px] whitespace-nowrap text-center">
-                              {commercialAssetTypeLabel(row.asset_type)}
-                            </td>
-                            <td className="name">
-                              {row.road_name || row.display_label}
-                              {!row.is_reliable && <span className="ml-0.5 text-[9px] text-amber-600">n&lt;15</span>}
-                            </td>
-                            <td className="num">{row.count}</td>
-                            <td className="num">{fmtPrice(row.median)}</td>
-                            <td className="num">{fmtPrice(row.mean)}</td>
-                            {tableWide && (
-                              <td className="num text-[10px]">{fmtCi(row.ci_lower, row.ci_upper)}</td>
-                            )}
-                            <td className="col-district text-[10px] text-slate-600 dark:text-slate-300">
-                              {[row.addr3, row.addr4].filter(Boolean).join(" · ") || "—"}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  </DualHorizontalScroll>
-                </div>
+                <CommercialClusterTable
+                  items={clustersQ.data.items}
+                  wide={tableWide}
+                  highlightQuery={clusterSearchQ}
+                  selectedKey={selected ? `${selected.cluster_key}|${selected.asset_type}` : null}
+                  onSelect={setSelected}
+                />
               </>
             )}
           </div>

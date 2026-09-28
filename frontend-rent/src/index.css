@@ -83,7 +83,7 @@ table.data.sangkwon-table td.sk-metric {
 }
 
 .layout-main {
-  @apply flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden;
+  @apply min-h-0 min-w-0 flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-900;
 }
 
 table.data.buildings-table {
@@ -121,6 +121,7 @@ table.data.buildings-table col.col-num {
 
 table.data.buildings-table th {
   @apply align-top py-1.5;
+  overflow: visible;
 }
 
 table.data td.addr {

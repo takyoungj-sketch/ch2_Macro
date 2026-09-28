@@ -49,7 +49,7 @@ export default function DualHorizontalScroll({
       </div>
       <div
         ref={bodyRef}
-        className="overflow-x-auto"
+        className="max-h-[min(72vh,56rem)] overflow-auto overscroll-contain"
         onScroll={(e: UIEvent<HTMLDivElement>) => mirror(e.currentTarget, topRef.current)}
       >
         <div ref={contentRef}>{children}</div>
