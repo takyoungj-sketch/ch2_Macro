@@ -320,6 +320,7 @@ export default function App() {
       windowYears: buildingsQ.data.window_years ?? scope.windowYears,
       total: buildingsQ.data.total,
       first: buildingsQ.data.items[0] ?? null,
+      items: buildingsQ.data.items,
       sort: scope.sort,
     });
   }, [scope, buildingsQ.data]);
@@ -434,7 +435,7 @@ export default function App() {
         onToggleTheme={toggleUiColorScheme}
         rightSlot={<AiAssistantPanel />}
       />
-      {listAiContext ? <PublishAiContext context={listAiContext} /> : null}
+      {listAiContext ? <PublishAiContext context={listAiContext} role="base" /> : null}
 
       <div className="relative z-0 isolate flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
       <main className="flex flex-1 min-h-0 overflow-hidden">

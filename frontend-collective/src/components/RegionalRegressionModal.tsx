@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
+import { buildRegionalRegressionContext } from "../api/aiContext";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import {
@@ -16,6 +18,7 @@ import {
 } from "../api/regionalRegressionClient";
 import type { StatsWindowYears } from "./StatsWindowToggle";
 import CollectiveRegressionEquation from "./CollectiveRegressionEquation";
+import CollectiveModelRecommend, { blocksMatch } from "./CollectiveModelRecommend";
 import DraggableModalShell from "./DraggableModalShell";
 import {
   ESTIMATE_COPY,
@@ -424,6 +427,11 @@ export default function RegionalRegressionModal(props: Props) {
   const [modelType, setModelType] = useState<"linear" | "log">("log");
   const [weightMode, setWeightMode] = useState<"equal" | "tx">("equal");
   const [minTx, setMinTx] = useState<MinTx>(5);
+  const selectedBlocks = useMemo(
+    () => (Object.keys(vars) as (keyof RegionalRegressionVariables)[]).filter((key) => Boolean(vars[key])),
+    [vars],
+  );
+  const fittedSnap = useRef<{ type: "linear" | "log"; blocks: string[] } | null>(null);
   const [pickKey, setPickKey] = useState(VIRTUAL_KEY);
   const [inputs, setInputs] = useState<RegionalRegressionPredictInputs>({});
 
@@ -546,6 +554,29 @@ export default function RegionalRegressionModal(props: Props) {
 
   const data = runShown.data;
   const picked = pickKey !== VIRTUAL_KEY ? data?.fitted.find((r) => fittedKey(r) === pickKey) : undefined;
+  const regionalAiContext = useMemo(() => {
+    const regionLabel = data?.scope_label ?? [props.addr1, props.addr2].filter(Boolean).join(" ");
+    if (!data) {
+      return {
+        app: "collective" as const,
+        panel: "RegionalRegressionModal",
+        purpose: "statistics" as const,
+        scope: { region_label: regionLabel, asset_type: props.assetType },
+        facts: {
+          screen: "regional_regression",
+          ran: false,
+          tab: effectiveTab,
+          window_years: props.windowYears,
+        },
+      };
+    }
+    return buildRegionalRegressionContext(data, {
+      regionLabel,
+      assetType: props.assetType,
+      tab: effectiveTab,
+      prediction: predM.data ?? null,
+    });
+  }, [data, effectiveTab, props.addr1, props.addr2, props.assetType, props.windowYears, predM.data]);
 
   function applyTarget(key: string) {
     if (key === VIRTUAL_KEY || !key) {
@@ -577,6 +608,7 @@ export default function RegionalRegressionModal(props: Props) {
       minHeight={480}
     >
       <div className="text-xs text-slate-700 dark:text-slate-200 space-y-3">
+        <PublishAiContext context={regionalAiContext} />
         <p className="text-[11px] text-slate-500">
           {data?.scope_label ?? `${props.addr1} · ${props.addr2} · ${props.windowYears}년 창`}
           {data?.as_of_month ? ` · 기준 ${data.as_of_month.slice(0, 7)}` : ""}
@@ -727,6 +759,7 @@ export default function RegionalRegressionModal(props: Props) {
               setPickKey(VIRTUAL_KEY);
               setInputs(emptyPredictInputs());
               predM.reset();
+              fittedSnap.current = { type: modelType, blocks: selectedBlocks };
               runM.mutate(body);
             }}
           >
@@ -785,6 +818,7 @@ export default function RegionalRegressionModal(props: Props) {
               setPickKey(VIRTUAL_KEY);
               setInputs(emptyPredictInputs());
               predM.reset();
+              fittedSnap.current = { type: modelType, blocks: selectedBlocks };
               twinRun.mutate(twinRequest);
             }}
           />
@@ -820,6 +854,12 @@ export default function RegionalRegressionModal(props: Props) {
                   setPickKey(VIRTUAL_KEY);
                   setInputs(emptyPredictInputs());
                   predM.reset();
+                  fittedSnap.current = {
+                    type: modelType,
+                    blocks: (Object.keys(nextVars) as (keyof RegionalRegressionVariables)[]).filter((key) =>
+                      Boolean(nextVars[key]),
+                    ),
+                  };
                   runShown.mutate({ ...base, variables: nextVars });
                 }}
               />
@@ -1122,6 +1162,49 @@ export default function RegionalRegressionModal(props: Props) {
                   </div>
                 )}
               </section>
+            )}
+
+            {data.model_candidates && data.model_candidates.length > 0 && (
+              <>
+                {fittedSnap.current &&
+                  (modelType !== fittedSnap.current.type ||
+                    !blocksMatch(selectedBlocks, fittedSnap.current.blocks)) && (
+                    <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                      변수 또는 척도가 바뀌었습니다. 식과 예측은 마지막 실행입니다. 회귀를 다시 실행하면 맞춥니다.
+                    </p>
+                  )}
+                <CollectiveModelRecommend
+                  candidates={data.model_candidates}
+                  selectedType={modelType}
+                  selectedBlocks={selectedBlocks}
+                  datasetNote={
+                    effectiveTab === "twin"
+                      ? "고른 읍면동과 체크한 쌍둥이 지역의 단지를 사용합니다."
+                      : "지금 고른 읍면동의 단지를 사용합니다."
+                  }
+                  samplePhrase="고른 지역의 단지에서"
+                  outcomeNoun="단가"
+                  applyNote="적용은 위의 변수 체크와 선형·로그 선택을 바꿉니다. 식과 예측 단가는 회귀를 다시 실행해야 바뀝니다."
+                  blockLabels={{
+                    households: "세대수",
+                    max_floor: "최고층",
+                    parking: "세대당 주차",
+                    builder: "시공사",
+                    assessed_land_price: "개별공시지가",
+                    asset_type_dummy: "유형",
+                  }}
+                  onAdopt={(pick) => {
+                    setModelType(pick.modelType);
+                    setVars((prev) => {
+                      const next = { ...prev };
+                      (Object.keys(next) as (keyof RegionalRegressionVariables)[]).forEach((key) => {
+                        next[key] = pick.blocks.includes(key);
+                      });
+                      return next;
+                    });
+                  }}
+                />
+              </>
             )}
           </>
         )}

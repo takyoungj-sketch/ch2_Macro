@@ -44,6 +44,7 @@ export type ModelRecommendSectionProps = {
   defaultTabId?: string;
   headerExtra?: ReactNode;
   className?: string;
+  onTabChange?: (id: string) => void;
 };
 
 /**
@@ -58,6 +59,7 @@ export default function ModelRecommendSection({
   defaultTabId,
   headerExtra,
   className = "",
+  onTabChange,
 }: ModelRecommendSectionProps) {
   const initial =
     defaultTabId && tabs.some((t) => t.id === defaultTabId)
@@ -99,7 +101,10 @@ export default function ModelRecommendSection({
                 ? "rounded border border-indigo-500 bg-indigo-600 px-2 py-0.5 text-[11px] font-medium text-white"
                 : "rounded border border-indigo-200 bg-white px-2 py-0.5 text-[11px] text-indigo-800 dark:border-indigo-700 dark:bg-slate-900/50 dark:text-indigo-200"
             }
-            onClick={() => setTabId(t.id)}
+            onClick={() => {
+              setTabId(t.id);
+              onTabChange?.(t.id);
+            }}
           >
             {t.label}
           </button>

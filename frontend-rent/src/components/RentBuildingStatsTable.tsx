@@ -321,6 +321,11 @@ export default function RentBuildingStatsTable({
           setRanges({});
           setSelects({});
         }}
+        sortDirty={sortKey !== "jeonse" || sortDir !== "desc"}
+        onResetSort={() => {
+          setSortKey("jeonse");
+          setSortDir("desc");
+        }}
       />
       <DualHorizontalScroll key={wide ? "wide" : "compact"}>
         <table className={clsx("data buildings-table", wide && "is-wide")}>

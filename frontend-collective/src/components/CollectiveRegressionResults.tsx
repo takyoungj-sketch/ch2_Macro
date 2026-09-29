@@ -111,6 +111,7 @@ type RegressionResultData = Pick<
   | "equation"
   | "coefficients"
   | "predict_options"
+  | "time_reference"
 >;
 
 function ReferenceCategories({
@@ -197,6 +198,7 @@ export function CollectiveRegressionResults({
             coefficients={data.coefficients}
             modelType={fitModel}
             equation={data.equation}
+            timeReference={data.time_reference}
           />
           <ReferenceCategories options={data.predict_options} />
         </div>

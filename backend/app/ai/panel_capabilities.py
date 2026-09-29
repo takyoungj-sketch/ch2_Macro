@@ -220,6 +220,19 @@ PANEL_CAPABILITIES: dict[str, PanelCapability] = {
             "VIF가 높으면 어떻게 하나요?",
         ),
     ),
+    "RegionalRegressionModal": PanelCapability(
+        panel="RegionalRegressionModal",
+        label="지역회귀",
+        bundle_id="regression_diagnostic",
+        blocked_keywords=(),
+        redirects=(),
+        on_screen_questions=(
+            "이 지역회귀 식을 어떻게 읽나요?",
+            "홀드아웃 MAPE와 표본 안 MAPE는 무엇이 다른가요?",
+            "모형추천은 어떤 후보를 골랐나요?",
+            "단지 한 행은 무엇을 뜻하나요?",
+        ),
+    ),
     "CommercialRegressionPanel": PanelCapability(
         panel="CommercialRegressionPanel",
         label="상가·공장 회귀",

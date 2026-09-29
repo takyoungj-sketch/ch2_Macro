@@ -155,6 +155,63 @@ def test_soft_facts_include_ch2_screen_context():
     assert facts["stats"]["n"] == 77
 
 
+def test_soft_facts_keep_modal_result_and_base_list():
+    bundle = AiDiagnosticPack(
+        bundle_id="regression_diagnostic",
+        panel="RegionalRegressionModal",
+        app="collective",
+        summary_lines=["표본 n=22"],
+        diagnostics={"n": 22},
+        limitations=[],
+    )
+    ctx = AiContext(
+        app="collective",
+        panel="RegionalRegressionModal",
+        purpose="statistics",
+        scope=AiScope(region_label="가경동", asset_type="apartment"),
+        facts={
+            "equation": "log(단가) = …",
+            "hold_mape": None,
+            "mape": 5.3,
+            "model_type": "log",
+            "coefficients": [{"name": "households", "label": "세대수", "coef": 0.01, "p": 0.02}],
+            "model_candidates": [
+                {
+                    "rank": 1,
+                    "purpose": "predictive",
+                    "blocks": ["households", "building_age"],
+                    "model_type": "log",
+                    "n": 22,
+                    "mape": 5.3,
+                    "variables": {"households": True},
+                }
+            ],
+            "fitted": [{"display_name": "세원가경골", "y": 400, "y_hat": 390, "ape": 2.5}],
+            "base_screen": {
+                "panel": "BuildingList",
+                "scope": {"region_label": "충북 청주시 흥덕구 가경동"},
+                "facts": {
+                    "screen": "building_list",
+                    "list_n": 30,
+                    "visible_rows": [{"name": "세원가경골", "count": 40, "median": 410}],
+                },
+            },
+        },
+    )
+    facts = soft_facts_snapshot(bundle, scope_label="가경동", context=ctx)
+    assert facts["page"] == "지역회귀"
+    assert facts["equation"] == "log(단가) = …"
+    assert facts["stats"]["mape"] == 5.3
+    assert facts["stats"]["model_type"] == "log"
+    assert facts["model_candidates"][0]["blocks"] == ["households", "building_age"]
+    assert "variables" not in facts["model_candidates"][0]
+    assert facts["fitted"][0]["display_name"] == "세원가경골"
+    assert facts["base_screen"]["panel"] == "BuildingList"
+    assert facts["base_screen"]["list_n"] == 30
+    assert facts["base_screen"]["visible_rows"][0]["name"] == "세원가경골"
+    assert facts["coefficients"][0]["label"] == "세대수"
+
+
 def test_open_mode_still_refuses_valuation(monkeypatch):
     from app.config import settings
 
@@ -219,6 +276,53 @@ def test_chat_log_log_methodology():
     assert "세션 scope" not in r2.answer or "semi-log" in r2.answer.lower() or "Log-log" in r2.answer
     assert "log(금액)" in r2.answer or "semi-log" in r2.answer.lower()
     assert r2.bundle_id != "cluster_compare" or "탄력성" in r2.answer
+
+
+def test_regional_result_explain_is_not_missing_playbook(monkeypatch):
+    from app.config import settings
+    from app.ai.knowledge.planner import is_path_intent_question
+
+    q = "지역회귀 결과에 대해 설명해 주세요"
+    ctx = AiContext(
+        app="collective",
+        panel="RegionalRegressionModal",
+        scope=AiScope(region_label="가경동", asset_type="apartment"),
+        facts={
+            "screen": "regional_regression",
+            "ran": True,
+            "n": 22,
+            "model_type": "log",
+            "mape": 5.3,
+            "equation": "log(단가) = 1.2 + 0.01*세대수",
+            "coefficients": [{"name": "households", "label": "세대수", "coef": 0.01, "p": 0.02}],
+            "base_screen": {
+                "panel": "BuildingList",
+                "facts": {"list_n": 24, "screen": "building_list"},
+            },
+        },
+    )
+    assert not is_path_intent_question(q, ctx)
+    assert is_path_intent_question("지역회귀는 언제 쓰나요?", ctx)
+    assert is_path_intent_question("분석 경로를 추천해 주세요", ctx)
+
+    closed = handle_chat(AiChatRequest(message=q, context=ctx))
+    assert "전용 플레이북" not in closed.answer
+
+    monkeypatch.setattr(settings, "ai_open_mode", True)
+    seen: dict[str, object] = {}
+
+    def _fake_open(**kwargs):
+        seen["facts"] = kwargs.get("screen_facts")
+        return "가경동 지역회귀는 로그 식이고 표본 안 MAPE는 5.3%입니다."
+
+    with patch("app.ai.orchestrator.open_mode_chat_completion", side_effect=_fake_open):
+        opened = handle_chat(AiChatRequest(message=q, context=ctx))
+    assert opened.route == "open"
+    assert "전용 플레이북" not in opened.answer
+    facts = seen["facts"]
+    assert isinstance(facts, dict)
+    assert facts.get("equation")
+    assert facts.get("base_screen", {}).get("panel") == "BuildingList"
 
 
 def test_loglog_prediction_is_methodology_not_playbook():

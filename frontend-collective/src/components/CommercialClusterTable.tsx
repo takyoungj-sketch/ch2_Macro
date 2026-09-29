@@ -174,6 +174,11 @@ export default function CommercialClusterTable({
           setRanges({});
           setSelects({});
         }}
+        sortDirty={sortKey !== "count" || sortDir !== "desc"}
+        onResetSort={() => {
+          setSortKey("count");
+          setSortDir("desc");
+        }}
       />
       <DualHorizontalScroll key={wide ? "wide" : "compact"}>
         <table className={clsx("data commercial-clusters-table", wide && "is-wide")}>

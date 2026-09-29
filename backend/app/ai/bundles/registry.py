@@ -18,7 +18,13 @@ BUNDLE_REGISTRY: dict[str, BundleSpec] = {
     "regression_diagnostic": BundleSpec(
         bundle_id="regression_diagnostic",
         description="회귀·VIF·상관·표본 진단",
-        panels=("RegressionCard", "BuildingRegressionPanel", "LandRegressionTab"),
+        panels=(
+            "RegressionCard",
+            "BuildingRegressionPanel",
+            "CommercialRegressionPanel",
+            "RegionalRegressionModal",
+            "LandRegressionTab",
+        ),
     ),
     "prediction_explain": BundleSpec(
         bundle_id="prediction_explain",

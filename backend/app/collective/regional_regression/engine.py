@@ -32,6 +32,7 @@ from app.collective.regional_regression.schemas import (
     FunnelReason,
     FunnelStep,
     NewBuildAge0Gap,
+    RegionalModelCandidate,
     RegionalRegressionPredictInputs,
     RegionalRegressionRunRequest,
     RegionalRegressionRunResponse,
@@ -1091,9 +1092,163 @@ def _price_intervals(
     return y_hat, ci_lo, ci_hi, pi_lo, pi_hi
 
 
+def _regional_vars(blocks: list[str]) -> RegionalRegressionVariables:
+    chosen = set(blocks)
+    return RegionalRegressionVariables(
+        households="households" in chosen,
+        max_floor="max_floor" in chosen,
+        building_age="building_age" in chosen,
+        parking="parking" in chosen,
+        structure="structure" in chosen,
+        builder="builder" in chosen,
+        asset_type_dummy="asset_type_dummy" in chosen,
+        assessed_land_price="assessed_land_price" in chosen,
+    )
+
+
+def suggest_regional_regression(
+    df: pd.DataFrame,
+    req: RegionalRegressionRunRequest,
+    *,
+    unified: bool,
+) -> list[RegionalModelCandidate]:
+    """고른 지역의 단지 행은 유지하고, 속성 블록 × 선형/로그를 탐색한다.
+
+    창 길이·최소 거래수·가중·읍면동 더미는 요청값을 그대로 쓴다.
+    """
+    from app.collective.regression.recommend import iter_block_subsets
+
+    if df is None or df.empty:
+        return []
+    pool = [
+        "households",
+        "max_floor",
+        "building_age",
+        "parking",
+        "structure",
+        "builder",
+        "assessed_land_price",
+    ]
+    if unified:
+        pool.append("asset_type_dummy")
+
+    best: dict[tuple, dict] = {}
+    for blocks in iter_block_subsets(pool):
+        variables = _regional_vars(blocks)
+        try:
+            elig = _eligible_mask(df, variables, min_tx=int(req.min_tx))
+            work = df.loc[elig].copy()
+            if len(work) < MIN_FIT_N:
+                continue
+            train_idx, hold_idx = _split_hold(work.index)
+            if len(train_idx) < MIN_FIT_N:
+                continue
+            region_levels, region_ref, _region_warns = _prepare_region_dummy(work, req)
+            x, _labels, _design_warns = _design(
+                work,
+                variables,
+                region_levels=region_levels or None,
+                region_ref=region_ref,
+            )
+        except Exception:
+            continue
+        if x is None or x.empty or x.shape[1] == 0:
+            continue
+        sig = tuple(sorted(str(col) for col in x.columns))
+        if not sig:
+            continue
+        for model_type in ("linear", "log"):
+            try:
+                fitted = _fit_ols(
+                    work,
+                    x,
+                    model_type=model_type,  # type: ignore[arg-type]
+                    weight_mode=req.weight_mode,
+                    train_idx=train_idx,
+                    hold_idx=hold_idx,
+                )
+            except Exception:
+                fitted = None
+            if not fitted:
+                continue
+            row = {
+                "blocks": list(blocks),
+                "model_type": model_type,
+                "n": int(len(work)),
+                "adj_r_squared": fitted.get("adj_r_squared"),
+                "mape": fitted.get("mape"),
+                "hold_mape": fitted.get("hold_mape"),
+            }
+            key = (sig, model_type)
+            prev = best.get(key)
+            if prev is not None and len(prev["blocks"]) <= len(row["blocks"]):
+                continue
+            best[key] = row
+
+    rows = list(best.values())
+    if not rows:
+        return []
+
+    def mape_of(row: dict) -> float:
+        mape = row.get("mape")
+        return float(mape) if mape is not None else float("inf")
+
+    def pred_key(row: dict):
+        hold = row.get("hold_mape")
+        if hold is not None:
+            return (0, float(hold), len(row["blocks"]), mape_of(row), tuple(row["blocks"]), row["model_type"])
+        return (1, mape_of(row), len(row["blocks"]), tuple(row["blocks"]), row["model_type"])
+
+    def expl_key(row: dict):
+        adj = row.get("adj_r_squared")
+        adj_v = float(adj) if adj is not None else float("-inf")
+        return (-adj_v, mape_of(row), len(row["blocks"]), tuple(row["blocks"]), row["model_type"])
+
+    out: list[RegionalModelCandidate] = []
+    for purpose, ordered in (
+        ("predictive", sorted(rows, key=pred_key)),
+        ("explanatory", sorted(rows, key=expl_key)),
+    ):
+        for rank, row in enumerate(ordered[:3], start=1):
+            out.append(
+                RegionalModelCandidate(
+                    rank=rank,
+                    purpose=purpose,  # type: ignore[arg-type]
+                    blocks=list(row["blocks"]),
+                    model_type=row["model_type"],
+                    n=row["n"],
+                    adj_r_squared=row.get("adj_r_squared"),
+                    mape=row.get("mape"),
+                    hold_mape=row.get("hold_mape"),
+                )
+            )
+    return out
+
+
+def _with_regional_recommendation(
+    resp: RegionalRegressionRunResponse,
+    df: pd.DataFrame,
+    req: RegionalRegressionRunRequest,
+    *,
+    unified: bool,
+    enabled: bool,
+) -> RegionalRegressionRunResponse:
+    if not enabled:
+        return resp
+    try:
+        candidates = suggest_regional_regression(df, req, unified=unified)
+    except Exception:
+        return resp.model_copy(
+            update={"warnings": [*resp.warnings, "모형 추천 탐색을 마치지 못했습니다"]}
+        )
+    return resp.model_copy(update={"model_candidates": candidates})
+
+
 def run_regional_regression(
     conn: Connection,
     req: RegionalRegressionRunRequest,
+    *,
+    with_recommendation: bool = True,
 ) -> RegionalRegressionRunResponse:
     df, meta = load_danji_frame(conn, req)
     v = req.variables
@@ -1161,15 +1316,21 @@ def run_regional_regression(
             "결측으로 빠지는 연속변수를 끄거나, 최소 거래수를 낮추거나, "
             "같은 시군구의 인접 읍·면·동을 추가해 보세요."
         )
-        return RegionalRegressionRunResponse(
-            n=len(train_idx),
-            model_type=req.model_type,
-            weight_mode=req.weight_mode,
-            warnings=warnings,
-            sample=sample,
-            as_of_month=meta.get("as_of_month"),
-            snapshot_ym=meta.get("snapshot_ym"),
-            scope_label=meta.get("scope_label"),
+        return _with_regional_recommendation(
+            RegionalRegressionRunResponse(
+                n=len(train_idx),
+                model_type=req.model_type,
+                weight_mode=req.weight_mode,
+                warnings=warnings,
+                sample=sample,
+                as_of_month=meta.get("as_of_month"),
+                snapshot_ym=meta.get("snapshot_ym"),
+                scope_label=meta.get("scope_label"),
+            ),
+            df,
+            req,
+            unified=unified,
+            enabled=with_recommendation,
         )
 
     region_levels, region_ref, region_warns = _prepare_region_dummy(work, req)
@@ -1191,15 +1352,21 @@ def run_regional_regression(
     )
     if fitted is None:
         warnings.append("회귀를 적합하지 못했습니다. 변수가 서로 겹치거나 표본이 부족합니다.")
-        return RegionalRegressionRunResponse(
-            n=len(train_idx),
-            model_type=req.model_type,
-            weight_mode=req.weight_mode,
-            warnings=warnings,
-            sample=sample,
-            as_of_month=meta.get("as_of_month"),
-            snapshot_ym=meta.get("snapshot_ym"),
-            scope_label=meta.get("scope_label"),
+        return _with_regional_recommendation(
+            RegionalRegressionRunResponse(
+                n=len(train_idx),
+                model_type=req.model_type,
+                weight_mode=req.weight_mode,
+                warnings=warnings,
+                sample=sample,
+                as_of_month=meta.get("as_of_month"),
+                snapshot_ym=meta.get("snapshot_ym"),
+                scope_label=meta.get("scope_label"),
+            ),
+            df,
+            req,
+            unified=unified,
+            enabled=with_recommendation,
         )
 
     train = work.loc[fitted["work_index"]]
@@ -1273,7 +1440,8 @@ def run_regional_regression(
             f"단지 정보가 없는 행 {sample.n_missing_attr}곳은 식에서 빠집니다 "
             f"(풀 {sample.n_pool}곳 중 속성 {sample.n_with_attributes}곳)."
         )
-    return RegionalRegressionRunResponse(
+    return _with_regional_recommendation(
+        RegionalRegressionRunResponse(
         n=fitted["n"],
         model_type=req.model_type,
         weight_mode=req.weight_mode,
@@ -1300,6 +1468,11 @@ def run_regional_regression(
         snapshot_ym=meta.get("snapshot_ym"),
         scope_label=meta.get("scope_label"),
         newbuild_age0_gap=age0_gap,
+        ),
+        df,
+        req,
+        unified=unified,
+        enabled=with_recommendation,
     )
 
 
@@ -1394,7 +1567,7 @@ def predict_regional(
     inputs: RegionalRegressionPredictInputs,
 ) -> dict[str, Any]:
     """같은 스코프·변수로 다시 적합하고 입력 한 건을 예측한다. 표본이 작아 매번 재적합해도 부담이 없다."""
-    result = run_regional_regression(conn, req)
+    result = run_regional_regression(conn, req, with_recommendation=False)
     if result.n < MIN_FIT_N or not result.coefficients:
         raise ValueError(result.warnings[0] if result.warnings else "적합된 식이 없습니다")
 

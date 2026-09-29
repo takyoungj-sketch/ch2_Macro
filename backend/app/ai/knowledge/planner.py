@@ -51,6 +51,28 @@ def is_nested_admin_scope_question(message: str) -> bool:
     return False
 
 
+def _is_result_explanation(message: str, context: AiContext | None) -> bool:
+    """지금 화면의 회귀 결과를 읽어 달라는 질문. 분석 경로 추천이 아니다."""
+    m = message.strip()
+    asks = any(k in m for k in ("설명", "해석", "읽어", "무슨 뜻", "어떻게 읽", "풀어서"))
+    about_result = any(k in m for k in ("결과", "회귀식", "이 식", "계수", "MAPE", "mape", "표본", "홀드아웃"))
+    if asks and about_result:
+        return True
+    facts = (context.facts or {}) if context is not None else {}
+    panel = (context.panel if context is not None else "") or ""
+    has_fit = bool(facts.get("equation") or facts.get("coefficients") or facts.get("model_candidates"))
+    on_regression = panel in (
+        "RegionalRegressionModal",
+        "BuildingRegressionPanel",
+        "CommercialRegressionPanel",
+        "RegressionCard",
+        "LandRegressionTab",
+    ) or has_fit
+    if on_regression and asks and not any(k in m for k in ("분석 경로", "경로를 추천", "어떤 기능")):
+        return True
+    return False
+
+
 def is_path_intent_question(message: str, context: AiContext | None = None) -> bool:
     """화면 *경로*를 고르는 질문인가. 통계 방법론·사용법·지식 출처는 여기로 보내지 않는다."""
     m = message.strip()
@@ -61,6 +83,8 @@ def is_path_intent_question(message: str, context: AiContext | None = None) -> b
     if is_statistical_methodology_question(m):
         return False
     if any(k in m for k in ("왜 이 결과", "왜 이렇게", "이 화면", "이번 표본", "이 계수")):
+        return False
+    if _is_result_explanation(m, context):
         return False
     if detect_intent(m, context) in ("apartment_officetel_price_gap", "built_type_price_gap"):
         return True

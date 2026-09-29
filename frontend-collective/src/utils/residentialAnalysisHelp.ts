@@ -126,7 +126,7 @@ export const APT_TWIN_REGION_HELP: AnalysisExplain = {
 /** 회귀 실행 전에도 표시할 주거 회귀 기본 도움말 */
 export const RESIDENTIAL_REGRESSION_HELP: AnalysisExplain = {
   spec_id: "residential_regression_explore_static_v1",
-  spec_version: "1",
+  spec_version: "3",
   title: "단지 가격 형성 분석 (탐색용)",
   summary:
     "선택한 표본·변수에서 가격이 어떻게 형성되는지 읽기 위한 OLS입니다. AVM·적정가가 아닙니다. " +
@@ -145,6 +145,7 @@ export const RESIDENTIAL_REGRESSION_HELP: AnalysisExplain = {
     "기본(선형): 연속 변수 1단위 증가 시 금액(만원) 변화, 더미는 기준 범주 대비 만원 차이.",
     "로그 옵션: 연속 변수는 대략 % 변화 — 회귀 결과 「쉬운 설명」 참고.",
     "시나리오 계산은 통계적 추정이며 개별 물건의 가격이 아닙니다.",
+    "모형 추천은 지금 고른 거래에서 변수 조합과 선형·로그를 찾습니다. 위의 체크와 무관합니다. 적용 뒤에는 회귀를 다시 실행해야 식과 시나리오가 맞습니다.",
   ],
   limitations: [
     "변수·층 형식 선택에 따라 결과 변경",

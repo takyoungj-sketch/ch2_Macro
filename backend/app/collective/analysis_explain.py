@@ -777,10 +777,10 @@ def build_residential_regression_explain(
     if result.r_squared is not None:
         adj = round(result.adj_r_squared, 3) if result.adj_r_squared else "—"
         hints.append(f"R²={round(result.r_squared, 3)}, Adj.R²={adj} (적합척도).")
-    cmp = getattr(result, "model_comparison", None)
-    if cmp is not None:
-        rec = "로그회귀" if cmp.recommended == "log" else "선형회귀"
-        hints.append(f"모형: 사용자 선택({model_type}). API model_comparison 권장={rec} (화면 미표시).")
+    if getattr(result, "model_comparison", None) is not None or getattr(result, "model_candidates", None):
+        hints.append(
+            f"모형: 사용자 선택({model_type}). 화면 모형 추천은 이 거래에서 변수와 선형·로그를 탐색한다. 정답 식이 아니다."
+        )
     hints.append(f"독립변수: {', '.join(active) if active else '(없음)'}.")
 
     market = build_market_interpretation_hints(

@@ -136,6 +136,16 @@ export type RegionalRegressionRunResponse = {
   snapshot_ym?: string | null;
   scope_label?: string | null;
   newbuild_age0_gap?: NewBuildAge0Gap | null;
+  model_candidates?: Array<{
+    rank: number;
+    purpose?: "predictive" | "explanatory";
+    blocks: string[];
+    model_type: "linear" | "log";
+    n: number;
+    adj_r_squared?: number | null;
+    mape?: number | null;
+    hold_mape?: number | null;
+  }>;
 };
 
 export type RegionalRegressionPredictResponse = {

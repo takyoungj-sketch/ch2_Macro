@@ -15,6 +15,7 @@ from app.collective.regression.engine import (
     _floor_row_for_predict,
     _sanitize_key,
     count_significant_coefficients,
+    _build_model_comparison,
     fit_model_price_metrics,
     resolve_product_floor_mode,
     row_max_floors,
@@ -22,10 +23,12 @@ from app.collective.regression.engine import (
 from app.collective.regression.presentation import enrich_regression_response
 from app.collective.schemas import ContinuousRange
 from app.collective_commercial.schemas import (
+    CommercialModelCandidate,
     CommercialPredictOptions,
     CommercialRegressionPredictInputs,
     CommercialRegressionRequest,
     CommercialRegressionResponse,
+    CommercialRegressionSpec,
     RegressionCoeff,
 )
 
@@ -47,6 +50,7 @@ class CommercialRegressionDesignMeta:
     cluster_labels: dict[str, str] = field(default_factory=dict)
     cluster_reference_key: str | None = None
     cluster_fe_map: dict[str, str] = field(default_factory=dict)
+    time_reference: str | None = None
 
 
 MIN_CLUSTER_FE_GROUP = 5
@@ -172,7 +176,8 @@ def _build_design_matrix(
             meta.continuous_ranges["floor"] = rng
 
     if getattr(req.variables, "contract_period", False):
-        period_part, period_labels = _add_contract_period_columns(work)
+        period_part, period_labels, time_ref = _add_contract_period_columns(work)
+        meta.time_reference = time_ref
         if not period_part.empty:
             parts.append(period_part)
             labels.update(period_labels)
@@ -426,6 +431,7 @@ def _run_regression_core(
     sig_count = count_significant_coefficients(coefs)
 
     predict_options = _meta_to_predict_options(meta, req)
+    comparison = _build_model_comparison(y, X_const)
     resp = CommercialRegressionResponse(
         cluster_key="",
         display_label="",
@@ -441,9 +447,106 @@ def _run_regression_core(
         coefficients=coefs,
         warnings=warnings,
         predict_options=predict_options,
-        model_comparison=None,
+        model_comparison=comparison,
+        time_reference=meta.time_reference,
     )
     return model, X, meta, resp
+
+
+_COMMERCIAL_SEARCH_FLAGS = (
+    "gross_area",
+    "land_area",
+    "building_age",
+    "floor",
+    "zone_type",
+    "building_use",
+    "road_width",
+    "road_code",
+    "addr4",
+    "contract_period",
+)
+
+
+def commercial_recommendation_pool(*, is_shop: bool) -> list[str]:
+    """화면에서 켜고 끌 수 있는 변수. 체크 상태와 무관하다."""
+    fields = ["gross_area", "building_age", "floor", "zone_type", "building_use", "contract_period"]
+    fields.append("road_width" if is_shop else "road_code")
+    return fields
+
+
+def suggest_commercial_regression(
+    df: pd.DataFrame,
+    req: CommercialRegressionRequest,
+    *,
+    is_shop: bool,
+    cohort_mode: bool = False,
+    cluster_display_labels: dict[str, str] | None = None,
+) -> list[CommercialModelCandidate]:
+    from app.collective.regression.recommend import search_block_models
+
+    pool = commercial_recommendation_pool(is_shop=is_shop)
+    work = _prepare_work(df, req)
+    if len(work) < 5:
+        return []
+
+    def build_xy(blocks: list[str]):
+        update = {name: False for name in _COMMERCIAL_SEARCH_FLAGS}
+        update["floor_mode"] = req.variables.floor_mode
+        for name in blocks:
+            if name in update:
+                update[name] = True
+        variables = req.variables.model_copy(update=update)
+        candidate_req = req.model_copy(update={"variables": variables, "model_type": "linear"})
+        y, x, _labels, _meta, _warnings = _build_design_matrix(
+            work,
+            candidate_req,
+            is_shop=is_shop,
+            cohort_mode=cohort_mode,
+            cluster_display_labels=cluster_display_labels,
+        )
+        if x.empty or len(y) < 5:
+            return None
+        return y, x
+
+    found = search_block_models(pool, build_xy)
+    return [
+        CommercialModelCandidate(
+            rank=row["rank"],
+            purpose=row["purpose"],
+            blocks=row["blocks"],
+            model_type=row["model_type"],
+            n=row["n"],
+            adj_r_squared=row.get("adj_r_squared"),
+            mape=row.get("mape"),
+            cv_mape=row.get("cv_mape"),
+        )
+        for row in found
+    ]
+
+
+def _attach_commercial_candidates(
+    resp: CommercialRegressionResponse,
+    df: pd.DataFrame,
+    req: CommercialRegressionRequest,
+    *,
+    is_shop: bool,
+    cohort_mode: bool,
+    cluster_display_labels: dict[str, str] | None = None,
+) -> CommercialRegressionResponse:
+    if resp.n < 5:
+        return resp
+    try:
+        candidates = suggest_commercial_regression(
+            df,
+            req,
+            is_shop=is_shop,
+            cohort_mode=cohort_mode,
+            cluster_display_labels=cluster_display_labels,
+        )
+    except Exception:
+        warnings = [*resp.warnings, "모형 추천 탐색을 마치지 못했습니다"]
+        return resp.model_copy(update={"warnings": warnings})
+    return resp.model_copy(update={"model_candidates": candidates})
 
 
 def run_commercial_regression(
@@ -455,9 +558,10 @@ def run_commercial_regression(
     is_shop: bool,
 ) -> CommercialRegressionResponse:
     model, _, _, resp = _run_regression_core(df, req, is_shop=is_shop, cohort_mode=False)
+    resp = resp.model_copy(update={"cluster_key": cluster_key, "display_label": display_label})
     if model is None:
-        return resp.model_copy(update={"cluster_key": cluster_key, "display_label": display_label})
-    return resp.model_copy(update={"cluster_key": cluster_key, "display_label": display_label})
+        return resp
+    return _attach_commercial_candidates(resp, df, req, is_shop=is_shop, cohort_mode=False)
 
 
 def run_cohort_commercial_regression(
@@ -485,7 +589,14 @@ def run_cohort_commercial_regression(
             "display_label": display_label,
         }
     )
-    return resp
+    return _attach_commercial_candidates(
+        resp,
+        df,
+        req,
+        is_shop=is_shop,
+        cohort_mode=True,
+        cluster_display_labels=names,
+    )
 
 
 def predict_commercial_regression(

@@ -2,7 +2,6 @@ import { useState } from "react";
 import clsx from "clsx";
 import type { RegressionCoeff, RegressionModelType } from "../types";
 import {
-  compareCoefficientOrder,
   EQUATION_SIG_P,
   formatCoefValue,
   isEquationSignificant,
@@ -10,14 +9,25 @@ import {
   sortCoefficientsByVariableOrder,
 } from "../utils/collectiveRegressionFormat";
 
+function isTimeCoef(c: RegressionCoeff) {
+  return c.name.startsWith("time_");
+}
+
+function timeCode(c: RegressionCoeff) {
+  if (c.name.startsWith("time_")) return c.name.slice("time_".length);
+  return shortDisplayLabel(c.label);
+}
+
 export default function CollectiveRegressionEquation({
   coefficients,
   modelType,
   equation,
+  timeReference,
 }: {
   coefficients: RegressionCoeff[];
   modelType: RegressionModelType;
   equation?: string;
+  timeReference?: string | null;
 }) {
   const [showAll, setShowAll] = useState(false);
   const dep = modelType === "log" ? "log(금액)" : "금액(만원)";
@@ -30,16 +40,15 @@ export default function CollectiveRegressionEquation({
     return <p className="text-sm text-slate-500 dark:text-slate-400">{dep} = —</p>;
   }
 
-  const others = coefficients.filter((c) => c.name !== "const");
-  const sig = sortCoefficientsByVariableOrder(
-    others.filter((c) => isEquationSignificant(c.p)),
-  );
-  const nonsig = sortCoefficientsByVariableOrder(
-    others.filter((c) => !isEquationSignificant(c.p)),
-  );
-
+  const others = coefficients.filter((c) => c.name !== "const" && !isTimeCoef(c));
+  const time = coefficients.filter(isTimeCoef).sort((a, b) => a.name.localeCompare(b.name));
+  const sig = sortCoefficientsByVariableOrder(others.filter((c) => isEquationSignificant(c.p)));
+  const nonsig = sortCoefficientsByVariableOrder(others.filter((c) => !isEquationSignificant(c.p)));
+  const sigTime = time.filter((c) => isEquationSignificant(c.p));
+  const nonsigTime = time.filter((c) => !isEquationSignificant(c.p));
   const visible = showAll ? [...sig, ...nonsig] : sig;
-  const hiddenCount = nonsig.length;
+  const visibleTime = showAll ? [...sigTime, ...nonsigTime] : sigTime;
+  const hiddenCount = nonsig.length + nonsigTime.length;
 
   return (
     <div className="space-y-1">
@@ -69,6 +78,33 @@ export default function CollectiveRegressionEquation({
           </span>
         )}
       </p>
+
+      {visibleTime.length > 0 && (
+        <div className="space-y-0.5">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            거래시점
+            {timeReference ? ` · 기준 ${timeReference} (최다 반기)` : " · 기준은 거래 최다 반기"}
+          </p>
+          <p className="text-sm font-mono leading-relaxed break-words text-slate-800 dark:text-slate-100">
+            {visibleTime.map((c, i) => {
+              const sign = c.coef >= 0 ? "+" : "−";
+              const mag = formatCoefValue(Math.abs(c.coef));
+              const significant = isEquationSignificant(c.p);
+              const faded = showAll && !significant;
+              return (
+                <span
+                  key={c.name}
+                  className={clsx(faded && "opacity-40", significant && !faded && "font-semibold")}
+                >
+                  {i > 0 ? " · " : ""}
+                  {timeCode(c)} {sign}
+                  {mag}
+                </span>
+              );
+            })}
+          </p>
+        </div>
+      )}
 
       {hiddenCount > 0 && (
         <button

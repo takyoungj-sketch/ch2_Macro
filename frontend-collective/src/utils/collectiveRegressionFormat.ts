@@ -28,7 +28,8 @@ export function isEquationSignificant(p: number | null | undefined): boolean {
 export function shortDisplayLabel(label: string): string {
   let s = label.trim();
   s = s.replace(/\s*\(기준\s*대비\)\s*$/i, "");
-  const prefixes = ["용도지역 ", "건축물용도 ", "도로폭 ", "동 ", "권리 ", "단지 ", "시공사 ", "구조 ", "유형 "];
+  s = s.replace(/\s*\(최다\s*반기\s*대비\)\s*$/i, "");
+  const prefixes = ["거래시점 ", "용도지역 ", "건축물용도 ", "도로폭 ", "동 ", "권리 ", "단지 ", "시공사 ", "구조 ", "유형 "];
   for (const p of prefixes) {
     if (s.startsWith(p) && s.length > p.length) {
       s = s.slice(p.length).trim();
@@ -64,6 +65,7 @@ export function coefficientSortKey(name: string): [number, number, string] {
   if (name.startsWith("use_")) return [6, 1, name];
   if (name.startsWith("roadw_")) return [6, 2, name];
   if (name === "road_code") return [6, 3, name];
+  if (name.startsWith("time_")) return [7, 0, name];
   if (name.startsWith("struct_")) return [6, 4, name];
   if (name.startsWith("builder_")) return [6, 5, name];
   if (name.startsWith("bld_")) return [9, 0, name];

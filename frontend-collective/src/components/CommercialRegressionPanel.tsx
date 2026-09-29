@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { predictCommercialRegression, runCommercialCohortRegression, runCommercialRegression, predictCommercialCohortRegression } from "../api/commercialClient";
 import { buildCommercialRegressionContext } from "../api/aiContext";
@@ -34,6 +34,7 @@ import {
   regressionRunLabel,
 } from "../utils/analysisGates";
 import RegressionSampleHint from "./RegressionSampleHint";
+import CollectiveModelRecommend, { blocksMatch } from "./CollectiveModelRecommend";
 
 function regionParams(scope: CommercialModalScope) {
   return scope.hasIntermediate
@@ -63,6 +64,7 @@ function toResultsData(data: CommercialRegressionResponse) {
     equation: data.equation,
     coefficients: data.coefficients,
     predict_options: data.predict_options,
+    time_reference: data.time_reference,
   };
 }
 
@@ -325,6 +327,11 @@ export default function CommercialRegressionPanel({
     contract_period: true,
   });
   const [predictInputs, setPredictInputs] = useState<CommercialRegressionPredictInputs>({});
+  const selectedBlocks = useMemo(
+    () => (Object.keys(vars) as (keyof CommercialVars)[]).filter((key) => Boolean(vars[key])),
+    [vars],
+  );
+  const fittedSnap = useRef<{ type: RegressionModelType; blocks: string[] } | null>(null);
 
   const regressionBody = useMemo(
     () => ({
@@ -340,8 +347,9 @@ export default function CommercialRegressionPanel({
   );
 
   const regM = useMutation({
-    mutationFn: () =>
-      useCohort
+    mutationFn: () => {
+      fittedSnap.current = { type: modelType, blocks: selectedBlocks };
+      return useCohort
         ? runCommercialCohortRegression({
             cluster_keys: keys,
             asset_type:
@@ -350,12 +358,17 @@ export default function CommercialRegressionPanel({
                 : (scope.assetType as CommercialAssetType),
             ...regressionBody,
           })
-        : runCommercialRegression(clusterKey, regressionBody),
+        : runCommercialRegression(clusterKey, regressionBody);
+    },
   });
 
   const predictM = useMutation({
     mutationFn: () => {
-      const body = { ...regressionBody, inputs: predictInputs };
+      const body = {
+        ...regressionBody,
+        model_type: regM.data?.model_type ?? modelType,
+        inputs: predictInputs,
+      };
       return useCohort
         ? predictCommercialCohortRegression({
             cluster_keys: keys,
@@ -538,6 +551,13 @@ export default function CommercialRegressionPanel({
           {(regM.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? "회귀 실패"}
         </p>
       )}
+      {regM.data &&
+        fittedSnap.current &&
+        (modelType !== fittedSnap.current.type || !blocksMatch(selectedBlocks, fittedSnap.current.blocks)) && (
+        <p className="text-[10px] text-amber-700 dark:text-amber-300">
+          변수 또는 척도가 바뀌었습니다. 아래 식과 시나리오는 마지막 실행입니다. 회귀를 다시 실행하면 맞춥니다.
+        </p>
+      )}
       {regM.data && (
         <CollectiveRegressionResults data={toResultsData(regM.data)} modelType={modelType} />
       )}
@@ -561,6 +581,25 @@ export default function CommercialRegressionPanel({
                 )
               : undefined
           }
+        />
+      )}
+      {regM.data && (
+        <CollectiveModelRecommend
+          candidates={regM.data.model_candidates}
+          selectedType={modelType}
+          selectedBlocks={selectedBlocks}
+          selectionN={regM.data.n}
+          datasetNote="이 도로와 추가한 cluster의 거래만 사용합니다."
+          onAdopt={(pick) => {
+            setModelType(pick.modelType);
+            setVars((prev) => {
+              const next = { ...prev };
+              (Object.keys(next) as (keyof CommercialVars)[]).forEach((key) => {
+                next[key] = pick.blocks.includes(key);
+              });
+              return next;
+            });
+          }}
         />
       )}
     </div>

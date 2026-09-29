@@ -106,7 +106,8 @@ export default function RollingTrendChart({
             x={xAt(i)}
             y={H - 8}
             textAnchor="middle"
-            className={`fill-slate-700 dark:fill-slate-200 font-semibold ${n > 4 ? "text-[12px]" : "text-[13px]"}`}
+            fontSize={n > 4 ? 8 : 9}
+            className="fill-slate-700 dark:fill-slate-200 font-semibold"
           >
             {r.label}
           </text>

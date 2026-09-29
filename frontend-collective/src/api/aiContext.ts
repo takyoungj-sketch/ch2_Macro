@@ -17,6 +17,10 @@ import type {
   YearlyStatsResponse,
 } from "../types";
 import { assetTypeLabel, commercialAssetTypeLabel } from "../types";
+import type {
+  RegionalRegressionPredictResponse,
+  RegionalRegressionRunResponse,
+} from "./regionalRegressionClient";
 
 function rollingPointsToRows(points: RollingStatPoint[]) {
   return points.map((p) => ({
@@ -43,6 +47,7 @@ export function buildCollectiveListContext(opts: {
   windowYears: number;
   total: number;
   first?: BuildingStatsRow | null;
+  items?: BuildingStatsRow[] | null;
   sort?: string;
 }): AiContextPayload {
   const first = opts.first;
@@ -61,6 +66,15 @@ export function buildCollectiveListContext(opts: {
       window_years: opts.windowYears,
       region_label: opts.regionLabel,
       list_sort: opts.sort ?? "count",
+      visible_rows: (opts.items ?? []).slice(0, 40).map((row) => ({
+        name: row.display_name,
+        asset_label: assetTypeLabel(row.asset_type),
+        count: row.count,
+        median: row.median,
+        mean: row.mean,
+        building_year: row.building_year,
+        households: row.households,
+      })),
       first_row: first
         ? {
             name: first.display_name,
@@ -96,6 +110,14 @@ export function buildCommercialListContext(opts: {
     ci_upper?: number | null;
     is_reliable?: boolean;
   } | null;
+  items?: Array<{
+    display_label?: string | null;
+    road_name?: string | null;
+    asset_type?: string | null;
+    count?: number | null;
+    median?: number | null;
+    mean?: number | null;
+  }> | null;
   sort?: string;
 }): AiContextPayload {
   const first = opts.first;
@@ -114,6 +136,13 @@ export function buildCommercialListContext(opts: {
       window_years: opts.windowYears,
       region_label: opts.regionLabel,
       list_sort: opts.sort ?? "count",
+      visible_rows: (opts.items ?? []).slice(0, 40).map((row) => ({
+        name: row.road_name || row.display_label,
+        asset_label: row.asset_type ? commercialAssetTypeLabel(row.asset_type) : undefined,
+        count: row.count,
+        median: row.median,
+        mean: row.mean,
+      })),
       first_row: first
         ? {
             name: first.road_name || first.display_label,
@@ -153,6 +182,73 @@ export function buildCollectiveRegressionContext(
     facts: {
       ...regData,
       cohort: opts.cohort ?? false,
+    },
+  };
+}
+
+export function buildRegionalRegressionContext(
+  data: RegionalRegressionRunResponse,
+  opts: {
+    regionLabel: string;
+    assetType: string;
+    tab: "local" | "twin";
+    prediction?: RegionalRegressionPredictResponse | null;
+  },
+): AiContextPayload {
+  return {
+    app: "collective",
+    panel: "RegionalRegressionModal",
+    purpose: "statistics",
+    scope: {
+      region_label: opts.regionLabel,
+      asset_type: opts.assetType,
+    },
+    facts: {
+      screen: "regional_regression",
+      ran: true,
+      tab: opts.tab,
+      n: data.n,
+      model_type: data.model_type,
+      weight_mode: data.weight_mode,
+      n_effective: data.n_effective,
+      r_squared: data.r_squared,
+      adj_r_squared: data.adj_r_squared,
+      mape: data.mape,
+      hold_mape: data.hold_mape,
+      equation: data.equation,
+      scope_label: data.scope_label,
+      as_of_month: data.as_of_month,
+      warnings: data.warnings,
+      coefficients: data.coefficients,
+      sample: data.sample,
+      blocks: data.blocks,
+      model_candidates: data.model_candidates ?? [],
+      reference_categories: data.reference_categories,
+      fitted: data.fitted.slice(0, 40).map((row) => ({
+        display_name: row.display_name,
+        asset_type: row.asset_type,
+        y: row.y,
+        y_hat: row.y_hat,
+        ape: row.ape,
+        households: row.households,
+        max_floor: row.max_floor,
+        building_age: row.building_age,
+        parking_per_household: row.parking_per_household,
+        structure_group: row.structure_group,
+        builder_group: row.builder_group,
+      })),
+      prediction: opts.prediction
+        ? {
+            y_hat: opts.prediction.y_hat,
+            unit: opts.prediction.unit,
+            ci_lower: opts.prediction.ci_lower,
+            ci_upper: opts.prediction.ci_upper,
+            pi_lower: opts.prediction.pi_lower,
+            pi_upper: opts.prediction.pi_upper,
+            model_type: opts.prediction.model_type,
+            warnings: opts.prediction.warnings,
+          }
+        : null,
     },
   };
 }

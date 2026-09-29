@@ -320,10 +320,21 @@ export default function BuildingStatsTable({
     setRanges({});
     setSelects({});
   };
+  const sortDirty = sortKey !== "count" || sortDir !== "desc";
 
   return (
     <div className="card p-0 w-full">
-      <FilterStatusBar shown={shown.length} total={items.length} filterCount={filterCount} onClear={clearFilters} />
+      <FilterStatusBar
+        shown={shown.length}
+        total={items.length}
+        filterCount={filterCount}
+        onClear={clearFilters}
+        sortDirty={sortDirty}
+        onResetSort={() => {
+          setSortKey("count");
+          setSortDir("desc");
+        }}
+      />
       <DualHorizontalScroll key={wide ? "wide" : "compact"}>
         <table className={clsx("data buildings-table", wide && "is-wide")}>
           <colgroup>

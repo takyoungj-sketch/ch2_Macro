@@ -53,6 +53,21 @@ def test_short_display_label():
     assert short_display_label("유형 오피스텔 (기준 대비)") == "오피스텔"
 
 
+def test_equation_omits_time_dummies():
+    coefs = [
+        RegressionCoeff(name="const", label="절편", coef=3218.0, p=0.0),
+        RegressionCoeff(name="exclusive_area", label="전용면적", coef=400.0, p=0.01),
+        RegressionCoeff(name="time_2021H2", label="거래시점 2021H2 (최다 반기 대비)", coef=-1665.0, p=0.02),
+        RegressionCoeff(name="floor_rel_high", label="층 고층부 (기준 대비)", coef=5435.0, p=0.03),
+    ]
+    eq = format_equation(coefs, model_type="linear")
+    assert "전용면적" in eq
+    assert "고층부" in eq
+    assert "2021H2" not in eq
+    assert "거래시점" not in eq
+    assert short_display_label("거래시점 2021H2 (최다 반기 대비)") == "2021H2"
+
+
 def test_equation_variable_order():
     coefs = [
         RegressionCoeff(name="const", label="절편", coef=1.0, p=0.0),

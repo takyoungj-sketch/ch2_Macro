@@ -326,6 +326,7 @@ export default function CommercialApp() {
       windowYears: clustersQ.data.window_years ?? scope.windowYears,
       total: clustersQ.data.total,
       first: clustersQ.data.items[0] ?? null,
+      items: clustersQ.data.items,
       sort: scope.sort,
     });
   }, [scope, clustersQ.data]);
@@ -421,7 +422,7 @@ export default function CommercialApp() {
         onToggleTheme={toggleUiColorScheme}
         rightSlot={<AiAssistantPanel />}
       />
-      {listAiContext ? <PublishAiContext context={listAiContext} /> : null}
+      {listAiContext ? <PublishAiContext context={listAiContext} role="base" /> : null}
 
       <div className="relative z-0 isolate flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
       <main className="flex flex-1 min-h-0 overflow-hidden">

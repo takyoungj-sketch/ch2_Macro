@@ -187,25 +187,37 @@ export function FilterStatusBar({
   total,
   filterCount,
   onClear,
+  sortDirty = false,
+  onResetSort,
 }: {
   shown: number;
   total: number;
   filterCount: number;
   onClear: () => void;
+  sortDirty?: boolean;
+  onResetSort?: () => void;
 }) {
-  if (filterCount <= 0) return null;
+  const showSort = sortDirty && Boolean(onResetSort);
+  if (filterCount <= 0 && !showSort) return null;
+  const btn =
+    "px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300";
   return (
     <div className="flex items-center gap-2 px-2 py-1 text-[11px] border-b border-slate-100 dark:border-slate-700">
       <span className="text-indigo-700 dark:text-indigo-300">
         표시 {shown.toLocaleString("ko-KR")} / {total.toLocaleString("ko-KR")}
       </span>
-      <button
-        type="button"
-        className="ml-auto px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300"
-        onClick={onClear}
-      >
-        필터 초기화 ({filterCount})
-      </button>
+      <span className="ml-auto flex items-center gap-1">
+        {showSort && (
+          <button type="button" className={btn} onClick={onResetSort}>
+            정렬 초기화
+          </button>
+        )}
+        {filterCount > 0 && (
+          <button type="button" className={btn} onClick={onClear}>
+            필터 초기화 ({filterCount})
+          </button>
+        )}
+      </span>
     </div>
   );
 }

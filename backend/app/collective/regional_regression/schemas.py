@@ -127,6 +127,17 @@ class NewBuildAge0Gap(BaseModel):
     thin: bool = True
 
 
+class RegionalModelCandidate(BaseModel):
+    rank: int
+    purpose: Literal["predictive", "explanatory"] = "predictive"
+    blocks: list[str] = Field(default_factory=list)
+    model_type: Literal["linear", "log"]
+    n: int
+    adj_r_squared: Optional[float] = None
+    mape: Optional[float] = None
+    hold_mape: Optional[float] = None
+
+
 class RegionalRegressionRunResponse(BaseModel):
     n: int
     model_type: Literal["linear", "log"]
@@ -150,6 +161,7 @@ class RegionalRegressionRunResponse(BaseModel):
     snapshot_ym: Optional[str] = None
     scope_label: Optional[str] = None
     newbuild_age0_gap: Optional[NewBuildAge0Gap] = None
+    model_candidates: list[RegionalModelCandidate] = Field(default_factory=list)
 
 
 class RegionalRegressionPredictResponse(BaseModel):

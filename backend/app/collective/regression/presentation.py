@@ -58,6 +58,8 @@ def coefficient_sort_key(name: str) -> tuple[int, int, str]:
         return (6, 2, name)
     if name == "road_code":
         return (6, 3, name)
+    if name.startswith("time_"):
+        return (7, 0, name)
     if name.startswith("bld_"):
         return (9, 0, name)
     return (8, 0, name)
@@ -148,7 +150,10 @@ def short_display_label(label: str) -> str:
     for suffix in (" (기준 대비)", "(기준 대비)"):
         if s.endswith(suffix):
             s = s[: -len(suffix)].strip()
-    for prefix in ("용도지역 ", "건축물용도 ", "도로폭 ", "동 ", "권리 ", "단지 ", "시공사 ", "구조 ", "유형 "):
+    for suffix in (" (최다 반기 대비)", "(최다 반기 대비)"):
+        if s.endswith(suffix):
+            s = s[: -len(suffix)].strip()
+    for prefix in ("거래시점 ", "용도지역 ", "건축물용도 ", "도로폭 ", "동 ", "권리 ", "단지 ", "시공사 ", "구조 ", "유형 "):
         if s.startswith(prefix) and len(s) > len(prefix):
             s = s[len(prefix):].strip()
             break
@@ -209,6 +214,7 @@ def format_equation(
     parts = [f"{dep} = {_fmt_num(ic)}"]
     others = [c for c in coefficients if _coef_attr(c, "name") != "const"]
     sig = [c for c in others if (p := _coef_attr(c, "p")) is not None and p < EQUATION_SIG_P]
+    sig = [c for c in sig if not str(_coef_attr(c, "name", "")).startswith("time_")]
     sig = sort_coefficients_for_display(sig)
     for c in sig:
         coef = float(_coef_attr(c, "coef"))

@@ -441,6 +441,7 @@ class RegressionDesignMeta:
     asset_type_reference: str | None = None
     asset_type_dummy_cols: list[str] = field(default_factory=list)
     used_building_attrs: bool = False
+    time_reference: str | None = None
 
 
 def _shop_floor_code(floor: object) -> str | None:
@@ -488,15 +489,18 @@ def _labeled_floor_dummies(
     dummies = pd.get_dummies(codes, prefix="", prefix_sep="", drop_first=True)
     missing = codes.isna()
     if missing.any() and not dummies.empty:
+        dummies = dummies.astype(float)
         dummies.loc[missing, :] = np.nan
     labels = {c: f"{label_map.get(c, c)} (기준 대비)" for c in dummies.columns}
     return dummies, labels, list(dummies.columns)
 
 
-def _add_contract_period_columns(work: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, str]]:
+def _add_contract_period_columns(
+    work: pd.DataFrame,
+) -> tuple[pd.DataFrame, dict[str, str], str | None]:
     """반기 더미. 거래가 가장 많은 반기를 뺀다. 반기가 하나면 열을 만들지 않는다."""
     if "contract_year" not in work.columns:
-        return pd.DataFrame(index=work.index), {}
+        return pd.DataFrame(index=work.index), {}, None
     months = (
         work["contract_month"]
         if "contract_month" in work.columns
@@ -515,7 +519,7 @@ def _add_contract_period_columns(work: pd.DataFrame) -> tuple[pd.DataFrame, dict
     series = pd.Series(codes, index=work.index)
     counts = series.dropna().value_counts()
     if len(counts) < 2:
-        return pd.DataFrame(index=work.index), {}
+        return pd.DataFrame(index=work.index), {}, None
     ref = str(counts.idxmax())
     out = pd.DataFrame(index=work.index)
     labels: dict[str, str] = {}
@@ -526,8 +530,8 @@ def _add_contract_period_columns(work: pd.DataFrame) -> tuple[pd.DataFrame, dict
         out[col] = (series == code).astype(float)
         labels[col] = f"거래시점 {code} (최다 반기 대비)"
     if out.empty:
-        return pd.DataFrame(index=work.index), {}
-    return out, labels
+        return pd.DataFrame(index=work.index), {}, ref
+    return out, labels, ref
 
 
 def _add_floor_columns(
@@ -931,7 +935,8 @@ def _build_design_matrix(
             meta.continuous_ranges["floor"] = (rng.min, rng.max)
 
     if getattr(req.variables, "contract_period", False):
-        period_part, period_labels = _add_contract_period_columns(work)
+        period_part, period_labels, time_ref = _add_contract_period_columns(work)
+        meta.time_reference = time_ref
         if not period_part.empty:
             parts.append(period_part)
             labels.update(period_labels)
@@ -1120,6 +1125,7 @@ def _fit_regression(
     sig_count = count_significant_coefficients(coefs)
 
     predict_options = _meta_to_predict_options(meta, req)
+    comparison = _build_model_comparison(y, X_const)
     return model, CollectiveRegressionResponse(
         building_key="",
         display_name="",
@@ -1135,7 +1141,8 @@ def _fit_regression(
         coefficients=coefs,
         warnings=warnings,
         predict_options=predict_options,
-        model_comparison=None,
+        model_comparison=comparison,
+        time_reference=meta.time_reference,
     )
 
 
@@ -1280,7 +1287,7 @@ def run_building_regression(
     _, _, _, resp = _run_regression_core(df, req, cohort_mode=False)
     resp.building_key = building_key
     resp.display_name = display_name
-    return resp
+    return _attach_model_candidates(resp, df, req, cohort_mode=False)
 
 
 def run_cohort_regression(
@@ -1306,7 +1313,54 @@ def run_cohort_regression(
         resp.warnings.insert(0, f"코호트 {len(building_keys)}개 단지 — 단지 고정효과 적용")
     resp.building_key = building_keys[0] if building_keys else ""
     resp.display_name = display_label
-    return resp
+    return _attach_model_candidates(
+        resp,
+        df,
+        req,
+        cohort_mode=True,
+        building_display_names=names,
+    )
+
+
+_SEARCH_FLAGS = (
+    "exclusive_area",
+    "building_age",
+    "floor",
+    "dong",
+    "housing_subtype",
+    "contract_period",
+    "households",
+    "parking",
+    "assessed_land_price",
+    "structure",
+    "asset_type_dummy",
+)
+
+
+def recommendation_pool(req: CollectiveRegressionRequest, *, cohort_mode: bool) -> list[str]:
+    """모형 추천 변수 풀. 사용자가 체크한 값과 무관하다."""
+    asset = req.asset_type
+    fields = ["exclusive_area", "floor", "contract_period"]
+    if asset != "presale":
+        fields.insert(1, "building_age")
+    if asset in ("apartment", "rowhouse"):
+        fields.append("dong")
+    if asset == "presale":
+        fields.append("housing_subtype")
+    if cohort_mode:
+        fields.extend(
+            ["households", "parking", "assessed_land_price", "structure", "asset_type_dummy"]
+        )
+    return fields
+
+
+def _spec_for_blocks(req: CollectiveRegressionRequest, blocks: list[str]) -> CollectiveRegressionSpec:
+    update = {name: False for name in _SEARCH_FLAGS}
+    update["floor_mode"] = req.variables.floor_mode
+    for name in blocks:
+        if name in update:
+            update[name] = True
+    return req.variables.model_copy(update=update)
 
 
 def suggest_collective_regression(
@@ -1316,61 +1370,66 @@ def suggest_collective_regression(
     cohort_mode: bool = False,
     building_display_names: dict[str, str] | None = None,
 ) -> list[CollectiveModelCandidate]:
-    """건물·코호트 회귀의 변수 블록 후보를 비교한다.
+    """고른 거래 행은 유지하고, 변수 풀 × 선형/로그를 탐색한다."""
+    from app.collective.regression.recommend import search_block_models
 
-    본건 건물 회귀와 코호트 회귀의 기존 경로는 유지하고, 동일 데이터에
-    변수 블록 후보만 추가로 적합해 추천 목록으로 제공한다.
-    집합 회귀 결과 UI에서는 호출하지 않는다.
-    """
-    fields = ["exclusive_area", "building_age", "floor", "dong", "housing_subtype"]
-    enabled = [field for field in fields if getattr(req.variables, field, False)]
-    if not enabled:
+    pool = recommendation_pool(req, cohort_mode=cohort_mode)
+    work = _prepare_work(df, req)
+    if len(work) < 5:
         return []
-    scored: list[CollectiveModelCandidate] = []
-    for mask in range(1, min((1 << len(enabled)) - 1, 64) + 1):
-        chosen = [enabled[i] for i in range(len(enabled)) if mask & (1 << i)]
-        variables = req.variables.model_copy(
-            update={field: field in chosen for field in fields}
+
+    def build_xy(blocks: list[str]):
+        variables = _spec_for_blocks(req, blocks)
+        candidate_req = req.model_copy(update={"variables": variables, "model_type": "linear"})
+        y, x, _labels, _meta, _warnings = _build_design_matrix(
+            work,
+            candidate_req,
+            cohort_mode=cohort_mode,
+            building_display_names=building_display_names,
         )
-        candidate_req = req.model_copy(update={"variables": variables})
-        try:
-            _, _, _, response = _run_regression_core(
-                df,
-                candidate_req,
-                cohort_mode=cohort_mode,
-                building_display_names=building_display_names,
-            )
-        except Exception:
-            continue
-        if response.n <= 0:
-            continue
-        scored.append(
+        if x.empty or len(y) < 5:
+            return None
+        return y, x
+
+    found = search_block_models(pool, build_xy)
+    out: list[CollectiveModelCandidate] = []
+    for row in found:
+        out.append(
             CollectiveModelCandidate(
-                rank=0,
-                blocks=chosen,
-                variables=variables,
-                model_type=response.model_type,
-                n=response.n,
-                adj_r_squared=response.price_adj_r_squared or response.adj_r_squared,
-                mape=response.mape,
-                cv_mape=(
-                    response.model_comparison.log.cv_mape
-                    if response.model_type == "log"
-                    and response.model_comparison
-                    and response.model_comparison.log
-                    else response.model_comparison.linear.cv_mape
-                    if response.model_comparison and response.model_comparison.linear
-                    else None
-                ),
+                rank=row["rank"],
+                purpose=row["purpose"],
+                blocks=row["blocks"],
+                variables=_spec_for_blocks(req, row["blocks"]),
+                model_type=row["model_type"],
+                n=row["n"],
+                adj_r_squared=row.get("adj_r_squared"),
+                mape=row.get("mape"),
+                cv_mape=row.get("cv_mape"),
             )
         )
-    scored.sort(
-        key=lambda item: (
-            item.cv_mape if item.cv_mape is not None else float("inf"),
-            -(item.adj_r_squared or float("-inf")),
+    return out
+
+
+def _attach_model_candidates(
+    resp: CollectiveRegressionResponse,
+    df: pd.DataFrame,
+    req: CollectiveRegressionRequest,
+    *,
+    cohort_mode: bool,
+    building_display_names: dict[str, str] | None = None,
+) -> CollectiveRegressionResponse:
+    if resp.n < 5:
+        return resp
+    try:
+        resp.model_candidates = suggest_collective_regression(
+            df,
+            req,
+            cohort_mode=cohort_mode,
+            building_display_names=building_display_names,
         )
-    )
-    return [item.model_copy(update={"rank": i + 1}) for i, item in enumerate(scored[:5])]
+    except Exception:
+        resp.warnings.append("모형 추천 탐색을 마치지 못했습니다")
+    return resp
 
 
 def predict_regression(

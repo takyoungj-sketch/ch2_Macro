@@ -364,7 +364,18 @@ export interface CommercialRegressionResponse {
   warnings: string[];
   predict_options?: CommercialPredictOptions | null;
   model_comparison?: ModelComparison | null;
+  model_candidates?: {
+    rank: number;
+    purpose?: "predictive" | "explanatory";
+    blocks: string[];
+    model_type: RegressionModelType;
+    n: number;
+    adj_r_squared?: number | null;
+    mape?: number | null;
+    cv_mape?: number | null;
+  }[];
   explain?: AnalysisExplain | null;
+  time_reference?: string | null;
 }
 
 export interface CommercialPredictOptions {
@@ -579,6 +590,7 @@ export interface CollectiveRegressionSpec {
 
 export interface CollectiveModelCandidate {
   rank: number;
+  purpose?: "predictive" | "explanatory";
   blocks: string[];
   variables: CollectiveRegressionSpec;
   model_type: RegressionModelType;
@@ -615,6 +627,7 @@ export interface CollectiveRegressionResponse {
   model_comparison?: ModelComparison | null;
   model_candidates?: CollectiveModelCandidate[];
   explain?: AnalysisExplain | null;
+  time_reference?: string | null;
 }
 
 export interface CohortRegressionResponse extends CollectiveRegressionResponse {

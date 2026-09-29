@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
   predictBuildingRegression,
@@ -38,6 +38,7 @@ import {
 } from "@ch2/ai-assistant/aiActions";
 import { buildCollectiveRegressionContext } from "../api/aiContext";
 import { CollectiveRegressionResults } from "./CollectiveRegressionResults";
+import CollectiveModelRecommend, { blocksMatch } from "./CollectiveModelRecommend";
 import type { FloorMode } from "../utils/collectiveRegressionTypes";
 
 export type { FloorMode };
@@ -426,6 +427,11 @@ export default function BuildingRegressionPanel({
   const keys = useCohort ? cohortKeys! : [buildingKey];
   const canRun = useCohort || canRunRegression(countTotal);
   const recommended = useCohort || isRegressionRecommended(countTotal);
+  const selectedBlocks = useMemo(
+    () => (Object.keys(vars) as (keyof RegressionVars)[]).filter((key) => Boolean(vars[key])),
+    [vars],
+  );
+  const fittedSnap = useRef<{ type: RegressionModelType; blocks: string[] } | null>(null);
   const attrOn =
     vars.households ||
     vars.parking ||
@@ -451,6 +457,7 @@ export default function BuildingRegressionPanel({
   );
 
   const runRegression = () => {
+    fittedSnap.current = { type: modelType, blocks: selectedBlocks };
     return useCohort
       ? runCohortRegression({ building_keys: keys, ...regressionBody })
       : runBuildingRegression(buildingKey, regressionBody);
@@ -503,7 +510,11 @@ export default function BuildingRegressionPanel({
 
   const predictM = useMutation({
     mutationFn: () => {
-      const body = { ...regressionBody, inputs: predictInputs };
+      const body = {
+        ...regressionBody,
+        model_type: regM.data?.model_type ?? modelType,
+        inputs: predictInputs,
+      };
       return useCohort
         ? predictCohortRegression({ building_keys: keys, ...body })
         : predictBuildingRegression(buildingKey, body);
@@ -683,6 +694,13 @@ export default function BuildingRegressionPanel({
           {(regM.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? "회귀 실패"}
         </p>
       )}
+      {regM.data &&
+        fittedSnap.current &&
+        (modelType !== fittedSnap.current.type || !blocksMatch(selectedBlocks, fittedSnap.current.blocks)) && (
+        <p className="text-[10px] text-amber-700 dark:text-amber-300">
+          변수 또는 척도가 바뀌었습니다. 아래 식과 시나리오는 마지막 실행입니다. 회귀를 다시 실행하면 맞춥니다.
+        </p>
+      )}
       {regM.data && (
         <CollectiveRegressionResults data={regM.data} modelType={modelType} />
       )}
@@ -706,6 +724,25 @@ export default function BuildingRegressionPanel({
                 )
               : undefined
           }
+        />
+      )}
+      {regM.data && (
+        <CollectiveModelRecommend
+          candidates={regM.data.model_candidates}
+          selectedType={modelType}
+          selectedBlocks={selectedBlocks}
+          selectionN={regM.data.n}
+          datasetNote="지금 연 건물과 추가한 단지의 거래만 사용합니다."
+          onAdopt={(pick) => {
+            setModelType(pick.modelType);
+            setVars((prev) => {
+              const next = { ...prev };
+              (Object.keys(next) as (keyof RegressionVars)[]).forEach((key) => {
+                next[key] = pick.blocks.includes(key);
+              });
+              return next;
+            });
+          }}
         />
       )}
     </div>

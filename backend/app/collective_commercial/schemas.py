@@ -176,6 +176,17 @@ class CommercialRegressionRequest(BaseModel):
     model_type: Literal["log", "linear"] = "linear"
 
 
+class CommercialModelCandidate(BaseModel):
+    rank: int
+    purpose: Literal["predictive", "explanatory"] = "predictive"
+    blocks: list[str] = Field(default_factory=list)
+    model_type: Literal["log", "linear"]
+    n: int
+    adj_r_squared: Optional[float] = None
+    mape: Optional[float] = None
+    cv_mape: Optional[float] = None
+
+
 class CommercialRegressionResponse(BaseModel):
     cluster_key: str
     display_label: str
@@ -192,7 +203,9 @@ class CommercialRegressionResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     predict_options: Optional["CommercialPredictOptions"] = None
     model_comparison: Optional[ModelComparison] = None
+    model_candidates: list[CommercialModelCandidate] = Field(default_factory=list)
     explain: Optional[AnalysisExplain] = None
+    time_reference: Optional[str] = None
 
 
 class CommercialPredictOptions(BaseModel):

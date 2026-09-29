@@ -462,6 +462,7 @@ class ModelComparison(BaseModel):
 
 class CollectiveModelCandidate(BaseModel):
     rank: int
+    purpose: Literal["predictive", "explanatory"] = "predictive"
     blocks: list[str] = Field(default_factory=list)
     variables: CollectiveRegressionSpec
     model_type: Literal["log", "linear"]
@@ -489,6 +490,7 @@ class CollectiveRegressionResponse(BaseModel):
     model_comparison: Optional[ModelComparison] = None
     model_candidates: list[CollectiveModelCandidate] = Field(default_factory=list)
     explain: Optional[AnalysisExplain] = None
+    time_reference: Optional[str] = None
 
 
 class CohortBuildingSummary(BaseModel):
