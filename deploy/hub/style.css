@@ -280,6 +280,18 @@ button.card {
   color: #94a3b8;
 }
 
+.footer p.footer__biz {
+  max-width: 36rem;
+  margin: 0.75rem auto 0.35rem;
+  line-height: 1.55;
+}
+
+.footer__biz a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .footer__links {
   display: flex;
   justify-content: center;
