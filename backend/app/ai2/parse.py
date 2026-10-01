@@ -9,6 +9,20 @@ from app.ai2.case_tools import UNAVAILABLE_ANALYSIS
 from app.ai2.catalog import get_spec
 
 _ANALYSIS = (
+    ("전월세 전환율", "rent_conversion"),
+    ("전환율", "rent_conversion"),
+    ("전월세", "rent_conversion"),
+    ("상가 면적형", "shop_area"),
+    ("상가면적형", "shop_area"),
+    ("면적형별", "shop_area"),
+    ("면적형", "shop_area"),
+    ("집합상가", "shop_floor"),
+    ("상가 층별효용", "shop_floor"),
+    ("상가층별효용", "shop_floor"),
+    ("공장 면적대", "factory_area"),
+    ("공장면적대", "factory_area"),
+    ("면적대별", "factory_area"),
+    ("면적대", "factory_area"),
     ("공장 층별효용", "factory_floor"),
     ("공장층별효용", "factory_floor"),
     ("집합공장", "factory_floor"),

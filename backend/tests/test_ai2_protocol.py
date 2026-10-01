@@ -602,6 +602,19 @@ def test_screen_region_fills_only_when_the_sentence_has_none():
     assert explicit.ctx.region == "가경동"
 
 
+def test_screen_target_fills_only_when_the_sentence_has_none():
+    state = new_session("named_ok")
+    actions = run_turn(state, Turn(sentence="가경동 아파트 층별효용", screen_target="세원가경골"))
+    assert state.ctx.target == "세원가경골"
+    assert _ids(actions) == ["floor_index", "insight_compare"]
+    named = new_session("named_ok")
+    run_turn(named, Turn(sentence="가경동 다른단지 아파트 층별효용", screen_target="세원가경골"))
+    assert named.ctx.target == "다른단지"
+    whole = new_session("one_eligible")
+    run_turn(whole, Turn(sentence="가경동 지역 전체 아파트 층별효용", screen_target="세원가경골"))
+    assert whole.ctx.target == "region"
+
+
 def test_sentence_without_a_target_asks():
     state = new_session("one_eligible")
     actions = run_turn(state, Turn(sentence="가경동 아파트 층별효용"))
@@ -851,6 +864,65 @@ def test_model_cannot_supply_a_sample_size_or_an_unknown_analysis():
     refused = run_turn(new_session("named_ok"), Turn(sentence="공실"), reader=lambda _s, _c: unknown)
     assert _kinds(refused) == ["refuse"]
     assert _ids(refused) == []
+
+
+def test_model_json_keeps_shop_rent_factory_and_profile():
+    from app.ai2.llm import draft_from_model_json
+
+    new_session("live_rent")
+    shop = draft_from_model_json(
+        {"property_type": "collective_shop", "analysis_type": "shop_floor", "target": "산단로"}
+    )
+    assert shop is not None
+    assert shop.property_type == "collective_shop"
+    assert shop.analysis_type == "shop_floor"
+    assert shop.target == "산단로"
+    assert shop.unknown_analysis is False
+    rent = draft_from_model_json({"property_type": "rent", "analysis_type": "rent_conversion"})
+    assert rent is not None and rent.property_type == "rent" and rent.analysis_type == "rent_conversion"
+    factory = draft_from_model_json(
+        {"property_type": "collective_factory", "analysis_type": "factory_floor"}
+    )
+    assert factory is not None and factory.property_type == "collective_factory"
+    profile = draft_from_model_json({"property_type": "profile", "analysis_type": "profile_twin"})
+    assert profile is not None and profile.property_type == "profile"
+
+
+def test_unknown_sentence_keeps_the_screen_analysis(monkeypatch):
+    monkeypatch.setattr(
+        "app.ai2.live_domains.fetch_rent_rate",
+        lambda region: {
+            "conversion_rate": 5.1,
+            "n_buildings": 40,
+            "gate_passed": True,
+            "window_years": 5,
+            "as_of": "2026-05-01",
+        }
+        if region == "흥덕구"
+        else {"error": "NO_MATCH"},
+    )
+    state = new_session("live_rent")
+    actions = run_turn(
+        state,
+        Turn(
+            region="흥덕구",
+            property_type="rent",
+            analysis_type="rent_conversion",
+            sentence="이 지역은 어때",
+        ),
+        reader=lambda _sentence, _ctx: LlmDraft(unknown_analysis=True),
+    )
+    assert state.ctx.analysis_type == "rent_conversion"
+    assert actions[-1].kind == "report"
+    assert "5.1" in actions[-1].message
+    land = new_session("twin_worse")
+    run_turn(
+        land,
+        Turn(region="흥덕구", property_type="land", analysis_type="twin_region", sentence="전환율"),
+        reader=lambda _sentence, _ctx: LlmDraft(property_type="rent", analysis_type="rent_conversion"),
+    )
+    assert land.ctx.property_type == "land"
+    assert land.ctx.analysis_type == "twin_region"
 
 
 def test_model_failure_falls_back_to_the_keyword_parser():
@@ -1526,6 +1598,153 @@ def test_factory_sentence_uses_the_factory_road_index(monkeypatch):
     )
     assert refused[-1].kind == "refuse"
     assert "이 지역 전체의 층별 지수는 없습니다." in refused[-1].message
+
+
+def test_factory_area_sentence_reports_a_non_reference_band(monkeypatch):
+    monkeypatch.setattr(
+        "app.ai2.live_domains.fetch_shop_counts",
+        lambda _region: (_ for _ in ()).throw(AssertionError("shop")),
+    )
+    monkeypatch.setattr(
+        "app.ai2.live_domains.fetch_factory_index",
+        lambda _key: (_ for _ in ()).throw(AssertionError("floor")),
+    )
+    monkeypatch.setattr(
+        "app.ai2.live_domains.fetch_factory_counts",
+        lambda _region: [("좁은공장", "secret", 12), ("산단로", "road-ok", 80)],
+    )
+    monkeypatch.setattr(
+        "app.ai2.live_domains.fetch_factory_area_index",
+        lambda _key: {
+            "n": 80,
+            "reference_label": "300~1000㎡",
+            "cells": [
+                {"label": "100㎡ 미만", "count": 6, "index": 140.0},
+                {"label": "300~1000㎡", "count": 40, "index": 100.0},
+                {"label": "1000㎡ 이상", "count": 9, "index": 64.2},
+            ],
+        },
+    )
+    state = new_session("live_shop")
+    report = run_turn(
+        state,
+        Turn(
+            region="신길동",
+            property_type="collective_shop",
+            analysis_type="shop_floor",
+            target="산단로",
+            sentence="면적대",
+        ),
+    )
+    assert state.ctx.analysis_type == "factory_area"
+    text = report[-1].message
+    assert report[-1].kind == "report"
+    assert "1000㎡ 이상 지수 64.2" in text
+    assert "100.0" not in text
+    assert "140" not in text
+    assert "기준 100은 300~1000㎡입니다." in text
+    assert "어느 결과를 채택하지 않습니다" not in text
+    assert "Insight" not in text
+    assert "secret" not in text
+    whole = new_session("live_shop")
+    monkeypatch.setattr("app.ai2.live_domains.fetch_factory_counts", lambda _region: [("짧은공장", "k", 12)])
+
+    def boom(_key):
+        raise AssertionError("area")
+
+    monkeypatch.setattr("app.ai2.live_domains.fetch_factory_area_index", boom)
+    refused = run_turn(
+        whole,
+        Turn(
+            region="가경동",
+            property_type="collective_shop",
+            analysis_type="shop_floor",
+            target="region",
+            sentence="공장 면적대",
+        ),
+    )
+    assert refused[-1].kind == "refuse"
+    assert "이 지역 전체의 면적대 지수는 없습니다." in refused[-1].message
+    assert "층별" not in refused[-1].message
+    apartment = new_session("one_eligible")
+    run_turn(
+        apartment,
+        Turn(region="가경동", property_type="apartment", analysis_type="floor_utility", sentence="면적대"),
+    )
+    assert apartment.ctx.analysis_type == "floor_utility"
+
+
+def test_shop_area_sentence_reports_a_non_reference_band(monkeypatch):
+    monkeypatch.setattr(
+        "app.ai2.live_domains.fetch_factory_counts",
+        lambda _region: (_ for _ in ()).throw(AssertionError("factory")),
+    )
+    monkeypatch.setattr(
+        "app.ai2.live_domains.fetch_shop_index",
+        lambda _key: (_ for _ in ()).throw(AssertionError("floor")),
+    )
+    monkeypatch.setattr(
+        "app.ai2.live_domains.fetch_shop_counts",
+        lambda _region: [("좁은길", "secret", 12), ("상가길", "road-ok", 80)],
+    )
+    monkeypatch.setattr(
+        "app.ai2.live_domains.fetch_shop_area_index",
+        lambda _key: {
+            "n": 80,
+            "reference_label": "50~100㎡",
+            "cells": [
+                {"label": "35㎡ 미만", "count": 6, "index": 110.0},
+                {"label": "50~100㎡", "count": 40, "index": 100.0},
+                {"label": "300㎡ 이상", "count": 9, "index": 82.5},
+            ],
+        },
+    )
+    state = new_session("live_shop")
+    report = run_turn(
+        state,
+        Turn(
+            region="가경동",
+            property_type="collective_shop",
+            analysis_type="shop_floor",
+            target="상가길",
+            sentence="면적형",
+        ),
+    )
+    assert state.ctx.analysis_type == "shop_area"
+    text = report[-1].message
+    assert report[-1].kind == "report"
+    assert "300㎡ 이상 지수 82.5" in text
+    assert "100.0" not in text
+    assert "110" not in text
+    assert "기준 100은 50~100㎡입니다." in text
+    assert "Insight" not in text
+    assert "secret" not in text
+    whole = new_session("live_shop")
+    monkeypatch.setattr("app.ai2.live_domains.fetch_shop_counts", lambda _region: [("짧은길", "k", 12)])
+
+    def boom(_key):
+        raise AssertionError("area")
+
+    monkeypatch.setattr("app.ai2.live_domains.fetch_shop_area_index", boom)
+    refused = run_turn(
+        whole,
+        Turn(
+            region="가경동",
+            property_type="collective_shop",
+            analysis_type="shop_floor",
+            target="region",
+            sentence="상가 면적형",
+        ),
+    )
+    assert refused[-1].kind == "refuse"
+    assert "이 지역 전체의 면적형 지수는 없습니다." in refused[-1].message
+    assert "면적대" not in refused[-1].message
+    apartment = new_session("one_eligible")
+    run_turn(
+        apartment,
+        Turn(region="가경동", property_type="apartment", analysis_type="floor_utility", sentence="면적형"),
+    )
+    assert apartment.ctx.analysis_type == "floor_utility"
 
 
 def test_shop_sentence_does_not_switch_to_the_factory(monkeypatch):

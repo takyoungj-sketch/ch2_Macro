@@ -19,8 +19,19 @@ WINDOW_FROM = date(2021, 9, 1)
 WINDOW_TO = date(2026, 8, 31)
 _SHOP_INDEX_LABELS = ("초고층", "고층")
 _FACTORY_INDEX_LABELS = ("3층 이상", "2층")
+_FACTORY_AREA_LABELS = ("1000㎡ 이상", "300~1000㎡", "100~300㎡", "100㎡ 미만")
+_SHOP_AREA_LABELS = ("300㎡ 이상", "100~300㎡", "50~100㎡", "35~50㎡", "35㎡ 미만")
+_AREA_ANALYSES = frozenset({"factory_area", "shop_area"})
 _SHOP_RULE = "화면 100은 1층입니다."
 _FACTORY_RULE = "공장·창고 층은 지하·1·2·3층 이상입니다. 화면 100은 1층입니다."
+_FACTORY_AREA_RULE = (
+    "공장 면적대는 100㎡ 미만 · 100~300㎡ · 300~1000㎡ · 1000㎡ 이상입니다. "
+    "기준 100은 연면적 중앙값이 속한 면적대입니다."
+)
+_SHOP_AREA_RULE = (
+    "상가 면적구간은 35㎡ 미만 · 35~50㎡ · 50~100㎡ · 100~300㎡ · 300㎡ 이상입니다. "
+    "기준 100은 연면적 중앙값이 속한 구간입니다."
+)
 
 
 def fetch_shop_counts(region: str) -> list[tuple[str, str, int]] | None:
@@ -35,8 +46,16 @@ def fetch_shop_index(cluster_key: str) -> dict | None:
     return _fetch_road_index(cluster_key, "collective_shop", "shop")
 
 
+def fetch_shop_area_index(cluster_key: str) -> dict | None:
+    return _fetch_road_index(cluster_key, "collective_shop", "relative", dimension="area")
+
+
 def fetch_factory_index(cluster_key: str) -> dict | None:
     return _fetch_road_index(cluster_key, "collective_factory", "factory")
+
+
+def fetch_factory_area_index(cluster_key: str) -> dict | None:
+    return _fetch_road_index(cluster_key, "collective_factory", "relative", dimension="area")
 
 
 def _fetch_road_counts(region: str, asset: str) -> list[tuple[str, str, int]] | None:
@@ -75,7 +94,9 @@ def _fetch_road_counts(region: str, asset: str) -> list[tuple[str, str, int]] | 
     ]
 
 
-def _fetch_road_index(cluster_key: str, asset: str, floor_mode: str) -> dict | None:
+def _fetch_road_index(
+    cluster_key: str, asset: str, floor_mode: str, dimension: str = "floor"
+) -> dict | None:
     from app.collective.db import get_collective_engine
     from app.collective.floor_index_regression import compute_residential_floor_index_regression
 
@@ -107,7 +128,10 @@ def _fetch_road_index(cluster_key: str, asset: str, floor_mode: str) -> dict | N
         if not frame.empty:
             frame["exclusive_area"] = frame["gross_area"]
         raw = compute_residential_floor_index_regression(
-            frame, asset_type=asset, dimension="floor", floor_mode=floor_mode
+            frame,
+            asset_type=asset,
+            dimension=dimension,
+            floor_mode=floor_mode if dimension == "floor" else "relative",
         )
     except Exception as exc:
         _LOG.warning("AI2 road floor index failed: %s", type(exc).__name__)
@@ -116,7 +140,11 @@ def _fetch_road_index(cluster_key: str, asset: str, floor_mode: str) -> dict | N
         {"label": cell.get("label"), "count": cell.get("count"), "index": cell.get("index")}
         for cell in raw.get("cells") or []
     ]
-    return {"n": int(raw.get("n_total") or 0), "cells": cells}
+    return {
+        "n": int(raw.get("n_total") or 0),
+        "cells": cells,
+        "reference_label": raw.get("reference_floor"),
+    }
 
 
 def fetch_rent_rate(region: str) -> dict | None:
@@ -340,7 +368,7 @@ def run_live_profile(tool_id: str, ctx: AnalysisContext) -> ToolEnvelope:
 
 
 def _is_factory(ctx: AnalysisContext) -> bool:
-    return ctx.analysis_type == "factory_floor"
+    return ctx.analysis_type in ("factory_floor", "factory_area")
 
 
 def _road_counts(ctx: AnalysisContext):
@@ -350,16 +378,38 @@ def _road_counts(ctx: AnalysisContext):
 
 
 def _road_index(ctx: AnalysisContext, cluster_key: str):
+    if ctx.analysis_type == "factory_area":
+        return fetch_factory_area_index(cluster_key)
+    if ctx.analysis_type == "shop_area":
+        return fetch_shop_area_index(cluster_key)
     if _is_factory(ctx):
         return fetch_factory_index(cluster_key)
     return fetch_shop_index(cluster_key)
 
 
 def _road_labels(ctx: AnalysisContext) -> tuple[str, ...]:
+    if ctx.analysis_type == "factory_area":
+        return _FACTORY_AREA_LABELS
+    if ctx.analysis_type == "shop_area":
+        return _SHOP_AREA_LABELS
     return _FACTORY_INDEX_LABELS if _is_factory(ctx) else _SHOP_INDEX_LABELS
 
 
-def _road_rule(ctx: AnalysisContext) -> str:
+def _road_rule(ctx: AnalysisContext, reference: str | None = None) -> str:
+    if ctx.analysis_type == "factory_area":
+        if reference:
+            return (
+                "공장 면적대는 100㎡ 미만 · 100~300㎡ · 300~1000㎡ · 1000㎡ 이상입니다. "
+                f"기준 100은 {reference}입니다."
+            )
+        return _FACTORY_AREA_RULE
+    if ctx.analysis_type == "shop_area":
+        if reference:
+            return (
+                "상가 면적구간은 35㎡ 미만 · 35~50㎡ · 50~100㎡ · 100~300㎡ · 300㎡ 이상입니다. "
+                f"기준 100은 {reference}입니다."
+            )
+        return _SHOP_AREA_RULE
     return _FACTORY_RULE if _is_factory(ctx) else _SHOP_RULE
 
 
@@ -369,11 +419,17 @@ def _shop_sample(ctx: AnalysisContext) -> ToolEnvelope:
         return _bad("sample_status", "DATABASE_UNAVAILABLE")
     eligible = [row for row in rows if row[2] >= MIN_COUNT_FLOOR_INDEX]
     alts = [Alternative("representative_candidates", "대표 도로 후보", False, {})] if eligible else []
+    if ctx.analysis_type == "factory_area":
+        reason = "NO_REGION_LEVEL_AREA"
+    elif ctx.analysis_type == "shop_area":
+        reason = "NO_REGION_LEVEL_SHOP_AREA"
+    else:
+        reason = "NO_REGION_LEVEL_INDEX"
     return ToolEnvelope(
         tool_id="sample_status",
         level="impossible",
         analysis_possible=False,
-        reason_code="NO_REGION_LEVEL_INDEX",
+        reason_code=reason,
         valid_n=sum(row[2] for row in rows),
         required_n=MIN_COUNT_FLOOR_INDEX,
         period=PERIOD,
@@ -452,7 +508,8 @@ def _shop_index(ctx: AnalysisContext, args: dict) -> ToolEnvelope:
     fitted = _road_index(ctx, key)
     if fitted is None:
         return _bad("floor_index", "DATABASE_UNAVAILABLE")
-    facts: dict = {"target": name, "index_rule": _road_rule(ctx)}
+    reference = str(fitted.get("reference_label") or "")
+    facts: dict = {"target": name, "index_rule": _road_rule(ctx, reference or None)}
     blank = next(
         (cell for cell in fitted["cells"] if 0 < int(cell.get("count") or 0) < MIN_GROUP_FOR_DUMMY),
         None,
@@ -463,6 +520,7 @@ def _shop_index(ctx: AnalysisContext, args: dict) -> ToolEnvelope:
             for label in _road_labels(ctx)
             for cell in fitted["cells"]
             if cell.get("label") == label
+            and (ctx.analysis_type not in _AREA_ANALYSES or label != reference)
             and int(cell.get("count") or 0) >= MIN_GROUP_FOR_DUMMY
             and cell.get("index") is not None
         ),
@@ -470,6 +528,8 @@ def _shop_index(ctx: AnalysisContext, args: dict) -> ToolEnvelope:
     )
     if picked is not None:
         facts["local_index"] = picked["index"]
+        if ctx.analysis_type in _AREA_ANALYSES:
+            facts["index_group"] = picked.get("label")
     if "local_index" not in facts and blank is None:
         return ToolEnvelope(
             tool_id="floor_index",

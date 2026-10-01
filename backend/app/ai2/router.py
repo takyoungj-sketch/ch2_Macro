@@ -42,6 +42,7 @@ class TurnIn(BaseModel):
     building_age: float | None = None
     road_width_label: str | None = None
     screen_region: str | None = None
+    screen_target: str | None = None
 
 
 class TurnOut(BaseModel):
@@ -94,6 +95,7 @@ def turn(body: TurnIn) -> TurnOut:
             building_age=body.building_age,
             road_width_label=body.road_width_label,
             screen_region=body.screen_region,
+            screen_target=body.screen_target,
         ),
         reader=read_sentence if body.use_llm else None,
         writer=write_report if body.use_llm else None,

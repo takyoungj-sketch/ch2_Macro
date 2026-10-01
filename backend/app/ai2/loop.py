@@ -62,6 +62,7 @@ class Turn:
     building_age: float | None = None
     road_width_label: str | None = None
     screen_region: str | None = None
+    screen_target: str | None = None
 
 
 def install_protocol_specs() -> None:
@@ -287,7 +288,8 @@ def _overlay_draft(turn: Turn, state: Session, draft: LlmDraft) -> Action | None
     sentence_fits = not parsed.ambiguous_analysis and _analysis_fits(
         parsed.analysis_type, turn.property_type
     )
-    if draft.unknown_analysis and not sentence_fits:
+    pinned = _analysis_fits(turn.analysis_type, turn.property_type)
+    if draft.unknown_analysis and not sentence_fits and not pinned:
         return Action(kind="refuse", message="이 문장에 해당하는 분석이 없습니다.")
     if not draft.unknown_analysis:
         _apply_fields(turn, draft)
@@ -386,6 +388,14 @@ def run_turn(
         and (turn.screen_region or "").strip()
     ):
         turn.region = turn.screen_region.strip()
+    if (
+        not turn.accept_offer
+        and not turn.explain
+        and not turn.drop_property_type
+        and turn.target is None
+        and (turn.screen_target or "").strip()
+    ):
+        turn.target = turn.screen_target.strip()
     if turn.claim:
         state.claim = turn.claim
     if turn.drop_property_type:

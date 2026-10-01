@@ -12,6 +12,8 @@ MAX_CALLS = 6
 _REASON_KO = {
     "INSUFFICIENT_SAMPLE": "표본이 최소 건수보다 적습니다.",
     "NO_REGION_LEVEL_INDEX": "이 지역 전체의 층별 지수는 없습니다.",
+    "NO_REGION_LEVEL_AREA": "이 지역 전체의 면적대 지수는 없습니다.",
+    "NO_REGION_LEVEL_SHOP_AREA": "이 지역 전체의 면적형 지수는 없습니다.",
     "PERIOD_UNAVAILABLE": "요청한 기간의 자료는 제공하지 않습니다.",
     "PERIOD_OUTSIDE": "요청한 기간은 분석 구간 밖입니다.",
     "MISSING_INPUTS": "필요한 값이 빠졌습니다.",
@@ -246,7 +248,11 @@ def _report(ctx, envelopes: list[ToolEnvelope]) -> str:
                 f"검증 {env.facts.get('twin_cv_mape')}, 로컬 {env.facts.get('local_cv_mape')}."
             )
         if env.facts.get("local_index") is not None and env.facts.get("top_floor_index") is None:
-            bits.append(f"지수 {env.facts['local_index']}.")
+            group = env.facts.get("index_group")
+            if group:
+                bits.append(f"{group} 지수 {env.facts['local_index']}.")
+            else:
+                bits.append(f"지수 {env.facts['local_index']}.")
         if env.facts.get("blank_group"):
             bits.append(
                 f"{env.facts['blank_group']} {env.facts.get('blank_group_n')}건이라 칸을 비움."

@@ -20,15 +20,23 @@ _SYSTEM = """당신은 CH2 AI2다. 화면 통계 어시스턴트가 아니다. �
 문장을 분석 맥락 JSON으로만 바꾼다.
 허용 키: region, property_type, analysis_type, target, period, measure, claim.
 analysis_type은 허용 목록에 있는 값만 쓴다. 목록에 없으면 null.
-property_type은 apartment, land, built 또는 null.
+property_type은 apartment, land, built, collective_shop, collective_factory, rent, profile 또는 null.
 measure는 total, unit_price 또는 null.
 claim은 적정가·감정을 묻는 경우에만 appraisal, 아니면 null.
-지역 전체는 target을 "region"으로 둔다. 단지 이름은 target 문자열이다.
+지역 전체는 target을 "region"으로 둔다. 단지 또는 도로 이름은 target 문자열이다.
 표본 수, 가격, 지수를 넣지 않는다. JSON 외의 문장은 쓰지 않는다.
 """
 
 _PERIOD = re.compile(r"^\d{4}-\d{2}~\d{4}-\d{2}$")
-_PROPERTIES = frozenset({"apartment", "land", "built"})
+_PROPERTIES = frozenset({
+    "apartment",
+    "land",
+    "built",
+    "collective_shop",
+    "collective_factory",
+    "rent",
+    "profile",
+})
 _MEASURES = frozenset({"total", "unit_price"})
 
 

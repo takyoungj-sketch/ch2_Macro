@@ -42,7 +42,7 @@ const LIVE: Partial<Record<Ai2Domain, LiveSpec>> = {
     property_type: "collective_shop",
     analysis_type: "shop_floor",
     needsBuilding: false,
-    placeholder: "가경동 상가 또는 공장",
+    placeholder: "가경동 상가 면적형, 공장 또는 면적대",
   },
   rent: {
     fixture: "live_rent",
@@ -90,21 +90,31 @@ export function singleScreenRegion(input: {
 export function Ai2HeaderSlot({
   domain,
   screenRegion = "",
+  screenTarget = "",
   children,
 }: {
   domain: Ai2Domain;
   screenRegion?: string;
+  screenTarget?: string;
   children: ReactNode;
 }) {
   return (
     <span className="inline-flex items-center gap-1">
-      <Ai2Entry domain={domain} screenRegion={screenRegion} />
+      <Ai2Entry domain={domain} screenRegion={screenRegion} screenTarget={screenTarget} />
       {children}
     </span>
   );
 }
 
-export default function Ai2Entry({ domain, screenRegion = "" }: { domain: Ai2Domain; screenRegion?: string }) {
+export default function Ai2Entry({
+  domain,
+  screenRegion = "",
+  screenTarget = "",
+}: {
+  domain: Ai2Domain;
+  screenRegion?: string;
+  screenTarget?: string;
+}) {
   const spec = LIVE[domain];
   const [open, setOpen] = useState(false);
   const [sessionId] = useState(() => `ai2-${domain}-${Date.now()}`);
@@ -137,6 +147,7 @@ export default function Ai2Entry({ domain, screenRegion = "" }: { domain: Ai2Dom
       body.analysis_type = spec.analysis_type;
       if (spec.measure) body.measure = spec.measure;
       if (screenRegion.trim()) body.screen_region = screenRegion.trim();
+      if (screenTarget.trim()) body.screen_target = screenTarget.trim();
     }
     if (spec.needsBuilding) {
       if (grossArea.trim()) body.gross_area = Number(grossArea);
@@ -203,6 +214,7 @@ export default function Ai2Entry({ domain, screenRegion = "" }: { domain: Ai2Dom
           <p className="mb-2 text-xs text-slate-500">
             화면 어시스턴트와 세션이 분리됩니다. 숫자는 도구 결과입니다.
             {screenRegion.trim() ? ` 화면 지역은 ${screenRegion.trim()}입니다. 문장에 지역이 있으면 문장을 씁니다.` : ""}
+            {screenTarget.trim() ? ` 화면 대상은 ${screenTarget.trim()}입니다. 문장에 대상이 있으면 문장을 씁니다.` : ""}
           </p>
           {spec ? (
             <>

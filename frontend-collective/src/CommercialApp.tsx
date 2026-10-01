@@ -429,6 +429,7 @@ export default function CommercialApp() {
               gu: guList,
               sigungu: formatScopeAddr2(addr2, addr1),
             })}
+            screenTarget={(selected?.road_name || selected?.display_label || "").trim()}
           >
             <AiAssistantPanel />
           </Ai2HeaderSlot>

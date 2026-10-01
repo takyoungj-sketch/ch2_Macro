@@ -29,6 +29,15 @@ BUILT_VALUE_SPEC = AnalysisSpec(
     needs_measure=True,
 )
 
+SHOP_AREA_SPEC = AnalysisSpec(
+    analysis_type="shop_area",
+    property_types=frozenset({"collective_shop"}),
+    needs_target=True,
+    ask="특정 도로인가요, 이 지역 전체인가요?",
+    discovery_tool="sample_status",
+    direct_tool="floor_index",
+)
+
 SHOP_FLOOR_SPEC = AnalysisSpec(
     analysis_type="shop_floor",
     property_types=frozenset({"collective_shop"}),
@@ -40,6 +49,15 @@ SHOP_FLOOR_SPEC = AnalysisSpec(
 
 FACTORY_FLOOR_SPEC = AnalysisSpec(
     analysis_type="factory_floor",
+    property_types=frozenset({"collective_shop", "collective_factory"}),
+    needs_target=True,
+    ask="특정 도로인가요, 이 지역 전체인가요?",
+    discovery_tool="sample_status",
+    direct_tool="floor_index",
+)
+
+FACTORY_AREA_SPEC = AnalysisSpec(
+    analysis_type="factory_area",
     property_types=frozenset({"collective_shop", "collective_factory"}),
     needs_target=True,
     ask="특정 도로인가요, 이 지역 전체인가요?",
@@ -148,7 +166,9 @@ def install_case_specs() -> None:
     register(BUILT_SPEC)
     register(BUILT_VALUE_SPEC)
     register(SHOP_FLOOR_SPEC)
+    register(SHOP_AREA_SPEC)
     register(FACTORY_FLOOR_SPEC)
+    register(FACTORY_AREA_SPEC)
     register(RENT_RATE_SPEC)
     register(PROFILE_TWIN_SPEC)
 
