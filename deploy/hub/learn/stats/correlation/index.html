@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>07. 상관관계 | 통계학 &amp; 데이터 분석</title>
+    <meta name="description" content="상관계수와 함께 움직임. Macro Insight 시계열 상관." />
+    <link rel="canonical" href="https://ch2data.com/learn/stats/correlation/" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero hero--document">
+        <p class="learn-breadcrumb">
+          <a href="https://ch2data.com/">CH2 DATA</a> ·
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </p>
+        <p class="hero__eyebrow">상관관계 · 07</p>
+        <h1 class="hero__title">상관관계</h1>
+      </header>
+
+      <article class="learn-chapter" aria-label="상관관계">
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">① 한 줄 정의</p>
+          <h2>두 변수가 함께 움직이는 정도</h2>
+          <p>
+            면적이 커질수록 가격이 올라지거나, 금리 변화와 거래량이 반대로 움직이는 패턴을 볼 때가
+            있습니다. <strong>상관관계</strong>는 두 변수가 같은·반대 방향으로 얼마나 함께 변하는지를
+            대략 −1~1 사이로 요약합니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">② 쉽게 이해하기</p>
+          <h2>산점도로 보면 직관적입니다</h2>
+          <p>
+            면적(가로축)과 가격(세로축)에 점을 찍으면 오른쪽 위로 퍼지면 양의 상관입니다. r=0.8에
+            가깝다면 「같은 방향으로 꽤 함께 움직인다」고 읽을 수 있습니다.
+          </p>
+          <figure class="learn-chart" aria-label="양의 상관 산점도">
+            <svg viewBox="0 0 360 160" role="img" aria-hidden="true">
+              <line x1="40" y1="130" x2="320" y2="130" stroke="#cbd5e1" />
+              <line x1="40" y1="130" x2="40" y2="30" stroke="#cbd5e1" />
+              <circle cx="70" cy="110" r="5" fill="#93c5fd" />
+              <circle cx="130" cy="95" r="5" fill="#60a5fa" />
+              <circle cx="210" cy="65" r="5" fill="#3b82f6" />
+              <circle cx="290" cy="40" r="5" fill="#1d4ed8" />
+              <line x1="55" y1="120" x2="305" y2="35" stroke="#1d4ed8" stroke-width="2" opacity="0.5" />
+            </svg>
+            <p class="learn-chart__caption">점들이 한 방향으로 늘어서면 |r|가 커집니다.</p>
+          </figure>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">③ 상관계수가 높으면 관계가 강한 걸까?</p>
+          <h2>상관 ≠ 인과</h2>
+          <p>
+            상관이 있다는 것은 <strong>함께 움직였다</strong>는 뜻이지, 한쪽이 다른쪽을
+            <strong>일으켰다</strong>는 뜻이 아닙니다. Macro Insight의 금리·거래 통계에도 같은
+            주의가 필요합니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">④ CH2 Macro에서는?</p>
+          <h2>Insight 시계열 · 변수 관계</h2>
+          <p>
+            <a href="https://macro.ch2data.com/insight/">Macro Insight</a> 실험에서 시계열 상관을
+            다룹니다. 토지 단가에 변수 관계를 가정할 때도 상관 개념이 들어갑니다. 실험 본문에 있는
+            링크로 이 페이지에 들어올 수 있습니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">⑤ Macro 화면</p>
+          <h2>Insight · 상관 표</h2>
+          <figure class="learn-capture learn-macro-mock" aria-label="Insight 상관 예시">
+            <div class="learn-macro-mock__bar"><span><strong>Macro Insight</strong></span><span>전국 시계열 · 청주시 흥덕구 예시</span></div>
+            <div class="learn-macro-mock__body">
+              <table>
+                <thead><tr><th>변수 쌍</th><th>r</th><th>읽기</th></tr></thead>
+                <tbody>
+                  <tr class="is-highlight"><td>CD 금리 ↔ 월 거래건수</td><td>−0.42</td><td>함께 반대로 움직임</td></tr>
+                  <tr><td>M2 ↔ 월 거래액</td><td>+0.28</td><td>같은 방향 (약함)</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <figcaption class="learn-capture__caption">예시 화면 · 청주시 흥덕구. Insight 실험은 상관과 인과를 구분하지 않습니다.</figcaption>
+          </figure>
+        </section>
+
+        <aside class="learn-caution" aria-label="주의">
+          <p class="learn-caution__title">주의</p>
+          <p>상관관계를 <strong>인과관계</strong>로 해석하지 마세요.</p>
+        </aside>
+
+        <details class="learn-more"><summary>조금 더 알아보기</summary><div class="learn-more__body"><p>Pearson(직선), Spearman(순위) 등 방법이 있습니다.</p></div></details>
+
+        <p class="learn-macro-cta">
+          <a href="https://macro.ch2data.com/insight/">CH2 Macro에서 확인하기 →</a>
+          <span style="display: block; margin-top: 0.35rem; font-size: 0.8125rem; color: #64748b">Macro Insight · 시계열 상관</span>
+        </p>
+      </article>
+
+      <nav class="learn-chapter-nav" aria-label="장 이동">
+        <a href="/learn/stats/sample-size/">← 이전: 표본수</a>
+        <a href="/learn/stats/regression/">다음: 회귀분석 →</a>
+      </nav>
+
+      <footer class="footer">
+        <nav class="footer__links"><a href="https://ch2data.com/">홈</a><a href="/learn/stats/">통계학 &amp; 데이터 분석</a></nav>
+        <p>© CH2 DATA</p>
+      </footer>
+    </div>
+    <script src="/learn/stats/learn-stats-toc.js" defer></script>
+  </body>
+</html>

@@ -1,4 +1,5 @@
 // @ts-nocheck — shared: 각 frontend node_modules 기준 경로가 달라짐
+import { StatsGlossaryHelp } from "../stats-glossary";
 import { useState, type ReactNode } from "react";
 
 export type ModelRecommendDepth = "standard" | "standard_plus" | "extended";
@@ -87,6 +88,12 @@ export default function ModelRecommendSection({
           <span className="font-normal text-indigo-800/80 dark:text-indigo-200/80">
             · 공통 표본 n={selectionN.toLocaleString("ko-KR")}
           </span>
+        )}
+        {depth === "standard_plus" && (
+          <>
+            <StatsGlossaryHelp termId="cv_mape" size="xs" />
+            <StatsGlossaryHelp termId="adj_r_squared" size="xs" />
+          </>
         )}
         {headerExtra}
       </div>

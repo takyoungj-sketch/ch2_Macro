@@ -19,6 +19,7 @@ import {
   StatisticalEstimateCaption,
   StatisticalEstimateDisclaimer,
   StatisticalEstimateRangeRow,
+  StatsGlossaryHelp,
 } from "@ch2/stats-glossary";
 import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import { recordAnalysisHistory } from "@ch2/ai-assistant/aiClient";
@@ -490,7 +491,10 @@ export default function CommercialRegressionPanel({
             checked={modelType === "log"}
             onChange={(e) => setModelType(e.target.checked ? "log" : "linear")}
           />
-          로그(% 해석)
+          <span className="inline-flex items-center gap-0.5">
+            로그(% 해석)
+            <StatsGlossaryHelp termId="log_model" size="xs" />
+          </span>
         </label>
       </div>
 

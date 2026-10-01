@@ -1,3 +1,4 @@
+import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchRegions } from "../api/client";
@@ -293,6 +294,7 @@ export default function PaidFilterTable() {
                   className="rounded"
                 />
                 이상치 제외 (IQR)
+                <StatsGlossaryHelp termId="iqr_outliers" size="xs" />
               </label>
               <div
                 className={`flex flex-wrap items-center gap-2 pt-0.5 ${

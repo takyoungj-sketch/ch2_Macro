@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>03. 분위수 | 통계학 &amp; 데이터 분석</title>
+    <meta name="description" content="Q1·중앙값·Q3와 분위 단가. CH2 Macro 가격분포." />
+    <link rel="canonical" href="https://ch2data.com/learn/stats/quantiles/" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero hero--document">
+        <p class="learn-breadcrumb">
+          <a href="https://ch2data.com/">CH2 DATA</a> ·
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </p>
+        <p class="hero__eyebrow">기술통계 · 03</p>
+        <h1 class="hero__title">분위수</h1>
+      </header>
+
+      <article class="learn-chapter" aria-label="분위수">
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">① 한 줄 정의</p>
+          <h2>가격 분포를 나누는 기준점</h2>
+          <p>
+            <a href="/learn/stats/mean-and-median/">평균·중앙값</a>만으로는 저가·고가 구간이 어디쯤인지
+            잘 보이지 않을 때가 있습니다. <strong>분위수</strong>는 거래를 단가 순으로 줄 세운 뒤
+            특정 위치의 값을 알려 주는 지표입니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">② 쉽게 이해하기</p>
+          <h2>100건 중 하위 25%는 얼마일까?</h2>
+          <p>
+            청주시 흥덕구 2종일반주거×대 128건을 단가 순으로 정렬하면, <strong>25% 지점</strong>이
+            <strong>Q1(1사분위수)</strong>, <strong>50% 지점</strong>이 중앙값, <strong>75% 지점</strong>이
+            <strong>Q3</strong>입니다.
+          </p>
+          <p>
+            Q1=80만 · 중앙=120만 · Q3=180만이면, 거래의 절반은 120만 이하·이상이고, 중간 50%는 대략
+            80만~180만 사이에 있다고 읽을 수 있습니다.
+          </p>
+          <figure class="learn-chart" aria-label="분위수 박스 그래프">
+            <svg viewBox="0 0 360 120" role="img" aria-hidden="true">
+              <line x1="40" y1="60" x2="320" y2="60" stroke="#cbd5e1" stroke-width="2" />
+              <line x1="60" y1="40" x2="60" y2="80" stroke="#64748b" stroke-width="2" />
+              <rect x="100" y="35" width="160" height="50" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2" rx="4" />
+              <line x1="180" y1="35" x2="180" y2="85" stroke="#1d4ed8" stroke-width="2" />
+              <line x1="260" y1="40" x2="260" y2="80" stroke="#64748b" stroke-width="2" />
+              <text x="60" y="100" text-anchor="middle" fill="#475569" font-size="10">최소</text>
+              <text x="100" y="100" text-anchor="middle" fill="#1d4ed8" font-size="10" font-weight="700">Q1</text>
+              <text x="180" y="100" text-anchor="middle" fill="#1d4ed8" font-size="10" font-weight="700">중앙값</text>
+              <text x="260" y="100" text-anchor="middle" fill="#1d4ed8" font-size="10" font-weight="700">Q3</text>
+            </svg>
+            <p class="learn-chart__caption">Q1~Q3 사이(파란 박스)에 중간 50%의 거래가 모여 있습니다.</p>
+          </figure>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">③ 분위수는 어디 세 군데를 볼까?</p>
+          <h2>하·중·고 구간을 나누어 보기</h2>
+          <p>
+            평균 하나만 보면 대부분의 거래가 어느 가격대에 몰려 있는지 파악하기 어렵습니다.
+            Q1·중앙·Q3를 함께 보면 하위·중간·상위 구간을 빠르게 파악할 수 있습니다. 이후
+            <a href="/learn/stats/iqr-outliers/">IQR</a>은 Q3−Q1을 이상치 기준으로 씁니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">④ CH2 Macro에서는?</p>
+          <h2>분위 단가 · 가격분포</h2>
+          <p>
+            지역통계·용도지역×지목 표에서 분위 관련 지표를 확인할 수 있습니다. 평균·중위와 함께
+            보면 해당 필터 조건에서 거래가 어느 가격대에 몰려 있는지 더 정확히 읽을 수 있습니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">⑤ Macro 화면</p>
+          <h2>분위 단가 요약</h2>
+          <figure class="learn-capture learn-macro-mock" aria-label="Macro 분위수 예시">
+            <div class="learn-macro-mock__bar">
+              <span><strong>토지</strong> · 2종일반주거×대</span>
+              <span>청주시 흥덕구</span>
+              <span>n=128</span>
+            </div>
+            <div class="learn-macro-mock__body">
+              <table>
+                <thead>
+                  <tr><th>분위</th><th>단가 (만/㎡)</th><th>의미</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Q1 (P25)</td><td>80.2</td><td>하위 25% 경계</td></tr>
+                  <tr class="is-highlight"><td>중앙 (P50)</td><td>118.6</td><td>중위단가</td></tr>
+                  <tr><td>Q3 (P75)</td><td>178.4</td><td>상위 25% 경계</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <figcaption class="learn-capture__caption">예시 화면 · 중간 50%는 Q1~Q3 사이입니다.</figcaption>
+          </figure>
+        </section>
+
+        <aside class="learn-caution" aria-label="주의">
+          <p class="learn-caution__title">주의</p>
+          <p>분위수는 <strong>표본 내 순위</strong>에 기반합니다. 거래 건수가 매우 적으면 Q1·Q3가 불안정해질 수 있습니다.</p>
+        </aside>
+
+        <details class="learn-more">
+          <summary>조금 더 알아보기</summary>
+          <div class="learn-more__body"><p>IQR = Q3 − Q1. 10·90분위수도 같은 원리입니다.</p></div>
+        </details>
+
+        <p class="learn-macro-cta">
+          <a href="https://macro.ch2data.com/land/">CH2 Macro에서 확인하기 →</a>
+          <span style="display: block; margin-top: 0.35rem; font-size: 0.8125rem; color: #64748b">토지 · 분위 단가</span>
+        </p>
+      </article>
+
+      <nav class="learn-chapter-nav" aria-label="장 이동">
+        <a href="/learn/stats/mean-and-median/">← 이전: 평균과 중앙값</a>
+        <a href="/learn/stats/spread/">다음: 분산과 표준편차 →</a>
+      </nav>
+
+      <footer class="footer">
+        <nav class="footer__links"><a href="https://ch2data.com/">홈</a><a href="/learn/stats/">통계학 &amp; 데이터 분석</a></nav>
+        <p>© CH2 DATA</p>
+      </footer>
+    </div>
+    <script src="/learn/stats/learn-stats-toc.js" defer></script>
+  </body>
+</html>

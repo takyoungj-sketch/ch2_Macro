@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>05. 이상치와 IQR | 통계학 &amp; 데이터 분석</title>
+    <meta name="description" content="IQR 1.5·2·3 배수와 이상치 제거. CH2 Macro 필터." />
+    <link rel="canonical" href="https://ch2data.com/learn/stats/iqr-outliers/" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero hero--document">
+        <p class="learn-breadcrumb">
+          <a href="https://ch2data.com/">CH2 DATA</a> ·
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </p>
+        <p class="hero__eyebrow">기술통계 · 05</p>
+        <h1 class="hero__title">이상치와 IQR</h1>
+      </header>
+
+      <article class="learn-chapter" aria-label="이상치와 IQR">
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">① 한 줄 정의</p>
+          <h2>통계에서 특이한 거래를 다루는 방법</h2>
+          <p>
+            실거래 목록에는 주변 거래와 비교해 단가가 매우 높거나 낮은 건이 섞여 있습니다.
+            <strong>IQR(사분위 범위)</strong>는 중간 50%의 퍼짐(Q3−Q1)을 잡고, 이를 기준으로
+            <strong>이상치</strong> 후보를 걸러 낼 수 있습니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step" id="iqr-multiplier">
+          <p class="learn-chapter__label">② 쉽게 이해하기</p>
+          <h2>IQR의 1.5 · 2 · 3 배수</h2>
+          <p>
+            흥덕구 2종일반×대에서 Q1=80만, Q3=180만이면 IQR=100만입니다. <strong>1.5배</strong> 기준
+            상한은 180+150=330만원입니다. 330만을 넘는 거래는 이상치 후보가 됩니다. Macro에서는
+            <strong>1.5 · 2 · 3</strong> 중 선택합니다. 배수가 클수록 더 많은 거래가 남습니다.
+          </p>
+          <figure class="learn-chart" aria-label="IQR Tukey fence">
+            <svg viewBox="0 0 360 120" role="img" aria-hidden="true">
+              <line x1="30" y1="60" x2="330" y2="60" stroke="#cbd5e1" stroke-width="2" />
+              <line x1="50" y1="40" x2="50" y2="80" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4 3" />
+              <line x1="290" y1="40" x2="290" y2="80" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4 3" />
+              <rect x="90" y="35" width="160" height="50" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2" rx="4" />
+              <circle cx="310" cy="60" r="6" fill="#dc2626" />
+            </svg>
+            <p class="learn-chart__caption">주황 점선 밖으로 튀는 거래가 이상치 후보입니다.</p>
+          </figure>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">③ 왜 이상치를 확인할까?</p>
+          <h2>분석 목적에 맞게 고르기</h2>
+          <p>
+            이상치 제거는 「잘못된 거래를 지운다」는 뜻이 아닙니다. 소수 조건 거래가 평균·회귀를
+            끌어올리는 것을 줄이고 「일반적인」 패턴을 보려는 선택입니다. 목적에 따라 제거하지
+            않는 것도 맞는 판단입니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">④ CH2 Macro에서는?</p>
+          <h2>IQR 필터 설정</h2>
+          <p>
+            토지·집합·복합 필터에서 IQR 배수를 선택해 이상치를 제외할 수 있습니다. 필터를 바꾸면
+            평균단가·회귀 결과가 달라지므로, 어떤 거래가 빠졌는지 목록과 함께 확인해 보시기 바랍니다.
+            화면의 <strong>?</strong> 링크로 이 페이지에 연결됩니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">⑤ Macro 화면</p>
+          <h2>필터분석 · IQR 이상치 제외</h2>
+          <figure class="learn-capture learn-macro-mock" aria-label="Macro IQR 필터">
+            <div class="learn-macro-mock__bar"><span><strong>토지</strong> · 필터분석</span><span>청주시 흥덕구</span></div>
+            <div class="learn-macro-mock__body">
+              <div class="learn-macro-mock__card">
+                <div class="learn-macro-mock__card-title">이상치 제외 (IQR) <span class="learn-macro-mock__help">?</span></div>
+                <div style="font-size: 0.625rem; color: #94a3b8; margin-top: 0.25rem">
+                  ☑ 이상치 제외 (IQR) &nbsp; IQR 배수 k: ○1.5 &nbsp; ○2 &nbsp; ○3
+                </div>
+                <div class="learn-macro-mock__card-metrics" style="margin-top: 0.45rem">
+                  적용 전 n=128 → 적용 후 n=119 (9건 제외)
+                </div>
+              </div>
+            </div>
+            <figcaption class="learn-capture__caption">예시 화면 · k를 바꾸면 제외 건수와 평균단가가 함께 변합니다.</figcaption>
+          </figure>
+        </section>
+
+        <aside class="learn-caution" aria-label="주의">
+          <p class="learn-caution__title">주의</p>
+          <p>이상치 제거는 <strong>분석 목적</strong>에 따른 선택입니다. 제거 = 잘못된 거래가 아닙니다.</p>
+        </aside>
+
+        <details class="learn-more">
+          <summary>조금 더 알아보기</summary>
+          <div class="learn-more__body">
+            <p>
+              Tukey fence: 하한 = Q1 − k×IQR, 상한 = Q3 + k×IQR (k=1.5·2·3). Macro는 k를 선택해
+              상·하위 꼬리 거래를 제외합니다.
+            </p>
+            <p>
+              IQR 배수를 키우면(3) 더 많은 거래가 남고, 평균·회귀는 극단값에 덜 민감해집니다. 반대로
+              1.5는 더 공격적으로 이상치를 걸러 냅니다.
+            </p>
+          </div>
+        </details>
+
+        <p class="learn-macro-cta">
+          <a href="https://macro.ch2data.com/land/">CH2 Macro에서 확인하기 →</a>
+          <span style="display: block; margin-top: 0.35rem; font-size: 0.8125rem; color: #64748b">토지 · 필터 · IQR 1.5 / 2 / 3</span>
+        </p>
+      </article>
+
+      <nav class="learn-chapter-nav" aria-label="장 이동">
+        <a href="/learn/stats/spread/">← 이전: 분산과 표준편차</a>
+        <a href="/learn/stats/sample-size/">다음: 표본수 →</a>
+      </nav>
+
+      <footer class="footer">
+        <nav class="footer__links"><a href="https://ch2data.com/">홈</a><a href="/learn/stats/">통계학 &amp; 데이터 분석</a></nav>
+        <p>© CH2 DATA</p>
+      </footer>
+    </div>
+    <script src="/learn/stats/learn-stats-toc.js" defer></script>
+  </body>
+</html>

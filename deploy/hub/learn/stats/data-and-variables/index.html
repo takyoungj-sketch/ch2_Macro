@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>01. 데이터와 변수 | 통계학 &amp; 데이터 분석</title>
+    <meta name="description" content="표본·모집단, 연속형·범주형 변수. CH2 Macro의 거래가격·면적·용도지역·지목." />
+    <link rel="canonical" href="https://ch2data.com/learn/stats/data-and-variables/" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero hero--document">
+        <p class="learn-breadcrumb">
+          <a href="https://ch2data.com/">CH2 DATA</a> ·
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </p>
+        <p class="hero__eyebrow">데이터 이해 · 01</p>
+        <h1 class="hero__title">데이터와 변수</h1>
+      </header>
+
+      <article class="learn-chapter" aria-label="데이터와 변수">
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">① 한 줄 정의</p>
+          <h2>Macro 화면에 보이는 숫자의 출처</h2>
+          <p>
+            Macro 토지·집합·복합 화면에 들어가면 거래 목록, 평균단가, 용도지역×지목 같은 숫자들이
+            나옵니다. 이 숫자들은 공중에 떠 있는 값이 아니라 <strong>거래 한 건 한 건에 붙어 있는
+            정보</strong>를 모아 계산한 결과입니다.
+          </p>
+          <p>
+            그래서 「평균단가가 왜 이렇게 나왔지?」를 이해하려면 먼저 각 거래에 어떤 항목(변수)이
+            있고, 우리가 지금 보고 있는 표본(데이터)이 무엇인지 구분할 수 있어야 합니다. 이 페이지는
+            그 출발점입니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">② 쉽게 이해하기</p>
+          <h2>토지 거래 한 건을 펼쳐 보면</h2>
+          <p>
+            부동산 거래자료 한 건에는 거래가격, 면적, 용도지역, 지목 등 여러 정보가 들어 있습니다.
+            이처럼 분석의 대상이 되는 개별 항목을 <strong>변수</strong>라고 부릅니다. 그리고 선택한
+            지역·기간에서 모아 온 거래 전체를 <strong>데이터</strong>(또는 <strong>표본</strong>)라고
+            부릅니다.
+          </p>
+          <p>아래는 같은 구역에서 모은 세 건의 예시입니다.</p>
+          <ul>
+            <li>거래 1 — 2.4억 · 330㎡ · 2종일반주거지역 · 대</li>
+            <li>거래 2 — 1.8억 · 280㎡ · 2종일반주거지역 · 대</li>
+            <li>거래 3 — 9.5억 · 1,200㎡ · 상업지역 · 대</li>
+          </ul>
+          <p>
+            세 건 모두 「토지 매매」라는 같은 거래 유형이지만, 변수 값은 서로 다릅니다. Macro에서
+            <strong>거래가격·면적</strong>은 숫자로 비교할 수 있어 <strong>연속형</strong>이고,
+            <strong>용도지역·지목</strong>은 이름으로 구분하는 <strong>범주형</strong>입니다.
+          </p>
+          <p>
+            필터에서 「2종일반주거지역×대」만 고르면 이 예시에서는 거래 1·2만 남습니다. 이때
+            Macro가 보여 주는 평균단가·건수는 <strong>남은 표본</strong>에 대한 요약입니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">③ 왜 변수 종류를 구분할까?</p>
+          <h2>연속형과 범주형</h2>
+          <p>
+            연속형 변수는 평균·분산·회귀처럼 숫자 연산을 적용할 수 있는 경우입니다. ㎡당 단가의
+            평균이 120만원인 것처럼 말할 수 있습니다. 범주형 변수는 그룹을 나누는 용도입니다.
+            「상업지역 거래만」「대 지목만」처럼 체크박스·칩으로 고르는 대부분의 필터 부분이
+            범주형입니다.
+          </p>
+          <p>
+            회귀실험에서는 범주형을 더미 변수(0/1)로 바꿔 「이 조건이냐 아니냐」를 숫자로
+            학습합니다. 반면 범주형에 그냥 평균을 내면 「평균 용도지역」처럼 해석할 수 없는 값이
+            나옵니다.
+          </p>
+          <p>
+            Macro 화면에서 어떤 칸은 평균·중위값이고, 어떤 칸은 건수·체크로 둘러싸이는 이유가
+            여기에 있습니다. 변수 종류를 알면, 각 숫자를 어떻게 읽어야 하는지 갈림길이 보입니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">④ CH2 Macro에서는?</p>
+          <h2>화면 표와 필터</h2>
+          <p>
+            토지 <strong>기본통계</strong>·<strong>용도지역×지목</strong> 표의 각 칸은, 선택한
+            범주 조합(용도지역×지목 등)에 한정된 거래들의 연속형 변수 요약입니다. 거래 목록의
+            <strong>열</strong>은 변수 이름, 각 <strong>행</strong>은 거래 한 건입니다.
+          </p>
+          <p>
+            집합·복합에서는 면적·층·연식·유형 등 변수를 회귀실험의 설명변수로 고릅니다. 화면
+            오른쪽이나 하단에 보이는 <strong>건수(n)</strong>는 지금 표본에 몇 건이 들어 있는지
+            알려 줍니다. 필터를 바꾸면 표본이 바뀌고, 그에 따라 평균·회귀 결과도 함께 바뀝니다.
+          </p>
+          <p>
+            모집단은 이론적으로 관심 있는 전체 시장이고, Macro에 보이는 것은 실제로 접근 가능한
+            <strong>공개 실거래 표본</strong>입니다. 표본에 없는 거래·시점은 숫자에 자동으로
+            포함되지 않습니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">⑤ Macro 화면</p>
+          <h2>용도지역×지목 표에서 변수 읽기</h2>
+          <p>
+            아래는 토지 Macro <strong>용도지역×지목</strong> 표의 구조를 단순화한 예시입니다. 행·열은
+            범주형 변수, 각 칸의 평균·건수는 연속형·개수 요약입니다.
+          </p>
+          <figure class="learn-capture learn-macro-mock" aria-label="Macro 토지 용도지역×지목 표 예시">
+            <div class="learn-macro-mock__bar">
+              <span><strong>토지</strong> · 기본통계</span>
+              <span>지역: 청주시 흥덕구</span>
+              <span>창: 3년 롤링</span>
+              <span>n=847</span>
+            </div>
+            <div class="learn-macro-mock__body">
+              <table>
+                <thead>
+                  <tr>
+                    <th>용도지역</th>
+                    <th>지목</th>
+                    <th>건수</th>
+                    <th>평균(만/㎡)</th>
+                    <th>중위(만/㎡)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="is-highlight">
+                    <td>2종일반주거</td>
+                    <td>대</td>
+                    <td>128</td>
+                    <td>142.3</td>
+                    <td>118.6</td>
+                  </tr>
+                  <tr>
+                    <td>2종일반주거</td>
+                    <td>전</td>
+                    <td>54</td>
+                    <td>89.1</td>
+                    <td>82.4</td>
+                  </tr>
+                  <tr>
+                    <td>상업지역</td>
+                    <td>대</td>
+                    <td>31</td>
+                    <td>318.7</td>
+                    <td>265.0</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <figcaption class="learn-capture__caption">
+              예시 화면 · 청주시 흥덕구 · 3년 롤링. 「2종일반주거×대」 칸을 누르면 해당 거래만
+              필터된 목록·추이로 이어집니다.
+            </figcaption>
+          </figure>
+        </section>
+
+        <aside class="learn-caution" aria-label="주의">
+          <p class="learn-caution__title">주의</p>
+          <p>
+            실거래 데이터는 그 시장의 모든 거래가 아니라 공개된 표본입니다. 표본에 없는 거래나
+            시점은 통계에 자동으로 들어가지 않습니다. 건수가 적을 때(예: 10건 미만)는 평균·분위
+            분석을 매우 조심해야 합니다.
+          </p>
+        </aside>
+
+        <details class="learn-more">
+          <summary>조금 더 알아보기</summary>
+          <div class="learn-more__body">
+            <h3>표본과 모집단</h3>
+            <p>
+              모집단은 관심 있는 전체 집합이고, 표본은 그중에서 실제로 관측한 일부입니다. 표본 평균과
+              모집단 평균은 다를 수 있습니다. 거래 건수가 많을수록 표본 통계는 해당 시장을 더
+              안정적으로 반영합니다. (→ <a href="/learn/stats/sample-size/">표본수</a>)
+            </p>
+            <h3>연속형·범주형·순서형</h3>
+            <p>
+              순서형(예: 층수의 고저)은 범주형이지만 크기 비교가 가능한 경우입니다. Macro 1차
+              화면에서는 연속형·범주형 구분만으로도 대부분의 숫자를 해석할 수 있습니다.
+            </p>
+          </div>
+        </details>
+
+        <p class="learn-macro-cta">
+          <a href="https://macro.ch2data.com/land/">CH2 Macro에서 확인하기 →</a>
+          <span style="display: block; margin-top: 0.35rem; font-size: 0.8125rem; color: #64748b"
+            >토지 · 기본통계 · 용도지역×지목</span
+          >
+        </p>
+      </article>
+
+      <nav class="learn-chapter-nav" aria-label="장 이동">
+        <a href="/learn/stats/">← 로드맵</a>
+        <a href="/learn/stats/mean-and-median/">다음: 평균과 중앙값 →</a>
+      </nav>
+
+      <footer class="footer">
+        <nav class="footer__links">
+          <a href="https://ch2data.com/">홈</a>
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </nav>
+        <p>© CH2 DATA</p>
+      </footer>
+    </div>
+    <script src="/learn/stats/learn-stats-toc.js" defer></script>
+  </body>
+</html>

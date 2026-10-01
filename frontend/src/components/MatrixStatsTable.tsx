@@ -75,6 +75,15 @@ function minColWidthForText(text: string): number {
   );
 }
 
+function LegendLabel({ label, termId }: { label: string; termId: string }) {
+  return (
+    <span className="inline-flex items-center justify-center gap-0.5">
+      {label}
+      <StatsGlossaryHelp termId={termId} size="xs" />
+    </span>
+  );
+}
+
 /** 무료 패널 상단(지역명 행 우측) 등에서 재사용 */
 export function MatrixStatsLegend({
   matchYearlyStatsHeight = false,
@@ -123,16 +132,22 @@ export function MatrixStatsLegend({
                 "matrix-mean-mid leading-tight",
               )}
             >
-              평균
+              <LegendLabel label="평균" termId="unit_price_mean" />
             </td>
-            <td className={cellClass}>25%값</td>
+            <td className={cellClass}>
+              <LegendLabel label="25%값" termId="quantile" />
+            </td>
           </tr>
           <tr style={matchYearlyStatsHeight ? { height: "20%" } : undefined}>
-            <td className={cellClass}>중위</td>
+            <td className={cellClass}>
+              <LegendLabel label="중위" termId="unit_price_median" />
+            </td>
           </tr>
           <tr style={matchYearlyStatsHeight ? { height: "20%" } : undefined}>
             <td className={cellClass}>표준편차</td>
-            <td className={cellClass}>75%값</td>
+            <td className={cellClass}>
+              <LegendLabel label="75%값" termId="quantile" />
+            </td>
           </tr>
           <tr style={matchYearlyStatsHeight ? { height: "20%" } : undefined}>
             <td className={cellClass}>신뢰구간(95%)</td>

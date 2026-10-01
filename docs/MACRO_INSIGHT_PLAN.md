@@ -13,6 +13,7 @@
 > D-055 · D-058 · D-073 · [`REGIONAL_PROFILE_POST_MVP_BACKLOG.md`](./REGIONAL_PROFILE_POST_MVP_BACKLOG.md) Phase G ·  
 > [`lab/G3_TIMESERIES_LAB.md`](lab/G3_TIMESERIES_LAB.md) ·  
 > [`lab/MACRO_ANNUAL_SCALE_LAB.md`](lab/MACRO_ANNUAL_SCALE_LAB.md) ·  
+> [`STATS_LEARN_PLAN.md`](./STATS_LEARN_PLAN.md) (Learn ↔ Insight·Macro `?` 연동) ·  
 > 1번 본문 [`MACRO_INSIGHT_01.md`](./MACRO_INSIGHT_01.md) ·  
 > 2번 본문 [`MACRO_INSIGHT_02.md`](./MACRO_INSIGHT_02.md) ·  
 > 3번 본문 [`MACRO_INSIGHT_03.md`](./MACRO_INSIGHT_03.md) ·  

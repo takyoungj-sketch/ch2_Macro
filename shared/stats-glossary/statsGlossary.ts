@@ -43,6 +43,21 @@ export const STATS_GLOSSARY: Record<string, StatsGlossaryEntry> = {
       "표본 n이 작으면 Adj R²도 불안정할 수 있습니다.",
     ],
   },
+  iqr_outliers: {
+    id: "iqr_outliers",
+    label: "IQR",
+    title: "IQR 이상치 제외",
+    definition:
+      "단가 분포에서 Q1−k×IQR 보다 작거나 Q3+k×IQR 보다 큰 거래를 제외합니다. k는 1.5·2·3 중 선택합니다.",
+    interpretation: [
+      "분석 목적에 따라 극단 단가를 빼고 「일반적인」 패턴을 보려는 필터입니다.",
+      "제거한 거래가 잘못된 거래라는 뜻은 아닙니다.",
+    ],
+    limitations: [
+      "제외 후 평균·회귀·분위수가 달라집니다.",
+      "표본이 작으면 IQR 자체가 불안정할 수 있습니다.",
+    ],
+  },
   mape: {
     id: "mape",
     label: "MAPE",
@@ -126,6 +141,39 @@ export const STATS_GLOSSARY: Record<string, StatsGlossaryEntry> = {
       "계수는 조건부 연관(통제 후)이며 인과를 단정하지 않습니다.",
       "범주형 변수는 기준 범주 대비 효과입니다.",
     ],
+  },
+  unit_price_mean: {
+    id: "unit_price_mean",
+    label: "평균",
+    title: "평균단가 (만원/㎡)",
+    definition: "선택한 표본에서 ㎡당 거래단가의 평균입니다. 모든 거래에 같은 비중을 둡니다.",
+    interpretation: [
+      "극단 고가·저가 거래에 민감할 수 있어 중위·분위와 함께 보는 것이 좋습니다.",
+      "IQR 이상치 제외 필터를 켜면 값이 달라집니다.",
+    ],
+    limitations: ["소표본에서는 한두 건에 크게 흔들릴 수 있습니다."],
+  },
+  unit_price_median: {
+    id: "unit_price_median",
+    label: "중위",
+    title: "중위단가 (만원/㎡)",
+    definition: "㎡당 거래단가를 크기순으로 나열했을 때 가운데(50%) 값입니다.",
+    interpretation: [
+      "「일반적인」 단가 수준을 볼 때 평균보다 안정적인 경우가 많습니다.",
+      "평균과 차이가 크면 분포가 한쪽으로 치우쳤을 수 있습니다.",
+    ],
+    limitations: ["상·하위 극단 구간 정보는 분위수를 함께 봅니다."],
+  },
+  quantile: {
+    id: "quantile",
+    label: "분위",
+    title: "분위수 (25% · 50% · 75%)",
+    definition: "표본을 크기순으로 나눴을 때 하위 25%·50%(중위)·75% 위치의 단가입니다.",
+    interpretation: [
+      "Q1~Q3(25%~75%)는 중간 50% 거래의 범위를 보여 줍니다.",
+      "IQR 이상치 제외는 이 범위를 기준으로 합니다.",
+    ],
+    limitations: ["표본이 작으면 분위 값이 몇 건 차이로 크게 바뀔 수 있습니다."],
   },
   fit_n: {
     id: "fit_n",

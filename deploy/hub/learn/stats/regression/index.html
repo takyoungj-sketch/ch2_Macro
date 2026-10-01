@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>08. 회귀분석 | 통계학 &amp; 데이터 분석</title>
+    <meta name="description" content="OLS 회귀와 설명변수. CH2 Macro 회귀실험." />
+    <link rel="canonical" href="https://ch2data.com/learn/stats/regression/" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero hero--document">
+        <p class="learn-breadcrumb">
+          <a href="https://ch2data.com/">CH2 DATA</a> ·
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </p>
+        <p class="hero__eyebrow">회귀분석 · 08</p>
+        <h1 class="hero__title">회귀분석</h1>
+      </header>
+
+      <article class="learn-chapter" aria-label="회귀분석">
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">① 한 줄 정의</p>
+          <h2>가격을 여러 요인으로 설명하는 방법</h2>
+          <p>
+            아파트 한 채의 면적이 1㎡ 늘면 가격이 얼마나 변하는가, 층수가 한 층 올라가면 단가가
+            얼마나 달라지는가처럼, 여러 변수와 거래가격의 관계를 <strong>회귀식</strong>으로
+            요약하는 방법이 <strong>회귀분석</strong>입니다. Macro 회귀실험의 핵심입니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">② 쉽게 이해하기</p>
+          <h2>직선으로 패턴을 잡아 보기</h2>
+          <p>
+            산점도 위에 데이터에 맞는 직선식을 그으면, 그 직선의 기울기와 절편을 회귀 계수로
+            얻습니다. 단순회귀는 설명변수 하나, 다중회귀는 여러 개를 동시에 씁니다. OLS(최소
+            제곱법)는 점과 직선 사이 거리 제곱의 합이 최소가 되도록 직선을 찾는 방법입니다.
+          </p>
+          <figure class="learn-chart" aria-label="회귀선">
+            <svg viewBox="0 0 360 160" role="img" aria-hidden="true">
+              <line x1="40" y1="130" x2="320" y2="130" stroke="#e2e8f0" />
+              <line x1="40" y1="130" x2="40" y2="30" stroke="#e2e8f0" />
+              <circle cx="80" cy="105" r="4" fill="#93c5fd" />
+              <circle cx="120" cy="90" r="4" fill="#93c5fd" />
+              <circle cx="160" cy="85" r="4" fill="#60a5fa" />
+              <circle cx="200" cy="70" r="4" fill="#60a5fa" />
+              <circle cx="240" cy="55" r="4" fill="#3b82f6" />
+              <circle cx="280" cy="45" r="4" fill="#1d4ed8" />
+              <line x1="60" y1="115" x2="300" y2="38" stroke="#1d4ed8" stroke-width="2.5" />
+              <text x="180" y="150" text-anchor="middle" fill="#64748b" font-size="10">회귀선 = 데이터에서 추정한 관계의 요약</text>
+            </svg>
+            <p class="learn-chart__caption">회귀선은 관측된 거래들의 패턴을 직선(또는 변환된 직선)으로 요약합니다.</p>
+          </figure>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">③ 회귀식이 가격을 어떻게 설명할까?</p>
+          <h2>계수의 의미</h2>
+          <p>
+            각 계수는 「다른 변수를 고정했을 때, 이 변수가 1단위 변할 때 가격이 평균적으로 얼마나
+            변하는가」를 뜻합니다. 다만 관측된 범위 밖으로 과하게 벗어난 값에 예측을 적용하면
+            (외삽) 결과가 불안정해질 수 있습니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">④ CH2 Macro에서는?</p>
+          <h2>회귀실험 · OLS</h2>
+          <p>
+            집합·복합 <strong>회귀실험</strong>에서 종속변수(보통 가격·단가)와 설명변수(면적, 층,
+            연식 등)를 선택해 OLS 회귀를 실행할 수 있습니다. 계수 표·R²·예측값은 이 페이지에서
+            다루는 개념들이 화면에 적용된 결과입니다.
+          </p>
+          <p>
+            흥덕구 아파트 표본에서 전용면적이 1㎡ 증가할 때 거래가격이 평균적으로 얼마나 변하는가를
+            계수로 읽을 수 있습니다. 표본(n)과 변수 선택에 따라 계수가 달라지므로, 결과와 함께
+            적합 n을 확인해 보시기 바랍니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">⑤ Macro 화면</p>
+          <h2>회귀실험 · 계수 표</h2>
+          <p>아래는 집합 Macro 회귀실험 결과를 단순화한 예시입니다.</p>
+          <figure class="learn-capture learn-macro-mock" aria-label="Macro 회귀실험 계수">
+            <div class="learn-macro-mock__bar">
+              <span><strong>집합</strong> · 회귀실험</span>
+              <span>청주시 흥덕구 · 아파트</span>
+              <span>n=128</span>
+            </div>
+            <div class="learn-macro-mock__body">
+              <div class="learn-macro-mock__card">
+                <div class="learn-macro-mock__card-title">
+                  OLS 회귀 · 선형
+                  <span class="learn-macro-mock__help" title="OLS 설명">?</span>
+                </div>
+                <table>
+                  <thead>
+                    <tr><th>변수</th><th>계수</th><th>읽기</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr class="is-highlight">
+                      <td>전용면적</td>
+                      <td>+412만/㎡</td>
+                      <td>면적 1㎡↑ → 가격 평균 +412만</td>
+                    </tr>
+                    <tr><td>층수</td><td>−8.4만/층</td><td>층수 1층↑ → 가격 평균 −8.4만</td></tr>
+                    <tr><td>상수</td><td>−,840만</td><td>기준점(해석 주의)</td></tr>
+                  </tbody>
+                </table>
+                <div class="learn-macro-mock__card-metrics" style="margin-top: 0.45rem">
+                  R² 0.74 · Adj R² 0.71 · 적합 n=112
+                </div>
+              </div>
+            </div>
+            <figcaption class="learn-capture__caption">
+              예시 화면 · 청주시 흥덕구. 계수는 「다른 변수를 고정했을 때」의 평균적 변화입니다.
+            </figcaption>
+          </figure>
+        </section>
+
+        <aside class="learn-caution" aria-label="주의">
+          <p class="learn-caution__title">주의</p>
+          <p>
+            회귀식을 관측 범위를 벗어난 <strong>외삽</strong>에 주의해야 합니다. 관측되지 않은
+            면적·층수 구간에 대한 예측은 신뢰하기 어렵습니다.
+          </p>
+        </aside>
+
+        <details class="learn-more">
+          <summary>조금 더 알아보기</summary>
+          <div class="learn-more__body">
+            <p>잔차·이분산·다중공선성 등은 2차 회귀 진단에서 다룹니다.</p>
+          </div>
+        </details>
+
+        <p class="learn-macro-cta">
+          <a href="https://macro.ch2data.com/collective/">CH2 Macro에서 확인하기 →</a>
+          <span style="display: block; margin-top: 0.35rem; font-size: 0.8125rem; color: #64748b"
+            >집합 · 회귀실험</span
+          >
+        </p>
+      </article>
+
+      <nav class="learn-chapter-nav" aria-label="장 이동">
+        <a href="/learn/stats/correlation/">← 이전: 상관관계</a>
+        <a href="/learn/stats/log-regression/">다음: 로그회귀 →</a>
+      </nav>
+
+      <footer class="footer">
+        <nav class="footer__links">
+          <a href="https://ch2data.com/">홈</a>
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </nav>
+        <p>© CH2 DATA</p>
+      </footer>
+    </div>
+    <script src="/learn/stats/learn-stats-toc.js" defer></script>
+  </body>
+</html>

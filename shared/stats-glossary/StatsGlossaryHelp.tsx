@@ -2,6 +2,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { getGlossaryEntry, type StatsGlossaryEntry } from "./statsGlossary";
+import { getStatsLearnUrl } from "./statsLearnLinks";
 import {
   boxesEqual,
   clampBox,
@@ -47,38 +48,52 @@ function BulletList({ items }: { items: string[] }) {
   );
 }
 
-function GlossaryBody({ entry }: { entry: StatsGlossaryEntry }) {
+function GlossaryBody({ entry, learnUrl }: { entry: StatsGlossaryEntry; learnUrl?: string }) {
   const hasThresholds = (entry.thresholds?.length ?? 0) > 0;
   return (
-    <div className={`gap-3 ${hasThresholds ? "grid sm:grid-cols-2" : "space-y-2.5"}`}>
-      <div className="space-y-2.5">
-        <Section title="정의">
-          <p>{entry.definition}</p>
-        </Section>
-        {entry.formula && (
-          <Section title="공식">
-            <p className="font-mono bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-indigo-400/50 rounded px-2 py-1 whitespace-normal break-words dark:text-indigo-100" style={{ fontSize: "0.92em" }}>
-              {entry.formula}
-            </p>
-          </Section>
-        )}
-        <Section title="해석">
-          <BulletList items={entry.interpretation} />
-        </Section>
-      </div>
-      {(hasThresholds || entry.limitations.length > 0) && (
+    <>
+      <div className={`gap-3 ${hasThresholds ? "grid sm:grid-cols-2" : "space-y-2.5"}`}>
         <div className="space-y-2.5">
-          {hasThresholds && (
-            <Section title="참고 기준">
-              <BulletList items={entry.thresholds!} />
+          <Section title="정의">
+            <p>{entry.definition}</p>
+          </Section>
+          {entry.formula && (
+            <Section title="공식">
+              <p className="font-mono bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-indigo-400/50 rounded px-2 py-1 whitespace-normal break-words dark:text-indigo-100" style={{ fontSize: "0.92em" }}>
+                {entry.formula}
+              </p>
             </Section>
           )}
-          <Section title="한계·주의">
-            <BulletList items={entry.limitations} />
+          <Section title="해석">
+            <BulletList items={entry.interpretation} />
           </Section>
         </div>
+        {(hasThresholds || entry.limitations.length > 0) && (
+          <div className="space-y-2.5">
+            {hasThresholds && (
+              <Section title="참고 기준">
+                <BulletList items={entry.thresholds!} />
+              </Section>
+            )}
+            <Section title="한계·주의">
+              <BulletList items={entry.limitations} />
+            </Section>
+          </div>
+        )}
+      </div>
+      {learnUrl && (
+        <p className="pt-2 mt-2 border-t border-slate-100 dark:border-slate-500">
+          <a
+            href={learnUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-indigo-600 dark:text-indigo-300 font-medium hover:underline"
+          >
+            통계학 &amp; 데이터 분석에서 더 보기 →
+          </a>
+        </p>
       )}
-    </div>
+    </>
   );
 }
 
@@ -181,6 +196,8 @@ export default function StatsGlossaryHelp({
 
   if (!entry) return null;
 
+  const learnUrl = getStatsLearnUrl(termId);
+
   const popup =
     open && box
       ? createPortal(
@@ -235,7 +252,7 @@ export default function StatsGlossaryHelp({
               </div>
             </div>
             <div className="ch2-glossary-popup-body" style={{ fontSize: fontPx }}>
-              <GlossaryBody entry={entry} />
+              <GlossaryBody entry={entry} learnUrl={learnUrl} />
               <p className="text-slate-400 dark:text-slate-300 pt-2 mt-2 border-t border-slate-100 dark:border-slate-500" style={{ fontSize: "0.8em" }}>
                 이번 결과 해석은 AI 어시스턴트에 질문하세요.
               </p>

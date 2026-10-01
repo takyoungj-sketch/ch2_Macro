@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>04. 분산과 표준편차 | 통계학 &amp; 데이터 분석</title>
+    <meta name="description" content="같은 평균인데 시장이 다른 경우. 분산·표준편차." />
+    <link rel="canonical" href="https://ch2data.com/learn/stats/spread/" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero hero--document">
+        <p class="learn-breadcrumb">
+          <a href="https://ch2data.com/">CH2 DATA</a> ·
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </p>
+        <p class="hero__eyebrow">기술통계 · 04</p>
+        <h1 class="hero__title">분산과 표준편차</h1>
+      </header>
+
+      <article class="learn-chapter" aria-label="분산과 표준편차">
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">① 한 줄 정의</p>
+          <h2>평균이 같다고 같은 시장이 아닙니다</h2>
+          <p>
+            두 구역의 평균단가가 같아도, 한쪽은 거래가 비슷한 가격대에 모여 있고 다른 쪽은 넓게
+            퍼져 있을 수 있습니다. <strong>분산</strong>과 <strong>표준편차</strong>는 값들이 평균
+            주변에서 얼마나 퍼져 있는지를 봅니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">② 쉽게 이해하기</p>
+          <h2>같은 평균 120만원, 다른 분포</h2>
+          <p>
+            A구역 단가가 115·118·120·122·125만원이고, B구역이 80·100·120·140·160만원이면 평균은
+            모두 120만원입니다. B구역은 훨씬 넓게 퍼져 있고, 표준편차가 큽니다.
+          </p>
+          <figure class="learn-chart" aria-label="같은 평균 다른 퍼짐">
+            <svg viewBox="0 0 360 140" role="img" aria-hidden="true">
+              <text x="90" y="22" text-anchor="middle" fill="#475569" font-size="11">A구역 (좁음)</text>
+              <path d="M30 80 Q90 30 150 80 Q90 50 30 80" fill="#93c5fd" opacity="0.7" />
+              <line x1="90" y1="28" x2="90" y2="95" stroke="#1d4ed8" stroke-width="2" stroke-dasharray="3 2" />
+              <text x="270" y="22" text-anchor="middle" fill="#475569" font-size="11">B구역 (넓음)</text>
+              <path d="M210 80 Q270 10 330 80 Q270 70 210 80" fill="#60a5fa" opacity="0.5" />
+              <line x1="270" y1="28" x2="270" y2="95" stroke="#1d4ed8" stroke-width="2" stroke-dasharray="3 2" />
+            </svg>
+            <p class="learn-chart__caption">평균이 같아도 분포가 다르면 시장 성격이 다릅니다.</p>
+          </figure>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">③ 같은 평균인데 시장이 다를 수 있을까?</p>
+          <h2>퍼짐을 함께 봐야 하는 이유</h2>
+          <p>
+            평균·중앙값은 중심만 알려 줍니다. 단가격이 얼마나 쭉쭉한 시장인지 보려면
+            분위수·IQR·표준편차를 함께 확인하는 것이 좋습니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">④ CH2 Macro에서는?</p>
+          <h2>분포 통계</h2>
+          <p>
+            Macro 지역통계에서는 최소·최대·분위·IQR 등 분포 관련 지표를 함께 제공합니다. 평균단가를
+            비교할 때 맞닿을 수 있는 최소·최대·표준편차도 같은 화면에서 확인할 수 있습니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">⑤ Macro 화면</p>
+          <h2>같은 평균, 다른 최소·최대</h2>
+          <figure class="learn-capture learn-macro-mock" aria-label="Macro 분포 비교">
+            <div class="learn-macro-mock__bar"><span><strong>토지</strong> · 용도지역×지목 비교</span><span>청주시 흥덕구</span></div>
+            <div class="learn-macro-mock__body">
+              <table>
+                <thead><tr><th>조합</th><th>평균</th><th>최소</th><th>최대</th><th>퍼짐</th></tr></thead>
+                <tbody>
+                  <tr><td>2종일반×대</td><td>142.3</td><td>62.1</td><td>318.0</td><td>넓음</td></tr>
+                  <tr class="is-highlight"><td>2종일반×전</td><td>89.1</td><td>71.4</td><td>108.2</td><td>좁음</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <figcaption class="learn-capture__caption">예시 화면 · 평균만 보면 비슷해 보이는 시장도 최소·최대·퍼짐이 다를 수 있습니다.</figcaption>
+          </figure>
+        </section>
+
+        <aside class="learn-caution" aria-label="주의">
+          <p class="learn-caution__title">주의</p>
+          <p>표준편차는 <strong>연속형 숫자 변수</strong>에 쓰는 지표입니다. 범주형에는 적용하지 않습니다.</p>
+        </aside>
+
+        <details class="learn-more"><summary>조금 더 알아보기</summary><div class="learn-more__body"><p>표준편차 = 분산의 제곱근입니다.</p></div></details>
+
+        <p class="learn-macro-cta">
+          <a href="https://macro.ch2data.com/land/">CH2 Macro에서 확인하기 →</a>
+          <span style="display: block; margin-top: 0.35rem; font-size: 0.8125rem; color: #64748b">토지 · 분포 통계</span>
+        </p>
+      </article>
+
+      <nav class="learn-chapter-nav" aria-label="장 이동">
+        <a href="/learn/stats/quantiles/">← 이전: 분위수</a>
+        <a href="/learn/stats/iqr-outliers/">다음: 이상치와 IQR →</a>
+      </nav>
+
+      <footer class="footer">
+        <nav class="footer__links"><a href="https://ch2data.com/">홈</a><a href="/learn/stats/">통계학 &amp; 데이터 분석</a></nav>
+        <p>© CH2 DATA</p>
+      </footer>
+    </div>
+    <script src="/learn/stats/learn-stats-toc.js" defer></script>
+  </body>
+</html>

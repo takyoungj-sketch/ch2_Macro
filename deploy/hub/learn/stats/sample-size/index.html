@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>06. 표본수와 통계의 신뢰성 | 통계학 &amp; 데이터 분석</title>
+    <meta name="description" content="거래 10건 vs 500건. 표본수와 통계 신뢰성." />
+    <link rel="canonical" href="https://ch2data.com/learn/stats/sample-size/" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero hero--document">
+        <p class="learn-breadcrumb">
+          <a href="https://ch2data.com/">CH2 DATA</a> ·
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </p>
+        <p class="hero__eyebrow">기술통계 · 06</p>
+        <h1 class="hero__title">표본수와 통계의 신뢰성</h1>
+      </header>
+
+      <article class="learn-chapter" aria-label="표본수와 통계의 신뢰성">
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">① 한 줄 정의</p>
+          <h2>거래 건수는 단순한 숫자가 아닙니다</h2>
+          <p>
+            Macro 화면의 <strong>거래 건수(n)</strong>는 지금 통계·회귀를 만든 표본의 크기입니다.
+            같은 평균단가라도 n=12건과 n=480건은 얼마나 믿을 수 있는 요약인지가 다릅니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">② 쉽게 이해하기</p>
+          <h2>10건과 500건의 차이</h2>
+          <p>
+            10건의 평균단가는 한두 건이 바뀌면 크게 흔들립니다. 500건이면 같은 비율의 변화가 평균에
+            미치는 영향이 상대적으로 작습니다. 회귀에서도 표본이나 변수가 많으면 계수가 불안정해질
+            수 있습니다.
+          </p>
+          <figure class="learn-chart" aria-label="표본수와 평균 안정성">
+            <svg viewBox="0 0 360 100" role="img" aria-hidden="true">
+              <text x="90" y="22" text-anchor="middle" fill="#475569" font-size="11">n = 10건</text>
+              <rect x="50" y="30" width="80" height="50" fill="#fca5a5" rx="4" />
+              <text x="90" y="58" text-anchor="middle" fill="#7f1d1d" font-size="10">평균 흔들림 큼</text>
+              <text x="270" y="22" text-anchor="middle" fill="#475569" font-size="11">n = 500건</text>
+              <rect x="230" y="30" width="80" height="50" fill="#93c5fd" rx="4" />
+              <text x="270" y="58" text-anchor="middle" fill="#1e3a8a" font-size="10">평균 안정적</text>
+            </svg>
+            <p class="learn-chart__caption">같은 시장이라도 건수가 많을 때 요약 통계가 더 안정됩니다.</p>
+          </figure>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">③ 거래 건수가 적으면 무엇이 달라질까?</p>
+          <h2>소표본에서의 함정</h2>
+          <p>
+            소표본에서는 우연히 들어온 고가·저가가 평균·회귀를 크게 바꿉니다. 분위수도 한두 건 차이로
+            값이 달라집니다. 필터를 조정해 표본을 넓히거나, 결과를 참고용으로만 쓰는 것이
+            좋습니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">④ CH2 Macro에서는?</p>
+          <h2>거래 건수 · 적합 n</h2>
+          <p>
+            지역통계·회귀실험·모형추천에 <strong>n</strong>이 표시됩니다. 회귀에서는 결측을 제외한
+            <strong>적합 n</strong>이 실제 추정에 쓰인 건수입니다. 통계를 읽을 때마다 n을 함께
+            확인해 보시기 바랍니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">⑤ Macro 화면</p>
+          <h2>건수 표시 위치</h2>
+          <figure class="learn-capture learn-macro-mock" aria-label="Macro 표본수">
+            <div class="learn-macro-mock__bar"><span><strong>토지</strong> · 용도지역×지목</span><span>청주시 흥덕구 · 2종일반×대</span></div>
+            <div class="learn-macro-mock__body">
+              <table>
+                <thead><tr><th>화면</th><th>건수</th><th>해석</th></tr></thead>
+                <tbody>
+                  <tr class="is-highlight"><td>매트릭스 셀</td><td>n=128</td><td>해당 조합 거래 수</td></tr>
+                  <tr><td>회귀 적합</td><td>n=112</td><td>결측 제외 후 적합 n</td></tr>
+                  <tr><td>소표본 셀</td><td>n=4</td><td>경리적 표시 · 참고용</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <figcaption class="learn-capture__caption">예시 화면 · n이 작은 칸은 평균·회귀를 과신하지 마세요.</figcaption>
+          </figure>
+        </section>
+
+        <aside class="learn-caution" aria-label="주의">
+          <p class="learn-caution__title">주의</p>
+          <p>실거래는 <strong>전체 시장의 표본</strong>입니다. 건수가 적을 때 결과를 과도하게 일반화하지 마세요.</p>
+        </aside>
+
+        <details class="learn-more">
+          <summary>조금 더 알아보기</summary>
+          <div class="learn-more__body">
+            <p>
+              표본이 커지면 평균의 <strong>표준오차</strong>는 전체적으로 √n에 반비례해 줄어듭니다. n=16에서
+              n=64로 늘리면 표준오차는 약 절반입니다.
+            </p>
+            <p>신뢰구간·유의성 검정은 2차 표본수·신뢰도에서 다룹니다.</p>
+          </div>
+        </details>
+
+        <p class="learn-macro-cta">
+          <a href="https://macro.ch2data.com/land/">CH2 Macro에서 확인하기 →</a>
+          <span style="display: block; margin-top: 0.35rem; font-size: 0.8125rem; color: #64748b">토지 · 거래 건수</span>
+        </p>
+      </article>
+
+      <nav class="learn-chapter-nav" aria-label="장 이동">
+        <a href="/learn/stats/iqr-outliers/">← 이전: 이상치와 IQR</a>
+        <a href="/learn/stats/correlation/">다음: 상관관계 →</a>
+      </nav>
+
+      <footer class="footer">
+        <nav class="footer__links"><a href="https://ch2data.com/">홈</a><a href="/learn/stats/">통계학 &amp; 데이터 분석</a></nav>
+        <p>© CH2 DATA</p>
+      </footer>
+    </div>
+    <script src="/learn/stats/learn-stats-toc.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>02. 평균과 중앙값 | 통계학 &amp; 데이터 분석</title>
+    <meta name="description" content="평균단가와 중위단가가 다른 이유. CH2 Macro 지역통계." />
+    <link rel="canonical" href="https://ch2data.com/learn/stats/mean-and-median/" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero hero--document">
+        <p class="learn-breadcrumb">
+          <a href="https://ch2data.com/">CH2 DATA</a> ·
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </p>
+        <p class="hero__eyebrow">데이터 이해 · 02</p>
+        <h1 class="hero__title">평균과 중앙값</h1>
+      </header>
+
+      <article class="learn-chapter" aria-label="평균과 중앙값">
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">① 한 줄 정의</p>
+          <h2>Macro에서 두 가지 대표 단가값</h2>
+          <p>
+            토지·집합 지역통계를 보면 <strong>평균단가</strong>와 <strong>중위단가</strong>가 나란히
+            보입니다. 두 숫자가 비슷하면 거래가 고르게 퍼져 있을 수 있고, 차이가 크면 소수의 고가·저가
+            거래가 평균을 끌고 갈 가능성이 있습니다.
+          </p>
+          <p>
+            평균과 중앙값(중위값)은 모두 데이터 시장의 대표 단가를 요약하는 방법이지만,
+            <strong>극단값에 민감한 정도</strong>가 다릅니다. Macro가 두 값을 함께 보여 주는 이유가
+            여기에 있습니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">② 쉽게 이해하기</p>
+          <h2>흥덕구 단가 다섯 건으로 비교해 보기</h2>
+          <p>
+            청주시 흥덕구 어떤 필터에서 해당 단가가 100만, 110만, 120만, 130만,
+            <strong>1,000만</strong>원인 거래 다섯 건이 있다고 해 보겠습니다.
+            <strong>평균</strong>은 다섯 값을 더해 5로 나눈 값으로 약 292만원입니다.
+            <strong>중앙값</strong>은 가운데 값으로 120만원입니다.
+          </p>
+          <p>
+            고가 한 건이 평균을 크게 끌어올렸지만, 중앙값은 「절반의 거래가 이 값 이하」라는 위치를
+            보여 줍니다. 부동산에서는 대형·특수 거래 때문에 평균과 중앙값이 자주 달라집니다.
+          </p>
+          <figure class="learn-chart" aria-label="평균과 중앙값 비교 그래프">
+            <svg viewBox="0 0 360 160" role="img" aria-hidden="true">
+              <text x="12" y="18" fill="#64748b" font-size="11">흥덕구 단가 분포 (예시)</text>
+              <rect x="40" y="110" width="28" height="35" fill="#93c5fd" rx="2" />
+              <rect x="72" y="100" width="28" height="45" fill="#93c5fd" rx="2" />
+              <rect x="104" y="90" width="28" height="55" fill="#93c5fd" rx="2" />
+              <rect x="136" y="80" width="28" height="65" fill="#60a5fa" rx="2" />
+              <rect x="168" y="30" width="28" height="115" fill="#1d4ed8" rx="2" />
+              <line x1="212" y1="24" x2="212" y2="148" stroke="#dc2626" stroke-width="2" stroke-dasharray="4 3" />
+              <text x="218" y="40" fill="#dc2626" font-size="11" font-weight="700">평균</text>
+              <line x1="118" y1="24" x2="118" y2="148" stroke="#059669" stroke-width="2" />
+              <text x="124" y="56" fill="#059669" font-size="11" font-weight="700">중앙값</text>
+            </svg>
+            <p class="learn-chart__caption">
+              고가 거래(진한 막대)가 있으면 평균(빨간 점선)이 중앙값(녹색)보다 오른쪽으로 치우칩니다.
+            </p>
+          </figure>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">③ 왜 평균만 보면 안 될까?</p>
+          <h2>극단값의 영향</h2>
+          <p>
+            평균은 모든 거래에 같은 비중을 두기 때문에, 한두 건의 초고가·초저가 거래에 크게 영향을
+            받습니다. 이 구역의 일반적인 단가 수준을 보려면 중앙값이나
+            <a href="/learn/stats/quantiles/">분위수</a>를 함께 보는 것이 안전합니다.
+          </p>
+          <p>
+            반대로 중앙값만 보면 상·하위 극단 구간 정보를 놓칠 수 있습니다. Macro는 두 값을 나란히
+            두어 「중심」과 「평균이 끌려가는 방향」의 차이를 함께 파악할 수 있게 합니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">④ CH2 Macro에서는?</p>
+          <h2>평균단가 · 중위단가</h2>
+          <p>
+            토지·집합·복합 <strong>지역통계</strong>와 용도지역×지목 표에서 평균·중위(중앙값) 단가가
+            함께 표시됩니다. 용도지역×지목 칸을 누르면 해당 조건의 거래만 모이고, 그 표본에 대한
+            평균·중위가 다시 계산됩니다.
+          </p>
+          <p>
+            평균 142만 · 중위 119만처럼 차이가 나면, 다음 단계로 거래 목록이나 분위 통계로 들어가
+            분포 모양을 확인해 보시기 바랍니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">⑤ Macro 화면</p>
+          <h2>지역통계에서 평균·중위 확인</h2>
+          <p>아래는 토지 Macro 지역통계 요약을 단순화한 예시입니다.</p>
+          <figure class="learn-capture learn-macro-mock" aria-label="Macro 평균 중위 단가">
+            <div class="learn-macro-mock__bar">
+              <span><strong>토지</strong> · 지역통계</span>
+              <span>청주시 흥덕구 · 2종일반주거×대</span>
+              <span>n=128</span>
+            </div>
+            <div class="learn-macro-mock__body">
+              <table>
+                <thead>
+                  <tr>
+                    <th>지표</th>
+                    <th>값 (만/㎡)</th>
+                    <th>설명</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>평균단가</td>
+                    <td class="is-highlight">142.3</td>
+                    <td>모든 거래에 동일 비중</td>
+                  </tr>
+                  <tr>
+                    <td>중위단가</td>
+                    <td class="is-highlight">118.6</td>
+                    <td>50% 위치 (중앙값)</td>
+                  </tr>
+                  <tr>
+                    <td>차이</td>
+                    <td>+23.7</td>
+                    <td>평균 &gt; 중위 → 우측 치우침</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <figcaption class="learn-capture__caption">
+              예시 화면 · 평균이 중위보다 크면 고가 거래가 평균을 끌어올렸을 수 있습니다.
+            </figcaption>
+          </figure>
+        </section>
+
+        <aside class="learn-caution" aria-label="주의">
+          <p class="learn-caution__title">주의</p>
+          <p>
+            평균은 <strong>극단값(고가·저가 거래)</strong>의 영향을 크게 받습니다. 평균단가만으로
+            시장을 요약하면 실제 체감과 다를 수 있습니다.
+          </p>
+        </aside>
+
+        <details class="learn-more">
+          <summary>조금 더 알아보기</summary>
+          <div class="learn-more__body">
+            <p>기하평균·조화평균 등도 있으나, Macro 1차 화면에서는 평균·중앙값·분위수가 핵심입니다.</p>
+          </div>
+        </details>
+
+        <p class="learn-macro-cta">
+          <a href="https://macro.ch2data.com/land/">CH2 Macro에서 확인하기 →</a>
+          <span style="display: block; margin-top: 0.35rem; font-size: 0.8125rem; color: #64748b"
+            >토지 · 지역통계 · 평균단가 / 중위단가</span
+          >
+        </p>
+      </article>
+
+      <nav class="learn-chapter-nav" aria-label="장 이동">
+        <a href="/learn/stats/data-and-variables/">← 이전: 데이터와 변수</a>
+        <a href="/learn/stats/quantiles/">다음: 분위수 →</a>
+      </nav>
+
+      <footer class="footer">
+        <nav class="footer__links">
+          <a href="https://ch2data.com/">홈</a>
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </nav>
+        <p>© CH2 DATA</p>
+      </footer>
+    </div>
+    <script src="/learn/stats/learn-stats-toc.js" defer></script>
+  </body>
+</html>

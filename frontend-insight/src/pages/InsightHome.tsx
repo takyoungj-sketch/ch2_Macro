@@ -65,6 +65,16 @@ export default function InsightHome() {
             </li>
           ))}
         </ol>
+        <p className="mt-8 text-sm text-center">
+          <a
+            href="https://ch2data.com/learn/stats/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-indigo-700 dark:text-indigo-300 font-medium hover:underline"
+          >
+            통계학 &amp; 데이터 분석 — Macro 용어·개념 설명 →
+          </a>
+        </p>
       </main>
     </>
   );

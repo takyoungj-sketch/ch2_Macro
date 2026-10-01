@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>09. 로그회귀와 변수변환 | 통계학 &amp; 데이터 분석</title>
+    <meta name="description" content="선형·log·log-log 모형. CH2 Macro 회귀실험." />
+    <link rel="canonical" href="https://ch2data.com/learn/stats/log-regression/" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero hero--document">
+        <p class="learn-breadcrumb">
+          <a href="https://ch2data.com/">CH2 DATA</a> ·
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </p>
+        <p class="hero__eyebrow">회귀분석 · 09</p>
+        <h1 class="hero__title">로그회귀와 변수변환</h1>
+      </header>
+
+      <article class="learn-chapter" aria-label="로그회귀와 변수변환">
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">① 한 줄 정의</p>
+          <h2>직선이 잘 맞지 않을 때 곡선을 다루기</h2>
+          <p>
+            가격·면적 관계를 단순 직선으로는 잘 맞지 않을 때, 변수에 <strong>로그(log)</strong>
+            변환을 적용해 패턴에 더 잘 맞추는 회귀모형을 쓸 수 있습니다. Macro 회귀실험에서 선형 /
+            log / log-log 모형을 선택할 수 있습니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">② 쉽게 이해하기</p>
+          <h2>부동산에서 흔한 이유</h2>
+          <p>
+            면적이 2배가 될 때 가격도 정확히 2배가 되지 않는 경우가 많습니다. 면적이 커질수록
+            단가가 낮아지는 등의 <strong>비율 관계가 아닌</strong> 패턴이 나올 수 있습니다. log
+            변환은 큰 숫자 간격을 줄여 주어, 이런 곡선 관계를 직선 회귀로 다루기 쉽게 만듭니다.
+          </p>
+          <p>
+            <strong>log-log</strong> 모형은 종속·설명 변수 모두에 log를 씁니다. 계수를 읽으면 「면적이 1%
+            늘면 가격이 몇 % 변한다」처럼 비율로 읽는 경우가 많습니다.
+          </p>
+          <figure class="learn-chart" aria-label="선형 vs 로그">
+            <svg viewBox="0 0 360 140" role="img" aria-hidden="true">
+              <text x="100" y="18" text-anchor="middle" fill="#64748b" font-size="10">선형 (직선)</text>
+              <line x1="30" y1="110" x2="170" y2="30" stroke="#94a3b8" stroke-width="2" />
+              <text x="280" y="18" text-anchor="middle" fill="#64748b" font-size="10">log (곡선 → 직선)</text>
+              <path d="M190 110 Q250 100 330 35" fill="none" stroke="#1d4ed8" stroke-width="2" />
+              <line x1="190" y1="110" x2="330" y2="35" stroke="#93c5fd" stroke-width="1.5" stroke-dasharray="3 2" />
+            </svg>
+            <p class="learn-chart__caption">면적이 커질수록 단가가 완만히 내려가는 패턴은 log 모형에 더 맞을 수 있습니다.</p>
+          </figure>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">③ 언제 log 변환을 쓸까?</p>
+          <h2>모형 형태의 선택</h2>
+          <p>
+            선형 모형이 잔차 패턴을 잘 설명하지 못하거나, 가격분포가 왼쪽으로 길게 늘어져 있을 때
+            log 모형을 시도해 볼 수 있습니다. 어떤 모형이 더 나은지는 R²만이 아니라 교차검증
+            지표(<a href="/learn/stats/cross-validation/">CV-MAPE</a>)를 함께 비교하는 것이
+            좋습니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">④ CH2 Macro에서는?</p>
+          <h2>회귀실험 모형 선택</h2>
+          <p>
+            회귀실험에서 <strong>선형</strong>, <strong>log</strong>, <strong>log-log</strong> 등
+            모형 형태를 고를 수 있습니다. 모형추천과 함께 쓰면 여러 형태 간 예측 성능을 나란히
+            비교할 수 있습니다.
+          </p>
+          <p>
+            같은 변수 조합이라도 모형 형태를 바꾸면 R²·계수 해석·CV-MAPE가 달라집니다. 선형과 log를
+            나란히 돌려 보고, 잔차 패턴과 교차검증 지표를 함께 비교하는 것이 좋습니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">⑤ Macro 화면</p>
+          <h2>회귀실험 · 모형 형태 선택</h2>
+          <figure class="learn-capture learn-macro-mock" aria-label="Macro 모형 형태">
+            <div class="learn-macro-mock__bar">
+              <span><strong>집합</strong> · 회귀실험</span>
+              <span>청주시 흥덕구 · 아파트</span>
+            </div>
+            <div class="learn-macro-mock__body">
+              <div class="learn-macro-mock__card">
+                <div class="learn-macro-mock__card-title">
+                  모형 형태
+                  <span class="learn-macro-mock__help" title="log 모형 설명">?</span>
+                </div>
+                <div style="font-size: 0.625rem; color: #94a3b8; margin-top: 0.25rem">
+                  ○ 선형 &nbsp; ● log &nbsp; ○ log-log
+                </div>
+                <div class="learn-macro-mock__card-metrics" style="margin-top: 0.45rem">
+                  전용면적 계수 0.82 → 「면적 1%↑ 시 가격 약 0.82%↑」(log-log 해석)
+                </div>
+                <div class="learn-macro-mock__card-metrics" style="margin-top: 0.25rem">
+                  R² 0.78 · Adj R² 0.75 · n=112
+                </div>
+              </div>
+            </div>
+            <figcaption class="learn-capture__caption">
+              예시 화면 · log-log 계수는 선형 모형과 단위·해석이 다릅니다.
+            </figcaption>
+          </figure>
+        </section>
+
+        <aside class="learn-caution" aria-label="주의">
+          <p class="learn-caution__title">주의</p>
+          <p>
+            log 변환 후 계수의 <strong>해석 단위</strong>가 달라집니다. 선형 모형과 log 모형의
+            계수를 같은 방식으로 비교하지 마십시오.
+          </p>
+        </aside>
+
+        <details class="learn-more">
+          <summary>조금 더 알아보기</summary>
+          <div class="learn-more__body">
+            <p>자연로그(ln)와 상용로그(log₁₀) 중 어떤 것을 쓰는지는 구현마다 다릅니다. Macro UI·문서에 맞춰 해석합니다.</p>
+          </div>
+        </details>
+
+        <p class="learn-macro-cta">
+          <a href="https://macro.ch2data.com/collective/">CH2 Macro에서 확인하기 →</a>
+          <span style="display: block; margin-top: 0.35rem; font-size: 0.8125rem; color: #64748b"
+            >집합 · 회귀실험 · 모형 형태</span
+          >
+        </p>
+      </article>
+
+      <nav class="learn-chapter-nav" aria-label="장 이동">
+        <a href="/learn/stats/regression/">← 이전: 회귀분석</a>
+        <a href="/learn/stats/model-fit/">다음: 회귀모형의 성능 →</a>
+      </nav>
+
+      <footer class="footer">
+        <nav class="footer__links">
+          <a href="https://ch2data.com/">홈</a>
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </nav>
+        <p>© CH2 DATA</p>
+      </footer>
+    </div>
+    <script src="/learn/stats/learn-stats-toc.js" defer></script>
+  </body>
+</html>
