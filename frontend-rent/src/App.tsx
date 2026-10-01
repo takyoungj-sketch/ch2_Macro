@@ -16,6 +16,7 @@ import {
 } from "./api/client";
 import { buildRentListContext } from "./api/aiContext";
 import AiAssistantPanel from "./components/AiAssistantPanel";
+import { Ai2HeaderSlot, singleScreenRegion } from "@ch2/ai2-entry/Ai2Entry";
 import { ActiveAiViewProvider, emptyAiContext, PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import BuildingDetailModal from "./components/BuildingDetailModal";
 import RegionChipPanel, {
@@ -338,7 +339,18 @@ export default function App() {
         onBumpFont={bumpUiFontScale}
         isDark={isDark}
         onToggleTheme={toggleUiColorScheme}
-        rightSlot={<AiAssistantPanel />}
+        rightSlot={
+          <Ai2HeaderSlot
+            domain="rent"
+            screenRegion={singleScreenRegion({
+              leaf: leafList,
+              gu: guList,
+              sigungu: formatScopeAddr2(addr2, addr1),
+            })}
+          >
+            <AiAssistantPanel />
+          </Ai2HeaderSlot>
+        }
       />
       <PublishAiContext context={rentAiContext} />
 

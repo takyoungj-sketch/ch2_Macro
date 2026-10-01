@@ -169,4 +169,5 @@ export const TOOL_WHY: Record<string, string[]> = {
   "sangkwon-apt": [],
   "apt-twin": [],
   "land-twin": [],
+  ai2: [],
 };

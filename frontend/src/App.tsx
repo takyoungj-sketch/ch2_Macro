@@ -1,13 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import CollapsibleLeftSidebar from "@ch2/macro-shell/CollapsibleLeftSidebar";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
 import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
+import { Ai2HeaderSlot } from "@ch2/ai2-entry/Ai2Entry";
 import { ActiveAiViewProvider, emptyAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import { CH2_AI_ACTION_EVENT, type AiScreenAction } from "@ch2/ai-assistant/aiActions";
+import { fetchRegions } from "./api/client";
+import { REGIONS_CATALOG_QUERY_KEY } from "./constants/regionsCatalog";
 import { useLandDeepLink } from "./hooks/useLandDeepLink";
 import { useAppStore } from "./store";
+import { landScreenRegion } from "./utils/upperTierStats";
 import RegionSelector from "./components/RegionSelector";
 import RegionMapHub, { type MapPanelMode } from "./components/RegionMapHub";
 import FreeStatsPanel from "./components/FreeStatsPanel";
@@ -16,7 +21,13 @@ import PaidFilterTable from "./components/PaidFilterTable";
 
 export default function App() {
   useLandDeepLink();
-  const { paidResultView } = useAppStore();
+  const { paidResultView, tierSelection } = useAppStore();
+  const { data: regions = [] } = useQuery({
+    queryKey: REGIONS_CATALOG_QUERY_KEY,
+    queryFn: () => fetchRegions(),
+    staleTime: 6 * 60 * 60 * 1000,
+  });
+  const screenRegion = useMemo(() => landScreenRegion(tierSelection, regions), [tierSelection, regions]);
   const [mapPanelMode, setMapPanelMode] = useState<MapPanelMode>("normal");
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
   const { isDark, toggleUiColorScheme } = useUiColorScheme();
@@ -50,7 +61,7 @@ export default function App() {
         onBumpFont={bumpUiFontScale}
         isDark={isDark}
         onToggleTheme={toggleUiColorScheme}
-        rightSlot={<AiAssistantPanel />}
+        rightSlot={<Ai2HeaderSlot domain="land" screenRegion={screenRegion}><AiAssistantPanel /></Ai2HeaderSlot>}
       />
 
       <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>

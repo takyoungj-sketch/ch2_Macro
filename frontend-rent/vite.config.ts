@@ -11,6 +11,7 @@ export default defineConfig({
       "@ch2/stats-glossary": path.resolve(__dirname, "../shared/stats-glossary"),
       "@ch2/stats-table-filter": path.resolve(__dirname, "../shared/stats-table-filter"),
       "@ch2/ai-assistant": path.resolve(__dirname, "../shared/ai-assistant"),
+      "@ch2/ai2-entry": path.resolve(__dirname, "../shared/ai2-entry"),
       clsx: path.resolve(__dirname, "node_modules/clsx"),
       axios: path.resolve(__dirname, "node_modules/axios"),
     },

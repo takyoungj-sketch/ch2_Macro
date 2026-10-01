@@ -1,4 +1,4 @@
-import type { FreeStatsV2Response, RegionLevel, UpperStatsV2Response } from "../types";
+import type { FreeStatsV2Response, RegionItem, RegionLevel, UpperStatsV2Response } from "../types";
 import type { TierCodes } from "./regionTier";
 import { isLegalDongWithoutRi } from "@ch2/region-picker";
 
@@ -63,6 +63,28 @@ export function resolveProfileRegionFromTier(
   }
 
   return { level: "beopjungri", code: beop, escalatedFromBeop: false };
+}
+
+function onlyCode(codes: readonly string[]): string {
+  const cleaned = codes.map((code) => code.trim()).filter(Boolean);
+  return cleaned.length === 1 ? cleaned[0]! : "";
+}
+
+/** AI2에 넘길 화면 지역 이름. 같은 단계에서 둘 이상이면 빈 문자열. */
+export function landScreenRegion(tier: TierCodes, regions: readonly RegionItem[]): string {
+  const beop = onlyCode(tier.beopjungri_codes);
+  if (tier.beopjungri_codes.map((code) => code.trim()).filter(Boolean).length > 1) return "";
+  if (beop) return regions.find((row) => row.beopjungri_code === beop)?.beopjungri_name ?? "";
+  const eup = onlyCode(tier.eupmyeondong_codes);
+  if (tier.eupmyeondong_codes.map((code) => code.trim()).filter(Boolean).length > 1) return "";
+  if (eup) return regions.find((row) => row.eupmyeondong_code === eup)?.eupmyeondong_name ?? "";
+  const sigungu = onlyCode(tier.sigungu_codes);
+  if (tier.sigungu_codes.map((code) => code.trim()).filter(Boolean).length > 1) return "";
+  if (sigungu) return regions.find((row) => row.sigungu_code === sigungu)?.sigungu_name ?? "";
+  const sido = onlyCode(tier.sido_codes);
+  if (tier.city_codes.map((code) => code.trim()).filter(Boolean).length > 0) return "";
+  if (sido) return regions.find((row) => row.sido_code === sido)?.sido_name ?? "";
+  return "";
 }
 
 /** `/paid/upper-stats/…` 응답을 FreeStatsV2Response 로 맞춤 — 기본통계 카드 재사용. */

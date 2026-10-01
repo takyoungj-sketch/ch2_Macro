@@ -23,6 +23,7 @@ import YieldCompareLab from "./components/YieldCompareLab";
 import SangkwonAptYieldLab from "./components/SangkwonAptYieldLab";
 import AptTwinRegressionLab from "./components/AptTwinRegressionLab";
 import LandTwinLab from "./components/LandTwinLab";
+import Ai2ProtocolLab from "./components/Ai2ProtocolLab";
 import WhyDecision, { WhyLinks } from "./components/WhyDecision";
 import { TOOL_WHY } from "./labContent";
 
@@ -47,7 +48,8 @@ export type LabTool =
   | "yield-compare"
   | "sangkwon-apt"
   | "apt-twin"
-  | "land-twin";
+  | "land-twin"
+  | "ai2";
 export type TwinPane = "v2" | "mape" | "scope";
 
 type LabParams = {
@@ -80,7 +82,8 @@ function readParams(): LabParams {
     t === "yield-compare" ||
     t === "sangkwon-apt" ||
     t === "apt-twin" ||
-    t === "land-twin"
+    t === "land-twin" ||
+    t === "ai2"
       ? t
       : null;
   const pane = q.get("pane");
@@ -337,6 +340,14 @@ export default function App() {
     return (
       <LabChrome title="토지 쌍둥이" whyIds={TOOL_WHY["land-twin"] ?? []} onWhy={setWhy} onBack={back}>
         <LandTwinLab />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "ai2") {
+    return (
+      <LabChrome title="AI2 프로토콜" whyIds={TOOL_WHY.ai2 ?? []} onWhy={setWhy} onBack={back}>
+        <Ai2ProtocolLab />
         {whyModal}
       </LabChrome>
     );

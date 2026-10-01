@@ -7,6 +7,7 @@ import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
 import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
+import { Ai2HeaderSlot } from "@ch2/ai2-entry/Ai2Entry";
 import { ActiveAiViewProvider, emptyAiContext } from "@ch2/ai-assistant/ActiveAiView";
 
 function parseSearchParams() {
@@ -45,7 +46,7 @@ export default function BuildingRegressionPage() {
           onBumpFont={bumpUiFontScale}
           isDark={isDark}
           onToggleTheme={toggleUiColorScheme}
-          rightSlot={<AiAssistantPanel />}
+          rightSlot={<Ai2HeaderSlot domain="collective"><AiAssistantPanel /></Ai2HeaderSlot>}
         />
         <div className="max-w-3xl mx-auto w-full p-4 md:p-6">
           <div className="card space-y-4">

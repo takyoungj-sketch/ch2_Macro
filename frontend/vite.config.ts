@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@ch2/ai-assistant": path.resolve(__dirname, "../shared/ai-assistant"),
+        "@ch2/ai2-entry": path.resolve(__dirname, "../shared/ai2-entry"),
         "@ch2/macro-shell": path.resolve(__dirname, "../shared/macro-shell"),
         "@ch2/region-picker": path.resolve(__dirname, "../shared/region-picker"),
         "@ch2/stats-glossary": path.resolve(__dirname, "../shared/stats-glossary"),

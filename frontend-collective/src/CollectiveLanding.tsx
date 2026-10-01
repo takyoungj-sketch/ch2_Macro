@@ -2,6 +2,7 @@ import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
 import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
+import { Ai2HeaderSlot } from "@ch2/ai2-entry/Ai2Entry";
 import { ActiveAiViewProvider, emptyAiContext } from "@ch2/ai-assistant/ActiveAiView";
 
 export default function CollectiveLanding() {
@@ -20,7 +21,7 @@ export default function CollectiveLanding() {
           onBumpFont={bumpUiFontScale}
           isDark={isDark}
           onToggleTheme={toggleUiColorScheme}
-          rightSlot={<AiAssistantPanel />}
+          rightSlot={<Ai2HeaderSlot domain="collective"><AiAssistantPanel /></Ai2HeaderSlot>}
         />
         <div className="max-w-3xl mx-auto px-5 py-12">
           <header className="text-center mb-10">

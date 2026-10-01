@@ -60,6 +60,7 @@ import {
   type AiScreenAction,
 } from "@ch2/ai-assistant/aiActions";
 import AiAssistantPanel from "./components/AiAssistantPanel";
+import { Ai2HeaderSlot, singleScreenRegion } from "@ch2/ai2-entry/Ai2Entry";
 import RegressionScatterSection from "./components/RegressionScatterSection";
 import ResidualDiagnosticsCard from "./components/ResidualDiagnosticsCard";
 import { buildBuiltRegressionContext } from "./api/aiClient";
@@ -1213,7 +1214,18 @@ export default function App() {
         onBumpFont={bumpUiFontScale}
         isDark={isDark}
         onToggleTheme={toggleUiColorScheme}
-        rightSlot={<AiAssistantPanel />}
+        rightSlot={
+          <Ai2HeaderSlot
+            domain="built"
+            screenRegion={singleScreenRegion({
+              leaf: leafList,
+              gu: guList,
+              sigungu: formatScopeAddr2(addr2, addr1),
+            })}
+          >
+            <AiAssistantPanel />
+          </Ai2HeaderSlot>
+        }
       />
 
       <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>

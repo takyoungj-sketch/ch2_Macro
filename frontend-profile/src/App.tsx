@@ -4,6 +4,7 @@ import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
 import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
+import { Ai2HeaderSlot } from "@ch2/ai2-entry/Ai2Entry";
 import { ActiveAiViewProvider, emptyAiContext, PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import { CH2_AI_ACTION_EVENT, type AiScreenAction } from "@ch2/ai-assistant/aiActions";
 import { fetchNationalRanks, fetchRegionalProfile, fetchRentProfileYearly, fetchTwinNeighbors, resolveRegionName } from "./api/profile";
@@ -229,7 +230,14 @@ export default function App() {
         onBumpFont={bumpUiFontScale}
         isDark={isDark}
         onToggleTheme={toggleUiColorScheme}
-        rightSlot={<AiAssistantPanel />}
+        rightSlot={
+          <Ai2HeaderSlot
+            domain="profile"
+            screenRegion={shortName && !/^\d+$/.test(shortName) ? shortName : ""}
+          >
+            <AiAssistantPanel />
+          </Ai2HeaderSlot>
+        }
       />
       <PublishAiContext context={profileAiContext} />
 

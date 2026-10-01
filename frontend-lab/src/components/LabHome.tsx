@@ -2,6 +2,11 @@ import type { LabTool } from "../App";
 
 const DOORS: { id: LabTool; title: string; desc: string }[] = [
   {
+    id: "ai2",
+    title: "AI2 프로토콜",
+    desc: "ask·call·offer·refuse 루프. 화면 어시스턴트와 세션이 분리된 같은 OpenAI 연결. 실데이터는 층 지수·쌍둥이·복합 예측.",
+  },
+  {
     id: "plan",
     title: "계획일지",
     desc: "토지 · 복합 · 집합 · 임대 · 지역프로필 · 관리 — 한 표로 오늘과 다음.",
