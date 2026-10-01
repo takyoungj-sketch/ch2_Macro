@@ -48,6 +48,38 @@
         background: #fff;
         cursor: pointer;
       }
+      .review-login {
+        margin: 1rem 0 0;
+        padding-top: 1rem;
+        border-top: 1px solid #e2e8f0;
+      }
+      .review-login h2 {
+        margin: 0 0 0.75rem;
+        font-size: 0.9375rem;
+        color: #334155;
+      }
+      .review-login__grid {
+        display: grid;
+        gap: 0.5rem;
+        max-width: 24rem;
+      }
+      .review-login__grid input {
+        width: 100%;
+        padding: 0.55rem 0.75rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font: inherit;
+      }
+      .review-login__grid button {
+        padding: 0.55rem 0.75rem;
+        border: 0;
+        border-radius: 8px;
+        background: #334155;
+        color: #fff;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
       #status { color: #334155; font-size: 0.9375rem; }
       #pay-note { margin-top: 1rem; color: #64748b; font-size: 0.9375rem; }
     </style>
@@ -68,6 +100,14 @@
           <button type="button" id="logout-btn" hidden>로그아웃</button>
           <span id="status">로그인이 필요합니다.</span>
         </div>
+        <section class="review-login" id="review-login" hidden>
+          <h2>심사용 로그인</h2>
+          <form class="review-login__grid" id="review-login-form">
+            <input type="email" id="review-email" autocomplete="username" placeholder="이메일" required />
+            <input type="password" id="review-password" autocomplete="current-password" placeholder="비밀번호" required />
+            <button type="submit">이메일로 로그인</button>
+          </form>
+        </section>
         <div class="plan-grid" id="plan-grid"></div>
         <p id="pay-note"></p>
         <p class="policy-meta" style="margin-top: 1.5rem">
@@ -95,9 +135,11 @@
         const data = await res.json();
         me = data.logged_in ? data : null;
         const kakaoOn = Boolean(data.providers && data.providers.kakao);
+        const reviewOn = Boolean(data.providers && data.providers.review);
         document.getElementById("login-btn").hidden = Boolean(me);
         document.getElementById("kakao-login-btn").hidden = Boolean(me) || !kakaoOn;
         document.getElementById("logout-btn").hidden = !me;
+        document.getElementById("review-login").hidden = Boolean(me) || !reviewOn;
         document.getElementById("status").textContent = me
           ? `${me.nickname}님 — Macro Pro 구독`
           : "로그인이 필요합니다.";
@@ -194,6 +236,22 @@
       });
       document.getElementById("logout-btn").addEventListener("click", async () => {
         await fetch(`${AUTH}/logout`, { method: "POST", credentials: "include" });
+        await refreshAuth();
+      });
+      document.getElementById("review-login-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const email = document.getElementById("review-email").value.trim();
+        const password = document.getElementById("review-password").value;
+        const res = await fetch(`${AUTH}/review-login`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        if (!res.ok) {
+          alert("이메일 또는 비밀번호가 올바르지 않습니다.");
+          return;
+        }
         await refreshAuth();
       });
 

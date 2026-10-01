@@ -21,14 +21,18 @@ from app.platform.deps import CurrentUser, get_optional_user, require_user
 from app.platform.entitlements import list_entitlements
 from app.platform.jwt_util import COOKIE_NAME, create_access_token
 from app.platform.oauth_next import DEFAULT_NEXT, safe_oauth_next
+from app.platform.review_login import (
+    clear_failures,
+    record_failure,
+    review_credentials_match,
+    review_login_configured,
+    too_many_attempts,
+)
 from app.platform.staff_login import (
     STAFF_SESSION_MINUTES,
-    clear_failures,
     client_ip,
     passwords_match,
-    record_failure,
     staff_password_configured,
-    too_many_attempts,
 )
 from app.platform.ops_events import VID_COOKIE, insert_event, new_visitor_id, normalize_visitor_id
 
@@ -87,6 +91,11 @@ class StaffLoginBody(BaseModel):
     password: str = Field(min_length=1, max_length=200)
 
 
+class ReviewLoginBody(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+    password: str = Field(min_length=1, max_length=200)
+
+
 def _cookie_domain() -> str | None:
     d = (settings.platform_cookie_domain or "").strip()
     return d or None
@@ -121,6 +130,10 @@ def _oauth_providers() -> dict[str, bool]:
         "google": bool(settings.google_client_id),
         "kakao": bool(kakao_id and (settings.kakao_client_secret or "").strip()),
         "staff": staff_password_configured(settings.platform_staff_password),
+        "review": review_login_configured(
+            settings.platform_review_email,
+            settings.platform_review_password,
+        ),
     }
 
 
@@ -369,6 +382,54 @@ def update_me(
         db.rollback()
         raise HTTPException(409, "닉네임이 이미 사용 중입니다.") from exc
     return {"nickname": nick}
+
+
+@router.post("/review-login")
+def review_login(
+    body: ReviewLoginBody,
+    request: Request,
+    db: Session = Depends(get_platform_db),
+):
+    expected_email = (settings.platform_review_email or "").strip()
+    expected_password = (settings.platform_review_password or "").strip()
+    if not review_login_configured(expected_email, expected_password):
+        raise HTTPException(404, "찾을 수 없습니다.")
+    ip = client_ip(request)
+    if too_many_attempts(ip):
+        raise HTTPException(429, "잠시 후 다시 시도해 주세요.")
+    if not review_credentials_match(
+        expected_email,
+        expected_password,
+        body.email.strip(),
+        body.password.strip(),
+    ):
+        record_failure(ip)
+        raise HTTPException(401, "이메일 또는 비밀번호가 올바르지 않습니다.")
+    email = expected_email.lower()
+    user_id, nickname, role = _get_or_create_oauth_user(
+        db,
+        provider="email",
+        sub=email,
+        email=email,
+        nickname_seed="review",
+    )
+    clear_failures(ip)
+    jwt_token = create_access_token(
+        user_id=user_id,
+        email=email,
+        nickname=nickname,
+        role=role,
+    )
+    payload = {
+        "ok": True,
+        "id": user_id,
+        "nickname": nickname,
+        "role": role,
+    }
+    response = JSONResponse(payload)
+    _set_session_cookie(response, jwt_token)
+    _log.info("review-login ok user_id=%s ip=%s", user_id, ip)
+    return response
 
 
 @router.post("/staff-login")
