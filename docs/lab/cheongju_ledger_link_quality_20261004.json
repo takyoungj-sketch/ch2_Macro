@@ -1,0 +1,24 @@
+{
+  "annual_unique": 7293,
+  "prior_unique": 6890,
+  "both_unique": 6769,
+  "different_pnu_when_both_unique": 3,
+  "annual_only_unique": 524,
+  "prior_only_unique": 121,
+  "features": {
+    "annual": {
+      "use": 1617,
+      "height": 21,
+      "shape": 22,
+      "road": 31,
+      "nonpositive_price": 0
+    },
+    "prior": {
+      "use": 1552,
+      "height": 22,
+      "shape": 22,
+      "road": 31,
+      "nonpositive_price": 0
+    }
+  }
+}

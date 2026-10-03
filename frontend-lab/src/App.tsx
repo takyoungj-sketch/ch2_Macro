@@ -23,6 +23,7 @@ import YieldCompareLab from "./components/YieldCompareLab";
 import SangkwonAptYieldLab from "./components/SangkwonAptYieldLab";
 import AptTwinRegressionLab from "./components/AptTwinRegressionLab";
 import LandTwinLab from "./components/LandTwinLab";
+import LandLotUnmaskLab from "./components/LandLotUnmaskLab";
 import Ai2ProtocolLab from "./components/Ai2ProtocolLab";
 import WhyDecision, { WhyLinks } from "./components/WhyDecision";
 import { TOOL_WHY } from "./labContent";
@@ -49,6 +50,7 @@ export type LabTool =
   | "sangkwon-apt"
   | "apt-twin"
   | "land-twin"
+  | "land-unmask"
   | "ai2";
 export type TwinPane = "v2" | "mape" | "scope";
 
@@ -83,6 +85,7 @@ function readParams(): LabParams {
     t === "sangkwon-apt" ||
     t === "apt-twin" ||
     t === "land-twin" ||
+    t === "land-unmask" ||
     t === "ai2"
       ? t
       : null;
@@ -348,6 +351,14 @@ export default function App() {
     return (
       <LabChrome title="AI2 프로토콜" whyIds={TOOL_WHY.ai2 ?? []} onWhy={setWhy} onBack={back}>
         <Ai2ProtocolLab />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "land-unmask") {
+    return (
+      <LabChrome title="토지 마스킹 제거" whyIds={TOOL_WHY["land-unmask"] ?? []} onWhy={setWhy} onBack={back}>
+        <LandLotUnmaskLab />
         {whyModal}
       </LabChrome>
     );

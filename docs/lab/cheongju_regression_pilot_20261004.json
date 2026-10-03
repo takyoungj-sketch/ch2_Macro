@@ -1,0 +1,1605 @@
+{
+  "run_date": "2026-10-04",
+  "sample": 6764,
+  "conflicting_pnu_excluded": 3,
+  "positive_filter_excluded": 2,
+  "trait_encoding": "Source A17/A19/A21/A23 codes normalized across years; blank/zero=UNKNOWN; raw labels retained for audit",
+  "method": "Same transaction hashes across policies and models; 2024 trains 2025, 2024-25 train 2026; log unit-price OLS; training-only rare categories threshold 30; no target-based outlier trim; Duan smearing; cluster covariance by matched PNU",
+  "baseline": "log(area)+year trend+BJD+transaction zone/jimok/road/deal categories; this exploratory pooled design is not an exact replay of a production modal",
+  "caveats": [
+    "Matches unverified; common linked complete sample not all land transactions",
+    "Annual source policy uses later observations and is retrospective, not leakage-free forecasting",
+    "Mean CI uses coefficient cluster covariance and delta method; excludes source/matching uncertainty and uncertainty in Duan factor",
+    "Cell observed means are noisy samples; cell mean error is exploratory, not true conditional mean accuracy",
+    "Repeated parcels may cross years; chronological holdout is not unseen-parcel validation",
+    "Rule thresholds were exploratory and not pre-registered operational gates"
+  ],
+  "results": [
+    {
+      "policy": "annual",
+      "test_year": 2025,
+      "model": "baseline",
+      "n_train": 2649,
+      "n_test": 2534,
+      "p": 28,
+      "rank": 28,
+      "train_adj_r2": 0.5260232672405465,
+      "test_log_rmse": 0.8201211653518099,
+      "test_mae_10k_sqm": 16.59619226327863,
+      "test_actual_mean_10k_sqm": 27.3112865035517,
+      "test_predicted_mean_10k_sqm": 27.880256788073005,
+      "mean_ci95_approx": [
+        26.432831777696748,
+        29.327681798449262
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.91682171478516,
+      "cells_n20": 25,
+      "unseen_test_categories": {
+        "beopjungri_code": 45,
+        "land_category": 4,
+        "zone_type": 0,
+        "road_condition": 0,
+        "deal_type": 0
+      },
+      "train_log_assessed_coef": null,
+      "train_log_area_coef": -0.1511676798791863,
+      "worst_test_log_errors": [
+        {
+          "transaction_hash": "b8828ca13a37f142b1478bf9302229a5346e6a58a7984e2b258ce7a7f0f80acc",
+          "pnu": "4311132027200390004",
+          "use": "자연림",
+          "road": "세로한면(불)",
+          "log_error": 3.8155632556182004,
+          "actual": 0.1,
+          "predicted": 6.429572294650029
+        },
+        {
+          "transaction_hash": "004fee0c21f6d2baaf7872edaf6f7c237ca1f2e24060f5e773c4316e9744cc9a",
+          "pnu": "4311132027200390002",
+          "use": "자연림",
+          "road": "세로한면(불)",
+          "log_error": 3.637266930511567,
+          "actual": 0.1,
+          "predicted": 5.379587475238121
+        },
+        {
+          "transaction_hash": "5a4cdb37b4948ce9465c0e19c9bd5d3bd92a2b56d94c9f4a0ad4666acf663f4c",
+          "pnu": "4311210300103740019",
+          "use": "아파트",
+          "road": "소로한면",
+          "log_error": 3.53051122336288,
+          "actual": 5.0,
+          "predicted": 241.74392192897307
+        },
+        {
+          "transaction_hash": "23c8423532b469cd0a6bdb69323f09dad8a784ed4a11decf1b354e5f61daf4df",
+          "pnu": "4311431031100400008",
+          "use": "토지임야",
+          "road": "세로한면(가)",
+          "log_error": 3.487471348031547,
+          "actual": 0.3,
+          "predicted": 13.893601354711018
+        },
+        {
+          "transaction_hash": "505ce72e40116b687ef050d9874e53dcd14b4ba813567e09160539c67e8f15df",
+          "pnu": "4311431044101800002",
+          "use": "단독",
+          "road": "세로한면(불)",
+          "log_error": 3.377420735268857,
+          "actual": 0.6,
+          "predicted": 24.891464853818615
+        }
+      ]
+    },
+    {
+      "policy": "annual",
+      "test_year": 2025,
+      "model": "assessed",
+      "n_train": 2649,
+      "n_test": 2534,
+      "p": 29,
+      "rank": 29,
+      "train_adj_r2": 0.723013765428677,
+      "test_log_rmse": 0.6384394522724619,
+      "test_mae_10k_sqm": 12.344113154602141,
+      "test_actual_mean_10k_sqm": 27.3112865035517,
+      "test_predicted_mean_10k_sqm": 28.156061649313447,
+      "mean_ci95_approx": [
+        27.105893129269514,
+        29.20623016935738
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.5289415593169045,
+      "cells_n20": 25,
+      "unseen_test_categories": {
+        "beopjungri_code": 45,
+        "land_category": 4,
+        "zone_type": 0,
+        "road_condition": 0,
+        "deal_type": 0
+      },
+      "train_log_assessed_coef": 0.8188872404221867,
+      "train_log_area_coef": -0.06659043862255878,
+      "worst_test_log_errors": [
+        {
+          "transaction_hash": "81ad164488bcc908eb3c8c3de2670e1b34d602c35fd4a1a7f009b87e7ea5c9be",
+          "pnu": "4311133025102320018",
+          "use": "주거기타",
+          "road": "세로한면(가)",
+          "log_error": 3.5550340282909185,
+          "actual": 0.7,
+          "predicted": 30.841280986476143
+        },
+        {
+          "transaction_hash": "5a4cdb37b4948ce9465c0e19c9bd5d3bd92a2b56d94c9f4a0ad4666acf663f4c",
+          "pnu": "4311210300103740019",
+          "use": "아파트",
+          "road": "소로한면",
+          "log_error": 3.325452850695929,
+          "actual": 5.0,
+          "predicted": 175.10499459649384
+        },
+        {
+          "transaction_hash": "505ce72e40116b687ef050d9874e53dcd14b4ba813567e09160539c67e8f15df",
+          "pnu": "4311431044101800002",
+          "use": "단독",
+          "road": "세로한면(불)",
+          "log_error": 3.214085211656431,
+          "actual": 0.6,
+          "predicted": 18.798077197888563
+        },
+        {
+          "transaction_hash": "3be23eee0539c4e22f2e345551ca57e0b6eeea84a6c3359ffcb48002b244ae0a",
+          "pnu": "4311425351201220001",
+          "use": "자연림",
+          "road": "맹지",
+          "log_error": 2.9641929507882834,
+          "actual": 0.1,
+          "predicted": 2.440255770534543
+        },
+        {
+          "transaction_hash": "02db83ace234c1b8feff12e7f2fd57cedd86d8345728fb9f95b499e8feb7d667",
+          "pnu": "4311231032200310005",
+          "use": "도로등",
+          "road": "맹지",
+          "log_error": -2.785883552977026,
+          "actual": 14.1,
+          "predicted": 1.0950349104107253
+        }
+      ]
+    },
+    {
+      "policy": "annual",
+      "test_year": 2025,
+      "model": "traits",
+      "n_train": 2649,
+      "n_test": 2534,
+      "p": 54,
+      "rank": 54,
+      "train_adj_r2": 0.5638240836374993,
+      "test_log_rmse": 0.7891966318695441,
+      "test_mae_10k_sqm": 16.626436722205906,
+      "test_actual_mean_10k_sqm": 27.3112865035517,
+      "test_predicted_mean_10k_sqm": 28.452369870961903,
+      "mean_ci95_approx": [
+        26.255152191841145,
+        30.64958755008266
+      ],
+      "cell_mean_mae_n20_10k_sqm": 4.2072880588685635,
+      "cells_n20": 25,
+      "unseen_test_categories": {
+        "beopjungri_code": 45,
+        "land_category": 4,
+        "zone_type": 0,
+        "road_condition": 0,
+        "deal_type": 0,
+        "use_code": 1472,
+        "height_code": 0,
+        "shape_code": 0,
+        "road_code": 0
+      },
+      "train_log_assessed_coef": null,
+      "train_log_area_coef": -0.12685059213217173,
+      "worst_test_log_errors": [
+        {
+          "transaction_hash": "23c8423532b469cd0a6bdb69323f09dad8a784ed4a11decf1b354e5f61daf4df",
+          "pnu": "4311431031100400008",
+          "use": "토지임야",
+          "road": "세로한면(가)",
+          "log_error": 3.7768007788713023,
+          "actual": 0.3,
+          "predicted": 18.19144852930237
+        },
+        {
+          "transaction_hash": "3be23eee0539c4e22f2e345551ca57e0b6eeea84a6c3359ffcb48002b244ae0a",
+          "pnu": "4311425351201220001",
+          "use": "자연림",
+          "road": "맹지",
+          "log_error": 3.4879444797395402,
+          "actual": 0.1,
+          "predicted": 4.542525045361129
+        },
+        {
+          "transaction_hash": "505ce72e40116b687ef050d9874e53dcd14b4ba813567e09160539c67e8f15df",
+          "pnu": "4311431044101800002",
+          "use": "단독",
+          "road": "세로한면(불)",
+          "log_error": 3.3238850111017344,
+          "actual": 0.6,
+          "predicted": 23.131215725854887
+        },
+        {
+          "transaction_hash": "81ad164488bcc908eb3c8c3de2670e1b34d602c35fd4a1a7f009b87e7ea5c9be",
+          "pnu": "4311133025102320018",
+          "use": "주거기타",
+          "road": "세로한면(가)",
+          "log_error": 3.2494826842137283,
+          "actual": 0.7,
+          "predicted": 25.05144194041303
+        },
+        {
+          "transaction_hash": "b8828ca13a37f142b1478bf9302229a5346e6a58a7984e2b258ce7a7f0f80acc",
+          "pnu": "4311132027200390004",
+          "use": "자연림",
+          "road": "세로한면(불)",
+          "log_error": 3.130242689664806,
+          "actual": 0.1,
+          "predicted": 3.1765040755698655
+        }
+      ]
+    },
+    {
+      "policy": "annual",
+      "test_year": 2025,
+      "model": "combined",
+      "n_train": 2649,
+      "n_test": 2534,
+      "p": 55,
+      "rank": 55,
+      "train_adj_r2": 0.7355451087662713,
+      "test_log_rmse": 0.6481656870730228,
+      "test_mae_10k_sqm": 12.630869608501802,
+      "test_actual_mean_10k_sqm": 27.3112865035517,
+      "test_predicted_mean_10k_sqm": 29.193474088497496,
+      "mean_ci95_approx": [
+        27.249063381727353,
+        31.137884795267638
+      ],
+      "cell_mean_mae_n20_10k_sqm": 4.24001748147374,
+      "cells_n20": 25,
+      "unseen_test_categories": {
+        "beopjungri_code": 45,
+        "land_category": 4,
+        "zone_type": 0,
+        "road_condition": 0,
+        "deal_type": 0,
+        "use_code": 1472,
+        "height_code": 0,
+        "shape_code": 0,
+        "road_code": 0
+      },
+      "train_log_assessed_coef": 0.8899238138332414,
+      "train_log_area_coef": -0.06314223291264728,
+      "worst_test_log_errors": [
+        {
+          "transaction_hash": "81ad164488bcc908eb3c8c3de2670e1b34d602c35fd4a1a7f009b87e7ea5c9be",
+          "pnu": "4311133025102320018",
+          "use": "주거기타",
+          "road": "세로한면(가)",
+          "log_error": 3.5095453199354045,
+          "actual": 0.7,
+          "predicted": 28.991683021775092
+        },
+        {
+          "transaction_hash": "5a4cdb37b4948ce9465c0e19c9bd5d3bd92a2b56d94c9f4a0ad4666acf663f4c",
+          "pnu": "4311210300103740019",
+          "use": "아파트",
+          "road": "소로한면",
+          "log_error": 3.4247910677391156,
+          "actual": 5.0,
+          "predicted": 190.25544197662578
+        },
+        {
+          "transaction_hash": "505ce72e40116b687ef050d9874e53dcd14b4ba813567e09160539c67e8f15df",
+          "pnu": "4311431044101800002",
+          "use": "단독",
+          "road": "세로한면(불)",
+          "log_error": 3.122757695303526,
+          "actual": 0.6,
+          "predicted": 16.879007533693056
+        },
+        {
+          "transaction_hash": "3be23eee0539c4e22f2e345551ca57e0b6eeea84a6c3359ffcb48002b244ae0a",
+          "pnu": "4311425351201220001",
+          "use": "자연림",
+          "road": "맹지",
+          "log_error": 3.0848882690011115,
+          "actual": 0.1,
+          "predicted": 2.708626816010456
+        },
+        {
+          "transaction_hash": "02db83ace234c1b8feff12e7f2fd57cedd86d8345728fb9f95b499e8feb7d667",
+          "pnu": "4311231032200310005",
+          "use": "도로등",
+          "road": "맹지",
+          "log_error": -3.0767281922395187,
+          "actual": 14.1,
+          "predicted": 0.8054011728354603
+        }
+      ]
+    },
+    {
+      "policy": "annual",
+      "test_year": 2025,
+      "model": "combined_restrictions",
+      "n_train": 2649,
+      "n_test": 2534,
+      "p": 59,
+      "rank": 59,
+      "train_adj_r2": 0.7381136668517261,
+      "test_log_rmse": 0.6513877117999043,
+      "test_mae_10k_sqm": 12.975359776394908,
+      "test_actual_mean_10k_sqm": 27.3112865035517,
+      "test_predicted_mean_10k_sqm": 29.79594430592034,
+      "mean_ci95_approx": [
+        27.82178095389207,
+        31.77010765794861
+      ],
+      "cell_mean_mae_n20_10k_sqm": 4.390660579743065,
+      "cells_n20": 25,
+      "unseen_test_categories": {
+        "beopjungri_code": 45,
+        "land_category": 4,
+        "zone_type": 0,
+        "road_condition": 0,
+        "deal_type": 0,
+        "use_code": 1472,
+        "height_code": 0,
+        "shape_code": 0,
+        "road_code": 0
+      },
+      "train_log_assessed_coef": 0.8761099867752781,
+      "train_log_area_coef": -0.06456185401241277,
+      "worst_test_log_errors": [
+        {
+          "transaction_hash": "81ad164488bcc908eb3c8c3de2670e1b34d602c35fd4a1a7f009b87e7ea5c9be",
+          "pnu": "4311133025102320018",
+          "use": "주거기타",
+          "road": "세로한면(가)",
+          "log_error": 3.4649110000405963,
+          "actual": 0.7,
+          "predicted": 27.67769426361325
+        },
+        {
+          "transaction_hash": "5a4cdb37b4948ce9465c0e19c9bd5d3bd92a2b56d94c9f4a0ad4666acf663f4c",
+          "pnu": "4311210300103740019",
+          "use": "아파트",
+          "road": "소로한면",
+          "log_error": 3.244928134972712,
+          "actual": 5.0,
+          "predicted": 158.65893237822937
+        },
+        {
+          "transaction_hash": "505ce72e40116b687ef050d9874e53dcd14b4ba813567e09160539c67e8f15df",
+          "pnu": "4311431044101800002",
+          "use": "단독",
+          "road": "세로한면(불)",
+          "log_error": 3.109352294268671,
+          "actual": 0.6,
+          "predicted": 16.625163847061774
+        },
+        {
+          "transaction_hash": "3be23eee0539c4e22f2e345551ca57e0b6eeea84a6c3359ffcb48002b244ae0a",
+          "pnu": "4311425351201220001",
+          "use": "자연림",
+          "road": "맹지",
+          "log_error": 3.090954215514013,
+          "actual": 0.1,
+          "predicted": 2.720348219457012
+        },
+        {
+          "transaction_hash": "02db83ace234c1b8feff12e7f2fd57cedd86d8345728fb9f95b499e8feb7d667",
+          "pnu": "4311231032200310005",
+          "use": "도로등",
+          "road": "맹지",
+          "log_error": -3.0422974788450228,
+          "actual": 14.1,
+          "predicted": 0.832158867388995
+        }
+      ]
+    },
+    {
+      "policy": "annual",
+      "test_year": 2026,
+      "model": "baseline",
+      "n_train": 5183,
+      "n_test": 1581,
+      "p": 65,
+      "rank": 65,
+      "train_adj_r2": 0.5713303679216416,
+      "test_log_rmse": 0.8664505659107837,
+      "test_mae_10k_sqm": 16.299528486765784,
+      "test_actual_mean_10k_sqm": 25.11094244149273,
+      "test_predicted_mean_10k_sqm": 29.942624032391354,
+      "mean_ci95_approx": [
+        27.570899555528527,
+        32.31434850925418
+      ],
+      "cell_mean_mae_n20_10k_sqm": 4.728080045220147,
+      "cells_n20": 22,
+      "unseen_test_categories": {
+        "beopjungri_code": 2,
+        "land_category": 0,
+        "zone_type": 0,
+        "road_condition": 0,
+        "deal_type": 0
+      },
+      "train_log_assessed_coef": null,
+      "train_log_area_coef": -0.12439378213007073,
+      "worst_test_log_errors": [
+        {
+          "transaction_hash": "6320240f88bd57305a1df8e081b612412705894cdda47e57459b320d96c4d12e",
+          "pnu": "4311332025102650011",
+          "use": "하천등",
+          "road": "소로한면",
+          "log_error": 5.643528847265685,
+          "actual": 0.1,
+          "predicted": 38.283266746984665
+        },
+        {
+          "transaction_hash": "fc7f77e216b49623d75a21ca02c889b6cf51f20573604c5263319c399d78799a",
+          "pnu": "4311332025102650013",
+          "use": "도로등",
+          "road": "소로한면",
+          "log_error": 5.312135480556417,
+          "actual": 0.2,
+          "predicted": 54.968852960659895
+        },
+        {
+          "transaction_hash": "f7a77a29ce203e65468cf06f728439f2a49ccb198e50d0e4bc1ff57e871377e6",
+          "pnu": "4311332028104560001",
+          "use": "도로등",
+          "road": "세로한면(가)",
+          "log_error": 4.098088440582212,
+          "actual": 0.2,
+          "predicted": 16.32535915192018
+        },
+        {
+          "transaction_hash": "7aaa2638fe28d4b8743b1c2c1788de8e98b128008c619330d7a01f3efcaa9597",
+          "pnu": "4311425347200650006",
+          "use": "자연림",
+          "road": "세로한면(가)",
+          "log_error": 3.2397073068551965,
+          "actual": 0.8,
+          "predicted": 27.67786240268717
+        },
+        {
+          "transaction_hash": "a5bf523db83c4319577136c028da195a17498f9a42e632ff6c47229be17b291d",
+          "pnu": "4311111900100560009",
+          "use": "도로등",
+          "road": "세로한면(가)",
+          "log_error": 3.1942257914875682,
+          "actual": 3.0,
+          "predicted": 99.17710854691114
+        }
+      ]
+    },
+    {
+      "policy": "annual",
+      "test_year": 2026,
+      "model": "assessed",
+      "n_train": 5183,
+      "n_test": 1581,
+      "p": 66,
+      "rank": 66,
+      "train_adj_r2": 0.7284740552805075,
+      "test_log_rmse": 0.7232231245236685,
+      "test_mae_10k_sqm": 13.054292526047755,
+      "test_actual_mean_10k_sqm": 25.11094244149273,
+      "test_predicted_mean_10k_sqm": 28.416163047318747,
+      "mean_ci95_approx": [
+        26.613376724413843,
+        30.21894937022365
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.3676091984703826,
+      "cells_n20": 22,
+      "unseen_test_categories": {
+        "beopjungri_code": 2,
+        "land_category": 0,
+        "zone_type": 0,
+        "road_condition": 0,
+        "deal_type": 0
+      },
+      "train_log_assessed_coef": 0.7951598745973247,
+      "train_log_area_coef": -0.06272428004191796,
+      "worst_test_log_errors": [
+        {
+          "transaction_hash": "6320240f88bd57305a1df8e081b612412705894cdda47e57459b320d96c4d12e",
+          "pnu": "4311332025102650011",
+          "use": "하천등",
+          "road": "소로한면",
+          "log_error": 6.294982568509727,
+          "actual": 0.1,
+          "predicted": 66.79041363721637
+        },
+        {
+          "transaction_hash": "fc7f77e216b49623d75a21ca02c889b6cf51f20573604c5263319c399d78799a",
+          "pnu": "4311332025102650013",
+          "use": "도로등",
+          "road": "소로한면",
+          "log_error": 5.784246012803006,
+          "actual": 0.2,
+          "predicted": 80.15563535360738
+        },
+        {
+          "transaction_hash": "87865c22d99fb20e0da96d43b6b765551af54b1bb45a7e99877af42d6a75380a",
+          "pnu": "4311325023104860001",
+          "use": "전",
+          "road": "세로한면(불)",
+          "log_error": 3.4347857345685338,
+          "actual": 0.4,
+          "predicted": 15.297005480257457
+        },
+        {
+          "transaction_hash": "f7a77a29ce203e65468cf06f728439f2a49ccb198e50d0e4bc1ff57e871377e6",
+          "pnu": "4311332028104560001",
+          "use": "도로등",
+          "road": "세로한면(가)",
+          "log_error": 3.3499631321500125,
+          "actual": 0.2,
+          "predicted": 7.026490095880797
+        },
+        {
+          "transaction_hash": "1f269a87b5890a3e9fda314544dd4774fe23fb5de35031cf2376c28b718d413c",
+          "pnu": "4311332028104570001",
+          "use": "전",
+          "road": "세로한면(불)",
+          "log_error": 3.266126673357154,
+          "actual": 0.3,
+          "predicted": 9.692146857985708
+        }
+      ]
+    },
+    {
+      "policy": "annual",
+      "test_year": 2026,
+      "model": "traits",
+      "n_train": 5183,
+      "n_test": 1581,
+      "p": 100,
+      "rank": 100,
+      "train_adj_r2": 0.6098009537509927,
+      "test_log_rmse": 0.8064693681426297,
+      "test_mae_10k_sqm": 15.3246302465609,
+      "test_actual_mean_10k_sqm": 25.11094244149273,
+      "test_predicted_mean_10k_sqm": 28.91861420346781,
+      "mean_ci95_approx": [
+        25.76009070619353,
+        32.07713770074209
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.717733171456253,
+      "cells_n20": 22,
+      "unseen_test_categories": {
+        "beopjungri_code": 2,
+        "land_category": 0,
+        "zone_type": 0,
+        "road_condition": 0,
+        "deal_type": 0,
+        "use_code": 0,
+        "height_code": 0,
+        "shape_code": 0,
+        "road_code": 0
+      },
+      "train_log_assessed_coef": null,
+      "train_log_area_coef": -0.10480755320578611,
+      "worst_test_log_errors": [
+        {
+          "transaction_hash": "6320240f88bd57305a1df8e081b612412705894cdda47e57459b320d96c4d12e",
+          "pnu": "4311332025102650011",
+          "use": "하천등",
+          "road": "소로한면",
+          "log_error": 4.685656557687922,
+          "actual": 0.1,
+          "predicted": 14.43666785409633
+        },
+        {
+          "transaction_hash": "fc7f77e216b49623d75a21ca02c889b6cf51f20573604c5263319c399d78799a",
+          "pnu": "4311332025102650013",
+          "use": "도로등",
+          "road": "소로한면",
+          "log_error": 4.503665332032567,
+          "actual": 0.2,
+          "predicted": 24.069062537946355
+        },
+        {
+          "transaction_hash": "f7a77a29ce203e65468cf06f728439f2a49ccb198e50d0e4bc1ff57e871377e6",
+          "pnu": "4311332028104560001",
+          "use": "도로등",
+          "road": "세로한면(가)",
+          "log_error": 3.51021780361755,
+          "actual": 0.2,
+          "predicted": 8.91272272222333
+        },
+        {
+          "transaction_hash": "87865c22d99fb20e0da96d43b6b765551af54b1bb45a7e99877af42d6a75380a",
+          "pnu": "4311325023104860001",
+          "use": "전",
+          "road": "세로한면(불)",
+          "log_error": 3.0694888936325575,
+          "actual": 0.4,
+          "predicted": 11.471871078579317
+        },
+        {
+          "transaction_hash": "1f269a87b5890a3e9fda314544dd4774fe23fb5de35031cf2376c28b718d413c",
+          "pnu": "4311332028104570001",
+          "use": "전",
+          "road": "세로한면(불)",
+          "log_error": 2.9495334158084416,
+          "actual": 0.3,
+          "predicted": 7.631317435526084
+        }
+      ]
+    },
+    {
+      "policy": "annual",
+      "test_year": 2026,
+      "model": "combined",
+      "n_train": 5183,
+      "n_test": 1581,
+      "p": 101,
+      "rank": 101,
+      "train_adj_r2": 0.7408271668292656,
+      "test_log_rmse": 0.7207904874617768,
+      "test_mae_10k_sqm": 12.566880407236159,
+      "test_actual_mean_10k_sqm": 25.11094244149273,
+      "test_predicted_mean_10k_sqm": 27.27611844371027,
+      "mean_ci95_approx": [
+        24.716392678131594,
+        29.835844209288947
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.0709054006526126,
+      "cells_n20": 22,
+      "unseen_test_categories": {
+        "beopjungri_code": 2,
+        "land_category": 0,
+        "zone_type": 0,
+        "road_condition": 0,
+        "deal_type": 0,
+        "use_code": 0,
+        "height_code": 0,
+        "shape_code": 0,
+        "road_code": 0
+      },
+      "train_log_assessed_coef": 0.890341940961578,
+      "train_log_area_coef": -0.045437327192615055,
+      "worst_test_log_errors": [
+        {
+          "transaction_hash": "6320240f88bd57305a1df8e081b612412705894cdda47e57459b320d96c4d12e",
+          "pnu": "4311332025102650011",
+          "use": "하천등",
+          "road": "소로한면",
+          "log_error": 6.936194472736657,
+          "actual": 0.1,
+          "predicted": 125.14210014613948
+        },
+        {
+          "transaction_hash": "fc7f77e216b49623d75a21ca02c889b6cf51f20573604c5263319c399d78799a",
+          "pnu": "4311332025102650013",
+          "use": "도로등",
+          "road": "소로한면",
+          "log_error": 6.283017253025142,
+          "actual": 0.2,
+          "predicted": 130.2453336190829
+        },
+        {
+          "transaction_hash": "f7a77a29ce203e65468cf06f728439f2a49ccb198e50d0e4bc1ff57e871377e6",
+          "pnu": "4311332028104560001",
+          "use": "도로등",
+          "road": "세로한면(가)",
+          "log_error": 3.636352137607642,
+          "actual": 0.2,
+          "predicted": 9.23272961964139
+        },
+        {
+          "transaction_hash": "87865c22d99fb20e0da96d43b6b765551af54b1bb45a7e99877af42d6a75380a",
+          "pnu": "4311325023104860001",
+          "use": "전",
+          "road": "세로한면(불)",
+          "log_error": 3.426832068724117,
+          "actual": 0.4,
+          "predicted": 14.97499559597431
+        },
+        {
+          "transaction_hash": "1f269a87b5890a3e9fda314544dd4774fe23fb5de35031cf2376c28b718d413c",
+          "pnu": "4311332028104570001",
+          "use": "전",
+          "road": "세로한면(불)",
+          "log_error": 3.2435460190633547,
+          "actual": 0.3,
+          "predicted": 9.350349551575809
+        }
+      ]
+    },
+    {
+      "policy": "annual",
+      "test_year": 2026,
+      "model": "combined_restrictions",
+      "n_train": 5183,
+      "n_test": 1581,
+      "p": 105,
+      "rank": 105,
+      "train_adj_r2": 0.7420554082914668,
+      "test_log_rmse": 0.7137723459308625,
+      "test_mae_10k_sqm": 12.26514395440839,
+      "test_actual_mean_10k_sqm": 25.11094244149273,
+      "test_predicted_mean_10k_sqm": 27.12642755389928,
+      "mean_ci95_approx": [
+        24.602181314523733,
+        29.650673793274827
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.1667445301139026,
+      "cells_n20": 22,
+      "unseen_test_categories": {
+        "beopjungri_code": 2,
+        "land_category": 0,
+        "zone_type": 0,
+        "road_condition": 0,
+        "deal_type": 0,
+        "use_code": 0,
+        "height_code": 0,
+        "shape_code": 0,
+        "road_code": 0
+      },
+      "train_log_assessed_coef": 0.8814989937860231,
+      "train_log_area_coef": -0.04764586736388744,
+      "worst_test_log_errors": [
+        {
+          "transaction_hash": "6320240f88bd57305a1df8e081b612412705894cdda47e57459b320d96c4d12e",
+          "pnu": "4311332025102650011",
+          "use": "하천등",
+          "road": "소로한면",
+          "log_error": 6.887293019121254,
+          "actual": 0.1,
+          "predicted": 119.02925312276165
+        },
+        {
+          "transaction_hash": "fc7f77e216b49623d75a21ca02c889b6cf51f20573604c5263319c399d78799a",
+          "pnu": "4311332025102650013",
+          "use": "도로등",
+          "road": "소로한면",
+          "log_error": 6.258490915001697,
+          "actual": 0.2,
+          "predicted": 126.93997842333833
+        },
+        {
+          "transaction_hash": "f7a77a29ce203e65468cf06f728439f2a49ccb198e50d0e4bc1ff57e871377e6",
+          "pnu": "4311332028104560001",
+          "use": "도로등",
+          "road": "세로한면(가)",
+          "log_error": 3.643324556142905,
+          "actual": 0.2,
+          "predicted": 9.286372519508147
+        },
+        {
+          "transaction_hash": "87865c22d99fb20e0da96d43b6b765551af54b1bb45a7e99877af42d6a75380a",
+          "pnu": "4311325023104860001",
+          "use": "전",
+          "road": "세로한면(불)",
+          "log_error": 3.4280409991160763,
+          "actual": 0.4,
+          "predicted": 14.975441538032522
+        },
+        {
+          "transaction_hash": "1f269a87b5890a3e9fda314544dd4774fe23fb5de35031cf2376c28b718d413c",
+          "pnu": "4311332028104570001",
+          "use": "전",
+          "road": "세로한면(불)",
+          "log_error": 3.2487493531891554,
+          "actual": 0.3,
+          "predicted": 9.388052875335244
+        }
+      ]
+    },
+    {
+      "policy": "observed_before_trade",
+      "test_year": 2025,
+      "model": "baseline",
+      "n_train": 2649,
+      "n_test": 2534,
+      "p": 28,
+      "rank": 28,
+      "train_adj_r2": 0.5260232672405465,
+      "test_log_rmse": 0.8201211653518099,
+      "test_mae_10k_sqm": 16.59619226327863,
+      "test_actual_mean_10k_sqm": 27.3112865035517,
+      "test_predicted_mean_10k_sqm": 27.880256788073005,
+      "mean_ci95_approx": [
+        26.432831777696748,
+        29.327681798449262
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.91682171478516,
+      "cells_n20": 25,
+      "unseen_test_categories": {
+        "beopjungri_code": 45,
+        "land_category": 4,
+        "zone_type": 0,
+        "road_condition": 0,
+        "deal_type": 0
+      },
+      "train_log_assessed_coef": null,
+      "train_log_area_coef": -0.1511676798791863,
+      "worst_test_log_errors": [
+        {
+          "transaction_hash": "b8828ca13a37f142b1478bf9302229a5346e6a58a7984e2b258ce7a7f0f80acc",
+          "pnu": "4311132027200390004",
+          "use": "자연림",
+          "road": "세로(불)",
+          "log_error": 3.8155632556182004,
+          "actual": 0.1,
+          "predicted": 6.429572294650029
+        },
+        {
+          "transaction_hash": "004fee0c21f6d2baaf7872edaf6f7c237ca1f2e24060f5e773c4316e9744cc9a",
+          "pnu": "4311132027200390002",
+          "use": "자연림",
+          "road": "세로(불)",
+          "log_error": 3.637266930511567,
+          "actual": 0.1,
+          "predicted": 5.379587475238121
+        },
+        {
+          "transaction_hash": "5a4cdb37b4948ce9465c0e19c9bd5d3bd92a2b56d94c9f4a0ad4666acf663f4c",
+          "pnu": "4311210300103740019",
+          "use": "아파트",
+          "road": "소로한면",
+          "log_error": 3.53051122336288,
+          "actual": 5.0,
+          "predicted": 241.74392192897307
+        },
+        {
+          "transaction_hash": "23c8423532b469cd0a6bdb69323f09dad8a784ed4a11decf1b354e5f61daf4df",
+          "pnu": "4311431031100400008",
+          "use": "토지임야",
+          "road": "세로(가)",
+          "log_error": 3.487471348031547,
+          "actual": 0.3,
+          "predicted": 13.893601354711018
+        },
+        {
+          "transaction_hash": "505ce72e40116b687ef050d9874e53dcd14b4ba813567e09160539c67e8f15df",
+          "pnu": "4311431044101800002",
+          "use": "단독",
+          "road": "세로한면(불)",
+          "log_error": 3.377420735268857,
+          "actual": 0.6,
+          "predicted": 24.891464853818615
+        }
+      ]
+    },
+    {
+      "policy": "observed_before_trade",
+      "test_year": 2025,
+      "model": "assessed",
+      "n_train": 2649,
+      "n_test": 2534,
+      "p": 29,
+      "rank": 29,
+      "train_adj_r2": 0.7223188409828498,
+      "test_log_rmse": 0.6384857747390643,
+      "test_mae_10k_sqm": 12.247191715258491,
+      "test_actual_mean_10k_sqm": 27.3112865035517,
+      "test_predicted_mean_10k_sqm": 27.91221289579323,
+      "mean_ci95_approx": [
+        26.87160018114241,
+        28.952825610444048
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.390825121000756,
+      "cells_n20": 25,
+      "unseen_test_categories": {
+        "beopjungri_code": 45,
+        "land_category": 4,
+        "zone_type": 0,
+        "road_condition": 0,
+        "deal_type": 0
+      },
+      "train_log_assessed_coef": 0.816697227094681,
+      "train_log_area_coef": -0.06606907373424213,
+      "worst_test_log_errors": [
+        {
+          "transaction_hash": "81ad164488bcc908eb3c8c3de2670e1b34d602c35fd4a1a7f009b87e7ea5c9be",
+          "pnu": "4311133025102320018",
+          "use": "주거기타",
+          "road": "세로(가)",
+          "log_error": 3.5353396598443694,
+          "actual": 0.7,
+          "predicted": 30.247974986169638
+        },
+        {
+          "transaction_hash": "5a4cdb37b4948ce9465c0e19c9bd5d3bd92a2b56d94c9f4a0ad4666acf663f4c",
+          "pnu": "4311210300103740019",
+          "use": "아파트",
+          "road": "소로한면",
+          "log_error": 3.317047410172947,
+          "actual": 5.0,
+          "predicted": 173.68613461819737
+        },
+        {
+          "transaction_hash": "505ce72e40116b687ef050d9874e53dcd14b4ba813567e09160539c67e8f15df",
+          "pnu": "4311431044101800002",
+          "use": "단독",
+          "road": "세로한면(불)",
+          "log_error": 3.217250593337681,
+          "actual": 0.6,
+          "predicted": 18.862757837089053
+        },
+        {
+          "transaction_hash": "3be23eee0539c4e22f2e345551ca57e0b6eeea84a6c3359ffcb48002b244ae0a",
+          "pnu": "4311425351201220001",
+          "use": "자연림",
+          "road": "맹지",
+          "log_error": 2.922810711272191,
+          "actual": 0.1,
+          "predicted": 2.3419645817969217
+        },
+        {
+          "transaction_hash": "23c8423532b469cd0a6bdb69323f09dad8a784ed4a11decf1b354e5f61daf4df",
+          "pnu": "4311431031100400008",
+          "use": "토지임야",
+          "road": "세로(가)",
+          "log_error": 2.8186782791036933,
+          "actual": 0.3,
+          "predicted": 6.331074686869338
+        }
+      ]
+    },
+    {
+      "policy": "observed_before_trade",
+      "test_year": 2025,
+      "model": "traits",
+      "n_train": 2649,
+      "n_test": 2534,
+      "p": 56,
+      "rank": 56,
+      "train_adj_r2": 0.5633432698055139,
+      "test_log_rmse": 0.7945373897425541,
+      "test_mae_10k_sqm": 17.031530461370703,
+      "test_actual_mean_10k_sqm": 27.3112865035517,
+      "test_predicted_mean_10k_sqm": 28.84400212241159,
+      "mean_ci95_approx": [
+        27.380004103380365,
+        30.308000141442818
+      ],
+      "cell_mean_mae_n20_10k_sqm": 4.601247626599377,
+      "cells_n20": 25,
+      "unseen_test_categories": {
+        "beopjungri_code": 45,
+        "land_category": 4,
+        "zone_type": 0,
+        "road_condition": 0,
+        "deal_type": 0,
+        "use_code": 5,
+        "height_code": 0,
+        "shape_code": 0,
+        "road_code": 0
+      },
+      "train_log_assessed_coef": null,
+      "train_log_area_coef": -0.12647013579143443,
+      "worst_test_log_errors": [
+        {
+          "transaction_hash": "23c8423532b469cd0a6bdb69323f09dad8a784ed4a11decf1b354e5f61daf4df",
+          "pnu": "4311431031100400008",
+          "use": "토지임야",
+          "road": "세로(가)",
+          "log_error": 3.76449020478141,
+          "actual": 0.3,
+          "predicted": 17.974980350425746
+        },
+        {
+          "transaction_hash": "3be23eee0539c4e22f2e345551ca57e0b6eeea84a6c3359ffcb48002b244ae0a",
+          "pnu": "4311425351201220001",
+          "use": "자연림",
+          "road": "맹지",
+          "log_error": 3.490933131085612,
+          "actual": 0.1,
+          "predicted": 4.557669635634145
+        },
+        {
+          "transaction_hash": "505ce72e40116b687ef050d9874e53dcd14b4ba813567e09160539c67e8f15df",
+          "pnu": "4311431044101800002",
+          "use": "단독",
+          "road": "세로한면(불)",
+          "log_error": 3.322051239636444,
+          "actual": 0.6,
+          "predicted": 23.09668327061266
+        },
+        {
+          "transaction_hash": "81ad164488bcc908eb3c8c3de2670e1b34d602c35fd4a1a7f009b87e7ea5c9be",
+          "pnu": "4311133025102320018",
+          "use": "주거기타",
+          "road": "세로(가)",
+          "log_error": 3.174816980548375,
+          "actual": 0.7,
+          "predicted": 23.25698336221023
+        },
+        {
+          "transaction_hash": "b8828ca13a37f142b1478bf9302229a5346e6a58a7984e2b258ce7a7f0f80acc",
+          "pnu": "4311132027200390004",
+          "use": "자연림",
+          "road": "세로(불)",
+          "log_error": 3.1198879540238913,
+          "actual": 0.1,
+          "predicted": 3.14485024139302
+        }
+      ]
+    },
+    {
+      "policy": "observed_before_trade",
+      "test_year": 2025,
+      "model": "combined",
+      "n_train": 2649,
+      "n_test": 2534,
+      "p": 57,
+      "rank": 57,
+      "train_adj_r2": 0.7355311651519232,
+      "test_log_rmse": 0.6441565080926258,
+      "test_mae_10k_sqm": 12.292165331893202,
+      "test_actual_mean_10k_sqm": 27.3112865035517,
+      "test_predicted_mean_10k_sqm": 28.44781287097622,
+      "mean_ci95_approx": [
+        27.352562675531853,
+        29.54306306642059
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.542055548180811,
+      "cells_n20": 25,
+      "unseen_test_categories": {
+        "beopjungri_code": 45,
+        "land_category": 4,
+        "zone_type": 0,
+        "road_condition": 0,
+        "deal_type": 0,
+        "use_code": 5,
+        "height_code": 0,
+        "shape_code": 0,
+        "road_code": 0
+      },
+      "train_log_assessed_coef": 0.8907798867805993,
+      "train_log_area_coef": -0.0625627270396756,
+      "worst_test_log_errors": [
+        {
+          "transaction_hash": "81ad164488bcc908eb3c8c3de2670e1b34d602c35fd4a1a7f009b87e7ea5c9be",
+          "pnu": "4311133025102320018",
+          "use": "주거기타",
+          "road": "세로(가)",
+          "log_error": 3.4871097733100846,
+          "actual": 0.7,
+          "predicted": 28.352490678152222
+        },
+        {
+          "transaction_hash": "5a4cdb37b4948ce9465c0e19c9bd5d3bd92a2b56d94c9f4a0ad4666acf663f4c",
+          "pnu": "4311210300103740019",
+          "use": "아파트",
+          "road": "소로한면",
+          "log_error": 3.413771734514106,
+          "actual": 5.0,
+          "predicted": 188.19707753055218
+        },
+        {
+          "transaction_hash": "505ce72e40116b687ef050d9874e53dcd14b4ba813567e09160539c67e8f15df",
+          "pnu": "4311431044101800002",
+          "use": "단독",
+          "road": "세로한면(불)",
+          "log_error": 3.1307947760666215,
+          "actual": 0.6,
+          "predicted": 17.01761874023534
+        },
+        {
+          "transaction_hash": "3be23eee0539c4e22f2e345551ca57e0b6eeea84a6c3359ffcb48002b244ae0a",
+          "pnu": "4311425351201220001",
+          "use": "자연림",
+          "road": "맹지",
+          "log_error": 3.03567451848855,
+          "actual": 0.1,
+          "predicted": 2.578916828970917
+        },
+        {
+          "transaction_hash": "02db83ace234c1b8feff12e7f2fd57cedd86d8345728fb9f95b499e8feb7d667",
+          "pnu": "4311231032200310005",
+          "use": "도로등",
+          "road": "맹지",
+          "log_error": -3.0345727476150355,
+          "actual": 14.1,
+          "predicted": 0.840197833604147
+        }
+      ]
+    },
+    {
+      "policy": "observed_before_trade",
+      "test_year": 2025,
+      "model": "combined_restrictions",
+      "n_train": 2649,
+      "n_test": 2534,
+      "p": 61,
+      "rank": 61,
+      "train_adj_r2": 0.7380668044817191,
+      "test_log_rmse": 0.647271240846519,
+      "test_mae_10k_sqm": 12.605707244209727,
+      "test_actual_mean_10k_sqm": 27.3112865035517,
+      "test_predicted_mean_10k_sqm": 28.882038381745474,
+      "mean_ci95_approx": [
+        27.74994717834377,
+        30.014129585147177
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.7690290423029364,
+      "cells_n20": 25,
+      "unseen_test_categories": {
+        "beopjungri_code": 45,
+        "land_category": 4,
+        "zone_type": 0,
+        "road_condition": 0,
+        "deal_type": 0,
+        "use_code": 5,
+        "height_code": 0,
+        "shape_code": 0,
+        "road_code": 0
+      },
+      "train_log_assessed_coef": 0.8767942032444516,
+      "train_log_area_coef": -0.06399491854695924,
+      "worst_test_log_errors": [
+        {
+          "transaction_hash": "81ad164488bcc908eb3c8c3de2670e1b34d602c35fd4a1a7f009b87e7ea5c9be",
+          "pnu": "4311133025102320018",
+          "use": "주거기타",
+          "road": "세로(가)",
+          "log_error": 3.4415327802017845,
+          "actual": 0.7,
+          "predicted": 27.04128122016564
+        },
+        {
+          "transaction_hash": "5a4cdb37b4948ce9465c0e19c9bd5d3bd92a2b56d94c9f4a0ad4666acf663f4c",
+          "pnu": "4311210300103740019",
+          "use": "아파트",
+          "road": "소로한면",
+          "log_error": 3.2364517989106805,
+          "actual": 5.0,
+          "predicted": 157.3380236073165
+        },
+        {
+          "transaction_hash": "505ce72e40116b687ef050d9874e53dcd14b4ba813567e09160539c67e8f15df",
+          "pnu": "4311431044101800002",
+          "use": "단독",
+          "road": "세로한면(불)",
+          "log_error": 3.1174802141266964,
+          "actual": 0.6,
+          "predicted": 16.76278727725944
+        },
+        {
+          "transaction_hash": "3be23eee0539c4e22f2e345551ca57e0b6eeea84a6c3359ffcb48002b244ae0a",
+          "pnu": "4311425351201220001",
+          "use": "자연림",
+          "road": "맹지",
+          "log_error": 3.041819981179464,
+          "actual": 0.1,
+          "predicted": 2.590217073540484
+        },
+        {
+          "transaction_hash": "02db83ace234c1b8feff12e7f2fd57cedd86d8345728fb9f95b499e8feb7d667",
+          "pnu": "4311231032200310005",
+          "use": "도로등",
+          "road": "맹지",
+          "log_error": -3.001738057138439,
+          "actual": 14.1,
+          "predicted": 0.8667051302545508
+        }
+      ]
+    },
+    {
+      "policy": "observed_before_trade",
+      "test_year": 2026,
+      "model": "baseline",
+      "n_train": 5183,
+      "n_test": 1581,
+      "p": 65,
+      "rank": 65,
+      "train_adj_r2": 0.5713303679216416,
+      "test_log_rmse": 0.8664505659107837,
+      "test_mae_10k_sqm": 16.299528486765784,
+      "test_actual_mean_10k_sqm": 25.11094244149273,
+      "test_predicted_mean_10k_sqm": 29.942624032391354,
+      "mean_ci95_approx": [
+        27.570899555528527,
+        32.31434850925418
+      ],
+      "cell_mean_mae_n20_10k_sqm": 4.728080045220147,
+      "cells_n20": 22,
+      "unseen_test_categories": {
+        "beopjungri_code": 2,
+        "land_category": 0,
+        "zone_type": 0,
+        "road_condition": 0,
+        "deal_type": 0
+      },
+      "train_log_assessed_coef": null,
+      "train_log_area_coef": -0.12439378213007073,
+      "worst_test_log_errors": [
+        {
+          "transaction_hash": "6320240f88bd57305a1df8e081b612412705894cdda47e57459b320d96c4d12e",
+          "pnu": "4311332025102650011",
+          "use": "하천등",
+          "road": "소로한면",
+          "log_error": 5.643528847265685,
+          "actual": 0.1,
+          "predicted": 38.283266746984665
+        },
+        {
+          "transaction_hash": "fc7f77e216b49623d75a21ca02c889b6cf51f20573604c5263319c399d78799a",
+          "pnu": "4311332025102650013",
+          "use": "도로등",
+          "road": "소로한면",
+          "log_error": 5.312135480556417,
+          "actual": 0.2,
+          "predicted": 54.968852960659895
+        },
+        {
+          "transaction_hash": "f7a77a29ce203e65468cf06f728439f2a49ccb198e50d0e4bc1ff57e871377e6",
+          "pnu": "4311332028104560001",
+          "use": "도로등",
+          "road": "세로한면(가)",
+          "log_error": 4.098088440582212,
+          "actual": 0.2,
+          "predicted": 16.32535915192018
+        },
+        {
+          "transaction_hash": "7aaa2638fe28d4b8743b1c2c1788de8e98b128008c619330d7a01f3efcaa9597",
+          "pnu": "4311425347200650006",
+          "use": "자연림",
+          "road": "세로한면(가)",
+          "log_error": 3.2397073068551965,
+          "actual": 0.8,
+          "predicted": 27.67786240268717
+        },
+        {
+          "transaction_hash": "a5bf523db83c4319577136c028da195a17498f9a42e632ff6c47229be17b291d",
+          "pnu": "4311111900100560009",
+          "use": "도로등",
+          "road": "세로한면(가)",
+          "log_error": 3.1942257914875682,
+          "actual": 3.0,
+          "predicted": 99.17710854691114
+        }
+      ]
+    },
+    {
+      "policy": "observed_before_trade",
+      "test_year": 2026,
+      "model": "assessed",
+      "n_train": 5183,
+      "n_test": 1581,
+      "p": 66,
+      "rank": 66,
+      "train_adj_r2": 0.7281754752212258,
+      "test_log_rmse": 0.7247389628986382,
+      "test_mae_10k_sqm": 13.179020526058219,
+      "test_actual_mean_10k_sqm": 25.11094244149273,
+      "test_predicted_mean_10k_sqm": 28.738819960290197,
+      "mean_ci95_approx": [
+        26.91576663942715,
+        30.561873281153243
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.539389239756176,
+      "cells_n20": 22,
+      "unseen_test_categories": {
+        "beopjungri_code": 2,
+        "land_category": 0,
+        "zone_type": 0,
+        "road_condition": 0,
+        "deal_type": 0
+      },
+      "train_log_assessed_coef": 0.7940684358925132,
+      "train_log_area_coef": -0.06226586744466415,
+      "worst_test_log_errors": [
+        {
+          "transaction_hash": "6320240f88bd57305a1df8e081b612412705894cdda47e57459b320d96c4d12e",
+          "pnu": "4311332025102650011",
+          "use": "하천등",
+          "road": "소로한면",
+          "log_error": 6.284176840428506,
+          "actual": 0.1,
+          "predicted": 66.07580757910807
+        },
+        {
+          "transaction_hash": "fc7f77e216b49623d75a21ca02c889b6cf51f20573604c5263319c399d78799a",
+          "pnu": "4311332025102650013",
+          "use": "도로등",
+          "road": "소로한면",
+          "log_error": 5.772107159363472,
+          "actual": 0.2,
+          "predicted": 79.19238791910892
+        },
+        {
+          "transaction_hash": "87865c22d99fb20e0da96d43b6b765551af54b1bb45a7e99877af42d6a75380a",
+          "pnu": "4311325023104860001",
+          "use": "전",
+          "road": "세로한면(불)",
+          "log_error": 3.4537922263147136,
+          "actual": 0.4,
+          "predicted": 15.59129007147011
+        },
+        {
+          "transaction_hash": "f7a77a29ce203e65468cf06f728439f2a49ccb198e50d0e4bc1ff57e871377e6",
+          "pnu": "4311332028104560001",
+          "use": "도로등",
+          "road": "세로한면(가)",
+          "log_error": 3.358303853212397,
+          "actual": 0.2,
+          "predicted": 7.085687297996176
+        },
+        {
+          "transaction_hash": "1f269a87b5890a3e9fda314544dd4774fe23fb5de35031cf2376c28b718d413c",
+          "pnu": "4311332028104570001",
+          "use": "전",
+          "road": "세로한면(불)",
+          "log_error": 3.2905418910643727,
+          "actual": 0.3,
+          "predicted": 9.932180309468858
+        }
+      ]
+    },
+    {
+      "policy": "observed_before_trade",
+      "test_year": 2026,
+      "model": "traits",
+      "n_train": 5183,
+      "n_test": 1581,
+      "p": 100,
+      "rank": 100,
+      "train_adj_r2": 0.6097388776279886,
+      "test_log_rmse": 0.8075341990139713,
+      "test_mae_10k_sqm": 15.550724085040258,
+      "test_actual_mean_10k_sqm": 25.11094244149273,
+      "test_predicted_mean_10k_sqm": 29.611258301471928,
+      "mean_ci95_approx": [
+        27.257083381808044,
+        31.96543322113581
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.737199650530343,
+      "cells_n20": 22,
+      "unseen_test_categories": {
+        "beopjungri_code": 2,
+        "land_category": 0,
+        "zone_type": 0,
+        "road_condition": 0,
+        "deal_type": 0,
+        "use_code": 0,
+        "height_code": 0,
+        "shape_code": 0,
+        "road_code": 0
+      },
+      "train_log_assessed_coef": null,
+      "train_log_area_coef": -0.1045731382758039,
+      "worst_test_log_errors": [
+        {
+          "transaction_hash": "6320240f88bd57305a1df8e081b612412705894cdda47e57459b320d96c4d12e",
+          "pnu": "4311332025102650011",
+          "use": "하천등",
+          "road": "소로한면",
+          "log_error": 4.6472103726204494,
+          "actual": 0.1,
+          "predicted": 13.895422616297708
+        },
+        {
+          "transaction_hash": "fc7f77e216b49623d75a21ca02c889b6cf51f20573604c5263319c399d78799a",
+          "pnu": "4311332025102650013",
+          "use": "도로등",
+          "road": "소로한면",
+          "log_error": 4.471064871337178,
+          "actual": 0.2,
+          "predicted": 23.30251179214638
+        },
+        {
+          "transaction_hash": "f7a77a29ce203e65468cf06f728439f2a49ccb198e50d0e4bc1ff57e871377e6",
+          "pnu": "4311332028104560001",
+          "use": "도로등",
+          "road": "세로한면(가)",
+          "log_error": 3.5786209780433538,
+          "actual": 0.2,
+          "predicted": 9.545952700851068
+        },
+        {
+          "transaction_hash": "87865c22d99fb20e0da96d43b6b765551af54b1bb45a7e99877af42d6a75380a",
+          "pnu": "4311325023104860001",
+          "use": "전",
+          "road": "세로한면(불)",
+          "log_error": 3.043213099021683,
+          "actual": 0.4,
+          "predicted": 11.17698289741956
+        },
+        {
+          "transaction_hash": "7aaa2638fe28d4b8743b1c2c1788de8e98b128008c619330d7a01f3efcaa9597",
+          "pnu": "4311425347200650006",
+          "use": "자연림",
+          "road": "세로한면(가)",
+          "log_error": 2.989929478545146,
+          "actual": 0.8,
+          "predicted": 21.194042442609998
+        }
+      ]
+    },
+    {
+      "policy": "observed_before_trade",
+      "test_year": 2026,
+      "model": "combined",
+      "n_train": 5183,
+      "n_test": 1581,
+      "p": 101,
+      "rank": 101,
+      "train_adj_r2": 0.741213934120659,
+      "test_log_rmse": 0.7208486374188395,
+      "test_mae_10k_sqm": 12.755804905244535,
+      "test_actual_mean_10k_sqm": 25.11094244149273,
+      "test_predicted_mean_10k_sqm": 27.72097367146283,
+      "mean_ci95_approx": [
+        25.887877682465454,
+        29.554069660460204
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.0597754377027355,
+      "cells_n20": 22,
+      "unseen_test_categories": {
+        "beopjungri_code": 2,
+        "land_category": 0,
+        "zone_type": 0,
+        "road_condition": 0,
+        "deal_type": 0,
+        "use_code": 0,
+        "height_code": 0,
+        "shape_code": 0,
+        "road_code": 0
+      },
+      "train_log_assessed_coef": 0.8928604681197251,
+      "train_log_area_coef": -0.04496244113175633,
+      "worst_test_log_errors": [
+        {
+          "transaction_hash": "6320240f88bd57305a1df8e081b612412705894cdda47e57459b320d96c4d12e",
+          "pnu": "4311332025102650011",
+          "use": "하천등",
+          "road": "소로한면",
+          "log_error": 6.94418178946059,
+          "actual": 0.1,
+          "predicted": 126.13555144239645
+        },
+        {
+          "transaction_hash": "fc7f77e216b49623d75a21ca02c889b6cf51f20573604c5263319c399d78799a",
+          "pnu": "4311332025102650013",
+          "use": "도로등",
+          "road": "소로한면",
+          "log_error": 6.297271826034581,
+          "actual": 0.2,
+          "predicted": 132.10464199522912
+        },
+        {
+          "transaction_hash": "f7a77a29ce203e65468cf06f728439f2a49ccb198e50d0e4bc1ff57e871377e6",
+          "pnu": "4311332028104560001",
+          "use": "도로등",
+          "road": "세로한면(가)",
+          "log_error": 3.673354516152064,
+          "actual": 0.2,
+          "predicted": 9.579994721947422
+        },
+        {
+          "transaction_hash": "87865c22d99fb20e0da96d43b6b765551af54b1bb45a7e99877af42d6a75380a",
+          "pnu": "4311325023104860001",
+          "use": "전",
+          "road": "세로한면(불)",
+          "log_error": 3.3925762042648677,
+          "actual": 0.4,
+          "predicted": 14.469542307638559
+        },
+        {
+          "transaction_hash": "1f269a87b5890a3e9fda314544dd4774fe23fb5de35031cf2376c28b718d413c",
+          "pnu": "4311332028104570001",
+          "use": "전",
+          "road": "세로한면(불)",
+          "log_error": 3.2097518766520015,
+          "actual": 0.3,
+          "predicted": 9.038918295307118
+        }
+      ]
+    },
+    {
+      "policy": "observed_before_trade",
+      "test_year": 2026,
+      "model": "combined_restrictions",
+      "n_train": 5183,
+      "n_test": 1581,
+      "p": 105,
+      "rank": 105,
+      "train_adj_r2": 0.7425502544496247,
+      "test_log_rmse": 0.7146486683108806,
+      "test_mae_10k_sqm": 12.53609589943756,
+      "test_actual_mean_10k_sqm": 25.11094244149273,
+      "test_predicted_mean_10k_sqm": 27.81056970259191,
+      "mean_ci95_approx": [
+        25.979687802995617,
+        29.6414516021882
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.141938777724282,
+      "cells_n20": 22,
+      "unseen_test_categories": {
+        "beopjungri_code": 2,
+        "land_category": 0,
+        "zone_type": 0,
+        "road_condition": 0,
+        "deal_type": 0,
+        "use_code": 0,
+        "height_code": 0,
+        "shape_code": 0,
+        "road_code": 0
+      },
+      "train_log_assessed_coef": 0.8824524089737468,
+      "train_log_area_coef": -0.04718911474932623,
+      "worst_test_log_errors": [
+        {
+          "transaction_hash": "6320240f88bd57305a1df8e081b612412705894cdda47e57459b320d96c4d12e",
+          "pnu": "4311332025102650011",
+          "use": "하천등",
+          "road": "소로한면",
+          "log_error": 6.907265832300428,
+          "actual": 0.1,
+          "predicted": 121.40839503215864
+        },
+        {
+          "transaction_hash": "fc7f77e216b49623d75a21ca02c889b6cf51f20573604c5263319c399d78799a",
+          "pnu": "4311332025102650013",
+          "use": "도로등",
+          "road": "소로한면",
+          "log_error": 6.281674851556419,
+          "actual": 0.2,
+          "predicted": 129.8936745700955
+        },
+        {
+          "transaction_hash": "f7a77a29ce203e65468cf06f728439f2a49ccb198e50d0e4bc1ff57e871377e6",
+          "pnu": "4311332028104560001",
+          "use": "도로등",
+          "road": "세로한면(가)",
+          "log_error": 3.685971791486147,
+          "actual": 0.2,
+          "predicted": 9.689212641073581
+        },
+        {
+          "transaction_hash": "87865c22d99fb20e0da96d43b6b765551af54b1bb45a7e99877af42d6a75380a",
+          "pnu": "4311325023104860001",
+          "use": "전",
+          "road": "세로한면(불)",
+          "log_error": 3.398974073976122,
+          "actual": 0.4,
+          "predicted": 14.543768656612478
+        },
+        {
+          "transaction_hash": "1f269a87b5890a3e9fda314544dd4774fe23fb5de35031cf2376c28b718d413c",
+          "pnu": "4311332028104570001",
+          "use": "전",
+          "road": "세로한면(불)",
+          "log_error": 3.2190180645832154,
+          "actual": 0.3,
+          "predicted": 9.111383346862963
+        }
+      ]
+    }
+  ],
+  "repeated_parcel_diagnostic": {
+    "annual:2025": {
+      "test_n": 2534,
+      "test_rows_with_training_pnu": 42
+    },
+    "annual:2026": {
+      "test_n": 1581,
+      "test_rows_with_training_pnu": 45
+    },
+    "prior:2025": {
+      "test_n": 2534,
+      "test_rows_with_training_pnu": 42
+    },
+    "prior:2026": {
+      "test_n": 1581,
+      "test_rows_with_training_pnu": 45
+    }
+  }
+}

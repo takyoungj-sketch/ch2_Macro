@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-27",
+  "updated": "2026-10-04",
   "domains": [
     {
       "id": "land",
@@ -691,39 +691,144 @@
           "commit": "needed"
         }
       }
+    },
+    {
+      "date": "2026-09-27",
+      "cells": {
+        "land": {
+          "text": "매트릭스 평균을 같은 지목 열의 거래건수 상·중·하위로 표시. 헤더 건수·평균 크기 맞춤, 평균에 만. 면적구분에 광소·광대 범위. 쌍둥이지역 탭은 넣지 않음",
+          "status": "done",
+          "commit": "committed"
+        },
+        "built": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "collective": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "rent": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "profile": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "admin": {
+          "text": "토지 쌍둥이 실험창 A~E. E는 대표 10칸 구성비로 전국, 가격·규모는 순위 밖. 식 미고정. 모달 탭 없음. 새 D 없음",
+          "status": "done",
+          "commit": "committed"
+        }
+      }
+    },
+    {
+      "date": "2026-10-01",
+      "cells": {
+        "land": {
+          "text": "제품 코드 변경 없음. AI2 픽스처만 토지 회귀 거절과 쌍둥이 채택 여부를 확인",
+          "status": "done",
+          "commit": "none"
+        },
+        "built": {
+          "text": "제품 엔진 변경 없음. AI2 픽스처가 예측 최소 10건, 외삽이면 중심값 숨김을 따름",
+          "status": "done",
+          "commit": "none"
+        },
+        "collective": {
+          "text": "제품 층 지수 식 변경 없음. AI2는 단지 최소 50건, 층 그룹 5건 게이트만 참조",
+          "status": "done",
+          "commit": "none"
+        },
+        "rent": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "profile": {
+          "text": "제품·Insight 글 변경 없음. 층 비교 숫자는 픽스처 108이고 다시 계산하지 않음",
+          "status": "done",
+          "commit": "none"
+        },
+        "admin": {
+          "text": "AI2 프로토콜을 랩에만 둠. 화면 어시스턴트와 분리. 문장과 짧은 답까지. 테스트 43 passed. 여기서 중지. 코드는 이후 40c6e70·2185283",
+          "status": "stopped",
+          "commit": "committed"
+        }
+      }
+    },
+    {
+      "date": "2026-10-03",
+      "cells": {
+        "land": {
+          "text": "매매 202610 운영 반영. 계약 202510~202609, 기준월 2026-09-01, 원장 9,761,556. 보강·필지 맞춤은 안 함. 여기서 중지",
+          "status": "stopped",
+          "commit": "needed"
+        },
+        "built": {
+          "text": "매매 202610 운영 반영. 원장 828,617. enrich 안 함. 전북 단독 CSV에 섞인 서울 행을 잘라 재적재. 보강 전에서 중지",
+          "status": "stopped",
+          "commit": "needed"
+        },
+        "collective": {
+          "text": "매매 202610 운영 반영. 원장 6,576,186. skip-enrich. 신규 키 보강은 안 함. 여기서 중지",
+          "status": "stopped",
+          "commit": "needed"
+        },
+        "rent": {
+          "text": "주거용 202610 로컬 적재 후 운영 반영. 거래 14,721,683, 건물·전환율 기준월 2026-09-01. 경기·인천 아파트와 서울 연립을 채운 뒤 다시 집계. 상업용 상권은 안 함",
+          "status": "done",
+          "commit": "needed"
+        },
+        "profile": {
+          "text": "이 축 작업 없음",
+          "status": "done",
+          "commit": "none"
+        },
+        "admin": {
+          "text": "월별 업데이트 전에 CSV 수를 세고, 지역이 빠지면 적재 전에 알리도록 문서에 기록. 계획일지. 커밋·푸시는 안 함",
+          "status": "done",
+          "commit": "needed"
+        }
+      }
     }
   ],
   "today": {
-    "date": "2026-09-27",
+    "date": "2026-10-04",
     "cells": {
-      "land": {
-        "text": "매트릭스 평균을 같은 지목 열의 거래건수 상·중·하위로 표시. 헤더 건수·평균 크기 맞춤, 평균에 만. 면적구분에 광소·광대 범위. 쌍둥이지역 탭은 넣지 않음",
-        "status": "done",
-        "commit": "committed"
-      },
       "built": {
-        "text": "이 축 작업 없음",
+        "text": "이번 청주 대장 연구에서는 변경 없음. 기존 Cursor 작업·월간 보강 계획은 유지",
         "status": "done",
         "commit": "none"
       },
       "collective": {
-        "text": "이 축 작업 없음",
+        "text": "이번 청주 대장 연구에서는 변경 없음. 기존 Cursor 작업·월간 보강 계획은 유지",
         "status": "done",
         "commit": "none"
       },
       "rent": {
-        "text": "이 축 작업 없음",
+        "text": "이번 청주 대장 연구에서는 변경 없음. 기존 Cursor 작업·월간 보강 계획은 유지",
         "status": "done",
         "commit": "none"
       },
       "profile": {
-        "text": "이 축 작업 없음",
+        "text": "이번 청주 대장 연구에서는 변경 없음. 기존 Cursor 작업·월간 보강 계획은 유지",
         "status": "done",
         "commit": "none"
       },
+      "land": {
+        "text": "청주 2023~26 대장 원천 감사·연도별 연결·동일 거래 6,764건 회귀 검증. 공시지가 개선 확인, 특성·지구 효과는 선택 비교. 제품 식·운영 DB 미변경",
+        "status": "stopped",
+        "commit": "committed"
+      },
       "admin": {
-        "text": "토지 쌍둥이 실험창 A~E. E는 대표 10칸 구성비로 전국, 가격·규모는 순위 밖. 식 미고정. 모달 탭 없음. 새 D 없음",
-        "status": "done",
+        "text": "청주 연도별 대장·회귀 비교 탭. 기존 마스킹 기록 유지. 빌드·기본 렌더링 검증. 사용자 요청으로 커밋·푸시·랩 배포. 내일 후속 검토",
+        "status": "stopped",
         "commit": "committed"
       }
     }
@@ -731,7 +836,7 @@
   "next": {
     "cells": {
       "land": {
-        "text": "면적 탄성 이어서: 주거계 vs 농림 대지. 쌍둥이지역 탭은 E 보고 결정, 제품 미추가",
+        "text": "내일 보강. 단독 용도지역은 일반 필지 parcel_zone. 면적 탄성·쌍둥이지역 탭은 그 다음. 제품 식은 그대로 / 청주 대장 연구: 매칭 충돌·비매칭 편향 검토, 공시지가 우선 보강 및 연결 시점·버전 정책 구체화",
         "status": "planned",
         "commit": "none"
       },
@@ -742,24 +847,24 @@
         "decision": "D-058"
       },
       "built": {
-        "text": "등급 구간(max_cv_mape) 재보정은 P4가 빠졌으므로 P1~P3 기준선으로 본다. P5가 연식 비선형과 지역 잔차의 진입 조건을 만들었으나, 공간모형 전에 지역 더미·Twin을 먼저 쓴다. 계약연도 축 치우침은 시점 미통제의 비용이므로 창 길이 논의 때 근거로 쓴다. P4 재검토 조건은 창 늘리기 또는 시도 단위·외부 지수로 잡음 줄이기. Twin 붙임 실험(단순 pooling·절편 분리·무게 제한)은 그 다음",
+        "text": "내일 9월 신규 해시만 매칭. 표제부 스냅샷은 새로 받지 않음. built_transaction_enrichment는 승격하지 않음. 등급 재보정·Twin은 그 다음",
         "status": "planned",
-        "commit": "needed",
+        "commit": "none",
         "decision": "D-075"
       },
       "rent": {
-        "text": "AI에 전세보증금·전세가율·환산칸 전달. 다른 앱 창 크기조절은 앱별 재빌드",
+        "text": "주거용 202610은 운영 반영됨. 상업용 상권은 별도 요청. 전세 칸 전달은 그 다음",
         "status": "planned",
         "commit": "none"
       },
       "collective": {
-        "text": "이어서: 아파트 층 효용 실험 0차(적격 단지 수, 가격 계수 없음). 계획 docs/lab/APT_FLOOR_UTILITY_LAB.md. 제품 식 미변경. 그 다음 시공사 브랜드 vs 시공사(D-065), 연식=0 서울·경기(D-064)",
+        "text": "내일 신규 건물키만 K-apt. 매매 러너에 enrich-new-keys를 넣지 않음. 층 효용 0차는 그 다음",
         "status": "planned",
         "commit": "none",
         "decision": "D-065"
       },
       "admin": {
-        "text": "운영 반영은 별도 요청 시. 결정 카드는 카피 굳은 뒤. Fingerprint 붙임은 mape 트랙",
+        "text": "내일 매매 보강(신규 해시·신규 건물키). CSV 수 규칙 문서는 미커밋. AI2는 요청 전 추가 없음 / 청주 비교 화면 검토: 정책·연도·평균 오차와 신뢰구간. 제품 회귀 공개는 검증 후 판단",
         "status": "planned",
         "commit": "none"
       }

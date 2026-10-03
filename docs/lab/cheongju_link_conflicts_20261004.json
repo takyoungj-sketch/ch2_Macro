@@ -1,0 +1,140 @@
+[
+  {
+    "transaction": {
+      "transaction_hash": "0dcf3618d54287c92452f9698f193a3b2c67e80feed093899dcb475e913bf2c5",
+      "contract_date": "2024-06-20",
+      "land_category": "전",
+      "zone_type": "계관",
+      "area_sqm": "36.0",
+      "lot_display": "2**",
+      "beopjungri_code": "4311331021"
+    },
+    "candidates": {
+      "annual": {
+        "pnu": "4311331021102190005",
+        "lot": "219-5",
+        "year": "2024",
+        "jimok": "전",
+        "area": "36.000000000000000",
+        "zone1": "계획관리지역",
+        "zone2": "지정되지않음",
+        "use": "",
+        "height": "완경사",
+        "shape": "사다리",
+        "road": "세로(불)",
+        "price": "49200",
+        "trait_asof": "2024-07-31",
+        "plan_asof": "2024-08-03"
+      },
+      "prior": {
+        "pnu": "4311331021102050006",
+        "lot": "205-6",
+        "year": "2023",
+        "jimok": "전",
+        "area": "36.000000000000000",
+        "zone1": "계획관리지역",
+        "zone2": "지정되지않음",
+        "use": "공업용",
+        "height": "평지",
+        "shape": "사다리형",
+        "road": "소로한면",
+        "price": "141600",
+        "trait_asof": "2023-08-05",
+        "plan_asof": "2023-08-10"
+      }
+    },
+    "resolution": "unresolved; same masked range and rounded area can identify different parcels across snapshots; exclude from paired regression"
+  },
+  {
+    "transaction": {
+      "transaction_hash": "311af9beb2c5782f26dee0709cc4239b8b529f75749a3e8a119ff464f337a871",
+      "contract_date": "2026-01-05",
+      "land_category": "도",
+      "zone_type": "자녹",
+      "area_sqm": "35.0",
+      "lot_display": "4**",
+      "beopjungri_code": "4311425033"
+    },
+    "candidates": {
+      "annual": {
+        "pnu": "4311425033104420031",
+        "lot": "442-31",
+        "year": "2026",
+        "jimok": "도",
+        "area": "35.000000000000000",
+        "zone1": "자연녹지지역",
+        "zone2": "지정되지않음",
+        "use": "도로등",
+        "height": "완경사",
+        "shape": "부정형",
+        "road": "세로한면(가)",
+        "price": "28900",
+        "trait_asof": "2026-05-13",
+        "plan_asof": "2026-08-06"
+      },
+      "prior": {
+        "pnu": "4311425033104440011",
+        "lot": "444-11",
+        "year": "2025",
+        "jimok": "도",
+        "area": "35.000000000000000",
+        "zone1": "자연녹지지역",
+        "zone2": "지정되지않음",
+        "use": "도로등",
+        "height": "완경사",
+        "shape": "부정형",
+        "road": "세로한면(가)",
+        "price": "48600",
+        "trait_asof": "2025-08-08",
+        "plan_asof": "2025-08-25"
+      }
+    },
+    "resolution": "unresolved; same masked range and rounded area can identify different parcels across snapshots; exclude from paired regression"
+  },
+  {
+    "transaction": {
+      "transaction_hash": "758c4fd13136b09e97507ee339bc84820a7f27a7864e23a4ae0bc545f93fb0a5",
+      "contract_date": "2025-01-17",
+      "land_category": "답",
+      "zone_type": "농림",
+      "area_sqm": "333.0",
+      "lot_display": "3**",
+      "beopjungri_code": "4311431036"
+    },
+    "candidates": {
+      "annual": {
+        "pnu": "4311431036103160006",
+        "lot": "316-6",
+        "year": "2025",
+        "jimok": "답",
+        "area": "333.000000000000000",
+        "zone1": "농림지역",
+        "zone2": "지정되지않음",
+        "use": "도로등",
+        "height": "평지",
+        "shape": "부정형",
+        "road": "세로한면(가)",
+        "price": "11200",
+        "trait_asof": "2025-08-08",
+        "plan_asof": "2025-08-25"
+      },
+      "prior": {
+        "pnu": "4311431036103260002",
+        "lot": "326-2",
+        "year": "2024",
+        "jimok": "답",
+        "area": "333.000000000000000",
+        "zone1": "농림지역",
+        "zone2": "지정되지않음",
+        "use": "",
+        "height": "평지",
+        "shape": "부정형",
+        "road": "세로(가)",
+        "price": "31400",
+        "trait_asof": "2024-07-31",
+        "plan_asof": "2024-08-03"
+      }
+    },
+    "resolution": "unresolved; same masked range and rounded area can identify different parcels across snapshots; exclude from paired regression"
+  }
+]

@@ -1,0 +1,431 @@
+{
+  "run_date": "2026-10-04",
+  "sample": 6764,
+  "conflicting_pnu_excluded": 3,
+  "positive_filter_excluded": 2,
+  "transaction_rows": 16862,
+  "source_join": {
+    "2023": {
+      "parcels": 475217,
+      "with_plan": 474835,
+      "plan_asof": "2023-08-10",
+      "trait_asof": "2023-08-05",
+      "compact_bytes": 9586327
+    },
+    "2024": {
+      "parcels": 477399,
+      "with_plan": 477383,
+      "plan_asof": "2024-08-03",
+      "trait_asof": "2024-07-31",
+      "compact_bytes": 9549217
+    },
+    "2025": {
+      "parcels": 478750,
+      "with_plan": 478658,
+      "plan_asof": "2025-08-25",
+      "trait_asof": "2025-08-08",
+      "compact_bytes": 9585218
+    },
+    "2026": {
+      "parcels": 480633,
+      "with_plan": 480599,
+      "plan_asof": "2026-08-06",
+      "trait_asof": "2026-05-13",
+      "compact_bytes": 9666191
+    }
+  },
+  "counts": {
+    "2024:annual": {
+      "unsupported_zone": 280,
+      "partial": 1815,
+      "no_candidate": 609,
+      "ambiguous": 245,
+      "unique_candidate": 2803,
+      "cancelled": 581
+    },
+    "2024:observed_before_trade": {
+      "unsupported_zone": 280,
+      "partial": 1815,
+      "no_candidate": 731,
+      "ambiguous": 231,
+      "unique_candidate": 2695,
+      "cancelled": 581
+    },
+    "2025:annual": {
+      "unique_candidate": 2691,
+      "partial": 1814,
+      "no_candidate": 745,
+      "cancelled": 672,
+      "ambiguous": 230,
+      "unsupported_zone": 147
+    },
+    "2025:observed_before_trade": {
+      "unique_candidate": 2585,
+      "partial": 1814,
+      "no_candidate": 863,
+      "cancelled": 672,
+      "ambiguous": 218,
+      "unsupported_zone": 147
+    },
+    "2026:annual": {
+      "unique_candidate": 1799,
+      "ambiguous": 183,
+      "no_candidate": 370,
+      "partial": 1467,
+      "cancelled": 324,
+      "unsupported_zone": 87
+    },
+    "2026:observed_before_trade": {
+      "unique_candidate": 1610,
+      "ambiguous": 144,
+      "no_candidate": 598,
+      "partial": 1467,
+      "cancelled": 324,
+      "unsupported_zone": 87
+    }
+  },
+  "annual_unique": 7293,
+  "prior_unique": 6890,
+  "results": [
+    {
+      "policy": "annual",
+      "test_year": 2025,
+      "model": "baseline",
+      "n_train": 2649,
+      "n_test": 2534,
+      "train_adj_r2": 0.5260232672405465,
+      "test_log_rmse": 0.8201211653518099,
+      "test_actual_mean_10k_sqm": 27.3112865035517,
+      "test_predicted_mean_10k_sqm": 27.880256788073005,
+      "mean_ci95_approx": [
+        26.432831777696748,
+        29.327681798449262
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.91682171478516,
+      "cells_n20": 25
+    },
+    {
+      "policy": "annual",
+      "test_year": 2025,
+      "model": "assessed",
+      "n_train": 2649,
+      "n_test": 2534,
+      "train_adj_r2": 0.723013765428677,
+      "test_log_rmse": 0.6384394522724619,
+      "test_actual_mean_10k_sqm": 27.3112865035517,
+      "test_predicted_mean_10k_sqm": 28.156061649313447,
+      "mean_ci95_approx": [
+        27.105893129269514,
+        29.20623016935738
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.5289415593169045,
+      "cells_n20": 25
+    },
+    {
+      "policy": "annual",
+      "test_year": 2025,
+      "model": "traits",
+      "n_train": 2649,
+      "n_test": 2534,
+      "train_adj_r2": 0.5638240836374993,
+      "test_log_rmse": 0.7891966318695441,
+      "test_actual_mean_10k_sqm": 27.3112865035517,
+      "test_predicted_mean_10k_sqm": 28.452369870961903,
+      "mean_ci95_approx": [
+        26.255152191841145,
+        30.64958755008266
+      ],
+      "cell_mean_mae_n20_10k_sqm": 4.2072880588685635,
+      "cells_n20": 25
+    },
+    {
+      "policy": "annual",
+      "test_year": 2025,
+      "model": "combined",
+      "n_train": 2649,
+      "n_test": 2534,
+      "train_adj_r2": 0.7355451087662713,
+      "test_log_rmse": 0.6481656870730228,
+      "test_actual_mean_10k_sqm": 27.3112865035517,
+      "test_predicted_mean_10k_sqm": 29.193474088497496,
+      "mean_ci95_approx": [
+        27.249063381727353,
+        31.137884795267638
+      ],
+      "cell_mean_mae_n20_10k_sqm": 4.24001748147374,
+      "cells_n20": 25
+    },
+    {
+      "policy": "annual",
+      "test_year": 2025,
+      "model": "combined_restrictions",
+      "n_train": 2649,
+      "n_test": 2534,
+      "train_adj_r2": 0.7381136668517261,
+      "test_log_rmse": 0.6513877117999043,
+      "test_actual_mean_10k_sqm": 27.3112865035517,
+      "test_predicted_mean_10k_sqm": 29.79594430592034,
+      "mean_ci95_approx": [
+        27.82178095389207,
+        31.77010765794861
+      ],
+      "cell_mean_mae_n20_10k_sqm": 4.390660579743065,
+      "cells_n20": 25
+    },
+    {
+      "policy": "annual",
+      "test_year": 2026,
+      "model": "baseline",
+      "n_train": 5183,
+      "n_test": 1581,
+      "train_adj_r2": 0.5713303679216416,
+      "test_log_rmse": 0.8664505659107837,
+      "test_actual_mean_10k_sqm": 25.11094244149273,
+      "test_predicted_mean_10k_sqm": 29.942624032391354,
+      "mean_ci95_approx": [
+        27.570899555528527,
+        32.31434850925418
+      ],
+      "cell_mean_mae_n20_10k_sqm": 4.728080045220147,
+      "cells_n20": 22
+    },
+    {
+      "policy": "annual",
+      "test_year": 2026,
+      "model": "assessed",
+      "n_train": 5183,
+      "n_test": 1581,
+      "train_adj_r2": 0.7284740552805075,
+      "test_log_rmse": 0.7232231245236685,
+      "test_actual_mean_10k_sqm": 25.11094244149273,
+      "test_predicted_mean_10k_sqm": 28.416163047318747,
+      "mean_ci95_approx": [
+        26.613376724413843,
+        30.21894937022365
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.3676091984703826,
+      "cells_n20": 22
+    },
+    {
+      "policy": "annual",
+      "test_year": 2026,
+      "model": "traits",
+      "n_train": 5183,
+      "n_test": 1581,
+      "train_adj_r2": 0.6098009537509927,
+      "test_log_rmse": 0.8064693681426297,
+      "test_actual_mean_10k_sqm": 25.11094244149273,
+      "test_predicted_mean_10k_sqm": 28.91861420346781,
+      "mean_ci95_approx": [
+        25.76009070619353,
+        32.07713770074209
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.717733171456253,
+      "cells_n20": 22
+    },
+    {
+      "policy": "annual",
+      "test_year": 2026,
+      "model": "combined",
+      "n_train": 5183,
+      "n_test": 1581,
+      "train_adj_r2": 0.7408271668292656,
+      "test_log_rmse": 0.7207904874617768,
+      "test_actual_mean_10k_sqm": 25.11094244149273,
+      "test_predicted_mean_10k_sqm": 27.27611844371027,
+      "mean_ci95_approx": [
+        24.716392678131594,
+        29.835844209288947
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.0709054006526126,
+      "cells_n20": 22
+    },
+    {
+      "policy": "annual",
+      "test_year": 2026,
+      "model": "combined_restrictions",
+      "n_train": 5183,
+      "n_test": 1581,
+      "train_adj_r2": 0.7420554082914668,
+      "test_log_rmse": 0.7137723459308625,
+      "test_actual_mean_10k_sqm": 25.11094244149273,
+      "test_predicted_mean_10k_sqm": 27.12642755389928,
+      "mean_ci95_approx": [
+        24.602181314523733,
+        29.650673793274827
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.1667445301139026,
+      "cells_n20": 22
+    },
+    {
+      "policy": "prior",
+      "test_year": 2025,
+      "model": "baseline",
+      "n_train": 2649,
+      "n_test": 2534,
+      "train_adj_r2": 0.5260232672405465,
+      "test_log_rmse": 0.8201211653518099,
+      "test_actual_mean_10k_sqm": 27.3112865035517,
+      "test_predicted_mean_10k_sqm": 27.880256788073005,
+      "mean_ci95_approx": [
+        26.432831777696748,
+        29.327681798449262
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.91682171478516,
+      "cells_n20": 25
+    },
+    {
+      "policy": "prior",
+      "test_year": 2025,
+      "model": "assessed",
+      "n_train": 2649,
+      "n_test": 2534,
+      "train_adj_r2": 0.7223188409828498,
+      "test_log_rmse": 0.6384857747390643,
+      "test_actual_mean_10k_sqm": 27.3112865035517,
+      "test_predicted_mean_10k_sqm": 27.91221289579323,
+      "mean_ci95_approx": [
+        26.87160018114241,
+        28.952825610444048
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.390825121000756,
+      "cells_n20": 25
+    },
+    {
+      "policy": "prior",
+      "test_year": 2025,
+      "model": "traits",
+      "n_train": 2649,
+      "n_test": 2534,
+      "train_adj_r2": 0.5633432698055139,
+      "test_log_rmse": 0.7945373897425541,
+      "test_actual_mean_10k_sqm": 27.3112865035517,
+      "test_predicted_mean_10k_sqm": 28.84400212241159,
+      "mean_ci95_approx": [
+        27.380004103380365,
+        30.308000141442818
+      ],
+      "cell_mean_mae_n20_10k_sqm": 4.601247626599377,
+      "cells_n20": 25
+    },
+    {
+      "policy": "prior",
+      "test_year": 2025,
+      "model": "combined",
+      "n_train": 2649,
+      "n_test": 2534,
+      "train_adj_r2": 0.7355311651519232,
+      "test_log_rmse": 0.6441565080926258,
+      "test_actual_mean_10k_sqm": 27.3112865035517,
+      "test_predicted_mean_10k_sqm": 28.44781287097622,
+      "mean_ci95_approx": [
+        27.352562675531853,
+        29.54306306642059
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.542055548180811,
+      "cells_n20": 25
+    },
+    {
+      "policy": "prior",
+      "test_year": 2025,
+      "model": "combined_restrictions",
+      "n_train": 2649,
+      "n_test": 2534,
+      "train_adj_r2": 0.7380668044817191,
+      "test_log_rmse": 0.647271240846519,
+      "test_actual_mean_10k_sqm": 27.3112865035517,
+      "test_predicted_mean_10k_sqm": 28.882038381745474,
+      "mean_ci95_approx": [
+        27.74994717834377,
+        30.014129585147177
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.7690290423029364,
+      "cells_n20": 25
+    },
+    {
+      "policy": "prior",
+      "test_year": 2026,
+      "model": "baseline",
+      "n_train": 5183,
+      "n_test": 1581,
+      "train_adj_r2": 0.5713303679216416,
+      "test_log_rmse": 0.8664505659107837,
+      "test_actual_mean_10k_sqm": 25.11094244149273,
+      "test_predicted_mean_10k_sqm": 29.942624032391354,
+      "mean_ci95_approx": [
+        27.570899555528527,
+        32.31434850925418
+      ],
+      "cell_mean_mae_n20_10k_sqm": 4.728080045220147,
+      "cells_n20": 22
+    },
+    {
+      "policy": "prior",
+      "test_year": 2026,
+      "model": "assessed",
+      "n_train": 5183,
+      "n_test": 1581,
+      "train_adj_r2": 0.7281754752212258,
+      "test_log_rmse": 0.7247389628986382,
+      "test_actual_mean_10k_sqm": 25.11094244149273,
+      "test_predicted_mean_10k_sqm": 28.738819960290197,
+      "mean_ci95_approx": [
+        26.91576663942715,
+        30.561873281153243
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.539389239756176,
+      "cells_n20": 22
+    },
+    {
+      "policy": "prior",
+      "test_year": 2026,
+      "model": "traits",
+      "n_train": 5183,
+      "n_test": 1581,
+      "train_adj_r2": 0.6097388776279886,
+      "test_log_rmse": 0.8075341990139713,
+      "test_actual_mean_10k_sqm": 25.11094244149273,
+      "test_predicted_mean_10k_sqm": 29.611258301471928,
+      "mean_ci95_approx": [
+        27.257083381808044,
+        31.96543322113581
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.737199650530343,
+      "cells_n20": 22
+    },
+    {
+      "policy": "prior",
+      "test_year": 2026,
+      "model": "combined",
+      "n_train": 5183,
+      "n_test": 1581,
+      "train_adj_r2": 0.741213934120659,
+      "test_log_rmse": 0.7208486374188395,
+      "test_actual_mean_10k_sqm": 25.11094244149273,
+      "test_predicted_mean_10k_sqm": 27.72097367146283,
+      "mean_ci95_approx": [
+        25.887877682465454,
+        29.554069660460204
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.0597754377027355,
+      "cells_n20": 22
+    },
+    {
+      "policy": "prior",
+      "test_year": 2026,
+      "model": "combined_restrictions",
+      "n_train": 5183,
+      "n_test": 1581,
+      "train_adj_r2": 0.7425502544496247,
+      "test_log_rmse": 0.7146486683108806,
+      "test_actual_mean_10k_sqm": 25.11094244149273,
+      "test_predicted_mean_10k_sqm": 27.81056970259191,
+      "mean_ci95_approx": [
+        25.979687802995617,
+        29.6414516021882
+      ],
+      "cell_mean_mae_n20_10k_sqm": 3.141938777724282,
+      "cells_n20": 22
+    }
+  ]
+}
