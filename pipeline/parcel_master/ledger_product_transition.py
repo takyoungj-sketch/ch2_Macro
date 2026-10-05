@@ -19,7 +19,7 @@ def conditions(acceptance,contract,publication_bound=False):
     return blockers
 
 
-def inspect(root=ROOT):
+def inspect(root=ROOT,operations=None):
     root=Path(root);lab=root/'docs/lab';out=root/'data/research/cheongju_ledger'
     _,manifest_hash=verify_manifest(root)
     acceptance_path=lab/'cheongju_product_acceptance.json';acceptance=json.loads(acceptance_path.read_text(encoding='utf-8'))
@@ -44,12 +44,20 @@ def inspect(root=ROOT):
     contract_path=root/'docs/LEDGER_SOURCE_CONSUMER_CONTRACT_V2_2.json'
     contract=json.loads(contract_path.read_text(encoding='utf-8'))
     if contract['contract']!=CONTRACT or contract['identity_rule']!=VERSION:raise ValueError('Consumer contract changed')
-    blockers=conditions(acceptance,contract)
+    publication_bound=False
+    handoff_receipt_sha=None
+    if operations is not None:
+        from ledger_product_handoff import load
+        receipt,_=load(operations,root)
+        publication_bound=True
+        handoff_receipt_sha=receipt['content_sha256']
+    blockers=conditions(acceptance,contract,publication_bound=publication_bound)
     return {'gate':'ledger-product-transition-v1','status':'blocked' if blockers else 'ready_for_scoped_review',
             'verified_existing_audit_evidence':True,'blockers':blockers,'acceptance_sha256':sha(acceptance_path),
             'source_manifest_sha256':manifest_hash,'consumer_contract_sha256':sha(contract_path),
             'default_permissions':contract['default_permissions'],'production_apply':False,
             'gate_implementation_sha256':sha(Path(__file__)),
+            'publication_bound_handoff_verified':publication_bound,'handoff_content_sha256':handoff_receipt_sha,
             'limitations':['Verified fixed historical replay is not approval to replace product inputs.',
                            'The current contract keeps new membership, representative selection, quantity aggregation and model adoption separate.']}
 

@@ -5,8 +5,7 @@
   "blockers": [
     "consumer_contract_does_not_authorize_new_product_use",
     "real_next_source_update_not_tested",
-    "tcp_proxy_browser_path_not_tested",
-    "product_handoff_not_bound_to_selected_source_publication"
+    "tcp_proxy_browser_path_not_tested"
   ],
   "acceptance_sha256": "a948f7b76da987182a6406c104cc6d7149e46a930aa465a0442e4220a4ae6c45",
   "source_manifest_sha256": "b24823837c8279ea79f71c924f5645aee8895c7430d2c9555a09062e985e840d",
@@ -17,7 +16,9 @@
     "regression": false
   },
   "production_apply": false,
-  "gate_implementation_sha256": "9b005907e7e56a052fc8c29c37c450df709cf18f2f62573a393939c4c806f69f",
+  "gate_implementation_sha256": "2df52c63cf05752875100d0ed45a0aff838da1cdd5d718dd8944c9fbbb498a7b",
+  "publication_bound_handoff_verified": true,
+  "handoff_content_sha256": "b951897e3d086c83ec111ed7132300f1d64898a14237e7922d654adbed808ee0",
   "limitations": [
     "Verified fixed historical replay is not approval to replace product inputs.",
     "The current contract keeps new membership, representative selection, quantity aggregation and model adoption separate."

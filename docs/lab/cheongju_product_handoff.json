@@ -1,0 +1,205 @@
+{
+  "experiment": "city-source-bound-product-handoff-v1",
+  "checks": {
+    "handoff_receipt_verified": true,
+    "failed_handoff_keeps_selected_product": true,
+    "source_state_unchanged_by_product_handoff": true,
+    "original_city_extension_unchanged": true,
+    "893_title_keys_recomputed": true,
+    "1302_price_keys_recomputed": true,
+    "1471_residential_keys_preserved": true,
+    "306_commercial_keys_preserved": true,
+    "13293_built_transactions_preserved": true,
+    "actual_sql_fixture_inputs_equal": true,
+    "no_new_product_permission": true
+  },
+  "source_state": {
+    "active_id": "ops-city-2026-07-product-fields",
+    "latest_id": "ops-city-2026-07-product-fields",
+    "revision": 1,
+    "product_enrichment": false,
+    "production_apply": false
+  },
+  "source_stage": {
+    "batch_id": "ops-city-2026-07-product-fields",
+    "expected_base": null,
+    "expected_revision": 0,
+    "database": "ledger.sqlite",
+    "database_sha256": "e4d7663e63af586e61d1a0a9aed63d27781d75e934215eaab32e719132d9ebc1",
+    "impact_sha256": "a6da88a738868acf3ee8f609defc2f4d67f160a65a32a2f8e1c39afe1d34da05",
+    "package_path": "inbox\\ops-city-2026-07-product-fields\\package.json",
+    "package_sha256": "b71f9516e6b616f0d20c88ce92ec74deb98120ba208e982f384ea392fae74c0a",
+    "snapshot": "2026-07",
+    "scope_sha256": "a63bc16d93243ebfa60e12eb4b7eab3721822d46b2ea2b286719a9c398c8e03e",
+    "evidence_kind": "historical_rehearsal",
+    "consumer_contract": "ledger-source-consumer-v2.2",
+    "production_apply": false
+  },
+  "source_baseline_seconds": 67.73529889999918,
+  "source_baseline_bytes": 999714816,
+  "original_extension_sha256": "3dbc513d93edab66c28bda85cacfda0605f33a50db90061fa1980273fbf7f253",
+  "selected_handoff": "city-handoff-2",
+  "receipt": {
+    "handoff": "source-bound-compatibility-v1",
+    "source_state": {
+      "active_id": "ops-city-2026-07-product-fields",
+      "latest_id": "ops-city-2026-07-product-fields",
+      "revision": 1,
+      "product_enrichment": false,
+      "production_apply": false
+    },
+    "source_database_sha256": "e4d7663e63af586e61d1a0a9aed63d27781d75e934215eaab32e719132d9ebc1",
+    "source_stage_sha256": "66a190f7527ea96ea8b5b41ff6be24f56c4107eaceb9c3f124368609766a7eba",
+    "source_scope_sha256": "a63bc16d93243ebfa60e12eb4b7eab3721822d46b2ea2b286719a9c398c8e03e",
+    "consumer_contract_sha256": "29cb3a5e605c2ac115da3fcd5df31a91974f47c9f44cb5b565fd7254cb4c43c0",
+    "acceptance_sha256": "a948f7b76da987182a6406c104cc6d7149e46a930aa465a0442e4220a4ae6c45",
+    "supply_manifest_sha256": "b24823837c8279ea79f71c924f5645aee8895c7430d2c9555a09062e985e840d",
+    "artifact_sha256": "fbe4622ec3bf6f662c74309cb310b23836d9cbc041be089d1d2eefb134cf544a",
+    "content_sha256": "b951897e3d086c83ec111ed7132300f1d64898a14237e7922d654adbed808ee0",
+    "counts": {
+      "title_source_keys": 893,
+      "price_source_keys": 1302,
+      "residential_keys": 1471,
+      "built_transactions": 13293,
+      "commercial_keys": 306
+    },
+    "production_apply": false,
+    "http_sql_fixture_sha256": "bd3ff0f760e75704ddd2175cb0b8875ca002704a059a60b049eeddf59f7c08bf",
+    "http_sql_fixture_equal_to_accepted_supply": true,
+    "adapter_sha256": "3b7e27bb4057e89cb36ded97da30447cd26f964def79dd2eb4afaf9c654ef4a2",
+    "source_mode": "historical_shadow",
+    "scope": "existing_equal_value_bindings_only"
+  },
+  "gate": {
+    "gate": "ledger-product-transition-v1",
+    "status": "blocked",
+    "verified_existing_audit_evidence": true,
+    "blockers": [
+      "consumer_contract_does_not_authorize_new_product_use",
+      "real_next_source_update_not_tested",
+      "tcp_proxy_browser_path_not_tested"
+    ],
+    "acceptance_sha256": "a948f7b76da987182a6406c104cc6d7149e46a930aa465a0442e4220a4ae6c45",
+    "source_manifest_sha256": "b24823837c8279ea79f71c924f5645aee8895c7430d2c9555a09062e985e840d",
+    "consumer_contract_sha256": "29cb3a5e605c2ac115da3fcd5df31a91974f47c9f44cb5b565fd7254cb4c43c0",
+    "default_permissions": {
+      "product_enrichment": false,
+      "quantity_aggregation": false,
+      "regression": false
+    },
+    "production_apply": false,
+    "gate_implementation_sha256": "2df52c63cf05752875100d0ed45a0aff838da1cdd5d718dd8944c9fbbb498a7b",
+    "publication_bound_handoff_verified": true,
+    "handoff_content_sha256": "b951897e3d086c83ec111ed7132300f1d64898a14237e7922d654adbed808ee0",
+    "limitations": [
+      "Verified fixed historical replay is not approval to replace product inputs.",
+      "The current contract keeps new membership, representative selection, quantity aggregation and model adoption separate."
+    ]
+  },
+  "elapsed_seconds": 188.02542209999956,
+  "production_apply": false,
+  "runner_sha256": "e84f3002a7130e6e9bd7796ed5a5ade5e1d32fe7f0ac2368df2bc444784bbafc",
+  "limitations": [
+    "Single current city snapshot bootstrap; previous city releases remain in original research DB, not in this operations lane.",
+    "Historical normalized intake, not new raw extraction or a future-month update.",
+    "Existing held bindings pass through; equal legacy fields only. Built/commercial remain frozen input.",
+    "Verified output equality reuses prior actual SQL/ASGI acceptance; no new TCP/browser test."
+  ],
+  "execution_records": [
+    {
+      "source_baseline_seconds": 159.17676779999601,
+      "elapsed_seconds": 259.63376900000003,
+      "checks": {
+        "handoff_receipt_verified": true,
+        "failed_handoff_keeps_selected_product": true,
+        "source_state_unchanged_by_product_handoff": true,
+        "original_city_extension_unchanged": true,
+        "893_title_keys_recomputed": true,
+        "1302_price_keys_recomputed": true,
+        "1471_residential_keys_preserved": true,
+        "306_commercial_keys_preserved": true,
+        "13293_built_transactions_preserved": true,
+        "no_new_product_permission": true
+      },
+      "receipt": {
+        "handoff": "source-bound-compatibility-v1",
+        "source_state": {
+          "active_id": "ops-city-2026-07-product-fields",
+          "latest_id": "ops-city-2026-07-product-fields",
+          "revision": 1,
+          "product_enrichment": false,
+          "production_apply": false
+        },
+        "source_database_sha256": "e4d7663e63af586e61d1a0a9aed63d27781d75e934215eaab32e719132d9ebc1",
+        "source_stage_sha256": "66a190f7527ea96ea8b5b41ff6be24f56c4107eaceb9c3f124368609766a7eba",
+        "source_scope_sha256": "a63bc16d93243ebfa60e12eb4b7eab3721822d46b2ea2b286719a9c398c8e03e",
+        "consumer_contract_sha256": "29cb3a5e605c2ac115da3fcd5df31a91974f47c9f44cb5b565fd7254cb4c43c0",
+        "acceptance_sha256": "a948f7b76da987182a6406c104cc6d7149e46a930aa465a0442e4220a4ae6c45",
+        "supply_manifest_sha256": "b24823837c8279ea79f71c924f5645aee8895c7430d2c9555a09062e985e840d",
+        "artifact_sha256": "a2637958379a5bcc9b687fa273df76afa1ad290c88030f8e6b94d10ff7ff2075",
+        "content_sha256": "b951897e3d086c83ec111ed7132300f1d64898a14237e7922d654adbed808ee0",
+        "counts": {
+          "title_source_keys": 893,
+          "price_source_keys": 1302,
+          "residential_keys": 1471,
+          "built_transactions": 13293,
+          "commercial_keys": 306
+        },
+        "production_apply": false,
+        "adapter_sha256": "11b0b6a6bf2b6c05d6fec6e8b9d3908bb78d8f9a0e11ff33acffad93cb813f50",
+        "source_mode": "historical_shadow",
+        "scope": "existing_equal_value_bindings_only"
+      },
+      "runner_sha256": "2327d5dcfab62ba920378e4f702a230c326f0fb4c04a6db6171dd00d90c8136a"
+    },
+    {
+      "source_baseline_seconds": 67.73529889999918,
+      "elapsed_seconds": 188.02542209999956,
+      "checks": {
+        "handoff_receipt_verified": true,
+        "failed_handoff_keeps_selected_product": true,
+        "source_state_unchanged_by_product_handoff": true,
+        "original_city_extension_unchanged": true,
+        "893_title_keys_recomputed": true,
+        "1302_price_keys_recomputed": true,
+        "1471_residential_keys_preserved": true,
+        "306_commercial_keys_preserved": true,
+        "13293_built_transactions_preserved": true,
+        "actual_sql_fixture_inputs_equal": true,
+        "no_new_product_permission": true
+      },
+      "receipt": {
+        "handoff": "source-bound-compatibility-v1",
+        "source_state": {
+          "active_id": "ops-city-2026-07-product-fields",
+          "latest_id": "ops-city-2026-07-product-fields",
+          "revision": 1,
+          "product_enrichment": false,
+          "production_apply": false
+        },
+        "source_database_sha256": "e4d7663e63af586e61d1a0a9aed63d27781d75e934215eaab32e719132d9ebc1",
+        "source_stage_sha256": "66a190f7527ea96ea8b5b41ff6be24f56c4107eaceb9c3f124368609766a7eba",
+        "source_scope_sha256": "a63bc16d93243ebfa60e12eb4b7eab3721822d46b2ea2b286719a9c398c8e03e",
+        "consumer_contract_sha256": "29cb3a5e605c2ac115da3fcd5df31a91974f47c9f44cb5b565fd7254cb4c43c0",
+        "acceptance_sha256": "a948f7b76da987182a6406c104cc6d7149e46a930aa465a0442e4220a4ae6c45",
+        "supply_manifest_sha256": "b24823837c8279ea79f71c924f5645aee8895c7430d2c9555a09062e985e840d",
+        "artifact_sha256": "fbe4622ec3bf6f662c74309cb310b23836d9cbc041be089d1d2eefb134cf544a",
+        "content_sha256": "b951897e3d086c83ec111ed7132300f1d64898a14237e7922d654adbed808ee0",
+        "counts": {
+          "title_source_keys": 893,
+          "price_source_keys": 1302,
+          "residential_keys": 1471,
+          "built_transactions": 13293,
+          "commercial_keys": 306
+        },
+        "production_apply": false,
+        "http_sql_fixture_sha256": "bd3ff0f760e75704ddd2175cb0b8875ca002704a059a60b049eeddf59f7c08bf",
+        "http_sql_fixture_equal_to_accepted_supply": true,
+        "adapter_sha256": "3b7e27bb4057e89cb36ded97da30447cd26f964def79dd2eb4afaf9c654ef4a2",
+        "source_mode": "historical_shadow",
+        "scope": "existing_equal_value_bindings_only"
+      },
+      "runner_sha256": "e84f3002a7130e6e9bd7796ed5a5ade5e1d32fe7f0ac2368df2bc444784bbafc"
+    }
+  ]
+}
