@@ -1,0 +1,17 @@
+{
+  "acceptance": "cheongju-fixed-product-input-acceptance-v1",
+  "supply_manifest_sha256": "982d450a6fd88254570fd59a6b4f6b7ff21bb324c7c19deaf6ffb59a7512721b",
+  "marts_api_report_sha256": "c113c37831222e8749e27c309f5dc8e8eebb2d596e6d7bed980757abb8b9455a",
+  "response_artifact_sha256": "74fbdcc1a5c8d0c855f2dd451ea97bf2b878307e0275668db0f34f007690be60",
+  "runner_sha256": "f216aa9139b6b55a578a782d559934389d79c423b861f284bfffc8ea577d397f",
+  "checks": {
+    "completed_supply_verified": true,
+    "price_marts_and_response_helpers_passed": true,
+    "product_implementation_hashes_verified": true,
+    "response_artifact_verified": true
+  },
+  "production_apply": false,
+  "actual_next_month_update_tested": false,
+  "http_end_to_end_tested": false,
+  "elapsed_seconds": 54.44210640000165
+}

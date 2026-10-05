@@ -1,0 +1,76 @@
+{
+  "audit": "fixed-price-mart-and-api-helper-replay-v1",
+  "supply_manifest_sha256": "982d450a6fd88254570fd59a6b4f6b7ff21bb324c7c19deaf6ffb59a7512721b",
+  "local_title_inventory": {
+    "original_title_files": [
+      {
+        "snapshot": "2024-09",
+        "bytes": 3628263011
+      },
+      {
+        "snapshot": "2025-07",
+        "bytes": 3755874423
+      },
+      {
+        "snapshot": "2026-07",
+        "bytes": 3803104062
+      }
+    ],
+    "after_frozen_2026_07": [],
+    "scope": "Local original title folders only; availability is not schema/hash/authority validation.",
+    "product_field_columns": 25
+  },
+  "counts": {
+    "residential_marts": 1471,
+    "residential_transactions": 108077,
+    "commercial_marts": 306,
+    "commercial_transactions": 3987,
+    "built_transactions_per_mode": 13293
+  },
+  "stored_mart_difference_counts": {
+    "residential": 0,
+    "commercial": 0
+  },
+  "stored_mart_difference_fields": {
+    "residential": {},
+    "commercial": {}
+  },
+  "checks": {
+    "residential_responses_equal": true,
+    "commercial_306_responses_valid": true,
+    "built_ledger_responses_equal": true,
+    "built_enriched_responses_equal": true,
+    "residential_counts_match_stored": true,
+    "commercial_counts_match_stored": true,
+    "residential_all_price_fields_match_stored": true,
+    "commercial_all_price_fields_match_stored": true,
+    "no_product_permission_escalation": true
+  },
+  "payload_content_sha256": "a8935d296cb0d931a7b1ca75354976c3e14ee611f646c19e7c2188e376d6aae7",
+  "gzip_sha256": "74fbdcc1a5c8d0c855f2dd451ea97bf2b878307e0275668db0f34f007690be60",
+  "production_apply": false,
+  "elapsed_seconds": 14.678418200001033,
+  "implementation_sha256": {
+    "pipeline/build_collective_building_stats.py": "3d86bfe356c22c7203e1e9612a4d591a20f03bcb73664ea8232fd65f5aa5f17d",
+    "pipeline/build_collective_commercial_cluster_stats.py": "543de4fd880bca7d94e67cb018b0bd29bf632724ffeb2b35f4885090c896b185",
+    "pipeline/stats.py": "d0258165fc927f8dcff287692501b9a9f71fafd79d6b602a3e54d4699b72a202",
+    "backend/app/collective/building_stats_query.py": "883d733039c280d2cdfa6f285fef122ec3a7a4d55d200aad3127bc5470d670c1",
+    "backend/app/collective/danji_attributes.py": "df584531df9e98e4d5dda080fcdb876f47bc7b09e5cc926fea0f2bc7456df788",
+    "backend/app/collective/analysis_gates.py": "1162c092c2bd06aa6fb87c692deea861853a072e91754313033c1a8b10dd8c8f",
+    "backend/app/collective/schemas.py": "b60e06dd6faf505b7e21ed01b36c682db2bf6a6d30b854abce6007d67c9dd6e9",
+    "backend/app/collective_commercial/cluster_stats_query.py": "830380d59b40b03c4202b2bf055696257c81a65d2e137b1ef6b86fafcbaa1158",
+    "backend/app/collective_commercial/schemas.py": "c8a1f5d8154598f1a131842d26355621311ce20dfa62dd910ad62ab8ee61bb09",
+    "backend/app/built/router.py": "22fbc6dbbcb0522e1840c0134e81c9bbc93f6f792da5c97e612ab188065ee7f0",
+    "backend/app/built/schemas.py": "83a0c8c01702ea536aa200b163aca44ea9d59dc027de17e3256c8a5d7008965e",
+    "backend/app/built/enrichment_join.py": "608785fc74f5965c37dfe8aeecec0241042a0eeb713982a979b984b1d87608aa",
+    "pipeline/parcel_master/ledger_supply_bundle.py": "2e3e9aa39e3797f69c840f0d3203cf617a128c81fe199558d7d98e7f69f11b37",
+    "pipeline/parcel_master/replay_cheongju_supply_marts_api.py": "2648364bdad81cd7559bfc81616cd7944581f92fbda1581a19c9bd6ff6f94a7b"
+  },
+  "limitations": [
+    "Offline actual response helpers and Pydantic validation, not HTTP routing/auth/pagination or PostgreSQL SQL execution.",
+    "Recomputed rolling price fields only; frozen address/cluster metadata retained, annual/other windows excluded.",
+    "Residential attribute lookup latest snapshot is scoped to frozen rows, not a fresh whole-table global lookup.",
+    "Analysis gates use frozen window transaction years, not a live annual table query.",
+    "Fixed historical inputs; next-month availability is recorded separately and is not an update acceptance test."
+  ]
+}

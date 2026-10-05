@@ -17,7 +17,7 @@
   "report_sha256": {
     "cheongju_product_numeric_baseline.json": "7e68f60a8eaa0c89638376b66067da339aa06609a72ba5df7c47e593ccd8f798",
     "cheongju_product_field_extension.json": "e776c5ce20508798583f71fd1dc173d23447b2d9128b4ca12e090b8903f4ab74",
-    "cheongju_numeric_supply_shadow.json": "4e5592a57e9f2b2ea7ad8af8ad8076e16bc1883098700eadc8cd1cfac8c00dc2",
+    "cheongju_numeric_supply_shadow.json": "8f8f91d29346be5851ac7e1c7dc41755272be7612e38f01db9090c7fd00eec0d",
     "cheongju_supply_regression_replay.json": "62fc348e193a13b6874b5bbde9488a998190e4c274b76f3fd87637ca0a6c312e"
   },
   "script_sha256": {
@@ -28,7 +28,7 @@
     "run_cheongju_product_supply.py": "d63eb1ce120304ed84036b5762c4c69aca72df15bc6b4fdf5aee0a30f8cfea97",
     "ledger_supply_artifacts.py": "d65cbfb78fa7cea4845505df6e782afb802f7ba2b0da13d105f43cbd638922b2"
   },
-  "elapsed_seconds": 33.328298799999175,
+  "elapsed_seconds": 34.95097259999966,
   "production_apply": false,
   "limitations": [
     "Fixed historical source and product baseline; not a new-month production update or full API deployment.",
@@ -116,6 +116,31 @@
         "sample_consumer_field_and_permission_contract": true
       },
       "elapsed_seconds": 33.328298799999175,
+      "script_sha256": {
+        "freeze_cheongju_product_numeric.py": "1468bcce6ea959db45a700ea4a6c5cc28c4c7d0fb5600166329010e23ecc96eb",
+        "extend_cheongju_product_fields.py": "1dbea196a2c42a6a2f3026f597af1497ef6c921220f58f95609e48380eea1b58",
+        "cheongju_numeric_supply_shadow.py": "28d3e30a490a773e6c8328f779ed79ed28bf4ed2790c1489fd9987c8ca5d5291",
+        "replay_cheongju_supply_regressions.py": "e2383b4697ed471c0e8c686d17d1511230e6d93db7ccf42b0f13725e187e863c",
+        "run_cheongju_product_supply.py": "d63eb1ce120304ed84036b5762c4c69aca72df15bc6b4fdf5aee0a30f8cfea97",
+        "ledger_supply_artifacts.py": "d65cbfb78fa7cea4845505df6e782afb802f7ba2b0da13d105f43cbd638922b2"
+      },
+      "checks": {
+        "cheongju_product_numeric_baseline.json": true,
+        "cheongju_product_field_extension.json": true,
+        "cheongju_numeric_supply_shadow.json": true,
+        "cheongju_supply_regression_replay.json": true
+      }
+    },
+    {
+      "finished_at": "2026-10-05T08:02:01.300343+00:00",
+      "extension": {
+        "selected_release": "cheongju-city-2026-07-product-fields-v1",
+        "release_content_sha256": "fbe7a0b4c8d65796dba22183700d23599e47b54f3227bf5b910bc62c13de6921",
+        "resumed_from_previous_publication": false,
+        "previous_selected_release": "cheongju-city-2026-07-product-fields-v1",
+        "sample_consumer_field_and_permission_contract": true
+      },
+      "elapsed_seconds": 34.95097259999966,
       "script_sha256": {
         "freeze_cheongju_product_numeric.py": "1468bcce6ea959db45a700ea4a6c5cc28c4c7d0fb5600166329010e23ecc96eb",
         "extend_cheongju_product_fields.py": "1dbea196a2c42a6a2f3026f597af1497ef6c921220f58f95609e48380eea1b58",

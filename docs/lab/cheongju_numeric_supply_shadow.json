@@ -2,7 +2,7 @@
   "published_release": "cheongju-city-2026-07-product-fields-v1",
   "baseline_sha256": "d4b8b3dc6c190ecd8c6ba1f4ba0c7d3c2f4db055760b5362cc241e0630a902e1",
   "paired_content_sha256": "439430674331d7880afe55930131285c4baaa4a5f28ce4dacfd2ac3538e796b2",
-  "gzip_sha256": "2cce13c4f9c7e720b2e2339cdab949596731fd45fc441e5d3c7bd87df8825c88",
+  "gzip_sha256": "59a26db50bcb446526abaaa5106b65b4ec0e842e46feff5bc4f2e21f095eb19c",
   "residential_attribute_comparisons": {
     "no_existing_attribute_row": 124,
     "title_numeric_equal": 905,
@@ -39,7 +39,7 @@
   "title_bulk_lookup": {
     "requested_parcels": 10987,
     "title_rows": 17570,
-    "seconds": 1.5978656000006595,
+    "seconds": 1.6203774999994494,
     "mode": "read-only main DB and in-memory TEMP scope; one ordered title payload query",
     "consumed_raw_hashes_verified": true
   },
@@ -55,7 +55,7 @@
     "no_new_assignment": true,
     "commercial_306_3987_preserved": true
   },
-  "elapsed_seconds": 12.010668099999748,
+  "elapsed_seconds": 12.170926599999802,
   "limitations": [
     "Candidate aggregate uses the existing product algorithm for audit only, not independent site/membership certification.",
     "K-apt and other existing numeric attributes pass through frozen product inputs; they are not re-sourced from title originals.",
