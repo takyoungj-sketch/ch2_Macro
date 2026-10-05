@@ -1,0 +1,144 @@
+{
+  "audit": "cheongju-frozen-http-postgresql-v1",
+  "supply_manifest_sha256": "b24823837c8279ea79f71c924f5645aee8895c7430d2c9555a09062e985e840d",
+  "cases_per_branch": 122,
+  "http_requests_total": 244,
+  "response_differences": 0,
+  "status_counts_per_branch": {
+    "401": 6,
+    "422": 8,
+    "200": 104,
+    "400": 4
+  },
+  "sql_queries_by_branch": {
+    "legacy": {
+      "collective": 618,
+      "built": 398
+    },
+    "compatible": {
+      "collective": 618,
+      "built": 398
+    }
+  },
+  "temporary_isolation": {
+    "legacy": {
+      "collective_temp_resolution": {
+        "collective_building_stats": true,
+        "collective_building_annual_stats": true,
+        "collective_transactions": true,
+        "collective_building_attributes": true,
+        "collective_building_assessed_land_price": true,
+        "collective_commercial_cluster_stats": true,
+        "collective_commercial_transactions": true,
+        "commercial_clusters": true
+      },
+      "built_temp_resolution": {
+        "built_transactions": true,
+        "built_transaction_enrichment": true
+      },
+      "request_transactions_read_only": true,
+      "temporary_rows": {
+        "collective_building_stats": 1471,
+        "collective_building_annual_stats": 6495,
+        "collective_transactions": 108077,
+        "collective_building_attributes": 1347,
+        "collective_building_assessed_land_price": 1302,
+        "collective_commercial_cluster_stats": 306,
+        "collective_commercial_transactions": 3987,
+        "commercial_clusters": 306,
+        "built_transactions": 13293,
+        "built_transaction_enrichment": 10799
+      }
+    },
+    "compatible": {
+      "collective_temp_resolution": {
+        "collective_building_stats": true,
+        "collective_building_annual_stats": true,
+        "collective_transactions": true,
+        "collective_building_attributes": true,
+        "collective_building_assessed_land_price": true,
+        "collective_commercial_cluster_stats": true,
+        "collective_commercial_transactions": true,
+        "commercial_clusters": true
+      },
+      "built_temp_resolution": {
+        "built_transactions": true,
+        "built_transaction_enrichment": true
+      },
+      "request_transactions_read_only": true,
+      "temporary_rows": {
+        "collective_building_stats": 1471,
+        "collective_building_annual_stats": 6495,
+        "collective_transactions": 108077,
+        "collective_building_attributes": 1347,
+        "collective_building_assessed_land_price": 1302,
+        "collective_commercial_cluster_stats": 306,
+        "collective_commercial_transactions": 3987,
+        "commercial_clusters": 306,
+        "built_transactions": 13293,
+        "built_transaction_enrichment": 10799
+      }
+    }
+  },
+  "cluster_reference_sha256": "26b92b317d4903e47ebf1d19a986dbaaeb6fb16919dc6673c72a4e27741cc977",
+  "live_api_health_before_run": {
+    "status": 200
+  },
+  "product_mart_snapshot_scope": {
+    "residential": {
+      "latest_product_mart_month": "2026-09-01",
+      "frozen_rows": 1471,
+      "latest_month_rows": 1470,
+      "older_month_rows": 1
+    },
+    "commercial": {
+      "latest_product_mart_month": "2026-09-01",
+      "frozen_rows": 306,
+      "latest_month_rows": 306,
+      "older_month_rows": 0
+    }
+  },
+  "full_page_totals": {
+    "residential_full_page_False_1": 1470,
+    "commercial_full_page_False_1": 306,
+    "built_full_page_False_1": 13293,
+    "built_full_page_True_1": 13293
+  },
+  "checks": {
+    "http_status_and_bodies_equal": true,
+    "missing_wrong_token_rejected": true,
+    "query_validation_and_domain_errors_checked": true,
+    "all_pages_complete_without_duplicate_keys": true,
+    "past_last_and_empty_region_checked": true,
+    "actual_postgresql_temp_tables_used": true,
+    "request_transactions_read_only": true,
+    "source_generation_unchanged": true,
+    "asset_numeric_filters_and_transaction_sort_checked": true,
+    "all_latest_product_mart_keys_returned": true
+  },
+  "gzip_sha256": "9ae4e39555a4ef24f2614e6ea7befafbb3a07f5cfa874c2ea9e05d2783e371d6",
+  "payload_content_sha256": "7eb28aaee9c3df46eaa6a63ec9aa03d326ee25de0a65acbad438dd1511fbfa83",
+  "production_apply": false,
+  "elapsed_seconds": 52.39728029999969,
+  "implementation_sha256": {
+    "pipeline/parcel_master/ledger_http_isolation.py": "107739101298b7cf8305c0dcdbe75bac1af9893a8fc2ca5ef62babd63a50f322",
+    "pipeline/parcel_master/replay_cheongju_supply_http.py": "43ad5ec1c5bf9eb91988ca8b7468460e32030f8b5b4971cf2c35d46fc234fd59",
+    "backend/app/main.py": "513b49d6a956c494fdf655094cfb5a6b4a08286007f61bd37cb29e9db49d51ca",
+    "backend/app/collective/router.py": "fc802fbf9ef5b66500333a503bd6d5f603fca9a0fea2170e4aa5cbd200d90346",
+    "backend/app/collective/building_stats_query.py": "883d733039c280d2cdfa6f285fef122ec3a7a4d55d200aad3127bc5470d670c1",
+    "backend/app/collective/danji_attributes.py": "df584531df9e98e4d5dda080fcdb876f47bc7b09e5cc926fea0f2bc7456df788",
+    "backend/app/collective/type_siblings.py": "b18f98ed8efc60ed723c0ec7771000a068a871f9778fe502fb506127e2935cb9",
+    "backend/app/collective_commercial/router.py": "996b33218439e54505f07bf3c6d92894f56aebf06201f1333d6f4690fde8ebe8",
+    "backend/app/collective_commercial/cluster_stats_query.py": "830380d59b40b03c4202b2bf055696257c81a65d2e137b1ef6b86fafcbaa1158",
+    "backend/app/built/router.py": "22fbc6dbbcb0522e1840c0134e81c9bbc93f6f792da5c97e612ab188065ee7f0",
+    "backend/app/built/transaction_scope.py": "8a17b36a5ac6aa77e274d49a844f2a81f943b56a46bc400cc849912acdf124d9",
+    "backend/app/built/enrichment_join.py": "608785fc74f5965c37dfe8aeecec0241042a0eeb713982a979b984b1d87608aa"
+  },
+  "limitations": [
+    "Actual FastAPI TestClient ASGI requests and PostgreSQL SQL; no TCP/nginx/frontend browser or production authentication credential test.",
+    "Frozen selected product cohort and seven-year transaction scope, not all city transactions or all API endpoints/windows.",
+    "Annual counts derived from frozen transactions for gate lookup; commercial cluster metadata read from local DB once and shared by both branches.",
+    "Public schema/region metadata may be read; product input tables resolve to connection-local TEMP tables. No public DML or durable audit tables.",
+    "Compatibility inputs preserve existing values and memberships; no new product permission or real next-month acceptance."
+  ]
+}

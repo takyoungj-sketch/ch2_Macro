@@ -1,17 +1,23 @@
 {
-  "acceptance": "cheongju-fixed-product-input-acceptance-v1",
-  "supply_manifest_sha256": "982d450a6fd88254570fd59a6b4f6b7ff21bb324c7c19deaf6ffb59a7512721b",
-  "marts_api_report_sha256": "c113c37831222e8749e27c309f5dc8e8eebb2d596e6d7bed980757abb8b9455a",
-  "response_artifact_sha256": "74fbdcc1a5c8d0c855f2dd451ea97bf2b878307e0275668db0f34f007690be60",
-  "runner_sha256": "f216aa9139b6b55a578a782d559934389d79c423b861f284bfffc8ea577d397f",
+  "acceptance": "cheongju-fixed-product-input-acceptance-v2",
+  "supply_manifest_sha256": "b24823837c8279ea79f71c924f5645aee8895c7430d2c9555a09062e985e840d",
+  "marts_api_report_sha256": "8c90bf0f3ef2dd8f81da91e5babff329cdf038e6404e8746abff1b9a66ff04e4",
+  "response_artifact_sha256": "e342f926f1baa0c74d38ced2625134e1d8c3239d46d7f9cd8a179bbdbb78e5c1",
+  "http_sql_report_sha256": "f805b92a5a5694648d89ba7449c56d3ca29d1b3fbc0e0cb805b1a419c973fc90",
+  "http_sql_artifact_sha256": "9ae4e39555a4ef24f2614e6ea7befafbb3a07f5cfa874c2ea9e05d2783e371d6",
+  "runner_sha256": "d947bfa74b44bb066a7f93fcc05e608e55a8b50ebd3c6ef6f2aa45a8952b6eb8",
   "checks": {
     "completed_supply_verified": true,
     "price_marts_and_response_helpers_passed": true,
     "product_implementation_hashes_verified": true,
-    "response_artifact_verified": true
+    "response_artifact_verified": true,
+    "actual_asgi_http_and_postgresql_passed": true,
+    "http_sql_artifact_verified": true
   },
   "production_apply": false,
   "actual_next_month_update_tested": false,
   "http_end_to_end_tested": false,
-  "elapsed_seconds": 54.44210640000165
+  "http_asgi_postgresql_tested": true,
+  "tcp_nginx_browser_tested": false,
+  "elapsed_seconds": 112.85766209999929
 }

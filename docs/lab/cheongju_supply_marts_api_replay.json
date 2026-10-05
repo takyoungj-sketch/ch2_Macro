@@ -1,6 +1,6 @@
 {
   "audit": "fixed-price-mart-and-api-helper-replay-v1",
-  "supply_manifest_sha256": "982d450a6fd88254570fd59a6b4f6b7ff21bb324c7c19deaf6ffb59a7512721b",
+  "supply_manifest_sha256": "b24823837c8279ea79f71c924f5645aee8895c7430d2c9555a09062e985e840d",
   "local_title_inventory": {
     "original_title_files": [
       {
@@ -46,10 +46,10 @@
     "commercial_all_price_fields_match_stored": true,
     "no_product_permission_escalation": true
   },
-  "payload_content_sha256": "a8935d296cb0d931a7b1ca75354976c3e14ee611f646c19e7c2188e376d6aae7",
-  "gzip_sha256": "74fbdcc1a5c8d0c855f2dd451ea97bf2b878307e0275668db0f34f007690be60",
+  "payload_content_sha256": "cf7ed52e6fc8a6551b4b19e40d59a3d1e0781b969e5e8005f30c99fe5d78ad4f",
+  "gzip_sha256": "e342f926f1baa0c74d38ced2625134e1d8c3239d46d7f9cd8a179bbdbb78e5c1",
   "production_apply": false,
-  "elapsed_seconds": 14.678418200001033,
+  "elapsed_seconds": 15.311745499999233,
   "implementation_sha256": {
     "pipeline/build_collective_building_stats.py": "3d86bfe356c22c7203e1e9612a4d591a20f03bcb73664ea8232fd65f5aa5f17d",
     "pipeline/build_collective_commercial_cluster_stats.py": "543de4fd880bca7d94e67cb018b0bd29bf632724ffeb2b35f4885090c896b185",
