@@ -1,5 +1,7 @@
 # 청주 실제 SQL·FastAPI 요청 병행 검증
 
+후속: [원천 판본 접수·게시·복구](LEDGER_SOURCE_OPERATIONS_RUNBOOK.md)를 별도 경로로 구현했다. 아래의 고정 제품 검증 증거를 재확인하고 제품 전환에 남은 조건을 명시했다. ASGI/SQL 일치가 새 원천 게시나 제품 사용 허용을 대신하지 않는다.
+
 2026-10-05. [가격 마트·응답 함수 검증](CHEONGJU_PRODUCT_MARTS_API_REPLAY_RESULT.md)의 후속으로 실제 FastAPI 앱과 PostgreSQL에 기존 입력·통합 공급 입력을 각각 실행했다. 비교 범위 안에서 상태 코드와 전체 JSON 본문이 동일했다. 운영 API 프로세스·제품 테이블·라우터 코드는 이번 작업에서 수정하지 않았다.
 
 ## 실측 결과

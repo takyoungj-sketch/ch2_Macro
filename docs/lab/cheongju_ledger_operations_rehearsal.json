@@ -1,0 +1,354 @@
+{
+  "rehearsal": "historical-4000-source-operations-v1",
+  "actual_future_source_update_tested": false,
+  "source_database_sha256": "092bee72026f0f5f7f8e9f02a0a0fbfc8cbd0df1be8ba7c2dd6f0a2ff988372c",
+  "batches": [
+    {
+      "batch_id": "ops-4000-2024-09",
+      "previous_id": null,
+      "snapshot": "2024-09",
+      "delta": {
+        "snapshot": "2024-09",
+        "previous_release": null,
+        "building_observation": {
+          "observations": 3850,
+          "new_vs_previous_snapshot": 3850,
+          "missing_vs_previous_snapshot": 0,
+          "raw_hash_changed": 0,
+          "attribute_hash_changed": 0
+        },
+        "parcel_observation": {
+          "observations": 3607,
+          "new_vs_previous_snapshot": 3607,
+          "missing_vs_previous_snapshot": 0,
+          "version_hash_changed": 0
+        },
+        "price_changed_among_shared_parcels": 0,
+        "raw_price_changed_among_shared_parcels": 0,
+        "raw_year_changed_among_shared_parcels": 0
+      },
+      "identity_statuses": {
+        "block_without_canonical_pnu": 18,
+        "canonical_address": 3818,
+        "noncanonical_zero_main_lot": 14
+      },
+      "price_statuses": {
+        "positive_known_year": 3590,
+        "source_overflow": 17
+      },
+      "last_seen_only_buildings": 0,
+      "evidence_kind": "historical_rehearsal",
+      "product_permissions": {
+        "product_enrichment": false,
+        "quantity_aggregation": false,
+        "regression": false
+      },
+      "missing_is_not_demolition": true,
+      "raw_originals_reextracted": false
+    },
+    {
+      "batch_id": "ops-4000-2025-07",
+      "previous_id": "ops-4000-2024-09",
+      "snapshot": "2025-07",
+      "delta": {
+        "snapshot": "2025-07",
+        "previous_release": "ops-4000-2024-09",
+        "building_observation": {
+          "observations": 3933,
+          "new_vs_previous_snapshot": 107,
+          "missing_vs_previous_snapshot": 24,
+          "raw_hash_changed": 3826,
+          "attribute_hash_changed": 59
+        },
+        "parcel_observation": {
+          "observations": 3626,
+          "new_vs_previous_snapshot": 40,
+          "missing_vs_previous_snapshot": 21,
+          "version_hash_changed": 1179
+        },
+        "price_changed_among_shared_parcels": 3584,
+        "raw_price_changed_among_shared_parcels": 3572,
+        "raw_year_changed_among_shared_parcels": 3584
+      },
+      "identity_statuses": {
+        "block_without_canonical_pnu": 3,
+        "canonical_address": 3916,
+        "noncanonical_zero_main_lot": 14
+      },
+      "price_statuses": {
+        "positive_known_year": 3602,
+        "source_overflow": 24
+      },
+      "last_seen_only_buildings": 24,
+      "evidence_kind": "historical_rehearsal",
+      "product_permissions": {
+        "product_enrichment": false,
+        "quantity_aggregation": false,
+        "regression": false
+      },
+      "missing_is_not_demolition": true,
+      "raw_originals_reextracted": false
+    },
+    {
+      "batch_id": "ops-4000-2026-07",
+      "previous_id": "ops-4000-2025-07",
+      "snapshot": "2026-07",
+      "delta": {
+        "snapshot": "2026-07",
+        "previous_release": "ops-4000-2025-07",
+        "building_observation": {
+          "observations": 3913,
+          "new_vs_previous_snapshot": 43,
+          "missing_vs_previous_snapshot": 63,
+          "raw_hash_changed": 160,
+          "attribute_hash_changed": 60
+        },
+        "parcel_observation": {
+          "observations": 3634,
+          "new_vs_previous_snapshot": 20,
+          "missing_vs_previous_snapshot": 12,
+          "version_hash_changed": 1179
+        },
+        "price_changed_among_shared_parcels": 3614,
+        "raw_price_changed_among_shared_parcels": 3586,
+        "raw_year_changed_among_shared_parcels": 3611
+      },
+      "identity_statuses": {
+        "block_without_canonical_pnu": 2,
+        "canonical_address": 3895,
+        "noncanonical_zero_main_lot": 16
+      },
+      "price_statuses": {
+        "missing_or_nonpositive": 6,
+        "positive_known_year": 3628
+      },
+      "last_seen_only_buildings": 87,
+      "evidence_kind": "historical_rehearsal",
+      "product_permissions": {
+        "product_enrichment": false,
+        "quantity_aggregation": false,
+        "regression": false
+      },
+      "missing_is_not_demolition": true,
+      "raw_originals_reextracted": false
+    }
+  ],
+  "checks": {
+    "ops-4000-2024-09_stage_no_pointer_change": true,
+    "ops-4000-2024-09_stage_replay_equal": true,
+    "ops-4000-2024-09_staged_artifacts_unchanged": true,
+    "ops-4000-2025-07_stage_no_pointer_change": true,
+    "ops-4000-2025-07_stage_replay_equal": true,
+    "ops-4000-2025-07_staged_artifacts_unchanged": true,
+    "ops-4000-2026-07_stage_no_pointer_change": true,
+    "ops-4000-2026-07_stage_replay_equal": true,
+    "ops-4000-2026-07_staged_artifacts_unchanged": true,
+    "restore_failure_preserves_pointer": true,
+    "oldest_consumer_output_restored": true,
+    "append_from_restored_old_head_rejected": true,
+    "latest_consumer_output_restored": true,
+    "publication_replay_no_pointer_change": true,
+    "original_integrated_4000_database_unchanged": true,
+    "registry_foreign_keys_clean": true,
+    "registry_integrity": true,
+    "product_transition_remains_blocked": true
+  },
+  "active_state": {
+    "active_id": "ops-4000-2026-07",
+    "latest_id": "ops-4000-2026-07",
+    "revision": 7,
+    "product_enrichment": false,
+    "production_apply": false
+  },
+  "immutable_consumer_output_sha256": {
+    "ops-4000-2024-09": "c28e659f7ca1cbd83e8c5ec1120352cf9b3a9099c35c3ae693b1e83950265781",
+    "ops-4000-2025-07": "0734c1545a7bb3001ef804879f495226169cc31a0c84228cefeb04263a24fde5",
+    "ops-4000-2026-07": "6b818bf133bff8883eff6a6c03baba53d4cfcdd762739dc91cf2ab1da874f7d2"
+  },
+  "publication_events": [
+    [
+      "publish",
+      null,
+      "ops-4000-2024-09",
+      1
+    ],
+    [
+      "publish",
+      "ops-4000-2024-09",
+      "ops-4000-2025-07",
+      2
+    ],
+    [
+      "publish",
+      "ops-4000-2025-07",
+      "ops-4000-2026-07",
+      3
+    ],
+    [
+      "restore",
+      "ops-4000-2026-07",
+      "ops-4000-2024-09",
+      4
+    ],
+    [
+      "restore",
+      "ops-4000-2024-09",
+      "ops-4000-2026-07",
+      5
+    ],
+    [
+      "restore",
+      "ops-4000-2026-07",
+      "ops-4000-2024-09",
+      6
+    ],
+    [
+      "restore",
+      "ops-4000-2024-09",
+      "ops-4000-2026-07",
+      7
+    ]
+  ],
+  "stage_receipts": [
+    {
+      "batch_id": "ops-4000-2024-09",
+      "database_sha256": "b78e62e94e8b8bff837b2a01294170062dd61a36d057d0abf0b493bc0b0fb9ab",
+      "impact_sha256": "5a45f80cc7e5b1ce2dc44c9e0b908d9cd00108c8350fdef32273868e74b6028d",
+      "package_sha256": "21e6d10b04ca3f8767cff767c9f966aef3309083e99af16cb8575ab4e6a35436"
+    },
+    {
+      "batch_id": "ops-4000-2025-07",
+      "database_sha256": "ca8b3f067223a1e24a6262dc56a4e1991e6d0a99f1ac7d092c80cca5c2b1122d",
+      "impact_sha256": "adfa5d2063affba3f727197925034a8e6e8f22cb48c531bea2452f410359df50",
+      "package_sha256": "83c59b6e54e528fe66f82e0d55febe1cf7bc35b4170a4b5a9070211c943f7d4e"
+    },
+    {
+      "batch_id": "ops-4000-2026-07",
+      "database_sha256": "ed251ba1b0407bbe126046b408bc33a607df704a281e23c354b85050714ef692",
+      "impact_sha256": "f634b972e34f6cb5bd617f04dd70f2d88405d043fbe94b2ee2d49f09e2240c4a",
+      "package_sha256": "4e43e631d98f3bf569a6ef924009b9794227bcf6cba833bb36abdd302c0cf577"
+    }
+  ],
+  "product_transition_gate": {
+    "gate": "ledger-product-transition-v1",
+    "status": "blocked",
+    "verified_existing_audit_evidence": true,
+    "blockers": [
+      "consumer_contract_does_not_authorize_new_product_use",
+      "real_next_source_update_not_tested",
+      "tcp_proxy_browser_path_not_tested",
+      "product_handoff_not_bound_to_selected_source_publication"
+    ],
+    "acceptance_sha256": "a948f7b76da987182a6406c104cc6d7149e46a930aa465a0442e4220a4ae6c45",
+    "source_manifest_sha256": "b24823837c8279ea79f71c924f5645aee8895c7430d2c9555a09062e985e840d",
+    "consumer_contract_sha256": "29cb3a5e605c2ac115da3fcd5df31a91974f47c9f44cb5b565fd7254cb4c43c0",
+    "default_permissions": {
+      "product_enrichment": false,
+      "quantity_aggregation": false,
+      "regression": false
+    },
+    "production_apply": false,
+    "gate_implementation_sha256": "9b005907e7e56a052fc8c29c37c450df709cf18f2f62573a393939c4c806f69f",
+    "limitations": [
+      "Verified fixed historical replay is not approval to replace product inputs.",
+      "The current contract keeps new membership, representative selection, quantity aggregation and model adoption separate."
+    ]
+  },
+  "elapsed_seconds": 13.321120900000096,
+  "production_apply": false,
+  "immutable_database_bytes": {
+    "ops-4000-2024-09": 14008320,
+    "ops-4000-2025-07": 26882048,
+    "ops-4000-2026-07": 34451456
+  },
+  "implementation_sha256": {
+    "ledger_operations.py": "ae10d752d7fea340fca41a5e89e5bb40f5f833eb0a3082785a935bb691b29b19",
+    "ledger_operations_cli.py": "3d5442cada2e406f3d73e2c0b4393dc78a237d3c1e65628416b2dab7e3a79498",
+    "ledger_product_transition.py": "9b005907e7e56a052fc8c29c37c450df709cf18f2f62573a393939c4c806f69f",
+    "run_cheongju_ledger_operations_rehearsal.py": "4b33bef8585334d4acd0c648a80fa7296ca152713fc1a2d5d81e49f22f36f9fb",
+    "integrated_ledger_v2.py": "7a7de6408847f47fc4e2058ec2d55897f1b7938ce75b14b7906f8de962d380ce",
+    "run_cheongju_integrated_ledger_city.py": "68df7c8713c2b4431ebc3fff4b04b32cca630d4e718e6d24bc9c0980f9901144"
+  },
+  "limitations": [
+    "Real three historical 4,000-PK input releases exported from already verified ledger; not a future month ingestion.",
+    "Normalized JSON/gzip intake verified; original nationwide raw files are not re-extracted by this operational wrapper.",
+    "Separate immutable research databases and registry, not a live product supply switch."
+  ],
+  "execution_records": [
+    {
+      "checks": {
+        "ops-4000-2024-09_stage_no_pointer_change": true,
+        "ops-4000-2024-09_stage_replay_equal": true,
+        "ops-4000-2024-09_staged_artifacts_unchanged": true,
+        "ops-4000-2025-07_stage_no_pointer_change": true,
+        "ops-4000-2025-07_stage_replay_equal": true,
+        "ops-4000-2025-07_staged_artifacts_unchanged": true,
+        "stage_failure_sources_preserves_pointer": true,
+        "stage_failure_traits_preserves_pointer": true,
+        "stage_failure_buildings_preserves_pointer": true,
+        "stage_failure_published_preserves_pointer": true,
+        "ops-4000-2026-07_stage_no_pointer_change": true,
+        "ops-4000-2026-07_stage_replay_equal": true,
+        "publication_failure_preserves_pointer": true,
+        "ops-4000-2026-07_staged_artifacts_unchanged": true,
+        "restore_failure_preserves_pointer": true,
+        "oldest_consumer_output_restored": true,
+        "append_from_restored_old_head_rejected": true,
+        "latest_consumer_output_restored": true,
+        "publication_replay_no_pointer_change": true,
+        "original_integrated_4000_database_unchanged": true,
+        "registry_foreign_keys_clean": true,
+        "registry_integrity": true,
+        "product_transition_remains_blocked": true
+      },
+      "active_state": {
+        "active_id": "ops-4000-2026-07",
+        "latest_id": "ops-4000-2026-07",
+        "revision": 5,
+        "product_enrichment": false,
+        "production_apply": false
+      },
+      "elapsed_seconds": 31.15047760000016,
+      "source_database_sha256": "092bee72026f0f5f7f8e9f02a0a0fbfc8cbd0df1be8ba7c2dd6f0a2ff988372c"
+    },
+    {
+      "checks": {
+        "ops-4000-2024-09_stage_no_pointer_change": true,
+        "ops-4000-2024-09_stage_replay_equal": true,
+        "ops-4000-2024-09_staged_artifacts_unchanged": true,
+        "ops-4000-2025-07_stage_no_pointer_change": true,
+        "ops-4000-2025-07_stage_replay_equal": true,
+        "ops-4000-2025-07_staged_artifacts_unchanged": true,
+        "ops-4000-2026-07_stage_no_pointer_change": true,
+        "ops-4000-2026-07_stage_replay_equal": true,
+        "ops-4000-2026-07_staged_artifacts_unchanged": true,
+        "restore_failure_preserves_pointer": true,
+        "oldest_consumer_output_restored": true,
+        "append_from_restored_old_head_rejected": true,
+        "latest_consumer_output_restored": true,
+        "publication_replay_no_pointer_change": true,
+        "original_integrated_4000_database_unchanged": true,
+        "registry_foreign_keys_clean": true,
+        "registry_integrity": true,
+        "product_transition_remains_blocked": true
+      },
+      "active_state": {
+        "active_id": "ops-4000-2026-07",
+        "latest_id": "ops-4000-2026-07",
+        "revision": 7,
+        "product_enrichment": false,
+        "production_apply": false
+      },
+      "elapsed_seconds": 13.321120900000096,
+      "source_database_sha256": "092bee72026f0f5f7f8e9f02a0a0fbfc8cbd0df1be8ba7c2dd6f0a2ff988372c",
+      "implementation_sha256": {
+        "ledger_operations.py": "ae10d752d7fea340fca41a5e89e5bb40f5f833eb0a3082785a935bb691b29b19",
+        "ledger_operations_cli.py": "3d5442cada2e406f3d73e2c0b4393dc78a237d3c1e65628416b2dab7e3a79498",
+        "ledger_product_transition.py": "9b005907e7e56a052fc8c29c37c450df709cf18f2f62573a393939c4c806f69f",
+        "run_cheongju_ledger_operations_rehearsal.py": "4b33bef8585334d4acd0c648a80fa7296ca152713fc1a2d5d81e49f22f36f9fb",
+        "integrated_ledger_v2.py": "7a7de6408847f47fc4e2058ec2d55897f1b7938ce75b14b7906f8de962d380ce",
+        "run_cheongju_integrated_ledger_city.py": "68df7c8713c2b4431ebc3fff4b04b32cca630d4e718e6d24bc9c0980f9901144"
+      }
+    }
+  ]
+}
