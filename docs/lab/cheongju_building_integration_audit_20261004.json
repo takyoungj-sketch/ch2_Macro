@@ -1,0 +1,1181 @@
+{
+  "run_date": "2026-10-04",
+  "scope": "Cheongju four districts; local read-only audit",
+  "parcel_master": {
+    "columns": [
+      {
+        "table_name": "building",
+        "column_name": "mgmt_pk",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "building",
+        "column_name": "snapshot",
+        "data_type": "character"
+      },
+      {
+        "table_name": "building",
+        "column_name": "pnu",
+        "data_type": "character"
+      },
+      {
+        "table_name": "building",
+        "column_name": "beopjungri_code",
+        "data_type": "character"
+      },
+      {
+        "table_name": "building",
+        "column_name": "sido_code",
+        "data_type": "character"
+      },
+      {
+        "table_name": "building",
+        "column_name": "ledger_kind",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "building",
+        "column_name": "building_name",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "building",
+        "column_name": "dong_name",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "building",
+        "column_name": "structure_name",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "building",
+        "column_name": "structure_group",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "building",
+        "column_name": "main_purpose",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "building",
+        "column_name": "purpose_detail",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "building",
+        "column_name": "households",
+        "data_type": "integer"
+      },
+      {
+        "table_name": "building",
+        "column_name": "floors_above",
+        "data_type": "integer"
+      },
+      {
+        "table_name": "building",
+        "column_name": "floors_below",
+        "data_type": "integer"
+      },
+      {
+        "table_name": "building",
+        "column_name": "gross_area",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "building",
+        "column_name": "arch_area",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "building",
+        "column_name": "plat_area",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "building",
+        "column_name": "title_land_area",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "building",
+        "column_name": "approve_date",
+        "data_type": "character"
+      },
+      {
+        "table_name": "building",
+        "column_name": "ho_cnt",
+        "data_type": "integer"
+      },
+      {
+        "table_name": "building",
+        "column_name": "parking_total",
+        "data_type": "integer"
+      },
+      {
+        "table_name": "ledger_snapshot",
+        "column_name": "source",
+        "data_type": "text"
+      },
+      {
+        "table_name": "ledger_snapshot",
+        "column_name": "snapshot",
+        "data_type": "text"
+      },
+      {
+        "table_name": "ledger_snapshot",
+        "column_name": "sido_code",
+        "data_type": "character"
+      },
+      {
+        "table_name": "ledger_snapshot",
+        "column_name": "loaded_at",
+        "data_type": "timestamp with time zone"
+      },
+      {
+        "table_name": "ledger_snapshot",
+        "column_name": "row_count",
+        "data_type": "bigint"
+      },
+      {
+        "table_name": "ledger_snapshot",
+        "column_name": "kind",
+        "data_type": "text"
+      },
+      {
+        "table_name": "parcel",
+        "column_name": "pnu",
+        "data_type": "character"
+      },
+      {
+        "table_name": "parcel",
+        "column_name": "beopjungri_code",
+        "data_type": "character"
+      },
+      {
+        "table_name": "parcel",
+        "column_name": "bun",
+        "data_type": "character"
+      },
+      {
+        "table_name": "parcel",
+        "column_name": "ji",
+        "data_type": "character"
+      },
+      {
+        "table_name": "parcel",
+        "column_name": "sido_code",
+        "data_type": "character"
+      },
+      {
+        "table_name": "parcel",
+        "column_name": "sigungu_code",
+        "data_type": "character"
+      },
+      {
+        "table_name": "parcel",
+        "column_name": "jimok_code",
+        "data_type": "character"
+      },
+      {
+        "table_name": "parcel",
+        "column_name": "land_area",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "parcel",
+        "column_name": "land_area_source",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "parcel",
+        "column_name": "first_seen",
+        "data_type": "character"
+      },
+      {
+        "table_name": "parcel",
+        "column_name": "last_seen",
+        "data_type": "character"
+      },
+      {
+        "table_name": "parcel",
+        "column_name": "n_buildings",
+        "data_type": "integer"
+      },
+      {
+        "table_name": "parcel_land_price",
+        "column_name": "pnu",
+        "data_type": "character"
+      },
+      {
+        "table_name": "parcel_land_price",
+        "column_name": "price_year",
+        "data_type": "smallint"
+      },
+      {
+        "table_name": "parcel_land_price",
+        "column_name": "price_per_m2",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "parcel_land_price",
+        "column_name": "base_date",
+        "data_type": "date"
+      },
+      {
+        "table_name": "parcel_land_price",
+        "column_name": "source_sido",
+        "data_type": "character"
+      },
+      {
+        "table_name": "parcel_land_price",
+        "column_name": "snapshot",
+        "data_type": "character varying"
+      }
+    ],
+    "building_snapshots": [
+      {
+        "snapshot": "2024-09",
+        "ledger_kind": "일반",
+        "rows": 131165,
+        "building_keys": 131165,
+        "parcels": 90696
+      },
+      {
+        "snapshot": "2024-09",
+        "ledger_kind": "집합",
+        "rows": 8150,
+        "building_keys": 8150,
+        "parcels": 2244
+      },
+      {
+        "snapshot": "2025-07",
+        "ledger_kind": "일반",
+        "rows": 133042,
+        "building_keys": 133042,
+        "parcels": 92195
+      },
+      {
+        "snapshot": "2025-07",
+        "ledger_kind": "집합",
+        "rows": 8378,
+        "building_keys": 8378,
+        "parcels": 2297
+      },
+      {
+        "snapshot": "2026-07",
+        "ledger_kind": "일반",
+        "rows": 132731,
+        "building_keys": 132731,
+        "parcels": 92143
+      },
+      {
+        "snapshot": "2026-07",
+        "ledger_kind": "집합",
+        "rows": 8521,
+        "building_keys": 8521,
+        "parcels": 2293
+      }
+    ],
+    "multi_building_parcels": [
+      {
+        "snapshot": "2024-09",
+        "parcels_with_multiple_buildings": 24443
+      },
+      {
+        "snapshot": "2025-07",
+        "parcels_with_multiple_buildings": 24654
+      },
+      {
+        "snapshot": "2026-07",
+        "parcels_with_multiple_buildings": 24419
+      }
+    ]
+  },
+  "built_stats": {
+    "columns": [
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "transaction_hash",
+        "data_type": "character"
+      },
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "recovered_lot",
+        "data_type": "text"
+      },
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "bldrgst_pk",
+        "data_type": "text"
+      },
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "structure_raw",
+        "data_type": "text"
+      },
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "structure_group",
+        "data_type": "text"
+      },
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "max_floor",
+        "data_type": "smallint"
+      },
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "approve_year",
+        "data_type": "smallint"
+      },
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "zone_labels",
+        "data_type": "ARRAY"
+      },
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "zone_source",
+        "data_type": "text"
+      },
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "zone_multi",
+        "data_type": "boolean"
+      },
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "match_tier",
+        "data_type": "text"
+      },
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "match_rule",
+        "data_type": "text"
+      },
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "land_area_source",
+        "data_type": "text"
+      },
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "n_range",
+        "data_type": "integer"
+      },
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "n_exact",
+        "data_type": "integer"
+      },
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "snapshots_matched",
+        "data_type": "ARRAY"
+      },
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "coverage_scope",
+        "data_type": "text"
+      },
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "matched_cycle",
+        "data_type": "character"
+      },
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "evidence",
+        "data_type": "jsonb"
+      },
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "created_at",
+        "data_type": "timestamp with time zone"
+      },
+      {
+        "table_name": "built_transaction_enrichment",
+        "column_name": "updated_at",
+        "data_type": "timestamp with time zone"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "id",
+        "data_type": "bigint"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "transaction_hash",
+        "data_type": "character"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "asset_type",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "deal_form",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "addr1",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "addr2",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "addr3",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "addr4",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "addr5",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "lot_number",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "beopjungri_code",
+        "data_type": "character"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "sido_code",
+        "data_type": "character"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "sigungu_code",
+        "data_type": "character"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "eupmyeondong_code",
+        "data_type": "character"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "trade_year_label",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "contract_year",
+        "data_type": "smallint"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "contract_month",
+        "data_type": "smallint"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "contract_date",
+        "data_type": "date"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "zone_type",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "building_use",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "building_scale",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "land_scale",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "age_bucket",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "price",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "gross_area",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "land_area",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "building_age",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "road_code",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "floor",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "housing_type",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "floor_area_ratio",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "is_valid",
+        "data_type": "boolean"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "created_at",
+        "data_type": "timestamp without time zone"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "needs_review",
+        "data_type": "boolean"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "mapping_notes",
+        "data_type": "text"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "road_width_label",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "road_name",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "display_address",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "deal_type",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "is_partial_ownership",
+        "data_type": "boolean"
+      },
+      {
+        "table_name": "built_transactions",
+        "column_name": "partial_ownership_label",
+        "data_type": "character varying"
+      }
+    ],
+    "enrichment_coverage": [
+      {
+        "asset_type": "commercial",
+        "transactions": 2432,
+        "enriched": 1965,
+        "enriched_with_building_pk": 0
+      },
+      {
+        "asset_type": "detached",
+        "transactions": 10156,
+        "enriched": 8388,
+        "enriched_with_building_pk": 0
+      },
+      {
+        "asset_type": "factory",
+        "transactions": 705,
+        "enriched": 446,
+        "enriched_with_building_pk": 0
+      }
+    ]
+  },
+  "collective_stats": {
+    "columns": [
+      {
+        "table_name": "collective_building_assessed_land_price",
+        "column_name": "building_key",
+        "data_type": "character"
+      },
+      {
+        "table_name": "collective_building_assessed_land_price",
+        "column_name": "asset_type",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_building_assessed_land_price",
+        "column_name": "representative_pnu",
+        "data_type": "character"
+      },
+      {
+        "table_name": "collective_building_assessed_land_price",
+        "column_name": "assessed_land_price",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "collective_building_assessed_land_price",
+        "column_name": "assessed_land_price_year",
+        "data_type": "smallint"
+      },
+      {
+        "table_name": "collective_building_assessed_land_price",
+        "column_name": "source",
+        "data_type": "text"
+      },
+      {
+        "table_name": "collective_building_assessed_land_price",
+        "column_name": "loaded_at",
+        "data_type": "timestamp without time zone"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "id",
+        "data_type": "bigint"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "snapshot_ym",
+        "data_type": "character"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "asset_type",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "building_key",
+        "data_type": "character"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "danji_code",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "match_tier",
+        "data_type": "character"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "match_rule",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "approved_year",
+        "data_type": "smallint"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "building_year",
+        "data_type": "smallint"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "year_diff",
+        "data_type": "smallint"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "builder_raw",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "builder_norm",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "builder_group",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "developer_raw",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "brand",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "structure_raw",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "structure_group",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "households",
+        "data_type": "integer"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "households_sale",
+        "data_type": "integer"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "households_rent",
+        "data_type": "integer"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "dong_count",
+        "data_type": "integer"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "max_floor",
+        "data_type": "integer"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "parking_total",
+        "data_type": "integer"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "parking_per_household",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "danji_class",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "supply_type",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "n_tx",
+        "data_type": "integer"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "created_at",
+        "data_type": "timestamp without time zone"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "builder_is_joint",
+        "data_type": "boolean"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "builder_is_public",
+        "data_type": "boolean"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "brand_is_public",
+        "data_type": "boolean"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "brand_confidence",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "attr_quality_flags",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "dictionary_version",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_building_attributes",
+        "column_name": "match_danji_codes",
+        "data_type": "text"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "id",
+        "data_type": "bigint"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "transaction_hash",
+        "data_type": "character"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "cluster_id",
+        "data_type": "bigint"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "asset_type",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "cluster_key",
+        "data_type": "character"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "resolution_mode",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "building_key",
+        "data_type": "character"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "addr1",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "addr2",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "addr3",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "addr4",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "addr5",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "lot_number",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "road_name",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "zone_type",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "building_use",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "building_year",
+        "data_type": "smallint"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "area_bucket_label",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "contract_year",
+        "data_type": "smallint"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "contract_month",
+        "data_type": "smallint"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "contract_date",
+        "data_type": "date"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "price",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "gross_area",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "land_area",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "unit_price",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "floor",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "road_code",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "building_age",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "is_valid",
+        "data_type": "boolean"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "created_at",
+        "data_type": "timestamp without time zone"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "road_width_label",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "buyer_type",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "seller_type",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "deal_type",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "beopjungri_code",
+        "data_type": "character"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "sido_code",
+        "data_type": "character"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "sigungu_code",
+        "data_type": "character"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "eupmyeondong_code",
+        "data_type": "character"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "needs_review",
+        "data_type": "boolean"
+      },
+      {
+        "table_name": "collective_commercial_transactions",
+        "column_name": "mapping_notes",
+        "data_type": "text"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "id",
+        "data_type": "bigint"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "cluster_key",
+        "data_type": "character"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "asset_type",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "display_label",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "resolution_mode",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "building_key",
+        "data_type": "character"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "addr1",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "addr2",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "addr3",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "addr4",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "road_name",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "zone_type",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "building_use",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "building_year",
+        "data_type": "smallint"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "area_bucket_label",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "n_total",
+        "data_type": "integer"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "cohesion_score",
+        "data_type": "numeric"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "confidence_tier",
+        "data_type": "character varying"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "created_at",
+        "data_type": "timestamp without time zone"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "updated_at",
+        "data_type": "timestamp without time zone"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "beopjungri_code",
+        "data_type": "character"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "sido_code",
+        "data_type": "character"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "sigungu_code",
+        "data_type": "character"
+      },
+      {
+        "table_name": "commercial_clusters",
+        "column_name": "eupmyeondong_code",
+        "data_type": "character"
+      }
+    ],
+    "assessed_mart_years": [
+      {
+        "asset_type": "apartment",
+        "assessed_land_price_year": 2026,
+        "rows": 41566
+      },
+      {
+        "asset_type": "officetel",
+        "assessed_land_price_year": 2026,
+        "rows": 11945
+      },
+      {
+        "asset_type": "rowhouse",
+        "assessed_land_price_year": 2026,
+        "rows": 171566
+      }
+    ]
+  }
+}

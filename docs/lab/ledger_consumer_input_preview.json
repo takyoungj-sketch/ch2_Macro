@@ -1,0 +1,54 @@
+{
+  "run_date": "2026-10-05",
+  "contract_version": "ledger-consumer-input-draft-v1",
+  "batches": [
+    {
+      "snapshot": "2024-09",
+      "title_input_rows": 3850,
+      "price_statuses": {
+        "positive_known_year": 3513,
+        "not_observed_in_selected_snapshot": 305,
+        "identity_blocked": 18,
+        "source_overflow": 14
+      },
+      "distinct_positive_price_pnus": 3354
+    },
+    {
+      "snapshot": "2025-07",
+      "title_input_rows": 3933,
+      "price_statuses": {
+        "positive_known_year": 3656,
+        "not_observed_in_selected_snapshot": 257,
+        "identity_blocked": 3,
+        "source_overflow": 17
+      },
+      "distinct_positive_price_pnus": 3444
+    },
+    {
+      "snapshot": "2026-07",
+      "title_input_rows": 3913,
+      "price_statuses": {
+        "positive_known_year": 3688,
+        "not_observed_in_selected_snapshot": 215,
+        "identity_blocked": 2,
+        "missing_or_nonpositive": 8
+      },
+      "distinct_positive_price_pnus": 3469
+    }
+  ],
+  "checks": {
+    "one_input_per_title_observation": true,
+    "input_keys_unique": true,
+    "versioned_source_provenance_present": true,
+    "no_identity_blocked_price": true,
+    "no_invented_product_assignment": true,
+    "positive_prices_have_matching_year": true,
+    "both_input_databases_unchanged": true
+  },
+  "limitations": [
+    "Title-address source inputs, not matched transactions or assigned danji regression rows.",
+    "Same-year research policy, not historical information availability certification.",
+    "Repeated titles can reference one parcel; title row counts are not parcel counts or summed site prices.",
+    "No production pipeline or regression eligibility changes."
+  ]
+}

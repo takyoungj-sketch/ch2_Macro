@@ -1,0 +1,31 @@
+{
+  "run_date": "2026-10-05",
+  "policy_version": "relationship-gates-draft-v1",
+  "representative_decisions": {
+    "review_required": 4,
+    "reasons": {
+      "multiple_observed_address_pairs": 4,
+      "stats_address_pair_not_observed": 3
+    },
+    "component_max_reproduced": 4,
+    "mart_loaded_before_stats_computed": 4
+  },
+  "aggregation_decisions": {
+    "blocked_groups": 40,
+    "reasons": {
+      "membership_unverified": 40,
+      "metric_scope_unverified": 40
+    }
+  },
+  "evidence_sha256": "d4a96db89697719f47d7cf9c9e386c5dddeac0a52d386aea290e76cf8930545b",
+  "checks": {
+    "no_representative_assignment": true,
+    "all_unverified_groups_blocked": true,
+    "component_max_replayed_for_all_conflicts": true,
+    "prior_evidence_unchanged": true
+  },
+  "limitations": [
+    "Shadow gate experiment; no real representative assignment or new aggregate.",
+    "Current eligible transaction pairs and stored timestamps do not certify physical identity or historical import execution."
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "run_date": "2026-10-05",
+  "title_index_snapshot": "2026-07",
+  "title_index_rows": 141252,
+  "title_index_sha256": "f7ceedc886306269e74ee1e5b2edcea39cfac1ee1c965cfe06643bc1e930e189",
+  "source_verified_title_observations": 3913,
+  "built": {
+    "rows": 13293,
+    "unique_product_keys": 13293,
+    "candidate_statuses": {
+      "no_existing_recovered_address": 2494,
+      "single_title_candidate": 8370,
+      "multiple_title_candidates": 1979,
+      "no_latest_title_candidate": 450
+    },
+    "flag_counts": {
+      "mountain_counterpart_in_latest_title_index": 2,
+      "partial_ownership_do_not_assign_whole_site": 120
+    },
+    "rows_touching_source_verified_candidates": 333,
+    "rows_with_processed_only_candidates": 10135
+  },
+  "collective_residential": {
+    "rows": 1381,
+    "unique_product_keys": 1381,
+    "candidate_statuses": {
+      "single_title_candidate": 738,
+      "multiple_title_candidates": 583,
+      "no_latest_title_candidate": 60
+    },
+    "flag_counts": {
+      "no_existing_price_mart_pnu": 79,
+      "mart_pnu_differs_from_latest_stats_address": 4,
+      "latest_stats_address_not_strictly_parseable": 1
+    },
+    "rows_touching_source_verified_candidates": 140,
+    "rows_with_processed_only_candidates": 1303
+  },
+  "collective_pnu_conflict_breakdown": {
+    "by_asset_type": {
+      "rowhouse": 4
+    },
+    "by_component": {
+      "bjd": 2,
+      "main_lot": 3,
+      "sub_lot": 3
+    }
+  },
+  "checks": {
+    "built_keys_unique": true,
+    "collective_keys_unique": true,
+    "no_assignment_or_verification_promotion": true
+  },
+  "limitations": [
+    "Co-address title candidates do not certify a transaction or danji match.",
+    "Built cohort includes all locally stored city transactions, not an active/valid regression sample.",
+    "City title index is a frozen processed extract; only 4,000-PK cohort observations have source-v2 review.",
+    "Latest title co-address audit is not transaction-time matching or preservation of historical candidates.",
+    "Residential collective only: commercial road clusters have no one-to-one danji address contract in this audit.",
+    "Separate local read-only database snapshots; not a synchronized production audit."
+  ]
+}

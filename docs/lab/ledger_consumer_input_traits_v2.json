@@ -1,0 +1,111 @@
+{
+  "run_date": "2026-10-05",
+  "contract_version": "ledger-consumer-input-draft-v2",
+  "retained_cache_fields": [
+    "pnu",
+    "bjd",
+    "lot",
+    "year",
+    "month",
+    "jimok_code",
+    "jimok_label",
+    "area",
+    "zone1_code",
+    "zone1_label",
+    "zone2_code",
+    "zone2_label",
+    "use_code",
+    "height_code",
+    "shape_code",
+    "road_code",
+    "price",
+    "trait_asof",
+    "trait_source"
+  ],
+  "batches": [
+    {
+      "snapshot": "2024-09",
+      "input_rows": 3850,
+      "trait_statuses": {
+        "observed": 3527,
+        "not_observed_in_selected_snapshot": 305,
+        "identity_blocked": 18
+      },
+      "distinct_observed_pnus": 3360,
+      "blank_labels_in_title_inputs": {
+        "jimok_label": 14,
+        "zone1_label": 14,
+        "zone2_label": 14
+      },
+      "blank_or_zero_codes_in_title_inputs": {
+        "use_code": 58,
+        "jimok_code": 14,
+        "zone1_code": 14,
+        "zone2_code": 14,
+        "height_code": 14,
+        "shape_code": 14,
+        "road_code": 14
+      }
+    },
+    {
+      "snapshot": "2025-07",
+      "input_rows": 3933,
+      "trait_statuses": {
+        "observed": 3673,
+        "not_observed_in_selected_snapshot": 257,
+        "identity_blocked": 3
+      },
+      "distinct_observed_pnus": 3454,
+      "blank_labels_in_title_inputs": {
+        "jimok_label": 17,
+        "zone1_label": 17,
+        "zone2_label": 17
+      },
+      "blank_or_zero_codes_in_title_inputs": {
+        "jimok_code": 17,
+        "zone1_code": 17,
+        "zone2_code": 17,
+        "use_code": 17,
+        "height_code": 17,
+        "shape_code": 17,
+        "road_code": 17
+      }
+    },
+    {
+      "snapshot": "2026-07",
+      "input_rows": 3913,
+      "trait_statuses": {
+        "observed": 3696,
+        "not_observed_in_selected_snapshot": 215,
+        "identity_blocked": 2
+      },
+      "distinct_observed_pnus": 3474,
+      "blank_labels_in_title_inputs": {
+        "jimok_label": 8,
+        "zone1_label": 8,
+        "zone2_label": 8
+      },
+      "blank_or_zero_codes_in_title_inputs": {
+        "jimok_code": 8,
+        "zone1_code": 8,
+        "zone2_code": 8,
+        "use_code": 8,
+        "height_code": 8,
+        "shape_code": 8,
+        "road_code": 8
+      }
+    }
+  ],
+  "checks": {
+    "row_count_and_keys_preserved": true,
+    "identity_blocked_has_no_traits": true,
+    "all_observed_records_keep_19_columns": true,
+    "prices_and_product_assignment_unchanged": true,
+    "existing_preview_and_database_unchanged": true
+  },
+  "limitations": [
+    "All retained cache columns, not every original SHP/DBF field or geometry.",
+    "Same-year title-address research input, not transaction or danji assignment.",
+    "Missing labels and zero codes are preserved; no cross-year name imputation."
+  ]
+}

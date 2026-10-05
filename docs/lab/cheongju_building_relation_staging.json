@@ -1,0 +1,124 @@
+{
+  "run_date": "2026-10-04",
+  "version": "building-relation-staging-v1",
+  "scope_management_pks": 4000,
+  "scope_sha256": "bdb1f558c3da37b88998b8c6f4eb447b9710b71b855bbbf2ceeb6dd3cd574212",
+  "address_change_management_pks_included": 301,
+  "scope_parcels": 3931,
+  "sampling": "1000 management PKs per earliest observed district; all adjacent-snapshot PNU-change PKs forced in; remaining PKs selected by SHA256 order.",
+  "snapshots": [
+    {
+      "snapshot": "2024-09",
+      "address_changed": 0,
+      "attribute_changed": 0,
+      "attribute_unchanged": 0,
+      "building_rows": 3850,
+      "missing_not_deleted": 0,
+      "new_buildings": 3850,
+      "relations_with_traits": 3527,
+      "relations_without_traits": 323,
+      "trait_rows": 3607
+    },
+    {
+      "snapshot": "2025-07",
+      "address_changed": 170,
+      "attribute_changed": 59,
+      "attribute_unchanged": 3767,
+      "building_rows": 3933,
+      "missing_not_deleted": 24,
+      "new_buildings": 107,
+      "relations_with_traits": 3673,
+      "relations_without_traits": 260,
+      "trait_rows": 3626
+    },
+    {
+      "snapshot": "2026-07",
+      "address_changed": 131,
+      "attribute_changed": 60,
+      "attribute_unchanged": 3810,
+      "building_rows": 3913,
+      "missing_not_deleted": 87,
+      "new_buildings": 43,
+      "relations_with_traits": 3696,
+      "relations_without_traits": 217,
+      "trait_rows": 3634
+    }
+  ],
+  "checks": {
+    "injected_failure_preserved_every_table": true,
+    "restored_oldest_head": true,
+    "restored_latest_exact_state": true,
+    "foreign_keys_clean": true,
+    "one_relation_per_building_observation": true,
+    "versions_owned_by_observed_entity": true,
+    "all_forced_address_changes_in_scope": true,
+    "idempotent_replay_each_snapshot": true,
+    "one_price_observation_per_trait_observation": true
+  },
+  "limitations": [
+    "Sample deliberately includes address-change cases; sample change rates are not city estimates.",
+    "Address relations are observed representative title addresses, not certified complete sites or transaction targets.",
+    "Missing observations are retained stale, not classified as demolition or deletion.",
+    "SQLite is an isolated local experiment, not a production schema or migration.",
+    "Building attributes come from the existing processed DB extract, not untouched source text.",
+    "Trait observations use same-year sources with different observation dates."
+  ],
+  "tables": {
+    "source_snapshot": 3,
+    "building_entity": 4000,
+    "parcel_identity": 3931,
+    "building_version": 4119,
+    "parcel_version": 5028,
+    "building_observation": 11696,
+    "parcel_observation": 10867,
+    "assessed_price_observation": 10867,
+    "address_relation_observation": 11696,
+    "current_building": 4000
+  },
+  "price_observation_statuses": [
+    {
+      "snapshot": "2024-09",
+      "status": "positive",
+      "rows": 3590
+    },
+    {
+      "snapshot": "2024-09",
+      "status": "source_overflow",
+      "rows": 17
+    },
+    {
+      "snapshot": "2025-07",
+      "status": "positive",
+      "rows": 3602
+    },
+    {
+      "snapshot": "2025-07",
+      "status": "source_overflow",
+      "rows": 24
+    },
+    {
+      "snapshot": "2026-07",
+      "status": "missing_or_nonpositive",
+      "rows": 6
+    },
+    {
+      "snapshot": "2026-07",
+      "status": "positive",
+      "rows": 3628
+    }
+  ],
+  "price_observations_with_unknown_year": 47,
+  "stale_current_buildings": 87,
+  "review_queue": {
+    "rows": 160,
+    "sampling": "At most 10 observations per district/reason; SHA256 order; independent evidence empty.",
+    "by_reason": {
+      "address_without_same_year_trait": 40,
+      "address_pnu_changed": 40,
+      "missing_title_observation_retained": 38,
+      "price_source_overflow": 36,
+      "price_missing_or_nonpositive": 6
+    }
+  },
+  "sqlite_bytes": 7962624
+}

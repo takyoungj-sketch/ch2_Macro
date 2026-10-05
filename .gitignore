@@ -66,3 +66,6 @@ pipeline/built/_cache/
 pipeline/parcel_master/_cache/
 data/*.db
 data/cache/
+
+# 청주 대장 실험의 로컬 원문·SQLite·압축 근거 (코드와 요약은 별도 관리)
+data/research/cheongju_ledger/

@@ -1,0 +1,51 @@
+{
+  "run_date": "2026-10-05",
+  "conflict_trace_count": 4,
+  "conflict_findings": {
+    "current_pair_not_observed_in_eligible_window_transactions": 3,
+    "mart_pair_observed_in_eligible_window_transactions": 4,
+    "current_pnu_without_positive_same_year_source_price": 3,
+    "mart_pnu_seen_in_stats_history": 4
+  },
+  "multibuilding_sample": {
+    "groups": 40,
+    "sampling": "Up to 5 multiple-candidate product keys per district/product; SHA256 order; can repeat same PNU.",
+    "by_product": {
+      "built": 20,
+      "collective": 20
+    },
+    "composition": {
+      "main_and_auxiliary_titles": 29,
+      "multiple_main_titles": 11
+    },
+    "groups_with_coaddress_summary": 22,
+    "groups_with_identity_conflicts": 0
+  },
+  "raw_inventory": [
+    {
+      "filename": "국토교통부_건축물대장_표제부+(2026년+07월)/mart_djy_03.txt",
+      "sha256": "42abc5ed87e16419c477b78cfbb5a4b375e56604d9133be2acec067b35787247",
+      "rows": 8060932,
+      "target_pks_found": 252,
+      "duplicate_target_pks": 0
+    },
+    {
+      "filename": "국토교통부_건축물대장_총괄표제부+(2026년+07월)/mart_djy_02.txt",
+      "sha256": "bf8146fd9393426569fd2b53e975aff877427ca84415d43bcc4c9d5529a18d7a",
+      "rows": 620535,
+      "target_pnus_found": 22
+    }
+  ],
+  "checks": {
+    "four_conflicts_traced": true,
+    "all_sample_titles_found_in_raw": true,
+    "no_inferred_parent_links": true,
+    "prior_candidate_file_unchanged": true
+  },
+  "limitations": [
+    "Source address/role observations, not certified danji or transaction membership.",
+    "Separate local read-only snapshots; price source absence does not prove historical import cause.",
+    "Co-address summary is not a confirmed parent; roles/counts alone do not authorize sums.",
+    "Small stratified group review, not city-wide composition proportions."
+  ]
+}

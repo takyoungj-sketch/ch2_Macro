@@ -1,0 +1,186 @@
+{
+  "run_date": "2026-10-05",
+  "review_rows": 160,
+  "counts": {
+    "raw_link_difference_requires_review": 2,
+    "raw_address_change_confirmed": 39,
+    "raw_title_and_trait_absence_confirmed": 38,
+    "absent_from_whole_latest_title_file": 38,
+    "raw_overflow_confirmed": 36,
+    "raw_address_change_unresolved": 1,
+    "raw_price_observation_retained": 6
+  },
+  "title_categories": [
+    {
+      "ledger_kind": "일반",
+      "main_aux_label": "부속건축물",
+      "observations": 14
+    },
+    {
+      "ledger_kind": "일반",
+      "main_aux_label": "주건축물",
+      "observations": 101
+    },
+    {
+      "ledger_kind": "집합",
+      "main_aux_label": "주건축물",
+      "observations": 3
+    }
+  ],
+  "review_rows_with_same_address_summary": 54,
+  "raw_inventory": [
+    {
+      "snapshot": "2024-09",
+      "source": "title",
+      "filename": "국토교통부_건축물대장_표제부+(2024년+09월)/mart_djy_03.txt",
+      "sha256": "77b1d88d0ce4a3462c13d519ab389b3d38bbb348582ef6485949b317b4e4959c",
+      "rows": 7863889,
+      "target_pks_found": 113,
+      "duplicate_target_pks": 0
+    },
+    {
+      "snapshot": "2024-09",
+      "source": "summary",
+      "filename": "국토교통부_건축물대장_총괄표제부+(2024년+09월)/mart_djy_02.txt",
+      "sha256": "1c1149e06248fcedb4bec611b0cb6e287b300c29aac2817c8e54ffb8c950ea8f",
+      "rows": 607587,
+      "target_pnus_found": 44
+    },
+    {
+      "year": 2024,
+      "source": "traits",
+      "filename": "AL_D194_43111_20240730.zip",
+      "sha256": "ac5fc5797c5bbeb36968e1631992934edd18c43f79ac0100ab9bd637188b0335",
+      "rows": 143359
+    },
+    {
+      "year": 2024,
+      "source": "traits",
+      "filename": "AL_D194_43112_20240730.zip",
+      "sha256": "6a13a7a55ff7d618d2a6aea0d09d6c9a96e4924ac4ea6fccbe3b02f1ac550dc4",
+      "rows": 80957
+    },
+    {
+      "year": 2024,
+      "source": "traits",
+      "filename": "AL_D194_43113_20240730.zip",
+      "sha256": "9887411b92e3d727b68c1de7407a16bae3526e071c1bf12536f43100be79b647",
+      "rows": 124969
+    },
+    {
+      "year": 2024,
+      "source": "traits",
+      "filename": "AL_D194_43114_20240730.zip",
+      "sha256": "943e6f376422aae959036ece768f40f6dada2173158df7f1e155d4fd33237b76",
+      "rows": 128114
+    },
+    {
+      "snapshot": "2025-07",
+      "source": "title",
+      "filename": "국토교통부_건축물대장_표제부+(2025년+07월)/mart_djy_03.txt",
+      "sha256": "a89073dc6b7089d86257a3c5f87f8e17e13e4354ef22ebe507049b2084317760",
+      "rows": 8036702,
+      "target_pks_found": 105,
+      "duplicate_target_pks": 0
+    },
+    {
+      "snapshot": "2025-07",
+      "source": "summary",
+      "filename": "국토교통부_건축물대장_총괄표제부+(2025년+07월)/mart_djy_02.txt",
+      "sha256": "e1b2c07dc8e447f017b9c07d9b1dca1a40cc77659512c904b56d93bc2d27c46f",
+      "rows": 616909,
+      "target_pnus_found": 51
+    },
+    {
+      "year": 2025,
+      "source": "traits",
+      "filename": "AL_D194_43111_20250814.zip",
+      "sha256": "8e9d33273498f79f7c61340ade30db57828dc06c67a07387d8a72a50655f5f8a",
+      "rows": 143855
+    },
+    {
+      "year": 2025,
+      "source": "traits",
+      "filename": "AL_D194_43112_20250814.zip",
+      "sha256": "63c06348adcd004381f32ad0677de1de776e99abfbeba4b29e2ad440f35359ff",
+      "rows": 81618
+    },
+    {
+      "year": 2025,
+      "source": "traits",
+      "filename": "AL_D194_43113_20250814.zip",
+      "sha256": "71f3087a3c2efea5356181c495c2131653cbdb44f3a4abc39aff6d4214ce3180",
+      "rows": 124066
+    },
+    {
+      "year": 2025,
+      "source": "traits",
+      "filename": "AL_D194_43114_20250814.zip",
+      "sha256": "07b33eba0e09d09116736f12a722b80b7a3fcff3dfa2821f5e4772b2f567792c",
+      "rows": 129211
+    },
+    {
+      "snapshot": "2026-07",
+      "source": "title",
+      "filename": "국토교통부_건축물대장_표제부+(2026년+07월)/mart_djy_03.txt",
+      "sha256": "42abc5ed87e16419c477b78cfbb5a4b375e56604d9133be2acec067b35787247",
+      "rows": 8060932,
+      "target_pks_found": 80,
+      "duplicate_target_pks": 0
+    },
+    {
+      "snapshot": "2026-07",
+      "source": "summary",
+      "filename": "국토교통부_건축물대장_총괄표제부+(2026년+07월)/mart_djy_02.txt",
+      "sha256": "bf8146fd9393426569fd2b53e975aff877427ca84415d43bcc4c9d5529a18d7a",
+      "rows": 620535,
+      "target_pnus_found": 50
+    },
+    {
+      "year": 2026,
+      "source": "traits",
+      "filename": "AL_D194_43111_20260520.zip",
+      "sha256": "57af7a4cf9ad87d3ee3d96156c0f561bd959289ca8b8e7bebbb8b9824cbe6b9c",
+      "rows": 144590
+    },
+    {
+      "year": 2026,
+      "source": "traits",
+      "filename": "AL_D194_43112_20260520.zip",
+      "sha256": "678d010f8a77f80d4e21782eee4b1edca18ea6f5b8f9257753d82771cd3167f2",
+      "rows": 81613
+    },
+    {
+      "year": 2026,
+      "source": "traits",
+      "filename": "AL_D194_43113_20260520.zip",
+      "sha256": "05f130de1314710b129fab513ee4d2d54ae8d8985ce35c5f8b36f69124b6e2b8",
+      "rows": 124614
+    },
+    {
+      "year": 2026,
+      "source": "traits",
+      "filename": "AL_D194_43114_20260520.zip",
+      "sha256": "48713f530c3148c37b19f8cc1dea95ba260808646aec348ded3b3bd8c6b8283f",
+      "rows": 129816
+    }
+  ],
+  "supplied_building_files": [
+    "03. 표제부_가경동샘플.csv",
+    "국토교통부_건축물대장_총괄표제부+(2024년+09월)\\mart_djy_02.txt",
+    "국토교통부_건축물대장_총괄표제부+(2025년+07월)\\mart_djy_02.txt",
+    "국토교통부_건축물대장_총괄표제부+(2026년+07월)\\mart_djy_02.txt",
+    "국토교통부_건축물대장_표제부+(2024년+09월)\\mart_djy_03.txt",
+    "국토교통부_건축물대장_표제부+(2025년+07월)\\mart_djy_03.txt",
+    "국토교통부_건축물대장_표제부+(2026년+07월)\\mart_djy_03.txt"
+  ],
+  "limitations": [
+    "Source replay confirms observations, not independent transaction-match accuracy or legal event causes.",
+    "Summary PNU equality is co-address evidence, not a certified title-parent relationship.",
+    "Related-lot count and auxiliary-building count are not identifier lists.",
+    "No supplied additional-parcel mapping or explicit parent/child relationship file was found in the current building source inventory."
+  ],
+  "strict_identity_exceptions": {
+    "unknown_land_type": 3
+  }
+}

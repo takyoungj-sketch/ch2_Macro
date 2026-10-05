@@ -1,0 +1,112 @@
+{
+  "run_date": "2026-10-05",
+  "cohort_pk_count": 4000,
+  "review_queue_rows": 160,
+  "cohort": "full",
+  "scope_sha256": "bdb1f558c3da37b88998b8c6f4eb447b9710b71b855bbbf2ceeb6dd3cd574212",
+  "identity_exception_unique_pks": 18,
+  "batches": [
+    {
+      "snapshot": "2024-09",
+      "source_records": 3850,
+      "comparison": {
+        "canonical_same_as_v1": 3832,
+        "v1_link_withheld_unknown_identity": 18
+      },
+      "identity_exceptions": 18,
+      "v1_observations_missing_in_source": 0,
+      "identity_statuses": {
+        "canonical_address": 3832,
+        "unknown_land_type": 18
+      },
+      "by_raw_district": {
+        "43112": 967,
+        "43113": 962,
+        "43114": 962,
+        "43111": 959
+      },
+      "by_main_aux_role": {
+        "주건축물": 3160,
+        "부속건축물": 690
+      }
+    },
+    {
+      "snapshot": "2025-07",
+      "source_records": 3933,
+      "comparison": {
+        "canonical_same_as_v1": 3930,
+        "v1_link_withheld_unknown_identity": 3
+      },
+      "identity_exceptions": 3,
+      "v1_observations_missing_in_source": 0,
+      "identity_statuses": {
+        "canonical_address": 3930,
+        "unknown_land_type": 3
+      },
+      "by_raw_district": {
+        "43111": 986,
+        "43112": 975,
+        "43113": 986,
+        "43114": 986
+      },
+      "by_main_aux_role": {
+        "부속건축물": 692,
+        "주건축물": 3241
+      }
+    },
+    {
+      "snapshot": "2026-07",
+      "source_records": 3913,
+      "comparison": {
+        "canonical_same_as_v1": 3911,
+        "v1_link_withheld_unknown_identity": 2
+      },
+      "identity_exceptions": 2,
+      "v1_observations_missing_in_source": 0,
+      "identity_statuses": {
+        "canonical_address": 3911,
+        "unknown_land_type": 2
+      },
+      "by_raw_district": {
+        "43111": 986,
+        "43112": 953,
+        "43113": 982,
+        "43114": 992
+      },
+      "by_main_aux_role": {
+        "주건축물": 3225,
+        "부속건축물": 688
+      }
+    }
+  ],
+  "comparison": {
+    "canonical_same_as_v1": 11673,
+    "v1_link_withheld_unknown_identity": 23
+  },
+  "checks": {
+    "2024-09_idempotent": true,
+    "2025-07_idempotent": true,
+    "2026-07_idempotent": true,
+    "atomic_failure_preserves_all_tables": true,
+    "foreign_keys_clean": true,
+    "all_raw_versions_preserved": true,
+    "uncertain_identity_has_no_canonical_link": true,
+    "v1_unchanged": true,
+    "no_confirmed_identity_disagreement": true,
+    "all_v1_observations_found_in_originals": true
+  },
+  "table_counts": {
+    "source_batch": 3,
+    "building_entity": 4000,
+    "source_version": 7986,
+    "title_observation": 11696,
+    "canonical_address_relation": 11673
+  },
+  "limitations": [
+    "Frozen 4,000-PK sample deliberately forces address-change cases; not city-wide accuracy or exception-rate estimation.",
+    "Address links only; no inferred parent-child or additional-parcel edges.",
+    "No production updates, historical price migration, or legal event determination.",
+    "Current-view restoration remains in v1; v2 here validates immutable source observations only."
+  ],
+  "normalization_rule": "cheongju-source-identity-v2.1"
+}
