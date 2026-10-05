@@ -1,0 +1,2042 @@
+{
+  "audit_version": "cheongju-remaining-object-review-v1",
+  "run_date": "2026-10-05",
+  "keys": 35,
+  "transactions": 3726,
+  "address_partitions": 67,
+  "categories": {
+    "shared_parcel_multiple_management_codes_no_auto_split": 9,
+    "cross_legal_dong_observed_addresses_membership_review": 24,
+    "development_block_identity_unresolved": 2
+  },
+  "title_statuses": {
+    "titles_present": 61,
+    "address_not_canonical": 4,
+    "no_titles_in_latest_snapshot": 2
+  },
+  "shared_parcel_distinct_pnus": 6,
+  "cases": [
+    {
+      "case_id": "remaining-01",
+      "asset_type": "apartment",
+      "category": "shared_parcel_multiple_management_codes_no_auto_split",
+      "transactions": 353,
+      "sites": [
+        {
+          "observed_labels": [
+            "수곡동 314 산남주공4단지아파트"
+          ],
+          "transactions": 353,
+          "title_rows": 18,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 17,
+            "판매시설": 1
+          },
+          "title_names": [
+            "산남 영구임대 아파트",
+            "산남(4)근로복지아파트",
+            "산남(4)아파트",
+            "산남영구임대",
+            "산남주공4단지 아파트"
+          ],
+          "kapt_names": [
+            "산남주공4단지",
+            "청주산남주공2-2"
+          ],
+          "code_context": {
+            "distinct_codes": 2,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-02",
+      "asset_type": "apartment",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 278,
+      "sites": [
+        {
+          "observed_labels": [
+            "운천동 677 세원"
+          ],
+          "transactions": 104,
+          "title_rows": 10,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 10
+          },
+          "title_names": [
+            "세원아파트"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "복대동 2009 세원"
+          ],
+          "transactions": 83,
+          "title_rows": 4,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 3,
+            "판매시설": 1
+          },
+          "title_names": [
+            "세원아파트"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "봉명동 2193 세원"
+          ],
+          "transactions": 91,
+          "title_rows": 7,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "": 3,
+            "공동주택": 4
+          },
+          "title_names": [
+            "봉명동 세원아파트"
+          ],
+          "kapt_names": [
+            "봉명세원아파트"
+          ],
+          "code_context": {
+            "distinct_codes": 1,
+            "common_approval_dates_across_codes": [
+              "19930726"
+            ],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-03",
+      "asset_type": "apartment",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 45,
+      "sites": [
+        {
+          "observed_labels": [
+            "모충동 490-1 삼덕"
+          ],
+          "transactions": 37,
+          "title_rows": 3,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "단독주택": 1,
+            "": 1,
+            "공동주택": 1
+          },
+          "title_names": [],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "수곡동 64-2 삼덕"
+          ],
+          "transactions": 8,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "삼덕아파트"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-04",
+      "asset_type": "apartment",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 79,
+      "sites": [
+        {
+          "observed_labels": [
+            "내덕동 422 신라"
+          ],
+          "transactions": 36,
+          "title_rows": 6,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 6
+          },
+          "title_names": [
+            "신라아파트"
+          ],
+          "kapt_names": [
+            "내덕신라아파트"
+          ],
+          "code_context": {
+            "distinct_codes": 1,
+            "common_approval_dates_across_codes": [
+              "19881226"
+            ],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "율량동 1868 신라"
+          ],
+          "transactions": 43,
+          "title_rows": 4,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 4
+          },
+          "title_names": [
+            "신라아파트"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-05",
+      "asset_type": "apartment",
+      "category": "shared_parcel_multiple_management_codes_no_auto_split",
+      "transactions": 327,
+      "sites": [
+        {
+          "observed_labels": [
+            "분평동 1261 주공4단지2차"
+          ],
+          "transactions": 327,
+          "title_rows": 30,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 20,
+            "": 10
+          },
+          "title_names": [
+            "분평주공4단지 경비실(1)",
+            "분평주공4단지 경비실(2)",
+            "분평주공4단지 경비실(3)",
+            "분평주공4단지 주민복지관",
+            "분평주공4단지 지하주차장(1)",
+            "분평주공4단지 지하주차장(2)",
+            "분평주공4단지아파트",
+            "분평주공4단지재활용품보관소(1)",
+            "분평주공4단지재활용품보관소(2)",
+            "분평주공4단지재활용품보관소(3)",
+            "분평주공4단지재활용품보관소(4)"
+          ],
+          "kapt_names": [
+            "분평주공4-1단지아파트",
+            "분평주공4-2단지아파트"
+          ],
+          "code_context": {
+            "distinct_codes": 2,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-06",
+      "asset_type": "apartment",
+      "category": "shared_parcel_multiple_management_codes_no_auto_split",
+      "transactions": 318,
+      "sites": [
+        {
+          "observed_labels": [
+            "분평동 1261 분평주공4"
+          ],
+          "transactions": 318,
+          "title_rows": 30,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 20,
+            "": 10
+          },
+          "title_names": [
+            "분평주공4단지 경비실(1)",
+            "분평주공4단지 경비실(2)",
+            "분평주공4단지 경비실(3)",
+            "분평주공4단지 주민복지관",
+            "분평주공4단지 지하주차장(1)",
+            "분평주공4단지 지하주차장(2)",
+            "분평주공4단지아파트",
+            "분평주공4단지재활용품보관소(1)",
+            "분평주공4단지재활용품보관소(2)",
+            "분평주공4단지재활용품보관소(3)",
+            "분평주공4단지재활용품보관소(4)"
+          ],
+          "kapt_names": [
+            "분평주공4-1단지아파트",
+            "분평주공4-2단지아파트"
+          ],
+          "code_context": {
+            "distinct_codes": 2,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-07",
+      "asset_type": "apartment",
+      "category": "shared_parcel_multiple_management_codes_no_auto_split",
+      "transactions": 281,
+      "sites": [
+        {
+          "observed_labels": [
+            "용암동 2108 청주용암주공1단지아파트(해누리)"
+          ],
+          "transactions": 281,
+          "title_rows": 20,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 18,
+            "제1종근린생활시설": 1,
+            "노유자시설": 1
+          },
+          "title_names": [
+            "용암주공(2)단지",
+            "용암주공1/2단지",
+            "청주 용암 주공 1단지 아파트",
+            "청주 용암 주공 2단지 아파트",
+            "청주 용암 주공1단지",
+            "청주용암주공1단지"
+          ],
+          "kapt_names": [
+            "청주용암2",
+            "청주용암주공1단지"
+          ],
+          "code_context": {
+            "distinct_codes": 2,
+            "common_approval_dates_across_codes": [
+              "19941101"
+            ],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-08",
+      "asset_type": "apartment",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 76,
+      "sites": [
+        {
+          "observed_labels": [
+            "복대동 208 재원"
+          ],
+          "transactions": 6,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "재원아파트"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "비하동 64-4 재원"
+          ],
+          "transactions": 42,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "재원아파트"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "오송읍 263-3 재원"
+          ],
+          "transactions": 28,
+          "title_rows": 2,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 2
+          },
+          "title_names": [
+            "강외재원아파트"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-09",
+      "asset_type": "apartment",
+      "category": "shared_parcel_multiple_management_codes_no_auto_split",
+      "transactions": 30,
+      "sites": [
+        {
+          "observed_labels": [
+            "용담동 190-1 홍은모드니"
+          ],
+          "transactions": 30,
+          "title_rows": 5,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 4,
+            "제1종근린생활시설": 1
+          },
+          "title_names": [
+            "모드니아파트"
+          ],
+          "kapt_names": [
+            "모드니아파트",
+            "홍은모드니"
+          ],
+          "code_context": {
+            "distinct_codes": 2,
+            "common_approval_dates_across_codes": [
+              "20091211"
+            ],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-10",
+      "asset_type": "apartment",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 54,
+      "sites": [
+        {
+          "observed_labels": [
+            "영운동 40-5 진흥"
+          ],
+          "transactions": 41,
+          "title_rows": 4,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 4
+          },
+          "title_names": [
+            "진흥아파트"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "금천동 181-1 진흥"
+          ],
+          "transactions": 13,
+          "title_rows": 4,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 4
+          },
+          "title_names": [
+            "진흥아파트"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-11",
+      "asset_type": "apartment",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 28,
+      "sites": [
+        {
+          "observed_labels": [
+            "대성동 170 장미"
+          ],
+          "transactions": 12,
+          "title_rows": 2,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 2
+          },
+          "title_names": [
+            "장미아파트"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "금천동 103-2 장미"
+          ],
+          "transactions": 16,
+          "title_rows": 2,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 2
+          },
+          "title_names": [
+            "장미아파트"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-12",
+      "asset_type": "apartment",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 106,
+      "sites": [
+        {
+          "observed_labels": [
+            "가경동 1507 효성"
+          ],
+          "transactions": 92,
+          "title_rows": 12,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 11,
+            "자동차관련시설": 1
+          },
+          "title_names": [
+            "효성아파트"
+          ],
+          "kapt_names": [
+            "가경효성아파트"
+          ],
+          "code_context": {
+            "distinct_codes": 1,
+            "common_approval_dates_across_codes": [
+              "19971217"
+            ],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "복대동 162-4 효성"
+          ],
+          "transactions": 14,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "효성아파트"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-13",
+      "asset_type": "apartment",
+      "category": "shared_parcel_multiple_management_codes_no_auto_split",
+      "transactions": 208,
+      "sites": [
+        {
+          "observed_labels": [
+            "분평동 1255 주은프레지던트"
+          ],
+          "transactions": 208,
+          "title_rows": 63,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "": 24,
+            "공동주택": 34,
+            "자동차관련시설": 5
+          },
+          "title_names": [
+            "대원아파트",
+            "주은프레지던트 아파트"
+          ],
+          "kapt_names": [
+            "분평대원아파트",
+            "주은프레지던트아파트"
+          ],
+          "code_context": {
+            "distinct_codes": 2,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-14",
+      "asset_type": "apartment",
+      "category": "shared_parcel_multiple_management_codes_no_auto_split",
+      "transactions": 247,
+      "sites": [
+        {
+          "observed_labels": [
+            "분평동 1255 대원"
+          ],
+          "transactions": 247,
+          "title_rows": 63,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "": 24,
+            "공동주택": 34,
+            "자동차관련시설": 5
+          },
+          "title_names": [
+            "대원아파트",
+            "주은프레지던트 아파트"
+          ],
+          "kapt_names": [
+            "분평대원아파트",
+            "주은프레지던트아파트"
+          ],
+          "code_context": {
+            "distinct_codes": 2,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-15",
+      "asset_type": "apartment",
+      "category": "shared_parcel_multiple_management_codes_no_auto_split",
+      "transactions": 263,
+      "sites": [
+        {
+          "observed_labels": [
+            "분평동 1200 주공3단지2차"
+          ],
+          "transactions": 263,
+          "title_rows": 42,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "": 28,
+            "공동주택": 14
+          },
+          "title_names": [
+            "주공3단지아파트"
+          ],
+          "kapt_names": [
+            "분평주공3-1단지아파트",
+            "분평주공3-2단지아파트"
+          ],
+          "code_context": {
+            "distinct_codes": 2,
+            "common_approval_dates_across_codes": [
+              "19970618"
+            ],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-16",
+      "asset_type": "apartment",
+      "category": "shared_parcel_multiple_management_codes_no_auto_split",
+      "transactions": 414,
+      "sites": [
+        {
+          "observed_labels": [
+            "분평동 1200 분평주공3"
+          ],
+          "transactions": 414,
+          "title_rows": 42,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "": 28,
+            "공동주택": 14
+          },
+          "title_names": [
+            "주공3단지아파트"
+          ],
+          "kapt_names": [
+            "분평주공3-1단지아파트",
+            "분평주공3-2단지아파트"
+          ],
+          "code_context": {
+            "distinct_codes": 2,
+            "common_approval_dates_across_codes": [
+              "19970618"
+            ],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-17",
+      "asset_type": "officetel",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 32,
+      "sites": [
+        {
+          "observed_labels": [
+            "사직동 6-90 주1"
+          ],
+          "transactions": 1,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "업무시설": 1
+          },
+          "title_names": [],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "사직동 6-168 주1"
+          ],
+          "transactions": 1,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "업무시설": 1
+          },
+          "title_names": [],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "성화동 480 주1"
+          ],
+          "transactions": 30,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "업무시설": 1
+          },
+          "title_names": [],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-18",
+      "asset_type": "presale",
+      "category": "development_block_identity_unresolved",
+      "transactions": 243,
+      "sites": [
+        {
+          "observed_labels": [
+            "용암동 BL-B1 청주 동남지구 B1BL 시티프라디움"
+          ],
+          "transactions": 201,
+          "title_rows": 0,
+          "title_status": "address_not_canonical",
+          "title_purposes": {},
+          "title_names": [],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "운동동 BL-B1 청주 동남지구 B1BL 시티프라디움"
+          ],
+          "transactions": 42,
+          "title_rows": 0,
+          "title_status": "address_not_canonical",
+          "title_purposes": {},
+          "title_names": [],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-19",
+      "asset_type": "presale",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 23,
+      "sites": [
+        {
+          "observed_labels": [
+            "가경동 633-5 가경 아이파크 5단지"
+          ],
+          "transactions": 18,
+          "title_rows": 0,
+          "title_status": "no_titles_in_latest_snapshot",
+          "title_purposes": {},
+          "title_names": [],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "강서동 583 가경아이파크5단지"
+          ],
+          "transactions": 5,
+          "title_rows": 20,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 19,
+            "제2종근린생활시설": 1
+          },
+          "title_names": [
+            "가경아이파크5단지"
+          ],
+          "kapt_names": [
+            "청주가경아이파크5단지"
+          ],
+          "code_context": {
+            "distinct_codes": 1,
+            "common_approval_dates_across_codes": [
+              "20230223"
+            ],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-20",
+      "asset_type": "presale",
+      "category": "development_block_identity_unresolved",
+      "transactions": 233,
+      "sites": [
+        {
+          "observed_labels": [
+            "용암동 BL-B2 청주 동남지구 B2BL 시티프라디움"
+          ],
+          "transactions": 189,
+          "title_rows": 0,
+          "title_status": "address_not_canonical",
+          "title_purposes": {},
+          "title_names": [],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "운동동 BL-B2 청주 동남지구 B2BL 시티프라디움"
+          ],
+          "transactions": 44,
+          "title_rows": 0,
+          "title_status": "address_not_canonical",
+          "title_purposes": {},
+          "title_names": [],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-21",
+      "asset_type": "rowhouse",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 4,
+      "sites": [
+        {
+          "observed_labels": [
+            "운천동 813-3 흥덕가동"
+          ],
+          "transactions": 1,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "흥덕빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "봉명동 224-9 흥덕가동"
+          ],
+          "transactions": 3,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "흥덕빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-22",
+      "asset_type": "rowhouse",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 7,
+      "sites": [
+        {
+          "observed_labels": [
+            "우암동 365-5 가영빌라"
+          ],
+          "transactions": 2,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "가영 빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "우암동 365-23 가영빌라"
+          ],
+          "transactions": 1,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "가영빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "우암동 401-8 가영빌라"
+          ],
+          "transactions": 2,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "가영 빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "율량동 929 가영빌라"
+          ],
+          "transactions": 2,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "가영빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-23",
+      "asset_type": "rowhouse",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 8,
+      "sites": [
+        {
+          "observed_labels": [
+            "모충동 505-12 주연빌라"
+          ],
+          "transactions": 6,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "주연빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "수곡동 74-15 주연빌라"
+          ],
+          "transactions": 2,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "주연빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-24",
+      "asset_type": "rowhouse",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 10,
+      "sites": [
+        {
+          "observed_labels": [
+            "대성동 120-10 영일빌라"
+          ],
+          "transactions": 8,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "영일빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "금천동 201-10 영일빌라"
+          ],
+          "transactions": 2,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "영일빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-25",
+      "asset_type": "rowhouse",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 5,
+      "sites": [
+        {
+          "observed_labels": [
+            "복대동 37-2 동향주택"
+          ],
+          "transactions": 3,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "동향주택"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "봉명동 191-8 동향주택"
+          ],
+          "transactions": 2,
+          "title_rows": 0,
+          "title_status": "no_titles_in_latest_snapshot",
+          "title_purposes": {},
+          "title_names": [],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-26",
+      "asset_type": "rowhouse",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 7,
+      "sites": [
+        {
+          "observed_labels": [
+            "비하동 682-1 금정빌라"
+          ],
+          "transactions": 1,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "금정빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "옥산면 586-2 금정빌라"
+          ],
+          "transactions": 6,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "옥산빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-27",
+      "asset_type": "rowhouse",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 3,
+      "sites": [
+        {
+          "observed_labels": [
+            "봉명동 815 장미빌라"
+          ],
+          "transactions": 2,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "장미빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "비하동 687-2 장미빌라"
+          ],
+          "transactions": 1,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "장미빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-28",
+      "asset_type": "rowhouse",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 8,
+      "sites": [
+        {
+          "observed_labels": [
+            "내덕동 23-9 삼부빌라"
+          ],
+          "transactions": 3,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "삼부연립"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "내덕동 60-2 삼부빌라"
+          ],
+          "transactions": 3,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "삼부빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "율량동 938 삼부빌라"
+          ],
+          "transactions": 2,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "삼부빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-29",
+      "asset_type": "rowhouse",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 3,
+      "sites": [
+        {
+          "observed_labels": [
+            "영운동 167-1 보광빌라"
+          ],
+          "transactions": 1,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "보광빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "문의면 114-70 보광빌라"
+          ],
+          "transactions": 2,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "보광빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-30",
+      "asset_type": "rowhouse",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 5,
+      "sites": [
+        {
+          "observed_labels": [
+            "영운동 60-8 정원쉐르빌(103동)"
+          ],
+          "transactions": 1,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "정원쉐르빌"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "금천동 54-12 정원쉐르빌(103동)"
+          ],
+          "transactions": 4,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "금천동정원쉐르빌"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-31",
+      "asset_type": "rowhouse",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 10,
+      "sites": [
+        {
+          "observed_labels": [
+            "오동동 7-8 그린빌라"
+          ],
+          "transactions": 5,
+          "title_rows": 2,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 2
+          },
+          "title_names": [
+            "오동동다세대주택"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "오창읍 234-1 그린빌라"
+          ],
+          "transactions": 5,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-32",
+      "asset_type": "rowhouse",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 4,
+      "sites": [
+        {
+          "observed_labels": [
+            "운천동 813 흥덕라동"
+          ],
+          "transactions": 2,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "흥덕빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "봉명동 224-2 흥덕라동"
+          ],
+          "transactions": 2,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "흥덕빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-33",
+      "asset_type": "rowhouse",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 6,
+      "sites": [
+        {
+          "observed_labels": [
+            "사직동 40-11 동성빌라"
+          ],
+          "transactions": 3,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "다세대주택"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "사창동 190-12 동성빌라"
+          ],
+          "transactions": 3,
+          "title_rows": 3,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1,
+            "단독주택": 2
+          },
+          "title_names": [],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-34",
+      "asset_type": "rowhouse",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 4,
+      "sites": [
+        {
+          "observed_labels": [
+            "운천동 813-2 흥덕나동"
+          ],
+          "transactions": 3,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "흥덕빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "봉명동 224-8 흥덕나동"
+          ],
+          "transactions": 1,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "흥덕빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "remaining-35",
+      "asset_type": "rowhouse",
+      "category": "cross_legal_dong_observed_addresses_membership_review",
+      "transactions": 4,
+      "sites": [
+        {
+          "observed_labels": [
+            "봉명동 1470 주연9차"
+          ],
+          "transactions": 2,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "주연빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        },
+        {
+          "observed_labels": [
+            "비하동 666-1 주연9차"
+          ],
+          "transactions": 2,
+          "title_rows": 1,
+          "title_status": "titles_present",
+          "title_purposes": {
+            "공동주택": 1
+          },
+          "title_names": [
+            "주연빌라"
+          ],
+          "kapt_names": [],
+          "code_context": {
+            "distinct_codes": 0,
+            "common_approval_dates_across_codes": [],
+            "code_change_history_verified": false,
+            "alias_certified": false,
+            "auto_split": false,
+            "auto_merge": false
+          }
+        }
+      ]
+    }
+  ],
+  "previous_two_address_history": [
+    {
+      "observed_labels": [
+        "우암동 50-4"
+      ],
+      "snapshots": [
+        {
+          "snapshot": "2024-09",
+          "title_count": 6,
+          "purposes": {
+            "공동주택 / 연립주택": 5,
+            "공동주택 / 공동주택,점포": 1
+          }
+        },
+        {
+          "snapshot": "2025-07",
+          "title_count": 6,
+          "purposes": {
+            "공동주택 / 연립주택": 5,
+            "공동주택 / 공동주택,점포": 1
+          }
+        },
+        {
+          "snapshot": "2026-07",
+          "title_count": 6,
+          "purposes": {
+            "공동주택 / 연립주택": 5,
+            "공동주택 / 공동주택,점포": 1
+          }
+        }
+      ],
+      "stable_management_pks": 6,
+      "assessment": "stable_title_address_observations_membership_unverified"
+    },
+    {
+      "observed_labels": [
+        "서운동 21-7"
+      ],
+      "snapshots": [
+        {
+          "snapshot": "2024-09",
+          "title_count": 3,
+          "purposes": {
+            "공동주택 / 관리실": 1,
+            "공동주택 / 아파트": 1,
+            "단독주택 / 주택": 1
+          }
+        },
+        {
+          "snapshot": "2025-07",
+          "title_count": 3,
+          "purposes": {
+            "공동주택 / 관리실": 1,
+            "공동주택 / 아파트": 1,
+            "단독주택 / 주택": 1
+          }
+        },
+        {
+          "snapshot": "2026-07",
+          "title_count": 3,
+          "purposes": {
+            "단독주택 / 주택": 1,
+            "공동주택 / 관리실": 1,
+            "공동주택 / 아파트": 1
+          }
+        }
+      ],
+      "stable_management_pks": 3,
+      "assessment": "stable_title_address_observations_membership_unverified"
+    }
+  ],
+  "checks": {
+    "remaining_cohort_35_preserved": true,
+    "previous_two_addresses_preserved": true,
+    "all_transaction_counts_conserved": true,
+    "address_partitions_preserved": true,
+    "protected_evidence_unchanged": true,
+    "no_product_assignment": true
+  },
+  "source_inventory": {
+    "titles": {
+      "2024-09": {
+        "file": "국토교통부_건축물대장_표제부+(2024년+09월)/mart_djy_03.txt",
+        "rows": 7863889,
+        "sha256": "77b1d88d0ce4a3462c13d519ab389b3d38bbb348582ef6485949b317b4e4959c"
+      },
+      "2025-07": {
+        "file": "국토교통부_건축물대장_표제부+(2025년+07월)/mart_djy_03.txt",
+        "rows": 8036702,
+        "sha256": "a89073dc6b7089d86257a3c5f87f8e17e13e4354ef22ebe507049b2084317760"
+      },
+      "2026-07": {
+        "file": "국토교통부_건축물대장_표제부+(2026년+07월)/mart_djy_03.txt",
+        "rows": 8060932,
+        "sha256": "42abc5ed87e16419c477b78cfbb5a4b375e56604d9133be2acec067b35787247"
+      }
+    },
+    "kapt": {
+      "kapt_representative": {
+        "file": "raw\\raw addition\\K-apt공동주택관리정보시스템\\20260814_단지_필지고유번호.xlsx",
+        "sha256": "8b1ed4c9238c3131a644b6ca91b614566f8622eb2025055896e9a193a299eb74",
+        "rows": 21687,
+        "pnu_column": "고유번호",
+        "danji_column": "단지코드(kapt)"
+      },
+      "kapt_basic_info": {
+        "file": "raw\\raw addition\\K-apt공동주택관리정보시스템\\20261002_단지_기본정보.xlsx",
+        "sha256": "d0070c35b9e67e01c3be40d74b7a7abb7e555f5a650e5d736dd5c02a8070382a",
+        "rows": 22551,
+        "selected_rows": 404
+      }
+    }
+  },
+  "provenance": {
+    "protected_inputs_sha256": {
+      "named_object_mix_review_queue.json.gz": "d419fbba0d9c6c0de482d1568a89fb6fcf2d723ce764808a46391bc9cb17db02",
+      "apartment_site_review_evidence.json.gz": "81ae7ffda689ae8b306ec3831c384b04922f2e5f0f9b028733528e5fbd172cf5"
+    },
+    "query_sql_sha256": "a732bb746461efce3021fc39d0f6ea8acea9569c342a8ff11747dc957dcad0f1",
+    "query_output_sha256": "569116743e1f3442a30546f92bca274b21e1db8366634b62138d4f3795c42960",
+    "database_snapshot": {
+      "db": "collective_stats",
+      "observed_at": "2026-10-05 11:50:07.255939+09:00",
+      "snapshot": "168882:168882:"
+    },
+    "evidence_content_sha256": "0ed77c93f6ae0d79ca179d267f657bb96ce75bc8f1e8f05f1d0264d29554c7f8",
+    "code_sha256": "595f5702bb87886c05cb9ed79d9c07b7d2020eb4e25c65fe6740fd9495cb3ca7"
+  },
+  "limitations": [
+    "Title absence is snapshot/source coverage, not evidence of nonexistence.",
+    "Shared PNU with multiple management codes requires object-level evidence; neither auto split nor alias merge is justified.",
+    "Same approval dates do not certify alias codes or equal physical objects.",
+    "BL development blocks remain raw observations; no PNU is invented.",
+    "Repeated management PK at a title address does not certify transaction membership or an administrative code history.",
+    "No product prices, attributes, keys, statistics or regression inputs changed."
+  ]
+}

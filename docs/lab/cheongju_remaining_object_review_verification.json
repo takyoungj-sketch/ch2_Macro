@@ -1,0 +1,27 @@
+{
+  "tests_passed": 67,
+  "keys_verified": 35,
+  "address_partitions_verified": 67,
+  "transactions_conserved": 3726,
+  "history_snapshots_verified": 3,
+  "stable_management_pks_at_previous_two_addresses": [
+    6,
+    3
+  ],
+  "categories_replayed": {
+    "shared_parcel_multiple_management_codes_no_auto_split": 9,
+    "cross_legal_dong_observed_addresses_membership_review": 24,
+    "development_block_identity_unresolved": 2
+  },
+  "title_statuses_replayed": {
+    "titles_present": 61,
+    "address_not_canonical": 4,
+    "no_titles_in_latest_snapshot": 2
+  },
+  "all_source_gate_checks_passed": true,
+  "production_apply": false,
+  "full_source_scan_runs": 1,
+  "evidence_content_sha256": "0ed77c93f6ae0d79ca179d267f657bb96ce75bc8f1e8f05f1d0264d29554c7f8",
+  "canvas_typescript_errors": 0,
+  "canvas_visual_render_verified": false
+}

@@ -1,0 +1,385 @@
+{
+  "run_date_kst": "2026-10-05",
+  "review_version": "priority-price-mart-source-review-v1",
+  "cases": [
+    {
+      "case_id": "case-1",
+      "asset_type": "apartment",
+      "district": "43113",
+      "transaction_count": 278,
+      "observed_pnu_candidates": 3,
+      "existing_attribute_tiers": [
+        "T"
+      ],
+      "synthetic_address_raw_title_count": 1,
+      "linked_kapt_raw_count": 0,
+      "distinct_kapt_codes_on_observed_addresses": 1,
+      "distinct_observed_legal_dongs": 3,
+      "existing_named_key_reproduced": true,
+      "synthetic_address_title_purposes": [
+        "단독주택"
+      ],
+      "raw_kapt_basic_info_rows": 1,
+      "price_raw_pnu_year_value_agrees": true,
+      "price_source_label": "parcel_land_price",
+      "status": "review_required",
+      "reasons": [
+        "stats_component_max_pnu_not_observed",
+        "physical_membership_unverified",
+        "named_object_key_spans_multiple_legal_dongs"
+      ]
+    },
+    {
+      "case_id": "case-2",
+      "asset_type": "apartment",
+      "district": "43111",
+      "transaction_count": 690,
+      "observed_pnu_candidates": 3,
+      "existing_attribute_tiers": [
+        "C"
+      ],
+      "synthetic_address_raw_title_count": 0,
+      "linked_kapt_raw_count": 1,
+      "distinct_kapt_codes_on_observed_addresses": 3,
+      "distinct_observed_legal_dongs": 3,
+      "existing_named_key_reproduced": true,
+      "synthetic_address_title_purposes": [],
+      "raw_kapt_basic_info_rows": 3,
+      "price_raw_pnu_year_value_agrees": true,
+      "price_source_label": "individual_official_land_price",
+      "status": "review_required",
+      "reasons": [
+        "stats_component_max_pnu_not_observed",
+        "physical_membership_unverified",
+        "multiple_kapt_codes_on_observed_addresses",
+        "named_object_key_spans_multiple_legal_dongs"
+      ]
+    },
+    {
+      "case_id": "case-3",
+      "asset_type": "apartment",
+      "district": "43113",
+      "transaction_count": 132,
+      "observed_pnu_candidates": 2,
+      "existing_attribute_tiers": [
+        "C"
+      ],
+      "synthetic_address_raw_title_count": 1,
+      "linked_kapt_raw_count": 1,
+      "distinct_kapt_codes_on_observed_addresses": 2,
+      "distinct_observed_legal_dongs": 2,
+      "existing_named_key_reproduced": true,
+      "synthetic_address_title_purposes": [
+        "단독주택"
+      ],
+      "raw_kapt_basic_info_rows": 2,
+      "price_raw_pnu_year_value_agrees": true,
+      "price_source_label": "parcel_land_price",
+      "status": "review_required",
+      "reasons": [
+        "stats_component_max_pnu_not_observed",
+        "physical_membership_unverified",
+        "multiple_kapt_codes_on_observed_addresses",
+        "named_object_key_spans_multiple_legal_dongs"
+      ]
+    },
+    {
+      "case_id": "case-4",
+      "asset_type": "rowhouse",
+      "district": "43113",
+      "transaction_count": 3,
+      "observed_pnu_candidates": 2,
+      "existing_attribute_tiers": [
+        "T"
+      ],
+      "synthetic_address_raw_title_count": 0,
+      "linked_kapt_raw_count": 0,
+      "distinct_kapt_codes_on_observed_addresses": 0,
+      "distinct_observed_legal_dongs": 2,
+      "existing_named_key_reproduced": true,
+      "synthetic_address_title_purposes": [],
+      "raw_kapt_basic_info_rows": 0,
+      "price_raw_pnu_year_value_agrees": true,
+      "price_source_label": "individual_official_land_price",
+      "status": "review_required",
+      "reasons": [
+        "stats_component_max_pnu_not_observed",
+        "physical_membership_unverified",
+        "named_object_key_spans_multiple_legal_dongs"
+      ]
+    },
+    {
+      "case_id": "case-5",
+      "asset_type": "rowhouse",
+      "district": "43111",
+      "transaction_count": 5,
+      "observed_pnu_candidates": 2,
+      "existing_attribute_tiers": [
+        "T"
+      ],
+      "synthetic_address_raw_title_count": 1,
+      "linked_kapt_raw_count": 0,
+      "distinct_kapt_codes_on_observed_addresses": 0,
+      "distinct_observed_legal_dongs": 2,
+      "existing_named_key_reproduced": true,
+      "synthetic_address_title_purposes": [
+        "단독주택"
+      ],
+      "raw_kapt_basic_info_rows": 0,
+      "price_raw_pnu_year_value_agrees": true,
+      "price_source_label": "parcel_land_price",
+      "status": "review_required",
+      "reasons": [
+        "stats_component_max_pnu_not_observed",
+        "physical_membership_unverified",
+        "named_object_key_spans_multiple_legal_dongs"
+      ]
+    },
+    {
+      "case_id": "case-6",
+      "asset_type": "rowhouse",
+      "district": "43113",
+      "transaction_count": 4,
+      "observed_pnu_candidates": 2,
+      "existing_attribute_tiers": [],
+      "synthetic_address_raw_title_count": 0,
+      "linked_kapt_raw_count": 0,
+      "distinct_kapt_codes_on_observed_addresses": 0,
+      "distinct_observed_legal_dongs": 2,
+      "existing_named_key_reproduced": true,
+      "synthetic_address_title_purposes": [],
+      "raw_kapt_basic_info_rows": 0,
+      "price_raw_pnu_year_value_agrees": true,
+      "price_source_label": "individual_official_land_price",
+      "status": "review_required",
+      "reasons": [
+        "stats_component_max_pnu_not_observed",
+        "physical_membership_unverified",
+        "no_existing_building_attribute_row",
+        "named_object_key_spans_multiple_legal_dongs"
+      ]
+    }
+  ],
+  "counts": {
+    "keys": 6,
+    "source_price_replayed": 6,
+    "synthetic_address_with_raw_title": 3,
+    "existing_attribute_missing": 1,
+    "reasons": {
+      "stats_component_max_pnu_not_observed": 6,
+      "physical_membership_unverified": 6,
+      "named_object_key_spans_multiple_legal_dongs": 6,
+      "multiple_kapt_codes_on_observed_addresses": 2,
+      "no_existing_building_attribute_row": 1
+    }
+  },
+  "checks": {
+    "six_priority_keys_reviewed": true,
+    "all_mart_values_replayed_from_raw_price": true,
+    "all_existing_named_keys_reproduced_from_transaction_fields": true,
+    "all_observed_kapt_codes_have_raw_basic_info": true,
+    "raw_title_pks_unique_and_processed_targets_present": true,
+    "prior_address_evidence_unchanged": true,
+    "no_automatic_pnu_change_or_apply": true,
+    "review_partition_transaction_counts_conserved": true
+  },
+  "source_inventory": {
+    "title": {
+      "file": "국토교통부_건축물대장_표제부+(2026년+07월)/mart_djy_03.txt",
+      "sha256": "42abc5ed87e16419c477b78cfbb5a4b375e56604d9133be2acec067b35787247",
+      "rows": 8060932
+    },
+    "price": {
+      "file": "raw\\raw addition\\개별공시지가(브이월드)\\AL_D151_43_20260526\\AL_D151_43_20260526.csv",
+      "sha256": "c7c0e8fcb73ecf942eef07f9e1c2a069e043b66613d3091ce293ebdf8b207234",
+      "rows": 2402654
+    },
+    "kapt": {
+      "file": "raw\\raw addition\\K-apt공동주택관리정보시스템\\20260814_단지_필지고유번호.xlsx",
+      "sha256": "8b1ed4c9238c3131a644b6ca91b614566f8622eb2025055896e9a193a299eb74",
+      "rows": 21687,
+      "pnu_column": "고유번호",
+      "danji_column": "단지코드(kapt)"
+    },
+    "kapt_basic_info": {
+      "file": "raw\\raw addition\\K-apt공동주택관리정보시스템\\20261002_단지_기본정보.xlsx",
+      "sha256": "d0070c35b9e67e01c3be40d74b7a7abb7e555f5a650e5d736dd5c02a8070382a",
+      "rows": 22551,
+      "selected_rows": 6
+    },
+    "traits": [
+      {
+        "file": "AL_D194_43111_20260520.zip",
+        "sha256": "57af7a4cf9ad87d3ee3d96156c0f561bd959289ca8b8e7bebbb8b9824cbe6b9c",
+        "dbf_member": "AL_D194_43111_20260520.dbf",
+        "rows": 144590,
+        "fields": [
+          "A0",
+          "A1",
+          "A2",
+          "A3",
+          "A4",
+          "A5",
+          "A6",
+          "A7",
+          "A8",
+          "A9",
+          "A10",
+          "A11",
+          "A12",
+          "A13",
+          "A14",
+          "A15",
+          "A16",
+          "A17",
+          "A18",
+          "A19",
+          "A20",
+          "A21",
+          "A22",
+          "A23",
+          "A24",
+          "A25",
+          "A26"
+        ],
+        "encoding": "cp949"
+      },
+      {
+        "file": "AL_D194_43112_20260520.zip",
+        "sha256": "678d010f8a77f80d4e21782eee4b1edca18ea6f5b8f9257753d82771cd3167f2",
+        "dbf_member": "AL_D194_43112_20260520.dbf",
+        "rows": 81613,
+        "fields": [
+          "A0",
+          "A1",
+          "A2",
+          "A3",
+          "A4",
+          "A5",
+          "A6",
+          "A7",
+          "A8",
+          "A9",
+          "A10",
+          "A11",
+          "A12",
+          "A13",
+          "A14",
+          "A15",
+          "A16",
+          "A17",
+          "A18",
+          "A19",
+          "A20",
+          "A21",
+          "A22",
+          "A23",
+          "A24",
+          "A25",
+          "A26"
+        ],
+        "encoding": "cp949"
+      },
+      {
+        "file": "AL_D194_43113_20260520.zip",
+        "sha256": "05f130de1314710b129fab513ee4d2d54ae8d8985ce35c5f8b36f69124b6e2b8",
+        "dbf_member": "AL_D194_43113_20260520.dbf",
+        "rows": 124614,
+        "fields": [
+          "A0",
+          "A1",
+          "A2",
+          "A3",
+          "A4",
+          "A5",
+          "A6",
+          "A7",
+          "A8",
+          "A9",
+          "A10",
+          "A11",
+          "A12",
+          "A13",
+          "A14",
+          "A15",
+          "A16",
+          "A17",
+          "A18",
+          "A19",
+          "A20",
+          "A21",
+          "A22",
+          "A23",
+          "A24",
+          "A25",
+          "A26"
+        ],
+        "encoding": "cp949"
+      },
+      {
+        "file": "AL_D194_43114_20260520.zip",
+        "sha256": "48713f530c3148c37b19f8cc1dea95ba260808646aec348ded3b3bd8c6b8283f",
+        "dbf_member": "AL_D194_43114_20260520.dbf",
+        "rows": 129816,
+        "fields": [
+          "A0",
+          "A1",
+          "A2",
+          "A3",
+          "A4",
+          "A5",
+          "A6",
+          "A7",
+          "A8",
+          "A9",
+          "A10",
+          "A11",
+          "A12",
+          "A13",
+          "A14",
+          "A15",
+          "A16",
+          "A17",
+          "A18",
+          "A19",
+          "A20",
+          "A21",
+          "A22",
+          "A23",
+          "A24",
+          "A25",
+          "A26"
+        ],
+        "encoding": "cp949"
+      }
+    ]
+  },
+  "provenance": {
+    "input_sha256": "3b924cdece2a7464032f131642462b07604d31c9ae2a1f077f89883823190f08",
+    "database_snapshots": [
+      {
+        "db": "collective_stats",
+        "observed_at": "2026-10-05 11:00:00.950257+09:00",
+        "snapshot": "168881:168881:"
+      },
+      {
+        "db": "parcel_master",
+        "observed_at": "2026-10-05 11:00:37.336443+09:00",
+        "snapshot": "168881:168881:"
+      }
+    ],
+    "code_sha256": "99ff2fa0a991095438acbf9b7b13bdebe327c0ae6596137796a40b971f38bd40",
+    "building_key_code_sha256": "a43b36f296c7ebb36766e490409e9176752ca913166b4222cdd54de5f05324a6",
+    "query_output_sha256": "64ad5bb33cd165c68fea204718157bcf863fa5b97ed1800e7d4e91ecdc802ef1",
+    "evidence_content_sha256": "33b541077893cfc2967285bb797180984a517bcd07095bdc11e019b7ef5cba12"
+  },
+  "limitations": [
+    "Source PNU/price/role replay is not independently verified danji membership.",
+    "Separate local read-only snapshots; no production audit or historical import log reconstruction.",
+    "A raw K-apt representative PNU is not the full parcel set or certified transaction membership.",
+    "Co-address titles and counts do not certify parent-child or additional-parcel relationships.",
+    "Six priority keys only; no city-wide reassignment, regression change, or price deletion.",
+    "Commercial road clusters have no same representative-PNU price mart; prior paired address audit remains the commercial evidence."
+  ],
+  "review_queue_rows": 6
+}

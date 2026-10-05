@@ -1,0 +1,10 @@
+{
+  "tests_passed": 53,
+  "direct_sql_cross_legal_dong_keys_verified": 43,
+  "repeated_source_evidence_content_hash_equal": true,
+  "review_queue_keys": 52,
+  "review_queue_address_partitions": 106,
+  "transactions_conserved": 10620,
+  "all_gate_checks_passed": true,
+  "source_evidence_sha256": "42b926c0be1fe4207818acbb6e3fc1769fba4ee27b6a770da015f12f511201ea"
+}

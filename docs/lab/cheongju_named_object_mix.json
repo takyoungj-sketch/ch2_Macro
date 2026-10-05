@@ -1,0 +1,258 @@
+{
+  "run_date_kst": "2026-10-05",
+  "audit_version": "cheongju-named-object-mix-v1",
+  "all_residential_and_presale": {
+    "keys": 1471,
+    "named_keys": 1471,
+    "unnamed_keys": 0,
+    "named_cross_legal_dong_keys": 43,
+    "transactions_in_named_cross_legal_dong_keys": 8179,
+    "named_same_legal_dong_multi_pnu_keys": 33,
+    "multiple_kapt_code_keys": 26,
+    "named_cross_legal_dong_with_price_mart": 22,
+    "named_cross_legal_dong_with_building_attributes": 38,
+    "unobserved_stats_address_keys": 28,
+    "classes": {
+      "single_or_unparseable_address_not_independently_verified": 1395,
+      "same_legal_dong_multiple_parcels_no_kapt_evidence": 22,
+      "cross_legal_dong_no_kapt_evidence": 22,
+      "cross_legal_dong_multiple_kapt_codes_review": 17,
+      "same_legal_dong_single_kapt_code_partial_coverage_unverified": 11,
+      "cross_legal_dong_single_kapt_code_membership_unverified": 4
+    }
+  },
+  "ledger_consumer_types": {
+    "keys": 1381,
+    "named_keys": 1381,
+    "unnamed_keys": 0,
+    "named_cross_legal_dong_keys": 40,
+    "transactions_in_named_cross_legal_dong_keys": 7680,
+    "named_same_legal_dong_multi_pnu_keys": 23,
+    "multiple_kapt_code_keys": 26,
+    "named_cross_legal_dong_with_price_mart": 22,
+    "named_cross_legal_dong_with_building_attributes": 38,
+    "unobserved_stats_address_keys": 27,
+    "classes": {
+      "single_or_unparseable_address_not_independently_verified": 1318,
+      "same_legal_dong_multiple_parcels_no_kapt_evidence": 22,
+      "cross_legal_dong_multiple_kapt_codes_review": 17,
+      "cross_legal_dong_single_kapt_code_membership_unverified": 3,
+      "cross_legal_dong_no_kapt_evidence": 20,
+      "same_legal_dong_single_kapt_code_partial_coverage_unverified": 1
+    }
+  },
+  "by_asset_type": {
+    "apartment": {
+      "keys": 584,
+      "named_keys": 584,
+      "unnamed_keys": 0,
+      "named_cross_legal_dong_keys": 24,
+      "transactions_in_named_cross_legal_dong_keys": 7560,
+      "named_same_legal_dong_multi_pnu_keys": 4,
+      "multiple_kapt_code_keys": 26,
+      "named_cross_legal_dong_with_price_mart": 11,
+      "named_cross_legal_dong_with_building_attributes": 24,
+      "unobserved_stats_address_keys": 16,
+      "classes": {
+        "single_or_unparseable_address_not_independently_verified": 556,
+        "same_legal_dong_multiple_parcels_no_kapt_evidence": 3,
+        "cross_legal_dong_multiple_kapt_codes_review": 17,
+        "cross_legal_dong_single_kapt_code_membership_unverified": 3,
+        "cross_legal_dong_no_kapt_evidence": 4,
+        "same_legal_dong_single_kapt_code_partial_coverage_unverified": 1
+      }
+    },
+    "officetel": {
+      "keys": 68,
+      "named_keys": 68,
+      "unnamed_keys": 0,
+      "named_cross_legal_dong_keys": 1,
+      "transactions_in_named_cross_legal_dong_keys": 32,
+      "named_same_legal_dong_multi_pnu_keys": 1,
+      "multiple_kapt_code_keys": 0,
+      "named_cross_legal_dong_with_price_mart": 0,
+      "named_cross_legal_dong_with_building_attributes": 1,
+      "unobserved_stats_address_keys": 1,
+      "classes": {
+        "single_or_unparseable_address_not_independently_verified": 66,
+        "cross_legal_dong_no_kapt_evidence": 1,
+        "same_legal_dong_multiple_parcels_no_kapt_evidence": 1
+      }
+    },
+    "presale": {
+      "keys": 90,
+      "named_keys": 90,
+      "unnamed_keys": 0,
+      "named_cross_legal_dong_keys": 3,
+      "transactions_in_named_cross_legal_dong_keys": 499,
+      "named_same_legal_dong_multi_pnu_keys": 10,
+      "multiple_kapt_code_keys": 0,
+      "named_cross_legal_dong_with_price_mart": 0,
+      "named_cross_legal_dong_with_building_attributes": 0,
+      "unobserved_stats_address_keys": 1,
+      "classes": {
+        "cross_legal_dong_no_kapt_evidence": 2,
+        "single_or_unparseable_address_not_independently_verified": 77,
+        "same_legal_dong_single_kapt_code_partial_coverage_unverified": 10,
+        "cross_legal_dong_single_kapt_code_membership_unverified": 1
+      }
+    },
+    "rowhouse": {
+      "keys": 729,
+      "named_keys": 729,
+      "unnamed_keys": 0,
+      "named_cross_legal_dong_keys": 15,
+      "transactions_in_named_cross_legal_dong_keys": 88,
+      "named_same_legal_dong_multi_pnu_keys": 18,
+      "multiple_kapt_code_keys": 0,
+      "named_cross_legal_dong_with_price_mart": 11,
+      "named_cross_legal_dong_with_building_attributes": 13,
+      "unobserved_stats_address_keys": 10,
+      "classes": {
+        "single_or_unparseable_address_not_independently_verified": 696,
+        "same_legal_dong_multiple_parcels_no_kapt_evidence": 18,
+        "cross_legal_dong_no_kapt_evidence": 15
+      }
+    }
+  },
+  "by_district": {
+    "43111": {
+      "keys": 385,
+      "named_keys": 385,
+      "unnamed_keys": 0,
+      "named_cross_legal_dong_keys": 11,
+      "transactions_in_named_cross_legal_dong_keys": 2179,
+      "named_same_legal_dong_multi_pnu_keys": 5,
+      "multiple_kapt_code_keys": 6,
+      "named_cross_legal_dong_with_price_mart": 4,
+      "named_cross_legal_dong_with_building_attributes": 9,
+      "unobserved_stats_address_keys": 7,
+      "classes": {
+        "single_or_unparseable_address_not_independently_verified": 369,
+        "cross_legal_dong_no_kapt_evidence": 7,
+        "same_legal_dong_multiple_parcels_no_kapt_evidence": 4,
+        "cross_legal_dong_multiple_kapt_codes_review": 4,
+        "same_legal_dong_single_kapt_code_partial_coverage_unverified": 1
+      }
+    },
+    "43112": {
+      "keys": 310,
+      "named_keys": 310,
+      "unnamed_keys": 0,
+      "named_cross_legal_dong_keys": 7,
+      "transactions_in_named_cross_legal_dong_keys": 1579,
+      "named_same_legal_dong_multi_pnu_keys": 7,
+      "multiple_kapt_code_keys": 10,
+      "named_cross_legal_dong_with_price_mart": 3,
+      "named_cross_legal_dong_with_building_attributes": 7,
+      "unobserved_stats_address_keys": 4,
+      "classes": {
+        "single_or_unparseable_address_not_independently_verified": 296,
+        "cross_legal_dong_no_kapt_evidence": 4,
+        "cross_legal_dong_multiple_kapt_codes_review": 3,
+        "same_legal_dong_multiple_parcels_no_kapt_evidence": 6,
+        "same_legal_dong_single_kapt_code_partial_coverage_unverified": 1
+      }
+    },
+    "43113": {
+      "keys": 491,
+      "named_keys": 491,
+      "unnamed_keys": 0,
+      "named_cross_legal_dong_keys": 19,
+      "transactions_in_named_cross_legal_dong_keys": 3188,
+      "named_same_legal_dong_multi_pnu_keys": 12,
+      "multiple_kapt_code_keys": 8,
+      "named_cross_legal_dong_with_price_mart": 13,
+      "named_cross_legal_dong_with_building_attributes": 17,
+      "unobserved_stats_address_keys": 13,
+      "classes": {
+        "single_or_unparseable_address_not_independently_verified": 460,
+        "cross_legal_dong_multiple_kapt_codes_review": 8,
+        "same_legal_dong_single_kapt_code_partial_coverage_unverified": 7,
+        "cross_legal_dong_single_kapt_code_membership_unverified": 3,
+        "cross_legal_dong_no_kapt_evidence": 8,
+        "same_legal_dong_multiple_parcels_no_kapt_evidence": 5
+      }
+    },
+    "43114": {
+      "keys": 285,
+      "named_keys": 285,
+      "unnamed_keys": 0,
+      "named_cross_legal_dong_keys": 6,
+      "transactions_in_named_cross_legal_dong_keys": 1233,
+      "named_same_legal_dong_multi_pnu_keys": 9,
+      "multiple_kapt_code_keys": 2,
+      "named_cross_legal_dong_with_price_mart": 2,
+      "named_cross_legal_dong_with_building_attributes": 5,
+      "unobserved_stats_address_keys": 4,
+      "classes": {
+        "single_or_unparseable_address_not_independently_verified": 270,
+        "same_legal_dong_multiple_parcels_no_kapt_evidence": 7,
+        "cross_legal_dong_no_kapt_evidence": 3,
+        "cross_legal_dong_single_kapt_code_membership_unverified": 1,
+        "cross_legal_dong_multiple_kapt_codes_review": 2,
+        "same_legal_dong_single_kapt_code_partial_coverage_unverified": 2
+      }
+    }
+  },
+  "review_queue_keys": 52,
+  "review_queue_address_partitions": 106,
+  "review_queue_transactions": 10620,
+  "key_replay_discrepancy_keys": 0,
+  "missing_kapt_basic_info_codes": [],
+  "commercial_paired_context": {
+    "keys": 306,
+    "address_tuple_unobserved_keys": 0,
+    "analysis_unit": "road_cluster",
+    "action": "keep_existing_cluster_identity"
+  },
+  "checks": {
+    "one_row_per_key": true,
+    "kapt_sources_match_prior_priority_review": true,
+    "all_transaction_keys_reproduced": true,
+    "all_partition_transaction_counts_conserved": true,
+    "prior_six_mixed_keys_reproduced": true,
+    "no_new_object_or_representative_assignment": true,
+    "prior_evidence_unchanged": true
+  },
+  "source_inventory": {
+    "kapt_representative": {
+      "file": "raw\\raw addition\\K-apt공동주택관리정보시스템\\20260814_단지_필지고유번호.xlsx",
+      "sha256": "8b1ed4c9238c3131a644b6ca91b614566f8622eb2025055896e9a193a299eb74",
+      "rows": 21687,
+      "pnu_column": "고유번호",
+      "danji_column": "단지코드(kapt)"
+    },
+    "kapt_basic_info": {
+      "file": "raw\\raw addition\\K-apt공동주택관리정보시스템\\20261002_단지_기본정보.xlsx",
+      "sha256": "d0070c35b9e67e01c3be40d74b7a7abb7e555f5a650e5d736dd5c02a8070382a",
+      "rows": 22551,
+      "selected_rows": 404
+    }
+  },
+  "provenance": {
+    "protected_inputs_sha256": {
+      "address_pair_impact_evidence.json.gz": "3b924cdece2a7464032f131642462b07604d31c9ae2a1f077f89883823190f08",
+      "priority_price_mart_source_evidence.json.gz": "83019ec5eff1954eb3800b145aa6199da13306554558de4ef38b8fd3578471a1"
+    },
+    "database_snapshot": {
+      "db": "collective_stats",
+      "observed_at": "2026-10-05 11:15:25.533743+09:00",
+      "snapshot": "168882:168882:"
+    },
+    "query_output_sha256": "914bf65ba74f35bad921a69adf89066027a9c8d1d332f842aac832f8307bdaef",
+    "query_sql_sha256": "7d1db9d9b4405c872139922c2d809f6698c709e1d826323446165119d0987263",
+    "code_sha256": "254fab5ac8dc5a2610be8daa1ae805300a21e0d81fa74f05807b47dfc59d5371",
+    "building_key_code_sha256": "a43b36f296c7ebb36766e490409e9176752ca913166b4222cdd54de5f05324a6",
+    "evidence_content_sha256": "42b926c0be1fe4207818acbb6e3fc1769fba4ee27b6a770da015f12f511201ea"
+  },
+  "limitations": [
+    "Local latest-per-key longest stored window, not a production VPS or synchronized global-month audit.",
+    "Legal-code differences may include address changes; physical cause and object membership remain unverified.",
+    "K-apt representative mapping is not a full parcel set; one code on only one address does not prove a multi-parcel site.",
+    "Multiple K-apt codes can share a parcel; code counts alone do not certify separate transaction objects.",
+    "Address review partitions are diagnostic buckets, not new building keys or certified property boundaries.",
+    "Commercial paired context reuses the protected prior road-cluster audit; no residential split rule applied to commercial.",
+    "No product keys, representative prices, aggregates, or regression inputs changed."
+  ]
+}

@@ -1,0 +1,963 @@
+{
+  "audit_version": "cheongju-apartment-site-review-v1",
+  "run_date": "2026-10-05",
+  "keys": 17,
+  "address_partitions": 39,
+  "transactions": 6894,
+  "keys_with_supported_distinct_site_pair": 17,
+  "site_pair_assessments": {
+    "distinct_sites_supported_membership_unverified": 23,
+    "insufficient_or_conflicting_site_evidence": 5
+  },
+  "selected_pnus": 39,
+  "raw_title_rows": 546,
+  "cases": [
+    {
+      "case_id": "apt-site-01",
+      "district": "43113",
+      "transactions": 793,
+      "address_partitions": 2,
+      "supported_distinct_site_pairs": 1,
+      "price_mart_present": true,
+      "sites": [
+        {
+          "names": [
+            "가경대원아파트"
+          ],
+          "kapt_codes": [
+            "A36180223"
+          ],
+          "observed_address_labels": [
+            "가경동 1511"
+          ],
+          "approval_dates": [
+            "19970729"
+          ],
+          "transactions": 424,
+          "communal_housing_title_count": 8,
+          "kapt_approval_dates_seen_in_title": [
+            "19970729"
+          ]
+        },
+        {
+          "names": [
+            "복대대원아파트"
+          ],
+          "kapt_codes": [
+            "A36181010"
+          ],
+          "observed_address_labels": [
+            "복대동 221-7"
+          ],
+          "approval_dates": [
+            "19991007"
+          ],
+          "transactions": 369,
+          "communal_housing_title_count": 15,
+          "kapt_approval_dates_seen_in_title": [
+            "19991007"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "apt-site-02",
+      "district": "43112",
+      "transactions": 194,
+      "address_partitions": 2,
+      "supported_distinct_site_pairs": 1,
+      "price_mart_present": false,
+      "sites": [
+        {
+          "names": [
+            "모충한솔아파트"
+          ],
+          "kapt_codes": [
+            "A36180804"
+          ],
+          "observed_address_labels": [
+            "모충동 473"
+          ],
+          "approval_dates": [
+            "19941031"
+          ],
+          "transactions": 117,
+          "communal_housing_title_count": 7,
+          "kapt_approval_dates_seen_in_title": [
+            "19941031"
+          ]
+        },
+        {
+          "names": [
+            "두산한솔1차아파트"
+          ],
+          "kapt_codes": [
+            "A36174604"
+          ],
+          "observed_address_labels": [
+            "개신동 447-15"
+          ],
+          "approval_dates": [
+            "19930526"
+          ],
+          "transactions": 77,
+          "communal_housing_title_count": 2,
+          "kapt_approval_dates_seen_in_title": [
+            "19930526"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "apt-site-03",
+      "district": "43113",
+      "transactions": 201,
+      "address_partitions": 2,
+      "supported_distinct_site_pairs": 1,
+      "price_mart_present": false,
+      "sites": [
+        {
+          "names": [
+            "가경대림아파트"
+          ],
+          "kapt_codes": [
+            "A36172910"
+          ],
+          "observed_address_labels": [
+            "가경동 764"
+          ],
+          "approval_dates": [
+            "19930119"
+          ],
+          "transactions": 117,
+          "communal_housing_title_count": 10,
+          "kapt_approval_dates_seen_in_title": [
+            "19930119"
+          ]
+        },
+        {
+          "names": [
+            "강서대림아파트"
+          ],
+          "kapt_codes": [
+            "A36138003"
+          ],
+          "observed_address_labels": [
+            "강서동 37-1"
+          ],
+          "approval_dates": [
+            "19901122"
+          ],
+          "transactions": 84,
+          "communal_housing_title_count": 3,
+          "kapt_approval_dates_seen_in_title": [
+            "19901122"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "apt-site-04",
+      "district": "43112",
+      "transactions": 479,
+      "address_partitions": 2,
+      "supported_distinct_site_pairs": 1,
+      "price_mart_present": true,
+      "sites": [
+        {
+          "names": [
+            "수곡두진하트리움아파트"
+          ],
+          "kapt_codes": [
+            "A36179205"
+          ],
+          "observed_address_labels": [
+            "수곡동 1002"
+          ],
+          "approval_dates": [
+            "19950502"
+          ],
+          "transactions": 407,
+          "communal_housing_title_count": 17,
+          "kapt_approval_dates_seen_in_title": [
+            "19950502"
+          ]
+        },
+        {
+          "names": [
+            "개신두진백로1차아파트"
+          ],
+          "kapt_codes": [
+            "A36174405"
+          ],
+          "observed_address_labels": [
+            "개신동 443"
+          ],
+          "approval_dates": [
+            "19930412"
+          ],
+          "transactions": 72,
+          "communal_housing_title_count": 3,
+          "kapt_approval_dates_seen_in_title": [
+            "19930412"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "apt-site-05",
+      "district": "43113",
+      "transactions": 188,
+      "address_partitions": 2,
+      "supported_distinct_site_pairs": 1,
+      "price_mart_present": false,
+      "sites": [
+        {
+          "names": [
+            "가경벽산아파트"
+          ],
+          "kapt_codes": [
+            "A36173008"
+          ],
+          "observed_address_labels": [
+            "가경동 762"
+          ],
+          "approval_dates": [
+            "19921208"
+          ],
+          "transactions": 93,
+          "communal_housing_title_count": 6,
+          "kapt_approval_dates_seen_in_title": [
+            "19921208"
+          ]
+        },
+        {
+          "names": [
+            "하복대벽산아파트"
+          ],
+          "kapt_codes": [
+            "A36181502"
+          ],
+          "observed_address_labels": [
+            "복대동 2606"
+          ],
+          "approval_dates": [
+            "19990618"
+          ],
+          "transactions": 95,
+          "communal_housing_title_count": 12,
+          "kapt_approval_dates_seen_in_title": [
+            "19990618"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "apt-site-06",
+      "district": "43114",
+      "transactions": 413,
+      "address_partitions": 3,
+      "supported_distinct_site_pairs": 1,
+      "price_mart_present": false,
+      "sites": [
+        {
+          "names": [],
+          "kapt_codes": [],
+          "observed_address_labels": [
+            "우암동 50-4"
+          ],
+          "approval_dates": [],
+          "transactions": 16,
+          "communal_housing_title_count": 6,
+          "kapt_approval_dates_seen_in_title": []
+        },
+        {
+          "names": [
+            "삼일맨션아파트"
+          ],
+          "kapt_codes": [
+            "A10021392"
+          ],
+          "observed_address_labels": [
+            "내덕동 697-1"
+          ],
+          "approval_dates": [
+            "19891110"
+          ],
+          "transactions": 58,
+          "communal_housing_title_count": 4,
+          "kapt_approval_dates_seen_in_title": [
+            "19891110"
+          ]
+        },
+        {
+          "names": [
+            "내수삼일아파트"
+          ],
+          "kapt_codes": [
+            "A36393211"
+          ],
+          "observed_address_labels": [
+            "내수읍 200-3"
+          ],
+          "approval_dates": [
+            "19961014"
+          ],
+          "transactions": 339,
+          "communal_housing_title_count": 17,
+          "kapt_approval_dates_seen_in_title": [
+            "19961014"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "apt-site-07",
+      "district": "43111",
+      "transactions": 231,
+      "address_partitions": 4,
+      "supported_distinct_site_pairs": 3,
+      "price_mart_present": false,
+      "sites": [
+        {
+          "names": [],
+          "kapt_codes": [],
+          "observed_address_labels": [
+            "서운동 21-7"
+          ],
+          "approval_dates": [],
+          "transactions": 11,
+          "communal_housing_title_count": 2,
+          "kapt_approval_dates_seen_in_title": []
+        },
+        {
+          "names": [
+            "탑동삼일맨션"
+          ],
+          "kapt_codes": [
+            "A10021045"
+          ],
+          "observed_address_labels": [
+            "탑동 83"
+          ],
+          "approval_dates": [
+            "19880923"
+          ],
+          "transactions": 53,
+          "communal_housing_title_count": 7,
+          "kapt_approval_dates_seen_in_title": [
+            "19880923"
+          ]
+        },
+        {
+          "names": [
+            "영운삼일아파트"
+          ],
+          "kapt_codes": [
+            "A36009001"
+          ],
+          "observed_address_labels": [
+            "영운동 204"
+          ],
+          "approval_dates": [
+            "19920811"
+          ],
+          "transactions": 73,
+          "communal_housing_title_count": 9,
+          "kapt_approval_dates_seen_in_title": [
+            "19920811"
+          ]
+        },
+        {
+          "names": [
+            "금천삼일아파트"
+          ],
+          "kapt_codes": [
+            "A10021284"
+          ],
+          "observed_address_labels": [
+            "금천동 122-1"
+          ],
+          "approval_dates": [
+            "19871118"
+          ],
+          "transactions": 94,
+          "communal_housing_title_count": 8,
+          "kapt_approval_dates_seen_in_title": [
+            "19871118"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "apt-site-08",
+      "district": "43113",
+      "transactions": 223,
+      "address_partitions": 2,
+      "supported_distinct_site_pairs": 1,
+      "price_mart_present": true,
+      "sites": [
+        {
+          "names": [
+            "복대2동 삼일아파트"
+          ],
+          "kapt_codes": [
+            "A10021444"
+          ],
+          "observed_address_labels": [
+            "복대동 2008"
+          ],
+          "approval_dates": [
+            "19900920"
+          ],
+          "transactions": 52,
+          "communal_housing_title_count": 9,
+          "kapt_approval_dates_seen_in_title": [
+            "19900920"
+          ]
+        },
+        {
+          "names": [
+            "비하삼일아파트"
+          ],
+          "kapt_codes": [
+            "A36182503"
+          ],
+          "observed_address_labels": [
+            "비하동 238-1"
+          ],
+          "approval_dates": [
+            "19900615"
+          ],
+          "transactions": 171,
+          "communal_housing_title_count": 7,
+          "kapt_approval_dates_seen_in_title": [
+            "19900615"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "apt-site-09",
+      "district": "43113",
+      "transactions": 220,
+      "address_partitions": 2,
+      "supported_distinct_site_pairs": 1,
+      "price_mart_present": true,
+      "sites": [
+        {
+          "names": [
+            "신봉삼정백조아파트"
+          ],
+          "kapt_codes": [
+            "A36179503"
+          ],
+          "observed_address_labels": [
+            "신봉동 310"
+          ],
+          "approval_dates": [
+            "19950706"
+          ],
+          "transactions": 166,
+          "communal_housing_title_count": 10,
+          "kapt_approval_dates_seen_in_title": [
+            "19950706"
+          ]
+        },
+        {
+          "names": [
+            "봉명삼정백조아파트"
+          ],
+          "kapt_codes": [
+            "A36130001"
+          ],
+          "observed_address_labels": [
+            "봉명동 87"
+          ],
+          "approval_dates": [
+            "19931009"
+          ],
+          "transactions": 54,
+          "communal_housing_title_count": 4,
+          "kapt_approval_dates_seen_in_title": [
+            "19931009"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "apt-site-10",
+      "district": "43111",
+      "transactions": 690,
+      "address_partitions": 3,
+      "supported_distinct_site_pairs": 3,
+      "price_mart_present": true,
+      "sites": [
+        {
+          "names": [
+            "탑동현대아파트"
+          ],
+          "kapt_codes": [
+            "A36077703"
+          ],
+          "observed_address_labels": [
+            "탑동 44"
+          ],
+          "approval_dates": [
+            "19910427"
+          ],
+          "transactions": 169,
+          "communal_housing_title_count": 9,
+          "kapt_approval_dates_seen_in_title": [
+            "19910427"
+          ]
+        },
+        {
+          "names": [
+            "금천현대아파트"
+          ],
+          "kapt_codes": [
+            "A36080316"
+          ],
+          "observed_address_labels": [
+            "금천동 199-1"
+          ],
+          "approval_dates": [
+            "19921202"
+          ],
+          "transactions": 379,
+          "communal_housing_title_count": 21,
+          "kapt_approval_dates_seen_in_title": [
+            "19921202"
+          ]
+        },
+        {
+          "names": [
+            "용암현대홈타운아파트"
+          ],
+          "kapt_codes": [
+            "A36010008"
+          ],
+          "observed_address_labels": [
+            "용암동 2089"
+          ],
+          "approval_dates": [
+            "19951012"
+          ],
+          "transactions": 142,
+          "communal_housing_title_count": 13,
+          "kapt_approval_dates_seen_in_title": [
+            "19951012"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "apt-site-11",
+      "district": "43112",
+      "transactions": 815,
+      "address_partitions": 2,
+      "supported_distinct_site_pairs": 1,
+      "price_mart_present": false,
+      "sites": [
+        {
+          "names": [
+            "모충주공1단지아파트"
+          ],
+          "kapt_codes": [
+            "A36180803"
+          ],
+          "observed_address_labels": [
+            "모충동 452"
+          ],
+          "approval_dates": [
+            "19851105"
+          ],
+          "transactions": 173,
+          "communal_housing_title_count": 6,
+          "kapt_approval_dates_seen_in_title": [
+            "19851105"
+          ]
+        },
+        {
+          "names": [
+            "산남주공1단지아파트"
+          ],
+          "kapt_codes": [
+            "A36115004"
+          ],
+          "observed_address_labels": [
+            "수곡동 324"
+          ],
+          "approval_dates": [
+            "19901208"
+          ],
+          "transactions": 642,
+          "communal_housing_title_count": 31,
+          "kapt_approval_dates_seen_in_title": [
+            "19901208"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "apt-site-12",
+      "district": "43113",
+      "transactions": 542,
+      "address_partitions": 3,
+      "supported_distinct_site_pairs": 3,
+      "price_mart_present": false,
+      "sites": [
+        {
+          "names": [
+            "신봉두진백로아파트"
+          ],
+          "kapt_codes": [
+            "A36183901"
+          ],
+          "observed_address_labels": [
+            "신봉동 35-1"
+          ],
+          "approval_dates": [
+            "19931115"
+          ],
+          "transactions": 97,
+          "communal_housing_title_count": 15,
+          "kapt_approval_dates_seen_in_title": [
+            "19931115"
+          ]
+        },
+        {
+          "names": [
+            "하복대두진하트리움아파트"
+          ],
+          "kapt_codes": [
+            "A36181509"
+          ],
+          "observed_address_labels": [
+            "복대동 2459"
+          ],
+          "approval_dates": [
+            "19990831"
+          ],
+          "transactions": 361,
+          "communal_housing_title_count": 7,
+          "kapt_approval_dates_seen_in_title": [
+            "19990831"
+          ]
+        },
+        {
+          "names": [
+            "두진하트리움"
+          ],
+          "kapt_codes": [
+            "A36130002"
+          ],
+          "observed_address_labels": [
+            "봉명동 2758"
+          ],
+          "approval_dates": [
+            "20030506"
+          ],
+          "transactions": 84,
+          "communal_housing_title_count": 10,
+          "kapt_approval_dates_seen_in_title": [
+            "20030506"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "apt-site-13",
+      "district": "43114",
+      "transactions": 716,
+      "address_partitions": 2,
+      "supported_distinct_site_pairs": 1,
+      "price_mart_present": false,
+      "sites": [
+        {
+          "names": [
+            "우암덕일한마음아파트"
+          ],
+          "kapt_codes": [
+            "A36081402"
+          ],
+          "observed_address_labels": [
+            "우암동 353-2"
+          ],
+          "approval_dates": [
+            "19961129"
+          ],
+          "transactions": 108,
+          "communal_housing_title_count": 9,
+          "kapt_approval_dates_seen_in_title": [
+            "19961129"
+          ]
+        },
+        {
+          "names": [
+            "은곡덕일한마음아파트"
+          ],
+          "kapt_codes": [
+            "A36379512"
+          ],
+          "observed_address_labels": [
+            "내수읍 301"
+          ],
+          "approval_dates": [
+            "19971029"
+          ],
+          "transactions": 608,
+          "communal_housing_title_count": 14,
+          "kapt_approval_dates_seen_in_title": [
+            "19971029"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "apt-site-14",
+      "district": "43111",
+      "transactions": 400,
+      "address_partitions": 2,
+      "supported_distinct_site_pairs": 1,
+      "price_mart_present": true,
+      "sites": [
+        {
+          "names": [
+            "금천효성1차아파트"
+          ],
+          "kapt_codes": [
+            "A36079310"
+          ],
+          "observed_address_labels": [
+            "금천동 124"
+          ],
+          "approval_dates": [
+            "19980827"
+          ],
+          "transactions": 185,
+          "communal_housing_title_count": 9,
+          "kapt_approval_dates_seen_in_title": [
+            "19980827"
+          ]
+        },
+        {
+          "names": [
+            "용암효성아파트"
+          ],
+          "kapt_codes": [
+            "A36010009"
+          ],
+          "observed_address_labels": [
+            "용암동 2086"
+          ],
+          "approval_dates": [
+            "19941015"
+          ],
+          "transactions": 215,
+          "communal_housing_title_count": 9,
+          "kapt_approval_dates_seen_in_title": [
+            "19941015"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "apt-site-15",
+      "district": "43113",
+      "transactions": 132,
+      "address_partitions": 2,
+      "supported_distinct_site_pairs": 1,
+      "price_mart_present": true,
+      "sites": [
+        {
+          "names": [
+            "가경신라아파트"
+          ],
+          "kapt_codes": [
+            "A36173105"
+          ],
+          "observed_address_labels": [
+            "가경동 768"
+          ],
+          "approval_dates": [
+            "19930520"
+          ],
+          "transactions": 86,
+          "communal_housing_title_count": 2,
+          "kapt_approval_dates_seen_in_title": [
+            "19930520"
+          ]
+        },
+        {
+          "names": [
+            "봉명동신라아파트1,2,3동 입주자대표회의"
+          ],
+          "kapt_codes": [
+            "A10022478"
+          ],
+          "observed_address_labels": [
+            "봉명동 1603"
+          ],
+          "approval_dates": [
+            "19851115"
+          ],
+          "transactions": 46,
+          "communal_housing_title_count": 6,
+          "kapt_approval_dates_seen_in_title": [
+            "19851115"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "apt-site-16",
+      "district": "43113",
+      "transactions": 375,
+      "address_partitions": 2,
+      "supported_distinct_site_pairs": 1,
+      "price_mart_present": true,
+      "sites": [
+        {
+          "names": [
+            "가경태암수정아파트"
+          ],
+          "kapt_codes": [
+            "A36174013"
+          ],
+          "observed_address_labels": [
+            "가경동 1516"
+          ],
+          "approval_dates": [
+            "19970704"
+          ],
+          "transactions": 171,
+          "communal_housing_title_count": 6,
+          "kapt_approval_dates_seen_in_title": [
+            "19970704"
+          ]
+        },
+        {
+          "names": [
+            "강내태암수정아파트"
+          ],
+          "kapt_codes": [
+            "A36389304"
+          ],
+          "observed_address_labels": [
+            "강내면 90"
+          ],
+          "approval_dates": [
+            "19971205"
+          ],
+          "transactions": 204,
+          "communal_housing_title_count": 4,
+          "kapt_approval_dates_seen_in_title": [
+            "19971205"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "apt-site-17",
+      "district": "43111",
+      "transactions": 282,
+      "address_partitions": 2,
+      "supported_distinct_site_pairs": 1,
+      "price_mart_present": false,
+      "sites": [
+        {
+          "names": [
+            "용담e그린타운1차"
+          ],
+          "kapt_codes": [
+            "A36078505"
+          ],
+          "observed_address_labels": [
+            "용담동 423"
+          ],
+          "approval_dates": [
+            "20030729"
+          ],
+          "transactions": 158,
+          "communal_housing_title_count": 9,
+          "kapt_approval_dates_seen_in_title": [
+            "20030729"
+          ]
+        },
+        {
+          "names": [
+            "중흥마을e-그린3차아파트"
+          ],
+          "kapt_codes": [
+            "A36010005"
+          ],
+          "observed_address_labels": [
+            "용암동 2540"
+          ],
+          "approval_dates": [
+            "20051116"
+          ],
+          "transactions": 124,
+          "communal_housing_title_count": 11,
+          "kapt_approval_dates_seen_in_title": [
+            "20051116"
+          ]
+        }
+      ]
+    }
+  ],
+  "checks": {
+    "cohort_17_preserved": true,
+    "source_title_hash_replayed": true,
+    "kapt_source_hashes_replayed": true,
+    "raw_title_pks_unique": true,
+    "all_transactions_conserved": true,
+    "no_product_assignment": true,
+    "prior_evidence_unchanged": true
+  },
+  "sites_without_kapt_evidence": 2,
+  "sites_with_kapt_approval_date_replayed_in_title": 37,
+  "source_inventory": {
+    "title": {
+      "file": "국토교통부_건축물대장_표제부+(2026년+07월)/mart_djy_03.txt",
+      "rows": 8060932,
+      "sha256": "42abc5ed87e16419c477b78cfbb5a4b375e56604d9133be2acec067b35787247"
+    },
+    "kapt": {
+      "kapt_representative": {
+        "file": "raw\\raw addition\\K-apt공동주택관리정보시스템\\20260814_단지_필지고유번호.xlsx",
+        "sha256": "8b1ed4c9238c3131a644b6ca91b614566f8622eb2025055896e9a193a299eb74",
+        "rows": 21687,
+        "pnu_column": "고유번호",
+        "danji_column": "단지코드(kapt)"
+      },
+      "kapt_basic_info": {
+        "file": "raw\\raw addition\\K-apt공동주택관리정보시스템\\20261002_단지_기본정보.xlsx",
+        "sha256": "d0070c35b9e67e01c3be40d74b7a7abb7e555f5a650e5d736dd5c02a8070382a",
+        "rows": 22551,
+        "selected_rows": 404
+      }
+    }
+  },
+  "provenance": {
+    "protected_input_sha256": "22028e4dd9fcc7a1a60f76afd8fc6a05c4dc55b8f36812183a71cacf319cb5de",
+    "evidence_content_sha256": "ef4662f1b1ae750e63c3c68e68ca5fb07b3e1d538939726b0711e579531d67a2",
+    "query_sql_sha256": "a732bb746461efce3021fc39d0f6ea8acea9569c342a8ff11747dc957dcad0f1",
+    "query_output_sha256": "cd3136f93dd37a56c45dd4a4d48eda2064289ac5a6eca434a9be5b5e63586ec9",
+    "database_snapshot": {
+      "db": "collective_stats",
+      "observed_at": "2026-10-05 11:37:59.688236+09:00",
+      "snapshot": "168882:168882:"
+    },
+    "code_sha256": "2f2c45471caad9bfc593f30a807baf48178977dff46f7245a6b1541aaec4ad2d"
+  },
+  "limitations": [
+    "Static K-apt files provide no code validity/change history.",
+    "Common transaction months support contemporary address use; they do not certify transaction membership or disprove administrative change.",
+    "Title address co-location and apartment purpose do not certify danji membership or additional parcel relations.",
+    "Latest 2026-07 title source is not historical title availability or a complete site boundary.",
+    "No production object, price, attribute, statistics or regression changes."
+  ]
+}

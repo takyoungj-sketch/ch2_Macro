@@ -1,0 +1,9 @@
+{
+  "independent_direct_query_stats_rows": 67,
+  "all_counts_and_maxima_match": true,
+  "all_stored_pairs_unobserved": true,
+  "repeated_query_output_hashes_equal": true,
+  "repeated_evidence_content_hash_equal": true,
+  "evidence_content_sha256": "4f271abc95fede31d8f7e5c4f924e477442d803d678c761266583d24f12732d1",
+  "tests_passed": 37
+}

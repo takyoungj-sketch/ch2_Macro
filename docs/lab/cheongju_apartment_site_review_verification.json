@@ -1,0 +1,14 @@
+{
+  "tests_passed": 61,
+  "repeated_evidence_content_hash_equal": true,
+  "repeated_query_output_hash_equal": true,
+  "repeated_code_hash_equal": true,
+  "address_partitions": 39,
+  "transactions_conserved": 6894,
+  "raw_title_rows_verified": 546,
+  "supported_site_pairs_independently_replayed": 23,
+  "all_gate_checks_passed": true,
+  "canvas_typescript_errors": 0,
+  "canvas_visual_render_verified": false,
+  "evidence_content_sha256": "ef4662f1b1ae750e63c3c68e68ca5fb07b3e1d538939726b0711e579531d67a2"
+}

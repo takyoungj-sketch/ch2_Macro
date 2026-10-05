@@ -1,0 +1,9 @@
+{
+  "tests_passed": 45,
+  "repeat_source_evidence_content_hash_equal": true,
+  "review_queue_rows": 6,
+  "observed_address_review_partitions": 14,
+  "transactions_conserved": 1112,
+  "no_new_object_key_or_representative_or_production_apply": true,
+  "source_evidence_sha256": "33b541077893cfc2967285bb797180984a517bcd07095bdc11e019b7ef5cba12"
+}

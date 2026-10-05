@@ -1,0 +1,472 @@
+{
+  "run_date_kst": "2026-10-05",
+  "audit_version": "cheongju-address-pair-impact-v1",
+  "provenance": {
+    "database_snapshot": {
+      "db": "collective_stats",
+      "snapshot": "168881:168881:",
+      "observed_at": "2026-10-05 10:34:19.560378+09:00"
+    },
+    "transaction_read_only": "on",
+    "transaction_local_planner": {
+      "enable_mergejoin": "off"
+    },
+    "query_output_sha256": {
+      "residential": "1a2f1d71ccfbf0ccd3748dcf5ac41b9b4ee246f93d8324b4328370367848b2df",
+      "commercial": "eb6f76199b4e2c96c2b78f5fd8a70e43eeabad2f03fdeb81cf7c8dcef62bb080"
+    },
+    "query_text_sha256": {
+      "residential": "ffd92d6a120f3b83d06845b77f8ef3f503ca6518930709f1aac34bdbc07edbb0",
+      "commercial": "9f88781353cb6908edcfa83ee45f3f5580c6f9b7c3b0b6cc3a80055e237c498f"
+    },
+    "code_sha256": "61028946df63a95735ae8869509b701684a5b5a7423d4ed86398b1216420498b",
+    "protected_prior_evidence_sha256": {
+      "product_link_candidate_review.json.gz": "798857ee32b00fc524d6f61066b66d060bbb1739803a028079906b8d5f9a3326",
+      "representative_multibuilding_evidence.json.gz": "d4a96db89697719f47d7cf9c9e386c5dddeac0a52d386aea290e76cf8930545b"
+    }
+  },
+  "products": {
+    "residential": {
+      "all_latest_windows": {
+        "stats_rows": 3964,
+        "unique_product_keys": 1471,
+        "eligible_transaction_window_memberships": 215874,
+        "flag_rows": {
+          "multiple_observed_cheongju_pnus": 180,
+          "stored_address_tuple_not_observed": 67,
+          "component_max_tuple_not_observed": 67,
+          "mart_pnu_not_in_current_window_cheongju_candidates": 25,
+          "price_mart_uses_unobserved_stats_pnu": 15,
+          "mart_pnu_differs_from_stats_pnu": 14,
+          "stored_address_not_strictly_parseable_as_cheongju_pnu": 24
+        },
+        "flag_unique_product_keys": {
+          "component_max_tuple_not_observed": 28,
+          "mart_pnu_differs_from_stats_pnu": 12,
+          "mart_pnu_not_in_current_window_cheongju_candidates": 12,
+          "multiple_observed_cheongju_pnus": 74,
+          "price_mart_uses_unobserved_stats_pnu": 6,
+          "stored_address_not_strictly_parseable_as_cheongju_pnu": 13,
+          "stored_address_tuple_not_observed": 28
+        },
+        "component_max_reproduces_stored_rows": 3964
+      },
+      "latest_longest_window": {
+        "stats_rows": 1471,
+        "unique_product_keys": 1471,
+        "eligible_transaction_window_memberships": 108077,
+        "flag_rows": {
+          "multiple_observed_cheongju_pnus": 74,
+          "stored_address_tuple_not_observed": 28,
+          "component_max_tuple_not_observed": 28,
+          "mart_pnu_not_in_current_window_cheongju_candidates": 6,
+          "price_mart_uses_unobserved_stats_pnu": 6,
+          "mart_pnu_differs_from_stats_pnu": 4,
+          "stored_address_not_strictly_parseable_as_cheongju_pnu": 13
+        },
+        "flag_unique_product_keys": {
+          "component_max_tuple_not_observed": 28,
+          "mart_pnu_differs_from_stats_pnu": 4,
+          "mart_pnu_not_in_current_window_cheongju_candidates": 6,
+          "multiple_observed_cheongju_pnus": 74,
+          "price_mart_uses_unobserved_stats_pnu": 6,
+          "stored_address_not_strictly_parseable_as_cheongju_pnu": 13,
+          "stored_address_tuple_not_observed": 28
+        },
+        "component_max_reproduces_stored_rows": 1471
+      },
+      "by_asset_type": {
+        "apartment": {
+          "stats_rows": 584,
+          "unique_product_keys": 584,
+          "eligible_transaction_window_memberships": 88689,
+          "flag_rows": {
+            "multiple_observed_cheongju_pnus": 28,
+            "stored_address_tuple_not_observed": 16,
+            "component_max_tuple_not_observed": 16,
+            "mart_pnu_not_in_current_window_cheongju_candidates": 3,
+            "price_mart_uses_unobserved_stats_pnu": 3,
+            "stored_address_not_strictly_parseable_as_cheongju_pnu": 1
+          },
+          "flag_unique_product_keys": {
+            "component_max_tuple_not_observed": 16,
+            "mart_pnu_not_in_current_window_cheongju_candidates": 3,
+            "multiple_observed_cheongju_pnus": 28,
+            "price_mart_uses_unobserved_stats_pnu": 3,
+            "stored_address_not_strictly_parseable_as_cheongju_pnu": 1,
+            "stored_address_tuple_not_observed": 16
+          },
+          "component_max_reproduces_stored_rows": 584
+        },
+        "officetel": {
+          "stats_rows": 68,
+          "unique_product_keys": 68,
+          "eligible_transaction_window_memberships": 2507,
+          "flag_rows": {
+            "multiple_observed_cheongju_pnus": 2,
+            "stored_address_tuple_not_observed": 1,
+            "component_max_tuple_not_observed": 1
+          },
+          "flag_unique_product_keys": {
+            "component_max_tuple_not_observed": 1,
+            "multiple_observed_cheongju_pnus": 2,
+            "stored_address_tuple_not_observed": 1
+          },
+          "component_max_reproduces_stored_rows": 68
+        },
+        "presale": {
+          "stats_rows": 90,
+          "unique_product_keys": 90,
+          "eligible_transaction_window_memberships": 13497,
+          "flag_rows": {
+            "multiple_observed_cheongju_pnus": 11,
+            "stored_address_not_strictly_parseable_as_cheongju_pnu": 12,
+            "stored_address_tuple_not_observed": 1,
+            "component_max_tuple_not_observed": 1
+          },
+          "flag_unique_product_keys": {
+            "component_max_tuple_not_observed": 1,
+            "multiple_observed_cheongju_pnus": 11,
+            "stored_address_not_strictly_parseable_as_cheongju_pnu": 12,
+            "stored_address_tuple_not_observed": 1
+          },
+          "component_max_reproduces_stored_rows": 90
+        },
+        "rowhouse": {
+          "stats_rows": 729,
+          "unique_product_keys": 729,
+          "eligible_transaction_window_memberships": 3384,
+          "flag_rows": {
+            "multiple_observed_cheongju_pnus": 33,
+            "stored_address_tuple_not_observed": 10,
+            "component_max_tuple_not_observed": 10,
+            "mart_pnu_differs_from_stats_pnu": 4,
+            "mart_pnu_not_in_current_window_cheongju_candidates": 3,
+            "price_mart_uses_unobserved_stats_pnu": 3
+          },
+          "flag_unique_product_keys": {
+            "component_max_tuple_not_observed": 10,
+            "mart_pnu_differs_from_stats_pnu": 4,
+            "mart_pnu_not_in_current_window_cheongju_candidates": 3,
+            "multiple_observed_cheongju_pnus": 33,
+            "price_mart_uses_unobserved_stats_pnu": 3,
+            "stored_address_tuple_not_observed": 10
+          },
+          "component_max_reproduces_stored_rows": 729
+        }
+      },
+      "by_district": {
+        "43111": {
+          "stats_rows": 385,
+          "unique_product_keys": 385,
+          "eligible_transaction_window_memberships": 23584,
+          "flag_rows": {
+            "multiple_observed_cheongju_pnus": 14,
+            "stored_address_tuple_not_observed": 7,
+            "component_max_tuple_not_observed": 7,
+            "mart_pnu_not_in_current_window_cheongju_candidates": 2,
+            "price_mart_uses_unobserved_stats_pnu": 2,
+            "stored_address_not_strictly_parseable_as_cheongju_pnu": 8
+          },
+          "flag_unique_product_keys": {
+            "component_max_tuple_not_observed": 7,
+            "mart_pnu_not_in_current_window_cheongju_candidates": 2,
+            "multiple_observed_cheongju_pnus": 14,
+            "price_mart_uses_unobserved_stats_pnu": 2,
+            "stored_address_not_strictly_parseable_as_cheongju_pnu": 8,
+            "stored_address_tuple_not_observed": 7
+          },
+          "component_max_reproduces_stored_rows": 385
+        },
+        "43112": {
+          "stats_rows": 310,
+          "unique_product_keys": 310,
+          "eligible_transaction_window_memberships": 26214,
+          "flag_rows": {
+            "multiple_observed_cheongju_pnus": 14,
+            "stored_address_tuple_not_observed": 4,
+            "component_max_tuple_not_observed": 4,
+            "mart_pnu_differs_from_stats_pnu": 1,
+            "stored_address_not_strictly_parseable_as_cheongju_pnu": 3
+          },
+          "flag_unique_product_keys": {
+            "component_max_tuple_not_observed": 4,
+            "mart_pnu_differs_from_stats_pnu": 1,
+            "multiple_observed_cheongju_pnus": 14,
+            "stored_address_not_strictly_parseable_as_cheongju_pnu": 3,
+            "stored_address_tuple_not_observed": 4
+          },
+          "component_max_reproduces_stored_rows": 310
+        },
+        "43113": {
+          "stats_rows": 491,
+          "unique_product_keys": 491,
+          "eligible_transaction_window_memberships": 37864,
+          "flag_rows": {
+            "multiple_observed_cheongju_pnus": 31,
+            "stored_address_tuple_not_observed": 13,
+            "component_max_tuple_not_observed": 13,
+            "mart_pnu_not_in_current_window_cheongju_candidates": 4,
+            "price_mart_uses_unobserved_stats_pnu": 4,
+            "mart_pnu_differs_from_stats_pnu": 3,
+            "stored_address_not_strictly_parseable_as_cheongju_pnu": 2
+          },
+          "flag_unique_product_keys": {
+            "component_max_tuple_not_observed": 13,
+            "mart_pnu_differs_from_stats_pnu": 3,
+            "mart_pnu_not_in_current_window_cheongju_candidates": 4,
+            "multiple_observed_cheongju_pnus": 31,
+            "price_mart_uses_unobserved_stats_pnu": 4,
+            "stored_address_not_strictly_parseable_as_cheongju_pnu": 2,
+            "stored_address_tuple_not_observed": 13
+          },
+          "component_max_reproduces_stored_rows": 491
+        },
+        "43114": {
+          "stats_rows": 285,
+          "unique_product_keys": 285,
+          "eligible_transaction_window_memberships": 20415,
+          "flag_rows": {
+            "multiple_observed_cheongju_pnus": 15,
+            "stored_address_tuple_not_observed": 4,
+            "component_max_tuple_not_observed": 4
+          },
+          "flag_unique_product_keys": {
+            "component_max_tuple_not_observed": 4,
+            "multiple_observed_cheongju_pnus": 15,
+            "stored_address_tuple_not_observed": 4
+          },
+          "component_max_reproduces_stored_rows": 285
+        }
+      },
+      "by_window_years": {
+        "3": {
+          "stats_rows": 1149,
+          "unique_product_keys": 1149,
+          "eligible_transaction_window_memberships": 42338,
+          "flag_rows": {
+            "multiple_observed_cheongju_pnus": 48,
+            "stored_address_tuple_not_observed": 17,
+            "component_max_tuple_not_observed": 17,
+            "mart_pnu_not_in_current_window_cheongju_candidates": 11,
+            "price_mart_uses_unobserved_stats_pnu": 4,
+            "mart_pnu_differs_from_stats_pnu": 7,
+            "stored_address_not_strictly_parseable_as_cheongju_pnu": 3
+          },
+          "flag_unique_product_keys": {
+            "component_max_tuple_not_observed": 17,
+            "mart_pnu_differs_from_stats_pnu": 7,
+            "mart_pnu_not_in_current_window_cheongju_candidates": 11,
+            "multiple_observed_cheongju_pnus": 48,
+            "price_mart_uses_unobserved_stats_pnu": 4,
+            "stored_address_not_strictly_parseable_as_cheongju_pnu": 3,
+            "stored_address_tuple_not_observed": 17
+          },
+          "component_max_reproduces_stored_rows": 1149
+        },
+        "5": {
+          "stats_rows": 1344,
+          "unique_product_keys": 1344,
+          "eligible_transaction_window_memberships": 65459,
+          "flag_rows": {
+            "multiple_observed_cheongju_pnus": 58,
+            "stored_address_tuple_not_observed": 22,
+            "component_max_tuple_not_observed": 22,
+            "mart_pnu_not_in_current_window_cheongju_candidates": 8,
+            "price_mart_uses_unobserved_stats_pnu": 5,
+            "stored_address_not_strictly_parseable_as_cheongju_pnu": 8,
+            "mart_pnu_differs_from_stats_pnu": 3
+          },
+          "flag_unique_product_keys": {
+            "component_max_tuple_not_observed": 22,
+            "mart_pnu_differs_from_stats_pnu": 3,
+            "mart_pnu_not_in_current_window_cheongju_candidates": 8,
+            "multiple_observed_cheongju_pnus": 58,
+            "price_mart_uses_unobserved_stats_pnu": 5,
+            "stored_address_not_strictly_parseable_as_cheongju_pnu": 8,
+            "stored_address_tuple_not_observed": 22
+          },
+          "component_max_reproduces_stored_rows": 1344
+        },
+        "7": {
+          "stats_rows": 1471,
+          "unique_product_keys": 1471,
+          "eligible_transaction_window_memberships": 108077,
+          "flag_rows": {
+            "multiple_observed_cheongju_pnus": 74,
+            "stored_address_not_strictly_parseable_as_cheongju_pnu": 13,
+            "stored_address_tuple_not_observed": 28,
+            "component_max_tuple_not_observed": 28,
+            "mart_pnu_not_in_current_window_cheongju_candidates": 6,
+            "price_mart_uses_unobserved_stats_pnu": 6,
+            "mart_pnu_differs_from_stats_pnu": 4
+          },
+          "flag_unique_product_keys": {
+            "component_max_tuple_not_observed": 28,
+            "mart_pnu_differs_from_stats_pnu": 4,
+            "mart_pnu_not_in_current_window_cheongju_candidates": 6,
+            "multiple_observed_cheongju_pnus": 74,
+            "price_mart_uses_unobserved_stats_pnu": 6,
+            "stored_address_not_strictly_parseable_as_cheongju_pnu": 13,
+            "stored_address_tuple_not_observed": 28
+          },
+          "component_max_reproduces_stored_rows": 1471
+        }
+      },
+      "snapshot_months": [
+        "2026-08-01",
+        "2026-09-01"
+      ],
+      "ledger_consumer_latest_longest_window": {
+        "stats_rows": 1381,
+        "unique_product_keys": 1381,
+        "eligible_transaction_window_memberships": 94580,
+        "flag_rows": {
+          "multiple_observed_cheongju_pnus": 63,
+          "stored_address_tuple_not_observed": 27,
+          "component_max_tuple_not_observed": 27,
+          "mart_pnu_not_in_current_window_cheongju_candidates": 6,
+          "price_mart_uses_unobserved_stats_pnu": 6,
+          "mart_pnu_differs_from_stats_pnu": 4,
+          "stored_address_not_strictly_parseable_as_cheongju_pnu": 1
+        },
+        "flag_unique_product_keys": {
+          "component_max_tuple_not_observed": 27,
+          "mart_pnu_differs_from_stats_pnu": 4,
+          "mart_pnu_not_in_current_window_cheongju_candidates": 6,
+          "multiple_observed_cheongju_pnus": 63,
+          "price_mart_uses_unobserved_stats_pnu": 6,
+          "stored_address_not_strictly_parseable_as_cheongju_pnu": 1,
+          "stored_address_tuple_not_observed": 27
+        },
+        "component_max_reproduces_stored_rows": 1381
+      },
+      "price_mart_exposure_latest_longest_window": {
+        "keys_with_price_mart": 1302,
+        "unobserved_stats_tuple_with_price_mart": 9,
+        "mart_uses_unobserved_stats_pnu": 6,
+        "mart_uses_unobserved_stats_pnu_by_asset_type": {
+          "apartment": 3,
+          "rowhouse": 3
+        }
+      }
+    },
+    "commercial": {
+      "all_latest_windows": {
+        "stats_rows": 754,
+        "unique_product_keys": 306,
+        "eligible_transaction_window_memberships": 7713,
+        "flag_rows": {},
+        "flag_unique_product_keys": {},
+        "component_max_reproduces_stored_rows": 754
+      },
+      "latest_longest_window": {
+        "stats_rows": 306,
+        "unique_product_keys": 306,
+        "eligible_transaction_window_memberships": 3987,
+        "flag_rows": {},
+        "flag_unique_product_keys": {},
+        "component_max_reproduces_stored_rows": 306
+      },
+      "by_asset_type": {
+        "collective_factory": {
+          "stats_rows": 11,
+          "unique_product_keys": 11,
+          "eligible_transaction_window_memberships": 118,
+          "flag_rows": {},
+          "flag_unique_product_keys": {},
+          "component_max_reproduces_stored_rows": 11
+        },
+        "collective_shop": {
+          "stats_rows": 295,
+          "unique_product_keys": 295,
+          "eligible_transaction_window_memberships": 3869,
+          "flag_rows": {},
+          "flag_unique_product_keys": {},
+          "component_max_reproduces_stored_rows": 295
+        }
+      },
+      "by_district": {
+        "43111": {
+          "stats_rows": 70,
+          "unique_product_keys": 70,
+          "eligible_transaction_window_memberships": 821,
+          "flag_rows": {},
+          "flag_unique_product_keys": {},
+          "component_max_reproduces_stored_rows": 70
+        },
+        "43112": {
+          "stats_rows": 73,
+          "unique_product_keys": 73,
+          "eligible_transaction_window_memberships": 656,
+          "flag_rows": {},
+          "flag_unique_product_keys": {},
+          "component_max_reproduces_stored_rows": 73
+        },
+        "43113": {
+          "stats_rows": 106,
+          "unique_product_keys": 106,
+          "eligible_transaction_window_memberships": 1370,
+          "flag_rows": {},
+          "flag_unique_product_keys": {},
+          "component_max_reproduces_stored_rows": 106
+        },
+        "43114": {
+          "stats_rows": 57,
+          "unique_product_keys": 57,
+          "eligible_transaction_window_memberships": 1140,
+          "flag_rows": {},
+          "flag_unique_product_keys": {},
+          "component_max_reproduces_stored_rows": 57
+        }
+      },
+      "by_window_years": {
+        "3": {
+          "stats_rows": 190,
+          "unique_product_keys": 190,
+          "eligible_transaction_window_memberships": 1344,
+          "flag_rows": {},
+          "flag_unique_product_keys": {},
+          "component_max_reproduces_stored_rows": 190
+        },
+        "5": {
+          "stats_rows": 258,
+          "unique_product_keys": 258,
+          "eligible_transaction_window_memberships": 2382,
+          "flag_rows": {},
+          "flag_unique_product_keys": {},
+          "component_max_reproduces_stored_rows": 258
+        },
+        "7": {
+          "stats_rows": 306,
+          "unique_product_keys": 306,
+          "eligible_transaction_window_memberships": 3987,
+          "flag_rows": {},
+          "flag_unique_product_keys": {},
+          "component_max_reproduces_stored_rows": 306
+        }
+      },
+      "snapshot_months": [
+        "2026-09-01"
+      ]
+    }
+  },
+  "checks": {
+    "unique_stats_ids": true,
+    "no_representative_assignment": true,
+    "district_breakdowns_partition_consumer_keys": true,
+    "prior_four_traces_reproduced": true,
+    "prior_evidence_unchanged": true
+  },
+  "limitations": [
+    "Current local read-only snapshot, not a production VPS audit or historical import reconstruction.",
+    "Address tuple observation is not independently verified transaction/danji membership.",
+    "All-window row totals repeat keys and transactions; they are not unique city transaction counts.",
+    "Latest longest window is per key, not a single globally synchronized observation month.",
+    "Component maxima use PostgreSQL collation. Raw tuple absence and strict PNU parsing are separate flags.",
+    "Count/tuple drift may reflect later transaction corrections; do not attribute all absence to the MAX rule.",
+    "Commercial five-field tuples describe road clusters; multiple parcel addresses are expected and not certified assignments.",
+    "No new prices, building aggregates, representative choices, or regression samples are published."
+  ],
+  "evidence_content_sha256": "4f271abc95fede31d8f7e5c4f924e477442d803d678c761266583d24f12732d1"
+}
