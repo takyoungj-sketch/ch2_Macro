@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-05",
+  "official_api_url": "https://www.data.go.kr/data/15134735/openapi.do",
+  "official_land_type_url": "https://www.hub.go.kr/portal/opn/tyb/idx-bdrg-anx.do",
+  "schema_fields": {
+    "getBrBasisOulnInfo": {
+      "field_count": 32,
+      "required_relation_fields": [
+        "mgmBldrgstPk",
+        "mgmUpBldrgstPk",
+        "bldgId"
+      ]
+    },
+    "getBrAtchJibunInfo": {
+      "field_count": 34,
+      "required_relation_fields": [
+        "mgmBldrgstPk",
+        "atchSigunguCd",
+        "atchBjdongCd",
+        "atchPlatGbCd",
+        "atchBun",
+        "atchJi"
+      ]
+    }
+  },
+  "saved_swagger_file_sha256": "921428dacc72ff935d40a89897369d5f0eacc5c910de16c82f4d4d7151805dc0",
+  "frozen_plan_content_sha256": "7653e0000e326556f7365a6e30c1257b39f818612e0e50d46bbfa6f4706c5552",
+  "query_manifest_content_sha256": "adcb4a8f7cadd565f01c59abe421ea4f610f4275aa730a1f2cf6e257547f6a17",
+  "frozen_keys": 85,
+  "candidate_partitions": 177,
+  "unique_query_scopes": 172,
+  "endpoint_query_items": 344,
+  "raw_address_candidates": 4,
+  "api_requests_executed": false,
+  "actual_relation_data_admitted": false,
+  "membership_verified": false,
+  "production_apply": false,
+  "old_txt_pk_mapping_applied": false,
+  "unit_tests_passed": 76,
+  "independent_checks": {
+    "required_official_fields_and_types": true,
+    "manifest_order_independence": true,
+    "frozen_plan_hash_unchanged": true,
+    "baseline_enrichment_hold_preserved": true
+  }
+}
