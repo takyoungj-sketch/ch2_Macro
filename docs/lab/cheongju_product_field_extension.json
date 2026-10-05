@@ -1,0 +1,28 @@
+{
+  "extension": "original-title-product-fields-v1",
+  "base_release": "cheongju-city-2026-07-identity-2.2",
+  "published_release": "cheongju-city-2026-07-product-fields-v1",
+  "source_rows_scanned": 8060932,
+  "extended_building_observations": 141252,
+  "trait_observations": 480633,
+  "new_release_inserted": true,
+  "source_title_sha256": "42abc5ed87e16419c477b78cfbb5a4b375e56604d9133be2acec067b35787247",
+  "original_city_database_sha256": "1d2688a32a9f6fb5251dac5d7eaa8698e7c7e8fc61af6bbf914e8d135d8f4838",
+  "checks": {
+    "all_title_fields_preserved": true,
+    "release_replay_idempotent": true,
+    "attribute_versions_unchanged": true,
+    "original_city_database_unchanged": true,
+    "foreign_keys_clean": true,
+    "integrity": true,
+    "consumer_field_extension_present": true,
+    "no_product_permission": true
+  },
+  "sqlite_bytes": 2724536320,
+  "elapsed_seconds": 578.0906815999988,
+  "limitations": [
+    "Same frozen original and schema; old city DB preserved and experimental supply branch created.",
+    "Original columns preserved as strings; existing product normalization reused only in shadow comparison.",
+    "No new membership, representative selection, aggregation permission or production application."
+  ]
+}

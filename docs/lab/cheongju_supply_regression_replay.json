@@ -1,0 +1,555 @@
+{
+  "baseline_sha256": "d4b8b3dc6c190ecd8c6ba1f4ba0c7d3c2f4db055760b5362cc241e0630a902e1",
+  "published_release": "cheongju-city-2026-07-product-fields-v1",
+  "regional": {
+    "legacy": {
+      "n": 693,
+      "r_squared": 0.7563,
+      "adj_r_squared": 0.759,
+      "mape": 21.06,
+      "rmse": 64.0,
+      "coefficients": [
+        {
+          "name": "const",
+          "label": "절편",
+          "coef": 5.530768782991292,
+          "se": 0.054429253946117,
+          "t": 101.61390028359665,
+          "p": 0.0,
+          "effect_plain": null
+        },
+        {
+          "name": "households",
+          "label": "세대수",
+          "coef": 0.00017550273450237568,
+          "se": 2.9203345473877114e-05,
+          "t": 6.009679084862584,
+          "p": 3.018174673841102e-09,
+          "effect_plain": null
+        },
+        {
+          "name": "max_floor",
+          "label": "최고층",
+          "coef": 0.016503496291239143,
+          "se": 0.0022725833197894665,
+          "t": 7.261998337983066,
+          "p": 1.0379621838398754e-12,
+          "effect_plain": null
+        },
+        {
+          "name": "building_age",
+          "label": "연식",
+          "coef": -0.023817056736162436,
+          "se": 0.0011365078917160935,
+          "t": -20.956349630093094,
+          "p": 9.516282064698364e-76,
+          "effect_plain": null
+        },
+        {
+          "name": "assessed_land_price",
+          "label": "개별공시지가 (원/㎡, 최신 대표 필지)",
+          "coef": 1.4286254541701003e-07,
+          "se": 2.6828903492773822e-08,
+          "t": 5.324949096614741,
+          "p": 1.3701333153664441e-07,
+          "effect_plain": null
+        },
+        {
+          "name": "atype_rowhouse",
+          "label": "atype_rowhouse",
+          "coef": -0.06534764779713269,
+          "se": 0.03426145086217885,
+          "t": -1.9073228410554508,
+          "p": 0.05689616000084247,
+          "effect_plain": null
+        },
+        {
+          "name": "atype_officetel",
+          "label": "atype_officetel",
+          "coef": -0.2929614053206173,
+          "se": 0.06003558851257027,
+          "t": -4.879795677513463,
+          "p": 1.3216582251011077e-06,
+          "effect_plain": null
+        }
+      ],
+      "fitted_mean_unit_price_10k_krw_per_m2": 222.59019695801877,
+      "target_mean_unit_price_10k_krw_per_m2": 220.44329004329006,
+      "sample_keys_sha256": "1859f0aa86705e6a6b72284f39b3e59c4a5b33a7bc99f215236f95b425aaa3d5"
+    },
+    "compatible": {
+      "n": 693,
+      "r_squared": 0.7563,
+      "adj_r_squared": 0.759,
+      "mape": 21.06,
+      "rmse": 64.0,
+      "coefficients": [
+        {
+          "name": "const",
+          "label": "절편",
+          "coef": 5.530768782991292,
+          "se": 0.054429253946117,
+          "t": 101.61390028359665,
+          "p": 0.0,
+          "effect_plain": null
+        },
+        {
+          "name": "households",
+          "label": "세대수",
+          "coef": 0.00017550273450237568,
+          "se": 2.9203345473877114e-05,
+          "t": 6.009679084862584,
+          "p": 3.018174673841102e-09,
+          "effect_plain": null
+        },
+        {
+          "name": "max_floor",
+          "label": "최고층",
+          "coef": 0.016503496291239143,
+          "se": 0.0022725833197894665,
+          "t": 7.261998337983066,
+          "p": 1.0379621838398754e-12,
+          "effect_plain": null
+        },
+        {
+          "name": "building_age",
+          "label": "연식",
+          "coef": -0.023817056736162436,
+          "se": 0.0011365078917160935,
+          "t": -20.956349630093094,
+          "p": 9.516282064698364e-76,
+          "effect_plain": null
+        },
+        {
+          "name": "assessed_land_price",
+          "label": "개별공시지가 (원/㎡, 최신 대표 필지)",
+          "coef": 1.4286254541701003e-07,
+          "se": 2.6828903492773822e-08,
+          "t": 5.324949096614741,
+          "p": 1.3701333153664441e-07,
+          "effect_plain": null
+        },
+        {
+          "name": "atype_rowhouse",
+          "label": "atype_rowhouse",
+          "coef": -0.06534764779713269,
+          "se": 0.03426145086217885,
+          "t": -1.9073228410554508,
+          "p": 0.05689616000084247,
+          "effect_plain": null
+        },
+        {
+          "name": "atype_officetel",
+          "label": "atype_officetel",
+          "coef": -0.2929614053206173,
+          "se": 0.06003558851257027,
+          "t": -4.879795677513463,
+          "p": 1.3216582251011077e-06,
+          "effect_plain": null
+        }
+      ],
+      "fitted_mean_unit_price_10k_krw_per_m2": 222.59019695801877,
+      "target_mean_unit_price_10k_krw_per_m2": 220.44329004329006,
+      "sample_keys_sha256": "1859f0aa86705e6a6b72284f39b3e59c4a5b33a7bc99f215236f95b425aaa3d5"
+    },
+    "candidate_replay": {
+      "n": 693,
+      "r_squared": 0.7563,
+      "adj_r_squared": 0.759,
+      "mape": 21.06,
+      "rmse": 64.0,
+      "coefficients": [
+        {
+          "name": "const",
+          "label": "절편",
+          "coef": 5.530768782991292,
+          "se": 0.054429253946117,
+          "t": 101.61390028359665,
+          "p": 0.0,
+          "effect_plain": null
+        },
+        {
+          "name": "households",
+          "label": "세대수",
+          "coef": 0.00017550273450237568,
+          "se": 2.9203345473877114e-05,
+          "t": 6.009679084862584,
+          "p": 3.018174673841102e-09,
+          "effect_plain": null
+        },
+        {
+          "name": "max_floor",
+          "label": "최고층",
+          "coef": 0.016503496291239143,
+          "se": 0.0022725833197894665,
+          "t": 7.261998337983066,
+          "p": 1.0379621838398754e-12,
+          "effect_plain": null
+        },
+        {
+          "name": "building_age",
+          "label": "연식",
+          "coef": -0.023817056736162436,
+          "se": 0.0011365078917160935,
+          "t": -20.956349630093094,
+          "p": 9.516282064698364e-76,
+          "effect_plain": null
+        },
+        {
+          "name": "assessed_land_price",
+          "label": "개별공시지가 (원/㎡, 최신 대표 필지)",
+          "coef": 1.4286254541701003e-07,
+          "se": 2.6828903492773822e-08,
+          "t": 5.324949096614741,
+          "p": 1.3701333153664441e-07,
+          "effect_plain": null
+        },
+        {
+          "name": "atype_rowhouse",
+          "label": "atype_rowhouse",
+          "coef": -0.06534764779713269,
+          "se": 0.03426145086217885,
+          "t": -1.9073228410554508,
+          "p": 0.05689616000084247,
+          "effect_plain": null
+        },
+        {
+          "name": "atype_officetel",
+          "label": "atype_officetel",
+          "coef": -0.2929614053206173,
+          "se": 0.06003558851257027,
+          "t": -4.879795677513463,
+          "p": 1.3216582251011077e-06,
+          "effect_plain": null
+        }
+      ],
+      "fitted_mean_unit_price_10k_krw_per_m2": 222.59019695801877,
+      "target_mean_unit_price_10k_krw_per_m2": 220.44329004329006,
+      "sample_keys_sha256": "1859f0aa86705e6a6b72284f39b3e59c4a5b33a7bc99f215236f95b425aaa3d5"
+    }
+  },
+  "built": {
+    "legacy": {
+      "n": 12946,
+      "r_squared": 0.7282609781003582,
+      "adj_r_squared": 0.7280088426126294,
+      "mape": 47.71,
+      "coefficients": [
+        {
+          "name": "const",
+          "estimate": 6.118219743560094,
+          "std_err": 0.05466301228299775,
+          "t_value": 111.9261359378669,
+          "p_value": 0.0
+        },
+        {
+          "name": "gross_area",
+          "estimate": 0.5803620309224605,
+          "std_err": 0.007079566365368563,
+          "t_value": 81.97705918281152,
+          "p_value": 0.0
+        },
+        {
+          "name": "land_area",
+          "estimate": 0.28097504670664225,
+          "std_err": 0.007609733975825361,
+          "t_value": 36.92311026893254,
+          "p_value": 7.990001738509981e-284
+        },
+        {
+          "name": "building_age",
+          "estimate": -0.00655009281037081,
+          "std_err": 0.0002979166991078582,
+          "t_value": -21.986323123160695,
+          "p_value": 3.2537585548757015e-105
+        },
+        {
+          "name": "struct_RC",
+          "estimate": 0.13676681805208019,
+          "std_err": 0.014928461168436331,
+          "t_value": 9.161481314715152,
+          "p_value": 5.88120333030749e-20
+        },
+        {
+          "name": "struct_SRC",
+          "estimate": 0.2759220663282872,
+          "std_err": 0.14936587945892899,
+          "t_value": 1.8472898049260122,
+          "p_value": 0.06472797383773103
+        },
+        {
+          "name": "struct_기타",
+          "estimate": -0.4044132448121615,
+          "std_err": 0.15614600551547828,
+          "t_value": -2.589968558446878,
+          "p_value": 0.009609232095724101
+        },
+        {
+          "name": "struct_목",
+          "estimate": -0.0920041882689344,
+          "std_err": 0.025293805263600675,
+          "t_value": -3.63741980734445,
+          "p_value": 0.00027645372788679773
+        },
+        {
+          "name": "struct_벽돌",
+          "estimate": -0.1538678870619884,
+          "std_err": 0.013460325604085988,
+          "t_value": -11.43121582551321,
+          "p_value": 4.073202212773513e-30
+        },
+        {
+          "name": "struct_블록",
+          "estimate": -0.4227564156647115,
+          "std_err": 0.0359045203959333,
+          "t_value": -11.774462129080401,
+          "p_value": 7.684079919918881e-32
+        },
+        {
+          "name": "struct_철골",
+          "estimate": -0.18413713210062138,
+          "std_err": 0.017663519603099045,
+          "t_value": -10.42471354736769,
+          "p_value": 2.40974693892344e-25
+        },
+        {
+          "name": "atype_detached",
+          "estimate": -0.23053762738453384,
+          "std_err": 0.013354117339904513,
+          "t_value": -17.2634118389574,
+          "p_value": 4.867431289432629e-66
+        },
+        {
+          "name": "atype_factory",
+          "estimate": -0.5464891668594326,
+          "std_err": 0.025134407720077825,
+          "t_value": -21.742671358947003,
+          "p_value": 5.599957178649045e-103
+        }
+      ]
+    },
+    "compatible": {
+      "n": 12946,
+      "r_squared": 0.7282609781003582,
+      "adj_r_squared": 0.7280088426126294,
+      "mape": 47.71,
+      "coefficients": [
+        {
+          "name": "const",
+          "estimate": 6.118219743560094,
+          "std_err": 0.05466301228299775,
+          "t_value": 111.9261359378669,
+          "p_value": 0.0
+        },
+        {
+          "name": "gross_area",
+          "estimate": 0.5803620309224605,
+          "std_err": 0.007079566365368563,
+          "t_value": 81.97705918281152,
+          "p_value": 0.0
+        },
+        {
+          "name": "land_area",
+          "estimate": 0.28097504670664225,
+          "std_err": 0.007609733975825361,
+          "t_value": 36.92311026893254,
+          "p_value": 7.990001738509981e-284
+        },
+        {
+          "name": "building_age",
+          "estimate": -0.00655009281037081,
+          "std_err": 0.0002979166991078582,
+          "t_value": -21.986323123160695,
+          "p_value": 3.2537585548757015e-105
+        },
+        {
+          "name": "struct_RC",
+          "estimate": 0.13676681805208019,
+          "std_err": 0.014928461168436331,
+          "t_value": 9.161481314715152,
+          "p_value": 5.88120333030749e-20
+        },
+        {
+          "name": "struct_SRC",
+          "estimate": 0.2759220663282872,
+          "std_err": 0.14936587945892899,
+          "t_value": 1.8472898049260122,
+          "p_value": 0.06472797383773103
+        },
+        {
+          "name": "struct_기타",
+          "estimate": -0.4044132448121615,
+          "std_err": 0.15614600551547828,
+          "t_value": -2.589968558446878,
+          "p_value": 0.009609232095724101
+        },
+        {
+          "name": "struct_목",
+          "estimate": -0.0920041882689344,
+          "std_err": 0.025293805263600675,
+          "t_value": -3.63741980734445,
+          "p_value": 0.00027645372788679773
+        },
+        {
+          "name": "struct_벽돌",
+          "estimate": -0.1538678870619884,
+          "std_err": 0.013460325604085988,
+          "t_value": -11.43121582551321,
+          "p_value": 4.073202212773513e-30
+        },
+        {
+          "name": "struct_블록",
+          "estimate": -0.4227564156647115,
+          "std_err": 0.0359045203959333,
+          "t_value": -11.774462129080401,
+          "p_value": 7.684079919918881e-32
+        },
+        {
+          "name": "struct_철골",
+          "estimate": -0.18413713210062138,
+          "std_err": 0.017663519603099045,
+          "t_value": -10.42471354736769,
+          "p_value": 2.40974693892344e-25
+        },
+        {
+          "name": "atype_detached",
+          "estimate": -0.23053762738453384,
+          "std_err": 0.013354117339904513,
+          "t_value": -17.2634118389574,
+          "p_value": 4.867431289432629e-66
+        },
+        {
+          "name": "atype_factory",
+          "estimate": -0.5464891668594326,
+          "std_err": 0.025134407720077825,
+          "t_value": -21.742671358947003,
+          "p_value": 5.599957178649045e-103
+        }
+      ]
+    }
+  },
+  "commercial": {
+    "legacy": {
+      "collective_shop": {
+        "n": 3792,
+        "r_squared": 0.5424973664731857,
+        "adj_r_squared": 0.5249541266228012,
+        "mape": 90.73,
+        "coefficients_sha256": "7155e83fbf085d128b268e40e0612204736e5c62a5046c7749b5150061e745bc"
+      },
+      "collective_factory": {
+        "n": 114,
+        "r_squared": 0.21051290654753507,
+        "adj_r_squared": 0.16624260224178933,
+        "mape": 110.34,
+        "coefficients_sha256": "90fa4d81d07632e2aae90989442aad16059d34024cb2bcc746ffcd22c78d8523"
+      }
+    },
+    "compatible": {
+      "collective_shop": {
+        "n": 3792,
+        "r_squared": 0.5424973664731857,
+        "adj_r_squared": 0.5249541266228012,
+        "mape": 90.73,
+        "coefficients_sha256": "7155e83fbf085d128b268e40e0612204736e5c62a5046c7749b5150061e745bc"
+      },
+      "collective_factory": {
+        "n": 114,
+        "r_squared": 0.21051290654753507,
+        "adj_r_squared": 0.16624260224178933,
+        "mape": 110.34,
+        "coefficients_sha256": "90fa4d81d07632e2aae90989442aad16059d34024cb2bcc746ffcd22c78d8523"
+      }
+    }
+  },
+  "checks": {
+    "regional_compatibility_fit_exact": true,
+    "built_compatibility_fit_exact": true,
+    "commercial_compatibility_fit_exact": true,
+    "frozen_shadow_unchanged": true
+  },
+  "captured_engine_warnings": [
+    {
+      "category": "PerformanceWarning",
+      "message": "DataFrame is highly fragmented.  This is usually the result of calling `frame.insert` many times, which has poor performance.  Consider joining all columns at once using pd.concat(axis=1) instead. To get a de-fragmented frame, use `newframe = frame.copy()`",
+      "count": 84
+    }
+  ],
+  "specifications": {
+    "regional": {
+      "model": "log",
+      "weight": "tx",
+      "min_tx": 5,
+      "variables": {
+        "households": true,
+        "max_floor": true,
+        "building_age": true,
+        "parking": false,
+        "structure": false,
+        "builder": false,
+        "asset_type_dummy": true,
+        "assessed_land_price": true
+      }
+    },
+    "built": {
+      "response_scale": "loglog",
+      "partial_excluded": true,
+      "variables": {
+        "gross_area": true,
+        "land_area": true,
+        "building_age": true,
+        "road_width_dummy": false,
+        "road_code": false,
+        "zone_type_dummy": false,
+        "building_use_dummy": false,
+        "structure_dummy": true,
+        "asset_type_dummy": true,
+        "region_leaf_dummy": false,
+        "region_population": false,
+        "region_land_p50": false,
+        "region_apt_p50": false,
+        "region_apt_n": false,
+        "region_comm_p50": false,
+        "region_comm_n": false
+      }
+    },
+    "commercial": {
+      "addr1": null,
+      "addr2": null,
+      "addr3_list": [],
+      "addr4_list": [],
+      "contract_year_from": null,
+      "contract_year_to": null,
+      "variables": {
+        "gross_area": true,
+        "land_area": false,
+        "building_age": true,
+        "floor": false,
+        "zone_type": false,
+        "building_use": false,
+        "road_width": false,
+        "road_code": false,
+        "addr4": false,
+        "floor_mode": "relative",
+        "contract_period": false
+      },
+      "exclude_outliers_iqr": false,
+      "outlier_iqr_multiplier": 3.0,
+      "experiment": false,
+      "model_type": "log"
+    }
+  },
+  "engine_code_sha256": {
+    "backend\\app\\collective\\regional_regression\\engine.py": "d616a72fbe732712947b97088d6c458f979b6ede00dda64bac503fe08d38980f",
+    "backend\\app\\built\\regression\\engine.py": "8f816338843cb75f51154bd9ac74d23660169bea391e038a3e05618b20d9df6b",
+    "backend\\app\\collective_commercial\\regression\\engine.py": "801f82e94afcdfd85390e02d9e1a5de45e20f8f8a26c87b5437877d50e3c9ab2"
+  },
+  "limitations": [
+    "Actual product engines, fixed audit specifications; not every UI request or production API end-to-end parity.",
+    "Compatibility preserves legacy numeric attributes and built enrichment; equal refits prove this specified input path, not new membership accuracy.",
+    "Candidate title substitution is exploratory and blocked on review holds; no regression adoption or product permissions.",
+    "No train/test model-selection study; in-sample metrics must not be treated as generalization improvement.",
+    "Built replay uses original transaction numeric variables and frozen legacy enrichment structure; not newly joined historical land prices or candidate structure.",
+    "Commercial control keeps road-cluster inputs and includes cluster effects in the fixed engine specification."
+  ]
+}

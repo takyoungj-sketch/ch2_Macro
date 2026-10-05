@@ -1,0 +1,66 @@
+{
+  "published_release": "cheongju-city-2026-07-product-fields-v1",
+  "baseline_sha256": "d4b8b3dc6c190ecd8c6ba1f4ba0c7d3c2f4db055760b5362cc241e0630a902e1",
+  "paired_content_sha256": "439430674331d7880afe55930131285c4baaa4a5f28ce4dacfd2ac3538e796b2",
+  "gzip_sha256": "2cce13c4f9c7e720b2e2339cdab949596731fd45fc441e5d3c7bd87df8825c88",
+  "residential_attribute_comparisons": {
+    "no_existing_attribute_row": 124,
+    "title_numeric_equal": 905,
+    "retain_existing_non_title_pnu_source": 413,
+    "title_numeric_changed": 15,
+    "latest_source_candidate_missing": 14
+  },
+  "title_numeric_changed_by_field": {
+    "households": 15,
+    "dong_count": 7,
+    "approved_year": 9,
+    "max_floor": 6,
+    "structure_group": 3
+  },
+  "price_comparisons": {
+    "no_existing_price": 169,
+    "same_year_equal": 1302
+  },
+  "review_hold_keys": 85,
+  "candidate_replay_substitutions": 0,
+  "compatible_title_source_keys": 893,
+  "title_numeric_changed_in_review_holds": 15,
+  "built_candidate_statuses": {
+    "single_latest_title_candidate": 8370,
+    "multiple_latest_title_candidates": 1979,
+    "no_legacy_recovered_address": 2494,
+    "no_latest_title_candidate": 450
+  },
+  "built_candidate_field_differences": {
+    "max_floor": 1600,
+    "approve_year": 1455,
+    "structure_group": 1259
+  },
+  "title_bulk_lookup": {
+    "requested_parcels": 10987,
+    "title_rows": 17570,
+    "seconds": 1.5978656000006595,
+    "mode": "read-only main DB and in-memory TEMP scope; one ordered title payload query",
+    "consumed_raw_hashes_verified": true
+  },
+  "built_title_candidate_comparisons": 12820,
+  "checks": {
+    "1471_residential_keys_preserved": true,
+    "13293_built_hashes_preserved": true,
+    "all_existing_attributes_preserved": true,
+    "all_existing_prices_preserved": true,
+    "all_existing_built_enrichment_preserved": true,
+    "holds_never_substituted": true,
+    "numeric_differences_all_in_existing_holds": true,
+    "no_new_assignment": true,
+    "commercial_306_3987_preserved": true
+  },
+  "elapsed_seconds": 12.010668099999748,
+  "limitations": [
+    "Candidate aggregate uses the existing product algorithm for audit only, not independent site/membership certification.",
+    "K-apt and other existing numeric attributes pass through frozen product inputs; they are not re-sourced from title originals.",
+    "Built legacy PKs may be absent; single current candidate never implies historical transaction membership.",
+    "Compatibility preserves baseline values; candidate replay is separate and subject to review holds.",
+    "Commercial road-cluster inputs preserved without residential title aggregation."
+  ]
+}

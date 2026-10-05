@@ -1,0 +1,38 @@
+{
+  "frozen_at": "2026-10-05T06:51:06.616098+00:00",
+  "content_sha256": "d4b8b3dc6c190ecd8c6ba1f4ba0c7d3c2f4db055760b5362cc241e0630a902e1",
+  "gzip_sha256": "8410e56d18d8f359d05313472f5fe55419a267ac6795f59ffd3db95970c4dc58",
+  "prior_scope_sha256": "3b924cdece2a7464032f131642462b07604d31c9ae2a1f077f89883823190f08",
+  "counts": {
+    "collective": {
+      "residential_stats": 1471,
+      "residential_transactions": 108077,
+      "commercial_stats": 306,
+      "commercial_transactions": 3987,
+      "attributes": 1347,
+      "prices": 1302
+    },
+    "built_transactions": 13293
+  },
+  "checks": {
+    "stats_cohort_preserved": true,
+    "window_transaction_counts_match_stats": true,
+    "built_hashes_unique": true
+  },
+  "db_observations": [
+    {
+      "db": "collective_stats",
+      "observed_at": "2026-10-05 15:50:49.107672+09:00",
+      "snapshot": "168882:168882:"
+    },
+    {
+      "db": "built_stats",
+      "observed_at": "2026-10-05 15:50:55.434396+09:00",
+      "snapshot": "168882:168882:"
+    }
+  ],
+  "limitations": [
+    "Separate local repeatable-read snapshots, not a synchronized production snapshot.",
+    "Frozen numeric inputs are never overwritten; refresh requires a new filename/version."
+  ]
+}
