@@ -1,0 +1,147 @@
+{
+  "review_date": "2026-10-05",
+  "code_baseline": "df7216a",
+  "scope": "local documents, saved summaries, readonly SQLite and current unit tests; no VPS audit, raw nationwide rescan or regression refit",
+  "unit_test_run": {
+    "command": "python -m unittest discover -s . -p test*.py",
+    "cwd": "pipeline/parcel_master",
+    "passed": 119
+  },
+  "databases": {
+    "ledger_staging_pilot.sqlite": {
+      "sha256": "c9757d580b19cf0d2321c7bafa00f09e703fa5576ca87b1d401720d1c619a649",
+      "table_counts": {
+        "snapshots": 2,
+        "versions": 7881,
+        "membership": 7939,
+        "current_values": 4000,
+        "state": 1
+      },
+      "quick_check": "ok",
+      "foreign_key_errors": 0,
+      "file_hash_unchanged": true
+    },
+    "building_relation_staging.sqlite": {
+      "sha256": "c1db4196db533181ad04201325d73812a075b88e391c14c94a3e1f4e0b40e090",
+      "table_counts": {
+        "source_snapshot": 3,
+        "building_entity": 4000,
+        "parcel_identity": 3931,
+        "building_version": 4119,
+        "parcel_version": 5028,
+        "building_observation": 11696,
+        "parcel_observation": 10867,
+        "address_relation_observation": 11696,
+        "current_building": 4000,
+        "state": 1,
+        "assessed_price_observation": 10867
+      },
+      "quick_check": "ok",
+      "foreign_key_errors": 0,
+      "file_hash_unchanged": true
+    },
+    "building_source_staging_v2_full.sqlite": {
+      "sha256": "8dc1158793cdc172762acaf1e2a43be9c93dfb6867f958c693f333f0f5384a3e",
+      "table_counts": {
+        "source_batch": 3,
+        "building_entity": 4000,
+        "source_version": 7986,
+        "title_observation": 11696,
+        "canonical_address_relation": 11673
+      },
+      "quick_check": "ok",
+      "foreign_key_errors": 0,
+      "zero_main_lot_canonical": {
+        "observations": 44,
+        "unique_management_pks": 16,
+        "by_snapshot": {
+          "2024-09": 14,
+          "2025-07": 14,
+          "2026-07": 16
+        },
+        "minimal_replay_fields": [
+          "43111",
+          "12000",
+          "0",
+          "0000",
+          "0000"
+        ],
+        "minimal_replay_result": [
+          "4311112000100000000",
+          "canonical_address"
+        ],
+        "production_or_price_impact_audited": false
+      },
+      "file_hash_unchanged": true
+    }
+  },
+  "source_documents_sha256": {
+    "LEDGER_UNIFICATION_ROADMAP.md": "90d8d77e0806d820342fc98ae9c4f6a9ae8029582c4b3a12f453080e6a7c8230",
+    "CH2_LEDGER_V2_OPERATING_POLICY.md": "a9b15a7dd9ddefce6403146a80fcf199cbcdbce66b03242f35feac985e0320ce",
+    "PARCEL_MASTER_DESIGN.md": "61f6f253e4b5e318582a11e02f610ccfadd0a16cf72fe835f360bb753a2d784f",
+    "PARCEL_MASTER_IMPLEMENTATION.md": "28e22f1855ad831184d9ca72075ae2174aead7b8d1a42a6b4552b694dfa56752",
+    "PARCEL_MASTER_MONTHLY_UPDATE.md": "23708be02136bb841e88a152236e46dca4fca6119f5fd9e8bc8e344bd6f3a3cb",
+    "PARCEL_LEDGER_CHEONGJU_PILOT_PLAN.md": "d062c51b2bf5fde5c38fafe507f5ddac7bbe2b173f46f7b24a8f0e7f978f5de5",
+    "CHEONGJU_BUILDING_PARCEL_INTEGRATION_REVIEW.md": "0d15dc5fb4db7486fe0ced0395d37c7ed30aa141ef7b5b94bad955c83c203a7a",
+    "CHEONGJU_BUILDING_TRAIT_COVERAGE_RESULT.md": "9e77e19057e9c12cd7221c2df4aae40cfb05325e4e2b43c14faaaaec05a779b5",
+    "CHEONGJU_BUILDING_RELATION_STAGING_RESULT.md": "d2f44fe50cb931bff873fb1c09a488f21f0c1f83fad788f96901b24ce697da80",
+    "CHEONGJU_BUILDING_SOURCE_V2_FULL_RESULT.md": "e94748ff6fbaeec530649964dd21f35df31e8559aae9ea49ad624c1a3258b10f",
+    "CHEONGJU_TRAIT_AND_PRODUCT_LINK_REVIEW.md": "2d90265fad10c7288e6518fe1d77a06f8dcb790f433bd8b03f0219efeed9641f",
+    "CHEONGJU_ADDRESS_PAIR_IMPACT_RESULT.md": "b0642fb64d6a9edebe243f575912d7c9eead569248feacabfa5a895a2772b53c",
+    "CHEONGJU_NAMED_OBJECT_MIX_RESULT.md": "66b9b1743a90e1900b332b0f98e1428fac9d696871d60d73ae94663f5fa5f0a2",
+    "CHEONGJU_APARTMENT_SITE_REVIEW.md": "7b60e8d3167b721a6b1b900152a52cedb3667587b9830b314e76a7d9f6a38d09",
+    "CHEONGJU_OBJECT_SELECTOR_SHADOW_RESULT.md": "65be6ddaf3730fbead05aa37f6f904c160310c964e9189701417ee474e30a77c",
+    "LEDGER_CONSUMER_CONTRACT_DRAFT.md": "56d6f0f4b92353238b98405fa30db28d284403539ed55fe9d4853e759a56e409",
+    "LEDGER_OBJECT_MEMBERSHIP_CONTRACT_DRAFT.md": "7143f8ffbb6860148a68880574bcc02559540f4901bf4d4915b0897b809ead18",
+    "BUILDING_HUB_RELATION_SOURCE_ADAPTER.md": "6af607237c87c7626da290534175bac892ca6e55bc2fd91ee96ff4620e15e3f7",
+    "MACRO_ENRICHMENT_POLICY_REVIEW_20261004.md": "97ce4babcd2faad520dffd85eba12704d5953c67ce98e00201ceead573b44718",
+    "lab/cheongju_historical_regression_20261004.json": "0332114b71d81520c17e5c06f2af63cfd41587d1660527efef4c323591e38040",
+    "lab/cheongju_mean_bias_20261004.json": "a074844227d0d5a6c45d4ef4521e474580ed202b55874b1afbaa31c4841da87a"
+  },
+  "regression_2026": [
+    {
+      "model": "baseline",
+      "n_train": 23144,
+      "n_test": 1610,
+      "test_log_rmse": 0.7800243655624071,
+      "cell_mean_mae_n20": 4.200838767009835,
+      "actual_mean": 25.438819875776396,
+      "predicted_mean": 29.280696338508108
+    },
+    {
+      "model": "assessed",
+      "n_train": 23144,
+      "n_test": 1610,
+      "test_log_rmse": 0.7067599061738018,
+      "cell_mean_mae_n20": 3.9205130671234523,
+      "actual_mean": 25.438819875776396,
+      "predicted_mean": 30.007724869225655
+    },
+    {
+      "model": "traits",
+      "n_train": 23144,
+      "n_test": 1610,
+      "test_log_rmse": 0.7188552400566888,
+      "cell_mean_mae_n20": 3.8887583754889685,
+      "actual_mean": 25.438819875776396,
+      "predicted_mean": 29.92425352049418
+    },
+    {
+      "model": "combined",
+      "n_train": 23144,
+      "n_test": 1610,
+      "test_log_rmse": 0.7034772662647154,
+      "cell_mean_mae_n20": 4.259119292886067,
+      "actual_mean": 25.438819875776396,
+      "predicted_mean": 30.503101151271082
+    }
+  ],
+  "selector_frozen_replay": {
+    "keys": 85,
+    "address_partitions": 177,
+    "transactions": 13975,
+    "content_sha256": "7653e0000e326556f7365a6e30c1257b39f818612e0e50d46bbfa6f4706c5552",
+    "all_production_apply_false": true,
+    "all_representatives_unassigned": true
+  }
+}
