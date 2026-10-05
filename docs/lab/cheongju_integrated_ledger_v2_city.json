@@ -1,0 +1,156 @@
+{
+  "rule_version": "cheongju-source-identity-v2.2",
+  "consumer_contract": "ledger-source-consumer-v2.2",
+  "batches": [
+    {
+      "snapshot": "2024-09",
+      "building_observations": 139315,
+      "all_city_trait_candidates": 477399,
+      "identity_statuses": {
+        "canonical_address": 138646,
+        "noncanonical_zero_main_lot": 618,
+        "block_without_canonical_pnu": 51
+      },
+      "new_release_inserted": true,
+      "ingest_seconds": 60.593799500002206,
+      "source_prepare_and_replay_seconds": 109.87822989999768
+    },
+    {
+      "snapshot": "2025-07",
+      "building_observations": 141420,
+      "all_city_trait_candidates": 478750,
+      "identity_statuses": {
+        "canonical_address": 140765,
+        "noncanonical_zero_main_lot": 618,
+        "block_without_canonical_pnu": 37
+      },
+      "new_release_inserted": true,
+      "ingest_seconds": 114.68601049999779,
+      "source_prepare_and_replay_seconds": 172.76429370000187
+    },
+    {
+      "snapshot": "2026-07",
+      "building_observations": 141252,
+      "all_city_trait_candidates": 480633,
+      "identity_statuses": {
+        "canonical_address": 140548,
+        "noncanonical_zero_main_lot": 620,
+        "block_without_canonical_pnu": 84
+      },
+      "new_release_inserted": true,
+      "ingest_seconds": 230.48794429999907,
+      "source_prepare_and_replay_seconds": 316.07808210000076
+    }
+  ],
+  "tables": {
+    "source": 9,
+    "release": 3,
+    "release_source": 9,
+    "building": 144247,
+    "building_raw": 283404,
+    "building_attribute": 145818,
+    "building_observation": 421987,
+    "parcel": 493028,
+    "parcel_version": 714794,
+    "parcel_observation": 1436782,
+    "price_observation": 1436782,
+    "address_relation": 419959,
+    "current_building": 144247,
+    "current_parcel": 488932,
+    "state": 1
+  },
+  "current_buildings": 144247,
+  "latest_observed_buildings": 141252,
+  "last_seen_only_buildings": 2995,
+  "restore_oldest_then_latest_seconds": 15.523987800002942,
+  "injected_subset_rollback_seconds": 51.76830179999888,
+  "checks": {
+    "2024-09_idempotent": true,
+    "2025-07_idempotent": true,
+    "2026-07_idempotent": true,
+    "oldest_and_latest_restore_exact": true,
+    "failure_after_full_size_current_publication": true,
+    "foreign_keys_clean": true,
+    "integrity": true,
+    "no_zero_main_canonical_relation": true,
+    "frozen_input_hashes_unchanged": true
+  },
+  "frozen_inputs_sha256": {
+    "building_identity_2024-09.csv.gz": "3eb9f31688b1140e2527ca186dc7d9439124e091be4075efcea755fe69bf6e4b",
+    "traits_2024.csv.gz": "d89ce7a1570f91ff1b410bacf567aa93fce7349203e66cff9a593f7fd755ad33",
+    "building_identity_2025-07.csv.gz": "1abcea7dc1c72539c8429378c3a21f677119b5f9850b14c9978bf92020abdf37",
+    "traits_2025.csv.gz": "0fce6a8ad1bf27be7da66c2750f58bd65d76f1fa2e5b51598472c699d31824ed",
+    "building_identity_2026-07.csv.gz": "f7ceedc886306269e74ee1e5b2edcea39cfac1ee1c965cfe06643bc1e930e189",
+    "traits_2026.csv.gz": "34ac3e0ee610079d4fb0808fa233e8f848fe7e7756285fca67bfa6912f21d40c"
+  },
+  "sqlite_bytes": 2030292992,
+  "elapsed_seconds": 890.6058832999988,
+  "limitations": [
+    "Three frozen city building snapshots; not legal nationwide completeness.",
+    "Traits retain all city candidate parcels; original DBF columns are referenced by inventory, not re-copied in this city run.",
+    "Same schema and identity/consumer contract as the 4,000 PK stage; no production assignments or regression adoption.",
+    "No real future source delta available; idempotency and injected subset rollback are not a certified new-month incremental update."
+  ],
+  "snapshot_deltas": [
+    {
+      "snapshot": "2024-09",
+      "previous_release": null,
+      "building_observation": {
+        "observations": 139315,
+        "new_vs_previous_snapshot": 139315,
+        "missing_vs_previous_snapshot": 0,
+        "raw_hash_changed": 0,
+        "attribute_hash_changed": 0
+      },
+      "parcel_observation": {
+        "observations": 477399,
+        "new_vs_previous_snapshot": 477399,
+        "missing_vs_previous_snapshot": 0,
+        "version_hash_changed": 0
+      },
+      "price_changed_among_shared_parcels": 0,
+      "raw_price_changed_among_shared_parcels": 0,
+      "raw_year_changed_among_shared_parcels": 0
+    },
+    {
+      "snapshot": "2025-07",
+      "previous_release": "cheongju-city-2024-09-identity-2.2",
+      "building_observation": {
+        "observations": 141420,
+        "new_vs_previous_snapshot": 3240,
+        "missing_vs_previous_snapshot": 1135,
+        "raw_hash_changed": 138180,
+        "attribute_hash_changed": 643
+      },
+      "parcel_observation": {
+        "observations": 478750,
+        "new_vs_previous_snapshot": 7170,
+        "missing_vs_previous_snapshot": 5819,
+        "version_hash_changed": 195780
+      },
+      "price_changed_among_shared_parcels": 467890,
+      "raw_price_changed_among_shared_parcels": 464194,
+      "raw_year_changed_among_shared_parcels": 467890
+    },
+    {
+      "snapshot": "2026-07",
+      "previous_release": "cheongju-city-2025-07-identity-2.2",
+      "building_observation": {
+        "observations": 141252,
+        "new_vs_previous_snapshot": 1692,
+        "missing_vs_previous_snapshot": 1860,
+        "raw_hash_changed": 977,
+        "attribute_hash_changed": 928
+      },
+      "parcel_observation": {
+        "observations": 480633,
+        "new_vs_previous_snapshot": 4386,
+        "missing_vs_previous_snapshot": 2503,
+        "version_hash_changed": 72965
+      },
+      "price_changed_among_shared_parcels": 476247,
+      "raw_price_changed_among_shared_parcels": 468876,
+      "raw_year_changed_among_shared_parcels": 471745
+    }
+  ]
+}

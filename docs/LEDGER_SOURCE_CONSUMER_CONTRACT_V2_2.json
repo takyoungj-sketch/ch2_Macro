@@ -1,0 +1,36 @@
+{
+  "contract": "ledger-source-consumer-v2.2",
+  "identity_rule": "cheongju-source-identity-v2.2",
+  "scope": "Local source supply. Product entity or transaction membership is not certified.",
+  "value_columns": ["source", "base_date", "trust_state", "last_seen", "permissions"],
+  "rows": [
+    {
+      "value": "building raw and processed attributes",
+      "source": "title original selected fields and separately marked processed extract; source hashes and PK namespace",
+      "base_date": "Title source base date when known; otherwise null. Snapshot month is separate.",
+      "trust_state": "identity status when observed, or last_seen_not_observed",
+      "last_seen": "Release of last building observation",
+      "product_use": "Source display permitted; candidate research only when observed and canonical; new enrichment, aggregation and regression prohibited."
+    },
+    {
+      "value": "parcel traits",
+      "source": "Frozen trait cache, original ZIP inventory and original DBF payload where already captured",
+      "base_date": "Selected source observation cutoff plus the preserved raw row trait_asof",
+      "trust_state": "observed, not_observed_in_selected_release, identity_blocked, or last_seen_not_observed",
+      "last_seen": "Last parcel observation release; old value is not automatically used",
+      "product_use": "Source display and candidate research only when present; new enrichment, aggregation and regression prohibited."
+    },
+    {
+      "value": "assessed land price",
+      "source": "Price observation preserved separately from trait attribute content version",
+      "base_date": "Source price_year; never copied from title snapshot when unknown",
+      "trust_state": "positive_known_year, source_overflow, unknown_price_year, missing_or_nonpositive, not_observed_in_selected_snapshot, identity_blocked, or last_seen_not_observed",
+      "last_seen": "Last parcel source observation release; unavailable current price is not filled from history",
+      "product_use": "Candidate research requires a positive price with known year and current canonical building address; new enrichment, quantity aggregation and regression prohibited."
+    }
+  ],
+  "required_envelope_fields": ["published_release", "pk_namespace", "selected_source_snapshot", "last_seen_source_snapshot", "last_seen_release", "observed_in_selected_release", "identity_status", "address_pnu"],
+  "default_permissions": {"product_enrichment": false, "quantity_aggregation": false, "regression": false},
+  "price_unit": "KRW per square metre",
+  "forbidden_inferences": ["address observation implies transaction membership", "latest missing source implies demolition", "parcel identity implies complete building site", "source parent edge implies transaction ownership", "value exists implies permission to use it", "price sum across multiple titles of one parcel"]
+}

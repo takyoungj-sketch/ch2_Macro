@@ -1,5 +1,7 @@
 # 공통 대장 소비 계약 초안 v1~v2
 
+2026-10-05 통합 원천 공급 구현: [소비 계약 v2.2](LEDGER_SOURCE_CONSUMER_CONTRACT_V2_2.json), [4,000 PK 통합 결과](CHEONGJU_INTEGRATED_LEDGER_V2_4000_RESULT.md), [청주 전체·병행 공급 결과](CHEONGJU_INTEGRATED_LEDGER_V2_CITY_RESULT.md)를 따른다. 원천·기준시점·신뢰상태·last-seen·사용 허용을 각 값에 함께 반환한다. 이는 아래 v1~v2 실험을 보존하면서 원천 공급 계약을 고정한 것이며 제품 연결·회귀 사용 권한의 자동 승격이 아니다.
+
 작성: 2026-10-05. 계약 ID: `ledger-consumer-input-draft-v1`. 청주 실험을 바탕으로 정리한 개편 설계다. 운영 API·테이블·회귀의 현재 계약을 교체한 문서가 아니며, 제품 전환 전 확정할 항목을 아래에 남긴다.
 
 ## 소비 단위를 먼저 고정한다

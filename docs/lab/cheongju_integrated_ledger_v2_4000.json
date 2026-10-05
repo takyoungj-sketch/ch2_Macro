@@ -1,0 +1,119 @@
+{
+  "rule_version": "cheongju-source-identity-v2.2",
+  "consumer_contract": "ledger-source-consumer-v2.2",
+  "cohort_management_pks": 4000,
+  "batches": [
+    {
+      "snapshot": "2024-09",
+      "buildings": 3850,
+      "traits": 3607,
+      "identity_statuses": {
+        "canonical_address": 3818,
+        "block_without_canonical_pnu": 18,
+        "noncanonical_zero_main_lot": 14
+      },
+      "ingest_seconds": 1.9912925999997242
+    },
+    {
+      "snapshot": "2025-07",
+      "buildings": 3933,
+      "traits": 3626,
+      "identity_statuses": {
+        "canonical_address": 3916,
+        "block_without_canonical_pnu": 3,
+        "noncanonical_zero_main_lot": 14
+      },
+      "ingest_seconds": 2.0515957999996317
+    },
+    {
+      "snapshot": "2026-07",
+      "buildings": 3913,
+      "traits": 3634,
+      "identity_statuses": {
+        "canonical_address": 3895,
+        "block_without_canonical_pnu": 2,
+        "noncanonical_zero_main_lot": 16
+      },
+      "ingest_seconds": 2.018646599997737
+    }
+  ],
+  "identity_impact": {
+    "changed_observations": 67,
+    "by_new_status": {
+      "block_without_canonical_pnu": 23,
+      "noncanonical_zero_main_lot": 44
+    },
+    "unique_changed_management_pks": 34,
+    "prior_price_statuses": {
+      "identity_blocked": 23,
+      "not_observed_in_selected_snapshot": 44
+    },
+    "prior_trait_statuses": {
+      "identity_blocked": 23,
+      "not_observed_in_selected_snapshot": 44
+    }
+  },
+  "tables": {
+    "source": 9,
+    "release": 3,
+    "release_source": 9,
+    "building": 4000,
+    "building_raw": 7986,
+    "building_attribute": 4119,
+    "building_observation": 11696,
+    "parcel": 3911,
+    "parcel_version": 5028,
+    "parcel_observation": 10867,
+    "price_observation": 10867,
+    "address_relation": 11629,
+    "current_building": 4000,
+    "current_parcel": 3667,
+    "state": 1
+  },
+  "consumer": {
+    "records": 4000,
+    "observed_in_selected_release": 3913,
+    "last_seen_not_observed": 87,
+    "price_statuses": {
+      "positive_known_year": 3688,
+      "last_seen_not_observed": 87,
+      "not_observed_in_selected_snapshot": 199,
+      "identity_blocked": 18,
+      "missing_or_nonpositive": 8
+    }
+  },
+  "checks": {
+    "2024-09_idempotent": true,
+    "2025-07_idempotent": true,
+    "2026-07_idempotent": true,
+    "failure_sources": true,
+    "failure_traits": true,
+    "failure_buildings": true,
+    "failure_published": true,
+    "oldest_release_selected": true,
+    "restore_latest_all_tables": true,
+    "restore_latest_consumer_exact": true,
+    "stale_buildings_not_current_observations": true,
+    "blocked_identity_no_price_or_traits": true,
+    "no_product_or_regression_permission": true,
+    "foreign_keys_clean": true,
+    "sqlite_integrity": true,
+    "zero_main_lot_never_canonical": true,
+    "all_frozen_inputs_unchanged": true
+  },
+  "frozen_inputs_sha256": {
+    "building_source_staging_v2_full.sqlite": "8dc1158793cdc172762acaf1e2a43be9c93dfb6867f958c693f333f0f5384a3e",
+    "building_relation_staging.sqlite": "c1db4196db533181ad04201325d73812a075b88e391c14c94a3e1f4e0b40e090",
+    "ledger_consumer_input_traits_full_dbf.json.gz": "dd5e3c9b17fb3036d8978fa6fcf294f8adea3e7a3c445bb481d74f516bb4f9e6",
+    "building_source_v2_raw_review_full.json.gz": "d3166d3b957d363cd854b7ba5a9ebf242449f7cea1dcdb4056ab937ccbe25a95"
+  },
+  "sqlite_bytes": 37801984,
+  "elapsed_seconds": 26.418476899998495,
+  "limitations": [
+    "Biased 4,000-PK cohort, not city-wide exception rates.",
+    "Local source supply; no object membership, product enrichment or regression adoption.",
+    "Source base dates/collection dates remain null when unknown; title snapshot month is not legal effect date.",
+    "Building attributes retain explicitly marked processed provenance; source raw is selected original fields.",
+    "Original DBF payload preserved where already captured; other cached parcel observations reference original inventory."
+  ]
+}

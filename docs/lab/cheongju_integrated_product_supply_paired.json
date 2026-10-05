@@ -1,0 +1,42 @@
+{
+  "consumer_contract": "ledger-source-consumer-v2.2",
+  "published_release": "cheongju-city-2026-07-identity-2.2",
+  "keys": 1471,
+  "transactions": 108077,
+  "by_asset_type": {
+    "rowhouse": 729,
+    "apartment": 584,
+    "officetel": 68,
+    "presale": 90
+  },
+  "address_partitions": 1565,
+  "distinct_source_parcels_requested": 1478,
+  "price_comparisons_at_existing_representative": {
+    "no_existing_price": 169,
+    "same_year_equal": 1302
+  },
+  "keys_with_observed_address_title_candidates": 1391,
+  "commercial_control_keys": 306,
+  "checks": {
+    "1471_keys_preserved": true,
+    "transaction_counts_preserved": true,
+    "all_legacy_enrichment_exact": true,
+    "no_implicit_product_permissions": true,
+    "parcel_value_contract_preserved": true,
+    "no_new_representatives": true,
+    "commercial_306_preserved": true,
+    "protected_product_inputs_unchanged": true
+  },
+  "frozen_inputs_sha256": {
+    "named_object_mix_evidence.json.gz": "22028e4dd9fcc7a1a60f76afd8fc6a05c4dc55b8f36812183a71cacf319cb5de",
+    "object_selector_shadow_commercial_control.json.gz": "bbf69bd76c9b324d49cc56b5388b6f1a7e1a3e3c41fc3fcbdb2553b367be57ef"
+  },
+  "elapsed_seconds": 65.99040779999996,
+  "limitations": [
+    "Source candidates paired with frozen residential keys including presale; no transaction-to-building assignment.",
+    "Legacy attribute evidence contains match metadata, not numeric attribute values; attribute equality cannot be certified.",
+    "Existing representative price is compared only at the same price year; candidate parcels are not summed.",
+    "Commercial existing road clusters preserved; no residential relation rules applied.",
+    "No production input replacement or regression recomputation. Full product output parity remains a later gate."
+  ]
+}
