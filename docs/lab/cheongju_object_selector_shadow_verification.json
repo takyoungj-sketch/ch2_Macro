@@ -1,0 +1,18 @@
+{
+  "tests_passed": 82,
+  "unique_existing_keys_verified": 85,
+  "address_partitions_verified": 177,
+  "raw_address_pairs_verified": 177,
+  "transactions_conserved": 13975,
+  "input_and_group_order_reversal_replays_verified": 85,
+  "baseline_enrichment_content_hashes_verified": 85,
+  "commercial_existing_cluster_controls_verified": 306,
+  "all_gate_checks_passed": true,
+  "new_objects_or_representatives_assigned": 0,
+  "prices_or_attributes_inherited": 0,
+  "membership_verifier_implemented": false,
+  "production_apply": false,
+  "plan_content_sha256": "7653e0000e326556f7365a6e30c1257b39f818612e0e50d46bbfa6f4706c5552",
+  "canvas_typescript_errors": 0,
+  "canvas_visual_render_verified": false
+}

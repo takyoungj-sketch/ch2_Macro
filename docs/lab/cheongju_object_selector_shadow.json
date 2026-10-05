@@ -1,0 +1,2023 @@
+{
+  "audit_version": "ledger-object-selector-shadow-v1",
+  "run_date": "2026-10-05",
+  "scope_summary": {
+    "keys": 85,
+    "transactions": 13975,
+    "address_partitions": 177,
+    "statuses": {
+      "object_scope_review_hold": 74,
+      "development_block_identity_unresolved": 2,
+      "shared_parcel_management_review": 9
+    },
+    "reason_counts": {
+      "transaction_object_membership_unverified": 85,
+      "representative_selection_rule_pending": 85,
+      "multiple_observed_parcels_membership_unverified": 74,
+      "noncanonical_address_identity": 2,
+      "named_key_spans_legal_dongs": 43,
+      "multiple_management_codes_membership_unverified": 26,
+      "latest_title_source_coverage_missing": 13,
+      "stored_stats_address_pair_not_observed": 28
+    },
+    "baseline_price_mart_keys": 54,
+    "baseline_building_attribute_keys": 70,
+    "selected_representatives": 0,
+    "inherited_prices": 0
+  },
+  "by_cohort": {
+    "review_queue_52": {
+      "keys": 52,
+      "transactions": 10620,
+      "address_partitions": 106,
+      "statuses": {
+        "development_block_identity_unresolved": 2,
+        "shared_parcel_management_review": 9,
+        "object_scope_review_hold": 41
+      },
+      "reason_counts": {
+        "transaction_object_membership_unverified": 52,
+        "representative_selection_rule_pending": 52,
+        "noncanonical_address_identity": 2,
+        "named_key_spans_legal_dongs": 43,
+        "multiple_management_codes_membership_unverified": 26,
+        "multiple_observed_parcels_membership_unverified": 41,
+        "stored_stats_address_pair_not_observed": 28,
+        "latest_title_source_coverage_missing": 2
+      },
+      "baseline_price_mart_keys": 31,
+      "baseline_building_attribute_keys": 47,
+      "selected_representatives": 0,
+      "inherited_prices": 0
+    },
+    "same_legal_dong_multi_pnu_33": {
+      "keys": 33,
+      "transactions": 3355,
+      "address_partitions": 71,
+      "statuses": {
+        "object_scope_review_hold": 33
+      },
+      "reason_counts": {
+        "transaction_object_membership_unverified": 33,
+        "representative_selection_rule_pending": 33,
+        "multiple_observed_parcels_membership_unverified": 33,
+        "latest_title_source_coverage_missing": 11
+      },
+      "baseline_price_mart_keys": 23,
+      "baseline_building_attribute_keys": 23,
+      "selected_representatives": 0,
+      "inherited_prices": 0
+    }
+  },
+  "by_asset_type": {
+    "apartment": {
+      "keys": 37,
+      "transactions": 10701,
+      "address_partitions": 72,
+      "statuses": {
+        "shared_parcel_management_review": 9,
+        "object_scope_review_hold": 28
+      },
+      "reason_counts": {
+        "transaction_object_membership_unverified": 37,
+        "representative_selection_rule_pending": 37,
+        "multiple_management_codes_membership_unverified": 26,
+        "multiple_observed_parcels_membership_unverified": 28,
+        "named_key_spans_legal_dongs": 24,
+        "stored_stats_address_pair_not_observed": 16
+      },
+      "baseline_price_mart_keys": 24,
+      "baseline_building_attribute_keys": 37,
+      "selected_representatives": 0,
+      "inherited_prices": 0
+    },
+    "officetel": {
+      "keys": 2,
+      "transactions": 55,
+      "address_partitions": 6,
+      "statuses": {
+        "object_scope_review_hold": 2
+      },
+      "reason_counts": {
+        "transaction_object_membership_unverified": 2,
+        "representative_selection_rule_pending": 2,
+        "named_key_spans_legal_dongs": 1,
+        "multiple_observed_parcels_membership_unverified": 2,
+        "stored_stats_address_pair_not_observed": 1
+      },
+      "baseline_price_mart_keys": 1,
+      "baseline_building_attribute_keys": 2,
+      "selected_representatives": 0,
+      "inherited_prices": 0
+    },
+    "presale": {
+      "keys": 13,
+      "transactions": 2921,
+      "address_partitions": 26,
+      "statuses": {
+        "development_block_identity_unresolved": 2,
+        "object_scope_review_hold": 11
+      },
+      "reason_counts": {
+        "transaction_object_membership_unverified": 13,
+        "representative_selection_rule_pending": 13,
+        "noncanonical_address_identity": 2,
+        "named_key_spans_legal_dongs": 3,
+        "multiple_observed_parcels_membership_unverified": 11,
+        "latest_title_source_coverage_missing": 11,
+        "stored_stats_address_pair_not_observed": 1
+      },
+      "baseline_price_mart_keys": 0,
+      "baseline_building_attribute_keys": 0,
+      "selected_representatives": 0,
+      "inherited_prices": 0
+    },
+    "rowhouse": {
+      "keys": 33,
+      "transactions": 298,
+      "address_partitions": 73,
+      "statuses": {
+        "object_scope_review_hold": 33
+      },
+      "reason_counts": {
+        "transaction_object_membership_unverified": 33,
+        "representative_selection_rule_pending": 33,
+        "multiple_observed_parcels_membership_unverified": 33,
+        "named_key_spans_legal_dongs": 15,
+        "stored_stats_address_pair_not_observed": 10,
+        "latest_title_source_coverage_missing": 2
+      },
+      "baseline_price_mart_keys": 29,
+      "baseline_building_attribute_keys": 31,
+      "selected_representatives": 0,
+      "inherited_prices": 0
+    }
+  },
+  "source_coverage_partition_counts": {
+    "titles_present": 160,
+    "address_not_canonical": 4,
+    "no_titles_in_latest_snapshot": 13
+  },
+  "fresh_33_key_title_coverage": {
+    "distinct_pnus_requested": 71,
+    "pnus_with_titles": 60,
+    "title_rows": 297
+  },
+  "commercial_control": {
+    "keys": 306,
+    "analysis_unit": "road_cluster",
+    "action": "keep_existing_cluster_identity",
+    "source": "protected prior address audit, not a new DB query"
+  },
+  "selector_runtime_seconds": 0.005870100001629908,
+  "selector_runtime_scope": "In-memory 85-key candidate validation and review gates only; excludes file IO and source scan, not production latency.",
+  "checks": {
+    "85_unique_existing_keys": true,
+    "cohorts_have_no_overlap": true,
+    "transactions_conserved": true,
+    "177_address_partitions_conserved": true,
+    "all_baseline_enrichment_preserved": true,
+    "no_assignments_or_inheritance": true,
+    "core_replay_stable_after_row_order_reversal": true,
+    "no_unreviewed_canonical_source_coverage": true,
+    "commercial_306_cluster_identities_preserved": true,
+    "protected_inputs_unchanged": true
+  },
+  "cases": [
+    {
+      "case_number": 1,
+      "asset_type": "rowhouse",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 10,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "내덕동 696-1 형제주택",
+        "내덕동 706-1 형제주택"
+      ]
+    },
+    {
+      "case_number": 2,
+      "asset_type": "presale",
+      "cohort": "review_queue_52",
+      "status": "development_block_identity_unresolved",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "noncanonical_address_identity",
+        "named_key_spans_legal_dongs"
+      ],
+      "transactions": 243,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": false,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "용암동 BL-B1 청주 동남지구 B1BL 시티프라디움",
+        "운동동 BL-B1 청주 동남지구 B1BL 시티프라디움"
+      ]
+    },
+    {
+      "case_number": 3,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "shared_parcel_management_review",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_management_codes_membership_unverified"
+      ],
+      "transactions": 353,
+      "address_partitions": 1,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "수곡동 314 산남주공4단지아파트"
+      ]
+    },
+    {
+      "case_number": 4,
+      "asset_type": "rowhouse",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 14,
+      "address_partitions": 3,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "오창읍 324-31 보탑아트빌",
+        "오창읍 324-34 보탑아트빌",
+        "오창읍 324-35 보탑아트빌"
+      ]
+    },
+    {
+      "case_number": 5,
+      "asset_type": "apartment",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 28,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "금천동 166-1 진주",
+        "금천동 167-3 진주"
+      ]
+    },
+    {
+      "case_number": 6,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "multiple_management_codes_membership_unverified"
+      ],
+      "transactions": 793,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "가경동 1511 대원",
+        "복대동 221-7 대원"
+      ]
+    },
+    {
+      "case_number": 7,
+      "asset_type": "presale",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified",
+        "latest_title_source_coverage_missing"
+      ],
+      "transactions": 76,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": false,
+      "source_missing_partitions": 1,
+      "observed_address_labels": [
+        "복대동 288-56 청주 지웰시티 푸르지오",
+        "복대동 3404 청주지웰시티푸르지오"
+      ]
+    },
+    {
+      "case_number": 8,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 278,
+      "address_partitions": 3,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "복대동 2009 세원",
+        "봉명동 2193 세원",
+        "운천동 677 세원"
+      ]
+    },
+    {
+      "case_number": 9,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 45,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "모충동 490-1 삼덕",
+        "수곡동 64-2 삼덕"
+      ]
+    },
+    {
+      "case_number": 10,
+      "asset_type": "rowhouse",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 4,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "봉명동 224-9 흥덕가동",
+        "운천동 813-3 흥덕가동"
+      ]
+    },
+    {
+      "case_number": 11,
+      "asset_type": "rowhouse",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 7,
+      "address_partitions": 4,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "우암동 365-23 가영빌라",
+        "우암동 365-5 가영빌라",
+        "우암동 401-8 가영빌라",
+        "율량동 929 가영빌라"
+      ]
+    },
+    {
+      "case_number": 12,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "multiple_management_codes_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 194,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "개신동 447-15 두산한솔",
+        "모충동 473 두산한솔"
+      ]
+    },
+    {
+      "case_number": 13,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 79,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "내덕동 422 신라",
+        "율량동 1868 신라"
+      ]
+    },
+    {
+      "case_number": 14,
+      "asset_type": "presale",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified",
+        "latest_title_source_coverage_missing"
+      ],
+      "transactions": 366,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": false,
+      "source_missing_partitions": 1,
+      "observed_address_labels": [
+        "복대동 100-28 복대자이 더 스카이",
+        "복대동 3411 복대자이더스카이"
+      ]
+    },
+    {
+      "case_number": 15,
+      "asset_type": "rowhouse",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 20,
+      "address_partitions": 3,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "내덕동 135-2 삼일",
+        "내덕동 135-4 삼일",
+        "내덕동 135-6 삼일"
+      ]
+    },
+    {
+      "case_number": 16,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "multiple_management_codes_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 201,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "가경동 764 대림",
+        "강서동 37-1 대림"
+      ]
+    },
+    {
+      "case_number": 17,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "multiple_management_codes_membership_unverified"
+      ],
+      "transactions": 479,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "개신동 443 두진백로",
+        "수곡동 1002 두진백로"
+      ]
+    },
+    {
+      "case_number": 18,
+      "asset_type": "rowhouse",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 8,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "모충동 505-12 주연빌라",
+        "수곡동 74-15 주연빌라"
+      ]
+    },
+    {
+      "case_number": 19,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "shared_parcel_management_review",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_management_codes_membership_unverified"
+      ],
+      "transactions": 327,
+      "address_partitions": 1,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "분평동 1261 주공4단지2차"
+      ]
+    },
+    {
+      "case_number": 20,
+      "asset_type": "rowhouse",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 10,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "금천동 201-10 영일빌라",
+        "대성동 120-10 영일빌라"
+      ]
+    },
+    {
+      "case_number": 21,
+      "asset_type": "apartment",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 30,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "복대동 167-3 명성",
+        "복대동 168 명성"
+      ]
+    },
+    {
+      "case_number": 22,
+      "asset_type": "rowhouse",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 2,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "사직동 594-5 궁전다동",
+        "사직동 625-1 궁전다동"
+      ]
+    },
+    {
+      "case_number": 23,
+      "asset_type": "presale",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "stored_stats_address_pair_not_observed",
+        "latest_title_source_coverage_missing"
+      ],
+      "transactions": 23,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": false,
+      "source_missing_partitions": 1,
+      "observed_address_labels": [
+        "가경동 633-5 가경 아이파크 5단지",
+        "강서동 583 가경아이파크5단지"
+      ]
+    },
+    {
+      "case_number": 24,
+      "asset_type": "rowhouse",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 11,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "금천동 120-2 금남",
+        "금천동 120-8 금남"
+      ]
+    },
+    {
+      "case_number": 25,
+      "asset_type": "rowhouse",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 2,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "옥산면 226-3 오미타운",
+        "옥산면 260-1 오미타운"
+      ]
+    },
+    {
+      "case_number": 26,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "multiple_management_codes_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 188,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "가경동 762 벽산",
+        "복대동 2606 벽산"
+      ]
+    },
+    {
+      "case_number": 27,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "multiple_management_codes_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 413,
+      "address_partitions": 3,
+      "baseline_price_present": false,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "내덕동 697-1 삼일",
+        "내수읍 200-3 삼일",
+        "우암동 50-4 삼일"
+      ]
+    },
+    {
+      "case_number": 28,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "multiple_management_codes_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 231,
+      "address_partitions": 4,
+      "baseline_price_present": false,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "금천동 122-1 삼일",
+        "서운동 21-7 삼일",
+        "영운동 204 삼일",
+        "탑동 83 삼일"
+      ]
+    },
+    {
+      "case_number": 29,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "multiple_management_codes_membership_unverified"
+      ],
+      "transactions": 223,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "복대동 2008 삼일",
+        "비하동 238-1 삼일"
+      ]
+    },
+    {
+      "case_number": 30,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "multiple_management_codes_membership_unverified"
+      ],
+      "transactions": 220,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "봉명동 87 삼정백조",
+        "신봉동 310 삼정백조"
+      ]
+    },
+    {
+      "case_number": 31,
+      "asset_type": "rowhouse",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 13,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "남일면 416 송암해든마루",
+        "남일면 416-1 송암해든마루"
+      ]
+    },
+    {
+      "case_number": 32,
+      "asset_type": "presale",
+      "cohort": "review_queue_52",
+      "status": "development_block_identity_unresolved",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "noncanonical_address_identity",
+        "named_key_spans_legal_dongs"
+      ],
+      "transactions": 233,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": false,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "용암동 BL-B2 청주 동남지구 B2BL 시티프라디움",
+        "운동동 BL-B2 청주 동남지구 B2BL 시티프라디움"
+      ]
+    },
+    {
+      "case_number": 33,
+      "asset_type": "rowhouse",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 7,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "오창읍 174 아름누리빌",
+        "오창읍 174-1 아름누리빌"
+      ]
+    },
+    {
+      "case_number": 34,
+      "asset_type": "rowhouse",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "stored_stats_address_pair_not_observed",
+        "latest_title_source_coverage_missing"
+      ],
+      "transactions": 5,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 1,
+      "observed_address_labels": [
+        "복대동 37-2 동향주택",
+        "봉명동 191-8 동향주택"
+      ]
+    },
+    {
+      "case_number": 35,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "shared_parcel_management_review",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_management_codes_membership_unverified"
+      ],
+      "transactions": 318,
+      "address_partitions": 1,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "분평동 1261 분평주공4"
+      ]
+    },
+    {
+      "case_number": 36,
+      "asset_type": "rowhouse",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 7,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "비하동 682-1 금정빌라",
+        "옥산면 586-2 금정빌라"
+      ]
+    },
+    {
+      "case_number": 37,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "shared_parcel_management_review",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_management_codes_membership_unverified"
+      ],
+      "transactions": 281,
+      "address_partitions": 1,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "용암동 2108 청주용암주공1단지아파트(해누리)"
+      ]
+    },
+    {
+      "case_number": 38,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "multiple_management_codes_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 690,
+      "address_partitions": 3,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "금천동 199-1 현대",
+        "용암동 2089 현대",
+        "탑동 44 현대"
+      ]
+    },
+    {
+      "case_number": 39,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "multiple_management_codes_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 815,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "모충동 452 주공1",
+        "수곡동 324 주공1"
+      ]
+    },
+    {
+      "case_number": 40,
+      "asset_type": "rowhouse",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 12,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "죽림동 136-3 그린하우스",
+        "죽림동 137-1 그린하우스"
+      ]
+    },
+    {
+      "case_number": 41,
+      "asset_type": "rowhouse",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 3,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "봉명동 815 장미빌라",
+        "비하동 687-2 장미빌라"
+      ]
+    },
+    {
+      "case_number": 42,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "multiple_management_codes_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 542,
+      "address_partitions": 3,
+      "baseline_price_present": false,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "복대동 2459 두진하트리움",
+        "봉명동 2758 두진하트리움",
+        "신봉동 35-1 두진하트리움"
+      ]
+    },
+    {
+      "case_number": 43,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 76,
+      "address_partitions": 3,
+      "baseline_price_present": false,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "복대동 208 재원",
+        "비하동 64-4 재원",
+        "오송읍 263-3 재원"
+      ]
+    },
+    {
+      "case_number": 44,
+      "asset_type": "rowhouse",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 8,
+      "address_partitions": 3,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "내덕동 23-9 삼부빌라",
+        "내덕동 60-2 삼부빌라",
+        "율량동 938 삼부빌라"
+      ]
+    },
+    {
+      "case_number": 45,
+      "asset_type": "presale",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified",
+        "latest_title_source_coverage_missing"
+      ],
+      "transactions": 86,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": false,
+      "source_missing_partitions": 1,
+      "observed_address_labels": [
+        "가경동 2236 청주가경아이파크2단지",
+        "가경동 323 청주가경 IPARK 2단지"
+      ]
+    },
+    {
+      "case_number": 46,
+      "asset_type": "rowhouse",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 3,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "문의면 114-70 보광빌라",
+        "영운동 167-1 보광빌라"
+      ]
+    },
+    {
+      "case_number": 47,
+      "asset_type": "rowhouse",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 5,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "금천동 54-12 정원쉐르빌(103동)",
+        "영운동 60-8 정원쉐르빌(103동)"
+      ]
+    },
+    {
+      "case_number": 48,
+      "asset_type": "presale",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified",
+        "latest_title_source_coverage_missing"
+      ],
+      "transactions": 200,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": false,
+      "source_missing_partitions": 1,
+      "observed_address_labels": [
+        "내덕동 154-6 청주 힐즈파크 푸르지오",
+        "내덕동 857 청주힐즈파크푸르지오"
+      ]
+    },
+    {
+      "case_number": 49,
+      "asset_type": "rowhouse",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified",
+        "latest_title_source_coverage_missing"
+      ],
+      "transactions": 32,
+      "address_partitions": 3,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 1,
+      "observed_address_labels": [
+        "내덕동 499-13 덕일",
+        "내덕동 499-4 덕일",
+        "내덕동 499-6 덕일"
+      ]
+    },
+    {
+      "case_number": 50,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "multiple_management_codes_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 716,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "내수읍 301 덕일한마음",
+        "우암동 353-2 덕일한마음"
+      ]
+    },
+    {
+      "case_number": 51,
+      "asset_type": "rowhouse",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 10,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": false,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "오동동 7-8 그린빌라",
+        "오창읍 234-1 그린빌라"
+      ]
+    },
+    {
+      "case_number": 52,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "shared_parcel_management_review",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_management_codes_membership_unverified"
+      ],
+      "transactions": 30,
+      "address_partitions": 1,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "용담동 190-1 홍은모드니"
+      ]
+    },
+    {
+      "case_number": 53,
+      "asset_type": "rowhouse",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 6,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "신봉동 341 나산아트빌",
+        "신봉동 341-4 나산아트빌"
+      ]
+    },
+    {
+      "case_number": 54,
+      "asset_type": "apartment",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 601,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "복대동 3366 어울림",
+        "복대동 3367 어울림"
+      ]
+    },
+    {
+      "case_number": 55,
+      "asset_type": "rowhouse",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 12,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "내수읍 178-28 동경드림빌",
+        "내수읍 182-33 동경드림빌"
+      ]
+    },
+    {
+      "case_number": 56,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "multiple_management_codes_membership_unverified"
+      ],
+      "transactions": 400,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "금천동 124 효성",
+        "용암동 2086 효성"
+      ]
+    },
+    {
+      "case_number": 57,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "multiple_management_codes_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 132,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "가경동 768 신라",
+        "봉명동 1603 신라"
+      ]
+    },
+    {
+      "case_number": 58,
+      "asset_type": "rowhouse",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 4,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": false,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "봉명동 224-2 흥덕라동",
+        "운천동 813 흥덕라동"
+      ]
+    },
+    {
+      "case_number": 59,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 54,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "금천동 181-1 진흥",
+        "영운동 40-5 진흥"
+      ]
+    },
+    {
+      "case_number": 60,
+      "asset_type": "rowhouse",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 27,
+      "address_partitions": 3,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "봉명동 2318 더라움",
+        "봉명동 2318-1 더라움",
+        "봉명동 2319-2 더라움"
+      ]
+    },
+    {
+      "case_number": 61,
+      "asset_type": "officetel",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 32,
+      "address_partitions": 3,
+      "baseline_price_present": false,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "사직동 6-168 주1",
+        "사직동 6-90 주1",
+        "성화동 480 주1"
+      ]
+    },
+    {
+      "case_number": 62,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "multiple_management_codes_membership_unverified"
+      ],
+      "transactions": 375,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "가경동 1516 태암수정",
+        "강내면 90 태암수정"
+      ]
+    },
+    {
+      "case_number": 63,
+      "asset_type": "rowhouse",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 6,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "사직동 40-11 동성빌라",
+        "사창동 190-12 동성빌라"
+      ]
+    },
+    {
+      "case_number": 64,
+      "asset_type": "rowhouse",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 5,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "오창읍 324-39 SH",
+        "오창읍 324-4 SH"
+      ]
+    },
+    {
+      "case_number": 65,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 28,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "금천동 103-2 장미",
+        "대성동 170 장미"
+      ]
+    },
+    {
+      "case_number": 66,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 106,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "가경동 1507 효성",
+        "복대동 162-4 효성"
+      ]
+    },
+    {
+      "case_number": 67,
+      "asset_type": "presale",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified",
+        "latest_title_source_coverage_missing"
+      ],
+      "transactions": 565,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": false,
+      "source_missing_partitions": 1,
+      "observed_address_labels": [
+        "율량동 1502 율량 금호어울림 센트로",
+        "율량동 2605 율량금호어울림센트로"
+      ]
+    },
+    {
+      "case_number": 68,
+      "asset_type": "presale",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified",
+        "latest_title_source_coverage_missing"
+      ],
+      "transactions": 317,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": false,
+      "source_missing_partitions": 1,
+      "observed_address_labels": [
+        "개신동 767 더샵청주그리니티",
+        "개신동 산104-6 더샵 청주그리니티"
+      ]
+    },
+    {
+      "case_number": 69,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "shared_parcel_management_review",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_management_codes_membership_unverified"
+      ],
+      "transactions": 208,
+      "address_partitions": 1,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "분평동 1255 주은프레지던트"
+      ]
+    },
+    {
+      "case_number": 70,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "shared_parcel_management_review",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_management_codes_membership_unverified"
+      ],
+      "transactions": 247,
+      "address_partitions": 1,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "분평동 1255 대원"
+      ]
+    },
+    {
+      "case_number": 71,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "shared_parcel_management_review",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_management_codes_membership_unverified"
+      ],
+      "transactions": 263,
+      "address_partitions": 1,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "분평동 1200 주공3단지2차"
+      ]
+    },
+    {
+      "case_number": 72,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "multiple_management_codes_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 282,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "용담동 423 부영E그린",
+        "용암동 2540 부영E그린"
+      ]
+    },
+    {
+      "case_number": 73,
+      "asset_type": "presale",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified",
+        "latest_title_source_coverage_missing"
+      ],
+      "transactions": 133,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": false,
+      "source_missing_partitions": 1,
+      "observed_address_labels": [
+        "가경동 2251 청주가경아이파크4단지",
+        "가경동 320 청주 가경 IPARK 4단지"
+      ]
+    },
+    {
+      "case_number": 74,
+      "asset_type": "apartment",
+      "cohort": "review_queue_52",
+      "status": "shared_parcel_management_review",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_management_codes_membership_unverified"
+      ],
+      "transactions": 414,
+      "address_partitions": 1,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "분평동 1200 분평주공3"
+      ]
+    },
+    {
+      "case_number": 75,
+      "asset_type": "presale",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified",
+        "latest_title_source_coverage_missing"
+      ],
+      "transactions": 515,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": false,
+      "source_missing_partitions": 1,
+      "observed_address_labels": [
+        "북문로3가 123 청주행정타운코아루휴티스",
+        "북문로3가 21-1 청주 행정타운 코아루 휴티스"
+      ]
+    },
+    {
+      "case_number": 76,
+      "asset_type": "rowhouse",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified",
+        "stored_stats_address_pair_not_observed"
+      ],
+      "transactions": 4,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "봉명동 224-8 흥덕나동",
+        "운천동 813-2 흥덕나동"
+      ]
+    },
+    {
+      "case_number": 77,
+      "asset_type": "rowhouse",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 6,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "사직동 594-24 궁전나동",
+        "사직동 628-11 궁전나동"
+      ]
+    },
+    {
+      "case_number": 78,
+      "asset_type": "apartment",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 41,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "수곡동 19-4 목화맨션",
+        "수곡동 20-3 목화맨션"
+      ]
+    },
+    {
+      "case_number": 79,
+      "asset_type": "officetel",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 23,
+      "address_partitions": 3,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "비하동 319-27 헤리움오피스텔",
+        "비하동 319-29 헤리움오피스텔",
+        "비하동 319-31 헤리움오피스텔"
+      ]
+    },
+    {
+      "case_number": 80,
+      "asset_type": "rowhouse",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 8,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "사창동 240-7 서원",
+        "사창동 241-1 서원"
+      ]
+    },
+    {
+      "case_number": 81,
+      "asset_type": "presale",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified",
+        "latest_title_source_coverage_missing"
+      ],
+      "transactions": 95,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": false,
+      "source_missing_partitions": 1,
+      "observed_address_labels": [
+        "비하동 422 서청주 파크 자이",
+        "비하동 824 서청주파크자이"
+      ]
+    },
+    {
+      "case_number": 82,
+      "asset_type": "rowhouse",
+      "cohort": "review_queue_52",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "named_key_spans_legal_dongs",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 4,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "봉명동 1470 주연9차",
+        "비하동 666-1 주연9차"
+      ]
+    },
+    {
+      "case_number": 83,
+      "asset_type": "rowhouse",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 15,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "용담동 97-16 용담",
+        "용담동 97-3 용담"
+      ]
+    },
+    {
+      "case_number": 84,
+      "asset_type": "rowhouse",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified"
+      ],
+      "transactions": 8,
+      "address_partitions": 2,
+      "baseline_price_present": true,
+      "baseline_attributes_present": true,
+      "source_missing_partitions": 0,
+      "observed_address_labels": [
+        "수곡동 62-1 이지네스트",
+        "수곡동 62-2 이지네스트"
+      ]
+    },
+    {
+      "case_number": 85,
+      "asset_type": "presale",
+      "cohort": "same_legal_dong_multi_pnu_33",
+      "status": "object_scope_review_hold",
+      "reasons": [
+        "transaction_object_membership_unverified",
+        "representative_selection_rule_pending",
+        "multiple_observed_parcels_membership_unverified",
+        "latest_title_source_coverage_missing"
+      ],
+      "transactions": 69,
+      "address_partitions": 2,
+      "baseline_price_present": false,
+      "baseline_attributes_present": false,
+      "source_missing_partitions": 1,
+      "observed_address_labels": [
+        "가경동 2258 가경자이",
+        "가경동 635 가경자이"
+      ]
+    }
+  ],
+  "source_inventory": {
+    "title": {
+      "file": "국토교통부_건축물대장_표제부+(2026년+07월)/mart_djy_03.txt",
+      "rows": 8060932,
+      "sha256": "42abc5ed87e16419c477b78cfbb5a4b375e56604d9133be2acec067b35787247"
+    }
+  },
+  "provenance": {
+    "protected_inputs_sha256": {
+      "named_object_mix_evidence.json.gz": "22028e4dd9fcc7a1a60f76afd8fc6a05c4dc55b8f36812183a71cacf319cb5de",
+      "named_object_mix_review_queue.json.gz": "d419fbba0d9c6c0de482d1568a89fb6fcf2d723ce764808a46391bc9cb17db02",
+      "address_pair_impact_evidence.json.gz": "3b924cdece2a7464032f131642462b07604d31c9ae2a1f077f89883823190f08",
+      "apartment_site_review_evidence.json.gz": "81ae7ffda689ae8b306ec3831c384b04922f2e5f0f9b028733528e5fbd172cf5",
+      "remaining_object_review_evidence.json.gz": "51479b605916faaf9db99d9b1dc488e7594c4a32668b8753f06cea8bd6185519"
+    },
+    "plan_content_sha256": "7653e0000e326556f7365a6e30c1257b39f818612e0e50d46bbfa6f4706c5552",
+    "selector_code_sha256": "126975be880d17706b1c316bbad181adead82287f07cfa7df09c524d09aa6587",
+    "audit_code_sha256": "c8f464a7263940afd7d06f039a66fd343d5a04d7a53e712be7b8a9d964939184"
+  },
+  "limitations": [
+    "No source-specific membership verifier is implemented. Caller verification flags are rejected.",
+    "All outputs are observations and review holds, not new objects or regression inputs.",
+    "Source title coverage is latest 2026-07; absence is not demolition or historical nonexistence.",
+    "No current DB re-query: source windows and enrichment reuse protected frozen inputs.",
+    "Commercial control reuses prior clusters and deliberately skips residential scope rules.",
+    "In-memory runtime is not a product/API/database performance measurement."
+  ]
+}
