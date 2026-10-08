@@ -10,28 +10,32 @@
       "with_plan": 474835,
       "plan_asof": "2023-08-10",
       "trait_asof": "2023-08-05",
-      "compact_bytes": 9586327
+      "compact_bytes": 9586327,
+      "candidate_universe_cutoff": "2023-08-10"
     },
     "2024": {
       "parcels": 477399,
       "with_plan": 477383,
       "plan_asof": "2024-08-03",
       "trait_asof": "2024-07-31",
-      "compact_bytes": 9549217
+      "compact_bytes": 9549217,
+      "candidate_universe_cutoff": "2024-08-03"
     },
     "2025": {
       "parcels": 478750,
       "with_plan": 478658,
       "plan_asof": "2025-08-25",
       "trait_asof": "2025-08-08",
-      "compact_bytes": 9585218
+      "compact_bytes": 9585218,
+      "candidate_universe_cutoff": "2025-08-25"
     },
     "2026": {
       "parcels": 480633,
       "with_plan": 480599,
       "plan_asof": "2026-08-06",
       "trait_asof": "2026-05-13",
-      "compact_bytes": 9666191
+      "compact_bytes": 9666191,
+      "candidate_universe_cutoff": "2026-08-06"
     }
   },
   "counts": {
@@ -102,7 +106,46 @@
         29.327681798449262
       ],
       "cell_mean_mae_n20_10k_sqm": 3.91682171478516,
-      "cells_n20": 25
+      "cells_n20": 25,
+      "unseen_parcel_test": {
+        "n": 2492,
+        "log_rmse": 0.8215021875542415,
+        "mae_10k_sqm": 16.356876273877383
+      },
+      "district_validation": [
+        {
+          "sigungu": "43111",
+          "n": 717,
+          "actual_mean": 24.179637377963736,
+          "predicted_mean": 27.859496933700925,
+          "mean_absolute_error": 17.03963351510258,
+          "log_rmse": 0.8607680827610247
+        },
+        {
+          "sigungu": "43112",
+          "n": 330,
+          "actual_mean": 34.10909090909091,
+          "predicted_mean": 36.08704045174426,
+          "mean_absolute_error": 20.940874485565054,
+          "log_rmse": 0.902672000246608
+        },
+        {
+          "sigungu": "43113",
+          "n": 517,
+          "actual_mean": 37.971566731141195,
+          "predicted_mean": 32.8452841538933,
+          "mean_absolute_error": 20.464923003054107,
+          "log_rmse": 0.8222006336451951
+        },
+        {
+          "sigungu": "43114",
+          "n": 970,
+          "actual_mean": 21.631649484536084,
+          "predicted_mean": 22.45729499265462,
+          "mean_absolute_error": 12.728330094849548,
+          "log_rmse": 0.7562356698880403
+        }
+      ]
     },
     {
       "policy": "annual",
@@ -119,7 +162,46 @@
         29.20623016935738
       ],
       "cell_mean_mae_n20_10k_sqm": 3.5289415593169045,
-      "cells_n20": 25
+      "cells_n20": 25,
+      "unseen_parcel_test": {
+        "n": 2492,
+        "log_rmse": 0.6380246333657589,
+        "mae_10k_sqm": 12.14420709925426
+      },
+      "district_validation": [
+        {
+          "sigungu": "43111",
+          "n": 717,
+          "actual_mean": 24.179637377963736,
+          "predicted_mean": 25.008393814322197,
+          "mean_absolute_error": 11.048954682039408,
+          "log_rmse": 0.640362410519173
+        },
+        {
+          "sigungu": "43112",
+          "n": 330,
+          "actual_mean": 34.10909090909091,
+          "predicted_mean": 36.81039958209576,
+          "mean_absolute_error": 17.416802976665178,
+          "log_rmse": 0.6939905433557639
+        },
+        {
+          "sigungu": "43113",
+          "n": 517,
+          "actual_mean": 37.971566731141195,
+          "predicted_mean": 39.1411261988025,
+          "mean_absolute_error": 15.882822155637916,
+          "log_rmse": 0.5796392507972554
+        },
+        {
+          "sigungu": "43114",
+          "n": 970,
+          "actual_mean": 21.631649484536084,
+          "predicted_mean": 21.68355437898841,
+          "mean_absolute_error": 9.689606381417793,
+          "log_rmse": 0.6471324025042348
+        }
+      ]
     },
     {
       "policy": "annual",
@@ -136,7 +218,46 @@
         30.64958755008266
       ],
       "cell_mean_mae_n20_10k_sqm": 4.2072880588685635,
-      "cells_n20": 25
+      "cells_n20": 25,
+      "unseen_parcel_test": {
+        "n": 2492,
+        "log_rmse": 0.7894341205723724,
+        "mae_10k_sqm": 16.36574331114265
+      },
+      "district_validation": [
+        {
+          "sigungu": "43111",
+          "n": 717,
+          "actual_mean": 24.179637377963736,
+          "predicted_mean": 28.02766802107701,
+          "mean_absolute_error": 17.67980184060543,
+          "log_rmse": 0.8361974915636954
+        },
+        {
+          "sigungu": "43112",
+          "n": 330,
+          "actual_mean": 34.10909090909091,
+          "predicted_mean": 36.662684456917994,
+          "mean_absolute_error": 20.32509977113698,
+          "log_rmse": 0.8489823281217576
+        },
+        {
+          "sigungu": "43113",
+          "n": 517,
+          "actual_mean": 37.971566731141195,
+          "predicted_mean": 34.719973861536445,
+          "mean_absolute_error": 20.505133607744156,
+          "log_rmse": 0.7990517714208036
+        },
+        {
+          "sigungu": "43114",
+          "n": 970,
+          "actual_mean": 21.631649484536084,
+          "predicted_mean": 22.632530850214398,
+          "mean_absolute_error": 12.522201788326534,
+          "log_rmse": 0.7243616733370281
+        }
+      ]
     },
     {
       "policy": "annual",
@@ -153,7 +274,46 @@
         31.137884795267638
       ],
       "cell_mean_mae_n20_10k_sqm": 4.24001748147374,
-      "cells_n20": 25
+      "cells_n20": 25,
+      "unseen_parcel_test": {
+        "n": 2492,
+        "log_rmse": 0.6482864376897535,
+        "mae_10k_sqm": 12.441797668984119
+      },
+      "district_validation": [
+        {
+          "sigungu": "43111",
+          "n": 717,
+          "actual_mean": 24.179637377963736,
+          "predicted_mean": 26.306015636669873,
+          "mean_absolute_error": 10.981352512987941,
+          "log_rmse": 0.6563535891429139
+        },
+        {
+          "sigungu": "43112",
+          "n": 330,
+          "actual_mean": 34.10909090909091,
+          "predicted_mean": 37.71140147993635,
+          "mean_absolute_error": 18.04737746993274,
+          "log_rmse": 0.7043330399023268
+        },
+        {
+          "sigungu": "43113",
+          "n": 517,
+          "actual_mean": 37.971566731141195,
+          "predicted_mean": 41.055142739691426,
+          "mean_absolute_error": 16.73826035321529,
+          "log_rmse": 0.5869433373805905
+        },
+        {
+          "sigungu": "43114",
+          "n": 970,
+          "actual_mean": 21.631649484536084,
+          "predicted_mean": 22.107813241196805,
+          "mean_absolute_error": 9.81822543138258,
+          "log_rmse": 0.6532089426374851
+        }
+      ]
     },
     {
       "policy": "annual",
@@ -170,7 +330,46 @@
         31.77010765794861
       ],
       "cell_mean_mae_n20_10k_sqm": 4.390660579743065,
-      "cells_n20": 25
+      "cells_n20": 25,
+      "unseen_parcel_test": {
+        "n": 2492,
+        "log_rmse": 0.6519539015449052,
+        "mae_10k_sqm": 12.819240702591799
+      },
+      "district_validation": [
+        {
+          "sigungu": "43111",
+          "n": 717,
+          "actual_mean": 24.179637377963736,
+          "predicted_mean": 26.81908392313261,
+          "mean_absolute_error": 11.05645304860332,
+          "log_rmse": 0.6570259966746035
+        },
+        {
+          "sigungu": "43112",
+          "n": 330,
+          "actual_mean": 34.10909090909091,
+          "predicted_mean": 37.931099323217495,
+          "mean_absolute_error": 17.727721981137563,
+          "log_rmse": 0.6993911429887568
+        },
+        {
+          "sigungu": "43113",
+          "n": 517,
+          "actual_mean": 37.971566731141195,
+          "predicted_mean": 42.45646950798077,
+          "mean_absolute_error": 17.887286732361463,
+          "log_rmse": 0.5992295241620005
+        },
+        {
+          "sigungu": "43114",
+          "n": 970,
+          "actual_mean": 21.631649484536084,
+          "predicted_mean": 22.480806377348678,
+          "mean_absolute_error": 10.15897870425757,
+          "log_rmse": 0.6569323585624347
+        }
+      ]
     },
     {
       "policy": "annual",
@@ -187,7 +386,46 @@
         32.31434850925418
       ],
       "cell_mean_mae_n20_10k_sqm": 4.728080045220147,
-      "cells_n20": 22
+      "cells_n20": 22,
+      "unseen_parcel_test": {
+        "n": 1536,
+        "log_rmse": 0.8706837029320676,
+        "mae_10k_sqm": 16.301681303075835
+      },
+      "district_validation": [
+        {
+          "sigungu": "43111",
+          "n": 442,
+          "actual_mean": 14.488461538461538,
+          "predicted_mean": 22.263334156665447,
+          "mean_absolute_error": 11.316516862975822,
+          "log_rmse": 0.9396133166607548
+        },
+        {
+          "sigungu": "43112",
+          "n": 208,
+          "actual_mean": 29.607692307692307,
+          "predicted_mean": 29.372883731692248,
+          "mean_absolute_error": 17.66574691282811,
+          "log_rmse": 0.9695398093979537
+        },
+        {
+          "sigungu": "43113",
+          "n": 409,
+          "actual_mean": 38.15378973105135,
+          "predicted_mean": 38.889083281400715,
+          "mean_absolute_error": 22.472718556054904,
+          "log_rmse": 0.9556713215067684
+        },
+        {
+          "sigungu": "43114",
+          "n": 522,
+          "actual_mean": 22.09425287356322,
+          "predicted_mean": 29.662260574099086,
+          "mean_absolute_error": 15.137618461392117,
+          "log_rmse": 0.660343872125291
+        }
+      ]
     },
     {
       "policy": "annual",
@@ -204,7 +442,46 @@
         30.21894937022365
       ],
       "cell_mean_mae_n20_10k_sqm": 3.3676091984703826,
-      "cells_n20": 22
+      "cells_n20": 22,
+      "unseen_parcel_test": {
+        "n": 1536,
+        "log_rmse": 0.7257040792959307,
+        "mae_10k_sqm": 12.951896640003019
+      },
+      "district_validation": [
+        {
+          "sigungu": "43111",
+          "n": 442,
+          "actual_mean": 14.488461538461538,
+          "predicted_mean": 19.469487489297318,
+          "mean_absolute_error": 8.194622405426653,
+          "log_rmse": 0.7150090147060789
+        },
+        {
+          "sigungu": "43112",
+          "n": 208,
+          "actual_mean": 29.607692307692307,
+          "predicted_mean": 31.78600509951699,
+          "mean_absolute_error": 13.391461491139989,
+          "log_rmse": 0.7283988066529329
+        },
+        {
+          "sigungu": "43113",
+          "n": 409,
+          "actual_mean": 38.15378973105135,
+          "predicted_mean": 38.838446294893366,
+          "mean_absolute_error": 19.63507859893132,
+          "log_rmse": 0.8784126612432893
+        },
+        {
+          "sigungu": "43114",
+          "n": 522,
+          "actual_mean": 22.09425287356322,
+          "predicted_mean": 26.48280979354521,
+          "mean_absolute_error": 11.878624987285233,
+          "log_rmse": 0.5790600243013092
+        }
+      ]
     },
     {
       "policy": "annual",
@@ -221,7 +498,46 @@
         32.07713770074209
       ],
       "cell_mean_mae_n20_10k_sqm": 3.717733171456253,
-      "cells_n20": 22
+      "cells_n20": 22,
+      "unseen_parcel_test": {
+        "n": 1536,
+        "log_rmse": 0.811021587684249,
+        "mae_10k_sqm": 15.34917601599553
+      },
+      "district_validation": [
+        {
+          "sigungu": "43111",
+          "n": 442,
+          "actual_mean": 14.488461538461538,
+          "predicted_mean": 21.449010760832245,
+          "mean_absolute_error": 10.801872537479651,
+          "log_rmse": 0.8605575519986798
+        },
+        {
+          "sigungu": "43112",
+          "n": 208,
+          "actual_mean": 29.607692307692307,
+          "predicted_mean": 29.345125632301468,
+          "mean_absolute_error": 16.495485097495905,
+          "log_rmse": 0.8872030633878611
+        },
+        {
+          "sigungu": "43113",
+          "n": 409,
+          "actual_mean": 38.15378973105135,
+          "predicted_mean": 35.92865700923087,
+          "mean_absolute_error": 21.09903407643808,
+          "log_rmse": 0.9085532084700891
+        },
+        {
+          "sigungu": "43114",
+          "n": 522,
+          "actual_mean": 22.09425287356322,
+          "predicted_mean": 29.580956802874766,
+          "mean_absolute_error": 14.163308277211595,
+          "log_rmse": 0.6183716555533051
+        }
+      ]
     },
     {
       "policy": "annual",
@@ -238,7 +554,46 @@
         29.835844209288947
       ],
       "cell_mean_mae_n20_10k_sqm": 3.0709054006526126,
-      "cells_n20": 22
+      "cells_n20": 22,
+      "unseen_parcel_test": {
+        "n": 1536,
+        "log_rmse": 0.7242202851970023,
+        "mae_10k_sqm": 12.479483707778444
+      },
+      "district_validation": [
+        {
+          "sigungu": "43111",
+          "n": 442,
+          "actual_mean": 14.488461538461538,
+          "predicted_mean": 18.449758298370107,
+          "mean_absolute_error": 7.970425598723918,
+          "log_rmse": 0.6914588659901914
+        },
+        {
+          "sigungu": "43112",
+          "n": 208,
+          "actual_mean": 29.607692307692307,
+          "predicted_mean": 30.54503376459152,
+          "mean_absolute_error": 12.537677721559081,
+          "log_rmse": 0.7006970316674369
+        },
+        {
+          "sigungu": "43113",
+          "n": 409,
+          "actual_mean": 38.15378973105135,
+          "predicted_mean": 37.757680466691625,
+          "mean_absolute_error": 19.40451348090628,
+          "log_rmse": 0.910505847435079
+        },
+        {
+          "sigungu": "43114",
+          "n": 522,
+          "actual_mean": 22.09425287356322,
+          "predicted_mean": 25.23465853968285,
+          "mean_absolute_error": 11.113078217297765,
+          "log_rmse": 0.5687780621568593
+        }
+      ]
     },
     {
       "policy": "annual",
@@ -255,7 +610,46 @@
         29.650673793274827
       ],
       "cell_mean_mae_n20_10k_sqm": 3.1667445301139026,
-      "cells_n20": 22
+      "cells_n20": 22,
+      "unseen_parcel_test": {
+        "n": 1536,
+        "log_rmse": 0.716870367310601,
+        "mae_10k_sqm": 12.151275523763013
+      },
+      "district_validation": [
+        {
+          "sigungu": "43111",
+          "n": 442,
+          "actual_mean": 14.488461538461538,
+          "predicted_mean": 18.386484692051866,
+          "mean_absolute_error": 7.942980828361264,
+          "log_rmse": 0.6861954220881389
+        },
+        {
+          "sigungu": "43112",
+          "n": 208,
+          "actual_mean": 29.607692307692307,
+          "predicted_mean": 30.600852444731956,
+          "mean_absolute_error": 12.578015107310797,
+          "log_rmse": 0.7025861394413628
+        },
+        {
+          "sigungu": "43113",
+          "n": 409,
+          "actual_mean": 38.15378973105135,
+          "predicted_mean": 38.14864079734815,
+          "mean_absolute_error": 18.68134981735787,
+          "log_rmse": 0.8938550861889174
+        },
+        {
+          "sigungu": "43114",
+          "n": 522,
+          "actual_mean": 22.09425287356322,
+          "predicted_mean": 24.506291827985052,
+          "mean_absolute_error": 10.772980552038266,
+          "log_rmse": 0.5671323304637752
+        }
+      ]
     },
     {
       "policy": "prior",
@@ -272,7 +666,46 @@
         29.327681798449262
       ],
       "cell_mean_mae_n20_10k_sqm": 3.91682171478516,
-      "cells_n20": 25
+      "cells_n20": 25,
+      "unseen_parcel_test": {
+        "n": 2492,
+        "log_rmse": 0.8215021875542415,
+        "mae_10k_sqm": 16.356876273877383
+      },
+      "district_validation": [
+        {
+          "sigungu": "43111",
+          "n": 717,
+          "actual_mean": 24.179637377963736,
+          "predicted_mean": 27.859496933700925,
+          "mean_absolute_error": 17.03963351510258,
+          "log_rmse": 0.8607680827610247
+        },
+        {
+          "sigungu": "43112",
+          "n": 330,
+          "actual_mean": 34.10909090909091,
+          "predicted_mean": 36.08704045174426,
+          "mean_absolute_error": 20.940874485565054,
+          "log_rmse": 0.902672000246608
+        },
+        {
+          "sigungu": "43113",
+          "n": 517,
+          "actual_mean": 37.971566731141195,
+          "predicted_mean": 32.8452841538933,
+          "mean_absolute_error": 20.464923003054107,
+          "log_rmse": 0.8222006336451951
+        },
+        {
+          "sigungu": "43114",
+          "n": 970,
+          "actual_mean": 21.631649484536084,
+          "predicted_mean": 22.45729499265462,
+          "mean_absolute_error": 12.728330094849548,
+          "log_rmse": 0.7562356698880403
+        }
+      ]
     },
     {
       "policy": "prior",
@@ -289,7 +722,46 @@
         28.952825610444048
       ],
       "cell_mean_mae_n20_10k_sqm": 3.390825121000756,
-      "cells_n20": 25
+      "cells_n20": 25,
+      "unseen_parcel_test": {
+        "n": 2492,
+        "log_rmse": 0.6380358696940116,
+        "mae_10k_sqm": 12.039835332097786
+      },
+      "district_validation": [
+        {
+          "sigungu": "43111",
+          "n": 717,
+          "actual_mean": 24.179637377963736,
+          "predicted_mean": 24.872340679050602,
+          "mean_absolute_error": 10.993067813482392,
+          "log_rmse": 0.637623945720163
+        },
+        {
+          "sigungu": "43112",
+          "n": 330,
+          "actual_mean": 34.10909090909091,
+          "predicted_mean": 36.58715413220051,
+          "mean_absolute_error": 17.195547797812807,
+          "log_rmse": 0.6893531243363935
+        },
+        {
+          "sigungu": "43113",
+          "n": 517,
+          "actual_mean": 37.971566731141195,
+          "predicted_mean": 38.59240670840915,
+          "mean_absolute_error": 15.786558029877304,
+          "log_rmse": 0.588117680896113
+        },
+        {
+          "sigungu": "43114",
+          "n": 970,
+          "actual_mean": 21.631649484536084,
+          "predicted_mean": 21.515509359986662,
+          "mean_absolute_error": 9.604301968529228,
+          "log_rmse": 0.6468595306152087
+        }
+      ]
     },
     {
       "policy": "prior",
@@ -306,7 +778,46 @@
         30.308000141442818
       ],
       "cell_mean_mae_n20_10k_sqm": 4.601247626599377,
-      "cells_n20": 25
+      "cells_n20": 25,
+      "unseen_parcel_test": {
+        "n": 2492,
+        "log_rmse": 0.7947816693046423,
+        "mae_10k_sqm": 16.725111950568547
+      },
+      "district_validation": [
+        {
+          "sigungu": "43111",
+          "n": 717,
+          "actual_mean": 24.179637377963736,
+          "predicted_mean": 28.195020725987202,
+          "mean_absolute_error": 17.748784626956336,
+          "log_rmse": 0.8370624799570715
+        },
+        {
+          "sigungu": "43112",
+          "n": 330,
+          "actual_mean": 34.10909090909091,
+          "predicted_mean": 36.32050463313458,
+          "mean_absolute_error": 20.072408128166842,
+          "log_rmse": 0.8489653123155024
+        },
+        {
+          "sigungu": "43113",
+          "n": 517,
+          "actual_mean": 37.971566731141195,
+          "predicted_mean": 35.45477955006559,
+          "mean_absolute_error": 21.2043956465676,
+          "log_rmse": 0.8033341572547505
+        },
+        {
+          "sigungu": "43114",
+          "n": 970,
+          "actual_mean": 21.631649484536084,
+          "predicted_mean": 23.256684496226644,
+          "mean_absolute_error": 13.242734412386762,
+          "log_rmse": 0.7362599722112516
+        }
+      ]
     },
     {
       "policy": "prior",
@@ -323,7 +834,46 @@
         29.54306306642059
       ],
       "cell_mean_mae_n20_10k_sqm": 3.542055548180811,
-      "cells_n20": 25
+      "cells_n20": 25,
+      "unseen_parcel_test": {
+        "n": 2492,
+        "log_rmse": 0.6442048206629193,
+        "mae_10k_sqm": 12.102127214182126
+      },
+      "district_validation": [
+        {
+          "sigungu": "43111",
+          "n": 717,
+          "actual_mean": 24.179637377963736,
+          "predicted_mean": 25.85521637309309,
+          "mean_absolute_error": 10.69054742741131,
+          "log_rmse": 0.6457389156237417
+        },
+        {
+          "sigungu": "43112",
+          "n": 330,
+          "actual_mean": 34.10909090909091,
+          "predicted_mean": 36.784582355371256,
+          "mean_absolute_error": 17.420119230647146,
+          "log_rmse": 0.6974246685108076
+        },
+        {
+          "sigungu": "43113",
+          "n": 517,
+          "actual_mean": 37.971566731141195,
+          "predicted_mean": 39.880706155715,
+          "mean_absolute_error": 16.354350966210585,
+          "log_rmse": 0.590497436135968
+        },
+        {
+          "sigungu": "43114",
+          "n": 970,
+          "actual_mean": 21.631649484536084,
+          "predicted_mean": 21.43436125336992,
+          "mean_absolute_error": 9.566376958679424,
+          "log_rmse": 0.6514808309358654
+        }
+      ]
     },
     {
       "policy": "prior",
@@ -340,7 +890,46 @@
         30.014129585147177
       ],
       "cell_mean_mae_n20_10k_sqm": 3.7690290423029364,
-      "cells_n20": 25
+      "cells_n20": 25,
+      "unseen_parcel_test": {
+        "n": 2492,
+        "log_rmse": 0.6478007313809159,
+        "mae_10k_sqm": 12.450201576351503
+      },
+      "district_validation": [
+        {
+          "sigungu": "43111",
+          "n": 717,
+          "actual_mean": 24.179637377963736,
+          "predicted_mean": 26.138634743929664,
+          "mean_absolute_error": 10.638591274044655,
+          "log_rmse": 0.6457197891526734
+        },
+        {
+          "sigungu": "43112",
+          "n": 330,
+          "actual_mean": 34.10909090909091,
+          "predicted_mean": 36.96863228066396,
+          "mean_absolute_error": 17.12662506893136,
+          "log_rmse": 0.6930786296069225
+        },
+        {
+          "sigungu": "43113",
+          "n": 517,
+          "actual_mean": 37.971566731141195,
+          "predicted_mean": 41.240918918671426,
+          "mean_absolute_error": 17.476532622510366,
+          "log_rmse": 0.6022608773286274
+        },
+        {
+          "sigungu": "43114",
+          "n": 970,
+          "actual_mean": 21.631649484536084,
+          "predicted_mean": 21.571629293168275,
+          "mean_absolute_error": 9.925606778095071,
+          "log_rmse": 0.6553863363678544
+        }
+      ]
     },
     {
       "policy": "prior",
@@ -357,7 +946,46 @@
         32.31434850925418
       ],
       "cell_mean_mae_n20_10k_sqm": 4.728080045220147,
-      "cells_n20": 22
+      "cells_n20": 22,
+      "unseen_parcel_test": {
+        "n": 1536,
+        "log_rmse": 0.8706837029320676,
+        "mae_10k_sqm": 16.301681303075835
+      },
+      "district_validation": [
+        {
+          "sigungu": "43111",
+          "n": 442,
+          "actual_mean": 14.488461538461538,
+          "predicted_mean": 22.263334156665447,
+          "mean_absolute_error": 11.316516862975822,
+          "log_rmse": 0.9396133166607548
+        },
+        {
+          "sigungu": "43112",
+          "n": 208,
+          "actual_mean": 29.607692307692307,
+          "predicted_mean": 29.372883731692248,
+          "mean_absolute_error": 17.66574691282811,
+          "log_rmse": 0.9695398093979537
+        },
+        {
+          "sigungu": "43113",
+          "n": 409,
+          "actual_mean": 38.15378973105135,
+          "predicted_mean": 38.889083281400715,
+          "mean_absolute_error": 22.472718556054904,
+          "log_rmse": 0.9556713215067684
+        },
+        {
+          "sigungu": "43114",
+          "n": 522,
+          "actual_mean": 22.09425287356322,
+          "predicted_mean": 29.662260574099086,
+          "mean_absolute_error": 15.137618461392117,
+          "log_rmse": 0.660343872125291
+        }
+      ]
     },
     {
       "policy": "prior",
@@ -374,7 +1002,46 @@
         30.561873281153243
       ],
       "cell_mean_mae_n20_10k_sqm": 3.539389239756176,
-      "cells_n20": 22
+      "cells_n20": 22,
+      "unseen_parcel_test": {
+        "n": 1536,
+        "log_rmse": 0.7273113700403206,
+        "mae_10k_sqm": 13.077926480996178
+      },
+      "district_validation": [
+        {
+          "sigungu": "43111",
+          "n": 442,
+          "actual_mean": 14.488461538461538,
+          "predicted_mean": 19.690215724738632,
+          "mean_absolute_error": 8.343460791110703,
+          "log_rmse": 0.7210672391526702
+        },
+        {
+          "sigungu": "43112",
+          "n": 208,
+          "actual_mean": 29.607692307692307,
+          "predicted_mean": 32.21195823835148,
+          "mean_absolute_error": 13.534563173624182,
+          "log_rmse": 0.7295640980500184
+        },
+        {
+          "sigungu": "43113",
+          "n": 409,
+          "actual_mean": 38.15378973105135,
+          "predicted_mean": 39.34706725421171,
+          "mean_absolute_error": 19.73532330142099,
+          "log_rmse": 0.8787602135882945
+        },
+        {
+          "sigungu": "43114",
+          "n": 522,
+          "actual_mean": 22.09425287356322,
+          "predicted_mean": 26.70490648723109,
+          "mean_absolute_error": 11.994799639141947,
+          "log_rmse": 0.5774391755865611
+        }
+      ]
     },
     {
       "policy": "prior",
@@ -391,7 +1058,46 @@
         31.96543322113581
       ],
       "cell_mean_mae_n20_10k_sqm": 3.737199650530343,
-      "cells_n20": 22
+      "cells_n20": 22,
+      "unseen_parcel_test": {
+        "n": 1536,
+        "log_rmse": 0.8120662274745502,
+        "mae_10k_sqm": 15.57299451364087
+      },
+      "district_validation": [
+        {
+          "sigungu": "43111",
+          "n": 442,
+          "actual_mean": 14.488461538461538,
+          "predicted_mean": 21.664368860948116,
+          "mean_absolute_error": 10.867755143996549,
+          "log_rmse": 0.8628581121114703
+        },
+        {
+          "sigungu": "43112",
+          "n": 208,
+          "actual_mean": 29.607692307692307,
+          "predicted_mean": 30.024153180743028,
+          "mean_absolute_error": 16.738824586371752,
+          "log_rmse": 0.8874360674329645
+        },
+        {
+          "sigungu": "43113",
+          "n": 409,
+          "actual_mean": 38.15378973105135,
+          "predicted_mean": 36.8737902855608,
+          "mean_absolute_error": 21.134032648031248,
+          "log_rmse": 0.9063947540965884
+        },
+        {
+          "sigungu": "43114",
+          "n": 522,
+          "actual_mean": 22.09425287356322,
+          "predicted_mean": 30.48533381168415,
+          "mean_absolute_error": 14.667915972781744,
+          "log_rmse": 0.6222027858242514
+        }
+      ]
     },
     {
       "policy": "prior",
@@ -408,7 +1114,46 @@
         29.554069660460204
       ],
       "cell_mean_mae_n20_10k_sqm": 3.0597754377027355,
-      "cells_n20": 22
+      "cells_n20": 22,
+      "unseen_parcel_test": {
+        "n": 1536,
+        "log_rmse": 0.7242777456700842,
+        "mae_10k_sqm": 12.667775288905219
+      },
+      "district_validation": [
+        {
+          "sigungu": "43111",
+          "n": 442,
+          "actual_mean": 14.488461538461538,
+          "predicted_mean": 18.715182725079647,
+          "mean_absolute_error": 8.095983751035114,
+          "log_rmse": 0.6904394852858752
+        },
+        {
+          "sigungu": "43112",
+          "n": 208,
+          "actual_mean": 29.607692307692307,
+          "predicted_mean": 30.982828929543516,
+          "mean_absolute_error": 12.706092137731961,
+          "log_rmse": 0.7010526364764271
+        },
+        {
+          "sigungu": "43113",
+          "n": 409,
+          "actual_mean": 38.15378973105135,
+          "predicted_mean": 38.5538855223869,
+          "mean_absolute_error": 19.655359881151384,
+          "log_rmse": 0.9110922849942279
+        },
+        {
+          "sigungu": "43114",
+          "n": 522,
+          "actual_mean": 22.09425287356322,
+          "predicted_mean": 25.558967459954463,
+          "mean_absolute_error": 11.315312990794878,
+          "log_rmse": 0.5691393068245872
+        }
+      ]
     },
     {
       "policy": "prior",
@@ -425,7 +1170,328 @@
         29.6414516021882
       ],
       "cell_mean_mae_n20_10k_sqm": 3.141938777724282,
-      "cells_n20": 22
+      "cells_n20": 22,
+      "unseen_parcel_test": {
+        "n": 1536,
+        "log_rmse": 0.7177831528815259,
+        "mae_10k_sqm": 12.422575503446637
+      },
+      "district_validation": [
+        {
+          "sigungu": "43111",
+          "n": 442,
+          "actual_mean": 14.488461538461538,
+          "predicted_mean": 18.7829660599339,
+          "mean_absolute_error": 8.132311858263941,
+          "log_rmse": 0.6876756497714703
+        },
+        {
+          "sigungu": "43112",
+          "n": 208,
+          "actual_mean": 29.607692307692307,
+          "predicted_mean": 31.207083184718297,
+          "mean_absolute_error": 12.753569984723628,
+          "log_rmse": 0.702738730598462
+        },
+        {
+          "sigungu": "43113",
+          "n": 409,
+          "actual_mean": 38.15378973105135,
+          "predicted_mean": 39.38145312372245,
+          "mean_absolute_error": 19.01006465775464,
+          "log_rmse": 0.8948321903251371
+        },
+        {
+          "sigungu": "43114",
+          "n": 522,
+          "actual_mean": 22.09425287356322,
+          "predicted_mean": 25.035157224680333,
+          "mean_absolute_error": 11.105798417268124,
+          "log_rmse": 0.5676737700095871
+        }
+      ]
     }
-  ]
+  ],
+  "link_review": {
+    "policy_conflicts": 3,
+    "review_queue_rows": 78,
+    "independently_validated_matches": 0,
+    "selection_bias_groups": [
+      {
+        "policy": "annual",
+        "group": "eligible_unlinked",
+        "n": 2382,
+        "area_sqm_transaction": {
+          "median": 312.35,
+          "p10": 19.100000000000023,
+          "p90": 2071.3000000000006
+        },
+        "unit_price_per_sqm_transaction": {
+          "median": 22.6,
+          "p10": 4.8,
+          "p90": 92.44000000000005
+        },
+        "contract_year": {
+          "2025": 975,
+          "2024": 854,
+          "2026": 553
+        },
+        "district": {
+          "43114": 837,
+          "43113": 653,
+          "43111": 561,
+          "43112": 331
+        },
+        "land_category": {
+          "대": 611,
+          "전": 520,
+          "임": 420,
+          "답": 415,
+          "도": 190,
+          "잡": 117,
+          "장": 37,
+          "구": 19,
+          "과": 12,
+          "창": 7,
+          "천": 7,
+          "제": 7,
+          "묘": 5,
+          "차": 5,
+          "체": 3,
+          "목": 3,
+          "철": 1,
+          "공": 1,
+          "학": 1,
+          "유": 1
+        },
+        "zone_type": {
+          "자녹": 695,
+          "계관": 505,
+          "1주": 263,
+          "생관": 220,
+          "농림": 175,
+          "보녹": 154,
+          "2주": 125,
+          "생녹": 91,
+          "보관": 86,
+          "준주": 20,
+          "일상": 19,
+          "준공": 19,
+          "일공": 5,
+          "개제": 2,
+          "근상": 1,
+          "유상": 1,
+          "1전": 1
+        }
+      },
+      {
+        "policy": "annual",
+        "group": "unique_candidate",
+        "n": 7293,
+        "area_sqm_transaction": {
+          "median": 686.0,
+          "p10": 51.0,
+          "p90": 3025.0
+        },
+        "unit_price_per_sqm_transaction": {
+          "median": 11.9,
+          "p10": 3.2,
+          "p90": 60.88000000000002
+        },
+        "contract_year": {
+          "2024": 2803,
+          "2025": 2691,
+          "2026": 1799
+        },
+        "district": {
+          "43114": 2485,
+          "43111": 2034,
+          "43113": 1710,
+          "43112": 1064
+        },
+        "land_category": {
+          "답": 2366,
+          "전": 1951,
+          "임": 1128,
+          "대": 1007,
+          "도": 342,
+          "장": 127,
+          "잡": 125,
+          "구": 55,
+          "과": 40,
+          "천": 23,
+          "묘": 22,
+          "창": 21,
+          "목": 19,
+          "유": 13,
+          "차": 12,
+          "체": 8,
+          "철": 8,
+          "제": 6,
+          "학": 6,
+          "종": 5,
+          "주": 5,
+          "원": 3,
+          "수": 1
+        },
+        "zone_type": {
+          "계관": 1833,
+          "자녹": 1714,
+          "농림": 1117,
+          "생관": 807,
+          "생녹": 425,
+          "보녹": 336,
+          "보관": 325,
+          "2주": 323,
+          "1주": 203,
+          "일상": 77,
+          "준주": 52,
+          "일공": 25,
+          "준공": 24,
+          "개제": 19,
+          "1전": 9,
+          "중상": 2,
+          "3주": 1,
+          "근상": 1
+        }
+      },
+      {
+        "policy": "observed_before_trade",
+        "group": "eligible_unlinked",
+        "n": 2785,
+        "area_sqm_transaction": {
+          "median": 331.0,
+          "p10": 22.0,
+          "p90": 2038.7999999999997
+        },
+        "unit_price_per_sqm_transaction": {
+          "median": 22.3,
+          "p10": 4.8,
+          "p90": 89.43999999999996
+        },
+        "contract_year": {
+          "2025": 1081,
+          "2024": 962,
+          "2026": 742
+        },
+        "district": {
+          "43114": 976,
+          "43113": 732,
+          "43111": 693,
+          "43112": 384
+        },
+        "land_category": {
+          "대": 721,
+          "전": 612,
+          "임": 533,
+          "답": 430,
+          "도": 207,
+          "잡": 151,
+          "장": 45,
+          "구": 21,
+          "과": 14,
+          "창": 8,
+          "묘": 8,
+          "천": 8,
+          "차": 7,
+          "제": 7,
+          "목": 5,
+          "체": 3,
+          "철": 3,
+          "공": 1,
+          "유": 1
+        },
+        "zone_type": {
+          "자녹": 812,
+          "계관": 636,
+          "1주": 275,
+          "생관": 254,
+          "보녹": 201,
+          "농림": 173,
+          "2주": 169,
+          "보관": 101,
+          "생녹": 90,
+          "준주": 25,
+          "준공": 21,
+          "일상": 17,
+          "일공": 6,
+          "개제": 2,
+          "근상": 1,
+          "유상": 1,
+          "1전": 1
+        }
+      },
+      {
+        "policy": "observed_before_trade",
+        "group": "unique_candidate",
+        "n": 6890,
+        "area_sqm_transaction": {
+          "median": 706.5,
+          "p10": 53.0,
+          "p90": 3052.0
+        },
+        "unit_price_per_sqm_transaction": {
+          "median": 11.4,
+          "p10": 3.1,
+          "p90": 60.6
+        },
+        "contract_year": {
+          "2024": 2695,
+          "2025": 2585,
+          "2026": 1610
+        },
+        "district": {
+          "43114": 2346,
+          "43111": 1902,
+          "43113": 1631,
+          "43112": 1011
+        },
+        "land_category": {
+          "답": 2351,
+          "전": 1859,
+          "임": 1015,
+          "대": 897,
+          "도": 325,
+          "장": 119,
+          "잡": 91,
+          "구": 53,
+          "과": 38,
+          "천": 22,
+          "창": 20,
+          "묘": 19,
+          "목": 17,
+          "유": 13,
+          "차": 10,
+          "체": 8,
+          "학": 7,
+          "제": 6,
+          "철": 6,
+          "종": 5,
+          "주": 5,
+          "원": 3,
+          "수": 1
+        },
+        "zone_type": {
+          "계관": 1702,
+          "자녹": 1597,
+          "농림": 1119,
+          "생관": 773,
+          "생녹": 426,
+          "보관": 310,
+          "보녹": 289,
+          "2주": 279,
+          "1주": 191,
+          "일상": 79,
+          "준주": 47,
+          "일공": 24,
+          "준공": 22,
+          "개제": 19,
+          "1전": 9,
+          "중상": 2,
+          "3주": 1,
+          "근상": 1
+        }
+      }
+    ]
+  }
 }

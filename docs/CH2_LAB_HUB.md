@@ -1,5 +1,7 @@
 # CH2 Macro 관리자
 
+청주 공통 대장 공급 파일럿은 2026-10-05 **성공 종료(D-077)**했다. [종료 보고서](CHEONGJU_LEDGER_PILOT_CLOSURE.md) · [전국 구축 체크리스트](LEDGER_NATIONAL_BUILD_CHECKLIST.md) · 계획일지 `?tool=plan`의 오늘/다음 및 2026-10-05 일지에 기록했다. 후속은 전국 구조 확정 → 지역 확장 → 실제 월 갱신 → 제품 전환이며 날짜는 미정이다. 추가 실험을 파일럿 종료 조건으로 붙이지 않는다.
+
 > **작성:** 2026-08-16  
 > **성격:** 관리자·개발 전용. **공개 게이트웨이 카드에 없음.**  
 > **로컬:** http://localhost:5179/lab/  
@@ -30,6 +32,7 @@
 | 상권과 아파트 | `sangkwon-apt` | 2021–2025 상권 수익률과 경계가 겹치는 읍면동 아파트. 공개 `/insight/?q=5` |
 | 아파트 쌍둥이 지역회귀 | `apt-twin` | 설계 1차. 한 읍면동의 아파트 재고 쌍둥이·표준화 계수·기준지역 CV-MAPE. [`lab/APT_TWIN_REGRESSION_LAB.md`](./lab/APT_TWIN_REGRESSION_LAB.md) |
 | 토지 쌍둥이 | `land-twin` | A~D는 후보 20곳. E는 대표 10칸 구성비로 전국. 식은 미고정. [`lab/LAND_TWIN_LAB.md`](./lab/LAND_TWIN_LAB.md) |
+| 토지 마스킹 제거 | `land-unmask` | 청주 1차. 대장·이용계획으로 실거래 지번이 필지 하나로 좁혀지는 비율. 전체 50.8%, 2024년 이후 74.2%. 제품 식 미변경. [`lab/LAND_LOT_UNMASK_LAB.md`](./lab/LAND_LOT_UNMASK_LAB.md) |
 
 공개 게이트웨이 **Macro Insight**(6번째 문)는 `/insight/`. 1번(경제지표(GDP, M2, 주식거래액)와 부동산의 관계) [`MACRO_INSIGHT_05.md`](./MACRO_INSIGHT_05.md) · 2번(부동산 거래와 금리, 유동성과의 관계) [`MACRO_INSIGHT_01.md`](./MACRO_INSIGHT_01.md) · 3번(부동산 유형별 상관관계) [`MACRO_INSIGHT_02.md`](./MACRO_INSIGHT_02.md) · 4번(상업용, 주거용 부동산의 수익률 분석) [`MACRO_INSIGHT_11.md`](./MACRO_INSIGHT_11.md) · 5번(상권 수익률과 아파트 수익률의 상관관계 분석) [`MACRO_INSIGHT_12.md`](./MACRO_INSIGHT_12.md) · 6번(쌍둥이 지역 찾기 로직) [`MACRO_INSIGHT_07.md`](./MACRO_INSIGHT_07.md) · 7번(광평수 토지의 가격효과) [`MACRO_INSIGHT_04.md`](./MACRO_INSIGHT_04.md) · 8번(도로 지목의 가격배율 검토) [`MACRO_INSIGHT_06.md`](./MACRO_INSIGHT_06.md) · 9번(아파트(오피스텔)의 층별효용지수 검토) [`MACRO_INSIGHT_08.md`](./MACRO_INSIGHT_08.md) · 10번(연립다세대의 층별효용지수 검토) [`MACRO_INSIGHT_03.md`](./MACRO_INSIGHT_03.md) · 11번(집합상가의 층별효용지수 검토) [`MACRO_INSIGHT_10.md`](./MACRO_INSIGHT_10.md). 결정 카드 없음. 파일명의 숫자는 예전 번호다.
 
@@ -46,6 +49,7 @@ G3·Insight 월 합 출처 수정: [`lab/MACRO_TS_RAW_MONTH_MART.md`](./lab/MACR
 아파트·오피스텔·집합상가 층 효용 기록 창: `?tool=floor-utility`. 아파트는 [`lab/APT_FLOOR_UTILITY_LAB.md`](./lab/APT_FLOOR_UTILITY_LAB.md), 공개 [`MACRO_INSIGHT_08.md`](./MACRO_INSIGHT_08.md) `/insight/?q=9`. 오피스텔은 [`lab/OFFICETEL_FLOOR_UTILITY_LAB.md`](./lab/OFFICETEL_FLOOR_UTILITY_LAB.md). 저층=100, 차이는 2포인트 안, 공개는 #9 맨 끝. 집합상가는 [`lab/SHOP_FLOOR_UTILITY_LAB.md`](./lab/SHOP_FLOOR_UTILITY_LAB.md), 공개 [`MACRO_INSIGHT_10.md`](./MACRO_INSIGHT_10.md) `/insight/?q=11`. 세 숫자는 더하지 않음. 제품 층 식 미변경.
 수익률 비교: [`lab/YIELD_COMPARE_LAB.md`](./lab/YIELD_COMPARE_LAB.md) · `?tool=yield-compare`. 스냅샷 [`lab/yield_compare_national.json`](./lab/yield_compare_national.json). 공개 [`MACRO_INSIGHT_11.md`](./MACRO_INSIGHT_11.md) `/insight/?q=4`. #2·#1와 문을 섞지 않음.
 아파트 쌍둥이 지역회귀(설계): [`lab/APT_TWIN_REGRESSION_LAB.md`](./lab/APT_TWIN_REGRESSION_LAB.md). 화면 없음. 아파트 재고만으로 선정하고, 핵심 5변수의 표준화 계수를 비교한 뒤 기준 지역 CV-MAPE로 통합을 본다. 제품 식 미변경.
+토지 마스킹 제거: [`lab/LAND_LOT_UNMASK_LAB.md`](./lab/LAND_LOT_UNMASK_LAB.md) · `?tool=land-unmask`. 청주 실거래의 마스킹 본번을 2026년 8월 토지대장·토지이용계획과 맞춰, 후보가 하나인 비율을 기록한다. 전체 기간 비교 대상의 50.8%, 2024년 이후 74.2%. 지분·해제·용도 기타는 분모 밖. 부번은 공개 번지에 없다. 제품 토지 식 미변경. Insight로 올리지 않음.
 토지 쌍둥이: [`lab/LAND_TWIN_LAB.md`](./lab/LAND_TWIN_LAB.md) · `?tool=land-twin`. A~D는 지목 비중 후보 20곳. E는 고정 10칸의 건수×중위 구성비로 전국 시군구를 줄 세운다. 가격과 대표액 비율은 E 순위 밖. 식은 미고정. 토지 통계 모달 탭은 아직 없음. 제품 토지 식 미변경.
 계획일지 표 규칙:
 

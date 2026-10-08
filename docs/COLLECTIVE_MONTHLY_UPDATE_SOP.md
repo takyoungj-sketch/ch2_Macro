@@ -25,6 +25,8 @@
 
 xlsx `run_collective_monthly_cycle.py` 는 **복구**. 토지를 먼저 — `region_codes` 동기화.
 
+체크리스트 **0.7** CSV 수(유형당 16개)를 통과하기 전에는 시작하지 않는다. 빠진 지역이 있으면 사용자에게 먼저 알린다.
+
 ---
 
 ## 2. cycle_id (토지·복합과 동일 YYYYMM)

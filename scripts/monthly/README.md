@@ -4,6 +4,8 @@
 토지 SOP: [`docs/MONTHLY_UPDATE_SOP.md`](../../docs/MONTHLY_UPDATE_SOP.md)  
 xlsx / `run_monthly_cycle*` 는 **복구·레거시**. 매월 아래 CSV 러너로 시작한다.
 
+러너 전에 체크리스트 **0.7**: 유형 폴더마다 CSV 16개. 빠진 지역이 있으면 적재하지 말고 사용자에게 먼저 알린다.
+
 ## SSOT 러너 (매월)
 
 ```

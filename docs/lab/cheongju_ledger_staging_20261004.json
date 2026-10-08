@@ -1,0 +1,36 @@
+{
+  "run_date": "2026-10-04",
+  "scope_pnu": 4000,
+  "scope_sha256": "f1a910356222161c603e90bb371c72cfdedd17a575834b0a63b42c5fb2122fad",
+  "snapshot_counts": {
+    "2025": {
+      "new": 3969,
+      "changed": 0,
+      "unchanged": 0,
+      "missing_not_deleted": 0,
+      "rows": 3969,
+      "idempotent_replay": true,
+      "idempotency_verified": true
+    },
+    "2026": {
+      "new": 31,
+      "changed": 3881,
+      "unchanged": 58,
+      "missing_not_deleted": 30,
+      "rows": 3970,
+      "idempotent_replay": true,
+      "idempotency_verified": true
+    }
+  },
+  "failure_rollback_verified": true,
+  "historical_restore_verified": true,
+  "missing_retained_as_stale": 30,
+  "versions": 7881,
+  "observations": 7939,
+  "sqlite_bytes": 3190784,
+  "limitations": [
+    "Local SQLite prototype on 1000 PNU per district, not full-city production migration.",
+    "Missing observations are retained as stale; no legal extinction inferred.",
+    "Quarterly collection, building/plan histories and transaction enrichment are not implemented."
+  ]
+}

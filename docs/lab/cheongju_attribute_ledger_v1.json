@@ -1,0 +1,279 @@
+{
+  "schema_version": "attribute-ledger-v1",
+  "identity_rule": "cheongju-source-identity-v2.2",
+  "database": "data/research/cheongju_ledger/attribute_ledger_v1.sqlite",
+  "traits": {
+    "2019": {
+      "rows_in": 464856,
+      "stored": 464217,
+      "collapsed_identical": 15,
+      "held": {
+        "invalid_land_type": 611,
+        "noncanonical_zero_main_lot": 13
+      },
+      "sha256": "7b42613f8e11ca439536e3f5a1499c6966a256c1d6acc102930acf6a7ef6baa1",
+      "bytes": 6140936
+    },
+    "2020": {
+      "rows_in": 468753,
+      "stored": 468176,
+      "collapsed_identical": 0,
+      "held": {
+        "invalid_land_type": 564,
+        "noncanonical_zero_main_lot": 13
+      },
+      "sha256": "be806021192f0605f07a56db92fb515ab31aff654c438e27c639c43168bbb7c0",
+      "bytes": 6229717
+    },
+    "2021": {
+      "rows_in": 472470,
+      "stored": 471937,
+      "collapsed_identical": 0,
+      "held": {
+        "invalid_land_type": 521,
+        "noncanonical_zero_main_lot": 12
+      },
+      "sha256": "0c83096f48458b993c335329736e3f8fb3275c6fe6da3c0d2bafedb401cfeeee",
+      "bytes": 6277002
+    },
+    "2022": {
+      "rows_in": 473146,
+      "stored": 472690,
+      "collapsed_identical": 0,
+      "held": {
+        "invalid_land_type": 445,
+        "noncanonical_zero_main_lot": 11
+      },
+      "sha256": "91054d4f0e0749675882f93d07dd71cdec883b3fa0d6b9c8dedbeeea39d94ae5",
+      "bytes": 5821249
+    },
+    "2023": {
+      "rows_in": 475217,
+      "stored": 475217,
+      "collapsed_identical": 0,
+      "held": {},
+      "sha256": "946d5cce35261777f1be492ba5917bae54527ec28f417b3e86ad4b2cd22f498f",
+      "bytes": 6049851
+    },
+    "2024": {
+      "rows_in": 477399,
+      "stored": 477399,
+      "collapsed_identical": 0,
+      "held": {},
+      "sha256": "d89ce7a1570f91ff1b410bacf567aa93fce7349203e66cff9a593f7fd755ad33",
+      "bytes": 6000020
+    },
+    "2025": {
+      "rows_in": 478750,
+      "stored": 478750,
+      "collapsed_identical": 0,
+      "held": {},
+      "sha256": "0fce6a8ad1bf27be7da66c2750f58bd65d76f1fa2e5b51598472c699d31824ed",
+      "bytes": 6051115
+    },
+    "2026": {
+      "rows_in": 480633,
+      "stored": 480633,
+      "collapsed_identical": 0,
+      "held": {},
+      "sha256": "34ac3e0ee610079d4fb0808fa233e8f848fe7e7756285fca67bfa6912f21d40c",
+      "bytes": 6069979
+    }
+  },
+  "buildings": {
+    "2024-09": {
+      "일반": {
+        "rows_in": 131165,
+        "stored": 131165,
+        "with_pnu": 130498,
+        "collapsed_identical": 0,
+        "held": {
+          "noncanonical_zero_main_lot": 616,
+          "block_without_canonical_pnu": 51
+        },
+        "sha256": "9b7e3e7ec7b89984b59be8233d62cdf6905fd98e741a8cf3e893d57141b6f3e1",
+        "bytes": 861737042
+      },
+      "집합": {
+        "rows_in": 8150,
+        "stored": 8150,
+        "with_pnu": 8148,
+        "collapsed_identical": 0,
+        "held": {
+          "noncanonical_zero_main_lot": 2
+        },
+        "sha256": "a1eb50868cd7fc56d0d07701af4893a7d0acf3b60ce5474b883334d943bb57b3",
+        "bytes": 4835348
+      }
+    },
+    "2025-07": {
+      "일반": {
+        "rows_in": 133042,
+        "stored": 133042,
+        "with_pnu": 132389,
+        "collapsed_identical": 0,
+        "held": {
+          "noncanonical_zero_main_lot": 616,
+          "block_without_canonical_pnu": 37
+        },
+        "sha256": "7e130a412886b6af772e975d7ef99adf9fef56eb7aea9a74650d7924c7dfd0c6",
+        "bytes": 883269222
+      },
+      "집합": {
+        "rows_in": 8378,
+        "stored": 8378,
+        "with_pnu": 8376,
+        "collapsed_identical": 0,
+        "held": {
+          "noncanonical_zero_main_lot": 2
+        },
+        "sha256": "27d8fdd34a3ed6241875b0a9f616b173017eda567fd65c08cc8588efa0b0e9b5",
+        "bytes": 4972780
+      }
+    },
+    "2026-07": {
+      "일반": {
+        "rows_in": 132731,
+        "stored": 132731,
+        "with_pnu": 132076,
+        "collapsed_identical": 0,
+        "held": {
+          "noncanonical_zero_main_lot": 618,
+          "block_without_canonical_pnu": 37
+        },
+        "sha256": "8c875562aaf48bd04581fe79d35d1159166a2be03651a6c37a86b88271740c27",
+        "bytes": 1006261364
+      },
+      "집합": {
+        "rows_in": 8521,
+        "stored": 8521,
+        "with_pnu": 8472,
+        "collapsed_identical": 0,
+        "held": {
+          "block_without_canonical_pnu": 47,
+          "noncanonical_zero_main_lot": 2
+        },
+        "sha256": "015ce87464ac197d1677459f9a8262b943945be5d525b6283dd783beccbc3cc1",
+        "bytes": 5089142
+      }
+    }
+  },
+  "checks": {
+    "traits": [
+      {
+        "vintage_year": 2019,
+        "n": 464217,
+        "asofs": 1,
+        "min_asof": "2019-08-20",
+        "max_asof": "2019-08-20",
+        "code_without_zone_label": 0
+      },
+      {
+        "vintage_year": 2020,
+        "n": 468176,
+        "asofs": 1,
+        "min_asof": "2020-08-20",
+        "max_asof": "2020-08-20",
+        "code_without_zone_label": 0
+      },
+      {
+        "vintage_year": 2021,
+        "n": 471937,
+        "asofs": 1,
+        "min_asof": "2021-11-15",
+        "max_asof": "2021-11-15",
+        "code_without_zone_label": 0
+      },
+      {
+        "vintage_year": 2022,
+        "n": 472690,
+        "asofs": 1,
+        "min_asof": "2022-11-09",
+        "max_asof": "2022-11-09",
+        "code_without_zone_label": 466738
+      },
+      {
+        "vintage_year": 2023,
+        "n": 475217,
+        "asofs": 1,
+        "min_asof": "2023-08-05",
+        "max_asof": "2023-08-05",
+        "code_without_zone_label": 0
+      },
+      {
+        "vintage_year": 2024,
+        "n": 477399,
+        "asofs": 1,
+        "min_asof": "2024-07-31",
+        "max_asof": "2024-07-31",
+        "code_without_zone_label": 0
+      },
+      {
+        "vintage_year": 2025,
+        "n": 478750,
+        "asofs": 1,
+        "min_asof": "2025-08-08",
+        "max_asof": "2025-08-08",
+        "code_without_zone_label": 0
+      },
+      {
+        "vintage_year": 2026,
+        "n": 480633,
+        "asofs": 1,
+        "min_asof": "2026-05-13",
+        "max_asof": "2026-05-13",
+        "code_without_zone_label": 0
+      }
+    ],
+    "buildings": [
+      {
+        "snapshot": "2024-09",
+        "ledger_kind": "일반",
+        "n": 131165,
+        "held": 667,
+        "parcels": 90528
+      },
+      {
+        "snapshot": "2024-09",
+        "ledger_kind": "집합",
+        "n": 8150,
+        "held": 2,
+        "parcels": 2242
+      },
+      {
+        "snapshot": "2025-07",
+        "ledger_kind": "일반",
+        "n": 133042,
+        "held": 653,
+        "parcels": 92028
+      },
+      {
+        "snapshot": "2025-07",
+        "ledger_kind": "집합",
+        "n": 8378,
+        "held": 2,
+        "parcels": 2295
+      },
+      {
+        "snapshot": "2026-07",
+        "ledger_kind": "일반",
+        "n": 132731,
+        "held": 655,
+        "parcels": 91975
+      },
+      {
+        "snapshot": "2026-07",
+        "ledger_kind": "집합",
+        "n": 8521,
+        "held": 49,
+        "parcels": 2291
+      }
+    ],
+    "multi_building_parcels_2026_07": 24312,
+    "building_pnu_2026_07": 140548,
+    "building_pnu_also_in_2026_traits": 90087,
+    "zero_main_lot_parcels": 0,
+    "enrichment_rows": 0
+  },
+  "run_date": "2026-10-07"
+}

@@ -1,0 +1,899 @@
+{
+  "run_date": "2026-10-04",
+  "files": [
+    {
+      "file": "AL_43111_D194_20190823.zip",
+      "year": 2019,
+      "district": "43111",
+      "zip_bytes": 26466678,
+      "sha256": "bda8722ea7a0823c2692fa29b6b71b0532c6fcaa057643250bb71be83e59ac73",
+      "encoding": "cp949",
+      "rows": 141584,
+      "unique_pnu": 141581,
+      "counts": {
+        "active_rows": 141584,
+        "invalid_pnu": 0,
+        "wrong_district": 0,
+        "duplicate_pnu": 3,
+        "cross_district_duplicate": 3,
+        "nonpositive_or_missing_price": 5740,
+        "year_with_positive_price": 135844
+      },
+      "missing_fields": {
+        "A16": 5740,
+        "A19": 5740,
+        "A23": 5740,
+        "A9": 5740,
+        "A13": 5740,
+        "A14": 5740,
+        "A24": 5740,
+        "A18": 6614,
+        "A10": 5740,
+        "A11": 5740,
+        "A17": 5740,
+        "A8": 5740,
+        "A21": 5740,
+        "A20": 5740,
+        "A22": 5740,
+        "A15": 5740
+      },
+      "positive_code_without_label": {
+        "A17/A18": 874
+      },
+      "source_dates_and_years": {
+        "A8": {
+          "2019": 135844,
+          "<EMPTY>": 5740
+        },
+        "A9": {
+          "01": 135844,
+          "<EMPTY>": 5740
+        },
+        "A26": {
+          "2019-08-20": 141584
+        }
+      }
+    },
+    {
+      "file": "AL_43112_D194_20190823.zip",
+      "year": 2019,
+      "district": "43112",
+      "zip_bytes": 13756026,
+      "sha256": "1ec12a6108952c4d9f2497900e843f863a95b8b7ddefce8de7b40729d5d98d8a",
+      "encoding": "cp949",
+      "rows": 79366,
+      "unique_pnu": 79366,
+      "counts": {
+        "active_rows": 79366,
+        "invalid_pnu": 0,
+        "wrong_district": 0,
+        "duplicate_pnu": 0,
+        "cross_district_duplicate": 0,
+        "nonpositive_or_missing_price": 716,
+        "year_with_positive_price": 78650
+      },
+      "missing_fields": {
+        "A16": 716,
+        "A19": 716,
+        "A23": 716,
+        "A9": 716,
+        "A13": 716,
+        "A14": 716,
+        "A24": 716,
+        "A18": 1109,
+        "A10": 716,
+        "A11": 716,
+        "A17": 716,
+        "A8": 716,
+        "A21": 716,
+        "A20": 716,
+        "A22": 716,
+        "A15": 716
+      },
+      "positive_code_without_label": {
+        "A17/A18": 393
+      },
+      "source_dates_and_years": {
+        "A8": {
+          "2019": 78650,
+          "<EMPTY>": 716
+        },
+        "A9": {
+          "01": 78650,
+          "<EMPTY>": 716
+        },
+        "A26": {
+          "2019-08-20": 79366
+        }
+      }
+    },
+    {
+      "file": "AL_43113_D194_20190823.zip",
+      "year": 2019,
+      "district": "43113",
+      "zip_bytes": 19267999,
+      "sha256": "bda84c509687e0cd9749a8fad4fcfcae97eb802129fd3db5ece8e79a625d9ec0",
+      "encoding": "cp949",
+      "rows": 120541,
+      "unique_pnu": 120541,
+      "counts": {
+        "active_rows": 120541,
+        "invalid_pnu": 0,
+        "wrong_district": 0,
+        "duplicate_pnu": 0,
+        "cross_district_duplicate": 0,
+        "nonpositive_or_missing_price": 3632,
+        "year_with_positive_price": 116909
+      },
+      "missing_fields": {
+        "A16": 3632,
+        "A19": 3632,
+        "A23": 3632,
+        "A9": 3632,
+        "A13": 3632,
+        "A14": 3632,
+        "A24": 3632,
+        "A18": 4727,
+        "A10": 3632,
+        "A11": 3632,
+        "A17": 3632,
+        "A8": 3632,
+        "A21": 3632,
+        "A20": 3632,
+        "A22": 3632,
+        "A15": 3632
+      },
+      "positive_code_without_label": {
+        "A17/A18": 1095
+      },
+      "source_dates_and_years": {
+        "A8": {
+          "2019": 116909,
+          "<EMPTY>": 3632
+        },
+        "A9": {
+          "01": 116909,
+          "<EMPTY>": 3632
+        },
+        "A26": {
+          "2019-08-20": 120541
+        }
+      }
+    },
+    {
+      "file": "AL_43114_D194_20190823.zip",
+      "year": 2019,
+      "district": "43114",
+      "zip_bytes": 21408549,
+      "sha256": "67e271cb3a3102e93291e2c5bc1cf573442b27aadd206e595757a6a508b55326",
+      "encoding": "cp949",
+      "rows": 123365,
+      "unique_pnu": 123353,
+      "counts": {
+        "active_rows": 123365,
+        "invalid_pnu": 0,
+        "wrong_district": 0,
+        "duplicate_pnu": 12,
+        "cross_district_duplicate": 12,
+        "nonpositive_or_missing_price": 1405,
+        "year_with_positive_price": 121960
+      },
+      "missing_fields": {
+        "A16": 1405,
+        "A19": 1405,
+        "A23": 1405,
+        "A9": 1405,
+        "A13": 1405,
+        "A14": 1405,
+        "A24": 1405,
+        "A18": 2342,
+        "A10": 1405,
+        "A11": 1405,
+        "A17": 1405,
+        "A8": 1405,
+        "A21": 1405,
+        "A20": 1405,
+        "A22": 1405,
+        "A15": 1405
+      },
+      "positive_code_without_label": {
+        "A17/A18": 937
+      },
+      "source_dates_and_years": {
+        "A8": {
+          "2019": 121960,
+          "<EMPTY>": 1405
+        },
+        "A9": {
+          "01": 121960,
+          "<EMPTY>": 1405
+        },
+        "A26": {
+          "2019-08-20": 123365
+        }
+      }
+    },
+    {
+      "file": "AL_43111_D194_20200914.zip",
+      "year": 2020,
+      "district": "43111",
+      "zip_bytes": 26785479,
+      "sha256": "fb63104883cc1b5efffcc42f767bde8d215faa1942d627d926633ce35072cf5b",
+      "encoding": "cp949",
+      "rows": 142507,
+      "unique_pnu": 142507,
+      "counts": {
+        "active_rows": 142507,
+        "invalid_pnu": 0,
+        "wrong_district": 0,
+        "duplicate_pnu": 0,
+        "cross_district_duplicate": 0,
+        "nonpositive_or_missing_price": 5316,
+        "year_with_positive_price": 137191
+      },
+      "missing_fields": {
+        "A16": 5316,
+        "A19": 5316,
+        "A23": 5316,
+        "A9": 5316,
+        "A13": 5316,
+        "A14": 5316,
+        "A24": 5316,
+        "A18": 6291,
+        "A10": 5316,
+        "A11": 5316,
+        "A17": 5316,
+        "A8": 5316,
+        "A21": 5316,
+        "A20": 5316,
+        "A22": 5316,
+        "A15": 5316
+      },
+      "positive_code_without_label": {
+        "A17/A18": 975
+      },
+      "source_dates_and_years": {
+        "A8": {
+          "2020": 137191,
+          "<EMPTY>": 5316
+        },
+        "A9": {
+          "01": 137191,
+          "<EMPTY>": 5316
+        },
+        "A26": {
+          "2020-08-20": 142507
+        }
+      }
+    },
+    {
+      "file": "AL_43112_D194_20200914.zip",
+      "year": 2020,
+      "district": "43112",
+      "zip_bytes": 13935701,
+      "sha256": "44d224aa6497ece7c631d067c0580ff3d57909850d8ba15a1d2b58175e756308",
+      "encoding": "cp949",
+      "rows": 79896,
+      "unique_pnu": 79896,
+      "counts": {
+        "active_rows": 79896,
+        "invalid_pnu": 0,
+        "wrong_district": 0,
+        "duplicate_pnu": 0,
+        "cross_district_duplicate": 0,
+        "nonpositive_or_missing_price": 1371,
+        "year_with_positive_price": 78525
+      },
+      "missing_fields": {
+        "A16": 1371,
+        "A19": 1371,
+        "A23": 1371,
+        "A9": 1371,
+        "A13": 1371,
+        "A14": 1371,
+        "A24": 1371,
+        "A18": 1795,
+        "A10": 1371,
+        "A11": 1371,
+        "A17": 1371,
+        "A8": 1371,
+        "A21": 1371,
+        "A20": 1371,
+        "A22": 1371,
+        "A15": 1371
+      },
+      "positive_code_without_label": {
+        "A17/A18": 424
+      },
+      "source_dates_and_years": {
+        "A8": {
+          "2020": 78525,
+          "<EMPTY>": 1371
+        },
+        "A9": {
+          "01": 78525,
+          "<EMPTY>": 1371
+        },
+        "A26": {
+          "2020-08-20": 79896
+        }
+      }
+    },
+    {
+      "file": "AL_43113_D194_20200914.zip",
+      "year": 2020,
+      "district": "43113",
+      "zip_bytes": 19717311,
+      "sha256": "3f6481707461359aa0dbef7419a86b5d40fe49825905923e7d2274d82570ccf3",
+      "encoding": "cp949",
+      "rows": 122121,
+      "unique_pnu": 122121,
+      "counts": {
+        "active_rows": 122121,
+        "invalid_pnu": 0,
+        "wrong_district": 0,
+        "duplicate_pnu": 0,
+        "cross_district_duplicate": 0,
+        "nonpositive_or_missing_price": 1978,
+        "year_with_positive_price": 120143
+      },
+      "missing_fields": {
+        "A16": 1978,
+        "A19": 1978,
+        "A23": 1978,
+        "A9": 1978,
+        "A13": 1978,
+        "A14": 1978,
+        "A24": 1978,
+        "A18": 3125,
+        "A10": 1978,
+        "A11": 1978,
+        "A17": 1978,
+        "A8": 1978,
+        "A21": 1978,
+        "A20": 1978,
+        "A22": 1978,
+        "A15": 1978
+      },
+      "positive_code_without_label": {
+        "A17/A18": 1147
+      },
+      "source_dates_and_years": {
+        "A8": {
+          "2020": 120143,
+          "<EMPTY>": 1978
+        },
+        "A9": {
+          "01": 120143,
+          "<EMPTY>": 1978
+        },
+        "A26": {
+          "2020-08-20": 122121
+        }
+      }
+    },
+    {
+      "file": "AL_43114_D194_20200914.zip",
+      "year": 2020,
+      "district": "43114",
+      "zip_bytes": 21730913,
+      "sha256": "be624308714c98eceb66f4ae1adcd632462a1556db82c82f23033b3d5120ad34",
+      "encoding": "cp949",
+      "rows": 124229,
+      "unique_pnu": 124229,
+      "counts": {
+        "active_rows": 124229,
+        "invalid_pnu": 0,
+        "wrong_district": 0,
+        "duplicate_pnu": 0,
+        "cross_district_duplicate": 0,
+        "nonpositive_or_missing_price": 1835,
+        "year_with_positive_price": 122394
+      },
+      "missing_fields": {
+        "A16": 1835,
+        "A19": 1835,
+        "A23": 1835,
+        "A9": 1835,
+        "A13": 1835,
+        "A14": 1835,
+        "A24": 1835,
+        "A18": 2888,
+        "A10": 1835,
+        "A11": 1835,
+        "A17": 1835,
+        "A8": 1835,
+        "A21": 1835,
+        "A20": 1835,
+        "A22": 1835,
+        "A15": 1835
+      },
+      "positive_code_without_label": {
+        "A17/A18": 1053
+      },
+      "source_dates_and_years": {
+        "A8": {
+          "2020": 122394,
+          "<EMPTY>": 1835
+        },
+        "A9": {
+          "01": 122394,
+          "<EMPTY>": 1835
+        },
+        "A26": {
+          "2020-08-20": 124229
+        }
+      }
+    },
+    {
+      "file": "AL_43111_D194_20211129.zip",
+      "year": 2021,
+      "district": "43111",
+      "zip_bytes": 26952011,
+      "sha256": "b9ec6da9dd2d68f053933fecf0c01a0303ab12f3040b74e01351568b34bb69ee",
+      "encoding": "cp949",
+      "rows": 143602,
+      "unique_pnu": 143602,
+      "counts": {
+        "active_rows": 143602,
+        "invalid_pnu": 0,
+        "wrong_district": 0,
+        "duplicate_pnu": 0,
+        "cross_district_duplicate": 0,
+        "nonpositive_or_missing_price": 5567,
+        "year_with_positive_price": 138035
+      },
+      "missing_fields": {
+        "A16": 5567,
+        "A19": 5567,
+        "A23": 5567,
+        "A9": 5567,
+        "A13": 5567,
+        "A14": 5567,
+        "A24": 5567,
+        "A18": 5567,
+        "A10": 5567,
+        "A11": 5567,
+        "A17": 5567,
+        "A8": 5567,
+        "A21": 5567,
+        "A20": 5567,
+        "A22": 5567,
+        "A15": 5567
+      },
+      "positive_code_without_label": {},
+      "source_dates_and_years": {
+        "A8": {
+          "2021": 138035,
+          "<EMPTY>": 5567
+        },
+        "A9": {
+          "01": 138035,
+          "<EMPTY>": 5567
+        },
+        "A26": {
+          "2021-11-15": 143602
+        }
+      }
+    },
+    {
+      "file": "AL_43112_D194_20211129.zip",
+      "year": 2021,
+      "district": "43112",
+      "zip_bytes": 14008360,
+      "sha256": "f4a76af6eccfc57b0ed2543fd065221254f2f904f07c53f417dca8d56381433d",
+      "encoding": "cp949",
+      "rows": 80405,
+      "unique_pnu": 80405,
+      "counts": {
+        "active_rows": 80405,
+        "invalid_pnu": 0,
+        "wrong_district": 0,
+        "duplicate_pnu": 0,
+        "cross_district_duplicate": 0,
+        "nonpositive_or_missing_price": 1620,
+        "year_with_positive_price": 78785
+      },
+      "missing_fields": {
+        "A16": 1620,
+        "A19": 1620,
+        "A23": 1620,
+        "A9": 1620,
+        "A13": 1620,
+        "A14": 1620,
+        "A24": 1620,
+        "A18": 1620,
+        "A10": 1620,
+        "A11": 1620,
+        "A17": 1620,
+        "A8": 1620,
+        "A21": 1620,
+        "A20": 1620,
+        "A22": 1620,
+        "A15": 1620
+      },
+      "positive_code_without_label": {},
+      "source_dates_and_years": {
+        "A8": {
+          "2021": 78785,
+          "<EMPTY>": 1620
+        },
+        "A9": {
+          "01": 78785,
+          "<EMPTY>": 1620
+        },
+        "A26": {
+          "2021-11-15": 80405
+        }
+      }
+    },
+    {
+      "file": "AL_43113_D194_20211129.zip",
+      "year": 2021,
+      "district": "43113",
+      "zip_bytes": 19758767,
+      "sha256": "8149ee331a0c467ec11ac7f9b8657542b65aa2a2d73e9fbab514884517aa1b92",
+      "encoding": "cp949",
+      "rows": 122852,
+      "unique_pnu": 122852,
+      "counts": {
+        "active_rows": 122852,
+        "invalid_pnu": 0,
+        "wrong_district": 0,
+        "duplicate_pnu": 0,
+        "cross_district_duplicate": 0,
+        "nonpositive_or_missing_price": 1757,
+        "year_with_positive_price": 121095
+      },
+      "missing_fields": {
+        "A16": 1757,
+        "A19": 1757,
+        "A23": 1757,
+        "A9": 1757,
+        "A13": 1757,
+        "A14": 1757,
+        "A24": 1757,
+        "A18": 1757,
+        "A10": 1757,
+        "A11": 1757,
+        "A17": 1757,
+        "A8": 1757,
+        "A21": 1757,
+        "A20": 1757,
+        "A22": 1757,
+        "A15": 1757
+      },
+      "positive_code_without_label": {},
+      "source_dates_and_years": {
+        "A8": {
+          "2021": 121095,
+          "<EMPTY>": 1757
+        },
+        "A9": {
+          "01": 121095,
+          "<EMPTY>": 1757
+        },
+        "A26": {
+          "2021-11-15": 122852
+        }
+      }
+    },
+    {
+      "file": "AL_43114_D194_20211129.zip",
+      "year": 2021,
+      "district": "43114",
+      "zip_bytes": 21890664,
+      "sha256": "73139ead06595e0952cf153e3f6edeb710678ec76aa9eaca84ac901caf0894f8",
+      "encoding": "cp949",
+      "rows": 125611,
+      "unique_pnu": 125611,
+      "counts": {
+        "active_rows": 125611,
+        "invalid_pnu": 0,
+        "wrong_district": 0,
+        "duplicate_pnu": 0,
+        "cross_district_duplicate": 0,
+        "nonpositive_or_missing_price": 2396,
+        "year_with_positive_price": 123215
+      },
+      "missing_fields": {
+        "A16": 2396,
+        "A19": 2396,
+        "A23": 2396,
+        "A9": 2396,
+        "A13": 2396,
+        "A14": 2396,
+        "A24": 2396,
+        "A18": 2396,
+        "A10": 2396,
+        "A11": 2396,
+        "A17": 2396,
+        "A8": 2396,
+        "A21": 2396,
+        "A20": 2396,
+        "A22": 2396,
+        "A15": 2396
+      },
+      "positive_code_without_label": {},
+      "source_dates_and_years": {
+        "A8": {
+          "2021": 123215,
+          "<EMPTY>": 2396
+        },
+        "A9": {
+          "01": 123215,
+          "<EMPTY>": 2396
+        },
+        "A26": {
+          "2021-11-15": 125611
+        }
+      }
+    },
+    {
+      "file": "AL_43111_D194_20221115.zip",
+      "year": 2022,
+      "district": "43111",
+      "zip_bytes": 26943264,
+      "sha256": "6b7a8d442fbeea8cbaa7ab21455a6ba83e21307146c7fde5c86d884702392d05",
+      "encoding": "cp949",
+      "rows": 142994,
+      "unique_pnu": 142994,
+      "counts": {
+        "active_rows": 142994,
+        "invalid_pnu": 0,
+        "wrong_district": 0,
+        "duplicate_pnu": 0,
+        "cross_district_duplicate": 0,
+        "nonpositive_or_missing_price": 2597,
+        "year_with_positive_price": 140397
+      },
+      "missing_fields": {
+        "A16": 142994,
+        "A14": 142994,
+        "A24": 142994,
+        "A18": 142994,
+        "A20": 142994,
+        "A22": 142994,
+        "A19": 2597,
+        "A23": 2597,
+        "A9": 2597,
+        "A13": 2597,
+        "A10": 2597,
+        "A11": 2597,
+        "A17": 2597,
+        "A8": 2597,
+        "A21": 2597,
+        "A15": 2597
+      },
+      "positive_code_without_label": {
+        "A13/A14": 140397,
+        "A17/A18": 140397,
+        "A19/A20": 138424,
+        "A23/A24": 133956,
+        "A21/A22": 138058,
+        "A15/A16": 10862
+      },
+      "source_dates_and_years": {
+        "A8": {
+          "2022": 140397,
+          "<EMPTY>": 2597
+        },
+        "A9": {
+          "01": 140397,
+          "<EMPTY>": 2597
+        },
+        "A26": {
+          "2022-11-09": 142994
+        }
+      }
+    },
+    {
+      "file": "AL_43112_D194_20221115.zip",
+      "year": 2022,
+      "district": "43112",
+      "zip_bytes": 13942459,
+      "sha256": "4c2164f47cc9d7df03683dd2dbf878c1c2ac30ff4dd75327082cfe76d7572f52",
+      "encoding": "cp949",
+      "rows": 80269,
+      "unique_pnu": 80269,
+      "counts": {
+        "active_rows": 80269,
+        "invalid_pnu": 0,
+        "wrong_district": 0,
+        "duplicate_pnu": 0,
+        "cross_district_duplicate": 0,
+        "nonpositive_or_missing_price": 820,
+        "year_with_positive_price": 79449
+      },
+      "missing_fields": {
+        "A16": 80269,
+        "A14": 80269,
+        "A24": 80269,
+        "A18": 80269,
+        "A20": 80269,
+        "A22": 80269,
+        "A19": 820,
+        "A23": 820,
+        "A9": 820,
+        "A13": 820,
+        "A10": 820,
+        "A11": 820,
+        "A17": 820,
+        "A8": 820,
+        "A21": 820,
+        "A15": 820
+      },
+      "positive_code_without_label": {
+        "A13/A14": 79449,
+        "A15/A16": 6696,
+        "A17/A18": 79449,
+        "A19/A20": 79273,
+        "A21/A22": 79139,
+        "A23/A24": 79195
+      },
+      "source_dates_and_years": {
+        "A8": {
+          "2022": 79449,
+          "<EMPTY>": 820
+        },
+        "A9": {
+          "01": 79449,
+          "<EMPTY>": 820
+        },
+        "A26": {
+          "2022-11-09": 80269
+        }
+      }
+    },
+    {
+      "file": "AL_43113_D194_20221115.zip",
+      "year": 2022,
+      "district": "43113",
+      "zip_bytes": 19891422,
+      "sha256": "48fceb723998c52b40e7347b8365043bb58ffd504c5df86430f91c036d72553b",
+      "encoding": "cp949",
+      "rows": 123414,
+      "unique_pnu": 123414,
+      "counts": {
+        "active_rows": 123414,
+        "invalid_pnu": 0,
+        "wrong_district": 0,
+        "duplicate_pnu": 0,
+        "cross_district_duplicate": 0,
+        "nonpositive_or_missing_price": 1382,
+        "year_with_positive_price": 122032
+      },
+      "missing_fields": {
+        "A16": 123414,
+        "A14": 123414,
+        "A24": 123414,
+        "A18": 123414,
+        "A20": 123414,
+        "A22": 123414,
+        "A19": 1382,
+        "A23": 1382,
+        "A9": 1382,
+        "A13": 1382,
+        "A10": 1382,
+        "A11": 1382,
+        "A17": 1382,
+        "A8": 1382,
+        "A21": 1382,
+        "A15": 1382
+      },
+      "positive_code_without_label": {
+        "A13/A14": 122032,
+        "A17/A18": 122032,
+        "A19/A20": 120684,
+        "A21/A22": 120637,
+        "A23/A24": 120627,
+        "A15/A16": 8011
+      },
+      "source_dates_and_years": {
+        "A8": {
+          "2022": 122032,
+          "<EMPTY>": 1382
+        },
+        "A9": {
+          "01": 122032,
+          "<EMPTY>": 1382
+        },
+        "A26": {
+          "2022-11-09": 123414
+        }
+      }
+    },
+    {
+      "file": "AL_43114_D194_20221115.zip",
+      "year": 2022,
+      "district": "43114",
+      "zip_bytes": 22034134,
+      "sha256": "d5311950870b66e61fd962c6a958cfa08844411a31cbcb30603b0fdc9880ab46",
+      "encoding": "cp949",
+      "rows": 126469,
+      "unique_pnu": 126469,
+      "counts": {
+        "active_rows": 126469,
+        "invalid_pnu": 0,
+        "wrong_district": 0,
+        "duplicate_pnu": 0,
+        "cross_district_duplicate": 0,
+        "nonpositive_or_missing_price": 1609,
+        "year_with_positive_price": 124860
+      },
+      "missing_fields": {
+        "A16": 126469,
+        "A14": 126469,
+        "A24": 126469,
+        "A18": 126469,
+        "A20": 126469,
+        "A22": 126469,
+        "A19": 1609,
+        "A23": 1609,
+        "A9": 1609,
+        "A13": 1609,
+        "A10": 1609,
+        "A11": 1609,
+        "A17": 1609,
+        "A8": 1609,
+        "A21": 1609,
+        "A15": 1609
+      },
+      "positive_code_without_label": {
+        "A13/A14": 124860,
+        "A17/A18": 124860,
+        "A19/A20": 119833,
+        "A21/A22": 119804,
+        "A23/A24": 119651,
+        "A15/A16": 7836
+      },
+      "source_dates_and_years": {
+        "A8": {
+          "2022": 124860,
+          "<EMPTY>": 1609
+        },
+        "A9": {
+          "01": 124860,
+          "<EMPTY>": 1609
+        },
+        "A26": {
+          "2022-11-09": 126469
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "Source base dates are not legal effective dates or historical availability dates.",
+    "Price presence does not validate transaction-to-parcel matching.",
+    "Historical code labels require a verified dictionary; blank labels are preserved."
+  ],
+  "year_summary": {
+    "2019": {
+      "rows": 464856,
+      "year_with_positive_price": 453363,
+      "cache_bytes": 6140936
+    },
+    "2020": {
+      "rows": 468753,
+      "year_with_positive_price": 458253,
+      "cache_bytes": 6229717
+    },
+    "2021": {
+      "rows": 472470,
+      "year_with_positive_price": 461130,
+      "cache_bytes": 6277002
+    },
+    "2022": {
+      "rows": 473146,
+      "year_with_positive_price": 466738,
+      "cache_bytes": 5821249
+    }
+  },
+  "duplicate_review": {
+    "duplicate_rows": 15,
+    "identical_normalized_rows": 15,
+    "conflicting_normalized_rows": 0,
+    "different_fields": [],
+    "policy": "Raw rows preserved; conflicting PNU cannot be silently overwritten or certified unique."
+  }
+}

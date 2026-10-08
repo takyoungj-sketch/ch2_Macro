@@ -8,6 +8,7 @@ import statsmodels.api as sm
 from sqlalchemy import text
 ROOT=Path(__file__).resolve().parents[2];sys.path.insert(0,str(ROOT/'pipeline'))
 from db_utils import get_engine
+from pilot_validation import encode_category
 OUT=ROOT/'data/research/cheongju_ledger'
 x=pd.read_csv(OUT/'transaction_candidates.csv.gz',dtype=str,keep_default_na=False)
 u=x[x.status=='unique_candidate'];a=u[u.policy=='annual'].set_index('transaction_hash');b=u[u.policy=='observed_before_trade'].set_index('transaction_hash');common=a.index.intersection(b.index)
@@ -45,9 +46,7 @@ def design(train,test,model):
  if model=='combined_restrictions':num+=FLAGS
  tr={col:train[col].astype(float) for col in num};te={col:test[col].astype(float) for col in num};novel={}
  for col in cats:
-  ta=train[col].fillna('UNKNOWN').replace({'':'UNKNOWN','지정되지않음':'UNKNOWN'}).astype(str);tb=test[col].fillna('UNKNOWN').replace({'':'UNKNOWN','지정되지않음':'UNKNOWN'}).astype(str)
-  keep=set(ta.value_counts()[lambda v:v>=30].index);novel[col]=int((~tb.isin(set(ta))).sum())
-  ta=ta.where(ta.isin(keep),'OTHER');tb=tb.where(tb.isin(keep),'OTHER')
+  ta,tb,novel[col]=encode_category(train[col],test[col])
   levels=sorted(set(ta));ref=ta.value_counts().idxmax()
   for level in levels:
    if level==ref:continue
@@ -67,12 +66,18 @@ for policy,frame in [('annual',a),('observed_before_trade',b)]:
    cells=test[['zone_type','land_category']].copy();cells['pred']=pred;cells['actual']=truth
    grouped=cells.groupby(['zone_type','land_category']).agg(n=('actual','size'),actual=('actual','mean'),pred=('pred','mean'));grouped=grouped[grouped.n>=20]
    avgcellerror=float(np.average(abs(grouped.pred-grouped.actual),weights=grouped.n)) if len(grouped) else None
-   rec={'policy':policy,'test_year':testyear,'model':model,'n_train':len(train),'n_test':len(test),'p':X.shape[1],'rank':int(np.linalg.matrix_rank(X)),'train_adj_r2':float(fit.rsquared_adj),'test_log_rmse':float(np.sqrt(np.mean((predlog-truthlog)**2))),'test_mae_10k_sqm':float(np.mean(abs(pred-truth))),'test_actual_mean_10k_sqm':float(truth.mean()),'test_predicted_mean_10k_sqm':mean,'mean_ci95_approx':[mean-1.96*se,mean+1.96*se],'cell_mean_mae_n20_10k_sqm':avgcellerror,'cells_n20':len(grouped),'unseen_test_categories':novel,'train_log_assessed_coef':float(fit.params['log_assessed']) if 'log_assessed' in fit.params else None,'train_log_area_coef':float(fit.params['log_area'])}
+   rec={'policy':policy,'test_year':testyear,'model':model,'n_train':len(train),'n_test':len(test),'p':X.shape[1],'rank':int(np.linalg.matrix_rank(X)),'train_adj_r2':float(fit.rsquared_adj),'test_log_rmse':float(np.sqrt(np.mean((predlog-truthlog)**2))),'test_mae_10k_sqm':float(np.mean(abs(pred-truth))),'test_actual_mean_10k_sqm':float(truth.mean()),'test_predicted_mean_10k_sqm':mean,'mean_ci95_approx':[mean-1.96*se,mean+1.96*se],'cell_mean_mae_n20_10k_sqm':avgcellerror,'cells_n20':len(grouped),'unseen_test_categories':{key:value['unseen'] for key,value in novel.items()},'category_fallbacks':novel,'train_log_assessed_coef':float(fit.params['log_assessed']) if 'log_assessed' in fit.params else None,'train_log_area_coef':float(fit.params['log_area'])}
    worst=np.argsort(np.abs(predlog-truthlog))[-5:][::-1]
    rec['worst_test_log_errors']=[{'transaction_hash':str(test.index[i]),'pnu':str(test.pnu.iloc[i]),'use':str(test.use.iloc[i]),'road':str(test.road.iloc[i]),'log_error':float(predlog[i]-truthlog[i]),'actual':float(truth[i]),'predicted':float(pred[i])} for i in worst]
+   subset = ~test.pnu.isin(set(train.pnu))
+   rec['unseen_parcel_test']={'n':int(subset.sum()),'log_rmse':float(np.sqrt(np.mean((predlog[subset]-truthlog[subset])**2))) if subset.any() else None,'mae_10k_sqm':float(np.mean(abs(pred[subset]-truth[subset]))) if subset.any() else None}
+   rec['district_validation']=[]
+   for district in sorted(set(test.beopjungri_code.str[:5])):
+    mask=(test.beopjungri_code.str[:5]==district).to_numpy()
+    rec['district_validation'].append({'sigungu':district,'n':int(mask.sum()),'actual_mean':float(truth[mask].mean()),'predicted_mean':float(pred[mask].mean()),'mean_absolute_error':float(abs(pred[mask]-truth[mask]).mean()),'log_rmse':float(np.sqrt(np.mean((predlog[mask]-truthlog[mask])**2)))})
    results.append(rec)
    for (zone,jimok),r in grouped.iterrows():cellrows.append({'policy':policy,'test_year':testyear,'model':model,'zone':zone,'jimok':jimok,**r.to_dict()})
    print(policy,testyear,model,'logRMSE',round(rec['test_log_rmse'],4),'cellMeanMAE',round(avgcellerror,3) if avgcellerror is not None else None,flush=True)
-report={'run_date':'2026-10-04','sample':len(common),'conflicting_pnu_excluded':len(conflict),'positive_filter_excluded':int((~positive).sum()),'trait_encoding':'Source A17/A19/A21/A23 codes normalized across years; blank/zero=UNKNOWN; raw labels retained for audit','method':'Same transaction hashes across policies and models; 2024 trains 2025, 2024-25 train 2026; log unit-price OLS; training-only rare categories threshold 30; no target-based outlier trim; Duan smearing; cluster covariance by matched PNU','baseline':'log(area)+year trend+BJD+transaction zone/jimok/road/deal categories; this exploratory pooled design is not an exact replay of a production modal','caveats':['Matches unverified; common linked complete sample not all land transactions','Annual source policy uses later observations and is retrospective, not leakage-free forecasting','Mean CI uses coefficient cluster covariance and delta method; excludes source/matching uncertainty and uncertainty in Duan factor','Cell observed means are noisy samples; cell mean error is exploratory, not true conditional mean accuracy','Repeated parcels may cross years; chronological holdout is not unseen-parcel validation','Rule thresholds were exploratory and not pre-registered operational gates'],'results':results}
+report={'run_date':'2026-10-04','rule_version':'cheongju-regression-v2-explicit-fallback','sample':len(common),'conflicting_pnu_excluded':len(conflict),'positive_filter_excluded':int((~positive).sum()),'trait_encoding':'Source A17/A19/A21/A23 codes normalized across years; blank/zero=UNKNOWN; raw labels retained for audit','method':'Same transaction hashes across policies and models; 2024 trains 2025, 2024-25 train 2026; log unit-price OLS; training-only rare categories threshold 30; no target-based outlier trim; Duan smearing; cluster covariance by matched PNU','baseline':'log(area)+year trend+BJD+transaction zone/jimok/road/deal categories; this exploratory pooled design is not an exact replay of a production modal','caveats':['Matches unverified; common linked complete sample not all land transactions','Annual source policy uses later observations and is retrospective, not leakage-free forecasting','Mean CI uses coefficient cluster covariance and delta method; excludes source/matching uncertainty and uncertainty in Duan factor','Cell observed means are noisy samples; cell mean error is exploratory, not true conditional mean accuracy','Repeated parcels may cross years; chronological holdout is not unseen-parcel validation','Rule thresholds were exploratory and not pre-registered operational gates'],'results':results}
 (ROOT/'docs/lab/cheongju_regression_pilot_20261004.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
 pd.DataFrame(cellrows).to_csv(OUT/'regression_cell_means.csv',index=False,encoding='utf-8-sig')

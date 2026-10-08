@@ -1,6 +1,8 @@
 import LabResume from "./LabResume";
 import { useState } from "react";
 import CheongjuLedgerRegressionLab from "./CheongjuLedgerRegressionLab";
+import CheongjuHistoricalLedgerLab from "./CheongjuHistoricalLedgerLab";
+import CheongjuLedgerFollowupLab from "./CheongjuLedgerFollowupLab";
 
 function Table({
   caption,
@@ -41,15 +43,15 @@ function Table({
 }
 
 export default function LandLotUnmaskLab() {
-  const [tab, setTab] = useState("annual");
+  const [tab, setTab] = useState("followup");
   return (
     <>
       <nav aria-label="청주 대장 실험" className="max-w-5xl mx-auto px-4 pt-4 flex gap-2">
-        {[{ id: "annual", label: "연도별 대장·회귀 비교" }, { id: "original", label: "단일 대장 마스킹 기록" }].map(t => (
+        {[{ id: "followup", label: "평균 편향·갱신 시험" }, { id: "historical", label: "2019년 확대 실험" }, { id: "annual", label: "연도별 대장·회귀 비교" }, { id: "original", label: "단일 대장 마스킹 기록" }].map(t => (
           <button key={t.id} type="button" aria-pressed={tab === t.id} onClick={() => setTab(t.id)} className={`rounded border px-3 py-2 text-sm ${tab === t.id ? "bg-indigo-700 text-white" : "bg-white dark:bg-slate-900"}`}>{t.label}</button>
         ))}
       </nav>
-      {tab === "annual" ? <CheongjuLedgerRegressionLab /> : <OriginalLandLotUnmaskLab />}
+      {tab === "followup" ? <CheongjuLedgerFollowupLab /> : tab === "historical" ? <CheongjuHistoricalLedgerLab /> : tab === "annual" ? <CheongjuLedgerRegressionLab /> : <OriginalLandLotUnmaskLab />}
     </>
   );
 }

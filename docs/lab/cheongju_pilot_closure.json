@@ -1,0 +1,85 @@
+{
+  "project": "cheongju-common-ledger-supply-pilot",
+  "status": "successful_closed",
+  "closed_at": "2026-10-05",
+  "decision": "D-077",
+  "completion_scope": [
+    "city_source_integration",
+    "version_provenance_hash_rollback",
+    "legacy_numeric_resupply",
+    "actual_analysis_engine_replay",
+    "publication_bound_handoff_failure_preserves_previous"
+  ],
+  "stop_rule": "No new pilot experiments or completion gates. Reopen only by explicit user decision.",
+  "last_recorded_tests_passed": 168,
+  "new_experiment_or_batch_run_for_closure": false,
+  "production_apply": false,
+  "product_transition_approved": false,
+  "followup_tracks": {
+    "data_quality": [
+      "85_object_memberships",
+      "built_management_pk_assignments"
+    ],
+    "national_build": [
+      "common_structure",
+      "regional_expansion"
+    ],
+    "monthly_operations": [
+      "actual_new_source_update",
+      "operating_recovery"
+    ],
+    "product_integration": [
+      "consumer_permissions",
+      "tcp_proxy_browser",
+      "product_transition"
+    ],
+    "regression_research": [
+      "model_adoption"
+    ]
+  },
+  "build_stages": [
+    {
+      "stage": 1,
+      "name": "청주 파일럿 종료",
+      "status": "complete",
+      "due_date": "2026-10-05"
+    },
+    {
+      "stage": 2,
+      "name": "전국 공통 대장 구조 확정",
+      "status": "not_started",
+      "due_date": null
+    },
+    {
+      "stage": 3,
+      "name": "지역 단위 확장",
+      "status": "not_started",
+      "due_date": null
+    },
+    {
+      "stage": 4,
+      "name": "실제 월 갱신 운영",
+      "status": "not_started",
+      "due_date": null
+    },
+    {
+      "stage": 5,
+      "name": "제품 전환",
+      "status": "not_started",
+      "due_date": null
+    }
+  ],
+  "closure_report": "docs/CHEONGJU_LEDGER_PILOT_CLOSURE.md",
+  "checklist": "docs/LEDGER_NATIONAL_BUILD_CHECKLIST.md",
+  "evidence_report_sha256": {
+    "docs/lab/cheongju_integrated_ledger_v2_4000.json": "4983fc71c1245343b44d0d5abe77b7972993865a3c92bc92641fa8a5bc271a6f",
+    "docs/lab/cheongju_integrated_ledger_v2_city.json": "eb445e30aca8500ebb549a64500d6fac4a6502b32fe8873e7f7de38c236b1597",
+    "docs/lab/cheongju_numeric_supply_shadow.json": "0cc806e15f242ca79424123362a52f699fdffac538c86e6aba7c0eef51deb564",
+    "docs/lab/cheongju_supply_regression_replay.json": "62fc348e193a13b6874b5bbde9488a998190e4c274b76f3fd87637ca0a6c312e",
+    "docs/lab/cheongju_supply_marts_api_replay.json": "8c90bf0f3ef2dd8f81da91e5babff329cdf038e6404e8746abff1b9a66ff04e4",
+    "docs/lab/cheongju_supply_http_sql_replay.json": "f805b92a5a5694648d89ba7449c56d3ca29d1b3fbc0e0cb805b1a419c973fc90",
+    "docs/lab/cheongju_ledger_operations_rehearsal.json": "8d2cd8913bf9b37e42a975f11e2de96945de15b98f2446197a7574c01d6f059d",
+    "docs/lab/cheongju_product_handoff.json": "72ccb6aaa325e9b033f52e7b4929debd8c782be6e8b80022f2525f898f1ff6f2"
+  },
+  "evidence_note": "Existing successful reports read for closure; not newly rerun proofs and not a substitute for supply manifest or permissions."
+}

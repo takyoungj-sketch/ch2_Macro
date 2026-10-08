@@ -1,0 +1,4847 @@
+{
+  "run_date": "2026-10-04",
+  "transaction_rows": 62499,
+  "source_join": {
+    "2019": {
+      "parcels": 464841,
+      "deduplicated_rows": 15,
+      "cutoff": "2019-08-20",
+      "unknown_zone_codes": {},
+      "sha256": "7b42613f8e11ca439536e3f5a1499c6966a256c1d6acc102930acf6a7ef6baa1"
+    },
+    "2020": {
+      "parcels": 468753,
+      "deduplicated_rows": 0,
+      "cutoff": "2020-08-20",
+      "unknown_zone_codes": {},
+      "sha256": "be806021192f0605f07a56db92fb515ab31aff654c438e27c639c43168bbb7c0"
+    },
+    "2021": {
+      "parcels": 472470,
+      "deduplicated_rows": 0,
+      "cutoff": "2021-11-15",
+      "unknown_zone_codes": {},
+      "sha256": "0c83096f48458b993c335329736e3f8fb3275c6fe6da3c0d2bafedb401cfeeee"
+    },
+    "2022": {
+      "parcels": 473146,
+      "deduplicated_rows": 0,
+      "cutoff": "2022-11-09",
+      "unknown_zone_codes": {},
+      "sha256": "91054d4f0e0749675882f93d07dd71cdec883b3fa0d6b9c8dedbeeea39d94ae5"
+    },
+    "2023": {
+      "parcels": 475217,
+      "deduplicated_rows": 0,
+      "cutoff": "2023-08-05",
+      "unknown_zone_codes": {
+        "61": 1
+      },
+      "sha256": "946d5cce35261777f1be492ba5917bae54527ec28f417b3e86ad4b2cd22f498f"
+    },
+    "2024": {
+      "parcels": 477399,
+      "deduplicated_rows": 0,
+      "cutoff": "2024-07-31",
+      "unknown_zone_codes": {},
+      "sha256": "d89ce7a1570f91ff1b410bacf567aa93fce7349203e66cff9a593f7fd755ad33"
+    },
+    "2025": {
+      "parcels": 478750,
+      "deduplicated_rows": 0,
+      "cutoff": "2025-08-08",
+      "unknown_zone_codes": {},
+      "sha256": "0fce6a8ad1bf27be7da66c2750f58bd65d76f1fa2e5b51598472c699d31824ed"
+    },
+    "2026": {
+      "parcels": 480633,
+      "deduplicated_rows": 0,
+      "cutoff": "2026-05-13",
+      "unknown_zone_codes": {},
+      "sha256": "34ac3e0ee610079d4fb0808fa233e8f848fe7e7756285fca67bfa6912f21d40c"
+    }
+  },
+  "counts": {
+    "2021:annual": {
+      "partial": 3144,
+      "cancelled": 1277,
+      "unsupported_zone": 328,
+      "unique_candidate": 5710,
+      "ambiguous": 581,
+      "no_candidate": 1226
+    },
+    "2021:observed_before_trade": {
+      "partial": 3144,
+      "cancelled": 1277,
+      "unsupported_zone": 328,
+      "ambiguous": 565,
+      "no_candidate": 1488,
+      "unique_candidate": 5464
+    },
+    "2022:annual": {
+      "partial": 2538,
+      "cancelled": 843,
+      "unsupported_zone": 220,
+      "no_candidate": 900,
+      "ambiguous": 391,
+      "unique_candidate": 3733
+    },
+    "2022:observed_before_trade": {
+      "partial": 2538,
+      "cancelled": 843,
+      "unsupported_zone": 220,
+      "no_candidate": 1120,
+      "ambiguous": 321,
+      "unique_candidate": 3583
+    },
+    "2023:annual": {
+      "unsupported_zone": 192,
+      "cancelled": 584,
+      "partial": 2002,
+      "no_candidate": 783,
+      "unique_candidate": 2682,
+      "ambiguous": 245
+    },
+    "2023:observed_before_trade": {
+      "unsupported_zone": 192,
+      "cancelled": 584,
+      "partial": 2002,
+      "unique_candidate": 2585,
+      "no_candidate": 886,
+      "ambiguous": 239
+    },
+    "2024:annual": {
+      "unsupported_zone": 280,
+      "partial": 1815,
+      "cancelled": 581,
+      "no_candidate": 667,
+      "ambiguous": 242,
+      "unique_candidate": 2748
+    },
+    "2024:observed_before_trade": {
+      "unsupported_zone": 280,
+      "partial": 1815,
+      "cancelled": 581,
+      "ambiguous": 230,
+      "unique_candidate": 2639,
+      "no_candidate": 788
+    },
+    "2025:annual": {
+      "partial": 1814,
+      "cancelled": 672,
+      "unsupported_zone": 147,
+      "unique_candidate": 2661,
+      "no_candidate": 775,
+      "ambiguous": 230
+    },
+    "2025:observed_before_trade": {
+      "partial": 1814,
+      "cancelled": 672,
+      "unsupported_zone": 147,
+      "no_candidate": 895,
+      "unique_candidate": 2552,
+      "ambiguous": 219
+    },
+    "2020:annual": {
+      "cancelled": 643,
+      "unsupported_zone": 243,
+      "unsupported_lot": 4,
+      "partial": 3236,
+      "unique_candidate": 5242,
+      "no_candidate": 1045,
+      "ambiguous": 560
+    },
+    "2020:observed_before_trade": {
+      "cancelled": 643,
+      "unsupported_zone": 243,
+      "unsupported_lot": 4,
+      "partial": 3236,
+      "unique_candidate": 5022,
+      "no_candidate": 1317,
+      "ambiguous": 508
+    },
+    "2019:annual": {
+      "partial": 2078,
+      "unsupported_zone": 197,
+      "unique_candidate": 3650,
+      "no_candidate": 1033,
+      "ambiguous": 327
+    },
+    "2019:observed_before_trade": {
+      "partial": 2078,
+      "unsupported_zone": 197,
+      "no_prior_snapshot": 3231,
+      "unique_candidate": 1301,
+      "no_candidate": 360,
+      "ambiguous": 118
+    },
+    "2026:annual": {
+      "partial": 1467,
+      "cancelled": 324,
+      "unsupported_zone": 87,
+      "unique_candidate": 1736,
+      "ambiguous": 181,
+      "no_candidate": 435
+    },
+    "2026:observed_before_trade": {
+      "partial": 1467,
+      "cancelled": 324,
+      "unsupported_zone": 87,
+      "no_candidate": 588,
+      "unique_candidate": 1612,
+      "ambiguous": 152
+    }
+  },
+  "method_comparison": [
+    {
+      "policy": "annual",
+      "year": 2023,
+      "transactions": 6488,
+      "trait_unique": 2682,
+      "plan_unique": 2680,
+      "both_unique": 2679,
+      "same_pnu": 2679,
+      "different_pnu": 0,
+      "trait_only_unique": 3,
+      "plan_only_unique": 1
+    },
+    {
+      "policy": "annual",
+      "year": 2024,
+      "transactions": 6333,
+      "trait_unique": 2748,
+      "plan_unique": 2803,
+      "both_unique": 2745,
+      "same_pnu": 2745,
+      "different_pnu": 0,
+      "trait_only_unique": 3,
+      "plan_only_unique": 58
+    },
+    {
+      "policy": "annual",
+      "year": 2025,
+      "transactions": 6299,
+      "trait_unique": 2661,
+      "plan_unique": 2691,
+      "both_unique": 2656,
+      "same_pnu": 2656,
+      "different_pnu": 0,
+      "trait_only_unique": 5,
+      "plan_only_unique": 35
+    },
+    {
+      "policy": "annual",
+      "year": 2026,
+      "transactions": 4230,
+      "trait_unique": 1736,
+      "plan_unique": 1799,
+      "both_unique": 1731,
+      "same_pnu": 1731,
+      "different_pnu": 0,
+      "trait_only_unique": 5,
+      "plan_only_unique": 68
+    },
+    {
+      "policy": "observed_before_trade",
+      "year": 2023,
+      "transactions": 6488,
+      "trait_unique": 2585,
+      "plan_unique": 983,
+      "both_unique": 983,
+      "same_pnu": 983,
+      "different_pnu": 0,
+      "trait_only_unique": 1602,
+      "plan_only_unique": 0
+    },
+    {
+      "policy": "observed_before_trade",
+      "year": 2024,
+      "transactions": 6333,
+      "trait_unique": 2639,
+      "plan_unique": 2695,
+      "both_unique": 2638,
+      "same_pnu": 2638,
+      "different_pnu": 0,
+      "trait_only_unique": 1,
+      "plan_only_unique": 57
+    },
+    {
+      "policy": "observed_before_trade",
+      "year": 2025,
+      "transactions": 6299,
+      "trait_unique": 2552,
+      "plan_unique": 2585,
+      "both_unique": 2551,
+      "same_pnu": 2551,
+      "different_pnu": 0,
+      "trait_only_unique": 1,
+      "plan_only_unique": 34
+    },
+    {
+      "policy": "observed_before_trade",
+      "year": 2026,
+      "transactions": 4230,
+      "trait_unique": 1612,
+      "plan_unique": 1610,
+      "both_unique": 1550,
+      "same_pnu": 1550,
+      "different_pnu": 0,
+      "trait_only_unique": 62,
+      "plan_only_unique": 60
+    }
+  ],
+  "selection_bias": [
+    {
+      "policy": "annual",
+      "year": 2019,
+      "group": "unique_candidate",
+      "n": 3650,
+      "area_median": 780.0,
+      "price_median": 10.3
+    },
+    {
+      "policy": "annual",
+      "year": 2019,
+      "group": "eligible_unlinked",
+      "n": 1360,
+      "area_median": 326.5,
+      "price_median": 16.5
+    },
+    {
+      "policy": "annual",
+      "year": 2020,
+      "group": "unique_candidate",
+      "n": 5242,
+      "area_median": 759.5,
+      "price_median": 11.8
+    },
+    {
+      "policy": "annual",
+      "year": 2020,
+      "group": "eligible_unlinked",
+      "n": 1605,
+      "area_median": 298.2,
+      "price_median": 20.8
+    },
+    {
+      "policy": "annual",
+      "year": 2021,
+      "group": "unique_candidate",
+      "n": 5710,
+      "area_median": 705.5,
+      "price_median": 15.0
+    },
+    {
+      "policy": "annual",
+      "year": 2021,
+      "group": "eligible_unlinked",
+      "n": 1807,
+      "area_median": 314.0,
+      "price_median": 25.7
+    },
+    {
+      "policy": "annual",
+      "year": 2022,
+      "group": "unique_candidate",
+      "n": 3733,
+      "area_median": 740.0,
+      "price_median": 13.5
+    },
+    {
+      "policy": "annual",
+      "year": 2022,
+      "group": "eligible_unlinked",
+      "n": 1291,
+      "area_median": 271.1,
+      "price_median": 26.4
+    },
+    {
+      "policy": "annual",
+      "year": 2023,
+      "group": "unique_candidate",
+      "n": 2682,
+      "area_median": 692.0,
+      "price_median": 12.1
+    },
+    {
+      "policy": "annual",
+      "year": 2023,
+      "group": "eligible_unlinked",
+      "n": 1028,
+      "area_median": 268.3,
+      "price_median": 22.7
+    },
+    {
+      "policy": "annual",
+      "year": 2024,
+      "group": "unique_candidate",
+      "n": 2748,
+      "area_median": 686.5,
+      "price_median": 12.149999999999999
+    },
+    {
+      "policy": "annual",
+      "year": 2024,
+      "group": "eligible_unlinked",
+      "n": 909,
+      "area_median": 336.0,
+      "price_median": 22.6
+    },
+    {
+      "policy": "annual",
+      "year": 2025,
+      "group": "unique_candidate",
+      "n": 2661,
+      "area_median": 660.0,
+      "price_median": 11.8
+    },
+    {
+      "policy": "annual",
+      "year": 2025,
+      "group": "eligible_unlinked",
+      "n": 1005,
+      "area_median": 347.0,
+      "price_median": 21.1
+    },
+    {
+      "policy": "annual",
+      "year": 2026,
+      "group": "unique_candidate",
+      "n": 1736,
+      "area_median": 694.5,
+      "price_median": 11.4
+    },
+    {
+      "policy": "annual",
+      "year": 2026,
+      "group": "eligible_unlinked",
+      "n": 616,
+      "area_median": 316.5,
+      "price_median": 24.0
+    },
+    {
+      "policy": "observed_before_trade",
+      "year": 2019,
+      "group": "unique_candidate",
+      "n": 1301,
+      "area_median": 823.0,
+      "price_median": 10.0
+    },
+    {
+      "policy": "observed_before_trade",
+      "year": 2019,
+      "group": "eligible_unlinked",
+      "n": 3709,
+      "area_median": 565.0,
+      "price_median": 12.4
+    },
+    {
+      "policy": "observed_before_trade",
+      "year": 2020,
+      "group": "unique_candidate",
+      "n": 5022,
+      "area_median": 800.0,
+      "price_median": 11.5
+    },
+    {
+      "policy": "observed_before_trade",
+      "year": 2020,
+      "group": "eligible_unlinked",
+      "n": 1825,
+      "area_median": 312.6,
+      "price_median": 20.6
+    },
+    {
+      "policy": "observed_before_trade",
+      "year": 2021,
+      "group": "unique_candidate",
+      "n": 5464,
+      "area_median": 727.5,
+      "price_median": 14.55
+    },
+    {
+      "policy": "observed_before_trade",
+      "year": 2021,
+      "group": "eligible_unlinked",
+      "n": 2053,
+      "area_median": 320.0,
+      "price_median": 25.8
+    },
+    {
+      "policy": "observed_before_trade",
+      "year": 2022,
+      "group": "unique_candidate",
+      "n": 3583,
+      "area_median": 752.0,
+      "price_median": 12.9
+    },
+    {
+      "policy": "observed_before_trade",
+      "year": 2022,
+      "group": "eligible_unlinked",
+      "n": 1441,
+      "area_median": 276.0,
+      "price_median": 26.6
+    },
+    {
+      "policy": "observed_before_trade",
+      "year": 2023,
+      "group": "unique_candidate",
+      "n": 2585,
+      "area_median": 704.0,
+      "price_median": 11.9
+    },
+    {
+      "policy": "observed_before_trade",
+      "year": 2023,
+      "group": "eligible_unlinked",
+      "n": 1125,
+      "area_median": 273.8,
+      "price_median": 22.5
+    },
+    {
+      "policy": "observed_before_trade",
+      "year": 2024,
+      "group": "unique_candidate",
+      "n": 2639,
+      "area_median": 700.0,
+      "price_median": 12.1
+    },
+    {
+      "policy": "observed_before_trade",
+      "year": 2024,
+      "group": "eligible_unlinked",
+      "n": 1018,
+      "area_median": 354.5,
+      "price_median": 21.6
+    },
+    {
+      "policy": "observed_before_trade",
+      "year": 2025,
+      "group": "unique_candidate",
+      "n": 2552,
+      "area_median": 688.5,
+      "price_median": 11.5
+    },
+    {
+      "policy": "observed_before_trade",
+      "year": 2025,
+      "group": "eligible_unlinked",
+      "n": 1114,
+      "area_median": 347.5,
+      "price_median": 21.1
+    },
+    {
+      "policy": "observed_before_trade",
+      "year": 2026,
+      "group": "unique_candidate",
+      "n": 1612,
+      "area_median": 726.5,
+      "price_median": 10.649999999999999
+    },
+    {
+      "policy": "observed_before_trade",
+      "year": 2026,
+      "group": "eligible_unlinked",
+      "n": 740,
+      "area_median": 339.0,
+      "price_median": 22.05
+    }
+  ],
+  "samples": [
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "n": 28157,
+      "excluded_nonpositive_or_missing": 5,
+      "by_year": {
+        "2019": 3648,
+        "2020": 5242,
+        "2021": 5710,
+        "2022": 3733,
+        "2023": 2681,
+        "2024": 2748,
+        "2025": 2661,
+        "2026": 1734
+      }
+    },
+    {
+      "scope": "same_pnu_method_comparison",
+      "policy": "annual",
+      "n": 9808,
+      "plan_positive_excluded": 3
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "n": 24754,
+      "excluded_nonpositive_or_missing": 4,
+      "by_year": {
+        "2019": 1300,
+        "2020": 5022,
+        "2021": 5464,
+        "2022": 3583,
+        "2023": 2584,
+        "2024": 2639,
+        "2025": 2552,
+        "2026": 1610
+      }
+    },
+    {
+      "scope": "same_pnu_method_comparison",
+      "policy": "observed_before_trade",
+      "n": 7719,
+      "plan_positive_excluded": 3
+    }
+  ],
+  "results": [
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2020,
+      "model": "baseline",
+      "n_train": 3648,
+      "n_test": 5242,
+      "test_log_rmse": 0.7866879540481112,
+      "cell_mean_mae_n20": 3.5616654796783482,
+      "cells_n20": 37,
+      "cell_covered_transactions": 4886,
+      "actual_mean": 23.792903471957267,
+      "predicted_mean": 21.74671678911488,
+      "mean_ci95_approx": [
+        20.82192645318465,
+        22.671507125045114
+      ],
+      "unseen_parcel": {
+        "n": 5094,
+        "log_rmse": 0.7832456809839136,
+        "mae": 12.0200582809461
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 1275,
+          "actual_mean": 21.02345098039216,
+          "predicted_mean": 19.166743096470796,
+          "log_rmse": 0.8093039936346506
+        },
+        {
+          "sigungu": "43112",
+          "n": 785,
+          "actual_mean": 28.541783439490448,
+          "predicted_mean": 24.08728138820531,
+          "log_rmse": 0.8461724422480936
+        },
+        {
+          "sigungu": "43113",
+          "n": 1621,
+          "actual_mean": 30.01128932757557,
+          "predicted_mean": 24.391549892758967,
+          "log_rmse": 0.83521088395607
+        },
+        {
+          "sigungu": "43114",
+          "n": 1561,
+          "actual_mean": 17.209417040358744,
+          "predicted_mean": 19.930476421932404,
+          "log_rmse": 0.6773676440218375
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2020,
+      "model": "assessed",
+      "n_train": 3648,
+      "n_test": 5242,
+      "test_log_rmse": 0.6001118426740351,
+      "cell_mean_mae_n20": 2.1339599965491702,
+      "cells_n20": 37,
+      "cell_covered_transactions": 4886,
+      "actual_mean": 23.792903471957267,
+      "predicted_mean": 23.236242833381144,
+      "mean_ci95_approx": [
+        22.420661977069287,
+        24.051823689693002
+      ],
+      "unseen_parcel": {
+        "n": 5094,
+        "log_rmse": 0.5977374730173038,
+        "mae": 9.038428059354931
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 1275,
+          "actual_mean": 21.02345098039216,
+          "predicted_mean": 17.611796993244933,
+          "log_rmse": 0.6292594677196095
+        },
+        {
+          "sigungu": "43112",
+          "n": 785,
+          "actual_mean": 28.541783439490448,
+          "predicted_mean": 29.11847169176777,
+          "log_rmse": 0.6568890346618107
+        },
+        {
+          "sigungu": "43113",
+          "n": 1621,
+          "actual_mean": 30.01128932757557,
+          "predicted_mean": 29.55360593965097,
+          "log_rmse": 0.5766727715439606
+        },
+        {
+          "sigungu": "43114",
+          "n": 1561,
+          "actual_mean": 17.209417040358744,
+          "predicted_mean": 18.31194635489094,
+          "log_rmse": 0.5688751129334906
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2020,
+      "model": "traits",
+      "n_train": 3648,
+      "n_test": 5242,
+      "test_log_rmse": 0.7519873291529853,
+      "cell_mean_mae_n20": 3.0877844735002413,
+      "cells_n20": 37,
+      "cell_covered_transactions": 4886,
+      "actual_mean": 23.792903471957267,
+      "predicted_mean": 21.712776233711214,
+      "mean_ci95_approx": [
+        20.68675552816273,
+        22.738796939259696
+      ],
+      "unseen_parcel": {
+        "n": 5094,
+        "log_rmse": 0.749278727493656,
+        "mae": 11.641397628492284
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 1275,
+          "actual_mean": 21.02345098039216,
+          "predicted_mean": 19.478634171319314,
+          "log_rmse": 0.7502935389981207
+        },
+        {
+          "sigungu": "43112",
+          "n": 785,
+          "actual_mean": 28.541783439490448,
+          "predicted_mean": 23.107428380133253,
+          "log_rmse": 0.8329661539696299
+        },
+        {
+          "sigungu": "43113",
+          "n": 1621,
+          "actual_mean": 30.01128932757557,
+          "predicted_mean": 24.679640199162126,
+          "log_rmse": 0.7995982009037733
+        },
+        {
+          "sigungu": "43114",
+          "n": 1561,
+          "actual_mean": 17.209417040358744,
+          "predicted_mean": 19.755340427569283,
+          "log_rmse": 0.6529224264379545
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2020,
+      "model": "combined",
+      "n_train": 3648,
+      "n_test": 5242,
+      "test_log_rmse": 0.5934553983192415,
+      "cell_mean_mae_n20": 2.125196473616369,
+      "cells_n20": 37,
+      "cell_covered_transactions": 4886,
+      "actual_mean": 23.792903471957267,
+      "predicted_mean": 23.158052526227287,
+      "mean_ci95_approx": [
+        22.328191339760775,
+        23.9879137126938
+      ],
+      "unseen_parcel": {
+        "n": 5094,
+        "log_rmse": 0.5909762774154118,
+        "mae": 8.891364051008884
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 1275,
+          "actual_mean": 21.02345098039216,
+          "predicted_mean": 17.516313983293447,
+          "log_rmse": 0.6214156023617718
+        },
+        {
+          "sigungu": "43112",
+          "n": 785,
+          "actual_mean": 28.541783439490448,
+          "predicted_mean": 28.461892004727964,
+          "log_rmse": 0.6542860916721442
+        },
+        {
+          "sigungu": "43113",
+          "n": 1621,
+          "actual_mean": 30.01128932757557,
+          "predicted_mean": 30.29306371055113,
+          "log_rmse": 0.5728351683949986
+        },
+        {
+          "sigungu": "43114",
+          "n": 1561,
+          "actual_mean": 17.209417040358744,
+          "predicted_mean": 17.68966656967935,
+          "log_rmse": 0.5578969566141628
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2021,
+      "model": "baseline",
+      "n_train": 8890,
+      "n_test": 5710,
+      "test_log_rmse": 0.7051370215300509,
+      "cell_mean_mae_n20": 3.460787099379759,
+      "cells_n20": 37,
+      "cell_covered_transactions": 5248,
+      "actual_mean": 30.141418563922944,
+      "predicted_mean": 30.102263538139535,
+      "mean_ci95_approx": [
+        28.511786912501478,
+        31.692740163777593
+      ],
+      "unseen_parcel": {
+        "n": 5374,
+        "log_rmse": 0.7088913013695837,
+        "mae": 14.801108036215032
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 1400,
+          "actual_mean": 19.16542857142857,
+          "predicted_mean": 18.910816016851065,
+          "log_rmse": 0.7707771460795769
+        },
+        {
+          "sigungu": "43112",
+          "n": 999,
+          "actual_mean": 40.14834834834835,
+          "predicted_mean": 34.63135600515071,
+          "log_rmse": 0.7379630459322273
+        },
+        {
+          "sigungu": "43113",
+          "n": 1644,
+          "actual_mean": 42.50431873479319,
+          "predicted_mean": 45.04309842776805,
+          "log_rmse": 0.6870184561320096
+        },
+        {
+          "sigungu": "43114",
+          "n": 1667,
+          "actual_mean": 21.17012597480504,
+          "predicted_mean": 22.05231188649611,
+          "log_rmse": 0.6421395255052877
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2021,
+      "model": "assessed",
+      "n_train": 8890,
+      "n_test": 5710,
+      "test_log_rmse": 0.5987684895593777,
+      "cell_mean_mae_n20": 2.4721717031264685,
+      "cells_n20": 37,
+      "cell_covered_transactions": 5248,
+      "actual_mean": 30.141418563922944,
+      "predicted_mean": 29.528282928209908,
+      "mean_ci95_approx": [
+        28.28594008405907,
+        30.770625772360745
+      ],
+      "unseen_parcel": {
+        "n": 5374,
+        "log_rmse": 0.5978465542520228,
+        "mae": 11.969294347500393
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 1400,
+          "actual_mean": 19.16542857142857,
+          "predicted_mean": 19.70244668946833,
+          "log_rmse": 0.629889675968463
+        },
+        {
+          "sigungu": "43112",
+          "n": 999,
+          "actual_mean": 40.14834834834835,
+          "predicted_mean": 34.8628154176105,
+          "log_rmse": 0.6568590644406671
+        },
+        {
+          "sigungu": "43113",
+          "n": 1644,
+          "actual_mean": 42.50431873479319,
+          "predicted_mean": 42.254019641621426,
+          "log_rmse": 0.5556022065552559
+        },
+        {
+          "sigungu": "43114",
+          "n": 1667,
+          "actual_mean": 21.17012597480504,
+          "predicted_mean": 22.033298897303183,
+          "log_rmse": 0.5760569438075877
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2021,
+      "model": "traits",
+      "n_train": 8890,
+      "n_test": 5710,
+      "test_log_rmse": 0.6836350855292658,
+      "cell_mean_mae_n20": 3.6710160522859767,
+      "cells_n20": 37,
+      "cell_covered_transactions": 5248,
+      "actual_mean": 30.141418563922944,
+      "predicted_mean": 28.60797782705601,
+      "mean_ci95_approx": [
+        26.92854411095722,
+        30.287411543154803
+      ],
+      "unseen_parcel": {
+        "n": 5374,
+        "log_rmse": 0.6848315680787387,
+        "mae": 13.7466252659165
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 1400,
+          "actual_mean": 19.16542857142857,
+          "predicted_mean": 18.26157277071686,
+          "log_rmse": 0.7211461031069756
+        },
+        {
+          "sigungu": "43112",
+          "n": 999,
+          "actual_mean": 40.14834834834835,
+          "predicted_mean": 32.85952221181948,
+          "log_rmse": 0.7387196687438462
+        },
+        {
+          "sigungu": "43113",
+          "n": 1644,
+          "actual_mean": 42.50431873479319,
+          "predicted_mean": 42.19623540718807,
+          "log_rmse": 0.6648796281750068
+        },
+        {
+          "sigungu": "43114",
+          "n": 1667,
+          "actual_mean": 21.17012597480504,
+          "predicted_mean": 21.348576973282167,
+          "log_rmse": 0.6333180340930683
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2021,
+      "model": "combined",
+      "n_train": 8890,
+      "n_test": 5710,
+      "test_log_rmse": 0.5906824557305467,
+      "cell_mean_mae_n20": 2.487908551013222,
+      "cells_n20": 37,
+      "cell_covered_transactions": 5248,
+      "actual_mean": 30.141418563922944,
+      "predicted_mean": 29.20344514099948,
+      "mean_ci95_approx": [
+        27.70706014315022,
+        30.699830138848743
+      ],
+      "unseen_parcel": {
+        "n": 5374,
+        "log_rmse": 0.5895296777468981,
+        "mae": 11.748009705827393
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 1400,
+          "actual_mean": 19.16542857142857,
+          "predicted_mean": 19.84963872695978,
+          "log_rmse": 0.6221292965220254
+        },
+        {
+          "sigungu": "43112",
+          "n": 999,
+          "actual_mean": 40.14834834834835,
+          "predicted_mean": 35.035319902124435,
+          "log_rmse": 0.6544007538538724
+        },
+        {
+          "sigungu": "43113",
+          "n": 1644,
+          "actual_mean": 42.50431873479319,
+          "predicted_mean": 41.12574034579658,
+          "log_rmse": 0.547721109101024
+        },
+        {
+          "sigungu": "43114",
+          "n": 1667,
+          "actual_mean": 21.17012597480504,
+          "predicted_mean": 21.806344227145438,
+          "log_rmse": 0.5635283936763783
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2022,
+      "model": "baseline",
+      "n_train": 14600,
+      "n_test": 3733,
+      "test_log_rmse": 0.7132448475286144,
+      "cell_mean_mae_n20": 3.758845087374867,
+      "cells_n20": 29,
+      "cell_covered_transactions": 3343,
+      "actual_mean": 29.447227431020625,
+      "predicted_mean": 32.251460968892175,
+      "mean_ci95_approx": [
+        30.712504006209105,
+        33.79041793157525
+      ],
+      "unseen_parcel": {
+        "n": 3352,
+        "log_rmse": 0.7221345947629682,
+        "mae": 14.74140417264532
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 943,
+          "actual_mean": 17.534994697773065,
+          "predicted_mean": 22.535309969387228,
+          "log_rmse": 0.7700695978589692
+        },
+        {
+          "sigungu": "43112",
+          "n": 757,
+          "actual_mean": 40.17952443857332,
+          "predicted_mean": 41.49568081515817,
+          "log_rmse": 0.6819081670724106
+        },
+        {
+          "sigungu": "43113",
+          "n": 858,
+          "actual_mean": 44.14300699300699,
+          "predicted_mean": 45.564039572527285,
+          "log_rmse": 0.7056522279715675
+        },
+        {
+          "sigungu": "43114",
+          "n": 1175,
+          "actual_mean": 21.362042553191486,
+          "predicted_mean": 24.372536311012073,
+          "log_rmse": 0.6907278871558767
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2022,
+      "model": "assessed",
+      "n_train": 14600,
+      "n_test": 3733,
+      "test_log_rmse": 0.6325748787226084,
+      "cell_mean_mae_n20": 2.831865132726848,
+      "cells_n20": 29,
+      "cell_covered_transactions": 3343,
+      "actual_mean": 29.447227431020625,
+      "predicted_mean": 32.08505321291022,
+      "mean_ci95_approx": [
+        30.750320675246755,
+        33.41978575057368
+      ],
+      "unseen_parcel": {
+        "n": 3352,
+        "log_rmse": 0.640580012777306,
+        "mae": 12.431762143619144
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 943,
+          "actual_mean": 17.534994697773065,
+          "predicted_mean": 21.190397406472048,
+          "log_rmse": 0.6716865431725523
+        },
+        {
+          "sigungu": "43112",
+          "n": 757,
+          "actual_mean": 40.17952443857332,
+          "predicted_mean": 41.590804842197166,
+          "log_rmse": 0.6008644888962899
+        },
+        {
+          "sigungu": "43113",
+          "n": 858,
+          "actual_mean": 44.14300699300699,
+          "predicted_mean": 45.88376105288232,
+          "log_rmse": 0.595104409557143
+        },
+        {
+          "sigungu": "43114",
+          "n": 1175,
+          "actual_mean": 21.362042553191486,
+          "predicted_mean": 24.62847033240374,
+          "log_rmse": 0.6465299419270092
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2022,
+      "model": "traits",
+      "n_train": 14600,
+      "n_test": 3733,
+      "test_log_rmse": 0.6745826281489198,
+      "cell_mean_mae_n20": 2.946575847676554,
+      "cells_n20": 29,
+      "cell_covered_transactions": 3343,
+      "actual_mean": 29.447227431020625,
+      "predicted_mean": 31.865493551711896,
+      "mean_ci95_approx": [
+        30.42397828663934,
+        33.30700881678445
+      ],
+      "unseen_parcel": {
+        "n": 3352,
+        "log_rmse": 0.6812564274628693,
+        "mae": 13.795749690961673
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 943,
+          "actual_mean": 17.534994697773065,
+          "predicted_mean": 21.914429599488216,
+          "log_rmse": 0.7252094209518064
+        },
+        {
+          "sigungu": "43112",
+          "n": 757,
+          "actual_mean": 40.17952443857332,
+          "predicted_mean": 40.775737386598344,
+          "log_rmse": 0.639868162633773
+        },
+        {
+          "sigungu": "43113",
+          "n": 858,
+          "actual_mean": 44.14300699300699,
+          "predicted_mean": 45.48451404530036,
+          "log_rmse": 0.6719743740223821
+        },
+        {
+          "sigungu": "43114",
+          "n": 1175,
+          "actual_mean": 21.362042553191486,
+          "predicted_mean": 24.166497075489747,
+          "log_rmse": 0.655857827704053
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2022,
+      "model": "combined",
+      "n_train": 14600,
+      "n_test": 3733,
+      "test_log_rmse": 0.6236081298444178,
+      "cell_mean_mae_n20": 3.0186653501168212,
+      "cells_n20": 29,
+      "cell_covered_transactions": 3343,
+      "actual_mean": 29.447227431020625,
+      "predicted_mean": 32.38989271115987,
+      "mean_ci95_approx": [
+        31.025038647884177,
+        33.75474677443556
+      ],
+      "unseen_parcel": {
+        "n": 3352,
+        "log_rmse": 0.6323125724694703,
+        "mae": 12.238664295970375
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 943,
+          "actual_mean": 17.534994697773065,
+          "predicted_mean": 21.34756777354998,
+          "log_rmse": 0.6658015928791678
+        },
+        {
+          "sigungu": "43112",
+          "n": 757,
+          "actual_mean": 40.17952443857332,
+          "predicted_mean": 42.53022101835477,
+          "log_rmse": 0.5906732154117994
+        },
+        {
+          "sigungu": "43113",
+          "n": 858,
+          "actual_mean": 44.14300699300699,
+          "predicted_mean": 46.388910183622826,
+          "log_rmse": 0.5879698409204939
+        },
+        {
+          "sigungu": "43114",
+          "n": 1175,
+          "actual_mean": 21.362042553191486,
+          "predicted_mean": 24.49672411222061,
+          "log_rmse": 0.6344440291022242
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2023,
+      "model": "baseline",
+      "n_train": 18333,
+      "n_test": 2681,
+      "test_log_rmse": 0.7070080111631467,
+      "cell_mean_mae_n20": 5.976192448844087,
+      "cells_n20": 27,
+      "cell_covered_transactions": 2351,
+      "actual_mean": 23.171503170458784,
+      "predicted_mean": 29.473504529863934,
+      "mean_ci95_approx": [
+        28.63456116459965,
+        30.31244789512822
+      ],
+      "unseen_parcel": {
+        "n": 2342,
+        "log_rmse": 0.7244029467951345,
+        "mae": 12.067745031830725
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 726,
+          "actual_mean": 16.460330578512398,
+          "predicted_mean": 20.442205456198565,
+          "log_rmse": 0.8042728363707985
+        },
+        {
+          "sigungu": "43112",
+          "n": 488,
+          "actual_mean": 28.146516393442624,
+          "predicted_mean": 39.90860302065938,
+          "log_rmse": 0.7132345191106713
+        },
+        {
+          "sigungu": "43113",
+          "n": 602,
+          "actual_mean": 31.691860465116278,
+          "predicted_mean": 41.177830123991946,
+          "log_rmse": 0.6526629110036063
+        },
+        {
+          "sigungu": "43114",
+          "n": 865,
+          "actual_mean": 20.06774566473988,
+          "predicted_mean": 23.020777427329612,
+          "log_rmse": 0.6503253047180851
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2023,
+      "model": "assessed",
+      "n_train": 18333,
+      "n_test": 2681,
+      "test_log_rmse": 0.6165873373515647,
+      "cell_mean_mae_n20": 3.143628429249919,
+      "cells_n20": 27,
+      "cell_covered_transactions": 2351,
+      "actual_mean": 23.171503170458784,
+      "predicted_mean": 26.35582121695851,
+      "mean_ci95_approx": [
+        25.696010196036287,
+        27.015632237880734
+      ],
+      "unseen_parcel": {
+        "n": 2342,
+        "log_rmse": 0.6320944806377882,
+        "mae": 9.69858002704043
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 726,
+          "actual_mean": 16.460330578512398,
+          "predicted_mean": 17.83320400643887,
+          "log_rmse": 0.6579559550526235
+        },
+        {
+          "sigungu": "43112",
+          "n": 488,
+          "actual_mean": 28.146516393442624,
+          "predicted_mean": 35.27889318243533,
+          "log_rmse": 0.6222915544367729
+        },
+        {
+          "sigungu": "43113",
+          "n": 602,
+          "actual_mean": 31.691860465116278,
+          "predicted_mean": 36.75853390491584,
+          "log_rmse": 0.5629196624821513
+        },
+        {
+          "sigungu": "43114",
+          "n": 865,
+          "actual_mean": 20.06774566473988,
+          "predicted_mean": 21.23504426613107,
+          "log_rmse": 0.6131839904445525
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2023,
+      "model": "traits",
+      "n_train": 18333,
+      "n_test": 2681,
+      "test_log_rmse": 0.6590487468466056,
+      "cell_mean_mae_n20": 5.6310192422149505,
+      "cells_n20": 27,
+      "cell_covered_transactions": 2351,
+      "actual_mean": 23.171503170458784,
+      "predicted_mean": 29.317396892889086,
+      "mean_ci95_approx": [
+        28.458628931507338,
+        30.176164854270834
+      ],
+      "unseen_parcel": {
+        "n": 2342,
+        "log_rmse": 0.6741011292101942,
+        "mae": 11.912085928323888
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 726,
+          "actual_mean": 16.460330578512398,
+          "predicted_mean": 20.121186131300664,
+          "log_rmse": 0.7210164373163642
+        },
+        {
+          "sigungu": "43112",
+          "n": 488,
+          "actual_mean": 28.146516393442624,
+          "predicted_mean": 39.432423643657216,
+          "log_rmse": 0.6594288805429955
+        },
+        {
+          "sigungu": "43113",
+          "n": 602,
+          "actual_mean": 31.691860465116278,
+          "predicted_mean": 41.10938246923722,
+          "log_rmse": 0.6344882311003139
+        },
+        {
+          "sigungu": "43114",
+          "n": 865,
+          "actual_mean": 20.06774566473988,
+          "predicted_mean": 23.12264618950963,
+          "log_rmse": 0.6199966773643241
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2023,
+      "model": "combined",
+      "n_train": 18333,
+      "n_test": 2681,
+      "test_log_rmse": 0.6033360443430906,
+      "cell_mean_mae_n20": 2.9454596833153692,
+      "cells_n20": 27,
+      "cell_covered_transactions": 2351,
+      "actual_mean": 23.171503170458784,
+      "predicted_mean": 25.868486874048347,
+      "mean_ci95_approx": [
+        25.178188761305197,
+        26.558784986791498
+      ],
+      "unseen_parcel": {
+        "n": 2342,
+        "log_rmse": 0.6174412581583687,
+        "mae": 9.299693666252454
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 726,
+          "actual_mean": 16.460330578512398,
+          "predicted_mean": 17.658022918783047,
+          "log_rmse": 0.642176084099558
+        },
+        {
+          "sigungu": "43112",
+          "n": 488,
+          "actual_mean": 28.146516393442624,
+          "predicted_mean": 34.24671413432476,
+          "log_rmse": 0.6042953520102746
+        },
+        {
+          "sigungu": "43113",
+          "n": 602,
+          "actual_mean": 31.691860465116278,
+          "predicted_mean": 36.303249039277816,
+          "log_rmse": 0.564662940891005
+        },
+        {
+          "sigungu": "43114",
+          "n": 865,
+          "actual_mean": 20.06774566473988,
+          "predicted_mean": 20.770793353862885,
+          "log_rmse": 0.5951429008069765
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2024,
+      "model": "baseline",
+      "n_train": 21014,
+      "n_test": 2748,
+      "test_log_rmse": 0.7412076423588236,
+      "cell_mean_mae_n20": 6.338397848104808,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2395,
+      "actual_mean": 27.190502183406114,
+      "predicted_mean": 33.22602846638124,
+      "mean_ci95_approx": [
+        32.19256836747511,
+        34.25948856528736
+      ],
+      "unseen_parcel": {
+        "n": 2431,
+        "log_rmse": 0.7522117257992011,
+        "mae": 15.961751091287754
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 748,
+          "actual_mean": 19.953743315508024,
+          "predicted_mean": 23.8920505844667,
+          "log_rmse": 0.7674061891194534
+        },
+        {
+          "sigungu": "43112",
+          "n": 436,
+          "actual_mean": 33.96697247706422,
+          "predicted_mean": 46.184865582270916,
+          "log_rmse": 0.815246520622823
+        },
+        {
+          "sigungu": "43113",
+          "n": 695,
+          "actual_mean": 38.032805755395685,
+          "predicted_mean": 43.016678401777035,
+          "log_rmse": 0.7494516291989692
+        },
+        {
+          "sigungu": "43114",
+          "n": 869,
+          "actual_mean": 21.348331415420024,
+          "predicted_mean": 26.928284816259353,
+          "log_rmse": 0.6691204843762353
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2024,
+      "model": "assessed",
+      "n_train": 21014,
+      "n_test": 2748,
+      "test_log_rmse": 0.6591551853643525,
+      "cell_mean_mae_n20": 4.255898760130732,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2395,
+      "actual_mean": 27.190502183406114,
+      "predicted_mean": 31.36826955722307,
+      "mean_ci95_approx": [
+        30.52288821696454,
+        32.2136508974816
+      ],
+      "unseen_parcel": {
+        "n": 2431,
+        "log_rmse": 0.6673330107650487,
+        "mae": 13.256075460299453
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 748,
+          "actual_mean": 19.953743315508024,
+          "predicted_mean": 23.01655467747107,
+          "log_rmse": 0.6521138620790918
+        },
+        {
+          "sigungu": "43112",
+          "n": 436,
+          "actual_mean": 33.96697247706422,
+          "predicted_mean": 42.70960042204018,
+          "log_rmse": 0.7128277353277016
+        },
+        {
+          "sigungu": "43113",
+          "n": 695,
+          "actual_mean": 38.032805755395685,
+          "predicted_mean": 41.788726456650174,
+          "log_rmse": 0.6801556468495762
+        },
+        {
+          "sigungu": "43114",
+          "n": 869,
+          "actual_mean": 21.348331415420024,
+          "predicted_mean": 24.53287821993009,
+          "log_rmse": 0.6188639175279924
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2024,
+      "model": "traits",
+      "n_train": 21014,
+      "n_test": 2748,
+      "test_log_rmse": 0.6920515927171222,
+      "cell_mean_mae_n20": 5.225197816440524,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2395,
+      "actual_mean": 27.190502183406114,
+      "predicted_mean": 32.361008696661784,
+      "mean_ci95_approx": [
+        30.595790449044063,
+        34.1262269442795
+      ],
+      "unseen_parcel": {
+        "n": 2431,
+        "log_rmse": 0.7007889482558958,
+        "mae": 14.982957341328897
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 748,
+          "actual_mean": 19.953743315508024,
+          "predicted_mean": 22.871150105558737,
+          "log_rmse": 0.6786374224605812
+        },
+        {
+          "sigungu": "43112",
+          "n": 436,
+          "actual_mean": 33.96697247706422,
+          "predicted_mean": 45.894469807928076,
+          "log_rmse": 0.7779255052365269
+        },
+        {
+          "sigungu": "43113",
+          "n": 695,
+          "actual_mean": 38.032805755395685,
+          "predicted_mean": 41.71772975313164,
+          "log_rmse": 0.7114203877377968
+        },
+        {
+          "sigungu": "43114",
+          "n": 869,
+          "actual_mean": 21.348331415420024,
+          "predicted_mean": 26.256180212641578,
+          "log_rmse": 0.6400680179214684
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2024,
+      "model": "combined",
+      "n_train": 21014,
+      "n_test": 2748,
+      "test_log_rmse": 0.654150372849897,
+      "cell_mean_mae_n20": 3.962469867451654,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2395,
+      "actual_mean": 27.190502183406114,
+      "predicted_mean": 28.811146791300857,
+      "mean_ci95_approx": [
+        27.375113685221205,
+        30.24717989738051
+      ],
+      "unseen_parcel": {
+        "n": 2431,
+        "log_rmse": 0.655719787602284,
+        "mae": 12.050266595299867
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 748,
+          "actual_mean": 19.953743315508024,
+          "predicted_mean": 21.41614747220142,
+          "log_rmse": 0.6313204464772052
+        },
+        {
+          "sigungu": "43112",
+          "n": 436,
+          "actual_mean": 33.96697247706422,
+          "predicted_mean": 39.00915485709139,
+          "log_rmse": 0.7006009708134507
+        },
+        {
+          "sigungu": "43113",
+          "n": 695,
+          "actual_mean": 38.032805755395685,
+          "predicted_mean": 38.401304651774055,
+          "log_rmse": 0.704368029826547
+        },
+        {
+          "sigungu": "43114",
+          "n": 869,
+          "actual_mean": 21.348331415420024,
+          "predicted_mean": 22.389936504733345,
+          "log_rmse": 0.6058373370843455
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2025,
+      "model": "baseline",
+      "n_train": 23762,
+      "n_test": 2661,
+      "test_log_rmse": 0.704334820704928,
+      "cell_mean_mae_n20": 5.266102630580521,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2361,
+      "actual_mean": 27.530214205186017,
+      "predicted_mean": 31.94449552994437,
+      "mean_ci95_approx": [
+        30.955496188548036,
+        32.9334948713407
+      ],
+      "unseen_parcel": {
+        "n": 2264,
+        "log_rmse": 0.7189542555118077,
+        "mae": 14.677810856411286
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 772,
+          "actual_mean": 24.040932642487046,
+          "predicted_mean": 26.24639706500532,
+          "log_rmse": 0.7364541556905606
+        },
+        {
+          "sigungu": "43112",
+          "n": 317,
+          "actual_mean": 37.831861198738174,
+          "predicted_mean": 47.843704833265356,
+          "log_rmse": 0.8307556586740598
+        },
+        {
+          "sigungu": "43113",
+          "n": 548,
+          "actual_mean": 37.66368613138686,
+          "predicted_mean": 45.98527086689379,
+          "log_rmse": 0.6348933755396955
+        },
+        {
+          "sigungu": "43114",
+          "n": 1024,
+          "actual_mean": 21.548730468749998,
+          "predicted_mean": 23.804395706830984,
+          "log_rmse": 0.671483281846099
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2025,
+      "model": "assessed",
+      "n_train": 23762,
+      "n_test": 2661,
+      "test_log_rmse": 0.6261341409724857,
+      "cell_mean_mae_n20": 3.6749045594125707,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2361,
+      "actual_mean": 27.530214205186017,
+      "predicted_mean": 30.777270835827984,
+      "mean_ci95_approx": [
+        29.94921214172226,
+        31.60532952993371
+      ],
+      "unseen_parcel": {
+        "n": 2264,
+        "log_rmse": 0.6363557843520498,
+        "mae": 12.039202593851087
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 772,
+          "actual_mean": 24.040932642487046,
+          "predicted_mean": 26.28562395738747,
+          "log_rmse": 0.6372937889531773
+        },
+        {
+          "sigungu": "43112",
+          "n": 317,
+          "actual_mean": 37.831861198738174,
+          "predicted_mean": 44.27910447236329,
+          "log_rmse": 0.7040897871402088
+        },
+        {
+          "sigungu": "43113",
+          "n": 548,
+          "actual_mean": 37.66368613138686,
+          "predicted_mean": 43.96802651139648,
+          "log_rmse": 0.5491112220258301
+        },
+        {
+          "sigungu": "43114",
+          "n": 1024,
+          "actual_mean": 21.548730468749998,
+          "predicted_mean": 22.92466929008858,
+          "log_rmse": 0.6306783245153148
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2025,
+      "model": "traits",
+      "n_train": 23762,
+      "n_test": 2661,
+      "test_log_rmse": 0.6743776215267228,
+      "cell_mean_mae_n20": 6.107886786142685,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2361,
+      "actual_mean": 27.530214205186017,
+      "predicted_mean": 32.96029768499987,
+      "mean_ci95_approx": [
+        31.768114135470867,
+        34.15248123452888
+      ],
+      "unseen_parcel": {
+        "n": 2264,
+        "log_rmse": 0.6903092675848804,
+        "mae": 14.664038875278449
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 772,
+          "actual_mean": 24.040932642487046,
+          "predicted_mean": 27.941730079558592,
+          "log_rmse": 0.6998901664960127
+        },
+        {
+          "sigungu": "43112",
+          "n": 317,
+          "actual_mean": 37.831861198738174,
+          "predicted_mean": 48.041038809762085,
+          "log_rmse": 0.7655026277644253
+        },
+        {
+          "sigungu": "43113",
+          "n": 548,
+          "actual_mean": 37.66368613138686,
+          "predicted_mean": 47.0765459345893,
+          "log_rmse": 0.6148170052902788
+        },
+        {
+          "sigungu": "43114",
+          "n": 1024,
+          "actual_mean": 21.548730468749998,
+          "predicted_mean": 24.520878948746006,
+          "log_rmse": 0.6548481276751066
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2025,
+      "model": "combined",
+      "n_train": 23762,
+      "n_test": 2661,
+      "test_log_rmse": 0.6217375271630393,
+      "cell_mean_mae_n20": 4.220119247597947,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2361,
+      "actual_mean": 27.530214205186017,
+      "predicted_mean": 31.256396978551855,
+      "mean_ci95_approx": [
+        30.216534026277483,
+        32.29625993082623
+      ],
+      "unseen_parcel": {
+        "n": 2264,
+        "log_rmse": 0.6350501922862145,
+        "mae": 12.065843313604761
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 772,
+          "actual_mean": 24.040932642487046,
+          "predicted_mean": 27.472091463725114,
+          "log_rmse": 0.6320134899566959
+        },
+        {
+          "sigungu": "43112",
+          "n": 317,
+          "actual_mean": 37.831861198738174,
+          "predicted_mean": 45.02265347381882,
+          "log_rmse": 0.697942205448792
+        },
+        {
+          "sigungu": "43113",
+          "n": 548,
+          "actual_mean": 37.66368613138686,
+          "predicted_mean": 43.968794409421335,
+          "log_rmse": 0.554665851699885
+        },
+        {
+          "sigungu": "43114",
+          "n": 1024,
+          "actual_mean": 21.548730468749998,
+          "predicted_mean": 23.044665295280502,
+          "log_rmse": 0.6228467261679623
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2026,
+      "model": "baseline",
+      "n_train": 26423,
+      "n_test": 1734,
+      "test_log_rmse": 0.7823104905259123,
+      "cell_mean_mae_n20": 5.052334883644754,
+      "cells_n20": 23,
+      "cell_covered_transactions": 1461,
+      "actual_mean": 25.545674740484426,
+      "predicted_mean": 30.40353117968549,
+      "mean_ci95_approx": [
+        29.483974701540916,
+        31.323087657830065
+      ],
+      "unseen_parcel": {
+        "n": 1496,
+        "log_rmse": 0.8053970414093256,
+        "mae": 15.037309927229606
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 505,
+          "actual_mean": 17.673663366336633,
+          "predicted_mean": 25.290970095254018,
+          "log_rmse": 0.8088803203637857
+        },
+        {
+          "sigungu": "43112",
+          "n": 228,
+          "actual_mean": 30.24122807017544,
+          "predicted_mean": 35.10836806816028,
+          "log_rmse": 0.8185590436288996
+        },
+        {
+          "sigungu": "43113",
+          "n": 408,
+          "actual_mean": 36.2953431372549,
+          "predicted_mean": 39.64564252101295,
+          "log_rmse": 0.9114294297899368
+        },
+        {
+          "sigungu": "43114",
+          "n": 593,
+          "actual_mean": 23.04806070826307,
+          "predicted_mean": 26.58963423163159,
+          "log_rmse": 0.6350017736811869
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2026,
+      "model": "assessed",
+      "n_train": 26423,
+      "n_test": 1734,
+      "test_log_rmse": 0.7090064830100277,
+      "cell_mean_mae_n20": 4.284654617370418,
+      "cells_n20": 23,
+      "cell_covered_transactions": 1461,
+      "actual_mean": 25.545674740484426,
+      "predicted_mean": 30.54459487478802,
+      "mean_ci95_approx": [
+        29.721142166832397,
+        31.368047582743646
+      ],
+      "unseen_parcel": {
+        "n": 1496,
+        "log_rmse": 0.727324028345954,
+        "mae": 13.673192282075178
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 505,
+          "actual_mean": 17.673663366336633,
+          "predicted_mean": 26.571904138579374,
+          "log_rmse": 0.7122864467775476
+        },
+        {
+          "sigungu": "43112",
+          "n": 228,
+          "actual_mean": 30.24122807017544,
+          "predicted_mean": 33.84272314654619,
+          "log_rmse": 0.7327872138375134
+        },
+        {
+          "sigungu": "43113",
+          "n": 408,
+          "actual_mean": 36.2953431372549,
+          "predicted_mean": 39.568083268890966,
+          "log_rmse": 0.8566701518290175
+        },
+        {
+          "sigungu": "43114",
+          "n": 593,
+          "actual_mean": 23.04806070826307,
+          "predicted_mean": 26.451259817503875,
+          "log_rmse": 0.5713755110476622
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2026,
+      "model": "traits",
+      "n_train": 26423,
+      "n_test": 1734,
+      "test_log_rmse": 0.7185954596940473,
+      "cell_mean_mae_n20": 4.2364042954467775,
+      "cells_n20": 23,
+      "cell_covered_transactions": 1461,
+      "actual_mean": 25.545674740484426,
+      "predicted_mean": 30.27541750682968,
+      "mean_ci95_approx": [
+        29.334653002026393,
+        31.216182011632966
+      ],
+      "unseen_parcel": {
+        "n": 1496,
+        "log_rmse": 0.7377915636925841,
+        "mae": 13.84729947525599
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 505,
+          "actual_mean": 17.673663366336633,
+          "predicted_mean": 23.630608664818844,
+          "log_rmse": 0.7093022558210869
+        },
+        {
+          "sigungu": "43112",
+          "n": 228,
+          "actual_mean": 30.24122807017544,
+          "predicted_mean": 35.04936227095182,
+          "log_rmse": 0.7500884115479938
+        },
+        {
+          "sigungu": "43113",
+          "n": 408,
+          "actual_mean": 36.2953431372549,
+          "predicted_mean": 40.25758514441507,
+          "log_rmse": 0.8515811011950696
+        },
+        {
+          "sigungu": "43114",
+          "n": 593,
+          "actual_mean": 23.04806070826307,
+          "predicted_mean": 27.230636162581433,
+          "log_rmse": 0.6051683472084154
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "annual",
+      "test_year": 2026,
+      "model": "combined",
+      "n_train": 26423,
+      "n_test": 1734,
+      "test_log_rmse": 0.7008842286940971,
+      "cell_mean_mae_n20": 4.377352531785554,
+      "cells_n20": 23,
+      "cell_covered_transactions": 1461,
+      "actual_mean": 25.545674740484426,
+      "predicted_mean": 30.696197406288494,
+      "mean_ci95_approx": [
+        29.783023720844884,
+        31.609371091732104
+      ],
+      "unseen_parcel": {
+        "n": 1496,
+        "log_rmse": 0.7199811392071144,
+        "mae": 13.160519667802463
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 505,
+          "actual_mean": 17.673663366336633,
+          "predicted_mean": 26.451642861005215,
+          "log_rmse": 0.6936436604955063
+        },
+        {
+          "sigungu": "43112",
+          "n": 228,
+          "actual_mean": 30.24122807017544,
+          "predicted_mean": 33.380514996597284,
+          "log_rmse": 0.715317560213275
+        },
+        {
+          "sigungu": "43113",
+          "n": 408,
+          "actual_mean": 36.2953431372549,
+          "predicted_mean": 40.8895119642667,
+          "log_rmse": 0.8676918833481524
+        },
+        {
+          "sigungu": "43114",
+          "n": 593,
+          "actual_mean": 23.04806070826307,
+          "predicted_mean": 26.265511563324825,
+          "log_rmse": 0.5585300239535861
+        }
+      ]
+    },
+    {
+      "scope": "trait_same_sample",
+      "policy": "annual",
+      "test_year": 2024,
+      "model": "baseline",
+      "n_train": 2678,
+      "n_test": 2745,
+      "test_log_rmse": 0.8432169622441013,
+      "cell_mean_mae_n20": 3.285056997110203,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2392,
+      "actual_mean": 27.14007285974499,
+      "predicted_mean": 27.553503087730903,
+      "mean_ci95_approx": [
+        26.23760566831969,
+        28.869400507142114
+      ],
+      "unseen_parcel": {
+        "n": 2684,
+        "log_rmse": 0.8428600747345868,
+        "mae": 16.759923217997457
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 748,
+          "actual_mean": 19.953743315508024,
+          "predicted_mean": 24.874613330584367,
+          "log_rmse": 0.882440777898575
+        },
+        {
+          "sigungu": "43112",
+          "n": 435,
+          "actual_mean": 34.02413793103448,
+          "predicted_mean": 32.68120044113818,
+          "log_rmse": 0.8613389315563851
+        },
+        {
+          "sigungu": "43113",
+          "n": 695,
+          "actual_mean": 38.032805755395685,
+          "predicted_mean": 30.632084211086294,
+          "log_rmse": 0.9290494212298127
+        },
+        {
+          "sigungu": "43114",
+          "n": 867,
+          "actual_mean": 21.15432525951557,
+          "predicted_mean": 24.824145889208932,
+          "log_rmse": 0.717760338206363
+        }
+      ]
+    },
+    {
+      "scope": "trait_same_sample",
+      "policy": "annual",
+      "test_year": 2024,
+      "model": "assessed",
+      "n_train": 2678,
+      "n_test": 2745,
+      "test_log_rmse": 0.6727486283778854,
+      "cell_mean_mae_n20": 1.920232643960851,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2392,
+      "actual_mean": 27.14007285974499,
+      "predicted_mean": 28.452904260787744,
+      "mean_ci95_approx": [
+        27.43471262080096,
+        29.47109590077453
+      ],
+      "unseen_parcel": {
+        "n": 2684,
+        "log_rmse": 0.6723443476660931,
+        "mae": 12.860139803601383
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 748,
+          "actual_mean": 19.953743315508024,
+          "predicted_mean": 23.329232364362436,
+          "log_rmse": 0.6886108193491525
+        },
+        {
+          "sigungu": "43112",
+          "n": 435,
+          "actual_mean": 34.02413793103448,
+          "predicted_mean": 36.24620683055661,
+          "log_rmse": 0.7130183858812602
+        },
+        {
+          "sigungu": "43113",
+          "n": 695,
+          "actual_mean": 38.032805755395685,
+          "predicted_mean": 36.00516193110039,
+          "log_rmse": 0.6954335590474506
+        },
+        {
+          "sigungu": "43114",
+          "n": 867,
+          "actual_mean": 21.15432525951557,
+          "predicted_mean": 22.909191319391404,
+          "log_rmse": 0.6173182850431065
+        }
+      ]
+    },
+    {
+      "scope": "trait_same_sample",
+      "policy": "annual",
+      "test_year": 2025,
+      "model": "baseline",
+      "n_train": 5423,
+      "n_test": 2656,
+      "test_log_rmse": 0.7929504383291412,
+      "cell_mean_mae_n20": 3.578536870105209,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2356,
+      "actual_mean": 27.54559487951807,
+      "predicted_mean": 28.344948603662335,
+      "mean_ci95_approx": [
+        26.298536656859707,
+        30.391360550464963
+      ],
+      "unseen_parcel": {
+        "n": 2539,
+        "log_rmse": 0.7922982702000845,
+        "mae": 15.854175392137579
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 770,
+          "actual_mean": 24.09649350649351,
+          "predicted_mean": 28.115650750013412,
+          "log_rmse": 0.8334280904898422
+        },
+        {
+          "sigungu": "43112",
+          "n": 317,
+          "actual_mean": 37.831861198738174,
+          "predicted_mean": 38.46924041832691,
+          "log_rmse": 0.8541313964398178
+        },
+        {
+          "sigungu": "43113",
+          "n": 547,
+          "actual_mean": 37.64570383912249,
+          "predicted_mean": 32.957319083617335,
+          "log_rmse": 0.7898116900600408
+        },
+        {
+          "sigungu": "43114",
+          "n": 1022,
+          "actual_mean": 21.54784735812133,
+          "predicted_mean": 22.908737438814597,
+          "log_rmse": 0.7420063581463158
+        }
+      ]
+    },
+    {
+      "scope": "trait_same_sample",
+      "policy": "annual",
+      "test_year": 2025,
+      "model": "assessed",
+      "n_train": 5423,
+      "n_test": 2656,
+      "test_log_rmse": 0.6388959059070562,
+      "cell_mean_mae_n20": 2.657536501734107,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2356,
+      "actual_mean": 27.54559487951807,
+      "predicted_mean": 27.207015426234772,
+      "mean_ci95_approx": [
+        25.628159643790248,
+        28.785871208679296
+      ],
+      "unseen_parcel": {
+        "n": 2539,
+        "log_rmse": 0.6315731720219929,
+        "mae": 11.668350563009776
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 770,
+          "actual_mean": 24.09649350649351,
+          "predicted_mean": 24.59666663550785,
+          "log_rmse": 0.6428983122497793
+        },
+        {
+          "sigungu": "43112",
+          "n": 317,
+          "actual_mean": 37.831861198738174,
+          "predicted_mean": 37.69327846379143,
+          "log_rmse": 0.7195769689847904
+        },
+        {
+          "sigungu": "43113",
+          "n": 547,
+          "actual_mean": 37.64570383912249,
+          "predicted_mean": 36.211704065202056,
+          "log_rmse": 0.5643396097304728
+        },
+        {
+          "sigungu": "43114",
+          "n": 1022,
+          "actual_mean": 21.54784735812133,
+          "predicted_mean": 21.10159321531419,
+          "log_rmse": 0.6467927460228696
+        }
+      ]
+    },
+    {
+      "scope": "trait_same_sample",
+      "policy": "annual",
+      "test_year": 2026,
+      "model": "baseline",
+      "n_train": 8079,
+      "n_test": 1729,
+      "test_log_rmse": 0.8132493133308556,
+      "cell_mean_mae_n20": 4.096296802330244,
+      "cells_n20": 23,
+      "cell_covered_transactions": 1457,
+      "actual_mean": 25.37108155002892,
+      "predicted_mean": 28.651678316231347,
+      "mean_ci95_approx": [
+        27.141221488576374,
+        30.16213514388632
+      ],
+      "unseen_parcel": {
+        "n": 1637,
+        "log_rmse": 0.8213275784338807,
+        "mae": 15.197737923633566
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 505,
+          "actual_mean": 17.673663366336633,
+          "predicted_mean": 25.552465746033732,
+          "log_rmse": 0.8566318582235327
+        },
+        {
+          "sigungu": "43112",
+          "n": 228,
+          "actual_mean": 30.24122807017544,
+          "predicted_mean": 29.285934331655067,
+          "log_rmse": 0.8784957594523319
+        },
+        {
+          "sigungu": "43113",
+          "n": 404,
+          "actual_mean": 36.01757425742575,
+          "predicted_mean": 34.112179812700454,
+          "log_rmse": 0.9445076259665631
+        },
+        {
+          "sigungu": "43114",
+          "n": 592,
+          "actual_mean": 22.796114864864865,
+          "predicted_mean": 27.324734687615912,
+          "log_rmse": 0.6321508763682936
+        }
+      ]
+    },
+    {
+      "scope": "trait_same_sample",
+      "policy": "annual",
+      "test_year": 2026,
+      "model": "assessed",
+      "n_train": 8079,
+      "n_test": 1729,
+      "test_log_rmse": 0.6940988942598586,
+      "cell_mean_mae_n20": 2.625221197571167,
+      "cells_n20": 23,
+      "cell_covered_transactions": 1457,
+      "actual_mean": 25.37108155002892,
+      "predicted_mean": 28.306134191821563,
+      "mean_ci95_approx": [
+        27.018445001502087,
+        29.59382338214104
+      ],
+      "unseen_parcel": {
+        "n": 1637,
+        "log_rmse": 0.697877892282952,
+        "mae": 12.654993444538489
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 505,
+          "actual_mean": 17.673663366336633,
+          "predicted_mean": 24.9149597918876,
+          "log_rmse": 0.685570572879573
+        },
+        {
+          "sigungu": "43112",
+          "n": 228,
+          "actual_mean": 30.24122807017544,
+          "predicted_mean": 29.95506571166439,
+          "log_rmse": 0.7238041095115418
+        },
+        {
+          "sigungu": "43113",
+          "n": 404,
+          "actual_mean": 36.01757425742575,
+          "predicted_mean": 36.414555504551686,
+          "log_rmse": 0.8492529949578559
+        },
+        {
+          "sigungu": "43114",
+          "n": 592,
+          "actual_mean": 22.796114864864865,
+          "predicted_mean": 25.030432291651834,
+          "log_rmse": 0.5587265400941117
+        }
+      ]
+    },
+    {
+      "scope": "plan_same_sample",
+      "policy": "annual",
+      "test_year": 2024,
+      "model": "baseline",
+      "n_train": 2678,
+      "n_test": 2745,
+      "test_log_rmse": 0.8432169622441013,
+      "cell_mean_mae_n20": 3.285056997110203,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2392,
+      "actual_mean": 27.14007285974499,
+      "predicted_mean": 27.553503087730903,
+      "mean_ci95_approx": [
+        26.23760566831969,
+        28.869400507142114
+      ],
+      "unseen_parcel": {
+        "n": 2684,
+        "log_rmse": 0.8428600747345868,
+        "mae": 16.759923217997457
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 748,
+          "actual_mean": 19.953743315508024,
+          "predicted_mean": 24.874613330584367,
+          "log_rmse": 0.882440777898575
+        },
+        {
+          "sigungu": "43112",
+          "n": 435,
+          "actual_mean": 34.02413793103448,
+          "predicted_mean": 32.68120044113818,
+          "log_rmse": 0.8613389315563851
+        },
+        {
+          "sigungu": "43113",
+          "n": 695,
+          "actual_mean": 38.032805755395685,
+          "predicted_mean": 30.632084211086294,
+          "log_rmse": 0.9290494212298127
+        },
+        {
+          "sigungu": "43114",
+          "n": 867,
+          "actual_mean": 21.15432525951557,
+          "predicted_mean": 24.824145889208932,
+          "log_rmse": 0.717760338206363
+        }
+      ]
+    },
+    {
+      "scope": "plan_same_sample",
+      "policy": "annual",
+      "test_year": 2024,
+      "model": "assessed",
+      "n_train": 2678,
+      "n_test": 2745,
+      "test_log_rmse": 0.6727486283778854,
+      "cell_mean_mae_n20": 1.920232643960851,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2392,
+      "actual_mean": 27.14007285974499,
+      "predicted_mean": 28.452904260787744,
+      "mean_ci95_approx": [
+        27.43471262080096,
+        29.47109590077453
+      ],
+      "unseen_parcel": {
+        "n": 2684,
+        "log_rmse": 0.6723443476660931,
+        "mae": 12.860139803601383
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 748,
+          "actual_mean": 19.953743315508024,
+          "predicted_mean": 23.329232364362436,
+          "log_rmse": 0.6886108193491525
+        },
+        {
+          "sigungu": "43112",
+          "n": 435,
+          "actual_mean": 34.02413793103448,
+          "predicted_mean": 36.24620683055661,
+          "log_rmse": 0.7130183858812602
+        },
+        {
+          "sigungu": "43113",
+          "n": 695,
+          "actual_mean": 38.032805755395685,
+          "predicted_mean": 36.00516193110039,
+          "log_rmse": 0.6954335590474506
+        },
+        {
+          "sigungu": "43114",
+          "n": 867,
+          "actual_mean": 21.15432525951557,
+          "predicted_mean": 22.909191319391404,
+          "log_rmse": 0.6173182850431065
+        }
+      ]
+    },
+    {
+      "scope": "plan_same_sample",
+      "policy": "annual",
+      "test_year": 2025,
+      "model": "baseline",
+      "n_train": 5423,
+      "n_test": 2656,
+      "test_log_rmse": 0.7929504383291412,
+      "cell_mean_mae_n20": 3.578536870105209,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2356,
+      "actual_mean": 27.54559487951807,
+      "predicted_mean": 28.344948603662335,
+      "mean_ci95_approx": [
+        26.298536656859707,
+        30.391360550464963
+      ],
+      "unseen_parcel": {
+        "n": 2539,
+        "log_rmse": 0.7922982702000845,
+        "mae": 15.854175392137579
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 770,
+          "actual_mean": 24.09649350649351,
+          "predicted_mean": 28.115650750013412,
+          "log_rmse": 0.8334280904898422
+        },
+        {
+          "sigungu": "43112",
+          "n": 317,
+          "actual_mean": 37.831861198738174,
+          "predicted_mean": 38.46924041832691,
+          "log_rmse": 0.8541313964398178
+        },
+        {
+          "sigungu": "43113",
+          "n": 547,
+          "actual_mean": 37.64570383912249,
+          "predicted_mean": 32.957319083617335,
+          "log_rmse": 0.7898116900600408
+        },
+        {
+          "sigungu": "43114",
+          "n": 1022,
+          "actual_mean": 21.54784735812133,
+          "predicted_mean": 22.908737438814597,
+          "log_rmse": 0.7420063581463158
+        }
+      ]
+    },
+    {
+      "scope": "plan_same_sample",
+      "policy": "annual",
+      "test_year": 2025,
+      "model": "assessed",
+      "n_train": 5423,
+      "n_test": 2656,
+      "test_log_rmse": 0.6388959059070562,
+      "cell_mean_mae_n20": 2.657536501734107,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2356,
+      "actual_mean": 27.54559487951807,
+      "predicted_mean": 27.207015426234772,
+      "mean_ci95_approx": [
+        25.628159643790248,
+        28.785871208679296
+      ],
+      "unseen_parcel": {
+        "n": 2539,
+        "log_rmse": 0.6315731720219929,
+        "mae": 11.668350563009776
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 770,
+          "actual_mean": 24.09649350649351,
+          "predicted_mean": 24.59666663550785,
+          "log_rmse": 0.6428983122497793
+        },
+        {
+          "sigungu": "43112",
+          "n": 317,
+          "actual_mean": 37.831861198738174,
+          "predicted_mean": 37.69327846379143,
+          "log_rmse": 0.7195769689847904
+        },
+        {
+          "sigungu": "43113",
+          "n": 547,
+          "actual_mean": 37.64570383912249,
+          "predicted_mean": 36.211704065202056,
+          "log_rmse": 0.5643396097304728
+        },
+        {
+          "sigungu": "43114",
+          "n": 1022,
+          "actual_mean": 21.54784735812133,
+          "predicted_mean": 21.10159321531419,
+          "log_rmse": 0.6467927460228696
+        }
+      ]
+    },
+    {
+      "scope": "plan_same_sample",
+      "policy": "annual",
+      "test_year": 2026,
+      "model": "baseline",
+      "n_train": 8079,
+      "n_test": 1729,
+      "test_log_rmse": 0.8132493133308556,
+      "cell_mean_mae_n20": 4.096296802330244,
+      "cells_n20": 23,
+      "cell_covered_transactions": 1457,
+      "actual_mean": 25.37108155002892,
+      "predicted_mean": 28.651678316231347,
+      "mean_ci95_approx": [
+        27.141221488576374,
+        30.16213514388632
+      ],
+      "unseen_parcel": {
+        "n": 1637,
+        "log_rmse": 0.8213275784338807,
+        "mae": 15.197737923633566
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 505,
+          "actual_mean": 17.673663366336633,
+          "predicted_mean": 25.552465746033732,
+          "log_rmse": 0.8566318582235327
+        },
+        {
+          "sigungu": "43112",
+          "n": 228,
+          "actual_mean": 30.24122807017544,
+          "predicted_mean": 29.285934331655067,
+          "log_rmse": 0.8784957594523319
+        },
+        {
+          "sigungu": "43113",
+          "n": 404,
+          "actual_mean": 36.01757425742575,
+          "predicted_mean": 34.112179812700454,
+          "log_rmse": 0.9445076259665631
+        },
+        {
+          "sigungu": "43114",
+          "n": 592,
+          "actual_mean": 22.796114864864865,
+          "predicted_mean": 27.324734687615912,
+          "log_rmse": 0.6321508763682936
+        }
+      ]
+    },
+    {
+      "scope": "plan_same_sample",
+      "policy": "annual",
+      "test_year": 2026,
+      "model": "assessed",
+      "n_train": 8079,
+      "n_test": 1729,
+      "test_log_rmse": 0.6940988942598586,
+      "cell_mean_mae_n20": 2.625221197571167,
+      "cells_n20": 23,
+      "cell_covered_transactions": 1457,
+      "actual_mean": 25.37108155002892,
+      "predicted_mean": 28.306134191821563,
+      "mean_ci95_approx": [
+        27.018445001502087,
+        29.59382338214104
+      ],
+      "unseen_parcel": {
+        "n": 1637,
+        "log_rmse": 0.697877892282952,
+        "mae": 12.654993444538489
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 505,
+          "actual_mean": 17.673663366336633,
+          "predicted_mean": 24.9149597918876,
+          "log_rmse": 0.685570572879573
+        },
+        {
+          "sigungu": "43112",
+          "n": 228,
+          "actual_mean": 30.24122807017544,
+          "predicted_mean": 29.95506571166439,
+          "log_rmse": 0.7238041095115418
+        },
+        {
+          "sigungu": "43113",
+          "n": 404,
+          "actual_mean": 36.01757425742575,
+          "predicted_mean": 36.414555504551686,
+          "log_rmse": 0.8492529949578559
+        },
+        {
+          "sigungu": "43114",
+          "n": 592,
+          "actual_mean": 22.796114864864865,
+          "predicted_mean": 25.030432291651834,
+          "log_rmse": 0.5587265400941117
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2020,
+      "model": "baseline",
+      "n_train": 1300,
+      "n_test": 5022,
+      "test_log_rmse": 0.8219114557654157,
+      "cell_mean_mae_n20": 4.697423322028502,
+      "cells_n20": 36,
+      "cell_covered_transactions": 4679,
+      "actual_mean": 23.321863799283154,
+      "predicted_mean": 21.843007398485728,
+      "mean_ci95_approx": [
+        20.483396802432534,
+        23.202617994538922
+      ],
+      "unseen_parcel": {
+        "n": 4965,
+        "log_rmse": 0.8198608945631216,
+        "mae": 12.97114837671207
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 1234,
+          "actual_mean": 21.091166936790923,
+          "predicted_mean": 21.271707756102753,
+          "log_rmse": 0.8488662269423085
+        },
+        {
+          "sigungu": "43112",
+          "n": 753,
+          "actual_mean": 28.056972111553787,
+          "predicted_mean": 26.559174162629112,
+          "log_rmse": 0.9041993417316979
+        },
+        {
+          "sigungu": "43113",
+          "n": 1540,
+          "actual_mean": 28.750389610389604,
+          "predicted_mean": 23.0775627680551,
+          "log_rmse": 0.8749610673821187
+        },
+        {
+          "sigungu": "43114",
+          "n": 1495,
+          "actual_mean": 17.186220735785955,
+          "predicted_mean": 18.66741871364546,
+          "log_rmse": 0.6885461629677261
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2020,
+      "model": "assessed",
+      "n_train": 1300,
+      "n_test": 5022,
+      "test_log_rmse": 0.5931211958629103,
+      "cell_mean_mae_n20": 2.530166054604921,
+      "cells_n20": 36,
+      "cell_covered_transactions": 4679,
+      "actual_mean": 23.321863799283154,
+      "predicted_mean": 22.2619249739952,
+      "mean_ci95_approx": [
+        21.089498894456025,
+        23.434351053534375
+      ],
+      "unseen_parcel": {
+        "n": 4965,
+        "log_rmse": 0.5918780155000133,
+        "mae": 8.753086385279467
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 1234,
+          "actual_mean": 21.091166936790923,
+          "predicted_mean": 17.282733611757063,
+          "log_rmse": 0.6225333597753927
+        },
+        {
+          "sigungu": "43112",
+          "n": 753,
+          "actual_mean": 28.056972111553787,
+          "predicted_mean": 28.797335111113178,
+          "log_rmse": 0.650395414705781
+        },
+        {
+          "sigungu": "43113",
+          "n": 1540,
+          "actual_mean": 28.750389610389604,
+          "predicted_mean": 27.240798215495705,
+          "log_rmse": 0.5815613105912163
+        },
+        {
+          "sigungu": "43114",
+          "n": 1495,
+          "actual_mean": 17.186220735785955,
+          "predicted_mean": 17.951352074892366,
+          "log_rmse": 0.5480831123073389
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2020,
+      "model": "traits",
+      "n_train": 1300,
+      "n_test": 5022,
+      "test_log_rmse": 0.794086896017766,
+      "cell_mean_mae_n20": 4.203059450501907,
+      "cells_n20": 36,
+      "cell_covered_transactions": 4679,
+      "actual_mean": 23.321863799283154,
+      "predicted_mean": 21.410955827736665,
+      "mean_ci95_approx": [
+        19.979633556156777,
+        22.84227809931655
+      ],
+      "unseen_parcel": {
+        "n": 4965,
+        "log_rmse": 0.7932106528540525,
+        "mae": 12.582932402138285
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 1234,
+          "actual_mean": 21.091166936790923,
+          "predicted_mean": 20.841358760590353,
+          "log_rmse": 0.7866991512217222
+        },
+        {
+          "sigungu": "43112",
+          "n": 753,
+          "actual_mean": 28.056972111553787,
+          "predicted_mean": 25.409275624047766,
+          "log_rmse": 0.8853752155631445
+        },
+        {
+          "sigungu": "43113",
+          "n": 1540,
+          "actual_mean": 28.750389610389604,
+          "predicted_mean": 22.88400042391433,
+          "log_rmse": 0.850558491634446
+        },
+        {
+          "sigungu": "43114",
+          "n": 1495,
+          "actual_mean": 17.186220735785955,
+          "predicted_mean": 18.349858366949167,
+          "log_rmse": 0.6836085016112468
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2020,
+      "model": "combined",
+      "n_train": 1300,
+      "n_test": 5022,
+      "test_log_rmse": 0.5952457397279746,
+      "cell_mean_mae_n20": 2.4338509265457096,
+      "cells_n20": 36,
+      "cell_covered_transactions": 4679,
+      "actual_mean": 23.321863799283154,
+      "predicted_mean": 22.20621230288389,
+      "mean_ci95_approx": [
+        20.987085760895397,
+        23.425338844872385
+      ],
+      "unseen_parcel": {
+        "n": 4965,
+        "log_rmse": 0.5945527344381928,
+        "mae": 8.884989729946131
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 1234,
+          "actual_mean": 21.091166936790923,
+          "predicted_mean": 17.586948153886865,
+          "log_rmse": 0.6181761885486211
+        },
+        {
+          "sigungu": "43112",
+          "n": 753,
+          "actual_mean": 28.056972111553787,
+          "predicted_mean": 28.155445581215254,
+          "log_rmse": 0.6523025080843434
+        },
+        {
+          "sigungu": "43113",
+          "n": 1540,
+          "actual_mean": 28.750389610389604,
+          "predicted_mean": 27.985239580660227,
+          "log_rmse": 0.5864758372505022
+        },
+        {
+          "sigungu": "43114",
+          "n": 1495,
+          "actual_mean": 17.186220735785955,
+          "predicted_mean": 17.06955497412352,
+          "log_rmse": 0.5533298542423173
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2021,
+      "model": "baseline",
+      "n_train": 6322,
+      "n_test": 5464,
+      "test_log_rmse": 0.7415227772163174,
+      "cell_mean_mae_n20": 4.299396094796404,
+      "cells_n20": 34,
+      "cell_covered_transactions": 4978,
+      "actual_mean": 29.74754758418741,
+      "predicted_mean": 29.759162792715706,
+      "mean_ci95_approx": [
+        27.877080027099716,
+        31.641245558331697
+      ],
+      "unseen_parcel": {
+        "n": 5223,
+        "log_rmse": 0.7438296056495299,
+        "mae": 14.943285826378487
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 1350,
+          "actual_mean": 18.852740740740742,
+          "predicted_mean": 22.012935184613468,
+          "log_rmse": 0.8066865117902225
+        },
+        {
+          "sigungu": "43112",
+          "n": 973,
+          "actual_mean": 40.17862281603289,
+          "predicted_mean": 31.47700971440523,
+          "log_rmse": 0.7869190966845231
+        },
+        {
+          "sigungu": "43113",
+          "n": 1550,
+          "actual_mean": 41.735290322580646,
+          "predicted_mean": 42.09350186958271,
+          "log_rmse": 0.7478587439172834
+        },
+        {
+          "sigungu": "43114",
+          "n": 1591,
+          "actual_mean": 20.933940917661843,
+          "predicted_mean": 23.264955782653022,
+          "log_rmse": 0.6423579157506494
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2021,
+      "model": "assessed",
+      "n_train": 6322,
+      "n_test": 5464,
+      "test_log_rmse": 0.6084675296156228,
+      "cell_mean_mae_n20": 2.908292388029483,
+      "cells_n20": 34,
+      "cell_covered_transactions": 4978,
+      "actual_mean": 29.74754758418741,
+      "predicted_mean": 27.925843021243395,
+      "mean_ci95_approx": [
+        26.521971221933818,
+        29.329714820552972
+      ],
+      "unseen_parcel": {
+        "n": 5223,
+        "log_rmse": 0.6082486705329763,
+        "mae": 11.633956577402246
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 1350,
+          "actual_mean": 18.852740740740742,
+          "predicted_mean": 19.671773263429472,
+          "log_rmse": 0.6275863189738139
+        },
+        {
+          "sigungu": "43112",
+          "n": 973,
+          "actual_mean": 40.17862281603289,
+          "predicted_mean": 32.04738748641908,
+          "log_rmse": 0.6761080371981876
+        },
+        {
+          "sigungu": "43113",
+          "n": 1550,
+          "actual_mean": 41.735290322580646,
+          "predicted_mean": 39.53044666149708,
+          "log_rmse": 0.572407948720448
+        },
+        {
+          "sigungu": "43114",
+          "n": 1591,
+          "actual_mean": 20.933940917661843,
+          "predicted_mean": 21.103464495812627,
+          "log_rmse": 0.5818304056268812
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2021,
+      "model": "traits",
+      "n_train": 6322,
+      "n_test": 5464,
+      "test_log_rmse": 0.7112674589500709,
+      "cell_mean_mae_n20": 4.117678074552682,
+      "cells_n20": 34,
+      "cell_covered_transactions": 4978,
+      "actual_mean": 29.74754758418741,
+      "predicted_mean": 29.938925629445034,
+      "mean_ci95_approx": [
+        28.12701354806254,
+        31.75083771082753
+      ],
+      "unseen_parcel": {
+        "n": 5223,
+        "log_rmse": 0.7127603076302385,
+        "mae": 14.890831778673883
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 1350,
+          "actual_mean": 18.852740740740742,
+          "predicted_mean": 22.008277153866022,
+          "log_rmse": 0.7650487672387304
+        },
+        {
+          "sigungu": "43112",
+          "n": 973,
+          "actual_mean": 40.17862281603289,
+          "predicted_mean": 29.93616945870348,
+          "log_rmse": 0.7675567426192665
+        },
+        {
+          "sigungu": "43113",
+          "n": 1550,
+          "actual_mean": 41.735290322580646,
+          "predicted_mean": 43.292695422873486,
+          "log_rmse": 0.7151134497132166
+        },
+        {
+          "sigungu": "43114",
+          "n": 1591,
+          "actual_mean": 20.933940917661843,
+          "predicted_mean": 23.660304646634902,
+          "log_rmse": 0.6182862122069052
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2021,
+      "model": "combined",
+      "n_train": 6322,
+      "n_test": 5464,
+      "test_log_rmse": 0.6015801435305557,
+      "cell_mean_mae_n20": 3.0331119659836365,
+      "cells_n20": 34,
+      "cell_covered_transactions": 4978,
+      "actual_mean": 29.74754758418741,
+      "predicted_mean": 27.74403943601211,
+      "mean_ci95_approx": [
+        26.387235362401263,
+        29.100843509622955
+      ],
+      "unseen_parcel": {
+        "n": 5223,
+        "log_rmse": 0.6015866047190387,
+        "mae": 11.567377611769738
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 1350,
+          "actual_mean": 18.852740740740742,
+          "predicted_mean": 19.897028438757353,
+          "log_rmse": 0.6217434723748863
+        },
+        {
+          "sigungu": "43112",
+          "n": 973,
+          "actual_mean": 40.17862281603289,
+          "predicted_mean": 31.96384148619755,
+          "log_rmse": 0.674090339567739
+        },
+        {
+          "sigungu": "43113",
+          "n": 1550,
+          "actual_mean": 41.735290322580646,
+          "predicted_mean": 39.06871165254523,
+          "log_rmse": 0.565330729036028
+        },
+        {
+          "sigungu": "43114",
+          "n": 1591,
+          "actual_mean": 20.933940917661843,
+          "predicted_mean": 20.78888891171113,
+          "log_rmse": 0.5706218637586948
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2022,
+      "model": "baseline",
+      "n_train": 11786,
+      "n_test": 3583,
+      "test_log_rmse": 0.7166975375686183,
+      "cell_mean_mae_n20": 3.9151716920203157,
+      "cells_n20": 29,
+      "cell_covered_transactions": 3222,
+      "actual_mean": 28.726039631593636,
+      "predicted_mean": 32.092125799046656,
+      "mean_ci95_approx": [
+        30.422633028447464,
+        33.76161856964585
+      ],
+      "unseen_parcel": {
+        "n": 3272,
+        "log_rmse": 0.7268845567768529,
+        "mae": 14.168520515552592
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 898,
+          "actual_mean": 16.542427616926506,
+          "predicted_mean": 20.94317725286929,
+          "log_rmse": 0.7948052250864219
+        },
+        {
+          "sigungu": "43112",
+          "n": 714,
+          "actual_mean": 40.38347338935575,
+          "predicted_mean": 41.70651059494272,
+          "log_rmse": 0.6687308216502031
+        },
+        {
+          "sigungu": "43113",
+          "n": 829,
+          "actual_mean": 43.148733413751515,
+          "predicted_mean": 45.26164088488247,
+          "log_rmse": 0.7114529734861115
+        },
+        {
+          "sigungu": "43114",
+          "n": 1142,
+          "actual_mean": 20.54833625218914,
+          "predicted_mean": 25.287885032006038,
+          "log_rmse": 0.6839633283999113
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2022,
+      "model": "assessed",
+      "n_train": 11786,
+      "n_test": 3583,
+      "test_log_rmse": 0.6216908116976411,
+      "cell_mean_mae_n20": 3.2222380848110337,
+      "cells_n20": 29,
+      "cell_covered_transactions": 3222,
+      "actual_mean": 28.726039631593636,
+      "predicted_mean": 31.97547190676406,
+      "mean_ci95_approx": [
+        30.565507151590463,
+        33.38543666193765
+      ],
+      "unseen_parcel": {
+        "n": 3272,
+        "log_rmse": 0.6283508736971057,
+        "mae": 11.77381570679439
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 898,
+          "actual_mean": 16.542427616926506,
+          "predicted_mean": 20.515537828784012,
+          "log_rmse": 0.6699575682048434
+        },
+        {
+          "sigungu": "43112",
+          "n": 714,
+          "actual_mean": 40.38347338935575,
+          "predicted_mean": 41.51489266850319,
+          "log_rmse": 0.5905533232840203
+        },
+        {
+          "sigungu": "43113",
+          "n": 829,
+          "actual_mean": 43.148733413751515,
+          "predicted_mean": 46.18431004281284,
+          "log_rmse": 0.5810632417805919
+        },
+        {
+          "sigungu": "43114",
+          "n": 1142,
+          "actual_mean": 20.54833625218914,
+          "predicted_mean": 24.708175552438234,
+          "log_rmse": 0.6297204535219254
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2022,
+      "model": "traits",
+      "n_train": 11786,
+      "n_test": 3583,
+      "test_log_rmse": 0.6787259047260318,
+      "cell_mean_mae_n20": 3.511604738735345,
+      "cells_n20": 29,
+      "cell_covered_transactions": 3222,
+      "actual_mean": 28.726039631593636,
+      "predicted_mean": 32.12619590928573,
+      "mean_ci95_approx": [
+        30.563628025571784,
+        33.68876379299967
+      ],
+      "unseen_parcel": {
+        "n": 3272,
+        "log_rmse": 0.6863938495562252,
+        "mae": 13.61849765320146
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 898,
+          "actual_mean": 16.542427616926506,
+          "predicted_mean": 21.15234855236485,
+          "log_rmse": 0.7452752356038682
+        },
+        {
+          "sigungu": "43112",
+          "n": 714,
+          "actual_mean": 40.38347338935575,
+          "predicted_mean": 40.34240903800058,
+          "log_rmse": 0.6383506743555941
+        },
+        {
+          "sigungu": "43113",
+          "n": 829,
+          "actual_mean": 43.148733413751515,
+          "predicted_mean": 46.66342199603797,
+          "log_rmse": 0.6777162193495746
+        },
+        {
+          "sigungu": "43114",
+          "n": 1142,
+          "actual_mean": 20.54833625218914,
+          "predicted_mean": 25.065581484325094,
+          "log_rmse": 0.6483764078723621
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2022,
+      "model": "combined",
+      "n_train": 11786,
+      "n_test": 3583,
+      "test_log_rmse": 0.6118400423167157,
+      "cell_mean_mae_n20": 3.6207108157563646,
+      "cells_n20": 29,
+      "cell_covered_transactions": 3222,
+      "actual_mean": 28.726039631593636,
+      "predicted_mean": 32.339906002117026,
+      "mean_ci95_approx": [
+        30.92418056072279,
+        33.75563144351126
+      ],
+      "unseen_parcel": {
+        "n": 3272,
+        "log_rmse": 0.6196793646501624,
+        "mae": 11.72441464978741
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 898,
+          "actual_mean": 16.542427616926506,
+          "predicted_mean": 20.85415063926578,
+          "log_rmse": 0.6621851442697282
+        },
+        {
+          "sigungu": "43112",
+          "n": 714,
+          "actual_mean": 40.38347338935575,
+          "predicted_mean": 42.74292362412798,
+          "log_rmse": 0.5829729624686195
+        },
+        {
+          "sigungu": "43113",
+          "n": 829,
+          "actual_mean": 43.148733413751515,
+          "predicted_mean": 46.55887461620352,
+          "log_rmse": 0.5725195181835261
+        },
+        {
+          "sigungu": "43114",
+          "n": 1142,
+          "actual_mean": 20.54833625218914,
+          "predicted_mean": 24.545622948392758,
+          "log_rmse": 0.6158585542914978
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2023,
+      "model": "baseline",
+      "n_train": 15369,
+      "n_test": 2584,
+      "test_log_rmse": 0.7166195256596367,
+      "cell_mean_mae_n20": 5.773866743912614,
+      "cells_n20": 27,
+      "cell_covered_transactions": 2267,
+      "actual_mean": 23.299961300309594,
+      "predicted_mean": 29.196067882500248,
+      "mean_ci95_approx": [
+        28.26229771795275,
+        30.129838047047745
+      ],
+      "unseen_parcel": {
+        "n": 2287,
+        "log_rmse": 0.7310193903715952,
+        "mae": 11.974685559559441
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 700,
+          "actual_mean": 16.529857142857143,
+          "predicted_mean": 19.709126798488413,
+          "log_rmse": 0.7947176143901198
+        },
+        {
+          "sigungu": "43112",
+          "n": 474,
+          "actual_mean": 28.31075949367089,
+          "predicted_mean": 39.90480037427261,
+          "log_rmse": 0.7013597768458798
+        },
+        {
+          "sigungu": "43113",
+          "n": 586,
+          "actual_mean": 31.862798634812282,
+          "predicted_mean": 40.799483991226154,
+          "log_rmse": 0.6711699557661763
+        },
+        {
+          "sigungu": "43114",
+          "n": 824,
+          "actual_mean": 20.079247572815532,
+          "predicted_mean": 22.8432981227852,
+          "log_rmse": 0.6859858754638622
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2023,
+      "model": "assessed",
+      "n_train": 15369,
+      "n_test": 2584,
+      "test_log_rmse": 0.638422902130598,
+      "cell_mean_mae_n20": 4.971565005594371,
+      "cells_n20": 27,
+      "cell_covered_transactions": 2267,
+      "actual_mean": 23.299961300309594,
+      "predicted_mean": 28.8608069688368,
+      "mean_ci95_approx": [
+        28.066760073826106,
+        29.654853863847496
+      ],
+      "unseen_parcel": {
+        "n": 2287,
+        "log_rmse": 0.6548050525800307,
+        "mae": 11.015484953855946
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 700,
+          "actual_mean": 16.529857142857143,
+          "predicted_mean": 19.601176661017472,
+          "log_rmse": 0.664608485946351
+        },
+        {
+          "sigungu": "43112",
+          "n": 474,
+          "actual_mean": 28.31075949367089,
+          "predicted_mean": 39.173381853606564,
+          "log_rmse": 0.6362898651135797
+        },
+        {
+          "sigungu": "43113",
+          "n": 586,
+          "actual_mean": 31.862798634812282,
+          "predicted_mean": 39.90630465814347,
+          "log_rmse": 0.5949544515482982
+        },
+        {
+          "sigungu": "43114",
+          "n": 824,
+          "actual_mean": 20.079247572815532,
+          "predicted_mean": 22.93959225301027,
+          "log_rmse": 0.6467531270775361
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2023,
+      "model": "traits",
+      "n_train": 15369,
+      "n_test": 2584,
+      "test_log_rmse": 0.6700829238034124,
+      "cell_mean_mae_n20": 5.373000804192873,
+      "cells_n20": 27,
+      "cell_covered_transactions": 2267,
+      "actual_mean": 23.299961300309594,
+      "predicted_mean": 29.26948183853739,
+      "mean_ci95_approx": [
+        28.347032041638712,
+        30.19193163543607
+      ],
+      "unseen_parcel": {
+        "n": 2287,
+        "log_rmse": 0.6835308821423896,
+        "mae": 12.086942611856816
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 700,
+          "actual_mean": 16.529857142857143,
+          "predicted_mean": 19.685379246029207,
+          "log_rmse": 0.7115970747915915
+        },
+        {
+          "sigungu": "43112",
+          "n": 474,
+          "actual_mean": 28.31075949367089,
+          "predicted_mean": 39.54652241288478,
+          "log_rmse": 0.6601644220671496
+        },
+        {
+          "sigungu": "43113",
+          "n": 586,
+          "actual_mean": 31.862798634812282,
+          "predicted_mean": 40.927854714777524,
+          "log_rmse": 0.6443213310010231
+        },
+        {
+          "sigungu": "43114",
+          "n": 824,
+          "actual_mean": 20.079247572815532,
+          "predicted_mean": 23.20849649513734,
+          "log_rmse": 0.6572322568850207
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2023,
+      "model": "combined",
+      "n_train": 15369,
+      "n_test": 2584,
+      "test_log_rmse": 0.6236834805083237,
+      "cell_mean_mae_n20": 4.871953434021439,
+      "cells_n20": 27,
+      "cell_covered_transactions": 2267,
+      "actual_mean": 23.299961300309594,
+      "predicted_mean": 28.659235072627972,
+      "mean_ci95_approx": [
+        27.85911423334341,
+        29.459355911912535
+      ],
+      "unseen_parcel": {
+        "n": 2287,
+        "log_rmse": 0.639538240754699,
+        "mae": 10.712658346991867
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 700,
+          "actual_mean": 16.529857142857143,
+          "predicted_mean": 19.649692134513153,
+          "log_rmse": 0.6463708797008302
+        },
+        {
+          "sigungu": "43112",
+          "n": 474,
+          "actual_mean": 28.31075949367089,
+          "predicted_mean": 38.53684620592452,
+          "log_rmse": 0.6192152473874221
+        },
+        {
+          "sigungu": "43113",
+          "n": 586,
+          "actual_mean": 31.862798634812282,
+          "predicted_mean": 39.79244079880125,
+          "log_rmse": 0.5891610162080217
+        },
+        {
+          "sigungu": "43114",
+          "n": 824,
+          "actual_mean": 20.079247572815532,
+          "predicted_mean": 22.71340233471568,
+          "log_rmse": 0.630455686565567
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2024,
+      "model": "baseline",
+      "n_train": 17953,
+      "n_test": 2639,
+      "test_log_rmse": 0.7333287423746043,
+      "cell_mean_mae_n20": 5.692797619206806,
+      "cells_n20": 24,
+      "cell_covered_transactions": 2287,
+      "actual_mean": 27.122697991663504,
+      "predicted_mean": 32.27011435325625,
+      "mean_ci95_approx": [
+        31.13152127237956,
+        33.408707434132936
+      ],
+      "unseen_parcel": {
+        "n": 2377,
+        "log_rmse": 0.7452139029408147,
+        "mae": 15.500702608839342
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 716,
+          "actual_mean": 19.70754189944134,
+          "predicted_mean": 22.698775221738934,
+          "log_rmse": 0.7545458363612606
+        },
+        {
+          "sigungu": "43112",
+          "n": 411,
+          "actual_mean": 33.064963503649636,
+          "predicted_mean": 44.155762222386706,
+          "log_rmse": 0.8033040160066172
+        },
+        {
+          "sigungu": "43113",
+          "n": 685,
+          "actual_mean": 38.49270072992701,
+          "predicted_mean": 42.705610594039456,
+          "log_rmse": 0.7506289020773853
+        },
+        {
+          "sigungu": "43114",
+          "n": 827,
+          "actual_mean": 21.171704957678354,
+          "predicted_mean": 26.006223928851526,
+          "log_rmse": 0.6601038599494373
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2024,
+      "model": "assessed",
+      "n_train": 17953,
+      "n_test": 2639,
+      "test_log_rmse": 0.656177530348821,
+      "cell_mean_mae_n20": 4.82588186947089,
+      "cells_n20": 24,
+      "cell_covered_transactions": 2287,
+      "actual_mean": 27.122697991663504,
+      "predicted_mean": 31.86830706216071,
+      "mean_ci95_approx": [
+        30.89845887917405,
+        32.83815524514737
+      ],
+      "unseen_parcel": {
+        "n": 2377,
+        "log_rmse": 0.6652544180924799,
+        "mae": 13.68420830649658
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 716,
+          "actual_mean": 19.70754189944134,
+          "predicted_mean": 22.912630750216856,
+          "log_rmse": 0.6438505149913428
+        },
+        {
+          "sigungu": "43112",
+          "n": 411,
+          "actual_mean": 33.064963503649636,
+          "predicted_mean": 43.41285355431409,
+          "log_rmse": 0.6969549799594783
+        },
+        {
+          "sigungu": "43113",
+          "n": 685,
+          "actual_mean": 38.49270072992701,
+          "predicted_mean": 43.290191578470235,
+          "log_rmse": 0.6903183560668625
+        },
+        {
+          "sigungu": "43114",
+          "n": 827,
+          "actual_mean": 21.171704957678354,
+          "predicted_mean": 24.423887155757726,
+          "log_rmse": 0.6155846888922667
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2024,
+      "model": "traits",
+      "n_train": 17953,
+      "n_test": 2639,
+      "test_log_rmse": 0.6973545249627903,
+      "cell_mean_mae_n20": 6.186841741211666,
+      "cells_n20": 24,
+      "cell_covered_transactions": 2287,
+      "actual_mean": 27.122697991663504,
+      "predicted_mean": 33.458515975099736,
+      "mean_ci95_approx": [
+        32.167420955919575,
+        34.7496109942799
+      ],
+      "unseen_parcel": {
+        "n": 2377,
+        "log_rmse": 0.709243628589177,
+        "mae": 15.737141256707528
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 716,
+          "actual_mean": 19.70754189944134,
+          "predicted_mean": 23.050730840383544,
+          "log_rmse": 0.6809983322842881
+        },
+        {
+          "sigungu": "43112",
+          "n": 411,
+          "actual_mean": 33.064963503649636,
+          "predicted_mean": 46.537864977334166,
+          "log_rmse": 0.7705327400133267
+        },
+        {
+          "sigungu": "43113",
+          "n": 685,
+          "actual_mean": 38.49270072992701,
+          "predicted_mean": 44.33723142572375,
+          "log_rmse": 0.7172169283449894
+        },
+        {
+          "sigungu": "43114",
+          "n": 827,
+          "actual_mean": 21.171704957678354,
+          "predicted_mean": 26.958445398148104,
+          "log_rmse": 0.6551073225176103
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2024,
+      "model": "combined",
+      "n_train": 17953,
+      "n_test": 2639,
+      "test_log_rmse": 0.6479300421407675,
+      "cell_mean_mae_n20": 4.486766752613938,
+      "cells_n20": 24,
+      "cell_covered_transactions": 2287,
+      "actual_mean": 27.122697991663504,
+      "predicted_mean": 31.25071349641493,
+      "mean_ci95_approx": [
+        30.161452043494176,
+        32.33997494933569
+      ],
+      "unseen_parcel": {
+        "n": 2377,
+        "log_rmse": 0.6564768158078178,
+        "mae": 12.988156738586797
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 716,
+          "actual_mean": 19.70754189944134,
+          "predicted_mean": 22.65988043818888,
+          "log_rmse": 0.6296018704172592
+        },
+        {
+          "sigungu": "43112",
+          "n": 411,
+          "actual_mean": 33.064963503649636,
+          "predicted_mean": 42.09883638038719,
+          "log_rmse": 0.6765749691364306
+        },
+        {
+          "sigungu": "43113",
+          "n": 685,
+          "actual_mean": 38.49270072992701,
+          "predicted_mean": 42.33731753266583,
+          "log_rmse": 0.699377012572672
+        },
+        {
+          "sigungu": "43114",
+          "n": 827,
+          "actual_mean": 21.171704957678354,
+          "predicted_mean": 24.114237316905136,
+          "log_rmse": 0.6031722659149786
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2025,
+      "model": "baseline",
+      "n_train": 20592,
+      "n_test": 2552,
+      "test_log_rmse": 0.6937261342975867,
+      "cell_mean_mae_n20": 4.819167338853708,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2264,
+      "actual_mean": 27.39753134796238,
+      "predicted_mean": 30.738280116621198,
+      "mean_ci95_approx": [
+        29.69800805704429,
+        31.778552176198104
+      ],
+      "unseen_parcel": {
+        "n": 2198,
+        "log_rmse": 0.7038118953670577,
+        "mae": 14.406047135358037
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 731,
+          "actual_mean": 24.194664842681256,
+          "predicted_mean": 25.483166808264105,
+          "log_rmse": 0.7272680710269643
+        },
+        {
+          "sigungu": "43112",
+          "n": 314,
+          "actual_mean": 36.099363057324844,
+          "predicted_mean": 45.356010874869035,
+          "log_rmse": 0.8148781626430814
+        },
+        {
+          "sigungu": "43113",
+          "n": 523,
+          "actual_mean": 37.682982791587,
+          "predicted_mean": 44.47842331441959,
+          "log_rmse": 0.6375186453617252
+        },
+        {
+          "sigungu": "43114",
+          "n": 984,
+          "actual_mean": 21.53333333333333,
+          "predicted_mean": 22.674688122587302,
+          "log_rmse": 0.6536780768017094
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2025,
+      "model": "assessed",
+      "n_train": 20592,
+      "n_test": 2552,
+      "test_log_rmse": 0.6158306881090169,
+      "cell_mean_mae_n20": 3.450237178953771,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2264,
+      "actual_mean": 27.39753134796238,
+      "predicted_mean": 30.16541143843252,
+      "mean_ci95_approx": [
+        29.274755027899914,
+        31.056067848965128
+      ],
+      "unseen_parcel": {
+        "n": 2198,
+        "log_rmse": 0.6224468341051997,
+        "mae": 11.798023083963272
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 731,
+          "actual_mean": 24.194664842681256,
+          "predicted_mean": 25.933622911102646,
+          "log_rmse": 0.624287070345254
+        },
+        {
+          "sigungu": "43112",
+          "n": 314,
+          "actual_mean": 36.099363057324844,
+          "predicted_mean": 42.40659992065027,
+          "log_rmse": 0.6881878052924629
+        },
+        {
+          "sigungu": "43113",
+          "n": 523,
+          "actual_mean": 37.682982791587,
+          "predicted_mean": 43.36993989994109,
+          "log_rmse": 0.5621406279905778
+        },
+        {
+          "sigungu": "43114",
+          "n": 984,
+          "actual_mean": 21.53333333333333,
+          "predicted_mean": 22.384655183039005,
+          "log_rmse": 0.6123420560368208
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2025,
+      "model": "traits",
+      "n_train": 20592,
+      "n_test": 2552,
+      "test_log_rmse": 0.663518603824163,
+      "cell_mean_mae_n20": 4.9930243905065,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2264,
+      "actual_mean": 27.39753134796238,
+      "predicted_mean": 31.11086943851643,
+      "mean_ci95_approx": [
+        30.113964755306572,
+        32.107774121726294
+      ],
+      "unseen_parcel": {
+        "n": 2198,
+        "log_rmse": 0.6747472516995222,
+        "mae": 14.075836485825132
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 731,
+          "actual_mean": 24.194664842681256,
+          "predicted_mean": 26.307527925016913,
+          "log_rmse": 0.6943584056935092
+        },
+        {
+          "sigungu": "43112",
+          "n": 314,
+          "actual_mean": 36.099363057324844,
+          "predicted_mean": 44.52939477593928,
+          "log_rmse": 0.7507765618479261
+        },
+        {
+          "sigungu": "43113",
+          "n": 523,
+          "actual_mean": 37.682982791587,
+          "predicted_mean": 45.197993727666756,
+          "log_rmse": 0.6127414974301321
+        },
+        {
+          "sigungu": "43114",
+          "n": 984,
+          "actual_mean": 21.53333333333333,
+          "predicted_mean": 22.909913836069023,
+          "log_rmse": 0.6357759053947147
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2025,
+      "model": "combined",
+      "n_train": 20592,
+      "n_test": 2552,
+      "test_log_rmse": 0.6129131584720592,
+      "cell_mean_mae_n20": 3.6335950097226473,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2264,
+      "actual_mean": 27.39753134796238,
+      "predicted_mean": 30.11235048391079,
+      "mean_ci95_approx": [
+        29.238083547013396,
+        30.986617420808187
+      ],
+      "unseen_parcel": {
+        "n": 2198,
+        "log_rmse": 0.6216859600951075,
+        "mae": 11.689123232067988
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 731,
+          "actual_mean": 24.194664842681256,
+          "predicted_mean": 26.414316577936138,
+          "log_rmse": 0.6227159060276428
+        },
+        {
+          "sigungu": "43112",
+          "n": 314,
+          "actual_mean": 36.099363057324844,
+          "predicted_mean": 42.27307145743265,
+          "log_rmse": 0.6802214227022165
+        },
+        {
+          "sigungu": "43113",
+          "n": 523,
+          "actual_mean": 37.682982791587,
+          "predicted_mean": 42.90741884137968,
+          "log_rmse": 0.5646271912399421
+        },
+        {
+          "sigungu": "43114",
+          "n": 984,
+          "actual_mean": 21.53333333333333,
+          "predicted_mean": 22.178382647147966,
+          "log_rmse": 0.6075445470578265
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2026,
+      "model": "baseline",
+      "n_train": 23144,
+      "n_test": 1610,
+      "test_log_rmse": 0.7800243655624071,
+      "cell_mean_mae_n20": 4.200838767009835,
+      "cells_n20": 22,
+      "cell_covered_transactions": 1353,
+      "actual_mean": 25.438819875776396,
+      "predicted_mean": 29.280696338508108,
+      "mean_ci95_approx": [
+        28.3338144389792,
+        30.227578238037015
+      ],
+      "unseen_parcel": {
+        "n": 1413,
+        "log_rmse": 0.7991764631002325,
+        "mae": 14.233025453044313
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 480,
+          "actual_mean": 17.91208333333333,
+          "predicted_mean": 23.66847462908678,
+          "log_rmse": 0.7929690862904702
+        },
+        {
+          "sigungu": "43112",
+          "n": 209,
+          "actual_mean": 30.208133971291865,
+          "predicted_mean": 34.146432226146636,
+          "log_rmse": 0.8020628450409821
+        },
+        {
+          "sigungu": "43113",
+          "n": 380,
+          "actual_mean": 36.32184210526316,
+          "predicted_mean": 38.67742434938244,
+          "log_rmse": 0.9267388904897338
+        },
+        {
+          "sigungu": "43114",
+          "n": 541,
+          "actual_mean": 22.630129390018485,
+          "predicted_mean": 25.780088160825173,
+          "log_rmse": 0.6332578927183039
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2026,
+      "model": "assessed",
+      "n_train": 23144,
+      "n_test": 1610,
+      "test_log_rmse": 0.7067599061738018,
+      "cell_mean_mae_n20": 3.9205130671234523,
+      "cells_n20": 22,
+      "cell_covered_transactions": 1353,
+      "actual_mean": 25.438819875776396,
+      "predicted_mean": 30.007724869225655,
+      "mean_ci95_approx": [
+        29.145898510585226,
+        30.869551227866083
+      ],
+      "unseen_parcel": {
+        "n": 1413,
+        "log_rmse": 0.7250077044672619,
+        "mae": 13.190238199143362
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 480,
+          "actual_mean": 17.91208333333333,
+          "predicted_mean": 25.887029299382977,
+          "log_rmse": 0.6918943436392815
+        },
+        {
+          "sigungu": "43112",
+          "n": 209,
+          "actual_mean": 30.208133971291865,
+          "predicted_mean": 33.9517088806365,
+          "log_rmse": 0.7240367031658145
+        },
+        {
+          "sigungu": "43113",
+          "n": 380,
+          "actual_mean": 36.32184210526316,
+          "predicted_mean": 38.946084565284714,
+          "log_rmse": 0.8719357995864226
+        },
+        {
+          "sigungu": "43114",
+          "n": 541,
+          "actual_mean": 22.630129390018485,
+          "predicted_mean": 25.861818271512483,
+          "log_rmse": 0.5703042567384822
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2026,
+      "model": "traits",
+      "n_train": 23144,
+      "n_test": 1610,
+      "test_log_rmse": 0.7188552400566888,
+      "cell_mean_mae_n20": 3.8887583754889685,
+      "cells_n20": 22,
+      "cell_covered_transactions": 1353,
+      "actual_mean": 25.438819875776396,
+      "predicted_mean": 29.92425352049418,
+      "mean_ci95_approx": [
+        28.880453401273662,
+        30.968053639714697
+      ],
+      "unseen_parcel": {
+        "n": 1413,
+        "log_rmse": 0.736990611660156,
+        "mae": 13.612591736092401
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 480,
+          "actual_mean": 17.91208333333333,
+          "predicted_mean": 22.970729118036388,
+          "log_rmse": 0.6945432898238496
+        },
+        {
+          "sigungu": "43112",
+          "n": 209,
+          "actual_mean": 30.208133971291865,
+          "predicted_mean": 35.17938978641711,
+          "log_rmse": 0.7353575014187008
+        },
+        {
+          "sigungu": "43113",
+          "n": 380,
+          "actual_mean": 36.32184210526316,
+          "predicted_mean": 40.10941344171439,
+          "log_rmse": 0.870102937551545
+        },
+        {
+          "sigungu": "43114",
+          "n": 541,
+          "actual_mean": 22.630129390018485,
+          "predicted_mean": 26.909479885629416,
+          "log_rmse": 0.6075887346308527
+        }
+      ]
+    },
+    {
+      "scope": "historical_trait",
+      "policy": "observed_before_trade",
+      "test_year": 2026,
+      "model": "combined",
+      "n_train": 23144,
+      "n_test": 1610,
+      "test_log_rmse": 0.7034772662647154,
+      "cell_mean_mae_n20": 4.259119292886067,
+      "cells_n20": 22,
+      "cell_covered_transactions": 1353,
+      "actual_mean": 25.438819875776396,
+      "predicted_mean": 30.503101151271082,
+      "mean_ci95_approx": [
+        29.49145964593884,
+        31.514742656603325
+      ],
+      "unseen_parcel": {
+        "n": 1413,
+        "log_rmse": 0.7231330783755339,
+        "mae": 12.946269346043758
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 480,
+          "actual_mean": 17.91208333333333,
+          "predicted_mean": 26.338445922672783,
+          "log_rmse": 0.6797696824194596
+        },
+        {
+          "sigungu": "43112",
+          "n": 209,
+          "actual_mean": 30.208133971291865,
+          "predicted_mean": 33.72839877738877,
+          "log_rmse": 0.7071102920815873
+        },
+        {
+          "sigungu": "43113",
+          "n": 380,
+          "actual_mean": 36.32184210526316,
+          "predicted_mean": 40.54010246317355,
+          "log_rmse": 0.886236214353097
+        },
+        {
+          "sigungu": "43114",
+          "n": 541,
+          "actual_mean": 22.630129390018485,
+          "predicted_mean": 25.902152551170637,
+          "log_rmse": 0.5638476133559354
+        }
+      ]
+    },
+    {
+      "scope": "trait_same_sample",
+      "policy": "observed_before_trade",
+      "test_year": 2024,
+      "model": "baseline",
+      "n_train": 982,
+      "n_test": 2638,
+      "test_log_rmse": 0.8685324891371474,
+      "cell_mean_mae_n20": 6.426892279143497,
+      "cells_n20": 24,
+      "cell_covered_transactions": 2286,
+      "actual_mean": 27.129529946929498,
+      "predicted_mean": 26.66681394264696,
+      "mean_ci95_approx": [
+        24.133088420652964,
+        29.200539464640958
+      ],
+      "unseen_parcel": {
+        "n": 2610,
+        "log_rmse": 0.8697943775240758,
+        "mae": 17.48593571979454
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 716,
+          "actual_mean": 19.70754189944134,
+          "predicted_mean": 23.63118598610478,
+          "log_rmse": 0.9012932305308465
+        },
+        {
+          "sigungu": "43112",
+          "n": 410,
+          "actual_mean": 33.123414634146336,
+          "predicted_mean": 33.98304073662151,
+          "log_rmse": 0.8820050009358157
+        },
+        {
+          "sigungu": "43113",
+          "n": 685,
+          "actual_mean": 38.49270072992701,
+          "predicted_mean": 28.114170721978166,
+          "log_rmse": 0.9705667862938304
+        },
+        {
+          "sigungu": "43114",
+          "n": 827,
+          "actual_mean": 21.171704957678354,
+          "predicted_mean": 24.46901132778936,
+          "log_rmse": 0.7328214330202681
+        }
+      ]
+    },
+    {
+      "scope": "trait_same_sample",
+      "policy": "observed_before_trade",
+      "test_year": 2024,
+      "model": "assessed",
+      "n_train": 982,
+      "n_test": 2638,
+      "test_log_rmse": 0.657448996969746,
+      "cell_mean_mae_n20": 2.1139654598860913,
+      "cells_n20": 24,
+      "cell_covered_transactions": 2286,
+      "actual_mean": 27.129529946929498,
+      "predicted_mean": 27.75934878825617,
+      "mean_ci95_approx": [
+        25.996459577336644,
+        29.522237999175694
+      ],
+      "unseen_parcel": {
+        "n": 2610,
+        "log_rmse": 0.6576866721010053,
+        "mae": 12.38533426130929
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 716,
+          "actual_mean": 19.70754189944134,
+          "predicted_mean": 21.841089012749443,
+          "log_rmse": 0.6706992003819151
+        },
+        {
+          "sigungu": "43112",
+          "n": 410,
+          "actual_mean": 33.123414634146336,
+          "predicted_mean": 36.44477041400736,
+          "log_rmse": 0.657349333855783
+        },
+        {
+          "sigungu": "43113",
+          "n": 685,
+          "actual_mean": 38.49270072992701,
+          "predicted_mean": 35.558678233398766,
+          "log_rmse": 0.7047327639754476
+        },
+        {
+          "sigungu": "43114",
+          "n": 827,
+          "actual_mean": 21.171704957678354,
+          "predicted_mean": 22.117160714232163,
+          "log_rmse": 0.6030905604827201
+        }
+      ]
+    },
+    {
+      "scope": "trait_same_sample",
+      "policy": "observed_before_trade",
+      "test_year": 2025,
+      "model": "baseline",
+      "n_train": 3620,
+      "n_test": 2551,
+      "test_log_rmse": 0.8138625757365461,
+      "cell_mean_mae_n20": 4.537722511606173,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2263,
+      "actual_mean": 27.39580556644453,
+      "predicted_mean": 29.089118343871792,
+      "mean_ci95_approx": [
+        26.517503360190165,
+        31.66073332755342
+      ],
+      "unseen_parcel": {
+        "n": 2477,
+        "log_rmse": 0.815567842187592,
+        "mae": 16.64233148181149
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 731,
+          "actual_mean": 24.194664842681256,
+          "predicted_mean": 29.489688415429974,
+          "log_rmse": 0.8704911634150928
+        },
+        {
+          "sigungu": "43112",
+          "n": 314,
+          "actual_mean": 36.099363057324844,
+          "predicted_mean": 40.41654649624514,
+          "log_rmse": 0.8496501730019325
+        },
+        {
+          "sigungu": "43113",
+          "n": 523,
+          "actual_mean": 37.682982791587,
+          "predicted_mean": 34.18299292769854,
+          "log_rmse": 0.7864589783513705
+        },
+        {
+          "sigungu": "43114",
+          "n": 983,
+          "actual_mean": 21.52288911495422,
+          "predicted_mean": 22.462744417630024,
+          "log_rmse": 0.7718534324102334
+        }
+      ]
+    },
+    {
+      "scope": "trait_same_sample",
+      "policy": "observed_before_trade",
+      "test_year": 2025,
+      "model": "assessed",
+      "n_train": 3620,
+      "n_test": 2551,
+      "test_log_rmse": 0.6401703723977107,
+      "cell_mean_mae_n20": 3.2579620846102313,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2263,
+      "actual_mean": 27.39580556644453,
+      "predicted_mean": 27.73837204348048,
+      "mean_ci95_approx": [
+        25.86092978297255,
+        29.61581430398841
+      ],
+      "unseen_parcel": {
+        "n": 2477,
+        "log_rmse": 0.6395059637611029,
+        "mae": 11.943438008005568
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 731,
+          "actual_mean": 24.194664842681256,
+          "predicted_mean": 24.688338995051286,
+          "log_rmse": 0.6298518119114368
+        },
+        {
+          "sigungu": "43112",
+          "n": 314,
+          "actual_mean": 36.099363057324844,
+          "predicted_mean": 38.693682704520754,
+          "log_rmse": 0.6898236104791242
+        },
+        {
+          "sigungu": "43113",
+          "n": 523,
+          "actual_mean": 37.682982791587,
+          "predicted_mean": 37.9039377744056,
+          "log_rmse": 0.5875374995661289
+        },
+        {
+          "sigungu": "43114",
+          "n": 983,
+          "actual_mean": 21.52288911495422,
+          "predicted_mean": 21.098510124417672,
+          "log_rmse": 0.6579120315289606
+        }
+      ]
+    },
+    {
+      "scope": "trait_same_sample",
+      "policy": "observed_before_trade",
+      "test_year": 2026,
+      "model": "baseline",
+      "n_train": 6171,
+      "n_test": 1548,
+      "test_log_rmse": 0.8488490580407408,
+      "cell_mean_mae_n20": 4.432530407813663,
+      "cells_n20": 22,
+      "cell_covered_transactions": 1311,
+      "actual_mean": 23.74127906976744,
+      "predicted_mean": 28.0073108790324,
+      "mean_ci95_approx": [
+        26.339952865857406,
+        29.674668892207393
+      ],
+      "unseen_parcel": {
+        "n": 1496,
+        "log_rmse": 0.8540886705327457,
+        "mae": 14.830040522577852
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 445,
+          "actual_mean": 14.454606741573034,
+          "predicted_mean": 21.022222574829904,
+          "log_rmse": 0.9199404861086319
+        },
+        {
+          "sigungu": "43112",
+          "n": 204,
+          "actual_mean": 30.20735294117647,
+          "predicted_mean": 29.66679789344698,
+          "log_rmse": 0.9490079981946205
+        },
+        {
+          "sigungu": "43113",
+          "n": 368,
+          "actual_mean": 33.22635869565217,
+          "predicted_mean": 34.210653676141874,
+          "log_rmse": 0.9511116031540897
+        },
+        {
+          "sigungu": "43114",
+          "n": 531,
+          "actual_mean": 22.46629001883239,
+          "predicted_mean": 28.9244460863643,
+          "log_rmse": 0.6468532720807348
+        }
+      ]
+    },
+    {
+      "scope": "trait_same_sample",
+      "policy": "observed_before_trade",
+      "test_year": 2026,
+      "model": "assessed",
+      "n_train": 6171,
+      "n_test": 1548,
+      "test_log_rmse": 0.7131154538353937,
+      "cell_mean_mae_n20": 3.0018323414342416,
+      "cells_n20": 22,
+      "cell_covered_transactions": 1311,
+      "actual_mean": 23.74127906976744,
+      "predicted_mean": 27.254279779682193,
+      "mean_ci95_approx": [
+        25.929827214049187,
+        28.5787323453152
+      ],
+      "unseen_parcel": {
+        "n": 1496,
+        "log_rmse": 0.7159464894322688,
+        "mae": 11.825892627295953
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 445,
+          "actual_mean": 14.454606741573034,
+          "predicted_mean": 18.89133676481291,
+          "log_rmse": 0.7168450655412857
+        },
+        {
+          "sigungu": "43112",
+          "n": 204,
+          "actual_mean": 30.20735294117647,
+          "predicted_mean": 31.925178686413,
+          "log_rmse": 0.7348081026122815
+        },
+        {
+          "sigungu": "43113",
+          "n": 368,
+          "actual_mean": 33.22635869565217,
+          "predicted_mean": 36.40728718323678,
+          "log_rmse": 0.875395548586039
+        },
+        {
+          "sigungu": "43114",
+          "n": 531,
+          "actual_mean": 22.46629001883239,
+          "predicted_mean": 26.124975712141058,
+          "log_rmse": 0.5597722691150671
+        }
+      ]
+    },
+    {
+      "scope": "plan_same_sample",
+      "policy": "observed_before_trade",
+      "test_year": 2024,
+      "model": "baseline",
+      "n_train": 982,
+      "n_test": 2638,
+      "test_log_rmse": 0.8685324891371474,
+      "cell_mean_mae_n20": 6.426892279143497,
+      "cells_n20": 24,
+      "cell_covered_transactions": 2286,
+      "actual_mean": 27.129529946929498,
+      "predicted_mean": 26.66681394264696,
+      "mean_ci95_approx": [
+        24.133088420652964,
+        29.200539464640958
+      ],
+      "unseen_parcel": {
+        "n": 2610,
+        "log_rmse": 0.8697943775240758,
+        "mae": 17.48593571979454
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 716,
+          "actual_mean": 19.70754189944134,
+          "predicted_mean": 23.63118598610478,
+          "log_rmse": 0.9012932305308465
+        },
+        {
+          "sigungu": "43112",
+          "n": 410,
+          "actual_mean": 33.123414634146336,
+          "predicted_mean": 33.98304073662151,
+          "log_rmse": 0.8820050009358157
+        },
+        {
+          "sigungu": "43113",
+          "n": 685,
+          "actual_mean": 38.49270072992701,
+          "predicted_mean": 28.114170721978166,
+          "log_rmse": 0.9705667862938304
+        },
+        {
+          "sigungu": "43114",
+          "n": 827,
+          "actual_mean": 21.171704957678354,
+          "predicted_mean": 24.46901132778936,
+          "log_rmse": 0.7328214330202681
+        }
+      ]
+    },
+    {
+      "scope": "plan_same_sample",
+      "policy": "observed_before_trade",
+      "test_year": 2024,
+      "model": "assessed",
+      "n_train": 982,
+      "n_test": 2638,
+      "test_log_rmse": 0.6574835432579401,
+      "cell_mean_mae_n20": 2.12048854338455,
+      "cells_n20": 24,
+      "cell_covered_transactions": 2286,
+      "actual_mean": 27.129529946929498,
+      "predicted_mean": 27.75209763341482,
+      "mean_ci95_approx": [
+        25.99040287265963,
+        29.51379239417001
+      ],
+      "unseen_parcel": {
+        "n": 2610,
+        "log_rmse": 0.6577215763732663,
+        "mae": 12.379887086386166
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 716,
+          "actual_mean": 19.70754189944134,
+          "predicted_mean": 21.81888865953792,
+          "log_rmse": 0.6708193486669913
+        },
+        {
+          "sigungu": "43112",
+          "n": 410,
+          "actual_mean": 33.123414634146336,
+          "predicted_mean": 36.44425448727731,
+          "log_rmse": 0.6573580868983956
+        },
+        {
+          "sigungu": "43113",
+          "n": 685,
+          "actual_mean": 38.49270072992701,
+          "predicted_mean": 35.55796815959799,
+          "log_rmse": 0.7047300085990545
+        },
+        {
+          "sigungu": "43114",
+          "n": 827,
+          "actual_mean": 21.171704957678354,
+          "predicted_mean": 22.11409522081115,
+          "log_rmse": 0.603092936687875
+        }
+      ]
+    },
+    {
+      "scope": "plan_same_sample",
+      "policy": "observed_before_trade",
+      "test_year": 2025,
+      "model": "baseline",
+      "n_train": 3620,
+      "n_test": 2551,
+      "test_log_rmse": 0.8138625757365461,
+      "cell_mean_mae_n20": 4.537722511606173,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2263,
+      "actual_mean": 27.39580556644453,
+      "predicted_mean": 29.089118343871792,
+      "mean_ci95_approx": [
+        26.517503360190165,
+        31.66073332755342
+      ],
+      "unseen_parcel": {
+        "n": 2477,
+        "log_rmse": 0.815567842187592,
+        "mae": 16.64233148181149
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 731,
+          "actual_mean": 24.194664842681256,
+          "predicted_mean": 29.489688415429974,
+          "log_rmse": 0.8704911634150928
+        },
+        {
+          "sigungu": "43112",
+          "n": 314,
+          "actual_mean": 36.099363057324844,
+          "predicted_mean": 40.41654649624514,
+          "log_rmse": 0.8496501730019325
+        },
+        {
+          "sigungu": "43113",
+          "n": 523,
+          "actual_mean": 37.682982791587,
+          "predicted_mean": 34.18299292769854,
+          "log_rmse": 0.7864589783513705
+        },
+        {
+          "sigungu": "43114",
+          "n": 983,
+          "actual_mean": 21.52288911495422,
+          "predicted_mean": 22.462744417630024,
+          "log_rmse": 0.7718534324102334
+        }
+      ]
+    },
+    {
+      "scope": "plan_same_sample",
+      "policy": "observed_before_trade",
+      "test_year": 2025,
+      "model": "assessed",
+      "n_train": 3620,
+      "n_test": 2551,
+      "test_log_rmse": 0.6401089211795282,
+      "cell_mean_mae_n20": 3.238928824694726,
+      "cells_n20": 25,
+      "cell_covered_transactions": 2263,
+      "actual_mean": 27.39580556644453,
+      "predicted_mean": 27.732575422177902,
+      "mean_ci95_approx": [
+        25.85562396912313,
+        29.609526875232675
+      ],
+      "unseen_parcel": {
+        "n": 2477,
+        "log_rmse": 0.6394481129344224,
+        "mae": 11.936511902522046
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 731,
+          "actual_mean": 24.194664842681256,
+          "predicted_mean": 24.69597676241023,
+          "log_rmse": 0.629632258375602
+        },
+        {
+          "sigungu": "43112",
+          "n": 314,
+          "actual_mean": 36.099363057324844,
+          "predicted_mean": 38.69669384323558,
+          "log_rmse": 0.6896880367103326
+        },
+        {
+          "sigungu": "43113",
+          "n": 523,
+          "actual_mean": 37.682982791587,
+          "predicted_mean": 37.87006530027347,
+          "log_rmse": 0.5876820806044846
+        },
+        {
+          "sigungu": "43114",
+          "n": 983,
+          "actual_mean": 21.52288911495422,
+          "predicted_mean": 21.094847273484177,
+          "log_rmse": 0.6578898430856583
+        }
+      ]
+    },
+    {
+      "scope": "plan_same_sample",
+      "policy": "observed_before_trade",
+      "test_year": 2026,
+      "model": "baseline",
+      "n_train": 6171,
+      "n_test": 1548,
+      "test_log_rmse": 0.8488490580407408,
+      "cell_mean_mae_n20": 4.432530407813663,
+      "cells_n20": 22,
+      "cell_covered_transactions": 1311,
+      "actual_mean": 23.74127906976744,
+      "predicted_mean": 28.0073108790324,
+      "mean_ci95_approx": [
+        26.339952865857406,
+        29.674668892207393
+      ],
+      "unseen_parcel": {
+        "n": 1496,
+        "log_rmse": 0.8540886705327457,
+        "mae": 14.830040522577852
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 445,
+          "actual_mean": 14.454606741573034,
+          "predicted_mean": 21.022222574829904,
+          "log_rmse": 0.9199404861086319
+        },
+        {
+          "sigungu": "43112",
+          "n": 204,
+          "actual_mean": 30.20735294117647,
+          "predicted_mean": 29.66679789344698,
+          "log_rmse": 0.9490079981946205
+        },
+        {
+          "sigungu": "43113",
+          "n": 368,
+          "actual_mean": 33.22635869565217,
+          "predicted_mean": 34.210653676141874,
+          "log_rmse": 0.9511116031540897
+        },
+        {
+          "sigungu": "43114",
+          "n": 531,
+          "actual_mean": 22.46629001883239,
+          "predicted_mean": 28.9244460863643,
+          "log_rmse": 0.6468532720807348
+        }
+      ]
+    },
+    {
+      "scope": "plan_same_sample",
+      "policy": "observed_before_trade",
+      "test_year": 2026,
+      "model": "assessed",
+      "n_train": 6171,
+      "n_test": 1548,
+      "test_log_rmse": 0.7131004285501478,
+      "cell_mean_mae_n20": 2.973482621854566,
+      "cells_n20": 22,
+      "cell_covered_transactions": 1311,
+      "actual_mean": 23.74127906976744,
+      "predicted_mean": 27.183081829137024,
+      "mean_ci95_approx": [
+        25.86239129256593,
+        28.503772365708116
+      ],
+      "unseen_parcel": {
+        "n": 1496,
+        "log_rmse": 0.7159727638332682,
+        "mae": 11.797624630557985
+      },
+      "districts": [
+        {
+          "sigungu": "43111",
+          "n": 445,
+          "actual_mean": 14.454606741573034,
+          "predicted_mean": 18.83887505561432,
+          "log_rmse": 0.7174418114099003
+        },
+        {
+          "sigungu": "43112",
+          "n": 204,
+          "actual_mean": 30.20735294117647,
+          "predicted_mean": 31.82539756030383,
+          "log_rmse": 0.734544453265558
+        },
+        {
+          "sigungu": "43113",
+          "n": 368,
+          "actual_mean": 33.22635869565217,
+          "predicted_mean": 36.311348707239475,
+          "log_rmse": 0.8751537322331605
+        },
+        {
+          "sigungu": "43114",
+          "n": 531,
+          "actual_mean": 22.46629001883239,
+          "predicted_mean": 26.066203098285577,
+          "log_rmse": 0.5594706743063432
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Matches independently unverified; linked positive-price sample is selected.",
+    "2019 is first training year, not a test year. Prior policy lacks a pre-2019 snapshot.",
+    "Annual is retrospective; source observation cutoff is not historical public availability.",
+    "Policies have different selected samples: cross-policy metric differences are not causal.",
+    "Trait zones omit additional land-use planning designations.",
+    "Approximate mean CI excludes matching, source timing, and smearing uncertainty."
+  ]
+}

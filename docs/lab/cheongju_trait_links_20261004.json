@@ -1,0 +1,228 @@
+{
+  "run_date": "2026-10-04",
+  "rule_version": "trait-only-v1",
+  "transaction_rows": 62499,
+  "source_join": {
+    "2019": {
+      "parcels": 464841,
+      "deduplicated_rows": 15,
+      "cutoff": "2019-08-20",
+      "unknown_zone_codes": {},
+      "sha256": "7b42613f8e11ca439536e3f5a1499c6966a256c1d6acc102930acf6a7ef6baa1"
+    },
+    "2020": {
+      "parcels": 468753,
+      "deduplicated_rows": 0,
+      "cutoff": "2020-08-20",
+      "unknown_zone_codes": {},
+      "sha256": "be806021192f0605f07a56db92fb515ab31aff654c438e27c639c43168bbb7c0"
+    },
+    "2021": {
+      "parcels": 472470,
+      "deduplicated_rows": 0,
+      "cutoff": "2021-11-15",
+      "unknown_zone_codes": {},
+      "sha256": "0c83096f48458b993c335329736e3f8fb3275c6fe6da3c0d2bafedb401cfeeee"
+    },
+    "2022": {
+      "parcels": 473146,
+      "deduplicated_rows": 0,
+      "cutoff": "2022-11-09",
+      "unknown_zone_codes": {},
+      "sha256": "91054d4f0e0749675882f93d07dd71cdec883b3fa0d6b9c8dedbeeea39d94ae5"
+    },
+    "2023": {
+      "parcels": 475217,
+      "deduplicated_rows": 0,
+      "cutoff": "2023-08-05",
+      "unknown_zone_codes": {
+        "61": 1
+      },
+      "sha256": "946d5cce35261777f1be492ba5917bae54527ec28f417b3e86ad4b2cd22f498f"
+    },
+    "2024": {
+      "parcels": 477399,
+      "deduplicated_rows": 0,
+      "cutoff": "2024-07-31",
+      "unknown_zone_codes": {},
+      "sha256": "d89ce7a1570f91ff1b410bacf567aa93fce7349203e66cff9a593f7fd755ad33"
+    },
+    "2025": {
+      "parcels": 478750,
+      "deduplicated_rows": 0,
+      "cutoff": "2025-08-08",
+      "unknown_zone_codes": {},
+      "sha256": "0fce6a8ad1bf27be7da66c2750f58bd65d76f1fa2e5b51598472c699d31824ed"
+    },
+    "2026": {
+      "parcels": 480633,
+      "deduplicated_rows": 0,
+      "cutoff": "2026-05-13",
+      "unknown_zone_codes": {},
+      "sha256": "34ac3e0ee610079d4fb0808fa233e8f848fe7e7756285fca67bfa6912f21d40c"
+    }
+  },
+  "counts": {
+    "2021:annual": {
+      "partial": 3144,
+      "cancelled": 1277,
+      "unsupported_zone": 328,
+      "unique_candidate": 5710,
+      "ambiguous": 581,
+      "no_candidate": 1226
+    },
+    "2021:observed_before_trade": {
+      "partial": 3144,
+      "cancelled": 1277,
+      "unsupported_zone": 328,
+      "ambiguous": 565,
+      "no_candidate": 1488,
+      "unique_candidate": 5464
+    },
+    "2022:annual": {
+      "partial": 2538,
+      "cancelled": 843,
+      "unsupported_zone": 220,
+      "no_candidate": 900,
+      "ambiguous": 391,
+      "unique_candidate": 3733
+    },
+    "2022:observed_before_trade": {
+      "partial": 2538,
+      "cancelled": 843,
+      "unsupported_zone": 220,
+      "no_candidate": 1120,
+      "ambiguous": 321,
+      "unique_candidate": 3583
+    },
+    "2023:annual": {
+      "unsupported_zone": 192,
+      "cancelled": 584,
+      "partial": 2002,
+      "no_candidate": 783,
+      "unique_candidate": 2682,
+      "ambiguous": 245
+    },
+    "2023:observed_before_trade": {
+      "unsupported_zone": 192,
+      "cancelled": 584,
+      "partial": 2002,
+      "unique_candidate": 2585,
+      "no_candidate": 886,
+      "ambiguous": 239
+    },
+    "2024:annual": {
+      "unsupported_zone": 280,
+      "partial": 1815,
+      "cancelled": 581,
+      "no_candidate": 667,
+      "ambiguous": 242,
+      "unique_candidate": 2748
+    },
+    "2024:observed_before_trade": {
+      "unsupported_zone": 280,
+      "partial": 1815,
+      "cancelled": 581,
+      "ambiguous": 230,
+      "unique_candidate": 2639,
+      "no_candidate": 788
+    },
+    "2025:annual": {
+      "partial": 1814,
+      "cancelled": 672,
+      "unsupported_zone": 147,
+      "unique_candidate": 2661,
+      "no_candidate": 775,
+      "ambiguous": 230
+    },
+    "2025:observed_before_trade": {
+      "partial": 1814,
+      "cancelled": 672,
+      "unsupported_zone": 147,
+      "no_candidate": 895,
+      "unique_candidate": 2552,
+      "ambiguous": 219
+    },
+    "2020:annual": {
+      "cancelled": 643,
+      "unsupported_zone": 243,
+      "unsupported_lot": 4,
+      "partial": 3236,
+      "unique_candidate": 5242,
+      "no_candidate": 1045,
+      "ambiguous": 560
+    },
+    "2020:observed_before_trade": {
+      "cancelled": 643,
+      "unsupported_zone": 243,
+      "unsupported_lot": 4,
+      "partial": 3236,
+      "unique_candidate": 5022,
+      "no_candidate": 1317,
+      "ambiguous": 508
+    },
+    "2019:annual": {
+      "partial": 2078,
+      "unsupported_zone": 197,
+      "unique_candidate": 3650,
+      "no_candidate": 1033,
+      "ambiguous": 327
+    },
+    "2019:observed_before_trade": {
+      "partial": 2078,
+      "unsupported_zone": 197,
+      "no_prior_snapshot": 3231,
+      "unique_candidate": 1301,
+      "no_candidate": 360,
+      "ambiguous": 118
+    },
+    "2026:annual": {
+      "partial": 1467,
+      "cancelled": 324,
+      "unsupported_zone": 87,
+      "unique_candidate": 1736,
+      "ambiguous": 181,
+      "no_candidate": 435
+    },
+    "2026:observed_before_trade": {
+      "partial": 1467,
+      "cancelled": 324,
+      "unsupported_zone": 87,
+      "no_candidate": 588,
+      "unique_candidate": 1612,
+      "ambiguous": 152
+    }
+  },
+  "overlap_comparison_2023_2026": [
+    {
+      "policy": "annual",
+      "transaction_rows": 23350,
+      "trait_unique": 9827,
+      "plan_unique": 9973,
+      "both_unique": 9811,
+      "same_pnu": 9811,
+      "different_pnu": 0,
+      "trait_only_unique": 16,
+      "plan_only_unique": 162
+    },
+    {
+      "policy": "observed_before_trade",
+      "transaction_rows": 23350,
+      "trait_unique": 9388,
+      "plan_unique": 7873,
+      "both_unique": 7722,
+      "same_pnu": 7722,
+      "different_pnu": 0,
+      "trait_only_unique": 1666,
+      "plan_only_unique": 151
+    }
+  ],
+  "accuracy": "unverified",
+  "dictionary_basis": "Unique observed code-label pairs from 2019-2021, checked against subsequent source pairs; not a legal historical dictionary certification.",
+  "limitations": [
+    "Annual is retrospective reference; before-trade uses source observation date, not historic publication/availability.",
+    "Trait zone1/zone2 is not complete land-use planning designations.",
+    "Unmatched or ambiguous transactions are not forced; no price is used in matching."
+  ],
+  "transaction_input_sha256": "41eb6f7e51fc08a3d568b8609da3732f4f42d537def8227fa3c7726d64c3e894"
+}

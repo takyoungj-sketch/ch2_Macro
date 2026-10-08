@@ -34,8 +34,25 @@
       "candidate_universe_cutoff": "2026-08-06"
     }
   },
-  "transaction_rows": 16862,
+  "transaction_rows": 23350,
   "counts": {
+    "2023:annual": {
+      "unsupported_zone": 192,
+      "cancelled": 584,
+      "partial": 2002,
+      "no_candidate": 784,
+      "unique_candidate": 2680,
+      "ambiguous": 246
+    },
+    "2023:observed_before_trade": {
+      "unsupported_zone": 192,
+      "cancelled": 584,
+      "partial": 2002,
+      "no_candidate": 325,
+      "no_prior_snapshot": 2300,
+      "unique_candidate": 983,
+      "ambiguous": 102
+    },
     "2024:annual": {
       "unsupported_zone": 280,
       "partial": 1815,

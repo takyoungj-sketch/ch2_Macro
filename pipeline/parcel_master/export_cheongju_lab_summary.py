@@ -10,13 +10,15 @@ def main():
     report = json.loads((LAB / "cheongju_regression_pilot_20261004.json").read_text(encoding="utf-8"))
     links = json.loads((LAB / "cheongju_ledger_link_pilot_20261004.json").read_text(encoding="utf-8"))
     quality = json.loads((LAB / "cheongju_ledger_link_quality_20261004.json").read_text(encoding="utf-8"))
+    review = json.loads((LAB / "cheongju_link_review_20261004.json").read_text(encoding="utf-8"))
     fields = ("policy", "test_year", "model", "n_train", "n_test", "train_adj_r2", "test_log_rmse",
               "test_actual_mean_10k_sqm", "test_predicted_mean_10k_sqm", "mean_ci95_approx",
-              "cell_mean_mae_n20_10k_sqm", "cells_n20")
+              "cell_mean_mae_n20_10k_sqm", "cells_n20", "unseen_parcel_test", "district_validation")
     output = {key: report[key] for key in ("run_date", "sample", "conflicting_pnu_excluded", "positive_filter_excluded")}
     output.update(transaction_rows=links["transaction_rows"], source_join=links["source_join"],
                   counts=links["counts"], annual_unique=quality["annual_unique"], prior_unique=quality["prior_unique"],
                   results=[{key: row[key] for key in fields} for row in report["results"]])
+    output['link_review'] = {key: review[key] for key in ('policy_conflicts', 'review_queue_rows', 'independently_validated_matches', 'selection_bias_groups')}
     for row in output["results"]:
         if row["policy"] == "observed_before_trade":
             row["policy"] = "prior"

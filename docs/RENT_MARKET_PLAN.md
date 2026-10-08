@@ -72,6 +72,8 @@
 
 ## 적재
 
+시작 전 CSV 수를 센다. `임대시장/A.주거용/{yymm}업데이트` 아래 4유형(`아파트`·`연립다세대`·`오피스텔`·`단독다가구` `_전월세`) 폴더마다 **16개**. 시도 목록은 체크리스트 **0.7**(전남·광주는 `전남광주통합특별시` 1파일). **빠진 지역이 있으면 `import_molit.py` 와 마트 재구축을 시작하지 말고 사용자에게 먼저 알린다.**
+
 ```powershell
 py pipeline/rent/import_molit.py
 py pipeline/rent/build_building_stats.py

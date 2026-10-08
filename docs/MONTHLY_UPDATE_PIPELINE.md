@@ -13,11 +13,12 @@
 
 ```
 1. MOLIT CSV 수집 (molit_csv_collector · 검증 포함)
-2. run_land_cycle_csv  — purge → collect/clean/dedupe → V2 3,5,7 category+group → annual → cache TRUNCATE
-3. run_built_cycle_csv  — 토지 이후 · skip-enrich 기본
-4. run_collective_cycle_csv
-5. verify_monthly_integrity · 건수 비교
-6. dump → VPS Promote → 3 DB as_of 스모크 (체크리스트 §5)
+2. CSV 수 확인 (체크리스트 0.7) — 유형당 16개. 빠진 지역이 있으면 사용자에게 먼저 알리고 3번 이후를 시작하지 않음
+3. run_land_cycle_csv  — purge → collect/clean/dedupe → V2 3,5,7 category+group → annual → cache TRUNCATE
+4. run_built_cycle_csv  — 토지 이후 · skip-enrich 기본
+5. run_collective_cycle_csv
+6. verify_monthly_integrity · 건수 비교
+7. dump → VPS Promote → 3 DB as_of 스모크 (체크리스트 §5)
 ```
 
 지역프로필·Twin mart는 **월간에 넣지 않는다** (D-054, 연초 §7). git/deploy ≠ 월갱신.

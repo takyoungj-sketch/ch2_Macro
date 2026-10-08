@@ -1,7 +1,7 @@
 """Cheongju local research: annual source joins and unverified transaction candidates.
 Writes research CSV/JSON only; transaction connection is READ ONLY.
 """
-import csv,gzip,json,re,struct,sys,zipfile
+import argparse,csv,gzip,json,re,struct,sys,zipfile
 from collections import Counter,defaultdict
 from datetime import date
 from decimal import Decimal,ROUND_HALF_UP
@@ -10,8 +10,13 @@ import pandas as pd
 from sqlalchemy import text
 ROOT=Path(__file__).resolve().parents[2];sys.path.insert(0,str(ROOT/'pipeline'))
 from db_utils import get_engine
+from pilot_validation import snapshot_cutoff
 from constants import LAND_CATEGORY_COMPACT_MAP,ZONE_TYPE_COMPACT_MAP
 RAW=ROOT/'raw/raw addition';OUT=ROOT/'data/research/cheongju_ledger';OUT.mkdir(parents=True,exist_ok=True)
+parser=argparse.ArgumentParser()
+parser.add_argument('--include-2023', action='store_true', help='Write separate comparison outputs including 2023')
+cli_args=parser.parse_args()
+year_from=2023 if cli_args.include_2023 else 2024
 def area_key(x):
  try:return str(Decimal(str(x)).quantize(Decimal('.1'),rounding=ROUND_HALF_UP))
  except Exception:return None
@@ -30,7 +35,7 @@ def fields(src):
     if row[:1]==b'*':continue
     yield {k:row[a:a+l].decode(enc).replace(chr(0),'').strip() for k,(a,l) in cols.items()}
    f.read()
-ledger={};summary={}
+ledger={};summary={};cutoffs={}
 for year in range(2023,2027):
  cache=OUT/f'parcels_{year}.csv.gz'
  if cache.exists():
@@ -67,10 +72,11 @@ for year in range(2023,2027):
   r['_zones']=zones
   if r['year']==str(year) and r['jimok'] and area_key(r['area']):index[(r['bjd'],r['jimok'],area_key(r['area']))].append(pnu)
  ledger[year]=(parcels,index)
- summary[str(year)]={'parcels':len(parcels),'with_plan':covered,'plan_asof':next(iter(parcels.values()))['plan_asof'],'trait_asof':next(iter(parcels.values()))['trait_asof'],'compact_bytes':cache.stat().st_size}
+ cutoffs[year]=snapshot_cutoff(parcels)
+ summary[str(year)]={'parcels':len(parcels),'with_plan':covered,'plan_asof':next(iter(parcels.values()))['plan_asof'],'trait_asof':next(iter(parcels.values()))['trait_asof'],'compact_bytes':cache.stat().st_size,'candidate_universe_cutoff':cutoffs[year]}
 with get_engine().connect() as c:
  c.execute(text('SET TRANSACTION READ ONLY'))
- tx=pd.read_sql(text("SELECT transaction_hash, contract_year, contract_month, contract_date, beopjungri_code, land_category, zone_type, area_sqm, unit_price_per_sqm, is_partial_ownership, is_cancelled, is_valid, lot_display FROM land_transactions WHERE sigungu_code IN ('43111','43112','43113','43114') AND contract_year BETWEEN 2024 AND 2026"),c)
+ tx=pd.read_sql(text("SELECT transaction_hash, contract_year, contract_month, contract_date, beopjungri_code, land_category, zone_type, area_sqm, unit_price_per_sqm, is_partial_ownership, is_cancelled, is_valid, lot_display FROM land_transactions WHERE sigungu_code IN ('43111','43112','43113','43114') AND contract_year BETWEEN :year_from AND 2026"),c,params={'year_from':year_from})
 results=[];counts=defaultdict(Counter)
 for r in tx.to_dict('records'):
  y=int(r['contract_year']);d=r['contract_date'];base={'transaction_hash':r['transaction_hash'],'contract_year':y,'contract_date':str(d),'area_sqm':str(r['area_sqm']),'unit_price_per_sqm':str(r['unit_price_per_sqm'])}
@@ -85,9 +91,9 @@ for r in tx.to_dict('records'):
  for policy in ['annual','observed_before_trade']:
   selected=y
   if policy=='observed_before_trade':
-   if d is None: selected=None
+   if pd.isna(d): selected=None
    else:
-    options=[yr for yr,(p,_) in ledger.items() if max(next(iter(p.values()))['trait_asof'],next(iter(p.values()))['plan_asof'])<=str(d)]
+    options=[yr for yr,cutoff in cutoffs.items() if cutoff is not None and cutoff<=str(d)]
     selected=max(options) if options else None
   status=reason; candidates=[]
   if not status and selected is None:status='no_prior_snapshot'
@@ -103,8 +109,10 @@ for r in tx.to_dict('records'):
   counts[f'{y}:{policy}'][status]+=1
   a=ledger[selected][0][candidates[0]] if len(candidates)==1 else {}
   results.append({**base,'policy':policy,'source_year':selected,'status':status,'candidate_count':len(candidates),'candidate_pnus':json.dumps(sorted(candidates)),'trait_asof':a.get('trait_asof',''),'plan_asof':a.get('plan_asof',''),'price':a.get('price',''),'use':a.get('use',''),'height':a.get('height',''),'shape':a.get('shape',''),'road':a.get('road',''),'match_accuracy':'unverified'})
-with gzip.open(OUT/'transaction_candidates.csv.gz','wt',encoding='utf-8',newline='') as f:
+candidate_file='plan_comparison_candidates.csv.gz' if cli_args.include_2023 else 'transaction_candidates.csv.gz'
+with gzip.open(OUT/candidate_file,'wt',encoding='utf-8',newline='') as f:
  w=csv.DictWriter(f,fieldnames=list(results[0]));w.writeheader();w.writerows(results)
-report={'run_date':'2026-10-04','source_join':summary,'transaction_rows':len(tx),'counts':{k:dict(v) for k,v in counts.items()},'rules':'BJD+jimok+area rounded half-up to 0.1+mountain flag+masked main-lot digits+AL_D155 zone labels with 포함/저촉; no price matching','accuracy':'unique candidate is not independently validated','timing':'annual is retrospective reference; observed_before_trade requires both source observation dates before contract_date; neither proves effective validity','outputs':str(OUT.relative_to(ROOT))}
-(ROOT/'docs/lab/cheongju_ledger_link_pilot_20261004.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+report={'run_date':'2026-10-04','source_join':summary,'transaction_rows':len(tx),'counts':{k:dict(v) for k,v in counts.items()},'rules':'BJD+jimok+area rounded half-up to 0.1+mountain flag+masked main-lot digits+AL_D155 zone labels with 포함/저촉; no price matching','accuracy':'unique candidate is not independently validated','rule_version':'cheongju-link-v2-whole-universe-cutoff','timing':'annual is retrospective reference; observed_before_trade requires both source observation dates before contract_date; neither proves effective validity','outputs':str(OUT.relative_to(ROOT))}
+report_file='cheongju_plan_comparison_20261004.json' if cli_args.include_2023 else 'cheongju_ledger_link_pilot_20261004.json'
+(ROOT/'docs/lab'/report_file).write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
 print(json.dumps(report,ensure_ascii=False),flush=True)

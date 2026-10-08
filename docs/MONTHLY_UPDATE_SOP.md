@@ -77,10 +77,11 @@ raw\토지\202605\
 ## 4. 실행 흐름 (반자동 · CSV)
 
 1. 운영자: 국토부 **CSV**(검증 포함 `molit_csv_collector`) — 직전 12개월. [`MOLIT_CSV_COLLECTOR_WARNINGS.md`](MOLIT_CSV_COLLECTOR_WARNINGS.md).
-2. `py scripts/monthly/run_land_cycle_csv.py --cycle-id YYYYMM`  
+2. **CSV 수 확인** — 체크리스트 **0.7**. 유형 폴더마다 16개(전남광주통합 1파일). 빠진 지역이 있으면 **러너를 돌리지 말고** 사용자에게 먼저 알린다. purge가 창을 비우기 전에 멈춘다.
+3. `py scripts/monthly/run_land_cycle_csv.py --cycle-id YYYYMM`  
    purge → collect/clean/dedupe → V2 **3,5,7** category → §7.1 group·annual → cache TRUNCATE → 스냅샷.
-3. 검증: `verify_monthly_integrity.py` · 건수 비교 · 체크리스트 §1.
-4. **OK** 후 **Promote** (§9). 이어서 복합·집합 CSV 러너 ([`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md) §2–3).
+4. 검증: `verify_monthly_integrity.py` · 건수 비교 · 체크리스트 §1.
+5. **OK** 후 **Promote** (§9). 이어서 복합·집합 CSV 러너 ([`MONTHLY_UPDATE_CHECKLIST.md`](./MONTHLY_UPDATE_CHECKLIST.md) §2–3). 복합·집합도 같은 CSV 묶음이므로 0.7을 통과한 뒤에만 시작한다.
 
 xlsx 복구만: 아래 §5·§6 `run_monthly_cycle.py` 후 **반드시 §7.1 수동** (xlsx cycle은 group 미포함).
 
@@ -407,6 +408,7 @@ SSOT: [`REB_COMMERCIAL_RENT_SURVEY.md`](./REB_COMMERCIAL_RENT_SURVEY.md) §7 · 
 
 | 날짜 | 내용 |
 |------|------|
+| 2026-10-02 | **§4 CSV 수 확인** — 유형당 16개. 빠진 지역이 있으면 적재 전에 사용자에게 알리고 러너를 시작하지 않음. 체크리스트 0.7 |
 | 2026-09-01 | **CSV SSOT 본문 정렬** — 실행 흐름·§7.1·빠른 참조를 `run_land_cycle_csv`·windows **3,5,7**에 맞춤. xlsx는 복구. 2026-06 재구축 as_of 문단은 이력으로 격하 |
 | 2026-08-16 | **§11.1 임대 상권 분기 갱신** — 기본표 4분기 롤링, 추세는 연간 |
 | 2026-08-09 | **§9.4 코드 배포 vs DB Promote** — 2608 토지 7월 미노출 원인·ingest→mart→dump→VPS restore 체크리스트·PG18 dump 호환 |
