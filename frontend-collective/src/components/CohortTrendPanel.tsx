@@ -1,8 +1,13 @@
 import clsx from "clsx";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import MultiBuildingTrendChart, { type CohortTrendMetric, type TrendSeries } from "./MultiBuildingTrendChart";
 import type { LongTermPriceMetric } from "./LongTermMetricToggle";
 import { buildWeightedMeanCombinedSeries } from "../utils/weightedMeanCombinedSeries";
+
+function fmtQuartile(v: number | null | undefined): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  return v.toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
 
 export default function CohortTrendPanel({
   series,
@@ -26,8 +31,13 @@ export default function CohortTrendPanel({
   priceMetric?: LongTermPriceMetric;
   onPriceMetricChange?: (m: LongTermPriceMetric) => void;
 }) {
+  const [showQuartiles, setShowQuartiles] = useState(false);
   const chartMetric: CohortTrendMetric =
     variant === "longTerm" ? (priceMetric === "median" ? "median" : "mean") : metric;
+
+  useEffect(() => {
+    if (priceMetric !== "median") setShowQuartiles(false);
+  }, [priceMetric]);
 
   const combinedSeries = useMemo(() => {
     if (variant !== "longTerm" || priceMetric !== "mean" || series.length < 2) return null;
@@ -71,6 +81,20 @@ export default function CohortTrendPanel({
               >
                 중앙값(만원/㎡)
               </button>
+              <button
+                type="button"
+                aria-pressed={priceMetric === "median" && showQuartiles}
+                disabled={priceMetric !== "median"}
+                className={clsx(
+                  "px-2 py-0.5 rounded font-medium",
+                  priceMetric !== "median" && "text-slate-300 dark:text-slate-600 cursor-not-allowed",
+                  priceMetric === "median" && showQuartiles && "bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-slate-100",
+                  priceMetric === "median" && !showQuartiles && "text-slate-500 dark:text-slate-400",
+                )}
+                onClick={() => setShowQuartiles((v) => !v)}
+              >
+                25·75
+              </button>
             </>
           ) : (
             <>
@@ -106,8 +130,47 @@ export default function CohortTrendPanel({
         <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 px-1 mb-2">
           {variant === "longTerm" && series.length >= 2 ? "단지별 연도 추이 (꺾은선)" : chartTitle}
         </p>
-        <MultiBuildingTrendChart series={series} metric={chartMetric} />
+        <MultiBuildingTrendChart series={series} metric={chartMetric} showQuartiles={showQuartiles} />
       </div>
+      {showQuartiles && priceMetric === "median" && (
+        <div className="space-y-3">
+          {series.map((s) => (
+            <div key={s.label} className="modal-table-wrap">
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 px-3 pt-3 pb-1">{s.label}</p>
+              <table className="w-full text-xs border-collapse modal-inner-table">
+                <thead>
+                  <tr>
+                    <th className="border px-2 py-1.5 text-left font-medium">연도</th>
+                    <th className="border px-2 py-1.5 text-right font-medium">건수</th>
+                    <th className="border px-2 py-1.5 text-right font-medium">25%</th>
+                    <th className="border px-2 py-1.5 text-right font-bold text-blue-700 dark:text-blue-400">중앙값</th>
+                    <th className="border px-2 py-1.5 text-right font-medium">75%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...s.points]
+                    .sort((a, b) => a.xOrder - b.xOrder)
+                    .map((p) => (
+                      <tr key={`${s.label}-${p.xOrder}`}>
+                        <td className="border px-2 py-1 tabular-nums">{p.xLabel}</td>
+                        <td className="border px-2 py-1 text-right tabular-nums">{p.count.toLocaleString("ko-KR")}</td>
+                        <td className="border px-2 py-1 text-right tabular-nums text-slate-600 dark:text-slate-300">
+                          {fmtQuartile(p.p25)}
+                        </td>
+                        <td className="border px-2 py-1 text-right tabular-nums text-blue-600 dark:text-blue-400 font-bold">
+                          {fmtQuartile(p.median)}
+                        </td>
+                        <td className="border px-2 py-1 text-right tabular-nums text-slate-600 dark:text-slate-300">
+                          {fmtQuartile(p.p75)}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      )}
       {combinedSeries && (
         <div className="modal-card px-2 py-3 border border-slate-200 dark:border-slate-600">
           <p className="text-[10px] font-semibold text-slate-700 dark:text-slate-200 px-1 mb-0.5">

@@ -89,7 +89,9 @@ CREATE TABLE IF NOT EXISTS collective_commercial_cluster_annual_stats (
     std                 NUMERIC(14, 2),
     ci_lower            NUMERIC(14, 2),
     ci_upper            NUMERIC(14, 2),
+    p25                 NUMERIC(14, 2),
     median              NUMERIC(14, 2),
+    p75                 NUMERIC(14, 2),
 
     computed_at         TIMESTAMP       NOT NULL DEFAULT NOW(),
     batch_id            TEXT,

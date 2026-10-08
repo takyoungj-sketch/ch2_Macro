@@ -160,16 +160,16 @@ function CheckChips({ items }: { items: DiagnosticCheckItem[] }) {
   if (!items.length) return null;
   return (
     <ul className="flex flex-wrap gap-1.5 text-xs">
-      {items.map((item) => (
+        {items.map((item) => (
         <li
           key={item.check_id}
           className={clsx("rounded border px-1.5 py-0.5", CHECK_CLASS[item.status])}
           title={item.summary_ko}
         >
           {CHECK_MARK[item.status]} {item.label_ko}
-        </li>
-      ))}
-    </ul>
+          </li>
+        ))}
+      </ul>
   );
 }
 
@@ -287,9 +287,9 @@ export default function RecommendStagePanel({
           <ul className="text-xs text-amber-700 dark:text-amber-400 space-y-0.5">
             {warnings.map((w) => (
               <li key={w}>⚠ {w}</li>
-            ))}
-          </ul>
-        )}
+          ))}
+        </ul>
+      )}
 
         <div className="overflow-x-auto rounded-md border border-slate-200 dark:border-slate-700">
           <table className="w-full text-left text-xs border-collapse">
@@ -306,7 +306,7 @@ export default function RecommendStagePanel({
               {ranking.map((c) => (
                 <tr
                   key={`${c.rank}-${c.response_scale}-${c.blocks.join(",")}`}
-                  className={clsx(
+                className={clsx(
                     "border-b border-slate-100 dark:border-slate-800 last:border-0",
                     c.rank === 1 && "bg-indigo-50/70 dark:bg-indigo-950/30",
                   )}
@@ -338,14 +338,14 @@ export default function RecommendStagePanel({
               : "CV 미산출"}
             <span className="ml-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
               {formatResponseScale(primary.response_scale)}
-            </span>
+        </span>
             {stage1.satisfaction.label_ko && (
               <span className="ml-2 text-sm font-medium text-slate-500 dark:text-slate-400">
                 {stage1.satisfaction.label_ko}
                 {stage1.satisfaction.stars > 0 && ` ${"★".repeat(stage1.satisfaction.stars)}`}
                 {stage1.satisfaction.grade_basis === "confirm" && " (마지막 연도 기준)"}
-              </span>
-            )}
+          </span>
+        )}
           </p>
           <p className="text-sm text-slate-700 dark:text-slate-200">
             {stage1.primary_confirm_cv_mape != null ? (
@@ -353,7 +353,7 @@ export default function RecommendStagePanel({
                 마지막 연도로 확인:{" "}
                 <span className="font-semibold tabular-nums">
                   {stage1.primary_confirm_cv_mape.toFixed(1)}%
-                </span>
+            </span>
                 {stage1.primary_confirm_cv_folds
                   ? ` (거래 ${stage1.primary_confirm_cv_folds}개 연도)`
                   : ""}
@@ -361,7 +361,7 @@ export default function RecommendStagePanel({
             ) : (
               <span className="text-slate-500 dark:text-slate-400">
                 {stage1.primary_confirm_note ?? "마지막 연도 확인 CV 없음"}
-              </span>
+          </span>
             )}
           </p>
           {(stage1.primary_cv_extreme_rate != null || stage1.primary_cv_median_ape != null) && (
@@ -396,9 +396,9 @@ export default function RecommendStagePanel({
               이 모형의 예측 {(extremeRate * 100).toFixed(0)}%가 학습 거래 가격 범위를 한 자릿수
               이상 벗어났습니다. 평균 오차가 낮아도 개별 예측이 불안정할 수 있으니, 예상값은 입력
               조건이 실제 거래 범위 안에 있는지 함께 확인하세요.
-            </p>
-          )}
-        </div>
+        </p>
+      )}
+    </div>
       </StageSection>
 
       <StageSection index="②" title="Local 기준선">
@@ -421,14 +421,14 @@ export default function RecommendStagePanel({
               {primary.metrics.adj_r_squared != null
                 ? primary.metrics.adj_r_squared.toFixed(3)
                 : "—"}
-            </p>
-          </div>
+      </p>
+    </div>
           <div className="rounded border border-slate-200 dark:border-slate-700 px-2 py-1.5">
             <p className="text-slate-500">CV-MAPE</p>
             <p className="font-medium tabular-nums">
               {primary.metrics.cv_mape != null ? `${primary.metrics.cv_mape.toFixed(1)}%` : "—"}
             </p>
-          </div>
+    </div>
         </div>
 
         {(conclusion.macro_diagnosis?.summary_ko || conclusion.summary_ko) && (
@@ -451,7 +451,7 @@ export default function RecommendStagePanel({
           </p>
         )}
 
-        {onAdopt && (
+          {onAdopt && (
           <div className="space-y-1">
             <button
               type="button"
@@ -471,9 +471,9 @@ export default function RecommendStagePanel({
               확인 후에만 왼쪽 선택이 바뀝니다. 통계분석은 자동으로 실행하지 않습니다.
             </p>
           </div>
-        )}
+          )}
 
-        {onPredict && (
+          {onPredict && (
           <details
             className="rounded-md border border-slate-200 dark:border-slate-700 px-2.5 py-2"
             onToggle={(e) => {
@@ -524,17 +524,17 @@ export default function RecommendStagePanel({
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-violet-200 dark:border-violet-800 bg-violet-50/60 dark:bg-violet-950/20 px-2.5 py-2">
             <p className="text-sm text-violet-900 dark:text-violet-100">
               Local 표본만으로는 예측 기준선이 얇을 수 있어, 유사 지역 1위 거래를 보탠 검증을 권합니다.
-            </p>
-            <button
-              type="button"
+              </p>
+              <button
+                type="button"
               className="px-2.5 py-1 text-sm rounded bg-violet-600 text-white disabled:opacity-50"
-              disabled={twinRunning}
-              onClick={onRunTwin}
-            >
+                disabled={twinRunning}
+                onClick={onRunTwin}
+              >
               {twinRunning ? "Twin 실험1 중…" : "Twin 실험1"}
-            </button>
-          </div>
-        )}
+              </button>
+            </div>
+          )}
 
         {!conclusion.twin_recommended && canRunTwin && (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-violet-200 dark:border-violet-800 px-2.5 py-2">
@@ -542,15 +542,15 @@ export default function RecommendStagePanel({
               교차검증 오차가 낮아 Twin은 필수는 아닙니다. 쌍둥이 1위 표본을 보태면 예측이 나아지는지는
               실험해 볼 수 있습니다.
             </p>
-            <button
-              type="button"
+                    <button
+                      type="button"
               className="px-2.5 py-1 text-sm rounded border border-violet-400 text-violet-800 dark:text-violet-200 disabled:opacity-50"
               disabled={twinRunning}
               onClick={onRunTwin}
             >
               {twinRunning ? "Twin 실험1 중…" : "Twin 실험1"}
-            </button>
-          </div>
+                    </button>
+                  </div>
         )}
 
         {showTwinResults && stage2 && (
@@ -583,8 +583,8 @@ export default function RecommendStagePanel({
         {!twin1Done && (
           <p className="text-sm text-slate-500">
             Twin 실험1을 실행하면 그 1위 표본으로 Twin 실험2를 돌릴 수 있습니다.
-          </p>
-        )}
+                  </p>
+                )}
 
         {twinResearchRunning && !stage2?.research_ran && (
           <p className="text-sm text-amber-800 dark:text-amber-200">Twin 실험2를 계산 중…</p>
@@ -596,16 +596,16 @@ export default function RecommendStagePanel({
               Twin1과 같은 1위 표본에서 CV-MAPE로 식을 다시 고릅니다. Local 식은 ②에, Twin1 식은 ③에
               그대로 둡니다.
             </p>
-            <button
-              type="button"
+                  <button
+                    type="button"
               className="px-2.5 py-1 text-sm rounded bg-amber-600 text-white disabled:opacity-50"
               disabled={twinResearchRunning || !stage2?.ran}
               onClick={onRunTwinResearch}
             >
               {twinResearchRunning ? "Twin 실험2 중…" : "Twin 실험2"}
-            </button>
-          </div>
-        )}
+                  </button>
+              </div>
+            )}
 
         {stage2?.research_ran && (
           <TwinResearchResult
@@ -649,10 +649,10 @@ export default function RecommendStagePanel({
             ))}
           </ol>
         </details>
-      )}
-    </div>
-  );
-}
+        )}
+      </div>
+    );
+  }
 
 function CandidateEquationBlock({
   candidate,
@@ -687,7 +687,7 @@ function CandidateEquationBlock({
         />
         <CoefficientInsights items={narratives} />
       </details>
-    </div>
+      </div>
   );
 }
 
@@ -788,7 +788,7 @@ function TwinStructureResult({
             </tr>
           </tbody>
         </table>
-      </div>
+        </div>
 
       <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200">
         {adopted
@@ -819,8 +819,8 @@ function TwinStructureResult({
             볼 수 있습니다. Local 최적식은 위에서 그대로입니다.
           </p>
           {onPredict && !twin1PredictActive && (
-            <button
-              type="button"
+          <button
+            type="button"
               className="px-2 py-0.5 text-xs rounded border border-violet-400 text-violet-700 dark:text-violet-300"
               onClick={() => {
                 const { vars, scale } = poolAdoptVars(predictPool, stage1, stage2);
@@ -832,7 +832,7 @@ function TwinStructureResult({
               }}
             >
               Twin1 표본으로 값 계산해 보기
-            </button>
+          </button>
           )}
           {twin1PredictActive && twin1PredictPanel}
         </div>
@@ -851,54 +851,54 @@ function TwinStructureResult({
             . 부호가 뒤집히면 채택하지 않습니다.
           </p>
         </details>
-      )}
+          )}
 
-      {stage2.ran && stage2.pools.length > 0 && visiblePool && (
+          {stage2.ran && stage2.pools.length > 0 && visiblePool && (
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
           <span>{visiblePool.label}</span>
           {stage2.pools.length > 1 && (
             <span className="flex gap-1">
-              <button
-                type="button"
+                  <button
+                    type="button"
                 className="px-1.5 py-0.5 border rounded disabled:opacity-40"
                 disabled={twinStepIndex <= 0}
-                onClick={() => setTwinStep((s) => Math.max(0, s - 1))}
-              >
-                ←
-              </button>
+                    onClick={() => setTwinStep((s) => Math.max(0, s - 1))}
+                  >
+                    ←
+                  </button>
               <span className="tabular-nums self-center">
                 {twinStepIndex + 1}/{stage2.pools.length}
-              </span>
-              <button
-                type="button"
+                  </span>
+                  <button
+                    type="button"
                 className="px-1.5 py-0.5 border rounded disabled:opacity-40"
                 disabled={twinStepIndex >= stage2.pools.length - 1}
-                onClick={() => setTwinStep((s) => Math.min(stage2.pools.length - 1, s + 1))}
-              >
-                →
-              </button>
-            </span>
-          )}
-          {onAdoptPool && (
-            <button
-              type="button"
+                    onClick={() => setTwinStep((s) => Math.min(stage2.pools.length - 1, s + 1))}
+                  >
+                    →
+                  </button>
+                  </span>
+              )}
+              {onAdoptPool && (
+                <button
+                  type="button"
               className="px-2 py-0.5 rounded border border-violet-400 text-violet-700 dark:text-violet-300 disabled:opacity-50"
-              disabled={adopting}
-              onClick={() => {
-                const { vars, scale } = poolAdoptVars(visiblePool, stage1, stage2);
-                onAdoptPool({
-                  vars,
-                  scale,
-                  regionCodes: visiblePool.region_codes,
-                  label: visiblePool.label,
-                });
-              }}
-            >
+                  disabled={adopting}
+                  onClick={() => {
+                    const { vars, scale } = poolAdoptVars(visiblePool, stage1, stage2);
+                    onAdoptPool({
+                      vars,
+                      scale,
+                      regionCodes: visiblePool.region_codes,
+                      label: visiblePool.label,
+                    });
+                  }}
+                >
               Twin 식을 기본 통계에 적용 (선택)
-            </button>
+                </button>
+              )}
+            </div>
           )}
-        </div>
-      )}
     </div>
   );
 }

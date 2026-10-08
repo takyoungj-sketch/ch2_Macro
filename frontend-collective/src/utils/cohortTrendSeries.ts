@@ -26,6 +26,8 @@ export function yearlyToTrendSeries(displayName: string, points: YearlyStatPoint
         count: p.count,
         mean: p.mean,
         median: p.median,
+        p25: p.p25,
+        p75: p.p75,
       })),
   };
 }

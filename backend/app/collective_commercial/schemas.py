@@ -106,6 +106,8 @@ class CommercialYearlyStatPoint(BaseModel):
     count: int
     mean: Optional[float] = None
     median: Optional[float] = None
+    p25: Optional[float] = None
+    p75: Optional[float] = None
 
 
 class CommercialYearlyStatsResponse(BaseModel):

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import re
 import sys
 import uuid
 from pathlib import Path
@@ -130,7 +131,9 @@ def _group_annual(df: pd.DataFrame, batch_id: str) -> list[dict]:
                 "std": st["std"],
                 "ci_lower": st["ci_lower"],
                 "ci_upper": st["ci_upper"],
+                "p25": st["p25"],
                 "median": st["median"],
+                "p75": st["p75"],
                 "batch_id": batch_id,
             }
         )
@@ -145,11 +148,11 @@ def upsert(records: list[dict], engine) -> None:
         INSERT INTO collective_commercial_cluster_annual_stats (
             cluster_key, asset_type, contract_year, display_label,
             addr1, addr2, addr3, addr4, road_name,
-            count, mean, std, ci_lower, ci_upper, median, batch_id
+            count, mean, std, ci_lower, ci_upper, p25, median, p75, batch_id
         ) VALUES (
             :cluster_key, :asset_type, :contract_year, :display_label,
             :addr1, :addr2, :addr3, :addr4, :road_name,
-            :count, :mean, :std, :ci_lower, :ci_upper, :median, :batch_id
+            :count, :mean, :std, :ci_lower, :ci_upper, :p25, :median, :p75, :batch_id
         )
         ON CONFLICT (cluster_key, asset_type, contract_year)
         DO UPDATE SET
@@ -164,7 +167,9 @@ def upsert(records: list[dict], engine) -> None:
             std = EXCLUDED.std,
             ci_lower = EXCLUDED.ci_lower,
             ci_upper = EXCLUDED.ci_upper,
+            p25 = EXCLUDED.p25,
             median = EXCLUDED.median,
+            p75 = EXCLUDED.p75,
             computed_at = NOW(),
             batch_id = EXCLUDED.batch_id
         WHERE EXCLUDED.contract_year < 2021
@@ -177,6 +182,50 @@ def upsert(records: list[dict], engine) -> None:
             conn.execute(sql, rec)
 
 
+_YEAR_IN_NAME = re.compile(r"_(19\d{2}|20\d{2})(?:_|\.csv$)")
+
+
+def _named_year(path: Path) -> int | None:
+    m = _YEAR_IN_NAME.search(path.name)
+    return int(m.group(1)) if m else None
+
+
+def update_quartiles_only(records: list[dict], engine) -> int:
+    """기존 연도 행의 25%·75%만 갱신. 건수·평균·중앙값은 그대로 둔다."""
+    rows = [
+        (r["cluster_key"], r["asset_type"], int(r["contract_year"]), r["p25"], r["p75"])
+        for r in records
+        if r.get("p25") is not None and r.get("p75") is not None
+    ]
+    if not rows:
+        return 0
+    from psycopg2.extras import execute_values
+
+    sql = """
+        UPDATE collective_commercial_cluster_annual_stats AS a
+        SET p25 = q.p25, p75 = q.p75
+        FROM (VALUES %s) AS q(cluster_key, asset_type, contract_year, p25, p75)
+        WHERE a.cluster_key = q.cluster_key
+          AND a.asset_type = q.asset_type
+          AND a.contract_year = q.contract_year
+    """
+    raw = engine.raw_connection()
+    try:
+        with raw.cursor() as cur:
+            execute_values(
+                cur,
+                sql,
+                rows,
+                template="(%s, %s, %s::smallint, %s::numeric, %s::numeric)",
+                page_size=1000,
+            )
+            updated = cur.rowcount
+        raw.commit()
+    finally:
+        raw.close()
+    return int(updated or 0)
+
+
 def ingest_asset(
     engine,
     asset_type: CollectiveMolitAsset,
@@ -185,6 +234,7 @@ def ingest_asset(
     year_to: int,
     batch_id: str,
     limit_files: int | None = None,
+    quartiles_only: bool = False,
 ) -> int:
     files = _find_csvs(root)
     if not files:
@@ -194,6 +244,9 @@ def ingest_asset(
         files = files[:limit_files]
     total = 0
     for fp in files:
+        named = _named_year(fp)
+        if named is not None and named > year_to:
+            continue
         log.info("[%s] read %s", asset_type, fp.name)
         df = refine_collective_molit_file(fp, asset_type=asset_type)
         if df.empty:
@@ -202,9 +255,14 @@ def ingest_asset(
         df = _enrich_cluster_keys(df)
         df = df[df["contract_year"].notna() & (df["contract_year"] <= year_to)]
         records = _group_annual(df, batch_id)
-        upsert(records, engine)
-        total += len(records)
-        log.info("  upserted %s annual rows (from %s tx rows)", len(records), len(df))
+        if quartiles_only:
+            updated = update_quartiles_only(records, engine)
+            log.info("  quartiles updated %s / grouped %s", updated, len(records))
+            total += updated
+        else:
+            upsert(records, engine)
+            total += len(records)
+            log.info("  upserted %s annual rows (from %s tx rows)", len(records), len(df))
     return total
 
 
@@ -214,6 +272,11 @@ def main() -> None:
     p.add_argument("--year-to", type=int, default=2020)
     p.add_argument("--asset-type", type=str, default=None, choices=list(ASSET_DIRS.keys()))
     p.add_argument("--limit-files", type=int, default=None, help="smoke: process first N CSV per asset")
+    p.add_argument(
+        "--quartiles-only",
+        action="store_true",
+        help="기존 행의 p25·p75만 갱신 (건수·평균·중앙값 유지)",
+    )
     args = p.parse_args()
 
     engine = get_collective_engine()
@@ -231,6 +294,7 @@ def main() -> None:
             year_to=args.year_to,
             batch_id=batch_id,
             limit_files=args.limit_files,
+            quartiles_only=args.quartiles_only,
         )
     log.info("commercial long-term ingest done total=%s", grand)
 

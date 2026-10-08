@@ -193,12 +193,12 @@ def upsert_annual_stats(records: list[dict], engine, *, chunk_size: int = DEFAUL
         INSERT INTO collective_commercial_cluster_annual_stats (
             cluster_key, asset_type, contract_year, display_label,
             addr1, addr2, addr3, addr4, road_name,
-            count, mean, std, ci_lower, ci_upper, median,
+            count, mean, std, ci_lower, ci_upper, p25, median, p75,
             computed_at, batch_id
         ) VALUES (
             :cluster_key, :asset_type, :contract_year, :display_label,
             :addr1, :addr2, :addr3, :addr4, :road_name,
-            :count, :mean, :std, :ci_lower, :ci_upper, :median,
+            :count, :mean, :std, :ci_lower, :ci_upper, :p25, :median, :p75,
             NOW(), :batch_id
         )
         ON CONFLICT (cluster_key, asset_type, contract_year)
@@ -207,7 +207,8 @@ def upsert_annual_stats(records: list[dict], engine, *, chunk_size: int = DEFAUL
             addr1 = EXCLUDED.addr1, addr2 = EXCLUDED.addr2, addr3 = EXCLUDED.addr3, addr4 = EXCLUDED.addr4,
             road_name = EXCLUDED.road_name,
             count = EXCLUDED.count, mean = EXCLUDED.mean, std = EXCLUDED.std,
-            ci_lower = EXCLUDED.ci_lower, ci_upper = EXCLUDED.ci_upper, median = EXCLUDED.median,
+            ci_lower = EXCLUDED.ci_lower, ci_upper = EXCLUDED.ci_upper,
+            p25 = EXCLUDED.p25, median = EXCLUDED.median, p75 = EXCLUDED.p75,
             computed_at = NOW(), batch_id = EXCLUDED.batch_id
         """
     )
@@ -284,7 +285,9 @@ def build_annual(engine, *, addr1_filter: str | None, batch_id: str) -> int:
                     "std": st["std"],
                     "ci_lower": st["ci_lower"],
                     "ci_upper": st["ci_upper"],
+                    "p25": st["p25"],
                     "median": st["median"],
+                    "p75": st["p75"],
                     "batch_id": batch_id,
                 }
             )

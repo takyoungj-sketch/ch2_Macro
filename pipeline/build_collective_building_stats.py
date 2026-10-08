@@ -224,12 +224,12 @@ def upsert_annual_stats(records: list[dict], engine, *, chunk_size: int = DEFAUL
         INSERT INTO collective_building_annual_stats (
             building_key, asset_type, contract_year, display_name,
             addr1, addr2, addr3, addr4, beopjungri_code,
-            count, mean, std, ci_lower, ci_upper, median,
+            count, mean, std, ci_lower, ci_upper, p25, median, p75,
             computed_at, batch_id
         ) VALUES (
             :building_key, :asset_type, :contract_year, :display_name,
             :addr1, :addr2, :addr3, :addr4, :beopjungri_code,
-            :count, :mean, :std, :ci_lower, :ci_upper, :median,
+            :count, :mean, :std, :ci_lower, :ci_upper, :p25, :median, :p75,
             NOW(), :batch_id
         )
         ON CONFLICT (building_key, asset_type, contract_year)
@@ -245,7 +245,9 @@ def upsert_annual_stats(records: list[dict], engine, *, chunk_size: int = DEFAUL
             std = EXCLUDED.std,
             ci_lower = EXCLUDED.ci_lower,
             ci_upper = EXCLUDED.ci_upper,
+            p25 = EXCLUDED.p25,
             median = EXCLUDED.median,
+            p75 = EXCLUDED.p75,
             computed_at = NOW(),
             batch_id = EXCLUDED.batch_id
         """
@@ -349,7 +351,9 @@ def build_annual(
                     "std": st["std"],
                     "ci_lower": st["ci_lower"],
                     "ci_upper": st["ci_upper"],
+                    "p25": st["p25"],
                     "median": st["median"],
+                    "p75": st["p75"],
                     "batch_id": batch_id,
                 }
             )

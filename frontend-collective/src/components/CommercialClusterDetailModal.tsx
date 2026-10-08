@@ -135,6 +135,7 @@ export default function CommercialClusterDetailModal({
   const [cohortRunByPanel, setCohortRunByPanel] = useState<Partial<Record<PanelMode, number>>>({});
   const [cohortChartMetric, setCohortChartMetric] = useState<CohortTrendMetric>("mean");
   const [longTermMetric, setLongTermMetric] = useState<LongTermPriceMetric>("mean");
+  const [showQuartiles, setShowQuartiles] = useState(false);
   const [histScope, setHistScope] = useState<"all" | "single">("all");
   const [histYear, setHistYear] = useState<number | null>(null);
   const [txSubView, setTxSubView] = useState<TxSubView>("list");
@@ -584,13 +585,19 @@ export default function CommercialClusterDetailModal({
                   )}
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                     <p className="text-xs text-slate-500">만년력 연도별 장기 추세</p>
-                    <LongTermMetricToggle metric={longTermMetric} onChange={setLongTermMetric} />
+                    <LongTermMetricToggle
+                      metric={longTermMetric}
+                      onChange={setLongTermMetric}
+                      showQuartiles={showQuartiles}
+                      onQuartilesChange={setShowQuartiles}
+                    />
                   </div>
                   <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3">
                     <p className="text-xs font-semibold text-slate-600 px-1 mb-2">연도별 장기 추세</p>
                     <YearlyTrendChart
                       points={[...longTermYearQ.data.points].sort((a, b) => a.year - b.year)}
                       metric={longTermMetric}
+                      showQuartiles={showQuartiles}
                     />
                   </div>
                   <div className="rounded-lg border border-slate-100 bg-white overflow-hidden">
@@ -599,9 +606,15 @@ export default function CommercialClusterDetailModal({
                         <tr className="bg-slate-50 text-slate-600">
                           <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">연도</th>
                           <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">건수</th>
+                          {showQuartiles && (
+                            <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">25%</th>
+                          )}
                           <th className="border border-slate-200 px-2 py-1.5 text-right font-bold text-blue-700">
                             {longTermPriceLabel(longTermMetric)}(만원/㎡)
                           </th>
+                          {showQuartiles && (
+                            <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">75%</th>
+                          )}
                         </tr>
                       </thead>
                       <tbody className="text-slate-800">
@@ -611,9 +624,19 @@ export default function CommercialClusterDetailModal({
                             <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
                               {p.count.toLocaleString("ko-KR")}
                             </td>
+                            {showQuartiles && (
+                              <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-slate-600">
+                                {p.p25 != null ? fmtPrice(p.p25) : "—"}
+                              </td>
+                            )}
                             <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-blue-600 font-bold">
                               {yearlyPointPrice(p, longTermMetric) != null ? fmtPrice(yearlyPointPrice(p, longTermMetric)!) : "—"}
                             </td>
+                            {showQuartiles && (
+                              <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-slate-600">
+                                {p.p75 != null ? fmtPrice(p.p75) : "—"}
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>

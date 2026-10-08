@@ -158,7 +158,9 @@ def cohort_stats_by_year(body: CohortAnalysisRequest, db: Session = Depends(get_
                 f"""
                 SELECT contract_year AS year, COUNT(*)::int AS count,
                        AVG(unit_price)::float AS mean,
-                       PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY unit_price)::float AS median
+                       PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY unit_price)::float AS median,
+                       PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY unit_price)::float AS p25,
+                       PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY unit_price)::float AS p75
                 FROM collective_transactions
                 WHERE {where}
                 GROUP BY contract_year
@@ -173,6 +175,8 @@ def cohort_stats_by_year(body: CohortAnalysisRequest, db: Session = Depends(get_
                 count=int(r["count"]),
                 mean=round(float(r["mean"]), 1) if r["mean"] is not None else None,
                 median=round(float(r["median"]), 1) if r.get("median") is not None else None,
+                p25=round(float(r["p25"]), 1) if r.get("p25") is not None else None,
+                p75=round(float(r["p75"]), 1) if r.get("p75") is not None else None,
             )
             for r in rows
         ]

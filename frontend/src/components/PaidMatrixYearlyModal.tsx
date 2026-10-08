@@ -104,6 +104,11 @@ type PanelMode = "trend" | "longTerm" | "histogram" | "transactions";
 type LtPriceMetric = "mean" | "median";
 type TxSubView = "list" | "aggregate";
 
+function fmtLtPrice(v: number | null | undefined): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  return Number(v).toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
 function ltPointsToChartRows(
   points: LongTermTrendPoint[],
   metric: LtPriceMetric,
@@ -119,6 +124,8 @@ function ltPointsToChartRows(
       count: p.count,
       mean_unit_price_per_sqm:
         metric === "median" ? (p.median ?? null) : (p.mean ?? null),
+      band_low: metric === "median" ? (p.p25 ?? null) : null,
+      band_high: metric === "median" ? (p.p75 ?? null) : null,
     }));
 }
 
@@ -161,6 +168,7 @@ export default function PaidMatrixYearlyModal({
   const [ltError, setLtError] = useState<string | null>(null);
   const [ltData, setLtData] = useState<LongTermTrendResponse | null>(null);
   const [ltMetric, setLtMetric] = useState<LtPriceMetric>("mean");
+  const [showQuartiles, setShowQuartiles] = useState(false);
   const [defaultSize] = useState(defaultPaidMatrixModalSize);
 
   useEffect(() => {
@@ -562,11 +570,29 @@ export default function PaidMatrixYearlyModal({
                           ? "bg-white text-slate-800 shadow-sm border border-slate-100"
                           : "text-slate-500 hover:text-slate-700"
                       }`}
-                      onClick={() => setLtMetric(id)}
+                      onClick={() => {
+                        setLtMetric(id);
+                        if (id !== "median") setShowQuartiles(false);
+                      }}
                     >
                       {label}
                     </button>
                   ))}
+                  <button
+                    type="button"
+                    aria-pressed={ltMetric === "median" && showQuartiles}
+                    disabled={ltMetric !== "median"}
+                    className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
+                      ltMetric !== "median"
+                        ? "text-slate-300 cursor-not-allowed"
+                        : showQuartiles
+                          ? "bg-white text-slate-800 shadow-sm border border-slate-100"
+                          : "text-slate-500 hover:text-slate-700"
+                    }`}
+                    onClick={() => setShowQuartiles((v) => !v)}
+                  >
+                    25·75
+                  </button>
                   </div>
                 </div>
               </div>
@@ -591,7 +617,9 @@ export default function PaidMatrixYearlyModal({
                       {ltPriceLabel}
                       {ltMetric === "mean"
                         ? " · 통합(가중평균)은 아래 별도 칸"
-                        : " · 중앙값은 지역별 선만 (통합선 없음)"}
+                        : showQuartiles
+                          ? " · 지역별 중앙값 · 25·75는 아래 표 · 통합선 없음"
+                          : " · 지역별 중앙값 · 통합선 없음"}
                     </p>
                     <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3 overflow-x-auto">
                       <p className="text-xs font-semibold text-slate-600 px-1 mb-2">
@@ -600,8 +628,42 @@ export default function PaidMatrixYearlyModal({
                       <MultiRegionTrendChart
                         series={longTermSeriesToTrendSeries(ltData.series, ltMetric)}
                         metricLabel={`${ltPriceLabel}(만원/㎡)`}
+                        showQuartiles={showQuartiles}
                       />
                     </div>
+                    {showQuartiles &&
+                      ltData.series.map((s) => (
+                        <div key={`${s.region_level}:${s.region_code}`} className="rounded-lg border border-slate-100 bg-white overflow-hidden">
+                          <p className="text-xs font-semibold text-slate-700 px-3 pt-3 pb-1">{s.region_name}</p>
+                          <table className="w-full text-xs border-collapse">
+                            <thead>
+                              <tr className={simpleTableHeadClass("neutral")}>
+                                <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">연도</th>
+                                <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">건수</th>
+                                <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">25%</th>
+                                <th className="border border-slate-200 px-2 py-1.5 text-right font-bold text-blue-700">중앙값</th>
+                                <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">75%</th>
+                              </tr>
+                            </thead>
+                            <tbody className="text-slate-800">
+                              {[...s.points]
+                                .sort((a, b) => a.year - b.year)
+                                .map((p) => (
+                                  <tr key={`${s.region_code}-${p.year}`} className={p.reference_only ? "opacity-60" : undefined}>
+                                    <td className="border border-slate-200 px-2 py-1 tabular-nums">
+                                      {p.year}
+                                      {p.reference_only ? <span className="ml-1 text-[10px] text-amber-700">참고</span> : null}
+                                    </td>
+                                    <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">{p.count.toLocaleString("ko-KR")}</td>
+                                    <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-slate-600">{fmtLtPrice(p.p25)}</td>
+                                    <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-blue-600 font-bold">{fmtLtPrice(p.median)}</td>
+                                    <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-slate-600">{fmtLtPrice(p.p75)}</td>
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ))}
                     {ltCombinedSeries && (
                       <div className="rounded-lg border border-slate-200 bg-white px-2 py-3 overflow-x-auto">
                         <p className="text-xs font-semibold text-slate-700 px-1 mb-0.5">
@@ -633,7 +695,12 @@ export default function PaidMatrixYearlyModal({
                         </span>
                       </p>
                       <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3 overflow-x-auto">
-                        <MatrixYearlyTrendChart rows={chartRows} xSpacingScale={1.5} />
+                        <MatrixYearlyTrendChart
+                          rows={chartRows}
+                          xSpacingScale={1.5}
+                          priceLabel={`${ltPriceLabel}(만원/㎡)`}
+                          showQuartiles={showQuartiles}
+                        />
                       </div>
                       <div className="rounded-lg border border-slate-100 bg-white overflow-hidden">
                         <table className="w-full text-xs border-collapse">
@@ -645,9 +712,19 @@ export default function PaidMatrixYearlyModal({
                               <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">
                                 건수
                               </th>
+                              {showQuartiles && (
+                                <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">
+                                  25%
+                                </th>
+                              )}
                               <th className="border border-slate-200 px-2 py-1.5 text-right font-bold text-blue-700">
                                 {ltPriceLabel}(만원/㎡)
                               </th>
+                              {showQuartiles && (
+                                <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">
+                                  75%
+                                </th>
+                              )}
                             </tr>
                           </thead>
                           <tbody className="text-slate-800">
@@ -669,6 +746,11 @@ export default function PaidMatrixYearlyModal({
                                 <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
                                   {r.count.toLocaleString("ko-KR")}
                                 </td>
+                                {showQuartiles && (
+                                  <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-slate-600">
+                                    {fmtLtPrice(r.band_low)}
+                                  </td>
+                                )}
                                 <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-blue-600 font-bold">
                                   {r.mean_unit_price_per_sqm != null
                                     ? Number(r.mean_unit_price_per_sqm).toLocaleString("ko-KR", {
@@ -677,6 +759,11 @@ export default function PaidMatrixYearlyModal({
                                       })
                                     : "—"}
                                 </td>
+                                {showQuartiles && (
+                                  <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-slate-600">
+                                    {fmtLtPrice(r.band_high)}
+                                  </td>
+                                )}
                               </tr>
                             ))}
                           </tbody>

@@ -171,6 +171,9 @@ export interface MatrixYearlyStat {
   chart_label?: string | null;
   count: number;
   mean_unit_price_per_sqm: number | null;
+  /** 장기 추세 중앙값 모드 — 같은 표본의 25%·75%. 롤링 차트는 비움 */
+  band_low?: number | null;
+  band_high?: number | null;
 }
 
 export interface MatrixYearlyRequest extends PaidAnalysisRequest {
@@ -207,6 +210,8 @@ export interface LongTermTrendPoint {
   count: number;
   mean?: number | null;
   median?: number | null;
+  p25?: number | null;
+  p75?: number | null;
   reference_only?: boolean;
 }
 

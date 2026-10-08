@@ -567,6 +567,7 @@ export default function BuildingDetailModal({
   const [txExternalFilterToken, setTxExternalFilterToken] = useState(0);
   const [cohortChartMetric, setCohortChartMetric] = useState<CohortTrendMetric>("mean");
   const [longTermMetric, setLongTermMetric] = useState<LongTermPriceMetric>("mean");
+  const [showQuartiles, setShowQuartiles] = useState(false);
   const [defaultSize] = useState(defaultBuildingDetailSize);
   const [presaleOverlay, setPresaleOverlay] = useState<{ key: string; name: string }[]>([]);
   const [showPresalePicker, setShowPresalePicker] = useState(false);
@@ -1224,11 +1225,16 @@ export default function BuildingDetailModal({
                     <p className="text-[10px] text-slate-500 dark:text-slate-400">
                       만년력 연도별 추이 · 롤링 통계 창({periodLabel ?? "5년"})과 기간·표본이 다릅니다.
                     </p>
-                    <LongTermMetricToggle metric={longTermMetric} onChange={setLongTermMetric} />
+                    <LongTermMetricToggle
+                      metric={longTermMetric}
+                      onChange={setLongTermMetric}
+                      showQuartiles={showQuartiles}
+                      onQuartilesChange={setShowQuartiles}
+                    />
                   </div>
                   <div className="modal-card px-2 py-3">
                     <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 px-1 mb-2">추이 (꺾은선)</p>
-                    <YearlyTrendChart points={longTermYears} metric={longTermMetric} />
+                    <YearlyTrendChart points={longTermYears} metric={longTermMetric} showQuartiles={showQuartiles} />
                   </div>
                   <div className="modal-table-wrap">
                     <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 px-3 pt-3 pb-1">연도별 수치</p>
@@ -1237,9 +1243,15 @@ export default function BuildingDetailModal({
                         <tr>
                           <th className="border px-2 py-1.5 text-left font-medium">연도</th>
                           <th className="border px-2 py-1.5 text-right font-medium">건수</th>
+                          {showQuartiles && (
+                            <th className="border px-2 py-1.5 text-right font-medium">25%</th>
+                          )}
                           <th className="border px-2 py-1.5 text-right font-bold text-blue-700 dark:text-blue-400">
                             {longTermPriceLabel(longTermMetric)}(만원/㎡)
                           </th>
+                          {showQuartiles && (
+                            <th className="border px-2 py-1.5 text-right font-medium">75%</th>
+                          )}
                         </tr>
                       </thead>
                       <tbody>
@@ -1249,9 +1261,19 @@ export default function BuildingDetailModal({
                             <td className="border px-2 py-1 text-right tabular-nums">
                               {p.count.toLocaleString("ko-KR")}
                             </td>
+                            {showQuartiles && (
+                              <td className="border px-2 py-1 text-right tabular-nums text-slate-600 dark:text-slate-300">
+                                {p.p25 != null ? fmtPrice(p.p25) : "—"}
+                              </td>
+                            )}
                             <td className="border px-2 py-1 text-right tabular-nums text-blue-600 dark:text-blue-400 font-bold">
                               {yearlyPointPrice(p, longTermMetric) != null ? fmtPrice(yearlyPointPrice(p, longTermMetric)!) : "—"}
                             </td>
+                            {showQuartiles && (
+                              <td className="border px-2 py-1 text-right tabular-nums text-slate-600 dark:text-slate-300">
+                                {p.p75 != null ? fmtPrice(p.p75) : "—"}
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>

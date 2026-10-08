@@ -514,6 +514,8 @@ class LongTermTrendPoint(BaseModel):
     count: int
     mean: Optional[float] = None
     median: Optional[float] = None
+    p25: Optional[float] = None
+    p75: Optional[float] = None
     reference_only: bool = Field(
         False,
         description="count < 15 — 참고용",

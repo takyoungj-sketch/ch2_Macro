@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { MatrixYearlyStat } from "../types";
 import { formatMatrixBucketAxisLabel } from "../utils/matrixYearlyLabels";
 
@@ -10,6 +11,8 @@ const PAD_B = 48;
 
 const LABEL_MEAN_ABOVE = 16;
 const LABEL_COUNT_BELOW = 18;
+const PRICE_LINE = "#2563eb";
+const QUARTILE_LINE = "#f59e0b";
 
 function formatMeanLabel(v: number): string {
   return Number(v).toLocaleString("ko-KR", {
@@ -34,6 +37,36 @@ function niceStep(max: number, targetTicks = 4): number {
 const COUNT_MARKER_STROKE = "#787f89";
 const COUNT_DASH_LINE = "#94a3b8";
 
+function finiteNum(v: number | null | undefined): v is number {
+  return v != null && Number.isFinite(v);
+}
+
+function quartileBands(
+  ordered: { x: number; lo?: number | null; hi?: number | null }[],
+  yOf: (v: number) => number,
+): { fill: string; lo: string; hi: string }[] {
+  const segs: { x: number; lo: number; hi: number }[][] = [];
+  let cur: { x: number; lo: number; hi: number }[] = [];
+  for (const p of ordered) {
+    if (finiteNum(p.lo) && finiteNum(p.hi)) cur.push({ x: p.x, lo: p.lo, hi: p.hi });
+    else if (cur.length) {
+      segs.push(cur);
+      cur = [];
+    }
+  }
+  if (cur.length) segs.push(cur);
+  return segs
+    .filter((s) => s.length >= 2)
+    .map((s) => ({
+      fill: `${s.map((p) => `${p.x.toFixed(1)},${yOf(p.hi).toFixed(1)}`).join(" ")} ${[...s]
+        .reverse()
+        .map((p) => `${p.x.toFixed(1)},${yOf(p.lo).toFixed(1)}`)
+        .join(" ")}`,
+      hi: s.map((p) => `${p.x.toFixed(1)},${yOf(p.hi).toFixed(1)}`).join(" "),
+      lo: s.map((p) => `${p.x.toFixed(1)},${yOf(p.lo).toFixed(1)}`).join(" "),
+    }));
+}
+
 function rowSortKey(r: MatrixYearlyStat): number {
   if (r.bucket_index != null && Number.isFinite(r.bucket_index)) return r.bucket_index;
   if (r.year != null && Number.isFinite(r.year)) return r.year;
@@ -51,10 +84,16 @@ export default function MatrixYearlyTrendChart({
   rows,
   /** x축 점 간격 배율 (장기 추세 등) */
   xSpacingScale = 1,
+  priceLabel = "평균(만원/㎡)",
+  showQuartiles = false,
 }: {
   rows: MatrixYearlyStat[];
   xSpacingScale?: number;
+  priceLabel?: string;
+  /** 중앙값 모드에서 25%·75% 띠. 기본은 끔 */
+  showQuartiles?: boolean;
 }) {
+  const clipId = useId().replace(/:/g, "");
   const sorted = [...rows].sort((a, b) => rowSortKey(a) - rowSortKey(b));
   if (sorted.length === 0) return null;
 
@@ -73,7 +112,8 @@ export default function MatrixYearlyTrendChart({
 
   const meanVals = sorted
     .map((r) => r.mean_unit_price_per_sqm)
-    .filter((v): v is number => v != null && Number.isFinite(v));
+    .filter((v): v is number => finiteNum(v));
+  const showBand = showQuartiles && sorted.some((r) => finiteNum(r.band_low) && finiteNum(r.band_high));
   const hasMean = meanVals.length > 0;
   let meanMin = hasMean ? Math.min(...meanVals) : 0;
   let meanMax = hasMean ? Math.max(...meanVals) : 1;
@@ -119,12 +159,18 @@ export default function MatrixYearlyTrendChart({
   }
 
   return (
-    <div className="w-full overflow-x-auto" role="img" aria-label="구간별 평균 단가 및 거래 건수 추이 그래프">
+    <div className="w-full overflow-x-auto" role="img" aria-label={`구간별 ${priceLabel} 및 거래 건수 추이 그래프`}>
       <p className="text-xs text-slate-500 mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
         <span className="inline-flex items-center gap-1 font-bold text-blue-600">
           <span className="inline-block w-3 h-0.5 bg-blue-600 rounded" aria-hidden />
-          평균(만원/㎡)
+          {priceLabel}
         </span>
+        {showBand && (
+          <span className="inline-flex items-center gap-1 font-medium" style={{ color: QUARTILE_LINE }}>
+            <span className="inline-block w-3 h-0.5 rounded" style={{ backgroundColor: QUARTILE_LINE }} aria-hidden />
+            25%·75%
+          </span>
+        )}
         <span className="inline-flex items-center gap-1">
           <svg width={22} height={10} viewBox="0 0 22 10" className="shrink-0 text-slate-500" aria-hidden>
             <line
@@ -153,6 +199,11 @@ export default function MatrixYearlyTrendChart({
         width={chartW > W ? chartW : undefined}
         preserveAspectRatio="xMidYMid meet"
       >
+        <defs>
+          <clipPath id={clipId}>
+            <rect x={PAD_L} y={PAD_T} width={innerW} height={innerH} />
+          </clipPath>
+        </defs>
         {hasMean &&
           meanTicks.map((v) => {
             const y = yMean(v);
@@ -246,12 +297,25 @@ export default function MatrixYearlyTrendChart({
           <>
             <polyline
               fill="none"
-              stroke="#2563eb"
+              stroke={PRICE_LINE}
               strokeWidth={2}
               strokeLinejoin="round"
               strokeLinecap="round"
               points={meanPoints}
             />
+            {showBand && (
+              <g clipPath={`url(#${clipId})`}>
+                {quartileBands(
+                  sorted.map((r, i) => ({ x: xAt(i), lo: r.band_low, hi: r.band_high })),
+                  yMean,
+                ).map((b, bi) => (
+                  <g key={`band-${bi}`}>
+                    <polyline fill="none" stroke={QUARTILE_LINE} strokeWidth={1.75} strokeLinejoin="round" points={b.hi} />
+                    <polyline fill="none" stroke={QUARTILE_LINE} strokeWidth={1.75} strokeLinejoin="round" points={b.lo} />
+                  </g>
+                ))}
+              </g>
+            )}
             {meanLineRows.map((r) => {
               const idx = sorted.indexOf(r);
               return (
@@ -261,7 +325,7 @@ export default function MatrixYearlyTrendChart({
                   cy={yMean(Number(r.mean_unit_price_per_sqm))}
                   r={3.5}
                   fill="#fff"
-                  stroke="#2563eb"
+                  stroke={PRICE_LINE}
                   strokeWidth={2}
                 />
               );

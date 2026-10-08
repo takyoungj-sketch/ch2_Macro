@@ -1540,7 +1540,9 @@ def long_term_trend(body: LongTermTrendRequest, db: Session = Depends(get_db)):
                     btrim(las.beopjungri_code::text) AS bc,
                     las.transaction_count AS cnt,
                     las.mean_unit_price::float8 AS mean_px,
-                    las.median_unit_price::float8 AS med_px
+                    las.median_unit_price::float8 AS med_px,
+                    las.p25::float8 AS p25,
+                    las.p75::float8 AS p75
                 FROM land_annual_stats las
                 WHERE las.zone_type = :zt
                   AND las.land_category = :lc
@@ -1571,6 +1573,8 @@ def long_term_trend(body: LongTermTrendRequest, db: Session = Depends(get_db)):
                     count=cnt,
                     mean=round(float(r["mean_px"]), 1) if r["mean_px"] is not None else None,
                     median=round(float(r["med_px"]), 1) if r["med_px"] is not None else None,
+                    p25=round(float(r["p25"]), 1) if r["p25"] is not None else None,
+                    p75=round(float(r["p75"]), 1) if r["p75"] is not None else None,
                     reference_only=cnt < LONG_TERM_MIN_RELIABLE,
                 )
             )
@@ -1595,7 +1599,9 @@ def long_term_trend(body: LongTermTrendRequest, db: Session = Depends(get_db)):
                     calendar_year AS y,
                     transaction_count AS cnt,
                     mean_unit_price::float8 AS mean_px,
-                    median_unit_price::float8 AS med_px
+                    median_unit_price::float8 AS med_px,
+                    p25::float8 AS p25,
+                    p75::float8 AS p75
                 FROM land_annual_upper_stats
                 WHERE zone_type = :zt
                   AND land_category = :lc
@@ -1628,6 +1634,8 @@ def long_term_trend(body: LongTermTrendRequest, db: Session = Depends(get_db)):
                     count=cnt,
                     mean=round(float(r["mean_px"]), 1) if r["mean_px"] is not None else None,
                     median=round(float(r["med_px"]), 1) if r["med_px"] is not None else None,
+                    p25=round(float(r["p25"]), 1) if r["p25"] is not None else None,
+                    p75=round(float(r["p75"]), 1) if r["p75"] is not None else None,
                     reference_only=cnt < LONG_TERM_MIN_RELIABLE,
                 )
             )

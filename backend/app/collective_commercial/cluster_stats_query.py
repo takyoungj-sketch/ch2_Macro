@@ -227,7 +227,7 @@ def cluster_yearly_from_mart(
     rows = conn.execute(
         text(
             """
-            SELECT display_label, contract_year, count, mean, median
+            SELECT display_label, contract_year, count, mean, median, p25, p75
             FROM collective_commercial_cluster_annual_stats
             WHERE cluster_key = :ck
             ORDER BY contract_year
@@ -244,6 +244,8 @@ def cluster_yearly_from_mart(
             "count": int(r["count"] or 0),
             "mean": round(float(r["mean"]), 1) if r["mean"] is not None else None,
             "median": round(float(r["median"]), 1) if r.get("median") is not None else None,
+            "p25": round(float(r["p25"]), 1) if r.get("p25") is not None else None,
+            "p75": round(float(r["p75"]), 1) if r.get("p75") is not None else None,
         }
         for r in rows
     ]
@@ -261,7 +263,9 @@ def cluster_yearly_live(
                    t.contract_year AS year,
                    COUNT(*)::int AS count,
                    AVG(t.unit_price)::float AS mean,
-                   PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY t.unit_price)::float AS median
+                   PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY t.unit_price)::float AS median,
+                   PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY t.unit_price)::float AS p25,
+                   PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY t.unit_price)::float AS p75
             FROM collective_commercial_transactions t
             LEFT JOIN commercial_clusters c ON c.id = t.cluster_id
             WHERE t.cluster_key = :ck
@@ -284,6 +288,8 @@ def cluster_yearly_live(
             "count": int(r["count"] or 0),
             "mean": round(float(r["mean"]), 1) if r["mean"] is not None else None,
             "median": round(float(r["median"]), 1) if r.get("median") is not None else None,
+            "p25": round(float(r["p25"]), 1) if r.get("p25") is not None else None,
+            "p75": round(float(r["p75"]), 1) if r.get("p75") is not None else None,
         }
         for r in rows
     ]
@@ -309,6 +315,12 @@ def cluster_yearly_resolved(
         yr = int(p["year"])
         if yr not in by_year:
             by_year[yr] = p
+            continue
+        # 연도 마트는 중앙값까지만 저장한다. 25%·75%는 같은 cluster live 집계를 붙인다.
+        kept = by_year[yr]
+        if kept.get("p25") is None and p.get("p25") is not None:
+            kept["p25"] = p["p25"]
+            kept["p75"] = p["p75"]
     points = [by_year[y] for y in sorted(by_year)]
     mart_years = {int(p["year"]) for p in mart[1]}
     source: str = "mart" if all(int(p["year"]) in mart_years for p in points) else "live"

@@ -51,6 +51,8 @@ export function longTermSeriesToTrendSeries(
         xOrder: p.year,
         count: p.count,
         value: metric === "median" ? (p.median ?? null) : (p.mean ?? null),
+        bandLow: metric === "median" ? (p.p25 ?? null) : null,
+        bandHigh: metric === "median" ? (p.p75 ?? null) : null,
       })),
   }));
 }

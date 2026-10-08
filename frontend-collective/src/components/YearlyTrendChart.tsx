@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { YearlyStatPoint } from "../types";
 import type { LongTermPriceMetric } from "./LongTermMetricToggle";
 
@@ -11,6 +12,8 @@ const LABEL_PRICE_ABOVE = 16;
 const LABEL_COUNT_BELOW = 18;
 const COUNT_MARKER_STROKE = "#787f89";
 const COUNT_DASH_LINE = "#94a3b8";
+const MEDIAN_LINE = "#2563eb";
+const QUARTILE_LINE = "#f59e0b";
 
 function formatPriceLabel(v: number): string {
   return Number(v).toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -19,6 +22,36 @@ function formatPriceLabel(v: number): string {
 function priceValue(p: YearlyStatPoint, metric: LongTermPriceMetric): number | null {
   const v = metric === "median" ? p.median : p.mean;
   return v != null && Number.isFinite(v) ? v : null;
+}
+
+function finiteNum(v: number | null | undefined): v is number {
+  return v != null && Number.isFinite(v);
+}
+
+function quartileBands(
+  ordered: { x: number; lo?: number | null; hi?: number | null }[],
+  yOf: (v: number) => number,
+): { fill: string; lo: string; hi: string }[] {
+  const segs: { x: number; lo: number; hi: number }[][] = [];
+  let cur: { x: number; lo: number; hi: number }[] = [];
+  for (const p of ordered) {
+    if (finiteNum(p.lo) && finiteNum(p.hi)) cur.push({ x: p.x, lo: p.lo, hi: p.hi });
+    else if (cur.length) {
+      segs.push(cur);
+      cur = [];
+    }
+  }
+  if (cur.length) segs.push(cur);
+  return segs
+    .filter((s) => s.length >= 2)
+    .map((s) => ({
+      fill: `${s.map((p) => `${p.x.toFixed(1)},${yOf(p.hi).toFixed(1)}`).join(" ")} ${[...s]
+        .reverse()
+        .map((p) => `${p.x.toFixed(1)},${yOf(p.lo).toFixed(1)}`)
+        .join(" ")}`,
+      hi: s.map((p) => `${p.x.toFixed(1)},${yOf(p.hi).toFixed(1)}`).join(" "),
+      lo: s.map((p) => `${p.x.toFixed(1)},${yOf(p.lo).toFixed(1)}`).join(" "),
+    }));
 }
 
 function niceStep(max: number, targetTicks = 4): number {
@@ -38,10 +71,14 @@ function niceStep(max: number, targetTicks = 4): number {
 export default function YearlyTrendChart({
   points,
   metric = "median",
+  showQuartiles = false,
 }: {
   points: YearlyStatPoint[];
   metric?: LongTermPriceMetric;
+  /** 중앙값 모드에서 25%·75% 띠. 기본은 끔 */
+  showQuartiles?: boolean;
 }) {
+  const clipId = useId().replace(/:/g, "");
   const sorted = [...points].sort((a, b) => a.year - b.year);
   if (sorted.length === 0) return null;
 
@@ -57,6 +94,7 @@ export default function YearlyTrendChart({
   const countAxisMax = Math.ceil(countMax / countTick) * countTick;
 
   const priceVals = sorted.map((r) => priceValue(r, metric)).filter((v): v is number => v != null);
+  const showBand = showQuartiles && metric === "median" && sorted.some((r) => finiteNum(r.p25) && finiteNum(r.p75));
   const hasPrice = priceVals.length > 0;
   let priceMin = hasPrice ? Math.min(...priceVals) : 0;
   let priceMax = hasPrice ? Math.max(...priceVals) : 1;
@@ -88,6 +126,12 @@ export default function YearlyTrendChart({
           <span className="inline-block w-3 h-0.5 bg-blue-600 rounded" aria-hidden />
           {priceLabel}(만원/㎡)
         </span>
+        {showBand && (
+          <span className="inline-flex items-center gap-1 font-medium" style={{ color: QUARTILE_LINE }}>
+            <span className="inline-block w-3 h-0.5 rounded" style={{ backgroundColor: QUARTILE_LINE }} aria-hidden />
+            25%·75%
+          </span>
+        )}
         <span className="inline-flex items-center gap-1">
           <svg width={22} height={10} viewBox="0 0 22 10" className="shrink-0 text-slate-500" aria-hidden>
             <line x1="1" y1="5" x2="14" y2="5" stroke={COUNT_DASH_LINE} strokeWidth="1.4" strokeDasharray="3 5" strokeOpacity={0.55} />
@@ -102,6 +146,11 @@ export default function YearlyTrendChart({
         width={chartW > W ? chartW : undefined}
         preserveAspectRatio="xMidYMid meet"
       >
+        <defs>
+          <clipPath id={clipId}>
+            <rect x={PAD_L} y={PAD_T} width={innerW} height={innerH} />
+          </clipPath>
+        </defs>
         {sorted.map((r, i) => (
           <text key={r.year} x={xAt(i)} y={H - 8} textAnchor="middle" className={`fill-slate-700 dark:fill-slate-200 font-semibold ${n > 6 ? "text-[12px]" : "text-[13px]"}`}>
             {r.year}
@@ -120,12 +169,25 @@ export default function YearlyTrendChart({
         ))}
         {priceLineRows.length > 0 && (
           <>
-            <polyline fill="none" stroke="#2563eb" strokeWidth={2} strokeLinejoin="round" points={pricePoints} />
+            <polyline fill="none" stroke={MEDIAN_LINE} strokeWidth={2} strokeLinejoin="round" points={pricePoints} />
+            {showBand && (
+              <g clipPath={`url(#${clipId})`}>
+                {quartileBands(
+                  sorted.map((r, i) => ({ x: xAt(i), lo: r.p25, hi: r.p75 })),
+                  yPrice,
+                ).map((b, bi) => (
+                  <g key={`band-${bi}`}>
+                    <polyline fill="none" stroke={QUARTILE_LINE} strokeWidth={1.75} strokeLinejoin="round" points={b.hi} />
+                    <polyline fill="none" stroke={QUARTILE_LINE} strokeWidth={1.75} strokeLinejoin="round" points={b.lo} />
+                  </g>
+                ))}
+              </g>
+            )}
             {priceLineRows.map((r) => {
               const idx = sorted.indexOf(r);
               const pv = Number(priceValue(r, metric));
               return (
-                <circle key={`m-${r.year}`} cx={xAt(idx)} cy={yPrice(pv)} r={3.5} fill="#fff" stroke="#2563eb" strokeWidth={2} />
+                <circle key={`m-${r.year}`} cx={xAt(idx)} cy={yPrice(pv)} r={3.5} fill="#fff" stroke={MEDIAN_LINE} strokeWidth={2} />
               );
             })}
             {priceLineRows.map((r) => {
