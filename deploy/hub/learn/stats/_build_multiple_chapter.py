@@ -1,0 +1,61 @@
+"""Chapter 15: one-way ANOVA, Tukey and categorical independence."""
+from pathlib import Path
+from statistics import mean
+from html import escape
+import json,math,re
+from scipy.stats import f,chi2,tukey_hsd
+ROOT=Path(__file__).resolve().parent
+GROUPS=[[90,100,110,100],[110,120,130,120],[130,140,150,140]]
+COUNTS=[[30,20],[20,30],[10,40]]
+def build():
+ groups=GROUPS;allv=sum(groups,[]);grand=mean(allv);ssb=sum(len(g)*(mean(g)-grand)**2 for g in groups);ssw=sum(sum((x-mean(g))**2 for x in g) for g in groups);F=(ssb/2)/(ssw/9);p=float(f.sf(F,2,9));eta=ssb/(ssb+ssw)
+ tuk=tukey_hsd(*groups);ci=tuk.confidence_interval();pairs=[{'label':f'{"ABC"[i]}−{"ABC"[j]}','i':i,'j':j,'difference':float(tuk.statistic[i,j]),'p':float(tuk.pvalue[i,j]),'low':float(ci.low[i,j]),'high':float(ci.high[i,j])} for i,j in [(1,0),(2,0),(2,1)]]
+ expected=[[20,30] for _ in COUNTS];contrib=[[(o-e)**2/e for o,e in zip(row,ex)] for row,ex in zip(COUNTS,expected)];stat=sum(map(sum,contrib));cp=float(chi2.sf(stat,2));V=math.sqrt(stat/150)
+ result={'description':'15장 전용 가상 예제. 수치형 12건과 범주형 150건은 서로 다른 자료.','groups':groups,'anova':{'grand_mean':grand,'between_ss':ssb,'within_ss':ssw,'F':F,'df':[2,9],'p':p,'eta_squared':eta},'tukey':pairs,'categorical':{'observed':COUNTS,'expected':expected,'contributions':contrib,'chi2':stat,'df':2,'p':cp,'V':V}}
+ (ROOT/'multiple-groups-example.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+ def t(x,y,s,extra=''):return f'<text x="{x}" y="{y}" {extra}>{escape(str(s))}</text>'
+ def line(x,y,xx,yy,c='#64748b',extra=''):return f'<line x1="{x}" y1="{y}" x2="{xx}" y2="{yy}" stroke="{c}" {extra}/>'
+ def fig(id,title,b,cap,h):return f'<figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 {h}" role="img" aria-labelledby="{id}-title {id}-desc"><title id="{id}-title">{title}</title><desc id="{id}-desc">{cap}</desc>{b}</svg><figcaption class="learn-chart__caption">{cap}</figcaption></figure>'
+ b=t(24,28,'세 집단의 평균 차이와 집단 안의 퍼짐을 함께 봅니다');x=lambda v:80+(v-80)*6
+ for i,g in enumerate(groups):
+  y=90+i*85;b+=t(24,y+5,'ABC'[i])+line(80,y,560,y)
+  for j,v in enumerate(g):b+=f'<circle cx="{x(v)}" cy="{y-j*7}" r="5" fill="#2563eb" data-group="{i}" data-value="{v}"/>'
+  b+=line(x(mean(g)),y-24,x(mean(g)),y+15,'#d97706')+t(x(mean(g)),y-32,f'평균 {mean(g):g}','text-anchor="middle"')
+ for v in [80,100,120,140,160]:b+=t(x(v),310,v,'text-anchor="middle"')
+ b+=t(350,342,'단가(만원/㎡) · 주황선: 평균')
+ f1=fig('groups','세 집단의 가상 원자료',b,'그림 1. A=90·100·110·100, B=110·120·130·120, C=130·140·150·140인 별도 가상 자료입니다. 각 4건이며 점의 세로 간격은 겹침을 구분하기 위한 표시입니다. 실제 지역 가격이 아닙니다.',370)
+ b=t(24,28,'총 제곱합 = 집단 간 제곱합 + 집단 내 제곱합')
+ for i,(label,value) in enumerate([('집단 간',ssb),('집단 내',ssw)]):
+  y=85+i*85;b+=t(24,y+20,label)+f'<rect x="150" y="{y}" width="{value*.11}" height="28" fill="#2563eb" data-ss="{value}"/>'+t(160+value*.11,y+20,f'{value:g}')
+ b+=t(24,260,'SS 합계 3,800 / 단위: (만원/㎡)²')+t(24,292,'F는 SS 자체의 비율이 아니라 자유도로 나눈 MS의 비율입니다')
+ f2=fig('variation','ANOVA의 변동 분해',b,'그림 2. 집단 간 SS=3,200, 집단 내 SS=600입니다. 평균제곱은 각각 1,600과 66.67이며 F=24입니다. 막대 길이는 제곱합에 비례합니다.',320)
+ b=t(24,28,'모든 쌍을 함께 고려한 Tukey 95% 동시 신뢰구간');xx=lambda v:115+v*6
+ b+=line(xx(0),50,xx(0),295,'#d97706','stroke-dasharray="4 3"')
+ for i,d in enumerate(pairs):
+  y=90+i*85;b+=t(24,y+4,d['label'])+line(xx(d['low']),y,xx(d['high']),y,'#2563eb',f'stroke-width="3" data-pair="{i}"')+f'<circle cx="{xx(d["difference"])}" cy="{y}" r="4" fill="#2563eb"/>'+t(xx(d['low']),y+24,f'{d["low"]:.2f}','text-anchor="middle"')+t(xx(d['high']),y+24,f'{d["high"]:.2f}','text-anchor="middle"')
+ b+=t(xx(0),317,'0','text-anchor="middle"')+t(320,344,'평균 차이(만원/㎡)')
+ f3=fig('tukey','다중비교를 반영한 쌍별 구간',b,'그림 3. 정규성·독립성·등분산을 가정한 Tukey HSD입니다. 세 쌍 전체의 동시 포함률을 다루며 보정 없는 개별 95% 구간을 나열한 그림과 다릅니다.',372)
+ b=t(24,28,'지역별 비율을 같은 100% 길이로 비교합니다')
+ for i,row in enumerate(COUNTS):
+  y=80+i*80;ratio=row[0]/sum(row);b+=t(24,y+20,f'{"ABC"[i]} · 50건')+f'<rect x="150" y="{y}" width="{ratio*400}" height="30" fill="#2563eb" data-row="{i}"/>'+f'<rect x="{150+ratio*400}" y="{y}" width="{(1-ratio)*400}" height="30" fill="#cbd5e1"/>'+t(150+ratio*200,y+21,f'{ratio:.0%}','style="fill:white" text-anchor="middle"')+t(160+ratio*400,y+21,f'{1-ratio:.0%}')
+ b+=t(24,330,'파랑: 주거 / 회색: 비주거 · 각 행의 합계 100%')
+ f4=fig('categorical','지역별 거래 유형 구성비',b,'그림 4. 별도 가상 150건입니다. 지역별 주거·비주거 건수는 A 30·20, B 20·30, C 10·40입니다. 앞의 단가 12건과 다른 자료입니다.',358)
+ parts=[]
+ def sec(id,label,title,body):parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{title}</h2>{body}</section>')
+ sec('quick-start','비교 질문 선택','수치의 평균과 범주의 비율은 다른 질문입니다','''<p>세 지역의 <strong>평균 단가</strong>를 비교하는 질문과 세 지역의 <strong>주거·비주거 구성비</strong>를 비교하는 질문은 다릅니다. 첫째는 수치형 결과를 집단별로 비교하고, 둘째는 범주형 변수의 관계를 살펴봅니다.</p><p>이 장은 수치형에는 일원분산분석(ANOVA)과 사후비교를, 범주형에는 분할표와 카이제곱 검정을 소개합니다. <a href="/learn/stats/comparing-groups/">14장 두 집단 비교</a>의 설계·효과크기·인과 해석 원칙은 그대로 적용됩니다.</p><p>아래 단가 12건과 구성비 150건은 각각 별도로 만든 가상 학습 자료입니다. 공통 30건이나 실제 시장 자료와 혼용하지 않습니다. <a href="../multiple-groups-example.json">원자료와 계산 결과 JSON</a>을 제공합니다.</p>''')
+ sec('anova','여러 평균의 비교','분산을 이용해 평균이 모두 같은지 검정합니다','''<p>일원분산분석은 하나의 집단 구분 요인에 대해 H₀:μ₁=μ₂=…=μₖ를 검정합니다. 대립가설은 ‘적어도 하나의 모평균이 다르다’입니다. 기각했다고 모든 집단이 서로 다르다는 뜻은 아닙니다.</p>'''+f1+'''<p>이름에 분산이 들어가지만 관심 가설은 평균의 동등성입니다. 평균들이 서로 떨어진 정도를 각 집단 안의 퍼짐과 비교합니다. 서로 독립인 관측, 집단별 정규 오차와 공통 분산을 가정하는 고전적 F 검정을 다룹니다. 집단마다 4건인 이 가상 자료만으로 가정을 확인했다는 뜻은 아닙니다.</p>''')
+ sec('variation','변동 분해와 F','전체 변동을 집단 간·집단 내로 나눕니다',f'''<p>전체 평균 x̄는 집단 크기를 반영한 가중 평균입니다. 집단 간 제곱합 SS_B=Σnⱼ(x̄ⱼ−x̄)², 집단 내 제곱합 SS_W=ΣΣ(xᵢⱼ−x̄ⱼ)²이며 총 제곱합 SS_T=SS_B+SS_W입니다.</p>'''+f2+f'''<p>예제 전체 평균은 120, SS_B=3,200, SS_W=600입니다. 집단 수 k=3, 총 n=12이므로 자유도는 2와 9입니다. MS_B=3,200/2=1,600, MS_W=600/9≈66.67이며 <strong>F=MS_B/MS_W=24</strong>입니다. F(2,9)의 오른쪽 꼬리 p값은 <strong>{p:.6f}</strong>입니다.</p><div class="learn-data learn-data--full"><table><caption>가상 단가 자료의 일원분산분석</caption><thead><tr><th scope="col">변동</th><th scope="col">SS</th><th scope="col">자유도</th><th scope="col">MS</th></tr></thead><tbody><tr><th scope="row">집단 간</th><td>3,200</td><td>2</td><td>1,600</td></tr><tr><th scope="row">집단 내</th><td>600</td><td>9</td><td>66.67</td></tr><tr><th scope="row">전체</th><td>3,800</td><td>11</td><td>—</td></tr></tbody></table></div><p>기술적 효과크기 η²=SS_B/SS_T≈{eta:.3f}는 이 표본의 총 제곱변동 중 집단 구분과 연결되는 비율입니다. 집단이 가격 변동의 그 비율을 인과적으로 만들었다는 뜻은 아닙니다. 표본의 효과크기에는 불확실성과 편향도 있습니다.</p>''')
+ sec('posthoc','어느 집단이 다른가','전체 검정과 쌍별 비교를 분리합니다','''<p>ANOVA는 ‘어딘가 차이가 있는가’를 묻습니다. 어느 쌍이 얼마나 다른지는 별도의 비교가 필요합니다. k집단에는 k(k−1)/2개의 쌍이 있어 비교 수가 빠르게 늘어납니다. 보정 없는 t 검정을 반복하면 전체 제1종 오류가 커질 수 있습니다.</p>'''+f3+f'''<p>예제의 B−A와 C−B 차이는 각각 20이고 동시 구간은 {pairs[0]['low']:.2f}~{pairs[0]['high']:.2f}입니다. C−A는 40이고 구간은 {pairs[1]['low']:.2f}~{pairs[1]['high']:.2f}입니다. 이 예제에서는 세 구간 모두 0을 포함하지 않지만 다른 자료에서도 항상 그렇지는 않습니다.</p><p>Tukey는 모든 쌍 비교에 맞춘 방법입니다. 사전에 정한 대비나 대조군과의 비교에는 질문에 맞는 절차를 선택합니다. 모든 비교를 무조건 탐색한 뒤 유리한 결과만 남기지 않습니다. 다중비교 보정은 편향된 자료나 잘못된 모형을 교정하는 방법은 아닙니다.</p>''')
+ sec('assumptions','가정이 다를 때','설계에 맞는 확장 방법을 선택합니다','''<p>등분산이 부적절하면 Welch ANOVA, 쌍별 비교에는 Games–Howell 같은 방법을 검토할 수 있습니다. 같은 대상의 반복 측정이면 독립집단 ANOVA 대신 반복측정·혼합모형 등 의존성을 반영한 방법이 필요합니다.</p><p>심한 치우침이나 이상치가 있으면 잔차·원자료를 살펴보고 변환·강건한 방법을 검토합니다. Kruskal–Wallis는 순위 기반 비교로, 추가적인 같은 분포 모양 가정 없이 무조건 ‘여러 중앙값의 검정’이라고 해석하지 않습니다. 방법을 바꾸면 비교하는 대상도 달라질 수 있습니다.</p>''')
+ sec('categorical','분할표와 조건부 비율','각 칸의 건수와 분모를 먼저 확인합니다','''<p>별도 예제에서 행은 지역 A·B·C, 열은 주거·비주거입니다. 한 거래가 정확히 한 칸에만 들어가고 거래들 사이에 독립성이 있다고 가정합니다. 원자료는 비율이 아니라 관측 건수입니다.</p>'''+f4+'''<div class="learn-data learn-data--full"><table><caption>가상 거래 유형 분할표 · 단위: 건</caption><thead><tr><th scope="col">지역</th><th scope="col">주거</th><th scope="col">비주거</th><th scope="col">합계</th></tr></thead><tbody><tr><th scope="row">A</th><td>30</td><td>20</td><td>50</td></tr><tr><th scope="row">B</th><td>20</td><td>30</td><td>50</td></tr><tr><th scope="row">C</th><td>10</td><td>40</td><td>50</td></tr><tr><th scope="row">합계</th><td>60</td><td>90</td><td>150</td></tr></tbody></table></div><p>A 안에서 주거 비율은 30/50=60%이고, 주거 전체 중 A 비율은 30/60=50%입니다. 같은 30건도 행 비율과 열 비율은 다릅니다. 결측을 제외했다면 유효 분모와 제외 기준을 밝혀야 합니다.</p>''')
+ sec('chi-square','카이제곱 검정','독립일 때의 기대 건수와 관측 건수를 비교합니다',f'''<p>독립성 검정의 H₀는 ‘지역과 거래 유형이 독립이다’입니다. 독립이면 기대도수 Eᵢⱼ=(행 합계×열 합계)/전체 건수입니다. 이 예제에서는 각 행의 기대 주거가 50×60/150=20, 기대 비주거가 30입니다.</p><p><strong>χ²=Σ(O−E)²/E</strong>로 모든 칸의 어긋남을 합합니다. A의 주거 칸은 (30−20)²/20=5, 비주거 칸은 (20−30)²/30≈3.333입니다. B는 두 칸 모두 0, C는 A와 같은 기여도를 가집니다.</p><p>합계 χ²={stat:.4f}, 자유도 (행 수−1)(열 수−1)=2, 오른쪽 꼬리 p={cp:.6f}입니다. 연속성 보정을 사용하지 않은 Pearson 카이제곱 계산입니다. 이 가상 모형에서는 독립 가설을 5%에서 기각합니다.</p><p>한 모집단에서 두 변수를 분류하면 독립성, 별도로 표집한 여러 집단의 구성비를 비교하면 동질성 질문으로 설명할 수 있습니다. 같은 통계량을 써도 표집 설계와 해석 대상을 명시해야 합니다.</p>''')
+ sec('categorical-effect','관계의 크기와 셀 해석','유의성만으로 구성 차이의 크기를 알 수 없습니다',f'''<p>Cramér의 V=√[χ²/(n×min(r−1,c−1))]는 분할표 관계의 크기를 요약합니다. 예제에서는 V=√({stat:.4f}/150)≈{V:.3f}입니다. 0~1 사이의 요약값이지만 인과관계의 강도나 설명된 분산 비율은 아닙니다.</p><p>어느 지역의 어떤 범주가 더 많은지 보려면 원래 비율과 (O−E)의 방향을 함께 봅니다. 카이제곱 기여도는 제곱하므로 방향을 잃습니다. 여러 셀의 잔차를 추가로 검정하면 다중비교를 고려해야 하며, 큰 기여도 하나를 곧바로 독립적인 유의성 판정으로 읽지 않습니다.</p><p>표본수가 커지면 작은 구성 차이도 유의해질 수 있습니다. A와 C의 주거 비율 차이는 60%−20%=40%포인트이며, 이런 원래 척도의 차이도 함께 보고합니다.</p>''')
+ sec('sparse','작은 기대도수와 의존성','검정 가능한 표인지 먼저 확인합니다','''<p>카이제곱 p값은 큰 표본 근사입니다. 관측도수만이 아니라 <strong>기대도수</strong>가 너무 작지 않은지 확인합니다. 모든 기대도수가 5 이상인지 보는 것은 흔히 쓰는 보수적인 점검 기준이며 보편적 만능 규칙은 아닙니다. 예제 기대도수는 20·30으로 이 문제를 피하도록 설계했습니다.</p><p>희소한 2×2 표에는 Fisher의 정확검정 등을, 큰 표에는 설계에 맞는 정확·몬테카를로 방법 등을 검토할 수 있습니다. 결과가 유의해지도록 범주를 사후 합치지 않습니다. 기대도수가 0인 빈 행·열은 산식에 바로 넣을 수 없습니다.</p><p>같은 사람이나 물건의 전후 범주를 비교하는 자료는 독립 분할표가 아닙니다. 이분형 대응 자료에는 McNemar 검정처럼 짝을 반영한 방법이 필요합니다. 복합표본·군집·가중치가 있는 조사도 일반 독립성 검정과 구분합니다.</p>''')
+ sec('practice','확인 문제','평균과 구성비, 전체와 쌍별 질문을 구별하세요','''<ol class="learn-exercises"><li>ANOVA가 유의하면 모든 쌍의 평균이 다른가요?<details><summary>답과 해설</summary><p>아니요. 적어도 하나가 다르다는 전체 가설 결과입니다. 쌍별 차이는 다중비교를 고려해 확인합니다.</p></details></li><li>F를 3,200/600으로 계산하면 되나요?<details><summary>답과 해설</summary><p>아니요. 자유도로 나눈 평균제곱의 비율입니다. (3,200/2)/(600/9)=24입니다.</p></details></li><li>A 지역의 기대 주거 건수는 관측 30건인가요?<details><summary>답과 해설</summary><p>아니요. 독립 가정에서 50×60/150=20건입니다.</p></details></li><li>카이제곱이 유의하면 지역이 거래 유형을 원인으로서 바꾸나요?<details><summary>답과 해설</summary><p>아니요. 가정 아래 연관성에 관한 결과이며 인과효과의 증명이 아닙니다.</p></details></li></ol>''')
+ sec('macro','CH2 Macro에서 읽기','필터와 관측 단위를 맞춘 뒤 비교합니다','''<p>CH2 Macro에서 여러 지역·유형을 비교할 때는 기간·단위·유효 건수와 구성 차이를 먼저 확인합니다. 평균 단가 비교와 거래 유형 비중 비교를 구분하고, 여러 쌍을 탐색했다면 전체 비교 범위를 밝힙니다.</p><p>이 장의 ANOVA·Tukey·카이제곱 기능이 모든 서비스 화면에서 제공된다고 전제하지 않습니다. 가상 예제의 p값을 실제 지역의 우열이나 개별 물건의 가치 판정으로 해석하지 않습니다.</p><p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 통계 열기 →</a></p>''')
+ sec('recap','정리와 참고자료','질문에 맞는 검정과 크기의 지표를 함께 선택합니다','''<p>여러 평균은 ANOVA와 적절한 후속 비교로, 범주형 구성은 분할표와 독립성·동질성 검정으로 살펴봅니다. 검정 가정·다중비교·효과크기와 인과 해석의 한계를 함께 보고합니다.</p><p>다음 <a href="/learn/stats/correlation/">16장 「상관관계와 인과관계」</a>로 이어집니다.</p><ul><li><a href="https://www.itl.nist.gov/div898/handbook/prc/section4/prc433.htm">NIST: ANOVA table and tests of means</a> — 평균제곱과 F 검정.</li><li><a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.tukey_hsd.html">SciPy: Tukey HSD</a> — 쌍별 동시 구간.</li><li><a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.chi2_contingency.html">SciPy: Chi-square independence test</a> — 기대도수와 근사 검정.</li></ul><p class="learn-source-note">모든 예제와 그림은 별도 가상 자료로 직접 작성했습니다. SciPy로 분포 확률과 Tukey 구간을 계산했습니다. 참고자료 확인: 2026-10-08.</p>''')
+ pth=ROOT/'multiple-groups-and-categorical/index.html';pth.parent.mkdir(exist_ok=True);html=pth.read_text(encoding='utf-8') if pth.exists() else (ROOT/'comparing-groups/index.html').read_text(encoding='utf-8')
+ html=html.replace('https://ch2data.com/learn/stats/comparing-groups/','https://ch2data.com/learn/stats/multiple-groups-and-categorical/')
+ html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded" aria-label="여러 집단과 범주형 자료의 비교">\n'+'\n'.join(parts)+'\n</article>',html,count=1,flags=re.S)
+ html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1ANOVA와 사후비교, 분할표와 카이제곱 검정을 가상 자료와 그림으로 설명합니다.\2',html,count=1,flags=re.S);pth.write_text(html,encoding='utf-8')
+if __name__=='__main__':build()

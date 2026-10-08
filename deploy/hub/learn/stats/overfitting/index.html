@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>24. 과적합과 편향–분산의 균형 | 통계학 &amp; 데이터 분석</title>
+    <meta
+      name="description"
+      content="흥덕 예시에서 직선은 학습 오차 42.0, 확인 오차 41.1입니다. 이웃 1개는 학습 0, 확인 64입니다."
+    />
+    <link rel="canonical" href="https://ch2data.com/learn/stats/overfitting/" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261007-2" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero hero--document">
+        <p class="learn-breadcrumb">
+          <a href="https://ch2data.com/">CH2 DATA</a> ·
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </p>
+        <p class="hero__eyebrow">V. 예측과 모형 평가</p>
+        <h1 class="hero__title">24. 과적합과 편향–분산의 균형</h1>
+      </header>
+
+      <article class="learn-chapter" aria-label="과적합">
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">① 정의</p>
+          <h2>이미 본 자료를 외우면, 안 본 자료에서 오차가 커질 수 있습니다</h2>
+          <p>
+            <strong>과적합</strong>은 모형을 만든 자료에서는 오차가 작은데, 그 자료를 벗어나면 오차가
+            커지는 상태입니다. 학습 오차만 줄어드는 모형이 더 나은 모형은 아닙니다.
+          </p>
+          <p>
+            이 장부터 몇 장은 같은
+            <a href="/learn/stats/graphs/">흥덕 예시 30건</a>에서 면적으로 단가를 맞힙니다. 번호
+            1–20(20건)으로 모형을 만들고, 번호 21–30(10건)은 확인에만 씁니다. 번호는 모은 순서라
+            시간이 아닙니다. 나누는 위치를 바꿔 가며 평균내는 방법은
+            <a href="/learn/stats/cross-validation/">교차검증</a>에 있습니다. 오차는 예측과 단가의
+            차이 절댓값을 평균한 값, 만원/㎡입니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">② 같은 자료의 숫자</p>
+          <h2>직선은 42.0과 41.1, 이웃 1개는 0과 64</h2>
+          <p>
+            학습 20건에 맞춘 직선은 250.7 − 0.76 × 면적입니다. 면적이 100㎡ 늘면 예측 단가가 76
+            줄어듭니다. 면적 0은 이 표 밖입니다. 이 직선의 학습 오차는 42.0, 확인 오차는 41.1입니다.
+          </p>
+          <p>
+            면적을 두 번 잘라 잎마다 평균을 두는 나무는 학습 오차 23.1, 확인 오차 60.4입니다.
+            가장 가까운 학습 건 하나의 단가를 그대로 가져오는 방법은 학습 오차 0, 확인 오차
+            64입니다. 학습 오차 0은 각 점의 가장 가까운 자료가 자기 자신이기 때문입니다.
+          </p>
+          <div class="learn-data">
+            <table>
+              <thead>
+                <tr>
+                  <th>모형</th>
+                  <th>학습 20건</th>
+                  <th>확인 10건</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>직선</td>
+                  <td>42.0</td>
+                  <td>41.1</td>
+                </tr>
+                <tr>
+                  <td>나무, 잎 3개</td>
+                  <td>23.1</td>
+                  <td>60.4</td>
+                </tr>
+                <tr>
+                  <td>가장 가까운 1건</td>
+                  <td>0</td>
+                  <td>64.0</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            확인 10건에서 이웃 1개의 절대오차 합은 640입니다. 그중 320은 28번 한 건입니다. 28번은
+            면적 28㎡, 단가 160인데, 학습 자료에서 가장 가까운 면적은 7번의 22㎡이고 그 단가는
+            480입니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">③ 그림</p>
+          <h2>직선은 480을 지나지 않습니다</h2>
+          <p>
+            파란 점은 학습 20건, 흰 점은 확인 10건입니다. 주황 점은 7번입니다. 선은 학습 20건에
+            맞춘 직선입니다.
+          </p>
+          <figure class="learn-chart" aria-label="학습 점, 확인 점, 직선">
+            <svg viewBox="0 0 430 210" role="img">
+              <line x1="48" y1="20" x2="48" y2="168" stroke="#cbd5e1" />
+              <line x1="48" y1="168" x2="400" y2="168" stroke="#cbd5e1" />
+              <text x="42" y="144" text-anchor="end" fill="#64748b" font-size="11">100</text>
+              <text x="42" y="116" text-anchor="end" fill="#64748b" font-size="11">200</text>
+              <text x="42" y="88" text-anchor="end" fill="#64748b" font-size="11">300</text>
+              <text x="42" y="60" text-anchor="end" fill="#64748b" font-size="11">400</text>
+              <text x="42" y="33" text-anchor="end" fill="#64748b" font-size="11">500</text>
+              <text x="98" y="184" text-anchor="middle" fill="#475569" font-size="11">50</text>
+              <text x="199" y="184" text-anchor="middle" fill="#475569" font-size="11">150</text>
+              <text x="300" y="184" text-anchor="middle" fill="#475569" font-size="11">250</text>
+              <text x="220" y="204" text-anchor="middle" fill="#64748b" font-size="11">면적 (㎡)</text>
+              <line x1="68.1" y1="102.8" x2="329.6" y2="157.5" stroke="#1d4ed8" stroke-width="2" />
+              <circle cx="229.1" cy="135.3" r="4" fill="#2563eb" />
+              <circle cx="143.6" cy="148.3" r="4" fill="#2563eb" />
+              <circle cx="108.4" cy="121.5" r="4" fill="#2563eb" />
+              <circle cx="289.4" cy="140.9" r="4" fill="#2563eb" />
+              <circle cx="88.2" cy="102.9" r="4" fill="#2563eb" />
+              <circle cx="208.9" cy="138.9" r="4" fill="#2563eb" />
+              <circle cx="359.8" cy="144.7" r="4" fill="#2563eb" />
+              <circle cx="158.6" cy="125.9" r="4" fill="#2563eb" />
+              <circle cx="168.7" cy="132.6" r="4" fill="#2563eb" />
+              <circle cx="249.2" cy="142.8" r="4" fill="#2563eb" />
+              <circle cx="123.4" cy="109.8" r="4" fill="#2563eb" />
+              <circle cx="188.8" cy="137.0" r="4" fill="#2563eb" />
+              <circle cx="299.5" cy="150.8" r="4" fill="#2563eb" />
+              <circle cx="133.5" cy="127.8" r="4" fill="#2563eb" />
+              <circle cx="103.3" cy="119.5" r="4" fill="#2563eb" />
+              <circle cx="239.1" cy="139.8" r="4" fill="#2563eb" />
+              <circle cx="113.4" cy="101.5" r="4" fill="#2563eb" />
+              <circle cx="118.4" cy="129.8" r="4" fill="#2563eb" />
+              <circle cx="96.3" cy="115.9" r="4" fill="#2563eb" />
+              <circle cx="269.3" cy="143.6" r="4" fill="#fff" stroke="#64748b" />
+              <circle cx="138.5" cy="131.4" r="4" fill="#fff" stroke="#64748b" />
+              <circle cx="198.9" cy="134.8" r="4" fill="#fff" stroke="#64748b" />
+              <circle cx="83.2" cy="93.8" r="4" fill="#fff" stroke="#64748b" />
+              <circle cx="309.5" cy="146.4" r="4" fill="#fff" stroke="#64748b" />
+              <circle cx="219.0" cy="133.7" r="4" fill="#fff" stroke="#64748b" />
+              <circle cx="148.6" cy="136.2" r="4" fill="#fff" stroke="#64748b" />
+              <circle cx="76.2" cy="123.7" r="5" fill="#fff" stroke="#334155" stroke-width="1.5" />
+              <circle cx="178.8" cy="141.7" r="4" fill="#fff" stroke="#64748b" />
+              <circle cx="128.5" cy="138.1" r="4" fill="#fff" stroke="#64748b" />
+              <circle cx="70.1" cy="35.1" r="5.5" fill="#d97706" stroke="#b45309" />
+              <text x="78" y="30" fill="#9a3412" font-size="11">7번 480</text>
+              <text x="84" y="128" fill="#334155" font-size="11">28번</text>
+            </svg>
+            <p class="learn-chart__caption">
+              직선은 7번 아래를 지납니다. 면적 22㎡에서 직선의 예측은 234이고, 실제 단가는 480입니다.
+              테두리가 진한 흰 점은 확인 자료인 28번입니다.
+            </p>
+          </figure>
+          <figure class="learn-chart" aria-label="학습 오차와 확인 오차">
+            <svg viewBox="0 0 420 150" role="img">
+              <text x="78" y="28" text-anchor="end" fill="#475569" font-size="12">직선</text>
+              <rect x="86" y="16" width="117.6" height="12" fill="#93c5fd" stroke="#1d4ed8" rx="2" />
+              <rect x="86" y="30" width="115.1" height="12" fill="#1d4ed8" rx="2" />
+              <text x="208" y="28" fill="#1e3a8a" font-size="11">42.0 / 41.1</text>
+              <text x="78" y="68" text-anchor="end" fill="#475569" font-size="12">나무</text>
+              <rect x="86" y="56" width="64.7" height="12" fill="#93c5fd" stroke="#1d4ed8" rx="2" />
+              <rect x="86" y="70" width="169.1" height="12" fill="#1d4ed8" rx="2" />
+              <text x="260" y="68" fill="#1e3a8a" font-size="11">23.1 / 60.4</text>
+              <text x="78" y="108" text-anchor="end" fill="#475569" font-size="12">이웃 1</text>
+              <rect x="86" y="110" width="179.2" height="12" fill="#1d4ed8" rx="2" />
+              <text x="270" y="108" fill="#1e3a8a" font-size="11">0 / 64.0</text>
+              <text x="230" y="140" text-anchor="middle" fill="#64748b" font-size="11">연한 막대 학습, 진한 막대 확인 (만원/㎡)</text>
+            </svg>
+            <p class="learn-chart__caption">
+              이웃 1개의 학습 막대는 길이가 0이라 보이지 않습니다. 확인 막대는 세 모형 중 가장 깁니다.
+            </p>
+          </figure>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">④ 그 그림에서 읽을 문장</p>
+          <h2>학습 오차 0인 모형의 확인 오차는 64입니다</h2>
+          <p>
+            직선은 학습과 확인이 42.0과 41.1로 가깝습니다. 나무는 학습을 23.1까지 줄이지만 확인은
+            60.4입니다. 이웃 1개는 학습 자료를 그대로 외워서 학습 오차가 0이고, 확인은 64입니다.
+          </p>
+          <p>
+            28번은 학습에 없습니다. 면적만 보면 7번 옆이라, 외우는 모형은 160인 단가를 480으로
+            말합니다. 그 한 건의 절대오차 320이 확인 절대오차 합 640의 절반입니다. 직선은 같은
+            면적에서 229를 말합니다. 480보다는 160에 가깝습니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">⑤ 자주 하는 실수</p>
+          <h2>학습 오차가 가장 작은 모형을 고르지 않습니다</h2>
+          <p>
+            이 표에서 학습 오차만 보면 이웃 1개가 이깁니다. 확인 10건에서는 직선이 41.1, 이웃 1개가
+            64입니다. 모형을 만든 자료의 오차는 그 모형이 새 자료에서 맞을 크기가 아닙니다.
+          </p>
+          <p>
+            이 10건은 번호를 한 번 자른 결과입니다. 다른 10건을 확인으로 두면 수가 달라질 수
+            있습니다. 자르는 위치를 바꿔 평균내는 절차는 다음 장입니다.
+          </p>
+        </section>
+
+        <aside class="learn-caution" aria-label="주의">
+          <p class="learn-caution__title">주의</p>
+          <p>학습에 쓴 자료의 오차로 모형을 고르면, 그 자료를 외운 쪽이 좋아 보입니다.</p>
+        </aside>
+
+        <details class="learn-more">
+          <summary>조금 더 알아보기</summary>
+          <div class="learn-more__body">
+            <p>
+              직선을 30건 전체에 맞추면 식은 232.5 − 0.68 × 면적이고, 30건 오차는 38.2입니다. 그
+              38.2에는 확인으로 빼 둔 10건도 들어 있습니다. 이 장의 41.1은 그 10건을 빼고 만든
+              직선을, 빼 둔 10건에만 적용한 값입니다.
+            </p>
+          </div>
+        </details>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">CH2 Macro에서는?</p>
+          <h2>모형 추천은 학습 오차로 순서를 매기지 않습니다</h2>
+          <p>
+            청주시 아파트 모형 추천은 홀드아웃 MAPE가 낮은 후보를 위에 둡니다. 그 화면은
+            <a href="/learn/stats/cross-validation/">교차검증</a> 장에 있습니다. 최근접 이웃이나
+            나무의 학습 오차 0을 보여주는 화면은 없습니다.
+          </p>
+        </section>
+      </article>
+
+      <nav class="learn-chapter-nav" aria-label="장 이동">
+<a href="/learn/stats/supervised-unsupervised/">← 22. 통계적 설명과 예측, 지도학습과 비지도학습</a>
+<a href="/learn/stats/cross-validation/">26. 교차검증과 모형 선택 →</a>
+</nav>
+<p class="learn-nav-note">25장은 작성 중입니다. 다음 링크는 현재 읽을 수 있는 장으로 연결됩니다.</p>
+
+      <footer class="footer">
+        <nav class="footer__links">
+          <a href="https://ch2data.com/">홈</a>
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </nav>
+        <p>© CH2 DATA</p>
+      </footer>
+    </div>
+    <script src="/learn/stats/learn-stats-toc.js?v=20261007-2" defer></script>
+  </body>
+</html>

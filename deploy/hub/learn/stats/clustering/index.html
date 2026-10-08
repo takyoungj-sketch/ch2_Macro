@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>31. 군집분석 | 통계학 &amp; 데이터 분석</title>
+    <meta
+      name="description"
+      content="면적과 단가의 거리로 30건을 15건씩 나누면, 좁고 단가 높은 쪽에 상업 12건, 넓고 단가 낮은 쪽에 주거 12건이 있습니다."
+    />
+    <link rel="canonical" href="https://ch2data.com/learn/stats/clustering/" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261007-2" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero hero--document">
+        <p class="learn-breadcrumb">
+          <a href="https://ch2data.com/">CH2 DATA</a> ·
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </p>
+        <p class="hero__eyebrow">VI. 기초 머신러닝과 종합 해석</p>
+        <h1 class="hero__title">31. 군집분석</h1>
+      </header>
+
+      <article class="learn-chapter" aria-label="군집">
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">① 정의</p>
+          <h2>답 열 없이, 가까운 점끼리 묶습니다</h2>
+          <p>
+            <strong>군집</strong>은 비지도학습입니다. 구분도 단가도 맞힐 답으로 쓰지 않습니다.
+            다만 이 장은 거리를 재는 칸으로 면적과 단가를 함께 씁니다. 단가는 여기에서는 축이지,
+            예측의 정답이 아닙니다.
+          </p>
+          <p>
+            면적 평균 125.9, 퍼짐 76.0, 단가 평균 146.3, 퍼짐 80.2로 각 점을 맞춥니다. 퍼짐은
+            이 30건을 30으로 나눈 값입니다. 맞춘 뒤의 거리에서 가까운 점끼리 15건씩 둘로 나눕니다.
+            둘로 나눈 것은 이 장에서 고른 개수입니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">② 같은 자료의 숫자</p>
+          <h2>한 묶음은 면적 64·단가 194, 다른 묶음은 면적 188·단가 98</h2>
+          <div class="learn-data">
+            <table>
+              <thead>
+                <tr>
+                  <th>묶음</th>
+                  <th>건수</th>
+                  <th>평균 면적</th>
+                  <th>평균 단가</th>
+                  <th>주거</th>
+                  <th>상업</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>좁고 단가 높음</td>
+                  <td>15</td>
+                  <td>64</td>
+                  <td>194</td>
+                  <td>3</td>
+                  <td>12</td>
+                </tr>
+                <tr>
+                  <td>넓고 단가 낮음</td>
+                  <td>15</td>
+                  <td>188</td>
+                  <td>98</td>
+                  <td>12</td>
+                  <td>3</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            구분 열은 묶음이 끝난 뒤에 열었습니다. 좁은 묶음의 주거 3건은 15·19·27번이고, 넓은
+            묶음의 상업 3건은 14·26·29번입니다. 7번은 좁은 묶음에 있습니다. 7번만 따로 떨어진
+            묶음은, 둘로 나눌 때는 생기지 않습니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">③ 그림</p>
+          <h2>왼쪽 위와 오른쪽 아래</h2>
+          <p>연한 점은 좁고 단가가 높은 묶음, 진한 점은 넓고 단가가 낮은 묶음입니다. 주황은 7번입니다.</p>
+          <figure class="learn-chart" aria-label="두 군집">
+            <svg viewBox="0 0 430 210" role="img">
+              <line x1="48" y1="20" x2="48" y2="168" stroke="#cbd5e1" />
+              <line x1="48" y1="168" x2="400" y2="168" stroke="#cbd5e1" />
+              <text x="42" y="144" text-anchor="end" fill="#64748b" font-size="11">100</text>
+              <text x="42" y="88" text-anchor="end" fill="#64748b" font-size="11">300</text>
+              <text x="42" y="33" text-anchor="end" fill="#64748b" font-size="11">500</text>
+              <text x="98" y="184" text-anchor="middle" fill="#475569" font-size="11">50</text>
+              <text x="199" y="184" text-anchor="middle" fill="#475569" font-size="11">150</text>
+              <text x="300" y="184" text-anchor="middle" fill="#475569" font-size="11">250</text>
+              <text x="220" y="204" text-anchor="middle" fill="#64748b" font-size="11">면적 (㎡)</text>
+              <circle cx="229.1" cy="135.3" r="4.5" fill="#2563eb" />
+              <circle cx="143.6" cy="148.3" r="4.5" fill="#2563eb" />
+              <circle cx="108.4" cy="121.5" r="4.5" fill="#93c5fd" stroke="#1d4ed8" />
+              <circle cx="289.4" cy="140.9" r="4.5" fill="#2563eb" />
+              <circle cx="88.2" cy="102.9" r="4.5" fill="#93c5fd" stroke="#1d4ed8" />
+              <circle cx="208.9" cy="138.9" r="4.5" fill="#2563eb" />
+              <circle cx="359.8" cy="144.7" r="4.5" fill="#2563eb" />
+              <circle cx="158.6" cy="125.9" r="4.5" fill="#93c5fd" stroke="#1d4ed8" />
+              <circle cx="168.7" cy="132.6" r="4.5" fill="#2563eb" />
+              <circle cx="249.2" cy="142.8" r="4.5" fill="#2563eb" />
+              <circle cx="123.4" cy="109.8" r="4.5" fill="#93c5fd" stroke="#1d4ed8" />
+              <circle cx="188.8" cy="137.0" r="4.5" fill="#2563eb" />
+              <circle cx="299.5" cy="150.8" r="4.5" fill="#2563eb" />
+              <circle cx="133.5" cy="127.8" r="4.5" fill="#93c5fd" stroke="#1d4ed8" />
+              <circle cx="103.3" cy="119.5" r="4.5" fill="#93c5fd" stroke="#1d4ed8" />
+              <circle cx="239.1" cy="139.8" r="4.5" fill="#2563eb" />
+              <circle cx="113.4" cy="101.5" r="4.5" fill="#93c5fd" stroke="#1d4ed8" />
+              <circle cx="118.4" cy="129.8" r="4.5" fill="#93c5fd" stroke="#1d4ed8" />
+              <circle cx="96.3" cy="115.9" r="4.5" fill="#93c5fd" stroke="#1d4ed8" />
+              <circle cx="269.3" cy="143.6" r="4.5" fill="#2563eb" />
+              <circle cx="138.5" cy="131.4" r="4.5" fill="#93c5fd" stroke="#1d4ed8" />
+              <circle cx="198.9" cy="134.8" r="4.5" fill="#2563eb" />
+              <circle cx="83.2" cy="93.8" r="4.5" fill="#93c5fd" stroke="#1d4ed8" />
+              <circle cx="309.5" cy="146.4" r="4.5" fill="#2563eb" />
+              <circle cx="219.0" cy="133.7" r="4.5" fill="#2563eb" />
+              <circle cx="148.6" cy="136.2" r="4.5" fill="#93c5fd" stroke="#1d4ed8" />
+              <circle cx="76.2" cy="123.7" r="4.5" fill="#93c5fd" stroke="#1d4ed8" />
+              <circle cx="178.8" cy="141.7" r="4.5" fill="#2563eb" />
+              <circle cx="128.5" cy="138.1" r="4.5" fill="#93c5fd" stroke="#1d4ed8" />
+              <circle cx="70.1" cy="35.1" r="5.5" fill="#d97706" stroke="#b45309" />
+            </svg>
+            <p class="learn-chart__caption">
+              연한 점은 왼쪽·위쪽에 많고, 진한 점은 오른쪽·아래쪽에 많습니다. 주황 점은 연한 묶음에 있습니다.
+            </p>
+          </figure>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">④ 그 그림에서 읽을 문장</p>
+          <h2>둘로 나누면 7번은 높은 단가 묶음의 한 점입니다</h2>
+          <p>
+            좁은 묶음 15건의 평균 단가 194에는 480이 들어 있지만, 그 묶음은 7번만의 자리가
+            아닙니다. 5번 235, 18번 240, 24번 268도 같은 쪽에 있습니다. 넓은 묶음은 평균 면적
+            188, 평균 단가 98로, 면적이 크고 단가가 낮은 쪽에 있습니다.
+          </p>
+          <p>
+            구분을 나중에 열면 좁은 쪽 15건 중 상업이 12건, 넓은 쪽 15건 중 주거가 12건입니다.
+            나머지 6건은 면적·단가의 자리와 구분 칸이 그 다수와 다릅니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">⑤ 자주 하는 실수</p>
+          <h2>묶음 개수 2를 자료가 말해 준 수로 두지 않습니다</h2>
+          <p>
+            15건과 15건은 거리를 둘로 나누라고 정해 둔 결과입니다. 자료 안에 「둘이다」라는 칸은
+            없습니다. 개수를 바꾸면 7번이 들어가는 묶음의 크기도 바뀝니다.
+          </p>
+        </section>
+
+        <aside class="learn-caution" aria-label="주의">
+          <p class="learn-caution__title">주의</p>
+          <p>군집은 구분을 맞히려고 만든 모형이 아닙니다. 구분과의 일치는 묶은 뒤의 비교입니다.</p>
+        </aside>
+
+        <details class="learn-more">
+          <summary>조금 더 알아보기</summary>
+          <div class="learn-more__body">
+            <p>
+              같은 거리를 셋으로 나누면, 5·7·18·24번이 한 묶음이 됩니다. 네 건 모두 상업이고
+              평균 면적 40.5, 평균 단가 306입니다. 둘로 나눌 때 이 네 건은 좁고 단가 높은 15건
+              안에 있고, 셋으로 나누면 그 15건에서 갈라집니다.
+            </p>
+          </div>
+        </details>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">CH2 Macro에서는?</p>
+          <h2>거리로 단지를 묶는 화면은 없습니다</h2>
+          <p>
+            용도지역×지목 표는 칸이 미리 나뉜 집단입니다. 그 표는
+            <a href="/learn/stats/comparing-groups/">집단 비교</a> 장에 있습니다. 거리를 둘로
+            나누는 군집 화면은 없습니다.
+          </p>
+        </section>
+      </article>
+
+      <nav class="learn-chapter-nav" aria-label="장 이동">
+<a href="/learn/stats/decision-tree/">← 30. 의사결정나무</a>
+<a href="/learn/stats/reading-results/">32. 통계 결과를 읽고 판단하는 법 →</a>
+</nav>
+
+      <footer class="footer">
+        <nav class="footer__links">
+          <a href="https://ch2data.com/">홈</a>
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </nav>
+        <p>© CH2 DATA</p>
+      </footer>
+    </div>
+    <script src="/learn/stats/learn-stats-toc.js?v=20261007-2" defer></script>
+  </body>
+</html>

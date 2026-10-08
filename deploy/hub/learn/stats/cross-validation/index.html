@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>11. 교차검증과 CV-MAPE | 통계학 &amp; 데이터 분석</title>
+    <title>26. 교차검증과 모형 선택 | 통계학 &amp; 데이터 분석</title>
     <meta
       name="description"
-      content="교차검증과 CV-MAPE. CH2 Macro 모형추천에서 예측 성능을 비교하는 방법."
+      content="흥덕 예시 30건을 10건씩 세 번 빼면 확인 오차는 55.1, 23.3, 41.1입니다. 평균은 39.8이고 CV-MAPE는 27.4%입니다."
     />
     <link rel="canonical" href="https://ch2data.com/learn/stats/cross-validation/" />
     <link rel="stylesheet" href="/style.css" />
-    <link rel="stylesheet" href="/learn/stats/learn-stats.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261007-2" />
   </head>
   <body>
     <div class="page">
@@ -19,86 +19,187 @@
           <a href="https://ch2data.com/">CH2 DATA</a> ·
           <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
         </p>
-        <p class="hero__eyebrow">모델 평가 · 11</p>
-        <h1 class="hero__title">교차검증과 CV-MAPE</h1>
+        <p class="hero__eyebrow">V. 예측과 모형 평가</p>
+        <h1 class="hero__title">26. 교차검증과 모형 선택</h1>
       </header>
 
       <article class="learn-chapter" aria-label="교차검증과 CV-MAPE">
         <section class="learn-chapter__step" id="cross-validation">
-          <p class="learn-chapter__label">① 한 줄 정의</p>
-          <h2>교차검증이란</h2>
+          <p class="learn-chapter__label">① 정의</p>
+          <h2>빼 둔 10건의 위치를 바꿔 오차를 평균합니다</h2>
           <p>
-            회귀모형을 만든 데이터로, 그 모형이 맞았는지 확인하는 데이터가 같으면 모형이 실제보다
-            훨씬 잘 맞는 것처럼 보일 수 있습니다. 시험 문제를 미리 본 뒤 같은 문제로 점수를 내는
-            것과 비슷합니다.
+            <strong>교차검증</strong>은 모형을 만들 때 빼 둔 건으로 오차를 재고, 빼는 위치를 바꿔
+            그 오차를 평균하는 절차입니다. 한 번 자른 확인 오차는 그 한 번의 결과입니다.
           </p>
           <p>
-            <strong>교차검증</strong>은 표본을 여러 덩어리로 나눠, 일부로 모형을 만들고
-            <strong>나머지는 처음 보는 데이터</strong>처럼 예측해 보는 방법입니다. 이 과정을 여러 번
-            반복하면, 모형이 새로운 거래에서 어느 정도 맞는지 더 솔직하게 볼 수 있습니다.
+            자료는 <a href="/learn/stats/graphs/">흥덕 예시 30건</a>입니다. 번호 순서대로 10건씩
+            세 번 뺍니다. 1회는 1–10, 2회는 11–20, 3회는 21–30입니다. 번호는 모은 순서라 시간이
+            아닙니다. 3회는 <a href="/learn/stats/overfitting/">과적합</a>에서 확인으로 둔 10건과
+            같습니다. 각 회는 남은 20건으로 면적에서 단가를 말하는 직선을 맞춥니다.
           </p>
         </section>
 
         <section class="learn-chapter__step" id="cv-mape">
-          <p class="learn-chapter__label">② 쉽게 이해하기</p>
-          <h2>100건으로 교차검증을 상상해 보기</h2>
+          <p class="learn-chapter__label">② 같은 자료의 숫자</p>
+          <h2>세 확인 오차는 55.1, 23.3, 41.1이고 평균은 39.8입니다</h2>
           <p>
-            집합 아파트 거래가 100건 있다고 해 보겠습니다. 80건으로 「전용면적 + 연식 → 거래가격」
-            회귀식을 만들고, 남은 20건의 가격을 예측해 봅니다. 이때 예측이 실제 가격에서
-            얼마나 벗어나는지를 백분율로 모으면 <strong>MAPE</strong>가 됩니다.
+            1회는 7번이 빠집니다. 남은 20건의 직선은 면적 22㎡에서 196.6을 말하고, 실제 단가는
+            480입니다. 그 10건의 평균절대오차는 55.1입니다. 각 오차를 그 건의 단가로 나눈 뒤
+            평균하면 33.4%입니다.
           </p>
           <p>
-            교차검증은 검증용 20건의 위치를 바꿔 이 과정을 반복합니다. 각 차수의 MAPE를 평균한 값이
-            <strong>CV-MAPE</strong>(교차검증 MAPE)입니다.
+            2회는 11–20을 뺍니다. 이 10건에는 480이 없습니다. 평균절대오차는 23.3, 비율 오차는
+            14.9%입니다. 3회는 21–30입니다. 평균절대오차 41.1은 과적합 장의 확인 오차와 같습니다.
+            비율 오차는 33.9%입니다.
           </p>
-          <figure class="learn-chart" aria-label="교차검증 1회차 학습 검증 분할">
-            <svg viewBox="0 0 360 100" role="img" aria-hidden="true">
-              <text x="12" y="18" fill="#64748b" font-size="11">전체 거래 100건 — 1회차</text>
-              <rect x="12" y="32" width="272" height="36" fill="#93c5fd" rx="4" />
-              <rect x="284" y="32" width="64" height="36" fill="#1d4ed8" rx="4" />
-              <text x="148" y="56" text-anchor="middle" fill="#1e3a8a" font-size="12" font-weight="600">학습 80건</text>
-              <text x="316" y="56" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">검증 20건</text>
-              <text x="180" y="88" text-anchor="middle" fill="#64748b" font-size="10">2·3회차는 검증 위치를 바꿔 반복합니다</text>
+          <p>
+            (55.1 + 23.3 + 41.1) / 3 = 39.8입니다. (33.4 + 14.9 + 33.9) / 3 = 27.4%입니다.
+            이 27.4%가 이 표의 <strong>CV-MAPE</strong>입니다. 30건 전부로 맞추고 같은 30건으로
+            잰 MAPE 26.6%는 <a href="/learn/stats/model-fit/#mape">회귀모형의 성능</a>에 있습니다.
+            그 26.6%에는 맞출 때 본 건이 들어 있습니다.
+          </p>
+          <div class="learn-data">
+            <table>
+              <thead>
+                <tr>
+                  <th>회</th>
+                  <th>빼 둔 번호</th>
+                  <th>평균절대오차</th>
+                  <th>MAPE</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td>1–10, 7번 포함</td>
+                  <td>55.1</td>
+                  <td>33.4%</td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td>11–20</td>
+                  <td>23.3</td>
+                  <td>14.9%</td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td>21–30</td>
+                  <td>41.1</td>
+                  <td>33.9%</td>
+                </tr>
+                <tr>
+                  <td>평균</td>
+                  <td>10건씩</td>
+                  <td>39.8</td>
+                  <td>27.4%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">③ 그림</p>
+          <h2>1회만 7번이 확인 쪽에 있습니다</h2>
+          <p>진한 칸이 그 회에 빼 둔 10건입니다. 연한 칸 20건으로 직선을 맞춥니다.</p>
+          <figure class="learn-chart" aria-label="세 번의 학습과 확인 분할">
+            <svg viewBox="0 0 440 148" role="img">
+              <text x="40" y="32" text-anchor="end" fill="#475569" font-size="12">1회</text>
+              <rect x="48" y="16" width="120" height="24" fill="#1d4ed8" rx="3" />
+              <text x="108" y="33" text-anchor="middle" fill="#fff" font-size="11">1–10</text>
+              <rect x="168" y="16" width="240" height="24" fill="#93c5fd" stroke="#1d4ed8" rx="3" />
+              <text x="288" y="33" text-anchor="middle" fill="#1e3a8a" font-size="11">11–30</text>
+              <text x="40" y="72" text-anchor="end" fill="#475569" font-size="12">2회</text>
+              <rect x="48" y="56" width="120" height="24" fill="#93c5fd" stroke="#1d4ed8" rx="3" />
+              <text x="108" y="73" text-anchor="middle" fill="#1e3a8a" font-size="11">1–10</text>
+              <rect x="168" y="56" width="120" height="24" fill="#1d4ed8" rx="3" />
+              <text x="228" y="73" text-anchor="middle" fill="#fff" font-size="11">11–20</text>
+              <rect x="288" y="56" width="120" height="24" fill="#93c5fd" stroke="#1d4ed8" rx="3" />
+              <text x="348" y="73" text-anchor="middle" fill="#1e3a8a" font-size="11">21–30</text>
+              <text x="40" y="112" text-anchor="end" fill="#475569" font-size="12">3회</text>
+              <rect x="48" y="96" width="240" height="24" fill="#93c5fd" stroke="#1d4ed8" rx="3" />
+              <text x="168" y="113" text-anchor="middle" fill="#1e3a8a" font-size="11">1–20</text>
+              <rect x="288" y="96" width="120" height="24" fill="#1d4ed8" rx="3" />
+              <text x="348" y="113" text-anchor="middle" fill="#fff" font-size="11">21–30</text>
+              <text x="228" y="140" text-anchor="middle" fill="#64748b" font-size="11">칸 하나의 너비는 10건입니다</text>
             </svg>
+            <p class="learn-chart__caption">
+              1회의 진한 칸에 7번이 있습니다. 3회의 진한 칸은 과적합 장의 확인 10건입니다.
+            </p>
           </figure>
-          <pre class="learn-diagram" aria-label="교차검증 흐름">1차 [ 학습 80건         ][검증 20건]
-2차 [ 학습 ][검증][   학습   ]
-3차 [검증][      학습 80건    ]
-                    ↓             각 MAPE를 평균
-                    ↓                CV-MAPE</pre>
+          <figure class="learn-chart" aria-label="세 회의 평균절대오차">
+            <svg viewBox="0 0 420 168" role="img">
+              <text x="92" y="32" text-anchor="end" fill="#475569" font-size="12">1회</text>
+              <rect x="100" y="18" width="165.3" height="16" fill="#1d4ed8" rx="2" />
+              <text x="272" y="31" fill="#1e3a8a" font-size="12">55.1</text>
+              <text x="92" y="68" text-anchor="end" fill="#475569" font-size="12">2회</text>
+              <rect x="100" y="54" width="69.9" height="16" fill="#1d4ed8" rx="2" />
+              <text x="176" y="67" fill="#1e3a8a" font-size="12">23.3</text>
+              <text x="92" y="104" text-anchor="end" fill="#475569" font-size="12">3회</text>
+              <rect x="100" y="90" width="123.3" height="16" fill="#1d4ed8" rx="2" />
+              <text x="230" y="103" fill="#1e3a8a" font-size="12">41.1</text>
+              <text x="92" y="140" text-anchor="end" fill="#475569" font-size="12">평균</text>
+              <rect x="100" y="126" width="119.4" height="16" fill="#64748b" rx="2" />
+              <text x="226" y="139" fill="#334155" font-size="12">39.8</text>
+            </svg>
+            <p class="learn-chart__caption">
+              막대는 평균절대오차(만원/㎡)입니다. 회색 39.8은 세 파란 막대의 평균이고, 1회 55.1과
+              2회 23.3의 사이에 있습니다.
+            </p>
+          </figure>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">④ 그 그림에서 읽을 문장</p>
+          <h2>평균 39.8은 한 건의 오차가 아닙니다</h2>
           <p>
-            예를 들어 CV-MAPE가 <strong>13.2%</strong>이면, 교차검증에서 실제 거래가격과 모형
-            예측가격의 평균 백분율 차이가 약 13.2%라는 뜻입니다.
+            1회 55.1은 7번이 확인 10건에 들어간 결과입니다. 2회 23.3은 그 10건에 480이 없는
+            결과입니다. 평균 39.8은 두 회를 포함한 세 회의 평균이라, 어느 한 회의 오차도 아니고
+            7번 한 건의 오차도 아닙니다.
           </p>
           <p>
-            쉽게 말하면, 이 모형이 <strong>처음 보는 거래에서</strong> 가격을 예측했을 때 어느
-            정도의 오차를 보는지를 봅니다. 시장·변수·표본에 따라 값은 달라집니다. Macro
-            집합·복합 <strong>모형추천</strong>은 5겹 교차검증 MAPE를 비교 지표로 씁니다.
+            3회 41.1은 세 번 가운데 한 번입니다. 그 한 번만 이 직선의 확인 오차라고 두면, 1회
+            55.1과 2회 23.3이 빠집니다.
           </p>
         </section>
 
         <section class="learn-chapter__step">
-          <p class="learn-chapter__label">③ 왜 R²가 가장 높은 모형을 고르지 않을까?</p>
-          <h2>설명력과 예측력은 다릅니다</h2>
+          <p class="learn-chapter__label">⑤ 자주 하는 실수</p>
+          <h2>30건 MAPE 26.6%와 CV-MAPE 27.4%를 같은 점수로 두지 않습니다</h2>
           <p>
-            R²·Adj-R²는 「이 데이터에 얼마나 잘 맞췄나」에 가깝습니다. 변수를 많이 넣으면 R²는
-            올라가기 쉽지만, 새로운 거래를 맞히는 능력은 늘지 않을 수 있습니다.
+            26.6%는 30건에 맞춘 직선을 그 30건에 다시 댄 비율입니다. 27.4%는 맞출 때 빼 둔
+            10건만으로 잰 비율을 세 번 평균한 값입니다. 이 표에서는 둘이 가깝습니다. 같은 30건을
+            쓰더라도 맞출 때 본 건이 점수에 들어가는지가 다릅니다.
           </p>
           <p>
-            예를 들어 같은 표본에서 모형 A는 Adj R² 0.81·CV-MAPE 17.8%, 모형 B는 Adj R² 0.74·CV-MAPE
-            13.2%일 수 있습니다. 설명력만 보면 A가 더 좋아 보이지만, <strong>예측형 모형추천</strong>은
-            B를 위에 올릴 수 있습니다. Macro가 「R²가 높은데도 다른 모형이 추천된다」고 느껴지는
-            대표적인 경우입니다.
-          </p>
-          <p>
-            따라서 회귀실험 카드의 R²·MAPE(표본 내)와 모형추천의 CV-MAPE(교차검증)는 질문이
-            다릅니다. 전자는 「이 표본을 얼마나 잘 설명했나」, 후자는 「안 본 데이터에서 얼마나
-            맞았나」에 가깝습니다.
+            1회와 3회의 MAPE는 33.4%와 33.9%로 가깝고, 평균절대오차는 55.1과 41.1입니다. 단가가
+            낮은 건이 많은 회는 같은 단가 차이도 비율이 커집니다. 두 점수의 순서가 항상 같지는
+            않습니다.
           </p>
         </section>
 
+        <aside class="learn-caution" aria-label="주의">
+          <p class="learn-caution__title">주의</p>
+          <p>
+            이 세 번은 번호를 섞지 않고 10건씩 자른 것입니다. 7번이 어느 10건에 들어가는지에 따라
+            55.1과 23.3은 바뀝니다. 27.4%는 이 30건의 과거 패턴이고, 한 건의 감정평가액을 보장하지
+            않습니다.
+          </p>
+        </aside>
+
+        <details class="learn-more">
+          <summary>조금 더 알아보기</summary>
+          <div class="learn-more__body">
+            <p>
+              3회의 직선은 과적합 장의 250.7 − 0.76 × 면적입니다. 1회는 7번 없이 맞춘 직선이라
+              면적 22㎡에서 196.6을 말합니다. 아래 화면 예시는 5겹이고 CV-MAPE 13.2%는 다른
+              표본입니다. 이 장은 확인 칸을 10건으로 맞추려고 세 번으로 두었습니다.
+            </p>
+          </div>
+        </details>
+
         <section class="learn-chapter__step" id="model-recommendation">
-          <p class="learn-chapter__label">④ CH2 Macro에서는?</p>
+          <p class="learn-chapter__label">CH2 Macro에서는?</p>
           <h2>모형추천</h2>
           <p>
             집합·복합 <strong>회귀실험</strong>에서 설명변수와 선형·로그 형태를 바꿔 여러 모형을 만들
@@ -110,10 +211,17 @@
             <strong>설명력</strong> 탭은 Adj R²가 높은 순서를 중심으로 봅니다. 화면의 지표 옆
             <strong>?</strong>를 누르면 간단한 정의와 함께 이 Learn 페이지로 연결됩니다.
           </p>
+          <figure class="learn-capture">
+            <img src="../assets/captures/collective-cheongju-recommend.png" alt="청주시 아파트 모형 추천. 홀드아웃 MAPE" />
+            <figcaption class="learn-capture__caption">
+              집합 · 청주시 · 아파트. 1순위는 홀드아웃 MAPE 14.3%입니다. 홀드아웃은 단지를 한 번 나누어 떼 둔 오차입니다.
+              이 장의 10건씩 세 번, 평균 27.4%와는 표본도 나누기도 다릅니다. 5겹 교차검증 MAPE는 홀드아웃 값이 없을 때 같은 자리에 나옵니다.
+            </figcaption>
+          </figure>
         </section>
 
         <section class="learn-chapter__step">
-          <p class="learn-chapter__label">⑤ Macro 화면</p>
+          <p class="learn-chapter__label">Macro 화면</p>
           <h2>모형추천에서 CV-MAPE 읽기</h2>
           <p>
             아래는 집합 Macro <strong>모형추천</strong> 패널을 단순화한 예시입니다. 1순위 모형의
@@ -158,60 +266,6 @@
           </figure>
         </section>
 
-        <aside class="learn-caution" aria-label="주의">
-          <p class="learn-caution__title">주의</p>
-          <p>
-            CV-MAPE는 과거 표본 패턴에 대한 예측 성능 추정입니다. 시장 구조가 바뀌거나 표본이 매우
-            적으면 달라질 수 있습니다. 낮은 CV-MAPE가 개별 부동산의 감정평가액을 보장하지는
-            않습니다.
-          </p>
-        </aside>
-
-        <details class="learn-more">
-          <summary>조금 더 알아보기</summary>
-          <div class="learn-more__body">
-            <h3>K-fold 교차검증이란?</h3>
-            <p>
-              데이터를 K개 묶음(fold)으로 나누고, 각 묶음을 한 번씩 검증용으로 씁니다. Macro
-              모형추천은 5겹(5-fold) 교차검증 MAPE를 표시합니다.
-            </p>
-            <pre class="learn-diagram" aria-label="5-fold 교차검증">5-fold (K=5)
-
-1차 [V][  학습 4/5  ]
-2차 [  학습  ][V][학습]
-3차 [학습][V][  학습 ]
-4차 [  학습  ][V][학습]
-5차 [  학습 4/5  ][V]
-
-V = 검증용 fold</pre>
-
-            <h3>MAPE 계산</h3>
-            <p>
-              MAPE = mean( |실제 − 예측| / |실제| ) × 100%<br />
-              (구현마다 0으로 나누기 처리·소수 반올림이 조금 다를 수 있습니다.)
-            </p>
-
-            <h3>CV-MAPE와 일반 MAPE</h3>
-            <p>
-              회귀 카드의 MAPE는 <strong>표본 내(in-sample)</strong> 오차입니다. CV-MAPE는 교차검증
-              각 차수 MAPE의 평균이라, 표본 분할에 덜 민감한 예측 성능 추정에 가깝습니다.
-            </p>
-
-            <h3>R² · Adj-R² · AIC · CV-MAPE는 무엇이 다른가?</h3>
-            <p>
-              <strong>R²·Adj-R²</strong> → 이미 본 데이터 설명력<br />
-              <strong>AIC</strong> → 모형 단순성·적합도 비교(2차)<br />
-              <strong>CV-MAPE</strong> → 안 본 데이터 예측 오차. 모형추천(예측형)의 핵심 지표입니다.
-            </p>
-
-            <h3>MAPE의 한계</h3>
-            <p>
-              실제 거래가격이 매우 낮으면 백분율 오차가 왜곡될 수 있습니다. 저가 거래가 많은 표본에서는
-              CV-MAPE 해석에 주의가 필요합니다.
-            </p>
-          </div>
-        </details>
-
         <p class="learn-macro-cta">
           <a href="https://macro.ch2data.com/collective/">CH2 Macro에서 확인하기 →</a>
           <span style="display: block; margin-top: 0.35rem; font-size: 0.8125rem; color: #64748b"
@@ -221,9 +275,9 @@ V = 검증용 fold</pre>
       </article>
 
       <nav class="learn-chapter-nav" aria-label="장 이동">
-        <a href="/learn/stats/model-fit/">← 이전: 회귀모형의 성능</a>
-        <a href="/learn/stats/reading-results/">다음: 통계 결과를 읽는 법 →</a>
-      </nav>
+<a href="/learn/stats/overfitting/">← 24. 과적합과 편향–분산의 균형</a>
+<a href="/learn/stats/regularization/">27. 규제: 릿지와 라쏘 →</a>
+</nav>
 
       <footer class="footer">
         <nav class="footer__links">
@@ -234,6 +288,8 @@ V = 검증용 fold</pre>
         <p>© CH2 DATA</p>
       </footer>
     </div>
-    <script src="/learn/stats/learn-stats-toc.js" defer></script>
+    <script src="/learn/stats/learn-stats-toc.js?v=20261007-2" defer></script>
   </body>
 </html>
+
+

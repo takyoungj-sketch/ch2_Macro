@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>30. 의사결정나무 | 통계학 &amp; 데이터 분석</title>
+    <meta
+      name="description"
+      content="학습 20건을 면적 31, 80에서 자르면 예측은 480, 193.4, 105.7입니다. 확인 오차는 60.4로, 직선 41.1보다 큽니다."
+    />
+    <link rel="canonical" href="https://ch2data.com/learn/stats/decision-tree/" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261007-2" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero hero--document">
+        <p class="learn-breadcrumb">
+          <a href="https://ch2data.com/">CH2 DATA</a> ·
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </p>
+        <p class="hero__eyebrow">VI. 기초 머신러닝과 종합 해석</p>
+        <h1 class="hero__title">30. 의사결정나무</h1>
+      </header>
+
+      <article class="learn-chapter" aria-label="나무 하나">
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">① 정의</p>
+          <h2>면적 경계마다 그 구간의 평균 단가를 둡니다</h2>
+          <p>
+            <strong>나무 하나</strong>는 면적을 경계에서 둘로 나누고, 나뉜 쪽에 다시 경계를 둘 수
+            있습니다. 각 구간의 예측은 그 구간에 들어간 학습 건의 단가 평균입니다. 기울기 같은
+            식은 없습니다.
+          </p>
+          <p>
+            경계는 학습 20건의 오차 제곱합이 작아지도록 고릅니다. 확인 10건은 경계를 고를 때
+            쓰지 않습니다. 이 장은 나무 하나만 다룹니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">② 같은 자료의 숫자</p>
+          <h2>31 이하는 480, 80 이하는 193.4, 그 밖은 105.7</h2>
+          <p>
+            첫 경계는 면적 31㎡입니다. 31 이하인 학습 건은 7번 하나뿐이고, 그 구간의 예측은
+            480입니다. 나머지 19건의 평균은 138입니다. 둘째 경계는 그 19건 안에서 면적 80㎡입니다.
+            31 초과 80 이하 7건의 평균은 193.4, 80 초과 12건의 평균은 105.7입니다.
+          </p>
+          <div class="learn-data">
+            <table>
+              <thead>
+                <tr>
+                  <th>면적</th>
+                  <th>학습 건수</th>
+                  <th>예측 단가</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>31 이하</td>
+                  <td>1</td>
+                  <td>480</td>
+                </tr>
+                <tr>
+                  <td>31 초과 ~ 80 이하</td>
+                  <td>7</td>
+                  <td>193.4</td>
+                </tr>
+                <tr>
+                  <td>80 초과</td>
+                  <td>12</td>
+                  <td>105.7</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            학습 오차는 23.1, 확인 오차는 60.4입니다. 같은 나누기에서 직선의 확인 오차는
+            41.1입니다. 28번(면적 28)은 31 이하로 들어가 예측 480, 실제 160입니다. 30번(면적
+            80)은 80 이하라 예측 193.4, 실제 108입니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">③ 그림</p>
+          <h2>좁은 구간 하나가 480입니다</h2>
+          <figure class="learn-chart" aria-label="면적 세 구간의 예측">
+            <svg viewBox="0 0 430 150" role="img">
+              <line x1="48" y1="24" x2="48" y2="110" stroke="#cbd5e1" />
+              <line x1="48" y1="110" x2="400" y2="110" stroke="#cbd5e1" />
+              <line x1="79.2" y1="24" x2="79.2" y2="110" stroke="#cbd5e1" stroke-dasharray="3 2" />
+              <line x1="128.5" y1="24" x2="128.5" y2="110" stroke="#cbd5e1" stroke-dasharray="3 2" />
+              <text x="64" y="44" text-anchor="middle" fill="#9a3412" font-size="12" font-weight="700">480</text>
+              <text x="104" y="70" text-anchor="middle" fill="#1d4ed8" font-size="12" font-weight="700">193.4</text>
+              <text x="250" y="90" text-anchor="middle" fill="#1d4ed8" font-size="12" font-weight="700">105.7</text>
+              <circle cx="70.1" cy="40" r="5" fill="#d97706" stroke="#b45309" />
+              <circle cx="76.2" cy="78" r="4.5" fill="#fff" stroke="#334155" />
+              <text x="79" y="128" text-anchor="middle" fill="#475569" font-size="11">31</text>
+              <text x="128" y="128" text-anchor="middle" fill="#475569" font-size="11">80</text>
+              <text x="230" y="144" text-anchor="middle" fill="#64748b" font-size="11">면적 (㎡). 주황은 7번, 흰 점은 28번</text>
+            </svg>
+            <p class="learn-chart__caption">
+              28번의 면적 28은 31의 왼쪽으로 들어가 예측이 480이 됩니다. 세로 위치는 단가가 아닙니다.
+            </p>
+          </figure>
+          <figure class="learn-chart" aria-label="직선과 나무의 오차">
+            <svg viewBox="0 0 420 100" role="img">
+              <text x="56" y="28" text-anchor="end" fill="#475569" font-size="12">직선</text>
+              <rect x="64" y="16" width="123.3" height="16" fill="#93c5fd" stroke="#1d4ed8" rx="2" />
+              <text x="194" y="28" fill="#1e3a8a" font-size="12" font-weight="700">41.1</text>
+              <text x="56" y="62" text-anchor="end" fill="#475569" font-size="12">나무</text>
+              <rect x="64" y="50" width="181.2" height="16" fill="#93c5fd" stroke="#1d4ed8" rx="2" />
+              <text x="252" y="62" fill="#1e3a8a" font-size="12" font-weight="700">60.4</text>
+              <text x="220" y="90" text-anchor="middle" fill="#64748b" font-size="11">확인 10건의 평균절대오차</text>
+            </svg>
+            <p class="learn-chart__caption">학습 오차는 나무가 23.1로 직선 42.0보다 작습니다. 확인 오차는 반대입니다.</p>
+          </figure>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">④ 그 그림에서 읽을 문장</p>
+          <h2>첫 구간은 7번 한 건의 단가입니다</h2>
+          <p>
+            면적 31 이하의 예측 480은 여러 건의 평균이 아니라 7번 하나의 단가입니다. 확인에서
+            면적 28인 28번이 그 구간으로 들어가면, 예측은 480이 됩니다. 실제 160과의 차이 320이
+            확인 오차 60.4의 큰 부분입니다.
+          </p>
+          <p>
+            80을 넘는 12건의 예측 105.7은 그 구간의 평균이라, 한 건이 구간 전체를 차지하지
+            않습니다. 나무는 구간을 잘게 나눌수록 학습 자료를 더 따라가고, 한 건짜리 구간이
+            생기기 쉽습니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">⑤ 자주 하는 실수</p>
+          <h2>잎을 더 나누어 학습 오차가 줄어든 것을 확인 성능으로 두지 않습니다</h2>
+          <p>
+            경계를 한 번만 두면 학습 오차 40.9, 확인 오차 69.4입니다. 두 번째로 80을 두면 학습
+            오차는 23.1로 줄고, 확인 오차는 60.4입니다. 이 한 걸음에서는 확인도 줄었지만, 여전히
+            직선의 확인 오차 41.1보다 큽니다. 학습 오차가 더 작은 나무가 확인에서도 더 맞지는
+            않았습니다.
+          </p>
+        </section>
+
+        <aside class="learn-caution" aria-label="주의">
+          <p class="learn-caution__title">주의</p>
+          <p>한 건만 들어간 잎의 예측은 그 한 건의 단가입니다. 옆 면적의 새 자료도 그 단가를 받습니다.</p>
+        </aside>
+
+        <details class="learn-more">
+          <summary>조금 더 알아보기</summary>
+          <div class="learn-more__body">
+            <p>
+              나무를 여러 개 만들어 평균하는 방법, 그리고 신경망과 딥러닝은 이 과정에 넣지
+              않습니다. 이 장은 나무 하나의 경계와 잎만 봅니다.
+            </p>
+          </div>
+        </details>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">CH2 Macro에서는?</p>
+          <h2>면적으로 잎을 나누는 화면은 없습니다</h2>
+          <p>
+            지역회귀는 계수로 된 식입니다. 80㎡에서 한 번 나누는 나무 화면은 없습니다.
+          </p>
+        </section>
+      </article>
+
+      <nav class="learn-chapter-nav" aria-label="장 이동">
+<a href="/learn/stats/knn/">← 29. 최근접 이웃과 변수의 스케일</a>
+<a href="/learn/stats/clustering/">31. 군집분석 →</a>
+</nav>
+
+      <footer class="footer">
+        <nav class="footer__links">
+          <a href="https://ch2data.com/">홈</a>
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </nav>
+        <p>© CH2 DATA</p>
+      </footer>
+    </div>
+    <script src="/learn/stats/learn-stats-toc.js?v=20261007-2" defer></script>
+  </body>
+</html>

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>22. 통계적 설명과 예측, 지도학습과 비지도학습 | 통계학 &amp; 데이터 분석</title>
+    <meta
+      name="description"
+      content="단가를 맞히는 직선은 지도학습입니다. 구분 열을 보지 않고 면적·단가로 나눈 두 묶음은 비지도학습이고, 나중에 견주면 30건 중 24건이 구분과 같습니다."
+    />
+    <link rel="canonical" href="https://ch2data.com/learn/stats/supervised-unsupervised/" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261007-2" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero hero--document">
+        <p class="learn-breadcrumb">
+          <a href="https://ch2data.com/">CH2 DATA</a> ·
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </p>
+        <p class="hero__eyebrow">V. 예측과 모형 평가</p>
+        <h1 class="hero__title">22. 통계적 설명과 예측, 지도학습과 비지도학습</h1>
+      </header>
+
+      <article class="learn-chapter" aria-label="지도학습과 비지도학습">
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">① 정의</p>
+          <h2>맞힐 답이 있으면 지도, 답 없이 묶으면 비지도입니다</h2>
+          <p>
+            <strong>지도학습</strong>은 답 열이 있는 자료로, 다른 열에서 그 답을 맞히는 방법을
+            만듭니다. 면적으로 단가를 맞힐 때 단가가 답입니다.
+            <strong>비지도학습</strong>은 그 답 열을 쓰지 않고, 점들이 가까운 자리끼리 묶습니다.
+          </p>
+          <p>
+            앞 장의 직선·벌점·이웃·나무는 단가라는 답이 있으므로 지도학습입니다. 이 장의 묶음은
+            구분 열을 보지 않습니다. 자료는 같은
+            <a href="/learn/stats/graphs/">흥덕 예시 30건</a>입니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">② 같은 자료의 숫자</p>
+          <h2>묶은 뒤에 구분을 견주면 30건 중 24건이 같습니다</h2>
+          <p>
+            지도학습의 한 예는 번호 1–20으로 만든 직선 250.7 − 0.76 × 면적입니다. 확인 10건의
+            평균절대오차는 41.1만원/㎡입니다. 오차를 계산하려면 확인 건의 단가, 곧 답이 필요합니다.
+          </p>
+          <p>
+            비지도에서는 30건의 면적과 단가만 씁니다. 각 열에서 평균을 빼고, 30으로 나눈 퍼짐
+            (면적 76.0, 단가 80.2)으로 나눈 뒤, 그 거리에서 가까운 점끼리 15건씩 둘로 나눕니다.
+            구분 열은 이 계산에 없습니다.
+          </p>
+          <div class="learn-data">
+            <table>
+              <thead>
+                <tr>
+                  <th>묶음</th>
+                  <th>건수</th>
+                  <th>평균 면적</th>
+                  <th>평균 단가</th>
+                  <th>주거</th>
+                  <th>상업</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>좁고 단가 높음</td>
+                  <td>15</td>
+                  <td>64</td>
+                  <td>194</td>
+                  <td>3</td>
+                  <td>12</td>
+                </tr>
+                <tr>
+                  <td>넓고 단가 낮음</td>
+                  <td>15</td>
+                  <td>188</td>
+                  <td>98</td>
+                  <td>12</td>
+                  <td>3</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            좁은 묶음의 다수는 상업, 넓은 묶음의 다수는 주거입니다. 그 다수와 구분이 같은 건은
+            12 + 12 = 24건입니다. 나머지 6건은 15·19·27번(주거인데 좁은 묶음)과
+            14·26·29번(상업인데 넓은 묶음)입니다. 이 24는 묶은 다음에 견준 수입니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">③ 그림</p>
+          <h2>답 열이 있는 표와, 답 열을 가린 표</h2>
+          <figure class="learn-chart" aria-label="지도학습과 비지도학습의 표">
+            <svg viewBox="0 0 420 130" role="img">
+              <text x="70" y="18" text-anchor="middle" fill="#1d4ed8" font-size="12" font-weight="700">지도학습</text>
+              <rect x="16" y="28" width="108" height="28" fill="#f8fafc" stroke="#cbd5e1" />
+              <rect x="16" y="56" width="108" height="28" fill="#dbeafe" stroke="#1d4ed8" />
+              <text x="70" y="46" text-anchor="middle" fill="#475569" font-size="12">면적</text>
+              <text x="70" y="74" text-anchor="middle" fill="#1e3a8a" font-size="12">단가 · 답</text>
+              <text x="290" y="18" text-anchor="middle" fill="#1d4ed8" font-size="12" font-weight="700">비지도학습</text>
+              <rect x="236" y="28" width="108" height="28" fill="#f8fafc" stroke="#cbd5e1" />
+              <rect x="236" y="56" width="108" height="28" fill="#f8fafc" stroke="#cbd5e1" />
+              <text x="290" y="46" text-anchor="middle" fill="#475569" font-size="12">면적</text>
+              <text x="290" y="74" text-anchor="middle" fill="#475569" font-size="12">단가</text>
+              <text x="210" y="110" text-anchor="middle" fill="#64748b" font-size="11">왼쪽만 단가 칸을 답으로 표시했습니다</text>
+            </svg>
+            <p class="learn-chart__caption">
+              구분 칸은 두 그림 모두에 그리지 않았습니다. 비지도 묶음은 면적과 단가의 거리만 씁니다.
+            </p>
+          </figure>
+          <figure class="learn-chart" aria-label="묶음과 구분이 같은 건수">
+            <svg viewBox="0 0 420 90" role="img">
+              <text x="70" y="28" text-anchor="end" fill="#475569" font-size="12">같음</text>
+              <rect x="78" y="14" width="240" height="18" fill="#93c5fd" stroke="#1d4ed8" rx="2" />
+              <text x="326" y="28" fill="#1e3a8a" font-size="12" font-weight="700">24</text>
+              <text x="70" y="58" text-anchor="end" fill="#475569" font-size="12">다름</text>
+              <rect x="78" y="44" width="60" height="18" fill="#e2e8f0" stroke="#64748b" rx="2" />
+              <text x="146" y="58" fill="#475569" font-size="12" font-weight="700">6</text>
+            </svg>
+            <p class="learn-chart__caption">24와 6은 묶음이 끝난 뒤에 구분 열을 열어 센 수입니다.</p>
+          </figure>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">④ 그 그림에서 읽을 문장</p>
+          <h2>24건은 정답을 보고 맞힌 점수가 아닙니다</h2>
+          <p>
+            직선 41.1은 단가라는 답을 학습에서 보고, 확인의 단가와 견준 오차입니다. 묶음의 24건은
+            구분을 보지 않고 나눈 뒤, 사람이 구분 열을 열어 다수와 비교한 결과입니다. 학습 도중에
+            「24건을 맞히도록」 묶음을 고친 것이 아닙니다.
+          </p>
+          <p>
+            좁고 단가가 높은 15건의 평균 단가는 194, 넓고 단가가 낮은 15건은 98입니다. 주거 평균
+            106.2, 상업 평균 186.5와 방향은 비슷합니다. 6건은 그 방향 밖에 있습니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">⑤ 자주 하는 실수</p>
+          <h2>비지도의 묶음을, 구분을 맞힌 지도학습의 점수로 두지 않습니다</h2>
+          <p>
+            24/30을 「구분 예측의 정답률」이라고 부르면, 구분 열을 학습에 쓴 것처럼 읽힙니다.
+            그 열은 묶은 뒤에 열었습니다. 구분을 답으로 두고 면적으로 맞히는 방법은 따로이며, 이
+            장의 묶음이 그 방법을 대신하지 않습니다.
+          </p>
+        </section>
+
+        <aside class="learn-caution" aria-label="주의">
+          <p class="learn-caution__title">주의</p>
+          <p>답이 있는 열을 학습에 썼는지가 지도와 비지도를 가릅니다.</p>
+        </aside>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">CH2 Macro에서는?</p>
+          <h2>지역회귀는 단가를 보고 맞춥니다</h2>
+          <p>
+            집합 지역회귀는 단가라는 답을 보고 식을 맞추므로 지도학습입니다. 그 화면은
+            <a href="/learn/stats/regression/">회귀분석</a> 장에 있습니다. 답을 가리고 묶는
+            군집 화면은 없습니다.
+          </p>
+        </section>
+      </article>
+
+      <nav class="learn-chapter-nav" aria-label="장 이동">
+<a href="/learn/stats/model-fit/">← 21. 회귀모형의 적합도와 추정의 불확실성</a>
+<a href="/learn/stats/overfitting/">24. 과적합과 편향–분산의 균형 →</a>
+</nav>
+<p class="learn-nav-note">23장은 작성 중입니다. 다음 링크는 현재 읽을 수 있는 장으로 연결됩니다.</p>
+
+      <footer class="footer">
+        <nav class="footer__links">
+          <a href="https://ch2data.com/">홈</a>
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </nav>
+        <p>© CH2 DATA</p>
+      </footer>
+    </div>
+    <script src="/learn/stats/learn-stats-toc.js?v=20261007-2" defer></script>
+  </body>
+</html>

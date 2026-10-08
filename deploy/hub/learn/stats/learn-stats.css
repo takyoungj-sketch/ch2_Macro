@@ -29,9 +29,17 @@
 }
 
 .learn-roadmap__group h2 {
-  margin: 0 0 0.65rem;
-  font-size: 0.9375rem;
-  color: #0f172a;
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 800;
+  color: #1d4ed8;
+}
+
+.learn-roadmap__purpose {
+  margin: 0.3rem 0 0.75rem;
+  color: #64748b;
+  font-size: 0.875rem;
+  line-height: 1.55;
 }
 
 .learn-roadmap__list {
@@ -59,6 +67,42 @@
 .learn-roadmap__list .is-soon {
   color: #94a3b8;
   font-weight: 500;
+}
+
+.learn-roadmap__badge {
+  margin-left: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.learn-frame {
+  margin: 0 0 1.25rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem 1.15rem 1.1rem;
+}
+
+.learn-frame h2 {
+  margin: 0 0 0.65rem;
+  font-size: 1.0625rem;
+  font-weight: 800;
+  color: #1d4ed8;
+}
+
+.learn-frame ol {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #334155;
+  line-height: 1.7;
+}
+
+.learn-frame p {
+  margin: 0.75rem 0 0;
+  color: #64748b;
+  font-size: 0.875rem;
+  line-height: 1.6;
 }
 
 .learn-chapter {
@@ -238,6 +282,47 @@
   font-size: 0.6875rem;
 }
 
+.learn-data {
+  margin: 0.85rem 0 0;
+  max-height: 280px;
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.learn-data table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.learn-data th,
+.learn-data td {
+  padding: 0.28rem 0.55rem;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: right;
+  color: #334155;
+}
+
+.learn-data th:nth-child(2),
+.learn-data td:nth-child(2) {
+  text-align: left;
+}
+
+.learn-data th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  font-weight: 700;
+}
+
+.learn-data tr.is-outlier td {
+  background: #fff7ed;
+  color: #9a3412;
+  font-weight: 700;
+}
+
 .learn-chart {
   margin: 0.85rem 0 0;
   padding: 0.75rem;
@@ -408,16 +493,20 @@
   line-height: 1.5;
 }
 
-/* —— 왼쪽 목차 —— */
+/* —— 오른쪽 목차. 제목 아래, 본문 카드와 같은 높이에서 시작 —— */
 .page.learn-stats--with-sidebar {
   max-width: 1180px;
 }
 
 .learn-layout {
   display: grid;
-  grid-template-columns: minmax(200px, 220px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 240px);
   gap: 1.5rem;
   align-items: start;
+}
+
+.learn-main {
+  min-width: 0;
 }
 
 .learn-toc__inner {
@@ -508,6 +597,15 @@
   background: #eff6ff;
 }
 
+.learn-toc__list .is-soon {
+  display: block;
+  padding: 0.2rem 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
 .learn-toc__list--sections a {
   font-size: 0.75rem;
   padding-left: 0.5rem;
@@ -533,14 +631,41 @@
     grid-template-columns: 1fr;
   }
 
+  .learn-toc {
+    order: -1;
+  }
+
   .learn-toc__inner {
     position: static;
     max-height: none;
     margin-bottom: 0.25rem;
   }
-
-  .learn-toc--chapter .learn-toc__chapters,
-  .learn-toc--chapter .learn-toc__heading:not(.learn-toc__heading--sections) {
-    display: none;
-  }
 }
+
+/* Expanded textbook chapter and desktop section navigation. */
+.learn-toc { position: sticky; top: 1rem; }
+.learn-toc__inner { position: static; }
+.learn-toc__heading--sections { margin-top: 0; padding-top: 0; border-top: 0; }
+.learn-course-details { margin-top: 1rem; border-top: 1px solid #e2e8f0; padding-top: .8rem; }
+.learn-course-details summary { cursor: pointer; font-weight: 700; color: #334155; padding: .35rem 0; }
+.learn-course-details .learn-toc__heading { margin-top: .8rem; }
+.learn-nav-note, .learn-source-note { font-size: .875rem; line-height: 1.65; color: #64748b; }
+.learn-start { display: inline-block; margin-top: 1rem; color: #1d4ed8; font-weight: 700; }
+.learn-chapter-nav a { max-width: 48%; line-height: 1.6; }
+.learn-chapter-nav a:last-child { text-align: right; }
+.learn-chapter--expanded { padding: 2rem; box-shadow: none; }
+.learn-chapter--expanded p { line-height: 1.85; word-break: keep-all; overflow-wrap: anywhere; }
+.learn-chapter--expanded .learn-chapter__step { margin-bottom: 2rem; padding-bottom: 2rem; }
+.learn-chart--wide { padding: 1rem; margin: 1.25rem 0; }
+.learn-chart--wide svg { max-width: 680px; }
+.learn-chart--wide svg text { font-size: 14px; fill: #334155; font-family: inherit; }
+.learn-chart--wide .learn-chart__caption { text-align: left; line-height: 1.65; }
+.learn-data--full { max-height: none; }
+.learn-data--full th, .learn-data--full td { text-align: left; padding: .65rem; position: static; }
+.learn-data caption { padding: .65rem; text-align: left; color: #475569; font-weight: 600; }
+.learn-exercises { padding-left: 1.35rem; }
+.learn-exercises > li { padding: .8rem 0; }
+.learn-exercises details { margin-top: .5rem; padding: .7rem 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; }
+.learn-exercises summary { cursor: pointer; font-weight: 600; color: #1d4ed8; }
+.learn-chapter--expanded a:focus-visible, .learn-toc a:focus-visible, summary:focus-visible { outline: 2px solid #2563eb; outline-offset: 3px; }
+@media (max-width: 899px) { .learn-toc { position: static; } }

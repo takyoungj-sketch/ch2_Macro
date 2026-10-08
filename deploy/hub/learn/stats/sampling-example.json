@@ -1,0 +1,644 @@
+{
+  "kind": "fictional teaching example",
+  "seed": 20261007,
+  "unit": "만원/㎡",
+  "population": [
+    {
+      "id": 1,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 2,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 3,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 4,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 5,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 6,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 7,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 8,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 9,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 10,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 11,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 12,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 13,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 14,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 15,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 16,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 17,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 18,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 19,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 20,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 21,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 22,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 23,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 24,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 25,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 26,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 27,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 28,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 29,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 30,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 31,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 32,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 33,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 34,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 35,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 36,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 37,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 38,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 39,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 40,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 41,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 42,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 43,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 44,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 45,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 46,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 47,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 48,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 49,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 50,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 51,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 52,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 53,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 54,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 55,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 56,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 57,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 58,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 59,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 60,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 61,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 62,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 63,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 64,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 65,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 66,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 67,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 68,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 69,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 70,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 71,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 72,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 73,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 74,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 75,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 76,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 77,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 78,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 79,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 80,
+      "group": "A",
+      "price": 100
+    },
+    {
+      "id": 81,
+      "group": "B",
+      "price": 200
+    },
+    {
+      "id": 82,
+      "group": "B",
+      "price": 200
+    },
+    {
+      "id": 83,
+      "group": "B",
+      "price": 200
+    },
+    {
+      "id": 84,
+      "group": "B",
+      "price": 200
+    },
+    {
+      "id": 85,
+      "group": "B",
+      "price": 200
+    },
+    {
+      "id": 86,
+      "group": "B",
+      "price": 200
+    },
+    {
+      "id": 87,
+      "group": "B",
+      "price": 200
+    },
+    {
+      "id": 88,
+      "group": "B",
+      "price": 200
+    },
+    {
+      "id": 89,
+      "group": "B",
+      "price": 200
+    },
+    {
+      "id": 90,
+      "group": "B",
+      "price": 200
+    },
+    {
+      "id": 91,
+      "group": "B",
+      "price": 200
+    },
+    {
+      "id": 92,
+      "group": "B",
+      "price": 200
+    },
+    {
+      "id": 93,
+      "group": "B",
+      "price": 200
+    },
+    {
+      "id": 94,
+      "group": "B",
+      "price": 200
+    },
+    {
+      "id": 95,
+      "group": "B",
+      "price": 200
+    },
+    {
+      "id": 96,
+      "group": "B",
+      "price": 200
+    },
+    {
+      "id": 97,
+      "group": "B",
+      "price": 200
+    },
+    {
+      "id": 98,
+      "group": "B",
+      "price": 200
+    },
+    {
+      "id": 99,
+      "group": "B",
+      "price": 200
+    },
+    {
+      "id": 100,
+      "group": "B",
+      "price": 200
+    }
+  ],
+  "frame_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    81,
+    82,
+    83,
+    84,
+    85,
+    86,
+    87,
+    88,
+    89,
+    90,
+    91,
+    92,
+    93,
+    94,
+    95,
+    96,
+    97,
+    98,
+    99,
+    100
+  ],
+  "selected_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    81,
+    82,
+    83,
+    84,
+    85,
+    86,
+    87,
+    88,
+    89,
+    90
+  ],
+  "population_mean": 120,
+  "frame_mean": 150,
+  "sample_mean": 150,
+  "trials": [
+    {
+      "source": "population",
+      "n": 5,
+      "repetitions": 500,
+      "mean": 120.68,
+      "sd": 17.718284341323795,
+      "frequencies": {
+        "100": 155,
+        "120": 204,
+        "140": 112,
+        "160": 27,
+        "180": 2
+      }
+    },
+    {
+      "source": "population",
+      "n": 20,
+      "repetitions": 500,
+      "mean": 119.73,
+      "sd": 8.262995824759928,
+      "frequencies": {
+        "100": 4,
+        "105": 28,
+        "110": 60,
+        "115": 110,
+        "120": 127,
+        "125": 85,
+        "130": 57,
+        "135": 16,
+        "140": 9,
+        "145": 4
+      }
+    },
+    {
+      "source": "frame",
+      "n": 5,
+      "repetitions": 500,
+      "mean": 151.48,
+      "sd": 22.275762613208105,
+      "frequencies": {
+        "100": 12,
+        "120": 78,
+        "140": 141,
+        "160": 164,
+        "180": 90,
+        "200": 15
+      }
+    },
+    {
+      "source": "frame",
+      "n": 20,
+      "repetitions": 500,
+      "mean": 149.93,
+      "sd": 8.108335217540034,
+      "frequencies": {
+        "125": 1,
+        "130": 5,
+        "135": 23,
+        "140": 57,
+        "145": 107,
+        "150": 125,
+        "155": 99,
+        "160": 49,
+        "165": 27,
+        "170": 5,
+        "175": 2
+      }
+    }
+  ]
+}

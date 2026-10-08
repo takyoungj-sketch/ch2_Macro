@@ -1,0 +1,15 @@
+{
+  "description": "08장 전용 가상 학습 자료. 실제 거래 및 서비스 성능이 아님.",
+  "table": {
+    "A_B": 18,
+    "A_notB": 22,
+    "notA_B": 12,
+    "notA_notB": 48
+  },
+  "screening": {
+    "total": 1000,
+    "errors": 20,
+    "true_positive": 18,
+    "false_positive": 98
+  }
+}

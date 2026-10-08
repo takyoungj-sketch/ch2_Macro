@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>27. 규제: 릿지와 라쏘 | 통계학 &amp; 데이터 분석</title>
+    <meta
+      name="description"
+      content="같은 직선의 기울기 −0.76에 벌점을 주면 −0.65, −0.29가 됩니다. 확인 오차는 41.1, 38.8, 43.5입니다."
+    />
+    <link rel="canonical" href="https://ch2data.com/learn/stats/regularization/" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261007-2" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero hero--document">
+        <p class="learn-breadcrumb">
+          <a href="https://ch2data.com/">CH2 DATA</a> ·
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </p>
+        <p class="hero__eyebrow">V. 예측과 모형 평가</p>
+        <h1 class="hero__title">27. 규제: 릿지와 라쏘</h1>
+      </header>
+
+      <article class="learn-chapter" aria-label="규제">
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">① 정의</p>
+          <h2>기울기를 0 쪽으로 조금 당깁니다</h2>
+          <p>
+            <strong>규제</strong>는 학습 오차에 벌점을 더해, 계수(여기서는 기울기)가 너무 커지지
+            않게 하는 방법입니다. 이 장의 벌점은 기울기의 제곱에 비례합니다. 벌점이 0이면
+            <a href="/learn/stats/overfitting/">과적합</a> 장의 직선 그대로입니다.
+          </p>
+          <p>
+            자료와 나누기는 같습니다. 번호 1–20으로 기울기를 정하고, 21–30의 평균절대오차로
+            확인합니다. 면적은 학습 20건의 평균에서 잰 뒤 기울기만 벌점을 받습니다. 면적 편차
+            제곱의 합은 122,152입니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">② 같은 자료의 숫자</p>
+          <h2>벌점 0이면 기울기 −0.76, 2만이면 −0.65</h2>
+          <p>
+            벌점 0의 식은 250.7 − 0.76 × 면적입니다. 학습 오차 42.0, 확인 오차 41.1입니다.
+            벌점 2만은 122,152의 약 16%입니다. 기울기는 −0.65가 되고, 식은 237.3 − 0.65 ×
+            면적입니다. 학습 오차는 41.5로 거의 같고, 확인 오차는 38.8로 줄어듭니다.
+          </p>
+          <p>
+            벌점 20만은 면적 퍼짐보다 큽니다. 기울기는 −0.29, 식은 191.4 − 0.29 × 면적입니다.
+            학습 오차 46.8, 확인 오차 43.5입니다. 확인 오차가 다시 커집니다.
+          </p>
+          <div class="learn-data">
+            <table>
+              <thead>
+                <tr>
+                  <th>벌점</th>
+                  <th>기울기</th>
+                  <th>학습 오차</th>
+                  <th>확인 오차</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>0</td>
+                  <td>−0.76</td>
+                  <td>42.0</td>
+                  <td>41.1</td>
+                </tr>
+                <tr>
+                  <td>2만</td>
+                  <td>−0.65</td>
+                  <td>41.5</td>
+                  <td>38.8</td>
+                </tr>
+                <tr>
+                  <td>20만</td>
+                  <td>−0.29</td>
+                  <td>46.8</td>
+                  <td>43.5</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            면적 22㎡에서 세 식의 예측은 234, 223, 185입니다. 7번의 단가 480에는 어느 직선도
+            닿지 않습니다. 규제가 하는 일은 480을 맞히는 것이 아니라, 그 한 점이 기울기를 끌어가는
+            정도를 줄이는 것입니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">③ 그림</p>
+          <h2>벌점이 커질수록 선이 눕습니다</h2>
+          <figure class="learn-chart" aria-label="벌점에 따른 세 직선">
+            <svg viewBox="0 0 430 200" role="img">
+              <line x1="48" y1="20" x2="48" y2="168" stroke="#cbd5e1" />
+              <line x1="48" y1="168" x2="390" y2="168" stroke="#cbd5e1" />
+              <line x1="68.1" y1="102.8" x2="329.6" y2="157.5" stroke="#94a3b8" stroke-width="2" />
+              <line x1="68.1" y1="105.9" x2="329.6" y2="152.7" stroke="#2563eb" stroke-width="2" />
+              <line x1="68.1" y1="116.6" x2="329.6" y2="137.5" stroke="#1d4ed8" stroke-width="2.5" />
+              <circle cx="70.1" cy="35.1" r="5.5" fill="#d97706" stroke="#b45309" />
+              <text x="80" y="32" fill="#9a3412" font-size="11">7번</text>
+              <text x="48" y="188" fill="#64748b" font-size="11">회색 벌점 0 · 파랑 2만 · 진한 파랑 20만</text>
+            </svg>
+            <p class="learn-chart__caption">
+              세 선 모두 7번 아래를 지납니다. 벌점 20만인 진한 선이 가장 눕습니다.
+            </p>
+          </figure>
+          <figure class="learn-chart" aria-label="벌점별 확인 오차">
+            <svg viewBox="0 0 420 120" role="img">
+              <text x="70" y="28" text-anchor="end" fill="#475569" font-size="12">0</text>
+              <rect x="78" y="16" width="164.4" height="16" fill="#93c5fd" stroke="#1d4ed8" rx="2" />
+              <text x="248" y="28" fill="#1e3a8a" font-size="12" font-weight="700">41.1</text>
+              <text x="70" y="58" text-anchor="end" fill="#475569" font-size="12">2만</text>
+              <rect x="78" y="46" width="155.2" height="16" fill="#93c5fd" stroke="#1d4ed8" rx="2" />
+              <text x="240" y="58" fill="#1e3a8a" font-size="12" font-weight="700">38.8</text>
+              <text x="70" y="88" text-anchor="end" fill="#475569" font-size="12">20만</text>
+              <rect x="78" y="76" width="174" height="16" fill="#93c5fd" stroke="#1d4ed8" rx="2" />
+              <text x="258" y="88" fill="#1e3a8a" font-size="12" font-weight="700">43.5</text>
+              <text x="220" y="110" text-anchor="middle" fill="#64748b" font-size="11">확인 10건의 평균절대오차</text>
+            </svg>
+            <p class="learn-chart__caption">확인 오차는 벌점 2만에서 가장 짧고, 20만에서 다시 길어집니다.</p>
+          </figure>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">④ 그 그림에서 읽을 문장</p>
+          <h2>조금 당기면 확인 오차가 줄고, 더 당기면 다시 늘니다</h2>
+          <p>
+            벌점 0에서 2만으로 가면 기울기의 절댓값이 0.76에서 0.65로 줄고, 확인 오차는 41.1에서
+            38.8로 줄어듭니다. 학습 오차는 42.0에서 41.5로 거의 그대로입니다. 이 자료에서 벌점은
+            학습을 망가뜨리지 않은 채 확인을 조금 낮췄습니다.
+          </p>
+          <p>
+            20만까지 가면 기울기 −0.29가 되고 확인 오차는 43.5입니다. 면적이 단가와 함께 움직이던
+            관계까지 지워진 쪽에 가깝습니다. 규제의 크기는 학습 오차가 아니라 확인 오차로 봅니다.
+          </p>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">⑤ 자주 하는 실수</p>
+          <h2>벌점을 키울수록 확인 오차가 준다는 순서로 읽지 않습니다</h2>
+          <p>
+            0, 2만, 20만의 확인 오차는 41.1, 38.8, 43.5입니다. 가운데가 가장 작습니다. 벌점의
+            크기 자체는 모형의 점수가 아닙니다.
+          </p>
+          <p>
+            이 장은 직선 하나의 기울기만 당깁니다. 7번을 잎으로 외우는 나무는 기울기가 없습니다.
+            그 나무를 누르는 방법은 여기서 다루지 않고, 이웃의 개수를 늘리는 쪽이 다음다음 장에
+            있습니다.
+          </p>
+        </section>
+
+        <aside class="learn-caution" aria-label="주의">
+          <p class="learn-caution__title">주의</p>
+          <p>벌점은 학습 자료 안에서 고르면, 그 자료에 맞는 벌점이 됩니다. 확인 자료로 봅니다.</p>
+        </aside>
+
+        <details class="learn-more">
+          <summary>조금 더 알아보기</summary>
+          <div class="learn-more__body">
+            <p>
+              기울기 계산의 분모는 면적 편차 제곱합 122,152에 벌점을 더한 값입니다. 벌점 2만이면
+              분모가 142,152가 되어, 기울기의 절댓값이 122,152 / 142,152배, 약 86%로 줄어듭니다.
+              −0.76 × 0.86은 −0.65입니다.
+            </p>
+          </div>
+        </details>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">CH2 Macro에서는?</p>
+          <h2>기울기를 벌점으로 줄이는 조절은 없습니다</h2>
+          <p>
+            지역회귀는 변수와 선형·로그를 고릅니다. 이 장의 벌점 0, 2만, 20만처럼 기울기만
+            당기는 칸은 화면에 없습니다.
+          </p>
+        </section>
+      </article>
+
+      <nav class="learn-chapter-nav" aria-label="장 이동">
+<a href="/learn/stats/cross-validation/">← 26. 교차검증과 모형 선택</a>
+<a href="/learn/stats/knn/">29. 최근접 이웃과 변수의 스케일 →</a>
+</nav>
+<p class="learn-nav-note">28장은 작성 중입니다. 다음 링크는 현재 읽을 수 있는 장으로 연결됩니다.</p>
+
+      <footer class="footer">
+        <nav class="footer__links">
+          <a href="https://ch2data.com/">홈</a>
+          <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
+        </nav>
+        <p>© CH2 DATA</p>
+      </footer>
+    </div>
+    <script src="/learn/stats/learn-stats-toc.js?v=20261007-2" defer></script>
+  </body>
+</html>

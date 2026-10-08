@@ -3,11 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>12. 통계 결과를 읽는 법 | 통계학 &amp; 데이터 분석</title>
-    <meta name="description" content="상관≠인과, 표본편향, 외삽. CH2 Macro 결과 해석." />
+    <title>32. 통계 결과를 읽고 판단하는 법 | 통계학 &amp; 데이터 분석</title>
+    <meta
+      name="description"
+      content="흥덕 예시 30건의 146.3, 0.42, 38.2, 41.1, 27.4%는 서로 다른 질문의 답입니다. 기울기 −0.68은 면적의 효과가 아닙니다."
+    />
     <link rel="canonical" href="https://ch2data.com/learn/stats/reading-results/" />
     <link rel="stylesheet" href="/style.css" />
-    <link rel="stylesheet" href="/learn/stats/learn-stats.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261007-2" />
   </head>
   <body>
     <div class="page">
@@ -16,53 +19,182 @@
           <a href="https://ch2data.com/">CH2 DATA</a> ·
           <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
         </p>
-        <p class="hero__eyebrow">통계 결과 읽기 · 12</p>
-        <h1 class="hero__title">통계 결과를 읽는 법</h1>
+        <p class="hero__eyebrow">VI. 기초 머신러닝과 종합 해석</p>
+        <h1 class="hero__title">32. 통계 결과를 읽고 판단하는 법</h1>
       </header>
 
       <article class="learn-chapter" aria-label="통계 결과를 읽는 법">
         <section class="learn-chapter__step">
-          <p class="learn-chapter__label">① 한 줄 정의</p>
-          <h2>숫자는 답이 아니라 단서입니다</h2>
+          <p class="learn-chapter__label">① 정의</p>
+          <h2>숫자는 그 숫자를 만든 건에 대한 문장입니다</h2>
           <p>
-            Macro에서 평균단가, 상관계수, 회귀 계수, CV-MAPE를 봤을 때, 이 숫자들은 「정답 가격」이
-            아니라 <strong>데이터가 보여 주는 단서</strong>입니다. 1~12장을 마무리하며 결과를
-            어디서 읽을 때 공통으로 쓰는 원칙을 정리합니다.
+            이 과정의 숫자는 <a href="/learn/stats/graphs/">흥덕 예시 30건</a>으로 계산한 문장입니다.
+            각 숫자는 어떤 건을 넣었는지, 무엇을 묻는지가 적혀 있습니다. 그 문장을 한 건의 가격이나
+            다른 표본의 오차로 옮기지 않습니다.
+          </p>
+          <p>
+            아래 표는 앞에서 이미 계산한 값만 모은 것입니다. 새 모형은 없습니다.
           </p>
         </section>
 
         <section class="learn-chapter__step">
-          <p class="learn-chapter__label">② 쉽게 이해하기</p>
-          <h2>세 가지 질문을 항상 함께</h2>
+          <p class="learn-chapter__label">② 같은 자료의 숫자</p>
+          <h2>같은 30건에서도 질문마다 숫자가 다릅니다</h2>
           <p>
-            통계 결과를 읽을 때는 다음을 함께 확인하는 것이 좋습니다. <strong>① 표본</strong> —
-            거래가 몇 건인가, 어떤 필터가 적용되었나. <strong>② 범위</strong> — 이 결과가 어떤
-            지역·시점·용도에 해당하는가. <strong>③ 한계</strong> — 상관이 인과인지, 관측 범위
-            밖까지 유효한지.
+            <a href="/learn/stats/mean-and-median/">평균</a> 146.3은 30건 단가를 건수로 나눈 값입니다.
+            크기순 가운데는 <a href="/learn/stats/quantiles/">중앙값</a> 122입니다.
+            <a href="/learn/stats/confidence-intervals/">평균의 95% 구간</a>은 115.8–176.8입니다.
+            이 구간은 평균에 대한 것이고, 한 건의 단가 범위가 아닙니다.
           </p>
           <p>
-            예를 들어 상관계수 0.9가 나왔다면 「A가 B를 일으켰다」가 아니라 「이 표본·이 기간에서
-            함께 움직였다」로 읽습니다. CV-MAPE 10%가 나왔다면 「과거 패턴 기준 예측 오차 추정」이지
-            「이 부동산의 감정평가액」이 아닙니다.
+            면적만 넣은 직선의 기울기 −0.68은 면적 1㎡당 예측 단가입니다.
+            <a href="/learn/stats/model-fit/#r-squared">R² 0.42</a>는 그 직선이 30건의 제곱 오차를
+            줄인 비율입니다. 오차를 단가로 재면 38.2, 각 건의 단가 대비로 재면 26.6%입니다.
+          </p>
+          <p>
+            번호 1–20으로 맞추고 21–30만으로 재면 41.1입니다. 10건씩 세 번 빼서 평균하면 39.8이고,
+            비율 오차의 평균인 CV-MAPE는 27.4%입니다. 세 점수는
+            <a href="/learn/stats/cross-validation/#cv-mape">교차검증</a>과
+            <a href="/learn/stats/overfitting/">과적합</a>에 나눠 있습니다.
+          </p>
+          <div class="learn-data">
+            <table>
+              <thead>
+                <tr>
+                  <th>숫자</th>
+                  <th>넣은 건</th>
+                  <th>묻는 것</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>146.3</td>
+                  <td>30건 단가</td>
+                  <td>평균. 가운데는 122</td>
+                </tr>
+                <tr>
+                  <td>115.8–176.8</td>
+                  <td>30건 단가의 평균</td>
+                  <td>평균의 95% 구간</td>
+                </tr>
+                <tr>
+                  <td>−0.68</td>
+                  <td>30건, 면적만</td>
+                  <td>면적 1㎡당 예측 단가</td>
+                </tr>
+                <tr>
+                  <td>38.2</td>
+                  <td>1–30으로 맞추고 1–30으로 잼</td>
+                  <td>단가 평균절대오차</td>
+                </tr>
+                <tr>
+                  <td>41.1</td>
+                  <td>1–20으로 맞추고 21–30으로 잼</td>
+                  <td>한 번 자른 확인 오차</td>
+                </tr>
+                <tr>
+                  <td>39.8 · 27.4%</td>
+                  <td>10건씩 세 번</td>
+                  <td>확인 오차의 평균, CV-MAPE</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">③ 그림</p>
+          <h2>면적 0은 표 밖이고, 310㎡는 표의 끝입니다</h2>
+          <p>
+            표의 면적은 22㎡에서 310㎡까지입니다. 절편 232.5는 면적 0㎡에 적힌 수이고, 그 위치는
+            표에 없습니다. 310㎡의 예측 21.7은 표의 가장 낮은 단가 62보다 아래입니다.
+          </p>
+          <figure class="learn-chart" aria-label="표의 면적 범위와 그 밖">
+            <svg viewBox="0 0 440 118" role="img">
+              <line x1="36" y1="58" x2="404" y2="58" stroke="#cbd5e1" />
+              <rect x="60" y="46" width="308" height="24" fill="#dbeafe" stroke="#1d4ed8" rx="3" />
+              <text x="214" y="63" text-anchor="middle" fill="#1e3a8a" font-size="12">면적 22–310</text>
+              <line x1="36" y1="46" x2="36" y2="70" stroke="#64748b" />
+              <text x="36" y="34" text-anchor="middle" fill="#475569" font-size="11">0㎡</text>
+              <text x="36" y="90" text-anchor="middle" fill="#475569" font-size="11">232.5</text>
+              <line x1="368" y1="46" x2="368" y2="70" stroke="#1d4ed8" />
+              <text x="368" y="34" text-anchor="middle" fill="#1e3a8a" font-size="11">310㎡</text>
+              <text x="368" y="90" text-anchor="middle" fill="#1e3a8a" font-size="11">예측 21.7</text>
+            </svg>
+            <p class="learn-chart__caption">
+              색이 있는 구간이 표의 면적입니다. 0㎡의 232.5와, 끝의 예측 21.7은 표에 있는 단가가
+              아닙니다. 21.7은 최소 단가 62보다 아래입니다.
+            </p>
+          </figure>
+          <figure class="learn-chart" aria-label="같은 직선의 세 가지 오차">
+            <svg viewBox="0 0 440 130" role="img">
+              <text x="108" y="28" text-anchor="end" fill="#475569" font-size="12">30건</text>
+              <rect x="116" y="14" width="137.5" height="16" fill="#1d4ed8" rx="2" />
+              <text x="260" y="27" fill="#1e3a8a" font-size="12">38.2</text>
+              <text x="108" y="64" text-anchor="end" fill="#475569" font-size="12">21–30</text>
+              <rect x="116" y="50" width="148" height="16" fill="#1d4ed8" rx="2" />
+              <text x="270" y="63" fill="#1e3a8a" font-size="12">41.1</text>
+              <text x="108" y="100" text-anchor="end" fill="#475569" font-size="12">세 번 평균</text>
+              <rect x="116" y="86" width="143.3" height="16" fill="#64748b" rx="2" />
+              <text x="266" y="99" fill="#334155" font-size="12">39.8</text>
+            </svg>
+            <p class="learn-chart__caption">
+              세 막대는 모두 평균절대오차입니다. 길이는 비슷하고, 맞춘 건과 잰 건이 다릅니다.
+              1–10만 뺀 55.1은 교차검증에 있고 이 그림에는 없습니다.
+            </p>
+          </figure>
+        </section>
+
+        <section class="learn-chapter__step">
+          <p class="learn-chapter__label">④ 그 그림에서 읽을 문장</p>
+          <h2>길이가 비슷한 세 오차는 서로 다른 건을 포함합니다</h2>
+          <p>
+            38.2는 30건 전부로 맞추고 전부로 잰 값입니다. 41.1은 21–30만으로 잰 값입니다. 39.8은
+            1–10, 11–20, 21–30을 한 번씩 뺀 평균입니다. 막대가 비슷해도 41.1을 30건의 오차로,
+            38.2를 새 10건의 오차로 읽지 않습니다.
+          </p>
+          <p>
+            면적 그림의 232.5는 표 왼쪽 밖에 있습니다. 그 수를 면적 0㎡의 단가로 두면, 표에 없는
+            위치를 표 안의 거래처럼 읽게 됩니다. 310㎡의 21.7도 표의 단가 62–480 안에 있지 않습니다.
           </p>
         </section>
 
         <section class="learn-chapter__step">
-          <p class="learn-chapter__label">③ 통계 결과를 그대로 결론으로 써도 될까?</p>
-          <h2>CH2 Macro의 역할</h2>
+          <p class="learn-chapter__label">⑤ 자주 하는 실수</p>
+          <h2>기울기 −0.68을 면적의 효과로, 27.4%를 한 건의 오차로 두지 않습니다</h2>
           <p>
-            CH2 Macro는 AVM(자동가격모형)이 아니라 <strong>탐색·판단을 돕는 통계 도구</strong>입니다.
-            Insight는 시장에 던진 질문의 실험 기록이고, Learn은 개념 설명입니다. 세 가지를 함께
-            보면 숫자가 무엇을 말하는지 더 잘 이해할 수 있고, 전문가 판단과 결합할 수 있습니다.
+            −0.68은 이 30건에서 면적과 단가가 함께 놓인 방향입니다. 같은 건의 면적을 1㎡ 바꾸면
+            단가가 0.68 바뀐다는 실험은 이 표에 없습니다. 상관 −0.65도 같은 방향의 다른 점수입니다.
           </p>
           <p>
-            감정평가사의 결론, 개별 부동산의 적정 가격, 법적·회계적 판단은 Macro 화면 숫자만으로
-            대체할 수 없습니다.
+            CV-MAPE 27.4%는 이 30건에서 빼 둔 10건의 비율 오차를 평균한 값입니다. 아래 Macro
+            화면의 13%는 다른 표본의 숫자입니다. 두 퍼센트를 같은 시장의 오차로 두지 않습니다.
           </p>
         </section>
 
+        <aside class="learn-caution" aria-label="주의">
+          <p class="learn-caution__title">주의</p>
+          <p>
+            상업과 주거의 단가 차이 80.3은 구분이라는 글자의 효과가 아닙니다. 그 비교는
+            <a href="/learn/stats/comparing-groups/">두 집단 비교</a>에 있습니다. 115.8–176.8은
+            한 건의 단가가 그 안에 있을 확률이 95%라는 뜻이 아닙니다.
+          </p>
+        </aside>
+
+        <details class="learn-more">
+          <summary>조금 더 알아보기</summary>
+          <div class="learn-more__body">
+            <p>
+              가장 가까운 1건의 학습 오차 0과 확인 오차 64는 같이 읽습니다. 7번을 빼면 R²가
+              0.54가 되는 계산은 회귀모형의 성능에 있고, 그 일은 점수의 목적이 아닙니다.
+              <a href="/learn/stats/clustering/">군집</a>에서 구분과 같은 쪽이 24/30인 것은
+              맞힌 비율이 아닙니다.
+            </p>
+          </div>
+        </details>
+
         <section class="learn-chapter__step">
-          <p class="learn-chapter__label">④ CH2 Macro에서는?</p>
+          <p class="learn-chapter__label">CH2 Macro에서는?</p>
           <h2>다시 돌아가 볼 화면</h2>
           <p>
             지역통계(평균·분위·IQR) → 회귀실험(계수·R²) → 모형추천(CV-MAPE) 순으로 배운 개념을
@@ -75,10 +207,17 @@
             등)가 켜져 있으면 어떤 거래가 빠졌는지도 함께 봅니다. 숫자 하나만 떼어 쓰지 말고, 맥락
             전체로 읽는 것이 좋습니다.
           </p>
+          <figure class="learn-capture">
+            <img src="../assets/captures/collective-cheongju-recommend.png" alt="청주시 아파트 모형 추천. 지역과 표본수, 홀드아웃 MAPE" />
+            <figcaption class="learn-capture__caption">
+              집합 · 청주시 · 아파트 · n=331. 읽을 때 지역, 표본수, 홀드아웃 MAPE, 원척도 조정 R²를 같이 봅니다.
+              14.3%는 이 장의 27.4%와 다른 표본입니다.
+            </figcaption>
+          </figure>
         </section>
 
         <section class="learn-chapter__step">
-          <p class="learn-chapter__label">⑤ Macro 화면</p>
+          <p class="learn-chapter__label">Macro 화면</p>
           <h2>읽기 체크리스트</h2>
           <p>Macro 화면에 있을 때 함께 확인할 항목을 정리한 예시입니다.</p>
           <figure class="learn-capture learn-macro-mock" aria-label="Macro 결과 읽기 체크리스트">
@@ -116,24 +255,6 @@
           </figure>
         </section>
 
-        <aside class="learn-caution" aria-label="주의">
-          <p class="learn-caution__title">주의</p>
-          <p>
-            CH2 Macro 결과는 <strong>감정평가사의 결론을 대체하지 않습니다</strong>. 표본·시점·변수
-            선택에 따라 달라집니다.
-          </p>
-        </aside>
-
-        <details class="learn-more">
-          <summary>조금 더 알아보기</summary>
-          <div class="learn-more__body">
-            <p>
-              교란 변수, 선택 편향 등 통계적 함정은 2차에서 다룹니다. CH2
-              <a href="https://ch2data.com/">허브</a> 정책·철학 문서와도 맞춥니다.
-            </p>
-          </div>
-        </details>
-
         <p class="learn-macro-cta">
           <a href="https://macro.ch2data.com/">CH2 Macro에서 확인하기 →</a>
           <span style="display: block; margin-top: 0.35rem; font-size: 0.8125rem; color: #64748b"
@@ -143,9 +264,8 @@
       </article>
 
       <nav class="learn-chapter-nav" aria-label="장 이동">
-        <a href="/learn/stats/cross-validation/">← 이전: 교차검증</a>
-        <a href="/learn/stats/">로드맵 →</a>
-      </nav>
+<a href="/learn/stats/clustering/">← 31. 군집분석</a>
+</nav>
 
       <footer class="footer">
         <nav class="footer__links">
@@ -156,6 +276,6 @@
         <p>© CH2 DATA</p>
       </footer>
     </div>
-    <script src="/learn/stats/learn-stats-toc.js" defer></script>
+    <script src="/learn/stats/learn-stats-toc.js?v=20261007-2" defer></script>
   </body>
 </html>

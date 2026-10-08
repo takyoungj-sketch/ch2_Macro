@@ -3,11 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>08. 회귀분석 | 통계학 &amp; 데이터 분석</title>
-    <meta name="description" content="OLS 회귀와 설명변수. CH2 Macro 회귀실험." />
+    <title>17. 단순선형회귀와 최소제곱법 | 통계학 &amp; 데이터 분석</title>
+    <meta
+      name="description"
+      content="단순선형회귀의 기울기·절편·잔차와 최소제곱 계산, 예측·외삽의 한계를 설명합니다."
+    />
     <link rel="canonical" href="https://ch2data.com/learn/stats/regression/" />
     <link rel="stylesheet" href="/style.css" />
-    <link rel="stylesheet" href="/learn/stats/learn-stats.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261007-2" />
   </head>
   <body>
     <div class="page">
@@ -16,139 +19,29 @@
           <a href="https://ch2data.com/">CH2 DATA</a> ·
           <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
         </p>
-        <p class="hero__eyebrow">회귀분석 · 08</p>
-        <h1 class="hero__title">회귀분석</h1>
+        <p class="hero__eyebrow">IV. 상관과 회귀</p>
+        <h1 class="hero__title">17. 단순선형회귀와 최소제곱법</h1>
       </header>
 
-      <article class="learn-chapter" aria-label="회귀분석">
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">① 한 줄 정의</p>
-          <h2>가격을 여러 요인으로 설명하는 방법</h2>
-          <p>
-            아파트 한 채의 면적이 1㎡ 늘면 가격이 얼마나 변하는가, 층수가 한 층 올라가면 단가가
-            얼마나 달라지는가처럼, 여러 변수와 거래가격의 관계를 <strong>회귀식</strong>으로
-            요약하는 방법이 <strong>회귀분석</strong>입니다. Macro 회귀실험의 핵심입니다.
-          </p>
-        </section>
-
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">② 쉽게 이해하기</p>
-          <h2>직선으로 패턴을 잡아 보기</h2>
-          <p>
-            산점도 위에 데이터에 맞는 직선식을 그으면, 그 직선의 기울기와 절편을 회귀 계수로
-            얻습니다. 단순회귀는 설명변수 하나, 다중회귀는 여러 개를 동시에 씁니다. OLS(최소
-            제곱법)는 점과 직선 사이 거리 제곱의 합이 최소가 되도록 직선을 찾는 방법입니다.
-          </p>
-          <figure class="learn-chart" aria-label="회귀선">
-            <svg viewBox="0 0 360 160" role="img" aria-hidden="true">
-              <line x1="40" y1="130" x2="320" y2="130" stroke="#e2e8f0" />
-              <line x1="40" y1="130" x2="40" y2="30" stroke="#e2e8f0" />
-              <circle cx="80" cy="105" r="4" fill="#93c5fd" />
-              <circle cx="120" cy="90" r="4" fill="#93c5fd" />
-              <circle cx="160" cy="85" r="4" fill="#60a5fa" />
-              <circle cx="200" cy="70" r="4" fill="#60a5fa" />
-              <circle cx="240" cy="55" r="4" fill="#3b82f6" />
-              <circle cx="280" cy="45" r="4" fill="#1d4ed8" />
-              <line x1="60" y1="115" x2="300" y2="38" stroke="#1d4ed8" stroke-width="2.5" />
-              <text x="180" y="150" text-anchor="middle" fill="#64748b" font-size="10">회귀선 = 데이터에서 추정한 관계의 요약</text>
-            </svg>
-            <p class="learn-chart__caption">회귀선은 관측된 거래들의 패턴을 직선(또는 변환된 직선)으로 요약합니다.</p>
-          </figure>
-        </section>
-
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">③ 회귀식이 가격을 어떻게 설명할까?</p>
-          <h2>계수의 의미</h2>
-          <p>
-            각 계수는 「다른 변수를 고정했을 때, 이 변수가 1단위 변할 때 가격이 평균적으로 얼마나
-            변하는가」를 뜻합니다. 다만 관측된 범위 밖으로 과하게 벗어난 값에 예측을 적용하면
-            (외삽) 결과가 불안정해질 수 있습니다.
-          </p>
-        </section>
-
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">④ CH2 Macro에서는?</p>
-          <h2>회귀실험 · OLS</h2>
-          <p>
-            집합·복합 <strong>회귀실험</strong>에서 종속변수(보통 가격·단가)와 설명변수(면적, 층,
-            연식 등)를 선택해 OLS 회귀를 실행할 수 있습니다. 계수 표·R²·예측값은 이 페이지에서
-            다루는 개념들이 화면에 적용된 결과입니다.
-          </p>
-          <p>
-            흥덕구 아파트 표본에서 전용면적이 1㎡ 증가할 때 거래가격이 평균적으로 얼마나 변하는가를
-            계수로 읽을 수 있습니다. 표본(n)과 변수 선택에 따라 계수가 달라지므로, 결과와 함께
-            적합 n을 확인해 보시기 바랍니다.
-          </p>
-        </section>
-
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">⑤ Macro 화면</p>
-          <h2>회귀실험 · 계수 표</h2>
-          <p>아래는 집합 Macro 회귀실험 결과를 단순화한 예시입니다.</p>
-          <figure class="learn-capture learn-macro-mock" aria-label="Macro 회귀실험 계수">
-            <div class="learn-macro-mock__bar">
-              <span><strong>집합</strong> · 회귀실험</span>
-              <span>청주시 흥덕구 · 아파트</span>
-              <span>n=128</span>
-            </div>
-            <div class="learn-macro-mock__body">
-              <div class="learn-macro-mock__card">
-                <div class="learn-macro-mock__card-title">
-                  OLS 회귀 · 선형
-                  <span class="learn-macro-mock__help" title="OLS 설명">?</span>
-                </div>
-                <table>
-                  <thead>
-                    <tr><th>변수</th><th>계수</th><th>읽기</th></tr>
-                  </thead>
-                  <tbody>
-                    <tr class="is-highlight">
-                      <td>전용면적</td>
-                      <td>+412만/㎡</td>
-                      <td>면적 1㎡↑ → 가격 평균 +412만</td>
-                    </tr>
-                    <tr><td>층수</td><td>−8.4만/층</td><td>층수 1층↑ → 가격 평균 −8.4만</td></tr>
-                    <tr><td>상수</td><td>−,840만</td><td>기준점(해석 주의)</td></tr>
-                  </tbody>
-                </table>
-                <div class="learn-macro-mock__card-metrics" style="margin-top: 0.45rem">
-                  R² 0.74 · Adj R² 0.71 · 적합 n=112
-                </div>
-              </div>
-            </div>
-            <figcaption class="learn-capture__caption">
-              예시 화면 · 청주시 흥덕구. 계수는 「다른 변수를 고정했을 때」의 평균적 변화입니다.
-            </figcaption>
-          </figure>
-        </section>
-
-        <aside class="learn-caution" aria-label="주의">
-          <p class="learn-caution__title">주의</p>
-          <p>
-            회귀식을 관측 범위를 벗어난 <strong>외삽</strong>에 주의해야 합니다. 관측되지 않은
-            면적·층수 구간에 대한 예측은 신뢰하기 어렵습니다.
-          </p>
-        </aside>
-
-        <details class="learn-more">
-          <summary>조금 더 알아보기</summary>
-          <div class="learn-more__body">
-            <p>잔차·이분산·다중공선성 등은 2차 회귀 진단에서 다룹니다.</p>
-          </div>
-        </details>
-
-        <p class="learn-macro-cta">
-          <a href="https://macro.ch2data.com/collective/">CH2 Macro에서 확인하기 →</a>
-          <span style="display: block; margin-top: 0.35rem; font-size: 0.8125rem; color: #64748b"
-            >집합 · 회귀실험</span
-          >
-        </p>
-      </article>
+      <article class="learn-chapter learn-chapter--expanded" aria-label="단순선형회귀와 최소제곱법">
+<section class="learn-chapter__step" id="quick-start" data-toc-label="핵심 이해"><p class="learn-chapter__label">핵심 이해</p><h2>평균적 관계를 기울기와 절편으로 표현합니다</h2><p>단순선형회귀는 설명변수 X 하나와 결과변수 Y 사이의 관계를 직선으로 요약합니다. 모집단 모형은 Y=β₀+β₁X+ε, 자료로 적합한 식은 <strong>ŷ=b₀+b₁x</strong>로 구분합니다. β는 미지의 모수, b는 추정 계수, ε는 모형의 오차입니다.</p><p>면적을 X, 단가를 Y로 정해 보겠습니다. 같은 면적에서도 거래 조건에 따라 단가가 다르므로 모든 점이 직선에 놓일 필요는 없습니다. E[ε|X]=0이라는 조건이 맞으면 직선은 조건부 평균 E[Y|X]을 나타냅니다. 이 조건을 확인하지 않은 적합선은 관측 관계의 기술적 요약으로 읽어야 합니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 407" role="img" aria-labelledby="fit-title fit-desc"><title id="fit-title">공통 자료의 최소제곱 직선</title><desc id="fit-desc">그림 1. 공통 학습 자료 30건의 면적을 X, 단가를 Y로 둔 절편 포함 OLS입니다. 선은 관측된 면적 22~310㎡ 범위에만 표시했습니다.</desc><text x="24" y="28" >ŷ=232.509 -0.6843×면적</text><line x1="70" y1="320" x2="580" y2="320" stroke="#64748b" /><line x1="70" y1="55" x2="70" y2="320" stroke="#64748b" /><circle cx="340.0" cy="261.0" r="4" fill="#2563eb" data-id="1"/><circle cx="212.5" cy="284.5" r="4" fill="#2563eb" data-id="2"/><circle cx="160.0" cy="236.0" r="4" fill="#2563eb" data-id="3"/><circle cx="430.0" cy="271.0" r="4" fill="#2563eb" data-id="4"/><circle cx="130.0" cy="202.5" r="4" fill="#2563eb" data-id="5"/><circle cx="310.0" cy="267.5" r="4" fill="#2563eb" data-id="6"/><circle cx="103.0" cy="80.0" r="4" fill="#2563eb" data-id="7"/><circle cx="535.0" cy="278.0" r="4" fill="#2563eb" data-id="8"/><circle cx="235.0" cy="244.0" r="4" fill="#2563eb" data-id="9"/><circle cx="250.0" cy="256.0" r="4" fill="#2563eb" data-id="10"/><circle cx="370.0" cy="274.5" r="4" fill="#2563eb" data-id="11"/><circle cx="182.5" cy="215.0" r="4" fill="#2563eb" data-id="12"/><circle cx="280.0" cy="264.0" r="4" fill="#2563eb" data-id="13"/><circle cx="445.0" cy="289.0" r="4" fill="#2563eb" data-id="14"/><circle cx="197.5" cy="247.5" r="4" fill="#2563eb" data-id="15"/><circle cx="152.5" cy="232.5" r="4" fill="#2563eb" data-id="16"/><circle cx="355.0" cy="269.0" r="4" fill="#2563eb" data-id="17"/><circle cx="167.5" cy="200.0" r="4" fill="#2563eb" data-id="18"/><circle cx="175.0" cy="251.0" r="4" fill="#2563eb" data-id="19"/><circle cx="142.0" cy="226.0" r="4" fill="#2563eb" data-id="20"/><circle cx="400.0" cy="276.0" r="4" fill="#2563eb" data-id="21"/><circle cx="205.0" cy="254.0" r="4" fill="#2563eb" data-id="22"/><circle cx="295.0" cy="260.0" r="4" fill="#2563eb" data-id="23"/><circle cx="122.5" cy="186.0" r="4" fill="#2563eb" data-id="24"/><circle cx="460.0" cy="281.0" r="4" fill="#2563eb" data-id="25"/><circle cx="325.0" cy="258.0" r="4" fill="#2563eb" data-id="26"/><circle cx="220.0" cy="262.5" r="4" fill="#2563eb" data-id="27"/><circle cx="112.0" cy="240.0" r="4" fill="#2563eb" data-id="28"/><circle cx="265.0" cy="272.5" r="4" fill="#2563eb" data-id="29"/><circle cx="190.0" cy="266.0" r="4" fill="#2563eb" data-id="30"/><line x1="103.0" y1="211.2727450409119" x2="535.0" y2="309.81138610778845" stroke="#d97706" stroke-width="3" data-fit="true"/><text x="70.0" y="345" text-anchor="middle">0</text><text x="220.0" y="345" text-anchor="middle">100</text><text x="370.0" y="345" text-anchor="middle">200</text><text x="520.0" y="345" text-anchor="middle">300</text><text x="58" y="325.0" text-anchor="end">0</text><text x="58" y="275.0" text-anchor="end">100</text><text x="58" y="225.0" text-anchor="end">200</text><text x="58" y="175.0" text-anchor="end">300</text><text x="58" y="125.0" text-anchor="end">400</text><text x="58" y="75.0" text-anchor="end">500</text><text x="24" y="52" >단가(만원/㎡)</text><text x="430" y="380" >면적(㎡)</text></svg><figcaption class="learn-chart__caption">그림 1. 공통 학습 자료 30건의 면적을 X, 단가를 Y로 둔 절편 포함 OLS입니다. 선은 관측된 면적 22~310㎡ 범위에만 표시했습니다.</figcaption></figure></section>
+<section class="learn-chapter__step" id="coefficients" data-toc-label="기울기와 절편"><p class="learn-chapter__label">기울기와 절편</p><h2>계수에는 단위와 적용 범위가 있습니다</h2><p>공통 30건을 적합하면 b₀=232.50902…, b₁=-0.68430…입니다. 면적이 1㎡ 큰 거래의 적합 단가는 평균적으로 약 0.684만원/㎡ 낮게 나타납니다. 이는 다른 조건을 통제한 면적의 인과효과가 아닙니다.</p><p>기울기의 단위는 ‘Y 단위/X 단위’이므로 여기서는 (만원/㎡)/㎡입니다. 10㎡ 차이에 대한 적합값의 차이는 10b₁≈-6.84만원/㎡입니다. 상관계수와 달리 단위 변환에 따라 계수의 숫자가 바뀝니다.</p><p>절편은 X=0일 때의 적합값입니다. 관측 면적은 22~310㎡이므로 면적 0의 절편을 실제 0㎡ 물건의 단가로 해석하지 않습니다. X를 평균에서 뺀 X−x̄로 중심화하면 절편이 ȳ가 되어 해석하기 쉬워지고, 같은 직선의 적합값과 기울기는 유지됩니다.</p></section>
+<section class="learn-chapter__step" id="residuals" data-toc-label="잔차"><p class="learn-chapter__label">잔차</p><h2>오차와 잔차, 적합값과 관측값을 구분합니다</h2><p>잔차 eᵢ=yᵢ−ŷᵢ는 관측값에서 적합값을 뺀 값입니다. 양수면 점이 직선 위, 음수면 아래에 있습니다. 진짜 조건부 평균에서의 오차 εᵢ는 모르는 값이고, 표본으로 맞춘 직선에서의 잔차는 계산 가능한 값입니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 378" role="img" aria-labelledby="residuals-title residuals-desc"><title id="residuals-title">관측값과 적합값의 차이</title><desc id="residuals-desc">그림 2. 별도 가상 (1,2)·(2,2)·(3,5) 예제입니다. 잔차는 같은 X에서의 세로 차이이며 점에서 직선까지의 최단거리가 아닙니다. 축은 단위 없는 가상 변수입니다.</desc><text x="24" y="28" >세로 잔차를 제곱해 더합니다: 가상 세 점</text><line x1="70" y1="290" x2="550" y2="290" stroke="#64748b" /><line x1="70" y1="45" x2="70" y2="290" stroke="#64748b" /><line x1="140.0" y1="257.75" x2="518.0" y2="83.59999999999997" stroke="#d97706" stroke-width="2"/><line x1="210" y1="204" x2="210" y2="225.5" stroke="#2563eb" stroke-width="3" data-residual="0.5"/><circle cx="210" cy="204" r="5" fill="#2563eb"/><text x="222" y="204" >e=+0.5</text><line x1="350" y1="204" x2="350" y2="161.0" stroke="#2563eb" stroke-width="3" data-residual="-1.0"/><circle cx="350" cy="204" r="5" fill="#2563eb"/><text x="362" y="204" >e=-1.0</text><line x1="490" y1="75" x2="490" y2="96.5" stroke="#2563eb" stroke-width="3" data-residual="0.5"/><circle cx="490" cy="75" r="5" fill="#2563eb"/><text x="502" y="75" >e=+0.5</text><text x="210" y="316" text-anchor="middle">1</text><text x="350" y="316" text-anchor="middle">2</text><text x="490" y="316" text-anchor="middle">3</text><text x="24" y="350" >ŷ=1.5x · 잔차 0.5, −1, 0.5 · SSE=1.5</text></svg><figcaption class="learn-chart__caption">그림 2. 별도 가상 (1,2)·(2,2)·(3,5) 예제입니다. 잔차는 같은 X에서의 세로 차이이며 점에서 직선까지의 최단거리가 아닙니다. 축은 단위 없는 가상 변수입니다.</figcaption></figure><p>가상 세 점의 직선 ŷ=1.5x에서 잔차 합은 0이지만 모든 점이 직선에 맞는 것은 아닙니다. 양수·음수의 상쇄를 피하려고 제곱합니다. 잔차제곱합 SSE=0.5²+(−1)²+0.5²=1.5입니다.</p><p>OLS는 Y방향의 세로 잔차를 최소화합니다. X와 Y를 뒤집어 적합하면 다른 문제를 풀기 때문에 원래 기울기의 역수가 되는 것은 일반적이지 않습니다.</p></section>
+<section class="learn-chapter__step" id="ols" data-toc-label="최소제곱법"><p class="learn-chapter__label">최소제곱법</p><h2>잔차제곱합이 가장 작은 계수를 찾습니다</h2><p>최소제곱법(OLS)은 <strong>SSE=Σ[yᵢ−(b₀+b₁xᵢ)]²</strong>를 최소화합니다. X에 퍼짐이 있을 때 Sxx=Σ(xᵢ−x̄)², Sxy=Σ(xᵢ−x̄)(yᵢ−ȳ)로 놓으면 <strong>b₁=Sxy/Sxx, b₀=ȳ−b₁x̄</strong>입니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 401" role="img" aria-labelledby="objective-title objective-desc"><title id="objective-title">기울기에 따른 잔차제곱합</title><desc id="objective-desc">그림 3. 기울기마다 절편을 ȳ−b×x̄로 맞췄습니다. 공통 자료의 최소제곱 목적함수이며 확률곡선이나 신뢰구간이 아닙니다.</desc><text x="24" y="28" >각 기울기에서 절편을 최적으로 맞춘 제곱합</text><line x1="70" y1="285" x2="560" y2="285" stroke="#64748b" /><polyline points="80.00000,192.74397 84.50000,196.28715 89.00000,199.76095 93.50000,203.16537 98.00000,206.50042 102.50000,209.76608 107.00000,212.96237 111.50000,216.08928 116.00000,219.14681 120.50000,222.13496 125.00000,225.05374 129.50000,227.90313 134.00000,230.68315 138.50000,233.39379 143.00000,236.03505 147.50000,238.60693 152.00000,241.10944 156.50000,243.54256 161.00000,245.90631 165.50000,248.20068 170.00000,250.42567 174.50000,252.58128 179.00000,254.66751 183.50000,256.68437 188.00000,258.63185 192.50000,260.50995 197.00000,262.31867 201.50000,264.05801 206.00000,265.72797 210.50000,267.32856 215.00000,268.85976 219.50000,270.32159 224.00000,271.71404 228.50000,273.03712 233.00000,274.29081 237.50000,275.47512 242.00000,276.59006 246.50000,277.63562 251.00000,278.61180 255.50000,279.51860 260.00000,280.35603 264.50000,281.12407 269.00000,281.82274 273.50000,282.45203 278.00000,283.01194 282.50000,283.50247 287.00000,283.92362 291.50000,284.27540 296.00000,284.55779 300.50000,284.77081 305.00000,284.91445 309.50000,284.98871 314.00000,284.99360 318.50000,284.92910 323.00000,284.79523 327.50000,284.59198 332.00000,284.31935 336.50000,283.97734 341.00000,283.56595 345.50000,283.08519 350.00000,282.53504 354.50000,281.91552 359.00000,281.22662 363.50000,280.46834 368.00000,279.64069 372.50000,278.74365 377.00000,277.77724 381.50000,276.74145 386.00000,275.63628 390.50000,274.46173 395.00000,273.21780 399.50000,271.90450 404.00000,270.52181 408.50000,269.06975 413.00000,267.54831 417.50000,265.95749 422.00000,264.29730 426.50000,262.56772 431.00000,260.76877 435.50000,258.90043 440.00000,256.96272 444.50000,254.95564 449.00000,252.87917 453.50000,250.73332 458.00000,248.51810 462.50000,246.23350 467.00000,243.87952 471.50000,241.45616 476.00000,238.96342 480.50000,236.40131 485.00000,233.76981 489.50000,231.06894 494.00000,228.29869 498.50000,225.45906 503.00000,222.55005 507.50000,219.57167 512.00000,216.52390 516.50000,213.40676 521.00000,210.22024 525.50000,206.96434 530.00000,203.63907" fill="none" stroke="#2563eb" stroke-width="2"/><circle cx="312.06674666601066" cy="285" r="5" fill="#d97706"/><text x="80.0" y="312" text-anchor="middle">-1.2</text><text x="170.0" y="312" text-anchor="middle">-1.0</text><text x="260.0" y="312" text-anchor="middle">-0.8</text><text x="350.0" y="312" text-anchor="middle">-0.6</text><text x="439.99999999999994" y="312" text-anchor="middle">-0.4</text><text x="530.0" y="312" text-anchor="middle">-0.2</text><text x="24" y="345" >최소 기울기 -0.6843 · 최소 SSE 111,542.70</text><text x="24" y="374" >세로축: 최소 SSE보다 늘어난 양(제곱 단위), 아래가 0</text></svg><figcaption class="learn-chart__caption">그림 3. 기울기마다 절편을 ȳ−b×x̄로 맞췄습니다. 공통 자료의 최소제곱 목적함수이며 확률곡선이나 신뢰구간이 아닙니다.</figcaption></figure><p>공통 자료의 x̄=125.93333…, ȳ=146.33333…, Sxx=173,445.86667…, Sxy=-118,688.33333…입니다. 이를 대입한 SSE는 111,542.70입니다. 중간값은 반올림하지 않았습니다. <a href="../regression-example.json">계수·잔차·예제 JSON</a>을 확인할 수 있습니다.</p><p>절편을 포함한 같은 자료의 OLS 직선은 (x̄,ȳ)를 지나고 잔차 합은 0입니다. 모든 X가 같으면 Sxx=0이어서 기울기를 고유하게 정할 수 없습니다. 두 개의 서로 다른 X만 있으면 직선을 계산할 수 있어도 오차 변동을 추정할 잔차 자유도가 없어집니다.</p></section>
+<section class="learn-chapter__step" id="prediction" data-toc-label="적합값과 예측"><p class="learn-chapter__label">적합값과 예측</p><h2>계산한 한 점은 개별 거래의 보장값이 아닙니다</h2><p>면적 100㎡의 적합 단가는 164.08, 200㎡는 95.65만원/㎡입니다. 반올림한 식으로 다시 계산하면 마지막 자릿수가 달라질 수 있으므로 내부 계산에는 원래 계수를 사용합니다.</p><p>같은 X의 평균적 수준을 추정하는 것과 새 거래 한 건을 예측하는 것은 다릅니다. 평균 반응의 신뢰구간은 회귀선의 추정 불확실성을, 개별 예측구간은 그 위에 개별 오차 변동까지 반영합니다. 적합값 한 개만으로 정확성을 판단하지 않습니다.</p><p>학습 자료에 맞춘 오차가 작다는 것이 새로운 지역·시점에서도 잘 맞는다는 뜻은 아닙니다. 실제 예측 성능은 별도 검증 자료와 적절한 시간·집단 분할로 확인해야 합니다.</p></section>
+<section class="learn-chapter__step" id="extrapolation" data-toc-label="내삽과 외삽"><p class="learn-chapter__label">내삽과 외삽</p><h2>자료가 없는 영역에서는 모형 가정이 더 중요해집니다</h2><p>관측 X 범위 안에서 계산하는 것을 내삽, 밖으로 연장하는 것을 외삽이라고 합니다. 범위 안에서도 관측이 드문 구간이나 다른 거래 유형에는 주의가 필요합니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 414" role="img" aria-labelledby="extrapolation-title extrapolation-desc"><title id="extrapolation-title">내삽과 외삽</title><desc id="extrapolation-desc">그림 4. 세로 위치는 예측 단가(만원/㎡)이며 가로선은 단가 0입니다. 400㎡에서 음수로 내려가는 결과는 직선 연장의 한계를 보여 줍니다.</desc><text x="24" y="28" >관측 범위 밖의 직선 연장은 별도 가정입니다</text><line x1="70" y1="280" x2="580" y2="280" stroke="#64748b" /><line x1="96.4" y1="127.78184305727666" x2="442.0" y2="265.7359405509039" stroke="#2563eb" stroke-width="3"/><line x1="442.0" y1="265.7359405509039" x2="550.0" y2="308.84659601766236" stroke="#d97706" stroke-width="3" stroke-dasharray="5 4"/><circle cx="190.0" cy="165.14441112846734" r="5" fill="#2563eb"/><text x="185.0" y="151.14441112846734" text-anchor="middle">164.08</text><circle cx="310.0" cy="213.04513942486568" r="5" fill="#2563eb"/><text x="305.0" y="199.04513942486568" text-anchor="middle">95.65</text><circle cx="550.0" cy="308.84659601766236" r="5" fill="#2563eb"/><text x="545.0" y="294.84659601766236" text-anchor="middle">-41.21</text><text x="70.0" y="350" text-anchor="middle">0</text><text x="190.0" y="350" text-anchor="middle">100</text><text x="310.0" y="350" text-anchor="middle">200</text><text x="430.0" y="350" text-anchor="middle">300</text><text x="550.0" y="350" text-anchor="middle">400</text><text x="24" y="385" >파랑: 관측 범위의 적합선 / 주황 점선: 외삽 · 가로축: 면적(㎡)</text></svg><figcaption class="learn-chart__caption">그림 4. 세로 위치는 예측 단가(만원/㎡)이며 가로선은 단가 0입니다. 400㎡에서 음수로 내려가는 결과는 직선 연장의 한계를 보여 줍니다.</figcaption></figure><p>400㎡에서 식은 -41.21만원/㎡를 냅니다. 단가가 음수가 되는 이 값은 시장의 타당한 가격 전망이 아니라 직선을 범위 밖까지 연장한 산술 결과입니다. 외삽 결과를 단순히 0으로 잘라내기보다 모형의 범위와 함수 형태를 재검토해야 합니다.</p></section>
+<section class="learn-chapter__step" id="correlation" data-toc-label="상관과 설명력"><p class="learn-chapter__label">상관과 설명력</p><h2>기울기·상관·R²는 서로 다른 정보를 담습니다</h2><p>절편을 포함한 단순 OLS에서 두 변수의 분산이 양수이면 b₁=r×s_y/s_x입니다. r은 단위 없는 선형 결합의 정도, 기울기는 단위가 있는 변화량입니다. 이 특별한 모형에서는 <strong>R²=r²=1−SSE/SST</strong>이며 SST=Σ(yᵢ−ȳ)²입니다.</p><p>공통 자료의 R²는 0.421입니다. 같은 표본의 Y 제곱변동 중 평균만 사용하는 것보다 직선이 줄인 비율을 뜻합니다. 인과적으로 설명된 비율이나 미래 예측의 정확도, ‘정답률’이 아닙니다. 절편 없는 회귀나 다른 평가 상황에는 r² 관계를 그대로 적용하지 않습니다.</p><p>R²가 같아도 잔차의 곡선 패턴·이상치·예측 위험은 다를 수 있습니다. 더 자세한 적합도는 21장에서 다룹니다.</p></section>
+<section class="learn-chapter__step" id="assumptions" data-toc-label="계산과 추론의 조건"><p class="learn-chapter__label">계산과 추론의 조건</p><h2>직선을 계산할 수 있다는 것과 타당한 모형은 다릅니다</h2><p>OLS 계수 계산 자체에 정규성 가정이 필요한 것은 아닙니다. 하지만 계수의 불편성이나 표준오차·검정·신뢰구간의 타당성을 주장하려면 조건을 구별해야 합니다. 조건부 평균의 선형성, E[ε|X]=0, 적절한 표집과 독립성, 일정한 오차분산 등이 기본 점검 대상입니다. 고전적 작은 표본 t·F 추론에는 정규 오차 가정도 사용합니다.</p><p>이분산이 있으면 계수 계산과 별개로 일반적인 표준오차가 부적절할 수 있습니다. 군집·시간 의존성도 그 구조에 맞춰 다뤄야 합니다. 강건한 표준오차를 쓴다고 누락변수나 잘못된 평균 함수가 해결되지는 않습니다.</p><p>면적과 단가에는 분모의 공유 구조가 있고, 유형·위치·연식이 섞여 있습니다. 계수의 인과 해석에는 별도 설계와 가정이 필요합니다. 단순회귀가 다른 조건을 자동으로 고정해 주지 않습니다.</p></section>
+<section class="learn-chapter__step" id="sensitivity" data-toc-label="큰 관측과 모형 점검"><p class="learn-chapter__label">큰 관측과 모형 점검</p><h2>한 점이 직선에 미치는 영향을 확인합니다</h2><p>공통 자료의 7번을 제외해 다시 적합하면 절편은 200.925, 기울기는 -0.5103입니다. 원래 기울기 -0.6843와 비교하면 민감도를 볼 수 있습니다. 더 보기 좋은 직선을 얻기 위한 삭제가 아니라 원자료·조건·영향력을 확인하는 과정입니다.</p><p>X방향에서 멀리 있는 점은 높은 레버리지를 가질 수 있고, 큰 잔차와 레버리지가 결합하면 계수에 강한 영향을 줄 수 있습니다. 잔차가 크다는 사실만으로 영향력을 모두 판단하지 않습니다. 다음 장에서 잔차 패턴과 진단을 자세히 다룹니다.</p><p>공통 자료는 출처 미확인 학습 예제이며 적합한 식을 실제 시장의 가격모형이나 개별 적정가로 사용하지 않습니다.</p></section>
+<section class="learn-chapter__step" id="practice" data-toc-label="확인 문제"><p class="learn-chapter__label">확인 문제</p><h2>계수의 단위와 예측의 대상을 확인하세요</h2><ol class="learn-exercises"><li>잔차 합이 0이면 모든 점이 직선 위에 있나요?<details><summary>답과 해설</summary><p>아니요. 양수·음수가 상쇄될 수 있습니다. SSE와 잔차 패턴을 봐야 합니다.</p></details></li><li>절편은 항상 실제로 관측 가능한 X=0의 의미인가요?<details><summary>답과 해설</summary><p>아니요. X=0이 관측 범위 밖이면 물리적 해석이 부적절할 수 있습니다.</p></details></li><li>X와 Y를 바꾸면 OLS 기울기는 원래의 역수인가요?<details><summary>답과 해설</summary><p>일반적으로 아닙니다. 최소화하는 잔차 방향이 바뀝니다.</p></details></li><li>학습 자료의 R²가 높으면 인과효과와 미래 정확성이 보장되나요?<details><summary>답과 해설</summary><p>아니요. 적합도·인과 식별·외부 예측 성능은 별도로 확인해야 합니다.</p></details></li></ol></section>
+<section class="learn-chapter__step" id="macro" data-toc-label="CH2 Macro에서 읽기"><p class="learn-chapter__label">CH2 Macro에서 읽기</p><h2>변수·단위·범위를 확인하고 회귀선을 읽습니다</h2><p>CH2 Macro의 회귀 결과를 읽을 때는 X와 Y의 정의, 로그 등 변환 여부, 관측 단위·기간·유형과 건수, 적용 범위를 먼저 확인하세요. 이 장의 단순선형식이 모든 서비스 모형의 산식이라고 전제하지 않습니다.</p><p>회귀선을 시장 관계를 이해하는 요약으로 읽고, 개별 물건의 적정가나 조건 변경의 확정적 효과로 바꾸어 해석하지 않습니다.</p><p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 통계 열기 →</a></p></section>
+<section class="learn-chapter__step" id="recap" data-toc-label="정리와 참고자료"><p class="learn-chapter__label">정리와 참고자료</p><h2>식·잔차·가정을 함께 읽습니다</h2><p>단순 OLS는 세로 잔차제곱합을 최소화하는 직선을 찾습니다. 계수의 단위, 절편의 범위, 개별 예측의 불확실성, 외삽과 영향 관측을 함께 확인합니다.</p><p>다음 <a href="/learn/stats/residuals/">18장 「잔차와 회귀모형의 가정」</a>으로 이어집니다.</p><ul><li><a href="https://www.itl.nist.gov/div898/handbook/pmd/section1/pmd141.htm">NIST: Linear Least Squares Regression</a> — 최소제곱의 원리와 적용 한계.</li></ul><p class="learn-source-note">본문과 그림은 공통 학습 자료 및 별도 가상 예제로 직접 작성했습니다. 실제 시장의 가격모형이 아닙니다. 참고자료 확인: 2026-10-08.</p></section>
+</article>
 
       <nav class="learn-chapter-nav" aria-label="장 이동">
-        <a href="/learn/stats/correlation/">← 이전: 상관관계</a>
-        <a href="/learn/stats/log-regression/">다음: 로그회귀 →</a>
-      </nav>
+<a href="/learn/stats/correlation/">← 16. 상관관계와 인과관계</a>
+<a href="/learn/stats/residuals/">18. 잔차와 회귀모형의 가정 →</a>
+</nav>
 
       <footer class="footer">
         <nav class="footer__links">
@@ -158,6 +51,6 @@
         <p>© CH2 DATA</p>
       </footer>
     </div>
-    <script src="/learn/stats/learn-stats-toc.js" defer></script>
+    <script src="/learn/stats/learn-stats-toc.js?v=20261007-2" defer></script>
   </body>
 </html>
