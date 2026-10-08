@@ -1,0 +1,45 @@
+{
+  "sido_code": "30",
+  "snapshots": [
+    {
+      "as_of": "2026-08-18",
+      "n_buildings": 8,
+      "n_builders": 7,
+      "n_brands": 5,
+      "n_sigungu": 1,
+      "mean_ape": 26.6,
+      "direction_underpred_pct": 100.0,
+      "ready_for_builder_layer": false,
+      "building_keys": [
+        "7fa971a5d5a81d13e3d8f6a982ffe9fd09bef3469d8942f2a3114c491d52fc10",
+        "404d1954e6ebf852c23f6374cf91a90a3d5aee54572e0fc11f189eb01630f099",
+        "4fbb682137b9ad3c3ebf8d58c94a66fb89bb1309c354470d987a512752c1ff46",
+        "02cd19568c702978e7a82277210b9903a761aa51abcdd31714e078d7af1c1a05",
+        "70edf15b5d8ff2c31f2c411a09870bb078afc48e9596df733af27f94b0793b54",
+        "f62da36784245107f59adc964cff583bcdb3e75875247f2d376e0e14b59219a7",
+        "1088cc40bfc44542655c494c3f0a33c04d725790f6686ec9ef5c74404da94156",
+        "db99756d97c340077d789e5c5242e96f1b695184f6dbd08d63f7deba7bfd1411"
+      ]
+    },
+    {
+      "as_of": "2026-09-07",
+      "n_buildings": 8,
+      "n_builders": 7,
+      "n_brands": 5,
+      "n_sigungu": 1,
+      "mean_ape": 26.6,
+      "direction_underpred_pct": 100.0,
+      "ready_for_builder_layer": false,
+      "building_keys": [
+        "7fa971a5d5a81d13e3d8f6a982ffe9fd09bef3469d8942f2a3114c491d52fc10",
+        "404d1954e6ebf852c23f6374cf91a90a3d5aee54572e0fc11f189eb01630f099",
+        "4fbb682137b9ad3c3ebf8d58c94a66fb89bb1309c354470d987a512752c1ff46",
+        "02cd19568c702978e7a82277210b9903a761aa51abcdd31714e078d7af1c1a05",
+        "70edf15b5d8ff2c31f2c411a09870bb078afc48e9596df733af27f94b0793b54",
+        "f62da36784245107f59adc964cff583bcdb3e75875247f2d376e0e14b59219a7",
+        "1088cc40bfc44542655c494c3f0a33c04d725790f6686ec9ef5c74404da94156",
+        "db99756d97c340077d789e5c5242e96f1b695184f6dbd08d63f7deba7bfd1411"
+      ]
+    }
+  ]
+}

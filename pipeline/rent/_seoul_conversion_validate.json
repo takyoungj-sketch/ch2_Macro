@@ -1,0 +1,372 @@
+{
+  "as_of": "2026-07-01",
+  "addr1": "서울특별시",
+  "windows": {
+    "3": {
+      "period": [
+        "2023-08-01",
+        "2026-07-31"
+      ],
+      "in_sample_sigungu": {
+        "summary": {
+          "mean_simple": {
+            "cells": 75,
+            "mae_median": 89.1575,
+            "mape_median": 13.4449,
+            "median_ae_median": 64.1333
+          },
+          "mean_weighted": {
+            "cells": 75,
+            "mae_median": 92.5116,
+            "mape_median": 14.0511,
+            "median_ae_median": 66.4023
+          },
+          "ols_origin": {
+            "cells": 75,
+            "mae_median": 90.4081,
+            "mape_median": 14.0809,
+            "median_ae_median": 64.5326
+          },
+          "ols_weighted": {
+            "cells": 75,
+            "mae_median": 96.9323,
+            "mape_median": 15.3907,
+            "median_ae_median": 69.5731
+          }
+        },
+        "n_cells": 75
+      },
+      "in_sample_dong": {
+        "summary": {
+          "mean_simple": {
+            "cells": 597,
+            "mae_median": 83.6051,
+            "mape_median": 12.4678,
+            "median_ae_median": 62.4461
+          },
+          "mean_weighted": {
+            "cells": 597,
+            "mae_median": 86.1389,
+            "mape_median": 12.825,
+            "median_ae_median": 62.9477
+          },
+          "ols_origin": {
+            "cells": 597,
+            "mae_median": 81.8134,
+            "mape_median": 12.9191,
+            "median_ae_median": 63.0369
+          },
+          "ols_weighted": {
+            "cells": 597,
+            "mae_median": 86.5744,
+            "mape_median": 13.4084,
+            "median_ae_median": 64.7266
+          }
+        },
+        "n_cells": 597
+      },
+      "holdout_sigungu": {
+        "summary": {
+          "mean_simple": {
+            "cells": 75,
+            "mae_median": 88.5725,
+            "mape_median": 12.3175,
+            "median_ae_median": 64.1675
+          },
+          "mean_weighted": {
+            "cells": 75,
+            "mae_median": 91.3732,
+            "mape_median": 13.0794,
+            "median_ae_median": 66.2845
+          },
+          "ols_origin": {
+            "cells": 75,
+            "mae_median": 95.1903,
+            "mape_median": 13.143,
+            "median_ae_median": 68.1185
+          },
+          "ols_weighted": {
+            "cells": 75,
+            "mae_median": 100.0535,
+            "mape_median": 13.9008,
+            "median_ae_median": 74.9402
+          }
+        },
+        "n_cells": 75
+      },
+      "holdout_dong": {
+        "summary": {
+          "mean_simple": {
+            "cells": 519,
+            "mae_median": 87.6842,
+            "mape_median": 11.911,
+            "median_ae_median": 70.1204
+          },
+          "mean_weighted": {
+            "cells": 519,
+            "mae_median": 85.3987,
+            "mape_median": 11.999,
+            "median_ae_median": 68.2794
+          },
+          "ols_origin": {
+            "cells": 519,
+            "mae_median": 86.3672,
+            "mape_median": 12.1864,
+            "median_ae_median": 72.2963
+          },
+          "ols_weighted": {
+            "cells": 519,
+            "mae_median": 91.4799,
+            "mape_median": 12.5999,
+            "median_ae_median": 76.4692
+          }
+        },
+        "n_cells": 519
+      }
+    },
+    "5": {
+      "period": [
+        "2021-08-01",
+        "2026-07-31"
+      ],
+      "in_sample_sigungu": {
+        "summary": {
+          "mean_simple": {
+            "cells": 75,
+            "mae_median": 91.8831,
+            "mape_median": 14.3093,
+            "median_ae_median": 63.4088
+          },
+          "mean_weighted": {
+            "cells": 75,
+            "mae_median": 94.8975,
+            "mape_median": 15.5469,
+            "median_ae_median": 63.5569
+          },
+          "ols_origin": {
+            "cells": 75,
+            "mae_median": 95.3691,
+            "mape_median": 14.8497,
+            "median_ae_median": 65.005
+          },
+          "ols_weighted": {
+            "cells": 75,
+            "mae_median": 99.5116,
+            "mape_median": 17.0694,
+            "median_ae_median": 69.9052
+          }
+        },
+        "n_cells": 75
+      },
+      "in_sample_dong": {
+        "summary": {
+          "mean_simple": {
+            "cells": 648,
+            "mae_median": 86.3697,
+            "mape_median": 13.46585,
+            "median_ae_median": 63.0496
+          },
+          "mean_weighted": {
+            "cells": 648,
+            "mae_median": 87.7608,
+            "mape_median": 14.02435,
+            "median_ae_median": 64.35300000000001
+          },
+          "ols_origin": {
+            "cells": 648,
+            "mae_median": 86.15795,
+            "mape_median": 14.04355,
+            "median_ae_median": 65.6474
+          },
+          "ols_weighted": {
+            "cells": 648,
+            "mae_median": 88.84845,
+            "mape_median": 14.737549999999999,
+            "median_ae_median": 67.46215000000001
+          }
+        },
+        "n_cells": 648
+      },
+      "holdout_sigungu": {
+        "summary": {
+          "mean_simple": {
+            "cells": 75,
+            "mae_median": 91.2656,
+            "mape_median": 12.6229,
+            "median_ae_median": 66.5131
+          },
+          "mean_weighted": {
+            "cells": 75,
+            "mae_median": 95.7909,
+            "mape_median": 14.0772,
+            "median_ae_median": 73.2796
+          },
+          "ols_origin": {
+            "cells": 75,
+            "mae_median": 106.8941,
+            "mape_median": 14.519,
+            "median_ae_median": 81.0204
+          },
+          "ols_weighted": {
+            "cells": 75,
+            "mae_median": 114.7675,
+            "mape_median": 15.7615,
+            "median_ae_median": 88.6633
+          }
+        },
+        "n_cells": 75
+      },
+      "holdout_dong": {
+        "summary": {
+          "mean_simple": {
+            "cells": 575,
+            "mae_median": 90.1198,
+            "mape_median": 11.8695,
+            "median_ae_median": 72.6839
+          },
+          "mean_weighted": {
+            "cells": 575,
+            "mae_median": 91.5955,
+            "mape_median": 12.3568,
+            "median_ae_median": 78.8748
+          },
+          "ols_origin": {
+            "cells": 575,
+            "mae_median": 98.0012,
+            "mape_median": 13.4907,
+            "median_ae_median": 86.2069
+          },
+          "ols_weighted": {
+            "cells": 575,
+            "mae_median": 102.9073,
+            "mape_median": 14.0738,
+            "median_ae_median": 87.3371
+          }
+        },
+        "n_cells": 575
+      }
+    },
+    "7": {
+      "period": [
+        "2019-08-01",
+        "2026-07-31"
+      ],
+      "in_sample_sigungu": {
+        "summary": {
+          "mean_simple": {
+            "cells": 75,
+            "mae_median": 91.9916,
+            "mape_median": 15.1503,
+            "median_ae_median": 63.5847
+          },
+          "mean_weighted": {
+            "cells": 75,
+            "mae_median": 95.7356,
+            "mape_median": 16.5169,
+            "median_ae_median": 64.3107
+          },
+          "ols_origin": {
+            "cells": 75,
+            "mae_median": 96.026,
+            "mape_median": 16.1832,
+            "median_ae_median": 65.6776
+          },
+          "ols_weighted": {
+            "cells": 75,
+            "mae_median": 100.9826,
+            "mape_median": 17.8261,
+            "median_ae_median": 71.8459
+          }
+        },
+        "n_cells": 75
+      },
+      "in_sample_dong": {
+        "summary": {
+          "mean_simple": {
+            "cells": 670,
+            "mae_median": 86.64005,
+            "mape_median": 14.693249999999999,
+            "median_ae_median": 64.25874999999999
+          },
+          "mean_weighted": {
+            "cells": 670,
+            "mae_median": 87.10495,
+            "mape_median": 15.3265,
+            "median_ae_median": 63.2906
+          },
+          "ols_origin": {
+            "cells": 670,
+            "mae_median": 85.7925,
+            "mape_median": 15.6227,
+            "median_ae_median": 67.26615
+          },
+          "ols_weighted": {
+            "cells": 670,
+            "mae_median": 89.14825,
+            "mape_median": 16.0276,
+            "median_ae_median": 68.11975000000001
+          }
+        },
+        "n_cells": 670
+      },
+      "holdout_sigungu": {
+        "summary": {
+          "mean_simple": {
+            "cells": 75,
+            "mae_median": 91.7553,
+            "mape_median": 12.6827,
+            "median_ae_median": 64.8715
+          },
+          "mean_weighted": {
+            "cells": 75,
+            "mae_median": 101.6886,
+            "mape_median": 14.2863,
+            "median_ae_median": 73.8777
+          },
+          "ols_origin": {
+            "cells": 75,
+            "mae_median": 110.0153,
+            "mape_median": 14.7172,
+            "median_ae_median": 81.1772
+          },
+          "ols_weighted": {
+            "cells": 75,
+            "mae_median": 119.8325,
+            "mape_median": 16.2031,
+            "median_ae_median": 92.9818
+          }
+        },
+        "n_cells": 75
+      },
+      "holdout_dong": {
+        "summary": {
+          "mean_simple": {
+            "cells": 581,
+            "mae_median": 92.534,
+            "mape_median": 12.1,
+            "median_ae_median": 73.8798
+          },
+          "mean_weighted": {
+            "cells": 581,
+            "mae_median": 94.0466,
+            "mape_median": 12.8696,
+            "median_ae_median": 79.4209
+          },
+          "ols_origin": {
+            "cells": 581,
+            "mae_median": 103.6657,
+            "mape_median": 13.617,
+            "median_ae_median": 87.3961
+          },
+          "ols_weighted": {
+            "cells": 581,
+            "mae_median": 104.9279,
+            "mape_median": 14.5342,
+            "median_ae_median": 91.0428
+          }
+        },
+        "n_cells": 581
+      }
+    }
+  }
+}

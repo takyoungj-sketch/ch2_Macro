@@ -1,0 +1,1164 @@
+{
+  "baseline": "M2",
+  "baseline_status": "daejeon_provisional",
+  "baseline_role": "대전 M2는 잠정 기준식이다. 충북 복제·전이 실험 전에는 최종으로 확정하지 않는다.",
+  "adopt_pooled": false,
+  "samples": {
+    "daejeon": {
+      "sido_code": "30",
+      "sido_name": "대전광역시",
+      "n_cells": 2655,
+      "n_buildings": 465,
+      "n_land": 1652,
+      "land_join_pct": 62.2,
+      "n_sigungu": 5,
+      "land_dispersion": {
+        "land_cv_daejeon": 0.8019,
+        "land_cv_mean_within_eup": 0.2017,
+        "land_cv_mean_within_sigungu": 0.5685,
+        "n_eup_with_3plus": 71,
+        "note": "동 내부 CV가 대전 전체 CV보다 작으면 토지는 동 내부가 아니라 대전 입지 변수"
+      }
+    },
+    "chungbuk": {
+      "sido_code": "43",
+      "sido_name": "충청북도",
+      "n_cells": 3479,
+      "n_buildings": 573,
+      "n_land": 2460,
+      "land_join_pct": 70.7,
+      "n_sigungu": 14,
+      "land_dispersion": {
+        "land_cv_daejeon": 0.7536,
+        "land_cv_mean_within_eup": 0.0881,
+        "land_cv_mean_within_sigungu": 0.2774,
+        "n_eup_with_3plus": 65,
+        "note": "동 내부 CV가 대전 전체 CV보다 작으면 토지는 동 내부가 아니라 대전 입지 변수"
+      }
+    }
+  },
+  "models": [
+    {
+      "track": "region",
+      "product": "M2",
+      "location": "land",
+      "n_train": 1521,
+      "adj_r_squared": 0.62703,
+      "holdout_mae": 79.2649,
+      "holdout_mape": 13.18,
+      "n_holdout": 35,
+      "land_coef": 0.1273,
+      "households_coef": 0.1667,
+      "floor_coef": -0.0053,
+      "parking_coef": 0.305,
+      "focus": {
+        "ln_land_p50": {
+          "coef": 0.127282,
+          "t": 7.626,
+          "p": 0.0,
+          "sign": "+"
+        },
+        "ln_households": {
+          "coef": 0.166682,
+          "t": 12.411,
+          "p": 0.0,
+          "sign": "+"
+        },
+        "max_floor": {
+          "coef": -0.005332,
+          "t": -1.684,
+          "p": 0.09219,
+          "sign": "−"
+        },
+        "parking_per_household": {
+          "coef": 0.304989,
+          "t": 8.306,
+          "p": 0.0,
+          "sign": "+"
+        }
+      },
+      "equation": "ln(P) = 3.680 + 0.149·[yr_2020] + 0.313·[yr_2021] + 0.278·[yr_2022] + 0.254·[yr_2023] + 0.267·[yr_2024] + 0.257·[yr_2025] + 0.290·[yr_2026] + 0.127·[ln_land_p50] + 0.167·[ln_households] − 0.005·[max_floor] + 0.305·[parking_per_household] − 0.219·[vintage_1990-1999] + 0.278·[vintage_2010-2019] + 0.322·[vintage_2020+] − 0.192·[vintage_~1989]",
+      "coefficients": [
+        {
+          "name": "const",
+          "coef": 3.68023,
+          "se": 0.115121,
+          "t": 31.968,
+          "p": 0.0,
+          "plain": "3.6802"
+        },
+        {
+          "name": "yr_2020",
+          "coef": 0.148975,
+          "se": 0.034471,
+          "t": 4.322,
+          "p": 2e-05,
+          "plain": "0.1490"
+        },
+        {
+          "name": "yr_2021",
+          "coef": 0.313431,
+          "se": 0.02982,
+          "t": 10.511,
+          "p": 0.0,
+          "plain": "0.3134"
+        },
+        {
+          "name": "yr_2022",
+          "coef": 0.277591,
+          "se": 0.031085,
+          "t": 8.93,
+          "p": 0.0,
+          "plain": "0.2776"
+        },
+        {
+          "name": "yr_2023",
+          "coef": 0.254498,
+          "se": 0.031855,
+          "t": 7.989,
+          "p": 0.0,
+          "plain": "0.2545"
+        },
+        {
+          "name": "yr_2024",
+          "coef": 0.26663,
+          "se": 0.030768,
+          "t": 8.666,
+          "p": 0.0,
+          "plain": "0.2666"
+        },
+        {
+          "name": "yr_2025",
+          "coef": 0.256544,
+          "se": 0.034282,
+          "t": 7.483,
+          "p": 0.0,
+          "plain": "0.2565"
+        },
+        {
+          "name": "yr_2026",
+          "coef": 0.2896,
+          "se": 0.036556,
+          "t": 7.922,
+          "p": 0.0,
+          "plain": "0.2896"
+        },
+        {
+          "name": "ln_land_p50",
+          "coef": 0.127282,
+          "se": 0.016691,
+          "t": 7.626,
+          "p": 0.0,
+          "plain": "13.6%"
+        },
+        {
+          "name": "ln_households",
+          "coef": 0.166682,
+          "se": 0.013431,
+          "t": 12.411,
+          "p": 0.0,
+          "plain": "18.1%"
+        },
+        {
+          "name": "max_floor",
+          "coef": -0.005332,
+          "se": 0.003166,
+          "t": -1.684,
+          "p": 0.09219,
+          "plain": "-0.0053"
+        },
+        {
+          "name": "parking_per_household",
+          "coef": 0.304989,
+          "se": 0.03672,
+          "t": 8.306,
+          "p": 0.0,
+          "plain": "0.3050"
+        },
+        {
+          "name": "vintage_1990-1999",
+          "coef": -0.219042,
+          "se": 0.029244,
+          "t": -7.49,
+          "p": 0.0,
+          "plain": "-0.2190"
+        },
+        {
+          "name": "vintage_2010-2019",
+          "coef": 0.278335,
+          "se": 0.024777,
+          "t": 11.234,
+          "p": 0.0,
+          "plain": "0.2783"
+        },
+        {
+          "name": "vintage_2020+",
+          "coef": 0.322295,
+          "se": 0.073193,
+          "t": 4.403,
+          "p": 1e-05,
+          "plain": "0.3223"
+        },
+        {
+          "name": "vintage_~1989",
+          "coef": -0.191936,
+          "se": 0.041117,
+          "t": -4.668,
+          "p": 0.0,
+          "plain": "-0.1919"
+        }
+      ],
+      "builder_gamma": [],
+      "warnings": [],
+      "id": "A",
+      "region": "대전",
+      "purpose": "현재 잠정 기준",
+      "n_train_buildings": 302,
+      "n_hold_buildings": 10,
+      "hold_scope": "대전 hold-out",
+      "is_baseline": true,
+      "primary_pool": false
+    },
+    {
+      "track": "region",
+      "product": "M2",
+      "location": "land",
+      "n_train": 2277,
+      "adj_r_squared": 0.78853,
+      "holdout_mae": 42.6572,
+      "holdout_mape": 12.0,
+      "n_holdout": 47,
+      "land_coef": 0.12,
+      "households_coef": 0.0895,
+      "floor_coef": 0.0043,
+      "parking_coef": 0.5093,
+      "focus": {
+        "ln_land_p50": {
+          "coef": 0.120018,
+          "t": 10.239,
+          "p": 0.0,
+          "sign": "+"
+        },
+        "ln_households": {
+          "coef": 0.089515,
+          "t": 5.949,
+          "p": 0.0,
+          "sign": "+"
+        },
+        "max_floor": {
+          "coef": 0.004311,
+          "t": 1.701,
+          "p": 0.08896,
+          "sign": "+"
+        },
+        "parking_per_household": {
+          "coef": 0.509289,
+          "t": 18.471,
+          "p": 0.0,
+          "sign": "+"
+        }
+      },
+      "equation": "ln(P) = 3.532 + 0.076·[yr_2020] + 0.227·[yr_2021] + 0.279·[yr_2022] + 0.291·[yr_2023] + 0.290·[yr_2024] + 0.296·[yr_2025] + 0.311·[yr_2026] + 0.120·[ln_land_p50] + 0.090·[ln_households] + 0.004·[max_floor] + 0.509·[parking_per_household] − 0.165·[vintage_1990-1999] + 0.285·[vintage_2010-2019] + 0.431·[vintage_2020+] − 0.259·[vintage_~1989]",
+      "coefficients": [
+        {
+          "name": "const",
+          "coef": 3.532086,
+          "se": 0.101981,
+          "t": 34.635,
+          "p": 0.0,
+          "plain": "3.5321"
+        },
+        {
+          "name": "yr_2020",
+          "coef": 0.075903,
+          "se": 0.034737,
+          "t": 2.185,
+          "p": 0.02888,
+          "plain": "0.0759"
+        },
+        {
+          "name": "yr_2021",
+          "coef": 0.226874,
+          "se": 0.032723,
+          "t": 6.933,
+          "p": 0.0,
+          "plain": "0.2269"
+        },
+        {
+          "name": "yr_2022",
+          "coef": 0.279484,
+          "se": 0.035791,
+          "t": 7.809,
+          "p": 0.0,
+          "plain": "0.2795"
+        },
+        {
+          "name": "yr_2023",
+          "coef": 0.291251,
+          "se": 0.031111,
+          "t": 9.362,
+          "p": 0.0,
+          "plain": "0.2913"
+        },
+        {
+          "name": "yr_2024",
+          "coef": 0.290006,
+          "se": 0.030804,
+          "t": 9.415,
+          "p": 0.0,
+          "plain": "0.2900"
+        },
+        {
+          "name": "yr_2025",
+          "coef": 0.295584,
+          "se": 0.031148,
+          "t": 9.49,
+          "p": 0.0,
+          "plain": "0.2956"
+        },
+        {
+          "name": "yr_2026",
+          "coef": 0.311399,
+          "se": 0.035348,
+          "t": 8.809,
+          "p": 0.0,
+          "plain": "0.3114"
+        },
+        {
+          "name": "ln_land_p50",
+          "coef": 0.120018,
+          "se": 0.011721,
+          "t": 10.239,
+          "p": 0.0,
+          "plain": "12.8%"
+        },
+        {
+          "name": "ln_households",
+          "coef": 0.089515,
+          "se": 0.015046,
+          "t": 5.949,
+          "p": 0.0,
+          "plain": "9.4%"
+        },
+        {
+          "name": "max_floor",
+          "coef": 0.004311,
+          "se": 0.002535,
+          "t": 1.701,
+          "p": 0.08896,
+          "plain": "0.0043"
+        },
+        {
+          "name": "parking_per_household",
+          "coef": 0.509289,
+          "se": 0.027573,
+          "t": 18.471,
+          "p": 0.0,
+          "plain": "0.5093"
+        },
+        {
+          "name": "vintage_1990-1999",
+          "coef": -0.164753,
+          "se": 0.01722,
+          "t": -9.567,
+          "p": 0.0,
+          "plain": "-0.1648"
+        },
+        {
+          "name": "vintage_2010-2019",
+          "coef": 0.284889,
+          "se": 0.028464,
+          "t": 10.009,
+          "p": 0.0,
+          "plain": "0.2849"
+        },
+        {
+          "name": "vintage_2020+",
+          "coef": 0.43117,
+          "se": 0.037393,
+          "t": 11.531,
+          "p": 0.0,
+          "plain": "0.4312"
+        },
+        {
+          "name": "vintage_~1989",
+          "coef": -0.259327,
+          "se": 0.066852,
+          "t": -3.879,
+          "p": 0.0001,
+          "plain": "-0.2593"
+        }
+      ],
+      "builder_gamma": [],
+      "warnings": [],
+      "id": "B",
+      "region": "충북",
+      "purpose": "외부 지역에서 구조 확인",
+      "n_train_buildings": 406,
+      "n_hold_buildings": 16,
+      "hold_scope": "충북 hold-out",
+      "is_baseline": false,
+      "primary_pool": false
+    },
+    {
+      "track": "region",
+      "product": "M2",
+      "location": "land",
+      "n_train": 3883,
+      "adj_r_squared": 0.71463,
+      "holdout_mae": 97.9567,
+      "holdout_mape": 16.24,
+      "n_holdout": 35,
+      "land_coef": 0.2082,
+      "households_coef": 0.155,
+      "floor_coef": 0.0023,
+      "parking_coef": 0.3548,
+      "focus": {
+        "ln_land_p50": {
+          "coef": 0.208249,
+          "t": 18.475,
+          "p": 0.0,
+          "sign": "+"
+        },
+        "ln_households": {
+          "coef": 0.154967,
+          "t": 13.893,
+          "p": 0.0,
+          "sign": "+"
+        },
+        "max_floor": {
+          "coef": 0.002315,
+          "t": 1.254,
+          "p": 0.20992,
+          "sign": "+"
+        },
+        "parking_per_household": {
+          "coef": 0.35475,
+          "t": 13.702,
+          "p": 0.0,
+          "sign": "+"
+        }
+      },
+      "equation": "ln(P) = 3.035 + 0.087·[yr_2020] + 0.196·[yr_2021] + 0.200·[yr_2022] + 0.234·[yr_2023] + 0.237·[yr_2024] + 0.231·[yr_2025] + 0.263·[yr_2026] + 0.208·[ln_land_p50] + 0.155·[ln_households] + 0.002·[max_floor] + 0.355·[parking_per_household] − 0.204·[vintage_1990-1999] + 0.278·[vintage_2010-2019] + 0.386·[vintage_2020+] − 0.220·[vintage_~1989]",
+      "coefficients": [
+        {
+          "name": "const",
+          "coef": 3.034765,
+          "se": 0.080759,
+          "t": 37.578,
+          "p": 0.0,
+          "plain": "3.0348"
+        },
+        {
+          "name": "yr_2020",
+          "coef": 0.087374,
+          "se": 0.026456,
+          "t": 3.303,
+          "p": 0.00096,
+          "plain": "0.0874"
+        },
+        {
+          "name": "yr_2021",
+          "coef": 0.195713,
+          "se": 0.02839,
+          "t": 6.894,
+          "p": 0.0,
+          "plain": "0.1957"
+        },
+        {
+          "name": "yr_2022",
+          "coef": 0.199852,
+          "se": 0.033174,
+          "t": 6.024,
+          "p": 0.0,
+          "plain": "0.1999"
+        },
+        {
+          "name": "yr_2023",
+          "coef": 0.234128,
+          "se": 0.023791,
+          "t": 9.841,
+          "p": 0.0,
+          "plain": "0.2341"
+        },
+        {
+          "name": "yr_2024",
+          "coef": 0.236915,
+          "se": 0.023554,
+          "t": 10.058,
+          "p": 0.0,
+          "plain": "0.2369"
+        },
+        {
+          "name": "yr_2025",
+          "coef": 0.231327,
+          "se": 0.024149,
+          "t": 9.579,
+          "p": 0.0,
+          "plain": "0.2313"
+        },
+        {
+          "name": "yr_2026",
+          "coef": 0.263099,
+          "se": 0.026412,
+          "t": 9.961,
+          "p": 0.0,
+          "plain": "0.2631"
+        },
+        {
+          "name": "ln_land_p50",
+          "coef": 0.208249,
+          "se": 0.011272,
+          "t": 18.475,
+          "p": 0.0,
+          "plain": "23.2%"
+        },
+        {
+          "name": "ln_households",
+          "coef": 0.154967,
+          "se": 0.011154,
+          "t": 13.893,
+          "p": 0.0,
+          "plain": "16.8%"
+        },
+        {
+          "name": "max_floor",
+          "coef": 0.002315,
+          "se": 0.001846,
+          "t": 1.254,
+          "p": 0.20992,
+          "plain": "0.0023"
+        },
+        {
+          "name": "parking_per_household",
+          "coef": 0.35475,
+          "se": 0.025891,
+          "t": 13.702,
+          "p": 0.0,
+          "plain": "0.3548"
+        },
+        {
+          "name": "vintage_1990-1999",
+          "coef": -0.204234,
+          "se": 0.017863,
+          "t": -11.433,
+          "p": 0.0,
+          "plain": "-0.2042"
+        },
+        {
+          "name": "vintage_2010-2019",
+          "coef": 0.278447,
+          "se": 0.017826,
+          "t": 15.62,
+          "p": 0.0,
+          "plain": "0.2784"
+        },
+        {
+          "name": "vintage_2020+",
+          "coef": 0.386375,
+          "se": 0.031275,
+          "t": 12.354,
+          "p": 0.0,
+          "plain": "0.3864"
+        },
+        {
+          "name": "vintage_~1989",
+          "coef": -0.219773,
+          "se": 0.051135,
+          "t": -4.298,
+          "p": 2e-05,
+          "plain": "-0.2198"
+        }
+      ],
+      "builder_gamma": [],
+      "warnings": [],
+      "id": "C_naive",
+      "region": "대전+충북",
+      "purpose": "지역 FE 없이 섞기 (비교용, 채택 금지)",
+      "n_train_buildings": 725,
+      "n_hold_buildings": 10,
+      "hold_scope": "동일 대전 hold-out",
+      "is_baseline": false,
+      "primary_pool": false
+    },
+    {
+      "track": "region",
+      "product": "M2",
+      "location": "sido_fe_land",
+      "n_train": 3883,
+      "adj_r_squared": 0.76972,
+      "holdout_mae": 85.2,
+      "holdout_mape": 15.41,
+      "n_holdout": 35,
+      "land_coef": 0.1387,
+      "households_coef": 0.1255,
+      "floor_coef": 0.0013,
+      "parking_coef": 0.4185,
+      "focus": {
+        "ln_land_p50": {
+          "coef": 0.13868,
+          "t": 11.57,
+          "p": 0.0,
+          "sign": "+"
+        },
+        "ln_households": {
+          "coef": 0.12548,
+          "t": 11.837,
+          "p": 0.0,
+          "sign": "+"
+        },
+        "max_floor": {
+          "coef": 0.001289,
+          "t": 0.663,
+          "p": 0.50733,
+          "sign": "+"
+        },
+        "parking_per_household": {
+          "coef": 0.418455,
+          "t": 17.752,
+          "p": 0.0,
+          "sign": "+"
+        }
+      },
+      "equation": "ln(P) = 3.636 + 0.112·[yr_2020] + 0.249·[yr_2021] + 0.273·[yr_2022] + 0.279·[yr_2023] + 0.282·[yr_2024] + 0.284·[yr_2025] + 0.309·[yr_2026] + 0.139·[ln_land_p50] − 0.281·[sido_43] + 0.125·[ln_households] + 0.001·[max_floor] + 0.418·[parking_per_household] − 0.172·[vintage_1990-1999] + 0.291·[vintage_2010-2019] + 0.406·[vintage_2020+] − 0.216·[vintage_~1989]",
+      "coefficients": [
+        {
+          "name": "const",
+          "coef": 3.636356,
+          "se": 0.081982,
+          "t": 44.356,
+          "p": 0.0,
+          "plain": "3.6364"
+        },
+        {
+          "name": "yr_2020",
+          "coef": 0.111743,
+          "se": 0.024037,
+          "t": 4.649,
+          "p": 0.0,
+          "plain": "0.1117"
+        },
+        {
+          "name": "yr_2021",
+          "coef": 0.249289,
+          "se": 0.02344,
+          "t": 10.635,
+          "p": 0.0,
+          "plain": "0.2493"
+        },
+        {
+          "name": "yr_2022",
+          "coef": 0.272608,
+          "se": 0.027233,
+          "t": 10.01,
+          "p": 0.0,
+          "plain": "0.2726"
+        },
+        {
+          "name": "yr_2023",
+          "coef": 0.278821,
+          "se": 0.021248,
+          "t": 13.122,
+          "p": 0.0,
+          "plain": "0.2788"
+        },
+        {
+          "name": "yr_2024",
+          "coef": 0.28159,
+          "se": 0.021175,
+          "t": 13.298,
+          "p": 0.0,
+          "plain": "0.2816"
+        },
+        {
+          "name": "yr_2025",
+          "coef": 0.284019,
+          "se": 0.022258,
+          "t": 12.76,
+          "p": 0.0,
+          "plain": "0.2840"
+        },
+        {
+          "name": "yr_2026",
+          "coef": 0.30854,
+          "se": 0.02531,
+          "t": 12.19,
+          "p": 0.0,
+          "plain": "0.3085"
+        },
+        {
+          "name": "ln_land_p50",
+          "coef": 0.13868,
+          "se": 0.011986,
+          "t": 11.57,
+          "p": 0.0,
+          "plain": "14.9%"
+        },
+        {
+          "name": "sido_43",
+          "coef": -0.280729,
+          "se": 0.01591,
+          "t": -17.645,
+          "p": 0.0,
+          "plain": "-0.2807"
+        },
+        {
+          "name": "ln_households",
+          "coef": 0.12548,
+          "se": 0.010601,
+          "t": 11.837,
+          "p": 0.0,
+          "plain": "13.4%"
+        },
+        {
+          "name": "max_floor",
+          "coef": 0.001289,
+          "se": 0.001944,
+          "t": 0.663,
+          "p": 0.50733,
+          "plain": "0.0013"
+        },
+        {
+          "name": "parking_per_household",
+          "coef": 0.418455,
+          "se": 0.023572,
+          "t": 17.752,
+          "p": 0.0,
+          "plain": "0.4185"
+        },
+        {
+          "name": "vintage_1990-1999",
+          "coef": -0.172149,
+          "se": 0.015254,
+          "t": -11.286,
+          "p": 0.0,
+          "plain": "-0.1721"
+        },
+        {
+          "name": "vintage_2010-2019",
+          "coef": 0.290818,
+          "se": 0.016465,
+          "t": 17.662,
+          "p": 0.0,
+          "plain": "0.2908"
+        },
+        {
+          "name": "vintage_2020+",
+          "coef": 0.406071,
+          "se": 0.036257,
+          "t": 11.2,
+          "p": 0.0,
+          "plain": "0.4061"
+        },
+        {
+          "name": "vintage_~1989",
+          "coef": -0.216125,
+          "se": 0.042334,
+          "t": -5.105,
+          "p": 0.0,
+          "plain": "-0.2161"
+        }
+      ],
+      "builder_gamma": [],
+      "warnings": [],
+      "id": "C_sido",
+      "region": "대전+충북",
+      "purpose": "표본 확대 + 광역 지역 효과",
+      "n_train_buildings": 725,
+      "n_hold_buildings": 10,
+      "hold_scope": "동일 대전 hold-out",
+      "is_baseline": false,
+      "primary_pool": true
+    },
+    {
+      "track": "region",
+      "product": "M2",
+      "location": "gu_fe_land",
+      "n_train": 3883,
+      "adj_r_squared": 0.81081,
+      "holdout_mae": 80.5459,
+      "holdout_mape": 13.91,
+      "n_holdout": 35,
+      "land_coef": 0.0722,
+      "households_coef": 0.117,
+      "floor_coef": 0.0024,
+      "parking_coef": 0.3618,
+      "focus": {
+        "ln_land_p50": {
+          "coef": 0.072214,
+          "t": 6.948,
+          "p": 0.0,
+          "sign": "+"
+        },
+        "ln_households": {
+          "coef": 0.117032,
+          "t": 12.452,
+          "p": 0.0,
+          "sign": "+"
+        },
+        "max_floor": {
+          "coef": 0.002436,
+          "t": 1.817,
+          "p": 0.06916,
+          "sign": "+"
+        },
+        "parking_per_household": {
+          "coef": 0.361841,
+          "t": 16.61,
+          "p": 0.0,
+          "sign": "+"
+        }
+      },
+      "equation": "ln(P) = 4.032 + 0.113·[yr_2020] + 0.258·[yr_2021] + 0.291·[yr_2022] + 0.286·[yr_2023] + 0.292·[yr_2024] + 0.286·[yr_2025] + 0.303·[yr_2026] + 0.072·[ln_land_p50] + 0.081·[gu_30140] + 0.153·[gu_30170] + 0.059·[gu_30200] − 0.259·[gu_30230] − 0.288·[gu_43111] − 0.291·[gu_43112] − 0.100·[gu_43113] − 0.210·[gu_43114] − 0.347·[gu_43130] − 0.428·[gu_43150] − 0.327·[gu_43720] − 0.222·[gu_43730] − 0.506·[gu_43740] − 0.447·[gu_43745] − 0.469·[gu_43750] − 0.226·[gu_43760] − 0.443·[gu_43770] − 0.385·[gu_43800] + 0.117·[ln_households] + 0.002·[max_floor] + 0.362·[parking_per_household] − 0.200·[vintage_1990-1999] + 0.288·[vintage_2010-2019] + 0.405·[vintage_2020+] − 0.219·[vintage_~1989]",
+      "coefficients": [
+        {
+          "name": "const",
+          "coef": 4.032091,
+          "se": 0.07645,
+          "t": 52.741,
+          "p": 0.0,
+          "plain": "4.0321"
+        },
+        {
+          "name": "yr_2020",
+          "coef": 0.112553,
+          "se": 0.020858,
+          "t": 5.396,
+          "p": 0.0,
+          "plain": "0.1126"
+        },
+        {
+          "name": "yr_2021",
+          "coef": 0.258409,
+          "se": 0.020595,
+          "t": 12.547,
+          "p": 0.0,
+          "plain": "0.2584"
+        },
+        {
+          "name": "yr_2022",
+          "coef": 0.291442,
+          "se": 0.023983,
+          "t": 12.152,
+          "p": 0.0,
+          "plain": "0.2914"
+        },
+        {
+          "name": "yr_2023",
+          "coef": 0.286461,
+          "se": 0.019344,
+          "t": 14.809,
+          "p": 0.0,
+          "plain": "0.2865"
+        },
+        {
+          "name": "yr_2024",
+          "coef": 0.291969,
+          "se": 0.019114,
+          "t": 15.275,
+          "p": 0.0,
+          "plain": "0.2920"
+        },
+        {
+          "name": "yr_2025",
+          "coef": 0.286041,
+          "se": 0.01992,
+          "t": 14.359,
+          "p": 0.0,
+          "plain": "0.2860"
+        },
+        {
+          "name": "yr_2026",
+          "coef": 0.302708,
+          "se": 0.022397,
+          "t": 13.516,
+          "p": 0.0,
+          "plain": "0.3027"
+        },
+        {
+          "name": "ln_land_p50",
+          "coef": 0.072214,
+          "se": 0.010394,
+          "t": 6.948,
+          "p": 0.0,
+          "plain": "7.5%"
+        },
+        {
+          "name": "gu_30140",
+          "coef": 0.081202,
+          "se": 0.021927,
+          "t": 3.703,
+          "p": 0.00021,
+          "plain": "0.0812"
+        },
+        {
+          "name": "gu_30170",
+          "coef": 0.152509,
+          "se": 0.023732,
+          "t": 6.426,
+          "p": 0.0,
+          "plain": "0.1525"
+        },
+        {
+          "name": "gu_30200",
+          "coef": 0.058972,
+          "se": 0.023323,
+          "t": 2.528,
+          "p": 0.01146,
+          "plain": "0.0590"
+        },
+        {
+          "name": "gu_30230",
+          "coef": -0.258616,
+          "se": 0.046766,
+          "t": -5.53,
+          "p": 0.0,
+          "plain": "-0.2586"
+        },
+        {
+          "name": "gu_43111",
+          "coef": -0.287705,
+          "se": 0.018795,
+          "t": -15.308,
+          "p": 0.0,
+          "plain": "-0.2877"
+        },
+        {
+          "name": "gu_43112",
+          "coef": -0.290821,
+          "se": 0.020497,
+          "t": -14.188,
+          "p": 0.0,
+          "plain": "-0.2908"
+        },
+        {
+          "name": "gu_43113",
+          "coef": -0.100327,
+          "se": 0.021233,
+          "t": -4.725,
+          "p": 0.0,
+          "plain": "-0.1003"
+        },
+        {
+          "name": "gu_43114",
+          "coef": -0.210088,
+          "se": 0.02547,
+          "t": -8.248,
+          "p": 0.0,
+          "plain": "-0.2101"
+        },
+        {
+          "name": "gu_43130",
+          "coef": -0.346857,
+          "se": 0.025752,
+          "t": -13.469,
+          "p": 0.0,
+          "plain": "-0.3469"
+        },
+        {
+          "name": "gu_43150",
+          "coef": -0.428178,
+          "se": 0.026363,
+          "t": -16.242,
+          "p": 0.0,
+          "plain": "-0.4282"
+        },
+        {
+          "name": "gu_43720",
+          "coef": -0.326761,
+          "se": 0.145041,
+          "t": -2.253,
+          "p": 0.02427,
+          "plain": "-0.3268"
+        },
+        {
+          "name": "gu_43730",
+          "coef": -0.221917,
+          "se": 0.028895,
+          "t": -7.68,
+          "p": 0.0,
+          "plain": "-0.2219"
+        },
+        {
+          "name": "gu_43740",
+          "coef": -0.506135,
+          "se": 0.069123,
+          "t": -7.322,
+          "p": 0.0,
+          "plain": "-0.5061"
+        },
+        {
+          "name": "gu_43745",
+          "coef": -0.44704,
+          "se": 0.038365,
+          "t": -11.652,
+          "p": 0.0,
+          "plain": "-0.4470"
+        },
+        {
+          "name": "gu_43750",
+          "coef": -0.468661,
+          "se": 0.055009,
+          "t": -8.52,
+          "p": 0.0,
+          "plain": "-0.4687"
+        },
+        {
+          "name": "gu_43760",
+          "coef": -0.225916,
+          "se": 0.057173,
+          "t": -3.951,
+          "p": 8e-05,
+          "plain": "-0.2259"
+        },
+        {
+          "name": "gu_43770",
+          "coef": -0.443341,
+          "se": 0.034541,
+          "t": -12.835,
+          "p": 0.0,
+          "plain": "-0.4433"
+        },
+        {
+          "name": "gu_43800",
+          "coef": -0.385135,
+          "se": 0.057979,
+          "t": -6.643,
+          "p": 0.0,
+          "plain": "-0.3851"
+        },
+        {
+          "name": "ln_households",
+          "coef": 0.117032,
+          "se": 0.009399,
+          "t": 12.452,
+          "p": 0.0,
+          "plain": "12.4%"
+        },
+        {
+          "name": "max_floor",
+          "coef": 0.002436,
+          "se": 0.00134,
+          "t": 1.817,
+          "p": 0.06916,
+          "plain": "0.0024"
+        },
+        {
+          "name": "parking_per_household",
+          "coef": 0.361841,
+          "se": 0.021785,
+          "t": 16.61,
+          "p": 0.0,
+          "plain": "0.3618"
+        },
+        {
+          "name": "vintage_1990-1999",
+          "coef": -0.200354,
+          "se": 0.014625,
+          "t": -13.699,
+          "p": 0.0,
+          "plain": "-0.2004"
+        },
+        {
+          "name": "vintage_2010-2019",
+          "coef": 0.288041,
+          "se": 0.014601,
+          "t": 19.727,
+          "p": 0.0,
+          "plain": "0.2880"
+        },
+        {
+          "name": "vintage_2020+",
+          "coef": 0.40495,
+          "se": 0.025795,
+          "t": 15.699,
+          "p": 0.0,
+          "plain": "0.4050"
+        },
+        {
+          "name": "vintage_~1989",
+          "coef": -0.21893,
+          "se": 0.036938,
+          "t": -5.927,
+          "p": 0.0,
+          "plain": "-0.2189"
+        }
+      ],
+      "builder_gamma": [],
+      "warnings": [],
+      "id": "C_gu",
+      "region": "대전+충북",
+      "purpose": "표본 확대 + 시군구 지역 효과",
+      "n_train_buildings": 725,
+      "n_hold_buildings": 10,
+      "hold_scope": "동일 대전 hold-out",
+      "is_baseline": false,
+      "primary_pool": false
+    }
+  ],
+  "transfer": {
+    "holdout": "daejeon_frozen",
+    "n_hold_buildings": 10,
+    "n_hold_cells": 35,
+    "rows": [
+      {
+        "model_id": "A",
+        "train": "대전",
+        "test": "대전 hold-out",
+        "mape": 13.18,
+        "mae": 79.2649,
+        "n_hold": 35
+      },
+      {
+        "model_id": "C_sido",
+        "train": "대전+충북 (광역FE)",
+        "test": "동일 대전 hold-out",
+        "mape": 15.41,
+        "mae": 85.2,
+        "n_hold": 35
+      },
+      {
+        "model_id": "C_gu",
+        "train": "대전+충북 (시군구FE)",
+        "test": "동일 대전 hold-out",
+        "mape": 13.91,
+        "mae": 80.5459,
+        "n_hold": 35
+      },
+      {
+        "model_id": "C_naive",
+        "train": "대전+충북 (지역FE 없음)",
+        "test": "동일 대전 hold-out",
+        "mape": 16.24,
+        "mae": 97.9567,
+        "n_hold": 35
+      }
+    ],
+    "verdict": {
+      "code": "worsens",
+      "delta_mape": 2.23,
+      "improves_daejeon": false,
+      "adopt_pooled": false,
+      "summary": "충북을 넣으면 동일 대전 hold-out MAPE가 2.2%p 나빠진다. 지역별 가격 형성 구조가 다를 수 있어 통합 채택은 하지 않는다."
+    },
+    "misleading_overall": {
+      "label": "통합 표본 자체 hold-out (채택 기준 아님)",
+      "mape": 13.14,
+      "mae": 66.3615,
+      "n_hold": 77,
+      "n_hold_buildings": 27,
+      "note": "충북 데이터가 많거나 쉬운 표본이면 평균만 좋아질 수 있다. 대전 고정 테스트와 따로 본다."
+    }
+  },
+  "next_steps": [
+    "시공사군(M3)은 충북까지 연 뒤에 본다. 대전만의 시공사 신호는 아직 확정하지 않는다.",
+    "M4는 넣지 않는다.",
+    "신축 대단지 hold-out 개선은 지역 비교 다음 단계다."
+  ],
+  "notes": [
+    "A·B는 같은 M2(연도+토지+세대수+최고층+주차+vintage)다.",
+    "C는 대전과 충북을 섞되, 본선은 광역(시도) 효과를 통제한다. 시군구 FE는 비교용이다.",
+    "전이 실험의 테스트 단지는 대전 hold-out과 동일하다. 충북 학습 추가가 대전 예측을 돕는지가 핵심이다.",
+    "통합 평균 MAPE가 낮아졌다고 대전 식을 바꾸지 않는다."
+  ]
+}

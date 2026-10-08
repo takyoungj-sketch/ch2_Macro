@@ -1,0 +1,141 @@
+{
+  "as_of": "2026-08-16",
+  "note": "저장된 building_key 정확 층 + 법정동(또는 시·시군구·동)+단지명 보조 1:1. SQL fallback 키 미사용.",
+  "assets": [
+    "apartment",
+    "rowhouse",
+    "officetel"
+  ],
+  "by_asset": {
+    "apartment": {
+      "sale_n": 45743,
+      "rent_n": 44621,
+      "exact": 40571,
+      "aux_1to1": 3,
+      "aux_ambiguous": 0,
+      "sale_only": 5169,
+      "rent_only": 4047,
+      "sale_exact_pct": 88.7,
+      "sale_joined_pct": 88.7
+    },
+    "rowhouse": {
+      "sale_n": 200923,
+      "rent_n": 211011,
+      "exact": 160643,
+      "aux_1to1": 83,
+      "aux_ambiguous": 0,
+      "sale_only": 40197,
+      "rent_only": 50285,
+      "sale_exact_pct": 80.0,
+      "sale_joined_pct": 80.0
+    },
+    "officetel": {
+      "sale_n": 13522,
+      "rent_n": 18101,
+      "exact": 11796,
+      "aux_1to1": 9,
+      "aux_ambiguous": 0,
+      "sale_only": 1717,
+      "rent_only": 6296,
+      "sale_exact_pct": 87.2,
+      "sale_joined_pct": 87.3
+    },
+    "all": {
+      "sale_n": 260188,
+      "rent_n": 273733,
+      "exact": 213010,
+      "aux_1to1": 95,
+      "aux_ambiguous": 0,
+      "sale_only": 47083,
+      "rent_only": 60628,
+      "sale_exact_pct": 81.9,
+      "sale_joined_pct": 81.9
+    }
+  },
+  "sale_miss_examples": [
+    {
+      "asset_type": "rowhouse",
+      "sale_key": "00000f3c15444c9b12a625620ed38ab2dceba96d99a47d97372a33ac7509e03b",
+      "name": "사랑채석남1차",
+      "addr": "인천광역시 서해구 석남동",
+      "beopjungri_code": "2827510800"
+    },
+    {
+      "asset_type": "rowhouse",
+      "sale_key": "0000c0a6d74f9bb1635482c840bb1b31967dddf958589f4ddf02a31f3df97828",
+      "name": "(1590-17)",
+      "addr": "부산광역시 해운대구 반여동",
+      "beopjungri_code": "2635010300"
+    },
+    {
+      "asset_type": "rowhouse",
+      "sale_key": "00047395c858a05c391639310a63291bcab1bd2bf5e1782e50b76d725d497f23",
+      "name": "(483-7)",
+      "addr": "전북특별자치도 순창군 순창읍",
+      "beopjungri_code": "5277025021"
+    },
+    {
+      "asset_type": "rowhouse",
+      "sale_key": "00060622d10a517ac1254f02404c09bd30c918f97d217cb22398f6b1d7e983dd",
+      "name": "진성빌라B동",
+      "addr": "부산광역시 수영구 망미동",
+      "beopjungri_code": "2650010100"
+    },
+    {
+      "asset_type": "apartment",
+      "sale_key": "0009736e58fc700bde0ec0d33f4a94fe58857f3efe615cc1621c844bfb82415a",
+      "name": "대진2",
+      "addr": "인천광역시 서구 가정동",
+      "beopjungri_code": "2826010800"
+    },
+    {
+      "asset_type": "rowhouse",
+      "sale_key": "000983ff26247827f8931bc65ce19a8a892e435e16d988dcfa7da7a997f1b41b",
+      "name": "동방하이츠",
+      "addr": "경상북도 경주시 동천동",
+      "beopjungri_code": "4713012600"
+    },
+    {
+      "asset_type": "rowhouse",
+      "sale_key": "0009e6b8a6937e65fe1b42fc655f27e5d4d720b939b197e152662999a6ba81e0",
+      "name": "우산빌라2차",
+      "addr": "전라남도 고흥군 고흥읍",
+      "beopjungri_code": "1274025025"
+    },
+    {
+      "asset_type": "rowhouse",
+      "sale_key": "000a82f08b7291de839cff493e093d0f515fafaec552a5dabc01a793b6e515ad",
+      "name": "삼성쉐르빌(755-5)",
+      "addr": "경기도 안산시 단원구",
+      "beopjungri_code": "4127310200"
+    },
+    {
+      "asset_type": "rowhouse",
+      "sale_key": "000babd4475b9ebddfe4e7a9a5208cc504e41c95cc6086965e376ab8f16e8e1f",
+      "name": "아이빌101동102동",
+      "addr": "경기도 고양시 덕양구",
+      "beopjungri_code": "4128111900"
+    },
+    {
+      "asset_type": "rowhouse",
+      "sale_key": "000c0471024d7946b8dae88a1aa7a92c962478d2a37c27b2a8248847f8a3da0d",
+      "name": "홍우2차",
+      "addr": "충청북도 영동군 영동읍",
+      "beopjungri_code": "4374025021"
+    },
+    {
+      "asset_type": "rowhouse",
+      "sale_key": "000c3f897c6e441c47650c6c42b5ed0e7410421248ee20d6137dc6afee75996d",
+      "name": "정우",
+      "addr": "부산광역시 부산진구 가야동",
+      "beopjungri_code": "2623011000"
+    },
+    {
+      "asset_type": "officetel",
+      "sale_key": "000c496c49495999bd80bc420627b8c2610571c729ca1e97bca1dfd6abd30863",
+      "name": "월미 그린 비치",
+      "addr": "인천광역시 중구 북성동1가",
+      "beopjungri_code": "2811013800"
+    }
+  ]
+}
