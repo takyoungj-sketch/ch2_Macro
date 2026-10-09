@@ -3,11 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>06. 표본수와 통계의 신뢰성 | 통계학 &amp; 데이터 분석</title>
-    <meta name="description" content="거래 10건 vs 500건. 표본수와 통계 신뢰성." />
+    <title>11. 표준오차와 표본수 | 통계학 &amp; 데이터 분석</title>
+    <meta
+      name="description"
+      content="표준편차와 표준오차의 차이, 표본수와 정밀도, 표집 설계의 한계를 공통 예제와 그림으로 설명합니다."
+    />
     <link rel="canonical" href="https://ch2data.com/learn/stats/sample-size/" />
     <link rel="stylesheet" href="/style.css" />
-    <link rel="stylesheet" href="/learn/stats/learn-stats.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261007-2" />
   </head>
   <body>
     <div class="page">
@@ -16,112 +19,33 @@
           <a href="https://ch2data.com/">CH2 DATA</a> ·
           <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
         </p>
-        <p class="hero__eyebrow">기술통계 · 06</p>
-        <h1 class="hero__title">표본수와 통계의 신뢰성</h1>
+        <p class="hero__eyebrow">II. 확률과 표본의 불확실성</p>
+        <h1 class="hero__title">11. 표준오차와 표본수</h1>
       </header>
 
-      <article class="learn-chapter" aria-label="표본수와 통계의 신뢰성">
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">① 한 줄 정의</p>
-          <h2>거래 건수는 단순한 숫자가 아닙니다</h2>
-          <p>
-            Macro 화면의 <strong>거래 건수(n)</strong>는 지금 통계·회귀를 만든 표본의 크기입니다.
-            같은 평균단가라도 n=12건과 n=480건은 얼마나 믿을 수 있는 요약인지가 다릅니다.
-          </p>
-        </section>
-
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">② 쉽게 이해하기</p>
-          <h2>10건과 500건의 차이</h2>
-          <p>
-            10건의 평균단가는 한두 건이 바뀌면 크게 흔들립니다. 500건이면 같은 비율의 변화가 평균에
-            미치는 영향이 상대적으로 작습니다. 회귀에서도 표본이나 변수가 많으면 계수가 불안정해질
-            수 있습니다.
-          </p>
-          <figure class="learn-chart" aria-label="표본수와 평균 안정성">
-            <svg viewBox="0 0 360 100" role="img" aria-hidden="true">
-              <text x="90" y="22" text-anchor="middle" fill="#475569" font-size="11">n = 10건</text>
-              <rect x="50" y="30" width="80" height="50" fill="#fca5a5" rx="4" />
-              <text x="90" y="58" text-anchor="middle" fill="#7f1d1d" font-size="10">평균 흔들림 큼</text>
-              <text x="270" y="22" text-anchor="middle" fill="#475569" font-size="11">n = 500건</text>
-              <rect x="230" y="30" width="80" height="50" fill="#93c5fd" rx="4" />
-              <text x="270" y="58" text-anchor="middle" fill="#1e3a8a" font-size="10">평균 안정적</text>
-            </svg>
-            <p class="learn-chart__caption">같은 시장이라도 건수가 많을 때 요약 통계가 더 안정됩니다.</p>
-          </figure>
-        </section>
-
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">③ 거래 건수가 적으면 무엇이 달라질까?</p>
-          <h2>소표본에서의 함정</h2>
-          <p>
-            소표본에서는 우연히 들어온 고가·저가가 평균·회귀를 크게 바꿉니다. 분위수도 한두 건 차이로
-            값이 달라집니다. 필터를 조정해 표본을 넓히거나, 결과를 참고용으로만 쓰는 것이
-            좋습니다.
-          </p>
-        </section>
-
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">④ CH2 Macro에서는?</p>
-          <h2>거래 건수 · 적합 n</h2>
-          <p>
-            지역통계·회귀실험·모형추천에 <strong>n</strong>이 표시됩니다. 회귀에서는 결측을 제외한
-            <strong>적합 n</strong>이 실제 추정에 쓰인 건수입니다. 통계를 읽을 때마다 n을 함께
-            확인해 보시기 바랍니다.
-          </p>
-        </section>
-
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">⑤ Macro 화면</p>
-          <h2>건수 표시 위치</h2>
-          <figure class="learn-capture learn-macro-mock" aria-label="Macro 표본수">
-            <div class="learn-macro-mock__bar"><span><strong>토지</strong> · 용도지역×지목</span><span>청주시 흥덕구 · 2종일반×대</span></div>
-            <div class="learn-macro-mock__body">
-              <table>
-                <thead><tr><th>화면</th><th>건수</th><th>해석</th></tr></thead>
-                <tbody>
-                  <tr class="is-highlight"><td>매트릭스 셀</td><td>n=128</td><td>해당 조합 거래 수</td></tr>
-                  <tr><td>회귀 적합</td><td>n=112</td><td>결측 제외 후 적합 n</td></tr>
-                  <tr><td>소표본 셀</td><td>n=4</td><td>경리적 표시 · 참고용</td></tr>
-                </tbody>
-              </table>
-            </div>
-            <figcaption class="learn-capture__caption">예시 화면 · n이 작은 칸은 평균·회귀를 과신하지 마세요.</figcaption>
-          </figure>
-        </section>
-
-        <aside class="learn-caution" aria-label="주의">
-          <p class="learn-caution__title">주의</p>
-          <p>실거래는 <strong>전체 시장의 표본</strong>입니다. 건수가 적을 때 결과를 과도하게 일반화하지 마세요.</p>
-        </aside>
-
-        <details class="learn-more">
-          <summary>조금 더 알아보기</summary>
-          <div class="learn-more__body">
-            <p>
-              표본이 커지면 평균의 <strong>표준오차</strong>는 전체적으로 √n에 반비례해 줄어듭니다. n=16에서
-              n=64로 늘리면 표준오차는 약 절반입니다.
-            </p>
-            <p>신뢰구간·유의성 검정은 2차 표본수·신뢰도에서 다룹니다.</p>
-          </div>
-        </details>
-
-        <p class="learn-macro-cta">
-          <a href="https://macro.ch2data.com/land/">CH2 Macro에서 확인하기 →</a>
-          <span style="display: block; margin-top: 0.35rem; font-size: 0.8125rem; color: #64748b">토지 · 거래 건수</span>
-        </p>
-      </article>
+      <article class="learn-chapter learn-chapter--expanded" aria-label="표준오차와 표본수">
+<section class="learn-chapter__step" id="quick-start" data-toc-label="핵심 이해"><p class="learn-chapter__label">핵심 이해</p><h2>많은 자료와 정확한 추정은 같은 말이 아닙니다</h2><p>표본수 n은 계산에 실제로 사용한 유효 관측 수입니다. 자료가 많으면 평균 추정의 표집 변동을 줄일 수 있지만, 관측값 자체의 다양성이나 수집 편향이 저절로 줄지는 않습니다. 이 장에서는 <a href="/learn/stats/sampling-distributions/">10장의 표본분포</a>를 실제 계산으로 연결합니다.</p><p><strong>표준편차(SD)</strong>는 개별 관측의 퍼짐이고, <strong>표준오차(SE)</strong>는 통계량이 반복 표집에서 달라지는 정도입니다. 이 장의 SE는 특별히 ‘산술평균의 표준오차’를 뜻합니다. 중앙값·회귀계수 등 다른 통계량은 별도의 산식이 필요합니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 305" role="img" aria-labelledby="sd-se-title sd-se-desc"><title id="sd-se-title">표준편차와 표준오차</title><desc id="sd-se-desc">그림 1. 공통 학습 자료 30건에서 n−1로 계산한 s=81.53, s/√30=14.89입니다. 막대는 0에서 시작하며 이 SE는 독립·동일분포 표본을 가정한 계산입니다.</desc><text x="24" y="28" >같은 30건이지만 요약하는 대상이 다릅니다</text><text x="24" y="98" >표본표준편차 s</text><rect x="200" y="80" width="326.11456981201894" height="25" fill="#2563eb" data-value="81.52864245300474"/><text x="536.114569812019" y="98" >81.53</text><text x="24" y="183" >추정 표준오차 SE</text><rect x="200" y="165" width="59.54010207237869" height="25" fill="#2563eb" data-value="14.885025518094672"/><text x="269.54010207237866" y="183" >14.89</text><text x="24" y="245" >s: 관측값의 퍼짐 / SE: 평균 추정의 표집 변동</text><text x="360" y="277" >단위: 만원/㎡</text></svg><figcaption class="learn-chart__caption">그림 1. 공통 학습 자료 30건에서 n−1로 계산한 s=81.53, s/√30=14.89입니다. 막대는 0에서 시작하며 이 SE는 독립·동일분포 표본을 가정한 계산입니다.</figcaption></figure></section>
+<section class="learn-chapter__step" id="calculation" data-toc-label="30건 계산"><p class="learn-chapter__label">30건 계산</p><h2>표본표준편차를 유효 표본수의 제곱근으로 나눕니다</h2><p>독립이고 같은 분포에서 뽑은 표본이며 분산이 유한하면 평균의 이론적 SE는 σ/√n입니다. 모집단 σ를 모르면 표본표준편차 s로 바꾸어 <strong>추정 SE=s/√n</strong>을 사용합니다. 이것은 표집 변동의 추정치이며 실제 평균 오차 |x̄−μ|를 관측한 값이 아닙니다.</p><p><a href="/learn/stats/graphs/#data">공통 학습 예시 30건</a>의 평균은 146.33, n−1로 나눈 표본표준편차는 81.53만원/㎡입니다. 따라서 추정 SE=81.52864…/√30=<strong>14.89만원/㎡</strong>입니다. 중간값을 반올림하지 않고 계산했습니다.</p><p>이 자료는 실제 거래 출처와 무작위 표집 설계가 확인되지 않은 교육용 예시입니다. 숫자를 계산할 수 있다는 것과 더 큰 실제 시장의 불확실성을 타당하게 추정한다는 것은 구별해야 합니다.</p><p>06장에서 n으로 나눈 기술 표준편차는 약 80.16이었습니다. 여기서는 모집단 분산을 추정하는 n−1 방식의 s를 사용합니다. 표준편차 계산의 n−1과 표준오차 계산의 √n을 혼동하지 않습니다. n=1이면 s를 계산할 수 없어 이 추정 SE도 정의되지 않습니다.</p></section>
+<section class="learn-chapter__step" id="size" data-toc-label="표본수의 효과"><p class="learn-chapter__label">표본수의 효과</p><h2>네 배의 관측으로 표준오차를 절반으로 줄입니다</h2><p>모집단의 퍼짐과 표집 방식이 같다면 SE는 √n에 반비례합니다. n을 두 배로 늘리면 약 0.707배가 되고, 네 배로 늘리면 절반이 됩니다. 정확도를 두 배 높이려면 표본도 두 배면 된다는 식으로 읽으면 안 됩니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 370" role="img" aria-labelledby="size-title size-desc"><title id="size-title">표본수와 평균의 정밀도</title><desc id="size-desc">그림 2. s=81.5286…을 고정한 가상 비교입니다. 실제로 10·120·480건을 추출한 결과가 아니며, 새 표본에서는 s도 달라질 수 있습니다.</desc><text x="24" y="28" >퍼짐 s를 고정한 표본수 비교입니다</text><text x="24" y="89" >n=10</text><rect x="145" y="70" width="360.9426865701891" height="25" fill="#2563eb" data-n="10" data-se="25.78162046929922"/><text x="515.9426865701892" y="89" >25.78</text><text x="24" y="154" >n=30</text><rect x="145" y="135" width="208.39035725332542" height="25" fill="#2563eb" data-n="30" data-se="14.885025518094672"/><text x="363.3903572533254" y="154" >14.89</text><text x="24" y="219" >n=120</text><rect x="145" y="200" width="104.19517862666271" height="25" fill="#2563eb" data-n="120" data-se="7.442512759047336"/><text x="259.1951786266627" y="219" >7.44</text><text x="24" y="284" >n=480</text><rect x="145" y="265" width="52.097589313331355" height="25" fill="#2563eb" data-n="480" data-se="3.721256379523668"/><text x="207.09758931333135" y="284" >3.72</text><text x="24" y="345" >가로축: 추정 표준오차(만원/㎡), 모두 0에서 시작</text></svg><figcaption class="learn-chart__caption">그림 2. s=81.5286…을 고정한 가상 비교입니다. 실제로 10·120·480건을 추출한 결과가 아니며, 새 표본에서는 s도 달라질 수 있습니다.</figcaption></figure><p>이 그림은 퍼짐을 고정해 표본수의 효과만 비교합니다. 실제 추가 거래에는 다른 유형이나 시점이 포함될 수 있고 표본표준편차도 변합니다. 따라서 새로 계산한 추정 SE가 매번 단조롭게 감소해야 하는 것은 아닙니다.</p><p>숫자가 30 이상이면 무조건 충분하다는 기준은 없습니다. 분포의 치우침, 극단값, 목표 정밀도와 의존성에 따라 필요한 정보량이 달라집니다. 큰 n만 보고 평균을 확정적인 시장 수준으로 읽지 않습니다.</p></section>
+<section class="learn-chapter__step" id="groups" data-toc-label="같은 n의 비교"><p class="learn-chapter__label">같은 n의 비교</p><h2>정밀도는 건수와 퍼짐에 함께 좌우됩니다</h2><p>공통 자료를 주거·상업으로 나누면 각각 15건입니다. 하지만 주거는 s=21.73, SE=5.61, 상업는 s=99.22, SE=25.62만원/㎡입니다. 건수만 같은 두 집단의 평균 정밀도가 같다고 볼 수 없습니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 325" role="img" aria-labelledby="groups-title groups-desc"><title id="groups-title">유형별 표준오차 비교</title><desc id="groups-desc">그림 3. 공통 자료의 주거·상업 각 15건을 별도로 계산했습니다. 단순 독립 표본 공식을 적용한 학습 예제이며 집단 간 차이의 유의성 검정은 아닙니다.</desc><text x="24" y="28" >건수가 같아도 자료의 퍼짐이 다를 수 있습니다</text><text x="24" y="80" >주거 n=15 · s=21.73</text><rect x="160" y="100" width="72.9259115227816" height="25" fill="#2563eb" data-group="주거" data-se="5.609685501752431"/><text x="242.9259115227816" y="120" >5.61</text><text x="24" y="180" >상업 n=15 · s=99.22</text><rect x="160" y="200" width="333.04913789705" height="25" fill="#2563eb" data-group="상업" data-se="25.61916445361923"/><text x="503.04913789705" y="220" >25.62</text><text x="24" y="300" >가로축: 추정 표준오차(만원/㎡), 모두 0에서 시작</text></svg><figcaption class="learn-chart__caption">그림 3. 공통 자료의 주거·상업 각 15건을 별도로 계산했습니다. 단순 독립 표본 공식을 적용한 학습 예제이며 집단 간 차이의 유의성 검정은 아닙니다.</figcaption></figure><p>그룹을 나누면 평균·표준편차·n을 모두 그 그룹에서 다시 계산합니다. 전체의 s를 그대로 붙이지 않습니다. 두 집단 평균의 차이를 검정하려면 차이 자체의 표준오차와 표집 관계를 검토해야 합니다. 이 그림만으로 두 평균의 차이가 통계적으로 유의하다고 판정할 수 없습니다.</p></section>
+<section class="learn-chapter__step" id="planning" data-toc-label="표본수 계획"><p class="learn-chapter__label">표본수 계획</p><h2>원하는 정밀도를 먼저 정하고 필요한 건수를 계산합니다</h2><p>계획용 모집단 표준편차를 σ₀, 목표 표준오차를 e라고 놓으면 σ₀/√n≤e에서 <strong>n≥(σ₀/e)²</strong>을 얻습니다. 건수는 정수이므로 올림합니다. σ₀는 예비조사나 관련 자료로 설정하며 불확실하면 여러 퍼짐 시나리오를 비교하는 편이 낫습니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 352" role="img" aria-labelledby="planning-title planning-desc"><title id="planning-title">목표 정밀도와 표본수 계획</title><desc id="planning-desc">그림 4. n≥(s/목표 SE)²을 올림했습니다. 목표 SE의 단위는 만원/㎡입니다. 이는 모집단 퍼짐을 학습 자료의 s로 가정한 계획 예제이며 신뢰수준을 지정한 오차한계 계산과 다릅니다.</desc><text x="24" y="28" >목표 표준오차가 작아질수록 필요한 n이 빠르게 늘어납니다</text><text x="24" y="94" >목표 SE 20</text><rect x="175" y="75" width="22.1" height="25" fill="#2563eb" data-target="20" data-required="17"/><text x="207.1" y="94" >17건</text><text x="24" y="169" >목표 SE 10</text><rect x="175" y="150" width="87.10000000000001" height="25" fill="#2563eb" data-target="10" data-required="67"/><text x="272.1" y="169" >67건</text><text x="24" y="244" >목표 SE 5</text><rect x="175" y="225" width="345.8" height="25" fill="#2563eb" data-target="5" data-required="266"/><text x="530.8" y="244" >266건</text><text x="24" y="325" >가로축: 필요 표본수 / 계획용 퍼짐 s≈81.53</text></svg><figcaption class="learn-chart__caption">그림 4. n≥(s/목표 SE)²을 올림했습니다. 목표 SE의 단위는 만원/㎡입니다. 이는 모집단 퍼짐을 학습 자료의 s로 가정한 계획 예제이며 신뢰수준을 지정한 오차한계 계산과 다릅니다.</figcaption></figure><p>목표 SE 10은 ‘오차가 반드시 ±10 이내’라는 보장이 아닙니다. 대략적인 95% 오차한계를 E로 계획하려면 정규근사와 독립 표집 조건 아래 n≈(1.96σ₀/E)²처럼 신뢰계수를 포함합니다. σ₀=80, E=10이면 약 245.86을 올려 246건입니다. σ를 추정하는 상황이나 작은 표본에는 t분포와 반복 계산 등 추가 검토가 필요합니다.</p><p>건수 계획에는 결측·탈락도 반영합니다. 분석에 필요한 유효 246건과 수집할 원래 행 수는 같지 않을 수 있습니다. 무응답이 특정 집단에 집중되는 편향은 단순히 더 모으는 것으로 해결되지 않습니다.</p></section>
+<section class="learn-chapter__step" id="interpretation" data-toc-label="SE와 신뢰구간"><p class="learn-chapter__label">SE와 신뢰구간</p><h2>SE 하나가 완성된 신뢰구간은 아닙니다</h2><p>평균±SE를 95% 신뢰구간이라고 부르지 않습니다. 정규모집단의 독립 표본에서 σ를 모를 때 평균의 t 신뢰구간은 x̄±t×s/√n 형태이며 자유도·신뢰수준에 따라 t가 달라집니다. 비정규 자료에서는 표본수와 분포 형태에 따른 근사의 적절성을 추가로 확인합니다.</p><p>SE가 작다는 것은 해당 표집 모형 아래 평균의 추정이 정밀하다는 뜻입니다. 개인 거래가 평균 근처에 모인다는 뜻도, 데이터가 정확히 입력되었다는 뜻도, 미래 가격 예측오차가 작다는 뜻도 아닙니다. 신뢰구간의 해석은 12장에서 이어집니다.</p><p>모든 값이 같으면 표본 s와 추정 SE가 0이 될 수 있습니다. 작은 표본에서 우연히 같은 값만 관측했다고 해서 모집단의 불확실성까지 0이라고 결론 내리지는 않습니다.</p></section>
+<section class="learn-chapter__step" id="design" data-toc-label="표집 설계와 데이터 품질"><p class="learn-chapter__label">표집 설계와 데이터 품질</p><h2>행 수보다 독립적인 정보가 얼마나 있는지 봅니다</h2><p>같은 거래를 여러 번 복사하거나 같은 단지의 강하게 연관된 관측을 추가하는 것은 독립적인 새 표본을 얻는 것과 다릅니다. 군집·시계열 의존성이 있으면 군집 표준오차나 설계에 맞는 방법이 필요합니다. s/√n을 그대로 사용하면 불확실성을 과소평가할 수 있습니다.</p><p>가중평균도 일반적인 단순평균과 산식이 다릅니다. 유효표본수라는 개념을 쓰기도 하지만 가중치만으로 모든 의존성이나 편향을 보정할 수는 없습니다. 거래 1건, 건물 1개, 단지 1개 중 무엇이 관측 단위인지 먼저 확인합니다.</p><p>결측값을 제외했다면 해당 변수의 유효 n을 사용합니다. 면적은 30건이고 단가는 27건만 유효하다면 단가 평균의 분모에 30을 쓰면 안 됩니다. 0과 결측도 구별해야 합니다.</p><p>유한 모집단에서 비복원 추출한 비율이 크면 10장에서 설명한 유한모집단 보정이 필요합니다. 전수 자료라도 분석 대상 기간과 기록 범위를 벗어난 미래·누락 거래까지 완전히 안다는 뜻은 아닙니다.</p></section>
+<section class="learn-chapter__step" id="practice" data-toc-label="확인 문제"><p class="learn-chapter__label">확인 문제</p><h2>정밀도와 자료의 퍼짐을 나누어 읽으세요</h2><ol class="learn-exercises"><li>s=80, n=100일 때 평균의 추정 SE는?<details><summary>답과 해설</summary><p>80/√100=8입니다. 80은 관측값의 퍼짐이고 8은 독립 표본 모형에서 평균의 표집 변동 추정치입니다.</p></details></li><li>퍼짐이 같을 때 SE를 절반으로 줄이려면 n을 몇 배로 해야 하나요?<details><summary>답과 해설</summary><p>네 배입니다. SE가 표본수의 제곱근에 반비례하기 때문입니다.</p></details></li><li>자료 30건을 복사해 120행으로 만들면 정보량이 네 배가 되나요?<details><summary>답과 해설</summary><p>아니요. 독립적인 새 관측이 아닙니다. 단순히 √120으로 나누는 계산은 정밀도를 과장합니다.</p></details></li><li>목표 SE 10이면 평균의 실제 오차가 항상 ±10 이내인가요?<details><summary>답과 해설</summary><p>아니요. SE는 반복 표집에서의 퍼짐이며 개별 표본의 오차 한계를 보장하지 않습니다.</p></details></li></ol></section>
+<section class="learn-chapter__step" id="macro" data-toc-label="CH2 Macro에서 읽기"><p class="learn-chapter__label">CH2 Macro에서 읽기</p><h2>건수·퍼짐·표집 범위를 함께 확인합니다</h2><p>CH2 Macro에서 지역이나 유형의 평균을 읽을 때는 적용한 필터, 유효 거래 건수, 표준편차와 분위수, 기간·관측 단위를 함께 확인하세요. 단가가 크게 다른 집단을 합치면 n도 커지지만 퍼짐과 분석 질문도 달라집니다.</p><p>이 장의 SE는 교재용 계산입니다. 모든 서비스 화면이 이 산식을 제공하거나 독립 표본 가정을 만족한다고 전제하지 않습니다. 시장의 구조적 차이와 개별 가격 위험을 표준오차 한 개로 요약하지 않습니다.</p><p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 통계 열기 →</a></p></section>
+<section class="learn-chapter__step" id="recap" data-toc-label="정리와 참고자료"><p class="learn-chapter__label">정리와 참고자료</p><h2>작은 SE는 조건이 명확할 때 의미가 있습니다</h2><p>표준편차는 관측값의 퍼짐, 표준오차는 통계량의 표집 변동입니다. 평균의 s/√n 계산에는 표집 가정이 필요하며 표본수만으로 대표성·정확성을 판단할 수 없습니다.</p><p>다음 <a href="/learn/stats/confidence-intervals/">12장 「점추정과 신뢰구간」</a>에서 추정치에 불확실성의 범위를 붙이는 방법을 배웁니다.</p><ul><li><a href="https://www.itl.nist.gov/div898/handbook/eda/section3/eda352.htm">NIST/SEMATECH: Confidence Limits for the Mean</a> — 평균의 표준오차와 신뢰구간의 관계.</li></ul><p class="learn-source-note">공통 30건은 출처 미확인 학습 자료입니다. 표본수 비교와 계획 예제는 별도 가정이며 실제 서비스의 정밀도나 필요 건수를 뜻하지 않습니다. 참고자료 확인: 2026-10-07.</p></section>
+</article>
 
       <nav class="learn-chapter-nav" aria-label="장 이동">
-        <a href="/learn/stats/iqr-outliers/">← 이전: 이상치와 IQR</a>
-        <a href="/learn/stats/correlation/">다음: 상관관계 →</a>
-      </nav>
+<a href="/learn/stats/sampling-distributions/">← 10. 표본분포와 중심극한정리</a>
+<a href="/learn/stats/confidence-intervals/">12. 점추정과 신뢰구간 →</a>
+</nav>
 
       <footer class="footer">
         <nav class="footer__links"><a href="https://ch2data.com/">홈</a><a href="/learn/stats/">통계학 &amp; 데이터 분석</a></nav>
         <p>© CH2 DATA</p>
       </footer>
     </div>
-    <script src="/learn/stats/learn-stats-toc.js" defer></script>
+    <script src="/learn/stats/learn-stats-toc.js?v=20261007-2" defer></script>
   </body>
 </html>

@@ -1,0 +1,48 @@
+{
+  "description": "별도 가상 자료. 공통 거래 자료나 운영 성능 추정이 아님.",
+  "train": [
+    10,
+    10,
+    10,
+    10,
+    20,
+    60
+  ],
+  "validation": [
+    11,
+    12,
+    13
+  ],
+  "test": [
+    9,
+    11,
+    16
+  ],
+  "candidates": {
+    "mean": {
+      "value": 20,
+      "validation_MAE": 8
+    },
+    "median": {
+      "value": 10.0,
+      "validation_MAE": 2.0
+    }
+  },
+  "selected": "median",
+  "refit_value": 11,
+  "test_MAE": 2.3333333333333335,
+  "scaling": {
+    "train": [
+      40,
+      60,
+      80
+    ],
+    "held_out": 140,
+    "train_mean": 60,
+    "train_sd": 16.32993161855452,
+    "train_z": 4.898979485566356,
+    "all_mean": 80,
+    "all_sd": 37.416573867739416,
+    "leaked_z": 1.6035674514745462
+  }
+}

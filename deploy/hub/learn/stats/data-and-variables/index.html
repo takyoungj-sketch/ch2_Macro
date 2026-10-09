@@ -4,10 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>01. 데이터와 변수 | 통계학 &amp; 데이터 분석</title>
-    <meta name="description" content="표본·모집단, 연속형·범주형 변수. CH2 Macro의 거래가격·면적·용도지역·지목." />
+    <meta
+      name="description"
+      content="관측 단위, 변수 유형과 측정척도, 단위와 결측값을 예제와 네 개의 그림으로 이해합니다."
+    />
     <link rel="canonical" href="https://ch2data.com/learn/stats/data-and-variables/" />
     <link rel="stylesheet" href="/style.css" />
-    <link rel="stylesheet" href="/learn/stats/learn-stats.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261007-2" />
   </head>
   <body>
     <div class="page">
@@ -16,187 +19,24 @@
           <a href="https://ch2data.com/">CH2 DATA</a> ·
           <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
         </p>
-        <p class="hero__eyebrow">데이터 이해 · 01</p>
-        <h1 class="hero__title">데이터와 변수</h1>
+        <p class="hero__eyebrow">I. 데이터와 기술통계</p>
+        <h1 class="hero__title">01. 데이터와 변수</h1>
       </header>
 
-      <article class="learn-chapter" aria-label="데이터와 변수">
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">① 한 줄 정의</p>
-          <h2>Macro 화면에 보이는 숫자의 출처</h2>
-          <p>
-            Macro 토지·집합·복합 화면에 들어가면 거래 목록, 평균단가, 용도지역×지목 같은 숫자들이
-            나옵니다. 이 숫자들은 공중에 떠 있는 값이 아니라 <strong>거래 한 건 한 건에 붙어 있는
-            정보</strong>를 모아 계산한 결과입니다.
-          </p>
-          <p>
-            그래서 「평균단가가 왜 이렇게 나왔지?」를 이해하려면 먼저 각 거래에 어떤 항목(변수)이
-            있고, 우리가 지금 보고 있는 표본(데이터)이 무엇인지 구분할 수 있어야 합니다. 이 페이지는
-            그 출발점입니다.
-          </p>
-        </section>
-
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">② 쉽게 이해하기</p>
-          <h2>토지 거래 한 건을 펼쳐 보면</h2>
-          <p>
-            부동산 거래자료 한 건에는 거래가격, 면적, 용도지역, 지목 등 여러 정보가 들어 있습니다.
-            이처럼 분석의 대상이 되는 개별 항목을 <strong>변수</strong>라고 부릅니다. 그리고 선택한
-            지역·기간에서 모아 온 거래 전체를 <strong>데이터</strong>(또는 <strong>표본</strong>)라고
-            부릅니다.
-          </p>
-          <p>아래는 같은 구역에서 모은 세 건의 예시입니다.</p>
-          <ul>
-            <li>거래 1 — 2.4억 · 330㎡ · 2종일반주거지역 · 대</li>
-            <li>거래 2 — 1.8억 · 280㎡ · 2종일반주거지역 · 대</li>
-            <li>거래 3 — 9.5억 · 1,200㎡ · 상업지역 · 대</li>
-          </ul>
-          <p>
-            세 건 모두 「토지 매매」라는 같은 거래 유형이지만, 변수 값은 서로 다릅니다. Macro에서
-            <strong>거래가격·면적</strong>은 숫자로 비교할 수 있어 <strong>연속형</strong>이고,
-            <strong>용도지역·지목</strong>은 이름으로 구분하는 <strong>범주형</strong>입니다.
-          </p>
-          <p>
-            필터에서 「2종일반주거지역×대」만 고르면 이 예시에서는 거래 1·2만 남습니다. 이때
-            Macro가 보여 주는 평균단가·건수는 <strong>남은 표본</strong>에 대한 요약입니다.
-          </p>
-        </section>
-
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">③ 왜 변수 종류를 구분할까?</p>
-          <h2>연속형과 범주형</h2>
-          <p>
-            연속형 변수는 평균·분산·회귀처럼 숫자 연산을 적용할 수 있는 경우입니다. ㎡당 단가의
-            평균이 120만원인 것처럼 말할 수 있습니다. 범주형 변수는 그룹을 나누는 용도입니다.
-            「상업지역 거래만」「대 지목만」처럼 체크박스·칩으로 고르는 대부분의 필터 부분이
-            범주형입니다.
-          </p>
-          <p>
-            회귀실험에서는 범주형을 더미 변수(0/1)로 바꿔 「이 조건이냐 아니냐」를 숫자로
-            학습합니다. 반면 범주형에 그냥 평균을 내면 「평균 용도지역」처럼 해석할 수 없는 값이
-            나옵니다.
-          </p>
-          <p>
-            Macro 화면에서 어떤 칸은 평균·중위값이고, 어떤 칸은 건수·체크로 둘러싸이는 이유가
-            여기에 있습니다. 변수 종류를 알면, 각 숫자를 어떻게 읽어야 하는지 갈림길이 보입니다.
-          </p>
-        </section>
-
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">④ CH2 Macro에서는?</p>
-          <h2>화면 표와 필터</h2>
-          <p>
-            토지 <strong>기본통계</strong>·<strong>용도지역×지목</strong> 표의 각 칸은, 선택한
-            범주 조합(용도지역×지목 등)에 한정된 거래들의 연속형 변수 요약입니다. 거래 목록의
-            <strong>열</strong>은 변수 이름, 각 <strong>행</strong>은 거래 한 건입니다.
-          </p>
-          <p>
-            집합·복합에서는 면적·층·연식·유형 등 변수를 회귀실험의 설명변수로 고릅니다. 화면
-            오른쪽이나 하단에 보이는 <strong>건수(n)</strong>는 지금 표본에 몇 건이 들어 있는지
-            알려 줍니다. 필터를 바꾸면 표본이 바뀌고, 그에 따라 평균·회귀 결과도 함께 바뀝니다.
-          </p>
-          <p>
-            모집단은 이론적으로 관심 있는 전체 시장이고, Macro에 보이는 것은 실제로 접근 가능한
-            <strong>공개 실거래 표본</strong>입니다. 표본에 없는 거래·시점은 숫자에 자동으로
-            포함되지 않습니다.
-          </p>
-        </section>
-
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">⑤ Macro 화면</p>
-          <h2>용도지역×지목 표에서 변수 읽기</h2>
-          <p>
-            아래는 토지 Macro <strong>용도지역×지목</strong> 표의 구조를 단순화한 예시입니다. 행·열은
-            범주형 변수, 각 칸의 평균·건수는 연속형·개수 요약입니다.
-          </p>
-          <figure class="learn-capture learn-macro-mock" aria-label="Macro 토지 용도지역×지목 표 예시">
-            <div class="learn-macro-mock__bar">
-              <span><strong>토지</strong> · 기본통계</span>
-              <span>지역: 청주시 흥덕구</span>
-              <span>창: 3년 롤링</span>
-              <span>n=847</span>
-            </div>
-            <div class="learn-macro-mock__body">
-              <table>
-                <thead>
-                  <tr>
-                    <th>용도지역</th>
-                    <th>지목</th>
-                    <th>건수</th>
-                    <th>평균(만/㎡)</th>
-                    <th>중위(만/㎡)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr class="is-highlight">
-                    <td>2종일반주거</td>
-                    <td>대</td>
-                    <td>128</td>
-                    <td>142.3</td>
-                    <td>118.6</td>
-                  </tr>
-                  <tr>
-                    <td>2종일반주거</td>
-                    <td>전</td>
-                    <td>54</td>
-                    <td>89.1</td>
-                    <td>82.4</td>
-                  </tr>
-                  <tr>
-                    <td>상업지역</td>
-                    <td>대</td>
-                    <td>31</td>
-                    <td>318.7</td>
-                    <td>265.0</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <figcaption class="learn-capture__caption">
-              예시 화면 · 청주시 흥덕구 · 3년 롤링. 「2종일반주거×대」 칸을 누르면 해당 거래만
-              필터된 목록·추이로 이어집니다.
-            </figcaption>
-          </figure>
-        </section>
-
-        <aside class="learn-caution" aria-label="주의">
-          <p class="learn-caution__title">주의</p>
-          <p>
-            실거래 데이터는 그 시장의 모든 거래가 아니라 공개된 표본입니다. 표본에 없는 거래나
-            시점은 통계에 자동으로 들어가지 않습니다. 건수가 적을 때(예: 10건 미만)는 평균·분위
-            분석을 매우 조심해야 합니다.
-          </p>
-        </aside>
-
-        <details class="learn-more">
-          <summary>조금 더 알아보기</summary>
-          <div class="learn-more__body">
-            <h3>표본과 모집단</h3>
-            <p>
-              모집단은 관심 있는 전체 집합이고, 표본은 그중에서 실제로 관측한 일부입니다. 표본 평균과
-              모집단 평균은 다를 수 있습니다. 거래 건수가 많을수록 표본 통계는 해당 시장을 더
-              안정적으로 반영합니다. (→ <a href="/learn/stats/sample-size/">표본수</a>)
-            </p>
-            <h3>연속형·범주형·순서형</h3>
-            <p>
-              순서형(예: 층수의 고저)은 범주형이지만 크기 비교가 가능한 경우입니다. Macro 1차
-              화면에서는 연속형·범주형 구분만으로도 대부분의 숫자를 해석할 수 있습니다.
-            </p>
-          </div>
-        </details>
-
-        <p class="learn-macro-cta">
-          <a href="https://macro.ch2data.com/land/">CH2 Macro에서 확인하기 →</a>
-          <span style="display: block; margin-top: 0.35rem; font-size: 0.8125rem; color: #64748b"
-            >토지 · 기본통계 · 용도지역×지목</span
-          >
-        </p>
-      </article>
+      <article class="learn-chapter learn-chapter--expanded" aria-label="데이터와 변수"><section class="learn-chapter__step" id="quick-start" data-toc-label="핵심 이해"><p class="learn-chapter__label">핵심 이해</p><h2>통계는 표의 의미를 확인하는 데서 시작합니다</h2><p>평균을 계산하기 전에 먼저 물어야 할 질문이 있습니다. <strong>무엇을 한 건으로 세었으며, 각 열의 값은 무엇을 뜻할까요?</strong> 같은 숫자라도 면적인지, 지역을 구분하는 코드인지에 따라 계산과 해석이 달라집니다.</p><p>이 장을 읽으면 관측 단위와 변수를 구별하고, 변수의 유형에 맞는 요약 방법을 선택하며, 단위와 결측값을 확인할 수 있습니다. 선수 지식은 필요하지 않습니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 255" role="img" aria-labelledby="data-map-title data-map-desc"><title id="data-map-title">표의 행과 열 읽기</title><desc id="data-map-desc">1번, 7번, 14번의 구분·면적·층·단가. 7번 행을 강조했습니다.</desc><text x="24" y="28" >한 행: 관측 한 건 / 한 열: 같은 특성</text><rect x="24" y="48" width="115" height="35" rx="6" fill="#eff6ff" stroke="#cbd5e1"/><text x="33" y="71" >번호</text><rect x="145" y="48" width="115" height="35" rx="6" fill="#eff6ff" stroke="#cbd5e1"/><text x="154" y="71" >구분</text><rect x="266" y="48" width="115" height="35" rx="6" fill="#eff6ff" stroke="#cbd5e1"/><text x="275" y="71" >면적(㎡)</text><rect x="387" y="48" width="115" height="35" rx="6" fill="#eff6ff" stroke="#cbd5e1"/><text x="396" y="71" >층</text><rect x="508" y="48" width="115" height="35" rx="6" fill="#eff6ff" stroke="#cbd5e1"/><text x="517" y="71" >단가(만원/㎡)</text><rect x="24" y="90" width="115" height="33" rx="6" fill="#ffffff" stroke="#cbd5e1"/><text x="33" y="112" >1</text><rect x="145" y="90" width="115" height="33" rx="6" fill="#ffffff" stroke="#cbd5e1"/><text x="154" y="112" >주거</text><rect x="266" y="90" width="115" height="33" rx="6" fill="#ffffff" stroke="#cbd5e1"/><text x="275" y="112" >180</text><rect x="387" y="90" width="115" height="33" rx="6" fill="#ffffff" stroke="#cbd5e1"/><text x="396" y="112" >2</text><rect x="508" y="90" width="115" height="33" rx="6" fill="#ffffff" stroke="#cbd5e1"/><text x="517" y="112" >118</text><rect x="24" y="129" width="115" height="33" rx="6" fill="#fff7ed" stroke="#cbd5e1"/><text x="33" y="151" >7</text><rect x="145" y="129" width="115" height="33" rx="6" fill="#fff7ed" stroke="#cbd5e1"/><text x="154" y="151" >상업</text><rect x="266" y="129" width="115" height="33" rx="6" fill="#fff7ed" stroke="#cbd5e1"/><text x="275" y="151" >22</text><rect x="387" y="129" width="115" height="33" rx="6" fill="#fff7ed" stroke="#cbd5e1"/><text x="396" y="151" >1</text><rect x="508" y="129" width="115" height="33" rx="6" fill="#fff7ed" stroke="#cbd5e1"/><text x="517" y="151" >480</text><rect x="24" y="168" width="115" height="33" rx="6" fill="#ffffff" stroke="#cbd5e1"/><text x="33" y="190" >14</text><rect x="145" y="168" width="115" height="33" rx="6" fill="#ffffff" stroke="#cbd5e1"/><text x="154" y="190" >상업</text><rect x="266" y="168" width="115" height="33" rx="6" fill="#ffffff" stroke="#cbd5e1"/><text x="275" y="190" >250</text><rect x="387" y="168" width="115" height="33" rx="6" fill="#ffffff" stroke="#cbd5e1"/><text x="396" y="190" >2</text><rect x="508" y="168" width="115" height="33" rx="6" fill="#ffffff" stroke="#cbd5e1"/><text x="517" y="190" >62</text><text x="24" y="232" >7번의 모든 값은 같은 관측을 설명합니다. 번호는 식별자입니다.</text></svg><figcaption class="learn-chart__caption">그림 1. 공통 학습 예시 30건 중 3건. 번호는 관측을 찾는 표식이며 거래 시각이 아닙니다.</figcaption></figure></section>
+<section class="learn-chapter__step" id="observations" data-toc-label="관측 단위와 변수"><p class="learn-chapter__label">관측 단위와 변수</p><h2>한 행이 무엇을 나타내는지 먼저 정합니다</h2><p><strong>데이터(data)</strong>는 관찰하거나 측정해 기록한 값입니다. 통계 분석에서는 이를 일정한 구조의 표로 정리하는 경우가 많습니다. <strong>관측 단위(observational unit)</strong>는 값을 기록하는 대상이며, <strong>변수(variable)</strong>는 그 대상에서 기록한 특성입니다. 특정 행과 열에 기록된 값은 그 변수의 관측값입니다.</p><p>거래 자료라면 한 행을 거래 한 건으로 정할 수 있습니다. 건물 자료라면 한 행이 건물 하나이고, 지역별 연간 통계라면 ‘한 지역의 한 해’가 한 행입니다. 같은 건물이 두 번 거래되었다면 거래는 두 건이지만 건물은 하나입니다. 따라서 행의 수가 곧 서로 다른 건물 수라는 뜻은 아닙니다.</p><p>그림 1에서 7번의 구분은 상업, 면적은 22㎡, 층은 1, 단가는 480만원/㎡입니다. 이 네 값은 같은 관측을 설명합니다. 번호는 관측을 찾기 위한 식별자이며, 번호가 크다고 면적이나 가격이 크지는 않습니다.</p><aside class="learn-caution"><p class="learn-caution__title">분석 단위 확인</p><p>거래를 건물별로 묶어 평균을 내면 새로운 표의 관측 단위는 건물이 됩니다. 거래가 많은 건물의 영향도 달라질 수 있습니다. 표를 합치거나 묶기 전후에는 한 행의 의미를 다시 확인하세요.</p></aside></section>
+<section class="learn-chapter__step" id="types" data-toc-label="변수의 유형"><p class="learn-chapter__label">변수의 유형</p><h2>이름을 구분하는 값과 양을 재는 값을 나눕니다</h2><p><strong>범주형 변수</strong>는 대상을 종류로 구분합니다. 이 예제의 주거·상업이 해당합니다. 범주별로 몇 건인지, 전체 중 어느 정도인지 요약할 수 있습니다. <strong>수치형 변수</strong>는 크기를 세거나 측정한 값입니다. 면적과 단가는 수치형 변수입니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 240" role="img" aria-labelledby="category-count-title category-count-desc"><title id="category-count-title">범주별 건수</title><desc id="category-count-desc">주거 15건, 상업 15건으로 각각 전체의 50%입니다.</desc><text x="24" y="27" >구분별 관측 수 (전체 30건)</text><text x="24" y="96" >주거</text><rect x="100" y="76" width="390" height="28" rx="6" fill="#93c5fd" stroke="#cbd5e1"/><text x="505" y="97" >15건 · 50%</text><text x="24" y="154" >상업</text><rect x="100" y="134" width="390" height="28" rx="6" fill="#93c5fd" stroke="#cbd5e1"/><text x="505" y="155" >15건 · 50%</text><line x1="100" y1="190" x2="490" y2="190" stroke="#64748b"/><text x="100" y="212" text-anchor="middle">0</text><text x="230" y="212" text-anchor="middle">5</text><text x="360" y="212" text-anchor="middle">10</text><text x="490" y="212" text-anchor="middle">15</text><text x="545" y="212" >건수(건)</text></svg><figcaption class="learn-chart__caption">그림 2. 공통 학습 예시의 구분별 빈도. 범주 이름의 평균 대신 건수와 비율을 읽습니다.</figcaption></figure><p>수치형 변수는 다시 세어서 얻는 <strong>이산형</strong>과 측정해서 얻는 <strong>연속형</strong>으로 구분합니다. 거래 건수는 0건, 1건, 2건처럼 정수로 셉니다. 면적은 측정 정밀도에 따라 84㎡, 84.2㎡, 84.23㎡처럼 표현할 수 있습니다. 자료에 정수로 기록되어 있다는 이유만으로 면적을 이산형으로 바꾸지는 않습니다.</p><p>층은 보통 정수로 기록되지만 단순한 개수와는 다릅니다. 지하층 표기, 빠진 층 번호, 실제 높이의 차이가 있을 수 있습니다. 층 번호를 높이의 대용 변수로 쓰려면 기록 규칙과 해석을 함께 확인해야 합니다.</p><p>숫자로 저장된 법정동 코드도 범주를 식별하는 값입니다. 코드의 합이나 평균에는 지역의 특성을 설명하는 의미가 없습니다. 반대로 범주를 0과 1로 표시한 지시변수는 평균이 ‘1로 표시한 범주의 비율’이라는 의미를 갖습니다. 숫자 모양이 아니라 <strong>값을 어떻게 정의했는지</strong>가 기준입니다.</p></section>
+<section class="learn-chapter__step" id="scales" data-toc-label="측정척도"><p class="learn-chapter__label">측정척도</p><h2>어떤 비교가 의미 있는지 살펴봅니다</h2><p>측정척도는 값 사이에서 어떤 비교가 가능한지를 구분합니다. 범주형·수치형이 값의 성격을 나눈다면, 척도는 순서·차이·비율의 의미를 더 자세히 살펴보는 기준입니다.</p><div class="learn-data learn-data--full"><table><caption>측정척도와 해석 가능한 비교</caption><thead><tr><th scope="col">척도</th><th scope="col">예</th><th scope="col">읽을 수 있는 의미</th></tr></thead><tbody><tr><th scope="row">명목</th><td>용도 구분</td><td>같은 종류인지 다른 종류인지</td></tr><tr><th scope="row">서열</th><td>낮음·보통·높음</td><td>순서. 단계 사이의 간격은 보장되지 않음</td></tr><tr><th scope="row">등간</th><td>섭씨온도</td><td>차이. 20℃가 10℃보다 두 배 덥다는 뜻은 아님</td></tr><tr><th scope="row">비율</th><td>면적</td><td>차이와 비율. 100㎡는 50㎡의 두 배 면적</td></tr></tbody></table></div><p>예를 들어 상태 등급에 1·2·3을 붙였다고 해서 1에서 2로의 변화와 2에서 3으로의 변화가 같아지는 것은 아닙니다. 등급 평균을 제시하려면 같은 간격으로 해석할 수 있는지 근거가 필요합니다. 척도는 계산을 기계적으로 금지하는 규칙이 아니라, 계산 결과에 붙이는 의미를 점검하는 기준입니다.</p></section>
+<section class="learn-chapter__step" id="units" data-toc-label="단위와 자료 사전"><p class="learn-chapter__label">단위와 자료 사전</p><h2>숫자 옆의 단위도 데이터의 일부입니다</h2><p>면적 100이라는 값은 100㎡인지 100평인지 알아야 해석할 수 있습니다. 단가도 만원/㎡와 만원/평이 다릅니다. 서로 다른 단위의 숫자를 같은 열에 섞으면 평균과 그래프가 모두 왜곡됩니다. 단위가 같아도 전용면적과 연면적처럼 측정 대상이 다를 수 있습니다.</p><p>다음 산점도는 공통 예시의 면적을 가로축, 단가를 세로축에 놓았습니다. 두 값의 단위는 다르지만 각 축을 따로 정의했으므로 한 관측의 두 특성을 함께 살펴볼 수 있습니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 350" role="img" aria-labelledby="numeric-scatter-title numeric-scatter-desc"><title id="numeric-scatter-title">면적과 단가의 산점도</title><desc id="numeric-scatter-desc">공통 예시 30건을 점으로 표시했습니다. 주황색 7번은 면적 22제곱미터, 단가 480만원입니다.</desc><text x="24" y="26" >두 수치형 변수: 면적과 단가</text><text x="24" y="51" >단가(만원/㎡)</text><line x1="70" y1="285.0" x2="590" y2="285.0" stroke="#e2e8f0"/><text x="59" y="290.0" text-anchor="end">0</text><line x1="70" y1="243.0" x2="590" y2="243.0" stroke="#e2e8f0"/><text x="59" y="248.0" text-anchor="end">100</text><line x1="70" y1="201.0" x2="590" y2="201.0" stroke="#e2e8f0"/><text x="59" y="206.0" text-anchor="end">200</text><line x1="70" y1="159.0" x2="590" y2="159.0" stroke="#e2e8f0"/><text x="59" y="164.0" text-anchor="end">300</text><line x1="70" y1="117.0" x2="590" y2="117.0" stroke="#e2e8f0"/><text x="59" y="122.0" text-anchor="end">400</text><line x1="70" y1="75.0" x2="590" y2="75.0" stroke="#e2e8f0"/><text x="59" y="80.0" text-anchor="end">500</text><text x="70.0" y="309" text-anchor="middle">0</text><text x="230.0" y="309" text-anchor="middle">100</text><text x="390.0" y="309" text-anchor="middle">200</text><text x="550.0" y="309" text-anchor="middle">300</text><circle cx="358.0" cy="235.44" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="222.0" cy="255.18" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="166.0" cy="214.44" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="454.0" cy="243.84" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="134.0" cy="186.3" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="326.0" cy="240.9" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="105.2" cy="83.4" r="5" fill="#d97706" fill-opacity="0.8"/><circle cx="566.0" cy="249.72" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="246.0" cy="221.16" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="262.0" cy="231.24" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="390.0" cy="246.78" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="190.0" cy="196.8" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="294.0" cy="237.96" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="470.0" cy="258.96" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="206.0" cy="224.1" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="158.0" cy="211.5" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="374.0" cy="242.16" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="174.0" cy="184.2" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="182.0" cy="227.04" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="146.8" cy="206.04000000000002" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="422.0" cy="248.04" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="214.0" cy="229.56" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="310.0" cy="234.6" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="126.0" cy="172.44" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="486.0" cy="252.24" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="342.0" cy="232.92000000000002" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="230.0" cy="236.7" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="114.80000000000001" cy="217.8" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="278.0" cy="245.1" r="5" fill="#2563eb" fill-opacity="0.8"/><circle cx="198.0" cy="239.64" r="5" fill="#2563eb" fill-opacity="0.8"/><text x="120" y="74" >7번: 22㎡, 480만원/㎡</text><text x="510" y="335" >면적(㎡)</text></svg><figcaption class="learn-chart__caption">그림 3. 각 점은 한 관측입니다. 면적은 가로 위치, 단가는 세로 위치로 표현합니다. 관계의 원인이나 실제 시장의 가격 수준을 뜻하지 않습니다.</figcaption></figure><p><strong>자료 사전</strong>에는 변수 이름, 정의, 단위, 허용값, 결측 표기를 기록합니다. 예를 들어 ‘면적’이라는 이름만 적기보다 ‘거래 대상 면적, ㎡, 미확인은 빈칸’처럼 적어 두면 다른 사람이 표를 읽을 때도 의미가 유지됩니다. 분석 전에 자료의 정의가 충분하지 않다면 그 한계를 먼저 기록해야 합니다.</p><details class="learn-more"><summary>이 장에서 사용한 자료와 계산 확인</summary><div class="learn-more__body"><p>출처는 프로젝트 학습계획 §16.4의 ‘흥덕 예시 30건’입니다. 실제 거래 원천은 확인되지 않았으므로 이 장에서는 학습 예시로만 사용합니다. 거래 시점·면적 기준 등이 확인된 실제 시장 자료로 해석하지 않습니다.</p><p>주거 15건, 상업 15건이며 각각 15÷30=50%입니다. 면적의 최솟값·최댓값은 22·310㎡, 단가는 62·480만원/㎡입니다. 산점도에는 30개 관측을 모두 표시했습니다.</p><p><a href="../example-data.json">공통 예시 원자료(JSON)</a>에서 값을 확인할 수 있습니다. 그림 4의 결측 예제는 별도의 가상 자료입니다.</p></div></details></section>
+<section class="learn-chapter__step" id="missing" data-toc-label="결측값과 자료 품질"><p class="learn-chapter__label">결측값과 자료 품질</p><h2>모르는 값은 0과 다릅니다</h2><p><strong>결측값(missing value)</strong>은 기록되어야 할 값을 알 수 없거나 사용할 수 없는 상태입니다. 가격이 비어 있다는 사실은 가격이 0이라는 뜻이 아닙니다. 미조사, 입력 누락, 해당 없음도 가능한 한 구분해서 기록해야 합니다.</p><p>단가가 100, 120, 미확인인 가상 자료를 생각해 봅시다. 확인된 두 값의 평균은 (100+120)÷2=110입니다. 미확인을 0으로 바꾸면 (100+120+0)÷3≈73.3으로 낮아집니다. 이는 새로운 가격을 관측한 결과가 아니라 임의로 넣은 값 때문에 생긴 차이입니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 260" role="img" aria-labelledby="missing-values-title missing-values-desc"><title id="missing-values-title">결측 처리에 따른 평균 비교</title><desc id="missing-values-desc">100, 120, 결측의 평균은 관측 2건에서 110. 결측을 0으로 바꾸면 73.3이 됩니다.</desc><text x="24" y="27" >결측값을 0으로 바꾸면 요약값도 바뀝니다</text><text x="24" y="83" >관측된 2건</text><rect x="155" y="65" width="396" height="28" rx="6" fill="#93c5fd" stroke="#cbd5e1"/><text x="551" y="114" text-anchor="end">평균 110</text><text x="24" y="150" >0으로 채운 3건</text><rect x="155" y="132" width="264" height="28" rx="6" fill="#cbd5e1" stroke="#cbd5e1"/><text x="419" y="181" text-anchor="end">평균 73.3</text><text x="155" y="220" >0</text><text x="515" y="220" >100</text><text x="510" y="242" >단가(만원/㎡)</text></svg><figcaption class="learn-chart__caption">그림 4. 결측 설명을 위한 별도 가상 자료: 100, 120, 미확인. 공통 예시 30건과 다른 자료입니다. 막대 길이는 평균에 비례합니다.</figcaption></figure><p>그렇다고 결측 행을 언제나 삭제하면 되는 것도 아닙니다. 특정 유형의 값이 더 자주 누락된다면 남은 자료의 구성이 달라집니다. 결측의 수와 이유, 계산에 실제로 사용한 건수를 함께 확인하고, 처리 방법에 따른 결과 차이를 점검해야 합니다.</p><p>중복 기록도 같은 원칙으로 살펴봅니다. 값이 같다는 이유만으로 서로 다른 거래를 삭제해서는 안 되며, 같은 거래가 두 번 들어온 것인지 식별 정보와 기록 과정을 확인해야 합니다.</p></section>
+<section class="learn-chapter__step" id="practice" data-toc-label="확인 문제"><p class="learn-chapter__label">확인 문제</p><h2>표의 의미를 직접 설명해 보세요</h2><ol class="learn-exercises"><li>주거를 1, 상업을 2로 저장했습니다. 이 코드의 평균 1.5를 ‘중간 용도’라고 해석할 수 있을까요?<details><summary>답과 해설</summary><p>아니요. 1과 2는 이름을 바꿔 적은 표식입니다. 두 용도의 중간을 측정한 값이 아닙니다. 코드 대신 범주별 건수나 비율을 제시합니다.</p></details></li><li>한 건물이 두 번 거래되어 표에 두 행이 있습니다. 표본은 건물 두 개인가요?<details><summary>답과 해설</summary><p>관측 단위가 거래라면 거래 두 건, 건물로 세면 건물 하나입니다. 같은 건물의 반복 거래는 서로 독립적이지 않을 수 있으므로 이후 추론이나 검증에서도 구분해야 합니다.</p></details></li><li>면적 84와 84.00은 변수 유형이 다른가요? 면적이 빈칸인 행은 0㎡로 읽어도 될까요?<details><summary>답과 해설</summary><p>표시 자릿수만으로 변수 유형은 바뀌지 않습니다. 면적은 측정값입니다. 빈칸은 정의된 결측 표기를 확인해야 하며, 실제로 0㎡라는 관측 근거 없이 0을 넣어서는 안 됩니다.</p></details></li></ol></section>
+<section class="learn-chapter__step" id="macro" data-toc-label="CH2 Macro에서 읽기"><p class="learn-chapter__label">CH2 Macro에서 읽기</p><h2>요약표의 행과 원자료의 행을 구별합니다</h2><p>토지 기본통계의 용도지역×지목 표는 거래를 범주별로 묶어 요약한 표입니다. 요약표의 한 칸이 원자료의 거래 한 건은 아닙니다. 해당 범주에 포함된 거래들의 건수와 단가 요약을 읽는 자리입니다.</p><figure class="learn-capture"><img src="../assets/captures/land-heungdeok-stats.png" loading="lazy" alt="CH2 Macro 토지 기본통계의 용도지역과 지목별 요약표"/><figcaption class="learn-capture__caption">기존 로컬 화면 캡처: 토지 · 청주시 흥덕구 · 5년 롤링. 이 장의 공통 예시 30건과 다른 자료이며 현재 운영 수치를 뜻하지 않습니다.</figcaption></figure><p>표를 볼 때는 먼저 어떤 지역·기간·유형이 선택되었는지 확인하세요. 이어서 건수가 거래 수인지 다른 단위의 수인지, 단가의 면적 기준과 단위가 무엇인지 읽으면 숫자를 해석할 준비가 됩니다.</p><p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 기본통계 열기 →</a></p></section>
+<section class="learn-chapter__step" id="recap" data-toc-label="정리와 참고자료"><p class="learn-chapter__label">정리와 참고자료</p><h2>무엇을 세었고 무엇을 측정했는지 확인하세요</h2><p>분석의 출발점은 관측 단위, 변수의 정의, 단위와 결측 표기를 확인하는 일입니다. 범주형 변수는 종류별 건수와 비율로, 수치형 변수는 크기와 퍼짐으로 살펴봅니다. 숫자로 기록되어 있어도 식별 코드에는 크기나 평균의 의미가 없을 수 있습니다.</p><p>다음 주제는 이 자료가 어떤 전체에서 어떻게 모였는지입니다. <a href="/learn/stats/population-and-sampling/">02장 ‘모집단과 표본, 자료 수집과 편향’</a>에서 자료가 모인 과정과 해석 범위를 살펴봅니다.</p><ul><li><a href="https://openstax.org/books/introductory-statistics-2e/pages/1-2-data-sampling-and-variation-in-data-and-sampling">OpenStax, Introductory Statistics 2e §1.2</a> — 범주형·수치형, 이산형·연속형의 구분 참고.</li><li><a href="https://openstax.org/books/introductory-statistics-2e/pages/1-3-frequency-frequency-tables-and-levels-of-measurement">OpenStax, Introductory Statistics 2e §1.3</a> — 빈도와 측정척도 참고.</li></ul><p class="learn-source-note">본문과 그림은 이 과정의 예제에 맞춰 새로 작성했습니다. 참고자료 확인: 2026-10-07.</p></section></article>
 
       <nav class="learn-chapter-nav" aria-label="장 이동">
-        <a href="/learn/stats/">← 로드맵</a>
-        <a href="/learn/stats/mean-and-median/">다음: 평균과 중앙값 →</a>
-      </nav>
+<a href="/learn/stats/">← 전체 과정</a>
+<a href="/learn/stats/population-and-sampling/">02. 모집단과 표본, 자료 수집과 편향 →</a>
+</nav>
 
       <footer class="footer">
         <nav class="footer__links">
@@ -206,6 +46,6 @@
         <p>© CH2 DATA</p>
       </footer>
     </div>
-    <script src="/learn/stats/learn-stats-toc.js" defer></script>
+    <script src="/learn/stats/learn-stats-toc.js?v=20261007-2" defer></script>
   </body>
 </html>

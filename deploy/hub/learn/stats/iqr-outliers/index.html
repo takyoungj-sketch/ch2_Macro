@@ -3,11 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>05. 이상치와 IQR | 통계학 &amp; 데이터 분석</title>
-    <meta name="description" content="IQR 1.5·2·3 배수와 이상치 제거. CH2 Macro 필터." />
+    <title>07. 이상치와 IQR | 통계학 &amp; 데이터 분석</title>
+    <meta
+      name="description"
+      content="IQR 울타리의 계산, 배수와 분위수 관례, 집단별 비교와 이상치 처리 절차를 그림과 예제로 익힙니다."
+    />
     <link rel="canonical" href="https://ch2data.com/learn/stats/iqr-outliers/" />
     <link rel="stylesheet" href="/style.css" />
-    <link rel="stylesheet" href="/learn/stats/learn-stats.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261007-2" />
   </head>
   <body>
     <div class="page">
@@ -16,116 +19,32 @@
           <a href="https://ch2data.com/">CH2 DATA</a> ·
           <a href="/learn/stats/">통계학 &amp; 데이터 분석</a>
         </p>
-        <p class="hero__eyebrow">기술통계 · 05</p>
-        <h1 class="hero__title">이상치와 IQR</h1>
+        <p class="hero__eyebrow">I. 데이터와 기술통계</p>
+        <h1 class="hero__title">07. 이상치와 IQR</h1>
       </header>
 
-      <article class="learn-chapter" aria-label="이상치와 IQR">
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">① 한 줄 정의</p>
-          <h2>통계에서 특이한 거래를 다루는 방법</h2>
-          <p>
-            실거래 목록에는 주변 거래와 비교해 단가가 매우 높거나 낮은 건이 섞여 있습니다.
-            <strong>IQR(사분위 범위)</strong>는 중간 50%의 퍼짐(Q3−Q1)을 잡고, 이를 기준으로
-            <strong>이상치</strong> 후보를 걸러 낼 수 있습니다.
-          </p>
-        </section>
-
-        <section class="learn-chapter__step" id="iqr-multiplier">
-          <p class="learn-chapter__label">② 쉽게 이해하기</p>
-          <h2>IQR의 1.5 · 2 · 3 배수</h2>
-          <p>
-            흥덕구 2종일반×대에서 Q1=80만, Q3=180만이면 IQR=100만입니다. <strong>1.5배</strong> 기준
-            상한은 180+150=330만원입니다. 330만을 넘는 거래는 이상치 후보가 됩니다. Macro에서는
-            <strong>1.5 · 2 · 3</strong> 중 선택합니다. 배수가 클수록 더 많은 거래가 남습니다.
-          </p>
-          <figure class="learn-chart" aria-label="IQR Tukey fence">
-            <svg viewBox="0 0 360 120" role="img" aria-hidden="true">
-              <line x1="30" y1="60" x2="330" y2="60" stroke="#cbd5e1" stroke-width="2" />
-              <line x1="50" y1="40" x2="50" y2="80" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4 3" />
-              <line x1="290" y1="40" x2="290" y2="80" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4 3" />
-              <rect x="90" y="35" width="160" height="50" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2" rx="4" />
-              <circle cx="310" cy="60" r="6" fill="#dc2626" />
-            </svg>
-            <p class="learn-chart__caption">주황 점선 밖으로 튀는 거래가 이상치 후보입니다.</p>
-          </figure>
-        </section>
-
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">③ 왜 이상치를 확인할까?</p>
-          <h2>분석 목적에 맞게 고르기</h2>
-          <p>
-            이상치 제거는 「잘못된 거래를 지운다」는 뜻이 아닙니다. 소수 조건 거래가 평균·회귀를
-            끌어올리는 것을 줄이고 「일반적인」 패턴을 보려는 선택입니다. 목적에 따라 제거하지
-            않는 것도 맞는 판단입니다.
-          </p>
-        </section>
-
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">④ CH2 Macro에서는?</p>
-          <h2>IQR 필터 설정</h2>
-          <p>
-            토지·집합·복합 필터에서 IQR 배수를 선택해 이상치를 제외할 수 있습니다. 필터를 바꾸면
-            평균단가·회귀 결과가 달라지므로, 어떤 거래가 빠졌는지 목록과 함께 확인해 보시기 바랍니다.
-            화면의 <strong>?</strong> 링크로 이 페이지에 연결됩니다.
-          </p>
-        </section>
-
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">⑤ Macro 화면</p>
-          <h2>필터분석 · IQR 이상치 제외</h2>
-          <figure class="learn-capture learn-macro-mock" aria-label="Macro IQR 필터">
-            <div class="learn-macro-mock__bar"><span><strong>토지</strong> · 필터분석</span><span>청주시 흥덕구</span></div>
-            <div class="learn-macro-mock__body">
-              <div class="learn-macro-mock__card">
-                <div class="learn-macro-mock__card-title">이상치 제외 (IQR) <span class="learn-macro-mock__help">?</span></div>
-                <div style="font-size: 0.625rem; color: #94a3b8; margin-top: 0.25rem">
-                  ☑ 이상치 제외 (IQR) &nbsp; IQR 배수 k: ○1.5 &nbsp; ○2 &nbsp; ○3
-                </div>
-                <div class="learn-macro-mock__card-metrics" style="margin-top: 0.45rem">
-                  적용 전 n=128 → 적용 후 n=119 (9건 제외)
-                </div>
-              </div>
-            </div>
-            <figcaption class="learn-capture__caption">예시 화면 · k를 바꾸면 제외 건수와 평균단가가 함께 변합니다.</figcaption>
-          </figure>
-        </section>
-
-        <aside class="learn-caution" aria-label="주의">
-          <p class="learn-caution__title">주의</p>
-          <p>이상치 제거는 <strong>분석 목적</strong>에 따른 선택입니다. 제거 = 잘못된 거래가 아닙니다.</p>
-        </aside>
-
-        <details class="learn-more">
-          <summary>조금 더 알아보기</summary>
-          <div class="learn-more__body">
-            <p>
-              Tukey fence: 하한 = Q1 − k×IQR, 상한 = Q3 + k×IQR (k=1.5·2·3). Macro는 k를 선택해
-              상·하위 꼬리 거래를 제외합니다.
-            </p>
-            <p>
-              IQR 배수를 키우면(3) 더 많은 거래가 남고, 평균·회귀는 극단값에 덜 민감해집니다. 반대로
-              1.5는 더 공격적으로 이상치를 걸러 냅니다.
-            </p>
-          </div>
-        </details>
-
-        <p class="learn-macro-cta">
-          <a href="https://macro.ch2data.com/land/">CH2 Macro에서 확인하기 →</a>
-          <span style="display: block; margin-top: 0.35rem; font-size: 0.8125rem; color: #64748b">토지 · 필터 · IQR 1.5 / 2 / 3</span>
-        </p>
-      </article>
+      <article class="learn-chapter learn-chapter--expanded" aria-label="이상치와 IQR">
+<section class="learn-chapter__step" id="quick-start" data-toc-label="핵심 이해"><p class="learn-chapter__label">핵심 이해</p><h2>이상치는 확인할 관측이지, 곧바로 버릴 관측은 아닙니다</h2><p>주변 값에서 유난히 떨어진 관측을 발견하면 먼저 비교 기준을 묻습니다. 같은 지역이라도 용도·면적·시점이 다르면 가격 분포가 달라질 수 있습니다. <strong>이상치 후보</strong>는 정한 규칙에 따라 추가 확인 대상으로 표시한 관측입니다. 표시만으로 입력 오류나 부적정 거래가 입증되지는 않습니다.</p><p>이 장에서는 <a href="/learn/stats/quantiles/">05장의 사분위수</a>로 울타리를 계산하고, 배수·집단·계산 관례에 따라 판정이 달라질 수 있음을 살펴봅니다. 이어서 포함·제외 결과를 비교하고 처리 근거를 남기는 방법을 익힙니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 305" role="img" aria-labelledby="fences-title fences-desc"><title id="fences-title">IQR 울타리와 수염</title><desc id="fences-desc">그림 1. 공통 30건의 IQR은 70, 1.5배 울타리는 −7과 273입니다. 수염은 경계 안의 실제 최솟값 62와 최댓값 268까지입니다. 별도 점 480은 검토 후보입니다.</desc><text x="24" y="28" >울타리는 계산한 경계, 수염 끝은 실제 관측값입니다</text><line x1="168.9" y1="90" x2="364.6" y2="90" stroke="#64748b" /><rect x="203.1" y="70" width="66.5" height="40" fill="#bfdbfe"/><line x1="225.89999999999998" y1="70" x2="225.89999999999998" y2="110" stroke="#64748b" /><line x1="103.35" y1="65" x2="103.35" y2="115" stroke="#64748b" stroke-dasharray="4 3"/><text x="103.35" y="55" text-anchor="middle">하한 −7</text><line x1="203.1" y1="65" x2="203.1" y2="115" stroke="#64748b" stroke-dasharray="4 3"/><text x="203.1" y="140" text-anchor="middle">Q1 98</text><line x1="269.6" y1="65" x2="269.6" y2="115" stroke="#64748b" stroke-dasharray="4 3"/><text x="269.6" y="160" text-anchor="middle">Q3 168</text><line x1="369.34999999999997" y1="65" x2="369.34999999999997" y2="115" stroke="#64748b" stroke-dasharray="4 3"/><text x="369.34999999999997" y="55" text-anchor="middle">상한 273</text><line x1="168.9" y1="83" x2="168.9" y2="97" stroke="#64748b" /><line x1="364.6" y1="83" x2="364.6" y2="97" stroke="#64748b" /><text x="168.9" y="190" text-anchor="middle">수염 62</text><text x="364.6" y="190" text-anchor="middle">수염 268</text><circle cx="566.0" cy="90" r="6" fill="#d97706"/><text x="566.0" y="65" text-anchor="middle">7번 480</text><line x1="110.0" y1="230" x2="585.0" y2="230" stroke="#64748b" /><text x="110.0" y="252" text-anchor="middle">0</text><text x="205.0" y="252" text-anchor="middle">100</text><text x="300.0" y="252" text-anchor="middle">200</text><text x="395.0" y="252" text-anchor="middle">300</text><text x="490.0" y="252" text-anchor="middle">400</text><text x="585.0" y="252" text-anchor="middle">500</text><text x="400" y="281" >단가(만원/㎡)</text></svg><figcaption class="learn-chart__caption">그림 1. 공통 30건의 IQR은 70, 1.5배 울타리는 −7과 273입니다. 수염은 경계 안의 실제 최솟값 62와 최댓값 268까지입니다. 별도 점 480은 검토 후보입니다.</figcaption></figure></section>
+<section class="learn-chapter__step" id="iqr-multiplier" data-toc-label="울타리 계산"><p class="learn-chapter__label">울타리 계산</p><h2>Q1과 Q3에서 IQR의 일정 배수만큼 넓힙니다</h2><p><strong>IQR=Q3−Q1</strong>은 가운데 부분의 퍼짐입니다. 배수 k를 정하면 하한 L=Q1−k×IQR, 상한 U=Q3+k×IQR입니다. 이 장에서는 <strong>x&lt;L 또는 x&gt;U</strong>인 값을 후보로 표시하고, 경계와 같은 값은 포함합니다. 수염은 울타리 자체가 아니라 그 안에 있는 실제 관측값까지 그립니다.</p><p>공통 <a href="/learn/stats/graphs/#data">학습 예시 30건</a>은 Q1=98, Q3=168, IQR=70입니다. k=1.5이면 L=98−105=−7, U=168+105=273입니다. 최솟값 62는 하한보다 크고, 24번 268은 상한보다 5 작습니다. 따라서 7번 480만 후보입니다. 음수 하한은 계산 결과이며 음수 거래가 존재한다는 뜻이 아닙니다.</p><p>1.5배는 널리 쓰이는 탐색 규칙이며 3배 울타리도 함께 쓰입니다. k가 2여야 한다는 통계학적 의무는 없습니다. 배수는 민감도를 정하는 선택이고, 울타리가 95% 신뢰구간이거나 잘못된 거래를 확률 95%로 검출한다는 의미도 아닙니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 336" role="img" aria-labelledby="multipliers-title multipliers-desc"><title id="multipliers-title">배수별 IQR 경계</title><desc id="multipliers-desc">그림 2. 하한·상한은 k=1.5에서 −7·273, k=2에서 −42·308, k=3에서 −112·378입니다. 세 경우 모두 480 한 건만 경계 밖입니다.</desc><text x="24" y="28" >같은 Q1·Q3를 고정하고 배수만 바꿉니다</text><text x="24" y="90" >k=1.5</text><line x1="105" y1="85" x2="600" y2="85" stroke="#64748b" /><rect x="189.75" y="75" width="210.0" height="20" fill="#dbeafe" data-k="1.5" data-low="-7.0" data-high="273.0"/><text x="189.75" y="65" text-anchor="middle">-7</text><text x="399.75" y="65" text-anchor="middle">273</text><circle cx="555" cy="85" r="5" fill="#d97706"/><text x="568" y="90" >480</text><text x="24" y="165" >k=2</text><line x1="105" y1="160" x2="600" y2="160" stroke="#64748b" /><rect x="163.5" y="150" width="262.5" height="20" fill="#dbeafe" data-k="2" data-low="-42" data-high="308"/><text x="163.5" y="140" text-anchor="middle">-42</text><text x="426.0" y="140" text-anchor="middle">308</text><circle cx="555" cy="160" r="5" fill="#d97706"/><text x="568" y="165" >480</text><text x="24" y="240" >k=3</text><line x1="105" y1="235" x2="600" y2="235" stroke="#64748b" /><rect x="111.0" y="225" width="367.5" height="20" fill="#dbeafe" data-k="3" data-low="-112" data-high="378"/><text x="111.0" y="215" text-anchor="middle">-112</text><text x="478.5" y="215" text-anchor="middle">378</text><circle cx="555" cy="235" r="5" fill="#d97706"/><text x="568" y="240" >480</text><text x="24" y="285" >색칠한 구간: 하한~상한 / 주황 점: 7번</text><text x="370" y="311" >단가(만원/㎡), 동일 축척</text></svg><figcaption class="learn-chart__caption">그림 2. 하한·상한은 k=1.5에서 −7·273, k=2에서 −42·308, k=3에서 −112·378입니다. 세 경우 모두 480 한 건만 경계 밖입니다.</figcaption></figure><p>자료와 사분위수를 고정하면 k를 키울수록 경계가 바깥으로 이동합니다. 후보 수는 줄거나 그대로이며 늘지 않습니다. 이 예제에서는 273과 378 사이에 값이 없어 세 배수 모두 1건입니다. 필터 적용 후 사분위수를 다시 구하는 절차는 이 비교와 다릅니다.</p></section>
+<section class="learn-chapter__step" id="conventions" data-toc-label="계산 관례와 예외"><p class="learn-chapter__label">계산 관례와 예외</p><h2>작은 표본과 같은 값이 많은 자료에서는 더 주의합니다</h2><p>이 장은 정렬한 자료를 절반으로 나누어 각 절반의 중앙값을 Q1·Q3로 삼고, 홀수 건수에서는 전체 중앙값을 양쪽 절반에서 제외합니다. <a href="/learn/stats/quantiles/#methods">분위수 계산 관례</a>에 따라 경계는 달라질 수 있습니다. 공통 30건에 선형 보간 type 7을 쓰면 Q1=99, Q3=166, IQR=67이며 1.5배 울타리는 −1.5와 266.5입니다. 이때는 268과 480 두 건이 후보가 됩니다.</p><p>표본이 작으면 몇 개 관측이 사분위수 위치를 크게 바꿉니다. 반올림된 값이나 동일 값이 많아 IQR=0이면 두 울타리가 Q1=Q3로 겹칩니다. 예를 들어 100·100·100·100·100·100·120은 이 관례에서 IQR=0이고 120만 경계 밖입니다. 그것만으로 120이 오류라고 결론 내리지 않습니다.</p><p>제외 후 울타리를 다시 계산해 반복 적용하면 처음에는 포함되던 값도 나중에 빠질 수 있습니다. 한 번 계산한 경계를 쓰는지, 반복하는지 구분하고 기록해야 합니다. 결과가 원하는 모양이 될 때까지 배수를 바꾸지 않습니다.</p></section>
+<section class="learn-chapter__step" id="groups" data-toc-label="집단과 분포"><p class="learn-chapter__label">집단과 분포</p><h2>누구와 비교하느냐가 이상치 판단의 일부입니다</h2><p>전체 거래에 하나의 기준을 적용하는 것과 용도별로 나누어 적용하는 것은 서로 다른 질문입니다. 전자는 전체에서 떨어진 값을 찾고, 후자는 같은 유형 안에서 떨어진 값을 찾습니다. 집단을 나누면 건수와 사분위수도 다시 구합니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 407" role="img" aria-labelledby="group-fences-title group-fences-desc"><title id="group-fences-title">집단별 상한 비교</title><desc id="group-fences-desc">그림 3. 공통 자료를 유형별로 나눠 다시 계산한 상한은 주거 168, 상업 401.5입니다. 전체와 상업에서는 480이 후보이고 주거에는 후보가 없습니다. 기준값 자체도 달라집니다. 점이 겹치면 여러 건이 하나로 보일 수 있습니다.</desc><text x="24" y="28" >집단을 나누면 비교 기준도 달라집니다</text><text x="24" y="62" >전체 30건 · Q1 98, Q3 168, 상한 273</text><line x1="90" y1="90" x2="590" y2="90" stroke="#64748b" /><rect x="188" y="80" width="70" height="20" fill="#bfdbfe" data-group="전체" data-upper="273.0"/><line x1="212.0" y1="80" x2="212.0" y2="100" stroke="#64748b" /><line x1="363.0" y1="73" x2="363.0" y2="107" stroke="#64748b" stroke-dasharray="4 3"/><circle cx="208" cy="115" r="3" fill="#2563eb"/><circle cx="161" cy="115" r="3" fill="#2563eb"/><circle cx="258" cy="115" r="3" fill="#2563eb"/><circle cx="188" cy="115" r="3" fill="#2563eb"/><circle cx="325" cy="115" r="3" fill="#2563eb"/><circle cx="195" cy="115" r="3" fill="#2563eb"/><circle cx="570" cy="115" r="3" fill="#d97706"/><circle cx="174" cy="115" r="3" fill="#2563eb"/><circle cx="242" cy="115" r="3" fill="#2563eb"/><circle cx="218" cy="115" r="3" fill="#2563eb"/><circle cx="181" cy="115" r="3" fill="#2563eb"/><circle cx="300" cy="115" r="3" fill="#2563eb"/><circle cx="202" cy="115" r="3" fill="#2563eb"/><circle cx="152" cy="115" r="3" fill="#2563eb"/><circle cx="235" cy="115" r="3" fill="#2563eb"/><circle cx="265" cy="115" r="3" fill="#2563eb"/><circle cx="192" cy="115" r="3" fill="#2563eb"/><circle cx="330" cy="115" r="3" fill="#2563eb"/><circle cx="228" cy="115" r="3" fill="#2563eb"/><circle cx="278" cy="115" r="3" fill="#2563eb"/><circle cx="178" cy="115" r="3" fill="#2563eb"/><circle cx="222" cy="115" r="3" fill="#2563eb"/><circle cx="210" cy="115" r="3" fill="#2563eb"/><circle cx="358" cy="115" r="3" fill="#2563eb"/><circle cx="168" cy="115" r="3" fill="#2563eb"/><circle cx="214" cy="115" r="3" fill="#2563eb"/><circle cx="205" cy="115" r="3" fill="#2563eb"/><circle cx="250" cy="115" r="3" fill="#2563eb"/><circle cx="185" cy="115" r="3" fill="#2563eb"/><circle cx="198" cy="115" r="3" fill="#2563eb"/><text x="24" y="162" >주거 15건 · Q1 88, Q3 120, 상한 168</text><line x1="90" y1="190" x2="590" y2="190" stroke="#64748b" /><rect x="178" y="180" width="32" height="20" fill="#bfdbfe" data-group="주거" data-upper="168.0"/><line x1="195" y1="180" x2="195" y2="200" stroke="#64748b" /><line x1="258.0" y1="173" x2="258.0" y2="207" stroke="#64748b" stroke-dasharray="4 3"/><circle cx="208" cy="215" r="3" fill="#2563eb"/><circle cx="161" cy="215" r="3" fill="#2563eb"/><circle cx="188" cy="215" r="3" fill="#2563eb"/><circle cx="195" cy="215" r="3" fill="#2563eb"/><circle cx="174" cy="215" r="3" fill="#2563eb"/><circle cx="218" cy="215" r="3" fill="#2563eb"/><circle cx="181" cy="215" r="3" fill="#2563eb"/><circle cx="202" cy="215" r="3" fill="#2563eb"/><circle cx="235" cy="215" r="3" fill="#2563eb"/><circle cx="192" cy="215" r="3" fill="#2563eb"/><circle cx="228" cy="215" r="3" fill="#2563eb"/><circle cx="178" cy="215" r="3" fill="#2563eb"/><circle cx="210" cy="215" r="3" fill="#2563eb"/><circle cx="168" cy="215" r="3" fill="#2563eb"/><circle cx="205" cy="215" r="3" fill="#2563eb"/><text x="24" y="262" >상업 15건 · Q1 124, Q3 235, 상한 401.5</text><line x1="90" y1="290" x2="590" y2="290" stroke="#64748b" /><rect x="214" y="280" width="111" height="20" fill="#bfdbfe" data-group="상업" data-upper="401.5"/><line x1="258" y1="280" x2="258" y2="300" stroke="#64748b" /><line x1="491.5" y1="273" x2="491.5" y2="307" stroke="#64748b" stroke-dasharray="4 3"/><circle cx="258" cy="315" r="3" fill="#2563eb"/><circle cx="325" cy="315" r="3" fill="#2563eb"/><circle cx="570" cy="315" r="3" fill="#d97706"/><circle cx="242" cy="315" r="3" fill="#2563eb"/><circle cx="300" cy="315" r="3" fill="#2563eb"/><circle cx="152" cy="315" r="3" fill="#2563eb"/><circle cx="265" cy="315" r="3" fill="#2563eb"/><circle cx="330" cy="315" r="3" fill="#2563eb"/><circle cx="278" cy="315" r="3" fill="#2563eb"/><circle cx="222" cy="315" r="3" fill="#2563eb"/><circle cx="358" cy="315" r="3" fill="#2563eb"/><circle cx="214" cy="315" r="3" fill="#2563eb"/><circle cx="250" cy="315" r="3" fill="#2563eb"/><circle cx="185" cy="315" r="3" fill="#2563eb"/><circle cx="198" cy="315" r="3" fill="#2563eb"/><text x="90" y="355" text-anchor="middle">0</text><text x="190" y="355" text-anchor="middle">100</text><text x="290" y="355" text-anchor="middle">200</text><text x="390" y="355" text-anchor="middle">300</text><text x="490" y="355" text-anchor="middle">400</text><text x="590" y="355" text-anchor="middle">500</text><text x="420" y="382" >단가(만원/㎡)</text></svg><figcaption class="learn-chart__caption">그림 3. 공통 자료를 유형별로 나눠 다시 계산한 상한은 주거 168, 상업 401.5입니다. 전체와 상업에서는 480이 후보이고 주거에는 후보가 없습니다. 기준값 자체도 달라집니다. 점이 겹치면 여러 건이 하나로 보일 수 있습니다.</figcaption></figure><p>이 그림에서는 주거 15건의 IQR은 32, 상업 15건의 IQR은 111입니다. 전체 IQR 70을 두 집단에 그대로 적용하지 않습니다. 집단을 지나치게 잘게 나누면 표본이 작아져 기준이 불안정해질 수 있으므로, 분석 목적에 맞는 비교 집단을 먼저 정합니다.</p><p>IQR 울타리를 계산하는 데 정규분포 가정은 필요하지 않습니다. 다만 오른쪽 꼬리가 긴 자료에서 경계 밖의 값이 자연스럽게 나타날 수 있고, 여러 집단이 섞이면 구조적인 차이를 후보로 표시할 수 있습니다. 히스토그램과 산점도를 함께 읽으세요. 한 변수의 IQR 검사는 변수들의 관계에서만 드러나는 특이한 관측까지 모두 찾아내지는 못합니다.</p></section>
+<section class="learn-chapter__step" id="sensitivity" data-toc-label="포함·제외 비교"><p class="learn-chapter__label">포함·제외 비교</p><h2>숫자가 얼마나 바뀌는지와 그 이유를 함께 봅니다</h2><p>공통 예제는 실제 거래 출처가 확인되지 않은 학습 자료입니다. 7번을 제외하면 평균은 146.33에서 134.83, 중앙값은 122에서 120으로 바뀝니다. <a href="/learn/stats/spread/">06장 표준편차</a>는 80.16에서 51.72로 줄어듭니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 398" role="img" aria-labelledby="sensitivity-title sensitivity-desc"><title id="sensitivity-title">제외 전후 통계량</title><desc id="sensitivity-desc">그림 4. 표준편차는 각 집합의 건수 n으로 나눠 계산합니다. 자료가 바뀌므로 평균도 다시 구합니다. 제외 결과가 더 정확하다는 의미는 아닙니다.</desc><text x="24" y="28" >포함·제외 비교는 결과의 민감도를 보여 줍니다</text><text x="24" y="86" >평균</text><rect x="150" y="68" width="365.83333333333337" height="18" fill="#2563eb" data-metric="평균" data-series="all" data-value="146.33333333333334"/><text x="523.8333333333334" y="82" >146.33</text><rect x="150" y="99" width="337.06896551724134" height="18" fill="#d97706" data-metric="평균" data-series="without" data-value="134.82758620689654"/><text x="495.06896551724134" y="113" >134.83</text><text x="24" y="176" >중앙값</text><rect x="150" y="158" width="305.0" height="18" fill="#2563eb" data-metric="중앙값" data-series="all" data-value="122.0"/><text x="463.0" y="172" >122.00</text><rect x="150" y="189" width="300.0" height="18" fill="#d97706" data-metric="중앙값" data-series="without" data-value="120"/><text x="458.0" y="203" >120.00</text><text x="24" y="266" >표준편차</text><rect x="150" y="248" width="200.39578893335613" height="18" fill="#2563eb" data-metric="표준편차" data-series="all" data-value="80.15831557334245"/><text x="358.39578893335613" y="262" >80.16</text><rect x="150" y="279" width="129.31195401297586" height="18" fill="#d97706" data-metric="표준편차" data-series="without" data-value="51.724781605190344"/><text x="287.3119540129759" y="293" >51.72</text><text x="24" y="345" >파랑: 전체 30건 / 주황: 7번 제외 29건</text><text x="24" y="373" >가로축은 모두 0에서 시작 · 단위: 만원/㎡</text></svg><figcaption class="learn-chart__caption">그림 4. 표준편차는 각 집합의 건수 n으로 나눠 계산합니다. 자료가 바뀌므로 평균도 다시 구합니다. 제외 결과가 더 정확하다는 의미는 아닙니다.</figcaption></figure><p>평균과 표준편차가 더 크게 변하는 것은 큰 관측의 영향과 연결됩니다. 중앙값과 IQR은 꼬리의 일부 값에 상대적으로 덜 민감하지만, 어떤 변경에도 불변인 지표는 아닙니다. 전체 시장을 묻는 분석에서 유효한 고가 거래를 빼면 분석 대상 자체가 달라질 수 있습니다.</p></section>
+<section class="learn-chapter__step" id="workflow" data-toc-label="확인과 처리"><p class="learn-chapter__label">확인과 처리</p><h2>원자료를 확인하고 처리 근거를 남깁니다</h2><ol><li><strong>대상을 정합니다.</strong> 지역·기간·유형, 관측 단위, 금액인지 단가인지와 단위를 확인합니다.</li><li><strong>후보를 표시합니다.</strong> 사분위수 산식, k, 경계 포함 여부, 기준 건수와 후보 목록을 남깁니다.</li><li><strong>원자료를 대조합니다.</strong> 단위 입력, 면적 분모, 중복, 정정 여부와 거래 조건을 확인합니다. 높은 단가만으로 원인을 추측하지 않습니다.</li><li><strong>처리 방식을 선택합니다.</strong> 확인된 오류는 근거에 따라 정정하고, 유효한 별도 집단은 구분해 분석할 수 있습니다. 근거가 부족하면 원자료를 유지한 결과와 민감도 비교를 함께 제시합니다.</li><li><strong>변경을 설명합니다.</strong> 제외 사유·건수와 전후 통계량을 보고합니다. 원자료는 보존합니다.</li></ol><p>절사(trimming)는 일부 관측을 분석에서 제외하고, 윈저화(winsorization)는 정한 경계값으로 극단의 값을 바꾸는 방식입니다. 둘은 건수와 분포에 미치는 효과가 다릅니다. 어느 방식도 자동으로 오류를 교정해 주는 것은 아니며, 적용했다면 규칙을 밝혀야 합니다.</p></section>
+<section class="learn-chapter__step" id="practice" data-toc-label="확인 문제"><p class="learn-chapter__label">확인 문제</p><h2>판정 기준과 처리 결정을 구분해 보세요</h2><ol class="learn-exercises"><li>Q1=98, Q3=168, k=1.5일 때 273은 후보인가요?<details><summary>답과 해설</summary><p>아니요. 상한은 273이며 이 장은 경계를 포함합니다. 273보다 큰 값이 위쪽 후보입니다. 실제 공통 자료에는 273이 없습니다.</p></details></li><li>k를 1.5에서 3으로 바꾸면 후보가 반드시 줄어드나요?<details><summary>답과 해설</summary><p>반드시 줄지는 않습니다. 같은 자료와 사분위수에서는 줄거나 그대로입니다. 공통 예제는 두 경우 모두 480 한 건입니다.</p></details></li><li>같은 30건인데 한 프로그램은 480만, 다른 프로그램은 268과 480을 표시합니다. 반드시 구현 오류인가요?<details><summary>답과 해설</summary><p>아니요. 절반의 중앙값 방식과 type 7은 상한이 각각 273과 266.5입니다. 먼저 분위수 산식과 경계 처리, 비교 집단을 확인해야 합니다.</p></details></li></ol></section>
+<section class="learn-chapter__step" id="macro" data-toc-label="CH2 Macro에서 읽기"><p class="learn-chapter__label">CH2 Macro에서 읽기</p><h2>필터 전후의 건수와 기준을 함께 확인합니다</h2><p>CH2 Macro에서 IQR 옵션을 사용할 때는 적용 변수와 비교 집단, 선택 배수, 적용 전후 건수를 함께 확인하세요. 이 장의 손계산 관례를 서비스의 모든 화면에 그대로 대입하지 말고 해당 화면의 산식 설명을 확인합니다. 필터로 제외했다는 것은 분석 대상에서 빠졌다는 뜻이며 원자료 오류가 확정되었다는 뜻은 아닙니다.</p><figure class="learn-capture"><img src="../assets/captures/land-heungdeok-iqr.png" alt="토지 필터의 IQR 이상치 제외와 배수 선택 화면" loading="lazy"/><figcaption class="learn-capture__caption">기존 토지 필터 캡처. 설정 위치를 보여 주며 공통 학습 자료 30건의 실행 결과는 아닙니다. 현재 화면은 서비스 변경에 따라 다를 수 있습니다.</figcaption></figure><p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지에서 확인하기 →</a></p></section>
+<section class="learn-chapter__step" id="recap" data-toc-label="정리와 참고자료"><p class="learn-chapter__label">정리와 참고자료</p><h2>표시 → 확인 → 비교 → 기록 순서로 읽습니다</h2><p>IQR 울타리는 검토 대상을 찾는 탐색 도구입니다. 배수와 분위수 관례, 비교 집단을 명시하고 후보의 실제 맥락을 확인하세요. 제외 여부는 통계량을 작게 만드는 방향이 아니라 분석 목적과 자료 근거로 판단합니다.</p><p>다음 <a href="/learn/stats/probability/">08장 「확률의 기초와 조건부확률」</a>에서는 사건과 확률, 조건에 따른 분모의 변화를 배웁니다.</p><ul><li><a href="https://www.itl.nist.gov/div898/handbook/eda/section3/boxplot.htm">NIST/SEMATECH: Box Plot</a> — 상자그림과 IQR 울타리.</li><li><a href="https://www.itl.nist.gov/div898/handbook/eda/section3/eda35h.htm">NIST/SEMATECH: Detection of Outliers</a> — 후보 표시와 확인, 처리의 구분.</li></ul><p class="learn-source-note">본문과 그림은 공통 학습 자료 및 별도 가상 예제를 바탕으로 직접 작성했습니다. 출처 미확인 자료를 실제 시장 통계로 해석하지 않습니다. 참고자료 확인: 2026-10-07.</p></section>
+</article>
 
       <nav class="learn-chapter-nav" aria-label="장 이동">
-        <a href="/learn/stats/spread/">← 이전: 분산과 표준편차</a>
-        <a href="/learn/stats/sample-size/">다음: 표본수 →</a>
-      </nav>
+<a href="/learn/stats/spread/">← 06. 분산과 표준편차</a>
+<a href="/learn/stats/probability/">08. 확률의 기초와 조건부확률 →</a>
+</nav>
 
       <footer class="footer">
         <nav class="footer__links"><a href="https://ch2data.com/">홈</a><a href="/learn/stats/">통계학 &amp; 데이터 분석</a></nav>
         <p>© CH2 DATA</p>
       </footer>
     </div>
-    <script src="/learn/stats/learn-stats-toc.js" defer></script>
+    <script src="/learn/stats/learn-stats-toc.js?v=20261007-2" defer></script>
   </body>
 </html>
