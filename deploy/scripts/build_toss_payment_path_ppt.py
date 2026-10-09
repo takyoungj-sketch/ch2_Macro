@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -23,8 +24,8 @@ MERCHANT = {
     "name": "씨에이치투",
     "biz_no": "607-23-96932",
     "url": "https://ch2data.com/",
-    "test_id": "review@ch2data.com",
-    "test_pw": "Ch2T0ssReview2026",
+    "test_id": os.environ.get("PLATFORM_REVIEW_EMAIL", "review@ch2data.com"),
+    "test_pw": os.environ.get("PLATFORM_REVIEW_PASSWORD", ""),
     "ceo": "정탁영",
     "address": "충청북도 청주시 흥덕구 서현중로35번길 25, 401호(가경동)",
     "phone": "010-5801-7953",
@@ -101,9 +102,9 @@ def _add_notes_slide(prs: Presentation) -> None:
         "PPT 형식으로 제작 (본 파일)",
         "캡처 화면에 URL을 슬라이드 하단에 표기",
         "무형상품(월 구독 SaaS) — CH2 Macro / Macro+FieldNote",
+        "카드 자동결제(빌링) — 등록창 + 매월 자동 청구",
         "로그인 후 구매 — 심사용 이메일·비밀번호 계정 제공",
-        "테스트 결제창 연동 가능 (토스 키 심사 후 활성화)",
-        "비씨카드 인증 화면은 실제 결제 테스트 시 추가 캡처 가능",
+        "테스트 키로 카드 등록·결제창 연동 (본 PPT ⑥)",
     ]
     for note in notes:
         para = tf.add_paragraph()
@@ -170,9 +171,10 @@ async def capture_screenshots() -> dict[str, Path]:
         card_btn = page.locator(".btn-pay--card").first
         if await card_btn.count() > 0 and not await card_btn.is_disabled():
             await card_btn.click()
-            await page.wait_for_timeout(2500)
-            await page.screenshot(path=str(SHOT_DIR / "07_payment_window.png"), full_page=False)
-            paths["07_payment_window"] = SHOT_DIR / "07_payment_window.png"
+            await page.wait_for_timeout(3500)
+            target = SHOT_DIR / "07_payment_window.png"
+            await page.screenshot(path=str(target), full_page=False)
+            paths["07_payment_window"] = target
         else:
             note = SHOT_DIR / "07_payment_note.png"
             await page.screenshot(path=str(note), full_page=False)
@@ -221,14 +223,14 @@ def build_ppt(paths: dict[str, Path]) -> None:
     _add_section_slide(
         prs,
         "⑤ 구매 과정",
-        "로그인 후 상품 선택·결제 수단 선택",
+        "로그인 후 월 구독 · 카드 자동결제 시작",
         paths.get("06_subscribe_logged_in", Path()),
         "https://ch2data.com/subscribe/",
     )
     _add_section_slide(
         prs,
         "⑥ 카드 결제경로",
-        "카드 결제 버튼 클릭 후 결제창 (테스트 키 미활성 시 동일 화면)",
+        "「카드로 구독하기」 클릭 후 토스 카드 등록·결제창 (테스트 키)",
         paths.get("07_payment_window", Path()),
         "https://ch2data.com/subscribe/",
     )

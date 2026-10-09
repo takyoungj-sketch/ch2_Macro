@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>웹 구독 | CH2 DATA</title>
-    <meta name="description" content="CH2 웹 구독 — 카카오페이·카드 (토스페이먼츠)" />
+    <meta name="description" content="CH2 웹 구독 — 카드 자동결제 (토스페이먼츠)" />
     <link rel="stylesheet" href="/style.css" />
     <style>
       .plan-grid { display: grid; gap: 1rem; margin-top: 1rem; }
@@ -90,7 +90,7 @@
       <header class="hero hero--document">
         <p class="hero__eyebrow">CH2 Pro</p>
         <h1 class="hero__title">웹 구독</h1>
-        <p class="hero__lead">로그인 후 카카오페이 또는 카드로 결제할 수 있습니다.</p>
+        <p class="hero__lead">로그인 후 카드로 월 구독을 시작합니다. 매월 자동 결제되며, 해지하면 이번 기간 말까지 이용할 수 있습니다.</p>
       </header>
 
       <main class="policy-card">
@@ -108,10 +108,16 @@
             <button type="submit">이메일로 로그인</button>
           </form>
         </section>
+        <section id="sub-status" class="review-login" hidden aria-live="polite">
+          <h2>현재 구독</h2>
+          <p id="sub-status-text"></p>
+          <button type="button" id="cancel-sub-btn" hidden>다음 결제일부터 해지</button>
+          <button type="button" id="resume-sub-btn" hidden>해지 예약 취소</button>
+        </section>
         <div class="plan-grid" id="plan-grid"></div>
         <p id="pay-note"></p>
         <p class="policy-meta" style="margin-top: 1.5rem">
-          카카오페이는 토스페이먼츠 상점의 결제 수단입니다. 결제 완료 전에는 권한이 생기지 않습니다.
+          웹 월 구독은 카드 자동결제(토스페이먼츠)입니다. 첫 결제 시 카드 등록창이 열립니다.
           자세한 내용은 <a href="/subscription/">구독 정책</a>을 참고하세요.
         </p>
       </main>
@@ -129,6 +135,13 @@
       const BILLING = "/api/billing";
       let me = null;
       let tossEnabled = false;
+      let subInfo = null;
+
+      function formatDate(iso) {
+        if (!iso) return "";
+        const d = new Date(iso);
+        return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("ko-KR");
+      }
 
       async function refreshAuth() {
         const res = await fetch(`${AUTH}/status`, { credentials: "include" });
@@ -141,8 +154,37 @@
         document.getElementById("logout-btn").hidden = !me;
         document.getElementById("review-login").hidden = Boolean(me) || !reviewOn;
         document.getElementById("status").textContent = me
-          ? `${me.nickname}님 — Macro Pro 구독`
+          ? `${me.nickname}님`
           : "로그인이 필요합니다.";
+      }
+
+      async function loadSubscription() {
+        subInfo = null;
+        const box = document.getElementById("sub-status");
+        if (!me) {
+          box.hidden = true;
+          return;
+        }
+        const res = await fetch(`${BILLING}/subscription/me`, { credentials: "include" });
+        const data = await res.json();
+        if (!data.active) {
+          box.hidden = true;
+          return;
+        }
+        subInfo = data;
+        box.hidden = false;
+        const productLabel = data.product === "bundle" ? "Macro + FieldNote" : "Macro";
+        const end = formatDate(data.current_period_end);
+        const next = formatDate(data.next_billing_at);
+        let line = `${productLabel} 월 ${(data.price || 0).toLocaleString()}원 · 이용 기간 ~${end}`;
+        if (data.cancel_at_period_end) {
+          line += " · 해지 예약됨 (다음 결제 없음)";
+        } else if (next) {
+          line += ` · 다음 결제 ${next}`;
+        }
+        document.getElementById("sub-status-text").textContent = line;
+        document.getElementById("cancel-sub-btn").hidden = Boolean(data.cancel_at_period_end);
+        document.getElementById("resume-sub-btn").hidden = !data.cancel_at_period_end;
       }
 
       async function loadConfig() {
@@ -151,8 +193,8 @@
         tossEnabled = Boolean(data.enabled);
         const note = document.getElementById("pay-note");
         note.textContent = tossEnabled
-          ? "카카오페이 버튼을 누르면 카카오페이 결제창이 열립니다. 카드는 토스 결제창입니다."
-          : "토스 상점 키가 아직 서버에 없습니다. 카카오페이·카드 모두 키 등록 후 활성화됩니다.";
+          ? "「카드로 구독하기」를 누르면 토스 카드 등록·결제창이 열립니다."
+          : "토스 테스트 키가 서버에 설정되면 구독 버튼이 활성화됩니다.";
       }
 
       async function loadPlans() {
@@ -160,37 +202,39 @@
         const data = await res.json();
         const grid = document.getElementById("plan-grid");
         grid.replaceChildren();
+        const hidePlans =
+          subInfo &&
+          subInfo.active &&
+          subInfo.status === "active" &&
+          !subInfo.cancel_at_period_end;
+        if (hidePlans) {
+          return;
+        }
         for (const plan of data.plans.filter((p) => (p.product === "macro" || p.product === "bundle") && p.interval === "month")) {
           const card = document.createElement("div");
           card.className = "plan-card";
           const title = plan.product === "bundle" ? "Macro + FieldNote" : "Macro";
-          card.innerHTML = `<h3>${title} 월간</h3><p>${plan.price.toLocaleString()}원</p>`;
+          card.innerHTML = `<h3>${title} 월간</h3><p>${plan.price.toLocaleString()}원 / 매월 자동결제</p>`;
           const actions = document.createElement("div");
           actions.className = "pay-actions";
-          const kakaoBtn = document.createElement("button");
-          kakaoBtn.type = "button";
-          kakaoBtn.className = "btn-pay btn-pay--kakao";
-          kakaoBtn.textContent = tossEnabled ? "카카오페이" : "카카오페이 준비 중";
-          kakaoBtn.disabled = !tossEnabled;
-          kakaoBtn.addEventListener("click", () => checkout(plan, "kakaopay"));
           const cardBtn = document.createElement("button");
           cardBtn.type = "button";
           cardBtn.className = "btn-pay btn-pay--card";
-          cardBtn.textContent = tossEnabled ? "카드" : "카드 준비 중";
-          cardBtn.disabled = !tossEnabled;
-          cardBtn.addEventListener("click", () => checkout(plan, "card"));
-          actions.append(kakaoBtn, cardBtn);
+          cardBtn.textContent = tossEnabled ? "카드로 구독하기" : "카드 구독 준비 중";
+          cardBtn.disabled = !tossEnabled || !me;
+          cardBtn.addEventListener("click", () => startBilling(plan));
+          actions.append(cardBtn);
           card.appendChild(actions);
           grid.appendChild(card);
         }
       }
 
-      async function checkout(plan, payMethod) {
+      async function startBilling(plan) {
         if (!me) {
           alert("로그인 후 진행해 주세요.");
           return;
         }
-        const res = await fetch(`${BILLING}/toss/prepare`, {
+        const res = await fetch(`${BILLING}/toss/billing/prepare`, {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
@@ -198,32 +242,40 @@
         });
         if (!res.ok) {
           const text = await res.text();
-          alert(text || "결제 준비를 시작하지 못했습니다.");
+          alert(text || "구독 준비를 시작하지 못했습니다.");
           return;
         }
         const prepared = await res.json();
         const tossPayments = TossPayments(prepared.clientKey);
         const payment = tossPayments.payment({ customerKey: prepared.customerKey });
-        const request = {
-          method: "CARD",
-          amount: { currency: "KRW", value: prepared.amount },
-          orderId: prepared.orderId,
-          orderName: prepared.orderName,
-          successUrl: `${window.location.origin}/subscribe/success.html`,
-          failUrl: `${window.location.origin}/subscribe/fail.html`,
-        };
-        if (payMethod === "kakaopay") {
-          request.flowMode = "DIRECT";
-          request.easyPay = "KAKAOPAY";
-        }
+        const successUrl = `${window.location.origin}/subscribe/billing-success.html?pending=${encodeURIComponent(prepared.pendingId)}`;
         try {
-          await payment.requestPayment(request);
+          await payment.requestBillingAuth({
+            method: "CARD",
+            successUrl,
+            failUrl: `${window.location.origin}/subscribe/fail.html`,
+          });
         } catch (err) {
           if (err && err.code === "USER_CANCEL") {
             return;
           }
-          alert((err && err.message) || "결제를 시작하지 못했습니다.");
+          alert((err && err.message) || "카드 등록창을 열지 못했습니다.");
         }
+      }
+
+      async function setCancel(cancelAtPeriodEnd) {
+        const res = await fetch(`${BILLING}/subscription/cancel`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cancel_at_period_end: cancelAtPeriodEnd }),
+        });
+        if (!res.ok) {
+          alert("구독 상태를 변경하지 못했습니다.");
+          return;
+        }
+        await loadSubscription();
+        await loadPlans();
       }
 
       document.getElementById("login-btn").addEventListener("click", () => {
@@ -255,7 +307,20 @@
         await refreshAuth();
       });
 
-      refreshAuth().then(loadConfig).then(loadPlans);
+      document.getElementById("cancel-sub-btn").addEventListener("click", () => {
+        if (confirm("다음 결제일부터 자동 결제를 멈춥니다. 이번 이용 기간까지는 계속 사용할 수 있습니다.")) {
+          setCancel(true);
+        }
+      });
+      document.getElementById("resume-sub-btn").addEventListener("click", () => setCancel(false));
+
+      async function boot() {
+        await refreshAuth();
+        await loadConfig();
+        await loadSubscription();
+        await loadPlans();
+      }
+      boot();
     </script>
   </body>
 </html>
