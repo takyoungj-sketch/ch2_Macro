@@ -1,6 +1,18 @@
 # 토스페이먼츠 심사 · 웹 구독 연동
 
-> MID 예: `ch2datoe5e` · 상점 URL `https://ch2data.com/`
+> MID: `ch2datoe5e` · 상점 URL `https://ch2data.com/`  
+> **작업 일지:** [`docs/lab/journal/2026-10-09.md`](./lab/journal/2026-10-09.md) · **회신 초안:** [`TOSS_MERCHANT_REPLY_DRAFT.md`](./TOSS_MERCHANT_REPLY_DRAFT.md)
+
+## 상태 (2026-10-09)
+
+| 항목 | 상태 |
+|------|------|
+| 테스트 API 키 (개별 연동 `test_ck_` / `test_sk_`) | VPS 반영 · `toss/config` enabled |
+| 심사용 결제창 (`requestPayment`) | ✅ 동작 확인 |
+| 자동결제 빌링 (`requestBillingAuth`) | ⏳ 가맹 **빌링 계약** 대기 |
+| 결제경로 PPT | `deploy/hub/toss-review/CH2DATA_payment_path.pptx` 갱신 |
+| 가맹계약팀 재회신 | 사용자 메일 발송 예정 |
+| 라이브 키·웹훅 | 심사 후 |
 
 ## 상품 설명 (회신 메일용)
 
@@ -74,13 +86,13 @@ sudo bash /opt/ch2_Macro/deploy/scripts/verify_toss_billing_ready.sh
 ### 5. 결제경로 PPT 재생성
 
 ```bash
-cd deploy/scripts
-# PLATFORM_REVIEW_* 등 env 설정 후
-python build_toss_payment_path_ppt.py
+# 스크린샷: deploy/hub/toss-review/screenshots/ (06·07 갱신 후)
+python deploy/scripts/build_toss_payment_path_ppt_manual.py
+# 선택: PLATFORM_REVIEW_* 를 deploy/local/toss-test-keys.env 에 넣으면 ① Test PW 자동
 ```
 
-출력: `deploy/hub/toss-review/CH2DATA_결제경로.pptx`  
-가맹계약팀에 **⑥ 카드 결제경로** 캡처 포함본 재첨부.
+출력: `deploy/hub/toss-review/CH2DATA_payment_path.pptx` (동일 내용 `CH2DATA_결제경로.pptx`)  
+가맹계약팀에 **⑥ 카드 결제경로(테스트 결제창)** 재첨부.
 
 ### 6. 자동 갱신 cron (라이브 전에 설정)
 
@@ -102,3 +114,6 @@ python build_toss_payment_path_ppt.py
 | 토스 HTTP | `backend/app/platform/toss_client.py` |
 | 구독 UI | `deploy/hub/subscribe/` |
 | DDL | `db/072_platform_toss_billing.sql` |
+| PPT·캡처 | `deploy/hub/toss-review/` |
+| 키 VPS 반영 | `deploy/scripts/apply_toss_test_keys_from_local.ps1` |
+| 준비 검증 | `deploy/scripts/verify_toss_billing_ready.sh` |
