@@ -22,9 +22,11 @@ if (-not (Test-Path $Key)) {
 
 $client = ""
 $secret = ""
-Get-Content $LocalFile -Encoding UTF8 | ForEach-Object {
-  $line = $_.Trim()
-  if ($line -match "^#") { return }
+$content = Get-Content $LocalFile -Encoding UTF8 -Raw
+$content = $content.TrimStart([char]0xFEFF)
+foreach ($line in ($content -split "`r?`n")) {
+  $line = $line.Trim()
+  if (-not $line -or $line.StartsWith("#")) { continue }
   if ($line -match "^TOSS_CLIENT_KEY=(.+)$") { $client = $Matches[1].Trim() }
   if ($line -match "^TOSS_SECRET_KEY=(.+)$") { $secret = $Matches[1].Trim() }
 }
@@ -50,27 +52,9 @@ Add-Content -Path $localTmp -Value "" -Encoding ASCII
 Remove-Item -Force $localTmp
 if ($LASTEXITCODE -ne 0) { throw "scp failed" }
 
-$mergeBash = @'
-set -euo pipefail
-REMOTE_TMP="$1"
-ENV_FILE="/opt/ch2_Macro/backend/.env"
-set -a
-source "$REMOTE_TMP"
-set +a
-test -n "$TOSS_CLIENT_KEY" && test -n "$TOSS_SECRET_KEY"
-grep -v -E '^TOSS_CLIENT_KEY=|^TOSS_SECRET_KEY=|^TOSS_WEBHOOK_SECRET=' "$ENV_FILE" > "${ENV_FILE}.new" || cp "$ENV_FILE" "${ENV_FILE}.new"
-{
-  echo "TOSS_CLIENT_KEY=$TOSS_CLIENT_KEY"
-  echo "TOSS_SECRET_KEY=$TOSS_SECRET_KEY"
-} >> "${ENV_FILE}.new"
-mv "${ENV_FILE}.new" "$ENV_FILE"
-chmod 600 "$ENV_FILE"
-rm -f "$REMOTE_TMP"
-sudo systemctl restart ch2-macro-backend
-sleep 2
-bash /opt/ch2_Macro/deploy/scripts/verify_toss_billing_ready.sh
-'@
-
-$mergeBash | & ssh -i $Key $VpsHost "tr -d '\r' | bash -s -- $remoteTmp"
+$mergeScript = Join-Path $RepoRoot "deploy/scripts/merge_toss_keys_remote.sh"
+& scp -i $Key $mergeScript "${VpsHost}:/opt/ch2_Macro/deploy/scripts/merge_toss_keys_remote.sh"
+if ($LASTEXITCODE -ne 0) { throw "scp merge script failed" }
+& ssh -i $Key $VpsHost "sed -i 's/\r$//' /opt/ch2_Macro/deploy/scripts/merge_toss_keys_remote.sh; bash /opt/ch2_Macro/deploy/scripts/merge_toss_keys_remote.sh $remoteTmp"
 if ($LASTEXITCODE -ne 0) { throw "remote merge/verify failed" }
 Write-Host "OK: Toss test keys applied and verify script passed."

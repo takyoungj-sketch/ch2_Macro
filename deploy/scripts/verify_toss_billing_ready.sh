@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ENV_FILE="/opt/ch2_Macro/backend/.env"
-API="http://127.0.0.1:8000"
+API="https://ch2data.com"
 
 fail() {
   echo "FAIL: $*" >&2
@@ -54,9 +54,10 @@ if [[ -z "${PLATFORM_REVIEW_EMAIL:-}" || -z "${PLATFORM_REVIEW_PASSWORD:-}" ]]; 
 else
   echo "==> review-login + billing/prepare (smoke)"
   jar=$(mktemp)
+  login_body=$(python3 -c "import json,os; print(json.dumps({'email':os.environ['PLATFORM_REVIEW_EMAIL'],'password':os.environ['PLATFORM_REVIEW_PASSWORD']}))")
   curl -sf -c "$jar" -b "$jar" -X POST "$API/api/auth/review-login" \
     -H "Content-Type: application/json" \
-    -d "{\"email\":\"${PLATFORM_REVIEW_EMAIL}\",\"password\":\"${PLATFORM_REVIEW_PASSWORD}\"}" >/dev/null \
+    -d "$login_body" >/dev/null \
     || fail "review-login failed"
 
   prep=$(curl -sf -b "$jar" -X POST "$API/api/billing/toss/billing/prepare" \
