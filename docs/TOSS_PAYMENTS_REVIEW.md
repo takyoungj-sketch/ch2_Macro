@@ -19,9 +19,22 @@
 sudo -u postgres psql -d ch2_platform -f /opt/ch2_Macro/db/072_platform_toss_billing.sql
 ```
 
-### 2. VPS `backend/.env` — **테스트 키** (심사)
+### 2. 어떤 키를 쓰나 (MID `ch2datoe5e`)
 
-개발자센터 → MID 선택 → **[테스트]** 탭:
+| 개발자센터 구역 | 접두사 | 이 프로젝트 |
+|-----------------|--------|-------------|
+| **API 개별 연동 키** (자동결제·결제창 SDK) | `test_ck_` / `test_sk_` | **✅ 사용** |
+| 주문서형·결제위젯 연동 키 | `test_gck_` / `test_gsk_` | ❌ 미사용 (`/v2/standard` + REST 빌링) |
+
+환경변수 이름 (`backend/app/config.py`):
+
+- `TOSS_CLIENT_KEY` — 브라우저 SDK에 전달 (공개 가능한 클라이언트 키)
+- `TOSS_SECRET_KEY` — 서버만 (빌링키 발급·승인·confirm). **git·채팅·로그 금지**
+- `TOSS_WEBHOOK_SECRET` — (선택) 라이브 웹훅 검증용. 심사 단계는 비워도 됨
+
+### 3. VPS `backend/.env` — **테스트 키** (심사)
+
+개발자센터 → **씨에이치투** → **[테스트]** → **API 개별 연동 키** (`ch2datoe5e`):
 
 ```env
 TOSS_CLIENT_KEY=test_ck_...
@@ -34,15 +47,20 @@ PLATFORM_REVIEW_PASSWORD=...
 
 백엔드 재시작 후 확인:
 
-- `curl -s https://ch2data.com/api/billing/toss/config` → `"enabled":true`
+```bash
+sudo systemctl restart ch2-macro-backend
+sudo bash /opt/ch2_Macro/deploy/scripts/verify_toss_billing_ready.sh
+```
 
-### 3. 심사 흐름 확인
+공개 확인: `curl -s https://ch2data.com/api/billing/toss/config` → `"enabled":true` (clientKey만 노출)
+
+### 4. 심사 흐름 확인
 
 1. `https://ch2data.com/subscribe/` → 심사용 로그인  
 2. **카드로 구독하기** → 토스 **카드 등록·결제창**  
 3. 테스트 카드로 완료 → `billing-success.html` → 구독 활성
 
-### 4. 결제경로 PPT 재생성
+### 5. 결제경로 PPT 재생성
 
 ```bash
 cd deploy/scripts
@@ -53,14 +71,14 @@ python build_toss_payment_path_ppt.py
 출력: `deploy/hub/toss-review/CH2DATA_결제경로.pptx`  
 가맹계약팀에 **⑥ 카드 결제경로** 캡처 포함본 재첨부.
 
-### 5. 자동 갱신 cron (라이브 전에 설정)
+### 6. 자동 갱신 cron (라이브 전에 설정)
 
 ```bash
 # 예: 매일 09:05 KST
 5 0 * * * cd /opt/ch2_Macro/backend && . .env && python scripts/platform_billing_renewal.py
 ```
 
-### 6. 라이브 전환
+### 7. 라이브 전환
 
 심사 승인 후 **라이브** `TOSS_CLIENT_KEY` / `TOSS_SECRET_KEY` 로 교체. PPT를 라이브 화면으로 한 번 더 갱신.
 
