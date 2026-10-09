@@ -500,6 +500,224 @@ def main():
   b=log20['models']['log_log']['slope'];c=row['change'];assert abs(row['exact']-100*math.expm1(b*math.log1p(c/100)))<1e-10
  assert abs(math.exp(mean([math.log(50),math.log(200)]))-100)<1e-10
  print('Chapter 20 log fits, smearing, MAE, exact percentages and curve coordinates verified')
+ ch21=(ROOT/'model-fit/index.html').read_text(encoding='utf-8')
+ charts21=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch21,re.S)]
+ assert len(charts21)==4 and ch21.count('<summary>답과 해설</summary>')==4
+ fit21=json.loads((ROOT/'model-fit-example.json').read_text(encoding='utf-8'))
+ A=np.column_stack([np.ones(30),areas]);yy=np.array(prices);q,r=np.linalg.qr(A);beta=np.linalg.solve(r,q.T@yy);e=yy-A@beta
+ invr=np.linalg.solve(r,np.eye(2));cov=invr@invr.T*float(e@e)/28;critical=student_t19.ppf(.975,28)
+ assert abs(fit21['SST']-fit21['SSR']-fit21['SSE'])<1e-8
+ assert abs(fit21['slope_se']-math.sqrt(cov[1,1]))<1e-10 and abs(fit21['F']-fit21['t']**2)<1e-10
+ assert abs(fit21['p']-fit21['F_p'])<1e-12
+ for row in fit21['grid']+[fit21['point100']]:
+  v=np.array([1,row['x']]);center=float(v@beta);meanvar=float(v@cov@v)
+  assert abs(row['fit']-center)<1e-9
+  assert np.allclose(row['ci'],[center-critical*math.sqrt(meanvar),center+critical*math.sqrt(meanvar)])
+  assert np.allclose(row['pi'],[center-critical*math.sqrt(meanvar+float(e@e)/28),center+critical*math.sqrt(meanvar+float(e@e)/28)])
+  assert row['pi'][0]<row['ci'][0]<row['ci'][1]<row['pi'][1]
+ for band in charts21[1].findall('polygon'):
+  key=band.attrib['data-band'];points=[tuple(map(float,p.split(','))) for p in band.attrib['points'].split()]
+  expected=[(65+v['x']*1.55,330-(v[key][1]+150)*.43) for v in fit21['grid']]+[(65+v['x']*1.55,330-(v[key][0]+150)*.43) for v in reversed(fit21['grid'])]
+  assert np.allclose(points,expected)
+ for curve in charts21[3].findall('polyline'):
+  key=curve.attrib['data-width'];points=[tuple(map(float,p.split(','))) for p in curve.attrib['points'].split()]
+  assert np.allclose(points,[(65+v['x']*1.55,320-(v[key][1]-v['fit'])*1.6) for v in fit21['grid']])
+ print('Chapter 21 sum-of-squares, QR covariance, t/F agreement and interval coordinates verified')
+ ch22=(ROOT/'supervised-unsupervised/index.html').read_text(encoding='utf-8')
+ charts22=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch22,re.S)]
+ assert len(charts22)==4 and ch22.count('<summary>답과 해설</summary>')==4
+ learn=json.loads((ROOT/'learning-example.json').read_text(encoding='utf-8'))
+ assert learn['train_ids']==list(range(1,21)) and [v['id'] for v in learn['test']]==list(range(21,31))
+ lr=linregress([r['area'] for r in data[:20]],[r['price'] for r in data[:20]])
+ pred=[lr.intercept+lr.slope*r['area'] for r in data[20:]]
+ assert np.allclose(pred,[v['predicted'] for v in learn['test']])
+ assert abs(learn['MAE']-mean(abs(v-r['price']) for v,r in zip(pred,data[20:])))<1e-10
+ assert abs(learn['baseline_MAE']-mean(abs(mean(r['price'] for r in data[:20])-r['price']) for r in data[20:]))<1e-10
+ for dot,row in zip(charts22[0].findall('circle'),learn['test']):
+  assert abs(float(dot.attrib['cx'])-(65+row['actual']*1.5))<1e-9 and abs(float(dot.attrib['cy'])-(325-row['predicted']*.9))<1e-9
+ cl=learn['clustering'];pts=np.array(cl['points']);cent=np.array(cl['centers']);dist=((pts[:,None,:]-cent[None,:,:])**2).sum(axis=2)
+ assert np.array_equal(dist.argmin(axis=1),cl['labels']) and abs(dist.min(axis=1).sum()-4)<1e-12
+ for j in range(2):assert np.allclose(pts[np.array(cl['labels'])==j].mean(axis=0),cent[j])
+ cf=learn['classification'];assert (cf['TP']+cf['TN'])/100==cf['accuracy'] and cf['TP']/(cf['TP']+cf['FN'])==0
+ print('Chapter 22 held-out predictions, baseline, confusion counts and clustering fixed point verified')
+ ch23=(ROOT/'train-validation-test/index.html').read_text(encoding='utf-8')
+ charts23=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch23,re.S)]
+ assert len(charts23)==4 and ch23.count('<summary>답과 해설</summary>')==4
+ split23=json.loads((ROOT/'split-example.json').read_text(encoding='utf-8'))
+ tr=np.array(split23['train']);va=np.array(split23['validation']);te=np.array(split23['test'])
+ assert tr.mean()==20 and np.median(tr)==10
+ assert np.abs(va-tr.mean()).mean()==8 and np.abs(va-np.median(tr)).mean()==2
+ assert split23['selected']=='median' and split23['refit_value']==np.median(np.concatenate([tr,va]))==11
+ assert abs(split23['test_MAE']-np.abs(te-11).mean())<1e-12
+ sc=split23['scaling'];a=np.array(sc['train']);b=np.append(a,sc['held_out'])
+ assert abs(sc['train_z']-(140-a.mean())/a.std())<1e-12 and abs(sc['leaked_z']-(140-b.mean())/b.std())<1e-12
+ bars=charts23[3].findall('rect');assert len(bars)==2
+ assert [float(v.attrib['height']) for v in bars]==[200,50]
+ assert [float(v.attrib['y']) for v in bars]==[120,270]
+ print('Chapter 23 selection, refit, test MAE, scaling boundaries and chart heights verified')
+ ch24=(ROOT/'overfitting/index.html').read_text(encoding='utf-8')
+ charts24=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch24,re.S)]
+ assert len(charts24)==4 and ch24.count('<summary>답과 해설</summary>')==4
+ sim=json.loads((ROOT/'overfitting-example.json').read_text(encoding='utf-8'));xx=np.array(sim['x']);gg=np.array(sim['grid']);yy=np.array(sim['training_y']);true=1+gg+.7*gg**2
+ expected=1+xx+.7*xx**2+np.random.default_rng(sim['seed']).normal(0,.15,(300,12));assert np.allclose(yy,expected)
+ previous=float('inf')
+ for m in sim['models']:
+  # Independent monomial QR solution rather than generator Legendre SVD.
+  deg=m['degree'];A=np.vander(xx,deg+1,increasing=True);G=np.vander(gg,deg+1,increasing=True);q,r=np.linalg.qr(A);coef=np.linalg.solve(r,q.T@yy.T);pred=(G@coef).T
+  err=float(np.mean((pred-true)**2)+.15**2);trerr=float(np.mean((yy-(A@coef).T)**2))
+  assert abs(err-m['expected_MSE'])<1e-8 and abs(trerr-m['train_MSE'])<1e-8
+  assert abs(m['bias2']+m['variance']+m['noise']-err)<1e-8
+  assert trerr<=previous+1e-10;previous=trerr
+  assert np.allclose(pred[0],m['first_curve'],atol=1e-8)
+  assert np.allclose((np.vander([.8],deg+1,increasing=True)@coef).ravel(),m['at08'],atol=1e-8)
+ ymax=max(m['expected_MSE'] for m in sim['models'])*1.2
+ for curve in charts24[1].findall('polyline'):
+  key=curve.attrib['data-metric'];points=[tuple(map(float,p.split(','))) for p in curve.attrib['points'].split()]
+  assert np.allclose(points,[(120+i*140,320-m[key]/ymax*240) for i,m in enumerate(sim['models'])])
+ for bar in charts24[2].findall('rect'):
+  m=next(m for m in sim['models'] if m['degree']==int(bar.attrib['data-degree']))
+  assert abs(float(bar.attrib['height'])-m[bar.attrib['data-part']]/ymax*240)<1e-9
+ print('Chapter 24 seeded simulation, independent polynomial QR, bias/variance identity and chart coordinates verified')
+ ch25=(ROOT/'prediction-errors/index.html').read_text(encoding='utf-8')
+ charts25=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch25,re.S)]
+ assert len(charts25)==4 and ch25.count('<summary>답과 해설</summary>')==4
+ er25=json.loads((ROOT/'prediction-errors-example.json').read_text(encoding='utf-8'))
+ for key in ['A','B']:
+  d=er25['ranking'];e=np.array(d['actual'])-np.array(d[key+'_predictions']);m=d[key]
+  assert abs(m['MAE']-np.abs(e).mean())<1e-12 and abs(m['RMSE']-np.sqrt(np.mean(e*e)))<1e-12
+ assert er25['ranking']['A']['MAE']==2 and er25['ranking']['A']['RMSE']==4
+ assert er25['ranking']['B']['MAE']==er25['ranking']['B']['RMSE']==3
+ assert er25['small_values']['metrics']['MAPE']==37
+ for row in er25['loss']['grid']:
+  e=np.array([1,2,9])-row['value'];assert abs(row['MAE']-np.abs(e).mean())<1e-12 and abs(row['MSE']-np.mean(e*e))<1e-12
+ assert min(er25['loss']['grid'],key=lambda v:v['MAE'])['value']==2
+ assert min(er25['loss']['grid'],key=lambda v:v['MSE'])['value']==4
+ co=er25['common'];lr=linregress([r['area'] for r in data[:20]],[r['price'] for r in data[:20]]);pred=np.array([lr.intercept+lr.slope*r['area'] for r in data[20:]]);actual=np.array([r['price'] for r in data[20:]]);e=actual-pred
+ assert np.allclose(pred,co['predictions']) and abs(co['metrics']['MAPE']-100*np.mean(np.abs(e/actual)))<1e-10
+ for j,curve in enumerate(charts25[3].findall('polyline')):
+  key=curve.attrib['data-loss'];maxv=10 if key=='MAE' else 60;left=65+j*300
+  points=[tuple(map(float,p.split(','))) for p in curve.attrib['points'].split()]
+  assert np.allclose(points,[(left+v['value']*23,315-v[key]/maxv*220) for v in er25['loss']['grid']])
+ assert np.allclose([float(b.attrib['height']) for b in charts25[2].findall('rect')],[220,22,2.2])
+ print('Chapter 25 metric ranking, MAPE, loss optima, held-out predictions and graphic coordinates verified')
+ ch26=(ROOT/'cross-validation/index.html').read_text(encoding='utf-8')
+ charts26=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch26,re.S)]
+ assert len(charts26)==4 and ch26.count('<summary>답과 해설</summary>')==4
+ cv26=json.loads((ROOT/'cross-validation-example.json').read_text(encoding='utf-8'));errors26=[];apes26=[];seen=[]
+ for fold in cv26['folds']:
+  tr=[r for r in data if r['id'] in fold['train_ids']];va=[r for r in data if r['id'] in fold['validation_ids']]
+  assert not set(fold['train_ids'])&set(fold['validation_ids']) and len(tr)==20 and len(va)==10;seen+=fold['validation_ids']
+  lr=linregress([r['area'] for r in tr],[r['price'] for r in tr]);pred=np.array([lr.intercept+lr.slope*r['area'] for r in va]);actual=np.array([r['price'] for r in va]);e=actual-pred
+  assert np.allclose(pred,fold['predictions']) and abs(np.abs(e).mean()-fold['metrics']['MAE'])<1e-10
+  errors26.extend(e);apes26.extend(np.abs(e/actual))
+ assert sorted(seen)==list(range(1,31))
+ assert abs(np.abs(errors26).mean()-cv26['pooled']['MAE'])<1e-10 and abs(100*np.mean(apes26)-cv26['pooled']['MAPE'])<1e-10
+ assert abs(np.sqrt(np.mean(np.array(errors26)**2))-cv26['pooled']['RMSE'])<1e-10
+ assert abs(mean(f['metrics']['RMSE'] for f in cv26['folds'])-cv26['mean_fold_RMSE'])<1e-10
+ for bar,fold in zip(charts26[1].findall('rect'),cv26['folds']):assert abs(float(bar.attrib['height'])-fold['metrics']['MAE']*3.5)<1e-9
+ assert np.allclose([float(v.attrib['height']) for v in charts26[2].findall('rect')],[192,115.2])
+ print('Chapter 26 disjoint folds, independent regressions, pooled metrics and bar coordinates verified')
+ ch27=(ROOT/'regularization/index.html').read_text(encoding='utf-8')
+ charts27=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch27,re.S)]
+ assert len(charts27)==4 and ch27.count('<summary>답과 해설</summary>')==4
+ reg27=json.loads((ROOT/'regularization-example.json').read_text(encoding='utf-8'));z=np.array(reg27['orthogonal']['z'])
+ for row in reg27['orthogonal']['path']:
+  lam=row['lam'];ridge=np.array(row['ridge']);lasso=np.array(row['lasso'])
+  assert np.allclose((1+lam)*ridge,z)
+  for b,zi in zip(lasso,z):
+   assert abs(b-zi+lam*np.sign(b))<1e-10 if b!=0 else abs(zi)<=lam+1e-10
+ for item in reg27['cv']:
+  errs=[]
+  for fold in item['folds']:
+   k=fold['fold']-1;tr=data[:k*10]+data[(k+1)*10:];va=data[k*10:(k+1)*10];xx=np.array([r['area'] for r in tr]);yy=np.array([r['price'] for r in tr]);zz=(xx-xx.mean())/xx.std()
+   A=np.column_stack([np.ones(20),zz]);pen=np.diag([0,20*item['lam']]);b=np.linalg.solve(A.T@A+pen,A.T@yy)
+   pred=b[0]+b[1]*(np.array([r['area'] for r in va])-xx.mean())/xx.std();assert np.allclose(pred,fold['predictions'])
+   errs.extend(np.array([r['price'] for r in va])-pred)
+  assert abs(np.sqrt(np.mean(np.array(errs)**2))-item['RMSE'])<1e-10
+ assert reg27['best_lambda']==min(reg27['cv'],key=lambda v:v['RMSE'])['lam']
+ for chart,key in [(charts27[0],'ridge'),(charts27[1],'lasso')]:
+  for curve in chart.findall('polyline'):
+   j=int(curve.attrib['data-index']);points=[tuple(map(float,p.split(','))) for p in curve.attrib['points'].split()]
+   assert np.allclose(points,[(70+r['lam']*120,290-r[key][j]*70) for r in reg27['orthogonal']['path']])
+ print('Chapter 27 ridge equations, lasso optimality, fold-local scaling and coefficient paths verified')
+ ch28=(ROOT/'classification/index.html').read_text(encoding='utf-8')
+ charts28=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch28,re.S)]
+ assert len(charts28)==4 and ch28.count('<summary>답과 해설</summary>')==4
+ cls=json.loads((ROOT/'classification-example.json').read_text(encoding='utf-8'));pp=np.array(cls['probabilities']);yy=np.array(cls['labels'])
+ from scipy.special import expit,logit
+ for v in cls['curve']:assert abs(v['p']-expit(-2+.8*v['x']))<1e-12
+ for v in cls['odds']:assert abs(logit(v['after'])-logit(v['before'])-math.log(2))<1e-12
+ for c in cls['confusions']:
+  pr=pp>=c['threshold'];tp=int(np.sum(pr&(yy==1)));fp=int(np.sum(pr&(yy==0)));fn=int(np.sum(~pr&(yy==1)));tn=int(np.sum(~pr&(yy==0)))
+  assert [tp,fp,fn,tn]==[c['TP'],c['FP'],c['FN'],c['TN']]
+  assert abs(c['precision']-tp/(tp+fp))<1e-12 and abs(c['F1']-2*tp/(2*tp+fp+fn))<1e-12
+ assert abs(cls['log_loss']-np.mean(np.logaddexp(0,logit(pp))-yy*logit(pp)))<1e-12
+ assert abs(cls['brier']-np.mean((pp-yy)**2))<1e-12
+ from scipy.stats import rankdata
+ auc=(rankdata(pp)[yy==1].sum()-4*5/2)/16
+ assert cls['AUC']==auc==13/16
+ points=[tuple(map(float,v.split(','))) for v in charts28[0].find('polyline').attrib['points'].split()]
+ assert np.allclose(points,[(70+r['x']*100,320-r['p']*250) for r in cls['curve']])
+ for curve in charts28[3].findall('polyline'):
+  key=curve.attrib['data-label'];points=[tuple(map(float,v.split(','))) for v in curve.attrib['points'].split()]
+  assert np.allclose(points,[(70+r['p']*500,320-r[key]*50) for r in cls['loss']])
+ print('Chapter 28 sigmoid, odds ratios, confusion metrics, log loss, rank AUC and chart coordinates verified')
+ knn=json.loads((Path(__file__).resolve().parent/'knn-example.json').read_text(encoding='utf-8'))
+ kx=np.array(knn['x']);ky=np.array(knn['y'])
+ for row in knn['grid']+[dict(x=knn['query'],k1=knn['k1'],k3=knn['k3'])]:
+  order=np.argsort(abs(kx-row['x']),kind='stable')
+  for k in [1,3]:assert abs(row[f'k{k}']-ky[order[:k]].mean())<1e-12
+ ks=knn['scaling'];kp=np.array(ks['points']);kq=np.array(ks['query']);std=kp.std(axis=0)
+ assert np.allclose(std,ks['scales'])
+ assert np.allclose(np.linalg.norm(kp-kq,axis=1),ks['raw'])
+ assert np.allclose(np.linalg.norm((kp-kq)/std,axis=1),ks['scaled'])
+ assert np.argmin(ks['raw'])==1 and np.argmin(ks['scaled'])==0
+ assert knn['vote']['probability']==np.mean(knn['vote']['labels'])
+ print('Chapter 29 neighbor predictions, stable ties, scaling distances and voting verified')
+ tree30=json.loads((Path(__file__).resolve().parent/'decision-tree-example.json').read_text(encoding='utf-8'))
+ raw30=json.loads((Path(__file__).resolve().parent/'example-data.json').read_text(encoding='utf-8'))['rows']
+ x30=np.array([r['area'] for r in raw30[:20]]);y30=np.array([r['price'] for r in raw30[:20]])
+ for candidate in tree30['candidates']:
+  mask=x30<=candidate['threshold'];loss=sum(np.sum((v-v.mean())**2) for v in [y30[mask],y30[~mask]])
+  assert abs(loss-candidate['sse'])<1e-8
+ assert tree30['thresholds']==[31,80]
+ assert min(tree30['candidates'],key=lambda r:r['sse'])['threshold']==31
+ for leaf in tree30['leaves']:
+  assert abs(leaf['mean']-np.mean([r['price'] for r in raw30 if r['id'] in leaf['ids']]))<1e-12
+ for key,rr in [('train_mae',raw30[:20]),('test_mae',raw30[20:])]:
+  pp=[tree30['leaves'][0 if r['area']<=31 else 1 if r['area']<=80 else 2]['mean'] for r in rr]
+  assert abs(np.mean(np.abs(np.array(pp)-[r['price'] for r in rr]))-tree30['metrics'][key])<1e-12
+ cc=tree30['classification'];gini=lambda counts:1-np.sum((np.array(counts)/sum(counts))**2)
+ assert gini(cc['parent'])==cc['parent_gini'] and gini(cc['left'])==cc['weighted_gini']
+ assert cc['parent_gini']-cc['weighted_gini']==cc['gain']
+ print('Chapter 30 split losses, leaf means, held-out errors and Gini impurity verified')
+ cluster31=json.loads((Path(__file__).resolve().parent/'clustering-example.json').read_text(encoding='utf-8'))
+ xp31=np.array(cluster31['points'],dtype=float)
+ for model31 in cluster31['models']:
+  centers31=np.array(model31['centers']);labels31=np.array(model31['labels'])
+  assert np.array_equal(np.argmin(((xp31[:,None]-centers31)**2).sum(axis=2),axis=1),labels31)
+  for j in range(len(centers31)):assert np.allclose(centers31[j],xp31[labels31==j].mean(axis=0))
+  assert abs(np.sum((xp31-centers31[labels31])**2)-model31['inertia'])<1e-10
+ from scipy.spatial.distance import cdist
+ from scipy.cluster.hierarchy import linkage
+ dd31=cdist(xp31,xp31);ll31=np.array(cluster31['models'][1]['labels'])
+ for i,ss31 in enumerate(cluster31['silhouette']):
+  aa31=np.mean(dd31[i,(ll31==ll31[i])&(np.arange(6)!=i)]);bb31=np.mean(dd31[i,ll31!=ll31[i]])
+  assert abs((bb31-aa31)/max(aa31,bb31)-ss31['s'])<1e-12
+ assert np.allclose(linkage(np.array(cluster31['hierarchy']['x'])[:,None],method='complete'),cluster31['hierarchy']['merges'])
+ print('Chapter 31 centers, assignments, inertia, silhouette distances and complete linkage verified')
+ read32=json.loads((ROOT/'reading-results-example.json').read_text(encoding='utf-8'))
+ raw32=json.loads((ROOT/'example-data.json').read_text(encoding='utf-8'))['rows'];xx32=np.array([r['area'] for r in raw32]);yy32=np.array([r['price'] for r in raw32])
+ assert abs(read32['mean']-yy32.mean())<1e-12 and read32['median']==np.median(yy32)
+ from scipy.stats import t as t32
+ assert np.allclose(read32['mean_ci'],t32.interval(.95,29,loc=yy32.mean(),scale=yy32.std(ddof=1)/np.sqrt(30)))
+ def mae32(tr,te):
+  design=np.column_stack([np.ones(len(tr)),xx32[tr]]);beta=np.linalg.lstsq(design,yy32[tr],rcond=None)[0]
+  return np.mean(abs(yy32[te]-(beta[0]+beta[1]*xx32[te])))
+ ids32=np.arange(30);folds32=np.array_split(ids32,3)
+ expected32=[mae32(ids32,ids32),mae32(ids32[:20],ids32[20:]),np.mean([mae32(np.setdiff1d(ids32,f),f) for f in folds32])]
+ assert np.allclose(expected32,read32['mae'])
+ print('Chapter 32 summary statistics, t interval and independent least-squares evaluation errors verified')
  print(f'{len(items)} chapters: {len(available)} available, {len(items)-len(available)} planned; {len(pages)} pages checked')
  print('Chapter 01 example counts, ranges, missing-value example and scatter count verified')
  for error in errors:print('ERROR:',error)

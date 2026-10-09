@@ -6,7 +6,7 @@
     <title>26. 교차검증과 모형 선택 | 통계학 &amp; 데이터 분석</title>
     <meta
       name="description"
-      content="흥덕 예시 30건을 10건씩 세 번 빼면 확인 오차는 55.1, 23.3, 41.1입니다. 평균은 39.8이고 CV-MAPE는 27.4%입니다."
+      content="K폴드·OOF·점수 집계와 중첩 교차검증, 시간·집단 분할 및 모형 선택의 한계를 학습합니다."
     />
     <link rel="canonical" href="https://ch2data.com/learn/stats/cross-validation/" />
     <link rel="stylesheet" href="/style.css" />
@@ -23,259 +23,21 @@
         <h1 class="hero__title">26. 교차검증과 모형 선택</h1>
       </header>
 
-      <article class="learn-chapter" aria-label="교차검증과 CV-MAPE">
-        <section class="learn-chapter__step" id="cross-validation">
-          <p class="learn-chapter__label">① 정의</p>
-          <h2>빼 둔 10건의 위치를 바꿔 오차를 평균합니다</h2>
-          <p>
-            <strong>교차검증</strong>은 모형을 만들 때 빼 둔 건으로 오차를 재고, 빼는 위치를 바꿔
-            그 오차를 평균하는 절차입니다. 한 번 자른 확인 오차는 그 한 번의 결과입니다.
-          </p>
-          <p>
-            자료는 <a href="/learn/stats/graphs/">흥덕 예시 30건</a>입니다. 번호 순서대로 10건씩
-            세 번 뺍니다. 1회는 1–10, 2회는 11–20, 3회는 21–30입니다. 번호는 모은 순서라 시간이
-            아닙니다. 3회는 <a href="/learn/stats/overfitting/">과적합</a>에서 확인으로 둔 10건과
-            같습니다. 각 회는 남은 20건으로 면적에서 단가를 말하는 직선을 맞춥니다.
-          </p>
-        </section>
-
-        <section class="learn-chapter__step" id="cv-mape">
-          <p class="learn-chapter__label">② 같은 자료의 숫자</p>
-          <h2>세 확인 오차는 55.1, 23.3, 41.1이고 평균은 39.8입니다</h2>
-          <p>
-            1회는 7번이 빠집니다. 남은 20건의 직선은 면적 22㎡에서 196.6을 말하고, 실제 단가는
-            480입니다. 그 10건의 평균절대오차는 55.1입니다. 각 오차를 그 건의 단가로 나눈 뒤
-            평균하면 33.4%입니다.
-          </p>
-          <p>
-            2회는 11–20을 뺍니다. 이 10건에는 480이 없습니다. 평균절대오차는 23.3, 비율 오차는
-            14.9%입니다. 3회는 21–30입니다. 평균절대오차 41.1은 과적합 장의 확인 오차와 같습니다.
-            비율 오차는 33.9%입니다.
-          </p>
-          <p>
-            (55.1 + 23.3 + 41.1) / 3 = 39.8입니다. (33.4 + 14.9 + 33.9) / 3 = 27.4%입니다.
-            이 27.4%가 이 표의 <strong>CV-MAPE</strong>입니다. 30건 전부로 맞추고 같은 30건으로
-            잰 MAPE 26.6%는 <a href="/learn/stats/model-fit/#mape">회귀모형의 성능</a>에 있습니다.
-            그 26.6%에는 맞출 때 본 건이 들어 있습니다.
-          </p>
-          <div class="learn-data">
-            <table>
-              <thead>
-                <tr>
-                  <th>회</th>
-                  <th>빼 둔 번호</th>
-                  <th>평균절대오차</th>
-                  <th>MAPE</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>1</td>
-                  <td>1–10, 7번 포함</td>
-                  <td>55.1</td>
-                  <td>33.4%</td>
-                </tr>
-                <tr>
-                  <td>2</td>
-                  <td>11–20</td>
-                  <td>23.3</td>
-                  <td>14.9%</td>
-                </tr>
-                <tr>
-                  <td>3</td>
-                  <td>21–30</td>
-                  <td>41.1</td>
-                  <td>33.9%</td>
-                </tr>
-                <tr>
-                  <td>평균</td>
-                  <td>10건씩</td>
-                  <td>39.8</td>
-                  <td>27.4%</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">③ 그림</p>
-          <h2>1회만 7번이 확인 쪽에 있습니다</h2>
-          <p>진한 칸이 그 회에 빼 둔 10건입니다. 연한 칸 20건으로 직선을 맞춥니다.</p>
-          <figure class="learn-chart" aria-label="세 번의 학습과 확인 분할">
-            <svg viewBox="0 0 440 148" role="img">
-              <text x="40" y="32" text-anchor="end" fill="#475569" font-size="12">1회</text>
-              <rect x="48" y="16" width="120" height="24" fill="#1d4ed8" rx="3" />
-              <text x="108" y="33" text-anchor="middle" fill="#fff" font-size="11">1–10</text>
-              <rect x="168" y="16" width="240" height="24" fill="#93c5fd" stroke="#1d4ed8" rx="3" />
-              <text x="288" y="33" text-anchor="middle" fill="#1e3a8a" font-size="11">11–30</text>
-              <text x="40" y="72" text-anchor="end" fill="#475569" font-size="12">2회</text>
-              <rect x="48" y="56" width="120" height="24" fill="#93c5fd" stroke="#1d4ed8" rx="3" />
-              <text x="108" y="73" text-anchor="middle" fill="#1e3a8a" font-size="11">1–10</text>
-              <rect x="168" y="56" width="120" height="24" fill="#1d4ed8" rx="3" />
-              <text x="228" y="73" text-anchor="middle" fill="#fff" font-size="11">11–20</text>
-              <rect x="288" y="56" width="120" height="24" fill="#93c5fd" stroke="#1d4ed8" rx="3" />
-              <text x="348" y="73" text-anchor="middle" fill="#1e3a8a" font-size="11">21–30</text>
-              <text x="40" y="112" text-anchor="end" fill="#475569" font-size="12">3회</text>
-              <rect x="48" y="96" width="240" height="24" fill="#93c5fd" stroke="#1d4ed8" rx="3" />
-              <text x="168" y="113" text-anchor="middle" fill="#1e3a8a" font-size="11">1–20</text>
-              <rect x="288" y="96" width="120" height="24" fill="#1d4ed8" rx="3" />
-              <text x="348" y="113" text-anchor="middle" fill="#fff" font-size="11">21–30</text>
-              <text x="228" y="140" text-anchor="middle" fill="#64748b" font-size="11">칸 하나의 너비는 10건입니다</text>
-            </svg>
-            <p class="learn-chart__caption">
-              1회의 진한 칸에 7번이 있습니다. 3회의 진한 칸은 과적합 장의 확인 10건입니다.
-            </p>
-          </figure>
-          <figure class="learn-chart" aria-label="세 회의 평균절대오차">
-            <svg viewBox="0 0 420 168" role="img">
-              <text x="92" y="32" text-anchor="end" fill="#475569" font-size="12">1회</text>
-              <rect x="100" y="18" width="165.3" height="16" fill="#1d4ed8" rx="2" />
-              <text x="272" y="31" fill="#1e3a8a" font-size="12">55.1</text>
-              <text x="92" y="68" text-anchor="end" fill="#475569" font-size="12">2회</text>
-              <rect x="100" y="54" width="69.9" height="16" fill="#1d4ed8" rx="2" />
-              <text x="176" y="67" fill="#1e3a8a" font-size="12">23.3</text>
-              <text x="92" y="104" text-anchor="end" fill="#475569" font-size="12">3회</text>
-              <rect x="100" y="90" width="123.3" height="16" fill="#1d4ed8" rx="2" />
-              <text x="230" y="103" fill="#1e3a8a" font-size="12">41.1</text>
-              <text x="92" y="140" text-anchor="end" fill="#475569" font-size="12">평균</text>
-              <rect x="100" y="126" width="119.4" height="16" fill="#64748b" rx="2" />
-              <text x="226" y="139" fill="#334155" font-size="12">39.8</text>
-            </svg>
-            <p class="learn-chart__caption">
-              막대는 평균절대오차(만원/㎡)입니다. 회색 39.8은 세 파란 막대의 평균이고, 1회 55.1과
-              2회 23.3의 사이에 있습니다.
-            </p>
-          </figure>
-        </section>
-
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">④ 그 그림에서 읽을 문장</p>
-          <h2>평균 39.8은 한 건의 오차가 아닙니다</h2>
-          <p>
-            1회 55.1은 7번이 확인 10건에 들어간 결과입니다. 2회 23.3은 그 10건에 480이 없는
-            결과입니다. 평균 39.8은 두 회를 포함한 세 회의 평균이라, 어느 한 회의 오차도 아니고
-            7번 한 건의 오차도 아닙니다.
-          </p>
-          <p>
-            3회 41.1은 세 번 가운데 한 번입니다. 그 한 번만 이 직선의 확인 오차라고 두면, 1회
-            55.1과 2회 23.3이 빠집니다.
-          </p>
-        </section>
-
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">⑤ 자주 하는 실수</p>
-          <h2>30건 MAPE 26.6%와 CV-MAPE 27.4%를 같은 점수로 두지 않습니다</h2>
-          <p>
-            26.6%는 30건에 맞춘 직선을 그 30건에 다시 댄 비율입니다. 27.4%는 맞출 때 빼 둔
-            10건만으로 잰 비율을 세 번 평균한 값입니다. 이 표에서는 둘이 가깝습니다. 같은 30건을
-            쓰더라도 맞출 때 본 건이 점수에 들어가는지가 다릅니다.
-          </p>
-          <p>
-            1회와 3회의 MAPE는 33.4%와 33.9%로 가깝고, 평균절대오차는 55.1과 41.1입니다. 단가가
-            낮은 건이 많은 회는 같은 단가 차이도 비율이 커집니다. 두 점수의 순서가 항상 같지는
-            않습니다.
-          </p>
-        </section>
-
-        <aside class="learn-caution" aria-label="주의">
-          <p class="learn-caution__title">주의</p>
-          <p>
-            이 세 번은 번호를 섞지 않고 10건씩 자른 것입니다. 7번이 어느 10건에 들어가는지에 따라
-            55.1과 23.3은 바뀝니다. 27.4%는 이 30건의 과거 패턴이고, 한 건의 감정평가액을 보장하지
-            않습니다.
-          </p>
-        </aside>
-
-        <details class="learn-more">
-          <summary>조금 더 알아보기</summary>
-          <div class="learn-more__body">
-            <p>
-              3회의 직선은 과적합 장의 250.7 − 0.76 × 면적입니다. 1회는 7번 없이 맞춘 직선이라
-              면적 22㎡에서 196.6을 말합니다. 아래 화면 예시는 5겹이고 CV-MAPE 13.2%는 다른
-              표본입니다. 이 장은 확인 칸을 10건으로 맞추려고 세 번으로 두었습니다.
-            </p>
-          </div>
-        </details>
-
-        <section class="learn-chapter__step" id="model-recommendation">
-          <p class="learn-chapter__label">CH2 Macro에서는?</p>
-          <h2>모형추천</h2>
-          <p>
-            집합·복합 <strong>회귀실험</strong>에서 설명변수와 선형·로그 형태를 바꿔 여러 모형을 만들
-            수 있습니다. <strong>모형추천</strong>은 이 모형들을 같은 표본에서 교차검증하며
-            CV-MAPE·Adj R² 등을 나란히 보여 줍니다.
-          </p>
-          <p>
-            <strong>예측력</strong> 탭은 CV-MAPE(또는 탭에 따라 MAPE)가 낮은 순서를,
-            <strong>설명력</strong> 탭은 Adj R²가 높은 순서를 중심으로 봅니다. 화면의 지표 옆
-            <strong>?</strong>를 누르면 간단한 정의와 함께 이 Learn 페이지로 연결됩니다.
-          </p>
-          <figure class="learn-capture">
-            <img src="../assets/captures/collective-cheongju-recommend.png" alt="청주시 아파트 모형 추천. 홀드아웃 MAPE" />
-            <figcaption class="learn-capture__caption">
-              집합 · 청주시 · 아파트. 1순위는 홀드아웃 MAPE 14.3%입니다. 홀드아웃은 단지를 한 번 나누어 떼 둔 오차입니다.
-              이 장의 10건씩 세 번, 평균 27.4%와는 표본도 나누기도 다릅니다. 5겹 교차검증 MAPE는 홀드아웃 값이 없을 때 같은 자리에 나옵니다.
-            </figcaption>
-          </figure>
-        </section>
-
-        <section class="learn-chapter__step">
-          <p class="learn-chapter__label">Macro 화면</p>
-          <h2>모형추천에서 CV-MAPE 읽기</h2>
-          <p>
-            아래는 집합 Macro <strong>모형추천</strong> 패널을 단순화한 예시입니다. 1순위 모형의
-            CV-MAPE와 Adj R²를 함께 확인하는 흐름입니다.
-          </p>
-          <figure class="learn-capture learn-macro-mock" aria-label="Macro 모형추천 예시">
-            <div class="learn-macro-mock__bar">
-              <span><strong>집합</strong> · 회귀실험</span>
-              <span>지역: 청주시 흥덕구 · 아파트</span>
-              <span>공통 표본 n=128</span>
-            </div>
-            <div class="learn-macro-mock__body">
-              <div class="learn-macro-mock__card">
-                <div class="learn-macro-mock__card-title">
-                  모형 추천 · 깊이: 표준+
-                  <span class="learn-macro-mock__help" title="CV-MAPE 설명">?</span>
-                </div>
-                <div style="font-size: 0.625rem; color: #a5b4fc; margin-bottom: 0.35rem">
-                  [ 예측형 ] 설명형
-                </div>
-                <div class="learn-macro-mock__card-row">
-                  <strong>1.</strong> 로그 · 전용면적 · 층수 · 건축목적별 유형
-                  <div class="learn-macro-mock__card-metrics">
-                    5겹 교차검증 MAPE <strong style="color: #86efac">13.2%</strong>
-                    <span class="learn-macro-mock__help">?</span>
-                    · 동일표본 Adj R² 0.682 · n=128
-                  </div>
-                </div>
-                <div class="learn-macro-mock__card-row">
-                  <strong>2.</strong> 선형 · 전용면적 · 연식 · 층
-                  <div class="learn-macro-mock__card-metrics">
-                    5겹 교차검증 MAPE 17.8% · 동일표본 Adj R² 0.811 · n=128
-                  </div>
-                </div>
-              </div>
-            </div>
-            <figcaption class="learn-capture__caption">
-              예시 화면 · 청주시 흥덕구 · 아파트. 2순위는 Adj R²가 더 높지만 1순위는 CV-MAPE가 더
-              낮습니다. <strong>?</strong> 링크 → 이 페이지
-              <a href="#cv-mape" style="color: #6366f1">CV-MAPE</a> 설명.
-            </figcaption>
-          </figure>
-        </section>
-
-        <p class="learn-macro-cta">
-          <a href="https://macro.ch2data.com/collective/">CH2 Macro에서 확인하기 →</a>
-          <span style="display: block; margin-top: 0.35rem; font-size: 0.8125rem; color: #64748b"
-            >집합 · 회귀실험 · 모형추천</span
-          >
-        </p>
-      </article>
+      <article class="learn-chapter learn-chapter--expanded" aria-label="교차검증과 모형 선택"><section class="learn-chapter__step" id="cross-validation" data-toc-label="K폴드의 원리"><p class="learn-chapter__label">K폴드의 원리</p><h2>검증 역할을 바꾸면서 모형을 다시 학습합니다</h2><p>K폴드 교차검증은 개발 자료를 K개 부분으로 나누고, 한 부분을 검증에 남겨 나머지 K−1개로 학습하는 과정을 반복합니다. 이미 전체 자료로 적합한 모형을 그대로 가져와 각 부분의 점수만 계산하는 것이 아닙니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 410" role="img" aria-labelledby="folds-title folds-desc"><title id="folds-title">3폴드의 자료 배정</title><desc id="folds-desc">그림 1. 번호 블록별 교재용 분할입니다. 세 모형의 학습 자료가 서로 겹치므로 폴드 점수들을 독립 반복 측정으로 간주하지 않습니다.</desc><text x="24" y="28">3폴드: 매번 20건으로 새로 학습하고 10건을 예측</text><text x="140" y="80">1~10번</text><text x="300" y="80">11~20번</text><text x="460" y="80">21~30번</text><text x="24" y="137">1회</text><rect x="120" y="105" width="145" height="55" rx="5" fill="#ffedd5"/><text x="160" y="137">검증</text><rect x="280" y="105" width="145" height="55" rx="5" fill="#dbeafe"/><text x="320" y="137">학습</text><rect x="440" y="105" width="145" height="55" rx="5" fill="#dbeafe"/><text x="480" y="137">학습</text><text x="24" y="212">2회</text><rect x="120" y="180" width="145" height="55" rx="5" fill="#dbeafe"/><text x="160" y="212">학습</text><rect x="280" y="180" width="145" height="55" rx="5" fill="#ffedd5"/><text x="320" y="212">검증</text><rect x="440" y="180" width="145" height="55" rx="5" fill="#dbeafe"/><text x="480" y="212">학습</text><text x="24" y="287">3회</text><rect x="120" y="255" width="145" height="55" rx="5" fill="#dbeafe"/><text x="160" y="287">학습</text><rect x="280" y="255" width="145" height="55" rx="5" fill="#dbeafe"/><text x="320" y="287">학습</text><rect x="440" y="255" width="145" height="55" rx="5" fill="#ffedd5"/><text x="480" y="287">검증</text><text x="24" y="370">파랑: 학습 / 주황: 검증 · 한 관측은 검증에 정확히 한 번 사용</text></svg><figcaption class="learn-chart__caption">그림 1. 번호 블록별 교재용 분할입니다. 세 모형의 학습 자료가 서로 겹치므로 폴드 점수들을 독립 반복 측정으로 간주하지 않습니다.</figcaption></figure><p>일반적인 K폴드에서 각 관측은 검증에 한 번, 학습에 K−1번 들어갑니다. 다른 반복의 학습에 사용되었다고 누수는 아닙니다. 그 관측을 예측하는 해당 반복의 학습·선택에 그 검증 정보를 넣지 않는 것이 핵심입니다.</p><p>교차검증은 자료 활용을 높이지만 최종 모형 한 개의 정확한 미래 성능을 보장하지 않습니다. 각 반복은 전체보다 적은 자료로 학습하며, 최종 재적합 모형과 학습 크기도 다릅니다.</p></section>
+<section class="learn-chapter__step" id="scores" data-toc-label="공통 자료 예제"><p class="learn-chapter__label">공통 자료 예제</p><h2>세 번의 직선과 검증 오차를 계산합니다</h2><p>공통 30건을 번호 1~10, 11~20, 21~30의 세 블록으로 나눕니다. 번호는 시간 정보가 아니며 이 예제는 실제 미래·새 지역 성능을 평가하는 설계가 아닙니다. 매번 나머지 20건으로 면적–단가 직선을 새로 적합합니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 410" role="img" aria-labelledby="scores-title scores-desc"><title id="scores-title">폴드별 오차의 차이</title><desc id="scores-desc">그림 2. 각 폴드에서 회귀계수를 다시 추정했습니다. 폴드마다 검증 관측과 학습 구성이 달라 점수도 달라집니다. 세 값만으로 성능의 정밀한 신뢰구간을 만들지 않습니다.</desc><text x="24" y="28">공통 자료: 폴드별 검증 MAE</text><line x1="70" y1="320" x2="575" y2="320" stroke="#94a3b8"/><rect x="140" y="126.99340810121461" width="70" height="193.0065918987854" rx="5" fill="#2563eb"/><text x="150" y="113.99340810121461">55.14</text><text x="150" y="350">1폴드</text><rect x="310" y="238.32684158195326" width="70" height="81.67315841804674" rx="5" fill="#2563eb"/><text x="320" y="225.32684158195326">23.34</text><text x="320" y="350">2폴드</text><rect x="480" y="176.23595478574808" width="70" height="143.76404521425192" rx="5" fill="#2563eb"/><text x="490" y="163.23595478574808">41.08</text><text x="490" y="350">3폴드</text><text x="25" y="325.0">0</text><text x="25" y="255.0">20</text><text x="25" y="185.0">40</text><text x="25" y="115.0">60</text><text x="24" y="385">세로: 만원/㎡ · 동일 크기 폴드 평균 = 전체 OOF MAE 39.85</text></svg><figcaption class="learn-chart__caption">그림 2. 각 폴드에서 회귀계수를 다시 추정했습니다. 폴드마다 검증 관측과 학습 구성이 달라 점수도 달라집니다. 세 값만으로 성능의 정밀한 신뢰구간을 만들지 않습니다.</figcaption></figure><p>1폴드: ŷ=209.579 -0.5902×면적 / 2폴드: ŷ=236.411 -0.6928×면적 / 3폴드: ŷ=250.703 -0.7603×면적입니다. 동일한 회귀 방법도 학습 표본이 달라지면 계수가 달라집니다. 세 폴드의 MAE 평균은 39.85만원/㎡입니다.</p><p>모든 관측에 대해 그 관측을 학습에서 제외한 모형의 예측을 모으면 OOF(out-of-fold) 예측이 됩니다. <a href="../cross-validation-example.json">분할·계수·OOF 예측 자료</a>에서 계산을 확인할 수 있습니다.</p></section>
+<section class="learn-chapter__step" id="aggregation" data-toc-label="점수 집계"><p class="learn-chapter__label">점수 집계</p><h2>폴드 평균과 관측 평균을 구별합니다</h2><p>검증 건수가 같으면 폴드별 MAE의 단순 평균과 전체 OOF MAE가 같습니다. 크기가 다르면 각 폴드에 같은 비중을 줄지, 관측 수로 가중할지에 따라 결과가 달라집니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 410" role="img" aria-labelledby="aggregation-title aggregation-desc"><title id="aggregation-title">폴드와 관측 가중치</title><desc id="aggregation-desc">그림 3. 별도 가상 예제입니다. 폴드에 같은 비중을 주는 것과 관측에 같은 비중을 주는 것은 다른 집계입니다. 어떤 대상을 평균하는지 밝혀야 합니다.</desc><text x="24" y="28">가상 불균등 폴드: 2건 MAE 10 / 8건 MAE 2</text><line x1="80" y1="320" x2="570" y2="320" stroke="#94a3b8"/><rect x="180" y="128" width="80" height="192" rx="5" fill="#2563eb"/><text x="205" y="115">6</text><text x="162" y="350">폴드 단순 평균</text><rect x="400" y="204.8" width="80" height="115.2" rx="5" fill="#d97706"/><text x="425" y="191.8">3.6</text><text x="382" y="350">관측별 통합</text><text x="35" y="325">0</text><text x="35" y="261">2</text><text x="35" y="197">4</text><text x="35" y="133">6</text><text x="24" y="385">(10+2)/2 = 6 / (2×10+8×2)/10 = 3.6</text></svg><figcaption class="learn-chart__caption">그림 3. 별도 가상 예제입니다. 폴드에 같은 비중을 주는 것과 관측에 같은 비중을 주는 것은 다른 집계입니다. 어떤 대상을 평균하는지 밝혀야 합니다.</figcaption></figure><p>RMSE는 제곱근 때문에 동일 크기 폴드에서도 단순 평균과 전체 OOF 계산이 일반적으로 다릅니다. 공통 예제의 폴드 RMSE 평균은 58.10, 전체 OOF RMSE는 64.83입니다. 관측별 통합은 √[Σnₖ RMSEₖ²/Σnₖ]로 계산합니다.</p><p>R²·AUC 같은 지표도 폴드별 계산을 평균한 값과 모든 OOF 예측을 합쳐 계산한 값이 같다고 전제하지 않습니다. 집단을 같은 비중으로 평가하려면 관측 수 가중과 다른 질문이라는 점을 적습니다.</p></section>
+<section class="learn-chapter__step" id="cv-mape" data-toc-label="CV-MAPE"><p class="learn-chapter__label">CV-MAPE</p><h2>교차검증은 MAPE의 한계를 없애지 않습니다</h2><p>이 장의 CV-MAPE는 각 관측의 OOF 예측으로 계산한 100×평균(|y−ŷ|/|y|)로 정의합니다. 공통 자료에서는 27.39%입니다. 세 폴드의 크기가 같고 실제값이 모두 양수이므로 폴드별 MAPE 평균과도 같습니다.</p><p>실제값 0에서는 원래 MAPE가 정의되지 않고, 작은 실제값에 민감한 성질도 그대로 남습니다. 소프트웨어의 비율/백분율 표시와 0 처리 규칙을 확인하세요. 교차검증을 붙였다고 다른 자료의 CV-MAPE를 무조건 비교할 수 있는 것은 아닙니다.</p></section>
+<section class="learn-chapter__step" id="pipeline" data-toc-label="전처리의 위치"><p class="learn-chapter__label">전처리의 위치</p><h2>전체 파이프라인을 폴드 안에서 다시 적합합니다</h2><p>결측 대체·표준화·PCA·특징 선택을 전체 개발 자료에 먼저 적합한 뒤 교차검증하면 검증 부분의 정보가 학습에 들어갈 수 있습니다. 각 폴드의 학습 부분에서 기준을 추정하고, 해당 검증에는 그 기준을 적용합니다.</p><p>규제 강도·이웃 수·나무 깊이 등을 비교할 때 후보마다 같은 분할을 사용하면 표본 차이에 따른 변동을 줄여 비교하기 쉽습니다. 단, 같은 분할을 반복해서 들여다보며 후보를 무한히 늘리면 선택 편향은 커질 수 있습니다.</p></section>
+<section class="learn-chapter__step" id="model-recommendation" data-toc-label="모형 선택"><p class="learn-chapter__label">모형 선택</p><h2>가장 낮은 CV 점수는 선택에 쓰인 점수입니다</h2><p>후보와 주 지표를 먼저 정하고 같은 분할에서 비교합니다. 가장 좋은 평균 점수뿐 아니라 폴드별 편차·특정 집단의 실패·해석 가능성·비용도 살펴봅니다. 작은 점수 차이를 확정적인 우열로 읽지 않습니다.</p><p>여러 후보 중 최소값을 고르면 우연히 잘 나온 후보를 선택할 수 있습니다. 따라서 선택에 사용한 최저 CV 오차를 그대로 독립적인 최종 성능이라고 보고하면 낙관적일 수 있습니다. 최종 시험 자료를 남겨 두거나 중첩 교차검증으로 선택 절차 자체를 평가합니다.</p><p>선택이 끝나면 정한 설정과 전처리를 개발 자료 전체에 다시 적합합니다. OOF 예측을 만든 K개 모형이 곧 최종 모형은 아닙니다. 폴드 모형을 평균하는 앙상블을 쓰려면 그것도 별도의 절차로 정의하고 평가해야 합니다.</p></section>
+<section class="learn-chapter__step" id="nested" data-toc-label="중첩 교차검증"><p class="learn-chapter__label">중첩 교차검증</p><h2>선택의 바깥에 평가를 한 겹 더 둡니다</h2><p>바깥 반복에서 평가 부분을 먼저 떼어 둡니다. 바깥 학습 부분 안에서만 안쪽 CV로 설정을 고르고, 선택된 설정을 바깥 학습 전체에 재적합한 뒤 바깥 검증에 적용합니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 410" role="img" aria-labelledby="nested-title nested-desc"><title id="nested-title">선택과 평가의 중첩 구조</title><desc id="nested-desc">그림 4. 한 번의 바깥 반복을 보여 주는 개념도입니다. 바깥 검증 자료는 안쪽 선택과 재적합에 쓰지 않습니다. 각 바깥 반복에서 선택되는 설정은 달라도 됩니다.</desc><text x="24" y="28">중첩 교차검증: 바깥은 평가, 안쪽은 선택</text><rect x="55" y="65" width="370" height="250" rx="5" fill="#f1f5f9"/><text x="75" y="95">바깥 학습 부분</text><rect x="80" y="115" width="330" height="75" rx="5" fill="#dbeafe"/><text x="100" y="144">안쪽 CV: 전처리·후보 비교</text><text x="100" y="174">선택 후 바깥 학습 전체로 재적합</text><rect x="80" y="215" width="330" height="65" rx="5" fill="#dcfce7"/><text x="100" y="251">이 바깥 반복의 선택된 모형</text><rect x="435" y="115" width="125" height="165" rx="5" fill="#ffedd5"/><text x="453" y="160">바깥 검증</text><text x="450" y="196">선택에 미사용</text><text x="417" y="252">→</text><text x="24" y="370">바깥 분할을 바꾸며 선택 절차 전체의 성능을 평가합니다</text></svg><figcaption class="learn-chart__caption">그림 4. 한 번의 바깥 반복을 보여 주는 개념도입니다. 바깥 검증 자료는 안쪽 선택과 재적합에 쓰지 않습니다. 각 바깥 반복에서 선택되는 설정은 달라도 됩니다.</figcaption></figure><p>바깥 점수는 특정 설정 하나가 아니라 ‘설정을 고르고 학습하는 절차’의 성능을 평가합니다. 바깥 점수를 보고 절차를 반복 변경하면 다시 선택에 사용한 것이므로 사용 이력을 밝혀야 합니다. 전체 개발 자료로 최종 설정을 고르고 재적합할 때도 평가 결과와 최종 모델을 구별합니다.</p></section>
+<section class="learn-chapter__step" id="design" data-toc-label="K와 분할 설계"><p class="learn-chapter__label">K와 분할 설계</p><h2>시간·집단의 구조가 K보다 먼저입니다</h2><p>K가 커지면 각 학습 부분은 커지고 검증 부분은 작아집니다. 계산량과 점수 변동의 특성이 달라지므로 K가 클수록 항상 더 신뢰할 수 있는 것은 아닙니다. 한 관측씩 빼는 LOOCV도 만능은 아닙니다.</p><p>독립적인 분류 자료에서는 계층화로 범주 비율을 맞출 수 있고, 새 단지 평가에서는 집단 단위 분할을 사용합니다. 미래 예측은 앞 시점으로 학습하고 뒤 시점으로 평가하는 확장·이동 창을 설계합니다. 일반 K폴드처럼 미래를 학습해 과거를 예측하지 않도록 주의합니다.</p><p>시간 분할에서는 초반 관측이 검증에 들어가지 않을 수 있고, 반복 분할에서는 같은 관측이 여러 번 평가될 수도 있습니다. 모든 CV에서 OOF가 관측당 정확히 한 번이라고 가정하지 않습니다. 평가 대상과 집계 가중치를 명시하세요.</p></section>
+<section class="learn-chapter__step" id="uncertainty" data-toc-label="점수의 불확실성"><p class="learn-chapter__label">점수의 불확실성</p><h2>폴드 표준편차를 곧바로 신뢰구간으로 바꾸지 않습니다</h2><p>폴드 점수의 표준편차는 분할 사이 변동을 요약하지만, 학습 부분이 겹치므로 점수들이 독립이 아닙니다. SD/√K를 기계적으로 표준오차로 해석하거나 단순 t구간을 붙이지 않습니다.</p><p>반복 CV는 분할 민감도를 살피는 데 도움이 되지만 반복 횟수가 늘었다고 새로운 독립 관측이 늘어난 것은 아닙니다. 시간·집단에 맞는 외부 검증과 자료 수집 설계가 중요합니다. 점수와 함께 분할 규칙·시드·기간·집단·건수·후보 탐색 범위를 보고하세요.</p></section>
+<section class="learn-chapter__step" id="practice" data-toc-label="확인 문제"><p class="learn-chapter__label">확인 문제</p><h2>반복마다 무엇을 다시 배워야 할까요?</h2><ol class="learn-exercises"><li>전체 자료로 표준화한 뒤 K폴드를 하면 괜찮나요?<details><summary>답과 해설</summary><p>학습되는 전처리 기준도 각 폴드의 학습 부분에서 추정해야 합니다.</p></details></li><li>폴드 RMSE 평균은 전체 OOF RMSE와 같은가요?<details><summary>답과 해설</summary><p>일반적으로 다릅니다. 통합 RMSE는 폴드 MSE를 관측 수로 가중한 뒤 제곱근을 취합니다.</p></details></li><li>최저 CV 오차는 선택된 모형의 독립 최종 점수인가요?<details><summary>답과 해설</summary><p>선택에 사용됐으므로 낙관적일 수 있습니다. 별도 시험 또는 중첩 평가를 사용합니다.</p></details></li><li>CV 표준편차를 √K로 나누면 정확한 표준오차인가요?<details><summary>답과 해설</summary><p>겹치는 학습 자료 때문에 폴드 점수들이 의존하므로 자동으로 그렇게 해석할 수 없습니다.</p></details></li></ol></section>
+<section class="learn-chapter__step" id="macro" data-toc-label="CH2 Macro에서 읽기"><p class="learn-chapter__label">CH2 Macro에서 읽기</p><h2>CV라는 이름보다 분할과 선택 절차를 확인합니다</h2><p>CV 점수의 산식·폴드 수·시간/집단 기준·전처리 위치·후보 선택 여부를 함께 확인하세요. 이 장의 번호 분할 예제가 실제 서비스의 평가 설계라고 전제하지 않습니다.</p><p>공통 자료는 출처 미확인 학습 예제입니다. 작은 CV 오차를 개별 적정가나 미래 시장 성능의 보장으로 해석하지 않습니다.</p></section>
+<section class="learn-chapter__step" id="recap" data-toc-label="정리와 참고자료"><p class="learn-chapter__label">정리와 참고자료</p><h2>반복 평가에서도 정보의 경계를 지킵니다</h2><p>교차검증은 매번 학습을 다시 수행하는 절차입니다. 점수 집계를 명확히 하고, 선택에 사용한 결과와 최종 평가를 구별하세요.</p><p>다음 <a href="/learn/stats/regularization/">27장 「규제: 릿지와 라쏘」</a>로 이어집니다.</p><ul><li><a href="https://scikit-learn.org/stable/modules/cross_validation.html">scikit-learn: Cross-validation</a></li><li><a href="../cross-validation-example.json">공통 자료 3폴드 계산 자료</a></li></ul><p class="learn-source-note">본문·그림은 공통 학습 자료와 별도 가상 예제로 직접 작성했습니다. 참고자료 확인: 2026-10-09.</p></section></article>
 
       <nav class="learn-chapter-nav" aria-label="장 이동">
-<a href="/learn/stats/overfitting/">← 24. 과적합과 편향–분산의 균형</a>
+<a href="/learn/stats/prediction-errors/">← 25. 예측오차: MAE·RMSE·MAPE</a>
 <a href="/learn/stats/regularization/">27. 규제: 릿지와 라쏘 →</a>
 </nav>
 

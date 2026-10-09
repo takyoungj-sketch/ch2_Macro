@@ -159,7 +159,7 @@
         "n": "23",
         "slug": "train-validation-test",
         "title": "학습·검증·시험 자료와 데이터 누수",
-        "soon": true
+        "soon": false
       },
       {
         "n": "24",
@@ -171,7 +171,7 @@
         "n": "25",
         "slug": "prediction-errors",
         "title": "예측오차: MAE·RMSE·MAPE",
-        "soon": true
+        "soon": false
       },
       {
         "n": "26",
@@ -194,7 +194,7 @@
         "n": "28",
         "slug": "classification",
         "title": "분류와 로지스틱 회귀",
-        "soon": true
+        "soon": false
       },
       {
         "n": "29",
