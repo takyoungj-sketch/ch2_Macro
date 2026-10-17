@@ -1,0 +1,1290 @@
+{
+  "rows": 507116,
+  "note": "base year = land trait 기준연도, not the date a zone changed",
+  "groups": {
+    "all": {
+      "status": {
+        "observed": 495605,
+        "unknown": 8587,
+        "adjacent_after": 2541,
+        "adjacent_before": 379,
+        "estimated": 4
+      },
+      "obs_year_minus_contract": {
+        "0": 496206,
+        "1": 1940,
+        "-1": 383
+      },
+      "vs_latest": {
+        "same": 489053,
+        "changed_same_family": 8307,
+        "changed_family": 1169
+      },
+      "vs_tx_zone": {
+        "same": 129835,
+        "differs": 1718
+      },
+      "latest_vs_tx_zone": {
+        "same": 128513,
+        "differs": 3040
+      },
+      "zone2": {
+        "present": 9658
+      },
+      "vs_al_d155_primary": {
+        "differs": 78616,
+        "same": 404668
+      },
+      "vs_al_d155_any": {
+        "in": 470549,
+        "out": 12735
+      },
+      "unknown": {
+        "no_parcel": 1187,
+        "code_newer_than_contract": 7170,
+        "no_base_within_a_year": 227,
+        "base_has_two_zones": 3
+      }
+    },
+    "asset:commercial": {
+      "status": {
+        "observed": 98369,
+        "unknown": 1864,
+        "adjacent_after": 620,
+        "adjacent_before": 109
+      },
+      "obs_year_minus_contract": {
+        "0": 98503,
+        "1": 486,
+        "-1": 109
+      },
+      "vs_latest": {
+        "same": 97944,
+        "changed_same_family": 850,
+        "changed_family": 304
+      },
+      "vs_tx_zone": {
+        "same": 97840,
+        "differs": 1258
+      },
+      "latest_vs_tx_zone": {
+        "same": 96792,
+        "differs": 2306
+      },
+      "zone2": {
+        "present": 2450
+      },
+      "vs_al_d155_primary": {
+        "differs": 17601,
+        "same": 77258
+      },
+      "vs_al_d155_any": {
+        "in": 92930,
+        "out": 1929
+      },
+      "unknown": {
+        "no_parcel": 143,
+        "code_newer_than_contract": 1694,
+        "no_base_within_a_year": 26,
+        "base_has_two_zones": 1
+      }
+    },
+    "sido:11": {
+      "status": {
+        "observed": 43791,
+        "unknown": 152,
+        "adjacent_after": 11
+      },
+      "obs_year_minus_contract": {
+        "0": 43792,
+        "1": 10
+      },
+      "vs_latest": {
+        "same": 41734,
+        "changed_same_family": 1992,
+        "changed_family": 76
+      },
+      "vs_tx_zone": {
+        "same": 13437,
+        "differs": 225
+      },
+      "latest_vs_tx_zone": {
+        "same": 13207,
+        "differs": 455
+      },
+      "zone2": {
+        "present": 844
+      },
+      "vs_al_d155_primary": {
+        "differs": 18160,
+        "same": 24661
+      },
+      "vs_al_d155_any": {
+        "in": 40439,
+        "out": 2382
+      },
+      "unknown": {
+        "no_parcel": 140,
+        "code_newer_than_contract": 10,
+        "no_base_within_a_year": 2
+      }
+    },
+    "year:2026": {
+      "status": {
+        "observed": 34316,
+        "unknown": 97,
+        "adjacent_before": 342
+      },
+      "obs_year_minus_contract": {
+        "0": 34316,
+        "-1": 342
+      },
+      "vs_latest": {
+        "same": 34658
+      },
+      "vs_tx_zone": {
+        "same": 9551,
+        "differs": 211
+      },
+      "latest_vs_tx_zone": {
+        "same": 9551,
+        "differs": 211
+      },
+      "zone2": {
+        "present": 763
+      },
+      "vs_al_d155_primary": {
+        "differs": 4400,
+        "same": 23274
+      },
+      "vs_al_d155_any": {
+        "in": 27220,
+        "out": 454
+      },
+      "unknown": {
+        "no_parcel": 76,
+        "no_base_within_a_year": 21
+      }
+    },
+    "status:observed": {
+      "status": {
+        "observed": 495605
+      },
+      "obs_year_minus_contract": {
+        "0": 495605
+      },
+      "vs_latest": {
+        "same": 486214,
+        "changed_same_family": 8231,
+        "changed_family": 1160
+      },
+      "vs_tx_zone": {
+        "same": 128732,
+        "differs": 1646
+      },
+      "latest_vs_tx_zone": {
+        "same": 127414,
+        "differs": 2964
+      },
+      "zone2": {
+        "present": 9566
+      },
+      "vs_al_d155_primary": {
+        "differs": 77709,
+        "same": 402837
+      },
+      "vs_al_d155_any": {
+        "in": 468531,
+        "out": 12015
+      }
+    },
+    "year:2025": {
+      "status": {
+        "observed": 50002,
+        "unknown": 149,
+        "adjacent_after": 45,
+        "adjacent_before": 5
+      },
+      "obs_year_minus_contract": {
+        "0": 50022,
+        "1": 25,
+        "-1": 5
+      },
+      "vs_latest": {
+        "same": 49782,
+        "changed_same_family": 242,
+        "changed_family": 28
+      },
+      "vs_al_d155_primary": {
+        "differs": 7766,
+        "same": 41292
+      },
+      "vs_al_d155_any": {
+        "in": 48095,
+        "out": 963
+      },
+      "vs_tx_zone": {
+        "same": 14161,
+        "differs": 313
+      },
+      "latest_vs_tx_zone": {
+        "same": 14144,
+        "differs": 330
+      },
+      "zone2": {
+        "present": 1068
+      },
+      "unknown": {
+        "no_parcel": 101,
+        "no_base_within_a_year": 48
+      }
+    },
+    "asset:factory": {
+      "status": {
+        "observed": 32009,
+        "unknown": 939,
+        "adjacent_after": 374,
+        "adjacent_before": 72
+      },
+      "obs_year_minus_contract": {
+        "0": 32108,
+        "1": 275,
+        "-1": 72
+      },
+      "vs_latest": {
+        "same": 32132,
+        "changed_same_family": 119,
+        "changed_family": 204
+      },
+      "vs_tx_zone": {
+        "same": 31995,
+        "differs": 460
+      },
+      "latest_vs_tx_zone": {
+        "same": 31721,
+        "differs": 734
+      },
+      "vs_al_d155_primary": {
+        "differs": 5588,
+        "same": 24849
+      },
+      "vs_al_d155_any": {
+        "in": 28976,
+        "out": 1461
+      },
+      "unknown": {
+        "no_parcel": 45,
+        "no_base_within_a_year": 6,
+        "code_newer_than_contract": 887,
+        "base_has_two_zones": 1
+      },
+      "zone2": {
+        "present": 735
+      }
+    },
+    "asset:detached": {
+      "status": {
+        "observed": 365227,
+        "unknown": 5784,
+        "adjacent_after": 1547,
+        "adjacent_before": 198,
+        "estimated": 4
+      },
+      "obs_year_minus_contract": {
+        "0": 365595,
+        "1": 1179,
+        "-1": 202
+      },
+      "vs_latest": {
+        "same": 358977,
+        "changed_same_family": 7338,
+        "changed_family": 661
+      },
+      "vs_al_d155_primary": {
+        "same": 302561,
+        "differs": 55427
+      },
+      "vs_al_d155_any": {
+        "in": 348643,
+        "out": 9345
+      },
+      "zone2": {
+        "present": 6473
+      },
+      "unknown": {
+        "no_parcel": 999,
+        "code_newer_than_contract": 4589,
+        "no_base_within_a_year": 195,
+        "base_has_two_zones": 1
+      }
+    },
+    "year:2019": {
+      "status": {
+        "observed": 71828,
+        "unknown": 2204,
+        "adjacent_after": 309,
+        "adjacent_before": 6,
+        "estimated": 3
+      },
+      "obs_year_minus_contract": {
+        "0": 71962,
+        "1": 175,
+        "-1": 9
+      },
+      "vs_latest": {
+        "same": 69806,
+        "changed_same_family": 2012,
+        "changed_family": 328
+      },
+      "vs_al_d155_primary": {
+        "same": 58196,
+        "differs": 13150
+      },
+      "vs_al_d155_any": {
+        "in": 68858,
+        "out": 2488
+      },
+      "vs_tx_zone": {
+        "same": 17522,
+        "differs": 150
+      },
+      "latest_vs_tx_zone": {
+        "same": 17176,
+        "differs": 496
+      },
+      "zone2": {
+        "present": 1059
+      },
+      "unknown": {
+        "no_parcel": 273,
+        "code_newer_than_contract": 1873,
+        "no_base_within_a_year": 56,
+        "base_has_two_zones": 2
+      }
+    },
+    "year:2020": {
+      "status": {
+        "observed": 88811,
+        "unknown": 2571,
+        "adjacent_after": 479,
+        "adjacent_before": 3,
+        "estimated": 1
+      },
+      "obs_year_minus_contract": {
+        "0": 88932,
+        "1": 358,
+        "-1": 4
+      },
+      "vs_latest": {
+        "same": 86383,
+        "changed_same_family": 2616,
+        "changed_family": 295
+      },
+      "vs_al_d155_primary": {
+        "same": 72556,
+        "differs": 15758
+      },
+      "vs_al_d155_any": {
+        "in": 85140,
+        "out": 3174
+      },
+      "vs_tx_zone": {
+        "same": 20517,
+        "differs": 161
+      },
+      "latest_vs_tx_zone": {
+        "same": 20166,
+        "differs": 512
+      },
+      "zone2": {
+        "present": 1541
+      },
+      "unknown": {
+        "no_parcel": 267,
+        "code_newer_than_contract": 2277,
+        "no_base_within_a_year": 26,
+        "base_has_two_zones": 1
+      }
+    },
+    "year:2021": {
+      "status": {
+        "observed": 93330,
+        "unknown": 1943,
+        "adjacent_after": 553,
+        "adjacent_before": 3
+      },
+      "obs_year_minus_contract": {
+        "0": 93455,
+        "1": 428,
+        "-1": 3
+      },
+      "vs_latest": {
+        "same": 91871,
+        "changed_same_family": 1765,
+        "changed_family": 250
+      },
+      "vs_al_d155_primary": {
+        "same": 77260,
+        "differs": 14665
+      },
+      "vs_al_d155_any": {
+        "in": 89523,
+        "out": 2402
+      },
+      "vs_tx_zone": {
+        "same": 24576,
+        "differs": 199
+      },
+      "latest_vs_tx_zone": {
+        "same": 24277,
+        "differs": 498
+      },
+      "zone2": {
+        "present": 1801
+      },
+      "unknown": {
+        "no_parcel": 205,
+        "code_newer_than_contract": 1716,
+        "no_base_within_a_year": 22
+      }
+    },
+    "status:unknown": {
+      "status": {
+        "unknown": 8587
+      },
+      "unknown": {
+        "no_parcel": 1187,
+        "code_newer_than_contract": 7170,
+        "no_base_within_a_year": 227,
+        "base_has_two_zones": 3
+      }
+    },
+    "status:adjacent_after": {
+      "status": {
+        "adjacent_after": 2541
+      },
+      "obs_year_minus_contract": {
+        "1": 1940,
+        "0": 601
+      },
+      "vs_latest": {
+        "same": 2456,
+        "changed_same_family": 76,
+        "changed_family": 9
+      },
+      "vs_al_d155_primary": {
+        "same": 1807,
+        "differs": 675
+      },
+      "vs_al_d155_any": {
+        "in": 1988,
+        "out": 494
+      },
+      "vs_tx_zone": {
+        "same": 925,
+        "differs": 69
+      },
+      "latest_vs_tx_zone": {
+        "same": 921,
+        "differs": 73
+      },
+      "zone2": {
+        "present": 82
+      }
+    },
+    "year:2022": {
+      "status": {
+        "observed": 60459,
+        "unknown": 1002,
+        "adjacent_after": 233,
+        "adjacent_before": 2
+      },
+      "obs_year_minus_contract": {
+        "0": 60581,
+        "1": 111,
+        "-1": 2
+      },
+      "vs_latest": {
+        "same": 59815,
+        "changed_same_family": 756,
+        "changed_family": 123
+      },
+      "vs_al_d155_primary": {
+        "same": 50873,
+        "differs": 8608
+      },
+      "vs_al_d155_any": {
+        "in": 58220,
+        "out": 1261
+      },
+      "vs_tx_zone": {
+        "same": 16411,
+        "differs": 97
+      },
+      "latest_vs_tx_zone": {
+        "same": 16254,
+        "differs": 254
+      },
+      "zone2": {
+        "present": 1274
+      },
+      "unknown": {
+        "code_newer_than_contract": 869,
+        "no_parcel": 115,
+        "no_base_within_a_year": 18
+      }
+    },
+    "year:2024": {
+      "status": {
+        "observed": 50192,
+        "unknown": 97,
+        "adjacent_after": 552,
+        "adjacent_before": 17
+      },
+      "obs_year_minus_contract": {
+        "0": 50193,
+        "1": 551,
+        "-1": 17
+      },
+      "vs_latest": {
+        "same": 50278,
+        "changed_same_family": 424,
+        "changed_family": 59
+      },
+      "vs_al_d155_primary": {
+        "differs": 7662,
+        "same": 41800
+      },
+      "vs_al_d155_any": {
+        "in": 48268,
+        "out": 1194
+      },
+      "vs_tx_zone": {
+        "same": 14437,
+        "differs": 518
+      },
+      "latest_vs_tx_zone": {
+        "same": 14397,
+        "differs": 558
+      },
+      "zone2": {
+        "present": 1087
+      },
+      "unknown": {
+        "no_parcel": 77,
+        "no_base_within_a_year": 20
+      }
+    },
+    "year:2023": {
+      "status": {
+        "observed": 46667,
+        "unknown": 524,
+        "adjacent_after": 370,
+        "adjacent_before": 1
+      },
+      "obs_year_minus_contract": {
+        "0": 46745,
+        "1": 292,
+        "-1": 1
+      },
+      "vs_latest": {
+        "same": 46460,
+        "changed_family": 86,
+        "changed_same_family": 492
+      },
+      "vs_al_d155_primary": {
+        "same": 39417,
+        "differs": 6607
+      },
+      "vs_al_d155_any": {
+        "in": 45225,
+        "out": 799
+      },
+      "vs_tx_zone": {
+        "same": 12660,
+        "differs": 69
+      },
+      "latest_vs_tx_zone": {
+        "same": 12548,
+        "differs": 181
+      },
+      "zone2": {
+        "present": 1065
+      },
+      "unknown": {
+        "no_parcel": 73,
+        "no_base_within_a_year": 16,
+        "code_newer_than_contract": 435
+      }
+    },
+    "sido:12": {
+      "status": {
+        "observed": 55129,
+        "unknown": 287,
+        "adjacent_after": 96,
+        "adjacent_before": 3
+      },
+      "obs_year_minus_contract": {
+        "0": 55169,
+        "1": 56,
+        "-1": 3
+      },
+      "vs_latest": {
+        "same": 54930,
+        "changed_same_family": 147,
+        "changed_family": 151
+      },
+      "vs_al_d155_primary": {
+        "same": 41635,
+        "differs": 10974
+      },
+      "vs_al_d155_any": {
+        "in": 52204,
+        "out": 405
+      },
+      "vs_tx_zone": {
+        "same": 12497,
+        "differs": 163
+      },
+      "latest_vs_tx_zone": {
+        "same": 12446,
+        "differs": 214
+      },
+      "zone2": {
+        "present": 1444
+      },
+      "unknown": {
+        "no_parcel": 249,
+        "code_newer_than_contract": 23,
+        "no_base_within_a_year": 15
+      }
+    },
+    "status:adjacent_before": {
+      "status": {
+        "adjacent_before": 379
+      },
+      "obs_year_minus_contract": {
+        "-1": 379
+      },
+      "vs_latest": {
+        "same": 379
+      },
+      "vs_al_d155_primary": {
+        "same": 22,
+        "differs": 230
+      },
+      "vs_al_d155_any": {
+        "in": 26,
+        "out": 226
+      },
+      "vs_tx_zone": {
+        "same": 178,
+        "differs": 3
+      },
+      "latest_vs_tx_zone": {
+        "same": 178,
+        "differs": 3
+      },
+      "zone2": {
+        "present": 10
+      }
+    },
+    "sido:26": {
+      "status": {
+        "observed": 29098,
+        "adjacent_after": 91,
+        "unknown": 232
+      },
+      "obs_year_minus_contract": {
+        "0": 29110,
+        "1": 79
+      },
+      "vs_latest": {
+        "same": 27605,
+        "changed_same_family": 1573,
+        "changed_family": 11
+      },
+      "vs_tx_zone": {
+        "same": 7790,
+        "differs": 126
+      },
+      "latest_vs_tx_zone": {
+        "same": 7640,
+        "differs": 276
+      },
+      "vs_al_d155_primary": {
+        "differs": 4146,
+        "same": 24712
+      },
+      "vs_al_d155_any": {
+        "in": 26918,
+        "out": 1940
+      },
+      "zone2": {
+        "present": 489
+      },
+      "unknown": {
+        "code_newer_than_contract": 72,
+        "no_parcel": 146,
+        "no_base_within_a_year": 14
+      }
+    },
+    "sido:27": {
+      "status": {
+        "observed": 24238,
+        "unknown": 57,
+        "adjacent_after": 17,
+        "adjacent_before": 1
+      },
+      "obs_year_minus_contract": {
+        "0": 24248,
+        "1": 7,
+        "-1": 1
+      },
+      "vs_latest": {
+        "same": 24226,
+        "changed_family": 13,
+        "changed_same_family": 17
+      },
+      "vs_al_d155_primary": {
+        "differs": 7483,
+        "same": 16513
+      },
+      "vs_al_d155_any": {
+        "in": 23838,
+        "out": 158
+      },
+      "vs_tx_zone": {
+        "same": 5634,
+        "differs": 97
+      },
+      "latest_vs_tx_zone": {
+        "same": 5624,
+        "differs": 107
+      },
+      "zone2": {
+        "present": 627
+      },
+      "unknown": {
+        "no_parcel": 49,
+        "no_base_within_a_year": 7,
+        "code_newer_than_contract": 1
+      }
+    },
+    "sido:28": {
+      "status": {
+        "observed": 13619,
+        "adjacent_before": 273,
+        "unknown": 3039,
+        "adjacent_after": 446
+      },
+      "obs_year_minus_contract": {
+        "0": 13634,
+        "-1": 273,
+        "1": 431
+      },
+      "vs_latest": {
+        "same": 14195,
+        "changed_family": 41,
+        "changed_same_family": 102
+      },
+      "vs_tx_zone": {
+        "same": 5052,
+        "differs": 53
+      },
+      "latest_vs_tx_zone": {
+        "same": 5004,
+        "differs": 101
+      },
+      "vs_al_d155_primary": {
+        "differs": 1963,
+        "same": 11421
+      },
+      "vs_al_d155_any": {
+        "out": 1183,
+        "in": 12201
+      },
+      "unknown": {
+        "no_parcel": 72,
+        "code_newer_than_contract": 2964,
+        "no_base_within_a_year": 3
+      },
+      "zone2": {
+        "present": 123
+      }
+    },
+    "sido:30": {
+      "status": {
+        "observed": 14012,
+        "unknown": 28,
+        "adjacent_after": 24,
+        "adjacent_before": 6
+      },
+      "obs_year_minus_contract": {
+        "0": 14017,
+        "-1": 6,
+        "1": 19
+      },
+      "vs_latest": {
+        "same": 13157,
+        "changed_same_family": 857,
+        "changed_family": 28
+      },
+      "vs_al_d155_primary": {
+        "differs": 2813,
+        "same": 11104
+      },
+      "vs_al_d155_any": {
+        "in": 12892,
+        "out": 1025
+      },
+      "vs_tx_zone": {
+        "same": 3267,
+        "differs": 34
+      },
+      "latest_vs_tx_zone": {
+        "same": 3216,
+        "differs": 85
+      },
+      "zone2": {
+        "present": 106
+      },
+      "unknown": {
+        "no_parcel": 26,
+        "code_newer_than_contract": 1,
+        "no_base_within_a_year": 1
+      }
+    },
+    "sido:31": {
+      "status": {
+        "observed": 8360,
+        "adjacent_after": 14,
+        "unknown": 15
+      },
+      "obs_year_minus_contract": {
+        "0": 8364,
+        "1": 10
+      },
+      "zone2": {
+        "present": 116
+      },
+      "vs_latest": {
+        "same": 8334,
+        "changed_family": 16,
+        "changed_same_family": 24
+      },
+      "vs_al_d155_primary": {
+        "differs": 550,
+        "same": 7711
+      },
+      "vs_al_d155_any": {
+        "in": 8141,
+        "out": 120
+      },
+      "vs_tx_zone": {
+        "same": 2113,
+        "differs": 29
+      },
+      "latest_vs_tx_zone": {
+        "same": 2105,
+        "differs": 37
+      },
+      "unknown": {
+        "no_parcel": 13,
+        "no_base_within_a_year": 2
+      }
+    },
+    "sido:36": {
+      "status": {
+        "observed": 1393,
+        "unknown": 2,
+        "adjacent_after": 8
+      },
+      "obs_year_minus_contract": {
+        "0": 1396,
+        "1": 5
+      },
+      "vs_latest": {
+        "same": 1398,
+        "changed_family": 3
+      },
+      "vs_al_d155_primary": {
+        "same": 1089,
+        "differs": 285
+      },
+      "vs_al_d155_any": {
+        "in": 1342,
+        "out": 32
+      },
+      "vs_tx_zone": {
+        "same": 410,
+        "differs": 9
+      },
+      "latest_vs_tx_zone": {
+        "same": 408,
+        "differs": 11
+      },
+      "unknown": {
+        "code_newer_than_contract": 1,
+        "no_parcel": 1
+      },
+      "zone2": {
+        "present": 21
+      }
+    },
+    "sido:41": {
+      "status": {
+        "observed": 82165,
+        "unknown": 4097,
+        "adjacent_after": 892,
+        "adjacent_before": 84
+      },
+      "obs_year_minus_contract": {
+        "0": 82357,
+        "1": 700,
+        "-1": 84
+      },
+      "vs_latest": {
+        "same": 80772,
+        "changed_family": 401,
+        "changed_same_family": 1968
+      },
+      "vs_tx_zone": {
+        "same": 29447,
+        "differs": 467
+      },
+      "latest_vs_tx_zone": {
+        "same": 28937,
+        "differs": 977
+      },
+      "vs_al_d155_primary": {
+        "same": 67251,
+        "differs": 9773
+      },
+      "vs_al_d155_any": {
+        "in": 73662,
+        "out": 3362
+      },
+      "unknown": {
+        "no_parcel": 139,
+        "no_base_within_a_year": 41,
+        "code_newer_than_contract": 3915,
+        "base_has_two_zones": 2
+      },
+      "zone2": {
+        "present": 1609
+      }
+    },
+    "sido:43": {
+      "status": {
+        "observed": 29159,
+        "adjacent_after": 115,
+        "unknown": 92,
+        "estimated": 1
+      },
+      "obs_year_minus_contract": {
+        "0": 29216,
+        "1": 58,
+        "-1": 1
+      },
+      "vs_latest": {
+        "same": 29140,
+        "changed_family": 76,
+        "changed_same_family": 59
+      },
+      "vs_al_d155_primary": {
+        "same": 26569,
+        "differs": 2252
+      },
+      "vs_al_d155_any": {
+        "in": 28645,
+        "out": 176
+      },
+      "zone2": {
+        "present": 503
+      },
+      "vs_tx_zone": {
+        "same": 6079,
+        "differs": 55
+      },
+      "latest_vs_tx_zone": {
+        "same": 6033,
+        "differs": 101
+      },
+      "unknown": {
+        "no_base_within_a_year": 13,
+        "no_parcel": 31,
+        "code_newer_than_contract": 48
+      }
+    },
+    "status:estimated": {
+      "status": {
+        "estimated": 4
+      },
+      "obs_year_minus_contract": {
+        "-1": 4
+      },
+      "vs_latest": {
+        "same": 4
+      },
+      "vs_al_d155_primary": {
+        "same": 2,
+        "differs": 2
+      },
+      "vs_al_d155_any": {
+        "in": 4
+      }
+    },
+    "sido:44": {
+      "status": {
+        "observed": 32311,
+        "adjacent_after": 111,
+        "unknown": 115,
+        "adjacent_before": 3
+      },
+      "obs_year_minus_contract": {
+        "0": 32348,
+        "1": 74,
+        "-1": 3
+      },
+      "vs_latest": {
+        "same": 32317,
+        "changed_same_family": 44,
+        "changed_family": 64
+      },
+      "vs_tx_zone": {
+        "same": 7829,
+        "differs": 82
+      },
+      "latest_vs_tx_zone": {
+        "same": 7790,
+        "differs": 121
+      },
+      "vs_al_d155_primary": {
+        "same": 29475,
+        "differs": 2421
+      },
+      "vs_al_d155_any": {
+        "in": 31791,
+        "out": 105
+      },
+      "zone2": {
+        "present": 551
+      },
+      "unknown": {
+        "no_parcel": 96,
+        "no_base_within_a_year": 17,
+        "code_newer_than_contract": 2
+      }
+    },
+    "sido:47": {
+      "status": {
+        "observed": 48223,
+        "unknown": 186,
+        "adjacent_after": 189,
+        "adjacent_before": 3
+      },
+      "obs_year_minus_contract": {
+        "0": 48289,
+        "1": 123,
+        "-1": 3
+      },
+      "vs_latest": {
+        "same": 48319,
+        "changed_family": 68,
+        "changed_same_family": 28
+      },
+      "vs_tx_zone": {
+        "same": 11499,
+        "differs": 109
+      },
+      "latest_vs_tx_zone": {
+        "same": 11473,
+        "differs": 135
+      },
+      "vs_al_d155_primary": {
+        "same": 44020,
+        "differs": 3598
+      },
+      "vs_al_d155_any": {
+        "in": 47501,
+        "out": 117
+      },
+      "zone2": {
+        "present": 960
+      },
+      "unknown": {
+        "no_base_within_a_year": 29,
+        "code_newer_than_contract": 96,
+        "no_parcel": 61
+      }
+    },
+    "sido:48": {
+      "status": {
+        "observed": 44258,
+        "unknown": 103,
+        "adjacent_after": 236,
+        "adjacent_before": 5
+      },
+      "obs_year_minus_contract": {
+        "0": 44305,
+        "1": 189,
+        "-1": 5
+      },
+      "vs_latest": {
+        "same": 43117,
+        "changed_family": 88,
+        "changed_same_family": 1294
+      },
+      "vs_al_d155_primary": {
+        "same": 38057,
+        "differs": 5729
+      },
+      "vs_al_d155_any": {
+        "in": 42345,
+        "out": 1441
+      },
+      "vs_tx_zone": {
+        "same": 10543,
+        "differs": 81
+      },
+      "latest_vs_tx_zone": {
+        "same": 10458,
+        "differs": 166
+      },
+      "zone2": {
+        "present": 830
+      },
+      "unknown": {
+        "no_base_within_a_year": 52,
+        "code_newer_than_contract": 2,
+        "no_parcel": 49
+      }
+    },
+    "sido:50": {
+      "status": {
+        "observed": 9194,
+        "unknown": 19,
+        "adjacent_after": 34
+      },
+      "obs_year_minus_contract": {
+        "0": 9208,
+        "1": 20
+      },
+      "vs_latest": {
+        "same": 9116,
+        "changed_family": 42,
+        "changed_same_family": 70
+      },
+      "vs_al_d155_primary": {
+        "same": 8698,
+        "differs": 390
+      },
+      "vs_al_d155_any": {
+        "in": 9018,
+        "out": 70
+      },
+      "vs_tx_zone": {
+        "same": 1655,
+        "differs": 20
+      },
+      "latest_vs_tx_zone": {
+        "same": 1633,
+        "differs": 42
+      },
+      "zone2": {
+        "present": 240
+      },
+      "unknown": {
+        "code_newer_than_contract": 4,
+        "no_parcel": 13,
+        "no_base_within_a_year": 2
+      }
+    },
+    "sido:51": {
+      "status": {
+        "observed": 30526,
+        "unknown": 101,
+        "adjacent_after": 210,
+        "adjacent_before": 1
+      },
+      "obs_year_minus_contract": {
+        "0": 30610,
+        "1": 126,
+        "-1": 1
+      },
+      "vs_latest": {
+        "same": 30606,
+        "changed_family": 79,
+        "changed_same_family": 52
+      },
+      "vs_al_d155_primary": {
+        "same": 27961,
+        "differs": 2233
+      },
+      "vs_al_d155_any": {
+        "in": 30089,
+        "out": 105
+      },
+      "vs_tx_zone": {
+        "same": 5661,
+        "differs": 77
+      },
+      "latest_vs_tx_zone": {
+        "same": 5627,
+        "differs": 111
+      },
+      "unknown": {
+        "no_base_within_a_year": 16,
+        "no_parcel": 55,
+        "code_newer_than_contract": 29,
+        "base_has_two_zones": 1
+      },
+      "zone2": {
+        "present": 721
+      }
+    },
+    "sido:52": {
+      "status": {
+        "observed": 30129,
+        "unknown": 62,
+        "adjacent_after": 47,
+        "estimated": 3
+      },
+      "obs_year_minus_contract": {
+        "0": 30143,
+        "1": 33,
+        "-1": 3
+      },
+      "vs_latest": {
+        "same": 30087,
+        "changed_same_family": 80,
+        "changed_family": 12
+      },
+      "vs_tx_zone": {
+        "same": 6922,
+        "differs": 91
+      },
+      "latest_vs_tx_zone": {
+        "same": 6912,
+        "differs": 101
+      },
+      "vs_al_d155_primary": {
+        "same": 23791,
+        "differs": 5846
+      },
+      "vs_al_d155_any": {
+        "in": 29523,
+        "out": 114
+      },
+      "unknown": {
+        "no_base_within_a_year": 13,
+        "no_parcel": 47,
+        "code_newer_than_contract": 2
+      },
+      "zone2": {
+        "present": 474
+      }
+    }
+  }
+}
