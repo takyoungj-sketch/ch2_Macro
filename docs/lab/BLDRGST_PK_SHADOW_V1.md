@@ -45,3 +45,4 @@
 ## 코드
 
 - `pipeline/built/resolve_tied_bldrgst_pk_v1.py` (입력: `measure_link_quality_v1` 행 파일, 표제부 캐시, 건축대장 원장 원문 읽기 전용)
+- 같은 섀도 파일의 `attr_shadow`: 연결 거래 전부의 식별 단계(확정 / 후보 속성 동일 / 충돌)와 변수별 값·충돌 표시. 사용승인은 연도로 비교해 동일 2,561 · 충돌 480이다(위 2,478 / 563은 일자 비교). 4-F [종합](BUILT_LEDGER_SUPPLY_4F_SUMMARY.md)에서 쓴다.

@@ -34,6 +34,35 @@ SHADOW = VERIFY / "bldrgst_pk_shadow_v1.sqlite"
 RAW = {"register": 1, "dong": 22, "main_annex": 23, "struct": 32, "use": 35, "floors": 43, "approve": 60}
 
 
+ATTRS = ("struct", "use", "floors", "approve")
+
+
+def building_attrs(g: pd.DataFrame, b: dict, cand_by_hash: dict, decided: dict) -> list[tuple]:
+    """Per-variable building attributes. identification:
+    confirmed            — one building (management key known)
+    candidates_agree     — key held; every candidate has the same value for all four variables
+    candidates_conflict  — key held; at least one variable differs (that variable is left empty)
+    A variable on which candidates agree is still not proof that the deal was that building.
+    """
+    out = []
+    for r in g.itertuples(index=False):
+        blds = {x["pk"]: x for x in b.get(r.parcel, [])}
+        pk = decided.get(r.transaction_hash, (r.bldrgst_pk,))[0]
+        if pk:
+            x = blds.get(pk, {})
+            out.append((r.transaction_hash, "confirmed", *(x.get(k) or None for k in ATTRS), 0, 0, 0, 0))
+            continue
+        cands = [blds[p] for p in set(cand_by_hash.get(r.transaction_hash, [])) if p in blds]
+        vals, conflicts = [], []
+        for k in ATTRS:
+            seen = {c.get(k) or None for c in cands}
+            conflicts.append(int(len(seen) > 1))
+            vals.append(next(iter(seen)) if len(seen) == 1 else None)
+        ident = "candidates_conflict" if any(conflicts) else "candidates_agree"
+        out.append((r.transaction_hash, ident, *vals, *conflicts))
+    return out
+
+
 def tied_buildings(sido: str, snap: str, parcels: set[str], gross: dict[str, list[float]]) -> dict:
     folder = BRIDGED if sido == "12" else CACHE
     t = pd.read_csv(folder / f"title_{sido}_{snap}.csv", dtype=str, keep_default_na=False)
@@ -42,7 +71,10 @@ def tied_buildings(sido: str, snap: str, parcels: set[str], gross: dict[str, lis
     t = t[key.isin(parcels)].assign(parcel=key[key.isin(parcels)])
     out = defaultdict(list)
     for r in t.itertuples(index=False):
-        out[r.parcel].append({"pk": r.pk.strip(), "gross": to_f(r.gross_area)})
+        out[r.parcel].append({
+            "pk": r.pk.strip(), "gross": to_f(r.gross_area), "struct": r.struct_name.strip(),
+            "use": r.use_name.strip(), "floors": r.floors_above.strip(), "approve": r.approve_date.strip()[:4],
+        })
     return out
 
 
@@ -95,9 +127,11 @@ def main() -> None:
     ties = linked[linked["register"] == "동률"]
     db = ledger_connect()
     decided: dict[str, tuple] = {}
+    attr_rows: list[tuple] = []
     hint_counts = Counter()
-    for (sido, snap), g in ties.groupby(["sido", "snapshot_used"]):
-        b = tied_buildings(sido, snap, set(g["parcel"]), {})
+    for (sido, snap), g_all in linked.groupby(["sido", "snapshot_used"]):
+        b = tied_buildings(sido, snap, set(g_all["parcel"]), {})
+        g = g_all[g_all["register"] == "동률"]
         cand_by_hash = {}
         for r in g.itertuples(index=False):
             blds = [x for x in b.get(r.parcel, []) if not math.isnan(x["gross"])]
@@ -119,7 +153,8 @@ def main() -> None:
             for h in hints:
                 hint_counts[h] += 1
             decided[r.transaction_hash] = (pk, rule, len(set(cands)), ",".join(hints))
-        print(sido, snap, len(g), flush=True)
+        attr_rows.extend(building_attrs(g_all, b, cand_by_hash, decided))
+        print(sido, snap, len(g_all), len(g), flush=True)
 
     rows = []
     rule_by = defaultdict(Counter)
@@ -138,6 +173,12 @@ def main() -> None:
         " n_candidates INTEGER, hints TEXT, snapshot_used TEXT)"
     )
     out.executemany("INSERT INTO pk_shadow VALUES (?,?,?,?,?,?)", rows)
+    out.execute(
+        "CREATE TABLE attr_shadow (transaction_hash TEXT PRIMARY KEY, identification TEXT NOT NULL,"
+        " struct TEXT, use TEXT, floors TEXT, approve TEXT,"
+        " struct_conflict INTEGER, use_conflict INTEGER, floors_conflict INTEGER, approve_conflict INTEGER)"
+    )
+    out.executemany("INSERT INTO attr_shadow VALUES (?,?,?,?,?,?,?,?,?,?)", attr_rows)
     out.execute("CREATE TABLE info (k TEXT PRIMARY KEY, v TEXT)")
     out.executemany("INSERT INTO info VALUES (?,?)", [
         ("source", "measure_link_quality_v1 proposed config"), ("rule_version", "BLDRGST_PK_SHADOW_V1"),
