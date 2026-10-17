@@ -1,0 +1,22 @@
+{
+  "bridge_file": "C:\\CH2\\parcel_master\\honam_code_bridge_v1.sqlite",
+  "region_codes_12": 2947,
+  "name_pairs_12": 2947,
+  "observed_building_pairs": {
+    "title_pairs": 919753,
+    "title_new_not_12": 13,
+    "summary_pairs": 56522
+  },
+  "observed_bjd_pairs": 2978,
+  "observed_tail_equal_buildings": 974993,
+  "observed_tail_differ_buildings": 1269,
+  "evidence": {
+    "observed_and_name": 2938,
+    "observed_only": 26,
+    "name_only": 6,
+    "held_not_1to1": 4
+  },
+  "usable_pairs": 2970,
+  "usable_buildings_covered": 973109,
+  "held_buildings": 1884
+}

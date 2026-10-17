@@ -31,12 +31,18 @@ SLIM = Path(r"C:\CH2\parcel_master\land_trait_slim_v1.sqlite")
 INT64_MAX = 2**63 - 1
 
 
-def slim_land(slim: sqlite3.Connection, keys: set[tuple[str, int, int]]) -> dict[tuple[str, str], float]:
+def slim_land(
+    slim: sqlite3.Connection, keys: set[tuple[str, int, int]], translate: dict[str, str] | None = None
+) -> dict[tuple[str, str], float]:
+    """translate: register legal-dong code → the code the slim holds (e.g. 12 → 29/46)."""
     out: dict[tuple[str, str], float] = {}
     for bjd10, bun, ji in sorted(keys):
         if not (len(bjd10) == 10 and bjd10.isdigit()) or bun > 9999 or ji > 9999:
             continue
-        pnu = int(f"{bjd10}1{bun:04d}{ji:04d}")
+        lookup = translate.get(bjd10) if translate is not None else bjd10
+        if not lookup:
+            continue
+        pnu = int(f"{lookup}1{bun:04d}{ji:04d}")
         if pnu > INT64_MAX:
             continue
         best = None

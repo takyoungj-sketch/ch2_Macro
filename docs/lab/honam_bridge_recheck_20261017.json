@@ -1,0 +1,71 @@
+{
+  "bridge_pairs": 2970,
+  "a_building_land": {
+    "bridged": 925712,
+    "in_last_asof": 880791,
+    "other_asof_only": 7976,
+    "absent": 36945,
+    "held_no_bridge": 1824,
+    "last_asof": "2026-07-20"
+  },
+  "b_land_area": {
+    "transactions": 69451,
+    "land_dict": {
+      "both_equal": 514516,
+      "neither": 145699,
+      "both_differ": 8883,
+      "slim_only": 4310,
+      "al_d003_only": 4305
+    },
+    "confirmed_al_d003": 53717,
+    "confirmed_slim_bridged": 53731,
+    "diff": {
+      "identical": 53704,
+      "different": 2,
+      "only_left": 11,
+      "only_right": 25,
+      "field_diff": {
+        "land_area_source": 2
+      }
+    }
+  },
+  "c_bridged_caches": {
+    "title_2024-09_bridged": 912648,
+    "title_2024-09_unbridged": 1835,
+    "title_2025-07_bridged": 925674,
+    "title_2025-07_unbridged": 1852,
+    "summary_2024-09_bridged": 56438,
+    "summary_2024-09_unbridged": 94,
+    "summary_2025-07_bridged": 57081,
+    "summary_2025-07_unbridged": 95
+  },
+  "c_time_fallback": {
+    "confirmed_current": 53717,
+    "confirmed_bridged": 55497,
+    "diff": {
+      "different": 52409,
+      "identical": 1307,
+      "only_right": 1781,
+      "only_left": 1,
+      "field_diff": {
+        "n_range": 33051,
+        "snapshots_matched": 52409,
+        "land_area_source": 505,
+        "match_tier": 254,
+        "n_exact": 388,
+        "recovered_lot": 226,
+        "approve_year": 153,
+        "structure_raw": 74,
+        "max_floor": 27
+      }
+    },
+    "snapshot_used_bridged": {
+      "2025-07": 6184,
+      "2026-07": 1307,
+      "2024-09": 48006
+    },
+    "snapshot_used_current": {
+      "2026-07": 53717
+    }
+  }
+}

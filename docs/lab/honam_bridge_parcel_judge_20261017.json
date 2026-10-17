@@ -1,0 +1,36 @@
+{
+  "auto_check_current": {
+    "confirmed": 53717,
+    "road_checked": 50958,
+    "road_agree": 50163,
+    "approve_checked": 49958,
+    "approve_agree": 47857
+  },
+  "auto_check_bridged": {
+    "confirmed": 55497,
+    "road_checked": 52497,
+    "road_agree": 51669,
+    "approve_checked": 51465,
+    "approve_agree": 49329
+  },
+  "verdicts": {
+    "parcel_differs": {
+      "frozen_supported": 47,
+      "rerun_supported": 89,
+      "both_supported": 69,
+      "undecidable_one_side_no_evidence": 8,
+      "neither_supported": 10,
+      "undecidable_no_evidence": 3
+    },
+    "new_in_bridged": {
+      "supported": 1657,
+      "no_evidence": 16,
+      "partly_contradicted": 87,
+      "contradicted": 21
+    },
+    "lost_in_bridged": {
+      "supported": 1
+    }
+  },
+  "note": "auto cross-check agreement, not link accuracy"
+}

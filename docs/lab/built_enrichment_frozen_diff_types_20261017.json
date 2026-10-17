@@ -1,0 +1,34 @@
+{
+  "types": {
+    "not_reproduced": 6,
+    "snapshot_or_count_only": 65,
+    "parcel_differs": 2
+  },
+  "types_by_matched_cycle": {
+    "not_reproduced": {
+      "202608": 6
+    },
+    "snapshot_or_count_only": {
+      "202608": 65
+    },
+    "parcel_differs": {
+      "202608": 2
+    }
+  },
+  "frozen_rows_by_matched_cycle": {
+    "202608": 426477
+  },
+  "detail": {
+    "snapshot_or_count_only": {
+      "2025-07->2026-07|via=time": 59,
+      "2026-07->2025-07|via=time": 6
+    },
+    "not_reproduced": {
+      "snapshot_conflict": 1,
+      "tx_now_partial_ownership_excluded_from_tx_sql": 5
+    }
+  },
+  "parcel_differs_evidence": {
+    "both_supported": 2
+  }
+}
