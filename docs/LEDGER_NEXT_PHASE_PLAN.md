@@ -92,6 +92,8 @@
 
 **완료 조건:** manifest만으로 같은 원장과 같은 결과표 건수를 다시 만들 수 있다.
 
+**2026-10-17 진행:** 코드·문서 커밋, 동결 기록 [`lab/land_trait_ledger_v1_freeze_20261017.json`](lab/land_trait_ledger_v1_freeze_20261017.json), 재생성 절차 [`lab/LAND_TRAIT_LEDGER_V1_FREEZE.md`](lab/LAND_TRAIT_LEDGER_V1_FREEZE.md) 완료. 백업 한 벌은 위치 결정 대기.
+
 **하지 않음:** 원장 구조 변경, 재적재, 연결 규칙 변경.
 
 ### 2단계 — 토지 제품용 slim 공급층
