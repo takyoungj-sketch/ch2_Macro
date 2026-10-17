@@ -1,0 +1,98 @@
+{
+  "run_date": "2026-10-10",
+  "database": "data/research/land_trait_slim/gauge_asof_2026-05-12.sqlite",
+  "cheongju_2026_rows": 480633,
+  "cheongju_2026_sqlite_bytes": 96489472,
+  "target_asof": "2026-05-12",
+  "stats": {
+    "asof": "2026-05-12",
+    "rows_in": 35943934,
+    "stored": 35887034,
+    "skipped_other_asof": 0,
+    "collapsed_identical": 0,
+    "held": {
+      "invalid_land_type": 23623,
+      "invalid_pnu": 33276,
+      "noncanonical_zero_main_lot": 1
+    },
+    "files": [
+      {
+        "file": "AL_D195_11_20260519.zip",
+        "rows": 889017
+      },
+      {
+        "file": "AL_D195_26_20260519.zip",
+        "rows": 693885
+      },
+      {
+        "file": "AL_D195_27_20260519.zip",
+        "rows": 565356
+      },
+      {
+        "file": "AL_D195_28_20260519.zip",
+        "rows": 646308
+      },
+      {
+        "file": "AL_D195_29_20260519.zip",
+        "rows": 382014
+      },
+      {
+        "file": "AL_D195_30_20260519.zip",
+        "rows": 238139
+      },
+      {
+        "file": "AL_D195_31_20260519.zip",
+        "rows": 444735
+      },
+      {
+        "file": "AL_D195_36_20260519.zip",
+        "rows": 187427
+      },
+      {
+        "file": "AL_D195_41_20260519.zip",
+        "rows": 4958835
+      },
+      {
+        "file": "AL_D195_43_20260519.zip",
+        "rows": 2404263
+      },
+      {
+        "file": "AL_D195_44_20260519.zip",
+        "rows": 3757344
+      },
+      {
+        "file": "AL_D195_46_20260519.zip",
+        "rows": 5587808
+      },
+      {
+        "file": "AL_D195_47_20260519.zip",
+        "rows": 4316355
+      },
+      {
+        "file": "AL_D195_48_20260519.zip",
+        "rows": 4582206
+      },
+      {
+        "file": "AL_D195_50_20260519.zip",
+        "rows": 583077
+      },
+      {
+        "file": "AL_D195_51_20260519.zip",
+        "rows": 2750315
+      },
+      {
+        "file": "AL_D195_52_20260519.zip",
+        "rows": 2956850
+      }
+    ]
+  },
+  "sqlite_bytes": 8826650624,
+  "bytes_per_stored_row": 245.96,
+  "projected_sqlite_bytes_if_all_source_rows": 908244700498,
+  "planning_band_bytes": [
+    10737418240,
+    21474836480
+  ],
+  "stopped": true,
+  "stop_reason": "all source rows at the measured density exceed the 10-20GB band"
+}

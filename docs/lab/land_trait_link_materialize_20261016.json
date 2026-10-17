@@ -1,0 +1,298 @@
+{
+  "rule_version": "LAND_CODE_HISTORY_LAYER_V1+LAND_LINK_RULE_V1",
+  "mode": "product_list_link",
+  "contract_date_from": "2019-01-01",
+  "product_table": "land_transaction_trait_link",
+  "product_source_updated": false,
+  "national_ledger_rewritten": false,
+  "regional_exceptions_added": false,
+  "cheongju_v1_check": true,
+  "transactions": 2684877,
+  "by_sido": {
+    "11": {
+      "name": "서울",
+      "exact": 10632,
+      "multiple_candidates": 7514,
+      "other_unmatched": 1184,
+      "clean_precontract_traits_differ": 333,
+      "no_precontract_observation": 571,
+      "post_contract_only": 84,
+      "comparable": 20320,
+      "label_normalized": 2
+    },
+    "12": {
+      "name": "전남광주",
+      "multiple_candidates": 36472,
+      "exact": 312754,
+      "no_precontract_observation": 18873,
+      "other_unmatched": 17837,
+      "clean_precontract_traits_differ": 15256,
+      "post_contract_only": 7542,
+      "label_normalized": 315,
+      "comparable": 409125,
+      "label_normalized_traits_differ": 76
+    },
+    "26": {
+      "name": "부산",
+      "exact": 15680,
+      "multiple_candidates": 9646,
+      "other_unmatched": 1685,
+      "clean_precontract_traits_differ": 780,
+      "no_precontract_observation": 2020,
+      "comparable": 30048,
+      "post_contract_only": 222,
+      "label_normalized": 15
+    },
+    "27": {
+      "name": "대구",
+      "exact": 14694,
+      "multiple_candidates": 3849,
+      "other_unmatched": 3586,
+      "no_precontract_observation": 6346,
+      "clean_precontract_traits_differ": 644,
+      "post_contract_only": 191,
+      "comparable": 29311,
+      "label_normalized": 1
+    },
+    "28": {
+      "name": "인천",
+      "multiple_candidates": 5935,
+      "exact": 31750,
+      "other_unmatched": 7772,
+      "clean_precontract_traits_differ": 2373,
+      "no_precontract_observation": 9667,
+      "post_contract_only": 897,
+      "comparable": 58413,
+      "label_normalized": 17,
+      "label_normalized_traits_differ": 2
+    },
+    "30": {
+      "name": "대전",
+      "exact": 10870,
+      "multiple_candidates": 2279,
+      "other_unmatched": 1496,
+      "no_precontract_observation": 735,
+      "clean_precontract_traits_differ": 597,
+      "post_contract_only": 225,
+      "label_normalized": 22,
+      "comparable": 16224
+    },
+    "31": {
+      "name": "울산",
+      "multiple_candidates": 2627,
+      "other_unmatched": 2221,
+      "exact": 17778,
+      "no_precontract_observation": 1914,
+      "clean_precontract_traits_differ": 1079,
+      "post_contract_only": 614,
+      "label_normalized": 47,
+      "comparable": 26284,
+      "label_normalized_traits_differ": 4
+    },
+    "36": {
+      "name": "세종",
+      "multiple_candidates": 1267,
+      "exact": 10421,
+      "other_unmatched": 1307,
+      "no_precontract_observation": 1330,
+      "post_contract_only": 546,
+      "clean_precontract_traits_differ": 953,
+      "label_normalized": 12,
+      "comparable": 15836
+    },
+    "41": {
+      "name": "경기",
+      "no_precontract_observation": 47846,
+      "other_unmatched": 39842,
+      "multiple_candidates": 34981,
+      "clean_precontract_traits_differ": 28000,
+      "exact": 290386,
+      "label_normalized": 20508,
+      "label_normalized_traits_differ": 1457,
+      "post_contract_only": 12853,
+      "comparable": 475873
+    },
+    "43": {
+      "name": "충북",
+      "other_unmatched": 9449,
+      "no_precontract_observation": 12292,
+      "exact": 124980,
+      "clean_precontract_traits_differ": 10608,
+      "multiple_candidates": 7509,
+      "label_normalized": 14425,
+      "post_contract_only": 4666,
+      "label_normalized_traits_differ": 696,
+      "comparable": 184625
+    },
+    "44": {
+      "name": "충남",
+      "other_unmatched": 17549,
+      "label_normalized": 13611,
+      "multiple_candidates": 19358,
+      "exact": 222926,
+      "no_precontract_observation": 23275,
+      "label_normalized_traits_differ": 758,
+      "post_contract_only": 8868,
+      "clean_precontract_traits_differ": 16170,
+      "comparable": 322515
+    },
+    "47": {
+      "name": "경북",
+      "label_normalized": 10391,
+      "label_normalized_traits_differ": 449,
+      "other_unmatched": 15799,
+      "post_contract_only": 7014,
+      "multiple_candidates": 18103,
+      "exact": 242867,
+      "clean_precontract_traits_differ": 13437,
+      "no_precontract_observation": 19033,
+      "comparable": 327093
+    },
+    "48": {
+      "name": "경남",
+      "label_normalized": 6444,
+      "exact": 187659,
+      "multiple_candidates": 18489,
+      "other_unmatched": 10936,
+      "no_precontract_observation": 12981,
+      "clean_precontract_traits_differ": 12746,
+      "post_contract_only": 4849,
+      "label_normalized_traits_differ": 296,
+      "comparable": 254400
+    },
+    "50": {
+      "name": "제주",
+      "multiple_candidates": 4945,
+      "other_unmatched": 6788,
+      "exact": 27672,
+      "no_precontract_observation": 3869,
+      "clean_precontract_traits_differ": 2314,
+      "post_contract_only": 1195,
+      "label_normalized": 10,
+      "label_normalized_traits_differ": 4,
+      "comparable": 46797
+    },
+    "51": {
+      "name": "강원",
+      "multiple_candidates": 15248,
+      "exact": 145921,
+      "other_unmatched": 10163,
+      "no_precontract_observation": 15282,
+      "clean_precontract_traits_differ": 9796,
+      "post_contract_only": 5218,
+      "label_normalized": 217,
+      "label_normalized_traits_differ": 39,
+      "comparable": 201884
+    },
+    "52": {
+      "name": "전북",
+      "exact": 179373,
+      "multiple_candidates": 18810,
+      "other_unmatched": 19251,
+      "clean_precontract_traits_differ": 10277,
+      "no_precontract_observation": 26967,
+      "label_normalized": 4206,
+      "post_contract_only": 7040,
+      "label_normalized_traits_differ": 205,
+      "comparable": 266129
+    }
+  },
+  "price_by_sido": {
+    "11": {
+      "same_year": 10588,
+      "price_conflict": 25,
+      "price_missing": 19,
+      "previous_year": 2
+    },
+    "12": {
+      "same_year": 310093,
+      "price_conflict": 2710,
+      "price_missing": 198,
+      "previous_year": 68
+    },
+    "26": {
+      "price_conflict": 101,
+      "same_year": 15517,
+      "price_missing": 65,
+      "previous_year": 12
+    },
+    "27": {
+      "same_year": 14520,
+      "price_conflict": 125,
+      "previous_year": 12,
+      "price_missing": 38
+    },
+    "28": {
+      "same_year": 30889,
+      "price_conflict": 315,
+      "previous_year": 199,
+      "price_missing": 364
+    },
+    "30": {
+      "same_year": 10789,
+      "price_conflict": 80,
+      "price_missing": 21,
+      "previous_year": 2
+    },
+    "31": {
+      "same_year": 17544,
+      "price_missing": 53,
+      "price_conflict": 132,
+      "previous_year": 96
+    },
+    "36": {
+      "same_year": 10308,
+      "price_conflict": 105,
+      "previous_year": 1,
+      "price_missing": 19
+    },
+    "41": {
+      "same_year": 305743,
+      "price_conflict": 2822,
+      "previous_year": 515,
+      "price_missing": 1814
+    },
+    "43": {
+      "same_year": 137849,
+      "price_missing": 59,
+      "price_conflict": 1472,
+      "previous_year": 25
+    },
+    "44": {
+      "same_year": 234094,
+      "price_conflict": 2084,
+      "previous_year": 186,
+      "price_missing": 173
+    },
+    "47": {
+      "same_year": 250637,
+      "price_missing": 348,
+      "price_conflict": 2186,
+      "previous_year": 87
+    },
+    "48": {
+      "same_year": 192193,
+      "price_conflict": 1571,
+      "price_missing": 226,
+      "previous_year": 113
+    },
+    "50": {
+      "same_year": 27316,
+      "price_conflict": 238,
+      "price_missing": 111,
+      "previous_year": 17
+    },
+    "51": {
+      "same_year": 137304,
+      "price_conflict": 1234,
+      "price_missing": 102,
+      "previous_year": 7498
+    },
+    "52": {
+      "same_year": 180987,
+      "previous_year": 1083,
+      "price_conflict": 1422,
+      "price_missing": 87
+    }
+  }
+}

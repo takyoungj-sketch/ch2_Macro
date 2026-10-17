@@ -1,0 +1,200 @@
+{
+  "place": "청주시 상당·서원·흥덕·청원",
+  "contract_years": "2019-2023",
+  "cheongju_land_link_rule": "closed",
+  "rule": {
+    "match_on": "코드, 면적, 공시지가",
+    "labels": "키와 충돌 판정에 쓰지 않음. 원문 명칭과 출처 ZIP은 보존",
+    "display_name": "코드사전. 나중 ZIP 문자열로 원장을 덮지 않음",
+    "real_conflict": "코드 또는 면적·공시지가가 다를 때만",
+    "alias": "같은 코드에 빈칸이 아닌 명칭이 둘이면 label_alias. 표시명은 사전",
+    "unobserved": "계약 전 관측 없음과 계약 후에만 있는 행은 메우지 않음"
+  },
+  "comparable": 28108,
+  "counts": {
+    "exact": 3137,
+    "multiple_candidates": 381,
+    "other_unmatched": 3772,
+    "label_normalized": 14336,
+    "label_normalized_traits_differ": 669,
+    "post_contract_only": 1594,
+    "no_precontract_observation": 1131,
+    "clean_precontract_traits_differ": 3088
+  },
+  "by_contract_year": {
+    "2019": {
+      "label_normalized": 3330,
+      "comparable": 5010,
+      "exact": 112,
+      "other_unmatched": 811,
+      "post_contract_only": 612,
+      "label_normalized_traits_differ": 127,
+      "multiple_candidates": 4,
+      "clean_precontract_traits_differ": 13,
+      "no_precontract_observation": 1
+    },
+    "2020": {
+      "label_normalized": 4836,
+      "comparable": 6847,
+      "post_contract_only": 598,
+      "exact": 137,
+      "other_unmatched": 1035,
+      "label_normalized_traits_differ": 201,
+      "clean_precontract_traits_differ": 29,
+      "multiple_candidates": 6,
+      "no_precontract_observation": 5
+    },
+    "2021": {
+      "exact": 908,
+      "comparable": 7517,
+      "multiple_candidates": 132,
+      "other_unmatched": 1025,
+      "label_normalized": 4621,
+      "label_normalized_traits_differ": 246,
+      "post_contract_only": 369,
+      "clean_precontract_traits_differ": 43,
+      "no_precontract_observation": 173
+    },
+    "2022": {
+      "no_precontract_observation": 489,
+      "comparable": 5024,
+      "other_unmatched": 551,
+      "multiple_candidates": 129,
+      "exact": 1011,
+      "clean_precontract_traits_differ": 1186,
+      "label_normalized": 1548,
+      "label_normalized_traits_differ": 95,
+      "post_contract_only": 15
+    },
+    "2023": {
+      "other_unmatched": 350,
+      "comparable": 3710,
+      "clean_precontract_traits_differ": 1817,
+      "exact": 969,
+      "no_precontract_observation": 463,
+      "multiple_candidates": 110,
+      "label_normalized": 1
+    }
+  },
+  "conflict_keys_on_recovery_parcels": {
+    "label_only": 178271,
+    "substantive": 0
+  },
+  "code_name_status": {
+    "height": {
+      "official_name": 178271
+    },
+    "road": {
+      "official_name": 178271
+    },
+    "shape": {
+      "official_name": 75770,
+      "code_not_in_dictionary": 84080,
+      "official_plus_alias": 12275,
+      "name_not_in_dictionary": 6146
+    },
+    "use": {
+      "official_name": 178065,
+      "name_not_in_dictionary": 191,
+      "official_plus_alias": 7,
+      "code_not_in_dictionary": 8
+    }
+  },
+  "shape_both_nonempty": [
+    {
+      "code": "05",
+      "dictionary_name": "부정형",
+      "labels": [
+        "부정형",
+        "삼각형"
+      ],
+      "status": "official_plus_alias",
+      "keys": 11844,
+      "files_by_label": {
+        "부정형": [
+          "AL_43_D195_20211109.zip"
+        ],
+        "삼각형": [
+          "AL_43_D195_20210819.zip"
+        ]
+      }
+    },
+    {
+      "code": "06",
+      "dictionary_name": "자루형",
+      "labels": [
+        "역삼각형",
+        "자루형"
+      ],
+      "status": "official_plus_alias",
+      "keys": 431,
+      "files_by_label": {
+        "역삼각형": [
+          "AL_43_D195_20210819.zip"
+        ],
+        "자루형": [
+          "AL_43_D195_20211109.zip"
+        ]
+      }
+    }
+  ],
+  "product_database_changed": false,
+  "national_ledger_rewritten": false,
+  "official_price": {
+    "rule_version": "LAND_LINK_RULE_V1",
+    "population": "exact + label_normalized",
+    "population_count": 17473,
+    "same_year": 17181,
+    "previous_year_fallback": 3,
+    "price_missing": 21,
+    "price_conflict": 268,
+    "by_contract_year": {
+      "2019": {
+        "same_year": 3381,
+        "priced_transactions": 3442,
+        "price_missing": 8,
+        "price_conflict": 53
+      },
+      "2020": {
+        "price_conflict": 58,
+        "priced_transactions": 4973,
+        "same_year": 4911,
+        "previous_year": 1,
+        "price_missing": 3
+      },
+      "2021": {
+        "same_year": 5436,
+        "priced_transactions": 5529,
+        "price_conflict": 88,
+        "price_missing": 5
+      },
+      "2022": {
+        "same_year": 2487,
+        "priced_transactions": 2559,
+        "price_missing": 4,
+        "price_conflict": 67,
+        "previous_year": 1
+      },
+      "2023": {
+        "same_year": 966,
+        "priced_transactions": 970,
+        "price_conflict": 2,
+        "previous_year": 1,
+        "price_missing": 1
+      }
+    },
+    "by_link_kind": {
+      "exact": {
+        "same_year": 3104,
+        "previous_year": 3,
+        "price_conflict": 28,
+        "price_missing": 2
+      },
+      "label_normalized": {
+        "same_year": 14077,
+        "price_missing": 19,
+        "price_conflict": 240
+      }
+    }
+  }
+}

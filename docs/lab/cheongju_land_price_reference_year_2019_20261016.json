@@ -1,0 +1,115 @@
+{
+  "contract_date_from": "2019-01-01",
+  "rule": "필지는 계약일 이전 판. 공시지가는 계약연도와 같은 기준연도, 없으면 직전 연도만",
+  "as_of_available_report": "D:\\ch2\\ch2_Macro\\docs\\lab\\cheongju_land_price_link_2019_20261016.json",
+  "comparable": 37783,
+  "same_year": 9813,
+  "previous_year_fallback": 13,
+  "parcel_found_price_missing": 15,
+  "price_conflict": 100,
+  "parcel_not_found": 26826,
+  "parcel_not_found_no_prior_plate": 24530,
+  "parcel_not_found_no_candidate": 2296,
+  "multiple_candidates": 1016,
+  "same_year_from_later_plate": 5305,
+  "shares_of_comparable": {
+    "same_year": 0.2597,
+    "previous_year": 0.0003,
+    "price_missing": 0.0004,
+    "conflict": 0.0026,
+    "no_prior_plate": 0.6492,
+    "no_candidate": 0.0608,
+    "multiple_candidates": 0.0269
+  },
+  "shares": {
+    "same_year": 0.2597,
+    "previous_year_fallback": 0.0003,
+    "parcel_found_price_missing": 0.0004,
+    "price_conflict": 0.0026,
+    "parcel_not_found": 0.71,
+    "multiple_candidates": 0.0269
+  },
+  "by_contract_year": {
+    "2019": {
+      "comparable": 5010,
+      "no_prior_plate": 4509,
+      "same_year_from_later_plate": 112,
+      "same_year": 112,
+      "no_candidate": 385,
+      "multiple_candidates": 4
+    },
+    "2020": {
+      "comparable": 6847,
+      "no_prior_plate": 6352,
+      "same_year_from_later_plate": 135,
+      "same_year": 135,
+      "no_candidate": 352,
+      "multiple_candidates": 6,
+      "previous_year": 1,
+      "conflict": 1
+    },
+    "2021": {
+      "comparable": 7517,
+      "same_year": 904,
+      "multiple_candidates": 132,
+      "no_prior_plate": 5994,
+      "no_candidate": 483,
+      "same_year_from_later_plate": 103,
+      "conflict": 3,
+      "price_missing": 1
+    },
+    "2022": {
+      "comparable": 5024,
+      "no_prior_plate": 3651,
+      "multiple_candidates": 129,
+      "no_candidate": 233,
+      "same_year_from_later_plate": 987,
+      "same_year": 987,
+      "conflict": 22,
+      "previous_year": 1,
+      "price_missing": 1
+    },
+    "2023": {
+      "comparable": 3710,
+      "no_prior_plate": 2496,
+      "same_year": 966,
+      "no_candidate": 135,
+      "multiple_candidates": 110,
+      "conflict": 2,
+      "previous_year": 1
+    },
+    "2024": {
+      "comparable": 3657,
+      "no_prior_plate": 588,
+      "multiple_candidates": 243,
+      "same_year_from_later_plate": 1626,
+      "same_year": 2650,
+      "no_candidate": 169,
+      "previous_year": 4,
+      "price_missing": 3
+    },
+    "2025": {
+      "comparable": 3666,
+      "same_year": 2466,
+      "no_prior_plate": 771,
+      "multiple_candidates": 231,
+      "no_candidate": 120,
+      "price_missing": 4,
+      "same_year_from_later_plate": 1497,
+      "conflict": 72,
+      "previous_year": 2
+    },
+    "2026": {
+      "comparable": 2352,
+      "same_year": 1593,
+      "multiple_candidates": 161,
+      "no_candidate": 419,
+      "price_missing": 6,
+      "previous_year": 4,
+      "no_prior_plate": 169,
+      "same_year_from_later_plate": 845
+    }
+  },
+  "unique_is_not_success": true,
+  "product_database_changed": false
+}

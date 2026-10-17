@@ -1,0 +1,57 @@
+{
+  "rule_version": "LAND_LINK_RULE_V1",
+  "population": "exact + label_normalized",
+  "population_count": 17473,
+  "same_year": 17181,
+  "previous_year_fallback": 3,
+  "price_missing": 21,
+  "price_conflict": 268,
+  "by_contract_year": {
+    "2019": {
+      "same_year": 3381,
+      "priced_transactions": 3442,
+      "price_missing": 8,
+      "price_conflict": 53
+    },
+    "2020": {
+      "price_conflict": 58,
+      "priced_transactions": 4973,
+      "same_year": 4911,
+      "previous_year": 1,
+      "price_missing": 3
+    },
+    "2021": {
+      "same_year": 5436,
+      "priced_transactions": 5529,
+      "price_conflict": 88,
+      "price_missing": 5
+    },
+    "2022": {
+      "same_year": 2487,
+      "priced_transactions": 2559,
+      "price_missing": 4,
+      "price_conflict": 67,
+      "previous_year": 1
+    },
+    "2023": {
+      "same_year": 966,
+      "priced_transactions": 970,
+      "price_conflict": 2,
+      "previous_year": 1,
+      "price_missing": 1
+    }
+  },
+  "by_link_kind": {
+    "exact": {
+      "same_year": 3104,
+      "previous_year": 3,
+      "price_conflict": 28,
+      "price_missing": 2
+    },
+    "label_normalized": {
+      "same_year": 14077,
+      "price_missing": 19,
+      "price_conflict": 240
+    }
+  }
+}

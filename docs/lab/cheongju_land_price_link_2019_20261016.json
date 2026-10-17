@@ -1,0 +1,175 @@
+{
+  "contract_date_from": "2019-01-01",
+  "why_2019": "토지 7년 롤링창으로 통계가 가능한 첫 해",
+  "rule": "후보가 하나인 거래만. 계약일 이전 판에서 계약연도 이하인 가장 늦은 공시지가",
+  "comparable": 37783,
+  "attached": 9941,
+  "attached_share": 0.2631,
+  "same_year": 4195,
+  "previous_year": 5459,
+  "two_or_more_years_behind": 287,
+  "same_year_share_of_comparable": 0.111,
+  "previous_year_share_of_comparable": 0.1445,
+  "same_year_share_of_attached": 0.422,
+  "link_counts": {
+    "unique_unverified": 9941,
+    "multiple_candidates": 1016,
+    "no_prior_plate": 24530,
+    "no_candidate": 2296
+  },
+  "by_contract_year": {
+    "2019": {
+      "comparable": 5010,
+      "no_price": 4898,
+      "previous_year": 112,
+      "attached": 112
+    },
+    "2020": {
+      "comparable": 6847,
+      "no_price": 6710,
+      "two_or_more_years_behind": 137,
+      "attached": 137
+    },
+    "2021": {
+      "comparable": 7517,
+      "same_year": 804,
+      "attached": 908,
+      "no_price": 6609,
+      "two_or_more_years_behind": 104
+    },
+    "2022": {
+      "comparable": 5024,
+      "no_price": 4013,
+      "previous_year": 984,
+      "attached": 1011,
+      "two_or_more_years_behind": 27
+    },
+    "2023": {
+      "comparable": 3710,
+      "no_price": 2741,
+      "same_year": 963,
+      "attached": 969,
+      "previous_year": 1,
+      "two_or_more_years_behind": 5
+    },
+    "2024": {
+      "comparable": 3657,
+      "no_price": 1000,
+      "previous_year": 1630,
+      "attached": 2657,
+      "same_year": 1024,
+      "two_or_more_years_behind": 3
+    },
+    "2025": {
+      "comparable": 3666,
+      "same_year": 970,
+      "attached": 2544,
+      "no_price": 1122,
+      "two_or_more_years_behind": 4,
+      "previous_year": 1570
+    },
+    "2026": {
+      "comparable": 2352,
+      "previous_year": 1162,
+      "attached": 1603,
+      "no_price": 749,
+      "same_year": 434,
+      "two_or_more_years_behind": 7
+    }
+  },
+  "by_contract_month": {
+    "01": {
+      "comparable": 2953,
+      "no_price": 2165,
+      "previous_year": 774,
+      "attached": 788,
+      "two_or_more_years_behind": 14
+    },
+    "02": {
+      "comparable": 3040,
+      "no_price": 2316,
+      "previous_year": 692,
+      "attached": 724,
+      "two_or_more_years_behind": 32
+    },
+    "03": {
+      "comparable": 3731,
+      "no_price": 2840,
+      "previous_year": 860,
+      "attached": 891,
+      "two_or_more_years_behind": 31
+    },
+    "04": {
+      "comparable": 3773,
+      "no_price": 2781,
+      "previous_year": 972,
+      "attached": 992,
+      "two_or_more_years_behind": 20
+    },
+    "05": {
+      "comparable": 3561,
+      "no_price": 2703,
+      "previous_year": 711,
+      "attached": 858,
+      "two_or_more_years_behind": 26,
+      "same_year": 121
+    },
+    "06": {
+      "comparable": 3516,
+      "no_price": 2747,
+      "previous_year": 522,
+      "attached": 769,
+      "two_or_more_years_behind": 28,
+      "same_year": 219
+    },
+    "07": {
+      "comparable": 2907,
+      "no_price": 2187,
+      "two_or_more_years_behind": 28,
+      "attached": 720,
+      "previous_year": 568,
+      "same_year": 124
+    },
+    "08": {
+      "comparable": 3005,
+      "no_price": 2027,
+      "same_year": 724,
+      "attached": 978,
+      "previous_year": 222,
+      "two_or_more_years_behind": 32
+    },
+    "09": {
+      "comparable": 2697,
+      "same_year": 677,
+      "attached": 810,
+      "no_price": 1887,
+      "previous_year": 105,
+      "two_or_more_years_behind": 28
+    },
+    "10": {
+      "comparable": 2565,
+      "no_price": 1857,
+      "previous_year": 13,
+      "attached": 708,
+      "two_or_more_years_behind": 17,
+      "same_year": 678
+    },
+    "11": {
+      "comparable": 2880,
+      "no_price": 2081,
+      "same_year": 775,
+      "attached": 799,
+      "previous_year": 11,
+      "two_or_more_years_behind": 13
+    },
+    "12": {
+      "comparable": 3155,
+      "same_year": 877,
+      "attached": 904,
+      "no_price": 2251,
+      "previous_year": 9,
+      "two_or_more_years_behind": 18
+    }
+  },
+  "unique_is_not_success": true
+}

@@ -1,0 +1,528 @@
+{
+  "rule_version": "LAND_LINK_RULE_V1",
+  "mode": "shadow",
+  "contract_date_from": "2019-01-01",
+  "product_database_changed": false,
+  "national_ledger_rewritten": false,
+  "regional_rules_added": false,
+  "by_sido": {
+    "12": {
+      "name": "전남광주",
+      "multiple_candidates": 36472,
+      "exact": 312754,
+      "no_precontract_observation": 18873,
+      "other_unmatched": 17837,
+      "clean_precontract_traits_differ": 15256,
+      "post_contract_only": 7542,
+      "label_normalized": 315,
+      "comparable": 409125,
+      "label_normalized_traits_differ": 76
+    },
+    "51": {
+      "name": "강원",
+      "other_unmatched": 10163,
+      "no_precontract_observation": 15282,
+      "multiple_candidates": 15248,
+      "clean_precontract_traits_differ": 9796,
+      "exact": 145921,
+      "post_contract_only": 5218,
+      "label_normalized": 217,
+      "label_normalized_traits_differ": 39,
+      "comparable": 201884
+    },
+    "52": {
+      "name": "전북",
+      "exact": 179373,
+      "multiple_candidates": 18810,
+      "other_unmatched": 19251,
+      "clean_precontract_traits_differ": 10277,
+      "no_precontract_observation": 26967,
+      "label_normalized": 4206,
+      "post_contract_only": 7040,
+      "label_normalized_traits_differ": 205,
+      "comparable": 266129
+    }
+  },
+  "by_sido_year": {
+    "12": {
+      "name": "전남광주",
+      "years": {
+        "2019": {
+          "multiple_candidates": 5773,
+          "comparable": 64740,
+          "exact": 49147,
+          "no_precontract_observation": 1992,
+          "post_contract_only": 3376,
+          "clean_precontract_traits_differ": 2486,
+          "other_unmatched": 1913,
+          "label_normalized": 45,
+          "label_normalized_traits_differ": 8
+        },
+        "2020": {
+          "other_unmatched": 1818,
+          "comparable": 68414,
+          "exact": 52553,
+          "multiple_candidates": 6228,
+          "no_precontract_observation": 1694,
+          "clean_precontract_traits_differ": 2435,
+          "post_contract_only": 3579,
+          "label_normalized": 78,
+          "label_normalized_traits_differ": 29
+        },
+        "2021": {
+          "exact": 54532,
+          "comparable": 69759,
+          "multiple_candidates": 6275,
+          "other_unmatched": 1587,
+          "no_precontract_observation": 4008,
+          "clean_precontract_traits_differ": 2539,
+          "label_normalized": 192,
+          "post_contract_only": 587,
+          "label_normalized_traits_differ": 39
+        },
+        "2022": {
+          "multiple_candidates": 4744,
+          "comparable": 53487,
+          "exact": 41913,
+          "clean_precontract_traits_differ": 1923,
+          "no_precontract_observation": 3598,
+          "other_unmatched": 1309
+        },
+        "2023": {
+          "multiple_candidates": 3831,
+          "comparable": 43301,
+          "exact": 33371,
+          "clean_precontract_traits_differ": 2158,
+          "no_precontract_observation": 2971,
+          "other_unmatched": 970
+        },
+        "2024": {
+          "multiple_candidates": 3799,
+          "comparable": 41299,
+          "exact": 32016,
+          "no_precontract_observation": 2119,
+          "clean_precontract_traits_differ": 1796,
+          "other_unmatched": 1569
+        },
+        "2025": {
+          "multiple_candidates": 3657,
+          "comparable": 40086,
+          "exact": 31609,
+          "clean_precontract_traits_differ": 1574,
+          "no_precontract_observation": 2181,
+          "other_unmatched": 1065
+        },
+        "2026": {
+          "other_unmatched": 7606,
+          "comparable": 28039,
+          "multiple_candidates": 2165,
+          "exact": 17613,
+          "no_precontract_observation": 310,
+          "clean_precontract_traits_differ": 345
+        }
+      }
+    },
+    "51": {
+      "name": "강원",
+      "years": {
+        "2019": {
+          "exact": 20269,
+          "comparable": 28903,
+          "other_unmatched": 1014,
+          "post_contract_only": 2277,
+          "multiple_candidates": 2006,
+          "no_precontract_observation": 1849,
+          "clean_precontract_traits_differ": 1485,
+          "label_normalized_traits_differ": 2,
+          "label_normalized": 1
+        },
+        "2020": {
+          "other_unmatched": 1000,
+          "comparable": 31849,
+          "no_precontract_observation": 1836,
+          "multiple_candidates": 2369,
+          "post_contract_only": 2282,
+          "exact": 22600,
+          "clean_precontract_traits_differ": 1743,
+          "label_normalized": 15,
+          "label_normalized_traits_differ": 4
+        },
+        "2021": {
+          "other_unmatched": 1146,
+          "comparable": 39556,
+          "no_precontract_observation": 4134,
+          "multiple_candidates": 3093,
+          "clean_precontract_traits_differ": 1930,
+          "exact": 28360,
+          "post_contract_only": 659,
+          "label_normalized": 201,
+          "label_normalized_traits_differ": 33
+        },
+        "2022": {
+          "multiple_candidates": 2210,
+          "comparable": 27480,
+          "other_unmatched": 2096,
+          "exact": 19680,
+          "no_precontract_observation": 2392,
+          "clean_precontract_traits_differ": 1102
+        },
+        "2023": {
+          "other_unmatched": 2011,
+          "comparable": 22026,
+          "exact": 15953,
+          "multiple_candidates": 1612,
+          "clean_precontract_traits_differ": 1118,
+          "no_precontract_observation": 1332
+        },
+        "2024": {
+          "multiple_candidates": 1579,
+          "comparable": 21169,
+          "exact": 15970,
+          "other_unmatched": 755,
+          "clean_precontract_traits_differ": 1201,
+          "no_precontract_observation": 1664
+        },
+        "2025": {
+          "exact": 14069,
+          "comparable": 18870,
+          "no_precontract_observation": 1815,
+          "other_unmatched": 515,
+          "multiple_candidates": 1417,
+          "clean_precontract_traits_differ": 1054
+        },
+        "2026": {
+          "multiple_candidates": 962,
+          "comparable": 12031,
+          "exact": 9020,
+          "other_unmatched": 1626,
+          "no_precontract_observation": 260,
+          "clean_precontract_traits_differ": 163
+        }
+      }
+    },
+    "52": {
+      "name": "전북",
+      "years": {
+        "2019": {
+          "label_normalized": 1092,
+          "comparable": 41036,
+          "other_unmatched": 2628,
+          "post_contract_only": 3424,
+          "label_normalized_traits_differ": 53,
+          "exact": 27199,
+          "no_precontract_observation": 1796,
+          "clean_precontract_traits_differ": 1921,
+          "multiple_candidates": 2923
+        },
+        "2020": {
+          "label_normalized": 1397,
+          "comparable": 45083,
+          "other_unmatched": 2416,
+          "post_contract_only": 3039,
+          "label_normalized_traits_differ": 100,
+          "no_precontract_observation": 1976,
+          "multiple_candidates": 3202,
+          "clean_precontract_traits_differ": 2197,
+          "exact": 30756
+        },
+        "2021": {
+          "multiple_candidates": 3449,
+          "comparable": 45655,
+          "other_unmatched": 2183,
+          "exact": 32306,
+          "no_precontract_observation": 3692,
+          "label_normalized": 1328,
+          "clean_precontract_traits_differ": 2071,
+          "post_contract_only": 575,
+          "label_normalized_traits_differ": 51
+        },
+        "2022": {
+          "other_unmatched": 1633,
+          "comparable": 35267,
+          "multiple_candidates": 2684,
+          "clean_precontract_traits_differ": 1746,
+          "no_precontract_observation": 3022,
+          "exact": 25790,
+          "label_normalized": 389,
+          "label_normalized_traits_differ": 1,
+          "post_contract_only": 2
+        },
+        "2023": {
+          "exact": 20619,
+          "comparable": 28265,
+          "multiple_candidates": 2074,
+          "other_unmatched": 4479,
+          "clean_precontract_traits_differ": 647,
+          "no_precontract_observation": 446
+        },
+        "2024": {
+          "multiple_candidates": 913,
+          "comparable": 27198,
+          "exact": 8920,
+          "no_precontract_observation": 14020,
+          "other_unmatched": 2830,
+          "clean_precontract_traits_differ": 515
+        },
+        "2025": {
+          "other_unmatched": 1059,
+          "comparable": 25283,
+          "multiple_candidates": 2149,
+          "exact": 19328,
+          "no_precontract_observation": 1755,
+          "clean_precontract_traits_differ": 992
+        },
+        "2026": {
+          "exact": 14455,
+          "comparable": 18342,
+          "multiple_candidates": 1416,
+          "other_unmatched": 2023,
+          "no_precontract_observation": 260,
+          "clean_precontract_traits_differ": 188
+        }
+      }
+    }
+  },
+  "price_by_sido": {
+    "12": {
+      "same_year": 310093,
+      "priced_transactions": 313069,
+      "price_conflict": 2710,
+      "price_missing": 198,
+      "previous_year": 68
+    },
+    "51": {
+      "same_year": 137304,
+      "priced_transactions": 146138,
+      "price_conflict": 1234,
+      "price_missing": 102,
+      "previous_year": 7498
+    },
+    "52": {
+      "same_year": 180987,
+      "priced_transactions": 183579,
+      "previous_year": 1083,
+      "price_conflict": 1422,
+      "price_missing": 87
+    }
+  },
+  "price_by_sido_year": {
+    "12": {
+      "2019": {
+        "same_year": 48698,
+        "priced_transactions": 49192,
+        "price_conflict": 460,
+        "price_missing": 27,
+        "previous_year": 7
+      },
+      "2020": {
+        "same_year": 52099,
+        "priced_transactions": 52631,
+        "price_conflict": 505,
+        "price_missing": 23,
+        "previous_year": 4
+      },
+      "2021": {
+        "same_year": 54172,
+        "priced_transactions": 54724,
+        "price_missing": 31,
+        "price_conflict": 489,
+        "previous_year": 32
+      },
+      "2022": {
+        "same_year": 41354,
+        "priced_transactions": 41913,
+        "price_conflict": 509,
+        "previous_year": 8,
+        "price_missing": 42
+      },
+      "2023": {
+        "same_year": 33116,
+        "priced_transactions": 33371,
+        "price_missing": 28,
+        "price_conflict": 226,
+        "previous_year": 1
+      },
+      "2024": {
+        "same_year": 31985,
+        "priced_transactions": 32016,
+        "price_missing": 17,
+        "previous_year": 14
+      },
+      "2025": {
+        "same_year": 31061,
+        "priced_transactions": 31609,
+        "price_conflict": 520,
+        "price_missing": 28
+      },
+      "2026": {
+        "same_year": 17608,
+        "priced_transactions": 17613,
+        "previous_year": 2,
+        "price_conflict": 1,
+        "price_missing": 2
+      }
+    },
+    "51": {
+      "2019": {
+        "same_year": 20032,
+        "priced_transactions": 20270,
+        "price_conflict": 223,
+        "price_missing": 12,
+        "previous_year": 3
+      },
+      "2020": {
+        "same_year": 22403,
+        "priced_transactions": 22615,
+        "previous_year": 5,
+        "price_conflict": 196,
+        "price_missing": 11
+      },
+      "2021": {
+        "same_year": 28215,
+        "priced_transactions": 28561,
+        "price_conflict": 316,
+        "price_missing": 24,
+        "previous_year": 6
+      },
+      "2022": {
+        "same_year": 19442,
+        "priced_transactions": 19680,
+        "price_conflict": 223,
+        "previous_year": 5,
+        "price_missing": 10
+      },
+      "2023": {
+        "same_year": 8415,
+        "priced_transactions": 15953,
+        "price_missing": 15,
+        "previous_year": 7474,
+        "price_conflict": 49
+      },
+      "2024": {
+        "same_year": 15957,
+        "priced_transactions": 15970,
+        "price_missing": 12,
+        "previous_year": 1
+      },
+      "2025": {
+        "same_year": 13828,
+        "priced_transactions": 14069,
+        "price_missing": 10,
+        "price_conflict": 227,
+        "previous_year": 4
+      },
+      "2026": {
+        "same_year": 9012,
+        "priced_transactions": 9020,
+        "price_missing": 8
+      }
+    },
+    "52": {
+      "2019": {
+        "same_year": 28024,
+        "priced_transactions": 28291,
+        "price_missing": 12,
+        "price_conflict": 248,
+        "previous_year": 7
+      },
+      "2020": {
+        "same_year": 31814,
+        "priced_transactions": 32153,
+        "price_conflict": 317,
+        "price_missing": 17,
+        "previous_year": 5
+      },
+      "2021": {
+        "same_year": 33306,
+        "priced_transactions": 33634,
+        "price_conflict": 299,
+        "previous_year": 5,
+        "price_missing": 24
+      },
+      "2022": {
+        "previous_year": 4,
+        "priced_transactions": 26179,
+        "same_year": 25915,
+        "price_missing": 16,
+        "price_conflict": 244
+      },
+      "2023": {
+        "same_year": 20602,
+        "priced_transactions": 20619,
+        "price_missing": 15,
+        "price_conflict": 1,
+        "previous_year": 1
+      },
+      "2024": {
+        "same_year": 7861,
+        "priced_transactions": 8920,
+        "previous_year": 1058,
+        "price_missing": 1
+      },
+      "2025": {
+        "same_year": 19011,
+        "priced_transactions": 19328,
+        "previous_year": 3,
+        "price_conflict": 312,
+        "price_missing": 2
+      },
+      "2026": {
+        "same_year": 14454,
+        "priced_transactions": 14455,
+        "price_conflict": 1
+      }
+    }
+  },
+  "layer": "legal_dong_history_1to1",
+  "v1_changed": false,
+  "region_code_history_rows_used": 0,
+  "candidate_pairs": 5997,
+  "effective": {
+    "51": "2023-06-11",
+    "52": "2024-01-18",
+    "12": "2026-07-01"
+  },
+  "sido": [
+    "12",
+    "51",
+    "52"
+  ],
+  "resolve_by_sido": {
+    "12": {
+      "name": "전남광주",
+      "reissued_1to1": 402753,
+      "current_code": 6372
+    },
+    "51": {
+      "name": "강원",
+      "reissued_1to1": 138015,
+      "current_code": 63869
+    },
+    "52": {
+      "name": "전북",
+      "reissued_1to1": 196771,
+      "current_code": 69358
+    }
+  },
+  "mislink_by_sido": {
+    "12": {
+      "other_generation_absent": 356923
+    },
+    "51": {
+      "same_parcel": 118005,
+      "other_generation_absent": 2935,
+      "lot_tail_mismatch": 89
+    },
+    "52": {
+      "same_parcel": 142596,
+      "other_generation_absent": 26175,
+      "lot_tail_mismatch": 663
+    }
+  },
+  "diagnosis": {
+    "v1_changed": false,
+    "product_database_changed": false,
+    "history_table_contains_these_pairs": false,
+    "note": "region_code_history 191행에는 이 세 시도가 없다. shadow는 region_codes에서 확인한 1:1 후보 5997쌍만 계약일 이전에 되돌렸다. 강원·전북은 시도 두 자리 치환이고 필지 뒷자리가 같다. 전남광주는 시군구·읍면동·리 이름이 1:1이며 앞자리 치환은 쓰지 않았다. 1:N은 없어 보류 건은 0이다. 재발급 이전 연도의 exact는 0%에서 66–78%로 올랐고, 재발급 이후 연도는 기존 shadow와 같다. true conflict는 0이다. 강원 2023과 전북 2024의 same-year 하락은 그 해 공시지가가 새 코드 판에만 있어서이며 충돌은 늘지 않았다."
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "place": "청주시 상당·서원·흥덕·청원",
+  "focus": "2019-2023 계약 중 계약 전 판에서 필지를 못 찾은 거래",
+  "rule_note": "용도지역이 비어 있고 지목·면적·지번이 맞는 단일 필지만 규칙 완화 후보",
+  "years_2019_2023": {
+    "contract_date_from": "2019-01-01",
+    "contract_date_to": "2023-12-31",
+    "comparable": 28108,
+    "no_prior_plate": 23002,
+    "no_candidate": 1588,
+    "reasons": {
+      "linked": {
+        "unique_unverified": 3137,
+        "multiple_candidates": 381
+      },
+      "no_prior_plate": {
+        "multiple_later_mixed": 1964,
+        "first_seen_after_contract": 17730,
+        "multiple_later_zone_blank": 220,
+        "zone_blank": 2622,
+        "zone_blank|earlier_plate_matched": 939,
+        "area_changed": 317,
+        "jimok_changed": 61,
+        "jimok_and_area_changed": 35,
+        "zone_changed": 1,
+        "zone_unmapped": 1,
+        "inconsistent_plate": 51,
+        "inconsistent_plate|earlier_plate_matched": 3,
+        "area_changed|earlier_plate_matched": 1
+      },
+      "no_candidate": {
+        "lot_ambiguous": 1584,
+        "lot_unmatched": 3,
+        "only_after_contract": 1
+      }
+    }
+  },
+  "years_2024_2026": {
+    "contract_date_from": "2024-01-01",
+    "contract_date_to": "2026-12-31",
+    "comparable": 9675,
+    "no_prior_plate": 1528,
+    "no_candidate": 708,
+    "reasons": {
+      "no_prior_plate": {
+        "multiple_later_mixed": 164,
+        "first_seen_after_contract": 900,
+        "area_changed": 319,
+        "zone_changed": 11,
+        "jimok_changed": 70,
+        "area_changed|earlier_plate_matched": 1,
+        "jimok_and_area_changed": 33,
+        "zone_changed|earlier_plate_matched": 1,
+        "jimok_changed|earlier_plate_matched": 10,
+        "inconsistent_plate": 31,
+        "inconsistent_plate|earlier_plate_matched": 1
+      },
+      "linked": {
+        "multiple_candidates": 635,
+        "unique_unverified": 6804
+      },
+      "no_candidate": {
+        "lot_ambiguous": 701,
+        "lot_unmatched": 7
+      }
+    }
+  },
+  "product_database_changed": false,
+  "ledger_rows_read": 9053276,
+  "unmapped_zone_labels": [
+    {
+      "zone1": "용도미지정",
+      "zone2": "지정되지않음",
+      "rows": 7588
+    },
+    {
+      "zone1": "지정되지않음",
+      "zone2": "지정되지않음",
+      "rows": 18
+    }
+  ],
+  "zone_blank_single_later": 2622
+}

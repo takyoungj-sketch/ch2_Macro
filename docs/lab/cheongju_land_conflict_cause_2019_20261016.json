@@ -1,0 +1,632 @@
+{
+  "place": "청주시 상당·서원·흥덕·청원",
+  "scope": "2019-2023 계약. 필지가 하나이고 계약 전 행이 충돌 테이블에만 있는 거래",
+  "selection_rule": "판을 고르지 않음. 파일명 날짜는 정정판 순서가 아님",
+  "source_file_meaning": "각 속성 조합을 처음 실은 ZIP. 이후 ZIP의 같은 조합은 다시 기록되지 않음",
+  "transactions": 15005,
+  "conflict_keys": 108615,
+  "key_categories": {
+    "label_only": 108615
+  },
+  "same_zip": {},
+  "different_zip": {
+    "label_only": 108615
+  },
+  "variants_3_or_more": {
+    "label_only": 142
+  },
+  "different_zip_keys": 108615,
+  "different_zip_filename_dates_differ": 108615,
+  "file_patterns": {
+    "chungbuk+sigungu_2019": 94492,
+    "chungbuk": 14123
+  },
+  "label_fields": {
+    "zone1_label": 105634,
+    "zone2_label": 105634,
+    "use_label": 105648,
+    "height_label": 105634,
+    "shape_label": 108611,
+    "road_label": 105634
+  },
+  "label_blank_versus_text": {
+    "zone1_label": 105634,
+    "zone2_label": 105634,
+    "use_label": 105648,
+    "height_label": 105634,
+    "shape_label": 105634,
+    "road_label": 105634
+  },
+  "label_both_nonempty": {
+    "shape_label": 2977
+  },
+  "top_label_pairs": {
+    "height_label": [
+      {
+        "values": [
+          "",
+          "평지"
+        ],
+        "keys": 59025
+      },
+      {
+        "values": [
+          "",
+          "완경사"
+        ],
+        "keys": 41331
+      },
+      {
+        "values": [
+          "",
+          "급경사"
+        ],
+        "keys": 4369
+      },
+      {
+        "values": [
+          "",
+          "저지"
+        ],
+        "keys": 503
+      },
+      {
+        "values": [
+          "",
+          "지정되지않음"
+        ],
+        "keys": 260
+      },
+      {
+        "values": [
+          "",
+          "고지"
+        ],
+        "keys": 146
+      }
+    ],
+    "road_label": [
+      {
+        "values": [
+          "",
+          "세로한면(가)"
+        ],
+        "keys": 39396
+      },
+      {
+        "values": [
+          "",
+          "맹지"
+        ],
+        "keys": 27524
+      },
+      {
+        "values": [
+          "",
+          "세로한면(불)"
+        ],
+        "keys": 20948
+      },
+      {
+        "values": [
+          "",
+          "소로한면"
+        ],
+        "keys": 8890
+      },
+      {
+        "values": [
+          "",
+          "세로각지(가)"
+        ],
+        "keys": 2359
+      },
+      {
+        "values": [
+          "",
+          "중로한면"
+        ],
+        "keys": 2233
+      },
+      {
+        "values": [
+          "",
+          "광대로한면"
+        ],
+        "keys": 1410
+      },
+      {
+        "values": [
+          "",
+          "소로각지"
+        ],
+        "keys": 1185
+      }
+    ],
+    "shape_label": [
+      {
+        "values": [
+          "",
+          "부정형"
+        ],
+        "keys": 65907
+      },
+      {
+        "values": [
+          "",
+          "사다리형"
+        ],
+        "keys": 13677
+      },
+      {
+        "values": [
+          "",
+          "세로장방"
+        ],
+        "keys": 12425
+      },
+      {
+        "values": [
+          "",
+          "삼각형"
+        ],
+        "keys": 4873
+      },
+      {
+        "values": [
+          "",
+          "가로장방"
+        ],
+        "keys": 4671
+      },
+      {
+        "values": [
+          "부정형",
+          "삼각형"
+        ],
+        "keys": 2878
+      },
+      {
+        "values": [
+          "",
+          "자루형"
+        ],
+        "keys": 2605
+      },
+      {
+        "values": [
+          "",
+          "정방형"
+        ],
+        "keys": 1021
+      }
+    ],
+    "use_label": [
+      {
+        "values": [
+          "",
+          "답"
+        ],
+        "keys": 34553
+      },
+      {
+        "values": [
+          "",
+          "전"
+        ],
+        "keys": 32744
+      },
+      {
+        "values": [
+          "",
+          "자연림"
+        ],
+        "keys": 10230
+      },
+      {
+        "values": [
+          "",
+          "주거나지"
+        ],
+        "keys": 5287
+      },
+      {
+        "values": [
+          "",
+          "도로등"
+        ],
+        "keys": 5269
+      },
+      {
+        "values": [
+          "",
+          "단독"
+        ],
+        "keys": 4936
+      },
+      {
+        "values": [
+          "",
+          "전기타"
+        ],
+        "keys": 2452
+      },
+      {
+        "values": [
+          "",
+          "주거기타"
+        ],
+        "keys": 1677
+      }
+    ],
+    "zone1_label": [
+      {
+        "values": [
+          "",
+          "계획관리지역"
+        ],
+        "keys": 27432
+      },
+      {
+        "values": [
+          "",
+          "자연녹지지역"
+        ],
+        "keys": 26864
+      },
+      {
+        "values": [
+          "",
+          "농림지역"
+        ],
+        "keys": 15823
+      },
+      {
+        "values": [
+          "",
+          "생산관리지역"
+        ],
+        "keys": 9306
+      },
+      {
+        "values": [
+          "",
+          "생산녹지지역"
+        ],
+        "keys": 6736
+      },
+      {
+        "values": [
+          "",
+          "보전관리지역"
+        ],
+        "keys": 4244
+      },
+      {
+        "values": [
+          "",
+          "보전녹지지역"
+        ],
+        "keys": 3552
+      },
+      {
+        "values": [
+          "",
+          "제1종일반주거지역"
+        ],
+        "keys": 3423
+      }
+    ],
+    "zone2_label": [
+      {
+        "values": [
+          "",
+          "지정되지않음"
+        ],
+        "keys": 100328
+      },
+      {
+        "values": [
+          "",
+          "자연녹지지역"
+        ],
+        "keys": 1667
+      },
+      {
+        "values": [
+          "",
+          "보전녹지지역"
+        ],
+        "keys": 1376
+      },
+      {
+        "values": [
+          "",
+          "계획관리지역"
+        ],
+        "keys": 524
+      },
+      {
+        "values": [
+          "",
+          "보전관리지역"
+        ],
+        "keys": 492
+      },
+      {
+        "values": [
+          "",
+          "농림지역"
+        ],
+        "keys": 471
+      },
+      {
+        "values": [
+          "",
+          "생산관리지역"
+        ],
+        "keys": 394
+      },
+      {
+        "values": [
+          "",
+          "생산녹지지역"
+        ],
+        "keys": 152
+      }
+    ]
+  },
+  "by_contract_year": {
+    "2019": {
+      "label_only": 3457,
+      "transactions": 3457
+    },
+    "2020": {
+      "label_only": 5037,
+      "transactions": 5037
+    },
+    "2021": {
+      "label_only": 4867,
+      "transactions": 4867
+    },
+    "2022": {
+      "label_only": 1643,
+      "transactions": 1643
+    },
+    "2023": {
+      "label_only": 1,
+      "transactions": 1
+    }
+  },
+  "by_asof_year": {
+    "2017": {
+      "label_only": 53684,
+      "keys": 53684
+    },
+    "2018": {
+      "label_only": 28435,
+      "keys": 28435
+    },
+    "2019": {
+      "label_only": 12373,
+      "keys": 12373
+    },
+    "2020": {
+      "label_only": 8838,
+      "keys": 8838
+    },
+    "2021": {
+      "label_only": 5248,
+      "keys": 5248
+    },
+    "2022": {
+      "label_only": 37,
+      "keys": 37
+    }
+  },
+  "top_asofs": [
+    {
+      "asof": "2017-10-17",
+      "label_only": 53684,
+      "keys": 53684
+    },
+    {
+      "asof": "2018-07-31",
+      "label_only": 14245,
+      "keys": 14245
+    },
+    {
+      "asof": "2018-05-23",
+      "label_only": 14190,
+      "keys": 14190
+    },
+    {
+      "asof": "2019-08-08",
+      "label_only": 12373,
+      "keys": 12373
+    },
+    {
+      "asof": "2020-08-12",
+      "label_only": 8454,
+      "keys": 8454
+    },
+    {
+      "asof": "2021-07-29",
+      "label_only": 2981,
+      "keys": 2981
+    },
+    {
+      "asof": "2021-11-15",
+      "label_only": 2133,
+      "keys": 2133
+    },
+    {
+      "asof": "2020-03-11",
+      "label_only": 384,
+      "keys": 384
+    },
+    {
+      "asof": "2021-04-01",
+      "label_only": 134,
+      "keys": 134
+    },
+    {
+      "asof": "2022-03-18",
+      "label_only": 37,
+      "keys": 37
+    }
+  ],
+  "top_file_pairs": [
+    {
+      "files": [
+        "AL_43114_D195_20190328.zip",
+        "AL_43_D195_20220916.zip"
+      ],
+      "keys": 25315
+    },
+    {
+      "files": [
+        "AL_43113_D195_20190328.zip",
+        "AL_43_D195_20220916.zip"
+      ],
+      "keys": 22130
+    },
+    {
+      "files": [
+        "AL_43111_D195_20190328.zip",
+        "AL_43_D195_20220916.zip"
+      ],
+      "keys": 20967
+    },
+    {
+      "files": [
+        "AL_43112_D195_20190328.zip",
+        "AL_43_D195_20220916.zip"
+      ],
+      "keys": 13619
+    },
+    {
+      "files": [
+        "AL_43_D195_20200812.zip",
+        "AL_43_D195_20220916.zip"
+      ],
+      "keys": 8438
+    },
+    {
+      "files": [
+        "AL_43114_D195_20190809.zip",
+        "AL_43_D195_20220916.zip"
+      ],
+      "keys": 3757
+    },
+    {
+      "files": [
+        "AL_43113_D195_20190809.zip",
+        "AL_43_D195_20220916.zip"
+      ],
+      "keys": 3327
+    },
+    {
+      "files": [
+        "AL_43111_D195_20190809.zip",
+        "AL_43_D195_20220916.zip"
+      ],
+      "keys": 3155
+    },
+    {
+      "files": [
+        "AL_43_D195_20210819.zip",
+        "AL_43_D195_20211109.zip"
+      ],
+      "keys": 2981
+    },
+    {
+      "files": [
+        "AL_43_D195_20211124.zip",
+        "AL_43_D195_20220916.zip"
+      ],
+      "keys": 2133
+    },
+    {
+      "files": [
+        "AL_43112_D195_20190809.zip",
+        "AL_43_D195_20220916.zip"
+      ],
+      "keys": 2100
+    },
+    {
+      "files": [
+        "AL_43_D195_20200528.zip",
+        "AL_43_D195_20220916.zip"
+      ],
+      "keys": 384
+    },
+    {
+      "files": [
+        "AL_43_D195_20210521.zip",
+        "AL_43_D195_20220916.zip"
+      ],
+      "keys": 130
+    },
+    {
+      "files": [
+        "AL_43_D195_20220331.zip",
+        "AL_43_D195_20220916.zip"
+      ],
+      "keys": 37
+    },
+    {
+      "files": [
+        "AL_43114_D195_20190328.zip",
+        "AL_43_D195_20210521.zip",
+        "AL_43_D195_20220916.zip"
+      ],
+      "keys": 32
+    },
+    {
+      "files": [
+        "AL_43113_D195_20190328.zip",
+        "AL_43_D195_20210521.zip",
+        "AL_43_D195_20220916.zip"
+      ],
+      "keys": 30
+    },
+    {
+      "files": [
+        "AL_43111_D195_20190328.zip",
+        "AL_43_D195_20210521.zip",
+        "AL_43_D195_20220916.zip"
+      ],
+      "keys": 18
+    },
+    {
+      "files": [
+        "AL_43113_D195_20190809.zip",
+        "AL_43_D195_20210521.zip",
+        "AL_43_D195_20220916.zip"
+      ],
+      "keys": 17
+    },
+    {
+      "files": [
+        "AL_43_D195_20200812.zip",
+        "AL_43_D195_20210521.zip",
+        "AL_43_D195_20220916.zip"
+      ],
+      "keys": 16
+    },
+    {
+      "files": [
+        "AL_43114_D195_20190809.zip",
+        "AL_43_D195_20210521.zip",
+        "AL_43_D195_20220916.zip"
+      ],
+      "keys": 8
+    }
+  ],
+  "other_unlinked_presence": {
+    "conflict_only_after_contract": 1594,
+    "absent_before_contract": 1131
+  },
+  "product_database_changed": false
+}

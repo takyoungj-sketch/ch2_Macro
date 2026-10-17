@@ -1,0 +1,56 @@
+{
+  "place": "청주시 상당·서원·흥덕·청원",
+  "scope": "2019-2023 계약. 필지가 하나이고 그 필지의 첫 정상 관측이 계약일 이후",
+  "transactions": 17730,
+  "distinct_pnu": 16648,
+  "clean_precontract": 0,
+  "conflict_precontract": 15005,
+  "conflict_only_after_contract": 1594,
+  "absent_before_contract": 1131,
+  "held_invalid_land_type": 0,
+  "held_invalid_pnu": 0,
+  "held_zero_main_lot": 0,
+  "no_precontract_source_row": 2725,
+  "shares": {
+    "conflict_precontract": 0.8463,
+    "absent_or_conflict_only_later": 0.1537
+  },
+  "distinct_pnu_by_presence": {
+    "absent_before_contract": 1101,
+    "conflict_only_after_contract": 1533,
+    "conflict_precontract": 14104
+  },
+  "by_contract_year": {
+    "2019": {
+      "conflict_precontract": 3457,
+      "transactions": 4070,
+      "conflict_only_after_contract": 612,
+      "absent_before_contract": 1
+    },
+    "2020": {
+      "conflict_precontract": 5037,
+      "transactions": 5640,
+      "conflict_only_after_contract": 598,
+      "absent_before_contract": 5
+    },
+    "2021": {
+      "conflict_precontract": 4867,
+      "transactions": 5409,
+      "conflict_only_after_contract": 369,
+      "absent_before_contract": 173
+    },
+    "2022": {
+      "absent_before_contract": 489,
+      "transactions": 2147,
+      "conflict_precontract": 1643,
+      "conflict_only_after_contract": 15
+    },
+    "2023": {
+      "absent_before_contract": 463,
+      "transactions": 464,
+      "conflict_precontract": 1
+    }
+  },
+  "product_database_changed": false,
+  "expected_transactions_from_gap": 17730
+}

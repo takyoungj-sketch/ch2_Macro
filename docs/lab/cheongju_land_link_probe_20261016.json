@@ -1,0 +1,65 @@
+{
+  "run_date": "2026-10-16",
+  "scope": {
+    "place": "청주시 상당·서원·흥덕·청원",
+    "sigungu_codes": [
+      "43111",
+      "43112",
+      "43113",
+      "43114"
+    ],
+    "contract_date_from": "2017-10-17",
+    "ledger": "C:\\CH2\\parcel_master\\land_trait_observations.sqlite",
+    "match": "법정동, 지목, 면적(소수 1자리), 산 여부, 본번 마스킹, 용도지역",
+    "plate": "계약일 이전 데이터기준일자 중 가장 늦은 판",
+    "price_year": "그 판에서 계약연도 이전인 기준연도 중 가장 늦은 연도",
+    "verification": "unverified"
+  },
+  "ledger_rows_read": 9053276,
+  "ledger_parcels": 522871,
+  "transaction_rows": 71915,
+  "excluded": {
+    "partial": 20289,
+    "cancelled": 4924,
+    "unsupported_zone": 1927,
+    "unsupported_lot": 4
+  },
+  "comparable": 44771,
+  "counts": {
+    "unique_unverified": 9941,
+    "multiple_candidates": 1016,
+    "no_prior_plate": 31047,
+    "no_candidate": 2767
+  },
+  "median_area_sqm": {
+    "unique_unverified": 684.0,
+    "multiple_candidates": 261.75,
+    "no_prior_plate": 609.0,
+    "no_candidate": 418.0
+  },
+  "median_unit_price_per_sqm": {
+    "unique_unverified": 12.7,
+    "multiple_candidates": 40.05,
+    "no_prior_plate": 13.5,
+    "no_candidate": 18.5
+  },
+  "unique_is_not_success": true,
+  "product_database_changed": false,
+  "shares_of_comparable": {
+    "unique_unverified": 0.222,
+    "multiple_candidates": 0.0227,
+    "no_prior_plate": 0.6935,
+    "no_candidate": 0.0618
+  },
+  "unique_unverified_without_price_year": 0,
+  "official_price_from_2019": {
+    "comparable": 37783,
+    "attached": 9941,
+    "attached_share": 0.2631,
+    "same_year": 4195,
+    "previous_year": 5459,
+    "two_or_more_years_behind": 287,
+    "same_year_share_of_comparable": 0.111,
+    "previous_year_share_of_comparable": 0.1445
+  }
+}
