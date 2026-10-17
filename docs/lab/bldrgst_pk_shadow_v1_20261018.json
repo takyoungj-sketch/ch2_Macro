@@ -1,0 +1,103 @@
+{
+  "linked": 507116,
+  "ties": 3057,
+  "rules": {
+    "all": {
+      "unique_nearest": 504059,
+      "held_ambiguous": 3041,
+      "others_approved_after": 16
+    },
+    "asset:commercial": {
+      "unique_nearest": 100454,
+      "held_ambiguous": 501,
+      "others_approved_after": 7
+    },
+    "sido:11": {
+      "unique_nearest": 43874,
+      "held_ambiguous": 80
+    },
+    "asset:factory": {
+      "unique_nearest": 32906,
+      "held_ambiguous": 482,
+      "others_approved_after": 6
+    },
+    "asset:detached": {
+      "unique_nearest": 370699,
+      "held_ambiguous": 2058,
+      "others_approved_after": 3
+    },
+    "sido:12": {
+      "unique_nearest": 55358,
+      "held_ambiguous": 157
+    },
+    "sido:26": {
+      "unique_nearest": 29310,
+      "held_ambiguous": 111
+    },
+    "sido:27": {
+      "unique_nearest": 24216,
+      "held_ambiguous": 97
+    },
+    "sido:28": {
+      "unique_nearest": 17244,
+      "held_ambiguous": 133
+    },
+    "sido:30": {
+      "unique_nearest": 14016,
+      "held_ambiguous": 54
+    },
+    "sido:31": {
+      "unique_nearest": 8372,
+      "held_ambiguous": 17
+    },
+    "sido:36": {
+      "unique_nearest": 1397,
+      "held_ambiguous": 6
+    },
+    "sido:41": {
+      "unique_nearest": 86553,
+      "held_ambiguous": 676,
+      "others_approved_after": 9
+    },
+    "sido:43": {
+      "unique_nearest": 29303,
+      "held_ambiguous": 63,
+      "others_approved_after": 1
+    },
+    "sido:44": {
+      "unique_nearest": 32382,
+      "held_ambiguous": 158
+    },
+    "sido:47": {
+      "unique_nearest": 48442,
+      "held_ambiguous": 157,
+      "others_approved_after": 2
+    },
+    "sido:48": {
+      "unique_nearest": 44433,
+      "held_ambiguous": 167,
+      "others_approved_after": 2
+    },
+    "sido:50": {
+      "unique_nearest": 8305,
+      "held_ambiguous": 941,
+      "others_approved_after": 1
+    },
+    "sido:51": {
+      "unique_nearest": 30684,
+      "held_ambiguous": 154
+    },
+    "sido:52": {
+      "unique_nearest": 30170,
+      "held_ambiguous": 70,
+      "others_approved_after": 1
+    }
+  },
+  "held_hints": {
+    "attributes_identical": 2478,
+    "one_main_rest_annex": 114,
+    "one_general_rest_collective": 3
+  },
+  "shadow_file": "C:\\CH2\\parcel_master\\verification\\bldrgst_pk_shadow_v1.sqlite",
+  "note": "hints are not used to fill; only same_pk_duplicate and others_approved_after fill a key"
+}
