@@ -1,0 +1,55 @@
+{
+  "version": "LAND_TRAIT_SLIM_V1",
+  "slim_file": "C:\\CH2\\parcel_master\\land_trait_slim_v1.sqlite",
+  "slim_bytes": 63732842496,
+  "ledger_sha256": "982855688626b998cf40216041e2d11afa8f67301ea04cd087785e65010f73b1",
+  "prefixes_done": 50,
+  "totals": {
+    "ledger_clean_rows": 970577839,
+    "ledger_conflict_rows": 87353687,
+    "observation_keys": 1014229488,
+    "conflict_keys": 43651649,
+    "slim_rows": 911610981,
+    "pnus": 46099693,
+    "semantic_conflicts": 0,
+    "seconds": 9201.0
+  },
+  "checks": {
+    "ledger_clean_rows_match_load_report": true,
+    "ledger_conflict_rows_match_load_report": true,
+    "conflict_keys_match_load_report": true,
+    "observation_keys_equal_clean_plus_conflict_keys": true,
+    "semantic_conflicts_zero": true
+  },
+  "dictionary": {
+    "jimok": {
+      "codes": 34,
+      "codes_with_multiple_labels": 0
+    },
+    "zone1": {
+      "codes": 26,
+      "codes_with_multiple_labels": 1
+    },
+    "zone2": {
+      "codes": 27,
+      "codes_with_multiple_labels": 2
+    },
+    "use": {
+      "codes": 75,
+      "codes_with_multiple_labels": 13
+    },
+    "height": {
+      "codes": 20,
+      "codes_with_multiple_labels": 0
+    },
+    "shape": {
+      "codes": 22,
+      "codes_with_multiple_labels": 5
+    },
+    "road": {
+      "codes": 28,
+      "codes_with_multiple_labels": 6
+    }
+  },
+  "finished_at": "2026-10-17T08:01:32.646238+00:00"
+}
