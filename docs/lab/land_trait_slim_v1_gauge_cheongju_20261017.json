@@ -1,0 +1,103 @@
+{
+  "label": "cheongju",
+  "prefixes": [
+    "43111",
+    "43112",
+    "43113",
+    "43114"
+  ],
+  "ledger": "LAND_TRAIT_LEDGER_V1 (read-only)",
+  "clean_rows": 9053276,
+  "pnus": 522871,
+  "pnu_asof_rows": 5832163,
+  "asof_inconsistent_v1": 101420,
+  "max_asofs_per_pnu": 15,
+  "asofs_seen": {
+    "2019-03-19": 8215,
+    "2021-07-29": 182460,
+    "2022-08-09": 468661,
+    "2023-04-20": 9510,
+    "2023-07-12": 471253,
+    "2023-08-03": 447524,
+    "2023-08-04": 462431,
+    "2023-08-05": 468997,
+    "2023-08-06": 477394,
+    "2024-01-23": 474070,
+    "2024-07-30": 469981,
+    "2025-01-16": 469981,
+    "2025-08-06": 471662,
+    "2026-05-12": 474780,
+    "2026-07-20": 475244
+  },
+  "slim": {
+    "v1_intervals": 1412347,
+    "code_intervals": 2198339,
+    "price_rows": 6498629,
+    "price_year_with_multiple_prices": 50903
+  },
+  "ratios_to_clean_rows": {
+    "pnu_asof_rows": 0.6442,
+    "v1_intervals": 0.156,
+    "code_intervals": 0.2428,
+    "price_rows": 0.7178
+  },
+  "national_estimate_by_row_ratio": {
+    "scale": 107.21,
+    "pnu_asof_rows": 625250811,
+    "v1_intervals": 151413996,
+    "code_intervals": 235678125,
+    "price_rows": 696700873
+  },
+  "conflict": {
+    "variant_rows": 8815242,
+    "keys": 4400550,
+    "label_only_keys": 4400550,
+    "semantic_keys": 0,
+    "semantic_by_field": {}
+  },
+  "dictionary": {
+    "jimok": {
+      "codes": 27,
+      "codes_with_multiple_labels": 0,
+      "blank_label_rows": 0,
+      "rows": 17868518
+    },
+    "zone1": {
+      "codes": 23,
+      "codes_with_multiple_labels": 0,
+      "blank_label_rows": 5068887,
+      "rows": 17868518
+    },
+    "zone2": {
+      "codes": 23,
+      "codes_with_multiple_labels": 0,
+      "blank_label_rows": 5068887,
+      "rows": 17868518
+    },
+    "use": {
+      "codes": 53,
+      "codes_with_multiple_labels": 10,
+      "blank_label_rows": 5229252,
+      "rows": 17868518
+    },
+    "height": {
+      "codes": 7,
+      "codes_with_multiple_labels": 0,
+      "blank_label_rows": 5068893,
+      "rows": 17868518
+    },
+    "shape": {
+      "codes": 10,
+      "codes_with_multiple_labels": 5,
+      "blank_label_rows": 5068890,
+      "rows": 17868518
+    },
+    "road": {
+      "codes": 18,
+      "codes_with_multiple_labels": 5,
+      "blank_label_rows": 5069053,
+      "rows": 17868518
+    }
+  },
+  "elapsed_seconds": 138.3
+}

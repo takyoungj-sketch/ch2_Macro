@@ -1,0 +1,13 @@
+{
+  "label": "national_conflict",
+  "ledger": "LAND_TRAIT_LEDGER_V1 (read-only)",
+  "conflict": {
+    "variant_rows": 87353687,
+    "keys": 43651649,
+    "label_only_keys": 43651649,
+    "semantic_keys": 0,
+    "semantic_by_field": {},
+    "semantic_by_sido": {}
+  },
+  "elapsed_seconds": 395.7
+}

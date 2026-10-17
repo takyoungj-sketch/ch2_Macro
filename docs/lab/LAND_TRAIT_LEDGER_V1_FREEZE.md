@@ -66,4 +66,6 @@ backend\.venv\Scripts\python.exe -u pipeline\parcel_master\land_trait_link_mater
 
 ## 백업
 
-원장 복사본 한 벌을 원본과 다른 물리 디스크에 둔다. 위치는 사용자 결정 후 이 절에 적는다.
+원장 복사본 한 벌: `D:\CH2_backup\land_trait_ledger_v1\land_trait_observations.sqlite` (2026-10-17 robocopy, 206,953,832,448바이트). SHA-256 `982855688626b998cf40216041e2d11afa8f67301ea04cd087785e65010f73b1`로 원본과 같다.
+
+원장이 망가지면 이 파일을 `C:\CH2\parcel_master\`로 되돌리고 해시를 다시 확인한다. 재생성(약 21.6시간)보다 빠르다.

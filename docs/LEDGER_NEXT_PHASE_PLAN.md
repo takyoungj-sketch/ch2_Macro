@@ -92,7 +92,7 @@
 
 **완료 조건:** manifest만으로 같은 원장과 같은 결과표 건수를 다시 만들 수 있다.
 
-**2026-10-17 진행:** 코드·문서 커밋, 동결 기록 [`lab/land_trait_ledger_v1_freeze_20261017.json`](lab/land_trait_ledger_v1_freeze_20261017.json), 재생성 절차 [`lab/LAND_TRAIT_LEDGER_V1_FREEZE.md`](lab/LAND_TRAIT_LEDGER_V1_FREEZE.md) 완료. 백업 한 벌은 위치 결정 대기.
+**2026-10-17 진행:** 코드·문서 커밋, 동결 기록 [`lab/land_trait_ledger_v1_freeze_20261017.json`](lab/land_trait_ledger_v1_freeze_20261017.json), 재생성 절차 [`lab/LAND_TRAIT_LEDGER_V1_FREEZE.md`](lab/LAND_TRAIT_LEDGER_V1_FREEZE.md), D: 백업 한 벌(해시 일치) 완료.
 
 **하지 않음:** 원장 구조 변경, 재적재, 연결 규칙 변경.
 
@@ -112,7 +112,9 @@
 - 전 필지 slim은 로컬 파일(SQLite 또는 Parquet)로 연결 작업에 쓴다.
 - PostgreSQL에는 거래·건물·단지가 가리키는 수요 필지만 올린다([`PARCEL_MASTER_DESIGN.md`](PARCEL_MASTER_DESIGN.md) §9와 같은 원칙). 전국 4,597만 필지 × 연도를 VPS에 올리지 않는다.
 
-**완료 조건:** slim으로 V1 연결을 다시 돌려 현재 결과표와 상태별 건수가 일치한다(예: 일치 1,846,363건, 표기 정규화 70,243건). 다르면 차이를 설명하기 전에는 쓰지 않는다. slim 생성은 다시 실행해도 같은 결과를 내야 하며, 새 판만 추가 반영할 수 있는 형태로 만든다(8단계 준비).
+**완료 조건:** [slim v1 설계](lab/LAND_TRAIT_SLIM_V1_DESIGN.md)의 세 검증(표본 무손실, 전국 합계, V1 결과 유지)을 통과한다. 처음 적은 "slim으로 V1을 다시 돌려 건수 일치"는 slim이 명칭을 코드사전으로 정규화하므로 맞출 수 없어 바꿨다.
+
+**2026-10-17 가늠:** 전국 충돌 43,651,649키가 전부 표기 충돌(코드·면적·가격 동일)이다. 코드 구간은 원장 행의 22~24%, 공시지가 행은 55~72%다. slim 생성은 다시 실행해도 같은 결과를 내야 하며, 새 판만 추가 반영할 수 있는 형태로 만든다(8단계 준비).
 
 **하지 않음:** 원장을 slim으로 대체, 원장 삭제.
 

@@ -1,0 +1,115 @@
+{
+  "label": "gangnam_cheoin_gyeongju",
+  "prefixes": [
+    "11680",
+    "41461",
+    "47130"
+  ],
+  "ledger": "LAND_TRAIT_LEDGER_V1 (read-only)",
+  "clean_rows": 16303242,
+  "pnus": 784750,
+  "pnu_asof_rows": 10651670,
+  "asof_inconsistent_v1": 134456,
+  "max_asofs_per_pnu": 22,
+  "asofs_seen": {
+    "2017-10-17": 433742,
+    "2018-05-23": 423271,
+    "2018-07-31": 423248,
+    "2019-03-19": 5760,
+    "2019-08-08": 425356,
+    "2019-10-21": 4938,
+    "2020-03-11": 4329,
+    "2020-08-12": 425355,
+    "2021-04-01": 3991,
+    "2021-07-29": 219621,
+    "2021-11-15": 432001,
+    "2022-03-18": 5038,
+    "2022-08-09": 645862,
+    "2023-04-20": 9182,
+    "2023-07-12": 653042,
+    "2023-08-03": 611652,
+    "2023-08-04": 637657,
+    "2023-08-05": 647921,
+    "2023-08-06": 661690,
+    "2024-01-23": 658100,
+    "2024-07-30": 252714,
+    "2024-08-02": 407297,
+    "2025-01-16": 252714,
+    "2025-01-17": 407297,
+    "2025-08-06": 664455,
+    "2026-05-12": 667921,
+    "2026-07-20": 667516
+  },
+  "slim": {
+    "v1_intervals": 1436507,
+    "code_intervals": 3658459,
+    "price_rows": 8983093,
+    "price_year_with_multiple_prices": 54721
+  },
+  "ratios_to_clean_rows": {
+    "pnu_asof_rows": 0.6533,
+    "v1_intervals": 0.0881,
+    "code_intervals": 0.2244,
+    "price_rows": 0.551
+  },
+  "national_estimate_by_row_ratio": {
+    "scale": 59.53,
+    "pnu_asof_rows": 634123866,
+    "v1_intervals": 85519301,
+    "code_intervals": 217798351,
+    "price_rows": 534788786
+  },
+  "conflict": {
+    "variant_rows": 4444300,
+    "keys": 2217381,
+    "label_only_keys": 2217381,
+    "semantic_keys": 0,
+    "semantic_by_field": {},
+    "semantic_by_sido": {}
+  },
+  "dictionary": {
+    "jimok": {
+      "codes": 29,
+      "codes_with_multiple_labels": 0,
+      "blank_label_rows": 0,
+      "rows": 20747542
+    },
+    "zone1": {
+      "codes": 23,
+      "codes_with_multiple_labels": 0,
+      "blank_label_rows": 2216544,
+      "rows": 20747542
+    },
+    "zone2": {
+      "codes": 23,
+      "codes_with_multiple_labels": 0,
+      "blank_label_rows": 2216544,
+      "rows": 20747542
+    },
+    "use": {
+      "codes": 60,
+      "codes_with_multiple_labels": 11,
+      "blank_label_rows": 2499240,
+      "rows": 20747542
+    },
+    "height": {
+      "codes": 7,
+      "codes_with_multiple_labels": 0,
+      "blank_label_rows": 2216549,
+      "rows": 20747542
+    },
+    "shape": {
+      "codes": 9,
+      "codes_with_multiple_labels": 5,
+      "blank_label_rows": 2216544,
+      "rows": 20747542
+    },
+    "road": {
+      "codes": 15,
+      "codes_with_multiple_labels": 5,
+      "blank_label_rows": 2216550,
+      "rows": 20747542
+    }
+  },
+  "elapsed_seconds": 170.3
+}
