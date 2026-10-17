@@ -1,0 +1,74 @@
+{
+  "seed": 20261018,
+  "population_linked": 507116,
+  "sample": 219,
+  "round1": 110,
+  "strata": {
+    "기타(동률·변경·원장없음)": {
+      "population": 3155,
+      "sample": 10
+    },
+    "일반|공장창고|광역시": {
+      "population": 3547,
+      "sample": 20
+    },
+    "일반|공장창고|도": {
+      "population": 18208,
+      "sample": 20
+    },
+    "일반|공장창고|수도권": {
+      "population": 11139,
+      "sample": 20
+    },
+    "일반|단독다가구|광역시": {
+      "population": 57750,
+      "sample": 20
+    },
+    "일반|단독다가구|도": {
+      "population": 215938,
+      "sample": 20
+    },
+    "일반|단독다가구|수도권": {
+      "population": 96675,
+      "sample": 20
+    },
+    "일반|상업업무|광역시": {
+      "population": 15894,
+      "sample": 20
+    },
+    "일반|상업업무|도": {
+      "population": 44864,
+      "sample": 20
+    },
+    "일반|상업업무|수도권": {
+      "population": 39544,
+      "sample": 20
+    },
+    "집합|공장창고": {
+      "population": 9,
+      "sample": 9
+    },
+    "집합|단독다가구": {
+      "population": 298,
+      "sample": 10
+    },
+    "집합|상업업무": {
+      "population": 95,
+      "sample": 10
+    }
+  },
+  "worksheet": "C:\\CH2\\parcel_master\\verification\\built_link_sample_v1\\worksheet.csv",
+  "note": "blind: worksheet has no recovered lot; key.csv stays local",
+  "followup": {
+    "('4A_new_in_bridged', 'contradicted')": 21,
+    "('4A_new_in_bridged', 'partly_contradicted')": 87,
+    "('4A_parcel_differs', 'both_supported')": 69,
+    "('4A_parcel_differs', 'frozen_supported')": 47,
+    "('4A_parcel_differs', 'neither_supported')": 10,
+    "('4A_parcel_differs', 'undecidable_no_evidence')": 3,
+    "('4A_parcel_differs', 'undecidable_one_side_no_evidence')": 8,
+    "('4B_not_reproduced', 'snapshot_conflict')": 1,
+    "('4B_parcel_differs', '')": 2,
+    "total": 248
+  }
+}

@@ -52,7 +52,9 @@ def rate(res: pd.DataFrame) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--followup", type=Path, help="local CSV of rows to re-check (kept outside the repo)")
     args = ap.parse_args()
+    followup: list[dict] = []
     with get_built_engine().connect() as conn:
         tx = pd.read_sql(text(TX_SQL), conn, params={"sido_like": "12%", "min_year": 2019})
     land = load_land_ledger("12", False)
@@ -64,11 +66,21 @@ def main() -> None:
     verdicts = {"parcel_differs": Counter(), "new_in_bridged": Counter(), "lost_in_bridged": Counter()}
     for h in both:
         if a.at[h, "parcel"] != b.at[h, "parcel"]:
-            verdicts["parcel_differs"][judge(*evidence(a.loc[h]), *evidence(b.loc[h]))] += 1
+            v = judge(*evidence(a.loc[h]), *evidence(b.loc[h]))
+            verdicts["parcel_differs"][v] += 1
+            if v != "rerun_supported":
+                followup.append({"transaction_hash": h, "sido": "12", "source": "4A_parcel_differs", "detail": v,
+                                 "lot_a": a.at[h, "parcel"], "lot_b": b.at[h, "parcel"]})
     for h in b.index[b["tier"].notna()].difference(both):
-        verdicts["new_in_bridged"][one_side(*evidence(b.loc[h]))] += 1
+        v = one_side(*evidence(b.loc[h]))
+        verdicts["new_in_bridged"][v] += 1
+        if v in ("contradicted", "partly_contradicted"):
+            followup.append({"transaction_hash": h, "sido": "12", "source": "4A_new_in_bridged", "detail": v,
+                             "lot_a": "", "lot_b": b.at[h, "parcel"]})
     for h in a.index[a["tier"].notna()].difference(both):
         verdicts["lost_in_bridged"][one_side(*evidence(a.loc[h]))] += 1
+    if args.followup:
+        pd.DataFrame(followup).to_csv(args.followup, index=False, encoding="utf-8-sig")
     report = {
         "auto_check_current": rate(cur),
         "auto_check_bridged": rate(brg),

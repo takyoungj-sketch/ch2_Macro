@@ -82,7 +82,9 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--sidos", default="11,26,27,28,30,41,43,44,47,48,51,52")
+    ap.add_argument("--followup", type=Path, help="local CSV of rows to re-check (kept outside the repo)")
     args = ap.parse_args()
+    followup: list[dict] = []
     eng = get_built_engine()
     types = Counter()
     by_type_cycle: dict[str, Counter] = defaultdict(Counter)
@@ -111,6 +113,12 @@ def main() -> None:
                 row = row.iloc[0]
             if kind == "not_reproduced" and row is not None:
                 detail[kind][str(row["fail"])] += 1
+            if kind == "parcel_differs" or (kind == "not_reproduced" and row is not None):
+                followup.append({
+                    "transaction_hash": r.transaction_hash, "sido": sido, "source": f"4B_{kind}",
+                    "detail": str(row["fail"]) if kind == "not_reproduced" else "",
+                    "lot_a": r.recovered_lot, "lot_b": got["recovered_lot"] if got else "",
+                })
             if kind == "snapshot_or_count_only" and got is not None:
                 frozen_snap = (list(r.snapshots_matched) or ["-"])[0]
                 detail[kind][f"{frozen_snap}->{(got['snapshots_matched'] or ['-'])[0]}|via={r.via}"] += 1
@@ -123,6 +131,8 @@ def main() -> None:
                 )
                 judgements[verdict] += 1
         print(sido, dict(types), flush=True)
+    if args.followup:
+        pd.DataFrame(followup).to_csv(args.followup, index=False, encoding="utf-8-sig")
     report = {
         "types": dict(types),
         "types_by_matched_cycle": {k: dict(v) for k, v in by_type_cycle.items()},

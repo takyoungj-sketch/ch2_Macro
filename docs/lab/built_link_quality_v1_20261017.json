@@ -1,0 +1,3873 @@
+{
+  "run_date": "2026-10-18",
+  "scope": "built_transactions contract_year>=2019",
+  "config": "proposed: slim land area + Honam bridge (12); current kept as link counts only",
+  "note": "agree_rate / model_corrected are automatic cross-checks, not link accuracy",
+  "population": [
+    {
+      "sido": "11",
+      "asset_type": "commercial",
+      "all_tx": 18817,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 1412
+    },
+    {
+      "sido": "11",
+      "asset_type": "detached",
+      "all_tx": 45496,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 0
+    },
+    {
+      "sido": "11",
+      "asset_type": "factory",
+      "all_tx": 722,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 55
+    },
+    {
+      "sido": "12",
+      "asset_type": "commercial",
+      "all_tx": 12274,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 633
+    },
+    {
+      "sido": "12",
+      "asset_type": "detached",
+      "all_tx": 53311,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 0
+    },
+    {
+      "sido": "12",
+      "asset_type": "factory",
+      "all_tx": 4633,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 134
+    },
+    {
+      "sido": "26",
+      "asset_type": "commercial",
+      "all_tx": 8780,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 428
+    },
+    {
+      "sido": "26",
+      "asset_type": "detached",
+      "all_tx": 30574,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 0
+    },
+    {
+      "sido": "26",
+      "asset_type": "factory",
+      "all_tx": 2616,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 172
+    },
+    {
+      "sido": "27",
+      "asset_type": "commercial",
+      "all_tx": 6508,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 297
+    },
+    {
+      "sido": "27",
+      "asset_type": "detached",
+      "all_tx": 27126,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 0
+    },
+    {
+      "sido": "27",
+      "asset_type": "factory",
+      "all_tx": 2214,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 77
+    },
+    {
+      "sido": "28",
+      "asset_type": "commercial",
+      "all_tx": 5867,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 211
+    },
+    {
+      "sido": "28",
+      "asset_type": "detached",
+      "all_tx": 16027,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 0
+    },
+    {
+      "sido": "28",
+      "asset_type": "factory",
+      "all_tx": 2632,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 62
+    },
+    {
+      "sido": "30",
+      "asset_type": "commercial",
+      "all_tx": 4034,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 217
+    },
+    {
+      "sido": "30",
+      "asset_type": "detached",
+      "all_tx": 14421,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 0
+    },
+    {
+      "sido": "30",
+      "asset_type": "factory",
+      "all_tx": 661,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 11
+    },
+    {
+      "sido": "31",
+      "asset_type": "commercial",
+      "all_tx": 2433,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 118
+    },
+    {
+      "sido": "31",
+      "asset_type": "detached",
+      "all_tx": 8567,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 0
+    },
+    {
+      "sido": "31",
+      "asset_type": "factory",
+      "all_tx": 776,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 26
+    },
+    {
+      "sido": "36",
+      "asset_type": "commercial",
+      "all_tx": 420,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 20
+    },
+    {
+      "sido": "36",
+      "asset_type": "detached",
+      "all_tx": 1292,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 0
+    },
+    {
+      "sido": "36",
+      "asset_type": "factory",
+      "all_tx": 184,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 5
+    },
+    {
+      "sido": "41",
+      "asset_type": "commercial",
+      "all_tx": 31364,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 1363
+    },
+    {
+      "sido": "41",
+      "asset_type": "detached",
+      "all_tx": 71325,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 0
+    },
+    {
+      "sido": "41",
+      "asset_type": "factory",
+      "all_tx": 17237,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 405
+    },
+    {
+      "sido": "43",
+      "asset_type": "commercial",
+      "all_tx": 5717,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 224
+    },
+    {
+      "sido": "43",
+      "asset_type": "detached",
+      "all_tx": 27658,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 0
+    },
+    {
+      "sido": "43",
+      "asset_type": "factory",
+      "all_tx": 2660,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 70
+    },
+    {
+      "sido": "44",
+      "asset_type": "commercial",
+      "all_tx": 7082,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 320
+    },
+    {
+      "sido": "44",
+      "asset_type": "detached",
+      "all_tx": 31299,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 0
+    },
+    {
+      "sido": "44",
+      "asset_type": "factory",
+      "all_tx": 3588,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 123
+    },
+    {
+      "sido": "47",
+      "asset_type": "commercial",
+      "all_tx": 9589,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 424
+    },
+    {
+      "sido": "47",
+      "asset_type": "detached",
+      "all_tx": 43755,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 0
+    },
+    {
+      "sido": "47",
+      "asset_type": "factory",
+      "all_tx": 5983,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 150
+    },
+    {
+      "sido": "48",
+      "asset_type": "commercial",
+      "all_tx": 8174,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 416
+    },
+    {
+      "sido": "48",
+      "asset_type": "detached",
+      "all_tx": 42337,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 0
+    },
+    {
+      "sido": "48",
+      "asset_type": "factory",
+      "all_tx": 6280,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 168
+    },
+    {
+      "sido": "50",
+      "asset_type": "commercial",
+      "all_tx": 1607,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 106
+    },
+    {
+      "sido": "50",
+      "asset_type": "detached",
+      "all_tx": 10057,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 0
+    },
+    {
+      "sido": "50",
+      "asset_type": "factory",
+      "all_tx": 799,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 50
+    },
+    {
+      "sido": "51",
+      "asset_type": "commercial",
+      "all_tx": 6141,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 423
+    },
+    {
+      "sido": "51",
+      "asset_type": "detached",
+      "all_tx": 29416,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 0
+    },
+    {
+      "sido": "51",
+      "asset_type": "factory",
+      "all_tx": 1380,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 62
+    },
+    {
+      "sido": "52",
+      "asset_type": "commercial",
+      "all_tx": 6789,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 315
+    },
+    {
+      "sido": "52",
+      "asset_type": "detached",
+      "all_tx": 28804,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 0
+    },
+    {
+      "sido": "52",
+      "asset_type": "factory",
+      "all_tx": 2760,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 93
+    },
+    {
+      "sido": NaN,
+      "asset_type": "commercial",
+      "all_tx": 85,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 10
+    },
+    {
+      "sido": NaN,
+      "asset_type": "detached",
+      "all_tx": 445,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 0
+    },
+    {
+      "sido": NaN,
+      "asset_type": "factory",
+      "all_tx": 48,
+      "invalid": 0,
+      "no_gross": 0,
+      "partial": 4
+    }
+  ],
+  "current_linked": {
+    "11|detached": 30253,
+    "11|commercial": 13356,
+    "11|factory": 339,
+    "12|detached": 41516,
+    "12|commercial": 9152,
+    "12|factory": 3049,
+    "26|detached": 21448,
+    "26|commercial": 6538,
+    "26|factory": 1414,
+    "27|detached": 18573,
+    "27|commercial": 4414,
+    "27|factory": 1321,
+    "28|detached": 11357,
+    "28|commercial": 4477,
+    "28|factory": 1531,
+    "30|detached": 10764,
+    "30|commercial": 2908,
+    "30|factory": 395,
+    "31|detached": 6241,
+    "31|commercial": 1799,
+    "31|factory": 348,
+    "36|detached": 983,
+    "36|commercial": 304,
+    "36|factory": 116,
+    "41|detached": 55653,
+    "41|commercial": 22033,
+    "41|factory": 9528,
+    "43|detached": 23199,
+    "43|commercial": 4580,
+    "43|factory": 1581,
+    "44|detached": 24595,
+    "44|commercial": 5660,
+    "44|factory": 2263,
+    "47|detached": 36933,
+    "47|commercial": 7750,
+    "47|factory": 3891,
+    "48|detached": 33956,
+    "48|commercial": 6311,
+    "48|factory": 4318,
+    "50|detached": 7566,
+    "50|commercial": 1186,
+    "50|factory": 491,
+    "51|detached": 25076,
+    "51|commercial": 4784,
+    "51|factory": 975,
+    "52|detached": 23208,
+    "52|commercial": 5345,
+    "52|factory": 1673
+  },
+  "national": {
+    "전국": {
+      "eligible": 663596,
+      "linked": 507116,
+      "link_rate": 0.7642,
+      "fail": {
+        "no_gross_match": 121504,
+        "exact_multi": 30469,
+        "no_parcel_in_range": 3581,
+        "lot_not_parsable": 708,
+        "no_bjd_code": 204,
+        "snapshot_conflict": 14
+      },
+      "road": {
+        "checked": 487082,
+        "agree": 479733,
+        "agree_rate": 0.9849,
+        "rival_same_rate": 0.4544,
+        "rival_rows": 41541,
+        "model_corrected": 0.9723
+      },
+      "approve": {
+        "checked": 468722,
+        "agree": 452870,
+        "agree_rate": 0.9662,
+        "rival_same_rate": 0.5016,
+        "rival_rows": 40528,
+        "model_corrected": 0.9321
+      },
+      "land_a1": {
+        "checked": 421276,
+        "agree": 375189,
+        "agree_rate": 0.8906
+      },
+      "tier": {
+        "A1": 463019,
+        "A2": 44097
+      },
+      "register": {
+        "일반": 503559,
+        "동률": 3057,
+        "집합": 402,
+        "변경": 98
+      },
+      "n_snapshots": {
+        "1": 507116
+      },
+      "n_exact_ge2": 44097
+    }
+  },
+  "by_residential": {
+    "비주거": {
+      "eligible": 182131,
+      "linked": 134356,
+      "link_rate": 0.7377,
+      "fail": {
+        "no_gross_match": 40651,
+        "exact_multi": 5302,
+        "no_parcel_in_range": 1537,
+        "lot_not_parsable": 179,
+        "no_bjd_code": 101,
+        "snapshot_conflict": 5
+      },
+      "road": {
+        "checked": 123542,
+        "agree": 122334,
+        "agree_rate": 0.9902,
+        "rival_same_rate": 0.4823,
+        "rival_rows": 6253,
+        "model_corrected": 0.9811
+      },
+      "approve": {
+        "checked": 120774,
+        "agree": 119102,
+        "agree_rate": 0.9862,
+        "rival_same_rate": 0.429,
+        "rival_rows": 6284,
+        "model_corrected": 0.9758
+      },
+      "land_a1": {
+        "checked": 92096,
+        "agree": 79090,
+        "agree_rate": 0.8588
+      },
+      "tier": {
+        "A1": 127671,
+        "A2": 6685
+      },
+      "register": {
+        "일반": 133196,
+        "동률": 996,
+        "집합": 104,
+        "변경": 60
+      },
+      "n_snapshots": {
+        "1": 134356
+      },
+      "n_exact_ge2": 6685
+    },
+    "주거": {
+      "eligible": 481465,
+      "linked": 372760,
+      "link_rate": 0.7742,
+      "fail": {
+        "no_gross_match": 80853,
+        "exact_multi": 25167,
+        "no_parcel_in_range": 2044,
+        "lot_not_parsable": 529,
+        "no_bjd_code": 103,
+        "snapshot_conflict": 9
+      },
+      "road": {
+        "checked": 363540,
+        "agree": 357399,
+        "agree_rate": 0.9831,
+        "rival_same_rate": 0.4494,
+        "rival_rows": 35288,
+        "model_corrected": 0.9693
+      },
+      "approve": {
+        "checked": 347948,
+        "agree": 333768,
+        "agree_rate": 0.9592,
+        "rival_same_rate": 0.515,
+        "rival_rows": 34244,
+        "model_corrected": 0.916
+      },
+      "land_a1": {
+        "checked": 329180,
+        "agree": 296099,
+        "agree_rate": 0.8995
+      },
+      "tier": {
+        "A1": 335348,
+        "A2": 37412
+      },
+      "register": {
+        "일반": 370363,
+        "동률": 2061,
+        "집합": 298,
+        "변경": 38
+      },
+      "n_snapshots": {
+        "1": 372760
+      },
+      "n_exact_ge2": 37412
+    }
+  },
+  "by_asset_type": {
+    "commercial": {
+      "eligible": 128669,
+      "linked": 100962,
+      "link_rate": 0.7847,
+      "fail": {
+        "no_gross_match": 22837,
+        "exact_multi": 3994,
+        "no_parcel_in_range": 724,
+        "lot_not_parsable": 112,
+        "no_bjd_code": 37,
+        "snapshot_conflict": 3
+      },
+      "road": {
+        "checked": 95459,
+        "agree": 94506,
+        "agree_rate": 0.99,
+        "rival_same_rate": 0.4653,
+        "rival_rows": 4892,
+        "model_corrected": 0.9813
+      },
+      "approve": {
+        "checked": 92317,
+        "agree": 90949,
+        "agree_rate": 0.9852,
+        "rival_same_rate": 0.4223,
+        "rival_rows": 4810,
+        "model_corrected": 0.9743
+      },
+      "land_a1": {
+        "checked": 87471,
+        "agree": 75227,
+        "agree_rate": 0.86
+      },
+      "tier": {
+        "A1": 95788,
+        "A2": 5174
+      },
+      "register": {
+        "일반": 100302,
+        "동률": 508,
+        "집합": 95,
+        "변경": 57
+      },
+      "n_snapshots": {
+        "1": 100962
+      },
+      "n_exact_ge2": 5174
+    },
+    "detached": {
+      "eligible": 481465,
+      "linked": 372760,
+      "link_rate": 0.7742,
+      "fail": {
+        "no_gross_match": 80853,
+        "exact_multi": 25167,
+        "no_parcel_in_range": 2044,
+        "lot_not_parsable": 529,
+        "no_bjd_code": 103,
+        "snapshot_conflict": 9
+      },
+      "road": {
+        "checked": 363540,
+        "agree": 357399,
+        "agree_rate": 0.9831,
+        "rival_same_rate": 0.4494,
+        "rival_rows": 35288,
+        "model_corrected": 0.9693
+      },
+      "approve": {
+        "checked": 347948,
+        "agree": 333768,
+        "agree_rate": 0.9592,
+        "rival_same_rate": 0.515,
+        "rival_rows": 34244,
+        "model_corrected": 0.916
+      },
+      "land_a1": {
+        "checked": 329180,
+        "agree": 296099,
+        "agree_rate": 0.8995
+      },
+      "tier": {
+        "A1": 335348,
+        "A2": 37412
+      },
+      "register": {
+        "일반": 370363,
+        "동률": 2061,
+        "집합": 298,
+        "변경": 38
+      },
+      "n_snapshots": {
+        "1": 372760
+      },
+      "n_exact_ge2": 37412
+    },
+    "factory": {
+      "eligible": 53462,
+      "linked": 33394,
+      "link_rate": 0.6246,
+      "fail": {
+        "no_gross_match": 17814,
+        "exact_multi": 1308,
+        "no_parcel_in_range": 813,
+        "lot_not_parsable": 67,
+        "no_bjd_code": 64,
+        "snapshot_conflict": 2
+      },
+      "road": {
+        "checked": 28083,
+        "agree": 27828,
+        "agree_rate": 0.9909,
+        "rival_same_rate": 0.5435,
+        "rival_rows": 1361,
+        "model_corrected": 0.9801
+      },
+      "approve": {
+        "checked": 28457,
+        "agree": 28153,
+        "agree_rate": 0.9893,
+        "rival_same_rate": 0.4506,
+        "rival_rows": 1474,
+        "model_corrected": 0.9806
+      },
+      "land_a1": {
+        "checked": 4625,
+        "agree": 3863,
+        "agree_rate": 0.8352
+      },
+      "tier": {
+        "A1": 31883,
+        "A2": 1511
+      },
+      "register": {
+        "일반": 32894,
+        "동률": 488,
+        "집합": 9,
+        "변경": 3
+      },
+      "n_snapshots": {
+        "1": 33394
+      },
+      "n_exact_ge2": 1511
+    }
+  },
+  "by_register": {
+    "동률": {
+      "eligible": 3057,
+      "linked": 3057,
+      "link_rate": 1.0,
+      "fail": {},
+      "road": {
+        "checked": 2753,
+        "agree": 2694,
+        "agree_rate": 0.9786,
+        "rival_same_rate": 0.5874,
+        "rival_rows": 181,
+        "model_corrected": 0.9481
+      },
+      "approve": {
+        "checked": 2474,
+        "agree": 2250,
+        "agree_rate": 0.9095,
+        "rival_same_rate": 0.4884,
+        "rival_rows": 179,
+        "model_corrected": 0.823
+      },
+      "land_a1": {
+        "checked": 2289,
+        "agree": 420,
+        "agree_rate": 0.1835
+      },
+      "tier": {
+        "A1": 2861,
+        "A2": 196
+      },
+      "register": {
+        "동률": 3057
+      },
+      "n_snapshots": {
+        "1": 3057
+      },
+      "n_exact_ge2": 196
+    },
+    "변경": {
+      "eligible": 98,
+      "linked": 98,
+      "link_rate": 1.0,
+      "fail": {},
+      "road": {
+        "checked": 97,
+        "agree": 93,
+        "agree_rate": 0.9588,
+        "rival_same_rate": 0.0,
+        "rival_rows": 2,
+        "model_corrected": 0.9588
+      },
+      "approve": {
+        "checked": 91,
+        "agree": 88,
+        "agree_rate": 0.967,
+        "rival_same_rate": 1.0,
+        "rival_rows": 1
+      },
+      "land_a1": {
+        "checked": 94,
+        "agree": 86,
+        "agree_rate": 0.9149
+      },
+      "tier": {
+        "A1": 96,
+        "A2": 2
+      },
+      "register": {
+        "변경": 98
+      },
+      "n_snapshots": {
+        "1": 98
+      },
+      "n_exact_ge2": 2
+    },
+    "일반": {
+      "eligible": 503559,
+      "linked": 503559,
+      "link_rate": 1.0,
+      "fail": {},
+      "road": {
+        "checked": 483836,
+        "agree": 476751,
+        "agree_rate": 0.9854,
+        "rival_same_rate": 0.4541,
+        "rival_rows": 41329,
+        "model_corrected": 0.9732
+      },
+      "approve": {
+        "checked": 465770,
+        "agree": 450336,
+        "agree_rate": 0.9669,
+        "rival_same_rate": 0.5019,
+        "rival_rows": 40320,
+        "model_corrected": 0.9335
+      },
+      "land_a1": {
+        "checked": 418529,
+        "agree": 374541,
+        "agree_rate": 0.8949
+      },
+      "tier": {
+        "A1": 459689,
+        "A2": 43870
+      },
+      "register": {
+        "일반": 503559
+      },
+      "n_snapshots": {
+        "1": 503559
+      },
+      "n_exact_ge2": 43870
+    },
+    "집합": {
+      "eligible": 402,
+      "linked": 402,
+      "link_rate": 1.0,
+      "fail": {},
+      "road": {
+        "checked": 396,
+        "agree": 195,
+        "agree_rate": 0.4924,
+        "rival_same_rate": 0.0542,
+        "rival_rows": 29,
+        "model_corrected": 0.4633
+      },
+      "approve": {
+        "checked": 387,
+        "agree": 196,
+        "agree_rate": 0.5065,
+        "rival_same_rate": 0.2321,
+        "rival_rows": 28,
+        "model_corrected": 0.3573
+      },
+      "land_a1": {
+        "checked": 364,
+        "agree": 142,
+        "agree_rate": 0.3901
+      },
+      "tier": {
+        "A1": 373,
+        "A2": 29
+      },
+      "register": {
+        "집합": 402
+      },
+      "n_snapshots": {
+        "1": 402
+      },
+      "n_exact_ge2": 29
+    }
+  },
+  "by_residential_register": {
+    "비주거|동률": {
+      "eligible": 996,
+      "linked": 996,
+      "link_rate": 1.0,
+      "fail": {},
+      "road": {
+        "checked": 837,
+        "agree": 808,
+        "agree_rate": 0.9654,
+        "rival_same_rate": 0.5618,
+        "rival_rows": 111,
+        "model_corrected": 0.9209
+      },
+      "approve": {
+        "checked": 759,
+        "agree": 713,
+        "agree_rate": 0.9394,
+        "rival_same_rate": 0.4383,
+        "rival_rows": 109,
+        "model_corrected": 0.8921
+      },
+      "land_a1": {
+        "checked": 399,
+        "agree": 121,
+        "agree_rate": 0.3033
+      },
+      "tier": {
+        "A1": 885,
+        "A2": 111
+      },
+      "register": {
+        "동률": 996
+      },
+      "n_snapshots": {
+        "1": 996
+      },
+      "n_exact_ge2": 111
+    },
+    "비주거|변경": {
+      "eligible": 60,
+      "linked": 60,
+      "link_rate": 1.0,
+      "fail": {},
+      "road": {
+        "checked": 59,
+        "agree": 57,
+        "agree_rate": 0.9661,
+        "rival_same_rate": 0.0,
+        "rival_rows": 2,
+        "model_corrected": 0.9661
+      },
+      "approve": {
+        "checked": 53,
+        "agree": 53,
+        "agree_rate": 1.0,
+        "rival_same_rate": 1.0,
+        "rival_rows": 1
+      },
+      "land_a1": {
+        "checked": 56,
+        "agree": 55,
+        "agree_rate": 0.9821
+      },
+      "tier": {
+        "A1": 58,
+        "A2": 2
+      },
+      "register": {
+        "변경": 60
+      },
+      "n_snapshots": {
+        "1": 60
+      },
+      "n_exact_ge2": 2
+    },
+    "비주거|일반": {
+      "eligible": 133196,
+      "linked": 133196,
+      "link_rate": 1.0,
+      "fail": {},
+      "road": {
+        "checked": 122544,
+        "agree": 121409,
+        "agree_rate": 0.9907,
+        "rival_same_rate": 0.481,
+        "rival_rows": 6140,
+        "model_corrected": 0.9822
+      },
+      "approve": {
+        "checked": 119867,
+        "agree": 118283,
+        "agree_rate": 0.9868,
+        "rival_same_rate": 0.4287,
+        "rival_rows": 6174,
+        "model_corrected": 0.9769
+      },
+      "land_a1": {
+        "checked": 91540,
+        "agree": 78871,
+        "agree_rate": 0.8616
+      },
+      "tier": {
+        "A1": 126624,
+        "A2": 6572
+      },
+      "register": {
+        "일반": 133196
+      },
+      "n_snapshots": {
+        "1": 133196
+      },
+      "n_exact_ge2": 6572
+    },
+    "비주거|집합": {
+      "eligible": 104,
+      "linked": 104,
+      "link_rate": 1.0,
+      "fail": {},
+      "road": {
+        "checked": 102,
+        "agree": 60,
+        "agree_rate": 0.5882
+      },
+      "approve": {
+        "checked": 95,
+        "agree": 53,
+        "agree_rate": 0.5579
+      },
+      "land_a1": {
+        "checked": 101,
+        "agree": 43,
+        "agree_rate": 0.4257
+      },
+      "tier": {
+        "A1": 104
+      },
+      "register": {
+        "집합": 104
+      },
+      "n_snapshots": {
+        "1": 104
+      },
+      "n_exact_ge2": 0
+    },
+    "주거|동률": {
+      "eligible": 2061,
+      "linked": 2061,
+      "link_rate": 1.0,
+      "fail": {},
+      "road": {
+        "checked": 1916,
+        "agree": 1886,
+        "agree_rate": 0.9843,
+        "rival_same_rate": 0.6279,
+        "rival_rows": 70,
+        "model_corrected": 0.9579
+      },
+      "approve": {
+        "checked": 1715,
+        "agree": 1537,
+        "agree_rate": 0.8962,
+        "rival_same_rate": 0.5664,
+        "rival_rows": 70,
+        "model_corrected": 0.7606
+      },
+      "land_a1": {
+        "checked": 1890,
+        "agree": 299,
+        "agree_rate": 0.1582
+      },
+      "tier": {
+        "A1": 1976,
+        "A2": 85
+      },
+      "register": {
+        "동률": 2061
+      },
+      "n_snapshots": {
+        "1": 2061
+      },
+      "n_exact_ge2": 85
+    },
+    "주거|변경": {
+      "eligible": 38,
+      "linked": 38,
+      "link_rate": 1.0,
+      "fail": {},
+      "road": {
+        "checked": 38,
+        "agree": 36,
+        "agree_rate": 0.9474
+      },
+      "approve": {
+        "checked": 38,
+        "agree": 35,
+        "agree_rate": 0.9211
+      },
+      "land_a1": {
+        "checked": 38,
+        "agree": 31,
+        "agree_rate": 0.8158
+      },
+      "tier": {
+        "A1": 38
+      },
+      "register": {
+        "변경": 38
+      },
+      "n_snapshots": {
+        "1": 38
+      },
+      "n_exact_ge2": 0
+    },
+    "주거|일반": {
+      "eligible": 370363,
+      "linked": 370363,
+      "link_rate": 1.0,
+      "fail": {},
+      "road": {
+        "checked": 361292,
+        "agree": 355342,
+        "agree_rate": 0.9835,
+        "rival_same_rate": 0.4494,
+        "rival_rows": 35189,
+        "model_corrected": 0.9701
+      },
+      "approve": {
+        "checked": 345903,
+        "agree": 332053,
+        "agree_rate": 0.96,
+        "rival_same_rate": 0.5151,
+        "rival_rows": 34146,
+        "model_corrected": 0.9174
+      },
+      "land_a1": {
+        "checked": 326989,
+        "agree": 295670,
+        "agree_rate": 0.9042
+      },
+      "tier": {
+        "A1": 333065,
+        "A2": 37298
+      },
+      "register": {
+        "일반": 370363
+      },
+      "n_snapshots": {
+        "1": 370363
+      },
+      "n_exact_ge2": 37298
+    },
+    "주거|집합": {
+      "eligible": 298,
+      "linked": 298,
+      "link_rate": 1.0,
+      "fail": {},
+      "road": {
+        "checked": 294,
+        "agree": 135,
+        "agree_rate": 0.4592,
+        "rival_same_rate": 0.0542,
+        "rival_rows": 29,
+        "model_corrected": 0.4282
+      },
+      "approve": {
+        "checked": 292,
+        "agree": 143,
+        "agree_rate": 0.4897,
+        "rival_same_rate": 0.2321,
+        "rival_rows": 28,
+        "model_corrected": 0.3355
+      },
+      "land_a1": {
+        "checked": 263,
+        "agree": 99,
+        "agree_rate": 0.3764
+      },
+      "tier": {
+        "A1": 269,
+        "A2": 29
+      },
+      "register": {
+        "집합": 298
+      },
+      "n_snapshots": {
+        "1": 298
+      },
+      "n_exact_ge2": 29
+    }
+  },
+  "by_sido": {
+    "11": {
+      "eligible": 63568,
+      "linked": 43954,
+      "link_rate": 0.6914,
+      "fail": {
+        "no_gross_match": 17097,
+        "exact_multi": 2387,
+        "no_parcel_in_range": 76,
+        "lot_not_parsable": 50,
+        "snapshot_conflict": 4
+      },
+      "road": {
+        "checked": 43214,
+        "agree": 41685,
+        "agree_rate": 0.9646,
+        "rival_same_rate": 0.2467,
+        "rival_rows": 3131,
+        "model_corrected": 0.953
+      },
+      "approve": {
+        "checked": 41230,
+        "agree": 39377,
+        "agree_rate": 0.9551,
+        "rival_same_rate": 0.3823,
+        "rival_rows": 2727,
+        "model_corrected": 0.9272
+      },
+      "land_a1": {
+        "checked": 40314,
+        "agree": 35726,
+        "agree_rate": 0.8862
+      },
+      "tier": {
+        "A1": 40650,
+        "A2": 3304
+      },
+      "register": {
+        "일반": 43699,
+        "집합": 124,
+        "동률": 80,
+        "변경": 51
+      },
+      "n_snapshots": {
+        "1": 43954
+      },
+      "n_exact_ge2": 3304
+    },
+    "12": {
+      "eligible": 69451,
+      "linked": 55515,
+      "link_rate": 0.7993,
+      "fail": {
+        "no_gross_match": 10650,
+        "exact_multi": 3058,
+        "lot_not_parsable": 158,
+        "no_parcel_in_range": 69,
+        "snapshot_conflict": 1
+      },
+      "road": {
+        "checked": 52513,
+        "agree": 51688,
+        "agree_rate": 0.9843,
+        "rival_same_rate": 0.3874,
+        "rival_rows": 5311,
+        "model_corrected": 0.9744
+      },
+      "approve": {
+        "checked": 51477,
+        "agree": 49342,
+        "agree_rate": 0.9585,
+        "rival_same_rate": 0.3903,
+        "rival_rows": 5170,
+        "model_corrected": 0.932
+      },
+      "land_a1": {
+        "checked": 45490,
+        "agree": 40142,
+        "agree_rate": 0.8824
+      },
+      "tier": {
+        "A1": 49691,
+        "A2": 5824
+      },
+      "register": {
+        "일반": 55344,
+        "동률": 157,
+        "집합": 11,
+        "변경": 3
+      },
+      "n_snapshots": {
+        "1": 55515
+      },
+      "n_exact_ge2": 5824
+    },
+    "26": {
+      "eligible": 41370,
+      "linked": 29421,
+      "link_rate": 0.7112,
+      "fail": {
+        "no_gross_match": 9003,
+        "exact_multi": 2857,
+        "lot_not_parsable": 82,
+        "no_parcel_in_range": 7
+      },
+      "road": {
+        "checked": 28807,
+        "agree": 27998,
+        "agree_rate": 0.9719,
+        "rival_same_rate": 0.239,
+        "rival_rows": 3625,
+        "model_corrected": 0.9631
+      },
+      "approve": {
+        "checked": 26956,
+        "agree": 25535,
+        "agree_rate": 0.9473,
+        "rival_same_rate": 0.4745,
+        "rival_rows": 3382,
+        "model_corrected": 0.8997
+      },
+      "land_a1": {
+        "checked": 24121,
+        "agree": 20520,
+        "agree_rate": 0.8507
+      },
+      "tier": {
+        "A1": 25588,
+        "A2": 3833
+      },
+      "register": {
+        "일반": 29225,
+        "동률": 111,
+        "집합": 80,
+        "변경": 5
+      },
+      "n_snapshots": {
+        "1": 29421
+      },
+      "n_exact_ge2": 3833
+    },
+    "27": {
+      "eligible": 35474,
+      "linked": 24313,
+      "link_rate": 0.6854,
+      "fail": {
+        "no_gross_match": 9332,
+        "exact_multi": 1744,
+        "no_parcel_in_range": 75,
+        "lot_not_parsable": 10
+      },
+      "road": {
+        "checked": 23660,
+        "agree": 23077,
+        "agree_rate": 0.9754,
+        "rival_same_rate": 0.1936,
+        "rival_rows": 2230,
+        "model_corrected": 0.9694
+      },
+      "approve": {
+        "checked": 23221,
+        "agree": 22434,
+        "agree_rate": 0.9661,
+        "rival_same_rate": 0.3505,
+        "rival_rows": 2299,
+        "model_corrected": 0.9478
+      },
+      "land_a1": {
+        "checked": 20446,
+        "agree": 18611,
+        "agree_rate": 0.9103
+      },
+      "tier": {
+        "A1": 21990,
+        "A2": 2323
+      },
+      "register": {
+        "일반": 24193,
+        "동률": 97,
+        "집합": 20,
+        "변경": 3
+      },
+      "n_snapshots": {
+        "1": 24313
+      },
+      "n_exact_ge2": 2323
+    },
+    "28": {
+      "eligible": 24253,
+      "linked": 17377,
+      "link_rate": 0.7165,
+      "fail": {
+        "no_gross_match": 3771,
+        "no_parcel_in_range": 1873,
+        "exact_multi": 1217,
+        "lot_not_parsable": 14,
+        "snapshot_conflict": 1
+      },
+      "road": {
+        "checked": 16763,
+        "agree": 16481,
+        "agree_rate": 0.9832,
+        "rival_same_rate": 0.463,
+        "rival_rows": 1628,
+        "model_corrected": 0.9687
+      },
+      "approve": {
+        "checked": 15464,
+        "agree": 14766,
+        "agree_rate": 0.9549,
+        "rival_same_rate": 0.6386,
+        "rival_rows": 1452,
+        "model_corrected": 0.8751
+      },
+      "land_a1": {
+        "checked": 13989,
+        "agree": 12374,
+        "agree_rate": 0.8846
+      },
+      "tier": {
+        "A1": 15660,
+        "A2": 1717
+      },
+      "register": {
+        "일반": 17226,
+        "동률": 133,
+        "집합": 12,
+        "변경": 6
+      },
+      "n_snapshots": {
+        "1": 17377
+      },
+      "n_exact_ge2": 1717
+    },
+    "30": {
+      "eligible": 18888,
+      "linked": 14070,
+      "link_rate": 0.7449,
+      "fail": {
+        "no_gross_match": 4192,
+        "exact_multi": 609,
+        "no_parcel_in_range": 14,
+        "lot_not_parsable": 3
+      },
+      "road": {
+        "checked": 13774,
+        "agree": 13557,
+        "agree_rate": 0.9842,
+        "rival_same_rate": 0.3794,
+        "rival_rows": 1026,
+        "model_corrected": 0.9746
+      },
+      "approve": {
+        "checked": 13710,
+        "agree": 13370,
+        "agree_rate": 0.9752,
+        "rival_same_rate": 0.5239,
+        "rival_rows": 1046,
+        "model_corrected": 0.9479
+      },
+      "land_a1": {
+        "checked": 12653,
+        "agree": 11650,
+        "agree_rate": 0.9207
+      },
+      "tier": {
+        "A1": 13007,
+        "A2": 1063
+      },
+      "register": {
+        "일반": 14011,
+        "동률": 54,
+        "집합": 4,
+        "변경": 1
+      },
+      "n_snapshots": {
+        "1": 14070
+      },
+      "n_exact_ge2": 1063
+    },
+    "31": {
+      "eligible": 11632,
+      "linked": 8389,
+      "link_rate": 0.7212,
+      "fail": {
+        "no_gross_match": 2885,
+        "exact_multi": 319,
+        "no_parcel_in_range": 32,
+        "lot_not_parsable": 7
+      },
+      "road": {
+        "checked": 8159,
+        "agree": 8020,
+        "agree_rate": 0.983,
+        "rival_same_rate": 0.3202,
+        "rival_rows": 471,
+        "model_corrected": 0.9749
+      },
+      "approve": {
+        "checked": 8051,
+        "agree": 7812,
+        "agree_rate": 0.9703,
+        "rival_same_rate": 0.4472,
+        "rival_rows": 456,
+        "model_corrected": 0.9463
+      },
+      "land_a1": {
+        "checked": 7516,
+        "agree": 6929,
+        "agree_rate": 0.9219
+      },
+      "tier": {
+        "A1": 7909,
+        "A2": 480
+      },
+      "register": {
+        "일반": 8365,
+        "동률": 17,
+        "집합": 6,
+        "변경": 1
+      },
+      "n_snapshots": {
+        "1": 8389
+      },
+      "n_exact_ge2": 480
+    },
+    "36": {
+      "eligible": 1871,
+      "linked": 1403,
+      "link_rate": 0.7499,
+      "fail": {
+        "no_gross_match": 361,
+        "exact_multi": 104,
+        "no_parcel_in_range": 2,
+        "lot_not_parsable": 1
+      },
+      "road": {
+        "checked": 1316,
+        "agree": 1302,
+        "agree_rate": 0.9894,
+        "rival_same_rate": 0.8113,
+        "rival_rows": 83,
+        "model_corrected": 0.9436
+      },
+      "approve": {
+        "checked": 1308,
+        "agree": 1230,
+        "agree_rate": 0.9404,
+        "rival_same_rate": 0.7931,
+        "rival_rows": 87,
+        "model_corrected": 0.7118
+      },
+      "land_a1": {
+        "checked": 1180,
+        "agree": 1056,
+        "agree_rate": 0.8949
+      },
+      "tier": {
+        "A1": 1314,
+        "A2": 89
+      },
+      "register": {
+        "일반": 1397,
+        "동률": 6
+      },
+      "n_snapshots": {
+        "1": 1403
+      },
+      "n_exact_ge2": 89
+    },
+    "41": {
+      "eligible": 118158,
+      "linked": 87238,
+      "link_rate": 0.7383,
+      "fail": {
+        "no_gross_match": 23175,
+        "exact_multi": 6406,
+        "no_parcel_in_range": 1262,
+        "lot_not_parsable": 77
+      },
+      "road": {
+        "checked": 83871,
+        "agree": 82994,
+        "agree_rate": 0.9895,
+        "rival_same_rate": 0.5593,
+        "rival_rows": 7301,
+        "model_corrected": 0.9763
+      },
+      "approve": {
+        "checked": 78204,
+        "agree": 75652,
+        "agree_rate": 0.9674,
+        "rival_same_rate": 0.561,
+        "rival_rows": 7260,
+        "model_corrected": 0.9257
+      },
+      "land_a1": {
+        "checked": 67680,
+        "agree": 60271,
+        "agree_rate": 0.8905
+      },
+      "tier": {
+        "A1": 79741,
+        "A2": 7497
+      },
+      "register": {
+        "일반": 86433,
+        "동률": 685,
+        "집합": 105,
+        "변경": 15
+      },
+      "n_snapshots": {
+        "1": 87238
+      },
+      "n_exact_ge2": 7497
+    },
+    "43": {
+      "eligible": 35741,
+      "linked": 29367,
+      "link_rate": 0.8217,
+      "fail": {
+        "no_gross_match": 4903,
+        "exact_multi": 1184,
+        "no_bjd_code": 204,
+        "no_parcel_in_range": 50,
+        "lot_not_parsable": 31,
+        "snapshot_conflict": 2
+      },
+      "road": {
+        "checked": 28077,
+        "agree": 27793,
+        "agree_rate": 0.9899,
+        "rival_same_rate": 0.5212,
+        "rival_rows": 1809,
+        "model_corrected": 0.9789
+      },
+      "approve": {
+        "checked": 26994,
+        "agree": 26445,
+        "agree_rate": 0.9797,
+        "rival_same_rate": 0.6079,
+        "rival_rows": 1822,
+        "model_corrected": 0.9481
+      },
+      "land_a1": {
+        "checked": 25414,
+        "agree": 23128,
+        "agree_rate": 0.91
+      },
+      "tier": {
+        "A1": 27465,
+        "A2": 1902
+      },
+      "register": {
+        "일반": 29297,
+        "동률": 64,
+        "집합": 4,
+        "변경": 2
+      },
+      "n_snapshots": {
+        "1": 29367
+      },
+      "n_exact_ge2": 1902
+    },
+    "44": {
+      "eligible": 41526,
+      "linked": 32540,
+      "link_rate": 0.7836,
+      "fail": {
+        "no_gross_match": 6983,
+        "exact_multi": 1887,
+        "lot_not_parsable": 58,
+        "no_parcel_in_range": 57,
+        "snapshot_conflict": 1
+      },
+      "road": {
+        "checked": 30989,
+        "agree": 30739,
+        "agree_rate": 0.9919,
+        "rival_same_rate": 0.6935,
+        "rival_rows": 2431,
+        "model_corrected": 0.9737
+      },
+      "approve": {
+        "checked": 30341,
+        "agree": 29169,
+        "agree_rate": 0.9614,
+        "rival_same_rate": 0.6473,
+        "rival_rows": 2499,
+        "model_corrected": 0.8905
+      },
+      "land_a1": {
+        "checked": 26794,
+        "agree": 23973,
+        "agree_rate": 0.8947
+      },
+      "tier": {
+        "A1": 29904,
+        "A2": 2636
+      },
+      "register": {
+        "일반": 32376,
+        "동률": 158,
+        "집합": 5,
+        "변경": 1
+      },
+      "n_snapshots": {
+        "1": 32540
+      },
+      "n_exact_ge2": 2636
+    },
+    "47": {
+      "eligible": 58753,
+      "linked": 48601,
+      "link_rate": 0.8272,
+      "fail": {
+        "no_gross_match": 7562,
+        "exact_multi": 2514,
+        "lot_not_parsable": 51,
+        "no_parcel_in_range": 24,
+        "snapshot_conflict": 1
+      },
+      "road": {
+        "checked": 45791,
+        "agree": 45467,
+        "agree_rate": 0.9929,
+        "rival_same_rate": 0.5525,
+        "rival_rows": 3271,
+        "model_corrected": 0.9842
+      },
+      "approve": {
+        "checked": 45782,
+        "agree": 44741,
+        "agree_rate": 0.9773,
+        "rival_same_rate": 0.4903,
+        "rival_rows": 3383,
+        "model_corrected": 0.9554
+      },
+      "land_a1": {
+        "checked": 40011,
+        "agree": 36087,
+        "agree_rate": 0.9019
+      },
+      "tier": {
+        "A1": 44999,
+        "A2": 3602
+      },
+      "register": {
+        "일반": 48434,
+        "동률": 159,
+        "집합": 7,
+        "변경": 1
+      },
+      "n_snapshots": {
+        "1": 48601
+      },
+      "n_exact_ge2": 3602
+    },
+    "48": {
+      "eligible": 56207,
+      "linked": 44602,
+      "link_rate": 0.7935,
+      "fail": {
+        "no_gross_match": 9513,
+        "exact_multi": 2028,
+        "lot_not_parsable": 48,
+        "no_parcel_in_range": 12,
+        "snapshot_conflict": 4
+      },
+      "road": {
+        "checked": 42702,
+        "agree": 42183,
+        "agree_rate": 0.9878,
+        "rival_same_rate": 0.4881,
+        "rival_rows": 3464,
+        "model_corrected": 0.9763
+      },
+      "approve": {
+        "checked": 41480,
+        "agree": 40384,
+        "agree_rate": 0.9736,
+        "rival_same_rate": 0.4037,
+        "rival_rows": 3494,
+        "model_corrected": 0.9557
+      },
+      "land_a1": {
+        "checked": 35949,
+        "agree": 32308,
+        "agree_rate": 0.8987
+      },
+      "tier": {
+        "A1": 40865,
+        "A2": 3737
+      },
+      "register": {
+        "일반": 44427,
+        "동률": 169,
+        "집합": 4,
+        "변경": 2
+      },
+      "n_snapshots": {
+        "1": 44602
+      },
+      "n_exact_ge2": 3737
+    },
+    "50": {
+      "eligible": 12307,
+      "linked": 9247,
+      "link_rate": 0.7514,
+      "fail": {
+        "no_gross_match": 1628,
+        "exact_multi": 1417,
+        "lot_not_parsable": 14,
+        "no_parcel_in_range": 1
+      },
+      "road": {
+        "checked": 9032,
+        "agree": 8935,
+        "agree_rate": 0.9893,
+        "rival_same_rate": 0.5155,
+        "rival_rows": 1340,
+        "model_corrected": 0.9778
+      },
+      "approve": {
+        "checked": 8351,
+        "agree": 7898,
+        "agree_rate": 0.9458,
+        "rival_same_rate": 0.5373,
+        "rival_rows": 1242,
+        "model_corrected": 0.8828
+      },
+      "land_a1": {
+        "checked": 7285,
+        "agree": 5777,
+        "agree_rate": 0.793
+      },
+      "tier": {
+        "A1": 7832,
+        "A2": 1415
+      },
+      "register": {
+        "일반": 8301,
+        "동률": 942,
+        "변경": 3,
+        "집합": 1
+      },
+      "n_snapshots": {
+        "1": 9247
+      },
+      "n_exact_ge2": 1415
+    },
+    "51": {
+      "eligible": 36452,
+      "linked": 30838,
+      "link_rate": 0.846,
+      "fail": {
+        "no_gross_match": 4161,
+        "exact_multi": 1397,
+        "lot_not_parsable": 45,
+        "no_parcel_in_range": 11
+      },
+      "road": {
+        "checked": 29368,
+        "agree": 29048,
+        "agree_rate": 0.9891,
+        "rival_same_rate": 0.6306,
+        "rival_rows": 2338,
+        "model_corrected": 0.9705
+      },
+      "approve": {
+        "checked": 27276,
+        "agree": 26532,
+        "agree_rate": 0.9727,
+        "rival_same_rate": 0.6582,
+        "rival_rows": 2108,
+        "model_corrected": 0.9202
+      },
+      "land_a1": {
+        "checked": 26822,
+        "agree": 23900,
+        "agree_rate": 0.8911
+      },
+      "tier": {
+        "A1": 28369,
+        "A2": 2469
+      },
+      "register": {
+        "일반": 30675,
+        "동률": 154,
+        "집합": 6,
+        "변경": 3
+      },
+      "n_snapshots": {
+        "1": 30838
+      },
+      "n_exact_ge2": 2469
+    },
+    "52": {
+      "eligible": 37945,
+      "linked": 30241,
+      "link_rate": 0.797,
+      "fail": {
+        "no_gross_match": 6288,
+        "exact_multi": 1341,
+        "lot_not_parsable": 59,
+        "no_parcel_in_range": 16
+      },
+      "road": {
+        "checked": 29046,
+        "agree": 28766,
+        "agree_rate": 0.9904,
+        "rival_same_rate": 0.485,
+        "rival_rows": 2082,
+        "model_corrected": 0.9813
+      },
+      "approve": {
+        "checked": 28877,
+        "agree": 28183,
+        "agree_rate": 0.976,
+        "rival_same_rate": 0.5659,
+        "rival_rows": 2101,
+        "model_corrected": 0.9446
+      },
+      "land_a1": {
+        "checked": 25612,
+        "agree": 22737,
+        "agree_rate": 0.8877
+      },
+      "tier": {
+        "A1": 28035,
+        "A2": 2206
+      },
+      "register": {
+        "일반": 30156,
+        "동률": 71,
+        "집합": 13,
+        "변경": 1
+      },
+      "n_snapshots": {
+        "1": 30241
+      },
+      "n_exact_ge2": 2206
+    }
+  },
+  "by_sido_residential": {
+    "11|비주거": {
+      "eligible": 18072,
+      "linked": 13695,
+      "link_rate": 0.7578,
+      "fail": {
+        "no_gross_match": 4041,
+        "exact_multi": 286,
+        "no_parcel_in_range": 47,
+        "snapshot_conflict": 2,
+        "lot_not_parsable": 1
+      },
+      "road": {
+        "checked": 13342,
+        "agree": 13111,
+        "agree_rate": 0.9827,
+        "rival_same_rate": 0.3052,
+        "rival_rows": 424,
+        "model_corrected": 0.9751
+      },
+      "approve": {
+        "checked": 12239,
+        "agree": 12057,
+        "agree_rate": 0.9851,
+        "rival_same_rate": 0.2263,
+        "rival_rows": 303,
+        "model_corrected": 0.9808
+      },
+      "land_a1": {
+        "checked": 13033,
+        "agree": 11200,
+        "agree_rate": 0.8594
+      },
+      "tier": {
+        "A1": 13227,
+        "A2": 468
+      },
+      "register": {
+        "일반": 13600,
+        "집합": 41,
+        "변경": 28,
+        "동률": 26
+      },
+      "n_snapshots": {
+        "1": 13695
+      },
+      "n_exact_ge2": 468
+    },
+    "11|주거": {
+      "eligible": 45496,
+      "linked": 30259,
+      "link_rate": 0.6651,
+      "fail": {
+        "no_gross_match": 13056,
+        "exact_multi": 2101,
+        "lot_not_parsable": 49,
+        "no_parcel_in_range": 29,
+        "snapshot_conflict": 2
+      },
+      "road": {
+        "checked": 29872,
+        "agree": 28574,
+        "agree_rate": 0.9565,
+        "rival_same_rate": 0.2375,
+        "rival_rows": 2707,
+        "model_corrected": 0.943
+      },
+      "approve": {
+        "checked": 28991,
+        "agree": 27320,
+        "agree_rate": 0.9424,
+        "rival_same_rate": 0.4018,
+        "rival_rows": 2424,
+        "model_corrected": 0.9037
+      },
+      "land_a1": {
+        "checked": 27281,
+        "agree": 24526,
+        "agree_rate": 0.899
+      },
+      "tier": {
+        "A1": 27423,
+        "A2": 2836
+      },
+      "register": {
+        "일반": 30099,
+        "집합": 83,
+        "동률": 54,
+        "변경": 23
+      },
+      "n_snapshots": {
+        "1": 30259
+      },
+      "n_exact_ge2": 2836
+    },
+    "12|비주거": {
+      "eligible": 16140,
+      "linked": 12711,
+      "link_rate": 0.7875,
+      "fail": {
+        "no_gross_match": 3082,
+        "exact_multi": 313,
+        "lot_not_parsable": 22,
+        "no_parcel_in_range": 12
+      },
+      "road": {
+        "checked": 11276,
+        "agree": 11178,
+        "agree_rate": 0.9913,
+        "rival_same_rate": 0.2872,
+        "rival_rows": 502,
+        "model_corrected": 0.9878
+      },
+      "approve": {
+        "checked": 11804,
+        "agree": 11593,
+        "agree_rate": 0.9821,
+        "rival_same_rate": 0.2864,
+        "rival_rows": 506,
+        "model_corrected": 0.975
+      },
+      "land_a1": {
+        "checked": 8896,
+        "agree": 7599,
+        "agree_rate": 0.8542
+      },
+      "tier": {
+        "A1": 12154,
+        "A2": 557
+      },
+      "register": {
+        "일반": 12643,
+        "동률": 60,
+        "집합": 5,
+        "변경": 3
+      },
+      "n_snapshots": {
+        "1": 12711
+      },
+      "n_exact_ge2": 557
+    },
+    "12|주거": {
+      "eligible": 53311,
+      "linked": 42804,
+      "link_rate": 0.8029,
+      "fail": {
+        "no_gross_match": 7568,
+        "exact_multi": 2745,
+        "lot_not_parsable": 136,
+        "no_parcel_in_range": 57,
+        "snapshot_conflict": 1
+      },
+      "road": {
+        "checked": 41237,
+        "agree": 40510,
+        "agree_rate": 0.9824,
+        "rival_same_rate": 0.3979,
+        "rival_rows": 4809,
+        "model_corrected": 0.9707
+      },
+      "approve": {
+        "checked": 39673,
+        "agree": 37749,
+        "agree_rate": 0.9515,
+        "rival_same_rate": 0.4016,
+        "rival_rows": 4664,
+        "model_corrected": 0.919
+      },
+      "land_a1": {
+        "checked": 36594,
+        "agree": 32543,
+        "agree_rate": 0.8893
+      },
+      "tier": {
+        "A1": 37537,
+        "A2": 5267
+      },
+      "register": {
+        "일반": 42701,
+        "동률": 97,
+        "집합": 6
+      },
+      "n_snapshots": {
+        "1": 42804
+      },
+      "n_exact_ge2": 5267
+    },
+    "26|비주거": {
+      "eligible": 10796,
+      "linked": 7953,
+      "link_rate": 0.7367,
+      "fail": {
+        "no_gross_match": 2380,
+        "exact_multi": 449,
+        "lot_not_parsable": 14
+      },
+      "road": {
+        "checked": 7753,
+        "agree": 7650,
+        "agree_rate": 0.9867,
+        "rival_same_rate": 0.3023,
+        "rival_rows": 422,
+        "model_corrected": 0.981
+      },
+      "approve": {
+        "checked": 7139,
+        "agree": 7020,
+        "agree_rate": 0.9833,
+        "rival_same_rate": 0.4413,
+        "rival_rows": 407,
+        "model_corrected": 0.9702
+      },
+      "land_a1": {
+        "checked": 6335,
+        "agree": 5434,
+        "agree_rate": 0.8578
+      },
+      "tier": {
+        "A1": 7525,
+        "A2": 428
+      },
+      "register": {
+        "일반": 7916,
+        "동률": 28,
+        "집합": 6,
+        "변경": 3
+      },
+      "n_snapshots": {
+        "1": 7953
+      },
+      "n_exact_ge2": 428
+    },
+    "26|주거": {
+      "eligible": 30574,
+      "linked": 21468,
+      "link_rate": 0.7022,
+      "fail": {
+        "no_gross_match": 6623,
+        "exact_multi": 2408,
+        "lot_not_parsable": 68,
+        "no_parcel_in_range": 7
+      },
+      "road": {
+        "checked": 21054,
+        "agree": 20348,
+        "agree_rate": 0.9665,
+        "rival_same_rate": 0.2307,
+        "rival_rows": 3203,
+        "model_corrected": 0.9564
+      },
+      "approve": {
+        "checked": 19817,
+        "agree": 18515,
+        "agree_rate": 0.9343,
+        "rival_same_rate": 0.4791,
+        "rival_rows": 2975,
+        "model_corrected": 0.8739
+      },
+      "land_a1": {
+        "checked": 17786,
+        "agree": 15086,
+        "agree_rate": 0.8482
+      },
+      "tier": {
+        "A1": 18063,
+        "A2": 3405
+      },
+      "register": {
+        "일반": 21309,
+        "동률": 83,
+        "집합": 74,
+        "변경": 2
+      },
+      "n_snapshots": {
+        "1": 21468
+      },
+      "n_exact_ge2": 3405
+    },
+    "27|비주거": {
+      "eligible": 8348,
+      "linked": 5735,
+      "link_rate": 0.687,
+      "fail": {
+        "no_gross_match": 2290,
+        "exact_multi": 291,
+        "no_parcel_in_range": 26,
+        "lot_not_parsable": 6
+      },
+      "road": {
+        "checked": 5439,
+        "agree": 5376,
+        "agree_rate": 0.9884,
+        "rival_same_rate": 0.3619,
+        "rival_rows": 182,
+        "model_corrected": 0.9818
+      },
+      "approve": {
+        "checked": 5247,
+        "agree": 5186,
+        "agree_rate": 0.9884,
+        "rival_same_rate": 0.4183,
+        "rival_rows": 186,
+        "model_corrected": 0.98
+      },
+      "land_a1": {
+        "checked": 4171,
+        "agree": 3605,
+        "agree_rate": 0.8643
+      },
+      "tier": {
+        "A1": 5543,
+        "A2": 192
+      },
+      "register": {
+        "일반": 5692,
+        "동률": 38,
+        "집합": 4,
+        "변경": 1
+      },
+      "n_snapshots": {
+        "1": 5735
+      },
+      "n_exact_ge2": 192
+    },
+    "27|주거": {
+      "eligible": 27126,
+      "linked": 18578,
+      "link_rate": 0.6849,
+      "fail": {
+        "no_gross_match": 7042,
+        "exact_multi": 1453,
+        "no_parcel_in_range": 49,
+        "lot_not_parsable": 4
+      },
+      "road": {
+        "checked": 18221,
+        "agree": 17701,
+        "agree_rate": 0.9715,
+        "rival_same_rate": 0.1786,
+        "rival_rows": 2048,
+        "model_corrected": 0.9653
+      },
+      "approve": {
+        "checked": 17974,
+        "agree": 17248,
+        "agree_rate": 0.9596,
+        "rival_same_rate": 0.3446,
+        "rival_rows": 2113,
+        "model_corrected": 0.9384
+      },
+      "land_a1": {
+        "checked": 16275,
+        "agree": 15006,
+        "agree_rate": 0.922
+      },
+      "tier": {
+        "A1": 16447,
+        "A2": 2131
+      },
+      "register": {
+        "일반": 18501,
+        "동률": 59,
+        "집합": 16,
+        "변경": 2
+      },
+      "n_snapshots": {
+        "1": 18578
+      },
+      "n_exact_ge2": 2131
+    },
+    "28|비주거": {
+      "eligible": 8226,
+      "linked": 6016,
+      "link_rate": 0.7313,
+      "fail": {
+        "no_gross_match": 1388,
+        "no_parcel_in_range": 574,
+        "exact_multi": 242,
+        "lot_not_parsable": 5,
+        "snapshot_conflict": 1
+      },
+      "road": {
+        "checked": 5720,
+        "agree": 5680,
+        "agree_rate": 0.993,
+        "rival_same_rate": 0.3984,
+        "rival_rows": 293,
+        "model_corrected": 0.9884
+      },
+      "approve": {
+        "checked": 5264,
+        "agree": 5217,
+        "agree_rate": 0.9911,
+        "rival_same_rate": 0.4999,
+        "rival_rows": 289,
+        "model_corrected": 0.9821
+      },
+      "land_a1": {
+        "checked": 4174,
+        "agree": 3627,
+        "agree_rate": 0.869
+      },
+      "tier": {
+        "A1": 5702,
+        "A2": 314
+      },
+      "register": {
+        "일반": 5960,
+        "동률": 46,
+        "변경": 6,
+        "집합": 4
+      },
+      "n_snapshots": {
+        "1": 6016
+      },
+      "n_exact_ge2": 314
+    },
+    "28|주거": {
+      "eligible": 16027,
+      "linked": 11361,
+      "link_rate": 0.7089,
+      "fail": {
+        "no_gross_match": 2383,
+        "no_parcel_in_range": 1299,
+        "exact_multi": 975,
+        "lot_not_parsable": 9
+      },
+      "road": {
+        "checked": 11043,
+        "agree": 10801,
+        "agree_rate": 0.9781,
+        "rival_same_rate": 0.4772,
+        "rival_rows": 1335,
+        "model_corrected": 0.9581
+      },
+      "approve": {
+        "checked": 10200,
+        "agree": 9549,
+        "agree_rate": 0.9362,
+        "rival_same_rate": 0.6731,
+        "rival_rows": 1163,
+        "model_corrected": 0.8048
+      },
+      "land_a1": {
+        "checked": 9815,
+        "agree": 8747,
+        "agree_rate": 0.8912
+      },
+      "tier": {
+        "A1": 9958,
+        "A2": 1403
+      },
+      "register": {
+        "일반": 11266,
+        "동률": 87,
+        "집합": 8
+      },
+      "n_snapshots": {
+        "1": 11361
+      },
+      "n_exact_ge2": 1403
+    },
+    "30|비주거": {
+      "eligible": 4467,
+      "linked": 3303,
+      "link_rate": 0.7394,
+      "fail": {
+        "no_gross_match": 1119,
+        "exact_multi": 40,
+        "no_parcel_in_range": 4,
+        "lot_not_parsable": 1
+      },
+      "road": {
+        "checked": 3154,
+        "agree": 3132,
+        "agree_rate": 0.993,
+        "rival_same_rate": 0.234,
+        "rival_rows": 73,
+        "model_corrected": 0.9909
+      },
+      "approve": {
+        "checked": 3122,
+        "agree": 3074,
+        "agree_rate": 0.9846,
+        "rival_same_rate": 0.3024,
+        "rival_rows": 76,
+        "model_corrected": 0.978
+      },
+      "land_a1": {
+        "checked": 2944,
+        "agree": 2599,
+        "agree_rate": 0.8828
+      },
+      "tier": {
+        "A1": 3225,
+        "A2": 78
+      },
+      "register": {
+        "일반": 3280,
+        "동률": 22,
+        "변경": 1
+      },
+      "n_snapshots": {
+        "1": 3303
+      },
+      "n_exact_ge2": 78
+    },
+    "30|주거": {
+      "eligible": 14421,
+      "linked": 10767,
+      "link_rate": 0.7466,
+      "fail": {
+        "no_gross_match": 3073,
+        "exact_multi": 569,
+        "no_parcel_in_range": 10,
+        "lot_not_parsable": 2
+      },
+      "road": {
+        "checked": 10620,
+        "agree": 10425,
+        "agree_rate": 0.9816,
+        "rival_same_rate": 0.3905,
+        "rival_rows": 953,
+        "model_corrected": 0.9699
+      },
+      "approve": {
+        "checked": 10588,
+        "agree": 10296,
+        "agree_rate": 0.9724,
+        "rival_same_rate": 0.5412,
+        "rival_rows": 970,
+        "model_corrected": 0.9399
+      },
+      "land_a1": {
+        "checked": 9709,
+        "agree": 9051,
+        "agree_rate": 0.9322
+      },
+      "tier": {
+        "A1": 9782,
+        "A2": 985
+      },
+      "register": {
+        "일반": 10731,
+        "동률": 32,
+        "집합": 4
+      },
+      "n_snapshots": {
+        "1": 10767
+      },
+      "n_exact_ge2": 985
+    },
+    "31|비주거": {
+      "eligible": 3065,
+      "linked": 2147,
+      "link_rate": 0.7005,
+      "fail": {
+        "no_gross_match": 872,
+        "exact_multi": 40,
+        "no_parcel_in_range": 4,
+        "lot_not_parsable": 2
+      },
+      "road": {
+        "checked": 2014,
+        "agree": 1995,
+        "agree_rate": 0.9906,
+        "rival_same_rate": 0.3435,
+        "rival_rows": 69,
+        "model_corrected": 0.9856
+      },
+      "approve": {
+        "checked": 2023,
+        "agree": 2002,
+        "agree_rate": 0.9896,
+        "rival_same_rate": 0.4066,
+        "rival_rows": 71,
+        "model_corrected": 0.9825
+      },
+      "land_a1": {
+        "checked": 1726,
+        "agree": 1528,
+        "agree_rate": 0.8853
+      },
+      "tier": {
+        "A1": 2075,
+        "A2": 72
+      },
+      "register": {
+        "일반": 2135,
+        "동률": 10,
+        "집합": 1,
+        "변경": 1
+      },
+      "n_snapshots": {
+        "1": 2147
+      },
+      "n_exact_ge2": 72
+    },
+    "31|주거": {
+      "eligible": 8567,
+      "linked": 6242,
+      "link_rate": 0.7286,
+      "fail": {
+        "no_gross_match": 2013,
+        "exact_multi": 279,
+        "no_parcel_in_range": 28,
+        "lot_not_parsable": 5
+      },
+      "road": {
+        "checked": 6145,
+        "agree": 6025,
+        "agree_rate": 0.9805,
+        "rival_same_rate": 0.3162,
+        "rival_rows": 402,
+        "model_corrected": 0.9714
+      },
+      "approve": {
+        "checked": 6028,
+        "agree": 5810,
+        "agree_rate": 0.9638,
+        "rival_same_rate": 0.4547,
+        "rival_rows": 385,
+        "model_corrected": 0.9337
+      },
+      "land_a1": {
+        "checked": 5790,
+        "agree": 5401,
+        "agree_rate": 0.9328
+      },
+      "tier": {
+        "A1": 5834,
+        "A2": 408
+      },
+      "register": {
+        "일반": 6230,
+        "동률": 7,
+        "집합": 5
+      },
+      "n_snapshots": {
+        "1": 6242
+      },
+      "n_exact_ge2": 408
+    },
+    "36|비주거": {
+      "eligible": 579,
+      "linked": 420,
+      "link_rate": 0.7254,
+      "fail": {
+        "no_gross_match": 141,
+        "exact_multi": 16,
+        "lot_not_parsable": 1,
+        "no_parcel_in_range": 1
+      },
+      "road": {
+        "checked": 374,
+        "agree": 372,
+        "agree_rate": 0.9947,
+        "rival_same_rate": 0.77,
+        "rival_rows": 10,
+        "model_corrected": 0.9767
+      },
+      "approve": {
+        "checked": 362,
+        "agree": 358,
+        "agree_rate": 0.989,
+        "rival_same_rate": 0.6364,
+        "rival_rows": 11,
+        "model_corrected": 0.9696
+      },
+      "land_a1": {
+        "checked": 286,
+        "agree": 246,
+        "agree_rate": 0.8601
+      },
+      "tier": {
+        "A1": 409,
+        "A2": 11
+      },
+      "register": {
+        "일반": 418,
+        "동률": 2
+      },
+      "n_snapshots": {
+        "1": 420
+      },
+      "n_exact_ge2": 11
+    },
+    "36|주거": {
+      "eligible": 1292,
+      "linked": 983,
+      "link_rate": 0.7608,
+      "fail": {
+        "no_gross_match": 220,
+        "exact_multi": 88,
+        "no_parcel_in_range": 1
+      },
+      "road": {
+        "checked": 942,
+        "agree": 930,
+        "agree_rate": 0.9873,
+        "rival_same_rate": 0.817,
+        "rival_rows": 73,
+        "model_corrected": 0.9304
+      },
+      "approve": {
+        "checked": 946,
+        "agree": 872,
+        "agree_rate": 0.9218,
+        "rival_same_rate": 0.8158,
+        "rival_rows": 76,
+        "model_corrected": 0.5754
+      },
+      "land_a1": {
+        "checked": 894,
+        "agree": 810,
+        "agree_rate": 0.906
+      },
+      "tier": {
+        "A1": 905,
+        "A2": 78
+      },
+      "register": {
+        "일반": 979,
+        "동률": 4
+      },
+      "n_snapshots": {
+        "1": 983
+      },
+      "n_exact_ge2": 78
+    },
+    "41|비주거": {
+      "eligible": 46833,
+      "linked": 31563,
+      "link_rate": 0.6739,
+      "fail": {
+        "no_gross_match": 12155,
+        "exact_multi": 2268,
+        "no_parcel_in_range": 826,
+        "lot_not_parsable": 21
+      },
+      "road": {
+        "checked": 28989,
+        "agree": 28683,
+        "agree_rate": 0.9894,
+        "rival_same_rate": 0.5817,
+        "rival_rows": 2555,
+        "model_corrected": 0.9748
+      },
+      "approve": {
+        "checked": 26951,
+        "agree": 26542,
+        "agree_rate": 0.9848,
+        "rival_same_rate": 0.4482,
+        "rival_rows": 2605,
+        "model_corrected": 0.9725
+      },
+      "land_a1": {
+        "checked": 17712,
+        "agree": 14895,
+        "agree_rate": 0.841
+      },
+      "tier": {
+        "A1": 28917,
+        "A2": 2646
+      },
+      "register": {
+        "일반": 31123,
+        "동률": 411,
+        "집합": 20,
+        "변경": 9
+      },
+      "n_snapshots": {
+        "1": 31563
+      },
+      "n_exact_ge2": 2646
+    },
+    "41|주거": {
+      "eligible": 71325,
+      "linked": 55675,
+      "link_rate": 0.7806,
+      "fail": {
+        "no_gross_match": 11020,
+        "exact_multi": 4138,
+        "no_parcel_in_range": 436,
+        "lot_not_parsable": 56
+      },
+      "road": {
+        "checked": 54882,
+        "agree": 54311,
+        "agree_rate": 0.9896,
+        "rival_same_rate": 0.5473,
+        "rival_rows": 4746,
+        "model_corrected": 0.977
+      },
+      "approve": {
+        "checked": 51253,
+        "agree": 49110,
+        "agree_rate": 0.9582,
+        "rival_same_rate": 0.624,
+        "rival_rows": 4655,
+        "model_corrected": 0.8888
+      },
+      "land_a1": {
+        "checked": 49968,
+        "agree": 45376,
+        "agree_rate": 0.9081
+      },
+      "tier": {
+        "A1": 50824,
+        "A2": 4851
+      },
+      "register": {
+        "일반": 55310,
+        "동률": 274,
+        "집합": 85,
+        "변경": 6
+      },
+      "n_snapshots": {
+        "1": 55675
+      },
+      "n_exact_ge2": 4851
+    },
+    "43|비주거": {
+      "eligible": 8083,
+      "linked": 6161,
+      "link_rate": 0.7622,
+      "fail": {
+        "no_gross_match": 1691,
+        "no_bjd_code": 101,
+        "exact_multi": 96,
+        "no_parcel_in_range": 24,
+        "lot_not_parsable": 10
+      },
+      "road": {
+        "checked": 5598,
+        "agree": 5526,
+        "agree_rate": 0.9871,
+        "rival_same_rate": 0.5447,
+        "rival_rows": 194,
+        "model_corrected": 0.9718
+      },
+      "approve": {
+        "checked": 5614,
+        "agree": 5539,
+        "agree_rate": 0.9866,
+        "rival_same_rate": 0.4951,
+        "rival_rows": 207,
+        "model_corrected": 0.9735
+      },
+      "land_a1": {
+        "checked": 4191,
+        "agree": 3658,
+        "agree_rate": 0.8728
+      },
+      "tier": {
+        "A1": 5949,
+        "A2": 212
+      },
+      "register": {
+        "일반": 6133,
+        "동률": 25,
+        "집합": 2,
+        "변경": 1
+      },
+      "n_snapshots": {
+        "1": 6161
+      },
+      "n_exact_ge2": 212
+    },
+    "43|주거": {
+      "eligible": 27658,
+      "linked": 23206,
+      "link_rate": 0.839,
+      "fail": {
+        "no_gross_match": 3212,
+        "exact_multi": 1088,
+        "no_bjd_code": 103,
+        "no_parcel_in_range": 26,
+        "lot_not_parsable": 21,
+        "snapshot_conflict": 2
+      },
+      "road": {
+        "checked": 22479,
+        "agree": 22267,
+        "agree_rate": 0.9906,
+        "rival_same_rate": 0.5184,
+        "rival_rows": 1615,
+        "model_corrected": 0.9804
+      },
+      "approve": {
+        "checked": 21380,
+        "agree": 20906,
+        "agree_rate": 0.9778,
+        "rival_same_rate": 0.6224,
+        "rival_rows": 1615,
+        "model_corrected": 0.9413
+      },
+      "land_a1": {
+        "checked": 21223,
+        "agree": 19470,
+        "agree_rate": 0.9174
+      },
+      "tier": {
+        "A1": 21516,
+        "A2": 1690
+      },
+      "register": {
+        "일반": 23164,
+        "동률": 39,
+        "집합": 2,
+        "변경": 1
+      },
+      "n_snapshots": {
+        "1": 23206
+      },
+      "n_exact_ge2": 1690
+    },
+    "44|비주거": {
+      "eligible": 10227,
+      "linked": 7923,
+      "link_rate": 0.7747,
+      "fail": {
+        "no_gross_match": 2069,
+        "exact_multi": 217,
+        "lot_not_parsable": 13,
+        "no_parcel_in_range": 5
+      },
+      "road": {
+        "checked": 7021,
+        "agree": 6992,
+        "agree_rate": 0.9959,
+        "rival_same_rate": 0.5792,
+        "rival_rows": 265,
+        "model_corrected": 0.9902
+      },
+      "approve": {
+        "checked": 7246,
+        "agree": 7155,
+        "agree_rate": 0.9874,
+        "rival_same_rate": 0.5051,
+        "rival_rows": 280,
+        "model_corrected": 0.9746
+      },
+      "land_a1": {
+        "checked": 5191,
+        "agree": 4481,
+        "agree_rate": 0.8632
+      },
+      "tier": {
+        "A1": 7629,
+        "A2": 294
+      },
+      "register": {
+        "일반": 7847,
+        "동률": 70,
+        "집합": 5,
+        "변경": 1
+      },
+      "n_snapshots": {
+        "1": 7923
+      },
+      "n_exact_ge2": 294
+    },
+    "44|주거": {
+      "eligible": 31299,
+      "linked": 24617,
+      "link_rate": 0.7865,
+      "fail": {
+        "no_gross_match": 4914,
+        "exact_multi": 1670,
+        "no_parcel_in_range": 52,
+        "lot_not_parsable": 45,
+        "snapshot_conflict": 1
+      },
+      "road": {
+        "checked": 23968,
+        "agree": 23747,
+        "agree_rate": 0.9908,
+        "rival_same_rate": 0.7075,
+        "rival_rows": 2166,
+        "model_corrected": 0.9685
+      },
+      "approve": {
+        "checked": 23095,
+        "agree": 22014,
+        "agree_rate": 0.9532,
+        "rival_same_rate": 0.6652,
+        "rival_rows": 2219,
+        "model_corrected": 0.8602
+      },
+      "land_a1": {
+        "checked": 21603,
+        "agree": 19492,
+        "agree_rate": 0.9023
+      },
+      "tier": {
+        "A1": 22275,
+        "A2": 2342
+      },
+      "register": {
+        "일반": 24529,
+        "동률": 88
+      },
+      "n_snapshots": {
+        "1": 24617
+      },
+      "n_exact_ge2": 2342
+    },
+    "47|비주거": {
+      "eligible": 14998,
+      "linked": 11642,
+      "link_rate": 0.7762,
+      "fail": {
+        "no_gross_match": 2970,
+        "exact_multi": 349,
+        "lot_not_parsable": 30,
+        "no_parcel_in_range": 7
+      },
+      "road": {
+        "checked": 10279,
+        "agree": 10214,
+        "agree_rate": 0.9937,
+        "rival_same_rate": 0.5681,
+        "rival_rows": 426,
+        "model_corrected": 0.9854
+      },
+      "approve": {
+        "checked": 10753,
+        "agree": 10625,
+        "agree_rate": 0.9881,
+        "rival_same_rate": 0.4925,
+        "rival_rows": 474,
+        "model_corrected": 0.9765
+      },
+      "land_a1": {
+        "checked": 7053,
+        "agree": 6132,
+        "agree_rate": 0.8694
+      },
+      "tier": {
+        "A1": 11156,
+        "A2": 486
+      },
+      "register": {
+        "일반": 11580,
+        "동률": 59,
+        "집합": 2,
+        "변경": 1
+      },
+      "n_snapshots": {
+        "1": 11642
+      },
+      "n_exact_ge2": 486
+    },
+    "47|주거": {
+      "eligible": 43755,
+      "linked": 36959,
+      "link_rate": 0.8447,
+      "fail": {
+        "no_gross_match": 4592,
+        "exact_multi": 2165,
+        "lot_not_parsable": 21,
+        "no_parcel_in_range": 17,
+        "snapshot_conflict": 1
+      },
+      "road": {
+        "checked": 35512,
+        "agree": 35253,
+        "agree_rate": 0.9927,
+        "rival_same_rate": 0.5501,
+        "rival_rows": 2845,
+        "model_corrected": 0.9838
+      },
+      "approve": {
+        "checked": 35029,
+        "agree": 34116,
+        "agree_rate": 0.9739,
+        "rival_same_rate": 0.4899,
+        "rival_rows": 2909,
+        "model_corrected": 0.9489
+      },
+      "land_a1": {
+        "checked": 32958,
+        "agree": 29955,
+        "agree_rate": 0.9089
+      },
+      "tier": {
+        "A1": 33843,
+        "A2": 3116
+      },
+      "register": {
+        "일반": 36854,
+        "동률": 100,
+        "집합": 5
+      },
+      "n_snapshots": {
+        "1": 36959
+      },
+      "n_exact_ge2": 3116
+    },
+    "48|비주거": {
+      "eligible": 13870,
+      "linked": 10630,
+      "link_rate": 0.7664,
+      "fail": {
+        "no_gross_match": 2962,
+        "exact_multi": 252,
+        "lot_not_parsable": 21,
+        "no_parcel_in_range": 3,
+        "snapshot_conflict": 2
+      },
+      "road": {
+        "checked": 9599,
+        "agree": 9542,
+        "agree_rate": 0.9941,
+        "rival_same_rate": 0.4839,
+        "rival_rows": 260,
+        "model_corrected": 0.9885
+      },
+      "approve": {
+        "checked": 9612,
+        "agree": 9525,
+        "agree_rate": 0.9909,
+        "rival_same_rate": 0.4019,
+        "rival_rows": 263,
+        "model_corrected": 0.9849
+      },
+      "land_a1": {
+        "checked": 5947,
+        "agree": 5200,
+        "agree_rate": 0.8744
+      },
+      "tier": {
+        "A1": 10350,
+        "A2": 280
+      },
+      "register": {
+        "일반": 10561,
+        "동률": 66,
+        "변경": 2,
+        "집합": 1
+      },
+      "n_snapshots": {
+        "1": 10630
+      },
+      "n_exact_ge2": 280
+    },
+    "48|주거": {
+      "eligible": 42337,
+      "linked": 33972,
+      "link_rate": 0.8024,
+      "fail": {
+        "no_gross_match": 6551,
+        "exact_multi": 1776,
+        "lot_not_parsable": 27,
+        "no_parcel_in_range": 9,
+        "snapshot_conflict": 2
+      },
+      "road": {
+        "checked": 33103,
+        "agree": 32641,
+        "agree_rate": 0.986,
+        "rival_same_rate": 0.4884,
+        "rival_rows": 3204,
+        "model_corrected": 0.9727
+      },
+      "approve": {
+        "checked": 31868,
+        "agree": 30859,
+        "agree_rate": 0.9683,
+        "rival_same_rate": 0.4039,
+        "rival_rows": 3231,
+        "model_corrected": 0.9469
+      },
+      "land_a1": {
+        "checked": 30002,
+        "agree": 27108,
+        "agree_rate": 0.9035
+      },
+      "tier": {
+        "A1": 30515,
+        "A2": 3457
+      },
+      "register": {
+        "일반": 33866,
+        "동률": 103,
+        "집합": 3
+      },
+      "n_snapshots": {
+        "1": 33972
+      },
+      "n_exact_ge2": 3457
+    },
+    "50|비주거": {
+      "eligible": 2250,
+      "linked": 1678,
+      "link_rate": 0.7458,
+      "fail": {
+        "no_gross_match": 415,
+        "exact_multi": 149,
+        "lot_not_parsable": 8
+      },
+      "road": {
+        "checked": 1556,
+        "agree": 1539,
+        "agree_rate": 0.9891,
+        "rival_same_rate": 0.2602,
+        "rival_rows": 102,
+        "model_corrected": 0.9852
+      },
+      "approve": {
+        "checked": 1505,
+        "agree": 1479,
+        "agree_rate": 0.9827,
+        "rival_same_rate": 0.1951,
+        "rival_rows": 105,
+        "model_corrected": 0.9785
+      },
+      "land_a1": {
+        "checked": 1135,
+        "agree": 987,
+        "agree_rate": 0.8696
+      },
+      "tier": {
+        "A1": 1563,
+        "A2": 115
+      },
+      "register": {
+        "일반": 1650,
+        "동률": 27,
+        "집합": 1
+      },
+      "n_snapshots": {
+        "1": 1678
+      },
+      "n_exact_ge2": 115
+    },
+    "50|주거": {
+      "eligible": 10057,
+      "linked": 7569,
+      "link_rate": 0.7526,
+      "fail": {
+        "exact_multi": 1268,
+        "no_gross_match": 1213,
+        "lot_not_parsable": 6,
+        "no_parcel_in_range": 1
+      },
+      "road": {
+        "checked": 7476,
+        "agree": 7396,
+        "agree_rate": 0.9893,
+        "rival_same_rate": 0.5365,
+        "rival_rows": 1238,
+        "model_corrected": 0.9769
+      },
+      "approve": {
+        "checked": 6846,
+        "agree": 6419,
+        "agree_rate": 0.9376,
+        "rival_same_rate": 0.5689,
+        "rival_rows": 1137,
+        "model_corrected": 0.8553
+      },
+      "land_a1": {
+        "checked": 6150,
+        "agree": 4790,
+        "agree_rate": 0.7789
+      },
+      "tier": {
+        "A1": 6269,
+        "A2": 1300
+      },
+      "register": {
+        "일반": 6651,
+        "동률": 915,
+        "변경": 3
+      },
+      "n_snapshots": {
+        "1": 7569
+      },
+      "n_exact_ge2": 1300
+    },
+    "51|비주거": {
+      "eligible": 7036,
+      "linked": 5760,
+      "link_rate": 0.8186,
+      "fail": {
+        "no_gross_match": 1104,
+        "exact_multi": 160,
+        "lot_not_parsable": 10,
+        "no_parcel_in_range": 2
+      },
+      "road": {
+        "checked": 5059,
+        "agree": 5018,
+        "agree_rate": 0.9919,
+        "rival_same_rate": 0.5636,
+        "rival_rows": 239,
+        "model_corrected": 0.9814
+      },
+      "approve": {
+        "checked": 5179,
+        "agree": 5106,
+        "agree_rate": 0.9859,
+        "rival_same_rate": 0.5293,
+        "rival_rows": 233,
+        "model_corrected": 0.9701
+      },
+      "land_a1": {
+        "checked": 4365,
+        "agree": 3666,
+        "agree_rate": 0.8399
+      },
+      "tier": {
+        "A1": 5499,
+        "A2": 261
+      },
+      "register": {
+        "일반": 5689,
+        "동률": 67,
+        "집합": 2,
+        "변경": 2
+      },
+      "n_snapshots": {
+        "1": 5760
+      },
+      "n_exact_ge2": 261
+    },
+    "51|주거": {
+      "eligible": 29416,
+      "linked": 25078,
+      "link_rate": 0.8525,
+      "fail": {
+        "no_gross_match": 3057,
+        "exact_multi": 1237,
+        "lot_not_parsable": 35,
+        "no_parcel_in_range": 9
+      },
+      "road": {
+        "checked": 24309,
+        "agree": 24030,
+        "agree_rate": 0.9885,
+        "rival_same_rate": 0.6382,
+        "rival_rows": 2099,
+        "model_corrected": 0.9683
+      },
+      "approve": {
+        "checked": 22097,
+        "agree": 21426,
+        "agree_rate": 0.9696,
+        "rival_same_rate": 0.6743,
+        "rival_rows": 1875,
+        "model_corrected": 0.9068
+      },
+      "land_a1": {
+        "checked": 22457,
+        "agree": 20234,
+        "agree_rate": 0.901
+      },
+      "tier": {
+        "A1": 22870,
+        "A2": 2208
+      },
+      "register": {
+        "일반": 24986,
+        "동률": 87,
+        "집합": 4,
+        "변경": 1
+      },
+      "n_snapshots": {
+        "1": 25078
+      },
+      "n_exact_ge2": 2208
+    },
+    "52|비주거": {
+      "eligible": 9141,
+      "linked": 7019,
+      "link_rate": 0.7679,
+      "fail": {
+        "no_gross_match": 1972,
+        "exact_multi": 134,
+        "lot_not_parsable": 14,
+        "no_parcel_in_range": 2
+      },
+      "road": {
+        "checked": 6369,
+        "agree": 6326,
+        "agree_rate": 0.9932,
+        "rival_same_rate": 0.4602,
+        "rival_rows": 237,
+        "model_corrected": 0.9875
+      },
+      "approve": {
+        "checked": 6714,
+        "agree": 6624,
+        "agree_rate": 0.9866,
+        "rival_same_rate": 0.4736,
+        "rival_rows": 268,
+        "model_corrected": 0.9745
+      },
+      "land_a1": {
+        "checked": 4937,
+        "agree": 4233,
+        "agree_rate": 0.8574
+      },
+      "tier": {
+        "A1": 6748,
+        "A2": 271
+      },
+      "register": {
+        "일반": 6969,
+        "동률": 39,
+        "집합": 10,
+        "변경": 1
+      },
+      "n_snapshots": {
+        "1": 7019
+      },
+      "n_exact_ge2": 271
+    },
+    "52|주거": {
+      "eligible": 28804,
+      "linked": 23222,
+      "link_rate": 0.8062,
+      "fail": {
+        "no_gross_match": 4316,
+        "exact_multi": 1207,
+        "lot_not_parsable": 45,
+        "no_parcel_in_range": 14
+      },
+      "road": {
+        "checked": 22677,
+        "agree": 22440,
+        "agree_rate": 0.9895,
+        "rival_same_rate": 0.4882,
+        "rival_rows": 1845,
+        "model_corrected": 0.9796
+      },
+      "approve": {
+        "checked": 22163,
+        "agree": 21559,
+        "agree_rate": 0.9727,
+        "rival_same_rate": 0.5794,
+        "rival_rows": 1833,
+        "model_corrected": 0.9352
+      },
+      "land_a1": {
+        "checked": 20675,
+        "agree": 18504,
+        "agree_rate": 0.895
+      },
+      "tier": {
+        "A1": 21287,
+        "A2": 1935
+      },
+      "register": {
+        "일반": 23187,
+        "동률": 32,
+        "집합": 3
+      },
+      "n_snapshots": {
+        "1": 23222
+      },
+      "n_exact_ge2": 1935
+    }
+  },
+  "by_tier": {
+    "A1": {
+      "eligible": 463019,
+      "linked": 463019,
+      "link_rate": 1.0,
+      "fail": {},
+      "road": {
+        "checked": 444342,
+        "agree": 437641,
+        "agree_rate": 0.9849
+      },
+      "approve": {
+        "checked": 429610,
+        "agree": 415144,
+        "agree_rate": 0.9663
+      },
+      "land_a1": {
+        "checked": 421276,
+        "agree": 375189,
+        "agree_rate": 0.8906
+      },
+      "tier": {
+        "A1": 463019
+      },
+      "register": {
+        "일반": 459689,
+        "동률": 2861,
+        "집합": 373,
+        "변경": 96
+      },
+      "n_snapshots": {
+        "1": 463019
+      },
+      "n_exact_ge2": 0
+    },
+    "A2": {
+      "eligible": 44097,
+      "linked": 44097,
+      "link_rate": 1.0,
+      "fail": {},
+      "road": {
+        "checked": 42740,
+        "agree": 42092,
+        "agree_rate": 0.9848,
+        "rival_same_rate": 0.4544,
+        "rival_rows": 41541,
+        "model_corrected": 0.9722
+      },
+      "approve": {
+        "checked": 39112,
+        "agree": 37726,
+        "agree_rate": 0.9646,
+        "rival_same_rate": 0.5016,
+        "rival_rows": 40528,
+        "model_corrected": 0.9289
+      },
+      "land_a1": {
+        "checked": 0,
+        "agree": 0,
+        "agree_rate": null
+      },
+      "tier": {
+        "A2": 44097
+      },
+      "register": {
+        "일반": 43870,
+        "동률": 196,
+        "집합": 29,
+        "변경": 2
+      },
+      "n_snapshots": {
+        "1": 44097
+      },
+      "n_exact_ge2": 44097
+    }
+  },
+  "by_contract_year": {
+    "2019": {
+      "eligible": 108186,
+      "linked": 74350,
+      "link_rate": 0.6872,
+      "fail": {
+        "no_gross_match": 27846,
+        "exact_multi": 5029,
+        "no_parcel_in_range": 827,
+        "lot_not_parsable": 132,
+        "snapshot_conflict": 2
+      },
+      "road": {
+        "checked": 71532,
+        "agree": 69725,
+        "agree_rate": 0.9747,
+        "rival_same_rate": 0.4062,
+        "rival_rows": 6346,
+        "model_corrected": 0.9575
+      },
+      "approve": {
+        "checked": 68651,
+        "agree": 66016,
+        "agree_rate": 0.9616,
+        "rival_same_rate": 0.487,
+        "rival_rows": 6161,
+        "model_corrected": 0.9252
+      },
+      "land_a1": {
+        "checked": 62328,
+        "agree": 53771,
+        "agree_rate": 0.8627
+      },
+      "tier": {
+        "A1": 67654,
+        "A2": 6696
+      },
+      "register": {
+        "일반": 73857,
+        "동률": 398,
+        "집합": 86,
+        "변경": 9
+      },
+      "n_snapshots": {
+        "1": 74350
+      },
+      "n_exact_ge2": 6696
+    },
+    "2020": {
+      "eligible": 130505,
+      "linked": 91865,
+      "link_rate": 0.7039,
+      "fail": {
+        "no_gross_match": 31145,
+        "exact_multi": 6337,
+        "no_parcel_in_range": 1008,
+        "lot_not_parsable": 149,
+        "snapshot_conflict": 1
+      },
+      "road": {
+        "checked": 88541,
+        "agree": 86647,
+        "agree_rate": 0.9786,
+        "rival_same_rate": 0.418,
+        "rival_rows": 7907,
+        "model_corrected": 0.9632
+      },
+      "approve": {
+        "checked": 85395,
+        "agree": 82383,
+        "agree_rate": 0.9647,
+        "rival_same_rate": 0.4847,
+        "rival_rows": 7645,
+        "model_corrected": 0.9315
+      },
+      "land_a1": {
+        "checked": 77296,
+        "agree": 67123,
+        "agree_rate": 0.8684
+      },
+      "tier": {
+        "A1": 83524,
+        "A2": 8341
+      },
+      "register": {
+        "일반": 91188,
+        "동률": 523,
+        "집합": 147,
+        "변경": 7
+      },
+      "n_snapshots": {
+        "1": 91865
+      },
+      "n_exact_ge2": 8341
+    },
+    "2021": {
+      "eligible": 129891,
+      "linked": 95829,
+      "link_rate": 0.7378,
+      "fail": {
+        "no_gross_match": 27284,
+        "exact_multi": 5878,
+        "no_parcel_in_range": 703,
+        "lot_not_parsable": 133,
+        "no_bjd_code": 62,
+        "snapshot_conflict": 2
+      },
+      "road": {
+        "checked": 92315,
+        "agree": 90767,
+        "agree_rate": 0.9832,
+        "rival_same_rate": 0.4734,
+        "rival_rows": 7657,
+        "model_corrected": 0.9682
+      },
+      "approve": {
+        "checked": 88898,
+        "agree": 86255,
+        "agree_rate": 0.9703,
+        "rival_same_rate": 0.5267,
+        "rival_rows": 7411,
+        "model_corrected": 0.9372
+      },
+      "land_a1": {
+        "checked": 80113,
+        "agree": 70814,
+        "agree_rate": 0.8839
+      },
+      "tier": {
+        "A1": 87766,
+        "A2": 8063
+      },
+      "register": {
+        "일반": 95044,
+        "동률": 680,
+        "집합": 88,
+        "변경": 17
+      },
+      "n_snapshots": {
+        "1": 95829
+      },
+      "n_exact_ge2": 8063
+    },
+    "2022": {
+      "eligible": 80735,
+      "linked": 61696,
+      "link_rate": 0.7642,
+      "fail": {
+        "no_gross_match": 14894,
+        "exact_multi": 3718,
+        "no_parcel_in_range": 278,
+        "lot_not_parsable": 94,
+        "no_bjd_code": 54,
+        "snapshot_conflict": 1
+      },
+      "road": {
+        "checked": 59110,
+        "agree": 58302,
+        "agree_rate": 0.9863,
+        "rival_same_rate": 0.4963,
+        "rival_rows": 4917,
+        "model_corrected": 0.9729
+      },
+      "approve": {
+        "checked": 57035,
+        "agree": 55540,
+        "agree_rate": 0.9738,
+        "rival_same_rate": 0.5252,
+        "rival_rows": 4877,
+        "model_corrected": 0.9448
+      },
+      "land_a1": {
+        "checked": 51203,
+        "agree": 45395,
+        "agree_rate": 0.8866
+      },
+      "tier": {
+        "A1": 56429,
+        "A2": 5267
+      },
+      "register": {
+        "일반": 61254,
+        "동률": 392,
+        "집합": 45,
+        "변경": 5
+      },
+      "n_snapshots": {
+        "1": 61696
+      },
+      "n_exact_ge2": 5267
+    },
+    "2023": {
+      "eligible": 59302,
+      "linked": 47562,
+      "link_rate": 0.802,
+      "fail": {
+        "no_gross_match": 8665,
+        "exact_multi": 2772,
+        "no_parcel_in_range": 208,
+        "lot_not_parsable": 63,
+        "no_bjd_code": 29,
+        "snapshot_conflict": 3
+      },
+      "road": {
+        "checked": 45534,
+        "agree": 45096,
+        "agree_rate": 0.9904,
+        "rival_same_rate": 0.502,
+        "rival_rows": 3800,
+        "model_corrected": 0.9807
+      },
+      "approve": {
+        "checked": 42961,
+        "agree": 40039,
+        "agree_rate": 0.932,
+        "rival_same_rate": 0.5187,
+        "rival_rows": 3743,
+        "model_corrected": 0.8587
+      },
+      "land_a1": {
+        "checked": 39169,
+        "agree": 35302,
+        "agree_rate": 0.9013
+      },
+      "tier": {
+        "A1": 43472,
+        "A2": 4090
+      },
+      "register": {
+        "일반": 47231,
+        "동률": 307,
+        "집합": 17,
+        "변경": 7
+      },
+      "n_snapshots": {
+        "1": 47562
+      },
+      "n_exact_ge2": 4090
+    },
+    "2024": {
+      "eligible": 58973,
+      "linked": 50858,
+      "link_rate": 0.8624,
+      "fail": {
+        "no_gross_match": 5287,
+        "exact_multi": 2570,
+        "no_parcel_in_range": 155,
+        "lot_not_parsable": 60,
+        "no_bjd_code": 42,
+        "snapshot_conflict": 1
+      },
+      "road": {
+        "checked": 48706,
+        "agree": 48370,
+        "agree_rate": 0.9931,
+        "rival_same_rate": 0.4648,
+        "rival_rows": 4067,
+        "model_corrected": 0.9871
+      },
+      "approve": {
+        "checked": 46875,
+        "agree": 45591,
+        "agree_rate": 0.9726,
+        "rival_same_rate": 0.4852,
+        "rival_rows": 4023,
+        "model_corrected": 0.9468
+      },
+      "land_a1": {
+        "checked": 41775,
+        "agree": 38552,
+        "agree_rate": 0.9228
+      },
+      "tier": {
+        "A1": 46518,
+        "A2": 4340
+      },
+      "register": {
+        "일반": 50551,
+        "동률": 291,
+        "변경": 8,
+        "집합": 8
+      },
+      "n_snapshots": {
+        "1": 50858
+      },
+      "n_exact_ge2": 4340
+    },
+    "2025": {
+      "eligible": 56617,
+      "linked": 50201,
+      "link_rate": 0.8867,
+      "fail": {
+        "no_gross_match": 3746,
+        "exact_multi": 2385,
+        "no_parcel_in_range": 220,
+        "lot_not_parsable": 46,
+        "no_bjd_code": 17,
+        "snapshot_conflict": 2
+      },
+      "road": {
+        "checked": 48024,
+        "agree": 47700,
+        "agree_rate": 0.9933,
+        "rival_same_rate": 0.4652,
+        "rival_rows": 4065,
+        "model_corrected": 0.9874
+      },
+      "approve": {
+        "checked": 46487,
+        "agree": 45354,
+        "agree_rate": 0.9756,
+        "rival_same_rate": 0.4918,
+        "rival_rows": 3932,
+        "model_corrected": 0.952
+      },
+      "land_a1": {
+        "checked": 41038,
+        "agree": 38138,
+        "agree_rate": 0.9293
+      },
+      "tier": {
+        "A1": 45885,
+        "A2": 4316
+      },
+      "register": {
+        "일반": 49897,
+        "동률": 274,
+        "변경": 24,
+        "집합": 6
+      },
+      "n_snapshots": {
+        "1": 50201
+      },
+      "n_exact_ge2": 4316
+    },
+    "2026": {
+      "eligible": 39387,
+      "linked": 34755,
+      "link_rate": 0.8824,
+      "fail": {
+        "no_gross_match": 2637,
+        "exact_multi": 1780,
+        "no_parcel_in_range": 182,
+        "lot_not_parsable": 31,
+        "snapshot_conflict": 2
+      },
+      "road": {
+        "checked": 33320,
+        "agree": 33126,
+        "agree_rate": 0.9942,
+        "rival_same_rate": 0.4447,
+        "rival_rows": 2782,
+        "model_corrected": 0.9895
+      },
+      "approve": {
+        "checked": 32420,
+        "agree": 31692,
+        "agree_rate": 0.9775,
+        "rival_same_rate": 0.4868,
+        "rival_rows": 2736,
+        "model_corrected": 0.9562
+      },
+      "land_a1": {
+        "checked": 28354,
+        "agree": 26094,
+        "agree_rate": 0.9203
+      },
+      "tier": {
+        "A1": 31771,
+        "A2": 2984
+      },
+      "register": {
+        "일반": 34537,
+        "동률": 192,
+        "변경": 21,
+        "집합": 5
+      },
+      "n_snapshots": {
+        "1": 34755
+      },
+      "n_exact_ge2": 2984
+    }
+  }
+}
