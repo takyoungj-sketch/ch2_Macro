@@ -1,0 +1,18 @@
+{
+  "v2_observations": 11696,
+  "v2_canonical_relations": 11673,
+  "v2_status_by_snapshot": {
+    "2024-09|canonical_address": 3832,
+    "2024-09|unknown_land_type": 18,
+    "2025-07|canonical_address": 3930,
+    "2025-07|unknown_land_type": 3,
+    "2026-07|canonical_address": 3911,
+    "2026-07|unknown_land_type": 2
+  },
+  "replay": {
+    "status_match": 11696,
+    "pnu_match": 11696
+  },
+  "raw_field_mismatch": {},
+  "pass": true
+}

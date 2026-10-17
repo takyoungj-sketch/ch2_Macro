@@ -1,0 +1,161 @@
+{
+  "rule": "building-ledger-v1 / cheongju-source-identity-v2.1 (national)",
+  "sources": [
+    {
+      "kind": "summary",
+      "snapshot": "2024-09",
+      "file": "국토교통부_건축물대장_총괄표제부+(2024년+09월)/mart_djy_02.txt",
+      "bytes": 214243852,
+      "sha256": "1c1149e06248fcedb4bec611b0cb6e287b300c29aac2817c8e54ffb8c950ea8f",
+      "rows": 607587,
+      "loaded_rows": 607587,
+      "scope": "national",
+      "stats": {
+        "identity_status": {
+          "canonical_address": 606011,
+          "unknown_land_type": 1569,
+          "invalid_sub_lot": 6,
+          "invalid_district": 1
+        },
+        "column_counts": {
+          "65": 607587
+        },
+        "canonical_with_zero_main_lot": 967,
+        "seconds": 5.6
+      }
+    },
+    {
+      "kind": "summary",
+      "snapshot": "2025-07",
+      "file": "국토교통부_건축물대장_총괄표제부+(2025년+07월)/mart_djy_02.txt",
+      "bytes": 218037240,
+      "sha256": "e1b2c07dc8e447f017b9c07d9b1dca1a40cc77659512c904b56d93bc2d27c46f",
+      "rows": 616909,
+      "loaded_rows": 616909,
+      "scope": "national",
+      "stats": {
+        "identity_status": {
+          "canonical_address": 615351,
+          "unknown_land_type": 1551,
+          "invalid_sub_lot": 6,
+          "invalid_district": 1
+        },
+        "column_counts": {
+          "64": 616909
+        },
+        "canonical_with_zero_main_lot": 970,
+        "seconds": 6.3
+      }
+    },
+    {
+      "kind": "summary",
+      "snapshot": "2026-07",
+      "file": "국토교통부_건축물대장_총괄표제부+(2026년+07월)/mart_djy_02.txt",
+      "bytes": 221666274,
+      "sha256": "bf8146fd9393426569fd2b53e975aff877427ca84415d43bcc4c9d5529a18d7a",
+      "rows": 620535,
+      "loaded_rows": 620535,
+      "scope": "national",
+      "stats": {
+        "identity_status": {
+          "canonical_address": 619017,
+          "unknown_land_type": 1510,
+          "invalid_sub_lot": 7,
+          "invalid_district": 1
+        },
+        "column_counts": {
+          "64": 620535
+        },
+        "canonical_with_zero_main_lot": 971,
+        "seconds": 5.9
+      }
+    },
+    {
+      "kind": "title",
+      "snapshot": "2024-09",
+      "file": "국토교통부_건축물대장_표제부+(2024년+09월)/mart_djy_03.txt",
+      "bytes": 3628263011,
+      "sha256": "77b1d88d0ce4a3462c13d519ab389b3d38bbb348582ef6485949b317b4e4959c",
+      "rows": 7863889,
+      "loaded_rows": 7863889,
+      "scope": "national",
+      "stats": {
+        "identity_status": {
+          "canonical_address": 7825947,
+          "unknown_land_type": 37935,
+          "invalid_bjd": 4,
+          "invalid_sub_lot": 2,
+          "invalid_district": 1
+        },
+        "column_counts": {
+          "76": 7863889
+        },
+        "canonical_with_zero_main_lot": 16247,
+        "seconds": 124.0
+      }
+    },
+    {
+      "kind": "title",
+      "snapshot": "2025-07",
+      "file": "국토교통부_건축물대장_표제부+(2025년+07월)/mart_djy_03.txt",
+      "bytes": 3755874423,
+      "sha256": "a89073dc6b7089d86257a3c5f87f8e17e13e4354ef22ebe507049b2084317760",
+      "rows": 8036702,
+      "loaded_rows": 8036702,
+      "scope": "national",
+      "stats": {
+        "identity_status": {
+          "canonical_address": 7998654,
+          "unknown_land_type": 38029,
+          "invalid_sub_lot": 14,
+          "invalid_bjd": 4,
+          "invalid_district": 1
+        },
+        "column_counts": {
+          "77": 8036702
+        },
+        "canonical_with_zero_main_lot": 16352,
+        "seconds": 134.4
+      }
+    },
+    {
+      "kind": "title",
+      "snapshot": "2026-07",
+      "file": "국토교통부_건축물대장_표제부+(2026년+07월)/mart_djy_03.txt",
+      "bytes": 3803104062,
+      "sha256": "42abc5ed87e16419c477b78cfbb5a4b375e56604d9133be2acec067b35787247",
+      "rows": 8060932,
+      "loaded_rows": 8060932,
+      "scope": "national",
+      "stats": {
+        "identity_status": {
+          "canonical_address": 8023442,
+          "unknown_land_type": 37468,
+          "invalid_sub_lot": 17,
+          "invalid_bjd": 4,
+          "invalid_district": 1
+        },
+        "column_counts": {
+          "77": 8060932
+        },
+        "canonical_with_zero_main_lot": 16439,
+        "seconds": 154.7
+      }
+    }
+  ],
+  "tables": {
+    "title": {
+      "versions": 17262992,
+      "observations": 23961523,
+      "buildings": 8172420,
+      "orphan_observations": 0
+    },
+    "summary": {
+      "versions": 1329785,
+      "observations": 1845031,
+      "buildings": 631730,
+      "orphan_observations": 0
+    }
+  },
+  "db_bytes": 15131811840
+}
