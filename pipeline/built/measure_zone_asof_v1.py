@@ -83,23 +83,36 @@ def classify(b: dict, year: int, month: int) -> dict:
     if same:
         v = one(same[-1])
         if v is None:
-            return {"status": "unknown", "why": "base_has_two_zones", "obs": [same[-1][0]]}
-        return {"status": "observed", "zone": v[0], "zone2": v[1], "obs": [same[-1][0]]}
+            return {"status": "unknown", "why": "base_has_two_zones", "obs": [same[-1]]}
+        return {"status": "observed", "zone": v[0], "zone2": v[1], "obs": [same[-1]]}
     before = sorted(k for k in b if k[0] == year - 1)
     after = sorted(k for k in b if (k[0] == year and k[1] > month) or k[0] == year + 1)
     vb = one(before[-1]) if before else None
     va = one(after[0]) if after else None
     if before and after:
         if vb and va and vb[0] == va[0]:
-            return {"status": "estimated", "zone": vb[0], "zone2": vb[1], "obs": [before[-1][0], after[0][0]]}
-        return {"status": "unknown", "why": "changed_around_contract", "obs": [before[-1][0], after[0][0]]}
+            return {"status": "estimated", "zone": vb[0], "zone2": vb[1], "obs": [before[-1], after[0]]}
+        return {"status": "unknown", "why": "changed_around_contract", "obs": [before[-1], after[0]]}
     if before and vb:
-        return {"status": "adjacent_before", "zone": vb[0], "zone2": vb[1], "obs": [before[-1][0]]}
+        return {"status": "adjacent_before", "zone": vb[0], "zone2": vb[1], "obs": [before[-1]]}
     if after and va:
-        return {"status": "adjacent_after", "zone": va[0], "zone2": va[1], "obs": [after[0][0]]}
+        return {"status": "adjacent_after", "zone": va[0], "zone2": va[1], "obs": [after[0]]}
     if min(b)[0] > year + 1:
         return {"status": "unknown", "why": "code_newer_than_contract"}
     return {"status": "unknown", "why": "no_base_within_a_year"}
+
+
+def next_base_check(b: dict, used: tuple[int, int], zone: str) -> str:
+    """Does the zone hold until the next base date? If not, the contract may fall after a change."""
+    later = sorted(k for k in b if k > used)
+    if not later:
+        return "no_next_base"
+    zones = {v[0] for v in b[later[0]]}
+    return "next_base_same" if zones == {zone} else "next_base_differs"
+
+
+def history(b: dict) -> str:
+    return ";".join(f"{y}{m:02d}:{'/'.join(sorted({v[0] for v in b[(y, m)]}))}" for y, m in sorted(b))
 
 
 def latest(b: dict) -> tuple[int, str] | None:
@@ -153,9 +166,13 @@ def main() -> None:
         tags = [f"status:{c['status']}"]
         if c["status"] == "unknown":
             tags.append(f"unknown:{c['why']}")
+        stability = None
         if label:
-            obs_gap = int(r.contract_year) - c["obs"][0]
+            obs_gap = int(r.contract_year) - c["obs"][0][0]
             tags.append(f"obs_year_minus_contract:{-obs_gap}")
+            if c["status"] != "adjacent_after":
+                stability = next_base_check(b, c["obs"][0], c["zone"])
+                tags.append(f"stability:{stability}")
             if labels2.get(c.get("zone2") or "", ""):
                 tags.append("zone2:present")
             if latest_label:
@@ -178,10 +195,18 @@ def main() -> None:
             for t in tags:
                 groups[key][t.split(":")[0]][t.split(":", 1)[1]] += 1
         total[c["status"]] += 1
-        rows.append((r.transaction_hash, c["status"], c.get("why"), c.get("zone"), (c.get("obs") or [None])[0],
-                     (c.get("obs") or [None, None])[-1], lt[0] if lt else None, lt[1] if lt else None))
-    pd.DataFrame(rows, columns=["transaction_hash", "status", "why", "zone1_code", "obs_year_first",
-                                "obs_year_last", "latest_year", "latest_zone1_code"]).to_pickle(OUT_ROWS)
+        obs = c.get("obs") or []
+        keep_history = c["status"] == "unknown" or stability == "next_base_differs"
+        rows.append((
+            r.transaction_hash, int(r.contract_year), int(r.contract_month or 0), c["status"], c.get("why"),
+            c.get("zone"), f"{obs[0][0]}-{obs[0][1]:02d}-01" if obs else None,
+            f"{obs[-1][0]}-{obs[-1][1]:02d}-01" if len(obs) > 1 else None, stability,
+            lt[0] if lt else None, lt[1] if lt else None, history(b) if keep_history else None,
+        ))
+    pd.DataFrame(rows, columns=[
+        "transaction_hash", "contract_year", "contract_month", "status", "why", "zone1_code", "base_date",
+        "base_date_after", "stability", "latest_year", "latest_zone1_code", "base_history",
+    ]).to_pickle(OUT_ROWS)
     report = {
         "rows": int(len(df)),
         "note": "base year = land trait 기준연도, not the date a zone changed",
