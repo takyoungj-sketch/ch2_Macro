@@ -1,0 +1,831 @@
+{
+  "run_date": "2026-10-17",
+  "land_asof_nearest_overall": {
+    "2024-09": "2024-08-02",
+    "2025-07": "2025-08-06",
+    "2026-07": "2026-07-20"
+  },
+  "land_slim_has_sido_12": false,
+  "results": {
+    "title|2024-09": {
+      "observations": 7863889,
+      "not_converted": {
+        "invalid_bjd": 4,
+        "invalid_district": 1,
+        "invalid_sub_lot": 2,
+        "unknown_land_type": 37935
+      },
+      "totals": {
+        "buildings_near_asof": 7377425,
+        "pnu_near_asof": 5498615,
+        "buildings_absent": 386267,
+        "pnu_absent": 263242,
+        "buildings_other_asof_only": 62255,
+        "pnu_other_asof_only": 42753,
+        "zero_main_lot_absent": 16247
+      },
+      "near_rate_of_all": 0.93814,
+      "any_rate_of_all": 0.94606,
+      "by_sido": {
+        "11": {
+          "buildings_near_asof": 513018,
+          "buildings_absent": 26189,
+          "buildings_other_asof_only": 1336,
+          "near_rate": 0.9491
+        },
+        "26": {
+          "buildings_absent": 33350,
+          "buildings_near_asof": 312874,
+          "buildings_other_asof_only": 3062,
+          "near_rate": 0.8958
+        },
+        "27": {
+          "buildings_near_asof": 265960,
+          "buildings_absent": 10303,
+          "buildings_other_asof_only": 2513,
+          "near_rate": 0.954
+        },
+        "28": {
+          "buildings_near_asof": 211569,
+          "buildings_absent": 12331,
+          "buildings_other_asof_only": 2255,
+          "near_rate": 0.9355
+        },
+        "29": {
+          "buildings_absent": 6274,
+          "buildings_near_asof": 173863,
+          "buildings_other_asof_only": 1063,
+          "near_rate": 0.9595
+        },
+        "30": {
+          "buildings_near_asof": 132953,
+          "buildings_absent": 6910,
+          "buildings_other_asof_only": 790,
+          "near_rate": 0.9453
+        },
+        "31": {
+          "buildings_near_asof": 141753,
+          "buildings_absent": 4582,
+          "buildings_other_asof_only": 1420,
+          "near_rate": 0.9594
+        },
+        "36": {
+          "buildings_other_asof_only": 543,
+          "buildings_near_asof": 35714,
+          "buildings_absent": 1076,
+          "near_rate": 0.9566
+        },
+        "38": {
+          "buildings_absent": 1,
+          "near_rate": 0.0
+        },
+        "41": {
+          "buildings_near_asof": 1209443,
+          "buildings_absent": 57934,
+          "buildings_other_asof_only": 13757,
+          "near_rate": 0.944
+        },
+        "43": {
+          "buildings_near_asof": 428476,
+          "buildings_absent": 19919,
+          "buildings_other_asof_only": 3511,
+          "near_rate": 0.9482
+        },
+        "44": {
+          "buildings_absent": 47399,
+          "buildings_near_asof": 548628,
+          "buildings_other_asof_only": 4954,
+          "near_rate": 0.9129
+        },
+        "46": {
+          "buildings_near_asof": 693915,
+          "buildings_other_asof_only": 7351,
+          "buildings_absent": 30826,
+          "near_rate": 0.9479
+        },
+        "47": {
+          "buildings_near_asof": 845927,
+          "buildings_other_asof_only": 8097,
+          "buildings_absent": 42325,
+          "near_rate": 0.9437
+        },
+        "48": {
+          "buildings_near_asof": 753443,
+          "buildings_absent": 33678,
+          "buildings_other_asof_only": 6252,
+          "near_rate": 0.9497
+        },
+        "50": {
+          "buildings_absent": 9288,
+          "buildings_near_asof": 201472,
+          "buildings_other_asof_only": 965,
+          "near_rate": 0.9516
+        },
+        "51": {
+          "buildings_near_asof": 428721,
+          "buildings_other_asof_only": 3557,
+          "buildings_absent": 17071,
+          "near_rate": 0.9541
+        },
+        "52": {
+          "buildings_near_asof": 479696,
+          "buildings_absent": 25846,
+          "buildings_other_asof_only": 829,
+          "near_rate": 0.9473
+        },
+        "99": {
+          "buildings_absent": 965,
+          "near_rate": 0.0
+        }
+      }
+    },
+    "title|2025-07": {
+      "observations": 8036702,
+      "not_converted": {
+        "invalid_bjd": 4,
+        "invalid_district": 1,
+        "invalid_sub_lot": 14,
+        "unknown_land_type": 38029
+      },
+      "totals": {
+        "buildings_near_asof": 7550531,
+        "pnu_near_asof": 5632576,
+        "buildings_absent": 385616,
+        "pnu_absent": 262403,
+        "buildings_other_asof_only": 62507,
+        "pnu_other_asof_only": 43760,
+        "zero_main_lot_absent": 16352
+      },
+      "near_rate_of_all": 0.93951,
+      "any_rate_of_all": 0.94728,
+      "by_sido": {
+        "11": {
+          "buildings_near_asof": 560898,
+          "buildings_absent": 25987,
+          "buildings_other_asof_only": 1482,
+          "near_rate": 0.9533
+        },
+        "26": {
+          "buildings_absent": 33362,
+          "buildings_near_asof": 320056,
+          "buildings_other_asof_only": 3496,
+          "near_rate": 0.8967
+        },
+        "27": {
+          "buildings_near_asof": 268465,
+          "buildings_absent": 10268,
+          "buildings_other_asof_only": 2235,
+          "near_rate": 0.9555
+        },
+        "28": {
+          "buildings_near_asof": 216886,
+          "buildings_absent": 12329,
+          "buildings_other_asof_only": 2213,
+          "near_rate": 0.9372
+        },
+        "29": {
+          "buildings_absent": 6249,
+          "buildings_near_asof": 179014,
+          "buildings_other_asof_only": 1153,
+          "near_rate": 0.9603
+        },
+        "30": {
+          "buildings_near_asof": 134755,
+          "buildings_absent": 6854,
+          "buildings_other_asof_only": 761,
+          "near_rate": 0.9465
+        },
+        "31": {
+          "buildings_near_asof": 143196,
+          "buildings_absent": 4552,
+          "buildings_other_asof_only": 1338,
+          "near_rate": 0.9605
+        },
+        "36": {
+          "buildings_other_asof_only": 955,
+          "buildings_near_asof": 36421,
+          "buildings_absent": 1074,
+          "near_rate": 0.9472
+        },
+        "38": {
+          "buildings_absent": 1,
+          "near_rate": 0.0
+        },
+        "41": {
+          "buildings_near_asof": 1255484,
+          "buildings_absent": 58284,
+          "buildings_other_asof_only": 13869,
+          "near_rate": 0.9457
+        },
+        "43": {
+          "buildings_near_asof": 433240,
+          "buildings_absent": 19838,
+          "buildings_other_asof_only": 3563,
+          "near_rate": 0.9488
+        },
+        "44": {
+          "buildings_absent": 47380,
+          "buildings_near_asof": 557149,
+          "buildings_other_asof_only": 4956,
+          "near_rate": 0.9141
+        },
+        "46": {
+          "buildings_near_asof": 701818,
+          "buildings_other_asof_only": 7426,
+          "buildings_absent": 30698,
+          "near_rate": 0.9485
+        },
+        "47": {
+          "buildings_near_asof": 853097,
+          "buildings_other_asof_only": 7805,
+          "buildings_absent": 42150,
+          "near_rate": 0.9447
+        },
+        "48": {
+          "buildings_near_asof": 763372,
+          "buildings_absent": 33656,
+          "buildings_other_asof_only": 6108,
+          "near_rate": 0.9505
+        },
+        "50": {
+          "buildings_absent": 9236,
+          "buildings_near_asof": 206150,
+          "buildings_other_asof_only": 794,
+          "near_rate": 0.9536
+        },
+        "51": {
+          "buildings_near_asof": 435492,
+          "buildings_other_asof_only": 3451,
+          "buildings_absent": 16966,
+          "near_rate": 0.9552
+        },
+        "52": {
+          "buildings_near_asof": 485038,
+          "buildings_absent": 25763,
+          "buildings_other_asof_only": 902,
+          "near_rate": 0.9479
+        },
+        "99": {
+          "buildings_absent": 969,
+          "near_rate": 0.0
+        }
+      }
+    },
+    "title|2026-07": {
+      "observations": 8060932,
+      "not_converted": {
+        "invalid_bjd": 4,
+        "invalid_district": 1,
+        "invalid_sub_lot": 17,
+        "unknown_land_type": 37468
+      },
+      "totals": {
+        "buildings_near_asof": 6691606,
+        "pnu_near_asof": 4997958,
+        "buildings_absent": 1280508,
+        "pnu_absent": 911591,
+        "buildings_other_asof_only": 51328,
+        "pnu_other_asof_only": 34944,
+        "zero_main_lot_absent": 16439
+      },
+      "near_rate_of_all": 0.83013,
+      "any_rate_of_all": 0.8365,
+      "by_sido": {
+        "11": {
+          "buildings_near_asof": 558270,
+          "buildings_absent": 25867,
+          "buildings_other_asof_only": 1103,
+          "near_rate": 0.9539
+        },
+        "12": {
+          "buildings_absent": 927536,
+          "near_rate": 0.0
+        },
+        "26": {
+          "buildings_absent": 33433,
+          "buildings_near_asof": 318623,
+          "buildings_other_asof_only": 3205,
+          "near_rate": 0.8969
+        },
+        "27": {
+          "buildings_near_asof": 268696,
+          "buildings_absent": 10418,
+          "buildings_other_asof_only": 2117,
+          "near_rate": 0.9554
+        },
+        "28": {
+          "buildings_near_asof": 217483,
+          "buildings_absent": 13360,
+          "buildings_other_asof_only": 913,
+          "near_rate": 0.9384
+        },
+        "30": {
+          "buildings_near_asof": 133738,
+          "buildings_absent": 7093,
+          "buildings_other_asof_only": 691,
+          "near_rate": 0.945
+        },
+        "31": {
+          "buildings_near_asof": 143199,
+          "buildings_absent": 4608,
+          "buildings_other_asof_only": 1605,
+          "near_rate": 0.9584
+        },
+        "36": {
+          "buildings_other_asof_only": 1014,
+          "buildings_near_asof": 36611,
+          "buildings_absent": 1092,
+          "near_rate": 0.9456
+        },
+        "38": {
+          "buildings_absent": 1,
+          "near_rate": 0.0
+        },
+        "41": {
+          "buildings_near_asof": 1263990,
+          "buildings_absent": 59508,
+          "buildings_other_asof_only": 13017,
+          "near_rate": 0.9457
+        },
+        "43": {
+          "buildings_near_asof": 435153,
+          "buildings_absent": 20073,
+          "buildings_other_asof_only": 3505,
+          "near_rate": 0.9486
+        },
+        "44": {
+          "buildings_absent": 47650,
+          "buildings_near_asof": 561711,
+          "buildings_other_asof_only": 4966,
+          "near_rate": 0.9144
+        },
+        "46": {
+          "buildings_near_asof": 13,
+          "near_rate": 1.0
+        },
+        "47": {
+          "buildings_near_asof": 856075,
+          "buildings_other_asof_only": 7792,
+          "buildings_absent": 42676,
+          "near_rate": 0.9443
+        },
+        "48": {
+          "buildings_near_asof": 765396,
+          "buildings_absent": 33949,
+          "buildings_other_asof_only": 6116,
+          "near_rate": 0.9503
+        },
+        "50": {
+          "buildings_absent": 9235,
+          "buildings_near_asof": 207443,
+          "buildings_other_asof_only": 754,
+          "near_rate": 0.9541
+        },
+        "51": {
+          "buildings_near_asof": 438362,
+          "buildings_other_asof_only": 3580,
+          "buildings_absent": 17260,
+          "near_rate": 0.9546
+        },
+        "52": {
+          "buildings_near_asof": 486843,
+          "buildings_absent": 25780,
+          "buildings_other_asof_only": 950,
+          "near_rate": 0.948
+        },
+        "99": {
+          "buildings_absent": 969,
+          "near_rate": 0.0
+        }
+      }
+    },
+    "summary|2024-09": {
+      "observations": 607587,
+      "not_converted": {
+        "invalid_district": 1,
+        "invalid_sub_lot": 6,
+        "unknown_land_type": 1569
+      },
+      "totals": {
+        "buildings_near_asof": 567616,
+        "pnu_near_asof": 565429,
+        "buildings_absent": 32810,
+        "pnu_absent": 32744,
+        "buildings_other_asof_only": 5585,
+        "pnu_other_asof_only": 5577,
+        "zero_main_lot_absent": 967
+      },
+      "near_rate_of_all": 0.93421,
+      "any_rate_of_all": 0.94341,
+      "by_sido": {
+        "11": {
+          "buildings_near_asof": 16247,
+          "buildings_absent": 2832,
+          "buildings_other_asof_only": 109,
+          "near_rate": 0.8467
+        },
+        "26": {
+          "buildings_near_asof": 20132,
+          "buildings_absent": 3607,
+          "buildings_other_asof_only": 374,
+          "near_rate": 0.8349
+        },
+        "27": {
+          "buildings_near_asof": 9882,
+          "buildings_other_asof_only": 131,
+          "buildings_absent": 338,
+          "near_rate": 0.9547
+        },
+        "28": {
+          "buildings_near_asof": 15791,
+          "buildings_absent": 782,
+          "buildings_other_asof_only": 192,
+          "near_rate": 0.9419
+        },
+        "29": {
+          "buildings_near_asof": 5790,
+          "buildings_absent": 346,
+          "buildings_other_asof_only": 51,
+          "near_rate": 0.9358
+        },
+        "30": {
+          "buildings_absent": 754,
+          "buildings_near_asof": 6469,
+          "buildings_other_asof_only": 48,
+          "near_rate": 0.8897
+        },
+        "31": {
+          "buildings_near_asof": 9786,
+          "buildings_other_asof_only": 164,
+          "buildings_absent": 596,
+          "near_rate": 0.9279
+        },
+        "36": {
+          "buildings_near_asof": 3934,
+          "buildings_other_asof_only": 64,
+          "buildings_absent": 135,
+          "near_rate": 0.9519
+        },
+        "41": {
+          "buildings_near_asof": 121789,
+          "buildings_other_asof_only": 1534,
+          "buildings_absent": 5158,
+          "near_rate": 0.9479
+        },
+        "43": {
+          "buildings_near_asof": 37301,
+          "buildings_absent": 2035,
+          "buildings_other_asof_only": 362,
+          "near_rate": 0.9396
+        },
+        "44": {
+          "buildings_absent": 3390,
+          "buildings_near_asof": 47185,
+          "buildings_other_asof_only": 414,
+          "near_rate": 0.9254
+        },
+        "46": {
+          "buildings_near_asof": 47988,
+          "buildings_other_asof_only": 517,
+          "buildings_absent": 1751,
+          "near_rate": 0.9549
+        },
+        "47": {
+          "buildings_near_asof": 75847,
+          "buildings_absent": 3944,
+          "buildings_other_asof_only": 698,
+          "near_rate": 0.9423
+        },
+        "48": {
+          "buildings_near_asof": 60256,
+          "buildings_absent": 3212,
+          "buildings_other_asof_only": 497,
+          "near_rate": 0.942
+        },
+        "50": {
+          "buildings_near_asof": 18936,
+          "buildings_absent": 803,
+          "buildings_other_asof_only": 83,
+          "near_rate": 0.9553
+        },
+        "51": {
+          "buildings_near_asof": 32254,
+          "buildings_other_asof_only": 275,
+          "buildings_absent": 1255,
+          "near_rate": 0.9547
+        },
+        "52": {
+          "buildings_near_asof": 38029,
+          "buildings_absent": 1866,
+          "buildings_other_asof_only": 72,
+          "near_rate": 0.9515
+        },
+        "99": {
+          "buildings_absent": 6,
+          "near_rate": 0.0
+        }
+      }
+    },
+    "summary|2025-07": {
+      "observations": 616909,
+      "not_converted": {
+        "invalid_district": 1,
+        "invalid_sub_lot": 6,
+        "unknown_land_type": 1551
+      },
+      "totals": {
+        "buildings_near_asof": 576878,
+        "pnu_near_asof": 574673,
+        "buildings_absent": 32777,
+        "pnu_absent": 32711,
+        "buildings_other_asof_only": 5696,
+        "pnu_other_asof_only": 5684,
+        "zero_main_lot_absent": 970
+      },
+      "near_rate_of_all": 0.93511,
+      "any_rate_of_all": 0.94434,
+      "by_sido": {
+        "11": {
+          "buildings_near_asof": 16690,
+          "buildings_absent": 2812,
+          "buildings_other_asof_only": 127,
+          "near_rate": 0.8503
+        },
+        "26": {
+          "buildings_near_asof": 20250,
+          "buildings_absent": 3606,
+          "buildings_other_asof_only": 394,
+          "near_rate": 0.8351
+        },
+        "27": {
+          "buildings_near_asof": 10003,
+          "buildings_other_asof_only": 113,
+          "buildings_absent": 340,
+          "near_rate": 0.9567
+        },
+        "28": {
+          "buildings_near_asof": 16083,
+          "buildings_other_asof_only": 187,
+          "buildings_absent": 781,
+          "near_rate": 0.9432
+        },
+        "29": {
+          "buildings_near_asof": 5910,
+          "buildings_absent": 345,
+          "buildings_other_asof_only": 53,
+          "near_rate": 0.9369
+        },
+        "30": {
+          "buildings_absent": 748,
+          "buildings_near_asof": 6501,
+          "buildings_other_asof_only": 49,
+          "near_rate": 0.8908
+        },
+        "31": {
+          "buildings_near_asof": 9882,
+          "buildings_other_asof_only": 164,
+          "buildings_absent": 594,
+          "near_rate": 0.9288
+        },
+        "36": {
+          "buildings_near_asof": 4032,
+          "buildings_other_asof_only": 81,
+          "buildings_absent": 134,
+          "near_rate": 0.9494
+        },
+        "41": {
+          "buildings_near_asof": 125418,
+          "buildings_other_asof_only": 1639,
+          "buildings_absent": 5195,
+          "near_rate": 0.9483
+        },
+        "43": {
+          "buildings_near_asof": 37741,
+          "buildings_absent": 2033,
+          "buildings_other_asof_only": 369,
+          "near_rate": 0.9402
+        },
+        "44": {
+          "buildings_absent": 3386,
+          "buildings_near_asof": 48021,
+          "buildings_other_asof_only": 414,
+          "near_rate": 0.9267
+        },
+        "46": {
+          "buildings_near_asof": 48524,
+          "buildings_other_asof_only": 511,
+          "buildings_absent": 1746,
+          "near_rate": 0.9556
+        },
+        "47": {
+          "buildings_near_asof": 76543,
+          "buildings_absent": 3936,
+          "buildings_other_asof_only": 671,
+          "near_rate": 0.9432
+        },
+        "48": {
+          "buildings_near_asof": 60682,
+          "buildings_absent": 3213,
+          "buildings_other_asof_only": 500,
+          "near_rate": 0.9423
+        },
+        "50": {
+          "buildings_near_asof": 19448,
+          "buildings_absent": 798,
+          "buildings_other_asof_only": 75,
+          "near_rate": 0.957
+        },
+        "51": {
+          "buildings_near_asof": 32853,
+          "buildings_other_asof_only": 279,
+          "buildings_absent": 1249,
+          "near_rate": 0.9556
+        },
+        "52": {
+          "buildings_near_asof": 38297,
+          "buildings_absent": 1855,
+          "buildings_other_asof_only": 70,
+          "near_rate": 0.9521
+        },
+        "99": {
+          "buildings_absent": 6,
+          "near_rate": 0.0
+        }
+      }
+    },
+    "summary|2026-07": {
+      "observations": 620535,
+      "not_converted": {
+        "invalid_district": 1,
+        "invalid_sub_lot": 7,
+        "unknown_land_type": 1510
+      },
+      "totals": {
+        "buildings_near_asof": 525712,
+        "pnu_near_asof": 523665,
+        "buildings_absent": 88530,
+        "pnu_absent": 88297,
+        "buildings_other_asof_only": 4775,
+        "pnu_other_asof_only": 4766,
+        "zero_main_lot_absent": 971
+      },
+      "near_rate_of_all": 0.84719,
+      "any_rate_of_all": 0.85489,
+      "by_sido": {
+        "11": {
+          "buildings_near_asof": 16465,
+          "buildings_absent": 2769,
+          "buildings_other_asof_only": 99,
+          "near_rate": 0.8517
+        },
+        "12": {
+          "buildings_absent": 57388,
+          "near_rate": 0.0
+        },
+        "26": {
+          "buildings_near_asof": 20168,
+          "buildings_absent": 3607,
+          "buildings_other_asof_only": 379,
+          "near_rate": 0.835
+        },
+        "27": {
+          "buildings_near_asof": 10066,
+          "buildings_other_asof_only": 112,
+          "buildings_absent": 349,
+          "near_rate": 0.9562
+        },
+        "28": {
+          "buildings_near_asof": 16144,
+          "buildings_absent": 866,
+          "buildings_other_asof_only": 79,
+          "near_rate": 0.9447
+        },
+        "30": {
+          "buildings_absent": 762,
+          "buildings_near_asof": 6468,
+          "buildings_other_asof_only": 44,
+          "near_rate": 0.8892
+        },
+        "31": {
+          "buildings_near_asof": 9927,
+          "buildings_other_asof_only": 186,
+          "buildings_absent": 602,
+          "near_rate": 0.9265
+        },
+        "36": {
+          "buildings_other_asof_only": 81,
+          "buildings_near_asof": 4041,
+          "buildings_absent": 135,
+          "near_rate": 0.9493
+        },
+        "41": {
+          "buildings_near_asof": 126605,
+          "buildings_other_asof_only": 1407,
+          "buildings_absent": 5371,
+          "near_rate": 0.9492
+        },
+        "43": {
+          "buildings_near_asof": 37998,
+          "buildings_absent": 2063,
+          "buildings_other_asof_only": 358,
+          "near_rate": 0.9401
+        },
+        "44": {
+          "buildings_absent": 3437,
+          "buildings_near_asof": 48658,
+          "buildings_other_asof_only": 429,
+          "near_rate": 0.9264
+        },
+        "47": {
+          "buildings_near_asof": 76912,
+          "buildings_absent": 4003,
+          "buildings_other_asof_only": 657,
+          "near_rate": 0.9429
+        },
+        "48": {
+          "buildings_near_asof": 60856,
+          "buildings_other_asof_only": 497,
+          "buildings_absent": 3231,
+          "near_rate": 0.9423
+        },
+        "50": {
+          "buildings_near_asof": 19727,
+          "buildings_absent": 805,
+          "buildings_other_asof_only": 77,
+          "near_rate": 0.9572
+        },
+        "51": {
+          "buildings_near_asof": 33232,
+          "buildings_other_asof_only": 297,
+          "buildings_absent": 1281,
+          "near_rate": 0.9547
+        },
+        "52": {
+          "buildings_near_asof": 38445,
+          "buildings_absent": 1855,
+          "buildings_other_asof_only": 73,
+          "near_rate": 0.9522
+        },
+        "99": {
+          "buildings_absent": 6,
+          "near_rate": 0.0
+        }
+      }
+    }
+  },
+  "land_asof_by_sido": {
+    "11|2024-09": "2024-07-30",
+    "11|2025-07": "2025-08-06",
+    "11|2026-07": "2026-07-20",
+    "26|2024-09": "2024-07-30",
+    "26|2025-07": "2025-08-06",
+    "26|2026-07": "2026-07-20",
+    "27|2024-09": "2024-07-30",
+    "27|2025-07": "2025-08-06",
+    "27|2026-07": "2026-07-20",
+    "28|2024-09": "2024-07-30",
+    "28|2025-07": "2025-08-06",
+    "28|2026-07": "2026-07-20",
+    "29|2024-09": "2024-07-30",
+    "29|2025-07": "2025-08-06",
+    "29|2026-07": "2026-07-20",
+    "30|2024-09": "2024-07-30",
+    "30|2025-07": "2025-08-06",
+    "30|2026-07": "2026-07-20",
+    "31|2024-09": "2024-07-30",
+    "31|2025-07": "2025-08-06",
+    "31|2026-07": "2026-07-20",
+    "36|2024-09": "2024-07-30",
+    "36|2025-07": "2025-08-06",
+    "36|2026-07": "2026-07-20",
+    "41|2024-09": "2024-07-30",
+    "41|2025-07": "2025-08-06",
+    "41|2026-07": "2026-07-20",
+    "43|2024-09": "2024-07-30",
+    "43|2025-07": "2025-08-06",
+    "43|2026-07": "2026-07-20",
+    "44|2024-09": "2024-07-30",
+    "44|2025-07": "2025-08-06",
+    "44|2026-07": "2026-07-20",
+    "46|2024-09": "2024-07-30",
+    "46|2025-07": "2025-08-06",
+    "46|2026-07": "2026-07-20",
+    "47|2024-09": "2024-08-02",
+    "47|2025-07": "2025-08-06",
+    "47|2026-07": "2026-07-20",
+    "48|2024-09": "2024-07-30",
+    "48|2025-07": "2025-08-06",
+    "48|2026-07": "2026-07-20",
+    "50|2024-09": "2024-07-30",
+    "50|2025-07": "2025-08-06",
+    "50|2026-07": "2026-07-20",
+    "51|2024-09": "2024-07-30",
+    "51|2025-07": "2025-08-06",
+    "51|2026-07": "2026-07-20",
+    "52|2024-09": "2024-07-30",
+    "52|2025-07": "2025-08-06",
+    "52|2026-07": "2026-07-20"
+  },
+  "distinct_pnu_looked_up": 6825376,
+  "elapsed_seconds": 312.7
+}

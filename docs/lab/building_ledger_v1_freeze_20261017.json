@@ -1,0 +1,96 @@
+{
+  "name": "BUILDING_LEDGER_V1",
+  "frozen_at": "2026-10-17T10:43:28.678949+00:00",
+  "rule": "building-ledger-v1 / cheongju-source-identity-v2.1 (national)",
+  "sources": [
+    {
+      "kind": "summary",
+      "snapshot": "2024-09",
+      "file": "국토교통부_건축물대장_총괄표제부+(2024년+09월)/mart_djy_02.txt",
+      "bytes": 214243852,
+      "sha256": "1c1149e06248fcedb4bec611b0cb6e287b300c29aac2817c8e54ffb8c950ea8f",
+      "rows": 607587,
+      "loaded_rows": 607587,
+      "scope": "national"
+    },
+    {
+      "kind": "summary",
+      "snapshot": "2025-07",
+      "file": "국토교통부_건축물대장_총괄표제부+(2025년+07월)/mart_djy_02.txt",
+      "bytes": 218037240,
+      "sha256": "e1b2c07dc8e447f017b9c07d9b1dca1a40cc77659512c904b56d93bc2d27c46f",
+      "rows": 616909,
+      "loaded_rows": 616909,
+      "scope": "national"
+    },
+    {
+      "kind": "summary",
+      "snapshot": "2026-07",
+      "file": "국토교통부_건축물대장_총괄표제부+(2026년+07월)/mart_djy_02.txt",
+      "bytes": 221666274,
+      "sha256": "bf8146fd9393426569fd2b53e975aff877427ca84415d43bcc4c9d5529a18d7a",
+      "rows": 620535,
+      "loaded_rows": 620535,
+      "scope": "national"
+    },
+    {
+      "kind": "title",
+      "snapshot": "2024-09",
+      "file": "국토교통부_건축물대장_표제부+(2024년+09월)/mart_djy_03.txt",
+      "bytes": 3628263011,
+      "sha256": "77b1d88d0ce4a3462c13d519ab389b3d38bbb348582ef6485949b317b4e4959c",
+      "rows": 7863889,
+      "loaded_rows": 7863889,
+      "scope": "national"
+    },
+    {
+      "kind": "title",
+      "snapshot": "2025-07",
+      "file": "국토교통부_건축물대장_표제부+(2025년+07월)/mart_djy_03.txt",
+      "bytes": 3755874423,
+      "sha256": "a89073dc6b7089d86257a3c5f87f8e17e13e4354ef22ebe507049b2084317760",
+      "rows": 8036702,
+      "loaded_rows": 8036702,
+      "scope": "national"
+    },
+    {
+      "kind": "title",
+      "snapshot": "2026-07",
+      "file": "국토교통부_건축물대장_표제부+(2026년+07월)/mart_djy_03.txt",
+      "bytes": 3803104062,
+      "sha256": "42abc5ed87e16419c477b78cfbb5a4b375e56604d9133be2acec067b35787247",
+      "rows": 8060932,
+      "loaded_rows": 8060932,
+      "scope": "national"
+    }
+  ],
+  "table_counts": {
+    "title_version": 17262992,
+    "title_observation": 23961523,
+    "summary_version": 1329785,
+    "summary_observation": 1845031
+  },
+  "schema_sql": {
+    "title_version": "CREATE TABLE title_version(\n            pk TEXT NOT NULL, raw_hash BLOB NOT NULL, raw BLOB NOT NULL,\n            PRIMARY KEY(pk, raw_hash)) WITHOUT ROWID",
+    "title_observation": "CREATE TABLE title_observation(\n            snapshot TEXT NOT NULL, pk TEXT NOT NULL, raw_hash BLOB NOT NULL,\n            column_count INTEGER NOT NULL, identity_status TEXT NOT NULL, pnu TEXT,\n            PRIMARY KEY(snapshot, pk)) WITHOUT ROWID",
+    "summary_version": "CREATE TABLE summary_version(\n            pk TEXT NOT NULL, raw_hash BLOB NOT NULL, raw BLOB NOT NULL,\n            PRIMARY KEY(pk, raw_hash)) WITHOUT ROWID",
+    "summary_observation": "CREATE TABLE summary_observation(\n            snapshot TEXT NOT NULL, pk TEXT NOT NULL, raw_hash BLOB NOT NULL,\n            column_count INTEGER NOT NULL, identity_status TEXT NOT NULL, pnu TEXT,\n            PRIMARY KEY(snapshot, pk)) WITHOUT ROWID",
+    "source_file": "CREATE TABLE source_file(\n        kind TEXT NOT NULL, snapshot TEXT NOT NULL, file TEXT NOT NULL, bytes INTEGER NOT NULL,\n        sha256 TEXT NOT NULL, rows INTEGER NOT NULL, loaded_rows INTEGER NOT NULL,\n        scope TEXT NOT NULL, stats TEXT NOT NULL, loaded_at TEXT NOT NULL,\n        PRIMARY KEY(kind, snapshot))",
+    "build_info": "CREATE TABLE build_info(key TEXT PRIMARY KEY, value TEXT NOT NULL)",
+    "title_observation_pnu": "CREATE INDEX title_observation_pnu ON title_observation(pnu) WHERE pnu IS NOT NULL",
+    "summary_observation_pnu": "CREATE INDEX summary_observation_pnu ON summary_observation(pnu) WHERE pnu IS NOT NULL"
+  },
+  "ledger": {
+    "path": "C:\\CH2\\parcel_master\\building_ledger_v1.sqlite",
+    "bytes": 15131811840,
+    "mtime_utc": "2026-10-17T10:16:33.393160+00:00",
+    "sha256": "2acb9fcd6b8558ae2f1db65f0a195228de8f383563cc2050229864e62399a3a0"
+  },
+  "backup": {
+    "path": "D:\\CH2_backup\\building_ledger_v1\\building_ledger_v1.sqlite",
+    "bytes": 15131811840,
+    "sha256": "2acb9fcd6b8558ae2f1db65f0a195228de8f383563cc2050229864e62399a3a0",
+    "matches": true
+  },
+  "elapsed_seconds": 435.5
+}
