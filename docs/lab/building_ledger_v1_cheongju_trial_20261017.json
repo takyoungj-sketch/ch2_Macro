@@ -1,0 +1,146 @@
+{
+  "rule": "building-ledger-v1 / cheongju-source-identity-v2.1 (national)",
+  "sources": [
+    {
+      "kind": "summary",
+      "snapshot": "2024-09",
+      "file": "국토교통부_건축물대장_총괄표제부+(2024년+09월)/mart_djy_02.txt",
+      "bytes": 214243852,
+      "sha256": "1c1149e06248fcedb4bec611b0cb6e287b300c29aac2817c8e54ffb8c950ea8f",
+      "rows": 607587,
+      "loaded_rows": 10816,
+      "scope": "43111,43112,43113,43114",
+      "stats": {
+        "identity_status": {
+          "canonical_address": 10806,
+          "unknown_land_type": 10
+        },
+        "column_counts": {
+          "65": 10816
+        },
+        "canonical_with_zero_main_lot": 99,
+        "seconds": 1.2
+      }
+    },
+    {
+      "kind": "summary",
+      "snapshot": "2025-07",
+      "file": "국토교통부_건축물대장_총괄표제부+(2025년+07월)/mart_djy_02.txt",
+      "bytes": 218037240,
+      "sha256": "e1b2c07dc8e447f017b9c07d9b1dca1a40cc77659512c904b56d93bc2d27c46f",
+      "rows": 616909,
+      "loaded_rows": 10987,
+      "scope": "43111,43112,43113,43114",
+      "stats": {
+        "identity_status": {
+          "canonical_address": 10979,
+          "unknown_land_type": 8
+        },
+        "column_counts": {
+          "64": 10987
+        },
+        "canonical_with_zero_main_lot": 99,
+        "seconds": 1.2
+      }
+    },
+    {
+      "kind": "summary",
+      "snapshot": "2026-07",
+      "file": "국토교통부_건축물대장_총괄표제부+(2026년+07월)/mart_djy_02.txt",
+      "bytes": 221666274,
+      "sha256": "bf8146fd9393426569fd2b53e975aff877427ca84415d43bcc4c9d5529a18d7a",
+      "rows": 620535,
+      "loaded_rows": 11039,
+      "scope": "43111,43112,43113,43114",
+      "stats": {
+        "identity_status": {
+          "canonical_address": 11029,
+          "unknown_land_type": 10
+        },
+        "column_counts": {
+          "64": 11039
+        },
+        "canonical_with_zero_main_lot": 99,
+        "seconds": 1.2
+      }
+    },
+    {
+      "kind": "title",
+      "snapshot": "2024-09",
+      "file": "국토교통부_건축물대장_표제부+(2024년+09월)/mart_djy_03.txt",
+      "bytes": 3628263011,
+      "sha256": "77b1d88d0ce4a3462c13d519ab389b3d38bbb348582ef6485949b317b4e4959c",
+      "rows": 7863889,
+      "loaded_rows": 139315,
+      "scope": "43111,43112,43113,43114",
+      "stats": {
+        "identity_status": {
+          "canonical_address": 139264,
+          "unknown_land_type": 51
+        },
+        "column_counts": {
+          "76": 139315
+        },
+        "canonical_with_zero_main_lot": 618,
+        "seconds": 18.9
+      }
+    },
+    {
+      "kind": "title",
+      "snapshot": "2025-07",
+      "file": "국토교통부_건축물대장_표제부+(2025년+07월)/mart_djy_03.txt",
+      "bytes": 3755874423,
+      "sha256": "a89073dc6b7089d86257a3c5f87f8e17e13e4354ef22ebe507049b2084317760",
+      "rows": 8036702,
+      "loaded_rows": 141420,
+      "scope": "43111,43112,43113,43114",
+      "stats": {
+        "identity_status": {
+          "canonical_address": 141383,
+          "unknown_land_type": 37
+        },
+        "column_counts": {
+          "77": 141420
+        },
+        "canonical_with_zero_main_lot": 618,
+        "seconds": 19.8
+      }
+    },
+    {
+      "kind": "title",
+      "snapshot": "2026-07",
+      "file": "국토교통부_건축물대장_표제부+(2026년+07월)/mart_djy_03.txt",
+      "bytes": 3803104062,
+      "sha256": "42abc5ed87e16419c477b78cfbb5a4b375e56604d9133be2acec067b35787247",
+      "rows": 8060932,
+      "loaded_rows": 141252,
+      "scope": "43111,43112,43113,43114",
+      "stats": {
+        "identity_status": {
+          "canonical_address": 141168,
+          "unknown_land_type": 84
+        },
+        "column_counts": {
+          "77": 141252
+        },
+        "canonical_with_zero_main_lot": 620,
+        "seconds": 19.8
+      }
+    }
+  ],
+  "tables": {
+    "title": {
+      "versions": 284897,
+      "observations": 421987,
+      "buildings": 144247,
+      "orphan_observations": 0
+    },
+    "summary": {
+      "versions": 22256,
+      "observations": 32842,
+      "buildings": 11274,
+      "orphan_observations": 0
+    }
+  },
+  "db_bytes": 264798208
+}

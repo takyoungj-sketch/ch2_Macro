@@ -1,0 +1,338 @@
+{
+  "run_date": "2026-10-17",
+  "title": {
+    "2024-09": {
+      "file": "국토교통부_건축물대장_표제부+(2024년+09월)/mart_djy_03.txt",
+      "bytes": 3628263011,
+      "sha256": "77b1d88d0ce4a3462c13d519ab389b3d38bbb348582ef6485949b317b4e4959c",
+      "rows": 7863889,
+      "raw_bytes_without_newline": 3620399122,
+      "column_counts": {
+        "76": 7863889
+      },
+      "unique_pk": 7863889,
+      "duplicate_pk_rows": 0,
+      "identity_status": {
+        "canonical_address": 7809700,
+        "unknown_land_type": 37935,
+        "zero_main_lot": 16247,
+        "invalid_bjd": 5,
+        "invalid_sub_lot": 2
+      },
+      "sido_prefix": {
+        "0": 1,
+        "11": 541087,
+        "26": 350322,
+        "27": 279317,
+        "28": 227543,
+        "29": 181834,
+        "30": 140706,
+        "31": 150242,
+        "36": 38123,
+        "38": 1,
+        "41": 1286891,
+        "43": 452139,
+        "44": 601572,
+        "46": 732649,
+        "47": 899848,
+        "48": 794505,
+        "50": 212000,
+        "51": 467376,
+        "52": 506768,
+        "99": 965
+      },
+      "ledger_kind": {
+        "일반": 7238795,
+        "집합": 625094
+      },
+      "matches_cheongju_evidence": true
+    },
+    "2025-07": {
+      "file": "국토교통부_건축물대장_표제부+(2025년+07월)/mart_djy_03.txt",
+      "bytes": 3755874423,
+      "sha256": "a89073dc6b7089d86257a3c5f87f8e17e13e4354ef22ebe507049b2084317760",
+      "rows": 8036702,
+      "raw_bytes_without_newline": 3747837721,
+      "column_counts": {
+        "77": 8036702
+      },
+      "unique_pk": 8036702,
+      "duplicate_pk_rows": 0,
+      "identity_status": {
+        "canonical_address": 7982302,
+        "unknown_land_type": 38029,
+        "zero_main_lot": 16352,
+        "invalid_sub_lot": 14,
+        "invalid_bjd": 5
+      },
+      "sido_prefix": {
+        "0": 1,
+        "11": 588926,
+        "26": 357959,
+        "27": 281515,
+        "28": 233039,
+        "29": 187053,
+        "30": 142409,
+        "31": 151621,
+        "36": 38904,
+        "38": 1,
+        "41": 1333495,
+        "43": 456828,
+        "44": 610073,
+        "46": 740473,
+        "47": 906627,
+        "48": 804300,
+        "50": 216480,
+        "51": 473931,
+        "52": 512098,
+        "99": 969
+      },
+      "ledger_kind": {
+        "일반": 7384381,
+        "집합": 652321
+      },
+      "vs_previous_snapshot": {
+        "same_line": 0,
+        "changed_line": 7809202,
+        "new_pk": 227500,
+        "gone_pk": 54687,
+        "cheongju_changed_column_index": {}
+      },
+      "matches_cheongju_evidence": true
+    },
+    "2026-07": {
+      "file": "국토교통부_건축물대장_표제부+(2026년+07월)/mart_djy_03.txt",
+      "bytes": 3803104062,
+      "sha256": "42abc5ed87e16419c477b78cfbb5a4b375e56604d9133be2acec067b35787247",
+      "rows": 8060932,
+      "raw_bytes_without_newline": 3795043130,
+      "column_counts": {
+        "77": 8060932
+      },
+      "unique_pk": 8060932,
+      "duplicate_pk_rows": 0,
+      "identity_status": {
+        "canonical_address": 8007003,
+        "unknown_land_type": 37468,
+        "zero_main_lot": 16439,
+        "invalid_sub_lot": 17,
+        "invalid_bjd": 5
+      },
+      "sido_prefix": {
+        "0": 1,
+        "11": 585731,
+        "12": 928704,
+        "26": 356359,
+        "27": 281755,
+        "28": 233227,
+        "30": 141562,
+        "31": 151957,
+        "36": 39149,
+        "38": 1,
+        "41": 1342053,
+        "43": 458989,
+        "44": 614916,
+        "46": 13,
+        "47": 910040,
+        "48": 806584,
+        "50": 217730,
+        "51": 477226,
+        "52": 513966,
+        "99": 969
+      },
+      "ledger_kind": {
+        "일반": 7401552,
+        "집합": 659380
+      },
+      "vs_previous_snapshot": {
+        "same_line": 6698531,
+        "changed_line": 1280917,
+        "new_pk": 81484,
+        "gone_pk": 57254,
+        "cheongju_changed_column_index": {
+          "74": 2096,
+          "30": 844,
+          "27": 782,
+          "28": 423,
+          "25": 416,
+          "29": 406,
+          "49": 369,
+          "26": 367,
+          "6": 224,
+          "36": 214,
+          "16": 210,
+          "34": 194,
+          "35": 194,
+          "48": 185,
+          "22": 175,
+          "47": 168,
+          "18": 153,
+          "7": 146,
+          "21": 146,
+          "20": 144
+        }
+      },
+      "matches_cheongju_evidence": true
+    }
+  },
+  "summary": {
+    "2024-09": {
+      "file": "국토교통부_건축물대장_총괄표제부+(2024년+09월)/mart_djy_02.txt",
+      "bytes": 214243852,
+      "sha256": "1c1149e06248fcedb4bec611b0cb6e287b300c29aac2817c8e54ffb8c950ea8f",
+      "rows": 607587,
+      "raw_bytes_without_newline": 213636265,
+      "column_counts": {
+        "65": 607587
+      },
+      "unique_pk": 607587,
+      "duplicate_pk_rows": 0,
+      "identity_status": {
+        "canonical_address": 605044,
+        "unknown_land_type": 1569,
+        "zero_main_lot": 967,
+        "invalid_sub_lot": 6,
+        "invalid_bjd": 1
+      },
+      "sido_prefix": {
+        "": 1,
+        "11": 19208,
+        "26": 24274,
+        "27": 10366,
+        "28": 16814,
+        "29": 6219,
+        "30": 7278,
+        "31": 10696,
+        "36": 4174,
+        "41": 128776,
+        "43": 39733,
+        "44": 51031,
+        "46": 50313,
+        "47": 80825,
+        "48": 64027,
+        "50": 19847,
+        "51": 34018,
+        "52": 39980,
+        "99": 7
+      },
+      "matches_cheongju_evidence": true
+    },
+    "2025-07": {
+      "file": "국토교통부_건축물대장_총괄표제부+(2025년+07월)/mart_djy_02.txt",
+      "bytes": 218037240,
+      "sha256": "e1b2c07dc8e447f017b9c07d9b1dca1a40cc77659512c904b56d93bc2d27c46f",
+      "rows": 616909,
+      "raw_bytes_without_newline": 217420331,
+      "column_counts": {
+        "64": 616909
+      },
+      "unique_pk": 616909,
+      "duplicate_pk_rows": 0,
+      "identity_status": {
+        "canonical_address": 614381,
+        "unknown_land_type": 1551,
+        "zero_main_lot": 970,
+        "invalid_sub_lot": 6,
+        "invalid_bjd": 1
+      },
+      "sido_prefix": {
+        "": 1,
+        "11": 19649,
+        "26": 24402,
+        "27": 10472,
+        "28": 17105,
+        "29": 6340,
+        "30": 7304,
+        "31": 10803,
+        "36": 4275,
+        "41": 132542,
+        "43": 40166,
+        "44": 51862,
+        "46": 50836,
+        "47": 81487,
+        "48": 64458,
+        "50": 20350,
+        "51": 34615,
+        "52": 40235,
+        "99": 7
+      },
+      "vs_previous_snapshot": {
+        "same_line": 0,
+        "changed_line": 602498,
+        "new_pk": 14411,
+        "gone_pk": 5089,
+        "cheongju_changed_column_index": {}
+      },
+      "matches_cheongju_evidence": true
+    },
+    "2026-07": {
+      "file": "국토교통부_건축물대장_총괄표제부+(2026년+07월)/mart_djy_02.txt",
+      "bytes": 221666274,
+      "sha256": "bf8146fd9393426569fd2b53e975aff877427ca84415d43bcc4c9d5529a18d7a",
+      "rows": 620535,
+      "raw_bytes_without_newline": 221045739,
+      "column_counts": {
+        "64": 620535
+      },
+      "unique_pk": 620535,
+      "duplicate_pk_rows": 0,
+      "identity_status": {
+        "canonical_address": 618046,
+        "unknown_land_type": 1510,
+        "zero_main_lot": 971,
+        "invalid_sub_lot": 7,
+        "invalid_bjd": 1
+      },
+      "sido_prefix": {
+        "": 1,
+        "11": 19350,
+        "12": 57476,
+        "26": 24295,
+        "27": 10542,
+        "28": 17141,
+        "30": 7280,
+        "31": 10867,
+        "36": 4285,
+        "41": 133658,
+        "43": 40447,
+        "44": 52565,
+        "47": 81909,
+        "48": 64644,
+        "50": 20638,
+        "51": 35045,
+        "52": 40385,
+        "99": 7
+      },
+      "vs_previous_snapshot": {
+        "same_line": 515246,
+        "changed_line": 95515,
+        "new_pk": 9774,
+        "gone_pk": 6148,
+        "cheongju_changed_column_index": {
+          "63": 257,
+          "29": 174,
+          "26": 171,
+          "27": 167,
+          "28": 167,
+          "25": 159,
+          "35": 96,
+          "24": 63,
+          "37": 56,
+          "46": 51,
+          "36": 50,
+          "45": 49,
+          "38": 47,
+          "18": 36,
+          "32": 26,
+          "22": 19,
+          "8": 18,
+          "19": 16,
+          "20": 16,
+          "30": 13
+        }
+      },
+      "matches_cheongju_evidence": true
+    }
+  },
+  "elapsed_seconds": 159.7
+}
