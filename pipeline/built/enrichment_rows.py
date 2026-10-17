@@ -98,7 +98,7 @@ def to_enrichment_records(
             {
                 "transaction_hash": hx,
                 "recovered_lot": parcel,
-                "bldrgst_pk": None,
+                "bldrgst_pk": row.get("bldrgst_pk") if isinstance(row.get("bldrgst_pk"), str) else None,
                 "structure_raw": row.get("struct") if pd.notna(row.get("struct")) else None,
                 "structure_group": structure_group(row.get("struct")),
                 "max_floor": _as_int(row.get("floors")),

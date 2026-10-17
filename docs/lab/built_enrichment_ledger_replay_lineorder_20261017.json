@@ -1,0 +1,64 @@
+{
+  "rule": "time_fallback, primary 2026-07",
+  "results": {
+    "12": {
+      "transactions": 69451,
+      "confirmed_cache_run": 53717,
+      "confirmed_ledger_run": 53717,
+      "frozen_rows": 53020,
+      "frozen_bldrgst_pk_filled": 0,
+      "cache_vs_ledger": {
+        "identical": 53717,
+        "field_diff": {}
+      },
+      "frozen_vs_rerun": {
+        "identical": 53020,
+        "only_right": 697,
+        "field_diff": {}
+      },
+      "bldrgst_pk_resolution": {
+        "unique_pk": 53564,
+        "tied_pk": 153
+      },
+      "seconds": 192.1
+    },
+    "30": {
+      "transactions": 18888,
+      "confirmed_cache_run": 14067,
+      "confirmed_ledger_run": 14067,
+      "frozen_rows": 13961,
+      "frozen_bldrgst_pk_filled": 0,
+      "cache_vs_ledger": {
+        "identical": 14067,
+        "field_diff": {}
+      },
+      "frozen_vs_rerun": {
+        "identical": 13959,
+        "only_right": 107,
+        "different": 1,
+        "only_left": 1,
+        "field_diff": {
+          "snapshots_matched": 1
+        }
+      },
+      "bldrgst_pk_resolution": {
+        "unique_pk": 14013,
+        "tied_pk": 54
+      },
+      "seconds": 119.4
+    }
+  },
+  "total": {
+    "transactions": 88339,
+    "confirmed_cache_run": 67784,
+    "confirmed_ledger_run": 67784,
+    "frozen_rows": 66981,
+    "cache_vs_ledger.identical": 67784,
+    "frozen_vs_rerun.identical": 66979,
+    "frozen_vs_rerun.only_right": 804,
+    "pk.unique_pk": 67577,
+    "pk.tied_pk": 207,
+    "frozen_vs_rerun.different": 1,
+    "frozen_vs_rerun.only_left": 1
+  }
+}

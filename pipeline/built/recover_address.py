@@ -266,28 +266,46 @@ def _scan_pipe_file_multi(
     return {"src": src.name, "rows_read": total, "rows_short": bad, "rows_kept": kept}
 
 
-def warm_register_caches(sidos: list[str], snapshots: list[str], refresh: bool = False) -> None:
+def _register_multi(kind: str, snap: str, out_by_sido: dict[str, Path], source: str) -> dict[str, Any]:
+    """표제부·총괄표제부 → 시도별 CSV. source='ledger' 면 건축대장 원장 v1에서 원문 줄 순서대로 읽는다."""
+    cols = TITLE_COLS if kind == "title" else SUMMARY_COLS
+    if source == "ledger":
+        from built.register_ledger import connect, write_caches
+
+        db = connect()
+        try:
+            return write_caches(db, kind, snap, cols, out_by_sido)
+        finally:
+            db.close()
+    tag = SNAPSHOTS[snap]
+    if kind == "title":
+        src = BLDRGST_DIR / f"국토교통부_건축물대장_표제부+({tag})" / "mart_djy_03.txt"
+    else:
+        src = BLDRGST_DIR / f"국토교통부_건축물대장_총괄표제부+({tag})" / "mart_djy_02.txt"
+    return _scan_pipe_file_multi(src, cols, out_by_sido)
+
+
+def warm_register_caches(
+    sidos: list[str], snapshots: list[str], refresh: bool = False, source: str = "raw"
+) -> None:
     CACHE.mkdir(exist_ok=True)
     for snap in snapshots:
-        tag = SNAPSHOTS[snap]
         need_title = [
             s for s in sidos if refresh or not (CACHE / f"title_{s}_{snap}.csv").exists()
         ]
         if need_title:
-            src = BLDRGST_DIR / f"국토교통부_건축물대장_표제부+({tag})" / "mart_djy_03.txt"
-            print(f"[표제부 일괄] {snap} → {need_title}", flush=True)
-            meta = _scan_pipe_file_multi(
-                src, TITLE_COLS, {s: CACHE / f"title_{s}_{snap}.csv" for s in need_title}
+            print(f"[표제부 일괄] {snap} → {need_title} ({source})", flush=True)
+            meta = _register_multi(
+                "title", snap, {s: CACHE / f"title_{s}_{snap}.csv" for s in need_title}, source
             )
             print(f"[표제부 일괄] {snap} read={meta['rows_read']:,}", flush=True)
         need_summ = [
             s for s in sidos if refresh or not (CACHE / f"summary_{s}_{snap}.csv").exists()
         ]
         if need_summ:
-            src = BLDRGST_DIR / f"국토교통부_건축물대장_총괄표제부+({tag})" / "mart_djy_02.txt"
-            print(f"[총괄 일괄] {snap} → {need_summ}", flush=True)
-            meta = _scan_pipe_file_multi(
-                src, SUMMARY_COLS, {s: CACHE / f"summary_{s}_{snap}.csv" for s in need_summ}
+            print(f"[총괄 일괄] {snap} → {need_summ} ({source})", flush=True)
+            meta = _register_multi(
+                "summary", snap, {s: CACHE / f"summary_{s}_{snap}.csv" for s in need_summ}, source
             )
             print(f"[총괄 일괄] {snap} read={meta['rows_read']:,}", flush=True)
 
@@ -320,24 +338,32 @@ def sidos_with_enrichment(eng) -> set[str]:
         return {str(r[0]).strip() for r in conn.execute(sql)}
 
 
-def load_register(sido: str, snapshot: str, refresh: bool) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+def load_register(
+    sido: str, snapshot: str, refresh: bool, source: str = "raw"
+) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
     """표제부·총괄표제부의 시도 필터 결과. 캐시가 있으면 재사용."""
     tag = SNAPSHOTS[snapshot]
     CACHE.mkdir(exist_ok=True)
     title_cache = CACHE / f"title_{sido}_{snapshot}.csv"
     summ_cache = CACHE / f"summary_{sido}_{snapshot}.csv"
-    meta: dict = {"snapshot": snapshot}
+    meta: dict = {"snapshot": snapshot, "register_source": source}
 
-    if refresh or not title_cache.exists():
-        src = BLDRGST_DIR / f"국토교통부_건축물대장_표제부+({tag})" / "mart_djy_03.txt"
-        print(f"[표제부] 전국 스캔 시작 — {src.name} ({src.stat().st_size / 2**30:.1f}GB)", flush=True)
-        meta["title"] = _scan_pipe_file(src, TITLE_COLS, title_cache, sido)
-        print(f"[표제부] {meta['title']}", flush=True)
-    if refresh or not summ_cache.exists():
-        src = BLDRGST_DIR / f"국토교통부_건축물대장_총괄표제부+({tag})" / "mart_djy_02.txt"
-        print(f"[총괄표제부] 스캔 시작 — {src.name}", flush=True)
-        meta["summary"] = _scan_pipe_file(src, SUMMARY_COLS, summ_cache, sido)
-        print(f"[총괄표제부] {meta['summary']}", flush=True)
+    if source == "ledger":
+        if refresh or not title_cache.exists():
+            meta["title"] = _register_multi("title", snapshot, {sido: title_cache}, source)
+        if refresh or not summ_cache.exists():
+            meta["summary"] = _register_multi("summary", snapshot, {sido: summ_cache}, source)
+    else:
+        if refresh or not title_cache.exists():
+            src = BLDRGST_DIR / f"국토교통부_건축물대장_표제부+({tag})" / "mart_djy_03.txt"
+            print(f"[표제부] 전국 스캔 시작 — {src.name} ({src.stat().st_size / 2**30:.1f}GB)", flush=True)
+            meta["title"] = _scan_pipe_file(src, TITLE_COLS, title_cache, sido)
+            print(f"[표제부] {meta['title']}", flush=True)
+        if refresh or not summ_cache.exists():
+            src = BLDRGST_DIR / f"국토교통부_건축물대장_총괄표제부+({tag})" / "mart_djy_02.txt"
+            print(f"[총괄표제부] 스캔 시작 — {src.name}", flush=True)
+            meta["summary"] = _scan_pipe_file(src, SUMMARY_COLS, summ_cache, sido)
+            print(f"[총괄표제부] {meta['summary']}", flush=True)
 
     title = pd.read_csv(title_cache, dtype=str, keep_default_na=False)
     summ = pd.read_csv(summ_cache, dtype=str, keep_default_na=False)
@@ -418,6 +444,7 @@ def build_parcels(
         p = parcels.setdefault(key, {"land": math.nan, "land_src": None, "b": []})
         p["b"].append(
             {
+                "pk": str(getattr(r, "pk", "") or "").strip(),
                 "gross": to_f(r.gross_area),
                 "struct": str(r.struct_name).strip(),
                 "floors": to_i(r.floors_above),
@@ -471,6 +498,7 @@ def match_all(tx: pd.DataFrame, parcels: dict, idx: dict) -> pd.DataFrame:
             "struct": None,
             "floors": None,
             "approve": None,
+            "bldrgst_pk": None,
             "reg_road": None,
             "reg_addr": None,
             "reg_addr_road": None,
@@ -551,6 +579,13 @@ def match_all(tx: pd.DataFrame, parcels: dict, idx: dict) -> pd.DataFrame:
                         (x for x in parcels[chosen]["b"] if not math.isnan(x["gross"])),
                         key=lambda x: abs(x["gross"] - g),
                     )
+                    # 구조 등은 첫 동을 쓰지만, 관리번호는 동이 하나로 정해질 때만 남긴다.
+                    nearest = [
+                        x for x in parcels[chosen]["b"]
+                        if not math.isnan(x["gross"]) and abs(x["gross"] - b["gross"]) <= 1e-9
+                    ]
+                    if len(nearest) == 1 and abs(b["gross"] - g) <= GROSS_TOL and b.get("pk"):
+                        rec["bldrgst_pk"] = b["pk"]
                     rec["parcel"] = f"{chosen[0]}|{lot_str(chosen[1], chosen[2])}"
                     rec["struct"] = b["struct"] or None
                     rec["floors"] = b["floors"]
@@ -1047,6 +1082,7 @@ def run(
     emit_enrichment: bool = False,
     apply_enrichment: bool = False,
     min_year: int = 2019,
+    register_source: str = "raw",
 ) -> dict:
     eng = get_built_engine()
     with eng.connect() as conn:
@@ -1068,7 +1104,7 @@ def run(
     results: dict[str, pd.DataFrame] = {}
     metas: dict[str, dict] = {}
     for snap in snaps:
-        title, summ, meta = load_register(sido, snap, refresh)
+        title, summ, meta = load_register(sido, snap, refresh, register_source)
         parcels, idx = build_parcels(title, summ, land_ledger)
         meta["parcels"] = len(parcels)
         print(f"[{snap}] 필지 {len(parcels):,} · 표제부 {len(title):,}행", flush=True)
@@ -1176,6 +1212,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="여러 스냅샷일 때 확정 규칙. 기본 time_fallback. latest·union은 대조군",
     )
     ap.add_argument("--refresh", action="store_true", help="캐시 무시하고 원본 재스캔")
+    ap.add_argument(
+        "--register-source",
+        default="raw",
+        choices=("raw", "ledger"),
+        help="표제부·총괄 캐시 공급. ledger = 건축대장 원장 v1(원문 줄 순서, 원본 스캔과 동일 캐시)",
+    )
     ap.add_argument("--no-zone", dest="zone", action="store_false", help="AL_D155 건너뜀")
     ap.add_argument("--sample", type=int, default=0, help="구조 감사용 표본 N건 CSV 추출")
     ap.add_argument("--no-compare-policies", action="store_true", help="4정책 대조 생략")
@@ -1219,7 +1261,7 @@ def main() -> None:
         else:
             snaps = [args.snapshot]
         if todo:
-            warm_register_caches(todo, snaps, args.refresh)
+            warm_register_caches(todo, snaps, args.refresh, args.register_source)
         summary: list[dict[str, Any]] = []
         for s in todo:
             print(f"\n======== sido {s} ========", flush=True)
@@ -1269,6 +1311,7 @@ def main() -> None:
         emit_enrichment=args.emit_enrichment or args.apply_enrichment,
         apply_enrichment=args.apply_enrichment,
         min_year=args.min_year,
+        register_source=args.register_source,
     )
     CACHE.mkdir(exist_ok=True)
     out = Path(args.out) if args.out else CACHE / f"recover_{args.sido}_{args.snapshot}.json"

@@ -22,6 +22,7 @@ MATCH_COLS = (
     "struct",
     "floors",
     "approve",
+    "bldrgst_pk",
     "reg_road",
     "reg_addr",
     "reg_addr_road",

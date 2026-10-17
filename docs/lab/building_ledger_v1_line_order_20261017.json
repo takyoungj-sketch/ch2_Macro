@@ -1,0 +1,38 @@
+{
+  "title|2024-09": {
+    "rows": 7863889,
+    "ledger_rows": 7863889,
+    "hash_mismatch": 0,
+    "sha256": "77b1d88d0ce4a3462c13d519ab389b3d38bbb348582ef6485949b317b4e4959c"
+  },
+  "title|2025-07": {
+    "rows": 8036702,
+    "ledger_rows": 8036702,
+    "hash_mismatch": 0,
+    "sha256": "a89073dc6b7089d86257a3c5f87f8e17e13e4354ef22ebe507049b2084317760"
+  },
+  "title|2026-07": {
+    "rows": 8060932,
+    "ledger_rows": 8060932,
+    "hash_mismatch": 0,
+    "sha256": "42abc5ed87e16419c477b78cfbb5a4b375e56604d9133be2acec067b35787247"
+  },
+  "summary|2024-09": {
+    "rows": 607587,
+    "ledger_rows": 607587,
+    "hash_mismatch": 0,
+    "sha256": "1c1149e06248fcedb4bec611b0cb6e287b300c29aac2817c8e54ffb8c950ea8f"
+  },
+  "summary|2025-07": {
+    "rows": 616909,
+    "ledger_rows": 616909,
+    "hash_mismatch": 0,
+    "sha256": "e1b2c07dc8e447f017b9c07d9b1dca1a40cc77659512c904b56d93bc2d27c46f"
+  },
+  "summary|2026-07": {
+    "rows": 620535,
+    "ledger_rows": 620535,
+    "hash_mismatch": 0,
+    "sha256": "bf8146fd9393426569fd2b53e975aff877427ca84415d43bcc4c9d5529a18d7a"
+  }
+}
