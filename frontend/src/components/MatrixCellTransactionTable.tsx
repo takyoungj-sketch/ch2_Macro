@@ -5,6 +5,9 @@ import type { MatrixCellTransactionItem } from "../types";
 import {
   formatLandTxCell,
   formatLandTxContractDate,
+  formatTraitAsof,
+  formatTraitOfficialPrice,
+  formatTraitStatus,
   landTxAdminCols,
   landTxSortValue,
   type LandTxSortDir,
@@ -45,11 +48,19 @@ const LAND_CATEGORY_COL: ColDef = {
   filterType: "select",
 };
 
-function buildCols(showLandCategory: boolean): ColDef[] {
-  if (!showLandCategory) return BASE_COLS;
-  const idx = BASE_COLS.findIndex((c) => c.key === "lot");
+const TRAIT_COLS: ColDef[] = [
+  { key: "trait_status", label: "연결", filterType: "select" },
+  { key: "official_price", label: "공시지가", align: "right", filterType: "sort-only" },
+  { key: "trait_asof", label: "특성기준일", filterType: "sort-only" },
+];
+
+function buildCols(showLandCategory: boolean, showTraitEnrich: boolean): ColDef[] {
   const next = [...BASE_COLS];
-  next.splice(idx + 1, 0, LAND_CATEGORY_COL);
+  if (showLandCategory) {
+    const idx = next.findIndex((c) => c.key === "lot");
+    next.splice(idx + 1, 0, LAND_CATEGORY_COL);
+  }
+  if (showTraitEnrich) next.push(...TRAIT_COLS);
   return next;
 }
 
@@ -73,6 +84,8 @@ function getSelectDisplayValue(r: MatrixCellTransactionItem, key: LandTxSortKey)
       return r.partial_ownership_label?.trim() || "—";
     case "deal_type":
       return r.deal_type?.trim() || "—";
+    case "trait_status":
+      return formatTraitStatus(r);
     default:
       return "";
   }
@@ -244,6 +257,7 @@ export default function MatrixCellTransactionTable({
   items,
   truncated,
   showLandCategory = false,
+  showTraitEnrich = false,
   externalSelectFilters,
   externalFilterToken = 0,
 }: {
@@ -251,12 +265,17 @@ export default function MatrixCellTransactionTable({
   truncated?: boolean;
   /** 지목군 모드에서 원장 지목 열 표시 */
   showLandCategory?: boolean;
+  /** 토지특성 대장 보강 열 */
+  showTraitEnrich?: boolean;
   /** 집계 탭 드릴다운 — 컬럼 포함 필터 */
   externalSelectFilters?: Partial<Record<LandTxSortKey, Set<string>>>;
   /** 변경 시 externalSelectFilters 적용 */
   externalFilterToken?: number;
 }) {
-  const cols = useMemo(() => buildCols(showLandCategory), [showLandCategory]);
+  const cols = useMemo(
+    () => buildCols(showLandCategory, showTraitEnrich),
+    [showLandCategory, showTraitEnrich],
+  );
   const selectCols = useMemo(
     () => cols.filter((c) => c.filterType === "select"),
     [cols],
@@ -285,7 +304,7 @@ export default function MatrixCellTransactionTable({
     setTextFilters({});
     setPage(1);
     setOpenFilterCol(null);
-  }, [showLandCategory]);
+  }, [showLandCategory, showTraitEnrich]);
 
   useEffect(() => {
     if (!externalFilterToken) return;
@@ -398,7 +417,7 @@ export default function MatrixCellTransactionTable({
     } else {
       setSortKey(key);
       setSortDir(
-        key === "contract_date" || key === "price" || key === "unit_price"
+        key === "contract_date" || key === "price" || key === "unit_price" || key === "official_price"
           ? "desc"
           : "asc",
       );
@@ -508,7 +527,13 @@ export default function MatrixCellTransactionTable({
         <table
           className={clsx(
             "w-full text-[11px] border-collapse",
-            showLandCategory ? "min-w-[1120px]" : "min-w-[1040px]",
+            showTraitEnrich
+              ? showLandCategory
+                ? "min-w-[1400px]"
+                : "min-w-[1320px]"
+              : showLandCategory
+                ? "min-w-[1120px]"
+                : "min-w-[1040px]",
           )}
         >
           <thead className="sticky top-0 z-10">
@@ -742,6 +767,29 @@ export default function MatrixCellTransactionTable({
                     <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">
                       {formatLandTxCell(r.deal_type)}
                     </td>
+                    {showTraitEnrich && (
+                      <>
+                        <td
+                          className="border border-slate-200 px-2 py-1 whitespace-nowrap"
+                          title={r.trait_unverified ? "검증 전 연결" : undefined}
+                        >
+                          {formatTraitStatus(r)}
+                        </td>
+                        <td
+                          className="border border-slate-200 px-2 py-1 text-right tabular-nums whitespace-nowrap"
+                          title={
+                            r.official_price_year != null
+                              ? `${r.official_price_year}년 공시지가(원/㎡)`
+                              : "원/㎡"
+                          }
+                        >
+                          {formatTraitOfficialPrice(r)}
+                        </td>
+                        <td className="border border-slate-200 px-2 py-1 tabular-nums whitespace-nowrap">
+                          {formatTraitAsof(r)}
+                        </td>
+                      </>
+                    )}
                   </tr>
                 );
               })

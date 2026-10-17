@@ -623,12 +623,27 @@ class MatrixCellTransactionItem(BaseModel):
     total_price_10k: float
     unit_price_per_sqm: Optional[float] = None
     road_condition: Optional[str] = None
+    # 토지특성 대장 연결. trait_enrich 를 켠 응답에만 채운다. 원장 값은 바꾸지 않는다.
+    trait_link_status: Optional[str] = None
+    trait_link_label: Optional[str] = None
+    trait_price_status: Optional[str] = None
+    official_price_won: Optional[float] = None
+    official_price_year: Optional[int] = None
+    trait_asof: Optional[date] = None
+    trait_unverified: Optional[bool] = None
 
 
 class MatrixCellTransactionsRequest(MatrixYearlyRequest):
     offset: int = Field(0, ge=0)
     # 매트릭스 칸 단위 subset — 서버가 전체 필터 후 slice. 클라이언트 필터·정렬용 상한.
     limit: int = Field(25, ge=1, le=10_000)
+    trait_enrich: bool = False
+
+
+class MatrixCellTransactionsExportRequest(MatrixYearlyRequest):
+    """목록 CSV. 보강을 켠 경우에만 특성 열을 붙인다."""
+
+    trait_enrich: bool = False
 
 
 class MatrixCellTransactionsResponse(BaseModel):
@@ -639,6 +654,7 @@ class MatrixCellTransactionsResponse(BaseModel):
     limit: int
     exclude_outlier: bool
     outlier_iqr_multiplier: float
+    trait_enrich_applied: bool = False
     items: list[MatrixCellTransactionItem] = []
 
 

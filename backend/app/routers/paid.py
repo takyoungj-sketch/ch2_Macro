@@ -58,6 +58,7 @@ from app.schemas import (
     LandRegressionResponse,
     LandRegressionSuggestResponse,
     MatrixCellTransactionItem,
+    MatrixCellTransactionsExportRequest,
     MatrixCellTransactionsRequest,
     MatrixCellTransactionsResponse,
     LongTermTrendPoint,
@@ -1791,14 +1792,28 @@ def matrix_cell_histogram(
 
 
 def _fetch_matrix_cell_filtered_transactions(
-    body: MatrixYearlyRequest, db: Session
+    body: MatrixYearlyRequest, db: Session, *, trait_enrich: bool = False
 ) -> list[dict]:
     """matrix-yearly 와 동일 필터·이상치 정책을 적용한 원거래 행(최신 계약 순)."""
     merged_where, merged_params = _matrix_cell_merged_where(body, db)
+    from app.land_trait_link import item_fields
     from app.region_canonical import canonical_select_expr, region_codes_join_on_canonical
 
     code_expr = canonical_select_expr("lt")
     join_sql = region_codes_join_on_canonical("lt", "rc", active_only=False)
+    trait_sql = ""
+    trait_join = ""
+    if trait_enrich:
+        trait_sql = """,
+               NULLIF(TRIM(BOTH FROM COALESCE(tl.link_status::text, '')), '') AS trait_link_status,
+               NULLIF(TRIM(BOTH FROM COALESCE(tl.price_status::text, '')), '') AS trait_price_status,
+               tl.official_price_won AS official_price_won,
+               tl.price_year AS official_price_year,
+               tl.trait_asof AS trait_asof,
+               tl.unverified AS trait_unverified"""
+        trait_join = """
+        LEFT JOIN land_transaction_trait_link tl
+          ON tl.transaction_hash = lt.transaction_hash"""
     tx_sql = f"""
         SELECT lt.id, lt.contract_year, lt.contract_month, lt.contract_date,
                ({code_expr}) AS beopjungri_code,
@@ -1815,8 +1830,10 @@ def _fetch_matrix_cell_filtered_transactions(
                lt.total_price_10k::float8 AS total_price_10k,
                lt.unit_price_per_sqm::float8 AS unit_price_per_sqm,
                TRIM(BOTH FROM COALESCE(lt.road_condition::text, '')) AS road_condition
+               {trait_sql}
         FROM land_transactions_resolved lt
         {join_sql}
+        {trait_join}
         WHERE {merged_where}
         ORDER BY lt.contract_year ASC, lt.contract_month ASC, lt.id ASC
         """
@@ -1858,6 +1875,19 @@ def _fetch_matrix_cell_filtered_transactions(
                 "road_condition": rd or None,
             }
         )
+        if trait_enrich:
+            candidates[-1].update(
+                item_fields(
+                    {
+                        "trait_link_status": m.get("trait_link_status"),
+                        "trait_price_status": m.get("trait_price_status"),
+                        "official_price_won": m.get("official_price_won"),
+                        "official_price_year": m.get("official_price_year"),
+                        "trait_asof": m.get("trait_asof"),
+                        "trait_unverified": m.get("trait_unverified"),
+                    }
+                )
+            )
         prices_px.append(fv)
 
     if body.exclude_outlier:
@@ -1889,7 +1919,10 @@ def _format_tx_contract_date_csv(row: dict) -> str:
 
 
 def _matrix_cell_transactions_csv_bytes(
-    rows: list[dict], *, include_land_category: bool = False
+    rows: list[dict],
+    *,
+    include_land_category: bool = False,
+    include_trait: bool = False,
 ) -> bytes:
     buf = io.StringIO()
     buf.write("\ufeff")
@@ -1898,6 +1931,10 @@ def _matrix_cell_transactions_csv_bytes(
     if include_land_category:
         header.append("지목")
     header.extend(["면적(㎡)", "금액(만원)", "단가(만원/㎡)", "도로", "지분", "유형"])
+    if include_trait:
+        from app.land_trait_link import TRAIT_CSV_HEADER
+
+        header.extend(TRAIT_CSV_HEADER)
     writer.writerow(header)
     for c in rows:
         row = [
@@ -1919,6 +1956,10 @@ def _matrix_cell_transactions_csv_bytes(
                 c.get("deal_type") or "",
             ]
         )
+        if include_trait:
+            from app.land_trait_link import csv_cells
+
+            row.extend(csv_cells(c))
         writer.writerow(row)
     return buf.getvalue().encode("utf-8")
 
@@ -1947,7 +1988,10 @@ def matrix_cell_transactions(
     matrix-yearly 와 동일 필터·이상치 정책을 적용한 뒤, 남은 행을 최신 계약 순으로 정렬해
     offset/limit 으로 잘라 반환한다.
     """
-    filtered = _fetch_matrix_cell_filtered_transactions(body, db)
+    from app.land_trait_link import TRAIT_ITEM_KEYS, table_ready
+
+    applied = bool(body.trait_enrich and table_ready(db))
+    filtered = _fetch_matrix_cell_filtered_transactions(body, db, trait_enrich=applied)
     total = len(filtered)
     off = int(body.offset)
     lim = int(body.limit)
@@ -1970,6 +2014,7 @@ def matrix_cell_transactions(
             total_price_10k=c["total_price_10k"],
             unit_price_per_sqm=c["unit_price_per_sqm"],
             road_condition=c["road_condition"],
+            **{key: c[key] for key in TRAIT_ITEM_KEYS if key in c},
         )
         for c in page
     ]
@@ -1982,6 +2027,7 @@ def matrix_cell_transactions(
         limit=lim,
         exclude_outlier=bool(body.exclude_outlier),
         outlier_iqr_multiplier=float(body.outlier_iqr_multiplier),
+        trait_enrich_applied=applied,
         items=items,
     )
 
@@ -1991,10 +2037,13 @@ def matrix_cell_transactions(
     summary="매트릭스 칸 원거래 목록 CSV 내보내기",
 )
 def matrix_cell_transactions_export(
-    body: MatrixYearlyRequest, db: Session = Depends(get_db)
+    body: MatrixCellTransactionsExportRequest, db: Session = Depends(get_db)
 ):
     """목록 API와 동일 필터·이상치 정책으로 전체 행을 CSV(UTF-8 BOM)로 반환한다."""
-    filtered = _fetch_matrix_cell_filtered_transactions(body, db)
+    from app.land_trait_link import table_ready
+
+    applied = bool(body.trait_enrich and table_ready(db))
+    filtered = _fetch_matrix_cell_filtered_transactions(body, db, trait_enrich=applied)
     if len(filtered) > MAX_MATRIX_CELL_TX_EXPORT:
         raise HTTPException(
             status_code=413,
@@ -2009,7 +2058,7 @@ def matrix_cell_transactions_export(
         getattr(body, "matrix_mode", None) or "category"
     ) == "group"
     payload = _matrix_cell_transactions_csv_bytes(
-        filtered, include_land_category=include_jimok
+        filtered, include_land_category=include_jimok, include_trait=applied
     )
     filename = _matrix_cell_export_filename(body)
     return Response(

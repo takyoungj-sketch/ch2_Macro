@@ -25,6 +25,7 @@ import { formatMatrixBucketAxisLabel } from "../utils/matrixYearlyLabels";
 import { resolveLongTermTargetsForFetch } from "../utils/longTermTargets";
 import { useAppStore } from "../store";
 import MatrixCellHistogramChart from "./MatrixCellHistogramChart";
+import LandTraitConsentModal from "./LandTraitConsentModal";
 import MatrixCellTransactionTable from "./MatrixCellTransactionTable";
 import MatrixCellTransactionAggregate from "./MatrixCellTransactionAggregate";
 import MatrixYearlyTrendChart from "./MatrixYearlyTrendChart";
@@ -163,6 +164,8 @@ export default function PaidMatrixYearlyModal({
 
   const [txExportLoading, setTxExportLoading] = useState(false);
   const [txExportError, setTxExportError] = useState<string | null>(null);
+  const [traitEnrich, setTraitEnrich] = useState(false);
+  const [traitConsentOpen, setTraitConsentOpen] = useState(false);
 
   const [ltLoading, setLtLoading] = useState(false);
   const [ltError, setLtError] = useState<string | null>(null);
@@ -316,16 +319,23 @@ export default function PaidMatrixYearlyModal({
   }, [open, panel, filterRequest, histScope, histSliceKey, isRolling, sortedRows]);
 
   useEffect(() => {
-    if (!open || panel !== "transactions" || !filterRequest) return;
-    let cancelled = false;
+    if (!open || panel !== "transactions") return;
     setTxSubView("list");
     setTxExternalFilters({});
     setTxExternalFilterToken(0);
+  }, [open, panel, filterRequest]);
+
+  useEffect(() => {
+    if (!open || panel !== "transactions" || !filterRequest) return;
+    let cancelled = false;
     (async () => {
       setTxLoading(true);
       setTxError(null);
       try {
-        const data = await fetchAllMatrixCellTransactions(filterRequest);
+        const data = await fetchAllMatrixCellTransactions({
+          ...filterRequest,
+          trait_enrich: traitEnrich,
+        });
         if (!cancelled) setTxData(data);
       } catch (e) {
         if (!cancelled) {
@@ -339,7 +349,7 @@ export default function PaidMatrixYearlyModal({
     return () => {
       cancelled = true;
     };
-  }, [open, panel, filterRequest]);
+  }, [open, panel, filterRequest, traitEnrich]);
 
   useEffect(() => {
     if (panel !== "transactions") return;
@@ -351,14 +361,17 @@ export default function PaidMatrixYearlyModal({
     setTxExportLoading(true);
     setTxExportError(null);
     try {
-      await downloadMatrixCellTransactionsCsv(filterRequest);
+      await downloadMatrixCellTransactionsCsv({
+        ...filterRequest,
+        trait_enrich: traitEnrich,
+      });
     } catch (e) {
       const parsed = await parseApiErrorAsync(e);
       setTxExportError(parsed.message);
     } finally {
       setTxExportLoading(false);
     }
-  }, [filterRequest]);
+  }, [filterRequest, traitEnrich]);
 
   const handleAggregateDrillDown = useCallback((filters: LandTxDrillDownFilters) => {
     setTxExternalFilters(
@@ -466,6 +479,7 @@ export default function PaidMatrixYearlyModal({
   if (!open) return null;
 
   return (
+    <>
     <DraggableModalShell
       open={open}
       onClose={onClose}
@@ -942,8 +956,32 @@ export default function PaidMatrixYearlyModal({
                   {txExportError && (
                     <p className="text-[10px] text-red-500">{txExportError}</p>
                   )}
+                  {traitEnrich && txData && !txData.trait_enrich_applied && (
+                    <p className="text-[10px] text-amber-700">
+                      대장 보강 결과를 아직 읽지 못했습니다.
+                    </p>
+                  )}
+                  {traitEnrich && txData?.trait_enrich_applied && (
+                    <p className="text-[10px] text-slate-500">
+                      토지특성 대장 연결은 검증 전입니다. 금액이 비어 있으면 필지가 하나로 정해지지 않았거나 아직 계산 전입니다.
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  <label className="flex items-center gap-1 text-[11px] text-slate-700 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={traitEnrich}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setTraitConsentOpen(true);
+                          return;
+                        }
+                        setTraitEnrich(false);
+                      }}
+                    />
+                    토지특성 대장 보강
+                  </label>
                   {!txLoading && !txError && txData && (
                     <div
                       className="inline-flex rounded-md border border-slate-200 bg-slate-50 p-0.5"
@@ -1002,6 +1040,7 @@ export default function PaidMatrixYearlyModal({
                       items={txData.items}
                       truncated={txData.total > txData.items.length}
                       showLandCategory={matrixMode === "group"}
+                      showTraitEnrich={traitEnrich && Boolean(txData.trait_enrich_applied)}
                       externalSelectFilters={txExternalFilters}
                       externalFilterToken={txExternalFilterToken}
                     />
@@ -1012,5 +1051,14 @@ export default function PaidMatrixYearlyModal({
           )}
 
     </DraggableModalShell>
+    <LandTraitConsentModal
+      open={traitConsentOpen}
+      onCancel={() => setTraitConsentOpen(false)}
+      onConfirm={() => {
+        setTraitEnrich(true);
+        setTraitConsentOpen(false);
+      }}
+    />
+    </>
   );
 }

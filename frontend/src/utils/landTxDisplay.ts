@@ -63,7 +63,10 @@ export type LandTxSortKey =
   | "unit_price"
   | "road"
   | "partial"
-  | "deal_type";
+  | "deal_type"
+  | "trait_status"
+  | "official_price"
+  | "trait_asof";
 
 export type LandTxSortDir = "asc" | "desc";
 
@@ -94,9 +97,42 @@ export function landTxSortValue(r: MatrixCellTransactionItem, key: LandTxSortKey
       return r.partial_ownership_label?.trim() ?? "";
     case "deal_type":
       return r.deal_type?.trim() ?? "";
+    case "trait_status":
+      return formatTraitStatus(r);
+    case "official_price":
+      return r.official_price_won ?? null;
+    case "trait_asof":
+      return r.trait_asof?.slice(0, 10) ?? "";
     default:
       return null;
   }
+}
+
+function formatWon(value: number): string {
+  const digits = Number.isInteger(value) ? 0 : 1;
+  return value.toLocaleString("ko-KR", { maximumFractionDigits: digits });
+}
+
+/** 보강 열. 행이 없으면 아직 계산 전이다. */
+export function formatTraitStatus(r: MatrixCellTransactionItem): string {
+  if (!r.trait_link_status) return "미계산";
+  return r.trait_link_label?.trim() || r.trait_link_status;
+}
+
+export function formatTraitOfficialPrice(r: MatrixCellTransactionItem): string {
+  if (!r.trait_link_status) return "미계산";
+  if (r.trait_price_status === "same_year" || r.trait_price_status === "previous_year") {
+    if (r.official_price_won == null) return "—";
+    const text = formatWon(r.official_price_won);
+    return r.trait_price_status === "previous_year" ? `${text} 전년` : text;
+  }
+  if (r.trait_price_status === "price_conflict") return "충돌";
+  if (r.trait_price_status === "price_missing") return "없음";
+  return "—";
+}
+
+export function formatTraitAsof(r: MatrixCellTransactionItem): string {
+  return r.trait_asof?.slice(0, 10) || "—";
 }
 
 export function landTxFilterText(r: MatrixCellTransactionItem, key: LandTxSortKey): string {

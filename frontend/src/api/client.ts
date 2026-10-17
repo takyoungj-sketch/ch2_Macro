@@ -204,7 +204,7 @@ export const fetchLandRegressionPredict = async (
 
 /** 매트릭스 칸 원거래 목록 CSV(UTF-8 BOM) 다운로드 — 목록 API와 동일 필터·이상치 정책 */
 export const downloadMatrixCellTransactionsCsv = async (
-  body: MatrixYearlyRequest,
+  body: MatrixYearlyRequest & { trait_enrich?: boolean },
 ): Promise<void> => {
   const response = await api.post<Blob>(
     "/paid/matrix-cell-transactions/export",

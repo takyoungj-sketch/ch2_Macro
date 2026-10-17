@@ -300,12 +300,21 @@ export interface MatrixCellTransactionItem {
   total_price_10k: number;
   unit_price_per_sqm?: number | null;
   road_condition?: string | null;
+  /** 토지특성 대장 연결. 보강을 켠 응답에만 채워진다. */
+  trait_link_status?: string | null;
+  trait_link_label?: string | null;
+  trait_price_status?: string | null;
+  official_price_won?: number | null;
+  official_price_year?: number | null;
+  trait_asof?: string | null;
+  trait_unverified?: boolean | null;
 }
 
 /** POST /paid/matrix-cell-transactions 요청 */
 export interface MatrixCellTransactionsRequest extends MatrixYearlyRequest {
   offset?: number;
   limit?: number;
+  trait_enrich?: boolean;
 }
 
 export interface MatrixCellTransactionsResponse {
@@ -316,6 +325,7 @@ export interface MatrixCellTransactionsResponse {
   limit: number;
   exclude_outlier: boolean;
   outlier_iqr_multiplier: number;
+  trait_enrich_applied?: boolean;
   items: MatrixCellTransactionItem[];
 }
 
