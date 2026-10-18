@@ -1,0 +1,290 @@
+{
+ "plan_step": "5 (collective) — parallel comparison, read only",
+ "edition_for_titles": "2026-07",
+ "residential": {
+  "all": {
+   "current_pnu_different": 433,
+   "current_pnu_same": 224644,
+   "kapt_different": 1700,
+   "kapt_kapt_no_pnu": 195328,
+   "kapt_no_attribute_row": 10098,
+   "kapt_same": 17951,
+   "ledger_kind_latest_없음": 2728,
+   "ledger_kind_latest_일반만": 236,
+   "ledger_kind_latest_집합포함": 222113,
+   "ledger_summary_any_no": 182747,
+   "ledger_summary_any_yes": 42330,
+   "ledger_title_any_no": 1655,
+   "ledger_title_any_yes": 223422,
+   "ledger_title_latest_no": 2728,
+   "ledger_title_latest_yes": 222349,
+   "mart_rows": 225077,
+   "mix_multi_bjd": 1323,
+   "mix_multi_lot_same_bjd": 3381,
+   "mix_no_tx": 1470,
+   "mix_single_lot": 218903,
+   "price_different_price": 4,
+   "price_pnu_not_in_slim": 13,
+   "price_same_price": 225060,
+   "slim_latest_year_2026": 225064,
+   "slim_via_absent": 13,
+   "slim_via_direct": 210112,
+   "slim_via_direct+incheon_new": 4845,
+   "slim_via_direct+incheon_old": 5293,
+   "slim_via_honam_bridge": 4814
+  },
+  "by_asset": {
+   "apartment": {
+    "current_pnu_different": 5,
+    "current_pnu_same": 41561,
+    "kapt_different": 1656,
+    "kapt_kapt_no_pnu": 22016,
+    "kapt_no_attribute_row": 491,
+    "kapt_same": 17403,
+    "ledger_kind_latest_없음": 379,
+    "ledger_kind_latest_일반만": 15,
+    "ledger_kind_latest_집합포함": 41172,
+    "ledger_summary_any_no": 20445,
+    "ledger_summary_any_yes": 21121,
+    "ledger_title_any_no": 283,
+    "ledger_title_any_yes": 41283,
+    "ledger_title_latest_no": 379,
+    "ledger_title_latest_yes": 41187,
+    "mart_rows": 41566,
+    "mix_multi_bjd": 195,
+    "mix_multi_lot_same_bjd": 102,
+    "mix_no_tx": 95,
+    "mix_single_lot": 41174,
+    "price_same_price": 41566,
+    "slim_latest_year_2026": 41566,
+    "slim_via_direct": 38180,
+    "slim_via_direct+incheon_new": 474,
+    "slim_via_direct+incheon_old": 474,
+    "slim_via_honam_bridge": 2438
+   },
+   "officetel": {
+    "current_pnu_different": 26,
+    "current_pnu_same": 11919,
+    "kapt_different": 44,
+    "kapt_kapt_no_pnu": 10697,
+    "kapt_no_attribute_row": 656,
+    "kapt_same": 548,
+    "ledger_kind_latest_없음": 40,
+    "ledger_kind_latest_일반만": 13,
+    "ledger_kind_latest_집합포함": 11892,
+    "ledger_summary_any_no": 10806,
+    "ledger_summary_any_yes": 1139,
+    "ledger_title_any_no": 32,
+    "ledger_title_any_yes": 11913,
+    "ledger_title_latest_no": 40,
+    "ledger_title_latest_yes": 11905,
+    "mart_rows": 11945,
+    "mix_multi_bjd": 32,
+    "mix_multi_lot_same_bjd": 318,
+    "mix_no_tx": 114,
+    "mix_single_lot": 11481,
+    "price_same_price": 11945,
+    "slim_latest_year_2026": 11945,
+    "slim_via_direct": 11189,
+    "slim_via_direct+incheon_new": 230,
+    "slim_via_direct+incheon_old": 245,
+    "slim_via_honam_bridge": 281
+   },
+   "rowhouse": {
+    "current_pnu_different": 402,
+    "current_pnu_same": 171164,
+    "kapt_kapt_no_pnu": 162615,
+    "kapt_no_attribute_row": 8951,
+    "ledger_kind_latest_없음": 2309,
+    "ledger_kind_latest_일반만": 208,
+    "ledger_kind_latest_집합포함": 169049,
+    "ledger_summary_any_no": 151496,
+    "ledger_summary_any_yes": 20070,
+    "ledger_title_any_no": 1340,
+    "ledger_title_any_yes": 170226,
+    "ledger_title_latest_no": 2309,
+    "ledger_title_latest_yes": 169257,
+    "mart_rows": 171566,
+    "mix_multi_bjd": 1096,
+    "mix_multi_lot_same_bjd": 2961,
+    "mix_no_tx": 1261,
+    "mix_single_lot": 166248,
+    "price_different_price": 4,
+    "price_pnu_not_in_slim": 13,
+    "price_same_price": 171549,
+    "slim_latest_year_2026": 171553,
+    "slim_via_absent": 13,
+    "slim_via_direct": 160743,
+    "slim_via_direct+incheon_new": 4141,
+    "slim_via_direct+incheon_old": 4574,
+    "slim_via_honam_bridge": 2095
+   }
+  },
+  "by_sido": {
+   "11": {
+    "different_price": 4,
+    "no_title_latest": 741,
+    "rows": 67224,
+    "same_price": 67220,
+    "title_latest": 66483
+   },
+   "12": {
+    "no_title_latest": 24,
+    "pnu_not_in_slim": 13,
+    "rows": 4827,
+    "same_price": 4814,
+    "title_latest": 4803
+   },
+   "26": {
+    "no_title_latest": 180,
+    "rows": 15964,
+    "same_price": 15964,
+    "title_latest": 15784
+   },
+   "27": {
+    "no_title_latest": 109,
+    "rows": 5981,
+    "same_price": 5981,
+    "title_latest": 5872
+   },
+   "28": {
+    "no_title_latest": 389,
+    "rows": 29561,
+    "same_price": 29561,
+    "title_latest": 29172
+   },
+   "30": {
+    "no_title_latest": 92,
+    "rows": 4112,
+    "same_price": 4112,
+    "title_latest": 4020
+   },
+   "31": {
+    "no_title_latest": 81,
+    "rows": 3572,
+    "same_price": 3572,
+    "title_latest": 3491
+   },
+   "36": {
+    "no_title_latest": 1,
+    "rows": 350,
+    "same_price": 350,
+    "title_latest": 349
+   },
+   "41": {
+    "no_title_latest": 940,
+    "rows": 60631,
+    "same_price": 60631,
+    "title_latest": 59691
+   },
+   "43": {
+    "no_title_latest": 35,
+    "rows": 3273,
+    "same_price": 3273,
+    "title_latest": 3238
+   },
+   "44": {
+    "no_title_latest": 29,
+    "rows": 4922,
+    "same_price": 4922,
+    "title_latest": 4893
+   },
+   "47": {
+    "no_title_latest": 16,
+    "rows": 7378,
+    "same_price": 7378,
+    "title_latest": 7362
+   },
+   "48": {
+    "no_title_latest": 54,
+    "rows": 7628,
+    "same_price": 7628,
+    "title_latest": 7574
+   },
+   "50": {
+    "no_title_latest": 8,
+    "rows": 4168,
+    "same_price": 4168,
+    "title_latest": 4160
+   },
+   "51": {
+    "no_title_latest": 13,
+    "rows": 2817,
+    "same_price": 2817,
+    "title_latest": 2804
+   },
+   "52": {
+    "no_title_latest": 16,
+    "rows": 2669,
+    "same_price": 2669,
+    "title_latest": 2653
+   }
+  },
+  "stats_keys_without_mart_row": {
+   "rowhouse": 24453,
+   "apartment": 4337,
+   "officetel": 1457
+  },
+  "stats_keys_without_mart_row_and_no_pnu": {
+   "rowhouse": 108,
+   "officetel": 50,
+   "apartment": 128
+  },
+  "stats_keys_without_mart_row_slim_supply": {
+   "rowhouse": {
+    "pnu_not_in_slim": 828,
+    "slim_latest_2013": 1,
+    "slim_latest_2015": 1,
+    "slim_latest_2016": 5,
+    "slim_latest_2017": 6,
+    "slim_latest_2018": 2,
+    "slim_latest_2019": 9,
+    "slim_latest_2020": 90,
+    "slim_latest_2021": 518,
+    "slim_latest_2022": 201,
+    "slim_latest_2023": 185,
+    "slim_latest_2024": 362,
+    "slim_latest_2025": 1158,
+    "slim_latest_2025_conflict": 2,
+    "slim_latest_2026": 20977
+   },
+   "apartment": {
+    "pnu_not_in_slim": 180,
+    "slim_latest_2015": 1,
+    "slim_latest_2016": 10,
+    "slim_latest_2017": 2,
+    "slim_latest_2018": 5,
+    "slim_latest_2019": 4,
+    "slim_latest_2020": 19,
+    "slim_latest_2021": 41,
+    "slim_latest_2022": 15,
+    "slim_latest_2023": 16,
+    "slim_latest_2024": 43,
+    "slim_latest_2025": 317,
+    "slim_latest_2025_conflict": 1,
+    "slim_latest_2026": 3555
+   },
+   "officetel": {
+    "pnu_not_in_slim": 29,
+    "slim_latest_2017": 1,
+    "slim_latest_2018": 2,
+    "slim_latest_2020": 1,
+    "slim_latest_2021": 3,
+    "slim_latest_2022": 2,
+    "slim_latest_2023": 2,
+    "slim_latest_2024": 2,
+    "slim_latest_2025": 107,
+    "slim_latest_2026": 1258
+   }
+  }
+ },
+ "non_residential": {
+  "state": "not_applicable (D-020: masked lots, road clusters; no representative-parcel mart)",
+  "clusters": {
+   "collective_factory": 1414,
+   "collective_shop": 24289
+  }
+ },
+ "seconds": 51.1,
+ "rows_file": "outside repo (verification folder)"
+}
