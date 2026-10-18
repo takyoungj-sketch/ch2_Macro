@@ -39,7 +39,7 @@
 | `link_state` | **linked / unlinked / not_applicable** | 5앱 공통 세 값 |
 | `link_reason` | 유형별 원래 상태 그대로 | 토지 `link_status`, 복합 tier·fail, 집합 등급 |
 | `parcel_resolved` | true / false | 필지가 하나로 정해졌나 |
-| `building_id_state` | **confirmed / candidates_agree / candidates_conflict / not_applicable** | 토지는 not_applicable |
+| `building_id_state` | **confirmed / candidates_agree / candidates_conflict / aggregated / weak_match / not_applicable** | 토지는 not_applicable. aggregated·weak_match는 집합 등급용(§5) |
 | `candidate_count` | 정수 | 미정일 때만 |
 | `code_resolution` | held / reissued_1to1 / current_code / bridge_12 / prefix_v1 | 코드 변경 처리 방식 |
 | `register_snapshot` | 판(YYYY-MM) | 건물 값을 읽은 판 |
@@ -124,8 +124,8 @@
 | 지금 | 계약 |
 |---|---|
 | A·B·C (명칭·지번 일치) 18,002 | linked, building_id_state confirmed |
-| D·F (여러 단지 세대 합산) 366 | linked, **candidates_agree에 해당하지 않음** — 합산값이라 별도 상태 `aggregated` 필요 여부 결정 |
-| E(부분일치 단일후보) 866 · P(필지 유일) 2,215 · T(표제부 동 합산) 221,167 | linked, 지금 회귀 `usable=false`. 상태 이름 결정 필요 |
+| D·F (여러 단지 세대 합산) 366 | linked, `aggregated` — 합산값이라 candidates_agree가 아니다 |
+| E(부분일치 단일후보) 866 · P(필지 유일) 2,215 · T(표제부 동 합산) 221,167 | linked, `weak_match`. 지금 회귀 `usable=false`와 같은 경계 |
 | Z(미매칭) 1,081 | unlinked |
 | 대표필지 공시지가 225,077 (2026 한 해) | `official_price`, timing latest. 과거 거래별 공시지가는 붙이지 않는다(정책 유지) |
 
@@ -144,13 +144,18 @@
 - 기존 표를 고치는 경우의 CHECK 변경 목록: 복합 `zone_source`에 land_trait_slim, `land_area_source`에 land_trait_slim, 식별 단계 열 추가, 토지 `link_status`에 V1.1 상태. 섀도 표로 가면 이 변경이 모두 필요 없다.
 - 크기 가늠: 복합 연결 507,116 × 변수 약 8 = 약 400만 행, 토지 2,684,877 × 변수 1~3. 수백 MB 수준.
 
-## 5. 결정이 필요한 것
+## 5. 결정
 
-1. **저장 방식:** 섀도 표 두 개(권장) / 기존 표 확장.
-2. **복합 미연결 행:** D-047은 결과표에 미상 행을 두지 않는다. 품질지표(9단계)에 미연결 사유가 필요하므로 섀도 머리 표에만 unlinked 행(약 15.6만)을 둘지. 기존 결과표 원칙은 그대로다.
-3. **집합 등급 대응:** D·F(합산)와 E·P·T(낮은 근거)를 공통 `building_id_state`의 어느 값으로 둘지, 또는 `aggregated`·`weak_match`를 추가할지.
-4. **candidates_agree 승인 단위:** 변수별 `use_approved`를 누가 어떤 근거로 켜는지(표본 판정 결과로만 켜는 것을 제안).
-5. **화면 표시명(5앱 공통, D-072):** 연결됨 / 미연결 / 해당 없음, 동 미확정, 후보 충돌, 대장 값 없음, 계약 후 대장, 같은 해 변경 가능.
+2026-10-18 사용자 결정:
+
+1. **저장 방식:** 유형별 DB에 섀도 표 두 개를 새로 둔다. 기존 결과표·CHECK는 바꾸지 않는다.
+2. **복합 미연결 행:** 섀도 머리 표에만 unlinked 행(약 15.6만)을 둔다. `built_transaction_enrichment`는 D-047대로 확정 행만.
+3. **집합 등급 대응:** A·B·C = confirmed, D·F = `aggregated`(여러 단지 합산값), E·P·T = `weak_match`(근거 약함), Z = unlinked.
+4. **`use_approved`:** 독립 표본 판정 결과가 있는 변수만 사용자 승인으로 켠다. 그 전에는 모두 false.
+
+남은 결정:
+
+5. **화면 표시명(5앱 공통, D-072):** 연결됨 / 미연결 / 해당 없음, 동 미확정, 후보 충돌, 대장 값 없음, 계약 후 대장, 같은 해 변경 가능 — 9단계에서 확정.
 6. **복합 용도지역 기본 표시:** `zone_latest`(지금) 유지, `zone_contract_year`는 별도 칸 — D-050·D-051 개정 여부는 회귀 비교 뒤.
 
 ## 6. 4-F 승인 대기 정책과의 관계
@@ -169,6 +174,6 @@
 
 ## 7. 다음
 
-1. §5 결정을 받는다.
-2. 섀도 표 DDL 초안을 쓰고, 복합 507,116건을 로컬 섀도 표에 채워 본다(운영 DB·기존 표는 불변).
+1. 섀도 표 DDL 초안을 파일로 쓴다(적용은 별도 승인).
+2. 복합 663,596건(연결 507,116 + 미연결)을 저장소 밖 SQLite에 계약 형식으로 채워 본다. 운영·로컬 Postgres와 기존 표는 그대로.
 3. 9단계에서 같은 표로 품질지표와 화면 표시를 만든다.
