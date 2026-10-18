@@ -1,0 +1,184 @@
+{
+ "plan_step": "6 (rent) — measurement only, read only",
+ "window": "contract_year >= 2019, is_valid",
+ "title_edition": "2026-07",
+ "A_collective_types": {
+  "apartment": {
+   "n": 7586074,
+   "with_key": 7586074,
+   "lot_masked": 0,
+   "lot_empty": 53,
+   "with_road": 7582697,
+   "with_exclusive_area": 7586074,
+   "with_contract_area": 0,
+   "with_building_year": 7586074,
+   "with_floor": 7586074,
+   "with_building_name": 7586074,
+   "building_key_reuse": {
+    "keys": 44722,
+    "rows": 7586074,
+    "keys_with_sale_key": 40713,
+    "rows_with_sale_key": 6471821,
+    "keys_with_mart_price": 39013,
+    "rows_with_mart_price": 6273944,
+    "keys_with_attribute_row": 40536,
+    "rows_with_attribute_row": 6459819,
+    "rows_tier_T": 523132,
+    "rows_tier_C": 3495362,
+    "rows_tier_A": 1693952,
+    "rows_tier_P": 142839,
+    "rows_tier_Z": 84756,
+    "rows_tier_B": 83567,
+    "rows_tier_E": 283812,
+    "rows_tier_D": 141998,
+    "rows_tier_F": 10401
+   },
+   "pnu_from_lot": {
+    "rows_pnu_ok": 7560153,
+    "rows_pnu_fail": 25921
+   }
+  },
+  "detached": {
+   "n": 3630282,
+   "with_key": 0,
+   "lot_masked": 3629771,
+   "lot_empty": 509,
+   "with_road": 3412316,
+   "with_exclusive_area": 0,
+   "with_contract_area": 3630282,
+   "with_building_year": 3322122,
+   "with_floor": 0,
+   "with_building_name": 0,
+   "building_key_reuse": {},
+   "pnu_from_lot": {
+    "rows_masked": 3629771,
+    "rows_pnu_fail": 511
+   }
+  },
+  "officetel": {
+   "n": 1671889,
+   "with_key": 1671889,
+   "lot_masked": 0,
+   "lot_empty": 1395,
+   "with_road": 1506889,
+   "with_exclusive_area": 1671889,
+   "with_contract_area": 0,
+   "with_building_year": 1657829,
+   "with_floor": 1671889,
+   "with_building_name": 1671867,
+   "building_key_reuse": {
+    "keys": 18171,
+    "rows": 1671889,
+    "keys_with_sale_key": 11899,
+    "rows_with_sale_key": 1481566,
+    "keys_with_mart_price": 10677,
+    "rows_with_mart_price": 1411351,
+    "keys_with_attribute_row": 11270,
+    "rows_with_attribute_row": 1429870,
+    "rows_tier_T": 1306240,
+    "rows_tier_P": 123630
+   },
+   "pnu_from_lot": {
+    "rows_pnu_ok": 1661747,
+    "rows_pnu_fail": 10142
+   }
+  },
+  "rowhouse": {
+   "n": 1833438,
+   "with_key": 1833438,
+   "lot_masked": 0,
+   "lot_empty": 0,
+   "with_road": 1832168,
+   "with_exclusive_area": 1833438,
+   "with_contract_area": 0,
+   "with_building_year": 1833438,
+   "with_floor": 1833438,
+   "with_building_name": 1833383,
+   "building_key_reuse": {
+    "keys": 211632,
+    "rows": 1833438,
+    "keys_with_sale_key": 161570,
+    "rows_with_sale_key": 1217429,
+    "keys_with_mart_price": 142313,
+    "rows_with_mart_price": 1101873,
+    "keys_with_attribute_row": 155602,
+    "rows_with_attribute_row": 1173695,
+    "rows_tier_T": 1173695
+   },
+   "pnu_from_lot": {
+    "rows_pnu_ok": 1833267,
+    "rows_pnu_fail": 171
+   }
+  }
+ },
+ "B_detached": {
+  "rows": 3630282,
+  "signatures": 2187804,
+  "lot_shape_rows": {
+   "masked_1stars": 515225,
+   "masked_2stars": 2380820,
+   "masked_3stars": 732883,
+   "unmasked": 493
+  },
+  "fails_rows": {
+   "lot_not_parsable": 1985
+  },
+  "candidate_buckets_signatures": {
+   "range": {
+    "6+": 540976,
+    "2-5": 2429,
+    "0": 3011,
+    "1": 515
+   },
+   "use": {
+    "6+": 532710,
+    "2-5": 8074,
+    "1": 1724,
+    "0": 4423
+   },
+   "year": {
+    "0": 91477,
+    "1": 69950,
+    "2-5": 135826,
+    "6+": 249678
+   },
+   "road": {
+    "0": 167182,
+    "1": 178620,
+    "2-5": 153534,
+    "6+": 47595
+   }
+  },
+  "candidate_buckets_rows": {
+   "range": {
+    "6+": 3591107,
+    "2-5": 5864,
+    "0": 28562,
+    "1": 1903
+   },
+   "use": {
+    "6+": 3564140,
+    "2-5": 25699,
+    "1": 4371,
+    "0": 33226
+   },
+   "year": {
+    "0": 378892,
+    "1": 274776,
+    "2-5": 739838,
+    "6+": 2233930
+   },
+   "road": {
+    "0": 646658,
+    "1": 878143,
+    "2-5": 1270501,
+    "6+": 832134
+   }
+  },
+  "leased_area_rows": {
+   "leased_area_not_equal": 3531057,
+   "leased_area_equals_gross_of_year_candidate": 96379
+  }
+ },
+ "seconds": 330.3
+}
