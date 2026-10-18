@@ -400,7 +400,7 @@ def compose(ledger_rows: pd.DataFrame, parts: dict, defn: Defn) -> tuple[list, l
     for r in ledger_rows.itertuples(index=False):
         k = r.transaction_hash
         mr, zr = m.get(k), z.get(k, {})
-        sido = (r.sigungu_code or "")[:2] or NO_SIDO
+        sido = r.sido
         if mr is None:
             deps.append((k, sido, r.beopjungri_code, r.contract_year, r.contract_month, 0) + (None,) * 12)
             continue
