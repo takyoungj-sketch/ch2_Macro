@@ -1,0 +1,138 @@
+{
+  "step": "9-input",
+  "zone": {
+    "compared_rows": 498278,
+    "latest": {
+      "both_present": 486437,
+      "same": 454033,
+      "differs": 32404,
+      "buckets": {
+        "representative_rule": 28529,
+        "source_difference": 3875
+      },
+      "witness": {
+        "representative_rule|no_tx_zone": 19293,
+        "representative_rule|tx_agrees_neither": 146,
+        "representative_rule|tx_agrees_new": 8575,
+        "representative_rule|tx_agrees_old": 515,
+        "source_difference|link_crosscheck_failed": 198,
+        "source_difference|no_tx_zone": 1920,
+        "source_difference|tx_agrees_neither": 24,
+        "source_difference|tx_agrees_new": 1783,
+        "source_difference|tx_agrees_old": 148
+      },
+      "old_multi_label_among_diffs": 28776,
+      "top_pairs": {
+        "보전관리 -> 계획관리": 4154,
+        "농림 -> 계획관리": 2721,
+        "자연녹지 -> 개발제한구역": 2670,
+        "생산관리 -> 계획관리": 2502,
+        "자연녹지 -> 제1종일반주거": 1671,
+        "제3종일반주거 -> 제2종일반주거": 1212,
+        "제2종일반주거 -> 제3종일반주거": 1199,
+        "계획관리 -> 농림": 789,
+        "자연녹지 -> 제2종일반주거": 747,
+        "보전관리 -> 생산관리": 741,
+        "제1종일반주거 -> 제2종일반주거": 725,
+        "계획관리 -> 보전관리": 719,
+        "농림 -> 보전관리": 708,
+        "제2종일반주거 -> 제1종일반주거": 684,
+        "제2종일반주거 -> 준주거": 649
+      },
+      "old_missing_new_present": 10608,
+      "old_present_new_missing": 316,
+      "old_missing_reason": {
+        "zone_source_null": 7438,
+        "coarse_only": 4087
+      }
+    },
+    "cy": {
+      "both_present": 482154,
+      "same": 442241,
+      "differs": 39913,
+      "buckets": {
+        "observation_time": 8678,
+        "representative_rule": 27457,
+        "source_difference": 3778
+      },
+      "witness": {
+        "observation_time|no_tx_zone": 7503,
+        "observation_time|tx_agrees_neither": 22,
+        "observation_time|tx_agrees_new": 1105,
+        "observation_time|tx_agrees_old": 48,
+        "representative_rule|no_tx_zone": 18646,
+        "representative_rule|tx_agrees_neither": 62,
+        "representative_rule|tx_agrees_new": 8443,
+        "representative_rule|tx_agrees_old": 306,
+        "source_difference|link_crosscheck_failed": 187,
+        "source_difference|no_tx_zone": 1850,
+        "source_difference|tx_agrees_neither": 19,
+        "source_difference|tx_agrees_new": 1766,
+        "source_difference|tx_agrees_old": 143
+      },
+      "old_multi_label_among_diffs": 28881,
+      "top_pairs": {
+        "보전관리 -> 계획관리": 4130,
+        "제3종일반주거 -> 제2종일반주거": 3706,
+        "농림 -> 계획관리": 2685,
+        "자연녹지 -> 개발제한구역": 2666,
+        "생산관리 -> 계획관리": 2447,
+        "제2종일반주거 -> 제1종일반주거": 2082,
+        "제2종일반주거 -> 제3종일반주거": 1770,
+        "자연녹지 -> 제1종일반주거": 1654,
+        "제1종일반주거 -> 제1종전용주거": 1349,
+        "계획관리 -> 농림": 866,
+        "제1종일반주거 -> 제2종일반주거": 821,
+        "계획관리 -> 보전관리": 814,
+        "보전관리 -> 생산관리": 732,
+        "계획관리 -> 생산관리": 732,
+        "자연녹지 -> 제2종일반주거": 723
+      },
+      "old_missing_new_present": 7491,
+      "old_present_new_missing": 4599,
+      "old_missing_reason": {
+        "zone_source_null": 7438,
+        "coarse_only": 4087
+      }
+    },
+    "tx_zone_agreement": {
+      "rows_with_tx_zone": 131767,
+      "old_display": 113887,
+      "old_any_label": 123010,
+      "new_latest": 128541,
+      "new_contract_year": 127304
+    }
+  },
+  "orphans": {
+    "frozen_rows": 498568,
+    "orphans": 285,
+    "by_snapshot": {
+      "2025-07": 218,
+      "2026-07": 67
+    },
+    "by_sido": {
+      "41": 67,
+      "11": 58,
+      "52": 23,
+      "48": 20,
+      "12": 17,
+      "47": 17,
+      "44": 15,
+      "28": 15,
+      "27": 12,
+      "43": 11,
+      "51": 10,
+      "50": 9,
+      "31": 5,
+      "26": 4,
+      "36": 1,
+      "30": 1
+    },
+    "classification": {
+      "likely_rehashed_same_parcel": 100,
+      "no_current_row_on_road": 112,
+      "same_road_other_parcel_only": 73
+    },
+    "hash_fields": "asset_type, addr1-5, lot_number, contract_year, price, gross_area, building_use"
+  }
+}

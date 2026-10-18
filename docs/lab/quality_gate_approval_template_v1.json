@@ -1,0 +1,22 @@
+{
+  "template": "quality_gate_approval_v1",
+  "note": "판본마다 docs/lab/approvals/<domain>_<version>.json 으로 복사해 채운다. 반영 스크립트는 이 파일이 있고 gate_report_sha256 이 지금 검사 결과와 같을 때만 실행한다.",
+  "domain": "built",
+  "version": "",
+  "version_db_sha256": "",
+  "gate_report": "",
+  "gate_report_sha256": "",
+  "gate_verdict": "",
+  "waivers": [
+    {
+      "check": "",
+      "reason": "",
+      "scope": ""
+    }
+  ],
+  "sample_accuracy": "unverified",
+  "scope_of_approval": "shadow_only | product_switch",
+  "approved_by": "",
+  "approved_on": "",
+  "conditions": []
+}

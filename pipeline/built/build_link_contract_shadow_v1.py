@@ -252,10 +252,10 @@ def build(snap: pd.DataFrame, rows: pd.DataFrame, zone: pd.DataFrame, pk: pd.Dat
     return headers, values
 
 
-def write(headers: list, values: list) -> None:
-    if OUT.exists():
-        OUT.unlink()
-    db = sqlite3.connect(OUT)
+def write(headers: list, values: list, path: Path = OUT) -> None:
+    if path.exists():
+        path.unlink()
+    db = sqlite3.connect(path)
     db.execute("PRAGMA foreign_keys=ON")
     db.executescript(SQLITE_DDL)
     db.executemany("INSERT INTO ledger_link_header_v1 VALUES (" + ",".join("?" * 20) + ")", headers)
@@ -274,8 +274,9 @@ def same_num(a, b) -> bool:
     return abs(float(a) - float(b)) < 1e-6
 
 
-def verify(before: pd.DataFrame, after: pd.DataFrame, rows: pd.DataFrame, frozen: pd.DataFrame) -> dict:
-    db = sqlite3.connect(f"file:{OUT}?mode=ro", uri=True)
+def verify(before: pd.DataFrame, after: pd.DataFrame, rows: pd.DataFrame, frozen: pd.DataFrame,
+           path: Path = OUT) -> dict:
+    db = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
     hdr = pd.read_sql("SELECT target_key, link_state, link_reason, building_id_state, source_digest, link_level,"
                       " hold_flags, register_after_contract FROM ledger_link_header_v1", db)
     val = pd.read_sql("SELECT target_key, variable, value_num, value_text, value_state, use_approved, timing,"
@@ -412,7 +413,9 @@ def compare_frozen(frozen: pd.DataFrame, hdr: pd.DataFrame, val: pd.DataFrame) -
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--db", type=Path, default=OUT, help="SQLite output (default: verification folder)")
     args = ap.parse_args()
+    db_path = args.db
     eng = get_built_engine()
     with eng.connect() as conn:
         before = ledger_snapshot(conn)
@@ -423,12 +426,12 @@ def main() -> None:
         pk = pd.read_sql("SELECT transaction_hash, bldrgst_pk, rule, n_candidates FROM pk_shadow", s)
         attr = pd.read_sql("SELECT * FROM attr_shadow", s)
     headers, values = build(before, rows, zone, pk, attr, zone_labels())
-    write(headers, values)
+    write(headers, values, db_path)
     with eng.connect() as conn:
         after = ledger_snapshot(conn)
-    rep = {"step": "7", "output": str(OUT), "rule_version": RULE_VERSION, "variables": list(VARIABLES)}
-    rep.update(verify(before, after, rows, frozen))
-    rep["file_bytes"] = OUT.stat().st_size
+    rep = {"step": "7", "output": str(db_path), "rule_version": RULE_VERSION, "variables": list(VARIABLES)}
+    rep.update(verify(before, after, rows, frozen, db_path))
+    rep["file_bytes"] = db_path.stat().st_size
     args.out.write_text(json.dumps(rep, ensure_ascii=False, indent=2, default=int), encoding="utf-8")
     print(json.dumps({k: rep[k] for k in ("keys", "ledger_unchanged", "matching_input_vs_ledger", "link_state",
                                           "values")}, ensure_ascii=False, indent=1, default=int))

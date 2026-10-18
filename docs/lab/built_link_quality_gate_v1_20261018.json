@@ -1,0 +1,5068 @@
+{
+  "step": "9",
+  "current": "C:\\CH2\\parcel_master\\verification\\built_link_contract_shadow_v1.sqlite",
+  "previous": "built_transaction_enrichment",
+  "previous_kind": "frozen_enrichment",
+  "thresholds": {
+    "link_rate_national_drop_fail_pp": 1.0,
+    "link_rate_scope_drop_warn_pp": 1.5,
+    "link_rate_scope_drop_fail_pp": 3.0,
+    "coverage_national_drop_fail_pp": 1.0,
+    "coverage_scope_drop_warn_pp": 3.0,
+    "conflict_national_rise_warn_pp": 0.2,
+    "zone_contract_year_national_drop_warn_pp": 1.0,
+    "prev_agreement_building_warn": 0.99,
+    "prev_agreement_zone_warn": 0.95,
+    "orphan_fail_share": 0.001
+  },
+  "scope_min_eligible": 1000,
+  "verdict": "needs_waiver",
+  "promotion": "never automatic; needs an approval record naming the version, the checks and any waivers",
+  "checks": [
+    {
+      "check": "integrity_keys",
+      "status": "pass",
+      "denominator_total": 672764,
+      "denominator_checked": 672764,
+      "unverified": null,
+      "mismatched": 0,
+      "detail": {
+        "duplicate": 0,
+        "missing_from_version": 0,
+        "not_in_ledger": 0
+      }
+    },
+    {
+      "check": "integrity_ledger_digest",
+      "status": "pass",
+      "denominator_total": 672764,
+      "denominator_checked": 672764,
+      "unverified": null,
+      "mismatched": 0,
+      "detail": "ledger rows changed after this version was built"
+    },
+    {
+      "check": "previous_result_orphans",
+      "status": "warn",
+      "denominator_total": 498568,
+      "denominator_checked": 498568,
+      "unverified": null,
+      "mismatched": 285,
+      "detail": "previous result rows whose transaction is gone"
+    },
+    {
+      "check": "contract_rules",
+      "status": "pass",
+      "denominator_total": 4645172,
+      "denominator_checked": 4645172,
+      "unverified": null,
+      "mismatched": 0,
+      "detail": {
+        "value_outside_known_state": 0,
+        "candidates_agree_approved": 0,
+        "pk_without_confirmed": 0
+      }
+    },
+    {
+      "check": "link_rate_change",
+      "status": "pass",
+      "denominator_total": 672764,
+      "denominator_checked": 663596,
+      "unverified": null,
+      "mismatched": 156480,
+      "detail": {
+        "national_pp": 1.332,
+        "scopes_fail": [],
+        "scopes_warn": []
+      }
+    },
+    {
+      "check": "coverage_change",
+      "status": "warn",
+      "denominator_total": 663596,
+      "denominator_checked": 507116,
+      "unverified": null,
+      "mismatched": null,
+      "detail": {
+        "national_fail": [],
+        "scopes_warn": [
+          "sido|50:structure",
+          "sido|50:floors_above",
+          "sido|50:approve_year"
+        ]
+      }
+    },
+    {
+      "check": "conflict_rate",
+      "status": "pass",
+      "denominator_total": 507116,
+      "denominator_checked": 507116,
+      "unverified": null,
+      "mismatched": 623,
+      "detail": {
+        "rise_warn": [],
+        "by_variable": {
+          "structure": 125,
+          "main_use": 217,
+          "floors_above": 68,
+          "approve_year": 210,
+          "zone_contract_year": 3,
+          "zone_latest": 0,
+          "land_area": 0
+        }
+      }
+    },
+    {
+      "check": "temporal_fitness",
+      "status": "pass",
+      "denominator_total": 507116,
+      "denominator_checked": 507116,
+      "unverified": null,
+      "mismatched": 11511,
+      "detail": {
+        "zone_contract_year_rate_pp": null,
+        "zone_contract_year": 495605,
+        "zone_contract_year_rate": 0.977301,
+        "zone_next_base_differs": 1610,
+        "register_after_contract": 409837
+      }
+    },
+    {
+      "check": "previous_result_agreement",
+      "status": "warn",
+      "denominator_total": null,
+      "denominator_checked": 1961227,
+      "unverified": null,
+      "mismatched": 32689,
+      "detail": {
+        "below_threshold": [
+          "zone_latest"
+        ],
+        "structure": {
+          "both_valued": 497954,
+          "same": 497874,
+          "differs": 80,
+          "rate": 0.999839,
+          "only_current": 8895,
+          "only_previous": 190
+        },
+        "floors_above": {
+          "both_valued": 498148,
+          "same": 498117,
+          "differs": 31,
+          "rate": 0.999938,
+          "only_current": 8900,
+          "only_previous": 135
+        },
+        "zone_latest": {
+          "both_valued": 486439,
+          "same": 454033,
+          "differs": 32406,
+          "rate": 0.933381,
+          "only_current": 19490,
+          "only_previous": 319
+        },
+        "approve_year": {
+          "both_valued": 478686,
+          "same": 478514,
+          "differs": 172,
+          "rate": 0.999641,
+          "only_current": 8348,
+          "only_previous": 246
+        }
+      }
+    },
+    {
+      "check": "rebuild_stability",
+      "status": "pass",
+      "denominator_total": null,
+      "denominator_checked": 5317936,
+      "unverified": null,
+      "mismatched": 0,
+      "detail": {
+        "same_digest": true
+      }
+    },
+    {
+      "check": "sample_accuracy",
+      "status": "unverified",
+      "denominator_total": 507116,
+      "denominator_checked": 0,
+      "unverified": 507116,
+      "mismatched": null,
+      "detail": "no independent sample judged; accuracy cannot be claimed and product switch stays closed"
+    }
+  ],
+  "metrics": {
+    "national": {
+      "total": 672764,
+      "eligible": 663596,
+      "linked": 507116,
+      "unlinked": 156480,
+      "not_applicable": 9168,
+      "link_rate": 0.764194,
+      "sample_verified": 0,
+      "unverified_linked": 507116,
+      "variables": {
+        "structure": {
+          "confirmed": 503933,
+          "candidates_agree": 2916,
+          "conflict_missing": 125,
+          "source_missing": 142,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.759397,
+          "coverage_of_linked": 0.993723,
+          "conflict_rate_of_linked": 0.000246
+        },
+        "main_use": {
+          "confirmed": 503864,
+          "candidates_agree": 2823,
+          "conflict_missing": 217,
+          "source_missing": 212,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.759293,
+          "coverage_of_linked": 0.993587,
+          "conflict_rate_of_linked": 0.000428
+        },
+        "floors_above": {
+          "confirmed": 504075,
+          "candidates_agree": 2973,
+          "conflict_missing": 68,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.759611,
+          "coverage_of_linked": 0.994003,
+          "conflict_rate_of_linked": 0.000134
+        },
+        "approve_year": {
+          "confirmed": 484265,
+          "candidates_agree": 2769,
+          "conflict_missing": 210,
+          "source_missing": 19872,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.729759,
+          "coverage_of_linked": 0.954939,
+          "conflict_rate_of_linked": 0.000414
+        },
+        "zone_contract_year": {
+          "confirmed": 498529,
+          "candidates_agree": 0,
+          "conflict_missing": 3,
+          "source_missing": 1414,
+          "undetermined": 7170,
+          "coverage_of_eligible": 0.751254,
+          "coverage_of_linked": 0.983067,
+          "conflict_rate_of_linked": 6e-06
+        },
+        "zone_latest": {
+          "confirmed": 505929,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1187,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.762405,
+          "coverage_of_linked": 0.997659,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 463023,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 44093,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.697748,
+          "coverage_of_linked": 0.913051,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 504075,
+        "candidates_agree": 2561,
+        "candidates_conflict": 480
+      },
+      "temporal": {
+        "zone_contract_year": 495605,
+        "zone_contract_year_rate": 0.977301,
+        "zone_next_base_differs": 1610,
+        "register_after_contract": 409837
+      }
+    },
+    "sido|11": {
+      "total": 65035,
+      "eligible": 63568,
+      "linked": 43954,
+      "unlinked": 19614,
+      "not_applicable": 1467,
+      "link_rate": 0.691449,
+      "sample_verified": 0,
+      "unverified_linked": 43954,
+      "variables": {
+        "structure": {
+          "confirmed": 43874,
+          "candidates_agree": 76,
+          "conflict_missing": 4,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.69019,
+          "coverage_of_linked": 0.99818,
+          "conflict_rate_of_linked": 9.1e-05
+        },
+        "main_use": {
+          "confirmed": 43874,
+          "candidates_agree": 67,
+          "conflict_missing": 13,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.69019,
+          "coverage_of_linked": 0.99818,
+          "conflict_rate_of_linked": 0.000296
+        },
+        "floors_above": {
+          "confirmed": 43874,
+          "candidates_agree": 80,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.69019,
+          "coverage_of_linked": 0.99818,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 41816,
+          "candidates_agree": 61,
+          "conflict_missing": 9,
+          "source_missing": 2068,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.657815,
+          "coverage_of_linked": 0.951358,
+          "conflict_rate_of_linked": 0.000205
+        },
+        "zone_contract_year": {
+          "confirmed": 43802,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 142,
+          "undetermined": 10,
+          "coverage_of_eligible": 0.689057,
+          "coverage_of_linked": 0.996542,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 43814,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 140,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.689246,
+          "coverage_of_linked": 0.996815,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 43613,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 341,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.686084,
+          "coverage_of_linked": 0.992242,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 43874,
+        "candidates_agree": 58,
+        "candidates_conflict": 22
+      },
+      "temporal": {
+        "zone_contract_year": 43791,
+        "zone_contract_year_rate": 0.996292,
+        "zone_next_base_differs": 297,
+        "register_after_contract": 33560
+      }
+    },
+    "sido|12": {
+      "total": 70218,
+      "eligible": 69451,
+      "linked": 55515,
+      "unlinked": 13936,
+      "not_applicable": 767,
+      "link_rate": 0.799341,
+      "sample_verified": 0,
+      "unverified_linked": 55515,
+      "variables": {
+        "structure": {
+          "confirmed": 55352,
+          "candidates_agree": 140,
+          "conflict_missing": 17,
+          "source_missing": 6,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.796994,
+          "coverage_of_linked": 0.997064,
+          "conflict_rate_of_linked": 0.000306
+        },
+        "main_use": {
+          "confirmed": 55355,
+          "candidates_agree": 146,
+          "conflict_missing": 11,
+          "source_missing": 3,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.797037,
+          "coverage_of_linked": 0.997118,
+          "conflict_rate_of_linked": 0.000198
+        },
+        "floors_above": {
+          "confirmed": 55358,
+          "candidates_agree": 151,
+          "conflict_missing": 6,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.79708,
+          "coverage_of_linked": 0.997172,
+          "conflict_rate_of_linked": 0.000108
+        },
+        "approve_year": {
+          "confirmed": 52357,
+          "candidates_agree": 132,
+          "conflict_missing": 20,
+          "source_missing": 3006,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.75387,
+          "coverage_of_linked": 0.943114,
+          "conflict_rate_of_linked": 0.00036
+        },
+        "zone_contract_year": {
+          "confirmed": 55228,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 264,
+          "undetermined": 23,
+          "coverage_of_eligible": 0.795208,
+          "coverage_of_linked": 0.99483,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 55266,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 249,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.795755,
+          "coverage_of_linked": 0.995515,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 51149,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 4366,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.736476,
+          "coverage_of_linked": 0.921355,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 55358,
+        "candidates_agree": 121,
+        "candidates_conflict": 36
+      },
+      "temporal": {
+        "zone_contract_year": 55129,
+        "zone_contract_year_rate": 0.993047,
+        "zone_next_base_differs": 72,
+        "register_after_contract": 44914
+      }
+    },
+    "sido|26": {
+      "total": 41970,
+      "eligible": 41370,
+      "linked": 29421,
+      "unlinked": 11949,
+      "not_applicable": 600,
+      "link_rate": 0.711168,
+      "sample_verified": 0,
+      "unverified_linked": 29421,
+      "variables": {
+        "structure": {
+          "confirmed": 29307,
+          "candidates_agree": 106,
+          "conflict_missing": 5,
+          "source_missing": 3,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.708412,
+          "coverage_of_linked": 0.996125,
+          "conflict_rate_of_linked": 0.00017
+        },
+        "main_use": {
+          "confirmed": 29309,
+          "candidates_agree": 104,
+          "conflict_missing": 7,
+          "source_missing": 1,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.70846,
+          "coverage_of_linked": 0.996193,
+          "conflict_rate_of_linked": 0.000238
+        },
+        "floors_above": {
+          "confirmed": 29310,
+          "candidates_agree": 106,
+          "conflict_missing": 5,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.708484,
+          "coverage_of_linked": 0.996227,
+          "conflict_rate_of_linked": 0.00017
+        },
+        "approve_year": {
+          "confirmed": 27868,
+          "candidates_agree": 96,
+          "conflict_missing": 11,
+          "source_missing": 1446,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.673628,
+          "coverage_of_linked": 0.947215,
+          "conflict_rate_of_linked": 0.000374
+        },
+        "zone_contract_year": {
+          "confirmed": 29189,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 160,
+          "undetermined": 72,
+          "coverage_of_eligible": 0.70556,
+          "coverage_of_linked": 0.992114,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 29275,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 146,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.707638,
+          "coverage_of_linked": 0.995038,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 27881,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1540,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.673942,
+          "coverage_of_linked": 0.947656,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 29310,
+        "candidates_agree": 85,
+        "candidates_conflict": 26
+      },
+      "temporal": {
+        "zone_contract_year": 29098,
+        "zone_contract_year_rate": 0.989021,
+        "zone_next_base_differs": 224,
+        "register_after_contract": 25180
+      }
+    },
+    "sido|27": {
+      "total": 35848,
+      "eligible": 35474,
+      "linked": 24313,
+      "unlinked": 11161,
+      "not_applicable": 374,
+      "link_rate": 0.685375,
+      "sample_verified": 0,
+      "unverified_linked": 24313,
+      "variables": {
+        "structure": {
+          "confirmed": 24216,
+          "candidates_agree": 75,
+          "conflict_missing": 22,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.682641,
+          "coverage_of_linked": 0.99601,
+          "conflict_rate_of_linked": 0.000905
+        },
+        "main_use": {
+          "confirmed": 24216,
+          "candidates_agree": 77,
+          "conflict_missing": 20,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.682641,
+          "coverage_of_linked": 0.99601,
+          "conflict_rate_of_linked": 0.000823
+        },
+        "floors_above": {
+          "confirmed": 24216,
+          "candidates_agree": 87,
+          "conflict_missing": 10,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.682641,
+          "coverage_of_linked": 0.99601,
+          "conflict_rate_of_linked": 0.000411
+        },
+        "approve_year": {
+          "confirmed": 23894,
+          "candidates_agree": 86,
+          "conflict_missing": 10,
+          "source_missing": 323,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.673564,
+          "coverage_of_linked": 0.982766,
+          "conflict_rate_of_linked": 0.000411
+        },
+        "zone_contract_year": {
+          "confirmed": 24256,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 56,
+          "undetermined": 1,
+          "coverage_of_eligible": 0.683768,
+          "coverage_of_linked": 0.997656,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 24264,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 49,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.683994,
+          "coverage_of_linked": 0.997985,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 22731,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1582,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.640779,
+          "coverage_of_linked": 0.934932,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 24216,
+        "candidates_agree": 55,
+        "candidates_conflict": 42
+      },
+      "temporal": {
+        "zone_contract_year": 24238,
+        "zone_contract_year_rate": 0.996915,
+        "zone_next_base_differs": 9,
+        "register_after_contract": 21245
+      }
+    },
+    "sido|28": {
+      "total": 24526,
+      "eligible": 24253,
+      "linked": 17377,
+      "unlinked": 6876,
+      "not_applicable": 273,
+      "link_rate": 0.716489,
+      "sample_verified": 0,
+      "unverified_linked": 17377,
+      "variables": {
+        "structure": {
+          "confirmed": 17243,
+          "candidates_agree": 133,
+          "conflict_missing": 0,
+          "source_missing": 1,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.710964,
+          "coverage_of_linked": 0.992289,
+          "conflict_rate_of_linked": 0.0
+        },
+        "main_use": {
+          "confirmed": 17244,
+          "candidates_agree": 126,
+          "conflict_missing": 7,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.711005,
+          "coverage_of_linked": 0.992346,
+          "conflict_rate_of_linked": 0.000403
+        },
+        "floors_above": {
+          "confirmed": 17244,
+          "candidates_agree": 132,
+          "conflict_missing": 1,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.711005,
+          "coverage_of_linked": 0.992346,
+          "conflict_rate_of_linked": 5.8e-05
+        },
+        "approve_year": {
+          "confirmed": 16372,
+          "candidates_agree": 130,
+          "conflict_missing": 0,
+          "source_missing": 875,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.675051,
+          "coverage_of_linked": 0.942165,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_contract_year": {
+          "confirmed": 14338,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 75,
+          "undetermined": 2964,
+          "coverage_of_eligible": 0.591185,
+          "coverage_of_linked": 0.825114,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 17305,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 72,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.71352,
+          "coverage_of_linked": 0.995857,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 15608,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1769,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.643549,
+          "coverage_of_linked": 0.898199,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 17244,
+        "candidates_agree": 125,
+        "candidates_conflict": 8
+      },
+      "temporal": {
+        "zone_contract_year": 13619,
+        "zone_contract_year_rate": 0.783737,
+        "zone_next_base_differs": 29,
+        "register_after_contract": 15141
+      }
+    },
+    "sido|30": {
+      "total": 19116,
+      "eligible": 18888,
+      "linked": 14070,
+      "unlinked": 4818,
+      "not_applicable": 228,
+      "link_rate": 0.744917,
+      "sample_verified": 0,
+      "unverified_linked": 14070,
+      "variables": {
+        "structure": {
+          "confirmed": 14015,
+          "candidates_agree": 51,
+          "conflict_missing": 3,
+          "source_missing": 1,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.742006,
+          "coverage_of_linked": 0.996091,
+          "conflict_rate_of_linked": 0.000213
+        },
+        "main_use": {
+          "confirmed": 14016,
+          "candidates_agree": 47,
+          "conflict_missing": 7,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.742058,
+          "coverage_of_linked": 0.996162,
+          "conflict_rate_of_linked": 0.000498
+        },
+        "floors_above": {
+          "confirmed": 14016,
+          "candidates_agree": 47,
+          "conflict_missing": 7,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.742058,
+          "coverage_of_linked": 0.996162,
+          "conflict_rate_of_linked": 0.000498
+        },
+        "approve_year": {
+          "confirmed": 13922,
+          "candidates_agree": 38,
+          "conflict_missing": 13,
+          "source_missing": 97,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.737082,
+          "coverage_of_linked": 0.989481,
+          "conflict_rate_of_linked": 0.000924
+        },
+        "zone_contract_year": {
+          "confirmed": 14042,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 27,
+          "undetermined": 1,
+          "coverage_of_eligible": 0.743435,
+          "coverage_of_linked": 0.99801,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 14044,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 26,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.743541,
+          "coverage_of_linked": 0.998152,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 13713,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 357,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.726017,
+          "coverage_of_linked": 0.974627,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 14016,
+        "candidates_agree": 36,
+        "candidates_conflict": 18
+      },
+      "temporal": {
+        "zone_contract_year": 14012,
+        "zone_contract_year_rate": 0.995878,
+        "zone_next_base_differs": 137,
+        "register_after_contract": 12056
+      }
+    },
+    "sido|31": {
+      "total": 11776,
+      "eligible": 11632,
+      "linked": 8389,
+      "unlinked": 3243,
+      "not_applicable": 144,
+      "link_rate": 0.7212,
+      "sample_verified": 0,
+      "unverified_linked": 8389,
+      "variables": {
+        "structure": {
+          "confirmed": 8372,
+          "candidates_agree": 14,
+          "conflict_missing": 3,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.719739,
+          "coverage_of_linked": 0.997974,
+          "conflict_rate_of_linked": 0.000358
+        },
+        "main_use": {
+          "confirmed": 8372,
+          "candidates_agree": 14,
+          "conflict_missing": 3,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.719739,
+          "coverage_of_linked": 0.997974,
+          "conflict_rate_of_linked": 0.000358
+        },
+        "floors_above": {
+          "confirmed": 8372,
+          "candidates_agree": 17,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.719739,
+          "coverage_of_linked": 0.997974,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 8221,
+          "candidates_agree": 14,
+          "conflict_missing": 3,
+          "source_missing": 151,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.706757,
+          "coverage_of_linked": 0.979974,
+          "conflict_rate_of_linked": 0.000358
+        },
+        "zone_contract_year": {
+          "confirmed": 8374,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 15,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.719911,
+          "coverage_of_linked": 0.998212,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 8376,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 13,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.720083,
+          "coverage_of_linked": 0.99845,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 7977,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 412,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.685781,
+          "coverage_of_linked": 0.950888,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 8372,
+        "candidates_agree": 12,
+        "candidates_conflict": 5
+      },
+      "temporal": {
+        "zone_contract_year": 8360,
+        "zone_contract_year_rate": 0.996543,
+        "zone_next_base_differs": 3,
+        "register_after_contract": 6885
+      }
+    },
+    "sido|36": {
+      "total": 1896,
+      "eligible": 1871,
+      "linked": 1403,
+      "unlinked": 468,
+      "not_applicable": 25,
+      "link_rate": 0.749866,
+      "sample_verified": 0,
+      "unverified_linked": 1403,
+      "variables": {
+        "structure": {
+          "confirmed": 1397,
+          "candidates_agree": 6,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.74666,
+          "coverage_of_linked": 0.995723,
+          "conflict_rate_of_linked": 0.0
+        },
+        "main_use": {
+          "confirmed": 1397,
+          "candidates_agree": 6,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.74666,
+          "coverage_of_linked": 0.995723,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 1397,
+          "candidates_agree": 6,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.74666,
+          "coverage_of_linked": 0.995723,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 1371,
+          "candidates_agree": 6,
+          "conflict_missing": 0,
+          "source_missing": 26,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.732763,
+          "coverage_of_linked": 0.977192,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_contract_year": {
+          "confirmed": 1401,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1,
+          "undetermined": 1,
+          "coverage_of_eligible": 0.748797,
+          "coverage_of_linked": 0.998574,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 1402,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.749332,
+          "coverage_of_linked": 0.999287,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 1266,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 137,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.676644,
+          "coverage_of_linked": 0.902352,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 1397,
+        "candidates_agree": 6
+      },
+      "temporal": {
+        "zone_contract_year": 1393,
+        "zone_contract_year_rate": 0.992872,
+        "zone_next_base_differs": 0,
+        "register_after_contract": 1177
+      }
+    },
+    "sido|41": {
+      "total": 119926,
+      "eligible": 118158,
+      "linked": 87238,
+      "unlinked": 30920,
+      "not_applicable": 1768,
+      "link_rate": 0.738316,
+      "sample_verified": 0,
+      "unverified_linked": 87238,
+      "variables": {
+        "structure": {
+          "confirmed": 86523,
+          "candidates_agree": 659,
+          "conflict_missing": 17,
+          "source_missing": 39,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.732265,
+          "coverage_of_linked": 0.991804,
+          "conflict_rate_of_linked": 0.000195
+        },
+        "main_use": {
+          "confirmed": 86520,
+          "candidates_agree": 631,
+          "conflict_missing": 45,
+          "source_missing": 42,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.73224,
+          "coverage_of_linked": 0.99177,
+          "conflict_rate_of_linked": 0.000516
+        },
+        "floors_above": {
+          "confirmed": 86562,
+          "candidates_agree": 663,
+          "conflict_missing": 13,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.732595,
+          "coverage_of_linked": 0.992251,
+          "conflict_rate_of_linked": 0.000149
+        },
+        "approve_year": {
+          "confirmed": 83780,
+          "candidates_agree": 628,
+          "conflict_missing": 33,
+          "source_missing": 2797,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.709051,
+          "coverage_of_linked": 0.960361,
+          "conflict_rate_of_linked": 0.000378
+        },
+        "zone_contract_year": {
+          "confirmed": 83141,
+          "candidates_agree": 0,
+          "conflict_missing": 2,
+          "source_missing": 180,
+          "undetermined": 3915,
+          "coverage_of_eligible": 0.703643,
+          "coverage_of_linked": 0.953037,
+          "conflict_rate_of_linked": 2.3e-05
+        },
+        "zone_latest": {
+          "confirmed": 87099,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 139,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.73714,
+          "coverage_of_linked": 0.998407,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 73910,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 13328,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.625518,
+          "coverage_of_linked": 0.847223,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 86562,
+        "candidates_agree": 585,
+        "candidates_conflict": 91
+      },
+      "temporal": {
+        "zone_contract_year": 82165,
+        "zone_contract_year_rate": 0.941849,
+        "zone_next_base_differs": 451,
+        "register_after_contract": 71538
+      }
+    },
+    "sido|43": {
+      "total": 36035,
+      "eligible": 35741,
+      "linked": 29367,
+      "unlinked": 6374,
+      "not_applicable": 294,
+      "link_rate": 0.821661,
+      "sample_verified": 0,
+      "unverified_linked": 29367,
+      "variables": {
+        "structure": {
+          "confirmed": 29304,
+          "candidates_agree": 60,
+          "conflict_missing": 3,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.819899,
+          "coverage_of_linked": 0.997855,
+          "conflict_rate_of_linked": 0.000102
+        },
+        "main_use": {
+          "confirmed": 29304,
+          "candidates_agree": 54,
+          "conflict_missing": 9,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.819899,
+          "coverage_of_linked": 0.997855,
+          "conflict_rate_of_linked": 0.000306
+        },
+        "floors_above": {
+          "confirmed": 29304,
+          "candidates_agree": 63,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.819899,
+          "coverage_of_linked": 0.997855,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 28019,
+          "candidates_agree": 58,
+          "conflict_missing": 2,
+          "source_missing": 1288,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.783946,
+          "coverage_of_linked": 0.954098,
+          "conflict_rate_of_linked": 6.8e-05
+        },
+        "zone_contract_year": {
+          "confirmed": 29275,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 44,
+          "undetermined": 48,
+          "coverage_of_eligible": 0.819087,
+          "coverage_of_linked": 0.996867,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 29336,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 31,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.820794,
+          "coverage_of_linked": 0.998944,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 27254,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 2113,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.762542,
+          "coverage_of_linked": 0.928048,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 29304,
+        "candidates_agree": 52,
+        "candidates_conflict": 11
+      },
+      "temporal": {
+        "zone_contract_year": 29159,
+        "zone_contract_year_rate": 0.992917,
+        "zone_next_base_differs": 41,
+        "register_after_contract": 23156
+      }
+    },
+    "sido|44": {
+      "total": 41969,
+      "eligible": 41526,
+      "linked": 32540,
+      "unlinked": 8986,
+      "not_applicable": 443,
+      "link_rate": 0.783605,
+      "sample_verified": 0,
+      "unverified_linked": 32540,
+      "variables": {
+        "structure": {
+          "confirmed": 32376,
+          "candidates_agree": 150,
+          "conflict_missing": 8,
+          "source_missing": 6,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.779656,
+          "coverage_of_linked": 0.99496,
+          "conflict_rate_of_linked": 0.000246
+        },
+        "main_use": {
+          "confirmed": 32372,
+          "candidates_agree": 149,
+          "conflict_missing": 9,
+          "source_missing": 10,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.77956,
+          "coverage_of_linked": 0.994837,
+          "conflict_rate_of_linked": 0.000277
+        },
+        "floors_above": {
+          "confirmed": 32382,
+          "candidates_agree": 158,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.779801,
+          "coverage_of_linked": 0.995144,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 31376,
+          "candidates_agree": 144,
+          "conflict_missing": 13,
+          "source_missing": 1007,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.755575,
+          "coverage_of_linked": 0.964229,
+          "conflict_rate_of_linked": 0.0004
+        },
+        "zone_contract_year": {
+          "confirmed": 32425,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 113,
+          "undetermined": 2,
+          "coverage_of_eligible": 0.780836,
+          "coverage_of_linked": 0.996466,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 32444,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 96,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.781294,
+          "coverage_of_linked": 0.99705,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 29323,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 3217,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.706136,
+          "coverage_of_linked": 0.901137,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 32382,
+        "candidates_agree": 134,
+        "candidates_conflict": 24
+      },
+      "temporal": {
+        "zone_contract_year": 32311,
+        "zone_contract_year_rate": 0.992963,
+        "zone_next_base_differs": 27,
+        "register_after_contract": 25763
+      }
+    },
+    "sido|47": {
+      "total": 59327,
+      "eligible": 58753,
+      "linked": 48601,
+      "unlinked": 10152,
+      "not_applicable": 574,
+      "link_rate": 0.827209,
+      "sample_verified": 0,
+      "unverified_linked": 48601,
+      "variables": {
+        "structure": {
+          "confirmed": 48428,
+          "candidates_agree": 148,
+          "conflict_missing": 9,
+          "source_missing": 16,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.824264,
+          "coverage_of_linked": 0.99644,
+          "conflict_rate_of_linked": 0.000185
+        },
+        "main_use": {
+          "confirmed": 48410,
+          "candidates_agree": 143,
+          "conflict_missing": 13,
+          "source_missing": 35,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.823958,
+          "coverage_of_linked": 0.99607,
+          "conflict_rate_of_linked": 0.000267
+        },
+        "floors_above": {
+          "confirmed": 48444,
+          "candidates_agree": 150,
+          "conflict_missing": 7,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.824537,
+          "coverage_of_linked": 0.99677,
+          "conflict_rate_of_linked": 0.000144
+        },
+        "approve_year": {
+          "confirmed": 47032,
+          "candidates_agree": 136,
+          "conflict_missing": 20,
+          "source_missing": 1413,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.800504,
+          "coverage_of_linked": 0.967717,
+          "conflict_rate_of_linked": 0.000412
+        },
+        "zone_contract_year": {
+          "confirmed": 48415,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 90,
+          "undetermined": 96,
+          "coverage_of_eligible": 0.824043,
+          "coverage_of_linked": 0.996173,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 48540,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 61,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.826171,
+          "coverage_of_linked": 0.998745,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 43404,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 5197,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.738754,
+          "coverage_of_linked": 0.893068,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 48444,
+        "candidates_agree": 123,
+        "candidates_conflict": 34
+      },
+      "temporal": {
+        "zone_contract_year": 48223,
+        "zone_contract_year_rate": 0.992222,
+        "zone_next_base_differs": 47,
+        "register_after_contract": 38334
+      }
+    },
+    "sido|48": {
+      "total": 56791,
+      "eligible": 56207,
+      "linked": 44602,
+      "unlinked": 11605,
+      "not_applicable": 584,
+      "link_rate": 0.793531,
+      "sample_verified": 0,
+      "unverified_linked": 44602,
+      "variables": {
+        "structure": {
+          "confirmed": 44431,
+          "candidates_agree": 161,
+          "conflict_missing": 6,
+          "source_missing": 4,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.790489,
+          "coverage_of_linked": 0.996166,
+          "conflict_rate_of_linked": 0.000135
+        },
+        "main_use": {
+          "confirmed": 44429,
+          "candidates_agree": 146,
+          "conflict_missing": 21,
+          "source_missing": 6,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.790453,
+          "coverage_of_linked": 0.996121,
+          "conflict_rate_of_linked": 0.000471
+        },
+        "floors_above": {
+          "confirmed": 44435,
+          "candidates_agree": 158,
+          "conflict_missing": 9,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.79056,
+          "coverage_of_linked": 0.996256,
+          "conflict_rate_of_linked": 0.000202
+        },
+        "approve_year": {
+          "confirmed": 42750,
+          "candidates_agree": 143,
+          "conflict_missing": 19,
+          "source_missing": 1690,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.760581,
+          "coverage_of_linked": 0.958477,
+          "conflict_rate_of_linked": 0.000426
+        },
+        "zone_contract_year": {
+          "confirmed": 44499,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 101,
+          "undetermined": 2,
+          "coverage_of_eligible": 0.791699,
+          "coverage_of_linked": 0.997691,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 44553,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 49,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.792659,
+          "coverage_of_linked": 0.998901,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 39570,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 5032,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.704005,
+          "coverage_of_linked": 0.88718,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 44435,
+        "candidates_agree": 123,
+        "candidates_conflict": 44
+      },
+      "temporal": {
+        "zone_contract_year": 44258,
+        "zone_contract_year_rate": 0.992287,
+        "zone_next_base_differs": 179,
+        "register_after_contract": 35286
+      }
+    },
+    "sido|50": {
+      "total": 12463,
+      "eligible": 12307,
+      "linked": 9247,
+      "unlinked": 3060,
+      "not_applicable": 156,
+      "link_rate": 0.751361,
+      "sample_verified": 0,
+      "unverified_linked": 9247,
+      "variables": {
+        "structure": {
+          "confirmed": 8288,
+          "candidates_agree": 927,
+          "conflict_missing": 14,
+          "source_missing": 18,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.673438,
+          "coverage_of_linked": 0.896291,
+          "conflict_rate_of_linked": 0.001514
+        },
+        "main_use": {
+          "confirmed": 8268,
+          "candidates_agree": 921,
+          "conflict_missing": 20,
+          "source_missing": 38,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.671813,
+          "coverage_of_linked": 0.894128,
+          "conflict_rate_of_linked": 0.002163
+        },
+        "floors_above": {
+          "confirmed": 8306,
+          "candidates_agree": 941,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.6749,
+          "coverage_of_linked": 0.898237,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 7858,
+          "candidates_agree": 912,
+          "conflict_missing": 29,
+          "source_missing": 448,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.638498,
+          "coverage_of_linked": 0.849789,
+          "conflict_rate_of_linked": 0.003136
+        },
+        "zone_contract_year": {
+          "confirmed": 9228,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 15,
+          "undetermined": 4,
+          "coverage_of_eligible": 0.749817,
+          "coverage_of_linked": 0.997945,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 9234,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 13,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.750305,
+          "coverage_of_linked": 0.998594,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 8657,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 590,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.703421,
+          "coverage_of_linked": 0.936196,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 8306,
+        "candidates_agree": 880,
+        "candidates_conflict": 61
+      },
+      "temporal": {
+        "zone_contract_year": 9194,
+        "zone_contract_year_rate": 0.994268,
+        "zone_next_base_differs": 16,
+        "register_after_contract": 7374
+      }
+    },
+    "sido|51": {
+      "total": 36937,
+      "eligible": 36452,
+      "linked": 30838,
+      "unlinked": 5614,
+      "not_applicable": 485,
+      "link_rate": 0.845989,
+      "sample_verified": 0,
+      "unverified_linked": 30838,
+      "variables": {
+        "structure": {
+          "confirmed": 30660,
+          "candidates_agree": 147,
+          "conflict_missing": 7,
+          "source_missing": 24,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.841106,
+          "coverage_of_linked": 0.994228,
+          "conflict_rate_of_linked": 0.000227
+        },
+        "main_use": {
+          "confirmed": 30640,
+          "candidates_agree": 137,
+          "conflict_missing": 17,
+          "source_missing": 44,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.840557,
+          "coverage_of_linked": 0.993579,
+          "conflict_rate_of_linked": 0.000551
+        },
+        "floors_above": {
+          "confirmed": 30684,
+          "candidates_agree": 149,
+          "conflict_missing": 5,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.841765,
+          "coverage_of_linked": 0.995006,
+          "conflict_rate_of_linked": 0.000162
+        },
+        "approve_year": {
+          "confirmed": 28084,
+          "candidates_agree": 130,
+          "conflict_missing": 13,
+          "source_missing": 2611,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.770438,
+          "coverage_of_linked": 0.910695,
+          "conflict_rate_of_linked": 0.000422
+        },
+        "zone_contract_year": {
+          "confirmed": 30737,
+          "candidates_agree": 0,
+          "conflict_missing": 1,
+          "source_missing": 71,
+          "undetermined": 29,
+          "coverage_of_eligible": 0.843218,
+          "coverage_of_linked": 0.996725,
+          "conflict_rate_of_linked": 3.2e-05
+        },
+        "zone_latest": {
+          "confirmed": 30783,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 55,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.84448,
+          "coverage_of_linked": 0.998216,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 29247,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1591,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.802343,
+          "coverage_of_linked": 0.948408,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 30684,
+        "candidates_agree": 122,
+        "candidates_conflict": 32
+      },
+      "temporal": {
+        "zone_contract_year": 30526,
+        "zone_contract_year_rate": 0.989883,
+        "zone_next_base_differs": 45,
+        "register_after_contract": 24726
+      }
+    },
+    "sido|52": {
+      "total": 38353,
+      "eligible": 37945,
+      "linked": 30241,
+      "unlinked": 7704,
+      "not_applicable": 408,
+      "link_rate": 0.796969,
+      "sample_verified": 0,
+      "unverified_linked": 30241,
+      "variables": {
+        "structure": {
+          "confirmed": 30147,
+          "candidates_agree": 63,
+          "conflict_missing": 7,
+          "source_missing": 24,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.794492,
+          "coverage_of_linked": 0.996892,
+          "conflict_rate_of_linked": 0.000231
+        },
+        "main_use": {
+          "confirmed": 30138,
+          "candidates_agree": 55,
+          "conflict_missing": 15,
+          "source_missing": 33,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.794255,
+          "coverage_of_linked": 0.996594,
+          "conflict_rate_of_linked": 0.000496
+        },
+        "floors_above": {
+          "confirmed": 30171,
+          "candidates_agree": 65,
+          "conflict_missing": 5,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.795125,
+          "coverage_of_linked": 0.997685,
+          "conflict_rate_of_linked": 0.000165
+        },
+        "approve_year": {
+          "confirmed": 29545,
+          "candidates_agree": 55,
+          "conflict_missing": 15,
+          "source_missing": 626,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.778627,
+          "coverage_of_linked": 0.976985,
+          "conflict_rate_of_linked": 0.000496
+        },
+        "zone_contract_year": {
+          "confirmed": 30179,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 60,
+          "undetermined": 2,
+          "coverage_of_eligible": 0.795335,
+          "coverage_of_linked": 0.99795,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 30194,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 47,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.795731,
+          "coverage_of_linked": 0.998446,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 27720,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 2521,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.730531,
+          "coverage_of_linked": 0.916636,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 30171,
+        "candidates_agree": 44,
+        "candidates_conflict": 26
+      },
+      "temporal": {
+        "zone_contract_year": 30129,
+        "zone_contract_year_rate": 0.996296,
+        "zone_next_base_differs": 33,
+        "register_after_contract": 23502
+      }
+    },
+    "sido|none": {
+      "total": 578,
+      "eligible": 0,
+      "linked": 0,
+      "unlinked": 0,
+      "not_applicable": 578,
+      "link_rate": null,
+      "sample_verified": 0,
+      "unverified_linked": 0,
+      "variables": {
+        "structure": {
+          "confirmed": 0,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": null,
+          "coverage_of_linked": null,
+          "conflict_rate_of_linked": null
+        },
+        "main_use": {
+          "confirmed": 0,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": null,
+          "coverage_of_linked": null,
+          "conflict_rate_of_linked": null
+        },
+        "floors_above": {
+          "confirmed": 0,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": null,
+          "coverage_of_linked": null,
+          "conflict_rate_of_linked": null
+        },
+        "approve_year": {
+          "confirmed": 0,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": null,
+          "coverage_of_linked": null,
+          "conflict_rate_of_linked": null
+        },
+        "zone_contract_year": {
+          "confirmed": 0,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": null,
+          "coverage_of_linked": null,
+          "conflict_rate_of_linked": null
+        },
+        "zone_latest": {
+          "confirmed": 0,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": null,
+          "coverage_of_linked": null,
+          "conflict_rate_of_linked": null
+        },
+        "land_area": {
+          "confirmed": 0,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": null,
+          "coverage_of_linked": null,
+          "conflict_rate_of_linked": null
+        }
+      },
+      "temporal": {
+        "zone_contract_year": 0,
+        "zone_contract_year_rate": null,
+        "zone_next_base_differs": 0,
+        "register_after_contract": 0
+      }
+    },
+    "asset_type|commercial": {
+      "total": 135681,
+      "eligible": 128669,
+      "linked": 100962,
+      "unlinked": 27707,
+      "not_applicable": 7012,
+      "link_rate": 0.784665,
+      "sample_verified": 0,
+      "unverified_linked": 100962,
+      "variables": {
+        "structure": {
+          "confirmed": 100443,
+          "candidates_agree": 478,
+          "conflict_missing": 23,
+          "source_missing": 18,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.780631,
+          "coverage_of_linked": 0.994859,
+          "conflict_rate_of_linked": 0.000228
+        },
+        "main_use": {
+          "confirmed": 100427,
+          "candidates_agree": 387,
+          "conflict_missing": 114,
+          "source_missing": 34,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.780507,
+          "coverage_of_linked": 0.994701,
+          "conflict_rate_of_linked": 0.001129
+        },
+        "floors_above": {
+          "confirmed": 100461,
+          "candidates_agree": 486,
+          "conflict_missing": 15,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.780771,
+          "coverage_of_linked": 0.995038,
+          "conflict_rate_of_linked": 0.000149
+        },
+        "approve_year": {
+          "confirmed": 97300,
+          "candidates_agree": 442,
+          "conflict_missing": 47,
+          "source_missing": 3173,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.756204,
+          "coverage_of_linked": 0.963729,
+          "conflict_rate_of_linked": 0.000466
+        },
+        "zone_contract_year": {
+          "confirmed": 99098,
+          "candidates_agree": 0,
+          "conflict_missing": 1,
+          "source_missing": 169,
+          "undetermined": 1694,
+          "coverage_of_eligible": 0.770178,
+          "coverage_of_linked": 0.981538,
+          "conflict_rate_of_linked": 1e-05
+        },
+        "zone_latest": {
+          "confirmed": 100819,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 143,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.783553,
+          "coverage_of_linked": 0.998584,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 91795,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 9167,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.71342,
+          "coverage_of_linked": 0.909203,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 100461,
+        "candidates_agree": 348,
+        "candidates_conflict": 153
+      },
+      "temporal": {
+        "zone_contract_year": 98369,
+        "zone_contract_year_rate": 0.974317,
+        "zone_next_base_differs": 220,
+        "register_after_contract": 80858
+      }
+    },
+    "asset_type|detached": {
+      "total": 481910,
+      "eligible": 481465,
+      "linked": 372760,
+      "unlinked": 108705,
+      "not_applicable": 445,
+      "link_rate": 0.77422,
+      "sample_verified": 0,
+      "unverified_linked": 372760,
+      "variables": {
+        "structure": {
+          "confirmed": 370604,
+          "candidates_agree": 1972,
+          "conflict_missing": 86,
+          "source_missing": 98,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.769742,
+          "coverage_of_linked": 0.994216,
+          "conflict_rate_of_linked": 0.000231
+        },
+        "main_use": {
+          "confirmed": 370562,
+          "candidates_agree": 1968,
+          "conflict_missing": 89,
+          "source_missing": 141,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.769655,
+          "coverage_of_linked": 0.994103,
+          "conflict_rate_of_linked": 0.000239
+        },
+        "floors_above": {
+          "confirmed": 370702,
+          "candidates_agree": 2018,
+          "conflict_missing": 40,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.769946,
+          "coverage_of_linked": 0.994479,
+          "conflict_rate_of_linked": 0.000107
+        },
+        "approve_year": {
+          "confirmed": 354631,
+          "candidates_agree": 1876,
+          "conflict_missing": 137,
+          "source_missing": 16116,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.736567,
+          "coverage_of_linked": 0.951365,
+          "conflict_rate_of_linked": 0.000368
+        },
+        "zone_contract_year": {
+          "confirmed": 366976,
+          "candidates_agree": 0,
+          "conflict_missing": 1,
+          "source_missing": 1194,
+          "undetermined": 4589,
+          "coverage_of_eligible": 0.762207,
+          "coverage_of_linked": 0.984483,
+          "conflict_rate_of_linked": 3e-06
+        },
+        "zone_latest": {
+          "confirmed": 371761,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 999,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.772145,
+          "coverage_of_linked": 0.99732,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 366330,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 6430,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.760865,
+          "coverage_of_linked": 0.98275,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 370702,
+        "candidates_agree": 1782,
+        "candidates_conflict": 276
+      },
+      "temporal": {
+        "zone_contract_year": 365227,
+        "zone_contract_year_rate": 0.979791,
+        "zone_next_base_differs": 1293,
+        "register_after_contract": 302917
+      }
+    },
+    "asset_type|factory": {
+      "total": 55173,
+      "eligible": 53462,
+      "linked": 33394,
+      "unlinked": 20068,
+      "not_applicable": 1711,
+      "link_rate": 0.624631,
+      "sample_verified": 0,
+      "unverified_linked": 33394,
+      "variables": {
+        "structure": {
+          "confirmed": 32886,
+          "candidates_agree": 466,
+          "conflict_missing": 16,
+          "source_missing": 26,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.615129,
+          "coverage_of_linked": 0.984788,
+          "conflict_rate_of_linked": 0.000479
+        },
+        "main_use": {
+          "confirmed": 32875,
+          "candidates_agree": 468,
+          "conflict_missing": 14,
+          "source_missing": 37,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.614923,
+          "coverage_of_linked": 0.984458,
+          "conflict_rate_of_linked": 0.000419
+        },
+        "floors_above": {
+          "confirmed": 32912,
+          "candidates_agree": 469,
+          "conflict_missing": 13,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.615615,
+          "coverage_of_linked": 0.985566,
+          "conflict_rate_of_linked": 0.000389
+        },
+        "approve_year": {
+          "confirmed": 32334,
+          "candidates_agree": 451,
+          "conflict_missing": 26,
+          "source_missing": 583,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.604803,
+          "coverage_of_linked": 0.968258,
+          "conflict_rate_of_linked": 0.000779
+        },
+        "zone_contract_year": {
+          "confirmed": 32455,
+          "candidates_agree": 0,
+          "conflict_missing": 1,
+          "source_missing": 51,
+          "undetermined": 887,
+          "coverage_of_eligible": 0.607067,
+          "coverage_of_linked": 0.971881,
+          "conflict_rate_of_linked": 3e-05
+        },
+        "zone_latest": {
+          "confirmed": 33349,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 45,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.623789,
+          "coverage_of_linked": 0.998652,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 4898,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 28496,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.091616,
+          "coverage_of_linked": 0.146673,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 32912,
+        "candidates_agree": 431,
+        "candidates_conflict": 51
+      },
+      "temporal": {
+        "zone_contract_year": 32009,
+        "zone_contract_year_rate": 0.958525,
+        "zone_next_base_differs": 97,
+        "register_after_contract": 26062
+      }
+    },
+    "contract_year|2019": {
+      "total": 108202,
+      "eligible": 108186,
+      "linked": 74350,
+      "unlinked": 33836,
+      "not_applicable": 16,
+      "link_rate": 0.687242,
+      "sample_verified": 0,
+      "unverified_linked": 74350,
+      "variables": {
+        "structure": {
+          "confirmed": 73938,
+          "candidates_agree": 378,
+          "conflict_missing": 17,
+          "source_missing": 17,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.683434,
+          "coverage_of_linked": 0.994459,
+          "conflict_rate_of_linked": 0.000229
+        },
+        "main_use": {
+          "confirmed": 73932,
+          "candidates_agree": 371,
+          "conflict_missing": 24,
+          "source_missing": 23,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.683379,
+          "coverage_of_linked": 0.994378,
+          "conflict_rate_of_linked": 0.000323
+        },
+        "floors_above": {
+          "confirmed": 73955,
+          "candidates_agree": 390,
+          "conflict_missing": 5,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.683591,
+          "coverage_of_linked": 0.994687,
+          "conflict_rate_of_linked": 6.7e-05
+        },
+        "approve_year": {
+          "confirmed": 71034,
+          "candidates_agree": 355,
+          "conflict_missing": 30,
+          "source_missing": 2931,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.656591,
+          "coverage_of_linked": 0.9554,
+          "conflict_rate_of_linked": 0.000403
+        },
+        "zone_contract_year": {
+          "confirmed": 72146,
+          "candidates_agree": 0,
+          "conflict_missing": 2,
+          "source_missing": 329,
+          "undetermined": 1873,
+          "coverage_of_eligible": 0.66687,
+          "coverage_of_linked": 0.970356,
+          "conflict_rate_of_linked": 2.7e-05
+        },
+        "zone_latest": {
+          "confirmed": 74077,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 273,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.684719,
+          "coverage_of_linked": 0.996328,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 68718,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 5632,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.635184,
+          "coverage_of_linked": 0.92425,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 73955,
+        "candidates_agree": 338,
+        "candidates_conflict": 57
+      },
+      "temporal": {
+        "zone_contract_year": 71828,
+        "zone_contract_year_rate": 0.966079,
+        "zone_next_base_differs": 243,
+        "register_after_contract": 74350
+      }
+    },
+    "contract_year|2020": {
+      "total": 130511,
+      "eligible": 130505,
+      "linked": 91865,
+      "unlinked": 38640,
+      "not_applicable": 6,
+      "link_rate": 0.703919,
+      "sample_verified": 0,
+      "unverified_linked": 91865,
+      "variables": {
+        "structure": {
+          "confirmed": 91325,
+          "candidates_agree": 493,
+          "conflict_missing": 26,
+          "source_missing": 21,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.699782,
+          "coverage_of_linked": 0.994122,
+          "conflict_rate_of_linked": 0.000283
+        },
+        "main_use": {
+          "confirmed": 91328,
+          "candidates_agree": 491,
+          "conflict_missing": 27,
+          "source_missing": 19,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.699805,
+          "coverage_of_linked": 0.994154,
+          "conflict_rate_of_linked": 0.000294
+        },
+        "floors_above": {
+          "confirmed": 91346,
+          "candidates_agree": 513,
+          "conflict_missing": 6,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.699943,
+          "coverage_of_linked": 0.99435,
+          "conflict_rate_of_linked": 6.5e-05
+        },
+        "approve_year": {
+          "confirmed": 87880,
+          "candidates_agree": 468,
+          "conflict_missing": 36,
+          "source_missing": 3481,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.673384,
+          "coverage_of_linked": 0.956621,
+          "conflict_rate_of_linked": 0.000392
+        },
+        "zone_contract_year": {
+          "confirmed": 89294,
+          "candidates_agree": 0,
+          "conflict_missing": 1,
+          "source_missing": 293,
+          "undetermined": 2277,
+          "coverage_of_eligible": 0.684219,
+          "coverage_of_linked": 0.972013,
+          "conflict_rate_of_linked": 1.1e-05
+        },
+        "zone_latest": {
+          "confirmed": 91598,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 267,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.701873,
+          "coverage_of_linked": 0.997094,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 85282,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 6583,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.653477,
+          "coverage_of_linked": 0.92834,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 91346,
+        "candidates_agree": 441,
+        "candidates_conflict": 78
+      },
+      "temporal": {
+        "zone_contract_year": 88811,
+        "zone_contract_year_rate": 0.966756,
+        "zone_next_base_differs": 420,
+        "register_after_contract": 91865
+      }
+    },
+    "contract_year|2021": {
+      "total": 132036,
+      "eligible": 129891,
+      "linked": 95829,
+      "unlinked": 34062,
+      "not_applicable": 2145,
+      "link_rate": 0.737765,
+      "sample_verified": 0,
+      "unverified_linked": 95829,
+      "variables": {
+        "structure": {
+          "confirmed": 95125,
+          "candidates_agree": 651,
+          "conflict_missing": 26,
+          "source_missing": 27,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.732345,
+          "coverage_of_linked": 0.992654,
+          "conflict_rate_of_linked": 0.000271
+        },
+        "main_use": {
+          "confirmed": 95109,
+          "candidates_agree": 641,
+          "conflict_missing": 36,
+          "source_missing": 43,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.732222,
+          "coverage_of_linked": 0.992487,
+          "conflict_rate_of_linked": 0.000376
+        },
+        "floors_above": {
+          "confirmed": 95152,
+          "candidates_agree": 664,
+          "conflict_missing": 13,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.732553,
+          "coverage_of_linked": 0.992935,
+          "conflict_rate_of_linked": 0.000136
+        },
+        "approve_year": {
+          "confirmed": 91561,
+          "candidates_agree": 625,
+          "conflict_missing": 42,
+          "source_missing": 3601,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.704906,
+          "coverage_of_linked": 0.955462,
+          "conflict_rate_of_linked": 0.000438
+        },
+        "zone_contract_year": {
+          "confirmed": 93886,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 227,
+          "undetermined": 1716,
+          "coverage_of_eligible": 0.722806,
+          "coverage_of_linked": 0.979724,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 95624,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 205,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.736186,
+          "coverage_of_linked": 0.997861,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 87711,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 8118,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.675266,
+          "coverage_of_linked": 0.915287,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 95152,
+        "candidates_agree": 582,
+        "candidates_conflict": 95
+      },
+      "temporal": {
+        "zone_contract_year": 93330,
+        "zone_contract_year_rate": 0.973922,
+        "zone_next_base_differs": 182,
+        "register_after_contract": 95829
+      }
+    },
+    "contract_year|2022": {
+      "total": 82365,
+      "eligible": 80735,
+      "linked": 61696,
+      "unlinked": 19039,
+      "not_applicable": 1630,
+      "link_rate": 0.764179,
+      "sample_verified": 0,
+      "unverified_linked": 61696,
+      "variables": {
+        "structure": {
+          "confirmed": 61286,
+          "candidates_agree": 382,
+          "conflict_missing": 9,
+          "source_missing": 19,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.759101,
+          "coverage_of_linked": 0.993355,
+          "conflict_rate_of_linked": 0.000146
+        },
+        "main_use": {
+          "confirmed": 61273,
+          "candidates_agree": 361,
+          "conflict_missing": 30,
+          "source_missing": 32,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.75894,
+          "coverage_of_linked": 0.993144,
+          "conflict_rate_of_linked": 0.000486
+        },
+        "floors_above": {
+          "confirmed": 61305,
+          "candidates_agree": 375,
+          "conflict_missing": 16,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.759336,
+          "coverage_of_linked": 0.993662,
+          "conflict_rate_of_linked": 0.000259
+        },
+        "approve_year": {
+          "confirmed": 58768,
+          "candidates_agree": 357,
+          "conflict_missing": 30,
+          "source_missing": 2541,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.727912,
+          "coverage_of_linked": 0.952541,
+          "conflict_rate_of_linked": 0.000486
+        },
+        "zone_contract_year": {
+          "confirmed": 60694,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 133,
+          "undetermined": 869,
+          "coverage_of_eligible": 0.751768,
+          "coverage_of_linked": 0.983759,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 61581,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 115,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.762755,
+          "coverage_of_linked": 0.998136,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 56187,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 5509,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.695944,
+          "coverage_of_linked": 0.910707,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 61305,
+        "candidates_agree": 328,
+        "candidates_conflict": 63
+      },
+      "temporal": {
+        "zone_contract_year": 60459,
+        "zone_contract_year_rate": 0.97995,
+        "zone_next_base_differs": 95,
+        "register_after_contract": 61696
+      }
+    },
+    "contract_year|2023": {
+      "total": 60680,
+      "eligible": 59302,
+      "linked": 47562,
+      "unlinked": 11740,
+      "not_applicable": 1378,
+      "link_rate": 0.80203,
+      "sample_verified": 0,
+      "unverified_linked": 47562,
+      "variables": {
+        "structure": {
+          "confirmed": 47253,
+          "candidates_agree": 295,
+          "conflict_missing": 9,
+          "source_missing": 5,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.79682,
+          "coverage_of_linked": 0.993503,
+          "conflict_rate_of_linked": 0.000189
+        },
+        "main_use": {
+          "confirmed": 47239,
+          "candidates_agree": 280,
+          "conflict_missing": 24,
+          "source_missing": 19,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.796584,
+          "coverage_of_linked": 0.993209,
+          "conflict_rate_of_linked": 0.000505
+        },
+        "floors_above": {
+          "confirmed": 47258,
+          "candidates_agree": 293,
+          "conflict_missing": 11,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.796904,
+          "coverage_of_linked": 0.993608,
+          "conflict_rate_of_linked": 0.000231
+        },
+        "approve_year": {
+          "confirmed": 45295,
+          "candidates_agree": 281,
+          "conflict_missing": 20,
+          "source_missing": 1966,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.763802,
+          "coverage_of_linked": 0.952336,
+          "conflict_rate_of_linked": 0.000421
+        },
+        "zone_contract_year": {
+          "confirmed": 47038,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 89,
+          "undetermined": 435,
+          "coverage_of_eligible": 0.793194,
+          "coverage_of_linked": 0.988983,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 47489,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 73,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.800799,
+          "coverage_of_linked": 0.998465,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 43020,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 4542,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.725439,
+          "coverage_of_linked": 0.904504,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 47258,
+        "candidates_agree": 255,
+        "candidates_conflict": 49
+      },
+      "temporal": {
+        "zone_contract_year": 46667,
+        "zone_contract_year_rate": 0.981182,
+        "zone_next_base_differs": 124,
+        "register_after_contract": 47562
+      }
+    },
+    "contract_year|2024": {
+      "total": 60495,
+      "eligible": 58973,
+      "linked": 50858,
+      "unlinked": 8115,
+      "not_applicable": 1522,
+      "link_rate": 0.862395,
+      "sample_verified": 0,
+      "unverified_linked": 50858,
+      "variables": {
+        "structure": {
+          "confirmed": 50554,
+          "candidates_agree": 272,
+          "conflict_missing": 17,
+          "source_missing": 15,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.85724,
+          "coverage_of_linked": 0.994023,
+          "conflict_rate_of_linked": 0.000334
+        },
+        "main_use": {
+          "confirmed": 50547,
+          "candidates_agree": 260,
+          "conflict_missing": 29,
+          "source_missing": 22,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.857121,
+          "coverage_of_linked": 0.993885,
+          "conflict_rate_of_linked": 0.00057
+        },
+        "floors_above": {
+          "confirmed": 50569,
+          "candidates_agree": 280,
+          "conflict_missing": 9,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.857494,
+          "coverage_of_linked": 0.994318,
+          "conflict_rate_of_linked": 0.000177
+        },
+        "approve_year": {
+          "confirmed": 48579,
+          "candidates_agree": 267,
+          "conflict_missing": 17,
+          "source_missing": 1995,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.82375,
+          "coverage_of_linked": 0.955189,
+          "conflict_rate_of_linked": 0.000334
+        },
+        "zone_contract_year": {
+          "confirmed": 50761,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 97,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.86075,
+          "coverage_of_linked": 0.998093,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 50781,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 77,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.861089,
+          "coverage_of_linked": 0.998486,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 45887,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 4971,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.778102,
+          "coverage_of_linked": 0.902257,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 50569,
+        "candidates_agree": 236,
+        "candidates_conflict": 53
+      },
+      "temporal": {
+        "zone_contract_year": 50192,
+        "zone_contract_year_rate": 0.986905,
+        "zone_next_base_differs": 278,
+        "register_after_contract": 35183
+      }
+    },
+    "contract_year|2025": {
+      "total": 58126,
+      "eligible": 56617,
+      "linked": 50201,
+      "unlinked": 6416,
+      "not_applicable": 1509,
+      "link_rate": 0.886677,
+      "sample_verified": 0,
+      "unverified_linked": 50201,
+      "variables": {
+        "structure": {
+          "confirmed": 49901,
+          "candidates_agree": 262,
+          "conflict_missing": 12,
+          "source_missing": 26,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.881378,
+          "coverage_of_linked": 0.994024,
+          "conflict_rate_of_linked": 0.000239
+        },
+        "main_use": {
+          "confirmed": 49894,
+          "candidates_agree": 244,
+          "conflict_missing": 30,
+          "source_missing": 33,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.881255,
+          "coverage_of_linked": 0.993885,
+          "conflict_rate_of_linked": 0.000598
+        },
+        "floors_above": {
+          "confirmed": 49927,
+          "candidates_agree": 268,
+          "conflict_missing": 6,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.881838,
+          "coverage_of_linked": 0.994542,
+          "conflict_rate_of_linked": 0.00012
+        },
+        "approve_year": {
+          "confirmed": 47927,
+          "candidates_agree": 237,
+          "conflict_missing": 25,
+          "source_missing": 2012,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.846513,
+          "coverage_of_linked": 0.954702,
+          "conflict_rate_of_linked": 0.000498
+        },
+        "zone_contract_year": {
+          "confirmed": 50052,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 149,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.884045,
+          "coverage_of_linked": 0.997032,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 50100,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 101,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.884893,
+          "coverage_of_linked": 0.997988,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 45100,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 5101,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.796581,
+          "coverage_of_linked": 0.898388,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 49927,
+        "candidates_agree": 219,
+        "candidates_conflict": 55
+      },
+      "temporal": {
+        "zone_contract_year": 50002,
+        "zone_contract_year_rate": 0.996036,
+        "zone_next_base_differs": 268,
+        "register_after_contract": 2259
+      }
+    },
+    "contract_year|2026": {
+      "total": 40349,
+      "eligible": 39387,
+      "linked": 34755,
+      "unlinked": 4632,
+      "not_applicable": 962,
+      "link_rate": 0.882398,
+      "sample_verified": 0,
+      "unverified_linked": 34755,
+      "variables": {
+        "structure": {
+          "confirmed": 34551,
+          "candidates_agree": 183,
+          "conflict_missing": 9,
+          "source_missing": 12,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.877218,
+          "coverage_of_linked": 0.99413,
+          "conflict_rate_of_linked": 0.000259
+        },
+        "main_use": {
+          "confirmed": 34542,
+          "candidates_agree": 175,
+          "conflict_missing": 17,
+          "source_missing": 21,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.87699,
+          "coverage_of_linked": 0.993871,
+          "conflict_rate_of_linked": 0.000489
+        },
+        "floors_above": {
+          "confirmed": 34563,
+          "candidates_agree": 190,
+          "conflict_missing": 2,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.877523,
+          "coverage_of_linked": 0.994476,
+          "conflict_rate_of_linked": 5.8e-05
+        },
+        "approve_year": {
+          "confirmed": 33221,
+          "candidates_agree": 179,
+          "conflict_missing": 10,
+          "source_missing": 1345,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.843451,
+          "coverage_of_linked": 0.955862,
+          "conflict_rate_of_linked": 0.000288
+        },
+        "zone_contract_year": {
+          "confirmed": 34658,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 97,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.879935,
+          "coverage_of_linked": 0.997209,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 34679,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 76,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.880468,
+          "coverage_of_linked": 0.997813,
+          "conflict_rate_of_linked": 0.0
+        },
+        "land_area": {
+          "confirmed": 31118,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 3637,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.790058,
+          "coverage_of_linked": 0.895353,
+          "conflict_rate_of_linked": 0.0
+        }
+      },
+      "building_id_state": {
+        "confirmed": 34563,
+        "candidates_agree": 162,
+        "candidates_conflict": 30
+      },
+      "temporal": {
+        "zone_contract_year": 34316,
+        "zone_contract_year_rate": 0.987369,
+        "zone_next_base_differs": 0,
+        "register_after_contract": 1093
+      }
+    }
+  },
+  "previous_metrics": {
+    "national": {
+      "total": 672764,
+      "eligible": 663601,
+      "linked": 498283,
+      "unlinked": 165318,
+      "not_applicable": 9163,
+      "link_rate": 0.750877,
+      "sample_verified": 0,
+      "unverified_linked": 498283,
+      "variables": {
+        "structure": {
+          "confirmed": 498144,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 139,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.750668,
+          "coverage_of_linked": 0.999721,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 498283,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.750877,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 478932,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 19351,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.721717,
+          "coverage_of_linked": 0.961165,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 486758,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 11525,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.73351,
+          "coverage_of_linked": 0.976871,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "sido|11": {
+      "total": 65035,
+      "eligible": 63569,
+      "linked": 43091,
+      "unlinked": 20478,
+      "not_applicable": 1466,
+      "link_rate": 0.677862,
+      "sample_verified": 0,
+      "unverified_linked": 43091,
+      "variables": {
+        "structure": {
+          "confirmed": 43091,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.677862,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 43091,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.677862,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 41056,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 2035,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.645849,
+          "coverage_of_linked": 0.952774,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 42852,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 239,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.674102,
+          "coverage_of_linked": 0.994454,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "sido|12": {
+      "total": 70218,
+      "eligible": 69451,
+      "linked": 53020,
+      "unlinked": 16431,
+      "not_applicable": 767,
+      "link_rate": 0.763416,
+      "sample_verified": 0,
+      "unverified_linked": 53020,
+      "variables": {
+        "structure": {
+          "confirmed": 53014,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 6,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.76333,
+          "coverage_of_linked": 0.999887,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 53020,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.763416,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 50296,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 2724,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.724194,
+          "coverage_of_linked": 0.948623,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 52801,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 219,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.760263,
+          "coverage_of_linked": 0.995869,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "sido|26": {
+      "total": 41970,
+      "eligible": 41370,
+      "linked": 29145,
+      "unlinked": 12225,
+      "not_applicable": 600,
+      "link_rate": 0.704496,
+      "sample_verified": 0,
+      "unverified_linked": 29145,
+      "variables": {
+        "structure": {
+          "confirmed": 29142,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 3,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.704423,
+          "coverage_of_linked": 0.999897,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 29145,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.704496,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 27716,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1429,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.669954,
+          "coverage_of_linked": 0.950969,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 28940,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 205,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.699541,
+          "coverage_of_linked": 0.992966,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "sido|27": {
+      "total": 35848,
+      "eligible": 35474,
+      "linked": 24115,
+      "unlinked": 11359,
+      "not_applicable": 374,
+      "link_rate": 0.679794,
+      "sample_verified": 0,
+      "unverified_linked": 24115,
+      "variables": {
+        "structure": {
+          "confirmed": 24115,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.679794,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 24115,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.679794,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 23794,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 321,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.670745,
+          "coverage_of_linked": 0.986689,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 24006,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 109,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.676721,
+          "coverage_of_linked": 0.99548,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "sido|28": {
+      "total": 24526,
+      "eligible": 24253,
+      "linked": 17131,
+      "unlinked": 7122,
+      "not_applicable": 273,
+      "link_rate": 0.706346,
+      "sample_verified": 0,
+      "unverified_linked": 17131,
+      "variables": {
+        "structure": {
+          "confirmed": 17130,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.706304,
+          "coverage_of_linked": 0.999942,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 17131,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.706346,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 16273,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 858,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.670969,
+          "coverage_of_linked": 0.949915,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 12366,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 4765,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.509875,
+          "coverage_of_linked": 0.721849,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "sido|30": {
+      "total": 19116,
+      "eligible": 18889,
+      "linked": 13961,
+      "unlinked": 4928,
+      "not_applicable": 227,
+      "link_rate": 0.739107,
+      "sample_verified": 0,
+      "unverified_linked": 13961,
+      "variables": {
+        "structure": {
+          "confirmed": 13960,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.739054,
+          "coverage_of_linked": 0.999928,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 13961,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.739107,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 13862,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 99,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.733866,
+          "coverage_of_linked": 0.992909,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 13914,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 47,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.736619,
+          "coverage_of_linked": 0.996633,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "sido|31": {
+      "total": 11776,
+      "eligible": 11632,
+      "linked": 8289,
+      "unlinked": 3343,
+      "not_applicable": 144,
+      "link_rate": 0.712603,
+      "sample_verified": 0,
+      "unverified_linked": 8289,
+      "variables": {
+        "structure": {
+          "confirmed": 8289,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.712603,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 8289,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.712603,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 8138,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 151,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.699622,
+          "coverage_of_linked": 0.981783,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 8263,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 26,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.710368,
+          "coverage_of_linked": 0.996863,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "sido|36": {
+      "total": 1896,
+      "eligible": 1871,
+      "linked": 1385,
+      "unlinked": 486,
+      "not_applicable": 25,
+      "link_rate": 0.740246,
+      "sample_verified": 0,
+      "unverified_linked": 1385,
+      "variables": {
+        "structure": {
+          "confirmed": 1385,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.740246,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 1385,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.740246,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 1359,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 26,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.72635,
+          "coverage_of_linked": 0.981227,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 1375,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 10,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.734901,
+          "coverage_of_linked": 0.99278,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "sido|41": {
+      "total": 119926,
+      "eligible": 118161,
+      "linked": 86006,
+      "unlinked": 32155,
+      "not_applicable": 1765,
+      "link_rate": 0.727871,
+      "sample_verified": 0,
+      "unverified_linked": 86006,
+      "variables": {
+        "structure": {
+          "confirmed": 85968,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 38,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.72755,
+          "coverage_of_linked": 0.999558,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 86006,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.727871,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 83246,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 2760,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.704513,
+          "coverage_of_linked": 0.967909,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 80965,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 5041,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.685209,
+          "coverage_of_linked": 0.941388,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "sido|43": {
+      "total": 36035,
+      "eligible": 35741,
+      "linked": 28945,
+      "unlinked": 6796,
+      "not_applicable": 294,
+      "link_rate": 0.809854,
+      "sample_verified": 0,
+      "unverified_linked": 28945,
+      "variables": {
+        "structure": {
+          "confirmed": 28945,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.809854,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 28945,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.809854,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 27676,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1269,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.774349,
+          "coverage_of_linked": 0.956158,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 28849,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 96,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.807168,
+          "coverage_of_linked": 0.996683,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "sido|44": {
+      "total": 41969,
+      "eligible": 41526,
+      "linked": 32045,
+      "unlinked": 9481,
+      "not_applicable": 443,
+      "link_rate": 0.771685,
+      "sample_verified": 0,
+      "unverified_linked": 32045,
+      "variables": {
+        "structure": {
+          "confirmed": 32039,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 6,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.771541,
+          "coverage_of_linked": 0.999813,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 32045,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.771685,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 31051,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 994,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.747748,
+          "coverage_of_linked": 0.968981,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 31905,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 140,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.768314,
+          "coverage_of_linked": 0.995631,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "sido|47": {
+      "total": 59327,
+      "eligible": 58753,
+      "linked": 47947,
+      "unlinked": 10806,
+      "not_applicable": 574,
+      "link_rate": 0.816077,
+      "sample_verified": 0,
+      "unverified_linked": 47947,
+      "variables": {
+        "structure": {
+          "confirmed": 47931,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 16,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.815805,
+          "coverage_of_linked": 0.999666,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 47947,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.816077,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 46550,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1397,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.7923,
+          "coverage_of_linked": 0.970864,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 47728,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 219,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.81235,
+          "coverage_of_linked": 0.995432,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "sido|48": {
+      "total": 56791,
+      "eligible": 56207,
+      "linked": 43960,
+      "unlinked": 12247,
+      "not_applicable": 584,
+      "link_rate": 0.782109,
+      "sample_verified": 0,
+      "unverified_linked": 43960,
+      "variables": {
+        "structure": {
+          "confirmed": 43956,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 4,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.782038,
+          "coverage_of_linked": 0.999909,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 43960,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.782109,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 42289,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1671,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.75238,
+          "coverage_of_linked": 0.961988,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 43833,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 127,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.779849,
+          "coverage_of_linked": 0.997111,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "sido|50": {
+      "total": 12463,
+      "eligible": 12307,
+      "linked": 9112,
+      "unlinked": 3195,
+      "not_applicable": 156,
+      "link_rate": 0.740392,
+      "sample_verified": 0,
+      "unverified_linked": 9112,
+      "variables": {
+        "structure": {
+          "confirmed": 9094,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 18,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.738929,
+          "coverage_of_linked": 0.998025,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 9112,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.740392,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 8677,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 435,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.705046,
+          "coverage_of_linked": 0.952261,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 9093,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 19,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.738848,
+          "coverage_of_linked": 0.997915,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "sido|51": {
+      "total": 36937,
+      "eligible": 36452,
+      "linked": 30367,
+      "unlinked": 6085,
+      "not_applicable": 485,
+      "link_rate": 0.833068,
+      "sample_verified": 0,
+      "unverified_linked": 30367,
+      "variables": {
+        "structure": {
+          "confirmed": 30343,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 24,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.83241,
+          "coverage_of_linked": 0.99921,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 30367,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.833068,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 27807,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 2560,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.762839,
+          "coverage_of_linked": 0.915698,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 30243,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 124,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.829666,
+          "coverage_of_linked": 0.995917,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "sido|52": {
+      "total": 38353,
+      "eligible": 37945,
+      "linked": 29764,
+      "unlinked": 8181,
+      "not_applicable": 408,
+      "link_rate": 0.784398,
+      "sample_verified": 0,
+      "unverified_linked": 29764,
+      "variables": {
+        "structure": {
+          "confirmed": 29742,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 22,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.783819,
+          "coverage_of_linked": 0.999261,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 29764,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.784398,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 29142,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 622,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.768006,
+          "coverage_of_linked": 0.979102,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 29625,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 139,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.780735,
+          "coverage_of_linked": 0.99533,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "sido|none": {
+      "total": 578,
+      "eligible": 0,
+      "linked": 0,
+      "unlinked": 0,
+      "not_applicable": 578,
+      "link_rate": null,
+      "sample_verified": 0,
+      "unverified_linked": 0,
+      "variables": {
+        "structure": {
+          "confirmed": 0,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": null,
+          "coverage_of_linked": null,
+          "conflict_rate_of_linked": null
+        },
+        "floors_above": {
+          "confirmed": 0,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": null,
+          "coverage_of_linked": null,
+          "conflict_rate_of_linked": null
+        },
+        "approve_year": {
+          "confirmed": 0,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": null,
+          "coverage_of_linked": null,
+          "conflict_rate_of_linked": null
+        },
+        "zone_latest": {
+          "confirmed": 0,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": null,
+          "coverage_of_linked": null,
+          "conflict_rate_of_linked": null
+        }
+      }
+    },
+    "asset_type|commercial": {
+      "total": 135681,
+      "eligible": 128673,
+      "linked": 99107,
+      "unlinked": 29566,
+      "not_applicable": 7008,
+      "link_rate": 0.770224,
+      "sample_verified": 0,
+      "unverified_linked": 99107,
+      "variables": {
+        "structure": {
+          "confirmed": 99090,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 17,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.770092,
+          "coverage_of_linked": 0.999828,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 99107,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.770224,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 96010,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 3097,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.746155,
+          "coverage_of_linked": 0.968751,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 95674,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 3433,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.743544,
+          "coverage_of_linked": 0.965361,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "asset_type|detached": {
+      "total": 481910,
+      "eligible": 481465,
+      "linked": 366511,
+      "unlinked": 114954,
+      "not_applicable": 445,
+      "link_rate": 0.761241,
+      "sample_verified": 0,
+      "unverified_linked": 366511,
+      "variables": {
+        "structure": {
+          "confirmed": 366414,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 97,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.76104,
+          "coverage_of_linked": 0.999735,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 366511,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.761241,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 350834,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 15677,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.72868,
+          "coverage_of_linked": 0.957226,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 360253,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 6258,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.748243,
+          "coverage_of_linked": 0.982925,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "asset_type|factory": {
+      "total": 55173,
+      "eligible": 53463,
+      "linked": 32665,
+      "unlinked": 20798,
+      "not_applicable": 1710,
+      "link_rate": 0.610983,
+      "sample_verified": 0,
+      "unverified_linked": 32665,
+      "variables": {
+        "structure": {
+          "confirmed": 32640,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 25,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.610516,
+          "coverage_of_linked": 0.999235,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 32665,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.610983,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 32088,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 577,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.600191,
+          "coverage_of_linked": 0.982336,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 30831,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1834,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.576679,
+          "coverage_of_linked": 0.943854,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "contract_year|2019": {
+      "total": 108202,
+      "eligible": 108186,
+      "linked": 74156,
+      "unlinked": 34030,
+      "not_applicable": 16,
+      "link_rate": 0.685449,
+      "sample_verified": 0,
+      "unverified_linked": 74156,
+      "variables": {
+        "structure": {
+          "confirmed": 74139,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 17,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.685292,
+          "coverage_of_linked": 0.999771,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 74156,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.685449,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 71259,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 2897,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.658671,
+          "coverage_of_linked": 0.960934,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 72935,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1221,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.674163,
+          "coverage_of_linked": 0.983535,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "contract_year|2020": {
+      "total": 130511,
+      "eligible": 130505,
+      "linked": 91644,
+      "unlinked": 38861,
+      "not_applicable": 6,
+      "link_rate": 0.702226,
+      "sample_verified": 0,
+      "unverified_linked": 91644,
+      "variables": {
+        "structure": {
+          "confirmed": 91623,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 21,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.702065,
+          "coverage_of_linked": 0.999771,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 91644,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.702226,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 88184,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 3460,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.675714,
+          "coverage_of_linked": 0.962245,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 90107,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1537,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.690449,
+          "coverage_of_linked": 0.983229,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "contract_year|2021": {
+      "total": 132036,
+      "eligible": 129891,
+      "linked": 95546,
+      "unlinked": 34345,
+      "not_applicable": 2145,
+      "link_rate": 0.735586,
+      "sample_verified": 0,
+      "unverified_linked": 95546,
+      "variables": {
+        "structure": {
+          "confirmed": 95519,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 27,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.735378,
+          "coverage_of_linked": 0.999717,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 95546,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.735586,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 91999,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 3547,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.708278,
+          "coverage_of_linked": 0.962877,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 92590,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 2956,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.712828,
+          "coverage_of_linked": 0.969062,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "contract_year|2022": {
+      "total": 82365,
+      "eligible": 80735,
+      "linked": 61507,
+      "unlinked": 19228,
+      "not_applicable": 1630,
+      "link_rate": 0.761838,
+      "sample_verified": 0,
+      "unverified_linked": 61507,
+      "variables": {
+        "structure": {
+          "confirmed": 61488,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 19,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.761603,
+          "coverage_of_linked": 0.999691,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 61507,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.761838,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 58995,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 2512,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.730724,
+          "coverage_of_linked": 0.959159,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 59809,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1698,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.740806,
+          "coverage_of_linked": 0.972393,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "contract_year|2023": {
+      "total": 60680,
+      "eligible": 59302,
+      "linked": 47346,
+      "unlinked": 11956,
+      "not_applicable": 1378,
+      "link_rate": 0.798388,
+      "sample_verified": 0,
+      "unverified_linked": 47346,
+      "variables": {
+        "structure": {
+          "confirmed": 47341,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 5,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.798304,
+          "coverage_of_linked": 0.999894,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 47346,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.798388,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 45403,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1943,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.765623,
+          "coverage_of_linked": 0.958962,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 46042,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1304,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.776399,
+          "coverage_of_linked": 0.972458,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "contract_year|2024": {
+      "total": 60495,
+      "eligible": 58973,
+      "linked": 50427,
+      "unlinked": 8546,
+      "not_applicable": 1522,
+      "link_rate": 0.855086,
+      "sample_verified": 0,
+      "unverified_linked": 50427,
+      "variables": {
+        "structure": {
+          "confirmed": 50412,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 15,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.854832,
+          "coverage_of_linked": 0.999703,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 50427,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.855086,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 48470,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1957,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.821902,
+          "coverage_of_linked": 0.961191,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 49068,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1359,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.832042,
+          "coverage_of_linked": 0.97305,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "contract_year|2025": {
+      "total": 58126,
+      "eligible": 56617,
+      "linked": 49826,
+      "unlinked": 6791,
+      "not_applicable": 1509,
+      "link_rate": 0.880054,
+      "sample_verified": 0,
+      "unverified_linked": 49826,
+      "variables": {
+        "structure": {
+          "confirmed": 49800,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 26,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.879594,
+          "coverage_of_linked": 0.999478,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 49826,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.880054,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 47859,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1967,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.845311,
+          "coverage_of_linked": 0.960523,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 48702,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1124,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.860201,
+          "coverage_of_linked": 0.977441,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    },
+    "contract_year|2026": {
+      "total": 40349,
+      "eligible": 39392,
+      "linked": 27831,
+      "unlinked": 11561,
+      "not_applicable": 957,
+      "link_rate": 0.706514,
+      "sample_verified": 0,
+      "unverified_linked": 27831,
+      "variables": {
+        "structure": {
+          "confirmed": 27822,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 9,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.706286,
+          "coverage_of_linked": 0.999677,
+          "conflict_rate_of_linked": 0.0
+        },
+        "floors_above": {
+          "confirmed": 27831,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 0,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.706514,
+          "coverage_of_linked": 1.0,
+          "conflict_rate_of_linked": 0.0
+        },
+        "approve_year": {
+          "confirmed": 26763,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 1068,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.679402,
+          "coverage_of_linked": 0.961626,
+          "conflict_rate_of_linked": 0.0
+        },
+        "zone_latest": {
+          "confirmed": 27505,
+          "candidates_agree": 0,
+          "conflict_missing": 0,
+          "source_missing": 326,
+          "undetermined": 0,
+          "coverage_of_eligible": 0.698238,
+          "coverage_of_linked": 0.988286,
+          "conflict_rate_of_linked": 0.0
+        }
+      }
+    }
+  },
+  "deltas": {
+    "national": {
+      "link_rate_pp": 1.332,
+      "eligible": -5,
+      "linked": 8833,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 0.873,
+          "conflict_rate_pp": 0.025
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 0.873,
+          "conflict_rate_pp": 0.013
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 0.804,
+          "conflict_rate_pp": 0.041
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 2.89,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "sido|11": {
+      "link_rate_pp": 1.359,
+      "eligible": -1,
+      "linked": 863,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 1.233,
+          "conflict_rate_pp": 0.009
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 1.233,
+          "conflict_rate_pp": 0.0
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 1.197,
+          "conflict_rate_pp": 0.021
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 1.514,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "sido|12": {
+      "link_rate_pp": 3.592,
+      "eligible": 0,
+      "linked": 2495,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 3.366,
+          "conflict_rate_pp": 0.031
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 3.366,
+          "conflict_rate_pp": 0.011
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 2.968,
+          "conflict_rate_pp": 0.036
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 3.549,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "sido|26": {
+      "link_rate_pp": 0.667,
+      "eligible": 0,
+      "linked": 276,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 0.399,
+          "conflict_rate_pp": 0.017
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 0.399,
+          "conflict_rate_pp": 0.017
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 0.367,
+          "conflict_rate_pp": 0.037
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 0.81,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "sido|27": {
+      "link_rate_pp": 0.558,
+      "eligible": 0,
+      "linked": 198,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 0.285,
+          "conflict_rate_pp": 0.09
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 0.285,
+          "conflict_rate_pp": 0.041
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 0.282,
+          "conflict_rate_pp": 0.041
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 0.727,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "sido|28": {
+      "link_rate_pp": 1.014,
+      "eligible": 0,
+      "linked": 246,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 0.466,
+          "conflict_rate_pp": 0.0
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 0.466,
+          "conflict_rate_pp": 0.006
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 0.408,
+          "conflict_rate_pp": 0.0
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 20.365,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "sido|30": {
+      "link_rate_pp": 0.581,
+      "eligible": -1,
+      "linked": 109,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 0.295,
+          "conflict_rate_pp": 0.021
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 0.295,
+          "conflict_rate_pp": 0.05
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 0.322,
+          "conflict_rate_pp": 0.092
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 0.692,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "sido|31": {
+      "link_rate_pp": 0.86,
+      "eligible": 0,
+      "linked": 100,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 0.714,
+          "conflict_rate_pp": 0.036
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 0.714,
+          "conflict_rate_pp": 0.0
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 0.714,
+          "conflict_rate_pp": 0.036
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 0.972,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "sido|36": {
+      "link_rate_pp": 0.962,
+      "eligible": 0,
+      "linked": 18,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 0.641,
+          "conflict_rate_pp": 0.0
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 0.641,
+          "conflict_rate_pp": 0.0
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 0.641,
+          "conflict_rate_pp": 0.0
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 1.443,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "sido|41": {
+      "link_rate_pp": 1.044,
+      "eligible": -3,
+      "linked": 1232,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 0.472,
+          "conflict_rate_pp": 0.019
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 0.472,
+          "conflict_rate_pp": 0.015
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 0.454,
+          "conflict_rate_pp": 0.038
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 5.193,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "sido|43": {
+      "link_rate_pp": 1.181,
+      "eligible": 0,
+      "linked": 422,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 1.005,
+          "conflict_rate_pp": 0.01
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 1.005,
+          "conflict_rate_pp": 0.0
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 0.96,
+          "conflict_rate_pp": 0.007
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 1.363,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "sido|44": {
+      "link_rate_pp": 1.192,
+      "eligible": 0,
+      "linked": 495,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 0.811,
+          "conflict_rate_pp": 0.025
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 0.812,
+          "conflict_rate_pp": 0.0
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 0.783,
+          "conflict_rate_pp": 0.04
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 1.298,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "sido|47": {
+      "link_rate_pp": 1.113,
+      "eligible": 0,
+      "linked": 654,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 0.846,
+          "conflict_rate_pp": 0.018
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 0.846,
+          "conflict_rate_pp": 0.014
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 0.82,
+          "conflict_rate_pp": 0.041
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 1.382,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "sido|48": {
+      "link_rate_pp": 1.142,
+      "eligible": 0,
+      "linked": 642,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 0.845,
+          "conflict_rate_pp": 0.013
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 0.845,
+          "conflict_rate_pp": 0.02
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 0.82,
+          "conflict_rate_pp": 0.043
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 1.281,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "sido|50": {
+      "link_rate_pp": 1.097,
+      "eligible": 0,
+      "linked": 135,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": -6.549,
+          "conflict_rate_pp": 0.151
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": -6.549,
+          "conflict_rate_pp": 0.0
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": -6.655,
+          "conflict_rate_pp": 0.314
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 1.146,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "sido|51": {
+      "link_rate_pp": 1.292,
+      "eligible": 0,
+      "linked": 471,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 0.87,
+          "conflict_rate_pp": 0.023
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 0.87,
+          "conflict_rate_pp": 0.016
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 0.76,
+          "conflict_rate_pp": 0.042
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 1.481,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "sido|52": {
+      "link_rate_pp": 1.257,
+      "eligible": 0,
+      "linked": 477,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 1.067,
+          "conflict_rate_pp": 0.023
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 1.073,
+          "conflict_rate_pp": 0.017
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 1.062,
+          "conflict_rate_pp": 0.05
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 1.5,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "sido|none": {
+      "link_rate_pp": null,
+      "eligible": 0,
+      "linked": 0,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": null,
+          "conflict_rate_pp": null
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": null,
+          "conflict_rate_pp": null
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": null,
+          "conflict_rate_pp": null
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": null,
+          "conflict_rate_pp": null
+        }
+      }
+    },
+    "asset_type|commercial": {
+      "link_rate_pp": 1.444,
+      "eligible": -4,
+      "linked": 1855,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 1.054,
+          "conflict_rate_pp": 0.023
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 1.055,
+          "conflict_rate_pp": 0.015
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 1.005,
+          "conflict_rate_pp": 0.047
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 4.001,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "asset_type|detached": {
+      "link_rate_pp": 1.298,
+      "eligible": 0,
+      "linked": 6249,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 0.87,
+          "conflict_rate_pp": 0.023
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 0.871,
+          "conflict_rate_pp": 0.011
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 0.789,
+          "conflict_rate_pp": 0.037
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 2.39,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "asset_type|factory": {
+      "link_rate_pp": 1.365,
+      "eligible": -1,
+      "linked": 729,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 0.461,
+          "conflict_rate_pp": 0.048
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 0.463,
+          "conflict_rate_pp": 0.039
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 0.461,
+          "conflict_rate_pp": 0.078
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 4.711,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "contract_year|2019": {
+      "link_rate_pp": 0.179,
+      "eligible": 0,
+      "linked": 194,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": -0.186,
+          "conflict_rate_pp": 0.023
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": -0.186,
+          "conflict_rate_pp": 0.007
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": -0.208,
+          "conflict_rate_pp": 0.04
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 1.056,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "contract_year|2020": {
+      "link_rate_pp": 0.169,
+      "eligible": 0,
+      "linked": 221,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": -0.228,
+          "conflict_rate_pp": 0.028
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": -0.228,
+          "conflict_rate_pp": 0.006
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": -0.233,
+          "conflict_rate_pp": 0.039
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 1.142,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "contract_year|2021": {
+      "link_rate_pp": 0.218,
+      "eligible": 0,
+      "linked": 283,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": -0.303,
+          "conflict_rate_pp": 0.027
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": -0.303,
+          "conflict_rate_pp": 0.014
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": -0.337,
+          "conflict_rate_pp": 0.044
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 2.336,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "contract_year|2022": {
+      "link_rate_pp": 0.234,
+      "eligible": 0,
+      "linked": 189,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": -0.25,
+          "conflict_rate_pp": 0.015
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": -0.25,
+          "conflict_rate_pp": 0.026
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": -0.281,
+          "conflict_rate_pp": 0.049
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 2.195,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "contract_year|2023": {
+      "link_rate_pp": 0.364,
+      "eligible": 0,
+      "linked": 216,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": -0.148,
+          "conflict_rate_pp": 0.019
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": -0.148,
+          "conflict_rate_pp": 0.023
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": -0.182,
+          "conflict_rate_pp": 0.042
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 2.44,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "contract_year|2024": {
+      "link_rate_pp": 0.731,
+      "eligible": 0,
+      "linked": 431,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 0.241,
+          "conflict_rate_pp": 0.033
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 0.241,
+          "conflict_rate_pp": 0.018
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 0.185,
+          "conflict_rate_pp": 0.033
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 2.905,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "contract_year|2025": {
+      "link_rate_pp": 0.662,
+      "eligible": 0,
+      "linked": 375,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 0.178,
+          "conflict_rate_pp": 0.024
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 0.178,
+          "conflict_rate_pp": 0.012
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 0.12,
+          "conflict_rate_pp": 0.05
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 2.469,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    },
+    "contract_year|2026": {
+      "link_rate_pp": 17.588,
+      "eligible": -5,
+      "linked": 6924,
+      "variables": {
+        "structure": {
+          "coverage_of_eligible_pp": 17.093,
+          "conflict_rate_pp": 0.026
+        },
+        "floors_above": {
+          "coverage_of_eligible_pp": 17.101,
+          "conflict_rate_pp": 0.006
+        },
+        "approve_year": {
+          "coverage_of_eligible_pp": 16.405,
+          "conflict_rate_pp": 0.029
+        },
+        "zone_latest": {
+          "coverage_of_eligible_pp": 18.223,
+          "conflict_rate_pp": 0.0
+        }
+      }
+    }
+  }
+}
