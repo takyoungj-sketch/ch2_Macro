@@ -1,0 +1,160 @@
+{
+  "step": "7",
+  "read_only": true,
+  "land": {
+    "table": "land_transaction_trait_link",
+    "exists": true,
+    "columns": [
+      "transaction_hash",
+      "link_status",
+      "price_status",
+      "official_price_won",
+      "price_year",
+      "trait_asof",
+      "ledger_beopjungri_code",
+      "code_resolution",
+      "unverified",
+      "rule_version",
+      "created_at"
+    ],
+    "rows": 2684877,
+    "link_status": {
+      "exact": 1846363,
+      "multiple_candidates": 207032,
+      "no_precontract_observation": 203001,
+      "other_unmatched": 166865,
+      "clean_precontract_traits_differ": 125363,
+      "label_normalized": 70243,
+      "post_contract_only": 62024,
+      "label_normalized_traits_differ": 3986
+    },
+    "price_status": {
+      "same_year": 1886371,
+      "none": 768271,
+      "price_conflict": 16622,
+      "previous_year": 9916,
+      "price_missing": 3697
+    },
+    "code_resolution": {
+      "current_code": 139599,
+      "held": 1807739,
+      "reissued_1to1": 737539
+    },
+    "rule_version": {
+      "LAND_CODE_HISTORY_LAYER_V1+LAND_LINK_RULE_V1": 2684877
+    },
+    "unverified_false": 0,
+    "trait_asof_null": 768271,
+    "tx_share_like_columns": []
+  },
+  "built": {
+    "table": "built_transaction_enrichment",
+    "exists": true,
+    "columns": [
+      "transaction_hash",
+      "recovered_lot",
+      "bldrgst_pk",
+      "structure_raw",
+      "structure_group",
+      "max_floor",
+      "approve_year",
+      "zone_labels",
+      "zone_source",
+      "zone_multi",
+      "match_tier",
+      "match_rule",
+      "land_area_source",
+      "n_range",
+      "n_exact",
+      "snapshots_matched",
+      "coverage_scope",
+      "matched_cycle",
+      "evidence",
+      "created_at",
+      "updated_at"
+    ],
+    "rows": 498568,
+    "match_tier": {
+      "A1": 455418,
+      "A2": 43150
+    },
+    "bldrgst_pk_null": 498568,
+    "structure_raw_null": 139,
+    "max_floor_null": 0,
+    "approve_year_null": 19362,
+    "zone_source": {
+      "(null)": 7440,
+      "al_d155": 491128
+    },
+    "zone_multi": 246041,
+    "land_area_source": {
+      "(null)": 455418,
+      "land_ledger": 19251,
+      "summary": 416,
+      "title": 23483
+    },
+    "n_snapshots": {
+      "1": 498568
+    },
+    "coverage_scope": {
+      "full": 498568
+    },
+    "matched_cycle": {
+      "202608": 498568
+    },
+    "evidence_keys": {
+      "reg_road": 498568,
+      "road_contains": 498568,
+      "snapshot_used": 498568,
+      "snapshot_via": 498568,
+      "tx_road": 498568
+    },
+    "tx_share_like_columns": []
+  },
+  "collective": {
+    "collective_building_attributes": {
+      "latest_snapshot": "202607",
+      "rows_latest": 243697,
+      "match_tier": {
+        "apartment|A": 5189,
+        "apartment|B": 239,
+        "apartment|C": 12574,
+        "apartment|D": 249,
+        "apartment|E": 866,
+        "apartment|F": 117,
+        "apartment|P": 1584,
+        "apartment|T": 23159,
+        "apartment|Z": 1081,
+        "officetel|P": 631,
+        "officetel|T": 12027,
+        "rowhouse|T": 185981
+      }
+    },
+    "collective_building_assessed_land_price": {
+      "rows": 225077,
+      "source": {
+        "individual_official_land_price": 6494,
+        "parcel_land_price": 218583
+      },
+      "year": {
+        "2026": 225077
+      }
+    },
+    "collective_building_stats_keys": {
+      "apartment": 45903,
+      "officetel": 13402,
+      "presale": 4325,
+      "rowhouse": 196019
+    }
+  },
+  "rent": {
+    "table": "rent_sale_building_map",
+    "exists": true,
+    "rows": 213547,
+    "tier": {
+      "apartment|exact": 40634,
+      "officetel|exact": 11841,
+      "rowhouse|exact": 161072
+    }
+  }
+}
