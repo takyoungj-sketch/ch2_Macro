@@ -259,9 +259,11 @@ def coverage_transitions(cur: dict, prev: dict, ledger: pd.DataFrame) -> dict:
 
 
 def content_digest(path: Path) -> str:
+    """Logical content: every header column except computed_cycle (when the row was computed), every value."""
     h = hashlib.md5()
     with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as db:
-        for row in db.execute("SELECT * FROM ledger_link_header_v1 ORDER BY domain, target_key"):
+        cols = [r[1] for r in db.execute("PRAGMA table_info(ledger_link_header_v1)") if r[1] != "computed_cycle"]
+        for row in db.execute(f"SELECT {','.join(cols)} FROM ledger_link_header_v1 ORDER BY domain, target_key"):
             h.update(repr(row).encode())
         for row in db.execute("SELECT * FROM ledger_link_value_v1 ORDER BY domain, target_key, variable"):
             h.update(repr(row).encode())
@@ -397,6 +399,35 @@ def verdict(checks: list[dict]) -> str:
     return "eligible_for_approval"
 
 
+def gate(db: Path, prev_db: Path | None = None, prev_frozen: bool = False, rebuild_db: Path | None = None,
+         scope_sidos: tuple[str, ...] | None = None) -> dict:
+    """scope_sidos limits the ledger to those sidos (test environments built for a region)."""
+    with get_built_engine().connect() as c:
+        ledger = pd.read_sql(
+            text(LEDGER_SCOPE_SQL).bindparams(bindparam("sidos", expanding=True)), c, params={"sidos": list(SIDOS)}
+        )
+        ledger["eligible"] = ledger["eligible"].fillna(False).astype(bool)
+        ledger_digest = pd.read_sql(text(DIGEST_SQL), c).set_index("transaction_hash")["digest"]
+        if scope_sidos:
+            ledger = ledger[ledger["sido"].isin(scope_sidos)].reset_index(drop=True)
+            ledger_digest = ledger_digest[ledger_digest.index.isin(set(ledger["transaction_hash"]))]
+        cur = load_contract(db)
+        prev = load_frozen(c, ledger) if prev_frozen else load_contract(prev_db)
+    sc, sp = all_scopes(wide(cur), ledger), all_scopes(wide(prev), ledger)
+    dl = deltas(sc, sp)
+    agree = agreement(cur, prev)
+    trans = coverage_transitions(cur, prev, ledger)
+    checks = run_checks(cur, prev, ledger_digest, sc, sp, dl, agree, trans, rebuild_db)
+    return {
+        "step": "9", "current": cur["path"], "previous": prev["path"], "previous_kind": prev["kind"],
+        "scope_sidos": list(scope_sidos) if scope_sidos else "all",
+        "thresholds": T, "scope_min_eligible": SCOPE_MIN_ELIGIBLE,
+        "verdict": verdict(checks),
+        "promotion": "never automatic; needs an approval record naming the version, the checks and any waivers",
+        "checks": checks, "metrics": sc, "previous_metrics": sp, "deltas": dl, "coverage_transitions": trans,
+    }
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path, required=True)
@@ -405,28 +436,9 @@ def main() -> None:
     ap.add_argument("--prev-frozen", action="store_true")
     ap.add_argument("--rebuild-db", type=Path)
     args = ap.parse_args()
-    with get_built_engine().connect() as c:
-        ledger = pd.read_sql(
-            text(LEDGER_SCOPE_SQL).bindparams(bindparam("sidos", expanding=True)), c, params={"sidos": list(SIDOS)}
-        )
-        ledger["eligible"] = ledger["eligible"].fillna(False).astype(bool)
-        ledger_digest = pd.read_sql(text(DIGEST_SQL), c).set_index("transaction_hash")["digest"]
-        cur = load_contract(args.db)
-        prev = load_frozen(c, ledger) if args.prev_frozen else load_contract(args.prev_db)
-    sc, sp = all_scopes(wide(cur), ledger), all_scopes(wide(prev), ledger)
-    dl = deltas(sc, sp)
-    agree = agreement(cur, prev)
-    trans = coverage_transitions(cur, prev, ledger)
-    checks = run_checks(cur, prev, ledger_digest, sc, sp, dl, agree, trans, args.rebuild_db)
-    rep = {
-        "step": "9", "current": cur["path"], "previous": prev["path"], "previous_kind": prev["kind"],
-        "thresholds": T, "scope_min_eligible": SCOPE_MIN_ELIGIBLE,
-        "verdict": verdict(checks),
-        "promotion": "never automatic; needs an approval record naming the version, the checks and any waivers",
-        "checks": checks, "metrics": sc, "previous_metrics": sp, "deltas": dl, "coverage_transitions": trans,
-    }
+    rep = gate(args.db, args.prev_db, args.prev_frozen, args.rebuild_db)
     args.out.write_text(json.dumps(rep, ensure_ascii=False, indent=2, default=int), encoding="utf-8")
-    print(json.dumps({"verdict": rep["verdict"], "checks": [(c["check"], c["status"], c["mismatched"]) for c in checks]},
+    print(json.dumps({"verdict": rep["verdict"], "checks": [(c["check"], c["status"], c["mismatched"]) for c in rep["checks"]]},
                      ensure_ascii=False, indent=1, default=int))
 
 

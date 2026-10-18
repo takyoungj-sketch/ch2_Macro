@@ -1,0 +1,141 @@
+{
+  "source": "raw/raw base MOLIT CSV (2021~2026 files), refine_built + import_molit._row_to_record",
+  "note": "counts only; month/day/source fields are not in the current key",
+  "by_asset": {
+    "commercial": {
+      "rows": 90793,
+      "keys": 89314,
+      "rows_lost_to_collision": 1479,
+      "collision_groups": 1184,
+      "group_size": {
+        "2": 1030,
+        "3": 87,
+        "4": 39,
+        "5+": 28
+      },
+      "groups_by_what_separates_them": {
+        "identical_in_every_field_same_file": 663,
+        "split_by_month": 226,
+        "split_by_month_day": 98,
+        "split_by_month_day_plus_source_fields": 153,
+        "partly_split": 44
+      },
+      "rows_by_what_separates_them": {
+        "identical_in_every_field_same_file": 1451,
+        "split_by_month": 458,
+        "split_by_month_day": 217,
+        "split_by_month_day_plus_source_fields": 333,
+        "partly_split": 204
+      },
+      "rows_still_lost_v2_month": 1205,
+      "rows_still_lost_v3_month_day": 1080,
+      "rows_still_lost_v3_plus_source_fields": 887,
+      "cancelled": {
+        "rows": 12708,
+        "same_deal_fields_reappear_uncancelled": 7575,
+        "reappear_with_other_price": 2359,
+        "same_current_key_alive": 5216
+      }
+    },
+    "factory": {
+      "rows": 38534,
+      "keys": 37953,
+      "rows_lost_to_collision": 581,
+      "collision_groups": 444,
+      "group_size": {
+        "2": 376,
+        "3": 44,
+        "4": 6,
+        "5+": 18
+      },
+      "groups_by_what_separates_them": {
+        "identical_in_every_field_same_file": 225,
+        "split_by_month_day": 28,
+        "split_by_month_day_plus_source_fields": 60,
+        "split_by_month": 106,
+        "partly_split": 25
+      },
+      "rows_by_what_separates_them": {
+        "identical_in_every_field_same_file": 501,
+        "split_by_month_day": 61,
+        "split_by_month_day_plus_source_fields": 130,
+        "split_by_month": 217,
+        "partly_split": 116
+      },
+      "rows_still_lost_v2_month": 449,
+      "rows_still_lost_v3_month_day": 412,
+      "rows_still_lost_v3_plus_source_fields": 332,
+      "cancelled": {
+        "rows": 5739,
+        "same_deal_fields_reappear_uncancelled": 3480,
+        "reappear_with_other_price": 1303,
+        "same_current_key_alive": 2177
+      }
+    },
+    "detached": {
+      "rows": 294055,
+      "keys": 291773,
+      "rows_lost_to_collision": 2282,
+      "collision_groups": 2027,
+      "group_size": {
+        "2": 1888,
+        "3": 94,
+        "4": 21,
+        "5+": 24
+      },
+      "groups_by_what_separates_them": {
+        "split_by_month": 953,
+        "identical_in_every_field_same_file": 586,
+        "split_by_month_day": 199,
+        "split_by_month_day_plus_source_fields": 256,
+        "partly_split": 33
+      },
+      "rows_by_what_separates_them": {
+        "split_by_month": 1933,
+        "identical_in_every_field_same_file": 1222,
+        "split_by_month_day": 438,
+        "split_by_month_day_plus_source_fields": 549,
+        "partly_split": 167
+      },
+      "rows_still_lost_v2_month": 1242,
+      "rows_still_lost_v3_month_day": 1019,
+      "rows_still_lost_v3_plus_source_fields": 694,
+      "cancelled": {
+        "rows": 28610,
+        "same_deal_fields_reappear_uncancelled": 19032,
+        "reappear_with_other_price": 7062,
+        "same_current_key_alive": 11970
+      }
+    }
+  },
+  "all": {
+    "rows": 423382,
+    "keys": 419040,
+    "rows_lost_to_collision": 4342,
+    "collision_groups": 3655,
+    "group_size": {
+      "2": 3294,
+      "3": 225,
+      "4": 66,
+      "5+": 70
+    },
+    "groups_by_what_separates_them": {
+      "identical_in_every_field_same_file": 1474,
+      "split_by_month": 1285,
+      "split_by_month_day": 325,
+      "split_by_month_day_plus_source_fields": 469,
+      "partly_split": 102
+    },
+    "rows_by_what_separates_them": {
+      "identical_in_every_field_same_file": 3174,
+      "split_by_month": 2608,
+      "split_by_month_day": 716,
+      "split_by_month_day_plus_source_fields": 1012,
+      "partly_split": 487
+    },
+    "rows_still_lost_v2_month": 2896,
+    "rows_still_lost_v3_month_day": 2511,
+    "rows_still_lost_v3_plus_source_fields": 1913
+  },
+  "seconds": 88.4
+}

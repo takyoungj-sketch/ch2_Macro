@@ -1,0 +1,712 @@
+{
+ "region": {
+  "sidos": [
+   "12",
+   "43",
+   "50"
+  ],
+  "keys": 118716
+ },
+ "product_unchanged": true,
+ "R2": {
+  "previous_full": {
+   "seconds": 184.5,
+   "bytes": 364392448,
+   "link_state": {
+    "linked": 93584,
+    "unlinked": 23915,
+    "not_applicable": 1217
+   },
+   "value_rows": 1057491,
+   "matched": 117499,
+   "reused": true
+  },
+  "incremental": {
+   "recomputed": 27057,
+   "removed": 0,
+   "causes": {
+    "register_fallback": 25339,
+    "register_kind": 3,
+    "register_time_choice": 1980,
+    "tx_added": 0,
+    "tx_row_changed": 0
+   },
+   "changed": {
+    "recomputed_same": 24788,
+    "link_state_changed": 551,
+    "value_changed": 1715,
+    "identification_changed": 3
+   },
+   "orphan_classification": {},
+   "seconds": {
+    "detect": 4.8,
+    "recompute": 106.7,
+    "splice": 22.4,
+    "total": 133.9
+   },
+   "bytes": 349569024,
+   "bytes_vs_previous": -14823424,
+   "untouched": {
+    "untouched_keys": 91659,
+    "headers_identical": true,
+    "values_identical": true
+   }
+  },
+  "vs_full": {
+   "identical": true,
+   "transactions_compared": 118716,
+   "transactions_mismatched": 0,
+   "header_keys_only_one_side": 0,
+   "value_keys_only_one_side": 0,
+   "link_state_columns_mismatch": 0,
+   "value_columns_mismatch": 0,
+   "missing_state_mismatch": 0,
+   "deps_mismatch": 0
+  }
+ },
+ "R3": {
+  "previous_full": {
+   "seconds": 266.8,
+   "bytes": 364945408,
+   "link_state": {
+    "linked": 94130,
+    "unlinked": 23369,
+    "not_applicable": 1217
+   },
+   "value_rows": 1057491,
+   "matched": 117499,
+   "reused": true
+  },
+  "incremental": {
+   "recomputed": 38586,
+   "removed": 0,
+   "causes": {
+    "land_area": 771,
+    "land_matching": 23513,
+    "land_zone": 16111,
+    "tx_added": 0,
+    "tx_row_changed": 0
+   },
+   "changed": {
+    "value_changed": 16557,
+    "recomputed_same": 22015,
+    "identification_changed": 3,
+    "link_state_changed": 11
+   },
+   "orphan_classification": {},
+   "seconds": {
+    "detect": 52.0,
+    "recompute": 144.2,
+    "splice": 30.5,
+    "total": 226.8
+   },
+   "bytes": 353718272,
+   "bytes_vs_previous": -11227136,
+   "untouched": {
+    "untouched_keys": 80130,
+    "headers_identical": true,
+    "values_identical": true
+   }
+  },
+  "vs_full": {
+   "identical": true,
+   "transactions_compared": 118716,
+   "transactions_mismatched": 0,
+   "header_keys_only_one_side": 0,
+   "value_keys_only_one_side": 0,
+   "link_state_columns_mismatch": 0,
+   "value_columns_mismatch": 0,
+   "missing_state_mismatch": 0,
+   "deps_mismatch": 0
+  }
+ },
+ "R4": {
+  "previous_full": {
+   "seconds": 257.1,
+   "bytes": 360706048,
+   "link_state": {
+    "linked": 93127,
+    "unlinked": 23100,
+    "not_applicable": 1204
+   },
+   "value_rows": 1046043,
+   "matched": 116227,
+   "reused": true
+  },
+  "incremental": {
+   "recomputed": 1285,
+   "removed": 1285,
+   "causes": {
+    "tx_added": 1285,
+    "tx_row_changed": 0
+   },
+   "changed": {
+    "added": 1285,
+    "orphaned": 1285
+   },
+   "orphan_classification": {
+    "rehashed_candidate": 103,
+    "removed": 577,
+    "relocated_or_removed": 605
+   },
+   "seconds": {
+    "detect": 1.3,
+    "recompute": 37.4,
+    "splice": 5.5,
+    "total": 44.3
+   },
+   "bytes": 352129024,
+   "bytes_vs_previous": -8577024,
+   "untouched": {
+    "untouched_keys": 116146,
+    "headers_identical": true,
+    "values_identical": true
+   }
+  },
+  "vs_full": {
+   "identical": true,
+   "transactions_compared": 117431,
+   "transactions_mismatched": 0,
+   "header_keys_only_one_side": 0,
+   "value_keys_only_one_side": 0,
+   "link_state_columns_mismatch": 0,
+   "value_columns_mismatch": 0,
+   "missing_state_mismatch": 0,
+   "deps_mismatch": 0
+  },
+  "full": {
+   "seconds": 263.6,
+   "bytes": 360673280,
+   "link_state": {
+    "linked": 93086,
+    "unlinked": 23134,
+    "not_applicable": 1211
+   },
+   "value_rows": 1045980,
+   "matched": 116220,
+   "reused": true
+  },
+  "orphans": {
+   "expected": 1285,
+   "found": 1285,
+   "missing": 0,
+   "classification": {
+    "relocated_or_removed": 605,
+    "removed": 577,
+    "rehashed_candidate": 103
+   },
+   "pairs": 100,
+   "pairs_rehashed_candidate": 100,
+   "orphan_rows_keep_header_and_values": 1285
+  },
+  "removed_keys_left_in_current_table": 0
+ },
+ "R9": {
+  "previous_full": {
+   "seconds": 173.8,
+   "bytes": 350048256,
+   "link_state": {
+    "linked": 89587,
+    "unlinked": 23286,
+    "not_applicable": 1132
+   },
+   "value_rows": 1015857,
+   "matched": 112873,
+   "reused": true
+  },
+  "incremental": {
+   "recomputed": 46408,
+   "removed": 1238,
+   "causes": {
+    "land_area": 656,
+    "land_matching": 22594,
+    "land_zone": 11662,
+    "register_fallback": 24452,
+    "register_kind": 2,
+    "register_time_choice": 0,
+    "tx_added": 4664,
+    "tx_row_changed": 0
+   },
+   "changed": {
+    "value_changed": 12103,
+    "recomputed_same": 29203,
+    "added": 4664,
+    "link_state_changed": 435,
+    "identification_changed": 3,
+    "orphaned": 1238
+   },
+   "orphan_classification": {
+    "relocated_or_removed": 936,
+    "removed": 287,
+    "rehashed_candidate": 15
+   },
+   "seconds": {
+    "detect": 54.5,
+    "recompute": 148.3,
+    "splice": 35.0,
+    "total": 237.7
+   },
+   "bytes": 354832384,
+   "bytes_vs_previous": 4784128,
+   "untouched": {
+    "untouched_keys": 71023,
+    "headers_identical": true,
+    "values_identical": true
+   }
+  },
+  "vs_full": {
+   "identical": true,
+   "transactions_compared": 117431,
+   "transactions_mismatched": 0,
+   "header_keys_only_one_side": 0,
+   "value_keys_only_one_side": 0,
+   "link_state_columns_mismatch": 0,
+   "value_columns_mismatch": 0,
+   "missing_state_mismatch": 0,
+   "deps_mismatch": 0
+  }
+ },
+ "R5": {
+  "previous_full": {
+   "seconds": 185.9,
+   "bytes": 364703744,
+   "link_state": {
+    "linked": 93585,
+    "unlinked": 23914,
+    "not_applicable": 1217
+   },
+   "value_rows": 1057491,
+   "matched": 117499,
+   "reused": true
+  },
+  "register_then_land": [
+   {
+    "recomputed": 27054,
+    "removed": 0,
+    "causes": {
+     "register_fallback": 25336,
+     "register_kind": 3,
+     "register_time_choice": 1980,
+     "tx_added": 0,
+     "tx_row_changed": 0
+    },
+    "changed": {
+     "recomputed_same": 24785,
+     "link_state_changed": 551,
+     "value_changed": 1715,
+     "identification_changed": 3
+    },
+    "orphan_classification": {},
+    "seconds": {
+     "detect": 4.9,
+     "recompute": 107.9,
+     "splice": 22.2,
+     "total": 134.9
+    },
+    "bytes": 349962240,
+    "bytes_vs_previous": -14741504,
+    "untouched": {
+     "untouched_keys": 91662,
+     "headers_identical": true,
+     "values_identical": true
+    }
+   },
+   {
+    "recomputed": 38586,
+    "removed": 0,
+    "causes": {
+     "land_area": 771,
+     "land_matching": 23513,
+     "land_zone": 16111,
+     "tx_added": 0,
+     "tx_row_changed": 0
+    },
+    "changed": {
+     "value_changed": 16557,
+     "recomputed_same": 22015,
+     "identification_changed": 3,
+     "link_state_changed": 11
+    },
+    "orphan_classification": {},
+    "seconds": {
+     "detect": 52.3,
+     "recompute": 144.1,
+     "splice": 29.8,
+     "total": 226.2
+    },
+    "bytes": 353243136,
+    "bytes_vs_previous": -11460608,
+    "untouched": {
+     "untouched_keys": 80130,
+     "headers_identical": true,
+     "values_identical": true
+    }
+   }
+  ],
+  "land_then_register": [
+   {
+    "recomputed": 37835,
+    "removed": 0,
+    "causes": {
+     "land_area": 699,
+     "land_matching": 22832,
+     "land_zone": 15783,
+     "tx_added": 0,
+     "tx_row_changed": 0
+    },
+    "changed": {
+     "value_changed": 16229,
+     "recomputed_same": 21592,
+     "identification_changed": 3,
+     "link_state_changed": 11
+    },
+    "orphan_classification": {},
+    "seconds": {
+     "detect": 49.0,
+     "recompute": 100.1,
+     "splice": 30.3,
+     "total": 179.4
+    },
+    "bytes": 353370112,
+    "bytes_vs_previous": -11333632,
+    "untouched": {
+     "untouched_keys": 80881,
+     "headers_identical": true,
+     "values_identical": true
+    }
+   },
+   {
+    "recomputed": 27057,
+    "removed": 0,
+    "causes": {
+     "register_fallback": 25339,
+     "register_kind": 3,
+     "register_time_choice": 1980,
+     "tx_added": 0,
+     "tx_row_changed": 0
+    },
+    "changed": {
+     "recomputed_same": 24788,
+     "link_state_changed": 551,
+     "value_changed": 1715,
+     "identification_changed": 3
+    },
+    "orphan_classification": {},
+    "seconds": {
+     "detect": 4.8,
+     "recompute": 105.5,
+     "splice": 22.5,
+     "total": 132.8
+    },
+    "bytes": 349585408,
+    "bytes_vs_previous": -15118336,
+    "untouched": {
+     "untouched_keys": 91659,
+     "headers_identical": true,
+     "values_identical": true
+    }
+   }
+  ],
+  "orders_compared": {
+   "identical": true,
+   "transactions_compared": 118716,
+   "transactions_mismatched": 0,
+   "header_keys_only_one_side": 0,
+   "value_keys_only_one_side": 0,
+   "link_state_columns_mismatch": 0,
+   "value_columns_mismatch": 0,
+   "missing_state_mismatch": 0,
+   "deps_mismatch": 0
+  },
+  "register_first_vs_full": {
+   "identical": true,
+   "transactions_compared": 118716,
+   "transactions_mismatched": 0,
+   "header_keys_only_one_side": 0,
+   "value_keys_only_one_side": 0,
+   "link_state_columns_mismatch": 0,
+   "value_columns_mismatch": 0,
+   "missing_state_mismatch": 0,
+   "deps_mismatch": 0
+  },
+  "land_first_vs_full": {
+   "identical": true,
+   "transactions_compared": 118716,
+   "transactions_mismatched": 0,
+   "header_keys_only_one_side": 0,
+   "value_keys_only_one_side": 0,
+   "link_state_columns_mismatch": 0,
+   "value_columns_mismatch": 0,
+   "missing_state_mismatch": 0,
+   "deps_mismatch": 0
+  }
+ },
+ "R0": {
+  "full": {
+   "seconds": 304.1,
+   "bytes": 364658688,
+   "link_state": {
+    "linked": 94129,
+    "unlinked": 23370,
+    "not_applicable": 1217
+   },
+   "value_rows": 1057491,
+   "matched": 117499
+  },
+  "vs_step7": {
+   "identical": false,
+   "transactions_compared": 118716,
+   "transactions_mismatched": 2187,
+   "header_keys_only_one_side": 0,
+   "value_keys_only_one_side": 0,
+   "link_state_columns_mismatch": 2187,
+   "value_columns_mismatch": 2178,
+   "missing_state_mismatch": 0,
+   "deps_mismatch": null
+  },
+  "vs_step7_columns": {
+   "hold_flags": 2187,
+   "use_approved": 2178
+  }
+ },
+ "R1": {
+  "full": {
+   "seconds": 302.7,
+   "bytes": 364658688,
+   "link_state": {
+    "linked": 94129,
+    "unlinked": 23370,
+    "not_applicable": 1217
+   },
+   "value_rows": 1057491,
+   "matched": 117499
+  },
+  "compare": {
+   "identical": true,
+   "transactions_compared": 118716,
+   "transactions_mismatched": 0,
+   "header_keys_only_one_side": 0,
+   "value_keys_only_one_side": 0,
+   "link_state_columns_mismatch": 0,
+   "value_columns_mismatch": 0,
+   "missing_state_mismatch": 0,
+   "deps_mismatch": 0
+  }
+ },
+ "registry_R6_R7_R8": {
+  "initial": {
+   "gate": {
+    "verdict": "needs_waiver",
+    "seconds": 18.0,
+    "checks": {
+     "integrity_keys": "pass",
+     "integrity_ledger_digest": "pass",
+     "contract_rules": "pass",
+     "link_rate_change": "pass",
+     "coverage_change": "pass",
+     "coverage_uncertainty": "pass",
+     "conflict_rate": "pass",
+     "temporal_fitness": "pass",
+     "previous_result_agreement": "pass",
+     "rebuild_stability": "warn",
+     "sample_accuracy": "unverified"
+    }
+   },
+   "status": {
+    "active": "A_reg",
+    "revision": 1,
+    "active_db_sha256": "62aff61dbf684150e7db924bc7145ee52b333f35f021503014a632f3db5f4697"
+   }
+  },
+  "R6": {
+   "injected": {
+    "splice_before_copy": {
+     "raised": "injected failure before splice",
+     "status_unchanged": true,
+     "candidate_file_left": false,
+     "partial_file_left": false
+    },
+    "splice_mid": {
+     "raised": "injected failure in the middle of splice",
+     "status_unchanged": true,
+     "candidate_file_left": false,
+     "partial_file_left": false
+    },
+    "publish_with_mismatched_gate_hash": {
+     "refused": "approval record does not match this version, its file or its gate report",
+     "status_unchanged": true
+    },
+    "publish_before_commit": {
+     "raised": "injected failure before commit",
+     "status_unchanged": true
+    },
+    "publish_stale_revision": {
+     "refused": "revision moved: expected 6, now 1",
+     "status_unchanged": true
+    },
+    "restore_before_commit": {
+     "raised": "injected failure before commit",
+     "status_unchanged": true
+    }
+   },
+   "candidate": {
+    "incremental_seconds": {
+     "detect": 4.7,
+     "recompute": 104.8,
+     "splice": 22.7,
+     "total": 132.3
+    },
+    "gate": {
+     "verdict": "eligible_for_approval",
+     "seconds": 26.5,
+     "checks": {
+      "integrity_keys": "pass",
+      "integrity_ledger_digest": "pass",
+      "contract_rules": "pass",
+      "link_rate_change": "pass",
+      "coverage_change": "pass",
+      "coverage_uncertainty": "pass",
+      "conflict_rate": "pass",
+      "temporal_fitness": "pass",
+      "previous_result_agreement": "pass",
+      "rebuild_stability": "pass",
+      "sample_accuracy": "unverified"
+     }
+    }
+   }
+  },
+  "R7": {
+   "published": {
+    "active": "C_new",
+    "revision": 2,
+    "active_db_sha256": "0801ef688ba91f858a698f70bad6ac6eb652c5b3721dc6e19cb235f6ed62d734"
+   },
+   "restored": {
+    "active": "A_reg",
+    "revision": 3,
+    "active_db_sha256": "62aff61dbf684150e7db924bc7145ee52b333f35f021503014a632f3db5f4697"
+   },
+   "restored_vs_original": true,
+   "restored_sha256_matches": true,
+   "forward_again": {
+    "active": "C_new",
+    "revision": 4,
+    "active_db_sha256": "0801ef688ba91f858a698f70bad6ac6eb652c5b3721dc6e19cb235f6ed62d734"
+   },
+   "after_revoke": {
+    "active": "A_reg",
+    "revision": 5,
+    "active_db_sha256": "62aff61dbf684150e7db924bc7145ee52b333f35f021503014a632f3db5f4697"
+   },
+   "revoked_cannot_publish": {
+    "refused": true,
+    "reason": "version state revoked / verdict eligible_for_approval cannot be published"
+   }
+  },
+  "R8": {
+   "candidate": {
+    "seconds": 111.9,
+    "bytes": 363491328,
+    "link_state": {
+     "linked": 91901,
+     "unlinked": 25598,
+     "not_applicable": 1217
+    },
+    "value_rows": 1057491,
+    "matched": 117499,
+    "reused": true
+   },
+   "gate": {
+    "verdict": "blocked",
+    "seconds": 18.5,
+    "checks": {
+     "integrity_keys": "pass",
+     "integrity_ledger_digest": "pass",
+     "contract_rules": "pass",
+     "link_rate_change": "fail",
+     "coverage_change": "fail",
+     "coverage_uncertainty": "pass",
+     "conflict_rate": "pass",
+     "temporal_fitness": "pass",
+     "previous_result_agreement": "pass",
+     "rebuild_stability": "warn",
+     "sample_accuracy": "unverified"
+    }
+   },
+   "publish_attempt": {
+    "refused": true,
+    "reason": "version state rejected / verdict blocked cannot be published"
+   },
+   "status_unchanged": true
+  },
+  "events": [
+   [
+    1,
+    "register",
+    "A_reg",
+    null
+   ],
+   [
+    2,
+    "publish",
+    "A_reg",
+    1
+   ],
+   [
+    3,
+    "register",
+    "C_new",
+    null
+   ],
+   [
+    4,
+    "publish",
+    "C_new",
+    2
+   ],
+   [
+    5,
+    "restore",
+    "A_reg",
+    3
+   ],
+   [
+    6,
+    "restore",
+    "C_new",
+    4
+   ],
+   [
+    7,
+    "restore",
+    "A_reg",
+    5
+   ],
+   [
+    8,
+    "revoke",
+    "C_new",
+    null
+   ],
+   [
+    9,
+    "register",
+    "C_bad",
+    null
+   ]
+  ],
+  "product_unchanged_during_registry_tests": true
+ },
+ "full_build_reference": {
+  "B_full_seconds": 304.1,
+  "B_full_bytes": 364658688,
+  "B_tx_full_seconds": 263.6,
+  "B_tx_full_bytes": 360673280
+ },
+ "storage_bytes_test_folder": 6462144512,
+ "runs": [
+  "run1: broad land_zone detection (latest_year compared) — identical results, 109,242 recomputed in R3",
+  "run2: latest_year excluded — identical, 38,586 recomputed in R3",
+  "run3 (this report): + VACUUM after splice, partial file removed on failure"
+ ]
+}
