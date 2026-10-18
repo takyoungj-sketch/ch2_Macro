@@ -1,0 +1,219 @@
+{
+  "step": "7",
+  "output": "C:\\CH2\\parcel_master\\verification\\built_link_contract_shadow_v1.sqlite",
+  "rule_version": "BUILT_A1A2_TIME_FALLBACK+LEDGER_SUPPLY_PROPOSED+CONTRACT_V1",
+  "variables": [
+    "structure",
+    "main_use",
+    "floors_above",
+    "approve_year",
+    "zone_contract_year",
+    "zone_latest",
+    "land_area"
+  ],
+  "keys": {
+    "ledger_2019_plus": 672764,
+    "ledger_duplicate_hash": 0,
+    "header_rows": 672764,
+    "header_duplicate_key": 0,
+    "missing_from_header": 0,
+    "extra_in_header": 0,
+    "matching_input_rows": 663596,
+    "matching_input_not_in_header": 0
+  },
+  "ledger_unchanged": {
+    "digest_before_vs_after_differs": 0,
+    "rows_after": 672764,
+    "header_digest_vs_ledger_differs": 0
+  },
+  "matching_input_vs_ledger": {
+    "asset_type_differs": 0,
+    "contract_year_differs": 0,
+    "contract_month_differs": 0,
+    "gross_area_differs": 0,
+    "land_area_differs": 0
+  },
+  "link_state": {
+    "linked": 507116,
+    "unlinked": 156480,
+    "not_applicable": 9168
+  },
+  "not_applicable_reason": {
+    "partial_ownership": 8604,
+    "not_in_matching_input": 564
+  },
+  "unlinked_reason": {
+    "no_gross_match": 121504,
+    "exact_multi": 30469,
+    "no_parcel_in_range": 3581,
+    "lot_not_parsable": 708,
+    "no_bjd_code": 204,
+    "snapshot_conflict": 14
+  },
+  "building_id_state_linked": {
+    "confirmed": 504075,
+    "candidates_agree": 2561,
+    "candidates_conflict": 480
+  },
+  "link_level_linked": {
+    "building": 504075,
+    "parcel": 3041
+  },
+  "hold_flags_linked": {
+    "approve_after_contract": 421,
+    "register_kind_changed": 98,
+    "collective_register": 402
+  },
+  "register_after_contract_linked": 409837,
+  "values": {
+    "rows": 4645172,
+    "duplicate_key_variable": 0,
+    "targets_with_values": 663596,
+    "targets_expected": 663596,
+    "targets_not_7_variables": 0,
+    "not_applicable_with_values": 0,
+    "value_present_outside_known_states": 0,
+    "candidates_agree_approved": 0
+  },
+  "value_state_linked": {
+    "approve_year": {
+      "confirmed": 484265,
+      "source_missing": 19872,
+      "candidates_agree": 2769,
+      "conflict_missing": 210
+    },
+    "floors_above": {
+      "confirmed": 504075,
+      "candidates_agree": 2973,
+      "conflict_missing": 68
+    },
+    "land_area": {
+      "confirmed": 463023,
+      "source_missing": 44093
+    },
+    "main_use": {
+      "confirmed": 503864,
+      "candidates_agree": 2823,
+      "conflict_missing": 217,
+      "source_missing": 212
+    },
+    "structure": {
+      "confirmed": 503933,
+      "candidates_agree": 2916,
+      "source_missing": 142,
+      "conflict_missing": 125
+    },
+    "zone_contract_year": {
+      "confirmed": 498529,
+      "undetermined": 7170,
+      "source_missing": 1414,
+      "conflict_missing": 3
+    },
+    "zone_latest": {
+      "confirmed": 505929,
+      "source_missing": 1187
+    }
+  },
+  "use_approved_linked": {
+    "approve_year": 484265,
+    "floors_above": 504075,
+    "land_area": 0,
+    "main_use": 503864,
+    "structure": 503933,
+    "zone_contract_year": 495605,
+    "zone_latest": 505929
+  },
+  "zone_contract_year_timing": {
+    "contract_year": 495605,
+    "NaN": 8587,
+    "adjacent_after": 2541,
+    "adjacent_before": 379,
+    "contract_year_estimated": 4
+  },
+  "zone_contract_year_change_risk": {
+    "none": 469566,
+    "undetermined": 35940,
+    "next_base_differs": 1610
+  },
+  "frozen_comparison": {
+    "frozen_rows": 498568,
+    "in_header": 498283,
+    "missing_from_header": 285,
+    "new_state_of_frozen": {
+      "linked": 498215,
+      "unlinked": 63,
+      "not_applicable": 5
+    },
+    "tier_same": 497914,
+    "structure": {
+      "old_missing": 139,
+      "new_missing": 329,
+      "new_state": {
+        "confirmed": 495082,
+        "candidates_agree": 2872,
+        "source_missing": 139,
+        "conflict_missing": 122,
+        "not_linked": 63
+      },
+      "both": 497954,
+      "same": 497874,
+      "same_rate": 0.9998
+    },
+    "floors_above": {
+      "old_missing": 0,
+      "new_missing": 135,
+      "new_state": {
+        "confirmed": 495221,
+        "candidates_agree": 2927,
+        "conflict_missing": 67,
+        "not_linked": 63
+      },
+      "both": 498148,
+      "same": 498117,
+      "same_rate": 0.9999
+    },
+    "approve_year": {
+      "old_missing": 19351,
+      "new_missing": 19589,
+      "new_state": {
+        "confirmed": 475968,
+        "source_missing": 19315,
+        "candidates_agree": 2726,
+        "conflict_missing": 206,
+        "not_linked": 63
+      },
+      "both": 478686,
+      "same": 478514,
+      "same_rate": 0.9996
+    },
+    "zone_display_vs_new": {
+      "zone_latest": {
+        "old_missing": 11525,
+        "new_missing": 1238,
+        "new_state": {
+          "confirmed": 497048,
+          "source_missing": 1167,
+          "not_linked": 63
+        },
+        "both": 486437,
+        "same": 454033,
+        "same_rate": 0.9334
+      },
+      "zone_contract_year": {
+        "old_missing": 11525,
+        "new_missing": 8638,
+        "new_state": {
+          "confirmed": 489654,
+          "undetermined": 7170,
+          "source_missing": 1388,
+          "not_linked": 63,
+          "conflict_missing": 3
+        },
+        "both": 482154,
+        "same": 442241,
+        "same_rate": 0.9172
+      }
+    }
+  },
+  "file_bytes": 1502650368
+}

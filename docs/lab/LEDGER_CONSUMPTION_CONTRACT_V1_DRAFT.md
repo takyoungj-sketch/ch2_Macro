@@ -38,6 +38,9 @@
 | `target_key` | 거래 해시 또는 단지 키 | id 금지(월간 재발급) |
 | `link_state` | **linked / unlinked / not_applicable** | 5앱 공통 세 값 |
 | `link_reason` | 유형별 원래 상태 그대로 | 토지 `link_status`, 복합 tier·fail, 집합 등급 |
+| `link_level` | building / parcel / complex / none | building = 표제부 한 동(관리번호), parcel = 필지까지(동 미정), complex = 집합 단지 |
+| `hold_flags` | 목록 | 보류 후보 표시(집합건축물 연결, 계약 뒤 사용승인 등). 연결 상태는 바꾸지 않음 |
+| `source_digest` | md5 | 원장 행 지문. 원장 값은 복사하지 않고 무변경 확인에만 씀 |
 | `parcel_resolved` | true / false | 필지가 하나로 정해졌나 |
 | `building_id_state` | **confirmed / candidates_agree / candidates_conflict / aggregated / weak_match / not_applicable** | 토지는 not_applicable. aggregated·weak_match는 집합 등급용(§5) |
 | `candidate_count` | 정수 | 미정일 때만 |
@@ -60,10 +63,11 @@
 |---|---|---|
 | `variable` | 변수 사전 키(§2-3) | |
 | `value_num` / `value_text` | 값 | 하나만 채움 |
-| `value_state` | **confirmed / candidates_agree / conflict_missing / source_missing / not_linked** | 아래 표 |
+| `value_state` | **confirmed / candidates_agree / conflict_missing / source_missing / undetermined / not_linked** | 아래 표 |
+| `value_level` | building / parcel / complex_aggregate | 단지 합산값은 complex_aggregate이고 후보 동일 상태가 될 수 없다 |
 | `source` | building_ledger / land_trait_slim / al_d155 / land_ledger / kapt / tx_source | |
 | `basis_date` | 그 값의 기준일 | 토지 기준일, 대장 판 |
-| `timing` | contract_year / previous_year / adjacent_before / adjacent_after / post_contract_register / latest | 계약 시점과의 관계 |
+| `timing` | contract_year / contract_year_estimated / previous_year / adjacent_before / adjacent_after / pre_contract_register / post_contract_register / latest | 계약 시점과의 관계 |
 | `change_risk` | none / next_base_differs / undetermined | 4-D 안정성 |
 | `use_approved` | true / false | 변수별 사용 승인. **candidates_agree는 기본 false** |
 
@@ -73,6 +77,7 @@
 | candidates_agree | 건물은 미정, 후보 모두 같은 값 | `use_approved`일 때만 값 + "동 미확정" |
 | conflict_missing | 후보·기준일끼리 값이 다름 | 빈칸 + "후보 충돌" |
 | source_missing | 연결은 됐으나 원천에 값 없음 | 빈칸 + "대장 값 없음" |
+| undetermined | 근거가 부족해 판단 불가(승인 대응 없는 코드 개편 등). 추정하지 않음 | 빈칸 + "판단 불가" |
 | not_linked | 연결 안 됨 | 빈칸 |
 
 ### 2-3. 변수 사전
@@ -174,6 +179,6 @@
 
 ## 7. 다음
 
-1. 섀도 표 DDL 초안을 파일로 쓴다(적용은 별도 승인).
-2. 복합 663,596건(연결 507,116 + 미연결)을 저장소 밖 SQLite에 계약 형식으로 채워 본다. 운영·로컬 Postgres와 기존 표는 그대로.
+1. (완료) 섀도 표 DDL 초안 [`sql/ledger_link_shadow_v1_draft.sql`](sql/ledger_link_shadow_v1_draft.sql) — 적용 금지.
+2. (완료) 복합 시험 공급표 — [복합 시험 공급표 v1](BUILT_LINK_CONTRACT_SHADOW_V1.md). 원장 2019+ 672,764건 전부(연결 507,116 · 미연결 156,480 · 해당 없음 9,168), 키 누락·중복 0, 원장 지문 차이 0.
 3. 9단계에서 같은 표로 품질지표와 화면 표시를 만든다.
