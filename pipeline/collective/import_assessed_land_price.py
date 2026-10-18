@@ -243,6 +243,43 @@ def read_source_from_parcel_master(
     )
 
 
+def read_source_from_slim(
+    target_pnus: set[str],
+    *,
+    current_to_old_bjd: dict[str, str] | None = None,
+    old_to_current_bjd: dict[str, str] | None = None,
+) -> pd.DataFrame:
+    """land_trait_slim 최신 연도 공시지가. 섀도 표(build_assessed_land_price_shadow_v1)와 같은 규칙.
+
+    대표 PNU를 직접·호남 브리지 구코드·인천 구/신 구 코드로 모두 찾아 합친다. 최신 연도(전체 최댓값)의
+    가장 이른 달 가격이 하나일 때만 넣는다. 최신 연도가 더 오래됐거나 값이 갈리면 넣지 않는다(기존 행 유지).
+    결과 키는 대표 PNU 그대로다.
+    """
+    from built.replay_honam_bridge import load_bridge
+    from collective.build_assessed_land_price_shadow_v1 import year_price
+    from collective.compare_rep_parcel_supply_v1 import SLIM, code_variants, ro, slim_lookup
+
+    bridge = load_bridge()
+    incheon_new = {k: v for k, v in (old_to_current_bjd or {}).items() if k[:2] == "28"}
+    slim = ro(SLIM)
+    found: dict[str, dict] = {}
+    held: dict[str, int] = {}
+    for pnu in sorted(target_pnus):
+        _, rows = slim_lookup(slim, code_variants(pnu, bridge, current_to_old_bjd or {}, incheon_new))
+        yp = year_price(rows) if rows else {"state": "pnu_not_in_slim"}
+        if yp["state"] == "single":
+            found[pnu] = yp
+        else:
+            held[yp["state"]] = held.get(yp["state"], 0) + 1
+    slim.close()
+    latest = max((v["year"] for v in found.values()), default=None)
+    records = [{"pnu": p, "assessed_land_price": v["price"], "assessed_land_price_year": v["year"]}
+               for p, v in found.items() if v["year"] == latest]
+    held["held_stale"] = len(found) - len(records)
+    print(f"slim latest_year={latest} supplied={len(records):,} held={held}", flush=True)
+    return pd.DataFrame.from_records(records, columns=["pnu", "assessed_land_price", "assessed_land_price_year"])
+
+
 def _apply_ddl(engine) -> None:
     with engine.begin() as conn:
         for statement in DDL.read_text(encoding="utf-8").split(";"):
@@ -443,10 +480,16 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=Path, default=DEFAULT_SOURCE_DIR)
     parser.add_argument("--dry-run", action="store_true", help="원천 스캔·매칭 예상만 하고 DB에 쓰지 않음")
-    parser.add_argument(
+    source_group = parser.add_mutually_exclusive_group()
+    source_group.add_argument(
         "--from-parcel-master",
         action="store_true",
         help="공부 달: parcel_land_price 최신 연도로 재파생. CSV 대신",
+    )
+    source_group.add_argument(
+        "--from-slim",
+        action="store_true",
+        help="land_trait_slim 최신 연도로 재파생(섀도 표와 같은 규칙). CSV 대신",
     )
     parser.add_argument(
         "--asset-type",
@@ -473,6 +516,13 @@ def main() -> None:
             current_to_old_bjd=current_to_old_bjd,
         )
         source_label = "parcel_land_price"
+    elif args.from_slim:
+        source = read_source_from_slim(
+            target_pnus,
+            current_to_old_bjd=current_to_old_bjd,
+            old_to_current_bjd=old_to_current_bjd,
+        )
+        source_label = "land_trait_slim"
     else:
         source = read_source(
             args.input,

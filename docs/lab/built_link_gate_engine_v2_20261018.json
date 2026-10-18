@@ -1,0 +1,42 @@
+{
+  "plan_step": "9 (quality gate) — national ENGINE_V2 version vs frozen enrichment, with rebuild",
+  "version": "N_full_ENGINE_V2 (test folder, outside repo)",
+  "rebuild_version": "N_full_ENGINE_V2_again (same inputs, built separately)",
+  "rule_version": "BUILT_A1A2_TIME_FALLBACK+LEDGER_SUPPLY_PROPOSED+CONTRACT_V1+ENGINE_V2",
+  "previous": "frozen built_transaction_enrichment",
+  "verdict": "needs_waiver",
+  "checks": [
+    {"check": "integrity_keys", "status": "pass", "checked": 672764, "mismatched": 0},
+    {"check": "integrity_ledger_digest", "status": "pass", "checked": 672764, "mismatched": 0},
+    {"check": "previous_result_orphans", "status": "warn", "checked": 498568, "mismatched": 285},
+    {"check": "contract_rules", "status": "pass", "checked": 5972364, "mismatched": 0},
+    {"check": "link_rate_change", "status": "pass", "checked": 663596},
+    {"check": "coverage_change", "status": "pass", "checked": 663596},
+    {"check": "coverage_uncertainty", "status": "pass", "checked": 663596},
+    {"check": "conflict_rate", "status": "pass", "checked": 507116, "mismatched": 623},
+    {"check": "temporal_fitness", "status": "pass", "checked": 507116, "mismatched": 11511},
+    {
+      "check": "previous_result_agreement",
+      "status": "warn",
+      "below_threshold": ["zone_latest"],
+      "zone_latest": {"both_valued": 486439, "same": 454033, "differs": 32406, "rate": 0.933381},
+      "approve_year": {"both_valued": 478686, "differs": 172, "rate": 0.999641},
+      "floors_above": {"both_valued": 498148, "differs": 31, "rate": 0.999938},
+      "structure": {"both_valued": 497954, "differs": 80, "rate": 0.999839}
+    },
+    {"check": "rebuild_stability", "status": "pass", "checked": 6645128, "mismatched": 0},
+    {"check": "sample_accuracy", "status": "unverified", "unverified": 507116}
+  ],
+  "waiver_basis_proposed": {
+    "previous_result_orphans": {
+      "reason": "rows exist only in frozen enrichment; transactions are gone from the ledger (rehash candidates 100, other parcel only 73, removed 112)",
+      "condition": "exclude these rows from product queries as orphaned; never auto-delete; recheck if the count grows"
+    },
+    "previous_result_agreement.zone_latest": {
+      "reason": "88% of differences are representative-label choice; against commercial/factory source labels new value matches 97.6% vs existing 86.4%; possible link errors at most about 200",
+      "condition": "keep the existing zone display on switch; new latest/contract-year zone as separate fields (D-050/D-051 revision scope)"
+    },
+    "note": "proposal only; a waiver holds only in an approval record under docs/lab/approvals/. Product switch stays closed while sample_accuracy is unverified."
+  },
+  "gate_file": "outside repo (versions_test/built/N_full_ENGINE_V2_gate_with_rebuild.json)"
+}

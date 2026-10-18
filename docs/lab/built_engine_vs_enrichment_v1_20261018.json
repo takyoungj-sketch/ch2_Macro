@@ -1,0 +1,177 @@
+{
+ "plan_step": "4-C follow-up — status-quo scope for the composite switch (read only)",
+ "engine_version": "N_full_ENGINE_V2 (test folder)",
+ "enrichment_rows": 498568,
+ "classes": {
+  "all": {
+   "changed_same_bjd": 276,
+   "dropped_not_applicable": 5,
+   "dropped_not_in_ledger": 285,
+   "dropped_unlinked": 63,
+   "new": 8901,
+   "same": 497939
+  },
+  "asset:commercial": {
+   "changed_same_bjd": 37,
+   "dropped_not_applicable": 4,
+   "dropped_unlinked": 4,
+   "new": 1863,
+   "same": 99062
+  },
+  "asset:detached": {
+   "changed_same_bjd": 220,
+   "dropped_unlinked": 59,
+   "new": 6308,
+   "same": 366232
+  },
+  "asset:factory": {
+   "changed_same_bjd": 19,
+   "dropped_not_applicable": 1,
+   "new": 730,
+   "same": 32645
+  },
+  "asset:not_in_ledger": {
+   "dropped_not_in_ledger": 285
+  },
+  "engine_tier:A1": {
+   "changed_same_bjd": 116,
+   "new": 7961,
+   "same": 454942
+  },
+  "engine_tier:A2": {
+   "changed_same_bjd": 160,
+   "new": 940,
+   "same": 42997
+  },
+  "engine_tier:None": {
+   "dropped_not_applicable": 5,
+   "dropped_not_in_ledger": 285,
+   "dropped_unlinked": 63
+  },
+  "sido:11": {
+   "changed_same_bjd": 6,
+   "dropped_not_applicable": 1,
+   "new": 864,
+   "same": 43084
+  },
+  "sido:12": {
+   "changed_same_bjd": 229,
+   "dropped_unlinked": 12,
+   "new": 2507,
+   "same": 52779
+  },
+  "sido:26": {
+   "changed_same_bjd": 6,
+   "dropped_unlinked": 3,
+   "new": 279,
+   "same": 29136
+  },
+  "sido:27": {
+   "changed_same_bjd": 6,
+   "new": 198,
+   "same": 24109
+  },
+  "sido:28": {
+   "changed_same_bjd": 1,
+   "dropped_unlinked": 3,
+   "new": 249,
+   "same": 17127
+  },
+  "sido:30": {
+   "dropped_not_applicable": 1,
+   "new": 110,
+   "same": 13960
+  },
+  "sido:31": {
+   "changed_same_bjd": 1,
+   "new": 100,
+   "same": 8288
+  },
+  "sido:36": {
+   "new": 18,
+   "same": 1385
+  },
+  "sido:41": {
+   "changed_same_bjd": 2,
+   "dropped_not_applicable": 3,
+   "dropped_unlinked": 7,
+   "new": 1242,
+   "same": 85994
+  },
+  "sido:43": {
+   "changed_same_bjd": 3,
+   "dropped_unlinked": 3,
+   "new": 425,
+   "same": 28939
+  },
+  "sido:44": {
+   "changed_same_bjd": 3,
+   "dropped_unlinked": 3,
+   "new": 498,
+   "same": 32039
+  },
+  "sido:47": {
+   "changed_same_bjd": 6,
+   "dropped_unlinked": 1,
+   "new": 655,
+   "same": 47940
+  },
+  "sido:48": {
+   "changed_same_bjd": 6,
+   "dropped_unlinked": 9,
+   "new": 651,
+   "same": 43945
+  },
+  "sido:50": {
+   "new": 135,
+   "same": 9112
+  },
+  "sido:51": {
+   "changed_same_bjd": 5,
+   "dropped_unlinked": 14,
+   "new": 485,
+   "same": 30348
+  },
+  "sido:52": {
+   "changed_same_bjd": 2,
+   "dropped_unlinked": 8,
+   "new": 485,
+   "same": 29754
+  },
+  "sido:none": {
+   "dropped_not_in_ledger": 285
+  }
+ },
+ "sample": {
+  "seed": 20261019,
+  "pool_new_and_changed_excluding_219": 9170,
+  "strata": {
+   "changed|commercial": {
+    "population": 37,
+    "sample": 1
+   },
+   "changed|detached": {
+    "population": 220,
+    "sample": 4
+   },
+   "changed|factory": {
+    "population": 19,
+    "sample": 1
+   },
+   "new|commercial": {
+    "population": 1860,
+    "sample": 5
+   },
+   "new|detached": {
+    "population": 6307,
+    "sample": 17
+   },
+   "new|factory": {
+    "population": 727,
+    "sample": 2
+   }
+  },
+  "worksheet": "outside repo (verification/built_link_sample_v1/new_links_worksheet.csv)"
+ },
+ "rows_file": "outside repo (verification)"
+}
