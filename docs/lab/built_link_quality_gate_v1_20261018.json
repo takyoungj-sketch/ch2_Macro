@@ -7,8 +7,9 @@
     "link_rate_national_drop_fail_pp": 1.0,
     "link_rate_scope_drop_warn_pp": 1.5,
     "link_rate_scope_drop_fail_pp": 3.0,
-    "coverage_national_drop_fail_pp": 1.0,
-    "coverage_scope_drop_warn_pp": 3.0,
+    "coverage_loss_national_fail_pp": 1.0,
+    "coverage_loss_scope_warn_pp": 3.0,
+    "uncertainty_national_warn_pp": 1.0,
     "conflict_national_rise_warn_pp": 0.2,
     "zone_contract_year_national_drop_warn_pp": 1.0,
     "prev_agreement_building_warn": 0.99,
@@ -78,17 +79,99 @@
     },
     {
       "check": "coverage_change",
-      "status": "warn",
+      "status": "pass",
       "denominator_total": 663596,
-      "denominator_checked": 507116,
+      "denominator_checked": 663596,
       "unverified": null,
-      "mismatched": null,
+      "mismatched": 508,
       "detail": {
+        "rule": "real loss only (previous value -> source_missing / not linked)",
         "national_fail": [],
-        "scopes_warn": [
-          "sido|50:structure",
+        "scopes_warn": [],
+        "scopes_net_drop_explained": [
+          {
+            "scope": "sido|50",
+            "variable": "approve_year",
+            "net_pp": -6.655,
+            "loss_pp": 0.0,
+            "uncertainty_pp": -7.573,
+            "gain_pp": 0.918
+          },
+          {
+            "scope": "sido|50",
+            "variable": "floors_above",
+            "net_pp": -6.549,
+            "loss_pp": 0.0,
+            "uncertainty_pp": -7.573,
+            "gain_pp": 1.024
+          },
+          {
+            "scope": "sido|50",
+            "variable": "structure",
+            "net_pp": -6.549,
+            "loss_pp": 0.0,
+            "uncertainty_pp": -7.573,
+            "gain_pp": 1.024
+          }
+        ],
+        "national": {
+          "approve_year": {
+            "kept": 475960,
+            "gain": 8305,
+            "reclassified_uncertain": 2726,
+            "removed_uncertain": 173,
+            "source_loss": 17,
+            "link_loss": 51,
+            "loss_pp": -0.01,
+            "gain_pp": 1.252
+          },
+          "floors_above": {
+            "kept": 495221,
+            "gain": 8854,
+            "reclassified_uncertain": 2927,
+            "removed_uncertain": 67,
+            "source_loss": 0,
+            "link_loss": 63,
+            "loss_pp": -0.009,
+            "gain_pp": 1.334
+          },
+          "structure": {
+            "kept": 495082,
+            "gain": 8851,
+            "reclassified_uncertain": 2872,
+            "removed_uncertain": 122,
+            "source_loss": 0,
+            "link_loss": 63,
+            "loss_pp": -0.009,
+            "gain_pp": 1.334
+          },
+          "zone_latest": {
+            "kept": 486439,
+            "gain": 19490,
+            "reclassified_uncertain": 0,
+            "removed_uncertain": 0,
+            "source_loss": 255,
+            "link_loss": 59,
+            "loss_pp": -0.047,
+            "gain_pp": 2.937
+          }
+        }
+      }
+    },
+    {
+      "check": "coverage_uncertainty",
+      "status": "pass",
+      "denominator_total": 663596,
+      "denominator_checked": 663596,
+      "unverified": 8525,
+      "mismatched": 362,
+      "detail": {
+        "rule": "previous value withdrawn because the building is not identified; national rise above threshold warns (identification regression), scopes are reported",
+        "national_warn": [],
+        "scopes_reported": [
+          "sido|50:approve_year",
           "sido|50:floors_above",
-          "sido|50:approve_year"
+          "sido|50:structure"
         ]
       }
     },
@@ -138,13 +221,13 @@
         "below_threshold": [
           "zone_latest"
         ],
-        "structure": {
-          "both_valued": 497954,
-          "same": 497874,
-          "differs": 80,
-          "rate": 0.999839,
-          "only_current": 8895,
-          "only_previous": 190
+        "approve_year": {
+          "both_valued": 478686,
+          "same": 478514,
+          "differs": 172,
+          "rate": 0.999641,
+          "only_current": 8348,
+          "only_previous": 246
         },
         "floors_above": {
           "both_valued": 498148,
@@ -154,6 +237,14 @@
           "only_current": 8900,
           "only_previous": 135
         },
+        "structure": {
+          "both_valued": 497954,
+          "same": 497874,
+          "differs": 80,
+          "rate": 0.999839,
+          "only_current": 8895,
+          "only_previous": 190
+        },
         "zone_latest": {
           "both_valued": 486439,
           "same": 454033,
@@ -161,14 +252,6 @@
           "rate": 0.933381,
           "only_current": 19490,
           "only_previous": 319
-        },
-        "approve_year": {
-          "both_valued": 478686,
-          "same": 478514,
-          "differs": 172,
-          "rate": 0.999641,
-          "only_current": 8348,
-          "only_previous": 246
         }
       }
     },
@@ -5062,6 +5145,1520 @@
           "coverage_of_eligible_pp": 18.223,
           "conflict_rate_pp": 0.0
         }
+      }
+    }
+  },
+  "coverage_transitions": {
+    "national": {
+      "approve_year": {
+        "kept": 475960,
+        "gain": 8305,
+        "reclassified_uncertain": 2726,
+        "removed_uncertain": 173,
+        "source_loss": 17,
+        "link_loss": 51,
+        "neither": 176364,
+        "eligible": 663596,
+        "loss_pp": -0.01,
+        "uncertainty_pp": -0.437,
+        "gain_pp": 1.252
+      },
+      "floors_above": {
+        "kept": 495221,
+        "gain": 8854,
+        "reclassified_uncertain": 2927,
+        "removed_uncertain": 67,
+        "source_loss": 0,
+        "link_loss": 63,
+        "neither": 156464,
+        "eligible": 663596,
+        "loss_pp": -0.009,
+        "uncertainty_pp": -0.451,
+        "gain_pp": 1.334
+      },
+      "structure": {
+        "kept": 495082,
+        "gain": 8851,
+        "reclassified_uncertain": 2872,
+        "removed_uncertain": 122,
+        "source_loss": 0,
+        "link_loss": 63,
+        "neither": 156606,
+        "eligible": 663596,
+        "loss_pp": -0.009,
+        "uncertainty_pp": -0.451,
+        "gain_pp": 1.334
+      },
+      "zone_latest": {
+        "kept": 486439,
+        "gain": 19490,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 255,
+        "link_loss": 59,
+        "neither": 157353,
+        "eligible": 663596,
+        "loss_pp": -0.047,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 2.937
+      }
+    },
+    "sido|11": {
+      "approve_year": {
+        "kept": 40989,
+        "gain": 827,
+        "reclassified_uncertain": 61,
+        "removed_uncertain": 5,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 21686,
+        "eligible": 63568,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -0.104,
+        "gain_pp": 1.301
+      },
+      "floors_above": {
+        "kept": 43010,
+        "gain": 864,
+        "reclassified_uncertain": 80,
+        "removed_uncertain": 0,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 19614,
+        "eligible": 63568,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -0.126,
+        "gain_pp": 1.359
+      },
+      "structure": {
+        "kept": 43010,
+        "gain": 864,
+        "reclassified_uncertain": 76,
+        "removed_uncertain": 4,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 19614,
+        "eligible": 63568,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -0.126,
+        "gain_pp": 1.359
+      },
+      "zone_latest": {
+        "kept": 42831,
+        "gain": 983,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 20,
+        "link_loss": 0,
+        "neither": 19734,
+        "eligible": 63568,
+        "loss_pp": -0.031,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 1.546
+      }
+    },
+    "sido|12": {
+      "approve_year": {
+        "kept": 50133,
+        "gain": 2224,
+        "reclassified_uncertain": 126,
+        "removed_uncertain": 15,
+        "source_loss": 13,
+        "link_loss": 9,
+        "neither": 16931,
+        "eligible": 69451,
+        "loss_pp": -0.032,
+        "uncertainty_pp": -0.203,
+        "gain_pp": 3.202
+      },
+      "floors_above": {
+        "kept": 52858,
+        "gain": 2500,
+        "reclassified_uncertain": 145,
+        "removed_uncertain": 5,
+        "source_loss": 0,
+        "link_loss": 12,
+        "neither": 13931,
+        "eligible": 69451,
+        "loss_pp": -0.017,
+        "uncertainty_pp": -0.216,
+        "gain_pp": 3.6
+      },
+      "structure": {
+        "kept": 52852,
+        "gain": 2500,
+        "reclassified_uncertain": 135,
+        "removed_uncertain": 15,
+        "source_loss": 0,
+        "link_loss": 12,
+        "neither": 13937,
+        "eligible": 69451,
+        "loss_pp": -0.017,
+        "uncertainty_pp": -0.216,
+        "gain_pp": 3.6
+      },
+      "zone_latest": {
+        "kept": 52638,
+        "gain": 2628,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 151,
+        "link_loss": 12,
+        "neither": 14022,
+        "eligible": 69451,
+        "loss_pp": -0.235,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 3.784
+      }
+    },
+    "sido|26": {
+      "approve_year": {
+        "kept": 27610,
+        "gain": 258,
+        "reclassified_uncertain": 95,
+        "removed_uncertain": 7,
+        "source_loss": 1,
+        "link_loss": 3,
+        "neither": 13396,
+        "eligible": 41370,
+        "loss_pp": -0.01,
+        "uncertainty_pp": -0.247,
+        "gain_pp": 0.624
+      },
+      "floors_above": {
+        "kept": 29033,
+        "gain": 277,
+        "reclassified_uncertain": 104,
+        "removed_uncertain": 5,
+        "source_loss": 0,
+        "link_loss": 3,
+        "neither": 11948,
+        "eligible": 41370,
+        "loss_pp": -0.007,
+        "uncertainty_pp": -0.263,
+        "gain_pp": 0.67
+      },
+      "structure": {
+        "kept": 29030,
+        "gain": 277,
+        "reclassified_uncertain": 105,
+        "removed_uncertain": 4,
+        "source_loss": 0,
+        "link_loss": 3,
+        "neither": 11951,
+        "eligible": 41370,
+        "loss_pp": -0.007,
+        "uncertainty_pp": -0.263,
+        "gain_pp": 0.67
+      },
+      "zone_latest": {
+        "kept": 28931,
+        "gain": 344,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 6,
+        "link_loss": 3,
+        "neither": 12086,
+        "eligible": 41370,
+        "loss_pp": -0.022,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 0.832
+      }
+    },
+    "sido|27": {
+      "approve_year": {
+        "kept": 23700,
+        "gain": 194,
+        "reclassified_uncertain": 85,
+        "removed_uncertain": 8,
+        "source_loss": 1,
+        "link_loss": 0,
+        "neither": 11486,
+        "eligible": 35474,
+        "loss_pp": -0.003,
+        "uncertainty_pp": -0.262,
+        "gain_pp": 0.547
+      },
+      "floors_above": {
+        "kept": 24019,
+        "gain": 197,
+        "reclassified_uncertain": 86,
+        "removed_uncertain": 10,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 11162,
+        "eligible": 35474,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -0.271,
+        "gain_pp": 0.555
+      },
+      "structure": {
+        "kept": 24019,
+        "gain": 197,
+        "reclassified_uncertain": 74,
+        "removed_uncertain": 22,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 11162,
+        "eligible": 35474,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -0.271,
+        "gain_pp": 0.555
+      },
+      "zone_latest": {
+        "kept": 23997,
+        "gain": 267,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 9,
+        "link_loss": 0,
+        "neither": 11201,
+        "eligible": 35474,
+        "loss_pp": -0.025,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 0.753
+      }
+    },
+    "sido|28": {
+      "approve_year": {
+        "kept": 16140,
+        "gain": 232,
+        "reclassified_uncertain": 130,
+        "removed_uncertain": 0,
+        "source_loss": 0,
+        "link_loss": 3,
+        "neither": 7748,
+        "eligible": 24253,
+        "loss_pp": -0.012,
+        "uncertainty_pp": -0.536,
+        "gain_pp": 0.957
+      },
+      "floors_above": {
+        "kept": 16995,
+        "gain": 249,
+        "reclassified_uncertain": 132,
+        "removed_uncertain": 1,
+        "source_loss": 0,
+        "link_loss": 3,
+        "neither": 6873,
+        "eligible": 24253,
+        "loss_pp": -0.012,
+        "uncertainty_pp": -0.548,
+        "gain_pp": 1.027
+      },
+      "structure": {
+        "kept": 16994,
+        "gain": 249,
+        "reclassified_uncertain": 133,
+        "removed_uncertain": 0,
+        "source_loss": 0,
+        "link_loss": 3,
+        "neither": 6874,
+        "eligible": 24253,
+        "loss_pp": -0.012,
+        "uncertainty_pp": -0.548,
+        "gain_pp": 1.027
+      },
+      "zone_latest": {
+        "kept": 12363,
+        "gain": 4942,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 1,
+        "link_loss": 2,
+        "neither": 6945,
+        "eligible": 24253,
+        "loss_pp": -0.012,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 20.377
+      }
+    },
+    "sido|30": {
+      "approve_year": {
+        "kept": 13812,
+        "gain": 110,
+        "reclassified_uncertain": 38,
+        "removed_uncertain": 11,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 4917,
+        "eligible": 18888,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -0.259,
+        "gain_pp": 0.582
+      },
+      "floors_above": {
+        "kept": 13906,
+        "gain": 110,
+        "reclassified_uncertain": 47,
+        "removed_uncertain": 7,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 4818,
+        "eligible": 18888,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -0.286,
+        "gain_pp": 0.582
+      },
+      "structure": {
+        "kept": 13905,
+        "gain": 110,
+        "reclassified_uncertain": 51,
+        "removed_uncertain": 3,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 4819,
+        "eligible": 18888,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -0.286,
+        "gain_pp": 0.582
+      },
+      "zone_latest": {
+        "kept": 13912,
+        "gain": 132,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 1,
+        "link_loss": 0,
+        "neither": 4843,
+        "eligible": 18888,
+        "loss_pp": -0.005,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 0.699
+      }
+    },
+    "sido|31": {
+      "approve_year": {
+        "kept": 8121,
+        "gain": 100,
+        "reclassified_uncertain": 14,
+        "removed_uncertain": 3,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 3394,
+        "eligible": 11632,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -0.146,
+        "gain_pp": 0.86
+      },
+      "floors_above": {
+        "kept": 8272,
+        "gain": 100,
+        "reclassified_uncertain": 17,
+        "removed_uncertain": 0,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 3243,
+        "eligible": 11632,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -0.146,
+        "gain_pp": 0.86
+      },
+      "structure": {
+        "kept": 8272,
+        "gain": 100,
+        "reclassified_uncertain": 14,
+        "removed_uncertain": 3,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 3243,
+        "eligible": 11632,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -0.146,
+        "gain_pp": 0.86
+      },
+      "zone_latest": {
+        "kept": 8261,
+        "gain": 115,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 2,
+        "link_loss": 0,
+        "neither": 3254,
+        "eligible": 11632,
+        "loss_pp": -0.017,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 0.989
+      }
+    },
+    "sido|36": {
+      "approve_year": {
+        "kept": 1353,
+        "gain": 18,
+        "reclassified_uncertain": 6,
+        "removed_uncertain": 0,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 494,
+        "eligible": 1871,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -0.321,
+        "gain_pp": 0.962
+      },
+      "floors_above": {
+        "kept": 1379,
+        "gain": 18,
+        "reclassified_uncertain": 6,
+        "removed_uncertain": 0,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 468,
+        "eligible": 1871,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -0.321,
+        "gain_pp": 0.962
+      },
+      "structure": {
+        "kept": 1379,
+        "gain": 18,
+        "reclassified_uncertain": 6,
+        "removed_uncertain": 0,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 468,
+        "eligible": 1871,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -0.321,
+        "gain_pp": 0.962
+      },
+      "zone_latest": {
+        "kept": 1375,
+        "gain": 27,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 469,
+        "eligible": 1871,
+        "loss_pp": 0.0,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 1.443
+      }
+    },
+    "sido|41": {
+      "approve_year": {
+        "kept": 82589,
+        "gain": 1191,
+        "reclassified_uncertain": 617,
+        "removed_uncertain": 29,
+        "source_loss": 1,
+        "link_loss": 7,
+        "neither": 33724,
+        "eligible": 118158,
+        "loss_pp": -0.007,
+        "uncertainty_pp": -0.547,
+        "gain_pp": 1.008
+      },
+      "floors_above": {
+        "kept": 85331,
+        "gain": 1231,
+        "reclassified_uncertain": 652,
+        "removed_uncertain": 13,
+        "source_loss": 0,
+        "link_loss": 7,
+        "neither": 30924,
+        "eligible": 118158,
+        "loss_pp": -0.006,
+        "uncertainty_pp": -0.563,
+        "gain_pp": 1.042
+      },
+      "structure": {
+        "kept": 85293,
+        "gain": 1230,
+        "reclassified_uncertain": 648,
+        "removed_uncertain": 17,
+        "source_loss": 0,
+        "link_loss": 7,
+        "neither": 30963,
+        "eligible": 118158,
+        "loss_pp": -0.006,
+        "uncertainty_pp": -0.563,
+        "gain_pp": 1.041
+      },
+      "zone_latest": {
+        "kept": 80934,
+        "gain": 6165,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 24,
+        "link_loss": 4,
+        "neither": 31031,
+        "eligible": 118158,
+        "loss_pp": -0.024,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 5.218
+      }
+    },
+    "sido|43": {
+      "approve_year": {
+        "kept": 27613,
+        "gain": 406,
+        "reclassified_uncertain": 58,
+        "removed_uncertain": 2,
+        "source_loss": 0,
+        "link_loss": 3,
+        "neither": 7659,
+        "eligible": 35741,
+        "loss_pp": -0.008,
+        "uncertainty_pp": -0.168,
+        "gain_pp": 1.136
+      },
+      "floors_above": {
+        "kept": 28879,
+        "gain": 425,
+        "reclassified_uncertain": 63,
+        "removed_uncertain": 0,
+        "source_loss": 0,
+        "link_loss": 3,
+        "neither": 6371,
+        "eligible": 35741,
+        "loss_pp": -0.008,
+        "uncertainty_pp": -0.176,
+        "gain_pp": 1.189
+      },
+      "structure": {
+        "kept": 28879,
+        "gain": 425,
+        "reclassified_uncertain": 60,
+        "removed_uncertain": 3,
+        "source_loss": 0,
+        "link_loss": 3,
+        "neither": 6371,
+        "eligible": 35741,
+        "loss_pp": -0.008,
+        "uncertainty_pp": -0.176,
+        "gain_pp": 1.189
+      },
+      "zone_latest": {
+        "kept": 28843,
+        "gain": 493,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 3,
+        "link_loss": 3,
+        "neither": 6399,
+        "eligible": 35741,
+        "loss_pp": -0.017,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 1.379
+      }
+    },
+    "sido|44": {
+      "approve_year": {
+        "kept": 30895,
+        "gain": 481,
+        "reclassified_uncertain": 142,
+        "removed_uncertain": 12,
+        "source_loss": 0,
+        "link_loss": 2,
+        "neither": 9994,
+        "eligible": 41526,
+        "loss_pp": -0.005,
+        "uncertainty_pp": -0.371,
+        "gain_pp": 1.158
+      },
+      "floors_above": {
+        "kept": 31886,
+        "gain": 496,
+        "reclassified_uncertain": 156,
+        "removed_uncertain": 0,
+        "source_loss": 0,
+        "link_loss": 3,
+        "neither": 8985,
+        "eligible": 41526,
+        "loss_pp": -0.007,
+        "uncertainty_pp": -0.376,
+        "gain_pp": 1.194
+      },
+      "structure": {
+        "kept": 31880,
+        "gain": 496,
+        "reclassified_uncertain": 148,
+        "removed_uncertain": 8,
+        "source_loss": 0,
+        "link_loss": 3,
+        "neither": 8991,
+        "eligible": 41526,
+        "loss_pp": -0.007,
+        "uncertainty_pp": -0.376,
+        "gain_pp": 1.194
+      },
+      "zone_latest": {
+        "kept": 31896,
+        "gain": 548,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 6,
+        "link_loss": 3,
+        "neither": 9073,
+        "eligible": 41526,
+        "loss_pp": -0.022,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 1.32
+      }
+    },
+    "sido|47": {
+      "approve_year": {
+        "kept": 46399,
+        "gain": 633,
+        "reclassified_uncertain": 134,
+        "removed_uncertain": 17,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 11570,
+        "eligible": 58753,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -0.257,
+        "gain_pp": 1.077
+      },
+      "floors_above": {
+        "kept": 47791,
+        "gain": 653,
+        "reclassified_uncertain": 148,
+        "removed_uncertain": 7,
+        "source_loss": 0,
+        "link_loss": 1,
+        "neither": 10153,
+        "eligible": 58753,
+        "loss_pp": -0.002,
+        "uncertainty_pp": -0.264,
+        "gain_pp": 1.111
+      },
+      "structure": {
+        "kept": 47775,
+        "gain": 653,
+        "reclassified_uncertain": 146,
+        "removed_uncertain": 9,
+        "source_loss": 0,
+        "link_loss": 1,
+        "neither": 10169,
+        "eligible": 58753,
+        "loss_pp": -0.002,
+        "uncertainty_pp": -0.264,
+        "gain_pp": 1.111
+      },
+      "zone_latest": {
+        "kept": 47715,
+        "gain": 825,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 12,
+        "link_loss": 1,
+        "neither": 10200,
+        "eligible": 58753,
+        "loss_pp": -0.022,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 1.404
+      }
+    },
+    "sido|48": {
+      "approve_year": {
+        "kept": 42125,
+        "gain": 625,
+        "reclassified_uncertain": 139,
+        "removed_uncertain": 15,
+        "source_loss": 1,
+        "link_loss": 9,
+        "neither": 13293,
+        "eligible": 56207,
+        "loss_pp": -0.018,
+        "uncertainty_pp": -0.274,
+        "gain_pp": 1.112
+      },
+      "floors_above": {
+        "kept": 43789,
+        "gain": 646,
+        "reclassified_uncertain": 153,
+        "removed_uncertain": 9,
+        "source_loss": 0,
+        "link_loss": 9,
+        "neither": 11601,
+        "eligible": 56207,
+        "loss_pp": -0.016,
+        "uncertainty_pp": -0.288,
+        "gain_pp": 1.149
+      },
+      "structure": {
+        "kept": 43785,
+        "gain": 646,
+        "reclassified_uncertain": 156,
+        "removed_uncertain": 6,
+        "source_loss": 0,
+        "link_loss": 9,
+        "neither": 11605,
+        "eligible": 56207,
+        "loss_pp": -0.016,
+        "uncertainty_pp": -0.288,
+        "gain_pp": 1.149
+      },
+      "zone_latest": {
+        "kept": 43819,
+        "gain": 734,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 5,
+        "link_loss": 9,
+        "neither": 11640,
+        "eligible": 56207,
+        "loss_pp": -0.025,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 1.306
+      }
+    },
+    "sido|50": {
+      "approve_year": {
+        "kept": 7745,
+        "gain": 113,
+        "reclassified_uncertain": 904,
+        "removed_uncertain": 28,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 3517,
+        "eligible": 12307,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -7.573,
+        "gain_pp": 0.918
+      },
+      "floors_above": {
+        "kept": 8180,
+        "gain": 126,
+        "reclassified_uncertain": 932,
+        "removed_uncertain": 0,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 3069,
+        "eligible": 12307,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -7.573,
+        "gain_pp": 1.024
+      },
+      "structure": {
+        "kept": 8162,
+        "gain": 126,
+        "reclassified_uncertain": 918,
+        "removed_uncertain": 14,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 3087,
+        "eligible": 12307,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -7.573,
+        "gain_pp": 1.024
+      },
+      "zone_latest": {
+        "kept": 9092,
+        "gain": 142,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 1,
+        "link_loss": 0,
+        "neither": 3072,
+        "eligible": 12307,
+        "loss_pp": -0.008,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 1.154
+      }
+    },
+    "sido|51": {
+      "approve_year": {
+        "kept": 27665,
+        "gain": 419,
+        "reclassified_uncertain": 125,
+        "removed_uncertain": 9,
+        "source_loss": 0,
+        "link_loss": 8,
+        "neither": 8226,
+        "eligible": 36452,
+        "loss_pp": -0.022,
+        "uncertainty_pp": -0.368,
+        "gain_pp": 1.149
+      },
+      "floors_above": {
+        "kept": 30204,
+        "gain": 480,
+        "reclassified_uncertain": 144,
+        "removed_uncertain": 5,
+        "source_loss": 0,
+        "link_loss": 14,
+        "neither": 5605,
+        "eligible": 36452,
+        "loss_pp": -0.038,
+        "uncertainty_pp": -0.409,
+        "gain_pp": 1.317
+      },
+      "structure": {
+        "kept": 30180,
+        "gain": 480,
+        "reclassified_uncertain": 142,
+        "removed_uncertain": 7,
+        "source_loss": 0,
+        "link_loss": 14,
+        "neither": 5629,
+        "eligible": 36452,
+        "loss_pp": -0.038,
+        "uncertainty_pp": -0.409,
+        "gain_pp": 1.317
+      },
+      "zone_latest": {
+        "kept": 30220,
+        "gain": 563,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 9,
+        "link_loss": 14,
+        "neither": 5646,
+        "eligible": 36452,
+        "loss_pp": -0.063,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 1.544
+      }
+    },
+    "sido|52": {
+      "approve_year": {
+        "kept": 29071,
+        "gain": 474,
+        "reclassified_uncertain": 52,
+        "removed_uncertain": 12,
+        "source_loss": 0,
+        "link_loss": 7,
+        "neither": 8329,
+        "eligible": 37945,
+        "loss_pp": -0.018,
+        "uncertainty_pp": -0.169,
+        "gain_pp": 1.249
+      },
+      "floors_above": {
+        "kept": 29689,
+        "gain": 482,
+        "reclassified_uncertain": 62,
+        "removed_uncertain": 5,
+        "source_loss": 0,
+        "link_loss": 8,
+        "neither": 7699,
+        "eligible": 37945,
+        "loss_pp": -0.021,
+        "uncertainty_pp": -0.177,
+        "gain_pp": 1.27
+      },
+      "structure": {
+        "kept": 29667,
+        "gain": 480,
+        "reclassified_uncertain": 60,
+        "removed_uncertain": 7,
+        "source_loss": 0,
+        "link_loss": 8,
+        "neither": 7723,
+        "eligible": 37945,
+        "loss_pp": -0.021,
+        "uncertainty_pp": -0.177,
+        "gain_pp": 1.265
+      },
+      "zone_latest": {
+        "kept": 29612,
+        "gain": 582,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 5,
+        "link_loss": 8,
+        "neither": 7738,
+        "eligible": 37945,
+        "loss_pp": -0.034,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 1.534
+      }
+    },
+    "asset_type|commercial": {
+      "approve_year": {
+        "kept": 95532,
+        "gain": 1768,
+        "reclassified_uncertain": 428,
+        "removed_uncertain": 39,
+        "source_loss": 3,
+        "link_loss": 4,
+        "neither": 30895,
+        "eligible": 128669,
+        "loss_pp": -0.005,
+        "uncertainty_pp": -0.363,
+        "gain_pp": 1.374
+      },
+      "floors_above": {
+        "kept": 98612,
+        "gain": 1849,
+        "reclassified_uncertain": 472,
+        "removed_uncertain": 15,
+        "source_loss": 0,
+        "link_loss": 4,
+        "neither": 27717,
+        "eligible": 128669,
+        "loss_pp": -0.003,
+        "uncertainty_pp": -0.378,
+        "gain_pp": 1.437
+      },
+      "structure": {
+        "kept": 98595,
+        "gain": 1848,
+        "reclassified_uncertain": 465,
+        "removed_uncertain": 22,
+        "source_loss": 0,
+        "link_loss": 4,
+        "neither": 27735,
+        "eligible": 128669,
+        "loss_pp": -0.003,
+        "uncertainty_pp": -0.378,
+        "gain_pp": 1.436
+      },
+      "zone_latest": {
+        "kept": 95622,
+        "gain": 5197,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 45,
+        "link_loss": 3,
+        "neither": 27802,
+        "eligible": 128669,
+        "loss_pp": -0.037,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 4.039
+      }
+    },
+    "asset_type|detached": {
+      "approve_year": {
+        "kept": 348802,
+        "gain": 5829,
+        "reclassified_uncertain": 1860,
+        "removed_uncertain": 111,
+        "source_loss": 14,
+        "link_loss": 47,
+        "neither": 124802,
+        "eligible": 481465,
+        "loss_pp": -0.013,
+        "uncertainty_pp": -0.409,
+        "gain_pp": 1.211
+      },
+      "floors_above": {
+        "kept": 364413,
+        "gain": 6289,
+        "reclassified_uncertain": 1999,
+        "removed_uncertain": 40,
+        "source_loss": 0,
+        "link_loss": 59,
+        "neither": 108665,
+        "eligible": 481465,
+        "loss_pp": -0.012,
+        "uncertainty_pp": -0.423,
+        "gain_pp": 1.306
+      },
+      "structure": {
+        "kept": 364316,
+        "gain": 6288,
+        "reclassified_uncertain": 1953,
+        "removed_uncertain": 86,
+        "source_loss": 0,
+        "link_loss": 59,
+        "neither": 108763,
+        "eligible": 481465,
+        "loss_pp": -0.012,
+        "uncertainty_pp": -0.423,
+        "gain_pp": 1.306
+      },
+      "zone_latest": {
+        "kept": 360009,
+        "gain": 11752,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 188,
+        "link_loss": 56,
+        "neither": 109460,
+        "eligible": 481465,
+        "loss_pp": -0.051,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 2.441
+      }
+    },
+    "asset_type|factory": {
+      "approve_year": {
+        "kept": 31626,
+        "gain": 708,
+        "reclassified_uncertain": 438,
+        "removed_uncertain": 23,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 20667,
+        "eligible": 53462,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -0.862,
+        "gain_pp": 1.324
+      },
+      "floors_above": {
+        "kept": 32196,
+        "gain": 716,
+        "reclassified_uncertain": 456,
+        "removed_uncertain": 12,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 20082,
+        "eligible": 53462,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -0.875,
+        "gain_pp": 1.339
+      },
+      "structure": {
+        "kept": 32171,
+        "gain": 715,
+        "reclassified_uncertain": 454,
+        "removed_uncertain": 14,
+        "source_loss": 0,
+        "link_loss": 0,
+        "neither": 20108,
+        "eligible": 53462,
+        "loss_pp": 0.0,
+        "uncertainty_pp": -0.875,
+        "gain_pp": 1.337
+      },
+      "zone_latest": {
+        "kept": 30808,
+        "gain": 2541,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 22,
+        "link_loss": 0,
+        "neither": 20091,
+        "eligible": 53462,
+        "loss_pp": -0.041,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 4.753
+      }
+    },
+    "contract_year|2019": {
+      "approve_year": {
+        "kept": 70872,
+        "gain": 162,
+        "reclassified_uncertain": 355,
+        "removed_uncertain": 27,
+        "source_loss": 2,
+        "link_loss": 3,
+        "neither": 36765,
+        "eligible": 108186,
+        "loss_pp": -0.005,
+        "uncertainty_pp": -0.353,
+        "gain_pp": 0.15
+      },
+      "floors_above": {
+        "kept": 73759,
+        "gain": 196,
+        "reclassified_uncertain": 390,
+        "removed_uncertain": 4,
+        "source_loss": 0,
+        "link_loss": 3,
+        "neither": 33834,
+        "eligible": 108186,
+        "loss_pp": -0.003,
+        "uncertainty_pp": -0.364,
+        "gain_pp": 0.181
+      },
+      "structure": {
+        "kept": 73742,
+        "gain": 196,
+        "reclassified_uncertain": 378,
+        "removed_uncertain": 16,
+        "source_loss": 0,
+        "link_loss": 3,
+        "neither": 33851,
+        "eligible": 108186,
+        "loss_pp": -0.003,
+        "uncertainty_pp": -0.364,
+        "gain_pp": 0.181
+      },
+      "zone_latest": {
+        "kept": 72885,
+        "gain": 1192,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 47,
+        "link_loss": 3,
+        "neither": 34059,
+        "eligible": 108186,
+        "loss_pp": -0.046,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 1.102
+      }
+    },
+    "contract_year|2020": {
+      "approve_year": {
+        "kept": 87680,
+        "gain": 200,
+        "reclassified_uncertain": 467,
+        "removed_uncertain": 30,
+        "source_loss": 0,
+        "link_loss": 7,
+        "neither": 42121,
+        "eligible": 130505,
+        "loss_pp": -0.005,
+        "uncertainty_pp": -0.381,
+        "gain_pp": 0.153
+      },
+      "floors_above": {
+        "kept": 91117,
+        "gain": 229,
+        "reclassified_uncertain": 512,
+        "removed_uncertain": 6,
+        "source_loss": 0,
+        "link_loss": 9,
+        "neither": 38632,
+        "eligible": 130505,
+        "loss_pp": -0.007,
+        "uncertainty_pp": -0.397,
+        "gain_pp": 0.175
+      },
+      "structure": {
+        "kept": 91096,
+        "gain": 229,
+        "reclassified_uncertain": 492,
+        "removed_uncertain": 26,
+        "source_loss": 0,
+        "link_loss": 9,
+        "neither": 38653,
+        "eligible": 130505,
+        "loss_pp": -0.007,
+        "uncertainty_pp": -0.397,
+        "gain_pp": 0.175
+      },
+      "zone_latest": {
+        "kept": 90061,
+        "gain": 1537,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 38,
+        "link_loss": 8,
+        "neither": 38861,
+        "eligible": 130505,
+        "loss_pp": -0.035,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 1.178
+      }
+    },
+    "contract_year|2021": {
+      "approve_year": {
+        "kept": 91331,
+        "gain": 230,
+        "reclassified_uncertain": 625,
+        "removed_uncertain": 33,
+        "source_loss": 3,
+        "link_loss": 7,
+        "neither": 37662,
+        "eligible": 129891,
+        "loss_pp": -0.008,
+        "uncertainty_pp": -0.507,
+        "gain_pp": 0.177
+      },
+      "floors_above": {
+        "kept": 94860,
+        "gain": 292,
+        "reclassified_uncertain": 664,
+        "removed_uncertain": 13,
+        "source_loss": 0,
+        "link_loss": 9,
+        "neither": 34053,
+        "eligible": 129891,
+        "loss_pp": -0.007,
+        "uncertainty_pp": -0.521,
+        "gain_pp": 0.225
+      },
+      "structure": {
+        "kept": 94833,
+        "gain": 292,
+        "reclassified_uncertain": 651,
+        "removed_uncertain": 26,
+        "source_loss": 0,
+        "link_loss": 9,
+        "neither": 34080,
+        "eligible": 129891,
+        "loss_pp": -0.007,
+        "uncertainty_pp": -0.521,
+        "gain_pp": 0.225
+      },
+      "zone_latest": {
+        "kept": 92543,
+        "gain": 3081,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 38,
+        "link_loss": 9,
+        "neither": 34220,
+        "eligible": 129891,
+        "loss_pp": -0.036,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 2.372
+      }
+    },
+    "contract_year|2022": {
+      "approve_year": {
+        "kept": 58607,
+        "gain": 161,
+        "reclassified_uncertain": 357,
+        "removed_uncertain": 28,
+        "source_loss": 1,
+        "link_loss": 2,
+        "neither": 21579,
+        "eligible": 80735,
+        "loss_pp": -0.004,
+        "uncertainty_pp": -0.477,
+        "gain_pp": 0.199
+      },
+      "floors_above": {
+        "kept": 61113,
+        "gain": 192,
+        "reclassified_uncertain": 375,
+        "removed_uncertain": 16,
+        "source_loss": 0,
+        "link_loss": 3,
+        "neither": 19036,
+        "eligible": 80735,
+        "loss_pp": -0.004,
+        "uncertainty_pp": -0.484,
+        "gain_pp": 0.238
+      },
+      "structure": {
+        "kept": 61094,
+        "gain": 192,
+        "reclassified_uncertain": 382,
+        "removed_uncertain": 9,
+        "source_loss": 0,
+        "link_loss": 3,
+        "neither": 19055,
+        "eligible": 80735,
+        "loss_pp": -0.004,
+        "uncertainty_pp": -0.484,
+        "gain_pp": 0.238
+      },
+      "zone_latest": {
+        "kept": 59784,
+        "gain": 1797,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 22,
+        "link_loss": 3,
+        "neither": 19129,
+        "eligible": 80735,
+        "loss_pp": -0.031,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 2.226
+      }
+    },
+    "contract_year|2023": {
+      "approve_year": {
+        "kept": 45102,
+        "gain": 193,
+        "reclassified_uncertain": 281,
+        "removed_uncertain": 16,
+        "source_loss": 0,
+        "link_loss": 4,
+        "neither": 13706,
+        "eligible": 59302,
+        "loss_pp": -0.007,
+        "uncertainty_pp": -0.501,
+        "gain_pp": 0.325
+      },
+      "floors_above": {
+        "kept": 47037,
+        "gain": 221,
+        "reclassified_uncertain": 293,
+        "removed_uncertain": 11,
+        "source_loss": 0,
+        "link_loss": 5,
+        "neither": 11735,
+        "eligible": 59302,
+        "loss_pp": -0.008,
+        "uncertainty_pp": -0.513,
+        "gain_pp": 0.373
+      },
+      "structure": {
+        "kept": 47032,
+        "gain": 221,
+        "reclassified_uncertain": 295,
+        "removed_uncertain": 9,
+        "source_loss": 0,
+        "link_loss": 5,
+        "neither": 11740,
+        "eligible": 59302,
+        "loss_pp": -0.008,
+        "uncertainty_pp": -0.513,
+        "gain_pp": 0.373
+      },
+      "zone_latest": {
+        "kept": 46018,
+        "gain": 1471,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 20,
+        "link_loss": 4,
+        "neither": 11789,
+        "eligible": 59302,
+        "loss_pp": -0.04,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 2.481
+      }
+    },
+    "contract_year|2024": {
+      "approve_year": {
+        "kept": 48183,
+        "gain": 396,
+        "reclassified_uncertain": 266,
+        "removed_uncertain": 11,
+        "source_loss": 3,
+        "link_loss": 7,
+        "neither": 10107,
+        "eligible": 58973,
+        "loss_pp": -0.017,
+        "uncertainty_pp": -0.47,
+        "gain_pp": 0.671
+      },
+      "floors_above": {
+        "kept": 50130,
+        "gain": 439,
+        "reclassified_uncertain": 279,
+        "removed_uncertain": 9,
+        "source_loss": 0,
+        "link_loss": 9,
+        "neither": 8107,
+        "eligible": 58973,
+        "loss_pp": -0.015,
+        "uncertainty_pp": -0.488,
+        "gain_pp": 0.744
+      },
+      "structure": {
+        "kept": 50115,
+        "gain": 439,
+        "reclassified_uncertain": 271,
+        "removed_uncertain": 17,
+        "source_loss": 0,
+        "link_loss": 9,
+        "neither": 8122,
+        "eligible": 58973,
+        "loss_pp": -0.015,
+        "uncertainty_pp": -0.488,
+        "gain_pp": 0.744
+      },
+      "zone_latest": {
+        "kept": 49035,
+        "gain": 1746,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 26,
+        "link_loss": 7,
+        "neither": 8159,
+        "eligible": 58973,
+        "loss_pp": -0.056,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 2.961
+      }
+    },
+    "contract_year|2025": {
+      "approve_year": {
+        "kept": 47585,
+        "gain": 342,
+        "reclassified_uncertain": 237,
+        "removed_uncertain": 22,
+        "source_loss": 6,
+        "link_loss": 9,
+        "neither": 8416,
+        "eligible": 56617,
+        "loss_pp": -0.026,
+        "uncertainty_pp": -0.457,
+        "gain_pp": 0.604
+      },
+      "floors_above": {
+        "kept": 49542,
+        "gain": 385,
+        "reclassified_uncertain": 268,
+        "removed_uncertain": 6,
+        "source_loss": 0,
+        "link_loss": 10,
+        "neither": 6406,
+        "eligible": 56617,
+        "loss_pp": -0.018,
+        "uncertainty_pp": -0.484,
+        "gain_pp": 0.68
+      },
+      "structure": {
+        "kept": 49516,
+        "gain": 385,
+        "reclassified_uncertain": 262,
+        "removed_uncertain": 12,
+        "source_loss": 0,
+        "link_loss": 10,
+        "neither": 6432,
+        "eligible": 56617,
+        "loss_pp": -0.018,
+        "uncertainty_pp": -0.484,
+        "gain_pp": 0.68
+      },
+      "zone_latest": {
+        "kept": 48666,
+        "gain": 1434,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 26,
+        "link_loss": 10,
+        "neither": 6481,
+        "eligible": 56617,
+        "loss_pp": -0.064,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 2.533
+      }
+    },
+    "contract_year|2026": {
+      "approve_year": {
+        "kept": 26600,
+        "gain": 6621,
+        "reclassified_uncertain": 138,
+        "removed_uncertain": 6,
+        "source_loss": 2,
+        "link_loss": 12,
+        "neither": 6008,
+        "eligible": 39387,
+        "loss_pp": -0.036,
+        "uncertainty_pp": -0.366,
+        "gain_pp": 16.81
+      },
+      "floors_above": {
+        "kept": 27663,
+        "gain": 6900,
+        "reclassified_uncertain": 146,
+        "removed_uncertain": 2,
+        "source_loss": 0,
+        "link_loss": 15,
+        "neither": 4661,
+        "eligible": 39387,
+        "loss_pp": -0.038,
+        "uncertainty_pp": -0.376,
+        "gain_pp": 17.518
+      },
+      "structure": {
+        "kept": 27654,
+        "gain": 6897,
+        "reclassified_uncertain": 141,
+        "removed_uncertain": 7,
+        "source_loss": 0,
+        "link_loss": 15,
+        "neither": 4673,
+        "eligible": 39387,
+        "loss_pp": -0.038,
+        "uncertainty_pp": -0.376,
+        "gain_pp": 17.511
+      },
+      "zone_latest": {
+        "kept": 27447,
+        "gain": 7232,
+        "reclassified_uncertain": 0,
+        "removed_uncertain": 0,
+        "source_loss": 38,
+        "link_loss": 15,
+        "neither": 4655,
+        "eligible": 39387,
+        "loss_pp": -0.135,
+        "uncertainty_pp": 0.0,
+        "gain_pp": 18.361
       }
     }
   }

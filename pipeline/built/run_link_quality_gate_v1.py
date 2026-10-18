@@ -41,8 +41,9 @@ T = {
     "link_rate_national_drop_fail_pp": 1.0,
     "link_rate_scope_drop_warn_pp": 1.5,
     "link_rate_scope_drop_fail_pp": 3.0,
-    "coverage_national_drop_fail_pp": 1.0,
-    "coverage_scope_drop_warn_pp": 3.0,
+    "coverage_loss_national_fail_pp": 1.0,
+    "coverage_loss_scope_warn_pp": 3.0,
+    "uncertainty_national_warn_pp": 1.0,
     "conflict_national_rise_warn_pp": 0.2,
     "zone_contract_year_national_drop_warn_pp": 1.0,
     "prev_agreement_building_warn": 0.99,
@@ -213,6 +214,50 @@ def agreement(cur: dict, prev: dict) -> dict:
     return out
 
 
+LOSS = ("source_loss", "link_loss")
+UNCERTAIN = ("reclassified_uncertain", "removed_uncertain")
+
+
+def coverage_transitions(cur: dict, prev: dict, ledger: pd.DataFrame) -> dict:
+    """Why coverage moved: per eligible target and variable, previous confirmed value vs current state.
+
+    A previous value that is now candidates_agree / conflict_missing / undetermined was taken away because
+    the building is no longer identified (reliability change). A previous value that is now source_missing
+    or not linked is a real loss. Only real loss counts against coverage.
+    """
+    hdr = cur["hdr"]
+    elig = hdr.loc[hdr["link_state"] != "not_applicable", "target_key"]
+    keys = ledger.set_index("transaction_hash")[["sido", "asset_type", "contract_year"]].reindex(elig)
+    out: dict = {}
+    for var in sorted(set(cur["val"]["variable"]) & set(prev["val"]["variable"])):
+        c = cur["val"].loc[cur["val"]["variable"] == var].set_index("target_key")["value_state"]
+        p = prev["val"].loc[prev["val"]["variable"] == var].set_index("target_key")["value_state"]
+        cs = c.reindex(elig).fillna("not_linked").values
+        ph = p.reindex(elig).isin(KNOWN).values
+        ch = cs == "confirmed"
+        cls = pd.Series("neither", index=elig.values)
+        cls[ph & ch] = "kept"
+        cls[~ph & ch] = "gain"
+        cls[ph & (cs == "candidates_agree")] = "reclassified_uncertain"
+        cls[ph & pd.Series(cs).isin(["conflict_missing", "undetermined"]).values] = "removed_uncertain"
+        cls[ph & (cs == "source_missing")] = "source_loss"
+        cls[ph & (cs == "not_linked")] = "link_loss"
+        df = keys.assign(cls=cls.values)
+        groups = [("national", df)] + [
+            (f"{k}|{v}", g) for k in ("sido", "asset_type", "contract_year") for v, g in df.groupby(k)
+        ]
+        for scope, g in groups:
+            n = len(g)
+            cnt = g["cls"].value_counts()
+            r = {k: int(cnt.get(k, 0)) for k in ("kept", "gain", *UNCERTAIN, *LOSS, "neither")}
+            r["eligible"] = n
+            r["loss_pp"] = round(-100 * sum(r[k] for k in LOSS) / n, 3) if n else None
+            r["uncertainty_pp"] = round(-100 * sum(r[k] for k in UNCERTAIN) / n, 3) if n else None
+            r["gain_pp"] = round(100 * r["gain"] / n, 3) if n else None
+            out.setdefault(scope, {})[var] = r
+    return out
+
+
 def content_digest(path: Path) -> str:
     h = hashlib.md5()
     with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as db:
@@ -230,7 +275,7 @@ def check(name, status, *, total=None, checked=None, unverified=None, mismatched
             "unverified": unverified, "mismatched": mismatched, "detail": detail}
 
 
-def run_checks(cur, prev, ledger_digest, scopes_cur, scopes_prev, dl, agree, rebuild_db) -> list[dict]:
+def run_checks(cur, prev, ledger_digest, scopes_cur, scopes_prev, dl, agree, trans, rebuild_db) -> list[dict]:
     out = []
     hdr = cur["hdr"]
     keys = set(hdr["target_key"])
@@ -272,22 +317,45 @@ def run_checks(cur, prev, ledger_digest, scopes_cur, scopes_prev, dl, agree, reb
     out.append(check("link_rate_change", st, total=scopes_cur["national"]["total"],
                      checked=scopes_cur["national"]["eligible"], mismatched=scopes_cur["national"]["unlinked"],
                      detail={"national_pp": nat, "scopes_fail": bad, "scopes_warn": warn}))
-    # coverage and conflict
-    cov_fail, cov_warn, conf_warn = [], [], []
-    for var, d in dl.get("national", {}).get("variables", {}).items():
-        if d["coverage_of_eligible_pp"] is not None and d["coverage_of_eligible_pp"] < -T["coverage_national_drop_fail_pp"]:
-            cov_fail.append(var)
-        if d["conflict_rate_pp"] is not None and d["conflict_rate_pp"] > T["conflict_national_rise_warn_pp"]:
-            conf_warn.append(var)
-    for scope, d in dl.items():
-        if scope == "national" or scopes_cur[scope]["eligible"] < SCOPE_MIN_ELIGIBLE:
-            continue
-        for var, x in d["variables"].items():
-            if x["coverage_of_eligible_pp"] is not None and x["coverage_of_eligible_pp"] < -T["coverage_scope_drop_warn_pp"]:
+    # coverage: only real loss counts; values withdrawn for lack of identification are reported apart
+    conf_warn = [var for var, d in dl.get("national", {}).get("variables", {}).items()
+                 if d["conflict_rate_pp"] is not None and d["conflict_rate_pp"] > T["conflict_national_rise_warn_pp"]]
+    cov_fail, cov_warn, net_drop, unc_warn, unc_scopes = [], [], [], [], []
+    for scope, by_var in trans.items():
+        small = scope != "national" and scopes_cur.get(scope, {}).get("eligible", 0) < SCOPE_MIN_ELIGIBLE
+        for var, r in by_var.items():
+            net = dl.get(scope, {}).get("variables", {}).get(var, {}).get("coverage_of_eligible_pp")
+            if scope == "national":
+                if r["loss_pp"] < -T["coverage_loss_national_fail_pp"]:
+                    cov_fail.append(var)
+                if r["uncertainty_pp"] < -T["uncertainty_national_warn_pp"]:
+                    unc_warn.append(var)
+                continue
+            if small:
+                continue
+            if r["loss_pp"] < -T["coverage_loss_scope_warn_pp"]:
                 cov_warn.append(f"{scope}:{var}")
+            if net is not None and net < -T["coverage_loss_scope_warn_pp"]:
+                net_drop.append({"scope": scope, "variable": var, "net_pp": net, "loss_pp": r["loss_pp"],
+                                 "uncertainty_pp": r["uncertainty_pp"], "gain_pp": r["gain_pp"]})
+            if r["uncertainty_pp"] < -T["coverage_loss_scope_warn_pp"]:
+                unc_scopes.append(f"{scope}:{var}")
+    nat = trans.get("national", {})
     out.append(check("coverage_change", "fail" if cov_fail else ("warn" if cov_warn else "pass"),
-                     total=scopes_cur["national"]["eligible"], checked=scopes_cur["national"]["linked"],
-                     detail={"national_fail": cov_fail, "scopes_warn": cov_warn}))
+                     total=scopes_cur["national"]["eligible"], checked=scopes_cur["national"]["eligible"],
+                     mismatched=sum(r["source_loss"] + r["link_loss"] for r in nat.values()),
+                     detail={"rule": "real loss only (previous value -> source_missing / not linked)",
+                             "national_fail": cov_fail, "scopes_warn": cov_warn,
+                             "scopes_net_drop_explained": net_drop,
+                             "national": {v: {k: r[k] for k in ("kept", "gain", *UNCERTAIN, *LOSS, "loss_pp", "gain_pp")}
+                                          for v, r in nat.items()}}))
+    out.append(check("coverage_uncertainty", "warn" if unc_warn else "pass",
+                     total=scopes_cur["national"]["eligible"], checked=scopes_cur["national"]["eligible"],
+                     unverified=sum(r["reclassified_uncertain"] for r in nat.values()),
+                     mismatched=sum(r["removed_uncertain"] for r in nat.values()),
+                     detail={"rule": "previous value withdrawn because the building is not identified; "
+                                     "national rise above threshold warns (identification regression), scopes are reported",
+                             "national_warn": unc_warn, "scopes_reported": unc_scopes}))
     nat_vars = scopes_cur["national"]["variables"]
     out.append(check("conflict_rate", "warn" if conf_warn else "pass", total=scopes_cur["national"]["linked"],
                      checked=scopes_cur["national"]["linked"],
@@ -348,13 +416,14 @@ def main() -> None:
     sc, sp = all_scopes(wide(cur), ledger), all_scopes(wide(prev), ledger)
     dl = deltas(sc, sp)
     agree = agreement(cur, prev)
-    checks = run_checks(cur, prev, ledger_digest, sc, sp, dl, agree, args.rebuild_db)
+    trans = coverage_transitions(cur, prev, ledger)
+    checks = run_checks(cur, prev, ledger_digest, sc, sp, dl, agree, trans, args.rebuild_db)
     rep = {
         "step": "9", "current": cur["path"], "previous": prev["path"], "previous_kind": prev["kind"],
         "thresholds": T, "scope_min_eligible": SCOPE_MIN_ELIGIBLE,
         "verdict": verdict(checks),
         "promotion": "never automatic; needs an approval record naming the version, the checks and any waivers",
-        "checks": checks, "metrics": sc, "previous_metrics": sp, "deltas": dl,
+        "checks": checks, "metrics": sc, "previous_metrics": sp, "deltas": dl, "coverage_transitions": trans,
     }
     args.out.write_text(json.dumps(rep, ensure_ascii=False, indent=2, default=int), encoding="utf-8")
     print(json.dumps({"verdict": rep["verdict"], "checks": [(c["check"], c["status"], c["mismatched"]) for c in checks]},
