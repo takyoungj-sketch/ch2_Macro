@@ -3,16 +3,16 @@
 > MID: `ch2datoe5e` · 상점 URL `https://ch2data.com/`  
 > **작업 일지:** [`docs/lab/journal/2026-10-09.md`](./lab/journal/2026-10-09.md) · **회신 초안:** [`TOSS_MERCHANT_REPLY_DRAFT.md`](./TOSS_MERCHANT_REPLY_DRAFT.md)
 
-## 상태 (2026-10-09)
+## 상태 (2026-10-18)
 
 | 항목 | 상태 |
 |------|------|
-| 테스트 API 키 (개별 연동 `test_ck_` / `test_sk_`) | VPS 반영 · `toss/config` enabled |
-| 심사용 결제창 (`requestPayment`) | ✅ 동작 확인 |
-| 자동결제 빌링 (`requestBillingAuth`) | ⏳ 가맹 **빌링 계약** 대기 |
-| 결제경로 PPT | `deploy/hub/toss-review/CH2DATA_payment_path.pptx` 갱신 |
-| 가맹계약팀 재회신 | 사용자 메일 발송 예정 |
-| 라이브 키·웹훅 | 심사 후 |
+| 단건 MID `ch2datoe5e` | 심사 중. 운영에 쓰지 않음. 가입비·연관리비 환불은 가맹계약팀 회신으로 요청 |
+| 빌링 MID `bill_ch2davyf4` | 신청·가입비 결제 완료. 심사 접수 |
+| 테스트 API 키 (단건 `test_ck_` / `test_sk_`) | VPS 반영 · `toss/config` enabled |
+| 자동결제 빌링 (`requestBillingAuth`) | 빌링 MID 테스트 키 발급 후 교체 |
+| 가맹계약팀 회신 | [`TOSS_MERCHANT_REPLY_DRAFT.md`](./TOSS_MERCHANT_REPLY_DRAFT.md) · 사용자 발송 |
+| 라이브 키·웹훅 | 빌링 심사 후 |
 
 ## 상품 설명 (회신 메일용)
 
