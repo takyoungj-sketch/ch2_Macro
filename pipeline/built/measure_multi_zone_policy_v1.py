@@ -24,7 +24,7 @@ sys.path.insert(0, str(REPO / "backend"))
 
 from built.link_engine_v1 import ALL_SNAPSHOTS, ENGINE_RULE, Defn, compute, counts, ledger_universe, write_version  # noqa: E402
 
-VERSION = Path(r"C:\CH2\parcel_master\versions_test\built\N_full.sqlite")
+VERSION = Path(r"C:\CH2\parcel_master\versions_test\built") / f"N_full_{ENGINE_RULE.rsplit('+', 1)[-1]}.sqlite"
 DEFN = Defn(ALL_SNAPSHOTS, None, "2026Q3")
 
 
@@ -46,14 +46,20 @@ def main() -> None:
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--workers", type=int, default=6)
     args = ap.parse_args()
-    built = build(args.workers) if not VERSION.exists() else {"reused": True}
+    built = build(args.workers) if not VERSION.exists() else {"reused": True, "bytes": VERSION.stat().st_size}
     u = ledger_universe().set_index("transaction_hash")
     db = sqlite3.connect(VERSION.resolve().as_uri() + "?mode=ro", uri=True)
     link = dict(db.execute("SELECT target_key, link_state FROM ledger_link_header_v1"))
-    zone = {k: (s, t) for k, s, t in db.execute(
-        "SELECT target_key, value_state, timing FROM ledger_link_value_v1 WHERE variable = 'zone_contract_year'")}
+    zone, approved = {}, set()
+    for k, s, t, ua in db.execute("SELECT target_key, value_state, timing, use_approved FROM ledger_link_value_v1 "
+                                  "WHERE variable = 'zone_contract_year'"):
+        zone[k] = (s, t)
+        if ua:
+            approved.add(k)
     multi = {k for (k,) in db.execute(
         "SELECT target_key FROM ledger_link_value_v1 WHERE variable = 'zone2_contract_year' AND value_state = 'confirmed'")}
+    held = db.execute("SELECT COUNT(*) FROM ledger_link_header_v1 WHERE hold_flags LIKE '%multi_zone%'").fetchone()[0]
+    rule = dict(db.execute("SELECT k, v FROM version_info")).get("rule_version")
     db.close()
 
     groups: dict = defaultdict(Counter)
@@ -67,6 +73,8 @@ def main() -> None:
             zs, timing = zone.get(k, (None, None))
             if zs == "confirmed" and timing == "contract_year":
                 cls = "included_multi" if k in multi else "included_single"
+                if k not in approved:
+                    groups["check"]["included_not_use_approved"] += 1
             elif zs == "confirmed":
                 cls = "adjacent_year_excluded_multi" if k in multi else "adjacent_year_excluded"
             else:
@@ -74,6 +82,8 @@ def main() -> None:
         for g in ("all", f"asset:{r['asset_type']}", f"sido:{r['sido']}", f"year:{int(r['contract_year'])}"):
             groups[g][cls] += 1
 
+    check = {"rule_version": rule, "multi_zone_hold_flags": held,
+             "included_not_use_approved": groups.pop("check", Counter())["included_not_use_approved"]}
     out = {}
     for g, c in sorted(groups.items()):
         inc = c["included_single"] + c["included_multi"]
@@ -84,9 +94,10 @@ def main() -> None:
     rep = {"decision": "D-078", "population": "built_transactions 2019+ (engine v1, editions 2024-09·2025-07·2026-07, all slim releases)",
            "rule": "included = zone_contract_year confirmed at contract-year base; multi = zone2 present at that base; "
                    "adjacent-year observations stay excluded (existing missing-value rule)",
-           "version": built, "groups": out}
+           "version": built, "check": check, "groups": out}
     args.out.write_text(json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(json.dumps({g: out[g] for g in out if g == "all" or g.startswith("asset:")}, ensure_ascii=False, indent=1))
+    print(json.dumps({"check": check, **{g: out[g] for g in out if g == "all" or g.startswith("asset:")}},
+                     ensure_ascii=False, indent=1))
 
 
 if __name__ == "__main__":

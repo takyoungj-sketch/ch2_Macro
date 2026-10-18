@@ -7,23 +7,212 @@
   ],
   "keys": 118716
  },
+ "product_before": {
+  "built_transaction_enrichment": [
+   498568,
+   "ec9ec61d1528d3ca5eeab7e07b1c3a14"
+  ],
+  "built_transactions_2019": [
+   672764,
+   "6121fb03e8ef267219e0440f38bc300f"
+  ]
+ },
+ "R0": {
+  "full": {
+   "path": "C:\\CH2\\parcel_master\\versions_test\\built\\B_full.sqlite",
+   "seconds": 289.6,
+   "bytes": 364654592,
+   "link_state": {
+    "linked": 94129,
+    "unlinked": 23370,
+    "not_applicable": 1217
+   },
+   "value_rows": 1057491,
+   "matched": 117499
+  },
+  "vs_step7": {
+   "header": {
+    "rows_a": 118716,
+    "rows_b": 118716,
+    "only_a": 0,
+    "only_b": 0,
+    "duplicate_a": 0,
+    "duplicate_b": 0,
+    "column_mismatch": {
+     "link_state": 0,
+     "link_reason": 0,
+     "link_level": 0,
+     "parcel_resolved": 0,
+     "building_id_state": 0,
+     "bldrgst_pk": 0,
+     "candidate_count": 0,
+     "hold_flags": 0,
+     "code_resolution": 0,
+     "register_snapshot": 0,
+     "register_after_contract": 0,
+     "trait_asof": 0,
+     "unverified": 0,
+     "verification_basis": 0,
+     "source_digest": 0
+    }
+   },
+   "value": {
+    "rows_a": 822493,
+    "rows_b": 822493,
+    "only_a": 0,
+    "only_b": 0,
+    "column_mismatch": {
+     "value_num": 0,
+     "value_text": 0,
+     "value_state": 0,
+     "value_level": 0,
+     "source": 0,
+     "basis_date": 0,
+     "timing": 0,
+     "change_risk": 0,
+     "use_approved": 0
+    },
+    "missing_state_mismatch": 0
+   },
+   "transactions_compared": 118716,
+   "transactions_mismatched": 0,
+   "identical": true
+  }
+ },
+ "product_after": {
+  "built_transaction_enrichment": [
+   498568,
+   "ec9ec61d1528d3ca5eeab7e07b1c3a14"
+  ],
+  "built_transactions_2019": [
+   672764,
+   "6121fb03e8ef267219e0440f38bc300f"
+  ]
+ },
  "product_unchanged": true,
+ "storage_bytes": {
+  "_smoke_50.sqlite": 37888000,
+  "A_both.sqlite": 364695552,
+  "A_land.sqlite": 364941312,
+  "A_quarter.sqlite": 350035968,
+  "A_reg.sqlite": 364384256,
+  "A_tx.sqlite": 360701952,
+  "B_full.sqlite": 364654592,
+  "B_full_again.sqlite": 364654592,
+  "B_tx_full.sqlite": 360673280,
+  "C_bad.sqlite": 363479040,
+  "C_new.sqlite": 349569024,
+  "N_full.sqlite": 2054373376,
+  "R2_inc.sqlite": 349569024,
+  "R3_inc.sqlite": 353714176,
+  "R4_inc.sqlite": 352124928,
+  "R5_land_first.sqlite": 349585408,
+  "R5_land_first_1.sqlite": 353366016,
+  "R5_reg_first.sqlite": 353239040,
+  "R5_reg_first_1.sqlite": 349962240,
+  "R9_inc.sqlite": 354828288
+ },
+ "R1": {
+  "full": {
+   "path": "C:\\CH2\\parcel_master\\versions_test\\built\\B_full_again.sqlite",
+   "seconds": 259.7,
+   "bytes": 364654592,
+   "link_state": {
+    "linked": 94129,
+    "unlinked": 23370,
+    "not_applicable": 1217
+   },
+   "value_rows": 1057491,
+   "matched": 117499
+  },
+  "compare": {
+   "header": {
+    "rows_a": 118716,
+    "rows_b": 118716,
+    "only_a": 0,
+    "only_b": 0,
+    "duplicate_a": 0,
+    "duplicate_b": 0,
+    "column_mismatch": {
+     "link_state": 0,
+     "link_reason": 0,
+     "link_level": 0,
+     "parcel_resolved": 0,
+     "building_id_state": 0,
+     "bldrgst_pk": 0,
+     "candidate_count": 0,
+     "hold_flags": 0,
+     "code_resolution": 0,
+     "register_snapshot": 0,
+     "register_after_contract": 0,
+     "trait_asof": 0,
+     "rule_version": 0,
+     "unverified": 0,
+     "verification_basis": 0,
+     "source_digest": 0
+    }
+   },
+   "value": {
+    "rows_a": 1057491,
+    "rows_b": 1057491,
+    "only_a": 0,
+    "only_b": 0,
+    "column_mismatch": {
+     "value_num": 0,
+     "value_text": 0,
+     "value_state": 0,
+     "value_level": 0,
+     "source": 0,
+     "basis_date": 0,
+     "timing": 0,
+     "change_risk": 0,
+     "use_approved": 0
+    },
+    "missing_state_mismatch": 0
+   },
+   "transactions_compared": 118716,
+   "transactions_mismatched": 0,
+   "deps": {
+    "only_a": 0,
+    "only_b": 0,
+    "column_mismatch": {
+     "sido": 0,
+     "bjd": 0,
+     "contract_year": 0,
+     "contract_month": 0,
+     "in_matching": 0,
+     "snapshot_used": 0,
+     "snapshot_via": 0,
+     "tier": 0,
+     "n_exact": 0,
+     "parcel": 0,
+     "match_pk": 0,
+     "zone_status": 0,
+     "zone_base": 0,
+     "zone_stability": 0,
+     "latest_zone1": 0,
+     "slim_land": 0,
+     "pnus": 0
+    }
+   },
+   "identical": true
+  },
+  "same_file_sha256": false
+ },
  "R2": {
   "previous_full": {
-   "seconds": 184.5,
-   "bytes": 364392448,
+   "path": "C:\\CH2\\parcel_master\\versions_test\\built\\A_reg.sqlite",
+   "seconds": 183.8,
+   "bytes": 364384256,
    "link_state": {
     "linked": 93584,
     "unlinked": 23915,
     "not_applicable": 1217
    },
    "value_rows": 1057491,
-   "matched": 117499,
-   "reused": true
+   "matched": 117499
   },
   "incremental": {
-   "recomputed": 27057,
-   "removed": 0,
    "causes": {
     "register_fallback": 25339,
     "register_kind": 3,
@@ -31,6 +220,8 @@
     "tx_added": 0,
     "tx_row_changed": 0
    },
+   "removed": 0,
+   "recomputed": 27057,
    "changed": {
     "recomputed_same": 24788,
     "link_state_changed": 551,
@@ -38,14 +229,27 @@
     "identification_changed": 3
    },
    "orphan_classification": {},
+   "detect": {
+    "previous_keys": 118716,
+    "new_keys": 118716,
+    "matching_rows_checked": 117499,
+    "detect_seconds": 4.1
+   },
    "seconds": {
-    "detect": 4.8,
-    "recompute": 106.7,
-    "splice": 22.4,
-    "total": 133.9
+    "detect": 5.0,
+    "recompute": 116.9,
+    "splice": 23.5,
+    "total": 145.5
+   },
+   "recompute_stats": {
+    "matched_rows": 27057,
+    "by_sido": {
+     "12": 16221,
+     "43": 7400,
+     "50": 3436
+    }
    },
    "bytes": 349569024,
-   "bytes_vs_previous": -14823424,
    "untouched": {
     "untouched_keys": 91659,
     "headers_identical": true,
@@ -53,33 +257,92 @@
    }
   },
   "vs_full": {
-   "identical": true,
+   "header": {
+    "rows_a": 118716,
+    "rows_b": 118716,
+    "only_a": 0,
+    "only_b": 0,
+    "duplicate_a": 0,
+    "duplicate_b": 0,
+    "column_mismatch": {
+     "link_state": 0,
+     "link_reason": 0,
+     "link_level": 0,
+     "parcel_resolved": 0,
+     "building_id_state": 0,
+     "bldrgst_pk": 0,
+     "candidate_count": 0,
+     "hold_flags": 0,
+     "code_resolution": 0,
+     "register_snapshot": 0,
+     "register_after_contract": 0,
+     "trait_asof": 0,
+     "rule_version": 0,
+     "unverified": 0,
+     "verification_basis": 0,
+     "source_digest": 0
+    }
+   },
+   "value": {
+    "rows_a": 1057491,
+    "rows_b": 1057491,
+    "only_a": 0,
+    "only_b": 0,
+    "column_mismatch": {
+     "value_num": 0,
+     "value_text": 0,
+     "value_state": 0,
+     "value_level": 0,
+     "source": 0,
+     "basis_date": 0,
+     "timing": 0,
+     "change_risk": 0,
+     "use_approved": 0
+    },
+    "missing_state_mismatch": 0
+   },
    "transactions_compared": 118716,
    "transactions_mismatched": 0,
-   "header_keys_only_one_side": 0,
-   "value_keys_only_one_side": 0,
-   "link_state_columns_mismatch": 0,
-   "value_columns_mismatch": 0,
-   "missing_state_mismatch": 0,
-   "deps_mismatch": 0
+   "deps": {
+    "only_a": 0,
+    "only_b": 0,
+    "column_mismatch": {
+     "sido": 0,
+     "bjd": 0,
+     "contract_year": 0,
+     "contract_month": 0,
+     "in_matching": 0,
+     "snapshot_used": 0,
+     "snapshot_via": 0,
+     "tier": 0,
+     "n_exact": 0,
+     "parcel": 0,
+     "match_pk": 0,
+     "zone_status": 0,
+     "zone_base": 0,
+     "zone_stability": 0,
+     "latest_zone1": 0,
+     "slim_land": 0,
+     "pnus": 0
+    }
+   },
+   "identical": true
   }
  },
  "R3": {
   "previous_full": {
-   "seconds": 266.8,
-   "bytes": 364945408,
+   "path": "C:\\CH2\\parcel_master\\versions_test\\built\\A_land.sqlite",
+   "seconds": 306.0,
+   "bytes": 364941312,
    "link_state": {
     "linked": 94130,
     "unlinked": 23369,
     "not_applicable": 1217
    },
    "value_rows": 1057491,
-   "matched": 117499,
-   "reused": true
+   "matched": 117499
   },
   "incremental": {
-   "recomputed": 38586,
-   "removed": 0,
    "causes": {
     "land_area": 771,
     "land_matching": 23513,
@@ -87,6 +350,8 @@
     "tx_added": 0,
     "tx_row_changed": 0
    },
+   "removed": 0,
+   "recomputed": 38586,
    "changed": {
     "value_changed": 16557,
     "recomputed_same": 22015,
@@ -94,14 +359,31 @@
     "link_state_changed": 11
    },
    "orphan_classification": {},
-   "seconds": {
-    "detect": 52.0,
-    "recompute": 144.2,
-    "splice": 30.5,
-    "total": 226.8
+   "detect": {
+    "previous_keys": 118716,
+    "new_keys": 118716,
+    "matching_rows_checked": 117499,
+    "land_linked_rows_checked": 94130,
+    "land_pnus_read": 93985,
+    "land_matching_candidates": 34285,
+    "land_title_parcels_read": 1060267,
+    "detect_seconds": 81.5
    },
-   "bytes": 353718272,
-   "bytes_vs_previous": -11227136,
+   "seconds": {
+    "detect": 82.5,
+    "recompute": 151.4,
+    "splice": 30.7,
+    "total": 264.6
+   },
+   "recompute_stats": {
+    "matched_rows": 38586,
+    "by_sido": {
+     "12": 22112,
+     "43": 10886,
+     "50": 5588
+    }
+   },
+   "bytes": 353714176,
    "untouched": {
     "untouched_keys": 80130,
     "headers_identical": true,
@@ -109,37 +391,110 @@
    }
   },
   "vs_full": {
-   "identical": true,
+   "header": {
+    "rows_a": 118716,
+    "rows_b": 118716,
+    "only_a": 0,
+    "only_b": 0,
+    "duplicate_a": 0,
+    "duplicate_b": 0,
+    "column_mismatch": {
+     "link_state": 0,
+     "link_reason": 0,
+     "link_level": 0,
+     "parcel_resolved": 0,
+     "building_id_state": 0,
+     "bldrgst_pk": 0,
+     "candidate_count": 0,
+     "hold_flags": 0,
+     "code_resolution": 0,
+     "register_snapshot": 0,
+     "register_after_contract": 0,
+     "trait_asof": 0,
+     "rule_version": 0,
+     "unverified": 0,
+     "verification_basis": 0,
+     "source_digest": 0
+    }
+   },
+   "value": {
+    "rows_a": 1057491,
+    "rows_b": 1057491,
+    "only_a": 0,
+    "only_b": 0,
+    "column_mismatch": {
+     "value_num": 0,
+     "value_text": 0,
+     "value_state": 0,
+     "value_level": 0,
+     "source": 0,
+     "basis_date": 0,
+     "timing": 0,
+     "change_risk": 0,
+     "use_approved": 0
+    },
+    "missing_state_mismatch": 0
+   },
    "transactions_compared": 118716,
    "transactions_mismatched": 0,
-   "header_keys_only_one_side": 0,
-   "value_keys_only_one_side": 0,
-   "link_state_columns_mismatch": 0,
-   "value_columns_mismatch": 0,
-   "missing_state_mismatch": 0,
-   "deps_mismatch": 0
+   "deps": {
+    "only_a": 0,
+    "only_b": 0,
+    "column_mismatch": {
+     "sido": 0,
+     "bjd": 0,
+     "contract_year": 0,
+     "contract_month": 0,
+     "in_matching": 0,
+     "snapshot_used": 0,
+     "snapshot_via": 0,
+     "tier": 0,
+     "n_exact": 0,
+     "parcel": 0,
+     "match_pk": 0,
+     "zone_status": 0,
+     "zone_base": 0,
+     "zone_stability": 0,
+     "latest_zone1": 0,
+     "slim_land": 0,
+     "pnus": 0
+    }
+   },
+   "identical": true
   }
  },
  "R4": {
   "previous_full": {
-   "seconds": 257.1,
-   "bytes": 360706048,
+   "path": "C:\\CH2\\parcel_master\\versions_test\\built\\A_tx.sqlite",
+   "seconds": 259.6,
+   "bytes": 360701952,
    "link_state": {
     "linked": 93127,
     "unlinked": 23100,
     "not_applicable": 1204
    },
    "value_rows": 1046043,
-   "matched": 116227,
-   "reused": true
+   "matched": 116227
+  },
+  "full": {
+   "path": "C:\\CH2\\parcel_master\\versions_test\\built\\B_tx_full.sqlite",
+   "seconds": 261.2,
+   "bytes": 360673280,
+   "link_state": {
+    "linked": 93086,
+    "unlinked": 23134,
+    "not_applicable": 1211
+   },
+   "value_rows": 1045980,
+   "matched": 116220
   },
   "incremental": {
-   "recomputed": 1285,
-   "removed": 1285,
    "causes": {
     "tx_added": 1285,
     "tx_row_changed": 0
    },
+   "removed": 1285,
+   "recomputed": 1285,
    "changed": {
     "added": 1285,
     "orphaned": 1285
@@ -149,14 +504,27 @@
     "removed": 577,
     "relocated_or_removed": 605
    },
-   "seconds": {
-    "detect": 1.3,
-    "recompute": 37.4,
-    "splice": 5.5,
-    "total": 44.3
+   "detect": {
+    "previous_keys": 117431,
+    "new_keys": 117431,
+    "matching_rows_checked": 114948,
+    "detect_seconds": 0.4
    },
-   "bytes": 352129024,
-   "bytes_vs_previous": -8577024,
+   "seconds": {
+    "detect": 1.4,
+    "recompute": 38.7,
+    "splice": 5.5,
+    "total": 45.5
+   },
+   "recompute_stats": {
+    "matched_rows": 1272,
+    "by_sido": {
+     "12": 737,
+     "43": 411,
+     "50": 124
+    }
+   },
+   "bytes": 352124928,
    "untouched": {
     "untouched_keys": 116146,
     "headers_identical": true,
@@ -164,27 +532,76 @@
    }
   },
   "vs_full": {
-   "identical": true,
+   "header": {
+    "rows_a": 117431,
+    "rows_b": 117431,
+    "only_a": 0,
+    "only_b": 0,
+    "duplicate_a": 0,
+    "duplicate_b": 0,
+    "column_mismatch": {
+     "link_state": 0,
+     "link_reason": 0,
+     "link_level": 0,
+     "parcel_resolved": 0,
+     "building_id_state": 0,
+     "bldrgst_pk": 0,
+     "candidate_count": 0,
+     "hold_flags": 0,
+     "code_resolution": 0,
+     "register_snapshot": 0,
+     "register_after_contract": 0,
+     "trait_asof": 0,
+     "rule_version": 0,
+     "unverified": 0,
+     "verification_basis": 0,
+     "source_digest": 0
+    }
+   },
+   "value": {
+    "rows_a": 1045980,
+    "rows_b": 1045980,
+    "only_a": 0,
+    "only_b": 0,
+    "column_mismatch": {
+     "value_num": 0,
+     "value_text": 0,
+     "value_state": 0,
+     "value_level": 0,
+     "source": 0,
+     "basis_date": 0,
+     "timing": 0,
+     "change_risk": 0,
+     "use_approved": 0
+    },
+    "missing_state_mismatch": 0
+   },
    "transactions_compared": 117431,
    "transactions_mismatched": 0,
-   "header_keys_only_one_side": 0,
-   "value_keys_only_one_side": 0,
-   "link_state_columns_mismatch": 0,
-   "value_columns_mismatch": 0,
-   "missing_state_mismatch": 0,
-   "deps_mismatch": 0
-  },
-  "full": {
-   "seconds": 263.6,
-   "bytes": 360673280,
-   "link_state": {
-    "linked": 93086,
-    "unlinked": 23134,
-    "not_applicable": 1211
+   "deps": {
+    "only_a": 0,
+    "only_b": 0,
+    "column_mismatch": {
+     "sido": 0,
+     "bjd": 0,
+     "contract_year": 0,
+     "contract_month": 0,
+     "in_matching": 0,
+     "snapshot_used": 0,
+     "snapshot_via": 0,
+     "tier": 0,
+     "n_exact": 0,
+     "parcel": 0,
+     "match_pk": 0,
+     "zone_status": 0,
+     "zone_base": 0,
+     "zone_stability": 0,
+     "latest_zone1": 0,
+     "slim_land": 0,
+     "pnus": 0
+    }
    },
-   "value_rows": 1045980,
-   "matched": 116220,
-   "reused": true
+   "identical": true
   },
   "orphans": {
    "expected": 1285,
@@ -201,22 +618,438 @@
   },
   "removed_keys_left_in_current_table": 0
  },
+ "R5": {
+  "previous_full": {
+   "path": "C:\\CH2\\parcel_master\\versions_test\\built\\A_both.sqlite",
+   "seconds": 181.8,
+   "bytes": 364695552,
+   "link_state": {
+    "linked": 93585,
+    "unlinked": 23914,
+    "not_applicable": 1217
+   },
+   "value_rows": 1057491,
+   "matched": 117499
+  },
+  "register_then_land": [
+   {
+    "causes": {
+     "register_fallback": 25336,
+     "register_kind": 3,
+     "register_time_choice": 1980,
+     "tx_added": 0,
+     "tx_row_changed": 0
+    },
+    "removed": 0,
+    "recomputed": 27054,
+    "changed": {
+     "recomputed_same": 24785,
+     "link_state_changed": 551,
+     "value_changed": 1715,
+     "identification_changed": 3
+    },
+    "orphan_classification": {},
+    "detect": {
+     "previous_keys": 118716,
+     "new_keys": 118716,
+     "matching_rows_checked": 117499,
+     "detect_seconds": 4.0
+    },
+    "seconds": {
+     "detect": 4.9,
+     "recompute": 110.9,
+     "splice": 22.6,
+     "total": 138.4
+    },
+    "recompute_stats": {
+     "matched_rows": 27054,
+     "by_sido": {
+      "12": 16222,
+      "43": 7397,
+      "50": 3435
+     }
+    },
+    "bytes": 349962240,
+    "untouched": {
+     "untouched_keys": 91662,
+     "headers_identical": true,
+     "values_identical": true
+    }
+   },
+   {
+    "causes": {
+     "land_area": 771,
+     "land_matching": 23513,
+     "land_zone": 16111,
+     "tx_added": 0,
+     "tx_row_changed": 0
+    },
+    "removed": 0,
+    "recomputed": 38586,
+    "changed": {
+     "value_changed": 16557,
+     "recomputed_same": 22015,
+     "identification_changed": 3,
+     "link_state_changed": 11
+    },
+    "orphan_classification": {},
+    "detect": {
+     "previous_keys": 118716,
+     "new_keys": 118716,
+     "matching_rows_checked": 117499,
+     "land_linked_rows_checked": 94130,
+     "land_pnus_read": 93985,
+     "land_matching_candidates": 34285,
+     "land_title_parcels_read": 1060267,
+     "detect_seconds": 52.4
+    },
+    "seconds": {
+     "detect": 53.5,
+     "recompute": 153.7,
+     "splice": 30.2,
+     "total": 237.3
+    },
+    "recompute_stats": {
+     "matched_rows": 38586,
+     "by_sido": {
+      "12": 22112,
+      "43": 10886,
+      "50": 5588
+     }
+    },
+    "bytes": 353239040,
+    "untouched": {
+     "untouched_keys": 80130,
+     "headers_identical": true,
+     "values_identical": true
+    }
+   }
+  ],
+  "land_then_register": [
+   {
+    "causes": {
+     "land_area": 699,
+     "land_matching": 22832,
+     "land_zone": 15783,
+     "tx_added": 0,
+     "tx_row_changed": 0
+    },
+    "removed": 0,
+    "recomputed": 37835,
+    "changed": {
+     "value_changed": 16229,
+     "recomputed_same": 21592,
+     "identification_changed": 3,
+     "link_state_changed": 11
+    },
+    "orphan_classification": {},
+    "detect": {
+     "previous_keys": 118716,
+     "new_keys": 118716,
+     "matching_rows_checked": 117499,
+     "land_linked_rows_checked": 93585,
+     "land_pnus_read": 93585,
+     "land_matching_candidates": 34326,
+     "land_title_parcels_read": 1048392,
+     "detect_seconds": 47.1
+    },
+    "seconds": {
+     "detect": 48.1,
+     "recompute": 104.5,
+     "splice": 31.8,
+     "total": 184.4
+    },
+    "recompute_stats": {
+     "matched_rows": 37835,
+     "by_sido": {
+      "12": 21765,
+      "43": 10523,
+      "50": 5547
+     }
+    },
+    "bytes": 353366016,
+    "untouched": {
+     "untouched_keys": 80881,
+     "headers_identical": true,
+     "values_identical": true
+    }
+   },
+   {
+    "causes": {
+     "register_fallback": 25339,
+     "register_kind": 3,
+     "register_time_choice": 1980,
+     "tx_added": 0,
+     "tx_row_changed": 0
+    },
+    "removed": 0,
+    "recomputed": 27057,
+    "changed": {
+     "recomputed_same": 24788,
+     "link_state_changed": 551,
+     "value_changed": 1715,
+     "identification_changed": 3
+    },
+    "orphan_classification": {},
+    "detect": {
+     "previous_keys": 118716,
+     "new_keys": 118716,
+     "matching_rows_checked": 117499,
+     "detect_seconds": 4.1
+    },
+    "seconds": {
+     "detect": 5.1,
+     "recompute": 109.4,
+     "splice": 22.9,
+     "total": 137.4
+    },
+    "recompute_stats": {
+     "matched_rows": 27057,
+     "by_sido": {
+      "12": 16221,
+      "43": 7400,
+      "50": 3436
+     }
+    },
+    "bytes": 349585408,
+    "untouched": {
+     "untouched_keys": 91659,
+     "headers_identical": true,
+     "values_identical": true
+    }
+   }
+  ],
+  "orders_compared": {
+   "header": {
+    "rows_a": 118716,
+    "rows_b": 118716,
+    "only_a": 0,
+    "only_b": 0,
+    "duplicate_a": 0,
+    "duplicate_b": 0,
+    "column_mismatch": {
+     "link_state": 0,
+     "link_reason": 0,
+     "link_level": 0,
+     "parcel_resolved": 0,
+     "building_id_state": 0,
+     "bldrgst_pk": 0,
+     "candidate_count": 0,
+     "hold_flags": 0,
+     "code_resolution": 0,
+     "register_snapshot": 0,
+     "register_after_contract": 0,
+     "trait_asof": 0,
+     "rule_version": 0,
+     "unverified": 0,
+     "verification_basis": 0,
+     "source_digest": 0
+    }
+   },
+   "value": {
+    "rows_a": 1057491,
+    "rows_b": 1057491,
+    "only_a": 0,
+    "only_b": 0,
+    "column_mismatch": {
+     "value_num": 0,
+     "value_text": 0,
+     "value_state": 0,
+     "value_level": 0,
+     "source": 0,
+     "basis_date": 0,
+     "timing": 0,
+     "change_risk": 0,
+     "use_approved": 0
+    },
+    "missing_state_mismatch": 0
+   },
+   "transactions_compared": 118716,
+   "transactions_mismatched": 0,
+   "deps": {
+    "only_a": 0,
+    "only_b": 0,
+    "column_mismatch": {
+     "sido": 0,
+     "bjd": 0,
+     "contract_year": 0,
+     "contract_month": 0,
+     "in_matching": 0,
+     "snapshot_used": 0,
+     "snapshot_via": 0,
+     "tier": 0,
+     "n_exact": 0,
+     "parcel": 0,
+     "match_pk": 0,
+     "zone_status": 0,
+     "zone_base": 0,
+     "zone_stability": 0,
+     "latest_zone1": 0,
+     "slim_land": 0,
+     "pnus": 0
+    }
+   },
+   "identical": true
+  },
+  "register_first_vs_full": {
+   "header": {
+    "rows_a": 118716,
+    "rows_b": 118716,
+    "only_a": 0,
+    "only_b": 0,
+    "duplicate_a": 0,
+    "duplicate_b": 0,
+    "column_mismatch": {
+     "link_state": 0,
+     "link_reason": 0,
+     "link_level": 0,
+     "parcel_resolved": 0,
+     "building_id_state": 0,
+     "bldrgst_pk": 0,
+     "candidate_count": 0,
+     "hold_flags": 0,
+     "code_resolution": 0,
+     "register_snapshot": 0,
+     "register_after_contract": 0,
+     "trait_asof": 0,
+     "rule_version": 0,
+     "unverified": 0,
+     "verification_basis": 0,
+     "source_digest": 0
+    }
+   },
+   "value": {
+    "rows_a": 1057491,
+    "rows_b": 1057491,
+    "only_a": 0,
+    "only_b": 0,
+    "column_mismatch": {
+     "value_num": 0,
+     "value_text": 0,
+     "value_state": 0,
+     "value_level": 0,
+     "source": 0,
+     "basis_date": 0,
+     "timing": 0,
+     "change_risk": 0,
+     "use_approved": 0
+    },
+    "missing_state_mismatch": 0
+   },
+   "transactions_compared": 118716,
+   "transactions_mismatched": 0,
+   "deps": {
+    "only_a": 0,
+    "only_b": 0,
+    "column_mismatch": {
+     "sido": 0,
+     "bjd": 0,
+     "contract_year": 0,
+     "contract_month": 0,
+     "in_matching": 0,
+     "snapshot_used": 0,
+     "snapshot_via": 0,
+     "tier": 0,
+     "n_exact": 0,
+     "parcel": 0,
+     "match_pk": 0,
+     "zone_status": 0,
+     "zone_base": 0,
+     "zone_stability": 0,
+     "latest_zone1": 0,
+     "slim_land": 0,
+     "pnus": 0
+    }
+   },
+   "identical": true
+  },
+  "land_first_vs_full": {
+   "header": {
+    "rows_a": 118716,
+    "rows_b": 118716,
+    "only_a": 0,
+    "only_b": 0,
+    "duplicate_a": 0,
+    "duplicate_b": 0,
+    "column_mismatch": {
+     "link_state": 0,
+     "link_reason": 0,
+     "link_level": 0,
+     "parcel_resolved": 0,
+     "building_id_state": 0,
+     "bldrgst_pk": 0,
+     "candidate_count": 0,
+     "hold_flags": 0,
+     "code_resolution": 0,
+     "register_snapshot": 0,
+     "register_after_contract": 0,
+     "trait_asof": 0,
+     "rule_version": 0,
+     "unverified": 0,
+     "verification_basis": 0,
+     "source_digest": 0
+    }
+   },
+   "value": {
+    "rows_a": 1057491,
+    "rows_b": 1057491,
+    "only_a": 0,
+    "only_b": 0,
+    "column_mismatch": {
+     "value_num": 0,
+     "value_text": 0,
+     "value_state": 0,
+     "value_level": 0,
+     "source": 0,
+     "basis_date": 0,
+     "timing": 0,
+     "change_risk": 0,
+     "use_approved": 0
+    },
+    "missing_state_mismatch": 0
+   },
+   "transactions_compared": 118716,
+   "transactions_mismatched": 0,
+   "deps": {
+    "only_a": 0,
+    "only_b": 0,
+    "column_mismatch": {
+     "sido": 0,
+     "bjd": 0,
+     "contract_year": 0,
+     "contract_month": 0,
+     "in_matching": 0,
+     "snapshot_used": 0,
+     "snapshot_via": 0,
+     "tier": 0,
+     "n_exact": 0,
+     "parcel": 0,
+     "match_pk": 0,
+     "zone_status": 0,
+     "zone_base": 0,
+     "zone_stability": 0,
+     "latest_zone1": 0,
+     "slim_land": 0,
+     "pnus": 0
+    }
+   },
+   "identical": true
+  }
+ },
  "R9": {
   "previous_full": {
-   "seconds": 173.8,
-   "bytes": 350048256,
+   "path": "C:\\CH2\\parcel_master\\versions_test\\built\\A_quarter.sqlite",
+   "seconds": 183.0,
+   "bytes": 350035968,
    "link_state": {
     "linked": 89587,
     "unlinked": 23286,
     "not_applicable": 1132
    },
    "value_rows": 1015857,
-   "matched": 112873,
-   "reused": true
+   "matched": 112873
   },
   "incremental": {
-   "recomputed": 46408,
-   "removed": 1238,
    "causes": {
     "land_area": 656,
     "land_matching": 22594,
@@ -227,6 +1060,8 @@
     "tx_added": 4664,
     "tx_row_changed": 0
    },
+   "removed": 1238,
+   "recomputed": 46408,
    "changed": {
     "value_changed": 12103,
     "recomputed_same": 29203,
@@ -240,14 +1075,31 @@
     "removed": 287,
     "rehashed_candidate": 15
    },
-   "seconds": {
-    "detect": 54.5,
-    "recompute": 148.3,
-    "splice": 35.0,
-    "total": 237.7
+   "detect": {
+    "previous_keys": 114005,
+    "new_keys": 117431,
+    "matching_rows_checked": 111641,
+    "land_linked_rows_checked": 88592,
+    "land_pnus_read": 88592,
+    "land_matching_candidates": 32992,
+    "land_title_parcels_read": 1056155,
+    "detect_seconds": 54.4
    },
-   "bytes": 354832384,
-   "bytes_vs_previous": 4784128,
+   "seconds": {
+    "detect": 55.4,
+    "recompute": 157.4,
+    "splice": 36.4,
+    "total": 249.1
+   },
+   "recompute_stats": {
+    "matched_rows": 46323,
+    "by_sido": {
+     "12": 27480,
+     "43": 13032,
+     "50": 5811
+    }
+   },
+   "bytes": 354828288,
    "untouched": {
     "untouched_keys": 71023,
     "headers_identical": true,
@@ -255,249 +1107,85 @@
    }
   },
   "vs_full": {
-   "identical": true,
+   "header": {
+    "rows_a": 117431,
+    "rows_b": 117431,
+    "only_a": 0,
+    "only_b": 0,
+    "duplicate_a": 0,
+    "duplicate_b": 0,
+    "column_mismatch": {
+     "link_state": 0,
+     "link_reason": 0,
+     "link_level": 0,
+     "parcel_resolved": 0,
+     "building_id_state": 0,
+     "bldrgst_pk": 0,
+     "candidate_count": 0,
+     "hold_flags": 0,
+     "code_resolution": 0,
+     "register_snapshot": 0,
+     "register_after_contract": 0,
+     "trait_asof": 0,
+     "rule_version": 0,
+     "unverified": 0,
+     "verification_basis": 0,
+     "source_digest": 0
+    }
+   },
+   "value": {
+    "rows_a": 1045980,
+    "rows_b": 1045980,
+    "only_a": 0,
+    "only_b": 0,
+    "column_mismatch": {
+     "value_num": 0,
+     "value_text": 0,
+     "value_state": 0,
+     "value_level": 0,
+     "source": 0,
+     "basis_date": 0,
+     "timing": 0,
+     "change_risk": 0,
+     "use_approved": 0
+    },
+    "missing_state_mismatch": 0
+   },
    "transactions_compared": 117431,
    "transactions_mismatched": 0,
-   "header_keys_only_one_side": 0,
-   "value_keys_only_one_side": 0,
-   "link_state_columns_mismatch": 0,
-   "value_columns_mismatch": 0,
-   "missing_state_mismatch": 0,
-   "deps_mismatch": 0
-  }
- },
- "R5": {
-  "previous_full": {
-   "seconds": 185.9,
-   "bytes": 364703744,
-   "link_state": {
-    "linked": 93585,
-    "unlinked": 23914,
-    "not_applicable": 1217
-   },
-   "value_rows": 1057491,
-   "matched": 117499,
-   "reused": true
-  },
-  "register_then_land": [
-   {
-    "recomputed": 27054,
-    "removed": 0,
-    "causes": {
-     "register_fallback": 25336,
-     "register_kind": 3,
-     "register_time_choice": 1980,
-     "tx_added": 0,
-     "tx_row_changed": 0
-    },
-    "changed": {
-     "recomputed_same": 24785,
-     "link_state_changed": 551,
-     "value_changed": 1715,
-     "identification_changed": 3
-    },
-    "orphan_classification": {},
-    "seconds": {
-     "detect": 4.9,
-     "recompute": 107.9,
-     "splice": 22.2,
-     "total": 134.9
-    },
-    "bytes": 349962240,
-    "bytes_vs_previous": -14741504,
-    "untouched": {
-     "untouched_keys": 91662,
-     "headers_identical": true,
-     "values_identical": true
+   "deps": {
+    "only_a": 0,
+    "only_b": 0,
+    "column_mismatch": {
+     "sido": 0,
+     "bjd": 0,
+     "contract_year": 0,
+     "contract_month": 0,
+     "in_matching": 0,
+     "snapshot_used": 0,
+     "snapshot_via": 0,
+     "tier": 0,
+     "n_exact": 0,
+     "parcel": 0,
+     "match_pk": 0,
+     "zone_status": 0,
+     "zone_base": 0,
+     "zone_stability": 0,
+     "latest_zone1": 0,
+     "slim_land": 0,
+     "pnus": 0
     }
    },
-   {
-    "recomputed": 38586,
-    "removed": 0,
-    "causes": {
-     "land_area": 771,
-     "land_matching": 23513,
-     "land_zone": 16111,
-     "tx_added": 0,
-     "tx_row_changed": 0
-    },
-    "changed": {
-     "value_changed": 16557,
-     "recomputed_same": 22015,
-     "identification_changed": 3,
-     "link_state_changed": 11
-    },
-    "orphan_classification": {},
-    "seconds": {
-     "detect": 52.3,
-     "recompute": 144.1,
-     "splice": 29.8,
-     "total": 226.2
-    },
-    "bytes": 353243136,
-    "bytes_vs_previous": -11460608,
-    "untouched": {
-     "untouched_keys": 80130,
-     "headers_identical": true,
-     "values_identical": true
-    }
-   }
-  ],
-  "land_then_register": [
-   {
-    "recomputed": 37835,
-    "removed": 0,
-    "causes": {
-     "land_area": 699,
-     "land_matching": 22832,
-     "land_zone": 15783,
-     "tx_added": 0,
-     "tx_row_changed": 0
-    },
-    "changed": {
-     "value_changed": 16229,
-     "recomputed_same": 21592,
-     "identification_changed": 3,
-     "link_state_changed": 11
-    },
-    "orphan_classification": {},
-    "seconds": {
-     "detect": 49.0,
-     "recompute": 100.1,
-     "splice": 30.3,
-     "total": 179.4
-    },
-    "bytes": 353370112,
-    "bytes_vs_previous": -11333632,
-    "untouched": {
-     "untouched_keys": 80881,
-     "headers_identical": true,
-     "values_identical": true
-    }
-   },
-   {
-    "recomputed": 27057,
-    "removed": 0,
-    "causes": {
-     "register_fallback": 25339,
-     "register_kind": 3,
-     "register_time_choice": 1980,
-     "tx_added": 0,
-     "tx_row_changed": 0
-    },
-    "changed": {
-     "recomputed_same": 24788,
-     "link_state_changed": 551,
-     "value_changed": 1715,
-     "identification_changed": 3
-    },
-    "orphan_classification": {},
-    "seconds": {
-     "detect": 4.8,
-     "recompute": 105.5,
-     "splice": 22.5,
-     "total": 132.8
-    },
-    "bytes": 349585408,
-    "bytes_vs_previous": -15118336,
-    "untouched": {
-     "untouched_keys": 91659,
-     "headers_identical": true,
-     "values_identical": true
-    }
-   }
-  ],
-  "orders_compared": {
-   "identical": true,
-   "transactions_compared": 118716,
-   "transactions_mismatched": 0,
-   "header_keys_only_one_side": 0,
-   "value_keys_only_one_side": 0,
-   "link_state_columns_mismatch": 0,
-   "value_columns_mismatch": 0,
-   "missing_state_mismatch": 0,
-   "deps_mismatch": 0
+   "identical": true
   },
-  "register_first_vs_full": {
-   "identical": true,
-   "transactions_compared": 118716,
-   "transactions_mismatched": 0,
-   "header_keys_only_one_side": 0,
-   "value_keys_only_one_side": 0,
-   "link_state_columns_mismatch": 0,
-   "value_columns_mismatch": 0,
-   "missing_state_mismatch": 0,
-   "deps_mismatch": 0
-  },
-  "land_first_vs_full": {
-   "identical": true,
-   "transactions_compared": 118716,
-   "transactions_mismatched": 0,
-   "header_keys_only_one_side": 0,
-   "value_keys_only_one_side": 0,
-   "link_state_columns_mismatch": 0,
-   "value_columns_mismatch": 0,
-   "missing_state_mismatch": 0,
-   "deps_mismatch": 0
-  }
+  "full_rebuild_bytes": 360673280,
+  "full_rebuild_seconds": 261.2
  },
- "R0": {
-  "full": {
-   "seconds": 304.1,
-   "bytes": 364658688,
-   "link_state": {
-    "linked": 94129,
-    "unlinked": 23370,
-    "not_applicable": 1217
-   },
-   "value_rows": 1057491,
-   "matched": 117499
-  },
-  "vs_step7": {
-   "identical": false,
-   "transactions_compared": 118716,
-   "transactions_mismatched": 2187,
-   "header_keys_only_one_side": 0,
-   "value_keys_only_one_side": 0,
-   "link_state_columns_mismatch": 2187,
-   "value_columns_mismatch": 2178,
-   "missing_state_mismatch": 0,
-   "deps_mismatch": null
-  },
-  "vs_step7_columns": {
-   "hold_flags": 2187,
-   "use_approved": 2178
-  }
- },
- "R1": {
-  "full": {
-   "seconds": 302.7,
-   "bytes": 364658688,
-   "link_state": {
-    "linked": 94129,
-    "unlinked": 23370,
-    "not_applicable": 1217
-   },
-   "value_rows": 1057491,
-   "matched": 117499
-  },
-  "compare": {
-   "identical": true,
-   "transactions_compared": 118716,
-   "transactions_mismatched": 0,
-   "header_keys_only_one_side": 0,
-   "value_keys_only_one_side": 0,
-   "link_state_columns_mismatch": 0,
-   "value_columns_mismatch": 0,
-   "missing_state_mismatch": 0,
-   "deps_mismatch": 0
-  }
- },
- "registry_R6_R7_R8": {
+ "registry": {
   "initial": {
    "gate": {
     "verdict": "needs_waiver",
-    "seconds": 18.0,
+    "seconds": 22.2,
     "checks": {
      "integrity_keys": "pass",
      "integrity_ledger_digest": "pass",
@@ -515,7 +1203,7 @@
    "status": {
     "active": "A_reg",
     "revision": 1,
-    "active_db_sha256": "62aff61dbf684150e7db924bc7145ee52b333f35f021503014a632f3db5f4697"
+    "active_db_sha256": "ce1bb3e721685a112d318b07b97672746d4cf20c9fb61e0750c6d6132a43c0a2"
    }
   },
   "R6": {
@@ -551,14 +1239,14 @@
    },
    "candidate": {
     "incremental_seconds": {
-     "detect": 4.7,
-     "recompute": 104.8,
-     "splice": 22.7,
-     "total": 132.3
+     "detect": 4.8,
+     "recompute": 109.0,
+     "splice": 23.8,
+     "total": 137.6
     },
     "gate": {
      "verdict": "eligible_for_approval",
-     "seconds": 26.5,
+     "seconds": 27.8,
      "checks": {
       "integrity_keys": "pass",
       "integrity_ledger_digest": "pass",
@@ -579,24 +1267,24 @@
    "published": {
     "active": "C_new",
     "revision": 2,
-    "active_db_sha256": "0801ef688ba91f858a698f70bad6ac6eb652c5b3721dc6e19cb235f6ed62d734"
+    "active_db_sha256": "de3d57ea593d9c28d050fcd9e3c98251dddda2504c43bc5e2db11726c24080de"
    },
    "restored": {
     "active": "A_reg",
     "revision": 3,
-    "active_db_sha256": "62aff61dbf684150e7db924bc7145ee52b333f35f021503014a632f3db5f4697"
+    "active_db_sha256": "ce1bb3e721685a112d318b07b97672746d4cf20c9fb61e0750c6d6132a43c0a2"
    },
    "restored_vs_original": true,
    "restored_sha256_matches": true,
    "forward_again": {
     "active": "C_new",
     "revision": 4,
-    "active_db_sha256": "0801ef688ba91f858a698f70bad6ac6eb652c5b3721dc6e19cb235f6ed62d734"
+    "active_db_sha256": "de3d57ea593d9c28d050fcd9e3c98251dddda2504c43bc5e2db11726c24080de"
    },
    "after_revoke": {
     "active": "A_reg",
     "revision": 5,
-    "active_db_sha256": "62aff61dbf684150e7db924bc7145ee52b333f35f021503014a632f3db5f4697"
+    "active_db_sha256": "ce1bb3e721685a112d318b07b97672746d4cf20c9fb61e0750c6d6132a43c0a2"
    },
    "revoked_cannot_publish": {
     "refused": true,
@@ -605,20 +1293,20 @@
   },
   "R8": {
    "candidate": {
-    "seconds": 111.9,
-    "bytes": 363491328,
+    "path": "C:\\CH2\\parcel_master\\versions_test\\built\\C_bad.sqlite",
+    "seconds": 117.9,
+    "bytes": 363479040,
     "link_state": {
      "linked": 91901,
      "unlinked": 25598,
      "not_applicable": 1217
     },
     "value_rows": 1057491,
-    "matched": 117499,
-    "reused": true
+    "matched": 117499
    },
    "gate": {
     "verdict": "blocked",
-    "seconds": 18.5,
+    "seconds": 19.2,
     "checks": {
      "integrity_keys": "pass",
      "integrity_ledger_digest": "pass",
@@ -696,17 +1384,5 @@
    ]
   ],
   "product_unchanged_during_registry_tests": true
- },
- "full_build_reference": {
-  "B_full_seconds": 304.1,
-  "B_full_bytes": 364658688,
-  "B_tx_full_seconds": 263.6,
-  "B_tx_full_bytes": 360673280
- },
- "storage_bytes_test_folder": 6462144512,
- "runs": [
-  "run1: broad land_zone detection (latest_year compared) — identical results, 109,242 recomputed in R3",
-  "run2: latest_year excluded — identical, 38,586 recomputed in R3",
-  "run3 (this report): + VACUUM after splice, partial file removed on failure"
- ]
+ }
 }

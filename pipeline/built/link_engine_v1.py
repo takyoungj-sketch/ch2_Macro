@@ -10,8 +10,10 @@ and building attributes) and 7 (contract shape), with three points made explicit
   - a tie decision reads each candidate's register row from the edition the transaction used
     (4-E read whichever stored version came last);
   - the register-kind flag looks only at editions inside the definition;
-  - a second zone at the contract-time base is kept (zone2_contract_year, zone_count_contract_year);
-    the first zone is then flagged multi_zone_contract_year and not marked usable as a representative.
+  - a second zone at the contract-time base is kept (zone2_contract_year, zone_count_contract_year).
+    ENGINE_V2 (D-078): the first zone stays the representative and keeps its normal use_approved; multi-zone
+    is identified by zone_count_contract_year = 2, not by a hold flag. ENGINE_V1 held it (use_approved 0,
+    hold flag multi_zone_contract_year).
 Read-only on every source. Writes only to the SQLite path it is given.
 """
 
@@ -46,7 +48,7 @@ from built.replay_honam_bridge import BRIDGED, load_bridge  # noqa: E402
 from built.resolve_tied_bldrgst_pk_v1 import RAW, building_attrs, decide  # noqa: E402
 from built.snapshot_policy import apply_snapshot_policy  # noqa: E402
 
-ENGINE_RULE = RULE_VERSION + "+ENGINE_V1"
+ENGINE_RULE = RULE_VERSION + "+ENGINE_V2"
 ZONE_EXTRA = ("zone2_contract_year", "zone_count_contract_year")
 VARIABLES_V11 = VARIABLES + ZONE_EXTRA
 ALL_SNAPSHOTS = ("2024-09", "2025-07", "2026-07")
@@ -381,8 +383,6 @@ def compose(ledger_rows: pd.DataFrame, parts: dict, defn: Defn) -> tuple[list, l
             z2 = labels2.get(str(nn(z.get(key, {}).get("zone2_code")) or ""), "") if zc[4] == "confirmed" else ""
             if zc[4] == "confirmed":
                 if z2:
-                    by_key[key]["zone_contract_year"] = (*zc[:10], 0)
-                    h[10] = ",".join(x for x in (h[10], "multi_zone_contract_year") if x)
                     by_key[key]["zone2_contract_year"] = (key, "zone2_contract_year", None, z2, "confirmed", "parcel",
                                                           zc[6], zc[7], zc[8], zc[9], 0)
                 else:

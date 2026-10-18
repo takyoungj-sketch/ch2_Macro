@@ -1,0 +1,116 @@
+{
+ "plan_step": "5 (collective) — slim price shadow, product mart untouched",
+ "rule": "slim_latest_year_v1",
+ "latest_year": 2026,
+ "shadow_file": "outside repo (C:\\CH2\\parcel_master\\shadow)",
+ "diag_file": "outside repo (verification)",
+ "candidates": 255038,
+ "stats_keys_without_pnu": {
+  "rowhouse": 108,
+  "officetel": 50,
+  "apartment": 128
+ },
+ "mart_rows": 225077,
+ "shadow_supplied": 250741,
+ "shadow_state_by_asset": {
+  "apartment": {
+   "held_conflict": 1,
+   "held_stale": 475,
+   "pnu_not_in_slim": 181,
+   "supplied": 45118,
+   "year_2015": 1,
+   "year_2016": 10,
+   "year_2017": 2,
+   "year_2018": 5,
+   "year_2019": 4,
+   "year_2020": 19,
+   "year_2021": 43,
+   "year_2022": 15,
+   "year_2023": 16,
+   "year_2024": 43,
+   "year_2025": 318,
+   "year_2026": 45118,
+   "year_none": 181
+  },
+  "officetel": {
+   "held_stale": 121,
+   "pnu_not_in_slim": 31,
+   "supplied": 13200,
+   "year_2017": 1,
+   "year_2018": 2,
+   "year_2020": 1,
+   "year_2021": 3,
+   "year_2022": 2,
+   "year_2023": 2,
+   "year_2024": 2,
+   "year_2025": 108,
+   "year_2026": 13200,
+   "year_none": 31
+  },
+  "rowhouse": {
+   "held_conflict": 2,
+   "held_stale": 2548,
+   "pnu_not_in_slim": 938,
+   "supplied": 192423,
+   "year_2013": 1,
+   "year_2015": 2,
+   "year_2016": 5,
+   "year_2017": 6,
+   "year_2018": 2,
+   "year_2019": 9,
+   "year_2020": 92,
+   "year_2021": 521,
+   "year_2022": 201,
+   "year_2023": 185,
+   "year_2024": 362,
+   "year_2025": 1164,
+   "year_2026": 192423,
+   "year_none": 938
+  }
+ },
+ "vs_mart": {
+  "apartment": {
+   "different_price": 2,
+   "new_held_conflict": 1,
+   "new_held_stale": 473,
+   "new_pnu_not_in_slim": 180,
+   "new_supplied": 3555,
+   "not_supplied_held_stale": 2,
+   "not_supplied_pnu_not_in_slim": 1,
+   "rep_pnu_changed": 5,
+   "rep_pnu_same": 41561,
+   "same": 41561
+  },
+  "officetel": {
+   "different_price": 18,
+   "new_held_stale": 120,
+   "new_pnu_not_in_slim": 29,
+   "new_supplied": 1258,
+   "not_supplied_held_stale": 1,
+   "not_supplied_pnu_not_in_slim": 2,
+   "rep_pnu_changed": 26,
+   "rep_pnu_same": 11919,
+   "same": 11924
+  },
+  "reasons": {
+   "different_price:mart_rep_pnu_differs_from_current": 286,
+   "different_price:slim_and_parcel_land_price_disagree": 4,
+   "not_supplied_held_stale:": 13,
+   "not_supplied_pnu_not_in_slim:bridge_held_not_1to1": 13,
+   "not_supplied_pnu_not_in_slim:not_in_slim": 100
+  },
+  "rowhouse": {
+   "different_price": 270,
+   "new_held_conflict": 2,
+   "new_held_stale": 2538,
+   "new_pnu_not_in_slim": 828,
+   "new_supplied": 20977,
+   "not_supplied_held_stale": 10,
+   "not_supplied_pnu_not_in_slim": 110,
+   "rep_pnu_changed": 402,
+   "rep_pnu_same": 171164,
+   "same": 171176
+  }
+ },
+ "seconds": 551.7
+}

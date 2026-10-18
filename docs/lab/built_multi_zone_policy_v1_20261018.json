@@ -3,27 +3,32 @@
  "population": "built_transactions 2019+ (engine v1, editions 2024-09·2025-07·2026-07, all slim releases)",
  "rule": "included = zone_contract_year confirmed at contract-year base; multi = zone2 present at that base; adjacent-year observations stay excluded (existing missing-value rule)",
  "version": {
-  "seconds": 672.0,
+  "seconds": 674.9,
   "keys": 672764,
   "link_state": {
    "linked": 507116,
    "unlinked": 156480,
    "not_applicable": 9168
   },
-  "bytes": 2054373376
+  "bytes": 2054184960
+ },
+ "check": {
+  "rule_version": "BUILT_A1A2_TIME_FALLBACK+LEDGER_SUPPLY_PROPOSED+CONTRACT_V1+ENGINE_V2",
+  "multi_zone_hold_flags": 0,
+  "included_not_use_approved": 0
  },
  "groups": {
   "all": {
    "adjacent_year_excluded": 2832,
    "adjacent_year_excluded_multi": 92,
-   "included_multi": 9566,
-   "included_single": 486039,
+   "included_multi": 9568,
+   "included_single": 486037,
    "not_applicable": 9168,
    "unlinked": 156480,
    "zone_missing": 8587,
    "included": 495605,
    "linked": 507116,
-   "multi_share_of_included_pct": 1.93,
+   "multi_share_of_included_pct": 1.931,
    "included_share_of_linked_pct": 97.73
   },
   "asset:commercial": {
@@ -42,8 +47,8 @@
   "asset:detached": {
    "adjacent_year_excluded": 1695,
    "adjacent_year_excluded_multi": 54,
-   "included_multi": 6419,
-   "included_single": 358808,
+   "included_multi": 6421,
+   "included_single": 358806,
    "not_applicable": 445,
    "unlinked": 108705,
    "zone_missing": 5784,
@@ -93,14 +98,14 @@
   },
   "sido:26": {
    "adjacent_year_excluded": 91,
-   "included_multi": 488,
-   "included_single": 28610,
+   "included_multi": 489,
+   "included_single": 28609,
    "not_applicable": 600,
    "unlinked": 11949,
    "zone_missing": 232,
    "included": 29098,
    "linked": 29421,
-   "multi_share_of_included_pct": 1.677,
+   "multi_share_of_included_pct": 1.681,
    "included_share_of_linked_pct": 98.902
   },
   "sido:27": {
@@ -247,14 +252,14 @@
   "sido:51": {
    "adjacent_year_excluded": 200,
    "adjacent_year_excluded_multi": 11,
-   "included_multi": 711,
-   "included_single": 29815,
+   "included_multi": 712,
+   "included_single": 29814,
    "not_applicable": 485,
    "unlinked": 5614,
    "zone_missing": 101,
    "included": 30526,
    "linked": 30838,
-   "multi_share_of_included_pct": 2.329,
+   "multi_share_of_included_pct": 2.332,
    "included_share_of_linked_pct": 98.988
   },
   "sido:52": {
@@ -292,14 +297,14 @@
   "year:2020": {
    "adjacent_year_excluded": 466,
    "adjacent_year_excluded_multi": 17,
-   "included_multi": 1524,
-   "included_single": 87287,
+   "included_multi": 1526,
+   "included_single": 87285,
    "not_applicable": 6,
    "unlinked": 38640,
    "zone_missing": 2571,
    "included": 88811,
    "linked": 91865,
-   "multi_share_of_included_pct": 1.716,
+   "multi_share_of_included_pct": 1.718,
    "included_share_of_linked_pct": 96.676
   },
   "year:2021": {

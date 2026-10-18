@@ -38,6 +38,9 @@ from built.replay_honam_bridge import load_bridge  # noqa: E402
 
 OUT_ROWS = VERIFY / "built_zone_asof_v1_rows.pkl"
 EMPTY_LABELS = {"", '""', "지정되지않음"}
+# Releases can disagree on zone2 for the same base (one has it, another "00"); the coded value wins so the
+# result does not depend on set order.
+EMPTY_ZONE2_CODES = {None, "", "0", "00"}
 # Older land trait years keep the old province code (LAND_CODE_HISTORY_LAYER V1 prefix swaps).
 # Other code changes (e.g. 부천·화성 일반구, 인천 개편, 군위) have no approved bridge and stay unknown.
 OLD_SIDO_PREFIX = {"51": "42", "52": "45"}
@@ -77,7 +80,10 @@ def classify(b: dict, year: int, month: int) -> dict:
 
     def one(key):
         vals = b[key]
-        return None if len({v[0] for v in vals}) != 1 else next(iter(vals))
+        if len({v[0] for v in vals}) != 1:
+            return None
+        z2 = sorted(v[1] for v in vals if v[1] not in EMPTY_ZONE2_CODES)
+        return (next(iter(vals))[0], z2[0] if z2 else None)
 
     same = sorted(k for k in b if k[0] == year and k[1] <= month)
     if same:

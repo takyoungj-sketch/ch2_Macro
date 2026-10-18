@@ -1,0 +1,90 @@
+{
+ "plan_step": "6 (rent) — adopted design, shadow supply, product untouched",
+ "rule": "rent_link_v1",
+ "window": "contract_year >= 2019, is_valid",
+ "shadow_file": "outside repo (C:\\CH2\\parcel_master\\shadow)",
+ "headers": 14721683,
+ "duplicate_transaction_hashes": 0,
+ "header_by_asset": {
+  "apartment": {
+   "linked:collective_sale": 6471821,
+   "linked:rent_only": 1114253
+  },
+  "detached": {
+   "not_applicable:detached_masked_lot_no_gross_area": 3630282
+  },
+  "officetel": {
+   "linked:collective_sale": 1481566,
+   "linked:rent_only": 190323
+  },
+  "rowhouse": {
+   "linked:collective_sale": 1217429,
+   "linked:rent_only": 616009
+  }
+ },
+ "key_layer_by_asset": {
+  "apartment": {
+   "keys_collective_sale": 40713,
+   "keys_rent_only": 4009,
+   "rows_collective_sale": 6471821,
+   "rows_collective_sale_price_held_conflict": 18,
+   "rows_collective_sale_price_held_stale": 116583,
+   "rows_collective_sale_price_no_collective_price_row": 28095,
+   "rows_collective_sale_price_pnu_not_in_slim": 35106,
+   "rows_collective_sale_price_supplied": 6292019,
+   "rows_collective_sale_state_aggregated": 152362,
+   "rows_collective_sale_state_confirmed": 5272804,
+   "rows_collective_sale_state_no_attribute_row": 12130,
+   "rows_collective_sale_state_unlinked": 84745,
+   "rows_collective_sale_state_weak_match": 949780,
+   "rows_multi_bjd": 55221,
+   "rows_price_use_approved": 7321672,
+   "rows_rent_only": 1114253,
+   "rows_rent_only_price_held_stale": 59006,
+   "rows_rent_only_price_no_pnu": 5888,
+   "rows_rent_only_price_pnu_not_in_slim": 19706,
+   "rows_rent_only_price_supplied": 1029653,
+   "rows_rent_only_state_rent_only_unverified": 1114253
+  },
+  "officetel": {
+   "keys_collective_sale": 11899,
+   "keys_rent_only": 6272,
+   "rows_collective_sale": 1481566,
+   "rows_collective_sale_price_held_stale": 33718,
+   "rows_collective_sale_price_no_collective_price_row": 15292,
+   "rows_collective_sale_price_pnu_not_in_slim": 3574,
+   "rows_collective_sale_price_supplied": 1428982,
+   "rows_collective_sale_state_no_attribute_row": 51696,
+   "rows_collective_sale_state_weak_match": 1429870,
+   "rows_multi_bjd": 1950,
+   "rows_price_use_approved": 1617649,
+   "rows_rent_only": 190323,
+   "rows_rent_only_price_held_stale": 780,
+   "rows_rent_only_price_no_pnu": 504,
+   "rows_rent_only_price_pnu_not_in_slim": 372,
+   "rows_rent_only_price_supplied": 188667,
+   "rows_rent_only_state_rent_only_unverified": 190323
+  },
+  "rowhouse": {
+   "keys_collective_sale": 161570,
+   "keys_rent_only": 50062,
+   "rows_collective_sale": 1217429,
+   "rows_collective_sale_price_held_conflict": 3,
+   "rows_collective_sale_price_held_stale": 5899,
+   "rows_collective_sale_price_no_collective_price_row": 24783,
+   "rows_collective_sale_price_pnu_not_in_slim": 8346,
+   "rows_collective_sale_price_supplied": 1178398,
+   "rows_collective_sale_state_no_attribute_row": 43926,
+   "rows_collective_sale_state_weak_match": 1173503,
+   "rows_multi_bjd": 20390,
+   "rows_price_use_approved": 1786794,
+   "rows_rent_only": 616009,
+   "rows_rent_only_price_held_stale": 7269,
+   "rows_rent_only_price_no_pnu": 85,
+   "rows_rent_only_price_pnu_not_in_slim": 259,
+   "rows_rent_only_price_supplied": 608396,
+   "rows_rent_only_state_rent_only_unverified": 616009
+  }
+ },
+ "seconds": 142.2
+}
