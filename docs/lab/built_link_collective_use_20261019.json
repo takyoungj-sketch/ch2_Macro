@@ -1,0 +1,65 @@
+{
+  "plan_step": "4-C follow-up — main use of titles linked as collective register",
+  "source": "sample frame built_link_quality_v1_rows (register == 집합, linked)",
+  "linked": 507116,
+  "collective": 402,
+  "collective_share_of_linked": 0.000793,
+  "by_asset_rows": {
+    "단독다가구": 298,
+    "상업업무": 95,
+    "공장창고": 9
+  },
+  "by_asset_use": {
+    "공장창고": {
+      "제2종근린생활시설": 3,
+      "공동주택": 3,
+      "판매시설": 1,
+      "공장": 2
+    },
+    "단독다가구": {
+      "공동주택": 254,
+      "제2종근린생활시설": 12,
+      "업무시설": 3,
+      "판매시설": 1,
+      "제1종근린생활시설": 10,
+      "단독주택": 16,
+      "위락시설": 1,
+      "표제부 용도 불일치": 1
+    },
+    "상업업무": {
+      "공동주택": 40,
+      "제1종근린생활시설": 17,
+      "제2종근린생활시설": 20,
+      "업무시설": 8,
+      "의료시설": 1,
+      "노유자시설": 1,
+      "숙박시설": 4,
+      "위락시설": 2,
+      "표제부 용도 불일치": 1,
+      "교육연구시설": 1
+    }
+  },
+  "use_total": {
+    "공동주택": 297,
+    "제1종근린생활시설": 27,
+    "제2종근린생활시설": 35,
+    "업무시설": 11,
+    "판매시설": 2,
+    "의료시설": 1,
+    "단독주택": 16,
+    "노유자시설": 1,
+    "숙박시설": 4,
+    "공장": 2,
+    "위락시설": 3,
+    "표제부 용도 불일치": 2,
+    "교육연구시설": 1
+  },
+  "apartment_title": 297,
+  "apartment_share_of_collective": 0.7388,
+  "apartment_share_of_linked": 0.000586,
+  "hold_all_collective_share_of_linked": 0.000793,
+  "pk_not_in_ledger": 0,
+  "register_code_not_only_collective": 0,
+  "decision": "D-079",
+  "note": "Counts only. D-079 holds the 297 apartment-title rows out of confirmed supply. On 2026-10-19 the local built enrichment table marked 296 of them collective_apartment_d079. One hash was not in that table and was not inserted. VPS was not updated."
+}

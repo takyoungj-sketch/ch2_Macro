@@ -81,13 +81,25 @@ def _continuous_range(work: pd.DataFrame, col: str) -> tuple[float, float] | Non
     return float(s.min()), float(s.max())
 
 
-def _prepare_work(df: pd.DataFrame, req: CommercialRegressionRequest) -> pd.DataFrame:
+def _prepare_work(df: pd.DataFrame, req: CommercialRegressionRequest) -> tuple[pd.DataFrame, list[str]]:
+    warnings: list[str] = []
     work = df.copy()
     mask = work["building_age"].isna() & work["building_year"].notna() & work["contract_year"].notna()
     work.loc[mask, "building_age"] = (
         work.loc[mask, "contract_year"].astype(float) - work.loc[mask, "building_year"].astype(float)
     )
     work = work.dropna(subset=["price"])
+    if req.variables.assessed_land_price:
+        if "assessed_land_price" not in work.columns:
+            work["assessed_land_price"] = np.nan
+        price = pd.to_numeric(work["assessed_land_price"], errors="coerce")
+        keep = price > 0
+        n_drop = int((~keep).sum())
+        work = work.loc[keep].copy()
+        if not work.empty:
+            work["assessed_land_price"] = price.loc[keep].astype(float)
+        if n_drop:
+            warnings.append(f"개별공시지가 결측 {n_drop}건 제외")
     if req.exclude_outliers_iqr and len(work) >= 4:
         up = work["unit_price"].astype(float)
         q1, q3 = up.quantile(0.25), up.quantile(0.75)
@@ -95,7 +107,7 @@ def _prepare_work(df: pd.DataFrame, req: CommercialRegressionRequest) -> pd.Data
         mult = req.outlier_iqr_multiplier
         lo, hi = q1 - mult * iqr, q3 + mult * iqr
         work = work[(up >= lo) & (up <= hi)]
-    return work
+    return work, warnings
 
 
 def _build_design_matrix(
@@ -139,6 +151,13 @@ def _build_design_matrix(
             parts.append(work[[col]])
             labels[col] = f"cluster {ck_name}"
             meta.cluster_fe_map[ck] = col
+
+    if req.variables.assessed_land_price and "assessed_land_price" in work.columns and work["assessed_land_price"].notna().any():
+        parts.append(work[["assessed_land_price"]].astype(float))
+        labels["assessed_land_price"] = "개별공시지가 (원/㎡)"
+        rng = _continuous_range(work, "assessed_land_price")
+        if rng:
+            meta.continuous_ranges["assessed_land_price"] = rng
 
     if req.variables.gross_area:
         parts.append(work[["gross_area"]].astype(float))
@@ -245,6 +264,9 @@ def _meta_to_predict_options(
     if req.variables.road_code and "road_code" in meta.continuous_ranges:
         lo, hi = meta.continuous_ranges["road_code"]
         opts.road_code = ContinuousRange(name="road_code", min=lo, max=hi)
+    if req.variables.assessed_land_price and "assessed_land_price" in meta.continuous_ranges:
+        lo, hi = meta.continuous_ranges["assessed_land_price"]
+        opts.assessed_land_price = ContinuousRange(name="assessed_land_price", min=lo, max=hi)
 
     if req.variables.zone_type and meta.zone_categories:
         opts.zone_types = meta.zone_categories
@@ -269,12 +291,14 @@ def _extrapolation_warnings(
         "building_age": "연식",
         "floor": "층",
         "road_code": "도로폭(m)",
+        "assessed_land_price": "개별공시지가(원/㎡)",
     }
     for key, val in [
         ("gross_area", inputs.gross_area),
         ("building_age", inputs.building_age),
         ("floor", inputs.floor),
         ("road_code", inputs.road_code),
+        ("assessed_land_price", inputs.assessed_land_price),
     ]:
         if val is None or key not in meta.continuous_ranges:
             continue
@@ -311,6 +335,10 @@ def _inputs_to_x_row(
         row["building_age"] = float(inputs.building_age)
     if req.variables.road_code and inputs.road_code is not None:
         row["road_code"] = float(inputs.road_code)
+    if req.variables.assessed_land_price:
+        if inputs.assessed_land_price is None or float(inputs.assessed_land_price) <= 0:
+            raise ValueError("개별공시지가(원/㎡)를 입력해 주세요.")
+        row["assessed_land_price"] = float(inputs.assessed_land_price)
 
     if req.variables.floor and meta.floor_dummy_cols:
         mx = float(meta.max_floor or inputs.floor or 1)
@@ -347,6 +375,10 @@ def _run_regression_core(
     cohort_mode: bool = False,
     cluster_display_labels: dict[str, str] | None = None,
 ) -> tuple[sm.regression.linear_model.RegressionResultsWrapper | None, pd.DataFrame, CommercialRegressionDesignMeta, CommercialRegressionResponse]:
+    # 집합상가·집합공장 대표필지 공시지가가 없다. 요청에 켜져 있어도 쓰지 않는다.
+    req = req.model_copy(
+        update={"variables": req.variables.model_copy(update={"assessed_land_price": False})}
+    )
     if df.empty:
         resp = CommercialRegressionResponse(
             cluster_key="",
@@ -356,14 +388,14 @@ def _run_regression_core(
         )
         return None, pd.DataFrame(), CommercialRegressionDesignMeta(), resp
 
-    work = _prepare_work(df, req)
+    work, prep_warnings = _prepare_work(df, req)
     n = len(work)
     if n < 5:
         resp = CommercialRegressionResponse(
             cluster_key="",
             display_label="",
             n=n,
-            warnings=[f"n={n} — 회귀 최소 표본 부족"],
+            warnings=[*prep_warnings, f"n={n} — 회귀 최소 표본 부족"],
         )
         return None, pd.DataFrame(), CommercialRegressionDesignMeta(), resp
 
@@ -379,13 +411,13 @@ def _run_regression_core(
             cluster_key="",
             display_label="",
             n=n,
-            warnings=base_warnings + ["선택 변수 없음"],
+            warnings=[*prep_warnings, *base_warnings, "선택 변수 없음"],
         )
         return None, pd.DataFrame(), meta, resp
 
     X_const = sm.add_constant(X, has_constant="add")
 
-    warnings = list(base_warnings)
+    warnings = [*prep_warnings, *base_warnings]
     model_type = req.model_type
     if model_type == "log" and (y <= 0).any():
         warnings.append("price≤0 거래가 있어 선형모델로 대체")
@@ -485,13 +517,16 @@ def suggest_commercial_regression(
     from app.collective.regression.recommend import search_block_models
 
     pool = commercial_recommendation_pool(is_shop=is_shop)
-    work = _prepare_work(df, req)
+    work, _prep_warnings = _prepare_work(df, req.model_copy(
+        update={"variables": req.variables.model_copy(update={"assessed_land_price": False})}
+    ))
     if len(work) < 5:
         return []
 
     def build_xy(blocks: list[str]):
         update = {name: False for name in _COMMERCIAL_SEARCH_FLAGS}
         update["floor_mode"] = req.variables.floor_mode
+        update["assessed_land_price"] = False
         for name in blocks:
             if name in update:
                 update[name] = True

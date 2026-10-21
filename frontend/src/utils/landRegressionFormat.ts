@@ -41,6 +41,7 @@ export function coefficientSortKey(name: string): [number, number, string] {
   if (name === "log_area") return [1, 0, name];
   if (name === "area_sqm") return [1, 1, name];
   if (name === "year_trend") return [2, 0, name];
+  if (name === "log_assessed_land_price") return [2, 1, name];
   if (name.startsWith("road_")) return [3, 0, name];
   if (name.startsWith("deal_")) return [4, 0, name];
   if (name === "partial_own") return [5, 0, name];
@@ -111,6 +112,13 @@ export function interpretLandCoefficient(
       return `연도 1년 진행(평균 대비) 시 단가 약 ${fmtPctFromLog(coef)}`;
     }
     return `연도 1년 진행 시 단가 ${fmtUnitPrice(coef)}`;
+  }
+
+  if (name === "log_assessed_land_price") {
+    if (modelType === "log") {
+      return `개별공시지가 1% 높을 때 단가 약 ${fmtPctFromLog(coef)}`;
+    }
+    return `log(개별공시지가) 1 증가 시 단가 ${fmtUnitPrice(coef)}`;
   }
 
   if (name === "partial_own") {

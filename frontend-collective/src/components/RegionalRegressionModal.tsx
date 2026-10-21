@@ -18,6 +18,7 @@ import {
 } from "../api/regionalRegressionClient";
 import type { StatsWindowYears } from "./StatsWindowToggle";
 import CollectiveRegressionEquation from "./CollectiveRegressionEquation";
+import ZoneCaution from "./ZoneCaution";
 import CollectiveModelRecommend, { blocksMatch } from "./CollectiveModelRecommend";
 import DraggableModalShell from "./DraggableModalShell";
 import {
@@ -999,6 +1000,7 @@ export default function RegionalRegressionModal(props: Props) {
                 </div>
               </details>
             )}
+            {data.coefficients.length > 0 && <ZoneCaution />}
 
             {data.n >= 20 && (
               <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">

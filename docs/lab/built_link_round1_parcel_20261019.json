@@ -1,0 +1,349 @@
+{
+  "plan_step": "4-C round 1 — parcel identity only",
+  "scope": "확인차수 1. Building identity not scored. KAIS 주용도 is from the transaction filing, not a physical survey.",
+  "worksheet": "outside repo (verification/built_link_sample_v1/worksheet_작업중.csv)",
+  "row_file": "outside repo (verification/built_link_sample_v1/round1_parcel_compare_20261019.csv)",
+  "backtick_stripped_for_compare": 9,
+  "worksheet_file_not_modified": true,
+  "round1": 110,
+  "match": 96,
+  "differ": 12,
+  "unable": 2,
+  "unable_reason": {
+    "거래 안보임": 2
+  },
+  "raw_match_rate": 0.8889,
+  "weighted": {
+    "checked": 108,
+    "correct": 96,
+    "strata": 13,
+    "estimate": 0.9628,
+    "ci95": [
+      0.9286,
+      0.9971
+    ]
+  },
+  "by_stratum": {
+    "기타(동률·변경·원장없음)": {
+      "population": 3155,
+      "round1": 5,
+      "match": 4,
+      "differ": 1,
+      "unable": 0,
+      "wilson95": [
+        0.3755,
+        0.9638
+      ]
+    },
+    "일반|공장창고|광역시": {
+      "population": 3547,
+      "round1": 10,
+      "match": 8,
+      "differ": 2,
+      "unable": 0,
+      "wilson95": [
+        0.4902,
+        0.9433
+      ]
+    },
+    "일반|공장창고|도": {
+      "population": 18208,
+      "round1": 10,
+      "match": 10,
+      "differ": 0,
+      "unable": 0,
+      "wilson95": [
+        0.7225,
+        1.0
+      ]
+    },
+    "일반|공장창고|수도권": {
+      "population": 11139,
+      "round1": 10,
+      "match": 10,
+      "differ": 0,
+      "unable": 0,
+      "wilson95": [
+        0.7225,
+        1.0
+      ]
+    },
+    "일반|단독다가구|광역시": {
+      "population": 57750,
+      "round1": 10,
+      "match": 7,
+      "differ": 3,
+      "unable": 0,
+      "wilson95": [
+        0.3968,
+        0.8922
+      ]
+    },
+    "일반|단독다가구|도": {
+      "population": 215938,
+      "round1": 10,
+      "match": 10,
+      "differ": 0,
+      "unable": 0,
+      "wilson95": [
+        0.7225,
+        1.0
+      ]
+    },
+    "일반|단독다가구|수도권": {
+      "population": 96675,
+      "round1": 10,
+      "match": 10,
+      "differ": 0,
+      "unable": 0,
+      "wilson95": [
+        0.7225,
+        1.0
+      ]
+    },
+    "일반|상업업무|광역시": {
+      "population": 15894,
+      "round1": 10,
+      "match": 10,
+      "differ": 0,
+      "unable": 0,
+      "wilson95": [
+        0.7225,
+        1.0
+      ]
+    },
+    "일반|상업업무|도": {
+      "population": 44864,
+      "round1": 10,
+      "match": 10,
+      "differ": 0,
+      "unable": 0,
+      "wilson95": [
+        0.7225,
+        1.0
+      ]
+    },
+    "일반|상업업무|수도권": {
+      "population": 39544,
+      "round1": 10,
+      "match": 10,
+      "differ": 0,
+      "unable": 0,
+      "wilson95": [
+        0.7225,
+        1.0
+      ]
+    },
+    "집합|공장창고": {
+      "population": 9,
+      "round1": 5,
+      "match": 2,
+      "differ": 1,
+      "unable": 2,
+      "wilson95": [
+        0.2077,
+        0.9385
+      ]
+    },
+    "집합|단독다가구": {
+      "population": 298,
+      "round1": 5,
+      "match": 3,
+      "differ": 2,
+      "unable": 0,
+      "wilson95": [
+        0.2307,
+        0.8824
+      ]
+    },
+    "집합|상업업무": {
+      "population": 95,
+      "round1": 5,
+      "match": 2,
+      "differ": 3,
+      "unable": 0,
+      "wilson95": [
+        0.1176,
+        0.7693
+      ]
+    }
+  },
+  "by_register_group": {
+    "기타": {
+      "checked": 5,
+      "correct": 4,
+      "strata": 1,
+      "estimate": 0.8,
+      "ci95": [
+        0.4083,
+        1
+      ],
+      "round1": 5,
+      "unable": 0
+    },
+    "일반": {
+      "checked": 90,
+      "correct": 85,
+      "strata": 9,
+      "estimate": 0.9642,
+      "ci95": [
+        0.9298,
+        0.9986
+      ],
+      "round1": 90,
+      "unable": 0
+    },
+    "집합": {
+      "checked": 13,
+      "correct": 7,
+      "strata": 3,
+      "estimate": 0.5542,
+      "ci95": [
+        0.1843,
+        0.9242
+      ],
+      "round1": 15,
+      "unable": 2
+    }
+  },
+  "land_building_memo": {
+    "rows": 9,
+    "match": 3,
+    "differ": 6,
+    "unable": 0,
+    "by_stratum": {
+      "필지다름": {
+        "집합|공장창고": 1,
+        "집합|단독다가구": 2,
+        "집합|상업업무": 3
+      },
+      "필지일치": {
+        "집합|공장창고": 0,
+        "집합|단독다가구": 3,
+        "집합|상업업무": 0
+      }
+    }
+  },
+  "differ_relation": {
+    "본번이 다름": 10,
+    "본번 같고 부번만 다름": 2,
+    "본번 같고 부번만 다름_번호": ["20", "213"]
+  },
+  "concentration": {
+    "general_capital_and_province": {"checked": 60, "match": 60},
+    "general_metro_city": {"checked": 30, "match": 25, "commercial_match": "10/10", "detached_match": "7/10", "factory_match": "8/10"},
+    "collective_checked": {"checked": 13, "match": 7, "unable": 2},
+    "differ_tier": "A1"
+  },
+  "differ_rows": [
+    {
+      "번호": "18",
+      "묶음": "일반|공장창고|광역시",
+      "tier": "A1",
+      "register": "일반",
+      "asset_type": "factory",
+      "sido": "26",
+      "토지건물메모": false
+    },
+    {
+      "번호": "191",
+      "묶음": "집합|공장창고",
+      "tier": "A1",
+      "register": "집합",
+      "asset_type": "factory",
+      "sido": "43",
+      "토지건물메모": true
+    },
+    {
+      "번호": "20",
+      "묶음": "일반|공장창고|광역시",
+      "tier": "A1",
+      "register": "일반",
+      "asset_type": "factory",
+      "sido": "31",
+      "토지건물메모": false
+    },
+    {
+      "번호": "200",
+      "묶음": "집합|단독다가구",
+      "tier": "A1",
+      "register": "집합",
+      "asset_type": "detached",
+      "sido": "11",
+      "토지건물메모": true
+    },
+    {
+      "번호": "203",
+      "묶음": "집합|단독다가구",
+      "tier": "A1",
+      "register": "집합",
+      "asset_type": "detached",
+      "sido": "11",
+      "토지건물메모": true
+    },
+    {
+      "번호": "210",
+      "묶음": "집합|상업업무",
+      "tier": "A1",
+      "register": "집합",
+      "asset_type": "commercial",
+      "sido": "11",
+      "토지건물메모": true
+    },
+    {
+      "번호": "211",
+      "묶음": "집합|상업업무",
+      "tier": "A1",
+      "register": "집합",
+      "asset_type": "commercial",
+      "sido": "11",
+      "토지건물메모": true
+    },
+    {
+      "번호": "213",
+      "묶음": "집합|상업업무",
+      "tier": "A1",
+      "register": "집합",
+      "asset_type": "commercial",
+      "sido": "11",
+      "토지건물메모": true
+    },
+    {
+      "번호": "4",
+      "묶음": "기타(동률·변경·원장없음)",
+      "tier": "A1",
+      "register": "동률",
+      "asset_type": "detached",
+      "sido": "28",
+      "토지건물메모": false
+    },
+    {
+      "번호": "75",
+      "묶음": "일반|단독다가구|광역시",
+      "tier": "A1",
+      "register": "일반",
+      "asset_type": "detached",
+      "sido": "27",
+      "토지건물메모": false
+    },
+    {
+      "번호": "76",
+      "묶음": "일반|단독다가구|광역시",
+      "tier": "A1",
+      "register": "일반",
+      "asset_type": "detached",
+      "sido": "27",
+      "토지건물메모": false
+    },
+    {
+      "번호": "79",
+      "묶음": "일반|단독다가구|광역시",
+      "tier": "A1",
+      "register": "일반",
+      "asset_type": "detached",
+      "sido": "26",
+      "토지건물메모": false
+    }
+  ],
+  "note": "Parcel match is KAIS lot versus the recovered lot. Same lot is not proof of the same building. National weight uses stratum populations. No engine or database was changed."
+}

@@ -15,12 +15,7 @@ import {
   fetchCohortHistogram,
   type BuildingStatsRow,
 } from "../api/client";
-import type {
-  AssetSelectorType,
-  AssetType,
-  DanjiAttributesResponse,
-  DanjiQualityFlag,
-} from "../types";
+import type { AssetSelectorType, AssetType, DanjiAttributesResponse } from "../types";
 import { assetTypeLabel } from "../types";
 import { CH2_AI_ACTION_EVENT, type AiScreenAction } from "@ch2/ai-assistant/aiActions";
 import BuildingRegressionPanel from "./BuildingRegressionPanel";
@@ -166,20 +161,6 @@ function danjiNumber(v: number | null | undefined, maximumFractionDigits = 0) {
   return v.toLocaleString("ko-KR", { maximumFractionDigits });
 }
 
-/** 품질 플래그가 지목한 필드는 값 옆에 경고를 붙여 회귀 결측 처리를 알린다. */
-function DanjiFieldWarning({ flags }: { flags: DanjiQualityFlag[] }) {
-  if (flags.length === 0) return null;
-  const detail = flags.map((f) => (f.detail ? `${f.label}: ${f.detail}` : f.label)).join(" / ");
-  return (
-    <span
-      className="ml-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400"
-      title={`${detail} — 이 값은 회귀에서 결측으로 처리됩니다.`}
-    >
-      ⚠ 결측
-    </span>
-  );
-}
-
 function DanjiBadge({ label, tone }: { label: string; tone: "slate" | "amber" }) {
   return (
     <span
@@ -238,13 +219,6 @@ function DanjiAttributesPanel({
 }) {
   const { match, builder, brand, scale, structure, classification } = data;
   const risky = !match.usable_for_regression;
-  const flagsByField = new Map<string, DanjiQualityFlag[]>();
-  for (const flag of data.quality_flags ?? []) {
-    for (const field of flag.affected_fields ?? []) {
-      flagsByField.set(field, [...(flagsByField.get(field) ?? []), flag]);
-    }
-  }
-  const fieldFlags = (field: string) => flagsByField.get(field) ?? [];
 
   const banner = (
     <div
@@ -356,22 +330,6 @@ function DanjiAttributesPanel({
         </div>
       )}
 
-      {data.quality_flags.length > 0 && (
-        <div className="rounded border border-amber-300 bg-amber-50 px-2 py-1.5 dark:border-amber-500/50 dark:bg-amber-500/10">
-          <p className="text-[10px] font-semibold text-amber-800 dark:text-amber-300">
-            원본 이상값 {data.quality_flags.length}건 — 값은 원본 그대로 표시합니다
-          </p>
-          <ul className="mt-1 space-y-0.5 text-[10px] text-amber-800 dark:text-amber-200">
-            {data.quality_flags.map((flag) => (
-              <li key={flag.code}>
-                <span className="font-semibold">{flag.label}</span>
-                {flag.detail ? ` — ${flag.detail}` : ""}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       <div className="modal-table-wrap">
         <p className={DANJI_SECTION_TITLE}>
           시공사·브랜드
@@ -437,7 +395,6 @@ function DanjiAttributesPanel({
                 ) : (
                   danjiNumber(scale?.households)
                 )}
-                <DanjiFieldWarning flags={fieldFlags("households")} />
               </td>
             </tr>
             <tr>
@@ -452,28 +409,24 @@ function DanjiAttributesPanel({
               <th className={DANJI_TH}>동수</th>
               <td className={clsx(DANJI_TD, "tabular-nums")}>
                 {danjiNumber(scale?.dong_count)}
-                <DanjiFieldWarning flags={fieldFlags("dong_count")} />
               </td>
             </tr>
             <tr>
               <th className={DANJI_TH}>최고층수</th>
               <td className={clsx(DANJI_TD, "tabular-nums")}>
                 {danjiNumber(scale?.max_floor)}
-                <DanjiFieldWarning flags={fieldFlags("max_floor")} />
               </td>
             </tr>
             <tr>
               <th className={DANJI_TH}>총 주차대수</th>
               <td className={clsx(DANJI_TD, "tabular-nums")}>
                 {danjiNumber(scale?.parking_total)}
-                <DanjiFieldWarning flags={fieldFlags("parking_total")} />
               </td>
             </tr>
             <tr>
               <th className={DANJI_TH}>세대당 주차</th>
               <td className={clsx(DANJI_TD, "tabular-nums")}>
                 {danjiNumber(scale?.parking_per_household, 3)}
-                <DanjiFieldWarning flags={fieldFlags("parking_per_household")} />
               </td>
             </tr>
             <tr>

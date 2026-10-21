@@ -113,6 +113,18 @@ function formatWon(value: number): string {
   return value.toLocaleString("ko-KR", { maximumFractionDigits: digits });
 }
 
+/** 보강을 켠 연결 행은 대장 지번을 호버로 보여 준다. 칸의 공개 번지는 그대로다. */
+export function landTxLotHoverTitle(
+  r: MatrixCellTransactionItem,
+  enrich: boolean,
+): string | undefined {
+  const recovered = enrich ? r.recovered_lot?.trim() : "";
+  if (recovered) {
+    return r.trait_unverified ? `${recovered} · 검증 전` : recovered;
+  }
+  return r.lot_display?.trim() || undefined;
+}
+
 /** 보강 열. 행이 없으면 아직 계산 전이다. */
 export function formatTraitStatus(r: MatrixCellTransactionItem): string {
   if (!r.trait_link_status) return "미계산";

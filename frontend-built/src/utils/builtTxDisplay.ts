@@ -72,6 +72,7 @@ export type BuiltTxSortKey =
   | "zone_type"
   | "building_use"
   | "structure_group"
+  | "assessed_land_price"
   | "price"
   | "gross_area"
   | "land_area"
@@ -118,6 +119,8 @@ export function builtTxSortValue(
       return r.building_use?.trim() || "—";
     case "structure_group":
       return r.structure_group?.trim() || "—";
+    case "assessed_land_price":
+      return r.assessed_land_price ?? null;
     case "price":
       return r.price;
     case "gross_area":

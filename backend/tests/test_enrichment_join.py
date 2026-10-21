@@ -23,5 +23,7 @@ def test_wrap_sql_strips_coarse_and_지역_suffix():
     assert "s.zone_type IN" not in sql
     assert "z IN (" in sql
     assert "zone_type_filled" in sql
+    assert "e.zone_contract_year" in sql
+    assert "e.assessed_land_price" in sql
     assert "zone_type_first" in sql
     assert sql.count("zone_type_filled") == 1

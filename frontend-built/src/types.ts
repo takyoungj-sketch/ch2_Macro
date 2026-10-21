@@ -37,6 +37,8 @@ export interface BuiltTransactionRow {
   is_partial_ownership?: boolean;
   partial_ownership_label?: string | null;
   structure_group?: string | null;
+  assessed_land_price?: number | null;
+  assessed_land_price_year?: number | null;
   match_tier?: string | null;
   match_rule?: string | null;
   zone_type_ledger?: string | null;
@@ -69,6 +71,7 @@ export interface RegressionVariableSpec {
   zone_type_dummy: boolean;
   building_use_dummy: boolean;
   structure_dummy: boolean;
+  assessed_land_price: boolean;
   asset_type_dummy: boolean;
   region_leaf_dummy: boolean;
 }

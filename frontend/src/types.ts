@@ -308,6 +308,8 @@ export interface MatrixCellTransactionItem {
   official_price_year?: number | null;
   trait_asof?: string | null;
   trait_unverified?: boolean | null;
+  /** 일치·표기 정규화의 대장 지번. 보강을 켠 호버에만 쓴다. */
+  recovered_lot?: string | null;
 }
 
 /** POST /paid/matrix-cell-transactions 요청 */
@@ -342,6 +344,7 @@ export interface LandRegressionVariables {
   partial_ownership: boolean;
   year_trend: boolean;
   beopjungri_fe: boolean;
+  assessed_land_price?: boolean;
 }
 
 export interface LandRegressionRequest extends MatrixYearlyRequest {
@@ -447,6 +450,7 @@ export interface LandRegressionPredictRequest extends LandRegressionRequest {
   deal_type?: string | null;
   partial_ownership?: boolean;
   beopjungri_name?: string | null;
+  assessed_land_price?: number | null;
 }
 
 export interface LandRegressionPredictResponse {

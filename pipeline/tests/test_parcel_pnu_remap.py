@@ -9,7 +9,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from parcel_master.load_title_pilot import cache_path
 from parcel_master.paths import ALL_SIDO, PILOT_SIDO
-from parcel_master.pnu import pick_incheon_old_bjd, remap_pnu_bjd, remap_pnu_old_sido
+from parcel_master.pnu import (
+    lot_text_from_pnu,
+    pick_incheon_old_bjd,
+    remap_pnu_bjd,
+    remap_pnu_old_sido,
+)
+
+
+def test_lot_text_from_pnu_keeps_only_the_lot():
+    assert lot_text_from_pnu("1150010800100140162") == "14-162"
+    assert lot_text_from_pnu("1150010800200140000") == "산14"
+    assert lot_text_from_pnu("short") is None
+    assert lot_text_from_pnu("1150010800300140000") is None
 
 
 def test_remap_skips_seoul():

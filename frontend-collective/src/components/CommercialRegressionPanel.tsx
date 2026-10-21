@@ -433,7 +433,6 @@ export default function CommercialRegressionPanel({
   }, [canRun]);
 
   const varOptions = (
-    // 세대수·주차·공시지가·구조는 주거 단지(K-apt) 통합회귀 전용. cluster에는 없음.
     [
       ["gross_area", "연면적"],
       ["building_age", "연식"],

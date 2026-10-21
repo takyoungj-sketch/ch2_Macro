@@ -59,6 +59,7 @@ function buildCols(assetType: AssetType, enrich: boolean): ColDef[] {
   });
   if (enrich) {
     cols.push({ key: "structure_group", label: "구조", filterType: "select" });
+    cols.push({ key: "assessed_land_price", label: "공시지가", filterType: "sort-only" });
   }
   cols.push(
     { key: "price", label: "금액(만)", align: "right", filterType: "sort-only" },
@@ -628,6 +629,13 @@ export default function BuiltTransactionTable({
                     {enrich && (
                       <td className="border px-2 py-1 whitespace-nowrap">
                         {formatBuiltTxCell(r.structure_group)}
+                      </td>
+                    )}
+                    {enrich && (
+                      <td className="border px-2 py-1 text-right tabular-nums whitespace-nowrap">
+                        {r.assessed_land_price == null
+                          ? "—"
+                          : `${fmtNum(r.assessed_land_price)}${r.assessed_land_price_year ? ` (${r.assessed_land_price_year})` : ""}`}
                       </td>
                     )}
                     <td className="border px-2 py-1 text-right tabular-nums">{fmtNum(r.price)}</td>

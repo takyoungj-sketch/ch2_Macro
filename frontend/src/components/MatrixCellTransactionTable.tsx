@@ -9,6 +9,7 @@ import {
   formatTraitOfficialPrice,
   formatTraitStatus,
   landTxAdminCols,
+  landTxLotHoverTitle,
   landTxSortValue,
   type LandTxSortDir,
   type LandTxSortKey,
@@ -723,9 +724,15 @@ export default function MatrixCellTransactionTable({
                     </td>
                     <td
                       className="border border-slate-200 px-1 py-1 max-w-[50px] w-[50px] truncate whitespace-nowrap"
-                      title={r.lot_display?.trim() || undefined}
                     >
-                      {formatLandTxCell(r.lot_display)}
+                      <span
+                        className={
+                          showTraitEnrich && r.recovered_lot?.trim() ? "cursor-help" : undefined
+                        }
+                        title={landTxLotHoverTitle(r, showTraitEnrich)}
+                      >
+                        {formatLandTxCell(r.lot_display)}
+                      </span>
                     </td>
                     {showLandCategory && (
                       <td

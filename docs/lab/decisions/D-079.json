@@ -1,0 +1,25 @@
+{
+  "id": "D-079",
+  "topic": "복합 연결 — 집합 대장의 공동주택 표제부는 확정 연결로 쓰지 않음",
+  "date": "2026-10-19",
+  "status": "confirmed",
+  "background": "복합 거래 연결 507,116건 중 대장 구분이 집합인 것은 402건이다. 1차 독립 표본에서 필지가 다르고 건축물대장상 다른 건물로 확인된 5건은 모두 그 집합 대장의 공동주택 표제부였다. 집합 402건 중 주용도가 공동주택인 것은 297건(단독다가구 254, 상업업무 40, 공장창고 3)이다.",
+  "decision": "1) 대장 구분이 집합이고 표제부 주용도가 공동주택인 연결은 확정된 건물 연결로 쓰지 않는다. 필지가 표본에서 일치했어도 같은 유형이면 포함한다. 2) 집합이지만 주용도가 공동주택이 아닌 105건은 이 보류에 넣지 않는다. 3) 해당 행을 삭제하거나 연결 엔진을 수정하지 않는다. 4) 제품 공급과 운영 DB에 반영하는 것은 별도 승인 뒤에 한다. 지금은 규칙 기록만 한다.",
+  "rationale": "확인된 오류 유형은 집합 공동주택 표제부를 복합 거래에 붙인 경우다. 확인되지 않은 105건까지 빼면 맞을 수 있는 연결을 같이 버린다. 297건은 전체 연결의 0.059%라 전국 비율을 거의 바꾸지 않고, 확인된 유형만 확정값에서 빼는 결정이다.",
+  "counts": {
+    "linked": 507116,
+    "collective": 402,
+    "collective_apartment_title": 297,
+    "collective_other_use": 105,
+    "round1_confirmed_different_building": 5
+  },
+  "revisit": "집합이면서 공동주택이 아닌 연결에서 같은 오류가 확인되면 보류 범위를 다시 정한다. 제품 반영은 별도 승인이다.",
+  "supply_flag": "collective_apartment_d079 on the test supply builder. Building variables for those rows have use_approved 0. The national test shadow file was not rebuilt.",
+  "product_note": "2026-10-19 local built_transaction_enrichment only. 296 of 297 rows were already in the table and are marked collective_apartment_d079. One hash was absent and was not inserted. VPS was not updated. See lab/approvals/built_ENGINE_V2_20261019.json.",
+  "related": [
+    "lab/BUILT_LINK_QUALITY_V1.md",
+    "lab/built_link_collective_use_20261019.json",
+    "lab/built_link_round1_differ_building_20261019.json",
+    "lab/LEDGER_PAUSE_HANDOFF_20261018.md"
+  ]
+}

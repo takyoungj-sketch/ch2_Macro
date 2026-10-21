@@ -138,6 +138,19 @@ def pick_incheon_old_bjd(current_code: str, old_codes: list[str]) -> str | None:
     return None
 
 
+def lot_text_from_pnu(pnu: str | None) -> str | None:
+    """PNU의 본번·부번만. 산이면 앞에 산. 법정동 코드는 넣지 않는다."""
+    parts = split_pnu(pnu or "")
+    if not parts or parts["gbn"] not in {"1", "2"}:
+        return None
+    bun = int(parts["bun"])
+    ji = int(parts["ji"])
+    body = str(bun) if ji == 0 else f"{bun}-{ji}"
+    if parts["gbn"] == "2":
+        return f"산{body}"
+    return body
+
+
 def split_pnu(pnu: str) -> dict[str, str] | None:
     p = (pnu or "").strip()
     if len(p) != 19 or not p.isdigit():

@@ -36,6 +36,7 @@ def test_wrap_filters_display_zone():
     assert "c.canon = ANY(:zone_types)" in sql
     assert "built_transaction_enrichment" in sql
     assert "e.match_rule" in sql
+    assert "e.supply_hold IS NULL" in sql
     assert "AS recovered_lot" in sql
 
 

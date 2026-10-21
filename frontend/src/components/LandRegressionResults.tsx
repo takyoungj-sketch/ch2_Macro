@@ -6,6 +6,7 @@ import {
 } from "../utils/landRegressionFormat";
 import LandRegressionEquation from "./LandRegressionEquation";
 import LandRegressionEffectsTable from "./LandRegressionEffectsTable";
+import ZoneCaution from "./ZoneCaution";
 
 export default function LandRegressionResults({ data }: { data: LandRegressionResponse }) {
   const sigCount = data.significant_count ?? countSignificantCoefficients(data.coefficients);
@@ -56,6 +57,7 @@ export default function LandRegressionResults({ data }: { data: LandRegressionRe
           <LandRegressionEffectsTable coefficients={data.coefficients} modelType={data.model_type} />
         </details>
       )}
+      <ZoneCaution />
     </div>
   );
 }

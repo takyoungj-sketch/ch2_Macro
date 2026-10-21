@@ -6,6 +6,7 @@ const COEF_LABELS: Record<string, string> = {
   land_area: "대지면적",
   building_age: "연식",
   road_code: "도로",
+  assessed_land_price: "개별공시지가",
 };
 
 const ASSET_TYPE_LABELS: Record<string, string> = {
@@ -61,7 +62,7 @@ function dummyReferenceDisplay(name: string, opts?: PredictOptions | null): stri
 export function formatCoefName(name: string, assetType?: AssetType, responseScale?: ResponseScale): string {
   if (COEF_LABELS[name]) {
     const base = COEF_LABELS[name];
-    if (responseScale === "loglog" && (name === "gross_area" || name === "land_area")) {
+    if (name === "assessed_land_price" || (responseScale === "loglog" && (name === "gross_area" || name === "land_area"))) {
       return `log(${base})`;
     }
     return base;
@@ -86,7 +87,7 @@ export function shortCoefName(name: string, assetType?: AssetType, responseScale
   if (name === "const") return "절편";
   if (name in COEF_LABELS && name !== "const") {
     const base = COEF_LABELS[name];
-    if (responseScale === "loglog" && (name === "gross_area" || name === "land_area")) {
+    if (name === "assessed_land_price" || (responseScale === "loglog" && (name === "gross_area" || name === "land_area"))) {
       return `log(${base})`;
     }
     return base;

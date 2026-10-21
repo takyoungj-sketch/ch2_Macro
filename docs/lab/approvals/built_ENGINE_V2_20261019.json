@@ -1,0 +1,44 @@
+{
+  "template": "quality_gate_approval_v1",
+  "domain": "built",
+  "version": "N_full_ENGINE_V2",
+  "version_db": "outside repo (versions_test/built/N_full_ENGINE_V2.sqlite)",
+  "version_db_sha256": "",
+  "gate_report": "docs/lab/built_link_gate_engine_v2_20261018.json",
+  "gate_report_sha256": "a0bb09acf8a8fbbc97d6efb7e583f81b5d07d696d83a7e5002e23e3d62e00429",
+  "gate_verdict": "needs_waiver",
+  "waivers": [
+    {
+      "check": "previous_result_orphans",
+      "reason": "285 rows exist only in the frozen enrichment. The transactions are gone from the ledger (rehash candidates 100, other parcel only 73, removed 112).",
+      "scope": "Marked supply_hold=orphaned on the local enrichment table. Rows were not deleted."
+    },
+    {
+      "check": "previous_result_agreement.zone_latest",
+      "reason": "Latest-zone agreement is 93.34%. Most differences are representative-label choice. Against commercial and factory source labels the new value matches more often (97.6% versus 86.4%).",
+      "scope": "zone_labels was not updated. Contract-year and latest zones were written to zone_contract_year and zone_latest. The screen still reads zone_labels."
+    }
+  ],
+  "sample_accuracy": {
+    "round": 1,
+    "checked": 108,
+    "match": 96,
+    "differ": 12,
+    "unable": 2,
+    "weighted_estimate": 0.9628,
+    "ci95": [0.9286, 0.9971],
+    "pass_line": "not recorded"
+  },
+  "scope_of_approval": "product_switch",
+  "approved_by": "user",
+  "approved_on": "2026-10-19",
+  "conditions": [
+    "Local built_stats.built_transaction_enrichment only. VPS and other product databases were not written.",
+    "Screen zone text stays on zone_labels. New zone values are separate columns.",
+    "D-079: 297 collective-apartment links are not confirmed building values. 296 were already in the table and are supply_hold=collective_apartment_d079. One was absent and was not inserted. Their building columns were not overwritten.",
+    "285 orphans are supply_hold=orphaned. They were not deleted.",
+    "68 engine rows with link_state unlinked (63) or not_applicable (5) stay in the table as supply_hold=engine_unlinked. The product join skips every non-null supply_hold.",
+    "Backup table: built_transaction_enrichment_pre_switch_20261019. Row count 498568 before, 507468 after (8900 inserts). zone_labels checksum unchanged on the pre-switch rows.",
+    "The national test shadow SQLite was not rebuilt. version_db_sha256 is still empty."
+  ]
+}

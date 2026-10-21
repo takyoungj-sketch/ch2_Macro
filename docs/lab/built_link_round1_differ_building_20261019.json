@@ -1,0 +1,36 @@
+{
+  "plan_step": "4-C round 1 — classify 12 parcel mismatches against the building ledger",
+  "rule": "same management number; else same approval year and gross area within 10 percent is a candidate; else a different building; no title on the KAIS lot means no counterpart. Attached lots are not in the ledger, so a missing title is not proof of an attached lot.",
+  "rows": 12,
+  "by_class": {
+    "상대 건물 없음": 7,
+    "다른 건물": 5,
+    "같은 대장 건물": 0,
+    "같은 건물 후보": 0
+  },
+  "by_class_and_group": {
+    "다른 건물": {
+      "집합|단독다가구": 2,
+      "집합|상업업무": 2,
+      "집합|공장창고": 1
+    },
+    "상대 건물 없음": {
+      "일반|단독다가구|광역시": 3,
+      "일반|공장창고|광역시": 2,
+      "집합|상업업무": 1,
+      "기타(동률·변경·원장없음)": 1
+    }
+  },
+  "numbers": {
+    "다른 건물": ["191", "200", "203", "211", "213"],
+    "상대 건물 없음": ["18", "20", "210", "75", "76", "79", "4"]
+  },
+  "different_building": {
+    "linked_use": "공동주택 5/5",
+    "kais_use": {"단독주택": 3, "위험물저장및처리시설": 1, "노유자시설": 1},
+    "area_within_10pct_but_approval_year_differs": ["191"]
+  },
+  "row4": "tied case. Stored management number is not a ledger key. The linked lot has 51 titles and the KAIS lot has none, so the class is no counterpart.",
+  "row_file": "outside repo (verification/built_link_sample_v1/round1_differ_building_20261019.csv)",
+  "ledger_modified": false
+}

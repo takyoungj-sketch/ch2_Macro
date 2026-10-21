@@ -861,7 +861,7 @@ def cluster_regression(
             SELECT price, unit_price, gross_area, land_area, building_age, building_year, floor,
                    zone_type, building_use, road_width_label, road_code, addr4,
                    contract_year, contract_month,
-                   asset_type
+                   asset_type, building_key
             FROM collective_commercial_transactions
             WHERE cluster_key = :cluster_key AND {where}
             """
@@ -930,7 +930,7 @@ def cluster_regression_predict(
             SELECT price, unit_price, gross_area, land_area, building_age, building_year, floor,
                    zone_type, building_use, road_width_label, road_code, addr4,
                    contract_year, contract_month,
-                   asset_type
+                   asset_type, building_key
             FROM collective_commercial_transactions
             WHERE cluster_key = :cluster_key AND {where}
             """

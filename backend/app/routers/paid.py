@@ -1810,7 +1810,8 @@ def _fetch_matrix_cell_filtered_transactions(
                tl.official_price_won AS official_price_won,
                tl.price_year AS official_price_year,
                tl.trait_asof AS trait_asof,
-               tl.unverified AS trait_unverified"""
+               tl.unverified AS trait_unverified,
+               NULLIF(btrim(tl.recovered_lot), '') AS recovered_lot"""
         trait_join = """
         LEFT JOIN land_transaction_trait_link tl
           ON tl.transaction_hash = lt.transaction_hash"""
@@ -1885,6 +1886,7 @@ def _fetch_matrix_cell_filtered_transactions(
                         "official_price_year": m.get("official_price_year"),
                         "trait_asof": m.get("trait_asof"),
                         "trait_unverified": m.get("trait_unverified"),
+                        "recovered_lot": m.get("recovered_lot"),
                     }
                 )
             )
@@ -2082,8 +2084,12 @@ def matrix_cell_regression(
     - 독립변수: 면적(log/linear), 도로조건 더미, 거래유형 더미, 지분 더미, 연도 추세, 법정동 FE
     """
     from app.land_regression import run_land_regression
+    from app.land_trait_link import table_ready
 
-    filtered = _fetch_matrix_cell_filtered_transactions(body, db)
+    want_price = bool(body.variables.assessed_land_price)
+    filtered = _fetch_matrix_cell_filtered_transactions(
+        body, db, trait_enrich=want_price and table_ready(db)
+    )
     return run_land_regression(filtered, body)
 
 
@@ -2114,6 +2120,10 @@ def matrix_cell_regression_predict(
     단위: 단가(만원/㎡). log 모형은 exp 역변환.
     """
     from app.land_regression import predict_land_regression
+    from app.land_trait_link import table_ready
 
-    filtered = _fetch_matrix_cell_filtered_transactions(body, db)
+    want_price = bool(body.variables.assessed_land_price)
+    filtered = _fetch_matrix_cell_filtered_transactions(
+        body, db, trait_enrich=want_price and table_ready(db)
+    )
     return predict_land_regression(filtered, body)

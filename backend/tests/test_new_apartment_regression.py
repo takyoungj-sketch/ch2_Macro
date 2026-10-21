@@ -294,7 +294,7 @@ def test_pick_ald155_prefers_toi():
 
     from app.collective.new_apt.dataset import pick_ald155_dirs
 
-    out = pick_ald155_dirs(Path("e:/ch2/ch2_Macro/raw"), "43")
+    out = pick_ald155_dirs(Path("D:/ch2/ch2_Macro/raw"), "43")
     assert all("43" in p.name for p in out)
     if out:
         assert any("토이계" in str(p) for p in out)

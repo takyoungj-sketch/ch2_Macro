@@ -391,6 +391,7 @@ export interface CommercialPredictOptions {
   building_use_reference?: string | null;
   road_width_labels?: string[];
   road_width_reference?: string | null;
+  assessed_land_price?: ContinuousRange | null;
 }
 
 export interface CommercialRegressionPredictInputs {
@@ -401,6 +402,7 @@ export interface CommercialRegressionPredictInputs {
   zone_type?: string | null;
   building_use?: string | null;
   road_width_label?: string | null;
+  assessed_land_price?: number | null;
 }
 
 export interface CommercialRegressionPredictResponse {

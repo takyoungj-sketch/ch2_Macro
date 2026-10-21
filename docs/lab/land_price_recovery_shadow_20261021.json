@@ -1,0 +1,2742 @@
+{
+  "scope": "충북",
+  "not_national": true,
+  "contract_date_from": "2019-01-01",
+  "identity_rule_changed": false,
+  "parcel_confirmed_by_agree": false,
+  "mean_imputation": false,
+  "tables_written": [],
+  "formula": "log(단가) ~ log(면적) + 연도 + 용도지역 + 지목 + 도로조건 + 거래유형 + 시군구",
+  "price_unit": "원/㎡",
+  "unit_price_unit": "만원/㎡",
+  "cv": {
+    "folds": 5,
+    "seed": 20261021,
+    "metric": "Duan smearing CV-MAPE"
+  },
+  "reference_levels": {
+    "zone": "계관",
+    "jimok": "전",
+    "road": "8미만",
+    "deal": "-",
+    "sigungu": "43770"
+  },
+  "sample": {
+    "sigungu": 14,
+    "rows": 184457,
+    "strict": 137744,
+    "strict_same_year": 137719,
+    "strict_previous_year": 25,
+    "agree_only": 1959,
+    "agree_candidate_median": 2.0,
+    "past2_only": 10,
+    "future_only": 0,
+    "still_missing_after_agree": 44754,
+    "still_missing_after_past2": 46703
+  },
+  "distribution": {
+    "all": {
+      "n": 184457,
+      "area_p25": 284.0,
+      "area_p50": 767.0,
+      "area_p75": 1726.0,
+      "unit_price_p25": 2.7,
+      "unit_price_p50": 5.1,
+      "unit_price_p75": 12.1,
+      "jimok_share_at_least_1pct": {
+        "전": 0.3451,
+        "답": 0.3043,
+        "임": 0.1333,
+        "대": 0.1123,
+        "도": 0.0296,
+        "과": 0.0219,
+        "잡": 0.0191
+      }
+    },
+    "strict": {
+      "n": 137744,
+      "area_p25": 353.0,
+      "area_p50": 913.0,
+      "area_p75": 1904.0,
+      "unit_price_p25": 2.5,
+      "unit_price_p50": 4.5,
+      "unit_price_p75": 9.9,
+      "jimok_share_at_least_1pct": {
+        "전": 0.3508,
+        "답": 0.3432,
+        "임": 0.1213,
+        "대": 0.0985,
+        "도": 0.0248,
+        "과": 0.0201,
+        "잡": 0.0112
+      }
+    },
+    "agree_only": {
+      "n": 1959,
+      "area_p25": 249.0,
+      "area_p50": 522.0,
+      "area_p75": 1029.5,
+      "unit_price_p25": 3.1,
+      "unit_price_p50": 7.0,
+      "unit_price_p75": 21.7,
+      "jimok_share_at_least_1pct": {
+        "전": 0.2797,
+        "답": 0.2435,
+        "대": 0.2129,
+        "임": 0.1092,
+        "도": 0.0796,
+        "과": 0.0281,
+        "잡": 0.0133
+      }
+    },
+    "past2_only": {
+      "n": 10,
+      "area_p25": 18.5,
+      "area_p50": 78.5,
+      "area_p75": 177.8,
+      "unit_price_p25": 33.3,
+      "unit_price_p50": 61.15,
+      "unit_price_p75": 65.0,
+      "jimok_share_at_least_1pct": {
+        "답": 0.3,
+        "대": 0.3,
+        "전": 0.3,
+        "임": 0.1
+      }
+    },
+    "future_only": {
+      "n": 0
+    }
+  },
+  "models": [
+    {
+      "arm": "baseline",
+      "note": "가격 없음. 전체 표본.",
+      "error": {
+        "n": 184457,
+        "folds": 5,
+        "cv_mape": 121.38
+      },
+      "fit": {
+        "n": 184457,
+        "adj_r2": 0.6024,
+        "coefficients": {
+          "const": {
+            "coef": 2.953,
+            "pvalue": 0.0
+          },
+          "log_area": {
+            "coef": -0.142,
+            "pvalue": 0.0
+          },
+          "zone_1전": {
+            "coef": 0.6805,
+            "pvalue": 0.0
+          },
+          "zone_1주": {
+            "coef": 1.103,
+            "pvalue": 0.0
+          },
+          "zone_2전": {
+            "coef": 1.3143,
+            "pvalue": 0.0
+          },
+          "zone_2주": {
+            "coef": 1.4143,
+            "pvalue": 0.0
+          },
+          "zone_개제": {
+            "coef": -0.538,
+            "pvalue": 0.0
+          },
+          "zone_근상": {
+            "coef": 1.5782,
+            "pvalue": 0.0
+          },
+          "zone_기타": {
+            "coef": 1.6843,
+            "pvalue": 0.0
+          },
+          "zone_농림": {
+            "coef": -0.5533,
+            "pvalue": 0.0
+          },
+          "zone_보관": {
+            "coef": -0.447,
+            "pvalue": 0.0
+          },
+          "zone_보녹": {
+            "coef": 0.3425,
+            "pvalue": 0.0
+          },
+          "zone_생관": {
+            "coef": -0.4025,
+            "pvalue": 0.0
+          },
+          "zone_생녹": {
+            "coef": 0.0726,
+            "pvalue": 0.0
+          },
+          "zone_일공": {
+            "coef": 0.4205,
+            "pvalue": 0.0
+          },
+          "zone_일상": {
+            "coef": 1.719,
+            "pvalue": 0.0
+          },
+          "zone_자녹": {
+            "coef": 0.633,
+            "pvalue": 0.0
+          },
+          "zone_준공": {
+            "coef": 1.1021,
+            "pvalue": 0.0
+          },
+          "zone_준주": {
+            "coef": 1.6316,
+            "pvalue": 0.0
+          },
+          "jimok_공": {
+            "coef": -0.5195,
+            "pvalue": 0.0
+          },
+          "jimok_과": {
+            "coef": 0.3276,
+            "pvalue": 0.0
+          },
+          "jimok_구": {
+            "coef": -0.1254,
+            "pvalue": 0.0
+          },
+          "jimok_기타": {
+            "coef": -0.3186,
+            "pvalue": 0.073
+          },
+          "jimok_답": {
+            "coef": 0.0143,
+            "pvalue": 0.0051
+          },
+          "jimok_대": {
+            "coef": 0.308,
+            "pvalue": 0.0
+          },
+          "jimok_도": {
+            "coef": -0.6486,
+            "pvalue": 0.0
+          },
+          "jimok_목": {
+            "coef": -0.0325,
+            "pvalue": 0.2866
+          },
+          "jimok_묘": {
+            "coef": -0.2085,
+            "pvalue": 0.0
+          },
+          "jimok_양": {
+            "coef": 0.4886,
+            "pvalue": 0.0
+          },
+          "jimok_원": {
+            "coef": 0.4361,
+            "pvalue": 0.0
+          },
+          "jimok_유": {
+            "coef": 0.0132,
+            "pvalue": 0.7866
+          },
+          "jimok_임": {
+            "coef": -0.5114,
+            "pvalue": 0.0
+          },
+          "jimok_잡": {
+            "coef": 0.0286,
+            "pvalue": 0.0385
+          },
+          "jimok_장": {
+            "coef": 0.5594,
+            "pvalue": 0.0
+          },
+          "jimok_제": {
+            "coef": -0.6947,
+            "pvalue": 0.0
+          },
+          "jimok_종": {
+            "coef": 0.2985,
+            "pvalue": 0.0015
+          },
+          "jimok_주": {
+            "coef": 0.525,
+            "pvalue": 0.0
+          },
+          "jimok_차": {
+            "coef": 0.3837,
+            "pvalue": 0.0
+          },
+          "jimok_창": {
+            "coef": 0.4735,
+            "pvalue": 0.0
+          },
+          "jimok_천": {
+            "coef": -0.3204,
+            "pvalue": 0.0
+          },
+          "jimok_철": {
+            "coef": -0.1882,
+            "pvalue": 0.0046
+          },
+          "jimok_체": {
+            "coef": 0.4043,
+            "pvalue": 0.0
+          },
+          "jimok_학": {
+            "coef": 0.4306,
+            "pvalue": 0.0
+          },
+          "road_-": {
+            "coef": -0.2667,
+            "pvalue": 0.0
+          },
+          "road_12미만": {
+            "coef": 0.2832,
+            "pvalue": 0.0
+          },
+          "road_25미만": {
+            "coef": 0.5975,
+            "pvalue": 0.0
+          },
+          "road_25이상": {
+            "coef": 0.8213,
+            "pvalue": 0.0
+          },
+          "deal_중개거래": {
+            "coef": 0.2397,
+            "pvalue": 0.0
+          },
+          "deal_직거래": {
+            "coef": 0.0593,
+            "pvalue": 0.0
+          },
+          "year_trend": {
+            "coef": -0.0053,
+            "pvalue": 0.0004
+          }
+        }
+      }
+    },
+    {
+      "arm": "baseline_on_strict_rows",
+      "note": "같은 검증 칸. 고유 필지 가격이 있는 행만.",
+      "error": {
+        "n": 137744,
+        "folds": 5,
+        "cv_mape": 111.34
+      },
+      "fit": {
+        "n": 137744,
+        "adj_r2": 0.6009,
+        "coefficients": {
+          "const": {
+            "coef": 2.9067,
+            "pvalue": 0.0
+          },
+          "log_area": {
+            "coef": -0.1349,
+            "pvalue": 0.0
+          },
+          "zone_1전": {
+            "coef": 0.6671,
+            "pvalue": 0.0
+          },
+          "zone_1주": {
+            "coef": 1.0537,
+            "pvalue": 0.0
+          },
+          "zone_2전": {
+            "coef": 1.5155,
+            "pvalue": 0.0
+          },
+          "zone_2주": {
+            "coef": 1.4305,
+            "pvalue": 0.0
+          },
+          "zone_개제": {
+            "coef": -0.4999,
+            "pvalue": 0.0
+          },
+          "zone_근상": {
+            "coef": 1.429,
+            "pvalue": 0.0
+          },
+          "zone_기타": {
+            "coef": 1.8263,
+            "pvalue": 0.0
+          },
+          "zone_농림": {
+            "coef": -0.5507,
+            "pvalue": 0.0
+          },
+          "zone_보관": {
+            "coef": -0.4505,
+            "pvalue": 0.0
+          },
+          "zone_보녹": {
+            "coef": 0.3075,
+            "pvalue": 0.0
+          },
+          "zone_생관": {
+            "coef": -0.3748,
+            "pvalue": 0.0
+          },
+          "zone_생녹": {
+            "coef": 0.0595,
+            "pvalue": 0.0001
+          },
+          "zone_일공": {
+            "coef": 0.4814,
+            "pvalue": 0.0
+          },
+          "zone_일상": {
+            "coef": 1.7774,
+            "pvalue": 0.0
+          },
+          "zone_자녹": {
+            "coef": 0.6278,
+            "pvalue": 0.0
+          },
+          "zone_준공": {
+            "coef": 1.0347,
+            "pvalue": 0.0
+          },
+          "zone_준주": {
+            "coef": 1.6258,
+            "pvalue": 0.0
+          },
+          "jimok_공": {
+            "coef": -0.2968,
+            "pvalue": 0.0792
+          },
+          "jimok_과": {
+            "coef": 0.321,
+            "pvalue": 0.0
+          },
+          "jimok_구": {
+            "coef": -0.1239,
+            "pvalue": 0.0003
+          },
+          "jimok_기타": {
+            "coef": -0.4568,
+            "pvalue": 0.0607
+          },
+          "jimok_답": {
+            "coef": 0.0182,
+            "pvalue": 0.0011
+          },
+          "jimok_대": {
+            "coef": 0.2883,
+            "pvalue": 0.0
+          },
+          "jimok_도": {
+            "coef": -0.6779,
+            "pvalue": 0.0
+          },
+          "jimok_목": {
+            "coef": 0.0624,
+            "pvalue": 0.1113
+          },
+          "jimok_묘": {
+            "coef": -0.1594,
+            "pvalue": 0.0001
+          },
+          "jimok_양": {
+            "coef": 0.5386,
+            "pvalue": 0.0
+          },
+          "jimok_원": {
+            "coef": 0.4274,
+            "pvalue": 0.0092
+          },
+          "jimok_유": {
+            "coef": 0.0428,
+            "pvalue": 0.4272
+          },
+          "jimok_임": {
+            "coef": -0.549,
+            "pvalue": 0.0
+          },
+          "jimok_잡": {
+            "coef": 0.154,
+            "pvalue": 0.0
+          },
+          "jimok_장": {
+            "coef": 0.431,
+            "pvalue": 0.0
+          },
+          "jimok_제": {
+            "coef": -0.9949,
+            "pvalue": 0.0
+          },
+          "jimok_종": {
+            "coef": 0.2992,
+            "pvalue": 0.0167
+          },
+          "jimok_주": {
+            "coef": 0.4761,
+            "pvalue": 0.0
+          },
+          "jimok_차": {
+            "coef": 0.4285,
+            "pvalue": 0.0
+          },
+          "jimok_창": {
+            "coef": 0.4313,
+            "pvalue": 0.0
+          },
+          "jimok_천": {
+            "coef": -0.3375,
+            "pvalue": 0.0
+          },
+          "jimok_철": {
+            "coef": -0.1339,
+            "pvalue": 0.0924
+          },
+          "jimok_체": {
+            "coef": 0.4189,
+            "pvalue": 0.0
+          },
+          "jimok_학": {
+            "coef": 0.3354,
+            "pvalue": 0.0001
+          },
+          "road_-": {
+            "coef": -0.4233,
+            "pvalue": 0.0
+          },
+          "road_12미만": {
+            "coef": 0.2866,
+            "pvalue": 0.0
+          },
+          "road_25미만": {
+            "coef": 0.6305,
+            "pvalue": 0.0
+          },
+          "road_25이상": {
+            "coef": 0.8597,
+            "pvalue": 0.0
+          },
+          "deal_중개거래": {
+            "coef": 0.2404,
+            "pvalue": 0.0
+          },
+          "deal_직거래": {
+            "coef": 0.0349,
+            "pvalue": 0.0
+          },
+          "year_trend": {
+            "coef": -0.0012,
+            "pvalue": 0.4807
+          }
+        }
+      }
+    },
+    {
+      "arm": "strict_complete",
+      "note": "고유 필지. 해당연도, 없으면 전년. 결측은 제외.",
+      "error": {
+        "n": 137744,
+        "folds": 5,
+        "cv_mape": 77.64
+      },
+      "fit": {
+        "n": 137744,
+        "adj_r2": 0.7222,
+        "coefficients": {
+          "const": {
+            "coef": -5.0758,
+            "pvalue": 0.0
+          },
+          "log_area": {
+            "coef": -0.0771,
+            "pvalue": 0.0
+          },
+          "zone_1전": {
+            "coef": -0.0029,
+            "pvalue": 0.9591
+          },
+          "zone_1주": {
+            "coef": 0.1542,
+            "pvalue": 0.0
+          },
+          "zone_2전": {
+            "coef": 0.4914,
+            "pvalue": 0.0017
+          },
+          "zone_2주": {
+            "coef": 0.2533,
+            "pvalue": 0.0
+          },
+          "zone_개제": {
+            "coef": -0.1844,
+            "pvalue": 0.0
+          },
+          "zone_근상": {
+            "coef": 0.2771,
+            "pvalue": 0.001
+          },
+          "zone_기타": {
+            "coef": 0.415,
+            "pvalue": 0.0
+          },
+          "zone_농림": {
+            "coef": -0.2464,
+            "pvalue": 0.0
+          },
+          "zone_보관": {
+            "coef": -0.0428,
+            "pvalue": 0.0
+          },
+          "zone_보녹": {
+            "coef": 0.2473,
+            "pvalue": 0.0
+          },
+          "zone_생관": {
+            "coef": -0.1088,
+            "pvalue": 0.0
+          },
+          "zone_생녹": {
+            "coef": -0.0788,
+            "pvalue": 0.0
+          },
+          "zone_일공": {
+            "coef": 0.1027,
+            "pvalue": 0.0001
+          },
+          "zone_일상": {
+            "coef": 0.4026,
+            "pvalue": 0.0
+          },
+          "zone_자녹": {
+            "coef": 0.1418,
+            "pvalue": 0.0
+          },
+          "zone_준공": {
+            "coef": 0.155,
+            "pvalue": 0.0002
+          },
+          "zone_준주": {
+            "coef": 0.3269,
+            "pvalue": 0.0
+          },
+          "jimok_공": {
+            "coef": -0.0597,
+            "pvalue": 0.6722
+          },
+          "jimok_과": {
+            "coef": 0.1396,
+            "pvalue": 0.0
+          },
+          "jimok_구": {
+            "coef": 0.3132,
+            "pvalue": 0.0
+          },
+          "jimok_기타": {
+            "coef": -0.2515,
+            "pvalue": 0.2158
+          },
+          "jimok_답": {
+            "coef": -0.0416,
+            "pvalue": 0.0
+          },
+          "jimok_대": {
+            "coef": -0.0847,
+            "pvalue": 0.0
+          },
+          "jimok_도": {
+            "coef": -0.0077,
+            "pvalue": 0.5236
+          },
+          "jimok_목": {
+            "coef": 0.1422,
+            "pvalue": 0.0
+          },
+          "jimok_묘": {
+            "coef": 0.0571,
+            "pvalue": 0.0832
+          },
+          "jimok_양": {
+            "coef": 0.3364,
+            "pvalue": 0.0007
+          },
+          "jimok_원": {
+            "coef": -0.1434,
+            "pvalue": 0.2952
+          },
+          "jimok_유": {
+            "coef": 0.4636,
+            "pvalue": 0.0
+          },
+          "jimok_임": {
+            "coef": 0.237,
+            "pvalue": 0.0
+          },
+          "jimok_잡": {
+            "coef": -0.1577,
+            "pvalue": 0.0
+          },
+          "jimok_장": {
+            "coef": -0.0615,
+            "pvalue": 0.005
+          },
+          "jimok_제": {
+            "coef": -0.3649,
+            "pvalue": 0.0001
+          },
+          "jimok_종": {
+            "coef": 0.003,
+            "pvalue": 0.9772
+          },
+          "jimok_주": {
+            "coef": -0.1456,
+            "pvalue": 0.0619
+          },
+          "jimok_차": {
+            "coef": -0.0284,
+            "pvalue": 0.5423
+          },
+          "jimok_창": {
+            "coef": 0.038,
+            "pvalue": 0.3108
+          },
+          "jimok_천": {
+            "coef": -0.0087,
+            "pvalue": 0.726
+          },
+          "jimok_철": {
+            "coef": 0.2093,
+            "pvalue": 0.0016
+          },
+          "jimok_체": {
+            "coef": 0.0662,
+            "pvalue": 0.2728
+          },
+          "jimok_학": {
+            "coef": 0.1475,
+            "pvalue": 0.0417
+          },
+          "road_-": {
+            "coef": -0.1529,
+            "pvalue": 0.0
+          },
+          "road_12미만": {
+            "coef": 0.083,
+            "pvalue": 0.0
+          },
+          "road_25미만": {
+            "coef": 0.212,
+            "pvalue": 0.0
+          },
+          "road_25이상": {
+            "coef": 0.2572,
+            "pvalue": 0.0
+          },
+          "deal_중개거래": {
+            "coef": 0.1874,
+            "pvalue": 0.0
+          },
+          "deal_직거래": {
+            "coef": 0.0068,
+            "pvalue": 0.2678
+          },
+          "year_trend": {
+            "coef": -0.009,
+            "pvalue": 0.0
+          },
+          "log_assessed": {
+            "coef": 0.725,
+            "pvalue": 0.0
+          }
+        }
+      }
+    },
+    {
+      "arm": "strict_missing_indicator",
+      "note": "고유 필지 가격. 없는 행은 빼지 않고 결측 표시만.",
+      "error": {
+        "n": 184457,
+        "folds": 5,
+        "cv_mape": 103.18
+      },
+      "fit": {
+        "n": 184457,
+        "adj_r2": 0.6632,
+        "coefficients": {
+          "const": {
+            "coef": -1.766,
+            "pvalue": 0.0
+          },
+          "log_area": {
+            "coef": -0.102,
+            "pvalue": 0.0
+          },
+          "zone_1전": {
+            "coef": 0.363,
+            "pvalue": 0.0
+          },
+          "zone_1주": {
+            "coef": 0.857,
+            "pvalue": 0.0
+          },
+          "zone_2전": {
+            "coef": 1.2838,
+            "pvalue": 0.0
+          },
+          "zone_2주": {
+            "coef": 0.9922,
+            "pvalue": 0.0
+          },
+          "zone_개제": {
+            "coef": -0.3698,
+            "pvalue": 0.0
+          },
+          "zone_근상": {
+            "coef": 1.1969,
+            "pvalue": 0.0
+          },
+          "zone_기타": {
+            "coef": 1.0065,
+            "pvalue": 0.0
+          },
+          "zone_농림": {
+            "coef": -0.3969,
+            "pvalue": 0.0
+          },
+          "zone_보관": {
+            "coef": -0.245,
+            "pvalue": 0.0
+          },
+          "zone_보녹": {
+            "coef": 0.2707,
+            "pvalue": 0.0
+          },
+          "zone_생관": {
+            "coef": -0.2747,
+            "pvalue": 0.0
+          },
+          "zone_생녹": {
+            "coef": -0.0219,
+            "pvalue": 0.0877
+          },
+          "zone_일공": {
+            "coef": 0.2565,
+            "pvalue": 0.0
+          },
+          "zone_일상": {
+            "coef": 1.1456,
+            "pvalue": 0.0
+          },
+          "zone_자녹": {
+            "coef": 0.4348,
+            "pvalue": 0.0
+          },
+          "zone_준공": {
+            "coef": 0.7825,
+            "pvalue": 0.0
+          },
+          "zone_준주": {
+            "coef": 1.1997,
+            "pvalue": 0.0
+          },
+          "jimok_공": {
+            "coef": -0.4897,
+            "pvalue": 0.0
+          },
+          "jimok_과": {
+            "coef": 0.2241,
+            "pvalue": 0.0
+          },
+          "jimok_구": {
+            "coef": 0.0706,
+            "pvalue": 0.0083
+          },
+          "jimok_기타": {
+            "coef": -0.3448,
+            "pvalue": 0.0351
+          },
+          "jimok_답": {
+            "coef": -0.0032,
+            "pvalue": 0.4963
+          },
+          "jimok_대": {
+            "coef": 0.17,
+            "pvalue": 0.0
+          },
+          "jimok_도": {
+            "coef": -0.3776,
+            "pvalue": 0.0
+          },
+          "jimok_목": {
+            "coef": -0.0704,
+            "pvalue": 0.0121
+          },
+          "jimok_묘": {
+            "coef": -0.1071,
+            "pvalue": 0.0008
+          },
+          "jimok_양": {
+            "coef": 0.3577,
+            "pvalue": 0.0001
+          },
+          "jimok_원": {
+            "coef": 0.2145,
+            "pvalue": 0.0283
+          },
+          "jimok_유": {
+            "coef": 0.2223,
+            "pvalue": 0.0
+          },
+          "jimok_임": {
+            "coef": -0.2192,
+            "pvalue": 0.0
+          },
+          "jimok_잡": {
+            "coef": -0.1959,
+            "pvalue": 0.0
+          },
+          "jimok_장": {
+            "coef": 0.3488,
+            "pvalue": 0.0
+          },
+          "jimok_제": {
+            "coef": -0.4852,
+            "pvalue": 0.0
+          },
+          "jimok_종": {
+            "coef": 0.1285,
+            "pvalue": 0.1367
+          },
+          "jimok_주": {
+            "coef": 0.1989,
+            "pvalue": 0.0091
+          },
+          "jimok_차": {
+            "coef": 0.1977,
+            "pvalue": 0.0
+          },
+          "jimok_창": {
+            "coef": 0.267,
+            "pvalue": 0.0
+          },
+          "jimok_천": {
+            "coef": -0.1261,
+            "pvalue": 0.0
+          },
+          "jimok_철": {
+            "coef": -0.1009,
+            "pvalue": 0.0986
+          },
+          "jimok_체": {
+            "coef": 0.2195,
+            "pvalue": 0.0004
+          },
+          "jimok_학": {
+            "coef": 0.3171,
+            "pvalue": 0.0
+          },
+          "road_-": {
+            "coef": -0.204,
+            "pvalue": 0.0
+          },
+          "road_12미만": {
+            "coef": 0.1958,
+            "pvalue": 0.0
+          },
+          "road_25미만": {
+            "coef": 0.3833,
+            "pvalue": 0.0
+          },
+          "road_25이상": {
+            "coef": 0.526,
+            "pvalue": 0.0
+          },
+          "deal_중개거래": {
+            "coef": 0.2253,
+            "pvalue": 0.0
+          },
+          "deal_직거래": {
+            "coef": 0.0435,
+            "pvalue": 0.0
+          },
+          "year_trend": {
+            "coef": -0.0077,
+            "pvalue": 0.0
+          },
+          "log_assessed": {
+            "coef": 0.4222,
+            "pvalue": 0.0
+          },
+          "price_missing": {
+            "coef": 4.5603,
+            "pvalue": 0.0
+          }
+        }
+      }
+    },
+    {
+      "arm": "baseline_on_agree_rows",
+      "note": "같은 검증 칸. 고유 가격 또는 후보 동일가.",
+      "error": {
+        "n": 139703,
+        "folds": 5,
+        "cv_mape": 111.67
+      },
+      "fit": {
+        "n": 139703,
+        "adj_r2": 0.6025,
+        "coefficients": {
+          "const": {
+            "coef": 2.9036,
+            "pvalue": 0.0
+          },
+          "log_area": {
+            "coef": -0.1343,
+            "pvalue": 0.0
+          },
+          "zone_1전": {
+            "coef": 0.6773,
+            "pvalue": 0.0
+          },
+          "zone_1주": {
+            "coef": 1.068,
+            "pvalue": 0.0
+          },
+          "zone_2전": {
+            "coef": 1.6238,
+            "pvalue": 0.0
+          },
+          "zone_2주": {
+            "coef": 1.4305,
+            "pvalue": 0.0
+          },
+          "zone_개제": {
+            "coef": -0.4994,
+            "pvalue": 0.0
+          },
+          "zone_근상": {
+            "coef": 1.4443,
+            "pvalue": 0.0
+          },
+          "zone_기타": {
+            "coef": 1.8255,
+            "pvalue": 0.0
+          },
+          "zone_농림": {
+            "coef": -0.5519,
+            "pvalue": 0.0
+          },
+          "zone_보관": {
+            "coef": -0.4486,
+            "pvalue": 0.0
+          },
+          "zone_보녹": {
+            "coef": 0.3262,
+            "pvalue": 0.0
+          },
+          "zone_생관": {
+            "coef": -0.3743,
+            "pvalue": 0.0
+          },
+          "zone_생녹": {
+            "coef": 0.0596,
+            "pvalue": 0.0001
+          },
+          "zone_일공": {
+            "coef": 0.4748,
+            "pvalue": 0.0
+          },
+          "zone_일상": {
+            "coef": 1.7698,
+            "pvalue": 0.0
+          },
+          "zone_자녹": {
+            "coef": 0.6295,
+            "pvalue": 0.0
+          },
+          "zone_준공": {
+            "coef": 1.0451,
+            "pvalue": 0.0
+          },
+          "zone_준주": {
+            "coef": 1.6345,
+            "pvalue": 0.0
+          },
+          "jimok_공": {
+            "coef": -0.309,
+            "pvalue": 0.067
+          },
+          "jimok_과": {
+            "coef": 0.3268,
+            "pvalue": 0.0
+          },
+          "jimok_구": {
+            "coef": -0.1227,
+            "pvalue": 0.0003
+          },
+          "jimok_기타": {
+            "coef": -0.4589,
+            "pvalue": 0.0599
+          },
+          "jimok_답": {
+            "coef": 0.0167,
+            "pvalue": 0.0026
+          },
+          "jimok_대": {
+            "coef": 0.2908,
+            "pvalue": 0.0
+          },
+          "jimok_도": {
+            "coef": -0.6848,
+            "pvalue": 0.0
+          },
+          "jimok_목": {
+            "coef": 0.059,
+            "pvalue": 0.1315
+          },
+          "jimok_묘": {
+            "coef": -0.1662,
+            "pvalue": 0.0
+          },
+          "jimok_양": {
+            "coef": 0.5718,
+            "pvalue": 0.0
+          },
+          "jimok_원": {
+            "coef": 0.4232,
+            "pvalue": 0.01
+          },
+          "jimok_유": {
+            "coef": 0.041,
+            "pvalue": 0.4473
+          },
+          "jimok_임": {
+            "coef": -0.5479,
+            "pvalue": 0.0
+          },
+          "jimok_잡": {
+            "coef": 0.1428,
+            "pvalue": 0.0
+          },
+          "jimok_장": {
+            "coef": 0.4311,
+            "pvalue": 0.0
+          },
+          "jimok_제": {
+            "coef": -0.9482,
+            "pvalue": 0.0
+          },
+          "jimok_종": {
+            "coef": 0.2933,
+            "pvalue": 0.0176
+          },
+          "jimok_주": {
+            "coef": 0.4702,
+            "pvalue": 0.0
+          },
+          "jimok_차": {
+            "coef": 0.4073,
+            "pvalue": 0.0
+          },
+          "jimok_창": {
+            "coef": 0.4324,
+            "pvalue": 0.0
+          },
+          "jimok_천": {
+            "coef": -0.3229,
+            "pvalue": 0.0
+          },
+          "jimok_철": {
+            "coef": -0.2261,
+            "pvalue": 0.003
+          },
+          "jimok_체": {
+            "coef": 0.4159,
+            "pvalue": 0.0
+          },
+          "jimok_학": {
+            "coef": 0.3319,
+            "pvalue": 0.0001
+          },
+          "road_-": {
+            "coef": -0.4246,
+            "pvalue": 0.0
+          },
+          "road_12미만": {
+            "coef": 0.2878,
+            "pvalue": 0.0
+          },
+          "road_25미만": {
+            "coef": 0.6288,
+            "pvalue": 0.0
+          },
+          "road_25이상": {
+            "coef": 0.8571,
+            "pvalue": 0.0
+          },
+          "deal_중개거래": {
+            "coef": 0.2394,
+            "pvalue": 0.0
+          },
+          "deal_직거래": {
+            "coef": 0.0334,
+            "pvalue": 0.0
+          },
+          "year_trend": {
+            "coef": -0.0012,
+            "pvalue": 0.4871
+          }
+        }
+      }
+    },
+    {
+      "arm": "agree_complete",
+      "note": "후보 동일가는 해당연도만. 필지 확정 아님. ±년과 섞지 않음.",
+      "error": {
+        "n": 139703,
+        "folds": 5,
+        "cv_mape": 77.83
+      },
+      "fit": {
+        "n": 139703,
+        "adj_r2": 0.7233,
+        "coefficients": {
+          "const": {
+            "coef": -5.0721,
+            "pvalue": 0.0
+          },
+          "log_area": {
+            "coef": -0.0773,
+            "pvalue": 0.0
+          },
+          "zone_1전": {
+            "coef": 0.0115,
+            "pvalue": 0.838
+          },
+          "zone_1주": {
+            "coef": 0.1644,
+            "pvalue": 0.0
+          },
+          "zone_2전": {
+            "coef": 0.6197,
+            "pvalue": 0.0
+          },
+          "zone_2주": {
+            "coef": 0.2559,
+            "pvalue": 0.0
+          },
+          "zone_개제": {
+            "coef": -0.1837,
+            "pvalue": 0.0
+          },
+          "zone_근상": {
+            "coef": 0.2866,
+            "pvalue": 0.0005
+          },
+          "zone_기타": {
+            "coef": 0.4166,
+            "pvalue": 0.0
+          },
+          "zone_농림": {
+            "coef": -0.2468,
+            "pvalue": 0.0
+          },
+          "zone_보관": {
+            "coef": -0.0398,
+            "pvalue": 0.0
+          },
+          "zone_보녹": {
+            "coef": 0.2539,
+            "pvalue": 0.0
+          },
+          "zone_생관": {
+            "coef": -0.1081,
+            "pvalue": 0.0
+          },
+          "zone_생녹": {
+            "coef": -0.0786,
+            "pvalue": 0.0
+          },
+          "zone_일공": {
+            "coef": 0.1002,
+            "pvalue": 0.0001
+          },
+          "zone_일상": {
+            "coef": 0.3968,
+            "pvalue": 0.0
+          },
+          "zone_자녹": {
+            "coef": 0.1428,
+            "pvalue": 0.0
+          },
+          "zone_준공": {
+            "coef": 0.1601,
+            "pvalue": 0.0001
+          },
+          "zone_준주": {
+            "coef": 0.3319,
+            "pvalue": 0.0
+          },
+          "jimok_공": {
+            "coef": -0.0742,
+            "pvalue": 0.598
+          },
+          "jimok_과": {
+            "coef": 0.1442,
+            "pvalue": 0.0
+          },
+          "jimok_구": {
+            "coef": 0.3126,
+            "pvalue": 0.0
+          },
+          "jimok_기타": {
+            "coef": -0.2548,
+            "pvalue": 0.2104
+          },
+          "jimok_답": {
+            "coef": -0.0427,
+            "pvalue": 0.0
+          },
+          "jimok_대": {
+            "coef": -0.0852,
+            "pvalue": 0.0
+          },
+          "jimok_도": {
+            "coef": -0.0106,
+            "pvalue": 0.3748
+          },
+          "jimok_목": {
+            "coef": 0.137,
+            "pvalue": 0.0
+          },
+          "jimok_묘": {
+            "coef": 0.0515,
+            "pvalue": 0.1169
+          },
+          "jimok_양": {
+            "coef": 0.3575,
+            "pvalue": 0.0002
+          },
+          "jimok_원": {
+            "coef": -0.1464,
+            "pvalue": 0.2859
+          },
+          "jimok_유": {
+            "coef": 0.4612,
+            "pvalue": 0.0
+          },
+          "jimok_임": {
+            "coef": 0.2383,
+            "pvalue": 0.0
+          },
+          "jimok_잡": {
+            "coef": -0.1656,
+            "pvalue": 0.0
+          },
+          "jimok_장": {
+            "coef": -0.0614,
+            "pvalue": 0.0049
+          },
+          "jimok_제": {
+            "coef": -0.3095,
+            "pvalue": 0.0007
+          },
+          "jimok_종": {
+            "coef": -0.0009,
+            "pvalue": 0.9928
+          },
+          "jimok_주": {
+            "coef": -0.1483,
+            "pvalue": 0.0559
+          },
+          "jimok_차": {
+            "coef": -0.0456,
+            "pvalue": 0.3141
+          },
+          "jimok_창": {
+            "coef": 0.0375,
+            "pvalue": 0.3146
+          },
+          "jimok_천": {
+            "coef": -0.0038,
+            "pvalue": 0.8784
+          },
+          "jimok_철": {
+            "coef": 0.1567,
+            "pvalue": 0.0137
+          },
+          "jimok_체": {
+            "coef": 0.0639,
+            "pvalue": 0.29
+          },
+          "jimok_학": {
+            "coef": 0.1438,
+            "pvalue": 0.0474
+          },
+          "road_-": {
+            "coef": -0.1542,
+            "pvalue": 0.0
+          },
+          "road_12미만": {
+            "coef": 0.0835,
+            "pvalue": 0.0
+          },
+          "road_25미만": {
+            "coef": 0.2119,
+            "pvalue": 0.0
+          },
+          "road_25이상": {
+            "coef": 0.2552,
+            "pvalue": 0.0
+          },
+          "deal_중개거래": {
+            "coef": 0.1863,
+            "pvalue": 0.0
+          },
+          "deal_직거래": {
+            "coef": 0.0056,
+            "pvalue": 0.3588
+          },
+          "year_trend": {
+            "coef": -0.009,
+            "pvalue": 0.0
+          },
+          "log_assessed": {
+            "coef": 0.7249,
+            "pvalue": 0.0
+          }
+        }
+      }
+    },
+    {
+      "arm": "agree_missing_indicator",
+      "note": "고유 가격 또는 후보 동일가. 나머지는 결측 표시.",
+      "error": {
+        "n": 184457,
+        "folds": 5,
+        "cv_mape": 102.68
+      },
+      "fit": {
+        "n": 184457,
+        "adj_r2": 0.6647,
+        "coefficients": {
+          "const": {
+            "coef": -1.8346,
+            "pvalue": 0.0
+          },
+          "log_area": {
+            "coef": -0.1024,
+            "pvalue": 0.0
+          },
+          "zone_1전": {
+            "coef": 0.3454,
+            "pvalue": 0.0
+          },
+          "zone_1주": {
+            "coef": 0.8248,
+            "pvalue": 0.0
+          },
+          "zone_2전": {
+            "coef": 1.0993,
+            "pvalue": 0.0
+          },
+          "zone_2주": {
+            "coef": 0.9786,
+            "pvalue": 0.0
+          },
+          "zone_개제": {
+            "coef": -0.3641,
+            "pvalue": 0.0
+          },
+          "zone_근상": {
+            "coef": 1.1784,
+            "pvalue": 0.0
+          },
+          "zone_기타": {
+            "coef": 1.0071,
+            "pvalue": 0.0
+          },
+          "zone_농림": {
+            "coef": -0.392,
+            "pvalue": 0.0
+          },
+          "zone_보관": {
+            "coef": -0.2389,
+            "pvalue": 0.0
+          },
+          "zone_보녹": {
+            "coef": 0.2672,
+            "pvalue": 0.0
+          },
+          "zone_생관": {
+            "coef": -0.2719,
+            "pvalue": 0.0
+          },
+          "zone_생녹": {
+            "coef": -0.022,
+            "pvalue": 0.0858
+          },
+          "zone_일공": {
+            "coef": 0.2536,
+            "pvalue": 0.0
+          },
+          "zone_일상": {
+            "coef": 1.1259,
+            "pvalue": 0.0
+          },
+          "zone_자녹": {
+            "coef": 0.4306,
+            "pvalue": 0.0
+          },
+          "zone_준공": {
+            "coef": 0.7628,
+            "pvalue": 0.0
+          },
+          "zone_준주": {
+            "coef": 1.1644,
+            "pvalue": 0.0
+          },
+          "jimok_공": {
+            "coef": -0.4826,
+            "pvalue": 0.0
+          },
+          "jimok_과": {
+            "coef": 0.2209,
+            "pvalue": 0.0
+          },
+          "jimok_구": {
+            "coef": 0.0767,
+            "pvalue": 0.004
+          },
+          "jimok_기타": {
+            "coef": -0.3447,
+            "pvalue": 0.0347
+          },
+          "jimok_답": {
+            "coef": -0.0041,
+            "pvalue": 0.3863
+          },
+          "jimok_대": {
+            "coef": 0.1604,
+            "pvalue": 0.0
+          },
+          "jimok_도": {
+            "coef": -0.3608,
+            "pvalue": 0.0
+          },
+          "jimok_목": {
+            "coef": -0.0743,
+            "pvalue": 0.008
+          },
+          "jimok_묘": {
+            "coef": -0.105,
+            "pvalue": 0.001
+          },
+          "jimok_양": {
+            "coef": 0.3573,
+            "pvalue": 0.0001
+          },
+          "jimok_원": {
+            "coef": 0.2085,
+            "pvalue": 0.0326
+          },
+          "jimok_유": {
+            "coef": 0.2221,
+            "pvalue": 0.0
+          },
+          "jimok_임": {
+            "coef": -0.2099,
+            "pvalue": 0.0
+          },
+          "jimok_잡": {
+            "coef": -0.1999,
+            "pvalue": 0.0
+          },
+          "jimok_장": {
+            "coef": 0.3449,
+            "pvalue": 0.0
+          },
+          "jimok_제": {
+            "coef": -0.4858,
+            "pvalue": 0.0
+          },
+          "jimok_종": {
+            "coef": 0.122,
+            "pvalue": 0.1565
+          },
+          "jimok_주": {
+            "coef": 0.1843,
+            "pvalue": 0.0155
+          },
+          "jimok_차": {
+            "coef": 0.1807,
+            "pvalue": 0.0
+          },
+          "jimok_창": {
+            "coef": 0.261,
+            "pvalue": 0.0
+          },
+          "jimok_천": {
+            "coef": -0.1256,
+            "pvalue": 0.0
+          },
+          "jimok_철": {
+            "coef": -0.0567,
+            "pvalue": 0.3519
+          },
+          "jimok_체": {
+            "coef": 0.2176,
+            "pvalue": 0.0005
+          },
+          "jimok_학": {
+            "coef": 0.3183,
+            "pvalue": 0.0
+          },
+          "road_-": {
+            "coef": -0.2023,
+            "pvalue": 0.0
+          },
+          "road_12미만": {
+            "coef": 0.1884,
+            "pvalue": 0.0
+          },
+          "road_25미만": {
+            "coef": 0.3707,
+            "pvalue": 0.0
+          },
+          "road_25이상": {
+            "coef": 0.52,
+            "pvalue": 0.0
+          },
+          "deal_중개거래": {
+            "coef": 0.2225,
+            "pvalue": 0.0
+          },
+          "deal_직거래": {
+            "coef": 0.0429,
+            "pvalue": 0.0
+          },
+          "year_trend": {
+            "coef": -0.008,
+            "pvalue": 0.0
+          },
+          "log_assessed": {
+            "coef": 0.4293,
+            "pvalue": 0.0
+          },
+          "price_missing": {
+            "coef": 4.6345,
+            "pvalue": 0.0
+          }
+        }
+      }
+    },
+    {
+      "arm": "baseline_on_past2_rows",
+      "note": "같은 검증 칸. 계약 이후 가격은 넣지 않음.",
+      "error": {
+        "n": 137754,
+        "folds": 5,
+        "cv_mape": 111.34
+      },
+      "fit": {
+        "n": 137754,
+        "adj_r2": 0.6009,
+        "coefficients": {
+          "const": {
+            "coef": 2.9072,
+            "pvalue": 0.0
+          },
+          "log_area": {
+            "coef": -0.135,
+            "pvalue": 0.0
+          },
+          "zone_1전": {
+            "coef": 0.6671,
+            "pvalue": 0.0
+          },
+          "zone_1주": {
+            "coef": 1.0544,
+            "pvalue": 0.0
+          },
+          "zone_2전": {
+            "coef": 1.5155,
+            "pvalue": 0.0
+          },
+          "zone_2주": {
+            "coef": 1.4304,
+            "pvalue": 0.0
+          },
+          "zone_개제": {
+            "coef": -0.5,
+            "pvalue": 0.0
+          },
+          "zone_근상": {
+            "coef": 1.4291,
+            "pvalue": 0.0
+          },
+          "zone_기타": {
+            "coef": 1.8264,
+            "pvalue": 0.0
+          },
+          "zone_농림": {
+            "coef": -0.5506,
+            "pvalue": 0.0
+          },
+          "zone_보관": {
+            "coef": -0.4506,
+            "pvalue": 0.0
+          },
+          "zone_보녹": {
+            "coef": 0.3073,
+            "pvalue": 0.0
+          },
+          "zone_생관": {
+            "coef": -0.3749,
+            "pvalue": 0.0
+          },
+          "zone_생녹": {
+            "coef": 0.0595,
+            "pvalue": 0.0001
+          },
+          "zone_일공": {
+            "coef": 0.4815,
+            "pvalue": 0.0
+          },
+          "zone_일상": {
+            "coef": 1.7772,
+            "pvalue": 0.0
+          },
+          "zone_자녹": {
+            "coef": 0.6279,
+            "pvalue": 0.0
+          },
+          "zone_준공": {
+            "coef": 1.0348,
+            "pvalue": 0.0
+          },
+          "zone_준주": {
+            "coef": 1.6257,
+            "pvalue": 0.0
+          },
+          "jimok_공": {
+            "coef": -0.2968,
+            "pvalue": 0.0792
+          },
+          "jimok_과": {
+            "coef": 0.321,
+            "pvalue": 0.0
+          },
+          "jimok_구": {
+            "coef": -0.1241,
+            "pvalue": 0.0003
+          },
+          "jimok_기타": {
+            "coef": -0.4569,
+            "pvalue": 0.0606
+          },
+          "jimok_답": {
+            "coef": 0.0182,
+            "pvalue": 0.0011
+          },
+          "jimok_대": {
+            "coef": 0.2883,
+            "pvalue": 0.0
+          },
+          "jimok_도": {
+            "coef": -0.6782,
+            "pvalue": 0.0
+          },
+          "jimok_목": {
+            "coef": 0.0623,
+            "pvalue": 0.1115
+          },
+          "jimok_묘": {
+            "coef": -0.1595,
+            "pvalue": 0.0001
+          },
+          "jimok_양": {
+            "coef": 0.5387,
+            "pvalue": 0.0
+          },
+          "jimok_원": {
+            "coef": 0.4274,
+            "pvalue": 0.0092
+          },
+          "jimok_유": {
+            "coef": 0.0427,
+            "pvalue": 0.4288
+          },
+          "jimok_임": {
+            "coef": -0.549,
+            "pvalue": 0.0
+          },
+          "jimok_잡": {
+            "coef": 0.154,
+            "pvalue": 0.0
+          },
+          "jimok_장": {
+            "coef": 0.431,
+            "pvalue": 0.0
+          },
+          "jimok_제": {
+            "coef": -0.9952,
+            "pvalue": 0.0
+          },
+          "jimok_종": {
+            "coef": 0.299,
+            "pvalue": 0.0168
+          },
+          "jimok_주": {
+            "coef": 0.4759,
+            "pvalue": 0.0
+          },
+          "jimok_차": {
+            "coef": 0.4284,
+            "pvalue": 0.0
+          },
+          "jimok_창": {
+            "coef": 0.4311,
+            "pvalue": 0.0
+          },
+          "jimok_천": {
+            "coef": -0.3377,
+            "pvalue": 0.0
+          },
+          "jimok_철": {
+            "coef": -0.1341,
+            "pvalue": 0.092
+          },
+          "jimok_체": {
+            "coef": 0.4189,
+            "pvalue": 0.0
+          },
+          "jimok_학": {
+            "coef": 0.3353,
+            "pvalue": 0.0001
+          },
+          "road_-": {
+            "coef": -0.4231,
+            "pvalue": 0.0
+          },
+          "road_12미만": {
+            "coef": 0.2866,
+            "pvalue": 0.0
+          },
+          "road_25미만": {
+            "coef": 0.6304,
+            "pvalue": 0.0
+          },
+          "road_25이상": {
+            "coef": 0.8595,
+            "pvalue": 0.0
+          },
+          "deal_중개거래": {
+            "coef": 0.2402,
+            "pvalue": 0.0
+          },
+          "deal_직거래": {
+            "coef": 0.0348,
+            "pvalue": 0.0
+          },
+          "year_trend": {
+            "coef": -0.0011,
+            "pvalue": 0.4982
+          }
+        }
+      }
+    },
+    {
+      "arm": "past2_complete",
+      "note": "고유 필지만. 해당연도, -1, -2. 후보 동일가와 섞지 않음.",
+      "error": {
+        "n": 137754,
+        "folds": 5,
+        "cv_mape": 77.64
+      },
+      "fit": {
+        "n": 137754,
+        "adj_r2": 0.7222,
+        "coefficients": {
+          "const": {
+            "coef": -5.0753,
+            "pvalue": 0.0
+          },
+          "log_area": {
+            "coef": -0.0771,
+            "pvalue": 0.0
+          },
+          "zone_1전": {
+            "coef": -0.0029,
+            "pvalue": 0.9596
+          },
+          "zone_1주": {
+            "coef": 0.1545,
+            "pvalue": 0.0
+          },
+          "zone_2전": {
+            "coef": 0.4915,
+            "pvalue": 0.0017
+          },
+          "zone_2주": {
+            "coef": 0.2532,
+            "pvalue": 0.0
+          },
+          "zone_개제": {
+            "coef": -0.1846,
+            "pvalue": 0.0
+          },
+          "zone_근상": {
+            "coef": 0.2772,
+            "pvalue": 0.001
+          },
+          "zone_기타": {
+            "coef": 0.4151,
+            "pvalue": 0.0
+          },
+          "zone_농림": {
+            "coef": -0.2464,
+            "pvalue": 0.0
+          },
+          "zone_보관": {
+            "coef": -0.0428,
+            "pvalue": 0.0
+          },
+          "zone_보녹": {
+            "coef": 0.247,
+            "pvalue": 0.0
+          },
+          "zone_생관": {
+            "coef": -0.1089,
+            "pvalue": 0.0
+          },
+          "zone_생녹": {
+            "coef": -0.0789,
+            "pvalue": 0.0
+          },
+          "zone_일공": {
+            "coef": 0.1027,
+            "pvalue": 0.0001
+          },
+          "zone_일상": {
+            "coef": 0.4023,
+            "pvalue": 0.0
+          },
+          "zone_자녹": {
+            "coef": 0.1418,
+            "pvalue": 0.0
+          },
+          "zone_준공": {
+            "coef": 0.1551,
+            "pvalue": 0.0002
+          },
+          "zone_준주": {
+            "coef": 0.3282,
+            "pvalue": 0.0
+          },
+          "jimok_공": {
+            "coef": -0.0597,
+            "pvalue": 0.6719
+          },
+          "jimok_과": {
+            "coef": 0.1396,
+            "pvalue": 0.0
+          },
+          "jimok_구": {
+            "coef": 0.313,
+            "pvalue": 0.0
+          },
+          "jimok_기타": {
+            "coef": -0.2516,
+            "pvalue": 0.2156
+          },
+          "jimok_답": {
+            "coef": -0.0416,
+            "pvalue": 0.0
+          },
+          "jimok_대": {
+            "coef": -0.0847,
+            "pvalue": 0.0
+          },
+          "jimok_도": {
+            "coef": -0.0079,
+            "pvalue": 0.5132
+          },
+          "jimok_목": {
+            "coef": 0.1421,
+            "pvalue": 0.0
+          },
+          "jimok_묘": {
+            "coef": 0.057,
+            "pvalue": 0.0836
+          },
+          "jimok_양": {
+            "coef": 0.3364,
+            "pvalue": 0.0007
+          },
+          "jimok_원": {
+            "coef": -0.1434,
+            "pvalue": 0.2953
+          },
+          "jimok_유": {
+            "coef": 0.4635,
+            "pvalue": 0.0
+          },
+          "jimok_임": {
+            "coef": 0.237,
+            "pvalue": 0.0
+          },
+          "jimok_잡": {
+            "coef": -0.1577,
+            "pvalue": 0.0
+          },
+          "jimok_장": {
+            "coef": -0.0616,
+            "pvalue": 0.0049
+          },
+          "jimok_제": {
+            "coef": -0.3651,
+            "pvalue": 0.0001
+          },
+          "jimok_종": {
+            "coef": 0.0029,
+            "pvalue": 0.978
+          },
+          "jimok_주": {
+            "coef": -0.1457,
+            "pvalue": 0.0617
+          },
+          "jimok_차": {
+            "coef": -0.0285,
+            "pvalue": 0.5411
+          },
+          "jimok_창": {
+            "coef": 0.0379,
+            "pvalue": 0.3124
+          },
+          "jimok_천": {
+            "coef": -0.0088,
+            "pvalue": 0.7236
+          },
+          "jimok_철": {
+            "coef": 0.2092,
+            "pvalue": 0.0016
+          },
+          "jimok_체": {
+            "coef": 0.0662,
+            "pvalue": 0.2729
+          },
+          "jimok_학": {
+            "coef": 0.1474,
+            "pvalue": 0.0419
+          },
+          "road_-": {
+            "coef": -0.1528,
+            "pvalue": 0.0
+          },
+          "road_12미만": {
+            "coef": 0.083,
+            "pvalue": 0.0
+          },
+          "road_25미만": {
+            "coef": 0.212,
+            "pvalue": 0.0
+          },
+          "road_25이상": {
+            "coef": 0.2571,
+            "pvalue": 0.0
+          },
+          "deal_중개거래": {
+            "coef": 0.1873,
+            "pvalue": 0.0
+          },
+          "deal_직거래": {
+            "coef": 0.0068,
+            "pvalue": 0.2724
+          },
+          "year_trend": {
+            "coef": -0.0089,
+            "pvalue": 0.0
+          },
+          "log_assessed": {
+            "coef": 0.725,
+            "pvalue": 0.0
+          }
+        }
+      }
+    },
+    {
+      "arm": "past2_missing_indicator",
+      "note": "고유 필지 ±2 중 계약 연도 이전만. 결측 표시.",
+      "error": {
+        "n": 184457,
+        "folds": 5,
+        "cv_mape": 103.17
+      },
+      "fit": {
+        "n": 184457,
+        "adj_r2": 0.6632,
+        "coefficients": {
+          "const": {
+            "coef": -1.7667,
+            "pvalue": 0.0
+          },
+          "log_area": {
+            "coef": -0.1019,
+            "pvalue": 0.0
+          },
+          "zone_1전": {
+            "coef": 0.3629,
+            "pvalue": 0.0
+          },
+          "zone_1주": {
+            "coef": 0.8565,
+            "pvalue": 0.0
+          },
+          "zone_2전": {
+            "coef": 1.2838,
+            "pvalue": 0.0
+          },
+          "zone_2주": {
+            "coef": 0.9922,
+            "pvalue": 0.0
+          },
+          "zone_개제": {
+            "coef": -0.3698,
+            "pvalue": 0.0
+          },
+          "zone_근상": {
+            "coef": 1.1968,
+            "pvalue": 0.0
+          },
+          "zone_기타": {
+            "coef": 1.0063,
+            "pvalue": 0.0
+          },
+          "zone_농림": {
+            "coef": -0.3969,
+            "pvalue": 0.0
+          },
+          "zone_보관": {
+            "coef": -0.2449,
+            "pvalue": 0.0
+          },
+          "zone_보녹": {
+            "coef": 0.2707,
+            "pvalue": 0.0
+          },
+          "zone_생관": {
+            "coef": -0.2747,
+            "pvalue": 0.0
+          },
+          "zone_생녹": {
+            "coef": -0.0219,
+            "pvalue": 0.088
+          },
+          "zone_일공": {
+            "coef": 0.2565,
+            "pvalue": 0.0
+          },
+          "zone_일상": {
+            "coef": 1.1446,
+            "pvalue": 0.0
+          },
+          "zone_자녹": {
+            "coef": 0.4347,
+            "pvalue": 0.0
+          },
+          "zone_준공": {
+            "coef": 0.7825,
+            "pvalue": 0.0
+          },
+          "zone_준주": {
+            "coef": 1.1985,
+            "pvalue": 0.0
+          },
+          "jimok_공": {
+            "coef": -0.4897,
+            "pvalue": 0.0
+          },
+          "jimok_과": {
+            "coef": 0.2241,
+            "pvalue": 0.0
+          },
+          "jimok_구": {
+            "coef": 0.0707,
+            "pvalue": 0.0082
+          },
+          "jimok_기타": {
+            "coef": -0.3447,
+            "pvalue": 0.0351
+          },
+          "jimok_답": {
+            "coef": -0.0033,
+            "pvalue": 0.4882
+          },
+          "jimok_대": {
+            "coef": 0.1699,
+            "pvalue": 0.0
+          },
+          "jimok_도": {
+            "coef": -0.3775,
+            "pvalue": 0.0
+          },
+          "jimok_목": {
+            "coef": -0.0703,
+            "pvalue": 0.0122
+          },
+          "jimok_묘": {
+            "coef": -0.107,
+            "pvalue": 0.0008
+          },
+          "jimok_양": {
+            "coef": 0.3576,
+            "pvalue": 0.0001
+          },
+          "jimok_원": {
+            "coef": 0.2146,
+            "pvalue": 0.0283
+          },
+          "jimok_유": {
+            "coef": 0.2224,
+            "pvalue": 0.0
+          },
+          "jimok_임": {
+            "coef": -0.2191,
+            "pvalue": 0.0
+          },
+          "jimok_잡": {
+            "coef": -0.1959,
+            "pvalue": 0.0
+          },
+          "jimok_장": {
+            "coef": 0.3488,
+            "pvalue": 0.0
+          },
+          "jimok_제": {
+            "coef": -0.485,
+            "pvalue": 0.0
+          },
+          "jimok_종": {
+            "coef": 0.1286,
+            "pvalue": 0.1362
+          },
+          "jimok_주": {
+            "coef": 0.1988,
+            "pvalue": 0.0092
+          },
+          "jimok_차": {
+            "coef": 0.1978,
+            "pvalue": 0.0
+          },
+          "jimok_창": {
+            "coef": 0.267,
+            "pvalue": 0.0
+          },
+          "jimok_천": {
+            "coef": -0.1261,
+            "pvalue": 0.0
+          },
+          "jimok_철": {
+            "coef": -0.1008,
+            "pvalue": 0.0989
+          },
+          "jimok_체": {
+            "coef": 0.2194,
+            "pvalue": 0.0004
+          },
+          "jimok_학": {
+            "coef": 0.3171,
+            "pvalue": 0.0
+          },
+          "road_-": {
+            "coef": -0.2041,
+            "pvalue": 0.0
+          },
+          "road_12미만": {
+            "coef": 0.1958,
+            "pvalue": 0.0
+          },
+          "road_25미만": {
+            "coef": 0.3834,
+            "pvalue": 0.0
+          },
+          "road_25이상": {
+            "coef": 0.5262,
+            "pvalue": 0.0
+          },
+          "deal_중개거래": {
+            "coef": 0.2253,
+            "pvalue": 0.0
+          },
+          "deal_직거래": {
+            "coef": 0.0435,
+            "pvalue": 0.0
+          },
+          "year_trend": {
+            "coef": -0.0078,
+            "pvalue": 0.0
+          },
+          "log_assessed": {
+            "coef": 0.4223,
+            "pvalue": 0.0
+          },
+          "price_missing": {
+            "coef": 4.5609,
+            "pvalue": 0.0
+          }
+        }
+      }
+    },
+    {
+      "arm": "baseline_on_pm2_rows",
+      "note": "같은 검증 칸. 계약 이후 가격이 표본에 포함됨.",
+      "error": {
+        "n": 137754,
+        "folds": 5,
+        "cv_mape": 111.34
+      },
+      "fit": {
+        "n": 137754,
+        "adj_r2": 0.6009,
+        "coefficients": {
+          "const": {
+            "coef": 2.9072,
+            "pvalue": 0.0
+          },
+          "log_area": {
+            "coef": -0.135,
+            "pvalue": 0.0
+          },
+          "zone_1전": {
+            "coef": 0.6671,
+            "pvalue": 0.0
+          },
+          "zone_1주": {
+            "coef": 1.0544,
+            "pvalue": 0.0
+          },
+          "zone_2전": {
+            "coef": 1.5155,
+            "pvalue": 0.0
+          },
+          "zone_2주": {
+            "coef": 1.4304,
+            "pvalue": 0.0
+          },
+          "zone_개제": {
+            "coef": -0.5,
+            "pvalue": 0.0
+          },
+          "zone_근상": {
+            "coef": 1.4291,
+            "pvalue": 0.0
+          },
+          "zone_기타": {
+            "coef": 1.8264,
+            "pvalue": 0.0
+          },
+          "zone_농림": {
+            "coef": -0.5506,
+            "pvalue": 0.0
+          },
+          "zone_보관": {
+            "coef": -0.4506,
+            "pvalue": 0.0
+          },
+          "zone_보녹": {
+            "coef": 0.3073,
+            "pvalue": 0.0
+          },
+          "zone_생관": {
+            "coef": -0.3749,
+            "pvalue": 0.0
+          },
+          "zone_생녹": {
+            "coef": 0.0595,
+            "pvalue": 0.0001
+          },
+          "zone_일공": {
+            "coef": 0.4815,
+            "pvalue": 0.0
+          },
+          "zone_일상": {
+            "coef": 1.7772,
+            "pvalue": 0.0
+          },
+          "zone_자녹": {
+            "coef": 0.6279,
+            "pvalue": 0.0
+          },
+          "zone_준공": {
+            "coef": 1.0348,
+            "pvalue": 0.0
+          },
+          "zone_준주": {
+            "coef": 1.6257,
+            "pvalue": 0.0
+          },
+          "jimok_공": {
+            "coef": -0.2968,
+            "pvalue": 0.0792
+          },
+          "jimok_과": {
+            "coef": 0.321,
+            "pvalue": 0.0
+          },
+          "jimok_구": {
+            "coef": -0.1241,
+            "pvalue": 0.0003
+          },
+          "jimok_기타": {
+            "coef": -0.4569,
+            "pvalue": 0.0606
+          },
+          "jimok_답": {
+            "coef": 0.0182,
+            "pvalue": 0.0011
+          },
+          "jimok_대": {
+            "coef": 0.2883,
+            "pvalue": 0.0
+          },
+          "jimok_도": {
+            "coef": -0.6782,
+            "pvalue": 0.0
+          },
+          "jimok_목": {
+            "coef": 0.0623,
+            "pvalue": 0.1115
+          },
+          "jimok_묘": {
+            "coef": -0.1595,
+            "pvalue": 0.0001
+          },
+          "jimok_양": {
+            "coef": 0.5387,
+            "pvalue": 0.0
+          },
+          "jimok_원": {
+            "coef": 0.4274,
+            "pvalue": 0.0092
+          },
+          "jimok_유": {
+            "coef": 0.0427,
+            "pvalue": 0.4288
+          },
+          "jimok_임": {
+            "coef": -0.549,
+            "pvalue": 0.0
+          },
+          "jimok_잡": {
+            "coef": 0.154,
+            "pvalue": 0.0
+          },
+          "jimok_장": {
+            "coef": 0.431,
+            "pvalue": 0.0
+          },
+          "jimok_제": {
+            "coef": -0.9952,
+            "pvalue": 0.0
+          },
+          "jimok_종": {
+            "coef": 0.299,
+            "pvalue": 0.0168
+          },
+          "jimok_주": {
+            "coef": 0.4759,
+            "pvalue": 0.0
+          },
+          "jimok_차": {
+            "coef": 0.4284,
+            "pvalue": 0.0
+          },
+          "jimok_창": {
+            "coef": 0.4311,
+            "pvalue": 0.0
+          },
+          "jimok_천": {
+            "coef": -0.3377,
+            "pvalue": 0.0
+          },
+          "jimok_철": {
+            "coef": -0.1341,
+            "pvalue": 0.092
+          },
+          "jimok_체": {
+            "coef": 0.4189,
+            "pvalue": 0.0
+          },
+          "jimok_학": {
+            "coef": 0.3353,
+            "pvalue": 0.0001
+          },
+          "road_-": {
+            "coef": -0.4231,
+            "pvalue": 0.0
+          },
+          "road_12미만": {
+            "coef": 0.2866,
+            "pvalue": 0.0
+          },
+          "road_25미만": {
+            "coef": 0.6304,
+            "pvalue": 0.0
+          },
+          "road_25이상": {
+            "coef": 0.8595,
+            "pvalue": 0.0
+          },
+          "deal_중개거래": {
+            "coef": 0.2402,
+            "pvalue": 0.0
+          },
+          "deal_직거래": {
+            "coef": 0.0348,
+            "pvalue": 0.0
+          },
+          "year_trend": {
+            "coef": -0.0011,
+            "pvalue": 0.4982
+          }
+        }
+      }
+    },
+    {
+      "arm": "pm2_complete_includes_post_contract",
+      "note": "고유 필지. 해당연도, -1, +1, -2, +2. 검증 행도 계약 이후 값을 쓸 수 있음.",
+      "error": {
+        "n": 137754,
+        "folds": 5,
+        "cv_mape": 77.64
+      },
+      "fit": {
+        "n": 137754,
+        "adj_r2": 0.7222,
+        "coefficients": {
+          "const": {
+            "coef": -5.0753,
+            "pvalue": 0.0
+          },
+          "log_area": {
+            "coef": -0.0771,
+            "pvalue": 0.0
+          },
+          "zone_1전": {
+            "coef": -0.0029,
+            "pvalue": 0.9596
+          },
+          "zone_1주": {
+            "coef": 0.1545,
+            "pvalue": 0.0
+          },
+          "zone_2전": {
+            "coef": 0.4915,
+            "pvalue": 0.0017
+          },
+          "zone_2주": {
+            "coef": 0.2532,
+            "pvalue": 0.0
+          },
+          "zone_개제": {
+            "coef": -0.1846,
+            "pvalue": 0.0
+          },
+          "zone_근상": {
+            "coef": 0.2772,
+            "pvalue": 0.001
+          },
+          "zone_기타": {
+            "coef": 0.4151,
+            "pvalue": 0.0
+          },
+          "zone_농림": {
+            "coef": -0.2464,
+            "pvalue": 0.0
+          },
+          "zone_보관": {
+            "coef": -0.0428,
+            "pvalue": 0.0
+          },
+          "zone_보녹": {
+            "coef": 0.247,
+            "pvalue": 0.0
+          },
+          "zone_생관": {
+            "coef": -0.1089,
+            "pvalue": 0.0
+          },
+          "zone_생녹": {
+            "coef": -0.0789,
+            "pvalue": 0.0
+          },
+          "zone_일공": {
+            "coef": 0.1027,
+            "pvalue": 0.0001
+          },
+          "zone_일상": {
+            "coef": 0.4023,
+            "pvalue": 0.0
+          },
+          "zone_자녹": {
+            "coef": 0.1418,
+            "pvalue": 0.0
+          },
+          "zone_준공": {
+            "coef": 0.1551,
+            "pvalue": 0.0002
+          },
+          "zone_준주": {
+            "coef": 0.3282,
+            "pvalue": 0.0
+          },
+          "jimok_공": {
+            "coef": -0.0597,
+            "pvalue": 0.6719
+          },
+          "jimok_과": {
+            "coef": 0.1396,
+            "pvalue": 0.0
+          },
+          "jimok_구": {
+            "coef": 0.313,
+            "pvalue": 0.0
+          },
+          "jimok_기타": {
+            "coef": -0.2516,
+            "pvalue": 0.2156
+          },
+          "jimok_답": {
+            "coef": -0.0416,
+            "pvalue": 0.0
+          },
+          "jimok_대": {
+            "coef": -0.0847,
+            "pvalue": 0.0
+          },
+          "jimok_도": {
+            "coef": -0.0079,
+            "pvalue": 0.5132
+          },
+          "jimok_목": {
+            "coef": 0.1421,
+            "pvalue": 0.0
+          },
+          "jimok_묘": {
+            "coef": 0.057,
+            "pvalue": 0.0836
+          },
+          "jimok_양": {
+            "coef": 0.3364,
+            "pvalue": 0.0007
+          },
+          "jimok_원": {
+            "coef": -0.1434,
+            "pvalue": 0.2953
+          },
+          "jimok_유": {
+            "coef": 0.4635,
+            "pvalue": 0.0
+          },
+          "jimok_임": {
+            "coef": 0.237,
+            "pvalue": 0.0
+          },
+          "jimok_잡": {
+            "coef": -0.1577,
+            "pvalue": 0.0
+          },
+          "jimok_장": {
+            "coef": -0.0616,
+            "pvalue": 0.0049
+          },
+          "jimok_제": {
+            "coef": -0.3651,
+            "pvalue": 0.0001
+          },
+          "jimok_종": {
+            "coef": 0.0029,
+            "pvalue": 0.978
+          },
+          "jimok_주": {
+            "coef": -0.1457,
+            "pvalue": 0.0617
+          },
+          "jimok_차": {
+            "coef": -0.0285,
+            "pvalue": 0.5411
+          },
+          "jimok_창": {
+            "coef": 0.0379,
+            "pvalue": 0.3124
+          },
+          "jimok_천": {
+            "coef": -0.0088,
+            "pvalue": 0.7236
+          },
+          "jimok_철": {
+            "coef": 0.2092,
+            "pvalue": 0.0016
+          },
+          "jimok_체": {
+            "coef": 0.0662,
+            "pvalue": 0.2729
+          },
+          "jimok_학": {
+            "coef": 0.1474,
+            "pvalue": 0.0419
+          },
+          "road_-": {
+            "coef": -0.1528,
+            "pvalue": 0.0
+          },
+          "road_12미만": {
+            "coef": 0.083,
+            "pvalue": 0.0
+          },
+          "road_25미만": {
+            "coef": 0.212,
+            "pvalue": 0.0
+          },
+          "road_25이상": {
+            "coef": 0.2571,
+            "pvalue": 0.0
+          },
+          "deal_중개거래": {
+            "coef": 0.1873,
+            "pvalue": 0.0
+          },
+          "deal_직거래": {
+            "coef": 0.0068,
+            "pvalue": 0.2724
+          },
+          "year_trend": {
+            "coef": -0.0089,
+            "pvalue": 0.0
+          },
+          "log_assessed": {
+            "coef": 0.725,
+            "pvalue": 0.0
+          }
+        }
+      }
+    },
+    {
+      "arm": "pm2_trained_test_uses_past_only",
+      "note": "학습은 ±2. 검증 행은 계약 연도 이전 가격만 넣음. 계약 이후만 있는 검증 행은 점수에서 뺌.",
+      "error": {
+        "n": 137754,
+        "folds": 5,
+        "cv_mape": 77.64
+      }
+    }
+  ]
+}

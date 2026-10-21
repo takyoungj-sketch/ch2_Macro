@@ -330,6 +330,7 @@ const DEFAULT_VARS_BY_KIND: Record<BuiltAssetKind, RegressionVariableSpec> = {
     zone_type_dummy: true,
     building_use_dummy: true,
     structure_dummy: true,
+    assessed_land_price: false,
     asset_type_dummy: false,
     region_leaf_dummy: false,
   },
@@ -341,6 +342,7 @@ const DEFAULT_VARS_BY_KIND: Record<BuiltAssetKind, RegressionVariableSpec> = {
     zone_type_dummy: true,
     building_use_dummy: true,
     structure_dummy: true,
+    assessed_land_price: false,
     asset_type_dummy: false,
     region_leaf_dummy: false,
   },
@@ -352,6 +354,7 @@ const DEFAULT_VARS_BY_KIND: Record<BuiltAssetKind, RegressionVariableSpec> = {
     zone_type_dummy: true,
     building_use_dummy: true,
     structure_dummy: true,
+    assessed_land_price: false,
     asset_type_dummy: false,
     region_leaf_dummy: false,
   },
@@ -364,9 +367,10 @@ const DEFAULT_VARS_MULTI: RegressionVariableSpec = {
   road_width_dummy: true,
   zone_type_dummy: true,
   building_use_dummy: true,
-  structure_dummy: true,
-  asset_type_dummy: true,
-  region_leaf_dummy: false,
+    structure_dummy: true,
+    assessed_land_price: false,
+    asset_type_dummy: true,
+    region_leaf_dummy: false,
 };
 
 function defaultVarsForKinds(kinds: BuiltAssetKind[]): RegressionVariableSpec {
@@ -384,6 +388,7 @@ const VAR_SPEC_KEYS: (keyof RegressionVariableSpec)[] = [
   "zone_type_dummy",
   "building_use_dummy",
   "structure_dummy",
+  "assessed_land_price",
   "asset_type_dummy",
   "region_leaf_dummy",
 ];
@@ -574,7 +579,7 @@ export default function App() {
   const [appliedBody, setAppliedBody] = useState<RegressionRunRequest | null>(null);
   /** 대장보강이 꺼져 있으면 구조 더미는 쓸 수 없다 — 체크 표시·요청이 같은 값을 본다 */
   const effectiveVars = useMemo<RegressionVariableSpec>(
-    () => (enrich ? vars : { ...vars, structure_dummy: false }),
+    () => (enrich ? vars : { ...vars, structure_dummy: false, assessed_land_price: false }),
     [vars, enrich],
   );
   const canLogLog = effectiveVars.gross_area || effectiveVars.land_area;
@@ -1518,6 +1523,7 @@ export default function App() {
                       isOnlyDetached(assetType) ? "주택유형 더미" : "건축물용도 더미",
                     ],
                     ["structure_dummy", "구조 더미"],
+                    ["assessed_land_price", "개별공시지가"],
                     ...(isUnifiedAsset(assetType)
                       ? ([["asset_type_dummy", "유형 더미"]] as const)
                       : []),
@@ -1535,13 +1541,13 @@ export default function App() {
                     key={key}
                     className={clsx(
                       "flex items-center gap-1",
-                      key === "structure_dummy" && !enrich && "opacity-50",
+                      (key === "structure_dummy" || key === "assessed_land_price") && !enrich && "opacity-50",
                     )}
                   >
                     <input
                       type="checkbox"
                       checked={Boolean(effectiveVars[key as keyof RegressionVariableSpec])}
-                      disabled={key === "structure_dummy" && !enrich}
+                      disabled={(key === "structure_dummy" || key === "assessed_land_price") && !enrich}
                       onChange={(e) =>
                         setVars((v) => ({ ...v, [key]: e.target.checked }))
                       }

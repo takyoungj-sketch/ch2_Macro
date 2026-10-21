@@ -7,16 +7,18 @@ import type { StatsWindowYears } from "./StatsWindowToggle";
 import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import { assetTypeLabel } from "../types";
 import DraggableModalShell from "./DraggableModalShell";
+import RentRegressionPanel from "./RentRegressionPanel";
 import RentTransactionTable from "./RentTransactionTable";
 import RollingTrendChart from "./RollingTrendChart";
 
-type PanelMode = "conversion" | "rolling" | "transactions";
+type PanelMode = "conversion" | "rolling" | "transactions" | "regression";
 type RollingSeriesId = "jeonse" | "mixed_deposit" | "mixed_monthly" | "monthly";
 
 const TABS: { id: PanelMode; label: string }[] = [
   { id: "conversion", label: "전환율" },
   { id: "rolling", label: "롤링 구간" },
   { id: "transactions", label: "거래 목록" },
+  { id: "regression", label: "회귀 분석" },
 ];
 
 const ROLLING_SERIES: { id: RollingSeriesId; label: string }[] = [
@@ -474,16 +476,25 @@ export default function BuildingDetailModal({
           {txQ.isError && <p className="text-xs text-red-600">거래 목록을 불러오지 못했습니다.</p>}
           {txQ.data && (
             <>
-              <p className="text-[11px] text-slate-500">
-                원장 {txQ.data.total.toLocaleString("ko-KR")}건 · 보증금·월세 단위 만원
-                {row.asset_type === "detached" ? (
-                  <> · 단독은 단지명이 없어 읍·면·동+지번(가림) 묶음</>
-                ) : null}
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-[11px] text-slate-500">
+                  원장 {txQ.data.total.toLocaleString("ko-KR")}건 · 보증금·월세 단위 만원
+                  {row.asset_type === "detached" ? (
+                    <> · 단독은 단지명이 없어 읍·면·동+지번(가림) 묶음</>
+                  ) : null}
+                </p>
+              </div>
               <RentTransactionTable items={txQ.data.items} truncated={txQ.data.truncated} />
             </>
           )}
         </div>
+      )}
+
+      {panel === "regression" && (
+        <RentRegressionPanel
+          buildingKey={row.building_key}
+          extraKeys={extraKeys}
+        />
       )}
 
     </DraggableModalShell>

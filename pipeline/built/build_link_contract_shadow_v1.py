@@ -147,7 +147,7 @@ def not_applicable_reason(r) -> str:
     return "not_in_matching_input"
 
 
-def building_value(var, value, flag, ident, after, snap, numeric):
+def building_value(var, value, flag, ident, after, snap, numeric, approved=True):
     """One building variable from the attr shadow. ident: confirmed / candidates_agree / candidates_conflict."""
     timing = "post_contract_register" if after else "pre_contract_register"
     v = nn(value)
@@ -163,7 +163,8 @@ def building_value(var, value, flag, ident, after, snap, numeric):
         v = None
     num = float(v) if (v is not None and numeric) else None
     txt = None if (v is None or numeric) else str(v)
-    return (var, num, txt, state, "building", "building_ledger", snap, timing, "none", int(state == "confirmed"))
+    return (var, num, txt, state, "building", "building_ledger", snap, timing, "none",
+            int(approved and state == "confirmed"))
 
 
 def zone_values(z, labels) -> list[tuple]:
@@ -225,6 +226,10 @@ def build(snap: pd.DataFrame, rows: pd.DataFrame, zone: pd.DataFrame, pk: pd.Dat
             flags.append("collective_register")
         elif m["register"] == "변경":
             flags.append("register_kind_changed")
+        # D-079: a collective title whose main use is apartment housing is not a confirmed building link.
+        apartment_hold = m["register"] == "집합" and str(nn(a["use"]) or "") == "공동주택"
+        if apartment_hold:
+            flags.append("collective_apartment_d079")
         approve = nn(a["approve"])
         if ident == "confirmed" and approve and str(approve).isdigit() and int(approve) > cy:
             flags.append("approve_after_contract")
@@ -238,7 +243,7 @@ def build(snap: pd.DataFrame, rows: pd.DataFrame, zone: pd.DataFrame, pk: pd.Dat
         for var, col, numeric in (("structure", "struct", False), ("main_use", "use", False),
                                   ("floors_above", "floors", True), ("approve_year", "approve", True)):
             values.append((h, *building_value(var, a[col], int(nn(a[f"{col}_conflict"]) or 0), ident, after,
-                                              snap_used, numeric)))
+                                              snap_used, numeric, approved=not apartment_hold)))
         z = zone.get(h)
         for v in zone_values(z, labels):
             values.append((h, *v))

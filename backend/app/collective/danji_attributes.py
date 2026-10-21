@@ -2,10 +2,9 @@
 
 설계 SSOT: `docs/COLLECTIVE_TWO_STAGE_HEDONIC_DESIGN.md` §0.1 · §3.1 · §3.1.1.
 
-값만 내려보내지 않는다 — 출처(`source_label`)·매칭 신뢰도(`match`)·원본 이상값
-사유(`quality_flags`)·회귀 표본 제외 사유(`notes`)를 함께 반환한다. 판정 임계값은
-`pipeline/collective/apply_danji_dictionary.py` 상단 상수가 SSOT이며 여기서는
-그 결과 코드(`attr_quality_flags`)를 사람이 읽는 문장으로만 옮긴다.
+화면에는 출처(`source_label`)와 원본 숫자를 그대로 보여 준다. 품질 플래그는
+회귀에서 해당 변수만 빼는 용도이고, 단지 정보에 「원본이 잘못됐다」고 적지 않는다.
+판정 임계값은 `pipeline/collective/apply_danji_dictionary.py` 상단 상수가 SSOT다.
 """
 
 from __future__ import annotations
@@ -71,10 +70,6 @@ QUALITY_FLAG_META: dict[str, dict[str, Any]] = {
 }
 
 NOTE_NOT_USABLE = "매칭 신뢰도가 낮아 이 단지는 브랜드·규모 회귀 표본에서 제외됩니다."
-NOTE_QUALITY_FLAGGED = (
-    "원본 이상값이 있어 해당 변수는 회귀에서 결측으로 처리됩니다. "
-    "값 자체는 원본 그대로 표시합니다."
-)
 NOTE_JOINT_BUILDER = (
     "공동시공 단지입니다. 기업집단은 원문 첫 번째 시공사를 기준으로 표시했습니다."
 )
@@ -493,8 +488,6 @@ def fetch_danji_attributes(
     notes: list[str] = []
     if not meta["usable"] and tier != "Z":
         notes.append(NOTE_NOT_USABLE)
-    if flags:
-        notes.append(NOTE_QUALITY_FLAGGED)
     if builder_is_joint and not is_multi:
         notes.append(NOTE_JOINT_BUILDER)
     if builder_group is None and builder_raw:

@@ -38,6 +38,7 @@ from app.collective.building_geocode import geocode_collective_building, resolve
 from app.collective.regression.engine import run_building_regression, run_cohort_regression
 from app.collective.schemas import CollectiveRegressionRequest, CollectiveRegressionResponse
 from app.rent.map_resolve import resolve_rent_map_codes
+from app.rent.land_price import prepare_rent_regression
 from app.rent.tx_query import fetch_regression_rows, list_building_transactions
 from app.rent.profile_yearly import build_profile_yearly_payload, completed_calendar_years
 from app.rent.sangkwon_query import annual_table, import_meta, list_polygons, series_table
@@ -394,6 +395,20 @@ def rent_building_transactions(
     )
 
 
+def _run_rent_regression(df, body, asset_type, keys, names):
+    df, body, notes = prepare_rent_regression(df, body, asset_type)
+    if len(keys) == 1:
+        name = names.get(keys[0]) or (keys[0] if keys else "")
+        resp = run_building_regression(df, keys[0], name, body)
+    else:
+        resp = run_cohort_regression(
+            df, keys, f"{len(keys)}동", body, building_display_names=names
+        )
+    if notes:
+        resp.warnings = [*notes, *resp.warnings]
+    return resp
+
+
 @router.post("/buildings/{building_key}/regression/run", response_model=CollectiveRegressionResponse)
 def rent_building_regression(
     building_key: str,
@@ -419,7 +434,7 @@ def rent_building_regression(
         raise HTTPException(400, "회귀 표본이 부족합니다. 전세 거래가 더 있는 건물을 선택하세요.")
     df = pd.DataFrame(rows)
     name = str(df["display_name"].dropna().iloc[0]) if "display_name" in df.columns else building_key
-    return run_building_regression(df, building_key, name, body)
+    return _run_rent_regression(df, body, asset_type, keys, {building_key: name})
 
 
 @router.post("/regression/run", response_model=CollectiveRegressionResponse)
@@ -448,15 +463,12 @@ def rent_cohort_regression(
     if len(rows) < 8:
         raise HTTPException(400, "회귀 표본이 부족합니다.")
     df = pd.DataFrame(rows)
-    if len(keys) == 1:
-        name = str(df["display_name"].dropna().iloc[0]) if len(df) else keys[0]
-        return run_building_regression(df, keys[0], name, body)
     names = {
         str(r["building_key"]): str(r.get("display_name") or r["building_key"])
         for r in rows
         if r.get("building_key")
     }
-    return run_cohort_regression(df, keys, f"{len(keys)}동", body, building_display_names=names)
+    return _run_rent_regression(df, body, asset_type, keys, names)
 
 
 def _sangkwon_ready(conn) -> bool:

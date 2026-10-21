@@ -17,6 +17,7 @@ import {
   sortCoefficientsByVariableOrder,
 } from "../utils/collectiveRegressionFormat";
 import CollectiveRegressionEquation from "./CollectiveRegressionEquation";
+import ZoneCaution from "./ZoneCaution";
 
 function EffectsTable({ coefficients }: { coefficients: RegressionCoeff[] }) {
   const [feOpen, setFeOpen] = useState(false);
@@ -210,6 +211,7 @@ export function CollectiveRegressionResults({
           <EffectsTable coefficients={data.coefficients} />
         </details>
       )}
+      <ZoneCaution />
     </div>
   );
 }

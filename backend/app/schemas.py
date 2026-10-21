@@ -631,6 +631,8 @@ class MatrixCellTransactionItem(BaseModel):
     official_price_year: Optional[int] = None
     trait_asof: Optional[date] = None
     trait_unverified: Optional[bool] = None
+    # 일치·표기 정규화일 때만. 목록 칸의 공개 번지를 바꾸지 않고 호버에만 쓴다.
+    recovered_lot: Optional[str] = None
 
 
 class MatrixCellTransactionsRequest(MatrixYearlyRequest):
@@ -671,6 +673,7 @@ class LandRegressionVariables(BaseModel):
     partial_ownership: bool = False
     year_trend: bool = True
     beopjungri_fe: bool = False
+    assessed_land_price: bool = False
 
 
 class LandRegressionRequest(MatrixYearlyRequest):
@@ -782,6 +785,7 @@ class LandRegressionPredictRequest(LandRegressionRequest):
     deal_type: Optional[str] = None
     partial_ownership: bool = False
     beopjungri_name: Optional[str] = None
+    assessed_land_price: Optional[float] = None
 
 
 class LandRegressionPredictResponse(BaseModel):

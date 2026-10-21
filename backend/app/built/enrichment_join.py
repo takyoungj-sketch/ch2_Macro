@@ -41,31 +41,22 @@ _LEDGER_CANON_SQL = f"""
 )
 """
 
-# 세부를 고르고, 상업·공장 원장과 같이 끝의 '지역'만 뗀다. 목록·회귀가 같은 문자열.
-ZONE_CANON_SQL = f"""
+# 거래 용도지역이 없을 때(단독다가구). 계약연도 토지대장 값. 계약 뒤 관측은 칸을 비워 둔다.
+_CONTRACT_ZONE_SQL = f"""
 (
   SELECT CASE
-           WHEN lab ~ '지역$' THEN regexp_replace(lab, '지역$', '')
+           WHEN lab IS NULL OR lab = '' OR lower(lab) = 'nan' OR lab IN ({_COARSE_SQL}) THEN NULL
+           WHEN lab ~ '지역$' THEN NULLIF(regexp_replace(lab, '지역$', ''), '')
            ELSE lab
          END
-  FROM (
-    SELECT btrim(p.part) AS lab
-    FROM unnest(COALESCE(e.zone_labels, ARRAY[]::text[])) WITH ORDINALITY AS t(x, ord)
-    CROSS JOIN LATERAL unnest(string_to_array(COALESCE(x::text, ''), ','))
-      WITH ORDINALITY AS p(part, pord)
-    WHERE btrim(COALESCE(p.part, '')) <> ''
-      AND lower(btrim(p.part)) <> 'nan'
-      AND btrim(p.part) NOT IN ({_COARSE_SQL})
-    ORDER BY t.ord, p.pord
-    LIMIT 1
-  ) picked
+  FROM (SELECT btrim(e.zone_contract_year) AS lab) q
 )
 """
 
 ZONE_DISPLAY_SQL = f"""
 COALESCE(
   {_LEDGER_CANON_SQL},
-  {ZONE_CANON_SQL}
+  {_CONTRACT_ZONE_SQL}
 )
 """
 
@@ -126,6 +117,8 @@ def wrap_tx_enrichment(
                c.canon AS zone_type_filled,
                c.canon AS zone_type_first,
                e.structure_group,
+               e.assessed_land_price,
+               e.assessed_land_price_year,
                {RECOVERED_LOT_SQL} AS recovered_lot,
                e.match_tier AS match_tier,
                e.match_rule AS match_rule
@@ -133,6 +126,7 @@ def wrap_tx_enrichment(
         FROM ({inner_sql}) s
         LEFT JOIN built_transaction_enrichment e
           ON e.transaction_hash = s.transaction_hash
+         AND e.supply_hold IS NULL
         CROSS JOIN LATERAL (
           SELECT {ZONE_DISPLAY_SQL} AS canon
         ) c{zone_where}

@@ -162,6 +162,8 @@ class CommercialRegressionSpec(BaseModel):
     addr4: bool = False
     floor_mode: Literal["linear", "dummy", "grouped", "relative", "shop", "factory"] = "relative"
     contract_period: bool = True
+    # 화면에서 고르지 않는다. 대표필지 행이 없어 회귀는 이 값을 무시한다.
+    assessed_land_price: bool = False
 
 
 class CommercialRegressionRequest(BaseModel):
@@ -223,6 +225,7 @@ class CommercialPredictOptions(BaseModel):
     building_use_reference: Optional[str] = None
     road_width_labels: list[str] = Field(default_factory=list)
     road_width_reference: Optional[str] = None
+    assessed_land_price: Optional[ContinuousRange] = None
 
 
 class CommercialRegressionPredictInputs(BaseModel):
@@ -233,6 +236,7 @@ class CommercialRegressionPredictInputs(BaseModel):
     zone_type: Optional[str] = None
     building_use: Optional[str] = None
     road_width_label: Optional[str] = None
+    assessed_land_price: Optional[float] = None
 
 
 class CommercialRegressionPredictRequest(CommercialRegressionRequest):

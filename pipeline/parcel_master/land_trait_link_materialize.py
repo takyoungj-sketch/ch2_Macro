@@ -30,6 +30,7 @@ from parcel_master.cheongju_land_label_rule_probe import (
 from parcel_master.cheongju_land_link_probe import exclusion_reason, latest_consistent_plate
 from parcel_master.code_history_link_shadow import _merge, _prefixes_for, load_pairs
 from parcel_master.land_code_history_layer import resolve_beopjungri
+from parcel_master.pnu import lot_text_from_pnu
 from parcel_master.national_land_link_shadow import (
     CHEONGJU,
     CHEONGJU_2019_2023,
@@ -44,6 +45,7 @@ from parcel_master.trait_link_helpers import area_key
 PROGRESS = Path(r"C:\CH2\parcel_master\land_trait_link_progress.json")
 REPORT = ROOT / "docs" / "lab" / "land_trait_link_materialize_20261016.json"
 DDL = ROOT / "db" / "073_land_transaction_trait_link.sql"
+LOT_DDL = ROOT / "db" / "076_land_trait_link_recovered_lot.sql"
 RULE_VERSION = "LAND_CODE_HISTORY_LAYER_V1+LAND_LINK_RULE_V1"
 CHEONGJU_PRICE_LOCK = {
     "same_year": 17181,
@@ -55,10 +57,12 @@ INSERT = text(
     """
     INSERT INTO land_transaction_trait_link (
         transaction_hash, link_status, price_status, official_price_won, price_year,
-        trait_asof, ledger_beopjungri_code, code_resolution, unverified, rule_version
+        trait_asof, ledger_beopjungri_code, code_resolution, unverified, rule_version,
+        recovered_lot
     ) VALUES (
         :transaction_hash, :link_status, :price_status, :official_price_won, :price_year,
-        :trait_asof, :ledger_beopjungri_code, :code_resolution, TRUE, :rule_version
+        :trait_asof, :ledger_beopjungri_code, :code_resolution, TRUE, :rule_version,
+        :recovered_lot
     )
     ON CONFLICT (transaction_hash) DO NOTHING
     """
@@ -82,6 +86,7 @@ def _statements(sql: str) -> list[str]:
 
 def ensure_table(engine) -> None:
     statements = _statements(DDL.read_text(encoding="utf-8"))
+    statements.extend(_statements(LOT_DDL.read_text(encoding="utf-8")))
     with engine.begin() as connection:
         for statement in statements:
             connection.execute(text(statement))
@@ -205,6 +210,7 @@ def _classify(code: str, plates, index, pairs, fetched: list[dict]) -> tuple[lis
         by_year[row["year"]]["comparable"] += 1
         if price_pnu:
             price[row["year"]][price_status] += 1
+        lot = lot_text_from_pnu(price_pnu) if kind in {"exact", "label_normalized"} and price_pnu else None
         records.append(
             {
                 "transaction_hash": row["transaction_hash"],
@@ -216,6 +222,7 @@ def _classify(code: str, plates, index, pairs, fetched: list[dict]) -> tuple[lis
                 "ledger_beopjungri_code": row["ledger_beopjungri_code"],
                 "code_resolution": row["code_resolution"],
                 "rule_version": RULE_VERSION,
+                "recovered_lot": lot,
             }
         )
     summary = {

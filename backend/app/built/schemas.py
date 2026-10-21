@@ -58,6 +58,8 @@ class BuiltTransactionRow(BaseModel):
     is_partial_ownership: bool = False
     partial_ownership_label: Optional[str] = None
     structure_group: Optional[str] = None
+    assessed_land_price: Optional[int] = None
+    assessed_land_price_year: Optional[int] = None
     recovered_lot: Optional[str] = None
     match_tier: Optional[str] = None
     match_rule: Optional[str] = None
@@ -160,6 +162,8 @@ class RegressionVariableSpec(BaseModel):
     zone_type_dummy: bool = True
     building_use_dummy: bool = True
     structure_dummy: bool = True
+    # 보강을 켠 뒤 선택. 식에는 log(원/㎡). 기본 식에는 넣지 않는다.
+    assessed_land_price: bool = False
     asset_type_dummy: bool = True
     # 읍·면·동 초점에서는 addr3/addr4, 법정리 초점에서는 addr5 기준
     region_leaf_dummy: bool = False
@@ -560,6 +564,7 @@ class RegressionPredictRequest(RegressionRunRequest):
     zone_type: Optional[str] = None
     building_use: Optional[str] = None
     structure_group: Optional[str] = None
+    assessed_land_price: Optional[float] = None
     predict_asset_type: Optional[str] = None
     region_leaf: Optional[str] = None
 

@@ -10,6 +10,7 @@ import {
   levelCardTitle,
 } from "../utils/regressionFormat";
 import RegressionEquation from "./RegressionEquation";
+import ZoneCaution from "./ZoneCaution";
 import RegressionEffectsTable from "./RegressionEffectsTable";
 import SampleFunnel from "./SampleFunnel";
 
@@ -99,6 +100,7 @@ export default function FocusRegressionCard({
           />
         </details>
       )}
+      <ZoneCaution />
 
       {(result.vif?.length ?? 0) > 0 && (
         <div className="text-xs space-y-1">

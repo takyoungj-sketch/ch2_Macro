@@ -37,6 +37,8 @@ PRICE_STATUS_LABELS: dict[str, str] = {
     "none": "",
 }
 
+UNIQUE_LINK_STATUSES = frozenset({"exact", "label_normalized"})
+
 TRAIT_ITEM_KEYS = (
     "trait_link_status",
     "trait_link_label",
@@ -45,6 +47,7 @@ TRAIT_ITEM_KEYS = (
     "official_price_year",
     "trait_asof",
     "trait_unverified",
+    "recovered_lot",
 )
 
 TRAIT_CSV_HEADER = ["연결상태", "공시지가(원/㎡)", "공시기준연도", "공시지가구분", "특성기준일"]
@@ -72,6 +75,10 @@ def item_fields(row: dict) -> dict:
     label = None
     if status:
         label = LINK_STATUS_LABELS.get(status, status)
+    raw_lot = row.get("recovered_lot")
+    lot = str(raw_lot).strip() if raw_lot is not None else ""
+    if status not in UNIQUE_LINK_STATUSES:
+        lot = ""
     return {
         "trait_link_status": status,
         "trait_link_label": label,
@@ -80,6 +87,7 @@ def item_fields(row: dict) -> dict:
         "official_price_year": None if year is None else int(year),
         "trait_asof": row.get("trait_asof"),
         "trait_unverified": None if status is None else bool(row.get("trait_unverified")),
+        "recovered_lot": lot or None,
     }
 
 

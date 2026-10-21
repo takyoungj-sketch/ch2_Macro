@@ -19,6 +19,7 @@ import { formatResponseScale, ScopeNLabels } from "../utils/recommendationLabels
 import { fmtDecimal, fmtNum } from "../utils/regressionFormat";
 import RegressionEffectsTable from "./RegressionEffectsTable";
 import RegressionEquation from "./RegressionEquation";
+import ZoneCaution from "./ZoneCaution";
 
 const BLOCK_LABELS: Record<string, string> = {
   gross_area: "연면적",
@@ -687,6 +688,7 @@ function CandidateEquationBlock({
         />
         <CoefficientInsights items={narratives} />
       </details>
+      <ZoneCaution />
       </div>
   );
 }

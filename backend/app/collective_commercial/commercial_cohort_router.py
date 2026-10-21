@@ -69,7 +69,7 @@ def _fetch_cohort_transactions(
     rows = db.execute(
         text(
             f"""
-            SELECT cluster_key, asset_type,
+            SELECT cluster_key, asset_type, building_key,
                    unit_price, floor, gross_area, land_area,
                    price, building_age, building_year, contract_year, contract_month,
                    zone_type, building_use, road_width_label, road_code, addr4

@@ -639,7 +639,7 @@ class DanjiLandPriceInfo(BaseModel):
 
 
 class DanjiQualityFlag(BaseModel):
-    """K-apt 원본 이상값 — 값은 지우지 않고 사유만 함께 노출한다(설계 §3.1.1)."""
+    """회귀에서 해당 변수를 빼는 품질 코드. 단지 정보 화면에는 노출하지 않는다."""
 
     code: str
     label: str

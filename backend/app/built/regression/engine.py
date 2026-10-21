@@ -54,6 +54,7 @@ CONTINUOUS_VARS = frozenset(
         "region_apt_n",
         "region_comm_p50",
         "region_comm_n",
+        "assessed_land_price",
     }
 )
 LOGLOG_X_COLS = frozenset({"gross_area", "land_area"})
@@ -68,6 +69,7 @@ _CONT_LABELS = {
     "region_apt_n": "지역아파트거래량",
     "region_comm_p50": "지역상가가격",
     "region_comm_n": "지역상가거래량",
+    "assessed_land_price": "개별공시지가",
 }
 _ASSET_LABELS = {
     "commercial": "상업",
@@ -552,7 +554,7 @@ def _coef_display_name(name: str, *, response_scale: ResponseScale = "linear") -
         return "절편"
     if name in _CONT_LABELS:
         label = _CONT_LABELS[name]
-        if _is_loglog(response_scale) and name in LOGLOG_X_COLS:
+        if name == "assessed_land_price" or (_is_loglog(response_scale) and name in LOGLOG_X_COLS):
             return f"log({label})"
         return label
     if name.startswith("zone_"):
@@ -857,6 +859,7 @@ def _build_design_matrix(
         ("region_apt_n", vars_spec.region_apt_n),
         ("region_comm_p50", vars_spec.region_comm_p50),
         ("region_comm_n", vars_spec.region_comm_n),
+        ("assessed_land_price", vars_spec.assessed_land_price),
     ):
         if not enabled or col not in df.columns:
             continue
@@ -936,23 +939,26 @@ def _build_design_matrix(
     if _uses_log_y(response_scale):
         mask &= y > 0
 
+    log_cols: set[str] = set()
     if _is_loglog(response_scale):
-        log_cols: set[str] = set()
         for col in LOGLOG_X_COLS:
             if col not in X.columns:
                 continue
             s = pd.to_numeric(X[col], errors="coerce")
             mask &= s > 0
             log_cols.add(col)
-        meta.log_x_columns = frozenset(log_cols)
+    if "assessed_land_price" in X.columns:
+        s = pd.to_numeric(X["assessed_land_price"], errors="coerce")
+        mask &= s > 0
+        log_cols.add("assessed_land_price")
+    meta.log_x_columns = frozenset(log_cols)
 
     for c in X.columns:
         mask &= pd.to_numeric(X[c], errors="coerce").notna()
 
     X_out = X.loc[mask].astype(float).copy()
-    if _is_loglog(response_scale):
-        for col in meta.log_x_columns:
-            X_out[col] = np.log(X_out[col])
+    for col in meta.log_x_columns:
+        X_out[col] = np.log(X_out[col])
 
     y_out = y.loc[mask]
     if _uses_log_y(response_scale):
@@ -1010,6 +1016,10 @@ def _row_drop_reason(
             return "nonpositive_area", _VAR_DROP_LABELS["nonpositive_area"]
     if vars_spec.building_age and pd.isna(_cell_num(row, "building_age")):
         return "missing_age", _VAR_DROP_LABELS["missing_age"]
+    if vars_spec.assessed_land_price:
+        p = _cell_num(row, "assessed_land_price")
+        if pd.isna(p) or float(p) <= 0:
+            return "missing_assessed", "개별공시지가 결측"
     if vars_spec.road_code and pd.isna(_cell_num(row, "road_code")):
         return "missing_road", _VAR_DROP_LABELS["missing_road"]
     return "other", _VAR_DROP_LABELS["other"]

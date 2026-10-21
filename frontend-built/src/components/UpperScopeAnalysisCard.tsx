@@ -15,6 +15,7 @@ import {
 } from "../utils/regressionFormat";
 import PredictPanel from "./PredictPanel";
 import RegressionEquation from "./RegressionEquation";
+import ZoneCaution from "./ZoneCaution";
 import RegressionEffectsTable from "./RegressionEffectsTable";
 import SampleFunnel from "./SampleFunnel";
 import UpperScopeModelDiff from "./UpperScopeModelDiff";
@@ -113,6 +114,7 @@ function ComparisonLevelCard({
           />
         </details>
       )}
+      <ZoneCaution />
     </div>
   );
 }

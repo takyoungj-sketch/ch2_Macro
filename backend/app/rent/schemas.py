@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -170,6 +170,13 @@ class RentTransactionRow(BaseModel):
 class RentTransactionListResponse(BaseModel):
     total: int
     items: list[RentTransactionRow] = Field(default_factory=list)
+
+
+class RentAssessedLandPriceResponse(BaseModel):
+    status: Literal["linked", "missing", "not_applicable"]
+    assessed_land_price: Optional[float] = None
+    assessed_land_price_year: Optional[int] = None
+    note: str
 
 
 class RentMapResolveCodesResponse(BaseModel):

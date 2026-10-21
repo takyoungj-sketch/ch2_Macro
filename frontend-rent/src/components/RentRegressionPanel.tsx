@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { runRentRegression, type RentRegressionResult } from "../api/client";
+import ZoneCaution from "./ZoneCaution";
 
 function fmtPct(v: number | null | undefined) {
   if (v == null || !Number.isFinite(v)) return "—";
@@ -15,11 +16,9 @@ function fmtR2(v: number | null | undefined) {
 export default function RentRegressionPanel({
   buildingKey,
   extraKeys,
-  assetType,
 }: {
   buildingKey: string;
   extraKeys: string[];
-  assetType: string;
 }) {
   const [exclusiveArea, setExclusiveArea] = useState(true);
   const [floor, setFloor] = useState(true);
@@ -49,7 +48,7 @@ export default function RentRegressionPanel({
       <p className="text-[10px] text-slate-500">
         전세 보증금(만원) 기준. 면적·층·연식이 보증금에 어떤 방향·크기로 작용하는지 탐색합니다.
         월세·반전세는 포함하지 않습니다. 표본 8건 이상.
-        {keys.length > 1 ? ` · 선택 ${keys.length}동 통합` : ""}
+        {keys.length > 1 ? ` 선택 ${keys.length}동 통합` : ""}
       </p>
       <div className="flex flex-wrap gap-3 text-xs">
         <label className="flex items-center gap-1.5">
@@ -131,6 +130,7 @@ export default function RentRegressionPanel({
               </table>
             </div>
           )}
+          <ZoneCaution />
         </div>
       )}
     </div>

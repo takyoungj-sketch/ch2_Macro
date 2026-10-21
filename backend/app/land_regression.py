@@ -29,6 +29,7 @@ _COEF_LABELS: dict[str, str] = {
     "log_area": "log(면적)",
     "area_sqm": "면적(㎡)",
     "year_trend": "연도 추세",
+    "log_assessed_land_price": "log(개별공시지가)",
 }
 
 
@@ -63,6 +64,7 @@ class _DesignBundle:
     use_deal: bool = False
     use_partial: bool = False
     use_beop: bool = False
+    use_assessed: bool = False
 
 
 def _prepare_df(rows: list[dict], req: "LandRegressionRequest") -> tuple[pd.DataFrame, list[str]]:
@@ -84,6 +86,27 @@ def _prepare_df(rows: list[dict], req: "LandRegressionRequest") -> tuple[pd.Data
         if n_removed:
             warnings.append(f"IQR 이상치 {n_removed}건 제외 (배수 {mult})")
     return df, warnings
+
+
+def _apply_assessed_case(
+    df: pd.DataFrame, req: "LandRegressionRequest", warnings: list[str]
+) -> tuple[pd.DataFrame, list[str]]:
+    """공시지가를 켠 식만 결측 행을 뺀다. 추천 탐색 풀에는 넣지 않는다."""
+    if not req.variables.assessed_land_price:
+        return df, warnings
+    out = list(warnings)
+    if "official_price_won" not in df.columns:
+        df = df.copy()
+        df["official_price_won"] = np.nan
+    price = pd.to_numeric(df["official_price_won"], errors="coerce")
+    keep = price > 0
+    n_drop = int((~keep).sum())
+    df = df.loc[keep].copy()
+    if not df.empty:
+        df["official_price_won"] = price.loc[keep].astype(float)
+    if n_drop:
+        out.append(f"개별공시지가 결측 {n_drop}건 제외")
+    return df, out
 
 
 def _build_design(df: pd.DataFrame, req: "LandRegressionRequest", base_warnings: list[str]) -> _DesignBundle:
@@ -116,6 +139,11 @@ def _build_design(df: pd.DataFrame, req: "LandRegressionRequest", base_warnings:
         yr_centered = (df["contract_year"] - year_mean).rename("year_trend")
         X_parts.append(yr_centered.to_frame())
         use_year = True
+
+    use_assessed = False
+    if v.assessed_land_price and "official_price_won" in df.columns and len(df):
+        X_parts.append(np.log(df["official_price_won"].astype(float)).rename("log_assessed_land_price").to_frame())
+        use_assessed = True
 
     road_cats: list[str] = []
     use_road = False
@@ -229,6 +257,7 @@ def _build_design(df: pd.DataFrame, req: "LandRegressionRequest", base_warnings:
     use_log_area = use_log_area and "log_area" in colset
     use_area = use_area and "area_sqm" in colset
     use_year = use_year and "year_trend" in colset
+    use_assessed = use_assessed and "log_assessed_land_price" in colset
 
     return _DesignBundle(
         y_fit=aligned_y,
@@ -251,6 +280,7 @@ def _build_design(df: pd.DataFrame, req: "LandRegressionRequest", base_warnings:
         use_deal=use_deal,
         use_partial=use_partial,
         use_beop=use_beop,
+        use_assessed=use_assessed,
     )
 
 
@@ -403,12 +433,14 @@ def run_land_regression(
 
     min_n = max(MIN_N, int(req.min_n))
     df, warnings = _prepare_df(rows, req)
+    df, warnings = _apply_assessed_case(df, req, warnings)
     n = len(df)
     if n < min_n:
-        raise HTTPException(
-            status_code=422,
-            detail=f"회귀 최소 표본({min_n}건) 미충족: 현재 {n}건. 필터 조건을 완화해 주세요.",
-        )
+        note = " ".join(w for w in warnings if w.startswith("개별공시지가"))
+        detail = f"회귀 최소 표본({min_n}건) 미충족: 현재 {n}건. 필터 조건을 완화해 주세요."
+        if note:
+            detail = f"{detail} {note}"
+        raise HTTPException(status_code=422, detail=detail)
 
     bundle = _build_design(df, req, warnings)
     model = sm.OLS(bundle.y_fit, bundle.X_const, missing="drop").fit()
@@ -587,6 +619,11 @@ def _input_to_x_row(bundle: _DesignBundle, req: "LandRegressionPredictRequest") 
     if bundle.use_partial and "partial_own" in row:
         row["partial_own"] = 1.0 if req.partial_ownership else 0.0
 
+    if bundle.use_assessed and "log_assessed_land_price" in row:
+        if req.assessed_land_price is None or float(req.assessed_land_price) <= 0:
+            raise HTTPException(status_code=400, detail="개별공시지가(원/㎡)를 입력해 주세요.")
+        row["log_assessed_land_price"] = float(np.log(float(req.assessed_land_price)))
+
     if bundle.use_beop:
         beop = (req.beopjungri_name or bundle.reference_categories.get("법정동") or "").strip()
         if not beop:
@@ -628,6 +665,7 @@ def predict_land_regression(
 
     min_n = max(MIN_N, int(req.min_n))
     df, warnings = _prepare_df(rows, req)
+    df, warnings = _apply_assessed_case(df, req, warnings)
     n = len(df)
     if n < min_n:
         raise HTTPException(

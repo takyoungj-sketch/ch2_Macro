@@ -117,6 +117,16 @@ export default function LandPredictPanel({
       if (opts.partial_ownership_enabled) {
         body.partial_ownership = inputs.partial_ownership === "1";
       }
+      if (vars.assessed_land_price) {
+        const raw = inputs.assessed_land_price;
+        const num = Number(raw);
+        if (raw === "" || raw == null || !Number.isFinite(num) || num <= 0) {
+          setError("개별공시지가(원/㎡)를 입력해 주세요.");
+          setLoading(false);
+          return;
+        }
+        body.assessed_land_price = num;
+      }
       const res = await fetchLandRegressionPredict(body);
       setData(res);
     } catch (e) {
@@ -231,6 +241,21 @@ export default function LandPredictPanel({
                 </option>
               ))}
             </select>
+          </label>
+        )}
+
+        {vars.assessed_land_price && (
+          <label className="space-y-1 shrink-0">
+            <span className="text-slate-500 block whitespace-nowrap">개별공시지가(원/㎡)</span>
+            <input
+              className="w-[8.5rem] rounded border border-slate-300 px-2 py-1 text-xs"
+              type="number"
+              min={1}
+              value={inputs.assessed_land_price ?? ""}
+              onChange={(e) =>
+                setInputs((prev) => ({ ...prev, assessed_land_price: e.target.value }))
+              }
+            />
           </label>
         )}
 

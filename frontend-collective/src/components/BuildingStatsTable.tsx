@@ -81,7 +81,6 @@ function fmtLandPrice(v: number | null | undefined) {
 }
 
 function householdsCellTitle(row: BuildingStatsRow): string | undefined {
-  if (row.households_flagged) return "원본 이상값 — 값은 그대로 표시";
   if (row.scale_scope === "complex" || (row.type_siblings?.length ?? 0) > 0) {
     return "단지 전체 세대수. 이 유형 재고가 아닙니다. 유형별 거래 통계는 별도입니다.";
   }
@@ -208,14 +207,7 @@ function BuildingTableRow({
       {wide && <td className="num text-[10px]">{fmtCiCompact(row.ci_lower, row.ci_upper)}</td>}
       <td className="num">{row.building_year ?? "—"}</td>
       <td className="num" title={householdsCellTitle(row)}>
-        {row.households == null ? (
-          "—"
-        ) : (
-          <>
-            {row.households.toLocaleString("ko-KR")}
-            {row.households_flagged ? <span className="ml-0.5 text-[9px] text-amber-600">!</span> : null}
-          </>
-        )}
+        {row.households == null ? "—" : row.households.toLocaleString("ko-KR")}
       </td>
       <td
         className="truncate"

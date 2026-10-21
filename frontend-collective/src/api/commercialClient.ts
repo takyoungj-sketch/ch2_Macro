@@ -301,6 +301,7 @@ export async function runCommercialRegression(
       road_code?: boolean;
       floor_mode?: string;
       contract_period?: boolean;
+      assessed_land_price?: boolean;
     };
   },
 ): Promise<CommercialRegressionResponse> {
@@ -345,6 +346,7 @@ export async function predictCommercialRegression(
       road_code?: boolean;
       floor_mode?: string;
       contract_period?: boolean;
+      assessed_land_price?: boolean;
     };
   },
 ): Promise<CommercialRegressionPredictResponse> {

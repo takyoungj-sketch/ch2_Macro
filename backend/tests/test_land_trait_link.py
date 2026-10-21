@@ -24,12 +24,38 @@ def test_item_fields_keep_a_unique_price_and_label_the_status():
             "official_price_year": 2019,
             "trait_asof": date(2019, 1, 1),
             "trait_unverified": True,
+            "recovered_lot": None,
         }
     )
     assert fields["trait_link_label"] == "일치"
     assert fields["official_price_won"] == 1234500.0
     assert fields["official_price_year"] == 2019
     assert fields["trait_unverified"] is True
+    assert fields["recovered_lot"] is None
+
+
+def test_item_fields_keep_a_lot_only_for_a_unique_link():
+    fields = item_fields(
+        {
+            "trait_link_status": "exact",
+            "trait_price_status": "same_year",
+            "official_price_won": 1,
+            "official_price_year": 2024,
+            "trait_asof": date(2024, 1, 1),
+            "trait_unverified": True,
+            "recovered_lot": " 12-3 ",
+        }
+    )
+    assert fields["recovered_lot"] == "12-3"
+    hidden = item_fields(
+        {
+            "trait_link_status": "multiple_candidates",
+            "trait_price_status": "none",
+            "recovered_lot": "12-3",
+            "trait_unverified": True,
+        }
+    )
+    assert hidden["recovered_lot"] is None
 
 
 def test_item_fields_leave_a_missing_row_blank():
