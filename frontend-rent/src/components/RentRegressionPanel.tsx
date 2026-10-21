@@ -16,9 +16,11 @@ function fmtR2(v: number | null | undefined) {
 export default function RentRegressionPanel({
   buildingKey,
   extraKeys,
+  assetType,
 }: {
   buildingKey: string;
   extraKeys: string[];
+  assetType: string;
 }) {
   const [exclusiveArea, setExclusiveArea] = useState(true);
   const [floor, setFloor] = useState(true);

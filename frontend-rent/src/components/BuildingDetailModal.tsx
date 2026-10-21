@@ -494,6 +494,7 @@ export default function BuildingDetailModal({
         <RentRegressionPanel
           buildingKey={row.building_key}
           extraKeys={extraKeys}
+          assetType={row.asset_type}
         />
       )}
 
