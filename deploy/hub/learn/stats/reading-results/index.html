@@ -10,7 +10,7 @@
     />
     <link rel="canonical" href="https://ch2data.com/learn/stats/reading-results/" />
     <link rel="stylesheet" href="/style.css" />
-    <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261007-2" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261021-2" />
   </head>
   <body>
     <div class="page">
@@ -21,7 +21,9 @@
         </p>
         <p class="hero__eyebrow">VI. 기초 머신러닝과 종합 해석</p>
         <h1 class="hero__title">32. 통계 결과를 읽고 판단하는 법</h1>
-      </header>
+<p class="learn-chapter-relevance">Macro 활용도 <span class="learn-relevance" aria-label="Macro 활용도 3단계, 핵심"><span aria-hidden="true">★★★</span></span></p>
+<p class="learn-relevance-guide">Macro 활용도: ★★★ 핵심 · ★★☆ 권장 · ★☆☆ 심화<br>별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.</p>
+</header>
 
       <article class="learn-chapter learn-chapter--expanded" aria-label="통계 결과를 읽고 판단하는 법"><section class="learn-chapter__step" id="workflow" data-toc-label="결과 읽기의 순서"><p class="learn-chapter__label">결과 읽기의 순서</p><h2>숫자를 질문·자료·방법에 연결합니다</h2><p>이 장은 새로운 모형을 추가하기보다 앞의 31개 장에서 배운 개념을 하나의 읽기 절차로 묶습니다. 전체 과정을 마친 뒤 종합 점검에 쓰거나, 결과를 해석하다 막힌 부분의 연결 장으로 돌아가는 안내로 사용할 수 있습니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 410" role="img" aria-labelledby="workflow-title workflow-desc"><title id="workflow-title">결과 읽기 순서</title><desc id="workflow-desc">그림 1. 숫자를 평가하기 전에 질문과 자료 범위를 확인합니다. 필요한 조건이 확인되지 않으면 결론을 좁히거나 추가 자료를 요청합니다.</desc><text x="24" y="28">결과를 읽는 다섯 단계</text><rect x="65" y="55" width="510" height="49" rx="5" fill="#eaf2ff"/><text x="80" y="84">1. 질문</text><text x="245" y="84">무엇을 알고 싶은가?</text><line x1="320" y1="104" x2="320" y2="119" stroke="#94a3b8"/><rect x="65" y="119" width="510" height="49" rx="5" fill="#eaf2ff"/><text x="80" y="148">2. 자료</text><text x="245" y="148">누구·언제·어떤 단위인가?</text><line x1="320" y1="168" x2="320" y2="183" stroke="#94a3b8"/><rect x="65" y="183" width="510" height="49" rx="5" fill="#eaf2ff"/><text x="80" y="212">3. 방법</text><text x="245" y="212">가정과 비교 기준은 무엇인가?</text><line x1="320" y1="232" x2="320" y2="247" stroke="#94a3b8"/><rect x="65" y="247" width="510" height="49" rx="5" fill="#eaf2ff"/><text x="80" y="276">4. 결과</text><text x="245" y="276">크기·불확실성·오차는?</text><line x1="320" y1="296" x2="320" y2="311" stroke="#94a3b8"/><rect x="65" y="311" width="510" height="49" rx="5" fill="#eaf2ff"/><text x="80" y="340">5. 적용</text><text x="245" y="340">어디까지 말할 수 있는가?</text></svg><figcaption class="learn-chart__caption">그림 1. 숫자를 평가하기 전에 질문과 자료 범위를 확인합니다. 필요한 조건이 확인되지 않으면 결론을 좁히거나 추가 자료를 요청합니다.</figcaption></figure><p>기술통계는 관측 자료를 요약하고, 추론은 가정 아래 모집단의 특성을 추정하며, 예측은 아직 보지 않은 관측의 목표를 맞추려 합니다. 인과 질문은 어떤 조건을 바꾸었을 때 결과가 어떻게 달라질지를 묻습니다. 같은 숫자를 이 네 질문의 답으로 바꾸어 읽지 마세요.</p></section>
 <section class="learn-chapter__step" id="data" data-toc-label="대상·단위·자료"><p class="learn-chapter__label">대상·단위·자료</p><h2>누가 포함되고 누가 빠졌는지 확인합니다</h2><p>지역·기간·용도·관측 단위·표본 수를 먼저 확인합니다. 거래 100건, 건물 100개, 단지 100개는 다른 자료입니다. 같은 단지의 반복 거래는 서로 독립적이지 않을 수 있으며, 관측 수가 많아도 대표성과 독립성이 자동으로 확보되지는 않습니다.</p><p>총액과 단가, 건수 가중과 면적 가중, 명목값과 물가를 조정한 값도 구별해야 합니다. 결측·중복·이상치 필터로 빠진 관측을 확인하고 필터 전후 건수와 요약치 변화를 비교하세요. IQR 기준으로 제외되었다는 사실만으로 입력 오류라고 단정할 수 없습니다.</p><p>기간별 평균 차이는 같은 유형의 값이 달라져서 생길 수도 있고 거래 구성비가 바뀌어서 생길 수도 있습니다. 자료 정의와 구성 변화를 함께 살펴야 합니다. 복습: <a href="/learn/stats/population-and-sampling/">02장 표본과 편향</a>, <a href="/learn/stats/iqr-outliers/">07장 이상치</a>.</p></section>
@@ -48,6 +50,6 @@
         <p>© CH2 DATA</p>
       </footer>
     </div>
-    <script src="/learn/stats/learn-stats-toc.js?v=20261007-2" defer></script>
+    <script src="/learn/stats/learn-stats-toc.js?v=20261021-2" defer></script>
   </body>
 </html>

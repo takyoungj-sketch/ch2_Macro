@@ -10,7 +10,7 @@
     />
     <link rel="canonical" href="https://ch2data.com/learn/stats/regularization/" />
     <link rel="stylesheet" href="/style.css" />
-    <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261007-2" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261021-2" />
   </head>
   <body>
     <div class="page">
@@ -21,7 +21,9 @@
         </p>
         <p class="hero__eyebrow">V. 예측과 모형 평가</p>
         <h1 class="hero__title">27. 규제: 릿지와 라쏘</h1>
-      </header>
+<p class="learn-chapter-relevance">Macro 활용도 <span class="learn-relevance" aria-label="Macro 활용도 1단계, 심화"><span aria-hidden="true">★☆☆</span></span></p>
+<p class="learn-relevance-guide">Macro 활용도: ★★★ 핵심 · ★★☆ 권장 · ★☆☆ 심화<br>별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.</p>
+</header>
 
       <article class="learn-chapter learn-chapter--expanded" aria-label="규제: 릿지와 라쏘"><section class="learn-chapter__step" id="quick-start" data-toc-label="규제의 목적"><p class="learn-chapter__label">규제의 목적</p><h2>적합 오차에 계수 크기의 벌점을 더합니다</h2><p>OLS는 학습 잔차제곱합만 최소화합니다. 설명변수가 많거나 서로 강하게 겹치면 계수가 표본의 작은 변화에도 크게 움직일 수 있습니다. 규제는 계수 크기에 벌점을 주어 적합과 안정성 사이를 조절하는 방법입니다.</p><p>일부 편향을 감수하고 예측 분산을 줄여 새 자료 오차를 낮추려는 선택이지만 항상 개선되는 것은 아닙니다. 너무 강한 규제는 중요한 관계도 눌러 과소적합을 만들 수 있습니다. 누락변수·측정오차·인과 식별 문제를 자동으로 해결하는 방법도 아닙니다.</p></section>
 <section class="learn-chapter__step" id="objective" data-toc-label="산식과 λ"><p class="learn-chapter__label">산식과 λ</p><h2>정규화 규칙을 먼저 고정합니다</h2><p>이 장에서는 표준화된 설명변수 Z를 사용하고 절편은 벌점에서 제외합니다. 릿지는 <strong>SSE/(2n)+(λ/2)Σbⱼ²</strong>, 라쏘는 <strong>SSE/(2n)+λΣ|bⱼ|</strong>를 최소화합니다. λ≥0이며 벌점 합에는 절편이 들어가지 않습니다.</p><p>λ=0은 규제 없는 최소제곱 문제입니다. λ가 커지면 계수 크기에 더 큰 비용을 부과합니다. 소프트웨어마다 SSE 앞의 1/n·1/2와 벌점 계수가 다르므로 숫자 λ만 비교하지 않습니다. 예컨대 SSE+αΣbⱼ²의 릿지는 이 장의 α=nλ에 해당합니다.</p><p>설명변수를 중심화하면 절편은 Y 평균이 됩니다. 절편까지 강제로 0 쪽으로 줄이면 자료의 기준 수준도 바뀌므로 보통 별도로 취급합니다.</p></section>
@@ -49,6 +51,6 @@
         <p>© CH2 DATA</p>
       </footer>
     </div>
-    <script src="/learn/stats/learn-stats-toc.js?v=20261007-2" defer></script>
+    <script src="/learn/stats/learn-stats-toc.js?v=20261021-2" defer></script>
   </body>
 </html>

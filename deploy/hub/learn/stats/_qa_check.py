@@ -147,7 +147,7 @@ def main():
 
  ch5=(ROOT/'quantiles/index.html').read_text(encoding='utf-8')
  charts5=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch5,re.S)]
- assert len(charts5)==5
+ assert len(charts5)==6
  from _build_quantiles_chapter import summary,type7
  assert summary(values)==(98,122,168,62,268,[480])
  assert [type7(values,p) for p in [.25,.5,.75]]==[99,122,166]
@@ -425,7 +425,8 @@ def main():
   sx,sy=map(float,pair.split(','));slope=-1.2+i*.01;inter=mean(prices)-slope*mean(areas)
   sse=sum((y-inter-slope*x)**2 for x,y in zip(areas,prices))
   assert abs(sx-(80+(slope+1.2)*450))<1e-4 and abs(sy-(285-(sse-fit['SSE'])/500))<1e-4
- dots=[e for e in charts17[0].findall('circle')];assert len(dots)==30
+ fit_chart17=next(svg for svg in charts17 if svg.attrib['aria-labelledby'].startswith('fit-title'))
+ dots=[e for e in fit_chart17.findall('circle')];assert len(dots)==30
  for dot in dots:
   row=next(r for r in data if r['id']==int(dot.attrib['data-id']))
   assert float(dot.attrib['cx'])==70+row['area']*1.5 and float(dot.attrib['cy'])==320-row['price']*.5
@@ -478,7 +479,7 @@ def main():
  print('Chapter 19 QR coefficients, intervals, partial regression and graphic coordinates verified')
  ch20=(ROOT/'log-regression/index.html').read_text(encoding='utf-8')
  charts20=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch20,re.S)]
- assert len(charts20)==4 and ch20.count('<summary>답과 해설</summary>')==4
+ assert len(charts20)==5 and ch20.count('<summary>답과 해설</summary>')==3
  log20=json.loads((ROOT/'log-regression-example.json').read_text(encoding='utf-8'))
  for key in ['level','log_y','log_x','log_log']:
   xx=np.log(areas) if key in ['log_x','log_log'] else np.array(areas)
@@ -493,8 +494,8 @@ def main():
  for curve in charts20[1].findall('polyline'):
   key=curve.attrib['data-model'];m=log20['models'][key];pairs=curve.attrib['points'].split();assert len(pairs)==101
   for i,pair in enumerate(pairs):
-   cx,cy=map(float,pair.split(','));xv=22+i*288/100;z=math.log(xv) if key=='log_log' else xv
-   yv=m['intercept']+m['slope']*z;yv=math.exp(yv) if key!='level' else yv
+   cx,cy=map(float,pair.split(','));xv=22+i*288/100;z=math.log(xv) if key in ['log_x','log_log'] else xv
+   yv=m['intercept']+m['slope']*z;yv=math.exp(yv) if key in ['log_y','log_log'] else yv
    assert abs(cx-(65+xv*1.55))<1e-9 and abs(cy-(325-yv*.5))<1e-9
  for row in log20['percentages']:
   b=log20['models']['log_log']['slope'];c=row['change'];assert abs(row['exact']-100*math.expm1(b*math.log1p(c/100)))<1e-10

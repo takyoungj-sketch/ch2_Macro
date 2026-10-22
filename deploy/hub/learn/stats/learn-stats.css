@@ -669,3 +669,42 @@
 .learn-exercises summary { cursor: pointer; font-weight: 600; color: #1d4ed8; }
 .learn-chapter--expanded a:focus-visible, .learn-toc a:focus-visible, summary:focus-visible { outline: 2px solid #2563eb; outline-offset: 3px; }
 @media (max-width: 899px) { .learn-toc { position: static; } }
+
+/* Macro 활용도는 course.json에서 목차와 장 머리말에 함께 생성합니다. */
+.learn-relevance { display: inline-block; white-space: nowrap; font-size: .75rem; font-weight: 600; color: #475569; }
+.learn-relevance > span { color: #1d4ed8; letter-spacing: .04em; }
+.learn-chapter-relevance { margin: .8rem 0 0; color: #475569; font-size: .875rem; }
+.learn-relevance-guide { color: #64748b; font-size: .8125rem; line-height: 1.65; margin: .65rem 0; }
+.learn-relevance-controls { margin-bottom: 1rem; }
+.learn-core-filter { padding: .65rem .9rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #1d4ed8; cursor: pointer; font: inherit; font-size: .875rem; font-weight: 600; }
+.learn-core-filter[aria-pressed="true"] { background: #eff6ff; border-color: #2563eb; }
+.learn-core-filter:focus-visible { outline: 2px solid #2563eb; outline-offset: 3px; }
+.learn-filter-status { margin: .5rem 0 0; font-size: .8125rem; color: #64748b; }
+.learn-layout [hidden] { display: none !important; }
+@media (max-width: 899px) { .learn-toc--roadmap { display: none; } }
+
+/* 장별 편집을 마친 본문: 절 제목과 설명 제목을 색으로 구분합니다. */
+.learn-chapter--edited .learn-chapter__label {
+  display: inline-block;
+  margin: 0 0 .75rem;
+  padding: .25rem .65rem;
+  border-left: 3px solid #0f766e;
+  border-radius: 0 4px 4px 0;
+  background: #ecfdf5;
+  color: #0f766e;
+  font-size: .875rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+.learn-chapter--edited .learn-chapter__step h2 { color: #1e3a8a; }
+.learn-chapter--edited .learn-objectives,
+.learn-chapter--edited .learn-recap-list { padding: .8rem 1rem .8rem 2rem; background: #f8fafc; border-radius: 8px; }
+.learn-chapter--edited .learn-screen-reading { padding-left: 1.35rem; }
+.learn-chapter--edited .learn-screen-reading > li { margin-top: .85rem; }
+.learn-chapter--edited .learn-capture a:focus-visible { outline: 2px solid #2563eb; outline-offset: 3px; }
+.learn-capture--detail > a { display: block; padding: 1rem; }
+.learn-capture--detail img { width: auto; max-width: 100%; margin: 0 auto; }
+.learn-quantile-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 1rem; align-items: start; }
+.learn-quantile-pair > figure { min-width: 0; margin-top: 1rem; }
+.learn-quantile-pair .learn-source-boxplot { padding: .75rem; }
+@media (max-width: 640px) { .learn-quantile-pair { grid-template-columns: 1fr; } }

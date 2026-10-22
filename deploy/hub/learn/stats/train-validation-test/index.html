@@ -10,7 +10,7 @@
     />
     <link rel="canonical" href="https://ch2data.com/learn/stats/train-validation-test/" />
     <link rel="stylesheet" href="/style.css" />
-    <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261007-2" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261021-2" />
   </head>
   <body>
     <div class="page">
@@ -21,7 +21,9 @@
         </p>
         <p class="hero__eyebrow">V. 예측과 모형 평가</p>
         <h1 class="hero__title">23. 학습·검증·시험 자료와 데이터 누수</h1>
-      </header>
+<p class="learn-chapter-relevance">Macro 활용도 <span class="learn-relevance" aria-label="Macro 활용도 2단계, 권장"><span aria-hidden="true">★★☆</span></span></p>
+<p class="learn-relevance-guide">Macro 활용도: ★★★ 핵심 · ★★☆ 권장 · ★☆☆ 심화<br>별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.</p>
+</header>
 
       <article class="learn-chapter learn-chapter--expanded" aria-label="학습·검증·시험 자료와 데이터 누수"><section class="learn-chapter__step" id="roles" data-toc-label="역할 구분"><p class="learn-chapter__label">역할 구분</p><h2>배우는 자료와 평가하는 자료를 구별합니다</h2><p>모형은 학습 자료에서 규칙을 배웁니다. 같은 자료로 평가하면 이미 본 관측을 얼마나 잘 맞추었는지 알 수 있지만, 새로운 대상에서의 성능은 낙관적으로 보일 수 있습니다. 평가 자료는 실제 활용 시 마주할 새 대상과 비슷한 역할을 하도록 설계합니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 410" role="img" aria-labelledby="roles-title roles-desc"><title id="roles-title">세 자료의 역할</title><desc id="roles-desc">그림 1. 역할을 구분한 개념도입니다. 세 개의 고정 파일만이 유일한 구현은 아니며 교차검증으로 학습·검증 역할을 반복할 수 있습니다.</desc><text x="24" y="28">자료의 역할: 학습 → 선택 → 마지막 평가</text><rect x="90" y="70" width="455" height="65" rx="6" fill="#eaf2ff"/><text x="112" y="95">학습</text><text x="112" y="119">전처리와 계수를 학습</text><rect x="90" y="165" width="455" height="65" rx="6" fill="#eaf2ff"/><text x="112" y="190">검증</text><text x="112" y="214">후보·설정·임계값을 선택</text><rect x="90" y="260" width="455" height="65" rx="6" fill="#eaf2ff"/><text x="112" y="285">시험</text><text x="112" y="309">선택한 절차의 성능을 마지막에 평가</text><text x="305" y="154">↓</text><text x="305" y="249">↓</text><text x="24" y="380">시험 성적에 맞춰 다시 선택하면 독립 평가의 역할을 잃습니다</text></svg><figcaption class="learn-chart__caption">그림 1. 역할을 구분한 개념도입니다. 세 개의 고정 파일만이 유일한 구현은 아니며 교차검증으로 학습·검증 역할을 반복할 수 있습니다.</figcaption></figure><p><strong>학습 자료</strong>는 계수·전처리 기준을 정하고, <strong>검증 자료</strong>는 후보 모형·설정·특징·조기 종료·분류 임계값을 선택하는 데 씁니다. <strong>시험 자료</strong>는 그 선택이 끝난 절차를 평가합니다. 이름보다 실제로 어느 결정에 사용했는지가 중요합니다.</p><p>검증도 선택에 쓰이므로 그 최저 오차는 최종 성능의 중립적 추정이 아닙니다. 시험 결과를 보고 반복 수정했다면 그 자료도 사실상 검증 역할을 했다는 점을 기록해야 합니다.</p></section>
 <section class="learn-chapter__step" id="target" data-toc-label="평가 대상 정하기"><p class="learn-chapter__label">평가 대상 정하기</p><h2>무엇이 새로운 대상인지 먼저 정합니다</h2><p>같은 단지의 새 거래, 처음 보는 단지, 다음 달 거래, 처음 보는 지역은 서로 다른 일반화 문제입니다. 분석 단위와 예측 시점, 입력의 이용 가능 시점, 목표가 확정되는 시점을 먼저 적으세요.</p><p>행 단위 무작위 분할은 관측들이 대체로 독립적이고 활용 대상과 같은 분포에서 나온다는 상황에 적합할 수 있습니다. 무작위라는 이유만으로 모든 의존성이나 시간 변화가 해결되지는 않습니다. 공통 학습 자료의 번호는 실제 거래일이 아니므로 번호 분할을 시간 검증이라고 부르지 않습니다.</p></section>
@@ -49,6 +51,6 @@
         <p>© CH2 DATA</p>
       </footer>
     </div>
-    <script src="/learn/stats/learn-stats-toc.js?v=20261007-2" defer></script>
+    <script src="/learn/stats/learn-stats-toc.js?v=20261021-2" defer></script>
   </body>
 </html>
