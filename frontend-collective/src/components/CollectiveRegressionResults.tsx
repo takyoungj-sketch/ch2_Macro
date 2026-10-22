@@ -113,6 +113,7 @@ type RegressionResultData = Pick<
   | "coefficients"
   | "predict_options"
   | "time_reference"
+  | "missing_treatment_label"
 >;
 
 function ReferenceCategories({
