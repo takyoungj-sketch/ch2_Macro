@@ -34,6 +34,7 @@ class RegionalRegressionRunRequest(BaseModel):
     asset_type: str = "apartment"
     variables: RegionalRegressionVariables = Field(default_factory=RegionalRegressionVariables)
     model_type: Literal["linear", "log"] = "log"
+    categorical_missing: Literal["keep_unknown", "drop"] = "keep_unknown"
     weight_mode: Literal["equal", "tx"] = "equal"
     min_tx: Literal[2, 3, 5] = 5
     region_dummy: bool = False
@@ -157,6 +158,9 @@ class RegionalRegressionRunResponse(BaseModel):
     fitted: list[FittedBuildingRow] = Field(default_factory=list)
     predict_options: dict[str, list[str]] = Field(default_factory=dict)
     reference_categories: dict[str, str] = Field(default_factory=dict)
+    categorical_missing: Literal["keep_unknown", "drop"] = "keep_unknown"
+    n_excluded_missing: int = 0
+    missing_treatment_label: str = ""
     as_of_month: Optional[str] = None
     snapshot_ym: Optional[str] = None
     scope_label: Optional[str] = None

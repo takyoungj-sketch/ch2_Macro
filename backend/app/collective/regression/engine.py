@@ -546,7 +546,7 @@ def _add_floor_columns(
         return pd.DataFrame(index=work.index), labels, []
 
     if mode == "linear":
-        fl = work["floor"].astype(float).fillna(0)
+        fl = pd.to_numeric(work["floor"], errors="coerce")
         out = fl.to_frame("floor")
         labels["floor"] = "층(선형)"
         return out, labels, ["floor"]
@@ -557,7 +557,7 @@ def _add_floor_columns(
         maxes = row_max_floors(work, max_floor)
         grp = pd.Series(
             [
-                relative_floor_group(f, m) if pd.notna(f) else "floor_rel_mid"
+                relative_floor_group(f, m) if pd.notna(f) else None
                 for f, m in zip(fl, maxes)
             ],
             index=work.index,
@@ -584,7 +584,7 @@ def _add_floor_columns(
         return _labeled_floor_dummies(grp, _FACTORY_FLOOR_LABELS)
 
     if mode == "grouped":
-        grp = fl.apply(lambda x: _floor_group_label(x) if pd.notna(x) else "floor_grp_unknown")
+        grp = fl.apply(lambda x: _floor_group_label(x) if pd.notna(x) else None)
         dummies = pd.get_dummies(grp, prefix="", prefix_sep="", drop_first=True)
     else:
         floor_str = fl.apply(
@@ -779,8 +779,9 @@ def _add_structure_dummies(
     if len(levels) < 2:
         warnings.append("구조 범주가 한 종류뿐이라 더미를 넣지 않았습니다")
         return
-    counts = raw.value_counts()
-    ref = str(counts.idxmax()) if not counts.empty else levels[0]
+    from app.regression_missing import pick_reference
+
+    ref = pick_reference(raw) or (levels[0] if levels else "미상")
     meta.structure_reference = ref
     dummy_cols: list[str] = []
     for lv in sorted(levels):
@@ -1095,9 +1096,19 @@ def _fit_regression(
             warnings=base_warnings + [f"회귀 실패: {exc}"],
         )
 
+    from app.regression_sample_judge import judge_exog, sample_notes
+
     warnings = list(base_warnings)
-    if int(model.nobs) < 30:
-        warnings.append(f"n={int(model.nobs)} — 참고용 (권장 n≥30)")
+    verdict = judge_exog(model.model.exog)
+    notes = sample_notes(verdict)
+    if verdict.tier == "blocked":
+        return None, CollectiveRegressionResponse(
+            building_key="",
+            display_name="",
+            n=int(model.nobs),
+            warnings=warnings + notes,
+        )
+    warnings.extend(notes)
 
     metrics = fit_model_price_metrics(y, X_const, model, model_type)
 
@@ -1257,7 +1268,21 @@ def _run_regression_core(
         )
         return None, pd.DataFrame(), RegressionDesignMeta(), resp
 
+    from app.regression_missing import drop_unknown_rows, treatment_label
+
     work = _prepare_work(df, req)
+    n_excluded = 0
+    if req.categorical_missing == "drop":
+        cat_cols: list[str] = []
+        if req.variables.structure:
+            cat_cols.append("structure_group")
+        if req.variables.dong:
+            cat_cols.append("dong")
+        if req.variables.housing_subtype:
+            cat_cols.append("housing_subtype")
+        if req.variables.asset_type_dummy:
+            cat_cols.append("asset_type")
+        work, n_excluded = drop_unknown_rows(work, cat_cols)
     n = len(work)
     if n < 5:
         resp = CollectiveRegressionResponse(
@@ -1275,6 +1300,9 @@ def _run_regression_core(
         building_display_names=building_display_names,
     )
     model, resp = _fit_regression(y, X, labels, meta, req, fe_warnings)
+    resp.categorical_missing = req.categorical_missing
+    resp.n_excluded_missing = n_excluded
+    resp.missing_treatment_label = treatment_label(req.categorical_missing, n_excluded)
     return model, X, meta, resp
 
 
@@ -1456,9 +1484,15 @@ def predict_regression(
     frame = model.get_prediction(x_df).summary_frame(alpha=0.05)
     row = frame.iloc[0]
 
+    from app.regression_sample_judge import identification_note, judge_exog, provision_note
+
     warnings = _extrapolation_warnings(meta, inputs)
-    if fit_resp.n < 30:
-        warnings.insert(0, f"n={fit_resp.n} — 참고용 (권장 n≥30, 예측구간 넓음)")
+    predict_verdict = judge_exog(model.model.exog)
+    if predict_verdict.tier == "caution":
+        warnings.insert(0, f"{provision_note(predict_verdict)} · 예측구간 넓음")
+    predict_ident = identification_note(predict_verdict)
+    if predict_ident:
+        warnings.insert(1 if predict_verdict.tier == "caution" else 0, predict_ident)
 
     model_type = fit_resp.model_type
     if model_type == "log":

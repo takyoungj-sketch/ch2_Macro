@@ -1,7 +1,7 @@
 """집합 지역회귀 엔진 — building_stats ⋈ building_attributes, 단지 1행.
 
 주거 단지 그레인 전용. 비주거(도로명 cluster)는 단지속성이 달라 이 모달을 쓰지 않는다.
-속성이 있으면 출처(K-apt·표제부)로 빼지 않는다. 구조·시공사 결측은 (미상) 더미.
+속성이 있으면 출처(K-apt·표제부)로 빼지 않는다. 구조·시공사 결측은 미상 더미이고, 미상은 기준범주가 아니다.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ from app.collective.regional_regression.schemas import (
     RegionalRegressionVariables,
     SampleBreakdown,
 )
-from app.collective.regression.engine import _duan_smearing, _orig_scale_metrics
+from app.collective.regression.engine import _duan_smearing
 from app.collective.regression.presentation import enrich_regression_response
 from app.collective.schemas import RegressionCoeff
 
@@ -179,11 +179,9 @@ def _orig_scale_metrics_w(
     k_params: int,
     weights: np.ndarray | None,
 ) -> tuple[float | None, float | None, float | None]:
-    if weights is None:
-        return _orig_scale_metrics(y_price, y_pred, k_params)
     y = np.asarray(y_price, dtype=float)
     p = np.asarray(y_pred, dtype=float)
-    w = np.asarray(weights, dtype=float)
+    w = np.ones(y.shape, dtype=float) if weights is None else np.asarray(weights, dtype=float)
     mask = np.isfinite(y) & np.isfinite(p) & np.isfinite(w) & (w > 0)
     y, p, w = y[mask], p[mask], w[mask]
     n = y.size
@@ -204,7 +202,7 @@ def _orig_scale_metrics_w(
     )
     rmse = float(np.sqrt(np.sum(w * err**2) / wsum))
     return (
-        round(adj, 4) if adj is not None else None,
+        round(adj, 5) if adj is not None else None,
         round(mape, 2) if mape is not None else None,
         round(rmse, 1) if rmse is not None else None,
     )
@@ -396,22 +394,24 @@ def _scope_label(req: RegionalRegressionRunRequest) -> str:
 
 
 def _collapse_dummy(series: pd.Series, *, min_n: int = DUMMY_MIN) -> pd.Series:
-    s = series.fillna("").astype(str).str.strip().replace({"": "(미상)", "nan": "(미상)"})
+    from app.regression_missing import normalize_categories
+
+    s = normalize_categories(series)
     counts = s.value_counts()
-    rare = set(counts[counts < min_n].index) - {"(미상)"}
+    rare = set(counts[counts < min_n].index) - {"미상"}
     if rare:
         s = s.where(~s.isin(rare), "기타")
     return s
 
 
 def _pick_dummy_ref(raw: pd.Series) -> str:
-    """더미 기준 = 표본 최다 범주. 동점이면 이름순."""
-    counts = raw.value_counts()
-    if counts.empty:
-        return "(미상)"
-    top = int(counts.max())
-    tied = sorted(str(v) for v in counts[counts == top].index)
-    return tied[0] if tied else "(미상)"
+    """기준 = 가장 많은 실제 범주. 미상은 기준이 되지 않는다. 실제 범주가 없으면 미상."""
+    from app.regression_missing import pick_reference
+
+    ref = pick_reference(raw)
+    if ref:
+        return ref
+    return "미상" if (raw.astype(str) == "미상").any() else ""
 
 
 MATCH_REASON_ORDER = (
@@ -518,6 +518,19 @@ def _count_reasons(
     return [FunnelReason(code=c, label=labels[c], n=counts[c]) for c in ordered]
 
 
+def _category_unknown_mask(df: pd.DataFrame, columns: list[str]) -> pd.Series:
+    from app.regression_missing import UNKNOWN, normalize_categories
+
+    if df.empty or not columns:
+        return pd.Series(False, index=df.index)
+    unknown = pd.Series(False, index=df.index)
+    for column in columns:
+        if column not in df.columns:
+            continue
+        unknown = unknown | (normalize_categories(df[column]) == UNKNOWN)
+    return unknown
+
+
 def build_sample_funnel(
     df: pd.DataFrame,
     v: RegionalRegressionVariables,
@@ -525,8 +538,10 @@ def build_sample_funnel(
     train_idx: pd.Index,
     hold_idx: pd.Index,
     min_tx: int = MIN_TX,
+    categorical_missing: str = "keep_unknown",
+    category_columns: list[str] | None = None,
 ) -> SampleBreakdown:
-    """원본 → 매칭 → 변수 결측 → 분석 표본 → 학습/hold. hold 는 탈락이 아니다."""
+    """원본 단지 → 매칭 → 숫자·범주 결측 → 최종 분석 표본 → 학습/hold. hold 는 탈락이 아니다."""
     n_pool = int(len(df))
     if n_pool == 0 or "match_tier" not in df.columns:
         empty = SampleBreakdown(
@@ -547,7 +562,6 @@ def build_sample_funnel(
     usable = _usable_tier_mask(df)
     elig = _eligible_mask(df, v, min_tx=min_tx)
     n_usable = int(usable.sum())
-    n_analysis = int(elig.sum())
     n_fit = int(len(train_idx))
     n_hold = int(len(hold_idx))
 
@@ -557,9 +571,20 @@ def build_sample_funnel(
     after_thin = usable & ~thin
     var_drop_mask = after_thin & ~elig
     n_var_drop = int(var_drop_mask.sum())
+    cat_cols = category_columns or []
+    unknown = (
+        _category_unknown_mask(df, cat_cols)
+        if categorical_missing == "drop"
+        else pd.Series(False, index=df.index)
+    )
+    cat_mask = elig & unknown
+    n_cat = int(cat_mask.sum())
+    overlap = int((var_drop_mask & unknown).sum()) if categorical_missing == "drop" else 0
+    n_analysis = int((elig & ~cat_mask).sum())
 
     match_pairs = [_drop_reason_for_row(row) for _, row in df.loc[~usable].iterrows()]
     var_pairs = [_var_drop_reason(row, v) for _, row in df.loc[var_drop_mask].iterrows()]
+    cat_pairs = [("cat_unknown", "범주 미상")] * n_cat
     thin_pairs: list[tuple[str, str]] = []
     if n_thin:
         if "asset_type" in df.columns:
@@ -590,13 +615,27 @@ def build_sample_funnel(
         ),
         FunnelStep(
             code="var_drop",
-            label="선택 변수 결측",
+            label="숫자 결측 제외",
             n=n_var_drop,
             kind="drop",
-            note="세대수·층·연식·주차·공시지가처럼 켠 연속변수에 값이 없어 빠진 단지입니다. 구조·시공사 결측은 미상 더미로 남고 여기서는 빠지지 않습니다.",
+            note=_numeric_drop_note(categorical_missing, overlap),
             reasons=_count_reasons(var_pairs, preferred=VAR_REASON_ORDER),
         ),
-        FunnelStep(
+    ]
+    if n_cat:
+        funnel.append(
+            FunnelStep(
+                code="cat_drop",
+                label="범주 결측 제외",
+                n=n_cat,
+                kind="drop",
+                note="결측 단지 제외를 켜서, 선택한 범주가 미상인 단지를 뺐습니다.",
+                reasons=_count_reasons(cat_pairs),
+            )
+        )
+    funnel.extend(
+        [
+            FunnelStep(
             code="analysis",
             label="최종 분석 표본",
             n=n_analysis,
@@ -605,7 +644,8 @@ def build_sample_funnel(
         ),
         FunnelStep(code="train", label="학습", n=n_fit, kind="split"),
         FunnelStep(code="hold", label="Holdout", n=n_hold, kind="split"),
-    ]
+        ]
+    )
 
     return SampleBreakdown(
         n_pool=n_pool,
@@ -619,6 +659,15 @@ def build_sample_funnel(
         n_no_price=int((pd.to_numeric(df["median"], errors="coerce").fillna(0) <= 0).sum()),
         funnel=funnel,
     )
+
+
+def _numeric_drop_note(categorical_missing: str, overlap: int) -> str:
+    note = "켠 숫자 변수에 값이 없는 단지입니다. 개별공시지가를 켜면 그 결측도 여기 포함됩니다."
+    if categorical_missing != "drop":
+        note += " 구조·시공사 결측은 미상 범주로 남고 여기서는 빠지지 않습니다."
+    if overlap:
+        note += f" 이 중 범주 미상도 있는 단지 {overlap}곳은 여기서 한 번만 셉니다."
+    return note
 
 
 def _usable_funnel_label(df: pd.DataFrame) -> str:
@@ -969,7 +1018,7 @@ def _fit_ols(
         "y_hat": fitted_price,
         "work_index": train.index,
         "adj_r_squared": adj,
-        "r_squared": round(r2, 4) if r2 is not None else None,
+        "r_squared": round(r2, 5) if r2 is not None else None,
         "mape": mape,
         "hold_mape": hold_mape,
         "rmse": rmse,
@@ -1275,7 +1324,7 @@ def run_regional_regression(
         warnings.append(WEAK_NOTE["structure"])
     if v.builder:
         warnings.append(WEAK_NOTE["builder"])
-        warnings.append("시공사 결측은 (미상) 더미로 넣고 단지를 빼지 않습니다.")
+        warnings.append("시공사 결측은 미상으로 두고 단지를 빼지 않습니다. 미상은 기준 범주가 아닙니다.")
     if v.parking and not df.empty:
         n_park_na = int(df["parking_per_household"].isna().sum())
         if n_park_na:
@@ -1301,6 +1350,16 @@ def run_regional_regression(
 
     elig = _eligible_mask(df, v, min_tx=min_tx) if not df.empty else pd.Series(dtype=bool)
     work = df.loc[elig].copy() if not df.empty else df
+    from app.regression_missing import drop_unknown_rows, treatment_label
+
+    n_excluded = 0
+    cat_cols: list[str] = []
+    if req.variables.structure:
+        cat_cols.append("structure_group")
+    if req.variables.builder:
+        cat_cols.append("builder_group")
+    if req.categorical_missing == "drop" and not work.empty:
+        work, n_excluded = drop_unknown_rows(work, cat_cols)
     if unified and v.asset_type_dummy and not work.empty and "asset_type" in work.columns:
         if work["asset_type"].astype(str).nunique() < 2:
             warnings.append(
@@ -1308,7 +1367,15 @@ def run_regional_regression(
             )
     train_idx, hold_idx = _split_hold(work.index)
 
-    sample = build_sample_funnel(df, v, train_idx=train_idx, hold_idx=hold_idx, min_tx=min_tx)
+    sample = build_sample_funnel(
+        df,
+        v,
+        train_idx=train_idx,
+        hold_idx=hold_idx,
+        min_tx=min_tx,
+        categorical_missing=req.categorical_missing,
+        category_columns=cat_cols,
+    )
 
     if len(train_idx) < MIN_FIT_N:
         warnings.append(
@@ -1368,6 +1435,30 @@ def run_regional_regression(
             unified=unified,
             enabled=with_recommendation,
         )
+
+    from app.regression_sample_judge import judge_exog, sample_notes
+
+    verdict = judge_exog(fitted["model"].model.exog)
+    notes = sample_notes(verdict, unit="곳")
+    if verdict.tier == "blocked":
+        warnings.extend(notes)
+        return _with_regional_recommendation(
+            RegionalRegressionRunResponse(
+                n=int(verdict.n),
+                model_type=req.model_type,
+                weight_mode=req.weight_mode,
+                warnings=warnings,
+                sample=sample,
+                as_of_month=meta.get("as_of_month"),
+                snapshot_ym=meta.get("snapshot_ym"),
+                scope_label=meta.get("scope_label"),
+            ),
+            df,
+            req,
+            unified=unified,
+            enabled=with_recommendation,
+        )
+    warnings[0:0] = notes
 
     train = work.loc[fitted["work_index"]]
 
@@ -1464,6 +1555,9 @@ def run_regional_regression(
             "asset_type": type_opts,
         },
         reference_categories=_reference_categories(labels),
+        categorical_missing=req.categorical_missing,
+        n_excluded_missing=n_excluded,
+        missing_treatment_label=treatment_label(req.categorical_missing, n_excluded, unit="단지"),
         as_of_month=meta.get("as_of_month"),
         snapshot_ym=meta.get("snapshot_ym"),
         scope_label=meta.get("scope_label"),
@@ -1647,6 +1741,10 @@ def predict_regional(
             }
         )
     warnings = list(result.warnings)
+    for i, text in enumerate(warnings):
+        if text.startswith("분석 제공 기준") and "예측구간" not in text:
+            warnings[i] = f"{text} · 예측구간 넓음"
+            break
     return {
         "n": result.n,
         "model_type": req.model_type,

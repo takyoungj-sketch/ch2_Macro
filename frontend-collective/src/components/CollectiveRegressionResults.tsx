@@ -181,16 +181,20 @@ export function CollectiveRegressionResults({
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs text-slate-700 dark:text-slate-200">
         <MetricWithHelp label="R²" termId="r_squared" value={fmtDecimal(data.r_squared, 5)} />
         <MetricWithHelp label="Adj R²" termId="adj_r_squared" value={fmtDecimal(data.adj_r_squared, 5)} />
-        <MetricWithHelp
-          label="MAPE"
-          termId="mape"
-          value={data.mape != null ? `${fmtDecimal(data.mape, 2)}%` : "—"}
-          title="in-sample · 금액(만원) 원척도"
-        />
+        <div title="학습 표본에서 계산한 오차. 교차검증 CV-MAPE가 아닙니다.">
+          <MetricWithHelp
+            label="학습 MAPE"
+            termId="mape"
+            value={data.mape != null ? `${fmtDecimal(data.mape, 2)}%` : "—"}
+          />
+        </div>
         <div>유의 변수 {sigCount}개</div>
         <MetricWithHelp label="F p" termId="f_p_value" value={fmtDecimal(data.f_p_value, 5)} />
         <MetricWithHelp label="n=" termId="fit_n" value={data.n.toLocaleString("ko-KR")} />
       </div>
+      {data.missing_treatment_label && (
+        <p className="text-[11px] text-slate-500">{data.missing_treatment_label}</p>
+      )}
 
       {(data.equation || data.coefficients.length > 0) && (
         <div className="space-y-1">
@@ -201,6 +205,12 @@ export function CollectiveRegressionResults({
             equation={data.equation}
             timeReference={data.time_reference}
           />
+          {data.warnings.some((w) => w.includes("참고용")) && (
+            <p className="text-[11px] leading-snug text-slate-600 dark:text-slate-300">
+              표본 수가 권장 기준에 미달하므로 회귀계수가 불안정할 수 있습니다. R²와 MAPE는 해당
+              표본의 적합 결과이며, 새로운 거래에 대한 예측 정확도를 보장하지 않습니다.
+            </p>
+          )}
           <ReferenceCategories options={data.predict_options} />
         </div>
       )}

@@ -31,6 +31,7 @@ import {
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import { ASSET_LABELS } from "../types";
 import { parseResidentialAssetKinds } from "../utils/residentialAssetTypes";
+import { countSignificantCoefficients } from "../utils/collectiveRegressionFormat";
 import { APT_TWIN_REGION_HELP } from "../utils/residentialAnalysisHelp";
 import { FLAT_SIDO_ADDR2_TOKEN } from "../utils/flatSidoRegion";
 
@@ -137,6 +138,11 @@ function turnOffVars(
 function fmt(n: number | null | undefined, d = 2) {
   if (n == null || Number.isNaN(n)) return "—";
   return n.toLocaleString("ko-KR", { maximumFractionDigits: d });
+}
+
+function fmtFixed(n: number | null | undefined, digits = 5) {
+  if (n == null || Number.isNaN(n)) return "—";
+  return n.toFixed(digits);
 }
 
 function fittedKey(row: { building_key: string; asset_type?: string | null }) {
@@ -428,6 +434,7 @@ export default function RegionalRegressionModal(props: Props) {
   const [modelType, setModelType] = useState<"linear" | "log">("log");
   const [weightMode, setWeightMode] = useState<"equal" | "tx">("equal");
   const [minTx, setMinTx] = useState<MinTx>(5);
+  const [categoricalMissing, setCategoricalMissing] = useState<"keep_unknown" | "drop">("keep_unknown");
   const selectedBlocks = useMemo(
     () => (Object.keys(vars) as (keyof RegionalRegressionVariables)[]).filter((key) => Boolean(vars[key])),
     [vars],
@@ -445,6 +452,7 @@ export default function RegionalRegressionModal(props: Props) {
       asset_type: props.assetType,
       variables: vars,
       model_type: modelType,
+      categorical_missing: categoricalMissing,
       weight_mode: weightMode,
       min_tx: minTx,
     }),
@@ -461,6 +469,7 @@ export default function RegionalRegressionModal(props: Props) {
       props.assetType,
       vars,
       modelType,
+      categoricalMissing,
       weightMode,
       minTx,
     ],
@@ -530,6 +539,7 @@ export default function RegionalRegressionModal(props: Props) {
       asset_type: props.assetType,
       variables: vars,
       model_type: modelType,
+      categorical_missing: categoricalMissing,
       weight_mode: weightMode,
       min_tx: minTx,
       region_dummy: regionDummy,
@@ -539,7 +549,7 @@ export default function RegionalRegressionModal(props: Props) {
         pickedTwins.map((row) => row.region_addr),
       ),
     };
-  }, [twinQ.data, checked, choices, regionDummy, props.windowYears, props.assetType, vars, modelType, weightMode, minTx]);
+  }, [twinQ.data, checked, choices, regionDummy, props.windowYears, props.assetType, vars, modelType, categoricalMissing, weightMode, minTx]);
 
   const runM = useMutation({
     mutationFn: (req: RegionalRegressionRunRequest) => runRegionalRegression(req),
@@ -646,7 +656,7 @@ export default function RegionalRegressionModal(props: Props) {
         )}
 
         <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
-          <p className="text-xs font-semibold">1. 변수</p>
+          <p className="text-xs font-semibold">1. 변수 선택</p>
           <div className="flex flex-wrap gap-x-3 gap-y-1.5">
             {CORE_VARS.map(([key, label]) => (
               <label
@@ -706,7 +716,7 @@ export default function RegionalRegressionModal(props: Props) {
         </section>
 
         <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-1.5">
-          <p className="text-xs font-semibold">2. 모형</p>
+          <p className="text-xs font-semibold">2. 회귀모형 선택</p>
           <label className="flex items-center gap-1.5">
             <input type="radio" checked={modelType === "linear"} onChange={() => setModelType("linear")} />
             선형 — 단가(만원/㎡) ~ 변수
@@ -718,7 +728,28 @@ export default function RegionalRegressionModal(props: Props) {
         </section>
 
         <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-1.5">
-          <p className="text-xs font-semibold">3. 관측치 처리</p>
+          <p className="text-xs font-semibold">3. 결측치 처리</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">선택한 범주형 변수에 적용</p>
+          <label className="flex items-center gap-1.5">
+            <input
+              type="radio"
+              checked={categoricalMissing === "keep_unknown"}
+              onChange={() => setCategoricalMissing("keep_unknown")}
+            />
+            미상 범주 유지 (기본값)
+          </label>
+          <label className="flex items-center gap-1.5">
+            <input
+              type="radio"
+              checked={categoricalMissing === "drop"}
+              onChange={() => setCategoricalMissing("drop")}
+            />
+            결측 단지 제외
+          </label>
+        </section>
+
+        <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-1.5">
+          <p className="text-xs font-semibold">4. 관측치 처리</p>
           <p className="text-[11px] text-slate-600 dark:text-slate-300">
             최소 거래수 — 창 중앙값을 단지 시세로 보기 어려운 단지를 제외합니다. 기본은 5건입니다.
           </p>
@@ -736,7 +767,7 @@ export default function RegionalRegressionModal(props: Props) {
             </p>
           )}
           <p className="text-[11px] text-slate-600 dark:text-slate-300">
-            구조·시공사 결측은 미상 더미입니다. 세대수·층·연식·주차·공시지가처럼 값이 없는 연속변수만 단지를 뺍니다.
+            세대수·층·연식·주차·공시지가에 값이 없으면 그 단지는 숫자 결측으로 빠집니다. 구조·시공사 결측은 위의 결측치 처리를 따릅니다.
           </p>
           <label className="flex items-center gap-1.5">
             <input type="radio" checked={weightMode === "equal"} onChange={() => setWeightMode("equal")} />
@@ -871,6 +902,19 @@ export default function RegionalRegressionModal(props: Props) {
             <section className="space-y-2">
               <p className="text-xs font-semibold">5. 성능</p>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                <MetricWithHelp label="R²" termId="r_squared" value={fmtFixed(data.r_squared)} />
+                <MetricWithHelp label="Adj R²" termId="adj_r_squared" value={fmtFixed(data.adj_r_squared)} />
+                <MetricWithHelp
+                  label="학습 MAPE"
+                  termId="mape"
+                  value={data.mape != null ? `${fmt(data.mape, 1)}%` : "—"}
+                  title="학습 표본에서 계산한 오차. 교차검증 CV-MAPE가 아닙니다."
+                />
+                <div>
+                  <div className="text-[10px] text-slate-500">유의 변수</div>
+                  <div className="tabular-nums">{countSignificantCoefficients(data.coefficients)}개</div>
+                </div>
+                <MetricWithHelp label="F p" termId="f_p_value" value={fmtFixed(data.f_p_value)} />
                 <MetricWithHelp
                   label="학습 n"
                   termId="fit_n"
@@ -883,23 +927,16 @@ export default function RegionalRegressionModal(props: Props) {
                     {data.sample.n_hold > 0 ? data.sample.n_hold.toLocaleString("ko-KR") : "—"}
                   </div>
                 </div>
+                <div>
+                  <div className="text-[10px] text-slate-500">Holdout MAPE</div>
+                  <div className="tabular-nums">{data.hold_mape != null ? `${fmt(data.hold_mape, 1)}%` : "—"}</div>
+                </div>
                 {data.weight_mode === "tx" && data.n_effective != null && (
                   <div>
                     <div className="text-[10px] text-slate-500">유효 단지</div>
                     <div className="tabular-nums">{fmt(data.n_effective, 1)}</div>
                   </div>
                 )}
-                <MetricWithHelp label="Adj R²" termId="adj_r_squared" value={fmt(data.adj_r_squared, 3)} />
-                <MetricWithHelp
-                  label="학습 MAPE"
-                  termId="mape"
-                  value={data.mape != null ? `${fmt(data.mape, 1)}%` : "—"}
-                  title="학습 표본 기준. Holdout 이 없으면 외부 검증이 아닙니다."
-                />
-                <div>
-                  <div className="text-[10px] text-slate-500">Holdout MAPE</div>
-                  <div className="tabular-nums">{data.hold_mape != null ? `${fmt(data.hold_mape, 1)}%` : "—"}</div>
-                </div>
               </div>
               {data.mape != null && data.sample.n_hold === 0 && (
                 <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-snug">
@@ -947,6 +984,10 @@ export default function RegionalRegressionModal(props: Props) {
               </div>
             )}
 
+            {data.missing_treatment_label && (
+              <p className="text-[11px] text-slate-500">{data.missing_treatment_label}</p>
+            )}
+
             {data.equation && (
               <div className="space-y-1">
                 <div className="text-xs font-semibold">회귀식</div>
@@ -955,6 +996,12 @@ export default function RegionalRegressionModal(props: Props) {
                   modelType={data.model_type}
                   equation={data.equation}
                 />
+                {data.warnings.some((w) => w.includes("참고용")) && (
+                  <p className="text-[11px] leading-snug text-slate-600 dark:text-slate-300">
+                    표본 수가 권장 기준에 미달하므로 회귀계수가 불안정할 수 있습니다. R²와 MAPE는 해당
+                    표본의 적합 결과이며, 새로운 단지에 대한 예측 정확도를 보장하지 않습니다.
+                  </p>
+                )}
                 <p className="text-[10px] text-slate-500">
                   적합: {data.weight_mode === "tx" ? "거래수 가중" : "단지 균등"}
                   {data.model_type === "log" ? " · log 단가" : " · 선형 단가"}
@@ -1281,7 +1328,7 @@ function SampleFunnel({ sample }: { sample: SampleBreakdown }) {
   if (!steps.length) {
     return (
       <section className="space-y-1">
-        <p className="text-xs font-semibold">4. 결과</p>
+        <p className="text-xs font-semibold">회귀분석 표본 구성</p>
         <p className="text-[11px] text-slate-500">
           원본 {sample.n_pool} · 속성 연결 {sample.n_usable_tier} · 최종 {sample.n_fit}
           {sample.n_hold ? ` · Holdout ${sample.n_hold}` : ""}
@@ -1302,7 +1349,7 @@ function SampleFunnel({ sample }: { sample: SampleBreakdown }) {
 
   return (
     <section className="space-y-1.5">
-      <p className="text-xs font-semibold">4. 결과</p>
+      <p className="text-xs font-semibold">회귀분석 표본 구성</p>
       <div className="rounded-md border border-slate-200 dark:border-slate-600 overflow-hidden">
         <ul className="list-none divide-y divide-slate-100 dark:divide-slate-700">
           {grouped ? (

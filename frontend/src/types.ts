@@ -350,6 +350,7 @@ export interface LandRegressionVariables {
 export interface LandRegressionRequest extends MatrixYearlyRequest {
   variables: LandRegressionVariables;
   model_type: "log" | "linear";
+  categorical_missing?: "keep_unknown" | "drop";
   exclude_outliers_iqr: boolean;
   outlier_iqr_multiplier: number;
   min_n: number;
@@ -402,6 +403,9 @@ export interface LandRegressionResponse {
   correlations?: CorrelationSeries[];
   partial_regressions?: PartialRegressionSeries[];
   correlation_n?: number | null;
+  categorical_missing?: "keep_unknown" | "drop";
+  n_excluded_missing?: number;
+  missing_treatment_label?: string;
 }
 
 export interface LandModelCandidate {

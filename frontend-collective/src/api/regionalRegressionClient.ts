@@ -23,6 +23,7 @@ export type RegionalRegressionRunRequest = {
   asset_type?: string;
   variables: RegionalRegressionVariables;
   model_type: "linear" | "log";
+  categorical_missing?: "keep_unknown" | "drop";
   weight_mode: "equal" | "tx";
   min_tx?: 2 | 3 | 5;
   region_dummy?: boolean;
@@ -127,6 +128,9 @@ export type RegionalRegressionRunResponse = {
     effect_plain?: string | null;
   }>;
   warnings: string[];
+  categorical_missing?: "keep_unknown" | "drop";
+  n_excluded_missing?: number;
+  missing_treatment_label?: string;
   sample: SampleBreakdown;
   blocks: BlockContribution[];
   fitted: FittedBuildingRow[];

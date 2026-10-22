@@ -14,7 +14,7 @@ from app.collective.analysis_gates import MIN_COUNT_REGRESSION
 CAVEAT_CATALOG: dict[str, dict[str, str]] = {
     "small_sample": {
         "id": "small_sample",
-        "condition": "회귀는 실행됐으나 n이 권장(엔진 참고용 경고 또는 권장 n≥30)에 못 미침",
+        "condition": "회귀는 실행됐으나 분석 제공 기준(30, 계수당 5)에 못 미쳐 참고용",
         "judgment": "결과의 안정성에 주의가 필요합니다.",
         "next_action": "인접지역 확대 또는 코호트(통합)로 표본을 늘린 분석을 추가로 비교하는 것이 좋습니다.",
     },

@@ -415,6 +415,7 @@ class CollectiveRegressionRequest(BaseModel):
     contract_date_to: Optional[date] = None
     variables: CollectiveRegressionSpec = Field(default_factory=CollectiveRegressionSpec)
     model_type: Literal["log", "linear"] = "linear"
+    categorical_missing: Literal["keep_unknown", "drop"] = "keep_unknown"
     exclude_outliers_iqr: bool = False
     outlier_iqr_multiplier: float = 3.0
     experiment: bool = False
@@ -493,6 +494,9 @@ class CollectiveRegressionResponse(BaseModel):
     model_candidates: list[CollectiveModelCandidate] = Field(default_factory=list)
     explain: Optional[AnalysisExplain] = None
     time_reference: Optional[str] = None
+    categorical_missing: Literal["keep_unknown", "drop"] = "keep_unknown"
+    n_excluded_missing: int = 0
+    missing_treatment_label: str = ""
 
 
 class CohortBuildingSummary(BaseModel):

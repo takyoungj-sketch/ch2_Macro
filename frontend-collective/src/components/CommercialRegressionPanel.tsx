@@ -447,7 +447,7 @@ export default function CommercialRegressionPanel({
   return (
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[11px] font-medium text-slate-700">회귀 분석 (탐색용)</p>
+        <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200">회귀 분석</p>
         <div className="flex items-center gap-2 shrink-0">
           <PublishAiContext context={publishedAiContext} />
           {regM.data?.explain ? (

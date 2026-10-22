@@ -294,7 +294,7 @@ def test_sample_funnel_exclusive_drop_reasons():
     assert _step(sample, "usable").n == 9
     assert _step(sample, "thin_tx").label == "최소 거래수 미달(<5)"
     assert _step(sample, "thin_tx").n == 0
-    assert _step(sample, "var_drop").label == "선택 변수 결측"
+    assert _step(sample, "var_drop").label == "숫자 결측 제외"
     assert _step(sample, "var_drop").n == 4
     assert _step(sample, "analysis").n == 5
     assert _step(sample, "train").n == 5
@@ -313,6 +313,45 @@ def test_sample_funnel_exclusive_drop_reasons():
         "parking_missing": 1,
         "households_flag": 1,
     }
+
+
+def test_sample_funnel_splits_category_drop_and_notes_overlap():
+    df = pd.DataFrame(
+        {
+            "median": [800.0, 900.0, 700.0],
+            "match_tier": ["A", "A", "A"],
+            "households": [np.nan, 120.0, 80.0],
+            "structure_group": [None, None, "RC"],
+            "n_tx": [10, 10, 10],
+        }
+    )
+    v = RegionalRegressionVariables(
+        households=True,
+        max_floor=False,
+        building_age=False,
+        parking=False,
+        structure=True,
+        builder=False,
+        asset_type_dummy=False,
+    )
+    kept = df.index[[2]]
+    sample = build_sample_funnel(
+        df,
+        v,
+        train_idx=kept,
+        hold_idx=df.index[:0],
+        categorical_missing="drop",
+        category_columns=["structure_group"],
+    )
+    assert _step(sample, "var_drop").n == 1
+    assert "범주 미상도 있는 단지 1곳" in (_step(sample, "var_drop").note or "")
+    assert _step(sample, "cat_drop").label == "범주 결측 제외"
+    assert _step(sample, "cat_drop").n == 1
+    assert _step(sample, "analysis").label == "최종 분석 표본"
+    assert _step(sample, "analysis").n == 1
+    assert all(step.code != "cat_drop" for step in build_sample_funnel(
+        df, v, train_idx=df.index[[1, 2]], hold_idx=df.index[:0], category_columns=["structure_group"]
+    ).funnel)
 
 
 def test_eligible_keeps_missing_builder_and_structure():
@@ -356,10 +395,10 @@ def test_design_missing_builder_becomes_misang():
         builder=True,
     )
     x, labels, _warn = _design(work, v)
-    assert labels["_builder_ref"] == "(미상)"
-    assert "builder_(미상)" not in x.columns
-    assert "builder_한화" in x.columns
-    assert int(x["builder_한화"].sum()) == 6
+    assert labels["_builder_ref"] == "한화"
+    assert "builder_한화" not in x.columns
+    assert "builder_미상" in x.columns
+    assert int(x["builder_미상"].sum()) == 8
 
 
 def test_sample_funnel_structure_missing_stays_in_sample():

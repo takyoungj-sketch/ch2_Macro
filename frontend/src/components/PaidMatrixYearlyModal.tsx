@@ -184,6 +184,7 @@ export default function PaidMatrixYearlyModal({
     assessed_land_price: false,
   });
   const [regModelType, setRegModelType] = useState<"log" | "linear">("log");
+  const [categoricalMissing, setCategoricalMissing] = useState<"keep_unknown" | "drop">("keep_unknown");
   const [regExcludeOutlier, setRegExcludeOutlier] = useState(false);
   const [regLoading, setRegLoading] = useState(false);
   const [regError, setRegError] = useState<string | null>(null);
@@ -224,6 +225,27 @@ export default function PaidMatrixYearlyModal({
       setRegBody(null);
     }
   }, [open, zoneType, landCategory]);
+
+  const regControlsStale = useMemo(() => {
+    if (!regResult || !regBody) return false;
+    const keys = [
+      "area_sqm",
+      "log_area",
+      "road_condition",
+      "deal_type",
+      "partial_ownership",
+      "year_trend",
+      "beopjungri_fe",
+      "assessed_land_price",
+    ] as const satisfies readonly (keyof LandRegressionVariables)[];
+    const varsSame = keys.every((key) => Boolean(regBody.variables[key]) === Boolean(regVars[key]));
+    return (
+      !varsSame ||
+      regBody.model_type !== regModelType ||
+      (regBody.categorical_missing ?? "keep_unknown") !== categoricalMissing ||
+      regBody.exclude_outliers_iqr !== regExcludeOutlier
+    );
+  }, [regResult, regBody, regVars, regModelType, categoricalMissing, regExcludeOutlier]);
 
   const sortedRows = useMemo(() => sortMatrixRows(rows), [rows]);
 
@@ -1168,6 +1190,19 @@ export default function PaidMatrixYearlyModal({
                     />
                     <span className="text-slate-500">IQR 이상치 제외</span>
                   </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <span className="text-slate-500">범주 결측</span>
+                    <select
+                      className="border border-slate-200 rounded px-1 py-0.5"
+                      value={categoricalMissing}
+                      onChange={(e) =>
+                        setCategoricalMissing(e.target.value as "keep_unknown" | "drop")
+                      }
+                    >
+                      <option value="keep_unknown">미상 범주 유지</option>
+                      <option value="drop">결측 거래 제외</option>
+                    </select>
+                  </label>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <button
@@ -1184,6 +1219,7 @@ export default function PaidMatrixYearlyModal({
                           ...filterRequest,
                           variables: regVars,
                           model_type: regModelType,
+                          categorical_missing: categoricalMissing,
                           exclude_outliers_iqr: regExcludeOutlier,
                           outlier_iqr_multiplier: 3,
                           min_n: 15,
@@ -1213,6 +1249,7 @@ export default function PaidMatrixYearlyModal({
                           ...filterRequest,
                           variables: { ...regVars, assessed_land_price: false },
                           model_type: regModelType,
+                          categorical_missing: categoricalMissing,
                           exclude_outliers_iqr: regExcludeOutlier,
                           outlier_iqr_multiplier: 3,
                           min_n: 15,
@@ -1233,6 +1270,12 @@ export default function PaidMatrixYearlyModal({
 
               {regError && (
                 <p className="text-xs text-red-500 bg-red-50 rounded p-2">{regError}</p>
+              )}
+
+              {regControlsStale && (
+                <p className="text-[10px] text-amber-700">
+                  변수 또는 척도가 바뀌었습니다. 아래 식과 시나리오는 마지막 실행입니다. 회귀를 다시 실행하면 맞춥니다.
+                </p>
               )}
 
               {regResult && <LandRegressionResults data={regResult} />}

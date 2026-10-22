@@ -14,6 +14,14 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 
+from app.regression_missing import (
+    categorical_dummies,
+    drop_unknown_rows,
+    normalize_categories,
+    pick_reference,
+    treatment_label,
+)
+
 if TYPE_CHECKING:
     from app.schemas import (
         LandRegressionPredictRequest,
@@ -148,15 +156,10 @@ def _build_design(df: pd.DataFrame, req: "LandRegressionRequest", base_warnings:
     road_cats: list[str] = []
     use_road = False
     if v.road_condition:
-        col = df["road_condition"].fillna("미상").astype(str).str.strip()
-        cats = sorted(col.unique())
-        if len(cats) >= 2:
-            ref = _pick_reference_road(cats)
+        dummies, cats, ref = categorical_dummies(df["road_condition"], "road")
+        if ref and not dummies.empty:
             reference_categories["도로조건"] = ref
             road_cats = cats
-            dummies = pd.get_dummies(col, prefix="road", drop_first=False)
-            ref_col = f"road_{ref}"
-            dummies = dummies.drop(columns=[ref_col], errors="ignore")
             dummies.columns = [c.replace(" ", "_") for c in dummies.columns]
             X_parts.append(dummies.astype(float))
             use_road = True
@@ -166,15 +169,10 @@ def _build_design(df: pd.DataFrame, req: "LandRegressionRequest", base_warnings:
     deal_cats: list[str] = []
     use_deal = False
     if v.deal_type:
-        col = df["deal_type"].fillna("중개거래").astype(str).str.strip()
-        cats = sorted(col.unique())
-        if len(cats) >= 2:
-            ref = "중개거래" if "중개거래" in cats else cats[0]
+        dummies, cats, ref = categorical_dummies(df["deal_type"], "deal")
+        if ref and not dummies.empty:
             reference_categories["거래유형"] = ref
             deal_cats = cats
-            dummies = pd.get_dummies(col, prefix="deal", drop_first=False)
-            ref_col = f"deal_{ref}"
-            dummies = dummies.drop(columns=[ref_col], errors="ignore")
             X_parts.append(dummies.astype(float))
             use_deal = True
         else:
@@ -193,10 +191,10 @@ def _build_design(df: pd.DataFrame, req: "LandRegressionRequest", base_warnings:
     beop_cats: list[str] = []
     use_beop = False
     if v.beopjungri_fe:
-        col = df["beopjungri_name"].fillna("미상").astype(str).str.strip()
+        col = normalize_categories(df["beopjungri_name"])
         n_beop = col.nunique()
-        if n_beop >= 2:
-            ref = col.value_counts().idxmax()
+        ref = pick_reference(col)
+        if n_beop >= 2 and ref:
             reference_categories["법정동"] = str(ref)
             dummies = pd.get_dummies(col, prefix="beop", drop_first=False)
             ref_col = f"beop_{ref}"
@@ -434,6 +432,16 @@ def run_land_regression(
     min_n = max(MIN_N, int(req.min_n))
     df, warnings = _prepare_df(rows, req)
     df, warnings = _apply_assessed_case(df, req, warnings)
+    n_excluded = 0
+    if req.categorical_missing == "drop":
+        cat_cols: list[str] = []
+        if req.variables.road_condition:
+            cat_cols.append("road_condition")
+        if req.variables.deal_type:
+            cat_cols.append("deal_type")
+        if req.variables.beopjungri_fe:
+            cat_cols.append("beopjungri_name")
+        df, n_excluded = drop_unknown_rows(df, cat_cols)
     n = len(df)
     if n < min_n:
         note = " ".join(w for w in warnings if w.startswith("개별공시지가"))
@@ -444,6 +452,14 @@ def run_land_regression(
 
     bundle = _build_design(df, req, warnings)
     model = sm.OLS(bundle.y_fit, bundle.X_const, missing="drop").fit()
+    from app.regression_sample_judge import judge_exog, sample_notes
+
+    verdict = judge_exog(model.model.exog)
+    notes = sample_notes(verdict)
+    if verdict.tier == "blocked":
+        raise HTTPException(status_code=422, detail=notes[0] if notes else "계산 불가")
+    for note in reversed(notes):
+        bundle.warnings.insert(0, note)
 
     coefs: list[LandRegressionCoeff] = []
     for name in model.params.index:
@@ -477,6 +493,9 @@ def run_land_regression(
         correlations=correlations,
         partial_regressions=partial_regressions,
         correlation_n=int(len(scatter_df)),
+        categorical_missing=req.categorical_missing,
+        n_excluded_missing=n_excluded,
+        missing_treatment_label=treatment_label(req.categorical_missing, n_excluded),
     )
 
 
@@ -675,13 +694,21 @@ def predict_land_regression(
 
     bundle = _build_design(df, req, warnings)
     model = sm.OLS(bundle.y_fit, bundle.X_const, missing="drop").fit()
+    from app.regression_sample_judge import identification_note, judge_exog, provision_note
+
+    verdict = judge_exog(model.model.exog)
+    if verdict.tier == "blocked":
+        raise HTTPException(status_code=422, detail="계산 불가: " + ", ".join(verdict.reasons))
     x_new = _input_to_x_row(bundle, req)
     frame = model.get_prediction(x_new).summary_frame(alpha=0.05)
     row = frame.iloc[0]
 
     warn = list(bundle.warnings)
-    if n < 30:
-        warn.insert(0, f"n={n} — 참고용 (권장 n≥30, 예측구간 넓음)")
+    if verdict.tier == "caution":
+        warn.insert(0, f"{provision_note(verdict)} · 예측구간 넓음")
+    ident = identification_note(verdict)
+    if ident:
+        warn.insert(1 if verdict.tier == "caution" else 0, ident)
     if bundle.model_type == "log":
         warn.insert(0, "log(단가) 모형 — 예측값은 exp(ŷ) 역변환 (만원/㎡)")
     warn.extend(_extrapolation_warnings(bundle, req))

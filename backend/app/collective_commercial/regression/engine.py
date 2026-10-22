@@ -434,8 +434,19 @@ def _run_regression_core(
         )
         return None, X, meta, resp
 
-    if int(model.nobs) < 30:
-        warnings.append(f"n={int(model.nobs)} — 참고용 (권장 n≥30)")
+    from app.regression_sample_judge import judge_exog, sample_notes
+
+    verdict = judge_exog(model.model.exog)
+    notes = sample_notes(verdict)
+    if verdict.tier == "blocked":
+        resp = CommercialRegressionResponse(
+            cluster_key="",
+            display_label="",
+            n=int(model.nobs),
+            warnings=warnings + notes,
+        )
+        return None, X, meta, resp
+    warnings.extend(notes)
 
     metrics = fit_model_price_metrics(y, X_const, model, model_type)
 
@@ -667,9 +678,15 @@ def predict_commercial_regression(
     frame = model.get_prediction(x_df).summary_frame(alpha=0.05)
     row = frame.iloc[0]
 
+    from app.regression_sample_judge import identification_note, judge_exog, provision_note
+
     warnings = _extrapolation_warnings(meta, inputs)
-    if fit_resp.n < 30:
-        warnings.insert(0, f"n={fit_resp.n} — 참고용 (권장 n≥30, 예측구간 넓음)")
+    predict_verdict = judge_exog(model.model.exog)
+    if predict_verdict.tier == "caution":
+        warnings.insert(0, f"{provision_note(predict_verdict)} · 예측구간 넓음")
+    predict_ident = identification_note(predict_verdict)
+    if predict_ident:
+        warnings.insert(1 if predict_verdict.tier == "caution" else 0, predict_ident)
 
     model_type = fit_resp.model_type
     if model_type == "log":

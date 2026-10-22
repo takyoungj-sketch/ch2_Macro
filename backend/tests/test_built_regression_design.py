@@ -451,3 +451,81 @@ def test_sample_funnel_exclusive_first_reason():
     assert var_n["missing_gross"] == 1
     assert var_n["missing_land"] == 1
     assert "missing_gross" not in price_n
+
+
+def test_sample_funnel_splits_numeric_and_category_drops():
+    df = pd.DataFrame(
+        {
+            "price": [100, 200, 300, 400],
+            "gross_area": [10, None, 30, 40],
+            "structure_group": ["RC", "RC", None, "RC"],
+            "asset_type": ["commercial"] * 4,
+        }
+    )
+    spec = RegressionVariableSpec(
+        gross_area=True,
+        land_area=False,
+        building_age=False,
+        road_width_dummy=False,
+        zone_type_dummy=False,
+        building_use_dummy=False,
+        structure_dummy=True,
+        asset_type_dummy=False,
+    )
+    y, _x, _meta = _build_design_matrix(
+        df, spec, response_scale="linear", categorical_missing="drop"
+    )
+    sample = build_sample_funnel(
+        df,
+        spec,
+        fitted_index=y.index,
+        response_scale="linear",
+        categorical_missing="drop",
+        category_columns=["structure_group"],
+    )
+    by_code = {step.code: step for step in sample.funnel}
+    assert by_code["pool"].label == "조회 거래"
+    assert by_code["var_drop"].label == "숫자 결측 제외"
+    assert by_code["var_drop"].n == 1
+    assert by_code["cat_drop"].label == "범주 결측 제외"
+    assert by_code["cat_drop"].n == 1
+    assert by_code["fit"].label == "최종 표본"
+    assert sample.n_fit == 2
+
+
+def test_sample_funnel_notes_category_overlap_inside_numeric_drop():
+    """숫자 결측과 범주 미상이 같은 행이면 숫자 쪽에 한 번만 세고, 겹침을 적는다."""
+    df = pd.DataFrame(
+        {
+            "price": [100, 200, 300],
+            "gross_area": [None, 20, 30],
+            "structure_group": [None, None, "RC"],
+            "asset_type": ["commercial"] * 3,
+        }
+    )
+    spec = RegressionVariableSpec(
+        gross_area=True,
+        land_area=False,
+        building_age=False,
+        road_width_dummy=False,
+        zone_type_dummy=False,
+        building_use_dummy=False,
+        structure_dummy=True,
+        asset_type_dummy=False,
+    )
+    y, _x, _meta = _build_design_matrix(
+        df, spec, response_scale="linear", categorical_missing="drop"
+    )
+    sample = build_sample_funnel(
+        df,
+        spec,
+        fitted_index=y.index,
+        response_scale="linear",
+        categorical_missing="drop",
+        category_columns=["structure_group"],
+    )
+    by_code = {step.code: step for step in sample.funnel}
+    assert by_code["var_drop"].n == 1
+    assert "범주 미상도 있는 거래 1건" in (by_code["var_drop"].note or "")
+    assert by_code["cat_drop"].n == 1
+    assert sample.n_fit == 1

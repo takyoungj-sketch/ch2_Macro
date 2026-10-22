@@ -627,6 +627,9 @@ export interface CollectiveRegressionResponse {
   equation?: string;
   coefficients: RegressionCoeff[];
   warnings: string[];
+  categorical_missing?: "keep_unknown" | "drop";
+  n_excluded_missing?: number;
+  missing_treatment_label?: string;
   predict_options?: CollectivePredictOptions | null;
   model_comparison?: ModelComparison | null;
   model_candidates?: CollectiveModelCandidate[];

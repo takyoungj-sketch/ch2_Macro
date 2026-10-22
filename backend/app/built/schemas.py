@@ -217,6 +217,8 @@ class RegressionRunRequest(BaseModel):
     time_adjust: bool = False
     include_partial: bool = False  # D-049 분석 기본 제외. 목록과 분리.
     enrich: bool = False  # D-051. 기본 끄기. 켜면 표시 용도지역=필터.
+    # 범주 빈칸. keep_unknown=미상으로 유지(기본). drop=그 식에서 해당 거래 제외.
+    categorical_missing: Literal["keep_unknown", "drop"] = "keep_unknown"
     # R0 analysis_scope — 프론트 analysisUnits 미러 (필터 로직에는 미사용)
     anchor_region_code: Optional[str] = None
     region_unit_hints: list[AnalysisRegionUnitHint] = Field(default_factory=list)
@@ -398,6 +400,9 @@ class RegressionLevelResult(BaseModel):
     predict_options: Optional[PredictOptions] = None
     warning: Optional[str] = None
     mape: Optional[float] = None  # in-sample MAPE (%), 원척도 금액(만원)
+    categorical_missing: Literal["keep_unknown", "drop"] = "keep_unknown"
+    n_excluded_missing: int = 0
+    missing_treatment_label: str = ""
     sample: Optional[SampleBreakdown] = None
     residuals: Optional[ResidualDiagnostics] = None  # 초점 모형만 (P5)
 

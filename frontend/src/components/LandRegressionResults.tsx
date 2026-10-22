@@ -34,20 +34,28 @@ export default function LandRegressionResults({ data }: { data: LandRegressionRe
           </div>
         <MetricWithHelp label="n=" termId="fit_n" value={data.n.toLocaleString("ko-KR")} />
       </div>
-
-      {Object.keys(data.reference_categories).length > 0 && (
-        <p className="rounded bg-slate-50 px-2 py-1 text-[10px] text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-          회귀 기준 범주:{" "}
-          {Object.entries(data.reference_categories)
-            .map(([k, v]) => `${k}=${v}`)
-            .join(" · ")}
-        </p>
+      {data.missing_treatment_label && (
+        <p className="text-[11px] text-slate-500">{data.missing_treatment_label}</p>
       )}
 
       {data.coefficients.length > 0 && (
         <div className="space-y-1">
           <div className="text-xs font-semibold text-slate-600">회귀식</div>
           <LandRegressionEquation coefficients={data.coefficients} modelType={data.model_type} />
+          {data.warnings.some((w) => w.includes("참고용")) && (
+            <p className="text-[11px] leading-snug text-slate-600 dark:text-slate-300">
+              표본 수가 권장 기준에 미달하므로 회귀계수가 불안정할 수 있습니다. R²와 MAPE는 해당
+              표본의 적합 결과이며, 새로운 거래에 대한 예측 정확도를 보장하지 않습니다.
+            </p>
+          )}
+          {Object.keys(data.reference_categories).length > 0 && (
+            <p className="text-[10px] text-slate-500 dark:text-slate-400">
+              기준 범주:{" "}
+              {Object.entries(data.reference_categories)
+                .map(([k, v]) => `${k}=${v}`)
+                .join(" · ")}
+            </p>
+          )}
         </div>
       )}
 

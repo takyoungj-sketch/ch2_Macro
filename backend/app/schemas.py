@@ -680,6 +680,8 @@ class LandRegressionRequest(MatrixYearlyRequest):
     """POST /paid/matrix-cell-transactions/regression 요청."""
     variables: LandRegressionVariables = Field(default_factory=LandRegressionVariables)
     model_type: Literal["log", "linear"] = "log"
+    # 범주 빈칸. keep_unknown=미상 범주 유지(기본). drop=결측 거래 제외.
+    categorical_missing: Literal["keep_unknown", "drop"] = "keep_unknown"
     exclude_outliers_iqr: bool = False
     outlier_iqr_multiplier: float = 3.0
     min_n: int = 15
@@ -754,6 +756,9 @@ class LandRegressionResponse(BaseModel):
     correlations: list[CorrelationSeries] = Field(default_factory=list)
     partial_regressions: list[PartialRegressionSeries] = Field(default_factory=list)
     correlation_n: Optional[int] = None
+    categorical_missing: Literal["keep_unknown", "drop"] = "keep_unknown"
+    n_excluded_missing: int = 0
+    missing_treatment_label: str = ""
 
 
 class LandModelCandidate(BaseModel):

@@ -14,7 +14,7 @@ export default function SampleFunnel({ sample }: { sample: SampleBreakdown }) {
   return (
     <div className="rounded-md border border-slate-200 dark:border-slate-600 overflow-hidden">
       <p className="px-2.5 py-1 text-[10px] font-medium text-slate-500 dark:text-slate-400">
-        조회 → 적합 표본
+        회귀분석 표본 구성
       </p>
       <ul className="list-none divide-y divide-slate-100 dark:divide-slate-700">
         {steps.map((step) => (

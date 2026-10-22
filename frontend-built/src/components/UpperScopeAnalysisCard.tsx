@@ -83,7 +83,7 @@ function ComparisonLevelCard({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div>R² {fmtDecimal(result.r_squared, 4)}</div>
         <div>Adj R² {fmtDecimal(result.adj_r_squared, 4)}</div>
-        <div>MAPE {result.mape != null ? `${fmtDecimal(result.mape, 1)}%` : "—"}</div>
+        <div>학습 MAPE {result.mape != null ? `${fmtDecimal(result.mape, 1)}%` : "—"}</div>
         <div>유의 {result.significant_count}개</div>
       </div>
       <p className="text-slate-500">
@@ -100,6 +100,12 @@ function ComparisonLevelCard({
             equation={result.equation}
             predictOptions={result.predict_options}
           />
+          {result.warning?.includes("참고용") && (
+            <p className="text-[11px] leading-snug text-slate-500">
+              표본 수가 권장 기준에 미달하므로 회귀계수가 불안정할 수 있습니다. R²와 MAPE는 해당
+              표본의 적합 결과이며, 새로운 거래에 대한 예측 정확도를 보장하지 않습니다.
+            </p>
+          )}
         </div>
       )}
 

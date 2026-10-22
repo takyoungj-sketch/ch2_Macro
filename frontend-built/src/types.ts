@@ -424,6 +424,7 @@ export interface RegressionRunRequest {
   response_scale?: ResponseScale;
   leaf_level?: "addr3" | "addr4";
   exclude_outliers_iqr: boolean;
+  categorical_missing?: "keep_unknown" | "drop";
   outlier_iqr_multiplier?: number;
   include_partial?: boolean;
   enrich?: boolean;
@@ -632,6 +633,9 @@ export interface RegressionLevelResult {
   predict_options?: PredictOptions | null;
   warning?: string | null;
   mape?: number | null;
+  categorical_missing?: "keep_unknown" | "drop";
+  n_excluded_missing?: number;
+  missing_treatment_label?: string;
   sample?: SampleBreakdown | null;
   /** 초점 모형만 (P5). 상위 비교에는 없다. */
   residuals?: ResidualDiagnostics | null;

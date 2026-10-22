@@ -408,6 +408,7 @@ export default function BuildingRegressionPanel({
   const [excludeOutliers, setExcludeOutliers] = useState(false);
   const [floorAdvanced, setFloorAdvanced] = useState(false);
   const [modelType, setModelType] = useState<RegressionModelType>("linear");
+  const [categoricalMissing, setCategoricalMissing] = useState<"keep_unknown" | "drop">("keep_unknown");
   const [vars, setVars] = useState<RegressionVars>({
     exclusive_area: true,
     building_age: assetType !== "presale",
@@ -450,11 +451,12 @@ export default function BuildingRegressionPanel({
       asset_type: assetType,
       ...periodParams,
       exclude_outliers_iqr: excludeOutliers,
+      categorical_missing: categoricalMissing,
       experiment,
       model_type: modelType,
       variables: { ...vars, floor_mode: floorMode },
     }),
-    [assetType, periodParams, excludeOutliers, experiment, modelType, vars, floorMode],
+    [assetType, periodParams, excludeOutliers, categoricalMissing, experiment, modelType, vars, floorMode],
   );
 
   const runRegression = () => {
@@ -676,6 +678,17 @@ export default function BuildingRegressionPanel({
       <label className="flex items-center gap-2 text-xs">
         <input type="checkbox" checked={excludeOutliers} onChange={(e) => setExcludeOutliers(e.target.checked)} />
         IQR 이상치 제외
+      </label>
+      <label className="flex items-center gap-2 text-xs">
+        범주 결측
+        <select
+          className="border border-slate-200 rounded px-1 py-0.5 dark:bg-slate-900"
+          value={categoricalMissing}
+          onChange={(e) => setCategoricalMissing(e.target.value as "keep_unknown" | "drop")}
+        >
+          <option value="keep_unknown">미상 범주 유지</option>
+          <option value="drop">결측 거래 제외</option>
+        </select>
       </label>
 
       <button

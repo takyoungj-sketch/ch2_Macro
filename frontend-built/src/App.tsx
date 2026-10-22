@@ -317,7 +317,7 @@ function SampleFilterPanel({
   );
 }
 
-/** 백엔드 회귀 게이트와 같은 숫자 — engine._fit_ols: n<10 빈 식, n<30 참고용 */
+/** 백엔드 회귀 게이트 — n<10 빈 식. 식을 주면 서버가 30건·계수당 5건으로 참고용을 가른다. */
 const MIN_REGRESSION_N_FIT = 10;
 const MIN_REGRESSION_N_RECOMMENDED = 30;
 
@@ -570,6 +570,7 @@ export default function App() {
   const [excludeOutliers, setExcludeOutliers] = useState(false);
   const [includePartial, setIncludePartial] = useState(false);
   const [enrich, setEnrich] = useState(false);
+  const [categoricalMissing, setCategoricalMissing] = useState<"keep_unknown" | "drop">("keep_unknown");
   const [enrichConsentOpen, setEnrichConsentOpen] = useState(false);
   const [iqrMultiplier, setIqrMultiplier] = useState<IqrMultiplier>(3);
   const [sampleFilter, setSampleFilter] = useState<SampleFilterState>(EMPTY_SAMPLE_FILTER);
@@ -1047,6 +1048,7 @@ export default function App() {
       ...sampleApiParams,
       variables: effectiveVars,
       response_scale: responseScale,
+      categorical_missing: categoricalMissing,
       exclude_outliers_iqr: excludeOutliers,
       outlier_iqr_multiplier: iqrMultiplier,
       include_partial: includePartial,
@@ -1066,6 +1068,7 @@ export default function App() {
     sampleApiParams,
     effectiveVars,
     responseScale,
+    categoricalMissing,
     excludeOutliers,
     iqrMultiplier,
     includePartial,
@@ -1607,8 +1610,37 @@ export default function App() {
             </section>
 
             <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                3. 결측치 처리
+              </p>
+              <p className="text-[10px] leading-snug text-slate-500 dark:text-slate-400">
+                선택한 범주형 변수에 적용
+              </p>
+              <div className="flex flex-col gap-1.5 text-xs">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="categorical-missing"
+                    checked={categoricalMissing === "keep_unknown"}
+                    onChange={() => setCategoricalMissing("keep_unknown")}
+                  />
+                  <span>미상 범주 유지 (기본값)</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="categorical-missing"
+                    checked={categoricalMissing === "drop"}
+                    onChange={() => setCategoricalMissing("drop")}
+                  />
+                  <span>결측 거래 제외</span>
+                </label>
+              </div>
+            </section>
+
+            <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
               <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 inline-flex items-center gap-1">
-                3. 분석 표본
+                4. 분석 표본
                 <AnalysisHelpPanel explain={BUILT_SAMPLE_HELP} title="분석 표본 설명" />
               </p>
               <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs">

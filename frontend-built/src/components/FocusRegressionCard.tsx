@@ -62,14 +62,17 @@ export default function FocusRegressionCard({
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
         <MetricWithHelp label="R²" termId="r_squared" value={fmtDecimal(result.r_squared, 5)} />
         <MetricWithHelp label="Adj R²" termId="adj_r_squared" value={fmtDecimal(result.adj_r_squared, 5)} />
-        <div className="flex flex-wrap items-center gap-1.5" title="in-sample · 금액(만원) 원척도">
+        <div className="flex flex-wrap items-center gap-1.5" title="학습 표본에서 계산한 오차. 교차검증 CV-MAPE가 아닙니다.">
           <MetricWithHelp
-            label="MAPE"
+            label="학습 MAPE"
             termId="mape"
             value={result.mape != null ? `${fmtDecimal(result.mape, 2)}%` : "—"}
           />
         </div>
         <div>유의 변수 {result.significant_count}개</div>
+        {result.missing_treatment_label && (
+          <div className="col-span-2 sm:col-span-3 text-slate-500">{result.missing_treatment_label}</div>
+        )}
         <MetricWithHelp label="F p" termId="f_p_value" value={fmtDecimal(result.f_p_value, 5)} />
       </div>
 
@@ -86,6 +89,12 @@ export default function FocusRegressionCard({
             equation={result.equation}
             predictOptions={result.predict_options}
           />
+          {result.warning?.includes("참고용") && (
+            <p className="text-[11px] leading-snug text-slate-600 dark:text-slate-300">
+              표본 수가 권장 기준에 미달하므로 회귀계수가 불안정할 수 있습니다. R²와 MAPE는 해당
+              표본의 적합 결과이며, 새로운 거래에 대한 예측 정확도를 보장하지 않습니다.
+            </p>
+          )}
         </div>
       )}
 

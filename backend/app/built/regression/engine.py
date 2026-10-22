@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from app.built.asset_scope import apply_asset_type_filter, is_unified
+from app.regression_missing import treatment_label
 from app.built.filters import (
     effective_addr3_list,
     effective_addr4_list,
@@ -156,6 +157,7 @@ class DesignMeta:
     structure_reference: str | None = None
     road_width_reference: str | None = None
     asset_type_reference: str | None = None
+    n_excluded_missing: int = 0
     region_leaves: list[str] = field(default_factory=list)
     region_reference: str | None = None
     continuous_ranges: dict[str, tuple[float, float]] = field(default_factory=dict)
@@ -833,6 +835,26 @@ def _vif_warning(vif_entries: list[VifEntry]) -> str | None:
     return None
 
 
+def _enabled_category_columns(
+    vars_spec: RegressionVariableSpec,
+    region_col: str | None,
+) -> list[str]:
+    columns: list[str] = []
+    if vars_spec.road_width_dummy:
+        columns.append("road_width_label")
+    if vars_spec.zone_type_dummy:
+        columns.append("zone_type")
+    if vars_spec.building_use_dummy:
+        columns.append("building_use")
+    if vars_spec.structure_dummy:
+        columns.append("structure_group")
+    if vars_spec.asset_type_dummy:
+        columns.append("asset_type")
+    if vars_spec.region_leaf_dummy and region_col:
+        columns.append(region_col)
+    return columns
+
+
 def _build_design_matrix(
     df: pd.DataFrame,
     vars_spec: RegressionVariableSpec,
@@ -840,14 +862,23 @@ def _build_design_matrix(
     unified: bool = False,
     response_scale: ResponseScale = "linear",
     region_col: str | None = None,
+    categorical_missing: str = "keep_unknown",
 ) -> tuple[pd.Series, pd.DataFrame, DesignMeta | None]:
     """종속 y와 독립 X (상수 미포함), 설계 메타."""
+    from app.regression_missing import categorical_dummies, drop_unknown_rows
+
     if df.empty:
         return pd.Series(dtype=float), pd.DataFrame(), None
 
+    excluded = 0
+    if categorical_missing == "drop":
+        df, excluded = drop_unknown_rows(df, _enabled_category_columns(vars_spec, region_col))
+        if df.empty:
+            return pd.Series(dtype=float), pd.DataFrame(), None
+
     y = pd.to_numeric(df["price"], errors="coerce")
     parts: list[pd.DataFrame] = []
-    meta = DesignMeta(response_scale=response_scale)
+    meta = DesignMeta(response_scale=response_scale, n_excluded_missing=excluded)
 
     for col, enabled in (
         ("gross_area", vars_spec.gross_area),
@@ -879,55 +910,50 @@ def _build_design_matrix(
     X = pd.concat(parts, axis=1) if parts else pd.DataFrame(index=df.index)
 
     if vars_spec.road_width_dummy and "road_width_label" in df.columns:
-        rw = df["road_width_label"].fillna("(null)").astype(str)
-        cats = sorted(rw.unique().tolist())
+        d, cats, ref = categorical_dummies(df["road_width_label"], "road")
         meta.road_width_labels = cats
-        meta.road_width_reference = cats[0] if len(cats) > 1 else None
-        d = pd.get_dummies(rw, prefix="road", drop_first=True)
-        X = pd.concat([X, d], axis=1)
+        meta.road_width_reference = ref
+        if not d.empty:
+            X = pd.concat([X, d], axis=1)
 
     if vars_spec.zone_type_dummy and "zone_type" in df.columns:
-        zt = df["zone_type"].fillna("(null)").astype(str)
-        cats = sorted(zt.unique().tolist())
-        if len(cats) > 1 or (len(cats) == 1 and cats[0] != "(null)"):
-            meta.zone_types = cats
-            meta.zone_reference = cats[0] if len(cats) > 1 else None
-            d = pd.get_dummies(zt, prefix="zone", drop_first=True)
+        d, cats, ref = categorical_dummies(df["zone_type"], "zone")
+        meta.zone_types = cats
+        meta.zone_reference = ref
+        if not d.empty:
             X = pd.concat([X, d], axis=1)
 
     if vars_spec.building_use_dummy and "building_use" in df.columns:
-        bu = df["building_use"].fillna("(null)").astype(str)
-        cats = sorted(bu.unique().tolist())
+        d, cats, ref = categorical_dummies(df["building_use"], "use")
         meta.building_uses = cats
-        meta.building_use_reference = cats[0] if len(cats) > 1 else None
-        d = pd.get_dummies(bu, prefix="use", drop_first=True)
-        X = pd.concat([X, d], axis=1)
+        meta.building_use_reference = ref
+        if not d.empty:
+            X = pd.concat([X, d], axis=1)
 
     if vars_spec.structure_dummy and "structure_group" in df.columns:
-        sg = df["structure_group"].fillna("(null)").astype(str)
-        cats = sorted(sg.unique().tolist())
-        if len(cats) > 1 or (len(cats) == 1 and cats[0] != "(null)"):
-            meta.structure_groups = cats
-            meta.structure_reference = cats[0] if len(cats) > 1 else None
-            d = pd.get_dummies(sg, prefix="struct", drop_first=True)
+        d, cats, ref = categorical_dummies(df["structure_group"], "struct")
+        meta.structure_groups = cats
+        meta.structure_reference = ref
+        if not d.empty:
             X = pd.concat([X, d], axis=1)
 
     if unified and vars_spec.asset_type_dummy and "asset_type" in df.columns:
-        at = df["asset_type"].fillna("(null)").astype(str)
-        cats = sorted(at.unique().tolist())
+        from app.regression_missing import normalize_categories
+
+        normalized = normalize_categories(df["asset_type"])
+        preferred = "commercial" if (normalized == "commercial").any() else None
+        d, cats, ref = categorical_dummies(df["asset_type"], "atype", reference=preferred)
         meta.asset_types = cats
-        meta.asset_type_reference = "commercial" if "commercial" in cats else (cats[0] if cats else None)
-        d = pd.get_dummies(at, prefix="atype", drop_first=True)
-        X = pd.concat([X, d], axis=1)
+        meta.asset_type_reference = ref
+        if not d.empty:
+            X = pd.concat([X, d], axis=1)
 
     if vars_spec.region_leaf_dummy and region_col and region_col in df.columns:
-        rs = _norm_col(df, region_col).replace("", "(null)")
-        valid = rs[(rs != "(null)") & (rs.notna())]
-        cats = sorted(valid.unique().tolist())
-        if len(cats) >= 2:
-            meta.region_leaves = cats
-            meta.region_reference = cats[0]
-            d = pd.get_dummies(rs, prefix="loc", drop_first=True)
+        d, cats, ref = categorical_dummies(df[region_col], "loc")
+        real = [level for level in cats if level != "미상"]
+        if len(real) >= 2 and ref:
+            meta.region_leaves = real
+            meta.region_reference = ref
             if not d.empty:
                 X = pd.concat([X, d], axis=1)
 
@@ -971,6 +997,7 @@ _VAR_DROP_ORDER = (
     "missing_land",
     "missing_age",
     "missing_road",
+    "missing_assessed",
     "nonpositive_area",
     "other",
 )
@@ -979,8 +1006,23 @@ _VAR_DROP_LABELS = {
     "missing_land": "대지면적 결측",
     "missing_age": "연식 결측",
     "missing_road": "도로코드 결측",
+    "missing_assessed": "개별공시지가 결측",
     "nonpositive_area": "면적 0 이하 (log-log)",
     "other": "기타 결측",
+}
+_CATEGORY_DROP_LABELS = {
+    "road_width_label": "도로조건 미상",
+    "zone_type": "용도지역 미상",
+    "building_use": "건축물용도 미상",
+    "structure_group": "구조 미상",
+    "asset_type": "유형 미상",
+}
+_CATEGORY_NAME = {
+    "road_width_label": "도로조건",
+    "zone_type": "용도지역",
+    "building_use": "건축물용도",
+    "structure_group": "구조",
+    "asset_type": "유형",
 }
 
 
@@ -1019,7 +1061,7 @@ def _row_drop_reason(
     if vars_spec.assessed_land_price:
         p = _cell_num(row, "assessed_land_price")
         if pd.isna(p) or float(p) <= 0:
-            return "missing_assessed", "개별공시지가 결측"
+            return "missing_assessed", _VAR_DROP_LABELS["missing_assessed"]
     if vars_spec.road_code and pd.isna(_cell_num(row, "road_code")):
         return "missing_road", _VAR_DROP_LABELS["missing_road"]
     return "other", _VAR_DROP_LABELS["other"]
@@ -1039,32 +1081,66 @@ def _count_funnel_reasons(pairs: list[tuple[str, str]]) -> list[FunnelReason]:
     return [FunnelReason(code=c, label=labels[c], n=counts[c]) for c in ordered]
 
 
+def _category_drop_reason(row: pd.Series, columns: list[str]) -> tuple[str, str] | None:
+    """결측 거래 제외일 때, 켠 범주가 미상인 첫 열."""
+    from app.regression_missing import UNKNOWN, normalize_categories
+
+    for column in columns:
+        if column not in row.index:
+            continue
+        if normalize_categories(pd.Series([row[column]])).iloc[0] != UNKNOWN:
+            continue
+        if column not in _CATEGORY_DROP_LABELS:
+            return column, "지역 미상"
+        return column, _CATEGORY_DROP_LABELS[column]
+    return None
+
+
 def build_sample_funnel(
     df: pd.DataFrame,
     vars_spec: RegressionVariableSpec,
     *,
     fitted_index: pd.Index,
     response_scale: ResponseScale,
+    categorical_missing: str = "keep_unknown",
+    category_columns: list[str] | None = None,
 ) -> SampleBreakdown:
-    """조회 표본에서 적합 표본이 어떻게 남는지. 더미 결측은 (null) 범주로 들어가 탈락하지 않는다."""
+    """조회 거래에서 최종 표본이 어떻게 남는지.
+
+    한 행은 한 사유만 탄다. 금액 → 숫자 결측 → 범주 결측 순이다.
+    범주 결측은 '결측 거래 제외'를 켠 식에서만 행을 뺀다.
+    """
     n_pool = int(len(df))
     n_fit = int(len(fitted_index))
     funnel: list[FunnelStep] = [
-        FunnelStep(code="pool", label="조회 표본", n=n_pool, kind="remain"),
+        FunnelStep(code="pool", label="조회 거래", n=n_pool, kind="remain"),
     ]
     if n_pool == 0:
-        funnel.append(FunnelStep(code="fit", label="적합 표본", n=0, kind="remain"))
+        funnel.append(FunnelStep(code="fit", label="최종 표본", n=0, kind="remain"))
         return SampleBreakdown(n_pool=0, n_fit=0, funnel=funnel)
 
     dropped = df.loc[df.index.difference(fitted_index)]
     price_pairs: list[tuple[str, str]] = []
     var_pairs: list[tuple[str, str]] = []
+    cat_pairs: list[tuple[str, str]] = []
+    cat_cols = category_columns or []
+    numeric_also_unknown = 0
     for _, row in dropped.iterrows():
         code, label = _row_drop_reason(row, vars_spec, response_scale=response_scale)
         if code in ("no_price", "nonpositive_price"):
             price_pairs.append((code, label))
-        else:
+            continue
+        if code != "other":
             var_pairs.append((code, label))
+            if categorical_missing == "drop" and _category_drop_reason(row, cat_cols) is not None:
+                numeric_also_unknown += 1
+            continue
+        if categorical_missing == "drop":
+            cat = _category_drop_reason(row, cat_cols)
+            if cat is not None:
+                cat_pairs.append(cat)
+                continue
+        var_pairs.append((code, label))
 
     if price_pairs:
         funnel.append(
@@ -1078,23 +1154,39 @@ def build_sample_funnel(
             )
         )
     if var_pairs:
+        numeric_note = "켠 숫자 변수에 값이 없거나 0 이하인 거래입니다. 개별공시지가를 켜면 그 결측도 여기 포함됩니다."
+        if numeric_also_unknown:
+            numeric_note += (
+                f" 이 중 범주 미상도 있는 거래 {numeric_also_unknown}건은 여기서 한 번만 셉니다."
+            )
         funnel.append(
             FunnelStep(
                 code="var_drop",
-                label="선택 변수 결측",
+                label="숫자 결측 제외",
                 n=len(var_pairs),
                 kind="drop",
-                note="지금 켠 연속변수에 값이 없는 거래입니다. 더미(용도지역·구조 등) 결측은 (null) 범주로 남고 여기서는 빠지지 않습니다.",
+                note=numeric_note,
                 reasons=_count_funnel_reasons(var_pairs),
+            )
+        )
+    if cat_pairs:
+        funnel.append(
+            FunnelStep(
+                code="cat_drop",
+                label="범주 결측 제외",
+                n=len(cat_pairs),
+                kind="drop",
+                note="결측 거래 제외를 켜서, 선택한 범주가 미상인 거래를 뺐습니다.",
+                reasons=_count_funnel_reasons(cat_pairs),
             )
         )
     funnel.append(
         FunnelStep(
             code="fit",
-            label="적합 표본",
+            label="최종 표본",
             n=n_fit,
             kind="remain",
-            note="선택 변수 complete-case. 회귀식 n과 같습니다.",
+            note="금액·숫자·범주 조건을 반영한 회귀식의 표본입니다.",
         )
     )
     return SampleBreakdown(n_pool=n_pool, n_fit=n_fit, funnel=funnel)
@@ -1248,6 +1340,7 @@ def _fit_ols(
     addr4_city: bool = False,
     year_index: "YearIndex | None" = None,
     with_residuals: bool = False,
+    categorical_missing: str = "keep_unknown",
 ) -> RegressionLevelResult:
     import statsmodels.api as sm
 
@@ -1267,7 +1360,11 @@ def _fit_ols(
             coefficients=[],
             warning="표본 0건",
             sample=build_sample_funnel(
-                df, vars_spec, fitted_index=df.index[:0], response_scale=response_scale
+                df,
+                vars_spec,
+                fitted_index=df.index[:0],
+                response_scale=response_scale,
+                categorical_missing=categorical_missing,
             ),
         )
 
@@ -1284,6 +1381,7 @@ def _fit_ols(
         unified=unified,
         response_scale=response_scale,
         region_col=region_col,
+        categorical_missing=categorical_missing,
     )
     n = len(y)
 
@@ -1299,7 +1397,12 @@ def _fit_ols(
             coefficients=[],
             warning=warn,
             sample=build_sample_funnel(
-                df, vars_spec, fitted_index=y.index, response_scale=response_scale
+                df,
+                vars_spec,
+                fitted_index=y.index,
+                response_scale=response_scale,
+                categorical_missing=categorical_missing,
+                category_columns=_enabled_category_columns(vars_spec, region_col),
             ),
         )
 
@@ -1308,6 +1411,26 @@ def _fit_ols(
 
     X = sm.add_constant(X)
     model = sm.OLS(y, X).fit()
+    from app.regression_sample_judge import identification_note, judge_exog, provision_note, sample_notes
+
+    verdict = judge_exog(model.model.exog)
+    if verdict.tier == "blocked":
+        return RegressionLevelResult(
+            admin_level=level,
+            scope_label=scope_label,
+            n=int(verdict.n),
+            equation="",
+            coefficients=[],
+            warning=sample_notes(verdict)[0],
+            sample=build_sample_funnel(
+                df,
+                vars_spec,
+                fitted_index=y.index,
+                response_scale=response_scale,
+                categorical_missing=categorical_missing,
+                category_columns=_enabled_category_columns(vars_spec, region_col),
+            ),
+        )
 
     coefs = [
         RegressionCoeff(
@@ -1321,9 +1444,10 @@ def _fit_ols(
     ]
     sig = sum(1 for c in coefs if c.name != "const" and c.p_value is not None and c.p_value < 0.05)
 
-    warn = None
-    if n < 30:
-        warn = f"n={n} — 참고용 (권장 n≥30)"
+    warn = provision_note(verdict)
+    ident = identification_note(verdict)
+    if ident:
+        warn = f"{warn} · {ident}" if warn else ident
     if _uses_log_y(response_scale):
         if _is_loglog(response_scale):
             log_note = "종속·면적=log — log-log (광평수 외삽에 유리)"
@@ -1332,6 +1456,18 @@ def _fit_ols(
         warn = f"{warn} · {log_note}" if warn else log_note
     if vif_warn:
         warn = f"{warn} · {vif_warn}" if warn else vif_warn
+    if categorical_missing != "drop":
+        from app.regression_missing import rare_unknown_warning
+
+        rare = rare_unknown_warning(
+            df.loc[y.index],
+            [
+                (column, _CATEGORY_NAME.get(column, "지역"))
+                for column in _enabled_category_columns(vars_spec, region_col)
+            ],
+        )
+        if rare:
+            warn = f"{warn} · {rare}" if warn else rare
     if vars_spec.region_leaf_dummy and level in {"eupmyeondong", "beopjungri"}:
         loc_cols = sum(1 for c in X.columns if str(c).startswith("loc_"))
         if loc_cols == 0:
@@ -1391,8 +1527,18 @@ def _fit_ols(
         predict_options=_meta_to_predict_options(meta),
         warning=warn,
         mape=mape,
+        categorical_missing=categorical_missing,  # type: ignore[arg-type]
+        n_excluded_missing=int(meta.n_excluded_missing) if meta else 0,
+        missing_treatment_label=treatment_label(
+            categorical_missing, int(meta.n_excluded_missing) if meta else 0
+        ),
         sample=build_sample_funnel(
-            df, vars_spec, fitted_index=y.index, response_scale=response_scale
+            df,
+            vars_spec,
+            fitted_index=y.index,
+            response_scale=response_scale,
+            categorical_missing=categorical_missing,
+            category_columns=_enabled_category_columns(vars_spec, region_col),
         ),
         residuals=residuals,
     )
@@ -1462,6 +1608,7 @@ def _partial_regression_plots(
     unified: bool = False,
     response_scale: ResponseScale = "linear",
     region_col: str | None = None,
+    categorical_missing: str = "keep_unknown",
 ) -> list[PartialRegressionSeries]:
     """Added-variable plot — OLS와 동일 설계행렬 기준."""
     import statsmodels.api as sm
@@ -1472,6 +1619,7 @@ def _partial_regression_plots(
         unified=unified,
         response_scale=response_scale,
         region_col=region_col,
+        categorical_missing=categorical_missing,
     )
     if len(y) < 10 or X.empty:
         return []
@@ -1550,6 +1698,7 @@ def _build_scatter_bundle(
         unified=unified,
         response_scale=response_scale,
         region_col=region_col,
+        categorical_missing=req.categorical_missing,
     )
     return corrs, partials, admin_level, scope_label, len(scatter_df)
 
@@ -1631,6 +1780,7 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
         response_scale=scale,
         addr4_city=addr4_city,
         year_index=year_index,
+        categorical_missing=req.categorical_missing,
     )
 
     scatter_kw = dict(
@@ -1731,6 +1881,7 @@ def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredict
         unified=is_unified(req.asset_type),
         response_scale=req.response_scale,
         region_col=region_col,
+        categorical_missing=req.categorical_missing,
     )
     n = len(y)
     if n < 10 or X.empty or meta is None:
@@ -1738,6 +1889,11 @@ def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredict
 
     X_const = sm.add_constant(X)
     model = sm.OLS(y, X_const).fit()
+    from app.regression_sample_judge import identification_note, judge_exog, provision_note
+
+    verdict = judge_exog(model.model.exog)
+    if verdict.tier == "blocked":
+        raise ValueError("계산 불가: " + ", ".join(verdict.reasons))
 
     x_new = _input_to_x_row(meta, req.variables, req)
     x_new_const = sm.add_constant(x_new, has_constant="add")
@@ -1749,8 +1905,11 @@ def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredict
         inputs,
         labels=_CONT_LABELS,
     )
-    if n < 30:
-        warnings.insert(0, f"n={n} — 참고용 (권장 n≥30, 예측구간 넓음)")
+    if verdict.tier == "caution":
+        warnings.insert(0, f"{provision_note(verdict)} · 예측구간 넓음")
+    ident = identification_note(verdict)
+    if ident:
+        warnings.insert(1 if verdict.tier == "caution" else 0, ident)
     row = frame.iloc[0]
     # log 계열 역변환 (D-074): 점추정·평균CI는 Duan smearing으로 평균 하향편향을 보정한다.
     # exp(ŷ)만 쓰면 조건부 중앙값에 가깝고, MAPE·CV-MAPE는 이미 보정값 기준으로 계산되므로
