@@ -53,6 +53,6 @@ def generate():
    s=re.sub(r'<nav class="learn-chapter-nav".*?</nav>(?:\s*<p class="learn-nav-note">.*?</p>)?','\n'.join(nav),s,count=1,flags=re.S)
    p.write_text(s,encoding='utf-8')
  for p in ROOT.rglob('index.html'):
-  s=p.read_text(encoding='utf-8');s=re.sub(r'(learn-stats(?:-toc\.js|\.css))\?v=[^"\s]+',r'\1?v=20261021-5',s)
+  s=p.read_text(encoding='utf-8');s=re.sub(r'(learn-stats(?:-toc\.js|\.css))\?v=[^"\s]+',r'\1?v=20261023-1',s)
   p.write_text(s,encoding='utf-8')
 if __name__=='__main__':generate()

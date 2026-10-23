@@ -1,0 +1,115 @@
+/* Learning pages only: theme tokens, touch navigation and readable charts. */
+:root {
+  color-scheme: light;
+  --learn-surface: #fff; --learn-soft: #f8fafc; --learn-border: #e2e8f0;
+  --learn-border-strong: #cbd5e1; --learn-text: #334155; --learn-secondary: #475569;
+  --learn-muted: #64748b; --learn-heading: #0f172a; --learn-heading-blue: #1e3a8a;
+  --learn-link: #1d4ed8; --learn-accent: #2563eb; --learn-selected: #eff6ff;
+  --learn-teal: #0f766e; --learn-teal-bg: #ecfdf5;
+  --learn-warning-bg: #fffbeb; --learn-warning-border: #fcd34d; --learn-warning-text: #78350f;
+}
+:root[data-learn-theme="dark"] {
+  color-scheme: dark;
+  --learn-surface: #172334; --learn-soft: #111c2c; --learn-border: #334155;
+  --learn-border-strong: #64748b; --learn-text: #e2e8f0; --learn-secondary: #cbd5e1;
+  --learn-muted: #a6b6c9; --learn-heading: #f1f5f9; --learn-heading-blue: #b3d4ff;
+  --learn-link: #9bc7ff; --learn-accent: #93c5fd; --learn-selected: #223856;
+  --learn-teal: #7ee8d5; --learn-teal-bg: #153b3c;
+  --learn-warning-bg: #3b2d17; --learn-warning-border: #92712f; --learn-warning-text: #fde0a6;
+}
+body { color: var(--learn-text); }
+:root[data-learn-theme="dark"] body { background: #0c1421; }
+.hero__title { color: var(--learn-heading); }
+.hero__eyebrow, .footer, .footer p { color: var(--learn-muted); }
+.hero__lead, .footer__links a { color: var(--learn-secondary); }
+a { color: var(--learn-link); }
+button, select, summary, a { -webkit-tap-highlight-color: transparent; }
+button, select { font: inherit; }
+:focus-visible { outline: 3px solid var(--learn-accent); outline-offset: 3px; }
+.learn-reader-bar {
+  position: sticky; top: 0; z-index: 20; display: flex; align-items: center;
+  justify-content: space-between; gap: .75rem; padding: .6rem .75rem;
+  margin-bottom: 1.25rem; background: var(--learn-surface); border: 1px solid var(--learn-border);
+  border-radius: 12px; color: var(--learn-text);
+}
+.learn-reader-home { font-size: .875rem; font-weight: 750; text-decoration: none; }
+.learn-reader-controls, .learn-theme-label { display: flex; align-items: center; gap: .5rem; }
+.learn-theme-label { font-size: .8125rem; color: var(--learn-secondary); }
+.learn-theme-select, .learn-reader-toc-button, .learn-chart-zoom, .learn-reader-close {
+  min-height: 44px; padding: .5rem .75rem; border: 1px solid var(--learn-border-strong);
+  border-radius: 8px; background: var(--learn-surface); color: var(--learn-link); cursor: pointer;
+}
+.learn-reader-toc-button { display: none; }
+.learn-toc-toggle { display: none; }
+.learn-toc { top: 5.5rem; }
+.learn-toc__inner { max-height: calc(100dvh - 7rem); }
+.learn-chart-zoom { display: block; margin: 0 0 .75rem auto; font-size: .8125rem; }
+.learn-chart-viewport { overflow-x: auto; overscroll-behavior-x: contain; }
+.learn-chart-viewport svg { max-width: 680px; }
+.learn-table-scroll { max-width: 100%; overflow-x: auto; }
+.learn-data, .learn-table-scroll { overscroll-behavior-x: contain; }
+.learn-table-scroll table { border-collapse: collapse; min-width: 480px; }
+.learn-chapter details:not(.learn-exercises details) > summary { cursor: pointer; color: var(--learn-link); padding: .75rem 0; }
+.learn-chart-dialog {
+  width: min(1100px, calc(100% - 1.5rem)); max-height: calc(100dvh - 1.5rem);
+  padding: 1rem; border: 1px solid var(--learn-border); border-radius: 12px;
+  background: var(--learn-surface); color: var(--learn-text);
+}
+.learn-chart-dialog::backdrop { background: rgba(0, 0, 0, .75); }
+.learn-chart-dialog-header { display: flex; gap: 1rem; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.learn-chart-dialog-header h2 { margin: 0; font-size: 1rem; }
+.learn-chart-dialog-content { overflow: auto; max-height: calc(100dvh - 8rem); }
+.learn-chart-dialog-content svg { display: block; width: 100%; min-width: 640px; height: auto; }
+.learn-chart-dialog-content svg text { font-family: inherit; font-size: 14px; fill: var(--learn-text); }
+.learn-chart-dialog-content .learn-chart__caption { min-width: 0; text-align: left; }
+body.learn-dialog-open { overflow: hidden; }
+/* Preserve semantic chart colors and original uploaded screenshots. */
+:root[data-learn-theme="dark"] :is(.learn-chart, .learn-chart-dialog) svg text { fill: var(--learn-text); }
+:root[data-learn-theme="dark"] :is(.learn-chart, .learn-chart-dialog) :is([fill="#dbeafe"], [fill="#eaf2ff"], [fill="#eff6ff"], [fill="#bfdbfe"]) { fill: #294463; }
+:root[data-learn-theme="dark"] :is(.learn-chart, .learn-chart-dialog) :is([fill="#f1f5f9"], [fill="#e2e8f0"], [fill="#ffffff"]) { fill: #263548; }
+:root[data-learn-theme="dark"] :is(.learn-chart, .learn-chart-dialog) :is([fill="#ffedd5"], [fill="#fff7ed"]) { fill: #553b21; }
+:root[data-learn-theme="dark"] :is(.learn-chart, .learn-chart-dialog) [fill="#dcfce7"] { fill: #204638; }
+:root[data-learn-theme="dark"] :is(.learn-chart, .learn-chart-dialog) [fill="#111827"] { fill: #f1f5f9; }
+:root[data-learn-theme="dark"] :is(.learn-chart, .learn-chart-dialog) [stroke="#111827"] { stroke: #f1f5f9; }
+:root[data-learn-theme="dark"] :is(.learn-chart, .learn-chart-dialog) [stroke="#2563eb"] { stroke: #6da7ff; }
+:root[data-learn-theme="dark"] :is(.learn-chart, .learn-chart-dialog) [fill="#2563eb"] { fill: #5c9af4; }
+@media (max-width: 899px) {
+  .learn-reader-toc-button { display: inline-block; }
+  .learn-toc { position: sticky; top: 5rem; z-index: 15; scroll-margin-top: 5rem; }
+  .learn-toc--roadmap { display: none; }
+  .learn-toc-details { background: var(--learn-surface); border: 1px solid var(--learn-border); border-radius: 10px; }
+  .learn-toc-toggle { display: list-item; min-height: 44px; padding: .75rem 1rem; font-size: .875rem; font-weight: 700; color: var(--learn-link); cursor: pointer; }
+  .learn-toc__inner { border: 0; max-height: min(60dvh, 540px); margin: 0; box-shadow: none; }
+  .learn-toc__list a, .learn-course-details summary { min-height: 44px; padding-top: .7rem; padding-bottom: .7rem; font-size: .875rem; }
+  .learn-layout { gap: 1rem; }
+  .learn-chapter--expanded { padding: 1.5rem; }
+  .learn-chart-viewport svg { min-width: 560px; }
+  .learn-chart-viewport { margin-bottom: .25rem; }
+  .learn-chart__caption::before { content: "도표는 좌우로 넘겨 볼 수 있습니다. "; color: var(--learn-link); }
+  .learn-chart-dialog .learn-chart__caption::before { content: none; }
+}
+@media (max-width: 599px) {
+  .page { padding: .65rem .65rem max(1rem, env(safe-area-inset-bottom)); }
+  .hero { margin-bottom: 1.5rem; }
+  .hero__title { font-size: 1.65rem; line-height: 1.4; word-break: keep-all; overflow-wrap: anywhere; }
+  .hero__eyebrow { letter-spacing: 0; line-height: 1.5; }
+  .learn-reader-bar { padding: .35rem .5rem; gap: .3rem; border-radius: 8px; }
+  .learn-reader-controls { gap: .3rem; }
+  .learn-theme-label { gap: .25rem; }
+  .learn-theme-select { max-width: 112px; padding-left: .4rem; padding-right: .2rem; }
+  .learn-toc { top: 4.4rem; }
+  .learn-chapter, .learn-chapter--expanded { padding: 1.1rem .9rem; border-radius: 10px; }
+  .learn-chapter__step h2 { font-size: 1.2rem; line-height: 1.5; }
+  .learn-chapter--expanded p, .learn-chapter__step li { line-height: 1.85; }
+  .learn-chart, .learn-chart--wide { padding: .65rem; }
+  .learn-chapter-nav { gap: .65rem; }
+  .learn-chapter-nav a { padding: .75rem .5rem; border: 1px solid var(--learn-border); border-radius: 8px; }
+  .learn-roadmap__list a { display: block; padding: .6rem 0; line-height: 1.65; }
+  .learn-data table { min-width: 480px; }
+  .learn-capture--detail > a { padding: .65rem; }
+}
+
+.learn-chapter__step, .learn-caution, .learn-more, .learn-macro-cta { scroll-margin-top: 6rem; }
+@media (max-width: 899px) {
+  .learn-chapter__step, .learn-caution, .learn-more, .learn-macro-cta { scroll-margin-top: 9rem; }
+}

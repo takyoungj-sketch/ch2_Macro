@@ -452,6 +452,110 @@
     update();
   }
 
+  function setupReader(page, aside, tocDetails) {
+    const toolbar = el("div", "learn-reader-bar");
+    toolbar.setAttribute("aria-label", "읽기 설정");
+    const home = el("a", "learn-reader-home", "통계 학습");
+    home.href = BASE;
+    toolbar.appendChild(home);
+    const controls = el("div", "learn-reader-controls");
+    if (page.querySelector(".learn-chapter")) {
+      const tocButton = el("button", "learn-reader-toc-button", "목차");
+      tocButton.type = "button";
+      tocDetails.id = "learn-reader-toc";
+      tocButton.setAttribute("aria-controls", tocDetails.id);
+      tocButton.addEventListener("click", () => {
+        tocDetails.open = !tocDetails.open;
+        if (tocDetails.open) {
+          aside.scrollIntoView({ block: "start" });
+          tocDetails.querySelector("summary").focus({ preventScroll: true });
+        }
+      });
+      tocDetails.addEventListener("toggle", () => tocButton.setAttribute("aria-expanded", String(tocDetails.open)));
+      tocButton.setAttribute("aria-expanded", String(tocDetails.open));
+      controls.appendChild(tocButton);
+    }
+    const label = el("label", "learn-theme-label", "화면");
+    const select = el("select", "learn-theme-select");
+    select.setAttribute("aria-label", "화면 테마");
+    [["system", "기기 설정"], ["light", "라이트"], ["dark", "다크"]].forEach(([value, text]) => {
+      const option = el("option", "", text);
+      option.value = value;
+      select.appendChild(option);
+    });
+    select.value = window.learnTheme.get();
+    select.addEventListener("change", () => window.learnTheme.set(select.value));
+    window.addEventListener("learn-theme-change", () => { select.value = window.learnTheme.get(); });
+    label.appendChild(select);
+    controls.appendChild(label);
+    toolbar.appendChild(controls);
+    page.insertBefore(toolbar, page.firstChild);
+
+    const dialog = el("dialog", "learn-chart-dialog");
+    const heading = el("h2", "", "도표 크게 보기");
+    heading.id = "learn-chart-dialog-title";
+    dialog.setAttribute("aria-labelledby", heading.id);
+    const close = el("button", "learn-reader-close", "닫기");
+    close.type = "button";
+    const dialogHeader = el("div", "learn-chart-dialog-header");
+    dialogHeader.append(heading, close);
+    const content = el("div", "learn-chart-dialog-content");
+    content.tabIndex = 0;
+    content.setAttribute("aria-label", "확대한 도표 · 가로로 넘겨 보기");
+    dialog.append(dialogHeader, content);
+    document.body.appendChild(dialog);
+    let opener;
+    close.addEventListener("click", () => dialog.close());
+    dialog.addEventListener("close", () => { document.body.classList.remove("learn-dialog-open"); opener?.focus({ preventScroll: true }); });
+    page.querySelectorAll(".learn-chart > svg").forEach((svg, index) => {
+      const figure = svg.parentElement;
+      const name = svg.querySelector("title")?.textContent || `도표 ${index + 1}`;
+      const viewport = el("div", "learn-chart-viewport");
+      viewport.tabIndex = 0;
+      viewport.setAttribute("role", "region");
+      viewport.setAttribute("aria-label", `${name} · 좁은 화면에서는 가로로 넘겨 보기`);
+      svg.before(viewport);
+      viewport.appendChild(svg);
+      const zoom = el("button", "learn-chart-zoom", "크게 보기 ↗");
+      zoom.type = "button";
+      zoom.setAttribute("aria-label", `${name} 크게 보기`);
+      viewport.before(zoom);
+      zoom.addEventListener("click", () => {
+        opener = zoom;
+        heading.textContent = name;
+        const clone = svg.cloneNode(true);
+        // Dialog clones must not duplicate SVG accessibility or paint-server IDs.
+        const idMap = new Map([...clone.querySelectorAll("[id]")].map(node => [node.id, `reader-${index}-${node.id}`]));
+        clone.querySelectorAll("*").forEach(node => {
+          [...node.attributes].forEach(attr => {
+            let value = attr.value;
+            if (attr.name === "id") value = idMap.get(value) || value;
+            else if (["aria-labelledby", "aria-describedby"].includes(attr.name)) value = value.split(/\s+/).map(id => idMap.get(id) || id).join(" ");
+            else idMap.forEach((next, id) => { value = value.replaceAll(`url(#${id})`, `url(#${next})`); });
+            node.setAttribute(attr.name, value);
+          });
+        });
+        clone.setAttribute("aria-labelledby", (svg.getAttribute("aria-labelledby") || "").split(/\s+/).map(id => idMap.get(id) || id).join(" "));
+        content.replaceChildren(clone);
+        const caption = figure.querySelector("figcaption");
+        if (caption) content.appendChild(el("p", "learn-chart__caption", caption.textContent));
+        dialog.showModal();
+        document.body.classList.add("learn-dialog-open");
+      });
+    });
+    page.querySelectorAll("table").forEach(table => {
+      if (table.closest(".learn-data, .learn-table-scroll")) return;
+      const wrapper = el("div", "learn-table-scroll");
+      table.before(wrapper);
+      wrapper.appendChild(table);
+    });
+    page.querySelectorAll(".learn-data, .learn-table-scroll").forEach(wrapper => {
+      wrapper.tabIndex = 0;
+      wrapper.setAttribute("role", "region");
+      wrapper.setAttribute("aria-label", "자료 표 · 가로로 넘겨 보기");
+    });
+  }
+
   function init() {
     const page = document.querySelector(".page");
     if (!page || page.dataset.learnTocInit === "1") return;
@@ -496,10 +600,22 @@
     home.textContent = "← 통계학 & 데이터 분석";
     inner.insertBefore(home, inner.firstChild);
 
-    aside.appendChild(inner);
+    const tocDetails = el("details", "learn-toc-details");
+    const tocSummary = el("summary", "learn-toc-toggle", "목차 열기 · 이 장 / 전체 과정");
+    tocDetails.append(tocSummary, inner);
+    const compact = window.matchMedia("(max-width: 899px)");
+    const syncToc = () => { tocDetails.open = !compact.matches; };
+    compact.addEventListener("change", syncToc);
+    syncToc();
+    aside.appendChild(tocDetails);
+    inner.addEventListener("click", (event) => {
+      if (compact.matches && event.target.closest("a[data-toc-target]")) tocDetails.open = false;
+    });
     layout.appendChild(main);
     layout.appendChild(aside);
     page.appendChild(layout);
+    setupReader(page, aside, tocDetails);
+
     const filter = page.querySelector(".learn-core-filter");
     if (filter && roadmap) {
       filter.hidden = false;

@@ -57,5 +57,5 @@ def build():
  pth=ROOT/'multiple-groups-and-categorical/index.html';pth.parent.mkdir(exist_ok=True);html=pth.read_text(encoding='utf-8') if pth.exists() else (ROOT/'comparing-groups/index.html').read_text(encoding='utf-8')
  html=html.replace('https://ch2data.com/learn/stats/comparing-groups/','https://ch2data.com/learn/stats/multiple-groups-and-categorical/')
  html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="여러 집단과 범주형 자료의 비교">\n'+'\n'.join(parts)+'\n</article>',html,count=1,flags=re.S)
- html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1ANOVA와 사후비교, 분할표와 카이제곱 검정을 가상 자료와 그림으로 설명합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261021-5',html);pth.write_text(html,encoding='utf-8')
+ html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1ANOVA와 사후비교, 분할표와 카이제곱 검정을 가상 자료와 그림으로 설명합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);pth.write_text(html,encoding='utf-8')
 if __name__=='__main__':build()

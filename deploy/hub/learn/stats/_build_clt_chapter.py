@@ -55,5 +55,5 @@ def build():
  p=ROOT/'sampling-distributions/index.html';p.parent.mkdir(exist_ok=True);s=p.read_text(encoding='utf-8') if p.exists() else (ROOT/'probability-distributions/index.html').read_text(encoding='utf-8')
  s=s.replace('https://ch2data.com/learn/stats/probability-distributions/','https://ch2data.com/learn/stats/sampling-distributions/')
  s=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="표본분포와 중심극한정리">\n'+'\n'.join(parts)+'\n</article>',s,count=1,flags=re.S)
- s=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1표본평균의 분포, 표준오차와 중심극한정리를 정확한 확률 계산과 그림으로 설명합니다.\2',s,count=1,flags=re.S);s=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261021-5',s);p.write_text(s,encoding='utf-8')
+ s=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1표본평균의 분포, 표준오차와 중심극한정리를 정확한 확률 계산과 그림으로 설명합니다.\2',s,count=1,flags=re.S);s=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',s);p.write_text(s,encoding='utf-8')
 if __name__=='__main__':build()

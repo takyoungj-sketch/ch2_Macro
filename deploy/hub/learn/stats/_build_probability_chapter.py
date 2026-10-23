@@ -49,5 +49,5 @@ def build():
  s=p.read_text(encoding='utf-8') if p.exists() else (ROOT/'iqr-outliers/index.html').read_text(encoding='utf-8')
  s=s.replace('https://ch2data.com/learn/stats/iqr-outliers/','https://ch2data.com/learn/stats/probability/')
  s=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="확률의 기초와 조건부확률">\n'+'\n'.join(parts)+'\n</article>',s,count=1,flags=re.S)
- s=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1사건과 확률, 조건부확률·독립·베이즈 정리를 동아리 참여와 제품 검사 예제로 익힙니다.\2',s,count=1,flags=re.S);s=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261021-5',s);p.write_text(s,encoding='utf-8')
+ s=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1사건과 확률, 조건부확률·독립·베이즈 정리를 동아리 참여와 제품 검사 예제로 익힙니다.\2',s,count=1,flags=re.S);s=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',s);p.write_text(s,encoding='utf-8')
 if __name__=='__main__':build()

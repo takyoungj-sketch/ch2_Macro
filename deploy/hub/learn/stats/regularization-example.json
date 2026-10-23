@@ -1,5 +1,5 @@
 {
-  "description": "직교 가상 예제와 공통 자료의 면적 단일 변수 릿지 3폴드. 최종 성능 평가 아님.",
+  "description": "직교 가상 예제와 공통 자료의 X 단일 변수 릿지 3폴드. 최종 성능 평가 아님.",
   "normalization": "SSE/(2n)+lambda*L2_squared/2 or SSE/(2n)+lambda*L1; intercept excluded",
   "orthogonal": {
     "z": [
