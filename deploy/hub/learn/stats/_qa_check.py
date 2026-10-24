@@ -313,7 +313,7 @@ def main():
  sim=ci['simulation'];rng=random.Random(sim['seed'])
  for d in sim['repeats']:
   sample=[rng.gauss(sim['mu'],sim['sigma']) for _ in range(sim['n'])];assert sample==d['sample']
-  avg=mean(sample);margin=float(norm.ppf(.975))*20/5
+  avg=mean(sample);margin=float(student_t.ppf(.975,24))*stdev(sample)/5
   assert abs(d['mean']-avg)<1e-10 and abs(d['low']-(avg-margin))<1e-10
   assert d['covers']==(d['low']<=100<=d['high'])
  bars=[e for e in next(svg for svg in charts12 if svg.attrib['aria-labelledby'].startswith('coverage')).findall('line') if 'data-repeat' in e.attrib];assert len(bars)==20
@@ -338,6 +338,18 @@ def main():
   n=d['n'];c=student_t.ppf(.975,n-1);nc=.25*math.sqrt(n);power=nct.cdf(-c,n-1,nc)+nct.sf(c,n-1,nc)
   assert abs(d['power']-power)<1e-12 and abs(float(bar.attrib['width'])-power*390)<1e-9
  assert round((1-.95**20)*100,1)==64.2
+ experiment13=json.loads(re.search(r'<script type="application/json" id="ht-experiment-data">(.*?)</script>',ch13,re.S)[1])
+ assert experiment13['n']==30 and experiment13['df']==29
+ assert experiment13['mean']==mean(v) and experiment13['sd']==stdev(v)
+ assert [r['mu0'] for r in experiment13['comparisons']]==list(range(80,211))
+ for row13 in experiment13['comparisons']:
+  test13=ttest_1samp(v,row13['mu0'])
+  assert abs(row13['t']-test13.statistic)<1e-12 and abs(row13['p']-test13.pvalue)<1e-12
+  for alpha13 in [.01,.05,.10]:
+   critical13=experiment13['criticals'][str(alpha13)]
+   assert abs(critical13-student_t.ppf(1-alpha13/2,29))<1e-12
+   assert (row13['p']<=alpha13)==(abs(row13['t'])>=critical13)
+ assert round((mean(v)-130)/stdev(v),2)==.20
  print('Chapter 13 independent t-test, null curves, CI agreement and power verified')
  ch14=(ROOT/'comparing-groups/index.html').read_text(encoding='utf-8')
  charts14=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch14,re.S)]
@@ -361,6 +373,16 @@ def main():
  pairs=[e for e in charts14[2].findall('line') if 'data-pair' in e.attrib];assert len(pairs)==6
  for line,pv,av in zip(pairs,pa['before'],pa['after']):
   assert abs(float(line.attrib['y1'])-(300-(pv-60)*1.7))<1e-9 and abs(float(line.attrib['y2'])-(300-(av-60)*1.7))<1e-9
+ display14=json.loads(re.search(r'<script type="application/json" id="gg-paired-data">(.*?)</script>',ch14,re.S)[1])
+ assert [(r['before'],r['after']) for r in display14['rows']]==list(zip(reversed(pa['before']),reversed(pa['after'])))
+ assert [r['change'] for r in display14['rows']]==[6,8,5,7,4,6]
+ removed14=[r for r in data if r['group']=='상업' and r['id']==7]
+ assert len(removed14)==1 and removed14[0]['price']==480
+ assert len(a)==15 and len(b)==15 and len([r for r in data if r['group']=='상업' and r['id']!=7])==14
+ assert round(w['low'],2)==24.47 and round(g['without_id7']['low'],2)==23.77 and round(g['without_id7']['high'],2)==94.83
+ for bar in charts14[3].findall('rect'):
+  value,scale=(w['difference'],4) if bar.attrib['data-effect']=='0' else (w['d'],200)
+  assert abs(float(bar.attrib['width'])-value*scale)<1e-9
  print('Chapter 14 independent Welch/paired checks, effect sizes and SVG coordinates verified')
  ch15=(ROOT/'multiple-groups-and-categorical/index.html').read_text(encoding='utf-8')
  charts15=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch15,re.S)]
@@ -379,7 +401,14 @@ def main():
  assert abs(c['V']-1/3)<1e-12
  dots=[e for e in charts15[0].findall('circle')];assert len(dots)==12
  for dot in dots:assert float(dot.attrib['cx'])==80+(float(dot.attrib['data-value'])-80)*6
- for bar in charts15[1].findall('rect'):assert abs(float(bar.attrib['width'])-float(bar.attrib['data-ss'])*.11)<1e-9
+ ssbars=charts15[1].findall('rect');assert len(ssbars)==2
+ for bar in ssbars:
+  assert abs(float(bar.attrib['width'])-float(bar.attrib['data-ss'])*.11)<1e-9
+  assert float(bar.attrib['width'])>0 and float(bar.attrib['height'])>0
+ assert abs(float(ssbars[0].attrib['width'])/float(ssbars[1].attrib['width'])-3200/600)<1e-12
+ assert len({(dot.attrib['cx'],dot.attrib['cy']) for dot in dots})==12
+ assert not re.search(r'<details\b[^>]*\bopen',re.search(r'<section[^>]*id="practice".*?</section>',ch15,re.S)[0])
+ assert '[그림 ' not in ch15 and r'\[' not in ch15
  intervals=[e for e in charts15[2].findall('line') if 'data-pair' in e.attrib]
  for bar,d in zip(intervals,m15['tukey']):
   assert abs(float(bar.attrib['x1'])-(115+d['low']*6))<1e-9 and abs(float(bar.attrib['x2'])-(115+d['high']*6))<1e-9
@@ -395,7 +424,9 @@ def main():
  areas=[r['area'] for r in data];prices=[r['price'] for r in data]
  assert abs(c['pearson_area_price']-pearsonr(areas,prices).statistic)<1e-12
  assert abs(c['spearman_area_price']-pearsonr(rankdata(areas),rankdata(prices)).statistic)<1e-12
+ assert abs(c['pearson_floor_price']-pearsonr([r['floor'] for r in data],prices).statistic)<1e-12
  otherrows=[r for r in data if r['id']!=7]
+ assert len(otherrows)==29 and next(r for r in data if r['id']==7)=={'id':7,'group':'상업','area':22,'floor':1,'price':480}
  assert abs(c['without_id7']-pearsonr([r['area'] for r in otherrows],[r['price'] for r in otherrows]).statistic)<1e-12
  assert abs(pearsonr(*zip(*c['curved'])).statistic)<1e-12
  mix=c['mixture'];assert abs(pearsonr(*zip(*mix['A'])).statistic-1)<1e-12
@@ -409,6 +440,17 @@ def main():
   a=dot.attrib;assert float(a['cx'])==320+int(a['data-x'])*65 and float(a['cy'])==285-int(a['data-y'])*22
  for dot in charts16[2].findall('circle'):
   a=dot.attrib;assert float(a['cx'])==70+int(a['data-x'])*48 and float(a['cy'])==320-int(a['data-y'])*23
+ from scipy.stats import linregress
+ trends=[e for e in charts16[2].findall('line') if 'data-trend' in e.attrib];assert len(trends)==3
+ for trend in trends:
+  a=trend.attrib;points=mix['A']+mix['B'] if a['data-trend']=='overall' else mix[a['data-trend']]
+  check=linregress(*zip(*points))
+  for suffix in ['1','2']:
+   x=(float(a['x'+suffix])-70)/48;y=(320-float(a['y'+suffix]))/23
+   assert abs(y-(check.intercept+check.slope*x))<1e-12
+ assert not re.search(r'<details\b[^>]*\bopen',re.search(r'<section[^>]*id="practice".*?</section>',ch16,re.S)[0])
+ assert '[그림 ' not in ch16 and 'macro-insight-correlation.png' in ch16 and 'n_pop' in ch16
+ assert (ROOT/'correlation/macro-insight-correlation.png').is_file()
  print('Chapter 16 Pearson/rank correlations, nonlinear/mixture examples and coordinates verified')
  ch17=(ROOT/'regression/index.html').read_text(encoding='utf-8')
  charts17=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch17,re.S)]
@@ -424,12 +466,28 @@ def main():
  for i,pair in enumerate(points):
   sx,sy=map(float,pair.split(','));slope=-1.2+i*.01;inter=mean(prices)-slope*mean(areas)
   sse=sum((y-inter-slope*x)**2 for x,y in zip(areas,prices))
-  assert abs(sx-(80+(slope+1.2)*450))<1e-4 and abs(sy-(285-(sse-fit['SSE'])/500))<1e-4
+  assert abs(sx-(80+(slope+1.2)*450))<1e-4 and abs(sy-(285-(sse-fit['SSE'])/250))<1e-4
  fit_chart17=next(svg for svg in charts17 if svg.attrib['aria-labelledby'].startswith('fit-title'))
  dots=[e for e in fit_chart17.findall('circle')];assert len(dots)==30
  for dot in dots:
   row=next(r for r in data if r['id']==int(dot.attrib['data-id']))
   assert float(dot.attrib['cx'])==70+row['area']*1.5 and float(dot.attrib['cy'])==320-row['price']*.5
+ assert len([r for r in data if r['id']!=7])==29
+ reduced=linregress(*zip(*[(r['area'],r['price']) for r in data if r['id']!=7]))
+ assert abs(reg['without_id7']['slope']-reduced.slope)<1e-12 and abs(reg['without_id7']['intercept']-reduced.intercept)<1e-10
+ small_res=[e for e in charts17[1].findall('line') if 'data-residual' in e.attrib]
+ assert len(small_res)==3
+ for e,res in zip(small_res,[.5,-1,.5]):
+  assert e.attrib['x1']==e.attrib['x2'] and abs((float(e.attrib['y2'])-float(e.attrib['y1']))/43-res)<1e-12
+ for dot in charts17[2].findall('.//circle[@data-experiment-id]'):
+  row=next(r for r in data if r['id']==int(dot.attrib['data-experiment-id']))
+  assert float(dot.attrib['cx'])==70+row['area']*1.5 and float(dot.attrib['cy'])==280-row['price']*.4
+ assert len(charts17[2].findall('.//circle[@data-experiment-id]'))==30
+ extrap=charts17[3];assert extrap.find("line[@data-zero='true']") is not None
+ for dot,x in zip(extrap.findall('circle'),[100,200,400]):
+  assert abs(float(dot.attrib['cy'])-(280-reg['predictions'][str(x)]*.7))<1e-10
+ assert '[그림 ' not in ch17 and '\\frac' not in ch17
+ assert not re.search(r'<details\b[^>]*\bopen',re.search(r'<section[^>]*id="practice".*?</section>',ch17,re.S)[0])
  print('Chapter 17 OLS, residuals, R-squared, predictions and objective curve verified')
  ch18=(ROOT/'residuals/index.html').read_text(encoding='utf-8')
  charts18=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch18,re.S)]
@@ -457,6 +515,26 @@ def main():
    cx=65+row['fitted']*2.2 if kind=='residual' else 65+row['leverage']*1800
    cy=255-row['residual']*.7 if kind=='residual' else 280-row['standardized']*45
    assert abs(float(dot.attrib['cx'])-cx)<1e-9 and abs(float(dot.attrib['cy'])-cy)<1e-9
+ qq_reference=next(e for e in charts18[2].findall('line') if e.attrib.get('stroke')=='#d97706')
+ for suffix in ['1','2']:
+  z=(float(qq_reference.attrib['x'+suffix])-320)/100
+  residual=(255-float(qq_reference.attrib['y'+suffix]))/.7
+  assert abs(residual-sigma*z)<1e-10
+ for dot,q in zip(charts18[2].findall('circle'),diag['qq']):
+  assert abs(float(dot.attrib['cx'])-(320+q['z']*100))<1e-10
+  assert abs(float(dot.attrib['cy'])-(255-q['residual']*.7))<1e-10
+ pattern_data=json.loads(re.search(r'<script type="application/json" id="rd-pattern-data">(.*?)</script>',ch18,re.S)[1])
+ panels=charts18[1].findall('g');assert len(panels)==3
+ for panel in panels:
+  key=panel.attrib['data-pattern'];dots=panel.findall('circle');assert len(dots)==30
+  for dot,(x,e) in zip(dots,pattern_data[key]['points']):
+   assert 0<=x<=14 and -80<=e<=80
+   assert abs(float(dot.attrib['cx'])-(100+x*32))<1e-10 and abs(float(dot.attrib['cy'])-(140-e*.75))<1e-10
+ seven18=next(r for r in diag['rows'] if r['id']==7)
+ assert round(seven18['fitted'],2)==217.45 and round(seven18['residual'],2)==262.55
+ assert round(seven18['leverage'],3)==.096 and round(seven18['standardized'],2)==4.37 and round(seven18['cook'],3)==1.011
+ assert '[그림 ' not in ch18 and '\\frac' not in ch18 and 'macro-built-residuals.png' in ch18
+ assert not re.search(r'<details\b[^>]*\bopen',re.search(r'<section[^>]*id="practice".*?</section>',ch18,re.S)[0])
  print('Chapter 18 independent matrix OLS, leverage, deletion Cook distances, Q-Q and plotted coordinates verified')
  ch19=(ROOT/'multiple-regression/index.html').read_text(encoding='utf-8')
  charts19=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch19,re.S)]
@@ -470,16 +548,33 @@ def main():
   mat=np.column_stack(cols);q,r=np.linalg.qr(mat);coef=np.linalg.solve(r,q.T@np.array(prices));err=np.array(prices)-mat@coef;df=30-mat.shape[1]
   invr=np.linalg.solve(r,np.eye(r.shape[0]));se=np.sqrt(np.diag(invr@invr.T)*(err@err)/df)
   assert np.allclose(coef,m19[key]['beta']) and np.allclose(se,m19[key]['se'])
+  sst=float(np.sum((np.array(prices)-np.mean(prices))**2))
+  assert abs(m19[key]['R2']-(1-err@err/sst))<1e-12
+  assert abs(m19[key]['adjusted_R2']-(1-(err@err/df)/(sst/29)))<1e-12
   for j in range(len(coef)):assert np.allclose(m19[key]['ci'][j],[coef[j]-student_t19.ppf(.975,df)*se[j],coef[j]+student_t19.ppf(.975,df)*se[j]])
  assert m19['multiple']['SSE']<=m19['simple']['SSE'] and m19['multiple']['df']==27
  for dot,xx,yy in zip(charts19[0].findall('circle'),demo['x'],demo['y']):
   assert abs(float(dot.attrib['cx'])-(70+xx*75))<1e-9 and abs(float(dot.attrib['cy'])-(320-yy*23))<1e-9
  for dot,xx,yy in zip(charts19[1].findall('circle'),rx,ry):
   assert abs(float(dot.attrib['cx'])-(320+xx*130))<1e-9 and abs(float(dot.attrib['cy'])-(210-yy*104))<1e-9
+ assert len(charts19[1].findall('ellipse'))==3 and ch19.count('×2')>=3
+ for trend in charts19[0].findall('line'):
+  kind=trend.attrib.get('data-trend')
+  if not kind:continue
+  a,b=demo['simple']['beta'] if kind=='overall' else (7 if kind=='A' else -2,1)
+  for end in ['1','2']:
+   x=(float(trend.attrib['x'+end])-70)/75;y=(320-float(trend.attrib['y'+end]))/23
+   assert abs(y-(a+b*x))<1e-10
+ for bar,m in zip([e for e in charts19[2].findall('line') if e.attrib.get('stroke-width')=='3'],[m19['simple'],m19['multiple']]):
+  bounds=[v for mm in [m19['simple'],m19['multiple']] for v in mm['ci'][1]];lo=min(bounds)-.1;hi=max(bounds)+.1
+  for end,value in zip(['1','2'],m['ci'][1]):assert abs(float(bar.attrib['x'+end])-(170+(value-lo)/(hi-lo)*380))<1e-10
+ assert round(m19['simple']['adjusted_R2'],3)==.401
+ assert '[그림 ' not in ch19 and '\\frac' not in ch19 and 'macro-built-regression.png' in ch19
+ assert not re.search(r'<details\b[^>]*\bopen',re.search(r'<section[^>]*id="practice".*?</section>',ch19,re.S)[0])
  print('Chapter 19 QR coefficients, intervals, partial regression and graphic coordinates verified')
  ch20=(ROOT/'log-regression/index.html').read_text(encoding='utf-8')
  charts20=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch20,re.S)]
- assert len(charts20)==5 and ch20.count('<summary>답과 해설</summary>')==3
+ assert len(charts20)==5 and ch20.count('<summary>답과 해설</summary>')==4
  log20=json.loads((ROOT/'log-regression-example.json').read_text(encoding='utf-8'))
  for key in ['level','log_y','log_x','log_log']:
   xx=np.log(areas) if key in ['log_x','log_log'] else np.array(areas)
@@ -499,8 +594,32 @@ def main():
    assert abs(cx-(65+xv*1.55))<1e-9 and abs(cy-(325-yv*.5))<1e-9
  for row in log20['percentages']:
   b=log20['models']['log_log']['slope'];c=row['change'];assert abs(row['exact']-100*math.expm1(b*math.log1p(c/100)))<1e-10
- assert abs(math.exp(mean([math.log(50),math.log(200)]))-100)<1e-10
- print('Chapter 20 log fits, smearing, MAE, exact percentages and curve coordinates verified')
+ # Four primary diagrams plus the preserved residual comparison inside a disclosure.
+ assert '보충 그림: 원래 척도와 로그 척도의 잔차' in ch20
+ assert 'id="lg-model"' in ch20 and 'id="lg-change"' in ch20
+ expected100={'level':164.08,'log_y':147.43,'log_x':148.35,'log_log':133.28}
+ for key,value in expected100.items():
+  m=log20['models'][key];z=math.log(100) if key in ['log_x','log_log'] else 100
+  pv=m['intercept']+m['slope']*z
+  if key in ['log_y','log_log']:pv=math.exp(pv)
+  assert round(pv,2)==value
+ values=log20['retransform']['values'];assert values==[1,2,8]
+ assert abs(log20['retransform']['geometric']-math.exp(np.log(values).mean()))<1e-12
+ assert abs(log20['retransform']['arithmetic']-np.mean(values))<1e-12
+ bars20=charts20[3].findall('rect')
+ for bar,value in zip(bars20,[16**(1/3),11/3]):
+  assert abs(float(bar.attrib['height'])-60*value)<1e-10
+  assert abs(float(bar.attrib['y'])-(320-60*value))<1e-10
+ scale_points=charts20[0].findall('circle');assert len(scale_points)==8
+ for i,v in enumerate([10,20,40,80]):
+  assert abs(float(scale_points[2*i].attrib['cx'])-(110+v*5.5))<1e-10
+  assert abs(float(scale_points[2*i+1].attrib['cx'])-(110+math.log(v/10)*210))<1e-10
+ # Unit changes in an intercept-containing log-log fit preserve its slope.
+ assert abs(linregress(np.log(np.array(areas)/3.305785),np.log(prices)).slope-log20['models']['log_log']['slope'])<1e-12
+ assert round(log20['percentages'][-1]['exact'],1)==-30.8 and log20['percentages'][-1]['change']==100
+ assert not re.search(r'<details\b[^>]*\bopen',re.search(r'<section[^>]*id="practice".*?</section>',ch20,re.S)[0])
+ assert '[그림 ' not in ch20 and '\\frac' not in ch20 and 'macro-loglog-regression.png' in ch20
+ print('Chapter 20 four log fits, predictions, MAE, smearing, exact percentages, means and graphic coordinates verified')
  ch21=(ROOT/'model-fit/index.html').read_text(encoding='utf-8')
  charts21=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch21,re.S)]
  assert len(charts21)==4 and ch21.count('<summary>답과 해설</summary>')==4

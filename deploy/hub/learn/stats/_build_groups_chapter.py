@@ -17,41 +17,104 @@ def build():
  def t(x,y,s,extra=''):return f'<text x="{x}" y="{y}" {extra}>{escape(str(s))}</text>'
  def line(x,y,xx,yy,c='#64748b',extra=''):return f'<line x1="{x}" y1="{y}" x2="{xx}" y2="{yy}" stroke="{c}" {extra}/>'
  def fig(id,title,body,cap,h):return f'<figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 {h}" role="img" aria-labelledby="{id}-title {id}-desc"><title id="{id}-title">{title}</title><desc id="{id}-desc">{cap}</desc>{body}</svg><figcaption class="learn-chart__caption">{cap}</figcaption></figure>'
- body=t(24,28,'평균 차이와 각 집단의 분포를 함께 봅니다')
+ body=t(24,28,'집단별 평균과 개별 단가의 흩어짐을 함께 봅니다')
  for i,(label,values) in enumerate([('주거',b),('상업',a)]):
-  y=100+i*120;body+=t(24,y-40,f'{label} · n={len(values)} · 평균 {mean(values):.2f} · s={stdev(values):.2f}')+line(70,y,570,y)
-  for j,value in enumerate(sorted(values)):body+=f'<circle cx="{70+value}" cy="{y-(j%3)*8}" r="4" fill="#2563eb" data-group="{label}" data-value="{value}"/>'
-  body+=line(70+mean(values),y-28,70+mean(values),y+15,'#d97706','stroke-width="2"')
- for v in [0,100,200,300,400,500]:body+=t(70+v,265,v,'text-anchor="middle"')
- body+=t(24,300,'주황선: 평균 / 점의 세로 위치는 겹침을 줄이기 위한 표시')+t(410,330,'단가(만원/㎡)')
- f1=fig('groups','두 집단의 관측값과 평균',body,'그림 1. 공통 학습 자료 각 15건. 상업의 큰 관측 480도 표시했습니다. 서로 다른 유형이라는 사실만으로 무작위 표집이나 관측 간 독립성이 확인되는 것은 아닙니다.',355)
+  y=100+i*120;avg=mean(values);sd=stdev(values)
+  body+=t(24,y-52,f'{label} · n={len(values)} · 평균 {avg:.2f} · 표본 s={sd:.2f}')+line(70,y,570,y)
+  placed=[]
+  for row in sorted((r for r in rows if r['group']==label),key=lambda r:r['price']):
+   value=row['price'];xx=70+value
+   for lane in range(8):
+    yy=y-lane*11
+    if all(math.hypot(xx-px,yy-py)>=10 for px,py in placed):break
+   placed.append((xx,yy));body+=f'<circle cx="{xx}" cy="{yy}" r="4" fill="#2563eb" data-group="{label}" data-value="{value}" data-source-id="{row["id"]}"><title>{label} 자료 {row["id"]}: {value}만원/㎡</title></circle>'
+  body+=line(70+avg,y-40,70+avg,y+8,'#d97706','stroke-width="2" stroke-dasharray="4 3" class="gg-mean"')
+  body+='<g class="gg-sd" hidden="">'+line(70+avg-sd,y+20,70+avg+sd,y+20,'#0f766e','stroke-width="3"')
+  for xx in [70+avg-sd,70+avg+sd]:body+=line(xx,y+15,xx,y+25,'#0f766e','stroke-width="2"')
+  body+='</g>'
+ for value in [0,100,200,300,400,500]:body+=t(70+value,280,value,'text-anchor="middle"')
+ body+=t(24,315,'점: 개별 단가 · 주황 점선: 평균 위치 · 가로축: 단가(만원/㎡)')+t(24,345,'청록선 선택 표시: 평균±표본표준편차 · 평균의 신뢰구간이 아닙니다')
+ f1=fig('groups','주거·상업의 개별 단가와 평균·표본표준편차 (만원/㎡)',body,'그림 1. 공통 학습 자료 각 15건입니다. 상업의 480도 그대로 표시합니다. 점의 세로 위치는 겹침을 줄이기 위한 배치이며 별도 측정값이 아닙니다. 주황 점선은 평균 위치입니다.',375)
+ group_controls='<div class="gg-controls" hidden><label><input type="checkbox" id="gg-mean" checked> 평균 위치선 표시</label><label><input type="checkbox" id="gg-sd"> 평균±표본표준편차 표시</label><p class="learn-source-note">표본표준편차는 개별 자료의 흩어짐입니다. 평균의 표준오차나 신뢰구간과 다릅니다. 선을 숨겨도 제목의 계산값과 개별 관측값은 유지됩니다.</p></div>'
+ f1=f1.replace('<figure class="learn-chart learn-chart--wide">','<figure class="learn-chart learn-chart--wide" id="gg-distribution">').replace('<figcaption',group_controls+'<figcaption')
  body=t(24,28,'상업 − 주거: 차이 자체의 구간을 계산합니다');x=lambda value:100+value*3.3
  body+=line(x(0),65,x(0),185,'#d97706','stroke-dasharray="4 3"')+line(x(w['low']),120,x(w['high']),120,'#2563eb',f'stroke-width="4" data-diff-ci="true"')+f'<circle cx="{x(w["difference"])}" cy="120" r="5" fill="#2563eb"/>'
  body+=t(x(w['low']),153,f'{w["low"]:.2f}','text-anchor="middle"')+t(x(w['high']),153,f'{w["high"]:.2f}','text-anchor="middle"')+t(x(w['difference']),95,f'차이 {w["difference"]:.2f}','text-anchor="middle"')+t(x(0),210,'0','text-anchor="middle"')+t(24,250,f'Welch 95% 구간 / p={w["p"]:.4f} / 단위: 만원/㎡')
- f2=fig('difference','Welch 평균 차이의 구간',body,'그림 2. 독립 정규표본 모형을 적용한 교재 계산입니다. 표집 가정이 확인되지 않은 이 자료로 실제 시장의 유의성이나 용도의 인과효과를 주장하지 않습니다.',280)
+ f2=fig('difference','상업−주거 평균 차이의 Welch 95% 신뢰구간 (만원/㎡)',body,'그림 2. 독립 정규표본 모형을 적용한 교재 계산입니다. 표집 가정이 확인되지 않은 이 자료로 실제 시장의 유의성이나 용도의 인과효과를 주장하지 않습니다.',280)
  body=t(24,28,'같은 대상의 전후 값을 연결하면 짝을 볼 수 있습니다')
  for i,(v1,v2) in enumerate(zip(before,after)):
-  yy=lambda value:300-(value-60)*1.7;body+=line(180,yy(v1),440,yy(v2),'#94a3b8',f'data-pair="{i+1}"')+f'<circle cx="180" cy="{yy(v1)}" r="4" fill="#2563eb"/><circle cx="440" cy="{yy(v2)}" r="4" fill="#d97706"/>'+t(165,yy(v1)+4,v1,'text-anchor="end"')+t(455,yy(v2)+4,v2)
- body+=t(180,324,'이전','text-anchor="middle"')+t(440,324,'이후','text-anchor="middle"')+t(24,360,'차이: 6 · 4 · 7 · 5 · 8 · 6 / 단위: 점')
- f3=fig('pairs','가상 대응표본의 연결선',body,'그림 3. 같은 학생 6명의 수업 전후 평가 점수를 가정한 별도 예제입니다. 점수는 200점 만점이며 전후 변화만으로 수업의 인과효과를 알 수는 없습니다.',385)
- body=t(24,28,'원 단위 차이와 표준화 차이는 다른 척도입니다')
- for i,(label,value,scale,unit) in enumerate([('평균 차이',w['difference'],4,'만원/㎡'),('Cohen의 d',w['d'],280,'표준편차 단위')]):
-  y=90+i*110;body+=t(24,y+17,label)+f'<rect x="160" y="{y}" width="{value*scale}" height="26" fill="#2563eb" data-effect="{i}"/>'+t(170+value*scale,y+19,f'{value:.2f}')+t(160,y+55,unit)
- body+=t(24,310,'각 행의 축척이 다릅니다. 막대 길이를 서로 비교하지 않습니다.')
- f4=fig('effect','효과크기의 두 표현',body,'그림 4. d=(상업 평균−주거 평균)/합동 표준편차입니다. 원 단위 차이를 표준화한 기술적 요약이며, 분산이 크게 다른 이 예제에서는 분모 선택에 민감함을 함께 밝혀야 합니다.',338)
- parts=[]
- def sec(id,label,title,body):parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{title}</h2>{body}</section>')
- sec('quick-start','서두 · 학습목표','두 집단의 차이를 크기와 불확실성으로 설명합니다','''<p>서로 다른 두 학급의 시험 점수를 비교할 수도 있고, 같은 학생들의 수업 전후 점수를 비교할 수도 있습니다. 둘 다 평균을 비교하지만 자료의 관계가 다르므로 계산 방법도 달라져야 합니다.</p><p>이 장에서는 <strong>독립표본과 대응표본</strong>을 구별하고, 평균 차이의 신뢰구간과 효과크기를 읽습니다. <a href="/learn/stats/hypothesis-tests/">13장의 가설검정</a>을 바탕으로, 차이가 유의한지를 넘어 얼마나 크고 불확실한지 설명하는 것이 목표입니다.</p><ul class="learn-objectives"><li>독립된 두 집단과 짝이 있는 자료를 구별합니다.</li><li>평균 차이의 방향·표준오차·신뢰구간을 해석합니다.</li><li>원래 단위의 차이와 표준화 효과크기가 무엇을 나타내는지 설명합니다.</li><li>분포·큰 관측값·집단 구성의 차이를 함께 확인합니다.</li></ul>''')
- sec('design','비교 구조부터 확인','서로 다른 대상인지, 같은 대상의 전후인지 살펴보세요','''<p><strong>독립표본</strong>은 서로 연결된 짝 없이 두 집단을 관측하는 설계입니다. 예를 들어 서로 다른 학생들로 구성된 두 집단을 비교할 때 생각할 수 있습니다. 단, 학생들이 같은 학급이나 가구 안에서 서로 영향을 받는다면 집단 안의 독립성도 따져 봐야 합니다. 집단 이름이 다르다고 독립성이 자동으로 성립하지는 않습니다.</p><p><strong>대응표본</strong>은 같은 학생의 전후 점수처럼 연결된 관측값이 있는 설계입니다. 연구 계획에 따라 사전에 정한 짝도 해당할 수 있습니다. 이때는 각 짝의 차이를 먼저 구합니다. 두 집단의 수가 같거나 자료의 행 순서가 같다는 이유로 임의로 짝지으면 안 됩니다.</p><p>차이의 방향도 먼저 정합니다. ‘집단 1 평균−집단 2 평균’이라면 양수는 집단 1이 높은 방향입니다. 순서를 바꾸면 차이의 부호와 구간의 방향도 바뀝니다.</p><p>비교할 단위·측정 방식·대상 범위를 맞추세요. 학년이나 학습 시간이 다른 두 학급의 점수 차이를 수업 방법의 효과로 바로 해석할 수는 없습니다.</p>''')
- sec('welch','독립표본의 Welch 방법','평균 차이의 표준오차에 두 집단의 퍼짐을 반영합니다','''<p>독립된 두 집단에서 평균 차이의 추정값은 <strong>Δ̂=x̄₁−x̄₂</strong>입니다. 차이를 추정할 때는 두 평균에 있는 불확실성을 모두 반영해야 합니다. 각 집단의 표본수와 퍼짐을 사용해 <strong>SE(Δ̂)=√(s₁²/n₁+s₂²/n₂)</strong>으로 구합니다.</p><p>두 평균의 표준오차를 그냥 더하는 것이 아닙니다. 독립일 때 <strong>두 SE의 제곱을 더한 뒤 제곱근</strong>을 구합니다. ‘모집단 평균의 차이가 0’이라는 귀무가설을 검정할 때는 t=Δ̂/SE를 사용하고, 차이의 95% 신뢰구간은 Δ̂±t 임계값×SE로 만듭니다.</p><p><strong>Welch 방법</strong>은 두 모집단의 분산이 같다는 가정을 요구하지 않습니다. 집단별 퍼짐이 다를 수 있다는 점을 반영해 임계값을 정합니다. 다만 관측의 독립성과 분포·표본수에 대한 조건은 여전히 확인해야 합니다. 작은 표본의 심한 치우침이나 큰 관측값의 영향을 자동으로 해결해 주는 방법은 아닙니다.</p><details class="learn-more"><summary>Welch 자유도와 합동분산 방법</summary><div class="learn-more__body"><p>a=s₁²/n₁, b=s₂²/n₂라 하면 근사 자유도는 ν=(a+b)²/[a²/(n₁−1)+b²/(n₂−1)]입니다. 보통 정수가 아니며, 반올림 전 값으로 95% 양측 임계값 t₀.₉₇₅,ν를 구합니다.</p><p>합동분산 t 검정은 두 모집단에 공통인 분산을 가정합니다. Welch 검정과는 표준오차와 자유도를 구하는 방식이 다릅니다. 두 방법의 가정과 산식을 섞어 사용하지 않습니다.</p></div></details>''')
- sec('example','독립표본 계산 예제','집단별 분포를 본 뒤 차이의 구간을 읽습니다',f'''<p><a href="/learn/stats/graphs/#data">공통 학습 자료 30건</a>을 두 집단으로 나누어 계산을 연습하겠습니다. 상업 평균은 {mean(a):.2f}, 주거 평균은 {mean(b):.2f}만원/㎡이며 각각 15건입니다. 표본표준편차는 각각 {stdev(a):.2f}, {stdev(b):.2f}로 차이가 큽니다.</p>'''+f1+f'''<p>차이의 방향은 <strong>상업−주거</strong>로 정합니다. 독립표본의 Welch 방법을 적용한 계산값은 다음과 같습니다.</p><ul><li><strong>평균 차이:</strong> {w['difference']:.2f}만원/㎡</li><li><strong>차이의 표준오차:</strong> {w['se']:.2f}만원/㎡</li><li><strong>95% 신뢰구간:</strong> {w['low']:.2f}~{w['high']:.2f}만원/㎡</li><li><strong>검정 결과:</strong> 자유도≈{w['df']:.3f}, t≈{w['t']:.3f}, 양측 p≈{w['p']:.4f}</li></ul>'''+f2+'''<p>차이의 구간이 0을 포함하지 않고 p&lt;0.05입니다. 같은 가정을 적용한 이 계산에서는 두 평균의 차이가 통계적으로 유의합니다. 개별 집단의 신뢰구간이 겹치는지만 보는 대신 <strong>차이 자체의 구간</strong>을 읽어야 합니다.</p><p>이 자료는 실제 출처·무작위 표집·독립성이 확인되지 않은 학습 예시입니다. 위 결과는 산식을 적용한 것이며, 실제 모집단에 대한 타당한 추론임을 확인한 결과는 아닙니다. 집단의 차이를 유형의 인과효과로 바꾸어 해석할 수도 없습니다. <a href="../group-comparison-example.json">계산 JSON</a>에서 반올림 전 값을 확인할 수 있습니다.</p>''')
- sec('paired','대응표본의 계산','각 대상의 전후 차이를 하나의 자료로 만듭니다','''<p>같은 학생의 수업 전후 점수라면 <strong>dᵢ=이후 점수−이전 점수</strong>를 먼저 구합니다. 전후 평균을 따로 비교하기보다 각 학생이 얼마나 달라졌는지를 비교하는 것입니다.</p><p>여기서 n은 전후 값이 모두 있는 <strong>짝의 수</strong>입니다. 차이들의 평균 d̄와 표준편차 s_d를 구하고, SE=s_d/√n을 계산합니다. ‘평균 변화가 0’이라는 가설을 검정할 때는 t=d̄/SE를 사용합니다.</p>'''+f3+f'''<p>이 예제의 변화량은 6, 4, 7, 5, 8, 6점입니다. 평균 변화는 <strong>{dm:.2f}점</strong>, 변화량의 표준편차는 {ds:.3f}점, SE는 {dse:.3f}점입니다. 자유도 5의 t 임계값으로 구한 평균 변화의 95% 신뢰구간은 <strong>{paired['low']:.2f}~{paired['high']:.2f}점</strong>입니다.</p><p>학생마다 원래 점수는 크게 달라도 각자의 변화량은 비슷할 수 있습니다. 전후의 짝을 살려 계산하는 이유입니다. 계산에 쓰는 표준편차도 전후 점수 각각의 표준편차가 아니라 <strong>짝별 차이의 표준편차</strong>입니다.</p><p>대응 t 방법의 정규성 가정은 차이의 분포에 관한 것이며, 짝들 사이의 독립성도 필요합니다. 전후 값이 모두 있는 짝만 사용했다면 제외된 대상과 결측 이유를 확인해야 합니다. 이 여섯 쌍은 설명용 가상 자료로, 실제 수업 효과를 검증한 결과는 아닙니다.</p>''')
- sec('effect','효과크기','원래 단위의 차이를 먼저 보고 표준화한 차이를 함께 읽으세요',f'''<p>가장 직접적인 효과크기는 <strong>평균 차이 {w['difference']:.2f}만원/㎡</strong>입니다. 단위를 유지하므로 질문의 맥락에서 크기를 판단할 수 있습니다. 서로 다른 척도의 결과를 비교할 때는 표준편차를 기준으로 바꾼 차이를 보조적으로 사용할 수 있습니다.</p><p>독립집단의 <strong>Cohen의 d</strong>를 ‘평균 차이÷합동 표준편차’로 정의하겠습니다. 이 자료의 합동 표준편차는 {w['pooled_sd']:.2f}이고 <strong>d≈{w['d']:.3f}</strong>입니다. 평균 차이가 이 합동 표준편차의 약 {w['d']:.2f}배라는 뜻입니다.</p>'''+f4+'''<p>이 예제는 두 집단의 퍼짐이 크게 다르므로 어떤 표준편차로 나누는지에 따라 표준화한 값의 해석도 달라집니다. 원 단위의 차이·신뢰구간·집단별 퍼짐을 함께 제시하세요. d를 기술적 요약으로 구하는 것과 Welch 검정에서 등분산을 가정하는 것은 별개의 문제입니다.</p><details class="learn-more"><summary>Cohen의 d 산식과 다른 표준화 지표</summary><div class="learn-more__body"><p>d=(x̄₁−x̄₂)/s_p이며, s_p=√[((n₁−1)s₁²+(n₂−1)s₂²)/(n₁+n₂−2)]입니다. 분모가 0이면 이 방식의 d는 계산할 수 없습니다.</p>'''+f'''<p>작은 표본에서의 편향을 줄이는 Hedges의 g는 d에 보정계수 J를 곱합니다. ν=n₁+n₂−2일 때 J≈1−3/(4ν−1) 근사를 사용하면 이 자료에서 g≈{w['g_approx']:.3f}입니다. 정확한 보정식과 마지막 자릿수는 다를 수 있습니다.</p>'''+'''<p>대응표본의 d_z=d̄/s_d는 짝별 차이의 표준편차로 나눕니다. 독립집단 d와 분모가 다르므로 같은 크기 척도로 곧바로 비교하지 않습니다.</p></div></details><p>‘작음·중간·큼’이라는 관행적 경계만으로 실제 중요성을 판단하지는 않습니다. 효과크기도 표본에서 추정한 값이므로 불확실성이 있습니다.</p>''')
- sec('sensitivity','큰 관측값과 민감도','큰 값의 영향을 살피되 결론에 맞춰 삭제하지 않습니다',f'''<p>공통 자료의 상업 집단에는 7번 관측값 480이 있습니다. 이 값을 제외하는 민감도 비교를 하면 상업은 14건, 주거는 15건이며 평균 차이는 <strong>{sensitivity['difference']:.2f}만원/㎡</strong>, Welch 95% 구간은 <strong>{sensitivity['low']:.2f}~{sensitivity['high']:.2f}만원/㎡</strong>입니다. 원래 결과가 한 관측값에 얼마나 영향을 받는지 살펴볼 수 있습니다.</p><p>이것만으로 삭제가 정당해지는 것은 아닙니다. 입력 오류인지, 비교 조건이 다른 값인지, 실제로 가능한 큰 값인지 먼저 확인하세요. 포함·제외 결과와 이유를 함께 보고하며, 원하는 p값이나 좁은 구간을 얻기 위해 값을 빼지는 않습니다.</p><details class="learn-more"><summary>다른 비교 방법을 선택할 때</summary><div class="learn-more__body"><p>치우침이나 큰 값의 영향을 줄이기 위해 변환·강건한 방법·재표집을 검토할 수 있습니다. 다만 방법마다 가정이 있고, 비교하는 대상도 달라질 수 있습니다.</p><p>Mann–Whitney 같은 순위 검정은 일반적으로 평균 차이를 검정하는 방법이 아닙니다. 추가적인 같은 모양·위치 이동 가정 없이 무조건 ‘중앙값 검정’이라고 부를 수도 없습니다. 방법을 바꿀 때는 어떤 특성을 비교하는지 다시 밝혀야 합니다.</p></div></details>''')
- sec('report','해석과 보고','집단의 차이가 곧 원인의 효과는 아닙니다','''<p>두 학급의 평균 차이에는 수업 방식뿐 아니라 학년·사전 학습 수준·학습 시간 같은 요인이 섞일 수 있습니다. 같은 학생의 전후 비교도 자연스러운 성장이나 다른 학습 활동을 자동으로 제외하지는 못합니다. 인과 해석에는 연구 설계와 추가 가정이 필요합니다.</p><p>보고에는 <strong>집단 정의와 차이의 방향, 독립·대응 설계, 각 집단의 n·평균·표준편차, 차이와 신뢰구간, 방법과 p값, 효과크기의 분모, 결측·제외 기준</strong>을 함께 남기세요. 중요하게 볼 최소 차이는 가능하면 결과를 보기 전에 정합니다.</p><p>집단이 많아져 모든 쌍을 반복 비교하면 13장에서 다룬 다중비교 문제가 생깁니다. 다음 장에서는 여러 집단과 범주형 자료를 비교하는 방법으로 확장합니다.</p>''')
- sec('practice','확인 문제','검정 이름보다 비교 구조를 먼저 확인하세요','''<ol class="learn-exercises"><li>두 집단이 각각 15건이면 대응표본인가요?<details><summary>답과 해설</summary><p>아니요. 같은 대상이나 설계상 정한 짝이 있어야 합니다. 같은 건수나 행 순서는 근거가 아닙니다.</p></details></li><li>독립표본 평균 차이의 SE는 두 SE의 합인가요?<details><summary>답과 해설</summary><p>아니요. 독립일 때 √(SE₁²+SE₂²)입니다.</p></details></li><li>두 학급의 Welch 결과가 유의하면 수업 방식이 점수 차이의 원인인가요?<details><summary>답과 해설</summary><p>아니요. 유의성은 검정 가정 아래의 결과이며 교란이나 선택 편향을 배제하지 않습니다.</p></details></li><li>Cohen의 d가 같으면 원 단위 차이도 같나요?<details><summary>답과 해설</summary><p>아니요. 분모인 표준편차가 다르면 같은 d라도 원 단위 차이는 달라집니다.</p></details></li></ol>''')
- sec('macro','CH2 Macro에서 읽기','평균 차이와 함께 거래 구성의 차이를 확인하세요','''<p>CH2 Macro에서 지역·유형·기간을 비교할 때는 먼저 관측 단위와 단가 단위, 필터 조건이 같은지 확인하세요. 건수와 평균만 보지 말고 분포·면적·위치·시점 구성을 함께 살펴야 합니다.</p><p>서로 다른 거래 집단은 이름이 다르다는 이유만으로 독립표본이 되는 것은 아닙니다. 같은 건물·단지의 거래가 관련되어 있을 수 있습니다. 반대로 두 기간의 거래 건수가 같다고 대응표본이 되는 것도 아닙니다. 같은 대상의 관측이라는 연결이 있어야 합니다.</p><p>이 장의 Welch·대응 t·효과크기 계산이 모든 화면에 제공된다고 전제하지 않습니다. 화면의 단순 평균 차이를 특정 물건의 저평가·고평가나 용도·정책의 인과효과로 읽기보다, 시장 집단의 구성과 수준을 이해하는 출발점으로 사용하세요.</p><p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 통계 열기 →</a></p>''')
- sec('recap','결론 · 학습 요약','비교 구조·차이의 크기·불확실성을 함께 읽으세요','''<p>두 집단의 평균을 비교할 때는 계산에 앞서 자료가 어떻게 연결되어 있는지 확인해야 합니다. 다음 구분을 기억해 두세요.</p><ul class="learn-recap-list"><li><strong>독립표본:</strong> 두 집단의 변동을 각각 반영합니다. Welch 방법은 등분산을 요구하지 않지만 독립성 등 다른 조건은 필요합니다.</li><li><strong>대응표본:</strong> 같은 대상이나 사전에 정한 짝 안의 차이를 계산합니다. n은 완전한 짝의 수입니다.</li><li><strong>평균 차이의 구간:</strong> 차이 자체의 표준오차와 신뢰구간을 구합니다. 차이를 빼는 순서와 단위를 함께 표시합니다.</li><li><strong>효과크기:</strong> 원 단위의 차이를 먼저 보고, 표준화 지표는 어떤 표준편차로 나눴는지 확인합니다.</li><li><strong>해석의 한계:</strong> 큰 관측값·결측·집단 구성의 영향을 살펴야 합니다. 유의한 차이가 인과효과를 뜻하지는 않습니다.</li></ul><p>다음 <a href="/learn/stats/multiple-groups-and-categorical/">15장 ‘여러 집단과 범주형 자료의 비교’</a>에서 여러 평균과 구성비를 비교하는 방법을 배웁니다.</p><details class="learn-more"><summary>참고자료</summary><div class="learn-more__body"><ul><li><a href="https://www.itl.nist.gov/div898/handbook/eda/section3/eda353.htm">NIST/SEMATECH: Two-Sample t-Test for Equal Means</a> — 독립·대응 설계와 Welch 산식.</li></ul><p class="learn-source-note">참고자료의 기존 확인일: 2026-10-07. 네 개의 그림은 공통 학습 자료와 별도 가상 대응표본으로 작성했습니다. 실제 조사에서 가정이 성립하는지 검증한 결과는 아닙니다.</p></div></details>''')
+  yy=lambda value:300-(value-60)*1.7;body+=line(180,yy(v1),440,yy(v2),'#94a3b8',f'data-pair="{i+1}"')+f'<circle cx="180" cy="{yy(v1)}" r="4" fill="#2563eb"/><circle cx="440" cy="{yy(v2)}" r="4" fill="#d97706"/>'+t(165,yy(v1)+4,v1,'text-anchor="end"')+t(455,yy(v2)+4,v2)+t(85,yy(v1)+4,f'학생 {6-i}')+t(520,yy(v2)+4,f'+{v2-v1}점')
+ body+=t(180,324,'이전','text-anchor="middle"')+t(440,324,'이후','text-anchor="middle"')+t(24,360,'표시 학생 1→6의 변화량: 6 · 8 · 5 · 7 · 4 · 6점')
+ f3=fig('pairs','같은 학생 6명의 수업 전후 점수와 짝별 변화량 (점)',body,'그림 3. 같은 학생 6명의 수업 전후 평가 점수를 가정한 별도 예제입니다. 점수는 200점 만점이며 전후 변화만으로 수업의 인과효과를 알 수는 없습니다.',385)
+ display_pairs=[{'student':i+1,'before':v1,'after':v2,'change':v2-v1} for i,(v1,v2) in enumerate(zip(reversed(before),reversed(after)))]
+ controls='''<div class="gg-paired-controls" hidden><div class="gg-actions" role="group" aria-label="대응표본 그래프 보기"><button type="button" id="gg-original" aria-pressed="true">원래 점수 보기</button><button type="button" id="gg-changes" aria-pressed="false">변화량 보기</button></div><p id="gg-paired-status" role="status" aria-live="polite">원래 점수 보기: 같은 학생의 이전·이후 점수를 연결합니다.</p><p class="gg-formula">평균 변화 6.00점 · 변화량의 표본 s≈1.414점 · SE≈0.577점 · 자유도 5 · 평균 변화의 95% 구간 4.52~7.48점</p><p class="learn-source-note">학생 번호는 표시용입니다. 기존 여섯 점수 쌍을 높은 이전 점수부터 표시한 순서이며, 원자료의 값과 짝 연결은 바꾸지 않았습니다. 실제 수업 효과를 검증한 자료가 아닙니다.</p></div>'''
+ paired_data={'rows':display_pairs,'mean':dm,'sd':ds,'se':dse,'df':5,'low':paired['low'],'high':paired['high']}
+ f3=f3.replace('<figure class="learn-chart learn-chart--wide">','<figure class="learn-chart learn-chart--wide" id="gg-paired">').replace('<figcaption',controls+'<script type="application/json" id="gg-paired-data">'+json.dumps(paired_data,ensure_ascii=False)+'</script><figcaption')
+ body=t(24,28,'원 단위 평균 차이와 Cohen의 d: 서로 다른 척도입니다')
+ for i,(label,value,scale,maximum,unit) in enumerate([('원 단위 차이',w['difference'],4,100,'만원/㎡'),('Cohen의 d',w['d'],200,2,'단위 없음')]):
+  y=80+i*115;body+=t(24,y+18,label)+f'<rect x="160" y="{y}" width="{value*scale}" height="26" fill="#2563eb" data-effect="{i}"/>'+t(170+value*scale,y+19,f'{value:.2f} {unit}')+line(160,y+40,560,y+40)
+  for tick in [0,maximum/2,maximum]:body+=t(160+tick*scale,y+62,f'{tick:g}','text-anchor="middle"')
+ body+=t(24,300,f'd = 평균 차이 {w["difference"]:.2f} / 합동 s_p {w["pooled_sd"]:.2f} ≈ {w["d"]:.2f}')+t(24,335,'행마다 단위와 눈금이 다릅니다. 막대 길이를 직접 비교하지 않습니다.')
+ f4=fig('effect','서로 다른 척도 · 평균 차이와 합동 표준편차로 표준화한 d',body,'그림 4. 위 막대는 평균 차이 80.27만원/㎡, 아래 막대는 단위 없는 Cohen의 d≈1.12입니다. 분모는 합동 표본표준편차 약 71.82만원/㎡입니다. 두 막대는 축척이 달라 길이를 비교할 수 없으며, 집단별 분산 차이가 커 d만으로 큰 효과라고 단정하지 않습니다.',365)
+ page=ROOT/'comparing-groups/index.html';old=page.read_text(encoding='utf-8')
+ recap=re.search(r'<section class="learn-chapter__step" id="recap".*?</section>',old,re.S)[0]
+ references=re.search(r'<details class="learn-more"><summary>참고자료</summary>.*?</details>',recap,re.S)[0]
+ macro=re.search(r'<section class="learn-chapter__step" id="macro".*?</section>',old,re.S)[0]
+ macro_body=re.sub(r'^.*?</h2>','',macro,flags=re.S).removesuffix('</section>')
+ macro_tail=re.sub(r'^<p>.*?</p>','',macro_body,count=1,flags=re.S)
+ parts=[];source=(ROOT/'comparing-groups/content.md').read_text(encoding='utf-8').replace('\\*','*').replace('**','').replace('\\~','~')
+ # The supplied copy ends mid-sentence; retain the existing complete Macro
+ # ending and recap rather than showing the unfinished fragment.
+ source=re.sub(r'^같은 단가 단위를 사용하더라도 집단\s*$','',source,flags=re.M)
+ ids=['quick-start','design','welch','example','paired','effect','sensitivity','report','practice','macro']
+ def inline(value):return re.sub(r'\*\*(.+?)\*\*',r'<strong>\1</strong>',escape(value))
+ def render(block):
+  out=[];lines=block.strip().split('\n');i=0
+  while i<len(lines):
+   line=lines[i].strip()
+   if not line or line=='---':i+=1;continue
+   if line.startswith('[그림 '):out.append({1:f1,2:f2,3:f3,4:f4}[int(re.search(r'그림 (\d)',line)[1])]);i+=1;continue
+   if line=='[CH2 Macro 토지 통계 열기 →]':out.append('<p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 통계 열기 →</a></p>');i+=1;continue
+   if line=='▶ 참고자료':out.append(references);i+=1;continue
+   if line.startswith('▶ '):
+    title=line[2:];rest=[];i+=1
+    while i<len(lines) and lines[i].strip()!='---':rest.append(lines[i]);i+=1
+    out.append('<details class="learn-more"><summary>'+inline(title)+'</summary><div class="learn-more__body">'+render('\n'.join(rest))+'</div></details>');continue
+   if line.startswith('|'):
+    table=[]
+    while i<len(lines) and lines[i].strip().startswith('|'):
+     cells=[c.strip() for c in lines[i].strip().strip('|').split('|')]
+     if not all(re.fullmatch(r'[:\- ]+',c) for c in cells):table.append(cells)
+     i+=1
+    out.append('<div class="learn-data learn-data--full"><table><thead><tr>'+''.join('<th scope="col">'+inline(c)+'</th>' for c in table[0])+'</tr></thead><tbody>'+''.join('<tr>'+''.join(('<th scope="row">'+inline(c)+'</th>') if j==0 else '<td>'+inline(c)+'</td>' for j,c in enumerate(row))+'</tr>' for row in table[1:])+'</tbody></table></div>');continue
+   if re.fullmatch(r'\d+\. (평균 차이|차이의 표준오차|Welch 검정통계량|차이의 95% 신뢰구간)',line):out.append('<p class="gg-step-title">'+inline(line)+'</p>');i+=1;continue
+   if line.startswith('- ') or re.match(r'\d+\. ',line):
+    ordered=not line.startswith('- ');tag='ol' if ordered else 'ul';items=[]
+    while i<len(lines) and (re.match(r'\d+\. ',lines[i]) if ordered else lines[i].startswith('- ')):
+     items.append('<li>'+inline(re.sub(r'^(?:- |\d+\. )','',lines[i]))+'</li>');i+=1
+    out.append('<'+tag+'>'+''.join(items)+'</'+tag+'>');continue
+   formula=line.startswith(('Δ̂ =','SE(','t =','d =','dᵢ =','s_p =','ν =','평균 차이의 신뢰구간','186.47 −','24.47~'))
+   out.append('<p'+(' class="gg-formula"' if formula else '')+'>'+inline(line)+'</p>');i+=1
+  return '\n'.join(out)
+ for id,section in zip(ids,re.split(r'^## ',source,flags=re.M)[1:],strict=True):
+  label,body=section.split('\n',1);heading=re.search(r'^### (.+)$',body,re.M)[1];body=re.sub(r'^### .+\n','',body,count=1,flags=re.M)
+  if id=='practice':
+   items=[]
+   for q in re.split(r'^\d+\. ',body,flags=re.M)[1:]:
+    question,answer=q.split('▶ 답과 해설',1);items.append('<li>'+inline(question.strip())+'<details><summary>답과 해설</summary><div class="learn-more__body">'+render(answer)+'</div></details></li>')
+   html='<ol class="learn-exercises">'+''.join(items)+'</ol>'
+  else:html=render(body)
+  if id=='quick-start':html=html.replace('<ul>','<ul class="learn-objectives">',1).replace('13장에서 배운 가설검정','<a href="/learn/stats/hypothesis-tests/">13장에서 배운 가설검정</a>')
+  if id=='example':
+   html=html.replace(f2,f2+'<p class="learn-source-note">차이의 95% 신뢰구간이 0을 포함하지 않으면, 같은 가정의 양측 5% 검정에서 귀무가설을 기각합니다.</p>')
+   html+='<p class="learn-source-note"><a href="/learn/stats/graphs/#data">공통 학습 자료 30건</a> · <a href="../group-comparison-example.json">계산 JSON</a>. 원자료의 Welch 구간 하한은 24.474513…이며 24.47로 표시합니다. 반올림된 평균과 표준편차를 다시 넣으면 24.478961…이 되어 24.48로 표시됩니다. 산식 오류가 아닌 중간 반올림의 차이입니다.</p>'
+  if id=='macro':html+='<p>관측 단위와 단가 단위, 필터 조건을 맞추고, 건수와 평균만 보지 말고 분포·면적·위치·시점 구성을 함께 살펴보세요.</p>'+macro_tail
+  parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{heading}</h2>{html}</section>')
+ parts.append(recap)
  p=ROOT/'comparing-groups/index.html';html=p.read_text(encoding='utf-8');html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="두 집단 비교와 효과크기">\n'+'\n'.join(parts)+'\n</article>',html,count=1,flags=re.S)
- html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1독립표본과 대응표본, Welch 평균 차이와 신뢰구간, 효과크기를 예제와 그림으로 설명합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);p.write_text(html,encoding='utf-8')
+ html=re.sub(r'(<p class="learn-chapter-relevance">).*?(</p>)',r'\1Macro 활용도 <span class="learn-relevance" aria-label="Macro 활용도 2단계, 권장"><span aria-hidden="true">★★☆</span></span>\2',html,count=1)
+ html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1독립표본과 대응표본, Welch 평균 차이와 신뢰구간, 효과크기를 예제와 그림으로 설명합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);html=html.replace('별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.','활용도는 CH2 Macro의 분석 결과를 이해하는 데 얼마나 도움이 되는지를 나타냅니다.')
+ if 'comparing-groups/chapter.css' not in html:html=html.replace('</head>','<link rel="stylesheet" href="/learn/stats/comparing-groups/chapter.css?v=20261024-1" />\n  </head>')
+ if 'comparing-groups/experiment.js' not in html:html=html.replace('</body>','<script type="module" src="/learn/stats/comparing-groups/experiment.js?v=20261024-1"></script>\n  </body>')
+ p.write_text(html,encoding='utf-8')
 if __name__=='__main__':build()

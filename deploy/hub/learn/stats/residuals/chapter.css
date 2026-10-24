@@ -1,0 +1,15 @@
+/* Chapter 18 only; preserve the shared reader and analysis code. */
+.learn-chapter[aria-label="잔차와 회귀모형의 가정"] :is(h2, h3, li) { word-break: keep-all; overflow-wrap: anywhere; }
+.rd-formula { padding: 1rem 1.25rem; background: var(--learn-soft); border-left: 3px solid var(--learn-border-strong); border-radius: 6px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.rd-controls[hidden], .rd-pattern-svg [hidden] { display: none; }
+.rd-controls { margin: 1rem 0; padding: 1rem; background: var(--learn-soft); border-radius: 8px; }
+.rd-controls label { display: block; margin: .5rem 0; font-weight: 500; }
+.rd-controls select, .rd-actions button { max-width: 100%; min-height: 44px; padding: .5rem .75rem; border: 1px solid var(--learn-border-strong); border-radius: 6px; background: var(--learn-surface); color: var(--learn-text); font: inherit; }
+.rd-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.rd-actions button { color: var(--learn-link); cursor: pointer; }
+.rd-actions button[aria-pressed="true"] { background: var(--learn-selected); border-color: var(--learn-accent); }
+.rd-controls :is(select, button):focus-visible { outline: 2px solid var(--learn-accent); outline-offset: 3px; }
+.rd-observation-svg circle[data-selected="true"] { stroke: var(--learn-text); stroke-width: 2; }
+.rd-macro-case { margin: 1.5rem 0; }
+.rd-macro-case img { display: block; width: 100%; height: auto; border: 1px solid var(--learn-border-strong); border-radius: 8px; }
+.rd-macro-case figcaption { color: var(--learn-muted); font-size: .875rem; line-height: 1.7; margin-top: .75rem; }

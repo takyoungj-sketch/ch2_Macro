@@ -3,7 +3,7 @@ from pathlib import Path
 from statistics import mean,stdev
 from html import escape
 import math,json,re,random
-from scipy.stats import t as student_t,norm
+from scipy.stats import t as student_t
 ROOT=Path(__file__).resolve().parent
 
 def interval(m,s,n,level=.95):
@@ -12,11 +12,11 @@ def interval(m,s,n,level=.95):
 
 def build():
  rows=json.loads((ROOT/'example-data.json').read_text(encoding='utf-8'))['rows'];v=[r['price'] for r in rows];m=mean(v);s=stdev(v);base=interval(m,s,30)
- rng=random.Random(20261007);repeats=[];z=float(norm.ppf(.975));mu=100;sigma=20;n=25
+ rng=random.Random(20261007);repeats=[];critical=float(student_t.ppf(.975,24));mu=100;sigma=20;n=25
  for i in range(20):
-  sample=[rng.gauss(mu,sigma) for _ in range(n)];avg=mean(sample);lo=avg-z*sigma/math.sqrt(n);hi=avg+z*sigma/math.sqrt(n);repeats.append({'id':i+1,'sample':sample,'mean':avg,'low':lo,'high':hi,'covers':lo<=mu<=hi})
+  sample=[rng.gauss(mu,sigma) for _ in range(n)];d=interval(mean(sample),stdev(sample),n);repeats.append({'id':i+1,'sample':sample,**d,'covers':d['low']<=mu<=d['high']})
  levels=[interval(m,s,30,c) for c in [.9,.95,.99]];sizes=[interval(m,s,n) for n in [10,30,120]]
- (ROOT/'confidence-example.json').write_text(json.dumps({'description':'공통 교육자료 계산과 별도 정규모형 반복표집 예제. 실제 시장 결과가 아님.','base':base,'levels':levels,'sizes':sizes,'simulation':{'seed':20261007,'mu':mu,'sigma':sigma,'n':25,'critical':z,'repeats':repeats}},ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+ (ROOT/'confidence-example.json').write_text(json.dumps({'description':'공통 교육자료 계산과 별도 정규모형 반복표집 예제. 실제 시장 결과가 아님.','base':base,'levels':levels,'sizes':sizes,'simulation':{'seed':20261007,'mu':mu,'sigma':sigma,'n':25,'critical':critical,'method':'two-sided t interval, df=24','repeats':repeats}},ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
  def text(x,y,s,extra=''):return f'<text x="{x}" y="{y}" {extra}>{escape(str(s))}</text>'
  def line(x,y,xx,yy,c='#64748b',extra=''):return f'<line x1="{x}" y1="{y}" x2="{xx}" y2="{yy}" stroke="{c}" {extra}/>'
  def fig(id,title,b,cap,h):return f'<figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 {h}" role="img" aria-labelledby="{id}-title {id}-desc"><title id="{id}-title">{title}</title><desc id="{id}-desc">{cap}</desc>{b}</svg><figcaption class="learn-chart__caption">{cap}</figcaption></figure>'
@@ -26,35 +26,87 @@ def build():
   for v in [d['low'],d['high']]:b+=line(x(v),y-8,x(v),y+8,'#2563eb')
   return b+f'<circle cx="{x(d["mean"])}" cy="{y}" r="5" fill="#d97706"/>'+text(x(d['low']),y+29,f'{d["low"]:.2f}','text-anchor="middle"')+text(x(d['high']),y+29,f'{d["high"]:.2f}','text-anchor="middle"')
  b=text(24,28,'평균 추정값에 오차한계를 붙입니다')+draw(base,115,'base')+text(260,80,f'평균 {m:.2f}')+text(24,195,f'95% 구간 = {m:.2f} ± {base["margin"]:.2f}')+text(24,230,'단위: 만원/㎡ · 주황 점은 표본평균')
- f1=fig('estimate','점추정과 구간추정',b,'그림 1. 공통 30건으로 계산한 평균의 t 구간입니다. 실제 시장의 타당한 95% 구간임을 검증한 결과가 아니라 산식 학습 예제입니다.',260)
+ f1=fig('estimate','표본평균과 평균의 95% t 신뢰구간 (만원/㎡)',b,'그림 1. 공통 30건으로 계산한 평균의 t 구간입니다. 실제 시장의 타당한 95% 구간임을 검증한 결과가 아니라 산식 학습 예제입니다.',260)
  b=text(24,28,'같은 자료에서 신뢰수준만 높이면 구간이 넓어집니다')
  for i,d in enumerate(levels):b+=text(24,85+i*90,f'{d["level"]:.0%}')+draw(d,80+i*90,f'level-{d["level"]}')
  b+=text(24,330,'중심·s·n 고정 / 단위: 만원/㎡')
- f2=fig('levels','신뢰수준별 구간',b,'그림 3. 같은 30건의 양측 t 구간을 90%·95%·99%로 비교했습니다. 같은 자료·같은 방법에서 높은 신뢰수준에는 더 넓은 구간이 필요합니다.',355)
+ f2=fig('levels','같은 표본의 90%·95%·99% t 신뢰구간 (만원/㎡)',b,'그림 3. 같은 30건의 양측 t 구간을 90%·95%·99%로 비교했습니다. 같은 자료·같은 방법에서 높은 신뢰수준에는 더 넓은 구간이 필요합니다.',355)
  b=text(24,28,'평균과 퍼짐을 고정한 표본수 비교입니다')
  for i,d in enumerate(sizes):b+=text(24,85+i*90,f'n={d["n"]}')+draw(d,80+i*90,f'n-{d["n"]}',3.7)
  b+=text(24,330,'신뢰수준 95% / 단위: 만원/㎡')
- f3=fig('sizes','표본수별 구간',b,'그림 4. 같은 평균과 s를 가정한 계획 비교입니다. 자유도에 따른 t 임계값도 다시 계산했습니다. 실제 10·120건을 수집한 결과가 아닙니다.',355)
+ f3=fig('sizes','평균과 표준편차를 고정한 표본수별 t 신뢰구간 (만원/㎡)',b,'그림 4. 같은 평균과 s를 가정한 계획 비교입니다. 자유도에 따른 t 임계값도 다시 계산했습니다. 실제 10·120건을 수집한 결과가 아닙니다.',355)
  b=text(24,28,'반복하면 구간은 달라지고 모평균 100은 고정됩니다');x=lambda v:80+(v-80)*12
  b+=line(x(mu),45,x(mu),485,'#d97706','stroke-dasharray="4 3"')
  for i,d in enumerate(repeats):
   y=60+i*21;b+=text(24,y+4,d['id'])+line(x(d['low']),y,x(d['high']),y,'#2563eb' if d['covers'] else '#dc2626',f'stroke-width="2" data-repeat="{d["id"]}"')+f'<circle cx="{x(d["mean"])}" cy="{y}" r="3" fill="#475569"/>'
  b+=text(24,510,f'이번 20회: {sum(d["covers"] for d in repeats)}개 포함 / {sum(not d["covers"] for d in repeats)}개 미포함')
  for v in [80,90,100,110,120]:b+=text(x(v),545,v,'text-anchor="middle"')
- f4=fig('coverage','신뢰구간의 반복표집 해석',b,'그림 2. 가상 N(100,20²)에서 매번 독립 표본 25개를 뽑아 20회 반복했습니다. σ=20을 아는 별도 z 구간 예제입니다. 파랑은 μ 포함, 빨강은 미포함. 시드 20261007이며 표본 원자료를 JSON에 보존했습니다.',575)
- parts=[]
- def sec(id,label,title,body):parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{title}</h2>{body}</section>')
- sec('quick-start','서두 · 학습목표','평균 하나에 추정의 불확실성을 더합니다','''<p>학생들의 평균 통학 시간을 조사해 35분이라는 결과를 얻었다고 해 봅시다. 다른 학생들을 뽑았다면 평균은 조금 달라졌을 것입니다. 평균 하나만으로는 이런 표집 변동을 충분히 설명하기 어렵습니다.</p><p><strong>점추정</strong>은 모집단의 특성을 하나의 값으로 추정하는 것입니다. <strong>신뢰구간</strong>은 표집 변동을 반영한 하한과 상한을 제시합니다. 이번 장에서는 <a href="/learn/stats/sample-size/">11장의 표준오차</a>를 이용해 모집단 평균의 신뢰구간을 만들고, 그 범위를 어떻게 읽어야 하는지 배웁니다.</p><ul class="learn-objectives"><li>점추정값, 표준오차, 신뢰구간의 관계를 설명합니다.</li><li>‘95% 신뢰구간’에서 95%가 무엇을 뜻하는지 이해합니다.</li><li>신뢰수준·표본수·자료의 퍼짐에 따라 구간 폭이 어떻게 달라지는지 읽습니다.</li><li>평균의 신뢰구간을 개별 관측값의 범위나 예측구간과 구별합니다.</li></ul>''')
- sec('formula','핵심 이해','추정값에 오차한계를 더하고 빼서 구간을 만듭니다','''<p>평균의 신뢰구간은 보통 <strong>표본평균 ± 오차한계</strong> 형태로 만듭니다. 오차한계는 표준오차에 신뢰수준에 맞는 <strong>임계값</strong>을 곱한 값입니다. 임계값은 어느 정도 넓은 범위를 잡을지 정하는 계수라고 생각하면 됩니다.</p><ul><li><strong>표본평균 x̄:</strong> 구간의 중심이 되는 점추정값입니다.</li><li><strong>표준오차 s/√n:</strong> 표본에 따라 평균이 달라지는 정도의 추정치입니다.</li><li><strong>임계값 t:</strong> 신뢰수준과 표본수에 맞춰 정합니다.</li><li><strong>오차한계 t×s/√n:</strong> 평균에서 구간의 한쪽 끝까지의 거리입니다.</li></ul><p>모집단 표준편차 σ를 모를 때 사용하는 평균의 <strong>t 신뢰구간</strong>을 살펴보겠습니다. 정규모집단에서 독립적으로 같은 분포의 표본을 뽑았다면 이 방법의 신뢰수준이 성립합니다. 비정규 자료에서는 근사 방법으로 쓸 수 있지만 치우침·이상치·의존성을 확인해야 합니다.</p><details class="learn-more"><summary>t 임계값과 정확한 표기</summary><div class="learn-more__body"><p>양측 100(1−α)% 신뢰구간은 x̄ ± t₁₋α/₂,ₙ₋₁ × s/√n입니다. s는 n−1로 계산한 표본표준편차이며 자유도는 n−1입니다. n≥2이고 모집단 분산이 양수라고 가정합니다.</p><p>95%이면 α=0.05이고 양쪽 꼬리에 0.025씩 남깁니다. t분포는 σ를 s로 추정하는 불확실성을 반영해 표준정규분포보다 꼬리가 두껍습니다. 자유도가 커지면 정규분포에 가까워집니다.</p><p>σ를 알고 정규모집단을 가정하면 z×σ/√n을 오차한계로 씁니다. n이 30 이상이라는 이유만으로 t를 z로 바꾸지는 않습니다.</p></div></details>''')
- sec('calculation','계산 예제','표준오차에 임계값을 곱해 양쪽 끝을 구합니다',f'''<p><a href="/learn/stats/graphs/#data">공통 학습 자료 30건</a>으로 t 신뢰구간의 계산을 연습해 보겠습니다. 11장에서 구한 평균과 표준오차에 95% 양측 t 임계값을 적용합니다.</p><ol><li><strong>평균과 표준오차:</strong> x̄≈{m:.2f}, s≈{s:.2f}, SE≈{s/math.sqrt(30):.2f}입니다.</li><li><strong>임계값:</strong> 자유도는 30−1=29이며, 95% 양측 t 임계값은 약 {base['critical']:.3f}입니다.</li><li><strong>오차한계:</strong> 임계값×SE≈{base['margin']:.2f}입니다.</li><li><strong>구간:</strong> 평균에서 오차한계를 빼고 더하면 <strong>{base['low']:.2f}~{base['high']:.2f}만원/㎡</strong>입니다.</li></ol>'''+f1+'''<p>표시는 반올림했지만 계산에는 반올림 전 값을 사용했습니다. <a href="../confidence-example.json">계산 결과와 반복표집 원자료</a>에서 사용한 값을 확인할 수 있습니다.</p><p>이 자료는 실제 출처와 무작위 표집이 확인되지 않은 교육용 예시이며 분포도 치우쳐 있습니다. 위 결과는 산식을 연습한 값입니다. 실제 모집단에 대한 95% 포함률이 확인된 결과로 해석하지는 않습니다.</p>''')
- sec('coverage','95%의 의미','같은 절차를 반복하면 약 95%의 구간이 모평균을 포함합니다','''<p>신뢰구간을 이해하려면 <strong>모평균은 고정되어 있고, 표본과 구간이 바뀐다</strong>고 생각해야 합니다. 같은 모집단에서 같은 방법으로 표본을 뽑고 구간을 만드는 일을 아주 많이 반복한다고 해 봅시다. 가정이 맞다면 95% 신뢰구간을 만드는 절차로 얻은 구간 중 장기적으로 약 95%가 모평균 μ를 포함합니다.</p>'''+f4+'''<p>그림의 세로선은 고정된 모평균 100입니다. 가로 구간들은 표본이 바뀔 때마다 위치가 달라집니다. 파란 구간은 100을 포함하고, 빨간 구간은 포함하지 않습니다. 20개를 만들었다고 반드시 19개가 포함해야 하는 것은 아닙니다. 작은 반복 묶음의 포함 비율은 달라질 수 있습니다.</p><p>계산을 마친 특정 구간은 고정된 모평균을 포함하거나 포함하지 않습니다. 따라서 빈도주의 해석에서 ‘이번 구간 안에 모평균이 있을 확률이 95%’라고 읽지는 않습니다. 95%는 <strong>구간을 만드는 방법의 장기적인 포함률</strong>을 말합니다.</p><p>또 ‘관측값의 95%가 이 안에 있다’거나 ‘다음 관측값이 95% 확률로 이 안에 나온다’는 뜻도 아닙니다. 이 그림은 별도의 정규모형 실험이며, 앞의 30건 자료에 대한 가정을 검증한 결과는 아닙니다.</p>''')
- sec('levels','신뢰수준과 구간 폭','같은 자료에서 신뢰수준을 높이면 구간이 넓어집니다','''<p>같은 자료와 계산 방법에서 신뢰수준을 90%, 95%, 99%로 높이면 임계값이 커져 구간도 넓어집니다. 더 많은 구간이 모평균을 포함하도록 범위를 넉넉히 잡는 것입니다.</p>'''+f2+'''<p>신뢰수준이 높다는 것과 추정이 더 정밀하다는 것은 다릅니다. 정밀도는 구간의 폭과 관련됩니다. 신뢰수준은 분석 목적에 맞게 정하고, 결과를 본 뒤 원하는 결론을 얻기 위해 바꾸지 않습니다.</p><details class="learn-more"><summary>여러 구간을 동시에 읽을 때</summary><div class="learn-more__body"><p>각 구간의 신뢰수준이 95%라는 것과 여러 구간이 모두 동시에 모수를 포함하는 비율이 95%라는 것은 다릅니다. 여러 집단이나 변수를 한꺼번에 비교할 때는 다중비교를 고려해야 합니다.</p></div></details>''')
- sec('sizes','표본수와 구간 폭','퍼짐이 같으면 표본수가 클수록 구간이 좁아집니다','''<p>평균의 오차한계는 t×s/√n입니다. 신뢰수준과 자료의 퍼짐이 같다면 표본수가 클수록 구간이 좁아집니다. 같은 표본수에서는 값이 더 넓게 퍼져 있을수록 구간이 넓어집니다. t 임계값도 자유도에 따라 달라집니다.</p>'''+f3+'''<p>그림은 평균과 s를 고정하고 n만 바꾼 비교입니다. 실제 표본을 늘리면 평균과 s도 바뀌므로 구간이 매번 좁아진다고 보장할 수는 없습니다. 같은 응답을 복사하거나 서로 강하게 관련된 관측을 추가하는 것도 독립적인 새 정보를 얻는 것과 다릅니다.</p>''')
- sec('other-intervals','다른 범위와 구별','평균의 신뢰구간과 개별 값의 범위는 다른 질문에 답합니다','''<ul><li><strong>평균의 신뢰구간:</strong> 모집단 평균이 얼마인지 추정합니다.</li><li><strong>사분위 범위:</strong> 제1사분위수와 제3사분위수 사이로, 분포의 가운데 부분을 설명합니다.</li><li><strong>최솟값~최댓값:</strong> 이번 자료에서 관측한 값의 전체 범위입니다.</li><li><strong>예측구간:</strong> 모형 아래 새로 관측할 개별 값의 변동까지 고려합니다.</li></ul><p>표본수가 많으면 평균의 신뢰구간은 좁아질 수 있지만, 개별 값의 다양성은 남습니다. 평균 추정의 범위를 개별 값이 들어갈 범위로 바꾸어 읽지 않는 것이 중요합니다.</p><details class="learn-more"><summary>예측구간·허용구간·베이지안 구간</summary><div class="learn-more__body"><p>정규모집단의 독립·동일분포 표본에서 한 미래 독립 관측에 대한 예측구간은 x̄±t×s√(1+1/n)입니다. 평균 추정의 불확실성과 새 관측값의 변동을 함께 반영하므로 같은 조건의 평균 신뢰구간보다 넓습니다.</p><p>허용구간은 정해진 모집단 비율을 일정 신뢰수준으로 포괄하는 범위를 다룹니다. 베이지안 신용구간은 사전분포와 자료를 반영한 사후분포에 대한 확률 진술입니다. 같은 ‘95%’가 붙어도 답하는 질문과 해석이 다릅니다.</p></div></details>''')
- sec('limits','가정과 보고','좁은 구간만으로 좋은 추정이라고 판단하지 않습니다','''<p>자발적 응답자만 모였거나 특정 집단이 빠졌다면, 표본수가 많아도 목표 모집단과 다른 대상을 추정할 수 있습니다. 입력 오류·중복·의존성도 단순 t 구간에 반영되지 않을 수 있습니다. 구간 폭을 보기 전에 2장과 10장에서 다룬 표집 방법을 확인하세요.</p><p>평균·비율·중앙값·회귀계수에는 각각 맞는 구간 계산이 필요합니다. 부트스트랩처럼 자료를 재표집하는 방법도 대표성이나 의존성 문제를 자동으로 해결하지 않습니다.</p><p>보고할 때는 <strong>추정 대상, 관측 단위와 조사 범위, n, 점추정값, 구간 양 끝과 단위, 신뢰수준, 계산 방법과 가정</strong>을 함께 제시합니다.</p><p>두 집단의 신뢰구간이 겹친다는 이유만으로 평균에 차이가 없다고 결론 내릴 수는 없습니다. 집단 차이를 판단하려면 차이 자체의 신뢰구간이나 적절한 검정을 사용해야 합니다.</p>''')
- sec('practice','확인 문제','구간이 답하는 질문부터 확인하세요','''<ol class="learn-exercises"><li>95% 평균 신뢰구간에 관측값의 95%가 포함되나요?<details><summary>답과 해설</summary><p>아니요. 모평균 추정 구간이며 관측값 분포를 포괄하는 범위가 아닙니다.</p></details></li><li>같은 표본에서 신뢰수준을 95%에서 99%로 높이면 폭은?<details><summary>답과 해설</summary><p>같은 방법이라면 임계값이 커져 넓어집니다.</p></details></li><li>20개의 95% 구간 중 반드시 19개가 μ를 포함하나요?<details><summary>답과 해설</summary><p>아니요. 95%는 장기 포함률이고 작은 반복 묶음의 결과는 달라질 수 있습니다.</p></details></li><li>자료가 편향되었어도 n이 커 구간이 좁으면 믿을 수 있나요?<details><summary>답과 해설</summary><p>구간 폭은 수집 편향을 포함하지 않을 수 있습니다. 좁다는 사실만으로 타당성이 확보되지 않습니다.</p></details></li></ol>''')
- sec('macro','CH2 Macro에서 읽기','평균 33.2와 신뢰구간 30.4~36.0을 함께 읽으세요','''<p>아래 토지 기본통계 화면에서 ‘자녹’ 행과 ‘답’ 열이 만나는 칸을 보겠습니다. <strong>33.2는 평균, 왼쪽 맨 아래의 30.4~36.0은 그 평균의 95% 신뢰구간</strong>입니다. 단위는 만원/㎡이며, 이 교차 칸의 거래 건수는 393건입니다.</p><figure class="learn-capture learn-capture--detail"><a href="../assets/captures/land-mean-confidence-interval-cell.png" target="_blank" rel="noopener" aria-label="토지 기본통계 자녹·답 교차 칸. 평균 33.2, 평균의 95% 신뢰구간 30.4~36.0, 거래 393건. 원본 크게 보기"><img src="../assets/captures/land-mean-confidence-interval-cell.png" width="242" height="172" loading="lazy" alt="토지 기본통계 자녹·답 교차 칸. 왼쪽 가운데 평균 33.2, 왼쪽 아래 신뢰구간 30.4~36.0, 오른쪽에는 분위수가 표시되어 있습니다."/></a><figcaption class="learn-capture__caption">토지 기본통계의 자녹·답 교차 칸입니다. 평균 33.2 아래에 표준편차 28.4와 신뢰구간 30.4~36.0이 표시되어 있습니다. 수치는 캡처 당시 기준입니다. <a href="../assets/captures/land-mean-confidence-interval-cell.png" target="_blank" rel="noopener">원본 크게 보기 ↗</a></figcaption></figure><ol class="learn-screen-reading"><li><strong>점추정값 33.2:</strong> 선택한 거래 자료의 평균 단가입니다.</li><li><strong>신뢰구간 30.4~36.0:</strong> 평균을 추정하는 구간입니다. 표시값 기준으로 평균에서 양쪽으로 2.8, 전체 폭은 5.6만원/㎡입니다.</li><li><strong>오른쪽 수치와 구별:</strong> 16.1~40.0은 제1~제3사분위수 사이이고, 3.3~296.6은 최솟값~최댓값입니다. 이 범위들은 개별 거래의 분포를 설명하며 평균의 신뢰구간과 역할이 다릅니다.</li></ol><p>화면의 95% 신뢰구간은 평균±t 임계값×(표본표준편차/√n)으로 계산하고 소수 첫째 자리까지 표시합니다. 화면에 반올림된 평균 33.2와 표준편차 28.4를 다시 넣어 계산하면 표시 전 원자료로 계산한 값과 조금 다를 수 있습니다.</p><p>이 구간은 ‘거래의 95%가 30.4~36.0에 있다’거나 ‘이 범위가 개별 물건의 적정가격이다’라는 뜻이 아닙니다. 미래 가격이 이 범위에 들어갈 확률을 나타내지도 않습니다.</p><p>평균과 구간을 비교할 때는 지역·기간·유형·이상치 제외 조건이 같은지 확인하세요. 계산에 쓰인 표집 가정이 실제 거래의 수집 편향과 관측 간 의존성까지 해결해 주는 것은 아닙니다.</p><p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 통계 열기 →</a></p>''')
- sec('recap','결론 · 학습 요약','추정값·구간·신뢰수준을 함께 읽으세요','''<p>평균 하나를 제시하는 것에서 나아가, 표본이 달라질 때의 변동을 구간으로 표현하는 방법을 배웠습니다. 다음 구분을 기억해 두세요.</p><ul class="learn-recap-list"><li><strong>점추정과 구간추정:</strong> 점추정은 하나의 값이고, 신뢰구간은 표집 변동을 반영한 하한과 상한입니다.</li><li><strong>구간 계산:</strong> 평균의 t 구간은 표본평균±t 임계값×표준오차입니다. 임계값은 신뢰수준과 자유도에 따라 달라집니다.</li><li><strong>95%의 의미:</strong> 가정이 맞을 때 같은 절차로 만든 구간들이 장기적으로 모평균을 포함하는 비율입니다.</li><li><strong>폭의 변화:</strong> 같은 자료에서 신뢰수준을 높이면 넓어집니다. 퍼짐과 표집 조건이 같다면 표본수가 클수록 좁아집니다.</li><li><strong>해석의 한계:</strong> 평균 신뢰구간은 개별 값의 분포 범위나 예측구간과 다릅니다. 좁은 구간도 수집 편향을 바로잡지는 못합니다.</li></ul><p>다음 <a href="/learn/stats/hypothesis-tests/">13장 ‘가설검정과 p값’</a>에서는 기준값과 관측 결과의 관계를 판단하는 방법을 배웁니다.</p><details class="learn-more"><summary>참고자료</summary><div class="learn-more__body"><ul><li><a href="https://www.itl.nist.gov/div898/handbook/eda/section3/eda352.htm">NIST/SEMATECH: Confidence Limits for the Mean</a> — 평균 구간의 산식과 해석.</li></ul><p class="learn-source-note">참고자료의 기존 확인일: 2026-10-07. 본문의 네 개 그림은 공통 학습 자료와 별도 가상 모형으로 작성했으며 임계값은 SciPy로 계산했습니다.</p></div></details>''')
+ f4=fig('coverage','정규모형 반복표집 · 표본 25개로 만든 95% t 신뢰구간 20개',b,'그림 2. 가상 N(100,20²)에서 매번 독립 표본 25개를 뽑아 20회 반복했습니다. 각 표본의 s와 자유도 24의 t 임계값을 사용합니다. 파랑은 μ 포함, 빨강은 미포함. 초기 정적 예제의 시드는 20261007이며 원자료를 JSON에 보존했습니다. 브라우저에서는 새 무작위 표본으로 시작합니다.',575)
+ p=ROOT/'confidence-intervals/index.html';old=p.read_text(encoding='utf-8')
+ capture=re.search(r'<figure class="learn-capture.*?</figure>',old,re.S)[0]
+ references=re.search(r'<details class="learn-more"><summary>참고자료</summary>.*?</details>',old,re.S)[0]
+ references=references.replace('본문의 네 개 그림은 공통 학습 자료와 별도 가상 모형으로 작성했으며 임계값은 SciPy로 계산했습니다.','공통 자료와 초기 정적 예제의 임계값은 SciPy로 계산했습니다. 그림 2의 실험은 N(100,20²)에서 새 표본을 추출하고 각 표본의 s와 자유도 24로 t 구간을 계산합니다.')
+ controls='''<div class="ci-experiment" hidden data-critical="CRITICAL">
+<p id="ci-model">학습용 정규모형 N(100,20²) · μ=100, σ=20 · 매회 독립표본 25개 · 자유도 24 · t 임계값 약 2.064. 단위는 모형값입니다.</p>
+<button type="button" id="ci-resample">새 표본 추출</button>
+<p id="ci-status" role="status" aria-live="polite"></p>
+<p class="learn-source-note">20개 모두 포함되거나 여러 개가 미포함되어도 결과를 그대로 표시합니다. 색상과 함께 선 모양·행 번호로 구분합니다. 주황 세로선은 μ=100입니다. 가로축은 이번 결과를 모두 담도록 자동 조정됩니다.</p>
+<details class="learn-more"><summary>누적 실험 · 장기 포함률 확인하기</summary><div class="learn-more__body">
+<p>누적 횟수에 도달할 때까지 독립 표본을 추가합니다. 그래프는 최근 20개만 보여줍니다. 누적 비율이 정확히 95%가 되도록 조정하지 않습니다.</p>
+<div class="ci-actions"><button type="button" data-ci-total="100">100회까지 누적</button><button type="button" data-ci-total="500">500회까지 누적</button></div>
+<p id="ci-total" role="status" aria-live="polite"></p>
+</div></details></div>'''.replace('CRITICAL',repr(critical))
+ f4=f4.replace('<figure class="learn-chart learn-chart--wide">','<figure class="learn-chart learn-chart--wide" id="ci-coverage">').replace('<figcaption',controls+'<figcaption')
+ source=(ROOT/'confidence-intervals/content.md').read_text(encoding='utf-8')
+ # The pasted copy wraps every paragraph in bold. Normalize that formatting,
+ # preserving its words and handling only this chapter's small Markdown subset.
+ source=source.replace('\\*','*').replace('**','').replace('\\~','~')
+ ids=['quick-start','formula','calculation','coverage','levels','sizes','other-intervals','limits','practice','macro','recap'];parts=[]
+ def inline(value):return escape(value)
+ def render(block):
+  out=[];lines=block.strip().split('\n');i=0
+  while i<len(lines):
+   line=lines[i].strip()
+   if not line or line=='---':i+=1;continue
+   if line.startswith('[그림 '):out.append({1:f1,2:f4,3:f2,4:f3}[int(re.search(r'그림 (\d)',line)[1])]);i+=1;continue
+   if line=='[기존 CH2 Macro 실제 화면 이미지 유지]':out.append(capture);i+=1;continue
+   if line=='[CH2 Macro 토지 통계 열기 →]':out.append('<p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 통계 열기 →</a></p>');i+=1;continue
+   if line=='▶ 참고자료':out.append(references);i+=1;continue
+   if line.startswith('▶ '):
+    title=line[2:];rest=[];i+=1
+    while i<len(lines) and lines[i].strip()!='---':rest.append(lines[i]);i+=1
+    out.append('<details class="learn-more"><summary>'+inline(title)+'</summary><div class="learn-more__body">'+render('\n'.join(rest))+'</div></details>');continue
+   if line.startswith('|'):
+    table=[]
+    while i<len(lines) and lines[i].strip().startswith('|'):
+     cells=[c.strip() for c in lines[i].strip().strip('|').split('|')]
+     if not all(re.fullmatch(r'[:\- ]+',c) for c in cells):table.append(cells)
+     i+=1
+    out.append('<div class="learn-data learn-data--full"><table><thead><tr>'+''.join('<th scope="col">'+inline(c)+'</th>' for c in table[0])+'</tr></thead><tbody>'+''.join('<tr>'+''.join(('<th scope="row">'+inline(c)+'</th>') if j==0 else '<td>'+inline(c)+'</td>' for j,c in enumerate(row))+'</tr>' for row in table[1:])+'</tbody></table></div>');continue
+   if line.startswith('- '):
+    items=[]
+    while i<len(lines) and lines[i].startswith('- '):items.append('<li>'+inline(lines[i][2:])+'</li>');i+=1
+    out.append('<ul>'+''.join(items)+'</ul>');continue
+   formula=line.startswith(('신뢰구간 =','x̄ ±','오차한계 =','95% 신뢰구간:'))
+   out.append('<p'+(' class="ci-formula"' if formula else '')+'>'+inline(line)+'</p>');i+=1
+  return '\n'.join(out)
+ for id,section in zip(ids,re.split(r'^## ',source,flags=re.M)[1:],strict=True):
+  label,body=section.split('\n',1);heading=re.search(r'^### (.+)$',body,re.M)[1];body=re.sub(r'^### .+\n','',body,count=1,flags=re.M)
+  if id=='practice':
+   items=[]
+   for q in re.split(r'^\d+\. ',body,flags=re.M)[1:]:
+    question,answer=q.split('▶ 답과 해설',1);items.append('<li>'+inline(question.strip())+'<details><summary>답과 해설</summary><div class="learn-more__body">'+render(answer)+'</div></details></li>')
+   html='<ol class="learn-exercises">'+''.join(items)+'</ol>'
+  else:html=render(body)
+  if id=='quick-start':html=html.replace('<ul>','<ul class="learn-objectives">',1);html+='<p>이전 <a href="/learn/stats/sample-size/">11장 「표준오차와 표본수」</a>에서 표준오차를 살펴보았습니다.</p>'
+  if id=='calculation':html+='<p class="learn-source-note"><a href="/learn/stats/graphs/#data">공통 학습 자료 30건</a> · <a href="../confidence-example.json">계산 결과와 초기 정적 반복표집 원자료</a>. 버튼으로 새로 뽑은 실험 결과는 이 JSON과 다릅니다.</p>'
+  if id=='macro':html+='''<ul class="learn-screen-reading"><li>점추정값: 평균 33.2만원/㎡</li><li>평균의 95% 신뢰구간: 30.4~36.0만원/㎡</li><li>제1~제3사분위수: 16.1~40.0만원/㎡</li><li>최솟값~최댓값: 3.3~296.6만원/㎡</li><li>거래 건수: 393건 · 표시 표본표준편차: 28.4만원/㎡</li></ul>
+<details class="learn-more"><summary>실제 화면의 계산 방법과 확인 범위</summary><div class="learn-more__body"><p>기본통계 코드는 같은 분석 대상의 반올림 전 단가로 산술평균, n−1을 사용하는 표본표준편차, 유효 건수를 구합니다. 평균 ± t₀.₉₇₅,ₙ₋₁ × s/√n으로 95% 신뢰구간을 계산한 뒤 소수 첫째 자리로 반올림합니다.</p><p>기본통계 사전집계는 정상 거래, 해제 제외, 단가가 있는 거래를 사용합니다. 이상치 제외를 선택하는 유료 조회 경로는 제외 후 남은 자료로 평균·표준편차·건수·신뢰구간을 함께 다시 계산합니다. 기본통계에 이상치가 자동으로 제외된다고 해석하지 않습니다.</p><p>캡처의 반올림된 평균 33.2, 표준편차 28.4, n=393을 넣으면 양측 오차한계는 약 2.82로, 표시 구간 30.4~36.0과 일치하는 수준입니다. 다만 캡처 당시 원거래 자료와 필터 상태를 확인하지 못하여, 당시의 반올림 전 구간을 완전히 재현한 것은 아닙니다.</p><p>이 산식은 단순 독립표본을 전제로 합니다. 실제 거래의 의존성, 수집 편향이나 대표성을 자동으로 보정하지 않습니다.</p></div></details>'''
+  if id=='recap':html=html.replace('<ul>','<ul class="learn-recap-list">',1).replace('13장 「가설검정과 p값」','<a href="/learn/stats/hypothesis-tests/">13장 「가설검정과 p값」</a>')
+  parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{heading}</h2>{html}</section>')
  p=ROOT/'confidence-intervals/index.html';s=p.read_text(encoding='utf-8');s=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="점추정과 신뢰구간">\n'+'\n'.join(parts)+'\n</article>',s,count=1,flags=re.S)
- s=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1점추정과 평균의 t 신뢰구간, 95%의 의미와 구간 폭의 변화를 그림과 예제로 설명합니다.\2',s,count=1,flags=re.S);s=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',s);p.write_text(s,encoding='utf-8')
+ s=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1점추정과 평균의 t 신뢰구간, 95%의 의미와 구간 폭의 변화를 그림과 예제로 설명합니다.\2',s,count=1,flags=re.S);s=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',s);s=s.replace('별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.','활용도는 CH2 Macro의 분석 결과를 이해하는 데 얼마나 도움이 되는지를 나타냅니다.')
+ if 'confidence-intervals/chapter.css' not in s:s=s.replace('</head>','<link rel="stylesheet" href="/learn/stats/confidence-intervals/chapter.css?v=20261024-1" />\n  </head>')
+ if 'confidence-intervals/experiment.js' not in s:s=s.replace('</body>','<script type="module" src="/learn/stats/confidence-intervals/experiment.js?v=20261024-1"></script>\n  </body>')
+ p.write_text(s,encoding='utf-8')
 if __name__=='__main__':build()

@@ -9,57 +9,120 @@ def fit(x,y):
  xm,ym=mean(x),mean(y);sxx=sum((v-xm)**2 for v in x);sxy=sum((a-xm)*(b-ym) for a,b in zip(x,y));b=sxy/sxx;a=ym-b*xm;res=[v-(a+b*u) for u,v in zip(x,y)];sse=sum(e*e for e in res);sst=sum((v-ym)**2 for v in y)
  return {'intercept':a,'slope':b,'xmean':xm,'ymean':ym,'Sxx':sxx,'Sxy':sxy,'residuals':res,'SSE':sse,'R2':1-sse/sst}
 
+
+def macro_details():
+ return '''<details class="learn-more"><summary>실제 토지 회귀분석 구현에서 확인한 항목</summary><div class="learn-more__body"><p>확인한 토지 회귀의 종속변수는 거래총액이 아니라 거래단가(만원/㎡)입니다. 선형 모형과 log(단가) 모형을 구분합니다. 면적은 ㎡ 또는 log(면적)으로 투입할 수 있고, 선택한 경우 연도 추세는 중심화하며 공시지가는 로그로 투입합니다. 설명변수를 여러 개 선택하면 이 장의 단순회귀와 달리 다중회귀가 됩니다.</p><p>도로조건·거래유형·법정동 등 범주형 변수는 기준 범주를 둔 더미로 처리합니다. 확인한 토지 설계행렬은 선택한 변수와 더미를 더하는 구조이며 상호작용항을 자동으로 추가하지 않습니다. 다른 앱의 모형 구조까지 같다고 전제하지 않습니다.</p><p>지역·기간·유형 등 요청 필터로 추린 거래에서 단가·면적 결측을 제외하고, 선택한 IQR 이상치 제외와 공시지가의 양수·결측 조건도 반영합니다. 범주형 결측은 선택한 정책에 따라 미상 범주로 처리하거나 행을 제외하므로, 정책과 제외 건수도 확인해야 합니다. 화면의 n은 최종 적합에 사용한 관측수입니다. 같은 단지·지역·시점 거래의 의존성이 이 처리만으로 해소되지는 않습니다.</p><p>절편을 포함한 OLS를 적합하고 계수·일반 표준오차·t값·p값을 산출합니다. 이 경로는 군집 또는 강건한 표준오차를 자동 적용하지 않습니다. 계수별 검정은 다른 포함 변수를 고려한 계수=0 가설이며 이 장의 단순 기울기와 구별합니다. 효과 표의 표준오차와 t값은 소수 둘째 자리, p값은 다섯째 자리까지 표시합니다. 반올림된 0.00000은 확률이 정확히 0이라는 뜻이 아닙니다.</p><p>R²·조정 R²·표본수와 예측 성능은 구별해야 합니다. 특히 로그 모형의 R²는 log(단가) 척도의 표본 내 적합도입니다. 높은 R²가 별도 거래의 정확도를 보장하지 않습니다. 예측 입력 면적과 연도가 학습 범위를 벗어나면 외삽 안내가 제공됩니다. 적용 범위를 점검하는 기능이며 시장의 타당한 가격이나 인과효과를 보증하지 않습니다.</p></div></details>'''
+
 def build():
  rows=json.loads((ROOT/'example-data.json').read_text(encoding='utf-8'))['rows'];x=[r['area'] for r in rows];y=[r['price'] for r in rows];d=fit(x,y);a,b=d['intercept'],d['slope'];pred=lambda v:a+b*v
- smallx=[1,2,3];smally=[2,2,5];small=fit(smallx,smally);other=[r for r in rows if r['id']!=7];reduced=fit([r['area'] for r in other],[r['price'] for r in other]);result={'description':'공통 학습자료의 두 수치열을 단위 없는 X,Y로 사용한 OLS 계산과 별도 가상 세 점.','fit':d,'without_id7':reduced,'small':{'x':smallx,'y':smally,'fit':small},'predictions':{str(v):pred(v) for v in [100,200,400]}}
+ smallx=[1,2,3];smally=[2,2,5];small=fit(smallx,smally);other=[r for r in rows if r['id']!=7];reduced=fit([r['area'] for r in other],[r['price'] for r in other]);result={'description':'공통 학습 자료 30건의 면적(㎡)·거래단가(만원/㎡) OLS 계산과 별도 가상 세 점.','fit':d,'without_id7':reduced,'small':{'x':smallx,'y':smally,'fit':small},'predictions':{str(v):pred(v) for v in [100,200,400]}}
  (ROOT/'regression-example.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
  def t(x,y,s,extra=''):return f'<text x="{x}" y="{y}" {extra}>{escape(str(s))}</text>'
  def line(x,y,xx,yy,c='#64748b',extra=''):return f'<line x1="{x}" y1="{y}" x2="{xx}" y2="{yy}" stroke="{c}" {extra}/>'
  def fig(id,title,body,cap,h):return f'<figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 {h}" role="img" aria-labelledby="{id}-title {id}-desc"><title id="{id}-title">{title}</title><desc id="{id}-desc">{cap}</desc>{body}</svg><figcaption class="learn-chart__caption">{cap}</figcaption></figure>'
  body=t(24,28,f'ŷ={a:.3f} {b:+.4f}×X')+line(70,320,580,320)+line(70,55,70,320)
- for row in rows:body+=f'<circle cx="{70+row["area"]*1.5}" cy="{320-row["price"]*.5}" r="4" fill="#2563eb" data-id="{row["id"]}"/>'
+ for row in rows:body+=f'<circle cx="{70+row["area"]*1.5}" cy="{320-row["price"]*.5}" r="4" fill="#2563eb" data-id="{row["id"]}"><title>{row["id"]}번 · 면적 {row["area"]}㎡ · 단가 {row["price"]}만원/㎡</title></circle>'
  body+=line(70+min(x)*1.5,320-pred(min(x))*.5,70+max(x)*1.5,320-pred(max(x))*.5,'#d97706','stroke-width="3" data-fit="true"')
  for v in [0,100,200,300]:body+=t(70+v*1.5,345,v,'text-anchor="middle"')
  for v in [0,100,200,300,400,500]:body+=t(58,325-v*.5,v,'text-anchor="end"')
- body+=t(24,52,'Y')+t(430,380,'X')
- f1=fig('fit','학습용 수치쌍의 최소제곱 직선',body,'그림 2. 공통 학습 자료의 두 수치열을 단위 없는 X,Y로 놓은 30쌍의 절편 포함 OLS입니다. 선은 관측된 X 범위 22~310에만 표시했습니다.',407)
+ body+=t(24,52,'거래단가(만원/㎡)')+t(430,380,'면적(㎡)')
+ body+='<line id="rg-selected-residual" x1="0" x2="0" y1="0" y2="0" stroke="#0f766e" stroke-width="3" stroke-dasharray="4 3" hidden=""/>'
+ f1=fig('fit','면적과 거래단가의 OLS 회귀직선 및 관측값',body,'그림 1. 공통 학습 자료 30건의 절편 포함 OLS입니다. 가로축은 면적(㎡), 세로축은 단가(만원/㎡)입니다. 파란 점은 관측값, 주황 실선은 관측 면적 22~310㎡의 회귀직선입니다.',407)
+ controls='<div class="rg-controls" hidden><label for="rg-observation">관측값의 잔차 확인</label><select id="rg-observation"><option value="">관측값 선택</option>'+''.join(f'<option value="{row["id"]}">{row["id"]}번 · {row["group"]} · {row["area"]}㎡</option>' for row in rows)+'</select><p id="rg-observation-status" role="status" aria-live="polite">관측값을 선택하면 그 점의 세로 잔차만 표시합니다.</p></div>'
+ f1=f1.replace('<figure class="learn-chart learn-chart--wide">','<figure class="learn-chart learn-chart--wide" id="rg-fit">').replace('<svg',controls+'<svg',1).replace('<svg ', '<svg class="rg-fit-svg" ',1)
  body=t(24,28,'세로 잔차를 제곱해 더합니다: 가상 세 점')+line(70,290,550,290)+line(70,45,70,290)
  px=lambda v:70+v*140;py=lambda v:290-v*43
  body+=line(px(.5),py(-.0+1.5*.5),px(3.2),py(1.5*3.2),'#d97706','stroke-width="2"')
  for xx,yy,e in zip(smallx,smally,small['residuals']):
-  hat=small['intercept']+small['slope']*xx;body+=line(px(xx),py(yy),px(xx),py(hat),'#2563eb',f'stroke-width="3" data-residual="{e}"')+f'<circle cx="{px(xx)}" cy="{py(yy)}" r="5" fill="#2563eb"/>'+t(px(xx)+12,py(yy),f'e={e:+.1f}')
+  hat=small['intercept']+small['slope']*xx;body+=line(px(xx),py(yy),px(xx),py(hat),'#0f766e' if e>0 else '#b45309',f'stroke-width="3" data-residual="{e}"')+f'<circle cx="{px(xx)}" cy="{py(yy)}" r="5" fill="#2563eb"/>'+f'<rect x="{px(xx)-4}" y="{py(hat)-4}" width="8" height="8" fill="none" stroke="#d97706" stroke-width="2"/>'+t(px(xx)+12,py(yy),f'e={e:+.1f}')
  for v in [1,2,3]:body+=t(px(v),316,v,'text-anchor="middle"')
- body+=t(24,350,'ŷ=1.5x · 잔차 0.5, −1, 0.5 · SSE=1.5')
- f2=fig('residuals','관측값과 적합값의 차이',body,'그림 1. 별도 가상 (1,2)·(2,2)·(3,5) 예제입니다. 잔차는 같은 X에서의 세로 차이이며 점에서 직선까지의 최단거리가 아닙니다. 축은 단위 없는 가상 변수입니다.',378)
- body=t(24,28,'각 기울기에서 절편을 최적으로 맞춘 제곱합')
+
+ for v in [0,2,4]:body+=t(58,py(v)+5,v,'text-anchor="end"')
+ body+=t(24,52,'Y')+t(550,316,'X')+t(24,350,'점'+': 관측값 · 빈 네모: 적합값 · 청록: 양의 잔차 / 주황: 음의 잔차')+t(24,380,'ŷ=1.5X · 잔차 합=0 · SSE=0.5²+(−1)²+0.5²=1.5')
+ f2=fig('residuals','관측값과 적합값의 차이',body,'그림 2. 별도 가상 (1,2)·(2,2)·(3,5) 예제입니다. 잔차는 같은 X에서의 세로 차이이며 점에서 직선까지의 최단거리가 아닙니다. 축은 단위 없는 가상 변수입니다.',410)
+ f2=f2.replace('<svg ', '<svg class="rg-residual-svg" ',1)
+ body=t(24,28,'기울기와 잔차제곱합(SSE) · 각 기울기마다 절편 재계산')
  pts=[]
  for i in range(101):
-  slope=-1.2+i*.01;inter=mean(y)-slope*mean(x);sse=sum((v-inter-slope*u)**2 for u,v in zip(x,y));cx=80+(slope+1.2)*450;cy=285-(sse-d['SSE'])/500;pts.append((cx,cy))
+  slope=-1.2+i*.01;inter=mean(y)-slope*mean(x);sse=sum((v-inter-slope*u)**2 for u,v in zip(x,y));cx=80+(slope+1.2)*450;cy=285-(sse-d['SSE'])/250;pts.append((cx,cy))
  body+=line(70,285,560,285)+ '<polyline points="'+' '.join(f'{xx:.5f},{yy:.5f}' for xx,yy in pts)+'" fill="none" stroke="#2563eb" stroke-width="2"/>'
- body+=f'<circle cx="{80+(b+1.2)*450}" cy="285" r="5" fill="#d97706"/>'
+ body+=f'<circle cx="{80+(b+1.2)*450}" cy="285" r="5" fill="#d97706" id="rg-optimum"/>'
  for val in [-1.2,-1,-.8,-.6,-.4,-.2]:body+=t(80+(val+1.2)*450,312,f'{val:.1f}','text-anchor="middle"')
- body+=t(24,345,f'최소 기울기 {b:.4f} · 최소 SSE {d["SSE"]:,.2f}')+t(24,374,'세로축: 최소 SSE보다 늘어난 양(제곱 단위), 아래가 0')
- f3=fig('objective','기울기에 따른 잔차제곱합',body,'그림 3. 기울기마다 절편을 ȳ−b×x̄로 맞췄습니다. 30쌍 자료의 최소제곱 목적함수이며 확률곡선이나 신뢰구간이 아닙니다.',401)
+ body+=f'<circle id="rg-current" cx="{80+(b+1.2)*450}" cy="285" r="7" fill="none" stroke="#0f766e" stroke-width="3"/>'
+ for delta in [0,20000,40000]:body+=t(65,290-delta/250,f'{d["SSE"]+delta:,.0f}','text-anchor="end"')
+ body+=t(450,335,'기울기 b₁')
+ body+=t(24,360,f'최소 기울기 {b:.4f} · 최소 SSE {d["SSE"]:,.2f}')+t(24,390,'세로축: SSE (만원/㎡)² · 주황 점: OLS 최소 · 청록 원: 현재값')
+ body+='<g class="rg-line-panel" transform="translate(0 420)">'+t(24,28,'같은 30건에 현재 직선을 적용합니다 · 인과효과가 아닙니다')+line(70,320,580,320)+line(70,60,70,320)+line(70,280,580,280,'#94a3b8','stroke-dasharray="4 3"')
+ for row in rows:body+=f'<circle cx="{70+row["area"]*1.5}" cy="{280-row["price"]*.4}" r="4" fill="#2563eb" data-experiment-id="{row["id"]}"/>'
+ body+=line(70+22*1.5,280-pred(22)*.4,70+310*1.5,280-pred(310)*.4,'#d97706','stroke-width="3" id="rg-current-line"')
+ for v in [0,100,200,300]:body+=t(70+v*1.5,345,v,'text-anchor="middle"')
+ for v in [-100,0,100,300,500]:body+=t(58,285-v*.4,v,'text-anchor="end"')
+ body+=t(24,52,'단가(만원/㎡)')+t(440,380,'면적(㎡)')+'</g>'
+ f3=fig('objective','기울기에 따른 잔차제곱합',body,'그림 3. 기울기마다 절편을 ȳ−b₁x̄로 맞춥니다. 위의 SSE 곡선과 아래의 직선은 같은 학습 자료 30건을 사용합니다. SSE 곡선은 확률분포나 신뢰구간이 아닙니다.',830)
+ controls=f'<div class="rg-controls" hidden><label for="rg-slope">기울기 b₁ 조절</label><input type="range" id="rg-slope" min="-1.2" max="-0.2" step="any" value="{b}" aria-describedby="rg-slope-help"><p id="rg-slope-help" class="learn-source-note">범위 −1.2~−0.2 · 방향키로 0.001씩 조절합니다. 매번 절편을 ȳ−b₁x̄로 계산합니다.</p><button type="button" id="rg-reset">OLS 최적값으로 복원</button><p id="rg-experiment-status" role="status" aria-live="polite"></p><p class="learn-source-note">그림 1의 OLS 기준선은 고정됩니다. 실험에서 바뀌는 직선은 이 그림의 아래 패널입니다.</p></div>'
+ f3=f3.replace('<figure class="learn-chart learn-chart--wide">','<figure class="learn-chart learn-chart--wide" id="rg-experiment">').replace('<svg',controls+'<script type="application/json" id="rg-rows">'+json.dumps(rows,ensure_ascii=False)+'</script><svg',1)
+ f3=f3.replace('<svg ', '<svg class="rg-experiment-svg" ',1)
  body=t(24,28,'관측 범위 밖의 직선 연장은 별도 가정입니다');xx=lambda v:70+v*1.2;yy=lambda v:280-v*.7
- body+=line(70,280,580,280)+line(xx(22),yy(pred(22)),xx(310),yy(pred(310)),'#2563eb','stroke-width="3"')+line(xx(310),yy(pred(310)),xx(400),yy(pred(400)),'#d97706','stroke-width="3" stroke-dasharray="5 4"')
+ body+=f'<rect x="{xx(22)}" y="55" width="{(310-22)*1.2}" height="275" fill="#2563eb" opacity=".06"/>'+line(70,80,70,330)+line(70,280,580,280,'#64748b','stroke-width="2" data-zero="true"')+line(xx(22),yy(pred(22)),xx(310),yy(pred(310)),'#2563eb','stroke-width="3"')+line(xx(310),yy(pred(310)),xx(400),yy(pred(400)),'#d97706','stroke-width="3" stroke-dasharray="5 4"')
  for val in [100,200,400]:body+=f'<circle cx="{xx(val)}" cy="{yy(pred(val))}" r="5" fill="#2563eb"/>'+t(xx(val)-5,yy(pred(val))-14,f'{pred(val):.2f}','text-anchor="middle"')
- for val in [0,100,200,300,400]:body+=t(xx(val),350,val,'text-anchor="middle"')
- body+=t(24,385,'파랑: 관측 범위의 적합선 / 주황 점선: 외삽 · 가로축: X')
- f4=fig('extrapolation','내삽과 외삽',body,'그림 4. 세로 위치는 예측값 Y이며 가로선은 Y=0입니다. X=400은 관측 범위 밖입니다. 음수 예측이 가능한지는 Y의 의미와 모형의 적용 범위를 따져야 합니다.',414)
- parts=[]
- def sec(id,label,title,body):parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{title}</h2>{body}</section>')
- sec('quick-start','서두 · 학습목표','두 변수의 평균적인 관계를 직선으로 나타냅니다','''<p>공부 시간과 시험 점수처럼 두 수치가 함께 달라지는 관계를 보았다고 해 봅시다. 상관계수는 그 직선적인 관계의 방향과 정도를 요약합니다. 회귀는 한 걸음 더 나아가, X가 주어졌을 때 Y를 어떤 값으로 나타낼지 식으로 표현합니다.</p><p><strong>단순선형회귀</strong>는 설명변수 X 하나로 결과변수 Y의 관계를 직선으로 요약하는 방법입니다. 이 장에서는 회귀직선의 기울기와 절편을 읽고, 점과 직선 사이의 차이인 잔차를 이용해 직선을 고르는 원리를 배웁니다.</p><ul class="learn-objectives"><li>회귀식의 기울기·절편·적합값이 무엇을 뜻하는지 설명합니다.</li><li>잔차와 잔차제곱합, 최소제곱법의 관계를 이해합니다.</li><li>상관계수·기울기·R²의 역할을 구별합니다.</li><li>개별 값의 예측과 외삽, 인과 해석의 한계를 확인합니다.</li></ul>''')
- sec('coefficients','회귀식 읽기','기울기는 X의 차이에 대응하는 적합값의 차이입니다','''<p>자료에 맞춘 회귀식은 <strong>ŷ=b₀+b₁x</strong>입니다. ŷ는 ‘와이 햇’이라고 읽으며, 주어진 x를 식에 넣어 구한 <strong>적합값</strong>입니다. 모든 관측값이 직선 위에 놓일 필요는 없습니다.</p><ul><li><strong>기울기 b₁:</strong> X가 1만큼 다를 때 직선 위의 Y가 얼마나 다른지 나타냅니다.</li><li><strong>절편 b₀:</strong> X=0일 때 직선이 나타내는 Y값입니다.</li></ul><p>예를 들어 ŷ=20+5x라면 x=2에서 적합값은 30입니다. X가 1 커질 때 적합값은 5 커집니다. X가 공부 시간이고 Y가 점수라면 기울기의 단위는 점/시간입니다. 이 식만으로 공부 시간을 늘린 인과효과가 5점이라고 말할 수는 없습니다.</p><p>절편은 계산에 필요해도 실제 의미가 없을 수 있습니다. X=0이 관측 범위 밖이라면 그 절편을 실제 대상의 수준으로 해석할 근거가 부족합니다.</p><details class="learn-more"><summary>모집단 모형과 자료에 맞춘 식</summary><div class="learn-more__body"><p>모집단 모형은 Y=β₀+β₁X+ε, 적합한 식은 ŷ=b₀+b₁x로 구별합니다. β는 미지의 모수, b는 자료에서 추정한 계수입니다. E[ε|X]=0이면 직선은 조건부 평균 E[Y|X]를 나타냅니다. 이 조건을 확인하지 않은 적합선은 관측 관계의 기술적 요약으로 읽어야 합니다.</p><p>X 대신 X−x̄로 중심화하면 같은 OLS 직선의 기울기와 적합값은 유지되고 절편은 ȳ가 됩니다.</p></div></details>''')
- sec('residuals','잔차','관측값에서 직선의 적합값을 뺍니다','''<p><strong>잔차 eᵢ=yᵢ−ŷᵢ</strong>는 실제 관측값과 직선이 나타내는 값의 차이입니다. 양수이면 점이 직선 위에, 음수이면 아래에 있습니다. 같은 X에서 위아래로 잰 세로 거리이며, 점에서 직선까지의 최단거리는 아닙니다.</p>'''+f2+'''<p>세 점 (1,2), (2,2), (3,5)에 맞춘 직선은 ŷ=1.5x입니다. 적합값은 1.5, 3, 4.5이고, 잔차는 0.5, −1, 0.5입니다. 잔차를 그냥 더하면 0이지만 점들이 모두 직선에 맞는 것은 아닙니다.</p><p>양수와 음수가 상쇄되지 않도록 잔차를 제곱해 더합니다. 이를 <strong>잔차제곱합(SSE)</strong>이라고 합니다. 이 예제에서는 SSE=0.5²+(−1)²+0.5²=1.5입니다.</p><p>모형의 오차 ε와 잔차 e도 구별해야 합니다. 오차는 알 수 없는 모집단의 평균 관계에서 벗어난 부분이고, 잔차는 자료로 맞춘 직선에서 계산한 차이입니다.</p>''')
- sec('ols','최소제곱법','잔차제곱합이 가장 작은 직선을 고릅니다','''<p><strong>최소제곱법(OLS)</strong>은 여러 직선 가운데 세로 잔차제곱합 SSE=Σ[yᵢ−(b₀+b₁xᵢ)]²가 가장 작은 직선을 찾습니다. 큰 잔차는 제곱되어 더 많이 반영됩니다.</p><p>아래부터는 <a href="/learn/stats/graphs/#data">공통 학습 자료</a>의 두 수치열을 단위 없는 X,Y로 놓은 30쌍을 사용합니다. 계수와 그래프를 계산하는 연습용 자료입니다.</p>'''+f1+f3+f'''<p>기울기마다 가장 잘 맞는 절편을 구하면 위 곡선처럼 SSE를 비교할 수 있습니다. 최소점에서 <strong>b₀≈{a:.3f}, b₁≈{b:.4f}</strong>이며, SSE는 {d['SSE']:,.2f}입니다. 이 곡선은 목적함수의 값이지 확률분포나 신뢰구간이 아닙니다.</p><details class="learn-more"><summary>계수 계산식과 OLS의 성질</summary><div class="learn-more__body"><p>Sxx=Σ(xᵢ−x̄)², Sxy=Σ(xᵢ−x̄)(yᵢ−ȳ)로 놓으면 b₁=Sxy/Sxx, b₀=ȳ−b₁x̄입니다. 모든 X가 같아 Sxx=0이면 기울기를 고유하게 정할 수 없습니다.</p>'''+f'''<p>30쌍의 x̄≈{d['xmean']:.5f}, ȳ≈{d['ymean']:.5f}, Sxx≈{d['Sxx']:,.5f}, Sxy≈{d['Sxy']:,.5f}입니다. 계산에는 반올림 전 값을 사용했습니다. <a href="../regression-example.json">계수·잔차·예제 JSON</a>에서 확인할 수 있습니다.</p>'''+'''<p>절편을 포함한 OLS 직선은 (x̄,ȳ)를 지나고 잔차 합은 0입니다. X가 서로 다른 두 관측만 있어도 직선은 계산할 수 있지만, 이때 잔차 자유도 n−2는 0이므로 오차분산을 추정할 여유가 없습니다.</p><p>OLS는 Y방향 잔차를 최소화합니다. X와 Y를 뒤집으면 다른 문제를 풀게 되므로 기울기가 일반적으로 원래 기울기의 역수가 되지는 않습니다.</p></div></details>''')
- sec('prediction','적합값과 예측','직선 위의 한 점은 개별 관측값의 보장값이 아닙니다',f'''<p>30쌍으로 구한 식은 <strong>ŷ≈{a:.3f}{b:+.4f}x</strong>입니다. X가 1 큰 곳의 적합값은 약 {abs(b):.3f} 작고, X가 10 다르면 적합값 차이는 약 {10*b:.2f}입니다. 부호와 단위를 함께 읽어야 합니다.</p><p>X=100을 넣으면 적합값은 <strong>{pred(100):.2f}</strong>, X=200이면 <strong>{pred(200):.2f}</strong>입니다. 표시한 계수는 반올림했으므로 그 식으로 다시 계산하면 마지막 자릿수가 조금 다를 수 있습니다.</p><p>같은 X에서의 평균적인 Y를 추정하는 것과 새 관측값 하나를 예측하는 것은 다릅니다. 평균 반응의 신뢰구간은 평균 관계를 추정하는 불확실성을, 개별 예측구간은 새 관측값의 오차 변동까지 반영합니다.</p><p>학습 자료에 잘 맞는다고 새 자료에서도 잘 맞는 것은 아닙니다. 실제 예측 성능은 별도 검증 자료로 확인해야 하며, 시간이나 집단의 관계에 맞춰 자료를 나누어야 합니다.</p>''')
- sec('extrapolation','내삽과 외삽','자료가 없는 범위까지 직선을 늘리면 가정에 더 의존합니다','''<p>관측한 X 범위 안에서 값을 계산하는 것은 <strong>내삽</strong>, 범위 밖으로 연장하는 것은 <strong>외삽</strong>입니다. 범위 안이더라도 관측이 드문 곳이나 다른 조건의 대상이라면 주의가 필요합니다.</p>'''+f4+f'''<p>예제의 X 범위는 22~310입니다. X=400을 넣으면 <strong>{pred(400):.2f}</strong>라는 음수 적합값이 나옵니다. 이는 직선을 연장한 산술 결과입니다. 음수 자체가 항상 오류는 아니지만, Y가 음수가 될 수 없는 값이라면 이 구간에 직선을 적용하는 것이 부적절하다는 신호입니다.</p><p>결과를 임의로 0에 맞춰 자르기보다 X의 범위, Y의 의미, 직선이라는 함수 형태가 적절한지 다시 확인해야 합니다. 관측 범위 안의 관계가 밖에서도 계속된다는 보장은 없습니다.</p>''')
- sec('correlation','상관·기울기·R²','관계의 방향과 변화량, 적합도는 서로 다릅니다','''<ul><li><strong>상관계수 r:</strong> 단위 없이 직선적인 관계의 방향과 정도를 요약합니다.</li><li><strong>기울기 b₁:</strong> X의 차이에 대응하는 직선 위 Y의 차이입니다. 단위는 Y 단위/X 단위입니다.</li><li><strong>R²:</strong> 같은 자료에서 평균만 사용하는 것보다 회귀선이 Y의 제곱변동을 얼마나 줄였는지 요약합니다.</li></ul>'''+f'''<p>30쌍 예제의 R²는 <strong>{d['R2']:.3f}</strong>입니다. 이를 정답률이나 미래 예측의 정확도로 읽지 않습니다. 인과적으로 설명한 비율이라는 뜻도 아닙니다. 같은 R²여도 잔차의 곡선 패턴이나 극단값의 영향은 다를 수 있습니다.</p>'''+'''<details class="learn-more"><summary>단순 OLS에서 상관과 R²의 관계</summary><div class="learn-more__body"><p>절편을 포함하고 두 변수의 분산이 양수인 단순 OLS에서 b₁=r×s_y/s_x이며, 같은 자료에 대한 R²=r²=1−SSE/SST입니다. SST=Σ(yᵢ−ȳ)²입니다. 절편 없는 회귀나 다른 평가 자료에 이 관계를 그대로 적용하지 않습니다.</p></div></details>''')
- sec('assumptions','계산과 해석의 조건','직선을 계산하는 것과 타당한 추론은 별개의 단계입니다','''<p>OLS 계수를 계산하는 데 정규분포 가정이 필수인 것은 아닙니다. 그러나 그 식이 평균 관계를 잘 나타내는지, 계수의 표준오차·검정·신뢰구간이 타당한지는 추가로 살펴야 합니다.</p><p>관계가 직선에 가까운지, 중요한 변수가 빠져 있지 않은지, 관측값이 서로 관련되어 있는지 확인하세요. 공부 시간만으로 점수를 설명하면 사전 학습 수준이나 학습 환경의 차이가 기울기에 섞일 수 있습니다. 단순회귀는 다른 조건을 자동으로 고정하지 않습니다.</p><details class="learn-more"><summary>오차에 대한 가정과 표준오차</summary><div class="learn-more__body"><p>조건부 평균의 선형성, E[ε|X]=0, 적절한 표집·독립성 등을 검토합니다. 고전적 표준오차는 일정한 오차분산을 가정하고, 작은 표본의 정확한 t·F 추론에는 정규 오차 가정도 사용합니다.</p><p>이분산이면 계수 계산과 별개로 일반적인 표준오차가 부적절할 수 있습니다. 군집·시간 의존성에도 구조에 맞는 방법이 필요합니다. 강건한 표준오차를 사용해도 누락변수나 잘못된 평균 함수가 해결되지는 않습니다.</p></div></details>''')
- sec('sensitivity','큰 관측값과 모형 점검','한 점이 직선에 미치는 영향을 확인하세요',f'''<p>30쌍 자료에서 7번을 제외해 다시 적합하면 절편은 {reduced['intercept']:.3f}, 기울기는 <strong>{reduced['slope']:.4f}</strong>입니다. 원래 기울기 {b:.4f}와 비교하면 한 관측값에 대한 민감도를 살펴볼 수 있습니다. 더 보기 좋은 직선을 얻으려는 삭제가 아니라, 자료와 조건을 확인하는 과정입니다.</p><p>X방향으로 멀리 떨어진 점은 직선의 위치를 좌우할 여지가 큽니다. 이를 <strong>레버리지</strong>라고 합니다. 큰 잔차와 높은 레버리지가 결합하면 계수에 강한 영향을 줄 수 있으므로 잔차의 크기만으로 판단하지 않습니다.</p><p>원자료의 오류 여부와 포함·제외 이유를 확인하고, 결과가 얼마나 바뀌는지 함께 보고하세요. 다음 장에서는 잔차 패턴과 회귀모형의 가정을 자세히 살펴봅니다.</p>''')
- sec('practice','확인 문제','계수의 단위와 예측의 대상을 확인하세요','''<ol class="learn-exercises"><li>잔차 합이 0이면 모든 점이 직선 위에 있나요?<details><summary>답과 해설</summary><p>아니요. 양수·음수가 상쇄될 수 있습니다. SSE와 잔차 패턴을 봐야 합니다.</p></details></li><li>절편은 항상 실제로 관측 가능한 X=0의 의미인가요?<details><summary>답과 해설</summary><p>아니요. X=0이 관측 범위 밖이면 물리적 해석이 부적절할 수 있습니다.</p></details></li><li>X와 Y를 바꾸면 OLS 기울기는 원래의 역수인가요?<details><summary>답과 해설</summary><p>일반적으로 아닙니다. 최소화하는 잔차 방향이 바뀝니다.</p></details></li><li>학습 자료의 R²가 높으면 인과효과와 미래 정확성이 보장되나요?<details><summary>답과 해설</summary><p>아니요. 적합도·인과 식별·외부 예측 성능은 별도로 확인해야 합니다.</p></details></li></ol>''')
- sec('macro','CH2 Macro에서 읽기','변수·단위·범위를 확인하고 회귀선을 읽습니다','''<p>CH2 Macro의 회귀 결과를 읽을 때는 X와 Y의 정의, 로그 등 변환 여부, 관측 단위·기간·유형과 건수, 적용 범위를 먼저 확인하세요. 이 장의 단순선형식이 모든 서비스 모형의 산식이라고 전제하지 않습니다.</p><p>회귀선을 시장 관계를 이해하는 요약으로 읽고, 개별 물건의 적정가나 조건 변경의 확정적 효과로 바꾸어 해석하지 않습니다.</p><p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 통계 열기 →</a></p>''')
- sec('recap','결론 · 학습 요약','회귀식과 함께 잔차·단위·적용 범위를 읽으세요','''<p>단순선형회귀는 X 하나와 Y의 관계를 직선으로 요약합니다. 식의 숫자뿐 아니라 다음을 함께 확인해야 합니다.</p><ul class="learn-recap-list"><li><strong>기울기와 절편:</strong> 기울기는 X의 차이에 대응하는 적합값의 차이이고, 절편은 X=0에서의 적합값입니다. 단위와 관측 범위를 확인합니다.</li><li><strong>잔차와 최소제곱:</strong> 잔차는 관측값−적합값입니다. OLS는 세로 잔차제곱합을 최소화합니다.</li><li><strong>예측의 대상:</strong> 평균 관계의 추정과 새 관측값 하나의 예측은 불확실성이 다릅니다.</li><li><strong>R²:</strong> 같은 자료에 대한 적합도의 요약이며 인과효과나 미래 정확도를 보장하지 않습니다.</li><li><strong>모형의 한계:</strong> 외삽·큰 관측값·누락변수·의존성을 점검합니다. 직선을 계산할 수 있다는 것만으로 타당한 해석이 확보되지는 않습니다.</li></ul><p>다음 <a href="/learn/stats/residuals/">18장 ‘잔차와 회귀모형의 가정’</a>에서는 잔차를 통해 모형을 점검하는 방법을 배웁니다.</p><details class="learn-more"><summary>참고자료</summary><div class="learn-more__body"><ul><li><a href="https://www.itl.nist.gov/div898/handbook/pmd/section1/pmd141.htm">NIST: Linear Least Squares Regression</a> — 최소제곱의 원리와 적용 한계.</li></ul><p class="learn-source-note">참고자료의 기존 확인일: 2026-10-08. 30쌍 계산은 공통 학습 자료의 두 수치열을 단위 없는 X,Y로 사용했습니다. 세 점 예제와 식 ŷ=20+5x는 원리를 설명하기 위한 가상 예시입니다.</p></div></details>''')
+ for val in [22,100,200,310,400]:body+=t(xx(val),350,val,'text-anchor="middle"')
+
+ for val in [-50,0,100,200]:body+=t(58,yy(val)+5,val,'text-anchor="end"')
+ body+=t(24,52,'단가(만원/㎡)')+t(400,385,'면적(㎡)')+t(24,415,'옅은 배경·실선: 관측 범위 22~310㎡ / 주황 점선: 외삽')
+ f4=fig('extrapolation','내삽과 외삽',body,'그림 4. 세로축은 단가(만원/㎡)이며 기준선은 단가 0입니다. 400㎡는 관측 범위 밖이고 계산값 −41.21만원/㎡는 비현실적입니다. 시장 가격 전망으로 해석하지 않습니다.',445)
+ page=ROOT/'regression/index.html';old=page.read_text(encoding='utf-8')
+ references=re.search(r'<details class="learn-more"><summary>참고자료</summary>.*?</details>',old,re.S)[0].replace('세 점 예제와 식 ŷ=20+5x는 원리를 설명하기 위한 가상 예시입니다.','세 점 예제는 원리를 설명하기 위한 별도 가상 자료입니다.').replace('30쌍 계산은 공통 학습 자료의 두 수치열을 단위 없는 X,Y로 사용했습니다.','30건 계산은 공통 학습 자료의 면적(㎡)과 거래단가(만원/㎡)를 사용했습니다.')
+ parts=[];source=(ROOT/'regression/content.md').read_text(encoding='utf-8').replace('\\*','*').replace('**','').replace('\\~','~')
+ formulas={r'e_i=y_i-\hat y_i':'eᵢ = yᵢ − ŷᵢ',r'SSE=\sum\_{i=1}^{n}[y_i-(b_0+b_1x_i)]^2':'SSE = Σᵢ₌₁ⁿ [yᵢ − (b₀ + b₁xᵢ)]²',r'b_1=\frac{\sum (x_i-\bar x)(y_i-\bar y)}{\sum (x_i-\bar x)^2}':'b₁ = Σ(xᵢ−x̄)(yᵢ−ȳ) / Σ(xᵢ−x̄)²',r'b_0=\bar y-b_1\bar x':'b₀ = ȳ − b₁x̄',r'R^2=1-\frac{SSE}{SST}':'R² = 1 − SSE / SST',r'b_1=r\frac{s_y}{s_x}':'b₁ = r × sᵧ / sₓ',r'R^2=r^2':'R² = r²'}
+ source=re.sub(r'^\[\s*\n(.*?)\n\]$',lambda m:formulas[m[1].strip()],source,flags=re.M|re.S)
+ ids=['quick-start','core','coefficients','residuals','ols','objective','prediction','extrapolation','correlation','assumptions','sensitivity','practice','macro','recap']
+ def inline(value):return re.sub(r'\*\*(.+?)\*\*',r'<strong>\1</strong>',escape(value))
+ def render(block):
+  out=[];lines=block.strip().split('\n');i=0
+  while i<len(lines):
+   line=lines[i].strip()
+   if not line or line=='---':i+=1;continue
+   if line.startswith('### '):out.append('<h3>'+inline(line[4:])+'</h3>');i+=1;continue
+   if line.startswith('[그림 '):out.append({1:f1,2:f2,3:f3,4:f4}[int(re.search(r'그림 (\d)',line)[1])]);i+=1;continue
+   if line=='[CH2 Macro 통계·데이터분석 열기 →]':out.append('<p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 통계·데이터분석 열기 →</a></p>');i+=1;continue
+   if line=='▶ 참고자료':out.append(references);i+=1;continue
+   if line.startswith('▶ '):
+    title=line[2:];rest=[];i+=1
+    while i<len(lines) and lines[i].strip()!='---':rest.append(lines[i]);i+=1
+    out.append('<details class="learn-more"><summary>'+inline(title)+'</summary><div class="learn-more__body">'+render('\n'.join(rest))+'</div></details>');continue
+   if line.startswith('|'):
+    table=[]
+    while i<len(lines) and lines[i].strip().startswith('|'):
+     cells=[c.strip() for c in lines[i].strip().strip('|').split('|')]
+     if not all(re.fullmatch(r'[:\- ]+',c) for c in cells):table.append(cells)
+     i+=1
+    out.append('<div class="learn-data learn-data--full"><table><thead><tr>'+''.join('<th scope="col">'+inline(c)+'</th>' for c in table[0])+'</tr></thead><tbody>'+''.join('<tr>'+''.join(('<th scope="row">'+inline(c)+'</th>') if j==0 else '<td>'+inline(c)+'</td>' for j,c in enumerate(row))+'</tr>' for row in table[1:])+'</tbody></table></div>');continue
+   if line.startswith('- ') or re.match(r'\d+\. ',line):
+    ordered=not line.startswith('- ');tag='ol' if ordered else 'ul';items=[]
+    while i<len(lines) and (re.match(r'\d+\. ',lines[i]) if ordered else lines[i].startswith('- ')):
+     items.append('<li>'+inline(re.sub(r'^(?:- |\d+\. )','',lines[i]))+'</li>');i+=1
+    out.append('<'+tag+'>'+''.join(items)+'</'+tag+'>');continue
+   formula=line.startswith(('ŷ','Y =','eᵢ','SSE','b₀','b₁','R²','잔차 =','10 ×','(만원/㎡)',"X' ="))
+   out.append('<p'+(' class="rg-formula"' if formula else '')+'>'+inline(line)+'</p>');i+=1
+  return '\n'.join(out)
+ for id,section in zip(ids,re.split(r'^## ',source,flags=re.M)[1:],strict=True):
+  label,body=section.split('\n',1);heading=re.search(r'^### (.+)$',body,re.M)[1];body=re.sub(r'^### .+\n','',body,count=1,flags=re.M)
+  if id=='practice':
+   items=[]
+   for q in re.split(r'^\d+\. ',body,flags=re.M)[1:]:
+    question,answer=q.split('▶ 답과 해설',1);items.append('<li>'+inline(question.strip())+'<details><summary>답과 해설</summary><div class="learn-more__body">'+render(answer)+'</div></details></li>')
+   html='<ol class="learn-exercises">'+''.join(items)+'</ol>'
+  else:html=render(body)
+  if id=='quick-start':html=html.replace('<ul>','<ul class="learn-objectives">',1).replace('16장에서 배운 상관계수','<a href="/learn/stats/correlation/">16장에서 배운 상관계수</a>')+'<p class="learn-source-note"><a href="/learn/stats/graphs/#data">공통 학습 자료 30건</a> · <a href="../regression-example.json">계수·잔차·계산 결과 JSON</a>. 실제 거래 출처와 대표성이 확인되지 않은 학습 자료입니다.</p>'
+  if id=='objective':html=html.replace('세로축은 잔차제곱합입니다.','세로축은 잔차제곱합(SSE)입니다. 세로 눈금은 0이 아닌 최소 SSE 부근에서 시작합니다.')
+  if id=='sensitivity':html+='<p class="learn-source-note">원자료 id=7(상업, 면적 22㎡, 단가 480만원/㎡) 한 건만 제외해 29건으로 계수와 절편을 모두 다시 계산했습니다. 상관계수의 변화와 기울기의 변화는 다른 수치입니다.</p>'
+  if id=='macro':html+=macro_details()
+  if id=='recap':html=html.replace('18장 「잔차와 회귀모형의 가정」','<a href="/learn/stats/residuals/">18장 「잔차와 회귀모형의 가정」</a>')
+  parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{heading}</h2>{html}</section>')
  p=ROOT/'regression/index.html';html=p.read_text(encoding='utf-8');html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="단순선형회귀와 최소제곱법">\n'+'\n'.join(parts)+'\n</article>',html,count=1,flags=re.S)
- html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1단순선형회귀의 기울기·절편·잔차와 최소제곱 계산, 예측·외삽의 한계를 설명합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);p.write_text(html,encoding='utf-8')
+ html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1단순선형회귀의 기울기·절편·잔차와 최소제곱 계산, 예측·외삽의 한계를 설명합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);
+ html=html.replace('별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.','활용도는 CH2 Macro의 분석 결과를 이해하는 데 얼마나 도움이 되는지를 나타냅니다.')
+ if 'regression/chapter.css' not in html:html=html.replace('</head>','<link rel="stylesheet" href="/learn/stats/regression/chapter.css?v=20261024-1" />\n</head>')
+ if 'regression/experiment.js' not in html:html=html.replace('</body>','<script type="module" src="/learn/stats/regression/experiment.js?v=20261024-1"></script>\n</body>')
+ p.write_text(html,encoding='utf-8')
 if __name__=='__main__':build()
