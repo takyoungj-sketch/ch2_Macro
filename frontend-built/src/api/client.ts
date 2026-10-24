@@ -16,6 +16,7 @@ import type {
   RegressionCompareResponse,
   RegressionScopeResponse,
   RegressionRecommendResponse,
+  Recommend2Response,
   ScopeSampleFilterResponse,
 } from "../types";
 
@@ -301,6 +302,18 @@ export async function runRegression(body: RegressionRunRequest) {
 /** analysis_scope SSOT — 기본 통계·모형 추천 공통 scope (R0). */
 export async function resolveRegressionScope(body: RegressionRunRequest) {
   const { data } = await api.post<RegressionScopeResponse>("/regression/scope", body);
+  return data;
+}
+
+export async function recommend2Regression(
+  body: RegressionRunRequest,
+  signal?: AbortSignal,
+) {
+  const { data } = await api.post<Recommend2Response>(
+    "/regression/recommend2",
+    body,
+    { signal },
+  );
   return data;
 }
 

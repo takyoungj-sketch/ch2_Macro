@@ -83,6 +83,7 @@ export const STATS_GLOSSARY: Record<string, StatsGlossaryEntry> = {
       "표본을 나눠 반복 검증한 뒤 평균낸 MAPE(%)입니다. in-sample MAPE보다 일반화 성능에 가깝습니다. CH2 복합 모형추천·Twin 채택은 이 값을 1차로 봅니다.",
     interpretation: [
       "모형 추천에서 후보를 비교하고, 결과를 어느 강도로 읽을지 정하는 지표입니다. 합격/부적합이 아닙니다.",
+      "복합 기본통계의 초점 식도 같은 연도 롤링 CV-MAPE를 보여 줍니다. 행 구성이 다르면 모형 추천 숫자와 달라집니다.",
       "값이 낮을수록 검증 fold에서 오차가 작았다는 뜻입니다.",
       "개별 물건 가격을 맞히기 위한 AVM 점수가 아닙니다.",
     ],

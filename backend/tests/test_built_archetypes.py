@@ -111,8 +111,10 @@ def test_complete_case_is_shared_across_candidate_union():
         ["gross_area", "building_age", "zone_type"],
         region_col=None,
     )
-    assert sampled.selection_n == 6
-    assert sampled.df.index.tolist() == [0, 1, 3, 4, 6, 7]
+    assert sampled.selection_n == 7
+    assert 2 not in sampled.df.index
+    assert 5 in sampled.df.index
+    assert any("연식 결측" in note for note in sampled.numeric_drop_notes)
     assert sampled.sample_columns == (
         "price",
         "gross_area",

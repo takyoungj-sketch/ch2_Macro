@@ -3,7 +3,8 @@
 > **상태:** R0~R3 **복합 built 구현 완료** (2026-08-07) — 집합·토지 adapter는 R4+  
 > **범위:** 복합·토지·집합 공통 **모형 추천** 제품·엔진 방향 (1차 착수: **복합 built**)  
 > **상위:** [CH2_MACRO_VISION.md](./CH2_MACRO_VISION.md) · [CANDIDATE_EVALUATION_DESIGN.md](./CANDIDATE_EVALUATION_DESIGN.md) · [CH2_MACRO_IMPLEMENTATION_ROADMAP.md](./CH2_MACRO_IMPLEMENTATION_ROADMAP.md)  
-> **관련:** [LAND_BUILT_SIGNAL_DESIGN.md](./LAND_BUILT_SIGNAL_DESIGN.md) · [SYSTEM_ARCHITECTURE.md](./SYSTEM_ARCHITECTURE.md)
+> **관련:** [LAND_BUILT_SIGNAL_DESIGN.md](./LAND_BUILT_SIGNAL_DESIGN.md) · [SYSTEM_ARCHITECTURE.md](./SYSTEM_ARCHITECTURE.md)  
+> **병행 실험:** [BUILT_RECOMMEND2.md](./BUILT_RECOMMEND2.md) — 현행 `/recommend` 는 유지. 채택 결정은 비교 후.
 
 ---
 

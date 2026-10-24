@@ -1329,6 +1329,37 @@ def _scope_for_level(
     return _filter_sigungu(wide_df, req)
 
 
+def _focus_cv_mape(
+    df: pd.DataFrame,
+    vars_spec: RegressionVariableSpec,
+    *,
+    unified: bool,
+    response_scale: ResponseScale,
+    region_col: str | None,
+    enabled: bool,
+) -> tuple[float | None, int, float | None, str | None]:
+    """초점 식 하나의 연도 롤링 CV. 모형 추천의 탐색 CV·마지막 연도 확인과 같다."""
+    if not enabled:
+        return None, 0, None, None
+    if "contract_year" not in df.columns:
+        return None, 0, None, "CV-MAPE는 계약연도가 있어야 계산합니다."
+    from app.built.regression.selection.fit import rolling_time_cv_split
+
+    try:
+        search, folds, confirm, _confirm_folds, skip = rolling_time_cv_split(
+            df,
+            vars_spec,
+            unified=unified,
+            response_scale=response_scale,
+            region_col=region_col,
+        )
+    except Exception:  # noqa: BLE001 — CV 실패가 회귀 결과를 막으면 안 된다
+        return None, 0, None, "CV-MAPE를 계산하지 못했습니다."
+    if search is None:
+        return None, int(folds or 0), confirm, skip or "CV-MAPE는 계약연도가 두 해 미만이면 계산하지 않습니다."
+    return search, int(folds or 0), confirm, skip
+
+
 def _fit_ols(
     df: pd.DataFrame,
     vars_spec: RegressionVariableSpec,
@@ -1340,6 +1371,7 @@ def _fit_ols(
     addr4_city: bool = False,
     year_index: "YearIndex | None" = None,
     with_residuals: bool = False,
+    with_cv: bool = False,
     categorical_missing: str = "keep_unknown",
 ) -> RegressionLevelResult:
     import statsmodels.api as sm
@@ -1491,6 +1523,14 @@ def _fit_ols(
     y_price = pd.to_numeric(df["price"], errors="coerce").loc[y.index].to_numpy()
     pred_price = _insample_pred_price(model, response_scale=response_scale)
     mape = _insample_mape_pct(y_price, pred_price)
+    cv_mape, cv_folds, confirm_cv_mape, confirm_cv_note = _focus_cv_mape(
+        df,
+        vars_spec,
+        unified=unified,
+        response_scale=response_scale,
+        region_col=region_col,
+        enabled=with_cv,
+    )
 
     # 잔차 진단은 초점 모형만 (P5). 상위 행정층 비교에는 이 화면이 없고, 그쪽 n은
     # 수만 건까지 가므로 영향도 계산을 매번 돌릴 이유가 없다.
@@ -1527,6 +1567,10 @@ def _fit_ols(
         predict_options=_meta_to_predict_options(meta),
         warning=warn,
         mape=mape,
+        cv_mape=cv_mape,
+        cv_folds=cv_folds,
+        confirm_cv_mape=confirm_cv_mape,
+        confirm_cv_note=confirm_cv_note,
         categorical_missing=categorical_missing,  # type: ignore[arg-type]
         n_excluded_missing=int(meta.n_excluded_missing) if meta else 0,
         missing_treatment_label=treatment_label(
@@ -1794,7 +1838,13 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
     focus_df = _scope_for_level(wide_df, req, focus, addr4_city, mode, conn=conn)
     focus_label = _label_for_level(req, wide_df, focus, addr4_city)
     primary = _fit_ols(
-        focus_df, req.variables, focus, focus_label, with_residuals=True, **fit_kw
+        focus_df,
+        req.variables,
+        focus,
+        focus_label,
+        with_residuals=True,
+        with_cv=True,
+        **fit_kw,
     )
 
     comparisons: list[RegressionLevelResult] = []

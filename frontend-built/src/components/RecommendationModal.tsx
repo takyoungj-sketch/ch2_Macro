@@ -56,6 +56,8 @@ export default function RecommendationModal({
   const [twin1Target, setTwin1Target] = useState<PredictTarget | null>(null);
   const [researchTarget, setResearchTarget] = useState<PredictTarget | null>(null);
   const [runStage2, setRunStage2] = useState(false);
+  const [checkedTwinCodes, setCheckedTwinCodes] = useState<string[]>([]);
+  const [twinRunId, setTwinRunId] = useState(0);
   const [runTwinResearch, setRunTwinResearch] = useState(false);
   const [heldData, setHeldData] = useState<RegressionRecommendResponse | null>(null);
   const [localBaseline, setLocalBaseline] = useState<RegressionRecommendResponse | null>(null);
@@ -123,6 +125,22 @@ export default function RecommendationModal({
     return map;
   }, [twinQ.data]);
 
+  const twinChoices = useMemo(
+    () =>
+      (twinQ.data?.neighbors ?? [])
+        .map((n) => {
+          const code = (n.twin_beopjungri_code || n.twin_eupmyeondong_code || "").trim();
+          const name = n.twin_beopjungri_name || n.twin_eupmyeondong_name || n.twin_sigungu_name || code;
+          return { code, rank: n.rank, label: name };
+        })
+        .filter((row) => row.code),
+    [twinQ.data],
+  );
+
+  useEffect(() => {
+    setCheckedTwinCodes([]);
+  }, [twinChoices]);
+
   const enrichedRegBody: RegressionSelectionRequest = useMemo(() => {
     const twin = twinQ.data;
     const base: RegressionSelectionRequest = {
@@ -137,8 +155,9 @@ export default function RecommendationModal({
       profile_as_of_month: twin.as_of_month ?? undefined,
       profile_window_years: twin.window_years,
       profile_twin_neighbors: twinNeighbors,
+      selected_twin_codes: checkedTwinCodes,
     };
-  }, [regBody, twinQ.data, twinNeighbors, runStage2, runTwinResearch]);
+  }, [regBody, twinQ.data, twinNeighbors, checkedTwinCodes, runStage2, runTwinResearch]);
 
   useEffect(() => {
     if (!open) {
@@ -181,7 +200,7 @@ export default function RecommendationModal({
       return;
     }
     if (twinWaiting) return;
-    if (!twinNeighbors.length) {
+    if (!twinNeighbors.length || !checkedTwinCodes.length) {
       setRunStage2(false);
       return;
     }
@@ -189,7 +208,7 @@ export default function RecommendationModal({
     launchedTwin.current = true;
     recommendM.mutate({ ...enrichedRegBody, run_stage2: true, run_stage2_research: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Twin opt-in 후 재요청
-  }, [open, runStage2, twinWaiting, twinNeighbors]);
+  }, [open, runStage2, twinRunId, twinWaiting, twinNeighbors, checkedTwinCodes]);
 
   useEffect(() => {
     if (!open || !runTwinResearch) {
@@ -197,7 +216,7 @@ export default function RecommendationModal({
       return;
     }
     if (twinWaiting) return;
-    if (!twinNeighbors.length) {
+    if (!twinNeighbors.length || !checkedTwinCodes.length) {
       setRunTwinResearch(false);
       return;
     }
@@ -209,7 +228,7 @@ export default function RecommendationModal({
       run_stage2_research: true,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Twin 실험2 opt-in 후 재요청
-  }, [open, runTwinResearch, twinWaiting, twinNeighbors]);
+  }, [open, runTwinResearch, twinWaiting, twinNeighbors, checkedTwinCodes]);
 
   useEffect(() => {
     if (!open) return;
@@ -381,12 +400,18 @@ export default function RecommendationModal({
       onClose={onClose}
       titleId="recommendation-modal-title"
       title="Macro 모형 탐색"
-      subtitle="탐색 → Local 기준선 → Twin1 → Twin2 → 비교. 식을 쓰려면 「기본 통계에 이 식 적용」 후 왼쪽에서 「통계분석」을 다시 실행하세요."
-      maxWidthClass="max-w-4xl"
+      subtitle="예측형 · 설명형 · 쌍둥이 확장. 기본 통계 식은 바꾸지 않습니다."
+      maxWidthClass="max-w-6xl"
       resizable
       allowFullscreen
-      defaultWidth={Math.min(900, typeof window !== "undefined" ? window.innerWidth - 48 : 900)}
-      defaultHeight={Math.min(780, typeof window !== "undefined" ? window.innerHeight - 48 : 780)}
+      defaultWidth={Math.min(
+        Math.round((typeof window !== "undefined" ? window.innerWidth : 1200) * 0.9),
+        typeof window !== "undefined" ? window.innerWidth - 32 : 1100,
+      )}
+      defaultHeight={Math.min(
+        Math.round((typeof window !== "undefined" ? window.innerHeight : 900) * 0.88),
+        typeof window !== "undefined" ? window.innerHeight - 32 : 820,
+      )}
       minWidth={520}
       minHeight={360}
       headerActions={
@@ -446,7 +471,22 @@ export default function RecommendationModal({
             twin1PredictActiveLabel={twin1Target?.label ?? null}
             researchPredictActiveLabel={researchTarget?.label ?? null}
             regionNameByCode={regionNameByCode}
-            onRunTwin={twinCandidateStatus === "ready" ? () => setRunStage2(true) : undefined}
+            onRunTwin={
+              twinCandidateStatus === "ready"
+                ? () => {
+                    launchedTwin.current = false;
+                    setTwinRunId((n) => n + 1);
+                    setRunStage2(true);
+                  }
+                : undefined
+            }
+            twinChoices={twinChoices}
+            checkedTwinCodes={checkedTwinCodes}
+            onToggleTwinCode={(code) =>
+              setCheckedTwinCodes((cur) =>
+                cur.includes(code) ? cur.filter((item) => item !== code) : [...cur, code],
+              )
+            }
             twinRunning={twin1Pending}
             onRunTwinResearch={
               twinCandidateStatus === "ready" ? () => setRunTwinResearch(true) : undefined
@@ -537,7 +577,7 @@ export default function RecommendationModal({
           <p className="text-sm text-slate-400 text-center py-6">
             {twinWaiting
               ? "쌍둥이 지역 후보를 불러온 뒤 탐색을 시작합니다…"
-              : "변수 조합과 척도를 CV-MAPE로 비교해 대표 예측모형을 찾습니다. 창을 열면 자동으로 시작하고, 「다시 탐색」으로 다시 돌립니다."}
+              : "변수 조합과 척도를 CV-MAPE로 비교해 탐색 1위를 고릅니다. 검증이 얇으면 대표모형으로 확정하지 않습니다. 결과는 예측형·설명형·쌍둥이 확장으로 나뉩니다. 기본 통계 식은 바꾸지 않습니다."}
           </p>
         )}
         {twin1Pending && !panelData && (

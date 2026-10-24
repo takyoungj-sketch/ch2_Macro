@@ -35,6 +35,11 @@ class CvPhase:
     max_ape: float | None = None
     # 폭발한 몇 건에 면역인 보조 지표. 평균 순위와 크게 엇갈리면 D-074를 재검토한다.
     median_ape: float | None = None
+    # 실제로 오차를 낸 거래 수와 그 연도. folds는 연도 수라 거래 수와 같지 않다.
+    n_trades: int = 0
+    years: tuple[int, ...] = ()
+    # 채점하려 한 연도. 적합이 안 되면 years는 비고 held_years만 남는다.
+    held_years: tuple[int, ...] = ()
 
 
 _EMPTY_CV = CvPhase()
@@ -280,6 +285,8 @@ def _rolling_time_cv_mape(
         extreme_hits = 0
         scored = 0
         valid_folds = 0
+        scored_years: list[int] = []
+        held = tuple(int(year) for year in test_years)
         for test_year in test_years:
             train_mask = year_values < test_year
             test_mask = year_values == test_year
@@ -319,6 +326,7 @@ def _rolling_time_cv_mape(
                         (np.abs(actual[valid] - pred[valid]) / np.abs(actual[valid])).tolist()
                     )
                     valid_folds += 1
+                    scored_years.append(int(test_year))
                     # 성능에는 개입하지 않고, 학습 범위를 한 자릿수 이상 벗어난 예측만 센다.
                     train_actual = price.loc[y_train.index].to_numpy(dtype=float)
                     train_actual = train_actual[np.isfinite(train_actual) & (train_actual > 0)]
@@ -331,7 +339,7 @@ def _rolling_time_cv_mape(
             except (ValueError, np.linalg.LinAlgError):
                 continue
         if not fold_errors:
-            return _EMPTY_CV
+            return CvPhase(held_years=held)
         errors = np.asarray(fold_errors, dtype=float)
         return CvPhase(
             mape=round(float(np.mean(errors)) * 100, 2),
@@ -339,6 +347,9 @@ def _rolling_time_cv_mape(
             extreme_rate=round(extreme_hits / scored, 4) if scored else None,
             max_ape=round(float(np.max(errors)) * 100, 2),
             median_ape=round(float(np.median(errors)) * 100, 2),
+            n_trades=scored,
+            years=tuple(scored_years),
+            held_years=held,
         )
 
     search = _eval(search_years)

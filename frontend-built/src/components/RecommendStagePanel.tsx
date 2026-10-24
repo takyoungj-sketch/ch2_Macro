@@ -1,10 +1,12 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import clsx from "clsx";
 import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import type {
   AssetType,
   CoefficientNarrative,
   DiagnosticCheckItem,
+  CandidateCvReport,
+  CvCoverage,
   ModelCandidate,
   RecommendationPoolCandidate,
   RecommendationStage1,
@@ -74,6 +76,9 @@ type Props = {
   researchPredictActiveLabel?: string | null;
   regionNameByCode?: Record<string, string>;
   onRunTwin?: () => void;
+  twinChoices?: { code: string; rank: number; label: string }[];
+  checkedTwinCodes?: string[];
+  onToggleTwinCode?: (code: string) => void;
   twinRunning?: boolean;
   onRunTwinResearch?: () => void;
   twinResearchRunning?: boolean;
@@ -88,6 +93,71 @@ type Props = {
   minePrimary?: RegressionLevelResult | null;
   mineScale?: ResponseScale | null;
 };
+
+function cvWhen(slice?: CvCoverage | null): string {
+  if (!slice) return "";
+  const years = slice.years?.length ? `${slice.years.join("·")}년` : "";
+  const n = slice.n_trades != null ? `${slice.n_trades}건` : "";
+  return [years, n].filter(Boolean).join(" · ");
+}
+
+function confirmGapPp(report?: CandidateCvReport | null): number | null {
+  const search = report?.search?.mape;
+  const confirm = report?.confirm?.mape;
+  if (search == null || confirm == null) return null;
+  return confirm - search;
+}
+
+function confirmIsWeaker(report?: CandidateCvReport | null): boolean {
+  const gap = confirmGapPp(report);
+  return gap != null && gap >= 10;
+}
+
+type WorkspaceTab = "predict" | "explain" | "twin";
+
+const WORKSPACE_TABS: { id: WorkspaceTab; label: string }[] = [
+  { id: "predict", label: "예측형" },
+  { id: "explain", label: "설명형" },
+  { id: "twin", label: "쌍둥이 확장" },
+];
+
+function WorkspaceTabs({
+  value,
+  onChange,
+}: {
+  value: WorkspaceTab;
+  onChange: (next: WorkspaceTab) => void;
+}) {
+  return (
+    <div
+      className="inline-flex flex-wrap rounded-md border border-slate-200 bg-slate-50 p-0.5 text-sm dark:border-slate-600 dark:bg-slate-900/70"
+      role="tablist"
+      aria-label="모형 탐색 작업"
+    >
+      {WORKSPACE_TABS.map((tab) => {
+        const selected = value === tab.id;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            className={clsx(
+              "px-3 py-1.5 rounded whitespace-nowrap transition-colors",
+              selected && tab.id === "predict" && "bg-white shadow-sm font-medium text-indigo-800 dark:bg-slate-700 dark:text-indigo-200",
+              selected && tab.id === "explain" && "bg-white shadow-sm font-medium text-teal-800 dark:bg-slate-700 dark:text-teal-200",
+              selected && tab.id === "twin" && "bg-white shadow-sm font-medium text-violet-800 dark:bg-slate-700 dark:text-violet-200",
+              !selected && "text-slate-500 dark:text-slate-400",
+            )}
+            onClick={() => onChange(tab.id)}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function blockSummary(blocks: string[]) {
   if (!blocks.length) return "(절편만)";
@@ -199,7 +269,6 @@ function CoefficientInsights({ items }: { items: CoefficientNarrative[] }) {
 
 export default function RecommendStagePanel({
   data,
-  onAdopt,
   onAdoptPool,
   adopting,
   onPredict,
@@ -208,6 +277,9 @@ export default function RecommendStagePanel({
   researchPredictActiveLabel,
   regionNameByCode = {},
   onRunTwin,
+  twinChoices = [],
+  checkedTwinCodes = [],
+  onToggleTwinCode,
   twinRunning,
   onRunTwinResearch,
   twinResearchRunning,
@@ -220,6 +292,7 @@ export default function RecommendStagePanel({
   mineScale,
 }: Props) {
   const [twinStep, setTwinStep] = useState(0);
+  const [workspace, setWorkspace] = useState<WorkspaceTab>("predict");
   const {
     stage1,
     stage2,
@@ -233,6 +306,24 @@ export default function RecommendStagePanel({
   const primary = stage1.primary;
   const extremeRate = stage1.primary_cv_extreme_rate ?? 0;
   const ranking = stage1.candidates_predictive ?? [];
+  const rankingKey = ranking
+    .map((c) => `${c.rank}:${c.response_scale}:${c.blocks.join(",")}`)
+    .join("|");
+  const defaultRank = ranking[0]?.rank ?? 1;
+  const [selectedRank, setSelectedRank] = useState(defaultRank);
+  useEffect(() => {
+    setSelectedRank(defaultRank);
+  }, [rankingKey, defaultRank]);
+  const judgmentByRank = new Map(
+    (stage1.predictive_judgments ?? []).map((row) => [row.rank, row]),
+  );
+  const selected = ranking.find((c) => c.rank === selectedRank) ?? ranking[0] ?? primary;
+  const selectedLabel =
+    judgmentByRank.get(selected.rank)?.label ??
+    (selected.rank === primary.rank ? "예측 최소" : "비교 후보");
+  const selectedIsPrimary =
+    selected.response_scale === primary.response_scale &&
+    selected.blocks.join(",") === primary.blocks.join(",");
   const resolvedAssetType = resolveRecommendAssetType(assetType, analysis_scope.asset_slice);
   const checks = diagnostics_checklist ?? [];
   const sampleChecks = checks.filter((c) => c.check_id === "sample");
@@ -249,7 +340,8 @@ export default function RecommendStagePanel({
         (Boolean(stage2.skipped_reason) && !emptyTwinSkip)),
   );
   const showTwinResults = twin1Done;
-  const canRunTwin = twinCandidateStatus === "ready" && Boolean(onRunTwin) && !conclusion.twin_ran;
+  const canRunTwin =
+    twinCandidateStatus === "ready" && Boolean(onRunTwin) && checkedTwinCodes.length > 0;
   const adminLevel = (analysis_scope.admin_level || "").toLowerCase();
   const twinBlockedAdmin = adminLevel === "sigungu" || adminLevel === "gu";
   const visiblePool = stage2?.ran
@@ -267,6 +359,30 @@ export default function RecommendStagePanel({
     Boolean(explanatory) &&
     (explanatory!.response_scale !== primary.response_scale ||
       explanatory!.blocks.join(",") !== primary.blocks.join(","));
+  const representativeConfirmed = stage1.representative_confirmed !== false;
+  const searchWhen = cvWhen(primary.cv_report?.search);
+  const confirmWhen = cvWhen(primary.cv_report?.confirm);
+  const primaryGap = confirmGapPp(primary.cv_report);
+  const withholdReasons = (() => {
+    if (representativeConfirmed) return [];
+    const search = primary.cv_report?.search;
+    const confirm = primary.cv_report?.confirm;
+    const lines: string[] = [];
+    if (search?.mape == null || (search.folds ?? 0) < 2) {
+      lines.push("탐색 검증이 한 해입니다.");
+    }
+    if ((search?.n_trades ?? 0) < 10) {
+      lines.push("탐색에 쓴 거래가 10건 미만입니다.");
+    }
+    if ((confirm?.years?.length ?? 0) > 0 && confirm?.mape == null) {
+      lines.push("마지막 연도 확인을 계산하지 못했습니다.");
+    }
+    if (primaryGap != null && primaryGap >= 10) {
+      lines.push(`확인 오차가 탐색보다 ${primaryGap.toFixed(1)}%p 큽니다.`);
+    }
+    if (!lines.length && stage1.representative_note) lines.push(stage1.representative_note);
+    return lines;
+  })();
 
   return (
     <div className="space-y-1.5 text-base">
@@ -281,16 +397,104 @@ export default function RecommendStagePanel({
         compact
         className="text-xs text-slate-500 mb-2"
       />
+      {(stage1.sample_drop_notes?.length ?? 0) > 0 && (
+        <p className="text-xs text-slate-500 mb-2">
+          {stage1.sample_drop_notes!.join(" · ")}
+        </p>
+      )}
 
-      <StageSection index="①" title="예측형 모형 탐색">
+      <WorkspaceTabs value={workspace} onChange={setWorkspace} />
+
+      {workspace === "predict" && (
+      <div role="tabpanel" className="space-y-2.5">
+        <p className="text-xs text-slate-500">
+          거래가격을 가장 잘 예측하는 식입니다. 순위는 탐색 CV이고, 확인 CV로 대표모형 확정을 가릅니다.
+        </p>
+        <div
+          className={clsx(
+            "rounded-lg border-2 px-3 py-3 space-y-2",
+            representativeConfirmed
+              ? "border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/20"
+              : "border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30",
+          )}
+        >
+          <p
+            className={clsx(
+              "text-sm font-semibold",
+              representativeConfirmed
+                ? "text-indigo-800 dark:text-indigo-200"
+                : "text-amber-900 dark:text-amber-200",
+            )}
+          >
+            {representativeConfirmed ? "예측 최소" : "탐색 1위 · 대표모형 미확정"}
+          </p>
+          <p className="text-sm text-slate-800 dark:text-slate-100">
+            {formatResponseScale(primary.response_scale)} · {blockSummary(primary.blocks)}
+          </p>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="rounded border border-slate-200/80 dark:border-slate-600 bg-white/70 dark:bg-slate-900/40 px-2 py-1.5">
+              <p className="text-xs text-slate-500">탐색 CV-MAPE</p>
+              <p className="text-lg font-semibold tabular-nums text-slate-900 dark:text-slate-100">
+                {primary.metrics.cv_mape != null ? `${primary.metrics.cv_mape.toFixed(2)}%` : "—"}
+              </p>
+              {searchWhen && <p className="text-xs text-slate-500">{searchWhen}</p>}
+            </div>
+            <div
+              className={clsx(
+                "rounded border px-2 py-1.5",
+                representativeConfirmed
+                  ? "border-slate-200/80 dark:border-slate-600 bg-white/70 dark:bg-slate-900/40"
+                  : "border-amber-300 dark:border-amber-700 bg-white/80 dark:bg-slate-900/50",
+              )}
+            >
+              <p className="text-xs text-slate-500">확인 CV-MAPE</p>
+              <p
+                className={clsx(
+                  "text-lg font-semibold tabular-nums",
+                  representativeConfirmed
+                    ? "text-slate-900 dark:text-slate-100"
+                    : "text-amber-900 dark:text-amber-200",
+                )}
+              >
+                {primary.cv_report?.confirm?.mape != null
+                  ? `${primary.cv_report.confirm.mape.toFixed(2)}%`
+                  : "—"}
+              </p>
+              <p className="text-xs text-slate-500">
+                {confirmWhen || stage1.primary_confirm_note || "확인 없음"}
+              </p>
+            </div>
+          </div>
+          {representativeConfirmed ? (
+            <p className="text-sm text-slate-700 dark:text-slate-200">
+              이 식을 이 지역 거래의 예측 기준선으로 둡니다. 왼쪽 기본 통계 식은 바꾸지 않습니다.
+            </p>
+          ) : (
+            <div className="text-sm text-amber-950 dark:text-amber-100 space-y-0.5">
+              {withholdReasons.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+              <p>이 식을 지역 대표 예측모형으로 확정하지 않았습니다.</p>
+              <p>왼쪽 기본 통계 식은 바꾸지 않습니다. 쌍둥이 확장은 이 탐색 1위를 출발점으로 씁니다.</p>
+            </div>
+          )}
+          {stage1.satisfaction.label_ko && (
+            <p className="text-xs text-slate-500">
+              등급 {stage1.satisfaction.label_ko}
+              {stage1.satisfaction.stars > 0 && ` ${"★".repeat(stage1.satisfaction.stars)}`}
+              {stage1.satisfaction.grade_basis === "confirm" && " · 확인 CV 기준"}
+            </p>
+          )}
+        </div>
+
         <CheckChips items={sampleChecks} />
         {warnings.length > 0 && (
           <ul className="text-xs text-amber-700 dark:text-amber-400 space-y-0.5">
             {warnings.map((w) => (
               <li key={w}>⚠ {w}</li>
-          ))}
-        </ul>
-      )}
+            ))}
+          </ul>
+        )}
 
         <div className="overflow-x-auto rounded-md border border-slate-200 dark:border-slate-700">
           <table className="w-full text-left text-xs border-collapse">
@@ -299,17 +503,37 @@ export default function RecommendStagePanel({
                 <th className="py-1.5 px-2 font-medium">순위</th>
                 <th className="py-1.5 pr-2 font-medium">척도</th>
                 <th className="py-1.5 pr-2 font-medium">변수</th>
-                <th className="py-1.5 pr-2 font-medium">CV-MAPE</th>
-                <th className="py-1.5 pr-2 font-medium">판단</th>
+                <th className="py-1.5 pr-2 font-medium">탐색 CV</th>
+                <th className="py-1.5 pr-2 font-medium">확인 CV</th>
+                <th className="py-1.5 pr-2 font-medium">차이(%p)</th>
+                <th className="py-1.5 pr-2 font-medium">상태</th>
               </tr>
             </thead>
             <tbody>
-              {ranking.map((c) => (
+              {ranking.map((c) => {
+                const judged = judgmentByRank.get(c.rank);
+                const gap = judged?.cv_gap_pp;
+                const label = judged?.label ?? (c.rank === 1 ? "예측 최소" : "비교 후보");
+                const interpretive = label.includes("해석 후보");
+                const status = label.replace(" · 해석 후보", "");
+                const rowUnconfirmed = c.rank === primary.rank && !representativeConfirmed;
+                const confirmWeak = confirmIsWeaker(c.cv_report);
+                return (
                 <tr
                   key={`${c.rank}-${c.response_scale}-${c.blocks.join(",")}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={c.rank === selected.rank}
+                  onClick={() => setSelectedRank(c.rank)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedRank(c.rank);
+                    }
+                  }}
                 className={clsx(
-                    "border-b border-slate-100 dark:border-slate-800 last:border-0",
-                    c.rank === 1 && "bg-indigo-50/70 dark:bg-indigo-950/30",
+                    "cursor-pointer border-b border-slate-100 dark:border-slate-800 last:border-0",
+                    c.rank === selected.rank && "bg-indigo-50/70 dark:bg-indigo-950/30",
                   )}
                 >
                   <td className="py-1.5 px-2 tabular-nums font-semibold text-indigo-700 dark:text-indigo-300">
@@ -318,94 +542,247 @@ export default function RecommendStagePanel({
                   <td className="py-1.5 pr-2">{formatResponseScale(c.response_scale)}</td>
                   <td className="py-1.5 pr-2">{blockSummary(c.blocks)}</td>
                   <td className="py-1.5 pr-2 tabular-nums">
-                    {c.metrics.cv_mape != null ? `${c.metrics.cv_mape.toFixed(1)}%` : "—"}
+                    {c.metrics.cv_mape != null ? `${c.metrics.cv_mape.toFixed(2)}%` : "—"}
+                    {cvWhen(c.cv_report?.search) && (
+                      <div className="text-[10px] leading-snug text-slate-500">{cvWhen(c.cv_report?.search)}</div>
+                    )}
                   </td>
-                  <td className="py-1.5 pr-2 text-slate-500">
-                    {c.rank === 1 ? "대표 예측모형" : "비교 후보"}
+                  <td
+                    className={clsx(
+                      "py-1.5 pr-2 tabular-nums",
+                      confirmWeak && "text-amber-800 dark:text-amber-300 font-medium",
+                    )}
+                  >
+                    {c.cv_report?.confirm?.mape != null
+                      ? `${c.cv_report.confirm.mape.toFixed(2)}%`
+                      : c.cv_report?.confirm?.years?.length
+                        ? "계산 없음"
+                        : "—"}
+                    {cvWhen(c.cv_report?.confirm) && (
+                      <div className="text-[10px] leading-snug font-normal text-slate-500">
+                        {cvWhen(c.cv_report?.confirm)}
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-1.5 pr-2 tabular-nums">
+                    {gap == null ? "—" : gap === 0 ? "0.00" : `+${gap.toFixed(2)}`}
+                  </td>
+                  <td className="py-1.5 pr-2 text-slate-600 dark:text-slate-300">
+                    <div>{status}</div>
+                    {rowUnconfirmed && (
+                      <div className="mt-0.5 inline-block rounded bg-amber-200/80 px-1.5 py-0.5 text-[10px] font-semibold text-amber-950 dark:bg-amber-900/60 dark:text-amber-100">
+                        미확정
+                      </div>
+                    )}
+                    {interpretive && <div className="text-[10px] text-slate-500">해석 후보</div>}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
 
-        <div className="rounded-lg border-2 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/20 px-3 py-3 space-y-1">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
-            대표 예측모형
-          </p>
-          <p className="text-xl font-bold text-slate-900 dark:text-slate-100">
-            {primary.metrics.cv_mape != null
-              ? `CV-MAPE ${primary.metrics.cv_mape.toFixed(1)}%`
-              : "CV 미산출"}
-            <span className="ml-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
-              {formatResponseScale(primary.response_scale)}
-        </span>
-            {stage1.satisfaction.label_ko && (
-              <span className="ml-2 text-sm font-medium text-slate-500 dark:text-slate-400">
-                {stage1.satisfaction.label_ko}
-                {stage1.satisfaction.stars > 0 && ` ${"★".repeat(stage1.satisfaction.stars)}`}
-                {stage1.satisfaction.grade_basis === "confirm" && " (마지막 연도 기준)"}
-          </span>
-        )}
-          </p>
-          <p className="text-sm text-slate-700 dark:text-slate-200">
-            {stage1.primary_confirm_cv_mape != null ? (
-              <>
-                마지막 연도로 확인:{" "}
-                <span className="font-semibold tabular-nums">
-                  {stage1.primary_confirm_cv_mape.toFixed(1)}%
+        <p className="text-xs text-slate-500">
+          순위를 누르면 그 식과 계수를 봅니다. Local 기준선과 Twin은 예측 최소 식입니다.
+        </p>
+
+        <div className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-3 space-y-2">
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+            #{selected.rank} · {selectedLabel}
+            <span className="ml-2 text-xs font-medium text-slate-500">
+              {formatResponseScale(selected.response_scale)} · {blockSummary(selected.blocks)}
             </span>
-                {stage1.primary_confirm_cv_folds
-                  ? ` (거래 ${stage1.primary_confirm_cv_folds}개 연도)`
-                  : ""}
-              </>
-            ) : (
-              <span className="text-slate-500 dark:text-slate-400">
-                {stage1.primary_confirm_note ?? "마지막 연도 확인 CV 없음"}
-          </span>
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <div className="rounded border border-slate-200 dark:border-slate-700 px-2 py-1.5">
+              <p className="text-slate-500">탐색 CV</p>
+              <p className="font-medium tabular-nums">
+                {selected.metrics.cv_mape != null ? `${selected.metrics.cv_mape.toFixed(2)}%` : "—"}
+              </p>
+              {cvWhen(selected.cv_report?.search) && (
+                <p className="text-[10px] text-slate-500">{cvWhen(selected.cv_report?.search)}</p>
+              )}
+            </div>
+            <div className="rounded border border-slate-200 dark:border-slate-700 px-2 py-1.5">
+              <p className="text-slate-500">확인 CV</p>
+              <p
+                className={clsx(
+                  "font-medium tabular-nums",
+                  confirmIsWeaker(selected.cv_report) && "text-amber-800 dark:text-amber-300",
+                )}
+              >
+                {selected.cv_report?.confirm?.mape != null
+                  ? `${selected.cv_report.confirm.mape.toFixed(2)}%`
+                  : "—"}
+              </p>
+              {cvWhen(selected.cv_report?.confirm) && (
+                <p className="text-[10px] text-slate-500">{cvWhen(selected.cv_report?.confirm)}</p>
+              )}
+            </div>
+            <div className="rounded border border-slate-200 dark:border-slate-700 px-2 py-1.5">
+              <p className="text-slate-500">Adj R²</p>
+              <p className="font-medium tabular-nums">
+                {selected.metrics.adj_r_squared != null
+                  ? selected.metrics.adj_r_squared.toFixed(3)
+                  : "—"}
+              </p>
+            </div>
+            <div className="rounded border border-slate-200 dark:border-slate-700 px-2 py-1.5">
+              <p className="text-slate-500">학습 MAPE</p>
+              <p className="font-medium tabular-nums">
+                {selected.metrics.mape != null ? `${selected.metrics.mape.toFixed(2)}%` : "—"}
+              </p>
+            </div>
+          </div>
+          <CandidateEquationBlock
+            candidate={selected}
+            assetType={resolvedAssetType}
+            narratives={selectedIsPrimary ? (coefficient_narratives ?? []) : []}
+          />
+          <p className="text-xs text-slate-500 leading-relaxed">
+            이 식과 계수는 탐색에 쓴 같은 표본입니다. 값 계산은 이 식의 열만 보고 다시 적합하므로,
+            순위표에서 뺀 숫자 결측이 이 식에 없으면 건수가 달라질 수 있습니다.
+          </p>
+          {onPredict && (
+            <details
+              key={`${selected.rank}-${selected.response_scale}-${selected.blocks.join(",")}`}
+              className="rounded-md border border-slate-200 dark:border-slate-700 px-2.5 py-2"
+              onToggle={(e) => {
+                if ((e.target as HTMLDetailsElement).open) {
+                  onPredict(
+                    selected.variables,
+                    selected.response_scale,
+                    `#${selected.rank} ${selectedLabel}`,
+                  );
+                }
+              }}
+            >
+              <summary className="cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-200">
+                이 순위로 값 계산해 보기
+              </summary>
+              <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                통계적 추정값입니다. 지역 거래자료에서 관찰된 변수 간 관계를 이용해 산출한 참고값이며,
+                개별 대상물건의 감정평가액이나 AVM 가격이 아닙니다.
+              </p>
+              {predictPanel}
+            </details>
+          )}
+        </div>
+
+        {(stage1.parity_notes?.length ?? 0) > 0 && (
+          <div className="space-y-1">
+            {stage1.parity_notes!.map((note) => (
+              <p key={note} className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                {note}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {stage1.assessed_side?.note && (
+          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            {stage1.assessed_side.note}
+          </p>
+        )}
+
+        {(stage1.primary_cv_median_ape != null || stage1.primary_cv_extreme_rate != null) && (
+          <p className="text-xs text-slate-600 dark:text-slate-300">
+            {stage1.primary_cv_median_ape != null && (
+              <>중위 오차 {stage1.primary_cv_median_ape.toFixed(1)}%</>
+            )}
+            {stage1.primary_cv_extreme_rate != null && (
+              <span className={extremeRate > 0.05 ? "text-amber-700 dark:text-amber-400" : ""}>
+                {stage1.primary_cv_median_ape != null ? " · " : ""}
+                범위 밖 예측 {(extremeRate * 100).toFixed(1)}%
+              </span>
             )}
           </p>
-          {(stage1.primary_cv_extreme_rate != null || stage1.primary_cv_median_ape != null) && (
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              {stage1.primary_cv_median_ape != null && (
-                <>
-                  중위 오차{" "}
-                  <span className="font-semibold tabular-nums">
-                    {stage1.primary_cv_median_ape.toFixed(1)}%
-                  </span>
-                </>
-              )}
-              {stage1.primary_cv_extreme_rate != null && (
-                <span className={extremeRate > 0 ? "text-amber-700 dark:text-amber-400" : ""}>
-                  {stage1.primary_cv_median_ape != null ? " · " : ""}
-                  범위 밖 예측{" "}
-                  <span className="font-semibold tabular-nums">
-                    {(stage1.primary_cv_extreme_rate * 100).toFixed(1)}%
-                  </span>
-                </span>
-              )}
-            </p>
-          )}
-          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-            전체 후보 중 교차검증 오차가 가장 낮은 모형입니다. 위 CV-MAPE는 마지막 연도를 떼어
-            놓고 후보를 고를 때 쓴 값이라 낙관적이므로, 고르는 데 전혀 쓰지 않은 마지막 연도로 한
-            번 더 확인합니다. 오차는 예측을 자르지 않은 값이라, 크게 틀린 예측이 있으면 그대로
-            반영됩니다. 다음 단계에서 이 지역 거래만의 예측 기준선으로 확정합니다.
+        )}
+        {extremeRate > 0.05 && (
+          <p className="text-sm text-amber-800 dark:text-amber-300 leading-relaxed">
+            예측 {(extremeRate * 100).toFixed(0)}%가 학습 거래 가격 범위를 한 자릿수 이상 벗어났습니다.
+            평균 오차가 낮아도 개별 예측이 불안정할 수 있습니다.
           </p>
-          {extremeRate > 0.05 && (
-            <p className="text-sm text-amber-700 dark:text-amber-400 leading-relaxed">
-              이 모형의 예측 {(extremeRate * 100).toFixed(0)}%가 학습 거래 가격 범위를 한 자릿수
-              이상 벗어났습니다. 평균 오차가 낮아도 개별 예측이 불안정할 수 있으니, 예상값은 입력
-              조건이 실제 거래 범위 안에 있는지 함께 확인하세요.
-        </p>
+        )}
+        <details className="text-xs text-slate-500">
+          <summary className="cursor-pointer">CV를 읽는 법</summary>
+          <p className="mt-1 leading-relaxed">
+            순위는 마지막 연도를 뺀 탐색 CV가 낮은 순입니다. 최저보다 1.0%p 이내이고 표본이 같으면
+            성능 유사입니다. 이 폭은 화면 규칙이며 통계적 동률이 아닙니다. 확인 CV는 고르는 데 쓰지
+            않은 마지막 연도입니다. 탐색 CV만으로 이 지역 전체의 기대오차라고 읽지 않습니다.
+          </p>
+        </details>
+      </div>
       )}
-    </div>
-      </StageSection>
+
+      {workspace === "explain" && (
+        <div role="tabpanel" className="space-y-2.5">
+          <p className="text-xs text-slate-500">
+            가격 차이를 설명하는 식입니다. log·log-log 중에서 AIC가 가장 낮은 식을 보여 줍니다.
+            예측형 순위와 별개이며, 특정 변수를 우선해 고르지 않습니다.
+          </p>
+          {explanatory ? (
+            <div className="rounded-lg border border-teal-200 dark:border-teal-800 bg-teal-50/40 dark:bg-teal-950/20 px-3 py-3 space-y-2">
+              <p className="text-sm font-semibold text-teal-900 dark:text-teal-100">AIC 1위</p>
+              <p className="text-sm text-slate-800 dark:text-slate-100">
+                {formatResponseScale(explanatory.response_scale)} · {blockSummary(explanatory.blocks)}
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                <div className="rounded border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/40 px-2 py-1.5">
+                  <p className="text-slate-500">AIC</p>
+                  <p className="font-medium tabular-nums">
+                    {explanatory.aic != null ? explanatory.aic.toFixed(1) : "—"}
+                  </p>
+                </div>
+                <div className="rounded border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/40 px-2 py-1.5">
+                  <p className="text-slate-500">Adj R²</p>
+                  <p className="font-medium tabular-nums">
+                    {explanatory.metrics.adj_r_squared != null
+                      ? explanatory.metrics.adj_r_squared.toFixed(3)
+                      : "—"}
+                  </p>
+                </div>
+                <div className="rounded border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/40 px-2 py-1.5">
+                  <p className="text-slate-500">학습 MAPE</p>
+                  <p className="font-medium tabular-nums">
+                    {explanatory.metrics.mape != null ? `${explanatory.metrics.mape.toFixed(2)}%` : "—"}
+                  </p>
+                </div>
+                <div className="rounded border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/40 px-2 py-1.5">
+                  <p className="text-slate-500">탐색 CV</p>
+                  <p className="font-medium tabular-nums">
+                    {explanatory.metrics.cv_mape != null ? `${explanatory.metrics.cv_mape.toFixed(2)}%` : "—"}
+                  </p>
+                </div>
+              </div>
+              <p className="text-sm text-slate-700 dark:text-slate-200">
+                {explDiffers
+                  ? `예측형 탐색 1위는 ${formatResponseScale(primary.response_scale)} · ${blockSummary(primary.blocks)} 입니다. 이 AIC 1위는 그 순위를 바꾸지 않습니다.`
+                  : "예측형 탐색 1위와 같은 식입니다."}
+              </p>
+              <CandidateEquationBlock
+                candidate={explanatory}
+                assetType={resolvedAssetType}
+                narratives={[]}
+              />
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">설명형으로 고를 수 있는 식이 없습니다.</p>
+          )}
+        </div>
+      )}
+
+      {workspace === "twin" && (
+      <div role="tabpanel" className="space-y-1.5">
+        <p className="text-xs text-slate-500">
+          출발점은 예측형 탐색 1위입니다. 대표모형 확정과는 별개이며, 기본 통계 식은 바꾸지 않습니다.
+          {!representativeConfirmed && " 지금은 탐색 1위를 대표모형으로 확정하지 않은 상태입니다."}
+        </p>
 
       <StageSection index="②" title="Local 기준선">
         <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-          이 지역 거래만으로 대표 예측모형이 어느 정도 맞는지입니다. Twin 실험1을 눌러도 이 Local
-          식은 바뀌지 않습니다. Twin1 결과는 ③에 따로 붙습니다.
+          선택 지역 거래만으로 본 예측 최소 식입니다. Twin 실험1을 눌러도 이 식은 바뀌지 않습니다.
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
           <div className="rounded border border-slate-200 dark:border-slate-700 px-2 py-1.5">
@@ -438,120 +815,89 @@ export default function RecommendStagePanel({
           </p>
         )}
         <CheckChips items={resultChecks} />
+        <p className="text-xs text-slate-500 leading-relaxed">
+          식과 값 계산은 예측형 탭에서 고른 순위입니다. 이 절의 숫자는 예측 최소 식입니다.
+        </p>
 
-        <CandidateEquationBlock
-          candidate={primary}
-          assetType={resolvedAssetType}
-          narratives={coefficient_narratives ?? []}
-        />
-
-        {explDiffers && explanatory && (
-          <p className="text-xs text-slate-500">
-            같은 풀에서 AIC로 본 설명형 1위는 {formatResponseScale(explanatory.response_scale)} ·{" "}
-            {blockSummary(explanatory.blocks)} 입니다. 이 장의 식은 CV-MAPE 대표 예측모형입니다.
-          </p>
-        )}
-
-          {onAdopt && (
+        {(stage1.provision_notes?.length ?? 0) > 0 && (
           <div className="space-y-1">
-            <button
-              type="button"
-              className="px-2.5 py-1 text-sm rounded bg-indigo-600 text-white disabled:opacity-50"
-              disabled={adopting}
-              onClick={() => {
-                const ok = window.confirm(
-                  "이 추천식을 기본 통계에 적용하시겠습니까?\n\n왼쪽 변수 선택과 회귀모형만 바뀝니다. 오른쪽 숫자는 「통계분석」을 다시 눌러야 갱신됩니다.",
-                );
-                if (!ok) return;
-                onAdopt(primary.variables, primary.response_scale);
-              }}
-            >
-              기본 통계에 이 식 적용
-            </button>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              확인 후에만 왼쪽 선택이 바뀝니다. 통계분석은 자동으로 실행하지 않습니다.
-            </p>
+            {stage1.provision_notes!.map((note) => (
+              <p key={note} className="text-[11px] leading-snug text-slate-600 dark:text-slate-300">
+                {note}
+              </p>
+            ))}
           </div>
-          )}
-
-          {onPredict && (
-          <details
-            className="rounded-md border border-slate-200 dark:border-slate-700 px-2.5 py-2"
-            onToggle={(e) => {
-              if ((e.target as HTMLDetailsElement).open) {
-                onPredict(primary.variables, primary.response_scale, "대표 예측모형");
-              }
-            }}
-          >
-            <summary className="cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-200">
-              이 모형으로 값 계산해 보기
-            </summary>
-            <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              통계적 추정값입니다. 지역 거래자료에서 관찰된 변수 간 관계를 이용해 산출한 참고값이며,
-              개별 대상물건의 감정평가액이나 AVM 가격이 아닙니다.
-            </p>
-            {predictPanel}
-          </details>
         )}
       </StageSection>
 
-      <StageSection index="③" title="Twin 실험1">
+      <StageSection index="③" title="추가 지역">
         <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-          Local 식은 ②에 그대로 둡니다. Twin 실험1은 쌍둥이 1위 거래만 보태고, Local에 지역 더미가
-          있었든 없었든 지역 더미를 넣어 다시 적합합니다. 예측오차와 계수 방향으로 적용 여부를
-          판단합니다.
+          위의 Local 식은 그대로 둡니다. 목록에서 지역을 고르면 그 거래를 지금 지역과 한 표본으로
+          합치고, 지역 더미를 넣어 다시 적합합니다. 예측오차와 계수 방향으로 적용 여부를 판단합니다.
         </p>
         <CheckChips items={twinChecks} />
 
-        {twinCandidateStatus === "loading" && !conclusion.twin_ran && (
+        {twinCandidateStatus === "loading" && (
           <p className="text-sm text-slate-500">유사 지역 후보를 불러오는 중…</p>
         )}
 
-        {twinCandidateStatus === "none" && !conclusion.twin_ran && (
+        {twinCandidateStatus === "none" && (
           <p className="text-sm text-slate-500">
             {twinBlockedAdmin
-              ? "시군구·구 초점에는 Twin 실험을 붙이지 않습니다."
-              : "이 지역의 Profile Twin 후보가 없어 실험을 돌릴 수 없습니다."}
+              ? "시군구·구 초점에는 쌍둥이 확장을 붙이지 않습니다."
+              : "이 지역의 쌍둥이 후보가 없어 실험을 돌릴 수 없습니다."}
           </p>
         )}
 
-        {twinRunning && !showTwinResults && (
-          <p className="text-sm text-violet-800 dark:text-violet-200">
-            Local 최적식은 그대로입니다. Twin 실험1(쌍둥이 1위 + 지역 더미)을 계산 중…
+        {twinChoices.length > 0 && (
+          <div className="modal-table-wrap">
+            <table className="w-full text-[11px]">
+              <thead>
+                <tr>
+                  <th className="text-left w-8">선택</th>
+                  <th className="text-right">순위</th>
+                  <th className="text-left">지역</th>
+                </tr>
+              </thead>
+              <tbody>
+                {twinChoices.map((row) => (
+                  <tr key={row.code}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={checkedTwinCodes.includes(row.code)}
+                        onChange={() => onToggleTwinCode?.(row.code)}
+                        aria-label={`${row.rank}위 ${row.label}`}
+                      />
+                    </td>
+                    <td className="text-right tabular-nums">{row.rank}</td>
+                    <td>{row.label}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {twinCandidateStatus === "ready" && checkedTwinCodes.length === 0 && (
+          <p className="text-sm text-slate-500">추가할 지역을 하나 이상 고르면 통합회귀를 실행할 수 있습니다.</p>
+        )}
+
+        {conclusion.twin_recommended && twinCandidateStatus === "ready" && (
+          <p className="text-sm text-violet-900 dark:text-violet-100">
+            Local 표본만으로는 예측 기준선이 얇을 수 있어, 유사 지역 거래를 보탠 검증을 권합니다.
           </p>
         )}
 
-        {conclusion.twin_recommended && canRunTwin && (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-violet-200 dark:border-violet-800 bg-violet-50/60 dark:bg-violet-950/20 px-2.5 py-2">
-            <p className="text-sm text-violet-900 dark:text-violet-100">
-              Local 표본만으로는 예측 기준선이 얇을 수 있어, 유사 지역 1위 거래를 보탠 검증을 권합니다.
-              </p>
-              <button
-                type="button"
-              className="px-2.5 py-1 text-sm rounded bg-violet-600 text-white disabled:opacity-50"
-                disabled={twinRunning}
-                onClick={onRunTwin}
-              >
-              {twinRunning ? "Twin 실험1 중…" : "Twin 실험1"}
-              </button>
-            </div>
-          )}
-
-        {!conclusion.twin_recommended && canRunTwin && (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-violet-200 dark:border-violet-800 px-2.5 py-2">
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              교차검증 오차가 낮아 Twin은 필수는 아닙니다. 쌍둥이 1위 표본을 보태면 예측이 나아지는지는
-              실험해 볼 수 있습니다.
-            </p>
-                    <button
-                      type="button"
-              className="px-2.5 py-1 text-sm rounded border border-violet-400 text-violet-800 dark:text-violet-200 disabled:opacity-50"
-              disabled={twinRunning}
-              onClick={onRunTwin}
-            >
-              {twinRunning ? "Twin 실험1 중…" : "Twin 실험1"}
-                    </button>
-                  </div>
+        {twinCandidateStatus === "ready" && (
+          <button
+            type="button"
+            className="px-2.5 py-1 text-sm rounded bg-violet-600 text-white disabled:opacity-50"
+            disabled={!canRunTwin || twinRunning}
+            onClick={onRunTwin}
+          >
+            {twinRunning ? "적합 중…" : "통합회귀 실행"}
+          </button>
         )}
 
         {showTwinResults && stage2 && (
@@ -577,13 +923,13 @@ export default function RecommendStagePanel({
 
       <StageSection index="④" title="Twin 실험2">
         <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-          Twin 1위만 보탠 표본에서 예측형 식을 다시 고릅니다. 출시 전 확인용이며 기본 통계 식은 바꾸지
+          선택한 지역을 보탠 표본에서 예측형 식을 다시 고릅니다. 출시 전 확인용이며 기본 통계 식은 바꾸지
           않습니다.
         </p>
 
         {!twin1Done && (
           <p className="text-sm text-slate-500">
-            Twin 실험1을 실행하면 그 1위 표본으로 Twin 실험2를 돌릴 수 있습니다.
+            통합회귀를 실행하면 그 표본으로 식을 다시 고를 수 있습니다.
                   </p>
                 )}
 
@@ -594,8 +940,7 @@ export default function RecommendStagePanel({
         {twin1Done && onRunTwinResearch && !stage2?.research_ran && (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 px-2.5 py-2">
             <p className="text-sm text-amber-950 dark:text-amber-100">
-              Twin1과 같은 1위 표본에서 CV-MAPE로 식을 다시 고릅니다. Local 식은 ②에, Twin1 식은 ③에
-              그대로 둡니다.
+              Twin1과 같은 1위 표본에서 CV-MAPE로 식을 다시 고릅니다. Local 식과 Twin1 식은 그대로 둡니다.
             </p>
                   <button
                     type="button"
@@ -638,6 +983,8 @@ export default function RecommendStagePanel({
           twin2Pool={stage2?.research ?? null}
         />
       </StageSection>
+      </div>
+      )}
 
       {termination.reasons.length > 0 && (
         <details className="rounded border border-slate-200 dark:border-slate-700 px-2.5 py-2 text-sm">
@@ -668,28 +1015,27 @@ function CandidateEquationBlock({
   if (!coeffs.length) return null;
   return (
     <div className="space-y-1">
-      <div className="flex items-center gap-1 text-sm font-semibold text-slate-600 dark:text-slate-400">
-        회귀식
-        <StatsGlossaryHelp termId="coefficient" size="xs" />
-      </div>
-      <RegressionEquation
-        coefficients={coeffs}
-        responseScale={candidate.response_scale}
-        assetType={assetType}
-      />
-      <details className="text-sm" open>
-        <summary className="cursor-pointer text-slate-600 dark:text-slate-400 font-medium">
-          계수 상세
+      <details className="text-sm">
+        <summary className="cursor-pointer text-slate-600 dark:text-slate-400 font-medium inline-flex items-center gap-1">
+          회귀식 · 계수
+          <StatsGlossaryHelp termId="coefficient" size="xs" />
         </summary>
-        <RegressionEffectsTable
-          coefficients={coeffs}
-          responseScale={candidate.response_scale}
-          assetType={assetType}
-        />
-        <CoefficientInsights items={narratives} />
+        <div className="mt-2 space-y-1">
+          <RegressionEquation
+            coefficients={coeffs}
+            responseScale={candidate.response_scale}
+            assetType={assetType}
+          />
+          <RegressionEffectsTable
+            coefficients={coeffs}
+            responseScale={candidate.response_scale}
+            assetType={assetType}
+          />
+          <CoefficientInsights items={narratives} />
+        </div>
       </details>
       <ZoneCaution />
-      </div>
+    </div>
   );
 }
 
@@ -801,7 +1147,7 @@ function TwinStructureResult({
       <p className="text-[11px] text-slate-500 leading-relaxed">
         후보 지역은 거래 구성·토지 이용·체급으로 고릅니다. 거래가격으로 고르지 않습니다. 판단 순서는
         예측력 → 계수 안정 → 표본 규모입니다. 아래 예측은 채택과 별개로, 쌍둥이 1위 표본에 Local 식 +
-        지역 더미를 다시 적합한 값입니다. Local 식은 ②에 그대로 있습니다.
+        지역 더미를 다시 적합한 값입니다. Local 식은 위에 그대로 있습니다.
       </p>
 
       {predictPool && (

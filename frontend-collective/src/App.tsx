@@ -51,7 +51,6 @@ import {
 } from "./utils/regionListCache";
 import {
   encodeResidentialAssetKinds,
-  RESIDENTIAL_ASSET_KINDS,
   RESIDENTIAL_KIND_LABELS,
   toggleResidentialAssetKind,
   type ResidentialAssetKind,
@@ -461,7 +460,7 @@ export default function App() {
                 기본은 아파트. 필요 시 유형을 추가해 함께 조회합니다.
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {RESIDENTIAL_ASSET_KINDS.map((kind) => {
+                {(["apartment", "officetel", "rowhouse", "presale"] as const).map((kind) => {
                   const on = assetKinds.includes(kind);
                   return (
                     <button

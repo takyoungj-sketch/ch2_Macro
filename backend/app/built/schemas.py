@@ -400,6 +400,11 @@ class RegressionLevelResult(BaseModel):
     predict_options: Optional[PredictOptions] = None
     warning: Optional[str] = None
     mape: Optional[float] = None  # in-sample MAPE (%), 원척도 금액(만원)
+    # 초점 식만. 모형 추천과 같은 연도 롤링 CV. 상위 비교에는 비운다.
+    cv_mape: Optional[float] = None
+    cv_folds: int = 0
+    confirm_cv_mape: Optional[float] = None
+    confirm_cv_note: Optional[str] = None
     categorical_missing: Literal["keep_unknown", "drop"] = "keep_unknown"
     n_excluded_missing: int = 0
     missing_treatment_label: str = ""
@@ -459,9 +464,27 @@ class RecommendationSatisfaction(BaseModel):
     grade_basis: Optional[str] = None
 
 
+class AssessedSideNote(BaseModel):
+    """대표식에 개별공시지가를 더한 옆 비교. 순위 번호는 붙이지 않는다."""
+
+    n: int = 0
+    cv_mape: Optional[float] = None
+    note: str = ""
+
+
+class PredictiveJudgment(BaseModel):
+    """예측형 순위 한 줄의 화면 판단. 1.0%p 밴드는 통계적 동률이 아니다."""
+
+    rank: int
+    cv_gap_pp: Optional[float] = None
+    label: str
+
+
 class RecommendationStage1(BaseModel):
     candidates_explanatory: list[ModelCandidate] = Field(default_factory=list)
     candidates_predictive: list[ModelCandidate] = Field(default_factory=list)
+    predictive_judgments: list[PredictiveJudgment] = Field(default_factory=list)
+    parity_notes: list[str] = Field(default_factory=list)
     primary: ModelCandidate
     alternate: Optional[ModelCandidate] = None
     selection_n: int = 0
@@ -480,6 +503,12 @@ class RecommendationStage1(BaseModel):
     # 지표를 끌고 있다는 뜻이다.
     primary_cv_extreme_rate: Optional[float] = None
     primary_cv_median_ape: Optional[float] = None
+    sample_drop_notes: list[str] = Field(default_factory=list)
+    provision_notes: list[str] = Field(default_factory=list)
+    assessed_side: Optional[AssessedSideNote] = None
+    # 탐색 1위를 대표모형으로 확정했는지. 순위는 바꾸지 않는다.
+    representative_confirmed: bool = True
+    representative_note: Optional[str] = None
 
 
 class RecommendationPoolCandidate(BaseModel):
@@ -615,6 +644,8 @@ class RegressionSelectionRequest(RegressionRunRequest):
     profile_as_of_month: Optional[str] = None
     profile_window_years: Optional[int] = None
     profile_twin_neighbors: list[dict[str, object]] = Field(default_factory=list)
+    # 비어 있으면 기존처럼 구조 1위만. 값이 있으면 그 지역만 한 표본으로 합친다.
+    selected_twin_codes: list[str] = Field(default_factory=list)
     run_stage2: bool = False
     run_stage2_research: bool = False
     # Lab/실험: 지역 프로필 공변량을 후보 풀에 추가 (제품 기본 경로 off)
@@ -754,6 +785,22 @@ class RegressionSuggestResponse(BaseModel):
     explain: Optional[AnalysisExplain] = None
 
 
+class CvCoverage(BaseModel):
+    """한 CV 구간에서 실제로 오차를 낸 연도와 거래 수. folds는 연도 수다."""
+
+    mape: Optional[float] = None
+    folds: int = 0
+    n_trades: int = 0
+    years: list[int] = Field(default_factory=list)
+
+
+class CandidateCvReport(BaseModel):
+    """탐색 CV와 마지막 연도 확인. 순위는 탐색 CV만 쓴다."""
+
+    search: CvCoverage = Field(default_factory=CvCoverage)
+    confirm: CvCoverage = Field(default_factory=CvCoverage)
+
+
 class ModelCandidate(BaseModel):
     rank: int
     blocks: list[str]
@@ -765,6 +812,44 @@ class ModelCandidate(BaseModel):
     bic: Optional[float] = None
     joint_f_tests: dict[str, JointFTest] = Field(default_factory=dict)
     coefficients: list[RegressionCoeff] = Field(default_factory=list)
+    cv_report: Optional[CandidateCvReport] = None
+
+
+class Recommend2Excluded(BaseModel):
+    """추천2 풀에서 뺀 블록. 현행 추천 응답에는 넣지 않는다."""
+
+    detail: str
+
+
+class Recommend2Side(BaseModel):
+    """개별공시지가를 더한 옆 비교. 행이 달라 예측형 순위가 아니다."""
+
+    block_summary: str
+    response_scale: ResponseScale
+    n: int
+    n_rank: int
+    coverage_ratio: Optional[float] = None
+    cv_mape: Optional[float] = None
+    confirm_cv_mape: Optional[float] = None
+    result: RegressionLevelResult
+
+
+class Recommend2Response(BaseModel):
+    notice: str
+    scope_label: str
+    n_pool: int
+    pool_summary: str
+    excluded: list[Recommend2Excluded] = Field(default_factory=list)
+    primary: RegressionLevelResult
+    variables: RegressionVariableSpec
+    response_scale: ResponseScale
+    cv_mape: Optional[float] = None
+    confirm_cv_mape: Optional[float] = None
+    cv_n: Optional[int] = None
+    explanatory_scale: Optional[ResponseScale] = None
+    explanatory_note: str
+    sides: list[Recommend2Side] = Field(default_factory=list)
+    total_subsets: int = 0
 
 
 class RegressionCompareResponse(BaseModel):

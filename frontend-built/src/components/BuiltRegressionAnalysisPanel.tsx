@@ -81,8 +81,7 @@ export default function BuiltRegressionAnalysisPanel({
           <div className="min-w-0">
             <h2 className="font-semibold text-sm">Macro 모형 탐색</h2>
             <p className="text-xs text-slate-500 mt-1">
-              변수 조합과 척도를 CV-MAPE로 탐색합니다. 추천식을 쓰려면 창 안에서 「기본 통계에 이
-              식 적용」을 누른 뒤, 왼쪽 「통계분석」을 다시 실행하세요.
+              변수 조합과 척도를 CV-MAPE로 탐색합니다. 이 창은 왼쪽 기본 통계 식을 바꾸지 않습니다.
             </p>
           </div>
           <button

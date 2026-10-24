@@ -5,6 +5,7 @@ import CollapsibleLeftSidebar from "@ch2/macro-shell/CollapsibleLeftSidebar";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
+import Recommend2Modal from "./components/Recommend2Modal";
 import {
   fetchAddr2,
   fetchAddr3WithCounts,
@@ -380,28 +381,6 @@ function defaultVarsForKinds(kinds: BuiltAssetKind[]): RegressionVariableSpec {
   return { ...DEFAULT_VARS_BY_KIND[kinds[0] ?? "commercial"] };
 }
 
-const VAR_SPEC_KEYS: (keyof RegressionVariableSpec)[] = [
-  "gross_area",
-  "land_area",
-  "building_age",
-  "road_width_dummy",
-  "zone_type_dummy",
-  "building_use_dummy",
-  "structure_dummy",
-  "assessed_land_price",
-  "asset_type_dummy",
-  "region_leaf_dummy",
-];
-
-/** Macro 추천 응답에 백엔드 전용 필드가 섞여 있어도 화면 체크박스 키만 받는다. */
-function specFromRecommended(src: RegressionVariableSpec): RegressionVariableSpec {
-  const out = defaultVarsForKinds(["commercial"]);
-  for (const key of VAR_SPEC_KEYS) {
-    if (typeof src[key] === "boolean") out[key] = src[key];
-  }
-  return out;
-}
-
 function fmtNum(n?: number | null, digits = 0) {
   if (n == null || Number.isNaN(n)) return "—";
   return n.toLocaleString("ko-KR", {
@@ -566,6 +545,7 @@ export default function App() {
   const [yearFrom] = useState<number | "">("");
   const [yearTo] = useState<number | "">("");
   const [txModalOpen, setTxModalOpen] = useState(false);
+  const [recommend2Open, setRecommend2Open] = useState(false);
   const [vars, setVars] = useState<RegressionVariableSpec>(() => defaultVarsForKinds(["commercial"]));
   const [excludeOutliers, setExcludeOutliers] = useState(false);
   const [includePartial, setIncludePartial] = useState(false);
@@ -1096,15 +1076,6 @@ export default function App() {
     recommendAbort.current = null;
   }, []);
 
-  /** P6 — 추천식의 변수·척도만 왼쪽에 옮긴다. 통계분석은 돌리지 않는다. */
-  const adoptRecommendedSpec = useCallback(
-    (nextVars: RegressionVariableSpec, scale: ResponseScale) => {
-      setVars(specFromRecommended(nextVars));
-      setResponseScale(scale);
-    },
-    [],
-  );
-
   /** 예측·상위지역·산점도는 화면에 뜬 결과와 같은 조건을 써야 한다 */
   const resultRegBody = appliedBody ?? regBody;
   const appliedResponseScale = resultRegBody.response_scale ?? "linear";
@@ -1560,7 +1531,7 @@ export default function App() {
                 ))}
               </div>
               <p className="text-[10px] leading-snug text-slate-500 dark:text-slate-400">
-                추가분석의 Macro 모형 탐색은 이 선택과 별개로 후보를 만듭니다.
+                모형 탐색은 이 체크 대부분을 읽지 않습니다. 구조·개별공시지가는 대장 보강과 체크가 있을 때만 반영됩니다.
               </p>
             </section>
 
@@ -1730,6 +1701,14 @@ export default function App() {
                 {sampleGateNote}
               </p>
             )}
+            <button
+              type="button"
+              className="btn btn-ghost w-full"
+              disabled={!addr2 || (!!addr2 && leafList.length > 0 && !structureQ.isSuccess)}
+              onClick={() => setRecommend2Open(true)}
+            >
+              모형추천2
+            </button>
           </div>
         </CollapsibleLeftSidebar>
 
@@ -1962,7 +1941,6 @@ export default function App() {
                   assetType={assetType}
                   regionLabel={aiRegionLabel}
                   profileTarget={profileTarget}
-                  onAdopt={adoptRecommendedSpec}
                 />
               </section>
             </PredictDraftProvider>
@@ -1970,6 +1948,12 @@ export default function App() {
         </div>
       </main>
 
+      <Recommend2Modal
+        open={recommend2Open}
+        onClose={() => setRecommend2Open(false)}
+        regBody={regBody}
+        assetType={assetType}
+      />
       <BuiltTransactionListModal
         open={txModalOpen}
         onClose={() => setTxModalOpen(false)}

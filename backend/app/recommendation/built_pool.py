@@ -82,13 +82,35 @@ def filter_pool_by_coverage(
     return kept, excluded
 
 
+def fit_is_offerable(fit) -> bool:
+    """복합 최소 건수 통과 뒤, 계산 불가(잔차 자유도 없음)는 순위에서 뺀다."""
+    if int(getattr(fit, "n", 0)) < built_min_fit_n():
+        return False
+    model = getattr(fit, "model", None)
+    exog = getattr(getattr(model, "model", None), "exog", None)
+    if exog is None:
+        return False
+    try:
+        from app.regression_sample_judge import judge_exog
+
+        return judge_exog(exog).tier != "blocked"
+    except (AttributeError, TypeError, ValueError):
+        return False
+
+
 def resolve_recommendation_pool(
     ctx: SelectionContext,
     *,
     unified: bool,
     min_leaves_for_region: int = 2,
+    include_structure: bool = False,
 ) -> list[BlockId]:
-    pool: list[BlockId] = list(DEFAULT_BUILT_CANDIDATE_BLOCKS)
+    """구조는 대장보강과 구조 체크가 있을 때만. 호출부가 그 조건을 넘긴다."""
+    pool: list[BlockId] = [
+        block
+        for block in DEFAULT_BUILT_CANDIDATE_BLOCKS
+        if block != "structure" or include_structure
+    ]
     if unified:
         pool.append("asset_type")
     if count_scope_leaves(ctx) >= min_leaves_for_region:

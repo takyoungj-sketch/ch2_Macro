@@ -131,6 +131,12 @@ def judge_exog(exog) -> SampleVerdict:
     return judge_sample(n, int(np.linalg.matrix_rank(arr)), k)
 
 
+PROVISION_FOLLOWUP = (
+    "표본 수가 권장 기준에 미달하므로 회귀계수가 불안정할 수 있습니다. "
+    "R²와 MAPE는 해당 표본의 적합 결과이며, 새로운 거래에 대한 예측 정확도를 보장하지 않습니다."
+)
+
+
 def provision_note(verdict: SampleVerdict, *, unit: str = "건") -> str | None:
     if verdict.tier != "caution":
         return None

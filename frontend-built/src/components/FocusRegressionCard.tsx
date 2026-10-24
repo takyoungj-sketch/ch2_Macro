@@ -62,19 +62,44 @@ export default function FocusRegressionCard({
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
         <MetricWithHelp label="R²" termId="r_squared" value={fmtDecimal(result.r_squared, 5)} />
         <MetricWithHelp label="Adj R²" termId="adj_r_squared" value={fmtDecimal(result.adj_r_squared, 5)} />
-        <div className="flex flex-wrap items-center gap-1.5" title="학습 표본에서 계산한 오차. 교차검증 CV-MAPE가 아닙니다.">
+        <div className="flex flex-wrap items-center gap-1.5" title="학습 표본에서 계산한 오차. 같은 행으로 맞추고 같은 행으로 채점합니다.">
           <MetricWithHelp
             label="학습 MAPE"
             termId="mape"
             value={result.mape != null ? `${fmtDecimal(result.mape, 2)}%` : "—"}
           />
         </div>
+        {(result.cv_mape != null || result.confirm_cv_note) && (
+          <div className="flex flex-wrap items-center gap-1.5" title="과거 연도로 학습하고 다음 연도를 맞춘 오차. 모형 추천의 CV-MAPE와 같은 계산입니다.">
+            <MetricWithHelp
+              label="CV-MAPE"
+              termId="cv_mape"
+              value={result.cv_mape != null ? `${fmtDecimal(result.cv_mape, 2)}%` : "—"}
+            />
+          </div>
+        )}
         <div>유의 변수 {result.significant_count}개</div>
         {result.missing_treatment_label && (
           <div className="col-span-2 sm:col-span-3 text-slate-500">{result.missing_treatment_label}</div>
         )}
         <MetricWithHelp label="F p" termId="f_p_value" value={fmtDecimal(result.f_p_value, 5)} />
       </div>
+      {(result.cv_mape != null || result.confirm_cv_note) && (
+        <p className="text-[11px] leading-snug text-slate-500">
+          {result.cv_mape != null
+            ? "CV-MAPE는 이 식의 행으로 다음 연도를 맞춘 오차입니다. 모형 추천과 같은 계산이고, 행이 다르면 숫자가 달라집니다."
+            : result.confirm_cv_note}
+          {result.cv_mape != null && result.confirm_cv_mape != null && (
+            <>
+              {" "}
+              마지막 연도 확인 {fmtDecimal(result.confirm_cv_mape, 2)}%.
+            </>
+          )}
+          {result.cv_mape != null && result.confirm_cv_note && result.confirm_cv_mape == null && (
+            <> {result.confirm_cv_note}</>
+          )}
+        </p>
+      )}
 
       {(result.equation || result.coefficients.length > 0) && (
         <div className="space-y-1">

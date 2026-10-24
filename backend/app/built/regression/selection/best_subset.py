@@ -65,6 +65,8 @@ def run_group_best_subset(
     ctx: SelectionContext,
     req: RegressionRunRequest,
     candidates: list[BlockId],
+    *,
+    eligible=None,
 ) -> CompareResult | None:
     if not candidates:
         return None
@@ -91,12 +93,15 @@ def run_group_best_subset(
             continue
         pred = pick_predictive_scale(fits)
         cmp = build_model_comparison_from_fits(fits, recommended=pred.response_scale)
-        scored_pred.append((blocks, pred, cmp))
+        if eligible is None or eligible(pred):
+            scored_pred.append((blocks, pred, cmp))
         expl = pick_explanatory_scale(fits)
         if expl is None:
             continue
         if expl.response_scale == pred.response_scale:
             expl = pred
+        if eligible is not None and not eligible(expl):
+            continue
         scored_expl.append((blocks, expl, cmp))
 
     if not scored_pred:

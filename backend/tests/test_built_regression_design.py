@@ -220,6 +220,40 @@ def test_fit_ols_reports_mape():
     assert result.n == 12
     assert result.mape is not None
     assert 0 <= result.mape < 100
+    assert result.cv_mape is None
+
+
+def test_focus_cv_mape_uses_rolling_years():
+    rows = []
+    for year in (2022, 2023, 2024):
+        for i in range(8):
+            gross = 80 + i * 10
+            rows.append(
+                {
+                    "price": 1000 + gross * 8 + (year - 2022) * 20,
+                    "gross_area": gross,
+                    "contract_year": year,
+                    "road_width_label": "8m",
+                    "zone_type": "일반",
+                    "building_use": "근린",
+                    "asset_type": "commercial",
+                }
+            )
+    df = pd.DataFrame(rows)
+    spec = RegressionVariableSpec(
+        gross_area=True,
+        land_area=False,
+        building_age=False,
+        road_width_dummy=False,
+        zone_type_dummy=False,
+        building_use_dummy=False,
+    )
+    from app.built.regression.engine import _fit_ols
+
+    result = _fit_ols(df, spec, "sigungu", "test", response_scale="linear", with_cv=True)
+    assert result.cv_mape is not None
+    assert result.cv_folds >= 1
+    assert result.confirm_cv_mape is not None
 
 
 def test_partial_regression_plots_match_ols_beta():

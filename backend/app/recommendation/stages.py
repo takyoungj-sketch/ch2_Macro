@@ -22,19 +22,32 @@ from app.built.regression.selection.context import (
     with_complete_case,
 )
 from app.built.schemas import (
+    AssessedSideNote,
     RegressionRecommendResponse,
     RegressionSelectionRequest,
     RecommendationSatisfaction,
     RecommendationStage1,
     RecommendationStage2,
 )
-from app.recommendation.built_pool import filter_pool_by_coverage, resolve_recommendation_pool
+from app.recommendation.built_pool import (
+    filter_pool_by_coverage,
+    fit_is_offerable,
+    resolve_recommendation_pool,
+)
 from app.recommendation.ranks import (
+    annotate_predictive_band,
     candidate_from_compare,
     pick_alternate_explanatory,
     pick_primary_predictive,
+    representative_verdict,
 )
 from app.recommendation.cv_fitness import offer_structure_twin
+from app.regression_sample_judge import (
+    PROVISION_FOLLOWUP,
+    identification_note,
+    judge_exog,
+    provision_note,
+)
 from app.recommendation.satisfaction import (
     built_min_fit_n,
     built_min_local_n,
@@ -53,9 +66,6 @@ from app.recommendation.termination import (
     narrative_hints_from_termination,
 )
 
-MIN_SELECTION_N = 30
-
-
 @dataclass(frozen=True)
 class _Stage1Bundle:
     ctx: object
@@ -63,12 +73,6 @@ class _Stage1Bundle:
     region_col: str | None
     result: CompareResult
     primary_raw: object
-
-
-def _warnings_for_n(n: int) -> list[str]:
-    if n < MIN_SELECTION_N:
-        return [f"표본 n={n} — 신뢰도 낮을 수 있습니다 (권장 n≥{MIN_SELECTION_N})."]
-    return []
 
 
 def _warnings_for_cv_mape(value: float | None) -> list[str]:
@@ -142,12 +146,110 @@ def _confirm_note(fit) -> str | None:
     return "확인 CV 생략 — 고유 계약연도가 3년 미만이거나 마지막 연도 fold를 적합할 수 없음"
 
 
+def _provision_notes(fit) -> list[str]:
+    model = getattr(fit, "model", None)
+    exog = getattr(getattr(model, "model", None), "exog", None)
+    if exog is None:
+        return []
+    try:
+        verdict = judge_exog(exog)
+    except (AttributeError, TypeError, ValueError):
+        return []
+    notes: list[str] = []
+    text = provision_note(verdict)
+    if text:
+        notes.append(text)
+        notes.append(PROVISION_FOLLOWUP)
+    identified = identification_note(verdict)
+    if identified:
+        notes.append(identified)
+    return notes
+
+
+def _assessed_side(ctx, primary_raw, req) -> AssessedSideNote | None:
+    """대표식에 개별공시지가를 더한 옆 비교. 공통 순위에 넣지 않는다."""
+    if not bool(getattr(req, "enrich", False)):
+        return None
+    if not bool(getattr(req.variables, "assessed_land_price", False)):
+        return None
+    if "assessed_land_price" not in ctx.df.columns:
+        return AssessedSideNote(n=0, note="개별공시지가 열이 없어 옆 비교를 만들지 않습니다.")
+
+    import pandas as pd
+
+    from app.built.regression.engine import _build_design_matrix
+    from app.built.regression.selection.blocks import spec_from_blocks
+    from app.built.regression.selection.fit import rolling_time_cv_split
+
+    assessed = pd.to_numeric(ctx.df["assessed_land_price"], errors="coerce")
+    frame = ctx.df.loc[assessed.notna() & (assessed > 0)]
+    spec = spec_from_blocks(list(primary_raw.blocks)).model_copy(
+        update={"assessed_land_price": True}
+    )
+    if len(frame) < built_min_fit_n():
+        return AssessedSideNote(
+            n=int(len(frame)),
+            note=f"개별공시지가 유효 {int(len(frame))}건이라 옆 비교를 만들지 않습니다.",
+        )
+    scale = primary_raw.fit.response_scale
+    region_col = region_col_for_context(ctx, spec)
+    y, x_frame, _meta = _build_design_matrix(
+        frame,
+        spec,
+        unified=ctx.unified,
+        response_scale=scale,
+        region_col=region_col,
+        categorical_missing="keep_unknown",
+    )
+    if len(y) < built_min_fit_n() or x_frame.empty:
+        return AssessedSideNote(
+            n=int(len(y)),
+            note="개별공시지가가 있는 거래만 쓴 식은 적합 건수가 부족합니다.",
+        )
+    try:
+        import statsmodels.api as sm
+
+        model = sm.OLS(y, sm.add_constant(x_frame, has_constant="add")).fit()
+        if judge_exog(model.model.exog).tier == "blocked":
+            return AssessedSideNote(
+                n=int(len(y)),
+                note="개별공시지가를 더한 식은 계산 불가입니다. 위의 순위가 아닙니다.",
+            )
+    except (AttributeError, TypeError, ValueError):
+        return AssessedSideNote(
+            n=int(len(y)),
+            note="개별공시지가를 더한 식을 적합하지 못했습니다. 위의 순위가 아닙니다.",
+        )
+    search, _folds, _confirm, _cfolds, _skip = rolling_time_cv_split(
+        frame,
+        spec,
+        unified=ctx.unified,
+        response_scale=scale,
+        region_col=region_col,
+        time_adjuster=ctx.time_adjuster,
+    )
+    cv_text = f"{float(search):.1f}%" if search is not None else "없음"
+    return AssessedSideNote(
+        n=int(len(y)),
+        cv_mape=None if search is None else float(search),
+        note=(
+            f"개별공시지가가 있는 거래 {int(len(y))}건으로 대표식에 그 열을 더한 식입니다. "
+            f"CV-MAPE {cv_text}. 행이 달라 위의 예측형 순위가 아닙니다."
+        ),
+    )
+
+
 def _build_stage1(conn, req: RegressionSelectionRequest) -> tuple:
     analysis_scope = resolve_built_analysis_scope(conn, req)
 
     ctx = resolve_selection_context(conn, req)
     ctx = _apply_region_features(ctx, req)
-    base_pool = resolve_recommendation_pool(ctx, unified=ctx.unified)
+    include_structure = bool(getattr(req, "enrich", False)) and bool(
+        getattr(req.variables, "structure_dummy", False)
+    )
+    base_pool = resolve_recommendation_pool(
+        ctx, unified=ctx.unified, include_structure=include_structure
+    )
     if getattr(req, "include_region_features", False):
         # region 공변량과 leaf 더미는 1차에서 동시 사용하지 않음
         base_pool = [b for b in base_pool if b != "region_leaf"]
@@ -167,7 +269,7 @@ def _build_stage1(conn, req: RegressionSelectionRequest) -> tuple:
     ctx = with_complete_case(ctx, pool, region_col=region_col)
 
     req_for_fit = req.model_copy(update={"variables": pool_spec})
-    result = run_group_best_subset(ctx, req_for_fit, pool)
+    result = run_group_best_subset(ctx, req_for_fit, pool, eligible=fit_is_offerable)
     if result is None:
         raise ValueError("1단계 추천 모형을 적합할 수 없습니다. 표본·scope를 확인하세요.")
 
@@ -189,11 +291,17 @@ def _build_stage1(conn, req: RegressionSelectionRequest) -> tuple:
         asset_slice=analysis_scope.asset_slice,
     )
 
+    predictive_raw = result.by_cv_mape or result.by_mape
+    predictive = [candidate_from_compare(c) for c in predictive_raw]
+    judgments, parity_notes = annotate_predictive_band(
+        predictive, ns=[c.fit.n for c in predictive_raw]
+    )
+    representative_confirmed, representative_note = representative_verdict(primary_fit)
     stage1 = RecommendationStage1(
         candidates_explanatory=[candidate_from_compare(c) for c in result.by_aic],
-        candidates_predictive=[
-            candidate_from_compare(c) for c in (result.by_cv_mape or result.by_mape)
-        ],
+        candidates_predictive=predictive,
+        predictive_judgments=judgments,
+        parity_notes=parity_notes,
         primary=primary,
         alternate=alternate,
         selection_n=ctx.selection_n,
@@ -213,6 +321,11 @@ def _build_stage1(conn, req: RegressionSelectionRequest) -> tuple:
         primary_confirm_note=_confirm_note(primary_fit),
         primary_cv_extreme_rate=primary_fit.cv_search.extreme_rate,
         primary_cv_median_ape=primary_fit.cv_search.median_ape,
+        sample_drop_notes=list(ctx.numeric_drop_notes),
+        provision_notes=_provision_notes(primary_fit),
+        assessed_side=_assessed_side(ctx, primary_raw, req),
+        representative_confirmed=representative_confirmed,
+        representative_note=representative_note,
     )
 
     bundle = _Stage1Bundle(
@@ -234,9 +347,7 @@ def run_recommendation(conn, req: RegressionSelectionRequest) -> RegressionRecom
         conn, req
     )
 
-    warnings = _warnings_for_n(stage1.selection_n) + _warnings_for_cv_mape(
-        stage1.satisfaction.cv_mape
-    )
+    warnings = _warnings_for_cv_mape(stage1.satisfaction.cv_mape)
     if excluded_blocks:
         warnings.append(
             "표본에 유효 값이 부족해 탐색 풀에서 제외: " + "; ".join(excluded_blocks)
