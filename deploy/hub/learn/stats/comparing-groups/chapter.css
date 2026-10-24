@@ -1,0 +1,12 @@
+/* Chapter 14 only; preserve the reader's shared light/dark tokens. */
+.learn-chapter[aria-label="두 집단 비교와 효과크기"] :is(h2, li) { word-break: keep-all; overflow-wrap: anywhere; }
+.gg-formula { padding: 1rem 1.25rem; background: var(--learn-soft); border-left: 3px solid var(--learn-border-strong); border-radius: 6px; font-variant-numeric: tabular-nums; }
+.gg-step-title { font-weight: 600; margin-top: 1.25rem; }
+.gg-controls[hidden], .gg-paired-controls[hidden], .gg-sd[hidden] { display: none; }
+.gg-controls { margin: 1rem 0; }
+.gg-controls label { display: flex; align-items: center; gap: .5rem; min-height: 44px; }
+.gg-controls input { width: 18px; height: 18px; accent-color: var(--learn-accent); }
+.gg-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; }
+.gg-actions button { min-height: 44px; padding: .5rem .85rem; border: 1px solid var(--learn-border-strong); border-radius: 8px; background: var(--learn-surface); color: var(--learn-link); font: inherit; cursor: pointer; }
+.gg-actions button[aria-pressed="true"] { border-color: var(--learn-accent); background: var(--learn-selected); }
+:root[data-learn-theme="dark"] .gg-sd line { stroke: var(--learn-teal); }

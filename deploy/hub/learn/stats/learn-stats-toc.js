@@ -109,14 +109,14 @@
         "slug": "comparing-groups",
         "title": "두 집단 비교와 효과크기",
         "soon": false,
-        "macro_relevance": 1
+        "macro_relevance": 2
       },
       {
         "n": "15",
         "slug": "multiple-groups-and-categorical",
         "title": "여러 집단과 범주형 자료의 비교",
         "soon": false,
-        "macro_relevance": 1
+        "macro_relevance": 2
       }
     ]
   },
@@ -142,7 +142,7 @@
         "slug": "residuals",
         "title": "잔차와 회귀모형의 가정",
         "soon": false,
-        "macro_relevance": 2
+        "macro_relevance": 3
       },
       {
         "n": "19",

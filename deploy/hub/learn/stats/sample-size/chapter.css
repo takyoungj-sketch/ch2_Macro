@@ -1,0 +1,19 @@
+/* Only chapter 11 loads this file; reuse the reader's light/dark tokens. */
+.se-formula {
+  padding: 1rem 1.25rem;
+  background: var(--learn-soft);
+  border-left: 3px solid var(--learn-border-strong);
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.se-experiment[hidden] { display: none; }
+.se-experiment label { display: flex; justify-content: space-between; gap: 1rem; }
+.se-experiment input[type="range"] { display: block; width: 100%; min-height: 44px; accent-color: var(--learn-accent); }
+.se-presets { display: flex; flex-wrap: wrap; gap: .5rem; margin: .5rem 0 1rem; }
+.se-presets button {
+  min-height: 44px; padding: .5rem .9rem; border: 1px solid var(--learn-border-strong);
+  border-radius: 8px; background: var(--learn-surface); color: var(--learn-link); cursor: pointer;
+}
+.se-presets button[aria-pressed="true"] { background: var(--learn-selected); border-color: var(--learn-accent); }
+.se-meter { height: 20px; background: var(--learn-soft); border: 1px solid var(--learn-border-strong); border-radius: 4px; overflow: hidden; }
+.se-meter span { display: block; height: 100%; background: var(--learn-accent); }

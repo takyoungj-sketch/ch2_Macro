@@ -14,37 +14,42 @@ def build():
  def pred(key,v):
   m=models[key];z=math.log(v) if key in ['log_x','log_log'] else v;value=m['intercept']+m['slope']*z;return math.exp(value) if key in ['log_y','log_log'] else value
  curve=[dict(x=22+i*288/100,**{k:pred(k,22+i*288/100) for k in models}) for i in range(101)]
- percentages=[dict(change=c,exact=100*((1+c/100)**models['log_log']['slope']-1),approx=models['log_log']['slope']*c) for c in [1,10,50]]
- (ROOT/'log-regression-example.json').write_text(json.dumps(dict(description='공통 학습 자료의 두 수치열을 단위 없는 양수 X,Y로 사용한 자연로그 OLS. 단순 지수변환은 산술평균 예측이 아님.',models=models,curves=curve,percentages=percentages,retransform=dict(values=[50,200],geometric=100,arithmetic=125)),ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+ percentages=[dict(change=c,exact=100*((1+c/100)**models['log_log']['slope']-1),approx=models['log_log']['slope']*c) for c in [1,10,50,100]]
+ (ROOT/'log-regression-example.json').write_text(json.dumps(dict(description='공통 학습 자료 30건의 면적 X(㎡)와 단가 Y(만원/㎡)를 사용한 자연로그 OLS. 단순 지수변환은 산술평균 예측이 아님.',models=models,curves=curve,percentages=percentages,retransform=dict(values=[1,2,8],geometric=16**(1/3),arithmetic=11/3)),ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
  def tx(x,y,s):return f'<text x="{x}" y="{y}">{escape(str(s))}</text>'
  def ln(x,y,a,b,c='#94a3b8'):return f'<line x1="{x}" y1="{y}" x2="{a}" y2="{b}" stroke="{c}"/>'
  def dot(x,y,c='#2563eb'):return f'<circle cx="{x}" cy="{y}" r="4" fill="{c}"/>'
  def fig(id,title,b,cap,h=400):return f'<figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 {h}" role="img" aria-labelledby="{id}-title {id}-desc"><title id="{id}-title">{title}</title><desc id="{id}-desc">{cap}</desc>{b}</svg><figcaption class="learn-chart__caption">{cap}</figcaption></figure>'
  b=tx(24,28,'같은 배수는 로그 축에서 같은 간격')
  b+=tx(24,85,'원래 값')+ln(110,110,590,110)+tx(24,225,'자연로그')+ln(110,250,590,250)
- for v in [25,50,100,200,400]:
-  a=110+v*1.1;z=110+(math.log(v)-math.log(25))*170;b+=dot(a,110)+tx(a-10,145,v)+dot(z,250)+tx(z-12,285,v)
- b+=tx(24,340,'아래 점의 위치 = ln(값), 숫자는 원래 값을 표시')+tx(24,373,'25 → 50 → 100 → 200 → 400: 매번 ×2, 로그 차이는 ln 2')
+ for v in [10,20,40,80]:
+  a=110+v*5.5;z=110+(math.log(v)-math.log(10))*210;b+=dot(a,110)+tx(a-10,145,v)+dot(z,250)+tx(z-12,285,v)
+ b+=tx(24,340,'아래 점의 위치 = ln(값), 숫자는 원래 값을 표시')+tx(24,373,'10 → 20 → 40 → 80: 매번 ×2, 로그 차이는 ln 2')
  f1=fig('scale','원래 축과 로그 축',b,'그림 1. 별도 양수 예제입니다. 로그는 순서를 유지하면서 곱셈 관계를 덧셈 관계로 바꿉니다. 아래 축은 자연로그 위치에 원래 값으로 눈금을 붙였습니다.')
- b=tx(24,28,'Y · 학습용 수치쌍 30개')+ln(65,325,580,325)+ln(65,55,65,325)
+ b=tx(24,28,'거래단가 (만원/㎡) · 공통 학습 자료 30건')+ln(65,325,580,325)+ln(65,55,65,325)
  for xx,yy in zip(x,y):b+=dot(65+xx*1.55,325-yy*.5,'#94a3b8')
  for key,c in [('level','#2563eb'),('log_y','#d97706'),('log_x','#9333ea'),('log_log','#16a34a')]:b+='<polyline data-model="'+key+'" points="'+' '.join(f"{65+r['x']*1.55},{325-r[key]*.5}" for r in curve)+'" fill="none" stroke="'+c+'" stroke-width="2"/>'
  for v in [0,100,200,300]:b+=tx(60+v*1.55,348,v)
  for v in [0,100,200,300,400,500]:b+=tx(25,330-v*.5,v)
- b+=tx(24,380,'파랑: 원래 척도 / 주황: Y만 로그')+tx(24,405,'보라: X만 로그 / 초록: 둘 다 로그')+tx(420,430,'X')
- f2=fig('curves','변환에 따른 네 가지 적합곡선',b,'그림 2. 공통 학습 자료의 두 수치열을 단위 없는 X,Y로 사용한 30쌍입니다. 관측 X 범위 22~310에서만 그렸습니다. 주황·초록은 로그 적합값을 단순 지수변환한 곡선이며, 산술평균을 위한 재변환 보정은 적용하지 않았습니다.',455)
- b=tx(24,28,'로그–로그: X 증가율에 따른 적합값 변화율')+ln(120,95,570,95)
- for i,r in enumerate(percentages):
-  xx=190+i*155;b+=f'<rect x="{xx-28}" y="95" width="24" height="{-r["exact"]*7}" fill="#2563eb"/><rect x="{xx+3}" y="95" width="24" height="{-r["approx"]*7}" fill="#d97706"/>'+tx(xx-35,320,f'+{r["change"]}%')+tx(xx-42,350,f'{r["exact"]:.2f} / {r["approx"]:.2f}')
- for v in [0,-10,-20,-30]:b+=tx(65,100-v*7,v)
- b+=tx(24,385,'세로: 변화율(%) · 파랑: 정확식 / 주황: b × 증가율 근사')
- f3=fig('percent','정확한 비율 변화와 근사',b,'그림 3. 공통 자료의 로그–로그 기울기를 사용했습니다. X 증가율이 커질수록 100[(1+c/100)^b−1]과 b×c의 차이가 커집니다.')
- b=tx(24,28,'가상 두 값 50과 200을 같은 비중으로 평균')+ln(120,320,570,320)
- for i,(label,v) in enumerate([('기하평균',100),('산술평균',125)]):
-  xx=210+i*210;b+=f'<rect x="{xx-40}" y="{320-v*1.6}" width="80" height="{v*1.6}" fill="'+('#2563eb' if i==0 else '#d97706')+'"/>'+tx(xx-12,305-v*1.6,v)+tx(xx-35,350,label)
- for v in [0,50,100,150]:b+=tx(65,325-v*1.6,v)
- b+=tx(24,385,'exp[(ln 50 + ln 200)/2] = 100 ≠ (50 + 200)/2 = 125')
- f4=fig('retransform','지수변환과 산술평균',b,'그림 4. 로그 평균을 지수변환한 값과 원래 값의 산술평균은 다릅니다. 단위 없는 가상 예제로, 공통 자료의 예측오차 비교가 아닙니다.')
+ b+=tx(24,380,'파랑: 원래 척도 / 주황: Y만 로그')+tx(24,405,'보라: X만 로그 / 초록: 둘 다 로그')+tx(420,430,'면적 (㎡)')
+ f2=fig('curves','변환에 따른 네 가지 적합곡선',b,'그림 2. 공통 학습 자료 30건의 면적(㎡)과 단가(만원/㎡)입니다. 관측 면적 범위 22~310㎡에서만 그렸습니다. 주황·초록은 로그 적합값을 단순 지수변환한 곡선이며, 산술평균을 위한 재변환 보정은 적용하지 않았습니다.',455)
+ controls='<div class="lg-controls" hidden><label for="lg-model">비교할 회귀모형</label><select id="lg-model"><option value="all">전체 비교</option><option value="level">원래 척도</option><option value="log_y">로그-선형</option><option value="log_x">선형-로그</option><option value="log_log">로그-로그</option></select><div id="lg-model-status" role="status" aria-live="polite"></div><p class="learn-source-note">모든 관측점은 같은 위치에 유지됩니다. 로그-선형·로그-로그 곡선은 산술평균 보정 없는 단순 역변환입니다.</p></div>'
+ f2=f2.replace('<figure class="learn-chart learn-chart--wide">','<figure class="learn-chart learn-chart--wide" id="lg-curves">').replace('<svg ',controls+'<svg class="lg-curves-svg" ',1)
+ b=tx(24,28,'면적 +10% · 정확한 변화율과 근사 변화율')+ln(120,70,570,70)
+ exact=100*math.expm1(models['log_log']['slope']*math.log1p(.1));approx=models['log_log']['slope']*10
+ for key,xx,value,color,label in [('exact',250,exact,'#2563eb','정확식'),('approx',430,approx,'#d97706','근삿값')]:
+  b+=f'<rect data-percent="{key}" x="{xx-30}" y="70" width="60" height="{-value*4.5}" fill="{color}"/>'+tx(xx-35,365,label)+f'<text data-percent-label="{key}" x="{xx-40}" y="{-value*4.5+92}">{value:.2f}%</text>'
+ for v in [0,-10,-20,-30,-40,-50,-60]:b+=tx(65,75-v*4.5,v)
+ b+=tx(24,395,'세로'+': 지수변환 적합값 변화율(%) · 동일한 축 범위')
+ f3=fig('percent','면적 증가율에 따른 정확식과 근삿값',b,'그림 3. 공통 자료의 로그-로그 기울기를 사용한 가상 변화율 비교입니다. 근사 bc%와 정확식 100[(1+c/100)^b−1]%는 큰 변화에서 달라집니다.',415)
+ controls='<div class="lg-controls" hidden><label for="lg-change">면적 증가율 <output id="lg-change-value" for="lg-change">10%</output></label><input id="lg-change" aria-label="면적 증가율" type="range" min="0" max="100" step="1" value="10"><div class="lg-quick">'+''.join(f'<button type="button" data-change="{v}">+{v}%</button>' for v in [1,10,50,100])+'</div><p id="lg-percent-status" role="status" aria-live="polite"></p></div>'
+ f3=f3.replace('<figure class="learn-chart learn-chart--wide">','<figure class="learn-chart learn-chart--wide" id="lg-percent">').replace('<svg ',controls+'<svg ',1)
+ b=tx(24,28,'가상 세 값 1, 2, 8을 같은 비중으로 평균')+ln(120,320,570,320)
+ for i,(label,v) in enumerate([('기하평균',16**(1/3)),('산술평균',11/3)]):
+  xx=210+i*210;b+=f'<rect x="{xx-40}" y="{320-v*60}" width="80" height="{v*60}" fill="'+('#2563eb' if i==0 else '#d97706')+'"/>'+tx(xx-18,305-v*60,f'{v:.2f}')+tx(xx-35,350,label)
+ for v in [0,1,2,3,4]:b+=tx(65,325-v*60,v)
+ b+=tx(24,385,'exp[(ln 1 + ln 2 + ln 8)/3] ≈ 2.52 ≠ 11/3 ≈ 3.67')
+ f4=fig('retransform','로그'+' 평균의 지수변환과 산술평균',b,'그림 4. 가상 자료 1, 2, 8의 기하평균과 산술평균입니다. 공통 학습 자료의 예측오차 비교가 아닙니다. 로그 평균의 지수변환은 산술평균과 다릅니다.')
  # Each panel shows residuals on the scale actually used for its OLS fit.
  # Different vertical units must not be compared as error magnitudes.
  b=''
@@ -62,102 +67,78 @@ def build():
   b+=tx(360,top+280,'적합값' if key=='level' else '로그 적합값')
  f5=fig('residual-check','원래 척도와 로그 척도의 잔차',b,'그림 5. 같은 교육용 자료 30건을 각각 원래 Y와 ln Y에 적합했습니다. 위는 원 단위 잔차, 아래는 로그 잔차입니다. 축의 단위와 범위가 다르므로 점의 높이로 오차 크기를 직접 비교하지 않습니다. 두 그림 모두 0선 주변의 굽음·퍼짐·떨어진 점을 살펴보세요.',590)
  parts=[]
- def sec(id,label,title,body):
-  parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{title}</h2>{body}</section>')
- ly_m=models['log_y'];ll=models['log_log'];lx_m=models['log_x'];level=models['level']
- sec('introduction','서두 · 학습목표','같은 차이와 같은 비율은 어떻게 다를까요?', '''
- <p>어떤 양이 100에서 110으로 늘어난 경우와 1,000에서 1,010으로 늘어난 경우를 생각해 보세요. 둘 다 10만큼 올랐지만, 증가율은 각각 10%와 1%입니다. 값의 차이를 볼 때와 비율의 차이를 볼 때는 같은 변화도 다르게 읽힙니다.</p>
- <p>앞 장의 회귀분석에서는 설명변수가 달라질 때 결과변수가 얼마나 달라지는지 살펴보았습니다. 이번 장에서는 <strong>변수를 로그로 바꾸면 어떤 관계를 표현할 수 있고, 회귀계수의 의미가 어떻게 달라지는지</strong> 배웁니다. 로그는 단순히 숫자를 작게 만드는 기술이 아니라, 관계를 읽는 척도를 바꾸는 방법입니다.</p>
- <p>이 장을 마치면 다음을 설명할 수 있습니다.</p>
- <ul class="learn-objectives"><li>일정한 차이와 일정한 비율을 구별하고, 로그변환을 고려하는 이유를 말할 수 있습니다.</li><li>X와 Y 중 어느 변수에 로그를 취했는지에 따라 계수를 다르게 해석할 수 있습니다.</li><li>작은 변화에 대한 근사값과 정확한 변화율을 구별할 수 있습니다.</li><li>로그 예측값을 원래 단위로 돌린 값이 산술평균과 다른 이유를 설명할 수 있습니다.</li><li>변환 전후 모형을 잔차와 같은 단위의 검증 오차로 비교할 수 있습니다.</li></ul>
- <p>여기서 X는 관계를 설명하는 변수이고 Y는 설명하려는 결과변수입니다. 회귀식이 계산한 값을 <strong>적합값</strong>이라고 합니다. 관측값에서 적합값을 뺀 차이는 <strong>잔차</strong>입니다. 이 용어가 낯설다면 <a href="/learn/stats/regression/">17장 단순선형회귀</a>를 먼저 확인하세요.</p>
- <p class="learn-source-note">자료 안내: 17·18장과 같이 공통 학습 자료의 두 수치열을 단위 없는 양수 X,Y로 사용합니다. 30쌍의 계산 예제이며 실제 모집단의 관계를 검증한 자료는 아닙니다. 별도 가상 예제는 해당 그림에 표시합니다.</p>''')
- sec('quick-start','로그의 의미','곱셈으로 달라지는 관계를 덧셈으로 표현합니다','''
- <p>값이 50→100과 200→250으로 바뀌면 모두 50 증가입니다. 하지만 첫 번째는 100%, 두 번째는 25% 증가입니다. 반대로 50→100과 200→400은 증가량은 달라도 모두 두 배입니다.</p>
- <p>로그 축에서는 이렇게 <strong>같은 배수로 커지는 변화가 같은 간격</strong>으로 나타납니다. 25→50, 50→100, 100→200은 모두 두 배이므로 로그값의 차이가 같습니다. 아래 그림에서 원래 축의 간격과 로그 축의 간격을 비교해 보세요.</p>'''+f1+'''
- <p>이 장은 자연로그를 사용하며 기호는 <strong>ln</strong>입니다. 예를 들어 ln(100)은 약 4.605입니다. 이 숫자는 4.605%라는 뜻이 아닙니다. 로그값 자체보다 두 로그값의 차이를 비율과 연결하는 것이 중요합니다.</p>
- <p>핵심 성질은 <strong>ln(b)−ln(a)=ln(b/a)</strong>입니다. 원래 값의 비율 b/a가 로그값의 차이로 바뀝니다. 곱셈이 덧셈으로 바뀌는 성질 ln(ab)=ln(a)+ln(b)도 같은 원리입니다. 이 식에서 a와 b는 양수입니다.</p>
- <p>로그를 취하기 전의 값으로 돌아갈 때는 지수함수 <strong>exp</strong>를 사용합니다. exp(ln(100))=100처럼 두 연산은 서로 반대 역할을 합니다. ‘로그를 취한다’와 ‘지수변환으로 되돌린다’를 한 쌍으로 기억하세요.</p>''')
- sec('why-log','로그를 고려할 때','관계의 형태와 분석 목적을 먼저 봅니다','''
- <p>어떤 관계는 X가 1만큼 늘 때 Y가 일정한 양만큼 달라집니다. 다른 관계는 X가 1만큼 늘 때 Y가 일정한 비율로 달라집니다. 첫 번째는 원래 단위의 직선으로, 두 번째는 Y에 로그를 취한 직선으로 표현하는 것이 후보가 될 수 있습니다.</p>
- <p>예를 들어 매일 10개씩 늘어나는 생산량과 매일 3%씩 늘어나는 생산량은 다른 관계입니다. 3%씩 늘어나는 경우에는 생산량이 커질수록 같은 3%에 해당하는 증가량도 커집니다. 로그는 이처럼 비율이 중심인 관계를 다루는 데 유용합니다. 이 생산량 예시는 개념을 설명하기 위한 가상 상황입니다.</p>
- <p>산점도가 곡선처럼 보이거나, 값이 큰 구간에서 오차의 퍼짐도 커질 때 로그변환을 검토할 수 있습니다. 다만 <strong>분포가 한쪽으로 치우쳤다는 이유만으로 반드시 로그를 취하는 것은 아닙니다.</strong> 어떤 관계를 설명하려는지, 변환한 모형의 잔차에 패턴이 남는지, 새로운 자료에서 예측이 잘 되는지를 함께 봅니다.</p>''')
- sec('forms','네 가지 모형','로그를 취한 변수에 따라 계수의 뜻이 달라집니다','''
- <p>아래 식에서 a는 절편, b는 기울기 계수입니다. ŷ는 원래 Y 단위의 적합값입니다. m(X)는 ln Y 척도의 적합값을 뜻하며, exp(m(X))는 이를 원래 단위로 되돌린 값입니다. 산술평균으로 읽을 수 있는지는 뒤의 ‘원래 단위로 복원’에서 따로 확인합니다.</p>
- <h3>① 로그를 취하지 않은 모형: 차이 → 차이</h3>
- <p><strong>ŷ=a+bX</strong>에서는 X가 1만큼 달라질 때 적합값이 b만큼 달라집니다. X가 Δ만큼 달라지면 차이는 bΔ입니다. Δ는 비교하는 두 X값의 차이를 나타냅니다.</p>
- <p>가상으로 b=−0.5라면 X가 10 큰 곳의 적합값은 5 낮습니다. 계수는 Y의 퍼센트 변화가 아니라 원래 단위의 차이를 나타냅니다.</p>
- <h3>② Y만 로그인 모형: 차이 → 비율</h3>
- <p><strong>m(X)=a+bX</strong>에서는 X가 1만큼 달라질 때 ln Y의 적합값이 b만큼 달라집니다. 원래 Y 단위로 돌아오면 exp(m)의 비율은 exp(b)가 됩니다.</p>
- <p>가상으로 b=0.01이라면 X가 1 늘 때 원래 단위로 되돌린 적합값은 exp(0.01)≈1.01005배, 약 1.005% 증가합니다. 작은 계수에서는 ‘약 1% 증가’로 읽을 수 있습니다. X의 차이가 Δ일 때 정확한 변화율은 <strong>100[exp(bΔ)−1]%</strong>이며, bΔ가 0에 가까울 때만 약 100bΔ%입니다.</p>
- <h3>③ X만 로그인 모형: 비율 → 차이</h3>
- <p><strong>ŷ=a+b ln X</strong>에서는 X의 비율 변화에 따른 Y의 원래 단위 차이를 읽습니다. X가 1% 늘면 적합값은 b ln(1.01), 대략 b/100만큼 달라집니다.</p>
- <p>가상으로 b=−90이라면 X가 1% 큰 곳의 Y 적합값은 약 0.9 낮습니다. <strong>Y가 90% 낮다는 뜻이 아닙니다.</strong> X가 c% 증가할 때 정확한 차이는 b ln(1+c/100)입니다. 여기서 c=10이면 10% 증가를 뜻합니다.</p>
- <h3>④ 둘 다 로그인 모형: 비율 → 비율</h3>
- <p><strong>m(X)=a+b ln X</strong>에서는 X가 1% 달라질 때 원래 단위로 되돌린 적합값이 약 b% 달라집니다. 가상으로 b=−0.5라면 X가 1% 큰 곳의 단순 역변환 적합값은 약 0.5% 낮습니다. 이처럼 아주 작은 비율 변화에 대한 반응을 <strong>탄력성</strong>이라고 합니다.</p>
- <p>정확한 변화율은 <strong>100[(1+c/100)ᵇ−1]%</strong>입니다. c가 작을 때 약 bc%로 읽을 수 있습니다. 원래 단위의 곡선은 exp(m)=exp(a)Xᵇ가 됩니다.</p>
- <p>위의 숫자 예시는 계수 해석을 위한 가상 예제입니다. 또한 Y에 로그를 취한 두 모형의 비율 해석은 우선 exp(m)에 관한 것입니다. 이를 산술평균의 비율로 읽으려면 뒤에서 설명할 보정 요인이 X에 따라 달라지는지도 확인해야 합니다.</p>''')
- equations=''.join(f'<li><strong>{label}</strong>: {"m" if key in ("log_y","log_log") else "ŷ"}={models[key]["intercept"]:.5f} {models[key]["slope"]:+.6f} {"ln X" if key in ("log_x","log_log") else "X"}</li>' for key,label in [('level','원래 척도'),('log_y','Y만 로그'),('log_x','X만 로그'),('log_log','둘 다 로그')])
- predictions=''.join(f'<li>{label}: {pred(key,100):.2f}</li>' for key,label in [('level','원래 척도'),('log_y','Y만 로그 · 단순 역변환'),('log_x','X만 로그'),('log_log','둘 다 로그 · 단순 역변환')])
- sec('example','계산 예제','같은 자료에서 네 모형의 곡선을 비교합니다',f'''
- <p>학습용 수치쌍 30개에서 X와 Y는 모두 양수이고 X의 범위는 22~310입니다. 질문은 같은 자료를 네 방식으로 적합하면 관계의 모양이 어떻게 달라지는지입니다.</p>
- <p>같은 자료에 네 모형을 적합한 식은 다음과 같습니다. Y만 로그이거나 둘 다 로그인 식의 m은 ln Y의 적합값입니다.</p><ul>{equations}</ul>'''+f2+f'''
- <p>X=100을 각 식에 넣어 보면 아래 값이 나옵니다. 로그 Y를 사용한 식은 계산한 m에 exp를 적용했습니다. 계산에는 반올림 전 계수를 사용했습니다.</p><ul>{predictions}</ul>
- <p>곡선이 다르므로 같은 X에서도 계산값이 달라집니다. 그림에서 점에 가까워 보이는 곡선이 새로운 자료에서도 가장 좋은 모형인지는 아직 알 수 없습니다.</p>
- <p>Y만 로그인 모형에서는 X가 10 클 때 단순 역변환 적합값은 {abs(100*math.expm1(ly_m['slope']*10)):.2f}% 낮습니다. 이는 이 교육용 자료에서 나타난 모형상 관계입니다. 다른 변수를 통제한 결과나 X에 개입했을 때의 인과효과가 아닙니다.</p>
- <p>최소제곱법(OLS)은 잔차를 제곱해 더한 값이 작아지도록 계수를 구합니다. Y에 로그를 취했다면 이때 사용하는 잔차도 로그 척도의 잔차입니다. 따라서 원래 Y의 제곱오차를 최소화한 모형과 같은 계산이 아닙니다. 큰 Y값의 절대적 차이는 로그 척도에서 압축되지만, 이상치나 영향력이 큰 관측의 문제가 저절로 해결되는 것은 아닙니다.</p>''')
- sec('percent','탄력성과 근사','1%에 대한 근사를 50% 변화에 그대로 쓰지 않습니다',f'''
- <p>공통 자료의 로그–로그 계수는 {ll['slope']:.4f}입니다. X가 1% 큰 곳의 단순 역변환 적합값은 약 {abs(ll['slope']):.2f}% 낮다고 읽습니다. 이 설명은 작은 변화에 대한 근사입니다.</p>
- <p>X가 10% 늘거나 50% 늘어나는 경우에는 정확식과 근사식의 차이가 커집니다. 예를 들어 50% 증가에 계수를 그대로 곱하면 약 {abs(percentages[-1]['approx']):.2f}% 감소이지만, 정확식으로 계산하면 약 {abs(percentages[-1]['exact']):.2f}% 감소입니다. 아래 그림에서 변화가 커질수록 두 막대의 차이가 커지는지 확인하세요.</p>'''+f3+'''
- <p>X가 두 배이면 증가율 c는 100입니다. 이때 정확한 변화율은 100(2ᵇ−1)%입니다. ‘두 배이므로 b×100%’라고 계산하는 것은 작은 변화의 근사를 너무 넓은 범위에 적용한 것입니다.</p>
- <p>다중회귀에 다른 변수를 함께 넣었다면 계수는 그 변수를 고정한 비교로 읽습니다. 상호작용 항이 있으면 변화율도 다른 변수의 값에 따라 달라질 수 있습니다. 어느 경우에도 회귀계수만으로 인과효과를 확정하지 않습니다.</p>
- <details><summary>더 알아보기: 백분율과 퍼센트포인트</summary><p>어떤 비율이 20%에서 22%로 바뀌면 2퍼센트포인트 상승입니다. 상대적으로는 (22−20)/20=10% 증가입니다. 로그 회귀식에서 구한 상대 변화율과 비율 변수의 퍼센트포인트 차이를 구별하세요.</p></details>''')
- sec('retransform','원래 단위로 복원','로그값을 되돌려도 산술평균이 되지는 않습니다','''
- <p>로그 척도의 적합값 m에 exp를 적용하면 Y의 원래 단위로 돌아옵니다. 하지만 ‘단위를 되돌렸다’는 것과 ‘원래 단위의 산술평균을 구했다’는 것은 다른 일입니다.</p>
- <p>가상으로 두 값이 50과 200이라고 해 보겠습니다. 원래 값의 산술평균은 (50+200)/2=125입니다. 반면 두 값에 로그를 취해 평균을 구한 뒤 exp로 되돌리면 100이 나옵니다. 이것이 <strong>기하평균</strong>입니다. 곱셈과 비율에 어울리는 평균이며, 산술평균과 계산 방식이 다릅니다.</p>'''+f4+'''
- <p>회귀에서도 같은 문제가 생깁니다. ln Y의 조건부 평균을 올바르게 나타내는 모형이라면, 그 값을 exp로 되돌린 것은 같은 X에서의 기하평균에 해당합니다. 여기서 ‘조건부’는 X=100처럼 X의 값을 고정하고 본다는 뜻입니다. 실제 표본으로 추정한 적합값에는 추정 오차도 있습니다.</p>
- <p>따라서 원래 단위의 산술평균을 예측하려면 로그 오차의 분포를 반영한 추가 보정이 필요할 수 있습니다. 단순 역변환값을 무조건 ‘Y의 산술평균’이라고 부르지 말고, 무엇을 예측한 값인지 확인하세요.</p>
- <details><summary>심화: 기하평균·중앙값·산술평균의 조건과 보정</summary>
- <p>모집단의 로그 모형을 ln Y=μ(X)+ε로 쓰겠습니다. μ(X)는 모집단의 ln Y 평균 관계, ε는 그 관계에서 벗어난 오차입니다. 표본으로 구한 m(X)는 μ(X)의 추정값입니다. E[ε|X]=0이면 exp(μ(X))는 조건부 기하평균입니다.</p>
- <p>오차의 조건부 중앙값도 0이면 exp(μ(X))는 Y의 조건부 중앙값이기도 합니다. 중앙값은 값을 순서대로 놓았을 때 가운데 위치입니다. 오차의 평균이 0이라는 사실만으로 중앙값도 0이라고 결론 내릴 수는 없습니다.</p>
- <p>산술평균에는 <strong>E[Y|X]=exp(μ(X))×E[exp(ε)|X]</strong>가 적용됩니다. E는 평균을 뜻하며, 세로 막대 |X는 X를 고정한다는 뜻입니다. 오차가 주어지는 X마다 평균 0, 분산 σ²인 정규분포이고 분산이 일정하다면 산술평균은 exp(μ(X)+σ²/2)입니다. σ²는 로그 오차의 분산입니다.</p>
- <p>정규분포를 가정하지 않는 보정 방법으로 <strong>스미어링</strong>이 있습니다. 학습 자료의 로그 잔차 eᵢ에 exp를 적용한 뒤 평균을 구합니다. S=(1/n)Σexp(eᵢ)이며, 단순 역변환값에 S를 곱합니다. n은 관측 수, Σ는 모두 더하라는 기호입니다.</p>
- <p>하나의 공통 S를 모든 X에 쓰려면 E[exp(ε)|X]가 일정하다는 조건 등이 필요합니다. 오차의 분산이 X에 따라 달라지는 이분산 상황에서는 이 보정 요인도 달라질 수 있습니다. 보정계수는 학습 자료에서만 추정해야 검증 자료의 결과값이 학습에 섞이지 않습니다. 보정을 해도 계수와 분산을 추정한 데서 생긴 불확실성은 남습니다.</p></details>
- <details><summary>심화: 로그 척도의 구간을 원래 단위로 바꾸기</summary>
- <p>로그 척도의 구간 양 끝에 exp를 적용하면 원래 단위에서는 보통 비대칭인 구간이 됩니다. 그러나 구간이 무엇을 대상으로 하는지는 계속 구별해야 합니다.</p><p>로그 평균의 신뢰구간을 변환했다고 해서 원래 Y의 산술평균 신뢰구간이 되는 것은 아닙니다. 반면 개별 관측값에 대한 유효한 로그 예측구간은 exp가 순서를 유지하므로 끝점을 변환해 Y의 예측구간으로 옮길 수 있습니다. 신뢰구간과 예측구간은 다음 장에서 더 자세히 배웁니다.</p></details>''')
- errors=''.join(f'<li>{label}: {models[key]["MAE"]:.2f}</li>' for key,label in [('level','원래 척도'),('log_y','Y만 로그 · 단순 역변환'),('log_x','X만 로그'),('log_log','둘 다 로그 · 단순 역변환')])
- sec('compare','모형 비교','잔차의 패턴과 같은 단위의 검증 오차를 봅니다','''
- <p>모형을 비교할 때는 먼저 잔차를 봅니다. 잔차가 0보다 크면 관측값이 적합값보다 높고, 0보다 작으면 낮습니다. 적합값에 따라 잔차가 휘어진 모양으로 모이거나 퍼짐이 커진다면, 현재 모형이 관계나 오차 구조를 충분히 설명하지 못할 수 있습니다.</p>'''+f5+f'''
- <p>위쪽 그림은 원 단위의 직선 모형이고 아래쪽은 Y만 로그인 모형입니다. 아래 그림의 잔차는 ln Y에서 로그 적합값을 뺀 값입니다. <strong>세로축의 단위가 다르므로 아래쪽 점의 숫자가 작다는 이유로 성능이 좋아졌다고 판단하지 않습니다.</strong> 각 그림에서 0선 주변의 굽음, 퍼짐의 변화, 유난히 떨어진 점을 확인하세요. 이 그림만으로 정규성이나 등분산이 충족되었다고 판정할 수는 없습니다.</p>
- <p>원래 Y의 오차를 비교하려면 모든 모형의 적합값을 같은 Y 단위로 맞춥니다. 평균절대오차(MAE)는 관측값과 적합값의 차이에 절댓값을 취해 평균한 값입니다. 이 자료에서 구한 MAE는 다음과 같습니다.</p><ul>{errors}</ul>
- <p>이 숫자는 모형을 만든 30개 관측에서 다시 측정한 <strong>학습 오차</strong>입니다. 로그 Y를 쓴 두 모형에는 산술평균 보정을 적용하지 않았습니다. 여기서 로그–로그 모형의 MAE가 가장 작다고 해서 미래 자료에서도 가장 좋다는 뜻은 아닙니다. 실제 선택에는 동일한 별도 검증 자료가 필요합니다.</p>
- <p>R²는 결과변수의 변동을 얼마나 설명했는지 나타내는 지표입니다. Y 모형과 ln Y 모형은 기준이 되는 결과변수가 다르므로 R² 숫자를 직접 비교해 승자를 고르면 안 됩니다. 원 단위의 오차가 중요한지, 상대적인 오차가 중요한지부터 정하고 같은 기준으로 평가하세요.</p>
- <details><summary>더 알아보기: MAE와 RMSE는 무엇을 목표로 하나요?</summary><p>MAE는 절대오차를 평균합니다. RMSE는 오차를 제곱해 평균한 뒤 제곱근을 취하므로 큰 오차에 더 민감합니다. 한 조건에서 어떤 한 값을 예측할지 정할 때, 기대 절대오차를 최소화하는 값은 조건부 중앙값이고 기대 제곱오차를 최소화하는 값은 조건부 평균입니다. 필요한 평균이 존재한다는 등의 조건을 전제로 합니다.</p><p>따라서 산술평균을 목표로 한 역변환 보정이 MAE까지 반드시 낮춰 주는 것은 아닙니다. 예측하고 싶은 대상과 평가 지표를 맞춰야 합니다.</p></details>
- <p>변환 후에도 시간이나 집단에 따른 잔차 패턴과 영향력이 큰 관측을 살펴야 합니다. 로그변환 하나가 선형성·등분산·정규성을 모두 보장해 주지는 않습니다.</p>''')
- sec('domain','0·음수와 단위','로그를 취할 수 있는 값인지 먼저 확인합니다','''
- <p>실수 범위에서 ln X는 X가 0보다 클 때만 정의됩니다. 따라서 0이나 음수가 있으면 곧바로 로그를 계산할 수 없습니다. 이런 값을 조용히 빼 버리면 분석 대상 자체가 달라집니다. 기록 오류인지, 실제로 의미 있는 0이나 음수인지부터 확인하세요.</p>
- <p>0을 처리하기 위해 ln(1+X)를 쓰기도 합니다. 하지만 이는 ln X와 다른 모형입니다. 특히 작은 값에서는 1을 더한 영향이 크기 때문에 일반적인 로그–로그 계수의 탄력성 해석을 그대로 적용할 수 없습니다.</p>
- <p>단위도 중요합니다. 1m를 숫자 1로 기록하면 ln(1+1)이지만, cm 단위의 숫자 100으로 기록하면 ln(1+100)입니다. ‘1을 더한다’는 처리는 단위가 달라질 때 같은 의미를 유지하지 않습니다. 임의 상수를 더하기 전에 처리 목적과 규칙을 정해야 합니다.</p>
- <details><summary>심화: 일반 로그 모형에서 단위를 바꾸면?</summary><p>X를 일정한 배수의 다른 단위로 바꾸면 ln X에는 상수가 더해집니다. 예를 들어 ln(kX)=ln k+ln X입니다. 동일한 표본과 절편을 포함한 동일한 로그–로그 모형에서는 이 상수를 절편이 흡수하므로 기울기는 유지됩니다.</p><p>반면 Y만 로그이고 X는 원 단위인 모형에서는 X의 단위를 바꿀 때 기울기 숫자도 바뀝니다. 계수를 읽기 전에 변수의 단위를 확인해야 합니다.</p></details>''')
- sec('nonlinear','비선형 관계','그림이 곡선이어도 선형회귀로 계산할 수 있습니다','''
- <p>‘선형회귀’라는 말 때문에 원래 X축에서 반드시 직선이어야 한다고 생각하기 쉽습니다. 하지만 회귀에서 선형이라는 말은 <strong>미지의 계수가 식에 선형으로 들어간다</strong>는 뜻입니다.</p>
- <p>예를 들어 Y=a+b ln X+ε는 원래 X에 대해서는 곡선입니다. 그래도 ln X를 새로운 설명변수 하나로 보면 계수 a와 b가 각각 더해지는 형태이므로 선형회귀로 적합할 수 있습니다.</p>
- <p>Y=a+bX+cX²+ε도 마찬가지입니다. X와 X²를 두 설명변수로 넣으면 계수 a, b, c에는 선형입니다. 다만 원래 X축에서의 기울기는 b+2cX로, X에 따라 달라집니다. X²에 붙은 c를 ‘X가 1 늘 때 Y가 항상 c만큼 변한다’고 읽으면 안 됩니다.</p>
- <p>또한 원래 단위의 지수곡선 Y=A exp(bX)+u를 직접 적합하는 것과 ln Y=a+bX+ε를 적합하는 것은 일반적으로 같은 문제가 아닙니다. 전자는 원래 Y 단위의 오차 u를, 후자는 로그 단위의 오차 ε를 사용합니다. 로그 모형을 되돌리면 오차는 곱셈 형태로 작용합니다. 곡선의 겉모양이 비슷해도 최소화하는 오차와 가정이 다릅니다.</p>
- <p>로그나 제곱항으로 곡선을 표현해도 관측 범위 밖의 관계가 보장되지는 않습니다. 이 장의 곡선도 관측 X 범위 22~310 안에서만 그렸습니다.</p>''')
- questions=[
- ('ln Y=a+0.1X에서 X가 1 늘면 정확히 10% 증가하나요?', '아닙니다. 단순 역변환 적합값의 정확한 변화율은 100[exp(0.1)−1]≈10.52%입니다. 10%는 작은 변화에 대한 근사이며, 산술평균의 비율로 읽을 때는 보정 조건도 확인해야 합니다.'),
- ('Y=a−90 ln X에서 X가 1% 늘면 Y가 약 90% 감소하나요?', '아닙니다. 적합값의 차이는 −90 ln(1.01)≈−0.896입니다. Y의 원 단위에서 약 0.896 감소이며, Y의 퍼센트 변화가 아닙니다.'),
- ('로그 모형의 학습 MAE가 가장 작고 단순 역변환도 했습니다. 가장 좋은 산술평균 예측 모형이라고 결론 내려도 될까요?', '아직 안 됩니다. 단순 역변환은 산술평균을 자동으로 주지 않습니다. 예측 대상과 보정 조건을 확인하고, 같은 별도 검증 자료에서 목적에 맞는 지표로 비교해야 합니다.')]
- sec('practice','확인 문제','변화의 단위와 예측 대상을 설명해 보세요','<ol class="learn-exercises">'+''.join(f'<li>{q}<details><summary>답과 해설</summary><p>{a}</p></details></li>' for q,a in questions)+'</ol>')
- sec('macro','CH2 Macro에서 읽기','회귀 결과의 변수·단위·복원 방식을 함께 확인합니다','''
- <p>회귀 결과를 읽을 때는 먼저 어떤 변수에 로그를 썼는지 확인하세요. 같은 기울기 숫자라도 Y만 로그인지, X만 로그인지, 둘 다 로그인지에 따라 뜻이 달라집니다.</p><p>그다음 0·음수를 어떻게 처리했는지, 변수의 단위는 무엇인지, 원 단위 예측값이 단순 역변환인지 산술평균 보정값인지 확인합니다. 성능 지표가 어떤 자료와 어떤 척도에서 계산되었는지도 함께 봅니다.</p><p>이 장의 교육용 모형이 실제 서비스의 산식이라고 전제하지 않습니다. 여기서 계산한 곡선은 개별 물건의 적정가격이나 확정적인 인과효과를 제시하는 값이 아닙니다.</p>''')
- sec('recap','결론 · 학습 요약','로그의 위치, 변화의 단위, 복원 대상을 기억하세요','''
- <p>이번 장에서는 로그변환을 이용해 비율과 곡선 관계를 표현하는 방법을 배웠습니다. 수식을 모두 외우기보다 다음 순서로 해석하면 좋습니다.</p>
- <ol class="learn-recap-list"><li><strong>무엇을 비교하나요?</strong> 일정한 값의 차이를 볼지, 일정한 비율 차이를 볼지 먼저 정합니다. 로그는 비율 관계를 다루는 데 유용하지만 모든 자료에 필요한 것은 아닙니다.</li><li><strong>어느 변수에 로그가 있나요?</strong> 원래 모형은 차이→차이, Y만 로그이면 차이→비율, X만 로그이면 비율→차이, 둘 다 로그이면 비율→비율로 읽습니다. 로그 Y 모형의 비율은 우선 단순 역변환 적합값의 비율입니다.</li><li><strong>근사인가요, 정확한 계산인가요?</strong> ‘X가 1% 변하면 Y가 약 b% 변한다’는 로그–로그 해석은 작은 변화에 대한 근사입니다. 큰 변화에는 정확식을 사용합니다.</li><li><strong>원래 단위로 돌아온 값은 무엇인가요?</strong> exp를 적용했다고 산술평균이 되는 것은 아닙니다. 기하평균·중앙값·산술평균의 차이와 필요한 보정 조건을 구별합니다.</li><li><strong>모형이 적절한가요?</strong> 잔차의 패턴을 살피고, 같은 별도 검증 자료와 같은 평가 단위로 비교합니다. 서로 다른 Y 척도의 R²나 학습 오차만으로 최종 모형을 고르지 않습니다.</li></ol>
- <p>마지막으로 로그를 취하기 전에 0·음수와 단위를 확인해야 합니다. ln(1+X)는 일반 로그와 다른 모형이며, 로그변환이 이상치나 오차의 모든 문제를 해결해 주지는 않습니다.</p>
- <p>다음 <a href="/learn/stats/model-fit/">21장 「회귀모형의 적합도와 추정의 불확실성」</a>에서는 ‘자료에 잘 맞는 모형인지’와 ‘추정 결과를 얼마나 확신할 수 있는지’를 구별해 살펴봅니다.</p>
- <details class="learn-more"><summary>참고자료와 계산 자료</summary><div class="learn-more__body"><ul><li><a href="https://stats.oarc.ucla.edu/other/mult-pkg/faq/general/faqhow-do-i-interpret-a-regression-model-when-some-variables-are-log-transformed/">UCLA OARC: 로그변환 회귀의 해석</a></li><li><a href="https://www.itl.nist.gov/div898/handbook/pmd/section1/pmd141.htm">NIST: Linear Least Squares Regression</a></li><li><a href="../log-regression-example.json">네 모형의 계수·적합곡선·잔차·변화율 계산 자료</a></li></ul>
- <p class="learn-source-note">계산에는 공통 학습 자료의 두 수치열을 단위 없는 X,Y로 사용했습니다. 별도 가상 예제는 본문에 표시했습니다. 참고자료의 기존 확인일: 2026-10-08.</p></div></details>''')
- p=ROOT/'log-regression/index.html';html=p.read_text(encoding='utf-8');html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="로그변환과 비선형 관계">'+'\n'.join(parts)+'</article>',html,count=1,flags=re.S);html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1로그변환의 계수·탄력성·정확한 변화율과 원 단위 재변환, 모형 비교의 주의점을 학습합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);p.write_text(html,encoding='utf-8')
+ page=ROOT/'log-regression/index.html';old=page.read_text(encoding='utf-8')
+ references=re.search(r'<details class="learn-more"><summary>참고자료(?:와 계산 자료)?</summary>.*?</details>',old,re.S)[0].replace('공통 학습 자료의 두 수치열을 단위 없는 X,Y로 사용했습니다.','공통 학습 자료의 면적(㎡)과 거래단가(만원/㎡)를 사용했습니다.')
+ source=(ROOT/'log-regression/content.md').read_text(encoding='utf-8').replace('**','').replace('\\~','~')
+ formulas={r'100[\exp(b\Delta)-1]\%':'100[exp(bΔ)−1]%',r'b\ln(1+c/100)':'b ln(1+c/100)',r'100[(1+c/100)^b-1]\%':'100[(1+c/100)ᵇ−1]%',r'100(2^{-0.53136}-1)\%':'100[2^(−0.53136)−1]%',r'E[Y\mid X]=\exp(m(X))E[\exp(\varepsilon)\mid X]':'E[Y|X] = exp(m(X)) E[exp(ε)|X]',r'E[Y\mid X]=\exp(m(X)+\sigma^2/2)':'E[Y|X] = exp(m(X)+σ²/2)',r'S=\frac{1}{n}\sum_{i=1}^n\exp(e_i)':'S = (1/n) Σ exp(eᵢ)',r'Y=a+b\ln X+\varepsilon':'Y = a+b ln X+ε',r'Y=a+bX+cX^2+\varepsilon':'Y = a+bX+cX²+ε',r'\frac{d\hat Y}{dX}=b+2cX':'dŶ/dX = b+2cX'}
+ source=re.sub(r'\\\[\s*\n(.*?)\n\\\]',lambda m:formulas[m[1].strip()],source,flags=re.S)
+ ids=['introduction','quick-start','forms','log-linear','linear-log','percent','example','retransform','intervals','compare','domain','units','nonlinear','practice','macro','recap']
+ def inline(value):return escape(value)
+ def render(block):
+  out=[];lines=block.strip().split('\n');i=0
+  while i<len(lines):
+   line=lines[i].strip()
+   if not line or line=='---':i+=1;continue
+   if line.startswith('### '):out.append('<h3>'+inline(line[4:])+'</h3>');i+=1;continue
+   if line.startswith('[그림 '):out.append({1:f1,2:f2,3:f3,4:f4}[int(re.search(r'그림 (\d)',line)[1])]);i+=1;continue
+   if line=='[CH2 Macro 통계·데이터분석 열기 →]':out.append('<p><a href="https://macro.ch2data.com/built/">CH2 Macro 복합 통계·데이터분석 열기 →</a></p>');i+=1;continue
+   if line=='▶ 참고자료':out.append(references);i+=1;continue
+   if line.startswith('▶ '):
+    title=line[2:];rest=[];i+=1
+    while i<len(lines) and lines[i].strip()!='---':rest.append(lines[i]);i+=1
+    out.append('<details class="learn-more"><summary>'+inline(title)+'</summary><div class="learn-more__body">'+render('\n'.join(rest))+'</div></details>');continue
+   if line.startswith('|'):
+    table=[]
+    while i<len(lines) and lines[i].strip().startswith('|'):
+     cells=[c.strip() for c in lines[i].strip().strip('|').split('|')]
+     if not all(re.fullmatch(r'[:\- ]+',c) for c in cells):table.append(cells)
+     i+=1
+    out.append('<div class="learn-data learn-data--full"><table><thead><tr>'+''.join('<th scope="col">'+inline(c)+'</th>' for c in table[0])+'</tr></thead><tbody>'+''.join('<tr>'+''.join('<th scope="row">'+inline(c)+'</th>' if j==0 else '<td>'+inline(c)+'</td>' for j,c in enumerate(row))+'</tr>' for row in table[1:])+'</tbody></table></div>');continue
+   if line.startswith('- '):
+    items=[]
+    while i<len(lines) and lines[i].startswith('- '):items.append('<li>'+inline(lines[i][2:])+'</li>');i+=1
+    out.append('<ul>'+''.join(items)+'</ul>');continue
+   formula=line.startswith(('ln ','ŷ','Y =','X>','exp(','100[','100(','b ×','b ln','S =','E[','비율 =','(1+','(1×','dŶ'))
+   out.append('<p'+(' class="lg-formula"' if formula else '')+'>'+inline(line)+'</p>');i+=1
+  return '\n'.join(out)
+ for id,section in zip(ids,re.split(r'^## ',source,flags=re.M)[1:],strict=True):
+  label,body=section.split('\n',1);heading=re.search(r'^### (.+)$',body,re.M)[1];body=re.sub(r'^### .+\n','',body,count=1,flags=re.M)
+  if id=='practice':
+   items=[]
+   for q in re.split(r'^\d+\. ',body,flags=re.M)[1:]:
+    question,answer=q.split('▶ 답과 해설',1);items.append('<li>'+inline(question.strip())+'<details><summary>답과 해설</summary><div class="learn-more__body">'+render(answer)+'</div></details></li>')
+   html='<ol class="learn-exercises">'+''.join(items)+'</ol>'
+  else:html=render(body)
+  if id=='introduction':html=html.replace('<ul>','<ul class="learn-objectives">',1)+'<p class="learn-source-note"><a href="/learn/stats/graphs/#data">공통 학습 자료 30건</a> · <a href="../log-regression-example.json">네 모형의 계산 자료 JSON</a>. 실제 거래의 출처·대표성이 검증되지 않은 학습 자료이며, 별도 가상 예제와 구별합니다.</p>'
+  if id=='percent':html+='<p class="learn-source-note">이 탄력성은 로그 적합값을 지수변환한 곡선에 관한 것입니다. 원 단위 산술평균의 탄력성에는 E[exp(ε)|X]의 변화도 반영해야 합니다.</p>'
+  if id=='compare':html+='<details class="learn-more" id="residual-patterns"><summary>보충 그림: 원래 척도와 로그 척도의 잔차</summary><div class="learn-more__body">'+f5+'</div></details>'
+  if id=='forms':html='<span id="why-log" aria-hidden="true"></span>'+html
+  if id=='macro':html=macro_case();heading='실제 로그-로그 회귀 화면에서 변환·보정·검증 범위를 읽으세요'
+  if id=='recap':html=html.replace('21장 「회귀모형의 적합도와 추정의 불확실성」','<a href="/learn/stats/model-fit/">21장 「회귀모형의 적합도와 추정의 불확실성」</a>')
+  parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{heading}</h2>{html}</section>')
+ html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="로그변환과 비선형 관계">'+'\n'.join(parts)+'</article>',old,count=1,flags=re.S)
+ html=html.replace('별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.','활용도는 CH2 Macro의 분석 결과를 이해하는 데 얼마나 도움이 되는지를 나타냅니다.')
+ if 'log-regression/chapter.css' not in html:html=html.replace('</head>','<link rel="stylesheet" href="/learn/stats/log-regression/chapter.css?v=20261024-1" />\n</head>')
+ data=json.dumps(models,ensure_ascii=False).replace('</','<\\/')
+ html=html.replace('</body>','<script type="application/json" id="lg-model-data">'+data+'</script>\n</body>') if 'id="lg-model-data"' not in html else re.sub(r'<script type="application/json" id="lg-model-data">.*?</script>',lambda _: '<script type="application/json" id="lg-model-data">'+data+'</script>',html,flags=re.S)
+ if 'log-regression/experiment.js' not in html:html=html.replace('</body>','<script type="module" src="/learn/stats/log-regression/experiment.js?v=20261024-1"></script>\n</body>')
+ page.write_text(html,encoding='utf-8')
+
+def macro_case():
+ return '''<p>아래는 구로동 복합부동산 로그-로그 회귀 화면입니다. 조회 거래 217건에서 숫자 결측 12건을 제외한 적합 표본 205건이 표시됩니다. ‘지분 64건 제외’는 별도 조건이며, 이 캡처만으로 전체 필터 처리 순서를 재구성하지 않습니다. 공통 학습 자료 30건과 다른 사례입니다.</p>
+<figure class="lg-macro-case"><a href="macro-loglog-regression.png" target="_blank" rel="noopener"><img src="macro-loglog-regression.png" width="1186" height="798" loading="lazy" alt="구로동 복합 로그-로그 회귀. 표본 205건, 설계 열 13개·독립 계수 11개로 식별 경고. R² 0.83564, 수정 R² 0.82717, 학습 MAPE 23.11%, CV-MAPE 미산출. log(금액)에 log(연면적) 0.2995, log(대지면적) 0.6794 등이 표시됩니다."></a><figcaption>실제 Macro 화면 캡처 · 선택하면 원본 크기로 볼 수 있습니다. 수치는 캡처 당시 값이며, 원자료와 전체 설정이 없어 독립 검산한 시장 통계로 제시하지 않습니다.</figcaption></figure>
+<p>이 식의 종속변수는 log(금액)입니다. 학습 예제의 log(단가)와 구별하세요. 복합의 log-log 설정은 금액과 선택된 연면적·대지면적에 자연로그를 적용합니다. 연식과 범주 더미까지 모두 로그로 바꾸는 모형은 아닙니다. 개별공시지가는 선택되면 별도로 자연로그를 사용합니다.</p>
+<p>화면의 연면적계수 0.2995는 식별된 가산적 로그-로그 모형이라면, 다른 포함 변수를 고정하고 연면적이 1% 다를 때 단순 역변환 적합값이 약 0.30% 다르다는 식으로 읽습니다. 하지만 이 캡처는 설계 열 13개에 독립 계수 11개로 계수가 고유하지 않다는 경고가 있습니다. 따라서 0.2995나 0.6794를 안정적으로 식별된 개별 탄력성 또는 인과효과로 확정해서는 안 됩니다.</p>
+<p>학습 R²=0.83564와 수정 R²=0.82717은 로그 금액 척도의 표본 내 적합도입니다. 원 단위 모형의 R²와 직접 순위를 매기지 마세요. 학습 MAPE=23.11%는 원래 금액으로 복원한 값에 대한 학습 오차입니다. ‘CV-MAPE —’는 0% 오차가 아니라 검증값을 산출하지 못했다는 뜻입니다. 화면에는 고유 계약연도가 3년 미만이거나 마지막 연도 fold를 적합할 수 없다는 안내가 있습니다. 이 이미지로 어느 조건이 원인인지 더 좁혀 판단할 수는 없습니다.</p>
+<p>본문의 로그 곡선은 보정 없는 단순 지수변환입니다. 반면 현재 복합 구현은 로그모형의 원 단위 적합값·MAPE와 점추정에 학습 잔차로 구한 Duan 스미어링 계수를 곱합니다. 같은 로그식이라도 두 계산 대상을 섞어 비교하면 안 됩니다. 공통 보정이 조건부 산술평균을 적절히 추정하는지는 오차 구조에 따라 다시 점검해야 합니다.</p>
+<details class="learn-more"><summary>실제 서비스의 변환·재변환·모형 비교 방식</summary><div class="learn-more__body">
+<p>확인한 복합 경로는 원래 금액, 로그 금액, 금액·면적 로그 모형을 지원하며 np.log와 np.exp, 즉 자연로그와 지수함수를 사용합니다. 로그를 취할 열의 0·음수와 선택된 수치열의 결측은 적합 마스크에서 제외됩니다. 모든 앱이 같은 규칙이라고 가정하지 말고 최종 표본수와 제외 사유를 확인하세요.</p>
+<p>복합의 롤링 시점 검증에서는 각 학습 fold의 잔차만으로 스미어링 계수를 구해 검증 금액을 복원합니다. 검증 거래의 실제 금액은 오차 평가에 사용하며 보정계수 계산에는 사용하지 않습니다. 다만 이것만으로 변수 선택·범주 구성 등 전처리 전체의 누출 가능성까지 검증되었다는 뜻은 아닙니다.</p>
+<p>복합의 점추정과 평균 구간 양 끝에는 학습 스미어링 계수를 곱하고, 개별 예측구간 양 끝에는 단순 지수변환을 적용합니다. 평균 구간에 추정된 보정계수의 불확실성까지 전파하는 계산은 확인한 경로에 포함되지 않습니다. 화면의 평균 구간을 재변환 불확실성이 모두 반영된 구간으로 해석하지 않습니다.</p>
+<p>집합 주거 회귀의 확인한 경로도 로그 종속변수와 스미어링 보정, 학습 fold 잔차에 의한 교차검증 복원을 사용합니다. 다만 이 사실을 집합 비주거·층지수·모든 지역 분석이 같은 종속변수와 표본 규칙을 사용한다는 뜻으로 확대하지 않습니다. 금액·단가·지수 중 분석 대상을 먼저 확인하세요.</p>
+<p>확인한 복합 척도 비교 경로는 같은 변수 블록에 대해 양수 금액·선택된 면적 조건을 공통 적용한 뒤 원래 금액·로그 금액·금액과 면적 로그 후보를 적합합니다. 예측형은 원 단위 CV-MAPE를 우선하며, 없으면 학습 MAPE, 이후 AIC를 참조합니다. 설명형은 로그 종속변수 후보끼리 AIC를 비교합니다. 모든 앱·서로 다른 변수 블록의 표본까지 같다는 뜻은 아니므로 유효 표본수와 제외 조건을 함께 확인하세요.</p>
+<p>이 캡처의 VIF는 연면적 118.79, 대지면적 142.89, 연식 5.37입니다. 현재 복합 VIF는 선택한 연속변수에서 상수항 없는 보조회귀로 계산하므로 교재의 통상적인 절편 포함 VIF와 다를 수 있습니다. 로그변환이 공선성이나 모형 식별 문제를 자동 해결하지 않는다는 점을 기억하세요. ‘미상’도 기준 범주와 다릅니다.</p>
+<p>이 장의 제곱항·상호작용 설명은 학습 원리입니다. 확인한 복합 기본 설계 경로에서는 이 항을 자동 생성하지 않으므로, 첨부 로그-로그 화면을 다항회귀 화면이라고 설명하지 않습니다. 관측 범위 밖의 적용과 개별 물건의 적정가격 해석도 별도 검토가 필요합니다.</p>
+</div></details><p class="learn-macro-cta"><a href="https://macro.ch2data.com/built/">CH2 Macro 복합 통계·데이터분석 열기 →</a></p>'''
+
 if __name__=='__main__':build()

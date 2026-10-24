@@ -1,0 +1,29 @@
+/* Chapter 13 only. Match chapters 11–12 without changing shared styles. */
+.learn-chapter[aria-label="가설검정과 p값"] :is(h2, li) {
+  word-break: keep-all; overflow-wrap: anywhere;
+}
+.ht-formula {
+  padding: 1rem 1.25rem; background: var(--learn-soft);
+  border-left: 3px solid var(--learn-border-strong); border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.ht-experiment[hidden] { display: none; }
+.ht-experiment label { display: block; margin-bottom: .5rem; }
+.ht-experiment select {
+  width: 100%; max-width: 100%; min-height: 44px; padding: .5rem .75rem;
+  border: 1px solid var(--learn-border-strong); border-radius: 8px;
+  background: var(--learn-surface); color: var(--learn-link); font: inherit;
+}
+.ht-experiment label[for="ht-mu"] { display: flex; justify-content: space-between; gap: .5rem; }
+.ht-experiment input[type="range"] { display: block; width: 100%; min-height: 44px; accent-color: var(--learn-accent); }
+.ht-experiment button {
+  margin-top: .75rem; min-height: 44px; padding: .5rem .75rem; font: inherit;
+  border: 1px solid var(--learn-border-strong); border-radius: 8px;
+  background: var(--learn-surface); color: var(--learn-link); cursor: pointer;
+}
+.ht-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.ht-step-title { font-weight: 600; margin-top: 1.25rem; }
+.ht-legend { color: var(--learn-secondary); font-size: .875rem; }
+:root[data-learn-theme="dark"] .ht-observed { stroke: var(--learn-teal); }
+:root[data-learn-theme="dark"] .ht-observed-dot { fill: var(--learn-teal); }
+@media (max-width: 599px) { .ht-comparison { grid-template-columns: 1fr; } }

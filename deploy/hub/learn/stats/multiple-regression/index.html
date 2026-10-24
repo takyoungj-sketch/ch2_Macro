@@ -13,7 +13,8 @@
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261023-1" />
     <link rel="stylesheet" href="/learn/stats/learn-reader.css?v=20261023-1" />
-  </head>
+  <link rel="stylesheet" href="/learn/stats/multiple-regression/chapter.css?v=20261024-1" />
+</head>
   <body>
     <div class="page">
       <header class="hero hero--document">
@@ -24,20 +25,277 @@
         <p class="hero__eyebrow">IV. 상관과 회귀</p>
         <h1 class="hero__title">19. 다중회귀와 변수의 해석</h1>
 <p class="learn-chapter-relevance">Macro 활용도 <span class="learn-relevance" aria-label="Macro 활용도 3단계, 핵심"><span aria-hidden="true">★★★</span></span></p>
-<p class="learn-relevance-guide">Macro 활용도: ★★★ 핵심 · ★★☆ 권장 · ★☆☆ 심화<br>별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.</p>
+<p class="learn-relevance-guide">Macro 활용도: ★★★ 핵심 · ★★☆ 권장 · ★☆☆ 심화<br>활용도는 CH2 Macro의 분석 결과를 이해하는 데 얼마나 도움이 되는지를 나타냅니다.</p>
 </header>
 
-      <article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="다중회귀와 변수의 해석"><section class="learn-chapter__step" id="quick-start" data-toc-label="서두 · 학습목표"><p class="learn-chapter__label">서두 · 학습목표</p><h2>여러 변수를 함께 고려하면 계수의 의미도 달라집니다</h2><p>시험 점수를 공부 시간 하나로 설명하면 사전 학습 수준이나 학년의 차이가 섞일 수 있습니다. 공부 시간과 사전 점수를 함께 넣으면, 모형 안에서 사전 점수가 같은 경우의 공부 시간 차이를 비교할 수 있습니다.</p><p><strong>다중회귀</strong>는 결과변수 Y 하나에 여러 설명변수를 함께 사용하는 방법입니다. 이 장에서는 ‘다른 조건이 같다’는 표현의 범위를 분명히 하고, 범주형 변수·상호작용·다중공선성이 계수 해석에 미치는 영향을 살펴봅니다.</p><ul class="learn-objectives"><li>다중회귀의 계수를 어떤 조건에서 비교한 값인지 설명합니다.</li><li>범주형 변수의 기준집단과 상호작용을 읽습니다.</li><li>다중공선성이 개별 계수의 추정에 미치는 영향을 이해합니다.</li><li>적합도 향상·예측 성능·인과 해석을 구별합니다.</li></ul></section>
-<section class="learn-chapter__step" id="groups" data-toc-label="조정 전후의 관계"><p class="learn-chapter__label">조정 전후의 관계</p><h2>집단을 구분하면 기울기가 달라질 수 있습니다</h2><p>먼저 <a href="/learn/stats/correlation/">16장</a>의 집단 혼합 문제를 떠올려 보세요. A와 B의 평균 수준이 다르고 X의 범위도 다르면, 전체 기울기에 집단 사이의 차이가 함께 반영될 수 있습니다.</p><p>아래는 별도의 가상 6점입니다. A는 X=1,2,3에서 Y=8.2,8.6,10.2이고, B는 X=4,5,6에서 Y=2.2,2.6,4.2입니다. X가 큰 관측들이 Y 수준이 낮은 B에 모여 있습니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 400" role="img" aria-labelledby="groups-title groups-desc"><title id="groups-title">집단 조정 전후의 관계</title><desc id="groups-desc">그림 1. 별도 가상 6점입니다. 집단 내 기울기는 양수지만 전체 기울기는 음수입니다. 집단 간 X범위가 겹치지 않아 같은 X에서의 집단 차이는 모형 가정에 의존합니다.</desc><text x="24" y="28">가상 자료: 파랑 A집단 / 주황 B집단</text><line x1="70" y1="320" x2="580" y2="320" stroke="#94a3b8" /><line x1="70" y1="55" x2="70" y2="320" stroke="#94a3b8" /><circle cx="145.0" cy="131.4" r="5" fill="#2563eb"/><circle cx="220.0" cy="122.20000000000002" r="5" fill="#2563eb"/><circle cx="295.0" cy="85.4" r="5" fill="#2563eb"/><circle cx="370.0" cy="269.4" r="5" fill="#d97706"/><circle cx="445.0" cy="260.2" r="5" fill="#d97706"/><circle cx="520.0" cy="223.39999999999998" r="5" fill="#d97706"/><line x1="145" y1="136" x2="295" y2="90" stroke="#2563eb" stroke-width="2"/><line x1="370" y1="274" x2="520" y2="228" stroke="#d97706" stroke-width="2"/><line x1="145" y1="106.42857142857116" x2="520" y2="257.57142857142844" stroke="#64748b" stroke-dasharray="5 4"/><text x="140" y="345">1</text><text x="215" y="345">2</text><text x="290" y="345">3</text><text x="365" y="345">4</text><text x="440" y="345">5</text><text x="515" y="345">6</text><text x="35" y="325">0</text><text x="35" y="233">4</text><text x="35" y="141">8</text><text x="35" y="95">10</text><text x="24" y="380">가로 X / 세로 Y · 회색 점선: 집단을 구분하지 않은 회귀</text></svg><figcaption class="learn-chart__caption">그림 1. 별도 가상 6점입니다. 집단 내 기울기는 양수지만 전체 기울기는 음수입니다. 집단 간 X범위가 겹치지 않아 같은 X에서의 집단 차이는 모형 가정에 의존합니다.</figcaption></figure><p>집단을 구분하지 않은 단순회귀의 기울기는 <strong>-1.314</strong>입니다. B이면 D=1, A이면 D=0인 변수를 추가하면 식은 <strong>ŷ=7+1×X−9×D</strong>가 됩니다. 집단마다 다른 절편을 허용하니 X계수는 +1이 됩니다.</p><p>A의 적합식은 ŷ=7+X, B는 ŷ=−2+X입니다. 이 모형은 두 집단의 기울기가 같고 높이만 다르다고 가정합니다. 계수의 부호가 바뀌었다고 어느 식이 인과적으로 옳다는 것이 입증되지는 않습니다.</p></section>
-<section class="learn-chapter__step" id="partial" data-toc-label="계수의 조건부 해석"><p class="learn-chapter__label">계수의 조건부 해석</p><h2>고정하는 것은 모형에 포함한 변수입니다</h2><p>적합식이 <strong>ŷ=b₀+b₁x₁+b₂x₂</strong>라면, x₂를 같은 값으로 놓고 x₁이 1만큼 다를 때 적합값 차이는 b₁입니다. 이를 <strong>다른 포함 변수를 고정한 조건부 비교</strong>라고 읽습니다. 실제로 그 속성을 바꾸었을 때의 인과효과가 자동으로 되는 것은 아닙니다.</p><p>앞의 집단 예제에서는 X와 Y에서 각 집단 평균을 빼면 집단 사이의 평균 수준 차이가 제거됩니다. 남은 편차끼리의 기울기는 집단 변수를 넣은 다중회귀의 X계수와 같습니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 400" role="img" aria-labelledby="partial-title partial-desc"><title id="partial-title">집단을 조정한 기울기</title><desc id="partial-desc">그림 2. 그림 1의 각 집단 평균을 제거했습니다. 같은 좌표의 점은 겹칩니다. 이 편차들의 원점 통과 회귀 기울기는 다중회귀 X계수 1과 같습니다.</desc><text x="24" y="28">집단 평균을 각각 뺀 X와 Y</text><line x1="100" y1="210" x2="540" y2="210" stroke="#94a3b8" /><line x1="320" y1="65" x2="320" y2="330" stroke="#94a3b8" /><line x1="160" y1="338" x2="480" y2="82" stroke="#2563eb" /><circle cx="190.0" cy="293.20000000000005" r="5" fill="#2563eb"/><circle cx="320.0" cy="251.60000000000002" r="5" fill="#2563eb"/><circle cx="450.0" cy="85.20000000000007" r="5" fill="#2563eb"/><circle cx="190.0" cy="293.2" r="5" fill="#2563eb"/><circle cx="320.0" cy="251.6" r="5" fill="#2563eb"/><circle cx="450.0" cy="85.19999999999999" r="5" fill="#2563eb"/><text x="185" y="355">-1</text><text x="315" y="355">0</text><text x="445" y="355">1</text><text x="65" y="319">-1</text><text x="65" y="215">0</text><text x="65" y="111">1</text><text x="24" y="383">가로: X의 집단 내 편차 / 세로: Y의 집단 내 편차</text></svg><figcaption class="learn-chart__caption">그림 2. 그림 1의 각 집단 평균을 제거했습니다. 같은 좌표의 점은 겹칩니다. 이 편차들의 원점 통과 회귀 기울기는 다중회귀 X계수 1과 같습니다.</figcaption></figure><p>중요한 것은 실제 비교할 자료가 있는지도 확인하는 것입니다. 이 예제는 A와 B의 X범위가 겹치지 않습니다. 같은 X에서 두 집단을 비교한다는 해석은 관측된 짝을 직접 비교하는 것이 아니라 공통 기울기와 가산 모형의 가정에 의존합니다.</p><details class="learn-more"><summary>부분회귀의 계산 원리</summary><div class="learn-more__body"><p>일반적으로 Xⱼ와 Y를 나머지 설명변수·절편에 각각 회귀한 잔차끼리 회귀하면 원래 OLS의 Xⱼ계수를 얻습니다. 같은 관측·가중치, 충분한 열 독립성 등 조건이 필요합니다.</p><p>이 보조회귀가 표시하는 기본 표준오차까지 원래 다중회귀와 그대로 같다고 볼 수는 없습니다. 원래 모형의 잔차 자유도를 반영해야 합니다. 다중회귀는 결과변수 하나와 여러 설명변수의 모형이며, 여러 결과변수를 다루는 다변량 회귀와 구별합니다.</p></div></details></section>
-<section class="learn-chapter__step" id="example" data-toc-label="계산 예제"><p class="learn-chapter__label">계산 예제</p><h2>설명변수를 추가한 뒤 같은 계수를 비교합니다</h2><p><a href="/learn/stats/graphs/#data">공통 학습 자료</a>의 세 수치열을 단위 없는 X₁,X₂,Y로 사용하겠습니다. 17·18장과 같은 30개 관측을 사용하며 X₂를 추가해 계산합니다.</p><p>적합식은 <strong>ŷ=277.920-0.8180x₁-6.5942x₂</strong>입니다. X₁계수는 X₂가 같을 때 X₁이 1 다른 경우의 적합값 차이이고, X₂계수는 X₁이 같을 때 X₂가 1 다른 경우의 차이입니다. 포함되지 않은 다른 조건까지 같다는 뜻은 아닙니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 400" role="img" aria-labelledby="coefficients-title coefficients-desc"><title id="coefficients-title">X₁ 계수 비교</title><desc id="coefficients-desc">그림 3. 같은 30개 관측에서 X₂를 추가했을 때의 X₁ 계수입니다. 구간은 등분산·독립·정규 오차 등 고전적 가정에 근거하며, 이 자료에서 가정이 충족되었다는 뜻은 아닙니다.</desc><text x="24" y="28">30쌍 자료: X₁ 계수와 고전적 95% 신뢰구간</text><text x="24" y="145">X₁만</text><line x1="278.9200145707862" y1="140" x2="512.3958276504966" y2="140" stroke="#2563eb" stroke-width="3"/><circle cx="395.6579211106414" cy="140" r="5" fill="#2563eb"/><text x="170" y="172">-0.684 [-0.995, -0.374]</text><text x="24" y="245">X₁ + X₂</text><line x1="207.6041723495035" y1="240" x2="483.16754113122767" y2="240" stroke="#2563eb" stroke-width="3"/><circle cx="345.38585674036557" cy="240" r="5" fill="#2563eb"/><text x="170" y="272">-0.818 [-1.184, -0.452]</text><line x1="170" y1="320" x2="550" y2="320" stroke="#94a3b8" /><text x="155.0" y="345">-1.28</text><text x="281.6666666666667" y="345">-0.95</text><text x="408.33333333333337" y="345">-0.61</text><text x="535.0" y="345">-0.27</text><text x="24" y="382">Y 단위/X₁ 단위 · 가정이 맞을 때의 구간</text></svg><figcaption class="learn-chart__caption">그림 3. 같은 30개 관측에서 X₂를 추가했을 때의 X₁ 계수입니다. 구간은 등분산·독립·정규 오차 등 고전적 가정에 근거하며, 이 자료에서 가정이 충족되었다는 뜻은 아닙니다.</figcaption></figure><p>계수는 잔차제곱합을 최소화하도록 구합니다. 절편과 두 기울기를 추정하므로 모수 수 p=3, 잔차 자유도는 n−p=27입니다. <a href="../multiple-regression-example.json">계수·신뢰구간·예제 자료</a>에는 반올림 전 값을 보존했습니다.</p><p>그림의 구간은 등분산·독립·정규 오차 등 고전적 조건을 적용해 계산한 예시입니다. 이 자료에서 그 조건이 확인되었다는 뜻은 아닙니다. <a href="/learn/stats/residuals/">18장</a>의 잔차 진단도 함께 확인해야 합니다.</p><details class="learn-more"><summary>행렬 표현과 계수의 신뢰구간</summary><div class="learn-more__body"><p>설계행렬 X에 절편 열을 포함하고 열들이 독립이면 OLS 계수는 b=(XᵀX)⁻¹Xᵀy로 표현할 수 있습니다. 실제 계산에서는 역행렬을 직접 구하기보다 QR·SVD 같은 수치해법을 사용합니다.</p><p>잔차분산 추정은 SSE/(n−p), 고전적 계수 구간은 bⱼ±t 임계값×SE(bⱼ)입니다. 이분산이나 군집 의존성이 있다면 그 구조에 맞는 표준오차를 검토해야 합니다.</p></div></details></section>
-<section class="learn-chapter__step" id="coding" data-toc-label="범주형 변수와 상호작용"><p class="learn-chapter__label">범주형 변수와 상호작용</p><h2>기준집단과 기울기가 같은지 확인하세요</h2><p>A·B처럼 이름으로 나뉘는 범주는 0과 1인 <strong>더미변수</strong>로 표현할 수 있습니다. 앞의 예제에서 A가 기준집단이고 D=1이면 B입니다. D의 계수 −9는 같은 X에서 B의 적합값이 A보다 9 낮다는 뜻입니다.</p><p>범주가 K개라면 절편과 함께 보통 K−1개의 더미변수를 넣습니다. 기준집단을 바꾸면 계수 표현은 달라져도 같은 모형의 적합값은 유지됩니다. 모든 범주 더미와 절편을 동시에 넣으면 정보가 중복되어 계수를 고유하게 정할 수 없습니다.</p><p>범주에 단순히 1·2·3을 붙여 수치형으로 넣으면 같은 간격으로 직선적인 변화가 생긴다는 추가 가정을 하게 됩니다. 이름을 숫자로 바꾸는 것과 수치형 관계를 가정하는 것은 다릅니다.</p><p>집단별로 기울기도 다르다면 <strong>상호작용 X×D</strong>를 검토합니다. ŷ=b₀+b₁X+b₂D+b₃XD에서 A의 기울기는 b₁, B는 b₁+b₃입니다. 같은 X에서 B−A 차이는 <strong>b₂+b₃X</strong>이므로 모든 X에서 b₂만큼 차이 난다고 읽으면 안 됩니다.</p><details class="learn-more"><summary>X를 중심화하면</summary><div class="learn-more__body"><p>X를 특정 기준값에서 빼면 절편과 집단 차이를 읽는 기준 X가 바뀝니다. 절편·주효과·상호작용 등 같은 모형을 유지하면 적합값은 같습니다. 중심화가 없는 자료 조합을 만들어 주거나 인과 가정을 해결하지는 않습니다.</p></div></details></section>
-<section class="learn-chapter__step" id="collinearity" data-toc-label="다중공선성"><p class="learn-chapter__label">다중공선성</p><h2>설명변수의 정보가 겹치면 개별 계수를 구분하기 어렵습니다</h2><p>두 설명변수가 거의 같은 정보를 담고 있으면 작은 자료 변화에도 개별 계수가 크게 달라지고 표준오차가 커질 수 있습니다. 이를 <strong>다중공선성</strong> 문제라고 합니다. 예측값은 비슷해도 어느 변수의 몫인지 나누어 해석하기 어려울 수 있습니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 400" role="img" aria-labelledby="collinear-title collinear-desc"><title id="collinear-title">완전 공선성</title><desc id="collinear-desc">그림 4. 별도 가상 설명변수입니다. 두 열이 정확히 비례하면 개별 계수의 유일한 OLS 해가 없습니다. 단위만 바꿔 추가한 변수는 새로운 정보를 더하지 않습니다.</desc><text x="24" y="28">완전 공선성: X₂=2X₁</text><line x1="70" y1="320" x2="570" y2="320" stroke="#94a3b8" /><line x1="70" y1="55" x2="70" y2="320" stroke="#94a3b8" /><circle cx="155" cy="276" r="5" fill="#2563eb"/><circle cx="240" cy="232" r="5" fill="#2563eb"/><circle cx="325" cy="188" r="5" fill="#2563eb"/><circle cx="410" cy="144" r="5" fill="#2563eb"/><circle cx="495" cy="100" r="5" fill="#2563eb"/><line x1="155" y1="276" x2="495" y2="100" stroke="#2563eb" /><text x="65" y="345">0</text><text x="150" y="345">1</text><text x="235" y="345">2</text><text x="320" y="345">3</text><text x="405" y="345">4</text><text x="490" y="345">5</text><text x="35" y="325">0</text><text x="35" y="237">4</text><text x="35" y="149">8</text><text x="35" y="105">10</text><text x="24" y="382">가로 X₁ / 세로 X₂ · b₁+2b₂만 구별할 수 있습니다</text></svg><figcaption class="learn-chart__caption">그림 4. 별도 가상 설명변수입니다. 두 열이 정확히 비례하면 개별 계수의 유일한 OLS 해가 없습니다. 단위만 바꿔 추가한 변수는 새로운 정보를 더하지 않습니다.</figcaption></figure><p>완전히 겹치면 계수를 고유하게 구할 수 없습니다. X₂=2X₁이면 b₁X₁+b₂X₂=(b₁+2b₂)X₁입니다. 여러 b₁,b₂ 조합이 같은 적합값을 만듭니다. 같은 길이를 cm와 m 두 열로 넣는 것처럼 단위만 바꾼 열을 추가해도 새로운 정보는 생기지 않습니다.</p><p>강한 공선성 자체가 OLS 계수의 편향을 뜻하는 것은 아닙니다. 다만 다른 조건을 고정한 개별 관계를 정밀하게 구분하기 어려워집니다. 계수 해석과 예측 중 무엇이 목적인지에 따라 자료 보강·변수 통합·규제 등을 검토해야 합니다.</p><details class="learn-more"><summary>VIF는 무엇을 보나요?</summary><div class="learn-more__body"><p>VIFⱼ=1/(1−Rⱼ²)이며, Rⱼ²는 Xⱼ를 나머지 설명변수에 회귀한 결정계수입니다. 높은 VIF는 점검 단서입니다. 정해진 숫자 하나만으로 변수를 자동 삭제하지 말고 측정 의미와 모형의 목적을 함께 판단합니다.</p></div></details></section>
-<section class="learn-chapter__step" id="fit" data-toc-label="적합도와 검정"><p class="learn-chapter__label">적합도와 검정</p><h2>R²가 올랐다는 이유만으로 변수를 추가하지 않습니다</h2><p>같은 관측·결과변수·절편을 사용하는 중첩 OLS 모형에서 변수를 추가하면 학습 SSE는 늘지 않고 R²는 줄지 않습니다. 30개 관측에서 X₁만 넣은 R²는 <strong>0.421</strong>, X₁과 X₂를 넣으면 <strong>0.459</strong>입니다. 증가 자체가 추가 변수의 유용성을 보장하지는 않습니다.</p><p><strong>수정 R²</strong>는 추정한 모수 수를 반영합니다. 두 변수를 넣은 예제에서는 0.419이며, 변수를 추가하면 내려갈 수도 있습니다. 수정 R²도 새 자료의 예측 성능이나 인과 해석의 타당성을 보장하지 않습니다.</p><p>계수별 t 검정은 다른 포함 변수를 조건으로 해당 계수가 0인지 봅니다. 여러 계수를 함께 검정하는 방법도 있지만, 어떤 모형과 어떤 자료를 비교하는지 먼저 확인해야 합니다.</p><details class="learn-more"><summary>수정 R²와 부분 F 검정</summary><div class="learn-more__body"><p>절편을 포함한 모수 수를 p라 하면 수정 R²=1−[SSE/(n−p)]/[SST/(n−1)]입니다.</p><p>고전적 부분 F 검정은 F=[(SSE축소−SSE전체)/q]/[SSE전체/(n−p전체)]이며 q는 추가한 계수 수입니다. 같은 자료·중첩 모형과 고전적 추론 가정이 필요합니다. 결과변수의 변환이나 결측 처리로 자료가 달라진 모형을 이 공식으로 바로 비교해서는 안 됩니다.</p></div></details></section>
-<section class="learn-chapter__step" id="causality" data-toc-label="변수 선택과 인과"><p class="learn-chapter__label">변수 선택과 인과</p><h2>다른 변수를 넣는 목적부터 분명히 하세요</h2><p>공부 시간과 관련된 사전 학습 수준이 시험 점수와도 관련되어 있다면, 공부 시간 하나로 구한 기울기에 그 차이도 섞일 수 있습니다. 관련 변수를 함께 고려하는 이유입니다. 그러나 변수를 많이 넣는다고 측정오차·선택 편향·빠진 교란이 모두 해결되지는 않습니다.</p><p>총효과를 알고 싶은데 원인 이후에 생긴 매개변수를 통제하면 다른 질문을 하게 될 수 있습니다. 두 변수의 공통 결과인 변수에 조건을 걸면 없던 연관성이 생길 수도 있습니다. 어떤 변수를 포함할지는 시간 순서와 분석 질문을 바탕으로 판단해야 합니다. p값만으로 넣고 빼서는 이런 문제를 해결할 수 없습니다.</p><p>예측이 목적이라면 예측 시점에 실제로 알 수 있는 변수인지 확인하고 새 자료로 검증하세요. 결과가 나온 뒤에야 알 수 있는 정보를 넣으면 예측 성능을 과장하는 <strong>데이터 누출</strong>이 생깁니다.</p></section>
-<section class="learn-chapter__step" id="practice" data-toc-label="확인 문제"><p class="learn-chapter__label">확인 문제</p><h2>계수의 조건과 모형의 한계를 읽으세요</h2><ol class="learn-exercises"><li>사전 점수를 넣은 공부 시간 계수는 모든 조건이 같은 인과효과인가요?<details><summary>답과 해설</summary><p>아니요. 모형에 포함한 사전 점수를 고정한 비교입니다. 학습 환경 등 포함하지 않은 조건까지 같다는 뜻은 아닙니다.</p></details></li><li>절편과 모든 범주 더미를 넣어도 되나요?<details><summary>답과 해설</summary><p>열이 중복되어 계수가 고유하지 않습니다. 보통 기준 범주 하나를 제외합니다.</p></details></li><li>상호작용이 있으면 집단 차이는 항상 b₂인가요?<details><summary>답과 해설</summary><p>아니요. b₂+b₃X로 X에 따라 달라집니다.</p></details></li><li>변수를 추가해 R²가 오르면 모형이 좋아졌나요?<details><summary>답과 해설</summary><p>학습 R²의 비감소는 중첩 OLS의 성질입니다. 진단·불확실성·새 자료 성능을 따로 확인합니다.</p></details></li></ol></section>
-<section class="learn-chapter__step" id="macro" data-toc-label="CH2 Macro에서 읽기"><p class="learn-chapter__label">CH2 Macro에서 읽기</p><h2>계수의 조건을 결과와 함께 기록합니다</h2><p>결과를 읽을 때 결과변수의 단위·변환, 포함 변수, 기준 범주, 상호작용, 표본과 결측 처리, 표준오차 계산 방법을 확인하세요. 이 장의 연습식이 서비스의 실제 산식이라고 전제하지 않습니다.</p><p>‘다른 조건이 같다’는 표현에는 어떤 변수를 조건으로 삼았는지 적습니다. 모형에 포함되지 않은 조건까지 같다고 확대하거나 개별 물건의 적정가로 해석하지 않습니다.</p></section>
-<section class="learn-chapter__step" id="recap" data-toc-label="결론 · 학습 요약"><p class="learn-chapter__label">결론 · 학습 요약</p><h2>계수와 함께 포함 변수·기준·자료 범위를 읽으세요</h2><p>다중회귀의 계수는 다른 포함 변수와 함수 형태를 조건으로 한 값입니다. 단순회귀에 변수를 더하는 것에서 나아가 비교의 의미가 어떻게 바뀌는지 확인해야 합니다.</p><ul class="learn-recap-list"><li><strong>조건부 계수:</strong> 가산 모형에서 다른 포함 변수를 고정했을 때의 적합값 차이입니다. 모든 조건이 같거나 인과효과라는 뜻은 아닙니다.</li><li><strong>범주형 변수:</strong> 기준집단과 더미변수의 정의를 확인합니다. 상호작용이 있으면 집단 차이나 기울기가 다른 변수 값에 따라 달라집니다.</li><li><strong>자료 범위:</strong> 실제로 없는 변수 조합에 대한 비교는 모형 가정과 외삽에 의존합니다.</li><li><strong>공선성:</strong> 겹치는 정보가 많으면 개별 계수를 나누어 추정하기 어렵습니다. 완전 공선성에서는 계수가 고유하지 않습니다.</li><li><strong>모형 평가:</strong> R² 증가만으로 판단하지 말고 잔차 진단·불확실성·예측 성능·분석 목적을 함께 확인합니다.</li></ul><p>다음 <a href="/learn/stats/log-regression/">20장 ‘로그변환과 비선형 관계’</a>에서는 변수 변환에 따라 해석이 어떻게 달라지는지 살펴봅니다.</p><details class="learn-more"><summary>참고자료</summary><div class="learn-more__body"><ul><li><a href="https://www.itl.nist.gov/div898/handbook/pmd/section1/pmd141.htm">NIST: Linear Least Squares Regression</a> — 모형과 최소제곱의 정의.</li></ul><p class="learn-source-note">참고자료의 기존 확인일: 2026-10-08. 30개 관측의 계산은 공통 학습 자료의 세 수치열을 단위 없는 X₁,X₂,Y로 사용했습니다. 여섯 점과 완전 공선성 그림은 별도 가상 예제입니다.</p></div></details></section></article>
+      <article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="다중회귀와 변수의 해석"><section class="learn-chapter__step" id="quick-start" data-toc-label="서두 · 학습목표"><p class="learn-chapter__label">서두 · 학습목표</p><h2>여러 변수를 함께 분석하면 관계가 어떻게 달라질까요?</h2><p>토지의 면적이 클수록 거래단가가 낮아지는 경향이 나타났다고 가정해 보겠습니다.</p>
+<p>그런데 면적이 큰 토지는 주로 농촌지역에 있고, 작은 토지는 도시지역에 많이 분포한다면 어떨까요?</p>
+<p>이 경우 면적과 거래단가의 관계에는 지역별 가격 수준의 차이도 함께 반영될 수 있습니다.</p>
+<p>그렇다면 지역의 차이를 고려한 뒤에도 면적과 거래단가 사이에 같은 관계가 나타날까요?</p>
+<p>이러한 질문을 살펴보는 데 사용하는 방법이 다중회귀분석(Multiple regression)입니다.</p>
+<p>다중회귀는 하나의 결과변수와 여러 설명변수 사이의 관계를 하나의 회귀식으로 나타냅니다.</p>
+<p>이번 장에서는 변수를 추가하면 회귀계수가 왜 달라지는지, 범주형 변수와 상호작용은 어떻게 해석하는지, 그리고 변수들 사이의 정보가 겹칠 때 어떤 문제가 발생하는지 알아보겠습니다.</p>
+<p>이번 장의 학습목표</p>
+<ul class="learn-objectives"><li>단순회귀와 다중회귀의 차이를 이해합니다.</li><li>다른 설명변수를 고정한 조건에서 회귀계수를 해석합니다.</li><li>변수를 추가했을 때 회귀계수의 부호와 크기가 달라지는 이유를 알아봅니다.</li><li>범주형 변수와 상호작용항의 의미를 이해합니다.</li><li>다중공선성과 변수 선택 문제를 구별합니다.</li><li>결정계수와 수정 결정계수, 계수별 검정의 의미를 살펴봅니다.</li></ul><p class="learn-source-note"><a href="/learn/stats/graphs/#data">공통 학습 자료 30건</a> · <a href="../multiple-regression-example.json">계수·구간·가상 예제 JSON</a>. 실제 거래 출처와 대표성이 검증되지 않은 학습 자료입니다.</p></section>
+<section class="learn-chapter__step" id="core" data-toc-label="다중회귀의 기본 구조"><p class="learn-chapter__label">다중회귀의 기본 구조</p><h2>여러 설명변수의 관계를 하나의 회귀식으로 나타냅니다</h2><p>17장에서 배운 단순선형회귀는 하나의 설명변수를 사용합니다.</p>
+<p>예를 들어 토지의 면적만으로 거래단가를 설명하는 식은 다음과 같습니다.</p>
+<p class="mr-formula">ŷ = b₀ + b₁ × 면적</p>
+<p>다중회귀는 여기에 층, 용도지역, 건축연도 등 다른 설명변수를 추가할 수 있습니다.</p>
+<p>설명변수가 여러 개일 때 일반적인 모집단 회귀모형은 다음과 같습니다.</p>
+<p class="mr-formula">Y = β₀ + β₁X₁ + β₂X₂ + … + βₖXₖ + ε</p>
+<p>표본자료로 계산한 회귀식은 다음과 같이 표현합니다.</p>
+<p class="mr-formula">ŷ = b₀ + b₁x₁ + b₂x₂ + … + bₖxₖ</p>
+<p>각 기호의 의미는 다음과 같습니다.</p>
+<ul><li>Y: 설명하려는 결과변수</li><li>X₁, X₂, …, Xₖ: 회귀식에 포함된 설명변수</li><li>b₀: 추정된 절편</li><li>b₁, b₂, …, bₖ: 각 설명변수의 추정 회귀계수</li></ul>
+<p>다중회귀도 최소제곱법을 사용할 수 있습니다.</p>
+<p>관측값과 적합값 사이의 잔차를 제곱해 더한 값이 가장 작아지도록 회귀계수를 계산하는 것입니다.</p>
+<p>다만 여러 설명변수를 포함한다는 점에서 단순회귀보다 계수의 해석이 복잡해집니다.</p>
+<p>다중회귀에서 가장 중요한 것은 각 회귀계수가 다른 포함 변수들을 고정한 조건에서의 관계를 나타낸다는 사실입니다.</p>
+<p>예를 들어 면적과 층을 포함한 가산적 선형회귀식에서 면적계수는 층이 같은 조건에서 면적이 1㎡ 다른 두 관측값의 적합 단가 차이를 뜻합니다.</p>
+<p>하지만 위치나 용도지역 등 모형에 포함되지 않은 조건까지 같다는 뜻은 아닙니다.</p>
+<p>또한 회귀계수 자체가 해당 변수를 실제로 변화시켰을 때 발생하는 인과효과를 의미하지는 않습니다.</p>
+<details class="learn-more"><summary>다중회귀와 다변량 회귀는 같을까요?</summary><div class="learn-more__body"><p>일반적으로 다중회귀는 하나의 결과변수를 여러 설명변수로 설명하는 모형을 말합니다.</p>
+<p>반면 다변량 회귀는 여러 결과변수를 동시에 분석하는 모형을 의미합니다.</p>
+<p>두 용어는 비슷하게 사용되기도 하지만 통계적으로 구분할 필요가 있습니다.</p></div></details></section>
+<section class="learn-chapter__step" id="groups" data-toc-label="변수를 추가하면 관계가 달라지는 이유"><p class="learn-chapter__label">변수를 추가하면 관계가 달라지는 이유</p><h2>전체 자료의 관계와 집단 내부의 관계는 다를 수 있습니다</h2><p>16장에서는 서로 다른 집단을 합쳤을 때 상관관계의 방향이 바뀔 수 있다는 사실을 배웠습니다.</p>
+<p>회귀분석에서도 비슷한 현상이 나타날 수 있습니다.</p>
+<p>이번에는 두 집단 A와 B에 대한 별도의 가상 자료를 살펴보겠습니다.</p>
+<div class="learn-data learn-data--full"><table><thead><tr><th scope="col">집단</th><th scope="col">X</th><th scope="col">Y</th></tr></thead><tbody><tr><th scope="row">A</th><td>1, 2, 3</td><td>8.2, 8.6, 10.2</td></tr><tr><th scope="row">B</th><td>4, 5, 6</td><td>2.2, 2.6, 4.2</td></tr></tbody></table></div>
+<p>각 집단 내부에서는 X가 증가할수록 Y도 증가하는 경향이 있습니다.</p>
+<p>하지만 B집단은 A집단보다 X의 값이 크면서 Y의 수준은 낮습니다.</p>
+<p>이러한 자료를 하나로 합쳐 단순회귀를 계산하면 다음과 같은 결과가 나옵니다.</p>
+<p>전체 단순회귀의 기울기 ≈ −1.314</p>
+<p>즉, 집단을 구분하지 않은 전체 자료에서는 X와 Y 사이에 음의 기울기가 나타납니다.</p>
+<figure class="learn-chart learn-chart--wide" id="mr-groups"><div class="mr-controls" hidden><label for="mr-group-mode">집단 통제 전후 보기</label><select id="mr-group-mode"><option value="both">통제 전후 비교</option><option value="overall">집단을 구분하지 않은 회귀</option><option value="adjusted">집단을 구분한 회귀</option></select><p id="mr-group-status" role="status" aria-live="polite"></p><p class="learn-source-note">A의 X범위는 1~3, B는 4~6으로 겹치지 않습니다. 집단별 선은 관측 범위에만 표시합니다. 동일한 X에서의 집단 차이는 공통 기울기·가산성 가정에 의존하며 인과효과가 아닙니다.</p></div><script type="application/json" id="mr-demo">{"x": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0], "group": [0, 0, 0, 1, 1, 1], "y": [8.2, 8.6, 10.2, 2.2, 2.6, 4.2], "model": {"beta": [6.999999999999998, 1.0000000000000009, -9.000000000000002], "residuals": [0.20000000000000018, -0.40000000000000036, 0.1999999999999993, 0.20000000000000018, -0.4000000000000017, 0.1999999999999984], "SSE": 0.48000000000000087, "df": 3, "R2": 0.9917920656634747, "adjusted_R2": 0.9863201094391244, "se": [0.46188021535170093, 0.20000000000000015, 0.6831300510639737], "ci": [[5.530091015170335, 8.469908984829662], [0.3635107389432589, 1.636489261056743], [-11.174024707036816, -6.825975292963188]]}, "simple": {"beta": [10.600000000000012, -1.3142857142857156], "residuals": [-1.0857142857142978, 0.6285714285714192, 3.542857142857134, -3.1428571428571495, -1.4285714285714337, 1.4857142857142813], "SSE": 28.25142857142857, "df": 4, "R2": 0.5169044361930818, "adjusted_R2": 0.39613054524135227, "se": [2.4740943508974866, 0.6352887821571335], "ci": [[3.730812849653173, 17.46918715034685], [-3.078130143892956, 0.4495587153215248]]}, "residual_x": [-1.0, 0.0, 1.0, -1.0, 0.0, 1.0], "residual_y": [-0.8000000000000007, -0.40000000000000036, 1.1999999999999993, -0.7999999999999998, -0.3999999999999999, 1.2000000000000002]}</script><svg class="mr-group-svg" viewBox="0 0 640 400" role="img" aria-labelledby="groups-title groups-desc"><title id="groups-title">집단 조정 전후의 관계</title><desc id="groups-desc">그림 1. 별도 가상 6점입니다. 집단 내 기울기는 양수지만 전체 기울기는 음수입니다. 집단 간 X범위가 겹치지 않아 같은 X에서의 집단 차이는 모형 가정에 의존합니다.</desc><text x="24" y="28" id="mr-group-heading">가상 자료: 파랑 A집단 / 주황 B집단</text><line x1="70" y1="320" x2="580" y2="320" stroke="#94a3b8" /><line x1="70" y1="55" x2="70" y2="320" stroke="#94a3b8" /><circle cx="145.0" cy="131.4" r="5" fill="#2563eb" data-group="0"><title>A: (1, 8.2)</title></circle><circle cx="220.0" cy="122.20000000000002" r="5" fill="#2563eb" data-group="0"><title>A: (2, 8.6)</title></circle><circle cx="295.0" cy="85.4" r="5" fill="#2563eb" data-group="0"><title>A: (3, 10.2)</title></circle><circle cx="370.0" cy="269.4" r="5" fill="#d97706" data-group="1"><title>B: (4, 2.2)</title></circle><circle cx="445.0" cy="260.2" r="5" fill="#d97706" data-group="1"><title>B: (5, 2.6)</title></circle><circle cx="520.0" cy="223.39999999999998" r="5" fill="#d97706" data-group="1"><title>B: (6, 4.2)</title></circle><line x1="145" y1="136" x2="295" y2="90" stroke="#2563eb" stroke-width="2" data-trend="A"/><line x1="370" y1="274" x2="520" y2="228" stroke="#d97706" stroke-width="2" data-trend="B"/><line x1="145" y1="106.42857142857116" x2="520" y2="257.57142857142844" stroke="#64748b" stroke-dasharray="5 4" stroke-width="2" data-trend="overall"/><text x="140" y="345" >1</text><text x="215" y="345" >2</text><text x="290" y="345" >3</text><text x="365" y="345" >4</text><text x="440" y="345" >5</text><text x="515" y="345" >6</text><text x="35" y="325" >0</text><text x="35" y="233" >4</text><text x="35" y="141" >8</text><text x="35" y="95" >10</text><text x="24" y="380" id="mr-group-legend">X·Y: 가상 변수 · 파랑 A / 주황 B / 회색 점선: 전체</text></svg><figcaption class="learn-chart__caption">그림 1. 별도 가상 6점입니다. 집단 내 기울기는 양수지만 전체 기울기는 음수입니다. 집단 간 X범위가 겹치지 않아 같은 X에서의 집단 차이는 모형 가정에 의존합니다.</figcaption></figure>
+<p>그림을 보면 각 집단의 내부 기울기와 전체 자료의 기울기가 서로 다른 방향으로 나타납니다.</p>
+<p>왜 이런 일이 발생했을까요?</p>
+<p>전체 단순회귀에는 집단 내부에서 X가 변할 때 나타나는 관계뿐 아니라, A와 B의 평균 수준 차이도 함께 반영되기 때문입니다.</p>
+<p>이번에는 회귀식에 집단을 구분하는 변수를 추가해 보겠습니다.</p>
+<p>A집단이면 D=0, B집단이면 D=1로 설정합니다.</p>
+<p>집단 더미변수를 포함하면 다음과 같은 회귀식을 얻습니다.</p>
+<p class="mr-formula">ŷ = 7 + 1 × X − 9 × D</p>
+<p>이제 X계수는 +1입니다.</p>
+<p>집단을 구분하지 않았을 때는 약 −1.314였지만, 집단을 구분한 뒤에는 +1로 바뀐 것입니다.</p>
+<p>이는 집단의 평균 수준 차이를 회귀식에 반영하면서 X계수가 달라진 사례입니다.</p>
+<p>다만 어느 회귀식이 인과적으로 옳은 관계를 나타내는지는 이 계산만으로 알 수 없습니다.</p>
+<p>또한 이번 자료에서는 A와 B의 X범위가 겹치지 않습니다.</p>
+<p>따라서 같은 X에서 두 집단을 직접 비교하는 것은 관측된 자료보다 모형의 가정에 의존하게 됩니다.</p></section>
+<section class="learn-chapter__step" id="partial" data-toc-label="통제변수의 의미"><p class="learn-chapter__label">통제변수의 의미</p><h2>다른 변수로 설명되는 부분을 제외하고 관계를 살펴봅니다</h2><p>다중회귀에서 흔히 사용하는 표현이 있습니다.</p>
+<p>&quot;다른 변수를 통제한 뒤에도 X와 Y 사이에 관계가 있습니다.&quot;</p>
+<p>여기서 통제한다는 것은 무엇을 의미할까요?</p>
+<p>앞의 A·B집단 사례를 생각해 보겠습니다.</p>
+<p>두 집단은 Y의 평균 수준이 서로 다릅니다.</p>
+<p>집단 차이를 고려하지 않고 전체 자료를 분석하면 X의 계수에 집단 사이의 평균 수준 차이가 섞여 들어갑니다.</p>
+<p>이 문제를 이해하기 위해 각 집단의 평균을 제거해 보겠습니다.</p>
+<p>먼저 각 관측값의 X에서 해당 집단의 X평균을 뺍니다.</p>
+<p>Y에서도 해당 집단의 Y평균을 뺍니다.</p>
+<p>그러면 집단 사이의 평균 수준 차이는 제거되고, 각 집단 내부에서 평균보다 얼마나 높거나 낮은지만 남습니다.</p>
+<figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 400" role="img" aria-labelledby="partial-title partial-desc"><title id="partial-title">집단을 조정한 기울기</title><desc id="partial-desc">그림 2. 그림 1의 각 집단 평균을 제거했습니다. 같은 좌표마다 A·B 각 1개씩 두 관측값이 겹치며, 고리와 ×2로 표시합니다. 이 편차들의 원점 통과 회귀 기울기는 다중회귀 X계수 1과 같습니다.</desc><text x="24" y="28" >집단 평균을 각각 뺀 X와 Y</text><line x1="100" y1="210" x2="540" y2="210" stroke="#94a3b8" /><line x1="320" y1="65" x2="320" y2="330" stroke="#94a3b8" /><line x1="160" y1="338" x2="480" y2="82" stroke="#2563eb" /><circle cx="190.0" cy="293.20000000000005" r="5" fill="#2563eb"/><circle cx="320.0" cy="251.60000000000002" r="5" fill="#2563eb"/><circle cx="450.0" cy="85.20000000000007" r="5" fill="#2563eb"/><circle cx="190.0" cy="293.2" r="5" fill="#2563eb"/><circle cx="320.0" cy="251.6" r="5" fill="#2563eb"/><circle cx="450.0" cy="85.19999999999999" r="5" fill="#2563eb"/><ellipse cx="190.0" cy="293.2" rx="8" ry="8" fill="none" stroke="#2563eb"/><text x="202.0" y="297.2" >×2</text><ellipse cx="320.0" cy="251.6" rx="8" ry="8" fill="none" stroke="#2563eb"/><text x="332.0" y="255.6" >×2</text><ellipse cx="450.0" cy="85.2" rx="8" ry="8" fill="none" stroke="#2563eb"/><text x="462.0" y="89.2" >×2</text><text x="185" y="355" >-1</text><text x="315" y="355" >0</text><text x="445" y="355" >1</text><text x="65" y="319" >-1</text><text x="65" y="215" >0</text><text x="65" y="111" >1</text><text x="24" y="383" >가로: X의 집단 내 편차 / 세로: Y의 집단 내 편차</text></svg><figcaption class="learn-chart__caption">그림 2. 그림 1의 각 집단 평균을 제거했습니다. 같은 좌표마다 A·B 각 1개씩 두 관측값이 겹치며, 고리와 ×2로 표시합니다. 이 편차들의 원점 통과 회귀 기울기는 다중회귀 X계수 1과 같습니다.</figcaption></figure>
+<p>이렇게 평균을 제거한 값들을 이용해 원점을 지나는 회귀직선을 계산하면 기울기는 +1입니다.</p>
+<p>앞에서 집단 더미변수를 포함한 다중회귀의 X계수와 같습니다.</p>
+<p>즉, 이번 사례에서는 집단 차이를 반영한 뒤 남는 X와 Y의 관계가 다중회귀의 X계수로 나타난 것입니다.</p>
+<p>이러한 원리는 일반적인 다중회귀에도 확장할 수 있습니다.</p>
+<p>다른 포함 변수들로 설명되는 부분을 X와 Y에서 각각 제거한 뒤, 남은 부분 사이의 관계를 계산하면 해당 설명변수의 다중회귀계수를 얻을 수 있습니다.</p>
+<p>이를 부분회귀의 원리라고 합니다.</p>
+<p>하지만 주의할 점이 있습니다.</p>
+<p>통계적으로 통제했다는 사실이 실제 실험에서 다른 조건을 완전히 같게 만들었다는 뜻은 아닙니다.</p>
+<p>모형에 포함되지 않은 변수나 측정 오류, 표본 선택 문제 등은 여전히 남아 있을 수 있습니다.</p>
+<details class="learn-more"><summary>부분회귀의 수학적 원리</summary><div class="learn-more__body"><p>일반적인 OLS에서 특정 설명변수 Xⱼ와 종속변수 Y를 나머지 설명변수 및 절편에 각각 회귀해 잔차를 구할 수 있습니다.</p>
+<p>그 두 잔차 사이의 원점 통과 회귀계수는 원래 다중회귀에서 Xⱼ의 계수와 같습니다.</p>
+<p>이것을 Frisch–Waugh–Lovell 정리라고 합니다.</p>
+<p>단, 같은 표본과 가중치, 적절한 행렬의 독립성 조건이 필요합니다.</p>
+<p>또한 보조회귀의 기본 출력 표준오차가 원래 다중회귀의 계수 표준오차와 항상 동일한 것은 아닙니다. 원래 모형에서 사용한 잔차 자유도 등을 고려해야 합니다.</p></div></details></section>
+<section class="learn-chapter__step" id="example" data-toc-label="공통 학습 자료로 계산하기"><p class="learn-chapter__label">공통 학습 자료로 계산하기</p><h2>면적과 층을 함께 포함하면 회귀계수가 달라집니다</h2><p>이번에는 11장부터 사용한 공통 학습 자료 30건을 이용해 보겠습니다.</p>
+<p>17장에서는 면적 하나만 설명변수로 사용했습니다.</p>
+<p>그때 계산한 회귀식은 다음과 같습니다.</p>
+<p>단순회귀</p>
+<p class="mr-formula">ŷ = 232.5090 − 0.6843 × 면적</p>
+<p>이번에는 설명변수에 층을 추가합니다.</p>
+<p>다중회귀</p>
+<p class="mr-formula">ŷ = 277.920 − 0.8180 × 면적 − 6.5942 × 층</p>
+<p>두 식의 면적계수를 비교하면 다음과 같습니다.</p>
+<div class="learn-data learn-data--full"><table><thead><tr><th scope="col">모형</th><th scope="col">면적계수</th></tr></thead><tbody><tr><th scope="row">면적만 포함한 단순회귀</th><td>−0.6843</td></tr><tr><th scope="row">면적과 층을 포함한 다중회귀</th><td>−0.8180</td></tr></tbody></table></div>
+<figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 400" role="img" aria-labelledby="coefficients-title coefficients-desc"><title id="coefficients-title">층 추가 전후의 면적계수와 95% 신뢰구간</title><desc id="coefficients-desc">그림 3. 같은 학습 자료 30건에서 층을 추가했을 때의 면적계수입니다. 구간은 등분산·독립·정규 오차 등 고전적 가정에 근거하며, 이 자료에서 가정이 충족되었다는 뜻은 아닙니다.</desc><text x="24" y="28" >같은 30건의 면적계수와 고전적 95% 신뢰구간</text><text x="24" y="145" >면적만</text><line x1="278.9200145707862" y1="140" x2="512.3958276504966" y2="140" stroke="#2563eb" stroke-width="3"/><circle cx="395.6579211106414" cy="140" r="5" fill="#2563eb"/><text x="170" y="172" >-0.684 [-0.995, -0.374]</text><text x="24" y="245" >면적+층</text><line x1="207.6041723495035" y1="240" x2="483.16754113122767" y2="240" stroke="#2563eb" stroke-width="3"/><circle cx="345.38585674036557" cy="240" r="5" fill="#2563eb"/><text x="170" y="272" >-0.818 [-1.184, -0.452]</text><line x1="170" y1="320" x2="550" y2="320" stroke="#94a3b8" /><text x="155.0" y="345" >-1.28</text><text x="281.6666666666667" y="345" >-0.95</text><text x="408.33333333333337" y="345" >-0.61</text><text x="535.0" y="345" >-0.27</text><text x="24" y="382" >면적계수 단위: (만원/㎡)/㎡ · 층 포함 여부만 다릅니다</text></svg><figcaption class="learn-chart__caption">그림 3. 같은 학습 자료 30건에서 층을 추가했을 때의 면적계수입니다. 구간은 등분산·독립·정규 오차 등 고전적 가정에 근거하며, 이 자료에서 가정이 충족되었다는 뜻은 아닙니다.</figcaption></figure>
+<p>면적계수가 −0.6843에서 −0.8180으로 바뀌었습니다.</p>
+<p>이는 층 변수를 모형에 추가하면서 면적과 거래단가 사이의 조건부 관계가 달라졌다는 뜻입니다.</p>
+<p>다중회귀식의 계수는 다음과 같이 해석할 수 있습니다.</p>
+<p>① 면적계수 −0.8180</p>
+<p>같은 층이라는 조건에서 면적이 1㎡ 다른 두 관측값의 적합 단가는 약 0.8180만원/㎡ 차이가 납니다.</p>
+<p>② 층계수 −6.5942</p>
+<p>같은 면적이라는 조건에서 층이 1층 다른 두 관측값의 적합 단가는 약 6.5942만원/㎡ 차이가 납니다.</p>
+<p>다만 이번 모형에는 위치와 유형, 연식 등 다른 부동산 특성이 포함되어 있지 않습니다.</p>
+<p>따라서 &#x27;다른 모든 조건이 같다&#x27;고 확대해서 해석해서는 안 됩니다.</p>
+<p>또한 층은 건물의 층을 의미하는 변수입니다. 서로 다른 유형의 부동산을 함께 분석한 학습 자료에서는 층계수에 부동산 시장 전체의 일반적인 의미를 부여하기 어렵습니다.</p>
+<p>이 자료는 다중회귀의 계산과 해석을 연습하기 위한 예시입니다.</p>
+<details class="learn-more"><summary>다중회귀계수는 어떻게 계산할까요?</summary><div class="learn-more__body"><p>다중회귀에서도 최소제곱법을 사용합니다.</p>
+<p>모든 관측값의 잔차제곱합을 최소화하는 계수를 구합니다.</p>
+<p class="mr-formula">SSE = Σ(yᵢ−ŷᵢ)²</p>
+<p>설계행렬 X에 절편을 포함하고 설명변수 열들이 선형독립이면 다음과 같이 나타낼 수 있습니다.</p>
+<p class="mr-formula">b = (XᵀX)⁻¹Xᵀy</p>
+<p>다만 실제 컴퓨터 계산에서는 수치적 안정성을 위해 역행렬을 직접 구하는 방법보다 QR 분해나 SVD 등을 사용하는 것이 일반적입니다.</p>
+<p>이번 모형은 절편, 면적계수, 층계수의 세 모수를 추정합니다.</p>
+<p>따라서 표본수가 30건일 때 잔차 자유도는 다음과 같습니다.</p>
+<p>30 − 3 = 27</p>
+<p>이 자유도는 잔차분산 추정과 계수별 신뢰구간, 검정 등에 사용됩니다.</p></div></details><details class="learn-more"><summary>두 모형의 전체 계수·고전적 표준오차·95% 구간</summary><div class="learn-more__body"><div class="learn-data learn-data--full"><table><thead><tr><th>모형·계수</th><th>추정값</th><th>표준오차</th><th>95% 구간</th></tr></thead><tbody><tr><th scope="row">면적만 · 절편</th><td>232.5090</td><td>22.2944</td><td>186.8410~278.1770</td></tr><tr><th scope="row">면적만 · 면적</th><td>-0.6843</td><td>0.1516</td><td>-0.9947~-0.3739</td></tr><tr><th scope="row">면적+층 · 절편</th><td>277.9198</td><td>39.8808</td><td>196.0911~359.7484</td></tr><tr><th scope="row">면적+층 · 면적</th><td>-0.8180</td><td>0.1786</td><td>-1.1844~-0.4516</td></tr><tr><th scope="row">면적+층 · 층</th><td>-6.5942</td><td>4.8342</td><td>-16.5133~3.3248</td></tr></tbody></table></div><p>면적만 모형 자유도 28, 면적+층 자유도 27의 양측 t 임계값을 각각 사용했습니다. 계수와 표준오차의 단위는 절편: 만원/㎡, 면적: (만원/㎡)/㎡, 층: (만원/㎡)/층입니다. 이분산·의존성이 있으면 이 고전적 구간이 자동으로 타당해지지는 않습니다.</p></div></details></section>
+<section class="learn-chapter__step" id="coding" data-toc-label="범주형 변수의 해석"><p class="learn-chapter__label">범주형 변수의 해석</p><h2>기준집단을 무엇으로 정했는지 먼저 확인하세요</h2><p>회귀분석에서는 숫자로 측정되는 변수뿐 아니라 범주형 변수도 사용할 수 있습니다.</p>
+<p>예를 들어 토지의 용도지역을 주거지역, 상업지역, 공업지역으로 구분한다고 가정해 보겠습니다.</p>
+<p>이러한 범주에 단순히 1, 2, 3이라는 숫자를 부여하고 연속형 설명변수로 사용하면 문제가 생길 수 있습니다.</p>
+<p>숫자의 차이를 일정한 간격의 변화로 해석하는 가정이 들어가기 때문입니다.</p>
+<p>이때 사용하는 대표적인 방법이 더미변수(Dummy variable)입니다.</p>
+<p>더미변수는 특정 범주에 해당하면 1, 해당하지 않으면 0을 부여합니다.</p>
+<p>세 가지 범주가 있고 절편을 포함한다면 일반적으로 두 개의 더미변수를 사용합니다.</p>
+<p>예를 들어 주거지역을 기준집단으로 설정하면 다음과 같습니다.</p>
+<div class="learn-data learn-data--full"><table><thead><tr><th scope="col">용도지역</th><th scope="col">상업 더미</th><th scope="col">공업 더미</th></tr></thead><tbody><tr><th scope="row">주거</th><td>0</td><td>0</td></tr><tr><th scope="row">상업</th><td>1</td><td>0</td></tr><tr><th scope="row">공업</th><td>0</td><td>1</td></tr></tbody></table></div>
+<p>다른 설명변수 없이 다음과 같은 가상 회귀식을 생각해 보겠습니다.</p>
+<p class="mr-formula">ŷ = 100 + 40 × 상업더미 − 20 × 공업더미</p>
+<p>각 범주의 적합값은 다음과 같습니다.</p>
+<ul><li>주거지역: 100</li><li>상업지역: 140</li><li>공업지역: 80</li></ul>
+<p>여기서 상업더미 계수 +40은 기준집단인 주거지역과의 차이입니다.</p>
+<p>공업더미 계수 −20 역시 주거지역과의 차이를 나타냅니다.</p>
+<p>기준집단을 상업지역으로 바꾸면 절편과 개별 더미계수의 표현이 달라집니다.</p>
+<p>하지만 같은 모형을 동일한 방식으로 다시 표현한다면 각 범주의 적합값은 변하지 않습니다.</p>
+<p>범주형 회귀계수를 읽을 때는 언제나 기준집단을 먼저 확인해야 합니다.</p>
+<details class="learn-more"><summary>범주가 세 개인데 더미변수 세 개를 모두 넣으면 안 되나요?</summary><div class="learn-more__body"><p>절편과 함께 세 범주의 더미변수를 모두 넣으면 각 행에서 세 더미의 합이 1이 됩니다.</p>
+<p>이는 절편 열과 완전히 중복되는 관계입니다.</p>
+<p>따라서 회귀계수를 고유하게 계산할 수 없는 완전 다중공선성 문제가 발생합니다.</p>
+<p>일반적인 기준집단 코딩에서는 K개 범주에 대해 K−1개의 더미를 사용합니다.</p></div></details></section>
+<section class="learn-chapter__step" id="interaction" data-toc-label="상호작용효과"><p class="learn-chapter__label">상호작용효과</p><h2>한 변수의 관계가 다른 변수에 따라 달라질 수 있습니다</h2><p>지금까지 살펴본 기본 다중회귀식에서는 각 설명변수의 계수가 일정합니다.</p>
+<p>예를 들어 면적계수가 −0.8이라면 다른 포함 변수가 같을 때 면적의 단위 차이에 따른 적합 단가 차이는 항상 −0.8로 계산됩니다.</p>
+<p>하지만 실제 부동산 시장에서도 면적과 단가의 관계가 모든 용도지역에서 같을까요?</p>
+<p>그렇지 않을 수 있습니다.</p>
+<p>주거지역에서는 면적이 증가할수록 단가가 완만하게 달라지지만, 상업지역에서는 다른 기울기가 나타날 수도 있습니다.</p>
+<p>이처럼 한 변수의 관계가 다른 변수의 값에 따라 달라지는 현상을 상호작용효과라고 합니다.</p>
+<p>다음 회귀식을 살펴보겠습니다.</p>
+<p class="mr-formula">ŷ = b₀ + b₁X + b₂D + b₃XD</p>
+<p>여기서 X는 면적, D는 상업지역 여부를 나타내는 더미변수라고 가정합니다.</p>
+<ul><li>D=0: 기준집단</li><li>D=1: 상업지역</li></ul>
+<p>이때 각 집단의 회귀식은 다음과 같습니다.</p>
+<p>기준집단</p>
+<p class="mr-formula">ŷ = b₀ + b₁X</p>
+<p>상업지역</p>
+<p class="mr-formula">ŷ = (b₀+b₂) + (b₁+b₃)X</p>
+<p>따라서 기울기도 달라집니다.</p>
+<ul><li>기준집단의 면적 기울기: b₁</li><li>상업지역의 면적 기울기: b₁+b₃</li></ul>
+<p>같은 면적에서 두 집단의 적합값 차이는 다음과 같습니다.</p>
+<p class="mr-formula">상업지역 − 기준집단 = b₂+b₃X</p>
+<p>즉, 상호작용항이 포함되면 집단 간 차이도 면적에 따라 달라질 수 있습니다.</p>
+<p>이때 b₂만을 모든 면적에서의 집단 차이라고 해석해서는 안 됩니다.</p>
+<p>또한 상호작용이 존재한다는 통계적 결과가 해당 특성 사이의 인과적인 상승효과를 증명하는 것은 아닙니다.</p>
+<details class="learn-more"><summary>중심화하면 상호작용항의 의미가 달라질까요?</summary><div class="learn-more__body"><p>면적 X에서 특정 기준값을 빼는 중심화를 적용할 수 있습니다.</p>
+<p>예를 들어 X&#x27;=X−100으로 정의하면 X&#x27;=0은 면적 100㎡를 의미합니다.</p>
+<p>이 경우 집단 더미계수는 면적 100㎡에서의 집단 간 적합값 차이로 해석할 수 있습니다.</p>
+<p>필요한 주효과항과 상호작용항을 모두 유지하면, 중심화는 계수의 기준을 바꾸지만 같은 모형의 적합값 자체는 바꾸지 않습니다.</p>
+<p>다만 중심화만으로 실제 자료에 존재하지 않는 집단·면적 조합이 새롭게 생기는 것은 아닙니다.</p></div></details></section>
+<section class="learn-chapter__step" id="collinearity" data-toc-label="다중공선성"><p class="learn-chapter__label">다중공선성</p><h2>설명변수의 정보가 겹치면 계수의 해석이 어려워집니다</h2><p>다중회귀에 설명변수를 여러 개 포함하면 각 변수의 관계를 함께 살펴볼 수 있습니다.</p>
+<p>하지만 설명변수끼리 매우 비슷한 정보를 담고 있다면 문제가 생길 수 있습니다.</p>
+<p>예를 들어 건물의 연면적과 층별 면적의 합계를 동시에 포함한다고 가정해 보겠습니다.</p>
+<p>두 값이 거의 동일한 정보라면, 회귀모형은 어느 변수에 얼마만큼의 계수를 부여할지 구별하기 어려워질 수 있습니다.</p>
+<p>이러한 문제를 다중공선성(Multicollinearity)이라고 합니다.</p>
+<p>다중공선성이 강하면 다음과 같은 현상이 나타날 수 있습니다.</p>
+<ul><li>작은 자료 변화에도 개별 회귀계수가 크게 달라집니다.</li><li>계수의 표준오차가 커질 수 있습니다.</li><li>변수별 관계의 방향과 크기를 안정적으로 구분하기 어려워집니다.</li></ul>
+<figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 400" role="img" aria-labelledby="collinear-title collinear-desc"><title id="collinear-title">완전 공선성</title><desc id="collinear-desc">그림 4. 별도 가상 설명변수입니다. 두 열이 정확히 비례하면 개별 계수의 유일한 OLS 해가 없습니다. 단위만 바꿔 추가한 변수는 새로운 정보를 더하지 않습니다.</desc><text x="24" y="28" >완전 공선성: X₂=2X₁</text><line x1="70" y1="320" x2="570" y2="320" stroke="#94a3b8" /><line x1="70" y1="55" x2="70" y2="320" stroke="#94a3b8" /><circle cx="155" cy="276" r="5" fill="#2563eb"/><circle cx="240" cy="232" r="5" fill="#2563eb"/><circle cx="325" cy="188" r="5" fill="#2563eb"/><circle cx="410" cy="144" r="5" fill="#2563eb"/><circle cx="495" cy="100" r="5" fill="#2563eb"/><line x1="155" y1="276" x2="495" y2="100" stroke="#2563eb" /><text x="65" y="345" >0</text><text x="150" y="345" >1</text><text x="235" y="345" >2</text><text x="320" y="345" >3</text><text x="405" y="345" >4</text><text x="490" y="345" >5</text><text x="35" y="325" >0</text><text x="35" y="237" >4</text><text x="35" y="149" >8</text><text x="35" y="105" >10</text><text x="24" y="365" >예: (b₁,b₂)=(2,0) 또는 (0,1) → 같은 2X₁</text><text x="24" y="392" >가로 X₁ / 세로 X₂ · b₁+2b₂만 구별할 수 있습니다</text></svg><figcaption class="learn-chart__caption">그림 4. 별도 가상 설명변수입니다. 두 열이 정확히 비례하면 개별 계수의 유일한 OLS 해가 없습니다. 단위만 바꿔 추가한 변수는 새로운 정보를 더하지 않습니다.</figcaption></figure>
+<p>예를 들어 두 설명변수 사이에 다음 관계가 정확하게 성립한다고 가정해 보겠습니다.</p>
+<p class="mr-formula">X₂ = 2X₁</p>
+<p>회귀식에 두 변수를 함께 넣으면 다음과 같습니다.</p>
+<p class="mr-formula">b₁X₁ + b₂X₂ = (b₁+2b₂)X₁</p>
+<p>서로 다른 b₁과 b₂의 조합이 같은 적합값을 만들 수 있습니다.</p>
+<p>따라서 개별 계수를 고유하게 결정할 수 없습니다.</p>
+<p>이를 완전 다중공선성이라고 합니다.</p>
+<p>실제 자료에서는 완전히 같지는 않지만 매우 강한 관계를 갖는 변수들이 문제가 될 수 있습니다.</p>
+<p>다만 다중공선성이 있다고 해서 OLS 회귀계수가 반드시 편향되는 것은 아닙니다.</p>
+<p>주로 개별 계수의 추정 정밀도와 안정성에 영향을 줍니다.</p>
+<p>또한 설명변수 사이의 관계가 강하다는 이유만으로 무조건 변수를 삭제해서는 안 됩니다.</p>
+<p>모형의 목적이 설명인지 예측인지, 해당 변수가 실무적으로 어떤 의미를 갖는지도 고려해야 합니다.</p>
+<details class="learn-more"><summary>VIF로 다중공선성을 확인할 수 있나요?</summary><div class="learn-more__body"><p>분산팽창계수(VIF)는 다중공선성을 점검할 때 사용하는 대표적인 지표입니다.</p>
+<p class="mr-formula">VIFⱼ = 1/(1−Rⱼ²)</p>
+<p>여기서 Rⱼ²는 특정 설명변수 Xⱼ를 나머지 설명변수로 회귀했을 때 얻는 결정계수입니다.</p>
+<p>다른 변수들로 Xⱼ를 거의 설명할 수 있다면 VIF가 커집니다.</p>
+<p>다만 VIF가 특정 기준을 넘었다는 이유만으로 해당 변수를 자동 삭제하는 것은 적절하지 않습니다.</p>
+<p>표본수와 분석 목적, 변수의 의미, 계수의 불확실성 등을 함께 살펴봐야 합니다.</p>
+<p>또한 변수의 단위를 바꾸는 것만으로 근본적인 정보 중복이 없어지는 것은 아닙니다.</p></div></details></section>
+<section class="learn-chapter__step" id="fit" data-toc-label="변수 추가와 결정계수"><p class="learn-chapter__label">변수 추가와 결정계수</p><h2>설명변수를 늘리면 R²가 높아질 수 있지만 모형이 개선되었다는 뜻은 아닙니다</h2><p>다중회귀에서 설명변수를 추가하면 결정계수가 어떻게 달라질까요?</p>
+<p>같은 표본과 결과변수를 사용하는 절편 포함 중첩 OLS 모형에서는 설명변수를 추가하더라도 학습 자료의 잔차제곱합은 증가하지 않습니다.</p>
+<p>따라서 표본 내 결정계수 R²는 감소하지 않습니다.</p>
+<p>공통 학습 자료 30건을 이용한 결과는 다음과 같습니다.</p>
+<div class="learn-data learn-data--full"><table><thead><tr><th scope="col">구분</th><th scope="col">면적만 포함</th><th scope="col">면적+층</th></tr></thead><tbody><tr><th scope="row">R²</th><td>0.421</td><td>0.459</td></tr><tr><th scope="row">수정 R²</th><td>0.401</td><td>0.419</td></tr></tbody></table></div>
+<p>층 변수를 추가하자 R²가 0.421에서 0.459로 높아졌습니다.</p>
+<p>그렇다면 층 변수를 추가한 모형이 반드시 더 좋을까요?</p>
+<p>그렇게 판단할 수는 없습니다.</p>
+<p>설명변수를 추가하면 학습 자료에 더 잘 맞도록 조정할 여지가 늘어나기 때문입니다.</p>
+<p>이를 고려하는 지표 중 하나가 수정 결정계수(Adjusted R²)입니다.</p>
+<p>수정 결정계수는 설명변수의 수와 표본수를 반영합니다.</p>
+<p class="mr-formula">R²_adj = 1 − [SSE/(n−p)] / [SST/(n−1)]</p>
+<p>여기서 p는 절편을 포함한 추정 모수의 수입니다.</p>
+<p>이번 면적+층 모형의 수정 R²는 약 0.419입니다.</p>
+<p>수정 R²는 설명변수를 추가했을 때 오히려 낮아질 수도 있습니다.</p>
+<p>하지만 수정 R²가 높다는 이유만으로 모형의 인과적 타당성이나 새로운 거래에 대한 예측 성능이 보장되는 것도 아닙니다.</p>
+<p>변수를 많이 포함하는 것보다 분석 목적에 적합한 변수를 선택하고, 그 결과를 검증하는 것이 중요합니다.</p><p class="learn-source-note">면적만 모형의 수정 R²는 0.4006745736…입니다. 표에서는 소수 셋째 자리까지 반올림해 표시합니다.</p></section>
+<section class="learn-chapter__step" id="tests" data-toc-label="계수별 검정과 모형 비교"><p class="learn-chapter__label">계수별 검정과 모형 비교</p><h2>개별 변수의 검정과 여러 변수의 공동 검정은 다릅니다</h2><p>다중회귀에서는 개별 회귀계수에 대한 통계적 검정을 수행할 수 있습니다.</p>
+<p>예를 들어 면적과 층을 포함한 회귀식에서 층계수가 0인지 검정한다고 가정해 보겠습니다.</p>
+<p>귀무가설은 다음과 같습니다.</p>
+<p class="mr-formula">H₀: β층 = 0</p>
+<p>이 검정은 모형에 포함된 다른 설명변수를 조건으로 층의 회귀계수가 0이라는 가설을 검토합니다.</p>
+<p>개별 계수에 대한 대표적인 검정 방법은 t검정입니다.</p>
+<p>일반적인 고전적 선형회귀 조건에서는 다음과 같이 계산합니다.</p>
+<p class="mr-formula">t = (bⱼ−0) / SE(bⱼ)</p>
+<p>한편 여러 설명변수가 함께 기여하는지를 검정하려면 부분 F검정을 사용할 수 있습니다.</p>
+<p>예를 들어 설명변수 세 개를 추가했을 때, 그 세 계수가 모두 0이라는 가설을 공동으로 검정할 수 있습니다.</p>
+<p>고전적인 중첩 OLS 모형 비교에서는 다음 식을 사용합니다.</p>
+<p class="mr-formula">F = [(SSE_R−SSE_U)/q] / [SSE_U/(n−p_U)]</p>
+<p>여기서 SSE_R은 축소모형의 잔차제곱합, SSE_U는 추가 변수들을 포함한 전체모형의 잔차제곱합입니다.</p>
+<p>q는 추가로 검정하는 계수의 수입니다.</p>
+<p>단, 두 모형이 같은 관측 자료를 사용하고 서로 중첩되어 있으며 필요한 통계적 가정이 적절해야 합니다.</p>
+<p>결측치 처리로 표본이 달라지거나 종속변수의 변환이 달라진 모형을 이 공식으로 직접 비교해서는 안 됩니다.</p>
+<p>또한 p값이 크다는 이유만으로 해당 변수가 시장에서 중요하지 않다고 판단해서도 안 됩니다.</p>
+<p>표본수와 다중공선성, 다른 변수와의 관계 등에 따라 계수의 추정 불확실성이 커질 수 있기 때문입니다.</p></section>
+<section class="learn-chapter__step" id="causality" data-toc-label="변수 선택과 분석 목적"><p class="learn-chapter__label">변수 선택과 분석 목적</p><h2>변수를 많이 포함하는 것이 언제나 좋은 선택은 아닙니다</h2><p>다중회귀에서는 어떤 설명변수를 포함할지 결정해야 합니다.</p>
+<p>하지만 후보 변수를 모두 넣는 방법이 반드시 좋은 것은 아닙니다.</p>
+<p>반대로 p값이 크다는 이유만으로 변수를 하나씩 제거하는 방법도 항상 적절한 것은 아닙니다.</p>
+<p>변수의 선택은 분석 목적과 연결되어야 합니다.</p>
+<p>① 관계를 설명하려는 경우</p>
+<p>시장과 변수 사이의 관계를 이해하려면 해당 변수가 어떤 의미를 갖는지, 다른 변수와 정보가 얼마나 겹치는지 고려해야 합니다.</p>
+<p>② 예측하려는 경우</p>
+<p>새로운 자료에서 예측 성능이 개선되는지 검증해야 합니다.</p>
+<p>특히 예측 시점에 실제로 알 수 있는 변수만 사용해야 합니다.</p>
+<p>③ 인과효과를 추정하려는 경우</p>
+<p>어떤 변수를 통제해야 하는지는 인과관계의 구조와 연구 설계에 따라 결정해야 합니다.</p>
+<p>단순히 통제변수를 많이 넣는다고 인과효과가 정확하게 추정되는 것은 아닙니다.</p>
+<p>특히 원인 이후에 발생하는 매개변수나 두 변수의 공통 결과에 해당하는 충돌변수를 무분별하게 통제하면 해석이 달라지거나 편향이 발생할 수 있습니다.</p>
+<p>또한 변수를 반복해서 선택한 뒤 최종 모형의 p값과 신뢰구간을 일반적인 사전 지정 모형과 동일하게 해석하는 것은 적절하지 않을 수 있습니다.</p>
+<p>변수 선택 과정에서 발생하는 불확실성도 고려해야 하기 때문입니다.</p>
+<p>변수 선택은 유의한 변수를 찾아내는 과정이 아니라, 분석 목적에 맞는 모형을 구성하고 검증하는 과정으로 이해하는 것이 좋습니다.</p></section>
+<section class="learn-chapter__step" id="practice" data-toc-label="확인 문제"><p class="learn-chapter__label">확인 문제</p><h2>다중회귀계수의 조건과 해석 범위를 확인하세요</h2><ol class="learn-exercises"><li>층을 포함한 다중회귀의 면적계수는 다른 모든 부동산 조건이 같을 때의 인과효과일까요?<details><summary>답과 해설</summary><div class="learn-more__body"><p>아닙니다.</p>
+<p>회귀식에 포함된 층을 일정하게 유지한 조건부 관계를 나타냅니다.</p>
+<p>위치와 용도지역 등 포함되지 않은 조건까지 같다는 뜻은 아니며, 인과효과를 자동으로 의미하지도 않습니다.</p></div></details></li><li>세 개의 범주에 대해 절편과 세 개의 더미변수를 모두 포함하면 어떻게 될까요?<details><summary>답과 해설</summary><div class="learn-more__body"><p>완전 다중공선성 문제가 발생합니다.</p>
+<p>각 관측값에서 세 더미의 합이 절편 열과 같아지기 때문입니다.</p>
+<p>일반적인 기준집단 코딩에서는 하나의 범주를 제외하고 더미변수를 구성합니다.</p></div></details></li><li>상호작용항 X×D가 포함된 모형에서 집단 차이는 언제나 b₂일까요?<details><summary>답과 해설</summary><div class="learn-more__body"><p>아닙니다.</p>
+<p>집단 차이는 다음과 같이 X의 값에 따라 달라집니다.</p>
+<p class="mr-formula">b₂+b₃X</p>
+<p>따라서 집단 더미계수 하나만으로 모든 X에서의 차이를 나타낼 수는 없습니다.</p></div></details></li><li>변수를 추가했더니 R²가 상승했습니다. 모형이 개선되었다고 확정할 수 있을까요?<details><summary>답과 해설</summary><div class="learn-more__body"><p>그렇지 않습니다.</p>
+<p>같은 표본의 중첩 OLS 모형에서 학습 R²가 감소하지 않는 것은 수학적인 성질입니다.</p>
+<p>수정 R²와 잔차, 계수의 불확실성, 새로운 자료에서의 예측 성능 등을 함께 살펴봐야 합니다.</p></div></details></li></ol></section>
+<section class="learn-chapter__step" id="macro" data-toc-label="CH2 Macro에서 읽기"><p class="learn-chapter__label">CH2 Macro에서 읽기</p><h2>실제 회귀 화면의 계수·기준·식별 경고를 함께 읽으세요</h2><p>아래는 사용자가 제공한 복합부동산 회귀 화면입니다. 남평읍의 적합 표본 112건을 사용한 캡처로, 공통 학습 자료 30건과 다른 사례입니다. 조회 거래 134건에서 숫자 결측 22건을 제외한 최종 표본 112건이 표시됩니다. ‘지분 4건 제외’도 별도 조건으로 보이지만, 전체 필터 처리 순서를 이미지 하나로 재구성할 수는 없습니다.</p>
+<figure class="mr-macro-case"><a href="macro-built-regression.png" target="_blank" rel="noopener"><img src="macro-built-regression.png" width="1174" height="900" loading="lazy" alt="남평읍 복합 회귀 화면. n=112, 설계 열 25개·독립 계수 22개로 계수가 고유하지 않다는 경고. R² 0.62322, 수정 R² 0.53531, 학습 MAPE 56.73%, CV-MAPE 111.29%. 기준 범주와 계수별 SE·t·p가 표시됩니다."></a><figcaption>실제 복합 회귀 화면 캡처 · 숫자는 캡처 당시 값입니다. 이미지를 선택하면 원본 크기로 볼 수 있습니다. 기간·전체 변수 설정과 원자료가 없어 이 숫자를 현재 값이나 독립 검산 결과로 제시하지 않습니다.</figcaption></figure>
+<p>이 화면의 종속변수는 ‘금액’입니다. 교재의 ‘단가’를 설명하는 식과 구별해야 합니다. 연면적·대지면적·연식·범주 더미와 log(개별공시지가) 등이 식에 포함되어 있습니다. 연면적계수 +53만원이라는 표시는 포함한 다른 변수와 함수 형태를 조건으로 한 표현이며, 누락된 모든 부동산 조건을 같게 만든 인과효과가 아닙니다.</p>
+<p>이 캡처에서는 계수보다 먼저 노란 ‘모형 식별’ 경고를 읽어야 합니다. 설계 열은 25개지만 독립 계수는 22개이므로, 같은 적합값을 만드는 계수 조합이 여러 개 존재합니다. 유한한 계수·표준오차·t값·p값이 출력되더라도 개별 계수가 고유하게 식별되었다는 뜻은 아닙니다. 숫자만으로 변수별 가격 기여를 나누어 해석해서는 안 됩니다.</p>
+<p>‘미상’ 범주는 기준 범주와 다릅니다. 캡처에는 용도지역 제1종일반주거, 구조 벽돌, 도로조건 8m미만, 유형 상업이 기준으로 표시됩니다. ‘미상’의 계수가 0만원, SE가 0.00으로 보이는 것은 표시 반올림과 식별 경고를 함께 확인해야 하는 상황입니다. 이 값만으로 관계가 정확히 0이라고 결론 내리지 않습니다.</p>
+<p>R²=0.62322와 수정 R²=0.53531은 표본 내 적합도입니다. 학습 MAPE=56.73%와 CV-MAPE=111.29%도 서로 다른 평가입니다. 오차율이므로 111.29%는 정답률이 아니며, 별도 시점 평가가 학습 적합보다 나쁠 수 있음을 보여 줍니다. ‘마지막 연도 확인 50.50%’도 전체 CV와 같은 숫자가 아닙니다.</p>
+<details class="learn-more"><summary>실제 복합·지역 회귀의 변수와 계산·표시 방식</summary><div class="learn-more__body">
+<p>확인한 복합 모형은 연면적·대지면적·연식·공시지가와 선택한 지역 지표 등을 수치형 변수로, 용도지역·건축물용도·구조·도로조건·지역 등을 기준 범주가 있는 더미로 구성합니다. ‘미상 유지’와 ‘결측 행 제외’ 정책이 있으며 켜진 숫자 변수의 결측, 로그변환의 양수 조건에 따라 표본이 달라집니다. 모형·앱별 제공 변수는 같다고 전제하지 않습니다.</p>
+<p>확인한 복합 설계행렬은 선택한 수치형 변수와 범주 더미를 더하는 구조입니다. 로그 변환 옵션과 별개로 이 장의 X×D 상호작용항을 자동으로 추가하지는 않습니다. 화면에 없는 상호작용이나 95% 계수 신뢰구간을 이미 제공하는 것처럼 읽지 마세요.</p>
+<p>절편을 포함한 statsmodels OLS에서 계수와 일반 표준오차·t·p를 구합니다. 현재 계수 상세 표에는 SE·t·p가 표시되며 95% 계수 구간 열은 없습니다. SE와 t는 소수 둘째 자리, p는 다섯째 자리로 표시하므로 0.00000은 확률이 정확히 0이라는 뜻이 아닙니다. 식의 기본 축약 표시는 p&lt;0.1인 항을 중심으로 하고, ‘유의 변수’ 개수는 백엔드의 p&lt;0.05 기준이므로 두 표시의 기준이 다릅니다.</p>
+<p>이 경로는 열 수와 행렬 rank를 따로 확인합니다. rank가 줄어도 잔차 자유도가 남으면 계산 결과와 식별 경고를 함께 제공할 수 있습니다. 자유도가 없으면 계산 불가로, 유효 표본 30건 미만 또는 독립 계수당 관측 5건 미만이면 참고용으로 안내합니다. 이는 서비스 제공 기준이지 통계적 타당성의 보증은 아닙니다.</p>
+<p>서비스 VIF 경고는 선택한 연속변수 열로 계산하며 기준 범주 더미와 상수항을 제외합니다. 특히 현재 보조회귀 입력에 상수항을 추가하지 않으므로 교재의 절편 포함 보조회귀 Rⱼ²로 계산한 통상적 VIF와 수치가 다를 수 있습니다. 캡처의 VIF 경고를 교재 공식의 독립 검산값으로 취급하지 않습니다. VIF나 드문 미상 범주의 경고는 자동 삭제 명령이 아닙니다.</p>
+<p>모형 탐색에는 후보 변수 블록을 구성하고 비교하는 절차와 AIC 기준 순차 추가 경로 등이 있습니다. 학습 R²만으로 변수를 고르거나 모든 변수를 p값 순으로 자동 삭제하는 단일 정책은 아닙니다. CV-MAPE는 연도 순서를 고려한 롤링 평가와 마지막 연도 확인으로 구분됩니다. 추천·선택 후의 p값과 구간에도 선택 과정의 불확실성이 남습니다.</p>
+<p>공시지가·면적·건물 특성은 서로 관련될 수 있습니다. 변수의 실무적 의미·유효 표본수·기준 범주·식별 경고와 검증 성능을 함께 보고, 한 변수를 무조건 제거하거나 개별 물건의 적정가격 효과로 해석하지 마세요.</p></div></details>
+<p class="learn-macro-cta"><a href="https://macro.ch2data.com/built/">CH2 Macro 복합 통계·데이터분석 열기 →</a></p></section>
+<section class="learn-chapter__step" id="recap" data-toc-label="결론 · 학습 요약"><p class="learn-chapter__label">결론 · 학습 요약</p><h2>다중회귀는 계수뿐 아니라 어떤 변수를 함께 넣었는지가 중요합니다</h2><p>다중회귀는 여러 설명변수를 하나의 식에 포함해 결과변수와의 관계를 분석하는 방법입니다.</p>
+<p>하지만 설명변수가 달라지면 회귀계수의 의미와 크기도 달라질 수 있습니다.</p>
+<p>따라서 결과를 해석할 때는 회귀계수의 숫자만 보지 말고 변수의 구성과 기준, 자료의 범위, 통계적 불확실성을 함께 살펴봐야 합니다.</p>
+<p>이번 장에서 기억할 내용</p>
+<ul><li>다중회귀: 하나의 결과변수와 여러 설명변수 사이의 관계를 하나의 식으로 나타냅니다.</li><li>조건부 계수: 각 계수는 모형에 포함된 다른 변수를 고정한 조건에서 해석합니다.</li><li>변수 추가: 집단 차이나 다른 변수의 관계를 반영하면 기존 회귀계수가 달라질 수 있습니다.</li><li>범주형 변수: 더미계수는 기준집단과의 차이를 나타냅니다.</li><li>상호작용: 한 변수의 관계가 다른 변수의 값에 따라 달라질 수 있습니다.</li><li>다중공선성: 설명변수의 정보가 겹치면 개별 계수의 추정이 불안정해질 수 있습니다.</li><li>적합도: 변수를 추가해 R²가 상승하더라도 좋은 모형이 보장되지는 않습니다.</li><li>변수 선택: 통계적 유의성뿐 아니라 분석 목적과 변수의 의미, 검증 결과를 고려해야 합니다.</li></ul>
+<p>다음 <a href="/learn/stats/log-regression/">20장 「로그변환과 비선형 관계」</a>에서는 설명변수와 결과변수를 변환했을 때 회귀계수의 의미가 어떻게 달라지는지 알아보겠습니다.</p>
+<details class="learn-more"><summary>참고자료</summary><div class="learn-more__body"><ul><li><a href="https://www.itl.nist.gov/div898/handbook/pmd/section1/pmd141.htm">NIST: Linear Least Squares Regression</a> — 모형과 최소제곱의 정의.</li></ul><p class="learn-source-note">참고자료의 기존 확인일: 2026-10-08. 30건의 계산은 공통 학습 자료의 면적(㎡)·층(층)·단가(만원/㎡)를 사용했습니다. 여섯 점과 완전 공선성 그림은 별도 가상 예제입니다.</p></div></details></section></article>
 
       <nav class="learn-chapter-nav" aria-label="장 이동">
 <a href="/learn/stats/residuals/">← 18. 잔차와 회귀모형의 가정</a>
@@ -53,5 +311,6 @@
       </footer>
     </div>
     <script src="/learn/stats/learn-stats-toc.js?v=20261023-1" defer></script>
-  </body>
+  <script type="module" src="/learn/stats/multiple-regression/experiment.js?v=20261024-1"></script>
+</body>
 </html>

@@ -1,0 +1,23 @@
+/* Chapter 12 only; use the same reader tokens and formula layout as chapter 11. */
+.learn-chapter[aria-label="점추정과 신뢰구간"] :is(h2, li) {
+  word-break: keep-all; overflow-wrap: anywhere;
+}
+.ci-formula {
+  padding: 1rem 1.25rem; background: var(--learn-soft);
+  border-left: 3px solid var(--learn-border-strong); border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.ci-experiment[hidden] { display: none; }
+.ci-experiment { margin: 1rem 0; }
+.ci-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.ci-experiment button {
+  min-height: 44px; padding: .5rem .9rem; border: 1px solid var(--learn-border-strong);
+  border-radius: 8px; background: var(--learn-surface); color: var(--learn-link);
+  font: inherit; cursor: pointer;
+}
+.ci-experiment button:disabled { opacity: .55; cursor: default; }
+#ci-status, #ci-total { font-variant-numeric: tabular-nums; }
+:root[data-learn-theme="dark"] .ci-miss { stroke: #fb7185; }
+:root[data-learn-theme="dark"] circle.ci-miss { fill: #fb7185; }
+#levels [data-key="level-0.9"] { stroke: var(--learn-muted); }
+#levels [data-key="level-0.99"] { stroke: var(--learn-teal); }

@@ -1,6 +1,6 @@
 """Generate chapter 11 from shared teaching observations."""
 from pathlib import Path
-from statistics import mean,stdev
+from statistics import stdev
 from html import escape
 import math,json,re
 ROOT=Path(__file__).resolve().parent
@@ -14,37 +14,92 @@ def build():
  for i,(label,value) in enumerate([('표본표준편차 s',s),('추정 표준오차 SE',se)]):
   y=80+i*85;b+=t(24,y+18,label)+bar(200,y,value,4,f'data-value="{value}"')+t(210+value*4,y+18,f'{value:.2f}')
  b+=t(24,245,'s: 관측값의 퍼짐 / SE: 평균 추정의 표집 변동')+t(360,277,'단위: 만원/㎡')
- f1=fig('sd-se','표준편차와 표준오차',b,'그림 1. 공통 학습 자료 30건에서 n−1로 계산한 s=81.53, s/√30=14.89입니다. 막대는 0에서 시작하며 이 SE는 독립·동일분포 표본을 가정한 계산입니다.',305)
+ f1=fig('sd-se','표본표준편차와 추정 표준오차 비교 (만원/㎡)',b,'그림 1. 공통 학습 자료 30건에서 n−1로 계산한 s=81.53, s/√30=14.89입니다. 막대는 0에서 시작하며 이 SE는 독립·동일분포 표본을 가정한 계산입니다.',305)
  b=t(24,28,'퍼짐 s를 고정한 표본수 비교입니다')
  for i,n in enumerate([10,30,120,480]):
   value=s/math.sqrt(n);y=70+i*65;b+=t(24,y+19,f'n={n}')+bar(145,y,value,14,f'data-n="{n}" data-se="{value}"')+t(155+value*14,y+19,f'{value:.2f}')
  b+=t(24,345,'가로축: 추정 표준오차(만원/㎡), 모두 0에서 시작')
- f2=fig('size','표본수와 평균의 정밀도',b,'그림 2. s=81.5286…을 고정한 가상 비교입니다. 실제로 10·120·480건을 추출한 결과가 아니며, 새 표본에서는 s도 달라질 수 있습니다.',370)
+ f2=fig('size','표본수별 추정 표준오차 · 표준편차 고정 가상 비교 (만원/㎡)',b,'그림 2. s=81.5286…을 고정한 가상 비교입니다. 실제로 10·120·480건을 추출한 결과가 아니며, 새 표본에서는 s도 달라질 수 있습니다.',370)
  b=t(24,28,'건수가 같아도 자료의 퍼짐이 다를 수 있습니다')
- grouptext=[]
  for i,label in enumerate(['주거','상업']):
   a=[r['price'] for r in rows if r['group']==label];sd=stdev(a);err=sd/math.sqrt(len(a));y=80+i*100
   b+=t(24,y,f'{label} n={len(a)} · s={sd:.2f}')+bar(160,y+20,err,13,f'data-group="{label}" data-se="{err}"')+t(170+err*13,y+40,f'{err:.2f}')
-  grouptext.append(f'{label}: s={sd:.2f}, SE={err:.2f}')
  b+=t(24,300,'가로축: 추정 표준오차(만원/㎡), 모두 0에서 시작')
- f3=fig('groups','유형별 표준오차 비교',b,'그림 3. 공통 자료의 주거·상업 각 15건을 별도로 계산했습니다. 단순 독립 표본 공식을 적용한 학습 예제이며 집단 간 차이의 유의성 검정은 아닙니다.',325)
+ f3=fig('groups','같은 표본수에서 주거·상업의 추정 표준오차 비교 (만원/㎡)',b,'그림 3. 공통 자료의 주거·상업 각 15건을 별도로 계산했습니다. 단순 독립 표본 공식을 적용한 학습 예제이며 집단 간 차이의 유의성 검정은 아닙니다.',325)
  b=t(24,28,'목표 표준오차가 작아질수록 필요한 n이 빠르게 늘어납니다')
  for i,target in enumerate([20,10,5]):
   n=math.ceil((s/target)**2);y=75+i*75;b+=t(24,y+19,f'목표 SE {target}')+bar(175,y,n,1.3,f'data-target="{target}" data-required="{n}"')+t(185+n*1.3,y+19,f'{n}건')
  b+=t(24,325,'가로축: 필요 표본수 / 계획용 퍼짐 s≈81.53')
- f4=fig('planning','목표 정밀도와 표본수 계획',b,'그림 4. n≥(s/목표 SE)²을 올림했습니다. 목표 SE의 단위는 만원/㎡입니다. 이는 모집단 퍼짐을 학습 자료의 s로 가정한 계획 예제이며 신뢰수준을 지정한 오차한계 계산과 다릅니다.',352)
+ f4=fig('planning','목표 표준오차별 계획 표본수 (건)',b,'그림 4. n≥(s/목표 SE)²을 올림했습니다. 목표 SE의 단위는 만원/㎡입니다. 이는 모집단 퍼짐을 학습 자료의 s로 가정한 계획 표본수이며 실제 추정오차를 보장하지 않습니다. 신뢰수준을 지정한 오차한계 계산과 다릅니다.',352)
+ experiment='''<details class="learn-more se-experiment" hidden><summary>직접 확인하기 · 표본수 n을 바꾸면?</summary><div class="learn-more__body">
+<p id="se-experiment-note">표본표준편차 s=81.53만원/㎡를 고정한 가상 계산입니다. 실제 재표집 결과가 아닙니다. 기존 그림은 반올림 전 s=81.5286…을 사용하며, 이 실험은 표시값 81.53을 사용합니다.</p>
+<label for="se-n">표본수 n <output id="se-n-value" for="se-n">30건</output></label>
+<input id="se-n" type="range" min="10" max="480" step="1" value="30" aria-describedby="se-experiment-note">
+<div class="se-presets" role="group" aria-label="표본수 빠른 선택"><button type="button" data-se-n="10" aria-pressed="false">10건</button><button type="button" data-se-n="30" aria-pressed="true">30건</button><button type="button" data-se-n="120" aria-pressed="false">120건</button><button type="button" data-se-n="480" aria-pressed="false">480건</button></div>
+<p class="se-formula">추정 SE = 81.53 / √<span id="se-formula-n">30</span> = <output id="se-result" for="se-n" aria-live="polite">14.89만원/㎡</output></p>
+<p class="learn-source-note">막대는 0에서 시작하며, n=10일 때의 SE(25.78)를 최대로 표시합니다. 위 그림 2와 비교해 보세요.</p>
+<div class="se-meter" role="meter" aria-label="선택한 표본수의 추정 표준오차 (만원/㎡)" aria-valuemin="0" aria-valuemax="25.7820536419776" aria-valuenow="14.88527343159583"><span></span></div>
+</div></details>'''
  parts=[]
- def sec(id,label,title,body):parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{title}</h2>{body}</section>')
- sec('quick-start','서두 · 학습목표','이번에 구한 평균은 얼마나 안정적일까요?','''<p>학생 100명을 조사한 통학 시간의 평균과 25명을 조사한 평균이 같다고 해 봅시다. 두 평균을 똑같이 믿어도 될까요? 표본수가 많으면 평균이 더 안정적일 수 있지만, 통학 시간이 얼마나 제각각인지와 학생을 어떻게 뽑았는지도 살펴야 합니다.</p><p><a href="/learn/stats/sampling-distributions/">10장</a>에서는 표본을 다시 뽑을 때 평균이 달라지는 모습을 배웠습니다. 이번 장에서는 관측한 자료로 <strong>평균의 표준오차를 추정</strong>하고, 원하는 정밀도를 얻으려면 표본이 얼마나 필요한지 계산합니다.</p><ul class="learn-objectives"><li>표준편차와 표준오차가 각각 무엇의 퍼짐인지 구별합니다.</li><li>평균의 추정 표준오차 s/√n을 계산하고, 그 값이 뜻하는 바를 설명합니다.</li><li>자료의 퍼짐과 표본수가 정밀도에 미치는 영향을 이해합니다.</li><li>목표 표준오차와 오차한계의 차이, 표집 방법에 따른 한계를 확인합니다.</li></ul>''')
- sec('calculation','핵심 이해와 계산','표준오차는 평균이 달라지는 정도를 나타냅니다',f'''<p><strong>표준편차(SD)</strong>는 개별 관측값이 얼마나 퍼져 있는지 나타냅니다. <strong>표준오차(SE)</strong>는 표본을 다시 뽑을 때 통계량이 얼마나 달라지는지 나타냅니다. 이 장에서는 산술평균의 표준오차를 다룹니다. 중앙값이나 회귀계수의 표준오차는 다른 방법으로 구합니다.</p><p>독립이고 같은 분포를 따르는 관측값들이 유한한 분산을 가질 때, 평균의 이론적 표준오차는 σ/√n입니다. 모집단의 표준편차 σ를 모르면 표본표준편차 s를 넣어 <strong>추정 SE=s/√n</strong>으로 계산합니다. n은 해당 평균을 계산할 수 있는 관측값의 수입니다.</p><p><a href="/learn/stats/graphs/#data">공통 학습 자료 30건</a>에 적용해 보겠습니다. 이 자료는 단가 계산을 연습하기 위한 예시이며 실제 거래 출처와 무작위 표집 여부가 확인된 조사 자료는 아닙니다.</p><ol><li>단가 평균을 구하면 <strong>{mean(v):.2f}만원/㎡</strong>입니다.</li><li>n−1로 나눈 표본표준편차 s는 <strong>{s:.2f}만원/㎡</strong>입니다.</li><li>s를 √30으로 나누면 추정 SE는 <strong>{se:.2f}만원/㎡</strong>입니다. 중간 계산에는 반올림 전 값을 사용했습니다.</li></ol>'''+f1+'''<p>s=81.53은 개별 단가의 퍼짐이고, SE=14.89는 독립·동일분포 표집을 가정했을 때 평균의 표집 변동 추정치입니다. <strong>이번 평균이 모집단 평균에서 정확히 14.89만큼 벗어났다는 뜻은 아닙니다.</strong> 실제 오차 |x̄−μ|는 모집단 평균 μ를 모르면 알 수 없습니다.</p><details class="learn-more"><summary>n−1과 √n은 왜 따로 쓰나요?</summary><div class="learn-more__body"><p>표본표준편차 s는 편차 제곱합을 n−1로 나눈 뒤 제곱근을 취해 계산합니다. 표본으로 모집단의 분산을 추정하는 과정입니다. 그 s를 다시 √n으로 나누는 것은 개별 값의 퍼짐에서 평균의 퍼짐으로 바꾸는 과정입니다.</p><p>6장에서 자료 자체를 요약하려고 n으로 나누어 구한 기술 표준편차는 약 80.16이었습니다. 여기서는 n−1을 사용하는 s≈81.53을 씁니다. n=1이면 이 방식의 s를 구할 수 없어 추정 SE도 계산할 수 없습니다.</p></div></details><p>공식을 적용해 숫자를 구할 수 있어도 표집 가정이 맞는지 별도로 확인해야 합니다. 이 예제의 SE를 실제 모집단에 대한 검증된 불확실성으로 읽지는 않습니다.</p>''')
- sec('size','표본수의 효과','표준오차를 절반으로 줄이려면 표본수가 네 배 필요합니다','''<p>같은 모집단에서 같은 방법으로 독립 표집한다면 평균의 SE는 √n에 반비례합니다. n을 두 배로 늘리면 약 0.707배, 네 배로 늘리면 절반이 됩니다. 표본수가 늘어나는 비율만큼 표준오차가 줄어들지는 않습니다.</p>'''+f2+'''<p>위 그림은 s를 고정하고 n만 바꾼 비교입니다. 실제로 새 표본을 뽑거나 자료를 추가하면 s도 달라질 수 있습니다. 따라서 자료를 더 모았는데 계산한 추정 SE가 조금 커졌다고 해서 반드시 계산이 틀린 것은 아닙니다.</p><p>‘30개 이상이면 충분하다’는 기준도 모든 조사에 적용되지는 않습니다. 분포의 치우침, 극단값, 관측 간 의존성, 원하는 정밀도를 함께 살펴야 합니다.</p>''')
- sec('groups','같은 표본수의 비교','건수가 같아도 평균의 정밀도는 다를 수 있습니다',f'''<p>공통 학습 자료를 주거·상업 두 집단으로 나누면 각각 15건입니다. 각 집단 안에서 s와 SE를 다시 계산하면 {grouptext[0]}, {grouptext[1]}만원/㎡입니다. 같은 표본수라도 값이 더 넓게 퍼진 집단은 평균의 추정 표준오차도 큽니다.</p>'''+f3+'''<p>어떤 집단의 평균을 설명할 때는 그 집단에 속한 값으로 평균·s·n을 모두 계산해야 합니다. 전체 자료의 s를 각 집단에 그대로 붙이면 집단별 퍼짐의 차이를 놓칠 수 있습니다.</p><p>이 그림은 각 평균의 추정 SE를 비교한 것입니다. 두 평균의 차이가 통계적으로 유의한지 알려면 <strong>차이의 표준오차</strong>를 따로 구해야 합니다. 두 집단이 독립인지, 같은 사람을 전후로 측정한 것인지에 따라서도 계산이 달라집니다.</p>''')
- sec('planning','표본수 계획','원하는 표준오차에서 필요한 표본수를 거꾸로 구합니다','''<p>조사를 시작하기 전에는 평균을 어느 정도 정밀하게 추정할지 먼저 정할 수 있습니다. 계획에 쓸 모집단 표준편차를 σ₀, 목표 표준오차를 e라고 하면 <strong>n≥(σ₀/e)²</strong>입니다. 계산한 값은 정수로 올림합니다.</p><p>예비조사나 관련 자료에서 σ₀를 정합니다. 아래 그림은 공통 학습 자료의 s≈81.53을 계획용 값으로 놓은 예입니다. 목표 SE를 20에서 10으로 줄이면 필요한 표본수가 약 네 배가 됩니다.</p>'''+f4+'''<p><strong>목표 SE=10은 실제 오차가 항상 ±10 이내라는 보장이 아닙니다.</strong> SE는 평균의 표집 변동을 나타내는 척도입니다. 신뢰수준까지 정해 오차의 범위를 계획할 때는 별도의 계수를 포함해야 합니다.</p><details class="learn-more"><summary>95% 오차한계를 기준으로 계획한다면</summary><div class="learn-more__body"><p>독립 표집과 정규근사를 사용할 수 있다고 가정하고, 95% 오차한계 목표를 E로 정하면 n≈(1.96σ₀/E)²으로 계획합니다. σ₀=80, E=10이면 (1.96×80/10)²=245.8624이므로 올림하여 246개입니다.</p><p>σ₀는 계획을 위해 정한 값입니다. 실제 퍼짐이 다르거나 표본이 작으면 결과도 달라집니다. 모집단 표준편차를 추정하는 상황에서는 t분포와 반복 계산 등 추가 검토가 필요할 수 있습니다. 신뢰구간의 의미는 12장에서 다룹니다.</p></div></details><p>수집 중 결측이나 탈락이 예상되면 처음부터 더 많이 모집해야 할 수 있습니다. 하지만 특정 집단만 응답하지 않는 편향은 단순히 수를 늘리는 것으로 해결되지 않습니다.</p>''')
- sec('interpretation','해석할 때 주의할 점','작은 표준오차가 뜻하는 범위를 확인하세요','''<p>작은 SE는 <strong>가정한 표집 방법 아래 평균의 추정이 정밀하다</strong>는 뜻입니다. 개별 관측값이 평균 근처에 모여 있다는 뜻도, 자료에 입력 오류가 없다는 뜻도 아닙니다. 정밀한 추정이 목표 모집단을 잘 대표하는지는 별개의 문제입니다.</p><p>또 <strong>평균±SE를 95% 신뢰구간이라고 부르지 않습니다.</strong> 신뢰구간을 만들려면 신뢰수준과 분포에 맞는 계수가 필요합니다. 정규모집단의 독립 표본에서 σ를 모르면 x̄±t×s/√n 형태를 쓰며, t는 자유도와 신뢰수준에 따라 달라집니다. 비정규 자료에서는 근사가 적절한지도 확인합니다.</p><p>표본의 모든 값이 같으면 s와 추정 SE가 0일 수 있습니다. 그렇더라도 작은 표본에서 우연히 같은 값만 관측했을 가능성은 남습니다. 표본에서 계산한 0을 모집단의 불확실성이 없다는 근거로 삼지는 않습니다.</p>''')
- sec('design','표집 방법과 자료 점검','행 수가 늘어도 새로운 정보가 늘지 않을 수 있습니다','''<p><strong>중복과 의존성:</strong> 같은 응답을 복사하거나 같은 사람을 반복 측정하면 행 수는 늘어납니다. 하지만 독립적인 새 관측이 그만큼 생기는 것은 아닙니다. 가구·학교처럼 묶인 집단 안에서 서로 관련된 값이 많거나 시간에 따른 의존성이 있으면, 군집 표준오차 등 구조에 맞는 방법이 필요합니다.</p><p><strong>가중치:</strong> 응답자마다 다른 가중치를 쓰는 평균은 단순평균과 표준오차 계산이 다릅니다. 가중치와 의존성에 따라 정보량을 나타내는 ‘유효표본수’를 따로 논하기도 합니다. 이것은 결측을 제외한 유효 관측 수와 구별해야 합니다.</p><p><strong>결측:</strong> 키는 30명, 몸무게는 27명만 기록되어 있다면 몸무게 평균의 SE에는 유효한 27개를 기준으로 계산합니다. 이때 s도 그 27개에서 구해야 합니다. 빠진 값을 0으로 채워 관측 수를 늘리면 평균과 퍼짐이 모두 왜곡됩니다.</p><p><strong>비복원 추출:</strong> 정해진 모집단에서 중복 없이 상당한 비율을 뽑았다면 10장의 유한모집단 보정을 검토합니다. 전수조사를 했더라도 측정 오류나 조사 범위 밖의 대상에 대한 불확실성까지 없어지지는 않습니다.</p>''')
- sec('practice','확인 문제','정밀도와 자료의 퍼짐을 나누어 읽으세요','''<ol class="learn-exercises"><li>s=80, n=100일 때 평균의 추정 SE는?<details><summary>답과 해설</summary><p>80/√100=8입니다. 80은 관측값의 퍼짐이고 8은 독립 표본 모형에서 평균의 표집 변동 추정치입니다.</p></details></li><li>퍼짐이 같을 때 SE를 절반으로 줄이려면 n을 몇 배로 해야 하나요?<details><summary>답과 해설</summary><p>네 배입니다. SE가 표본수의 제곱근에 반비례하기 때문입니다.</p></details></li><li>자료 30건을 복사해 120행으로 만들면 정보량이 네 배가 되나요?<details><summary>답과 해설</summary><p>아니요. 독립적인 새 관측이 아닙니다. 단순히 √120으로 나누는 계산은 정밀도를 과장합니다.</p></details></li><li>목표 SE 10이면 평균의 실제 오차가 항상 ±10 이내인가요?<details><summary>답과 해설</summary><p>아니요. SE는 반복 표집에서의 퍼짐이며 개별 표본의 오차 한계를 보장하지 않습니다.</p></details></li></ol>''')
- sec('macro','CH2 Macro에서 읽기','건수·퍼짐·관측 범위를 함께 확인하세요','''<p>CH2 Macro에서 지역이나 유형의 평균을 비교할 때는 적용한 필터, 유효 거래 건수, 표준편차와 분위수, 분석 기간·관측 단위를 함께 확인하세요. 단가가 다른 집단을 합치면 건수뿐 아니라 퍼짐과 평균의 의미도 달라집니다.</p><p>이 장의 30건은 계산을 연습하기 위한 자료입니다. 서비스의 모든 화면이 s/√n을 제공하거나 실제 거래가 독립 표본 가정을 만족한다고 전제하지 않습니다. 같은 단지의 거래나 같은 시기에 모인 거래는 서로 관련될 수 있습니다.</p><p>평균 추정의 표준오차는 개별 물건의 가격 차이나 미래 가격의 예측오차와 다릅니다. 화면에 표시된 평균이 어떤 자료를 요약한 값인지 먼저 살펴보세요.</p><p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 통계 열기 →</a></p>''')
- sec('recap','결론 · 학습 요약','표준오차는 계산한 값과 계산한 조건을 함께 읽으세요','''<p>표준오차는 한 번 구한 평균이 표본에 따라 얼마나 달라질 수 있는지 이해하는 데 쓰입니다. 계산식과 함께 다음 구분을 기억해 두세요.</p><ul class="learn-recap-list"><li><strong>SD와 SE:</strong> SD는 개별 값의 퍼짐, SE는 통계량의 표집 변동입니다. 실제 오차 |x̄−μ|와도 다릅니다.</li><li><strong>평균의 추정 SE:</strong> 독립·동일분포와 유한 분산 조건에서 s/√n을 사용합니다. s와 n은 해당 평균에 사용한 자료에서 구합니다.</li><li><strong>표본수의 효과:</strong> 퍼짐과 표집 방법이 같을 때 n이 네 배가 되어야 SE가 절반이 됩니다.</li><li><strong>표본수 계획:</strong> 목표 SE를 e로 정하면 n≥(σ₀/e)²입니다. 목표 SE와 신뢰수준을 포함한 오차한계를 구별합니다.</li><li><strong>해석의 조건:</strong> 작은 SE만으로 대표성·자료의 정확성·개별 값의 안정성을 판단하지 않습니다. 중복·의존성·결측·가중치를 함께 확인합니다.</li></ul><p>다음 <a href="/learn/stats/confidence-intervals/">12장 ‘점추정과 신뢰구간’</a>에서는 추정치에 불확실성의 범위를 붙이는 방법을 배웁니다.</p><details class="learn-more"><summary>참고자료</summary><div class="learn-more__body"><ul><li><a href="https://www.itl.nist.gov/div898/handbook/eda/section3/eda352.htm">NIST/SEMATECH: Confidence Limits for the Mean</a> — 평균의 표준오차와 신뢰구간의 관계.</li></ul><p class="learn-source-note">참고자료의 기존 확인일: 2026-10-07. 공통 30건은 실제 거래 출처가 확인되지 않은 학습 자료입니다. 표본수 비교와 계획 그림은 설명에 명시한 가정으로 계산했습니다.</p></div></details>''')
+ source=(ROOT/'sample-size/content.md').read_text(encoding='utf-8')
+ ids=['quick-start','calculation','size','groups','planning','interpretation','design','practice','macro','recap']
+ # This renderer handles only the approved chapter copy, not arbitrary Markdown.
+ def inline(value):
+  value=escape(value)
+  return re.sub(r'\*\*(.+?)\*\*',r'<strong>\1</strong>',value)
+ def render(block):
+  out=[];lines=block.strip().split('\n');i=0
+  while i<len(lines):
+   line=lines[i].strip()
+   if not line or line=='---':i+=1;continue
+   if line.startswith('**[그림 '):
+    number=int(re.search(r'그림 (\d)',line)[1]);out.append([f1,f2,f3,f4][number-1]);i+=1;continue
+   if line.startswith('|'):
+    table=[]
+    while i<len(lines) and lines[i].strip().startswith('|'):
+     cells=[x.strip() for x in lines[i].strip().strip('|').split('|')]
+     if not all(re.fullmatch(r'[:\-]+',c) for c in cells):table.append(cells)
+     i+=1
+    out.append('<div class="learn-data learn-data--full"><table><thead><tr>'+''.join('<th scope="col">'+inline(c)+'</th>' for c in table[0])+'</tr></thead><tbody>'+''.join('<tr>'+''.join(('<th scope="row">'+inline(c)+'</th>') if j==0 else '<td>'+inline(c)+'</td>' for j,c in enumerate(row))+'</tr>' for row in table[1:])+'</tbody></table></div>');continue
+   if line.startswith('- ') or re.match(r'\d+\. ',line):
+    ordered=not line.startswith('- ');tag='ol' if ordered else 'ul';items=[]
+    while i<len(lines) and (re.match(r'\d+\. ',lines[i]) if ordered else lines[i].startswith('- ')):
+     items.append('<li>'+inline(re.sub(r'^(?:- |\d+\. )','',lines[i]))+'</li>');i+=1
+    out.append('<'+tag+'>'+''.join(items)+'</'+tag+'>');continue
+   if line.startswith('**▶ '):
+    title=line.removeprefix('**▶ ').removesuffix('**');rest=[];i+=1
+    while i<len(lines) and lines[i].strip()!='---':rest.append(lines[i]);i+=1
+    out.append('<details class="learn-more"><summary>'+inline(title)+'</summary><div class="learn-more__body">'+render('\n'.join(rest))+'</div></details>');continue
+   if line=='▶ 참고자료':out.append(references);i+=1;continue
+   if line=='[CH2 Macro 토지 통계 열기 →]':
+    out.append('<p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 통계 열기 →</a></p>');i+=1;continue
+   formula=line in ['**SE = σ / √n**','**추정 SE = s / √n**','**n ≥ (σ₀ / e)²**'] or line.startswith('SE = ')
+   out.append('<p'+(' class="se-formula"' if formula else '')+'>'+inline(line)+'</p>');i+=1
+  return '\n'.join(out)
+ old=(ROOT/'sample-size/index.html').read_text(encoding='utf-8')
+ references=re.search(r'<details class="learn-more"><summary>참고자료</summary>.*?</details>',old,re.S)[0]
+ sections=re.split(r'^## ',source,flags=re.M)[1:]
+ for id,section in zip(ids,sections,strict=True):
+  label,body=section.split('\n',1);heading=re.search(r'^### (.+)$',body,re.M)[1];body=re.sub(r'^### .+\n','',body,count=1,flags=re.M)
+  if id=='practice':
+   questions=re.split(r'^\*\*(?=\d+\.)',body,flags=re.M)[1:];items=[]
+   for q in questions:
+    question,answer=q.split('▶ 답과 해설',1)
+    question=re.sub(r'^\d+\. ','',question.strip().removesuffix('**'))
+    items.append('<li>'+inline(question)+'<details><summary>답과 해설</summary><div class="learn-more__body">'+render(answer)+'</div></details></li>')
+   html='<ol class="learn-exercises">'+''.join(items)+'</ol>'
+  else:html=render(body)
+  if id=='quick-start':html=html.replace('<ul>','<ul class="learn-objectives">',1);html+='<p>이전 <a href="/learn/stats/sampling-distributions/">10장 「표본분포와 중심극한정리」</a>에서 표본평균의 변동을 살펴보았습니다.</p>'
+  if id=='calculation':
+   html=html.replace('<p>공통 학습 자료 30건에','<p><a href="/learn/stats/graphs/#data">공통 학습 자료 30건</a>에')
+   html+='<p class="learn-source-note"><a href="../example-data.json">공통 학습 자료 JSON</a> · 실제 자료 계산과 기존 네 그래프는 반올림 전 값을 사용하고, 표시만 소수 둘째 자리로 반올림합니다.</p>'
+  if id=='size':html=html.replace(f2,f2+experiment)
+  if id=='planning':html+='<p class="learn-source-note">계산값은 필요한 최소 정수로 올림합니다. 그림 4는 계획 표본수이며 실제 추정오차를 보장하지 않습니다.</p>'
+  if id=='recap':html=html.replace('<ul>','<ul class="learn-recap-list">',1);html=html.replace('12장 「점추정과 신뢰구간」','<a href="/learn/stats/confidence-intervals/">12장 「점추정과 신뢰구간」</a>')
+  parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{heading}</h2>{html}</section>')
  p=ROOT/'sample-size/index.html';text=p.read_text(encoding='utf-8');text=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="표준오차와 표본수">\n'+'\n'.join(parts)+'\n</article>',text,count=1,flags=re.S)
- text=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1표준편차와 표준오차의 차이, 표본수와 정밀도, 표집 설계의 한계를 공통 예제와 그림으로 설명합니다.\2',text,count=1,flags=re.S);text=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',text);p.write_text(text,encoding='utf-8')
+ text=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1표준편차와 표준오차의 차이, 표본수와 정밀도, 표집 설계의 한계를 공통 예제와 그림으로 설명합니다.\2',text,count=1,flags=re.S);text=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',text);text=text.replace('별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.','활용도는 CH2 Macro의 분석 결과를 이해하는 데 얼마나 도움이 되는지를 나타냅니다.')
+ if 'sample-size/chapter.css' not in text:text=text.replace('</head>','<link rel="stylesheet" href="/learn/stats/sample-size/chapter.css?v=20261024-1" />\n  </head>')
+ if 'sample-size/experiment.js' not in text:text=text.replace('</body>','<script src="/learn/stats/sample-size/experiment.js?v=20261024-1" defer></script>\n  </body>')
+ p.write_text(text,encoding='utf-8')
 if __name__=='__main__':build()

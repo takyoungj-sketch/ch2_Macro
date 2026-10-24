@@ -1,0 +1,12 @@
+/* Chapter 19 only. Reuse existing reader theme tokens. */
+.learn-chapter[aria-label="다중회귀와 변수의 해석"] :is(h2, h3, li) { word-break: keep-all; overflow-wrap: anywhere; }
+.mr-formula { padding: 1rem 1.25rem; background: var(--learn-soft); border-left: 3px solid var(--learn-border-strong); border-radius: 6px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.mr-controls[hidden], .mr-group-svg [hidden] { display: none; }
+.mr-controls { margin: 1rem 0; padding: 1rem; background: var(--learn-soft); border-radius: 8px; }
+.mr-controls label { display: block; margin: .5rem 0; font-weight: 500; }
+.mr-controls select { max-width: 100%; min-height: 44px; padding: .5rem .75rem; border: 1px solid var(--learn-border-strong); border-radius: 6px; background: var(--learn-surface); color: var(--learn-text); font: inherit; }
+.mr-controls select:focus-visible { outline: 2px solid var(--learn-accent); outline-offset: 3px; }
+.mr-macro-case { margin: 1.5rem 0; }
+.mr-macro-case img { display: block; width: 100%; height: auto; border: 1px solid var(--learn-border-strong); border-radius: 8px; }
+.mr-macro-case figcaption { color: var(--learn-muted); font-size: .875rem; line-height: 1.7; margin-top: .75rem; }
+:root[data-learn-theme="dark"] .mr-group-svg [data-trend="overall"] { stroke: #b6c4d6; }

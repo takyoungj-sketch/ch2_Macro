@@ -1,0 +1,10 @@
+/* Chapter 15 only; shared reader and Macro statistics are unchanged. */
+.learn-chapter[aria-label="여러 집단과 범주형 자료의 비교"] :is(h2, li) { word-break: keep-all; overflow-wrap: anywhere; }
+.mg-formula { padding: 1rem 1.25rem; background: var(--learn-soft); border-left: 3px solid var(--learn-border-strong); border-radius: 6px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.mg-step-title { font-weight: 600; margin-top: 1.25rem; }
+.mg-controls[hidden] { display: none; }
+.mg-controls { margin: 1rem 0; padding: 1rem; background: var(--learn-soft); border-radius: 8px; }
+.mg-controls label { display: block; margin-bottom: .5rem; font-weight: 600; }
+.mg-controls select { max-width: 100%; min-height: 44px; padding: .5rem .75rem; border: 1px solid var(--learn-border-strong); border-radius: 6px; background: var(--learn-surface); color: var(--learn-text); font: inherit; }
+.mg-controls p { margin-bottom: 0; }
+.mg-controls select:focus-visible { outline: 2px solid var(--learn-accent); outline-offset: 3px; }

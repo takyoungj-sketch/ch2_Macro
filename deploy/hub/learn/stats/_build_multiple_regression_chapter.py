@@ -1,5 +1,6 @@
 """Chapter 19: multiple regression, exact reproducible examples."""
 from pathlib import Path
+from html import escape
 import numpy as np
 import json,re
 from scipy.stats import t
@@ -9,60 +10,128 @@ def model(X,y):
  X=np.asarray(X,float);y=np.asarray(y,float);b=np.linalg.lstsq(X,y,rcond=None)[0];e=y-X@b;n,p=X.shape;sse=float(e@e);s2=sse/(n-p);se=np.sqrt(np.diag(np.linalg.inv(X.T@X))*s2);r2=1-sse/float(((y-y.mean())**2).sum());crit=t.ppf(.975,n-p)
  return dict(beta=b.tolist(),residuals=e.tolist(),SSE=sse,df=n-p,R2=r2,adjusted_R2=1-(1-r2)*(n-1)/(n-p),se=se.tolist(),ci=[[float(v-crit*w),float(v+crit*w)] for v,w in zip(b,se)])
 
+
+def macro_case():
+ return '''<p>아래는 사용자가 제공한 복합부동산 회귀 화면입니다. 남평읍의 적합 표본 112건을 사용한 캡처로, 공통 학습 자료 30건과 다른 사례입니다. 조회 거래 134건에서 숫자 결측 22건을 제외한 최종 표본 112건이 표시됩니다. ‘지분 4건 제외’도 별도 조건으로 보이지만, 전체 필터 처리 순서를 이미지 하나로 재구성할 수는 없습니다.</p>
+<figure class="mr-macro-case"><a href="macro-built-regression.png" target="_blank" rel="noopener"><img src="macro-built-regression.png" width="1174" height="900" loading="lazy" alt="남평읍 복합 회귀 화면. n=112, 설계 열 25개·독립 계수 22개로 계수가 고유하지 않다는 경고. R² 0.62322, 수정 R² 0.53531, 학습 MAPE 56.73%, CV-MAPE 111.29%. 기준 범주와 계수별 SE·t·p가 표시됩니다."></a><figcaption>실제 복합 회귀 화면 캡처 · 숫자는 캡처 당시 값입니다. 이미지를 선택하면 원본 크기로 볼 수 있습니다. 기간·전체 변수 설정과 원자료가 없어 이 숫자를 현재 값이나 독립 검산 결과로 제시하지 않습니다.</figcaption></figure>
+<p>이 화면의 종속변수는 ‘금액’입니다. 교재의 ‘단가’를 설명하는 식과 구별해야 합니다. 연면적·대지면적·연식·범주 더미와 log(개별공시지가) 등이 식에 포함되어 있습니다. 연면적계수 +53만원이라는 표시는 포함한 다른 변수와 함수 형태를 조건으로 한 표현이며, 누락된 모든 부동산 조건을 같게 만든 인과효과가 아닙니다.</p>
+<p>이 캡처에서는 계수보다 먼저 노란 ‘모형 식별’ 경고를 읽어야 합니다. 설계 열은 25개지만 독립 계수는 22개이므로, 같은 적합값을 만드는 계수 조합이 여러 개 존재합니다. 유한한 계수·표준오차·t값·p값이 출력되더라도 개별 계수가 고유하게 식별되었다는 뜻은 아닙니다. 숫자만으로 변수별 가격 기여를 나누어 해석해서는 안 됩니다.</p>
+<p>‘미상’ 범주는 기준 범주와 다릅니다. 캡처에는 용도지역 제1종일반주거, 구조 벽돌, 도로조건 8m미만, 유형 상업이 기준으로 표시됩니다. ‘미상’의 계수가 0만원, SE가 0.00으로 보이는 것은 표시 반올림과 식별 경고를 함께 확인해야 하는 상황입니다. 이 값만으로 관계가 정확히 0이라고 결론 내리지 않습니다.</p>
+<p>R²=0.62322와 수정 R²=0.53531은 표본 내 적합도입니다. 학습 MAPE=56.73%와 CV-MAPE=111.29%도 서로 다른 평가입니다. 오차율이므로 111.29%는 정답률이 아니며, 별도 시점 평가가 학습 적합보다 나쁠 수 있음을 보여 줍니다. ‘마지막 연도 확인 50.50%’도 전체 CV와 같은 숫자가 아닙니다.</p>
+<details class="learn-more"><summary>실제 복합·지역 회귀의 변수와 계산·표시 방식</summary><div class="learn-more__body">
+<p>확인한 복합 모형은 연면적·대지면적·연식·공시지가와 선택한 지역 지표 등을 수치형 변수로, 용도지역·건축물용도·구조·도로조건·지역 등을 기준 범주가 있는 더미로 구성합니다. ‘미상 유지’와 ‘결측 행 제외’ 정책이 있으며 켜진 숫자 변수의 결측, 로그변환의 양수 조건에 따라 표본이 달라집니다. 모형·앱별 제공 변수는 같다고 전제하지 않습니다.</p>
+<p>확인한 복합 설계행렬은 선택한 수치형 변수와 범주 더미를 더하는 구조입니다. 로그 변환 옵션과 별개로 이 장의 X×D 상호작용항을 자동으로 추가하지는 않습니다. 화면에 없는 상호작용이나 95% 계수 신뢰구간을 이미 제공하는 것처럼 읽지 마세요.</p>
+<p>절편을 포함한 statsmodels OLS에서 계수와 일반 표준오차·t·p를 구합니다. 현재 계수 상세 표에는 SE·t·p가 표시되며 95% 계수 구간 열은 없습니다. SE와 t는 소수 둘째 자리, p는 다섯째 자리로 표시하므로 0.00000은 확률이 정확히 0이라는 뜻이 아닙니다. 식의 기본 축약 표시는 p&lt;0.1인 항을 중심으로 하고, ‘유의 변수’ 개수는 백엔드의 p&lt;0.05 기준이므로 두 표시의 기준이 다릅니다.</p>
+<p>이 경로는 열 수와 행렬 rank를 따로 확인합니다. rank가 줄어도 잔차 자유도가 남으면 계산 결과와 식별 경고를 함께 제공할 수 있습니다. 자유도가 없으면 계산 불가로, 유효 표본 30건 미만 또는 독립 계수당 관측 5건 미만이면 참고용으로 안내합니다. 이는 서비스 제공 기준이지 통계적 타당성의 보증은 아닙니다.</p>
+<p>서비스 VIF 경고는 선택한 연속변수 열로 계산하며 기준 범주 더미와 상수항을 제외합니다. 특히 현재 보조회귀 입력에 상수항을 추가하지 않으므로 교재의 절편 포함 보조회귀 Rⱼ²로 계산한 통상적 VIF와 수치가 다를 수 있습니다. 캡처의 VIF 경고를 교재 공식의 독립 검산값으로 취급하지 않습니다. VIF나 드문 미상 범주의 경고는 자동 삭제 명령이 아닙니다.</p>
+<p>모형 탐색에는 후보 변수 블록을 구성하고 비교하는 절차와 AIC 기준 순차 추가 경로 등이 있습니다. 학습 R²만으로 변수를 고르거나 모든 변수를 p값 순으로 자동 삭제하는 단일 정책은 아닙니다. CV-MAPE는 연도 순서를 고려한 롤링 평가와 마지막 연도 확인으로 구분됩니다. 추천·선택 후의 p값과 구간에도 선택 과정의 불확실성이 남습니다.</p>
+<p>공시지가·면적·건물 특성은 서로 관련될 수 있습니다. 변수의 실무적 의미·유효 표본수·기준 범주·식별 경고와 검증 성능을 함께 보고, 한 변수를 무조건 제거하거나 개별 물건의 적정가격 효과로 해석하지 마세요.</p></div></details>
+<p class="learn-macro-cta"><a href="https://macro.ch2data.com/built/">CH2 Macro 복합 통계·데이터분석 열기 →</a></p>'''
+
 def build():
  rows=json.loads((ROOT/'example-data.json').read_text(encoding='utf-8'))['rows'];x=np.array([r['area'] for r in rows]);y=np.array([r['price'] for r in rows]);floor=np.array([r['floor'] for r in rows]);n=len(x)
  simple=model(np.column_stack([np.ones(n),x]),y);multi=model(np.column_stack([np.ones(n),x,floor]),y)
  sx=np.arange(1,7,dtype=float);g=np.array([0,0,0,1,1,1]);sy=7+sx-9*g+np.array([.2,-.4,.2,.2,-.4,.2]);demo=model(np.column_stack([np.ones(6),sx,g]),sy);unadjusted=model(np.column_stack([np.ones(6),sx]),sy)
  rx=sx-np.where(g==0,2,5);ry=sy-np.where(g==0,9,3)
- result=dict(description='공통 학습 자료의 세 수치열을 단위 없는 X1,X2,Y로 사용한 계산과 별도 가상 6점. 인과효과가 아님.',simple=simple,multiple=multi,demo=dict(x=sx.tolist(),group=g.tolist(),y=sy.tolist(),model=demo,simple=unadjusted,residual_x=rx.tolist(),residual_y=ry.tolist()))
+ result=dict(description='공통 학습 자료 30건의 면적(㎡)·층(층)·단가(만원/㎡) 다중회귀와 별도 가상 6점. 인과효과가 아님.',simple=simple,multiple=multi,demo=dict(x=sx.tolist(),group=g.tolist(),y=sy.tolist(),model=demo,simple=unadjusted,residual_x=rx.tolist(),residual_y=ry.tolist()))
  (ROOT/'multiple-regression-example.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
- def tx(x,y,s):return f'<text x="{x}" y="{y}">{s}</text>'
+ def tx(x,y,s,extra=''):return f'<text x="{x}" y="{y}" {extra}>{escape(str(s))}</text>'
  def ln(x,y,a,b,c='#94a3b8',extra=''):return f'<line x1="{x}" y1="{y}" x2="{a}" y2="{b}" stroke="{c}" {extra}/>'
  def dot(x,y,c='#2563eb'):return f'<circle cx="{x}" cy="{y}" r="5" fill="{c}"/>'
  def fig(id,title,b,cap):return f'<figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 400" role="img" aria-labelledby="{id}-title {id}-desc"><title id="{id}-title">{title}</title><desc id="{id}-desc">{cap}</desc>{b}</svg><figcaption class="learn-chart__caption">{cap}</figcaption></figure>'
- b=tx(24,28,'가상 자료: 파랑 A집단 / 주황 B집단')+ln(70,320,580,320)+ln(70,55,70,320)
- for xx,yy,gg in zip(sx,sy,g):b+=dot(70+xx*75,320-yy*23,'#2563eb' if gg==0 else '#d97706')
- for gg,lo,hi,c in [(0,1,3,'#2563eb'),(1,4,6,'#d97706')]:b+=ln(70+lo*75,320-(7+lo-9*gg)*23,70+hi*75,320-(7+hi-9*gg)*23,c,'stroke-width="2"')
- a,k=unadjusted['beta'];b+=ln(145,320-(a+k)*23,520,320-(a+6*k)*23,'#64748b','stroke-dasharray="5 4"')
+ b=tx(24,28,'가상 자료: 파랑 A집단 / 주황 B집단','id="mr-group-heading"')+ln(70,320,580,320)+ln(70,55,70,320)
+ for xx,yy,gg in zip(sx,sy,g):b+=dot(70+xx*75,320-yy*23,'#2563eb' if gg==0 else '#d97706').replace('/>',f' data-group="{int(gg)}"><title>{"AB"[gg]}: ({xx:g}, {yy:g})</title></circle>')
+ for gg,lo,hi,c in [(0,1,3,'#2563eb'),(1,4,6,'#d97706')]:b+=ln(70+lo*75,320-(7+lo-9*gg)*23,70+hi*75,320-(7+hi-9*gg)*23,c,f'stroke-width="2" data-trend="{"AB"[gg]}"')
+ a,k=unadjusted['beta'];b+=ln(145,320-(a+k)*23,520,320-(a+6*k)*23,'#64748b','stroke-dasharray="5 4" stroke-width="2" data-trend="overall"')
  for v in [1,2,3,4,5,6]:b+=tx(65+v*75,345,v)
  for v in [0,4,8,10]:b+=tx(35,325-v*23,v)
- b+=tx(24,380,'가로 X / 세로 Y · 회색 점선: 집단을 구분하지 않은 회귀')
+ b+=tx(24,380,'X·Y: 가상 변수 · 파랑 A / 주황 B / 회색 점선: 전체','id="mr-group-legend"')
  f1=fig('groups','집단 조정 전후의 관계',b,'그림 1. 별도 가상 6점입니다. 집단 내 기울기는 양수지만 전체 기울기는 음수입니다. 집단 간 X범위가 겹치지 않아 같은 X에서의 집단 차이는 모형 가정에 의존합니다.')
+ controls='<div class="mr-controls" hidden><label for="mr-group-mode">집단 통제 전후 보기</label><select id="mr-group-mode"><option value="both">통제 전후 비교</option><option value="overall">집단을 구분하지 않은 회귀</option><option value="adjusted">집단을 구분한 회귀</option></select><p id="mr-group-status" role="status" aria-live="polite"></p><p class="learn-source-note">A의 X범위는 1~3, B는 4~6으로 겹치지 않습니다. 집단별 선은 관측 범위에만 표시합니다. 동일한 X에서의 집단 차이는 공통 기울기·가산성 가정에 의존하며 인과효과가 아닙니다.</p></div>'
+ f1=f1.replace('<figure class="learn-chart learn-chart--wide">','<figure class="learn-chart learn-chart--wide" id="mr-groups">').replace('<svg',controls+'<script type="application/json" id="mr-demo">'+json.dumps(result['demo'],ensure_ascii=False)+'</script><svg',1).replace('<svg ','<svg class="mr-group-svg" ',1)
  b=tx(24,28,'집단 평균을 각각 뺀 X와 Y')+ln(100,210,540,210)+ln(320,65,320,330)+ln(160,338,480,82,'#2563eb')
  for xx,yy in zip(rx,ry):b+=dot(320+xx*130,210-yy*104)
+ for xx,yy in sorted(set(zip(np.round(rx,10),np.round(ry,10)))):
+  b+=f'<ellipse cx="{320+xx*130}" cy="{210-yy*104}" rx="8" ry="8" fill="none" stroke="#2563eb"/>'+tx(332+xx*130,214-yy*104,'×2')
  for v in [-1,0,1]:b+=tx(315+v*130,355,v)
  for v in [-1,0,1]:b+=tx(65,215-v*104,v)
  b+=tx(24,383,'가로: X의 집단 내 편차 / 세로: Y의 집단 내 편차')
- f2=fig('partial','집단을 조정한 기울기',b,'그림 2. 그림 1의 각 집단 평균을 제거했습니다. 같은 좌표의 점은 겹칩니다. 이 편차들의 원점 통과 회귀 기울기는 다중회귀 X계수 1과 같습니다.')
- b=tx(24,28,'30쌍 자료: X₁ 계수와 고전적 95% 신뢰구간')
+ f2=fig('partial','집단을 조정한 기울기',b,'그림 2. 그림 1의 각 집단 평균을 제거했습니다. 같은 좌표마다 A·B 각 1개씩 두 관측값이 겹치며, 고리와 ×2로 표시합니다. 이 편차들의 원점 통과 회귀 기울기는 다중회귀 X계수 1과 같습니다.')
+ b=tx(24,28,'같은 30건의 면적계수와 고전적 95% 신뢰구간')
  vals=[v for m in [simple,multi] for v in m['ci'][1]];lo=min(vals)-.1;hi=max(vals)+.1;px=lambda v:170+(v-lo)/(hi-lo)*380
- for yy,m,label in [(140,simple,'X₁만'),(240,multi,'X₁ + X₂')]:
+ for yy,m,label in [(140,simple,'면적만'),(240,multi,'면적+층')]:
   l,u=m['ci'][1];b+=tx(24,yy+5,label)+ln(px(l),yy,px(u),yy,'#2563eb','stroke-width="3"')+dot(px(m['beta'][1]),yy)+tx(170,yy+32,f"{m['beta'][1]:.3f} [{l:.3f}, {u:.3f}]")
  b+=ln(170,320,550,320)
  for v in np.linspace(lo,hi,4):b+=tx(px(v)-15,345,f'{v:.2f}')
- b+=tx(24,382,'Y 단위/X₁ 단위 · 가정이 맞을 때의 구간')
- f3=fig('coefficients','X₁ 계수 비교',b,'그림 3. 같은 30개 관측에서 X₂를 추가했을 때의 X₁ 계수입니다. 구간은 등분산·독립·정규 오차 등 고전적 가정에 근거하며, 이 자료에서 가정이 충족되었다는 뜻은 아닙니다.')
+ b+=tx(24,382,'면적계수 단위: (만원/㎡)/㎡ · 층 포함 여부만 다릅니다')
+ f3=fig('coefficients','층 추가 전후의 면적계수와 95% 신뢰구간',b,'그림 3. 같은 학습 자료 30건에서 층을 추가했을 때의 면적계수입니다. 구간은 등분산·독립·정규 오차 등 고전적 가정에 근거하며, 이 자료에서 가정이 충족되었다는 뜻은 아닙니다.')
  b=tx(24,28,'완전 공선성: X₂=2X₁')+ln(70,320,570,320)+ln(70,55,70,320)
  for v in range(1,6):b+=dot(70+v*85,320-v*44)
  b+=ln(155,276,495,100,'#2563eb')
  for v in range(6):b+=tx(65+v*85,345,v)
  for v in [0,4,8,10]:b+=tx(35,325-v*22,v)
- b+=tx(24,382,'가로 X₁ / 세로 X₂ · b₁+2b₂만 구별할 수 있습니다')
+ b+=tx(24,365,'예: (b₁,b₂)=(2,0) 또는 (0,1) → 같은 2X₁')
+ b+=tx(24,392,'가로 X₁ / 세로 X₂ · b₁+2b₂만 구별할 수 있습니다')
  f4=fig('collinear','완전 공선성',b,'그림 4. 별도 가상 설명변수입니다. 두 열이 정확히 비례하면 개별 계수의 유일한 OLS 해가 없습니다. 단위만 바꿔 추가한 변수는 새로운 정보를 더하지 않습니다.')
- parts=[]
- def sec(id,label,title,body):parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{title}</h2>{body}</section>')
- sec('quick-start','서두 · 학습목표','여러 변수를 함께 고려하면 계수의 의미도 달라집니다','''<p>시험 점수를 공부 시간 하나로 설명하면 사전 학습 수준이나 학년의 차이가 섞일 수 있습니다. 공부 시간과 사전 점수를 함께 넣으면, 모형 안에서 사전 점수가 같은 경우의 공부 시간 차이를 비교할 수 있습니다.</p><p><strong>다중회귀</strong>는 결과변수 Y 하나에 여러 설명변수를 함께 사용하는 방법입니다. 이 장에서는 ‘다른 조건이 같다’는 표현의 범위를 분명히 하고, 범주형 변수·상호작용·다중공선성이 계수 해석에 미치는 영향을 살펴봅니다.</p><ul class="learn-objectives"><li>다중회귀의 계수를 어떤 조건에서 비교한 값인지 설명합니다.</li><li>범주형 변수의 기준집단과 상호작용을 읽습니다.</li><li>다중공선성이 개별 계수의 추정에 미치는 영향을 이해합니다.</li><li>적합도 향상·예측 성능·인과 해석을 구별합니다.</li></ul>''')
- sec('groups','조정 전후의 관계','집단을 구분하면 기울기가 달라질 수 있습니다','''<p>먼저 <a href="/learn/stats/correlation/">16장</a>의 집단 혼합 문제를 떠올려 보세요. A와 B의 평균 수준이 다르고 X의 범위도 다르면, 전체 기울기에 집단 사이의 차이가 함께 반영될 수 있습니다.</p><p>아래는 별도의 가상 6점입니다. A는 X=1,2,3에서 Y=8.2,8.6,10.2이고, B는 X=4,5,6에서 Y=2.2,2.6,4.2입니다. X가 큰 관측들이 Y 수준이 낮은 B에 모여 있습니다.</p>'''+f1+f'''<p>집단을 구분하지 않은 단순회귀의 기울기는 <strong>{unadjusted['beta'][1]:.3f}</strong>입니다. B이면 D=1, A이면 D=0인 변수를 추가하면 식은 <strong>ŷ=7+1×X−9×D</strong>가 됩니다. 집단마다 다른 절편을 허용하니 X계수는 +1이 됩니다.</p><p>A의 적합식은 ŷ=7+X, B는 ŷ=−2+X입니다. 이 모형은 두 집단의 기울기가 같고 높이만 다르다고 가정합니다. 계수의 부호가 바뀌었다고 어느 식이 인과적으로 옳다는 것이 입증되지는 않습니다.</p>''')
- sec('partial','계수의 조건부 해석','고정하는 것은 모형에 포함한 변수입니다','''<p>적합식이 <strong>ŷ=b₀+b₁x₁+b₂x₂</strong>라면, x₂를 같은 값으로 놓고 x₁이 1만큼 다를 때 적합값 차이는 b₁입니다. 이를 <strong>다른 포함 변수를 고정한 조건부 비교</strong>라고 읽습니다. 실제로 그 속성을 바꾸었을 때의 인과효과가 자동으로 되는 것은 아닙니다.</p><p>앞의 집단 예제에서는 X와 Y에서 각 집단 평균을 빼면 집단 사이의 평균 수준 차이가 제거됩니다. 남은 편차끼리의 기울기는 집단 변수를 넣은 다중회귀의 X계수와 같습니다.</p>'''+f2+'''<p>중요한 것은 실제 비교할 자료가 있는지도 확인하는 것입니다. 이 예제는 A와 B의 X범위가 겹치지 않습니다. 같은 X에서 두 집단을 비교한다는 해석은 관측된 짝을 직접 비교하는 것이 아니라 공통 기울기와 가산 모형의 가정에 의존합니다.</p><details class="learn-more"><summary>부분회귀의 계산 원리</summary><div class="learn-more__body"><p>일반적으로 Xⱼ와 Y를 나머지 설명변수·절편에 각각 회귀한 잔차끼리 회귀하면 원래 OLS의 Xⱼ계수를 얻습니다. 같은 관측·가중치, 충분한 열 독립성 등 조건이 필요합니다.</p><p>이 보조회귀가 표시하는 기본 표준오차까지 원래 다중회귀와 그대로 같다고 볼 수는 없습니다. 원래 모형의 잔차 자유도를 반영해야 합니다. 다중회귀는 결과변수 하나와 여러 설명변수의 모형이며, 여러 결과변수를 다루는 다변량 회귀와 구별합니다.</p></div></details>''')
- b0,b1,b2=multi['beta']
- sec('example','계산 예제','설명변수를 추가한 뒤 같은 계수를 비교합니다',f'''<p><a href="/learn/stats/graphs/#data">공통 학습 자료</a>의 세 수치열을 단위 없는 X₁,X₂,Y로 사용하겠습니다. 17·18장과 같은 30개 관측을 사용하며 X₂를 추가해 계산합니다.</p><p>적합식은 <strong>ŷ={b0:.3f}{b1:+.4f}x₁{b2:+.4f}x₂</strong>입니다. X₁계수는 X₂가 같을 때 X₁이 1 다른 경우의 적합값 차이이고, X₂계수는 X₁이 같을 때 X₂가 1 다른 경우의 차이입니다. 포함되지 않은 다른 조건까지 같다는 뜻은 아닙니다.</p>'''+f3+'''<p>계수는 잔차제곱합을 최소화하도록 구합니다. 절편과 두 기울기를 추정하므로 모수 수 p=3, 잔차 자유도는 n−p=27입니다. <a href="../multiple-regression-example.json">계수·신뢰구간·예제 자료</a>에는 반올림 전 값을 보존했습니다.</p><p>그림의 구간은 등분산·독립·정규 오차 등 고전적 조건을 적용해 계산한 예시입니다. 이 자료에서 그 조건이 확인되었다는 뜻은 아닙니다. <a href="/learn/stats/residuals/">18장</a>의 잔차 진단도 함께 확인해야 합니다.</p><details class="learn-more"><summary>행렬 표현과 계수의 신뢰구간</summary><div class="learn-more__body"><p>설계행렬 X에 절편 열을 포함하고 열들이 독립이면 OLS 계수는 b=(XᵀX)⁻¹Xᵀy로 표현할 수 있습니다. 실제 계산에서는 역행렬을 직접 구하기보다 QR·SVD 같은 수치해법을 사용합니다.</p><p>잔차분산 추정은 SSE/(n−p), 고전적 계수 구간은 bⱼ±t 임계값×SE(bⱼ)입니다. 이분산이나 군집 의존성이 있다면 그 구조에 맞는 표준오차를 검토해야 합니다.</p></div></details>''')
- sec('coding','범주형 변수와 상호작용','기준집단과 기울기가 같은지 확인하세요','''<p>A·B처럼 이름으로 나뉘는 범주는 0과 1인 <strong>더미변수</strong>로 표현할 수 있습니다. 앞의 예제에서 A가 기준집단이고 D=1이면 B입니다. D의 계수 −9는 같은 X에서 B의 적합값이 A보다 9 낮다는 뜻입니다.</p><p>범주가 K개라면 절편과 함께 보통 K−1개의 더미변수를 넣습니다. 기준집단을 바꾸면 계수 표현은 달라져도 같은 모형의 적합값은 유지됩니다. 모든 범주 더미와 절편을 동시에 넣으면 정보가 중복되어 계수를 고유하게 정할 수 없습니다.</p><p>범주에 단순히 1·2·3을 붙여 수치형으로 넣으면 같은 간격으로 직선적인 변화가 생긴다는 추가 가정을 하게 됩니다. 이름을 숫자로 바꾸는 것과 수치형 관계를 가정하는 것은 다릅니다.</p><p>집단별로 기울기도 다르다면 <strong>상호작용 X×D</strong>를 검토합니다. ŷ=b₀+b₁X+b₂D+b₃XD에서 A의 기울기는 b₁, B는 b₁+b₃입니다. 같은 X에서 B−A 차이는 <strong>b₂+b₃X</strong>이므로 모든 X에서 b₂만큼 차이 난다고 읽으면 안 됩니다.</p><details class="learn-more"><summary>X를 중심화하면</summary><div class="learn-more__body"><p>X를 특정 기준값에서 빼면 절편과 집단 차이를 읽는 기준 X가 바뀝니다. 절편·주효과·상호작용 등 같은 모형을 유지하면 적합값은 같습니다. 중심화가 없는 자료 조합을 만들어 주거나 인과 가정을 해결하지는 않습니다.</p></div></details>''')
- sec('collinearity','다중공선성','설명변수의 정보가 겹치면 개별 계수를 구분하기 어렵습니다','''<p>두 설명변수가 거의 같은 정보를 담고 있으면 작은 자료 변화에도 개별 계수가 크게 달라지고 표준오차가 커질 수 있습니다. 이를 <strong>다중공선성</strong> 문제라고 합니다. 예측값은 비슷해도 어느 변수의 몫인지 나누어 해석하기 어려울 수 있습니다.</p>'''+f4+'''<p>완전히 겹치면 계수를 고유하게 구할 수 없습니다. X₂=2X₁이면 b₁X₁+b₂X₂=(b₁+2b₂)X₁입니다. 여러 b₁,b₂ 조합이 같은 적합값을 만듭니다. 같은 길이를 cm와 m 두 열로 넣는 것처럼 단위만 바꾼 열을 추가해도 새로운 정보는 생기지 않습니다.</p><p>강한 공선성 자체가 OLS 계수의 편향을 뜻하는 것은 아닙니다. 다만 다른 조건을 고정한 개별 관계를 정밀하게 구분하기 어려워집니다. 계수 해석과 예측 중 무엇이 목적인지에 따라 자료 보강·변수 통합·규제 등을 검토해야 합니다.</p><details class="learn-more"><summary>VIF는 무엇을 보나요?</summary><div class="learn-more__body"><p>VIFⱼ=1/(1−Rⱼ²)이며, Rⱼ²는 Xⱼ를 나머지 설명변수에 회귀한 결정계수입니다. 높은 VIF는 점검 단서입니다. 정해진 숫자 하나만으로 변수를 자동 삭제하지 말고 측정 의미와 모형의 목적을 함께 판단합니다.</p></div></details>''')
- sec('fit','적합도와 검정','R²가 올랐다는 이유만으로 변수를 추가하지 않습니다',f'''<p>같은 관측·결과변수·절편을 사용하는 중첩 OLS 모형에서 변수를 추가하면 학습 SSE는 늘지 않고 R²는 줄지 않습니다. 30개 관측에서 X₁만 넣은 R²는 <strong>{simple['R2']:.3f}</strong>, X₁과 X₂를 넣으면 <strong>{multi['R2']:.3f}</strong>입니다. 증가 자체가 추가 변수의 유용성을 보장하지는 않습니다.</p><p><strong>수정 R²</strong>는 추정한 모수 수를 반영합니다. 두 변수를 넣은 예제에서는 {multi['adjusted_R2']:.3f}이며, 변수를 추가하면 내려갈 수도 있습니다. 수정 R²도 새 자료의 예측 성능이나 인과 해석의 타당성을 보장하지 않습니다.</p><p>계수별 t 검정은 다른 포함 변수를 조건으로 해당 계수가 0인지 봅니다. 여러 계수를 함께 검정하는 방법도 있지만, 어떤 모형과 어떤 자료를 비교하는지 먼저 확인해야 합니다.</p><details class="learn-more"><summary>수정 R²와 부분 F 검정</summary><div class="learn-more__body"><p>절편을 포함한 모수 수를 p라 하면 수정 R²=1−[SSE/(n−p)]/[SST/(n−1)]입니다.</p><p>고전적 부분 F 검정은 F=[(SSE축소−SSE전체)/q]/[SSE전체/(n−p전체)]이며 q는 추가한 계수 수입니다. 같은 자료·중첩 모형과 고전적 추론 가정이 필요합니다. 결과변수의 변환이나 결측 처리로 자료가 달라진 모형을 이 공식으로 바로 비교해서는 안 됩니다.</p></div></details>''')
- sec('causality','변수 선택과 인과','다른 변수를 넣는 목적부터 분명히 하세요','''<p>공부 시간과 관련된 사전 학습 수준이 시험 점수와도 관련되어 있다면, 공부 시간 하나로 구한 기울기에 그 차이도 섞일 수 있습니다. 관련 변수를 함께 고려하는 이유입니다. 그러나 변수를 많이 넣는다고 측정오차·선택 편향·빠진 교란이 모두 해결되지는 않습니다.</p><p>총효과를 알고 싶은데 원인 이후에 생긴 매개변수를 통제하면 다른 질문을 하게 될 수 있습니다. 두 변수의 공통 결과인 변수에 조건을 걸면 없던 연관성이 생길 수도 있습니다. 어떤 변수를 포함할지는 시간 순서와 분석 질문을 바탕으로 판단해야 합니다. p값만으로 넣고 빼서는 이런 문제를 해결할 수 없습니다.</p><p>예측이 목적이라면 예측 시점에 실제로 알 수 있는 변수인지 확인하고 새 자료로 검증하세요. 결과가 나온 뒤에야 알 수 있는 정보를 넣으면 예측 성능을 과장하는 <strong>데이터 누출</strong>이 생깁니다.</p>''')
- sec('practice','확인 문제','계수의 조건과 모형의 한계를 읽으세요','<ol class="learn-exercises">'+''.join(f'<li>{q}<details><summary>답과 해설</summary><p>{a}</p></details></li>' for q,a in [('사전 점수를 넣은 공부 시간 계수는 모든 조건이 같은 인과효과인가요?','아니요. 모형에 포함한 사전 점수를 고정한 비교입니다. 학습 환경 등 포함하지 않은 조건까지 같다는 뜻은 아닙니다.'),('절편과 모든 범주 더미를 넣어도 되나요?','열이 중복되어 계수가 고유하지 않습니다. 보통 기준 범주 하나를 제외합니다.'),('상호작용이 있으면 집단 차이는 항상 b₂인가요?','아니요. b₂+b₃X로 X에 따라 달라집니다.'),('변수를 추가해 R²가 오르면 모형이 좋아졌나요?','학습 R²의 비감소는 중첩 OLS의 성질입니다. 진단·불확실성·새 자료 성능을 따로 확인합니다.')])+'</ol>')
- sec('macro','CH2 Macro에서 읽기','계수의 조건을 결과와 함께 기록합니다','<p>결과를 읽을 때 결과변수의 단위·변환, 포함 변수, 기준 범주, 상호작용, 표본과 결측 처리, 표준오차 계산 방법을 확인하세요. 이 장의 연습식이 서비스의 실제 산식이라고 전제하지 않습니다.</p><p>‘다른 조건이 같다’는 표현에는 어떤 변수를 조건으로 삼았는지 적습니다. 모형에 포함되지 않은 조건까지 같다고 확대하거나 개별 물건의 적정가로 해석하지 않습니다.</p>')
- sec('recap','결론 · 학습 요약','계수와 함께 포함 변수·기준·자료 범위를 읽으세요','''<p>다중회귀의 계수는 다른 포함 변수와 함수 형태를 조건으로 한 값입니다. 단순회귀에 변수를 더하는 것에서 나아가 비교의 의미가 어떻게 바뀌는지 확인해야 합니다.</p><ul class="learn-recap-list"><li><strong>조건부 계수:</strong> 가산 모형에서 다른 포함 변수를 고정했을 때의 적합값 차이입니다. 모든 조건이 같거나 인과효과라는 뜻은 아닙니다.</li><li><strong>범주형 변수:</strong> 기준집단과 더미변수의 정의를 확인합니다. 상호작용이 있으면 집단 차이나 기울기가 다른 변수 값에 따라 달라집니다.</li><li><strong>자료 범위:</strong> 실제로 없는 변수 조합에 대한 비교는 모형 가정과 외삽에 의존합니다.</li><li><strong>공선성:</strong> 겹치는 정보가 많으면 개별 계수를 나누어 추정하기 어렵습니다. 완전 공선성에서는 계수가 고유하지 않습니다.</li><li><strong>모형 평가:</strong> R² 증가만으로 판단하지 말고 잔차 진단·불확실성·예측 성능·분석 목적을 함께 확인합니다.</li></ul><p>다음 <a href="/learn/stats/log-regression/">20장 ‘로그변환과 비선형 관계’</a>에서는 변수 변환에 따라 해석이 어떻게 달라지는지 살펴봅니다.</p><details class="learn-more"><summary>참고자료</summary><div class="learn-more__body"><ul><li><a href="https://www.itl.nist.gov/div898/handbook/pmd/section1/pmd141.htm">NIST: Linear Least Squares Regression</a> — 모형과 최소제곱의 정의.</li></ul><p class="learn-source-note">참고자료의 기존 확인일: 2026-10-08. 30개 관측의 계산은 공통 학습 자료의 세 수치열을 단위 없는 X₁,X₂,Y로 사용했습니다. 여섯 점과 완전 공선성 그림은 별도 가상 예제입니다.</p></div></details>''')
+ page=ROOT/'multiple-regression/index.html';old=page.read_text(encoding='utf-8')
+ references=re.search(r'<details class="learn-more"><summary>참고자료</summary>.*?</details>',old,re.S)[0].replace('30개 관측의 계산은 공통 학습 자료의 세 수치열을 단위 없는 X₁,X₂,Y로 사용했습니다.','30건의 계산은 공통 학습 자료의 면적(㎡)·층(층)·단가(만원/㎡)를 사용했습니다.')
+ parts=[];source=(ROOT/'multiple-regression/content.md').read_text(encoding='utf-8').replace('\\*','*').replace('**','').replace('\\~','~')
+ formulas={r'Y=\beta_0+\beta_1X_1+\beta_2X_2+\cdots+\beta_kX_k+\varepsilon':'Y = β₀ + β₁X₁ + β₂X₂ + … + βₖXₖ + ε',r'\hat y=b_0+b_1x_1+b_2x_2+\cdots+b_kx_k':'ŷ = b₀ + b₁x₁ + b₂x₂ + … + bₖxₖ',r'SSE=\sum(y_i-\hat y_i)^2':'SSE = Σ(yᵢ−ŷᵢ)²',r'\mathbf b=(X^TX)^{-1}X^T\mathbf y':'b = (XᵀX)⁻¹Xᵀy',r'\hat y=b_0+b_1X+b_2D+b_3(XD)':'ŷ = b₀ + b₁X + b₂D + b₃XD',r'\hat y=b_0+b_1X':'ŷ = b₀ + b₁X',r'\hat y=(b_0+b_2)+(b_1+b_3)X':'ŷ = (b₀+b₂) + (b₁+b₃)X',r'b_1X_1+b_2X_2=(b_1+2b_2)X_1':'b₁X₁ + b₂X₂ = (b₁+2b₂)X₁',r'VIF_j=\frac{1}{1-R_j^2}':'VIFⱼ = 1/(1−Rⱼ²)',r'R^2\_{\mathrm{adj}}=' + '\n' + r'1-\frac{SSE/(n-p)}{SST/(n-1)}':'R²_adj = 1 − [SSE/(n−p)] / [SST/(n−1)]',r't=\frac{b_j-0}{SE(b_j)}':'t = (bⱼ−0) / SE(bⱼ)',r'F=' + '\n' + r'\frac{(SSE_R-SSE_U)/q}{SSE_U/(n-p_U)}':'F = [(SSE_R−SSE_U)/q] / [SSE_U/(n−p_U)]'}
+ source=re.sub(r'^\[\s*\n(.*?)\n\]$',lambda m:formulas[m[1].strip()],source,flags=re.M|re.S)
+ ids=['quick-start','core','groups','partial','example','coding','interaction','collinearity','fit','tests','causality','practice','macro','recap']
+ def inline(value):return re.sub(r'\*\*(.+?)\*\*',r'<strong>\1</strong>',escape(value))
+ def render(block):
+  out=[];lines=block.strip().split('\n');i=0
+  while i<len(lines):
+   line=lines[i].strip()
+   if not line or line=='---':i+=1;continue
+   if line.startswith('### '):out.append('<h3>'+inline(line[4:])+'</h3>');i+=1;continue
+   if line.startswith('[그림 '):out.append({1:f1,2:f2,3:f3,4:f4}[int(re.search(r'그림 (\d)',line)[1])]);i+=1;continue
+   if line=='[CH2 Macro 통계·데이터분석 열기 →]':out.append('<p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 통계·데이터분석 열기 →</a></p>');i+=1;continue
+   if line=='▶ 참고자료':out.append(references);i+=1;continue
+   if line.startswith('▶ '):
+    title=line[2:];rest=[];i+=1
+    while i<len(lines) and lines[i].strip()!='---':rest.append(lines[i]);i+=1
+    out.append('<details class="learn-more"><summary>'+inline(title)+'</summary><div class="learn-more__body">'+render('\n'.join(rest))+'</div></details>');continue
+   if line.startswith('|'):
+    table=[]
+    while i<len(lines) and lines[i].strip().startswith('|'):
+     cells=[c.strip() for c in lines[i].strip().strip('|').split('|')]
+     if not all(re.fullmatch(r'[:\- ]+',c) for c in cells):table.append(cells)
+     i+=1
+    out.append('<div class="learn-data learn-data--full"><table><thead><tr>'+''.join('<th scope="col">'+inline(c)+'</th>' for c in table[0])+'</tr></thead><tbody>'+''.join('<tr>'+''.join(('<th scope="row">'+inline(c)+'</th>') if j==0 else '<td>'+inline(c)+'</td>' for j,c in enumerate(row))+'</tr>' for row in table[1:])+'</tbody></table></div>');continue
+   if re.match(r'^\d+\. ',line):out.append('<h3>'+inline(line)+'</h3>');i+=1;continue
+   if line.startswith('- ') or re.match(r'\d+\. ',line):
+    ordered=not line.startswith('- ');tag='ol' if ordered else 'ul';items=[]
+    while i<len(lines) and (re.match(r'\d+\. ',lines[i]) if ordered else lines[i].startswith('- ')):
+     items.append('<li>'+inline(re.sub(r'^(?:- |\d+\. )','',lines[i]))+'</li>');i+=1
+    out.append('<'+tag+'>'+''.join(items)+'</'+tag+'>');continue
+   formula=line.startswith(('Y =','ŷ','SSE =','b =','b₁','b₂','R²','t =','F =','VIF','X₂ =','H₀:','상업지역 −'))
+   out.append('<p'+(' class="mr-formula"' if formula else '')+'>'+inline(line)+'</p>');i+=1
+  return '\n'.join(out)
+ for id,section in zip(ids,re.split(r'^## ',source,flags=re.M)[1:],strict=True):
+  label,body=section.split('\n',1);heading=re.search(r'^### (.+)$',body,re.M)[1];body=re.sub(r'^### .+\n','',body,count=1,flags=re.M)
+  if id=='practice':
+   items=[]
+   for q in re.split(r'^\d+\. ',body,flags=re.M)[1:]:
+    question,answer=q.split('▶ 답과 해설',1);items.append('<li>'+inline(question.strip())+'<details><summary>답과 해설</summary><div class="learn-more__body">'+render(answer)+'</div></details></li>')
+   html='<ol class="learn-exercises">'+''.join(items)+'</ol>'
+  else:html=render(body)
+  if id=='quick-start':html=html.replace('<ul>','<ul class="learn-objectives">',1)+'<p class="learn-source-note"><a href="/learn/stats/graphs/#data">공통 학습 자료 30건</a> · <a href="../multiple-regression-example.json">계수·구간·가상 예제 JSON</a>. 실제 거래 출처와 대표성이 검증되지 않은 학습 자료입니다.</p>'
+  if id=='example':
+   table='<details class="learn-more"><summary>두 모형의 전체 계수·고전적 표준오차·95% 구간</summary><div class="learn-more__body"><div class="learn-data learn-data--full"><table><thead><tr><th>모형·계수</th><th>추정값</th><th>표준오차</th><th>95% 구간</th></tr></thead><tbody>'
+   for name,m in [('면적만',simple),('면적+층',multi)]:
+    for j,label19 in enumerate(['절편','면적','층'][:len(m['beta'])]):table+=f'<tr><th scope="row">{name} · {label19}</th><td>{m["beta"][j]:.4f}</td><td>{m["se"][j]:.4f}</td><td>{m["ci"][j][0]:.4f}~{m["ci"][j][1]:.4f}</td></tr>'
+   html+=table+'</tbody></table></div><p>면적만 모형 자유도 28, 면적+층 자유도 27의 양측 t 임계값을 각각 사용했습니다. 계수와 표준오차의 단위는 절편: 만원/㎡, 면적: (만원/㎡)/㎡, 층: (만원/㎡)/층입니다. 이분산·의존성이 있으면 이 고전적 구간이 자동으로 타당해지지는 않습니다.</p></div></details>'
+  if id=='fit':
+   html=html.replace('<td>—</td>',f'<td>{simple["adjusted_R2"]:.3f}</td>',1)+'<p class="learn-source-note">면적만 모형의 수정 R²는 0.4006745736…입니다. 표에서는 소수 셋째 자리까지 반올림해 표시합니다.</p>'
+  if id=='macro':html=macro_case()
+  if id=='recap':html=html.replace('20장 「로그변환과 비선형 관계」','<a href="/learn/stats/log-regression/">20장 「로그변환과 비선형 관계」</a>')
+  parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{heading if id!="macro" else "실제 회귀 화면의 계수·기준·식별 경고를 함께 읽으세요"}</h2>{html}</section>')
  p=ROOT/'multiple-regression/index.html';p.parent.mkdir(exist_ok=True);html=p.read_text(encoding='utf-8') if p.exists() else (ROOT/'regression/index.html').read_text(encoding='utf-8').replace('https://ch2data.com/learn/stats/regression/','https://ch2data.com/learn/stats/multiple-regression/')
- html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="다중회귀와 변수의 해석">'+'\n'.join(parts)+'</article>',html,count=1,flags=re.S);html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1다중회귀의 조건부 계수, 더미변수·상호작용·공선성과 통제변수의 한계를 학습합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);p.write_text(html,encoding='utf-8')
+ html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="다중회귀와 변수의 해석">'+'\n'.join(parts)+'</article>',html,count=1,flags=re.S);html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1다중회귀의 조건부 계수, 더미변수·상호작용·공선성과 통제변수의 한계를 학습합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);
+ html=html.replace('별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.','활용도는 CH2 Macro의 분석 결과를 이해하는 데 얼마나 도움이 되는지를 나타냅니다.')
+ if 'multiple-regression/chapter.css' not in html:html=html.replace('</head>','<link rel="stylesheet" href="/learn/stats/multiple-regression/chapter.css?v=20261024-1" />\n</head>')
+ if 'multiple-regression/experiment.js' not in html:html=html.replace('</body>','<script type="module" src="/learn/stats/multiple-regression/experiment.js?v=20261024-1"></script>\n</body>')
+ p.write_text(html,encoding='utf-8')
 if __name__=='__main__':build()

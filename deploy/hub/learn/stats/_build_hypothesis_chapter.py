@@ -23,32 +23,95 @@ def build():
    pts=[point(a+(z-a)*i/100) for i in range(101)];b+='<polygon points="'+f'{point(a)[0]},235 '+' '.join(f'{x:.5f},{y:.5f}' for x,y in pts)+f' {point(z)[0]},235" fill="#bfdbfe"/>'
   pts=[point(-4.5+i*.025) for i in range(361)];b+='<polyline points="'+' '.join(f'{x:.5f},{y:.5f}' for x,y in pts)+'" fill="none" stroke="#2563eb" stroke-width="2"/>'
   for x in [-4,-2,0,2,4]:b+=text(320+x*60,264,x,'text-anchor="middle"')
-  for x in [-cut,cut]:b+=line(320+x*60,point(x)[1],320+x*60,235,'#d97706')+text(320+x*60,295,f'{x:.3f}','text-anchor="middle"')
-  return b+text(510,320,'t 값')
- f1=fig('p-tails','관측값보다 극단적인 양쪽 꼬리',curve(abs(obs),f'관측 |t|={abs(obs):.3f} 바깥 면적: p={p:.4f}'),'그림 1. H₀와 가정이 맞을 때의 자유도 29 t분포입니다. 양측 p값은 양쪽 꼬리 확률의 합입니다. 곡선은 −4.5~4.5만 표시하지만 계산은 무한 꼬리까지 포함합니다.',345)
- f2=fig('rejection','유의수준 5%의 기각역',curve(critical,f'사전에 정한 α=0.05: 양쪽 꼬리 0.025씩'),'그림 2. 자유도 29, 양측 5% 기각역은 ±2.045 바깥입니다. 그림 1의 관측값 기준 p값 영역과 그림 2의 사전 기준 기각역을 구별하세요.',345)
+  for x in [-cut,cut]:b+=text(320+x*60,295,f'{x:.3f}','text-anchor="middle"')
+  for x in [-critical,critical]:b+=line(320+x*60,45,320+x*60,235,'#d97706','stroke-dasharray="5 4" stroke-width="2" class="ht-critical"')
+  b+=line(320+obs*60,45,320+obs*60,235,'#0f766e','stroke-width="3" class="ht-observed"')
+  b+=text(24,338,'주황 점선: ±임계값 · 청록 실선: 관측 t · t=0: 귀무가설 중심')
+  return b+text(510,320,'t 값 (단위 없음)')
+ f1=fig('p-tails','양측 p값 · 관측 |t| 바깥의 꼬리 확률',curve(abs(obs),f'관측 |t|={abs(obs):.3f} 바깥 면적: p={p:.4f}'),'그림 1. H₀와 가정이 맞을 때의 자유도 29 t분포입니다. 양측 p값은 양쪽 꼬리 확률의 합입니다. 가로축은 단위 없는 t값, 세로축은 확률밀도입니다. 색칠한 면적이 p값이며 곡선은 −4.5~4.5만 표시하지만 계산은 무한 꼬리까지 포함합니다.',365)
+ f2=fig('rejection','유의수준에 따른 양측 기각영역 (자유도 29)',curve(critical,f'사전에 정한 α=0.05: 양쪽 꼬리 0.025씩'),'그림 2. 자유도 29, 양측 5% 기각역은 ±2.045 경계와 그 바깥입니다. 옅은 주황은 기각영역, 주황 점선은 임계값, 청록 실선은 관측 t입니다. 그림 1의 p값 영역과 사전 기준 기각영역을 구별하세요.',365)
  x=lambda a:90+(a-90)*4
  b=text(24,28,'같은 양측 t 검정과 95% t 신뢰구간을 연결합니다')+line(x(lo),115,x(hi),115,'#2563eb','stroke-width="4" data-ci="mean"')+text(x(lo),147,f'{lo:.2f}','text-anchor="middle"')+text(x(hi),147,f'{hi:.2f}','text-anchor="middle"')+line(x(mu0),65,x(mu0),180,'#d97706','stroke-dasharray="4 3"')+text(x(mu0),55,'기준 130','text-anchor="middle"')+f'<circle cx="{x(m)}" cy="115" r="5" fill="#2563eb"/>'+text(x(m)+10,93,f'평균 {m:.2f}')+text(24,225,'130이 구간 안에 있음 → 5% 양측 검정에서 기각하지 않음')+text(360,260,'단위: 만원/㎡')
- f3=fig('ci-link','신뢰구간과 검정의 관계',b,'그림 3. 동일한 자료·가정·양측 t 방법에서의 연결입니다. 기준값을 기각하지 않는 것이 그 값이 참임을 입증하는 것은 아닙니다.',285)
+ f3=fig('ci-link','평균의 95% t 신뢰구간과 기준 130 비교 (만원/㎡)',b,'그림 3. 동일한 자료·가정·양측 t 방법에서의 연결입니다. 기준값을 기각하지 않는 것이 그 값이 참임을 입증하는 것은 아닙니다.',285)
  b=text(24,28,'같은 실제 차이와 퍼짐을 가정한 사전 검정력 비교')
  for i,d in enumerate(power):
   y=70+i*65;b+=text(24,y+19,f'n={d["n"]}')+f'<rect x="145" y="{y}" width="{d["power"]*390}" height="25" fill="#2563eb" data-n="{d["n"]}" data-power="{d["power"]}"/>'+text(155+d['power']*390,y+19,f'{d["power"]:.1%}')
  b+=text(24,345,'가로축: 검정력(0~100%) / α=0.05, 차이 20, σ=80')
- f4=fig('power','표본수와 검정력',b,'그림 4. 독립 정규표본의 양측 단일표본 t 검정을 가정한 이론값입니다. 실제 차이 20만원/㎡와 σ=80만원/㎡를 사전에 설정한 가상 계획 예제이며 관측 p값에서 계산한 사후 검정력이 아닙니다.',375)
- parts=[]
- def sec(id,label,title,body):parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{title}</h2>{body}</section>')
- sec('quick-start','서두 · 학습목표','관측한 차이를 표본의 변동만으로 설명할 수 있을까요?','''<p>한 학교 학생들의 평균 통학 시간이 30분이라고 알려져 있다고 해 봅시다. 새로 뽑은 학생들의 평균이 33분이라면, 모집단 평균이 달라진 것일까요? 아니면 표본이 바뀌면서 생긴 차이일까요? 평균의 차이만 보고는 판단하기 어렵습니다.</p><p><strong>가설검정</strong>은 먼저 기준이 되는 가설을 정하고, 그 가설과 표집 가정 아래에서 관측 결과가 얼마나 드문지 살펴보는 방법입니다. <a href="/learn/stats/confidence-intervals/">12장의 신뢰구간</a>과 함께 읽으면 차이의 크기와 불확실성을 함께 이해할 수 있습니다.</p><ul class="learn-objectives"><li>귀무가설·대립가설과 양측·단측 검정을 구별합니다.</li><li>검정통계량과 p값을 계산하는 흐름을 이해합니다.</li><li>‘기각하지 않음’과 ‘같음의 증명’이 다르다는 것을 설명합니다.</li><li>유의수준·검정력·차이의 크기와 반복 검정을 함께 살펴봅니다.</li></ul>''')
- sec('hypotheses','가설과 검정 방향','자료를 보기 전에 질문과 기준을 정합니다','''<p><strong>귀무가설 H₀</strong>는 검정에서 출발점으로 삼는 가설입니다. <strong>대립가설 H₁</strong>는 그와 대비해 살펴볼 주장입니다. 앞의 통학 시간 질문이라면 H₀는 ‘모집단 평균은 30분이다’, H₁은 ‘모집단 평균은 30분과 다르다’가 됩니다. 검정 대상은 이번 표본평균 자체가 아니라 모집단 평균 μ입니다.</p><p>큰 쪽과 작은 쪽의 차이를 모두 살피면 <strong>양측 검정</strong>입니다. 증가만을 질문한다면 H₀: μ≤30, H₁: μ&gt;30처럼 <strong>단측 검정</strong>을 정할 수 있습니다. 방향은 자료를 보기 전에 정해야 합니다. 결과가 나온 뒤 유리한 쪽으로 바꾸면 원래 계획한 오류율을 유지할 수 없습니다.</p><p>이 장의 계산 예제에서는 공통 학습 자료를 사용해 <strong>H₀: μ=130, H₁: μ≠130</strong>을 검정합니다. 130만원/㎡는 분석 전에 정했다고 가정하는 연습용 기준이며 공인된 기준값은 아닙니다. 이후 계산은 모두 양측 검정입니다.</p><details class="learn-more"><summary>기준값도 자료에서 골랐다면</summary><div class="learn-more__body"><p>같은 표본을 보고 그 표본의 중앙값이나 유리한 숫자를 검정 기준으로 선택하면, 기준 자체가 자료에 따라 변합니다. 이를 외부에서 고정된 기준과 비교하는 일반 단일표본 t 검정으로 그대로 해석할 수는 없습니다. 다른 표본에서 추정한 기준값과 비교할 때도 그 기준의 불확실성을 고려해야 합니다.</p></div></details>''')
- sec('statistic','계산 예제','기준과의 차이를 표준오차로 나눕니다',f'''<p>같은 크기의 차이라도 표본평균의 변동이 작을 때와 클 때는 의미가 다릅니다. <strong>검정통계량</strong>은 관측 결과를 검정에 맞는 척도로 요약한 값입니다. 단일표본 t 검정에서는 <strong>T=(x̄−μ₀)/(s/√n)</strong>을 씁니다. 기준과의 차이가 추정 표준오차의 몇 배인지 나타냅니다.</p><ol><li><strong>자료 요약:</strong> <a href="/learn/stats/graphs/#data">공통 학습 자료 30건</a>의 평균은 {m:.2f}, 표본표준편차는 {s:.2f}, 추정 SE는 {se:.2f}만원/㎡입니다.</li><li><strong>기준과의 차이:</strong> 평균에서 기준 130을 빼면 {m-mu0:.2f}만원/㎡입니다.</li><li><strong>t값:</strong> 차이를 SE로 나누면 <strong>t≈{obs:.3f}</strong>입니다. 차이가 추정 표준오차의 약 {obs:.2f}배라는 뜻입니다.</li></ol><p>정규모집단에서 독립적으로 같은 분포의 관측값을 뽑았다면, H₀ 아래 T는 자유도 n−1의 t분포를 따릅니다. 여기서는 자유도가 29입니다. 비정규 자료에서는 근사가 적절한지 확인해야 합니다.</p><p>공통 자료는 실제 출처와 무작위 표집 여부가 확인되지 않았고 분포도 치우쳐 있습니다. 이 계산은 산식을 익히는 예제이며 실제 모집단에 대한 검정의 타당성을 확인한 결과는 아닙니다. 계산에는 반올림 전 값을 사용했고 <a href="../hypothesis-example.json">계산값 JSON</a>에 보존했습니다.</p>''')
- sec('p-value','p값의 의미','귀무가설 아래에서 이만큼 극단적인 결과가 나올 확률입니다',f'''<p>p값은 <strong>귀무가설과 검정의 다른 가정이 맞을 때, 검정통계량이 관측값만큼 또는 더 극단적일 확률</strong>입니다. 이 양측 t 검정에서는 0에서 관측 t값만큼 떨어져 있거나 더 멀리 있는 양쪽 꼬리의 확률을 더합니다.</p>'''+f1+f'''<p>이 예제의 p값은 <strong>{p:.4f}</strong>입니다. H₀와 표집·모형 가정이 맞을 때, |T|가 약 {abs(obs):.3f} 이상인 결과의 확률입니다. 이번 평균과 정확히 같은 값이 나올 확률을 구하는 것은 아닙니다.</p><ul><li><strong>H₀가 참일 확률</strong>이 아닙니다.</li><li><strong>결과가 우연일 확률</strong>이나 분석자가 틀렸을 확률이 아닙니다.</li><li><strong>차이의 크기</strong>나 그 차이가 중요한 정도를 나타내는 값이 아닙니다.</li></ul><p>작은 p값은 H₀와 모형 가정 아래에서 관측 결과가 드물다는 뜻입니다. 어느 가정이 맞지 않는지까지 p값 하나로 알 수는 없습니다. 표집 편향이나 관측 간 의존성도 확인해야 합니다.</p><details class="learn-more"><summary>양측 t 검정의 p값 산식</summary><div class="learn-more__body"><p>H₀ 아래 T가 자유도 n−1인 t분포를 따를 때 p=P(|T|≥|t관측|)=2P(T≥|t관측|)입니다. 단측 검정은 질문의 방향에 맞는 꼬리를 사용합니다. 결과를 본 뒤 양측 p값을 무조건 절반으로 나누지는 않습니다.</p></div></details>''')
- sec('decision','유의수준과 판단','기각하지 않는다고 같음이 증명되는 것은 아닙니다','''<p><strong>유의수준 α</strong>는 H₀가 참일 때 잘못 기각하는 비율을 통제하기 위해 사전에 정하는 기준입니다. 이 장에서는 α=0.05로 정하고 p&lt;0.05이면 H₀를 기각합니다. 이 기준에 따라 기각할 때 ‘통계적으로 유의하다’고 말합니다.</p>'''+f2+f'''<p>예제에서는 p={p:.4f}&gt;0.05이므로 <strong>H₀를 기각하지 않습니다.</strong> ‘모집단 평균이 130과 다르다고 판단할 근거가 이 검정에서 충분하지 않다’는 뜻입니다. ‘평균이 130임을 입증했다’거나 ‘차이가 없다’는 결론은 아닙니다. 표본수가 작거나 퍼짐이 커서 차이를 구별하기 어려울 수도 있습니다.</p><p>p값과 α는 역할이 다릅니다. p값은 관측 자료에서 계산하고, α는 판단 기준으로 미리 정합니다. 0.049와 0.051 사이에 차이의 중요성이 갑자기 바뀌는 것은 아닙니다. 판정과 함께 정확한 p값, 추정 차이, 신뢰구간을 제시하세요.</p>''')
- sec('ci','신뢰구간과 연결','같은 양측 방법에서는 기준값이 구간 안에 있는지 볼 수 있습니다',f'''<p>12장에서 계산한 평균의 95% t 신뢰구간은 <strong>{lo:.2f}~{hi:.2f}만원/㎡</strong>입니다. 기준 130이 이 안에 있으므로 같은 자료와 가정을 사용한 5% 양측 t 검정에서는 기각하지 않습니다. 기준값이 구간 바깥에 있으면 기각합니다.</p>'''+f3+f'''<p>차이 μ−130의 신뢰구간은 <strong>{lo-130:.2f}~{hi-130:.2f}만원/㎡</strong>로, 차이가 없는 값인 0을 포함합니다. 구간을 보면 기각 여부뿐 아니라 어떤 크기의 차이가 자료와 양립하는지도 읽을 수 있습니다.</p><p>이 연결은 같은 자료·가정·방법의 양측 검정과 그에 대응하는 신뢰구간을 쓸 때 성립합니다. 단측 검정이나 다른 계산법과 임의로 섞지 않습니다. 두 집단 각각의 구간이 겹치는지만 보는 것도 두 집단 차이의 검정을 대신하지 못합니다.</p>''')
- sec('errors','오류와 검정력','차이가 없는데 있다고 하거나, 있는 차이를 놓칠 수 있습니다','''<div class="learn-data learn-data--full"><table><caption>가설검정의 가능한 결정</caption><thead><tr><th scope="col">실제 상태</th><th scope="col">H₀ 기각</th><th scope="col">H₀ 기각하지 않음</th></tr></thead><tbody><tr><th scope="row">H₀ 참</th><td>제1종 오류 · α로 통제</td><td>올바른 결정</td></tr><tr><th scope="row">특정 대립가설 참</th><td>탐지 · 검정력 1−β</td><td>제2종 오류 · β</td></tr></tbody></table></div><p><strong>제1종 오류</strong>는 참인 H₀를 기각하는 것이고, <strong>제2종 오류</strong>는 특정 대립가설이 참인데도 기각하지 않는 것입니다. <strong>검정력 1−β</strong>는 그 실제 차이가 있을 때 이를 탐지해 H₀를 기각할 확률입니다.</p><p>β와 검정력은 실제 차이가 얼마인지에 따라 달라집니다. 모든 대립가설에 공통인 검정력 하나가 있는 것이 아닙니다. 실제 차이·표본수·퍼짐·유의수준·검정 방향을 정해야 계산할 수 있습니다.</p>'''+f4+'''<p>같은 조건에서 n이 커지거나 실제 차이가 커지면 검정력은 대체로 높아집니다. α를 더 엄격하게 낮추면 제1종 오류를 줄이는 대신 같은 n에서 차이를 놓치기 쉬워질 수 있습니다. 자료를 모으기 전에 중요하게 볼 최소 차이와 목표 검정력을 정해 표본수를 계획합니다.</p>''')
- sec('effect','통계적 유의성과 실제 의미','p값과 함께 차이의 크기를 보세요',f'''<p>예제의 추정 차이는 <strong>{m-mu0:.2f}만원/㎡</strong>입니다. 이 차이가 실제로 중요한지는 단위와 질문의 맥락을 알아야 판단할 수 있습니다. p값은 그 판단을 대신하지 않습니다.</p><p>큰 표본에서는 아주 작은 차이도 통계적으로 유의할 수 있습니다. 반대로 작은 표본에서는 중요한 크기의 차이가 있어도 불확실성이 커 유의하지 않을 수 있습니다. <strong>효과크기</strong>는 차이의 크기를 나타내는 지표입니다. 단위를 가진 차이와 신뢰구간을 함께 제시하면 결과를 해석하는 데 도움이 됩니다.</p><p>두 값이 실질적으로 비슷하다는 것을 보이려면 ‘유의하지 않음’만으로는 부족합니다. 무시해도 될 차이의 범위를 미리 정하고, 동등성 검정처럼 그 질문에 맞는 방법을 사용해야 합니다. 집단 간 차이와 표준화 효과크기는 다음 장에서 이어집니다.</p>''')
- sec('multiplicity','반복 검정과 보고','여러 번 비교한 뒤 유리한 결과만 고르지 않습니다',f'''<p>차이가 없는 항목을 많이 검정하면 그중 일부는 우연히 작은 p값이 나올 수 있습니다. 서로 독립이고 모두 H₀가 참인 검정을 α=0.05로 20번 하면, 적어도 한 번 잘못 기각할 확률은 <strong>1−0.95²⁰≈{(1-.95**20)*100:.1f}%</strong>입니다. 각 검정의 5%와 여러 검정 전체의 오류율은 다릅니다. 검정들이 서로 관련되어 있다면 이 계산도 달라집니다.</p><p>변수나 집단을 계속 바꾸다가 p&lt;0.05인 결과만 보고하면 탐색 과정이 가려집니다. 유의할 때까지 표본을 더 모으면서 일반 p값을 그대로 해석하는 것도 처음 정한 오류율을 유지하지 못할 수 있습니다. 계획한 검정과 탐색을 구별하고, 필요하면 다중비교 보정이나 순차검정 방법을 사용합니다.</p><p>보고할 때는 <strong>가설·기준값·방향·유의수준·표집 방법·n·추정 차이·신뢰구간·p값</strong>을 함께 남기세요. 반올림된 표시가 0.000이라고 해서 p=0이라고 쓰지는 않습니다.</p>''')
- sec('practice','확인 문제','기준과 확률의 방향을 점검하세요','''<ol class="learn-exercises"><li>p=0.03이면 H₀가 참일 확률이 3%인가요?<details><summary>답과 해설</summary><p>아니요. H₀와 가정 아래 관측 통계량만큼 또는 더 극단적인 결과의 확률입니다.</p></details></li><li>p&gt;0.05이면 두 값이 같다는 증거인가요?<details><summary>답과 해설</summary><p>기각하지 못했다는 뜻이며 같음을 입증하지 않습니다. 구간과 검정력을 함께 봐야 합니다.</p></details></li><li>결과를 본 뒤 단측으로 바꿔도 되나요?<details><summary>답과 해설</summary><p>유리한 방향을 사후 선택하면 사전에 설계한 오류율 해석이 성립하지 않습니다.</p></details></li><li>매우 작은 p값이면 차이도 반드시 큰가요?<details><summary>답과 해설</summary><p>아니요. 표본수와 퍼짐도 영향을 줍니다. 차이의 크기와 신뢰구간을 별도로 보고합니다.</p></details></li></ol>''')
- sec('macro','CH2 Macro에서 읽기','유의한 관계와 시장에서 중요한 차이를 구별하세요','''<p>CH2 Macro에서 p값이 표시된 결과를 읽을 때는 먼저 무엇을 검정한 값인지 확인하세요. 이 장의 예제는 평균과 고정된 기준값을 비교한 것입니다. 회귀계수 옆의 p값은 해당 모형의 계수에 대한 검정이므로 같은 질문으로 읽을 수는 없습니다.</p><p>계수나 차이의 크기, 단위, 신뢰구간, 건수, 분석 기간과 거래 구성을 함께 보세요. p값이 작더라도 차이가 실무적으로 작을 수 있고, p값이 크더라도 불확실성이 넓어 중요한 차이를 배제하지 못할 수 있습니다.</p><p>유의한 관계가 인과관계나 미래 예측의 정확성을 보장하지는 않습니다. 여러 지역·기간·모형을 비교한 뒤 일부 결과를 골랐다면 그 탐색 과정도 함께 고려해야 합니다.</p><p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 통계 열기 →</a></p>''')
- sec('recap','결론 · 학습 요약','기각 여부와 차이의 크기·불확실성을 함께 남기세요','''<p>가설검정은 사전에 정한 질문에 대해, 가설과 표집 모형 아래 관측 결과를 평가하는 절차입니다. p값 하나로 모든 결론을 내리지 않도록 다음을 기억해 두세요.</p><ul class="learn-recap-list"><li><strong>검정의 출발점:</strong> 기준값·가설·방향·유의수준을 자료를 보기 전에 정합니다.</li><li><strong>p값:</strong> H₀와 다른 가정 아래 관측값만큼 또는 더 극단적인 검정통계량이 나올 확률입니다. H₀가 참일 확률은 아닙니다.</li><li><strong>기각하지 않음:</strong> 차이가 없다는 증명이 아닙니다. 표본수·퍼짐·검정력과 신뢰구간을 함께 봅니다.</li><li><strong>실제 의미:</strong> 통계적 유의성과 차이의 중요성은 다릅니다. 차이의 크기와 단위를 확인합니다.</li><li><strong>반복 검정:</strong> 여러 비교에서 유리한 결과만 고르면 오류율의 해석이 달라집니다. 탐색 과정과 비교 수를 함께 보고합니다.</li></ul><p>다음 <a href="/learn/stats/comparing-groups/">14장 ‘두 집단 비교와 효과크기’</a>에서는 두 집단을 비교하는 방법을 배웁니다.</p><details class="learn-more"><summary>참고자료</summary><div class="learn-more__body"><ul><li><a href="https://www.itl.nist.gov/div898/handbook/eda/section3/eda352.htm">NIST/SEMATECH: Confidence Limits for the Mean</a> — 단일표본 t 검정과 신뢰구간의 연결.</li></ul><p class="learn-source-note">참고자료의 기존 확인일: 2026-10-07. 본문의 네 개 그림은 공통 학습 자료와 가상 기준으로 계산했습니다. 검정력은 SciPy 비중심 t분포로 계산한 사전 계획 예제입니다.</p></div></details>''')
+ f4=fig('power','표본수별 이론적 검정력 · 차이와 표준편차 고정 (%)',b,'그림 4. 독립 정규표본의 양측 단일표본 t 검정을 가정한 이론값입니다. 실제 차이 20만원/㎡와 σ=80만원/㎡를 사전에 설정한 가상 계획 예제이며 관측 p값에서 계산한 사후 검정력이 아닙니다.',375)
+ page=ROOT/'hypothesis-tests/index.html';old=page.read_text(encoding='utf-8')
+ references=re.search(r'<details class="learn-more"><summary>참고자료</summary>.*?</details>',old,re.S)[0]
+ comparisons=[{'mu0':value,'t':(m-value)/se,'p':float(2*student_t.sf(abs((m-value)/se),df))} for value in range(80,211)]
+ criticals={str(a):float(student_t.ppf(1-a/2,df)) for a in [.01,.05,.10]}
+ controls='''<details class="learn-more ht-experiment" hidden><summary>직접 확인하기 · 기준 평균과 유의수준을 바꾸면?</summary><div class="learn-more__body">
+<p id="ht-note">표본수 30건, 평균 약 146.33만원/㎡, 표본표준편차 약 81.53만원/㎡를 고정한 학습용 가상 비교입니다. 계산에는 반올림 전 값을 사용합니다. 그림 1·2가 같은 설정을 공유하며 그림 3·4와 본문의 계산 예제는 원래 조건을 유지합니다.</p>
+<label for="ht-mu">기준 평균 μ₀ <output id="ht-mu-value" for="ht-mu">130만원/㎡</output></label>
+<input id="ht-mu" type="range" min="80" max="210" step="1" value="130" aria-describedby="ht-note ht-range-note">
+<p id="ht-range-note" class="learn-source-note">80~210만원/㎡ · 1만원/㎡ 간격. 기준값을 결과에 유리하게 고르는 실제 검정 절차를 권장하는 기능은 아닙니다.</p>
+<label for="ht-alpha">유의수준 α</label><select id="ht-alpha"><option value="0.01">0.01 (1%)</option><option value="0.05" selected>0.05 (5%)</option><option value="0.1">0.10 (10%)</option></select>
+<button type="button" id="ht-reset">학습 예제 μ₀=130 · α=0.05로 복원</button>
+<div id="ht-result" class="ht-formula" role="status" aria-live="polite"></div>
+<p class="ht-legend">파란 곡선: 귀무가설 아래의 t분포 · 옅은 파랑: 그림 1의 p값 영역 · 옅은 주황: 그림 2의 기각영역 · 주황 점선: ±기각 임계값 · 청록 실선: 부호를 가진 관측 t값 · t=0: 귀무가설의 기준 중심</p>
+<p class="learn-source-note">p≤α이면 기각합니다. 표시값이 반올림되어 같아 보여도 판정은 반올림 전 확률로 합니다. 기준 평균과 관측 t는 단위가 다르므로 같은 가로축에 놓지 않습니다.</p>
+</div></details>'''
+ data={'df':df,'n':n,'mean':m,'sd':s,'se':se,'criticals':criticals,'densityAtZero':float(student_t.pdf(0,df)),'comparisons':comparisons}
+ f1=f1.replace('<figure class="learn-chart learn-chart--wide">','<figure class="learn-chart learn-chart--wide" id="ht-p-tails">').replace('<figcaption',controls+'<script type="application/json" id="ht-experiment-data">'+json.dumps(data,ensure_ascii=False)+'</script><figcaption')
+ f2=f2.replace('fill="#bfdbfe"','fill="#ffedd5"')
+ f2=f2.replace('<figure class="learn-chart learn-chart--wide">','<figure class="learn-chart learn-chart--wide" id="ht-rejection">')
+ parts=[];source=(ROOT/'hypothesis-tests/content.md').read_text(encoding='utf-8')
+ source=source.replace('\\*','*').replace('**','').replace('\\~','~')
+ ids=['quick-start','hypotheses','statistic','p-value','decision','ci','errors','effect','multiplicity','practice','macro','recap']
+ def inline(value):return re.sub(r'\*\*(.+?)\*\*',r'<strong>\1</strong>',escape(value))
+ def render(block):
+  out=[];lines=block.strip().split('\n');i=0
+  while i<len(lines):
+   line=lines[i].strip()
+   if not line or line=='---':i+=1;continue
+   if line.startswith('[그림 '):out.append({1:f1,2:f2,3:f3,4:f4}[int(re.search(r'그림 (\d)',line)[1])]);i+=1;continue
+   if line=='[CH2 Macro 통계분석 열기 →]':out.append('<p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 통계분석 열기 →</a></p>');i+=1;continue
+   if line=='▶ 참고자료':out.append(references);i+=1;continue
+   if line.startswith('▶ '):
+    title=line[2:];rest=[];i+=1
+    while i<len(lines) and lines[i].strip()!='---':rest.append(lines[i]);i+=1
+    out.append('<details class="learn-more"><summary>'+inline(title)+'</summary><div class="learn-more__body">'+render('\n'.join(rest))+'</div></details>');continue
+   if line.startswith('|'):
+    table=[]
+    while i<len(lines) and lines[i].strip().startswith('|'):
+     cells=[c.strip() for c in lines[i].strip().strip('|').split('|')]
+     if not all(re.fullmatch(r'[:\- ]+',c) for c in cells):table.append(cells)
+     i+=1
+    out.append('<div class="learn-data learn-data--full"><table><thead><tr>'+''.join('<th scope="col">'+inline(c)+'</th>' for c in table[0])+'</tr></thead><tbody>'+''.join('<tr>'+''.join(('<th scope="row">'+inline(c)+'</th>') if j==0 else '<td>'+inline(c)+'</td>' for j,c in enumerate(row))+'</tr>' for row in table[1:])+'</tbody></table></div>');continue
+   if re.fullmatch(r'\d+\. (자료 확인|기준값과의 차이|검정통계량 계산)',line):out.append('<p class="ht-step-title">'+inline(line)+'</p>');i+=1;continue
+   if line.startswith('- ') or re.match(r'\d+\. ',line):
+    ordered=not line.startswith('- ');tag='ol' if ordered else 'ul';items=[]
+    while i<len(lines) and (re.match(r'\d+\. ',lines[i]) if ordered else lines[i].startswith('- ')):
+     items.append('<li>'+inline(re.sub(r'^(?:- |\d+\. )','',lines[i]))+'</li>');i+=1
+    out.append('<'+tag+'>'+''.join(items)+'</'+tag+'>');continue
+   formula=line.startswith(('H₀:','H₁:','T =','t =','t ≈','d =','p =','p ≈','95% 신뢰구간:','차이의 95%','검정력 =','1 − 0.95','146.33 −'))
+   out.append('<p'+(' class="ht-formula"' if formula else '')+'>'+inline(line)+'</p>');i+=1
+  return '\n'.join(out)
+ for id,section in zip(ids,re.split(r'^## ',source,flags=re.M)[1:],strict=True):
+  label,body=section.split('\n',1);heading=re.search(r'^### (.+)$',body,re.M)[1];body=re.sub(r'^### .+\n','',body,count=1,flags=re.M)
+  if id=='practice':
+   items=[]
+   for q in re.split(r'^\d+\. ',body,flags=re.M)[1:]:
+    question,answer=q.split('▶ 답과 해설',1);items.append('<li>'+inline(question.strip())+'<details><summary>답과 해설</summary><div class="learn-more__body">'+render(answer)+'</div></details></li>')
+   html='<ol class="learn-exercises">'+''.join(items)+'</ol>'
+  else:html=render(body)
+  if id=='quick-start':html=html.replace('<ul>','<ul class="learn-objectives">',1).replace('12장에서 배운 신뢰구간','<a href="/learn/stats/confidence-intervals/">12장에서 배운 신뢰구간</a>')
+  if id=='quick-start':html+='<p><a href="/learn/stats/confidence-intervals/">12장 「점추정과 신뢰구간」</a>과 연결해 살펴보세요.</p>'
+  if id=='statistic':html+='<p class="learn-source-note"><a href="/learn/stats/graphs/#data">공통 학습 자료 30건</a> · <a href="../hypothesis-example.json">계산값 JSON</a>. 평균·표준편차·표준오차·t값·p값은 반올림 전 자료로 계산하고 표시만 반올림합니다.</p>'
+  if id=='errors':heading='잘못 기각하거나, 있는 차이를 놓칠 수 있습니다';html+='<p class="learn-source-note">α는 제1종 오류를 통제하는 유의수준이고, β는 특정한 실제 차이에서의 제2종 오류 확률입니다. 오류 사건과 그 확률을 구별합니다.</p>'
+  if id=='ci':html=html.replace('기준값이 신뢰구간 안에 있다면 기각하지 않습니다.','기준값이 신뢰구간의 내부(끝점 제외)에 있다면 기각하지 않습니다.');html+='<p class="learn-source-note">이 장은 p≤α를 기각 규칙으로 사용합니다. 신뢰구간 끝점에서는 p=α가 되어 기각 경계에 해당하므로, 끝점과 구간 내부를 구별합니다. 그림 3의 기준 130은 구간 내부에 있습니다.</p>'
+  if id=='macro':
+   html=html.replace('신뢰구간: 회귀계수 추정의 불확실성은 어느 정도인가?','신뢰구간: 제공되는 분석에서는 추정의 불확실성을 함께 살펴봅니다. 현재 토지 회귀의 계수 상세에는 계수별 신뢰구간이 표시되지 않습니다.')
+   html+='<p>회귀계수의 검정과 불확실성은 <a href="/learn/stats/model-fit/">21장 「회귀모형의 적합도와 추정의 불확실성」</a>에서 이어서 살펴봅니다.</p>'
+   html+='''<details class="learn-more"><summary>현재 토지 회귀 화면에서 확인할 수 있는 항목</summary><div class="learn-more__body"><p>계수 상세에는 계수, 표준오차(SE), t값, p값이 표시됩니다. 요약에는 분석 건수 n, R², 조정 R²와 전체 모형의 F p값 등이 표시됩니다. 계수별 신뢰구간과 잔차 자유도는 현재 이 표에 직접 표시되지 않습니다.</p><p>현재 토지 회귀는 기본 OLS를 적합하고, 각 계수에 대해 H₀: βⱼ=0인 양측 t검정을 사용합니다. t=계수/SE이며 p=2P(T≥|t|)입니다. 잔차 자유도는 분석 건수에서 상수항을 포함한 설계행렬의 순위를 뺀 값입니다. 따라서 이 장의 단일표본 검정처럼 항상 n−1인 것은 아닙니다.</p><p>표준오차는 기본 OLS의 잔차분산과 설계행렬로 계산합니다. 이 경로는 이분산 강건 또는 군집 표준오차를 자동 적용하지 않습니다. 오차의 독립성과 등분산 등 가정의 적절성을 함께 확인해야 합니다.</p><p>계수 상세의 p값은 소수 다섯째 자리, SE와 t는 소수 둘째 자리로 표시합니다. API는 반올림 전 계수·SE·t·p를 전달하므로 반올림된 표의 값으로 다시 나누면 차이가 날 수 있습니다. p가 0.00000으로 보이더라도 정확히 0이라는 뜻은 아닙니다.</p><p>토지 회귀 화면의 유의 변수 강조 기준은 p&lt;0.10입니다. 본문의 기본 α=0.05와 다르므로 색상이나 유의 변수 개수만으로 이 장의 5% 판정을 대신하지 않습니다. 전체 모형의 F p값과 개별 계수의 p값도 구별합니다.</p><p>도로 조건 같은 범주형 변수의 계수는 기준 범주와 비교한 조건부 관련성입니다. 변수 선택과 여러 모형 탐색 뒤의 p값을 사전에 정한 단일 검정처럼 해석하지 않습니다.</p></div></details>'''
+  if id=='recap':html=html.replace('<ul>','<ul class="learn-recap-list">',1).replace('14장 「두 집단 비교와 효과크기」','<a href="/learn/stats/comparing-groups/">14장 「두 집단 비교와 효과크기」</a>')
+  parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{heading}</h2>{html}</section>')
  pth=ROOT/'hypothesis-tests/index.html';html=pth.read_text(encoding='utf-8');html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="가설검정과 p값">\n'+'\n'.join(parts)+'\n</article>',html,count=1,flags=re.S)
- html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1가설검정과 p값, 유의수준·오류·검정력·효과크기를 그림과 예제로 구분해 설명합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);pth.write_text(html,encoding='utf-8')
+ html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1가설검정과 p값, 유의수준·오류·검정력·효과크기를 그림과 예제로 구분해 설명합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);html=html.replace('별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.','활용도는 CH2 Macro의 분석 결과를 이해하는 데 얼마나 도움이 되는지를 나타냅니다.')
+ if 'hypothesis-tests/chapter.css' not in html:html=html.replace('</head>','<link rel="stylesheet" href="/learn/stats/hypothesis-tests/chapter.css?v=20261024-1" />\n  </head>')
+ if 'hypothesis-tests/experiment.js' not in html:html=html.replace('</body>','<script type="module" src="/learn/stats/hypothesis-tests/experiment.js?v=20261024-1"></script>\n  </body>')
+ html=re.sub(r'(hypothesis-tests/(?:chapter\.css|experiment\.js)\?v=)[^"\s]+',r'\g<1>20261024-2',html)
+ pth.write_text(html,encoding='utf-8')
 if __name__=='__main__':build()

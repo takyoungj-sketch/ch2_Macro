@@ -1,0 +1,13 @@
+/* Chapter 17 only. The shared reader and Macro models are unchanged. */
+.learn-chapter[aria-label="단순선형회귀와 최소제곱법"] :is(h2, h3, li) { word-break: keep-all; overflow-wrap: anywhere; }
+.rg-formula { padding: 1rem 1.25rem; background: var(--learn-soft); border-left: 3px solid var(--learn-border-strong); border-radius: 6px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.rg-controls[hidden], .rg-fit-svg [hidden] { display: none; }
+.rg-controls { margin: 1rem 0; padding: 1rem; background: var(--learn-soft); border-radius: 8px; }
+.rg-controls label { display: block; margin: .5rem 0; font-weight: 500; }
+.rg-controls select, .rg-controls button { max-width: 100%; min-height: 44px; padding: .5rem .75rem; border: 1px solid var(--learn-border-strong); border-radius: 6px; background: var(--learn-surface); color: var(--learn-text); font: inherit; }
+.rg-controls button { color: var(--learn-link); cursor: pointer; }
+.rg-controls input[type="range"] { display: block; width: 100%; min-height: 44px; accent-color: var(--learn-accent); }
+.rg-controls p { margin-bottom: .75rem; }
+.rg-controls :is(select, button, input):focus-visible { outline: 2px solid var(--learn-accent); outline-offset: 3px; }
+.rg-fit-svg circle[data-selected="true"] { stroke: var(--learn-text); stroke-width: 3; }
+:root[data-learn-theme="dark"] :is(.rg-fit-svg line, .rg-residual-svg line, .rg-experiment-svg circle)[stroke="#0f766e"] { stroke: var(--learn-teal); }

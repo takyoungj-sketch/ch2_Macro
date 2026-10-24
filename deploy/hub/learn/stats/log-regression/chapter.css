@@ -1,0 +1,14 @@
+.lg-formula{font-variant-numeric:tabular-nums;line-height:1.8;padding:.6rem .9rem;border-left:3px solid #94a3b8;background:rgba(148,163,184,.08);overflow-wrap:anywhere}
+.lg-controls{padding:1rem;margin-bottom:1rem;border:1px solid rgba(148,163,184,.3);border-radius:.75rem}
+.lg-controls label{display:block;margin-bottom:.5rem;font-weight:600}
+.lg-controls select,.lg-quick button{font:inherit;color:inherit;background:transparent;border:1px solid #94a3b8;border-radius:.4rem;padding:.5rem .7rem;max-width:100%}
+.lg-controls select{background:var(--learn-card,#fff);color:var(--learn-text,#172033)}
+.lg-controls input[type=range]{width:100%;accent-color:#2563eb}
+.lg-quick{display:flex;flex-wrap:wrap;gap:.5rem;margin:.5rem 0}
+.lg-controls [role=status]{font-variant-numeric:tabular-nums}
+.lg-curves-svg [hidden]{display:none}
+.lg-macro-case{margin:1.5rem 0}
+.lg-macro-case img{display:block;width:100%;height:auto;border-radius:.5rem;border:1px solid #64748b}
+.lg-macro-case figcaption{font-size:.86rem;line-height:1.7;opacity:.8;margin-top:.5rem}
+html[data-learn-theme=dark] .lg-controls select{background:#1e293b;color:#e2e8f0}
+@media(prefers-color-scheme:dark){html:not([data-learn-theme=light]) .lg-controls select{background:#1e293b;color:#e2e8f0}}

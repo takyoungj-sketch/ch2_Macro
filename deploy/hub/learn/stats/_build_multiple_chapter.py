@@ -19,43 +19,95 @@ def build():
  b=t(24,28,'세 집단의 평균 차이와 집단 안의 퍼짐을 함께 봅니다');x=lambda v:80+(v-80)*6
  for i,g in enumerate(groups):
   y=90+i*85;b+=t(24,y+5,'ABC'[i])+line(80,y,560,y)
-  for j,v in enumerate(g):b+=f'<circle cx="{x(v)}" cy="{y-j*7}" r="5" fill="#2563eb" data-group="{i}" data-value="{v}"/>'
-  b+=line(x(mean(g)),y-24,x(mean(g)),y+15,'#d97706')+t(x(mean(g)),y-32,f'평균 {mean(g):g}','text-anchor="middle"')
+  for j,v in enumerate(g):b+=f'<circle cx="{x(v)}" cy="{y-(12 if v in g[:j] else 0)}" r="5" fill="#2563eb" data-group="{i}" data-value="{v}"><title>{"ABC"[i]} 관측 {j+1}: {v}점</title></circle>'
+  b+=line(x(mean(g)),y-24,x(mean(g)),y+15,'#d97706')+t(x(mean(g)),y-32,f'평균 {mean(g):g} · n=4','text-anchor="middle"')
  for v in [80,100,120,140,160]:b+=t(x(v),310,v,'text-anchor="middle"')
  b+=t(350,342,'평가 점수(점) · 주황선: 평균')
- f1=fig('groups','세 집단의 가상 원자료',b,'그림 1. A=90·100·110·100, B=110·120·130·120, C=130·140·150·140인 별도 가상 자료입니다. 200점 만점의 평가 점수이며 각 집단은 4명입니다. 점의 세로 간격은 겹침을 구분하기 위한 표시입니다.',370)
- b=t(24,28,'총 제곱합 = 집단 간 제곱합 + 집단 내 제곱합')
+ f1=fig('groups','A·B·C의 시험 점수 분포와 평균 (점)',b,'그림 1. A=90·100·110·100, B=110·120·130·120, C=130·140·150·140인 별도 가상 자료입니다. 200점 만점의 평가 점수이며 각 집단은 4명입니다. 점의 세로 간격은 겹침을 구분하기 위한 표시입니다.',370)
+ b=t(24,28,'집단 간·집단 내 제곱합(SS) 비교 · 단위: 점²')
  for i,(label,value) in enumerate([('집단 간',ssb),('집단 내',ssw)]):
-  y=85+i*85;b+=t(24,y+20,label)+f'<rect x="150" y="{y}" width="{value*.11}" height="28" fill="#2563eb" data-ss="{value}"/>'+t(160+value*.11,y+20,f'{value:g}')
- b+=t(24,260,'SS 합계 3,800 / 단위: 점²')+t(24,292,'F는 SS 자체의 비율이 아니라 자유도로 나눈 MS의 비율입니다')
- f2=fig('variation','ANOVA의 변동 분해',b,'그림 2. 집단 간 SS=3,200, 집단 내 SS=600입니다. 평균제곱은 각각 1,600과 66.67이며 F=24입니다. 막대 길이는 제곱합에 비례합니다.',320)
+  y=85+i*85;b+=t(24,y+20,label)+f'<rect x="150" y="{y}" width="{value*.11}" height="28" fill="#2563eb" data-ss="{value}"/>'+t(160+value*.11,y+20,f'{value:,.0f}')
+ b+=line(150,225,546,225)
+ for tick in [0,1000,2000,3000]:b+=t(150+tick*.11,250,f'{tick:,}','text-anchor="middle"')
+ b+=t(24,288,'SS 합계 3,800점²')+t(24,320,'F = MSB / MSW · 평균제곱 계산은 아래에서 확인합니다')
+ f2=fig('variation','집단 간 SS 3,200과 집단 내 SS 600 (점²)',b,'그림 2. 집단 간 SS=3,200, 집단 내 SS=600입니다. 평균제곱은 각각 1,600과 66.67이며 F=24입니다. 막대 길이는 제곱합에 비례합니다.',350)
  b=t(24,28,'모든 쌍을 함께 고려한 Tukey 95% 동시 신뢰구간');xx=lambda v:115+v*6
  b+=line(xx(0),50,xx(0),295,'#d97706','stroke-dasharray="4 3"')
  for i,d in enumerate(pairs):
   y=90+i*85;b+=t(24,y+4,d['label'])+line(xx(d['low']),y,xx(d['high']),y,'#2563eb',f'stroke-width="3" data-pair="{i}"')+f'<circle cx="{xx(d["difference"])}" cy="{y}" r="4" fill="#2563eb"/>'+t(xx(d['low']),y+24,f'{d["low"]:.2f}','text-anchor="middle"')+t(xx(d['high']),y+24,f'{d["high"]:.2f}','text-anchor="middle"')
- b+=t(xx(0),317,'0','text-anchor="middle"')+t(320,344,'평균 차이(점)')
+
+ for tick in [0,20,40,60]:b+=t(xx(tick),317,tick,'text-anchor="middle"')
+ b+=t(24,344,'점: 평균 차이 · 선: 95% 동시구간 · 점선: 차이 0 (단위: 점)')
  f3=fig('tukey','다중비교를 반영한 쌍별 구간',b,'그림 3. 정규성·독립성·등분산을 가정한 Tukey HSD입니다. 세 쌍 전체의 동시 포함률을 다루며 보정 없는 개별 95% 구간을 나열한 그림과 다릅니다.',372)
- b=t(24,28,'집단별 참여 비율을 같은 100% 길이로 비교합니다')
+ b=t(24,28,'집단 내 참여·비참여 비율 · 분모: 각 집단 50명','id="mg-chart-heading"')
  for i,row in enumerate(COUNTS):
-  y=80+i*80;ratio=row[0]/sum(row);b+=t(24,y+20,f'{"ABC"[i]} · 50명')+f'<rect x="150" y="{y}" width="{ratio*400}" height="30" fill="#2563eb" data-row="{i}"/>'+f'<rect x="{150+ratio*400}" y="{y}" width="{(1-ratio)*400}" height="30" fill="#cbd5e1"/>'+t(150+ratio*200,y+21,f'{ratio:.0%}','style="fill:white" text-anchor="middle"')+t(160+ratio*400,y+21,f'{1-ratio:.0%}')
- b+=t(24,330,'파랑: 참여 / 회색: 비참여 · 각 행의 합계 100%')
- f4=fig('categorical','집단별 동아리 참여 비율',b,'그림 4. 별도 가상 150명입니다. 집단별 동아리 참여·비참여 인원은 A 30·20, B 20·30, C 10·40입니다. 앞의 평가 점수 12개와 다른 자료입니다.',358)
- parts=[]
- def sec(id,label,title,body):parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{title}</h2>{body}</section>')
- sec('quick-start','서두 · 학습목표','평균을 비교할까요, 범주별 비율을 비교할까요?','''<p>세 학급의 시험 점수 평균이 다른지 묻는 것과, 세 학급의 동아리 참여 비율이 다른지 묻는 것은 서로 다른 질문입니다. 점수는 수치형 자료이고 참여 여부는 범주형 자료이므로, 비교에 쓰는 방법도 달라집니다.</p><p>이 장에서는 여러 평균을 비교하는 <strong>일원분산분석(ANOVA)</strong>과 후속 비교, 범주형 변수의 관계를 살펴보는 <strong>분할표와 카이제곱 검정</strong>을 배웁니다. <a href="/learn/stats/comparing-groups/">14장의 두 집단 비교</a>를 바탕으로 질문과 자료의 구조에 맞는 방법을 선택하는 것이 목표입니다.</p><ul class="learn-objectives"><li>평균 차이와 범주별 비율 차이를 구별합니다.</li><li>ANOVA의 전체 검정과 집단 쌍별 비교의 역할을 설명합니다.</li><li>관측도수·기대도수와 카이제곱 검정의 원리를 이해합니다.</li><li>검정 가정·다중비교·효과크기를 함께 확인합니다.</li></ul><p>점수 예제 12개와 참여 여부 예제 150명은 서로 다른 가상 자료입니다. <a href="../multiple-groups-example.json">원자료와 계산 결과 JSON</a>에서 수치를 확인할 수 있습니다.</p>''')
- sec('anova','여러 평균의 비교','분산분석은 평균이 모두 같은지 묻습니다','''<p>일원분산분석은 하나의 집단 구분을 기준으로 여러 모집단 평균을 비교합니다. 귀무가설은 <strong>H₀: μ₁=μ₂=…=μₖ</strong>, 대립가설은 <strong>적어도 하나의 모평균이 다르다</strong>입니다. 이름에 ‘분산’이 들어가지만 검정하려는 것은 평균의 차이입니다.</p>'''+f1+'''<p>세 집단의 평균은 100, 120, 140점입니다. 이 차이가 집단 안에서 개인마다 다른 정도에 비해 얼마나 큰지 살펴봅니다. 평균들이 멀리 떨어져 있고 집단 안의 퍼짐이 작다면, 평균이 모두 같다는 가설 아래에서 이런 결과는 드물어집니다.</p><p>이 장의 고전적 F 검정은 관측의 독립성, 집단별 정규 오차, 공통 분산을 가정합니다. 집단마다 4명인 가상 예제는 원리를 설명하려고 만든 것이며 가정이 확인된 실제 조사 결과는 아닙니다. 전체 검정이 유의하더라도 모든 집단 쌍이 서로 다르다는 뜻은 아닙니다.</p>''')
- sec('variation','변동 분해와 F','집단 사이의 차이를 집단 안의 퍼짐과 비교합니다','''<p>각 점수가 전체 평균에서 벗어난 정도를 <strong>집단 간 변동</strong>과 <strong>집단 내 변동</strong>으로 나눕니다. 집단 간 변동은 각 집단 평균이 전체 평균에서 얼마나 떨어져 있는지, 집단 내 변동은 개인 점수가 자기 집단 평균에서 얼마나 떨어져 있는지를 요약합니다. 편차를 제곱해 더한 값을 <strong>제곱합(SS)</strong>이라고 합니다.</p>'''+f2+f'''<p>예제의 전체 평균은 120점입니다. 집단 간 SS는 3,200, 집단 내 SS는 600이며 합계는 3,800입니다. F는 이 두 제곱합을 그대로 나눈 값이 아닙니다. 각각을 자유도로 나눈 <strong>평균제곱(MS)</strong>끼리 비교합니다.</p><ol><li>집단 간 자유도는 k−1=2, MS는 3,200/2=1,600입니다.</li><li>집단 내 자유도는 n−k=9, MS는 600/9≈66.67입니다.</li><li><strong>F=1,600÷66.67=24</strong>이며, 자유도 (2,9)인 F분포의 오른쪽 꼬리 p값은 <strong>{p:.6f}</strong>입니다.</li></ol><div class="learn-data learn-data--full"><table><caption>가상 평가 점수의 일원분산분석</caption><thead><tr><th scope="col">변동</th><th scope="col">SS</th><th scope="col">자유도</th><th scope="col">MS</th></tr></thead><tbody><tr><th scope="row">집단 간</th><td>3,200</td><td>2</td><td>1,600</td></tr><tr><th scope="row">집단 내</th><td>600</td><td>9</td><td>66.67</td></tr><tr><th scope="row">전체</th><td>3,800</td><td>11</td><td>—</td></tr></tbody></table></div><p>5% 유의수준에서는 평균이 모두 같다는 가설을 기각합니다. 효과크기 <strong>η²=3,200/3,800≈{eta:.3f}</strong>는 이 표본의 총 제곱변동 중 집단 구분과 연결되는 비율입니다. 집단 구분이 점수 변동의 그 비율을 원인으로서 만들었다는 뜻은 아닙니다.</p><details class="learn-more"><summary>제곱합의 산식</summary><div class="learn-more__body"><p>전체 평균 x̄는 집단 크기를 반영한 가중 평균입니다. 집단 간 SS_B=Σnⱼ(x̄ⱼ−x̄)², 집단 내 SS_W=ΣΣ(xᵢⱼ−x̄ⱼ)²이며 SS_T=SS_B+SS_W입니다. 표본의 η²에도 추정의 불확실성과 편향이 있습니다.</p></div></details>''')
- sec('posthoc','어느 집단이 다른가','전체 검정 다음에는 질문에 맞는 후속 비교를 합니다','''<p>ANOVA는 어딘가에 평균 차이가 있는지 알려 줍니다. 어느 집단끼리 얼마나 다른지 알려면 후속 비교가 필요합니다. k개 집단의 모든 쌍은 k(k−1)/2개입니다. 보정 없는 t 검정을 반복하면 전체적으로 잘못 기각할 가능성이 커질 수 있습니다.</p><p><strong>Tukey HSD</strong>는 모든 쌍의 평균을 비교하면서 다중비교를 반영하는 방법입니다. 아래 구간들은 세 쌍을 함께 고려한 95% 동시 신뢰구간입니다. 각각 따로 계산한 보정 없는 95% 구간을 나열한 것과는 다릅니다.</p>'''+f3+f'''<p>B−A와 C−B의 차이는 각각 20점이며 동시 구간은 <strong>{pairs[0]['low']:.2f}~{pairs[0]['high']:.2f}점</strong>입니다. C−A는 40점이며 구간은 <strong>{pairs[1]['low']:.2f}~{pairs[1]['high']:.2f}점</strong>입니다. 이 예제에서는 모두 0을 포함하지 않지만, 전체 ANOVA가 유의하다고 항상 모든 쌍이 유의한 것은 아닙니다.</p><p>모든 쌍이 아니라 사전에 정한 특정 비교나 대조군과의 비교가 목적이라면 그 질문에 맞는 절차를 선택합니다. 다중비교 보정도 편향된 자료나 잘못된 모형을 바로잡아 주지는 않습니다.</p>''')
- sec('assumptions','가정이 다를 때','같은 검정을 모든 자료에 적용하지 않습니다','''<p>고전적 ANOVA를 적용하기 전에 집단별 분포와 퍼짐, 극단값, 관측 사이의 관계를 살펴보세요. 같은 학생을 여러 차례 측정한 자료를 서로 독립인 세 집단처럼 분석할 수는 없습니다.</p><details class="learn-more"><summary>설계에 맞는 다른 방법</summary><div class="learn-more__body"><p>등분산 가정이 부적절하면 Welch ANOVA와 Games–Howell 쌍별 비교를 검토할 수 있습니다. 반복 측정에는 반복측정·혼합모형처럼 의존성을 반영하는 방법이 필요합니다.</p><p>심한 치우침이나 이상치가 있으면 원자료와 잔차를 확인하고 변환·강건한 방법을 검토합니다. 순위 기반 Kruskal–Wallis 검정도 추가적인 같은 분포 모양 가정 없이 무조건 ‘여러 중앙값의 검정’으로 해석할 수는 없습니다. 방법이 달라지면 비교하는 특성도 달라질 수 있습니다.</p></div></details>''')
- sec('categorical','분할표와 비율','같은 인원도 어떤 분모로 나누는지에 따라 비율이 달라집니다','''<p>이번에는 별도의 가상 학생 150명을 집단 A·B·C와 동아리 참여·비참여로 나누겠습니다. 각 학생은 정확히 한 칸에 들어가고 학생들 사이에 독립성이 있다고 가정합니다. 두 범주형 변수를 교차시켜 관측 인원을 적은 표가 <strong>분할표</strong>입니다.</p>'''+f4+'''<div class="learn-data learn-data--full"><table><caption>가상 동아리 참여 여부 분할표 · 단위: 명</caption><thead><tr><th scope="col">집단</th><th scope="col">참여</th><th scope="col">비참여</th><th scope="col">합계</th></tr></thead><tbody><tr><th scope="row">A</th><td>30</td><td>20</td><td>50</td></tr><tr><th scope="row">B</th><td>20</td><td>30</td><td>50</td></tr><tr><th scope="row">C</th><td>10</td><td>40</td><td>50</td></tr><tr><th scope="row">합계</th><td>60</td><td>90</td><td>150</td></tr></tbody></table></div><p><strong>A 안에서 참여한 비율</strong>은 30/50=60%입니다. 반면 <strong>참여자 전체 중 A의 비율</strong>은 30/60=50%입니다. 같은 30명이어도 행 합계로 나누는지 열 합계로 나누는지에 따라 답하는 질문이 달라집니다.</p><p>검정에는 비율을 적당한 인원으로 바꾼 값이 아니라 실제 관측 인원을 사용합니다. 결측을 제외했다면 유효 분모와 제외 기준도 밝혀야 합니다.</p>''')
- sec('chi-square','카이제곱 검정','독립이라면 기대되는 인원과 실제 인원의 차이를 봅니다',f'''<p>귀무가설은 <strong>집단과 동아리 참여 여부가 독립이다</strong>입니다. 독립이라면 각 집단의 참여 비율도 전체 참여 비율 60/150=40%와 같을 것으로 기대합니다. 각 집단 50명 중 참여 20명, 비참여 30명이 기대되는 인원입니다. 이를 <strong>기대도수</strong>라고 합니다.</p><p>기대도수는 <strong>E=(행 합계×열 합계)/전체 인원</strong>으로 구합니다. 실제 관측도수 O와의 차이는 <strong>χ²=Σ(O−E)²/E</strong>로 합합니다. 한 칸의 어긋남을 제곱하고 기대도수로 나누므로 큰 차이가 있는 칸은 더 많이 기여합니다.</p><ol><li>A의 참여 칸은 (30−20)²/20=5, 비참여 칸은 (20−30)²/30≈3.333입니다.</li><li>B는 관측과 기대가 같아 두 칸 모두 0입니다. C는 A와 반대 방향이지만 제곱하므로 같은 크기로 기여합니다.</li><li>합계는 <strong>χ²≈{stat:.4f}</strong>, 자유도는 (3−1)(2−1)=2, 오른쪽 꼬리 p값은 <strong>{cp:.6f}</strong>입니다.</li></ol><p>연속성 보정을 사용하지 않은 Pearson 카이제곱 계산입니다. 이 예제에서는 5% 유의수준에서 독립 가설을 기각합니다. 즉, 가정 아래 집단과 참여 여부에 연관성이 있다는 결과입니다. 집단이 참여의 원인이라는 뜻은 아닙니다.</p><details class="learn-more"><summary>독립성과 동질성 검정의 질문</summary><div class="learn-more__body"><p>한 모집단에서 두 변수를 분류하면 독립성 질문으로, 별도로 표집한 여러 집단의 구성비를 비교하면 동질성 질문으로 설명할 수 있습니다. 같은 통계량을 써도 표집 설계와 해석 대상은 명시해야 합니다.</p></div></details>''')
- sec('categorical-effect','관계의 크기와 방향','유의성뿐 아니라 원래 비율의 차이도 확인하세요',f'''<p>A의 참여 비율은 60%, C는 20%이므로 차이는 <strong>40%포인트</strong>입니다. 어떤 집단에서 어느 범주가 더 많은지 보려면 원래 비율과 관측−기대의 부호를 함께 읽어야 합니다. 카이제곱 통계량은 편차를 제곱하므로 방향을 보여 주지는 않습니다.</p><p><strong>Cramér의 V</strong>는 분할표 관계의 크기를 0~1 사이로 요약합니다. 이 예제에서는 V≈<strong>{V:.3f}</strong>입니다. 인과관계의 강도나 설명된 분산의 비율은 아닙니다. 표본수가 크면 작은 비율 차이도 유의해질 수 있으므로 V와 원래 비율을 함께 봅니다.</p><details class="learn-more"><summary>Cramér의 V 산식과 셀별 해석</summary><div class="learn-more__body"><p>행 수 r, 열 수 c, 전체 인원 n에 대해 V=√[χ²/(n×min(r−1,c−1))]입니다. 여기서는 V=√({stat:.4f}/150)≈{V:.3f}입니다.</p><p>한 칸의 큰 기여도를 그 칸만의 독립적인 유의성 판정으로 읽지는 않습니다. 여러 셀의 잔차를 추가 검정하면 다중비교도 고려해야 합니다.</p></div></details>''')
- sec('sparse','작은 기대도수와 의존성','검정 가능한 표인지 먼저 확인합니다','''<p>카이제곱 p값은 큰 표본 근사입니다. 관측도수만이 아니라 <strong>기대도수</strong>가 너무 작지 않은지 확인합니다. 모든 기대도수가 5 이상인지 보는 것은 흔히 쓰는 보수적인 점검 기준이며 보편적 만능 규칙은 아닙니다. 예제 기대도수는 20·30으로 이 문제를 피하도록 설계했습니다.</p><p>희소한 2×2 표에는 Fisher의 정확검정 등을, 큰 표에는 설계에 맞는 정확·몬테카를로 방법 등을 검토할 수 있습니다. 결과가 유의해지도록 범주를 사후 합치지 않습니다. 기대도수가 0인 빈 행·열은 산식에 바로 넣을 수 없습니다.</p><p>같은 사람이나 물건의 전후 범주를 비교하는 자료는 독립 분할표가 아닙니다. 이분형 대응 자료에는 McNemar 검정처럼 짝을 반영한 방법이 필요합니다. 복합표본·군집·가중치가 있는 조사도 일반 독립성 검정과 구분합니다.</p>''')
- sec('practice','확인 문제','평균과 구성비, 전체와 쌍별 질문을 구별하세요','''<ol class="learn-exercises"><li>ANOVA가 유의하면 모든 쌍의 평균이 다른가요?<details><summary>답과 해설</summary><p>아니요. 적어도 하나가 다르다는 전체 가설 결과입니다. 쌍별 차이는 다중비교를 고려해 확인합니다.</p></details></li><li>F를 3,200/600으로 계산하면 되나요?<details><summary>답과 해설</summary><p>아니요. 자유도로 나눈 평균제곱의 비율입니다. (3,200/2)/(600/9)=24입니다.</p></details></li><li>A 집단의 기대 참여 인원은 관측한 30명인가요?<details><summary>답과 해설</summary><p>아니요. 독립 가정에서 50×60/150=20명입니다.</p></details></li><li>카이제곱이 유의하면 집단 구분이 참여 여부의 원인인가요?<details><summary>답과 해설</summary><p>아니요. 가정 아래 연관성에 관한 결과이며 인과효과의 증명이 아닙니다.</p></details></li></ol>''')
- sec('macro','CH2 Macro에서 읽기','평균 단가와 거래 구성비를 다른 질문으로 읽으세요','''<p>CH2 Macro에서 여러 지역의 평균 단가를 비교하는 것과 용도·유형별 거래 비중을 비교하는 것은 다른 질문입니다. 평균은 수치의 수준을, 구성비는 전체 거래 중 각 범주가 차지하는 비중을 나타냅니다.</p><p>기간·필터·관측 단위·단가 단위를 맞추고 유효 건수와 거래 구성을 확인하세요. 비중을 읽을 때는 분모가 해당 지역 전체인지, 특정 유형 전체인지 구별해야 합니다. 여러 지역 쌍을 탐색했다면 비교한 범위도 함께 고려합니다.</p><p>이 장의 ANOVA·Tukey·카이제곱 계산이 모든 화면의 기능이라고 전제하지 않습니다. 화면의 차이나 가상 예제의 p값을 지역의 우열, 개별 물건의 가치, 정책의 인과효과로 바꾸어 해석하지 마세요.</p><p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 통계 열기 →</a></p>''')
- sec('recap','결론 · 학습 요약','자료의 유형과 비교 질문에 맞춰 방법을 선택하세요','''<p>여러 집단을 비교할 때는 평균을 묻는지 범주별 비율을 묻는지부터 정해야 합니다. 다음 구분을 기억해 두세요.</p><ul class="learn-recap-list"><li><strong>여러 평균:</strong> ANOVA는 평균이 모두 같다는 가설을 검정합니다. 기각해도 모든 집단 쌍이 다르다는 뜻은 아닙니다.</li><li><strong>F 통계량:</strong> 집단 간·집단 내 제곱합을 각각 자유도로 나눈 평균제곱끼리 비교합니다.</li><li><strong>후속 비교:</strong> 어느 쌍이 얼마나 다른지 보려면 질문에 맞는 비교를 하고 다중비교를 반영합니다.</li><li><strong>범주형 관계:</strong> 분할표의 관측도수와 독립일 때의 기대도수를 비교합니다. 비율을 읽을 때는 분모를 확인합니다.</li><li><strong>크기와 한계:</strong> η²·Cramér의 V와 원래 척도의 차이를 함께 봅니다. 검정 가정과 의존성을 확인하고 유의성을 인과관계로 읽지 않습니다.</li></ul><p>다음 <a href="/learn/stats/correlation/">16장 ‘상관관계와 인과관계’</a>에서는 두 수치형 변수의 관계를 살펴봅니다.</p><details class="learn-more"><summary>참고자료</summary><div class="learn-more__body"><ul><li><a href="https://www.itl.nist.gov/div898/handbook/prc/section4/prc433.htm">NIST: ANOVA table and tests of means</a> — 평균제곱과 F 검정.</li><li><a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.tukey_hsd.html">SciPy: Tukey HSD</a> — 쌍별 동시 구간.</li><li><a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.chi2_contingency.html">SciPy: Chi-square independence test</a> — 기대도수와 근사 검정.</li></ul><p class="learn-source-note">참고자료의 기존 확인일: 2026-10-08. 네 개 그림과 예제는 별도 가상 자료로 작성했습니다. 확률과 Tukey 구간은 SciPy로 계산했습니다.</p></div></details>''')
+  y=70+i*85;ratio=row[0]/sum(row)
+  b+=t(24,y+20,f'{"ABC"[i]} · 50명',f'data-label="{i}"')
+  b+=f'<rect x="150" y="{y}" width="{ratio*400}" height="30" fill="#2563eb" data-row="{i}"/><rect x="{150+ratio*400}" y="{y}" width="{(1-ratio)*400}" height="30" fill="#cbd5e1" data-non="{i}"/>'
+  b+=t(150,y+54,f'참여 {row[0]}/50 = {ratio:.0%} · 비참여 {row[1]}/50 = {1-ratio:.0%}',f'data-ratio="{i}"')
+ b+=line(150,303,550,303)
+ for tick in [0,25,50,75,100]:b+=t(150+tick*4,328,f'{tick}%','text-anchor="middle"')
+ b+=t(24,363,'파랑: 참여 · 회색: 비참여 · 각 행 합계 100%','id="mg-legend"')
+ f4=fig('categorical','분모에 따른 동아리 참여 비율 비교',b,'그림 4. 별도 가상 학생 150명입니다. 각 집단 50명을 분모로 참여·비참여 비율을 표시합니다. 앞의 시험 점수 12개와 다른 자료입니다.',390)
+ controls='''<div class="mg-controls" hidden><label for="mg-mode">비율의 기준</label><select id="mg-mode"><option value="group">집단 내 비율</option><option value="participants">참여자 구성비</option><option value="total">전체 학생 대비 비율</option></select><p id="mg-status" role="status" aria-live="polite">각 집단 50명이 분모입니다. 각 행의 합계는 100%입니다.</p><p class="learn-source-note">비율 보기만 바뀝니다. 카이제곱 검정은 원래 관측도수 30·20 / 20·30 / 10·40으로 계산하며 χ²≈16.6667, p≈0.0002404, V≈0.3333으로 유지됩니다.</p></div>'''
+ f4=f4.replace('<figure class="learn-chart learn-chart--wide">','<figure class="learn-chart learn-chart--wide" id="mg-proportions">').replace('<svg',controls+'<script type="application/json" id="mg-counts">'+json.dumps(COUNTS)+'</script><svg',1)
+ page=ROOT/'multiple-groups-and-categorical/index.html';old=page.read_text(encoding='utf-8')
+ references=re.search(r'<details class="learn-more"><summary>참고자료</summary>.*?</details>',old,re.S)[0]
+ parts=[];source=(ROOT/'multiple-groups-and-categorical/content.md').read_text(encoding='utf-8').replace('\\*','*').replace('**','').replace('\\~','~')
+ formulas={r'SS_T=SS_B+SS_W':'SS_T = SS_B + SS_W',r'\chi^2=\sum\frac{(O-E)^2}{E}':'χ² = Σ [(O − E)² / E]',r'V=\sqrt{\frac{\chi^2}{N\min(r-1,c-1)}}':'V = √[χ² / (N × min(r−1, c−1))]'}
+ source=re.sub(r'\\\[\s*(.*?)\s*\\\]',lambda m:formulas[m[1].strip()],source,flags=re.S)
+ ids=['quick-start','anova','variation','posthoc','assumptions','categorical','chi-square','categorical-effect','sparse','practice','macro','recap']
+ def inline(value):return re.sub(r'\*\*(.+?)\*\*',r'<strong>\1</strong>',escape(value))
+ def render(block):
+  out=[];lines=block.strip().split('\n');i=0
+  while i<len(lines):
+   line=lines[i].strip()
+   if not line or line=='---':i+=1;continue
+   if line.startswith('[그림 '):out.append({1:f1,2:f2,3:f3,4:f4}[int(re.search(r'그림 (\d)',line)[1])]);i+=1;continue
+   if line=='[CH2 Macro 토지 통계 열기 →]':out.append('<p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 통계 열기 →</a></p>');i+=1;continue
+   if line=='▶ 참고자료':out.append(references);i+=1;continue
+   if line.startswith('▶ '):
+    title=line[2:];rest=[];i+=1
+    while i<len(lines) and lines[i].strip()!='---':rest.append(lines[i]);i+=1
+    out.append('<details class="learn-more"><summary>'+inline(title)+'</summary><div class="learn-more__body">'+render('\n'.join(rest))+'</div></details>');continue
+   if line.startswith('|'):
+    table=[]
+    while i<len(lines) and lines[i].strip().startswith('|'):
+     cells=[c.strip() for c in lines[i].strip().strip('|').split('|')]
+     if not all(re.fullmatch(r'[:\- ]+',c) for c in cells):table.append(cells)
+     i+=1
+    out.append('<div class="learn-data learn-data--full"><table><thead><tr>'+''.join('<th scope="col">'+inline(c)+'</th>' for c in table[0])+'</tr></thead><tbody>'+''.join('<tr>'+''.join(('<th scope="row">'+inline(c)+'</th>') if j==0 else '<td>'+inline(c)+'</td>' for j,c in enumerate(row))+'</tr>' for row in table[1:])+'</tbody></table></div>');continue
+   if re.fullmatch(r'\d+\. (집단 간 평균제곱|집단 내 평균제곱|F통계량|[ABC] 집단)',line):out.append('<p class="mg-step-title">'+inline(line)+'</p>');i+=1;continue
+   if line.startswith('- ') or re.match(r'\d+\. ',line):
+    ordered=not line.startswith('- ');tag='ol' if ordered else 'ul';items=[]
+    while i<len(lines) and (re.match(r'\d+\. ',lines[i]) if ordered else lines[i].startswith('- ')):
+     items.append('<li>'+inline(re.sub(r'^(?:- |\d+\. )','',lines[i]))+'</li>');i+=1
+    out.append('<'+tag+'>'+''.join(items)+'</'+tag+'>');continue
+   formula=line.startswith(('SS','MS','F =','χ²','V =','귀무가설 H₀:','대립가설 H₁:','기대도수 =','(행 수−1)'))
+   out.append('<p'+(' class="mg-formula"' if formula else '')+'>'+inline(line)+'</p>');i+=1
+  return '\n'.join(out)
+ for id,section in zip(ids,re.split(r'^## ',source,flags=re.M)[1:],strict=True):
+  label,body=section.split('\n',1);heading=re.search(r'^### (.+)$',body,re.M)[1];body=re.sub(r'^### .+\n','',body,count=1,flags=re.M)
+  if id=='practice':
+   items=[]
+   for q in re.split(r'^\d+\. ',body,flags=re.M)[1:]:
+    question,answer=q.split('▶ 답과 해설',1);items.append('<li>'+inline(question.strip())+'<details><summary>답과 해설</summary><div class="learn-more__body">'+render(answer)+'</div></details></li>')
+   html='<ol class="learn-exercises">'+''.join(items)+'</ol>'
+  else:html=render(body)
+  if id=='quick-start':html=html.replace('<ul>','<ul class="learn-objectives">',1).replace('14장에서 배운 두 집단 비교','<a href="/learn/stats/comparing-groups/">14장에서 배운 두 집단 비교</a>')+'<p class="learn-source-note"><a href="../multiple-groups-example.json">원자료와 계산 결과 JSON</a></p>'
+  if id=='posthoc':html+='<p class="learn-source-note">검산: k=3, 각 n=4, MSW=600/9, 자유도 9. Studentized range 임계값 q≈3.94849를 적용해 구간 반폭 q√(MSW/4)≈16.11965점을 얻습니다.</p>'
+  if id=='macro':
+   html=html.replace('이러한 기능이 CH2 Macro의 모든 통계 화면에서 제공된다는 뜻은 아닙니다.','확인한 토지 기본통계·매트릭스 화면은 이 장의 ANOVA·Tukey HSD·카이제곱 검정·Cramér의 V를 제공하지 않습니다.')
+   html+='<details class="learn-more"><summary>실제 토지 통계의 자료 범위와 분모</summary><div class="learn-more__body"><p>토지 기본통계는 유효한 단가의 건수·평균·표본표준편차·평균의 신뢰구간 등을 제공합니다. 여러 지역을 합칠 때는 사전 집계된 분석 연도 구간의 공통 범위를 사용합니다. 매트릭스의 용도지역×지목별 셀과 전체·소계는 범위가 겹치므로, 셀에 소계를 더해 전체 건수를 다시 계산하면 중복됩니다.</p><p>기간·지역·용도·지목과 이상치 제외 여부를 맞춘 뒤 해당 범위의 유효 건수를 분모로 확인하세요. 합계·소계의 중복과 원자료의 중복 거래 여부는 별개의 점검입니다. 집계만으로 거래의 독립성이나 대표성이 입증되지는 않습니다.</p><p>Macro의 IQR 이상치 필터에 쓰이는 Tukey 펜스는 이 장의 Tukey HSD 사후 비교와 다른 방법입니다.</p></div></details>'
+  if id=='recap':html=html.replace('16장 「상관관계와 인과관계」','<a href="/learn/stats/correlation/">16장 「상관관계와 인과관계」</a>')
+  parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{heading}</h2>{html}</section>')
  pth=ROOT/'multiple-groups-and-categorical/index.html';pth.parent.mkdir(exist_ok=True);html=pth.read_text(encoding='utf-8') if pth.exists() else (ROOT/'comparing-groups/index.html').read_text(encoding='utf-8')
  html=html.replace('https://ch2data.com/learn/stats/comparing-groups/','https://ch2data.com/learn/stats/multiple-groups-and-categorical/')
  html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="여러 집단과 범주형 자료의 비교">\n'+'\n'.join(parts)+'\n</article>',html,count=1,flags=re.S)
- html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1ANOVA와 사후비교, 분할표와 카이제곱 검정을 가상 자료와 그림으로 설명합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);pth.write_text(html,encoding='utf-8')
+ html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1ANOVA와 사후비교, 분할표와 카이제곱 검정을 가상 자료와 그림으로 설명합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);
+ html=re.sub(r'(<p class="learn-chapter-relevance">).*?(</p>)',r'\1Macro 활용도 <span class="learn-relevance" aria-label="Macro 활용도 2단계, 권장"><span aria-hidden="true">★★☆</span></span>\2',html,count=1)
+ html=html.replace('별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.','활용도는 CH2 Macro의 분석 결과를 이해하는 데 얼마나 도움이 되는지를 나타냅니다.')
+ if 'multiple-groups-and-categorical/chapter.css' not in html:html=html.replace('</head>','<link rel="stylesheet" href="/learn/stats/multiple-groups-and-categorical/chapter.css?v=20261024-1" />\n</head>')
+ if 'multiple-groups-and-categorical/experiment.js' not in html:html=html.replace('</body>','<script type="module" src="/learn/stats/multiple-groups-and-categorical/experiment.js?v=20261024-1"></script>\n</body>')
+ pth.write_text(html,encoding='utf-8')
 if __name__=='__main__':build()

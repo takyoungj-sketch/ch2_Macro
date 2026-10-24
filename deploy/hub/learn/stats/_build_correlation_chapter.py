@@ -9,6 +9,22 @@ ROOT=Path(__file__).resolve().parent
 def corr(x,y):
  xm,ym=mean(x),mean(y);return sum((a-xm)*(b-ym) for a,b in zip(x,y))/math.sqrt(sum((a-xm)**2 for a in x)*sum((b-ym)**2 for b in y))
 
+
+def macro_case():
+ return '''<p>Macro Insight의 「부동산 유형별 상관관계」에서는 최근 3년 동안 전국 시·군·구의 유형별 거래 규모를 비교합니다. 아래는 사용자가 제공한 상가·아파트 화면입니다. 앞의 공통 학습 자료 30건과는 관측 단위가 다릅니다.</p>
+<figure class="co-macro-case"><a href="macro-insight-correlation.png" target="_blank" rel="noopener"><img src="macro-insight-correlation.png" width="800" height="642" loading="lazy" alt="Macro Insight 상가와 아파트 사례. 원래 상관 +0.92, 인구 보정 +0.54, 원래 유효 지역 수 n=266. 가로축은 상가 로그 거래액, 세로축은 아파트 로그 거래액이며 지역별 점이 우상향합니다."></a><figcaption>Macro Insight 실제 화면 캡처 · 상가 × 아파트. +0.92·+0.54·n=266은 캡처 당시의 표시값입니다. 기준월은 이미지에 포함되어 있지 않으며 현재 조회값을 보장하지 않습니다. 이미지를 선택하면 원본 크기로 볼 수 있습니다.</figcaption></figure>
+<p>점 하나는 개별 거래가 아니라 하나의 시·군·구를 나타냅니다. 가로축은 상가의 로그 거래액, 세로축은 아파트의 로그 거래액입니다. 이 산점도와 노란 추세선은 인구 보정 전의 로그 거래액 관계입니다. 인구 보정 후 잔차 산점도가 아닙니다.</p>
+<p class="co-formula">화면의 원래 Pearson r = +0.92 → 로그 인구를 보정한 상관 = +0.54</p>
+<p>원래 상관은 같은 시·군·구에서 두 유형의 거래 규모가 함께 큰 경향을 보여 줍니다. 인구를 보정하면 양의 관계가 약해지지만 남아 있습니다. 인구 외의 공통 요인이나 지역 구성의 영향도 남을 수 있으므로, 상가 거래가 아파트 거래를 늘린다는 인과효과로 해석할 수는 없습니다.</p>
+<details class="learn-more"><summary>실제 구현의 계산 방식과 유효 표본수</summary><div class="learn-more__body">
+<p>이 화면은 전국 시·군·구와 최근 3년의 집계 자료를 사용합니다. 기준월과 지역 코드 정리 기준이 적용되며, 개별 토지 화면의 지역·용도·지목 필터를 그대로 이어받는 분석은 아닙니다. 비교할 유형 쌍을 바꾸면 계산에 쓰는 지역도 달라질 수 있습니다.</p>
+<p>두 유형의 거래액이 모두 양수인 지역만 사용해 각각 자연로그로 변환하고 Pearson 상관을 구합니다. 원자료에서 누락된 유형의 거래액은 0으로 읽힌 뒤 이 양수 조건에서 제외됩니다. 인구 보정에는 여기에 양수인 인구가 있는 지역만 사용합니다. 각 로그 거래액을 절편과 로그 인구에 선형 회귀한 뒤, 두 잔차 사이의 Pearson 상관을 계산합니다. 거래액을 인구로 단순히 나누는 방법과 다릅니다.</p>
+<p>API는 유형 쌍별 원래 유효 지역 수 n과 인구 보정 유효 지역 수 n_pop을 별도로 반환합니다. 첨부 화면의 n=266은 원래 상관의 유효 지역 수이며, 인구 보정의 n_pop은 현재 카드에 따로 표시되지 않습니다. 두 표본수가 같다고 단정할 수 없습니다. 캡처만으로 +0.92와 +0.54의 원자료 재계산이나 같은 표본 여부를 확인할 수는 없습니다.</p>
+<p>확인한 Insight 화면은 Pearson 상관과 인구 보정 상관을 제공합니다. Spearman, 상관의 p값·신뢰구간은 이 화면에서 제공하지 않습니다. 백엔드는 계수를 소수 넷째 자리로 반올림하고 화면은 둘째 자리까지 표시합니다.</p>
+<p>인구 보정 상관은 회귀계수나 표준화 회귀계수가 아닙니다. 노란 선은 표시된 로그 좌표의 선형 추세입니다. 어느 쪽도 개별 물건의 적정가격이나 인과효과를 산출하지 않습니다. 지역 단위의 관계를 개별 거래의 관계로 옮겨 해석하지 않도록 주의하세요.</p></div></details>
+<p>토지 면적과 거래단가를 비교하는 경우에는 단가가 거래금액을 면적으로 나눈 값이라는 구조도 확인해야 합니다. 거래총액·유형·시점과 자료 범위를 함께 살펴보고, 면적과 단가의 음의 상관을 가격 할인 효과로 바로 해석하지 마세요.</p>
+<p class="learn-macro-cta"><a href="https://macro.ch2data.com/insight/?q=3">Macro Insight 유형별 상관관계 열기 →</a></p><p><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 통계 열기 →</a></p>'''
+
 def build():
  rows=json.loads((ROOT/'example-data.json').read_text(encoding='utf-8'))['rows'];x=[r['area'] for r in rows];y=[r['price'] for r in rows];r=corr(x,y);rho=float(spearmanr(x,y).statistic);without=[v for v in rows if v['id']!=7];rwithout=corr([v['area'] for v in without],[v['price'] for v in without]);floor=corr([v['floor'] for v in rows],y)
  curved=[(i,i*i) for i in range(-3,4)];mixA=[(1,8),(2,9),(3,10)];mixB=[(7,2),(8,3),(9,4)];mix=mixA+mixB;mixr=corr([v[0] for v in mix],[v[1] for v in mix])
@@ -17,44 +33,93 @@ def build():
  def t(x,y,s,extra=''):return f'<text x="{x}" y="{y}" {extra}>{escape(str(s))}</text>'
  def line(x,y,xx,yy,c='#64748b',extra=''):return f'<line x1="{x}" y1="{y}" x2="{xx}" y2="{yy}" stroke="{c}" {extra}/>'
  def fig(id,title,b,cap,h):return f'<figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 {h}" role="img" aria-labelledby="{id}-title {id}-desc"><title id="{id}-title">{title}</title><desc id="{id}-desc">{cap}</desc>{b}</svg><figcaption class="learn-chart__caption">{cap}</figcaption></figure>'
- b=t(24,28,f'면적과 단가 · Pearson r={r:.3f}')+line(70,320,580,320)+line(70,55,70,320)
+ b=t(24,28,f'면적과 거래단가 · Pearson r={r:.3f} · n=30','id="co-scatter-heading"')+line(70,320,580,320)+line(70,55,70,320)
  for row in rows:
-  cx=70+row['area']*1.5;cy=320-row['price']*.5;b+=f'<circle cx="{cx}" cy="{cy}" r="4" fill="{"#2563eb" if row["group"]=="주거" else "#d97706"}" data-id="{row["id"]}"/>'
-  if row['id']==7:b+=t(cx+10,cy,'7번 480')
+  cx=70+row['area']*1.5;cy=320-row['price']*.5;b+=f'<circle cx="{cx}" cy="{cy}" r="4" fill="{"#2563eb" if row["group"]=="주거" else "#d97706"}" data-id="{row["id"]}"><title>{row["id"]}번 · {row["group"]} · 면적 {row["area"]}㎡ · 단가 {row["price"]}만원/㎡</title></circle>'
+  if row['id']==7:b+=t(cx+10,cy,'7번 480','id="co-id7-label"')
  for v in [0,100,200,300]:b+=t(70+v*1.5,345,v,'text-anchor="middle"')
  for v in [0,100,200,300,400,500]:b+=t(58,325-v*.5,v,'text-anchor="end"')
  b+=t(400,374,'면적(㎡)')+t(24,52,'단가(만원/㎡)')+t(24,405,'파랑: 주거 / 주황: 상업 · 각 점은 거래 한 건')
  f1=fig('scatter','공통 자료의 면적과 단가',b,'그림 1. 공통 학습 자료 30건의 산점도입니다. 면적이 큰 쪽에서 단가가 낮은 경향이 있지만, 유형과 조건을 통제한 효과가 아닙니다.',431)
+ controls='<div class="co-controls" hidden><p id="co-scatter-stats" role="status" aria-live="polite"></p><label><input type="checkbox" id="co-exclude"> 7번 관측값을 제외해 비교 (30건 → 29건)</label><label for="co-observation">관측값 확인</label><select id="co-observation"><option value="">관측값 선택</option>'+''.join(f'<option value="{row["id"]}">{row["id"]}번 · {row["group"]}</option>' for row in rows)+'</select><p id="co-observation-status" role="status" aria-live="polite">점을 가리키거나 관측값을 선택하면 면적·단가·유형을 확인할 수 있습니다.</p><p class="learn-source-note">두 계수는 같은 원래 좌표에서 계산합니다. 순위 산점도가 아닙니다. 7번 제외는 민감도를 확인하는 예시이며 삭제 권장이 아닙니다.</p></div>'
+ f1=f1.replace('<figure class="learn-chart learn-chart--wide">','<figure class="learn-chart learn-chart--wide" id="co-scatter">').replace('<svg',controls+'<script type="application/json" id="co-rows">'+json.dumps(rows,ensure_ascii=False)+'</script><svg',1)
+ f1=f1.replace('<svg ', '<svg class="co-scatter-svg" ',1)
  b=t(24,28,'r=0이어도 뚜렷한 곡선 관계가 있을 수 있습니다')+line(80,285,560,285)+line(320,60,320,285)
+ b+='<polyline points="'+' '.join(f'{320+xx*65},{285-xx*xx*22}' for xx in [i/20 for i in range(-60,61)])+'" fill="none" stroke="#2563eb" stroke-dasharray="4 4" data-curve="x-squared"/>'
  for xx,yy in curved:b+=f'<circle cx="{320+xx*65}" cy="{285-yy*22}" r="6" fill="#2563eb" data-x="{xx}" data-y="{yy}"/>'
  for v in range(-3,4):b+=t(320+v*65,311,v,'text-anchor="middle"')
+ for v in [0,3,6,9]:b+=t(65,290-v*22,v,'text-anchor="end"')
+ b+=t(535,311,'X')+t(24,57,'Y')
  b+=t(24,345,'가상 자료 Y=X² / X=−3,−2,−1,0,1,2,3')+t(24,375,'Pearson r=0 · 선형 상관이 없다는 뜻')
  f2=fig('nonlinear','상관 0과 비선형 관계',b,'그림 2. 별도 가상 예제입니다. Y는 X로 완전히 정해지지만 대칭적인 U자 관계여서 Pearson 상관은 0입니다. 축은 단위 없는 가상 변수입니다.',403)
- b=t(24,28,f'집단 안에서는 r=1, 전체를 합치면 r={mixr:.3f}')+line(70,320,570,320)+line(70,60,70,320)
- for label,pts,color in [('A',mixA,'#2563eb'),('B',mixB,'#d97706')]:
-  for xx,yy in pts:b+=f'<circle cx="{70+xx*48}" cy="{320-yy*23}" r="6" fill="{color}" data-group="{label}" data-x="{xx}" data-y="{yy}"/>'
+ def fit(points):
+  xx,yy=zip(*points);xm,ym=mean(xx),mean(yy);slope=sum((a-xm)*(b-ym) for a,b in points)/sum((a-xm)**2 for a in xx);return ym-slope*xm,slope
+ b=t(24,28,f'전체 6개 관측값 · Pearson r={mixr:.3f}','id="co-mix-heading"')+line(70,320,570,320)+line(70,60,70,320)
+ for label,pts,color in [('overall',mix,'#0f766e'),('A',mixA,'#2563eb'),('B',mixB,'#d97706')]:
+  intercept,slope=fit(pts);lo=min(v[0] for v in pts);hi=max(v[0] for v in pts)
+  b+=line(70+lo*48,320-(intercept+slope*lo)*23,70+hi*48,320-(intercept+slope*hi)*23,color,f'stroke-width="3" data-trend="{label}" '+('stroke-dasharray="6 4"' if label=='overall' else 'hidden=""'))
+ for label,pts in [('A',mixA),('B',mixB)]:
+  for xx,yy in pts:b+=f'<circle cx="{70+xx*48}" cy="{320-yy*23}" r="6" fill="#2563eb" data-group="{label}" data-x="{xx}" data-y="{yy}"><title>{label}: ({xx}, {yy})</title></circle>'
  for v in [0,2,4,6,8,10]:b+=t(70+v*48,346,v,'text-anchor="middle"')+t(57,325-v*23,v,'text-anchor="end"')
- b+=t(24,385,'파랑: A / 주황: B · 축은 단위 없는 가상 X와 Y')
- f3=fig('mixture','집단 혼합에 따른 상관 방향 변화',b,'그림 3. A=(1,8)·(2,9)·(3,10), B=(7,2)·(8,3)·(9,4)인 별도 가상 예제입니다. 전체와 집단 내부의 관계가 다를 수 있음을 보여 줍니다.',412)
- b='<defs><marker id="causal-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/></marker></defs>'+t(24,28,'같은 연관성에도 서로 다른 설명이 가능합니다')
- for i,(label,nodes) in enumerate([('직접 영향 가설','X → Y'),('역방향 가설','X ← Y'),('공통 원인 가설','X ← Z → Y')]):
-  yy=80+i*75;b+=t(24,yy,label)+t(275,yy,nodes)
- b+=t(24,307,'예: 학습 의욕 Z가 공부 시간 X와 점수 Y 모두에 영향을 줄 수 있음')+t(24,340,'화살표는 검토할 가설이며 관측 상관으로 입증한 경로가 아닙니다')
- f4=fig('causes','상관을 설명하는 인과 가설',b,'그림 4. 방향과 공통 원인을 구분하는 개념도입니다. 실제 데이터로 추정한 인과모형이 아닙니다.',367)
- parts=[]
- def sec(id,label,title,body):parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{title}</h2>{body}</section>')
- sec('quick-start','서두 · 학습목표','함께 달라진다고 원인과 결과가 되는 것은 아닙니다','''<p>공부 시간이 긴 학생일수록 시험 점수가 높은 경향이 보인다고 해 봅시다. 두 변수가 함께 달라지는 모습은 관찰할 수 있습니다. 하지만 공부 시간을 한 시간 늘리면 점수가 얼마나 오를지는 이 관찰만으로 알 수 없습니다. 사전 학습 수준이나 학습 의욕도 관련될 수 있기 때문입니다.</p><p><strong>상관관계</strong>는 두 변수가 함께 달라지는 패턴이고, <strong>인과관계</strong>는 한 변수에 개입했을 때 다른 변수가 어떻게 달라지는지에 관한 관계입니다. 이 장에서는 <a href="/learn/stats/graphs/">3장의 산점도</a>를 바탕으로 상관계수를 읽고, 숫자 하나로 놓치기 쉬운 관계를 살펴봅니다.</p><ul class="learn-objectives"><li>산점도에서 관계의 방향·모양·군집·극단값을 읽습니다.</li><li>Pearson 상관과 Spearman 순위상관이 요약하는 관계를 구별합니다.</li><li>상관 0, 이상치, 집단 혼합을 해석할 때의 한계를 이해합니다.</li><li>상관관계를 인과효과로 해석하려면 무엇을 더 확인해야 하는지 설명합니다.</li></ul>''')
- sec('scatter','산점도부터 읽기','상관계수에 앞서 점들의 모양을 살펴보세요','''<p>같은 대상에서 측정한 두 값 (xᵢ,yᵢ)을 점 하나로 그립니다. 오른쪽으로 갈수록 높아지는지 낮아지는지, 직선에 가까운지 곡선인지, 따로 모인 집단이나 멀리 떨어진 점이 있는지 살펴보세요. 두 변수의 행을 잘못 맞추면 서로 다른 대상의 값을 짝지어 계산하게 됩니다.</p>'''+f1+f'''<p>계산 예제로 <a href="/learn/stats/graphs/#data">공통 학습 자료 30건</a>을 사용하겠습니다. 면적과 단가의 Pearson 상관은 <strong>{r:.3f}</strong>, 층과 단가는 {floor:.3f}입니다. <a href="../correlation-example.json">계산 결과</a>에서 반올림 전 값을 확인할 수 있습니다. 실제 출처가 확인되지 않은 학습 자료이므로 실제 모집단의 관계가 확인된 결과는 아닙니다.</p><p>그림의 음의 상관은 면적이 큰 쪽에서 단가가 낮은 경향을 요약합니다. 개별 점이 모두 같은 직선에 놓인다는 뜻도, 면적을 바꿀 때 단가가 얼마나 변하는지 추정한 결과도 아닙니다.</p>''')
- sec('pearson','Pearson 상관','직선적인 관계의 방향과 정도를 요약합니다','''<p>Pearson 상관계수 r은 두 변수가 각자의 평균을 기준으로 함께 높거나 낮은지 살펴봅니다. 함께 높은 값이나 함께 낮은 값은 양의 관계에, 한쪽은 높고 다른 쪽은 낮은 값은 음의 관계에 기여합니다. 이를 각 변수의 퍼짐으로 나누어 단위 없는 값으로 만듭니다.</p><ul><li><strong>r&gt;0:</strong> X가 큰 쪽에서 Y도 큰 경향이 있습니다.</li><li><strong>r&lt;0:</strong> X가 큰 쪽에서 Y는 작은 경향이 있습니다.</li><li><strong>|r|가 1에 가까움:</strong> 점들이 하나의 직선에 가까이 놓이는 정도가 큽니다.</li><li><strong>r이 0에 가까움:</strong> 직선적인 관계가 약합니다. 모든 관계가 없다는 뜻은 아닙니다.</li></ul><p>두 변수 모두 퍼짐이 있을 때 −1≤r≤1입니다. r=±1이면 모든 점이 하나의 직선에 놓입니다. 한 변수가 모두 같은 값이면 분모가 0이 되어 r은 정의되지 않습니다.</p><p><strong>r=0.6은 ‘X가 1 증가하면 Y가 0.6 증가한다’는 뜻이 아닙니다.</strong> 그런 기울기는 단위와 변수의 퍼짐에 따라 달라집니다. 또 ‘강함·약함’의 고정 경계만으로 모든 분야의 관계를 판단할 수는 없습니다.</p><details class="learn-more"><summary>계산식과 단위 변환의 성질</summary><div class="learn-more__body"><p>r=Σ(xᵢ−x̄)(yᵢ−ȳ)/√[Σ(xᵢ−x̄)²Σ(yᵢ−ȳ)²]입니다. 표본 공분산을 두 표본표준편차의 곱으로 나눈 식과 같습니다.</p><p>같은 관측값에서 한 변수에 상수를 더하거나 양의 상수를 곱해 단위를 바꿔도 r은 변하지 않습니다. 음의 상수를 곱하면 부호가 바뀝니다. r(X,Y)=r(Y,X)이므로 상관계수에는 원인 방향이 담겨 있지 않습니다.</p></div></details>''')
- sec('nonlinear','상관 0의 한계','U자 관계는 상관계수 하나로 놓칠 수 있습니다','''<p>Pearson 상관은 직선적인 관계를 요약합니다. X가 커질 때 Y가 한동안 낮아졌다가 다시 높아지는 관계라면, 양쪽의 움직임이 상쇄되어 r이 0에 가까워질 수 있습니다.</p>'''+f2+'''<p>그림에서는 Y=X²이므로 X를 알면 Y를 정확히 알 수 있습니다. 그런데 대칭적인 U자 모양 때문에 Pearson 상관은 0입니다. <strong>상관 0과 독립은 다른 말</strong>이라는 것을 보여 줍니다.</p><p>표본 상관을 계산하는 데 정규분포 가정이 필수인 것은 아닙니다. 다만 모집단 상관에 대한 p값이나 신뢰구간을 구하려면 표집·분포 가정을 별도로 검토해야 합니다.</p><details class="learn-more"><summary>독립이면 상관이 0인가요?</summary><div class="learn-more__body"><p>분산이 양수이고 유한한 등 필요한 조건 아래 독립이면 공분산과 상관은 0입니다. 그 역은 일반적으로 성립하지 않습니다. 두 변수가 공동 정규분포를 따르는 경우처럼 추가 조건이 있어야 상관 0에서 독립을 말할 수 있습니다.</p></div></details>''')
- sec('spearman','Spearman 순위상관','값의 간격 대신 순서가 함께 움직이는지 봅니다',f'''<p>Spearman 순위상관 ρ는 각 변수의 값을 순위로 바꾼 뒤 그 순위 사이의 Pearson 상관을 구합니다. 동점에는 보통 평균 순위를 부여합니다. 숫자 사이의 간격보다 대체로 함께 증가하거나 감소하는 <strong>단조 관계</strong>에 관심이 있을 때 도움이 됩니다.</p><p>단조 관계는 X가 커질수록 Y가 계속 증가하거나 계속 감소하는 관계입니다. 직선일 필요는 없습니다. 그러나 U자처럼 중간에 방향이 바뀌면 순위상관 하나로도 관계를 잘 표현하기 어렵습니다.</p><p>공통 자료의 면적·단가 순위상관은 <strong>{rho:.3f}</strong>로, 원래 값의 Pearson 상관 {r:.3f}와 다릅니다. 두 수치는 요약하는 대상이 다릅니다. 순위상관이 항상 더 옳거나 이상치 문제를 완전히 해결한다는 뜻은 아닙니다.</p><p>동점이 많은 서열 자료나 작은 표본에서는 순위 계산 관례와 추론 방법도 확인하세요.</p>''')
- sec('sensitivity','이상치와 관측 범위','같은 변수도 어떤 자료를 포함했는지에 따라 상관이 달라집니다',f'''<p>공통 자료의 7번을 제외하면 면적·단가 Pearson 상관은 <strong>{rwithout:.3f}</strong>입니다. 포함한 값 {r:.3f}와 비교하면 한 관측값의 영향을 살펴볼 수 있습니다. 이는 삭제를 권하는 것이 아닙니다. 오류인지, 비교 조건이 다른 값인지, 실제로 가능한 극단값인지 먼저 확인해야 합니다.</p><p>멀리 떨어진 관측 하나는 상관을 약하게 만들 수도 강하게 만들 수도 있습니다. X의 범위를 좁혀 선택하면 같은 자료 생성 과정에서도 상관이 달라질 수 있습니다. 표본수·범위·필터가 다른 상관계수를 숫자만으로 비교하지 마세요.</p><p>두 변수 중 하나라도 결측인 행을 제외했다면 실제 계산에 사용한 <strong>완전한 쌍의 수</strong>를 보고해야 합니다. 여러 변수의 상관행렬에서는 변수 쌍마다 사용한 자료가 다를 수 있습니다. 특정 집단의 누락도 결과를 왜곡할 수 있습니다.</p>''')
- sec('mixture','집단 혼합','전체의 관계가 각 집단 안의 관계와 반대일 수 있습니다','''<p>수준이 다른 집단을 한꺼번에 합치면 집단 사이의 차이가 전체 상관에 크게 반영될 수 있습니다. 아래에서는 A 안에서도, B 안에서도 X와 Y가 함께 증가합니다. 하지만 두 집단을 합치면 음의 상관이 나타납니다.</p>'''+f3+'''<p>집단 안에서의 관계와 집단 사이의 차이는 다른 정보입니다. 이런 방향 반전은 심프슨 역설과 관련된 집계 문제를 보여 줍니다. 전체 산점도에 집단을 색으로 표시하고 집단별 결과도 함께 확인하는 것이 도움이 됩니다.</p><p>그렇다고 집단을 무조건 나누거나 가능한 모든 변수를 통제해야 한다는 뜻은 아닙니다. 어떤 비교가 질문에 맞는지, 변수 사이의 관계가 어떤지 먼저 판단해야 합니다.</p>''')
- sec('causality','상관과 인과','같은 상관도 여러 원인으로 나타날 수 있습니다','''<p>X와 Y가 함께 움직인다면 X가 Y에 영향을 줄 수도 있고, 반대로 Y가 X에 영향을 줄 수도 있습니다. 공통 원인 Z가 둘 모두에 영향을 줄 수도 있습니다. 예를 들어 학습 의욕이 공부 시간과 시험 점수 모두에 영향을 준다면, 시간과 점수의 상관에 그 차이도 반영됩니다.</p>'''+f4+'''<p><strong>인과효과</strong>는 X에 개입했을 때 결과가 어떻게 달라지는지에 관한 질문입니다. 무작위 배정은 비교 집단을 만드는 강력한 방법입니다. 누구를 조사할지 정하는 무작위 표집과는 역할이 다릅니다.</p><p>관찰 자료에서는 시간 순서, 공통 원인에 의한 교란, 어떤 대상이 자료에 포함되었는지 등을 살펴야 합니다. 유의한 상관이나 먼저 측정된 변수의 예측력만으로 인과가 입증되지는 않습니다. 인과효과가 있어도 혼합·상쇄·측정 오류 때문에 단순 상관은 약할 수 있습니다.</p><details class="learn-more"><summary>변수를 많이 통제하면 인과관계가 되나요?</summary><div class="learn-more__body"><p>모든 변수를 회귀에 넣는다고 인과효과가 자동으로 나오는 것은 아닙니다. 원인에서 결과로 이어지는 매개변수를 통제하면 총효과와 다른 질문이 됩니다. 두 변수의 공통 결과에 조건을 걸면 없던 연관성이 생길 수도 있습니다. 통제할 변수는 인과 구조와 분석 목적에 맞춰 선택해야 합니다.</p></div></details>''')
- sec('inference','불확실성과 보고','상관의 크기와 통계적 유의성을 구별하세요','''<p>큰 표본에서는 작은 상관도 통계적으로 유의할 수 있습니다. p값이 작다는 이유만으로 강한 관계라고 말하지 마세요. <strong>r 또는 ρ, 유효한 쌍의 수, 산점도, 변수 단위·변환·관측 범위와 적절한 신뢰구간</strong>을 함께 제시하는 것이 좋습니다.</p><p>상관계수의 p값과 신뢰구간에도 표집 가정이 필요합니다. 같은 사람의 반복 측정이나 시계열 자료를 모두 독립 관측으로 세면 불확실성을 과소평가할 수 있습니다. 많은 변수 쌍을 탐색했다면 다중비교와 사후 선택도 고려해야 합니다.</p><details class="learn-more"><summary>모상관 0에 대한 t 검정</summary><div class="learn-more__body"><p>독립적으로 표집한 이변량 정규모형에서 H₀:모상관=0을 검정할 때 t=r√((n−2)/(1−r²)), 자유도 n−2를 사용할 수 있습니다. n&gt;2, |r|&lt;1 등의 계산 조건과 모형 가정을 확인해야 합니다.</p></div></details><p>다른 모집단이나 범위에서 계산한 두 상관을 비교할 때 p값의 크기만 비교하지는 않습니다. 다음 장에서는 방향과 단위를 정해 평균적인 관계를 나타내는 회귀를 배우지만, 회귀도 그 자체로 인과효과를 입증하는 방법은 아닙니다.</p>''')
- sec('practice','확인 문제','상관이 말하는 것과 말하지 않는 것을 구별하세요','''<ol class="learn-exercises"><li>r=0이면 두 변수는 독립인가요?<details><summary>답과 해설</summary><p>일반적으로 아닙니다. Y=X²의 대칭 예제처럼 비선형 관계가 남을 수 있습니다.</p></details></li><li>길이 단위를 cm에서 m로 바꾸면 r은?<details><summary>답과 해설</summary><p>같은 관측을 쓰면 Pearson r은 변하지 않습니다. 기울기와 단위는 바뀔 수 있습니다.</p></details></li><li>집단별 상관이 모두 양수이면 전체도 양수인가요?<details><summary>답과 해설</summary><p>아니요. 집단 평균 수준의 차이 때문에 전체 방향이 반대일 수 있습니다.</p></details></li><li>상관이 유의하면 X를 바꾸어 Y를 바꿀 수 있나요?<details><summary>답과 해설</summary><p>그 결론에는 인과 설계와 가정이 필요합니다. 유의성만으로 교란·역인과를 배제하지 못합니다.</p></details></li></ol>''')
- sec('macro','CH2 Macro에서 읽기','거래 조건과 단가의 분모를 함께 확인하세요','''<p>CH2 Macro에서 면적·단가·연식 등의 관계를 볼 때는 지역·유형·기간과 관측 범위를 확인하세요. 전체 산점도와 특정 조건으로 좁힌 산점도는 서로 다른 집단을 요약할 수 있습니다. 유형별 색상이나 집단별 분포가 있다면 함께 살펴보세요.</p><p>특히 단가는 금액을 면적으로 나눈 값입니다. 면적과 단가의 관계에는 이런 분모 구조도 영향을 줄 수 있으므로 총액·유형·시점의 관계를 함께 확인해야 합니다. 음의 상관만으로 면적 증가에 따른 할인율이나 가격 효과를 추정할 수는 없습니다.</p><p>큰 관측값, 같은 건물·단지의 반복 거래, 결측과 필터에 따라 계수가 달라질 수도 있습니다. 교재에서 계산한 상관을 실제 화면의 상관이나 회귀 결과와 혼용하지 말고 해당 기능의 설명을 확인하세요.</p><p>유의한 관계가 특정 조건 변경의 인과효과나 개별 물건의 적정가격을 보장하지는 않습니다. 시장 집단의 구조를 이해하는 자료로 읽으세요.</p><p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 통계 열기 →</a></p>''')
- sec('recap','결론 · 학습 요약','산점도·상관계수·관측 조건을 함께 읽으세요','''<p>상관계수는 두 변수가 함께 달라지는 모습을 간단한 숫자로 요약합니다. 편리한 만큼 어떤 관계를 요약했고 무엇을 놓쳤는지 확인해야 합니다.</p><ul class="learn-recap-list"><li><strong>산점도:</strong> 방향뿐 아니라 곡선·군집·극단값과 퍼짐을 먼저 확인합니다.</li><li><strong>Pearson과 Spearman:</strong> Pearson은 직선적인 관계, Spearman은 순위의 단조 관계를 요약합니다.</li><li><strong>상관 0:</strong> 일반적으로 관계가 없거나 독립이라는 뜻은 아닙니다. U자 같은 관계가 남을 수 있습니다.</li><li><strong>자료의 구성:</strong> 이상치·관측 범위·결측·집단 혼합에 따라 계수가 달라질 수 있습니다.</li><li><strong>상관과 인과:</strong> 계수의 크기나 유의성만으로 원인 방향과 개입 효과를 알 수 없습니다.</li></ul><p>다음 <a href="/learn/stats/regression/">17장 ‘단순선형회귀와 최소제곱법’</a>에서는 관계의 기울기와 예측값을 다룹니다.</p><details class="learn-more"><summary>참고자료</summary><div class="learn-more__body"><ul><li><a href="https://www.itl.nist.gov/div898/handbook/eda/section3/scatterp.htm">NIST/SEMATECH: Scatter Plot</a> — 산점도의 관계·곡선·이상치와 인과 해석의 한계.</li></ul><p class="learn-source-note">참고자료의 기존 확인일: 2026-10-08. 네 개 그림은 공통 학습 자료와 별도 가상 예제로 작성한 계산 및 개념도입니다.</p></div></details>''')
+ b+=t(555,370,'X')+t(24,57,'Y')+t(24,395,'점: 전체 자료 · 청록 점선: 전체의 선형 추세','id="co-mix-legend"')
+ f3=fig('mixture','전체와 집단별 관계 비교 (단위 없는 가상 X·Y)',b,'그림 3. A=(1,8)·(2,9)·(3,10), B=(7,2)·(8,3)·(9,4)인 가상 자료입니다. 전체 6점의 상관과 선형 추세를 표시합니다. 추세선은 인과효과가 아닙니다.',425)
+ controls='''<div class="co-controls" hidden><label for="co-mode">집단 혼합 실험</label><select id="co-mode"><option value="overall">전체 관계 보기</option><option value="groups">집단별 관계 보기</option><option value="both">전체와 집단별 함께 보기</option></select><p id="co-mix-status" role="status" aria-live="polite"></p><p class="learn-source-note">관측값은 여섯 개로 고정됩니다. 보기만 바꾸며, 전체와 부분 집단은 서로 다른 질문에 답합니다. 집단을 나누면 반드시 더 정확해지는 것은 아닙니다.</p></div>'''
+ f3=f3.replace('<figure class="learn-chart learn-chart--wide">','<figure class="learn-chart learn-chart--wide" id="co-mixture">').replace('<svg',controls+'<script type="application/json" id="co-mixture-data">'+json.dumps({'A':mixA,'B':mixB})+'</script><svg',1)
+ f3=f3.replace('<svg ', '<svg class="co-mixture-svg" ',1)
+ b=t(24,28,'X: 공부 시간 · Y: 시험 점수 · Z: 학습 의욕')
+ for i,(label,nodes,explanation) in enumerate([('직접 영향 가설','X → Y','공부 시간이 늘면서 시험 점수가 높아질 수 있습니다.'),('역방향 가설','Y → X','높은 점수로 공부에 흥미가 생겨 시간이 늘 수 있습니다.'),('공통 원인 가설','Z → X / Z → Y','학습 의욕이 공부 시간과 점수 모두에 영향을 줄 수 있습니다.')]):
+  yy=85+i*100;b+=t(24,yy,label)+t(300,yy,nodes)+t(24,yy+32,explanation)
+ b+=t(24,365,'가능한 설명을 구분하는 개념도 · 실제 자료로 검증한 인과모형이 아닙니다')
+ f4=fig('causes','공부 시간·시험 점수의 인과 방향과 학습 의욕의 공통 영향',b,'그림 4. X→Y, Y→X, Z→X와 Z→Y를 구별합니다. 관찰된 상관만으로 어느 구조인지 결정할 수 없습니다.',395)
+ page=ROOT/'correlation/index.html';old=page.read_text(encoding='utf-8')
+ references=re.search(r'<details class="learn-more"><summary>참고자료</summary>.*?</details>',old,re.S)[0]
+ parts=[];source=(ROOT/'correlation/content.md').read_text(encoding='utf-8').replace('\\*','*').replace('**','').replace('\\~','~')
+ ids=['quick-start','scatter','pearson','nonlinear','spearman','sensitivity','mixture','causality','inference','practice','macro','recap']
+ def inline(value):return re.sub(r'\*\*(.+?)\*\*',r'<strong>\1</strong>',escape(value))
+ def render(block):
+  out=[];lines=block.strip().split('\n');i=0
+  while i<len(lines):
+   line=lines[i].strip()
+   if not line or line=='---':i+=1;continue
+   if line.startswith('[그림 '):out.append({1:f1,2:f2,3:f3,4:f4}[int(re.search(r'그림 (\d)',line)[1])]);i+=1;continue
+   if line=='[CH2 Macro 토지 통계 열기 →]':out.append('<p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 통계 열기 →</a></p>');i+=1;continue
+   if line=='▶ 참고자료':out.append(references);i+=1;continue
+   if line.startswith('▶ '):
+    title=line[2:];rest=[];i+=1
+    while i<len(lines) and lines[i].strip()!='---':rest.append(lines[i]);i+=1
+    out.append('<details class="learn-more"><summary>'+inline(title)+'</summary><div class="learn-more__body">'+render('\n'.join(rest))+'</div></details>');continue
+   if line.startswith('|'):
+    table=[]
+    while i<len(lines) and lines[i].strip().startswith('|'):
+     cells=[c.strip() for c in lines[i].strip().strip('|').split('|')]
+     if not all(re.fullmatch(r'[:\- ]+',c) for c in cells):table.append(cells)
+     i+=1
+    out.append('<div class="learn-data learn-data--full"><table><thead><tr>'+''.join('<th scope="col">'+inline(c)+'</th>' for c in table[0])+'</tr></thead><tbody>'+''.join('<tr>'+''.join(('<th scope="row">'+inline(c)+'</th>') if j==0 else '<td>'+inline(c)+'</td>' for j,c in enumerate(row))+'</tr>' for row in table[1:])+'</tbody></table></div>');continue
+   if line.startswith('- ') or re.match(r'\d+\. ',line):
+    ordered=not line.startswith('- ');tag='ol' if ordered else 'ul';items=[]
+    while i<len(lines) and (re.match(r'\d+\. ',lines[i]) if ordered else lines[i].startswith('- ')):
+     items.append('<li>'+inline(re.sub(r'^(?:- |\d+\. )','',lines[i]))+'</li>');i+=1
+    out.append('<'+tag+'>'+''.join(items)+'</'+tag+'>');continue
+   formula=line.startswith(('r =','t =','Y =','r(X,Y)='))
+   out.append('<p'+(' class="co-formula"' if formula else '')+'>'+inline(line)+'</p>');i+=1
+  return '\n'.join(out)
+ for id,section in zip(ids,re.split(r'^## ',source,flags=re.M)[1:],strict=True):
+  label,body=section.split('\n',1);heading=re.search(r'^### (.+)$',body,re.M)[1];body=re.sub(r'^### .+\n','',body,count=1,flags=re.M)
+  if id=='practice':
+   items=[]
+   for q in re.split(r'^\d+\. ',body,flags=re.M)[1:]:
+    question,answer=q.split('▶ 답과 해설',1);items.append('<li>'+inline(question.strip())+'<details><summary>답과 해설</summary><div class="learn-more__body">'+render(answer)+'</div></details></li>')
+   html='<ol class="learn-exercises">'+''.join(items)+'</ol>'
+  else:html=render(body)
+  if id=='quick-start':html=html.replace('<ul>','<ul class="learn-objectives">',1)+'<p class="learn-source-note"><a href="/learn/stats/graphs/">3장의 산점도</a> · <a href="/learn/stats/graphs/#data">공통 학습 자료 30건</a> · <a href="../correlation-example.json">계산 결과 JSON</a></p>'
+  if id=='sensitivity':html+='<p class="learn-source-note">7번은 행 위치가 아닌 원자료의 id=7입니다. 상업, 면적 22㎡, 단가 480만원/㎡인 한 건만 제외합니다. 전체는 유효한 면적·단가 쌍 30건, 제외 후에는 29건입니다. 층·단가도 유효한 쌍 30건입니다.</p>'
+  if id=='macro':html=macro_case()
+  if id=='recap':html=html.replace('17장 「단순선형회귀와 최소제곱법」','<a href="/learn/stats/regression/">17장 「단순선형회귀와 최소제곱법」</a>')
+  parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{heading if id!="macro" else "Macro Insight의 상가·아파트 상관을 읽어 보세요"}</h2>{html}</section>')
  p=ROOT/'correlation/index.html';html=p.read_text(encoding='utf-8');html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="상관관계와 인과관계">\n'+'\n'.join(parts)+'\n</article>',html,count=1,flags=re.S)
- html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1상관계수와 산점도, 비선형·집단 혼합의 영향, 인과관계의 차이를 예제와 그림으로 설명합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);p.write_text(html,encoding='utf-8')
+ html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1상관계수와 산점도, 비선형·집단 혼합의 영향, 인과관계의 차이를 예제와 그림으로 설명합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);
+ html=html.replace('별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.','활용도는 CH2 Macro의 분석 결과를 이해하는 데 얼마나 도움이 되는지를 나타냅니다.')
+ if 'correlation/chapter.css' not in html:html=html.replace('</head>','<link rel="stylesheet" href="/learn/stats/correlation/chapter.css?v=20261024-1" />\n</head>')
+ if 'correlation/experiment.js' not in html:html=html.replace('</body>','<script type="module" src="/learn/stats/correlation/experiment.js?v=20261024-1"></script>\n</body>')
+ p.write_text(html,encoding='utf-8')
 if __name__=='__main__':build()
