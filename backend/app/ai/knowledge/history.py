@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import time
+import hashlib
+import json
 from typing import Any, Optional
 from uuid import uuid4
 
@@ -68,6 +70,8 @@ def _key_coeffs(facts: dict[str, Any], limit: int = 8) -> list[dict[str, Any]]:
 
 
 def _fingerprint(slot: dict[str, Any]) -> tuple[Any, ...]:
+    if slot.get("result_fingerprint"):
+        return (slot["result_fingerprint"],)
     return (
         slot.get("path_id"),
         slot.get("n"),
@@ -115,25 +119,40 @@ def slot_from_success_bundle(
         n=n,
         warnings=warnings,
         n_by_type=n_by_type,
-        adj_r_squared=diagnostics.get("adj_r_squared") or primary.get("adj_r_squared"),
+        adj_r_squared=diagnostics.get("adj_r_squared") if diagnostics.get("adj_r_squared") is not None else primary.get("adj_r_squared"),
         vif_warning=diagnostics.get("vif_warning"),
     )
     intent_id = detect_intent(message) if message else None
     path_id = infer_path_id(context)
+    # 같은 표본수/설명력이어도 조건이나 계수가 다르면 별도 결과다.
+    identity = {"context": context.model_dump(mode="json"), "diagnostics": diagnostics}
+    fingerprint = hashlib.sha256(
+        json.dumps(identity, ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")
+    ).hexdigest()
     return AnalysisHistorySlot(
         id=str(uuid4())[:12],
+        result_fingerprint=fingerprint,
         at=time.time(),
         intent_id=intent_id,
         path_id=path_id,
         scope={
+            **context.scope.model_dump(),
+            "app": context.app,
+            "panel": context.panel,
+            "model": primary.get("model_type", facts.get("model_type")),
+            "analysis_conditions": {
+                key: primary.get(key, facts.get(key)) for key in
+                ("model_type", "y_scale", "target", "window_years", "as_of_month")
+                if primary.get(key, facts.get(key)) is not None
+            },
             "region_label": context.scope.region_label or diagnostics.get("scope_label"),
             "asset_type": context.scope.asset_type,
         },
         n=n if isinstance(n, int) else _coerce_n(n),
         n_by_type=n_by_type,
         metrics={
-            "adj_r_squared": diagnostics.get("adj_r_squared") or primary.get("adj_r_squared"),
-            "mape": diagnostics.get("mape") or primary.get("mape"),
+            "adj_r_squared": diagnostics.get("adj_r_squared") if diagnostics.get("adj_r_squared") is not None else primary.get("adj_r_squared"),
+            "mape": diagnostics.get("mape") if diagnostics.get("mape") is not None else primary.get("mape"),
         },
         key_coeffs=_key_coeffs(facts),
         warnings=warnings[:12],
@@ -177,6 +196,7 @@ def format_history_for_prompt(slots: list[dict[str, Any]]) -> str:
         lines.append(
             f"#{i} path={s.get('path_id')} scope={scope} n={n} caveats={cids}"
         )
+        lines.append(f"    conditions={s.get('scope')} metrics={s.get('metrics')}")
         for c in (s.get("key_coeffs") or [])[:4]:
             if isinstance(c, dict):
                 lines.append(
@@ -244,6 +264,12 @@ def format_history_compare(slots: list[dict[str, Any]]) -> str:
         f"1차: path={a.get('path_id')} · {(a.get('scope') or {}).get('region_label') or '—'} · n={a.get('n')}",
         f"2차: path={b.get('path_id')} · {(b.get('scope') or {}).get('region_label') or '—'} · n={b.get('n')}",
     ]
+    conditions_differ = a.get("scope") != b.get("scope") or a.get("path_id") != b.get("path_id")
+    if conditions_differ:
+        lines.insert(0, "한계: 지역·유형·기간·필터 또는 모형 조건이 다릅니다. 지표 변화만으로 모형이 개선됐다고 판단할 수 없습니다.")
+    model_a = (a.get("scope") or {}).get("analysis_conditions") or {}
+    model_b = (b.get("scope") or {}).get("analysis_conditions") or {}
+    coefficients_comparable = all(model_a.get(k) == model_b.get(k) for k in ("model_type", "y_scale", "target"))
     adj_a = (a.get("metrics") or {}).get("adj_r_squared")
     adj_b = (b.get("metrics") or {}).get("adj_r_squared")
     if adj_a is not None and adj_b is not None:
@@ -261,6 +287,8 @@ def format_history_compare(slots: list[dict[str, Any]]) -> str:
 
     ca, cb = _by_name(a), _by_name(b)
     for name in list(ca.keys())[:8]:
+        if not coefficients_comparable:
+            break
         if name not in cb:
             continue
         ea, eb = ca[name].get("estimate"), cb[name].get("estimate")

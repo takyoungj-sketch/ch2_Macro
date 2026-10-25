@@ -69,6 +69,7 @@ class AnalysisHistorySlot(BaseModel):
     """실행된 분석 스냅샷. 채팅 전문이 아님. D-056."""
 
     id: str
+    result_fingerprint: Optional[str] = None
     at: float = 0
     intent_id: Optional[str] = None
     path_id: Optional[str] = None
@@ -165,6 +166,7 @@ class AiChatResponse(BaseModel):
     session_id: str
     route: AiRoute
     answer: str
+    answer_context: dict[str, Any] = Field(default_factory=dict)
     evidence: list[EvidenceItem] = Field(default_factory=list)
     bundle_id: Optional[str] = None
     suggested_followups: list[str] = Field(default_factory=list)

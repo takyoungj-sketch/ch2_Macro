@@ -20,7 +20,17 @@ import {
 } from "../ui-window/resizableWindow";
 import "./aiAssistantPanel.css";
 
-type ChatMessage = { role: "user" | "assistant"; text: string; meta?: AiChatResponse };
+type ChatMessage = { role: "user" | "assistant"; text: string; meta?: AiChatResponse; contextLabel?: string; contextDetails?: string };
+
+function answerContextLabel(context: AiContextPayload): string {
+  const app = { land: "토지", built: "복합", collective: "집합", rent: "임대", profile: "지역프로필", insight: "Insight" }[context.app];
+  const panel = { RegressionCard: "회귀분석", PredictionCard: "예측 결과", BuildingList: "건물 목록", SangkwonCard: "상권분석", ModelSelectionModal: "모형 탐색", ModelCompareModal: "모형 비교" }[context.panel] || "현재 분석 화면";
+  const filters = context.scope?.filters ?? {};
+  const facts = (context.facts?.primary ?? context.facts) as Record<string, unknown>;
+  const years = filters.window_years ?? facts?.window_years;
+  const period = filters.period ?? filters.as_of_month ?? facts?.as_of_month;
+  return [app, context.scope?.region_label || "지역 미선택", context.scope?.asset_type, panel, years != null ? `${years}년 구간` : null, typeof period === "string" ? period : null].filter(Boolean).join(" · ");
+}
 
 const PANEL_DISCLAIMER = "본 답변은 시장통계 해석이며 감정평가를 대체하지 않습니다.";
 
@@ -236,7 +246,7 @@ function TrustBadge({
   const dataSources =
     sources.length > 0
       ? sources.map((s) => `✓ CH2 ${s.replace(/^CH2\s*/, "")}`)
-      : ["✓ CH2 회귀분석", "✓ CH2 VIF", "✓ CH2 상관"];
+      : ["현재 화면에서 확인된 분석 근거 없음"];
 
   return (
     <div className="relative shrink-0" ref={ref}>
@@ -247,12 +257,12 @@ function TrustBadge({
         aria-expanded={open}
       >
         <span>{trustDot(level)}</span>
-        <span className="font-medium">AI 신뢰도</span>
-        <span className="text-slate-400">{trustLabel(level)}</span>
+        <span className="font-medium">답변 근거·주의사항</span>
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-1 z-[110] w-56 rounded-lg border border-slate-200 bg-white shadow-lg p-3 text-[10px] text-slate-600 space-y-2 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:shadow-black/40">
           <p className="font-semibold text-slate-800 dark:text-slate-100">사용한 데이터</p>
+          <p>표본과 모형 상태를 참고하는 표시입니다. 답변의 정확성을 보증하지 않습니다.</p>
           <ul className="space-y-0.5">
             {dataSources.map((s) => (
               <li key={s}>{s}</li>
@@ -301,11 +311,11 @@ function deriveTrustFromContext(context: AiContextPayload): {
   const primary = (context.facts?.primary ?? context.facts) as Record<string, unknown> | undefined;
   const n = primary?.n as number | undefined;
   const adj = primary?.adj_r_squared as number | undefined;
-  const sources = ["회귀분석 결과"];
+  const sources = primary && Object.keys(primary).length ? [primary.coefficients ? "회귀분석 결과" : "현재 화면 자료"] : [];
   if (primary?.vif || context.facts?.vif) sources.push("다중공선성(VIF)");
   if (context.facts?.correlations) sources.push("변수간 상관관계");
 
-  let level: "high" | "medium" | "low" = "high";
+  let level: "high" | "medium" | "low" = n == null ? "low" : "high";
   if (n != null && n < 50) level = "low";
   else if (n != null && n < 200) level = "medium";
   if (adj != null && adj < 0.4) level = level === "high" ? "low" : level;
@@ -447,14 +457,17 @@ function AiAssistantModal({
       setLoading(true);
       setError(null);
       setStoppedNotice(false);
-      setMessages((m: ChatMessage[]) => [...m, { role: "user", text: q }]);
+      const contextLabel = answerContextLabel(context);
+      const contextDetails = contextLabel;
+      setMessages((m: ChatMessage[]) => [...m, { role: "user", text: q, contextLabel, contextDetails }]);
       setInput("");
       try {
         const resp = await sendAiChat(q, context, sessionId, { signal: ac.signal });
         if (ac.signal.aborted) return;
         setSessionId(resp.session_id);
-        setLastMeta(resp);
-        setMessages((m: ChatMessage[]) => [...m, { role: "assistant", text: resp.answer, meta: resp }]);
+        const capturedTrust = deriveTrustFromContext(context);
+        setLastMeta({ ...resp, trust_level: resp.trust_level ?? capturedTrust.level, trust_sources: resp.trust_sources?.length ? resp.trust_sources : capturedTrust.sources });
+        setMessages((m: ChatMessage[]) => [...m, { role: "assistant", text: resp.answer, meta: resp, contextLabel, contextDetails }]);
       } catch (e) {
         if (isAiChatAborted(e) || ac.signal.aborted) {
           setError(null);
@@ -494,9 +507,9 @@ function AiAssistantModal({
 
   if (!open) return null;
 
-  const scopeHint = context.scope?.region_label ?? "현재 scope";
+  const scopeHint = [...messages].reverse().find((m) => m.role === "assistant")?.contextLabel ?? answerContextLabel(context);
   const trustLevel = lastMeta?.trust_level ?? baseTrust.level;
-  const trustSources = lastMeta?.trust_sources?.length ? lastMeta.trust_sources : baseTrust.sources;
+  const trustSources = lastMeta ? lastMeta.trust_sources ?? [] : baseTrust.sources;
   const webEvidence =
     lastMeta?.evidence
       ?.filter((e: EvidenceItem) => e.type === "web" && e.url)
@@ -580,7 +593,8 @@ function AiAssistantModal({
         className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3"
         style={{ fontSize: `${BASE_FONT_PX * fontScale}px` }}
       >
-        <div className="rounded-lg border border-slate-200 bg-white/70 px-3 py-2.5 space-y-2 text-[0.92em] leading-relaxed dark:border-slate-600 dark:bg-slate-800/40">
+        <details open={messages.length === 0} className="rounded-lg border border-slate-200 bg-white/70 px-3 py-2.5 space-y-2 text-[0.92em] leading-relaxed dark:border-slate-600 dark:bg-slate-800/40">
+          <summary className="cursor-pointer text-slate-600 dark:text-slate-300">역할·제한사항 및 사용량</summary>
           <div>
             <p className="text-[0.85em] font-semibold tracking-wide text-slate-500 dark:text-slate-400 mb-0.5">
               목적과 기능
@@ -593,7 +607,7 @@ function AiAssistantModal({
             </p>
             <p className="text-slate-700 dark:text-slate-200">{LIMITS_COPY}</p>
           </div>
-        </div>
+        </details>
 
         <div
           ref={chatLogRef}
@@ -628,6 +642,7 @@ function AiAssistantModal({
                 m.role === "user" ? "bg-white/70 dark:bg-slate-800/40" : "bg-transparent",
               )}
             >
+              {m.contextLabel && <p className="text-[0.75em] text-slate-500 mb-1 break-words" title={m.contextDetails}>질문 당시 범위: {m.contextLabel}</p>}
               {m.role === "user" ? (
                 <div className="flex gap-2.5">
                   <div
