@@ -1,0 +1,12 @@
+.mf-formula{font-variant-numeric:tabular-nums;line-height:1.8;padding:.6rem .9rem;border-left:3px solid #94a3b8;background:rgba(148,163,184,.08);overflow-wrap:anywhere}
+.mf-controls{padding:1rem;margin-bottom:1rem;border:1px solid rgba(148,163,184,.3);border-radius:.75rem}
+.mf-controls label{display:block;margin-bottom:.5rem;font-weight:600}
+.mf-controls input[type=range]{width:100%;accent-color:#0f766e}
+.mf-quick{display:flex;flex-wrap:wrap;gap:.5rem;margin:.5rem 0}
+.mf-quick button{font:inherit;color:inherit;background:transparent;border:1px solid #94a3b8;border-radius:.4rem;padding:.5rem .7rem}
+.mf-controls [role=status],.mf-position{font-variant-numeric:tabular-nums}
+.mf-macro-case{margin:1.5rem 0}
+.mf-macro-case img{display:block;width:100%;height:auto;border-radius:.5rem;border:1px solid #64748b}
+.mf-macro-case figcaption{font-size:.86rem;line-height:1.7;opacity:.8;margin-top:.5rem}
+html[data-learn-theme=dark] [data-selected-area]{stroke:#5eead4}
+@media(prefers-color-scheme:dark){html:not([data-learn-theme=light]) [data-selected-area]{stroke:#5eead4}}

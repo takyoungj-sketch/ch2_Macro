@@ -1,0 +1,13 @@
+.tree-chart svg{width:100%;height:auto}
+.tree-controls{padding:1rem;margin:0 0 1rem;border:1px solid rgba(148,163,184,.3);border-radius:.75rem}
+.tree-controls p,.tree-controls label{margin:.4rem 0}
+.tree-controls input,.tree-controls select{font:inherit;min-height:44px;border:1px solid #94a3b8;border-radius:.4rem;padding:.4rem .6rem;background:var(--learn-surface,#fff);color:inherit}
+.tree-shortcuts{display:flex;gap:.5rem;flex-wrap:wrap;margin:.4rem 0 .6rem}
+.tree-shortcuts button{font:inherit;min-height:44px;border:1px solid #94a3b8;border-radius:.4rem;padding:.5rem .75rem;background:var(--learn-surface,#fff);color:var(--learn-link,#172033)}
+.tree-shortcuts button[aria-pressed="true"]{border-color:var(--learn-accent,#2563eb);background:var(--learn-selected,#dbeafe)}
+.tree-controls [role=status]{font-variant-numeric:tabular-nums;line-height:1.7}
+.tree-metrics{width:100%;border-collapse:collapse;margin:1rem 0}
+.tree-metrics th,.tree-metrics td{border:1px solid rgba(148,163,184,.45);padding:.55rem .7rem;text-align:right;font-variant-numeric:tabular-nums}
+.tree-metrics th:first-child,.tree-metrics td:first-child{text-align:left}
+.tree-metrics caption{caption-side:top;text-align:left;font-weight:600;padding-bottom:.4rem}
+html[data-learn-theme=dark] .tree-chart [fill="#eaf2ff"]{fill:#1e3a5f}

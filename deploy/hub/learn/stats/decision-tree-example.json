@@ -7,79 +7,193 @@
   "candidates": [
     {
       "threshold": 31.0,
-      "sse": 50562
+      "sse": 50562,
+      "n_left": 1,
+      "n_right": 19,
+      "mean_left": 480,
+      "mean_right": 138,
+      "sse_left": 0,
+      "sse_right": 50562
     },
     {
       "threshold": 44.0,
-      "sse": 70642.77777777778
+      "sse": 70642.77777777778,
+      "n_left": 2,
+      "n_right": 18,
+      "mean_left": 357.5,
+      "mean_right": 132.61111111111111,
+      "sse_left": 30012.5,
+      "sse_right": 40630.27777777778
     },
     {
       "threshold": 51.5,
-      "sse": 86547.88235294117
+      "sse": 86547.88235294117,
+      "n_left": 3,
+      "n_right": 17,
+      "mean_left": 301,
+      "mean_right": 129.35294117647058,
+      "sse_left": 49166,
+      "sse_right": 37381.882352941175
     },
     {
       "threshold": 57.5,
-      "sse": 96241.0
+      "sse": 96241.0,
+      "n_left": 4,
+      "n_right": 16,
+      "mean_left": 269.5,
+      "mean_right": 126.5,
+      "sse_left": 61073.0,
+      "sse_right": 35168.0
     },
     {
       "threshold": 62.5,
-      "sse": 102645.73333333334
+      "sse": 102645.73333333334,
+      "n_left": 5,
+      "n_right": 15,
+      "mean_left": 249.2,
+      "mean_right": 123.73333333333333,
+      "sse_left": 69314.8,
+      "sse_right": 33330.933333333334
     },
     {
       "threshold": 67.5,
-      "sse": 88232.7619047619
+      "sse": 88232.7619047619,
+      "n_left": 6,
+      "n_right": 14,
+      "mean_left": 247.66666666666666,
+      "mean_right": 115.42857142857143,
+      "sse_left": 69385.33333333333,
+      "sse_right": 18847.428571428572
     },
     {
       "threshold": 72.5,
-      "sse": 97992.76923076923
+      "sse": 97992.76923076923,
+      "n_left": 7,
+      "n_right": 13,
+      "mean_left": 232,
+      "mean_right": 113.6923076923077,
+      "sse_left": 79694,
+      "sse_right": 18298.76923076923
     },
     {
       "threshold": 80.0,
-      "sse": 88368.16666666667
+      "sse": 88368.16666666667,
+      "n_left": 8,
+      "n_right": 12,
+      "mean_left": 229.25,
+      "mean_right": 105.66666666666667,
+      "sse_left": 80117.5,
+      "sse_right": 8250.666666666666
     },
     {
       "threshold": 90.0,
-      "sse": 92989.79797979796
+      "sse": 92989.79797979796,
+      "n_left": 9,
+      "n_right": 11,
+      "mean_left": 219.88888888888889,
+      "mean_right": 102.0909090909091,
+      "sse_left": 86426.88888888888,
+      "sse_right": 6562.909090909091
     },
     {
       "threshold": 102.5,
-      "sse": 111877.6
+      "sse": 111877.6,
+      "n_left": 10,
+      "n_right": 10,
+      "mean_left": 205,
+      "mean_right": 105.2,
+      "sse_left": 106378,
+      "sse_right": 5499.6
     },
     {
       "threshold": 115.0,
-      "sse": 111997.63636363637
+      "sse": 111997.63636363637,
+      "n_left": 11,
+      "n_right": 9,
+      "mean_left": 200.1818181818182,
+      "mean_right": 100,
+      "sse_left": 108931.63636363637,
+      "sse_right": 3066
     },
     {
       "threshold": 130.0,
-      "sse": 115891.66666666669
+      "sse": 115891.66666666669,
+      "n_left": 12,
+      "n_right": 8,
+      "mean_left": 194.16666666666666,
+      "mean_right": 96.5,
+      "sse_left": 113707.66666666669,
+      "sse_right": 2184.0
     },
     {
       "threshold": 150.0,
-      "sse": 121849.12087912089
+      "sse": 121849.12087912089,
+      "n_left": 13,
+      "n_right": 7,
+      "mean_left": 187.84615384615384,
+      "mean_right": 94.28571428571429,
+      "sse_left": 119939.69230769233,
+      "sse_right": 1909.4285714285713
     },
     {
       "threshold": 170.0,
-      "sse": 128088.42857142855
+      "sse": 128088.42857142855,
+      "n_left": 14,
+      "n_right": 6,
+      "mean_left": 181.92857142857142,
+      "mean_right": 92.5,
+      "sse_left": 126312.92857142855,
+      "sse_right": 1775.5
     },
     {
       "threshold": 185.0,
-      "sse": 131122.53333333335
+      "sse": 131122.53333333335,
+      "n_left": 15,
+      "n_right": 5,
+      "mean_left": 177.66666666666666,
+      "mean_right": 87.4,
+      "sse_left": 130127.33333333334,
+      "sse_right": 995.2
     },
     {
       "threshold": 195.0,
-      "sse": 136223.6875
+      "sse": 136223.6875,
+      "n_left": 16,
+      "n_right": 4,
+      "mean_left": 172.9375,
+      "mean_right": 83.75,
+      "sse_left": 135494.9375,
+      "sse_right": 728.75
     },
     {
       "threshold": 220.0,
-      "sse": 142472.431372549
+      "sse": 142472.431372549,
+      "n_left": 17,
+      "n_right": 3,
+      "mean_left": 168.11764705882354,
+      "mean_right": 81.33333333333333,
+      "sse_left": 141813.76470588235,
+      "sse_right": 658.6666666666666
     },
     {
       "threshold": 245.0,
-      "sse": 146699.11111111112
+      "sse": 146699.11111111112,
+      "n_left": 18,
+      "n_right": 2,
+      "mean_left": 164.22222222222223,
+      "mean_right": 73,
+      "sse_left": 146457.11111111112,
+      "sse_right": 242
     },
     {
       "threshold": 280.0,
-      "sse": 156356.52631578947
+      "sse": 156356.52631578947,
+      "n_left": 19,
+      "n_right": 1,
+      "mean_left": 158.8421052631579,
+      "mean_right": 84,
+      "sse_left": 156356.52631578947,
+      "sse_right": 0
     }
   ],
   "leaves": [
@@ -121,7 +235,8 @@
   ],
   "metrics": {
     "train_mae": 23.13809523809524,
-    "test_mae": 60.43333333333333
+    "test_mae": 60.43333333333333,
+    "linear_test_mae": 41.075441489786265
   },
   "risks": [
     {

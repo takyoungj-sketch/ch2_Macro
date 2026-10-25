@@ -78,15 +78,13 @@ body.learn-dialog-open { overflow: hidden; }
   .learn-toc { position: sticky; top: 5rem; z-index: 15; scroll-margin-top: 5rem; }
   .learn-toc--roadmap { display: none; }
   .learn-toc-details { background: var(--learn-surface); border: 1px solid var(--learn-border); border-radius: 10px; }
-  .learn-toc-toggle { display: list-item; min-height: 44px; padding: .75rem 1rem; font-size: .875rem; font-weight: 700; color: var(--learn-link); cursor: pointer; }
+  .learn-toc--chapter:has(> .learn-toc-details:not([open])) { display: none; }
   .learn-toc__inner { border: 0; max-height: min(60dvh, 540px); margin: 0; box-shadow: none; }
   .learn-toc__list a, .learn-course-details summary { min-height: 44px; padding-top: .7rem; padding-bottom: .7rem; font-size: .875rem; }
   .learn-layout { gap: 1rem; }
   .learn-chapter--expanded { padding: 1.5rem; }
   .learn-chart-viewport svg { min-width: 560px; }
   .learn-chart-viewport { margin-bottom: .25rem; }
-  .learn-chart__caption::before { content: "도표는 좌우로 넘겨 볼 수 있습니다. "; color: var(--learn-link); }
-  .learn-chart-dialog .learn-chart__caption::before { content: none; }
 }
 @media (max-width: 599px) {
   .page { padding: .65rem .65rem max(1rem, env(safe-area-inset-bottom)); }

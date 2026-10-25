@@ -17,11 +17,11 @@ def build():
  (ROOT/'prediction-errors-example.json').write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
  def tx(x,y,s):return f'<text x="{x}" y="{y}">{escape(str(s))}</text>'
  def ln(x,y,a,b):return f'<line x1="{x}" y1="{y}" x2="{a}" y2="{b}" stroke="#94a3b8"/>'
- def fig(id,title,b,cap,h=410):return f'<figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 {h}" role="img" aria-labelledby="{id}-title {id}-desc"><title id="{id}-title">{title}</title><desc id="{id}-desc">{cap}</desc>{b}</svg><figcaption class="learn-chart__caption">{cap}</figcaption></figure>'
+ def fig(id,title,b,cap,h=410):return f'<figure class="learn-chart learn-chart--wide"><svg class="errors-chart-svg" viewBox="0 0 640 {h}" role="img" aria-labelledby="{id}-title {id}-desc"><title id="{id}-title">{title}</title><desc id="{id}-desc">{cap}</desc>{b}</svg><figcaption class="learn-chart__caption">{cap}</figcaption></figure>'
  b=tx(24,28,'가상 4건: A는 한 번 큰 오차, B는 매번 작은 오차')+ln(65,320,580,320)
  for i in range(4):
   for j,(m,c) in enumerate([(A,'#2563eb'),(B,'#d97706')]):
-   v=abs(m['errors'][i]);xx=110+i*130+j*28;b+=f'<rect x="{xx}" y="{320-v*27}" width="24" height="{v*27}" fill="{c}"/>'+tx(xx,308-v*27,v)
+   v=abs(m['errors'][i]);xx=110+i*130+j*28;b+=f'<g data-error-model="{chr(65+j)}"><rect data-observation="{i}" x="{xx}" y="{320-v*27}" width="24" height="{v*27}" fill="{c}"/>'+tx(xx,308-v*27,v)+'</g>'
   b+=tx(110+i*130,350,f'{i+1}번')
  for v in [0,2,4,6,8]:b+=tx(25,325-v*27,v)
  b+=tx(24,385,'세로: 절대오차 · 파랑 A / 주황 B · 단위 없는 가상 값')
@@ -29,7 +29,7 @@ def build():
  b=tx(24,28,'같은 예측도 지표에 따라 순위가 달라집니다')+ln(65,320,580,320)
  for i,key in enumerate(['MAE','RMSE']):
   for j,(m,c) in enumerate([(A,'#2563eb'),(B,'#d97706')]):
-   xx=170+i*240+j*65;v=m[key];b+=f'<rect x="{xx}" y="{320-v*50}" width="50" height="{v*50}" fill="{c}"/>'+tx(xx+15,308-v*50,f'{v:.1f}')
+   xx=170+i*240+j*65;v=m[key];b+=f'<rect data-rank-metric="{key}" data-model="{chr(65+j)}" x="{xx}" y="{320-v*50}" width="50" height="{v*50}" fill="{c}"/>'+tx(xx+15,308-v*50,f'{v:.1f}')
   b+=tx(195+i*240,350,key)
  for v in [0,1,2,3,4]:b+=tx(25,325-v*50,v)
  b+=tx(24,385,'파랑 A / 주황 B · 낮을수록 좋음 · 두 지표 모두 Y와 같은 단위')
@@ -42,28 +42,86 @@ def build():
  g3=fig('mape','MAPE와 작은 분모',b,'그림 3. 별도 가상 값 1·10·100의 APE는 100%·10%·1%, MAPE는 37%입니다. MAPE는 작은 실제값의 같은 절대오차에 더 큰 비중을 줍니다.')
  b=tx(24,28,'가상 실제값 1·2·9에 상수 c를 예측한다면')
  for j,(key,maxv) in enumerate([('MAE',10),('MSE',60)]):
-  left=65+j*300;b+=ln(left,315,left+235,315)+tx(left,65,key)
+  left=65+j*300;b+=ln(left,315,left+235,315)+tx(left,65,key+(' · Y 단위' if key=='MAE' else ' · Y² 단위'))
   pts=' '.join(f"{left+r['value']*23},{315-r[key]/maxv*220}" for r in loss);b+='<polyline data-loss="'+key+'" points="'+pts+'" fill="none" stroke="#2563eb" stroke-width="2"/>'
   optimum=2 if key=='MAE' else 4;val=mean(abs(a-optimum) for a in target) if key=='MAE' else mean((a-optimum)**2 for a in target)
-  b+=f'<circle cx="{left+optimum*23}" cy="{315-val/maxv*220}" r="5" fill="#d97706"/>'+tx(left,380,f'최소점 c={optimum}: '+('중앙값' if key=='MAE' else '평균'))
+  b+=f'<circle data-optimum="{key}" cx="{left+optimum*23}" cy="{315-val/maxv*220}" r="5" fill="#d97706"/>'+tx(left,380,f'최소점 c={optimum}: '+('중앙값' if key=='MAE' else '평균'))+f'<circle data-current-loss="{key}" cx="{left+4*23}" cy="{315-(mean(abs(a-4) for a in target) if key=="MAE" else mean((a-4)**2 for a in target))/maxv*220}" r="6" fill="#0f766e"/>'
   for v in [0,5,10]:b+=tx(left+v*23-3,342,v)
   for v in [0,maxv/2,maxv]:b+=tx(left-32,320-v/maxv*220,f'{v:g}')
  g4=fig('target','손실과 예측 대상',b,'그림 4. 가로축은 상수 예측 c입니다. 왼쪽은 MAE, 오른쪽은 MSE이며 세로 척도·단위가 다릅니다. 같은 곡선의 높이를 직접 비교하는 그림이 아닙니다.')
- parts=[]
- def sec(id,label,title,body):parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{title}</h2>{body}</section>')
- sec('quick-start','학습 목표','예측이 얼마나 틀렸는지 어떻게 비교할까요?','<p>대부분 잘 맞히지만 가끔 크게 틀리는 모형과 매번 조금씩 틀리는 모형이 있습니다. 어느 쪽이 더 나은지는 오차를 어떻게 모아 비교하느냐에 따라 달라집니다. 예측 지표는 이런 차이를 하나의 숫자로 요약하는 방법입니다.</p><p>이 장에서는 같은 예측에 MAE·RMSE·MAPE를 적용해 보고, 지표마다 무엇을 중요하게 보는지 살펴봅니다. 계산값뿐 아니라 단위, 작은 실제값의 영향, 평가에 포함한 관측도 함께 확인합니다.</p><ul class="learn-objectives"><li>실제값과 예측값으로 MAE·MSE·RMSE·MAPE를 계산합니다.</li><li>큰 오차와 작은 실제값이 각 지표에 미치는 영향을 설명합니다.</li><li>손실의 선택이 평균·중앙값 예측과 어떻게 연결되는지 이해합니다.</li><li>같은 평가 자료와 기준으로 모형을 비교하고 결과를 보고합니다.</li></ul>')
- sec('errors','오차의 정의','실제값에서 예측값을 빼 봅니다','<p>이 장에서는 <strong>오차 eᵢ = 실제값 yᵢ − 예측값 ŷᵢ</strong>로 정합니다. 실제값이 10인데 7로 예측했다면 오차는 +3입니다. 양수는 실제보다 낮게, 음수는 실제보다 높게 예측했다는 뜻입니다.</p>'+g1+'<p>오차를 그대로 평균한 <strong>평균오차(ME)</strong>는 예측이 어느 방향으로 치우치는지 보여 줍니다. 다만 −10과 +10을 평균하면 0이 됩니다. 두 예측이 모두 틀려도 상쇄될 수 있으므로 정확성을 평가할 때는 절댓값이나 제곱을 이용합니다.</p><p>학습 자료에서 구한 잔차와 새 자료에서 구한 예측 오차는 계산 모양이 같아도 의미가 다릅니다. 어떤 자료에서 평가한 결과인지 먼저 밝혀야 합니다.</p>')
- sec('definitions','MAE·MSE·RMSE','절댓값으로 평균할지, 제곱해서 평균할지 정합니다','<p><strong>MAE(평균절대오차)</strong>는 오차의 절댓값을 평균한 값입니다. MAE = Σ|eᵢ|/n입니다. 절대오차가 2배가 되면 그 관측이 합계에 더하는 값도 2배가 됩니다. 예를 들어 절대오차가 1·2·3이면 MAE는 2입니다.</p><p><strong>MSE(평균제곱오차)</strong>는 오차를 제곱한 뒤 평균한 값이고, <strong>RMSE(평균제곱근오차)</strong>는 MSE의 제곱근입니다. MSE = Σeᵢ²/n, RMSE = √MSE입니다. 오차가 2배면 제곱 항은 4배가 되므로 큰 오차에 더 민감합니다.</p><p>MAE와 RMSE는 Y와 같은 단위입니다. 점수를 예측했다면 둘 다 ‘점’으로 읽습니다. MSE의 단위는 그 제곱인 ‘점²’입니다. RMSE는 절대오차의 평균에 제곱근을 씌운 값이 아니며, 잔차 표준오차처럼 n−p로 나누지도 않습니다.</p><p>같은 관측에 같은 비음수 가중치를 적용하면 RMSE는 MAE보다 작지 않습니다. 모든 절대오차가 같으면 두 값도 같습니다. MAE가 큰 오차에 덜 민감하더라도 그 영향을 전혀 받지 않는 것은 아닙니다.</p>')
- sec('ranking','지표에 따른 선택','한 번의 큰 오차와 여러 번의 작은 오차를 비교합니다','<p>그림 1의 A는 절대오차가 0·0·0·8이고 B는 3·3·3·3입니다. A는 네 번 중 세 번 정확하지만 한 번 크게 틀립니다. B는 네 번 모두 같은 크기로 틀립니다.</p>'+g2+'<p>A의 MAE는 (0+0+0+8)/4 = 2입니다. MSE는 64/4 = 16이고 RMSE는 4입니다. B는 MAE와 RMSE가 모두 3입니다. 따라서 MAE로는 A가, RMSE로는 B가 더 좋습니다. 큰 실패에 어느 정도의 비용을 두는지에 따라 선택이 달라집니다.</p><p>같은 평가 자료에서 하나로 집계한 MSE와 RMSE는 후보 순위가 같습니다. 제곱근을 취해도 값의 순서는 바뀌지 않기 때문입니다. 다만 자료를 여러 묶음으로 나누어 구한 RMSE의 평균과 전체 오차를 합쳐 구한 RMSE는 다를 수 있습니다. 집계 방식도 함께 적어야 합니다.</p>')
- sec('target','손실과 목표값','평균을 예측할지 중앙값을 예측할지도 연결됩니다','<p>실제값이 1·2·9일 때 세 값 모두에 같은 숫자 c를 예측한다고 해 봅시다. 절대오차의 평균을 가장 작게 만드는 c는 중앙값 2입니다. 제곱오차의 평균을 가장 작게 만드는 c는 평균 4입니다.</p>'+g4+'<p>이 원리는 입력 X가 주어진 예측에도 이어집니다. 필요한 기대값이 존재할 때, 기대 제곱오차를 최소화하는 예측은 <strong>조건부 평균</strong>이고 기대 절대오차를 최소화하는 예측은 <strong>조건부 중앙값</strong>입니다. 평균과 중앙값이 다른 분포에서는 좋은 예측값도 손실에 따라 달라질 수 있습니다.</p><p>일반 MAE와 제곱오차는 같은 실제값을 기준으로 +오차와 −오차를 대칭으로 취급합니다. 과소예측과 과대예측의 비용이 다르다면 분위수 손실처럼 비대칭적인 기준도 고려할 수 있습니다.</p>')
- sec('mape','MAPE의 정의와 한계','같은 오차도 실제값이 작으면 비율이 커집니다','<p><strong>MAPE(평균절대백분율오차)</strong>는 각 절대오차를 실제값의 절댓값으로 나눈 뒤 평균해 %로 표시합니다. MAPE = (100/n)Σ|(yᵢ−ŷᵢ)/yᵢ|입니다. 실제값 10을 9로 예측하면 절대오차는 1이고 절대백분율오차(APE)는 10%입니다.</p>'+g3+'<p>실제값 1·10·100을 각각 0·9·99로 예측하면 절대오차는 모두 1입니다. 하지만 APE는 100%·10%·1%이고 MAPE는 (100+10+1)/3 = 37%입니다. 같은 절대오차라도 작은 실제값에서 더 큰 영향을 줍니다.</p><p><strong>실제값이 0이면 원래 산식으로 계산할 수 없습니다.</strong> 0 근처에서도 값이 매우 커질 수 있습니다. 분모에 작은 상수를 넣거나 0인 관측을 빼는 것은 계산 규칙이나 평가 대상을 바꾸는 일입니다. 처리 방법과 관측 수를 밝히고 다른 지표도 함께 살펴야 합니다.</p><p>백분율이 의미 있는 척도인지도 확인합니다. 음수가 있거나 섭씨온도처럼 0이 임의의 기준인 척도에서는 해석이 부적절할 수 있습니다. 소프트웨어에 따라 37%를 37 또는 0.37로 반환하므로 표시 단위도 확인해야 합니다.</p><details><summary>MAPE의 가중치와 비교 방향</summary><p>양수인 실제값에서는 절대오차에 1/yᵢ의 가중치를 주는 셈입니다. 따라서 일반적인 평균이나 중앙값 예측과 다른 값을 선호할 수 있습니다. 같은 실제값에서 같은 크기의 ±오차는 같게 평가하지만, 실제값과 예측값을 뒤집으면 분모가 달라집니다. 실제 100·예측 200의 오차율은 100%, 실제 200·예측 100은 50%입니다.</p></details>')
- sec('alternatives','대안과 가중치','비율 지표도 산식과 가중치를 확인합니다','<p><strong>WAPE</strong>는 개별 오차율의 평균 대신 전체 실제값 규모에 대한 절대오차의 비율을 구합니다. WAPE = 100Σ|eᵢ|/Σ|yᵢ|이며 전체 분모가 양수여야 합니다. MAPE와 다른 지표이고, 같은 평가 표본에서는 분모가 고정되어 MAE와 후보 순위가 같습니다.</p><p><strong>가중 지표</strong>는 관측마다 다른 비중을 줍니다. 모든 학생을 같은 비중으로 볼지, 학교별 비중을 같게 맞출지에 따라 묻는 질문이 달라집니다. 가중 MAE = Σwᵢ|eᵢ|/Σwᵢ, 가중 RMSE = √[Σwᵢeᵢ²/Σwᵢ]로 계산합니다. 가중치는 비음수이고 합은 양수여야 합니다.</p><details><summary>sMAPE를 사용할 때</summary><p>sMAPE의 한 정의는 (100/n)Σ[2|yᵢ−ŷᵢ|/(|yᵢ|+|ŷᵢ|)]입니다. 실제값과 예측값이 모두 0일 때의 처리나 상수 배율이 구현마다 다를 수 있고 0 근처의 민감성도 남습니다. 이름만 보고 문제가 해결된다고 생각하기보다 산식과 처리 규칙을 확인합니다.</p></details>')
- sec('example','예제 계산','같은 예측을 세 지표로 요약해 봅니다',f'<p>22장에서 사용한 공통 학습 자료의 두 수치 열을 단위 없는 X와 Y로 놓습니다. 1~20번 관측으로 X에서 Y를 예측하는 직선을 학습하고, 남겨 둔 21~30번 관측에서 평가합니다. 같은 10개 예측으로 계산한 결과는 <strong>MAE={common["MAE"]:.2f}, RMSE={common["RMSE"]:.2f}, MAPE={common["MAPE"]:.2f}%</strong>입니다.</p><p>평가 자료의 Y가 모두 양수이므로 이 예제의 MAPE를 계산할 수 있습니다. MAE와 RMSE는 Y와 같은 단위이고 MAPE는 %입니다. RMSE가 MAE보다 큰 것은 오차의 크기가 관측마다 다르기 때문입니다.</p><p>이 예제는 작은 자료를 번호순으로 한 번 나눈 계산 연습입니다. 번호가 시간 순서를 뜻하지 않으며, 앞으로의 성능을 확인한 결과로 해석하지 않습니다. 원자료는 출처가 확인되지 않은 학습용 자료입니다.</p><p>모형을 비교할 때는 학습 오차와 평가 오차를 섞거나 서로 다른 관측을 제외한 점수를 나란히 놓지 않습니다. 로그로 학습한 모형을 원래 단위에서 평가하려면 20장에서 살펴본 역변환과 예측 대상도 먼저 정해야 합니다.</p>')
- sec('report','보고와 비교','평균 점수 옆에 평가 조건과 오차 분포를 적습니다','<p>평가 표본, 기간, 관측 수, 단위, 가중치, 결측값과 0의 처리 방법을 함께 보고합니다. 학습 평균·중앙값이나 이전 시점 값처럼 단순한 기준모형도 같은 자료에서 비교하면 개선 정도를 이해하기 쉽습니다. 기준모형의 예측 기준을 평가 정답으로 다시 맞추지는 않습니다.</p><p>전체 평균만으로는 특정 집단의 큰 실패가 가려질 수 있습니다. 학년·학교별 오차, 큰 오차의 분위수와 관측 수, 과소·과대예측의 방향도 살펴봅니다. 집단의 관측 수가 작으면 그 요약값도 불안정할 수 있습니다.</p><p>작은 점수 차이는 평가 표본이 바뀌면 뒤집힐 수 있습니다. 같은 관측에 대한 두 모형의 오차를 짝지어 비교하고, 반복 평가나 재표집을 할 때는 시간·집단의 의존성도 반영합니다. 시험 점수를 반복 확인하며 후보를 고르면 독립적인 최종 평가가 되지 않는다는 점도 기억해야 합니다.</p>')
- sec('practice','확인 문제','산식과 단위, 평가 대상을 확인하세요','<ol class="learn-exercises">'+''.join(f'<li>{q}<details><summary>답과 해설</summary><p>{a}</p></details></li>' for q,a in [('오차 −10과 +10의 평균이 0이면 정확한가요?','방향이 상쇄된 것입니다. MAE와 RMSE는 둘 다 10입니다.'),('같은 표본에서 MSE와 RMSE의 모형 순위가 다를 수 있나요?','단일 동일 집계라면 제곱근은 단조여서 순위가 같습니다. 폴드별 집계를 다르게 하면 별도 문제입니다.'),('MAPE 계산에서 실제값 0을 빼도 되나요?','평가 대상이 달라집니다. 처리 이유·건수를 밝히고 목적에 적절한 다른 지표를 함께 사용해야 합니다.'),('MAE가 가장 작으면 조건부 평균을 가장 잘 예측하나요?','일반적으로 그렇지 않습니다. 절대손실은 중앙값, 제곱손실은 평균을 목표로 합니다.')])+'</ol>')
- sec('macro','CH2 Macro에서 읽기','지표 이름과 함께 산식을 읽습니다','<p>CH2 Macro의 평가 수치를 읽을 때 단가·총액·로그값 중 무엇의 오차인지, 학습·검증·시험 중 어디서 계산했는지 확인하세요. 이 장의 계산을 실제 서비스 성능이라고 전제하지 않습니다.</p><p>낮은 평균 오차는 개별 거래의 정확성이나 적정가를 보장하지 않습니다. 지표·오차 분포·적용 범위를 함께 해석합니다.</p>')
- sec('recap','학습 요약','지표는 어떤 오차를 중요하게 볼지 정하는 기준입니다','<ul class="learn-recap-list"><li><strong>MAE</strong>는 절대오차의 평균입니다. <strong>RMSE</strong>는 제곱을 이용하므로 큰 오차에 더 민감합니다. 두 지표는 Y와 같은 단위입니다.</li><li><strong>MSE</strong>는 제곱 단위이고 같은 평가 자료에서 RMSE와 후보 순위가 같습니다.</li><li><strong>MAPE</strong>는 실제값 대비 백분율 오차입니다. 실제값이 0이면 정의되지 않고 작은 값에 민감합니다.</li><li>절대손실은 중앙값, 제곱손실은 평균 예측과 연결됩니다. 목적과 실패 비용에 맞춰 지표를 정합니다.</li><li>같은 자료와 계산 규칙으로 비교하고, 집단별 오차와 평가 조건도 함께 보고합니다.</li></ul><p>다음 <a href="/learn/stats/cross-validation/">26장 「교차검증과 모형 선택」</a>에서는 자료를 여러 번 나누어 후보를 비교하는 방법을 살펴봅니다.</p><details class="learn-references"><summary>참고자료와 예제 데이터</summary><ul><li><a href="https://scikit-learn.org/stable/modules/model_evaluation.html#regression-metrics">scikit-learn: 회귀 평가 지표</a></li><li><a href="../prediction-errors-example.json">예측값·지표·손실 곡선 계산 자료</a></li></ul><p class="learn-source-note">본문·그림은 직접 구성한 가상 예제와 공통 학습 자료로 작성했습니다. 참고자료 기존 확인일: 2026-10-09.</p></details>')
- target_section=next(v for v in parts if 'id="target"' in v);parts.remove(target_section);parts.insert(next(i for i,v in enumerate(parts) if 'id="mape"' in v)+1,target_section)
+ g1=g1.replace('<svg ','<div class="errors-controls" hidden=""><label for="errors-model">관측별 모형 보기</label><select id="errors-model"><option value="all">함께 비교</option><option value="A">모형 A</option><option value="B">모형 B</option></select><p id="errors-model-status" role="status" aria-live="polite"></p><div id="errors-observations" class="learn-data learn-data--full"></div></div><svg ',1)
+ g2=g2.replace('<svg ','<div class="errors-controls" hidden=""><label for="errors-metric">평가 지표 선택</label><select id="errors-metric"><option value="MAE">MAE 기준</option><option value="RMSE">RMSE 기준</option></select><p id="errors-ranking-status" role="status" aria-live="polite"></p></div><svg ',1)
+ g4=g4.replace('<svg ','<div class="errors-controls" hidden=""><label for="errors-constant">상수 예측 c</label><input id="errors-constant" type="range" min="0" max="10" step="0.05" value="4" /><div class="errors-shortcuts"><button type="button" data-constant="2">중앙값 2로 이동</button><button type="button" data-constant="4">평균 4로 이동</button></div><p id="errors-loss-status" role="status" aria-live="polite"></p><p>초록 점은 현재 c, 주황 점은 각 손실의 최소점입니다. 두 세로축의 단위와 척도는 다릅니다.</p></div><svg ',1)
+ parts=render_content([g1,g2,g3,g4])
  p=ROOT/'prediction-errors/index.html';p.parent.mkdir(exist_ok=True);html=p.read_text(encoding='utf-8') if p.exists() else (ROOT/'overfitting/index.html').read_text(encoding='utf-8').replace('https://ch2data.com/learn/stats/overfitting/','https://ch2data.com/learn/stats/prediction-errors/')
- html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="예측오차: MAE·RMSE·MAPE">'+'\n'.join(parts)+'</article>',html,count=1,flags=re.S);html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1MAE·RMSE·MAPE의 산식과 단위, 순위 차이와 0 근처 문제, 예측 대상과 평가 기준을 학습합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);p.write_text(html,encoding='utf-8')
+ html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="예측오차: MAE·RMSE·MAPE">'+'\n'.join(parts)+'</article>',html,count=1,flags=re.S);html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1MAE·RMSE·MAPE의 산식과 단위, 순위 차이와 0 근처 문제, 예측 대상과 평가 기준을 학습합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);html=add_assets(html,d);p.write_text(html,encoding='utf-8')
+
+def add_assets(html,data):
+ html=html.replace('prediction-errors/experiment.js?v=20261025-1','prediction-errors/experiment.js?v=20261025-2')
+ html=html.replace('별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.','활용도는 CH2 Macro의 분석 결과를 이해하는 데 얼마나 도움이 되는지를 나타냅니다.')
+ if 'prediction-errors/chapter.css' not in html:html=html.replace('</head>','<link rel="stylesheet" href="/learn/stats/prediction-errors/chapter.css?v=20261025-1" /></head>')
+ payload='<script type="application/json" id="errors-data">'+json.dumps(data,ensure_ascii=False)+'</script>'
+ if 'id="errors-data"' in html:html=re.sub(r'<script type="application/json" id="errors-data">.*?</script>',lambda _:payload,html,flags=re.S)
+ else:html=html.replace('</body>',payload+'</body>')
+ if 'prediction-errors/experiment.js' not in html:html=html.replace('</body>','<script type="module" src="/learn/stats/prediction-errors/experiment.js?v=20261025-2"></script></body>')
+ return html
+
+def macro_notes():
+ return '<details class="learn-more"><summary>실제 Macro의 평가 단위·가중치·0 처리 확인</summary><div class="learn-more__body"><p>복합의 확인한 학습 MAPE는 거래금액(만원)의 원척도에서 계산하며, 유한한 실제값·예측값 중 실제값 0을 제외하고 관측별 APE를 단순 평균해 백분율로 표시합니다. 롤링 CV도 로그 모형의 예측을 각 학습 fold 잔차로 보정해 원금액으로 돌린 뒤 평가합니다. 확인한 경로는 평가 관측의 APE를 모아 평균하며, 폴드별 RMSE 평균과 같은 계산이 아닙니다.</p><p>집합 주거 지역회귀는 단지별 중앙단가를 목표로 하며 동일 가중(equal)이 기본입니다. 거래수 가중(tx)을 선택하는 경로는 n_tx/(n_tx+10) 형태의 가중치를 사용하고, 원 단위 RMSE와 MAPE에도 같은 가중 모드를 적용합니다. 이는 거래 한 건씩의 동일 가중 평가와 다릅니다. MAPE는 실제값 0을 제외한 분모 가중치 합으로 나누고 RMSE는 포함 관측의 가중 제곱오차 평균의 제곱근입니다. 양수 가격 영역을 전제로 분모에 실제값을 쓰는 구현이며 음수 일반 자료의 MAPE 함수와 같다고 확대하지 않습니다.</p><p>복합 예측형 척도 비교는 CV-MAPE를 우선하고 없으면 학습 MAPE 등을 참조합니다. 설명형은 같은 로그 종속변수의 AIC를 비교합니다. 집합 주거 추천은 예측형 Holdout MAPE, 설명형 원 단위 수정 R²를 사용합니다. 이 장의 MAE/RMSE 전환이 실제 추천의 기본 지표를 변경하는 기능은 아닙니다. 랩의 릿지·라쏘·제곱항 실험과 일반 서비스도 구별합니다.</p><p>후보별 결측 조건 때문에 평가 표본이 달라질 수 있고, 선택에 사용한 Holdout은 최종 독립 시험이 아닙니다. 표시 반올림 전의 선택 기준과 작은 점수 차이의 불확실성을 별도로 검토해야 합니다. 이 장에서는 실제 서비스의 지표나 추천 정책을 바꾸지 않습니다.</p><p>복합 잔차 진단에는 금액·면적·연도·범주 등에 따른 오차 요약과 영향 관측 경로가 있습니다. 이를 모든 서비스가 공통된 지역·유형별 MAE/RMSE, 최대오차·상위 분위수를 제공한다는 뜻으로 확대하지 않습니다. 최신 구현에서의 노출 항목과 0 제외 건수 안내, 후보 간 동일 표본 비교는 별도 점검 대상으로 기록했습니다.</p><p>본 장 공통 자료의 MAE·RMSE는 문안대로 Y와 같은 단위로 읽습니다. 공통 예시의 실제 거래 출처와 대표성은 검증되지 않았으며 여기의 세 지표를 현재 Macro 서비스 성능으로 해석하지 않습니다.</p></div></details>'
+
+def render_content(graphs):
+ page=ROOT/'prediction-errors/index.html'
+ old=page.read_text(encoding='utf8')
+ refs=re.search(r'<details class="learn-references">.*?</details>',old,re.S)[0]
+ source=(ROOT/'prediction-errors/content.md').read_text(encoding='utf8').replace('**','').replace('<text color="secondary">그림에 표시할 핵심 계산값</text>','지표별 계산 비교')
+ formulas=['eᵢ = yᵢ−ŷᵢ','(10+(−10))/2 = 0','MAE = (1/n) Σ |yᵢ−ŷᵢ|','MAE = (10+20+30)/3 = 20','MSE = (1/n) Σ (yᵢ−ŷᵢ)²','RMSE = √[(1/n) Σ (yᵢ−ŷᵢ)²]','RMSE = √[(10²+20²+30²)/3]','RMSE ≥ MAE','(0+0+0+8)/4 = 2','(3+3+3+3)/4 = 3','√[(0+0+0+64)/4] = 4','√[(9+9+9+9)/4] = 3','MAPE = (100/n) Σ |(yᵢ−ŷᵢ)/yᵢ|','APE = (10/100)×100 = 10%','MAPE = (100+10+1)/3 = 37%','WAPE = 100 Σ |yᵢ−ŷᵢ| / Σ |yᵢ|','sMAPE = (100/n) Σ [2|yᵢ−ŷᵢ|/(|yᵢ|+|ŷᵢ|)]','MAEw = Σ wᵢ|eᵢ| / Σ wᵢ','RMSEw = √[Σ wᵢeᵢ² / Σ wᵢ]']
+
+ blocks=re.findall(r'\\\[.*?\\\]',source,re.S)
+ assert len(blocks)==len(formulas)
+ for block,formula in zip(blocks,formulas):source=source.replace(block,formula,1)
+
+ def inline(t):
+  return re.sub(r'`([^`]+)`',r'<code>\1</code>',escape(t))
+ def render(block):
+  lines=block.strip().splitlines();i=0;out=[]
+  while i<len(lines):
+   line=lines[i].strip();i+=1
+   if not line or line=='---':continue
+   if line.startswith('### '):out.append('<h3>'+inline(line[4:])+'</h3>');continue
+   if line.startswith('[그림 '):out.append(graphs[int(re.search(r'그림 (\d)',line)[1])-1]);continue
+   if line=='[CH2 Macro 통계·데이터분석 열기 →]':out.append('<p><a href="https://macro.ch2data.com/">CH2 Macro 통계·데이터분석 열기 →</a></p>');continue
+   if line=='▶ 참고자료':out.append(refs);continue
+   if line.startswith('▶ '):
+    rest=[]
+    while i<len(lines) and lines[i].strip()!='---':rest.append(lines[i]);i+=1
+    out.append('<details class="learn-more"><summary>'+inline(line[2:])+'</summary><div class="learn-more__body">'+render('\n'.join(rest))+'</div></details>');continue
+   if line.startswith('|'):
+    rows=[line]
+    while i<len(lines) and lines[i].strip().startswith('|'):rows.append(lines[i].strip());i+=1
+    cells=[[c.strip() for c in row.strip('|').split('|')] for row in rows]
+    cells=[row for row in cells if not all(re.fullmatch(r'[:\- ]+',c) for c in row)]
+    out.append('<div class="learn-data learn-data--full"><table><thead><tr>'+''.join('<th scope="col">'+inline(c)+'</th>' for c in cells[0])+'</tr></thead><tbody>'+''.join('<tr>'+''.join(('<th scope="row">'+inline(c)+'</th>') if j==0 else '<td>'+inline(c)+'</td>' for j,c in enumerate(row))+'</tr>' for row in cells[1:])+'</tbody></table></div>');continue
+   if line.startswith('- '):
+    items=[line[2:]]
+    while i<len(lines) and lines[i].startswith('- '):items.append(lines[i][2:]);i+=1
+    out.append('<ul>'+''.join('<li>'+inline(item)+'</li>' for item in items)+'</ul>');continue
+   out.append('<p'+(' class="errors-formula"' if (any(line==formula for formula in formulas) or line.startswith(('ME =','MSE =','MAE =','RMSE =','MAPE ='))) else '')+'>'+inline(line)+'</p>')
+  return '\n'.join(out)
+ ids=['quick-start','errors','mae','rmse','ranking','mape-definition','mape','mape-limits','target','common','weights','distribution','comparison','practice','macro','recap']
+ parts=[]
+ for id,section in zip(ids,re.split(r'^## ',source,flags=re.M)[1:],strict=True):
+  label,body=section.split('\n',1);heading=re.search(r'^### (.+)$',body,re.M)[1];body=re.sub(r'^### .+\n','',body,count=1,flags=re.M)
+  if id=='practice':
+   qs=[]
+   for q in re.split(r'^\d+\. ',body,flags=re.M)[1:]:
+    question,answer=q.split('▶ 답과 해설',1)
+    qs.append('<li>'+inline(question.strip())+'<details><summary>답과 해설</summary><div class="learn-more__body">'+render(answer)+'</div></details></li>')
+   content='<ol class="learn-exercises">'+''.join(qs)+'</ol>'
+  else:content=render(body)
+  if id=='macro':content+=macro_notes()
+  if id in {'mae','mape-limits','common','distribution'}:content='<span id="'+{'mae':'definitions','mape-limits':'alternatives','common':'example','distribution':'report'}[id]+'" aria-hidden="true"></span>'+content
+  if id=='quick-start':content=content.replace('<ul>','<ul class="learn-objectives">',1)
+  content=content.replace('교차검증은 26장에서','교차검증은 <a href="/learn/stats/cross-validation/">26장</a>에서').replace('26장 「교차검증과 모형 선택」','<a href="/learn/stats/cross-validation/">26장 「교차검증과 모형 선택」</a>')
+  parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{heading}</h2>{content}</section>')
+ return parts
 if __name__=='__main__':build()

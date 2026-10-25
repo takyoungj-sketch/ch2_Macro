@@ -18,42 +18,116 @@ def build():
  def tx(x,y,s):return f'<text x="{x}" y="{y}">{escape(str(s))}</text>'
  def box(x,y,w,h,c):return f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="5" fill="{c}"/>'
  def ln(x,y,a,b):return f'<line x1="{x}" y1="{y}" x2="{a}" y2="{b}" stroke="#94a3b8"/>'
- def fig(id,title,b,cap):return f'<figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 410" role="img" aria-labelledby="{id}-title {id}-desc"><title id="{id}-title">{title}</title><desc id="{id}-desc">{cap}</desc>{b}</svg><figcaption class="learn-chart__caption">{cap}</figcaption></figure>'
+ def fig(id,title,b,cap,h=410):return f'<figure class="learn-chart learn-chart--wide"><svg class="cv-chart-svg" viewBox="0 0 640 {h}" role="img" aria-labelledby="{id}-title {id}-desc"><title id="{id}-title">{title}</title><desc id="{id}-desc">{cap}</desc>{b}</svg><figcaption class="learn-chart__caption">{cap}</figcaption></figure>'
  b=tx(24,28,'3폴드: 매번 20건으로 새로 학습하고 10건을 예측')
  for j,label in enumerate(['1~10번','11~20번','21~30번']):b+=tx(140+j*160,80,label)
  for k in range(3):
-  yy=105+k*75;b+=tx(24,yy+32,f'{k+1}회')
+  yy=105+k*75;b+=f'<g data-fold-row="{k+1}">'+tx(24,yy+32,f'{k+1}회')
   for j in range(3):b+=box(120+j*160,yy,145,55,'#ffedd5' if j==k else '#dbeafe')+tx(160+j*160,yy+32,'검증' if j==k else '학습')
+  b+='</g>'
  b+=tx(24,370,'파랑: 학습 / 주황: 검증 · 한 관측은 검증에 정확히 한 번 사용')
  g1=fig('folds','3폴드의 자료 배정',b,'그림 1. 번호 블록별 교재용 분할입니다. 세 모형의 학습 자료가 서로 겹치므로 폴드 점수들을 독립 반복 측정으로 간주하지 않습니다.')
- b=tx(24,28,'공통 자료: 폴드별 검증 MAE')+ln(70,320,575,320)
+ b=tx(24,28,'폴드별 검증 MAE와 선택 폴드의 회귀')+ln(65,320,325,320)
  for i,f in enumerate(folds):
-  v=f['metrics']['MAE'];xx=140+i*170;b+=box(xx,320-v*3.5,70,v*3.5,'#2563eb')+tx(xx+10,307-v*3.5,f'{v:.2f}')+tx(xx+10,350,f'{i+1}폴드')
+  v=f['metrics']['MAE'];xx=90+i*80;b+=f'<rect data-fold-bar="{f["fold"]}" x="{xx}" y="{320-v*3.5}" width="45" height="{v*3.5}" fill="#2563eb"/>'+tx(xx,307-v*3.5,f'{v:.2f}')+tx(xx,350,f'{i+1}폴드')
  for v in [0,20,40,60]:b+=tx(25,325-v*3.5,v)
- b+=tx(24,385,f'세로: Y와 같은 단위 · 동일 크기 폴드 평균 = 전체 OOF MAE {pooled["MAE"]:.2f}')
- g2=fig('scores','폴드별 오차의 차이',b,'그림 2. 각 폴드에서 회귀계수를 다시 추정했습니다. 폴드마다 검증 관측과 학습 구성이 달라 점수도 달라집니다. 세 값만으로 성능의 정밀한 신뢰구간을 만들지 않습니다.')
+ px=lambda x:390+(x-22)*.65;py=lambda y:320-y*.48
+ b+=ln(390,320,590,320)+ln(390,65,390,320)+tx(390,56,'X → Y · 공통 학습 자료')
+ for value in [0,250,500]:b+=tx(350,py(value)+5,value)
+ for value in [22,160,310]:b+=tx(px(value)-7,345,value)
+ for f in folds:
+  hidden=' hidden=""' if f['fold']!=1 else ''
+  b+=f'<g data-fold-scatter="{f["fold"]}"{hidden}>'
+  for row in rows:
+   validation=row['id'] in f['validation_ids'];color='#d97706' if validation else '#2563eb'
+   b+=f'<circle data-id="{row["id"]}" data-role="{"validation" if validation else "train"}" cx="{px(row["area"])}" cy="{py(row["price"])}" r="{4 if validation else 3}" fill="{color}"><title>{row["id"]}번 · X={row["area"]}, 실제 Y={row["price"]} · {"검증" if validation else "학습"}</title></circle>'
+  b+=f'<line data-fit-line="{f["fold"]}" x1="{px(22)}" y1="{py(f["intercept"]+f["slope"]*22)}" x2="{px(310)}" y2="{py(f["intercept"]+f["slope"]*310)}" stroke="#111827"/>'
+  for id,prediction in zip(f['validation_ids'],f['predictions']):
+   row=next(r for r in rows if r['id']==id)
+   b+=f'<line x1="{px(row["area"])}" x2="{px(row["area"])}" y1="{py(row["price"])}" y2="{py(prediction)}" stroke="#94a3b8" stroke-dasharray="3 3"/><circle data-prediction-id="{id}" cx="{px(row["area"])}" cy="{py(prediction)}" r="4" fill="none" stroke="#0f766e"><title>{id}번 검증 예측 {prediction:.2f}</title></circle>'
+  b+='</g>'
+ b+=tx(24,382,'오른쪽: 파랑 학습 실제 / 주황 검증 실제 / 빈 원 검증 예측')+tx(24,409,'검정선: 해당 학습 20건의 회귀 · 점선: 검증 오차 · X·Y는 학습용 수치')
+ g2=fig('scores','폴드별 MAE와 검증 예측',b,'그림 2. 왼쪽 MAE는 Y와 같은 단위입니다. 오른쪽은 선택 폴드의 학습·검증 실제값, 새로 적합한 직선과 검증 예측입니다. 점수 차이를 독립 반복의 신뢰구간으로 해석하지 않습니다.',440)
  b=tx(24,28,'가상 불균등 폴드: 2건 MAE 10 / 8건 MAE 2')+ln(80,320,570,320)
  for i,(label,v) in enumerate([('폴드 단순 평균',6),('관측별 통합',3.6)]):
   xx=180+i*220;b+=box(xx,320-v*32,80,v*32,'#2563eb' if i==0 else '#d97706')+tx(xx+25,307-v*32,v)+tx(xx-18,350,label)
  for v in [0,2,4,6]:b+=tx(35,325-v*32,v)
  b+=tx(24,385,'(10+2)/2 = 6 / (2×10+8×2)/10 = 3.6')
  g3=fig('aggregation','폴드와 관측 가중치',b,'그림 3. 별도 가상 예제입니다. 폴드에 같은 비중을 주는 것과 관측에 같은 비중을 주는 것은 다른 집계입니다. 어떤 대상을 평균하는지 밝혀야 합니다.')
- b=tx(24,28,'중첩 교차검증: 바깥은 평가, 안쪽은 선택')+box(55,65,370,250,'#f1f5f9')+tx(75,95,'바깥 학습 부분')+box(80,115,330,75,'#dbeafe')+tx(100,144,'안쪽 CV: 전처리·후보 비교')+tx(100,174,'선택 후 바깥 학습 전체로 재적합')+box(80,215,330,65,'#dcfce7')+tx(100,251,'이 바깥 반복의 선택된 모형')+box(435,115,125,165,'#ffedd5')+tx(453,160,'바깥 검증')+tx(450,196,'선택에 미사용')+tx(417,252,'→')+tx(24,370,'바깥 분할을 바꾸며 선택 절차 전체의 성능을 평가합니다')
- g4=fig('nested','선택과 평가의 중첩 구조',b,'그림 4. 한 번의 바깥 반복을 보여 주는 개념도입니다. 바깥 검증 자료는 안쪽 선택과 재적합에 쓰지 않습니다. 각 바깥 반복에서 선택되는 설정은 달라도 됩니다.')
+ b=tx(24,28,'중첩 교차검증: 바깥은 평가, 안쪽은 선택')+'<g data-nested-part="train">'+box(55,65,370,250,'#f1f5f9')+tx(75,95,'바깥 학습 부분')+'</g>'+'<g data-nested-part="inner">'+box(80,115,330,75,'#dbeafe')+tx(100,144,'안쪽 CV: 전처리·후보·설정 선택')+tx(100,174,'바깥 학습자료 안에서만 수행')+'</g>'+'<g data-nested-part="refit">'+box(80,215,330,65,'#dcfce7')+tx(100,241,'선택 후 바깥 학습 전체로')+tx(100,267,'전처리·모형을 재적합')+'</g>'+'<g data-nested-part="evaluation">'+box(435,115,125,165,'#ffedd5')+tx(450,153,'바깥 평가')+tx(448,190,'안쪽 선택에')+tx(455,218,'미사용')+'</g>'+tx(417,252,'→')+tx(24,370,'바깥 분할을 바꾸며 선택·학습 절차 전체를 평가합니다')
+ g4=fig('nested','선택과 평가의 중첩 구조',b,'그림 4. 한 번의 바깥 반복 개념도입니다. 바깥 평가자료는 안쪽 선택·전처리·재적합에 사용하지 않습니다. 바깥 반복마다 선택되는 설정은 달라도 됩니다.')
+ g1=g1.replace('<svg ','<div class="cv-controls" hidden=""><label for="cv-fold">검증할 폴드 선택</label><select id="cv-fold">'+''.join(f'<option value="{f["fold"]}">{f["fold"]}폴드</option>' for f in folds)+'</select><p id="cv-fold-status" role="status" aria-live="polite"></p><div class="cv-blocks" id="cv-blocks"></div></div><svg ',1)
+ g2=g2.replace('<svg ','<p id="cv-score-status" role="status" aria-live="polite"></p><svg ',1)
+ g2+='<details class="learn-more"><summary>선택 폴드의 검증 10건과 OOF 예측</summary><div id="cv-predictions" class="learn-data learn-data--full"></div></details>'
+ g4=g4.replace('<svg ','<div class="cv-controls" hidden=""><label for="cv-stage">중첩 CV 단계</label><select id="cv-stage"><option value="split">바깥 분리</option><option value="inner">안쪽 선택</option><option value="refit">재적합</option><option value="evaluation">바깥 평가</option></select><p id="cv-stage-status" role="status" aria-live="polite"></p></div><svg ',1)
+ parts=render_content([g1,g2,g3,g4])
+ p=ROOT/'cross-validation/index.html';html=p.read_text(encoding='utf-8');html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="교차검증과 모형 선택">'+'\n'.join(parts)+'</article>',html,count=1,flags=re.S);html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1K폴드·OOF·점수 집계와 중첩 교차검증, 시간·집단 분할 및 모형 선택의 한계를 학습합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);html=add_assets(html,dict(folds=folds,rows=rows));p.write_text(html,encoding='utf-8')
+
+def add_assets(html,data):
+ html=html.replace('별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.','활용도는 CH2 Macro의 분석 결과를 이해하는 데 얼마나 도움이 되는지를 나타냅니다.')
+ if 'cross-validation/chapter.css' not in html:html=html.replace('</head>','<link rel="stylesheet" href="/learn/stats/cross-validation/chapter.css?v=20261025-1" /></head>')
+ payload='<script type="application/json" id="cv-data">'+json.dumps(data,ensure_ascii=False)+'</script>'
+ if 'id="cv-data"' in html:html=re.sub(r'<script type="application/json" id="cv-data">.*?</script>',lambda _:payload,html,flags=re.S)
+ else:html=html.replace('</body>',payload+'</body>')
+ if 'cross-validation/experiment.js' not in html:html=html.replace('</body>','<script type="module" src="/learn/stats/cross-validation/experiment.js?v=20261025-1"></script></body>')
+ return html
+
+def macro_notes():
+ return '<details class="learn-more"><summary>현재 Macro의 CV·Holdout과 교재 예제의 차이</summary><div class="learn-more__body"><p>교재 코드는 번호 블록별로 나머지 20건에 회귀계수를 새로 적합하고 검증 10건을 예측합니다. 결측 대체·표준화·변수 선택은 이 단순 예제에서 수행하지 않습니다. 이를 실제 서비스의 전처리 전체가 fold 안에서 학습된다는 증거로 사용하지 않습니다.</p><p>확인한 복합 롤링 CV는 계약연도로 과거 학습→이후 연도 평가를 구성합니다. 고정 3폴드·무작위 시드 3폴드가 아니며 기간과 유효 표본수에 따라 가능한 평가 연도 수가 달라집니다. 마지막 연도를 확인용으로 남기는 경로가 있고 탐색 CV 순위와 확인 CV가 UI에 구분됩니다. 확인 CV가 대표모형 확정에 쓰이는 경로도 있으므로 완전히 독립적인 최종 시험이라고 단정하지 않습니다.</p><p>복합 로그 역변환 보정과 시점 보정은 각 학습 fold에서 계산합니다. 다만 전체 설계행렬을 만든 뒤 연도로 나누는 경로가 있어 범주 전처리까지 모두 fold 내부라고 설명하지 않습니다. CV-MAPE는 유효 평가 관측의 APE를 모아 평균하며 실제값 0과 비유한값을 제외합니다. 이 경로의 응답은 점수·연도·유효 평가 정보 중심이며 교재처럼 30건의 OOF 예측표를 일반 서비스에서 저장·노출한다고 가정하지 않습니다.</p><p>집합 주거 지역회귀는 후보별 적격 단지에서 시드 42의 무작위 Holdout을 사용하는 경로가 있습니다. 이는 교재 K폴드나 중첩 CV와 다릅니다. 선택에 쓰는 Holdout 점수와 최종 독립 평가를 구분하고 후보별 동일 평가 단지 여부도 확인해야 합니다. 지역·단지·계약연도 구분과 당시 정보 공개·대장 판본은 각각 별도 검증 경계입니다.</p><p>복합 예측형은 CV-MAPE 우선, 집합 주거 예측형은 Holdout MAPE 우선이며, 설명형은 AIC 또는 수정 R² 등의 별도 기준을 사용합니다. 일반 추천의 CV-MAE·CV-RMSE, 중첩 CV, 모든 후보의 OOF 저장이나 랩의 릿지·라쏘·다항 실험을 현재 공통 서비스 기능으로 소개하지 않습니다. 실제 회귀·추천·검증 정책은 변경하지 않았습니다.</p></div></details>'
+
+def render_content(graphs):
+ page=ROOT/'cross-validation/index.html'
+ old=page.read_text(encoding='utf8')
+ refs=re.search(r'<details class="learn-references">.*?</details>',old,re.S)[0]
+ source=(ROOT/'cross-validation/content.md').read_text(encoding='utf8').replace('**','').replace('<text color="secondary">그림에 표시할 핵심 계산값</text>','지표별 계산 비교')
+ formulas=['ŷ = 209.579−0.5902X','ŷ = 236.411−0.6928X','ŷ = 250.703−0.7603X','(10+2)/2 = 6','(2×10+8×2)/10 = 3.6','RMSE = √[(1/n) Σ (yᵢ−ŷᵢ)²]','RMSEOOF = √[Σ nₖ RMSEₖ² / Σ nₖ]','폴드 평균 RMSE = (1/K) Σ RMSEₖ','MAPE = (100/n) Σ |(yᵢ−ŷᵢ)/yᵢ|']
+
+ blocks=re.findall(r'\\\[.*?\\\]',source,re.S)
+ assert len(blocks)==len(formulas)
+ for block,formula in zip(blocks,formulas):source=source.replace(block,formula,1)
+
+ def inline(t):
+  return re.sub(r'`([^`]+)`',r'<code>\1</code>',escape(t))
+ def render(block):
+  lines=block.strip().splitlines();i=0;out=[]
+  while i<len(lines):
+   line=lines[i].strip();i+=1
+   if not line or line=='---':continue
+   if line.startswith('### '):out.append('<h3>'+inline(line[4:])+'</h3>');continue
+   if line.startswith('[그림 '):out.append(graphs[int(re.search(r'그림 (\d)',line)[1])-1]);continue
+   if line=='[CH2 Macro 통계·데이터분석 열기 →]':out.append('<p><a href="https://macro.ch2data.com/">CH2 Macro 통계·데이터분석 열기 →</a></p>');continue
+   if line=='▶ 참고자료':out.append(refs);continue
+   if line.startswith('▶ '):
+    rest=[]
+    while i<len(lines) and lines[i].strip()!='---':rest.append(lines[i]);i+=1
+    out.append('<details class="learn-more"><summary>'+inline(line[2:])+'</summary><div class="learn-more__body">'+render('\n'.join(rest))+'</div></details>');continue
+   if line.startswith('|'):
+    rows=[line]
+    while i<len(lines) and lines[i].strip().startswith('|'):rows.append(lines[i].strip());i+=1
+    cells=[[c.strip() for c in row.strip('|').split('|')] for row in rows]
+    cells=[row for row in cells if not all(re.fullmatch(r'[:\- ]+',c) for c in row)]
+    out.append('<div class="learn-data learn-data--full"><table><thead><tr>'+''.join('<th scope="col">'+inline(c)+'</th>' for c in cells[0])+'</tr></thead><tbody>'+''.join('<tr>'+''.join(('<th scope="row">'+inline(c)+'</th>') if j==0 else '<td>'+inline(c)+'</td>' for j,c in enumerate(row))+'</tr>' for row in cells[1:])+'</tbody></table></div>');continue
+   if line.startswith('- '):
+    items=[line[2:]]
+    while i<len(lines) and lines[i].startswith('- '):items.append(lines[i][2:]);i+=1
+    out.append('<ul>'+''.join('<li>'+inline(item)+'</li>' for item in items)+'</ul>');continue
+   out.append('<p'+(' class="cv-formula"' if (any(line==formula for formula in formulas) or line.startswith(('ME =','MSE =','MAE =','RMSE =','MAPE ='))) else '')+'>'+inline(line)+'</p>')
+  return '\n'.join(out)
+ ids=['quick-start','cross-validation','scores','oof','aggregation','rmse','mape','pipeline','selection','evaluation','nested','fold-count','design','uncertainty','report','macro','practice','recap']
  parts=[]
- def sec(id,label,title,body):parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{title}</h2>{body}</section>')
- sec('quick-start','학습 목표','한 번 나눈 결과만으로 모형을 골라도 될까요?','<p>자료를 한 번 나누어 평가하면 어떤 관측이 검증 쪽에 들어갔는지에 따라 점수가 달라질 수 있습니다. 교차검증은 검증에 남길 부분을 바꾸어 가며 모형을 다시 학습하고 비교하는 방법입니다.</p><p>이 장에서는 3폴드 예제로 반복 과정을 따라갑니다. 이어서 여러 점수를 모으는 방법, 전처리를 수행할 위치, 후보를 고르는 평가와 최종 성능을 확인하는 평가의 차이를 살펴봅니다.</p><ul class="learn-objectives"><li>K폴드 교차검증에서 매번 어떤 자료로 학습하고 검증하는지 설명합니다.</li><li>각 관측을 학습에서 제외해 만든 OOF 예측과 점수 집계를 이해합니다.</li><li>전처리와 모형 선택에서 검증 정보가 섞이지 않도록 구분합니다.</li><li>중첩 교차검증의 역할과 교차검증 점수의 한계를 설명합니다.</li></ul>')
- sec('cross-validation','핵심 이해','검증할 부분을 바꿀 때마다 모형을 다시 배웁니다','<p><strong>K폴드 교차검증</strong>은 모형 개발에 사용할 자료를 K개 묶음(폴드)으로 나눕니다. 한 묶음을 검증에 남기고 나머지 K−1개로 학습합니다. 검증할 묶음을 바꾸면서 K번 반복합니다. 그림은 30개 관측을 10개씩 나눈 3폴드 예제입니다.</p>'+g1+'<p>첫 번째에는 11~30번으로 학습해 1~10번을 예측합니다. 두 번째에는 1~10번과 21~30번으로 새로 학습해 11~20번을 예측합니다. 세 번째에도 같은 방식으로 다시 학습합니다. 전체 자료로 만든 모형 하나의 점수만 나누어 계산하는 것이 아닙니다.</p><p>일반적인 K폴드에서 각 관측은 검증에 한 번, 학습에 K−1번 들어갑니다. 다른 반복의 학습에 쓰였다는 사실 자체가 누수는 아닙니다. <strong>그 관측을 예측하는 반복에서는 그 관측의 검증 정보가 학습에 들어가지 않아야 합니다.</strong></p><p>교차검증은 자료를 번갈아 활용하는 방법입니다. 각 모형은 전체보다 적은 자료로 학습하므로, 전체 자료로 다시 학습한 최종 모형의 정확한 미래 점수를 알려 주는 것은 아닙니다.</p>')
- sec('scores','예제 계산','같은 방법으로 학습해도 직선과 오차가 달라집니다',f'<p>공통 학습 자료의 두 수치 열을 단위 없는 X와 Y로 놓습니다. 30개 관측을 번호 1~10, 11~20, 21~30의 세 묶음으로 나누고, 매번 나머지 20개로 X에서 Y를 예측하는 직선을 새로 적합합니다. 번호는 시간 순서를 뜻하지 않으며 이 분할은 계산 연습을 위한 것입니다.</p>'+g2+'<p>반복마다 얻은 식은 '+ ' / '.join(f'{f["fold"]}폴드: ŷ={f["intercept"]:.3f} {f["slope"]:+.4f}×X' for f in folds)+f'입니다. 학습 자료가 바뀌면 계수가 달라지고, 검증 관측도 달라져 점수가 변합니다. 세 폴드의 MAE 평균은 {pooled["MAE"]:.2f}로 Y와 같은 단위입니다.</p><p>각 관측에는 자신을 학습에서 제외한 모형의 예측이 하나씩 생깁니다. 이를 모은 것이 <strong>OOF(out-of-fold) 예측</strong>입니다. <a href="../cross-validation-example.json">분할·계수·OOF 예측 자료</a>에서 계산을 확인할 수 있습니다. 원자료는 출처가 확인되지 않은 학습용 자료입니다.</p>')
- sec('aggregation','점수 집계','폴드를 평균할지 관측을 평균할지 구별합니다','<p>검증 관측 수가 같으면 폴드별 MAE의 단순 평균과 전체 OOF 예측의 MAE가 같습니다. 관측 수가 다르면 결과가 달라질 수 있습니다. 예를 들어 2개 관측인 폴드의 MAE가 10이고 8개 관측인 폴드의 MAE가 2라면, 폴드 평균은 (10+2)/2 = 6입니다. 관측을 같은 비중으로 모으면 (2×10+8×2)/10 = 3.6입니다.</p>'+g3+f'<p><strong>RMSE는 폴드 크기가 같아도 단순 평균과 전체 계산값이 다를 수 있습니다.</strong> 공통 예제의 폴드 RMSE 평균은 {average_rmse:.2f}, 전체 OOF RMSE는 {pooled["RMSE"]:.2f}입니다. 제곱근을 취하는 시점이 다르기 때문입니다.</p><details><summary>전체 RMSE를 구하는 방법</summary><p>폴드 k의 관측 수를 nₖ라고 하면 전체 RMSE는 √[Σnₖ RMSEₖ²/Σnₖ]입니다. 폴드별 MSE를 관측 수로 가중해 합친 뒤 마지막에 제곱근을 취합니다. R²나 AUC도 폴드별 평균과 전체 OOF 예측으로 계산한 값이 같다고 가정해서는 안 됩니다.</p></details><p>관측마다 같은 비중을 줄지 집단마다 같은 비중을 줄지는 평가 목적에 따라 정합니다. 점수와 함께 어떤 대상을 평균했는지 적어야 합니다.</p>')
- sec('cv-mape','CV-MAPE','교차검증을 해도 지표의 성질은 그대로입니다',f'<p>이 장에서 <strong>CV-MAPE</strong>는 각 관측의 OOF 예측으로 구한 MAPE를 뜻합니다. 산식은 100×평균(|y−ŷ|/|y|)이며 공통 자료의 결과는 {pooled["MAPE"]:.2f}%입니다. 세 폴드의 크기가 같고 실제값이 모두 양수이므로 폴드별 MAPE의 평균과도 같습니다.</p><p>25장에서 살펴본 한계도 남습니다. 실제값이 0이면 원래 MAPE는 정의되지 않고 작은 실제값에 민감합니다. 비율과 백분율 중 어떤 단위로 표시하는지, 0을 어떻게 처리하는지도 확인합니다. 서로 다른 자료의 CV-MAPE는 교차검증을 했다는 이유만으로 바로 비교할 수 없습니다.</p>')
- sec('pipeline','전처리의 위치','전처리 기준도 각 학습 부분에서 다시 구합니다','<p>전체 자료로 평균과 표준편차를 구해 표준화한 뒤 교차검증을 하면 검증 부분의 정보가 학습 기준에 섞입니다. 결측값 대체, 표준화, 주성분 분석(PCA), 변수 선택처럼 자료에서 기준을 배우는 과정은 <strong>각 반복의 학습 부분 안에서</strong> 수행해야 합니다. 검증 부분에는 그 기준을 적용합니다.</p><p>전처리와 모형을 하나의 파이프라인으로 묶어 매번 다시 적합하면 이 순서를 지키기 쉽습니다. 규제 강도, 이웃 수, 나무 깊이 같은 후보 설정도 같은 분할에서 비교하면 자료 구성 차이의 영향을 줄일 수 있습니다.</p><p>다만 같은 검증 결과를 계속 보면서 후보를 늘리면 우연히 그 자료에 잘 맞는 설정을 고를 수 있습니다. 전처리의 누수를 막는 일과 반복 선택의 영향을 줄이는 일은 모두 필요합니다.</p>')
- sec('model-recommendation','모형 선택','후보를 고른 점수와 최종 평가를 구별합니다','<p>후보와 주 평가 지표를 먼저 정하고 같은 분할에서 비교합니다. 평균 점수뿐 아니라 폴드별 차이, 특정 집단의 큰 오차, 설명하기 쉬운지, 계산 비용도 살펴봅니다. 작은 점수 차이만으로 우열을 단정하지 않습니다.</p><p>많은 후보 중 가장 좋은 점수를 고르면 우연히 잘 나온 결과를 선택할 수도 있습니다. 따라서 <strong>선택에 쓴 최저 CV 오차를 그대로 독립적인 최종 성능으로 보고하면 낙관적일 수 있습니다.</strong> 별도 시험 자료를 남기거나, 다음 절의 중첩 교차검증으로 선택 과정 전체를 평가합니다.</p><p>선택을 마치면 정한 설정으로 전처리와 모형을 개발 자료 전체에 다시 적합합니다. OOF 예측을 만든 K개 모형 자체가 최종 모형 하나는 아닙니다. 여러 폴드 모형의 예측을 평균해 사용할 수도 있지만, 그 경우에는 평균하는 절차까지 정해 평가해야 합니다.</p>')
- sec('nested','중첩 교차검증','안쪽에서 고르고 바깥쪽에서 평가합니다','<p><strong>중첩 교차검증</strong>은 선택과 평가를 두 겹으로 나눕니다. 먼저 바깥 분할에서 평가할 부분을 남깁니다. 바깥 학습 부분 안에서만 안쪽 교차검증을 수행해 설정을 고릅니다. 고른 설정으로 바깥 학습 부분 전체를 다시 학습한 뒤, 남겨 둔 바깥 검증 부분을 예측합니다.</p>'+g4+'<p>이 과정을 바깥 분할을 바꾸며 반복합니다. 바깥 점수는 특정 설정 하나보다는 <strong>설정을 고르고 학습하는 절차</strong>가 새 자료에서 얼마나 잘 작동하는지 평가합니다. 안쪽 학습 자료가 달라지므로 반복마다 선택되는 설정도 달라질 수 있습니다.</p><p>바깥 점수를 본 뒤 절차를 여러 번 바꾸면 그 점수도 선택에 사용한 셈입니다. 무엇을 보고 바꾸었는지 기록해야 합니다. 평가가 끝나 개발 자료 전체로 설정을 고르고 재적합할 때도 최종 모형과 평가에 사용한 모형들을 구별합니다.</p>')
- sec('design','K와 분할 설계','폴드 수보다 예측 상황을 먼저 정합니다','<p>K가 커지면 한 번에 학습하는 자료는 많아지고 검증 자료는 적어집니다. 반복 학습의 계산량도 늘어납니다. 점수 변동의 성질도 달라지므로 K가 클수록 항상 더 믿을 만하다고 할 수는 없습니다. 한 관측씩 남기는 방법(LOOCV)도 모든 상황의 정답은 아닙니다.</p><p>23장에서처럼 새 대상을 무엇으로 볼지 먼저 정합니다. 독립적인 분류 자료에서는 범주 비율을 비슷하게 맞추는 계층화를 고려할 수 있습니다. 처음 보는 학교에 적용하려면 학교를 묶어서 나눕니다. 미래 결과를 예측한다면 과거로 학습해 이후를 평가하고, 평가 시점을 뒤로 옮기며 반복합니다. 미래 자료로 학습해 과거를 예측하는 분할은 이 목적에 맞지 않습니다.</p><p>시간 분할에서는 초반 관측이 검증에 쓰이지 않을 수 있고, 반복 교차검증에서는 같은 관측에 여러 예측이 생길 수도 있습니다. 모든 교차검증에서 관측당 OOF 예측이 정확히 하나라고 생각해서는 안 됩니다. 평가 대상과 집계 규칙을 함께 정합니다.</p>')
- sec('uncertainty','점수의 불확실성','폴드 사이의 차이가 곧 신뢰구간은 아닙니다','<p>폴드 점수의 표준편차는 분할에 따라 점수가 얼마나 달랐는지 요약합니다. 하지만 학습 자료가 서로 겹치므로 폴드 점수들은 독립적인 반복 측정이 아닙니다. 표준편차를 √K로 나누어 곧바로 표준오차라고 하거나 단순한 t 신뢰구간을 붙일 수는 없습니다.</p><p>여러 분할로 교차검증을 반복하면 결과의 민감도를 살펴볼 수 있습니다. 반복 횟수를 늘려도 독립적인 새 관측이 늘어나는 것은 아닙니다. 필요한 경우 시간·집단 구조에 맞는 별도 자료에서 평가하고 자료 수집 방법도 검토합니다.</p><p>결과에는 분할 규칙, K, 난수 시드, 기간, 집단, 관측 수와 후보 탐색 범위를 함께 적습니다. 점수를 재현하고 적용 범위를 판단하는 데 필요한 정보입니다.</p>')
- sec('practice','확인 문제','반복마다 무엇을 다시 배워야 할까요?','<ol class="learn-exercises">'+''.join(f'<li>{q}<details><summary>답과 해설</summary><p>{a}</p></details></li>' for q,a in [('전체 자료로 표준화한 뒤 K폴드를 하면 괜찮나요?','학습되는 전처리 기준도 각 폴드의 학습 부분에서 추정해야 합니다.'),('폴드 RMSE 평균은 전체 OOF RMSE와 같은가요?','일반적으로 다릅니다. 통합 RMSE는 폴드 MSE를 관측 수로 가중한 뒤 제곱근을 취합니다.'),('최저 CV 오차는 선택된 모형의 독립 최종 점수인가요?','선택에 사용됐으므로 낙관적일 수 있습니다. 별도 시험 또는 중첩 평가를 사용합니다.'),('CV 표준편차를 √K로 나누면 정확한 표준오차인가요?','겹치는 학습 자료 때문에 폴드 점수들이 의존하므로 자동으로 그렇게 해석할 수 없습니다.')])+'</ol>')
- sec('macro','CH2 Macro에서 읽기','CV라는 이름보다 분할과 선택 절차를 확인합니다','<p>CV 점수의 산식·폴드 수·시간/집단 기준·전처리 위치·후보 선택 여부를 함께 확인하세요. 이 장의 번호 분할 예제가 실제 서비스의 평가 설계라고 전제하지 않습니다.</p><p>공통 자료는 출처 미확인 학습 예제입니다. 작은 CV 오차를 개별 적정가나 미래 시장 성능의 보장으로 해석하지 않습니다.</p>')
- sec('recap','학습 요약','역할을 바꾸어 반복하되 매번 학습의 경계를 지킵니다','<ul class="learn-recap-list"><li><strong>K폴드 교차검증</strong>은 검증 부분을 바꾸며 K번 새로 학습하는 절차입니다.</li><li><strong>OOF 예측</strong>은 각 관측을 해당 학습에서 제외해 얻습니다. 폴드 평균과 관측별 통합 점수는 지표와 폴드 크기에 따라 다를 수 있습니다.</li><li>전처리와 변수 선택도 매 반복의 학습 부분에서 다시 수행합니다.</li><li>후보 선택에 사용한 점수와 독립적인 최종 평가를 구별합니다. 중첩 교차검증은 안쪽에서 선택하고 바깥쪽에서 절차를 평가합니다.</li><li>시간·집단 구조에 맞게 분할하고, 폴드 점수의 표준편차를 곧바로 신뢰구간으로 해석하지 않습니다.</li></ul><p>다음 <a href="/learn/stats/regularization/">27장 「규제: 릿지와 라쏘」</a>에서는 계수의 크기를 제한해 모형의 복잡도를 조절하는 방법을 살펴봅니다.</p><details class="learn-references"><summary>참고자료와 예제 데이터</summary><ul><li><a href="https://scikit-learn.org/stable/modules/cross_validation.html">scikit-learn: Cross-validation</a></li><li><a href="../cross-validation-example.json">공통 자료 3폴드 계산 자료</a></li></ul><p class="learn-source-note">본문·그림은 공통 학습 자료와 별도 가상 예제로 직접 작성했습니다. 참고자료 기존 확인일: 2026-10-09.</p></details>')
- p=ROOT/'cross-validation/index.html';html=p.read_text(encoding='utf-8');html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="교차검증과 모형 선택">'+'\n'.join(parts)+'</article>',html,count=1,flags=re.S);html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1K폴드·OOF·점수 집계와 중첩 교차검증, 시간·집단 분할 및 모형 선택의 한계를 학습합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);p.write_text(html,encoding='utf-8')
+ for id,section in zip(ids,re.split(r'^## ',source,flags=re.M)[1:],strict=True):
+  label,body=section.split('\n',1);heading=re.search(r'^### (.+)$',body,re.M)[1];body=re.sub(r'^### .+\n','',body,count=1,flags=re.M)
+  if id=='practice':
+   qs=[]
+   for q in re.split(r'^\d+\. ',body,flags=re.M)[1:]:
+    question,answer=q.split('▶ 답과 해설',1)
+    qs.append('<li>'+inline(question.strip())+'<details><summary>답과 해설</summary><div class="learn-more__body">'+render(answer)+'</div></details></li>')
+   content='<ol class="learn-exercises">'+''.join(qs)+'</ol>'
+  else:content=render(body)
+  if id=='macro':content+=macro_notes()
+  if id in {'mape','selection'}:content='<span id="'+{'mape':'cv-mape','selection':'model-recommendation'}[id]+'" aria-hidden="true"></span>'+content
+  if id=='quick-start':content=content.replace('<ul>','<ul class="learn-objectives">',1)
+  content=content.replace('교차검증은 26장에서','교차검증은 <a href="/learn/stats/cross-validation/">26장</a>에서').replace('27장 「규제: 릿지와 라쏘」','<a href="/learn/stats/regularization/">27장 「규제: 릿지와 라쏘」</a>')
+  parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{heading}</h2>{content}</section>')
+ return parts
 if __name__=='__main__':build()

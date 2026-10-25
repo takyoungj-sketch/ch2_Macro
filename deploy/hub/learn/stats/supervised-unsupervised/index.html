@@ -12,8 +12,9 @@
     <script src="/learn/stats/learn-stats-theme.js?v=20261023-1"></script>
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261023-1" />
-    <link rel="stylesheet" href="/learn/stats/learn-reader.css?v=20261023-1" />
-  </head>
+    <link rel="stylesheet" href="/learn/stats/learn-reader.css?v=20261025-2" />
+  <link rel="stylesheet" href="/learn/stats/supervised-unsupervised/chapter.css?v=20261025-1" />
+</head>
   <body>
     <div class="page">
       <header class="hero hero--document">
@@ -24,22 +25,274 @@
         <p class="hero__eyebrow">V. 예측과 모형 평가</p>
         <h1 class="hero__title">22. 통계적 설명과 예측, 지도학습과 비지도학습</h1>
 <p class="learn-chapter-relevance">Macro 활용도 <span class="learn-relevance" aria-label="Macro 활용도 2단계, 권장"><span aria-hidden="true">★★☆</span></span></p>
-<p class="learn-relevance-guide">Macro 활용도: ★★★ 핵심 · ★★☆ 권장 · ★☆☆ 심화<br>별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.</p>
+<p class="learn-relevance-guide">Macro 활용도: ★★★ 핵심 · ★★☆ 권장 · ★☆☆ 심화<br>활용도는 CH2 Macro의 분석 결과를 이해하는 데 얼마나 도움이 되는지를 나타냅니다.</p>
 </header>
 
-      <article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="통계적 설명과 예측, 지도학습과 비지도학습"><section class="learn-chapter__step" id="quick-start" data-toc-label="서두 · 학습목표"><p class="learn-chapter__label">서두 · 학습목표</p><h2>알고 싶은 질문에 따라 학습과 평가 방법이 달라집니다</h2><p>공부 시간과 점수의 관계를 설명하는 것, 새 학생의 점수를 예측하는 것, 비슷한 학습 습관을 가진 학생들을 묶는 것은 서로 다른 일입니다. 같은 자료를 사용해도 질문에 따라 필요한 정보와 평가 기준이 달라집니다.</p><p>이 장에서는 <strong>설명·인과·예측</strong>의 목적과 <strong>지도학습·비지도학습</strong>의 구조를 구별합니다. 회귀·분류·군집 예제를 통해 방법 이름보다 먼저 무엇을 정해야 하는지 살펴봅니다.</p><ul class="learn-objectives"><li>관측 관계의 설명과 인과 추론, 새 결과의 예측을 구별합니다.</li><li>입력 X와 목표 Y가 있는 지도학습의 구조를 설명합니다.</li><li>회귀·분류·군집이 각각 어떤 질문에 답하는지 이해합니다.</li><li>기준모형·평가 지표·자료 분할을 분석 목적에 맞춰 선택합니다.</li></ul></section>
-<section class="learn-chapter__step" id="purposes" data-toc-label="분석 목적부터 정하기"><p class="learn-chapter__label">분석 목적부터 정하기</p><h2>설명·인과·예측은 같은 질문이 아닙니다</h2><p><strong>관측 관계의 설명</strong>은 자료에서 무엇이 함께 달라지는지 요약합니다. 예를 들어 학년별 점수 분포를 그리거나 사전 점수를 조건으로 한 공부 시간 계수를 읽을 수 있습니다.</p><p><strong>인과 추론</strong>은 어떤 조건에 개입했을 때 결과가 어떻게 달라지는지 묻습니다. 공부 시간을 늘리면 점수가 얼마나 달라질지 알려면 관측 관계 외에 연구 설계와 추가 가정이 필요합니다.</p><p><strong>예측</strong>은 예측 시점에 알 수 있는 정보로 아직 모르는 결과를 추정합니다. 계수의 p값보다 새로운 자료에서 얼마나 잘 맞는지, 어떤 오류를 줄여야 하는지가 중요합니다.</p><p>‘통계는 설명, 머신러닝은 예측’처럼 나누지는 않습니다. 같은 회귀식도 설명과 예측에 쓰일 수 있습니다. 다만 좋은 예측이 좋은 인과 설명을 보장하지 않고, 큰 변수 중요도가 큰 인과효과를 뜻하지도 않습니다.</p></section>
-<section class="learn-chapter__step" id="supervised" data-toc-label="지도학습"><p class="learn-chapter__label">지도학습</p><h2>입력과 목표값의 짝으로 예측 규칙을 학습합니다</h2><p><strong>지도학습</strong>은 입력 특징 X와 관측된 목표값 Y의 짝을 사용해 예측 규칙을 학습합니다. 예를 들어 공부 시간·사전 점수로 나중의 점수를 예측할 수 있습니다. 학습 자료에 목표값이 있다는 뜻이며, 새 대상을 예측할 때도 그 목표를 알고 있다는 뜻은 아닙니다.</p><p>Y가 점수처럼 수치형이면 <strong>회귀</strong>, 스팸 여부처럼 범주형이면 <strong>분류</strong> 문제로 다룹니다. 범주를 0과 1로 저장해도 연속적인 양을 예측하는 문제와 같아지는 것은 아닙니다.</p><p>흔히 Y를 ‘정답’이라고 부르지만 실제로는 기록된 목표 열입니다. 측정오차나 잘못된 분류, 모호한 기준이 있을 수 있습니다. 무엇을 한 관측으로 보고, 언제 알 수 있는 정보로 언제의 목표를 예측하는지 명시해야 합니다.</p><details class="learn-more"><summary>학습 손실이란?</summary><div class="learn-more__body"><p>손실함수 L은 예측이 목표와 얼마나 어긋나는지 수치로 나타냅니다. 경험위험 최소화는 학습 자료의 평균 손실 (1/n)ΣL(yᵢ,f(xᵢ))을 줄이는 방식입니다. 제곱손실·절대손실·로그손실 등을 목적에 맞춰 사용합니다. 학습 손실을 줄였다고 새 자료의 성능까지 보장되지는 않습니다.</p></div></details></section>
-<section class="learn-chapter__step" id="regression" data-toc-label="회귀 예제"><p class="learn-chapter__label">회귀 예제</p><h2>학습에 사용하지 않은 자료에서 기준모형과 비교합니다</h2><p>계산 연습에는 <a href="/learn/stats/graphs/#data">공통 학습 자료</a>의 두 수치열을 단위 없는 X,Y로 사용합니다. 1~20번으로 학습한 식은 <strong>ŷ=250.703-0.7603X</strong>입니다. 학습에 쓰지 않은 21~30번에서 관측 Y와 예측 Y를 비교하겠습니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 410" role="img" aria-labelledby="regression-title regression-desc"><title id="regression-title">관측값과 예측값</title><desc id="regression-desc">그림 1. 1~20번으로 학습하고 21~30번에서 평가한 교재용 분할입니다. 회색선은 예측=관측입니다. 번호는 시간순이 아니며 운영 성능을 추정하기 위한 검증 설계가 아닙니다.</desc><text x="24" y="28">공통 자료: 학습에 쓰지 않은 번호 21~30의 예측</text><line x1="65" y1="325" x2="570" y2="325" stroke="#94a3b8"/><line x1="65" y1="55" x2="65" y2="325" stroke="#94a3b8"/><line x1="65" y1="325" x2="515" y2="55" stroke="#94a3b8"/><circle data-id="21" cx="197.0" cy="249.899339591942" r="5" fill="#2563eb"/><circle data-id="22" cx="263.0" cy="160.94852636167718" r="5" fill="#2563eb"/><circle data-id="23" cx="245.0" cy="202.00274785256863" r="5" fill="#2563eb"/><circle data-id="24" cx="467.0" cy="123.31548999502667" r="5" fill="#2563eb"/><circle data-id="25" cx="182.0" cy="277.2688205858696" r="5" fill="#2563eb"/><circle data-id="26" cx="251.0" cy="215.68748834953243" r="5" fill="#2563eb"/><circle data-id="27" cx="237.5" cy="167.79089661015908" r="5" fill="#2563eb"/><circle data-id="28" cx="305.0" cy="118.52583082108936" r="5" fill="#2563eb"/><circle data-id="29" cx="207.5" cy="188.3180073556048" r="5" fill="#2563eb"/><circle data-id="30" cx="227.0" cy="154.10615611319528" r="5" fill="#2563eb"/><text x="60.0" y="350">0</text><text x="24" y="330.0">0</text><text x="210.0" y="350">100</text><text x="24" y="240.0">100</text><text x="360.0" y="350">200</text><text x="24" y="150.0">200</text><text x="510.0" y="350">300</text><text x="24" y="60.0">300</text><text x="24" y="385">가로: 관측 Y / 세로: 예측 Y</text></svg><figcaption class="learn-chart__caption">그림 1. 1~20번으로 학습하고 21~30번에서 평가한 교재용 분할입니다. 회색선은 예측=관측입니다. 번호는 시간순이 아니며 운영 성능을 추정하기 위한 검증 설계가 아닙니다.</figcaption></figure><p>평가한 10개 관측의 <strong>MAE는 41.08</strong>입니다. 관측값과 예측값 차이의 절댓값을 평균한 값이며 Y와 같은 단위입니다.</p><p>학습 평균 <strong>155.10</strong>를 항상 예측하는 단순한 기준모형의 MAE는 <strong>49.86</strong>입니다. 이처럼 같은 목표·평가 자료·지표에서 비교해야 모형의 성능을 판단할 수 있습니다. 기준모형도 평가 자료의 목표값을 보고 다시 정하지 않습니다.</p><p>번호순으로 나눈 작은 예제이므로 실제 활용 성능을 입증한 결과는 아닙니다. 번호가 시간순을 뜻하지도 않습니다. 활용할 시점과 대상에 맞는 평가 설계는 별도로 필요합니다.</p><details class="learn-more"><summary>평균 기준과 중앙값 기준</summary><div class="learn-more__body"><p>여기서는 비교용 기준으로 학습 평균을 사용했습니다. 학습 자료에서 절대오차를 최소화하는 상수는 학습 중앙값이고, 제곱오차를 최소화하는 상수는 학습 평균입니다. 목표와 평가 지표에 맞는 기준모형을 정해야 합니다.</p></div></details></section>
-<section class="learn-chapter__step" id="classification" data-toc-label="분류 예제"><p class="learn-chapter__label">분류 예제</p><h2>정확도가 높아도 중요한 범주를 전부 놓칠 수 있습니다</h2><p>분류는 목표 범주나 그 확률을 예측합니다. 예를 들어 이메일을 스팸·비스팸으로 구분할 수 있습니다. 아래에서는 찾으려는 범주를 ‘양성’, 나머지를 ‘음성’이라고 부릅니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 410" role="img" aria-labelledby="classification-title classification-desc"><title id="classification-title">불균형 분류의 혼동행렬</title><desc id="classification-desc">그림 2. 실제 양성 10건을 모두 놓친 별도 가상 예제입니다. 행은 실제, 열은 예측입니다. 양성 예측이 없어 정밀도는 분모가 0이며 정의되지 않습니다.</desc><text x="24" y="28">가상 분류: 100건 모두 음성으로 예측</text><text x="220" y="75">예측 음성</text><text x="420" y="75">예측 양성</text><rect x="190" y="100" width="170" height="85" rx="6" fill="#dbeafe"/><rect x="390" y="100" width="170" height="85" rx="6" fill="#f1f5f9"/><rect x="190" y="210" width="170" height="85" rx="6" fill="#ffedd5"/><rect x="390" y="210" width="170" height="85" rx="6" fill="#f1f5f9"/><text x="35" y="148">실제 음성</text><text x="35" y="258">실제 양성</text><text x="250" y="148">90</text><text x="450" y="148">0</text><text x="250" y="258">10</text><text x="450" y="258">0</text><text x="24" y="350">정확도 90% · 양성 재현율 0%</text><text x="24" y="385">높은 정확도가 드문 양성의 탐지를 보장하지 않습니다</text></svg><figcaption class="learn-chart__caption">그림 2. 실제 양성 10건을 모두 놓친 별도 가상 예제입니다. 행은 실제, 열은 예측입니다. 양성 예측이 없어 정밀도는 분모가 0이며 정의되지 않습니다.</figcaption></figure><p>100개 중 실제 양성은 10개인데 모형은 모두 음성으로 예측했습니다. 음성 90개를 맞혀 정확도는 90%이지만, 실제 양성을 찾은 비율인 <strong>재현율은 0%</strong>입니다. 드문 범주를 찾는 목적이라면 정확도 하나로 충분하지 않습니다.</p><p>확률을 범주로 바꾸는 임계값에 따라 잘못 양성으로 판단하는 오류와 양성을 놓치는 오류의 균형이 달라집니다. 확률 자체를 사용할 때는 확률의 신뢰성도 평가해야 합니다. 어떤 오류가 더 중요한지 먼저 정하세요.</p><details class="learn-more"><summary>혼동행렬과 지표 산식</summary><div class="learn-more__body"><p>TP는 맞힌 양성, TN은 맞힌 음성, FP는 잘못 양성으로 판단한 관측, FN은 놓친 양성입니다. 정확도=(TP+TN)/전체, 양성 재현율=TP/(TP+FN), 정밀도=TP/(TP+FP)입니다.</p><p>이 예제는 양성 예측이 없으므로 정밀도의 분모가 0입니다. 소프트웨어가 편의상 0을 출력해도 정의되지 않는 값과 출력 규칙은 구별해야 합니다. 로지스틱 회귀는 이름에 회귀가 있지만 대표적인 분류 확률 모형입니다. 확률 평가에는 로그손실과 보정 상태 등도 사용합니다.</p></div></details></section>
-<section class="learn-chapter__step" id="unsupervised" data-toc-label="비지도학습"><p class="learn-chapter__label">비지도학습</p><h2>지정된 목표 라벨 없이 자료의 구조를 찾습니다</h2><p><strong>비지도학습</strong>은 목표 Y를 맞추는 대신 입력 X에 담긴 구조를 찾습니다. 군집은 비슷한 관측을 묶고, 차원축소는 여러 특징을 더 적은 좌표로 요약합니다. 비지도학습이 모두 군집분석인 것은 아닙니다.</p><p>라벨을 사용하지 않는다고 사람의 선택이 없는 것도 아닙니다. 어떤 특징을 쓸지, 거리를 어떻게 잴지, 표준화를 할지, 군집 수를 얼마로 정할지에 따라 결과가 달라집니다. 알고리즘이 분석 목적을 대신 정해 주지는 않습니다.</p></section>
-<section class="learn-chapter__step" id="clusters" data-toc-label="군집 예제"><p class="learn-chapter__label">군집 예제</p><h2>군집 색은 알려진 정답 범주가 아닙니다</h2><p>아래는 단위 없는 가상 8점입니다. <strong>K-means</strong>는 정한 K개 중심과 각 점 사이의 제곱거리 합을 작게 만드는 군집을 찾습니다. 여기서는 K=2이며 가까운 중심에 점을 배정한 뒤 군집 평균을 다시 구하면 같은 두 중심을 얻습니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 410" role="img" aria-labelledby="clusters-title clusters-desc"><title id="clusters-title">정답 범주 없이 만든 군집</title><desc id="clusters-desc">그림 3. 단위 없는 가상 8점입니다. 색은 정답 유형이 아니라 거리로 정한 군집 번호입니다. 중심은 (1.5,1.5), (6.5,6.5)이며 번호를 바꾸어도 같은 분할입니다.</desc><text x="24" y="28">가상 두 특징의 K=2 군집 예제</text><line x1="65" y1="325" x2="570" y2="325" stroke="#94a3b8"/><line x1="65" y1="55" x2="65" y2="325" stroke="#94a3b8"/><circle cx="125" cy="290" r="5" fill="#2563eb"/><circle cx="125" cy="255" r="5" fill="#2563eb"/><circle cx="185" cy="290" r="5" fill="#2563eb"/><circle cx="185" cy="255" r="5" fill="#2563eb"/><circle cx="425" cy="115" r="5" fill="#d97706"/><circle cx="425" cy="80" r="5" fill="#d97706"/><circle cx="485" cy="115" r="5" fill="#d97706"/><circle cx="485" cy="80" r="5" fill="#d97706"/><line x1="147.0" y1="264.5" x2="163.0" y2="280.5" stroke="#111827"/><line x1="147.0" y1="280.5" x2="163.0" y2="264.5" stroke="#111827"/><line x1="447.0" y1="89.5" x2="463.0" y2="105.5" stroke="#111827"/><line x1="447.0" y1="105.5" x2="463.0" y2="89.5" stroke="#111827"/><text x="60" y="350">0</text><text x="30" y="330">0</text><text x="180" y="350">2</text><text x="30" y="260">2</text><text x="300" y="350">4</text><text x="30" y="190">4</text><text x="420" y="350">6</text><text x="30" y="120">6</text><text x="540" y="350">8</text><text x="30" y="50">8</text><text x="24" y="385">가로: 특징 1 / 세로: 특징 2 · ×는 군집 중심</text></svg><figcaption class="learn-chart__caption">그림 3. 단위 없는 가상 8점입니다. 색은 정답 유형이 아니라 거리로 정한 군집 번호입니다. 중심은 (1.5,1.5), (6.5,6.5)이며 번호를 바꾸어도 같은 분할입니다.</figcaption></figure><p>이 예제의 군집 내 제곱거리 합은 4입니다. 이 값이 작다는 것만으로 현실의 두 유형을 발견했다고 할 수는 없습니다. 같은 자료에서 K를 늘리면 최적 제곱거리 합은 줄거나 같아지므로 이 숫자만 작게 만드는 것이 목적은 아닙니다.</p><p>군집 번호에는 순서나 좋고 나쁨이 없습니다. 나중에 두 군집에 이름을 붙이는 것과 처음부터 그 범주를 예측하도록 학습하는 것은 다른 일입니다. 알려진 라벨과 사후에 얼마나 일치하는지 비교할 수는 있지만, 이를 새 관측의 분류 정확도와 같은 뜻으로 읽지는 않습니다.</p></section>
-<section class="learn-chapter__step" id="features" data-toc-label="특징·스케일·시점"><p class="learn-chapter__label">특징·스케일·시점</p><h2>같은 정보도 분석 목적에 따라 사용 가능 여부가 달라집니다</h2><p>시험이 끝난 학생들의 점수와 학습 시간을 이용해 유형을 탐색한다면 점수를 군집 특징으로 쓸 수 있습니다. 반대로 아직 모르는 시험 점수를 예측하려는데 그 점수나 점수를 복원할 수 있는 정보를 입력하면 <strong>데이터 누수</strong>입니다. 언제 알 수 있는 정보인지가 중요합니다.</p><p>거리 기반 방법에서는 분·시간·점수처럼 단위와 숫자 규모가 다른 특징의 영향이 달라집니다. 표준화는 한 방법이지만, 어떤 특징에 어떤 비중을 줄지에 대한 선택도 포함합니다. 예측 과정의 평균·표준편차 같은 전처리 기준은 학습 자료에서만 추정합니다.</p><p>같은 학생의 반복 측정이나 같은 집단의 유사한 관측을 무작위로 나누면 실제 새 대상에 적용하는 상황보다 평가가 쉬워질 수 있습니다. 새 관측·새 사람·새 집단·미래 중 어디까지 새로워야 하는지 먼저 정하세요.</p></section>
-<section class="learn-chapter__step" id="workflow" data-toc-label="학습과 평가"><p class="learn-chapter__label">학습과 평가</p><h2>모형 선택에 쓴 자료와 마지막 평가를 구별하세요</h2><p><strong>학습 자료</strong>는 전처리 기준과 계수를 정하고, <strong>검증 자료</strong>는 모형·변수·설정을 비교하며, <strong>시험 자료</strong>는 선택이 끝난 뒤 최종 성능을 평가합니다. 시험 결과를 보고 반복해서 모형을 바꾸면 시험 자료도 선택에 사용한 셈입니다.</p><figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 410" role="img" aria-labelledby="workflow-title workflow-desc"><title id="workflow-title">학습과 평가 역할</title><desc id="workflow-desc">그림 4. 역할을 구분한 개념도입니다. 비율은 고정하지 않으며 시간·집단 구조와 활용 상황에 맞춰 자료를 나눕니다. 전처리는 학습 자료에서 적합합니다.</desc><text x="24" y="28">예측 성능 평가의 개념 흐름</text><rect x="90" y="75" width="450" height="65" rx="6" fill="#eaf2ff"/><text x="115" y="100">학습 자료</text><text x="115" y="125">전처리 기준과 모형 계수 학습</text><rect x="90" y="170" width="450" height="65" rx="6" fill="#eaf2ff"/><text x="115" y="195">검증 자료</text><text x="115" y="220">변수·모형·설정 비교와 선택</text><rect x="90" y="265" width="450" height="65" rx="6" fill="#eaf2ff"/><text x="115" y="290">시험 자료</text><text x="115" y="315">선택을 끝낸 뒤 최종 성능 평가</text><text x="300" y="160">↓</text><text x="300" y="255">↓</text><text x="24" y="385">시험 결과를 보고 반복 선택하면 시험도 검증 자료가 됩니다</text></svg><figcaption class="learn-chart__caption">그림 4. 역할을 구분한 개념도입니다. 비율은 고정하지 않으며 시간·집단 구조와 활용 상황에 맞춰 자료를 나눕니다. 전처리는 학습 자료에서 적합합니다.</figcaption></figure><p>자료가 작으면 교차검증 등으로 역할을 구현할 수 있습니다. 비율을 먼저 고정하기보다 활용 상황과 시간·집단 구조에 맞춰 나눠야 합니다.</p><p>회귀는 같은 목표 단위의 오차, 분류는 오류 유형과 확률, 군집은 안정성·분리 정도·분야 해석을 함께 봅니다. 비지도학습도 평가가 필요합니다. 표본이나 스케일을 바꿔도 구조가 유지되는지 확인하고, 내부 지표가 좋다는 사실과 활용에 도움이 된다는 판단을 구별하세요.</p></section>
-<section class="learn-chapter__step" id="choice" data-toc-label="문제 정의 연습"><p class="learn-chapter__label">문제 정의 연습</p><h2>방법을 고르기 전에 목표·정보·평가를 적어 보세요</h2><ol><li><strong>관측 단위:</strong> 학생 한 명인지, 학급인지, 사람의 하루 기록인지 정합니다.</li><li><strong>질문:</strong> 설명·인과·예측·구조 탐색 중 무엇이 주된 목적인지 적습니다.</li><li><strong>입력과 목표:</strong> 지도학습이면 목표와 예측 시점, 그때 알 수 있는 정보를 정의합니다.</li><li><strong>평가:</strong> 실제 적용할 대상과 시점에 맞는 자료 분할·기준모형·지표를 정합니다.</li><li><strong>보고:</strong> 오차와 불확실성, 자료의 범위와 남은 한계를 함께 제시합니다.</li></ol><p>설명하기 쉬운 모형이 자동으로 좋은 예측을 보장하지는 않고, 예측을 잘한다고 원인을 설명한 것도 아닙니다. 목적에 맞는 증거로 판단해야 합니다.</p></section>
-<section class="learn-chapter__step" id="practice" data-toc-label="확인 문제"><p class="learn-chapter__label">확인 문제</p><h2>목표와 평가 대상을 구별하세요</h2><ol class="learn-exercises"><li>회귀분석은 통계이므로 지도학습이 아닌가요?<details><summary>답과 해설</summary><p>입력과 수치형 목표의 대응을 학습한다면 지도학습입니다. 방법의 전통과 학습 구조는 다른 구분입니다.</p></details></li><li>군집 색이 실제 유형과 비슷하면 분류 정확도인가요?<details><summary>답과 해설</summary><p>군집을 만든 뒤의 외부 비교입니다. 같은 자료에서 사후 대응시킨 일치율을 새 관측의 분류 정확도로 읽지 않습니다.</p></details></li><li>정확도 90%면 드문 양성도 잘 찾나요?<details><summary>답과 해설</summary><p>아니요. 양성 10%를 모두 놓쳐도 정확도 90%일 수 있습니다. 재현율 등도 확인합니다.</p></details></li><li>이미 관측한 점수로 학습 유형을 군집화하는 것도 늘 누수인가요?<details><summary>답과 해설</summary><p>아니요. 이미 알려진 자료의 구조 탐색에는 쓸 수 있습니다. 미지의 점수를 예측하는 입력에 그 점수를 넣으면 누수가 됩니다.</p></details></li></ol></section>
-<section class="learn-chapter__step" id="macro" data-toc-label="CH2 Macro에서 읽기"><p class="learn-chapter__label">CH2 Macro에서 읽기</p><h2>기능 이름보다 분석 질문을 확인합니다</h2><p>CH2 Macro에서 관계를 요약한 통계, 미래·미지 결과의 예측, 유사한 시장 집단의 탐색을 구별해 읽으세요. 실제 제공되는 입력·출력과 평가 설명을 확인하고 이 장의 예제가 서비스에 구현된 알고리즘이라고 전제하지 않습니다.</p><p>공통 자료는 출처 미확인 학습 예제이며 분류·군집 그림은 별도 가상 자료입니다. 군집이나 예측값을 개별 적정가·투자 권고로 바꾸어 해석하지 않습니다.</p></section>
-<section class="learn-chapter__step" id="recap" data-toc-label="결론 · 학습 요약"><p class="learn-chapter__label">결론 · 학습 요약</p><h2>질문·입력·목표·평가가 학습 문제를 정합니다</h2><p>방법의 이름에 앞서 무엇을 알고 싶고 어떤 정보를 사용할 수 있는지 정해야 합니다. 다음 구분을 기억해 두세요.</p><ul class="learn-recap-list"><li><strong>설명·인과·예측:</strong> 관측 관계를 요약하는 일, 개입의 효과를 묻는 일, 새 결과를 추정하는 일은 다릅니다.</li><li><strong>지도학습:</strong> 입력과 목표값의 짝으로 규칙을 학습합니다. 수치형 목표는 회귀, 범주형 목표는 분류로 다룹니다.</li><li><strong>비지도학습:</strong> 지정된 목표 라벨 없이 구조를 찾습니다. 군집 번호가 원래의 정답 범주는 아닙니다.</li><li><strong>목적에 맞는 평가:</strong> 기준모형과 비교하고, 드문 범주에서는 정확도만으로 판단하지 않습니다. 비지도학습도 안정성과 유용성을 확인합니다.</li><li><strong>정보의 경계:</strong> 예측 시점에 알 수 있는 입력만 사용하고 학습·선택·최종 평가의 역할을 구별합니다.</li></ul><p>다음 <a href="/learn/stats/train-validation-test/">23장 ‘학습·검증·시험 자료와 데이터 누수’</a>에서는 평가 설계를 자세히 살펴봅니다.</p><details class="learn-more"><summary>참고자료와 계산값</summary><div class="learn-more__body"><ul><li><a href="https://scikit-learn.org/stable/supervised_learning.html">scikit-learn: 지도학습</a></li><li><a href="https://scikit-learn.org/stable/unsupervised_learning.html">scikit-learn: 비지도학습</a></li><li><a href="../learning-example.json">분할·예측·가상 분류·군집 예제 자료</a></li></ul><p class="learn-source-note">참고자료의 기존 확인일: 2026-10-09. 회귀 계산은 공통 학습 자료의 두 수치열을 단위 없는 X,Y로 사용했습니다. 분류·군집과 평가 흐름 그림은 별도 가상 예제 및 개념도입니다.</p></div></details></section></article>
+      <article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="통계적 설명과 예측, 지도학습과 비지도학습"><section class="learn-chapter__step" id="quick-start" data-toc-label="서두 · 학습목표"><p class="learn-chapter__label">서두 · 학습목표</p><h2>같은 데이터라도 무엇을 알고 싶은지에 따라 분석 방법이 달라집니다</h2><p>부동산 거래자료에 면적, 거래단가, 층, 용도지역 등의 정보가 있다고 가정해 보겠습니다.</p>
+<p>이 자료로 어떤 질문에 답할 수 있을까요?</p>
+<p>예를 들어 다음과 같은 질문을 생각할 수 있습니다.</p>
+<p>&quot;면적이 큰 토지는 거래단가가 낮은 경향이 있을까요?&quot;</p>
+<p>이는 자료에서 변수 사이의 관계를 이해하려는 질문입니다.</p>
+<p>&quot;새로운 토지의 면적과 조건을 알면 거래단가를 얼마나 정확하게 예측할 수 있을까요?&quot;</p>
+<p>이는 아직 모르는 결과를 추정하려는 질문입니다.</p>
+<p>&quot;비슷한 가격과 규모를 가진 거래들이 자연스럽게 몇 개의 집단으로 나뉠까요?&quot;</p>
+<p>이는 자료 안에 존재하는 구조를 탐색하려는 질문입니다.</p>
+<p>세 질문 모두 같은 거래자료에서 출발할 수 있지만 분석 목적은 서로 다릅니다.</p>
+<p>이번 장에서는 통계적 설명과 예측의 차이, 그리고 지도학습과 비지도학습의 차이를 살펴보겠습니다.</p>
+<p>이번 장의 학습목표</p>
+<ul class="learn-objectives"><li>통계적 설명, 인과 추론, 예측의 목적을 구별합니다.</li><li>지도학습에서 입력변수와 목표변수의 역할을 이해합니다.</li><li>회귀와 분류가 서로 다른 예측 문제임을 알아봅니다.</li><li>비지도학습에서 군집분석의 의미와 한계를 이해합니다.</li><li>학습 자료와 평가 자료의 차이를 이해합니다.</li><li>분석 목적에 따라 변수와 평가 기준을 선택하는 방법을 알아봅니다.</li></ul><p class="learn-source-note"><a href="/learn/stats/graphs/#data">공통 학습 자료 30건</a> · <a href="../learning-example.json">회귀 평가·가상 분류·군집 계산 자료</a>. 회귀는 면적(㎡)·거래단가(만원/㎡), 분류·군집은 별도 가상 자료입니다. 실제 거래의 대표성이 검증된 자료는 아닙니다.</p></section>
+<section class="learn-chapter__step" id="purposes" data-toc-label="분석 목적의 차이"><p class="learn-chapter__label">분석 목적의 차이</p><h2>설명, 인과, 예측은 서로 다른 질문에 답합니다</h2><p>통계분석을 시작할 때는 먼저 어떤 질문에 답하려는지 정해야 합니다.</p>
+<p>크게 세 가지 목적을 구별할 수 있습니다.</p>
+<p>① 통계적 설명</p>
+<p>관측된 자료에서 어떤 관계와 특징이 나타나는지 살펴봅니다.</p>
+<p>예를 들어 토지면적과 거래단가 사이에 음의 상관관계가 나타나는지, 용도지역에 따라 평균 가격이 어떻게 다른지 분석합니다.</p>
+<p>여기서 중요한 것은 자료에서 발견한 관계를 정확하게 요약하고 해석하는 것입니다.</p>
+<p>② 인과 추론</p>
+<p>특정 조건을 실제로 바꾸었을 때 결과가 어떻게 달라지는지 살펴봅니다.</p>
+<p>예를 들어 도로 접근성을 개선하는 사업이 주변 토지가격에 어느 정도 영향을 미쳤는지 알고 싶다면 인과 추론의 문제가 됩니다.</p>
+<p>단순히 도로에 가까운 토지가 비싸다는 상관관계만으로는 그 효과를 알 수 없습니다.</p>
+<p>다른 입지 조건과 사업 대상의 선택 과정 등도 검토해야 하기 때문입니다.</p>
+<p>③ 예측</p>
+<p>아직 알지 못하는 결과를 이용 가능한 정보로 추정합니다.</p>
+<p>예를 들어 거래가 이루어지기 전에 해당 부동산의 특성을 이용해 거래단가를 예측할 수 있습니다.</p>
+<p>이때는 회귀계수의 p값뿐 아니라 새로운 자료에서 실제 오차가 얼마나 발생하는지가 중요합니다.</p>
+<p>세 목적을 비교하면 다음과 같습니다.</p>
+<div class="learn-data learn-data--full"><table><thead><tr><th scope="col">분석 목적</th><th scope="col">주요 질문</th><th scope="col">중요하게 살펴볼 것</th></tr></thead><tbody><tr><th scope="row">설명</th><td>어떤 관계가 관찰되는가?</td><td>관계의 크기·방향·안정성</td></tr><tr><th scope="row">인과</th><td>X를 바꾸면 Y가 달라지는가?</td><td>연구 설계·교란 요인·식별 가정</td></tr><tr><th scope="row">예측</th><td>아직 모르는 Y를 맞힐 수 있는가?</td><td>새로운 자료의 예측오차</td></tr></tbody></table></div>
+<p>같은 선형회귀식을 사용하더라도 목적에 따라 모형을 만들고 평가하는 기준은 달라질 수 있습니다.</p>
+<p>통계학은 설명만 하고 머신러닝은 예측만 한다는 구분은 정확하지 않습니다.</p>
+<p>회귀분석도 예측에 활용할 수 있고, 머신러닝 방법도 변수 사이의 관계를 탐색하는 데 활용할 수 있습니다.</p>
+<p>중요한 것은 기법의 이름보다 분석하려는 질문입니다.</p></section>
+<section class="learn-chapter__step" id="supervised" data-toc-label="지도학습의 기본 구조"><p class="learn-chapter__label">지도학습의 기본 구조</p><h2>입력과 목표값의 관계를 학습합니다</h2><p>지도학습(Supervised learning)은 입력변수와 목표변수가 함께 기록된 자료를 이용해 그 관계를 학습하는 방법입니다.</p>
+<p>보통 입력변수를 X, 목표변수를 Y로 표시합니다.</p>
+<p>부동산 거래자료를 예로 들면 다음과 같습니다.</p>
+<div class="learn-data learn-data--full"><table><thead><tr><th scope="col">입력변수 X</th><th scope="col">목표변수 Y</th></tr></thead><tbody><tr><th scope="row">면적, 층, 용도지역, 건축연도</th><td>거래단가</td></tr></tbody></table></div>
+<p>이때 이미 거래가 완료된 자료에는 면적과 거래단가가 함께 기록되어 있습니다.</p>
+<p>지도학습은 이러한 자료를 이용해 입력과 결과 사이의 관계를 학습합니다.</p>
+<p>학습된 모형은 새로운 입력 X에 대해 아직 모르는 Y를 예측하는 데 사용할 수 있습니다.</p>
+<p>이를 간단하게 표현하면 다음과 같습니다.</p>
+<p class="sl-formula">예측값 = 학습된 함수(새로운 입력정보)</p>
+<p class="sl-formula">ŷ = f̂(X)</p>
+<p>여기서 중요한 것은 학습에 사용할 수 있는 정보와 실제 예측에 사용할 수 있는 정보가 다를 수 있다는 점입니다.</p>
+<p>예를 들어 이미 거래된 자료를 분석할 때는 실제 거래단가를 알고 있습니다.</p>
+<p>하지만 새로운 거래단가를 예측하려는 시점에는 그 값을 알 수 없습니다.</p>
+<p>따라서 예측하려는 거래단가 자체를 입력변수로 사용해서는 안 됩니다.</p>
+<p>또한 지도학습에서 말하는 정답은 데이터에 기록된 목표값을 가리키는 표현입니다.</p>
+<p>입력 오류나 측정 오차가 존재할 수 있으므로 기록된 값이 언제나 완전한 진실이라는 의미는 아닙니다.</p>
+<details class="learn-more"><summary>지도학습은 무엇을 최소화하나요?</summary><div class="learn-more__body"><p>많은 지도학습 방법은 실제값과 예측값 사이의 차이를 나타내는 손실함수(Loss function)를 최소화하는 방식으로 학습합니다.</p>
+<p class="sl-formula">(1/n) Σ L(yᵢ, f̂(xᵢ))</p>
+<p>여기서 L은 손실함수입니다.</p>
+<p>수치 예측에서는 제곱오차나 절대오차를, 분류 확률 예측에서는 로그손실 등을 사용할 수 있습니다.</p>
+<p>다만 학습 자료의 손실을 작게 만들었다고 해서 새로운 자료에서도 반드시 오차가 작아지는 것은 아닙니다.</p></div></details></section>
+<section class="learn-chapter__step" id="regression" data-toc-label="지도학습 ① 회귀"><p class="learn-chapter__label">지도학습 ① 회귀</p><h2>예측하려는 결과가 숫자라면 회귀 문제입니다</h2><p>지도학습은 목표변수의 형태에 따라 대표적으로 회귀와 분류로 나눌 수 있습니다.</p>
+<p>회귀(Regression)는 연속적인 수치형 결과를 예측하는 문제입니다.</p>
+<p>예를 들어 거래단가, 거래금액, 임대료 등을 예측할 수 있습니다.</p>
+<p><a href="/learn/stats/regression/">17장에서 배운 단순선형회귀</a>도 목표값을 예측하는 데 사용한다면 지도학습의 한 형태입니다.</p>
+<p>이번에는 11장부터 사용한 공통 학습 자료 30건을 이용해 간단한 실험을 해보겠습니다.</p>
+<p>처음 20건으로 회귀식을 학습하고 나머지 10건을 평가에 사용합니다.</p>
+<ul><li>학습 자료: 1~20번, 총 20건</li><li>평가 자료: 21~30번, 총 10건</li></ul>
+<p>학습 자료 20건에서 계산한 회귀식은 다음과 같습니다.</p>
+<p class="sl-formula">ŷ = 250.703 − 0.7603 × 면적</p>
+<p>이 회귀식을 평가 자료 10건에 적용하고 실제 거래단가와의 차이를 계산합니다.</p>
+<p>그 결과 평균절대오차(MAE)는 약 41.08만원/㎡입니다.</p>
+<figure class="learn-chart learn-chart--wide" id="sl-regression"><div class="sl-controls" hidden><label for="sl-model">평가할 모형</label><select id="sl-model"><option value="regression">단순회귀</option><option value="baseline">학습 평균 기준모형</option></select><div id="sl-eval-status" role="status" aria-live="polite"></div><p class="learn-source-note">관측값과 평가 대상 10건은 고정합니다. 기준모형의 평균은 학습 20건에서만 계산합니다. 미래 시점 검증이 아닌 교재용 분할입니다.</p></div><svg class="sl-chart-svg" viewBox="0 0 640 575" role="img" aria-labelledby="regression-title regression-desc"><title id="regression-title">같은 평가 자료에서 회귀와 기준모형 비교</title><desc id="regression-desc">그림 1. 1~20번에서 학습하고 21~30번에서 평가합니다. 회색 45도 선은 예측=실제입니다. 번호는 시간순이 아니며 미래 예측 성능을 검증한 결과가 아닙니다.</desc><text x="24" y="28">공통 자료: 학습에 쓰지 않은 21~30번, 같은 10건 평가</text><line x1="120" y1="465" x2="525" y2="465" stroke="#94a3b8"/><line x1="120" y1="60" x2="120" y2="465" stroke="#94a3b8"/><line x1="120" y1="465" x2="525" y2="60" stroke="#64748b"/><circle data-id="21" data-actual="88" cx="238.8" cy="352.349009387913" r="5" fill="#2563eb"><title>21번: 실제 88, 예측 83.45만원/㎡</title></circle><circle data-id="22" data-actual="132" cx="298.20000000000005" cy="218.92278954251577" r="5" fill="#2563eb"><title>22번: 실제 132, 예측 182.28만원/㎡</title></circle><circle data-id="23" data-actual="120" cx="282.0" cy="280.5041217788529" r="5" fill="#2563eb"><title>23번: 실제 120, 예측 136.66만원/㎡</title></circle><circle data-id="24" data-actual="268" cx="481.8" cy="162.47323499254003" r="5" fill="#2563eb"><title>24번: 실제 268, 예측 224.09만원/㎡</title></circle><circle data-id="25" data-actual="78" cx="225.3" cy="393.4032308788044" r="5" fill="#2563eb"><title>25번: 실제 78, 예측 53.03만원/㎡</title></circle><circle data-id="26" data-actual="124" cx="287.4" cy="301.0312325242986" r="5" fill="#2563eb"><title>26번: 실제 124, 예측 121.46만원/㎡</title></circle><circle data-id="27" data-actual="115" cx="275.25" cy="229.18634491523864" r="5" fill="#2563eb"><title>27번: 실제 115, 예측 174.68만원/㎡</title></circle><circle data-id="28" data-actual="160" cx="336.0" cy="155.28874623163398" r="5" fill="#2563eb"><title>28번: 실제 160, 예측 229.42만원/㎡</title></circle><circle data-id="29" data-actual="95" cx="248.25" cy="259.97701103340717" r="5" fill="#2563eb"><title>29번: 실제 95, 예측 151.87만원/㎡</title></circle><circle data-id="30" data-actual="108" cx="265.8" cy="208.6592341697929" r="5" fill="#2563eb"><title>30번: 실제 108, 예측 189.88만원/㎡</title></circle><text x="113.0" y="490">0</text><text x="75" y="470.0">0</text><text x="248.0" y="490">100</text><text x="75" y="335.0">100</text><text x="383.0" y="490">200</text><text x="75" y="200.0">200</text><text x="518.0" y="490">300</text><text x="75" y="65.0">300</text><text x="24" y="525">가로: 실제 거래단가 / 세로: 예측 거래단가 (만원/㎡)</text><text x="24" y="550">두 축은 같은 배율 · 회색 45도 선: 예측=실제</text></svg><figcaption class="learn-chart__caption">그림 1. 1~20번에서 학습하고 21~30번에서 평가합니다. 회색 45도 선은 예측=실제입니다. 번호는 시간순이 아니며 미래 예측 성능을 검증한 결과가 아닙니다.</figcaption></figure>
+<p>이 그림에서는 가로축에 실제 단가를, 세로축에 예측 단가를 표시합니다.</p>
+<p>대각선은 예측값이 실제값과 정확하게 일치하는 위치입니다.</p>
+<p>점이 대각선에서 멀리 떨어질수록 해당 거래의 예측오차가 큽니다.</p>
+<p>하지만 MAE가 41.08이라는 숫자만으로 이 모형이 좋은지 나쁜지 판단하기는 어렵습니다.</p>
+<p>비교할 기준이 필요하기 때문입니다.</p></section>
+<section class="learn-chapter__step" id="baseline" data-toc-label="기준모형과 비교하기"><p class="learn-chapter__label">기준모형과 비교하기</p><h2>복잡한 모형이 단순한 방법보다 실제로 더 나을까요?</h2><p>모형의 성능을 평가할 때는 단순한 기준모형(Baseline model)과 비교하는 것이 좋습니다.</p>
+<p>예를 들어 면적을 전혀 사용하지 않고, 학습 자료의 평균 거래단가만을 모든 평가 대상에 적용한다고 가정해 보겠습니다.</p>
+<p>학습 자료 20건의 평균 거래단가는 155.10만원/㎡입니다.</p>
+<p>따라서 기준모형은 모든 평가 거래에 대해 155.10만원/㎡를 예측합니다.</p>
+<p>두 방법을 같은 평가 자료 10건에서 비교하면 다음과 같습니다.</p>
+<div class="learn-data learn-data--full"><table><thead><tr><th scope="col">예측 방법</th><th scope="col">평가 MAE</th></tr></thead><tbody><tr><th scope="row">학습 자료의 평균만 사용</th><td>49.86만원/㎡</td></tr><tr><th scope="row">면적을 이용한 단순회귀</th><td>41.08만원/㎡</td></tr></tbody></table></div>
+<p>이번 분할에서는 단순회귀의 MAE가 더 작습니다.</p>
+<p>즉, 이 평가 자료에서는 면적을 이용한 회귀식이 학습 평균만 사용한 방법보다 절대오차를 줄였습니다.</p>
+<p>하지만 이것만으로 회귀식이 미래 거래에서 더 좋은 예측모형이라고 확정할 수는 없습니다.</p>
+<p>평가 건수가 10건으로 적고, 자료를 나누는 방법에 따라 결과가 달라질 수 있기 때문입니다.</p>
+<p>또한 이번 공통 학습 자료의 번호는 실제 거래 순서를 의미하지 않습니다.</p>
+<p>따라서 처음 20건으로 학습하고 마지막 10건에서 평가했다고 해서 미래 예측 성능을 검증한 것은 아닙니다.</p>
+<p>이번 실험의 목적은 학습에 사용하지 않은 자료에서 예측오차를 확인하고 기준모형과 비교하는 원리를 이해하는 것입니다.</p>
+<details class="learn-more"><summary>평균과 중앙값 중 어떤 기준모형이 더 적절할까요?</summary><div class="learn-more__body"><p>상수 하나로 모든 값을 예측할 때 제곱오차를 최소화하는 값은 학습 자료의 평균입니다.</p>
+<p>반면 절대오차를 최소화하는 값은 학습 자료의 중앙값입니다.</p>
+<p>따라서 MAE를 중심으로 평가한다면 학습 중앙값을 사용하는 기준모형도 함께 비교하는 것이 좋습니다.</p>
+<p>평균 기준모형은 이해하기 쉬운 비교 방법이지만 모든 평가 지표에서 최적인 기준은 아닙니다.</p></div></details></section>
+<section class="learn-chapter__step" id="classification-intro" data-toc-label="지도학습 ② 분류"><p class="learn-chapter__label">지도학습 ② 분류</p><h2>예측하려는 결과가 범주라면 분류 문제입니다</h2><p>이번에는 목표변수가 숫자가 아니라 유형이라고 가정해 보겠습니다.</p>
+<p>예를 들어 거래자료에 주거용과 비주거용이라는 유형이 별도로 기록되어 있다면, 부동산 특성을 이용해 그 유형을 예측하는 문제를 생각할 수 있습니다.</p>
+<p>이러한 문제를 분류(Classification)라고 합니다.</p>
+<p>분류에서는 목표값을 0과 1처럼 숫자로 저장할 수 있습니다.</p>
+<p>하지만 숫자로 저장했다고 해서 연속적인 단가를 예측하는 회귀 문제와 같아지는 것은 아닙니다.</p>
+<p>대표적인 분류 방법으로 로지스틱 회귀가 있습니다.</p>
+<p>이름에는 회귀라는 단어가 포함되어 있지만, 주로 범주에 속할 확률을 추정하는 데 사용합니다.</p>
+<p>분류 결과를 평가할 때는 맞힌 비율뿐 아니라 어떤 종류의 오류를 발생시켰는지도 확인해야 합니다.</p></section>
+<section class="learn-chapter__step" id="classification" data-toc-label="분류의 정확도와 오류"><p class="learn-chapter__label">분류의 정확도와 오류</p><h2>정확도가 90%여도 중요한 대상을 모두 놓칠 수 있습니다</h2><p>전체 100건 가운데 양성에 해당하는 거래가 10건이고, 음성에 해당하는 거래가 90건이라고 가정해 보겠습니다.</p>
+<p>여기서 양성은 분석자가 관심 대상으로 정의한 범주입니다.</p>
+<p>어떤 분류모형이 모든 거래를 음성으로 예측했다고 가정하겠습니다.</p>
+<p>그러면 음성 90건은 모두 맞히지만, 양성 10건은 모두 놓칩니다.</p>
+<figure class="learn-chart learn-chart--wide"><svg class="sl-chart-svg" viewBox="0 0 640 410" role="img" aria-labelledby="classification-title classification-desc"><title id="classification-title">정확도 90%지만 양성 10건을 모두 놓친 분류</title><desc id="classification-desc">그림 2. 공통 30건과 별개인 가상 분류 자료 100건입니다. 행은 실제, 열은 예측입니다. 맞힌 음성 TN=90, 놓친 양성 FN=10이며 정밀도의 분모 TP+FP는 0입니다.</desc><text x="24" y="28">가상 분류: 100건 모두 음성으로 예측</text><text x="220" y="75">예측 양성</text><text x="420" y="75">예측 음성</text><rect x="190" y="100" width="170" height="85" data-cell="TP" data-count="0" rx="6" fill="#f1f5f9"/><text x="213" y="148">TP 0</text><rect x="390" y="100" width="170" height="85" data-cell="FN" data-count="10" rx="6" fill="#ffedd5"/><text x="413" y="148">FN 10 · 놓침</text><rect x="190" y="210" width="170" height="85" data-cell="FP" data-count="0" rx="6" fill="#f1f5f9"/><text x="213" y="258">FP 0</text><rect x="390" y="210" width="170" height="85" data-cell="TN" data-count="90" rx="6" fill="#dbeafe"/><text x="413" y="258">TN 90 · 맞힘</text><text x="35" y="148">실제 양성</text><text x="35" y="258">실제 음성</text><text x="24" y="340">정확도 90% · 양성 재현율 0%</text><text x="24" y="375">정밀도: 정의되지 않음 (양성 예측 0건)</text></svg><figcaption class="learn-chart__caption">그림 2. 공통 30건과 별개인 가상 분류 자료 100건입니다. 행은 실제, 열은 예측입니다. 맞힌 음성 TN=90, 놓친 양성 FN=10이며 정밀도의 분모 TP+FP는 0입니다.</figcaption></figure>
+<p>결과는 다음과 같습니다.</p>
+<div class="learn-data learn-data--full"><table><thead><tr><th scope="col">실제 \ 예측</th><th scope="col">양성</th><th scope="col">음성</th></tr></thead><tbody><tr><th scope="row">실제 양성</th><td>0</td><td>10</td></tr><tr><th scope="row">실제 음성</th><td>0</td><td>90</td></tr></tbody></table></div>
+<p>전체 정확도는 다음과 같습니다.</p>
+<p class="sl-formula">정확도 = 90 / 100 = 90%</p>
+<p>겉으로 보면 상당히 높은 숫자입니다.</p>
+<p>하지만 관심 대상인 양성 10건을 하나도 찾아내지 못했습니다.</p>
+<p>이를 확인하기 위해 다음 지표를 사용할 수 있습니다.</p>
+<p>정확도(Accuracy)</p>
+<p>전체 관측값 중 정확히 분류한 비율입니다.</p>
+<p>재현율(Recall)</p>
+<p>실제 양성 중 양성으로 찾아낸 비율입니다.</p>
+<p>이번 예제에서는 재현율이 0%입니다.</p>
+<p>정밀도(Precision)</p>
+<p>양성이라고 예측한 관측값 중 실제로 양성인 비율입니다.</p>
+<p>그런데 이번 예제에서는 양성으로 예측한 관측값이 한 건도 없습니다.</p>
+<p>따라서 정밀도는 계산식의 분모가 0이므로 수학적으로 정의되지 않습니다.</p>
+<p>일부 프로그램에서는 편의상 0으로 표시할 수 있지만, 정의되지 않은 값과 실제 계산 결과 0은 구별해야 합니다.</p>
+<p>높은 정확도 하나만으로 좋은 분류모형이라고 판단해서는 안 됩니다.</p>
+<p>특히 관심 대상이 드문 경우에는 재현율과 정밀도, 오탐과 누락에 따른 비용을 함께 살펴봐야 합니다.</p>
+<details class="learn-more"><summary>확률과 분류 결과는 어떻게 다를까요?</summary><div class="learn-more__body"><p>분류모형은 특정 범주에 속할 확률을 계산할 수 있습니다.</p>
+<p>예를 들어 양성일 확률이 0.65라고 하겠습니다.</p>
+<p>이를 양성으로 분류할지 여부는 임계값에 따라 달라집니다.</p>
+<p>임계값을 0.5로 설정하면 양성이지만, 0.7로 설정하면 음성이 됩니다.</p>
+<p>임계값을 변경하면 재현율과 정밀도 등도 달라질 수 있습니다.</p>
+<p>또한 확률 자체가 신뢰할 만한지도 중요합니다.</p>
+<p>예측확률이 70%인 대상들 가운데 실제 양성이 약 70% 나타나는지를 확인하는 과정을 확률 보정(Calibration)이라고 합니다.</p>
+<p>분류 기준과 확률의 신뢰성은 서로 구분해 평가해야 합니다.</p></div></details><p class="learn-source-note">정확도=(TP+TN)/100=90%, 양성 재현율=TP/(TP+FN)=0%, 정밀도=TP/(TP+FP)=0/0으로 정의되지 않습니다. 확률 보정 상태의 평가와 확률을 다시 보정하는 절차도 구분합니다.</p></section>
+<section class="learn-chapter__step" id="unsupervised" data-toc-label="비지도학습의 기본 구조"><p class="learn-chapter__label">비지도학습의 기본 구조</p><h2>정해진 목표값 없이 자료의 구조를 살펴봅니다</h2><p>지도학습은 입력변수 X와 목표변수 Y의 관계를 학습합니다.</p>
+<p>반면 비지도학습(Unsupervised learning)은 특정 목표변수 Y를 맞히도록 학습하지 않고 입력자료 X의 구조를 탐색합니다.</p>
+<p>대표적인 방법은 다음과 같습니다.</p>
+<p>① 군집분석</p>
+<p>특성이 비슷한 관측값을 여러 집단으로 묶습니다.</p>
+<p>② 차원축소</p>
+<p>여러 변수의 정보를 더 적은 수의 새로운 좌표나 변수로 요약합니다.</p>
+<p>③ 밀도 추정과 일부 이상 탐지</p>
+<p>자료가 주로 어디에 분포하고 어떤 관측값이 상대적으로 드문지 살펴봅니다.</p>
+<p>예를 들어 이미 거래된 토지의 면적과 거래단가를 이용해 비슷한 특성을 가진 거래들을 묶는다면 비지도학습을 생각할 수 있습니다.</p>
+<p>이때 군집은 원래부터 정해진 주거지역, 상업지역 같은 행정적 범주가 아닙니다.</p>
+<p>선택한 변수와 거리 계산 방식에 따라 만들어진 집단입니다.</p>
+<p>따라서 알고리즘이 거래자료를 세 집단으로 나누었다고 해서 시장에 본질적으로 세 가지 유형이 존재한다고 결론 내릴 수는 없습니다.</p>
+<p>비지도학습은 자료의 구조를 찾는 방법이지 현실의 정답 범주를 자동으로 밝혀내는 방법은 아닙니다.</p></section>
+<section class="learn-chapter__step" id="clusters" data-toc-label="군집분석의 예제"><p class="learn-chapter__label">군집분석의 예제</p><h2>가까운 관측값들을 같은 집단으로 묶습니다</h2><p>대표적인 군집분석 방법 중 하나가 K-means입니다.</p>
+<p>K-means는 사용자가 정한 K개의 군집을 만들고 각 관측값과 군집 중심 사이의 제곱거리 합이 작아지도록 중심과 소속을 조정합니다.</p>
+<p>별도로 만든 가상 자료 8개를 살펴보겠습니다.</p>
+<p>이 자료에서는 두 개의 군집이 나타나도록 점들을 배치했습니다.</p>
+<p>각 군집의 중심은 다음과 같습니다.</p>
+<ul><li>군집 A 중심: (1.5, 1.5)</li><li>군집 B 중심: (6.5, 6.5)</li></ul>
+<figure class="learn-chart learn-chart--wide" id="sl-clusters"><div class="sl-controls" hidden><label for="sl-cluster-mode">군집 표시</label><select id="sl-cluster-mode"><option value="cluster">군집과 중심 보기</option><option value="points">관측점만 보기</option></select><p id="sl-cluster-status" role="status" aria-live="polite"></p></div><svg class="sl-chart-svg sl-cluster-svg" viewBox="0 0 640 475" role="img" aria-labelledby="clusters-title clusters-desc"><title id="clusters-title">가상 8점의 관측점과 K-means 군집</title><desc id="clusters-desc">그림 3. 단위 없는 가상 8점입니다. 중심은 (1.5,1.5), (6.5,6.5), 군집 내 제곱거리 합은 4입니다. 군집 번호를 교환해도 같은 분할입니다.</desc><text x="24" y="28">단위 없는 가상 두 특징 · K=2 군집 예제</text><line x1="145" y1="355" x2="465" y2="355" stroke="#94a3b8"/><line x1="145" y1="35" x2="145" y2="355" stroke="#94a3b8"/><circle data-cluster="0" cx="185" cy="315" r="5" fill="#2563eb"><title>좌표 (1, 1)</title></circle><circle data-cluster="0" cx="185" cy="275" r="5" fill="#2563eb"><title>좌표 (1, 2)</title></circle><circle data-cluster="0" cx="225" cy="315" r="5" fill="#2563eb"><title>좌표 (2, 1)</title></circle><circle data-cluster="0" cx="225" cy="275" r="5" fill="#2563eb"><title>좌표 (2, 2)</title></circle><circle data-cluster="1" cx="385" cy="115" r="5" fill="#d97706"><title>좌표 (6, 6)</title></circle><circle data-cluster="1" cx="385" cy="75" r="5" fill="#d97706"><title>좌표 (6, 7)</title></circle><circle data-cluster="1" cx="425" cy="115" r="5" fill="#d97706"><title>좌표 (7, 6)</title></circle><circle data-cluster="1" cx="425" cy="75" r="5" fill="#d97706"><title>좌표 (7, 7)</title></circle><g data-cluster-center="0"><line x1="197.0" y1="287.0" x2="213.0" y2="303.0" stroke="#111827"/><line x1="197.0" y1="303.0" x2="213.0" y2="287.0" stroke="#111827"/></g><g data-cluster-center="1"><line x1="397.0" y1="87.0" x2="413.0" y2="103.0" stroke="#111827"/><line x1="397.0" y1="103.0" x2="413.0" y2="87.0" stroke="#111827"/></g><text x="140" y="380">0</text><text x="110" y="360">0</text><text x="220" y="380">2</text><text x="110" y="280">2</text><text x="300" y="380">4</text><text x="110" y="200">4</text><text x="380" y="380">6</text><text x="110" y="120">6</text><text x="460" y="380">8</text><text x="110" y="40">8</text><text x="24" y="415">가로: 특징 1 / 세로: 특징 2 · 단위 없음, 같은 축 배율</text><text id="sl-cluster-legend" x="24" y="445">파랑 A / 주황 B · ×: 중심 · 군집 번호는 정답 범주가 아님</text></svg><figcaption class="learn-chart__caption">그림 3. 단위 없는 가상 8점입니다. 중심은 (1.5,1.5), (6.5,6.5), 군집 내 제곱거리 합은 4입니다. 군집 번호를 교환해도 같은 분할입니다.</figcaption></figure>
+<p>점들은 자신과 가까운 군집 중심에 배정됩니다.</p>
+<p>배정된 점들의 평균을 다시 계산하면 각 군집의 중심을 갱신할 수 있습니다.</p>
+<p>이러한 과정을 반복하면서 군집 내 제곱거리 합을 줄입니다.</p>
+<p>이번 가상 예제에서 군집 내 제곱거리 합은 4입니다.</p>
+<p>하지만 이 값이 작다는 사실만으로 군집이 현실의 유용한 시장 구분을 발견했다고 결론 내릴 수는 없습니다.</p>
+<p>특히 군집 수 K를 증가시키면 최적으로 계산한 군집 내 제곱거리 합은 증가하지 않습니다.</p>
+<p>따라서 제곱거리 합을 작게 만드는 것만으로 군집 수를 결정해서는 안 됩니다.</p>
+<p>또한 군집 A와 B의 이름은 편의를 위한 구분입니다.</p>
+<p>군집 번호를 서로 바꾸더라도 점들이 묶인 구조는 같습니다.</p>
+<p>이 번호를 실제 용도지역이나 거래 유형과 동일한 의미로 해석해서는 안 됩니다.</p>
+<details class="learn-more"><summary>K-means는 언제나 최적의 군집을 찾을까요?</summary><div class="learn-more__body"><p>K-means는 중심의 초기 위치에 따라 서로 다른 결과에 도달할 수 있습니다.</p>
+<p>알고리즘의 반복 계산은 군집 내 제곱거리 합을 줄이는 방향으로 진행되지만, 항상 전역적으로 가장 작은 값을 찾는다고 보장할 수는 없습니다.</p>
+<p>따라서 여러 초기값으로 반복 실행하고 결과의 안정성을 점검하는 방법을 사용할 수 있습니다.</p>
+<p>또한 군집분석 결과는 변수의 선택과 측정 단위에 영향을 받습니다.</p></div></details><p><a href="/learn/stats/clustering/">31장 군집분석</a>에서 군집 수와 안정성을 더 자세히 살펴봅니다.</p></section>
+<section class="learn-chapter__step" id="features" data-toc-label="변수의 역할은 분석 목적에 따라 달라집니다"><p class="learn-chapter__label">변수의 역할은 분석 목적에 따라 달라집니다</p><h2>설명에 사용할 수 있는 변수가 예측에도 적절한 것은 아닙니다</h2><p>여기서 부동산 자료의 중요한 특징을 생각해 보겠습니다.</p>
+<p>거래단가는 일반적으로 거래금액을 면적으로 나눈 값입니다.</p>
+<p class="sl-formula">거래단가 = 거래금액 / 면적</p>
+<p>이미 완료된 거래들을 대상으로 면적과 거래단가를 이용해 시장의 구조를 탐색한다면 두 변수를 함께 사용할 수 있습니다.</p>
+<p>하지만 아직 모르는 거래단가를 예측하면서 해당 거래의 실제 거래금액을 입력변수에 포함하면 어떻게 될까요?</p>
+<p>거래금액과 면적을 알고 있다면 예측하려는 거래단가를 그대로 계산할 수 있습니다.</p>
+<p>즉, 예측하려는 정답에 해당하는 정보를 입력에 섞은 것입니다.</p>
+<p>이러한 문제를 데이터 누수(Data leakage)라고 합니다.</p>
+<p>데이터 누수가 발생하면 학습이나 검증에서 매우 높은 성능이 나타날 수 있습니다.</p>
+<p>하지만 실제 예측 시점에는 그 정보를 사용할 수 없기 때문에 결과를 신뢰하기 어렵습니다.</p>
+<p>중요한 것은 변수의 이름보다 예측 시점에 해당 정보를 실제로 알 수 있는지입니다.</p>
+<p>동일한 변수라도 과거 시장을 설명할 때와 미래 결과를 예측할 때의 역할은 달라질 수 있습니다.</p><p class="learn-source-note">공시지가·건축물대장 등의 정보도 해당 예측 시점에 이용 가능했던 판본인지 확인해야 합니다. 최신 자료가 과거에도 알려져 있었다고 가정하지 않습니다.</p></section>
+<section class="learn-chapter__step" id="scaling" data-toc-label="변수의 단위와 스케일"><p class="learn-chapter__label">변수의 단위와 스케일</p><h2>큰 숫자로 측정된 변수가 더 중요한 변수라는 뜻은 아닙니다</h2><p>군집분석이나 최근접 이웃과 같은 일부 방법에서는 관측값 사이의 거리를 사용합니다.</p>
+<p>그런데 변수마다 측정 단위가 다르면 문제가 발생할 수 있습니다.</p>
+<p>예를 들어 다음 두 변수가 있다고 가정해 보겠습니다.</p>
+<ul><li>토지면적: 수십~수천 ㎡</li><li>층: 1~30층</li></ul>
+<p>두 변수를 그대로 거리 계산에 사용하면 면적의 숫자 차이가 층의 숫자 차이보다 훨씬 크게 나타날 수 있습니다.</p>
+<p>하지만 이것이 면적이 층보다 본질적으로 중요한 변수라는 뜻은 아닙니다.</p>
+<p>이를 조정하기 위해 표준화(Standardization)를 사용할 수 있습니다.</p>
+<p>대표적인 방법은 평균을 빼고 표준편차로 나누는 것입니다.</p>
+<p class="sl-formula">z = (x−x̄)/s</p>
+<p>표준화하면 변수마다 숫자의 규모가 달라지는 문제를 완화할 수 있습니다.</p>
+<p>하지만 모든 변수의 중요도를 같게 반영하는 것이 언제나 적절한 것은 아닙니다.</p>
+<p>시장 구조와 변수의 의미에 따라 거리 계산과 가중치 설정이 달라질 수 있기 때문입니다.</p>
+<p>또한 예측모형의 평가에서는 표준화 기준을 학습 자료로만 계산해야 합니다.</p>
+<p>평가 자료까지 사용해 평균과 표준편차를 계산한다면 평가 자료의 정보가 학습 과정에 들어갈 수 있습니다.</p>
+<details class="learn-more"><summary>표준화가 모든 모형에 필요한가요?</summary><div class="learn-more__body"><p>그렇지는 않습니다.</p>
+<p>거리 기반 알고리즘과 규제회귀처럼 변수의 척도에 민감한 방법에서는 표준화가 중요할 수 있습니다.</p>
+<p>반면 일반적인 절편 포함 최소제곱회귀는 설명변수의 단위를 바꾸더라도 동일한 모형을 적절히 다시 표현하면 적합값이 달라지지 않습니다.</p>
+<p>또한 의사결정나무와 같은 일부 모형은 단순한 양의 척도 변경에 상대적으로 영향을 적게 받습니다.</p>
+<p>따라서 표준화 여부도 사용하는 알고리즘과 분석 목적에 따라 결정해야 합니다.</p></div></details><p class="learn-source-note">검증·시험 자료에는 학습 자료에서 정한 같은 평균과 표준편차를 적용합니다. 각각의 평균·표준편차를 다시 구해 별도로 표준화하지 않습니다.</p></section>
+<section class="learn-chapter__step" id="workflow" data-toc-label="학습·검증·시험 자료"><p class="learn-chapter__label">학습·검증·시험 자료</p><h2>모형을 만드는 자료와 마지막으로 평가하는 자료를 구별합니다</h2><p>예측모형을 평가하려면 자료의 역할을 나눌 필요가 있습니다.</p>
+<p>대표적으로 학습 자료, 검증 자료, 시험 자료를 구분합니다.</p>
+<p>① 학습 자료(Training data)</p>
+<p>회귀계수나 모형의 내부 설정을 학습하는 데 사용합니다.</p>
+<p>표준화나 결측치 대체 기준도 원칙적으로 학습 자료에서 계산합니다.</p>
+<p>② 검증 자료(Validation data)</p>
+<p>서로 다른 모형이나 변수 구성, 설정을 비교하고 선택하는 데 사용합니다.</p>
+<p>③ 시험 자료(Test data)</p>
+<p>모형 선택을 마친 뒤 최종적인 성능을 평가하는 데 사용합니다.</p>
+<figure class="learn-chart learn-chart--wide"><svg class="sl-chart-svg" viewBox="0 0 640 410" role="img" aria-labelledby="workflow-title workflow-desc"><title id="workflow-title">전체 자료에서 학습·검증·시험 역할 구분</title><desc id="workflow-desc">그림 4. 전체 원자료를 학습·검증·시험 역할로 구분한 개념도입니다. 학습 자료를 검증·시험 자료로 차례로 바꾼다는 뜻이 아닙니다. 비율은 고정하지 않으며 표준화·결측치 대체 기준은 학습 자료에서 계산합니다.</desc><text x="24" y="28">전체 자료를 역할에 따라 나누는 개념도</text><rect x="170" y="55" width="300" height="65" rx="6" fill="#eaf2ff"/><text x="253" y="95">전체 원자료</text><line x1="320" y1="120" x2="320" y2="150" stroke="#94a3b8"/><line x1="120" y1="150" x2="520" y2="150" stroke="#94a3b8"/><line x1="120" y1="150" x2="120" y2="178" stroke="#94a3b8"/><text x="113" y="175">↓</text><rect x="30" y="185" width="180" height="115" rx="6" fill="#eaf2ff"/><text x="65" y="215">학습 자료</text><text x="45" y="250">전처리 기준·계수</text><text x="45" y="280">학습 자료에서 계산</text><line x1="320" y1="150" x2="320" y2="178" stroke="#94a3b8"/><text x="313" y="175">↓</text><rect x="230" y="185" width="180" height="115" rx="6" fill="#eaf2ff"/><text x="265" y="215">검증 자료</text><text x="245" y="250">모형·변수·설정</text><text x="245" y="280">비교하고 선택</text><line x1="520" y1="150" x2="520" y2="178" stroke="#94a3b8"/><text x="513" y="175">↓</text><rect x="430" y="185" width="180" height="115" rx="6" fill="#eaf2ff"/><text x="465" y="215">시험 자료</text><text x="445" y="250">최종 선택을 끝낸 뒤</text><text x="445" y="280">마지막 성능 평가</text><text x="24" y="345">시험 자료를 보며 반복 선택하면 최종 평가의 독립성을 잃습니다</text><text x="24" y="380">시간·지역·단지 구조에 맞게 분할 · 박스 크기는 배분 비율이 아님</text></svg><figcaption class="learn-chart__caption">그림 4. 전체 원자료를 학습·검증·시험 역할로 구분한 개념도입니다. 학습 자료를 검증·시험 자료로 차례로 바꾼다는 뜻이 아닙니다. 비율은 고정하지 않으며 표준화·결측치 대체 기준은 학습 자료에서 계산합니다.</figcaption></figure>
+<p>이러한 구분은 모형이 이미 본 자료를 다시 평가함으로써 발생하는 과도하게 낙관적인 결과를 줄이기 위한 것입니다.</p>
+<p>반드시 60:20:20 또는 70:15:15처럼 일정한 비율로 나누어야 하는 것은 아닙니다.</p>
+<p>표본수와 시간적 구조, 동일 단지의 반복 거래 여부 등에 따라 적절한 분할 방식이 달라집니다.</p>
+<p>자료가 적다면 교차검증을 활용할 수 있습니다.</p>
+<p>하지만 시험 자료를 반복적으로 확인하며 모형을 고르면 그 시험 자료는 더 이상 독립적인 최종 평가 자료가 아닙니다.</p>
+<p>이러한 문제는 23장에서 더 자세히 살펴보겠습니다.</p></section>
+<section class="learn-chapter__step" id="evaluation" data-toc-label="무엇을 기준으로 평가해야 할까요?"><p class="learn-chapter__label">무엇을 기준으로 평가해야 할까요?</p><h2>지도학습과 비지도학습은 평가 기준도 다릅니다</h2><span id="choice" aria-hidden="true"></span><p>분석 목적이 달라지면 어떤 지표로 결과를 평가할지도 달라집니다.</p>
+<div class="learn-data learn-data--full"><table><thead><tr><th scope="col">분석 방법</th><th scope="col">평가할 내용</th><th scope="col">대표적인 방법</th></tr></thead><tbody><tr><th scope="row">수치 예측</th><td>실제값과 예측값의 차이</td><td>MAE, RMSE 등</td></tr><tr><th scope="row">분류</th><td>정확히 분류했는지와 오류의 종류</td><td>정확도, 재현율, 정밀도 등</td></tr><tr><th scope="row">확률 예측</th><td>예측확률의 품질</td><td>로그손실, 확률 보정 등</td></tr><tr><th scope="row">군집분석</th><td>군집 구조의 안정성과 해석 가능성</td><td>군집 분리도, 안정성, 분야 해석</td></tr></tbody></table></div>
+<p>군집분석에는 정답 범주가 없는 경우가 많습니다.</p>
+<p>따라서 군집 번호가 실제 용도지역과 얼마나 일치하는지를 계산했다고 해서 곧바로 분류모형의 예측 정확도로 해석할 수는 없습니다.</p>
+<p>이미 알려진 범주와 비교하는 외부 평가를 수행할 수는 있지만, 그것은 군집을 만든 뒤 구조를 비교한 결과입니다.</p>
+<p>또한 군집 내부의 거리나 분리도가 좋다고 해서 해당 군집이 실제 시장에서 유용한 구분이라는 뜻도 아닙니다.</p>
+<p>부동산 자료라면 지역과 용도지역, 거래 규모, 가격대 등의 관점에서 어떤 특징을 갖는지 살펴볼 필요가 있습니다.</p>
+<p>좋은 평가란 모든 모형에 같은 점수를 적용하는 것이 아니라, 분석 목적에 맞는 증거를 확인하는 것입니다.</p></section>
+<section class="learn-chapter__step" id="macro" data-toc-label="CH2 Macro에서 읽기"><p class="learn-chapter__label">CH2 Macro에서 읽기</p><h2>설명형과 예측형은 무엇을 우선하는지가 다릅니다</h2><p>CH2 Macro의 회귀분석을 사용할 때는 먼저 시장의 관계를 이해하려는지, 새로운 자료의 값을 예측하려는지 구분하는 것이 중요합니다.</p>
+<p>① 설명형 분석</p>
+<p>시장에 어떤 가격 구조가 나타나는지 알아보는 것이 우선입니다.</p>
+<p>예를 들어 면적과 단가의 관계가 지역이나 용도지역에 따라 어떻게 달라지는지, 특정 변수가 다른 설명변수를 고려한 후에도 어떤 관계를 보이는지 살펴볼 수 있습니다.</p>
+<p>이때 회귀계수의 방향과 크기, 해석 가능성, 표본수와 불확실성이 중요합니다.</p>
+<p>통계적으로 유의하지 않다는 이유만으로 시장에서 중요한 변수를 무조건 제외해서는 안 됩니다.</p>
+<p>② 예측형 분석</p>
+<p>새로운 관측값의 예측오차를 줄이는 것이 우선입니다.</p>
+<p>따라서 적절한 검증 자료에서 MAE나 RMSE 등을 비교하고, 예측 시점에 실제로 알 수 있는 변수만 사용하는지 확인해야 합니다.</p>
+<p>설명이 다소 어려운 모형이라도 예측 성능이 더 나을 수 있습니다.</p>
+<p>반대로 해석하기 쉬운 회귀식이 언제나 새로운 거래를 가장 정확하게 예측하는 것도 아닙니다.</p>
+<p>③ 유사한 거래집단의 탐색</p>
+<p>시장 구조를 탐색하려면 거래의 특성에 따라 비슷한 집단이 존재하는지 살펴볼 수 있습니다.</p>
+<p>다만 데이터가 나뉘었다는 사실만으로 군집이 실제 부동산 시장의 객관적인 유형을 뜻하는 것은 아닙니다.</p>
+<p>지역과 거래 규모, 용도지역 등의 의미를 검토해야 합니다.</p>
+<p>이처럼 설명형·예측형·구조 탐색은 서로 다른 목적을 갖지만, 한 분석이 다른 목적의 통계 결과를 전혀 사용하지 못한다는 뜻은 아닙니다.</p>
+<p>실제로 예측형 모형에서도 변수의 의미와 안정성을 살펴볼 수 있고, 설명형 분석에서도 모형의 적합도와 검증 결과를 참고할 수 있습니다.</p>
+<p>다만 예측 정확도가 높은 변수와 시장에서 설명상 중요한 변수는 반드시 일치하지 않습니다.</p>
+<p>따라서 CH2 Macro에서는 변수의 통계적 유의성, 해석 가능성, 실제 예측 성능을 서로 구별해서 읽는 것이 좋습니다.</p>
+<p>또한 이 장에서 소개한 분류나 군집 예제가 실제 CH2 Macro의 모든 기능으로 구현되어 있다는 뜻은 아닙니다.</p>
+<p>CH2 Macro의 목적은 개별 부동산의 적정가격을 자동 확정하는 것이 아니라, 거래자료를 통해 시장의 구조와 가격 형성의 특징을 이해하도록 돕는 것입니다.</p>
+<p><a href="https://macro.ch2data.com/">CH2 Macro 통계·데이터분석 열기 →</a></p><details class="learn-more"><summary>실제 Macro의 추천 목적·평가 자료·입력 범위 확인</summary><div class="learn-more__body">
+<p>확인한 복합 모형추천과 집합 주거 지역회귀 추천 UI는 ‘예측형’과 ‘설명형’을 구분합니다. 목적에 따른 후보 정렬이며 통계적 통제가 인과효과를 보장하는 기능은 아닙니다. 계수의 p값·유의 변수 수를 별도 자료의 예측 기여도나 변수 중요도 순위로 읽지 않습니다.</p>
+<p>복합 척도 비교의 확인한 경로는 예측형에서 원 단위 CV-MAPE를 우선하고, 없으면 학습 MAPE와 AIC를 참조합니다. 설명형은 로그 종속변수 후보끼리 AIC를 비교합니다. 롤링 시점 검증은 과거 연도로 학습해 이후 연도를 평가하며, 로그 역변환 보정계수는 각 학습 fold의 잔차에서만 구합니다. 그렇다고 모든 전처리·변수 선택 단계의 정보 누수까지 검증되었다는 뜻은 아닙니다.</p>
+<p>집합 주거 지역회귀는 단지별 중앙단가를 목표로 하며, 예측형 후보 정렬에는 Holdout MAPE를 사용합니다. 없으면 학습 MAPE를 참조하고, 설명형은 원 단위 수정 R²를 우선합니다. 이 Holdout은 후보 선택에 쓰이므로 최종 선택과 독립적인 시험 성능이라고 부르면 안 됩니다. 복합의 거래별 금액·연도 검증과 집합의 단지별 단가·단지 분할을 같은 평가로 섞지 않습니다.</p>
+<p>지역회귀는 후보별 선택 변수의 결측 조건으로 적격 표본을 정하고, 그 표본에서 분할합니다. 따라서 후보마다 같은 단지들이 평가된다고 단정할 수 없습니다. 또한 범주 구성에 전체 적격 자료를 사용하는 경로가 있어, 전처리가 모두 학습 자료 내부에서만 이루어진다고 설명하지 않습니다. 공정한 동일 표본 비교와 별도 최종 시험, 전처리 범위는 추가 점검 사항입니다.</p>
+<p>같은 단지·지역의 반복 거래는 서로 독립적이지 않을 수 있습니다. 확인한 복합 연도 분할이 단지 단위의 완전한 분리까지 보장하지는 않습니다. 반대로 단지 한 행을 나누는 지역회귀도 미래 연도나 새로운 지역에 대한 검증을 자동 보장하지 않습니다. 적용하려는 대상에 맞춰 시간·지역·단지 구조를 함께 점검해야 합니다.</p>
+<p>확인한 복합 설계는 거래금액을 목표로 하고, 지역회귀 설계는 단지 중앙단가를 목표로 합니다. 지역회귀의 선택 속성에는 세대수·최고층·연식·주차·대표 필지 공시지가·범주 등이 있습니다. 이 경로에서 실제 목표 거래금액을 입력해 단가를 복원하는 교재의 누수 예제를 그대로 사용한다고 보지는 않습니다. 다만 공시지가처럼 ‘최신 대표 필지’ 속성을 과거 예측에 쓸 때는 당시 이용 가능했던 판본인지 별도로 확인해야 합니다.</p>
+<p>이 장의 가상 혼동행렬과 K-means 8점 실험은 독립된 학습 UI입니다. 이를 실제 Macro가 모든 거래에 제공하는 분류·군집 기능으로 소개하지 않습니다. 유사 지역·집단을 찾는 다른 서비스 기능도 이 교재의 K-means와 같은 알고리즘이라고 가정하지 않습니다. 실제 회귀·추천·자료 처리 로직은 이번 작업에서 변경하지 않습니다.</p>
+</div></details></section>
+<section class="learn-chapter__step" id="practice" data-toc-label="확인 문제"><p class="learn-chapter__label">확인 문제</p><h2>분석 목적과 학습 방법을 구별하세요</h2><ol class="learn-exercises"><li>선형회귀는 통계학의 방법이므로 지도학습에 해당하지 않을까요?<details><summary>답과 해설</summary><div class="learn-more__body"><p>아닙니다.</p>
+<p>입력변수와 목표값의 관계를 학습한다면 선형회귀도 지도학습입니다.</p>
+<p>통계학과 머신러닝이라는 분야의 구분과 지도학습이라는 학습 방식의 구분은 서로 다릅니다.</p></div></details></li><li>거래단가를 군집분석의 변수로 사용하면 언제나 데이터 누수일까요?<details><summary>답과 해설</summary><div class="learn-more__body"><p>그렇지 않습니다.</p>
+<p>이미 거래가 완료된 자료의 구조를 탐색한다면 거래단가를 군집 특징으로 사용할 수 있습니다.</p>
+<p>하지만 거래단가를 예측하려는 시점에 실제 단가나 이를 계산할 수 있는 정보를 입력에 사용한다면 데이터 누수가 발생할 수 있습니다.</p></div></details></li><li>분류 정확도가 90%이면 드문 양성도 잘 찾아낸다고 볼 수 있을까요?<details><summary>답과 해설</summary><div class="learn-more__body"><p>아닙니다.</p>
+<p>양성이 10%, 음성이 90%인 자료에서 모든 대상을 음성으로 예측하면 정확도는 90%이지만 양성 재현율은 0%입니다.</p>
+<p>따라서 정확도만으로 판단해서는 안 됩니다.</p></div></details></li><li>K-means가 두 개의 군집을 만들었다면 실제 시장에도 두 개의 유형이 존재한다고 볼 수 있을까요?<details><summary>답과 해설</summary><div class="learn-more__body"><p>그렇지 않습니다.</p>
+<p>군집의 개수와 구분은 변수 선택, 거리 계산, 군집 수 등의 설정에 영향을 받습니다.</p>
+<p>따라서 군집이 실제 시장에서 의미 있는 구분인지 별도로 해석하고 검증해야 합니다.</p></div></details></li></ol></section>
+<section class="learn-chapter__step" id="recap" data-toc-label="결론 · 학습 요약"><p class="learn-chapter__label">결론 · 학습 요약</p><h2>좋은 분석은 알고리즘보다 질문과 평가 기준에서 시작됩니다</h2><p>같은 부동산 거래자료라도 무엇을 알고 싶은지에 따라 분석 방법은 달라집니다.</p>
+<p>관찰된 관계를 이해하고 싶은지, 특정 변화의 인과효과를 알고 싶은지, 아직 모르는 결과를 예측하고 싶은지 먼저 결정해야 합니다.</p>
+<p>또한 입력변수와 목표변수의 관계를 학습하는 지도학습과, 목표값 없이 자료의 구조를 살펴보는 비지도학습을 구분해야 합니다.</p>
+<p>이번 장에서 기억할 내용</p>
+<ul><li>설명: 자료에서 관찰되는 관계와 특징을 이해합니다.</li><li>인과: 특정 조건을 바꾸었을 때의 효과를 연구합니다.</li><li>예측: 아직 모르는 결과를 이용 가능한 정보로 추정합니다.</li><li>지도학습: 입력변수와 목표변수의 대응 관계를 학습합니다.</li><li>회귀와 분류: 수치형 목표와 범주형 목표를 구분합니다.</li><li>비지도학습: 정해진 목표값 없이 자료의 구조를 탐색합니다.</li><li>데이터 누수: 실제 예측 시점에 알 수 없는 정보를 학습에 사용하지 않아야 합니다.</li><li>모형 평가: 학습 성능보다 적절한 검증 자료와 기준모형을 활용하는 것이 중요합니다.</li><li>CH2 Macro: 설명형과 예측형은 서로 다른 기준을 우선하므로 결과를 구별해 해석해야 합니다.</li></ul>
+<p>다음 <a href="/learn/stats/train-validation-test/">23장 「학습·검증·시험 자료와 데이터 누수」</a>에서는 예측 성능을 과대평가하지 않기 위한 자료 분할과 검증 설계를 자세히 살펴보겠습니다.</p>
+<details class="learn-more"><summary>참고자료와 계산값</summary><div class="learn-more__body"><ul><li><a href="https://scikit-learn.org/stable/supervised_learning.html">scikit-learn: 지도학습</a></li><li><a href="https://scikit-learn.org/stable/unsupervised_learning.html">scikit-learn: 비지도학습</a></li><li><a href="../learning-example.json">분할·예측·가상 분류·군집 예제 자료</a></li></ul><p class="learn-source-note">참고자료의 기존 확인일: 2026-10-09. 회귀 계산은 공통 학습 자료의 면적(㎡)과 거래단가(만원/㎡)를 사용했습니다. 분류·군집과 평가 흐름 그림은 별도 가상 예제 및 개념도입니다.</p></div></details></section></article>
 
       <nav class="learn-chapter-nav" aria-label="장 이동">
 <a href="/learn/stats/model-fit/">← 21. 회귀모형의 적합도와 추정의 불확실성</a>
@@ -54,6 +307,8 @@
         <p>© CH2 DATA</p>
       </footer>
     </div>
-    <script src="/learn/stats/learn-stats-toc.js?v=20261023-1" defer></script>
-  </body>
+    <script src="/learn/stats/learn-stats-toc.js?v=20261025-2" defer></script>
+  <script type="application/json" id="sl-data">{"description": "공통 학습 자료의 면적 X(㎡)와 거래단가 Y(만원/㎡)를 사용한 번호 순서 분할. 시간 검증이 아니며 분류·군집 예제는 별도 가상 자료.", "train_ids": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], "test": [{"id": 21, "actual": 88, "predicted": 83.44517823117556}, {"id": 22, "actual": 132, "predicted": 182.279415153692}, {"id": 23, "actual": 120, "predicted": 136.66361349714597}, {"id": 24, "actual": 268, "predicted": 224.0939000055259}, {"id": 25, "actual": 78, "predicted": 53.03464379347821}, {"id": 26, "actual": 124, "predicted": 121.45834627829728}, {"id": 27, "actual": 115, "predicted": 174.67678154426767}, {"id": 28, "actual": 160, "predicted": 229.41574353212295}, {"id": 29, "actual": 95, "predicted": 151.86888071599466}, {"id": 30, "actual": 108, "predicted": 189.88204876311636}], "fit": {"intercept": 250.70311763851112, "slope": -0.7602633609424343, "xmean": 125.75, "ymean": 155.1, "Sxx": 122151.75, "Sxy": -92867.5, "residuals": [4.14428733112706, -107.47809834897987, -37.08731598196505, 29.7600889876731, 14.707416799186262, -24.06097988772163, 246.02267630222244, 68.97852425364351, -15.074147934843324, -31.471514325419008, -7.65044545002425, 16.31663443217144, -32.26624710657032, 1.362722597097445, -41.080731958404215, -33.88863278667722, -4.253079059448595, 38.714000822747096, -59.4846823725407, -26.210476313274285], "SSE": 91074.04232767847, "R2": 0.4366942008879483}, "MAE": 41.075441489786265, "baseline_mean": 155.1, "baseline_MAE": 49.86, "classification": {"TN": 90, "FP": 0, "FN": 10, "TP": 0, "accuracy": 0.9, "recall": 0, "precision": null}, "clustering": {"points": [[1, 1], [1, 2], [2, 1], [2, 2], [6, 6], [6, 7], [7, 6], [7, 7]], "centers": [[1.5, 1.5], [6.5, 6.5]], "labels": [0, 0, 0, 0, 1, 1, 1, 1], "inertia": 4.0}}</script>
+<script type="module" src="/learn/stats/supervised-unsupervised/experiment.js?v=20261025-1"></script>
+</body>
 </html>

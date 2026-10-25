@@ -10,47 +10,138 @@ def build():
  rows=json.loads((ROOT/'example-data.json').read_text(encoding='utf-8'))['rows'];train=rows[:20];test=rows[20:];m=fit([r['area'] for r in train],[r['price'] for r in train]);baseline=mean(r['price'] for r in train)
  predictions=[dict(id=r['id'],actual=r['price'],predicted=m['intercept']+m['slope']*r['area']) for r in test];mae=mean(abs(r['actual']-r['predicted']) for r in predictions);base_mae=mean(abs(r['price']-baseline) for r in test)
  points=[[1,1],[1,2],[2,1],[2,2],[6,6],[6,7],[7,6],[7,7]];centers=[[1.5,1.5],[6.5,6.5]];labels=[min(range(2),key=lambda j:sum((v-c)**2 for v,c in zip(p,centers[j]))) for p in points]
- result=dict(description='공통 학습 자료의 두 수치열을 단위 없는 X,Y로 사용한 번호 순서 분할. 시간 검증이 아니며 분류·군집 예제는 별도 가상 자료.',train_ids=[r['id'] for r in train],test=predictions,fit=m,MAE=mae,baseline_mean=baseline,baseline_MAE=base_mae,classification=dict(TN=90,FP=0,FN=10,TP=0,accuracy=.9,recall=0),clustering=dict(points=points,centers=centers,labels=labels,inertia=sum(sum((v-c)**2 for v,c in zip(p,centers[j])) for p,j in zip(points,labels))))
+ result=dict(description='공통 학습 자료의 면적 X(㎡)와 거래단가 Y(만원/㎡)를 사용한 번호 순서 분할. 시간 검증이 아니며 분류·군집 예제는 별도 가상 자료.',train_ids=[r['id'] for r in train],test=predictions,fit=m,MAE=mae,baseline_mean=baseline,baseline_MAE=base_mae,classification=dict(TN=90,FP=0,FN=10,TP=0,accuracy=.9,recall=0,precision=None),clustering=dict(points=points,centers=centers,labels=labels,inertia=sum(sum((v-c)**2 for v,c in zip(p,centers[j])) for p,j in zip(points,labels))))
  (ROOT/'learning-example.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
  def tx(x,y,s):return f'<text x="{x}" y="{y}">{escape(str(s))}</text>'
  def ln(x,y,a,b,c='#94a3b8'):return f'<line x1="{x}" y1="{y}" x2="{a}" y2="{b}" stroke="{c}"/>'
  def rect(x,y,w,h,c):return f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="6" fill="{c}"/>'
- def fig(id,title,b,cap,h=410):return f'<figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 {h}" role="img" aria-labelledby="{id}-title {id}-desc"><title id="{id}-title">{title}</title><desc id="{id}-desc">{cap}</desc>{b}</svg><figcaption class="learn-chart__caption">{cap}</figcaption></figure>'
- b=tx(24,28,'공통 자료: 학습에 쓰지 않은 번호 21~30의 예측')+ln(65,325,570,325)+ln(65,55,65,325)+ln(65,325,515,55,'#94a3b8')
- for r in predictions:b+=f'<circle data-id="{r["id"]}" cx="{65+r["actual"]*1.5}" cy="{325-r["predicted"]*.9}" r="5" fill="#2563eb"/>'
- for v in [0,100,200,300]:b+=tx(60+v*1.5,350,v)+tx(24,330-v*.9,v)
- b+=tx(24,385,'가로: 관측 Y / 세로: 예측 Y')
- f1=fig('regression','관측값과 예측값',b,'그림 1. 1~20번으로 학습하고 21~30번에서 평가한 교재용 분할입니다. 회색선은 예측=관측입니다. 번호는 시간순이 아니며 운영 성능을 추정하기 위한 검증 설계가 아닙니다.')
- b=tx(24,28,'가상 분류: 100건 모두 음성으로 예측')+tx(220,75,'예측 음성')+tx(420,75,'예측 양성')
- for x,y,c in [(190,100,'#dbeafe'),(390,100,'#f1f5f9'),(190,210,'#ffedd5'),(390,210,'#f1f5f9')]:b+=rect(x,y,170,85,c)
- b+=tx(35,148,'실제 음성')+tx(35,258,'실제 양성')+tx(250,148,'90')+tx(450,148,'0')+tx(250,258,'10')+tx(450,258,'0')+tx(24,350,'정확도 90% · 양성 재현율 0%')+tx(24,385,'높은 정확도가 드문 양성의 탐지를 보장하지 않습니다')
- f2=fig('classification','불균형 분류의 혼동행렬',b,'그림 2. 실제 양성 10건을 모두 놓친 별도 가상 예제입니다. 행은 실제, 열은 예측입니다. 양성 예측이 없어 정밀도는 분모가 0이며 정의되지 않습니다.')
- b=tx(24,28,'가상 두 특징의 K=2 군집 예제')+ln(65,325,570,325)+ln(65,55,65,325)
- for p,j in zip(points,labels):b+=f'<circle cx="{65+p[0]*60}" cy="{325-p[1]*35}" r="5" fill="'+('#2563eb' if j==0 else '#d97706')+'"/>'
- for a,v in centers:
-  cx=65+a*60;cy=325-v*35;b+=ln(cx-8,cy-8,cx+8,cy+8,'#111827')+ln(cx-8,cy+8,cx+8,cy-8,'#111827')
- for v in [0,2,4,6,8]:b+=tx(60+v*60,350,v)+tx(30,330-v*35,v)
- b+=tx(24,385,'가로: 특징 1 / 세로: 특징 2 · ×는 군집 중심')
- f3=fig('clusters','정답 범주 없이 만든 군집',b,'그림 3. 단위 없는 가상 8점입니다. 색은 정답 유형이 아니라 거리로 정한 군집 번호입니다. 중심은 (1.5,1.5), (6.5,6.5)이며 번호를 바꾸어도 같은 분할입니다.')
- b=tx(24,28,'예측 성능 평가의 개념 흐름')
- for y,label,desc in [(75,'학습 자료','전처리 기준과 모형 계수 학습'),(170,'검증 자료','변수·모형·설정 비교와 선택'),(265,'시험 자료','선택을 끝낸 뒤 최종 성능 평가')]:
-  b+=rect(90,y,450,65,'#eaf2ff')+tx(115,y+25,label)+tx(115,y+50,desc)
- b+=tx(300,160,'↓')+tx(300,255,'↓')+tx(24,385,'시험 결과를 보고 반복 선택하면 시험도 검증 자료가 됩니다')
- f4=fig('workflow','학습과 평가 역할',b,'그림 4. 역할을 구분한 개념도입니다. 비율은 고정하지 않으며 시간·집단 구조와 활용 상황에 맞춰 자료를 나눕니다. 전처리는 학습 자료에서 적합합니다.')
+ def fig(id,title,b,cap,h=410):return f'<figure class="learn-chart learn-chart--wide"><svg class="sl-chart-svg" viewBox="0 0 640 {h}" role="img" aria-labelledby="{id}-title {id}-desc"><title id="{id}-title">{title}</title><desc id="{id}-desc">{cap}</desc>{b}</svg><figcaption class="learn-chart__caption">{cap}</figcaption></figure>'
+ px=lambda v:120+v*1.35
+ py=lambda v:465-v*1.35
+ b=tx(24,28,'공통 자료: 학습에 쓰지 않은 21~30번, 같은 10건 평가')+ln(120,465,525,465)+ln(120,60,120,465)+ln(120,465,525,60,'#64748b')
+ for row in predictions:b+=f'<circle data-id="{row["id"]}" data-actual="{row["actual"]}" cx="{px(row["actual"])}" cy="{py(row["predicted"])}" r="5" fill="#2563eb"><title>{row["id"]}번: 실제 {row["actual"]}, 예측 {row["predicted"]:.2f}만원/㎡</title></circle>'
+ for v in [0,100,200,300]:b+=tx(px(v)-7,490,v)+tx(75,py(v)+5,v)
+ b+=tx(24,525,'가로: 실제 거래단가 / 세로: 예측 거래단가 (만원/㎡)')+tx(24,550,'두 축은 같은 배율 · 회색 45도 선: 예측=실제')
+ f1=fig('regression','같은 평가 자료에서 회귀와 기준모형 비교',b,'그림 1. 1~20번에서 학습하고 21~30번에서 평가합니다. 회색 45도 선은 예측=실제입니다. 번호는 시간순이 아니며 미래 예측 성능을 검증한 결과가 아닙니다.',575)
+ controls='<div class="sl-controls" hidden><label for="sl-model">평가할 모형</label><select id="sl-model"><option value="regression">단순회귀</option><option value="baseline">학습 평균 기준모형</option></select><div id="sl-eval-status" role="status" aria-live="polite"></div><p class="learn-source-note">관측값과 평가 대상 10건은 고정합니다. 기준모형의 평균은 학습 20건에서만 계산합니다. 미래 시점 검증이 아닌 교재용 분할입니다.</p></div>'
+ f1=f1.replace('<figure class="learn-chart learn-chart--wide">','<figure class="learn-chart learn-chart--wide" id="sl-regression">').replace('<svg ',controls+'<svg ',1)
+ b=tx(24,28,'가상 분류: 100건 모두 음성으로 예측')+tx(220,75,'예측 양성')+tx(420,75,'예측 음성')
+ cells=[('TP',190,100,0,'#f1f5f9',''),('FN',390,100,10,'#ffedd5',' · 놓침'),('FP',190,210,0,'#f1f5f9',''),('TN',390,210,90,'#dbeafe',' · 맞힘')]
+ for key,xx,yy,count,color,note in cells:b+=rect(xx,yy,170,85,color).replace(' rx=',f' data-cell="{key}" data-count="{count}" rx=')+tx(xx+23,yy+48,f'{key} {count}{note}')
+ b+=tx(35,148,'실제 양성')+tx(35,258,'실제 음성')+tx(24,340,'정확도 90% · 양성 재현율 0%')+tx(24,375,'정밀도: 정의되지 않음 (양성 예측 0건)')
+ f2=fig('classification','정확도 90%지만 양성 10건을 모두 놓친 분류',b,'그림 2. 공통 30건과 별개인 가상 분류 자료 100건입니다. 행은 실제, 열은 예측입니다. 맞힌 음성 TN=90, 놓친 양성 FN=10이며 정밀도의 분모 TP+FP는 0입니다.')
+ b=tx(24,28,'단위 없는 가상 두 특징 · K=2 군집 예제')+ln(145,355,465,355)+ln(145,35,145,355)
+ for point,label in zip(points,labels):b+=f'<circle data-cluster="{label}" cx="{145+point[0]*40}" cy="{355-point[1]*40}" r="5" fill="'+('#2563eb' if label==0 else '#d97706')+'"><title>좌표 ('+str(point[0])+', '+str(point[1])+')</title></circle>'
+ for label,(a,v) in enumerate(centers):
+  cx=145+a*40;cy=355-v*40;b+='<g data-cluster-center="'+str(label)+'">'+ln(cx-8,cy-8,cx+8,cy+8,'#111827')+ln(cx-8,cy+8,cx+8,cy-8,'#111827')+'</g>'
+ for v in [0,2,4,6,8]:b+=tx(140+v*40,380,v)+tx(110,360-v*40,v)
+ b+=tx(24,415,'가로: 특징 1 / 세로: 특징 2 · 단위 없음, 같은 축 배율')+tx(24,445,'파랑 A / 주황 B · ×: 중심 · 군집 번호는 정답 범주가 아님').replace('<text ','<text id="sl-cluster-legend" ',1)
+ f3=fig('clusters','가상 8점의 관측점과 K-means 군집',b,'그림 3. 단위 없는 가상 8점입니다. 중심은 (1.5,1.5), (6.5,6.5), 군집 내 제곱거리 합은 4입니다. 군집 번호를 교환해도 같은 분할입니다.',475)
+ controls='<div class="sl-controls" hidden><label for="sl-cluster-mode">군집 표시</label><select id="sl-cluster-mode"><option value="cluster">군집과 중심 보기</option><option value="points">관측점만 보기</option></select><p id="sl-cluster-status" role="status" aria-live="polite"></p></div>'
+ f3=f3.replace('<figure class="learn-chart learn-chart--wide">','<figure class="learn-chart learn-chart--wide" id="sl-clusters">').replace('<svg class="sl-chart-svg"',controls+'<svg class="sl-chart-svg sl-cluster-svg"',1)
+ b=tx(24,28,'전체 자료를 역할에 따라 나누는 개념도')+rect(170,55,300,65,'#eaf2ff')+tx(253,95,'전체 원자료')
+ b+=ln(320,120,320,150)+ln(120,150,520,150)
+ for xx,label,line1,line2 in [(30,'학습 자료','전처리 기준·계수','학습 자료에서 계산'),(230,'검증 자료','모형·변수·설정','비교하고 선택'),(430,'시험 자료','최종 선택을 끝낸 뒤','마지막 성능 평가')]:
+  b+=ln(xx+90,150,xx+90,178)+tx(xx+83,175,'↓')+rect(xx,185,180,115,'#eaf2ff')+tx(xx+35,215,label)+tx(xx+15,250,line1)+tx(xx+15,280,line2)
+ b+=tx(24,345,'시험 자료를 보며 반복 선택하면 최종 평가의 독립성을 잃습니다')+tx(24,380,'시간·지역·단지 구조에 맞게 분할 · 박스 크기는 배분 비율이 아님')
+ f4=fig('workflow','전체 자료에서 학습·검증·시험 역할 구분',b,'그림 4. 전체 원자료를 학습·검증·시험 역할로 구분한 개념도입니다. 학습 자료를 검증·시험 자료로 차례로 바꾼다는 뜻이 아닙니다. 비율은 고정하지 않으며 표준화·결측치 대체 기준은 학습 자료에서 계산합니다.')
  parts=[]
- def sec(id,label,title,body):parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{title}</h2>{body}</section>')
- sec('quick-start','서두 · 학습목표','알고 싶은 질문에 따라 학습과 평가 방법이 달라집니다','''<p>공부 시간과 점수의 관계를 설명하는 것, 새 학생의 점수를 예측하는 것, 비슷한 학습 습관을 가진 학생들을 묶는 것은 서로 다른 일입니다. 같은 자료를 사용해도 질문에 따라 필요한 정보와 평가 기준이 달라집니다.</p><p>이 장에서는 <strong>설명·인과·예측</strong>의 목적과 <strong>지도학습·비지도학습</strong>의 구조를 구별합니다. 회귀·분류·군집 예제를 통해 방법 이름보다 먼저 무엇을 정해야 하는지 살펴봅니다.</p><ul class="learn-objectives"><li>관측 관계의 설명과 인과 추론, 새 결과의 예측을 구별합니다.</li><li>입력 X와 목표 Y가 있는 지도학습의 구조를 설명합니다.</li><li>회귀·분류·군집이 각각 어떤 질문에 답하는지 이해합니다.</li><li>기준모형·평가 지표·자료 분할을 분석 목적에 맞춰 선택합니다.</li></ul>''')
- sec('purposes','분석 목적부터 정하기','설명·인과·예측은 같은 질문이 아닙니다','''<p><strong>관측 관계의 설명</strong>은 자료에서 무엇이 함께 달라지는지 요약합니다. 예를 들어 학년별 점수 분포를 그리거나 사전 점수를 조건으로 한 공부 시간 계수를 읽을 수 있습니다.</p><p><strong>인과 추론</strong>은 어떤 조건에 개입했을 때 결과가 어떻게 달라지는지 묻습니다. 공부 시간을 늘리면 점수가 얼마나 달라질지 알려면 관측 관계 외에 연구 설계와 추가 가정이 필요합니다.</p><p><strong>예측</strong>은 예측 시점에 알 수 있는 정보로 아직 모르는 결과를 추정합니다. 계수의 p값보다 새로운 자료에서 얼마나 잘 맞는지, 어떤 오류를 줄여야 하는지가 중요합니다.</p><p>‘통계는 설명, 머신러닝은 예측’처럼 나누지는 않습니다. 같은 회귀식도 설명과 예측에 쓰일 수 있습니다. 다만 좋은 예측이 좋은 인과 설명을 보장하지 않고, 큰 변수 중요도가 큰 인과효과를 뜻하지도 않습니다.</p>''')
- sec('supervised','지도학습','입력과 목표값의 짝으로 예측 규칙을 학습합니다','''<p><strong>지도학습</strong>은 입력 특징 X와 관측된 목표값 Y의 짝을 사용해 예측 규칙을 학습합니다. 예를 들어 공부 시간·사전 점수로 나중의 점수를 예측할 수 있습니다. 학습 자료에 목표값이 있다는 뜻이며, 새 대상을 예측할 때도 그 목표를 알고 있다는 뜻은 아닙니다.</p><p>Y가 점수처럼 수치형이면 <strong>회귀</strong>, 스팸 여부처럼 범주형이면 <strong>분류</strong> 문제로 다룹니다. 범주를 0과 1로 저장해도 연속적인 양을 예측하는 문제와 같아지는 것은 아닙니다.</p><p>흔히 Y를 ‘정답’이라고 부르지만 실제로는 기록된 목표 열입니다. 측정오차나 잘못된 분류, 모호한 기준이 있을 수 있습니다. 무엇을 한 관측으로 보고, 언제 알 수 있는 정보로 언제의 목표를 예측하는지 명시해야 합니다.</p><details class="learn-more"><summary>학습 손실이란?</summary><div class="learn-more__body"><p>손실함수 L은 예측이 목표와 얼마나 어긋나는지 수치로 나타냅니다. 경험위험 최소화는 학습 자료의 평균 손실 (1/n)ΣL(yᵢ,f(xᵢ))을 줄이는 방식입니다. 제곱손실·절대손실·로그손실 등을 목적에 맞춰 사용합니다. 학습 손실을 줄였다고 새 자료의 성능까지 보장되지는 않습니다.</p></div></details>''')
- sec('regression','회귀 예제','학습에 사용하지 않은 자료에서 기준모형과 비교합니다',f'''<p>계산 연습에는 <a href="/learn/stats/graphs/#data">공통 학습 자료</a>의 두 수치열을 단위 없는 X,Y로 사용합니다. 1~20번으로 학습한 식은 <strong>ŷ={m['intercept']:.3f}{m['slope']:+.4f}X</strong>입니다. 학습에 쓰지 않은 21~30번에서 관측 Y와 예측 Y를 비교하겠습니다.</p>'''+f1+f'''<p>평가한 10개 관측의 <strong>MAE는 {mae:.2f}</strong>입니다. 관측값과 예측값 차이의 절댓값을 평균한 값이며 Y와 같은 단위입니다.</p><p>학습 평균 <strong>{baseline:.2f}</strong>를 항상 예측하는 단순한 기준모형의 MAE는 <strong>{base_mae:.2f}</strong>입니다. 이처럼 같은 목표·평가 자료·지표에서 비교해야 모형의 성능을 판단할 수 있습니다. 기준모형도 평가 자료의 목표값을 보고 다시 정하지 않습니다.</p><p>번호순으로 나눈 작은 예제이므로 실제 활용 성능을 입증한 결과는 아닙니다. 번호가 시간순을 뜻하지도 않습니다. 활용할 시점과 대상에 맞는 평가 설계는 별도로 필요합니다.</p><details class="learn-more"><summary>평균 기준과 중앙값 기준</summary><div class="learn-more__body"><p>여기서는 비교용 기준으로 학습 평균을 사용했습니다. 학습 자료에서 절대오차를 최소화하는 상수는 학습 중앙값이고, 제곱오차를 최소화하는 상수는 학습 평균입니다. 목표와 평가 지표에 맞는 기준모형을 정해야 합니다.</p></div></details>''')
- sec('classification','분류 예제','정확도가 높아도 중요한 범주를 전부 놓칠 수 있습니다','''<p>분류는 목표 범주나 그 확률을 예측합니다. 예를 들어 이메일을 스팸·비스팸으로 구분할 수 있습니다. 아래에서는 찾으려는 범주를 ‘양성’, 나머지를 ‘음성’이라고 부릅니다.</p>'''+f2+'''<p>100개 중 실제 양성은 10개인데 모형은 모두 음성으로 예측했습니다. 음성 90개를 맞혀 정확도는 90%이지만, 실제 양성을 찾은 비율인 <strong>재현율은 0%</strong>입니다. 드문 범주를 찾는 목적이라면 정확도 하나로 충분하지 않습니다.</p><p>확률을 범주로 바꾸는 임계값에 따라 잘못 양성으로 판단하는 오류와 양성을 놓치는 오류의 균형이 달라집니다. 확률 자체를 사용할 때는 확률의 신뢰성도 평가해야 합니다. 어떤 오류가 더 중요한지 먼저 정하세요.</p><details class="learn-more"><summary>혼동행렬과 지표 산식</summary><div class="learn-more__body"><p>TP는 맞힌 양성, TN은 맞힌 음성, FP는 잘못 양성으로 판단한 관측, FN은 놓친 양성입니다. 정확도=(TP+TN)/전체, 양성 재현율=TP/(TP+FN), 정밀도=TP/(TP+FP)입니다.</p><p>이 예제는 양성 예측이 없으므로 정밀도의 분모가 0입니다. 소프트웨어가 편의상 0을 출력해도 정의되지 않는 값과 출력 규칙은 구별해야 합니다. 로지스틱 회귀는 이름에 회귀가 있지만 대표적인 분류 확률 모형입니다. 확률 평가에는 로그손실과 보정 상태 등도 사용합니다.</p></div></details>''')
- sec('unsupervised','비지도학습','지정된 목표 라벨 없이 자료의 구조를 찾습니다','''<p><strong>비지도학습</strong>은 목표 Y를 맞추는 대신 입력 X에 담긴 구조를 찾습니다. 군집은 비슷한 관측을 묶고, 차원축소는 여러 특징을 더 적은 좌표로 요약합니다. 비지도학습이 모두 군집분석인 것은 아닙니다.</p><p>라벨을 사용하지 않는다고 사람의 선택이 없는 것도 아닙니다. 어떤 특징을 쓸지, 거리를 어떻게 잴지, 표준화를 할지, 군집 수를 얼마로 정할지에 따라 결과가 달라집니다. 알고리즘이 분석 목적을 대신 정해 주지는 않습니다.</p>''')
- sec('clusters','군집 예제','군집 색은 알려진 정답 범주가 아닙니다','''<p>아래는 단위 없는 가상 8점입니다. <strong>K-means</strong>는 정한 K개 중심과 각 점 사이의 제곱거리 합을 작게 만드는 군집을 찾습니다. 여기서는 K=2이며 가까운 중심에 점을 배정한 뒤 군집 평균을 다시 구하면 같은 두 중심을 얻습니다.</p>'''+f3+'''<p>이 예제의 군집 내 제곱거리 합은 4입니다. 이 값이 작다는 것만으로 현실의 두 유형을 발견했다고 할 수는 없습니다. 같은 자료에서 K를 늘리면 최적 제곱거리 합은 줄거나 같아지므로 이 숫자만 작게 만드는 것이 목적은 아닙니다.</p><p>군집 번호에는 순서나 좋고 나쁨이 없습니다. 나중에 두 군집에 이름을 붙이는 것과 처음부터 그 범주를 예측하도록 학습하는 것은 다른 일입니다. 알려진 라벨과 사후에 얼마나 일치하는지 비교할 수는 있지만, 이를 새 관측의 분류 정확도와 같은 뜻으로 읽지는 않습니다.</p>''')
- sec('features','특징·스케일·시점','같은 정보도 분석 목적에 따라 사용 가능 여부가 달라집니다','''<p>시험이 끝난 학생들의 점수와 학습 시간을 이용해 유형을 탐색한다면 점수를 군집 특징으로 쓸 수 있습니다. 반대로 아직 모르는 시험 점수를 예측하려는데 그 점수나 점수를 복원할 수 있는 정보를 입력하면 <strong>데이터 누수</strong>입니다. 언제 알 수 있는 정보인지가 중요합니다.</p><p>거리 기반 방법에서는 분·시간·점수처럼 단위와 숫자 규모가 다른 특징의 영향이 달라집니다. 표준화는 한 방법이지만, 어떤 특징에 어떤 비중을 줄지에 대한 선택도 포함합니다. 예측 과정의 평균·표준편차 같은 전처리 기준은 학습 자료에서만 추정합니다.</p><p>같은 학생의 반복 측정이나 같은 집단의 유사한 관측을 무작위로 나누면 실제 새 대상에 적용하는 상황보다 평가가 쉬워질 수 있습니다. 새 관측·새 사람·새 집단·미래 중 어디까지 새로워야 하는지 먼저 정하세요.</p>''')
- sec('workflow','학습과 평가','모형 선택에 쓴 자료와 마지막 평가를 구별하세요','''<p><strong>학습 자료</strong>는 전처리 기준과 계수를 정하고, <strong>검증 자료</strong>는 모형·변수·설정을 비교하며, <strong>시험 자료</strong>는 선택이 끝난 뒤 최종 성능을 평가합니다. 시험 결과를 보고 반복해서 모형을 바꾸면 시험 자료도 선택에 사용한 셈입니다.</p>'''+f4+'''<p>자료가 작으면 교차검증 등으로 역할을 구현할 수 있습니다. 비율을 먼저 고정하기보다 활용 상황과 시간·집단 구조에 맞춰 나눠야 합니다.</p><p>회귀는 같은 목표 단위의 오차, 분류는 오류 유형과 확률, 군집은 안정성·분리 정도·분야 해석을 함께 봅니다. 비지도학습도 평가가 필요합니다. 표본이나 스케일을 바꿔도 구조가 유지되는지 확인하고, 내부 지표가 좋다는 사실과 활용에 도움이 된다는 판단을 구별하세요.</p>''')
- sec('choice','문제 정의 연습','방법을 고르기 전에 목표·정보·평가를 적어 보세요','''<ol><li><strong>관측 단위:</strong> 학생 한 명인지, 학급인지, 사람의 하루 기록인지 정합니다.</li><li><strong>질문:</strong> 설명·인과·예측·구조 탐색 중 무엇이 주된 목적인지 적습니다.</li><li><strong>입력과 목표:</strong> 지도학습이면 목표와 예측 시점, 그때 알 수 있는 정보를 정의합니다.</li><li><strong>평가:</strong> 실제 적용할 대상과 시점에 맞는 자료 분할·기준모형·지표를 정합니다.</li><li><strong>보고:</strong> 오차와 불확실성, 자료의 범위와 남은 한계를 함께 제시합니다.</li></ol><p>설명하기 쉬운 모형이 자동으로 좋은 예측을 보장하지는 않고, 예측을 잘한다고 원인을 설명한 것도 아닙니다. 목적에 맞는 증거로 판단해야 합니다.</p>''')
- sec('practice','확인 문제','목표와 평가 대상을 구별하세요','<ol class="learn-exercises">'+''.join(f'<li>{q}<details><summary>답과 해설</summary><p>{a}</p></details></li>' for q,a in [('회귀분석은 통계이므로 지도학습이 아닌가요?','입력과 수치형 목표의 대응을 학습한다면 지도학습입니다. 방법의 전통과 학습 구조는 다른 구분입니다.'),('군집 색이 실제 유형과 비슷하면 분류 정확도인가요?','군집을 만든 뒤의 외부 비교입니다. 같은 자료에서 사후 대응시킨 일치율을 새 관측의 분류 정확도로 읽지 않습니다.'),('정확도 90%면 드문 양성도 잘 찾나요?','아니요. 양성 10%를 모두 놓쳐도 정확도 90%일 수 있습니다. 재현율 등도 확인합니다.'),('이미 관측한 점수로 학습 유형을 군집화하는 것도 늘 누수인가요?','아니요. 이미 알려진 자료의 구조 탐색에는 쓸 수 있습니다. 미지의 점수를 예측하는 입력에 그 점수를 넣으면 누수가 됩니다.')])+'</ol>')
- sec('macro','CH2 Macro에서 읽기','기능 이름보다 분석 질문을 확인합니다','<p>CH2 Macro에서 관계를 요약한 통계, 미래·미지 결과의 예측, 유사한 시장 집단의 탐색을 구별해 읽으세요. 실제 제공되는 입력·출력과 평가 설명을 확인하고 이 장의 예제가 서비스에 구현된 알고리즘이라고 전제하지 않습니다.</p><p>공통 자료는 출처 미확인 학습 예제이며 분류·군집 그림은 별도 가상 자료입니다. 군집이나 예측값을 개별 적정가·투자 권고로 바꾸어 해석하지 않습니다.</p>')
- sec('recap','결론 · 학습 요약','질문·입력·목표·평가가 학습 문제를 정합니다','''<p>방법의 이름에 앞서 무엇을 알고 싶고 어떤 정보를 사용할 수 있는지 정해야 합니다. 다음 구분을 기억해 두세요.</p><ul class="learn-recap-list"><li><strong>설명·인과·예측:</strong> 관측 관계를 요약하는 일, 개입의 효과를 묻는 일, 새 결과를 추정하는 일은 다릅니다.</li><li><strong>지도학습:</strong> 입력과 목표값의 짝으로 규칙을 학습합니다. 수치형 목표는 회귀, 범주형 목표는 분류로 다룹니다.</li><li><strong>비지도학습:</strong> 지정된 목표 라벨 없이 구조를 찾습니다. 군집 번호가 원래의 정답 범주는 아닙니다.</li><li><strong>목적에 맞는 평가:</strong> 기준모형과 비교하고, 드문 범주에서는 정확도만으로 판단하지 않습니다. 비지도학습도 안정성과 유용성을 확인합니다.</li><li><strong>정보의 경계:</strong> 예측 시점에 알 수 있는 입력만 사용하고 학습·선택·최종 평가의 역할을 구별합니다.</li></ul><p>다음 <a href="/learn/stats/train-validation-test/">23장 ‘학습·검증·시험 자료와 데이터 누수’</a>에서는 평가 설계를 자세히 살펴봅니다.</p><details class="learn-more"><summary>참고자료와 계산값</summary><div class="learn-more__body"><ul><li><a href="https://scikit-learn.org/stable/supervised_learning.html">scikit-learn: 지도학습</a></li><li><a href="https://scikit-learn.org/stable/unsupervised_learning.html">scikit-learn: 비지도학습</a></li><li><a href="../learning-example.json">분할·예측·가상 분류·군집 예제 자료</a></li></ul><p class="learn-source-note">참고자료의 기존 확인일: 2026-10-09. 회귀 계산은 공통 학습 자료의 두 수치열을 단위 없는 X,Y로 사용했습니다. 분류·군집과 평가 흐름 그림은 별도 가상 예제 및 개념도입니다.</p></div></details>''')
- p=ROOT/'supervised-unsupervised/index.html';html=p.read_text(encoding='utf-8');html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="통계적 설명과 예측, 지도학습과 비지도학습">'+'\n'.join(parts)+'</article>',html,count=1,flags=re.S);html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1설명·인과·예측의 목적과 회귀·분류·군집의 차이, 입력과 목표·학습과 평가를 구별합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);p.write_text(html,encoding='utf-8')
+ page=ROOT/'supervised-unsupervised/index.html';old=page.read_text(encoding='utf-8')
+ references=re.search(r'<details class="learn-more"><summary>참고자료(?:와 계산값)?</summary>.*?</details>',old,re.S)[0].replace('회귀 계산은 공통 학습 자료의 두 수치열을 단위 없는 X,Y로 사용했습니다.','회귀 계산은 공통 학습 자료의 면적(㎡)과 거래단가(만원/㎡)를 사용했습니다.')
+ source=normalize_source((ROOT/'supervised-unsupervised/content.md').read_text(encoding='utf-8'))
+ formulas={r'\hat y=\hat f(X)':'ŷ = f̂(X)',r'\frac1n\sum_{i=1}^{n}L(y_i,\hat f(x_i))':'(1/n) Σ L(yᵢ, f̂(xᵢ))',r'z=\frac{x-\bar x}{s}':'z = (x−x̄)/s'}
+ source=re.sub(r'^\[\s*\n(.*?)\n\]$',lambda match:formulas[match[1].strip()],source,flags=re.M|re.S)
+ ids=['quick-start','purposes','supervised','regression','baseline','classification-intro','classification','unsupervised','clusters','features','scaling','workflow','evaluation','macro','practice','recap']
+ def inline(value):return escape(value)
+ def render(block):
+  out=[];lines=block.strip().split('\n');i=0
+  while i<len(lines):
+   line=lines[i].strip()
+   if not line or line=='---':i+=1;continue
+   if line.startswith('### '):out.append('<h3>'+inline(line[4:])+'</h3>');i+=1;continue
+   if line.startswith('[그림 '):out.append({1:f1,2:f2,3:f3,4:f4}[int(re.search(r'그림 (\d)',line)[1])]);i+=1;continue
+   if line=='[CH2 Macro 통계·데이터분석 열기 →]':out.append('<p><a href="https://macro.ch2data.com/">CH2 Macro 통계·데이터분석 열기 →</a></p>');i+=1;continue
+   if line=='▶ 참고자료':out.append(references);i+=1;continue
+   if line.startswith('▶ '):
+    title=line[2:];rest=[];i+=1
+    while i<len(lines) and lines[i].strip()!='---':rest.append(lines[i]);i+=1
+    out.append('<details class="learn-more"><summary>'+inline(title)+'</summary><div class="learn-more__body">'+render('\n'.join(rest))+'</div></details>');continue
+   if line.startswith('|'):
+    table=[]
+    while i<len(lines) and lines[i].strip().startswith('|'):
+     cells=[c.strip() for c in lines[i].strip().strip('|').split('|')]
+     if not all(re.fullmatch(r'[:\- ]+',c) for c in cells):table.append(cells)
+     i+=1
+    out.append('<div class="learn-data learn-data--full"><table><thead><tr>'+''.join('<th scope="col">'+inline(c)+'</th>' for c in table[0])+'</tr></thead><tbody>'+''.join('<tr>'+''.join('<th scope="row">'+inline(c)+'</th>' if j==0 else '<td>'+inline(c)+'</td>' for j,c in enumerate(row))+'</tr>' for row in table[1:])+'</tbody></table></div>');continue
+   if line.startswith('- '):
+    items=[]
+    while i<len(lines) and lines[i].startswith('- '):items.append('<li>'+inline(lines[i][2:])+'</li>');i+=1
+    out.append('<ul>'+''.join(items)+'</ul>');continue
+   formula=line.startswith(('ŷ','(1/n)','z =','거래단가 =','정확도 =','예측값 ='))
+   out.append('<p'+(' class="sl-formula"' if formula else '')+'>'+inline(line)+'</p>');i+=1
+  return '\n'.join(out)
+ for id,section in zip(ids,re.split(r'^## ',source,flags=re.M)[1:],strict=True):
+  label,body=section.split('\n',1);heading=re.search(r'^### (.+)$',body,re.M)[1];body=re.sub(r'^### .+\n','',body,count=1,flags=re.M)
+  if id=='practice':
+   items=[]
+   for q in re.split(r'^\d+\. ',body,flags=re.M)[1:]:
+    question,answer=q.split('▶ 답과 해설',1);items.append('<li>'+inline(question.strip())+'<details><summary>답과 해설</summary><div class="learn-more__body">'+render(answer)+'</div></details></li>')
+   html='<ol class="learn-exercises">'+''.join(items)+'</ol>'
+  else:html=render(body)
+  if id=='quick-start':html=html.replace('<ul>','<ul class="learn-objectives">',1)+'<p class="learn-source-note"><a href="/learn/stats/graphs/#data">공통 학습 자료 30건</a> · <a href="../learning-example.json">회귀 평가·가상 분류·군집 계산 자료</a>. 회귀는 면적(㎡)·거래단가(만원/㎡), 분류·군집은 별도 가상 자료입니다. 실제 거래의 대표성이 검증된 자료는 아닙니다.</p>'
+  if id=='regression':html=html.replace('17장에서 배운 단순선형회귀','<a href="/learn/stats/regression/">17장에서 배운 단순선형회귀</a>')
+  if id=='classification':html+='<p class="learn-source-note">정확도=(TP+TN)/100=90%, 양성 재현율=TP/(TP+FN)=0%, 정밀도=TP/(TP+FP)=0/0으로 정의되지 않습니다. 확률 보정 상태의 평가와 확률을 다시 보정하는 절차도 구분합니다.</p>'
+  if id=='features':html+='<p class="learn-source-note">공시지가·건축물대장 등의 정보도 해당 예측 시점에 이용 가능했던 판본인지 확인해야 합니다. 최신 자료가 과거에도 알려져 있었다고 가정하지 않습니다.</p>'
+  if id=='scaling':html+='<p class="learn-source-note">검증·시험 자료에는 학습 자료에서 정한 같은 평균과 표준편차를 적용합니다. 각각의 평균·표준편차를 다시 구해 별도로 표준화하지 않습니다.</p>'
+  if id=='clusters':html+='<p><a href="/learn/stats/clustering/">31장 군집분석</a>에서 군집 수와 안정성을 더 자세히 살펴봅니다.</p>'
+  if id=='evaluation':html='<span id="choice" aria-hidden="true"></span>'+html
+  if id=='macro':html+=macro_notes()
+  if id=='recap':html=html.replace('23장 「학습·검증·시험 자료와 데이터 누수」','<a href="/learn/stats/train-validation-test/">23장 「학습·검증·시험 자료와 데이터 누수」</a>')
+  parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{heading}</h2>{html}</section>')
+ html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="통계적 설명과 예측, 지도학습과 비지도학습">'+'\n'.join(parts)+'</article>',old,count=1,flags=re.S)
+ html=html.replace('별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.','활용도는 CH2 Macro의 분석 결과를 이해하는 데 얼마나 도움이 되는지를 나타냅니다.')
+ if 'supervised-unsupervised/chapter.css' not in html:html=html.replace('</head>','<link rel="stylesheet" href="/learn/stats/supervised-unsupervised/chapter.css?v=20261025-1" />\n</head>')
+ data=json.dumps(result,ensure_ascii=False).replace('</','<\\/')
+ html=html.replace('</body>','<script type="application/json" id="sl-data">'+data+'</script>\n</body>') if 'id="sl-data"' not in html else re.sub(r'<script type="application/json" id="sl-data">.*?</script>',lambda _: '<script type="application/json" id="sl-data">'+data+'</script>',html,flags=re.S)
+ if 'supervised-unsupervised/experiment.js' not in html:html=html.replace('</body>','<script type="module" src="/learn/stats/supervised-unsupervised/experiment.js?v=20261025-1"></script>\n</body>')
+ page.write_text(html,encoding='utf-8')
+
+def normalize_source(raw):
+ """Restore semantic headings/lists/tables from the user's plain-text paste."""
+ raw=raw.replace('**','').replace('\\~','~')
+ sections=['서두 · 학습목표','분석 목적의 차이','지도학습의 기본 구조','지도학습 ① 회귀','기준모형과 비교하기','지도학습 ② 분류','분류의 정확도와 오류','비지도학습의 기본 구조','군집분석의 예제','변수의 역할은 분석 목적에 따라 달라집니다','변수의 단위와 스케일','학습·검증·시험 자료','무엇을 기준으로 평가해야 할까요?','CH2 Macro에서 읽기','확인 문제','결론 · 학습 요약']
+ tables=[
+  [['분석 목적','주요 질문','중요하게 살펴볼 것'],['설명','어떤 관계가 관찰되는가?','관계의 크기·방향·안정성'],['인과','X를 바꾸면 Y가 달라지는가?','연구 설계·교란 요인·식별 가정'],['예측','아직 모르는 Y를 맞힐 수 있는가?','새로운 자료의 예측오차']],
+  [['입력변수 X','목표변수 Y'],['면적, 층, 용도지역, 건축연도','거래단가']],
+  [['예측 방법','평가 MAE'],['학습 자료의 평균만 사용','49.86만원/㎡'],['면적을 이용한 단순회귀','41.08만원/㎡']],
+  [['실제 \\ 예측','양성','음성'],['실제 양성','0','10'],['실제 음성','0','90']],
+  [['분석 방법','평가할 내용','대표적인 방법'],['수치 예측','실제값과 예측값의 차이','MAE, RMSE 등'],['분류','정확히 분류했는지와 오류의 종류','정확도, 재현율, 정밀도 등'],['확률 예측','예측확률의 품질','로그손실, 확률 보정 등'],['군집분석','군집 구조의 안정성과 해석 가능성','군집 분리도, 안정성, 분야 해석']]
+ ]
+ for table in tables:
+  flat='\n\n'.join(cell for row in table for cell in row)
+  assert flat in raw,table[0]
+  markdown='| '+' | '.join(table[0])+' |\n| '+' | '.join(['---']*len(table[0]))+' |\n'+'\n'.join('| '+' | '.join(row)+' |' for row in table[1:])
+  raw=raw.replace(flat,markdown,1)
+ objectives={'통계적 설명, 인과 추론, 예측의 목적을 구별합니다.','지도학습에서 입력변수와 목표변수의 역할을 이해합니다.','회귀와 분류가 서로 다른 예측 문제임을 알아봅니다.','비지도학습에서 군집분석의 의미와 한계를 이해합니다.','학습 자료와 평가 자료의 차이를 이해합니다.','분석 목적에 따라 변수와 평가 기준을 선택하는 방법을 알아봅니다.'}
+ out=[];heading=False
+ for paragraph in re.split(r'\n\s*\n',raw.strip()):
+  paragraph=paragraph.strip()
+  if paragraph in sections:out.append('## '+paragraph);heading=True
+  elif heading:out.append('### '+paragraph);heading=False
+  elif paragraph in objectives or paragraph.startswith(('학습 자료:','평가 자료:','군집 A 중심:','군집 B 중심:','토지면적:','층:','설명:','인과:','예측:','지도학습:','회귀와 분류:','비지도학습:','데이터 누수:','모형 평가:','CH2 Macro:')):out.append('- '+paragraph)
+  else:out.append(paragraph)
+ # Join consecutive list items while preserving ordinary paragraph boundaries.
+ return re.sub(r'\n\n(?=- )','\n','\n\n'.join(out))
+
+def macro_notes():
+ return '''<details class="learn-more"><summary>실제 Macro의 추천 목적·평가 자료·입력 범위 확인</summary><div class="learn-more__body">
+<p>확인한 복합 모형추천과 집합 주거 지역회귀 추천 UI는 ‘예측형’과 ‘설명형’을 구분합니다. 목적에 따른 후보 정렬이며 통계적 통제가 인과효과를 보장하는 기능은 아닙니다. 계수의 p값·유의 변수 수를 별도 자료의 예측 기여도나 변수 중요도 순위로 읽지 않습니다.</p>
+<p>복합 척도 비교의 확인한 경로는 예측형에서 원 단위 CV-MAPE를 우선하고, 없으면 학습 MAPE와 AIC를 참조합니다. 설명형은 로그 종속변수 후보끼리 AIC를 비교합니다. 롤링 시점 검증은 과거 연도로 학습해 이후 연도를 평가하며, 로그 역변환 보정계수는 각 학습 fold의 잔차에서만 구합니다. 그렇다고 모든 전처리·변수 선택 단계의 정보 누수까지 검증되었다는 뜻은 아닙니다.</p>
+<p>집합 주거 지역회귀는 단지별 중앙단가를 목표로 하며, 예측형 후보 정렬에는 Holdout MAPE를 사용합니다. 없으면 학습 MAPE를 참조하고, 설명형은 원 단위 수정 R²를 우선합니다. 이 Holdout은 후보 선택에 쓰이므로 최종 선택과 독립적인 시험 성능이라고 부르면 안 됩니다. 복합의 거래별 금액·연도 검증과 집합의 단지별 단가·단지 분할을 같은 평가로 섞지 않습니다.</p>
+<p>지역회귀는 후보별 선택 변수의 결측 조건으로 적격 표본을 정하고, 그 표본에서 분할합니다. 따라서 후보마다 같은 단지들이 평가된다고 단정할 수 없습니다. 또한 범주 구성에 전체 적격 자료를 사용하는 경로가 있어, 전처리가 모두 학습 자료 내부에서만 이루어진다고 설명하지 않습니다. 공정한 동일 표본 비교와 별도 최종 시험, 전처리 범위는 추가 점검 사항입니다.</p>
+<p>같은 단지·지역의 반복 거래는 서로 독립적이지 않을 수 있습니다. 확인한 복합 연도 분할이 단지 단위의 완전한 분리까지 보장하지는 않습니다. 반대로 단지 한 행을 나누는 지역회귀도 미래 연도나 새로운 지역에 대한 검증을 자동 보장하지 않습니다. 적용하려는 대상에 맞춰 시간·지역·단지 구조를 함께 점검해야 합니다.</p>
+<p>확인한 복합 설계는 거래금액을 목표로 하고, 지역회귀 설계는 단지 중앙단가를 목표로 합니다. 지역회귀의 선택 속성에는 세대수·최고층·연식·주차·대표 필지 공시지가·범주 등이 있습니다. 이 경로에서 실제 목표 거래금액을 입력해 단가를 복원하는 교재의 누수 예제를 그대로 사용한다고 보지는 않습니다. 다만 공시지가처럼 ‘최신 대표 필지’ 속성을 과거 예측에 쓸 때는 당시 이용 가능했던 판본인지 별도로 확인해야 합니다.</p>
+<p>이 장의 가상 혼동행렬과 K-means 8점 실험은 독립된 학습 UI입니다. 이를 실제 Macro가 모든 거래에 제공하는 분류·군집 기능으로 소개하지 않습니다. 유사 지역·집단을 찾는 다른 서비스 기능도 이 교재의 K-means와 같은 알고리즘이라고 가정하지 않습니다. 실제 회귀·추천·자료 처리 로직은 이번 작업에서 변경하지 않습니다.</p>
+</div></details>'''
+
 if __name__=='__main__':build()

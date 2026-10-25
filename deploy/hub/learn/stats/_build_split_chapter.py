@@ -15,42 +15,98 @@ def build():
  def tx(x,y,s):return f'<text x="{x}" y="{y}">{escape(str(s))}</text>'
  def box(x,y,w,h,c):return f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="6" fill="{c}"/>'
  def line(x,y,a,b):return f'<line x1="{x}" y1="{y}" x2="{a}" y2="{b}" stroke="#94a3b8"/>'
- def fig(id,title,b,cap,h=410):return f'<figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 {h}" role="img" aria-labelledby="{id}-title {id}-desc"><title id="{id}-title">{title}</title><desc id="{id}-desc">{cap}</desc>{b}</svg><figcaption class="learn-chart__caption">{cap}</figcaption></figure>'
+ def fig(id,title,b,cap,h=410):return f'<figure class="learn-chart learn-chart--wide"><svg class="split-chart-svg" viewBox="0 0 640 {h}" role="img" aria-labelledby="{id}-title {id}-desc"><title id="{id}-title">{title}</title><desc id="{id}-desc">{cap}</desc>{b}</svg><figcaption class="learn-chart__caption">{cap}</figcaption></figure>'
  b=tx(24,28,'자료의 역할: 학습 → 선택 → 마지막 평가')
  for y,title,desc in [(70,'학습','전처리와 계수를 학습'),(165,'검증','후보·설정·임계값을 선택'),(260,'시험','선택한 절차의 성능을 마지막에 평가')]:b+=box(90,y,455,65,'#eaf2ff')+tx(112,y+25,title)+tx(112,y+49,desc)
  b+=tx(305,154,'↓')+tx(305,249,'↓')+tx(24,380,'시험 성적에 맞춰 다시 선택하면 독립 평가의 역할을 잃습니다')
  g1=fig('roles','세 자료의 역할',b,'그림 1. 역할을 구분한 개념도입니다. 세 개의 고정 파일만이 유일한 구현은 아니며 교차검증으로 학습·검증 역할을 반복할 수 있습니다.')
  b=tx(24,28,'활용 상황에 맞춘 분할: 두 가지 별도 예시')+tx(24,80,'미래 결과 예측: 시간 순서')
  for x,w,label,c in [(65,230,'과거 학습','#dbeafe'),(305,115,'검증','#dcfce7'),(430,140,'미래 시험','#ffedd5')]:b+=box(x,100,w,55,c)+tx(x+14,133,label)
- b+=tx(65,190,'시간 → · 입력 이용 가능 시점과 결과 확정 시점도 고려')+tx(24,245,'새 학교 적용: 학교 전체를 한쪽에 배정')
- for i,(label,c) in enumerate([('학교 A','#dbeafe'),('학교 B','#dbeafe'),('학교 C','#dcfce7'),('학교 D','#ffedd5')]):b+=box(65+i*130,267,115,55,c)+tx(80+i*130,300,label)
- b+=tx(24,370,'시간과 새 집단이 모두 중요하면 두 조건을 함께 설계합니다')
- g2=fig('design','시간과 집단을 반영한 분할',b,'그림 2. 가상 시간·학교 개념도입니다. 위는 시간 순서, 아래는 집단 격리의 원리이며 특정 배정 비율을 권장하는 그림이 아닙니다.')
- b=tx(24,28,'표준화 기준을 어디서 계산했는가')
- for y,title,desc,c in [(80,'학습만: 40·60·80',f'평균 {mu:.0f}, 표준편차 {sd:.2f} → 140의 z={d["scaling"]["train_z"]:.2f}','#dbeafe'),(220,'평가값 140까지 포함',f'평균 {all_mu:.0f}, 표준편차 {all_sd:.2f} → z={d["scaling"]["leaked_z"]:.2f}','#ffedd5')]:b+=box(65,y,510,90,c)+tx(85,y+30,title)+tx(85,y+62,desc)
- b+=tx(24,370,'평가 자료의 Y를 보지 않아도 X의 분포가 학습에 섞일 수 있습니다')
- g3=fig('scaling','전처리 누수의 계산 예제',b,'그림 3. 단위 없는 가상 입력값이며 표준편차는 해당 자료 수로 나눠 계산했습니다. 좌표가 달라지는 예제이지, 모든 모형의 성능이 반드시 좋아진다는 주장은 아닙니다.')
+ b+=tx(65,190,'시간 → · 계약일≠공개일: 당시 이용 가능한 입력만 사용')+tx(24,245,'새 단지 적용: 단지 전체를 한쪽에 배정')
+ for i,(label,c) in enumerate([('단지 A','#dbeafe'),('단지 B','#dbeafe'),('단지 C','#dcfce7'),('단지 D','#ffedd5')]):b+=box(65+i*130,267,115,55,c)+tx(80+i*130,300,label)
+ for i,label in enumerate(['학습','학습','검증','시험']):b+=tx(80+i*130,344,label)
+ b+=tx(24,385,'시간과 새 집단이 모두 중요하면 두 조건을 함께 설계합니다')
+ g2=fig('design','시간과 집단을 반영한 분할',b,'그림 2. 가상 시간·단지 개념도입니다. 위는 시간 순서, 아래는 집단 격리의 원리이며 특정 배정 비율을 권장하는 그림이 아닙니다.')
+ b=tx(24,28,'같은 평가 면적 140㎡의 표준화 좌표 비교')
+ for key,y,label,center,spread,z,color in [('train',80,'학습 40·60·80㎡만 사용',mu,sd,d['scaling']['train_z'],'#2563eb'),('all',230,'평가 140㎡까지 포함한 누수',all_mu,all_sd,d['scaling']['leaked_z'],'#d97706')]:
+  b+=f'<g data-scale="{key}">'+tx(30,y,label)+tx(30,y+28,f'평균 {center:.0f}㎡ · 모집단형 SD {spread:.2f}㎡ · z={z:.2f}')+line(90,y+80,565,y+80)
+  for tick in range(6):b+=tx(86+tick*90,y+105,tick)
+  b+=f'<circle data-z="{key}" cx="{90+90*z}" cy="{y+80}" r="7" fill="{color}"/>'+tx(570,y+85,'z')+'</g>'
+ g3=fig('scaling','평가 면적 140㎡: 표준화 기준과 좌표',b,'그림 3. 별도 가상 면적 자료입니다. 두 축은 같은 z 배율이며 SD는 n으로 나눕니다. 좌표 변화가 모든 모형의 예측 성능 변화를 뜻하지는 않습니다.',380)
+ g3=g3.replace('<svg ', '<div class="split-controls" hidden=""><label for="split-scale">표준화 기준 선택</label><select id="split-scale"><option value="train">학습 자료로 표준화</option><option value="all">전체 자료로 표준화 — 누수 사례</option></select><p id="split-scale-status" role="status" aria-live="polite"></p></div><svg ',1)
  b=tx(24,28,'가상 목표값: 검증 MAE로 상수 예측 규칙 선택')+line(110,320,560,320)
  for i,(label,v,c) in enumerate([('학습 평균',candidates['mean']['validation_MAE'],'#94a3b8'),('학습 중앙값',candidates['median']['validation_MAE'],'#2563eb')]):
   xx=210+i*210;b+=box(xx-40,320-v*25,80,v*25,c)+tx(xx-10,305-v*25,f'{v:.1f}')+tx(xx-40,350,label)
  for v in [0,2,4,6,8]:b+=tx(65,325-v*25,v)
  b+=tx(24,390,f'중앙값 규칙 선택 → 학습+검증 재적합 → 시험 MAE {test_mae:.2f}')
  g4=fig('selection','선택과 최종 평가의 분리',b,'그림 4. 막대는 검증 오차만 비교합니다. 시험 오차는 선택과 재적합을 끝낸 뒤 한 번 계산했습니다. 작은 가상 예제로 성능 우열의 일반적 근거가 아닙니다.',420)
- parts=[]
- def sec(id,label,title,body):parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{title}</h2>{body}</section>')
- sec('quick-start','학습 목표','처음 보는 자료에서 얼마나 잘 작동할까요?','<p>연습 문제를 여러 번 풀면 익숙한 답은 잘 맞힐 수 있습니다. 실력을 확인하려면 처음 보는 문제도 풀어 봐야 합니다. 예측 모형도 마찬가지입니다. 규칙을 배우는 데 쓴 자료와 실력을 확인하는 자료를 구분해야 새로운 관측에 얼마나 잘 적용되는지 알 수 있습니다.</p><p>이 장에서는 자료를 학습·검증·시험으로 나누는 이유를 살펴봅니다. 이어서 시간과 집단을 고려한 분할, 전처리 과정의 데이터 누수, 모형을 고른 뒤 최종 평가까지 이어지는 순서를 익힙니다.</p><ul class="learn-objectives"><li>학습·검증·시험 자료가 각각 어떤 결정에 쓰이는지 설명합니다.</li><li>예측 대상에 맞게 무작위·시간·집단 분할을 구별합니다.</li><li>전처리와 모형 선택에서 평가 정보가 섞이는 경로를 찾습니다.</li><li>검증으로 규칙을 고른 뒤 시험 자료로 평가하는 과정을 계산합니다.</li></ul>')
- sec('roles','핵심 이해','학습은 규칙을 배우고, 검증은 고르고, 시험은 평가합니다','<p>학습 자료는 모형의 계수나 전처리 기준을 정하는 데 씁니다. 학습에 사용한 관측을 다시 잘 맞히는 것만으로는 새로운 관측에서도 잘 맞힐지 알 수 없습니다. 그래서 일부 자료를 남겨 두고 평가합니다.</p>'+g1+'<p><strong>검증 자료</strong>는 후보 모형, 설정, 입력 변수, 학습을 멈출 시점, 분류 임계값 등을 고르는 데 씁니다. <strong>시험 자료</strong>는 이런 선택을 마친 뒤 최종 성능을 확인하는 데 씁니다. 파일 이름보다 그 자료가 실제로 어떤 결정에 쓰였는지가 중요합니다.</p><p>검증 점수를 보고 여러 후보 중 가장 좋은 것을 골랐다면 그 점수에는 선택의 영향이 담깁니다. 시험 점수를 보고 다시 모형을 고치면 시험 자료도 선택에 참여하게 됩니다. 두 경우 모두 처음 보는 자료에서의 성능보다 좋게 보일 수 있습니다.</p>')
- sec('target','평가 대상 정하기','누구의 어떤 결과를 예측할지 먼저 정합니다','<p>학생의 다음 시험 점수를 예측한다고 해 봅시다. 이미 관찰한 학생의 다음 성적을 맞히는 것과, 처음 보는 학교 학생들의 성적을 맞히는 것은 다른 문제입니다. 무엇을 새로운 관측으로 볼지에 따라 자료를 나누는 방법도 달라집니다.</p><p>먼저 예측 대상과 예측 시점을 정하고, 그 시점에 어떤 입력을 알 수 있는지 적습니다. 관측들이 서로 대체로 독립적이고 앞으로 만날 대상과 비슷한 분포라면 행 단위 무작위 분할을 고려할 수 있습니다. 다만 무작위로 섞었다고 시간의 흐름이나 같은 사람의 반복 관측까지 독립적으로 바뀌는 것은 아닙니다.</p>')
- sec('design','시간·집단 분할','미래와 새로운 집단을 평가에 반영합니다','<p><strong>시간 분할</strong>은 과거 자료로 학습하고 이후 자료에서 평가합니다. 다음 학기 성적을 예측한다면 그 학기가 끝난 뒤 확정되는 출석 기록을 입력에 넣어서는 안 됩니다. 기록에 적힌 날짜뿐 아니라 실제로 그 정보를 알 수 있었던 시점도 확인해야 합니다.</p>'+g2+'<p><strong>집단 분할</strong>은 같은 집단에 속한 관측을 한쪽에 모읍니다. 처음 보는 학교에 적용하는 것이 목표라면 같은 학교의 학생이 학습과 평가 양쪽에 섞이지 않도록 나눕니다. 이미 아는 학생의 미래 성적을 예측하는 경우에는 같은 학생이 양쪽에 있다는 사실만으로 누수라고 단정하지 않고 시간 순서와 입력의 이용 가능 시점을 살펴봅니다.</p><p>결과를 집계하는 기간이 경계에서 겹치거나 결과가 늦게 확정된다면, 분할 사이에 간격을 두거나 겹치는 관측을 제외할 수도 있습니다. 간격은 관측 주기와 예측 기간에 맞춰 정합니다. 미래와 새로운 집단을 모두 평가하려면 두 조건을 함께 반영해야 합니다.</p>')
- sec('ratio','표본 수와 비율','80 대 20은 고정된 정답이 아닙니다','<p>학습 자료가 너무 적으면 규칙을 충분히 배우기 어렵고, 평가 자료가 너무 적으면 우연히 어떤 관측이 들어갔는지에 따라 점수가 크게 달라집니다. 전체 관측 수와 함께 서로 독립적인 집단 수, 분류 문제에서 드문 범주의 관측 수도 살펴야 합니다.</p><p>계층화는 학습과 평가의 범주 비율을 비슷하게 유지하는 방법입니다. 다만 비율을 맞추려고 시간 순서를 뒤섞거나 같은 집단을 양쪽으로 나누면 평가 목적이 흐려질 수 있습니다. 예측 상황에 필요한 제약을 먼저 지키고 표본 구성과 한계를 함께 설명합니다.</p><p>교차검증에서는 자료를 여러 번 나누어 학습과 검증의 역할을 바꿉니다. 이때 전처리와 변수 선택도 매번 해당 학습 부분 안에서 수행해야 합니다. 교차검증과 중첩 교차검증은 26장에서 더 자세히 다룹니다.</p>')
- sec('leakage','데이터 누수','예측할 때 모를 정보가 학습에 들어오지 않았나요?','<p><strong>목표 누수</strong>는 답 자체나 답을 거의 그대로 알려 주는 정보가 입력에 들어가는 경우입니다. 총점을 예측하면서 그 총점을 구성하는 모든 항목 점수를 입력으로 쓰면 합계만으로 답을 복원할 수 있습니다. 그 항목들을 실제 예측 시점에도 알 수 있는지 먼저 확인해야 합니다.</p><p><strong>미래 정보 누수</strong>는 나중에 확정된 정보를 미리 안 것처럼 사용하는 경우입니다. 학기 초에 성적을 예측하면서 학기 말까지의 출석률을 쓰는 예가 여기에 해당합니다.</p><p><strong>평가 자료를 통한 누수</strong>는 전처리 기준, 입력 변수, 모형 설정을 정할 때 평가 자료를 이용하는 경우입니다. 중복 관측이나 같은 사건에서 나온 자료가 양쪽에 나뉘어도 점수가 지나치게 좋아질 수 있습니다. 반면 시간이 지나 대상의 특성이 바뀌어 성능이 떨어지는 일은 누수가 없어도 생깁니다. 성능 변화와 누수 여부는 구별해서 살펴야 합니다.</p>')
- sec('scaling','전처리 누수','변환을 적용하기 전에 기준을 어디서 배웠는지 봅니다',f'<p>단위 없는 입력값 X가 학습 자료에는 40·60·80, 평가 자료에는 140이라고 합시다. 학습 자료의 평균은 {mu:.0f}, 표준편차는 {sd:.2f}입니다. 이 기준으로 140을 표준화하면 z≈{d["scaling"]["train_z"]:.2f}입니다. 평가값까지 포함해 기준을 구하면 평균은 {all_mu:.0f}, 표준편차는 {all_sd:.2f}가 되고 같은 140의 z가 약 {d["scaling"]["leaked_z"]:.2f}로 바뀝니다.</p>'+g3+'<p>평가 자료에는 <strong>학습 자료에서 정한 기준을 그대로 적용</strong>합니다. 결측값 대체, 표준화, 주성분 분석(PCA), 변수 선택처럼 자료를 보고 기준을 정하는 단계는 학습 자료 안에서 수행합니다. 교차검증에서도 각 반복의 학습 부분에서 기준을 다시 구합니다. 이런 순서를 하나로 묶어 실행하는 파이프라인을 쓰면 실수를 줄일 수 있습니다.</p><p>단위 환산이나 미리 정해 둔 공식처럼 자료에서 기준을 추정하지 않는 변환은 같은 규칙으로 적용하면 됩니다. 위 예제는 평가 정보가 기준을 바꾼다는 것을 보여 줍니다. 모든 모형에서 반드시 예측값이나 성능이 달라진다는 뜻은 아닙니다.</p>')
- sec('selection','선택과 재적합 예제','검증으로 규칙을 고른 뒤 시험 자료를 엽니다',f'<p>가상 목표값을 학습 [10, 10, 10, 10, 20, 60], 검증 [11, 12, 13], 시험 [9, 11, 16]으로 미리 나눕니다. 두 후보는 모든 관측에 ‘학습 평균’을 예측하는 규칙과 ‘학습 중앙값’을 예측하는 규칙입니다. 비교 지표는 평균절대오차(MAE)로 정합니다.</p><p>학습 평균은 20, 중앙값은 10입니다. 검증 자료에서 평균 규칙의 절대오차는 9·8·7이므로 MAE는 8입니다. 중앙값 규칙의 절대오차는 1·2·3이므로 MAE는 2입니다. 검증 오차가 작은 중앙값 규칙을 고릅니다. 이때 시험 자료는 사용하지 않습니다.</p>'+g4+f'<p>이제 선택한 규칙을 학습과 검증을 합친 9개 값에 다시 적합합니다. 중앙값은 {final:.0f}이 됩니다. 시험 자료 [9, 11, 16]에 모두 {final:.0f}을 예측하면 절대오차는 2·0·5이고, 시험 MAE는 7/3≈{test_mae:.2f}입니다. 고른 것은 숫자 10 자체가 아니라 <strong>자료의 중앙값을 예측하는 규칙</strong>입니다.</p><p>전처리가 있다면 재적합할 때 함께 다시 학습하되 시험 자료는 제외합니다. 이 작은 예제는 순서를 익히기 위한 것입니다. 검증 3개와 시험 3개만으로 안정적인 성능을 확인할 수 있다는 뜻은 아닙니다.</p>')
- sec('test-use','시험 자료의 사용','점수를 보고 바꾼 결정도 기록합니다','<p>시험 결과를 보고 문제를 발견하면 모형을 수정할 수 있습니다. 다만 그 결과가 수정에 영향을 주었다면 같은 시험 자료의 점수만으로 독립적인 성능 확인을 마쳤다고 할 수는 없습니다. 새로운 평가 자료를 확보하거나 시험 자료를 어떻게 사용했는지 밝혀야 합니다.</p><p>평가를 마친 뒤 실제 사용할 모형을 더 많은 자료로 다시 학습할 수도 있습니다. 이 모형은 시험에서 평가한 모형과 다르므로 기존 점수를 새 모형에서 직접 측정한 성능처럼 제시하지 않습니다. 사용을 시작한 뒤에도 시간이나 대상의 변화에 따라 성능이 달라지는지 확인합니다.</p>')
- sec('audit','평가 설계 점검','자료를 나눈 뒤 정보의 흐름까지 확인합니다','<ol><li>무엇을 언제 예측하며, 그때 어떤 입력을 알 수 있는지 적습니다.</li><li>같은 사람·학교·사건의 반복 관측과 중복 자료를 찾습니다.</li><li>평균, 인코딩, 결측값 대체 등의 기준을 어느 자료에서 구했는지 확인합니다.</li><li>분할 방법, 기간, 집단, 난수 시드와 제외 규칙을 기록합니다.</li><li>후보를 고른 지표와 시험 자료의 사용 이력, 집단별 오차를 함께 보고합니다.</li></ol><p>난수 시드를 고정하면 같은 분할을 재현할 수 있습니다. 하지만 그 분할이 앞으로 만날 대상을 잘 대표하는지는 별도로 살펴야 합니다. 누수가 없어도 작은 평가 표본의 점수는 흔들릴 수 있으므로 평가 관측 수와 적용 범위를 함께 확인합니다.</p>')
- sec('practice','확인 문제','정보가 어느 단계에 쓰였는지 확인하세요','<ol class="learn-exercises">'+''.join(f'<li>{q}<details><summary>답과 해설</summary><p>{a}</p></details></li>' for q,a in [('전체 자료로 표준화한 뒤 나누면 Y를 안 봤으니 괜찮나요?','평가 X의 분포도 학습 기준에 섞입니다. 학습에서 기준을 정하고 평가에는 적용합니다.'),('미래 예측에 무작위 분할이면 충분한가요?','시간 순서와 정보 공개 시점, 목표 기간의 겹침을 반영해야 합니다.'),('검증에서 고른 모형을 학습+검증으로 다시 학습해도 되나요?','선택이 끝났다면 가능합니다. 전처리도 다시 학습하되 시험 자료는 제외합니다.'),('시험 점수를 보고 후보를 바꾸면 같은 시험은 여전히 독립적인가요?','아니요. 선택에 영향을 주었으므로 평가 사용 이력을 밝히고 새로운 독립 평가를 고려해야 합니다.')])+'</ol>')
- sec('macro','CH2 Macro에서 읽기','성능 숫자와 분할 설계를 함께 봅니다','<p>성능 지표를 읽을 때 학습·검증·시험 중 어디서 계산했는지, 대상 기간과 단지·지역 분리 기준, 전처리 학습 범위를 확인하세요. 이 장의 분할 예제가 서비스의 실제 평가 설계라고 전제하지 않습니다.</p><p>같은 지역의 과거 자료 성능을 새 지역·미래 시점에 그대로 옮겨 읽지 않습니다. 성능은 자료와 절차에 조건부이며 개별 적정가나 결과 보장이 아닙니다.</p>')
- sec('recap','학습 요약','평가는 새로운 자료를 만나는 상황을 재현합니다','<ul class="learn-recap-list"><li><strong>학습</strong>은 규칙과 전처리 기준을 배우고, <strong>검증</strong>은 후보를 고르며, <strong>시험</strong>은 선택이 끝난 절차를 평가합니다.</li><li>무엇을 새로운 대상으로 볼지 정한 뒤 시간 순서와 집단의 의존성을 반영해 나눕니다.</li><li>전처리 기준과 입력 변수는 학습 자료 안에서 정하고 평가 자료에는 적용합니다.</li><li>검증으로 규칙을 고른 뒤 학습·검증 자료로 재적합할 수 있지만 시험 자료는 제외합니다.</li><li>시험 점수를 보고 선택을 바꿨다면 그 사용 이력을 밝히고 새로운 독립 평가를 고려합니다.</li></ul><p>다음 <a href="/learn/stats/overfitting/">24장 「과적합과 편향–분산의 균형」</a>에서는 학습 자료를 잘 맞히는 모형이 왜 새 자료에서는 어려움을 겪는지 살펴봅니다.</p><details class="learn-references"><summary>참고자료와 예제 데이터</summary><ul><li><a href="https://scikit-learn.org/stable/common_pitfalls.html">scikit-learn: 전처리와 데이터 누수</a></li><li><a href="../split-example.json">가상 분할·선택·재적합·표준화 예제</a></li></ul><p class="learn-source-note">본문과 그림은 직접 작성한 가상 예제와 개념도입니다. 참고자료 기존 확인일: 2026-10-09.</p></details>')
+ parts=render_content([g1,g2,g3,g4])
  p=ROOT/'train-validation-test/index.html';p.parent.mkdir(exist_ok=True);html=p.read_text(encoding='utf-8') if p.exists() else (ROOT/'supervised-unsupervised/index.html').read_text(encoding='utf-8').replace('https://ch2data.com/learn/stats/supervised-unsupervised/','https://ch2data.com/learn/stats/train-validation-test/')
- html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="학습·검증·시험 자료와 데이터 누수">'+'\n'.join(parts)+'</article>',html,count=1,flags=re.S);html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1학습·검증·시험 역할, 시간·집단 분할과 전처리·변수 선택의 데이터 누수를 예제로 학습합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);p.write_text(html,encoding='utf-8')
+ html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="학습·검증·시험 자료와 데이터 누수">'+'\n'.join(parts)+'</article>',html,count=1,flags=re.S);html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1학습·검증·시험 역할, 시간·집단 분할과 전처리·변수 선택의 데이터 누수를 예제로 학습합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);html=add_assets(html,d);p.write_text(html,encoding='utf-8')
+
+def add_assets(html,data):
+ html=html.replace('별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.','활용도는 CH2 Macro의 분석 결과를 이해하는 데 얼마나 도움이 되는지를 나타냅니다.')
+ if 'train-validation-test/chapter.css' not in html:html=html.replace('</head>','<link rel="stylesheet" href="/learn/stats/train-validation-test/chapter.css?v=20261025-1" /></head>')
+ payload='<script type="application/json" id="split-data">'+json.dumps(data,ensure_ascii=False)+'</script>'
+ if 'id="split-data"' in html:html=re.sub(r'<script type="application/json" id="split-data">.*?</script>',lambda _:payload,html,flags=re.S)
+ else:html=html.replace('</body>',payload+'</body>')
+ if 'train-validation-test/experiment.js' not in html:html=html.replace('</body>','<script type="module" src="/learn/stats/train-validation-test/experiment.js?v=20261025-1"></script></body>')
+ return html
+
+def render_content(graphs):
+ page=ROOT/'train-validation-test/index.html'
+ old=page.read_text(encoding='utf8')
+ refs=re.search(r'<details class="learn-references">.*?</details>',old,re.S)[0]
+ source=(ROOT/'train-validation-test/content.md').read_text(encoding='utf8').replace('**','')
+ formulas={r'z=\frac{x-\bar x}{s}':'z = (x−x̄)/s',r'z=\frac{140-60}{16.33}\approx4.90':'z = (140−60)/16.33 ≈ 4.90',r'z=\frac{140-80}{37.42}\approx1.60':'z = (140−80)/37.42 ≈ 1.60',r'MAE=\frac{2+0+5}{3}\approx2.33':'MAE = (2+0+5)/3 ≈ 2.33'}
+ source=re.sub(r'\\\[\s*\n(.*?)\n\\\]',lambda m:formulas[m[1].strip()],source,flags=re.S)
+ def inline(t):
+  return re.sub(r'`([^`]+)`',r'<code>\1</code>',escape(t))
+ def render(block):
+  lines=block.strip().splitlines();i=0;out=[]
+  while i<len(lines):
+   line=lines[i].strip();i+=1
+   if not line or line=='---':continue
+   if line.startswith('### '):out.append('<h3>'+inline(line[4:])+'</h3>');continue
+   if line.startswith('[그림 '):out.append(graphs[int(re.search(r'그림 (\d)',line)[1])-1]);continue
+   if line=='[CH2 Macro 통계·데이터분석 열기 →]':out.append('<p><a href="https://macro.ch2data.com/">CH2 Macro 통계·데이터분석 열기 →</a></p>');continue
+   if line=='▶ 참고자료':out.append(refs);continue
+   if line.startswith('▶ '):
+    rest=[]
+    while i<len(lines) and lines[i].strip()!='---':rest.append(lines[i]);i+=1
+    out.append('<details class="learn-more"><summary>'+inline(line[2:])+'</summary><div class="learn-more__body">'+render('\n'.join(rest))+'</div></details>');continue
+   if line.startswith('|'):
+    rows=[line]
+    while i<len(lines) and lines[i].strip().startswith('|'):rows.append(lines[i].strip());i+=1
+    cells=[[c.strip() for c in row.strip('|').split('|')] for row in rows]
+    cells=[row for row in cells if not all(re.fullmatch(r'[:\- ]+',c) for c in row)]
+    out.append('<div class="learn-data learn-data--full"><table><thead><tr>'+''.join('<th scope="col">'+inline(c)+'</th>' for c in cells[0])+'</tr></thead><tbody>'+''.join('<tr>'+''.join(('<th scope="row">'+inline(c)+'</th>') if j==0 else '<td>'+inline(c)+'</td>' for j,c in enumerate(row))+'</tr>' for row in cells[1:])+'</tbody></table></div>');continue
+   if line.startswith('- '):
+    items=[line[2:]]
+    while i<len(lines) and lines[i].startswith('- '):items.append(lines[i][2:]);i+=1
+    out.append('<ul>'+''.join('<li>'+inline(item)+'</li>' for item in items)+'</ul>');continue
+   out.append('<p'+(' class="split-formula"' if line.startswith(('z =','MAE =')) else '')+'>'+inline(line)+'</p>')
+  return '\n'.join(out)
+ ids=['quick-start','roles','evaluation','target','design','availability','ratio','leakage','scaling','preprocessing','selection','test-use','macro','practice','recap']
+ parts=[]
+ for id,section in zip(ids,re.split(r'^## ',source,flags=re.M)[1:],strict=True):
+  label,body=section.split('\n',1);heading=re.search(r'^### (.+)$',body,re.M)[1];body=re.sub(r'^### .+\n','',body,count=1,flags=re.M)
+  if id=='practice':
+   qs=[]
+   for q in re.split(r'^\d+\. ',body,flags=re.M)[1:]:
+    question,answer=q.split('▶ 답과 해설',1)
+    qs.append('<li>'+inline(question.strip())+'<details><summary>답과 해설</summary><div class="learn-more__body">'+render(answer)+'</div></details></li>')
+   content='<ol class="learn-exercises">'+''.join(qs)+'</ol>'
+  else:content=render(body)
+  if id=='macro':content+=macro_notes()
+  if id=='leakage':content+='<p class="learn-source-note">동일 거래의 중복 행이나 같은 사건에서 파생된 자료가 학습·평가 양쪽에 배정되는지도 확인합니다.</p>'
+  if id=='quick-start':content=content.replace('<ul>','<ul class="learn-objectives">',1)
+  if id=='test-use':content+='<span id="audit" aria-hidden="true"></span>'
+  content=content.replace('교차검증은 26장에서','교차검증은 <a href="/learn/stats/cross-validation/">26장</a>에서').replace('24장 「과적합과 편향–분산의 균형」','<a href="/learn/stats/overfitting/">24장 「과적합과 편향–분산의 균형」</a>')
+  parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{heading}</h2>{content}</section>')
+ return parts
+
+def macro_notes():
+ return '<details class="learn-more"><summary>현재 구현에서 확인한 평가 방식과 정보 시점의 한계</summary><div class="learn-more__body"><p>확인한 복합 회귀의 롤링 CV는 계약연도 기준으로 과거를 학습하고 이후 연도를 평가합니다. 로그 역변환 보정과 시점 보정은 각 학습 fold에서 구합니다. 다만 설계행렬은 전체 표본에서 만든 뒤 연도로 나누는 경로가 있어, 범주 구성까지 모두 학습 fold 내부에서 정한다고 설명할 수는 없습니다. 화면의 탐색 CV·확인 CV와 교재의 독립 시험 개념은 실제 후보 선택에 사용된 이력을 함께 확인해야 합니다.</p><p>집합 주거 지역회귀는 후보별 선택 변수의 결측 조건으로 적격 단지를 정한 뒤 무작위 Holdout을 나눕니다. 그 오차를 후보 선택에 사용하므로 최종 독립 시험 점수와 구별합니다. 후보별 평가 단지가 달라질 수 있고 범주 구성에도 전체 적격 자료를 참조하는 경로가 있습니다. 동일 표본 비교와 전처리 경계는 별도 점검 사항입니다.</p><p>계약연도 분할이 신고·공개 당시의 정보 가용성이나 새 단지·지역 분리를 자동 보장하지는 않습니다. 확인한 토지 거래 ORM에는 contract_date와 updated_at이 있지만 updated_at을 원천 공개일로 간주할 수 없습니다. 속성 원장에는 판본 연도·스냅샷·원천 파일을 기록하는 경로가 있으나, 이 정보만으로 거래별 최초 공개·접수·취득 시점 전체를 확인한 것은 아닙니다. 확인되지 않은 시점을 새 필드처럼 가정하지 않습니다.</p><p>이 장의 표준화·선택 실험은 별도 가상 자료입니다. 실제 회귀·변수 선택·데이터 파이프라인은 변경하지 않았으며, 시점 이력과 검증 정책은 별도 검토 대상으로 기록했습니다.</p></div></details>'
+
 if __name__=='__main__':build()

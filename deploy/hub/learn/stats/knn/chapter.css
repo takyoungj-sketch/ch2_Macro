@@ -1,0 +1,14 @@
+.knn-chart svg{width:100%;height:auto}
+.knn-controls{padding:1rem;margin:0 0 1rem;border:1px solid rgba(148,163,184,.3);border-radius:.75rem}
+.knn-controls p{margin:.4rem 0}
+.knn-shortcuts{display:flex;gap:.5rem;flex-wrap:wrap;margin:.4rem 0 .6rem}
+.knn-shortcuts button{font:inherit;min-height:44px;border:1px solid #94a3b8;border-radius:.4rem;padding:.5rem .75rem;background:var(--learn-surface,#fff);color:var(--learn-link,#172033)}
+.knn-shortcuts button[aria-pressed="true"]{border-color:var(--learn-accent,#2563eb);background:var(--learn-selected,#dbeafe)}
+.knn-controls [role=status]{font-variant-numeric:tabular-nums;line-height:1.7}
+.knn-metrics{width:100%;border-collapse:collapse;margin:1rem 0}
+.knn-metrics th,.knn-metrics td{border:1px solid rgba(148,163,184,.45);padding:.55rem .7rem;text-align:right;font-variant-numeric:tabular-nums}
+.knn-metrics th:first-child,.knn-metrics td:first-child{text-align:left}
+.knn-metrics caption{caption-side:top;text-align:left;font-weight:600;padding-bottom:.4rem}
+.knn-table-active{outline:2px solid #d97706;outline-offset:3px}
+html[data-learn-theme=dark] .knn-chart [stroke="#0f766e"]{stroke:#7ee8d5}
+html[data-learn-theme=dark] .knn-chart [fill="#dbeafe"]{fill:#1e3a5f}

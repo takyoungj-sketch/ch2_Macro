@@ -210,7 +210,7 @@
         "slug": "regularization",
         "title": "규제: 릿지와 라쏘",
         "soon": false,
-        "macro_relevance": 1
+        "macro_relevance": 3
       }
     ]
   },
@@ -222,28 +222,28 @@
         "slug": "classification",
         "title": "분류와 로지스틱 회귀",
         "soon": false,
-        "macro_relevance": 1
+        "macro_relevance": 2
       },
       {
         "n": "29",
         "slug": "knn",
         "title": "최근접 이웃과 변수의 스케일",
         "soon": false,
-        "macro_relevance": 1
+        "macro_relevance": 3
       },
       {
         "n": "30",
         "slug": "decision-tree",
         "title": "의사결정나무",
         "soon": false,
-        "macro_relevance": 1
+        "macro_relevance": 2
       },
       {
         "n": "31",
         "slug": "clustering",
         "title": "군집분석",
         "soon": false,
-        "macro_relevance": 1
+        "macro_relevance": 2
       },
       {
         "n": "32",
@@ -468,7 +468,7 @@
         tocDetails.open = !tocDetails.open;
         if (tocDetails.open) {
           aside.scrollIntoView({ block: "start" });
-          tocDetails.querySelector("summary").focus({ preventScroll: true });
+          tocDetails.querySelector(".learn-toc__home").focus({ preventScroll: true });
         }
       });
       tocDetails.addEventListener("toggle", () => tocButton.setAttribute("aria-expanded", String(tocDetails.open)));

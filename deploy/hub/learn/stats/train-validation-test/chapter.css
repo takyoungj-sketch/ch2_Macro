@@ -1,0 +1,8 @@
+.split-formula{font-variant-numeric:tabular-nums;line-height:1.8;padding:.6rem .9rem;border-left:3px solid #94a3b8;background:rgba(148,163,184,.08);overflow-wrap:anywhere}
+.split-controls{padding:1rem;margin-bottom:1rem;border:1px solid rgba(148,163,184,.3);border-radius:.75rem}
+.split-controls label{display:block;margin-bottom:.5rem;font-weight:600}
+.split-controls select{font:inherit;max-width:100%;border:1px solid #94a3b8;border-radius:.4rem;padding:.5rem;background:#fff;color:#172033}
+.split-controls [role=status]{font-variant-numeric:tabular-nums;line-height:1.8}
+.split-chart-svg{max-height:70vh}
+html[data-learn-theme=dark] .split-controls select{background:#1e293b;color:#e2e8f0}
+@media(prefers-color-scheme:dark){html:not([data-learn-theme=light]) .split-controls select{background:#1e293b;color:#e2e8f0}}

@@ -13,14 +13,14 @@ def build():
   hat=m['intercept']+m['slope']*v;h=1/n+(v-mean(x))**2/m['Sxx'];c=crit*s*math.sqrt(h);p=crit*s*math.sqrt(1+h)
   return dict(x=v,fit=hat,h=h,ci=[hat-c,hat+c],pi=[hat-p,hat+p])
  grid=[point(22+i*288/100) for i in range(101)];p100=point(100)
- result=dict(description='공통 학습 자료의 두 수치열을 단위 없는 X,Y로 사용한 고전적 단순 OLS. 가정 검증 완료를 뜻하지 않음.',n=n,df=df,SST=sst,SSR=ssr,SSE=sse,R2=m['R2'],adjusted_R2=1-(sse/df)/(sst/(n-1)),s=s,RMSE=math.sqrt(sse/n),MAE=mean(abs(e) for e in m['residuals']),slope=m['slope'],slope_se=se_b,slope_ci=[m['slope']-crit*se_b,m['slope']+crit*se_b],t=tv,p=pv,F=F,F_p=float(fdist.sf(F,1,df)),critical=crit,point100=p100,grid=grid)
+ result=dict(description='공통 학습 자료 30건의 면적 X(㎡)와 거래단가 Y(만원/㎡)를 사용한 고전적 단순 OLS. 가정 검증 완료를 뜻하지 않음.',n=n,df=df,SST=sst,SSR=ssr,SSE=sse,R2=m['R2'],adjusted_R2=1-(sse/df)/(sst/(n-1)),s=s,RMSE=math.sqrt(sse/n),MAE=mean(abs(e) for e in m['residuals']),slope=m['slope'],slope_se=se_b,slope_ci=[m['slope']-crit*se_b,m['slope']+crit*se_b],t=tv,p=pv,F=F,F_p=float(fdist.sf(F,1,df)),critical=crit,point100=p100,grid=grid,parameters=dict(n=n,df=df,intercept=m['intercept'],slope=m['slope'],xmean=mean(x),Sxx=m['Sxx'],s=s,critical=crit))
  (ROOT/'model-fit-example.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
  def tx(x,y,v):return f'<text x="{x}" y="{y}">{escape(str(v))}</text>'
  def ln(x,y,a,b,c='#94a3b8',extra=''):return f'<line x1="{x}" y1="{y}" x2="{a}" y2="{b}" stroke="{c}" {extra}/>'
  def fig(id,title,b,cap,h=400):return f'<figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 {h}" role="img" aria-labelledby="{id}-title {id}-desc"><title id="{id}-title">{title}</title><desc id="{id}-desc">{cap}</desc>{b}</svg><figcaption class="learn-chart__caption">{cap}</figcaption></figure>'
  w=500*m['R2'];b=tx(24,30,'평균만 사용할 때의 제곱합을 나누어 봅니다')
  b+=f'<rect x="65" y="105" width="{w}" height="80" fill="#2563eb"/><rect x="{65+w}" y="105" width="{500-w}" height="80" fill="#d97706"/>'
- b+=tx(65,220,f'적합으로 줄어든 부분: {100*m["R2"]:.1f}%')+tx(65,255,f'남은 잔차 부분: {100*(1-m["R2"]):.1f}%')+tx(65,300,f'SST {sst:,.2f} = SSR {ssr:,.2f} + SSE {sse:,.2f}')+tx(24,365,'파랑: SSR / 주황: SSE · 단위: Y 단위의 제곱')
+ b+=tx(65,220,f'적합으로 줄어든 부분: {100*m["R2"]:.1f}%')+tx(65,255,f'남은 잔차 부분: {100*(1-m["R2"]):.1f}%')+tx(65,300,f'SST {sst:,.2f} = SSR {ssr:,.2f} + SSE {sse:,.2f}')+tx(24,365,'파랑: SSR / 주황: SSE · 단위: (만원/㎡)²')
  g1=fig('variance','총제곱합의 분해',b,'그림 1. 공통 자료의 절편 포함 OLS 분해입니다. 막대 전체는 SST이며 길이는 제곱합의 비율을 나타냅니다. 관측값의 일정 비율을 정확히 맞혔다는 뜻이 아닙니다.')
  px=lambda v:65+v*1.55;py=lambda v:330-(v+150)*.43
  b=tx(24,28,'평균의 95% 신뢰구간과 새 관측의 95% 예측구간')
@@ -32,36 +32,105 @@ def build():
  for xx,yy in zip(x,y):b+=f'<circle cx="{px(xx)}" cy="{py(yy)}" r="3" fill="#64748b"/>'
  for v in [0,100,200,300]:b+=tx(px(v)-5,350,v)
  for v in [-100,0,100,200,300,400,500]:b+=tx(24,py(v)+5,v)
- b+=tx(24,380,'가로: X / 세로: Y')+tx(24,408,'파랑 띠: 평균 / 주황 띠: 새 관측 · 각 X별 점별 구간')
- g2=fig('bands','신뢰구간과 예측구간',b,'그림 2. 고전적 가정 아래의 점별 95% 구간입니다. 전체 곡선을 동시에 95%로 덮는 띠가 아닙니다. 음수 하한도 표시했습니다. Y의 의미에 비추어 모형이 적절한지 점검해야 합니다.',435)
- b=tx(24,28,'X=100에서 같은 중심, 다른 불확실성')
- axis=lambda v:90+v*1.4
- for yy,key,label,c in [(130,'ci','평균 반응','#2563eb'),(240,'pi','새 관측 하나','#d97706')]:
-  low,high=p100[key];b+=tx(24,yy-32,label)+ln(axis(low),yy,axis(high),yy,c,'stroke-width="4"')+f'<circle cx="{axis(p100["fit"])}" cy="{yy}" r="5" fill="{c}"/>'+tx(axis(low),yy+28,f'{low:.2f} ~ {high:.2f}')
+ b+=tx(24,380,'가로: 면적 (㎡) / 세로: 거래단가 (만원/㎡)')+tx(24,408,'파랑 띠: 평균 / 주황 띠: 새 관측 · 각 X별 점별 구간')
+ b+=ln(px(100),55,px(100),330,'#0f766e','stroke-dasharray="7 5" data-selected-area="bands"')
+ g2=fig('bands','신뢰구간과 예측구간',b,'그림 2. 고전적 가정 아래의 점별 95% 구간입니다. 전체 곡선을 동시에 95%로 덮는 띠가 아닙니다. 음수 하한도 표시했습니다. 관측 면적은 22~310㎡이며 음수 단가가 타당하다는 뜻은 아닙니다.',435)
+ g2=g2.replace('<figure class="learn-chart learn-chart--wide">','<figure class="learn-chart learn-chart--wide" id="mf-bands">').replace('<svg ','<p class="mf-position" id="mf-bands-position">선택 면적 100.00㎡ · 청록 점선</p><svg ',1)
+ b=tx(24,28,'면적 100.00㎡에서 같은 중심, 다른 불확실성').replace('<text ','<text id="mf-point-heading" ',1)
+ axis=lambda v:90+(v+150)*.85
+ for yy,key,label,c in [(130,'ci','평균 반응의 95% 신뢰구간','#2563eb'),(240,'pi','새 거래 한 건의 95% 예측구간','#d97706')]:
+  low,high=p100[key];b+=tx(24,yy-32,label)+ln(axis(low),yy,axis(high),yy,c,f'stroke-width="4" data-point-interval="{key}"')+f'<circle data-point-center="{key}" cx="{axis(p100["fit"])}" cy="{yy}" r="5" fill="{c}"/>'+f'<text data-point-label="{key}" x="90" y="{yy+28}">{low:.2f} ~ {high:.2f}</text>'
  b+=ln(90,320,560,320)
- for v in [0,100,200,300]:b+=tx(axis(v)-5,345,v)
- b+=tx(24,382,f'중심 {p100["fit"]:.2f} · 점은 두 구간에서 같은 적합값')
- g3=fig('at100','X=100에서의 두 구간',b,'그림 3. 평균 반응 구간은 모형 평균의 추정 오차를, 개별 예측구간은 여기에 새 관측 자체의 오차까지 반영합니다. 개별 관측값이 반드시 들어가는 범위는 아닙니다.')
- b=tx(24,28,'X 위치에 따른 구간의 반폭')+ln(65,320,580,320)+ln(65,55,65,320)
+ for v in [-100,0,100,200,300,400]:b+=tx(axis(v)-7,345,v)
+ b+=tx(24,382,'가로: 거래단가 (만원/㎡) · 두 점은 같은 적합값')
+ g3=fig('at100','선택한 면적에서 평균 신뢰구간과 개별 예측구간',b,'그림 3. 면적 100㎡의 적합 단가는 164.08만원/㎡입니다. 평균 95% 구간은 139.14~189.02, 개별 95% 구간은 32.41~295.75만원/㎡입니다. 선택한 면적의 점별 구간이며 실제 거래가격의 보장 범위가 아닙니다.')
+ controls='<div class="mf-controls" hidden><label for="mf-area">면적 <output for="mf-area" id="mf-area-value">100.00㎡</output></label><input type="range" id="mf-area" aria-label="비교할 면적" min="22" max="310" step="0.01" value="100"><div class="mf-quick"><button type="button" data-area="100">100㎡로 복원</button><button type="button" data-area="125.93">평균 면적 약 125.93㎡</button></div><div id="mf-point-status" role="status" aria-live="polite"></div><p class="learn-source-note">학습 자료 30건과 회귀계수는 고정합니다. 면적 22~310㎡에서 그림 2의 선택선, 그림 3의 구간과 그림 4의 선택선이 함께 바뀝니다.</p></div>'
+ g3=g3.replace('<figure class="learn-chart learn-chart--wide">','<figure class="learn-chart learn-chart--wide" id="mf-point">').replace('<svg ',controls+'<svg ',1)
+ b=tx(24,28,'면적 위치에 따른 95% 구간의 반폭 (만원/㎡)')+ln(65,320,580,320)+ln(65,55,65,320)
  for key,c in [('ci','#2563eb'),('pi','#d97706')]:b+='<polyline data-width="'+key+'" points="'+' '.join(f"{px(r['x'])},{320-(r[key][1]-r['fit'])*1.6}" for r in grid)+'" fill="none" stroke="'+c+'" stroke-width="3"/>'
  b+=ln(px(mean(x)),60,px(mean(x)),320,'#64748b','stroke-dasharray="4 4"')
  for v in [0,100,200,300]:b+=tx(px(v)-5,345,v)
  for v in [0,50,100,150]:b+=tx(25,325-v*1.6,v)
- b+=tx(24,380,f'파랑: 평균 / 주황: 새 관측 · 점선 x̄={mean(x):.2f}')
- g4=fig('width','구간 폭과 자료의 중심',b,'그림 4. 가로축은 X, 세로축은 95% 구간의 반폭(Y 단위)입니다. 이 단순 등분산 모형에서는 X의 평균에서 가장 좁고 멀어질수록 넓어집니다.')
+ b+=ln(px(100),60,px(100),320,'#0f766e','stroke-dasharray="7 5" data-selected-area="width"')
+ b+=tx(24,380,f'면적 (㎡) · 파랑: 평균 / 주황: 새 거래')+tx(24,408,f'회색 점선: 평균 면적 {mean(x):.4f}㎡ / 청록: 선택 면적')
+ g4=fig('width','구간 폭과 자료의 중심',b,'그림 4. 가로축은 면적(㎡), 세로축은 95% 구간의 반폭(만원/㎡)입니다. 이 단순 등분산 모형에서는 X의 평균에서 가장 좁고 멀어질수록 넓어집니다. 관측 범위 22~310㎡에서 비교합니다.',435)
  parts=[]
- def sec(id,label,title,body):parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{title}</h2>{body}</section>')
- sec('quick-start','서두 · 학습목표','잘 맞는 모형과 확실한 추정은 같은 말일까요?','''<p>회귀선이 자료에 가깝게 그려졌더라도 기울기를 얼마나 정확하게 추정했는지, 새 관측값을 얼마나 잘 예측할지는 별도로 물어야 합니다. 비슷한 평균을 가진 사람들도 실제 점수는 제각각일 수 있듯이, 평균 관계를 추정하는 일과 개별 값을 예측하는 일은 다릅니다.</p><p>이 장에서는 <strong>학습 자료에 대한 적합도, 추정의 불확실성, 새 자료의 예측 성능</strong>을 구별합니다. <a href="/learn/stats/residuals/">18장의 잔차 진단</a>과 함께 R²·오차·신뢰구간·예측구간을 읽는 것이 목표입니다.</p><ul class="learn-objectives"><li>R²·수정 R²와 원 단위 오차가 각각 무엇을 나타내는지 설명합니다.</li><li>계수의 크기·표준오차·신뢰구간·p값을 함께 읽습니다.</li><li>평균의 신뢰구간과 새 관측값의 예측구간을 구별합니다.</li><li>구간 폭을 결정하는 조건과 모형에 반영되지 않은 불확실성을 확인합니다.</li></ul><p>계산 예제는 17·18장과 같이 <a href="/learn/stats/graphs/#data">공통 학습 자료</a>의 두 수치열을 단위 없는 X,Y로 사용한 30쌍입니다. 실제 모집단에 대한 가정이 검증된 결과는 아닙니다.</p>''')
- sec('r-squared','R²와 제곱합','평균만 쓰는 기준보다 제곱오차를 얼마나 줄였는지 봅니다','''<p>모든 관측값에 Y의 평균 하나만 사용한 경우와 회귀선의 적합값을 사용한 경우를 비교해 보겠습니다. <strong>R²=1−SSE/SST</strong>는 평균만 쓰는 기준에서 회귀선이 줄인 제곱오차의 비율입니다.</p><ul><li><strong>SST:</strong> 관측값이 Y의 평균에서 벗어난 정도의 제곱합입니다.</li><li><strong>SSE:</strong> 관측값이 회귀선의 적합값에서 벗어난 정도의 제곱합입니다.</li><li><strong>SSR:</strong> 적합값이 Y의 평균에서 벗어난 정도의 제곱합입니다.</li></ul>'''+g1+f'''<p>예제의 R²는 <strong>{m['R2']:.4f}</strong>입니다. 평균만 쓰는 기준보다 학습 제곱오차를 약 {100*m['R2']:.1f}% 줄였다는 뜻입니다. 관측값 {100*m['R2']:.1f}%를 정확히 맞혔다거나, 인과적으로 설명한 비율이라는 뜻은 아닙니다.</p><details class="learn-more"><summary>제곱합의 산식과 R²의 범위</summary><div class="learn-more__body"><p>절편을 포함한 같은 표본의 OLS에서 SST=Σ(yᵢ−ȳ)², SSE=Σ(yᵢ−ŷᵢ)², SSR=Σ(ŷᵢ−ȳ)²이며 SST=SSR+SSE입니다.</p><p>SST&gt;0이면 이 학습 R²는 0~1입니다. Y가 전부 같으면 분모가 0이 됩니다. 절편 없는 회귀나 별도 검증 자료에서는 이 분해와 범위가 그대로 적용되지 않을 수 있습니다. 검증 R²는 사용한 기준 평균을 명시해야 하며 음수가 될 수도 있습니다.</p></div></details>''')
- sec('adj-r-squared','수정 R²','변수 수를 반영해도 새 자료의 성능은 따로 확인합니다',f'''<p>같은 관측·결과변수·절편을 사용하는 중첩 OLS에서는 설명변수를 추가해도 학습 R²가 줄지 않습니다. 이 성질 때문에 R² 증가만으로 추가 변수가 유용하다고 판단할 수는 없습니다.</p><p><strong>수정 R²</strong>는 추정하는 모수 수에 따른 자유도 손실을 반영합니다. 예제는 절편과 기울기를 추정하므로 p=2, 잔차 자유도 n−p=28이며 수정 R²는 <strong>{result['adjusted_R2']:.4f}</strong>입니다.</p><p>수정 R²는 변수를 추가하면 내려갈 수도 있고 음수가 될 수도 있습니다. 이를 최대화했다고 예측 성능이나 인과 해석이 보장되는 것은 아닙니다. 표본·결측 처리·Y의 변환이 다른 모형을 숫자만으로 비교하지 마세요.</p><details class="learn-more"><summary>수정 R²의 산식</summary><div class="learn-more__body"><p>절편을 포함한 모수 수가 p이면 수정 R²=1−[SSE/(n−p)]/[SST/(n−1)]입니다. 같은 자료의 변동을 기준으로 모수 수를 반영하는 지표입니다.</p></div></details>''')
- sec('error-scale','원 단위의 오차','R²와 함께 오차의 크기와 단위를 읽으세요',f'''<p>R²는 단위가 없으므로 오차가 실제로 어느 정도인지 직접 알려 주지는 않습니다. 예제의 <strong>학습 MAE는 {result['MAE']:.2f}, 학습 RMSE는 {result['RMSE']:.2f}, 잔차 표준오차 s는 {s:.2f}</strong>입니다. 셋 모두 Y와 같은 단위입니다.</p><p>MAE는 잔차 절댓값의 평균, 학습 RMSE는 √(SSE/n), 잔차 표준오차는 √(SSE/(n−p))입니다. RMSE와 s는 분모와 용도가 다릅니다. 이 값들은 모형을 맞춘 자료에서 구했으므로 새 관측값의 오차로 그대로 읽지 않습니다.</p><p>같은 R²라도 Y의 퍼짐이 크면 원 단위 오차가 클 수 있습니다. 반대로 비슷한 값만 모인 자료는 오차가 작아도 R²가 낮을 수 있습니다. 보편적인 합격선을 두기보다 분석 목적과 관측 범위를 함께 확인하세요.</p><details class="learn-more" id="mape"><summary>백분율 오차를 쓰면 비교가 쉬워지나요?</summary><div class="learn-more__body"><p>MAPE는 평균 절대 백분율 오차입니다. 실제값이 0이면 정의할 수 없고 0 근처에서는 불안정하며, 작은 값에 큰 비중을 줄 수 있습니다. 단위가 없다는 이유로 자료나 목표가 다른 결과를 무조건 비교할 수는 없습니다. 예측오차 지표는 25장에서 자세히 다룹니다.</p></div></details>''')
- sec('coefficients','계수의 불확실성','계수가 얼마나 큰지와 얼마나 정밀한지를 구별하세요',f'''<p>기울기의 점추정값만으로는 불확실성을 알기 어렵습니다. 예제의 기울기는 <strong>{m['slope']:.4f}</strong>, 표준오차는 <strong>{se_b:.4f}</strong>, 95% 신뢰구간은 <strong>{result['slope_ci'][0]:.4f}~{result['slope_ci'][1]:.4f}</strong>입니다. 기울기와 그 구간의 단위는 Y 단위/X 단위입니다.</p><p>‘모집단 기울기가 0’이라는 귀무가설을 검정하면 t≈{tv:.3f}, 자유도 28, 양측 p≈{pv:.5f}입니다. p값이 작다는 것은 가정 아래 기울기 0과 자료가 잘 맞지 않는다는 뜻이며, 큰 실질적 차이나 높은 예측력·인과효과를 보장하지는 않습니다.</p><p>이 구간과 검정은 올바른 선형 평균과 독립·등분산 정규 오차 등 고전적 가정을 적용한 계산 예제입니다. 앞 장의 진단과 자료의 수집 과정을 함께 보아야 합니다.</p><details class="learn-more"><summary>기울기의 표준오차와 전체 F 검정</summary><div class="learn-more__body"><p>고전적 단순회귀에서 SE(b₁)=s/√Sxx이며 H₀:β₁=0의 t=b₁/SE(b₁)입니다.</p>'''+f'''<p>절편을 포함한 단순회귀의 전체 F 검정은 F(1,28)≈{F:.3f}=t²로 같은 p값을 냅니다. 다중회귀의 전체 F 검정은 모든 기울기가 함께 0인지 묻기 때문에 개별 계수의 t 검정과 질문이 다릅니다.</p></div></details>''')
- sec('bands','평균 구간과 예측구간','평균 관계의 추정과 새 관측값의 예측은 다릅니다','''<p>같은 X=x₀에서 <strong>평균 반응 E[Y|X=x₀]</strong>을 추정할 수도 있고, <strong>새 관측값 하나</strong>를 예측할 수도 있습니다. 예를 들어 공부 시간이 같은 학생들의 평균 점수와 그중 새 학생 한 명의 점수는 다른 대상입니다.</p>'''+g2+'''<p>두 구간의 중심 적합값은 같습니다. 하지만 평균의 신뢰구간은 평균 관계를 추정하는 불확실성을, 개별 예측구간은 여기에 새 관측 자체의 오차까지 반영합니다. 따라서 같은 고전적 모형과 수준에서는 개별 예측구간이 더 넓습니다.</p><p>그림의 띠는 <strong>각 X에서 따로 구한 점별 95% 구간</strong>을 연결한 것입니다. 전체 곡선이 동시에 들어가는 비율이 95%라는 보장은 아닙니다. 여러 지점을 동시에 추론하려면 별도의 동시 신뢰대역이 필요합니다.</p><details class="learn-more"><summary>두 구간의 산식</summary><div class="learn-more__body"><p>h₀=1/n+(x₀−x̄)²/Sxx라 하면 평균 반응의 신뢰구간은 ŷ₀±t₀.₉₇₅,ₙ₋₂·s√h₀이고, 새 관측 하나의 예측구간은 ŷ₀±t₀.₉₇₅,ₙ₋₂·s√(1+h₀)입니다.</p><p>뒤의 1은 새 관측 자체의 오차분산을 반영합니다. 새 오차가 학습 자료와 독립이고 같은 분산을 가지는 등 고전적 가정이 필요합니다.</p></div></details>''')
- sec('point-example','X=100 계산 예제','같은 적합값이어도 구간 폭은 크게 달라집니다',f'''<p>X=100의 적합값은 <strong>{p100['fit']:.2f}</strong>입니다. 평균 반응의 95% 신뢰구간은 <strong>{p100['ci'][0]:.2f}~{p100['ci'][1]:.2f}</strong>, 새 관측의 95% 예측구간은 <strong>{p100['pi'][0]:.2f}~{p100['pi'][1]:.2f}</strong>입니다. 반올림 전 회귀계수와 t 임계값을 사용했습니다.</p>'''+g3+'''<p>신뢰구간이 비교적 좁아도 개별 값의 다양성은 남습니다. 새 관측값을 예측하는 데 평균 신뢰구간을 쓰면 그 변동을 빠뜨려 너무 좁은 범위를 제시하게 됩니다.</p><p>평균 신뢰구간의 95%는 가정 아래 표본추출과 구간 계산을 반복할 때 고정된 평균 반응을 포함하는 장기 비율입니다. 이미 계산한 구간 안에 고정 평균이 95% 확률로 들어 있다는 뜻은 아닙니다. 예측구간은 학습 표본과 새 관측도 함께 달라지는 반복 과정의 포함률을 대상으로 합니다.</p>''')
- sec('width','구간 폭을 결정하는 것','자료의 중심에서 멀어질수록 평균 추정이 불안정해집니다','''<p>구간 폭은 잔차 변동 s, 신뢰수준, 표본수, X의 퍼짐과 예측 위치에 좌우됩니다. 신뢰수준을 높이면 구간은 넓어집니다. 같은 조건에서 독립적인 정보가 더 많으면 평균 추정은 정밀해질 수 있습니다.</p>'''+g4+'''<p>이 단순 등분산 모형에서는 X의 평균 주변에서 평균 신뢰구간이 가장 좁습니다. 평균에서 멀어질수록 평균 관계를 추정하는 불확실성이 커집니다. 표본이 많아져도 새 관측 자체의 오차까지 사라지는 것은 아니므로 개별 예측구간을 같은 방식으로 좁아질 것으로 기대하지는 않습니다.</p><p>공식이 관측 범위 밖에서 값을 낸다고 직선 관계가 그곳에서도 맞는 것은 아닙니다. 음수 하한이 적절한지도 Y의 의미에 따라 판단해야 합니다. Y가 양수여야 하는 값이라면 가산 정규 오차 모형의 한계를 점검할 단서입니다. 하한을 임의로 0에 자른 뒤에도 같은 명목 포함률이라고 주장할 수는 없습니다.</p>''')
- sec('limits','진단과 외부 검증','좁은 구간이 모든 불확실성을 포함하지는 않습니다','<p>위 구간은 선택한 모형·가정에 조건부입니다. 변수 선택·변환 탐색을 거친 불확실성, 표본 편향, 측정오차, 시점 변화, 빠진 변수의 영향까지 모두 포함한 것이 아닙니다. 이분산·군집·시계열 의존성이 있으면 추론 방식을 조정해야 합니다.</p><p>계수에 강건 표준오차를 적용했다고 새 관측의 예측구간까지 자동으로 올바르게 구성되는 것은 아닙니다. 조건부 오차분포와 예측 대상을 별도로 고려해야 합니다.</p><p>적합도는 학습 자료의 요약, 계수·평균 구간은 추정의 불확실성, 별도 자료 오차는 일반화 성능입니다. 세 질문을 구별하고 18장의 잔차 진단과 함께 읽으세요.</p>')
- sec('practice','확인 문제','숫자가 답하는 질문을 구별하세요','<ol class="learn-exercises">'+''.join(f'<li>{q}<details><summary>답과 해설</summary><p>{a}</p></details></li>' for q,a in [('R²=0.42이면 관측값 42%를 정확히 맞혔나요?','아니요. 같은 학습 표본에서 평균만 쓰는 기준 대비 제곱오차가 줄어든 비율입니다.'),('새 관측값을 예측할 때 평균 신뢰구간을 사용해도 되나요?','새 관측의 오차가 빠져 너무 좁습니다. 목적에 맞는 예측구간이 필요합니다.'),('그림 전체가 동시에 95% 신뢰구간인가요?','각 X의 점별 구간입니다. 동시에 전체 곡선을 덮는 보장과 다릅니다.'),('p값이 작으면 미래 예측도 정확한가요?','아니요. 계수에 관한 추론과 별도 자료의 예측 성능은 다른 질문입니다.')])+'</ol>')
- sec('macro','CH2 Macro에서 읽기','적합도·단위·구간의 대상을 함께 확인합니다','<p>R²와 표본 수만 보지 말고 결과변수의 정의·변환, 원 단위 오차, 자유도, 구간의 대상과 계산 가정을 확인하세요. 화면의 구간이 평균 신뢰구간인지 개별 예측구간인지 확인한 후 해석합니다. 이 장의 공식이 모든 서비스 결과의 실제 산식이라고 전제하지 않습니다.</p><p>공통 자료는 출처 미확인 학습 예제입니다. 계산된 구간을 실제 시장의 보장 범위나 개별 물건의 적정가 범위로 사용하지 않습니다.</p>')
- sec('recap','결론 · 학습 요약','적합도·추정의 정밀도·예측 성능을 구별하세요','''<p>자료에 얼마나 잘 맞는지, 추정한 값이 얼마나 불확실한지, 새 관측값을 얼마나 잘 예측하는지는 서로 다른 질문입니다. 다음 구분을 기억해 두세요.</p><ul class="learn-recap-list"><li><strong>적합도:</strong> R²와 수정 R²는 학습 자료에 대한 요약입니다. 원 단위 오차와 관측 범위도 함께 봅니다.</li><li><strong>계수 추론:</strong> 계수의 크기·표준오차·신뢰구간·p값은 서로 다른 정보를 줍니다. 유의성은 인과효과나 예측 정확도를 보장하지 않습니다.</li><li><strong>평균 신뢰구간:</strong> 주어진 X에서 평균 관계를 추정하는 불확실성을 나타냅니다.</li><li><strong>개별 예측구간:</strong> 새 관측 자체의 변동까지 반영해 같은 조건의 평균 신뢰구간보다 넓습니다.</li><li><strong>모형의 한계:</strong> 점별 구간은 전체 곡선의 동시 구간이 아닙니다. 좁은 구간도 편향·모형 선택·시점 변화 등 모든 불확실성을 담지는 않습니다.</li></ul><p>다음 <a href="/learn/stats/supervised-unsupervised/">22장 ‘통계적 설명과 예측, 지도학습과 비지도학습’</a>에서는 분석 목적에 따라 방법을 어떻게 선택하는지 살펴봅니다.</p><details class="learn-more"><summary>참고자료와 계산값</summary><div class="learn-more__body"><ul><li><a href="https://www.itl.nist.gov/div898/handbook/pmd/section5/pmd511.htm">NIST: 평균 반응의 추정과 신뢰구간</a></li><li><a href="https://www.itl.nist.gov/div898/handbook/pmd/section5/pmd512.htm">NIST: 새 관측의 예측과 불확실성</a></li><li><a href="../model-fit-example.json">제곱합·검정·구간·그림 좌표</a></li></ul><p class="learn-source-note">참고자료의 기존 확인일: 2026-10-09. 계산은 공통 학습 자료의 두 수치열을 단위 없는 X,Y로 사용한 30쌍에 고전적 단순 OLS 가정을 적용한 예제입니다.</p></div></details>''')
- p=ROOT/'model-fit/index.html';html=p.read_text(encoding='utf-8');html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="회귀모형의 적합도와 추정의 불확실성">'+'\n'.join(parts)+'</article>',html,count=1,flags=re.S);html=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1R²·수정 R²·잔차 표준오차와 계수의 추론, 평균 신뢰구간·개별 예측구간을 비교합니다.\2',html,count=1,flags=re.S);html=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',html);p.write_text(html,encoding='utf-8')
+ page=ROOT/'model-fit/index.html';old=page.read_text(encoding='utf-8')
+ references=re.search(r'<details class="learn-more"><summary>참고자료(?:와 계산값)?</summary>.*?</details>',old,re.S)[0].replace('공통 학습 자료의 두 수치열을 단위 없는 X,Y로 사용한 30쌍에 고전적 단순 OLS 가정을 적용한 예제입니다.','공통 학습 자료 30건의 면적(㎡)과 거래단가(만원/㎡)에 고전적 단순 OLS 가정을 적용한 예제입니다.')
+ source=(ROOT/'model-fit/content.md').read_text(encoding='utf-8').replace('**','').replace('\\~','~')
+ formulas={r'R^2=1-\frac{SSE}{SST}':'R² = 1−SSE/SST',r'SST=SSR+SSE':'SST = SSR+SSE',r'R^2_{\mathrm{adj}}'+'\n'+r'=1-\frac{SSE/(n-p)}{SST/(n-1)}':'수정 R² = 1−[SSE/(n−p)]/[SST/(n−1)]',r'SE(b_1)=\frac{s}{\sqrt{S_{xx}}}':'SE(b₁) = s/√Sxx',r't=\frac{b_1}{SE(b_1)}':'t = b₁/SE(b₁)',r'h_0=\frac1n+\frac{(x_0-\bar x)^2}{S_{xx}}':'h₀ = 1/n+(x₀−x̄)²/Sxx',r'\hat y_0\pm t_{0.975,n-2}s\sqrt{h_0}':'ŷ₀ ± t₀.₉₇₅,ₙ₋₂ s√h₀',r'\hat y_0\pm t_{0.975,n-2}s\sqrt{1+h_0}':'ŷ₀ ± t₀.₉₇₅,ₙ₋₂ s√(1+h₀)'}
+ formulas.update({r'RMSE=\sqrt{\frac{SSE}{n}}':'RMSE = √(SSE/n)',r'RSE=\sqrt{\frac{SSE}{n-p}}':'RSE = √(SSE/(n−p))'})
+ source=re.sub(r'\\\[\s*\n(.*?)\n\\\]',lambda m:formulas[m[1].strip()],source,flags=re.S)
+ ids=['quick-start','r-squared','adj-r-squared','error-scale','coefficients','tests','bands','point-example','width','negative','limits','practice','macro','recap']
+ def inline(value):return escape(value)
+ def render(block):
+  out=[];lines=block.strip().split('\n');i=0
+  while i<len(lines):
+   line=lines[i].strip()
+   if not line or line=='---':i+=1;continue
+   if line.startswith('### '):out.append('<h3>'+inline(line[4:])+'</h3>');i+=1;continue
+   if line.startswith('[그림 '):out.append({1:g1,2:g2,3:g3,4:g4}[int(re.search(r'그림 (\d)',line)[1])]);i+=1;continue
+   if line=='[CH2 Macro 통계·데이터분석 열기 →]':out.append('<p><a href="https://macro.ch2data.com/built/">CH2 Macro 복합 통계·데이터분석 열기 →</a></p>');i+=1;continue
+   if line=='▶ 참고자료':out.append(references);i+=1;continue
+   if line.startswith('▶ '):
+    title=line[2:];rest=[];i+=1
+    while i<len(lines) and lines[i].strip()!='---':rest.append(lines[i]);i+=1
+    out.append('<details class="learn-more"><summary>'+inline(title)+'</summary><div class="learn-more__body">'+render('\n'.join(rest))+'</div></details>');continue
+   if line.startswith('|'):
+    table=[]
+    while i<len(lines) and lines[i].strip().startswith('|'):
+     cells=[c.strip() for c in lines[i].strip().strip('|').split('|')]
+     if not all(re.fullmatch(r'[:\- ]+',c) for c in cells):table.append(cells)
+     i+=1
+    out.append('<div class="learn-data learn-data--full"><table><thead><tr>'+''.join('<th scope="col">'+inline(c)+'</th>' for c in table[0])+'</tr></thead><tbody>'+''.join('<tr>'+''.join('<th scope="row">'+inline(c)+'</th>' if j==0 else '<td>'+inline(c)+'</td>' for j,c in enumerate(row))+'</tr>' for row in table[1:])+'</tbody></table></div>');continue
+   if line.startswith('- '):
+    items=[]
+    while i<len(lines) and lines[i].startswith('- '):items.append('<li>'+inline(lines[i][2:])+'</li>');i+=1
+    out.append('<ul>'+''.join(items)+'</ul>');continue
+   formula=line.startswith(('ŷ','R²','RMSE =','RSE =','수정 R² =','SST =','SE(','t =','F =','h₀','H₀:'))
+   out.append('<p'+(' class="mf-formula"' if formula else '')+'>'+inline(line)+'</p>');i+=1
+  return '\n'.join(out)
+ for id,section in zip(ids,re.split(r'^## ',source,flags=re.M)[1:],strict=True):
+  label,body=section.split('\n',1);heading=re.search(r'^### (.+)$',body,re.M)[1];body=re.sub(r'^### .+\n','',body,count=1,flags=re.M)
+  if id=='practice':
+   items=[]
+   for q in re.split(r'^\d+\. ',body,flags=re.M)[1:]:
+    question,answer=q.split('▶ 답과 해설',1);items.append('<li>'+inline(question.strip())+'<details><summary>답과 해설</summary><div class="learn-more__body">'+render(answer)+'</div></details></li>')
+   html='<ol class="learn-exercises">'+''.join(items)+'</ol>'
+  else:html=render(body)
+  if id=='quick-start':html=html.replace('<ul>','<ul class="learn-objectives">',1)+'<p class="learn-source-note"><a href="/learn/stats/graphs/#data">공통 학습 자료 30건</a> · <a href="../model-fit-example.json">제곱합·계수 검정·구간 계산 자료</a>. 실제 거래 출처·대표성과 고전적 가정이 검증된 자료는 아닙니다.</p>'
+  if id=='bands':html+='<p class="learn-source-note">새 관측의 오차가 학습 자료와 독립이고, 올바른 선형 평균·등분산 정규오차 등 고전적 가정이 적절해야 합니다. 그림은 면적 22~310㎡의 점별 구간입니다.</p>'
+  if id=='point-example':html=html.replace('두 구간의 중심은 모두 164.08만원/㎡입니다.','기본값 100㎡에서 두 구간의 중심은 모두 164.08만원/㎡입니다. 위 조절기로 면적을 바꾸면 선택 면적의 적합값과 구간을 확인할 수 있습니다.')
+  if id=='width':html+='<p class="learn-source-note">공통 자료의 평균 면적은 125.9333…㎡입니다. 회색 점선은 이 위치를, 청록 점선은 선택한 면적을 나타냅니다.</p>'
+  if id=='error-scale':html=html.replace('18장에서 배운 잔차 지표','<a href="/learn/stats/residuals/">18장에서 배운 잔차 지표</a>')+'<span id="mape" aria-hidden="true"></span>'
+  if id=='macro':html=macro_case();heading='실제 집합 지역회귀에서 학습 성능과 두 종류의 구간을 구별하세요'
+  if id=='recap':html=html.replace('22장 「통계적 설명과 예측, 지도학습과 비지도학습」','<a href="/learn/stats/supervised-unsupervised/">22장 「통계적 설명과 예측, 지도학습과 비지도학습」</a>')
+  parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{heading}</h2>{html}</section>')
+ html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="회귀모형의 적합도와 추정의 불확실성">'+'\n'.join(parts)+'</article>',old,count=1,flags=re.S)
+ html=html.replace('별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.','활용도는 CH2 Macro의 분석 결과를 이해하는 데 얼마나 도움이 되는지를 나타냅니다.')
+ if 'model-fit/chapter.css' not in html:html=html.replace('</head>','<link rel="stylesheet" href="/learn/stats/model-fit/chapter.css?v=20261025-1" />\n</head>')
+ data=json.dumps(result['parameters'],ensure_ascii=False).replace('</','<\\/')
+ html=html.replace('</body>','<script type="application/json" id="mf-model-data">'+data+'</script>\n</body>') if 'id="mf-model-data"' not in html else re.sub(r'<script type="application/json" id="mf-model-data">.*?</script>',lambda _: '<script type="application/json" id="mf-model-data">'+data+'</script>',html,flags=re.S)
+ if 'model-fit/experiment.js' not in html:html=html.replace('</body>','<script type="module" src="/learn/stats/model-fit/experiment.js?v=20261025-1"></script>\n</body>')
+ page.write_text(html,encoding='utf-8')
+
+def macro_case():
+ return '''<p>아래 두 화면은 집합 주거 지역회귀 사례입니다. 위쪽은 학습 성능과 계수표, 아래쪽은 선택 단지의 추정값과 구간을 보여줍니다. 공통 학습 자료 30건의 단순회귀와는 자료의 단위·가중치·모형이 다릅니다.</p>
+<figure class="mf-macro-case"><a href="macro-regional-fit.png" target="_blank" rel="noopener"><img src="macro-regional-fit.png" width="996" height="838" loading="lazy" alt="집합 지역회귀 성능. 학습 단지 38개, 유효 단지 24.6, R² 0.69870, 수정 R² 0.62355, 학습 MAPE 21.1%, Holdout 없음. 거래수 가중·로그 단가 적합 안내와 계수별 p값이 표시됩니다."></a><figcaption>실제 화면 1 · 학습 성능과 계수. 이미지를 선택하면 원본 크기로 볼 수 있습니다. 숫자는 캡처 당시 값이며 원자료가 없어 독립 검산한 결과로 제시하지 않습니다.</figcaption></figure>
+<p>학습 n=38은 거래 38건이 아니라 학습에 사용한 단지 38개입니다. 이 지역회귀의 결과변수는 단지별 중앙 거래단가이며, 화면에는 ‘거래수 가중 · log 단가’가 표시됩니다. ‘유효 단지 24.6’은 현재 구현에서 거래 건수 t에 따른 가중치 w=t/(t+10)의 합입니다. 독립적인 단지가 정확히 24.6개라거나, 이 값을 그대로 잔차 자유도에 넣는다는 뜻은 아닙니다.</p>
+<p>학습 MAPE 21.1%는 학습 단지의 가중 절대 백분율 오차입니다. Holdout n과 Holdout MAPE의 ‘—’는 검증 오차가 0이라는 뜻이 아닙니다. 표본이 작아 별도 Holdout을 만들지 않았다는 안내를 함께 읽으세요. 선택 단지의 중앙값과 적합값 차이 1.4%도 외부 예측 성능의 증거로 볼 수 없습니다.</p>
+<p>이 화면의 표기에는 확인할 차이가 있습니다. 공통 회귀식 표시 컴포넌트는 ‘log(금액)’이라고 쓰지만, 지역회귀 엔진은 단지 중앙단가의 자연로그를 적합합니다. 따라서 이 사례의 회귀식을 거래총액 모형으로 읽으면 안 됩니다. 또 로그모형의 R²는 로그 척도의 가중 적합도인 반면, 수정 R²는 스미어링으로 원 단위로 복원한 값의 가중 제곱오차에서 계산됩니다. 표시된 0.69870과 0.62355를 동일 척도의 R²와 수정 R² 한 쌍처럼 해석하지 않습니다.</p>
+<figure class="mf-macro-case"><a href="macro-regional-intervals.png" target="_blank" rel="noopener"><img src="macro-regional-intervals.png" width="972" height="722" loading="lazy" alt="개포우성3차 아파트의 단지 예측 사례. 중앙값 2210, 적합값 2241만원/㎡. 평균 95% 추정범위 1911~2630, 개별 단지 95% 예측범위 1320~3552만원/㎡. 감정평가액이나 실제 가격 보장 범위가 아니라는 안내가 있습니다."></a><figcaption>실제 화면 2 · 선택 조건의 평균 추정과 개별 단지 예측. 학습 예제의 새 거래 한 건과 이 화면의 새 단지 한 개는 서로 다른 관측 단위입니다.</figcaption></figure>
+<p>선택된 개포우성3차 사례의 추정값은 2,241만원/㎡입니다. 평균 95% 추정범위는 1,911~2,630만원/㎡, 개별 단지 95% 예측범위는 1,320~3,552만원/㎡로 표시됩니다. 평균 관계를 추정하는 구간보다 단지 자체의 변동까지 고려하는 예측범위가 넓습니다. 로그 척도에서 역변환한 구간이므로 원래 단위에서는 중심을 기준으로 대칭일 필요가 없습니다.</p>
+<p>이 값은 선택 자료와 모형에서 추정한 통계적 참고값입니다. 특정 단지나 개별 호의 감정평가액·적정가격·실제 거래가격의 보장 범위가 아닙니다. 화면 제목의 ‘평균단가 예측’과 구별해, 실제 학습 목표가 단지 중앙단가라는 점도 함께 확인하세요.</p>
+<details class="learn-more"><summary>실제 지역회귀의 적합·검정·구간 계산 방식</summary><div class="learn-more__body">
+<p>확인한 집합 주거 지역회귀는 단지 한 개를 한 행으로 구성합니다. 선택 지역·기간·유형과 거래 건수 조건을 적용하고, 중앙단가가 양수이며 선택한 수치 속성이 있는 단지를 사용합니다. 범주 결측은 선택한 미상 유지·제외 정책을 따릅니다. 학습 유효 표본과 원래 조회 표본은 다를 수 있습니다.</p>
+<p>단지 균등 설정은 OLS, 거래수 가중 설정은 WLS를 사용합니다. 현재 적합 호출은 고전적 기본 공분산을 사용하며, 이 경로에 이분산 강건 또는 군집 보정 옵션은 확인되지 않습니다. 계수별 SE·t·p와 모형 전체 F검정은 적합 결과에서 가져옵니다. 자유도는 설계행렬의 독립 열 수에 따르며 ‘유효 단지’ 가중치 합으로 대체하지 않습니다.</p>
+<p>첨부 계수표는 변수·해석·p를 표시합니다. 백엔드에 SE와 t가 있어도 이 표에 계수의 표준오차·95% 신뢰구간을 이미 제공하는 것처럼 설명하지 않습니다. p값은 표에서 최대 소수 넷째 자리, 전체 F의 p값은 다섯째 자리로 반올림되어 0으로 보일 수 있으며, 확률이 정확히 0이라는 뜻은 아닙니다. RSE·MAE는 이 성능 카드에 없고, 백엔드의 원 단위 가중 RMSE도 첨부 카드에는 표시되지 않습니다.</p>
+<p>현재 Holdout 분할은 적격 단지가 40개 미만이면 생략합니다. 그 이상이면 고정 난수로 약 25%를 따로 두며 최소 8개를 사용합니다. 이는 별도 단지에 대한 분할이며 미래 연도나 다른 지역의 성능까지 보장하지 않습니다. 모형 후보 탐색 후의 불확실성도 통상적인 계수 검정에 모두 포함되지는 않습니다.</p>
+<p>평균 구간과 개별 예측구간은 적합 모형의 get_prediction(...).summary_frame(alpha=0.05)에서 계산합니다. 로그모형은 학습 잔차의 가중 스미어링 계수로 점추정과 평균 구간 양 끝을 보정합니다. 개별 예측구간은 로그 구간 양 끝을 지수변환합니다. 보정계수 자체의 추정 불확실성을 별도로 전파하는 계산은 확인한 경로에 포함되지 않습니다.</p>
+<p>WLS 예측 호출에는 새 단지의 별도 가중치를 전달하지 않습니다. 따라서 거래 건수 가중 적합과 새 단지의 오차분산 가정이 어떻게 연결되는지 추가 검토가 필요합니다. 계산된 ‘95%’를 실제 단지 자료에서 검증된 95% 포함률로 받아들이지 마세요. 지역·시점 의존성과 가중치의 통계적 의미도 따로 확인해야 합니다.</p>
+<p>이 확인 범위는 첨부한 집합 주거 지역회귀 경로입니다. 거래별 회귀, 비주거 도로명 집계, 복합 회귀 등 다른 모형에도 같은 관측 단위와 구간 계산이 적용된다고 확대하지 않습니다. 이 장에서는 표기·계산의 차이를 설명하며 실제 분석 및 모형추천 코드를 변경하지 않습니다.</p>
+</div></details><p class="learn-macro-cta"><a href="https://macro.ch2data.com/collective/">CH2 Macro 집합 통계·데이터분석 열기 →</a></p>'''
+
 if __name__=='__main__':build()

@@ -1,0 +1,11 @@
+.errors-formula{font-variant-numeric:tabular-nums;line-height:1.8;padding:.6rem .9rem;border-left:3px solid #94a3b8;background:rgba(148,163,184,.08);overflow-wrap:anywhere}
+.errors-controls{padding:1rem;margin-bottom:1rem;border:1px solid rgba(148,163,184,.3);border-radius:.75rem}
+.errors-controls label{display:block;margin-bottom:.5rem;font-weight:600}
+.errors-controls select,.errors-shortcuts button{font:inherit;max-width:100%;border:1px solid #94a3b8;border-radius:.4rem;padding:.5rem;background:var(--learn-surface,#fff);color:var(--learn-link,#172033)}
+.errors-controls [role=status]{font-variant-numeric:tabular-nums;line-height:1.8}
+.errors-controls input[type=range]{width:100%;min-height:44px;accent-color:var(--learn-accent,#2563eb)}
+.errors-shortcuts{display:flex;gap:.5rem;flex-wrap:wrap}
+.errors-chart-svg{max-height:70vh}
+.errors-chart-svg [hidden]{display:none}
+html[data-learn-theme=dark] .errors-chart-svg [stroke="#0f766e"]{stroke:#7ee8d5}
+html[data-learn-theme=dark] .errors-chart-svg [fill="#0f766e"]{fill:#7ee8d5}

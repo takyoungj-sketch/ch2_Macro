@@ -1,0 +1,15 @@
+.read-chart svg{width:100%;height:auto}
+.read-controls{padding:1rem;margin:0 0 1rem;border:1px solid rgba(148,163,184,.3);border-radius:.75rem}
+.read-controls p,.read-controls label{margin:.4rem 0}
+.read-shortcuts{display:flex;gap:.5rem;flex-wrap:wrap;margin:.4rem 0 .6rem}
+.read-shortcuts button,.read-controls input{font:inherit;min-height:44px;border:1px solid #94a3b8;border-radius:.4rem;padding:.5rem .75rem;background:var(--learn-surface,#fff);color:var(--learn-link,#172033)}
+.read-shortcuts button[aria-pressed="true"]{border-color:var(--learn-accent,#2563eb);background:var(--learn-selected,#dbeafe)}
+.read-controls [role=status]{font-variant-numeric:tabular-nums;line-height:1.7}
+.learn-chapter .read-metrics{width:100%;min-width:0;border-collapse:collapse;margin:1rem 0;table-layout:fixed}
+.read-metrics th,.read-metrics td{border:1px solid rgba(148,163,184,.45);padding:.55rem .7rem;text-align:left;white-space:normal;overflow-wrap:anywhere;vertical-align:top}
+.read-metrics td:not(:first-child),.read-metrics th:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.read-chart rect,.read-chart circle{cursor:pointer}
+html[data-learn-theme=dark] .read-chart [fill="#eaf2ff"],
+html[data-learn-theme=dark] .read-chart [fill="#dbeafe"]{fill:#1e3a5f}
+html[data-learn-theme=dark] .read-shortcuts button[aria-pressed="true"]{background:#1e3a5f}
+.read-closing{font-weight:650;margin-top:1rem}
