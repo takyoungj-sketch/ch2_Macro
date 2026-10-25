@@ -42,6 +42,11 @@ export default function LandRegressionResults({ data }: { data: LandRegressionRe
         <div className="space-y-1">
           <div className="text-xs font-semibold text-slate-600">회귀식</div>
           <LandRegressionEquation coefficients={data.coefficients} modelType={data.model_type} />
+          {data.model_type === "log" && data.coefficients.some((c) => c.name === "log_area") && (
+            <p className="text-[11px] leading-snug text-slate-600">
+              면적 계수는 면적이 1% 늘 때 단가의 % 변화입니다.
+            </p>
+          )}
           {data.warnings.some((w) => w.includes("참고용")) && (
             <p className="text-[11px] leading-snug text-slate-600 dark:text-slate-300">
               표본 수가 권장 기준에 미달하므로 회귀계수가 불안정할 수 있습니다. R²와 MAPE는 해당

@@ -46,6 +46,31 @@ def test_list_addr2_from_meta_hit():
     ) == ["청주시", "충주시"]
 
 
+def test_list_addr2_from_meta_dedupes_multi_asset():
+    class Conn:
+        def execute(self, stmt, params=None):
+            sql = str(stmt)
+            if "to_regclass" in sql:
+                return SimpleNamespace(scalar=lambda: True)
+            assert "DISTINCT" in sql.upper()
+            assert params["asset_types"] == ["apartment", "officetel"]
+            return SimpleNamespace(
+                fetchall=lambda: [
+                    SimpleNamespace(addr2_token="청주시"),
+                    SimpleNamespace(addr2_token="청주시"),
+                    SimpleNamespace(addr2_token="충주시"),
+                    SimpleNamespace(addr2_token=" 충주시 "),
+                ]
+            )
+
+    assert list_addr2_from_meta(
+        Conn(),
+        table="collective_transactions",
+        addr1="충청북도",
+        asset_type="apartment,officetel",
+    ) == ["청주시", "충주시"]
+
+
 def test_list_addr2_from_meta_missing_table_falls_back():
     class Conn:
         def execute(self, stmt, params=None):

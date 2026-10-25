@@ -100,7 +100,16 @@ export function interpretLandCoefficient(
   }
 
   if (name === "log_area") {
-    return `면적 1% 증가 시 단가 약 ${fmtPctFromLog(coef)}`;
+    if (modelType === "log") {
+      const pct = (Math.pow(1.01, coef) - 1) * 100;
+      const sign = pct >= 0 ? "+" : "−";
+      return `면적 1% 증가 시 단가 약 ${sign}${Math.abs(pct).toFixed(2)}%`;
+    }
+    const delta = coef * Math.log(1.01);
+    const sign = delta >= 0 ? "+" : "−";
+    const abs = Math.abs(delta);
+    const body = abs >= 1 ? Math.round(abs).toLocaleString("ko-KR") : abs.toFixed(2);
+    return `면적 1% 증가 시 단가 ${sign}${body}만원/㎡`;
   }
 
   if (name === "area_sqm") {

@@ -542,7 +542,8 @@ export default function BuildingRegressionPanel({
 
       {useCohort && (
         <p className="text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900 rounded px-2 py-1.5">
-          {keys.length}개 단지 통합 · 단지 속성 변수가 추가됩니다. 변수를 고른 뒤 「
+          {keys.length}개 단지 통합. 면적·층·시점 기울기는 공유하고, 단지별 가격 수준은 고정효과로
+          나눕니다. 변수를 고른 뒤 「
           {regM.data ? "통합 회귀 다시 실행" : "통합 회귀 실행"}」을 누르세요.{" "}
           {attrOn
             ? "단지 속성으로 단지 간 차이 설명 (단지 FE 생략 — 속성은 단지마다 상수라 FE와 같이 넣을 수 없음)"
@@ -593,52 +594,70 @@ export default function BuildingRegressionPanel({
           <span className="inline-flex items-center gap-0.5">
             로그(% 해석)
             <StatsGlossaryHelp termId="log_model" size="xs" />
+            <span className="text-[10px] text-slate-500">금액만 로그. 전용면적은 그대로.</span>
           </span>
         </label>
       </div>
 
       {useCohort && (
-        <div className="space-y-1.5">
-          <p className="text-[10px] text-slate-500 dark:text-slate-400">
-            단지 속성 (기본 꺼짐). 켜면 단지 FE 대신 단지 간 차이를 이 변수로 설명합니다.
-            같은 지번 오피스텔 복사(kapt_same_pnu) 세대수·주차는 이 유형 재고가 아니라 빠집니다.
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-            {(
-              [
-                ["households", "총 세대수"],
-                ["parking", "세대당 주차"],
-                ["assessed_land_price", "개별공시지가"],
-                ["structure", "구조"],
-                ["asset_type_dummy", "유형"],
-              ] as const
-            ).map(([key, label]) => (
-              <label
-                key={key}
-                className="flex items-center gap-2"
-                title={
-                  key === "structure"
-                    ? "시군구 회귀에서는 예측 개선이 약했습니다. 코호트는 단지 간 차이가 있을 때만 식별됩니다."
-                    : key === "asset_type_dummy"
-                      ? "한 건물에서 층으로 유형이 갈리면(예: 저층 오피·고층 아파트) 유형 계수에 층 효과가 섞입니다."
-                      : undefined
-                }
-              >
-                <input
-                  type="checkbox"
-                  checked={vars[key]}
-                  onChange={(e) => setVars((v) => ({ ...v, [key]: e.target.checked }))}
-                />
-                {label}
-              </label>
-            ))}
-          </div>
-          {vars.asset_type_dummy && (
-            <p className="text-[10px] text-amber-700 dark:text-amber-300">
-              한 건물에서 층으로 유형이 갈리면 유형 계수에 층 효과가 섞입니다. 같은 층에 두 유형이 있을 때만 순수 유형 효과로 읽으세요.
+        <details className="rounded border border-slate-300 dark:border-slate-500 px-2.5 py-2">
+          <summary className="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-100">
+            고급 분석 · 단지 특성{attrOn ? " · 켜짐" : ""}
+          </summary>
+          <div className="mt-2 space-y-1.5">
+            <p className="text-[11px] leading-snug text-slate-600 dark:text-slate-300">
+              세대수·주차·공시지가·구조·유형으로 단지 사이 가격 차이를 탐색합니다. 표본 보강과 목적이
+              다릅니다. 하나라도 켜면 단지 고정효과는 빠집니다. 개별공시지가는 지금 단지·유형당 스냅샷
+              하나입니다.
             </p>
-          )}
-        </div>
+            {keys.length <= 3 && (
+              <p className="text-[11px] leading-snug text-amber-800 dark:text-amber-200">
+                단지가 {keys.length}곳이면 이 계수는 단지 사이 차이에 이름을 붙인 것입니다. 거래가
+                많아도 단지 수가 적으면 그대로입니다.
+              </p>
+            )}
+            <p className="text-[10px] text-slate-500 dark:text-slate-400">
+              같은 지번 오피스텔 복사(kapt_same_pnu) 세대수·주차는 이 유형 재고가 아니라 빠집니다.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              {(
+                [
+                  ["households", "총 세대수"],
+                  ["parking", "세대당 주차"],
+                  ["assessed_land_price", "개별공시지가"],
+                  ["structure", "구조"],
+                  ["asset_type_dummy", "유형"],
+                ] as const
+              ).map(([key, label]) => (
+                <label
+                  key={key}
+                  className="flex items-center gap-2"
+                  title={
+                    key === "structure"
+                      ? "시군구 회귀에서는 예측 개선이 약했습니다. 코호트는 단지 간 차이가 있을 때만 식별됩니다."
+                      : key === "asset_type_dummy"
+                        ? "한 건물에서 층으로 유형이 갈리면(예: 저층 오피·고층 아파트) 유형 계수에 층 효과가 섞입니다."
+                        : key === "assessed_land_price"
+                          ? "지금 값은 단지·유형당 스냅샷 하나입니다."
+                          : undefined
+                  }
+                >
+                  <input
+                    type="checkbox"
+                    checked={vars[key]}
+                    onChange={(e) => setVars((v) => ({ ...v, [key]: e.target.checked }))}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+            {vars.asset_type_dummy && (
+              <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                한 건물에서 층으로 유형이 갈리면 유형 계수에 층 효과가 섞입니다. 같은 층에 두 유형이 있을 때만 순수 유형 효과로 읽으세요.
+              </p>
+            )}
+          </div>
+        </details>
       )}
 
       {vars.floor && (
@@ -719,7 +738,11 @@ export default function BuildingRegressionPanel({
         </p>
       )}
       {regM.data && (
-        <CollectiveRegressionResults data={regM.data} modelType={modelType} />
+        <CollectiveRegressionResults
+          data={regM.data}
+          modelType={modelType}
+          logNote="금액만 로그입니다. 전용면적은 그대로입니다."
+        />
       )}
 
       {regM.data?.predict_options && (

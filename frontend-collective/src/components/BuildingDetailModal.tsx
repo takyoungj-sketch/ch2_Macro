@@ -876,11 +876,11 @@ export default function BuildingDetailModal({
             const help = collectiveModalPanelHelp(panel);
             return help ? <AnalysisHelpPanel explain={help} className="ml-1" /> : null;
           })()}
-          {peerBuildings.length > 0 && (
-            <div className="mt-2 rounded border border-indigo-100 bg-indigo-50/50 px-2 py-1.5 text-xs">
+          {peerBuildings.length > 0 && panel !== "danji" && (
+            <div className="mt-2 rounded border border-indigo-300 dark:border-indigo-400/70 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-2 text-xs">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-semibold text-indigo-800">분석 코호트</span>
-                <span className="text-slate-600">
+                <span className="font-semibold text-indigo-950 dark:text-indigo-100">분석 코호트</span>
+                <span className="text-slate-700 dark:text-slate-200">
                   {cohortKeys.length === 1 ? "단일 단지" : `${cohortKeys.length}개 단지`}
                 </span>
                 {canRunCohort && panel !== "regression" && (
@@ -922,10 +922,12 @@ export default function BuildingDetailModal({
                 </div>
               )}
               {peerOptions.length > 0 && (
-                <label className="mt-1.5 flex flex-wrap items-center gap-1.5 text-slate-600">
-                  <span className="shrink-0">+ 단지 추가</span>
+                <label className="mt-2 flex flex-wrap items-center gap-2 text-slate-800 dark:text-slate-100">
+                  <span className="shrink-0 text-sm font-semibold text-indigo-950 dark:text-indigo-50">
+                    + 인근단지 추가
+                  </span>
                   <select
-                    className="text-sm border border-slate-200 rounded px-1.5 py-1 min-w-[12rem] max-w-full w-[min(100%,22rem)] bg-white"
+                    className="text-sm font-medium border-2 border-indigo-400 dark:border-indigo-300 rounded px-2 py-1.5 min-w-[14rem] max-w-full w-[min(100%,22rem)] bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
                     defaultValue=""
                     onChange={(e) => {
                       const v = e.target.value;

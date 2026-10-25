@@ -463,6 +463,29 @@ class ModelComparison(BaseModel):
     confidence_label: Optional[str] = None
 
 
+class CohortSlopeShift(BaseModel):
+    """인근 단지를 더하기 전·후, 같은 이름의 공통 기울기."""
+
+    name: str
+    label: str
+    coef_before: Optional[float] = None
+    se_before: Optional[float] = None
+    coef_after: Optional[float] = None
+    se_after: Optional[float] = None
+
+
+class CohortAugmentation(BaseModel):
+    """기준 단지 거래만으로 본 인근 단지 추가 효과. 합친 전체 MAPE는 쓰지 않는다."""
+
+    subject_n: int
+    added_n: int
+    mape_before: Optional[float] = None
+    mape_after: Optional[float] = None
+    metric_basis: Literal["cv", "insample"] = "insample"
+    slopes: list[CohortSlopeShift] = Field(default_factory=list)
+    note: str = ""
+
+
 class CollectiveModelCandidate(BaseModel):
     rank: int
     purpose: Literal["predictive", "explanatory"] = "predictive"
@@ -492,6 +515,7 @@ class CollectiveRegressionResponse(BaseModel):
     predict_options: Optional[CollectivePredictOptions] = None
     model_comparison: Optional[ModelComparison] = None
     model_candidates: list[CollectiveModelCandidate] = Field(default_factory=list)
+    augmentation: Optional[CohortAugmentation] = None
     explain: Optional[AnalysisExplain] = None
     time_reference: Optional[str] = None
     categorical_missing: Literal["keep_unknown", "drop"] = "keep_unknown"

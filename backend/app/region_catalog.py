@@ -19,6 +19,19 @@ _TABLE_DOMAIN = {
 MIN_LEAF_COUNT = MIN_RELIABLE_COUNT
 
 
+def _unique_tokens(values) -> list[str]:
+    """같은 시군구가 유형별로 한 줄씩 있어도 화면에는 한 번만."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for raw in values:
+        token = str(raw).strip()
+        if not token or token in seen:
+            continue
+        seen.add(token)
+        out.append(token)
+    return out
+
+
 def _asset_clause(asset_type: str | None, *, prefix: str = "t") -> tuple[str, dict]:
     """단일 `=` / 복수(콤마) `ANY`. all·빈 값 — 필터 없음."""
     if not asset_type or asset_type == "all":
@@ -104,18 +117,18 @@ def list_addr2_from_meta(
         rows = conn.execute(
             text(
                 f"""
-                SELECT addr2_token
+                SELECT DISTINCT btrim(addr2_token) AS addr2_token
                 FROM region_sigungu_meta
                 WHERE asset_domain = :d
                   AND sido_name = :a1
                   AND tx_count > 0
                   {asset_sql}
-                ORDER BY addr2_token
+                ORDER BY 1
                 """
             ),
             {**params, **extra},
         ).fetchall()
-        return [str(r.addr2_token).strip() for r in rows if r.addr2_token]
+        return _unique_tokens(str(r.addr2_token) for r in rows if r.addr2_token)
 
     at = (asset_type or "").strip()
     if at and at != "all":

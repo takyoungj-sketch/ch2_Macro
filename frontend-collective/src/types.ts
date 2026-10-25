@@ -613,6 +613,25 @@ export interface ModelComparison {
   confidence_label?: string | null;
 }
 
+export interface CohortSlopeShift {
+  name: string;
+  label: string;
+  coef_before?: number | null;
+  se_before?: number | null;
+  coef_after?: number | null;
+  se_after?: number | null;
+}
+
+export interface CohortAugmentation {
+  subject_n: number;
+  added_n: number;
+  mape_before?: number | null;
+  mape_after?: number | null;
+  metric_basis: "cv" | "insample";
+  slopes: CohortSlopeShift[];
+  note: string;
+}
+
 export interface CollectiveRegressionResponse {
   building_key: string;
   display_name: string;
@@ -633,6 +652,7 @@ export interface CollectiveRegressionResponse {
   predict_options?: CollectivePredictOptions | null;
   model_comparison?: ModelComparison | null;
   model_candidates?: CollectiveModelCandidate[];
+  augmentation?: CohortAugmentation | null;
   explain?: AnalysisExplain | null;
   time_reference?: string | null;
 }

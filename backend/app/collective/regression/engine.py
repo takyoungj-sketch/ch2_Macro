@@ -18,6 +18,8 @@ from app.collective.schemas import (
     CollectiveRegressionRequest,
     CollectiveRegressionResponse,
     CollectiveRegressionSpec,
+    CohortAugmentation,
+    CohortSlopeShift,
     CollectiveModelCandidate,
     ContinuousRange,
     DongOption,
@@ -1318,6 +1320,211 @@ def run_building_regression(
     return _attach_model_candidates(resp, df, req, cohort_mode=False)
 
 
+def _finite_xy(y: pd.Series, x: pd.DataFrame) -> tuple[pd.Series, pd.DataFrame]:
+    mask = np.isfinite(y.to_numpy(dtype=float))
+    if not x.empty:
+        mask = mask & np.isfinite(x.to_numpy(dtype=float)).all(axis=1)
+    return y.loc[mask], x.loc[mask]
+
+
+def _price_mape(y: np.ndarray, pred: np.ndarray) -> float | None:
+    yv = np.asarray(y, dtype=float)
+    pv = np.asarray(pred, dtype=float)
+    ok = np.isfinite(yv) & np.isfinite(pv) & (yv != 0)
+    if int(ok.sum()) < 2:
+        return None
+    return round(float(np.mean(np.abs(yv[ok] - pv[ok]) / yv[ok])) * 100, 2)
+
+
+def _predict_price(y_train: np.ndarray, x_train: np.ndarray, x_test: np.ndarray, model_type: str) -> np.ndarray:
+    y_fit = np.log(y_train) if model_type == "log" else y_train
+    model = sm.OLS(y_fit, x_train).fit()
+    pred = np.asarray(model.predict(x_test), dtype=float)
+    if model_type == "log":
+        pred = np.exp(pred) * _duan_smearing(model.resid)
+    return pred
+
+
+def _with_const(x: pd.DataFrame) -> np.ndarray:
+    arr = np.asarray(x, dtype=float)
+    if arr.ndim != 2 or arr.shape[1] == 0:
+        return np.ones((len(x), 1))
+    return np.column_stack([np.ones(len(arr)), arr])
+
+
+def _subject_pair_mape(
+    y_before: pd.Series,
+    x_before: pd.DataFrame,
+    y_after: pd.Series,
+    x_after: pd.DataFrame,
+    subject_index: pd.Index,
+    model_type: str,
+) -> tuple[float | None, float | None, str]:
+    """기준 단지 행만 점수로 쓴다. 검증이 가능하면 그 행의 5-fold, 아니면 표본 안."""
+    common = subject_index.intersection(y_before.index).intersection(y_after.index)
+    if len(common) < 5:
+        return None, None, "insample"
+    yb, xb = _finite_xy(y_before.loc[common], x_before.loc[common])
+    ya, xa = _finite_xy(y_after.loc[yb.index], x_after.loc[yb.index])
+    yb, xb = yb.loc[ya.index], xb.loc[ya.index]
+    if len(yb) < 5:
+        return None, None, "insample"
+    xb_m = _with_const(xb)
+    xa_m = _with_const(xa)
+    yv = yb.to_numpy(dtype=float)
+    if len(yb) < CV_MIN_N:
+        pred_b = _predict_price(yv, xb_m, xb_m, model_type)
+        # 이후 모형은 인근 거래를 학습에 넣고, 점수는 기준 단지 행만.
+        y_all, x_all = _finite_xy(y_after, x_after)
+        train_x = _with_const(x_all)
+        train_y = y_all.to_numpy(dtype=float)
+        pred_a = _predict_price(train_y, train_x, xa_m, model_type)
+        return _price_mape(yv, pred_b), _price_mape(yv, pred_a), "insample"
+
+    idx = np.arange(len(yb))
+    rng = np.random.default_rng(42)
+    rng.shuffle(idx)
+    folds = np.array_split(idx, 5)
+    pred_b = np.full(len(yb), np.nan)
+    pred_a = np.full(len(yb), np.nan)
+    y_all, x_all = _finite_xy(y_after, x_after)
+    neighbor = x_all.index.difference(yb.index)
+    for fold in folds:
+        if fold.size == 0:
+            continue
+        train_pos = np.setdiff1d(idx, fold, assume_unique=False)
+        if train_pos.size <= xb_m.shape[1] + 1:
+            continue
+        try:
+            pred_b[fold] = _predict_price(yv[train_pos], xb_m[train_pos], xb_m[fold], model_type)
+        except Exception:
+            continue
+        hold = yb.index[fold]
+        after_train_idx = y_all.index.difference(hold)
+        if neighbor.empty:
+            after_train_idx = yb.index[train_pos]
+        x_tr = x_all.loc[after_train_idx.intersection(x_all.index)]
+        y_tr = y_all.loc[x_tr.index]
+        if len(y_tr) <= xa_m.shape[1] + 1:
+            continue
+        try:
+            pred_a[fold] = _predict_price(
+                y_tr.to_numpy(dtype=float),
+                _with_const(x_tr),
+                xa_m[fold],
+                model_type,
+            )
+        except Exception:
+            continue
+    return _price_mape(yv, pred_b), _price_mape(yv, pred_a), "cv"
+
+
+def _slope_family(name: str) -> str | None:
+    if name == "exclusive_area":
+        return "area"
+    if name == "floor" or name.startswith("floor_"):
+        return "floor"
+    if name.startswith("time_"):
+        return "time"
+    return None
+
+
+def _coef_lookup(coefs: list[RegressionCoeff]) -> dict[str, RegressionCoeff]:
+    return {c.name: c for c in coefs}
+
+
+def _cohort_augmentation(
+    df: pd.DataFrame,
+    req: CollectiveRegressionRequest,
+    subject_key: str,
+    after_coefs: list[RegressionCoeff],
+    *,
+    model_type: str,
+    building_display_names: dict[str, str] | None = None,
+) -> CohortAugmentation | None:
+    """단지 고정효과 모형에서, 기준 단지 거래의 전후만 비교한다."""
+    from app.regression_missing import drop_unknown_rows
+
+    work = _prepare_work(df, req)
+    if req.categorical_missing == "drop":
+        cat_cols: list[str] = []
+        if req.variables.structure:
+            cat_cols.append("structure_group")
+        if req.variables.dong:
+            cat_cols.append("dong")
+        if req.variables.housing_subtype:
+            cat_cols.append("housing_subtype")
+        if req.variables.asset_type_dummy:
+            cat_cols.append("asset_type")
+        work, _ = drop_unknown_rows(work, cat_cols)
+    if work.empty or "building_key" not in work.columns:
+        return None
+    keys = work["building_key"].astype(str)
+    subject_mask = keys == str(subject_key)
+    subject_n = int(subject_mask.sum())
+    added_n = int((~subject_mask).sum())
+    if subject_n < 5 or added_n < 1:
+        return None
+    _, entering = _resolve_entering_attrs(work.copy(), req, [])
+    if entering:
+        return None
+
+    subject = work.loc[subject_mask].copy()
+    y_b, x_b, labels_b, meta_b, _ = _build_design_matrix(subject, req, cohort_mode=False)
+    y_a, x_a, labels_a, meta_a, _ = _build_design_matrix(
+        work.copy(),
+        req,
+        cohort_mode=True,
+        building_display_names=building_display_names,
+    )
+    if x_b.empty or x_a.empty:
+        return None
+    _, resp_b = _fit_regression(y_b, x_b, labels_b, meta_b, req, [])
+    before = _coef_lookup(resp_b.coefficients)
+    after = _coef_lookup(after_coefs)
+    notes = ["점수는 기준 단지 거래만 사용합니다."]
+    names: list[str] = []
+    if "exclusive_area" in before and "exclusive_area" in after:
+        names.append("exclusive_area")
+    floor_b = sorted(n for n in before if _slope_family(n) == "floor")
+    floor_a = sorted(n for n in after if _slope_family(n) == "floor")
+    if floor_b and floor_b == floor_a:
+        names.extend(floor_b)
+    elif floor_b or floor_a:
+        notes.append("층 구간의 기준이 달라 층 계수는 비교에서 뺐습니다.")
+    if meta_b.time_reference and meta_b.time_reference == meta_a.time_reference:
+        names.extend(sorted(n for n in before if n.startswith("time_") and n in after))
+    elif meta_b.time_reference or meta_a.time_reference:
+        notes.append("거래시점의 기준 반기가 달라 시점 계수는 비교에서 뺐습니다.")
+
+    slopes: list[CohortSlopeShift] = []
+    for name in names:
+        b = before.get(name)
+        a = after.get(name)
+        label = (a.label if a else None) or (b.label if b else None) or name
+        slopes.append(
+            CohortSlopeShift(
+                name=name,
+                label=label,
+                coef_before=None if b is None else b.coef,
+                se_before=None if b is None else b.se,
+                coef_after=None if a is None else a.coef,
+                se_after=None if a is None else a.se,
+            )
+        )
+    score_type = model_type if model_type in ("linear", "log") else "linear"
+    mape_b, mape_a, basis = _subject_pair_mape(y_b, x_b, y_a, x_a, subject.index, score_type)
+    return CohortAugmentation(
+        subject_n=subject_n,
+        added_n=added_n,
+        mape_before=mape_b,
+        mape_after=mape_a,
+        metric_basis=basis,  # type: ignore[arg-type]
+        slopes=slopes,
+        note=" ".join(notes),
+    )
+
+
 def run_cohort_regression(
     df: pd.DataFrame,
     building_keys: list[str],
@@ -1341,6 +1548,18 @@ def run_cohort_regression(
         resp.warnings.insert(0, f"코호트 {len(building_keys)}개 단지 — 단지 고정효과 적용")
     resp.building_key = building_keys[0] if building_keys else ""
     resp.display_name = display_label
+    if len(building_keys) > 1 and resp.n > 0 and not any("단지 FE 생략" in w for w in resp.warnings):
+        try:
+            resp.augmentation = _cohort_augmentation(
+                df,
+                req,
+                building_keys[0],
+                resp.coefficients,
+                model_type=resp.model_type,
+                building_display_names=names,
+            )
+        except Exception:
+            resp.warnings.append("인근 단지 추가 전후 비교를 마치지 못했습니다")
     return _attach_model_candidates(
         resp,
         df,
@@ -1366,7 +1585,11 @@ _SEARCH_FLAGS = (
 
 
 def recommendation_pool(req: CollectiveRegressionRequest, *, cohort_mode: bool) -> list[str]:
-    """모형 추천 변수 풀. 사용자가 체크한 값과 무관하다."""
+    """모형 추천 변수 풀.
+
+    면적·층·시점·동·연식은 사용자가 끈 변수도 후보에 넣는다.
+    세대수·주차·공시지가·구조·유형은 고급에서 켠 것만 후보에 넣는다.
+    """
     asset = req.asset_type
     fields = ["exclusive_area", "floor", "contract_period"]
     if asset != "presale":
@@ -1376,9 +1599,10 @@ def recommendation_pool(req: CollectiveRegressionRequest, *, cohort_mode: bool) 
     if asset == "presale":
         fields.append("housing_subtype")
     if cohort_mode:
-        fields.extend(
-            ["households", "parking", "assessed_land_price", "structure", "asset_type_dummy"]
-        )
+        v = req.variables
+        for flag in ("households", "parking", "assessed_land_price", "structure", "asset_type_dummy"):
+            if getattr(v, flag, False):
+                fields.append(flag)
     return fields
 
 

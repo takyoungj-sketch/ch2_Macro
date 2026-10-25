@@ -55,6 +55,11 @@ export default function RegressionEquation({
 
   return (
     <div className="space-y-1">
+      {responseScale === "loglog" && (
+        <p className="text-[11px] leading-snug text-slate-500 font-sans">
+          log-log는 금액과 면적만 로그입니다. 연식·더미는 그대로입니다.
+        </p>
+      )}
       <p className="text-sm font-mono leading-relaxed break-words">
         <span>
           {dep} = {intercept ? formatCoefValue(intercept.estimate) : "α"}

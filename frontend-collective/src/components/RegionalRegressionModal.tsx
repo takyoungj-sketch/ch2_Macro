@@ -724,6 +724,7 @@ export default function RegionalRegressionModal(props: Props) {
           <label className="flex items-center gap-1.5">
             <input type="radio" checked={modelType === "log"} onChange={() => setModelType("log")} />
             log — log(단가) ~ 변수 (% 해석)
+            <span className="text-[10px] text-slate-500">단가만 로그. 세대수·연식 등 변수는 그대로.</span>
           </label>
         </section>
 
@@ -996,6 +997,11 @@ export default function RegionalRegressionModal(props: Props) {
                   modelType={data.model_type}
                   equation={data.equation}
                 />
+                {data.model_type === "log" && (
+                  <p className="text-[11px] leading-snug text-slate-500">
+                    단가만 로그입니다. 세대수·연식 등 변수는 그대로입니다.
+                  </p>
+                )}
                 {data.warnings.some((w) => w.includes("참고용")) && (
                   <p className="text-[11px] leading-snug text-slate-600 dark:text-slate-300">
                     표본 수가 권장 기준에 미달하므로 회귀계수가 불안정할 수 있습니다. R²와 MAPE는 해당

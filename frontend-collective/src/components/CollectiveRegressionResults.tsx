@@ -114,7 +114,60 @@ type RegressionResultData = Pick<
   | "predict_options"
   | "time_reference"
   | "missing_treatment_label"
+  | "augmentation"
 >;
+
+function fmtShift(v: number | null | undefined): string {
+  if (v == null || Number.isNaN(v)) return "—";
+  const abs = Math.abs(v);
+  const body = abs >= 100 ? Math.round(v).toLocaleString("ko-KR") : abs >= 1 ? v.toFixed(1) : v.toFixed(2);
+  return body;
+}
+
+function AugmentationCompare({ data }: { data: RegressionResultData["augmentation"] }) {
+  if (!data) return null;
+  const mapeLabel = data.metric_basis === "cv" ? "검증 MAPE" : "학습 MAPE";
+  return (
+    <div className="rounded border border-indigo-300 dark:border-indigo-400/60 bg-indigo-50/80 dark:bg-indigo-950/40 px-2.5 py-2 space-y-1.5">
+      <p className="text-xs font-semibold text-indigo-950 dark:text-indigo-100">인근 단지 추가 전후</p>
+      <p className="text-[11px] leading-snug text-slate-700 dark:text-slate-200">
+        기준 단지 {data.subject_n.toLocaleString("ko-KR")}건 · 더한 거래{" "}
+        {data.added_n.toLocaleString("ko-KR")}건. {mapeLabel}는 기준 단지 거래만 사용합니다.
+      </p>
+      <p className="text-[11px] text-slate-800 dark:text-slate-100">
+        {mapeLabel} {data.mape_before != null ? `${fmtDecimal(data.mape_before, 1)}%` : "—"} →{" "}
+        {data.mape_after != null ? `${fmtDecimal(data.mape_after, 1)}%` : "—"}
+      </p>
+      {data.slopes.length > 0 && (
+        <div className="table-wrap overflow-auto">
+          <table className="data w-full text-[11px] border-collapse">
+            <thead>
+              <tr className="text-slate-600 dark:text-slate-300">
+                <th className="text-left font-medium py-1">변수</th>
+                <th className="text-right font-medium py-1">이전 계수</th>
+                <th className="text-right font-medium py-1">이전 SE</th>
+                <th className="text-right font-medium py-1">이후 계수</th>
+                <th className="text-right font-medium py-1">이후 SE</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.slopes.map((s) => (
+                <tr key={s.name}>
+                  <td>{shortDisplayLabel(s.label)}</td>
+                  <td className="text-right tabular-nums">{fmtShift(s.coef_before)}</td>
+                  <td className="text-right tabular-nums">{fmtShift(s.se_before)}</td>
+                  <td className="text-right tabular-nums">{fmtShift(s.coef_after)}</td>
+                  <td className="text-right tabular-nums">{fmtShift(s.se_after)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {data.note && <p className="text-[10px] leading-snug text-slate-500 dark:text-slate-400">{data.note}</p>}
+    </div>
+  );
+}
 
 function ReferenceCategories({
   options,
@@ -164,9 +217,11 @@ function ReferenceCategories({
 export function CollectiveRegressionResults({
   data,
   modelType,
+  logNote,
 }: {
   data: RegressionResultData;
   modelType: RegressionModelType;
+  logNote?: string;
 }) {
   const fitModel = data.model_type ?? modelType;
   const sigCount = data.significant_count ?? countSignificantCoefficients(data.coefficients);
@@ -196,6 +251,7 @@ export function CollectiveRegressionResults({
       {data.missing_treatment_label && (
         <p className="text-[11px] text-slate-500">{data.missing_treatment_label}</p>
       )}
+      <AugmentationCompare data={data.augmentation} />
 
       {(data.equation || data.coefficients.length > 0) && (
         <div className="space-y-1">
@@ -206,6 +262,9 @@ export function CollectiveRegressionResults({
             equation={data.equation}
             timeReference={data.time_reference}
           />
+          {fitModel === "log" && logNote && (
+            <p className="text-[11px] leading-snug text-slate-500">{logNote}</p>
+          )}
           {data.warnings.some((w) => w.includes("참고용")) && (
             <p className="text-[11px] leading-snug text-slate-600 dark:text-slate-300">
               표본 수가 권장 기준에 미달하므로 회귀계수가 불안정할 수 있습니다. R²와 MAPE는 해당

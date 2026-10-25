@@ -65,6 +65,11 @@ export function ModelComparisonCard({
           })}
         </tbody>
       </table>
+      {rows.some((row) => row.type === "loglog") && (
+        <p className="text-[10px] leading-snug text-slate-500 dark:text-slate-400">
+          log-log는 금액과 면적만 로그입니다. 연식·더미는 그대로입니다.
+        </p>
+      )}
     </div>
   );
 }

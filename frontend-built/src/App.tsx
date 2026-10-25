@@ -1569,6 +1569,11 @@ export default function App() {
                         }}
                       />
                       <span className="font-medium">{label}</span>
+                      {value === "loglog" && (
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                          금액과 면적만 로그. 연식·더미는 그대로.
+                        </span>
+                      )}
                     </label>
                   );
                 })}
