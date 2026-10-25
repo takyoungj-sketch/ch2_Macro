@@ -35,6 +35,7 @@ export interface AiChatResponse {
   session_id: string;
   route: string;
   answer: string;
+  answer_context?: { app: AiApp; panel: string; purpose: AiPurpose; scope: AiContextPayload["scope"] };
   evidence: EvidenceItem[];
   bundle_id?: string | null;
   suggested_followups: string[];

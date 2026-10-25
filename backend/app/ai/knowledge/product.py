@@ -825,7 +825,6 @@ def product_knowledge_excerpt(*, app: str, panel: str, message: str) -> str:
         )
     sangkwon_keys = (
         "상권",
-        "상업용",
         "순영업",
         "noi",
         "공실",

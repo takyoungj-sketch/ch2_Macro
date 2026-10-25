@@ -782,7 +782,7 @@ def _pending_external_query(session: AiSession) -> str | None:
     return None
 
 
-def handle_chat(req: AiChatRequest) -> AiChatResponse:
+def _handle_chat(req: AiChatRequest) -> AiChatResponse:
     session = get_or_create(req.session_id)
     ctx = req.context
 
@@ -872,9 +872,8 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
             else:
                 answer = (
                     "### 답변\n\n"
-                    "Open Mode인데 LLM 응답을 받지 못했습니다. "
-                    "`OPENAI_API_KEY`와 네트워크를 확인한 뒤 다시 시도해 주세요.\n\n"
-                    f"참고 — 현재 화면 soft facts: `{facts.get('stats')}`"
+                    "현재 AI 해석 응답을 받지 못했습니다. 잠시 후 다시 시도해 주세요.\n\n"
+                    + "\n".join(bundle.summary_lines[:6])
                 )
                 llm_used = False
         finally:
@@ -890,22 +889,22 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
             evidence=[
                 EvidenceItem(
                     type="open_mode",
-                    label="AI Open Mode (routing bypass)",
+                    label="제품 기능·통계 방법 설명",
                     confidence="medium",
                 ),
                 EvidenceItem(
                     type="ch2_sample",
-                    label="screen_facts (soft)",
+                    label="질문 당시 CH2 화면 자료",
                     value=scope_label,
-                    confidence="high",
+                    confidence="medium" if ctx.facts else "low",
                 ),
             ],
             bundle_id=bundle.bundle_id,
             suggested_followups=suggested_questions(ctx.panel, ctx.purpose, app=ctx.app)[:4],
-            disclaimer="Open Mode (개발·검증): 라우팅/템플릿 우회. 화면 숫자는 soft cite.",
+            disclaimer=SHORT_DISCLAIMER,
             llm_used=llm_used,
             trust_level="medium" if llm_used else "low",
-            trust_sources=["OpenAI (open mode)", "CH2 screen_facts soft"],
+            trust_sources=["제품 지식"] + (["질문 당시 화면 자료"] if ctx.facts else []),
             ai_interpretation=_ai_interpretation_label(llm_used=llm_used),
             quota=_public_quota(quota_snap),
         )
@@ -1269,7 +1268,7 @@ def handle_chat(req: AiChatRequest) -> AiChatResponse:
     return resp
 
 
-def handle_explain(req: AiExplainRequest) -> AiChatResponse:
+def _handle_explain(req: AiExplainRequest) -> AiChatResponse:
     ctx = req.context
     bundle = build_from_explain_or_bundle(ctx)
     msg = req.message or "이 화면을 설명해 주세요."
@@ -1324,6 +1323,54 @@ def handle_explain(req: AiExplainRequest) -> AiChatResponse:
 
 def build_from_explain_or_bundle(ctx: AiContext) -> AiDiagnosticPack:
     return build_bundle(ctx)
+
+
+def _finalize_response(resp: AiChatResponse, ctx: AiContext, message: str) -> AiChatResponse:
+    """모든 해석 경로(Open Mode 포함)에 동일한 최종 검증을 적용한다."""
+    import json
+    from app.ai.validator import numbers_grounded
+
+    resp.answer_context = {
+        "app": ctx.app, "panel": ctx.panel, "purpose": ctx.purpose,
+        "scope": ctx.scope.model_dump(),
+    }
+    if resp.llm_used and resp.route != "web":
+        bundle = build_bundle(ctx)
+        scope_label = str(ctx.scope.region_label or "선택 지역")
+        # 과거 채팅 문장이 아닌, 실제 기록된 분석만 수치 근거로 허용한다.
+        history = get_or_create(resp.session_id).analysis_history if resp.session_id else []
+        history = [{k: slot.get(k) for k in ("scope", "n", "n_by_type", "metrics", "key_coeffs", "warnings")} for slot in history]
+        sources = json.dumps({
+            "screen": soft_facts_snapshot(bundle, scope_label=scope_label, context=ctx),
+            "bundle": bundle.model_dump(mode="json"),
+            "explain": ctx.explain.model_dump(mode="json") if ctx.explain else None,
+            "history": history,
+        }, ensure_ascii=False, default=str)
+        sources += "\n" + product_knowledge_excerpt(app=ctx.app, panel=ctx.panel, message=message)
+        if not numbers_grounded(resp.answer, sources):
+            fallback, _, _ = _explain_answer(ctx, message, bundle)
+            resp.answer = "제공된 근거와 대조되지 않는 수치가 있어 AI 해석 대신 화면 결과를 안내합니다.\n\n" + fallback
+            resp.llm_used = False
+            resp.trust_level = "low"
+            resp.ai_interpretation = "CH2 화면 결과 안내 (수치 검증 후 대체)"
+            resp.trust_sources = ["CH2 화면 결과"]
+            resp.evidence = _evidence_for_route("explain", bundle)
+            resp.actions = []
+            resp.suggested_followups = suggested_questions(ctx.panel, ctx.purpose, app=ctx.app)[:4]
+    resp.answer = validate_answer(resp.answer, resp.route)
+    if resp.session_id:
+        session = get_or_create(resp.session_id)
+        if session.turns and session.turns[-1].role == "assistant":
+            session.turns[-1].message = resp.answer[:500]
+    return resp
+
+
+def handle_chat(req: AiChatRequest) -> AiChatResponse:
+    return _finalize_response(_handle_chat(req), req.context, req.message)
+
+
+def handle_explain(req: AiExplainRequest) -> AiChatResponse:
+    return _finalize_response(_handle_explain(req), req.context, req.message or "이 화면을 설명해 주세요.")
 
 
 def handle_history_record(req: AiHistoryRecordRequest) -> AiHistoryRecordResponse:

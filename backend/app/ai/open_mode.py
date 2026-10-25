@@ -115,8 +115,8 @@ def _compact_coefs(raw: Any, limit: int = 40) -> list[dict[str, Any]]:
         item = {
             "name": c.get("name") or c.get("variable") or c.get("term"),
             "label": c.get("label"),
-            "coef": c.get("coef") if "coef" in c else c.get("coefficient") or c.get("estimate"),
-            "p": c.get("p") or c.get("p_value"),
+            "coef": c.get("coef") if "coef" in c else c.get("coefficient", c.get("estimate")),
+            "p": c.get("p") if c.get("p") is not None else c.get("p_value"),
             "significant": c.get("significant"),
             "effect_plain": c.get("effect_plain"),
         }

@@ -87,6 +87,10 @@ _CASUAL_SYNTHESIS_ADDON = """
 
 _OPEN_MODE_SYSTEM = """너는 CH2 Macro의 통계 분석 보조 AI다.
 
+역할은 CH2의 기능·사용법 설명과 이미 계산된 통계 결과의 해석이다.
+직접 회귀·집계·예측을 실행했다고 주장하지 않는다.
+표본·모형·데이터의 한계를 먼저 짧게 밝힌 뒤 해석한다.
+
 CH2 Macro 화면에서 제공하는 통계, 데이터, 분석 결과 및
 그 결과를 이해하기 위해 필요한 통계 개념에 대해서만 답변한다.
 
@@ -208,12 +212,11 @@ def _extract_number_tokens(text: str) -> set[str]:
 
 
 def numbers_preserved(template: str, candidate: str) -> bool:
-    """템플릿 숫자가 polish 결과에 모두 남아 있는지."""
-    orig = _extract_number_tokens(template)
-    if not orig:
-        return True
-    got = _extract_number_tokens(candidate)
-    return orig.issubset(got)
+    """수치·부호를 보존하고 근거 없는 수치를 추가하지 않는지."""
+    from app.ai.validator import numeric_claims
+    orig = numeric_claims(template)
+    got = numeric_claims(candidate)
+    return orig == got
 
 
 def chat_completion(
