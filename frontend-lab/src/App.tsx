@@ -15,6 +15,8 @@ import BuilderIdentLab from "./components/BuilderIdentLab";
 import Age0ResidualLab from "./components/Age0ResidualLab";
 import RecommendTwinBenchLab from "./components/RecommendTwinBenchLab";
 import LandAreaElasticityLab from "./components/LandAreaElasticityLab";
+import ScaleEffectLab from "./components/ScaleEffectLab";
+import ScaleEffectStage2Lab from "./components/ScaleEffectStage2Lab";
 import RowhouseFloorElevatorLab from "./components/RowhouseFloorElevatorLab";
 import MacroAnnualScaleLab from "./components/MacroAnnualScaleLab";
 import LandRoadJimokRatioLab from "./components/LandRoadJimokRatioLab";
@@ -42,6 +44,8 @@ export type LabTool =
   | "age0"
   | "recommend-twin"
   | "area-elasticity"
+  | "scale-effect"
+  | "scale-effect-2"
   | "rowhouse-floor"
   | "macro-scale"
   | "road-jimok"
@@ -77,6 +81,8 @@ function readParams(): LabParams {
     t === "age0" ||
     t === "recommend-twin" ||
     t === "area-elasticity" ||
+    t === "scale-effect" ||
+    t === "scale-effect-2" ||
     t === "rowhouse-floor" ||
     t === "macro-scale" ||
     t === "road-jimok" ||
@@ -287,6 +293,22 @@ export default function App() {
     return (
       <LabChrome title="토지 면적 탄성" whyIds={TOOL_WHY["area-elasticity"] ?? []} onWhy={setWhy} onBack={back}>
         <LandAreaElasticityLab />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "scale-effect") {
+    return (
+      <LabChrome title="규모효과 모형 비교" whyIds={TOOL_WHY["scale-effect"] ?? []} onWhy={setWhy} onBack={back}>
+        <ScaleEffectLab />
+        {whyModal}
+      </LabChrome>
+    );
+  }
+  if (params.tool === "scale-effect-2") {
+    return (
+      <LabChrome title="규모효과 2단계" whyIds={TOOL_WHY["scale-effect-2"] ?? []} onWhy={setWhy} onBack={back}>
+        <ScaleEffectStage2Lab />
         {whyModal}
       </LabChrome>
     );

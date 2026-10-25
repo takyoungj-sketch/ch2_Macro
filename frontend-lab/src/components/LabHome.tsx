@@ -72,6 +72,16 @@ const DOORS: { id: LabTool; title: string; desc: string }[] = [
     desc: "1–3차 정리. 차후=용도지역 분할. Insight·제품 식은 보류.",
   },
   {
+    id: "scale-effect",
+    title: "규모효과 모형 비교",
+    desc: "토지·복합·집합주거·비주거. 같은 칸에서 7모형. 제품 식은 바꾸지 않음.",
+  },
+  {
+    id: "scale-effect-2",
+    title: "규모효과 2단계",
+    desc: "평택·한남·고잔·주안. 2차항의 극값, 총액 환산, Ridge·Lasso 겹별 안정. 1단계 기록은 유지.",
+  },
+  {
     id: "rowhouse-floor",
     title: "연립·다세대 층·승강기",
     desc: "3차 기록. 최상×승강기 가산이 체급·연식·수도권에서 모인다. 제품 층 식 미변경.",

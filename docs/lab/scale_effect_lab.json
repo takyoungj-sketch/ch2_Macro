@@ -1,0 +1,1835 @@
+{
+  "title": "규모효과 모형 비교",
+  "term": "규모효과(면적에 따른 단가 변화)",
+  "generated": "2026-10-25",
+  "window": "최근 계약연도 포함 5년",
+  "models": [
+    "선형 OLS",
+    "log-log OLS",
+    "2차 OLS",
+    "Ridge",
+    "Lasso",
+    "2차+Ridge",
+    "2차+Lasso"
+  ],
+  "score": "5겹 검증. 예측은 ㎡당 단가로 되돌린 MAPE. 정규화 강도는 학습 겹 안에서만 고른다.",
+  "hold": "결측 행은 모형보다 먼저 한 번만 뺀다. 제품 선택창과 회귀 식은 바꾸지 않았다.",
+  "domains": [
+    {
+      "id": "land",
+      "label": "토지",
+      "size_label": "계약면적",
+      "y_label": "㎡당 단가",
+      "year_from": 2022,
+      "year_to": 2026,
+      "note": "대·전·답은 한 식에 섞지 않았다. 용도 혼재는 대지 안 용도 비율이다.",
+      "questions": {
+        "explain": "2차 항이 관측 면적 안에서 log-log보다 설명을 더한 칸은 도시 주거, 도시 상업, 외곽 개발이다.",
+        "predict": "수축 모형이 log-log보다 검증 MAPE를 1%p 이상 낮춘 칸은 5곳 중 3곳(도시 상업, 외곽 개발, 용도 혼재)이다.",
+        "recommend": "다섯 유형에서 같은 방향이 반복되지 않아, 표본 수나 공선성으로 모형을 고르는 규칙은 두지 않는다."
+      },
+      "cells": [
+        {
+          "role": "urban_res",
+          "role_label": "도시 주거",
+          "status": "ok",
+          "thin": false,
+          "name": "서울특별시 용산구 한남동",
+          "code": "11170131",
+          "slice": "대",
+          "n": 225,
+          "spread": 13.61,
+          "controls": "연도·도로·용도",
+          "fit": {
+            "n": 225,
+            "status": "ok",
+            "center_corr": 0.082,
+            "raw_sq_corr": 0.955,
+            "loglog_beta": {
+              "beta": -0.0389,
+              "p": 0.0231
+            },
+            "quad_beta2": {
+              "beta": 0.019,
+              "p": 0.0184
+            },
+            "turning_area": 68.0,
+            "turning_in_range": true,
+            "aic_log": 241.2,
+            "aic_quad": 237.4,
+            "explain_gain": true,
+            "sign_stable": true,
+            "square_sign_stable": true,
+            "lasso_keeps_square": 4,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 43.54,
+                "mae": 610.71,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 40.5,
+                "mae": 624.34,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 39.72,
+                "mae": 627.9,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 42.09,
+                "mae": 681.53,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 42.92,
+                "mae": 690.38,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 41.24,
+                "mae": 677.05,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 42.3,
+                "mae": 693.04,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 225
+        },
+        {
+          "role": "urban_com",
+          "role_label": "도시 상업",
+          "status": "ok",
+          "thin": false,
+          "name": "부산광역시 부산진구 부암동",
+          "code": "26230108",
+          "slice": "대",
+          "n": 119,
+          "spread": 8.89,
+          "controls": "연도·도로·용도",
+          "fit": {
+            "n": 119,
+            "status": "ok",
+            "center_corr": 0.292,
+            "raw_sq_corr": 0.945,
+            "loglog_beta": {
+              "beta": -0.0061,
+              "p": 0.8128
+            },
+            "quad_beta2": {
+              "beta": 0.0295,
+              "p": 0.0129
+            },
+            "turning_area": 25.4,
+            "turning_in_range": true,
+            "aic_log": 142.4,
+            "aic_quad": 137.7,
+            "explain_gain": true,
+            "sign_stable": false,
+            "square_sign_stable": true,
+            "lasso_keeps_square": 5,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 43.5,
+                "mae": 134.09,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 41.74,
+                "mae": 145.03,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 40.47,
+                "mae": 144.11,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 41.34,
+                "mae": 145.19,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 40.33,
+                "mae": 143.71,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 40.11,
+                "mae": 144.01,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 39.16,
+                "mae": 141.99,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 119
+        },
+        {
+          "role": "fringe",
+          "role_label": "외곽 개발",
+          "status": "ok",
+          "thin": false,
+          "name": "경기도 파주시 조리읍",
+          "code": "41480262",
+          "slice": "대",
+          "n": 88,
+          "spread": 6.54,
+          "controls": "연도·도로·용도",
+          "fit": {
+            "n": 88,
+            "status": "ok",
+            "center_corr": -0.147,
+            "raw_sq_corr": 0.983,
+            "loglog_beta": {
+              "beta": -0.1039,
+              "p": 0.0704
+            },
+            "quad_beta2": {
+              "beta": -0.0704,
+              "p": 0.0096
+            },
+            "turning_area": 63.0,
+            "turning_in_range": true,
+            "aic_log": 178.2,
+            "aic_quad": 172.6,
+            "explain_gain": true,
+            "sign_stable": true,
+            "square_sign_stable": true,
+            "lasso_keeps_square": 4,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 74.98,
+                "mae": 29.31,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 67.67,
+                "mae": 29.41,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 64.53,
+                "mae": 28.24,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 64.76,
+                "mae": 28.31,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 65.82,
+                "mae": 28.49,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 64.91,
+                "mae": 28.88,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 67.46,
+                "mae": 29.11,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 88
+        },
+        {
+          "role": "rural",
+          "role_label": "농촌",
+          "status": "ok",
+          "thin": false,
+          "name": "강원특별자치도 철원군 철원읍",
+          "code": "51780250",
+          "slice": "전",
+          "n": 166,
+          "spread": 9.31,
+          "controls": "연도·도로·용도",
+          "fit": {
+            "n": 166,
+            "status": "ok",
+            "center_corr": -0.311,
+            "raw_sq_corr": 0.977,
+            "loglog_beta": {
+              "beta": -0.1651,
+              "p": 0.0
+            },
+            "quad_beta2": {
+              "beta": -0.0191,
+              "p": 0.1349
+            },
+            "turning_area": 4.5,
+            "turning_in_range": false,
+            "aic_log": 327.6,
+            "aic_quad": 327.3,
+            "explain_gain": false,
+            "sign_stable": true,
+            "square_sign_stable": true,
+            "lasso_keeps_square": 5,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 173.16,
+                "mae": 4.69,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 54.21,
+                "mae": 3.91,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 55.06,
+                "mae": 3.91,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 55.91,
+                "mae": 3.98,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 55.49,
+                "mae": 3.91,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 56.65,
+                "mae": 3.96,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 56.52,
+                "mae": 3.9,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 166
+        },
+        {
+          "role": "mixed",
+          "role_label": "용도 혼재",
+          "status": "ok",
+          "thin": false,
+          "name": "강원특별자치도 정선군 신동읍",
+          "code": "51770259",
+          "slice": "대",
+          "n": 84,
+          "spread": 11.75,
+          "controls": "연도·도로·용도",
+          "fit": {
+            "n": 84,
+            "status": "ok",
+            "center_corr": -0.106,
+            "raw_sq_corr": 0.975,
+            "loglog_beta": {
+              "beta": -0.0569,
+              "p": 0.3826
+            },
+            "quad_beta2": {
+              "beta": 0.0176,
+              "p": 0.4517
+            },
+            "turning_area": 378.1,
+            "turning_in_range": true,
+            "aic_log": 179.9,
+            "aic_quad": 181.3,
+            "explain_gain": false,
+            "sign_stable": true,
+            "square_sign_stable": true,
+            "lasso_keeps_square": 4,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 109.3,
+                "mae": 5.9,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 74.71,
+                "mae": 5.24,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 76.04,
+                "mae": 5.36,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 72.05,
+                "mae": 5.26,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 71.88,
+                "mae": 5.29,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 73.3,
+                "mae": 5.38,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 71.96,
+                "mae": 5.44,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 84
+        },
+        {
+          "role": "thin",
+          "role_label": "얇은 표본",
+          "status": "ok",
+          "thin": true,
+          "name": "인천광역시 연수구 송도동",
+          "code": "28185106",
+          "slice": "대",
+          "n": 38,
+          "spread": 60.8,
+          "controls": "연도만",
+          "fit": {
+            "n": 38,
+            "status": "ok",
+            "center_corr": 0.743,
+            "raw_sq_corr": 0.998,
+            "loglog_beta": {
+              "beta": -0.0363,
+              "p": 0.4813
+            },
+            "quad_beta2": {
+              "beta": 0.1152,
+              "p": 0.0092
+            },
+            "turning_area": 5409.6,
+            "turning_in_range": true,
+            "aic_log": 65.6,
+            "aic_quad": 59.9,
+            "explain_gain": true,
+            "sign_stable": true,
+            "square_sign_stable": true,
+            "lasso_keeps_square": 3,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 58.08,
+                "mae": 139.45,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 49.35,
+                "mae": 135.24,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 42.73,
+                "mae": 136.43,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 47.91,
+                "mae": 131.77,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 47.69,
+                "mae": 131.47,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 44.3,
+                "mae": 130.99,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 45.4,
+                "mae": 133.8,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 38
+        }
+      ]
+    },
+    {
+      "id": "built",
+      "label": "복합",
+      "size_label": "연면적",
+      "y_label": "연면적당 단가",
+      "year_from": 2022,
+      "year_to": 2026,
+      "note": "단독·상업·공장만. 단가 = 거래금액 / 연면적.",
+      "questions": {
+        "explain": "2차 항이 관측 면적 안에서 log-log보다 설명을 더한 칸은 도시 주거, 도시 상업, 용도 혼재이다.",
+        "predict": "수축 모형이 log-log보다 검증 MAPE를 1%p 이상 낮춘 칸은 5곳 중 3곳(도시 주거, 도시 상업, 용도 혼재)이다.",
+        "recommend": "다섯 유형에서 같은 방향이 반복되지 않아, 표본 수나 공선성으로 모형을 고르는 규칙은 두지 않는다."
+      },
+      "cells": [
+        {
+          "role": "urban_res",
+          "role_label": "도시 주거",
+          "status": "ok",
+          "thin": false,
+          "name": "대전광역시 중구 대흥동",
+          "code": "30140105",
+          "slice": "detached",
+          "n": 96,
+          "spread": 6.14,
+          "controls": "연식·도로·용도",
+          "fit": {
+            "n": 96,
+            "status": "ok",
+            "center_corr": 0.374,
+            "raw_sq_corr": 0.994,
+            "loglog_beta": {
+              "beta": -0.1818,
+              "p": 0.0343
+            },
+            "quad_beta2": {
+              "beta": -0.2024,
+              "p": 0.0007
+            },
+            "turning_area": 98.7,
+            "turning_in_range": true,
+            "aic_log": 208.8,
+            "aic_quad": 198.2,
+            "explain_gain": true,
+            "sign_stable": true,
+            "square_sign_stable": true,
+            "lasso_keeps_square": 4,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 87.33,
+                "mae": 238.89,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 70.51,
+                "mae": 225.17,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 66.51,
+                "mae": 221.19,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 68.24,
+                "mae": 224.62,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 72.19,
+                "mae": 231.21,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 64.99,
+                "mae": 221.57,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 68.16,
+                "mae": 229.09,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 96
+        },
+        {
+          "role": "urban_com",
+          "role_label": "도시 상업",
+          "status": "ok",
+          "thin": false,
+          "name": "서울특별시 구로구 구로동",
+          "code": "11530102",
+          "slice": "commercial",
+          "n": 137,
+          "spread": 32.15,
+          "controls": "연식·도로·용도",
+          "fit": {
+            "n": 137,
+            "status": "ok",
+            "center_corr": 0.541,
+            "raw_sq_corr": 0.986,
+            "loglog_beta": {
+              "beta": -0.3058,
+              "p": 0.0
+            },
+            "quad_beta2": {
+              "beta": -0.0605,
+              "p": 0.0247
+            },
+            "turning_area": 13.7,
+            "turning_in_range": true,
+            "aic_log": 381.1,
+            "aic_quad": 377.6,
+            "explain_gain": true,
+            "sign_stable": true,
+            "square_sign_stable": true,
+            "lasso_keeps_square": 5,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 341.53,
+                "mae": 403.42,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 138.0,
+                "mae": 356.95,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 133.6,
+                "mae": 340.54,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 139.29,
+                "mae": 348.28,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 137.9,
+                "mae": 354.69,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 137.09,
+                "mae": 332.84,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 136.73,
+                "mae": 331.12,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 137
+        },
+        {
+          "role": "fringe",
+          "role_label": "외곽 개발",
+          "status": "ok",
+          "thin": false,
+          "name": "경기도 안성시 원곡면",
+          "code": "41550380",
+          "slice": "factory",
+          "n": 40,
+          "spread": 15.03,
+          "controls": "연식·도로·용도",
+          "fit": {
+            "n": 40,
+            "status": "ok",
+            "center_corr": 0.343,
+            "raw_sq_corr": 0.991,
+            "loglog_beta": {
+              "beta": -0.2168,
+              "p": 0.0448
+            },
+            "quad_beta2": {
+              "beta": 0.0663,
+              "p": 0.0773
+            },
+            "turning_area": 10013.3,
+            "turning_in_range": true,
+            "aic_log": 100.9,
+            "aic_quad": 99.0,
+            "explain_gain": false,
+            "sign_stable": true,
+            "square_sign_stable": true,
+            "lasso_keeps_square": 5,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 175.8,
+                "mae": 104.97,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 128.03,
+                "mae": 95.55,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 117.46,
+                "mae": 101.77,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 136.73,
+                "mae": 92.22,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 138.03,
+                "mae": 93.4,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 128.45,
+                "mae": 95.52,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 127.34,
+                "mae": 96.67,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 40
+        },
+        {
+          "role": "rural",
+          "role_label": "농촌",
+          "status": "ok",
+          "thin": false,
+          "name": "경상북도 울진군 죽변면",
+          "code": "47930370",
+          "slice": "detached",
+          "n": 80,
+          "spread": 6.71,
+          "controls": "연식·도로·용도",
+          "fit": {
+            "n": 80,
+            "status": "ok",
+            "center_corr": 0.685,
+            "raw_sq_corr": 0.995,
+            "loglog_beta": {
+              "beta": -0.1428,
+              "p": 0.2512
+            },
+            "quad_beta2": {
+              "beta": -0.0135,
+              "p": 0.8901
+            },
+            "turning_area": 0.8,
+            "turning_in_range": false,
+            "aic_log": 178.0,
+            "aic_quad": 180.0,
+            "explain_gain": false,
+            "sign_stable": true,
+            "square_sign_stable": false,
+            "lasso_keeps_square": 5,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 94.67,
+                "mae": 83.89,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 74.67,
+                "mae": 81.71,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 76.97,
+                "mae": 83.9,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 73.96,
+                "mae": 80.88,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 74.41,
+                "mae": 80.62,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 74.39,
+                "mae": 81.99,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 75.84,
+                "mae": 82.79,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 80
+        },
+        {
+          "role": "mixed",
+          "role_label": "용도 혼재",
+          "status": "ok",
+          "thin": false,
+          "name": "경기도 안산시 고잔동",
+          "code": "41273101",
+          "slice": "commercial",
+          "n": 78,
+          "spread": 17.74,
+          "controls": "연식·도로·용도",
+          "fit": {
+            "n": 78,
+            "status": "ok",
+            "center_corr": 0.757,
+            "raw_sq_corr": 0.987,
+            "loglog_beta": {
+              "beta": -0.1561,
+              "p": 0.0132
+            },
+            "quad_beta2": {
+              "beta": -0.0907,
+              "p": 0.0004
+            },
+            "turning_area": 119.7,
+            "turning_in_range": true,
+            "aic_log": 129.1,
+            "aic_quad": 117.1,
+            "explain_gain": true,
+            "sign_stable": false,
+            "square_sign_stable": false,
+            "lasso_keeps_square": 2,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 566.25,
+                "mae": 105.4,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 118.12,
+                "mae": 77.53,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 392.88,
+                "mae": 98.86,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 76.07,
+                "mae": 68.71,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 71.93,
+                "mae": 69.07,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 108.92,
+                "mae": 74.5,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 75.76,
+                "mae": 73.11,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 78
+        },
+        {
+          "role": "thin",
+          "role_label": "얇은 표본",
+          "status": "ok",
+          "thin": true,
+          "name": "대전광역시 서구 탄방동",
+          "code": "30170106",
+          "slice": "commercial",
+          "n": 43,
+          "spread": 43.84,
+          "controls": "연식만",
+          "fit": {
+            "n": 43,
+            "status": "ok",
+            "center_corr": 0.559,
+            "raw_sq_corr": 0.986,
+            "loglog_beta": {
+              "beta": 0.1524,
+              "p": 0.0253
+            },
+            "quad_beta2": {
+              "beta": 0.0067,
+              "p": 0.8469
+            },
+            "turning_area": 0.0,
+            "turning_in_range": false,
+            "aic_log": 112.3,
+            "aic_quad": 114.3,
+            "explain_gain": false,
+            "sign_stable": true,
+            "square_sign_stable": false,
+            "lasso_keeps_square": 1,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 145.89,
+                "mae": 159.01,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 97.55,
+                "mae": 134.37,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 105.94,
+                "mae": 138.83,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 104.23,
+                "mae": 141.58,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 104.68,
+                "mae": 146.09,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 106.84,
+                "mae": 140.5,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 109.89,
+                "mae": 145.34,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 43
+        }
+      ]
+    },
+    {
+      "id": "residential",
+      "label": "집합주거",
+      "size_label": "전용면적",
+      "y_label": "㎡당 단가",
+      "year_from": 2022,
+      "year_to": 2026,
+      "note": "아파트·오피스텔·연립. 오피스텔 칸이 도시 상업의 자리이다.",
+      "questions": {
+        "explain": "2차 항이 관측 면적 안에서 log-log보다 설명을 더한 칸은 오피스텔, 외곽 개발, 유형 혼재이다.",
+        "predict": "수축 모형이 log-log보다 검증 MAPE를 1%p 이상 낮춘 칸은 5곳 중 2곳(외곽 개발, 유형 혼재)이다. 과반이 아니라 일관된 우위로 두지 않는다.",
+        "recommend": "다섯 유형에서 같은 방향이 반복되지 않아, 표본 수나 공선성으로 모형을 고르는 규칙은 두지 않는다."
+      },
+      "cells": [
+        {
+          "role": "urban_res",
+          "role_label": "도시 주거",
+          "status": "ok",
+          "thin": false,
+          "name": "서울특별시 중구 흥인동",
+          "code": "11140163",
+          "slice": "apartment",
+          "n": 120,
+          "spread": 6.17,
+          "controls": "연도·층",
+          "fit": {
+            "n": 120,
+            "status": "ok",
+            "center_corr": 0.341,
+            "raw_sq_corr": 0.999,
+            "loglog_beta": {
+              "beta": 0.072,
+              "p": 0.0002
+            },
+            "quad_beta2": {
+              "beta": 0.0677,
+              "p": 0.1125
+            },
+            "turning_area": 27.3,
+            "turning_in_range": true,
+            "aic_log": -61.6,
+            "aic_quad": -62.2,
+            "explain_gain": false,
+            "sign_stable": true,
+            "square_sign_stable": true,
+            "lasso_keeps_square": 5,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 13.87,
+                "mae": 133.43,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 13.98,
+                "mae": 136.27,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 13.88,
+                "mae": 136.61,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 13.97,
+                "mae": 136.15,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 13.98,
+                "mae": 136.17,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 13.88,
+                "mae": 136.56,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 13.91,
+                "mae": 136.85,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 120
+        },
+        {
+          "role": "urban_com",
+          "role_label": "오피스텔",
+          "status": "ok",
+          "thin": false,
+          "name": "대전광역시 서구 탄방동",
+          "code": "30170106",
+          "slice": "officetel",
+          "n": 64,
+          "spread": 5.91,
+          "controls": "연도·층",
+          "fit": {
+            "n": 64,
+            "status": "ok",
+            "center_corr": 0.898,
+            "raw_sq_corr": 0.999,
+            "loglog_beta": {
+              "beta": 0.3567,
+              "p": 0.0
+            },
+            "quad_beta2": {
+              "beta": 0.3703,
+              "p": 0.0014
+            },
+            "turning_area": 43.2,
+            "turning_in_range": true,
+            "aic_log": 48.1,
+            "aic_quad": 38.9,
+            "explain_gain": true,
+            "sign_stable": true,
+            "square_sign_stable": true,
+            "lasso_keeps_square": 5,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 22.68,
+                "mae": 79.76,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 16.1,
+                "mae": 67.2,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 15.7,
+                "mae": 69.17,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 16.92,
+                "mae": 70.86,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 17.35,
+                "mae": 71.5,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 15.72,
+                "mae": 67.85,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 15.72,
+                "mae": 66.82,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 64
+        },
+        {
+          "role": "fringe",
+          "role_label": "외곽 개발",
+          "status": "ok",
+          "thin": false,
+          "name": "경기도 평택시 평택동",
+          "code": "41220113",
+          "slice": "apartment",
+          "n": 292,
+          "spread": 6.12,
+          "controls": "연도·층",
+          "fit": {
+            "n": 292,
+            "status": "ok",
+            "center_corr": 0.868,
+            "raw_sq_corr": 0.998,
+            "loglog_beta": {
+              "beta": -0.1403,
+              "p": 0.0
+            },
+            "quad_beta2": {
+              "beta": 0.4605,
+              "p": 0.0
+            },
+            "turning_area": 52.2,
+            "turning_in_range": true,
+            "aic_log": 65.4,
+            "aic_quad": -52.7,
+            "explain_gain": true,
+            "sign_stable": true,
+            "square_sign_stable": true,
+            "lasso_keeps_square": 5,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 22.65,
+                "mae": 72.62,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 21.86,
+                "mae": 75.39,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 16.51,
+                "mae": 63.39,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 21.87,
+                "mae": 75.37,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 21.86,
+                "mae": 75.39,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 16.52,
+                "mae": 63.37,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 16.52,
+                "mae": 63.38,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 292
+        },
+        {
+          "role": "rural",
+          "role_label": "농촌",
+          "status": "ok",
+          "thin": false,
+          "name": "강원특별자치도 평창군 진부면",
+          "code": "51760360",
+          "slice": "apartment",
+          "n": 425,
+          "spread": 2.2,
+          "controls": "연도·층",
+          "fit": {
+            "n": 425,
+            "status": "ok",
+            "center_corr": 0.743,
+            "raw_sq_corr": 0.999,
+            "loglog_beta": {
+              "beta": 0.6288,
+              "p": 0.0
+            },
+            "quad_beta2": {
+              "beta": 0.4488,
+              "p": 0.0001
+            },
+            "turning_area": 28.0,
+            "turning_in_range": false,
+            "aic_log": -146.9,
+            "aic_quad": -161.5,
+            "explain_gain": false,
+            "sign_stable": true,
+            "square_sign_stable": true,
+            "lasso_keeps_square": 5,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 16.44,
+                "mae": 30.63,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 15.37,
+                "mae": 29.98,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 14.66,
+                "mae": 29.13,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 15.32,
+                "mae": 29.96,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 15.38,
+                "mae": 30.02,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 14.4,
+                "mae": 28.95,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 14.58,
+                "mae": 29.01,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 425
+        },
+        {
+          "role": "mixed",
+          "role_label": "유형 혼재",
+          "status": "ok",
+          "thin": false,
+          "name": "대전광역시 유성구 궁동",
+          "code": "30200122",
+          "slice": "apartment",
+          "n": 242,
+          "spread": 4.76,
+          "controls": "연도·층",
+          "fit": {
+            "n": 242,
+            "status": "ok",
+            "center_corr": 0.793,
+            "raw_sq_corr": 0.998,
+            "loglog_beta": {
+              "beta": -0.3676,
+              "p": 0.0
+            },
+            "quad_beta2": {
+              "beta": -0.176,
+              "p": 0.0
+            },
+            "turning_area": 12.7,
+            "turning_in_range": true,
+            "aic_log": -195.8,
+            "aic_quad": -225.5,
+            "explain_gain": true,
+            "sign_stable": true,
+            "square_sign_stable": true,
+            "lasso_keeps_square": 5,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 14.68,
+                "mae": 57.33,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 13.87,
+                "mae": 60.83,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 12.53,
+                "mae": 51.14,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 13.88,
+                "mae": 60.85,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 13.92,
+                "mae": 61.01,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 12.6,
+                "mae": 51.44,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 12.57,
+                "mae": 51.43,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 242
+        },
+        {
+          "role": "thin",
+          "role_label": "얇은 표본",
+          "status": "ok",
+          "thin": true,
+          "name": "전남광주통합특별시 여수시 연등동",
+          "code": "12130111",
+          "slice": "apartment",
+          "n": 38,
+          "spread": 3.43,
+          "controls": "연도만",
+          "fit": {
+            "n": 38,
+            "status": "ok",
+            "center_corr": 0.968,
+            "raw_sq_corr": 1.0,
+            "loglog_beta": {
+              "beta": -1.3864,
+              "p": 0.0
+            },
+            "quad_beta2": {
+              "beta": 1.1533,
+              "p": 0.0
+            },
+            "turning_area": 66.1,
+            "turning_in_range": true,
+            "aic_log": -33.5,
+            "aic_quad": -65.9,
+            "explain_gain": true,
+            "sign_stable": true,
+            "square_sign_stable": true,
+            "lasso_keeps_square": 5,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 18.62,
+                "mae": 34.12,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 8.11,
+                "mae": 24.53,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 9.69,
+                "mae": 46.9,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 8.11,
+                "mae": 24.53,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 8.11,
+                "mae": 24.53,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 9.34,
+                "mae": 44.2,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 9.67,
+                "mae": 46.55,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 38
+        }
+      ]
+    },
+    {
+      "id": "commercial",
+      "label": "비주거",
+      "size_label": "연면적",
+      "y_label": "㎡당 단가",
+      "year_from": 2022,
+      "year_to": 2026,
+      "note": "상가·공장. 도시 소형은 연면적 꼬리가 짧은 상가다.",
+      "questions": {
+        "explain": "2차 항이 관측 면적 안에서 log-log보다 설명을 더한 칸은 도시 상업, 도시 소형이다.",
+        "predict": "수축 모형이 log-log보다 검증 MAPE를 1%p 이상 낮춘 칸은 5곳 중 3곳(도시 상업, 도시 소형, 농촌)이다.",
+        "recommend": "다섯 유형에서 같은 방향이 반복되지 않아, 표본 수나 공선성으로 모형을 고르는 규칙은 두지 않는다."
+      },
+      "cells": [
+        {
+          "role": "urban_com",
+          "role_label": "도시 상업",
+          "status": "ok",
+          "thin": false,
+          "name": "서울특별시 중구 남창동",
+          "code": "11140112",
+          "slice": "collective_shop",
+          "n": 179,
+          "spread": 108.6,
+          "controls": "연도·층",
+          "fit": {
+            "n": 179,
+            "status": "ok",
+            "center_corr": 0.88,
+            "raw_sq_corr": 0.988,
+            "loglog_beta": {
+              "beta": 0.0183,
+              "p": 0.7765
+            },
+            "quad_beta2": {
+              "beta": 0.2062,
+              "p": 0.0
+            },
+            "turning_area": 73.3,
+            "turning_in_range": true,
+            "aic_log": 604.3,
+            "aic_quad": 582.5,
+            "explain_gain": true,
+            "sign_stable": false,
+            "square_sign_stable": true,
+            "lasso_keeps_square": 5,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 456.07,
+                "mae": 583.24,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 251.59,
+                "mae": 554.31,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 201.1,
+                "mae": 519.42,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 249.58,
+                "mae": 557.06,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 253.31,
+                "mae": 559.71,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 201.45,
+                "mae": 510.63,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 200.63,
+                "mae": 506.52,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 179
+        },
+        {
+          "role": "fringe",
+          "role_label": "외곽 개발",
+          "status": "ok",
+          "thin": false,
+          "name": "경기도 부천시 상동",
+          "code": "41192109",
+          "slice": "collective_factory",
+          "n": 126,
+          "spread": 17.79,
+          "controls": "연도·층",
+          "fit": {
+            "n": 126,
+            "status": "ok",
+            "center_corr": 0.803,
+            "raw_sq_corr": 0.983,
+            "loglog_beta": {
+              "beta": -0.3163,
+              "p": 0.0
+            },
+            "quad_beta2": {
+              "beta": 0.0161,
+              "p": 0.4455
+            },
+            "turning_area": 2370023.7,
+            "turning_in_range": false,
+            "aic_log": 233.9,
+            "aic_quad": 235.3,
+            "explain_gain": false,
+            "sign_stable": true,
+            "square_sign_stable": false,
+            "lasso_keeps_square": 5,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 107.4,
+                "mae": 326.1,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 56.12,
+                "mae": 262.74,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 56.38,
+                "mae": 263.85,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 55.82,
+                "mae": 262.17,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 56.02,
+                "mae": 261.28,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 56.3,
+                "mae": 264.07,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 56.2,
+                "mae": 262.68,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 126
+        },
+        {
+          "role": "urban_res",
+          "role_label": "도시 소형",
+          "status": "ok",
+          "thin": false,
+          "name": "대전광역시 서구 월평동",
+          "code": "30170113",
+          "slice": "collective_shop",
+          "n": 156,
+          "spread": 29.63,
+          "controls": "연도·층",
+          "fit": {
+            "n": 156,
+            "status": "ok",
+            "center_corr": 0.723,
+            "raw_sq_corr": 0.989,
+            "loglog_beta": {
+              "beta": -0.013,
+              "p": 0.8305
+            },
+            "quad_beta2": {
+              "beta": -0.181,
+              "p": 0.0016
+            },
+            "turning_area": 28.4,
+            "turning_in_range": true,
+            "aic_log": 453.1,
+            "aic_quad": 444.8,
+            "explain_gain": true,
+            "sign_stable": false,
+            "square_sign_stable": true,
+            "lasso_keeps_square": 5,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 229.23,
+                "mae": 184.24,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 131.34,
+                "mae": 168.26,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 123.08,
+                "mae": 169.71,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 130.16,
+                "mae": 171.03,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 130.75,
+                "mae": 170.21,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 121.18,
+                "mae": 170.04,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 123.82,
+                "mae": 170.29,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 156
+        },
+        {
+          "role": "rural",
+          "role_label": "농촌",
+          "status": "ok",
+          "thin": false,
+          "name": "충청남도 금산군 하옥리",
+          "code": "44710250",
+          "slice": "collective_shop",
+          "n": 39,
+          "spread": 17.12,
+          "controls": "연도·층",
+          "fit": {
+            "n": 39,
+            "status": "ok",
+            "center_corr": 0.752,
+            "raw_sq_corr": 0.995,
+            "loglog_beta": {
+              "beta": 0.0241,
+              "p": 0.8152
+            },
+            "quad_beta2": {
+              "beta": -0.1416,
+              "p": 0.0643
+            },
+            "turning_area": 113.8,
+            "turning_in_range": true,
+            "aic_log": 64.0,
+            "aic_quad": 62.0,
+            "explain_gain": false,
+            "sign_stable": false,
+            "square_sign_stable": true,
+            "lasso_keeps_square": 5,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 60.92,
+                "mae": 61.95,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 55.67,
+                "mae": 64.16,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 52.78,
+                "mae": 61.23,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 54.38,
+                "mae": 64.5,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 55.06,
+                "mae": 65.03,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 51.35,
+                "mae": 61.08,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 53.3,
+                "mae": 62.84,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 39
+        },
+        {
+          "role": "mixed",
+          "role_label": "유형 혼재",
+          "status": "ok",
+          "thin": false,
+          "name": "인천광역시 미추홀구 주안동",
+          "code": "28177105",
+          "slice": "collective_shop",
+          "n": 1525,
+          "spread": 11.03,
+          "controls": "연도·층",
+          "fit": {
+            "n": 1570,
+            "status": "ok",
+            "center_corr": 0.59,
+            "raw_sq_corr": 0.978,
+            "loglog_beta": {
+              "beta": -0.3181,
+              "p": 0.0
+            },
+            "quad_beta2": {
+              "beta": 0.0248,
+              "p": 0.004
+            },
+            "turning_area": 17285.4,
+            "turning_in_range": false,
+            "aic_log": 2997.5,
+            "aic_quad": 2991.2,
+            "explain_gain": false,
+            "sign_stable": true,
+            "square_sign_stable": true,
+            "lasso_keeps_square": 4,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 97.93,
+                "mae": 171.33,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 53.03,
+                "mae": 134.17,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 52.68,
+                "mae": 132.59,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 53.2,
+                "mae": 134.43,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 53.25,
+                "mae": 135.13,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 52.85,
+                "mae": 132.88,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 53.04,
+                "mae": 133.75,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 1570
+        },
+        {
+          "role": "thin",
+          "role_label": "얇은 표본",
+          "status": "ok",
+          "thin": true,
+          "name": "경기도 화성시 방교동",
+          "code": "41590138",
+          "slice": "collective_shop",
+          "n": 53,
+          "spread": 29.26,
+          "controls": "연도만",
+          "fit": {
+            "n": 53,
+            "status": "ok",
+            "center_corr": 0.895,
+            "raw_sq_corr": 0.996,
+            "loglog_beta": {
+              "beta": -0.9826,
+              "p": 0.0
+            },
+            "quad_beta2": {
+              "beta": -0.0609,
+              "p": 0.1663
+            },
+            "turning_area": 0.1,
+            "turning_in_range": false,
+            "aic_log": 50.0,
+            "aic_quad": 49.9,
+            "explain_gain": false,
+            "sign_stable": true,
+            "square_sign_stable": true,
+            "lasso_keeps_square": 5,
+            "lasso_square_folds": 5,
+            "models": {
+              "linear": {
+                "mape": 97.89,
+                "mae": 243.99,
+                "folds": 5
+              },
+              "loglog": {
+                "mape": 32.37,
+                "mae": 137.8,
+                "folds": 5
+              },
+              "quad": {
+                "mape": 34.12,
+                "mae": 149.31,
+                "folds": 5
+              },
+              "ridge": {
+                "mape": 32.37,
+                "mae": 137.8,
+                "folds": 5
+              },
+              "lasso": {
+                "mape": 32.37,
+                "mae": 137.8,
+                "folds": 5
+              },
+              "quad_ridge": {
+                "mape": 34.86,
+                "mae": 154.08,
+                "folds": 5
+              },
+              "quad_lasso": {
+                "mape": 34.19,
+                "mae": 149.66,
+                "folds": 5
+              }
+            }
+          },
+          "n_used": 53
+        }
+      ]
+    }
+  ]
+}

@@ -161,6 +161,8 @@ export const TOOL_WHY: Record<string, string[]> = {
   age0: ["D-064", "D-045"],
   "recommend-twin": ["D-066", "D-073"],
   "area-elasticity": [],
+  "scale-effect": [],
+  "scale-effect-2": [],
   "rowhouse-floor": [],
   "macro-scale": ["D-055"],
   "road-jimok": [],

@@ -1,0 +1,1749 @@
+{
+  "title": "규모효과 회귀실험 2단계",
+  "generated": "2026-10-25",
+  "keeps": "1단계 기록은 그대로 둔다.",
+  "method": "같은 거래와 같은 통제. 면적 제곱은 칸 전체 로그면적 평균으로 중심화. 예측은 ㎡당 단가와 총액(단가×면적)으로 환산한 5겹 MAPE.",
+  "score_note": "단가 식과 총액 식은 같은 행이다. 총액 예측은 관측 면적으로 ㎡당 단가 MAPE에 맞춘다. 총액 log-log 기울기는 단가 기울기+1과 같다.",
+  "cells": [
+    {
+      "id": "pyeongtaek",
+      "name": "경기도 평택시 평택동",
+      "domain": "집합주거",
+      "slice": "아파트",
+      "size_label": "전용면적",
+      "controls": "연도·층",
+      "ask": "2차항이 예측오차를 얼마나 줄이는가",
+      "sample_note": "1단계 외곽 개발 칸과 같은 아파트 거래.",
+      "year_from": 2022,
+      "year_to": 2026,
+      "status": "ok",
+      "fit": {
+        "n": 292,
+        "p10": 17.2,
+        "p50": 19.9,
+        "p90": 121.9,
+        "quadratic": {
+          "beta1": {
+            "beta": -0.5061,
+            "p": 0.0
+          },
+          "beta2": {
+            "beta": 0.4605,
+            "p": 0.0
+          },
+          "extremum": "극솟값",
+          "turning_area": 52.2,
+          "turning_in_range": true,
+          "near": {
+            "band": "전환면적 ±20%",
+            "n": 12,
+            "share": 4.1,
+            "n_below": 223,
+            "percentile": 76.4
+          },
+          "cv_turning": {
+            "min": 51.0,
+            "max": 53.0,
+            "mean": 52.2
+          },
+          "cv_same_sign": true,
+          "cv_sign_folds": 5,
+          "raw_sq_corr": 0.998,
+          "center_corr": 0.868,
+          "vif_size": 4.23,
+          "vif_square": 4.52
+        },
+        "outcomes": {
+          "unit_loglog_beta": {
+            "beta": -0.1403,
+            "p": 0.0
+          },
+          "total_loglog_beta": {
+            "beta": 0.8597,
+            "p": 0.0
+          },
+          "total_quad_beta1": {
+            "beta": 0.4939,
+            "p": 0.0
+          },
+          "total_quad_beta2": {
+            "beta": 0.4605,
+            "p": 0.0
+          },
+          "beta_shift_from_plus_one": 0.0,
+          "cv_mape_unit": {
+            "loglog_unit": 21.65,
+            "quad_unit": 16.38,
+            "loglog_total": 21.65,
+            "quad_total": 16.38,
+            "ridge": 21.6,
+            "lasso": 21.65,
+            "quad_ridge": 16.38,
+            "quad_lasso": 16.36
+          }
+        },
+        "penalty": {
+          "standardize": "연속열(중심화 로그면적, 그 제곱, 연도·연식·층)만 학습 겹의 평균과 표준편차로 맞춘다. 더미는 0/1이다.",
+          "alpha_grid": [
+            0.001,
+            0.0036,
+            0.0129,
+            0.0464,
+            0.1668,
+            0.5995,
+            2.1544,
+            7.7426,
+            27.8256,
+            100.0
+          ],
+          "alpha_rule": "정규화 강도는 학습 겹 안의 3겹 평균제곱오차로만 고른다.",
+          "alphas": {
+            "ridge": [
+              7.7426,
+              2.1544,
+              7.7426,
+              7.7426,
+              7.7426
+            ],
+            "lasso": [
+              0.0464,
+              0.001,
+              0.1668,
+              0.001,
+              0.0129
+            ],
+            "quad_ridge": [
+              2.1544,
+              2.1544,
+              0.5995,
+              0.001,
+              0.001
+            ],
+            "quad_lasso": [
+              0.5995,
+              0.5995,
+              0.1668,
+              0.001,
+              0.001
+            ]
+          },
+          "lasso_keeps_square": 5,
+          "lasso_folds": 5
+        },
+        "folds": [
+          {
+            "fold": 1,
+            "n_test": 59,
+            "beta2": 0.4566,
+            "extremum": "극솟값",
+            "turning_area": 51.0,
+            "turning_in_train_range": true,
+            "quad_unit": {
+              "mape_unit": 15.87,
+              "mae_unit": 59.58,
+              "mape_total": 15.87,
+              "mae_total": 2477.41
+            },
+            "loglog_unit": {
+              "mape_unit": 21.41,
+              "mae_unit": 73.62,
+              "mape_total": 21.41,
+              "mae_total": 3206.13
+            },
+            "quad_total": {
+              "mape_unit": 15.87,
+              "mae_unit": 59.58,
+              "mape_total": 15.87,
+              "mae_total": 2477.41
+            },
+            "loglog_total": {
+              "mape_unit": 21.41,
+              "mae_unit": 73.62,
+              "mape_total": 21.41,
+              "mae_total": 3206.13
+            },
+            "ridge": {
+              "mape_unit": 21.4,
+              "alpha": 7.7426,
+              "size_coef": -0.0911,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "lasso": {
+              "mape_unit": 21.41,
+              "alpha": 0.0464,
+              "size_coef": -0.096,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "quad_ridge": {
+              "mape_unit": 15.92,
+              "alpha": 2.1544,
+              "size_coef": -0.3236,
+              "square_coef": 0.2917,
+              "square_kept": true
+            },
+            "quad_lasso": {
+              "mape_unit": 15.9,
+              "alpha": 0.5995,
+              "size_coef": -0.3267,
+              "square_coef": 0.2954,
+              "square_kept": true
+            }
+          },
+          {
+            "fold": 2,
+            "n_test": 59,
+            "beta2": 0.4629,
+            "extremum": "극솟값",
+            "turning_area": 53.0,
+            "turning_in_train_range": true,
+            "quad_unit": {
+              "mape_unit": 16.88,
+              "mae_unit": 66.92,
+              "mape_total": 16.88,
+              "mae_total": 3266.6
+            },
+            "loglog_unit": {
+              "mape_unit": 20.71,
+              "mae_unit": 74.09,
+              "mape_total": 20.71,
+              "mae_total": 3366.84
+            },
+            "quad_total": {
+              "mape_unit": 16.88,
+              "mae_unit": 66.92,
+              "mape_total": 16.88,
+              "mae_total": 3266.6
+            },
+            "loglog_total": {
+              "mape_unit": 20.71,
+              "mae_unit": 74.09,
+              "mape_total": 20.71,
+              "mae_total": 3366.84
+            },
+            "ridge": {
+              "mape_unit": 20.64,
+              "alpha": 2.1544,
+              "size_coef": -0.1091,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "lasso": {
+              "mape_unit": 20.71,
+              "alpha": 0.001,
+              "size_coef": -0.1106,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "quad_ridge": {
+              "mape_unit": 16.8,
+              "alpha": 2.1544,
+              "size_coef": -0.358,
+              "square_coef": 0.3071,
+              "square_kept": true
+            },
+            "quad_lasso": {
+              "mape_unit": 16.71,
+              "alpha": 0.5995,
+              "size_coef": -0.3628,
+              "square_coef": 0.3124,
+              "square_kept": true
+            }
+          },
+          {
+            "fold": 3,
+            "n_test": 58,
+            "beta2": 0.4518,
+            "extremum": "극솟값",
+            "turning_area": 52.2,
+            "turning_in_train_range": true,
+            "quad_unit": {
+              "mape_unit": 13.21,
+              "mae_unit": 55.03,
+              "mape_total": 13.21,
+              "mae_total": 2155.31
+            },
+            "loglog_unit": {
+              "mape_unit": 17.92,
+              "mae_unit": 70.53,
+              "mape_total": 17.92,
+              "mae_total": 2740.41
+            },
+            "quad_total": {
+              "mape_unit": 13.21,
+              "mae_unit": 55.03,
+              "mape_total": 13.21,
+              "mae_total": 2155.31
+            },
+            "loglog_total": {
+              "mape_unit": 17.92,
+              "mae_unit": 70.53,
+              "mape_total": 17.92,
+              "mae_total": 2740.41
+            },
+            "ridge": {
+              "mape_unit": 17.81,
+              "alpha": 7.7426,
+              "size_coef": -0.1027,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "lasso": {
+              "mape_unit": 17.91,
+              "alpha": 0.1668,
+              "size_coef": -0.107,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "quad_ridge": {
+              "mape_unit": 13.2,
+              "alpha": 0.5995,
+              "size_coef": -0.3613,
+              "square_coef": 0.316,
+              "square_kept": true
+            },
+            "quad_lasso": {
+              "mape_unit": 13.22,
+              "alpha": 0.1668,
+              "size_coef": -0.3627,
+              "square_coef": 0.3176,
+              "square_kept": true
+            }
+          },
+          {
+            "fold": 4,
+            "n_test": 58,
+            "beta2": 0.4636,
+            "extremum": "극솟값",
+            "turning_area": 52.8,
+            "turning_in_train_range": true,
+            "quad_unit": {
+              "mape_unit": 18.24,
+              "mae_unit": 68.5,
+              "mape_total": 18.24,
+              "mae_total": 2990.66
+            },
+            "loglog_unit": {
+              "mape_unit": 23.99,
+              "mae_unit": 78.85,
+              "mape_total": 23.99,
+              "mae_total": 3032.38
+            },
+            "quad_total": {
+              "mape_unit": 18.24,
+              "mae_unit": 68.5,
+              "mape_total": 18.24,
+              "mae_total": 2990.66
+            },
+            "loglog_total": {
+              "mape_unit": 23.99,
+              "mae_unit": 78.85,
+              "mape_total": 23.99,
+              "mae_total": 3032.38
+            },
+            "ridge": {
+              "mape_unit": 24.0,
+              "alpha": 7.7426,
+              "size_coef": -0.0967,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "lasso": {
+              "mape_unit": 23.99,
+              "alpha": 0.001,
+              "size_coef": -0.1015,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "quad_ridge": {
+              "mape_unit": 18.24,
+              "alpha": 0.001,
+              "size_coef": -0.4005,
+              "square_coef": 0.3546,
+              "square_kept": true
+            },
+            "quad_lasso": {
+              "mape_unit": 18.24,
+              "alpha": 0.001,
+              "size_coef": -0.4005,
+              "square_coef": 0.3546,
+              "square_kept": true
+            }
+          },
+          {
+            "fold": 5,
+            "n_test": 58,
+            "beta2": 0.4767,
+            "extremum": "극솟값",
+            "turning_area": 51.8,
+            "turning_in_train_range": true,
+            "quad_unit": {
+              "mape_unit": 17.72,
+              "mae_unit": 65.95,
+              "mape_total": 17.72,
+              "mae_total": 3945.01
+            },
+            "loglog_unit": {
+              "mape_unit": 24.21,
+              "mae_unit": 75.97,
+              "mape_total": 24.21,
+              "mae_total": 3702.35
+            },
+            "quad_total": {
+              "mape_unit": 17.72,
+              "mae_unit": 65.95,
+              "mape_total": 17.72,
+              "mae_total": 3945.01
+            },
+            "loglog_total": {
+              "mape_unit": 24.21,
+              "mae_unit": 75.97,
+              "mape_total": 24.21,
+              "mae_total": 3702.35
+            },
+            "ridge": {
+              "mape_unit": 24.16,
+              "alpha": 7.7426,
+              "size_coef": -0.096,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "lasso": {
+              "mape_unit": 24.21,
+              "alpha": 0.0129,
+              "size_coef": -0.1008,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "quad_ridge": {
+              "mape_unit": 17.72,
+              "alpha": 0.001,
+              "size_coef": -0.3792,
+              "square_coef": 0.3311,
+              "square_kept": true
+            },
+            "quad_lasso": {
+              "mape_unit": 17.72,
+              "alpha": 0.001,
+              "size_coef": -0.3792,
+              "square_coef": 0.331,
+              "square_kept": true
+            }
+          }
+        ],
+        "reading": {
+          "structure": "2차 계수는 0.4605 (p 0.0000)로 양수이다. 전환면적 52.2㎡는 단가의 극솟값이다. P10–P90(17.2–121.9㎡) 안이다. 그 면적 ±20% 거래는 12건, 전체의 4.1%이고, 그 면적 이하인 거래 비율은 76.4%이다. 학습 겹만 바꿔 다시 맞춘 전환면적은 51.0–53.0㎡(5겹, 부호 같음)이다. 면적과 제곱의 상관은 중심화 전 0.998, 중심화 후 0.868이고 VIF는 면적 4.23, 제곱 4.52이다.",
+          "prediction": "검증 MAPE(㎡당 단가)는 log-log 21.6%, 2차 16.4%, Ridge 21.6%, Lasso 21.6%, 2차+Ridge 16.4%, 2차+Lasso 16.4%이다. 2차와 log-log의 차이는 -5.3%p이다.",
+          "y_compare": "같은 행으로 환산한 검증 MAPE는 단가 2차 16.4%, 총액 2차 16.4%, 단가 log-log 21.6%, 총액 log-log 21.6%이다. 총액 log-log 기울기 0.8597와 단가 기울기+1의 차이는 0.0000이다. 총액 2차의 제곱계수는 0.4605이다. 환산 MAPE는 소수점 한 자리까지 같다. 금액 MAE는 큰 면적에 더 실린다.",
+          "penalty": "연속열(중심화 로그면적, 그 제곱, 연도·연식·층)만 학습 겹의 평균과 표준편차로 맞춘다. 더미는 0/1이다. 정규화 강도는 학습 겹 안의 3겹 평균제곱오차로만 고른다. 겹별 Ridge 강도는 [7.7426, 2.1544, 7.7426, 7.7426, 7.7426]이고, 2차+Ridge 강도는 [2.1544, 2.1544, 0.5995, 0.001, 0.001]이다. Lasso가 2차항을 남긴 겹은 5/5이다. 2차항이 없는 수축과 2차항이 있는 수축은 위의 MAPE로 갈라 둔다."
+        }
+      }
+    },
+    {
+      "id": "hannam",
+      "name": "서울특별시 용산구 한남동",
+      "domain": "토지",
+      "slice": "대",
+      "size_label": "계약면적",
+      "controls": "연도·도로·용도",
+      "ask": "68㎡ 전환면적이 어떤 극값이고 주변에 거래가 있는가",
+      "sample_note": "1단계 도시 주거 칸과 같은 대지 거래.",
+      "year_from": 2022,
+      "year_to": 2026,
+      "status": "ok",
+      "fit": {
+        "n": 225,
+        "p10": 2.0,
+        "p50": 23.0,
+        "p90": 312.9,
+        "quadratic": {
+          "beta1": {
+            "beta": -0.0389,
+            "p": 0.0218
+          },
+          "beta2": {
+            "beta": 0.019,
+            "p": 0.0184
+          },
+          "extremum": "극솟값",
+          "turning_area": 68.0,
+          "turning_in_range": true,
+          "near": {
+            "band": "전환면적 ±20%",
+            "n": 11,
+            "share": 4.9,
+            "n_below": 163,
+            "percentile": 72.4
+          },
+          "cv_turning": {
+            "min": 50.3,
+            "max": 118.0,
+            "mean": 70.2
+          },
+          "cv_same_sign": true,
+          "cv_sign_folds": 5,
+          "raw_sq_corr": 0.955,
+          "center_corr": 0.082,
+          "vif_size": 1.22,
+          "vif_square": 1.14
+        },
+        "outcomes": {
+          "unit_loglog_beta": {
+            "beta": -0.0389,
+            "p": 0.0231
+          },
+          "total_loglog_beta": {
+            "beta": 0.9611,
+            "p": 0.0
+          },
+          "total_quad_beta1": {
+            "beta": 0.9611,
+            "p": 0.0
+          },
+          "total_quad_beta2": {
+            "beta": 0.019,
+            "p": 0.0184
+          },
+          "beta_shift_from_plus_one": 0.0,
+          "cv_mape_unit": {
+            "loglog_unit": 38.7,
+            "quad_unit": 37.33,
+            "loglog_total": 38.7,
+            "quad_total": 37.33,
+            "ridge": 39.09,
+            "lasso": 38.73,
+            "quad_ridge": 37.64,
+            "quad_lasso": 37.34
+          }
+        },
+        "penalty": {
+          "standardize": "연속열(중심화 로그면적, 그 제곱, 연도·연식·층)만 학습 겹의 평균과 표준편차로 맞춘다. 더미는 0/1이다.",
+          "alpha_grid": [
+            0.001,
+            0.0036,
+            0.0129,
+            0.0464,
+            0.1668,
+            0.5995,
+            2.1544,
+            7.7426,
+            27.8256,
+            100.0
+          ],
+          "alpha_rule": "정규화 강도는 학습 겹 안의 3겹 평균제곱오차로만 고른다.",
+          "alphas": {
+            "ridge": [
+              7.7426,
+              7.7426,
+              0.001,
+              0.001,
+              0.1668
+            ],
+            "lasso": [
+              0.5995,
+              0.1668,
+              0.001,
+              0.001,
+              0.1668
+            ],
+            "quad_ridge": [
+              7.7426,
+              7.7426,
+              0.001,
+              0.001,
+              0.1668
+            ],
+            "quad_lasso": [
+              0.5995,
+              0.5995,
+              0.001,
+              0.001,
+              0.1668
+            ]
+          },
+          "lasso_keeps_square": 5,
+          "lasso_folds": 5
+        },
+        "folds": [
+          {
+            "fold": 1,
+            "n_test": 45,
+            "beta2": 0.023,
+            "extremum": "극솟값",
+            "turning_area": 61.5,
+            "turning_in_train_range": true,
+            "quad_unit": {
+              "mape_unit": 31.64,
+              "mae_unit": 639.86,
+              "mape_total": 31.64,
+              "mae_total": 165164.59
+            },
+            "loglog_unit": {
+              "mape_unit": 31.73,
+              "mae_unit": 644.18,
+              "mape_total": 31.73,
+              "mae_total": 131501.37
+            },
+            "quad_total": {
+              "mape_unit": 31.64,
+              "mae_unit": 639.86,
+              "mape_total": 31.64,
+              "mae_total": 165164.59
+            },
+            "loglog_total": {
+              "mape_unit": 31.73,
+              "mae_unit": 644.18,
+              "mape_total": 31.73,
+              "mae_total": 131501.37
+            },
+            "ridge": {
+              "mape_unit": 33.01,
+              "alpha": 7.7426,
+              "size_coef": -0.0696,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "lasso": {
+              "mape_unit": 32.36,
+              "alpha": 0.5995,
+              "size_coef": -0.0654,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "quad_ridge": {
+              "mape_unit": 32.87,
+              "alpha": 7.7426,
+              "size_coef": -0.0629,
+              "square_coef": 0.081,
+              "square_kept": true
+            },
+            "quad_lasso": {
+              "mape_unit": 32.27,
+              "alpha": 0.5995,
+              "size_coef": -0.058,
+              "square_coef": 0.0766,
+              "square_kept": true
+            }
+          },
+          {
+            "fold": 2,
+            "n_test": 45,
+            "beta2": 0.0214,
+            "extremum": "극솟값",
+            "turning_area": 54.4,
+            "turning_in_train_range": true,
+            "quad_unit": {
+              "mape_unit": 25.78,
+              "mae_unit": 647.83,
+              "mape_total": 25.78,
+              "mae_total": 42387.28
+            },
+            "loglog_unit": {
+              "mape_unit": 26.09,
+              "mae_unit": 632.99,
+              "mape_total": 26.09,
+              "mae_total": 39085.78
+            },
+            "quad_total": {
+              "mape_unit": 25.78,
+              "mae_unit": 647.83,
+              "mape_total": 25.78,
+              "mae_total": 42387.28
+            },
+            "loglog_total": {
+              "mape_unit": 26.09,
+              "mae_unit": 632.99,
+              "mape_total": 26.09,
+              "mae_total": 39085.78
+            },
+            "ridge": {
+              "mape_unit": 26.77,
+              "alpha": 7.7426,
+              "size_coef": -0.0643,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "lasso": {
+              "mape_unit": 26.09,
+              "alpha": 0.1668,
+              "size_coef": -0.0601,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "quad_ridge": {
+              "mape_unit": 26.22,
+              "alpha": 7.7426,
+              "size_coef": -0.0647,
+              "square_coef": 0.0801,
+              "square_kept": true
+            },
+            "quad_lasso": {
+              "mape_unit": 25.76,
+              "alpha": 0.5995,
+              "size_coef": -0.0528,
+              "square_coef": 0.0809,
+              "square_kept": true
+            }
+          },
+          {
+            "fold": 3,
+            "n_test": 45,
+            "beta2": 0.0191,
+            "extremum": "극솟값",
+            "turning_area": 50.3,
+            "turning_in_train_range": true,
+            "quad_unit": {
+              "mape_unit": 29.86,
+              "mae_unit": 725.83,
+              "mape_total": 29.86,
+              "mae_total": 53971.78
+            },
+            "loglog_unit": {
+              "mape_unit": 31.67,
+              "mae_unit": 745.19,
+              "mape_total": 31.67,
+              "mae_total": 53534.64
+            },
+            "quad_total": {
+              "mape_unit": 29.86,
+              "mae_unit": 725.83,
+              "mape_total": 29.86,
+              "mae_total": 53971.78
+            },
+            "loglog_total": {
+              "mape_unit": 31.67,
+              "mae_unit": 745.19,
+              "mape_total": 31.67,
+              "mae_total": 53534.64
+            },
+            "ridge": {
+              "mape_unit": 31.67,
+              "alpha": 0.001,
+              "size_coef": -0.0481,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "lasso": {
+              "mape_unit": 31.12,
+              "alpha": 0.001,
+              "size_coef": -0.0435,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "quad_ridge": {
+              "mape_unit": 29.85,
+              "alpha": 0.001,
+              "size_coef": -0.0494,
+              "square_coef": 0.0703,
+              "square_kept": true
+            },
+            "quad_lasso": {
+              "mape_unit": 29.31,
+              "alpha": 0.001,
+              "size_coef": -0.0449,
+              "square_coef": 0.071,
+              "square_kept": true
+            }
+          },
+          {
+            "fold": 4,
+            "n_test": 45,
+            "beta2": 0.0202,
+            "extremum": "극솟값",
+            "turning_area": 66.9,
+            "turning_in_train_range": true,
+            "quad_unit": {
+              "mape_unit": 34.03,
+              "mae_unit": 499.67,
+              "mape_total": 34.03,
+              "mae_total": 29939.12
+            },
+            "loglog_unit": {
+              "mape_unit": 35.49,
+              "mae_unit": 499.54,
+              "mape_total": 35.49,
+              "mae_total": 34244.33
+            },
+            "quad_total": {
+              "mape_unit": 34.03,
+              "mae_unit": 499.67,
+              "mape_total": 34.03,
+              "mae_total": 29939.12
+            },
+            "loglog_total": {
+              "mape_unit": 35.49,
+              "mae_unit": 499.54,
+              "mape_total": 35.49,
+              "mae_total": 34244.33
+            },
+            "ridge": {
+              "mape_unit": 35.49,
+              "alpha": 0.001,
+              "size_coef": -0.0714,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "lasso": {
+              "mape_unit": 35.7,
+              "alpha": 0.001,
+              "size_coef": -0.068,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "quad_ridge": {
+              "mape_unit": 34.03,
+              "alpha": 0.001,
+              "size_coef": -0.0736,
+              "square_coef": 0.0754,
+              "square_kept": true
+            },
+            "quad_lasso": {
+              "mape_unit": 34.15,
+              "alpha": 0.001,
+              "size_coef": -0.0703,
+              "square_coef": 0.0758,
+              "square_kept": true
+            }
+          },
+          {
+            "fold": 5,
+            "n_test": 45,
+            "beta2": 0.0144,
+            "extremum": "극솟값",
+            "turning_area": 118.0,
+            "turning_in_train_range": true,
+            "quad_unit": {
+              "mape_unit": 65.34,
+              "mae_unit": 505.67,
+              "mape_total": 65.34,
+              "mae_total": 58090.12
+            },
+            "loglog_unit": {
+              "mape_unit": 68.54,
+              "mae_unit": 519.37,
+              "mape_total": 68.54,
+              "mae_total": 55289.6
+            },
+            "quad_total": {
+              "mape_unit": 65.34,
+              "mae_unit": 505.67,
+              "mape_total": 65.34,
+              "mae_total": 58090.12
+            },
+            "loglog_total": {
+              "mape_unit": 68.54,
+              "mae_unit": 519.37,
+              "mape_total": 68.54,
+              "mae_total": 55289.6
+            },
+            "ridge": {
+              "mape_unit": 68.53,
+              "alpha": 0.1668,
+              "size_coef": -0.0729,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "lasso": {
+              "mape_unit": 68.36,
+              "alpha": 0.1668,
+              "size_coef": -0.0701,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "quad_ridge": {
+              "mape_unit": 65.25,
+              "alpha": 0.1668,
+              "size_coef": -0.0748,
+              "square_coef": 0.0505,
+              "square_kept": true
+            },
+            "quad_lasso": {
+              "mape_unit": 65.21,
+              "alpha": 0.1668,
+              "size_coef": -0.0717,
+              "square_coef": 0.049,
+              "square_kept": true
+            }
+          }
+        ],
+        "reading": {
+          "structure": "2차 계수는 0.0190 (p 0.0184)로 양수이다. 전환면적 68.0㎡는 단가의 극솟값이다. P10–P90(2.0–312.9㎡) 안이다. 그 면적 ±20% 거래는 11건, 전체의 4.9%이고, 그 면적 이하인 거래 비율은 72.4%이다. 학습 겹만 바꿔 다시 맞춘 전환면적은 50.3–118.0㎡(5겹, 부호 같음)이다. 면적과 제곱의 상관은 중심화 전 0.955, 중심화 후 0.082이고 VIF는 면적 1.22, 제곱 1.14이다.",
+          "prediction": "검증 MAPE(㎡당 단가)는 log-log 38.7%, 2차 37.3%, Ridge 39.1%, Lasso 38.7%, 2차+Ridge 37.6%, 2차+Lasso 37.3%이다. 2차와 log-log의 차이는 -1.4%p이다.",
+          "y_compare": "같은 행으로 환산한 검증 MAPE는 단가 2차 37.3%, 총액 2차 37.3%, 단가 log-log 38.7%, 총액 log-log 38.7%이다. 총액 log-log 기울기 0.9611와 단가 기울기+1의 차이는 0.0000이다. 총액 2차의 제곱계수는 0.0190이다. 환산 MAPE는 소수점 한 자리까지 같다. 금액 MAE는 큰 면적에 더 실린다.",
+          "penalty": "연속열(중심화 로그면적, 그 제곱, 연도·연식·층)만 학습 겹의 평균과 표준편차로 맞춘다. 더미는 0/1이다. 정규화 강도는 학습 겹 안의 3겹 평균제곱오차로만 고른다. 겹별 Ridge 강도는 [7.7426, 7.7426, 0.001, 0.001, 0.1668]이고, 2차+Ridge 강도는 [7.7426, 7.7426, 0.001, 0.001, 0.1668]이다. Lasso가 2차항을 남긴 겹은 5/5이다. 2차항이 없는 수축과 2차항이 있는 수축은 위의 MAPE로 갈라 둔다."
+        }
+      }
+    },
+    {
+      "id": "gojan",
+      "name": "경기도 안산시 고잔동",
+      "domain": "복합",
+      "slice": "상업",
+      "size_label": "연면적",
+      "controls": "연식·도로·용도",
+      "ask": "정규화 모형의 오차 감소가 2차항에서 오는가",
+      "sample_note": "1단계 용도 혼재 칸과 같은 상업 거래.",
+      "year_from": 2022,
+      "year_to": 2026,
+      "status": "ok",
+      "fit": {
+        "n": 78,
+        "p10": 20.4,
+        "p50": 34.2,
+        "p90": 606.2,
+        "quadratic": {
+          "beta1": {
+            "beta": 0.0889,
+            "p": 0.3097
+          },
+          "beta2": {
+            "beta": -0.0907,
+            "p": 0.0004
+          },
+          "extremum": "극댓값",
+          "turning_area": 119.7,
+          "turning_in_range": true,
+          "near": {
+            "band": "전환면적 ±20%",
+            "n": 1,
+            "share": 1.3,
+            "n_below": 56,
+            "percentile": 71.8
+          },
+          "cv_turning": {
+            "min": 80.6,
+            "max": 166.4,
+            "mean": 116.5
+          },
+          "cv_same_sign": false,
+          "cv_sign_folds": 5,
+          "raw_sq_corr": 0.987,
+          "center_corr": 0.757,
+          "vif_size": 6.08,
+          "vif_square": 3.29
+        },
+        "outcomes": {
+          "unit_loglog_beta": {
+            "beta": -0.1561,
+            "p": 0.0132
+          },
+          "total_loglog_beta": {
+            "beta": 0.8439,
+            "p": 0.0
+          },
+          "total_quad_beta1": {
+            "beta": 1.0889,
+            "p": 0.0
+          },
+          "total_quad_beta2": {
+            "beta": -0.0907,
+            "p": 0.0004
+          },
+          "beta_shift_from_plus_one": 0.0,
+          "cv_mape_unit": {
+            "loglog_unit": 69.03,
+            "quad_unit": 88.53,
+            "loglog_total": 70.41,
+            "quad_total": 89.91,
+            "ridge": 67.76,
+            "lasso": 66.31,
+            "quad_ridge": 77.94,
+            "quad_lasso": 71.02
+          }
+        },
+        "penalty": {
+          "standardize": "연속열(중심화 로그면적, 그 제곱, 연도·연식·층)만 학습 겹의 평균과 표준편차로 맞춘다. 더미는 0/1이다.",
+          "alpha_grid": [
+            0.001,
+            0.0036,
+            0.0129,
+            0.0464,
+            0.1668,
+            0.5995,
+            2.1544,
+            7.7426,
+            27.8256,
+            100.0
+          ],
+          "alpha_rule": "정규화 강도는 학습 겹 안의 3겹 평균제곱오차로만 고른다.",
+          "alphas": {
+            "ridge": [
+              100.0,
+              100.0,
+              0.5995,
+              100.0,
+              100.0
+            ],
+            "lasso": [
+              27.8256,
+              27.8256,
+              0.0464,
+              27.8256,
+              27.8256
+            ],
+            "quad_ridge": [
+              100.0,
+              100.0,
+              100.0,
+              100.0,
+              100.0
+            ],
+            "quad_lasso": [
+              27.8256,
+              27.8256,
+              7.7426,
+              27.8256,
+              27.8256
+            ]
+          },
+          "lasso_keeps_square": 0,
+          "lasso_folds": 5
+        },
+        "folds": [
+          {
+            "fold": 1,
+            "n_test": 16,
+            "beta2": -0.1148,
+            "extremum": "극댓값",
+            "turning_area": 166.4,
+            "turning_in_train_range": true,
+            "quad_unit": {
+              "mape_unit": 29.27,
+              "mae_unit": 62.86,
+              "mape_total": 29.27,
+              "mae_total": 14770.36
+            },
+            "loglog_unit": {
+              "mape_unit": 18.84,
+              "mae_unit": 40.8,
+              "mape_total": 18.84,
+              "mae_total": 12929.64
+            },
+            "quad_total": {
+              "mape_unit": 29.27,
+              "mae_unit": 62.86,
+              "mape_total": 29.27,
+              "mae_total": 14770.36
+            },
+            "loglog_total": {
+              "mape_unit": 18.84,
+              "mae_unit": 40.8,
+              "mape_total": 18.84,
+              "mae_total": 12929.64
+            },
+            "ridge": {
+              "mape_unit": 23.38,
+              "alpha": 100.0,
+              "size_coef": -0.0421,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "lasso": {
+              "mape_unit": 25.13,
+              "alpha": 27.8256,
+              "size_coef": -0.0,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "quad_ridge": {
+              "mape_unit": 23.34,
+              "alpha": 100.0,
+              "size_coef": -0.0136,
+              "square_coef": -0.1012,
+              "square_kept": true
+            },
+            "quad_lasso": {
+              "mape_unit": 25.13,
+              "alpha": 27.8256,
+              "size_coef": -0.0,
+              "square_coef": -0.0,
+              "square_kept": false
+            }
+          },
+          {
+            "fold": 2,
+            "n_test": 16,
+            "beta2": -0.0909,
+            "extremum": "극댓값",
+            "turning_area": 92.3,
+            "turning_in_train_range": true,
+            "quad_unit": {
+              "mape_unit": 35.7,
+              "mae_unit": 89.5,
+              "mape_total": 35.7,
+              "mae_total": 26240.75
+            },
+            "loglog_unit": {
+              "mape_unit": 35.03,
+              "mae_unit": 91.65,
+              "mape_total": 35.03,
+              "mae_total": 29628.55
+            },
+            "quad_total": {
+              "mape_unit": 36.59,
+              "mae_unit": 91.89,
+              "mape_total": 36.59,
+              "mae_total": 27493.99
+            },
+            "loglog_total": {
+              "mape_unit": 35.95,
+              "mae_unit": 94.11,
+              "mape_total": 35.95,
+              "mae_total": 30921.48
+            },
+            "ridge": {
+              "mape_unit": 26.77,
+              "alpha": 100.0,
+              "size_coef": -0.0472,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "lasso": {
+              "mape_unit": 26.81,
+              "alpha": 27.8256,
+              "size_coef": -0.0,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "quad_ridge": {
+              "mape_unit": 27.74,
+              "alpha": 100.0,
+              "size_coef": -0.0199,
+              "square_coef": -0.1006,
+              "square_kept": true
+            },
+            "quad_lasso": {
+              "mape_unit": 26.81,
+              "alpha": 27.8256,
+              "size_coef": -0.0,
+              "square_coef": -0.0,
+              "square_kept": false
+            }
+          },
+          {
+            "fold": 3,
+            "n_test": 16,
+            "beta2": 0.0148,
+            "extremum": "극솟값",
+            "turning_area": 80.6,
+            "turning_in_train_range": true,
+            "quad_unit": {
+              "mape_unit": 318.3,
+              "mae_unit": 91.74,
+              "mape_total": 318.3,
+              "mae_total": 473865.23
+            },
+            "loglog_unit": {
+              "mape_unit": 229.36,
+              "mae_unit": 88.07,
+              "mape_total": 229.36,
+              "mae_total": 384275.59
+            },
+            "quad_total": {
+              "mape_unit": 324.34,
+              "mae_unit": 108.27,
+              "mape_total": 324.34,
+              "mae_total": 485284.67
+            },
+            "loglog_total": {
+              "mape_unit": 235.36,
+              "mae_unit": 104.48,
+              "mape_total": 235.36,
+              "mae_total": 395613.63
+            },
+            "ridge": {
+              "mape_unit": 230.9,
+              "alpha": 0.5995,
+              "size_coef": 0.0143,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "lasso": {
+              "mape_unit": 225.25,
+              "alpha": 0.0464,
+              "size_coef": 0.0078,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "quad_ridge": {
+              "mape_unit": 280.47,
+              "alpha": 100.0,
+              "size_coef": 0.0095,
+              "square_coef": 0.0104,
+              "square_kept": true
+            },
+            "quad_lasso": {
+              "mape_unit": 248.8,
+              "alpha": 7.7426,
+              "size_coef": 0.0,
+              "square_coef": 0.0,
+              "square_kept": false
+            }
+          },
+          {
+            "fold": 4,
+            "n_test": 15,
+            "beta2": -0.0961,
+            "extremum": "극댓값",
+            "turning_area": 124.6,
+            "turning_in_train_range": true,
+            "quad_unit": {
+              "mape_unit": 41.18,
+              "mae_unit": 59.56,
+              "mape_total": 41.18,
+              "mae_total": 3029.46
+            },
+            "loglog_unit": {
+              "mape_unit": 45.03,
+              "mae_unit": 67.44,
+              "mape_total": 45.03,
+              "mae_total": 2877.06
+            },
+            "quad_total": {
+              "mape_unit": 41.18,
+              "mae_unit": 59.56,
+              "mape_total": 41.18,
+              "mae_total": 3029.46
+            },
+            "loglog_total": {
+              "mape_unit": 45.03,
+              "mae_unit": 67.44,
+              "mape_total": 45.03,
+              "mae_total": 2877.06
+            },
+            "ridge": {
+              "mape_unit": 41.51,
+              "alpha": 100.0,
+              "size_coef": -0.054,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "lasso": {
+              "mape_unit": 38.84,
+              "alpha": 27.8256,
+              "size_coef": -0.0,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "quad_ridge": {
+              "mape_unit": 43.07,
+              "alpha": 100.0,
+              "size_coef": -0.0251,
+              "square_coef": -0.1023,
+              "square_kept": true
+            },
+            "quad_lasso": {
+              "mape_unit": 38.84,
+              "alpha": 27.8256,
+              "size_coef": -0.0,
+              "square_coef": -0.0,
+              "square_kept": false
+            }
+          },
+          {
+            "fold": 5,
+            "n_test": 15,
+            "beta2": -0.0935,
+            "extremum": "극댓값",
+            "turning_area": 118.7,
+            "turning_in_train_range": true,
+            "quad_unit": {
+              "mape_unit": 18.19,
+              "mae_unit": 62.94,
+              "mape_total": 18.19,
+              "mae_total": 11286.42
+            },
+            "loglog_unit": {
+              "mape_unit": 16.89,
+              "mae_unit": 61.7,
+              "mape_total": 16.89,
+              "mae_total": 10019.79
+            },
+            "quad_total": {
+              "mape_unit": 18.19,
+              "mae_unit": 62.94,
+              "mape_total": 18.19,
+              "mae_total": 11286.42
+            },
+            "loglog_total": {
+              "mape_unit": 16.89,
+              "mae_unit": 61.7,
+              "mape_total": 16.89,
+              "mae_total": 10019.79
+            },
+            "ridge": {
+              "mape_unit": 16.25,
+              "alpha": 100.0,
+              "size_coef": -0.0429,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "lasso": {
+              "mape_unit": 15.54,
+              "alpha": 27.8256,
+              "size_coef": -0.0,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "quad_ridge": {
+              "mape_unit": 15.08,
+              "alpha": 100.0,
+              "size_coef": -0.0164,
+              "square_coef": -0.093,
+              "square_kept": true
+            },
+            "quad_lasso": {
+              "mape_unit": 15.54,
+              "alpha": 27.8256,
+              "size_coef": -0.0,
+              "square_coef": -0.0,
+              "square_kept": false
+            }
+          }
+        ],
+        "reading": {
+          "structure": "2차 계수는 -0.0907 (p 0.0004)로 음수이다. 전환면적 119.7㎡는 단가의 극댓값이다. P10–P90(20.4–606.2㎡) 안이다. 그 면적 ±20% 거래는 1건, 전체의 1.3%이고, 그 면적 이하인 거래 비율은 71.8%이다. 학습 겹만 바꿔 다시 맞춘 전환면적은 80.6–166.4㎡(5겹, 부호 갈림)이다. 면적과 제곱의 상관은 중심화 전 0.987, 중심화 후 0.757이고 VIF는 면적 6.08, 제곱 3.29이다.",
+          "prediction": "검증 MAPE(㎡당 단가)는 log-log 69.0%, 2차 88.5%, Ridge 67.8%, Lasso 66.3%, 2차+Ridge 77.9%, 2차+Lasso 71.0%이다. 2차와 log-log의 차이는 19.5%p이다.",
+          "y_compare": "같은 행으로 환산한 검증 MAPE는 단가 2차 88.5%, 총액 2차 89.9%, 단가 log-log 69.0%, 총액 log-log 70.4%이다. 총액 log-log 기울기 0.8439와 단가 기울기+1의 차이는 0.0000이다. 총액 2차의 제곱계수는 -0.0907이다. 환산 MAPE 차이는 2차 1.4%p, log-log 1.4%p이다. 금액 MAE는 큰 면적에 더 실린다.",
+          "penalty": "연속열(중심화 로그면적, 그 제곱, 연도·연식·층)만 학습 겹의 평균과 표준편차로 맞춘다. 더미는 0/1이다. 정규화 강도는 학습 겹 안의 3겹 평균제곱오차로만 고른다. 겹별 Ridge 강도는 [100.0, 100.0, 0.5995, 100.0, 100.0]이고, 2차+Ridge 강도는 [100.0, 100.0, 100.0, 100.0, 100.0]이다. Lasso가 2차항을 남긴 겹은 0/5이다. 2차항이 없는 수축과 2차항이 있는 수축은 위의 MAPE로 갈라 둔다."
+        }
+      }
+    },
+    {
+      "id": "juan",
+      "name": "인천광역시 미추홀구 주안동",
+      "domain": "비주거",
+      "slice": "상가·공장",
+      "size_label": "연면적",
+      "controls": "연도·층",
+      "ask": "표본이 커도 비선형 예측 개선이 작은가",
+      "sample_note": "1단계 유형 혼재 칸과 같이 이 읍면동의 상가·공장을 함께 썼다.",
+      "year_from": 2022,
+      "year_to": 2026,
+      "status": "ok",
+      "fit": {
+        "n": 1570,
+        "p10": 4.7,
+        "p50": 8.4,
+        "p90": 91.8,
+        "quadratic": {
+          "beta1": {
+            "beta": -0.3444,
+            "p": 0.0
+          },
+          "beta2": {
+            "beta": 0.0248,
+            "p": 0.004
+          },
+          "extremum": "극솟값",
+          "turning_area": 17285.4,
+          "turning_in_range": false,
+          "near": {
+            "band": "전환면적 ±20%",
+            "n": 0,
+            "share": 0.0,
+            "n_below": 1570,
+            "percentile": 100.0
+          },
+          "cv_turning": {
+            "min": 5746.9,
+            "max": 124035.3,
+            "mean": 38326.6
+          },
+          "cv_same_sign": true,
+          "cv_sign_folds": 5,
+          "raw_sq_corr": 0.978,
+          "center_corr": 0.59,
+          "vif_size": 1.63,
+          "vif_square": 1.55
+        },
+        "outcomes": {
+          "unit_loglog_beta": {
+            "beta": -0.3181,
+            "p": 0.0
+          },
+          "total_loglog_beta": {
+            "beta": 0.6819,
+            "p": 0.0
+          },
+          "total_quad_beta1": {
+            "beta": 0.6556,
+            "p": 0.0
+          },
+          "total_quad_beta2": {
+            "beta": 0.0248,
+            "p": 0.004
+          },
+          "beta_shift_from_plus_one": 0.0,
+          "cv_mape_unit": {
+            "loglog_unit": 53.02,
+            "quad_unit": 52.74,
+            "loglog_total": 53.02,
+            "quad_total": 52.74,
+            "ridge": 53.09,
+            "lasso": 53.13,
+            "quad_ridge": 52.83,
+            "quad_lasso": 52.88
+          }
+        },
+        "penalty": {
+          "standardize": "연속열(중심화 로그면적, 그 제곱, 연도·연식·층)만 학습 겹의 평균과 표준편차로 맞춘다. 더미는 0/1이다.",
+          "alpha_grid": [
+            0.001,
+            0.0036,
+            0.0129,
+            0.0464,
+            0.1668,
+            0.5995,
+            2.1544,
+            7.7426,
+            27.8256,
+            100.0
+          ],
+          "alpha_rule": "정규화 강도는 학습 겹 안의 3겹 평균제곱오차로만 고른다.",
+          "alphas": {
+            "ridge": [
+              27.8256,
+              7.7426,
+              2.1544,
+              2.1544,
+              0.5995
+            ],
+            "lasso": [
+              7.7426,
+              7.7426,
+              7.7426,
+              7.7426,
+              2.1544
+            ],
+            "quad_ridge": [
+              7.7426,
+              7.7426,
+              7.7426,
+              7.7426,
+              2.1544
+            ],
+            "quad_lasso": [
+              7.7426,
+              7.7426,
+              7.7426,
+              7.7426,
+              2.1544
+            ]
+          },
+          "lasso_keeps_square": 5,
+          "lasso_folds": 5
+        },
+        "folds": [
+          {
+            "fold": 1,
+            "n_test": 314,
+            "beta2": 0.0285,
+            "extremum": "극솟값",
+            "turning_area": 9483.0,
+            "turning_in_train_range": false,
+            "quad_unit": {
+              "mape_unit": 59.55,
+              "mae_unit": 141.76,
+              "mape_total": 59.55,
+              "mae_total": 6145.85
+            },
+            "loglog_unit": {
+              "mape_unit": 59.41,
+              "mae_unit": 142.11,
+              "mape_total": 59.41,
+              "mae_total": 6238.37
+            },
+            "quad_total": {
+              "mape_unit": 59.55,
+              "mae_unit": 141.76,
+              "mape_total": 59.55,
+              "mae_total": 6145.85
+            },
+            "loglog_total": {
+              "mape_unit": 59.41,
+              "mae_unit": 142.11,
+              "mape_total": 59.41,
+              "mae_total": 6238.37
+            },
+            "ridge": {
+              "mape_unit": 59.61,
+              "alpha": 27.8256,
+              "size_coef": -0.4223,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "lasso": {
+              "mape_unit": 59.42,
+              "alpha": 7.7426,
+              "size_coef": -0.4254,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "quad_ridge": {
+              "mape_unit": 59.59,
+              "alpha": 7.7426,
+              "size_coef": -0.4673,
+              "square_coef": 0.0626,
+              "square_kept": true
+            },
+            "quad_lasso": {
+              "mape_unit": 59.46,
+              "alpha": 7.7426,
+              "size_coef": -0.4556,
+              "square_coef": 0.0495,
+              "square_kept": true
+            }
+          },
+          {
+            "fold": 2,
+            "n_test": 314,
+            "beta2": 0.0303,
+            "extremum": "극솟값",
+            "turning_area": 5746.9,
+            "turning_in_train_range": false,
+            "quad_unit": {
+              "mape_unit": 46.18,
+              "mae_unit": 145.77,
+              "mape_total": 46.18,
+              "mae_total": 6117.01
+            },
+            "loglog_unit": {
+              "mape_unit": 46.93,
+              "mae_unit": 147.65,
+              "mape_total": 46.93,
+              "mae_total": 6019.36
+            },
+            "quad_total": {
+              "mape_unit": 46.18,
+              "mae_unit": 145.77,
+              "mape_total": 46.18,
+              "mae_total": 6117.01
+            },
+            "loglog_total": {
+              "mape_unit": 46.93,
+              "mae_unit": 147.65,
+              "mape_total": 46.93,
+              "mae_total": 6019.36
+            },
+            "ridge": {
+              "mape_unit": 47.01,
+              "alpha": 7.7426,
+              "size_coef": -0.4184,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "lasso": {
+              "mape_unit": 46.97,
+              "alpha": 7.7426,
+              "size_coef": -0.4144,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "quad_ridge": {
+              "mape_unit": 46.28,
+              "alpha": 7.7426,
+              "size_coef": -0.4573,
+              "square_coef": 0.0644,
+              "square_kept": true
+            },
+            "quad_lasso": {
+              "mape_unit": 46.35,
+              "alpha": 7.7426,
+              "size_coef": -0.4455,
+              "square_coef": 0.0512,
+              "square_kept": true
+            }
+          },
+          {
+            "fold": 3,
+            "n_test": 314,
+            "beta2": 0.0271,
+            "extremum": "극솟값",
+            "turning_area": 7768.6,
+            "turning_in_train_range": false,
+            "quad_unit": {
+              "mape_unit": 60.63,
+              "mae_unit": 128.92,
+              "mape_total": 60.63,
+              "mae_total": 6423.51
+            },
+            "loglog_unit": {
+              "mape_unit": 59.06,
+              "mae_unit": 131.46,
+              "mape_total": 59.06,
+              "mae_total": 6338.26
+            },
+            "quad_total": {
+              "mape_unit": 60.63,
+              "mae_unit": 128.92,
+              "mape_total": 60.63,
+              "mae_total": 6423.51
+            },
+            "loglog_total": {
+              "mape_unit": 59.06,
+              "mae_unit": 131.46,
+              "mape_total": 59.06,
+              "mae_total": 6338.26
+            },
+            "ridge": {
+              "mape_unit": 59.11,
+              "alpha": 2.1544,
+              "size_coef": -0.3924,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "lasso": {
+              "mape_unit": 59.42,
+              "alpha": 7.7426,
+              "size_coef": -0.3869,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "quad_ridge": {
+              "mape_unit": 60.73,
+              "alpha": 7.7426,
+              "size_coef": -0.4234,
+              "square_coef": 0.0562,
+              "square_kept": true
+            },
+            "quad_lasso": {
+              "mape_unit": 60.52,
+              "alpha": 7.7426,
+              "size_coef": -0.4117,
+              "square_coef": 0.0435,
+              "square_kept": true
+            }
+          },
+          {
+            "fold": 4,
+            "n_test": 314,
+            "beta2": 0.0192,
+            "extremum": "극솟값",
+            "turning_area": 124035.3,
+            "turning_in_train_range": false,
+            "quad_unit": {
+              "mape_unit": 49.83,
+              "mae_unit": 123.37,
+              "mape_total": 49.83,
+              "mae_total": 4594.33
+            },
+            "loglog_unit": {
+              "mape_unit": 51.2,
+              "mae_unit": 124.5,
+              "mape_total": 51.2,
+              "mae_total": 4797.69
+            },
+            "quad_total": {
+              "mape_unit": 49.83,
+              "mae_unit": 123.37,
+              "mape_total": 49.83,
+              "mae_total": 4594.33
+            },
+            "loglog_total": {
+              "mape_unit": 51.2,
+              "mae_unit": 124.5,
+              "mape_total": 51.2,
+              "mae_total": 4797.69
+            },
+            "ridge": {
+              "mape_unit": 51.22,
+              "alpha": 2.1544,
+              "size_coef": -0.421,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "lasso": {
+              "mape_unit": 51.31,
+              "alpha": 7.7426,
+              "size_coef": -0.4158,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "quad_ridge": {
+              "mape_unit": 49.98,
+              "alpha": 7.7426,
+              "size_coef": -0.4449,
+              "square_coef": 0.0422,
+              "square_kept": true
+            },
+            "quad_lasso": {
+              "mape_unit": 50.42,
+              "alpha": 7.7426,
+              "size_coef": -0.433,
+              "square_coef": 0.0285,
+              "square_kept": true
+            }
+          },
+          {
+            "fold": 5,
+            "n_test": 314,
+            "beta2": 0.0211,
+            "extremum": "극솟값",
+            "turning_area": 44599.4,
+            "turning_in_train_range": false,
+            "quad_unit": {
+              "mape_unit": 47.52,
+              "mae_unit": 124.65,
+              "mape_total": 47.52,
+              "mae_total": 5173.3
+            },
+            "loglog_unit": {
+              "mape_unit": 48.51,
+              "mae_unit": 126.23,
+              "mape_total": 48.51,
+              "mae_total": 5333.0
+            },
+            "quad_total": {
+              "mape_unit": 47.52,
+              "mae_unit": 124.65,
+              "mape_total": 47.52,
+              "mae_total": 5173.3
+            },
+            "loglog_total": {
+              "mape_unit": 48.51,
+              "mae_unit": 126.23,
+              "mape_total": 48.51,
+              "mae_total": 5333.0
+            },
+            "ridge": {
+              "mape_unit": 48.52,
+              "alpha": 0.5995,
+              "size_coef": -0.4044,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "lasso": {
+              "mape_unit": 48.54,
+              "alpha": 2.1544,
+              "size_coef": -0.4035,
+              "square_coef": null,
+              "square_kept": null
+            },
+            "quad_ridge": {
+              "mape_unit": 47.56,
+              "alpha": 2.1544,
+              "size_coef": -0.4327,
+              "square_coef": 0.0484,
+              "square_kept": true
+            },
+            "quad_lasso": {
+              "mape_unit": 47.64,
+              "alpha": 2.1544,
+              "size_coef": -0.4293,
+              "square_coef": 0.0444,
+              "square_kept": true
+            }
+          }
+        ],
+        "reading": {
+          "structure": "2차 계수는 0.0248 (p 0.0040)로 양수이다. 전환면적 17285.4㎡는 단가의 극솟값이다. P10–P90(4.7–91.8㎡) 밖이다. 그 면적 ±20% 거래는 0건, 전체의 0.0%이고, 그 면적 이하인 거래 비율은 100.0%이다. 학습 겹만 바꿔 다시 맞춘 전환면적은 5746.9–124035.3㎡(5겹, 부호 같음)이다. 면적과 제곱의 상관은 중심화 전 0.978, 중심화 후 0.590이고 VIF는 면적 1.63, 제곱 1.55이다.",
+          "prediction": "검증 MAPE(㎡당 단가)는 log-log 53.0%, 2차 52.7%, Ridge 53.1%, Lasso 53.1%, 2차+Ridge 52.8%, 2차+Lasso 52.9%이다. 2차와 log-log의 차이는 -0.3%p이다.",
+          "y_compare": "같은 행으로 환산한 검증 MAPE는 단가 2차 52.7%, 총액 2차 52.7%, 단가 log-log 53.0%, 총액 log-log 53.0%이다. 총액 log-log 기울기 0.6819와 단가 기울기+1의 차이는 0.0000이다. 총액 2차의 제곱계수는 0.0248이다. 환산 MAPE는 소수점 한 자리까지 같다. 금액 MAE는 큰 면적에 더 실린다.",
+          "penalty": "연속열(중심화 로그면적, 그 제곱, 연도·연식·층)만 학습 겹의 평균과 표준편차로 맞춘다. 더미는 0/1이다. 정규화 강도는 학습 겹 안의 3겹 평균제곱오차로만 고른다. 겹별 Ridge 강도는 [27.8256, 7.7426, 2.1544, 2.1544, 0.5995]이고, 2차+Ridge 강도는 [7.7426, 7.7426, 7.7426, 7.7426, 2.1544]이다. Lasso가 2차항을 남긴 겹은 5/5이다. 2차항이 없는 수축과 2차항이 있는 수축은 위의 MAPE로 갈라 둔다."
+        }
+      }
+    }
+  ]
+}
