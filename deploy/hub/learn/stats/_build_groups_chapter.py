@@ -59,9 +59,10 @@ def build():
  page=ROOT/'comparing-groups/index.html';old=page.read_text(encoding='utf-8')
  recap=re.search(r'<section class="learn-chapter__step" id="recap".*?</section>',old,re.S)[0]
  references=re.search(r'<details class="learn-more"><summary>참고자료</summary>.*?</details>',recap,re.S)[0]
- macro=re.search(r'<section class="learn-chapter__step" id="macro".*?</section>',old,re.S)[0]
- macro_body=re.sub(r'^.*?</h2>','',macro,flags=re.S).removesuffix('</section>')
- macro_tail=re.sub(r'^<p>.*?</p>','',macro_body,count=1,flags=re.S)
+ macro_tail='''<p>관측 단위와 단가 단위, 필터 조건을 맞추고, 건수와 평균만 보지 말고 분포·면적·위치·시점 구성을 함께 살펴보세요.</p>
+<p>서로 다른 거래 집단은 이름이 다르다는 이유만으로 독립표본이 되는 것은 아닙니다. 같은 건물·단지의 거래가 관련되어 있을 수 있습니다. 반대로 두 기간의 거래 건수가 같다고 대응표본이 되는 것도 아닙니다. 같은 대상의 관측이라는 연결이 있어야 합니다.</p>
+<p>이 장의 Welch·대응 t·효과크기 계산이 모든 화면에 제공된다고 전제하지 않습니다. 화면의 단순 평균 차이를 특정 물건의 저평가·고평가나 용도·정책의 인과효과로 읽기보다, 시장 집단의 구성과 수준을 이해하는 출발점으로 사용하세요.</p>
+<p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 통계 열기 →</a></p>'''
  parts=[];source=(ROOT/'comparing-groups/content.md').read_text(encoding='utf-8').replace('\\*','*').replace('**','').replace('\\~','~')
  # The supplied copy ends mid-sentence; retain the existing complete Macro
  # ending and recap rather than showing the unfinished fragment.
@@ -93,7 +94,7 @@ def build():
     while i<len(lines) and (re.match(r'\d+\. ',lines[i]) if ordered else lines[i].startswith('- ')):
      items.append('<li>'+inline(re.sub(r'^(?:- |\d+\. )','',lines[i]))+'</li>');i+=1
     out.append('<'+tag+'>'+''.join(items)+'</'+tag+'>');continue
-   formula=line.startswith(('Δ̂ =','SE(','t =','d =','dᵢ =','s_p =','ν =','평균 차이의 신뢰구간','186.47 −','24.47~'))
+   formula=line.startswith(('Δ̂ =','SE(','t =','d =','dᵢ =','s_p =','ν =','평균 차이의 신뢰구간','186.47 −','24.47~','H₀:','H₁:','6 ±'))
    out.append('<p'+(' class="gg-formula"' if formula else '')+'>'+inline(line)+'</p>');i+=1
   return '\n'.join(out)
  for id,section in zip(ids,re.split(r'^## ',source,flags=re.M)[1:],strict=True):
@@ -108,7 +109,7 @@ def build():
   if id=='example':
    html=html.replace(f2,f2+'<p class="learn-source-note">차이의 95% 신뢰구간이 0을 포함하지 않으면, 같은 가정의 양측 5% 검정에서 귀무가설을 기각합니다.</p>')
    html+='<p class="learn-source-note"><a href="/learn/stats/graphs/#data">공통 학습 자료 30건</a> · <a href="../group-comparison-example.json">계산 JSON</a>. 원자료의 Welch 구간 하한은 24.474513…이며 24.47로 표시합니다. 반올림된 평균과 표준편차를 다시 넣으면 24.478961…이 되어 24.48로 표시됩니다. 산식 오류가 아닌 중간 반올림의 차이입니다.</p>'
-  if id=='macro':html+='<p>관측 단위와 단가 단위, 필터 조건을 맞추고, 건수와 평균만 보지 말고 분포·면적·위치·시점 구성을 함께 살펴보세요.</p>'+macro_tail
+  if id=='macro':html+=macro_tail
   parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}"><p class="learn-chapter__label">{label}</p><h2>{heading}</h2>{html}</section>')
  parts.append(recap)
  p=ROOT/'comparing-groups/index.html';html=p.read_text(encoding='utf-8');html=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="두 집단 비교와 효과크기">\n'+'\n'.join(parts)+'\n</article>',html,count=1,flags=re.S)

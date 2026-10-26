@@ -1,0 +1,16 @@
+.pr-chart svg{width:100%;height:auto}
+.pr-controls{padding:1rem;margin:0 0 1rem;border:1px solid rgba(148,163,184,.3);border-radius:.75rem}
+.pr-controls p{margin:.4rem 0}
+.pr-shortcuts{display:flex;gap:.5rem;flex-wrap:wrap;margin:.4rem 0 .6rem}
+.pr-shortcuts button{font:inherit;min-height:44px;border:1px solid #94a3b8;border-radius:.4rem;padding:.5rem .75rem;background:var(--learn-surface,#fff);color:var(--learn-link,#172033)}
+.pr-shortcuts button[aria-pressed="true"]{border-color:var(--learn-accent,#2563eb);background:var(--learn-selected,#dbeafe)}
+.pr-controls [role=status]{font-variant-numeric:tabular-nums;line-height:1.7}
+.pr-chart text{pointer-events:none}
+.pr-chart circle{cursor:pointer}
+html[data-learn-theme=dark] .pr-chart [fill="#e2e8f0"],
+html[data-learn-theme=dark] .pr-chart [fill="#cbd5e1"]{fill:#334155}
+html[data-learn-theme=dark] .pr-chart [fill="#93c5fd"]{fill:#1d4ed8}
+html[data-learn-theme=dark] .pr-shortcuts button[aria-pressed="true"]{background:#1e3a5f}
+.learn-chapter .pr-table table{width:100%;min-width:0;table-layout:fixed}
+.learn-chapter .pr-table th,.learn-chapter .pr-table td{white-space:normal;overflow-wrap:anywhere;vertical-align:top}
+.learn-chapter .pr-table td[data-on="yes"]{outline:2px solid #d97706;outline-offset:-2px}

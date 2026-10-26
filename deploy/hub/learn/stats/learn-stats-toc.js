@@ -8,21 +8,21 @@
         "slug": "data-and-variables",
         "title": "데이터와 변수",
         "soon": false,
-        "macro_relevance": 2
+        "macro_relevance": 3
       },
       {
         "n": "02",
         "slug": "population-and-sampling",
         "title": "모집단과 표본, 자료 수집과 편향",
         "soon": false,
-        "macro_relevance": 2
+        "macro_relevance": 3
       },
       {
         "n": "03",
         "slug": "graphs",
         "title": "그래프로 보는 데이터와 분포",
         "soon": false,
-        "macro_relevance": 2
+        "macro_relevance": 3
       },
       {
         "n": "04",
@@ -36,7 +36,7 @@
         "slug": "quantiles",
         "title": "분위수와 상자그림",
         "soon": false,
-        "macro_relevance": 2
+        "macro_relevance": 3
       },
       {
         "n": "06",
@@ -62,7 +62,7 @@
         "slug": "probability",
         "title": "확률의 기초와 조건부확률",
         "soon": false,
-        "macro_relevance": 1
+        "macro_relevance": 2
       },
       {
         "n": "09",

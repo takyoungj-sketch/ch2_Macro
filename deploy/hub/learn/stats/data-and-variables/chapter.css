@@ -1,0 +1,15 @@
+.var-chart svg{width:100%;height:auto}
+.var-controls{padding:1rem;margin:0 0 1rem;border:1px solid rgba(148,163,184,.3);border-radius:.75rem}
+.var-controls p,.var-controls label{margin:.4rem 0}
+.var-shortcuts{display:flex;gap:.5rem;flex-wrap:wrap;margin:.4rem 0 .6rem}
+.var-shortcuts button,.var-controls input{font:inherit;min-height:44px;border:1px solid #94a3b8;border-radius:.4rem;padding:.5rem .75rem;background:var(--learn-surface,#fff);color:var(--learn-link,#172033)}
+.var-shortcuts button[aria-pressed="true"]{border-color:var(--learn-accent,#2563eb);background:var(--learn-selected,#dbeafe)}
+.var-controls [role=status]{font-variant-numeric:tabular-nums;line-height:1.7}
+.var-chart text{pointer-events:none}
+.var-chart rect,.var-chart circle{cursor:pointer}
+html[data-learn-theme=dark] .var-chart [fill="#eaf2ff"],
+html[data-learn-theme=dark] .var-chart [fill="#fff7ed"],
+html[data-learn-theme=dark] .var-chart [fill="#ffffff"]{fill:#1e3a5f}
+html[data-learn-theme=dark] .var-shortcuts button[aria-pressed="true"]{background:#1e3a5f}
+.learn-chapter .var-table{width:100%;min-width:0;table-layout:fixed}
+.learn-chapter .var-table th,.learn-chapter .var-table td{white-space:normal;overflow-wrap:anywhere;vertical-align:top}

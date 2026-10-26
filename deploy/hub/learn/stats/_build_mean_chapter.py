@@ -1,73 +1,359 @@
-"""Rebuild chapter 04 from the common teaching data; examples are not market estimates."""
+"""Chapter 4 body. Reuses example-data.json and the checked chart coordinates."""
 from pathlib import Path
-from statistics import mean,median
 from html import escape
-import json,re
-ROOT=Path(__file__).resolve().parent
+from statistics import median, mean
+import json
+import re
+import xml.etree.ElementTree as ET
+
+ROOT = Path(__file__).resolve().parent
+
+
+def coord(value):
+    return repr(float(value))
+
+
+def tx(x, y, text, extra=''):
+    return f'<text x="{x}" y="{y}"{extra}>{escape(str(text))}</text>'
+
 
 def build():
- data=json.loads((ROOT/'example-data.json').read_text(encoding='utf-8'))['rows'];values=[r['price'] for r in data];ordered=sorted(values)
- def t(x,y,s,extra=''):return f'<text x="{x}" y="{y}" {extra}>{escape(str(s))}</text>'
- def line(x,y,xx,yy,color='#cbd5e1',extra=''):return f'<line x1="{x}" y1="{y}" x2="{xx}" y2="{yy}" stroke="{color}" {extra}/>'
- def rect(x,y,w,h,color='#93c5fd',extra=''):return f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="{color}" {extra}/>'
- def fig(id,title,desc,b,cap,h):return f'<figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 {h}" role="img" aria-labelledby="{id}-title {id}-desc"><title id="{id}-title">{title}</title><desc id="{id}-desc">{desc}</desc>{b}</svg><figcaption class="learn-chart__caption">{cap}</figcaption></figure>'
- b=t(24,25,'같은 30건에서 계산한 두 중심')
- b+=line(60,150,560,150)
- for i,r in enumerate(sorted(data,key=lambda r:r['price'])):
-  b+=f'<circle cx="{60+r["price"]}" cy="{115-(i%3)*14}" r="4" fill="'+('#d97706' if r['id']==7 else '#475569')+f'" data-observation="{r["id"]}"/>'
- for v,label,y,color in [(median(values),'중앙값 122',185,'#1d4ed8'),(mean(values),'평균 146.3',50,'#047857')]:
-  b+=line(60+v,60,60+v,154,color,'stroke-width="2"')+t(60+v,y,label,'text-anchor="middle"')
- for v in [0,100,200,300,400,500]:b+=t(60+v,212,v,'text-anchor="middle"')
- b+=t(432,239,'단가(만원/㎡)')+t(540,70,'7번 480','text-anchor="middle"')
- f1=fig('two-centers','공통 자료의 평균과 중앙값','30건의 평균 146.3, 중앙값122. 7번480은 주황색입니다.',b,'그림 1. 점 하나가 관측 한 건입니다. 겹침을 줄이기 위해 세로 위치만 엇갈리게 놓았습니다. 세로 높이에는 수치 의미가 없습니다.',260)
- b=t(24,25,'크기순으로 정렬한 30개 단가')
- for i,v in enumerate(ordered):
-  x=24+(i%10)*60;y=65+(i//10)*68;selected=i in [14,15]
-  b+=rect(x,y,54,32,'#93c5fd' if selected else '#f1f5f9')+t(x+27,y-7,f'{i+1}번째','text-anchor="middle"')+t(x+27,y+22,v,'text-anchor="middle"')
- b+=t(24,290,'가운데 두 값: 15번째 120, 16번째 124 → (120 + 124) ÷ 2 = 122')
- f2=fig('median-ranks','중앙값의 정렬 위치','오름차순 30건에서 15번째120과16번째124의 평균이122입니다.',b,'그림 2. 이 그림의 가로 위치는 가격의 거리 대신 정렬 순서를 나타냅니다. 중앙값 122가 원자료에 실제로 존재할 필요는 없습니다.',315)
- other=[r['price'] for r in data if r['id']!=7];scenarios=[{'replacement':v,'mean':mean(other+[v]),'median':median(other+[v])} for v in [268,480,900]]
- b=t(24,25,'다른 29건은 고정하고 7번의 값만 바꿉니다')+t(24,50,'중심 단가(만원/㎡)')
- for v in [120,140,160,180]:
-  y=265-(v-100)*2.3;b+=line(75,y,585,y)+t(63,y+4,v,'text-anchor="end"')
- for key,color in [('mean','#047857'),('median','#1d4ed8')]:
-  pts=' '.join(f'{75+(r["replacement"]-268)*.75},{265-(r[key]-100)*2.3}' for r in scenarios)
-  b+=f'<polyline points="{pts}" fill="none" stroke="{color}" stroke-width="2"/>'
-  for r in scenarios:
-   x=75+(r['replacement']-268)*.75;y=265-(r[key]-100)*2.3
-   b+=f'<circle cx="{x}" cy="{y}" r="4" fill="{color}" data-series="{key}" data-replacement="{r["replacement"]}" data-value="{r[key]}"/>'
-   b+=t(x,y-12,f'{r[key]:.1f}','text-anchor="middle"')
- for r in scenarios:b+=t(75+(r['replacement']-268)*.75,286,r['replacement'],'text-anchor="middle"')
- b+=t(362,313,'7번에 넣은 단가(만원/㎡)')+line(30,339,55,339,'#047857','stroke-width="2"')+t(62,344,'평균')+line(155,339,180,339,'#1d4ed8','stroke-width="2"')+t(187,344,'중앙값')
- f3=fig('sensitivity','한 관측값 변화에 대한 민감도','7번을268,480,900으로 바꿀 때 평균은139.3,146.3,160.3이며 중앙값은 모두122입니다.',b,'그림 3. 원래 자료의 7번은 480입니다. 268·900은 영향 비교를 위한 가상 대체값이며, 값을 고치거나 삭제하라는 뜻이 아닙니다.',365)
- b=t(24,25,'두 거래에 어떤 비중을 줄 것인가?')
- for y,label,w in [(74,'거래별 동일 비중',.5),(149,'면적 비중',.1)]:
-  b+=t(24,y-12,label)+rect(24,y,580*w,32,'#93c5fd')+rect(24+580*w,y,580*(1-w),32,'#e2e8f0')
-  b+=t(24+580*w/2,y+22,f'{round(w*100)}%','text-anchor="middle"')+t(24+580*w+580*(1-w)/2,y+22,f'{round((1-w)*100)}%','text-anchor="middle"')
- b+=rect(24,212,14,14,'#93c5fd')+t(46,225,'거래 A: 10㎡ · 단가 200')+rect(330,212,14,14,'#e2e8f0')+t(352,225,'거래 B: 90㎡ · 단가 100')
- f4=fig('weights','거래 가중치와 면적 가중치','두 거래의 단가를 동일 비중으로 평균하면150, 면적10과90을 가중치로 평균하면110입니다.',b,'그림 4. 별도의 가상 거래 두 건. 막대 전체 길이는 가중치 합계 100%이며 단가 단위는 만원/㎡입니다.',250)
- b=t(24,25,'두 집단의 평균을 합칠 때 건수도 함께 씁니다')
- for y,label,v,color in [(65,'A: 10건',100,'#93c5fd'),(120,'B: 90건',200,'#93c5fd'),(175,'전체 100건',190,'#1d4ed8')]:
-  b+=t(24,y+22,label)+rect(145,y,v*2.05,28,color)+t(145+v*2.05+9,y+22,v)
- b+=line(145,229,555,229)
- for v in [0,50,100,150,200]:b+=t(145+v*2.05,251,v,'text-anchor="middle"')
- b+=t(428,277,'평균 단가(만원/㎡)')
- f5=fig('pooled-means','집단 평균의 결합','A10건 평균100과 B90건 평균200의 전체 평균은190. 두 평균을 단순 평균한150과 다릅니다.',b,'그림 5. 별도의 가상 집단. 단위·변수 정의가 같고 서로 중복되지 않는 두 집단을 합친 예입니다.',300)
- parts=[]
- def sec(id,label,title,body):parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}">\n<p class="learn-chapter__label">{label}</p>\n<h2>{title}</h2>\n{body}\n</section>')
- sec('quick-start','서두 · 학습목표','평균과 중앙값은 왜 다를까요?','<p>다섯 사람이 기다린 시간이 10분, 20분, 30분, 40분, 100분이라고 해 보겠습니다. 평균은 40분이지만, 크기순으로 놓았을 때 가운데 값은 30분입니다. 같은 자료인데 중심을 나타내는 숫자가 다릅니다.</p><p>평균은 모든 값을 더해 나눈 값이고, 중앙값은 정렬한 가운데 값입니다. <strong>무엇을 중심으로 삼느냐에 따라 답이 달라지는 것</strong>입니다. 어느 하나가 언제나 더 정확하다고 볼 수는 없습니다.</p><ul class="learn-objectives"><li><strong>평균과 중앙값</strong>을 직접 계산하고, 두 값이 어떤 의미에서 중심을 나타내는지 설명합니다.</li><li>아주 크거나 작은 값이 바뀔 때 두 대표값이 어떻게 달라지는지 이해합니다.</li><li><strong>가중평균</strong>과 여러 집단을 합친 평균을 구할 때 어떤 비중을 써야 하는지 알아봅니다.</li></ul><p>앞 장의 <a href="/learn/stats/graphs/#shape">분포의 모양</a>과 1장의 <a href="/learn/stats/data-and-variables/#units">변수와 단위</a>를 떠올리며 읽어 보세요. 계산 예제에서는 앞 장과 같은 학습 자료를 사용합니다.</p>')
- sec('example','공통 예제','같은 30건에서 두 가지 중심을 구합니다','<p>앞 장의 공통 학습 예시 30건의 단가를 사용합니다. 단위는 만원/㎡이며 값의 합은 4,390입니다. 실제 거래 원천이 확인되지 않았으므로 특정 지역의 시장 수준을 나타내는 자료로 사용하지 않습니다. <a href="/learn/stats/graphs/#data">원자료 표</a>와 <a href="../example-data.json">JSON 자료</a>에서 값을 확인할 수 있습니다.</p>'+f1+'<p>같은 자료에서 평균은 약 146.3, 중앙값은 122입니다. 오른쪽으로 멀리 떨어진 480을 포함해 모든 값을 반영하는 평균과, 정렬한 가운데를 찾는 중앙값의 위치가 다릅니다.</p><p>그림 1·2는 원자료를 그대로 사용합니다. 그림 3은 7번 값만 바꾸는 비교이고, 그림 4·5는 가중치와 집단 평균을 설명하기 위해 별도로 만든 가상 자료입니다. 계산에는 반올림 전 값을 쓰고 결과를 표시할 때 반올림합니다.</p>')
- sec('mean','산술평균','모든 값을 더하고 개수로 나눕니다','<p><strong>산술평균</strong>은 값의 합을 관측 수로 나눈 것입니다. 보통 ‘평균’이라고 할 때는 산술평균을 뜻합니다.</p><p><strong>평균 = 값의 합 ÷ 값의 개수</strong></p><p>서두의 대기 시간은 (10+20+30+40+100)÷5=40분입니다. 40분씩 다섯 명을 합치면 원래 대기 시간의 합인 200분이 됩니다. 이처럼 평균은 전체 합과 연결됩니다.</p><p>수식으로는 x̄=(x₁+x₂+…+xₙ)÷n입니다. xᵢ는 i번째 값, n은 값의 개수, x̄는 표본평균을 뜻합니다. 공통 예시에서는 4,390÷30=146.333…이므로 <strong>약 146.3만원/㎡</strong>입니다. 여기서 4,390은 단가들을 더한 값이지 거래금액의 합이 아닙니다.</p><p>모든 값이 같은 비중으로 들어가므로 한 값이 바뀌면 평균도 바뀝니다. 30건 중 한 값만 30만큼 커지면 평균은 1만큼 커집니다. 큰 값이 평균에 영향을 주는 이유도 같은 원리입니다.</p><p><strong>평균이 자료를 절반으로 나누는 것은 아닙니다.</strong> 공통 예시에서 평균보다 큰 값은 10건이고 나머지 20건은 평균보다 작습니다. ‘평균보다 낮다’는 말이 곧 ‘하위 절반’이라는 뜻은 아닙니다.</p>')
- sec('median','중앙값','값을 크기순으로 놓고 가운데를 찾습니다','<p><strong>중앙값</strong>은 값을 작은 순서대로 정렬했을 때 가운데에 놓인 값입니다. ‘중위값’ 또는 ‘중위’라고도 합니다. 서두의 다섯 대기 시간에서는 세 번째 값인 30분이 중앙값입니다.</p><ul><li><strong>홀수 개:</strong> 가운데 한 값을 고릅니다. n개라면 (n+1)÷2번째 값입니다.</li><li><strong>짝수 개:</strong> 가운데 두 값의 평균을 구합니다. n÷2번째와 그다음 값을 더해 2로 나눕니다.</li></ul>'+f2+'<p>30건에서는 15번째 값 120과 16번째 값 124의 평균을 구해 <strong>122만원/㎡</strong>를 얻습니다. 중앙값 122가 원자료에 실제로 들어 있을 필요는 없습니다.</p><p>중앙값 이하와 이상에는 각각 적어도 절반의 값이 놓입니다. 같은 값이 반복된다면 중앙값보다 엄격히 작은 값과 큰 값의 개수가 정확히 반씩인 것은 아닙니다.</p><p>중앙값은 양 끝의 평균과도 다릅니다. 공통 예시의 최솟값과 최댓값으로 계산한 (62+480)÷2=271은 중앙값이 아닙니다. 가운데를 찾으려면 값의 순서를 봐야 합니다.</p>')
- sec('outliers','극단값과 민감도','가장 큰 값 하나가 달라지면 어떻게 될까요?','<p>다섯 대기 시간 10·20·30·40·100분에서 마지막 100분을 200분으로 바꿔 보겠습니다. 평균은 40분에서 60분으로 커지지만 가운데 값은 여전히 30분입니다. 큰 값의 크기가 달라져도 정렬의 가운데가 그대로라면 중앙값은 변하지 않습니다.</p><p>공통 예시에서도 다른 29건을 고정하고 가장 큰 값인 7번의 단가만 바꿔 보겠습니다.</p>'+f3+'<p>7번이 480에서 900으로 420만큼 커지면 평균은 420÷30=14만큼 올라 약 160.3이 됩니다. 가운데 두 값 120과 124는 그대로라 중앙값은 122입니다. 그래서 중앙값은 평균보다 극단값에 덜 민감하다고 합니다.</p><p>다만 중앙값이 언제나 고정되는 것은 아닙니다. 7번 관측을 아예 제외하면 남은 자료는 29건입니다. 평균은 3,910÷29≈134.8이고, 가운데인 15번째 값은 120이 되어 중앙값도 달라집니다.</p><aside class="learn-caution"><p class="learn-caution__title">영향이 크다는 이유만으로 지우지는 않습니다</p><p>극단값은 입력 오류일 수도, 드물지만 실제로 관측된 값일 수도 있습니다. 값이 큰 이유와 분석 목적을 확인한 뒤 처리해야 합니다. 평균을 원하는 방향으로 바꾸려고 제외해서는 안 됩니다.</p></aside>')
- sec('weighted','가중평균','무엇에 같은 비중을 주는지 정합니다','<p>시험별 반영 비율이나 집단별 인원이 다르면 각 값에 같은 비중을 주기 어려울 수 있습니다. <strong>가중평균</strong>은 값마다 정한 비중을 곱해 더한 뒤 비중의 합으로 나눕니다.</p><p><strong>가중평균 = (가중치×값)의 합 ÷ 가중치의 합</strong></p><p>예를 들어 점수 80과 100을 각각 30%, 70% 반영하면 0.3×80+0.7×100=94점입니다. 반씩 반영한 평균 90점과는 다릅니다. 가중치는 음수가 아니고 합이 0보다 커야 합니다. 수식으로는 Σwᵢxᵢ÷Σwᵢ이며 Σ는 모두 더한다는 뜻입니다.</p><p>면적별 단가에서도 같은 차이가 생깁니다. 가상 거래 A는 10㎡에 단가 200만원/㎡, B는 90㎡에 단가 100만원/㎡라고 합시다. 금액을 면적×단가로 계산하면 각각 2,000만원과 9,000만원입니다.</p>'+f4+'<ul><li><strong>거래마다 같은 비중:</strong> (200+100)÷2=150만원/㎡입니다.</li><li><strong>면적을 비중으로 반영:</strong> (10×200+90×100)÷100=110만원/㎡입니다. 전체 금액 11,000만원을 전체 면적 100㎡로 나눈 값과 같습니다.</li></ul><p>둘 중 하나가 계산을 틀린 것은 아닙니다. 거래 한 건씩에 같은 비중을 줄지, 면적 한 단위씩에 같은 비중을 줄지가 다릅니다. 평균을 비교할 때는 산식과 함께 금액·면적의 정의와 단위도 확인해야 합니다.</p>')
- sec('group-means','평균의 평균','집단 평균을 합칠 때는 인원이나 건수도 필요합니다','<p>A모임 10명의 주간 독서 시간은 평균 100분, B모임 90명의 평균은 200분이라고 해 보겠습니다. 두 모임을 합친 전체 평균은 얼마일까요? 모임별 평균을 단순히 더해 2로 나누면 각 모임을 같은 비중으로 보게 됩니다. 사람 한 명씩에 같은 비중을 주려면 모임별 인원을 반영해야 합니다.</p><p>아래 그림은 같은 계산을 단가 예제로 나타낸 것입니다. 서로 중복되지 않는 A집단은 10건·평균 100, B집단은 90건·평균 200으로 정했습니다.</p>'+f5+'<p>전체 평균은 (10×100+90×200)÷100=<strong>190</strong>입니다. 10×100과 90×200은 각 집단의 값들을 더한 합계이므로, 이를 합쳐 전체 건수로 나눈 것입니다.</p><p>(100+200)÷2=<strong>150</strong>은 두 집단의 평균에 같은 비중을 준 값입니다. 집단 크기가 같을 때는 두 방식이 일치하지만, 크기가 다르면 일반적으로 일치하지 않습니다.</p><p><strong>중앙값은 이런 식으로 합칠 수 없습니다.</strong> 집단별 중앙값과 건수만으로는 전체의 가운데 값이 어디에 놓이는지 알기 어렵습니다. 값의 정렬에 관한 정보가 더 필요합니다.</p><p>또한 집단의 구성비가 바뀌면 각 집단의 평균이 같아도 전체 평균은 달라질 수 있습니다. 시기별 평균을 비교할 때도 조사 대상의 구성이 달라졌는지 살펴봐야 합니다.</p>')
- sec('choice','대표값 선택','한 가지 숫자로 분포 전체를 설명할 수는 없습니다','<p>값의 합과 연결되는 수준을 알고 싶다면 평균이 유용합니다. 크기순으로 가운데에 놓인 값을 알고 싶거나 극단값에 덜 민감한 중심이 필요하다면 중앙값이 유용합니다. 목적에 맞게 고르되 가능하면 두 값과 분포를 함께 보세요.</p><p>공통 예시에서는 평균 146.3이 중앙값 122보다 큽니다. 큰 값 쪽의 관측이 평균에 어떤 영향을 주는지 살펴볼 수 있지만, <strong>평균과 중앙값의 대소만으로 분포의 모양이나 이상치 여부가 정해지지는 않습니다.</strong></p><p>100·100·100과 0·100·200은 평균과 중앙값이 모두 100입니다. 하지만 첫 자료는 모두 같은 값이고, 두 번째는 넓게 퍼져 있습니다. 중심을 구한 뒤에도 그래프나 분위수·표준편차로 퍼짐을 확인해야 합니다.</p><details class="learn-more"><summary>절사평균·최빈값과 평균의 성질</summary><div class="learn-more__body"><p><strong>절사평균</strong>은 정렬한 자료의 양 끝에서 정해진 비율을 제외하고 평균을 구합니다. 제외 비율과 규칙을 밝혀야 하며 불편한 값만 임의로 지우는 것과는 다릅니다. <strong>최빈값</strong>은 가장 자주 나타난 값입니다. 여러 개일 수도 있고, 모든 값이 다르면 하나의 두드러진 최빈값이 없을 수도 있습니다. 히스토그램에서 가장 높은 구간과 개별 값의 최빈값도 구별합니다.</p><p>각 값에서 평균을 뺀 차이인 편차를 모두 더하면 0이 됩니다. 편차제곱의 합을 가장 작게 하는 중심은 평균이고, 절대편차의 합을 가장 작게 하는 중심은 중앙값입니다. 짝수 자료에서는 가운데 두 값 사이의 모든 값이 절대편차합을 최소화하며, 보통 가운데 두 값의 평균을 중앙값으로 정합니다. 이 성질은 뒤에서 오차와 회귀를 배울 때 다시 만납니다.</p></div></details>')
- sec('practice','확인 문제','위치와 비중을 구별해 보세요','<ol class="learn-exercises"><li>공통 예시에서 7번만 480에서 780으로 바꾸었습니다. 평균과 중앙값은 어떻게 될까요?<details><summary>답과 해설</summary><p>합계가 300 늘고 건수는 30이므로 평균은 10 증가해 약 156.3입니다. 가운데 값 120과 124는 변하지 않아 중앙값은 122입니다.</p></details></li><li>10건의 평균 100과 90건의 평균 200을 합친 전체 평균은 150일까요?<details><summary>답과 해설</summary><p>전체 관측에 같은 비중을 주면 (10×100+90×200)÷100=190입니다. 150은 두 집단의 평균을 반씩 반영한 값입니다.</p></details></li><li>100·100·100과 0·100·200의 평균·중앙값이 같다면 분포도 같을까요?<details><summary>답과 해설</summary><p>아니요. 두 자료의 평균과 중앙값은 모두 100이지만 퍼짐이 다릅니다. 중심과 함께 그래프나 퍼짐의 지표를 확인해야 합니다.</p></details></li></ol>')
- sec('macro','CH2 Macro에서 읽기','평균 33.2와 중앙값 26.0은 어떻게 읽을까요?','<p>CH2 Macro의 토지 기본통계에서는 용도지역과 지목별로 단가를 요약합니다. 아래 화면에서 <strong>‘자녹’ 행과 ‘답’ 열이 만나는 칸</strong>을 살펴보세요. 평균 단가는 <strong>33.2만원/㎡</strong>, 중앙값은 <strong>26.0만원/㎡</strong>입니다.</p><figure class="learn-capture learn-capture--detail"><a href="../assets/captures/land-mean-median-cell.png" target="_blank" rel="noopener" aria-label="토지 기본통계의 평균과 중앙값 화면 크게 보기"><img src="../assets/captures/land-mean-median-cell.png" width="251" height="180" loading="lazy" alt="CH2 Macro 토지 기본통계 일부. 용도지역 자녹과 지목 답이 만나는 칸에 평균 33.2와 중앙값 26.0이 표시되어 있습니다."/></a><figcaption class="learn-capture__caption">토지 기본통계의 일부를 확대한 화면입니다. ‘자녹’과 ‘답’이 만나는 칸에서 평균은 33.2, 중앙값은 26.0입니다. 본문의 공통 학습 예시 30건과는 다른 자료이며 수치는 캡처 당시의 값입니다. <a href="../assets/captures/land-mean-median-cell.png" target="_blank" rel="noopener">원본 크게 보기 ↗</a></figcaption></figure><ol class="learn-screen-reading"><li><strong>평균 33.2:</strong> 해당 조건에 포함된 거래들의 단가를 합해 계산한 평균입니다. 큰 단가도 계산에 반영됩니다. 이 값보다 높은 거래와 낮은 거래가 절반씩이라는 뜻은 아닙니다.</li><li><strong>중앙값 26.0:</strong> 같은 대상의 단가를 정렬했을 때 가운데를 나타내는 값입니다. 화면의 ‘중위’도 중앙값을 뜻합니다. 값이 반복될 수 있으므로 26.0보다 엄격히 작거나 큰 거래가 정확히 절반씩인 것은 아닙니다.</li><li><strong>두 값의 차이:</strong> 평균이 중앙값보다 7.2만원/㎡ 높습니다. 큰 단가 쪽의 거래가 평균에 미치는 영향을 단가 분포와 거래 목록에서 살펴볼 수 있습니다. 이 차이만으로 특정 거래가 이상치라고 정하지는 않습니다.</li><li><strong>같은 칸끼리 비교:</strong> 행·열 머리말의 숫자는 각각 다른 범위를 요약한 값입니다. 교차 칸의 평균과 중앙값을 비교할 때는 선택한 지역·기간·건수·이상치 제외 조건과 단위도 함께 확인합니다.</li></ol><p>평균과 중앙값은 같은 자료의 서로 다른 중심입니다. 어느 하나를 ‘맞는 가격’으로 고르기보다 분포의 퍼짐과 큰 값의 위치를 함께 확인하면 두 숫자가 다른 이유를 이해하는 데 도움이 됩니다.</p><p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 기본통계 열기 →</a></p>')
- sec('recap','결론 · 학습 요약','평균은 모든 값을, 중앙값은 가운데 위치를 반영합니다','<p>평균과 중앙값은 같은 자료에서도 다르게 나올 수 있습니다. 계산이 틀린 것인지 판단하기 전에 어떤 중심을 나타내는지 구별해 보세요.</p><ul class="learn-recap-list"><li><strong>평균:</strong> 모든 값을 더해 개수로 나눕니다. 전체 합과 연결되고 극단값의 크기에 영향을 받습니다.</li><li><strong>중앙값:</strong> 정렬한 가운데 값입니다. 짝수 개라면 가운데 두 값의 평균을 구합니다. 극단값의 크기에는 평균보다 덜 민감합니다.</li><li><strong>가중평균:</strong> 각 값에 줄 비중을 정해 계산합니다. 비중을 다르게 주면 같은 값들로도 다른 평균이 나옵니다.</li><li><strong>집단의 결합:</strong> 전체 관측에 같은 비중을 주려면 집단별 평균에 인원이나 건수를 반영합니다. 중앙값은 집단별 중앙값만으로 합칠 수 없습니다.</li><li><strong>분포 확인:</strong> 중심이 같아도 퍼짐은 다를 수 있습니다. 대표값과 함께 건수·단위·그래프를 확인합니다.</li></ul><p>다음 <a href="/learn/stats/quantiles/">5장 ‘분위수와 상자그림’</a>에서는 가운데 한 지점을 넘어, 자료의 여러 위치와 가운데 절반의 범위를 요약하는 방법을 배웁니다.</p><details class="learn-more"><summary>참고자료</summary><div class="learn-more__body"><ul><li><a href="https://www.itl.nist.gov/div898/handbook/eda/section3/eda351.htm">NIST/SEMATECH e-Handbook: Measures of Location</a> — 중심 지표와 극단값 민감도.</li><li><a href="https://openstax.org/books/introductory-statistics-2e/pages/2-5-measures-of-the-center-of-the-data">OpenStax, Introductory Statistics 2e §2.5</a> — 평균·중앙값의 정의와 계산.</li></ul><p class="learn-source-note">참고자료의 기존 확인일: 2026-10-07. 다섯 개 예제 그림은 공통 학습 자료와 별도의 가상 예제로 작성했습니다.</p></div></details>')
- p=ROOT/'mean-and-median/index.html';s=p.read_text(encoding='utf-8');s=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="평균과 중앙값">\n'+'\n'.join(parts)+'\n</article>',s,count=1,flags=re.S)
- s=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1평균과 중앙값의 계산, 극단값의 영향, 가중평균과 집단 평균의 결합을 다섯 그림과 예제로 설명합니다.\2',s,count=1,flags=re.S)
- s=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261021-4',s)
- p.write_text(s,encoding='utf-8');print('Mean:',mean(values),'Median:',median(values),'Sensitivity:',scenarios)
-if __name__=='__main__':build()
+    rows = json.loads((ROOT / 'example-data.json').read_text(encoding='utf-8'))['rows']
+    prices = [row['price'] for row in rows]
+    assert len(rows) == 30 and sum(prices) == 4390
+    assert min(prices) == 62 and max(prices) == 480
+    assert mean(prices) == 4390 / 30 and median(prices) == 122
+    ordered = sorted(prices)
+    assert ordered[14] == 120 and ordered[15] == 124
+    assert sum(price > mean(prices) for price in prices) == 10
+    assert sum(price < mean(prices) for price in prices) == 20
+    other = [row['price'] for row in rows if row['id'] != 7]
+    assert round(mean(other), 2) == 134.83 and median(other) == 120
+    scenarios = {}
+    for value in (268, 480, 900, 780):
+        changed = other + [value]
+        scenarios[value] = (sum(changed), mean(changed), median(changed))
+    assert scenarios[268][0] == 4178 and round(scenarios[268][1], 2) == 139.27 and scenarios[268][2] == 122
+    assert scenarios[480][0] == 4390 and round(scenarios[480][1], 2) == 146.33 and scenarios[480][2] == 122
+    assert scenarios[900][0] == 4810 and round(scenarios[900][1], 2) == 160.33 and scenarios[900][2] == 122
+    assert scenarios[780][0] == 4690 and round(scenarios[780][1], 2) == 156.33 and scenarios[780][2] == 122
+    assert (200 + 100) / 2 == 150 and (10 * 200 + 90 * 100) / (10 + 90) == 110
+    assert (10 * 100 + 90 * 200) / 100 == 190
+    assert (90 * 100 + 10 * 200) / 100 == 110
+    assert (62 + 480) / 2 == 271
+    page_data = {
+        'rows': [{'id': row['id'], 'price': row['price']} for row in rows],
+        'rank15': 120,
+        'rank16': 124,
+        'median': 122,
+    }
+
+    def fig1():
+        body = [tx(16, 24, '단가 점 30개 · 세로는 겹침 방지')]
+        body.append('<line x1="60" y1="150" x2="560" y2="150" stroke="#cbd5e1"/>')
+        lanes = ('115', '101', '87')
+        for index, row in enumerate(sorted(rows, key=lambda item: item['price'])):
+            fill = '#d97706' if row['id'] == 7 else '#475569'
+            stroke = '#d97706' if row['id'] == 7 else '#1e3a8a'
+            thick = '3' if row['id'] == 7 else '1'
+            body.append(
+                f'<circle data-observation="{row["id"]}" cx="{60 + row["price"]}" cy="{lanes[index % 3]}" r="4" '
+                f'fill="{fill}" stroke="{stroke}" stroke-width="{thick}"/>'
+            )
+        mean_x = coord(60 + mean(prices))
+        body.append(f'<line data-guide="mean" x1="{mean_x}" y1="48" x2="{mean_x}" y2="154" stroke="#047857" stroke-width="2"/>')
+        body.append(tx(mean_x, 40, '평균 146.33', ' data-guide="mean" text-anchor="middle"'))
+        body.append('<line data-guide="median" x1="182" y1="48" x2="182" y2="154" stroke="#1d4ed8" stroke-width="2"/>')
+        body.append(tx(182, 176, '중앙값 122', ' data-guide="median" text-anchor="middle"'))
+        for label, x in (('0', 60), ('100', 160), ('200', 260), ('300', 360), ('400', 460), ('500', 560)):
+            body.append(tx(x, 198, label, ' text-anchor="middle"'))
+        body.append(tx(16, 222, '단가(만원/㎡)'))
+        body.append(tx(540, 72, '7번 480', ' text-anchor="middle"'))
+        return (
+            '<figure class="learn-chart learn-chart--wide mm-chart"><svg id="mm-dots" viewBox="0 0 640 240" role="img" '
+            'aria-labelledby="two-centers-title two-centers-desc"><title id="two-centers-title">공통 자료의 평균과 중앙값</title>'
+            '<desc id="two-centers-desc">30건의 평균 146.33, 중앙값 122. 7번 480은 주황색입니다.</desc>'
+            f'{"".join(body)}</svg><figcaption class="learn-chart__caption">그림 1. 가로 위치는 단가입니다. 세로 위치는 점이 겹치지 않게 벌린 자리이며 다른 변수가 아닙니다.</figcaption></figure>'
+        )
+
+    def fig2():
+        body = [tx(16, 24, '정렬 순서 · 15번째와 16번째')]
+        ordered_rows = sorted(rows, key=lambda item: item['price'])
+        for index, row in enumerate(ordered_rows, start=1):
+            focus = index in (15, 16)
+            fill = '#fff7ed' if focus else '#93c5fd'
+            stroke = '#d97706' if focus else '#64748b'
+            thick = '3' if focus else '1'
+            body.append(
+                f'<rect data-order="{index}" data-price="{row["price"]}" x="{12 + (index - 1) * 20}" y="48" width="16" height="36" '
+                f'fill="{fill}" stroke="{stroke}" stroke-width="{thick}"/>'
+            )
+        body.append(tx(292, 104, '15번째 120', ' text-anchor="middle"'))
+        body.append(tx(332, 124, '16번째 124'))
+        body.append(tx(16, 156, '중앙값 (120+124)/2 = 122'))
+        body.append(tx(16, 180, '가로 간격은 순서입니다'))
+        return (
+            '<figure class="learn-chart learn-chart--wide mm-chart"><svg id="mm-ranks" viewBox="0 0 640 200" role="img" '
+            'aria-labelledby="median-ranks-title median-ranks-desc"><title id="median-ranks-title">정렬한 30건의 중앙값</title>'
+            '<desc id="median-ranks-desc">오름차순 30건에서 15번째 120과 16번째 124의 평균이 122입니다.</desc>'
+            f'{"".join(body)}</svg><figcaption class="learn-chart__caption">그림 2. 칸의 가로 위치는 크기순 번호입니다. 120과 124의 차이와 124와 200의 차이를 칸 간격으로 비교하지 않습니다.</figcaption></figure>'
+        )
+
+    def fig3():
+        body = [tx(16, 24, '7번만 바꾼 평균과 중앙값')]
+        body.append(tx(16, 48, '평균', ' fill="#047857"'))
+        body.append(tx(70, 48, '중앙값', ' fill="#1d4ed8"'))
+        points = {'mean': [], 'median': []}
+        circles = []
+        for value in (268, 480, 900):
+            changed = other + [value]
+            for key, actual in (('mean', mean(changed)), ('median', median(changed))):
+                cx = 75 + (value - 268) * 0.75
+                cy = 265 - (actual - 100) * 2.3
+                points[key].append(f'{coord(cx)},{coord(cy)}')
+                fill = '#047857' if key == 'mean' else '#1d4ed8'
+                stroke = '#d97706' if value == 480 else '#334155'
+                thick = '3' if value == 480 else '1'
+                circles.append(
+                    f'<circle cx="{coord(cx)}" cy="{coord(cy)}" r="4" fill="{fill}" stroke="{stroke}" stroke-width="{thick}" '
+                    f'data-series="{key}" data-replacement="{value}" data-value="{coord(actual)}"/>'
+                )
+        body.append(f'<polyline fill="none" stroke="#047857" points="{" ".join(points["mean"])}"/>')
+        body.append(f'<polyline fill="none" stroke="#1d4ed8" points="{" ".join(points["median"])}"/>')
+        body.extend(circles)
+        for value in (268, 480, 900):
+            body.append(tx(coord(75 + (value - 268) * 0.75), 292, value, ' text-anchor="middle"'))
+        body.append(tx(16, 316, '7번에 대입한 단가(만원/㎡)'))
+        return (
+            '<figure class="learn-chart learn-chart--wide mm-chart"><svg id="mm-sensitivity" viewBox="0 0 640 340" role="img" '
+            'aria-labelledby="sensitivity-title sensitivity-desc"><title id="sensitivity-title">한 관측값 변화에 대한 민감도</title>'
+            '<desc id="sensitivity-desc">7번을 268, 480, 900으로 바꿀 때 평균은 약 139.27, 146.33, 160.33이며 중앙값은 122입니다.</desc>'
+            f'{"".join(body)}</svg><figcaption class="learn-chart__caption">그림 3. 초록은 평균, 파랑은 중앙값입니다. 268과 900은 학습용 대체값이며 7번 거래를 오류로 본 것이 아닙니다.</figcaption></figure>'
+        )
+
+    def bars(svg_id, title_id, caption_id, title, desc, labels, widths, shares, result):
+        body = [tx(16, 24, title)]
+        for index, (label, width, share) in enumerate(zip(labels, widths, shares)):
+            y = 48 + index * 52
+            body.append(tx(16, y + 18, label))
+            body.append(f'<rect data-bar="{index}" x="36" y="{y}" width="{width}" height="24" fill="#93c5fd" stroke="#64748b"/>')
+            body.append(tx(36 + width + 8, y + 18, share, f' data-share="{index}"'))
+        body.append(tx(16, 168, result))
+        return (
+            f'<figure class="learn-chart learn-chart--wide mm-chart"><svg id="{svg_id}" viewBox="0 0 640 190" role="img" '
+            f'aria-labelledby="{title_id} {caption_id}"><title id="{title_id}">{escape(title)}</title>'
+            f'<desc id="{caption_id}">{escape(desc)}</desc>{"".join(body)}</svg>'
+        )
+
+    fig4 = bars(
+        'mm-weights', 'weights-title', 'weights-desc', '거래 비중과 면적 비중',
+        '거래별 평균은 150, 면적가중 평균은 110입니다.',
+        ('A 200', 'B 100'), (150, 150), ('50%', '50%'), '거래별 평균 150만원/㎡',
+    ) + '<figcaption class="learn-chart__caption">그림 4. A 10㎡·200만원/㎡, B 90㎡·100만원/㎡인 가상 두 거래입니다. 공통 30건이 아닙니다.</figcaption></figure>'
+    fig5 = bars(
+        'mm-pool', 'pooled-means-title', 'pooled-means-desc', '집단 비중과 거래 비중',
+        '두 평균의 단순평균은 150, 건수를 반영한 전체 평균은 190입니다.',
+        ('A 100', 'B 200'), (28, 252), ('10%', '90%'), '거래 건수 기준 190만원/㎡',
+    ) + '<figcaption class="learn-chart__caption">그림 5. A 10건·평균 100, B 90건·평균 200인 가상 집단입니다. 집단 중앙값의 평균으로 전체 중앙값을 만들지 않습니다.</figcaption></figure>'
+
+    def sec(sid, label, title, inner):
+        return (
+            f'<section class="learn-chapter__step" id="{sid}" data-toc-label="{escape(label)}">'
+            f'<p class="learn-chapter__label">{escape(label)}</p><h2>{escape(title)}</h2>{inner}</section>'
+        )
+
+    controls_dots = (
+        '<div class="mm-controls" hidden><div class="mm-shortcuts">'
+        '<button type="button" data-show="mean" aria-pressed="true">평균 표시</button>'
+        '<button type="button" data-show="median" aria-pressed="true">중앙값 표시</button></div>'
+        '<p role="status" id="mm-dot-status"></p></div>'
+    )
+    controls_rank = (
+        '<div class="mm-controls" hidden><div class="mm-shortcuts">'
+        '<button type="button" data-rank-step="sort">정렬</button>'
+        '<button type="button" data-rank-step="center">가운데 위치</button>'
+        '<button type="button" data-rank-step="pair">15·16번째</button>'
+        '<button type="button" data-rank-step="median" aria-pressed="true">중앙값 122</button></div>'
+        '<p role="status" id="mm-rank-status"></p></div>'
+    )
+    controls_sens = (
+        '<div class="mm-controls" hidden><div class="mm-shortcuts">'
+        '<button type="button" data-case="268">268</button>'
+        '<button type="button" data-case="480" aria-pressed="true">원래 값 480</button>'
+        '<button type="button" data-case="900">900</button>'
+        '<button type="button" data-case="drop">7번 제외</button></div>'
+        '<p role="status" id="mm-sens-status"></p></div>'
+    )
+    controls_weight = (
+        '<div class="mm-controls" hidden><div class="mm-shortcuts">'
+        '<button type="button" data-weight="trade" aria-pressed="true">거래별 동일 비중</button>'
+        '<button type="button" data-weight="area">면적 비중</button></div>'
+        '<p role="status" id="mm-weight-status"></p></div>'
+    )
+    controls_pool = (
+        '<div class="mm-controls" hidden><div class="mm-shortcuts">'
+        '<button type="button" data-pool="equal">집단 균등 비중</button>'
+        '<button type="button" data-pool="count" aria-pressed="true">거래 건수 비중</button></div>'
+        '<p role="status" id="mm-pool-status"></p></div>'
+    )
+    parts = [
+        sec('quick-start', '서두 · 학습목표', '어느 거래가격이 시장의 중심을 나타낼까요?',
+            '<p>다섯 건의 단가가 100, 110, 120, 130, 300만원/㎡라고 해 보겠습니다. 모두 더해 5로 나누면 평균은 152만원/㎡입니다. 작은 순서로 놓으면 가운데 값은 120만원/㎡입니다. 같은 자료인데 두 값이 다른 이유는 300이 나머지 네 건보다 크기 때문입니다. 평균은 그 크기를 모두 반영하고, 중앙값은 정렬한 가운데 위치를 찾습니다.</p>'
+            '<p>120이 언제나 더 정확한 가격은 아닙니다. 보려는 질문에 따라 평균이 맞을 수도 있고 중앙값이 맞을 수도 있습니다.</p>'
+            '<ul class="learn-objectives"><li>산술평균과 중앙값의 차이를 이해합니다.</li><li>같은 자료에서 두 대표값을 계산합니다.</li><li>극단값이 평균과 중앙값에 미치는 영향을 비교합니다.</li><li>값을 바꾸는 것과 관측을 빼는 것을 구별합니다.</li><li>거래별 단가 평균과 면적가중 평균을 구별합니다.</li><li>집단 크기가 다를 때 전체 평균을 계산합니다.</li><li>절사평균과 최빈값의 뜻을 알아봅니다.</li><li>CH2 Macro의 평균·중위 단가를 읽는 방법을 이해합니다.</li></ul>'),
+        sec('center', '대표값', '여러 관측을 하나의 숫자로 요약합니다',
+            '<p>대표값은 자료의 중심 위치를 나타내는 통계량입니다. 산술평균은 값을 더하고, 중앙값은 정렬한 가운데를 찾고, 최빈값은 가장 자주 나오는 값을 찾습니다.</p>'
+            '<p><strong>대표값은 요약한 숫자입니다.</strong> 평균이 150만원/㎡여도 150에 거래된 사례가 없을 수 있고, 그 평균이 특정 토지의 적정가격이 되지는 않습니다.</p>'),
+        sec('example', '공통 학습자료', '30건의 단가로 평균과 중앙값을 계산합니다',
+            '<p>1~3장의 공통 학습자료 30건에서 이번 장은 거래단가만 사용합니다. 단가 합계는 4,390, 최솟값은 62, 최댓값은 480, 산술평균은 약 146.33, 중앙값은 122입니다. 4,390은 단가를 더한 값이며 거래금액의 합이 아닙니다. 번호는 거래 시점이 아닙니다.</p>'
+            '<p>이 자료는 출처와 표집 설계가 확인되지 않은 학습 예제입니다. <a href="/learn/stats/graphs/#data">원자료 표</a>와 <a href="../example-data.json">JSON</a>에서 값을 확인할 수 있습니다.</p>'
+            + controls_dots + fig1() +
+            '<p>그림에서 평균은 중앙값보다 오른쪽에 있습니다. 480은 다른 점보다 멀리 떨어져 있습니다. 평균 146.33보다 큰 관측은 10건, 작은 관측은 20건입니다. 평균보다 낮다는 말과 하위 50%는 다릅니다.</p>'),
+        sec('mean', '산술평균', '모든 관측을 같은 비중으로 더합니다',
+            '<p>산술평균은 합을 관측수로 나눈 값입니다. 보통 평균이라고 하면 이 값을 말합니다.</p>'
+            '<p>평균 = (x₁+…+xₙ) / n = 4,390 / 30 ≈ 146.33만원/㎡.</p>'
+            '<p>이 계산에서 거래 한 건의 비중은 모두 1/30입니다. 면적이 큰 거래와 작은 거래도 한 건으로는 같습니다. 그래서 이번 평균은 거래 건수 기준 단가의 산술평균입니다.</p>'
+            '<p>한 건의 단가가 30 늘면 합이 30 늘고 평균은 30/30=1 늘어납니다. 한 건이 300 늘면 평균은 10 늘어납니다. 평균이 큰 값에 움직이는 것은 계산 오류가 아니라 산술평균의 성질입니다.</p>'),
+        sec('median', '중앙값', '정렬한 뒤 가운데 위치를 찾습니다',
+            '<p>중앙값은 값을 작은 순서로 놓았을 때의 가운데입니다. 표의 중위도 같은 뜻입니다. 홀수 개이면 가운데 한 값을 고릅니다. 10, 20, 30, 40, 100의 중앙값은 30입니다. 짝수 개이면 가운데 두 값의 평균을 씁니다. 10, 20, 30, 40, 50, 100이면 (30+40)/2=35이고, 35는 원자료에 없어도 됩니다.</p>'
+            '<p>30건의 가운데는 15번째와 16번째입니다. 정렬하면 120과 124이므로 중앙값은 (120+124)/2=122만원/㎡입니다.</p>'
+            + controls_rank + fig2() +
+            '<p>같은 값이 반복되면 중앙값보다 엄격히 작은 건수와 엄격히 큰 건수가 정확히 반반이 아닐 수 있습니다. 중앙값은 최솟값과 최댓값의 평균도 아닙니다. (62+480)/2=271이지만 중앙값은 122입니다.</p>'),
+        sec('outliers', '극단값', '값을 바꾸는 것과 관측을 빼는 것은 다릅니다',
+            '<p>10, 20, 30, 40, 100의 평균은 40, 중앙값은 30입니다. 100을 200으로 바꾸면 평균은 60이 되고 중앙값은 30입니다. 가운데 위치가 그대로이기 때문입니다. 관측을 넣거나 빼서 정렬이 바뀌면 중앙값도 달라질 수 있습니다.</p>'
+            '<p>공통 자료에서 나머지 29건은 두고 7번의 480만 바꿉니다. 268과 900은 가상 대체값입니다.</p>'
+            '<div class="learn-data learn-data--full mm-table"><table><caption>7번 단가를 바꾸거나 빼면</caption><thead><tr><th scope="col">상태</th><th scope="col">건수</th><th scope="col">합계</th><th scope="col">평균</th><th scope="col">중앙값</th></tr></thead><tbody>'
+            '<tr><th scope="row">268로 변경</th><td>30</td><td>4,178</td><td>139.27</td><td>122</td></tr>'
+            '<tr><th scope="row">원래 480</th><td>30</td><td>4,390</td><td>146.33</td><td>122</td></tr>'
+            '<tr><th scope="row">900으로 변경</th><td>30</td><td>4,810</td><td>160.33</td><td>122</td></tr>'
+            '<tr><th scope="row">7번 제외</th><td>29</td><td>3,910</td><td>134.83</td><td>120</td></tr>'
+            '</tbody></table></div>'
+            + controls_sens + fig3() +
+            '<p>480을 900으로 바꾸면 합이 420 늘고 평균은 420/30=14 늘어 약 160.33이 됩니다. 이번 세 값에서는 가운데 120과 124가 그대로라 중앙값은 122입니다. 7번을 빼면 건수가 29가 되어 가운데는 15번째 한 값인 120입니다. 평균은 3,910/29≈134.83입니다.</p>'
+            '<p>평균에 영향이 크다고 그 거래를 빼지는 않습니다. 유효한 거래인지, 면적과 금액이 맞는지, 조건이 다른지, 분석 목적에 넣을 거래인지를 먼저 봅니다. 원자료의 오류와 평균에 미치는 영향은 다른 문제입니다.</p>'),
+        sec('choice', '어느 대표값인가', '평균과 중앙값은 다른 질문에 답합니다',
+            '<p>산술평균은 전체 합의 중심입니다. 중앙값은 정렬한 가운데 위치입니다. 고가 몇 건에 덜 기대고 중간 수준을 보려면 중앙값이 유용할 수 있습니다. 서로 다른 유형이 섞여 있으면 중앙값도 한 시장의 전형적인 가격이라고 보기 어렵습니다. 평균, 중앙값, 거래 건수, 분포를 함께 봅니다.</p>'),
+        sec('weighted', '가중평균', '거래 한 건과 면적 1㎡는 비중이 다릅니다',
+            '<p>가중평균은 (가중치×값)의 합을 가중치의 합으로 나눕니다. 가중치는 음수가 아니고 합은 0보다 커야 합니다. 가중치가 모두 같으면 산술평균과 같습니다.</p>'
+            '<div class="learn-data learn-data--full mm-table"><table><caption>가상 거래 두 건</caption><thead><tr><th scope="col">거래</th><th scope="col">면적</th><th scope="col">단가</th><th scope="col">금액</th></tr></thead><tbody>'
+            '<tr><th scope="row">A</th><td>10㎡</td><td>200</td><td>2,000만원</td></tr>'
+            '<tr><th scope="row">B</th><td>90㎡</td><td>100</td><td>9,000만원</td></tr>'
+            '<tr><th scope="row">합계</th><td>100㎡</td><td></td><td>11,000만원</td></tr>'
+            '</tbody></table></div>'
+            '<p>거래별 평균은 (200+100)/2=150입니다. 면적가중 평균은 (10×200+90×100)/(10+90)=110이고, 11,000/100과도 같습니다.</p>'
+            + controls_weight + fig4 +
+            '<p>거래별 평균은 A와 B를 50%씩 반영합니다. 면적가중 평균은 A 10%, B 90%입니다. 어느 계산이 틀린 것은 아니고, 같은 비중을 주는 대상이 다릅니다. 평균단가라는 이름만으로는 가중치를 알 수 없습니다.</p>'
+            '<p>면적가중 단가는 각 거래의 금액과 면적이 서로 대응할 때 성립합니다. 집합건물의 거래금액과 전용면적, 토지 거래금액과 토지면적은 단위가 만원/㎡로 같아도 측정 대상이 다를 수 있습니다.</p>'),
+        sec('group-means', '평균의 평균', '건수가 많은 집단이 전체 평균에 더 들어갑니다',
+            '<p>A는 10건·평균 100, B는 90건·평균 200이고 서로 겹치지 않으며 단가의 정의가 같다고 하겠습니다. 두 평균을 더해 2로 나누면 150입니다. 이것은 집단에 같은 비중을 준 값입니다. 거래 한 건에 같은 비중을 주면 (10×100+90×200)/100=190입니다.</p>'
+            + controls_pool + fig5 +
+            '<p>집단 평균과 관측수를 알면 전체 평균은 (n₁x̄₁+n₂x̄₂)/(n₁+n₂)로 합칠 수 있습니다. 중앙값은 다릅니다. 집단별 중앙값과 건수만으로는 전체를 정렬한 가운데가 정해지지 않습니다. 읍면동 중앙값을 평균해 시군구 중앙값으로 쓰지 않습니다. 원자료를 합친 뒤 다시 중앙값을 구합니다.</p>'),
+        sec('composition', '거래 구성', '집단 가격이 그대로여도 전체 평균은 달라질 수 있습니다',
+            '<p>A 평균 100, B 평균 200이 두 기간 모두 같다고 하겠습니다. 첫 기간이 A 90건·B 10건이면 전체 평균은 110입니다. 다음 기간이 A 10건·B 90건이면 전체 평균은 190입니다. 달라진 것은 거래 구성입니다.</p>'
+            '<p>전체 평균이 올랐다고 같은 부동산의 가격이 올랐다고 보지는 않습니다. 구성이 바뀌었다고 가격 변화가 없었다고 단정하지도 않습니다. 기간을 비교할 때는 구성과 가격 수준을 함께 봅니다.</p>'),
+        sec('more-centers', '다른 대표값', '절사평균, 최빈값, 최소화하는 오차',
+            '<p>10% 절사평균은 정렬한 뒤 작은 쪽과 큰 쪽에서 각각 10%를 빼고 남은 값의 평균을 구합니다. 빼는 비율은 미리 정합니다. 결과를 맞추려고 특정 거래만 지우는 것과는 다릅니다.</p>'
+            '<p>최빈값은 가장 자주 나오는 값입니다. 100, 100, 120, 150, 200의 최빈값은 100입니다. 여러 개일 수도 있고, 단가가 모두 다르면 하나의 최빈값이 없을 수 있습니다. 히스토그램에서 가장 높은 구간은 개별 값의 최빈값과 다르며, 구간 폭에 따라 달라질 수 있습니다.</p>'
+            '<details class="learn-more"><summary>평균과 중앙값이 최소화하는 오차</summary><div class="learn-more__body"><p>어떤 수 c와 각 관측의 차이를 제곱해 모두 더하면, 그 합이 가장 작아지는 c는 산술평균입니다. 차이의 절댓값을 모두 더하면, 그 합이 가장 작아지는 c는 중앙값입니다. 짝수 개이고 가운데 두 값이 다르면 그 두 값 사이의 모든 c가 절대오차 합을 최소화합니다. 통계에서는 보통 그 두 값의 평균을 중앙값으로 적습니다.</p><p>제곱오차의 중심은 평균이고, 절대오차의 중심은 중앙값입니다. 이후 예측오차에서 MAE와 RMSE가 다른 모형을 고를 수 있는 이유와 이어집니다.</p></div></details>'
+            '<p>자료 100, 100, 100과 0, 100, 200은 평균과 중앙값이 모두 100입니다. 퍼짐은 다릅니다. 최솟값, 최댓값, 분위수, 분산, 히스토그램, 상자그림이 더 필요합니다. 5장과 6장에서 위치와 퍼짐을 이어서 봅니다.</p>'),
+        sec('practice', '확인 문제', '계산 기준을 구별해 보세요',
+            '<ol class="learn-exercises">'
+            '<li>7번의 단가를 480에서 780으로 바꾸면 평균과 중앙값은 어떻게 될까요?<details><summary>답과 해설</summary><p>단가가 300 늘어 합계는 4,690, 평균은 4,690/30≈156.33입니다. 기존 평균보다 10 큽니다. 가운데 120과 124는 그대로이므로 중앙값은 122입니다.</p></details></li>'
+            '<li>A 10건의 평균이 100이고 B 90건의 평균이 200입니다. 전체 평균을 150으로 계산해도 될까요?<details><summary>답과 해설</summary><p>거래 100건의 평균이라면 그렇지 않습니다. (10×100+90×200)/100=190입니다. 150은 두 집단 평균에 50%씩 준 값입니다.</p></details></li>'
+            '<li>거래별 평균이 150이고 면적가중 평균이 110이면 하나가 틀린 계산일까요?<details><summary>답과 해설</summary><p>그렇지 않습니다. 거래별 평균은 거래 한 건을, 면적가중 평균은 면적 1㎡를 같은 비중으로 봅니다.</p></details></li>'
+            '<li>중앙값이 100인 두 지역은 가격 분포도 비슷할까요?<details><summary>답과 해설</summary><p>반드시 그렇지는 않습니다. 퍼짐, 분위수, 극단값, 거래 건수가 다를 수 있습니다.</p></details></li>'
+            '<li>단가 480이 평균에 크게 영향을 주면 그 거래를 빼는 것이 좋을까요?<details><summary>답과 해설</summary><p>영향이 크다는 이유만으로 빼지는 않습니다. 거래의 유효성, 면적과 금액, 특수 조건, 분석 목적에 포함되는지를 먼저 확인합니다.</p></details></li>'
+            '</ol>'),
+        sec('macro', 'CH2 Macro에서 읽기', '평균 33.2와 중위 26.0은 어떻게 읽을까요?',
+            '<p>토지 기본통계에서는 지역, 기간, 용도지역, 지목별로 단가를 요약합니다. 아래는 자녹과 답이 만나는 칸의 과거 화면입니다.</p>'
+            '<figure class="learn-capture learn-capture--detail"><a href="../assets/captures/land-mean-median-cell.png" target="_blank" rel="noopener"><img src="../assets/captures/land-mean-median-cell.png" width="251" height="180" loading="lazy" alt="CH2 Macro 토지 기본통계 일부. 용도지역 자녹과 지목 답이 만나는 칸에 평균 33.2와 중앙값 26.0이 표시되어 있습니다."/></a>'
+            '<figcaption class="learn-capture__caption">자녹·답 칸의 평균 33.2만원/㎡, 중위 26.0만원/㎡입니다. 차이는 7.2입니다. 캡처 당시의 값이며 공통 30건이나 현재 운영 통계가 아닙니다.</figcaption></figure>'
+            '<p>평균 33.2와 중위 26.0은 같은 조건의 거래를 다른 방법으로 요약한 값입니다. 차이가 7.2라고 고가 거래의 건수나 이상치 여부가 정해지지는 않습니다. 그 조건의 모든 토지가 26만원/㎡에 거래된다는 뜻도 아닙니다.</p>'
+            '<p>확인한 토지 기본통계에서 매트릭스 칸의 평균은 그 조건에 들어온 거래단가의 산술평균입니다. 거래 한 건이 같은 비중입니다. 연도별 표의 단가는 거래금액 합을 면적 합으로 나눈 값입니다. 중위는 그 단가 목록의 중앙값입니다. 칸마다 같은 산식이라고 단정하지 않으려면 표의 이름을 함께 봅니다. 읍면동 중위를 평균해 시군구 중위로 쓰지 않습니다.</p>'
+            '<ol class="learn-screen-reading"><li><strong>건수:</strong> 5건과 500건의 대표값은 안정성이 다릅니다.</li>'
+            '<li><strong>산식:</strong> 거래별 평균인지 면적가중 평균인지 확인합니다.</li>'
+            '<li><strong>조건:</strong> 같은 자녹·답이어도 면적, 도로, 이용상황, 시점이 다를 수 있습니다.</li>'
+            '<li><strong>기간:</strong> 3년·5년·7년 평균이 달라도 구성이 바뀐 결과일 수 있습니다. 기간은 서로 겹칩니다.</li>'
+            '<li><strong>차이:</strong> 평균이 중위보다 높으면 큰 단가의 영향을 분포와 거래 목록에서 살펴봅니다.</li></ol>'
+            '<p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 기본통계 열기 →</a></p>'),
+        sec('recap', '결론 · 학습 요약', '평균은 값의 크기를, 중앙값은 가운데 위치를 반영합니다',
+            '<ul class="learn-recap-list">'
+            '<li><strong>산술평균:</strong> 합을 건수로 나눕니다.</li>'
+            '<li><strong>중앙값:</strong> 정렬한 가운데입니다. 짝수 개이면 가운데 두 값의 평균입니다.</li>'
+            '<li><strong>극단값:</strong> 평균은 크기에 민감하고, 중앙값은 그보다 덜 민감합니다. 관측을 빼면 둘 다 다시 계산합니다.</li>'
+            '<li><strong>가중평균:</strong> 거래 한 건과 면적 1㎡는 다른 질문입니다.</li>'
+            '<li><strong>집단 평균:</strong> 전체 평균에는 건수가 들어갑니다. 중앙값은 집단 중앙값만으로 합치지 않습니다.</li>'
+            '<li><strong>구성:</strong> 유형의 비중이 바뀌어도 전체 평균은 달라질 수 있습니다.</li>'
+            '</ul>'
+            '<p>다음 <a href="/learn/stats/quantiles/">5장 「분위수와 상자그림」</a>에서는 Q1·Q3·IQR로 분포의 위치를 더 나눕니다.</p>'
+            '<details class="learn-more"><summary>참고자료</summary><div class="learn-more__body"><ul>'
+            '<li><a href="https://www.itl.nist.gov/div898/handbook/eda/section3/eda351.htm">NIST/SEMATECH e-Handbook: Measures of Location</a></li>'
+            '<li><a href="https://openstax.org/books/introductory-statistics-2e/pages/2-5-measures-of-the-center-of-the-data">OpenStax, Introductory Statistics 2e §2.5</a></li>'
+            '</ul><p class="learn-source-note">참고자료 확인일: 2026-10-07. 그림 1·2·3은 공통 학습자료이고 그림 4·5는 별도 가상 예제입니다. 화면의 33.2와 26.0은 캡처 당시의 값입니다.</p></div></details>'),
+    ]
+    html = f'''<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>04. 평균과 중앙값 | 통계학 &amp; 데이터 분석</title>
+    <meta name="description" content="산술평균과 중앙값, 극단값의 영향, 면적가중 평균과 집단 평균을 같은 자료와 가상 예제로 비교합니다." />
+    <link rel="canonical" href="https://ch2data.com/learn/stats/mean-and-median/" />
+    <script src="/learn/stats/learn-stats-theme.js?v=20261023-1"></script>
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261023-1" />
+    <link rel="stylesheet" href="/learn/stats/learn-reader.css?v=20261026-toc" />
+    <link rel="stylesheet" href="/learn/stats/mean-and-median/chapter.css?v=20261026-9" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero hero--document">
+        <p class="learn-breadcrumb"><a href="https://ch2data.com/">CH2 DATA</a> · <a href="/learn/stats/">통계학 &amp; 데이터 분석</a></p>
+        <p class="hero__eyebrow">I. 데이터와 기술통계</p>
+        <h1 class="hero__title">04. 평균과 중앙값</h1>
+        <p class="learn-chapter-relevance">Macro 활용도 <span class="learn-relevance" aria-label="Macro 활용도 3단계, 핵심"><span aria-hidden="true">★★★</span></span></p>
+        <p class="learn-relevance-guide">Macro 활용도: ★★★ 핵심 · ★★☆ 권장 · ★☆☆ 심화<br>별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.</p>
+      </header>
+      <article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="평균과 중앙값">{''.join(parts)}</article>
+      <nav class="learn-chapter-nav" aria-label="장 이동">
+        <a href="/learn/stats/graphs/">← 03. 그래프로 보는 데이터와 분포</a>
+        <a href="/learn/stats/quantiles/">05. 분위수와 상자그림 →</a>
+      </nav>
+      <footer class="footer"><nav class="footer__links"><a href="https://ch2data.com/">홈</a><a href="/learn/stats/">통계학 &amp; 데이터 분석</a></nav><p>© CH2 DATA</p></footer>
+    </div>
+    <script src="/learn/stats/learn-stats-toc.js?v=20261026-9" defer></script>
+    <script type="application/json" id="mm-data">{json.dumps(page_data, ensure_ascii=False)}</script>
+    <script type="module" src="/learn/stats/mean-and-median/experiment.js?v=20261026-9"></script>
+  </body>
+</html>
+'''
+    ids = re.findall(r'\sid="([^"]+)"', html)
+    if len(ids) != len(set(ids)):
+        raise SystemExit(f'duplicate ids: {sorted({item for item in ids if ids.count(item) > 1})}')
+    charts = [ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>', html, re.S)]
+    assert len(charts) == 5
+    dot = next(svg for svg in charts if svg.attrib['aria-labelledby'].startswith('two-centers'))
+    points = [node for node in dot.findall('circle') if 'data-observation' in node.attrib]
+    assert len(points) == 30
+    for point in points:
+        row = next(item for item in rows if item['id'] == int(point.attrib['data-observation']))
+        assert float(point.attrib['cx']) == 60 + row['price']
+    sensitivity = next(svg for svg in charts if svg.attrib['aria-labelledby'].startswith('sensitivity'))
+    for point in sensitivity.findall('circle'):
+        replacement = int(point.attrib['data-replacement'])
+        key = point.attrib['data-series']
+        actual = mean(other + [replacement]) if key == 'mean' else median(other + [replacement])
+        assert abs(float(point.attrib['data-value']) - actual) < 1e-8
+        assert abs(float(point.attrib['cx']) - (75 + (replacement - 268) * 0.75)) < 1e-8
+        assert abs(float(point.attrib['cy']) - (265 - (actual - 100) * 2.3)) < 1e-8
+    exercises = html.split('<ol class="learn-exercises">')[1].split('</ol>')[0]
+    assert exercises.count('<summary>답과 해설</summary>') == 5 and ' open' not in exercises
+    assert 'id="mean"' in html and 'id="median"' in html
+    assert '[그림 ' not in html and '★☆☆ 심화' in html and '3단계, 핵심' in html
+    assert 'land-mean-median-cell.png' in html
+    (ROOT / 'mean-and-median' / 'index.html').write_text(html, encoding='utf-8')
+    print('chapter 4 rebuilt', round(mean(prices), 2), median(prices))
+
+
+if __name__ == '__main__':
+    build()

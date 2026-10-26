@@ -12,7 +12,7 @@
     <script src="/learn/stats/learn-stats-theme.js?v=20261023-1"></script>
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261023-1" />
-    <link rel="stylesheet" href="/learn/stats/learn-reader.css?v=20261025-2" />
+    <link rel="stylesheet" href="/learn/stats/learn-reader.css?v=20261026-toc" />
   <link rel="stylesheet" href="/learn/stats/comparing-groups/chapter.css?v=20261024-1" />
   </head>
   <body>
@@ -69,32 +69,31 @@
 <p>두 방법은 표준오차와 자유도를 구하는 방식이 다릅니다. 자료의 특성과 가정을 확인하지 않은 채 서로 섞어 사용해서는 안 됩니다.</p></div></details></section>
 <section class="learn-chapter__step" id="example" data-toc-label="독립표본 계산 예제"><p class="learn-chapter__label">독립표본 계산 예제</p><h2>평균 차이뿐 아니라 차이의 범위도 확인하세요</h2><p>11장부터 사용한 공통 학습 자료 30건을 주거와 상업 두 집단으로 나누어 보겠습니다.</p>
 <p>각 집단의 자료는 15건이며, 계산 결과는 다음과 같습니다.</p>
-<div class="learn-data learn-data--full"><table><thead><tr><th scope="col">구분</th><th scope="col">주거</th><th scope="col">상업</th></tr></thead><tbody><tr><th scope="row">표본수</th><td>15건</td><td>15건</td></tr><tr><th scope="row">평균 단가</th><td>106.20</td><td>186.47</td></tr><tr><th scope="row">표본표준편차</th><td>21.73</td><td>99.22</td></tr></tbody></table></div>
-<p>단위: 평균과 표준편차는 만원/㎡</p>
+<div class="learn-data learn-data--full"><table><thead><tr><th scope="col">구분</th><th scope="col">주거</th><th scope="col">상업</th></tr></thead><tbody><tr><th scope="row">표본수</th><td>15건</td><td>15건</td></tr><tr><th scope="row">평균 단가</th><td>106.20</td><td>186.47</td></tr><tr><th scope="row">표본표준편차</th><td>21.73</td><td>99.22</td></tr><tr><th scope="row">평균의 표준오차</th><td>5.61</td><td>25.62</td></tr></tbody></table></div>
+<p>단위는 만원/㎡입니다. 표준오차는 각 집단 평균의 s/√n입니다.</p>
 <figure class="learn-chart learn-chart--wide" id="gg-distribution"><svg viewBox="0 0 640 375" role="img" aria-labelledby="groups-title groups-desc"><title id="groups-title">주거·상업의 개별 단가와 평균·표본표준편차 (만원/㎡)</title><desc id="groups-desc">그림 1. 공통 학습 자료 각 15건입니다. 상업의 480도 그대로 표시합니다. 점의 세로 위치는 겹침을 줄이기 위한 배치이며 별도 측정값이 아닙니다. 주황 점선은 평균 위치입니다.</desc><text x="24" y="28" >집단별 평균과 개별 단가의 흩어짐을 함께 봅니다</text><text x="24" y="48" >주거 · n=15 · 평균 106.20 · 표본 s=21.73</text><line x1="70" y1="100" x2="570" y2="100" stroke="#64748b" /><circle cx="141" cy="100" r="4" fill="#2563eb" data-group="주거" data-value="71" data-source-id="2"><title>주거 자료 2: 71만원/㎡</title></circle><circle cx="148" cy="89" r="4" fill="#2563eb" data-group="주거" data-value="78" data-source-id="25"><title>주거 자료 25: 78만원/㎡</title></circle><circle cx="154" cy="100" r="4" fill="#2563eb" data-group="주거" data-value="84" data-source-id="8"><title>주거 자료 8: 84만원/㎡</title></circle><circle cx="158" cy="89" r="4" fill="#2563eb" data-group="주거" data-value="88" data-source-id="21"><title>주거 자료 21: 88만원/㎡</title></circle><circle cx="161" cy="78" r="4" fill="#2563eb" data-group="주거" data-value="91" data-source-id="11"><title>주거 자료 11: 91만원/㎡</title></circle><circle cx="168" cy="100" r="4" fill="#2563eb" data-group="주거" data-value="98" data-source-id="4"><title>주거 자료 4: 98만원/㎡</title></circle><circle cx="172" cy="89" r="4" fill="#2563eb" data-group="주거" data-value="102" data-source-id="17"><title>주거 자료 17: 102만원/㎡</title></circle><circle cx="175" cy="78" r="4" fill="#2563eb" data-group="주거" data-value="105" data-source-id="6"><title>주거 자료 6: 105만원/㎡</title></circle><circle cx="182" cy="100" r="4" fill="#2563eb" data-group="주거" data-value="112" data-source-id="13"><title>주거 자료 13: 112만원/㎡</title></circle><circle cx="185" cy="89" r="4" fill="#2563eb" data-group="주거" data-value="115" data-source-id="27"><title>주거 자료 27: 115만원/㎡</title></circle><circle cx="188" cy="78" r="4" fill="#2563eb" data-group="주거" data-value="118" data-source-id="1"><title>주거 자료 1: 118만원/㎡</title></circle><circle cx="190" cy="67" r="4" fill="#2563eb" data-group="주거" data-value="120" data-source-id="23"><title>주거 자료 23: 120만원/㎡</title></circle><circle cx="198" cy="100" r="4" fill="#2563eb" data-group="주거" data-value="128" data-source-id="10"><title>주거 자료 10: 128만원/㎡</title></circle><circle cx="208" cy="100" r="4" fill="#2563eb" data-group="주거" data-value="138" data-source-id="19"><title>주거 자료 19: 138만원/㎡</title></circle><circle cx="215" cy="89" r="4" fill="#2563eb" data-group="주거" data-value="145" data-source-id="15"><title>주거 자료 15: 145만원/㎡</title></circle><line x1="176.2" y1="60" x2="176.2" y2="108" stroke="#d97706" stroke-width="2" stroke-dasharray="4 3" class="gg-mean"/><g class="gg-sd" hidden=""><line x1="154.4737814742516" y1="120" x2="197.92621852574837" y2="120" stroke="#0f766e" stroke-width="3"/><line x1="154.4737814742516" y1="115" x2="154.4737814742516" y2="125" stroke="#0f766e" stroke-width="2"/><line x1="197.92621852574837" y1="115" x2="197.92621852574837" y2="125" stroke="#0f766e" stroke-width="2"/></g><text x="24" y="168" >상업 · n=15 · 평균 186.47 · 표본 s=99.22</text><line x1="70" y1="220" x2="570" y2="220" stroke="#64748b" /><circle cx="132" cy="220" r="4" fill="#2563eb" data-group="상업" data-value="62" data-source-id="14"><title>상업 자료 14: 62만원/㎡</title></circle><circle cx="165" cy="220" r="4" fill="#2563eb" data-group="상업" data-value="95" data-source-id="29"><title>상업 자료 29: 95만원/㎡</title></circle><circle cx="178" cy="220" r="4" fill="#2563eb" data-group="상업" data-value="108" data-source-id="30"><title>상업 자료 30: 108만원/㎡</title></circle><circle cx="194" cy="220" r="4" fill="#2563eb" data-group="상업" data-value="124" data-source-id="26"><title>상업 자료 26: 124만원/㎡</title></circle><circle cx="202" cy="209" r="4" fill="#2563eb" data-group="상업" data-value="132" data-source-id="22"><title>상업 자료 22: 132만원/㎡</title></circle><circle cx="222" cy="220" r="4" fill="#2563eb" data-group="상업" data-value="152" data-source-id="9"><title>상업 자료 9: 152만원/㎡</title></circle><circle cx="230" cy="209" r="4" fill="#2563eb" data-group="상업" data-value="160" data-source-id="28"><title>상업 자료 28: 160만원/㎡</title></circle><circle cx="238" cy="220" r="4" fill="#2563eb" data-group="상업" data-value="168" data-source-id="3"><title>상업 자료 3: 168만원/㎡</title></circle><circle cx="245" cy="209" r="4" fill="#2563eb" data-group="상업" data-value="175" data-source-id="16"><title>상업 자료 16: 175만원/㎡</title></circle><circle cx="258" cy="220" r="4" fill="#2563eb" data-group="상업" data-value="188" data-source-id="20"><title>상업 자료 20: 188만원/㎡</title></circle><circle cx="280" cy="220" r="4" fill="#2563eb" data-group="상업" data-value="210" data-source-id="12"><title>상업 자료 12: 210만원/㎡</title></circle><circle cx="305" cy="220" r="4" fill="#2563eb" data-group="상업" data-value="235" data-source-id="5"><title>상업 자료 5: 235만원/㎡</title></circle><circle cx="310" cy="209" r="4" fill="#2563eb" data-group="상업" data-value="240" data-source-id="18"><title>상업 자료 18: 240만원/㎡</title></circle><circle cx="338" cy="220" r="4" fill="#2563eb" data-group="상업" data-value="268" data-source-id="24"><title>상업 자료 24: 268만원/㎡</title></circle><circle cx="550" cy="220" r="4" fill="#2563eb" data-group="상업" data-value="480" data-source-id="7"><title>상업 자료 7: 480만원/㎡</title></circle><line x1="256.4666666666667" y1="180" x2="256.4666666666667" y2="228" stroke="#d97706" stroke-width="2" stroke-dasharray="4 3" class="gg-mean"/><g class="gg-sd" hidden=""><line x1="157.24406939405037" y1="240" x2="355.689263939283" y2="240" stroke="#0f766e" stroke-width="3"/><line x1="157.24406939405037" y1="235" x2="157.24406939405037" y2="245" stroke="#0f766e" stroke-width="2"/><line x1="355.689263939283" y1="235" x2="355.689263939283" y2="245" stroke="#0f766e" stroke-width="2"/></g><text x="70" y="280" text-anchor="middle">0</text><text x="170" y="280" text-anchor="middle">100</text><text x="270" y="280" text-anchor="middle">200</text><text x="370" y="280" text-anchor="middle">300</text><text x="470" y="280" text-anchor="middle">400</text><text x="570" y="280" text-anchor="middle">500</text><text x="24" y="315" >점: 개별 단가 · 주황 점선: 평균 위치 · 가로축: 단가(만원/㎡)</text><text x="24" y="345" >청록선 선택 표시: 평균±표본표준편차 · 평균의 신뢰구간이 아닙니다</text></svg><div class="gg-controls" hidden><label><input type="checkbox" id="gg-mean" checked> 평균 위치선 표시</label><label><input type="checkbox" id="gg-sd"> 평균±표본표준편차 표시</label><p class="learn-source-note">표본표준편차는 개별 자료의 흩어짐입니다. 평균의 표준오차나 신뢰구간과 다릅니다. 선을 숨겨도 제목의 계산값과 개별 관측값은 유지됩니다.</p></div><figcaption class="learn-chart__caption">그림 1. 공통 학습 자료 각 15건입니다. 상업의 480도 그대로 표시합니다. 점의 세로 위치는 겹침을 줄이기 위한 배치이며 별도 측정값이 아닙니다. 주황 점선은 평균 위치입니다.</figcaption></figure>
-<p>상업 집단의 평균 단가는 주거보다 높습니다. 하지만 그림을 보면 상업 집단의 개별 거래단가는 주거보다 훨씬 넓게 흩어져 있습니다.</p>
+<p>상업 집단의 평균 단가는 주거보다 높고, 개별 단가는 더 넓게 흩어져 있습니다. 상업 쪽의 높은 점 480만원/㎡는 7번 거래이며, 민감도 비교에서 다시 봅니다. 점의 세로 위치는 겹침을 피한 배치이고 거래 시점이나 위치가 아닙니다. 주거와 상업으로 나뉘었다는 사실만으로 거래가 서로 독립인 것은 아닙니다.</p>
 <p>평균의 차이와 자료의 흩어짐은 구별해서 살펴봐야 합니다.</p>
-<p>이번에는 차이의 방향을 &#x27;상업 − 주거&#x27;로 정하겠습니다.</p>
+<p>차이의 방향은 상업 − 주거입니다. 양수면 상업 평균이 높은 방향이고, 음수면 주거 평균이 높은 방향입니다.</p>
+<p class="gg-formula">H₀: μ상업 − μ주거 = 0</p>
+<p class="gg-formula">H₁: μ상업 − μ주거 ≠ 0</p>
 <p class="gg-step-title">1. 평균 차이</p>
-<p class="gg-formula">186.47 − 106.20 = 80.27만원/㎡</p>
-<p>상업 집단의 평균 단가가 주거보다 약 80.27만원/㎡ 높습니다.</p>
+<p class="gg-formula">186.47 − 106.20 = 80.27</p>
+<p>이번 자료에서는 상업 평균이 주거보다 약 80.27만원/㎡ 높습니다. 이 차이가 얼마나 안정적인지는 두 집단의 퍼짐을 같이 봐야 합니다.</p>
 <p class="gg-step-title">2. 차이의 표준오차</p>
-<p class="gg-formula">SE(Δ̂) = √(99.22²/15 + 21.73²/15)</p>
-<p>≈ 26.23만원/㎡</p>
+<p class="gg-formula">SE(Δ̂) = √(s₁²/n₁ + s₂²/n₂)</p>
+<p>반올림 전 계산은 26.226…이고 표시하면 약 26.23만원/㎡입니다. 표시용 99.22와 21.73을 넣어도 같은 26.23이 됩니다. 두 평균의 표준오차 25.62와 5.61을 더하는 계산이 아닙니다. 각 분산을 더한 뒤 제곱근을 구합니다.</p>
 <p class="gg-step-title">3. Welch 검정통계량</p>
 <p class="gg-formula">t = 80.27 / 26.23 ≈ 3.061</p>
-<p>Welch 자유도는 약 15.339입니다.</p>
-<p>양측 검정의 p값은 약 0.0078입니다.</p>
+<p>관측된 차이는 그 표준오차의 약 3.06배입니다. Welch 방법은 두 분산이 같다고 가정하지 않으므로, 자유도는 두 분산과 표본수를 함께 쓴 근삿값 15.339입니다. 정수로 바꿀 필요가 없습니다. 양측 p값은 약 0.0078입니다. 가정이 맞다면 유의수준 5%에서 귀무가설을 기각합니다. 독립성이나 자료의 적절성까지 자동으로 보장되지는 않습니다.</p>
 <p class="gg-step-title">4. 차이의 95% 신뢰구간</p>
-<p>기존 학습 자료의 반올림 전 수치를 이용한 계산 결과는 다음과 같습니다.</p>
+<p>자유도 15.339의 95% 양측 t 임계값은 약 2.127입니다. 오차한계는 약 2.127×26.23≈55.79입니다.</p>
+<p class="gg-formula">평균 차이의 신뢰구간 = 80.27 ± 55.79</p>
 <p class="gg-formula">24.47~136.06만원/㎡</p>
+<p>이 끝값은 반올림 전 평균과 분산으로 계산한 뒤 소수 둘째 자리에서 반올림한 결과입니다. 0이 들어 있지 않아, 같은 가정의 양측 5% 검정에서 기각하는 결과와 맞습니다. 표시된 끝의 간격은 111.59만원/㎡로 넓습니다. p값은 차이 0에 대한 검정 결과이고, 구간은 차이의 크기와 그 불확실성을 함께 보여 줍니다.</p>
 <figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 280" role="img" aria-labelledby="difference-title difference-desc"><title id="difference-title">상업−주거 평균 차이의 Welch 95% 신뢰구간 (만원/㎡)</title><desc id="difference-desc">그림 2. 독립 정규표본 모형을 적용한 교재 계산입니다. 표집 가정이 확인되지 않은 이 자료로 실제 시장의 유의성이나 용도의 인과효과를 주장하지 않습니다.</desc><text x="24" y="28" >상업 − 주거: 차이 자체의 구간을 계산합니다</text><line x1="100.0" y1="65" x2="100.0" y2="185" stroke="#d97706" stroke-dasharray="4 3"/><line x1="180.76589356295958" y1="120" x2="548.9941064370404" y2="120" stroke="#2563eb" stroke-width="4" data-diff-ci="true"/><circle cx="364.88" cy="120" r="5" fill="#2563eb"/><text x="180.76589356295958" y="153" text-anchor="middle">24.47</text><text x="548.9941064370404" y="153" text-anchor="middle">136.06</text><text x="364.88" y="95" text-anchor="middle">차이 80.27</text><text x="100.0" y="210" text-anchor="middle">0</text><text x="24" y="250" >Welch 95% 구간 / p=0.0078 / 단위: 만원/㎡</text></svg><figcaption class="learn-chart__caption">그림 2. 독립 정규표본 모형을 적용한 교재 계산입니다. 표집 가정이 확인되지 않은 이 자료로 실제 시장의 유의성이나 용도의 인과효과를 주장하지 않습니다.</figcaption></figure><p class="learn-source-note">차이의 95% 신뢰구간이 0을 포함하지 않으면, 같은 가정의 양측 5% 검정에서 귀무가설을 기각합니다.</p>
-<p>그림의 가운데 점은 평균 차이 80.27을, 양쪽 끝은 차이의 95% 신뢰구간을 나타냅니다.</p>
-<p>이 구간은 차이가 없음을 뜻하는 0을 포함하지 않습니다.</p>
-<p>따라서 Welch 검정의 가정이 적절하다는 전제에서, 유의수준 5%의 양측 검정에서는 두 모집단의 평균이 같다는 귀무가설을 기각합니다.</p>
-<p>하지만 통계적으로 유의한 차이가 관찰되었다고 해서 그 차이가 부동산 유형 자체의 영향이라고 결론 내릴 수는 없습니다.</p>
-<p>두 집단의 위치, 면적, 용도지역, 건축물 특성 등이 서로 다를 수 있기 때문입니다.</p>
-<p>또한 이 자료는 표집 대표성과 관측값의 독립성이 검증되지 않은 학습용 예시입니다. 계산 결과를 실제 부동산 시장의 확정적인 차이로 해석해서는 안 됩니다.</p><p class="learn-source-note"><a href="/learn/stats/graphs/#data">공통 학습 자료 30건</a> · <a href="../group-comparison-example.json">계산 JSON</a>. 원자료의 Welch 구간 하한은 24.474513…이며 24.47로 표시합니다. 반올림된 평균과 표준편차를 다시 넣으면 24.478961…이 되어 24.48로 표시됩니다. 산식 오류가 아닌 중간 반올림의 차이입니다.</p></section>
+<p>그림의 가운데 점은 평균 차이 80.27이고, 양쪽 끝은 24.47과 136.06입니다. 각 집단 평균의 구간이 겹치는지만으로 이 검정을 대신하지 않습니다.</p>
+<p>통계적으로 유의한 차이가 용도 자체의 영향이라는 뜻은 아닙니다. 위치, 면적, 용도지역, 건축물 특성이 다를 수 있습니다. 이 30건은 대표성과 독립성이 확인된 시장 표본이 아니므로, 계산은 절차를 배우기 위한 값입니다.</p><p class="learn-source-note"><a href="/learn/stats/graphs/#data">공통 학습 자료 30건</a> · <a href="../group-comparison-example.json">계산 JSON</a>. 원자료의 Welch 구간 하한은 24.474513…이며 24.47로 표시합니다. 반올림된 평균과 표준편차를 다시 넣으면 24.478961…이 되어 24.48로 표시됩니다. 산식 오류가 아닌 중간 반올림의 차이입니다.</p></section>
 <section class="learn-chapter__step" id="paired" data-toc-label="대응표본의 계산"><p class="learn-chapter__label">대응표본의 계산</p><h2>같은 대상이라면 전후 차이를 먼저 계산합니다</h2><p>이번에는 같은 학생 6명의 수업 전후 점수를 비교해 보겠습니다.</p>
 <p>같은 사람을 두 번 관찰했으므로 대응표본에 해당합니다.</p>
 <p>대응표본에서는 각 학생의 전후 차이를 먼저 구합니다.</p>
@@ -102,22 +101,21 @@
 <p>각 학생의 변화량을 계산하면 다음과 같습니다.</p>
 <div class="learn-data learn-data--full"><table><thead><tr><th scope="col">학생</th><th scope="col">이전</th><th scope="col">이후</th><th scope="col">변화량</th></tr></thead><tbody><tr><th scope="row">1</th><td>180</td><td>186</td><td>+6</td></tr><tr><th scope="row">2</th><td>160</td><td>168</td><td>+8</td></tr><tr><th scope="row">3</th><td>140</td><td>145</td><td>+5</td></tr><tr><th scope="row">4</th><td>120</td><td>127</td><td>+7</td></tr><tr><th scope="row">5</th><td>100</td><td>104</td><td>+4</td></tr><tr><th scope="row">6</th><td>80</td><td>86</td><td>+6</td></tr></tbody></table></div>
 <figure class="learn-chart learn-chart--wide" id="gg-paired"><svg viewBox="0 0 640 385" role="img" aria-labelledby="pairs-title pairs-desc"><title id="pairs-title">같은 학생 6명의 수업 전후 점수와 짝별 변화량 (점)</title><desc id="pairs-desc">그림 3. 같은 학생 6명의 수업 전후 평가 점수를 가정한 별도 예제입니다. 점수는 200점 만점이며 전후 변화만으로 수업의 인과효과를 알 수는 없습니다.</desc><text x="24" y="28" >같은 대상의 전후 값을 연결하면 짝을 볼 수 있습니다</text><line x1="180" y1="266.0" x2="440" y2="255.8" stroke="#94a3b8" data-pair="1"/><circle cx="180" cy="266.0" r="4" fill="#2563eb"/><circle cx="440" cy="255.8" r="4" fill="#d97706"/><text x="165" y="270.0" text-anchor="end">80</text><text x="455" y="259.8" >86</text><text x="85" y="270.0" >학생 6</text><text x="520" y="259.8" >+6점</text><line x1="180" y1="232.0" x2="440" y2="225.2" stroke="#94a3b8" data-pair="2"/><circle cx="180" cy="232.0" r="4" fill="#2563eb"/><circle cx="440" cy="225.2" r="4" fill="#d97706"/><text x="165" y="236.0" text-anchor="end">100</text><text x="455" y="229.2" >104</text><text x="85" y="236.0" >학생 5</text><text x="520" y="229.2" >+4점</text><line x1="180" y1="198.0" x2="440" y2="186.10000000000002" stroke="#94a3b8" data-pair="3"/><circle cx="180" cy="198.0" r="4" fill="#2563eb"/><circle cx="440" cy="186.10000000000002" r="4" fill="#d97706"/><text x="165" y="202.0" text-anchor="end">120</text><text x="455" y="190.10000000000002" >127</text><text x="85" y="202.0" >학생 4</text><text x="520" y="190.10000000000002" >+7점</text><line x1="180" y1="164.0" x2="440" y2="155.5" stroke="#94a3b8" data-pair="4"/><circle cx="180" cy="164.0" r="4" fill="#2563eb"/><circle cx="440" cy="155.5" r="4" fill="#d97706"/><text x="165" y="168.0" text-anchor="end">140</text><text x="455" y="159.5" >145</text><text x="85" y="168.0" >학생 3</text><text x="520" y="159.5" >+5점</text><line x1="180" y1="130.0" x2="440" y2="116.4" stroke="#94a3b8" data-pair="5"/><circle cx="180" cy="130.0" r="4" fill="#2563eb"/><circle cx="440" cy="116.4" r="4" fill="#d97706"/><text x="165" y="134.0" text-anchor="end">160</text><text x="455" y="120.4" >168</text><text x="85" y="134.0" >학생 2</text><text x="520" y="120.4" >+8점</text><line x1="180" y1="96.0" x2="440" y2="85.80000000000001" stroke="#94a3b8" data-pair="6"/><circle cx="180" cy="96.0" r="4" fill="#2563eb"/><circle cx="440" cy="85.80000000000001" r="4" fill="#d97706"/><text x="165" y="100.0" text-anchor="end">180</text><text x="455" y="89.80000000000001" >186</text><text x="85" y="100.0" >학생 1</text><text x="520" y="89.80000000000001" >+6점</text><text x="180" y="324" text-anchor="middle">이전</text><text x="440" y="324" text-anchor="middle">이후</text><text x="24" y="360" >표시 학생 1→6의 변화량: 6 · 8 · 5 · 7 · 4 · 6점</text></svg><div class="gg-paired-controls" hidden><div class="gg-actions" role="group" aria-label="대응표본 그래프 보기"><button type="button" id="gg-original" aria-pressed="true">원래 점수 보기</button><button type="button" id="gg-changes" aria-pressed="false">변화량 보기</button></div><p id="gg-paired-status" role="status" aria-live="polite">원래 점수 보기: 같은 학생의 이전·이후 점수를 연결합니다.</p><p class="gg-formula">평균 변화 6.00점 · 변화량의 표본 s≈1.414점 · SE≈0.577점 · 자유도 5 · 평균 변화의 95% 구간 4.52~7.48점</p><p class="learn-source-note">학생 번호는 표시용입니다. 기존 여섯 점수 쌍을 높은 이전 점수부터 표시한 순서이며, 원자료의 값과 짝 연결은 바꾸지 않았습니다. 실제 수업 효과를 검증한 자료가 아닙니다.</p></div><script type="application/json" id="gg-paired-data">{"rows": [{"student": 1, "before": 180, "after": 186, "change": 6}, {"student": 2, "before": 160, "after": 168, "change": 8}, {"student": 3, "before": 140, "after": 145, "change": 5}, {"student": 4, "before": 120, "after": 127, "change": 7}, {"student": 5, "before": 100, "after": 104, "change": 4}, {"student": 6, "before": 80, "after": 86, "change": 6}], "mean": 6, "sd": 1.4142135623730951, "se": 0.5773502691896258, "df": 5, "low": 4.515873885221411, "high": 7.484126114778589}</script><figcaption class="learn-chart__caption">그림 3. 같은 학생 6명의 수업 전후 평가 점수를 가정한 별도 예제입니다. 점수는 200점 만점이며 전후 변화만으로 수업의 인과효과를 알 수는 없습니다.</figcaption></figure>
-<p>모든 학생의 점수가 올랐지만 변화량은 서로 다릅니다.</p>
-<p>대응표본에서는 이전 점수와 이후 점수를 따로 비교하기보다, 각 학생의 변화량이 얼마나 일정한지를 살펴봅니다.</p>
-<p>계산 결과는 다음과 같습니다.</p>
-<ul><li>평균 변화량 d̄ = 6.00점</li><li>변화량의 표본표준편차 s_d ≈ 1.414점</li><li>평균 변화량의 추정 표준오차 ≈ 0.577점</li></ul>
-<p>대응표본의 평균 차이 표준오차는 다음과 같습니다.</p>
-<p class="gg-formula">SE(d̄) = s_d / √n</p>
-<p>평균 변화량이 0인지 검정할 때는 다음과 같이 계산합니다.</p>
-<p class="gg-formula">t = d̄ / SE(d̄)</p>
-<p>이 예제에서는 자유도 5의 t분포를 사용합니다.</p>
-<p>평균 변화량의 95% 신뢰구간은 4.52~7.48점입니다.</p>
-<p>이 구간에는 0이 포함되지 않으므로, 대응표본 t검정의 조건이 적절하다는 전제에서 평균 변화량이 0이라는 귀무가설을 기각합니다.</p>
-<p>대응표본을 이용하는 이유는 학생마다 원래 점수가 다르더라도 각자의 전후 차이를 직접 비교할 수 있기 때문입니다.</p>
-<p>다만 대응표본이라고 해서 반드시 실험 효과를 알 수 있는 것은 아닙니다.</p>
-<p>시험 난도, 자연스러운 학습 효과, 다른 교육활동 등도 점수 변화에 영향을 주었을 수 있습니다.</p>
-<p>따라서 전후에 차이가 있었다는 사실과 수업 때문에 차이가 발생했다는 주장은 구별해야 합니다.</p>
-<p>또한 대응표본 검정은 관측값의 차이에 대한 분포와 짝 사이의 독립성 등을 고려해야 합니다. 한쪽 시점의 값이 누락된 경우에는 어떻게 처리할지도 확인해야 합니다.</p></section>
+<p>그림은 이전 점수가 높은 학생부터 보여 주어 변화량이 6, 8, 5, 7, 4, 6점입니다. 이전 점수가 낮은 쪽부터 적으면 6, 4, 7, 5, 8, 6점입니다. 같은 여섯 쌍이고, 순서를 바꿔도 평균과 분산은 같습니다. 공통 30건을 줄 순서대로 묶어 대응표본으로 쓰지는 않습니다.</p>
+<p>1단계. 차이의 평균</p>
+<p>여섯 변화량의 합은 36이고 평균은 6.00점입니다.</p>
+<p>2단계. 차이의 표준편차</p>
+<p>6에서의 편차는 0, −2, 1, −1, 2, 0입니다. 제곱의 합은 10입니다.</p>
+<p>s_d² = 10 / (6 − 1) = 2</p>
+<p>s_d = √2 ≈ 1.414</p>
+<p>3단계. 표준오차</p>
+<p class="gg-formula">SE(d̄) = s_d / √n ≈ 1.414 / √6 ≈ 0.577</p>
+<p>4단계. 신뢰구간</p>
+<p>자유도는 5이고 95% 양측 t 임계값은 약 2.571입니다.</p>
+<p class="gg-formula">6 ± 2.571 × 0.577</p>
+<p>평균 변화량의 95% 구간은 4.52~7.48점입니다. 0이 없으므로, 대응표본 t검정의 조건이 맞다면 평균 변화가 0이라는 귀무가설을 기각합니다.</p>
+<p>학생마다 원래 점수가 달라도, 같은 학생의 이전과 이후를 빼면 그 학생의 기준 점수 중 일부가 상쇄됩니다. 그래서 변화량을 물을 때는 짝을 짓습니다. 같은 토지를 두 시점에 보았다면 그 토지의 원래 가격수준 일부가 같은 방식으로 빠질 수 있습니다. 이번 그림의 숫자는 학생 점수이고 토지 단가가 아닙니다.</p>
+<p>전후 차이가 있어도 수업, 정책, 개발이 그 변화의 원인이라고 단정하지 않습니다. 시험 난도, 다른 학습, 시장 전체의 가격 변화도 함께 움직일 수 있습니다. 같은 물건이 두 번 거래되었다면 조건과 권리, 이용상황이 비교 가능한지도 확인합니다. 차이의 분포, 짝 사이의 독립, 한쪽만 빠진 짝의 처리도 살펴야 합니다. 대응표본은 건수가 같은 두 집단이 아니라, 각 관측이 서로 연결된 자료입니다.</p></section>
 <section class="learn-chapter__step" id="effect" data-toc-label="효과크기"><p class="learn-chapter__label">효과크기</p><h2>원래 단위의 차이와 표준화된 차이를 함께 살펴보세요</h2><p>두 집단을 비교할 때 가장 먼저 확인해야 할 값은 실제 평균의 차이입니다.</p>
 <p>앞의 예제에서 상업과 주거 집단의 평균 단가 차이는 80.27만원/㎡입니다.</p>
 <p>이 값은 단위가 명확하기 때문에 실무적으로 이해하기 쉽습니다.</p>
@@ -127,34 +125,35 @@
 <p class="gg-formula">d = (x̄₁ − x̄₂) / s_p</p>
 <p>여기서 s_p는 두 집단의 표본분산과 자유도를 이용해 계산한 합동 표준편차입니다.</p>
 <p>이번 예제에서는 다음과 같습니다.</p>
-<ul><li>평균 차이: 80.27만원/㎡</li><li>합동 표준편차: 약 71.82만원/㎡</li><li>Cohen&#x27;s d: 약 1.12</li></ul>
-<p>이는 평균 차이가 합동 표준편차의 약 1.12배라는 의미입니다.</p>
+<ul><li>평균 차이: 80.27만원/㎡</li><li>합동 표준편차: 약 71.82만원/㎡</li><li>Cohen&#x27;s d: 약 1.118</li></ul>
+<p class="gg-formula">d = 80.27 / 71.82 ≈ 1.118</p>
+<p>d=1.118은 평균 차이가 이 합동 표준편차의 약 1.118배라는 뜻입니다. 상업 단가가 주거보다 111.8% 높다는 뜻도, 상업 용도가 가격을 1.118 표준편차만큼 올렸다는 뜻도 아닙니다. 그림 4의 막대 숫자는 1.12로 반올림되어 있습니다. d는 점 요약이고, 차이의 불확실성은 앞의 Welch 구간 24.47~136.06이 보여 줍니다. 그 구간은 d의 신뢰구간이 아닙니다.</p>
 <figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 365" role="img" aria-labelledby="effect-title effect-desc"><title id="effect-title">서로 다른 척도 · 평균 차이와 합동 표준편차로 표준화한 d</title><desc id="effect-desc">그림 4. 위 막대는 평균 차이 80.27만원/㎡, 아래 막대는 단위 없는 Cohen의 d≈1.12입니다. 분모는 합동 표본표준편차 약 71.82만원/㎡입니다. 두 막대는 축척이 달라 길이를 비교할 수 없으며, 집단별 분산 차이가 커 d만으로 큰 효과라고 단정하지 않습니다.</desc><text x="24" y="28" >원 단위 평균 차이와 Cohen의 d: 서로 다른 척도입니다</text><text x="24" y="98" >원 단위 차이</text><rect x="160" y="80" width="321.06666666666666" height="26" fill="#2563eb" data-effect="0"/><text x="491.06666666666666" y="99" >80.27 만원/㎡</text><line x1="160" y1="120" x2="560" y2="120" stroke="#64748b" /><text x="160" y="142" text-anchor="middle">0</text><text x="360.0" y="142" text-anchor="middle">50</text><text x="560" y="142" text-anchor="middle">100</text><text x="24" y="213" >Cohen의 d</text><rect x="160" y="195" width="223.51171910517667" height="26" fill="#2563eb" data-effect="1"/><text x="393.51171910517667" y="214" >1.12 단위 없음</text><line x1="160" y1="235" x2="560" y2="235" stroke="#64748b" /><text x="160" y="257" text-anchor="middle">0</text><text x="360.0" y="257" text-anchor="middle">1</text><text x="560" y="257" text-anchor="middle">2</text><text x="24" y="300" >d = 평균 차이 80.27 / 합동 s_p 71.82 ≈ 1.12</text><text x="24" y="335" >행마다 단위와 눈금이 다릅니다. 막대 길이를 직접 비교하지 않습니다.</text></svg><figcaption class="learn-chart__caption">그림 4. 위 막대는 평균 차이 80.27만원/㎡, 아래 막대는 단위 없는 Cohen의 d≈1.12입니다. 분모는 합동 표본표준편차 약 71.82만원/㎡입니다. 두 막대는 축척이 달라 길이를 비교할 수 없으며, 집단별 분산 차이가 커 d만으로 큰 효과라고 단정하지 않습니다.</figcaption></figure>
-<p>다만 이번 예제는 두 집단의 표준편차가 21.73과 99.22로 크게 다릅니다.</p>
-<p>이처럼 집단별 분산 차이가 클 때는 어떤 표준편차를 기준으로 표준화하느냐에 따라 효과크기가 상당히 달라질 수 있습니다.</p>
-<p>따라서 Cohen&#x27;s d=1.12라는 숫자만 보고 효과가 크다고 단정하기보다, 원래 단위의 평균 차이와 신뢰구간, 집단별 분포를 함께 살펴보는 것이 좋습니다.</p>
+<p>두 표준편차는 상업 약 99.22, 주거 약 21.73으로 크게 다릅니다. 분모를 바꾸면 표준화 값도 바뀝니다. 상업의 표준편차만 쓰면 80.27/99.22≈0.81이고, 주거의 표준편차만 쓰면 80.27/21.73≈3.69입니다. 이 둘은 Cohen&#x27;s d가 아닙니다. 같은 평균 차이를 다른 기준으로 나눈 예입니다. d를 보고할 때는 합동 표준편차를 썼는지 밝혀야 합니다.</p>
+<p>0.2·0.5·0.8 같은 관행적 기준은 모든 분야의 실무 중요성 기준이 아닙니다. 감정평가에서는 5만원/㎡도 넓은 토지에서는 총액이 클 수 있고, d가 커도 입지와 이용상황이 다른 거래를 한 물건의 가치 차이로 바로 옮기지는 않습니다. 부동산에서는 먼저 만원/㎡ 차이를 읽고, 표준화 값은 보조 비교로 둡니다.</p>
 <p>또한 Cohen&#x27;s d의 합동분산을 사용하는 것과 Welch t검정에서 등분산을 가정하지 않는 것은 서로 다른 목적의 계산입니다.</p>
 <p>표준화 효과크기를 구했다고 해서 두 집단의 분산이 같다는 사실이 검증되는 것은 아닙니다.</p>
 <details class="learn-more"><summary>Cohen&#x27;s d 산식과 다른 표준화 지표</summary><div class="learn-more__body"><p>합동 표본표준편차는 다음과 같습니다.</p>
 <p class="gg-formula">s_p = √{[(n₁−1)s₁² + (n₂−1)s₂²] / (n₁+n₂−2)}</p>
 <p>표본수가 같을 때는 두 표본분산의 산술평균에 제곱근을 취한 값과 같습니다.</p>
-<p>표본수가 작을 때 편향을 보정하는 Hedges&#x27; g도 사용할 수 있습니다.</p>
+<p>표본수가 작을 때 편향을 줄이는 Hedges의 g는 이번 자료에서 반올림 전 d에 보정계수를 곱하면 약 1.087입니다. d와 g는 가깝지만 보정 목적이 다르므로, 값이 조금 달라도 계산 오류로 보지 않습니다. 대응표본의 변화량 표준편차로 표준화한 지표는 이 독립집단 d와 같은 정의가 아닙니다.</p>
 <p>대응표본에서는 변화량의 표준편차를 이용한 표준화 지표 등이 사용되지만, 독립표본의 Cohen&#x27;s d와 계산 방식 및 해석이 다를 수 있습니다.</p>
 <p>어떤 효과크기를 사용했는지 계산 기준을 함께 밝혀야 합니다.</p></div></details></section>
 <section class="learn-chapter__step" id="sensitivity" data-toc-label="큰 관측값과 민감도"><p class="learn-chapter__label">큰 관측값과 민감도</p><h2>극단적인 값의 영향을 확인하되 임의로 삭제하지 마세요</h2><p>평균은 극단적으로 크거나 작은 관측값의 영향을 받을 수 있습니다.</p>
 <p>앞의 공통 학습 자료에서 상업 집단에는 단가가 480만원/㎡인 관측값이 포함되어 있습니다.</p>
-<p>이 값을 제외한 결과를 비교하면 다음과 같습니다.</p>
-<ul><li>원래 비교: 상업 15건, 주거 15건</li><li>민감도 비교: 상업 14건, 주거 15건</li><li>제외 후 평균 차이: 약 59.30만원/㎡</li><li>제외 후 차이의 Welch 95% 신뢰구간: 약 23.77~94.83만원/㎡</li></ul>
-<p>극단적인 관측값 하나를 제외했을 뿐인데 평균 차이와 신뢰구간이 달라졌습니다.</p>
-<p>그렇다고 이 거래를 제외한 결과가 더 정확하다는 뜻은 아닙니다.</p>
-<p>높은 가격의 거래가 실제로 존재하고 분석 대상에 적합하다면, 정당한 근거 없이 삭제해서는 안 됩니다.</p>
-<p>반대로 자료 입력 오류나 분석 대상과 다른 거래라면 그 이유를 확인하고 처리할 필요가 있습니다.</p>
-<p>민감도 분석은 어떤 관측값이 결과에 얼마나 영향을 주는지 확인하는 과정이지, 원하는 결과를 얻기 위해 데이터를 골라내는 과정이 아닙니다.</p>
+<p>이 7번 거래를 빼면 상업은 14건, 주거는 15건입니다. 뺀 뒤 각 집단의 평균과 분산, 차이의 표준오차를 다시 계산합니다.</p>
+<div class="learn-data learn-data--full"><table><thead><tr><th scope="col">항목</th><th scope="col">7번 포함</th><th scope="col">7번 제외</th></tr></thead><tbody><tr><th scope="row">상업 거래 건수</th><td>15</td><td>14</td></tr><tr><th scope="row">주거 거래 건수</th><td>15</td><td>15</td></tr><tr><th scope="row">상업−주거 평균 차이</th><td>80.27</td><td>59.30</td></tr><tr><th scope="row">차이의 95% Welch 구간</th><td>24.47~136.06</td><td>23.77~94.83</td></tr></tbody></table></div>
+<p>제외하면 평균 차이는 약 20.97만원/㎡ 줄어듭니다. 한 건이 비교 결과에 영향을 준다는 뜻입니다. 480만원/㎡가 잘못된 자료라는 증거는 아닙니다.</p>
+<p>거래금액, 면적, 정정이 유효한지, 같은 상업 비교에 맞는 거래인지, 제외 기준을 결과를 보기 전에 정했는지를 확인합니다. 유의하거나 원하는 방향으로 바뀌도록 거래를 골라 빼지 않습니다. 포함과 제외를 함께 보여 주면 그 거래가 통계를 얼마나 움직이는지 알 수 있습니다. 이번 예제는 전후 모두 구간이 0을 포함하지 않지만, 그것만으로 두 시장의 인과적 차이가 입증되지는 않습니다.</p>
+<p>민감도 분석은 판단의 근거를 보태는 도구이고, 원하는 결과를 얻기 위한 거래 삭제가 아닙니다.</p>
 <p>분석 기준을 변경했다면 변경 이유와 변경 전후의 결과를 함께 제시하는 것이 좋습니다.</p>
 <details class="learn-more"><summary>다른 비교 방법을 선택할 때</summary><div class="learn-more__body"><p>자료가 크게 치우쳐 있거나 이상치의 영향이 큰 경우에는 평균 외에 중앙값이나 분위수를 함께 살펴볼 수 있습니다.</p>
 <p>다만 중앙값 비교, 순위 기반 검정, 부트스트랩 등은 서로 다른 통계적 질문과 가정을 사용할 수 있습니다.</p>
 <p>따라서 단순히 p값이 더 작게 나오는 방법을 선택하지 말고, 분석 목적과 자료의 특성에 맞는 방법을 사용해야 합니다.</p></div></details></section>
-<section class="learn-chapter__step" id="report" data-toc-label="해석과 보고"><p class="learn-chapter__label">해석과 보고</p><h2>평균의 차이가 곧 원인의 효과를 뜻하지는 않습니다</h2><p>두 집단의 평균이 다르다고 해서 집단을 구분한 요인이 그 차이를 발생시켰다고 결론 내릴 수는 없습니다.</p>
+<section class="learn-chapter__step" id="report" data-toc-label="해석과 보고"><p class="learn-chapter__label">해석과 보고</p><h2>평균의 차이가 곧 원인의 효과를 뜻하지는 않습니다</h2><p>차이가 있다는 근거와 그 차이가 중요하다는 근거는 다른 질문입니다. 교육을 위해, 평균 단가 차이가 10만원/㎡ 이상이면 실무적으로 살펴볼 만하다고 미리 정했다고 가정합니다. 감정평가의 법정 기준이나 허용 오차는 아닙니다. 아래 세 상황은 서로 다른 가상 결과이고 단위는 만원/㎡입니다.</p>
+<div class="learn-data learn-data--full"><table><thead><tr><th scope="col">상황</th><th scope="col">추정 평균 차이</th><th scope="col">95% 신뢰구간</th><th scope="col">읽는 법</th></tr></thead><tbody><tr><th scope="row">A</th><td>3</td><td>1~5</td><td>0과 다른 근거가 있고, 구간은 10 미만</td></tr><tr><th scope="row">B</th><td>15</td><td>2~28</td><td>0과 다른 근거가 있으나 10 이상인지는 불확실</td></tr><tr><th scope="row">C</th><td>15</td><td>12~18</td><td>0과 다르고, 구간 전체가 10을 넘음</td></tr></tbody></table></div>
+<p>A는 대응하는 양측 5% 검정에서 유의할 수 있지만, 구간 전체가 기준 10보다 작습니다. B의 추정값 15는 10보다 크지만 구간이 2까지 내려가 기준보다 작은 차이도 양립합니다. C는 구간 전체가 10보다 커서, 구간 계산의 조건이 맞다면 그 크기라는 주장에 더 강한 근거가 됩니다. 그래도 인과효과는 아닙니다. 통계적 유의성, 차이의 크기, 그 크기의 불확실성을 함께 봅니다.</p>
+<p>두 집단의 평균이 다르다고 해서 집단을 구분한 요인이 그 차이를 발생시켰다고 결론 내릴 수는 없습니다.</p>
 <p>예를 들어 두 학급의 평균 점수가 다르더라도 수업 방식 외에 학생들의 사전 학습 수준이나 학습 시간 등이 영향을 주었을 수 있습니다.</p>
 <p>부동산 거래자료에서도 마찬가지입니다.</p>
 <p>주거와 상업 집단의 거래단가 차이는 용도뿐 아니라 위치, 면적, 접근성, 개발 가능성 등 여러 요인이 복합적으로 반영된 결과일 수 있습니다.</p>
@@ -171,8 +170,17 @@
 <p>통계적으로 유의한 평균 차이가 관찰되더라도 다른 요인이 영향을 주었을 수 있습니다.</p>
 <p>인과관계를 판단하려면 연구 설계와 교란 요인 등을 별도로 검토해야 합니다.</p></div></details></li><li>Cohen&#x27;s d가 같으면 원래 단위의 차이도 같을까요?<details><summary>답과 해설</summary><div class="learn-more__body"><p>아닙니다.</p>
 <p>Cohen&#x27;s d는 평균 차이를 표준편차로 나누어 표준화한 지표입니다.</p>
-<p>같은 d값이라도 원래 단위의 평균 차이나 자료의 흩어짐은 다를 수 있습니다.</p></div></details></li></ol></section>
-<section class="learn-chapter__step" id="macro" data-toc-label="CH2 Macro에서 읽기"><p class="learn-chapter__label">CH2 Macro에서 읽기</p><h2>평균 차이와 함께 거래 구성의 차이를 확인하세요</h2><p>CH2 Macro에서 지역이나 부동산 유형, 분석 기간별 평균 거래단가를 비교할 때는 먼저 비교 조건이 같은지 확인하는 것이 좋습니다.</p><p>관측 단위와 단가 단위, 필터 조건을 맞추고, 건수와 평균만 보지 말고 분포·면적·위치·시점 구성을 함께 살펴보세요.</p><p>서로 다른 거래 집단은 이름이 다르다는 이유만으로 독립표본이 되는 것은 아닙니다. 같은 건물·단지의 거래가 관련되어 있을 수 있습니다. 반대로 두 기간의 거래 건수가 같다고 대응표본이 되는 것도 아닙니다. 같은 대상의 관측이라는 연결이 있어야 합니다.</p><p>이 장의 Welch·대응 t·효과크기 계산이 모든 화면에 제공된다고 전제하지 않습니다. 화면의 단순 평균 차이를 특정 물건의 저평가·고평가나 용도·정책의 인과효과로 읽기보다, 시장 집단의 구성과 수준을 이해하는 출발점으로 사용하세요.</p><p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 통계 열기 →</a></p></section>
+<p>같은 d값이라도 원래 단위의 평균 차이나 자료의 흩어짐은 다를 수 있습니다.</p></div></details></li><li>같은 읍면동에서 상업용 토지의 평균단가가 주거용 토지보다 80만원/㎡ 높고 Welch 검정의 p값도 0.01 미만입니다. 상업용도라는 이유만으로 토지단가가 80만원/㎡ 높아진다고 해석해도 될까요?<details><summary>답과 해설</summary><div class="learn-more__body"><p>그렇게 해석해서는 안 됩니다.</p>
+<p>평균 차이가 통계적으로 확인되어도 면적, 입지, 도로, 거래 시점이 다를 수 있습니다. 단순 평균 차이를 용도 자체의 인과효과로 읽지 않습니다. 다른 조건을 보려면 회귀나 매칭을 검토할 수 있지만, 관측자료에는 통제되지 않은 차이가 남을 수 있습니다. 조건부 평균 차이와 인과효과도 구별합니다. 유의한 집단 차이와 그 특성의 인과적 가격효과는 다른 개념입니다.</p></div></details></li></ol></section>
+<section class="learn-chapter__step" id="macro" data-toc-label="CH2 Macro에서 읽기"><p class="learn-chapter__label">CH2 Macro에서 읽기</p><h2>평균 차이와 함께 거래 구성의 차이를 확인하세요</h2><p>CH2 Macro에서 지역이나 부동산 유형, 분석 기간별 평균 거래단가를 비교할 때는 먼저 비교 조건이 같은지 확인하는 것이 좋습니다. 주거와 상업의 단가 차이가 용도 자체의 가격 효과인지는 질문마다 답이 다릅니다.</p>
+<p>① 두 집단의 평균이 다른가요? 같은 읍면동의 자연녹지 대지와 계획관리 대지를 비교하면 관측된 평균 차이를 계산할 수 있고, 가정이 맞으면 Welch 검정으로 모평균 차이를 살펴볼 수 있습니다. 그 차이가 용도지역의 유일한 원인이라는 뜻은 아닙니다. 입지, 개발 가능성, 면적, 도로가 함께 다를 수 있습니다.</p>
+<p>② 비슷한 조건끼리 보면 차이가 얼마나 남을까요? 면적, 도로, 위치, 시점을 맞추면 단순 평균 차이와 다른 결과가 나올 수 있습니다. 그때는 그 조건을 넣은 회귀나 매칭이 도움이 될 수 있습니다. 변수 몇 개를 넣었다고 관측되지 않은 입지와 이용상황까지 사라지지는 않습니다.</p>
+<p>③ 회귀의 용도 계수와 단순 평균 차이는 같을까요? 같을 필요는 없습니다. 설명용으로 Y = β₀ + β₁D + β₂A + β₃R + ε을 생각하면, Y는 거래단가, D는 상업 1·주거 0, A는 면적, R은 도로입니다. β₁은 포함한 다른 변수를 같은 값으로 둔 조건부 평균 차이입니다. 단순 평균 차이는 그 변수들을 통제하지 않은 값이라 둘은 달라질 수 있습니다. β₁도 관측된 조건부 연관성이며, 용도를 바꾸었을 때의 인과효과는 아닙니다.</p>
+<p>④ 단지와 인근 단지. A단지 20건과 B단지 80건을 비교할 때는 기간, 전용면적, 건축연도와 세대수, 층과 주차, 거래가 한 시점에 몰렸는지, 같은 단지 거래가 서로 관련되는지를 봅니다. 단순 평균 차이에는 단지 고유의 차이뿐 아니라 거래 구성이 섞일 수 있습니다. 인근 단지를 넣은 지역회귀에서는 단지 특성을 통제한 것과 비교 가능한 거래를 모은 것을 함께 봅니다.</p>
+<p>⑤ 평균 차이와 개별 물건. 한 용도지역의 평균이 50만원/㎡ 높다고 그 지역의 모든 토지가 50만원/㎡ 높은 것은 아닙니다. 집단 평균 차이와 표준화 효과크기를 개별 물건의 가격 보정률로 그대로 쓰지 않습니다. 두 집단의 평균 차이는 시장 구성을 보는 출발점이고, 개별 특성은 별도 분석입니다.</p><p>관측 단위와 단가 단위, 필터 조건을 맞추고, 건수와 평균만 보지 말고 분포·면적·위치·시점 구성을 함께 살펴보세요.</p>
+<p>서로 다른 거래 집단은 이름이 다르다는 이유만으로 독립표본이 되는 것은 아닙니다. 같은 건물·단지의 거래가 관련되어 있을 수 있습니다. 반대로 두 기간의 거래 건수가 같다고 대응표본이 되는 것도 아닙니다. 같은 대상의 관측이라는 연결이 있어야 합니다.</p>
+<p>이 장의 Welch·대응 t·효과크기 계산이 모든 화면에 제공된다고 전제하지 않습니다. 화면의 단순 평균 차이를 특정 물건의 저평가·고평가나 용도·정책의 인과효과로 읽기보다, 시장 집단의 구성과 수준을 이해하는 출발점으로 사용하세요.</p>
+<p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 통계 열기 →</a></p></section>
 <section class="learn-chapter__step" id="recap" data-toc-label="결론 · 학습 요약"><p class="learn-chapter__label">결론 · 학습 요약</p><h2>비교 구조·차이의 크기·불확실성을 함께 읽으세요</h2><p>두 집단의 평균을 비교할 때는 계산에 앞서 자료가 어떻게 연결되어 있는지 확인해야 합니다. 다음 구분을 기억해 두세요.</p><ul class="learn-recap-list"><li><strong>독립표본:</strong> 두 집단의 변동을 각각 반영합니다. Welch 방법은 등분산을 요구하지 않지만 독립성 등 다른 조건은 필요합니다.</li><li><strong>대응표본:</strong> 같은 대상이나 사전에 정한 짝 안의 차이를 계산합니다. n은 완전한 짝의 수입니다.</li><li><strong>평균 차이의 구간:</strong> 차이 자체의 표준오차와 신뢰구간을 구합니다. 차이를 빼는 순서와 단위를 함께 표시합니다.</li><li><strong>효과크기:</strong> 원 단위의 차이를 먼저 보고, 표준화 지표는 어떤 표준편차로 나눴는지 확인합니다.</li><li><strong>해석의 한계:</strong> 큰 관측값·결측·집단 구성의 영향을 살펴야 합니다. 유의한 차이가 인과효과를 뜻하지는 않습니다.</li></ul><p>다음 <a href="/learn/stats/multiple-groups-and-categorical/">15장 ‘여러 집단과 범주형 자료의 비교’</a>에서 여러 평균과 구성비를 비교하는 방법을 배웁니다.</p><details class="learn-more"><summary>참고자료</summary><div class="learn-more__body"><ul><li><a href="https://www.itl.nist.gov/div898/handbook/eda/section3/eda353.htm">NIST/SEMATECH: Two-Sample t-Test for Equal Means</a> — 독립·대응 설계와 Welch 산식.</li></ul><p class="learn-source-note">참고자료의 기존 확인일: 2026-10-07. 네 개의 그림은 공통 학습 자료와 별도 가상 대응표본으로 작성했습니다. 실제 조사에서 가정이 성립하는지 검증한 결과는 아닙니다.</p></div></details></section>
 </article>
 

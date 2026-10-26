@@ -1,0 +1,17 @@
+.grp-chart svg{width:100%;height:auto}
+.grp-controls{padding:1rem;margin:0 0 1rem;border:1px solid rgba(148,163,184,.3);border-radius:.75rem}
+.grp-controls p,.grp-controls label{margin:.4rem 0}
+.grp-shortcuts{display:flex;gap:.5rem;flex-wrap:wrap;margin:.4rem 0 .6rem}
+.grp-shortcuts button,.grp-controls input{font:inherit;min-height:44px;border:1px solid #94a3b8;border-radius:.4rem;padding:.5rem .75rem;background:var(--learn-surface,#fff);color:var(--learn-link,#172033)}
+.grp-shortcuts button[aria-pressed="true"]{border-color:var(--learn-accent,#2563eb);background:var(--learn-selected,#dbeafe)}
+.grp-controls [role=status]{font-variant-numeric:tabular-nums;line-height:1.7}
+.grp-chart text{pointer-events:none}
+.grp-chart rect,.grp-chart circle{cursor:pointer}
+html[data-learn-theme=dark] .grp-chart [fill="#fff7ed"],
+html[data-learn-theme=dark] .grp-chart [fill="#ffffff"],
+html[data-learn-theme=dark] .grp-chart [fill="#eff6ff"]{fill:#1e3a5f}
+html[data-learn-theme=dark] .grp-chart [fill="#e2e8f0"],
+html[data-learn-theme=dark] .grp-chart [fill="#cbd5e1"]{fill:#334155}
+html[data-learn-theme=dark] .grp-shortcuts button[aria-pressed="true"]{background:#1e3a5f}
+.learn-chapter .grp-table table{width:100%;min-width:0;table-layout:fixed}
+.learn-chapter .grp-table th,.learn-chapter .grp-table td{white-space:normal;overflow-wrap:anywhere;vertical-align:top}

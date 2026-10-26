@@ -86,7 +86,7 @@ def build():
     while i<len(lines) and (re.match(r'\d+\. ',lines[i]) if ordered else lines[i].startswith('- ')):
      items.append('<li>'+inline(re.sub(r'^(?:- |\d+\. )','',lines[i]))+'</li>');i+=1
     out.append('<'+tag+'>'+''.join(items)+'</'+tag+'>');continue
-   formula=line.startswith(('H₀:','H₁:','T =','t =','t ≈','d =','p =','p ≈','95% 신뢰구간:','차이의 95%','검정력 =','1 − 0.95','146.33 −'))
+   formula=line.startswith(('H₀:','H₁:','T =','t =','t ≈','d =','p =','p ≈','95% 신뢰구간:','차이의 95%','검정력 =','1 − 0.95','1 − (1','146.33 −'))
    out.append('<p'+(' class="ht-formula"' if formula else '')+'>'+inline(line)+'</p>');i+=1
   return '\n'.join(out)
  for id,section in zip(ids,re.split(r'^## ',source,flags=re.M)[1:],strict=True):

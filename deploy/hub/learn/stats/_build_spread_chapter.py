@@ -1,60 +1,216 @@
 """Rebuild chapter 06 with explicit descriptive and sample variance conventions."""
 from pathlib import Path
-from statistics import mean,pvariance,variance,pstdev,stdev
+from statistics import mean, pvariance, variance, pstdev, stdev
 from html import escape
-import json,re
-ROOT=Path(__file__).resolve().parent
+import json, re
+import xml.etree.ElementTree as ET
+ROOT = Path(__file__).resolve().parent
 
 def build():
- rows=json.loads((ROOT/'example-data.json').read_text(encoding='utf-8'))['rows'];v=[r['price'] for r in rows];without=[r['price'] for r in rows if r['id']!=7];m=mean(v);ss=sum((x-m)**2 for x in v)
- def t(x,y,s,extra=''):return f'<text x="{x}" y="{y}" {extra}>{escape(str(s))}</text>'
- def l(x,y,xx,yy,c='#cbd5e1',extra=''):return f'<line x1="{x}" y1="{y}" x2="{xx}" y2="{yy}" stroke="{c}" {extra}/>'
- def r(x,y,w,h,c='#93c5fd',extra=''):return f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="{c}" {extra}/>'
- def fig(id,title,desc,b,cap,h):return f'<figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 {h}" role="img" aria-labelledby="{id}-title {id}-desc"><title id="{id}-title">{title}</title><desc id="{id}-desc">{desc}</desc>{b}</svg><figcaption class="learn-chart__caption">{cap}</figcaption></figure>'
- b=t(24,26,'평균이 같아도 관측값의 퍼짐은 다릅니다')
- for y,label,values in [(90,'A: 90 · 100 · 110',[90,100,110]),(180,'B: 50 · 100 · 150',[50,100,150])]:
-  b+=t(24,y-25,label)+l(70,y,570,y)
-  for x in values:b+=f'<circle cx="{70+x*3}" cy="{y}" r="6" fill="#2563eb"/>'
-  b+=t(410,y-25,f'SD {pstdev(values):.2f}')
- b+=l(370,65,370,195,'#64748b','stroke-dasharray="4 3"')
- for x in [0,50,100,150]:b+=t(70+x*3,220,x,'text-anchor="middle"')
- b+=t(410,249,'단가(만원/㎡)')
- f1=fig('same-center','같은 평균과 다른 표준편차','가상 A와 B는 평균100이며 n으로 나눈 표준편차는8.16과40.82입니다.',b,'그림 1. 별도 가상 자료 두 묶음, 각 3건. SD는 각 묶음 자체를 요약해 n으로 나눈 표준편차입니다.',270)
- b=t(24,26,'80 · 100 · 120의 평균은 100입니다')
- for i,(x,d) in enumerate([(80,-20),(100,0),(120,20)]):
-  y=75+i*70;b+=t(24,y+18,f'값 {x}')+l(200,y+12,400,y+12)
-  b+=f'<circle cx="{300+d*4}" cy="{y+12}" r="5" fill="#2563eb"/>'+l(300,y-5,300,y+26,'#475569')+t(440,y+18,f'편차 {d:+d} → 제곱 {d*d}')
- b+=t(24,296,'편차 합: −20 + 0 + 20 = 0')+t(24,323,'제곱편차 합: 400 + 0 + 400 = 800')
- f2=fig('deviations','편차와 제곱편차','80,100,120에서 편차는 마이너스20,0,20이며 제곱합은800입니다.',b,'그림 2. 별도 가상 자료 3건. 가로 위치는 평균에서의 편차를 나타냅니다. 편차 단위는 만원/㎡, 제곱편차 단위는 (만원/㎡)²입니다.',348)
- b=t(24,26,'같은 공통 자료를 서로 다른 분모로 계산합니다')
- for y,label,sd,key in [(80,'30으로 나눔',pstdev(v),'n'),(155,'29로 나눔',stdev(v),'n-1')]:
-  b+=t(24,y+21,label)+r(165,y,sd*4.7,28,extra=f'data-denominator="{key}" data-sd="{sd}"')+t(165+sd*4.7+9,y+21,f'{sd:.1f}')
- b+=l(165,218,588,218)
- for x in [0,20,40,60,80]:b+=t(165+x*4.7,243,x,'text-anchor="middle"')
- b+=t(390,273,'표준편차(만원/㎡)')
- f3=fig('denominators','n과 n-1의 표준편차 비교','n으로 나누면80.2, n-1로 나누면81.5만원/㎡입니다.',b,'그림 3. 같은 30건과 같은 평균으로 계산했습니다. 분모의 차이이며 자료를 한 건 제거한 비교가 아닙니다.',295)
- b=t(24,26,'7번 포함·제외에 따른 기술통계 변화')
- for y,label,values in [(80,'전체 30건',v),(155,'7번 제외 29건',without)]:
-  sd=pstdev(values);b+=t(24,y+21,label)+r(190,y,sd*4.4,28,extra=f'data-count="{len(values)}" data-sd="{sd}"')+t(190+sd*4.4+9,y+21,f'{sd:.1f}')
- b+=l(190,220,586,220)
- for x in [0,20,40,60,80]:b+=t(190+x*4.4,244,x,'text-anchor="middle"')
- b+=t(392,274,'표준편차(만원/㎡)')
- f4=fig('extreme-effect','큰 관측의 영향','각 자료의 건수로 나눈 표준편차가 전체80.2에서 7번 제외51.7로 달라집니다.',b,'그림 4. 공통 예제의 민감도 비교. 각 자료에서 평균을 다시 구하고 각각 30과 29로 나눕니다. 관측 삭제를 권하는 그림이 아닙니다.',297)
- parts=[]
- def sec(id,label,title,body):parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}">\n<p class="learn-chapter__label">{label}</p>\n<h2>{title}</h2>\n{body}\n</section>')
- sec('quick-start','서두 · 학습목표','평균이 같으면 자료도 비슷할까요?','<p>세 사람의 통학 시간이 25분·30분·35분인 경우와 10분·30분·50분인 경우를 비교해 보세요. 두 묶음의 평균은 모두 30분이지만, 두 번째 묶음의 값들이 평균에서 더 멀리 떨어져 있습니다.</p><p>앞 장에서는 분위수로 자료의 가운데 부분을 살펴봤습니다. 이번에는 <strong>각 값이 평균에서 얼마나 떨어졌는지</strong>를 이용해 전체 자료의 퍼짐을 나타내는 분산과 표준편차를 배웁니다.</p><ul class="learn-objectives"><li>편차를 제곱해 <strong>분산과 표준편차</strong>를 계산하는 과정을 이해합니다.</li><li>분산과 표준편차의 단위, 분모 <strong>n과 n−1</strong>의 차이를 설명합니다.</li><li>큰 값이나 단위 변환이 퍼짐에 미치는 영향을 살피고, 표준편차를 신뢰구간이나 표준오차와 구별합니다.</li></ul><p>먼저 <a href="/learn/stats/mean-and-median/#mean">산술평균</a>과 <a href="/learn/stats/quantiles/#iqr">IQR</a>을 떠올려 보세요. 아래는 평균이 같아도 퍼짐은 달라질 수 있음을 보여 주는 별도 가상 예시입니다.</p>'+f1)
- sec('deviation','편차와 제곱','평균에서 떨어진 정도를 어떻게 더할까요?','<p><strong>편차</strong>는 각 값에서 평균을 뺀 것입니다. 평균보다 작으면 음수, 크면 양수가 됩니다. 하지만 편차를 그대로 더하면 양수와 음수가 상쇄되어 합이 0이 됩니다. 퍼짐을 알아보려면 부호가 상쇄되지 않게 해야 합니다.</p>'+f2+'<p>그림의 80·100·120은 평균이 100입니다. 편차는 −20·0·20이고 합은 0이지만, 값들이 모두 같지는 않습니다. 편차를 <strong>제곱</strong>하면 400·0·400이 되고 합은 800입니다.</p><p>이를 값의 개수인 3으로 나눈 분산은 약 266.67입니다. 그 제곱근을 구하면 표준편차는 약 16.33입니다. 편차가 10에서 20으로 두 배가 되면 제곱은 100에서 400으로 네 배가 되므로, 평균에서 멀리 떨어진 값이 결과에 크게 반영됩니다.</p><p>부호를 없애는 다른 방법으로 절댓값을 쓸 수도 있습니다. 이 예시에서 절대편차의 평균은 (20+0+20)÷3≈13.33입니다. <strong>표준편차는 평균까지의 절대거리들을 단순히 평균한 값과는 다릅니다.</strong></p>')
- sec('formulas','공식과 단위','제곱해서 구한 분산을 원래 단위로 되돌립니다','<p>관측한 n개 자료 자체의 퍼짐을 요약하는 계산은 다음 순서입니다.</p><ol><li>평균 x̄를 구합니다.</li><li>각 값 xᵢ에서 평균을 빼고 제곱합니다.</li><li>제곱한 값을 모두 더해 n으로 나눕니다. 이것이 분산입니다.</li><li>분산의 제곱근을 구합니다. 이것이 표준편차입니다.</li></ol><p><strong>분산 = Σ(xᵢ−x̄)²÷n<br>표준편차 = √분산</strong></p><p>Σ는 모두 더한다는 기호입니다. 단위가 분이라면 편차도 분, 분산은 분², 표준편차는 다시 분입니다. 길이가 cm라면 분산은 cm², 표준편차는 cm입니다. 표준편차로 표현하면 원래 값과 같은 단위로 퍼짐의 규모를 읽을 수 있습니다.</p><p>분산과 표준편차는 0 이상입니다. 모든 값이 같으면 0이고, 값들이 평균에서 멀리 퍼져 있을수록 커지는 경향이 있습니다. 다만 표준편차가 더 큰 자료의 최솟값·최댓값 차이도 반드시 더 큰 것은 아닙니다.</p><p>모집단 전체를 알면 모집단 평균 μ로 계산해 모집단 분산을 구합니다. 일부 표본으로 모집단 분산을 추정할 때 쓰는 n−1 방식은 뒤에서 구별해 살펴보겠습니다.</p>')
- sec('example','30건 계산 예제','같은 평균을 기준으로 각 값의 편차를 계산합니다',f'''<p>공통 학습 예시 30건의 평균은 4,390÷30=146.333…입니다. 계산 중에는 이 값을 반올림하지 않습니다. <a href="/learn/stats/graphs/#data">원자료 표</a>와 <a href="../example-data.json">JSON 자료</a>를 확인할 수 있습니다. 실제 거래 출처가 확인되지 않은 학습 예시이며 실제 시장의 변동성을 뜻하지 않습니다.</p><p>제곱편차 합은 약 {ss:,.2f}입니다. 이를 30으로 나누면 분산은 {pvariance(v):,.2f}, 제곱근을 구하면 표준편차는 <strong>{pstdev(v):.2f}만원/㎡</strong>입니다. 표시 자릿수에 따라 80.2로 적을 수 있습니다.</p><div class="learn-data learn-data--full"><table><caption>공통 자료의 계산 요약</caption><thead><tr><th scope="col">단계</th><th scope="col">값</th><th scope="col">단위</th></tr></thead><tbody><tr><th scope="row">관측 수</th><td>30</td><td>건</td></tr><tr><th scope="row">평균</th><td>146.333…</td><td>만원/㎡</td></tr><tr><th scope="row">제곱편차 합</th><td>{ss:,.2f}</td><td>(만원/㎡)²</td></tr><tr><th scope="row">n으로 나눈 분산</th><td>{pvariance(v):,.2f}</td><td>(만원/㎡)²</td></tr><tr><th scope="row">표준편차</th><td>{pstdev(v):.2f}</td><td>만원/㎡</td></tr></tbody></table></div>''')
- sec('sample-variance','n과 n−1','같은 자료도 계산 목적에 따라 분모가 다릅니다','<p>자료 자체의 퍼짐을 기술하는 계산에서는 n으로 나눌 수 있습니다. 반면 <strong>독립적이고 같은 분포에서 뽑은 표본으로 모집단의 분산을 추정</strong>할 때는 n−1로 나눈 표본분산을 사용합니다. 이는 모집단 분산이 유한하다는 가정 아래의 계산입니다.</p><p><strong>표본분산 s² = Σ(xᵢ−x̄)²÷(n−1)</strong></p><p>같은 표본으로 평균을 구하면 제곱편차 합이 모집단 평균을 썼을 때보다 평균적으로 작아집니다. n−1로 나누는 것은 이 점을 보정하는 방법입니다. 편차 합이 0으로 정해져 n−1개 편차를 알면 마지막 편차도 정해진다는 점을 자유도 n−1과 연결해 이해할 수 있습니다.</p>'+f3+f'<p>공통 예시의 30건을 29로 나누어 계산한 표본분산은 {variance(v):,.2f}, 표본표준편차는 <strong>{stdev(v):.2f}만원/㎡</strong>입니다. 같은 30개 값으로 계산한 결과이며 한 건을 버린 것이 아닙니다.</p>' +'<p>이 보정이 수집 편향이나 관측 간의 의존성까지 없애 주지는 않습니다. 또한 분산이 평균적으로 목표값에 맞는 성질을 가진다고 해서 제곱근인 표준편차까지 정확히 같은 성질을 갖는 것은 아닙니다.</p><p>n=1이면 n−1 방식은 계산할 수 없습니다. 표본 수가 작을수록 두 분모의 차이가 크므로 결과를 비교할 때 어떤 규칙을 썼는지 확인하세요.</p>')
- sec('extremes','극단값과 다른 퍼짐 지표','평균에서 먼 값은 제곱합에 크게 반영됩니다','<p>공통 예시의 7번 값 480은 다른 값들보다 큽니다. 평균과의 차이도 커서 제곱편차 합에 큰 영향을 줍니다. 그 영향을 알아보기 위해 포함했을 때와 제외했을 때의 계산을 비교해 보겠습니다.</p>'+f4+'<p>7번을 제외한 나머지 29건의 평균은 약 134.83입니다. 이 평균으로 편차를 다시 구하고, 제곱편차 합을 29로 나누어 계산한 표준편차는 약 51.72입니다. 앞 절은 같은 자료에서 분모만 바꾼 비교이고, 이번에는 <strong>자료와 평균 자체가 바뀐 비교</strong>입니다.</p><p>표준편차가 작아진다는 이유만으로 값을 제외해서는 안 됩니다. 기록 오류인지, 다른 조건의 관측인지, 드물지만 유효한 값인지 확인해야 합니다.</p><p>IQR은 가운데 부분의 퍼짐을 보고, 표준편차는 모든 값의 제곱편차를 반영합니다. 따라서 같은 자료라도 두 지표가 주는 인상은 다를 수 있습니다. 떨어진 관측을 확인하는 방법은 <a href="/learn/stats/iqr-outliers/">7장 ‘이상치와 IQR’</a>에서 다룹니다.</p>')
- sec('scale','단위 변환과 상대적 퍼짐','같은 수를 더할 때와 곱할 때는 결과가 다릅니다','<p>모든 값에 같은 수를 더하면 평균도 같은 만큼 이동합니다. 각 값과 평균 사이의 거리는 그대로이므로 분산과 표준편차도 변하지 않습니다.</p><p>반대로 모든 값에 a를 곱하면 편차도 a배가 됩니다. 따라서 <strong>분산은 a²배, 표준편차는 |a|배</strong>가 됩니다. |a|는 부호를 뺀 크기입니다.</p><p>80·100·120에 각각 100을 더한 180·200·220의 표준편차는 원래와 같은 약 16.33입니다. 값을 두 배로 한 160·200·240에서는 표준편차가 약 32.66으로 두 배, 분산이 약 1,066.67로 네 배가 됩니다. 이 예시는 각 자료의 개수로 나눈 계산입니다.</p><p>단위를 바꿨다면 표준편차의 숫자도 달라집니다. cm로 적은 값과 m로 적은 값을 숫자 크기만으로 비교하지 않도록 주의하세요.</p><details class="learn-more"><summary>평균 수준이 다른 집단의 상대적인 퍼짐은 어떻게 볼까요?</summary><div class="learn-more__body"><p><strong>변동계수(CV)</strong>는 표준편차를 평균으로 나눈 비율입니다. 평균에 비해 얼마나 퍼져 있는지 볼 때 사용할 수 있습니다. 다만 의미 있는 0을 갖는 비율척도이고, 평균이 양수이며 0에서 충분히 떨어져 있을 때 신중하게 사용합니다.</p><p>평균이 0에 가까우면 비율이 매우 커지거나 불안정해집니다. 섭씨온도처럼 0이 양의 부재를 뜻하지 않는 척도에서도 변동계수를 그대로 해석하기 어렵습니다.</p></div></details>')
- sec('interpretation','해석의 한계','표준편차를 범위나 평균의 오차로 읽지 않습니다','<p>표준편차는 <strong>관측값들의 퍼짐</strong>입니다. 표본을 바꿔 뽑을 때 평균 추정값이 얼마나 달라지는지를 나타내는 <strong>표준오차</strong>와는 다릅니다. 자료 수가 늘어도 자료 자체의 표준편차가 반드시 작아지는 것은 아닙니다. 자세한 차이는 <a href="/learn/stats/sample-size/">11장 ‘표준오차와 표본수’</a>에서 배웁니다.</p><p>‘평균±표준편차’ 안에 언제나 약 68%의 값이 들어가는 것도 아닙니다. 약 68%라는 비율은 정규분포의 성질입니다. 한쪽으로 긴 꼬리가 있거나 여러 집단이 섞인 자료에 그대로 적용할 수는 없습니다.</p><p>평균±표준편차는 95% 신뢰구간도 아닙니다. <strong>자료가 얼마나 퍼졌는지, 평균을 얼마나 정밀하게 추정했는지, 새 값을 얼마나 잘 예측하는지는 서로 다른 질문</strong>입니다.</p><p>표준편차를 모형의 예측오차로 읽어서도 안 됩니다. 예측오차는 실제값과 모형의 예측값을 비교해야 구할 수 있습니다. 평균에서 떨어진 정도만 계산한 표준편차와는 대상이 다릅니다.</p>')
- sec('practice','확인 문제','분모·단위·계산 대상을 구별해 보세요','<ol class="learn-exercises"><li>80·100·120의 편차 합이 0이면 퍼짐도 0일까요?<details><summary>답과 해설</summary><p>아니요. 음수와 양수가 상쇄된 것입니다. 제곱편차 합은 800이고, 3으로 나눈 분산의 제곱근인 표준편차는 약 16.33입니다.</p></details></li><li>같은 30건의 제곱편차 합을 29로 나누면 한 건을 제거한 것일까요?<details><summary>답과 해설</summary><p>아니요. 자료는 모두 유지하고 분모만 보정한 것입니다. 실제로 한 건을 제거했다면 평균과 제곱편차 합부터 다시 구해야 합니다.</p></details></li><li>모든 값을 두 배로 바꾸면 분산과 표준편차는 어떻게 될까요?<details><summary>답과 해설</summary><p>편차가 두 배가 되어 분산은 네 배, 표준편차는 두 배가 됩니다. 모든 값에 같은 수를 더하기만 하면 둘 다 변하지 않습니다.</p></details></li></ol>')
- sec('macro','CH2 Macro에서 읽기','표준편차 28.4와 분포의 모양을 함께 읽습니다','<p>CH2 Macro 토지 기본통계의 ‘자녹’ 행과 ‘답’ 열이 만나는 칸에서 <strong>28.4가 표준편차</strong>입니다. 단위는 단가와 같은 만원/㎡입니다. 앞 장에서 본 평균 33.2·중앙값 26.0과 함께 살펴보세요.</p><figure class="learn-capture learn-capture--detail"><a href="../assets/captures/land-standard-deviation-cell.png" target="_blank" rel="noopener" aria-label="토지 기본통계 자녹·답 교차 칸. 평균 33.2, 중앙값 26.0, 표준편차 28.4가 표시되어 있습니다. 크게 보기"><img src="../assets/captures/land-standard-deviation-cell.png" width="239" height="174" loading="lazy" alt="토지 기본통계 자녹·답 교차 칸. 평균 33.2, 중앙값 26.0, 표준편차 28.4가 표시되어 있습니다."/></a><figcaption class="learn-capture__caption">교차 칸의 28.4가 표준편차입니다. 평균은 33.2, 중앙값은 26.0이며, 이 칸의 건수는 393건으로 표시됩니다. 수치는 캡처 당시 기준입니다. <a href="../assets/captures/land-standard-deviation-cell.png" target="_blank" rel="noopener">원본 크게 보기 ↗</a></figcaption></figure><ol class="learn-screen-reading"><li><strong>표준편차 28.4:</strong> 해당 거래들의 단가가 평균 주변에서 얼마나 퍼져 있는지 요약한 값입니다. 평균에서 멀리 떨어진 단가도 제곱편차 계산에 반영됩니다.</li><li><strong>평균과 다른 역할:</strong> 평균 33.2가 중심 수준이라면 표준편차 28.4는 퍼짐의 규모입니다. ‘거래마다 평균에서 정확히 28.4씩 차이 난다’는 뜻은 아닙니다.</li><li><strong>구간과 구별:</strong> 평균±표준편차를 계산하면 4.8~61.6이지만, 이것을 전체 거래 범위나 95% 신뢰구간이라고 부를 수는 없습니다. 일정 비율의 거래가 반드시 포함되는 범위도 아닙니다.</li></ol><h3>오른쪽 꼬리가 긴 분포에서는 어떻게 읽을까요?</h3><figure class="learn-capture"><a href="../assets/captures/land-spread-distribution-393.png" target="_blank" rel="noopener" aria-label="단가 분포 히스토그램. 표본 수 393건, 이상치 제외 안 함. 낮은 단가 구간에 거래가 많이 모이고 큰 값 방향으로 긴 꼬리가 이어집니다. 크게 보기"><img src="../assets/captures/land-spread-distribution-393.png" width="916" height="358" loading="lazy" alt="단가 분포 히스토그램. 표본 수 393건, 이상치 제외 안 함. 낮은 단가 구간에 거래가 많이 모이고 큰 값 방향으로 긴 꼬리가 이어집니다."/></a><figcaption class="learn-capture__caption">위 기본통계 칸과 같은 393건의 단가 분포입니다. 이상치는 제외하지 않은 상태입니다. 요약 수치와 실제 분포의 모양을 함께 확인할 수 있습니다. <a href="../assets/captures/land-spread-distribution-393.png" target="_blank" rel="noopener">원본 크게 보기 ↗</a></figcaption></figure><p>이 분포도에서는 낮은 단가 구간에 거래가 많이 모여 있고, 큰 값 쪽으로 드문 거래가 멀리 이어집니다. 이런 모양에서는 평균과 가까운 거래가 많아도 멀리 떨어진 큰 값이 표준편차에 크게 반영될 수 있습니다. 가운데 부분의 퍼짐인 IQR과 전체 제곱편차를 반영하는 표준편차를 함께 보는 이유입니다.</p><p>두 화면은 같은 393건을 보여 줍니다. 평균 33.2와 중앙값 26.0으로 중심을, 표준편차 28.4로 전체 퍼짐을 살펴보고, 히스토그램에서 큰 값 쪽 꼬리와 거래가 모인 구간을 함께 확인하세요.</p><p>분포가 정규분포인지 확인하지 않은 채 ‘평균±표준편차에 약 68%가 있다’고 해석하지 않습니다. 또 이 장의 n 또는 n−1 계산법을 화면에 그대로 적용했다고 가정하지 말고, 서비스의 산식 설명도 확인하세요.</p><p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 기본통계 열기 →</a></p>')
- sec('recap','결론 · 학습 요약','표준편차에는 단위와 계산 목적을 함께 붙이세요','<p>분산과 표준편차는 중심만으로 알 수 없었던 자료의 퍼짐을 요약합니다. 다음 내용을 정리해 두세요.</p><ul class="learn-recap-list"><li><strong>편차:</strong> 각 값에서 평균을 뺀 것입니다. 합이 0이 되어도 퍼짐이 없는 것은 아닙니다.</li><li><strong>분산과 표준편차:</strong> 제곱편차를 모아 분산을 구하고 제곱근을 구하면 표준편차입니다. 표준편차는 원래 변수와 같은 단위입니다.</li><li><strong>분모:</strong> 자료를 기술하는 n 방식과 모집단 분산을 추정하는 n−1 방식을 구별합니다. n−1은 한 관측을 버린다는 뜻이 아닙니다.</li><li><strong>큰 값과 단위 변환:</strong> 평균에서 먼 값은 제곱합에 크게 반영됩니다. 모든 값에 a를 곱하면 분산은 a²배, 표준편차는 |a|배입니다.</li><li><strong>해석:</strong> 표준편차는 자료의 퍼짐이며 표준오차·신뢰구간·예측오차와 다릅니다. 분포의 모양과 표본 조건도 함께 확인합니다.</li></ul><p>다음 <a href="/learn/stats/iqr-outliers/">7장 ‘이상치와 IQR’</a>에서는 멀리 떨어진 관측을 찾고 그 값을 어떻게 확인할지 살펴봅니다.</p><details class="learn-more"><summary>참고자료</summary><div class="learn-more__body"><ul><li><a href="https://www.itl.nist.gov/div898/handbook/eda/section3/eda356.htm">NIST/SEMATECH: Measures of Scale</a> — 분산·표준편차와 퍼짐 지표.</li><li><a href="https://openstax.org/books/introductory-statistics-2e/pages/2-7-measures-of-the-spread-of-the-data">OpenStax, Introductory Statistics 2e §2.7</a> — 퍼짐 지표의 계산과 해석.</li></ul><p class="learn-source-note">참고자료의 기존 확인일: 2026-10-07. 본문의 네 예제 그림은 공통 자료와 별도 가상 예제로 작성했습니다. 반올림은 결과 표시 단계에서 적용했습니다.</p></div></details>')
- p=ROOT/'spread/index.html';s=p.read_text(encoding='utf-8');s=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="분산과 표준편차">\n'+'\n'.join(parts)+'\n</article>',s,count=1,flags=re.S)
- s=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1분산과 표준편차의 계산·단위, n과 n−1, 극단값과 단위 변환의 영향을 그림과 예제로 설명합니다.\2',s,count=1,flags=re.S)
- s=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',s)
- p.write_text(s,encoding='utf-8');print(ss,pvariance(v),pstdev(v),variance(v),stdev(v),pstdev(without))
-if __name__=='__main__':build()
+ rows = json.loads((ROOT / 'example-data.json').read_text(encoding='utf-8'))['rows']
+ prices = [row['price'] for row in rows]
+ without = [row['price'] for row in rows if row['id'] != 7]
+ assert len(prices) == 30 and sum(prices) == 4390 and sum(without) == 3910
+ center = mean(prices)
+ ss = sum((value - center) ** 2 for value in prices)
+ assert round(pvariance(prices), 2) == 6425.36 and round(pstdev(prices), 2) == 80.16
+ assert round(variance(prices), 2) == 6646.92 and round(stdev(prices), 2) == 81.53
+ assert round(ss, 2) == 192760.67
+ assert round(mean(without), 2) == 134.83 and round(pstdev(without), 2) == 51.72
+ fresh = mean(without)
+ assert abs(sum((value - fresh) ** 2 for value in without) - pvariance(without) * 29) < 1e-6
+ group_a, group_b = [25, 30, 35], [10, 30, 50]
+ assert mean(group_a) == 30 and mean(group_b) == 30
+ assert abs(pstdev(group_b) / pstdev(group_a) - 4) < 1e-9
+ assert round(pstdev(group_a), 2) == 4.08 and round(pstdev(group_b), 2) == 16.33
+ small = [80, 100, 120]
+ assert round(pvariance(small), 2) == 266.67 and round(pstdev(small), 2) == 16.33
+ assert abs(pstdev([value + 100 for value in small]) - pstdev(small)) < 1e-8
+ assert abs(pvariance([2 * value for value in small]) - 4 * pvariance(small)) < 1e-8
+ assert abs(pstdev([-2 * value for value in small]) - 2 * pstdev(small)) < 1e-8
+
+ def t(x, y, text, extra=''):
+  return f'<text x="{x}" y="{y}" {extra}>{escape(str(text))}</text>'
+ def line(x1, y1, x2, y2, extra=''):
+  return f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="#64748b" {extra}/>'
+ def fig(svg_id, title, desc, body, caption, height):
+  return (
+   f'<figure class="learn-chart learn-chart--wide sd-chart"><svg id="{svg_id}" viewBox="0 0 640 {height}" role="img" aria-labelledby="{svg_id}-title {svg_id}-desc">'
+   f'<title id="{svg_id}-title">{title}</title><desc id="{svg_id}-desc">{desc}</desc>{body}</svg>'
+   f'<figcaption class="learn-chart__caption">{caption}</figcaption></figure>'
+  )
+ def xpos(value):
+  return 80 + value * 6
+
+ body = t(16, 24, '평균 30분 · 가상 자료') + line(xpos(0), 210, xpos(55), 210)
+ body += line(xpos(30), 52, xpos(30), 198, 'stroke-dasharray="5 4"')
+ for name, values, y in (('A', group_a, 90), ('B', group_b, 165)):
+  body += t(16, y + 4, name)
+  for value in values:
+   body += line(xpos(value), y, xpos(30), y, f'data-group="{name}"')
+   body += f'<circle data-group="{name}" cx="{xpos(value)}" cy="{y}" r="6" fill="#93c5fd" stroke="#1e3a8a"/>'
+  body += t(xpos(30), y - 16, f'SD {pstdev(values):.2f}', 'text-anchor="middle"')
+ for tick in (0, 10, 20, 30, 40, 50):
+  body += t(xpos(tick), 232, tick, 'text-anchor="middle"')
+ body += t(16, 256, '분 · 점선은 평균')
+ f1 = fig('sd-groups', '평균이 같은 두 집단', '집단 A 25, 30, 35와 집단 B 10, 30, 50의 평균은 30분입니다. n으로 나눈 표준편차는 약 4.08과 16.33입니다.', body,
+  '그림 1. 별도 가상 자료이며 단위는 분입니다. 공통 30건의 거래단가가 아닙니다.', 275)
+
+ body = t(16, 24, '80 · 100 · 120 · 평균 100')
+ for value, deviation, y in ((80, -20, 78), (100, 0, 148), (120, 20, 218)):
+  body += t(16, y + 5, f'{value}')
+  body += line(200, y, 420, y)
+  body += line(300, y, 300 + deviation * 4, y, f'data-dev="1" data-price="{value}"')
+  body += f'<circle data-price="{value}" cx="{300 + deviation * 4}" cy="{y}" r="6" fill="#93c5fd" stroke="#1e3a8a"/>'
+  body += t(430, y + 5, f'편차 {deviation:+d}', f'data-dev="1" data-price="{value}"')
+  body += f'<rect data-sq="1" data-price="{value}" x="430" y="{y - 10}" width="{abs(deviation) * 2}" height="16" fill="#bfdbfe" stroke="#64748b" opacity="0.2"/>'
+ body += t(16, 268, '편차 합 0 · 제곱편차 합 800')
+ body += t(16, 292, '가로 간격은 편차입니다')
+ f2 = fig('sd-deviations', '편차와 제곱편차', '80, 100, 120의 편차는 -20, 0, 20이고 제곱편차 합은 800입니다.', body,
+  '그림 2. 별도 가상 단가 3건. 편차의 단위는 만원/㎡, 제곱편차의 단위는 (만원/㎡)²입니다.', 315)
+
+ def bar(x, y, sd, scale, extra):
+  width = repr(float(sd) * scale)
+  return f'<rect x="{x}" y="{y}" width="{width}" height="28" fill="#93c5fd" data-sd="{repr(float(sd))}" {extra}/>'
+
+ body = t(16, 24, '같은 30건 · 분모만 다름')
+ body += t(16, 62, 'n = 30') + bar(24, 72, pstdev(prices), 4.7, 'stroke="#d97706" stroke-width="3" data-denominator="n"')
+ body += t(16, 138, 'n−1 = 29') + bar(24, 148, stdev(prices), 4.7, 'stroke="#64748b" stroke-width="1" data-denominator="n-1"')
+ body += line(24, 196, 560, 196)
+ for tick in (0, 20, 40, 60, 80):
+  body += t(24 + tick * 4.7, 218, tick, 'text-anchor="middle"')
+ body += t(16, 246, '표준편차(만원/㎡) · 점은 사라지지 않습니다')
+ f3 = fig('sd-denoms', 'n과 n-1', '같은 30건의 n 방식 표준편차는 약 80.16, n-1 방식은 약 81.53입니다.', body,
+  '그림 3. 관측 30건, 평균, 제곱편차 합은 그대로입니다. 막대 하나가 빠지지 않습니다.', 270)
+
+ body = t(16, 24, '7번 포함과 제외 · 평균을 다시 계산')
+ body += t(16, 62, '포함 30건') + bar(24, 72, pstdev(prices), 4.4, 'stroke="#d97706" stroke-width="3" data-count="30"')
+ body += t(16, 138, '제외 29건') + bar(24, 148, pstdev(without), 4.4, 'stroke="#64748b" stroke-width="1" data-count="29"')
+ body += line(24, 196, 520, 196)
+ for tick in (0, 20, 40, 60, 80):
+  body += t(24 + tick * 4.4, 218, tick, 'text-anchor="middle"')
+ body += t(16, 246, '표준편차(만원/㎡) · n 방식')
+ f4 = fig('sd-extreme', '7번 포함과 제외', '7번을 포함한 n 방식 표준편차는 약 80.16, 제외 후 다시 계산하면 약 51.72입니다.', body,
+  '그림 4. 29건의 평균을 새로 구한 뒤 제곱편차를 다시 계산했습니다. 거래를 삭제하라는 그림이 아닙니다.', 270)
+
+ controls = lambda buttons, status: f'<div class="sd-controls" hidden><div class="sd-shortcuts">{buttons}</div><p role="status" id="{status}"></p></div>'
+ sections = f'''
+<section class="learn-chapter__step" id="quick-start" data-toc-label="서두 · 학습목표"><p class="learn-chapter__label">서두 · 학습목표</p><h2>평균이 같으면 거래단가의 분포도 비슷할까요?</h2>
+<p>두 지역의 평균단가가 모두 100만원/㎡라고 해 보겠습니다. 한 지역은 95, 100, 105이고 다른 지역은 50, 100, 150입니다. 평균은 같지만 두 번째 지역의 차이가 더 큽니다. 이 퍼짐을 숫자로 나타내는 방법이 <strong>분산</strong>과 <strong>표준편차</strong>입니다.</p>
+<ul class="learn-objectives"><li>평균이 같아도 퍼짐은 다를 수 있습니다.</li><li>편차와 제곱편차를 계산합니다.</li><li>분산과 표준편차의 단위를 구별합니다.</li><li>n과 n−1 분모를 구별합니다.</li><li>극단값이 표준편차에 미치는 영향을 살펴봅니다.</li><li>단위 변환, IQR, 표준오차, 예측오차와 구별합니다.</li><li>CH2 Macro의 거래단가 표준편차를 읽습니다.</li></ul>
+<p>먼저 <a href="/learn/stats/mean-and-median/#mean">산술평균</a>과 <a href="/learn/stats/quantiles/#iqr">IQR</a>을 떠올려 보세요.</p>
+<div class="learn-data learn-data--full sd-table"><table><caption>평균이 같은 가상 두 집단 · 단위는 분</caption><thead><tr><th scope="col">구분</th><th scope="col">관측</th><th scope="col">평균</th><th scope="col">분산</th><th scope="col">표준편차</th></tr></thead><tbody><tr><th scope="row">A</th><td>25, 30, 35</td><td>30</td><td>16.67</td><td>4.08</td></tr><tr><th scope="row">B</th><td>10, 30, 50</td><td>30</td><td>266.67</td><td>16.33</td></tr></tbody></table></div>
+{controls('<button type="button" data-spread-group="A">집단 A</button><button type="button" data-spread-group="B">집단 B</button><button type="button" data-spread-group="both" aria-pressed="true">함께 비교</button>', 'sd-group-status')}
+{f1}
+<p>A의 제곱편차 합은 25+0+25=50이고, 3으로 나눈 분산은 약 16.67, 표준편차는 약 4.08입니다. B의 제곱편차 합은 800, 분산은 약 266.67, 표준편차는 약 16.33입니다. 표준편차는 네 배 차이입니다. 이 예제의 단위는 분이며 부동산 거래가 아닙니다.</p></section>
+<section class="learn-chapter__step" id="deviation" data-toc-label="편차와 제곱편차"><p class="learn-chapter__label">편차와 제곱편차</p><h2>편차를 그대로 더하면 퍼짐이 사라집니다</h2>
+<p>편차는 관측값에서 평균을 뺀 값입니다. 가상 단가 80, 100, 120의 평균은 100이고 편차는 −20, 0, +20입니다. 합은 0입니다. 산술평균으로 계산한 편차의 합은 언제나 0이므로, 편차를 그대로 더해서는 퍼짐을 나타낼 수 없습니다.</p>
+<p>편차를 제곱하면 400, 0, 400이고 합은 800입니다. 평균에서 10 떨어진 제곱편차는 100, 20 떨어진 제곱편차는 400입니다. 거리가 두 배가 되면 제곱편차는 네 배가 됩니다. 절댓값의 평균은 (20+0+20)/3≈13.33이고, 곧 계산할 표준편차 약 16.33과 다릅니다.</p>
+{controls('<button type="button" data-point="80">80</button><button type="button" data-point="100">100</button><button type="button" data-point="120" aria-pressed="true">120</button><button type="button" data-square="no" aria-pressed="true">편차</button><button type="button" data-square="yes">제곱편차</button>', 'sd-point-status')}
+{f2}</section>
+<section class="learn-chapter__step" id="formulas" data-toc-label="분산과 표준편차"><p class="learn-chapter__label">분산과 표준편차</p><h2>제곱편차의 평균을 구한 뒤 제곱근으로 단위를 되돌립니다</h2>
+<p>n으로 나눈 분산은 제곱편차 합을 관측수로 나눈 값입니다. 앞의 세 건은 800/3≈266.67이고 단위는 (만원/㎡)²입니다. 266.67만원/㎡만큼 떨어져 있다는 뜻이 아닙니다. 표준편차는 분산의 제곱근이므로 약 16.33만원/㎡입니다. 모든 거래가 평균에서 정확히 16.33씩 떨어져 있다는 뜻도 아닙니다.</p>
+<p>분산과 표준편차는 0 이상입니다. 모든 값이 같으면 둘 다 0입니다. 표준편차가 크다고 최댓값과 최솟값의 차이가 반드시 더 큰 것은 아닙니다. 분포가 대칭인지, 꼬리가 긴지, 봉우리가 여러 개인지도 표준편차만으로 알 수 없습니다.</p></section>
+<section class="learn-chapter__step" id="example" data-toc-label="공통 30건"><p class="learn-chapter__label">공통 30건</p><h2>반올림하기 전의 평균으로 제곱편차를 계산합니다</h2>
+<p>1~5장의 공통 학습자료 30건입니다. 단가 합계는 4,390이고 평균은 4,390/30=146.333…입니다. 중간에 146.33으로 반올림하지 않습니다. 제곱편차 합은 약 192,760.67입니다. 30으로 나누면 분산은 약 6,425.36, 표준편차는 약 80.16만원/㎡입니다. 4,390은 단가를 더한 값이며 거래금액의 합이 아닙니다. 출처와 표집 설계가 확인되지 않은 학습 자료이므로 특정 지역의 변동성으로 읽지 않습니다. <a href="/learn/stats/graphs/#data">전체 표</a>와 <a href="../example-data.json">원자료</a>에서 확인할 수 있습니다.</p></section>
+<section class="learn-chapter__step" id="denominators" data-toc-label="n과 n−1"><p class="learn-chapter__label">n과 n−1</p><h2>자료 자체를 요약하는 것과 모집단 분산을 추정하는 것은 다릅니다</h2>
+<p>n으로 나누면 관측한 자료의 퍼짐을 요약합니다. 모집단 N개를 모두 알 때는 모집단 평균을 기준으로 N으로 나눕니다. 독립적이고 같은 분포의 표본으로 모집단 분산을 추정할 때는 n−1로 나눈 표본분산을 널리 씁니다. 표본평균은 같은 자료의 제곱편차 합을 가장 작게 만들므로, n으로 나누면 모집단 분산을 평균적으로 작게 추정할 수 있습니다. 이 보정은 적절한 표집 가정 아래의 성질입니다.</p>
+<p>n−1은 관측 한 건을 버리는 수가 아닙니다. 30건을 모두 사용합니다. 편차의 합이 0이므로 일부를 알면 마지막 편차가 정해집니다. 그 제약을 자유도 n−1이라고 부릅니다. n=1이면 n−1 방식은 계산할 수 없습니다.</p>
+{controls('<button type="button" data-denominator-choice="n" aria-pressed="true">n으로 나눔</button><button type="button" data-denominator-choice="n-1">n−1로 나눔</button>', 'sd-denom-status')}
+{f3}
+<div class="learn-data learn-data--full sd-table"><table><caption>같은 30건에서 분모만 바꿉니다</caption><thead><tr><th scope="col">항목</th><th scope="col">n</th><th scope="col">n−1</th></tr></thead><tbody><tr><th scope="row">관측수</th><td>30</td><td>30</td></tr><tr><th scope="row">분모</th><td>30</td><td>29</td></tr><tr><th scope="row">제곱편차 합</th><td>192,760.67</td><td>192,760.67</td></tr><tr><th scope="row">분산</th><td>6,425.36</td><td>6,646.92</td></tr><tr><th scope="row">표준편차</th><td>80.16</td><td>81.53</td></tr></tbody></table></div>
+<p>n−1 방식이 모든 상황에서 더 올바른 것은 아닙니다. 지금 가진 거래의 퍼짐을 기술하려면 n을 쓸 수 있고, 더 큰 모집단의 분산을 확률표본으로 추정하려면 n−1이 필요할 수 있습니다. 표본분산이 불편추정량이 될 수 있어도, 그 제곱근인 표본표준편차까지 자동으로 불편추정량이 되는 것은 아닙니다.</p></section>
+<section class="learn-chapter__step" id="extremes" data-toc-label="극단값"><p class="learn-chapter__label">극단값</p><h2>한 건을 빼면 평균과 제곱편차를 다시 계산합니다</h2>
+<p>7번의 단가는 480만원/㎡입니다. 평균 약 146.33과의 차이는 약 333.67이고, 제곱하면 표준편차에 크게 반영됩니다. 포함한 30건의 n 방식 표준편차는 약 80.16입니다. 7번을 뺀 29건은 합계 3,910, 평균 약 134.83, 표준편차 약 51.72입니다. 이 값은 남은 29건의 평균으로 제곱편차를 다시 계산한 결과입니다. 전체 제곱편차 합에서 7번의 제곱편차만 뺀 값이 아닙니다.</p>
+{controls('<button type="button" data-inclusion="all" aria-pressed="true">7번 포함</button><button type="button" data-inclusion="drop">7번 제외</button>', 'sd-extreme-status')}
+{f4}
+<p>그림 3은 같은 30건에서 분모만 30과 29로 바꿉니다. 그림 4는 자료가 30건에서 29건으로 바뀌고 평균과 제곱편차 합도 다시 계산됩니다. 표준편차가 줄었다고 7번을 지우는 근거가 되지는 않습니다. 면적, 금액, 용도지역, 거래 유형, 특수 조건을 확인합니다.</p>
+<p>5장의 두 절반 방식에서 Q1은 98, Q3는 168, IQR은 70만원/㎡입니다. n 방식 표준편차는 약 80.16만원/㎡입니다. 숫자가 비슷해 보여도 같은 범위가 아닙니다. IQR은 가운데 부분이고, 표준편차는 모든 제곱편차를 반영합니다. 표준편차가 더 크다고 분산이 더 넓다고 단정하지 않습니다. 울타리 밖의 관측이 잘못된 거래인 것도 아닙니다. 처리는 <a href="/learn/stats/iqr-outliers/">7장 「이상치와 IQR」</a>에서 다룹니다.</p></section>
+<section class="learn-chapter__step" id="scale" data-toc-label="단위와 변동계수"><p class="learn-chapter__label">단위와 변동계수</p><h2>더하면 편차가 유지되고, 곱하면 표준편차가 배수가 됩니다</h2>
+<p>모든 값에 같은 수를 더하면 평균도 그만큼 이동해 편차는 그대로입니다. 모든 값에 a를 곱하면 분산은 a²배, 표준편차는 |a|배가 됩니다. 음수를 곱해도 표준편차는 음수가 되지 않습니다. 원 단위와 만원 단위의 표준편차를 숫자 크기만으로 비교하지 않습니다.</p>
+{controls('<button type="button" data-scale="base" aria-pressed="true">80, 100, 120</button><button type="button" data-scale="plus">100 더하기</button><button type="button" data-scale="double">2배</button>', 'sd-scale-status')}
+<div class="learn-data learn-data--full sd-table"><table><caption>같은 세 건의 단위 변환 · n 방식</caption><thead><tr><th scope="col">자료</th><th scope="col">평균</th><th scope="col">분산</th><th scope="col">표준편차</th></tr></thead><tbody><tr><th scope="row">80, 100, 120</th><td>100</td><td>266.67</td><td>16.33</td></tr><tr><th scope="row">180, 200, 220</th><td>200</td><td>266.67</td><td>16.33</td></tr><tr><th scope="row">160, 200, 240</th><td>200</td><td>1,066.67</td><td>32.66</td></tr></tbody></table></div>
+<p>표준편차가 모두 20이어도 평균이 100인 집단과 1,000인 집단은 평균에 비한 퍼짐이 다릅니다. 변동계수는 표준편차를 평균으로 나눈 값입니다. 이 예제에서는 20/100=20%, 20/1,000=2%입니다. 평균이 0에 가까우면 불안정하고, 0이 없음이 아닌 척도에는 그대로 쓰기 어렵습니다. 가격 위험을 자동으로 평가하는 지표도 아닙니다.</p></section>
+<section class="learn-chapter__step" id="interpretation" data-toc-label="해석의 한계"><p class="learn-chapter__label">해석의 한계</p><h2>표준편차, 표준오차, 예측오차는 다른 질문입니다</h2>
+<p>표준편차는 관측값이 평균 주변에 얼마나 퍼져 있는지입니다. 표준오차는 추정량이 표집을 반복할 때 얼마나 흔들릴 수 있는지입니다. 독립적이고 같은 분포라면 표본평균의 표준오차는 n−1로 계산한 표본표준편차를 √n으로 나눈 값으로 추정할 수 있습니다. 거래가 같은 지역에 몰려 서로 의존하면 이 공식이 맞지 않을 수 있습니다. 건수가 늘어도 관측값의 표준편차가 반드시 줄지는 않습니다. 차이는 <a href="/learn/stats/sample-size/">11장 「표준오차와 표본수」</a>에서 다룹니다.</p>
+<p>평균이 100이고 표준편차가 20이면 평균±표준편차는 80~120입니다. 그 안에 약 68%가 있다는 말은 정규분포의 성질입니다. 공통 30건이나 부동산 거래단가가 정규분포라고 확인된 것은 아닙니다. 이 구간은 95% 신뢰구간도, 새로운 거래의 예측구간도 아닙니다.</p>
+<p>지역의 표준편차가 크다고 회귀모형의 예측오차도 그만큼 큰 것은 아닙니다. 표준편차는 실제 단가와 전체 평균의 거리이고, 잔차는 실제 단가와 적합값의 차이이며, 검증 예측오차는 학습에 쓰지 않은 자료의 차이입니다. 표준편차가 작다고 모형이 우수하다고 판단하지 않습니다.</p></section>
+<section class="learn-chapter__step" id="practice" data-toc-label="확인 문제"><p class="learn-chapter__label">확인 문제</p><h2>편차·분모·단위를 구별해 보세요</h2>
+<ol class="learn-exercises"><li>80·100·120의 편차 합이 0이면 표준편차도 0일까요?<details><summary>답과 해설</summary><p>아닙니다. 편차는 −20, 0, 20이고 제곱편차 합은 800입니다. n으로 나눈 분산은 약 266.67, 표준편차는 약 16.33입니다.</p></details></li>
+<li>30건의 제곱편차 합을 29로 나누었다면 거래 한 건을 제외한 것일까요?<details><summary>답과 해설</summary><p>그렇지 않습니다. 같은 30건에서 분모만 29입니다. 한 건을 빼면 평균과 제곱편차 합을 다시 계산합니다.</p></details></li>
+<li>모든 거래단가에 100만원/㎡를 더하면 표준편차는 어떻게 달라질까요?<details><summary>답과 해설</summary><p>변하지 않습니다. 모든 값과 평균이 같이 이동하므로 편차가 그대로입니다.</p></details></li>
+<li>모든 거래단가를 두 배로 바꾸면 표준편차와 분산은 어떻게 될까요?<details><summary>답과 해설</summary><p>표준편차는 두 배, 분산은 네 배입니다. 편차가 두 배가 되고 제곱편차는 네 배가 됩니다.</p></details></li>
+<li>표준편차가 28.4만원/㎡라면 거래의 약 68%가 평균±28.4 안에 있을까요?<details><summary>답과 해설</summary><p>그렇게 단정할 수 없습니다. 약 68.3%는 정규분포의 성질입니다. 분포를 확인하지 않았다면 그 비율을 미리 말할 수 없습니다.</p></details></li></ol></section>
+<section class="learn-chapter__step" id="macro" data-toc-label="CH2 Macro에서 읽기"><p class="learn-chapter__label">CH2 Macro에서 읽기</p><h2>평균 33.2, 중앙값 26.0, 표준편차 28.4를 함께 읽습니다</h2>
+<p>아래는 자녹과 답이 만나는 칸의 과거 화면입니다. 거래 393건, 평균 33.2, 중위 26.0, 표준편차 28.4만원/㎡입니다. 캡처 당시의 값이며 공통 30건이나 현재 운영 통계가 아닙니다.</p>
+<figure class="learn-capture learn-capture--detail"><a href="../assets/captures/land-standard-deviation-cell.png" target="_blank" rel="noopener"><img src="../assets/captures/land-standard-deviation-cell.png" width="239" height="174" loading="lazy" alt="자녹과 답의 교차 칸. 393건, 평균 33.2, 중앙값 26.0, 표준편차 28.4, 95% 신뢰구간 30.4에서 36.0입니다."/></a><figcaption class="learn-capture__caption">393건의 평균 33.2, 중위 26.0, 표준편차 28.4만원/㎡입니다. 30.4~36.0은 평균의 95% 신뢰구간입니다. <a href="../assets/captures/land-standard-deviation-cell.png" target="_blank" rel="noopener">원본 크게 보기 ↗</a></figcaption></figure>
+<p>표시된 숫자로 평균±표준편차를 계산하면 4.8~61.6만원/㎡입니다. 이 구간은 최솟값·최댓값도, 95% 신뢰구간도, 거래의 68%가 들어가는 범위도 아닙니다. 화면의 30.4~36.0이 평균의 신뢰구간입니다.</p>
+<figure class="learn-capture"><a href="../assets/captures/land-spread-distribution-393.png" target="_blank" rel="noopener"><img src="../assets/captures/land-spread-distribution-393.png" width="916" height="358" loading="lazy" alt="같은 393건의 단가 분포. 이상치 제외 안 함. 낮은 단가에 거래가 모이고 높은 단가 쪽으로 꼬리가 있습니다."/></a><figcaption class="learn-capture__caption">같은 393건의 분포입니다. 이상치는 제외하지 않았습니다. 낮은 단가에 많이 모이고 높은 단가 쪽으로 길게 이어집니다. <a href="../assets/captures/land-spread-distribution-393.png" target="_blank" rel="noopener">원본 크게 보기 ↗</a></figcaption></figure>
+<p>확인한 토지 기본통계의 표준편차는 그 칸에 들어온 거래단가를 n−1로 나눈 값입니다. 거래 한 건이 같은 비중이고, 화면은 소수 한 자리로 반올림합니다. 이번 장의 공통 30건 설명은 자료 자체를 요약할 때 n으로 나눕니다. 두 분모를 같은 것으로 보지 않습니다. 매트릭스 조회는 이상치를 빼지 않은 목록으로 계산합니다. 읍면동 표준편차를 평균해 시군구 표준편차로 만들지 않고, 선택한 범위의 거래를 모아 다시 계산합니다.</p>
+<p>표준편차 50인 지역과 20인 지역을 비교할 때도 단위, 평균 수준, 유형, 거래 구성, 건수를 함께 봅니다. 3년·5년·7년으로 기간이 넓어져도 표준편차가 반드시 커지지는 않습니다. 서로 다른 면적과 용도가 한 칸에 섞이면 퍼짐이 커질 수 있습니다. 표준편차는 선택된 거래의 단가 분포를 설명하는 지표이며, 개별 부동산의 위험이나 앞으로의 변동성을 자동으로 측정하지 않습니다.</p>
+<p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 기본통계 열기 →</a></p></section>
+<section class="learn-chapter__step" id="recap" data-toc-label="결론 · 학습 요약"><p class="learn-chapter__label">결론 · 학습 요약</p><h2>표준편차는 중심이 아닌 퍼짐의 숫자입니다</h2>
+<ul class="learn-recap-list"><li><strong>편차:</strong> 관측값에서 평균을 뺀 값입니다. 합은 0입니다.</li><li><strong>분산:</strong> 제곱편차를 모은 값이고 단위는 제곱입니다.</li><li><strong>표준편차:</strong> 분산의 제곱근이며 원래 단위를 갖습니다.</li><li><strong>n과 n−1:</strong> 자료의 기술과 모집단 분산의 추정은 분모가 다릅니다. n−1은 한 건을 버리는 뜻이 아닙니다.</li><li><strong>극단값:</strong> 먼 관측은 제곱편차를 키웁니다. 제외하면 평균부터 다시 계산합니다.</li><li><strong>다른 지표:</strong> IQR, 표준오차, 신뢰구간, 예측오차와 구별합니다.</li></ul>
+<p>다음 <a href="/learn/stats/iqr-outliers/">7장 「이상치와 IQR」</a>에서는 멀리 떨어진 값을 어떻게 확인하고 처리하는지 살펴봅니다.</p>
+<p>표준편차가 크다는 것은 관측이 평균 주변에 넓게 퍼져 있다는 뜻입니다. 자료에 오류가 있다거나 시장이 위험하다는 뜻은 아닙니다.</p>
+<details class="learn-more"><summary>참고자료</summary><div class="learn-more__body"><ul><li><a href="https://www.itl.nist.gov/div898/handbook/eda/section3/eda356.htm">NIST/SEMATECH e-Handbook: Measures of Scale</a></li><li><a href="https://openstax.org/books/introductory-statistics-2e/pages/2-7-measures-of-the-spread-of-the-data">OpenStax, Introductory Statistics 2e §2.7</a></li></ul>
+<p class="learn-source-note">참고자료 확인일: 2026-10-07. 그림 1·2는 가상 자료이고 그림 3·4는 공통 학습자료 30건입니다. 화면의 393건은 캡처 당시의 자료입니다.</p></div></details></section>
+'''
+ page = f'''<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>06. 분산과 표준편차 | 통계학 &amp; 데이터 분석</title>
+    <meta name="description" content="분산과 표준편차의 계산, n과 n−1, 극단값과 단위 변환, 표준오차와의 차이를 가상 자료와 공통 30건으로 설명합니다." />
+    <link rel="canonical" href="https://ch2data.com/learn/stats/spread/" />
+    <script src="/learn/stats/learn-stats-theme.js?v=20261023-1"></script>
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261023-1" />
+    <link rel="stylesheet" href="/learn/stats/learn-reader.css?v=20261026-toc" />
+    <link rel="stylesheet" href="/learn/stats/spread/chapter.css?v=20261026-11" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero hero--document">
+        <p class="learn-breadcrumb"><a href="https://ch2data.com/">CH2 DATA</a> · <a href="/learn/stats/">통계학 &amp; 데이터 분석</a></p>
+        <p class="hero__eyebrow">I. 데이터와 기술통계</p>
+        <h1 class="hero__title">06. 분산과 표준편차</h1>
+        <p class="learn-chapter-relevance">Macro 활용도 <span class="learn-relevance" aria-label="Macro 활용도 2단계, 권장"><span aria-hidden="true">★★☆</span></span></p>
+        <p class="learn-relevance-guide">Macro 활용도: ★★★ 핵심 · ★★☆ 권장 · ★☆☆ 심화<br>별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.</p>
+      </header>
+      <article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="분산과 표준편차">{sections}</article>
+      <nav class="learn-chapter-nav" aria-label="장 이동">
+        <a href="/learn/stats/quantiles/">← 05. 분위수와 상자그림</a>
+        <a href="/learn/stats/iqr-outliers/">07. 이상치와 IQR →</a>
+      </nav>
+      <footer class="footer"><nav class="footer__links"><a href="https://ch2data.com/">홈</a><a href="/learn/stats/">통계학 &amp; 데이터 분석</a></nav><p>© CH2 DATA</p></footer>
+    </div>
+    <script src="/learn/stats/learn-stats-toc.js?v=20261026-11" defer></script>
+    <script type="application/json" id="sd-data">{json.dumps({'rows': [{'id': row['id'], 'price': row['price']} for row in rows]}, ensure_ascii=False)}</script>
+    <script type="module" src="/learn/stats/spread/experiment.js?v=20261026-12"></script>
+  </body>
+</html>
+'''
+ charts = [ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>', page, re.S)]
+ assert len(charts) == 4
+ for svg in charts:
+  for bar in svg.iter('rect'):
+   if 'data-denominator' in bar.attrib:
+    expected = pstdev(prices) if bar.attrib['data-denominator'] == 'n' else stdev(prices)
+    assert abs(float(bar.attrib['data-sd']) - expected) < 1e-8
+    assert abs(float(bar.attrib['width']) - expected * 4.7) < 1e-8
+   if 'data-count' in bar.attrib:
+    expected = pstdev(prices if int(bar.attrib['data-count']) == 30 else without)
+    assert abs(float(bar.attrib['data-sd']) - expected) < 1e-8
+    assert abs(float(bar.attrib['width']) - expected * 4.4) < 1e-8
+ ids = re.findall(r'id="([^"]+)"', page)
+ assert len(ids) == len(set(ids))
+ assert 'id="extremes"' in page and '★★☆ 권장' in page and '★☆☆ 심화' in page
+ assert '2단계, 권장' in page and 'land-spread-distribution-393.png' in page
+ assert page.count('<details') == 6 and '[그림 ' not in page
+ (ROOT / 'spread' / 'index.html').write_text(page, encoding='utf-8')
+ print('ss', round(ss, 2), 'drop-ss', round(sum((value - fresh) ** 2 for value in without), 2))
+
+if __name__ == '__main__':
+ build()

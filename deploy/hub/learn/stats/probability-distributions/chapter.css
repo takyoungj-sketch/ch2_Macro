@@ -1,0 +1,15 @@
+.pd-chart svg{width:100%;height:auto}
+.pd-controls{padding:1rem;margin:0 0 1rem;border:1px solid rgba(148,163,184,.3);border-radius:.75rem}
+.pd-controls p{margin:.4rem 0}
+.pd-shortcuts{display:flex;gap:.5rem;flex-wrap:wrap;margin:.4rem 0 .6rem}
+.pd-shortcuts button,.pd-controls input[type=range]{font:inherit}
+.pd-shortcuts button{min-height:44px;border:1px solid #94a3b8;border-radius:.4rem;padding:.5rem .75rem;background:var(--learn-surface,#fff);color:var(--learn-link,#172033)}
+.pd-shortcuts button[aria-pressed="true"]{border-color:var(--learn-accent,#2563eb);background:var(--learn-selected,#dbeafe)}
+.pd-sliders{display:grid;gap:.35rem;margin:.4rem 0 .6rem}
+.pd-sliders label{display:grid;grid-template-columns:7.5rem 1fr;gap:.5rem;align-items:center}
+.pd-controls [role=status]{font-variant-numeric:tabular-nums;line-height:1.7}
+.pd-chart text{pointer-events:none}
+html[data-learn-theme=dark] .pd-chart [fill="#bfdbfe"]{fill:#1e3a5f}
+html[data-learn-theme=dark] .pd-shortcuts button[aria-pressed="true"]{background:#1e3a5f}
+.learn-chapter .pd-table table{width:100%;min-width:0;table-layout:fixed}
+.learn-chapter .pd-table th,.learn-chapter .pd-table td{white-space:normal;overflow-wrap:anywhere;vertical-align:top}

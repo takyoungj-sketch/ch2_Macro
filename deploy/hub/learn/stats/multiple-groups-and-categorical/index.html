@@ -12,7 +12,7 @@
     <script src="/learn/stats/learn-stats-theme.js?v=20261023-1"></script>
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261023-1" />
-    <link rel="stylesheet" href="/learn/stats/learn-reader.css?v=20261025-2" />
+    <link rel="stylesheet" href="/learn/stats/learn-reader.css?v=20261026-toc" />
   <link rel="stylesheet" href="/learn/stats/multiple-groups-and-categorical/chapter.css?v=20261024-1" />
 </head>
   <body>
@@ -32,6 +32,8 @@
 <section class="learn-chapter__step" id="quick-start" data-toc-label="서두 · 학습목표"><p class="learn-chapter__label">서두 · 학습목표</p><h2>여러 집단의 평균과 비율은 어떻게 비교할까요?</h2><p>세 학급의 시험 점수가 서로 다른지 알아보고 싶다고 가정해 보겠습니다. 이때는 각 학급의 평균 점수를 비교하면 됩니다.</p>
 <p>그런데 세 학급의 동아리 참여율이 다른지 알고 싶다면 어떨까요? 이번에는 평균 점수가 아니라 참여한 학생의 비율을 비교해야 합니다.</p>
 <p>두 질문은 서로 다른 통계적 방법을 필요로 합니다.</p>
+<p>집단 수와 자료의 종류에 따라 검정을 고릅니다.</p>
+<div class="learn-data learn-data--full"><table><thead><tr><th scope="col">검정</th><th scope="col">자료</th><th scope="col">고르는 기준</th></tr></thead><tbody><tr><th scope="row">일원 ANOVA</th><td>숫자 평균, 집단 3개 이상</td><td>관측이 독립이고 집단 분산이 비슷할 때</td></tr><tr><th scope="row">Welch t검정</th><td>숫자 평균, 집단 2개</td><td>두 집단의 분산이 같다고 두기 어려울 때</td></tr><tr><th scope="row">카이제곱 검정</th><td>범주의 도수</td><td>분할표에서 범주 사이의 연관성을 볼 때</td></tr></tbody></table></div>
 <p>이번 장에서는 여러 집단의 평균을 비교하는 분산분석(ANOVA)과 범주형 변수 사이의 관계를 살펴보는 카이제곱 검정을 알아보겠습니다.</p>
 <p><a href="/learn/stats/comparing-groups/">14장에서 배운 두 집단 비교</a>를 확장하여, 자료의 유형과 분석 목적에 적합한 방법을 선택하는 것이 이번 장의 목표입니다.</p>
 <p>이번 장의 학습목표</p>
@@ -47,7 +49,7 @@
 <p>여기서 중요한 점이 있습니다.</p>
 <p>ANOVA의 결과가 통계적으로 유의하다고 해서 세 집단의 평균이 모두 서로 다르다는 뜻은 아닙니다.</p>
 <p>적어도 한 집단의 평균이 다른 집단과 차이가 있다는 근거를 얻었다는 뜻입니다.</p>
-<p>다음 가상 자료를 살펴보겠습니다.</p>
+<p>다음 자료는 각 집단 4명으로 F통계량의 계산 과정을 보이기 위한 가상 사례입니다. 이 결과로 실제 학급의 평균 차이를 추론하지 않습니다.</p>
 <div class="learn-data learn-data--full"><table><thead><tr><th scope="col">집단</th><th scope="col">시험 점수</th><th scope="col">평균</th></tr></thead><tbody><tr><th scope="row">A</th><td>90, 100, 110, 100</td><td>100점</td></tr><tr><th scope="row">B</th><td>110, 120, 130, 120</td><td>120점</td></tr><tr><th scope="row">C</th><td>130, 140, 150, 140</td><td>140점</td></tr></tbody></table></div>
 <figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 370" role="img" aria-labelledby="groups-title groups-desc"><title id="groups-title">A·B·C의 시험 점수 분포와 평균 (점)</title><desc id="groups-desc">그림 1. A=90·100·110·100, B=110·120·130·120, C=130·140·150·140인 별도 가상 자료입니다. 200점 만점의 평가 점수이며 각 집단은 4명입니다. 점의 세로 간격은 겹침을 구분하기 위한 표시입니다.</desc><text x="24" y="28" >세 집단의 평균 차이와 집단 안의 퍼짐을 함께 봅니다</text><text x="24" y="95" >A</text><line x1="80" y1="90" x2="560" y2="90" stroke="#64748b" /><circle cx="140" cy="90" r="5" fill="#2563eb" data-group="0" data-value="90"><title>A 관측 1: 90점</title></circle><circle cx="200" cy="90" r="5" fill="#2563eb" data-group="0" data-value="100"><title>A 관측 2: 100점</title></circle><circle cx="260" cy="90" r="5" fill="#2563eb" data-group="0" data-value="110"><title>A 관측 3: 110점</title></circle><circle cx="200" cy="78" r="5" fill="#2563eb" data-group="0" data-value="100"><title>A 관측 4: 100점</title></circle><line x1="200" y1="66" x2="200" y2="105" stroke="#d97706" /><text x="200" y="58" text-anchor="middle">평균 100 · n=4</text><text x="24" y="180" >B</text><line x1="80" y1="175" x2="560" y2="175" stroke="#64748b" /><circle cx="260" cy="175" r="5" fill="#2563eb" data-group="1" data-value="110"><title>B 관측 1: 110점</title></circle><circle cx="320" cy="175" r="5" fill="#2563eb" data-group="1" data-value="120"><title>B 관측 2: 120점</title></circle><circle cx="380" cy="175" r="5" fill="#2563eb" data-group="1" data-value="130"><title>B 관측 3: 130점</title></circle><circle cx="320" cy="163" r="5" fill="#2563eb" data-group="1" data-value="120"><title>B 관측 4: 120점</title></circle><line x1="320" y1="151" x2="320" y2="190" stroke="#d97706" /><text x="320" y="143" text-anchor="middle">평균 120 · n=4</text><text x="24" y="265" >C</text><line x1="80" y1="260" x2="560" y2="260" stroke="#64748b" /><circle cx="380" cy="260" r="5" fill="#2563eb" data-group="2" data-value="130"><title>C 관측 1: 130점</title></circle><circle cx="440" cy="260" r="5" fill="#2563eb" data-group="2" data-value="140"><title>C 관측 2: 140점</title></circle><circle cx="500" cy="260" r="5" fill="#2563eb" data-group="2" data-value="150"><title>C 관측 3: 150점</title></circle><circle cx="440" cy="248" r="5" fill="#2563eb" data-group="2" data-value="140"><title>C 관측 4: 140점</title></circle><line x1="440" y1="236" x2="440" y2="275" stroke="#d97706" /><text x="440" y="228" text-anchor="middle">평균 140 · n=4</text><text x="80" y="310" text-anchor="middle">80</text><text x="200" y="310" text-anchor="middle">100</text><text x="320" y="310" text-anchor="middle">120</text><text x="440" y="310" text-anchor="middle">140</text><text x="560" y="310" text-anchor="middle">160</text><text x="350" y="342" >평가 점수(점) · 주황선: 평균</text></svg><figcaption class="learn-chart__caption">그림 1. A=90·100·110·100, B=110·120·130·120, C=130·140·150·140인 별도 가상 자료입니다. 200점 만점의 평가 점수이며 각 집단은 4명입니다. 점의 세로 간격은 겹침을 구분하기 위한 표시입니다.</figcaption></figure>
 <p>세 집단의 평균은 각각 100점, 120점, 140점입니다.</p>
@@ -55,7 +57,7 @@
 <p>ANOVA는 집단 사이의 평균 차이를 집단 내부의 점수 변동과 비교합니다.</p>
 <p>만약 집단 내부의 점수가 거의 비슷하다면 평균 20점의 차이는 상대적으로 크게 나타납니다. 반대로 각 집단의 점수가 매우 넓게 퍼져 있다면 같은 20점 차이도 구별하기 어려울 수 있습니다.</p>
 <p>일반적인 일원분산분석의 F검정은 관측값의 독립성, 집단별 오차의 정규성, 집단 간 분산의 동질성 등을 가정합니다.</p>
-<p>이 예제는 원리를 설명하기 위해 만든 자료이며, 실제 조사에서 이러한 가정이 검증되었다는 뜻은 아닙니다.</p></section>
+<p>이 가상 사례는 독립성·정규성·등분산이 확인된 조사라는 뜻이 아닙니다.</p></section>
 <section class="learn-chapter__step" id="variation" data-toc-label="변동 분해와 F통계량"><p class="learn-chapter__label">변동 분해와 F통계량</p><h2>집단 사이의 차이를 집단 내부의 변동과 비교합니다</h2><p>ANOVA는 전체 자료의 변동을 크게 두 부분으로 나누어 살펴봅니다.</p>
 <p>집단 간 변동은 각 집단의 평균이 전체 평균에서 얼마나 떨어져 있는지를 나타냅니다.</p>
 <p>집단 내 변동은 개별 관측값이 자신이 속한 집단의 평균에서 얼마나 떨어져 있는지를 나타냅니다.</p>

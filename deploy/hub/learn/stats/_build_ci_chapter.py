@@ -87,7 +87,7 @@ def build():
     items=[]
     while i<len(lines) and lines[i].startswith('- '):items.append('<li>'+inline(lines[i][2:])+'</li>');i+=1
     out.append('<ul>'+''.join(items)+'</ul>');continue
-   formula=line.startswith(('신뢰구간 =','x̄ ±','오차한계 =','95% 신뢰구간:'))
+   formula=line.startswith(('신뢰구간 =','x̄ ±','오차한계 =','95% 신뢰구간:','SE =','E =','t₀.975','102 ±','110 ±'))
    out.append('<p'+(' class="ci-formula"' if formula else '')+'>'+inline(line)+'</p>');i+=1
   return '\n'.join(out)
  for id,section in zip(ids,re.split(r'^## ',source,flags=re.M)[1:],strict=True):

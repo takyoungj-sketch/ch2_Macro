@@ -1,0 +1,20 @@
+.iq-chart svg{width:100%;height:auto}
+.iq-controls{padding:1rem;margin:0 0 1rem;border:1px solid rgba(148,163,184,.3);border-radius:.75rem}
+.iq-controls p{margin:.4rem 0}
+.iq-shortcuts{display:flex;gap:.5rem;flex-wrap:wrap;margin:.4rem 0 .6rem}
+.iq-shortcuts button{font:inherit;min-height:44px;border:1px solid #94a3b8;border-radius:.4rem;padding:.5rem .75rem;background:var(--learn-surface,#fff);color:var(--learn-link,#172033)}
+.iq-shortcuts button[aria-pressed="true"]{border-color:var(--learn-accent,#2563eb);background:var(--learn-selected,#dbeafe)}
+.iq-controls [role=status]{font-variant-numeric:tabular-nums;line-height:1.7}
+.iq-chart text{pointer-events:none}
+.iq-chart rect,.iq-chart circle,.iq-chart line{cursor:pointer}
+html[data-learn-theme=dark] .iq-chart [fill="#fff7ed"],
+html[data-learn-theme=dark] .iq-chart [fill="#ffffff"],
+html[data-learn-theme=dark] .iq-chart [fill="#f1f5f9"],
+html[data-learn-theme=dark] .iq-chart [fill="#eff6ff"],
+html[data-learn-theme=dark] .iq-chart [fill="#dbeafe"],
+html[data-learn-theme=dark] .iq-chart [fill="#bfdbfe"]{fill:#1e3a5f}
+html[data-learn-theme=dark] .iq-chart [fill="#e2e8f0"],
+html[data-learn-theme=dark] .iq-chart [fill="#cbd5e1"]{fill:#334155}
+html[data-learn-theme=dark] .iq-shortcuts button[aria-pressed="true"]{background:#1e3a5f}
+.learn-chapter .iq-table table{width:100%;min-width:0;table-layout:fixed}
+.learn-chapter .iq-table th,.learn-chapter .iq-table td{white-space:normal;overflow-wrap:anywhere;vertical-align:top}

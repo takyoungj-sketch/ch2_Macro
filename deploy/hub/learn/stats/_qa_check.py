@@ -210,7 +210,7 @@ def main():
  print('Chapter 07 fences, quantile conventions, group thresholds and sensitivity verified')
  ch8=(ROOT/'probability/index.html').read_text(encoding='utf-8')
  charts8=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch8,re.S)]
- assert len(charts8)==4 and ch8.count('<summary>답과 해설</summary>')==4
+ assert len(charts8)==4 and ch8.count('<summary>답과 해설</summary>')==5
  example=json.loads((ROOT/'probability-example.json').read_text(encoding='utf-8'))
  counts=example['table'];assert counts=={'A_B':18,'A_notB':22,'notA_B':12,'notA_notB':48}
  assert sum(counts.values())==100
@@ -230,7 +230,7 @@ def main():
  print('Chapter 08 frequency cells, conditional bars, probability rules and Bayes example verified')
  ch9=(ROOT/'probability-distributions/index.html').read_text(encoding='utf-8')
  charts9=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch9,re.S)]
- assert len(charts9)==4 and ch9.count('<summary>답과 해설</summary>')==4
+ assert len(charts9)==4 and ch9.count('<summary>답과 해설</summary>')==5
  import math
  from _build_distributions_chapter import binomial,normal
  probs=binomial(3,.4)
@@ -256,7 +256,7 @@ def main():
  print('Chapter 09 PMF, CDF, moments, density area and normal curve verified')
  ch10=(ROOT/'sampling-distributions/index.html').read_text(encoding='utf-8')
  charts10=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch10,re.S)]
- assert len(charts10)==4 and ch10.count('<summary>답과 해설</summary>')==4
+ assert len(charts10)==4 and ch10.count('<summary>답과 해설</summary>')==5
  saved=json.loads((ROOT/'sampling-distributions-example.json').read_text(encoding='utf-8'))
  for d in saved['distributions']:
   n=d['n'];probs=binomial(n,.2);assert d['probabilities']==probs
@@ -277,7 +277,7 @@ def main():
  print('Chapter 10 exact sampling probabilities, moments, coordinates and approximation verified')
  ch11=(ROOT/'sample-size/index.html').read_text(encoding='utf-8')
  charts11=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch11,re.S)]
- assert len(charts11)==4 and ch11.count('<summary>답과 해설</summary>')==4
+ assert len(charts11)==4 and ch11.count('<summary>답과 해설</summary>')==5
  v=[r['price'] for r in data];sd=stdev(v);se=sd/math.sqrt(30)
  assert round(se,2)==14.89
  for i,svg in enumerate(charts11):
@@ -295,7 +295,7 @@ def main():
  print('Chapter 11 SD, SE, group calculations and sample-size planning verified')
  ch12=(ROOT/'confidence-intervals/index.html').read_text(encoding='utf-8')
  charts12=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch12,re.S)]
- assert len(charts12)==4 and ch12.count('<summary>답과 해설</summary>')==4
+ assert len(charts12)==4 and ch12.count('<summary>답과 해설</summary>')==5
  from scipy.stats import t as student_t,norm
  ci=json.loads((ROOT/'confidence-example.json').read_text(encoding='utf-8'))
  base=ci['base'];assert abs(base['mean']-mean(v))<1e-10 and abs(base['sd']-stdev(v))<1e-10
@@ -323,7 +323,7 @@ def main():
  print('Chapter 12 t intervals, confidence levels, SVG endpoints and seeded coverage verified')
  ch13=(ROOT/'hypothesis-tests/index.html').read_text(encoding='utf-8')
  charts13=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch13,re.S)]
- assert len(charts13)==4 and ch13.count('<summary>답과 해설</summary>')==4
+ assert len(charts13)==4 and ch13.count('<summary>답과 해설</summary>')==5
  from scipy.stats import ttest_1samp,nct
  h=json.loads((ROOT/'hypothesis-example.json').read_text(encoding='utf-8'))
  independent=ttest_1samp(v,130)
@@ -353,7 +353,7 @@ def main():
  print('Chapter 13 independent t-test, null curves, CI agreement and power verified')
  ch14=(ROOT/'comparing-groups/index.html').read_text(encoding='utf-8')
  charts14=[ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>',ch14,re.S)]
- assert len(charts14)==4 and ch14.count('<summary>답과 해설</summary>')==4
+ assert len(charts14)==4 and ch14.count('<summary>답과 해설</summary>')==5
  from scipy.stats import ttest_ind,ttest_rel
  g=json.loads((ROOT/'group-comparison-example.json').read_text(encoding='utf-8'))
  a=[r['price'] for r in data if r['group']=='상업'];b=[r['price'] for r in data if r['group']=='주거']

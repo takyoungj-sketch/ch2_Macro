@@ -2,8 +2,9 @@
 from pathlib import Path
 from statistics import median
 from html import escape
-import json,re,math
-ROOT=Path(__file__).resolve().parent
+import json, re, math
+import xml.etree.ElementTree as ET
+ROOT = Path(__file__).resolve().parent
 
 def summary(values):
  a=sorted(values);n=len(a);q1=median(a[:n//2]);q2=median(a);q3=median(a[(n+1)//2:]);iqr=q3-q1
@@ -11,63 +12,294 @@ def summary(values):
  return q1,q2,q3,min(inside),max(inside),[v for v in a if v not in inside]
 def type7(values,p):
  a=sorted(values);h=(len(a)-1)*p;j=math.floor(h);return a[j]+(h-j)*(a[min(j+1,len(a)-1)]-a[j])
+
 def build():
- rows=json.loads((ROOT/'example-data.json').read_text(encoding='utf-8'))['rows'];v=[r['price'] for r in rows];a=sorted(v)
- def t(x,y,s,extra=''):return f'<text x="{x}" y="{y}" {extra}>{escape(str(s))}</text>'
- def l(x,y,xx,yy,extra=''):return f'<line x1="{x}" y1="{y}" x2="{xx}" y2="{yy}" stroke="#64748b" {extra}/>'
- def r(x,y,w,h,c='#93c5fd',extra=''):return f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="{c}" {extra}/>'
- def fig(id,title,desc,b,cap,h):return f'<figure class="learn-chart learn-chart--wide"><svg viewBox="0 0 640 {h}" role="img" aria-labelledby="{id}-title {id}-desc"><title id="{id}-title">{title}</title><desc id="{id}-desc">{desc}</desc>{b}</svg><figcaption class="learn-chart__caption">{cap}</figcaption></figure>'
- b=t(24,27,'분위수는 비율에 대응하는 값입니다')+l(50,112,590,112)
- for p,label in [(0,'최솟값'),(.25,'Q1'),(.5,'Q2 · 중앙값'),(.75,'Q3'),(1,'최댓값')]:
-  x=50+p*540;b+=l(x,100,x,123)+t(x,87,label,'text-anchor="middle"')+t(x,148,f'{p:.0%}','text-anchor="middle"')
- b+=t(24,190,'여기서 같은 간격은 누적 비율의 간격입니다. 단가의 간격이 아닙니다.')
- f1=fig('quantile-map','누적 비율과 분위수','25%,50%,75%에 대응하는 값이 각각 Q1,Q2,Q3입니다.',b,'그림 1. 분위수의 위치를 설명하는 개념도. 백분위수는 단가처럼 변수의 단위를 가지며, 백분위 순위는 비율 또는 %로 표현합니다.',215)
- b=t(24,26,'아래 15건과 위 15건의 가운데를 찾습니다')
- for i,value in enumerate(a):
-  x=24+(i%10)*60;y=68+(i//10)*67
-  b+=r(x,y,54,31,'#93c5fd' if i in [7,14,15,22] else '#f1f5f9')+t(x+27,y-7,f'{i+1}번째','text-anchor="middle"')+t(x+27,y+22,value,'text-anchor="middle"')
- b+=t(24,285,'Q1: 8번째 98 / Q2: (120 + 124) ÷ 2 = 122 / Q3: 23번째 168')
- f2=fig('quartile-ranks','공통 자료의 사분위수 계산','하위15개 중앙값98, 전체 중앙값122, 상위15개 중앙값168입니다.',b,'그림 2. 이 장은 중앙값으로 나눈 두 절반의 중앙값을 Q1·Q3로 사용합니다. 홀수 자료에서는 전체 중앙 관측을 두 절반에서 제외합니다.',310)
- def box(values,y,style,id):
-  q1,q2,q3,lo,hi,out=summary(values)
-  if style=='range':lo,hi=min(values),max(values);out=[]
-  b=l(60+lo,y,60+hi,y)+r(60+q1,y-15,q3-q1,30,'#93c5fd',f'data-box="{id}" data-q1="{q1}" data-q2="{q2}" data-q3="{q3}" data-low="{lo}" data-high="{hi}"')+l(60+q2,y-15,60+q2,y+15,'stroke-width="3"')
-  for value in [lo,hi]:b+=l(60+value,y-9,60+value,y+9)
-  for value in out:b+=f'<circle cx="{60+value}" cy="{y}" r="5" fill="#d97706" data-outlier="{value}"/>'
-  return b
- b=t(24,26,'같은 자료도 수염 규칙에 따라 끝이 달라집니다')+t(24,64,'최솟값–최댓값 수염')+box(v,100,'range','range')+t(540,80,'480','text-anchor="middle"')+t(24,151,'1.5×IQR 경계 안의 관측값까지')+box(v,190,'iqr','iqr')+t(328,224,'수염 끝 268','text-anchor="middle"')+t(540,224,'별도 점 480','text-anchor="middle"')+l(60,255,560,255)
- for x in [0,100,200,300,400,500]:b+=t(60+x,277,x,'text-anchor="middle"')
- b+=t(440,303,'단가(만원/㎡)')
- f3=fig('whisker-rules','수염 규칙의 비교','위는수염이480까지, 아래는268까지이며480이 별도 점입니다. 상자는 모두98에서168입니다.',b,'그림 3. 두 규칙 모두 쓰이므로 범례를 확인합니다. 이 과정의 이상치 표시 상자그림은 아래의 1.5×IQR 규칙을 기본으로 사용합니다.',330)
- b=t(24,26,'같은 단가 축으로 두 집단을 비교합니다')
- groups={g:[r['price'] for r in rows if r['group']==g] for g in ['주거','상업']}
- for g,y in [('주거',100),('상업',195)]:
-  q=summary(groups[g]);b+=t(24,y-34,f'{g} · n=15 · Q1 {q[0]:g} / 중앙값 {q[1]:g} / Q3 {q[2]:g}')+box(groups[g],y,'iqr',g)
- b+=l(60,255,560,255)
- for x in [0,100,200,300,400,500]:b+=t(60+x,277,x,'text-anchor="middle"')
- b+=t(435,307,'단가(만원/㎡)')
- f4=fig('group-boxes','주거와 상업의 상자그림','주거의사분위수88,105,120. 상업124,168,235. 두집단각15건입니다.',b,'그림 4. 공통 학습 예시에서 두 집단을 따로 계산했습니다. 상자의 가로 길이는 IQR이고 세로 두께에는 수치 의미를 부여하지 않았습니다.',330)
- b=t(24,26,'계산 관례가 다르면 사분위수도 조금 달라집니다')
- for y,label,q in [(90,'두 절반의 중앙값',(98,122,168)),(175,'선형 보간 (type 7)',tuple(type7(v,p) for p in [.25,.5,.75]))]:
-  b+=t(24,y-26,label)+l(240,y,575,y)
-  for value in q:
-   x=240+(value-90)*4;b+=l(x,y-7,x,y+7)+t(x,y+25,f'{value:g}','text-anchor="middle"')
- b+=t(365,244,'단가(만원/㎡) · 90~174 구간 확대')
- f5=fig('quantile-methods','두 사분위수 계산 관례','두절반 방식98,122,168과 type7 방식99,122,166을 비교합니다.',b,'그림 5. 같은 자료와 단위에서 계산법만 바꾼 예입니다. 숫자가 다르다는 사실만으로 어느 한 계산을 오류라고 판단하지 않습니다.',270)
- parts=[]
- def sec(id,label,title,body):parts.append(f'<section class="learn-chapter__step" id="{id}" data-toc-label="{label}">\n<p class="learn-chapter__label">{label}</p>\n<h2>{title}</h2>\n{body}\n</section>')
- sec('quick-start','서두 · 학습목표','가운데 말고 다른 위치도 알 수 있을까요?','<p>시험 점수를 크기순으로 놓으면 중앙값으로 가운데 위치를 알 수 있습니다. 그렇다면 아래쪽 25%를 가르는 점수나 위쪽 25%가 시작되는 점수는 어떻게 나타낼까요? <strong>분위수</strong>를 쓰면 분포의 여러 위치를 함께 살펴볼 수 있습니다.</p><p>앞 장에서는 평균과 중앙값으로 중심을 읽었습니다. 이번에는 자료를 네 부분으로 나누는 사분위수와, 이를 그림으로 표현한 상자그림을 배웁니다.</p><ul class="learn-objectives"><li><strong>분위수·백분위수·사분위수</strong>가 뜻하는 위치를 이해하고 값과 백분율을 구별합니다.</li><li>Q1·중앙값·Q3를 구하고 <strong>IQR</strong>로 가운데 부분의 퍼짐을 설명합니다.</li><li>상자·수염·별도 점의 의미와 계산 규칙에 따른 차이를 읽습니다.</li></ul><p>먼저 <a href="/learn/stats/mean-and-median/#median">중앙값</a>과 <a href="/learn/stats/graphs/#shape">분포의 모양</a>을 떠올려 보세요. 아래 그림은 값의 크기가 아닌, 작은 값부터 세었을 때의 비율을 나타냅니다.</p>'+f1)
- sec('percentiles','분위수와 백분위 순위','25%라는 위치와 그 위치의 값을 구별합니다','<p><strong>p분위수</strong>는 작은 값부터 누적한 비율 p에 대응하는 값입니다. 0.25분위수는 25백분위수, 0.75분위수는 75백분위수입니다. ‘백분위수’는 비율을 100분의 몇으로 표현한 이름입니다.</p><p>예를 들어 75백분위수가 80점이면, 75는 분포 안의 위치를 지정하고 80점은 그 위치의 점수입니다. 점수가 평균보다 75% 높다는 뜻은 아닙니다. <strong>분위수는 원래 변수의 단위를 갖습니다.</strong></p><p>반대로 ‘80점은 전체에서 어느 위치인가’를 묻는 것은 <strong>백분위 순위</strong>에 관한 질문입니다. 같은 점수가 여럿이면 순위 계산 방식도 확인해야 합니다. 100·100·100·200에서 100보다 작은 값의 비율은 0%이지만, 100 이하의 비율은 75%입니다.</p><p>표본의 개수가 적거나 동점이 있으면 분위수를 경계로 정확히 그 비율의 관측이 나뉘지 않을 수 있습니다. ‘25% 위치를 요약한 값’과 ‘그 값 이하의 실제 개수’를 구별하세요.</p>')
- sec('calculation','사분위수 계산','중앙값으로 나누고 각 절반의 가운데를 찾습니다','<p><strong>Q1·Q2·Q3</strong>는 각각 25·50·75백분위수에 해당합니다. Q1은 제1사분위수, Q2는 중앙값, Q3는 제3사분위수입니다.</p><p>계산에는 앞 장의 공통 학습 예시 30건을 사용합니다. 실제 거래 출처는 확인되지 않았으므로 특정 시장을 설명하는 자료로 사용하지 않습니다. <a href="/learn/stats/graphs/#data">전체 표</a>와 <a href="../example-data.json">원자료</a>에서 값을 확인할 수 있습니다.</p>'+f2+'<ol><li>전체를 정렬해 가운데 두 값 120과 124의 평균을 구합니다. <strong>Q2=122</strong>입니다.</li><li>아래쪽 15건의 가운데인 8번째 값을 고릅니다. <strong>Q1=98</strong>입니다.</li><li>위쪽 15건의 가운데를 고릅니다. 전체의 23번째 값이므로 <strong>Q3=168</strong>입니다.</li></ol><p>이 장은 두 절반의 중앙값을 Q1·Q3로 삼는 방식을 사용합니다. 홀수 개의 자료에서는 전체 중앙 관측을 제외하고 두 절반을 나눕니다. 다른 프로그램에서는 보간 방식에 따라 값이 조금 달라질 수 있습니다.</p><p>30건의 25%는 7.5건이지만 관측을 반 건으로 셀 수는 없습니다. 이 예시에서 98 이하는 8건이고, 98~168을 양 끝까지 포함하면 16건입니다. 상자가 가운데 50%를 요약한다는 설명을 경계 안에 언제나 정확히 절반의 관측이 들어간다는 뜻으로 읽지는 않습니다.</p>')
- sec('iqr','IQR과 상자','상자의 길이는 가운데 부분이 퍼진 정도입니다','<p><strong>사분위범위(IQR)</strong>는 Q3에서 Q1을 뺀 값입니다. 공통 예시에서는 168−98=<strong>70만원/㎡</strong>입니다. 상자의 양 끝을 Q1·Q3에 놓고, 안쪽 선을 중앙값에 그립니다.</p><p>상자가 짧으면 가운데 부분이 좁은 범위에 모여 있다는 뜻입니다. 양 끝의 값까지 모두 비슷하다는 뜻은 아닙니다. 이 예시의 IQR은 70이지만 전체 범위는 480−62=418입니다.</p><p>상자가 가로로 놓였으면 가로 길이, 세로로 놓였으면 세로 길이가 IQR입니다. 다른 방향의 두께는 보통 그림을 보기 좋게 정한 너비입니다. 두께로 표본 수를 나타내는 방식이라면 범례에 그 규칙을 밝혀야 합니다.</p>')
- sec('whiskers','수염과 별도 점','수염을 어디까지 그렸는지 확인하세요','<p>상자 바깥으로 이어진 선을 <strong>수염</strong>이라고 합니다. 수염을 최솟값·최댓값까지 그리기도 하고, 1.5×IQR 경계 안의 관측값까지만 그리기도 합니다. 같은 상자라도 수염 규칙에 따라 끝이 달라집니다.</p>'+f3+'<p>공통 예시의 IQR은 70이고 1.5×IQR은 105입니다. 아래쪽 경계는 98−105=−7, 위쪽 경계는 168+105=273입니다. 경계 안의 실제 최솟값 62와 최댓값 268까지 수염을 그리고, 경계 밖의 480은 별도 점으로 표시합니다.</p><p>따라서 위쪽 수염 끝은 경계인 273도, 자료의 최댓값인 480도 아닌 <strong>268</strong>입니다. −7이라는 계산 결과는 음수 단가를 관측했다는 뜻이 아니라 규칙으로 정한 경계입니다.</p><p>이 과정의 이상치 표시 상자그림은 1.5×IQR 방식을 기본으로 사용합니다. 별도 점은 확인할 관측을 표시한 것이며 오류나 삭제 대상으로 확정한 것은 아닙니다. 처리 판단은 <a href="/learn/stats/iqr-outliers/">7장 ‘이상치와 IQR’</a>에서 다룹니다.</p>')
- sec('comparison','집단 비교','같은 눈금과 규칙으로 중심과 퍼짐을 비교합니다','<p>여러 반의 시험 점수처럼 집단을 비교할 때는 집단별로 사분위수를 구해 상자그림을 나란히 놓습니다. 같은 눈금과 계산 규칙을 써야 상자의 위치와 길이를 비교할 수 있습니다.</p><p>공통 예시의 주거·상업은 각각 15건입니다. 각 집단의 중앙 관측을 제외한 아래 7건과 위 7건의 중앙값으로 Q1·Q3를 계산했습니다.</p>'+f4+'<p>주거 집단은 중앙값 105, IQR 120−88=32입니다. 상업 집단은 중앙값 168, IQR 235−124=111입니다. 이 자료에서는 상업 집단의 중심이 더 높고 가운데 부분도 더 넓게 퍼져 있습니다. 이를 용도만의 효과나 모든 시장의 차이로 넓혀 말할 수는 없습니다.</p><p>비교할 때는 표본 수와 수집 범위, 다른 조건도 함께 살펴봅니다. 상자가 겹치는지만 보고 통계적으로 유의한 차이인지 정할 수는 없습니다.</p><p>상자그림에는 봉우리나 빈 구간이 잘 드러나지 않습니다. 같은 값이 반복되면 상자가 선처럼 보일 수도 있습니다. 원래 점이나 히스토그램을 함께 보고, 상자가 좁다는 이유만으로 평균의 추정 오차까지 작다고 판단하지는 않습니다.</p>')
- sec('methods','계산 관례의 차이','같은 자료도 계산법에 따라 조금 달라질 수 있습니다','<p>표본 분위수에는 여러 계산법이 있습니다. 두 절반의 중앙값을 쓰는 방식 외에, 정렬한 값 사이를 비율에 따라 나누는 <strong>선형 보간</strong>도 사용합니다. 표본이 작거나 값 사이의 간격이 크면 차이가 눈에 띌 수 있습니다.</p>'+f5+'<p>선형 보간 중 type 7은 1부터 세는 위치 h=1+(n−1)p를 사용합니다. n=30, p=0.25이면 h=8.25입니다. 8번째 값 98에서 9번째 값 102로 가는 간격의 25%를 더하므로 Q1=99입니다.</p><p>p=0.75이면 h=22.75이므로 160+0.75×(168−160)=166입니다. 앞에서 구한 Q1=98·Q3=168과 다르지만 계산 규칙이 다른 결과입니다.</p><p>프로그램의 숫자를 비교할 때는 원자료뿐 아니라 결측 처리, 가중치, 분위수 계산 옵션도 맞춰 보세요. 분위수 함수와 상자그림 함수가 같은 규칙을 쓰는지도 확인해야 합니다.</p>')
- sec('practice','확인 문제','비율·경계·실제 값을 구별해 보세요','<ol class="learn-exercises"><li>Q1=98, Q3=168일 때 IQR과 위쪽 경계는 얼마인가요? 수염도 그 경계까지 그리나요?<details><summary>답과 해설</summary><p>IQR은 70, 1.5×IQR 위쪽 경계는 168+105=273입니다. 수염은 경계 안의 실제 최댓값인 268까지 그립니다.</p></details></li><li>75백분위수가 168만원/㎡이면 평균보다 75% 높다는 뜻인가요?<details><summary>답과 해설</summary><p>아니요. 75는 작은 값부터 누적한 비율의 위치이고, 168은 그 위치에 대응하는 단가입니다.</p></details></li><li>다른 프로그램에서 Q1=99, Q3=166이 나왔다면 오류일까요?<details><summary>답과 해설</summary><p>같은 자료에 type 7 선형 보간을 적용하면 그 값이 나옵니다. 먼저 원자료와 계산 규칙을 맞춰야 합니다.</p></details></li></ol>')
- sec('macro','CH2 Macro에서 읽기','오른쪽 열의 다섯 수치를 상자그림으로 옮겨 봅니다','<p>아래 화면에서 오른쪽 열은 위에서부터 <strong>최솟값 3.3 → 25%값(Q1) 16.1 → 중앙값(Q2) 26.0 → 75%값(Q3) 40.0 → 최댓값 296.6</strong>입니다. 단위는 만원/㎡입니다. 옆 그림은 이 값으로 그린 상자그림입니다.</p><div class="learn-quantile-pair"><figure class="learn-capture learn-capture--detail"><a href="../assets/captures/land-quantile-cell.png" target="_blank" rel="noopener" aria-label="분위수 화면 크게 보기"><img src="../assets/captures/land-quantile-cell.png" width="251" height="180" loading="lazy" alt="자녹과 답의 교차 칸. 오른쪽 열은 위에서부터 최솟값 3.3, 25%값 16.1, 중앙값 26.0, 75%값 40.0, 최댓값 296.6입니다."/></a><figcaption class="learn-capture__caption">‘자녹’ 행과 ‘답’ 열이 만나는 칸입니다. 오른쪽 열의 다섯 수치를 상자그림에 옮겼습니다. 값은 캡처 당시 기준이며 본문의 공통 예시와는 다른 자료입니다. <a href="../assets/captures/land-quantile-cell.png" target="_blank" rel="noopener">원본 크게 보기 ↗</a></figcaption></figure><figure class="learn-chart learn-chart--wide learn-source-boxplot"><svg viewBox="0 0 480 395" role="img" aria-labelledby="source-box-title source-box-desc"><title id="source-box-title">화면의 다섯 수치로 그린 상자그림</title><desc id="source-box-desc">최솟값 3.3, Q1 16.1, 중앙값 26.0, Q3 40.0, 최댓값 296.6. 수염은 최솟값과 최댓값까지 그렸습니다. 아래는 상자 부분만 확대했습니다.</desc><text x="20" y="28" >최솟값–최댓값 방식 · 단가(만원/㎡)</text><line x1="44.125" y1="110" x2="410.75" y2="110" stroke="#475569" /><rect x="60.125" y="90" width="29.875" height="40" fill="#99f6e4" stroke="#0f766e" data-source-box="full" data-q1="16.1" data-median="26" data-q3="40"/><line x1="72.5" y1="90" x2="72.5" y2="130" stroke="#475569" stroke-width="3"/><line x1="44.125" y1="100" x2="44.125" y2="120" stroke="#475569" /><text x="44.125" y="75" text-anchor="middle">3.3</text><line x1="410.75" y1="100" x2="410.75" y2="120" stroke="#475569" /><text x="410.75" y="75" text-anchor="middle">296.6</text><line x1="40" y1="165" x2="440" y2="165" stroke="#475569" /><line x1="40.0" y1="165" x2="40.0" y2="170" stroke="#475569" /><text x="40.0" y="190" text-anchor="middle">0</text><line x1="140.0" y1="165" x2="140.0" y2="170" stroke="#475569" /><text x="140.0" y="190" text-anchor="middle">80</text><line x1="240.0" y1="165" x2="240.0" y2="170" stroke="#475569" /><text x="240.0" y="190" text-anchor="middle">160</text><line x1="340.0" y1="165" x2="340.0" y2="170" stroke="#475569" /><text x="340.0" y="190" text-anchor="middle">240</text><line x1="440.0" y1="165" x2="440.0" y2="170" stroke="#475569" /><text x="440.0" y="190" text-anchor="middle">320</text><text x="20" y="225" >상자 부분 확대 · 수염은 생략 (0~60)</text><rect x="147.33333333333334" y="270" width="159.33333333333334" height="42" fill="#99f6e4" stroke="#0f766e" data-source-box="zoom" data-q1="16.1" data-median="26" data-q3="40"/><line x1="213.33333333333334" y1="270" x2="213.33333333333334" y2="312" stroke="#475569" stroke-width="3"/><text x="147.33333333333334" y="250" text-anchor="middle">Q1 16.1</text><text x="213.33333333333334" y="330" text-anchor="middle">중앙값 26.0</text><text x="306.6666666666667" y="250" text-anchor="middle">Q3 40.0</text><line x1="40" y1="340" x2="440" y2="340" stroke="#475569" /><line x1="40.0" y1="340" x2="40.0" y2="345" stroke="#475569" /><text x="40.0" y="367" text-anchor="middle">0</text><line x1="106.66666666666667" y1="340" x2="106.66666666666667" y2="345" stroke="#475569" /><text x="106.66666666666667" y="367" text-anchor="middle">10</text><line x1="173.33333333333334" y1="340" x2="173.33333333333334" y2="345" stroke="#475569" /><text x="173.33333333333334" y="367" text-anchor="middle">20</text><line x1="240.0" y1="340" x2="240.0" y2="345" stroke="#475569" /><text x="240.0" y="367" text-anchor="middle">30</text><line x1="306.6666666666667" y1="340" x2="306.6666666666667" y2="345" stroke="#475569" /><text x="306.6666666666667" y="367" text-anchor="middle">40</text><line x1="373.33333333333337" y1="340" x2="373.33333333333337" y2="345" stroke="#475569" /><text x="373.33333333333337" y="367" text-anchor="middle">50</text><line x1="440.0" y1="340" x2="440.0" y2="345" stroke="#475569" /><text x="440.0" y="367" text-anchor="middle">60</text></svg><figcaption class="learn-chart__caption">위: 최솟값·최댓값까지 수염을 그린 상자그림(선형 축). 아래: 같은 상자만 확대. 원자료 없이 그린 요약 그림이므로 별도 점의 수와 1.5×IQR 위쪽 수염 끝은 표시하지 않았습니다.</figcaption></figure></div><ol class="learn-screen-reading"><li><strong>상자의 양 끝:</strong> 16.1과 40.0입니다. 가운데 부분의 범위를 보여 주며, IQR은 40.0−16.1=<strong>23.9만원/㎡</strong>입니다.</li><li><strong>상자 안의 선:</strong> 중앙값 26.0에 놓았습니다. 왼쪽의 큰 숫자 33.2는 평균이므로 상자 안 중앙선의 위치로 쓰지 않습니다.</li><li><strong>이번 그림의 수염:</strong> 제공된 최솟값 3.3과 최댓값 296.6까지 그렸습니다. 최댓값이 멀리 있어 전체 축에서는 상자가 짧아 보이므로 아래에 상자 부분을 따로 확대했습니다.</li></ol><p><strong>1.5×IQR 방식을 쓴다면 그림이 달라집니다.</strong> 표시값으로 계산한 아래·위 경계는 16.1−1.5×23.9=−19.75와 40.0+1.5×23.9=75.85입니다. 최댓값 296.6은 위 경계를 넘어 별도 점으로 표시할 값입니다. 다만 위쪽 수염은 75.85 자체가 아니라 그 이하의 실제 최댓값까지 그려야 하므로, 정확한 위치와 나머지 별도 점은 원자료가 있어야 알 수 있습니다.</p><p>분위수는 선택한 거래 집단의 위치와 퍼짐을 요약합니다. 다른 지역이나 기간과 비교할 때는 표본 조건과 분위수 계산법을 함께 확인하세요.</p><p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 기본통계 열기 →</a></p>')
- sec('recap','결론 · 학습 요약','상자는 위치와 퍼짐을, 수염은 정한 규칙을 보여 줍니다','<p>분위수를 알면 중앙값 하나보다 자료의 구조를 더 자세히 읽을 수 있습니다. 다음 내용을 정리해 두세요.</p><ul class="learn-recap-list"><li><strong>분위수:</strong> 작은 값부터 누적한 비율에 대응하는 값입니다. 백분율과 원래 변수의 단위를 구별합니다.</li><li><strong>사분위수:</strong> Q1·Q2·Q3는 각각 25·50·75백분위수이며, Q2는 중앙값입니다.</li><li><strong>상자와 IQR:</strong> 상자는 Q1부터 Q3까지, 내부 선은 중앙값입니다. IQR=Q3−Q1은 가운데 부분의 퍼짐입니다.</li><li><strong>수염:</strong> 최솟값·최댓값 방식인지 1.5×IQR 방식인지 확인합니다. 경계와 실제 수염 끝은 다를 수 있습니다.</li><li><strong>비교 조건:</strong> 같은 단위·축·계산 규칙을 쓰고, 상자에 가려진 분포는 원자료나 히스토그램으로 보완합니다.</li></ul><p>다음 <a href="/learn/stats/spread/">6장 ‘분산과 표준편차’</a>에서는 각 값이 평균에서 얼마나 떨어져 있는지를 이용해 퍼짐을 나타내는 방법을 배웁니다.</p><details class="learn-more"><summary>참고자료</summary><div class="learn-more__body"><ul><li><a href="https://www.itl.nist.gov/div898/handbook/eda/section3/boxplot.htm">NIST/SEMATECH: Box Plot</a> — 상자그림의 구성과 수염 규칙.</li><li><a href="https://stat.ethz.ch/R-manual/R-devel/library/stats/html/quantile.html">R 공식 문서: Sample Quantiles</a> — 분위수 계산 방식.</li></ul><p class="learn-source-note">참고자료의 기존 확인일: 2026-10-07. 다섯 개 학습 그림 중 그림 1은 개념도입니다. 추가 상자그림은 캡처에 표시된 다섯 요약값으로 작성했습니다.</p></div></details>')
- p=ROOT/'quantiles/index.html';s=p.read_text(encoding='utf-8');s=re.sub(r'<article.*?</article>','<article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="분위수와 상자그림">\n'+'\n'.join(parts)+'\n</article>',s,count=1,flags=re.S)
- s=re.sub(r'(name="description"\s+content=").*?("\s*/>)',r'\1분위수·백분위수·사분위수의 계산과 상자그림의 수염, 집단 비교와 계산 관례를 다섯 그림으로 설명합니다.\2',s,count=1,flags=re.S)
- s=re.sub(r'learn-stats\.css\?v=[^"\s]+','learn-stats.css?v=20261023-1',s)
- p.write_text(s,encoding='utf-8');print('Quartiles:',summary(v),'type7:',[type7(v,p) for p in [.25,.5,.75]])
-if __name__=='__main__':build()
+ rows = json.loads((ROOT / 'example-data.json').read_text(encoding='utf-8'))['rows']
+ prices = [row['price'] for row in rows]
+ ordered = sorted(prices)
+ assert ordered[7] == 98 and ordered[8] == 102
+ assert ordered[14] == 120 and ordered[15] == 124
+ assert ordered[21] == 160 and ordered[22] == 168
+ assert summary(prices) == (98, 122, 168, 62, 268, [480])
+ assert [type7(prices, p) for p in (.25, .5, .75)] == [99, 122, 166]
+ groups = {name: [row['price'] for row in rows if row['group'] == name] for name in ('주거', '상업')}
+ assert len(groups['주거']) == 15 and len(groups['상업']) == 15
+ assert summary(groups['주거'])[:3] == (88, 105, 120)
+ assert summary(groups['상업'])[:3] == (124, 168, 235)
+ assert sum(value <= 98 for value in prices) == 8
+ assert sum(98 <= value <= 168 for value in prices) == 16
+ q1, q3 = 99, 166
+ iqr7 = q3 - q1
+ upper7 = q3 + 1.5 * iqr7
+ lower7 = q1 - 1.5 * iqr7
+ inside7 = [value for value in ordered if lower7 <= value <= upper7]
+ assert lower7 == -1.5 and upper7 == 266.5
+ assert max(inside7) == 240 and min(inside7) == 62
+ assert [value for value in ordered if value > upper7] == [268, 480]
+
+ def t(x, y, text, extra=''):
+  return f'<text x="{x}" y="{y}" {extra}>{escape(str(text))}</text>'
+ def line(x1, y1, x2, y2, extra=''):
+  return f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="#64748b" {extra}/>'
+ def fig(svg_id, title, desc, body, caption, height):
+  return (
+   f'<figure class="learn-chart learn-chart--wide qn-chart"><svg id="{svg_id}" viewBox="0 0 640 {height}" role="img" aria-labelledby="{svg_id}-title {svg_id}-desc">'
+   f'<title id="{svg_id}-title">{title}</title><desc id="{svg_id}-desc">{desc}</desc>{body}</svg>'
+   f'<figcaption class="learn-chart__caption">{caption}</figcaption></figure>'
+  )
+
+ body = t(16, 28, '누적 비율의 눈금') + line(50, 112, 590, 112)
+ for ratio, label in ((0, '0%'), (.25, '25%'), (.5, '50%'), (.75, '75%'), (1, '100%')):
+  x = 50 + ratio * 540
+  body += line(x, 96, x, 128, f'data-p="{ratio}"') + t(x, 84, label, 'text-anchor="middle"')
+ body += t(16, 168, '간격은 비율입니다. 단가 간격이 아닙니다.')
+ f1 = fig('qn-map', '분위수와 누적 비율', '0%, 25%, 50%, 75%, 100% 위치가 같은 간격으로 표시된 개념도입니다.', body,
+  '그림 1. 분위수는 누적 비율에 대응하는 값입니다. 이 눈금에 공통 30건의 단가를 넣지 않았습니다.', 200)
+
+ body = t(16, 24, '정렬 순위 · Q1은 8번째, 중앙값은 15·16번째, Q3는 23번째')
+ for index, value in enumerate(ordered, start=1):
+  x = 12 + (index - 1) * 16
+  on = index in (8, 15, 16, 23)
+  fill = '#fff7ed' if on else '#f1f5f9'
+  stroke = '#d97706' if on else '#94a3b8'
+  width = '3' if on else '1'
+  body += f'<rect data-rank="{index}" data-price="{value}" x="{x}" y="48" width="14" height="36" fill="{fill}" stroke="{stroke}" stroke-width="{width}"/>'
+ body += t(131, 108, '8번째 98', 'text-anchor="middle"')
+ body += t(251, 128, '15·16번째', 'text-anchor="middle"')
+ body += t(371, 108, '23번째 168', 'text-anchor="middle"')
+ body += t(16, 160, 'Q1 98 · 중앙값 (120+124)/2 = 122 · Q3 168')
+ body += t(16, 184, '가로 간격은 순위입니다')
+ f2 = fig('qn-ranks', '공통 30건의 사분위수', '8번째 98, 15번째 120, 16번째 124, 23번째 168입니다.', body,
+  '그림 2. 칸의 위치는 크기순 번호입니다. 98과 168의 차이를 칸 간격으로 읽지 않습니다.', 210)
+
+ def box(values, y, style, label):
+  q1, q2, q3, lo, hi, outliers = summary(values)
+  if style == 'range':
+   lo, hi, outliers = min(values), max(values), []
+  extra = f'data-rule-row="{style}" data-box="{label}" data-q1="{q1}" data-q2="{q2}" data-q3="{q3}" data-low="{lo}" data-high="{hi}"'
+  named = label == 'iqr'
+  marks = f'<rect x="{60 + q1}" y="{y - 15}" width="{q3 - q1}" height="30" fill="#93c5fd" stroke="#64748b" {extra}/>'
+  median_extra = 'id="qn-iqr-median" ' if named else ''
+  whisker_id = 'id="qn-iqr-whisker" ' if named else ''
+  marks += f'<line {median_extra}x1="{60 + q2}" y1="{y - 15}" x2="{60 + q2}" y2="{y + 15}" stroke="#64748b" stroke-width="3" data-rule-row="{style}"/>'
+  marks += f'<line {whisker_id}x1="{60 + lo}" y1="{y}" x2="{60 + hi}" y2="{y}" stroke="#64748b" stroke-width="2" data-rule-row="{style}"/>'
+  for value, edge in ((lo, 'low'), (hi, 'high')):
+   cap = f'data-cap="{edge}" ' if named else ''
+   marks += line(60 + value, y - 8, 60 + value, y + 8, f'{cap}data-rule-row="{style}"')
+  for value in outliers:
+   opacity = '0' if value != 480 else '1'
+   marks += f'<circle cx="{60 + value}" cy="{y}" r="5" fill="#d97706" stroke="#d97706" data-outlier="{value}" opacity="{opacity}"/>'
+  return marks
+
+ body = t(16, 24, '위: 최솟값–최댓값 · 아래: 1.5×IQR')
+ body += t(16, 48, '실선 수염 · 점선 울타리')
+ body += box(prices, 96, 'range', 'range')
+ body += box(prices, 176, 'iqr', 'iqr')
+ body += '<circle cx="328" cy="176" r="5" fill="#d97706" stroke="#d97706" data-outlier="268" opacity="0"/>'
+ body += line(53, 150, 53, 202, 'id="qn-fence-low" data-rule-row="iqr" stroke-dasharray="5 4"')
+ body += line(333, 150, 333, 202, 'id="qn-fence-high" data-rule-row="iqr" stroke-dasharray="5 4"')
+ body += line(60, 230, 560, 230)
+ for tick in (0, 100, 200, 300, 400, 500):
+  body += t(60 + tick, 252, tick, 'text-anchor="middle"')
+ body += t(16, 278, '단가(만원/㎡) · 기본은 아래 규칙')
+ f3 = fig('qn-whiskers', '수염과 울타리', '최솟값-최댓값 수염은 62와 480, 1.5배 IQR 수염은 62와 268, 별도 점은 480입니다. 상자는 98에서 168입니다.', body,
+  '그림 3. 점선은 계산된 울타리, 실선은 울타리 안의 실제 관측까지 그린 수염입니다. 480은 삭제 대상이 아닙니다.', 300)
+
+ body = t(16, 24, '같은 단가 축 · 두 절반 방식 · 각 15건')
+ for name, y in (('주거', 96), ('상업', 186)):
+  q1, q2, q3, lo, hi, outliers = summary(groups[name])
+  body += t(16, y - 28, f'{name} · Q1 {q1:g} · 중앙값 {q2:g} · Q3 {q3:g}')
+  body += box(groups[name], y, 'iqr', name)
+ body += line(60, 236, 560, 236)
+ for tick in (0, 100, 200, 300, 400, 500):
+  body += t(60 + tick, 258, tick, 'text-anchor="middle"')
+ body += t(16, 286, '단가(만원/㎡)')
+ f4 = fig('qn-groups', '주거와 상업의 상자그림', '주거 15건은 88, 105, 120. 상업 15건은 124, 168, 235입니다.', body,
+  '그림 4. 각 집단의 사분위수를 따로 계산했습니다. 상자의 세로 두께에는 건수 의미를 두지 않았습니다.', 310)
+
+ body = t(16, 24, '같은 30건 · 계산법만 다름')
+ for y, label, values, key in (
+  (88, '두 절반 방식', (98, 122, 168), 'halves'),
+  (168, 'Type 7', (99, 122, 166), 'type7'),
+ ):
+  body += t(16, y - 16, label)
+  body += line(240, y, 580, y, f'data-method-row="{key}"')
+  for value in values:
+   x = 240 + (value - 90) * 4
+   body += line(x, y - 8, x, y + 8, f'data-method-row="{key}"') + t(x, y + 24, f'{value:g}', 'text-anchor="middle"')
+ body += t(16, 230, '단가(만원/㎡) · 90~174 구간')
+ f5 = fig('qn-methods', '분위수 계산법 비교', '두 절반 방식은 98, 122, 168이고 Type 7은 99, 122, 166입니다.', body,
+  '그림 5. 계산법이 바뀌면 IQR과 울타리 밖의 후보도 바뀝니다. 그림 3의 아래 상자가 함께 바뀝니다.', 250)
+
+ def scale(price, high):
+  return 40 + price / high * 400
+ full = ''.join([
+  t(16, 28, '최솟값–최댓값 · 단가(만원/㎡)'),
+  line(scale(3.3, 320), 110, scale(296.6, 320), 110),
+  f'<rect x="{scale(16.1, 320)}" y="90" width="{scale(40, 320) - scale(16.1, 320)}" height="40" fill="#99f6e4" stroke="#0f766e" data-source-box="full" data-q1="16.1" data-median="26" data-q3="40"/>',
+  line(scale(26, 320), 90, scale(26, 320), 130, 'stroke-width="3"'),
+  t(scale(3.3, 320), 78, '3.3', 'text-anchor="middle"'),
+  t(scale(296.6, 320), 78, '296.6', 'text-anchor="middle"'),
+  t(16, 220, '상자만 확대 · 수염 생략 (0~60)'),
+  f'<rect x="{scale(16.1, 60)}" y="250" width="{scale(40, 60) - scale(16.1, 60)}" height="42" fill="#99f6e4" stroke="#0f766e" data-source-box="zoom" data-q1="16.1" data-median="26" data-q3="40"/>',
+  line(scale(26, 60), 250, scale(26, 60), 292, 'stroke-width="3"'),
+  t(scale(16.1, 60), 242, 'Q1 16.1', 'text-anchor="middle"'),
+  t(scale(26, 60), 318, '중앙값 26.0', 'text-anchor="middle"'),
+  t(scale(40, 60), 242, 'Q3 40.0', 'text-anchor="middle"'),
+ ])
+ source = (
+  '<figure class="learn-chart learn-chart--wide learn-source-boxplot"><svg viewBox="0 0 480 360" role="img" aria-labelledby="source-box-title source-box-desc">'
+  f'<title id="source-box-title">화면의 다섯 수치로 그린 상자그림</title><desc id="source-box-desc">최솟값 3.3, Q1 16.1, 중앙값 26.0, Q3 40.0, 최댓값 296.6입니다. 원자료가 없어 1.5배 IQR 수염 끝은 그리지 않았습니다.</desc>{full}</svg>'
+  '<figcaption class="learn-chart__caption">캡처의 다섯 요약값으로 그린 그림입니다. 공통 30건이 아니며, 위 수염은 최댓값 296.6까지입니다. 75.85는 계산된 울타리이지 수염 끝이 아닙니다.</figcaption></figure>'
+ )
+
+ controls = lambda buttons, status: f'<div class="qn-controls" hidden><div class="qn-shortcuts">{buttons}</div><p role="status" id="{status}"></p></div>'
+ sections = f'''
+<section class="learn-chapter__step" id="quick-start" data-toc-label="서두 · 학습목표"><p class="learn-chapter__label">서두 · 학습목표</p><h2>평균과 중앙값만으로 거래가격의 분포를 이해할 수 있을까요?</h2>
+<p>어느 지역의 토지 거래단가 중앙값이 100만원/㎡라고 해 보겠습니다. 그렇다면 대부분의 거래가 100만원/㎡ 부근에서 일어났을까요? 반드시 그렇지는 않습니다. 90~110만원/㎡에 모여 있을 수도 있고, 30만원/㎡부터 300만원/㎡까지 퍼져 있을 수도 있습니다. 중앙값이 같아도 분포는 다를 수 있습니다.</p>
+<p>가운데 하나뿐 아니라 자료의 여러 위치를 보려면 <strong>분위수</strong>를 사용합니다. 분위수는 정렬한 자료에서 특정 누적 비율에 대응하는 값입니다. Q1·중앙값·Q3로 상자그림을 그릴 수 있습니다.</p>
+<ul class="learn-objectives"><li>분위수와 백분위수의 의미를 이해합니다.</li><li>분위수와 백분위 순위를 구별합니다.</li><li>Q1·Q2·Q3와 IQR을 계산합니다.</li><li>상자·중앙선·수염·별도 점을 읽습니다.</li><li>울타리와 실제 수염 끝의 차이를 알아봅니다.</li><li>집단별 상자그림을 비교합니다.</li><li>계산법에 따라 분위수가 달라지는 이유를 이해합니다.</li><li>CH2 Macro의 25%값·중위·75%값을 읽습니다.</li></ul>
+<p>먼저 <a href="/learn/stats/mean-and-median/#median">중앙값</a>과 <a href="/learn/stats/graphs/#shape">분포의 모양</a>을 떠올려 보세요.</p>
+{controls('<button type="button" data-ratio="0.25">25%</button><button type="button" data-ratio="0.5" aria-pressed="true">50%</button><button type="button" data-ratio="0.75">75%</button>', 'qn-map-status')}
+{f1}</section>
+<section class="learn-chapter__step" id="percentiles" data-toc-label="분위수와 백분위 순위"><p class="learn-chapter__label">분위수와 백분위 순위</p><h2>비율로 값을 찾는 것과 값으로 순위를 찾는 것은 다릅니다</h2>
+<p>4장에서 중앙값은 정렬한 자료의 가운데였습니다. 아래쪽 25%에 대응하는 값은 <strong>25백분위수</strong>, 75%에 대응하는 값은 <strong>75백분위수</strong>입니다. p분위수의 p는 0부터 1까지의 누적 비율입니다. p=0.25는 Q1, p=0.50은 중앙값, p=0.75는 Q3입니다.</p>
+<p>75백분위수가 168만원/㎡라면, 정렬한 분포의 75% 위치에 대응하는 단가입니다. <strong>평균보다 75% 높은 단가라는 뜻이 아닙니다.</strong> 표본에서는 같은 값이 반복되거나 건수가 적어, 관측이 정확히 75대 25로 나뉘지 않을 수 있습니다.</p>
+<p>「75백분위수는 얼마인가」와 「168만원/㎡는 어느 순위인가」는 다른 질문입니다. 뒤의 질문이 <strong>백분위 순위</strong>입니다.</p>
+<div class="learn-data learn-data--full qn-table"><table><caption>100, 100, 100, 200에서 100의 위치</caption><thead><tr><th scope="col">기준</th><th scope="col">건수</th><th scope="col">비율</th></tr></thead><tbody><tr><th scope="row">100 미만</th><td>0</td><td>0%</td></tr><tr><th scope="row">100 이하</th><td>3</td><td>75%</td></tr></tbody></table></div>
+<p>같은 값 100이라도 미만과 이하의 비율이 다릅니다. 동점의 중간 순위를 쓰는 방법도 있습니다. 분위수는 비율에서 값을 찾고, 백분위 순위는 값이 차지하는 위치를 찾습니다.</p></section>
+<section class="learn-chapter__step" id="calculation" data-toc-label="사분위수 계산"><p class="learn-chapter__label">사분위수 계산</p><h2>정렬한 30건을 아래 15건과 위 15건으로 나눕니다</h2>
+<p>Q1은 제1사분위수, Q2는 중앙값, Q3는 제3사분위수입니다. 이번 장의 기본 계산은 <strong>두 절반의 중앙값</strong>입니다. 자료는 1~4장과 같은 공통 학습자료 30건입니다. 출처와 표집 설계가 확인되지 않은 학습 예제이며, 번호는 거래 시점이 아닙니다. <a href="/learn/stats/graphs/#data">전체 표</a>와 <a href="../example-data.json">원자료</a>에서 확인할 수 있습니다.</p>
+<p>관측 30건, 최솟값 62, 최댓값 480, 중앙값 122만원/㎡입니다. 30건은 짝수이므로 중앙값은 15번째 120과 16번째 124의 평균인 122입니다. 아래쪽 15건의 가운데인 8번째가 Q1=98입니다. 위쪽 15건의 가운데인 전체 23번째가 Q3=168입니다.</p>
+{controls('<button type="button" data-step="all" aria-pressed="true">결과</button><button type="button" data-step="center">15·16번째</button><button type="button" data-step="lower">아래 15건</button><button type="button" data-step="q1">Q1</button><button type="button" data-step="upper">위 15건</button><button type="button" data-step="q3">Q3</button>', 'qn-rank-status')}
+{f2}
+<p>홀수 개이면 전체 중앙 관측을 두 절반에서 제외합니다. 98 이하인 관측은 8건입니다. 30의 25%인 7.5건이 아닙니다. Q1부터 Q3까지 양 끝을 포함하면 16건, 전체의 53.3%입니다. 사분위수는 누적 비율의 위치를 요약한 값입니다. 유한한 표본을 관측 건수로 언제나 정확히 네 등분하지는 않습니다. 상자가 가운데 50%를 나타낸다는 말은 위치의 요약으로 읽습니다.</p></section>
+<section class="learn-chapter__step" id="iqr" data-toc-label="사분위범위"><p class="learn-chapter__label">사분위범위</p><h2>IQR은 가운데 부분의 퍼짐입니다</h2>
+<p>IQR = Q3 − Q1 = 168 − 98 = <strong>70만원/㎡</strong>입니다. 전체 범위는 480 − 62 = 418만원/㎡입니다. 극단값의 크기에 평균이나 전체 범위보다 덜 민감할 수 있습니다. 다만 관측을 넣거나 빼면, 그리고 계산법이 바뀌면 IQR도 달라질 수 있습니다.</p>
+<p>IQR이 작다는 것은 가운데 부분이 상대적으로 좁다는 뜻입니다. 모든 거래단가가 비슷하다는 뜻은 아닙니다. Q1에서 중앙값까지는 122 − 98 = 24이고, 중앙값에서 Q3까지는 168 − 122 = 46입니다. 상자 안의 중앙선이 상자의 정가운데에 있지 않습니다.</p></section>
+<section class="learn-chapter__step" id="whiskers" data-toc-label="수염과 울타리"><p class="learn-chapter__label">수염과 울타리</p><h2>수염의 끝과 이상치 경계는 다를 수 있습니다</h2>
+<p>상자그림은 Q1, 중앙값, Q3, 수염, 별도 점으로 분포를 요약합니다. 수염을 실제 최솟값과 최댓값까지 그리는 방법도 있고, 1.5×IQR 울타리 안의 실제 관측까지 그리는 방법도 있습니다. 이번 과정은 <strong>1.5×IQR</strong>을 기본으로 합니다.</p>
+<p>1.5×70 = 105입니다. 아래 울타리 L = 98 − 105 = −7, 위 울타리 U = 168 + 105 = 273입니다. 수염은 −7과 273까지가 아니라, 울타리 안에 있는 실제 최솟값 62와 최댓값 268까지입니다. 480은 273을 넘으므로 별도 점입니다.</p>
+{controls('<button type="button" data-rule="range">최솟값–최댓값</button><button type="button" data-rule="iqr" aria-pressed="true">1.5×IQR</button><button type="button" data-part="q1">Q1</button><button type="button" data-part="median">중앙값</button><button type="button" data-part="q3">Q3</button><button type="button" data-part="iqr">IQR</button><button type="button" data-part="fence-low">아래 울타리</button><button type="button" data-part="fence-high" aria-pressed="true">위 울타리</button><button type="button" data-part="whisker-low">아래 수염</button><button type="button" data-part="whisker-high">위 수염</button><button type="button" data-part="outlier">별도 점</button>', 'qn-whisker-status')}
+{f3}
+<p>−7은 음수 단가가 관측되었다는 뜻이 아닙니다. Q1과 IQR로 계산한 경계입니다. 273도 그 단가의 거래가 있다는 뜻이 아닙니다. 480이 울타리 밖에 있다고 입력 오류나 삭제할 거래로 확정되지는 않습니다. 면적, 금액과 단가의 산식, 거래 유형, 용도지역, 이용상황, 중복·정정, 비교 범위를 확인합니다. 상자그림은 확인할 관측을 찾는 도구입니다. 처리는 <a href="/learn/stats/iqr-outliers/">7장 「이상치와 IQR」</a>에서 다룹니다.</p></section>
+<section class="learn-chapter__step" id="comparison" data-toc-label="집단별 상자그림"><p class="learn-chapter__label">집단별 상자그림</p><h2>집단을 나누면 사분위수도 다시 계산합니다</h2>
+<p>주거와 상업은 각각 15건입니다. 전체 30건의 Q1=98과 Q3=168을 두 집단에 그대로 쓰지 않습니다. 15건의 중앙값은 8번째입니다. Q1은 가운데를 뺀 아래 7건의 중앙값, Q3는 위 7건의 중앙값입니다.</p>
+<div class="learn-data learn-data--full qn-table"><table><caption>공통 학습자료의 집단별 사분위수</caption><thead><tr><th scope="col">항목</th><th scope="col">주거 15건</th><th scope="col">상업 15건</th></tr></thead><tbody><tr><th scope="row">Q1</th><td>88</td><td>124</td></tr><tr><th scope="row">중앙값</th><td>105</td><td>168</td></tr><tr><th scope="row">Q3</th><td>120</td><td>235</td></tr><tr><th scope="row">IQR</th><td>32</td><td>111</td></tr></tbody></table></div>
+{controls('<button type="button" data-group="주거" aria-pressed="true">주거</button><button type="button" data-group="상업">상업</button>', 'qn-group-status')}
+{f4}
+<p>이 예제에서는 상업의 중앙값과 IQR이 더 큽니다. 모든 주거·상업 시장에 적용되는 결과도 아니고, 용도가 가격 차이의 원인으로 확인된 것도 아닙니다. 면적, 입지, 시점이 다를 수 있습니다. 두 상자는 같은 축에 있습니다. 표본은 각 15건입니다.</p>
+<p>비교할 때는 단위와 축, 계산법, 건수를 맞춥니다. 상자가 겹친다고 통계적 유의성이 정해지지는 않습니다. 상자는 신뢰구간이 아닙니다. 두 봉우리나 빈 구간은 상자그림에 숨겨질 수 있으므로, 차이가 중요하면 히스토그램이나 개별 점도 함께 봅니다.</p></section>
+<section class="learn-chapter__step" id="methods" data-toc-label="계산 관례"><p class="learn-chapter__label">계산 관례</p><h2>같은 30건도 계산법에 따라 후보가 달라질 수 있습니다</h2>
+<p>다른 프로그램에서 Q1=99, 중앙값=122, Q3=166이 나왔다고 해서 어느 한쪽이 반드시 틀린 것은 아닙니다. 표본 분위수의 계산법은 하나가 아닙니다. Type 7은 h = 1 + (n − 1)p를 사용합니다. n=30, p=0.25이면 h=8.25이므로 Q1 = 98 + 0.25×(102 − 98) = 99입니다. p=0.75이면 h=22.75이므로 Q3 = 160 + 0.75×(168 − 160) = 166입니다. IQR은 67입니다.</p>
+{controls('<button type="button" data-method="halves" aria-pressed="true">두 절반 방식</button><button type="button" data-method="type7">Type 7</button>', 'qn-method-status')}
+{f5}
+<div class="learn-data learn-data--full qn-table"><table><caption>같은 30건의 위쪽 경계</caption><thead><tr><th scope="col">구분</th><th scope="col">두 절반 방식</th><th scope="col">Type 7</th></tr></thead><tbody><tr><th scope="row">Q1 / Q3</th><td>98 / 168</td><td>99 / 166</td></tr><tr><th scope="row">IQR</th><td>70</td><td>67</td></tr><tr><th scope="row">위 울타리</th><td>273</td><td>266.5</td></tr><tr><th scope="row">위 수염</th><td>268</td><td>240</td></tr><tr><th scope="row">울타리 밖</th><td>480</td><td>268, 480</td></tr></tbody></table></div>
+<p>Type 7의 위 수염은 266.5가 아닙니다. 266.5 이하인 실제 최댓값은 240입니다. 268은 두 절반 방식에서는 울타리 안이고, Type 7에서는 울타리 밖입니다. 이상치 기준을 설명할 때는 IQR 배수와 분위수 계산법을 함께 적습니다. 후보를 뺄지는 별도의 판단입니다.</p>
+<p>모든 프로그램이 Type 7을 기본으로 쓰지는 않습니다. 원자료, 정렬, 결측, 가중치, 분위수 함수, 상자그림 함수, IQR 배수, 경계와 같은 값의 처리가 같은지 확인합니다. 이번 학습 예제의 기본은 두 절반 방식입니다. 교재의 계산법을 실제 Macro에 그대로 적용하지는 않습니다.</p>
+<details class="learn-more"><summary>가중 분위수와 적은 표본</summary><div class="learn-more__body"><p>거래 한 건을 같게 보면 거래 건수 기준 분위수입니다. 면적에 비중을 두면 면적가중 분위수가 되지만, 가중치와 보간 규칙을 정해야 합니다. 100건의 중간 거래 단가와, 누적 면적 50%에 대응하는 단가는 다른 질문입니다. 이번 30건은 거래별 동일 비중입니다.</p>
+<p>단가 50, 80, 100, 150, 300의 중앙값은 100입니다. 300을 빼면 (80+100)/2 = 90입니다. 건수가 적으면 분위수가 크게 움직일 수 있습니다. 건수가 많다고 대표성이 보장되지는 않습니다. 건수, 계산법, 극단값, 기간·지역·유형, 결측과 이상치 처리를 함께 봅니다.</p></div></details></section>
+<section class="learn-chapter__step" id="practice" data-toc-label="확인 문제"><p class="learn-chapter__label">확인 문제</p><h2>위치값·울타리·수염을 구별해 보세요</h2>
+<ol class="learn-exercises"><li>Q1=98이고 Q3=168이라면 IQR과 위쪽 1.5×IQR 울타리는 얼마일까요?<details><summary>답과 해설</summary><p>IQR은 70, 위 울타리는 168+105=273입니다. 수염은 273까지가 아니라 울타리 안의 최댓값 268까지입니다.</p></details></li>
+<li>75백분위수가 168만원/㎡라면 평균보다 75% 높은 단가일까요?<details><summary>답과 해설</summary><p>아닙니다. 75는 정렬한 분포의 누적 비율이고, 168은 그 위치의 단가입니다.</p></details></li>
+<li>같은 30건인데 어떤 프로그램은 Q1=98·Q3=168, 다른 프로그램은 Q1=99·Q3=166입니다. 반드시 한쪽이 틀렸을까요?<details><summary>답과 해설</summary><p>그렇지 않습니다. 두 절반 방식과 Type 7은 규칙이 다릅니다. 원자료와 계산 옵션을 함께 확인합니다.</p></details></li>
+<li>수염 밖에 480만원/㎡가 표시되었습니다. 분석에서 자동으로 제외할까요?<details><summary>답과 해설</summary><p>아닙니다. 울타리 규칙에 따라 별도로 표시한 관측입니다. 유효성과 비교 가능성을 확인한 뒤 처리합니다.</p></details></li>
+<li>읍면동 두 곳의 중위단가가 100과 200입니다. 시군구 중위를 150으로 계산해도 될까요?<details><summary>답과 해설</summary><p>일반적으로 적절하지 않습니다. 집단별 중앙값만으로는 전체의 가운데 위치를 알 수 없습니다. 거래를 합쳐 다시 계산합니다.</p></details></li></ol></section>
+<section class="learn-chapter__step" id="macro" data-toc-label="CH2 Macro에서 읽기"><p class="learn-chapter__label">CH2 Macro에서 읽기</p><h2>25%값·중위·75%값을 함께 읽어 보세요</h2>
+<p>토지 기본통계에서는 지역, 기간, 용도지역, 지목으로 나눈 거래단가의 요약값을 볼 수 있습니다. 아래는 자녹과 답이 만나는 칸의 과거 화면입니다.</p>
+<div class="learn-quantile-pair"><figure class="learn-capture learn-capture--detail"><a href="../assets/captures/land-quantile-cell.png" target="_blank" rel="noopener" aria-label="분위수 화면 크게 보기"><img src="../assets/captures/land-quantile-cell.png" width="251" height="180" loading="lazy" alt="자녹과 답의 교차 칸. 오른쪽 열은 위에서부터 최솟값 3.3, 25%값 16.1, 중앙값 26.0, 75%값 40.0, 최댓값 296.6입니다. 칸의 평균은 33.2입니다."/></a><figcaption class="learn-capture__caption">자녹·답 칸입니다. 오른쪽 열은 3.3, 16.1, 26.0, 40.0, 296.6만원/㎡입니다. 33.2는 그 칸의 평균입니다. 캡처 당시의 값이며 공통 30건이나 현재 운영 통계가 아닙니다. <a href="../assets/captures/land-quantile-cell.png" target="_blank" rel="noopener">원본 크게 보기 ↗</a></figcaption></figure>{source}</div>
+<ol class="learn-screen-reading"><li><strong>25%값:</strong> 아래쪽 25% 위치의 단가입니다. 최저 적정가격이나 자동 저평가 기준이 아닙니다.</li><li><strong>중위값:</strong> 정렬한 가운데입니다. 극단값의 크기에 평균보다 덜 민감할 수 있지만, 시장 전체의 유일한 대표가격은 아닙니다.</li><li><strong>75%값:</strong> 아래쪽 75% 위치의 단가입니다. 개별 물건의 고평가 기준이 아닙니다.</li><li><strong>IQR:</strong> 75%값에서 25%값을 뺀 값입니다. 같은 산식과 같은 표본인지 확인합니다. 이 칸은 40.0−16.1=23.9입니다.</li><li><strong>건수와 필터:</strong> 용도지역, 지목, 기간, 이상치 제외에 따라 구성이 바뀝니다.</li><li><strong>계산법:</strong> 확인한 기본통계의 25%·75%는 거래단가 목록의 백분위입니다. 이번 장의 두 절반 방식과 같지 않습니다. 같은 30건이면 99와 166입니다. 이상치를 나누는 계산도 그 백분위를 사용합니다. 배수는 1.5만 있는 것이 아니며 화면에서 고를 수 있습니다.</li><li><strong>지역을 합칠 때:</strong> 읍면동 25%값을 평균해도 시군구 25%값이 되지 않습니다. 그 범위의 거래를 모아 다시 계산합니다.</li></ol>
+<p>기본통계의 분위수는 선택한 거래의 가격 분포를 읽는 지표입니다. 개별 부동산의 적정가격을 자동으로 판정하지 않습니다.</p>
+<p class="learn-macro-cta"><a href="https://macro.ch2data.com/land/">CH2 Macro 토지 기본통계 열기 →</a></p></section>
+<section class="learn-chapter__step" id="recap" data-toc-label="결론 · 학습 요약"><p class="learn-chapter__label">결론 · 학습 요약</p><h2>분위수는 가격의 위치를, IQR은 가운데 부분의 퍼짐을 보여 줍니다</h2>
+<ul class="learn-recap-list"><li><strong>분위수:</strong> 정렬한 자료의 누적 비율에 대응하는 값입니다.</li><li><strong>백분위 순위:</strong> 특정 값이 차지하는 위치입니다.</li><li><strong>Q1·Q2·Q3:</strong> 25%·50%·75% 위치입니다. Q2는 중앙값입니다.</li><li><strong>IQR:</strong> Q3−Q1입니다.</li><li><strong>울타리와 수염:</strong> 울타리는 계산된 경계이고, 수염은 그 안의 실제 관측까지입니다.</li><li><strong>계산법:</strong> 같은 자료라도 Q1·Q3·후보가 달라질 수 있습니다.</li></ul>
+<p>다음 <a href="/learn/stats/spread/">6장 「분산과 표준편차」</a>에서는 각 값이 평균에서 얼마나 떨어져 있는지로 퍼짐을 측정합니다.</p>
+<p>분위수를 읽을 때는 위치뿐 아니라 계산 규칙과 표본의 구성도 함께 확인하세요.</p>
+<details class="learn-more"><summary>참고자료</summary><div class="learn-more__body"><ul><li><a href="https://www.itl.nist.gov/div898/handbook/eda/section3/boxplot.htm">NIST/SEMATECH e-Handbook: Box Plot</a></li><li><a href="https://stat.ethz.ch/R-manual/R-devel/library/stats/html/quantile.html">R 공식 문서: Sample Quantiles</a> — Type 7을 포함한 계산 관례.</li></ul>
+<p class="learn-source-note">참고자료 확인일: 2026-10-07. 그림 1은 개념도이고 그림 2~5는 공통 학습자료입니다. 실제 서비스의 분위수 산식은 화면의 함수를 따로 확인합니다.</p></div></details></section>
+'''
+ page = f'''<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>05. 분위수와 상자그림 | 통계학 &amp; 데이터 분석</title>
+    <meta name="description" content="분위수, 사분위수, IQR, 상자그림의 수염과 울타리, 집단 비교와 계산 관례를 공통 학습자료로 설명합니다." />
+    <link rel="canonical" href="https://ch2data.com/learn/stats/quantiles/" />
+    <script src="/learn/stats/learn-stats-theme.js?v=20261023-1"></script>
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/learn/stats/learn-stats.css?v=20261023-1" />
+    <link rel="stylesheet" href="/learn/stats/learn-reader.css?v=20261026-toc" />
+    <link rel="stylesheet" href="/learn/stats/quantiles/chapter.css?v=20261026-10" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero hero--document">
+        <p class="learn-breadcrumb"><a href="https://ch2data.com/">CH2 DATA</a> · <a href="/learn/stats/">통계학 &amp; 데이터 분석</a></p>
+        <p class="hero__eyebrow">I. 데이터와 기술통계</p>
+        <h1 class="hero__title">05. 분위수와 상자그림</h1>
+        <p class="learn-chapter-relevance">Macro 활용도 <span class="learn-relevance" aria-label="Macro 활용도 3단계, 핵심"><span aria-hidden="true">★★★</span></span></p>
+        <p class="learn-relevance-guide">Macro 활용도: ★★★ 핵심 · ★★☆ 권장 · ★☆☆ 심화<br>별은 Macro 결과 이해에 도움이 되는 정도이며, 학습 순서나 선수 지식을 대신하지 않습니다.</p>
+      </header>
+      <article class="learn-chapter learn-chapter--expanded learn-chapter--edited" aria-label="분위수와 상자그림">{sections}</article>
+      <nav class="learn-chapter-nav" aria-label="장 이동">
+        <a href="/learn/stats/mean-and-median/">← 04. 평균과 중앙값</a>
+        <a href="/learn/stats/spread/">06. 분산과 표준편차 →</a>
+      </nav>
+      <footer class="footer"><nav class="footer__links"><a href="https://ch2data.com/">홈</a><a href="/learn/stats/">통계학 &amp; 데이터 분석</a></nav><p>© CH2 DATA</p></footer>
+    </div>
+    <script src="/learn/stats/learn-stats-toc.js?v=20261026-10" defer></script>
+    <script type="application/json" id="qn-data">{json.dumps({'rows': [{'id': row['id'], 'group': row['group'], 'price': row['price']} for row in rows]}, ensure_ascii=False)}</script>
+    <script type="module" src="/learn/stats/quantiles/experiment.js?v=20261026-10"></script>
+  </body>
+</html>
+'''
+ charts = [ET.fromstring(svg) for svg in re.findall(r'<svg .*?</svg>', page, re.S)]
+ assert len(charts) == 6
+ for svg in charts:
+  for node in svg.iter('rect'):
+   label = node.attrib.get('data-box')
+   if not label:
+    continue
+   group = groups[label] if label in groups else prices
+   q1, q2, q3, lo, hi, _out = summary(group)
+   if label == 'range':
+    lo, hi = min(group), max(group)
+   assert [float(node.attrib[key]) for key in ('data-q1', 'data-q2', 'data-q3', 'data-low', 'data-high')] == [q1, q2, q3, lo, hi]
+   assert float(node.attrib['x']) == 60 + q1 and float(node.attrib['width']) == q3 - q1
+ ids = re.findall(r'id="([^"]+)"', page)
+ assert len(ids) == len(set(ids))
+ assert page.count('<details') == 7
+ assert '★★☆ 권장' in page and '★☆☆ 심화' in page and '3단계, 핵심' in page
+ assert 'land-quantile-cell.png' in page and '[그림 ' not in page
+ (ROOT / 'quantiles' / 'index.html').write_text(page, encoding='utf-8')
+ promote()
+ home = summary(groups['주거'])
+ shop = summary(groups['상업'])
+ print('groups', home, shop)
+ print('type7 whisker', min(inside7), max(inside7), 'out', [value for value in ordered if value > upper7 or value < lower7])
+
+def promote():
+ old = '''        "slug": "quantiles",
+        "title": "분위수와 상자그림",
+        "soon": false,
+        "macro_relevance": 2'''
+ new = old.replace('"macro_relevance": 2', '"macro_relevance": 3')
+ for path in (ROOT / 'course.json', ROOT / 'learn-stats-toc.js'):
+  text = path.read_text(encoding='utf-8')
+  if old not in text:
+   if new not in text:
+    raise SystemExit(f'missing quantiles block: {path}')
+   continue
+  path.write_text(text.replace(old, new, 1), encoding='utf-8')
+ listing = ROOT / 'index.html'
+ text = listing.read_text(encoding='utf-8')
+ before = 'data-macro-relevance="2"><a href="/learn/stats/quantiles/">05. 분위수와 상자그림 <span class="learn-relevance" aria-label="Macro 활용도 2단계, 권장"><span aria-hidden="true">★★☆</span>'
+ after = 'data-macro-relevance="3"><a href="/learn/stats/quantiles/">05. 분위수와 상자그림 <span class="learn-relevance" aria-label="Macro 활용도 3단계, 핵심"><span aria-hidden="true">★★★</span>'
+ if before in text:
+  listing.write_text(text.replace(before, after, 1), encoding='utf-8')
+ elif after not in text:
+  raise SystemExit('missing quantiles listing')
+
+if __name__ == '__main__':
+ build()
