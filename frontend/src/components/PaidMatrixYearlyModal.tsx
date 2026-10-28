@@ -121,6 +121,20 @@ function fmtLtPrice(v: number | null | undefined): string {
   return Number(v).toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
+function rollingRowsForChart(
+  rows: MatrixYearlyStat[],
+  metric: LtPriceMetric,
+  quartiles: boolean,
+): MatrixYearlyStat[] {
+  return rows.map((r) => ({
+    ...r,
+    mean_unit_price_per_sqm:
+      metric === "median" ? (r.median_unit_price_per_sqm ?? null) : r.mean_unit_price_per_sqm,
+    band_low: metric === "median" && quartiles ? (r.p25_unit_price_per_sqm ?? null) : null,
+    band_high: metric === "median" && quartiles ? (r.p75_unit_price_per_sqm ?? null) : null,
+  }));
+}
+
 function ltPointsToChartRows(
   points: LongTermTrendPoint[],
   metric: LtPriceMetric,
@@ -202,6 +216,8 @@ export default function PaidMatrixYearlyModal({
   const [ltData, setLtData] = useState<LongTermTrendResponse | null>(null);
   const [ltMetric, setLtMetric] = useState<LtPriceMetric>("mean");
   const [showQuartiles, setShowQuartiles] = useState(false);
+  const [rollMetric, setRollMetric] = useState<LtPriceMetric>("mean");
+  const [rollQuartiles, setRollQuartiles] = useState(false);
   const [defaultSize] = useState(defaultPaidMatrixModalSize);
 
   useEffect(() => {
@@ -219,6 +235,9 @@ export default function PaidMatrixYearlyModal({
       setLtData(null);
       setLtError(null);
       setLtMetric("mean");
+      setShowQuartiles(false);
+      setRollMetric("mean");
+      setRollQuartiles(false);
       setRegResult(null);
       setRegSuggestion(null);
       setRegError(null);
@@ -464,6 +483,11 @@ export default function PaidMatrixYearlyModal({
   }, [isRolling]);
 
   const ltPriceLabel = ltMetric === "median" ? "중앙값" : "평균";
+  const rollPriceLabel = rollMetric === "median" ? "중앙값" : "평균";
+  const rollChartRows = useMemo(
+    () => (isRolling ? rollingRowsForChart(sortedRows, rollMetric, rollQuartiles) : sortedRows),
+    [isRolling, sortedRows, rollMetric, rollQuartiles],
+  );
 
   const ltCombinedSeries = useMemo(() => {
     if (ltMetric !== "mean" || !ltData || ltData.series.length < 2) return null;
@@ -860,11 +884,68 @@ export default function PaidMatrixYearlyModal({
           {canDetail && panel === "trend" && (
             <>
               <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3">
-                <div className="flex items-center gap-1 px-1 mb-2">
-                  <p className="text-xs font-semibold text-slate-600">추이 (꺾은선)</p>
-                  <AnalysisHelpPanel explain={trendExplain} />
+                <div className="flex flex-wrap items-center justify-between gap-2 px-1 mb-2">
+                  <div className="flex items-center gap-1">
+                    <p className="text-xs font-semibold text-slate-600">추이 (꺾은선)</p>
+                    <AnalysisHelpPanel explain={trendExplain} />
+                  </div>
+                  {isRolling && (
+                    <div
+                      className="inline-flex rounded-md border border-slate-200 bg-slate-50 p-0.5"
+                      role="group"
+                      aria-label="롤링 구간 단가 기준"
+                    >
+                      {(
+                        [
+                          ["mean", "평균"],
+                          ["median", "중앙값"],
+                        ] as const
+                      ).map(([id, label]) => (
+                        <button
+                          key={id}
+                          type="button"
+                          aria-pressed={rollMetric === id}
+                          className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+                            rollMetric === id
+                              ? "bg-white text-slate-800 shadow-sm border border-slate-100"
+                              : "text-slate-500 hover:text-slate-700"
+                          }`}
+                          onClick={() => {
+                            setRollMetric(id);
+                            if (id !== "median") setRollQuartiles(false);
+                          }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        aria-pressed={rollMetric === "median" && rollQuartiles}
+                        disabled={rollMetric !== "median"}
+                        className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+                          rollMetric !== "median"
+                            ? "text-slate-300 cursor-not-allowed"
+                            : rollQuartiles
+                              ? "bg-white text-slate-800 shadow-sm border border-slate-100"
+                              : "text-slate-500 hover:text-slate-700"
+                        }`}
+                        onClick={() => setRollQuartiles((v) => !v)}
+                      >
+                        25·75
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <MatrixYearlyTrendChart rows={sortedRows} />
+                {isRolling && rollMetric === "median" && (
+                  <p className="text-[11px] text-slate-500 px-1 mb-2">
+                    이 구간에 적용한 필터와 이상치 제외 뒤 거래의 중앙값입니다. 25·75도 같은 목록입니다. 장기 추세 탭의 만년력 연도 값과 다릅니다.
+                  </p>
+                )}
+                <MatrixYearlyTrendChart
+                  rows={rollChartRows}
+                  priceLabel={`${rollPriceLabel}(만원/㎡)`}
+                  showQuartiles={isRolling && rollMetric === "median" && rollQuartiles}
+                />
               </div>
               <div className="rounded-lg border border-slate-100 bg-white overflow-hidden">
                 <p className="text-xs font-semibold text-slate-600 px-3 pt-3 pb-1">
@@ -881,13 +962,23 @@ export default function PaidMatrixYearlyModal({
                       <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">
                         건수
                       </th>
+                      {isRolling && rollMetric === "median" && rollQuartiles && (
+                        <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">
+                          25%
+                        </th>
+                      )}
                       <th className="border border-slate-200 px-2 py-1.5 text-right font-bold text-blue-700">
-                        평균(만원/㎡)
+                        {isRolling ? `${rollPriceLabel}(만원/㎡)` : "평균(만원/㎡)"}
                       </th>
+                      {isRolling && rollMetric === "median" && rollQuartiles && (
+                        <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">
+                          75%
+                        </th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="text-slate-800">
-                    {sortedRows.map((r, ri) => (
+                    {(isRolling ? rollChartRows : sortedRows).map((r, ri) => (
                       <tr key={rowStableKey(r, ri)}>
                         <td className="border border-slate-200 px-2 py-1 tabular-nums">
                           {formatMatrixBucketAxisLabel(r)}
@@ -895,6 +986,11 @@ export default function PaidMatrixYearlyModal({
                         <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
                           {r.count.toLocaleString("ko-KR")}
                         </td>
+                        {isRolling && rollMetric === "median" && rollQuartiles && (
+                          <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-slate-600">
+                            {fmtLtPrice(r.p25_unit_price_per_sqm)}
+                          </td>
+                        )}
                         <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-blue-600 font-bold">
                           {r.mean_unit_price_per_sqm != null
                             ? Number(r.mean_unit_price_per_sqm).toLocaleString("ko-KR", {
@@ -903,6 +999,11 @@ export default function PaidMatrixYearlyModal({
                               })
                             : "—"}
                         </td>
+                        {isRolling && rollMetric === "median" && rollQuartiles && (
+                          <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-slate-600">
+                            {fmtLtPrice(r.p75_unit_price_per_sqm)}
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -987,6 +1088,14 @@ export default function PaidMatrixYearlyModal({
                         </span>
                       ) : null
                     ) : null}
+                  </p>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    최소 {fmtLtPrice(histData.min_unit_price_per_sqm)} · 25%{" "}
+                    {fmtLtPrice(histData.p25_unit_price_per_sqm)} · 중앙값{" "}
+                    {fmtLtPrice(histData.median_unit_price_per_sqm)} · 75%{" "}
+                    {fmtLtPrice(histData.p75_unit_price_per_sqm)} · 최대{" "}
+                    {fmtLtPrice(histData.max_unit_price_per_sqm)}
+                    <span> (만원/㎡, 막대와 같은 표본)</span>
                   </p>
                   <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-2">
                     <MatrixCellHistogramChart data={histData} />
@@ -1149,7 +1258,7 @@ export default function PaidMatrixYearlyModal({
                 </div>
                 {regVars.assessed_land_price && (
                   <p className="text-[11px] text-slate-500">
-                    개별공시지가는 log(원/㎡)로 들어갑니다. 필지와 금액이 하나씩 있는 행만 쓰고, 없으면 이 변수를 켠 식에서만 그 행을 뺍니다.
+                    개별공시지가는 log(원/㎡)로 사용합니다. 지분거래는 대장 보강이 불가능해 이 모형에서 제외합니다. 나머지 거래도 공시지가가 연결된 경우에만 사용합니다.
                   </p>
                 )}
                 {regVars.area_sqm && (
@@ -1314,6 +1423,7 @@ export default function PaidMatrixYearlyModal({
                   regResult={regResult}
                   regBody={regBody}
                   vars={regBody.variables}
+                  disabled={regControlsStale || regLoading}
                   regionLabel={scopeNote?.trim() || `${zoneType} × ${landCategory}`}
                 />
               )}

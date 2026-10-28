@@ -124,6 +124,9 @@ class CommercialRollingStatPoint(BaseModel):
     label: str
     count: int
     mean: Optional[float] = None
+    median: Optional[float] = None
+    p25: Optional[float] = None
+    p75: Optional[float] = None
 
 
 class CommercialRollingStatsResponse(BaseModel):
@@ -148,6 +151,11 @@ class CommercialHistogramResponse(BaseModel):
     n: int = 0
     contract_year: Optional[int] = None
     unit: str = "만원/㎡"
+    min_unit_price: Optional[float] = None
+    p25_unit_price: Optional[float] = None
+    median_unit_price: Optional[float] = None
+    p75_unit_price: Optional[float] = None
+    max_unit_price: Optional[float] = None
 
 
 class CommercialRegressionSpec(BaseModel):
@@ -325,6 +333,11 @@ class CommercialCohortHistogramResponse(BaseModel):
     n: int = 0
     contract_year: Optional[int] = None
     data_source: Literal["live"] = "live"
+    min_unit_price: Optional[float] = None
+    p25_unit_price: Optional[float] = None
+    median_unit_price: Optional[float] = None
+    p75_unit_price: Optional[float] = None
+    max_unit_price: Optional[float] = None
 
 
 class CommercialCohortTransactionsRequest(CommercialCohortAnalysisRequest):

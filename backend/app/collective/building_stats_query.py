@@ -19,7 +19,7 @@ from app.collective.address import split_building_addresses
 from app.collective.analysis_gates import count_recent_transactions, evaluate_analysis_gates
 from app.collective.filters import apply_region_filters
 from app.collective.schemas import AnalysisFeatures, BuildingStatsRow
-from app.stats_utils import compute_stats
+from app.stats_utils import attach_rolling_percentiles, compute_stats
 from app.v2_stats_windows import (
     default_as_of_month_for_service,
     iter_rolling_year_buckets_old_first,
@@ -720,6 +720,34 @@ def list_buildings_live(
     return items
 
 
+def _enrich_building_rolling_percentiles(conn: Connection, building_key: str, points: list[dict]) -> None:
+    """마트는 평균만 저장한다. 같은 창의 거래를 한 번 읽어 25%·중앙값·75%를 붙인다."""
+    if not points:
+        return
+    starts = [date.fromisoformat(str(p["period_start"])[:10]) for p in points if p.get("period_start")]
+    ends = [date.fromisoformat(str(p["period_end"])[:10]) for p in points if p.get("period_end")]
+    if not starts or not ends:
+        return
+    rows = conn.execute(
+        text(
+            """
+            SELECT contract_date, unit_price
+            FROM collective_transactions
+            WHERE building_key = :bk
+              AND is_valid = true
+              AND unit_price IS NOT NULL
+              AND unit_price > 0
+              AND contract_date IS NOT NULL
+              AND contract_date >= :ps
+              AND contract_date <= :pe
+            """
+        ),
+        {"bk": building_key, "ps": min(starts), "pe": max(ends)},
+    ).fetchall()
+    dated = [(r[0], float(r[1])) for r in rows if r[0] is not None and r[1] is not None]
+    attach_rolling_percentiles(points, dated)
+
+
 def building_rolling_from_mart(
     conn: Connection,
     building_key: str,
@@ -757,6 +785,7 @@ def building_rolling_from_mart(
         }
         for r in rows
     ]
+    _enrich_building_rolling_percentiles(conn, building_key, points)
     return display_name, points, "mart"
 
 
@@ -824,6 +853,9 @@ def building_rolling_live(
                 "label": _rolling_bucket_label(ps, pe),
                 "count": st["count"],
                 "mean": round(float(st["mean"]), 1) if st["mean"] is not None else None,
+                "median": st["median"],
+                "p25": st["p25"],
+                "p75": st["p75"],
             }
         )
     if not points:

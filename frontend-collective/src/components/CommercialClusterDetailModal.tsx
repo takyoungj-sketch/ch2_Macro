@@ -136,6 +136,8 @@ export default function CommercialClusterDetailModal({
   const [cohortChartMetric, setCohortChartMetric] = useState<CohortTrendMetric>("mean");
   const [longTermMetric, setLongTermMetric] = useState<LongTermPriceMetric>("mean");
   const [showQuartiles, setShowQuartiles] = useState(false);
+  const [rollMetric, setRollMetric] = useState<LongTermPriceMetric>("mean");
+  const [rollQuartiles, setRollQuartiles] = useState(false);
   const [histScope, setHistScope] = useState<"all" | "single">("all");
   const [histYear, setHistYear] = useState<number | null>(null);
   const [txSubView, setTxSubView] = useState<TxSubView>("list");
@@ -297,6 +299,8 @@ export default function CommercialClusterDetailModal({
     setCohortRunKeys([]);
     setCohortRunByPanel({});
     setCohortChartMetric("mean");
+    setRollMetric("mean");
+    setRollQuartiles(false);
   }, [row.cluster_key]);
 
   const runCohortAnalysis = () => {
@@ -519,8 +523,22 @@ export default function CommercialClusterDetailModal({
                     </p>
                   )}
                   <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-3">
-                    <p className="text-xs font-semibold text-slate-600 px-1 mb-2">12개월 롤링 구간 추이</p>
-                    <RollingTrendChart points={rollingQ.data.points} />
+                    <div className="flex flex-wrap items-center justify-between gap-2 px-1 mb-2">
+                      <p className="text-xs font-semibold text-slate-600">12개월 롤링 구간 추이</p>
+                      <LongTermMetricToggle
+                        metric={rollMetric}
+                        onChange={setRollMetric}
+                        showQuartiles={rollQuartiles}
+                        onQuartilesChange={setRollQuartiles}
+                        ariaLabel="롤링 구간 단가 기준"
+                      />
+                    </div>
+                    {rollMetric === "median" && (
+                      <p className="text-[11px] text-slate-500 px-1 mb-2">
+                        이 12개월 구간 거래의 중앙값입니다. 25·75도 같은 목록입니다. 장기 추세 탭의 만년력 연도 값과 다릅니다.
+                      </p>
+                    )}
+                    <RollingTrendChart points={rollingQ.data.points} metric={rollMetric} showQuartiles={rollQuartiles} />
                   </div>
                   <div className="rounded-lg border border-slate-100 bg-white overflow-hidden">
                     <table className="w-full text-xs border-collapse">
@@ -528,9 +546,15 @@ export default function CommercialClusterDetailModal({
                         <tr className="bg-slate-50 text-slate-600">
                           <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">구간</th>
                           <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">건수</th>
+                          {rollMetric === "median" && rollQuartiles && (
+                            <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">25%</th>
+                          )}
                           <th className="border border-slate-200 px-2 py-1.5 text-right font-bold text-blue-700">
-                            평균(만원/㎡)
+                            {longTermPriceLabel(rollMetric)}(만원/㎡)
                           </th>
+                          {rollMetric === "median" && rollQuartiles && (
+                            <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">75%</th>
+                          )}
                         </tr>
                       </thead>
                       <tbody className="text-slate-800">
@@ -540,9 +564,21 @@ export default function CommercialClusterDetailModal({
                             <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
                               {p.count.toLocaleString("ko-KR")}
                             </td>
+                            {rollMetric === "median" && rollQuartiles && (
+                              <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-slate-600">
+                                {p.p25 != null ? fmtPrice(p.p25) : "—"}
+                              </td>
+                            )}
                             <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-blue-600 font-bold">
-                              {p.mean != null ? fmtPrice(p.mean) : "—"}
+                              {(rollMetric === "median" ? p.median : p.mean) != null
+                                ? fmtPrice(rollMetric === "median" ? p.median : p.mean)
+                                : "—"}
                             </td>
+                            {rollMetric === "median" && rollQuartiles && (
+                              <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-slate-600">
+                                {p.p75 != null ? fmtPrice(p.p75) : "—"}
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>
@@ -685,8 +721,13 @@ export default function CommercialClusterDetailModal({
                   <p className="text-xs text-indigo-700">
                     {cohortRunKeys.length}개 cluster 통합 · 실시간 · n={cohortHistQ.data.n.toLocaleString("ko-KR")}건
                   </p>
+                  <p className="text-[11px] text-slate-500">
+                    최소 {fmtPrice(cohortHistQ.data.min_unit_price)} · 25% {fmtPrice(cohortHistQ.data.p25_unit_price)} · 중앙값{" "}
+                    {fmtPrice(cohortHistQ.data.median_unit_price)} · 75% {fmtPrice(cohortHistQ.data.p75_unit_price)} · 최대{" "}
+                    {fmtPrice(cohortHistQ.data.max_unit_price)} (만원/㎡, 막대와 같은 표본)
+                  </p>
                   <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-2">
-                    <HistogramChart bins={cohortHistQ.data.bins} />
+                    <HistogramChart bins={cohortHistQ.data.bins} box={cohortHistQ.data} />
                   </div>
                 </>
               )}
@@ -701,8 +742,13 @@ export default function CommercialClusterDetailModal({
                       </>
                     )}
                   </p>
+                  <p className="text-[11px] text-slate-500">
+                    최소 {fmtPrice(histQ.data.min_unit_price)} · 25% {fmtPrice(histQ.data.p25_unit_price)} · 중앙값{" "}
+                    {fmtPrice(histQ.data.median_unit_price)} · 75% {fmtPrice(histQ.data.p75_unit_price)} · 최대{" "}
+                    {fmtPrice(histQ.data.max_unit_price)} (만원/㎡, 막대와 같은 표본)
+                  </p>
                   <div className="rounded-lg border border-slate-100 bg-slate-50/60 px-2 py-2">
-                    <HistogramChart bins={histQ.data.bins} />
+                    <HistogramChart bins={histQ.data.bins} box={histQ.data} />
                   </div>
                 </>
               )}

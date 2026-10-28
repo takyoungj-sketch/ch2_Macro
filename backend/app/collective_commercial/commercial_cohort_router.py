@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Optional
 
 import numpy as np
+from app.stats_utils import histogram_box_fields
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
@@ -69,12 +70,13 @@ def _fetch_cohort_transactions(
     rows = db.execute(
         text(
             f"""
-            SELECT cluster_key, asset_type, building_key,
+            SELECT id AS transaction_id, cluster_key, asset_type, building_key,
                    unit_price, floor, gross_area, land_area,
                    price, building_age, building_year, contract_year, contract_month,
                    zone_type, building_use, road_width_label, road_code, addr4
             FROM collective_commercial_transactions
             WHERE {where}
+            ORDER BY id
             """
         ),
         params,
@@ -212,6 +214,7 @@ def cohort_histogram(
     prices = [float(r[0]) for r in rows if r[0] is not None]
     if not prices:
         return CommercialCohortHistogramResponse(cluster_keys=keys, bins=[], n=0, contract_year=contract_year)
+    box = histogram_box_fields(prices)
     lo, hi = min(prices), max(prices)
     if lo == hi:
         return CommercialCohortHistogramResponse(
@@ -219,19 +222,20 @@ def cohort_histogram(
             bins=[CommercialHistogramBin(lo=lo, hi=hi, count=len(prices))],
             n=len(prices),
             contract_year=contract_year,
+            **box,
         )
     edges = np.linspace(lo, hi, bins + 1)
     counts, _ = np.histogram(prices, bins=edges)
     out = [
         CommercialHistogramBin(lo=round(float(edges[i]), 1), hi=round(float(edges[i + 1]), 1), count=int(counts[i]))
         for i in range(len(counts))
-        if counts[i] > 0
     ]
     return CommercialCohortHistogramResponse(
         cluster_keys=keys,
         bins=out,
         n=len(prices),
         contract_year=contract_year,
+        **box,
     )
 
 
@@ -367,6 +371,8 @@ def cohort_regression(body: CommercialCohortAnalysisRequest, db: Session = Depen
     reg_req = CommercialRegressionRequest(
         contract_year_from=body.contract_year_from,
         contract_year_to=body.contract_year_to,
+        contract_date_from=body.contract_date_from,
+        contract_date_to=body.contract_date_to,
         variables=body.variables,
         model_type=body.model_type,
         exclude_outliers_iqr=body.exclude_outliers_iqr,

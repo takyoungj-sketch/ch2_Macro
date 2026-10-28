@@ -7,6 +7,7 @@ from typing import Optional
 
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, Query
+from app.stats_utils import histogram_box_fields
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session
@@ -810,6 +811,7 @@ def cluster_histogram(
         return CommercialHistogramResponse(
             cluster_key=cluster_key, bins=[], n=0, contract_year=contract_year
         )
+    box = histogram_box_fields(prices)
     lo, hi = min(prices), max(prices)
     if lo == hi:
         return CommercialHistogramResponse(
@@ -817,6 +819,7 @@ def cluster_histogram(
             bins=[CommercialHistogramBin(lo=lo, hi=hi, count=len(prices))],
             n=len(prices),
             contract_year=contract_year,
+            **box,
         )
     edges = np.linspace(lo, hi, bins + 1)
     counts, _ = np.histogram(prices, bins=edges)
@@ -827,13 +830,13 @@ def cluster_histogram(
             count=int(counts[i]),
         )
         for i in range(len(counts))
-        if counts[i] > 0
     ]
     return CommercialHistogramResponse(
         cluster_key=cluster_key,
         bins=out,
         n=len(prices),
         contract_year=contract_year,
+        **box,
     )
 
 
@@ -853,17 +856,20 @@ def cluster_regression(
         addr4_list=body.addr4_list or None,
         contract_year_from=body.contract_year_from,
         contract_year_to=body.contract_year_to,
+        contract_date_from=body.contract_date_from,
+        contract_date_to=body.contract_date_to,
     )
     params["cluster_key"] = cluster_key
     rows = db.execute(
         text(
             f"""
-            SELECT price, unit_price, gross_area, land_area, building_age, building_year, floor,
+            SELECT id AS transaction_id, price, unit_price, gross_area, land_area, building_age, building_year, floor,
                    zone_type, building_use, road_width_label, road_code, addr4,
                    contract_year, contract_month,
                    asset_type, building_key
             FROM collective_commercial_transactions
             WHERE cluster_key = :cluster_key AND {where}
+            ORDER BY id
             """
         ),
         params,
@@ -922,17 +928,20 @@ def cluster_regression_predict(
         addr4_list=body.addr4_list or None,
         contract_year_from=body.contract_year_from,
         contract_year_to=body.contract_year_to,
+        contract_date_from=body.contract_date_from,
+        contract_date_to=body.contract_date_to,
     )
     params["cluster_key"] = cluster_key
     rows = db.execute(
         text(
             f"""
-            SELECT price, unit_price, gross_area, land_area, building_age, building_year, floor,
+            SELECT id AS transaction_id, price, unit_price, gross_area, land_area, building_age, building_year, floor,
                    zone_type, building_use, road_width_label, road_code, addr4,
                    contract_year, contract_month,
                    asset_type, building_key
             FROM collective_commercial_transactions
             WHERE cluster_key = :cluster_key AND {where}
+            ORDER BY id
             """
         ),
         params,

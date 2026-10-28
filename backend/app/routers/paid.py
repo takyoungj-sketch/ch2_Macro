@@ -633,6 +633,39 @@ def _set_cache(key: str, result: dict, db: Session) -> None:
             pass
 
 
+def _linear_percentiles(arr: np.ndarray, qs: list[float]) -> np.ndarray:
+    """PostgreSQL percentile_cont 와 같은 선형 보간."""
+    try:
+        return np.asarray(np.percentile(arr, qs, method="linear"), dtype=float)
+    except TypeError:
+        return np.asarray(np.percentile(arr, qs, interpolation="linear"), dtype=float)
+
+
+def bucket_unit_price_summary(
+    prices: list[float],
+) -> tuple[Optional[float], Optional[float], Optional[float], Optional[float]]:
+    """같은 목록의 평균·25%·중앙값·75%. 소수 첫째 자리. 빈 목록은 모두 None."""
+    if not prices:
+        return None, None, None, None
+    arr = np.asarray(prices, dtype=float)
+    mean_v = round(float(arr.mean()), 1)
+    p25, med, p75 = _linear_percentiles(arr, [25, 50, 75])
+    return mean_v, round(float(p25), 1), round(float(med), 1), round(float(p75), 1)
+
+
+def sample_price_box(prices: list[float]) -> tuple[float, float, float, float, float]:
+    """히스토그램과 같은 목록의 최소·25%·중앙값·75%·최대. 소수 첫째 자리."""
+    arr = np.asarray(prices, dtype=float)
+    p25, med, p75 = _linear_percentiles(arr, [25, 50, 75])
+    return (
+        round(float(arr.min()), 1),
+        round(float(p25), 1),
+        round(float(med), 1),
+        round(float(p75), 1),
+        round(float(arr.max()), 1),
+    )
+
+
 def _prices_to_stats(
     prices: list[float],
     exclude_outlier: bool,
@@ -1252,10 +1285,7 @@ def matrix_yearly(body: MatrixYearlyRequest, db: Session = Depends(get_db)):
                     prices_px, iqr_multiplier=float(body.outlier_iqr_multiplier)
                 )
                 prices_px = [p for p, k in zip(prices_px, keep) if k]
-            if not prices_px:
-                mean_v = None
-            else:
-                mean_v = round(float(sum(prices_px)) / len(prices_px), 1)
+            mean_v, p25_v, med_v, p75_v = bucket_unit_price_summary(prices_px)
             stat_rows.append(
                 MatrixYearlyStat(
                     year=None,
@@ -1265,6 +1295,9 @@ def matrix_yearly(body: MatrixYearlyRequest, db: Session = Depends(get_db)):
                     chart_label=chart_label,
                     count=len(prices_px),
                     mean_unit_price_per_sqm=mean_v,
+                    median_unit_price_per_sqm=med_v,
+                    p25_unit_price_per_sqm=p25_v,
+                    p75_unit_price_per_sqm=p75_v,
                 )
             )
         if not any(sr.count > 0 for sr in stat_rows):
@@ -1677,8 +1710,8 @@ def matrix_cell_histogram(
 ):
     """
     matrix-yearly 와 동일 필터·이상치 정책으로 단가(만원/㎡) 표본을 만든 뒤
-    구간별 건수만 반환한다. `histogram_scope=all` 이면 필터 연도 전체,
-    `single` 이면 `histogram_year` 한 해의 표본만 사용한다.
+    구간별 건수와, 같은 표본의 최소·25%·중앙값·75%·최대를 반환한다.
+    `histogram_scope=all` 이면 필터 연도 전체, `single` 이면 한 해·한 구간의 표본만 사용한다.
     """
     merged_where, merged_params = _matrix_cell_merged_where(body, db)
     hist_sql = f"""
@@ -1762,6 +1795,8 @@ def matrix_cell_histogram(
         n_bins = max(3, min(req_bins, n))
         counts, edges = np.histogram(arr, bins=n_bins)
 
+    box_min, box_p25, box_med, box_p75, box_max = sample_price_box(prices_f)
+
     bins_out: list[HistogramBin] = []
     for i in range(int(counts.size)):
         bins_out.append(
@@ -1788,6 +1823,11 @@ def matrix_cell_histogram(
         histogram_period_start=hist_ps if rolling_single else None,
         histogram_period_end=hist_pe if rolling_single else None,
         bins=bins_out,
+        min_unit_price_per_sqm=box_min,
+        p25_unit_price_per_sqm=box_p25,
+        median_unit_price_per_sqm=box_med,
+        p75_unit_price_per_sqm=box_p75,
+        max_unit_price_per_sqm=box_max,
     )
 
 
@@ -1816,7 +1856,7 @@ def _fetch_matrix_cell_filtered_transactions(
         LEFT JOIN land_transaction_trait_link tl
           ON tl.transaction_hash = lt.transaction_hash"""
     tx_sql = f"""
-        SELECT lt.id, lt.contract_year, lt.contract_month, lt.contract_date,
+        SELECT lt.id, lt.contract_year, lt.contract_month, lt.contract_date, lt.is_partial_ownership,
                ({code_expr}) AS beopjungri_code,
                TRIM(BOTH FROM COALESCE(rc.sigungu_name::text, '')) AS sigungu_name,
                TRIM(BOTH FROM COALESCE(rc.eupmyeondong_name::text, '')) AS eupmyeondong_name,
@@ -1869,6 +1909,7 @@ def _fetch_matrix_cell_filtered_transactions(
                 "partial_ownership_label": (
                     (m.get("partial_ownership_label") or "").strip() or None
                 ),
+                "is_partial_ownership": bool(m.get("is_partial_ownership")),
                 "deal_type": (m.get("deal_type") or "").strip() or None,
                 "area_sqm": float(m["area_sqm"]) if m["area_sqm"] is not None else None,
                 "total_price_10k": float(m["total_price_10k"]),
