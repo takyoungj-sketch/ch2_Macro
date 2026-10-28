@@ -237,10 +237,6 @@ def caller_access(request: Request) -> str:
 
 
 async def product_gate_response(request: Request) -> JSONResponse | None:
-    from app.local_dev_access import local_dev_access_enabled
-
-    if local_dev_access_enabled(request):
-        return None
     body: object = None
     path = request.url.path
     if request.method == "POST" and path in {
