@@ -457,8 +457,15 @@ export default function RegionSelector() {
 
   const suggestionListMaxClass = suggestionsShortHeight ? "max-h-28" : "max-h-52";
 
+  const mobileRegionLabel = (() => {
+    const entry = paidUnifiedSubSigunguRows[0];
+    if (!entry) return "";
+    return entry.kind === "eup" ? labelEupChip(regions, entry.code) : labelForCode(entry.code);
+  })();
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className={narrow ? "flex flex-col gap-1.5" : "flex flex-col gap-4"}>
+      {narrow ? null : (
       <div className="flex items-start justify-between gap-2">
         <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100">지역 입력</h2>
         <button
@@ -474,11 +481,15 @@ export default function RegionSelector() {
           초기화
         </button>
       </div>
+      )}
 
       <div className="space-y-1.5">
+        {narrow ? null : (
         <label className="block text-sm font-medium text-slate-500 dark:text-slate-400" htmlFor="region-search">
           지역 이름·코드 검색
         </label>
+        )}
+        <div className={narrow ? "flex items-center gap-2" : undefined}>
         <input
           ref={inputRef}
           id="region-search"
@@ -490,8 +501,23 @@ export default function RegionSelector() {
           onChange={(e) => setSearchInput(e.target.value)}
           onKeyDown={onSearchKeyDown}
           disabled={catalogLoading}
-          className="input text-base"
+          className={narrow ? "input min-w-0 flex-1 text-base" : "input text-base"}
         />
+        {narrow ? (
+          <button
+            type="button"
+            onClick={() => {
+              clearTierSelection();
+              setPaidLeafAddGateOpen(true);
+              setSearchInput("");
+              setLocalError(null);
+            }}
+            className="shrink-0 text-xs text-slate-500 underline underline-offset-2"
+          >
+            초기화
+          </button>
+        ) : null}
+        </div>
         {!narrow &&
         viewMode === "paid" &&
         strictUpperTierChipCount === 0 &&
@@ -849,6 +875,11 @@ export default function RegionSelector() {
         </div>
       ) : null}
 
+      {narrow ? (
+        mobileRegionLabel ? (
+          <p className="truncate text-xs font-medium text-slate-600 dark:text-slate-300">{mobileRegionLabel}</p>
+        ) : null
+      ) : (
       <div className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5 space-y-1.5">
         <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
           {viewMode === "paid" ? "선택된 지역" : "선택"}{" "}
@@ -944,6 +975,7 @@ export default function RegionSelector() {
           </div>
         )}
       </div>
+      )}
 
       {localError ? (
         <p className="text-sm text-red-600 leading-snug" role="alert">
@@ -951,20 +983,19 @@ export default function RegionSelector() {
         </p>
       ) : null}
 
+      {narrow ? null : (
       <div className="rounded-lg border border-slate-100 bg-slate-50/80 px-2.5 py-2 space-y-2">
-        {narrow ? (
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-200">5년 롤링</p>
-        ) : (
-          <FreeStatsWindowToggle idPrefix="sidebar-v2" />
-        )}
+        <FreeStatsWindowToggle idPrefix="sidebar-v2" />
       </div>
+      )}
 
       <AnalysisActionButton
         primary={basicStatsActionLabel("paid")}
-        caption={rollingStatsCaption(freeStatsWindowYears)}
+        caption={narrow ? "" : rollingStatsCaption(freeStatsWindowYears)}
         onClick={commitPaid}
         disabled={catalogLoading && regions.length === 0}
         variant="basic"
+        className={narrow ? "py-1.5 text-sm" : ""}
       />
 
     </div>
