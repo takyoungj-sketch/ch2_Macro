@@ -7,6 +7,7 @@ from typing import Optional
 
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, Query
+from app.stats_utils import histogram_box_fields
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session
@@ -968,6 +969,7 @@ def building_histogram(
     prices = [float(r[0]) for r in rows if r[0] is not None]
     if not prices:
         return HistogramResponse(building_key=building_key, bins=[], n=0, contract_year=contract_year)
+    box = histogram_box_fields(prices)
     lo, hi = min(prices), max(prices)
     if lo == hi:
         return HistogramResponse(
@@ -975,19 +977,20 @@ def building_histogram(
             bins=[HistogramBin(lo=lo, hi=hi, count=len(prices))],
             n=len(prices),
             contract_year=contract_year,
+            **box,
         )
     edges = np.linspace(lo, hi, bins + 1)
     counts, _ = np.histogram(prices, bins=edges)
     out = [
         HistogramBin(lo=round(float(edges[i]), 1), hi=round(float(edges[i + 1]), 1), count=int(counts[i]))
         for i in range(len(counts))
-        if counts[i] > 0
     ]
     return HistogramResponse(
         building_key=building_key,
         bins=out,
         n=len(prices),
         contract_year=contract_year,
+        **box,
     )
 
 
@@ -1095,7 +1098,7 @@ def building_regression(
     rows = db.execute(
         text(
             f"""
-            SELECT price, unit_price, exclusive_area, building_age, floor, dong, housing_subtype,
+            SELECT id AS transaction_id, price, unit_price, exclusive_area, building_age, floor, dong, housing_subtype,
                    contract_year, contract_month
             FROM collective_transactions
             WHERE {where}
@@ -1152,7 +1155,7 @@ def building_regression_predict(
     rows = db.execute(
         text(
             f"""
-            SELECT price, unit_price, exclusive_area, building_age, floor, dong, housing_subtype,
+            SELECT id AS transaction_id, price, unit_price, exclusive_area, building_age, floor, dong, housing_subtype,
                    contract_year, contract_month
             FROM collective_transactions
             WHERE {where}

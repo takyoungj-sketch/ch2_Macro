@@ -461,6 +461,18 @@ class MatrixYearlyStat(BaseModel):
     chart_label: Optional[str] = Field(None, description="축 표시 문자열 예: y-1, 기준연월)")
     count: int
     mean_unit_price_per_sqm: Optional[float] = None
+    median_unit_price_per_sqm: Optional[float] = Field(
+        None,
+        description="롤링 12개월 구간. 평균과 같은 필터·이상치 제외 표본의 중앙값. 달력연도 모드는 비움.",
+    )
+    p25_unit_price_per_sqm: Optional[float] = Field(
+        None,
+        description="롤링 구간의 25%. 달력연도 모드는 비움.",
+    )
+    p75_unit_price_per_sqm: Optional[float] = Field(
+        None,
+        description="롤링 구간의 75%. 달력연도 모드는 비움.",
+    )
 
 
 class MatrixYearlyRequest(PaidFilters):
@@ -602,6 +614,11 @@ class MatrixCellHistogramResponse(BaseModel):
     histogram_bucket_index: Optional[int] = None
     histogram_period_start: Optional[date] = None
     histogram_period_end: Optional[date] = None
+    min_unit_price_per_sqm: float = Field(description="히스토그램과 같은 표본의 최소")
+    p25_unit_price_per_sqm: float = Field(description="같은 표본의 25%. 선형 보간")
+    median_unit_price_per_sqm: float = Field(description="같은 표본의 중앙값")
+    p75_unit_price_per_sqm: float = Field(description="같은 표본의 75%")
+    max_unit_price_per_sqm: float = Field(description="같은 표본의 최대")
     bins: list[HistogramBin] = []
 
 

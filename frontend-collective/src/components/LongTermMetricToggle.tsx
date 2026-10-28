@@ -11,17 +11,19 @@ export default function LongTermMetricToggle({
   onChange,
   showQuartiles = false,
   onQuartilesChange,
+  ariaLabel = "장기 추세선 기준",
 }: {
   metric: LongTermPriceMetric;
   onChange: (m: LongTermPriceMetric) => void;
   showQuartiles?: boolean;
   onQuartilesChange?: (on: boolean) => void;
+  ariaLabel?: string;
 }) {
   return (
     <div
       className="inline-flex rounded-md border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 p-0.5 text-xs"
       role="group"
-      aria-label="장기 추세선 기준"
+      aria-label={ariaLabel}
     >
       {(
         [

@@ -11,6 +11,9 @@ export function rollingToTrendSeries(data: RollingStatsResponse): TrendSeries {
         xOrder: p.bucket_index,
         count: p.count,
         mean: p.mean,
+        median: p.median,
+        p25: p.p25,
+        p75: p.p75,
       })),
   };
 }
@@ -46,6 +49,9 @@ export function commercialRollingToTrendSeries(data: CommercialRollingStatsRespo
         xOrder: p.bucket_index,
         count: p.count,
         mean: p.mean,
+        median: p.median,
+        p25: p.p25,
+        p75: p.p75,
       })),
   };
 }

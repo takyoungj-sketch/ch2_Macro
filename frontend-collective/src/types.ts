@@ -268,6 +268,9 @@ export interface CommercialRollingStatPoint {
   label: string;
   count: number;
   mean?: number | null;
+  median?: number | null;
+  p25?: number | null;
+  p75?: number | null;
 }
 
 export interface CommercialRollingStatsResponse {
@@ -299,7 +302,7 @@ export interface CommercialCohortYearlyStatsResponse {
   data_source: "live";
 }
 
-export interface CommercialCohortHistogramResponse {
+export interface CommercialCohortHistogramResponse extends PriceBoxFields {
   cluster_keys: string[];
   bins: HistogramBin[];
   n: number;
@@ -319,7 +322,7 @@ export interface CommercialCohortRegressionResponse extends CommercialRegression
   cohort_clusters?: CommercialCohortClusterSummary[];
 }
 
-export interface CommercialHistogramResponse {
+export interface CommercialHistogramResponse extends PriceBoxFields {
   cluster_key: string;
   bins: HistogramBin[];
   n: number;
@@ -446,6 +449,9 @@ export interface RollingStatPoint {
   label: string;
   count: number;
   mean?: number | null;
+  median?: number | null;
+  p25?: number | null;
+  p75?: number | null;
 }
 
 export interface RollingStatsResponse {
@@ -480,7 +486,15 @@ export interface HistogramBin {
   count: number;
 }
 
-export interface HistogramResponse {
+export interface PriceBoxFields {
+  min_unit_price?: number | null;
+  p25_unit_price?: number | null;
+  median_unit_price?: number | null;
+  p75_unit_price?: number | null;
+  max_unit_price?: number | null;
+}
+
+export interface HistogramResponse extends PriceBoxFields {
   building_key: string;
   bins: HistogramBin[];
   n: number;
@@ -675,7 +689,7 @@ export interface CohortYearlyStatsResponse {
   data_source: "live";
 }
 
-export interface CohortHistogramResponse {
+export interface CohortHistogramResponse extends PriceBoxFields {
   building_keys: string[];
   bins: HistogramBin[];
   n: number;

@@ -110,10 +110,14 @@ export default function MatrixYearlyTrendChart({
   const countTick = niceStep(countMax);
   const countAxisMax = Math.ceil(countMax / countTick) * countTick;
 
-  const meanVals = sorted
-    .map((r) => r.mean_unit_price_per_sqm)
-    .filter((v): v is number => finiteNum(v));
   const showBand = showQuartiles && sorted.some((r) => finiteNum(r.band_low) && finiteNum(r.band_high));
+  const meanVals = sorted.flatMap((r) => {
+    const vals: number[] = [];
+    if (finiteNum(r.mean_unit_price_per_sqm)) vals.push(r.mean_unit_price_per_sqm);
+    if (showBand && finiteNum(r.band_low)) vals.push(r.band_low);
+    if (showBand && finiteNum(r.band_high)) vals.push(r.band_high);
+    return vals;
+  });
   const hasMean = meanVals.length > 0;
   let meanMin = hasMean ? Math.min(...meanVals) : 0;
   let meanMax = hasMean ? Math.max(...meanVals) : 1;

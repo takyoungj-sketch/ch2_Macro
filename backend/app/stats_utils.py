@@ -15,6 +15,52 @@ OUTLIER_IQR_MULTIPLIER = 3.0
 PRICE_STAT_DECIMALS = 1
 
 
+def attach_rolling_percentiles(points: list[dict], dated_prices: list[tuple[date, float]]) -> None:
+    """구간이 겹치지 않을 때, 이미 불러 온 거래일로 25%·중앙값·75%를 붙인다."""
+    from datetime import date as _date
+
+    spans: list[tuple[_date, _date]] = []
+    for p in points:
+        ps, pe = p.get("period_start"), p.get("period_end")
+        if isinstance(ps, str):
+            ps = _date.fromisoformat(ps[:10])
+        if isinstance(pe, str):
+            pe = _date.fromisoformat(pe[:10])
+        if not isinstance(ps, _date) or not isinstance(pe, _date):
+            spans.append((_date.min, _date.min))
+            continue
+        spans.append((ps, pe))
+    groups: list[list[float]] = [[] for _ in points]
+    for cd, px in dated_prices:
+        if isinstance(cd, str):
+            cd = _date.fromisoformat(cd[:10])
+        if not isinstance(cd, _date):
+            continue
+        for i, (ps, pe) in enumerate(spans):
+            if ps <= cd <= pe:
+                groups[i].append(float(px))
+                break
+    for p, prices in zip(points, groups):
+        if not prices:
+            continue
+        st = compute_stats(prices)
+        p["median"] = st["median"]
+        p["p25"] = st["p25"]
+        p["p75"] = st["p75"]
+
+
+def histogram_box_fields(prices: Sequence[float]) -> dict:
+    """히스토그램과 같은 목록의 최소·25%·중앙값·75%·최대."""
+    st = compute_stats(list(prices))
+    return {
+        "min_unit_price": st["min"],
+        "p25_unit_price": st["p25"],
+        "median_unit_price": st["median"],
+        "p75_unit_price": st["p75"],
+        "max_unit_price": st["max"],
+    }
+
+
 def _rnd_price(x: float | None) -> float | None:
     if x is None:
         return None

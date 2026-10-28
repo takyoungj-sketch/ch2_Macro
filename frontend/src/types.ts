@@ -171,7 +171,11 @@ export interface MatrixYearlyStat {
   chart_label?: string | null;
   count: number;
   mean_unit_price_per_sqm: number | null;
-  /** 장기 추세 중앙값 모드 — 같은 표본의 25%·75%. 롤링 차트는 비움 */
+  /** 롤링 구간. 평균과 같은 필터·이상치 제외 표본. 달력연도 응답은 비움 */
+  median_unit_price_per_sqm?: number | null;
+  p25_unit_price_per_sqm?: number | null;
+  p75_unit_price_per_sqm?: number | null;
+  /** 차트용 25%·75%. 장기추세·롤링 중앙값 모드에서만 채운다 */
   band_low?: number | null;
   band_high?: number | null;
 }
@@ -279,6 +283,12 @@ export interface MatrixCellHistogramResponse {
   histogram_bucket_index?: number | null;
   histogram_period_start?: string | null;
   histogram_period_end?: string | null;
+  /** 막대와 같은 표본. 소수 첫째 자리 */
+  min_unit_price_per_sqm: number;
+  p25_unit_price_per_sqm: number;
+  median_unit_price_per_sqm: number;
+  p75_unit_price_per_sqm: number;
+  max_unit_price_per_sqm: number;
   bins: HistogramBin[];
 }
 

@@ -230,6 +230,9 @@ class RollingStatPoint(BaseModel):
     label: str
     count: int
     mean: Optional[float] = None
+    median: Optional[float] = None
+    p25: Optional[float] = None
+    p75: Optional[float] = None
 
 
 class RollingStatsResponse(BaseModel):
@@ -253,6 +256,11 @@ class HistogramResponse(BaseModel):
     n: int = 0
     contract_year: Optional[int] = None
     unit: str = "만원/㎡"
+    min_unit_price: Optional[float] = None
+    p25_unit_price: Optional[float] = None
+    median_unit_price: Optional[float] = None
+    p75_unit_price: Optional[float] = None
+    max_unit_price: Optional[float] = None
 
 
 class FloorIndexCell(BaseModel):
@@ -582,6 +590,11 @@ class CohortHistogramResponse(BaseModel):
     n: int = 0
     contract_year: Optional[int] = None
     data_source: Literal["live"] = "live"
+    min_unit_price: Optional[float] = None
+    p25_unit_price: Optional[float] = None
+    median_unit_price: Optional[float] = None
+    p75_unit_price: Optional[float] = None
+    max_unit_price: Optional[float] = None
 
 
 class CohortTransactionsRequest(CohortAnalysisRequest):

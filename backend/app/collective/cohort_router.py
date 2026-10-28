@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Optional
 
 import numpy as np
+from app.stats_utils import histogram_box_fields
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
@@ -90,7 +91,7 @@ def _fetch_cohort_transactions(
     rows = db.execute(
         text(
             f"""
-            SELECT building_key, display_name, asset_type,
+            SELECT id AS transaction_id, building_key, display_name, asset_type,
                    unit_price, floor, dong, housing_subtype, exclusive_area,
                    price, building_age, building_year, contract_year, contract_month
             FROM collective_transactions
@@ -222,6 +223,7 @@ def cohort_histogram(
     prices = [float(r[0]) for r in rows if r[0] is not None]
     if not prices:
         return CohortHistogramResponse(building_keys=keys, bins=[], n=0, contract_year=contract_year)
+    box = histogram_box_fields(prices)
     lo, hi = min(prices), max(prices)
     if lo == hi:
         return CohortHistogramResponse(
@@ -229,19 +231,20 @@ def cohort_histogram(
             bins=[HistogramBin(lo=lo, hi=hi, count=len(prices))],
             n=len(prices),
             contract_year=contract_year,
+            **box,
         )
     edges = np.linspace(lo, hi, bins + 1)
     counts, _ = np.histogram(prices, bins=edges)
     out = [
         HistogramBin(lo=round(float(edges[i]), 1), hi=round(float(edges[i + 1]), 1), count=int(counts[i]))
         for i in range(len(counts))
-        if counts[i] > 0
     ]
     return CohortHistogramResponse(
         building_keys=keys,
         bins=out,
         n=len(prices),
         contract_year=contract_year,
+        **box,
     )
 
 
