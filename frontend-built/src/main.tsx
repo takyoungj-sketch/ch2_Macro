@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ProductWall } from "@ch2/macro-shell/productAccess";
 import { applyColorScheme, readStoredColorScheme } from "@ch2/macro-shell/displayUi";
 import App from "./App";
 import TwinExperimentLab from "./components/TwinExperimentLab";
@@ -26,7 +27,11 @@ function Root() {
       />
     );
   }
-  return <App />;
+  return (
+    <ProductWall>
+      <App />
+    </ProductWall>
+  );
 }
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

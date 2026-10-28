@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useProductAccess } from "@ch2/macro-shell/productAccess";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import {
@@ -92,8 +93,12 @@ function buildRegionPeriodParams(
   return { window_years: windowYears };
 }
 
+const COMMERCIAL_REGION_KEY = "ch2.collective.commercial.region";
+
 export default function CommercialApp() {
   const qc = useQueryClient();
+  const { entitled, narrow, requestPaid } = useProductAccess();
+  const restoredRegion = useRef(false);
   const [assetKinds, setAssetKinds] = useState<CommercialAssetKind[]>(["collective_shop"]);
   const assetType = useMemo(() => encodeCommercialAssetKinds(assetKinds), [assetKinds]);
   const [addr1, setAddr1] = useState("");
@@ -120,6 +125,43 @@ export default function CommercialApp() {
   const [yearFrom, setYearFrom] = useState<number | "">("");
   const [yearTo, setYearTo] = useState<number | "">("");
   const [windowYears, setWindowYears] = useState<StatsWindowYears>(5);
+
+  useEffect(() => {
+    if (!entitled && windowYears !== 5) setWindowYears(5);
+  }, [entitled, windowYears]);
+
+  useEffect(() => {
+    if (!narrow) return;
+    if (leafList.length > 1) setLeafList(leafList.slice(0, 1));
+    if (analysisUnits.length > 0) setAnalysisUnits([]);
+  }, [narrow, leafList, analysisUnits, setAnalysisUnits]);
+
+  useEffect(() => {
+    if (!narrow || !addr1) return;
+    try {
+      window.localStorage.setItem(
+        COMMERCIAL_REGION_KEY,
+        JSON.stringify({ addr1, addr2, leaf: leafList[0] ?? "" }),
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [narrow, addr1, addr2, leafList]);
+
+  useEffect(() => {
+    if (!narrow || restoredRegion.current) return;
+    restoredRegion.current = true;
+    try {
+      const raw = window.localStorage.getItem(COMMERCIAL_REGION_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as { addr1?: string; addr2?: string; leaf?: string };
+      if (saved.addr1) setAddr1(saved.addr1);
+      if (saved.addr2) setAddr2(saved.addr2);
+      if (saved.leaf) setLeafList([saved.leaf]);
+    } catch {
+      /* ignore */
+    }
+  }, [narrow]);
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [selected, setSelected] = useState<CommercialClusterRow | null>(null);
   const [aiHint, setAiHint] = useState<string | null>(null);
@@ -422,26 +464,29 @@ export default function CommercialApp() {
         isDark={isDark}
         onToggleTheme={toggleUiColorScheme}
         rightSlot={
-          <Ai2HeaderSlot
-            domain="commercial"
-            screenRegion={singleScreenRegion({
-              leaf: leafList,
-              gu: guList,
-              sigungu: formatScopeAddr2(addr2, addr1),
-            })}
-            screenTarget={(selected?.road_name || selected?.display_label || "").trim()}
-          >
-            <AiAssistantPanel />
-          </Ai2HeaderSlot>
+          entitled ? (
+            <Ai2HeaderSlot
+              domain="commercial"
+              screenRegion={singleScreenRegion({
+                leaf: leafList,
+                gu: guList,
+                sigungu: formatScopeAddr2(addr2, addr1),
+              })}
+              screenTarget={(selected?.road_name || selected?.display_label || "").trim()}
+            >
+              <AiAssistantPanel />
+            </Ai2HeaderSlot>
+          ) : null
         }
       />
       {listAiContext ? <PublishAiContext context={listAiContext} role="base" /> : null}
 
       <div className="relative z-0 isolate flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
-      <main className="flex flex-1 min-h-0 overflow-hidden">
+      <main className={narrow ? "flex min-h-0 flex-1 flex-col overflow-hidden" : "flex min-h-0 flex-1 overflow-hidden"}>
+        <div className={narrow ? "ch2-mobile-region" : "contents"}>
         <CollapsibleLeftSidebar
           storageKey="collective-commercial"
-          className="layout-sidebar p-4"
+          className={narrow ? "w-full border-b border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800" : "layout-sidebar p-4"}
         >
           <h2 className="text-sm font-semibold mb-3 text-slate-800 dark:text-slate-100">조건</h2>
           <div className="space-y-3">
@@ -478,7 +523,14 @@ export default function CommercialApp() {
 
             <StatsWindowToggle
               value={windowYears}
-              onChange={(y) => setWindowYears(normalizeStatsWindowYears(y))}
+              onChange={(y) => {
+                const next = normalizeStatsWindowYears(y);
+                if (next !== 5 && !entitled) {
+                  requestPaid();
+                  return;
+                }
+                setWindowYears(next);
+              }}
             />
             <p className="text-[10px] text-slate-400 leading-snug">
               직전 월말 기준 롤링 {windowYears}년 창으로 집계합니다.
@@ -535,7 +587,7 @@ export default function CommercialApp() {
                 selected={guList}
                 options={guOptions}
                 countsReady={guCountsQ.isSuccess}
-                multiSelect={LEFT_REGION_MULTI_SELECT}
+                multiSelect={LEFT_REGION_MULTI_SELECT && !narrow}
                 onToggle={(name) => {
                   if (LEFT_REGION_MULTI_SELECT) {
                     setGuList((prev) => toggleChipMulti(prev, name));
@@ -566,7 +618,7 @@ export default function CommercialApp() {
                 options={visibleLeafOptions}
                 countsReady={leafCountsReady}
                 formatLabel={(o) => formatLeafChipLabel(o, visibleLeafOptions)}
-                multiSelect={LEFT_REGION_MULTI_SELECT}
+                multiSelect={LEFT_REGION_MULTI_SELECT && !narrow}
                 onToggle={(name) => {
                   setAnalysisUnits([]);
                   setLeafList((prev) =>
@@ -594,8 +646,10 @@ export default function CommercialApp() {
             </button>
           </div>
         </CollapsibleLeftSidebar>
+        </div>
 
-        <div className="layout-main">
+        <div className={narrow ? "min-h-0 flex-1 overflow-auto bg-slate-100 dark:bg-slate-900" : "layout-main"}>
+          {narrow ? null : (
           <section className="px-4 pt-4 shrink-0">
             {analysisUnits.length > 0 && (
               <div className="mb-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-3 py-2">
@@ -678,13 +732,14 @@ export default function CommercialApp() {
               onNormal={() => setMapPanelMode("normal")}
             />
           </section>
+          )}
           <div className="p-4 pt-2 pb-8">
             {!scope && (
               <p className="text-sm text-slate-500 dark:text-slate-400">시군구까지 선택한 뒤 「통계분석」을 누르면 도로(cluster) 목록이 표시됩니다.</p>
             )}
             {scopeStale && (
               <p className="text-xs text-amber-700 dark:text-amber-300 mb-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded px-2 py-1">
-                조건이 변경되었습니다. 「통계분석」을 다시 실행하세요.
+                분석 조건이 바뀌었습니다. 아래 결과는 이전 조건으로 계산했습니다.
               </p>
             )}
             {aiHint && (

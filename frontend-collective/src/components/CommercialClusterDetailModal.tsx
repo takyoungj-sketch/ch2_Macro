@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useProductAccess } from "@ch2/macro-shell/productAccess";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import { COLLECTIVE_EXPERIMENT_MODE } from "../api/client";
@@ -129,6 +130,7 @@ export default function CommercialClusterDetailModal({
   );
   const periodLabel = formatPeriodLabel(periodStart, periodEnd);
   const experiment = COLLECTIVE_EXPERIMENT_MODE;
+  const { entitled, narrow, requestPaid } = useProductAccess();
   const [panel, setPanel] = useState<PanelMode>("trend");
   const [cohortExtra, setCohortExtra] = useState<string[]>([]);
   const [cohortRunKeys, setCohortRunKeys] = useState<string[]>([]);
@@ -358,6 +360,7 @@ export default function CommercialClusterDetailModal({
     <DraggableModalShell
       open={true}
       onClose={onClose}
+      initialFullscreen={narrow}
       titleId="commercial-cluster-detail-modal-title"
       title={label}
       subtitle={
@@ -400,7 +403,13 @@ export default function CommercialClusterDetailModal({
                       : "modal-tab-idle",
                     showWarn && panel !== id && "text-amber-700",
                   )}
-                  onClick={() => setPanel(id)}
+                  onClick={() => {
+                    if (!entitled && id !== "trend") {
+                      requestPaid();
+                      return;
+                    }
+                    setPanel(id);
+                  }}
                 >
                   {tabLabel}
                   {showWarn && <span className="ml-0.5 text-xs">*</span>}

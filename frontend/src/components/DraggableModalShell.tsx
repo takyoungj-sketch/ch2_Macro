@@ -45,6 +45,8 @@ type Props = {
   /** Escape를 capture 단계에서 처리 */
   escapeCapture?: boolean;
   bodyClassName?: string;
+  /** 열릴 때 화면 전체. 모바일 롤링 */
+  initialFullscreen?: boolean;
 };
 
 type DragState = {
@@ -132,6 +134,7 @@ export default function DraggableModalShell({
   usePortal = false,
   escapeCapture = false,
   bodyClassName = "flex-1 min-h-0 overflow-y-auto px-4 py-3",
+  initialFullscreen = false,
 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -163,12 +166,13 @@ export default function DraggableModalShell({
       preFullscreenBoxRef.current = null;
       return;
     }
+    if (initialFullscreen) setFullscreen(true);
     if (resizable && (defaultWidth != null || defaultHeight != null)) {
       const w = defaultWidth ?? Math.min(768, window.innerWidth - 32);
       const h = defaultHeight ?? Math.min(window.innerHeight * 0.85, 640);
       setBox(defaultCenteredBox(w, h, minWidth, minHeight));
     }
-  }, [open, resizable, defaultWidth, defaultHeight, minWidth, minHeight]);
+  }, [open, resizable, defaultWidth, defaultHeight, minWidth, minHeight, initialFullscreen]);
 
   useEffect(() => {
     if (!open) return;

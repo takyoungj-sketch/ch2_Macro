@@ -13,6 +13,7 @@ import {
   getDefaultPaidSelectedYears,
   getPaidYearButtonYears,
 } from "./constants/paidFilters";
+import { landPickIsSingle } from "./regionPickMode";
 import type {
   FreeStatsWindowYears,
   PaidAnalysisRequest,
@@ -271,7 +272,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   applyBeopjungriCodes: (codes) =>
     set(() => {
-      const merged = normalizeAndSortCodes(codes);
+      const picked = landPickIsSingle() ? codes.slice(0, 1) : codes;
+      const merged = normalizeAndSortCodes(picked);
       const nt = tierOnlyBeopjungri(merged);
       return {
         tierSelection: nt,
@@ -286,6 +288,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => {
       const c = String(code ?? "").trim();
       if (!c) return s;
+      if (landPickIsSingle()) {
+        const nt: TierCodes = { ...emptyTierCodes(), beopjungri_codes: [c] };
+        return {
+          tierSelection: nt,
+          paidSubSigunguPickOrder: reconcilePaidSubSigunguPickOrder([{ kind: "beop", code: c }], nt),
+        };
+      }
       const eup = normalizeAndSortCodes(s.tierSelection.eupmyeondong_codes);
       const cur = s.tierSelection.beopjungri_codes.map((x) => x.trim()).filter(Boolean);
       if (cur.includes(c)) return s;
@@ -335,6 +344,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   mergePickedBeopjungriCodes: (incoming) => {
     const uniqIn = [...new Set(incoming.map((c) => String(c ?? "").trim()).filter(Boolean))];
     if (uniqIn.length === 0) return false;
+    if (landPickIsSingle()) {
+      get().replacePaidLeafBeopjungri(uniqIn[0]!);
+      return true;
+    }
     const s = get();
     const mergedAll = normalizeAndSortCodes([...s.tierSelection.beopjungri_codes, ...uniqIn]);
     const eup = normalizeAndSortCodes(s.tierSelection.eupmyeondong_codes);
@@ -424,6 +437,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   mergePickedEupmyeondongCodes: (incoming, regions) => {
     const uniqIn = [...new Set(incoming.map((c) => String(c ?? "").trim()).filter(Boolean))];
     if (uniqIn.length === 0) return false;
+    if (landPickIsSingle()) {
+      get().replacePaidLeafEupmyeondong(uniqIn[0]!);
+      return true;
+    }
     const s = get();
     const merged = normalizeAndSortCodes([
       ...s.tierSelection.eupmyeondong_codes,

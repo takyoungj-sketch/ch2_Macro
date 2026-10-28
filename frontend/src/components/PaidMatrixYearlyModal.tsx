@@ -30,6 +30,7 @@ import {
 } from "../api/aiContext";
 import { formatMatrixBucketAxisLabel } from "../utils/matrixYearlyLabels";
 import { resolveLongTermTargetsForFetch } from "../utils/longTermTargets";
+import { useProductAccess } from "@ch2/macro-shell/productAccess";
 import { useAppStore } from "../store";
 import MatrixCellHistogramChart from "./MatrixCellHistogramChart";
 import LandTraitConsentModal from "./LandTraitConsentModal";
@@ -170,6 +171,7 @@ export default function PaidMatrixYearlyModal({
   filterRequest,
   scopeNote,
 }: Props) {
+  const { entitled, narrow, requestPaid } = useProductAccess();
   const [panel, setPanel] = useState<PanelMode>("trend");
   const [histScope, setHistScope] = useState<"all" | "single">("all");
   /** calendar year 또는 롤링 bucket_index (histogram single 대상 키) */
@@ -575,6 +577,7 @@ export default function PaidMatrixYearlyModal({
     <DraggableModalShell
       open={open}
       onClose={onClose}
+      initialFullscreen={narrow && isRolling}
       titleId="paid-matrix-yearly-title"
       title={isRolling ? "롤링 구간별 평균 변동" : "연도별 평균 변동"}
       subtitle={
@@ -610,7 +613,17 @@ export default function PaidMatrixYearlyModal({
                     ? "bg-white text-slate-800 shadow-sm border border-slate-100"
                     : "text-slate-500 hover:text-slate-700"
                 }`}
-                onClick={() => setPanel(id)}
+                onClick={() => {
+                  if (!entitled && id !== "trend") {
+                    requestPaid();
+                    return;
+                  }
+                  if (!entitled && !isRolling) {
+                    requestPaid();
+                    return;
+                  }
+                  setPanel(id);
+                }}
               >
                 {label}
               </button>
