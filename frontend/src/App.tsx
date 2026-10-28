@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import CollapsibleLeftSidebar from "@ch2/macro-shell/CollapsibleLeftSidebar";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
+import { useProductAccess } from "@ch2/macro-shell/productAccess";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
 import AiAssistantPanel from "@ch2/ai-assistant/AiAssistantPanel";
@@ -18,10 +19,36 @@ import RegionMapHub, { type MapPanelMode } from "./components/RegionMapHub";
 import FreeStatsPanel from "./components/FreeStatsPanel";
 import PaidAnalysisPanel from "./components/PaidAnalysisPanel";
 import PaidFilterTable from "./components/PaidFilterTable";
+import { setLandPickSingle } from "./regionPickMode";
+
+const MOBILE_REGION_KEY = "ch2.land.mobileRegion";
+
+function singleTier(tier: {
+  sido_codes: string[];
+  city_codes: string[];
+  sigungu_codes: string[];
+  eupmyeondong_codes: string[];
+  beopjungri_codes: string[];
+}): { level: string; code: string } | null {
+  const rows: [string, string[]][] = [
+    ["beopjungri", tier.beopjungri_codes],
+    ["eupmyeondong", tier.eupmyeondong_codes],
+    ["sigungu", tier.sigungu_codes],
+    ["city", tier.city_codes],
+    ["sido", tier.sido_codes],
+  ];
+  const total = rows.reduce((n, [, codes]) => n + codes.length, 0);
+  if (total !== 1) return null;
+  const hit = rows.find(([, codes]) => codes.length === 1);
+  if (!hit) return null;
+  return { level: hit[0], code: hit[1][0]! };
+}
 
 export default function App() {
   useLandDeepLink();
-  const { paidResultView, tierSelection } = useAppStore();
+  const { entitled, narrow } = useProductAccess();
+  const restoredMobileRegion = useRef(false);
+  const { paidResultView, tierSelection, applyDeepLinkRegion } = useAppStore();
   const { data: regions = [] } = useQuery({
     queryKey: REGIONS_CATALOG_QUERY_KEY,
     queryFn: () => fetchRegions(),
@@ -31,6 +58,35 @@ export default function App() {
   const [mapPanelMode, setMapPanelMode] = useState<MapPanelMode>("normal");
   const { contentZoom, fontPct, fontStepMin, fontStepMax, bumpUiFontScale } = useUiFontScale();
   const { isDark, toggleUiColorScheme } = useUiColorScheme();
+
+  useEffect(() => {
+    setLandPickSingle(narrow);
+  }, [narrow]);
+
+  useEffect(() => {
+    if (!narrow) return;
+    const saved = singleTier(tierSelection);
+    if (!saved) return;
+    try {
+      window.localStorage.setItem(MOBILE_REGION_KEY, JSON.stringify(saved));
+    } catch {
+      /* ignore */
+    }
+  }, [narrow, tierSelection]);
+
+  useEffect(() => {
+    if (!narrow || restoredMobileRegion.current) return;
+    restoredMobileRegion.current = true;
+    if (singleTier(useAppStore.getState().tierSelection)) return;
+    try {
+      const raw = window.localStorage.getItem(MOBILE_REGION_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as { level?: string; code?: string };
+      if (saved.level && saved.code) applyDeepLinkRegion(saved.level, saved.code);
+    } catch {
+      /* ignore */
+    }
+  }, [narrow, applyDeepLinkRegion]);
 
   useEffect(() => {
     const on = (e: Event) => {
@@ -43,11 +99,17 @@ export default function App() {
   }, []);
 
   const statsPanel =
-    paidResultView === "basic" ? (
-      <FreeStatsPanel />
-    ) : paidResultView === "filtered" ? (
+    entitled && paidResultView === "filtered" ? (
       <PaidAnalysisPanel />
-    ) : null;
+    ) : paidResultView === "idle" ? null : (
+      <FreeStatsPanel />
+    );
+
+  const aiSlot = entitled ? (
+    <Ai2HeaderSlot domain="land" screenRegion={screenRegion}>
+      <AiAssistantPanel />
+    </Ai2HeaderSlot>
+  ) : null;
 
   return (
     <ActiveAiViewProvider fallback={emptyAiContext("land", "PaidMatrixCell")}>
@@ -61,29 +123,37 @@ export default function App() {
         onBumpFont={bumpUiFontScale}
         isDark={isDark}
         onToggleTheme={toggleUiColorScheme}
-        rightSlot={<Ai2HeaderSlot domain="land" screenRegion={screenRegion}><AiAssistantPanel /></Ai2HeaderSlot>}
+        rightSlot={aiSlot}
       />
 
       <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
-        <main className="flex flex-1 overflow-hidden min-h-0">
-          <CollapsibleLeftSidebar
-            storageKey="land"
-            className="layout-sidebar p-4 space-y-4"
-          >
-            <RegionSelector />
-            <PaidFilterTable />
-          </CollapsibleLeftSidebar>
+        <main className={narrow ? "flex flex-1 min-h-0 flex-col overflow-hidden" : "flex flex-1 overflow-hidden min-h-0"}>
+          {narrow ? (
+            <div className="max-h-[42vh] shrink-0 overflow-y-auto border-b border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
+              <RegionSelector />
+            </div>
+          ) : (
+            <CollapsibleLeftSidebar
+              storageKey="land"
+              className="layout-sidebar p-4 space-y-4"
+            >
+              <RegionSelector />
+              <PaidFilterTable />
+            </CollapsibleLeftSidebar>
+          )}
 
-          <div className="layout-main">
-            <section className="px-4 pt-4 shrink-0">
-              <RegionMapHub
-                fillHeight={mapPanelMode === "expanded"}
-                mapPanelMode={mapPanelMode}
-                onExpand={() => setMapPanelMode("expanded")}
-                onCollapse={() => setMapPanelMode("collapsed")}
-                onNormal={() => setMapPanelMode("normal")}
-              />
-            </section>
+          <div className={narrow ? "min-h-0 flex-1 overflow-auto bg-slate-50 dark:bg-slate-900" : "layout-main"}>
+            {narrow ? null : (
+              <section className="px-4 pt-4 shrink-0">
+                <RegionMapHub
+                  fillHeight={mapPanelMode === "expanded"}
+                  mapPanelMode={mapPanelMode}
+                  onExpand={() => setMapPanelMode("expanded")}
+                  onCollapse={() => setMapPanelMode("collapsed")}
+                  onNormal={() => setMapPanelMode("normal")}
+                />
+              </section>
+            )}
             {statsPanel ? <div id="land-step-analysis" className="p-4 pt-2 pb-8">{statsPanel}</div> : null}
           </div>
         </main>

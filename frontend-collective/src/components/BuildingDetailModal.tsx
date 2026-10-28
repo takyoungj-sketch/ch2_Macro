@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useProductAccess } from "@ch2/macro-shell/productAccess";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
 import {
@@ -505,6 +506,7 @@ export default function BuildingDetailModal({
   );
   const periodLabel = formatPeriodLabel(periodStart, periodEnd);
   const usesMartPeriod = Boolean(analysisPeriod.contract_date_from && analysisPeriod.contract_date_to);
+  const { entitled, narrow, requestPaid } = useProductAccess();
   const [panel, setPanel] = useState<PanelMode>("trend");
   const [cohortExtra, setCohortExtra] = useState<string[]>([]);
   const [cohortRunKeys, setCohortRunKeys] = useState<string[]>([]);
@@ -816,6 +818,7 @@ export default function BuildingDetailModal({
     <DraggableModalShell
       open={true}
       onClose={onClose}
+      initialFullscreen={narrow}
       titleId="building-detail-modal-title"
       title={row.display_name}
       subtitle={
@@ -868,7 +871,13 @@ export default function BuildingDetailModal({
                       : "modal-tab-idle",
                     showWarn && panel !== id && "text-amber-700",
                   )}
-                  onClick={() => setPanel(id)}
+                  onClick={() => {
+                    if (!entitled && id !== "trend") {
+                      requestPaid();
+                      return;
+                    }
+                    setPanel(id);
+                  }}
                 >
                   {tabLabel}
                   {showWarn && <span className="ml-0.5 text-xs">*</span>}

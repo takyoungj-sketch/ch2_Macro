@@ -81,32 +81,42 @@ app.add_middleware(GZipMiddleware, minimum_size=1500)
 
 
 # DECISIONS D-007 — `API_TOKEN` 환경변수가 비어 있으면 통과(개발), 값이 있으면 검사.
+# D-080 — 토큰 통과 뒤에 제품 구독 게이트.
 @app.middleware("http")
 async def _api_token_guard(request: Request, call_next):
-    expected = (settings.api_token or "").strip()
-    if not expected:
-        return await call_next(request)
-    # 헬스체크·OpenAPI 문서·preflight 는 보호 대상 아님.
-    open_paths = {"/health", "/openapi.json", "/docs", "/redoc"}
+    from app.product_gate import product_gate_response
+
     path = request.url.path
-    if request.url.path in open_paths or request.method == "OPTIONS":
+    open_paths = {"/health", "/openapi.json", "/docs", "/redoc"}
+    if path in open_paths or request.method == "OPTIONS":
         return await call_next(request)
-    # 플랫폼 — 사용자 JWT·웹훅 시크릿으로 보호 (X-Api-Token 과 분리)
-    if path.startswith("/api/auth/") or path.startswith("/api/board/") or path.startswith("/api/billing/") or path.startswith("/api/ops/"):
-        return await call_next(request)
-    if path.startswith("/api/platform/fieldnote/ai/"):
-        return await call_next(request)
-    # nginx가 /api/ 프록시 시 X-CH2-Proxy-Token 을 주입(클라이언트 헤더 덮어씀).
-    sent = (
-        request.headers.get("x-ch2-proxy-token")
-        or request.headers.get("x-api-token")
-        or ""
-    ).strip()
-    if sent != expected:
-        return JSONResponse(
-            status_code=401,
-            content={"detail": "API 토큰이 없거나 잘못되었습니다 (X-Api-Token)."},
+
+    expected = (settings.api_token or "").strip()
+    if expected:
+        # 플랫폼 — 사용자 JWT·웹훅 시크릿으로 보호 (X-Api-Token 과 분리)
+        platform_open = (
+            path.startswith("/api/auth/")
+            or path.startswith("/api/board/")
+            or path.startswith("/api/billing/")
+            or path.startswith("/api/ops/")
+            or path.startswith("/api/platform/fieldnote/ai/")
         )
+        if not platform_open:
+            # nginx가 /api/ 프록시 시 X-CH2-Proxy-Token 을 주입(클라이언트 헤더 덮어씀).
+            sent = (
+                request.headers.get("x-ch2-proxy-token")
+                or request.headers.get("x-api-token")
+                or ""
+            ).strip()
+            if sent != expected:
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "API 토큰이 없거나 잘못되었습니다 (X-Api-Token)."},
+                )
+
+    gated = await product_gate_response(request)
+    if gated is not None:
+        return gated
     return await call_next(request)
 
 

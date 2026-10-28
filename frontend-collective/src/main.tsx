@@ -6,6 +6,7 @@ import CommercialApp from "./CommercialApp";
 import CollectiveLanding from "./CollectiveLanding";
 import BuildingRegressionPage from "./pages/BuildingRegressionPage";
 import { getCollectiveSegment, redirectToCollectiveSubpath } from "./routing";
+import { ProductAccessProvider } from "@ch2/macro-shell/productAccess";
 import { applyColorScheme, readStoredColorScheme } from "@ch2/macro-shell/displayUi";
 import "./index.css";
 
@@ -34,7 +35,9 @@ function Root() {
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={qc}>
-      <Root />
+      <ProductAccessProvider>
+        <Root />
+      </ProductAccessProvider>
     </QueryClientProvider>
   </React.StrictMode>,
 );

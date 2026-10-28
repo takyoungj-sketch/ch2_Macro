@@ -16,6 +16,7 @@ import {
   rollingStatsCaption,
 } from "../constants/landAnalysisLabels";
 import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
+import { useProductAccess } from "@ch2/macro-shell/productAccess";
 import { useAppStore } from "../store";
 import { resolveUnionBeopjungriCodes } from "../utils/regionTier";
 import { paidUsesCustomAreaSpan } from "../utils/paidFiltersMap";
@@ -36,6 +37,7 @@ export default function PaidFilterTable() {
     tierSelection,
     freeStatsWindowYears,
   } = useAppStore();
+  const { entitled, requestPaid } = useProductAccess();
   const [filterError, setFilterError] = useState<string | null>(null);
 
   const yearOptions = useMemo(
@@ -60,6 +62,10 @@ export default function PaidFilterTable() {
   const customAreaSpan = paidUsesCustomAreaSpan(paidRequest);
 
   const runFiltered = () => {
+    if (!entitled) {
+      requestPaid();
+      return;
+    }
     setFilterError(null);
     if (resolvedRegionCodes.length === 0) {
       setFilterError(

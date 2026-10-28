@@ -109,7 +109,7 @@ CH2 AI는 [CH2_AI_CONSTITUTION.md](./CH2_AI_CONSTITUTION.md)에 따라 **통계 
 | [CH2_MACRO_IMPLEMENTATION_ROADMAP.md](./CH2_MACRO_IMPLEMENTATION_ROADMAP.md) | V1~V3 구현 순서·완료 게이트 |
 | [DECISIONS.md](./DECISIONS.md) | 구체적 설계 결정 기록 |
 | [BUILT_SHARE_TRANSACTION_POLICY.md](./BUILT_SHARE_TRANSACTION_POLICY.md) | 복합 지분거래 — 목록 전체 · 단가·회귀 기본 제외 (D-049) |
-| [CH2_ENTITLEMENT.md](./CH2_ENTITLEMENT.md) | 무료/유료 권한 — 5앱 통일 · 토지 전용 무료 탭 없음 (D-043) |
+| [CH2_ENTITLEMENT.md](./CH2_ENTITLEMENT.md) | 무료/유료/모바일 — 토지·집합 기본통계 공개, 상세 분석은 구독 (D-080) |
 | [REGIONAL_PROFILE_ARCHITECTURE.md](./REGIONAL_PROFILE_ARCHITECTURE.md) | Regional Profile·거시 분석 로드맵 |
 | [PROFILE_NATIONAL_RANK_PLAN.md](./PROFILE_NATIONAL_RANK_PLAN.md) | 지역프로필 전국 순위 1단계 (D-053) |
 | [CH2_MIDCHECK_IMPROVEMENT_PLAN.md](./CH2_MIDCHECK_IMPROVEMENT_PLAN.md) | 중간점검 개선안 — 검증·Twin Validation·월간 SSOT |

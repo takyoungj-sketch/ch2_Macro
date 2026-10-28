@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { StatsGlossaryHelp } from "@ch2/stats-glossary";
+import { useProductAccess } from "@ch2/macro-shell/productAccess";
 import { useAppStore } from "../store";
 import type { FreeStatsWindowYears } from "../types";
 import { normalizeFreeStatsWindowYears } from "../types";
@@ -8,8 +10,13 @@ export default function FreeStatsWindowToggle({
 }: {
   idPrefix?: string;
 }) {
+  const { entitled, requestPaid } = useProductAccess();
   const windowYears = useAppStore((s) => normalizeFreeStatsWindowYears(s.freeStatsWindowYears));
   const setWindowYears = useAppStore((s) => s.setFreeStatsWindowYears);
+
+  useEffect(() => {
+    if (!entitled && windowYears !== 5) setWindowYears(5);
+  }, [entitled, windowYears, setWindowYears]);
 
   const choice = (y: FreeStatsWindowYears, label: string) => {
     const active = windowYears === y;
@@ -19,7 +26,13 @@ export default function FreeStatsWindowToggle({
         type="button"
         id={`${idPrefix}-win-${y}`}
         aria-pressed={active}
-        onClick={() => setWindowYears(y)}
+        onClick={() => {
+          if (y !== 5 && !entitled) {
+            requestPaid();
+            return;
+          }
+          setWindowYears(y);
+        }}
         className={`px-3 py-1 rounded-md text-sm font-semibold transition-colors ${
           active
             ? "bg-white text-blue-700 shadow-sm"

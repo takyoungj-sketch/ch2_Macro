@@ -147,6 +147,22 @@ body {
     dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600;
 }
 
+.ch2-mobile-region .ch2-left-sidebar-wrap {
+  flex-direction: column;
+  width: 100%;
+  max-height: 46vh;
+}
+.ch2-mobile-region .ch2-left-sidebar-rail {
+  display: none;
+}
+.ch2-mobile-region .ch2-left-sidebar-panel {
+  width: 100% !important;
+  max-width: none !important;
+  max-height: 46vh;
+  overflow-y: auto;
+  border-right-width: 0;
+}
+
 table.data {
   @apply table-fixed text-xs;
 }
