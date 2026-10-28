@@ -1428,7 +1428,6 @@ export default function PaidMatrixYearlyModal({
                   regResult={regResult}
                   regBody={regBody}
                   vars={regBody.variables}
-                  disabled={regControlsStale || regLoading}
                   regionLabel={scopeNote?.trim() || `${zoneType} × ${landCategory}`}
                 />
               )}
