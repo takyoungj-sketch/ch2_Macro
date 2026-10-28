@@ -15,6 +15,8 @@ import {
   readStoredModalFontStep,
 } from "../constants/displayUi";
 import { isAiChatOpen, shouldIgnoreModalDismiss, CH2_AI_OPEN_ATTR } from "@ch2/ai-assistant/aiHost";
+import ModalScrollZoom from "@ch2/macro-shell/modalScrollZoom";
+import { useNarrowScreen } from "@ch2/macro-shell/useNarrowScreen";
 
 type Props = {
   open: boolean;
@@ -150,6 +152,7 @@ export default function DraggableModalShell({
   const fontPct = Math.round(modalZoom * 100);
   const fontStepMin = clampModalFontStep(fontStep) <= 0;
   const fontStepMax = clampModalFontStep(fontStep) >= MODAL_FONT_SCALE_STEPS.length - 1;
+  const narrow = useNarrowScreen();
 
   const bumpFontScale = useCallback((direction: 1 | -1) => {
     setFontStep((prev) => {
@@ -556,14 +559,16 @@ export default function DraggableModalShell({
           {!minimized && headerExtra && <div className="mt-2 pointer-events-auto" data-no-drag>{headerExtra}</div>}
         </div>
 
-        {!minimized && (
+        {!minimized && (fullscreen && narrow ? (
+          <ModalScrollZoom>{children}</ModalScrollZoom>
+        ) : (
           <div
             className={bodyClassName}
             style={allowFontScale ? { zoom: modalZoom } : undefined}
           >
             {children}
           </div>
-        )}
+        ))}
         </div>
 
         {resizable &&

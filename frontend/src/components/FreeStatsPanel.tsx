@@ -347,7 +347,7 @@ export default function FreeStatsPanel() {
   });
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-5 space-y-5">
+    <div className={narrow ? "bg-white rounded-xl shadow-sm p-2 space-y-2" : "bg-white rounded-xl shadow-sm p-5 space-y-5"}>
         <PublishAiContext
           context={buildLandMatrixOverviewContext({
             regionLabel: data.beopjungri_name,

@@ -129,7 +129,7 @@ export default function App() {
       <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
         <main className={narrow ? "flex flex-1 min-h-0 flex-col overflow-hidden" : "flex flex-1 overflow-hidden min-h-0"}>
           {narrow ? (
-            <div className="max-h-[42vh] shrink-0 overflow-y-auto border-b border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
+            <div className="shrink-0 border-b border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
               <RegionSelector />
             </div>
           ) : (
@@ -154,7 +154,11 @@ export default function App() {
                 />
               </section>
             )}
-            {statsPanel ? <div id="land-step-analysis" className="p-4 pt-2 pb-8">{statsPanel}</div> : null}
+            {statsPanel ? (
+              <div id="land-step-analysis" className={narrow ? "px-2 py-2" : "p-4 pt-2 pb-8"}>
+                {statsPanel}
+              </div>
+            ) : null}
           </div>
         </main>
       </div>

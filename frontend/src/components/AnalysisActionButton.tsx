@@ -29,7 +29,9 @@ export default function AnalysisActionButton({
       className={`w-full py-2 rounded-lg text-white text-base font-semibold disabled:opacity-40 transition-colors ${variantClass} ${className}`}
     >
       <span className="block leading-tight">{primary}</span>
-      <span className="block text-sm font-normal opacity-90 mt-0.5 leading-tight">{caption}</span>
+      {caption ? (
+        <span className="block text-sm font-normal opacity-90 mt-0.5 leading-tight">{caption}</span>
+      ) : null}
     </button>
   );
 }
