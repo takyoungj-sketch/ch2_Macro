@@ -8,6 +8,8 @@ import BuildingRegressionPage from "./pages/BuildingRegressionPage";
 import { getCollectiveSegment, redirectToCollectiveSubpath } from "./routing";
 import { ProductAccessProvider } from "@ch2/macro-shell/productAccess";
 import { applyColorScheme, readStoredColorScheme } from "@ch2/macro-shell/displayUi";
+import { StatsGlossaryPresentationProvider } from "@ch2/stats-glossary";
+import StatsGlossaryHelp from "./components/StatsGlossaryHelp";
 import "./index.css";
 
 applyColorScheme(readStoredColorScheme());
@@ -36,7 +38,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={qc}>
       <ProductAccessProvider>
+        <StatsGlossaryPresentationProvider component={StatsGlossaryHelp}>
         <Root />
+        </StatsGlossaryPresentationProvider>
       </ProductAccessProvider>
     </QueryClientProvider>
   </React.StrictMode>,

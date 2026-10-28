@@ -1,4 +1,5 @@
 // @ts-nocheck — shared: 각 frontend node_modules 기준 경로가 달라짐
+import { isForeignDialogEvent, useModalFocus } from "../ui-window/modalFocus";
 import {
   useEffect,
   useLayoutEffect,
@@ -85,11 +86,15 @@ export default function AnalysisHelpPanel({
   className,
   title = "분석 방법·해석·한계 설명",
   buttonLabel = "?",
+  content,
+  hideMetadata = false,
 }: {
   explain: AnalysisExplain | null | undefined;
   className?: string;
   title?: string;
   buttonLabel?: string;
+  content?: ReactNode;
+  hideMetadata?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [activePreset, setActivePreset] = useState<string | null>(null);
@@ -98,6 +103,7 @@ export default function AnalysisHelpPanel({
   const userPlacedRef = useRef(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  useModalFocus(Boolean(open && box), panelRef, true);
 
   const { beginMove, beginResize } = usePanelDrag(open, MIN_W, MIN_H, (next) => {
     userPlacedRef.current = true;
@@ -148,7 +154,11 @@ export default function AnalysisHelpPanel({
     if (!open) return;
     setFontPx(readStoredHelpFontPx());
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape" && !e.defaultPrevented && !isForeignDialogEvent(e, panelRef.current)) {
+        e.preventDefault();
+        e.stopPropagation();
+        setOpen(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -165,6 +175,7 @@ export default function AnalysisHelpPanel({
         <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/50" style={{ zIndex: BACKDROP_Z }} aria-hidden />
         <div
           ref={panelRef}
+          tabIndex={-1}
           role="dialog"
           aria-modal="true"
           aria-label={explain.title}
@@ -187,11 +198,11 @@ export default function AnalysisHelpPanel({
             }}
           >
             <div className="min-w-0">
-              <p className="text-xs font-semibold text-slate-800 dark:text-slate-100">{explain.title}</p>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-xs font-semibold text-slate-800 dark:text-slate-100" style={hideMetadata ? { fontSize: "1rem" } : undefined}>{explain.title}</p>
+              {!hideMetadata && <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
                 spec: {explain.spec_id} · v{explain.spec_version}
                 <span className="ml-1.5">· 드래그로 이동 · 모서리로 크기 조절</span>
-              </p>
+              </p>}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
               <HelpFontStepper
@@ -204,6 +215,7 @@ export default function AnalysisHelpPanel({
               <button
                 type="button"
                 className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  aria-label="닫기"
                 onClick={() => setOpen(false)}
               >
                 닫기
@@ -212,6 +224,7 @@ export default function AnalysisHelpPanel({
           </div>
 
           <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-3" style={{ fontSize: fontPx }}>
+            {content ?? <>
             <Section title="요약">
               <p>{explain.summary}</p>
             </Section>
@@ -302,6 +315,7 @@ export default function AnalysisHelpPanel({
                 </div>
               </Section>
             )}
+            </>}
           </div>
           <ResizeHandles onPointerDown={(edge, e) => beginResize(edge, e, box)} />
         </div>

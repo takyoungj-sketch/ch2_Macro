@@ -1,5 +1,6 @@
 // @ts-nocheck — shared 패키지: 각 frontend node_modules 기준으로 tsc 경로가 달라짐
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { isForeignDialogEvent, useModalFocus } from "../ui-window/modalFocus";
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type ComponentType } from "react";
 import { createPortal } from "react-dom";
 import { getGlossaryEntry, type StatsGlossaryEntry } from "./statsGlossary";
 import { getStatsLearnUrl } from "./statsLearnLinks";
@@ -118,7 +119,17 @@ function placeNearAnchor(anchor: HTMLElement, size: { w: number; h: number }): P
   return clampBox({ x: left, y: top, w: size.w, h: size.h }, MIN_W, MIN_H);
 }
 
-export default function StatsGlossaryHelp({
+export type StatsGlossaryHelpProps = { termId: string; className?: string; size?: "sm" | "xs" };
+const GlossaryPresentationContext = createContext<ComponentType<StatsGlossaryHelpProps> | null>(null);
+export function StatsGlossaryPresentationProvider({ component, children }: { component: ComponentType<StatsGlossaryHelpProps>; children: ReactNode }) {
+  return <GlossaryPresentationContext.Provider value={component}>{children}</GlossaryPresentationContext.Provider>;
+}
+export default function StatsGlossaryHelp(props: StatsGlossaryHelpProps) {
+  const Presentation = useContext(GlossaryPresentationContext);
+  return Presentation ? <Presentation {...props} /> : <DefaultStatsGlossaryHelp {...props} />;
+}
+
+function DefaultStatsGlossaryHelp({
   termId,
   className,
   size = "sm",
@@ -134,6 +145,7 @@ export default function StatsGlossaryHelp({
   const userPlacedRef = useRef(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
+  useModalFocus(Boolean(open && box), popupRef, false);
 
   const { beginMove, beginResize } = usePanelDrag(open, MIN_W, MIN_H, (next) => {
     userPlacedRef.current = true;
@@ -176,7 +188,11 @@ export default function StatsGlossaryHelp({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape" && !e.defaultPrevented && !isForeignDialogEvent(e, popupRef.current)) {
+        e.preventDefault();
+        e.stopPropagation();
+        setOpen(false);
+      }
     };
     const onClick = (e: MouseEvent) => {
       const t = e.target as Node;
@@ -203,6 +219,7 @@ export default function StatsGlossaryHelp({
       ? createPortal(
           <div
             ref={popupRef}
+            tabIndex={-1}
             role="dialog"
             aria-label={`${entry.label} 설명`}
             className="ch2-glossary-popup ch2-resize-host fixed rounded-lg border border-indigo-200 dark:border-indigo-300 bg-white dark:bg-slate-800 shadow-xl dark:shadow-black/70 ring-1 ring-black/5 dark:ring-indigo-300/60 p-3 text-left font-normal"
@@ -245,6 +262,7 @@ export default function StatsGlossaryHelp({
                   type="button"
                   className="text-slate-400 hover:text-slate-600 dark:text-slate-300 dark:hover:text-white ml-0.5"
                   style={{ fontSize: 11 }}
+                  aria-label="닫기"
                   onClick={() => setOpen(false)}
                 >
                   닫기
