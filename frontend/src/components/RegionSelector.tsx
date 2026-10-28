@@ -11,6 +11,7 @@ import { tryResolveUniqueRegionSearch } from "../utils/resolveUniqueRegionNameSe
 import { statsScopeKeyFromBeopjungriCodes } from "../utils/statsScopeKey";
 import type { RegionItem } from "../types";
 import { formatRegionHierarchyLabel } from "../utils/regionDisplay";
+import { useNarrowScreen } from "@ch2/macro-shell/useNarrowScreen";
 import FreeStatsWindowToggle from "./FreeStatsWindowToggle";
 import AnalysisActionButton from "./AnalysisActionButton";
 import {
@@ -81,6 +82,7 @@ function labelCityChip(regions: RegionItem[], cityCode: string): string {
 }
 
 export default function RegionSelector() {
+  const narrow = useNarrowScreen();
   const {
     viewMode,
     tierSelection,
@@ -490,7 +492,8 @@ export default function RegionSelector() {
           disabled={catalogLoading}
           className="input text-base"
         />
-        {viewMode === "paid" &&
+        {!narrow &&
+        viewMode === "paid" &&
         strictUpperTierChipCount === 0 &&
         paidSubSigunguSelections >= 1 &&
         (!LEFT_REGION_MULTI_SELECT || !paidLeafAddGateOpen) ? (
@@ -788,7 +791,8 @@ export default function RegionSelector() {
         ) : null}
       </div>
 
-      {LEFT_REGION_MULTI_SELECT &&
+      {!narrow &&
+      LEFT_REGION_MULTI_SELECT &&
       viewMode === "paid" &&
       strictUpperTierChipCount === 0 &&
       paidSubSigunguSelections >= 1 &&
@@ -812,7 +816,7 @@ export default function RegionSelector() {
         </div>
       ) : null}
 
-      {viewMode === "paid" && strictUpperTierChipCount === 0 && paidUnifiedSubSigunguRows.length > 0 ? (
+      {!narrow && viewMode === "paid" && strictUpperTierChipCount === 0 && paidUnifiedSubSigunguRows.length > 0 ? (
         <div className="rounded-lg border border-slate-100 bg-white px-3 py-2.5 space-y-1.5">
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
             선택한 지역 ({paidSubSigunguSelections}/{MAX_PAID_LEAF_BEOPJUNGRI_PICK}) — 시군구 미만
@@ -948,7 +952,11 @@ export default function RegionSelector() {
       ) : null}
 
       <div className="rounded-lg border border-slate-100 bg-slate-50/80 px-2.5 py-2 space-y-2">
-        <FreeStatsWindowToggle idPrefix="sidebar-v2" />
+        {narrow ? (
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-200">5년 롤링</p>
+        ) : (
+          <FreeStatsWindowToggle idPrefix="sidebar-v2" />
+        )}
       </div>
 
       <AnalysisActionButton

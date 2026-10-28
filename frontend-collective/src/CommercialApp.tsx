@@ -464,7 +464,7 @@ export default function CommercialApp() {
         isDark={isDark}
         onToggleTheme={toggleUiColorScheme}
         rightSlot={
-          entitled ? (
+          entitled && !narrow ? (
             <Ai2HeaderSlot
               domain="commercial"
               screenRegion={singleScreenRegion({
@@ -486,7 +486,8 @@ export default function CommercialApp() {
         <div className={narrow ? "ch2-mobile-region" : "contents"}>
         <CollapsibleLeftSidebar
           storageKey="collective-commercial"
-          className={narrow ? "w-full border-b border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800" : "layout-sidebar p-4"}
+          pinned={narrow}
+          className={narrow ? "w-full max-h-[46vh] overflow-y-auto border-b border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800" : "layout-sidebar p-4"}
         >
           <h2 className="text-sm font-semibold mb-3 text-slate-800 dark:text-slate-100">조건</h2>
           <div className="space-y-3">
@@ -521,20 +522,26 @@ export default function CommercialApp() {
               </div>
             </div>
 
-            <StatsWindowToggle
-              value={windowYears}
-              onChange={(y) => {
-                const next = normalizeStatsWindowYears(y);
-                if (next !== 5 && !entitled) {
-                  requestPaid();
-                  return;
-                }
-                setWindowYears(next);
-              }}
-            />
-            <p className="text-[10px] text-slate-400 leading-snug">
-              직전 월말 기준 롤링 {windowYears}년 창으로 집계합니다.
-            </p>
+            {narrow ? (
+              <p className="text-xs font-medium text-slate-600 dark:text-slate-300">5년 롤링</p>
+            ) : (
+              <>
+                <StatsWindowToggle
+                  value={windowYears}
+                  onChange={(y) => {
+                    const next = normalizeStatsWindowYears(y);
+                    if (next !== 5 && !entitled) {
+                      requestPaid();
+                      return;
+                    }
+                    setWindowYears(next);
+                  }}
+                />
+                <p className="text-[10px] text-slate-400 leading-snug">
+                  직전 월말 기준 롤링 {windowYears}년 창으로 집계합니다.
+                </p>
+              </>
+            )}
 
             <label className="text-xs block space-y-1">
               <span className="text-slate-500 dark:text-slate-400">시도</span>
@@ -610,9 +617,11 @@ export default function CommercialApp() {
               <RegionChipPanel
                 title="읍·면·동"
                 hint={
-                  hasIntermediate
-                    ? `${intermediateLabel} 선택 후 1개 선택 · 인접은 지도에서 추가`
-                    : `1개 선택(미선택 시 시군구 전체) · 인접은 지도에서 추가`
+                  narrow
+                    ? "한 곳"
+                    : hasIntermediate
+                      ? `${intermediateLabel} 선택 후 1개 선택 · 인접은 지도에서 추가`
+                      : `1개 선택(미선택 시 시군구 전체) · 인접은 지도에서 추가`
                 }
                 selected={leafList}
                 options={visibleLeafOptions}
@@ -771,7 +780,7 @@ export default function CommercialApp() {
                       <span className="ml-1 text-amber-700 dark:text-amber-400">· 실시간 집계</span>
                     )}
                   </p>
-                  {profileTarget && (
+                  {!narrow && profileTarget && (
                     <a
                       href={profileHref(profileTarget)}
                       className="shrink-0 text-xs font-medium text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white underline"

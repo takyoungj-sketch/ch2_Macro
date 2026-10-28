@@ -99,13 +99,13 @@ export default function App() {
   }, []);
 
   const statsPanel =
-    entitled && paidResultView === "filtered" ? (
+    !narrow && entitled && paidResultView === "filtered" ? (
       <PaidAnalysisPanel />
     ) : paidResultView === "idle" ? null : (
       <FreeStatsPanel />
     );
 
-  const aiSlot = entitled ? (
+  const aiSlot = entitled && !narrow ? (
     <Ai2HeaderSlot domain="land" screenRegion={screenRegion}>
       <AiAssistantPanel />
     </Ai2HeaderSlot>

@@ -31,6 +31,7 @@ import { statsScopeKeyFromBeopjungriCodes } from "../utils/statsScopeKey";
 import { resolveUpperSingleFromTier, upperToFreeStatsShape } from "../utils/upperTierStats";
 import { shouldUseBulkStats } from "../utils/statsFetchStrategy";
 import MatrixStatsTable, { MatrixStatsLegend } from "./MatrixStatsTable";
+import { useNarrowScreen } from "@ch2/macro-shell/useNarrowScreen";
 import PaidMatrixYearlyModal from "./PaidMatrixYearlyModal";
 import YearlyStatsTable from "./YearlyStatsTable";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
@@ -39,6 +40,7 @@ import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import { buildLandMatrixOverviewContext } from "../api/aiContext";
 
 export default function FreeStatsPanel() {
+  const narrow = useNarrowScreen();
   const viewMode = useAppStore((s) => s.viewMode);
   const paidResultView = useAppStore((s) => s.paidResultView);
   const paidBasicStatsKick = useAppStore((s) => s.paidBasicStatsKick);
@@ -381,7 +383,7 @@ export default function FreeStatsPanel() {
             {data.beopjungri_name}
           </h2>
           <AnalysisHelpPanel explain={statsExplain} />
-          <RegionalProfileLink />
+          {narrow ? null : <RegionalProfileLink />}
         </div>
         <div className="min-w-0 flex-1 basis-[12rem]">
           <YearlyStatsTable rows={yearlyRowsFreeReference} hideTitle />

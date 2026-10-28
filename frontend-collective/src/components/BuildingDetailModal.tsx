@@ -508,6 +508,9 @@ export default function BuildingDetailModal({
   const usesMartPeriod = Boolean(analysisPeriod.contract_date_from && analysisPeriod.contract_date_to);
   const { entitled, narrow, requestPaid } = useProductAccess();
   const [panel, setPanel] = useState<PanelMode>("trend");
+  useEffect(() => {
+    if (narrow) setPanel("trend");
+  }, [narrow]);
   const [cohortExtra, setCohortExtra] = useState<string[]>([]);
   const [cohortRunKeys, setCohortRunKeys] = useState<string[]>([]);
   const [cohortRunByPanel, setCohortRunByPanel] = useState<Partial<Record<PanelMode, number>>>({});
@@ -841,6 +844,7 @@ export default function BuildingDetailModal({
       }
       headerExtra={
         <>
+          {!narrow && (
           <div
             className="flex flex-wrap gap-0.5 rounded-md border modal-tab-bar p-0.5"
             role="tablist"
@@ -885,11 +889,12 @@ export default function BuildingDetailModal({
               );
             })}
           </div>
+          )}
           {(() => {
-            const help = collectiveModalPanelHelp(panel);
+            const help = collectiveModalPanelHelp(narrow ? "trend" : panel);
             return help ? <AnalysisHelpPanel explain={help} className="ml-1" /> : null;
           })()}
-          {peerBuildings.length > 0 && (
+          {!narrow && peerBuildings.length > 0 && panel !== "danji" && (
             <div className="mt-2 rounded border border-indigo-100 bg-indigo-50/50 px-2 py-1.5 text-xs">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-semibold text-indigo-800">분석 코호트</span>

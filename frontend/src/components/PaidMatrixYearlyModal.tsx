@@ -173,6 +173,9 @@ export default function PaidMatrixYearlyModal({
 }: Props) {
   const { entitled, narrow, requestPaid } = useProductAccess();
   const [panel, setPanel] = useState<PanelMode>("trend");
+  useEffect(() => {
+    if (narrow) setPanel("trend");
+  }, [narrow]);
   const [histScope, setHistScope] = useState<"all" | "single">("all");
   /** calendar year 또는 롤링 bucket_index (histogram single 대상 키) */
   const [histSliceKey, setHistSliceKey] = useState<number | null>(null);
@@ -596,7 +599,7 @@ export default function PaidMatrixYearlyModal({
         </>
       }
       headerExtra={
-        canDetail ? (
+        !narrow && canDetail ? (
           <div
             className="inline-flex flex-wrap rounded-md border border-slate-200 bg-slate-50 p-0.5 gap-0.5"
             role="tablist"
@@ -951,7 +954,9 @@ export default function PaidMatrixYearlyModal({
                 </div>
                 {isRolling && rollMetric === "median" && (
                   <p className="text-[11px] text-slate-500 px-1 mb-2">
-                    이 구간에 적용한 필터와 이상치 제외 뒤 거래의 중앙값입니다. 25·75도 같은 목록입니다. 장기 추세 탭의 만년력 연도 값과 다릅니다.
+                    {narrow
+                      ? "이 구간의 중앙값입니다. 25·75도 같은 목록입니다."
+                      : "이 구간에 적용한 필터와 이상치 제외 뒤 거래의 중앙값입니다. 25·75도 같은 목록입니다. 장기 추세 탭의 만년력 연도 값과 다릅니다."}
                   </p>
                 )}
                 <MatrixYearlyTrendChart
