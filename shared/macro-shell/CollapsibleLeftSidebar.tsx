@@ -25,11 +25,14 @@ export default function CollapsibleLeftSidebar({
   label = "필터",
   className,
   children,
+  pinned = false,
 }: {
   storageKey: string;
   label?: string;
   className: string;
   children: ReactNode;
+  /** 접기 레일 없이 내용만. 모바일 지역 입력 */
+  pinned?: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(() => readStored(storageKey));
   const railRef = useRef<HTMLButtonElement | null>(null);
@@ -44,6 +47,10 @@ export default function CollapsibleLeftSidebar({
       return next;
     });
   }, [storageKey]);
+
+  if (pinned) {
+    return <aside className={className}>{children}</aside>;
+  }
 
   return (
     <div className={`ch2-left-sidebar-wrap${collapsed ? " is-collapsed" : ""}`}>

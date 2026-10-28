@@ -5,6 +5,7 @@ import DisplaySettingsControls from "./DisplaySettingsControls";
 import MacroProfileNavLink from "./MacroProfileNavLink";
 import MacroRentNavLink from "./MacroRentNavLink";
 import MacroTypeNav, { type MacroAppKind } from "./MacroTypeNav";
+import { useNarrowScreen } from "./useNarrowScreen";
 
 type Props = {
   /** stats 앱(토지·복합·집합) 중 현재 페이지. 지역프로필 단독 화면이면 null */
@@ -35,6 +36,7 @@ export default function MacroStatsHeader({
   rightSlot,
 }: Props) {
   const headerRef = useRef(null);
+  const narrow = useNarrowScreen();
 
   useEffect(() => {
     const el = headerRef.current;
@@ -67,9 +69,9 @@ export default function MacroStatsHeader({
         </div>
         <div className="macro-header-toolbar">
           <div className="macro-header-nav-cluster">
-            <MacroProfileNavLink active={profileActive} />
+            {narrow ? null : <MacroProfileNavLink active={profileActive} />}
             <MacroTypeNav current={currentApp} />
-            <MacroRentNavLink active={currentApp === "rent"} />
+            {narrow ? null : <MacroRentNavLink active={currentApp === "rent"} />}
           </div>
           <DisplaySettingsControls
             fontPct={fontPct}
