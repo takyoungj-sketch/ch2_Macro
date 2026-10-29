@@ -158,23 +158,24 @@ body {
 
 .epigraph__quote {
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: 1.125rem;
   font-weight: 700;
   line-height: 1.7;
   color: #0f172a;
 }
 
 .epigraph__original {
-  margin: 0.75rem 0 0;
-  font-size: 0.8125rem;
-  line-height: 1.6;
+  margin: 0.85rem 0 0;
+  font-size: 1rem;
+  line-height: 1.65;
   color: #64748b;
 }
 
 .epigraph__source {
-  margin: 0.85rem 0 0;
-  font-size: 0.75rem;
+  margin: 1rem 0 0;
+  font-size: 0.875rem;
   color: #94a3b8;
+  text-align: right;
 }
 
 .footer {
