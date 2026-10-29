@@ -35,6 +35,15 @@ class CvPhase:
     max_ape: float | None = None
     # 폭발한 몇 건에 면역인 보조 지표. 평균 순위와 크게 엇갈리면 D-074를 재검토한다.
     median_ape: float | None = None
+    # 실제로 오차를 낸 거래 수와 그 연도. folds는 연도 수라 거래 수와 같지 않다.
+    n_trades: int = 0
+    years: tuple[int, ...] = ()
+    # 채점하려 한 연도. 적합이 안 되면 years는 비고 held_years만 남는다.
+    held_years: tuple[int, ...] = ()
+    evaluation_signature: str | None = None
+    failure_reasons: tuple[tuple[int, str], ...] = ()
+    failure_codes: tuple[tuple[int, str], ...] = ()
+    eligible_n: int = 0
 
 
 _EMPTY_CV = CvPhase()
@@ -176,6 +185,7 @@ def rolling_time_cv_split(
     response_scale: ResponseScale,
     region_col: str | None,
     time_adjuster: TimeAdjuster | None = None,
+    diagnostics: dict | None = None,
 ) -> tuple[float | None, int, float | None, int, str | None]:
     """탐색 CV(마지막 연도 제외)와 확인 CV(마지막 연도).
 
@@ -190,6 +200,19 @@ def rolling_time_cv_split(
         holdout_last_year=True,
         time_adjuster=time_adjuster,
     )
+    if diagnostics is not None:
+        def report(phase, method):
+            count = len(phase.held_years)
+            codes = dict(phase.failure_codes)
+            reasons = [dict(fold=i+1, year=year, code=codes.get(year, "year_unavailable"), reason=reason)
+                for i, (year, reason) in enumerate(phase.failure_reasons)]
+            return dict(method=method, observation_unit="transaction",
+                status="unavailable" if phase.mape is None else "partial" if reasons else "available",
+                requested_folds=count, attempted_folds=count, completed_folds=phase.folds,
+                eligible_n=phase.eligible_n, evaluated_n=phase.n_trades, failures=reasons,
+                reason_code="incomplete_validation" if reasons else "evaluation_unavailable" if phase.mape is None else None,
+                reason="일부 평가 연도를 완료하지 못했습니다." if reasons else "평가 가능한 연도 또는 설계행렬이 부족합니다." if phase.mape is None else None)
+        diagnostics.update(search=report(search, "rolling_year"), confirm=report(confirm, "last_year"))
     skip = None
     if confirm.mape is None:
         skip = "확인 CV 생략 — 고유 계약연도가 3년 미만이거나 마지막 연도 fold를 적합할 수 없음"
@@ -276,21 +299,34 @@ def _rolling_time_cv_mape(
     search_years = [yr for yr in years[1:] if confirm_year is None or yr != confirm_year]
 
     def _eval(test_years: list) -> CvPhase:
+        from app.regression_contracts import observation_signature, signature
+        evaluated = []
         fold_errors: list[float] = []
         extreme_hits = 0
         scored = 0
         valid_folds = 0
+        scored_years: list[int] = []
+        held = tuple(int(year) for year in test_years)
+        failures: list[tuple[int, str]] = []
+        failure_codes: list[tuple[int, str]] = []
+        eligible_n = int(year_values.isin(test_years).sum())
         for test_year in test_years:
             train_mask = year_values < test_year
             test_mask = year_values == test_year
             if int(train_mask.sum()) < max(5, x_const.shape[1] + 1) or not bool(test_mask.any()):
+                failures.append((int(test_year), "학습 표본 또는 평가 거래 부족"))
+                failure_codes.append((int(test_year), "insufficient_training"))
                 continue
             y_train = y.loc[train_mask]
             y_test = y.loc[test_mask]
             if _uses_log_y(response_scale) and (price.loc[y_train.index] <= 0).any():
+                failures.append((int(test_year), "로그 변환 불가 금액"))
+                failure_codes.append((int(test_year), "invalid_target"))
                 continue
             columns = _estimable_columns(x_const.loc[y_train.index])
             if not columns:
+                failures.append((int(test_year), "학습에서 추정 가능한 설명변수 없음"))
+                failure_codes.append((int(test_year), "unidentifiable_design"))
                 continue
             if time_adjuster is not None:
                 train_years = sorted(
@@ -314,11 +350,22 @@ def _rolling_time_cv_mape(
                     pred = np.exp(pred) * _duan_smearing(model.resid.to_numpy())
                 actual = price.loc[y_test.index].to_numpy(dtype=float)
                 valid = np.isfinite(actual) & np.isfinite(pred) & (actual != 0)
+                if not valid.all():
+                    failures.append((int(test_year), "전체 평가 거래의 유한한 예측값 확보 실패"))
+                    failure_codes.append((int(test_year), "invalid_prediction"))
+                    continue
                 if valid.any():
+                    train_identity = observation_signature(df.loc[y_train.index])
+                    test_identity = observation_signature(df.loc[y_test.index[valid]])
+                    evaluated_rows = df.loc[y_test.index[valid], [c for c in ("transaction_id", "id", "price") if c in df.columns]]
+                    evaluated.append(dict(year=int(test_year), train=train_identity, test=test_identity,
+                        actual=signature(sorted(signature(row) for row in evaluated_rows.to_dict("records"))),
+                        time_adjusted=time_adjuster is not None))
                     fold_errors.extend(
                         (np.abs(actual[valid] - pred[valid]) / np.abs(actual[valid])).tolist()
                     )
                     valid_folds += 1
+                    scored_years.append(int(test_year))
                     # 성능에는 개입하지 않고, 학습 범위를 한 자릿수 이상 벗어난 예측만 센다.
                     train_actual = price.loc[y_train.index].to_numpy(dtype=float)
                     train_actual = train_actual[np.isfinite(train_actual) & (train_actual > 0)]
@@ -329,9 +376,11 @@ def _rolling_time_cv_mape(
                         pred_valid = pred[valid]
                         extreme_hits += int(((pred_valid < lo) | (pred_valid > hi)).sum())
             except (ValueError, np.linalg.LinAlgError):
+                failures.append((int(test_year), "해당 연도 적합 또는 예측 실패"))
+                failure_codes.append((int(test_year), "fit_failure"))
                 continue
         if not fold_errors:
-            return _EMPTY_CV
+            return CvPhase(held_years=held, failure_reasons=tuple(failures), failure_codes=tuple(failure_codes), eligible_n=eligible_n)
         errors = np.asarray(fold_errors, dtype=float)
         return CvPhase(
             mape=round(float(np.mean(errors)) * 100, 2),
@@ -339,6 +388,12 @@ def _rolling_time_cv_mape(
             extreme_rate=round(extreme_hits / scored, 4) if scored else None,
             max_ape=round(float(np.max(errors)) * 100, 2),
             median_ape=round(float(np.median(errors)) * 100, 2),
+            n_trades=scored,
+            years=tuple(scored_years),
+            held_years=held,
+            failure_reasons=tuple(failures), failure_codes=tuple(failure_codes), eligible_n=eligible_n,
+            evaluation_signature=signature(dict(version="rolling-year-v1", method="trade_weighted_mape",
+                folds=evaluated)) if evaluated and all(f["train"] and f["test"] for f in evaluated) else None,
         )
 
     search = _eval(search_years)
@@ -418,13 +473,13 @@ def common_scale_frame(df: pd.DataFrame, blocks: list[BlockId] | list[str]) -> p
 
 
 def orig_cv_sort_key(fit: BlockFitResult) -> tuple[int, float, float]:
-    """원척도 CV-MAPE 우선, 없으면 in-sample MAPE, 마지막에 AIC."""
+    """원척도 CV-MAPE 우선, 없으면 학습 MAPE. 원척도/로그 AIC는 섞지 않는다."""
     if fit.cv_mape is not None:
         mape = float(fit.mape) if fit.mape is not None else 1e9
         return (0, float(fit.cv_mape), mape)
     if fit.mape is not None:
         return (1, float(fit.mape), 0.0)
-    return (2, float(fit.aic), 0.0)
+    return (2, float("inf"), float("inf"))
 
 
 def pick_predictive_scale(fits: dict[str, BlockFitResult]) -> BlockFitResult:

@@ -192,17 +192,18 @@ def _preset_answers_residential_regression(*, asset_type: str, cohort: bool) -> 
                 f"체크한 변수(전용면적, {age_note}층, {dong_note}{rights_note} 등)만 독립변수로 들어갑니다. "
                 "범주형 변수는 더미화(drop_first)되어 기준 범주 대비 계수로 표시됩니다. "
                 "코호트는 기본으로 거래 최다 단지 기준 단지 고정효과를 둡니다. "
-                "세대수·주차·공시지가·구조·유형을 켜면 FE 대신 그 변수로 단지 간 차이를 설명합니다."
+                "세대수·주차·공시지가·구조·유형이 실제 설계에 포함되면 FE 대신 그 변수로 단지 간 차이를 설명합니다. "
+                "체크해도 자료가 없거나 값이 같으면 생략될 수 있으며, 실제 반영 변수와 기준 범주는 분석 기준에서 확인합니다."
             ),
         },
         {
             "id": "interpret",
             "question": "계수를 어떻게 해석하나요?",
             "answer": (
-                "전용면적·연식·층(선형) 등 연속 변수: 계수 1단위 증가 시 금액(만원) 변화량. "
-                "더미 변수: 기준 범주 대비 금액 차이(만원). "
-                "R²는 모델이 가격 변동을 얼마나 설명하는지의 참고 지표입니다. "
-                "예측은 회귀 적합 후 입력값으로 개별 거래 금액·95% 구간을 추정합니다."
+                "선형 모형의 연속변수 계수는 해당 변수가 1단위 증가할 때의 금액 차이(만원)이고, 더미 계수는 기준 범주와의 금액 차이입니다. "
+                "로그 모형은 (exp(계수)−1)×100으로 금액의 비율 차이를 읽습니다. "
+                "R²는 선택한 종속변수 척도에서의 적합도이며 새로운 거래의 정확도를 뜻하지 않습니다. "
+                "조건별 추정에서는 거래시점과 필수 값을 입력합니다. 후보 순위는 공통 완전 관측의 선정용 검증 또는 학습 지표이며 독립 확인 결과는 아닙니다. 교차검증 미제공이면 분석 기준의 완료 분할 수와 실패 사유를 확인합니다. 일부 정상 예측만으로 전체 검증 오차를 제공하지 않습니다."
             ),
         },
         {
@@ -775,13 +776,15 @@ def build_residential_regression_explain(
         hints = [f"종속변수: 금액(만원, 수준). 연속 변수는 1단위당 만원 변화. 표본 n={result.n}."]
         formula = "금액(만원) = β₀ + Σ β_k·X_k  (선형 OLS · 기본)"
     if result.r_squared is not None:
-        adj = round(result.adj_r_squared, 3) if result.adj_r_squared else "—"
+        adj = round(result.adj_r_squared, 3) if result.adj_r_squared is not None else "—"
         hints.append(f"R²={round(result.r_squared, 3)}, Adj.R²={adj} (적합척도).")
     if getattr(result, "model_comparison", None) is not None or getattr(result, "model_candidates", None):
         hints.append(
             f"모형: 사용자 선택({model_type}). 화면 모형 추천은 이 거래에서 변수와 선형·로그를 탐색한다. 정답 식이 아니다."
         )
-    hints.append(f"독립변수: {', '.join(active) if active else '(없음)'}.")
+    hints.append(f"선택한 변수: {', '.join(active) if active else '(없음)'}.")
+    active = list(dict.fromkeys(short_display_label(c.label) for c in result.coefficients if c.name != "const"))
+    hints.append(f"실제 반영 계수: {', '.join(active) if active else '(없음)'}.")
 
     market = build_market_interpretation_hints(
         result.coefficients, model_type=model_type
@@ -892,8 +895,10 @@ def build_commercial_regression_explain(
         hints = [f"종속변수: 금액(만원, 수준). 표본 n={result.n}."]
         formula = "금액(만원) = β₀ + Σ β_k·X_k  (선형 OLS · 기본)"
     if result.r_squared is not None:
-        hints.append(f"R²={round(result.r_squared, 3)}, Adj.R²={round(result.adj_r_squared, 3) if result.adj_r_squared else '—'}.")
-    hints.append(f"독립변수: {', '.join(active) if active else '(없음)'}.")
+        hints.append(f"R²={round(result.r_squared, 3)}, Adj.R²={round(result.adj_r_squared, 3) if result.adj_r_squared is not None else '—'}.")
+    hints.append(f"선택한 변수: {', '.join(active) if active else '(없음)'}.")
+    active = list(dict.fromkeys(short_display_label(c.label) for c in result.coefficients if c.name != "const"))
+    hints.append(f"실제 반영 계수: {', '.join(active) if active else '(없음)'}.")
 
     market = build_market_interpretation_hints(
         result.coefficients, model_type=model_type

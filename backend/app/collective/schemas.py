@@ -6,6 +6,7 @@ from datetime import date
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
+from app.regression_contracts import RegressionAnalysisContext, RegressionComparisonContext, RegressionValidationContext
 
 AssetType = Literal["apartment", "rowhouse", "officetel", "presale"]
 
@@ -381,6 +382,8 @@ class DongOption(BaseModel):
 
 
 class CollectivePredictOptions(BaseModel):
+    contract_periods: list[str] = Field(default_factory=list)
+    contract_period_reference: Optional[str] = None
     exclusive_area: Optional[ContinuousRange] = None
     building_age: Optional[ContinuousRange] = None
     floor: Optional[ContinuousRange] = None
@@ -402,6 +405,7 @@ class CollectivePredictOptions(BaseModel):
 
 
 class CollectiveRegressionPredictInputs(BaseModel):
+    contract_period: Optional[str] = None
     exclusive_area: Optional[float] = None
     building_age: Optional[float] = None
     floor: Optional[float] = None
@@ -430,6 +434,7 @@ class CollectiveRegressionRequest(BaseModel):
 
 
 class CollectiveRegressionPredictRequest(CollectiveRegressionRequest):
+    expected_model_signature: Optional[str] = None
     inputs: CollectiveRegressionPredictInputs = Field(default_factory=CollectiveRegressionPredictInputs)
 
 
@@ -438,6 +443,7 @@ class CohortRegressionPredictRequest(CollectiveRegressionPredictRequest):
 
 
 class CollectiveRegressionPredictResponse(BaseModel):
+    applied_contract_period: Optional[str] = None
     n: int
     model_type: Literal["log", "linear"] = "linear"
     y_hat: float
@@ -451,6 +457,7 @@ class CollectiveRegressionPredictResponse(BaseModel):
 
 class ModelMetrics(BaseModel):
     """단일 모델의 원척도(price) 평가지표."""
+    cv_diagnostics: RegressionValidationContext | None = None
     model_type: Literal["log", "linear", "loglog"]
     adj_r_squared: Optional[float] = None
     mape: Optional[float] = None  # %
@@ -471,7 +478,32 @@ class ModelComparison(BaseModel):
     confidence_label: Optional[str] = None
 
 
+class CohortSlopeShift(BaseModel):
+    """인근 단지를 더하기 전·후, 같은 이름의 공통 기울기."""
+
+    name: str
+    label: str
+    coef_before: Optional[float] = None
+    se_before: Optional[float] = None
+    coef_after: Optional[float] = None
+    se_after: Optional[float] = None
+
+
+class CohortAugmentation(BaseModel):
+    """기준 단지 거래만으로 본 인근 단지 추가 효과. 합친 전체 MAPE는 쓰지 않는다."""
+
+    subject_n: int
+    added_n: int
+    mape_before: Optional[float] = None
+    mape_after: Optional[float] = None
+    metric_basis: Literal["cv", "insample"] = "insample"
+    slopes: list[CohortSlopeShift] = Field(default_factory=list)
+    note: str = ""
+
+
 class CollectiveModelCandidate(BaseModel):
+    cv_diagnostics: RegressionValidationContext | None = None
+    comparison: RegressionComparisonContext | None = None
     rank: int
     purpose: Literal["predictive", "explanatory"] = "predictive"
     blocks: list[str] = Field(default_factory=list)
@@ -484,6 +516,7 @@ class CollectiveModelCandidate(BaseModel):
 
 
 class CollectiveRegressionResponse(BaseModel):
+    analysis: RegressionAnalysisContext | None = None
     building_key: str
     display_name: str
     n: int
@@ -492,6 +525,9 @@ class CollectiveRegressionResponse(BaseModel):
     adj_r_squared: Optional[float] = None
     price_adj_r_squared: Optional[float] = None
     mape: Optional[float] = None  # in-sample or CV, 금액(만원) 원척도
+    in_sample_mape: Optional[float] = None
+    cv_mape: Optional[float] = None
+    metric_basis: Literal["cv", "insample"] = "insample"
     f_p_value: Optional[float] = None
     significant_count: int = 0
     equation: str = ""
@@ -500,6 +536,7 @@ class CollectiveRegressionResponse(BaseModel):
     predict_options: Optional[CollectivePredictOptions] = None
     model_comparison: Optional[ModelComparison] = None
     model_candidates: list[CollectiveModelCandidate] = Field(default_factory=list)
+    augmentation: Optional[CohortAugmentation] = None
     explain: Optional[AnalysisExplain] = None
     time_reference: Optional[str] = None
     categorical_missing: Literal["keep_unknown", "drop"] = "keep_unknown"

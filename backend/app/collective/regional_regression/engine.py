@@ -13,6 +13,7 @@ import pandas as pd
 import statsmodels.api as sm
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
+from app.regression_contracts import build_analysis_context, observation_signature, signature
 
 from app.collective.asset_scope import (
     RESIDENTIAL_ASSET_TYPES,
@@ -334,6 +335,10 @@ def load_danji_frame(
         df.loc[df["households"] <= 0, "households"] = np.nan
         df.loc[df["max_floor"] <= 0, "max_floor"] = np.nan
         df.loc[df["parking_per_household"] < 0, "parking_per_household"] = np.nan
+
+        # SQL 조회 순서와 무관하게 같은 단지가 같은 학습·검증 표본에 들어가야 한다.
+        # 기본회귀·추천·예측 재적합이 공유하는 입구에서 유형별 고유 키로 고정한다.
+        df = df.sort_values(["asset_type", "building_key"], kind="stable").reset_index(drop=True)
 
     selected = _selected_regression_types(req.asset_type)
     dropped_presale = includes_presale(req.asset_type or "apartment")
@@ -980,18 +985,39 @@ def _fit_ols(
     r2 = float(model.rsquared) if np.isfinite(model.rsquared) else None
 
     hold_mape = None
+    validation = dict(method="random_holdout", observation_unit="complex", status="not_run",
+        requested_folds=1, attempted_folds=0, completed_folds=0, eligible_n=0, evaluated_n=0,
+        reason_code="not_requested", reason="이 적합에서는 별도 평가를 요청하지 않았습니다.", failures=[])
     if hold_idx is not None:
         hold_idx = hold_idx.intersection(work.index)
+        validation.update(status="unavailable", eligible_n=len(hold_idx), reason_code="insufficient_evaluation_sample",
+            reason=f"별도 평가 단지 {len(hold_idx)}곳으로 최소 5곳에 못 미칩니다.")
+        if len(hold_idx) == 0 and len(work) < HOLD_MIN_N:
+            validation.update(reason_code="insufficient_sample",
+                reason=f"유효 단지 {len(work)}곳으로 분리 검증을 구성하는 기준 {HOLD_MIN_N}곳에 못 미칩니다.")
         if len(hold_idx) >= 5:
-            xh = sm.add_constant(x.reindex(hold_idx), has_constant="add").reindex(
-                columns=x_const.columns, fill_value=0
-            )
-            ph = np.asarray(model.predict(xh), dtype=float)
-            if model_type == "log":
-                ph = np.exp(ph) * smear
-            yh = work.loc[hold_idx, "median"].astype(float).to_numpy()
-            w_hold = _row_weights(work.loc[hold_idx], weight_mode)
-            _, hold_mape, _ = _orig_scale_metrics_w(yh, ph, k, w_hold)
+            validation["attempted_folds"] = 1
+            try:
+                xh = sm.add_constant(x.reindex(hold_idx), has_constant="add").reindex(
+                    columns=x_const.columns, fill_value=0)
+                ph = np.asarray(model.predict(xh), dtype=float)
+                if model_type == "log":
+                    ph = np.exp(ph) * smear
+                yh = work.loc[hold_idx, "median"].astype(float).to_numpy()
+                w_hold = _row_weights(work.loc[hold_idx], weight_mode)
+                if ph.shape != yh.shape or not np.isfinite(ph).all() or not np.isfinite(yh).all():
+                    validation.update(reason_code="invalid_prediction", reason="평가 단지 전체의 유한한 예측값을 확보하지 못했습니다.")
+                else:
+                    _, hold_mape, _ = _orig_scale_metrics_w(yh, ph, k, w_hold)
+                    if hold_mape is not None and np.isfinite(hold_mape):
+                        validation.update(status="available", completed_folds=1, evaluated_n=len(hold_idx), reason_code=None, reason=None)
+                    else:
+                        hold_mape = None
+                        validation.update(reason_code="invalid_metric", reason="분리 평가의 유한한 오차율을 계산하지 못했습니다.")
+            except Exception:
+                validation.update(reason_code="prediction_failure", reason="별도 평가 단지의 예측이 실패했습니다.")
+            if validation["status"] != "available":
+                validation["failures"] = [dict(fold=1, code=validation["reason_code"], reason=validation["reason"])]
 
     coefs: list[RegressionCoeff] = []
     for name in x_const.columns:
@@ -1021,6 +1047,7 @@ def _fit_ols(
         "r_squared": round(r2, 5) if r2 is not None else None,
         "mape": mape,
         "hold_mape": hold_mape,
+        "validation": validation,
         "rmse": rmse,
         "f_p_value": round(fp, 5) if fp is not None and np.isfinite(fp) else None,
         "coefficients": coefs,
@@ -1141,6 +1168,52 @@ def _price_intervals(
     return y_hat, ci_lo, ci_hi, pi_lo, pi_hi
 
 
+def _extension_comparison(work: pd.DataFrame, req: RegionalRegressionRunRequest):
+    """기존 지역의 같은 holdout을 양쪽 학습에서 제외한 별도 비교 실험."""
+    if not req.evaluation_region_addrs:
+        return None
+    from app.collective.regional_regression.schemas import RegionalExtensionComparison
+    from app.flat_sido_region import is_flat_sido_addr2
+    from app.region_scope import parse_region_addr_keys
+    from app.regression_contracts import comparison_context
+    triples = parse_region_addr_keys(req.evaluation_region_addrs)
+    mask = pd.Series(False, index=work.index)
+    for a1, a2, leaf in triples:
+        match = work["addr1"].eq(a1)
+        if not is_flat_sido_addr2(a2):
+            match &= work["addr2"].eq(a2)
+        match &= work.apply(lambda row: _leaf_names_match(leaf,
+            {str(row.get("addr3") or ""), str(row.get("addr4") or "")}), axis=1)
+        mask |= match
+    base = work.loc[mask].copy()
+    before_train, hold = _split_hold(base.index)
+    after_train = work.index.difference(hold, sort=False)
+    if not len(hold) or len(before_train) < MIN_FIT_N:
+        return RegionalExtensionComparison(status="unavailable", fit_before_n=len(before_train),
+            fit_after_n=len(after_train), reason="기존 지역에 검증용 단지를 따로 둘 표본이 부족합니다.")
+    base_req = req.model_copy(update={"region_addrs": req.evaluation_region_addrs})
+    levels_b, ref_b, _ = _prepare_region_dummy(base, base_req)
+    expanded = work.copy()
+    levels_a, ref_a, _ = _prepare_region_dummy(expanded, req)
+    xb, _, _ = _design(base, req.variables, region_levels=levels_b or None, region_ref=ref_b)
+    xa, _, _ = _design(expanded, req.variables, region_levels=levels_a or None, region_ref=ref_a)
+    before = _fit_ols(base, xb, model_type=req.model_type, weight_mode=req.weight_mode,
+        train_idx=before_train, hold_idx=hold)
+    after = _fit_ols(expanded, xa, model_type=req.model_type, weight_mode=req.weight_mode,
+        train_idx=after_train, hold_idx=hold)
+    if not before or not after or before["hold_mape"] is None or after["hold_mape"] is None:
+        return RegionalExtensionComparison(status="unavailable", evaluation_n=len(hold),
+            fit_before_n=len(before_train), fit_after_n=len(after_train), reason="두 모형의 동일 대상 검증을 모두 완료하지 못했습니다.")
+    proof = comparison_context(base.loc[hold], observation_unit="complex", fit_n=len(before_train),
+        evaluation_n=len(hold), method=f"same_base_holdout_seed42_{req.weight_mode}",
+        role="selection_validation", split=dict(hold=observation_signature(base.loc[hold], observation_unit="complex")))
+    if not proof.evaluation_signature:
+        return RegionalExtensionComparison(status="unavailable", reason="평가 대상 단지를 식별할 정보가 없습니다.")
+    return RegionalExtensionComparison(status="available", evaluation_n=len(hold), fit_before_n=before["n"],
+        fit_after_n=after["n"], mape_before=before["hold_mape"], mape_after=after["hold_mape"],
+        evaluation_signature=proof.evaluation_signature)
+
+
 def _regional_vars(blocks: list[str]) -> RegionalRegressionVariables:
     chosen = set(blocks)
     return RegionalRegressionVariables(
@@ -1181,26 +1254,41 @@ def suggest_regional_regression(
     if unified:
         pool.append("asset_type_dummy")
 
-    best: dict[tuple, dict] = {}
+    designs = []
+    common = None
     for blocks in iter_block_subsets(pool):
         variables = _regional_vars(blocks)
         try:
             elig = _eligible_mask(df, variables, min_tx=int(req.min_tx))
             work = df.loc[elig].copy()
+            if req.categorical_missing == "drop":
+                from app.regression_missing import drop_unknown_rows
+                columns = (["structure_group"] if variables.structure else []) + (["builder_group"] if variables.builder else [])
+                work, _ = drop_unknown_rows(work, columns)
             if len(work) < MIN_FIT_N:
                 continue
-            train_idx, hold_idx = _split_hold(work.index)
-            if len(train_idx) < MIN_FIT_N:
+            if len(_split_hold(work.index)[0]) < MIN_FIT_N:
                 continue
-            region_levels, region_ref, _region_warns = _prepare_region_dummy(work, req)
-            x, _labels, _design_warns = _design(
-                work,
-                variables,
-                region_levels=region_levels or None,
-                region_ref=region_ref,
-            )
         except Exception:
             continue
+        common = work.index if common is None else common.intersection(work.index, sort=False)
+        designs.append((blocks, variables))
+    if common is None or len(_split_hold(common)[0]) < MIN_FIT_N:
+        return []
+    work = df.loc[common].copy()
+    train_idx, hold_idx = _split_hold(work.index)
+    region_levels, region_ref, _region_warns = _prepare_region_dummy(work, req)
+    from app.regression_contracts import comparison_context
+    comparison = comparison_context(work, observation_unit="complex", fit_n=len(train_idx),
+        evaluation_n=len(hold_idx) if len(hold_idx) else None,
+        method=f"random_holdout_seed42_{req.weight_mode}" if len(hold_idx) else f"in_sample_{req.weight_mode}",
+        role="selection_validation" if len(hold_idx) else "training",
+        split=dict(train=observation_signature(work.loc[train_idx], observation_unit="complex"),
+            hold=observation_signature(work.loc[hold_idx], observation_unit="complex")))
+    best: dict[tuple, dict] = {}
+    for blocks, variables in designs:
+        x, _labels, _design_warns = _design(work, variables,
+            region_levels=region_levels or None, region_ref=region_ref)
         if x is None or x.empty or x.shape[1] == 0:
             continue
         sig = tuple(sorted(str(col) for col in x.columns))
@@ -1227,6 +1315,7 @@ def suggest_regional_regression(
                 "adj_r_squared": fitted.get("adj_r_squared"),
                 "mape": fitted.get("mape"),
                 "hold_mape": fitted.get("hold_mape"),
+                "validation": fitted.get("validation"),
             }
             key = (sig, model_type)
             prev = best.get(key)
@@ -1261,6 +1350,7 @@ def suggest_regional_regression(
         for rank, row in enumerate(ordered[:3], start=1):
             out.append(
                 RegionalModelCandidate(
+                    comparison=comparison if row.get("hold_mape") is not None else comparison.model_copy(update={"role": "training", "method": f"in_sample_{req.weight_mode}", "evaluation_n": None, "evaluation_signature": None}),
                     rank=rank,
                     purpose=purpose,  # type: ignore[arg-type]
                     blocks=list(row["blocks"]),
@@ -1268,7 +1358,7 @@ def suggest_regional_regression(
                     n=row["n"],
                     adj_r_squared=row.get("adj_r_squared"),
                     mape=row.get("mape"),
-                    hold_mape=row.get("hold_mape"),
+                    hold_mape=row.get("hold_mape"), validation=row.get("validation"),
                 )
             )
     return out
@@ -1290,7 +1380,8 @@ def _with_regional_recommendation(
         return resp.model_copy(
             update={"warnings": [*resp.warnings, "모형 추천 탐색을 마치지 못했습니다"]}
         )
-    return resp.model_copy(update={"model_candidates": candidates})
+    return resp.model_copy(update={"model_candidates": candidates,
+        "warnings": resp.warnings if candidates else [*resp.warnings, "공통 유효 표본에서 비교 가능한 모형 후보를 확보하지 못했습니다."]})
 
 
 def run_regional_regression(
@@ -1470,6 +1561,7 @@ def run_regional_regression(
 
     equation, enriched, price_adj = enrich_regression_response(
         fitted["coefficients"],
+        target_label="단지 중앙단가", target_unit="만원/㎡",
         model_type=req.model_type,
         price_adj_r_squared=fitted["adj_r_squared"],
     )
@@ -1488,6 +1580,9 @@ def run_regional_regression(
             FittedBuildingRow(
                 building_key=str(r["building_key"]),
                 display_name=str(r["display_name"] or ""),
+                transaction_n=int(r["n_tx"]) if pd.notna(r.get("n_tx")) else None,
+                address=" ".join(str(r[col]).strip() for col in ("addr1", "addr2", "addr3", "addr4")
+                    if col in r and pd.notna(r[col]) and str(r[col]).strip()) or None,
                 y=round(y, 1),
                 y_hat=round(float(yh), 1),
                 ape=round(ape, 1) if ape is not None else None,
@@ -1510,7 +1605,8 @@ def run_regional_regression(
     rows = rows[:FITTED_CAP]
 
     blocks = _block_contrib(
-        work, train_idx, hold_idx, v, req.model_type, req.weight_mode, core_hold=fitted.get("hold_mape")
+        work, train_idx, hold_idx, v, req.model_type, req.weight_mode, core_hold=fitted.get("hold_mape"),
+        region_levels=region_levels or None, region_ref=region_ref,
     )
     age0_gap = _newbuild_age0_gap(work, x, fitted, model_type=req.model_type)
 
@@ -1534,10 +1630,24 @@ def run_regional_regression(
     return _with_regional_recommendation(
         RegionalRegressionRunResponse(
         n=fitted["n"],
+        extension_comparison=_extension_comparison(work, req),
+        analysis=build_analysis_context(request=req, rows=work.loc[train_idx], coefficients=coeffs,
+            reference_categories=_reference_categories(labels),
+            observation_unit="complex", target="complex_median_unit_price", target_unit="만원/㎡",
+            response_scale=req.model_type, fit_n=fitted["n"], exog=fitted["model"].model.exog,
+            source_n=len(df), metrics=[
+                dict(key="mape", role="training", scale="unit_price", value=fitted["mape"], n=len(train_idx), method="in_sample"),
+                dict(key="mape", role="selection_validation", scale="unit_price", value=fitted["hold_mape"],
+                    n=len(hold_idx) if len(hold_idx) else None, method="random_holdout_seed42",
+                    evaluation_signature=signature(dict(train=observation_signature(work.loc[train_idx], observation_unit="complex"),
+                        hold=observation_signature(work.loc[hold_idx], observation_unit="complex"), weight=req.weight_mode)) if len(hold_idx) else None,
+                    reason=fitted["validation"].get("reason"), validation=fitted["validation"]),
+            ]),
         model_type=req.model_type,
         weight_mode=req.weight_mode,
         n_effective=fitted.get("n_effective"),
         r_squared=fitted["r_squared"],
+        model_adj_r_squared=float(fitted["model"].rsquared_adj),
         adj_r_squared=price_adj,
         mape=fitted["mape"],
         hold_mape=fitted["hold_mape"],
@@ -1579,6 +1689,8 @@ def _block_contrib(
     weight_mode: WeightMode,
     *,
     core_hold: float | None,
+    region_levels: list[str] | None = None,
+    region_ref: str | None = None,
 ) -> list[BlockContribution]:
     out: list[BlockContribution] = []
     core = RegionalRegressionVariables(
@@ -1591,7 +1703,7 @@ def _block_contrib(
         asset_type_dummy=v.asset_type_dummy,
         assessed_land_price=False,
     )
-    x_core, _, _ = _design(work, core)
+    x_core, _, _ = _design(work, core, region_levels=region_levels, region_ref=region_ref)
     fit_core = _fit_ols(
         work,
         x_core,
@@ -1626,7 +1738,7 @@ def _block_contrib(
         if not flag:
             continue
         extra = core.model_copy(update={key: True})
-        x, _, _ = _design(work, extra)
+        x, _, _ = _design(work, extra, region_levels=region_levels, region_ref=region_ref)
         fit = _fit_ols(
             work, x, model_type=model_type, weight_mode=weight_mode, train_idx=train_idx, hold_idx=hold_idx
         )
@@ -1662,12 +1774,19 @@ def predict_regional(
 ) -> dict[str, Any]:
     """같은 스코프·변수로 다시 적합하고 입력 한 건을 예측한다. 표본이 작아 매번 재적합해도 부담이 없다."""
     result = run_regional_regression(conn, req, with_recommendation=False)
+    from app.regression_contracts import require_model_signature
+    require_model_signature(getattr(req, "expected_model_signature", None),
+        result.analysis.model_signature if result.analysis else None)
     if result.n < MIN_FIT_N or not result.coefficients:
         raise ValueError(result.warnings[0] if result.warnings else "적합된 식이 없습니다")
 
     df, _ = load_danji_frame(conn, req)
     v = req.variables
     work = df.loc[_eligible_mask(df, v, min_tx=int(req.min_tx))].copy()
+    if req.categorical_missing == "drop":
+        from app.regression_missing import drop_unknown_rows
+        cat_cols = (["structure_group"] if v.structure else []) + (["builder_group"] if v.builder else [])
+        work, _ = drop_unknown_rows(work, cat_cols)
     train_idx, _hold = _split_hold(work.index)
     region_levels, region_ref, _region_warns = _prepare_region_dummy(work, req)
     x, labels, _ = _design(
@@ -1681,6 +1800,11 @@ def predict_regional(
     )
     if not fitted:
         raise ValueError("예측용 식을 적합하지 못했습니다")
+    if getattr(req, "expected_model_signature", None) is not None:
+        context = build_analysis_context(request={}, rows=work.loc[train_idx], coefficients=fitted["coefficients"],
+            observation_unit="complex", target="complex_median_unit_price", target_unit="만원/㎡",
+            response_scale=req.model_type, fit_n=fitted["n"])
+        require_model_signature(req.expected_model_signature, context.model_signature)
 
     struct_ref = labels.get("_struct_ref")
     builder_ref = labels.get("_builder_ref")
@@ -1706,6 +1830,20 @@ def predict_regional(
         present = set(work["asset_type"].astype(str))
         type_levels = [t for t in ASSET_TYPE_ORDER if t in present]
         type_levels.extend(sorted(t for t in present if t and t not in type_levels))
+    for name in ("households", "max_floor", "building_age", "parking_per_household", "assessed_land_price"):
+        if name not in fitted["x_cols"]:
+            continue
+        value = getattr(inputs, name)
+        if value is None or not np.isfinite(value):
+            raise ValueError(f"{LABELS.get(name, name)} 값을 입력해 주세요.")
+        if value < 0 or (name in ("households", "assessed_land_price") and value == 0):
+            raise ValueError(f"{LABELS.get(name, name)} 값의 범위를 확인해 주세요.")
+    for name, allowed, label in (("structure_group", struct_levels, "구조"),
+            ("builder_group", builder_levels, "건설사"),
+            ("asset_type", type_levels, "유형"), ("region_group", region_levels, "지역")):
+        value = getattr(inputs, name)
+        if allowed and value is not None and value not in allowed:
+            raise ValueError(f"모형에 포함된 {label} 값을 선택해 주세요.")
     x1, _, _ = _design(
         one,
         v,

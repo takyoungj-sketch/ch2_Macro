@@ -133,7 +133,14 @@ def run_stage2_twin(conn, inp: Stage2Input) -> RecommendationStage2:
         search_pool=list(inp.blocks),
         anchor_df=inp.ctx.df,
     )
-    twin_codes = tuple(validated.twin_codes[:1])
+    chosen = [str(code).strip() for code in (inp.req.selected_twin_codes or []) if str(code).strip()]
+    if chosen:
+        chosen_set = set(chosen)
+        twin_codes = tuple(code for code in validated.twin_codes if code in chosen_set)
+        pool_mode = "selected"
+    else:
+        twin_codes = tuple(validated.twin_codes[:1])
+        pool_mode = "prefix"
     req_for_pool = inp.req.model_copy(update={"profile_twin_neighbors": validated.neighbors})
 
     if not twin_codes:
@@ -171,6 +178,7 @@ def run_stage2_twin(conn, inp: Stage2Input) -> RecommendationStage2:
         twin_region_col=twin1_region_col,
         fixed_response_scale=scale,
         mode="diagnose",
+        pool_mode=pool_mode,
     )
 
     gate_note = hard_gate_summary(list(pooling.twin_gates))

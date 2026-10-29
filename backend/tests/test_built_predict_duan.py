@@ -118,3 +118,15 @@ def test_linear_prediction_has_no_duan_factor(patched_scope):
     # 선형은 역변환이 없으므로 점추정이 평균CI·PI의 산술 중심이다.
     assert out.y_hat == pytest.approx((out.pi_lower + out.pi_upper) / 2, rel=1e-6)
     assert not any("평균 보정" in w for w in out.warnings)
+
+
+def test_prediction_checks_displayed_model_before_using_refreshed_data(patched_scope):
+    from fastapi import HTTPException
+    req = _request("log")
+    fit = eng._fit_ols(patched_scope, _VARS, "sigungu", response_scale="log")
+    req.expected_model_signature = fit.analysis.model_signature
+    eng.predict_regression(None, req)
+    patched_scope.loc[0, "price"] *= 1.1
+    with pytest.raises(HTTPException) as exc:
+        eng.predict_regression(None, req)
+    assert exc.value.status_code == 409

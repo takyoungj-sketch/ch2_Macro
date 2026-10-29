@@ -88,6 +88,8 @@ _CONTINUOUS = frozenset(
 
 def _fmt_num(v: float) -> str:
     av = abs(v)
+    if v != 0 and av < 0.00005:
+        return f"{v:.3g}"
     if av >= 100:
         return f"{v:,.0f}"
     if av >= 1:
@@ -97,22 +99,25 @@ def _fmt_num(v: float) -> str:
     return s
 
 
-def _fmt_manwon(v: float) -> str:
+def _fmt_manwon(v: float, unit: str = "만원") -> str:
     sign = "+" if v >= 0 else "−"
-    return f"{sign}{abs(round(v)):,}만원"
+    value = abs(v)
+    amount = f"{value:,.0f}" if value >= 1 else f"{value:.3g}"
+    return f"{sign}{amount}{unit}"
 
 
 def _fmt_pct_from_log(coef: float) -> str:
-    pct = (math.exp(coef) - 1.0) * 100.0
+    pct = math.expm1(coef) * 100.0
     sign = "+" if pct >= 0 else "−"
-    return f"{sign}{abs(pct):.1f}%"
+    amount = f"{abs(pct):.1f}" if abs(pct) >= .1 or pct == 0 else f"{abs(pct):.3g}"
+    return f"{sign}{amount}%"
 
 
 def _is_continuous(name: str) -> bool:
     if name in _CONTINUOUS:
         return True
     if name.startswith(
-        ("dong_", "rights_", "bld_", "zone_", "use_", "roadw_", "floor_rel", "floor_grp", "floor_", "struct_", "builder_", "atype_")
+        ("dong_", "rights_", "bld_", "zone_", "use_", "roadw_", "floor_rel", "floor_grp", "floor_", "struct_", "builder_", "atype_", "time_", "clu_", "shop_", "fac_", "region_", "addr4_")
     ):
         return False
     return name not in ("const",)
@@ -162,19 +167,13 @@ def short_display_label(label: str) -> str:
     return s or label
 
 
-def _effect_magnitude(coef: float, model_type: ModelType) -> float:
-    if model_type == "log":
-        return abs(math.exp(coef) - 1.0)
-    return abs(coef)
-
-
 def build_market_interpretation_hints(
     coefficients: Sequence,
     *,
     model_type: ModelType,
     limit: int = 4,
 ) -> list[str]:
-    """AI·Explain용 시장 번역 불릿 (유의 변수, 효과 크기 순)."""
+    """AI·Explain용 계수 해석. 단위가 다른 원계수를 중요도로 정렬하지 않는다."""
     pool = [
         c
         for c in coefficients
@@ -183,10 +182,7 @@ def build_market_interpretation_hints(
         and (_p := _coef_attr(c, "p")) is not None
         and _p < EQUATION_SIG_P
     ]
-    pool.sort(
-        key=lambda c: _effect_magnitude(float(_coef_attr(c, "coef")), model_type),
-        reverse=True,
-    )
+    pool = sort_coefficients_for_display(pool)
     out: list[str] = []
     for i, c in enumerate(pool[:limit], start=1):
         label = short_display_label(_coef_attr(c, "label") or _coef_attr(c, "name"))
@@ -202,9 +198,11 @@ def format_equation(
     coefficients: Sequence,
     *,
     model_type: ModelType,
+    target_label: str = "금액",
+    target_unit: str = "만원",
 ) -> str:
     """유의(p<0.1) 변수만 포함한 회귀식 문자열."""
-    dep = "log(금액)" if model_type == "log" else "금액(만원)"
+    dep = f"log({target_label})" if model_type == "log" else f"{target_label}({target_unit})"
     by_name = {_coef_attr(c, "name"): c for c in coefficients}
     intercept = by_name.get("const")
     if intercept is None:
@@ -230,26 +228,30 @@ def interpret_coefficient(
     coef: float,
     *,
     model_type: ModelType,
+    target_label: str = "금액",
+    target_unit: str = "만원",
 ) -> str:
     """변수별 직관적 해석 (만원 또는 %)."""
     if name == "const":
         if model_type == "log":
-            approx = math.exp(coef)
-            return f"기준 조건 log(금액) 출발점 (대략 {round(approx):,}만원 수준, 다른 변수·기준 범주 전제)"
-        return f"기준 조건 출발 수준 약 {round(coef):,}만원 (다른 변수 0·기준 범주 전제)"
+            return f"로그 {target_label} 상수 {_fmt_num(coef)} (다른 변수 0·기준 범주 전제)"
+        return f"기준 조건 출발 수준 {_fmt_num(coef)}{target_unit} (다른 변수 0·기준 범주 전제)"
 
     unit = _unit_suffix(name)
     step = f"1{unit} " if unit else "1단위 "
 
     if model_type == "log":
-        pct = _fmt_pct_from_log(coef)
+        try:
+            pct = _fmt_pct_from_log(coef)
+        except OverflowError:
+            return "역변환 값이 계산 범위를 넘어 효과를 표시하지 않습니다. 모형과 계수를 확인하세요."
         if _is_continuous(name):
-            return f"{step}증가 시 금액 약 {pct}"
+            return f"{step}증가 시 {target_label} 약 {pct}"
         return f"기준 대비 약 {pct}"
 
     if _is_continuous(name):
-        return f"{step}증가 시 {_fmt_manwon(coef)}"
-    return f"기준 대비 {_fmt_manwon(coef)}"
+        return f"{step}증가 시 {_fmt_manwon(coef, target_unit)}"
+    return f"기준 대비 {_fmt_manwon(coef, target_unit)}"
 
 
 def enrich_regression_response(
@@ -258,10 +260,12 @@ def enrich_regression_response(
     model_type: ModelType,
     model_comparison=None,
     price_adj_r_squared: float | None = None,
+    target_label: str = "금액",
+    target_unit: str = "만원",
 ) -> tuple[str, list[dict], float | None]:
     """회귀식·effect_plain·금액척도 adj R²."""
-    equation = format_equation(coefficients, model_type=model_type)
-    enriched = enrich_coefficients(coefficients, model_type=model_type)
+    equation = format_equation(coefficients, model_type=model_type, target_label=target_label, target_unit=target_unit)
+    enriched = enrich_coefficients(coefficients, model_type=model_type, target_label=target_label, target_unit=target_unit)
     price_adj: float | None = price_adj_r_squared
     if price_adj is None and model_comparison is not None:
         m = model_comparison.log if model_type == "log" else model_comparison.linear
@@ -274,6 +278,8 @@ def enrich_coefficients(
     coefficients: Sequence,
     *,
     model_type: ModelType,
+    target_label: str = "금액",
+    target_unit: str = "만원",
 ) -> list[dict]:
     """계수 목록에 effect_plain 필드를 추가."""
     out: list[dict] = []
@@ -288,7 +294,8 @@ def enrich_coefficients(
             "se": _coef_attr(c, "se"),
             "t": _coef_attr(c, "t"),
             "p": _coef_attr(c, "p"),
-            "effect_plain": interpret_coefficient(name, label, coef, model_type=model_type),
+            "effect_plain": interpret_coefficient(name, label, coef, model_type=model_type,
+                target_label=target_label, target_unit=target_unit),
         }
         out.append(row)
     return out

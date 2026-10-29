@@ -201,6 +201,15 @@ def filter_twins_by_hard_gates(
     return gates, passed
 
 
+def _selected_pool_variant(
+    gate_passed_codes: list[str],
+) -> list[tuple[str, str, tuple[str, ...], int]]:
+    """사용자가 고른 지역만 한 표본으로 합친다."""
+    codes = tuple(gate_passed_codes)
+    label = "Local + 선택 지역" if len(codes) > 1 else "Local + 선택 1곳"
+    return [("twin_selected", label, codes, len(codes))]
+
+
 def _pool_variants(gate_passed_codes: list[str]) -> list[tuple[str, str, tuple[str, ...], int]]:
     """구조 순위 접두만 실험 — 1위, 1·2위, … (조합 검색 없음)."""
     out: list[tuple[str, str, tuple[str, ...], int]] = []
@@ -453,7 +462,11 @@ def _research_pool_variant(
         return None
 
     req_for_fit = req.model_copy(update={"variables": pool_spec})
-    result = run_group_best_subset(pooled_ctx, req_for_fit, pool_blocks)
+    from app.recommendation.built_pool import fit_is_offerable
+
+    result = run_group_best_subset(
+        pooled_ctx, req_for_fit, pool_blocks, eligible=fit_is_offerable
+    )
     if result is None:
         return None
     from app.recommendation.ranks import pick_primary_predictive
@@ -550,6 +563,7 @@ def evaluate_pooling_candidates(
     mode: PoolingMode = "diagnose",
     twin_blocks: list[BlockId] | list[str] | None = None,
     twin_region_col: str | None = None,
+    pool_mode: str = "prefix",
 ) -> PoolingEvaluation:
     """Local과 Twin 접두 표본을 실측 비교한다.
 
@@ -600,7 +614,12 @@ def evaluate_pooling_candidates(
         )
 
     all_candidates = [local_metrics]
-    for variant_id, label, codes, prefix_k in _pool_variants(gate_passed_codes):
+    variants = (
+        _selected_pool_variant(gate_passed_codes)
+        if pool_mode == "selected"
+        else _pool_variants(gate_passed_codes)
+    )
+    for variant_id, label, codes, prefix_k in variants:
         if mode == "optimize":
             metrics = _research_pool_variant(
                 conn,

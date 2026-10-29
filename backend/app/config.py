@@ -53,6 +53,8 @@ class Settings(BaseSettings):
     #: DECISIONS D-007 — 비어 있으면 인증 미들웨어 비활성. 값이 있으면 비-/health 요청은
     #: `X-Api-Token: <값>` 헤더가 필요하다. 결제·로그인 도입 전 1단 보호용.
     api_token: str = ""
+    #: 명시적인 로컬 개발 접근. 운영 기본값은 비활성입니다.
+    local_dev_access: bool = Field(default=False, validation_alias="CH2_LOCAL_DEV_ACCESS")
     #: 관리자 QA 검증 API (`/api/admin/qa/*`). 비어 있으면 통과(로컬).
     #: 값이 있으면 `X-Qa-Audit-Token` 필요. 공개 앱과 분리.
     qa_audit_token: str = Field(default="", validation_alias="QA_AUDIT_TOKEN")

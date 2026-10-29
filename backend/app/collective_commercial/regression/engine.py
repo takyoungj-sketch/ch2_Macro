@@ -51,6 +51,7 @@ class CommercialRegressionDesignMeta:
     cluster_reference_key: str | None = None
     cluster_fe_map: dict[str, str] = field(default_factory=dict)
     time_reference: str | None = None
+    time_periods: list[str] = field(default_factory=list)
 
 
 MIN_CLUSTER_FE_GROUP = 5
@@ -84,6 +85,8 @@ def _continuous_range(work: pd.DataFrame, col: str) -> tuple[float, float] | Non
 def _prepare_work(df: pd.DataFrame, req: CommercialRegressionRequest) -> tuple[pd.DataFrame, list[str]]:
     warnings: list[str] = []
     work = df.copy()
+    if "transaction_id" in work.columns:
+        work = work.sort_values("transaction_id", kind="stable").reset_index(drop=True)
     mask = work["building_age"].isna() & work["building_year"].notna() & work["contract_year"].notna()
     work.loc[mask, "building_age"] = (
         work.loc[mask, "contract_year"].astype(float) - work.loc[mask, "building_year"].astype(float)
@@ -197,6 +200,8 @@ def _build_design_matrix(
     if getattr(req.variables, "contract_period", False):
         period_part, period_labels, time_ref = _add_contract_period_columns(work)
         meta.time_reference = time_ref
+        if time_ref:
+            meta.time_periods = sorted([time_ref, *[col.removeprefix("time_") for col in period_part.columns]])
         if not period_part.empty:
             parts.append(period_part)
             labels.update(period_labels)
@@ -251,6 +256,8 @@ def _meta_to_predict_options(
     req: CommercialRegressionRequest,
 ) -> CommercialPredictOptions:
     opts = CommercialPredictOptions(floor_mode=meta.floor_mode, max_floor=meta.max_floor)
+    opts.contract_periods = meta.time_periods
+    opts.contract_period_reference = meta.time_reference
 
     if req.variables.gross_area and "gross_area" in meta.continuous_ranges:
         lo, hi = meta.continuous_ranges["gross_area"]
@@ -328,7 +335,30 @@ def _inputs_to_x_row(
     *,
     cluster_key: str | None = None,
 ) -> pd.Series:
+    for name, allowed, label in (("zone_type", meta.zone_categories, "용도지역"),
+            ("building_use", meta.building_use_categories, "건축물용도"),
+            ("road_width_label", meta.road_width_categories, "도로조건")):
+        value = getattr(inputs, name)
+        if allowed and value is not None and str(value).strip() not in allowed:
+            raise ValueError(f"모형에 포함된 {label} 값을 선택해 주세요.")
+    if (cluster_key and meta.cluster_reference_key and cluster_key != meta.cluster_reference_key
+            and cluster_key not in meta.cluster_fe_map):
+        raise ValueError("모형에 포함된 도로를 선택해 주세요.")
     row = {c: 0.0 for c in X.columns}
+    for name in ("gross_area", "building_age", "floor", "road_code"):
+        if name not in meta.continuous_ranges:
+            continue
+        value = getattr(inputs, name)
+        if value is None or not np.isfinite(value):
+            raise ValueError(f"{meta.column_labels.get(name, name)} 값을 입력해 주세요.")
+        if name == "gross_area" and value <= 0:
+            raise ValueError("연면적은 0보다 커야 합니다.")
+    if meta.time_reference:
+        period = inputs.contract_period or meta.time_reference
+        if period not in meta.time_periods:
+            raise ValueError("모형에 포함된 거래시점을 선택해 주세요.")
+        if period != meta.time_reference:
+            row[f"time_{period}"] = 1.0
     if req.variables.gross_area and inputs.gross_area is not None:
         row["gross_area"] = float(inputs.gross_area)
     if req.variables.building_age and inputs.building_age is not None:
@@ -475,7 +505,22 @@ def _run_regression_core(
 
     predict_options = _meta_to_predict_options(meta, req)
     comparison = _build_model_comparison(y, X_const)
+    from app.regression_contracts import build_analysis_context
     resp = CommercialRegressionResponse(
+        analysis=build_analysis_context(request=req, rows=work.loc[model.model.data.row_labels], coefficients=coefs,
+            sample_steps=[dict(label="조회 조건에 맞는 입력 거래", n=len(df), excluded=0),
+                dict(label="기본 값·이상치 확인 후", n=len(work), excluded=len(df)-len(work)),
+                dict(label="변수 자료 확인 후 적합", n=int(model.nobs), excluded=len(work)-int(model.nobs))],
+            reference_categories={"용도지역": meta.zone_reference, "건축물 용도": meta.building_use_reference,
+                "도로조건": meta.road_width_reference, "거래시점": meta.time_reference,
+                "도로": meta.cluster_labels.get(meta.cluster_reference_key)},
+            observation_unit="transaction", target="price", target_unit="만원", response_scale=model_type,
+            fit_n=int(model.nobs), exog=model.model.exog, source_n=len(df), metrics=[
+                dict(key="mape", role="training", scale="price", value=metrics["in_sample_mape"], n=int(model.nobs), method="in_sample"),
+                dict(key="mape", role="selection_validation", scale="price", value=metrics["cv_mape"],
+                    n=int(model.nobs) if metrics["cv_mape"] is not None else None, method="random_kfold_5",
+                    reason=metrics["cv_diagnostics"].get("reason"), validation=metrics["cv_diagnostics"]),
+            ]),
         cluster_key="",
         display_label="",
         n=int(model.nobs),
@@ -484,6 +529,9 @@ def _run_regression_core(
         adj_r_squared=float(model.rsquared_adj) if model.rsquared_adj is not None else None,
         price_adj_r_squared=price_adj,
         mape=metrics.get("mape"),
+        in_sample_mape=metrics.get("in_sample_mape"),
+        cv_mape=metrics.get("cv_mape"),
+        metric_basis=metrics["metric_basis"],
         f_p_value=float(model.f_pvalue) if model.f_pvalue is not None else None,
         significant_count=sig_count,
         equation=equation,
@@ -493,6 +541,10 @@ def _run_regression_core(
         model_comparison=comparison,
         time_reference=meta.time_reference,
     )
+    from app.regression_contracts import grouped_sample_details
+    resp.analysis.sample_groups = grouped_sample_details(df, work.loc[model.model.data.row_labels],
+        key="cluster_key", labels=meta.cluster_labels, reference=meta.cluster_reference_key,
+        effects=meta.cluster_fe_map)
     return model, X, meta, resp
 
 
@@ -554,9 +606,10 @@ def suggest_commercial_regression(
             return None
         return y, x
 
-    found = search_block_models(pool, build_xy)
+    found = search_block_models(pool, build_xy, observations=work)
     return [
         CommercialModelCandidate(
+            comparison=row.get("comparison"), cv_diagnostics=row.get("cv_diagnostics"),
             rank=row["rank"],
             purpose=row["purpose"],
             blocks=row["blocks"],
@@ -592,7 +645,8 @@ def _attach_commercial_candidates(
     except Exception:
         warnings = [*resp.warnings, "모형 추천 탐색을 마치지 못했습니다"]
         return resp.model_copy(update={"warnings": warnings})
-    return resp.model_copy(update={"model_candidates": candidates})
+    return resp.model_copy(update={"model_candidates": candidates,
+        "warnings": resp.warnings if candidates else [*resp.warnings, "공통 유효 표본에서 비교 가능한 모형 후보를 확보하지 못했습니다."]})
 
 
 def run_commercial_regression(
@@ -604,6 +658,12 @@ def run_commercial_regression(
     is_shop: bool,
 ) -> CommercialRegressionResponse:
     model, _, _, resp = _run_regression_core(df, req, is_shop=is_shop, cohort_mode=False)
+    if resp.analysis is not None and model is not None and not resp.analysis.sample_groups:
+        from app.regression_contracts import grouped_sample_details
+        # Use the actual fit rows; the core may disable unsupported request options.
+        resp.analysis.sample_groups = grouped_sample_details(df.assign(cluster_key=cluster_key),
+            df.loc[model.model.data.row_labels].assign(cluster_key=cluster_key), key="cluster_key",
+            labels={cluster_key: display_label})
     resp = resp.model_copy(update={"cluster_key": cluster_key, "display_label": display_label})
     if model is None:
         return resp
@@ -665,6 +725,10 @@ def predict_commercial_regression(
     if model is None or X.empty:
         raise ValueError("; ".join(fit_resp.warnings) or "예측 불가 — 회귀 미추정")
 
+    from app.regression_contracts import require_model_signature
+    require_model_signature(getattr(req, "expected_model_signature", None),
+        fit_resp.analysis.model_signature if fit_resp.analysis else None)
+
     x_row = _inputs_to_x_row(
         X,
         meta,
@@ -708,6 +772,7 @@ def predict_commercial_regression(
 
     return {
         "n": fit_resp.n,
+        "applied_contract_period": (inputs.contract_period or meta.time_reference) if meta.time_reference else None,
         "model_type": model_type,
         "y_hat": round(y_hat, 1),
         "pi_lower": round(pi_lower, 1),

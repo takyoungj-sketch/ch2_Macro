@@ -201,7 +201,6 @@ def macro_summary_ko(
     if composite.tier == "usable":
         return (
             "현재 변수 구성에서 지역 거래가격과 관련된 구조적 관계가 확인됩니다. "
-            f"다만 분석 표본이 {n}건으로 제한되어 있으므로 개별 계수의 크기보다는 "
             "변수의 방향과 반복적으로 나타나는 관계를 중심으로 해석하는 것이 적절합니다."
         )
     if composite.tier == "stable":

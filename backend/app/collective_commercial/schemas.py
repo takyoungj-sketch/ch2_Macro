@@ -6,6 +6,7 @@ from datetime import date
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
+from app.regression_contracts import RegressionAnalysisContext, RegressionComparisonContext, RegressionValidationContext
 
 from app.collective.schemas import AnalysisExplain, ContinuousRange, ModelComparison, RegressionCoeff
 from app.collective.schemas import AnalysisFeatures, FloorIndexCell, FloorIndexDiagnostics
@@ -181,6 +182,8 @@ class CommercialRegressionRequest(BaseModel):
     addr4_list: list[str] = Field(default_factory=list)
     contract_year_from: Optional[int] = None
     contract_year_to: Optional[int] = None
+    contract_date_from: Optional[date] = None
+    contract_date_to: Optional[date] = None
     variables: CommercialRegressionSpec = Field(default_factory=CommercialRegressionSpec)
     exclude_outliers_iqr: bool = False
     outlier_iqr_multiplier: float = 3.0
@@ -189,6 +192,8 @@ class CommercialRegressionRequest(BaseModel):
 
 
 class CommercialModelCandidate(BaseModel):
+    cv_diagnostics: RegressionValidationContext | None = None
+    comparison: RegressionComparisonContext | None = None
     rank: int
     purpose: Literal["predictive", "explanatory"] = "predictive"
     blocks: list[str] = Field(default_factory=list)
@@ -200,6 +205,7 @@ class CommercialModelCandidate(BaseModel):
 
 
 class CommercialRegressionResponse(BaseModel):
+    analysis: RegressionAnalysisContext | None = None
     cluster_key: str
     display_label: str
     n: int
@@ -208,6 +214,9 @@ class CommercialRegressionResponse(BaseModel):
     adj_r_squared: Optional[float] = None
     price_adj_r_squared: Optional[float] = None
     mape: Optional[float] = None
+    in_sample_mape: Optional[float] = None
+    cv_mape: Optional[float] = None
+    metric_basis: Literal["cv", "insample"] = "insample"
     f_p_value: Optional[float] = None
     significant_count: int = 0
     equation: str = ""
@@ -221,6 +230,8 @@ class CommercialRegressionResponse(BaseModel):
 
 
 class CommercialPredictOptions(BaseModel):
+    contract_periods: list[str] = Field(default_factory=list)
+    contract_period_reference: Optional[str] = None
     gross_area: Optional[ContinuousRange] = None
     building_age: Optional[ContinuousRange] = None
     floor: Optional[ContinuousRange] = None
@@ -237,6 +248,7 @@ class CommercialPredictOptions(BaseModel):
 
 
 class CommercialRegressionPredictInputs(BaseModel):
+    contract_period: Optional[str] = None
     gross_area: Optional[float] = None
     building_age: Optional[float] = None
     floor: Optional[float] = None
@@ -248,10 +260,12 @@ class CommercialRegressionPredictInputs(BaseModel):
 
 
 class CommercialRegressionPredictRequest(CommercialRegressionRequest):
+    expected_model_signature: Optional[str] = None
     inputs: CommercialRegressionPredictInputs = Field(default_factory=CommercialRegressionPredictInputs)
 
 
 class CommercialRegressionPredictResponse(BaseModel):
+    applied_contract_period: Optional[str] = None
     n: int
     model_type: Literal["log", "linear"] = "linear"
     y_hat: float

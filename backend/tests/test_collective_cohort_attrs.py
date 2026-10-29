@@ -3,10 +3,33 @@
 from __future__ import annotations
 
 import pandas as pd
+import numpy as np
 
 from app.collective.regression.building_attrs import apply_building_attr_quality
 from app.collective.regression.engine import _build_design_matrix
 from app.collective.schemas import CollectiveRegressionRequest, CollectiveRegressionSpec
+
+
+def test_attribute_state_distinguishes_constant_missing_and_single_complex():
+    from app.collective.regression.engine import _resolve_entering_attrs
+    cases = [(_two_buildings(hh_a=100, hh_b=100), "constant"),
+        (_two_buildings(hh_a=None, hh_b=None), "no_data"),
+        (_two_buildings(hh_a=100, hh_b=200).query("building_key == 'aaa'"), "not_identifiable")]
+    for frame, expected in cases:
+        states = {}
+        _, entering = _resolve_entering_attrs(frame, _req(households=True), [], states)
+        assert states["households"] == expected
+        assert "households" not in entering
+
+
+def test_attribute_state_records_loss_of_variation_after_common_missing_filter():
+    from app.collective.regression.engine import _resolve_entering_attrs
+    frame = pd.DataFrame(dict(building_key=["a", "b", "c"],
+        households=[100., 200., np.nan], parking_per_household=[1., np.nan, 2.]))
+    states = {}
+    work, entering = _resolve_entering_attrs(frame, _req(households=True, parking=True), [], states)
+    assert len(work) == 1 and not entering
+    assert states == {"households": "missing_after_filter", "parking": "missing_after_filter"}
 
 
 def _req(**kwargs) -> CollectiveRegressionRequest:

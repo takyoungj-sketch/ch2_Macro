@@ -52,6 +52,22 @@ def test_orig_cv_key_prefers_cv_over_aic():
     assert orig_cv_sort_key(better_cv) < orig_cv_sort_key(worse_cv)
 
 
+def test_missing_price_errors_do_not_compare_aic_across_response_scales():
+    linear = SimpleNamespace(cv_mape=None, mape=None, aic=10.)
+    logged = SimpleNamespace(cv_mape=None, mape=None, aic=-1000.)
+    assert orig_cv_sort_key(linear) == orig_cv_sort_key(logged)
+
+
+def test_cv_coverage_exposes_attempted_and_failed_years():
+    from app.built.regression.selection.fit import CvPhase
+    from app.recommendation.ranks import _coverage
+    coverage = _coverage(CvPhase(mape=10, folds=1, n_trades=20, years=(2024,),
+        held_years=(2023, 2024), failure_reasons=((2023, "학습 표본 부족"),)))
+    assert coverage.status == "partial"
+    assert coverage.requested_years == [2023, 2024]
+    assert coverage.failure_reasons == {"2023": "학습 표본 부족"}
+
+
 def test_pick_explanatory_scale_skips_linear():
     fits = {
         "linear": SimpleNamespace(aic=1.0, response_scale="linear"),

@@ -21,6 +21,7 @@ from app.regression_missing import (
     pick_reference,
     treatment_label,
 )
+from app.regression_contracts import build_analysis_context, grouped_sample_details
 
 if TYPE_CHECKING:
     from app.schemas import (
@@ -78,6 +79,8 @@ class _DesignBundle:
 def _prepare_df(rows: list[dict], req: "LandRegressionRequest") -> tuple[pd.DataFrame, list[str]]:
     warnings: list[str] = []
     df = pd.DataFrame(rows)
+    if "id" in df.columns:
+        df = df.sort_values("id", kind="stable").reset_index(drop=True)
     df = df.dropna(subset=["unit_price_per_sqm", "area_sqm"])
     df["unit_price_per_sqm"] = df["unit_price_per_sqm"].astype(float)
     df["area_sqm"] = df["area_sqm"].astype(float)
@@ -96,13 +99,25 @@ def _prepare_df(rows: list[dict], req: "LandRegressionRequest") -> tuple[pd.Data
     return df, warnings
 
 
+def _exclude_assessed_shares(df: pd.DataFrame, warnings: list[str]) -> tuple[pd.DataFrame, list[str]]:
+    """공시지가 분석 및 그 후보 탐색에서 보강 불가 지분거래를 제외한다."""
+    out = list(warnings)
+    if "is_partial_ownership" in df.columns:
+        shares = df["is_partial_ownership"].fillna(False).astype(bool)
+        n_share = int(shares.sum())
+        df = df.loc[~shares].copy()
+        if n_share:
+            out.append(f"지분거래 {n_share}건 제외 — 대장 보강이 불가능해 공시지가 모형에 사용하지 않습니다.")
+    return df, out
+
+
 def _apply_assessed_case(
     df: pd.DataFrame, req: "LandRegressionRequest", warnings: list[str]
 ) -> tuple[pd.DataFrame, list[str]]:
-    """공시지가를 켠 식만 결측 행을 뺀다. 추천 탐색 풀에는 넣지 않는다."""
+    """공시지가 모형은 연결된 전체면적 거래만 사용하며 값을 보충하지 않는다."""
     if not req.variables.assessed_land_price:
         return df, warnings
-    out = list(warnings)
+    df, out = _exclude_assessed_shares(df, warnings)
     if "official_price_won" not in df.columns:
         df = df.copy()
         df["official_price_won"] = np.nan
@@ -431,7 +446,10 @@ def run_land_regression(
 
     min_n = max(MIN_N, int(req.min_n))
     df, warnings = _prepare_df(rows, req)
+    n_prepared = len(df)
+    n_shares = int(df["is_partial_ownership"].fillna(False).astype(bool).sum()) if req.variables.assessed_land_price and "is_partial_ownership" in df.columns else 0
     df, warnings = _apply_assessed_case(df, req, warnings)
+    n_assessed = len(df)
     n_excluded = 0
     if req.categorical_missing == "drop":
         cat_cols: list[str] = []
@@ -479,7 +497,29 @@ def run_land_regression(
     correlations = _land_correlations(scatter_df, bundle)
     partial_regressions = _land_partial_plots(bundle)
 
+    source_frame = pd.DataFrame(rows)
+    group_details = grouped_sample_details(source_frame, df.loc[model.model.data.row_labels], key="beopjungri_name",
+        reference=bundle.reference_categories.get("법정동") if bundle.use_beop else None,
+        effects=[name.removeprefix("beop_") for name in bundle.X_const.columns if name.startswith("beop_")])
+    if req.variables.assessed_land_price:
+        for group in group_details:
+            raw = source_frame.loc[source_frame.beopjungri_name.fillna("미확인").astype(str) == group["key"]]
+            shares = raw["is_partial_ownership"].fillna(False).astype(bool) if "is_partial_ownership" in raw else pd.Series(False, index=raw.index)
+            price = pd.to_numeric(raw["official_price_won"], errors="coerce") if "official_price_won" in raw else pd.Series(np.nan, index=raw.index)
+            group.update(structural_excluded_n=int(shares.sum()),
+                linked_n=int(((~shares) & (price > 0)).sum()),
+                unlinked_n=int(((~shares) & ~(price > 0)).sum()))
     return LandRegressionResponse(
+        analysis=build_analysis_context(request=req, rows=df.loc[model.model.data.row_labels],
+            sample_groups=group_details,
+            reference_categories=bundle.reference_categories,
+            sample_steps=[dict(label="조회 조건에 맞는 입력 거래", n=len(rows), excluded=0),
+                dict(label="기본 값·이상치 필터 확인 후", n=n_prepared, excluded=len(rows)-n_prepared),
+                *([dict(label="공시지가 분석: 보강 불가 지분 제외 후", n=n_prepared-n_shares, excluded=n_shares),
+                    dict(label="공시지가 연결값 확인 후", n=n_assessed, excluded=n_prepared-n_shares-n_assessed)] if req.variables.assessed_land_price else []),
+                dict(label="범주 결측·설계행렬 확인 후 적합", n=int(model.nobs), excluded=n_assessed-int(model.nobs))],
+            coefficients=coefs, observation_unit="transaction", target="unit_price", target_unit="만원/㎡",
+            response_scale=bundle.model_type, fit_n=int(model.nobs), exog=model.model.exog, source_n=len(rows)),
         n=int(model.nobs),
         model_type=bundle.model_type,  # type: ignore[arg-type]
         r_squared=float(model.rsquared),
@@ -507,6 +547,11 @@ def suggest_land_regression(
     from app.schemas import LandModelCandidate, LandRegressionSuggestResponse
 
     base, warnings = _prepare_df(rows, req)
+    excluded_blocks = ["assessed_land_price"] if req.variables.assessed_land_price else []
+    if excluded_blocks:
+        base, warnings = _exclude_assessed_shares(base, warnings)
+        warnings.append("공시지가 제외 탐색입니다. 현재 공시지가 모형과 표본이 다르므로 지표를 직접 비교할 수 없습니다.")
+        req = req.model_copy(update={"variables": req.variables.model_copy(update={"assessed_land_price": False})})
     block_fields = [
         "area_sqm",
         "road_condition",
@@ -580,6 +625,7 @@ def suggest_land_regression(
         n=selection_n,
         selection_n=selection_n,
         warnings=warnings,
+        excluded_blocks=excluded_blocks,
     )
 
 
@@ -682,6 +728,9 @@ def predict_land_regression(
 
     from app.schemas import LandRegressionPredictResponse
 
+    if req.variables.assessed_land_price and req.partial_ownership:
+        raise HTTPException(status_code=400, detail="지분거래는 대장 보강이 불가능해 공시지가 모형으로 추정할 수 없습니다.")
+
     min_n = max(MIN_N, int(req.min_n))
     df, warnings = _prepare_df(rows, req)
     df, warnings = _apply_assessed_case(df, req, warnings)
@@ -695,6 +744,13 @@ def predict_land_regression(
     bundle = _build_design(df, req, warnings)
     model = sm.OLS(bundle.y_fit, bundle.X_const, missing="drop").fit()
     from app.regression_sample_judge import identification_note, judge_exog, provision_note
+    if getattr(req, "expected_model_signature", None) is not None:
+        from app.regression_contracts import require_model_signature
+        context = build_analysis_context(request={}, rows=df.loc[model.model.data.row_labels],
+            coefficients=[dict(name=str(name), coef=float(value)) for name, value in model.params.items()],
+            observation_unit="transaction", target="unit_price", target_unit="만원/㎡",
+            response_scale=bundle.model_type, fit_n=int(model.nobs))
+        require_model_signature(req.expected_model_signature, context.model_signature)
 
     verdict = judge_exog(model.model.exog)
     if verdict.tier == "blocked":
@@ -710,17 +766,19 @@ def predict_land_regression(
     if ident:
         warn.insert(1 if verdict.tier == "caution" else 0, ident)
     if bundle.model_type == "log":
-        warn.insert(0, "log(단가) 모형 — 예측값은 exp(ŷ) 역변환 (만원/㎡)")
+        warn.insert(0, "로그 모형의 원단가 평균 추정값입니다. 평균 추정범위는 역변환 보정에 따른 근사 범위입니다.")
     warn.extend(_extrapolation_warnings(bundle, req))
 
+    smear = _duan_smearing(model.resid) if bundle.model_type == "log" else 1.0
     return LandRegressionPredictResponse(
         n=int(model.nobs),
         model_type=bundle.model_type,  # type: ignore[arg-type]
-        y_hat=_back_transform(float(row["mean"]), bundle.model_type),
+        y_hat=_back_transform(float(row["mean"]), bundle.model_type) * smear,
         pi_lower=_back_transform(float(row["obs_ci_lower"]), bundle.model_type),
         pi_upper=_back_transform(float(row["obs_ci_upper"]), bundle.model_type),
-        ci_lower=_back_transform(float(row["mean_ci_lower"]), bundle.model_type),
-        ci_upper=_back_transform(float(row["mean_ci_upper"]), bundle.model_type),
+        ci_lower=_back_transform(float(row["mean_ci_lower"]), bundle.model_type) * smear,
+        ci_upper=_back_transform(float(row["mean_ci_upper"]), bundle.model_type) * smear,
+        log_smearing_factor=smear,
         warnings=warn,
     )
 

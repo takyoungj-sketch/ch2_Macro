@@ -54,6 +54,18 @@ def test_assessed_price_off_keeps_rows_and_marks_caution():
     assert any(w == "분석 제공 기준(30건, 계수당 5건)에 못 미쳐 참고용" for w in res.warnings)
 
 
+def test_region_linkage_counts_separate_structural_shares_from_unlinked_nonshares():
+    rows = _rows()
+    for i, row in enumerate(rows):
+        row.update(beopjungri_name="신림동" if i < 10 else "봉천동", is_partial_ownership=i < 2)
+    result = run_land_regression(rows, _req(assessed=True))
+    groups = {g["key"]: g for g in result.analysis.sample_groups}
+    assert groups["신림동"]["structural_excluded_n"] == 2
+    assert groups["신림동"]["linked_n"] == 8 and groups["신림동"]["unlinked_n"] == 0
+    assert groups["봉천동"]["linked_n"] == 8 and groups["봉천동"]["unlinked_n"] == 2
+    assert sum(g["fit_n"] for g in groups.values()) == result.n == 16
+
+
 def test_land_standard_when_n_and_rank_both_clear():
     rows = []
     for i in range(40):
