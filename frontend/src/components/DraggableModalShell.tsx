@@ -363,17 +363,19 @@ export default function DraggableModalShell({
 
   if (!open) return null;
 
+  const minimizedStyle: CSSProperties = {
+    left: 16,
+    bottom: 16,
+    width: "max-content",
+    maxWidth: "min(240px, calc(100vw - 2rem))",
+    height: "auto",
+    maxHeight: "none",
+    transform: "none",
+  };
+
   const panelStyle: CSSProperties = box
     ? minimized
-      ? {
-          left: 16,
-          bottom: 16,
-          width: "min(420px, calc(100vw - 2rem))",
-          height: "auto",
-          maxWidth: "none",
-          maxHeight: "none",
-          transform: "none",
-        }
+      ? minimizedStyle
       : {
           left: box.x,
           top: box.y,
@@ -384,15 +386,7 @@ export default function DraggableModalShell({
           transform: "none",
         }
     : minimized
-      ? {
-          left: 16,
-          bottom: 16,
-          width: "min(420px, calc(100vw - 2rem))",
-          height: "auto",
-          maxWidth: "none",
-          maxHeight: "none",
-          transform: "none",
-        }
+      ? minimizedStyle
       : {
           left: "50%",
           top: `calc(50% + ${modalViewport().headerHeight / 2}px)`,
@@ -434,7 +428,11 @@ export default function DraggableModalShell({
       >
         <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
         <div
-          className={`px-4 py-3 modal-header shrink-0 border-b border-slate-200 dark:border-slate-700 select-none touch-none ${
+          className={`${
+            minimized
+              ? "px-2.5 py-1"
+              : "px-4 py-3 border-b border-slate-200 dark:border-slate-700"
+          } modal-header shrink-0 select-none touch-none ${
             fullscreen
               ? "cursor-default"
               : "cursor-grab active:cursor-grabbing"
@@ -444,17 +442,22 @@ export default function DraggableModalShell({
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
         >
-          <div className="flex justify-between items-start gap-2">
+          <div className={`flex justify-between gap-1.5 ${minimized ? "items-center" : "items-start"}`}>
             <div className="min-w-0 pointer-events-none">
-              <h2 id={titleId} className={`font-bold ${fullscreen ? "text-base" : "text-sm"}`}>
+              <h2
+                id={titleId}
+                className={`font-bold truncate ${
+                  minimized ? "max-w-[11rem] whitespace-nowrap text-sm" : fullscreen ? "text-base" : "text-sm"
+                }`}
+              >
                 {title}
               </h2>
-              {subtitle && (
+              {!minimized && subtitle && (
                 <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</div>
               )}
             </div>
             <div className="flex items-center gap-1 shrink-0" data-no-drag>
-              {headerActions}
+              {!minimized && headerActions}
               <button
                 type="button"
                 aria-label={minimized ? "모달 복원" : "모달 최소화"}
@@ -464,7 +467,7 @@ export default function DraggableModalShell({
               >
                 {minimized ? "▣" : "−"}
               </button>
-              {allowFontScale && (
+              {!minimized && allowFontScale && (
                 <div
                   className="flex items-center gap-0.5 border border-slate-200 dark:border-slate-600 rounded-md bg-slate-50/90 dark:bg-slate-700/90 p-0.5"
                   aria-label="모달 글자 크기"
@@ -496,7 +499,7 @@ export default function DraggableModalShell({
                   </button>
                 </div>
               )}
-              {allowFullscreen && (
+              {!minimized && allowFullscreen && (
                 <button
                   type="button"
                   aria-label={fullscreen ? "전체화면 나가기" : "전체화면"}
@@ -538,6 +541,7 @@ export default function DraggableModalShell({
 
         {resizable &&
           !fullscreen &&
+          !minimized &&
           RESIZE_HANDLES.map(({ edge, className, cursor }) => (
             <div
               key={edge}

@@ -27,7 +27,7 @@ import {
   isTechnicalExtrapolationWarning,
   shouldHidePrediction,
 } from "../utils/extrapolationPolicy";
-import { ADMIN_LABELS, ASSET_TYPE_LABELS, formatCoefName } from "../utils/regressionFormat";
+import { ADMIN_LABELS, ASSET_TYPE_LABELS, predictInputLabel } from "../utils/regressionFormat";
 import {
   ESTIMATE_COPY,
   StatisticalEstimateCaption,
@@ -359,7 +359,7 @@ export default function PredictPanel({
           return (
           <label key={c.name} className="space-y-1 shrink-0">
             <span className="text-slate-500 block whitespace-nowrap">
-              {formatCoefName(c.name, assetType, regBody.response_scale)}
+              {predictInputLabel(c.name, assetType)}
             </span>
             <input
               className={clsx(

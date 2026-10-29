@@ -896,7 +896,7 @@ export default function BuildingDetailModal({
             return help ? <AnalysisHelpPanel explain={help} className="ml-1" /> : null;
           })()}
           {!narrow && peerBuildings.length > 0 && panel !== "danji" && (
-            <div className="mt-2 rounded border border-indigo-100 bg-indigo-50/50 px-2 py-1.5 text-xs">
+            <div className="mt-2 rounded border border-indigo-300 dark:border-indigo-400/70 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-2 text-xs">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-semibold text-indigo-950 dark:text-indigo-100">
                   {cohortExtra.length > 0 ? `함께 분석할 단지 ${cohortExtra.length}곳` : "함께 분석할 단지"}

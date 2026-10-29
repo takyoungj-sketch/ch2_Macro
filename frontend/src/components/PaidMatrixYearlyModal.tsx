@@ -1285,6 +1285,11 @@ export default function PaidMatrixYearlyModal({
                     <span className="text-slate-500">면적 로그 변환 (log area)</span>
                   </label>
                 )}
+                {regVars.area_sqm && regVars.log_area && regModelType === "log" && (
+                  <p className="text-[11px] text-slate-500">
+                    이 조합의 면적 계수는 면적이 1% 늘 때 단가의 % 변화입니다.
+                  </p>
+                )}
                 <ZoneCaution />
                 <div className="flex flex-wrap gap-4 text-xs">
                   <span className="text-slate-500 font-medium">종속변수:</span>

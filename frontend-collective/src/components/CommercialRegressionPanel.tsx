@@ -529,6 +529,7 @@ export default function CommercialRegressionPanel({
           <span className="inline-flex items-center gap-0.5">
             로그(% 해석)
             <StatsGlossaryHelp termId="log_model" size="xs" />
+            <span className="text-[10px] text-slate-500">금액만 로그. 연면적은 그대로.</span>
           </span>
         </label>
       </div>
@@ -596,7 +597,11 @@ export default function CommercialRegressionPanel({
         </p>
       )}
       {regM.data && (
-        <CollectiveRegressionResults data={toResultsData(regM.data)} modelType={modelType} />
+        <CollectiveRegressionResults
+          data={toResultsData(regM.data)}
+          modelType={modelType}
+          logNote="금액만 로그입니다. 연면적은 그대로입니다."
+        />
       )}
 
       {regM.data?.predict_options && (

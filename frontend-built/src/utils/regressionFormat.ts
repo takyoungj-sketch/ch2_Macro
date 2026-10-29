@@ -58,6 +58,12 @@ function dummyReferenceDisplay(name: string, opts?: PredictOptions | null): stri
   return null;
 }
 
+/** 예측 칸에 넣는 원값. 식의 log()는 서버가 이 값에 적용한다. */
+export function predictInputLabel(name: string, assetType?: AssetType): string {
+  if (name === "assessed_land_price") return "개별공시지가(원/㎡)";
+  return formatCoefName(name, assetType);
+}
+
 /** statsmodels 변수명 → 표시용 한글 (맥락 유지) */
 export function formatCoefName(name: string, assetType?: AssetType, responseScale?: ResponseScale): string {
   if (COEF_LABELS[name]) {

@@ -311,7 +311,7 @@ function TwinRegionPanel(props: {
           ? " 식의 통계 창도 3년입니다."
           : ` 식은 이 화면의 ${props.windowYears}년 창으로 맞춥니다.`}
         {" "}
-        변수, 모형, 최소 거래수는 지역회귀 탭과 같습니다.
+        변수, 모형, 최소 거래수는 기본회귀 탭과 같습니다.
       </p>
       {props.extraTypeLabel && (
         <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug">
@@ -320,7 +320,7 @@ function TwinRegionPanel(props: {
       )}
       <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug">
         이 식은 이미 고른 읍면동 전부와 체크한 쌍둥이 지역의 단지를 한 식으로 합칩니다. 쌍둥이 순위만 기준
-        읍면동으로 고릅니다. 미래 가격의 정답을 보장하지 않습니다. 그 지역만의 식은 지역회귀 탭에 있습니다.
+        읍면동으로 고릅니다. 미래 가격의 정답을 보장하지 않습니다. 그 지역만의 식은 기본회귀 탭에 있습니다.
       </p>
 
       {props.choices.length > 1 && (
@@ -654,28 +654,28 @@ export default function RegionalRegressionModal(props: Props) {
           <div className="flex flex-wrap gap-0.5 rounded-md border modal-tab-bar p-0.5" role="tablist">
             {(
               [
-                ["local", "지역회귀"],
-                ["twin", "쌍둥이지역"],
+                ["local", "기본회귀"],
+                ["twin", "쌍둥이 확장"],
               ] as const
             ).map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={effectiveTab === id}
-                className={clsx(
-                  "px-3 py-1.5 text-sm font-medium rounded transition-colors whitespace-nowrap",
-                  effectiveTab === id ? "modal-tab-active" : "modal-tab-idle",
-                )}
-                onClick={() => {
-                  setTab(id);
-                  setPickKey(VIRTUAL_KEY);
-                  setInputs(emptyPredictInputs());
-                  predM.reset();
-                }}
-              >
-                {label}
-              </button>
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={effectiveTab === id}
+              className={clsx(
+                "px-3 py-1.5 text-sm font-medium rounded transition-colors whitespace-nowrap",
+                effectiveTab === id ? "modal-tab-active" : "modal-tab-idle",
+              )}
+              onClick={() => {
+                setTab(id);
+                setPickKey(VIRTUAL_KEY);
+                setInputs(emptyPredictInputs());
+                predM.reset();
+              }}
+            >
+              {label}
+            </button>
             ))}
           </div>
         )}
@@ -749,6 +749,7 @@ export default function RegionalRegressionModal(props: Props) {
           <label className="flex items-center gap-1.5">
             <input type="radio" checked={modelType === "log"} onChange={() => setModelType("log")} />
             log — log(단가) ~ 변수 (% 해석)
+            <span className="text-[10px] text-slate-500">단가만 로그. 세대수·연식 등 변수는 그대로.</span>
           </label>
         </section>
 
@@ -1300,6 +1301,7 @@ export default function RegionalRegressionModal(props: Props) {
                 />
               </>
             )}
+
           </>
         )}
       </div>
@@ -1359,7 +1361,7 @@ function LowSampleHint({
         </li>
         <li>
           그래도 부족하면 이 창을 닫고 지도에서 같은 시군구의 인접 읍·면·동을 추가한 뒤 다시
-          실행하거나, 쌍둥이지역 탭에서 지역을 고르고 통합회귀를 실행해 보세요. 3·5·7년 창과
+          실행하거나, 쌍둥이 확장 탭에서 지역을 고르고 통합회귀를 실행해 보세요. 3·5·7년 창과
           선택한 유형은 그대로 유지됩니다.
         </li>
       </ol>
