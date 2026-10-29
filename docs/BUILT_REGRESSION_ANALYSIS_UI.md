@@ -1,5 +1,7 @@
 # 복합(Built) 회귀 분석 UI — 세로 흐름 설계
 
+> **2026-10-26 후속 검토:** [복합 회귀 분석 UX·설명문구 개선안](BUILT_REGRESSION_UX_IMPROVEMENT_PLAN.md). 아래는 이전 세로 섹션 설계 기록이며, 검토 시점의 Macro 화면은 예측형·설명형·쌍둥이 확장 탭을 사용한다. 후속 문서는 기본회귀·기존 Macro 탐색·상위지역 재적합의 개선 제안으로, 구현 완료 기록이 아니다. 모형추천2로 교체하지 않는다.
+
 > **상태:** 2026-09-19 — Macro는 작업 창(①~⑤ 세로 섹션) · 기본 통계 비대체  
 > **범위:** `frontend-built` 회귀·Macro 탐색·상위지역 UX  
 > **상위:** [CH2_RECOMMENDATION_ENGINE_DESIGN.md](./CH2_RECOMMENDATION_ENGINE_DESIGN.md) · [CH2_CONSTITUTION.md](./CH2_CONSTITUTION.md)
