@@ -16,7 +16,12 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.platform.db import get_platform_db
 from app.platform.deps import CurrentUser, require_user
-from app.platform.entitlements import activate_subscription, create_subscription, list_entitlements
+from app.platform.entitlements import (
+    activate_subscription,
+    apply_staff_entitlements,
+    create_subscription,
+    list_entitlements,
+)
 from app.platform.toss_client import TossApiError, confirm_payment, toss_configured
 from app.platform.web_subscription import (
     WEB_MONTH_PLAN_IDS,
@@ -154,7 +159,7 @@ def subscription_me(
     db: Session = Depends(get_platform_db),
 ):
     sub = get_web_subscription(db, user.id)
-    ent = list_entitlements(db, user.id)
+    ent = apply_staff_entitlements(user.role, list_entitlements(db, user.id))
     if not sub:
         return {"active": False, "entitlements": ent}
     plan = PLANS_BY_ID.get(str(sub.get("plan_id") or ""))

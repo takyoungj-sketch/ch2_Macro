@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.platform.db import get_platform_db
 from app.platform.deps import CurrentUser, get_optional_user, require_user
-from app.platform.entitlements import list_entitlements
+from app.platform.entitlements import apply_staff_entitlements, list_entitlements
 from app.platform.jwt_util import COOKIE_NAME, create_access_token
 from app.platform.oauth_next import DEFAULT_NEXT, safe_oauth_next
 from app.platform.review_login import (
@@ -356,7 +356,7 @@ def auth_entitlements(
     user: CurrentUser = Depends(require_user),
     db: Session = Depends(get_platform_db),
 ):
-    ent = list_entitlements(db, user.id)
+    ent = apply_staff_entitlements(user.role, list_entitlements(db, user.id))
     return {
         "user_id": user.id,
         "products": ent,
@@ -488,14 +488,18 @@ def logout(response: Response):
 
 
 @router.get("/status")
-def auth_status(user: Annotated[CurrentUser | None, Depends(get_optional_user)]):
+def auth_status(request: Request, user: Annotated[CurrentUser | None, Depends(get_optional_user)]):
+    from app.local_dev_access import local_dev_access_enabled
+
     providers = _oauth_providers()
+    local_dev = local_dev_access_enabled(request)
     if user is None:
-        return {"logged_in": False, "providers": providers}
+        return {"logged_in": False, "providers": providers, "local_dev_access": local_dev}
     return {
         "logged_in": True,
         "id": user.id,
         "nickname": user.nickname,
         "role": user.role,
         "providers": providers,
+        "local_dev_access": local_dev,
     }

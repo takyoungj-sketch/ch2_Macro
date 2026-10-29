@@ -1,3 +1,28 @@
+.product-jump {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+}
+
+.product-jump__btn {
+  display: block;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 1rem;
+  text-align: center;
+  text-decoration: none;
+}
+
+.product-jump__btn:hover {
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+
 .admin-nav {
   display: flex;
   gap: 0.75rem;
@@ -74,7 +99,8 @@
 }
 
 @media (max-width: 720px) {
-  .stat-grid {
+  .stat-grid,
+  .product-jump {
     grid-template-columns: 1fr;
   }
 }

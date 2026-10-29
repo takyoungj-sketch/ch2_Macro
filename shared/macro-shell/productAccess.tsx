@@ -25,11 +25,12 @@ async function loadStatus(): Promise<ProductAccessStatus> {
   try {
     const auth = await fetch("/api/auth/status", { credentials: "include" });
     if (!auth.ok) return "anonymous";
-    const body = (await auth.json()) as { logged_in?: boolean; local_dev_access?: boolean };
+    const body = (await auth.json()) as { logged_in?: boolean; role?: string; local_dev_access?: boolean };
     if (import.meta.env.DEV && ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname) && body.local_dev_access === true) {
       return "macro";
     }
     if (!body.logged_in) return "anonymous";
+    if (body.role === "admin") return "macro";
     const sub = await fetch("/api/billing/subscription/me", { credentials: "include" });
     if (!sub.ok) return "login";
     const subBody = (await sub.json()) as { entitlements?: { macro?: boolean } };

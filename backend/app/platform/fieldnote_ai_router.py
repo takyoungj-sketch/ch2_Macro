@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.platform.db import get_platform_db
 from app.platform.deps import CurrentUser, get_optional_user
-from app.platform.entitlements import list_entitlements
+from app.platform.entitlements import apply_staff_entitlements, list_entitlements
 
 router = APIRouter(prefix="/fieldnote/ai", tags=["fieldnote-ai"])
 _log = logging.getLogger(__name__)
@@ -178,7 +178,7 @@ def _is_fieldnote_premium(db: Session, user: CurrentUser | None) -> bool:
     if user is None:
         return False
     try:
-        ent = list_entitlements(db, user.id)
+        ent = apply_staff_entitlements(user.role, list_entitlements(db, user.id))
         return bool(ent.get("fieldnote"))
     except Exception:
         _log.exception("entitlement check failed user_id=%s", getattr(user, "id", None))

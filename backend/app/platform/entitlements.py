@@ -37,6 +37,16 @@ def list_entitlements(db: Session, user_id: int) -> dict[str, bool]:
     return out
 
 
+def apply_staff_entitlements(role: str, ent: dict[str, bool]) -> dict[str, bool]:
+    """관리자 세션은 구독 행 없이 Macro·FieldNote를 연다. 청구 대상이 아니다."""
+    if role != "admin":
+        return ent
+    opened = dict(ent)
+    opened["macro"] = True
+    opened["fieldnote"] = True
+    return opened
+
+
 def upsert_entitlement(
     db: Session,
     *,

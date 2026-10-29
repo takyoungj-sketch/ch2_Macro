@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from app.platform.db import get_platform_session_factory
-from app.platform.entitlements import list_entitlements
+from app.platform.entitlements import apply_staff_entitlements, list_entitlements
 from app.platform.jwt_util import COOKIE_NAME, decode_access_token
 
 _LOGIN = "로그인이 필요합니다."
@@ -221,12 +221,12 @@ def caller_access(request: Request) -> str:
     db = factory()
     try:
         row = db.execute(
-            text("SELECT id FROM users WHERE id = :id"),
+            text("SELECT id, role FROM users WHERE id = :id"),
             {"id": user_id},
-        ).first()
+        ).mappings().first()
         if row is None:
             return "anonymous"
-        ent = list_entitlements(db, user_id)
+        ent = apply_staff_entitlements(str(row["role"] or ""), list_entitlements(db, user_id))
         if ent.get("macro"):
             return "macro"
         return "login"
