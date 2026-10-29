@@ -55,6 +55,7 @@ from app.collective.transaction_export import (
     tx_row_dict,
     csv_attachment_response,
 )
+from app.collective.region_name_search import RegionNameHit, search_region_names
 from app.collective.region_structure import detect_region_structure
 from app.collective.resolve_codes import resolve_collective_map_codes
 from app.region_catalog import list_gu_names, list_gu_options, list_leaf_names, list_leaf_options
@@ -145,6 +146,22 @@ def _base_where(
         contract_year_to=contract_year_to,
     )
     return " AND ".join(clauses), params
+
+
+@router.get("/regions/name-search", response_model=list[RegionNameHit])
+def search_region_names_route(
+    db: Session = Depends(get_collective_db),
+    q: str = Query(""),
+    asset_type: Optional[str] = Query(None),
+):
+    """읍·면·동 이름. 화면의 시도·시군구 선택과 같은 토큰으로 돌려준다."""
+    rows = search_region_names(
+        db.connection(),
+        q,
+        table="collective_transactions",
+        asset_type=asset_type,
+    )
+    return [RegionNameHit(**row) for row in rows]
 
 
 @router.get("/regions/addr1", response_model=list[str])

@@ -36,6 +36,7 @@ from app.collective.filters import _col, apply_region_filters
 from app.flat_sido_region import list_addr2_for_sido
 from app.region_sido import is_retired_sido_name, list_sido_names
 from app.collective_commercial.tx_rows import apply_commercial_tx_period, commercial_tx_row_dict
+from app.collective.region_name_search import RegionNameHit, search_region_names
 from app.collective.region_structure import detect_region_structure
 from app.collective.resolve_codes import resolve_collective_map_codes
 from app.collective.schemas import CollectiveMapResolveCodesResponse, RegionOption, RegionStructureResponse
@@ -154,6 +155,22 @@ def _cluster_display_label(db: Session, cluster_key: str) -> str:
         {"ck": cluster_key},
     ).fetchone()
     return row.label if row and row.label else cluster_key
+
+
+@router.get("/regions/name-search", response_model=list[RegionNameHit])
+def search_region_names_route(
+    db: Session = Depends(get_collective_db),
+    q: str = Query(""),
+    asset_type: Optional[str] = Query(None),
+):
+    """읍·면·동 이름. 화면의 시도·시군구 선택과 같은 토큰으로 돌려준다."""
+    rows = search_region_names(
+        db.connection(),
+        q,
+        table="collective_commercial_transactions",
+        asset_type=asset_type,
+    )
+    return [RegionNameHit(**row) for row in rows]
 
 
 @router.get("/regions/addr1", response_model=list[str])

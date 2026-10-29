@@ -48,6 +48,24 @@ export async function fetchFilterMeta(assetType?: AssetSelectorType): Promise<Co
 }
 
 /** 시도 목록 — region_codes SSOT (meta/filters 대기 없이 즉시 표시). */
+export type RegionNameHit = {
+  addr1: string;
+  addr2: string;
+  gu: string;
+  leaf: string;
+  label: string;
+};
+
+export async function searchRegionNames(
+  q: string,
+  assetType?: AssetSelectorType,
+): Promise<RegionNameHit[]> {
+  const { data } = await api.get<RegionNameHit[]>("/regions/name-search", {
+    params: { q, asset_type: apiAssetParam(assetType) },
+  });
+  return data;
+}
+
 export async function fetchAddr1List(): Promise<string[]> {
   const { data } = await api.get<string[]>("/regions/addr1");
   return data;

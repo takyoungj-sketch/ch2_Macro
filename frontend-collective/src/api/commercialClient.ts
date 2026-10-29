@@ -39,6 +39,24 @@ export async function fetchCommercialFilterMeta(): Promise<CommercialFilterMeta>
 }
 
 /** 시도 목록 — region_codes SSOT (meta/filters 대기 없이 즉시 표시). */
+export type CommercialRegionNameHit = {
+  addr1: string;
+  addr2: string;
+  gu: string;
+  leaf: string;
+  label: string;
+};
+
+export async function searchCommercialRegionNames(
+  q: string,
+  assetType?: CommercialAssetSelectorType,
+): Promise<CommercialRegionNameHit[]> {
+  const { data } = await api.get<CommercialRegionNameHit[]>("/regions/name-search", {
+    params: { q, asset_type: apiCommercialAssetParam(assetType) },
+  });
+  return data;
+}
+
 export async function fetchCommercialAddr1List(): Promise<string[]> {
   const { data } = await api.get<string[]>("/regions/addr1");
   return data;

@@ -10,10 +10,12 @@ import {
   fetchCommercialFilterMeta,
   fetchCommercialLeafRegions,
   fetchCommercialRegionStructure,
+  searchCommercialRegionNames,
 } from "./api/commercialClient";
 import { fetchCollectiveMapResolveCodes } from "./api/mapClient";
 import { CH2_AI_ACTION_EVENT, type AiScreenAction } from "@ch2/ai-assistant/aiActions";
 import CommercialClusterTable, { clusterMatchesQuery } from "./components/CommercialClusterTable";
+import CollectiveMobileRegionBar, { type RegionNameHit } from "./components/CollectiveMobileRegionBar";
 import StatsTableExpandButton from "./components/StatsTableExpandButton";
 import CommercialClusterDetailModal from "./components/CommercialClusterDetailModal";
 import CollectiveRegionMapHub, { type MapPanelMode } from "./components/CollectiveRegionMapHub";
@@ -40,6 +42,8 @@ import {
   type CommercialAssetKind,
 } from "./utils/commercialAssetTypes";
 import { useCollectiveDeepLink } from "./hooks/useCollectiveDeepLink";
+import { useApplyMobileRegion } from "./hooks/useApplyMobileRegion";
+import { useCollectivePhone, useCollectivePortrait } from "./hooks/useCollectivePhone";
 import { profileHref, resolveCollectiveProfileTarget } from "./utils/profileLink";
 import { buildCommercialListContext } from "./api/aiContext";
 import { useCollectiveAnalysisUnits } from "./hooks/useCollectiveAnalysisUnits";
@@ -98,6 +102,9 @@ const COMMERCIAL_REGION_KEY = "ch2.collective.commercial.region";
 export default function CommercialApp() {
   const qc = useQueryClient();
   const { entitled, narrow, requestPaid } = useProductAccess();
+  const phone = useCollectivePhone();
+  const portrait = useCollectivePortrait();
+  const [pendingRegion, setPendingRegion] = useState<RegionNameHit | null>(null);
   const restoredRegion = useRef(false);
   const [assetKinds, setAssetKinds] = useState<CommercialAssetKind[]>(["collective_shop"]);
   const assetType = useMemo(() => encodeCommercialAssetKinds(assetKinds), [assetKinds]);
@@ -131,13 +138,12 @@ export default function CommercialApp() {
   }, [entitled, windowYears]);
 
   useEffect(() => {
-    if (!narrow) return;
+    if (!phone) return;
     if (leafList.length > 1) setLeafList(leafList.slice(0, 1));
-    if (analysisUnits.length > 0) setAnalysisUnits([]);
-  }, [narrow, leafList, analysisUnits, setAnalysisUnits]);
+  }, [phone, leafList]);
 
   useEffect(() => {
-    if (!narrow || !addr1) return;
+    if (!phone || !addr1) return;
     try {
       window.localStorage.setItem(
         COMMERCIAL_REGION_KEY,
@@ -146,10 +152,10 @@ export default function CommercialApp() {
     } catch {
       /* ignore */
     }
-  }, [narrow, addr1, addr2, leafList]);
+  }, [phone, addr1, addr2, leafList]);
 
   useEffect(() => {
-    if (!narrow || restoredRegion.current) return;
+    if (!phone || restoredRegion.current) return;
     restoredRegion.current = true;
     try {
       const raw = window.localStorage.getItem(COMMERCIAL_REGION_KEY);
@@ -158,10 +164,19 @@ export default function CommercialApp() {
       if (saved.addr1) setAddr1(saved.addr1);
       if (saved.addr2) setAddr2(saved.addr2);
       if (saved.leaf) setLeafList([saved.leaf]);
+      if (saved.addr1 && saved.addr2 && saved.leaf) {
+        setPendingRegion({
+          addr1: saved.addr1,
+          addr2: saved.addr2,
+          gu: "",
+          leaf: saved.leaf,
+          label: "",
+        });
+      }
     } catch {
       /* ignore */
     }
-  }, [narrow]);
+  }, [phone]);
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [selected, setSelected] = useState<CommercialClusterRow | null>(null);
   const [aiHint, setAiHint] = useState<string | null>(null);
@@ -437,6 +452,21 @@ export default function CommercialApp() {
     setSelected(null);
   };
 
+  useApplyMobileRegion({
+    phone,
+    pending: pendingRegion,
+    setPending: setPendingRegion,
+    addr1,
+    addr2,
+    structureReady: structureQ.isSuccess,
+    hasIntermediate,
+    guList,
+    leafList,
+    setGuList,
+    setLeafList,
+    run: runAnalysis,
+  });
+
   useEffect(() => {
     const on = (e: Event) => {
       const a = (e as CustomEvent<AiScreenAction>).detail;
@@ -482,20 +512,22 @@ export default function CommercialApp() {
       {listAiContext ? <PublishAiContext context={listAiContext} role="base" /> : null}
 
       <div className="relative z-0 isolate flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
-      <main className={narrow ? "flex min-h-0 flex-1 flex-col overflow-hidden" : "flex min-h-0 flex-1 overflow-hidden"}>
-        <div className={narrow ? "ch2-mobile-region" : "contents"}>
+      <main className={phone ? "flex min-h-0 flex-1 flex-col overflow-hidden" : "flex min-h-0 flex-1 overflow-hidden"}>
+        <div className={phone ? "ch2-mobile-region" : "contents"}>
         <CollapsibleLeftSidebar
           storageKey="collective-commercial"
-          pinned={narrow}
-          className={narrow ? "w-full max-h-[46vh] overflow-y-auto border-b border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800" : "layout-sidebar p-4"}
+          pinned={phone}
+          className={phone ? "w-full shrink-0 border-b border-slate-200 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-800" : "layout-sidebar p-4"}
         >
-          <h2 className="text-sm font-semibold mb-3 text-slate-800 dark:text-slate-100">조건</h2>
-          <div className="space-y-3">
+          {phone ? null : <h2 className="text-sm font-semibold mb-3 text-slate-800 dark:text-slate-100">조건</h2>}
+          <div className={phone ? "space-y-1" : "space-y-3"}>
             <div className="space-y-1">
-              <span className="text-xs text-slate-500 dark:text-slate-400">유형</span>
+              {phone ? null : <span className="text-xs text-slate-500 dark:text-slate-400">유형</span>}
+              {phone ? null : (
               <p className="text-[10px] text-slate-400 leading-snug">
                 기본은 집합상가. 필요 시 공장을 추가해 함께 조회합니다.
               </p>
+              )}
               <div className="flex flex-wrap gap-1.5">
                 {COMMERCIAL_ASSET_KINDS.map((kind) => {
                   const on = assetKinds.includes(kind);
@@ -504,7 +536,9 @@ export default function CommercialApp() {
                       key={kind}
                       type="button"
                       className={clsx(
-                        "rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900",
+                        phone
+                          ? "rounded border px-2 py-0.5 text-[11px] font-semibold"
+                          : "rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900",
                         on
                           ? "border-indigo-500 bg-indigo-600 text-white shadow-sm dark:border-indigo-300 dark:bg-indigo-500 dark:text-white"
                           : "border-slate-300 bg-white text-slate-700 hover:border-indigo-400 hover:bg-indigo-50 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-indigo-400 dark:hover:bg-slate-700",
@@ -522,8 +556,26 @@ export default function CommercialApp() {
               </div>
             </div>
 
-            {narrow ? (
-              <p className="text-xs font-medium text-slate-600 dark:text-slate-300">5년 롤링</p>
+            {phone ? (
+              <CollectiveMobileRegionBar
+                search={(q) => searchCommercialRegionNames(q, assetType)}
+                onPick={(hit) => {
+                  setAddr1(hit.addr1);
+                  setAddr2(hit.addr2);
+                  setGuList([]);
+                  setLeafList([]);
+                  setAnalysisUnits([]);
+                  setScope(null);
+                  setSelected(null);
+                  setPendingRegion(hit);
+                }}
+                onClear={() => {
+                  setAddr1("");
+                  setAddr2("");
+                  setPendingRegion(null);
+                  resetRegion();
+                }}
+              />
             ) : (
               <>
                 <StatsWindowToggle
@@ -543,6 +595,8 @@ export default function CommercialApp() {
               </>
             )}
 
+            {phone ? null : (
+            <>
             <label className="text-xs block space-y-1">
               <span className="text-slate-500 dark:text-slate-400">시도</span>
               <select
@@ -653,12 +707,14 @@ export default function CommercialApp() {
             >
               통계분석
             </button>
+            </>
+            )}
           </div>
         </CollapsibleLeftSidebar>
         </div>
 
-        <div className={narrow ? "min-h-0 flex-1 overflow-auto bg-slate-100 dark:bg-slate-900" : "layout-main"}>
-          {narrow ? null : (
+        <div className={phone ? "flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-100 dark:bg-slate-900" : "layout-main"}>
+          {phone ? null : (
           <section className="px-4 pt-4 shrink-0">
             {analysisUnits.length > 0 && (
               <div className="mb-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-3 py-2">
@@ -742,9 +798,11 @@ export default function CommercialApp() {
             />
           </section>
           )}
-          <div className="p-4 pt-2 pb-8">
+          <div className={phone ? "flex min-h-0 flex-1 flex-col px-1 py-1" : "p-4 pt-2 pb-8"}>
             {!scope && (
-              <p className="text-sm text-slate-500 dark:text-slate-400">시군구까지 선택한 뒤 「통계분석」을 누르면 도로(cluster) 목록이 표시됩니다.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                {phone ? "지역을 검색하면 도로 목록이 표시됩니다." : "시군구까지 선택한 뒤 「통계분석」을 누르면 도로(cluster) 목록이 표시됩니다."}
+              </p>
             )}
             {scopeStale && (
               <p className="text-xs text-amber-700 dark:text-amber-300 mb-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded px-2 py-1">
@@ -760,6 +818,7 @@ export default function CommercialApp() {
             {scope && clustersQ.isError && <p className="text-sm text-red-600">도로 목록을 불러오지 못했습니다.</p>}
             {scope && clustersQ.data && (
               <>
+                {phone ? null : (
                 <div className="flex flex-wrap items-center gap-2 mb-2">
                   <p className="text-xs text-slate-500 dark:text-slate-400 flex-1 min-w-[12rem]">
                     {scope.addr1}
@@ -788,11 +847,13 @@ export default function CommercialApp() {
                       지역 프로필 →
                     </a>
                   )}
+                  {phone ? null : (
                   <StatsTableExpandButton
                     expanded={tableWide}
                     onToggle={() => setTableWide((v) => !v)}
                     title="신뢰구간을 보여 줍니다"
                   />
+                  )}
                   <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 shrink-0">
                     <span className="whitespace-nowrap">검색</span>
                     <input
@@ -805,13 +866,16 @@ export default function CommercialApp() {
                     />
                   </label>
                 </div>
+                )}
+                <div className={phone ? "min-h-0 flex-1 overflow-auto" : undefined}>
                 <CommercialClusterTable
                   items={clustersQ.data.items}
-                  wide={tableWide}
+                  wide={tableWide || (phone && !portrait)}
                   highlightQuery={clusterSearchQ}
                   selectedKey={selected ? `${selected.cluster_key}|${selected.asset_type}` : null}
                   onSelect={setSelected}
                 />
+                </div>
               </>
             )}
           </div>

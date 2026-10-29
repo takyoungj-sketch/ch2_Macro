@@ -10,11 +10,13 @@ import {
   fetchFilterMeta,
   fetchLeafRegions,
   fetchRegionStructure,
+  searchRegionNames,
   type BuildingStatsRow,
 } from "./api/client";
 import { CH2_AI_ACTION_EVENT, type AiScreenAction } from "@ch2/ai-assistant/aiActions";
 import { fetchCollectiveMapResolveCodes } from "./api/mapClient";
 import BuildingStatsTable, { buildingMatchesQuery } from "./components/BuildingStatsTable";
+import CollectiveMobileRegionBar, { type RegionNameHit } from "./components/CollectiveMobileRegionBar";
 import StatsTableExpandButton from "./components/StatsTableExpandButton";
 import BuildingDetailModal from "./components/BuildingDetailModal";
 import RegionalRegressionModal from "./components/RegionalRegressionModal";
@@ -57,6 +59,8 @@ import {
   type ResidentialAssetKind,
 } from "./utils/residentialAssetTypes";
 import { useCollectiveDeepLink } from "./hooks/useCollectiveDeepLink";
+import { useApplyMobileRegion } from "./hooks/useApplyMobileRegion";
+import { useCollectivePhone, useCollectivePortrait } from "./hooks/useCollectivePhone";
 import { profileHref, resolveCollectiveProfileTarget } from "./utils/profileLink";
 import { buildCollectiveListContext } from "./api/aiContext";
 import { useCollectiveAnalysisUnits } from "./hooks/useCollectiveAnalysisUnits";
@@ -86,6 +90,9 @@ const RESIDENTIAL_REGION_KEY = "ch2.collective.residential.region";
 export default function App() {
   const qc = useQueryClient();
   const { entitled, narrow, requestPaid } = useProductAccess();
+  const phone = useCollectivePhone();
+  const portrait = useCollectivePortrait();
+  const [pendingRegion, setPendingRegion] = useState<RegionNameHit | null>(null);
   const restoredRegion = useRef(false);
   const [assetKinds, setAssetKinds] = useState<ResidentialAssetKind[]>(["apartment"]);
   const assetType = useMemo(() => encodeResidentialAssetKinds(assetKinds), [assetKinds]);
@@ -118,13 +125,12 @@ export default function App() {
   }, [entitled, windowYears]);
 
   useEffect(() => {
-    if (!narrow) return;
+    if (!phone) return;
     if (leafList.length > 1) setLeafList(leafList.slice(0, 1));
-    if (analysisUnits.length > 0) setAnalysisUnits([]);
-  }, [narrow, leafList, analysisUnits, setAnalysisUnits]);
+  }, [phone, leafList]);
 
   useEffect(() => {
-    if (!narrow || !addr1) return;
+    if (!phone || !addr1) return;
     try {
       window.localStorage.setItem(
         RESIDENTIAL_REGION_KEY,
@@ -133,10 +139,10 @@ export default function App() {
     } catch {
       /* ignore */
     }
-  }, [narrow, addr1, addr2, leafList]);
+  }, [phone, addr1, addr2, leafList]);
 
   useEffect(() => {
-    if (!narrow || restoredRegion.current) return;
+    if (!phone || restoredRegion.current) return;
     restoredRegion.current = true;
     try {
       const raw = window.localStorage.getItem(RESIDENTIAL_REGION_KEY);
@@ -145,10 +151,19 @@ export default function App() {
       if (saved.addr1) setAddr1(saved.addr1);
       if (saved.addr2) setAddr2(saved.addr2);
       if (saved.leaf) setLeafList([saved.leaf]);
+      if (saved.addr1 && saved.addr2 && saved.leaf) {
+        setPendingRegion({
+          addr1: saved.addr1,
+          addr2: saved.addr2,
+          gu: "",
+          leaf: saved.leaf,
+          label: "",
+        });
+      }
     } catch {
       /* ignore */
     }
-  }, [narrow]);
+  }, [phone]);
   const [scope, setScope] = useState<AnalysisScope | null>(null);
   const [selected, setSelected] = useState<BuildingStatsRow | null>(null);
   const [regionalOpen, setRegionalOpen] = useState(false);
@@ -463,6 +478,21 @@ export default function App() {
     setSelected(null);
   };
 
+  useApplyMobileRegion({
+    phone,
+    pending: pendingRegion,
+    setPending: setPendingRegion,
+    addr1,
+    addr2,
+    structureReady: structureQ.isSuccess,
+    hasIntermediate,
+    guList,
+    leafList,
+    setGuList,
+    setLeafList,
+    run: runAnalysis,
+  });
+
   return (
     <ActiveAiViewProvider fallback={emptyAiContext("collective", "BuildingList")}>
     <div className="h-screen flex flex-col overflow-hidden bg-slate-100 dark:bg-slate-900">
@@ -494,16 +524,18 @@ export default function App() {
       {listAiContext ? <PublishAiContext context={listAiContext} role="base" /> : null}
 
       <div className="relative z-0 isolate flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
-      <main className={narrow ? "flex min-h-0 flex-1 flex-col overflow-hidden" : "flex min-h-0 flex-1 overflow-hidden"}>
-        <div className={narrow ? "ch2-mobile-region" : "contents"}>
-        <CollapsibleLeftSidebar storageKey="collective" pinned={narrow} className={narrow ? "w-full max-h-[46vh] overflow-y-auto border-b border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800" : "layout-sidebar p-4"}>
-          <h2 className="text-sm font-semibold mb-3 text-slate-800 dark:text-slate-100">조건</h2>
-          <div className="space-y-3">
+      <main className={phone ? "flex min-h-0 flex-1 flex-col overflow-hidden" : "flex min-h-0 flex-1 overflow-hidden"}>
+        <div className={phone ? "ch2-mobile-region" : "contents"}>
+        <CollapsibleLeftSidebar storageKey="collective" pinned={phone} className={phone ? "w-full shrink-0 border-b border-slate-200 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-800" : "layout-sidebar p-4"}>
+          {phone ? null : <h2 className="text-sm font-semibold mb-3 text-slate-800 dark:text-slate-100">조건</h2>}
+          <div className={phone ? "space-y-1" : "space-y-3"}>
             <div className="space-y-1">
-              <span className="text-xs text-slate-500 dark:text-slate-400">유형</span>
+              {phone ? null : <span className="text-xs text-slate-500 dark:text-slate-400">유형</span>}
+              {phone ? null : (
               <p className="text-[10px] text-slate-400 leading-snug">
                 기본은 아파트. 필요 시 유형을 추가해 함께 조회합니다.
               </p>
+              )}
               <div className="flex flex-wrap gap-1.5">
                 {(["apartment", "officetel", "rowhouse", "presale"] as const).map((kind) => {
                   const on = assetKinds.includes(kind);
@@ -512,7 +544,9 @@ export default function App() {
                       key={kind}
                       type="button"
                       className={clsx(
-                        "rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900",
+                        phone
+                          ? "rounded border px-2 py-0.5 text-[11px] font-semibold"
+                          : "rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900",
                         on
                           ? "border-indigo-500 bg-indigo-600 text-white shadow-sm dark:border-indigo-300 dark:bg-indigo-500 dark:text-white"
                           : "border-slate-300 bg-white text-slate-700 hover:border-indigo-400 hover:bg-indigo-50 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-indigo-400 dark:hover:bg-slate-700",
@@ -530,8 +564,26 @@ export default function App() {
               </div>
             </div>
 
-            {narrow ? (
-              <p className="text-xs font-medium text-slate-600 dark:text-slate-300">5년 롤링</p>
+            {phone ? (
+              <CollectiveMobileRegionBar
+                search={(q) => searchRegionNames(q, assetType)}
+                onPick={(hit) => {
+                  setAddr1(hit.addr1);
+                  setAddr2(hit.addr2);
+                  setGuList([]);
+                  setLeafList([]);
+                  setAnalysisUnits([]);
+                  setScope(null);
+                  setSelected(null);
+                  setPendingRegion(hit);
+                }}
+                onClear={() => {
+                  setAddr1("");
+                  setAddr2("");
+                  setPendingRegion(null);
+                  resetRegion();
+                }}
+              />
             ) : (
               <>
                 <StatsWindowToggle
@@ -551,6 +603,8 @@ export default function App() {
               </>
             )}
 
+            {phone ? null : (
+            <>
             <label className="text-xs block space-y-1">
               <span className="text-slate-500 dark:text-slate-400">시도</span>
               <select
@@ -678,12 +732,14 @@ export default function App() {
               지역회귀
             </button>
             )}
+            </>
+            )}
           </div>
         </CollapsibleLeftSidebar>
         </div>
 
-        <div className={narrow ? "min-h-0 flex-1 overflow-auto bg-slate-100 dark:bg-slate-900" : "layout-main"}>
-          {narrow ? null : (
+        <div className={phone ? "flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-100 dark:bg-slate-900" : "layout-main"}>
+          {phone ? null : (
           <section className="px-4 pt-4 shrink-0">
             {analysisUnits.length > 0 && (
               <div className="mb-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-3 py-2">
@@ -764,9 +820,11 @@ export default function App() {
             />
           </section>
           )}
-          <div className="p-4 pt-2 pb-8">
+          <div className={phone ? "flex min-h-0 flex-1 flex-col px-1 py-1" : "p-4 pt-2 pb-8"}>
           {!scope && (
-            <p className="text-sm text-slate-500 dark:text-slate-400">시군구까지 선택한 뒤 「통계분석」을 누르면 건물 목록이 표시됩니다.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {phone ? "지역을 검색하면 건물 목록이 표시됩니다." : "시군구까지 선택한 뒤 「통계분석」을 누르면 건물 목록이 표시됩니다."}
+            </p>
           )}
           {scopeStale && (
             <p className="text-xs text-amber-700 dark:text-amber-300 mb-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded px-2 py-1">
@@ -782,6 +840,7 @@ export default function App() {
           {scope && buildingsQ.isError && <p className="text-sm text-red-600">건물 목록을 불러오지 못했습니다.</p>}
           {scope && buildingsQ.data && (
             <>
+              {phone ? null : (
               <div className="flex flex-wrap items-center gap-2 mb-2">
                 <p className="text-xs text-slate-500 dark:text-slate-400 flex-1 min-w-[12rem]">
                   {scope.addr1}
@@ -809,11 +868,13 @@ export default function App() {
                     지역 프로필 →
                   </a>
                 )}
+                {phone ? null : (
                 <StatsTableExpandButton
                   expanded={tableWide}
                   onToggle={() => setTableWide((v) => !v)}
                   title="신뢰구간·도로명 주소·개별공시지가를 보여 줍니다"
                 />
+                )}
                 <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 shrink-0">
                   <span className="whitespace-nowrap">검색</span>
                   <input
@@ -826,12 +887,15 @@ export default function App() {
                   />
                 </label>
               </div>
+              )}
+              <div className={phone ? "min-h-0 flex-1 overflow-auto" : undefined}>
               <BuildingStatsTable
                 items={buildingsQ.data.items}
-                wide={tableWide}
+                wide={tableWide || (phone && !portrait)}
                 highlightQuery={buildingSearchQ}
                 onSelect={setSelected}
               />
+              </div>
             </>
           )}
           </div>
