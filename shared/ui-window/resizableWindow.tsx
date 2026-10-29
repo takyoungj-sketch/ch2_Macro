@@ -1,6 +1,7 @@
 // @ts-nocheck — shared: 앱별 tsc 경로가 다름
 import { useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from "react";
 import "./resize-handles.css";
+import { clampModalBox } from "./modalViewport";
 
 export type PanelBox = { x: number; y: number; w: number; h: number };
 export type ResizeEdge = "n" | "s" | "e" | "w" | "nw" | "ne" | "sw" | "se";
@@ -17,19 +18,7 @@ export const RESIZE_HANDLES: { edge: ResizeEdge; className: string; cursor: stri
 ];
 
 export function clampBox(box: PanelBox, minW: number, minH: number): PanelBox {
-  const pad = 8;
-  const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
-  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
-  const maxW = Math.max(minW, vw - pad * 2);
-  const maxH = Math.max(minH, vh - pad * 2);
-  let { x, y, w, h } = box;
-  w = Math.min(Math.max(minW, w), maxW);
-  h = Math.min(Math.max(minH, h), maxH);
-  const maxX = Math.max(pad, vw - w - pad);
-  const maxY = Math.max(pad, vh - h - pad);
-  x = Math.min(Math.max(pad, x), maxX);
-  y = Math.min(Math.max(pad, y), maxY);
-  return { x, y, w, h };
+  return clampModalBox(box, minW, minH);
 }
 
 export function boxesEqual(a: PanelBox | null, b: PanelBox | null): boolean {

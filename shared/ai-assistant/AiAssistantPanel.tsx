@@ -1,4 +1,5 @@
 // @ts-nocheck — shared 패키지: 각 frontend node_modules 기준으로 tsc 경로가 달라짐
+import { isForeignDialogEvent, useModalFocus } from "../ui-window/modalFocus";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
@@ -359,10 +360,12 @@ function AiAssistantModal({
   open,
   onClose,
   context,
+  openerRef,
 }: {
   open: boolean;
   onClose: () => void;
   context: AiContextPayload;
+  openerRef: React.RefObject<HTMLButtonElement>;
 }) {
   const [sessionId, setSessionId] = useState<string | null>(() => readAiSessionId());
   const [input, setInput] = useState("");
@@ -374,6 +377,8 @@ function AiAssistantModal({
   const [win, setWin] = useState(defaultWinPos);
   const [fontScale, setFontScale] = useState(readStoredFontScale);
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useModalFocus(open, panelRef, false, openerRef);
   const chatLogRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const loadingRef = useRef(false);
@@ -419,7 +424,7 @@ function AiAssistantModal({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
+      if (e.key !== "Escape" || e.defaultPrevented || isForeignDialogEvent(e, panelRef.current)) return;
       e.preventDefault();
       e.stopPropagation();
       if (loadingRef.current) {
@@ -517,6 +522,8 @@ function AiAssistantModal({
 
   return createPortal(
     <div
+      ref={panelRef}
+      tabIndex={-1}
       data-ch2-ai
       className="ch2-ai-modal fixed z-[400] isolate rounded-xl flex flex-col overflow-hidden"
       role="dialog"
@@ -793,12 +800,14 @@ export default function AiAssistantPanel({
 }) {
   const fromView = useActiveAiView();
   const ctx = context ?? fromView ?? emptyAiContext("built", "RegressionCard");
+  const openerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <span data-ch2-ai className="inline-flex shrink-0">
         <button
+          ref={openerRef}
           type="button"
           className={clsx("btn btn-ghost shrink-0", className)}
           onClick={() => setOpen(true)}
@@ -806,7 +815,7 @@ export default function AiAssistantPanel({
           AI 어시스턴트
         </button>
       </span>
-      <AiAssistantModal open={open} onClose={() => setOpen(false)} context={ctx} />
+      <AiAssistantModal open={open} onClose={() => setOpen(false)} context={ctx} openerRef={openerRef} />
     </>
   );
 }

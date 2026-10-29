@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { contentSignature } from "../../../shared/regression-ui/signature";
 import {
   fetchLongTermTrend,
   fetchMatrixCellHistogram,
@@ -210,6 +211,7 @@ export default function PaidMatrixYearlyModal({
   const [regResult, setRegResult] = useState<LandRegressionResponse | null>(null);
   const [regSuggestion, setRegSuggestion] = useState<LandRegressionSuggestResponse | null>(null);
   const [regBody, setRegBody] = useState<LandRegressionRequest | null>(null);
+  const [regSuggestionBody, setRegSuggestionBody] = useState<LandRegressionRequest | null>(null);
 
   const [txExportLoading, setTxExportLoading] = useState(false);
   const [txExportError, setTxExportError] = useState<string | null>(null);
@@ -250,26 +252,17 @@ export default function PaidMatrixYearlyModal({
     }
   }, [open, zoneType, landCategory]);
 
-  const regControlsStale = useMemo(() => {
-    if (!regResult || !regBody) return false;
-    const keys = [
-      "area_sqm",
-      "log_area",
-      "road_condition",
-      "deal_type",
-      "partial_ownership",
-      "year_trend",
-      "beopjungri_fe",
-      "assessed_land_price",
-    ] as const satisfies readonly (keyof LandRegressionVariables)[];
-    const varsSame = keys.every((key) => Boolean(regBody.variables[key]) === Boolean(regVars[key]));
-    return (
-      !varsSame ||
-      regBody.model_type !== regModelType ||
-      (regBody.categorical_missing ?? "keep_unknown") !== categoricalMissing ||
-      regBody.exclude_outliers_iqr !== regExcludeOutlier
-    );
-  }, [regResult, regBody, regVars, regModelType, categoricalMissing, regExcludeOutlier]);
+  const currentRegRequest = useMemo<LandRegressionRequest | null>(() => filterRequest ? ({
+    ...filterRequest,
+    variables: regVars,
+    model_type: regModelType,
+    categorical_missing: categoricalMissing,
+    exclude_outliers_iqr: regExcludeOutlier,
+    outlier_iqr_multiplier: 3,
+    min_n: 15,
+  }) : null, [filterRequest, regVars, regModelType, categoricalMissing, regExcludeOutlier]);
+  const regControlsStale = Boolean(regResult && regBody && contentSignature(regBody) !== contentSignature(currentRegRequest));
+  const suggestionIsCurrent = contentSignature(regSuggestionBody) === contentSignature(currentRegRequest);
 
   const sortedRows = useMemo(() => sortMatrixRows(rows), [rows]);
 
@@ -1342,15 +1335,7 @@ export default function PaidMatrixYearlyModal({
                       setRegResult(null);
                       setRegBody(null);
                       try {
-                        const body: LandRegressionRequest = {
-                          ...filterRequest,
-                          variables: regVars,
-                          model_type: regModelType,
-                          categorical_missing: categoricalMissing,
-                          exclude_outliers_iqr: regExcludeOutlier,
-                          outlier_iqr_multiplier: 3,
-                          min_n: 15,
-                        };
+                        const body = currentRegRequest!;
                         const res = await fetchLandRegression(body);
                         setRegBody(body);
                         setRegResult(res);
@@ -1372,16 +1357,9 @@ export default function PaidMatrixYearlyModal({
                       setRegLoading(true);
                       setRegError(null);
                       try {
-                        const body: LandRegressionRequest = {
-                          ...filterRequest,
-                          variables: { ...regVars, assessed_land_price: false },
-                          model_type: regModelType,
-                          categorical_missing: categoricalMissing,
-                          exclude_outliers_iqr: regExcludeOutlier,
-                          outlier_iqr_multiplier: 3,
-                          min_n: 15,
-                        };
+                        const body = currentRegRequest!;
                         setRegSuggestion(await fetchLandRegressionSuggestion(body));
+                        setRegSuggestionBody(body);
                       } catch (e) {
                         setRegError(parseApiError(e).message);
                       } finally {
@@ -1401,26 +1379,29 @@ export default function PaidMatrixYearlyModal({
 
               {regControlsStale && (
                 <p className="text-[10px] text-amber-700">
-                  변수 또는 척도가 바뀌었습니다. 아래 식과 시나리오는 마지막 실행입니다. 회귀를 다시 실행하면 맞춥니다.
+                  분석 조건이 바뀌었습니다. 아래 결과는 이전 조건으로 계산했습니다.
                 </p>
               )}
 
               {regResult && <LandRegressionResults data={regResult} />}
 
-              {regSuggestion && (
+              {regSuggestion && suggestionIsCurrent && (
                 <div className="rounded-lg border border-indigo-200 bg-indigo-50/40 p-3 space-y-2 text-xs">
                   <div className="font-semibold text-indigo-900">
-                    토지 모형 추천 · 공통 표본 n={regSuggestion.selection_n}
+                    토지 모형 추천 · 후보 간 공통 표본 n={regSuggestion.selection_n} · AIC 낮은 순
                   </div>
                   {regSuggestion.warnings.map((w) => (
                     <p key={w} className="text-amber-700">⚠ {w}</p>
                   ))}
+                  {regResult && (regSuggestion.selection_n !== regResult.n || regSuggestion.excluded_blocks?.includes("assessed_land_price")) && (
+                    <p className="text-amber-700">현재 적합 모형과 분석 조건 또는 표본이 다릅니다. 지표를 직접 비교하지 마세요.</p>
+                  )}
                   <div className="space-y-1">
                     {regSuggestion.candidates_by_aic.map((candidate) => (
                       <div key={`aic-${candidate.rank}`} className="rounded border border-indigo-100 bg-white px-2 py-1">
                         #{candidate.rank} · {candidate.blocks.join(" + ")} · {candidate.model_type}
                         {" · "}AIC {candidate.aic?.toFixed(1) ?? "—"}
-                        {" · "}MAPE {candidate.mape != null ? `${candidate.mape}%` : "—"}
+                        {" · "}학습 MAPE {candidate.mape != null ? `${candidate.mape}%` : "—"}
                       </div>
                     ))}
                   </div>
@@ -1441,6 +1422,7 @@ export default function PaidMatrixYearlyModal({
                   regResult={regResult}
                   regBody={regBody}
                   vars={regBody.variables}
+                  disabled={regControlsStale || regLoading}
                   regionLabel={scopeNote?.trim() || `${zoneType} × ${landCategory}`}
                 />
               )}

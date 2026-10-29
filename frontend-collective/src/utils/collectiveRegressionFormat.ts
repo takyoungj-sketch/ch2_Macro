@@ -5,6 +5,8 @@ import type { RegressionCoeff } from "../types";
 export const EQUATION_SIG_P = 0.1;
 
 export function formatCoefValue(v: number): string {
+  if (!Number.isFinite(v)) return "—";
+  if (v !== 0 && Math.abs(v) < .00005) return v.toExponential(2);
   if (Math.abs(v) >= 100) {
     return v.toLocaleString("ko-KR", { maximumFractionDigits: 0 });
   }

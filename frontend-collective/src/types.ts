@@ -352,6 +352,10 @@ export interface CommercialFloorIndexResponse {
 }
 
 export interface CommercialRegressionResponse {
+  analysis?: import("../../shared/regression-ui/types").RegressionAnalysisContext | null;
+  in_sample_mape?: number | null;
+  cv_mape?: number | null;
+  metric_basis?: "cv" | "insample";
   cluster_key: string;
   display_label: string;
   n: number;
@@ -368,6 +372,8 @@ export interface CommercialRegressionResponse {
   predict_options?: CommercialPredictOptions | null;
   model_comparison?: ModelComparison | null;
   model_candidates?: {
+    comparison?: import("../../shared/regression-ui/types").RegressionComparisonContext | null;
+    cv_diagnostics?: import("../../shared/regression-ui/types").RegressionValidationContext | null;
     rank: number;
     purpose?: "predictive" | "explanatory";
     blocks: string[];
@@ -382,6 +388,8 @@ export interface CommercialRegressionResponse {
 }
 
 export interface CommercialPredictOptions {
+  contract_periods?: string[];
+  contract_period_reference?: string | null;
   gross_area?: ContinuousRange | null;
   building_age?: ContinuousRange | null;
   floor?: ContinuousRange | null;
@@ -398,6 +406,7 @@ export interface CommercialPredictOptions {
 }
 
 export interface CommercialRegressionPredictInputs {
+  contract_period?: string | null;
   gross_area?: number | null;
   building_age?: number | null;
   floor?: number | null;
@@ -409,6 +418,7 @@ export interface CommercialRegressionPredictInputs {
 }
 
 export interface CommercialRegressionPredictResponse {
+  applied_contract_period?: string | null;
   n: number;
   model_type?: RegressionModelType;
   y_hat: number;
@@ -534,6 +544,8 @@ export interface DongOption {
 }
 
 export interface CollectivePredictOptions {
+  contract_periods?: string[];
+  contract_period_reference?: string | null;
   exclusive_area?: ContinuousRange | null;
   building_age?: ContinuousRange | null;
   floor?: ContinuousRange | null;
@@ -555,6 +567,7 @@ export interface CollectivePredictOptions {
 }
 
 export interface CollectiveRegressionPredictInputs {
+  contract_period?: string | null;
   exclusive_area?: number | null;
   building_age?: number | null;
   floor?: number | null;
@@ -571,6 +584,7 @@ export interface CollectiveRegressionPredictInputs {
 export type RegressionModelType = "log" | "linear";
 
 export interface CollectiveRegressionPredictResponse {
+  applied_contract_period?: string | null;
   n: number;
   model_type?: RegressionModelType;
   y_hat: number;
@@ -583,6 +597,7 @@ export interface CollectiveRegressionPredictResponse {
 }
 
 export interface ModelMetrics {
+  cv_diagnostics?: import("../../shared/regression-ui/types").RegressionValidationContext | null;
   model_type: RegressionModelType;
   adj_r_squared?: number | null;
   mape?: number | null;
@@ -607,6 +622,8 @@ export interface CollectiveRegressionSpec {
 }
 
 export interface CollectiveModelCandidate {
+  comparison?: import("../../shared/regression-ui/types").RegressionComparisonContext | null;
+  cv_diagnostics?: import("../../shared/regression-ui/types").RegressionValidationContext | null;
   rank: number;
   purpose?: "predictive" | "explanatory";
   blocks: string[];
@@ -627,7 +644,30 @@ export interface ModelComparison {
   confidence_label?: string | null;
 }
 
+export interface CohortSlopeShift {
+  name: string;
+  label: string;
+  coef_before?: number | null;
+  se_before?: number | null;
+  coef_after?: number | null;
+  se_after?: number | null;
+}
+
+export interface CohortAugmentation {
+  subject_n: number;
+  added_n: number;
+  mape_before?: number | null;
+  mape_after?: number | null;
+  metric_basis: "cv" | "insample";
+  slopes: CohortSlopeShift[];
+  note: string;
+}
+
 export interface CollectiveRegressionResponse {
+  analysis?: import("../../shared/regression-ui/types").RegressionAnalysisContext | null;
+  in_sample_mape?: number | null;
+  cv_mape?: number | null;
+  metric_basis?: "cv" | "insample";
   building_key: string;
   display_name: string;
   n: number;
@@ -647,6 +687,7 @@ export interface CollectiveRegressionResponse {
   predict_options?: CollectivePredictOptions | null;
   model_comparison?: ModelComparison | null;
   model_candidates?: CollectiveModelCandidate[];
+  augmentation?: CohortAugmentation | null;
   explain?: AnalysisExplain | null;
   time_reference?: string | null;
 }

@@ -77,7 +77,8 @@ html.dark body {
     color: rgb(148 163 184);
   }
   html.dark .text-slate-400 {
-    color: rgb(100 116 139);
+    /* dark: 변형에도 이 규칙이 생성되므로 밝기를 다시 낮추지 않는다. */
+    color: rgb(148 163 184);
   }
   html.dark .text-sky-950 {
     color: rgb(186 230 253);

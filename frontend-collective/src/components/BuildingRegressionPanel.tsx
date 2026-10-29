@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { contentSignature } from "../../../shared/regression-ui/signature";
+import { reconcileListedInputs } from "../../../shared/regression-ui/inputs";
+import type { RegressionSampleGroup } from "../../../shared/regression-ui/types";
 import { useMutation } from "@tanstack/react-query";
 import {
   predictBuildingRegression,
@@ -39,7 +42,7 @@ import {
 } from "@ch2/ai-assistant/aiActions";
 import { buildCollectiveRegressionContext } from "../api/aiContext";
 import { CollectiveRegressionResults } from "./CollectiveRegressionResults";
-import CollectiveModelRecommend, { blocksMatch } from "./CollectiveModelRecommend";
+import CollectiveModelRecommend from "./CollectiveModelRecommend";
 import type { FloorMode } from "../utils/collectiveRegressionTypes";
 
 export type { FloorMode };
@@ -67,12 +70,6 @@ type RegressionVars = {
   contract_period: boolean;
 };
 
-function midRange(r?: { min?: number | null; max?: number | null } | null): number | undefined {
-  if (!r) return undefined;
-  if (r.min != null && r.max != null) return (r.min + r.max) / 2;
-  return r.min ?? r.max ?? undefined;
-}
-
 function defaultPredictInputs(
   opts: CollectivePredictOptions | null | undefined,
   vars: RegressionVars,
@@ -95,9 +92,10 @@ function defaultPredictInputs(
       ? opts.housing_subtype_reference ?? opts.housing_subtypes?.[0]
       : undefined,
     building_key: buildingKey,
-    households: vars.households ? midRange(opts.households) : undefined,
-    parking_per_household: vars.parking ? midRange(opts.parking_per_household) : undefined,
-    assessed_land_price: vars.assessed_land_price ? midRange(opts.assessed_land_price) : undefined,
+    contract_period: opts.contract_period_reference ?? undefined,
+    households: undefined,
+    parking_per_household: undefined,
+    assessed_land_price: undefined,
     structure_group: vars.structure
       ? opts.structure_reference ?? opts.structure_groups?.[0]
       : undefined,
@@ -116,8 +114,10 @@ function PredictPanel({
   setInputs,
   onPredict,
   pending,
+  disabled,
   result,
   error,
+  groups = [],
 }: {
   opts: CollectivePredictOptions;
   vars: RegressionVars;
@@ -127,9 +127,16 @@ function PredictPanel({
   setInputs: React.Dispatch<React.SetStateAction<CollectiveRegressionPredictInputs>>;
   onPredict: () => void;
   pending: boolean;
+  disabled: boolean;
   result?: CollectiveRegressionPredictResponse;
   error?: string;
+  groups?: RegressionSampleGroup[];
 }) {
+  const selectedGroup = groups.find(group => group.key === inputs.building_key) ?? (groups.length === 1 ? groups[0] : undefined);
+  const confirmed = selectedGroup?.confirmed_attributes ?? {};
+  const loadable = Object.fromEntries(["households", "parking_per_household", "assessed_land_price"]
+    .filter(key => opts[key as keyof CollectivePredictOptions] && Number.isFinite(confirmed[key]))
+    .map(key => [key, key === "parking_per_household" ? Number(confirmed[key].toPrecision(8)) : confirmed[key]]));
   const dongChoices =
     opts.dong_options?.length
       ? opts.dong_options.filter(
@@ -143,10 +150,16 @@ function PredictPanel({
         }));
   return (
     <div className="rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/40 p-3 space-y-3">
-      <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200">가정 시나리오 (참고)</p>
+      <p className="text-[11px] font-medium text-slate-700 dark:text-slate-200">조건별 추정 · 거래금액</p>
       <p className="text-[10px] text-slate-500 dark:text-slate-400">
-        아래 조건에서 모형이 가리키는 금액 수준입니다. AVM·적정가가 아닙니다.
+        입력한 조건에서 모형이 추정한 금액입니다. 개별 물건의 적정가격을 뜻하지는 않습니다.
       </p>
+      {groups.some(group => Object.keys(group.confirmed_attributes ?? {}).length > 0) && <div className="space-y-1 text-xs">
+        <button type="button" className="border rounded px-2 py-1 border-slate-300 dark:border-slate-500"
+          disabled={disabled || pending || Object.keys(loadable).length === 0}
+          onClick={() => setInputs(current => ({ ...current, ...loadable }))}>선택 단지의 확인된 특성 불러오기</button>
+        <p className="text-slate-600 dark:text-slate-300">현재 적합 거래에서 값이 모두 같고 결측이 없는 특성만 입력합니다. 연도별로 다르거나 미확보인 값은 채우지 않습니다. 면적·층·연식은 직접 입력하세요.</p>
+      </div>}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
         {vars.exclusive_area && opts.exclusive_area && (
           <label className="space-y-0.5">
@@ -207,7 +220,8 @@ function PredictPanel({
               }}
             >
               {opts.buildings!.map((b) => (
-                <option key={b.building_key} value={b.building_key}>
+                <option key={b.building_key} value={b.building_key}
+                  disabled={opts.buildings!.some(x => x.has_fe) && !b.is_reference && !b.has_fe}>
                   {b.display_name}
                   {b.is_reference && b.has_fe
                     ? " (FE 기준)"
@@ -339,8 +353,17 @@ function PredictPanel({
         )}
       </div>
 
-      <button type="button" className="btn btn-primary text-xs" disabled={pending} onClick={onPredict}>
-        {pending ? "계산 중…" : "시나리오 계산"}
+      {(opts.contract_periods?.length ?? 0) > 0 && <label className="block space-y-1 text-xs">
+        <span className="text-slate-500 dark:text-slate-400">거래시점 (반기)</span>
+        <select className="input" value={inputs.contract_period ?? opts.contract_period_reference ?? ""}
+          onChange={(e) => setInputs(p => ({ ...p, contract_period: e.target.value }))}>
+          {opts.contract_periods?.map(period => <option key={period} value={period}>
+            {period}{period === opts.contract_period_reference ? " (기준)" : ""}
+          </option>)}
+        </select>
+      </label>}
+      <button type="button" className="btn btn-primary text-xs" disabled={pending || disabled} onClick={onPredict}>
+        {pending ? "계산 중…" : "추정값 계산"}
       </button>
 
       {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
@@ -354,6 +377,7 @@ function PredictPanel({
             </span>
             <div className="text-lg font-bold text-slate-800 dark:text-slate-100">{fmtInt(result.y_hat)}만원</div>
             <StatisticalEstimateCaption compact />
+            {result.applied_contract_period && <p className="text-[11px] text-slate-500 dark:text-slate-400">적용 거래시점: {result.applied_contract_period}</p>}
             {result.unit_price_hat != null && (
               <div className="text-[11px] text-slate-500 dark:text-slate-400">
                 ㎡당 약 {fmt(result.unit_price_hat)} 만원/㎡
@@ -433,7 +457,6 @@ export default function BuildingRegressionPanel({
     () => (Object.keys(vars) as (keyof RegressionVars)[]).filter((key) => Boolean(vars[key])),
     [vars],
   );
-  const fittedSnap = useRef<{ type: RegressionModelType; blocks: string[] } | null>(null);
   const attrOn =
     vars.households ||
     vars.parking ||
@@ -459,14 +482,18 @@ export default function BuildingRegressionPanel({
     [assetType, periodParams, excludeOutliers, categoricalMissing, experiment, modelType, vars, floorMode],
   );
 
-  const runRegression = () => {
-    fittedSnap.current = { type: modelType, blocks: selectedBlocks };
-    return useCohort
+  const requestSignature = contentSignature({ body: regressionBody, keys });
+  const runRegression = async () => {
+    const signature = requestSignature;
+    const data = await (useCohort
       ? runCohortRegression({ building_keys: keys, ...regressionBody })
-      : runBuildingRegression(buildingKey, regressionBody);
+      : runBuildingRegression(buildingKey, regressionBody));
+    return { ...data, requestSignature: signature };
   };
 
   const regM = useMutation({ mutationFn: runRegression });
+  const conditionsChanged = Boolean(regM.data && regM.data.requestSignature !== requestSignature);
+  const predictionSignature = contentSignature({ requestSignature, inputs: predictInputs, model: regM.data?.analysis?.model_signature });
 
   const cohortKeySig = keys.join("|");
   useEffect(() => {
@@ -476,12 +503,15 @@ export default function BuildingRegressionPanel({
 
   const aiRegressionContext = useMemo(() => {
     if (!regM.data) return null;
-    return buildCollectiveRegressionContext(regM.data, {
+    const context = buildCollectiveRegressionContext(regM.data, {
       regionLabel: regM.data.display_name,
       assetType,
       cohort: useCohort,
     });
-  }, [regM.data, assetType, useCohort]);
+    context.facts = { ...context.facts, conditions_changed: conditionsChanged,
+      result_state: conditionsChanged ? "previous_conditions" : "current" };
+    return context;
+  }, [regM.data, assetType, useCohort, conditionsChanged]);
 
   const publishedAiContext = useMemo(
     () =>
@@ -512,23 +542,43 @@ export default function BuildingRegressionPanel({
   }, [canRun]);
 
   const predictM = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
+      if (conditionsChanged) throw new Error("분석 조건이 바뀌었습니다. 아래 결과는 이전 조건으로 계산했습니다.");
+      const signature = predictionSignature;
       const body = {
         ...regressionBody,
+        expected_model_signature: regM.data?.analysis?.model_signature,
         model_type: regM.data?.model_type ?? modelType,
         inputs: predictInputs,
       };
-      return useCohort
+      const data = await (useCohort
         ? predictCohortRegression({ building_keys: keys, ...body })
-        : predictBuildingRegression(buildingKey, body);
+        : predictBuildingRegression(buildingKey, body));
+      return { ...data, inputSignature: signature };
     },
   });
 
+  // 입력·적합 모형이 바뀌면 이전 요청의 오류와 진행 상태도 무효화한다.
+  const resetPrediction = predictM.reset;
+  useEffect(() => { resetPrediction(); }, [predictionSignature, resetPrediction]);
   useEffect(() => {
+    predictM.reset();
     if (regM.data?.predict_options) {
-      setPredictInputs(defaultPredictInputs(regM.data.predict_options, vars));
+      const defaults = defaultPredictInputs(regM.data.predict_options, vars);
+      const opts = regM.data.predict_options;
+      setPredictInputs((current) => {
+        const next = reconcileListedInputs(defaults, current, {
+          building_key: (opts.buildings ?? []).filter(b => !(opts.buildings ?? []).some(o => o.is_reference || o.has_fe) || b.is_reference || b.has_fe).map(b => b.building_key),
+          contract_period: opts.contract_periods ?? [], housing_subtype: opts.housing_subtypes ?? [],
+          structure_group: opts.structure_groups ?? [], asset_type: opts.asset_types ?? [],
+        });
+        const options = opts.dong_options?.filter(o => !o.building_key || o.building_key === next.building_key);
+        const allowed = options?.length ? options.map(o => o.dong) : opts.dongs ?? [];
+        if (!allowed.includes(next.dong ?? "")) next.dong = options?.find(o => o.is_reference)?.dong ?? allowed[0];
+        return next;
+      });
     }
-  }, [regM.data, vars]);
+  }, [regM.data]);
 
   return (
     <div className="space-y-3">
@@ -542,11 +592,15 @@ export default function BuildingRegressionPanel({
 
       {useCohort && (
         <p className="text-[10px] text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900 rounded px-2 py-1.5">
-          {keys.length}개 단지 통합 · 단지 속성 변수가 추가됩니다. 변수를 고른 뒤 「
+          {keys.length}개 단지를 함께 분석합니다. 면적·층·시점의 계수는 공유합니다. 변수를 고른 뒤 「
           {regM.data ? "통합 회귀 다시 실행" : "통합 회귀 실행"}」을 누르세요.{" "}
-          {attrOn
-            ? "단지 속성으로 단지 간 차이 설명 (단지 FE 생략 — 속성은 단지마다 상수라 FE와 같이 넣을 수 없음)"
-            : "단지 고정효과(거래 최다 단지=기준, n<5 제외)"}
+          {regM.data && !conditionsChanged && regM.data.analysis
+            ? regM.data.analysis.feature_names.some(name => name.startsWith("bld_"))
+              ? "현재 결과는 단지별 가격 수준의 차이를 고정효과로 구분합니다."
+              : "현재 결과에는 단지 고정효과 계수가 없습니다. 실제 반영 변수는 분석 기준에서 확인하세요."
+            : attrOn
+              ? "단지 특성을 선택했습니다. 실행 후 실제 반영 여부를 확인하세요."
+              : "단지별 가격 수준의 차이를 고정효과로 구분합니다 (거래 최다 단지 기준, 거래 5건 미만 단지 제외)."}
           {" · 동은 단지별로 구분"}
         </p>
       )}
@@ -593,52 +647,70 @@ export default function BuildingRegressionPanel({
           <span className="inline-flex items-center gap-0.5">
             로그(% 해석)
             <StatsGlossaryHelp termId="log_model" size="xs" />
+            <span className="text-[10px] text-slate-500">금액만 로그. 전용면적은 그대로.</span>
           </span>
         </label>
       </div>
 
       {useCohort && (
-        <div className="space-y-1.5">
-          <p className="text-[10px] text-slate-500 dark:text-slate-400">
-            단지 속성 (기본 꺼짐). 켜면 단지 FE 대신 단지 간 차이를 이 변수로 설명합니다.
-            같은 지번 오피스텔 복사(kapt_same_pnu) 세대수·주차는 이 유형 재고가 아니라 빠집니다.
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-            {(
-              [
-                ["households", "총 세대수"],
-                ["parking", "세대당 주차"],
-                ["assessed_land_price", "개별공시지가"],
-                ["structure", "구조"],
-                ["asset_type_dummy", "유형"],
-              ] as const
-            ).map(([key, label]) => (
-              <label
-                key={key}
-                className="flex items-center gap-2"
-                title={
-                  key === "structure"
-                    ? "시군구 회귀에서는 예측 개선이 약했습니다. 코호트는 단지 간 차이가 있을 때만 식별됩니다."
-                    : key === "asset_type_dummy"
-                      ? "한 건물에서 층으로 유형이 갈리면(예: 저층 오피·고층 아파트) 유형 계수에 층 효과가 섞입니다."
-                      : undefined
-                }
-              >
-                <input
-                  type="checkbox"
-                  checked={vars[key]}
-                  onChange={(e) => setVars((v) => ({ ...v, [key]: e.target.checked }))}
-                />
-                {label}
-              </label>
-            ))}
-          </div>
-          {vars.asset_type_dummy && (
-            <p className="text-[10px] text-amber-700 dark:text-amber-300">
-              한 건물에서 층으로 유형이 갈리면 유형 계수에 층 효과가 섞입니다. 같은 층에 두 유형이 있을 때만 순수 유형 효과로 읽으세요.
+        <details className="rounded border border-slate-300 dark:border-slate-500 px-2.5 py-2">
+          <summary className="cursor-pointer text-sm font-semibold text-slate-800 dark:text-slate-100">
+            고급 분석 · 단지 특성{attrOn ? " · 켜짐" : ""}
+          </summary>
+          <div className="mt-2 space-y-1.5">
+            <p className="text-[11px] leading-snug text-slate-600 dark:text-slate-300">
+              세대수·주차·공시지가·구조·유형으로 단지 사이 가격 차이를 탐색합니다. 표본 보강과 목적이
+              다릅니다. 단지 특성이 실제 모형에 포함될 때 단지 고정효과를 제외합니다. 체크해도 자료가 없거나 값이 같으면 생략됩니다. 개별공시지가는 지금 단지·유형당 스냅샷
+              하나입니다.
             </p>
-          )}
-        </div>
+            {keys.length <= 3 && (
+              <p className="text-[11px] leading-snug text-amber-800 dark:text-amber-200">
+                단지가 {keys.length}곳이면 이 계수는 단지 사이 차이에 이름을 붙인 것입니다. 거래가
+                많아도 단지 수가 적으면 그대로입니다.
+              </p>
+            )}
+            <p className="text-[10px] text-slate-500 dark:text-slate-400">
+              같은 지번 오피스텔 복사(kapt_same_pnu) 세대수·주차는 이 유형 재고가 아니라 빠집니다.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              {(
+                [
+                  ["households", "총 세대수"],
+                  ["parking", "세대당 주차"],
+                  ["assessed_land_price", "개별공시지가"],
+                  ["structure", "구조"],
+                  ["asset_type_dummy", "유형"],
+                ] as const
+              ).map(([key, label]) => (
+                <label
+                  key={key}
+                  className="flex items-center gap-2"
+                  title={
+                    key === "structure"
+                      ? "시군구 회귀에서는 예측 개선이 약했습니다. 코호트는 단지 간 차이가 있을 때만 식별됩니다."
+                      : key === "asset_type_dummy"
+                        ? "한 건물에서 층으로 유형이 갈리면(예: 저층 오피·고층 아파트) 유형 계수에 층 효과가 섞입니다."
+                        : key === "assessed_land_price"
+                          ? "지금 값은 단지·유형당 스냅샷 하나입니다."
+                          : undefined
+                  }
+                >
+                  <input
+                    type="checkbox"
+                    checked={vars[key]}
+                    onChange={(e) => setVars((v) => ({ ...v, [key]: e.target.checked }))}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+            {vars.asset_type_dummy && (
+              <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                한 건물에서 층으로 유형이 갈리면 유형 계수에 층 효과가 섞입니다. 같은 층에 두 유형이 있을 때만 순수 유형 효과로 읽으세요.
+              </p>
+            )}
+          </div>
+        </details>
       )}
 
       {vars.floor && (
@@ -711,20 +783,23 @@ export default function BuildingRegressionPanel({
           {(regM.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? "회귀 실패"}
         </p>
       )}
-      {regM.data &&
-        fittedSnap.current &&
-        (modelType !== fittedSnap.current.type || !blocksMatch(selectedBlocks, fittedSnap.current.blocks)) && (
+      {regM.data && conditionsChanged && (
         <p className="text-[10px] text-amber-700 dark:text-amber-300">
-          변수 또는 척도가 바뀌었습니다. 아래 식과 시나리오는 마지막 실행입니다. 회귀를 다시 실행하면 맞춥니다.
+          분석 조건이 바뀌었습니다. 아래 결과는 이전 조건으로 계산했습니다.
         </p>
       )}
       {regM.data && (
-        <CollectiveRegressionResults data={regM.data} modelType={modelType} />
+        <CollectiveRegressionResults
+          data={regM.data}
+          modelType={modelType}
+          logNote="금액만 로그입니다. 전용면적은 그대로입니다."
+        />
       )}
 
       {regM.data?.predict_options && (
         <PredictPanel
           opts={regM.data.predict_options}
+          groups={regM.data.analysis?.sample_groups}
           vars={vars}
           floorMode={floorMode}
           useCohort={useCohort}
@@ -732,7 +807,8 @@ export default function BuildingRegressionPanel({
           setInputs={setPredictInputs}
           onPredict={() => predictM.mutate()}
           pending={predictM.isPending}
-          result={predictM.data}
+          disabled={conditionsChanged || regM.isPending}
+          result={!conditionsChanged && !regM.isPending && predictM.data?.inputSignature === predictionSignature ? predictM.data : undefined}
           error={
             predictM.isError
               ? String(

@@ -366,6 +366,7 @@ export async function runCohortRegression(body: {
 }
 
 type RegressionBody = {
+  expected_model_signature?: string;
   asset_type?: AssetType;
   contract_year_from?: number;
   contract_year_to?: number;

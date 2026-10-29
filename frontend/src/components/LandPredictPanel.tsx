@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createRequestGate } from "../../../shared/regression-ui/requestGate";
+import { contentSignature } from "../../../shared/regression-ui/signature";
+import { reconcileListedInputs } from "../../../shared/regression-ui/inputs";
 import { fetchLandRegressionPredict } from "../api/client";
 import { buildLandPredictionContext } from "../api/aiContext";
 import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
@@ -32,11 +35,7 @@ function fmtNum(n?: number | null, digits = 2) {
 function defaultPredictInputs(opts?: LandPredictOptions | null): Record<string, string> {
   const out: Record<string, string> = {};
   for (const c of opts?.continuous ?? []) {
-    if (c.min != null && c.max != null) {
-      out[c.name] = String(Math.round((c.min + c.max) / 2));
-    } else {
-      out[c.name] = "";
-    }
+    out[c.name] = "";
   }
   if (opts?.road_conditions?.length) {
     out.road_condition = opts.road_reference ?? opts.road_conditions[0];
@@ -56,40 +55,63 @@ export default function LandPredictPanel({
   regBody,
   vars,
   regionLabel,
+  disabled = false,
 }: {
   regResult: LandRegressionResponse;
   regBody: LandRegressionRequest;
   vars: LandRegressionVariables;
   regionLabel: string;
+  disabled?: boolean;
 }) {
   const opts = regResult.predict_options;
   const [inputs, setInputs] = useState<Record<string, string>>(() => defaultPredictInputs(opts));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<LandRegressionPredictResponse | null>(null);
+  const [resultSignature, setResultSignature] = useState<string | null>(null);
+  const modelSignature = contentSignature({ regBody, model: regResult.analysis?.model_signature ?? regResult.coefficients });
+  const requestSignature = contentSignature({ modelSignature, inputs });
+  const currentData = !disabled && resultSignature === requestSignature ? data : null;
+  const requestGate = useRef(createRequestGate());
+  useEffect(() => {
+    requestGate.current.invalidate();
+    setLoading(false);
+    setError(null);
+    return () => requestGate.current.invalidate();
+  }, [requestSignature, disabled]);
 
   useEffect(() => {
-    setInputs(defaultPredictInputs(opts));
+    setInputs(current => reconcileListedInputs(defaultPredictInputs(opts), current, {
+      road_condition: opts?.road_conditions ?? [],
+      deal_type: opts?.deal_types ?? [],
+      beopjungri_name: opts?.beopjungri_names ?? [],
+    }));
     setData(null);
+    setResultSignature(null);
     setError(null);
-  }, [opts, regResult.n, regResult.adj_r_squared]);
+  }, [modelSignature]);
 
   const aiContext = useMemo(() => {
-    if (!data) return null;
-    return buildLandPredictionContext(data, {
+    if (!currentData) return null;
+    return buildLandPredictionContext(currentData, {
       regionLabel,
       regressionN: regResult.n,
       adjR2: regResult.adj_r_squared,
     });
-  }, [data, regionLabel, regResult.n, regResult.adj_r_squared]);
+  }, [currentData, regionLabel, regResult.n, regResult.adj_r_squared]);
 
   if (!opts) return null;
 
   const runPredict = async () => {
+    if (disabled) return;
+    const ticket = requestGate.current.start();
+    const signature = requestSignature;
+    setData(null);
+    setResultSignature(null);
     setLoading(true);
     setError(null);
     try {
-      const body: LandRegressionPredictRequest = { ...regBody };
+      const body: LandRegressionPredictRequest = { ...regBody, expected_model_signature: regResult.analysis?.model_signature };
       for (const c of opts.continuous) {
         const raw = inputs[c.name];
         if (raw === "" || raw == null) {
@@ -128,12 +150,15 @@ export default function LandPredictPanel({
         body.assessed_land_price = num;
       }
       const res = await fetchLandRegressionPredict(body);
+      if (!requestGate.current.isCurrent(ticket)) return;
       setData(res);
+      setResultSignature(signature);
     } catch (e) {
+      if (!requestGate.current.isCurrent(ticket)) return;
       setError(parseApiError(e).message);
       setData(null);
     } finally {
-      setLoading(false);
+      if (requestGate.current.isCurrent(ticket)) setLoading(false);
     }
   };
 
@@ -142,25 +167,24 @@ export default function LandPredictPanel({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 inline-flex items-center gap-1">
-            예측
+            조건별 추정 · 토지 단가
             <AnalysisHelpPanel explain={LAND_PREDICT_HELP} />
             <StatsGlossaryHelp termId="prediction_interval" size="xs" />
           </p>
           <h3 className="font-semibold text-sm text-slate-800">다른 변수 고정 · 통계적 추정</h3>
           <p className="text-xs text-slate-500 mt-1">
-            회귀 적합 모형으로 단가(만원/㎡)를 추정합니다. OLS 기준 95% 추정·예측범위 —
-            n이 작으면 범위가 넓습니다.
+            입력한 조건에서 모형이 추정한 단가입니다. 개별 필지의 적정가격을 뜻하지는 않습니다.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5 shrink-0">
           <PublishAiContext context={aiContext} />
           <button
             type="button"
-            disabled={loading}
+            disabled={loading || disabled}
             onClick={() => void runPredict()}
             className="px-4 py-1.5 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-50"
           >
-            {loading ? "계산 중…" : "예측"}
+            {loading ? "계산 중…" : "추정값 계산"}
           </button>
         </div>
       </div>
@@ -278,27 +302,27 @@ export default function LandPredictPanel({
 
       {error && <p className="text-xs text-red-500 bg-red-50 rounded p-2">{error}</p>}
 
-      {data && (
+      {currentData && (
         <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-2 text-sm">
           <div>
             <span className="text-slate-500 text-xs">{ESTIMATE_COPY.valueLabel}</span>
-            <div className="text-xl font-bold tabular-nums">{fmtNum(data.y_hat, 2)} 만원/㎡</div>
+            <div className="text-xl font-bold tabular-nums">{fmtNum(currentData.y_hat, 2)} 만원/㎡</div>
             <StatisticalEstimateCaption />
           </div>
           <div className="text-xs space-y-1.5">
             <StatisticalEstimateRangeRow kind="mean">
               <span className="tabular-nums">
-                {fmtNum(data.ci_lower, 2)} ~ {fmtNum(data.ci_upper, 2)} 만원/㎡
+                {fmtNum(currentData.ci_lower, 2)} ~ {fmtNum(currentData.ci_upper, 2)} 만원/㎡
               </span>
             </StatisticalEstimateRangeRow>
             <StatisticalEstimateRangeRow kind="individual">
               <span className="tabular-nums">
-                {fmtNum(data.pi_lower, 2)} ~ {fmtNum(data.pi_upper, 2)} 만원/㎡
+                {fmtNum(currentData.pi_lower, 2)} ~ {fmtNum(currentData.pi_upper, 2)} 만원/㎡
               </span>
             </StatisticalEstimateRangeRow>
           </div>
-          {data.warnings.map((w) => (
-            <p key={w} className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1">
+          {currentData.warnings.map((w) => (
+            <p key={w} className="text-xs text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/40 rounded px-2 py-1">
               {w}
             </p>
           ))}

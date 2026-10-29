@@ -23,14 +23,18 @@ export default function CollectiveRegressionEquation({
   modelType,
   equation,
   timeReference,
+  targetLabel = "금액",
+  targetUnit = "만원",
 }: {
   coefficients: RegressionCoeff[];
   modelType: RegressionModelType;
   equation?: string;
   timeReference?: string | null;
+  targetLabel?: string;
+  targetUnit?: string;
 }) {
   const [showAll, setShowAll] = useState(false);
-  const dep = modelType === "log" ? "log(금액)" : "금액(만원)";
+  const dep = modelType === "log" ? `log(${targetLabel})` : `${targetLabel}(${targetUnit})`;
   const intercept = coefficients.find((c) => c.name === "const");
 
   if (!intercept && equation) {
@@ -64,7 +68,7 @@ export default function CollectiveRegressionEquation({
           return (
             <span
               key={c.name}
-              className={clsx(faded && "opacity-40", significant && !faded && "font-semibold")}
+              className={clsx(faded && "text-slate-600 dark:text-slate-300", significant && !faded && "font-semibold")}
             >
               {" "}
               {sign} {mag}·{shortDisplayLabel(c.label)}
@@ -94,7 +98,7 @@ export default function CollectiveRegressionEquation({
               return (
                 <span
                   key={c.name}
-                  className={clsx(faded && "opacity-40", significant && !faded && "font-semibold")}
+                  className={clsx(faded && "text-slate-600 dark:text-slate-300", significant && !faded && "font-semibold")}
                 >
                   {i > 0 ? " · " : ""}
                   {timeCode(c)} {sign}
@@ -116,9 +120,9 @@ export default function CollectiveRegressionEquation({
         </button>
       )}
 
-      <p className="text-[10px] text-slate-400 dark:text-slate-500">
+      <p className="text-[10px] text-slate-500 dark:text-slate-400">
         회귀식 유의 기준 p&lt;{EQUATION_SIG_P}
-        {!showAll && hiddenCount > 0 ? " · 기본은 유의 변수만" : showAll ? " · 비유의는 흐림" : ""}
+        {!showAll && hiddenCount > 0 ? " · 기본은 유의 계수만" : showAll ? " · 비유의 계수는 보통 굵기" : ""}
       </p>
     </div>
   );

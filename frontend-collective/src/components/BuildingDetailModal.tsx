@@ -1,3 +1,4 @@
+import TargetPicker from "../../../shared/regression-ui/TargetPicker";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useProductAccess } from "@ch2/macro-shell/productAccess";
 import { useQuery } from "@tanstack/react-query";
@@ -897,10 +898,12 @@ export default function BuildingDetailModal({
           {!narrow && peerBuildings.length > 0 && panel !== "danji" && (
             <div className="mt-2 rounded border border-indigo-100 bg-indigo-50/50 px-2 py-1.5 text-xs">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-semibold text-indigo-800">분석 코호트</span>
-                <span className="text-slate-600">
-                  {cohortKeys.length === 1 ? "단일 단지" : `${cohortKeys.length}개 단지`}
+                <span className="font-semibold text-indigo-950 dark:text-indigo-100">
+                  {cohortExtra.length > 0 ? `함께 분석할 단지 ${cohortExtra.length}곳` : "함께 분석할 단지"}
                 </span>
+                {cohortExtra.length === 0 && (
+                  <span className="text-slate-700 dark:text-slate-200">단일 단지</span>
+                )}
                 {canRunCohort && panel !== "regression" && (
                   <button
                     type="button"
@@ -912,55 +915,50 @@ export default function BuildingDetailModal({
                   </button>
                 )}
                 {canRunCohort && panel === "regression" && (
-                  <span className="ml-auto text-slate-600">변수를 고른 뒤 아래 「회귀 실행」</span>
+                  <span className="ml-auto text-slate-700 dark:text-slate-200">변수를 고른 뒤 아래 「회귀 실행」</span>
                 )}
               </div>
+              {cohortExtra.length > 0 ? (
+                <details className="mt-1">
+                  <summary className="cursor-pointer text-indigo-950 dark:text-indigo-100">선택 내역 보기</summary>
+                  <div className="mt-1 space-y-1">
+                    <p>원래 단지: {row.display_name}. 목록의 n은 조회 거래수이며, 회귀 적합 수는 실행 결과에서 확인하세요.</p>
+                    {cohortKeys.length >= MAX_COHORT_BUILDINGS && (
+                      <p className="text-slate-500">최대 {MAX_COHORT_BUILDINGS}개 단지까지 포함할 수 있습니다.</p>
+                    )}
+                    <div className="flex flex-wrap gap-1">
+                      {cohortExtra.map((k) => {
+                        const label = peerBuildings.find((b) => b.building_key === k)?.display_name ?? k.slice(0, 8);
+                        return (
+                          <button
+                            key={k}
+                            type="button"
+                            className="px-2 py-1 rounded bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-400 text-indigo-950 dark:text-indigo-100 text-sm font-medium"
+                            onClick={() => setCohortExtra((prev) => prev.filter((x) => x !== k))}
+                            title="코호트에서 제거"
+                          >
+                            {label} ×
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {peerOptions.length > 0 && <TargetPicker label="+ 인근단지 추가"
+                      options={peerOptions.map(b => ({ key: b.building_key, label: b.display_name, address: b.jibun_address || b.road_address || b.address, count: b.count }))} onChoose={addToCohort}
+                      disabled={cohortKeys.length >= MAX_COHORT_BUILDINGS} />}
+                  </div>
+                </details>
+              ) : (
+              <p className="mt-1 text-slate-700 dark:text-slate-200">원래 단지: {row.display_name}. 목록의 n은 조회 거래수이며, 회귀 적합 수는 실행 결과에서 확인하세요.</p>
+              )}
               {cohortStale && panel !== "regression" && (
                 <p className="mt-1 text-amber-700">코호트가 변경되었습니다. 「통합분석」을 다시 실행하세요.</p>
               )}
-              {cohortKeys.length >= MAX_COHORT_BUILDINGS && (
+              {cohortExtra.length === 0 && cohortKeys.length >= MAX_COHORT_BUILDINGS && (
                 <p className="mt-1 text-slate-500">최대 {MAX_COHORT_BUILDINGS}개 단지까지 포함할 수 있습니다.</p>
               )}
-              {cohortExtra.length > 0 && (
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {cohortExtra.map((k) => {
-                    const label = peerBuildings.find((b) => b.building_key === k)?.display_name ?? k.slice(0, 8);
-                    return (
-                      <button
-                        key={k}
-                        type="button"
-                        className="px-2 py-1 rounded bg-white border border-indigo-200 text-indigo-800 text-sm font-medium"
-                        onClick={() => setCohortExtra((prev) => prev.filter((x) => x !== k))}
-                        title="코호트에서 제거"
-                      >
-                        {label} ×
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              {peerOptions.length > 0 && (
-                <label className="mt-1.5 flex flex-wrap items-center gap-1.5 text-slate-600">
-                  <span className="shrink-0">+ 단지 추가</span>
-                  <select
-                    className="text-sm border border-slate-200 rounded px-1.5 py-1 min-w-[12rem] max-w-full w-[min(100%,22rem)] bg-white"
-                    defaultValue=""
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v) addToCohort(v);
-                      e.target.value = "";
-                    }}
-                    disabled={cohortKeys.length >= MAX_COHORT_BUILDINGS}
-                  >
-                    <option value="">선택…</option>
-                    {peerOptions.slice(0, 80).map((b) => (
-                      <option key={b.building_key} value={b.building_key}>
-                        {b.display_name} (n={b.count})
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
+              {cohortExtra.length === 0 && peerOptions.length > 0 && <TargetPicker label="+ 인근단지 추가"
+                options={peerOptions.map(b => ({ key: b.building_key, label: b.display_name, address: b.jibun_address || b.road_address || b.address, count: b.count }))} onChoose={addToCohort}
+                disabled={cohortKeys.length >= MAX_COHORT_BUILDINGS} />}
             </div>
           )}
         </>

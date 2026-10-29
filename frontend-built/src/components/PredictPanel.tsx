@@ -11,6 +11,7 @@ import {
   type SetStateAction,
 } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { contentSignature } from "../../../shared/regression-ui/signature";
 import clsx from "clsx";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import { buildBuiltPredictionContext } from "../api/aiClient";
@@ -41,6 +42,7 @@ import type {
   RegressionRunResponse,
   RegressionVariableSpec,
 } from "../types";
+import BasicPredictionResult from "./BasicPredictionResult";
 
 function fmtNum(n?: number | null, digits = 0) {
   if (n == null || Number.isNaN(n)) return "—";
@@ -142,6 +144,8 @@ type Props = {
   lockAdminLevel?: string | null;
   /** 입력이 채워져 있으면 마운트 시 한 번 예측 */
   autoPredict?: boolean;
+  /** 복합 기본회귀에서만 사용하는 결과 표시. 계산·입력은 기존 경로를 유지한다. */
+  basicPresentation?: boolean;
 };
 
 export default function PredictPanel({
@@ -156,6 +160,7 @@ export default function PredictPanel({
   scopeNTx,
   lockAdminLevel = null,
   autoPredict = false,
+  basicPresentation = false,
 }: Props) {
   const draftCtx = useContext(PredictDraftContext);
   const levels = useMemo(() => {
@@ -208,17 +213,26 @@ export default function PredictPanel({
     }
   }, [selected?.admin_level, selected?.predict_options, draftCtx]);
 
-  const predictM = useMutation({ mutationFn: predictRegression });
+  const predictionSignature = contentSignature({ regBody, inputs,
+    model: selected?.analysis?.model_signature ?? selected?.coefficients, level: selected?.admin_level });
+  const predictM = useMutation({ mutationFn: async (body: RegressionPredictRequest) => {
+    const signature = predictionSignature;
+    return { ...await predictRegression(body), inputSignature: signature };
+  } });
+  // 입력·적합 모형이 바뀌면 이전 요청의 오류와 진행 상태도 무효화한다.
+  const resetPrediction = predictM.reset;
+  useEffect(() => { resetPrediction(); }, [predictionSignature, resetPrediction]);
+  const currentPrediction = predictM.data?.inputSignature === predictionSignature ? predictM.data : undefined;
 
   const aiPredictionContext = useMemo(() => {
-    if (!predictM.data || !selected) return null;
-    return buildBuiltPredictionContext(predictM.data, {
+    if (!currentPrediction || !selected) return null;
+    return buildBuiltPredictionContext(currentPrediction, {
       regionLabel: selected.scope_label ?? regionLabel,
       assetType,
       regressionN: selected.n,
       adjR2: selected.adj_r_squared,
     });
-  }, [predictM.data, selected, regionLabel, assetType]);
+  }, [currentPrediction, selected, regionLabel, assetType]);
 
   const runPredict = useCallback(() => {
     if (!selected?.predict_options) return;
@@ -226,6 +240,7 @@ export default function PredictPanel({
     const level = selected.admin_level;
     const body: RegressionPredictRequest = {
       ...regBody,
+      expected_model_signature: selected.analysis?.model_signature,
       admin_level: level as RegressionPredictRequest["admin_level"],
     };
     for (const c of pOpts.continuous ?? []) {
@@ -286,15 +301,15 @@ export default function PredictPanel({
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          {!embedded && (
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">예측</p>
+          {!embedded && !basicPresentation && (
+            <p className="text-[10px] font-semibold tracking-wide text-slate-400">조건별 추정 · 거래금액</p>
           )}
-          <h2 className="font-semibold text-sm">
-            {embedded ? "Macro 모형 적용 예시" : "다른 변수 고정 · 통계적 추정"}
+          <h2 className={clsx("font-semibold", basicPresentation ? "text-base" : "text-sm")}>
+            {basicPresentation ? "조건별 추정 · 거래금액" : "다른 변수 고정 · 통계적 추정"}
           </h2>
-          {modelHint && <p className="text-[11px] text-slate-500 mt-0.5">{modelHint}</p>}
+          {modelHint && <p className={clsx("text-slate-500 mt-0.5", basicPresentation ? "text-sm" : "text-[11px]")}>{modelHint}</p>}
           {embedded && (fitN != null || scopeNTx != null) && (
-            <p className="text-[10px] text-slate-400 mt-0.5 tabular-nums">
+            <p className={clsx("text-slate-400 mt-0.5 tabular-nums", basicPresentation ? "text-sm" : "text-[10px]")}>
               {scopeNTx != null && <>거래 {scopeNTx}</>}
               {fitN != null && (
                 <>
@@ -302,18 +317,20 @@ export default function PredictPanel({
                   적합 {fitN}
                 </>
               )}
-              <span className="text-slate-300"> — 이 창의 Macro 후보 기준</span>
+              {!basicPresentation && <span className="text-slate-300"> — 이 창의 Macro 후보 기준</span>}
             </p>
           )}
           {!embedded && (
             <p className="text-xs text-slate-500 mt-1">
-              탐색(통제 전) → 분석(통제 후) → <strong className="text-slate-600">예측</strong> 순으로
-              해석하세요. OLS 기준 95% 추정·예측범위 — n이 작으면 범위가 넓습니다.
+              {basicPresentation ? "조건을 입력하면 이 회귀모형의 추정금액과 범위를 확인할 수 있습니다." : <>
+                탐색(통제 전) → 분석(통제 후) → <strong className="text-slate-600">예측</strong> 순으로
+                해석하세요. OLS 기준 95% 추정·예측범위 — n이 작으면 범위가 넓습니다.
+              </>}
             </p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-1.5 shrink-0">
-          <AnalysisHelpPanel explain={predictM.data?.explain ?? BUILT_PREDICTION_HELP} />
+          <AnalysisHelpPanel explain={currentPrediction?.explain ?? BUILT_PREDICTION_HELP} />
           <PublishAiContext context={aiPredictionContext} />
           <button
             type="button"
@@ -321,7 +338,7 @@ export default function PredictPanel({
             onClick={runPredict}
             disabled={predictM.isPending}
           >
-            {predictM.isPending ? "계산 중…" : embedded ? "예시 계산" : "예측"}
+            {predictM.isPending ? "계산 중…" : "추정값 계산"}
           </button>
         </div>
       </div>
@@ -337,7 +354,7 @@ export default function PredictPanel({
         ) : null}
 
         {(opts?.continuous ?? []).map((c) => {
-          const assess = assessmentForName(predictM.data?.continuous_assessments, c.name);
+          const assess = assessmentForName(currentPrediction?.continuous_assessments, c.name);
           const level = assess?.level ?? 0;
           return (
           <label key={c.name} className="space-y-1 shrink-0">
@@ -347,7 +364,7 @@ export default function PredictPanel({
             <input
               className={clsx(
                 "input !w-[8.5rem] py-1 text-xs",
-                predictM.data && inputBorderClass(level),
+                currentPrediction && inputBorderClass(level),
               )}
               type="number"
               value={inputs[c.name] ?? ""}
@@ -477,20 +494,27 @@ export default function PredictPanel({
       )}
 
       {predictM.isError && (
-        <p className="text-sm text-red-600">{(predictM.error as Error).message ?? "예측 실패"}</p>
+        <p className="text-sm text-red-600" role="alert">{
+          (predictM.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+            ?? (predictM.error as Error).message ?? "추정값을 계산하지 못했습니다."
+        }</p>
       )}
 
-      {predictM.data && (() => {
-        const level = predictM.data.extrapolation_level ?? 0;
+      {currentPrediction && (() => {
+        const level = currentPrediction.extrapolation_level ?? 0;
         const badge = extrapolationBadge(level);
-        const hidden = predictM.data.y_hat_suppressed || shouldHidePrediction(level, predictM.data.response_scale);
+        const hidden = currentPrediction.y_hat_suppressed || shouldHidePrediction(level, currentPrediction.response_scale);
         const extrapGuidance = buildExtrapolationGuidance(
-          predictM.data.continuous_assessments,
+          currentPrediction.continuous_assessments,
           level,
         );
-        const otherWarnings = predictM.data.warnings.filter(
+        const otherWarnings = currentPrediction.warnings.filter(
           (w) => !isTechnicalExtrapolationWarning(w),
         );
+        if (basicPresentation) return <BasicPredictionResult
+          result={currentPrediction} hidden={hidden} badge={badge} guidance={extrapGuidance} warnings={otherWarnings}
+          limited={Boolean(selected.analysis?.provision?.identification_limited || (selected.analysis?.design_rank != null && selected.analysis.design_rank < selected.analysis.coefficient_n))}
+        />;
         return (
         <div
           className={clsx(
@@ -520,7 +544,7 @@ export default function PredictPanel({
             ) : (
               <>
                 <div className={clsx("font-bold", embedded ? "text-lg" : "text-xl")}>
-                  {fmtNum(Math.round(predictM.data.y_hat))}만원
+                  {fmtNum(Math.round(currentPrediction.y_hat))}만원
                 </div>
                 <StatisticalEstimateCaption compact={embedded} />
               </>
@@ -529,10 +553,10 @@ export default function PredictPanel({
           {!hidden && (
             <div className="text-xs space-y-1.5">
               <StatisticalEstimateRangeRow kind="mean" compact={embedded}>
-                {fmtNum(Math.round(predictM.data.ci_lower))} ~ {fmtNum(Math.round(predictM.data.ci_upper))}만원
+                {fmtNum(Math.round(currentPrediction.ci_lower))} ~ {fmtNum(Math.round(currentPrediction.ci_upper))}만원
               </StatisticalEstimateRangeRow>
               <StatisticalEstimateRangeRow kind="individual" compact={embedded}>
-                {fmtNum(Math.round(predictM.data.pi_lower))} ~ {fmtNum(Math.round(predictM.data.pi_upper))}만원
+                {fmtNum(Math.round(currentPrediction.pi_lower))} ~ {fmtNum(Math.round(currentPrediction.pi_upper))}만원
               </StatisticalEstimateRangeRow>
             </div>
           )}

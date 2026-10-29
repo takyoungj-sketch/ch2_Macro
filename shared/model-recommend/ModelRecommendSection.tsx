@@ -24,16 +24,16 @@ const DEPTH_META: Record<
   { badge: string; title: string }
 > = {
   standard: {
-    badge: "깊이: 표준",
-    title: "AIC/MAPE 후보 (Twin Validation 없음)",
+    badge: "변수 탐색",
+    title: "현재 분석 범위에서 후보 비교",
   },
   standard_plus: {
-    badge: "깊이: 표준+",
-    title: "Adj R²·CV-MAPE 후보 (Twin Validation 없음)",
+    badge: "변수·척도 탐색",
+    title: "현재 분석 범위에서 변수와 선형·로그 후보 비교",
   },
   extended: {
-    badge: "깊이: 확장",
-    title: "Stage1 + Twin Validation",
+    badge: "지역 확장 탐색",
+    title: "기본 탐색과 유사 지역 확장 비교",
   },
 };
 

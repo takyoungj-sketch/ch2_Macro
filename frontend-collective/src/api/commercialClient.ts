@@ -232,6 +232,8 @@ type ClusterScopeParams = {
   addr4_list?: string[];
   contract_year_from?: number;
   contract_year_to?: number;
+  contract_date_from?: string;
+  contract_date_to?: string;
 };
 
 export async function fetchCommercialYearlyStats(
@@ -306,6 +308,8 @@ export async function runCommercialRegression(
   },
 ): Promise<CommercialRegressionResponse> {
   const { data } = await api.post<CommercialRegressionResponse>(`/clusters/${clusterKey}/regression/run`, {
+    contract_date_from: body.contract_date_from,
+    contract_date_to: body.contract_date_to,
     variables: {
       gross_area: true,
       building_age: true,
@@ -332,6 +336,7 @@ export async function runCommercialRegression(
 export async function predictCommercialRegression(
   clusterKey: string,
   body: ClusterScopeParams & {
+    expected_model_signature?: string;
     exclude_outliers_iqr?: boolean;
     experiment?: boolean;
     model_type?: RegressionModelType;
@@ -353,6 +358,9 @@ export async function predictCommercialRegression(
   const { data } = await api.post<CommercialRegressionPredictResponse>(
     `/clusters/${clusterKey}/regression/predict`,
     {
+        expected_model_signature: body.expected_model_signature,
+      contract_date_from: body.contract_date_from,
+      contract_date_to: body.contract_date_to,
       variables: {
         gross_area: true,
         building_age: true,
@@ -494,6 +502,7 @@ export async function runCommercialCohortRegression(
 
 export async function predictCommercialCohortRegression(
   body: CommercialCohortBody & {
+    expected_model_signature?: string;
     exclude_outliers_iqr?: boolean;
     model_type?: RegressionModelType;
     inputs: CommercialRegressionPredictInputs;
@@ -501,6 +510,7 @@ export async function predictCommercialCohortRegression(
   },
 ): Promise<CommercialRegressionPredictResponse> {
   const { data } = await api.post<CommercialRegressionPredictResponse>("/analysis/cohort/regression/predict", {
+    expected_model_signature: body.expected_model_signature,
     variables: {
       gross_area: true,
       building_age: true,

@@ -1,3 +1,4 @@
+import TargetPicker from "../../../shared/regression-ui/TargetPicker";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useProductAccess } from "@ch2/macro-shell/productAccess";
 import { useQuery } from "@tanstack/react-query";
@@ -427,12 +428,14 @@ export default function CommercialClusterDetailModal({
             return help ? <AnalysisHelpPanel explain={help} className="ml-1" /> : null;
           })()}
           {!narrow && peerClusters.length > 0 && (
-            <div className="mt-2 rounded border border-indigo-100 bg-indigo-50/50 px-2 py-1.5 text-xs">
+            <div className="mt-2 rounded border border-indigo-300 dark:border-indigo-400/70 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-2 text-xs">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-semibold text-indigo-800">분석 코호트</span>
-                <span className="text-slate-600">
-                  {cohortKeys.length === 1 ? "단일 cluster" : `${cohortKeys.length}개 cluster`}
+                <span className="font-semibold text-indigo-950 dark:text-indigo-100">
+                  {cohortExtra.length > 0 ? `함께 분석할 도로 ${cohortExtra.length}곳` : "함께 분석할 도로"}
                 </span>
+                {cohortExtra.length === 0 && (
+                  <span className="text-slate-700 dark:text-slate-200">도로 1개</span>
+                )}
                 {canRunCohort && panel !== "regression" && (
                   <button
                     type="button"
@@ -443,53 +446,47 @@ export default function CommercialClusterDetailModal({
                   </button>
                 )}
                 {canRunCohort && panel === "regression" && (
-                  <span className="ml-auto text-slate-600">변수를 고른 뒤 아래 「회귀 실행」</span>
+                  <span className="ml-auto text-slate-700 dark:text-slate-200">변수를 고른 뒤 아래 「회귀 실행」</span>
                 )}
               </div>
               {cohortStale && panel !== "regression" && (
                 <p className="mt-1 text-amber-700">코호트가 변경되었습니다. 「통합분석」을 다시 실행하세요.</p>
               )}
-              {cohortExtra.length > 0 && (
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {cohortExtra.map((k) => {
-                    const peerLabel =
-                      peerClusters.find((c) => c.cluster_key === k)?.road_name ||
-                      peerClusters.find((c) => c.cluster_key === k)?.display_label ||
-                      k.slice(0, 8);
-                    return (
-                      <button
-                        key={k}
-                        type="button"
-                        className="px-2 py-1 rounded bg-white border border-indigo-200 text-indigo-800 text-sm font-medium"
-                        onClick={() => setCohortExtra((prev) => prev.filter((x) => x !== k))}
-                      >
-                        {peerLabel} ×
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              {peerOptions.length > 0 && (
-                <label className="mt-1.5 flex flex-wrap items-center gap-1.5 text-slate-600">
-                  <span className="shrink-0">+ cluster 추가</span>
-                  <select
-                    className="text-sm border border-slate-200 rounded px-1.5 py-1 min-w-[12rem] max-w-full w-[min(100%,22rem)] bg-white"
-                    defaultValue=""
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      if (v) addToCohort(v);
-                      e.target.value = "";
-                    }}
-                    disabled={cohortKeys.length >= MAX_COHORT_CLUSTERS}
-                  >
-                    <option value="">선택…</option>
-                    {peerOptions.slice(0, 80).map((c) => (
-                      <option key={c.cluster_key} value={c.cluster_key}>
-                        {c.road_name || c.display_label} (n={c.count})
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              {cohortExtra.length > 0 ? (
+                <details className="mt-1">
+                  <summary className="cursor-pointer text-indigo-950 dark:text-indigo-100">선택 내역 보기</summary>
+                  <div className="mt-1 space-y-1">
+                    <p>원래 도로: {row.road_name || row.display_label}. 목록의 n은 조회 거래수이며, 회귀 적합 수는 실행 결과에서 확인하세요.</p>
+                    <div className="flex flex-wrap gap-1">
+                      {cohortExtra.map((k) => {
+                        const peerLabel =
+                          peerClusters.find((c) => c.cluster_key === k)?.road_name ||
+                          peerClusters.find((c) => c.cluster_key === k)?.display_label ||
+                          k.slice(0, 8);
+                        return (
+                          <button
+                            key={k}
+                            type="button"
+                            className="px-2 py-1 rounded bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-400 text-indigo-950 dark:text-indigo-100 text-sm font-medium"
+                            onClick={() => setCohortExtra((prev) => prev.filter((x) => x !== k))}
+                          >
+                            {peerLabel} ×
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {peerOptions.length > 0 && <TargetPicker label="+ 인근 도로 추가"
+                      options={peerOptions.map(c => ({ key: c.cluster_key, label: c.road_name || c.display_label, address: [c.addr3, c.addr4, c.area_bucket_label].filter(Boolean).join(" "), count: c.count }))} onChoose={addToCohort}
+                      disabled={cohortKeys.length >= MAX_COHORT_CLUSTERS} />}
+                  </div>
+                </details>
+              ) : (
+                <>
+                  <p className="mt-1 text-slate-700 dark:text-slate-200">원래 도로: {row.road_name || row.display_label}. 목록의 n은 조회 거래수이며, 회귀 적합 수는 실행 결과에서 확인하세요.</p>
+                  {peerOptions.length > 0 && <TargetPicker label="+ 인근 도로 추가"
+                    options={peerOptions.map(c => ({ key: c.cluster_key, label: c.road_name || c.display_label, address: [c.addr3, c.addr4, c.area_bucket_label].filter(Boolean).join(" "), count: c.count }))} onChoose={addToCohort}
+                    disabled={cohortKeys.length >= MAX_COHORT_CLUSTERS} />}
+                </>
               )}
             </div>
           )}

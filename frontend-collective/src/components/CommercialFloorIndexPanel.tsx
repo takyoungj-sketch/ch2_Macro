@@ -252,7 +252,7 @@ export default function CommercialFloorIndexPanel({
       />
 
       {!floorIndexEligible && (
-        <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded px-2 py-1.5">
+        <p className="text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900 rounded px-2 py-1.5">
           {gateTip} — 실험 모드로 조회 중입니다.
         </p>
       )}

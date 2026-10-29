@@ -191,9 +191,17 @@ export interface RecommendationSatisfaction {
   grade_basis?: "search" | "confirm" | null;
 }
 
+export interface PredictiveJudgment {
+  rank: number;
+  cv_gap_pp?: number | null;
+  label: string;
+}
+
 export interface RecommendationStage1 {
   candidates_explanatory: ModelCandidate[];
   candidates_predictive: ModelCandidate[];
+  predictive_judgments?: PredictiveJudgment[];
+  parity_notes?: string[];
   primary: ModelCandidate;
   alternate?: ModelCandidate | null;
   selection_n: number;
@@ -210,6 +218,12 @@ export interface RecommendationStage1 {
   primary_cv_extreme_rate?: number | null;
   /** 중위 오차. 평균과 크게 벌어지면 소수 거래가 지표를 끌고 있다는 뜻 */
   primary_cv_median_ape?: number | null;
+  sample_drop_notes?: string[];
+  provision_notes?: string[];
+  assessed_side?: { n: number; cv_mape?: number | null; note: string } | null;
+  /** 탐색 1위를 대표모형으로 확정했는지. 순위는 그대로다. */
+  representative_confirmed?: boolean;
+  representative_note?: string | null;
 }
 
 export interface RecommendationPoolCandidate {
@@ -575,6 +589,7 @@ export interface ResidualScaleBin {
 
 export interface InfluentialTransaction {
   rank: number;
+  transaction_id?: number | null;
   label: string;
   contract_year?: number | null;
   zone_type?: string | null;
@@ -618,6 +633,7 @@ export interface ResidualDiagnostics {
 }
 
 export interface RegressionLevelResult {
+  analysis?: import("../../shared/regression-ui/types").RegressionAnalysisContext | null;
   admin_level: "sigungu" | "gu" | "eupmyeondong" | "beopjungri";
   scope_label?: string | null;
   n: number;
@@ -633,6 +649,11 @@ export interface RegressionLevelResult {
   predict_options?: PredictOptions | null;
   warning?: string | null;
   mape?: number | null;
+  /** 초점 식만. 모형 추천과 같은 연도 롤링 CV. */
+  cv_mape?: number | null;
+  cv_folds?: number;
+  confirm_cv_mape?: number | null;
+  confirm_cv_note?: string | null;
   categorical_missing?: "keep_unknown" | "drop";
   n_excluded_missing?: number;
   missing_treatment_label?: string;
@@ -678,6 +699,7 @@ export interface RegressionRunResponse {
 }
 
 export interface RegressionPredictRequest extends RegressionRunRequest {
+  expected_model_signature?: string;
   admin_level: "sigungu" | "gu" | "eupmyeondong" | "beopjungri";
   gross_area?: number;
   land_area?: number;
@@ -765,6 +787,8 @@ export interface RegressionSelectionRequest extends RegressionRunRequest {
   profile_as_of_month?: string | null;
   profile_window_years?: number | null;
   profile_twin_neighbors?: ProfileTwinCandidateNeighbor[];
+  /** 사용자가 고른 쌍둥이. 있으면 그 지역만 한 표본으로 합친다. */
+  selected_twin_codes?: string[];
   /** R3.5 — true일 때만 Twin 2단계 실행 (기본 false, 사용자 opt-in) */
   run_stage2?: boolean;
   /** Twin 실험2 — Local + Twin 1위 표본에서 예측형 식 재탐색 (확인용) */
@@ -889,6 +913,22 @@ export interface JointFTest {
   tested: boolean;
 }
 
+export interface CvCoverage {
+  requested_years?: number[];
+  failure_reasons?: Record<string, string>;
+  status?: "available" | "partial" | "unavailable";
+  evaluation_signature?: string | null;
+  mape?: number | null;
+  folds?: number;
+  n_trades?: number;
+  years?: number[];
+}
+
+export interface CandidateCvReport {
+  search?: CvCoverage;
+  confirm?: CvCoverage;
+}
+
 export interface ModelCandidate {
   rank: number;
   blocks: string[];
@@ -900,6 +940,36 @@ export interface ModelCandidate {
   bic?: number | null;
   joint_f_tests?: Record<string, JointFTest>;
   coefficients?: RegressionCoeff[];
+  cv_report?: CandidateCvReport | null;
+}
+
+export interface Recommend2Side {
+  block_summary: string;
+  response_scale: ResponseScale;
+  n: number;
+  n_rank: number;
+  coverage_ratio?: number | null;
+  cv_mape?: number | null;
+  confirm_cv_mape?: number | null;
+  result: RegressionLevelResult;
+}
+
+export interface Recommend2Response {
+  notice: string;
+  scope_label: string;
+  n_pool: number;
+  pool_summary: string;
+  excluded: { detail: string }[];
+  primary: RegressionLevelResult;
+  variables: RegressionVariableSpec;
+  response_scale: ResponseScale;
+  cv_mape?: number | null;
+  confirm_cv_mape?: number | null;
+  cv_n?: number | null;
+  explanatory_scale?: ResponseScale | null;
+  explanatory_note: string;
+  sides: Recommend2Side[];
+  total_subsets: number;
 }
 
 export interface RegressionCompareResponse {

@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import clsx from "clsx";
+import { formatProbability, formatStatistic } from "../../../shared/regression-ui/format";
 import { StatsGlossaryHelp } from "@ch2/stats-glossary";
 import type { LandRegressionCoeff } from "../types";
 import {
-  fmtDecimal,
   interpretLandCoefficient,
   isEquationSignificant,
   shortDisplayLabel,
@@ -39,29 +39,31 @@ export default function LandRegressionEffectsTable({
         <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">
           {shortDisplayLabel(c.label)}
         </td>
+        <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">{formatStatistic(c.coef, 4)}</td>
         <td className="border border-slate-200 px-2 py-1">{interpretLandCoefficient(c, modelType)}</td>
         <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-slate-600">
-          {c.se.toFixed(2)}
+          {formatStatistic(c.se)}
         </td>
         <td className="border border-slate-200 px-2 py-1 text-right tabular-nums text-slate-600">
-          {c.t.toFixed(2)}
+          {formatStatistic(c.t)}
         </td>
         <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">
-          {fmtDecimal(c.p, 5)}
+          {formatProbability(c.p)}
         </td>
       </tr>
     );
   };
 
   return (
-    <div className="max-h-48 mt-2 overflow-auto rounded-lg border border-slate-100">
+    <div tabIndex={0} role="region" aria-label="회귀 계수 상세 표" className="max-h-48 mt-2 overflow-auto rounded-lg border border-slate-100">
       <table className="w-full text-[11px] border-collapse min-w-[520px]">
         <thead className="sticky top-0 z-10">
           <tr className="bg-slate-50 text-slate-600">
             <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">변수</th>
+            <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">β</th>
             <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">
               <span className="inline-flex items-center gap-0.5">
-                계수
+                효과 해석
                 <StatsGlossaryHelp termId="coefficient" size="xs" />
               </span>
             </th>
@@ -86,7 +88,7 @@ export default function LandRegressionEffectsTable({
           {fe.length > 0 && (
             <>
               <tr className="bg-slate-50/80">
-                <td colSpan={5} className="border border-slate-200 px-2 py-1">
+                <td colSpan={6} className="border border-slate-200 px-2 py-1">
                   <button
                     type="button"
                     className="text-[11px] font-medium text-indigo-700"

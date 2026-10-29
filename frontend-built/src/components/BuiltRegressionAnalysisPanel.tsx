@@ -72,7 +72,7 @@ export default function BuiltRegressionAnalysisPanel({
           추가분석
         </h2>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          기본 회귀·예측과 별도 — Macro 모형 탐색·상위지역 재적합
+          변수 조합을 탐색하거나 상위지역에서 다시 적합한 결과를 확인합니다.
         </p>
       </div>
 
@@ -81,8 +81,7 @@ export default function BuiltRegressionAnalysisPanel({
           <div className="min-w-0">
             <h2 className="font-semibold text-sm">Macro 모형 탐색</h2>
             <p className="text-xs text-slate-500 mt-1">
-              변수 조합과 척도를 CV-MAPE로 탐색합니다. 추천식을 쓰려면 창 안에서 「기본 통계에 이
-              식 적용」을 누른 뒤, 왼쪽 「통계분석」을 다시 실행하세요.
+              변수 조합과 척도를 탐색 CV로 비교하고 후보별 결과를 확인합니다. 이 창의 탐색은 기본 회귀 설정을 바꾸지 않습니다.
             </p>
           </div>
           <button
@@ -103,6 +102,7 @@ export default function BuiltRegressionAnalysisPanel({
         }}
         regBody={regBody}
         regData={regData}
+        baselineRegBody={resultRegBody}
         recommendM={recommendM}
         assetType={assetType}
         regionLabel={regionLabel}
@@ -126,7 +126,7 @@ export default function BuiltRegressionAnalysisPanel({
         regionLabel={regionLabel}
         focusLabel={focusLabel}
         opened={upperOpened}
-        onOpen={() => setUpperOpened(true)}
+        onOpen={() => setUpperOpened(current => !current)}
       />
     </div>
   );

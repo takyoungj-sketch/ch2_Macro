@@ -543,7 +543,7 @@ export const LAND_SCATTER_PARTIAL_HELP: AnalysisExplain = {
   summary: "모형과 동일하게 다른 변수를 제거한 **잔차 vs 잔차**. 기울기 = 회귀 β.",
   formula: "Y잔차 vs X잔차 (Added Variable Plot)",
   interpretation: [
-    "회귀 계수표와 **같은 의미**입니다.",
+    "기울기는 해당 변수의 회귀계수 β와 같습니다. 전체 모형의 잔차 분포·영향 거래를 진단하는 그림과는 다릅니다.",
     "파란 기울기선 = OLS β.",
     "부분 R² = 통제 후 추가 설명력 참고.",
   ],

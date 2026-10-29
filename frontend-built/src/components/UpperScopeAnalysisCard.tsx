@@ -19,6 +19,10 @@ import ZoneCaution from "./ZoneCaution";
 import RegressionEffectsTable from "./RegressionEffectsTable";
 import SampleFunnel from "./SampleFunnel";
 import UpperScopeModelDiff from "./UpperScopeModelDiff";
+import AnalysisSummary, { primaryCaution } from "../../../shared/regression-ui/AnalysisSummary";
+import { DetailAnalysis, SummaryHeading } from "../../../shared/regression-ui/ReadingLayout";
+import AnalysisHelpPanel from "./AnalysisHelpPanel";
+import { BUILT_UPPER_SCOPE_HELP } from "../utils/builtAnalysisHelp";
 
 type Props = {
   regData: RegressionRunResponse;
@@ -69,10 +73,26 @@ function ComparisonLevelCard({
         <span className="text-slate-500 shrink-0">n={fmtNum(result.n)}</span>
       </div>
 
-      {result.warning && <p className="badge-warn">{result.warning}</p>}
+      <section className="space-y-2" aria-label="결과 요약">
+        <SummaryHeading />
+        {result.warning && <p className="badge-warn">{result.warning}</p>}
+        {primaryCaution(result.analysis) && (
+          <p className="text-amber-800 dark:text-amber-300">{primaryCaution(result.analysis)}</p>
+        )}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div>R² {fmtDecimal(result.r_squared, 4)}</div>
+        <div>Adj R² {fmtDecimal(result.adj_r_squared, 4)}</div>
+        <div>학습 MAPE {result.mape != null ? `${fmtDecimal(result.mape, 1)}%` : "—"}</div>
+        <div>유의 계수 {result.significant_count}개 (p&lt;0.05)</div>
+      </div>
+      <p className="text-slate-500">
+        위 지표는 이 단계 표본 안에서만 유효합니다. 초점 수치와 나란히 두고 우열을 가리지 마세요.
+      </p>
+      </section>
 
+      <DetailAnalysis>
       {result.sample && <SampleFunnel sample={result.sample} />}
-
+      <AnalysisSummary analysis={result.analysis} />
       <UpperScopeModelDiff
         focus={focus}
         upper={result}
@@ -80,19 +100,9 @@ function ComparisonLevelCard({
         focusTitle={focusTitle}
       />
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <div>R² {fmtDecimal(result.r_squared, 4)}</div>
-        <div>Adj R² {fmtDecimal(result.adj_r_squared, 4)}</div>
-        <div>학습 MAPE {result.mape != null ? `${fmtDecimal(result.mape, 1)}%` : "—"}</div>
-        <div>유의 {result.significant_count}개</div>
-      </div>
-      <p className="text-slate-500">
-        위 지표는 이 단계 표본 안에서만 유효합니다. 초점 수치와 나란히 두고 우열을 가리지 마세요.
-      </p>
-
       {(result.equation || result.coefficients.length > 0) && (
         <div className="space-y-1">
-          <div className="font-medium text-slate-600">회귀식</div>
+          <div className="font-medium text-slate-600">회귀식과 계수</div>
           <RegressionEquation
             coefficients={result.coefficients}
             responseScale={responseScale}
@@ -100,12 +110,6 @@ function ComparisonLevelCard({
             equation={result.equation}
             predictOptions={result.predict_options}
           />
-          {result.warning?.includes("참고용") && (
-            <p className="text-[11px] leading-snug text-slate-500">
-              표본 수가 권장 기준에 미달하므로 회귀계수가 불안정할 수 있습니다. R²와 MAPE는 해당
-              표본의 적합 결과이며, 새로운 거래에 대한 예측 정확도를 보장하지 않습니다.
-            </p>
-          )}
         </div>
       )}
 
@@ -121,6 +125,7 @@ function ComparisonLevelCard({
         </details>
       )}
       <ZoneCaution />
+      </DetailAnalysis>
     </div>
   );
 }
@@ -147,10 +152,9 @@ export default function UpperScopeAnalysisCard({
     <section id="built-step-upper" className="card scroll-mt-16 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="font-semibold text-sm">상위지역 재적합</h2>
+          <h2 className="font-semibold text-sm inline-flex items-center gap-1">상위지역 재적합 <AnalysisHelpPanel explain={BUILT_UPPER_SCOPE_HELP} title="상위지역 재적합 설명" /></h2>
           <p className="text-xs text-slate-500 mt-1">
-            같은 모형을 넓히는 것이 아니라, 상위 행정 단위 표본에서 회귀를 <strong>다시</strong>{" "}
-            적합합니다. 표본과 변수 구성이 달라지므로 참고용입니다.
+            통계분석 때 상위 행정 단위 표본에 따로 적합한 결과입니다. 실제 반영 변수와 기준 범주를 확인한 뒤 초점 결과와 비교하세요.
           </p>
         </div>
         <button
@@ -158,14 +162,13 @@ export default function UpperScopeAnalysisCard({
           className={clsx("btn text-xs shrink-0", opened ? "btn-ghost" : "btn-primary")}
           onClick={onOpen}
         >
-          {opened ? "다시 보기" : "상위지역 재적합"}
+          {opened ? "접기" : "결과 보기"}
         </button>
       </div>
 
       {!opened && (
         <p className="text-xs text-slate-400 py-2">
-          「상위지역 재적합」을 눌러 상위 단위에서 다시 적합한 결과와 초점과의 모형 차이를
-          확인하세요.
+          「결과 보기」를 누르면 이미 계산된 상위지역 결과를 펼칩니다. 새 계산은 기본 통계분석을 다시 실행하세요.
         </p>
       )}
 
@@ -229,7 +232,6 @@ export default function UpperScopeAnalysisCard({
                 regionLabel={regionLabel}
                 modelHint={`${ADMIN_LABELS[immediate.admin_level] ?? immediate.admin_level} 재적합 모형 · 기본통계 변수 중 이 단계에서 추정 가능한 것만 씁니다`}
                 lockAdminLevel={immediate.admin_level}
-                autoPredict
               />
             </div>
           )}

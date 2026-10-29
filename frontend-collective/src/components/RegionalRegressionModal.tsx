@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import AnalysisSummary, { primaryCaution } from "../../../shared/regression-ui/AnalysisSummary";
+import { DetailAnalysis, SummaryHeading } from "../../../shared/regression-ui/ReadingLayout";
+import ValidationStatus from "../../../shared/regression-ui/ValidationStatus";
+import { contentSignature } from "../../../shared/regression-ui/signature";
+import { formatProbability, formatStatistic } from "../../../shared/regression-ui/format";
 import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import { buildRegionalRegressionContext } from "../api/aiContext";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -19,7 +24,7 @@ import {
 import type { StatsWindowYears } from "./StatsWindowToggle";
 import CollectiveRegressionEquation from "./CollectiveRegressionEquation";
 import ZoneCaution from "./ZoneCaution";
-import CollectiveModelRecommend, { blocksMatch } from "./CollectiveModelRecommend";
+import CollectiveModelRecommend from "./CollectiveModelRecommend";
 import DraggableModalShell from "./DraggableModalShell";
 import {
   ESTIMATE_COPY,
@@ -439,7 +444,6 @@ export default function RegionalRegressionModal(props: Props) {
     () => (Object.keys(vars) as (keyof RegionalRegressionVariables)[]).filter((key) => Boolean(vars[key])),
     [vars],
   );
-  const fittedSnap = useRef<{ type: "linear" | "log"; blocks: string[] } | null>(null);
   const [pickKey, setPickKey] = useState(VIRTUAL_KEY);
   const [inputs, setInputs] = useState<RegionalRegressionPredictInputs>({});
 
@@ -543,6 +547,7 @@ export default function RegionalRegressionModal(props: Props) {
       weight_mode: weightMode,
       min_tx: minTx,
       region_dummy: regionDummy,
+      evaluation_region_addrs: choices.length ? choices.map(choice => choice.key) : [anchor.region_addr],
       region_addrs: twinPoolRegionAddrs(
         choices.map((choice) => choice.key),
         anchor.region_addr,
@@ -552,18 +557,32 @@ export default function RegionalRegressionModal(props: Props) {
   }, [twinQ.data, checked, choices, regionDummy, props.windowYears, props.assetType, vars, modelType, categoricalMissing, weightMode, minTx]);
 
   const runM = useMutation({
-    mutationFn: (req: RegionalRegressionRunRequest) => runRegionalRegression(req),
+    mutationFn: async (req: RegionalRegressionRunRequest) => ({
+      ...await runRegionalRegression(req), requestSignature: contentSignature(req),
+    }),
   });
   const twinRun = useMutation({
-    mutationFn: (req: RegionalRegressionRunRequest) => runRegionalRegression(req),
+    mutationFn: async (req: RegionalRegressionRunRequest) => ({
+      ...await runRegionalRegression(req), requestSignature: contentSignature(req),
+    }),
   });
   const runShown = effectiveTab === "twin" ? twinRun : runM;
-  const predM = useMutation({
-    mutationFn: (req: RegionalRegressionRunRequest) =>
-      predictRegionalRegression({ ...req, inputs }),
-  });
-
+  const currentRequest = effectiveTab === "twin" ? twinRequest : body;
   const data = runShown.data;
+  const conditionsChanged = Boolean(data && data.requestSignature !== contentSignature(currentRequest));
+  const predictionSignature = contentSignature({ request: currentRequest, inputs, model: data?.analysis?.model_signature });
+  const predM = useMutation({
+    mutationFn: async (req: RegionalRegressionRunRequest) => {
+      if (conditionsChanged) throw new Error("분석 조건이 바뀌었습니다. 아래 결과는 이전 조건으로 계산했습니다.");
+      const signature = predictionSignature;
+      return { ...await predictRegionalRegression({ ...req, inputs, expected_model_signature: data?.analysis?.model_signature }), inputSignature: signature };
+    },
+  });
+  // 입력·적합 모형이 바뀌면 이전 요청의 오류와 진행 상태도 무효화한다.
+  const resetPrediction = predM.reset;
+  useEffect(() => { resetPrediction(); }, [predictionSignature, resetPrediction]);
+  const currentPrediction = !conditionsChanged && !runShown.isPending
+    && predM.data?.inputSignature === predictionSignature ? predM.data : undefined;
   const picked = pickKey !== VIRTUAL_KEY ? data?.fitted.find((r) => fittedKey(r) === pickKey) : undefined;
   const regionalAiContext = useMemo(() => {
     const regionLabel = data?.scope_label ?? [props.addr1, props.addr2].filter(Boolean).join(" ");
@@ -581,13 +600,16 @@ export default function RegionalRegressionModal(props: Props) {
         },
       };
     }
-    return buildRegionalRegressionContext(data, {
+    const context = buildRegionalRegressionContext(data, {
       regionLabel,
       assetType: props.assetType,
       tab: effectiveTab,
-      prediction: predM.data ?? null,
+      prediction: currentPrediction ?? null,
     });
-  }, [data, effectiveTab, props.addr1, props.addr2, props.assetType, props.windowYears, predM.data]);
+    context.facts = { ...context.facts, conditions_changed: conditionsChanged,
+      result_state: conditionsChanged ? "previous_conditions" : "current" };
+    return context;
+  }, [data, effectiveTab, props.addr1, props.addr2, props.assetType, props.windowYears, currentPrediction, conditionsChanged]);
 
   function applyTarget(key: string) {
     if (key === VIRTUAL_KEY || !key) {
@@ -620,6 +642,9 @@ export default function RegionalRegressionModal(props: Props) {
     >
       <div className="text-xs text-slate-700 dark:text-slate-200 space-y-3">
         <PublishAiContext context={regionalAiContext} />
+        {conditionsChanged && <p className="text-xs text-amber-700 dark:text-amber-300" role="status">
+          분석 조건이 바뀌었습니다. 아래 결과는 이전 조건으로 계산했습니다.
+        </p>}
         <p className="text-[11px] text-slate-500">
           {data?.scope_label ?? `${props.addr1} · ${props.addr2} · ${props.windowYears}년 창`}
           {data?.as_of_month ? ` · 기준 ${data.as_of_month.slice(0, 7)}` : ""}
@@ -791,7 +816,6 @@ export default function RegionalRegressionModal(props: Props) {
               setPickKey(VIRTUAL_KEY);
               setInputs(emptyPredictInputs());
               predM.reset();
-              fittedSnap.current = { type: modelType, blocks: selectedBlocks };
               runM.mutate(body);
             }}
           >
@@ -850,7 +874,6 @@ export default function RegionalRegressionModal(props: Props) {
               setPickKey(VIRTUAL_KEY);
               setInputs(emptyPredictInputs());
               predM.reset();
-              fittedSnap.current = { type: modelType, blocks: selectedBlocks };
               twinRun.mutate(twinRequest);
             }}
           />
@@ -886,24 +909,20 @@ export default function RegionalRegressionModal(props: Props) {
                   setPickKey(VIRTUAL_KEY);
                   setInputs(emptyPredictInputs());
                   predM.reset();
-                  fittedSnap.current = {
-                    type: modelType,
-                    blocks: (Object.keys(nextVars) as (keyof RegionalRegressionVariables)[]).filter((key) =>
-                      Boolean(nextVars[key]),
-                    ),
-                  };
                   runShown.mutate({ ...base, variables: nextVars });
                 }}
               />
             )}
 
-            <SampleFunnel sample={data.sample} />
-
-            <section className="space-y-2">
-              <p className="text-xs font-semibold">5. 성능</p>
+            <section className="space-y-2" aria-label="결과 요약">
+              <SummaryHeading />
+              <p className="text-[11px] text-slate-600 dark:text-slate-300">추정 대상은 단지 중앙단가입니다. 아래 학습 수는 거래 건수가 아니라 단지 수입니다.</p>
+              {primaryCaution(data.analysis) && (
+                <p className="text-[11px] leading-snug text-amber-800 dark:text-amber-300">{primaryCaution(data.analysis)}</p>
+              )}
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                <MetricWithHelp label="R²" termId="r_squared" value={fmtFixed(data.r_squared)} />
-                <MetricWithHelp label="Adj R²" termId="adj_r_squared" value={fmtFixed(data.adj_r_squared)} />
+                <MetricWithHelp label={data.model_type === "log" ? "R² (로그)" : "R²"} termId="r_squared" value={fmtFixed(data.r_squared)} />
+                <MetricWithHelp label={data.model_type === "log" ? "조정 R² (로그)" : "조정 R²"} termId="adj_r_squared" value={fmtFixed(data.model_adj_r_squared)} />
                 <MetricWithHelp
                   label="학습 MAPE"
                   termId="mape"
@@ -911,24 +930,24 @@ export default function RegionalRegressionModal(props: Props) {
                   title="학습 표본에서 계산한 오차. 교차검증 CV-MAPE가 아닙니다."
                 />
                 <div>
-                  <div className="text-[10px] text-slate-500">유의 변수</div>
+                  <div className="text-[10px] text-slate-500">유의 계수 (p&lt;0.1, 절편 제외)</div>
                   <div className="tabular-nums">{countSignificantCoefficients(data.coefficients)}개</div>
                 </div>
-                <MetricWithHelp label="F p" termId="f_p_value" value={fmtFixed(data.f_p_value)} />
+                <MetricWithHelp label="F p" termId="f_p_value" value={formatProbability(data.f_p_value)} />
                 <MetricWithHelp
                   label="학습 n"
                   termId="fit_n"
                   value={data.n.toLocaleString("ko-KR")}
-                  title="최종 분석 표본 중 학습에 쓴 단지. Holdout 은 탈락이 아닙니다."
+                  title="최종 분석 표본 중 학습에 쓴 단지입니다. 분리 검증 단지는 탈락 표본이 아닙니다."
                 />
                 <div>
-                  <div className="text-[10px] text-slate-500">Holdout n</div>
+                  <div className="text-[10px] text-slate-500">분리 검증 단지 수</div>
                   <div className="tabular-nums">
                     {data.sample.n_hold > 0 ? data.sample.n_hold.toLocaleString("ko-KR") : "—"}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-slate-500">Holdout MAPE</div>
+                  <div className="text-[10px] text-slate-500">분리 검증 MAPE</div>
                   <div className="tabular-nums">{data.hold_mape != null ? `${fmt(data.hold_mape, 1)}%` : "—"}</div>
                 </div>
                 {data.weight_mode === "tx" && data.n_effective != null && (
@@ -938,12 +957,20 @@ export default function RegionalRegressionModal(props: Props) {
                   </div>
                 )}
               </div>
-              {data.mape != null && data.sample.n_hold === 0 && (
-                <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-snug">
-                  표본이 적어 Holdout 검증을 수행하지 않았습니다. MAPE는 학습표본 기준입니다.
-                </p>
-              )}
+              <ValidationStatus report={data.analysis?.metrics.find(metric => metric.role !== "training")?.validation} />
             </section>
+
+            <DetailAnalysis>
+            <SampleFunnel sample={data.sample} />
+            {data.extension_comparison && <section className="rounded border border-slate-200 dark:border-slate-600 p-3 space-y-1 text-xs">
+              <p className="font-semibold">기존 지역의 같은 단지로 확장 전후 비교</p>
+              {data.extension_comparison.status === "available" ? <>
+                <p>검증 {data.extension_comparison.evaluation_n}곳 · 확장 전 학습 {data.extension_comparison.fit_before_n}곳 · 확장 후 학습 {data.extension_comparison.fit_after_n}곳</p>
+                <p>선정용 검증 MAPE: 확장 전 {fmt(data.extension_comparison.mape_before, 1)}% → 확장 후 {fmt(data.extension_comparison.mape_after, 1)}%</p>
+                <p className="text-slate-500 dark:text-slate-400">양쪽 모두 같은 검증 단지를 학습에서 제외한 별도 비교입니다. 아래 전체 범위 모형의 분할과 다르며, 확장 선택에 참고하는 수치로 독립 확인 결과는 아닙니다.</p>
+              </> : <p>{data.extension_comparison.reason ?? "동일 대상 비교를 제공하지 않습니다."}</p>}
+            </section>}
+            <AnalysisSummary analysis={data.analysis} />
 
             {data.blocks.length > 0 && (
               <div className="rounded-md border border-slate-200 dark:border-slate-600 overflow-hidden">
@@ -951,7 +978,7 @@ export default function RegionalRegressionModal(props: Props) {
                   <thead>
                     <tr>
                       <th className="text-left">블록</th>
-                      <th className="text-right">hold MAPE</th>
+                      <th className="text-right">분리 검증 MAPE</th>
                       <th className="text-right">핵심 대비</th>
                     </tr>
                   </thead>
@@ -990,16 +1017,16 @@ export default function RegionalRegressionModal(props: Props) {
 
             {data.equation && (
               <div className="space-y-1">
-                <div className="text-xs font-semibold">회귀식</div>
+                <div className="text-xs font-semibold">회귀식과 계수</div>
                 <CollectiveRegressionEquation
+                  targetLabel="단지 중앙단가" targetUnit="만원/㎡"
                   coefficients={data.coefficients}
                   modelType={data.model_type}
                   equation={data.equation}
                 />
-                {data.warnings.some((w) => w.includes("참고용")) && (
-                  <p className="text-[11px] leading-snug text-slate-600 dark:text-slate-300">
-                    표본 수가 권장 기준에 미달하므로 회귀계수가 불안정할 수 있습니다. R²와 MAPE는 해당
-                    표본의 적합 결과이며, 새로운 단지에 대한 예측 정확도를 보장하지 않습니다.
+                {data.model_type === "log" && (
+                  <p className="text-[11px] leading-snug text-slate-500">
+                    단가만 로그입니다. 세대수·연식 등 변수는 그대로입니다.
                   </p>
                 )}
                 <p className="text-[10px] text-slate-500">
@@ -1015,12 +1042,15 @@ export default function RegionalRegressionModal(props: Props) {
                 <summary className="cursor-pointer text-slate-600 dark:text-slate-400 font-medium">
                   계수 상세
                 </summary>
-                <div className="table-wrap max-h-48 mt-1 overflow-auto">
+                <div tabIndex={0} role="region" aria-label="회귀 계수 상세 표" className="table-wrap max-h-48 mt-1 overflow-auto">
                   <table className="data w-full text-[11px]">
                     <thead>
                       <tr>
                         <th className="text-left">변수</th>
-                        <th className="text-left">해석</th>
+                        <th className="text-right">β</th>
+                        <th className="text-left">효과 해석</th>
+                        <th className="text-right">SE</th>
+                        <th className="text-right">t</th>
                         <th className="text-right">p</th>
                       </tr>
                     </thead>
@@ -1028,8 +1058,11 @@ export default function RegionalRegressionModal(props: Props) {
                       {data.coefficients.map((c) => (
                         <tr key={c.name}>
                           <td>{c.label}</td>
+                          <td className="text-right tabular-nums">{formatStatistic(c.coef, 4)}</td>
                           <td>{c.effect_plain ?? "—"}</td>
-                          <td className="text-right tabular-nums">{c.p == null ? "—" : fmt(c.p, 4)}</td>
+                          <td className="text-right tabular-nums">{formatStatistic(c.se)}</td>
+                          <td className="text-right tabular-nums">{formatStatistic(c.t)}</td>
+                          <td className="text-right tabular-nums">{formatProbability(c.p)}</td>
                         </tr>
                       ))}
                       {referenceRows(data.reference_categories).map((r) => (
@@ -1038,7 +1071,10 @@ export default function RegionalRegressionModal(props: Props) {
                             {r.label}
                             <span className="ml-1 text-[10px] text-indigo-700 dark:text-indigo-300">기준</span>
                           </td>
-                          <td>더미에 넣지 않습니다. 다른 {r.kind} 계수는 이 값 대비입니다.</td>
+                          <td className="text-right tabular-nums">—</td>
+                          <td>기준 범주입니다. 다른 {r.kind} 계수는 이 범주와의 차이입니다.</td>
+                          <td className="text-right tabular-nums">—</td>
+                          <td className="text-right tabular-nums">—</td>
                           <td className="text-right tabular-nums">—</td>
                         </tr>
                       ))}
@@ -1049,9 +1085,25 @@ export default function RegionalRegressionModal(props: Props) {
             )}
             {data.coefficients.length > 0 && <ZoneCaution />}
 
+            {data.fitted.length > 0 && <details className="rounded border border-slate-200 dark:border-slate-600 p-2.5 text-xs">
+              <summary className="cursor-pointer font-semibold">학습 단지별 거래수·적합 결과 ({data.fitted.length}/{data.n}곳 표시)</summary>
+              <p className="my-2 text-slate-600 dark:text-slate-300">학습에 사용한 단지입니다. 별도 평가 단지는 포함하지 않습니다. 거래수는 단지 중앙단가를 계산한 거래 건수이며 회귀 관측 수와 다릅니다. 표시 한도를 넘은 단지는 생략됩니다.</p>
+              <div className="max-h-64 overflow-auto" tabIndex={0} aria-label="학습 단지별 결과 표">
+                <table className="w-full text-left tabular-nums">
+                  <thead><tr><th className="p-1">단지</th><th className="p-1 text-right">거래수</th><th className="p-1 text-right">중앙단가</th><th className="p-1 text-right">적합 단가</th></tr></thead>
+                  <tbody>{data.fitted.map(r => <tr key={fittedKey(r)} className="border-t border-slate-200 dark:border-slate-700">
+                    <td className="p-1">{r.display_name}{(r.address || r.region_group) && <span className="block text-slate-600 dark:text-slate-300">{r.address || r.region_group}</span>}</td>
+                    <td className="p-1 text-right">{r.transaction_n ?? "—"}건</td>
+                    <td className="p-1 text-right">{fmt(r.y, 1)}</td><td className="p-1 text-right">{fmt(r.y_hat, 1)}</td>
+                  </tr>)}</tbody>
+                </table>
+              </div>
+              <p className="mt-1">단가 단위: 만원/㎡. 적합값과의 차이는 학습 오차이며 검증 오차가 아닙니다.</p>
+            </details>}
+            </DetailAnalysis>
             {data.n >= 20 && (
               <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
-                <p className="text-xs font-semibold">6. 단지 평균단가 예측 (만원/㎡)</p>
+                <p className="text-xs font-semibold">조건별 추정 · 단지 중앙단가 (만원/㎡)</p>
                 {data.fitted.length > 0 && (
                   <label className="block space-y-1">
                     <span className="text-slate-500">예측 대상</span>
@@ -1152,10 +1204,10 @@ export default function RegionalRegressionModal(props: Props) {
                 <button
                   type="button"
                   className="btn"
-                  disabled={predM.isPending || (effectiveTab === "twin" && !twinRequest)}
+                  disabled={predM.isPending || runShown.isPending || conditionsChanged || (effectiveTab === "twin" && !twinRequest)}
                   onClick={() => predM.mutate(effectiveTab === "twin" && twinRequest ? twinRequest : body)}
                 >
-                  {predM.isPending ? "계산 중…" : "이 값으로 예측"}
+                  {predM.isPending ? "계산 중…" : "추정값 계산"}
                 </button>
                 {predM.isError && (
                   <p className="text-red-600">
@@ -1163,29 +1215,29 @@ export default function RegionalRegressionModal(props: Props) {
                       ?.detail ?? "예측에 실패했습니다."}
                   </p>
                 )}
-                    {predM.data && (
+                    {currentPrediction && (
                   <div className="rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 space-y-2">
                     <div>
                       <span className="text-slate-500 dark:text-slate-400 text-[10px]">
                         {ESTIMATE_COPY.valueLabel}
-                        {predM.data.model_type === "log" ? " · 로그" : " · 선형"}
+                        {currentPrediction.model_type === "log" ? " · 로그" : " · 선형"}
                       </span>
                       <div className="text-lg font-bold text-slate-800 dark:text-slate-100 tabular-nums">
-                        {fmt(predM.data.y_hat, 0)} {predM.data.unit}
+                        {fmt(currentPrediction.y_hat, 0)} {currentPrediction.unit}
                       </div>
                       <StatisticalEstimateCaption compact />
                     </div>
-                    {predM.data.ci_lower != null && predM.data.ci_upper != null && (
+                    {currentPrediction.ci_lower != null && currentPrediction.ci_upper != null && (
                       <div className="text-[11px] space-y-1.5 text-slate-700 dark:text-slate-300">
                         <StatisticalEstimateRangeRow kind="mean" compact>
                           <span className="tabular-nums">
-                            {fmt(predM.data.ci_lower, 0)} ~ {fmt(predM.data.ci_upper, 0)} {predM.data.unit}
+                            {fmt(currentPrediction.ci_lower, 0)} ~ {fmt(currentPrediction.ci_upper, 0)} {currentPrediction.unit}
                           </span>
                         </StatisticalEstimateRangeRow>
-                        {predM.data.pi_lower != null && predM.data.pi_upper != null && (
+                        {currentPrediction.pi_lower != null && currentPrediction.pi_upper != null && (
                           <StatisticalEstimateRangeRow kind="individual" subject="단지" compact>
                             <span className="tabular-nums">
-                              {fmt(predM.data.pi_lower, 0)} ~ {fmt(predM.data.pi_upper, 0)} {predM.data.unit}
+                              {fmt(currentPrediction.pi_lower, 0)} ~ {fmt(currentPrediction.pi_upper, 0)} {currentPrediction.unit}
                             </span>
                           </StatisticalEstimateRangeRow>
                         )}
@@ -1215,13 +1267,6 @@ export default function RegionalRegressionModal(props: Props) {
 
             {data.model_candidates && data.model_candidates.length > 0 && (
               <>
-                {fittedSnap.current &&
-                  (modelType !== fittedSnap.current.type ||
-                    !blocksMatch(selectedBlocks, fittedSnap.current.blocks)) && (
-                    <p className="text-[10px] text-amber-700 dark:text-amber-300">
-                      변수 또는 척도가 바뀌었습니다. 식과 예측은 마지막 실행입니다. 회귀를 다시 실행하면 맞춥니다.
-                    </p>
-                  )}
                 <CollectiveModelRecommend
                   candidates={data.model_candidates}
                   selectedType={modelType}
@@ -1331,7 +1376,7 @@ function SampleFunnel({ sample }: { sample: SampleBreakdown }) {
         <p className="text-xs font-semibold">회귀분석 표본 구성</p>
         <p className="text-[11px] text-slate-500">
           원본 {sample.n_pool} · 속성 연결 {sample.n_usable_tier} · 최종 {sample.n_fit}
-          {sample.n_hold ? ` · Holdout ${sample.n_hold}` : ""}
+          {sample.n_hold ? ` · 분리 검증 ${sample.n_hold}곳` : ""}
         </p>
       </section>
     );
