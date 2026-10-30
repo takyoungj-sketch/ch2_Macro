@@ -3,11 +3,12 @@ import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
 import CommercialApp from "./CommercialApp";
-import CollectiveLanding from "./CollectiveLanding";
 import BuildingRegressionPage from "./pages/BuildingRegressionPage";
 import { getCollectiveSegment, redirectToCollectiveSubpath } from "./routing";
 import { ProductAccessProvider } from "@ch2/macro-shell/productAccess";
 import { applyColorScheme, readStoredColorScheme } from "@ch2/macro-shell/displayUi";
+import { StatsGlossaryPresentationProvider } from "@ch2/stats-glossary";
+import StatsGlossaryHelp from "./components/StatsGlossaryHelp";
 import "./index.css";
 
 applyColorScheme(readStoredColorScheme());
@@ -29,14 +30,17 @@ function Root() {
   const segment = getCollectiveSegment();
   if (segment === "residential") return <App />;
   if (segment === "commercial") return <CommercialApp />;
-  return <CollectiveLanding />;
+  redirectToCollectiveSubpath("residential");
+  return null;
 }
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={qc}>
       <ProductAccessProvider>
+        <StatsGlossaryPresentationProvider component={StatsGlossaryHelp}>
         <Root />
+        </StatsGlossaryPresentationProvider>
       </ProductAccessProvider>
     </QueryClientProvider>
   </React.StrictMode>,

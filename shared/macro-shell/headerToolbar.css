@@ -22,6 +22,47 @@ html.dark .ch2-macro-stats-header {
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.35);
 }
 
+.ch2-macro-stats-header.is-narrow {
+  padding: 3px 10px;
+  min-height: 35px;
+}
+
+.ch2-macro-stats-header.is-narrow .macro-header-row {
+  min-height: 0;
+  gap: 8px;
+}
+
+.ch2-macro-stats-header.is-narrow .macro-header-title h1 {
+  font-size: 14px;
+  line-height: 18px;
+}
+
+.ch2-macro-stats-header.is-narrow .macro-header-title {
+  flex: 0 1 auto;
+}
+
+.ch2-macro-stats-header.is-narrow .macro-font-label {
+  display: none;
+}
+
+.ch2-macro-stats-header.is-narrow .macro-theme-btn {
+  min-width: 0;
+  padding: 0 6px;
+}
+
+.ch2-macro-stats-header.is-narrow .macro-display-controls {
+  gap: 4px;
+}
+
+.ch2-macro-stats-header.is-narrow .macro-type-nav-item {
+  min-width: 28px;
+  padding: 0 6px;
+}
+
+.ch2-macro-stats-header.is-narrow .macro-font-stepper button {
+  width: 22px;
+}
+
 .ch2-macro-stats-header .macro-header-row {
   display: flex;
   flex-direction: row;
@@ -244,6 +285,7 @@ html.dark .ch2-macro-stats-header .macro-type-nav {
   font-size: 11px;
   font-weight: 500;
   line-height: 1;
+  white-space: nowrap;
   color: rgb(71 85 105);
   text-decoration: none;
   transition: background-color 0.15s, color 0.15s;

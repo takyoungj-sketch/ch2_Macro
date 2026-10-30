@@ -56,15 +56,17 @@ export default function MacroStatsHeader({
   }, []);
 
   return (
-    <header ref={headerRef} className="ch2-macro-stats-header">
+    <header ref={headerRef} className={narrow ? "ch2-macro-stats-header is-narrow" : "ch2-macro-stats-header"}>
       <div className="macro-header-row">
         <div className="macro-header-title">
+          {narrow ? null : (
           <p className="macro-header-breadcrumb">
             <a href="/" className="macro-header-home">
               CH2 Macro
             </a>
             {badge ? <span className="macro-header-badge-slot">{badge}</span> : null}
           </p>
+          )}
           <h1>{title}</h1>
         </div>
         <div className="macro-header-toolbar">

@@ -126,7 +126,7 @@ export const INSIGHT_03 = {
     "집합(주거) 심층분석의 층 효용지수는 아파트 단지용입니다. 상대 층, 거래 50건 이상 등의 조건으로 단지 안의 층별 가격을 비교합니다.",
     "따라서 이 글에서 확인한 연립·다세대의 결과를 그 지수에 그대로 적용하지 않습니다.",
   ],
-  relatedHref: "/collective/",
+  relatedHref: "/collective/residential/",
   relatedLink: "집합 앱에서 보기",
 };
 

@@ -38,7 +38,7 @@ export default function BuildingRegressionPage() {
     <ActiveAiViewProvider fallback={emptyAiContext("collective", "BuildingRegressionPanel")}>
       <div className="min-h-screen bg-slate-100 dark:bg-slate-900 flex flex-col">
         <MacroStatsHeader
-          currentApp="collective"
+          currentApp="collective-residential"
           title={params.displayName || "건물 회귀"}
           fontPct={fontPct}
           fontStepMin={fontStepMin}

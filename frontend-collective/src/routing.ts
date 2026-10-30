@@ -1,4 +1,4 @@
-/** `/collective/` SPA 하위 경로 — residential | commercial | (landing) */
+/** `/collective/` SPA 하위 경로 — residential | commercial. 빈 경로는 주거로 보낸다. */
 export function getCollectiveSegment(): string {
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   const pathname = window.location.pathname.replace(/\/$/, "") || "/";

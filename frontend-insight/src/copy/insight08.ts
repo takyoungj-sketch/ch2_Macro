@@ -123,7 +123,7 @@ export const INSIGHT_08 = {
     "한 아파트 단지의 층 지수는 집합 주거 심층분석의 층 효용지수 탭에서 확인할 수 있습니다.",
     "이 화면에서 보여주는 값은 개별 단지의 층별효용을 보여주는 지수이고, 이 글에서 다룬 내용은 여러 단지를 지역과 건물 높이별로 비교하면서 그 차이를 살펴본 기록입니다.",
   ],
-  relatedHref: "/collective/",
+  relatedHref: "/collective/residential/",
   relatedLink: "집합 주거 열기",
 } as const;
 

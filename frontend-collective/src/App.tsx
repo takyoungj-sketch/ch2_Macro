@@ -497,7 +497,7 @@ export default function App() {
     <ActiveAiViewProvider fallback={emptyAiContext("collective", "BuildingList")}>
     <div className="h-screen flex flex-col overflow-hidden bg-slate-100 dark:bg-slate-900">
       <MacroStatsHeader
-        currentApp="collective"
+        currentApp="collective-residential"
         title="주거형 집합부동산"
         fontPct={fontPct}
         fontStepMin={fontStepMin}
