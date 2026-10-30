@@ -5,6 +5,7 @@ import DisplaySettingsControls from "./DisplaySettingsControls";
 import MacroProfileNavLink from "./MacroProfileNavLink";
 import MacroRentNavLink from "./MacroRentNavLink";
 import MacroTypeNav, { type MacroAppKind } from "./MacroTypeNav";
+import TabletLayoutSwitch from "./TabletLayoutSwitch";
 import { useNarrowScreen } from "./useNarrowScreen";
 
 type Props = {
@@ -70,6 +71,7 @@ export default function MacroStatsHeader({
           <h1>{title}</h1>
         </div>
         <div className="macro-header-toolbar">
+          <TabletLayoutSwitch />
           <div className="macro-header-nav-cluster">
             {narrow ? null : <MacroProfileNavLink active={profileActive} />}
             <MacroTypeNav current={currentApp} />

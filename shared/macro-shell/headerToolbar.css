@@ -316,6 +316,68 @@ html.dark .ch2-macro-stats-header .macro-type-nav-item.is-active {
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.35);
 }
 
+.ch2-macro-stats-header .macro-layout-switch {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  box-sizing: border-box;
+  height: 28px;
+  padding: 2px;
+  border-radius: 6px;
+  border: 1px solid rgb(226 232 240);
+  background-color: rgb(248 250 252 / 0.9);
+  flex-shrink: 0;
+}
+
+html.dark .ch2-macro-stats-header .macro-layout-switch {
+  border-color: rgb(71 85 105);
+  background-color: rgb(51 65 85 / 0.9);
+}
+
+.ch2-macro-stats-header .macro-layout-switch button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 24px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  color: rgb(71 85 105);
+  cursor: pointer;
+}
+
+html.dark .ch2-macro-stats-header .macro-layout-switch button {
+  color: rgb(203 213 225);
+}
+
+.ch2-macro-stats-header .macro-layout-switch button[aria-pressed="true"] {
+  background-color: rgb(255 255 255);
+  color: rgb(30 41 59);
+  font-weight: 600;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+html.dark .ch2-macro-stats-header .macro-layout-switch button[aria-pressed="true"] {
+  background-color: rgb(71 85 105);
+  color: rgb(241 245 249);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.35);
+}
+
+.ch2-macro-stats-header.is-narrow .macro-layout-switch {
+  height: 24px;
+}
+
+.ch2-macro-stats-header.is-narrow .macro-layout-switch button {
+  height: 20px;
+  padding: 0 6px;
+}
+
 .ch2-macro-stats-header .macro-display-controls {
   display: flex;
   flex-wrap: nowrap;

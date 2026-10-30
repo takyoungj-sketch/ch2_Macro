@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNarrowScreen } from "@ch2/macro-shell/useNarrowScreen";
 
 function useMedia(query: string): boolean {
   const [on, setOn] = useState(() => typeof window !== "undefined" && window.matchMedia(query).matches);
@@ -17,7 +18,9 @@ const PHONE = "(max-width: 767px), (max-height: 500px) and (max-width: 1024px)";
 const PORTRAIT = "(orientation: portrait) and (max-width: 767px)";
 
 export function useCollectivePhone(): boolean {
-  return useMedia(PHONE);
+  const hardwarePhone = useMedia(PHONE);
+  const narrow = useNarrowScreen();
+  return hardwarePhone || narrow;
 }
 
 export function useCollectivePortrait(): boolean {
