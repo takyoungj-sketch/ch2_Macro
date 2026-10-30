@@ -17,6 +17,7 @@ import { REGIONS_CATALOG_QUERY_KEY } from "../constants/regionsCatalog";
 import {
   buildFreeStatsExplain,
   buildMatrixLegendExplain,
+  buildMatrixTableExplain,
 } from "../constants/landStatsExplain";
 import { useAppStore } from "../store";
 import { type FreeStatsV2Response, type MatrixYearlyRequest, type MatrixYearlyStat, normalizeFreeStatsWindowYears } from "../types";
@@ -347,7 +348,7 @@ export default function FreeStatsPanel() {
   });
 
   return (
-    <div className={narrow ? "bg-white rounded-xl shadow-sm p-2 space-y-2" : "bg-white rounded-xl shadow-sm p-5 space-y-5"}>
+    <div className={narrow ? "flex h-full min-h-0 flex-1 flex-col gap-1 bg-white p-1" : "bg-white rounded-xl shadow-sm p-5 space-y-5"}>
         <PublishAiContext
           context={buildLandMatrixOverviewContext({
             regionLabel: data.beopjungri_name,
@@ -377,22 +378,24 @@ export default function FreeStatsPanel() {
             {(data.stats_excluded_codes?.length ?? 0) > 8 ? " …" : ""}
           </p>
         )}
-      <div className="flex flex-wrap items-stretch gap-3 gap-y-2">
+      <div className={narrow ? "flex items-center gap-2" : "flex flex-wrap items-stretch gap-3 gap-y-2"}>
         <div className="flex items-start gap-1 shrink-0 self-start max-w-md">
-          <h2 className="text-base font-bold text-slate-800 leading-tight">
+          <h2 className={narrow ? "truncate text-sm font-bold text-slate-800 leading-tight" : "text-base font-bold text-slate-800 leading-tight"}>
             {data.beopjungri_name}
           </h2>
           <AnalysisHelpPanel explain={statsExplain} />
           {narrow ? null : <RegionalProfileLink />}
         </div>
-        <div className="min-w-0 flex-1 basis-[12rem]">
-          <YearlyStatsTable rows={yearlyRowsFreeReference} hideTitle />
-        </div>
-        <MatrixStatsLegend matchYearlyStatsHeight helpExplain={legendExplain} />
+        {narrow ? null : (
+          <div className="min-w-0 flex-1 basis-[12rem]">
+            <YearlyStatsTable rows={yearlyRowsFreeReference} hideTitle />
+          </div>
+        )}
+        {narrow ? null : <MatrixStatsLegend matchYearlyStatsHeight helpExplain={legendExplain} />}
       </div>
 
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-        <span className="font-medium text-slate-700">매트릭스</span>
+        {narrow ? null : <span className="font-medium text-slate-700">매트릭스</span>}
         {(["category", "group"] as const).map((mode) => (
           <button
             key={mode}
@@ -407,8 +410,10 @@ export default function FreeStatsPanel() {
             {MATRIX_MODE_LABEL[mode]}
           </button>
         ))}
+        {narrow ? <AnalysisHelpPanel explain={buildMatrixTableExplain()} /> : null}
       </div>
 
+      <div className={narrow ? "min-h-0 flex-1" : undefined}>
       <MatrixStatsTable
         title=""
         matrix={data.matrix ?? []}
@@ -418,7 +423,14 @@ export default function FreeStatsPanel() {
         showEmbeddedLegend={false}
         onPaidMatrixCellClick={isPaidBasic ? openMatrixTrend : undefined}
         suppressEscapeClose={trendModal != null}
+        showToolbar={!narrow}
+        scrollClassName={
+          narrow
+            ? "h-full overflow-auto border border-slate-200 rounded-lg overscroll-contain"
+            : undefined
+        }
       />
+      </div>
 
       <PaidMatrixYearlyModal
         open={trendModal != null}

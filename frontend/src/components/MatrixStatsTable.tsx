@@ -177,6 +177,9 @@ interface Props {
   onPaidMatrixCellClick?: (zoneType: string, landCategory: string) => void;
   /** 셀 추이 모달 등이 열려 있을 때 전체화면 Esc 닫기 억제 */
   suppressEscapeClose?: boolean;
+  scrollClassName?: string;
+  /** false면 표 위 도움·전체화면 줄을 그리지 않는다 */
+  showToolbar?: boolean;
 }
 
 function cellHl(reliable?: boolean): string {
@@ -654,6 +657,8 @@ export default function MatrixStatsTable({
   showEmbeddedLegend = true,
   onPaidMatrixCellClick,
   suppressEscapeClose: _suppressEscapeClose = false,
+  scrollClassName,
+  showToolbar = true,
 }: Props) {
   const [fullscreen, setFullscreen] = useState(false);
   const [fullscreenSize] = useState(defaultFullscreenSize);
@@ -735,6 +740,7 @@ export default function MatrixStatsTable({
     landAxisLabel,
     meanBands,
     onPaidMatrixCellClick,
+    ...(scrollClassName ? { scrollClassName } : {}),
   };
 
   useEffect(() => {
@@ -806,9 +812,11 @@ export default function MatrixStatsTable({
   );
 
   return (
-    <div>
-      {toolbar}
-      <MatrixStatsTableGrid {...gridProps} />
+    <div className={scrollClassName ? "flex h-full min-h-0 flex-col" : undefined}>
+      {showToolbar ? toolbar : null}
+      <div className={scrollClassName ? "min-h-0 flex-1" : undefined}>
+        <MatrixStatsTableGrid {...gridProps} />
+      </div>
 
       <DraggableModalShell
         open={fullscreen}

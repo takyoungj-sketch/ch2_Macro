@@ -365,7 +365,10 @@ export default function RegionSelector() {
     if (e.key === "Enter") {
       e.preventDefault();
 
-      if (qLive.length < 2) return;
+      if (qLive.length < 2) {
+        if (narrow && resolvedUnionCodes.length > 0) commitPaid();
+        return;
+      }
       if (catalogLoading && regions.length === 0) {
         setLocalError("지역 목록을 불러온 뒤 Enter로 확정해 주세요.");
         return;
@@ -456,12 +459,13 @@ export default function RegionSelector() {
   };
 
   const suggestionListMaxClass = suggestionsShortHeight ? "max-h-28" : "max-h-52";
+  const mobileScopeKey = resolvedUnionCodes.join("\u0001");
 
-  const mobileRegionLabel = (() => {
-    const entry = paidUnifiedSubSigunguRows[0];
-    if (!entry) return "";
-    return entry.kind === "eup" ? labelEupChip(regions, entry.code) : labelForCode(entry.code);
-  })();
+  useEffect(() => {
+    if (!narrow || mobileScopeKey.length === 0) return;
+    kickPaidBasicStatsAnalysis();
+    commitStatsDisplayScope(statsScopeKeyFromBeopjungriCodes(mobileScopeKey.split("\u0001")));
+  }, [narrow, mobileScopeKey, kickPaidBasicStatsAnalysis, commitStatsDisplayScope]);
 
   return (
     <div className={narrow ? "flex flex-col gap-1.5" : "flex flex-col gap-4"}>
@@ -496,26 +500,43 @@ export default function RegionSelector() {
           type="search"
           autoComplete="off"
           spellCheck={false}
-          placeholder="예: 오창읍 화산리 · 흥덕구 가경동 (Enter로 확정)"
+          placeholder={narrow ? "" : "예: 오창읍 화산리 · 흥덕구 가경동 (Enter로 확정)"}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           onKeyDown={onSearchKeyDown}
           disabled={catalogLoading}
-          className={narrow ? "input min-w-0 flex-1 text-base" : "input text-base"}
+          aria-label="지역 입력"
+          className={narrow ? "input !h-5 !w-1/2 !min-w-0 !shrink !py-0 !px-2 text-xs leading-none" : "input text-base"}
         />
         {narrow ? (
-          <button
-            type="button"
-            onClick={() => {
-              clearTierSelection();
-              setPaidLeafAddGateOpen(true);
-              setSearchInput("");
-              setLocalError(null);
-            }}
-            className="shrink-0 text-xs text-slate-500 underline underline-offset-2"
-          >
-            초기화
-          </button>
+          <>
+            <button
+              type="button"
+              aria-label="선택 초기화"
+              onClick={() => {
+                clearTierSelection();
+                setPaidLeafAddGateOpen(true);
+                setSearchInput("");
+                setLocalError(null);
+              }}
+              className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-slate-300 text-xs leading-none text-slate-600"
+            >
+              ×
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onSearchKeyDown({
+                  key: "Enter",
+                  preventDefault() {},
+                } as React.KeyboardEvent<HTMLInputElement>)
+              }
+              disabled={catalogLoading && regions.length === 0}
+              className="inline-flex h-5 shrink-0 items-center rounded bg-blue-600 px-2 text-xs font-medium leading-none text-white disabled:opacity-40"
+            >
+              검색
+            </button>
+          </>
         ) : null}
         </div>
         {!narrow &&
@@ -875,11 +896,7 @@ export default function RegionSelector() {
         </div>
       ) : null}
 
-      {narrow ? (
-        mobileRegionLabel ? (
-          <p className="truncate text-xs font-medium text-slate-600 dark:text-slate-300">{mobileRegionLabel}</p>
-        ) : null
-      ) : (
+      {narrow ? null : (
       <div className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5 space-y-1.5">
         <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
           {viewMode === "paid" ? "선택된 지역" : "선택"}{" "}
@@ -989,14 +1006,15 @@ export default function RegionSelector() {
       </div>
       )}
 
+      {narrow ? null : (
       <AnalysisActionButton
         primary={basicStatsActionLabel("paid")}
-        caption={narrow ? "" : rollingStatsCaption(freeStatsWindowYears)}
+        caption={rollingStatsCaption(freeStatsWindowYears)}
         onClick={commitPaid}
         disabled={catalogLoading && regions.length === 0}
         variant="basic"
-        className={narrow ? "py-1.5 text-sm" : ""}
       />
+      )}
 
     </div>
   );

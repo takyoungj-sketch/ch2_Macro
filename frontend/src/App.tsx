@@ -129,7 +129,7 @@ export default function App() {
       <div className="flex flex-1 min-h-0 flex flex-col overflow-hidden" style={{ zoom: contentZoom }}>
         <main className={narrow ? "flex flex-1 min-h-0 flex-col overflow-hidden" : "flex flex-1 overflow-hidden min-h-0"}>
           {narrow ? (
-            <div className="shrink-0 border-b border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
+            <div className="shrink-0 border-b border-slate-200 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-800">
               <RegionSelector />
             </div>
           ) : (
@@ -142,7 +142,7 @@ export default function App() {
             </CollapsibleLeftSidebar>
           )}
 
-          <div className={narrow ? "min-h-0 flex-1 overflow-auto bg-slate-50 dark:bg-slate-900" : "layout-main"}>
+          <div className={narrow ? "flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-50 dark:bg-slate-900" : "layout-main"}>
             {narrow ? null : (
               <section className="px-4 pt-4 shrink-0">
                 <RegionMapHub
@@ -155,7 +155,7 @@ export default function App() {
               </section>
             )}
             {statsPanel ? (
-              <div id="land-step-analysis" className={narrow ? "px-2 py-2" : "p-4 pt-2 pb-8"}>
+              <div id="land-step-analysis" className={narrow ? "flex min-h-0 flex-1 flex-col px-1 py-1" : "p-4 pt-2 pb-8"}>
                 {statsPanel}
               </div>
             ) : null}
