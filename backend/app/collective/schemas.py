@@ -204,24 +204,27 @@ class YearlyStatsResponse(BaseModel):
     data_source: Literal["mart", "live"] = "live"
 
 
-class RelatedPresaleCandidate(BaseModel):
+class PresaleCatalogItem(BaseModel):
     building_key: str
     display_name: str
-    addr1: Optional[str] = None
-    addr2: Optional[str] = None
+    dong: str = ""
     addr3: Optional[str] = None
     addr4: Optional[str] = None
+    road_name: Optional[str] = None
+    lot_number: Optional[str] = None
     year_from: int
     year_to: int
     total_count: int
-    score: float
+    rights_label: str = "분양권"
+    same_dong: bool = False
 
 
-class RelatedPresaleResponse(BaseModel):
+class PresaleCatalogResponse(BaseModel):
     source_building_key: str
     source_display_name: str
     source_asset_type: str
-    candidates: list[RelatedPresaleCandidate] = Field(default_factory=list)
+    source_dong: str = ""
+    items: list[PresaleCatalogItem] = Field(default_factory=list)
 
 
 class RollingStatPoint(BaseModel):

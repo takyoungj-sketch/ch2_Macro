@@ -57,7 +57,7 @@
 API:
 
 - `GET /buildings?presale_stats_mode=rolling|lifetime` — **기본 `rolling`**
-- `GET /buildings/{key}/related-presale` — 장기추세용 분양권 annual 후보(이름·동 유사, **키 병합 없음**)
+- `GET /buildings/{key}/presale-catalog` — 지금 단지와 같은 법정동 분양권(검색용). 이름 유사도 추천 없음. **키 병합 없음**
 
 ### 장기(2010–2020) 분양권 annual
 
@@ -69,7 +69,7 @@ API:
 
 - **동일 키로 합치지 않는다.**
 - 기본 목록은 유형별 3/5년.
-- 과거 분양 시세 대비는 모달 **장기 추세 → 과거 분양권 추세 추가** (오피스텔 포함).
+- 과거 분양 시세 대비는 모달 **장기 추세**. 확인된 연결만 「과거 분양권」, 직접 고른 분양권은 「비교 분양권」 (오피스텔 포함). 연결 원장이 없으면 확인된 과거 분양권은 없다.
 
 ---
 
@@ -84,13 +84,13 @@ API:
    purge 후 **반드시** long-term annual 분양권 재ingest (`ingest_collective_long_term_annual.py --asset-type presale`).
 3. **분양권 목록 통계:** 연도 미지정 시 타유형과 같이 **3/5년 rolling**.  
    보조로만 `presale_stats_mode=lifetime`.
-4. **준공유형(아파트·연립·오피스텔)과 같은 키로 합치지 않는다.** 연속 분석은 related-presale / cohort.
+4. **준공유형(아파트·연립·오피스텔)과 같은 키로 합치지 않는다.** 장기 추세의 분양권 비교는 presale-catalog 검색. 같은 유형 단지는 cohort.
 
 체크 (cycle 후 스모크 예):
 
 - [ ] 알려진 분열 단지(예: 청주 가경 IPARK / 아이파크)가 **분양권 1키**로 보이는지 (3/5년 창)
 - [ ] 동일 단지 **아파트** 행이 분양권과 **키가 다른지**
-- [ ] 장기 옵션에서 관련 분양권 annual(예: 청주 테크노폴리스 우미린 2017)이 후보로 뜨는지
+- [ ] 장기 추세에서 분양권 검색이 지금 단지와 같은 법정동만 보여 주는지. 유사도 자동 추천은 없다.
 
 ---
 

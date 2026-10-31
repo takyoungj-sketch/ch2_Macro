@@ -86,7 +86,7 @@ py scripts\monthly\compare_collective_count_snapshots.py --before ... --after ..
 | alias/규칙 변경 시 | `rekey_presale_building_keys.py --purge-presale-marts` 후 mart 재구축 + **long-term annual 분양권 재ingest** |
 | 목록 통계 | 분양권 기본 = **3/5년 rolling** (타유형과 동일). `lifetime`은 보조 API |
 | 장기 annual | `ingest_collective_long_term_annual.py --asset-type=presale` (필요 시) |
-| 준공유형 연결 | 키 병합 금지 · 모달 `related-presale`(아파트·연립·오피스텔) / sibling |
+| 준공유형 연결 | 키 병합 금지 · 모달 `presale-catalog` 검색(아파트·연립·오피스텔) / sibling. 이름 유사도 자동 추천 없음 |
 | mart 빌드 | `build_collective_presale_lifetime_stats.py` — 보조 mart 유지 · DDL `db/040_….sql` |
 
 ---

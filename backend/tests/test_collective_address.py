@@ -1,4 +1,14 @@
-from app.collective.address import format_jibun_address, format_road_address, split_building_addresses
+from app.collective.address import format_jibun_address, format_road_address, legal_dong, split_building_addresses
+
+
+def test_legal_dong_gu_uses_addr4():
+    assert legal_dong("강남구", "개포동") == "개포동"
+    assert legal_dong("흥덕구", "가경동") == "가경동"
+
+
+def test_legal_dong_without_gu_uses_addr3():
+    assert legal_dong("옥산면", "옥산리") == "옥산면"
+    assert legal_dong("개포동", None) == "개포동"
 
 
 def test_jibun_with_gu():
