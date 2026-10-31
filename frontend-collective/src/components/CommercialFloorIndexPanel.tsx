@@ -52,14 +52,14 @@ function regionParams(scope: CommercialModalScope) {
 function dimensionHelpText(dim: string, isRegression: boolean, isFactory: boolean) {
   if (dim === "area") {
     if (isFactory) {
-      return "공장 면적대는 연면적 100/300/1000㎡입니다. 기준은 표본 중앙값 칸=100.";
+      return "공장 면적대는 연면적 100/300/1000㎡입니다. 기준은 최종 표본 중앙값에 가장 가까운 칸이고, 거리가 같으면 더 작은 칸입니다.";
     }
-    return "상가 면적구간은 거래 목록과 같습니다. 35㎡ 미만 · 35~50 · 50~100 · 100~300 · 300㎡ 이상. 기준은 표본 중앙값 칸=100.";
+    return "상가 면적구간은 거래 목록과 같습니다. 35㎡ 미만 · 35~50 · 50~100 · 100~300 · 300㎡ 이상. 기준은 최종 표본 중앙값에 가장 가까운 칸이고, 거리가 같으면 더 작은 칸입니다.";
   }
   if (isRegression) {
     return isFactory
-      ? "공장·창고 층은 지하·1·2·3층 이상입니다. 화면 100은 1층입니다. 지수·95% CI·p는 모두 1층 대비입니다."
-      : "상가 층은 지하·1·2·저·중·고·초고층입니다. 화면 100은 1층입니다. 지수·95% CI·p는 모두 1층 대비이고, 지하를 중층부에 넣지 않습니다.";
+      ? "공장·창고 층은 지하·1·2·3층 이상입니다. 화면 100은 이번 결과의 기준 구간이고, 지수·95% CI·p는 그 대비입니다."
+      : "상가 층은 지하·1·2·저·중·고·초고층입니다. 화면 100은 이번 결과의 기준 구간이고, 지수·95% CI·p는 그 대비입니다. 지하를 중층부에 넣지 않습니다.";
   }
   if (isFactory) {
     return "층 정보가 적으면 지수가 비거나 참고용입니다. 면적대 탭을 우선하세요.";
@@ -134,6 +134,7 @@ export default function CommercialFloorIndexPanel({
           })
         : fetchCommercialFloorIndex(clusterKey, {
             ...regionParams(scope),
+            ...analysisPeriod,
             contract_year_from: scope.yearFrom === "" ? undefined : scope.yearFrom,
             contract_year_to: scope.yearTo === "" ? undefined : scope.yearTo,
             dimension,

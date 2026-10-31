@@ -145,3 +145,56 @@ def test_single_building_dong_dummy_unchanged():
     assert any(c.startswith("dong_") for c in X.columns)
     assert meta.dong_fe_map == {}
     assert "102동" in labels.get("dong_102동", "") or any("102" in v for v in labels.values())
+
+
+def test_blank_cohort_dong_is_not_the_building_reference():
+    from app.regression_missing import UNKNOWN
+
+    rows = []
+    for dong, n in (("101동", 6), ("102동", 4), ("", 5)):
+        for _ in range(n):
+            rows.append(
+                {
+                    "building_key": "aaa",
+                    "display_name": "A단지",
+                    "dong": dong,
+                    "price": 10000.0,
+                    "floor": 5,
+                }
+            )
+    for dong, n in (("101동", 6), ("102동", 4)):
+        for _ in range(n):
+            rows.append(
+                {
+                    "building_key": "bbb",
+                    "display_name": "B단지",
+                    "dong": dong,
+                    "price": 11000.0,
+                    "floor": 5,
+                }
+            )
+    work = pd.DataFrame(rows)
+    _, X, _, meta, _ = _build_design_matrix(
+        work,
+        _req(),
+        cohort_mode=True,
+        building_display_names={"aaa": "A단지", "bbb": "B단지"},
+    )
+    unknown = _nested_dong_col("aaa", UNKNOWN)
+    assert unknown in X.columns
+    assert int(X[unknown].sum()) == 5
+    assert meta.dong_reference_by_building["aaa"] == "101동"
+    blank = _inputs_to_x_row(
+        X,
+        meta,
+        _req(),
+        CollectiveRegressionPredictInputs(dong="", building_key="aaa"),
+    )
+    reference = _inputs_to_x_row(
+        X,
+        meta,
+        _req(),
+        CollectiveRegressionPredictInputs(dong="101동", building_key="aaa"),
+    )
+    assert blank[unknown] == 1.0
+    assert reference[unknown] == 0.0

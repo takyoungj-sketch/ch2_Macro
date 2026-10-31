@@ -132,6 +132,24 @@ def test_one_row_dummy_makes_cv_unavailable():
     assert any(item["code"] == "unseen_category" for item in report["failures"])
 
 
+def test_subject_pair_withholds_cv_when_a_category_is_held_out():
+    n = 80
+    y = pd.Series(np.linspace(100, 200, n))
+    rare = np.zeros(n)
+    rare[0] = 1.0
+    x = pd.DataFrame({"area": np.linspace(1, 2, n), "rare": rare})
+    report = {}
+    mape, rmse = engine._cv_price_metrics(y.to_numpy(), engine._with_const(x), "linear", diagnostics=report)
+    assert mape is None and rmse is None
+    assert any(item["code"] == "unseen_category" for item in report["failures"])
+    neighbors = pd.DataFrame({"area": np.linspace(1, 2, 20), "rare": 0.0}, index=range(100, 120))
+    y_after = pd.concat([y, pd.Series(np.linspace(100, 180, 20), index=neighbors.index)])
+    x_after = pd.concat([x, neighbors])
+    before_m, after_m, basis = engine._subject_pair_mape(y, x, y_after, x_after, y.index, "linear")
+    assert before_m is None and after_m is None
+    assert basis == "cv"
+
+
 def test_sparse_cluster_does_not_move_the_other_fe():
     rng = np.random.default_rng(7)
     frames = []
@@ -169,3 +187,76 @@ def test_sparse_cluster_does_not_move_the_other_fe():
     coef = next(c.coef for c in fit.coefficients if c.name == meta.cluster_fe_map["B"])
     assert coef == pytest.approx(5000, abs=0.05)
     assert any("다도로" in note and "학습에서 제외" in note for note in fit.warnings)
+
+
+def _priced(n, price, **cols):
+    frame = _block(0, n, "A", 0)
+    frame["price"] = price
+    for key, value in cols.items():
+        frame[key] = value
+    return frame
+
+
+def test_blank_dong_is_not_the_labeled_reference():
+    df = pd.concat(
+        [
+            _priced(20, 50000.0, dong=""),
+            _priced(20, 55000.0, dong="101"),
+            _priced(20, 60000.0, dong="102"),
+        ],
+        ignore_index=True,
+    )
+    req = CollectiveRegressionRequest(
+        asset_type="apartment",
+        model_type="linear",
+        variables=_spec(exclusive_area=False, dong=True),
+    )
+    _model, _X, meta, fit = engine._run_regression_core(df, req)
+    assert meta.dong_reference == "101"
+    assert fit.n == 60
+    reference = engine.predict_regression(df, req, CollectiveRegressionPredictInputs(dong="101"))
+    blank = engine.predict_regression(df, req, CollectiveRegressionPredictInputs(dong=""))
+    assert reference["y_hat"] == pytest.approx(55000, abs=1)
+    assert blank["y_hat"] == pytest.approx(50000, abs=1)
+
+
+def test_blank_rights_is_not_the_labeled_reference():
+    df = pd.concat(
+        [
+            _priced(20, 40000.0, housing_subtype=""),
+            _priced(20, 55000.0, housing_subtype="분양권"),
+            _priced(20, 70000.0, housing_subtype="입주권"),
+        ],
+        ignore_index=True,
+    )
+    req = CollectiveRegressionRequest(
+        asset_type="presale",
+        model_type="linear",
+        variables=_spec(exclusive_area=False, housing_subtype=True),
+    )
+    _model, _X, meta, fit = engine._run_regression_core(df, req)
+    assert meta.housing_subtype_reference == "분양권"
+    named = engine.predict_regression(df, req, CollectiveRegressionPredictInputs(housing_subtype="분양권"))
+    blank = engine.predict_regression(df, req, CollectiveRegressionPredictInputs(housing_subtype=""))
+    assert named["y_hat"] == pytest.approx(55000, abs=1)
+    assert blank["y_hat"] == pytest.approx(40000, abs=1)
+
+
+def test_missing_floor_is_excluded_in_individual_and_grouped_modes():
+    known = pd.concat(
+        [_priced(40, 50000.0, floor=1), _priced(40, 80000.0, floor=8)],
+        ignore_index=True,
+    )
+    missing = _priced(30, 90000.0)
+    missing["floor"] = np.nan
+    df = pd.concat([known, missing], ignore_index=True)
+    for mode in ("dummy", "grouped", "relative"):
+        req = CollectiveRegressionRequest(
+            asset_type="apartment",
+            model_type="linear",
+            variables=_spec(exclusive_area=False, floor=True, floor_mode=mode),
+        )
+        _model, _X, _meta, fit = engine._run_regression_core(df, req)
+        assert fit.n == 80
+        first = engine.predict_regression(df, req, CollectiveRegressionPredictInputs(floor=1))
+        assert first["y_hat"] == pytest.approx(50000, abs=1)

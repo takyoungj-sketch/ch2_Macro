@@ -26,11 +26,11 @@ _SHOP_RULE = "화면 100은 1층입니다."
 _FACTORY_RULE = "공장·창고 층은 지하·1·2·3층 이상입니다. 화면 100은 1층입니다."
 _FACTORY_AREA_RULE = (
     "공장 면적대는 100㎡ 미만 · 100~300㎡ · 300~1000㎡ · 1000㎡ 이상입니다. "
-    "기준 100은 연면적 중앙값이 속한 면적대입니다."
+    "기준 100은 최종 표본 연면적 중앙값에 가장 가까운 면적대입니다. 거리가 같으면 더 작은 면적대입니다."
 )
 _SHOP_AREA_RULE = (
     "상가 면적구간은 35㎡ 미만 · 35~50㎡ · 50~100㎡ · 100~300㎡ · 300㎡ 이상입니다. "
-    "기준 100은 연면적 중앙값이 속한 구간입니다."
+    "기준 100은 최종 표본 연면적 중앙값에 가장 가까운 구간입니다. 거리가 같으면 더 작은 구간입니다."
 )
 
 
@@ -410,6 +410,10 @@ def _road_rule(ctx: AnalysisContext, reference: str | None = None) -> str:
                 f"기준 100은 {reference}입니다."
             )
         return _SHOP_AREA_RULE
+    if reference:
+        if _is_factory(ctx):
+            return f"공장·창고 층은 지하·1·2·3층 이상입니다. 화면 100은 {reference}입니다."
+        return f"화면 100은 {reference}입니다."
     return _FACTORY_RULE if _is_factory(ctx) else _SHOP_RULE
 
 

@@ -1,14 +1,19 @@
 """공통 표본 판정. 30건·계수당 5건은 분석 제공 기준이다."""
 
+import numpy as np
+
 from app.regression_sample_judge import (
     MissingFunnel,
     blocked_reasons,
+    design_nullspace,
     identification_note,
     is_computable,
     judge_sample,
+    prediction_is_identified,
     provision_note,
     residual_df,
     sample_notes,
+    unidentified_column_names,
 )
 
 
@@ -75,3 +80,23 @@ def test_funnel_identity():
         n_fit=65,
     )
     assert funnel.balances()
+
+
+def test_nullspace_of_a_tall_copy_does_not_need_a_square_factor():
+    base = np.array([[1.0, 0.0], [1.0, 1.0], [1.0, 2.0], [1.0, 3.0]])
+    tall = np.column_stack([base, base[:, 1]])
+    assert unidentified_column_names(tall, ["a", "b", "b2"]) == {"b", "b2"}
+    wide = tall[:2]
+    assert unidentified_column_names(wide, ["a", "b", "b2"]) == {"b", "b2"}
+    assert design_nullspace(tall).shape[0] == 1
+
+
+def test_wide_rank_deficiency_is_not_hidden_by_a_gram_matrix():
+    rng = np.random.default_rng(0)
+    basis, _r = np.linalg.qr(rng.normal(size=(40, 20)))
+    extra = basis @ rng.normal(size=(20, 21))
+    exog = np.column_stack([basis, extra])
+    null = design_nullspace(exog)
+    assert null.shape == (21, 41)
+    assert prediction_is_identified(exog, exog[0])
+    assert not prediction_is_identified(exog, exog[0] + null[0])

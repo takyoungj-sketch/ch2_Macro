@@ -123,3 +123,71 @@ def test_cohort_augmentation_scores_the_opened_complex():
     assert aug.mape_before is not None and aug.mape_after is not None
     assert any(s.name == "exclusive_area" for s in aug.slopes)
     assert any(s.name == "floor" for s in aug.slopes)
+
+
+def test_saturated_dong_model_is_not_recommended():
+    rows = []
+    for i in range(30):
+        rows.append(
+            {
+                "building_key": "a",
+                "price": float(10000 + i * 100),
+                "exclusive_area": float(40 + i),
+                "building_age": 10,
+                "floor": 3,
+                "dong": f"d{i:02d}",
+                "contract_year": 2024,
+                "contract_month": 3,
+            }
+        )
+    found = suggest_collective_regression(
+        pd.DataFrame(rows),
+        _req(exclusive_area=True, building_age=False, floor=False, dong=False, contract_period=False),
+    )
+    assert found
+    assert all("dong" not in item.blocks for item in found)
+
+
+def test_recommend_uses_the_categorical_drop_sample():
+    rows = []
+    for i in range(60):
+        rows.append(
+            {
+                "building_key": "a",
+                "price": 50000.0 if i % 2 == 0 else 70000.0,
+                "exclusive_area": 50.0 + (i % 5),
+                "building_age": float(i % 6),
+                "floor": 1 + (i % 4),
+                "dong": "101" if i % 2 == 0 else "102",
+                "contract_year": 2024,
+                "contract_month": 3,
+            }
+        )
+    for i in range(30):
+        rows.append(
+            {
+                "building_key": "a",
+                "price": 200000.0,
+                "exclusive_area": 80.0,
+                "building_age": 4.0,
+                "floor": 2,
+                "dong": "",
+                "contract_year": 2024,
+                "contract_month": 3,
+            }
+        )
+    req = CollectiveRegressionRequest(
+        asset_type="apartment",
+        model_type="linear",
+        categorical_missing="drop",
+        variables=CollectiveRegressionSpec(
+            exclusive_area=True,
+            building_age=False,
+            floor=False,
+            dong=True,
+            contract_period=False,
+        ),
+    )
+    found = suggest_collective_regression(pd.DataFrame(rows), req)
+    assert found
+    assert all(item.n == 60 for item in found)

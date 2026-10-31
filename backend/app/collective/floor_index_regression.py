@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from collections import defaultdict
 
@@ -45,14 +46,17 @@ RESIDENTIAL_FLOOR_GROUPS: list[tuple[str, str, float]] = [
     ("고층부", "floor_rel_high", 4),
     ("관측 최상층", "floor_rel_top", 5),
 ]
+BASEMENT_RELATIVE_GROUP = ("지하", "floor_rel_b", 0)
 
 GROUPED_FLOOR_GROUPS: list[tuple[str, str, float]] = [
     ("1–5층", "floor_grp_1-5", 1),
     ("6–15층", "floor_grp_6-15", 6),
     ("16층+", "floor_grp_16+", 16),
 ]
+BASEMENT_GROUPED_GROUP = ("지하", "floor_grp_b", 0)
 
 GROUPED_FLOOR_LABELS: dict[str, str] = {code: label for label, code, _ in GROUPED_FLOOR_GROUPS}
+GROUPED_FLOOR_LABELS[BASEMENT_GROUPED_GROUP[1]] = BASEMENT_GROUPED_GROUP[0]
 
 FACTORY_FLOOR_SPECS: list[tuple[str, str, float]] = [
     (_FACTORY_FLOOR_LABELS[code], code, sort)
@@ -122,11 +126,16 @@ def _floor_dummy_code(floor: float) -> str:
 
 
 def _floor_dummy_label(floor: float) -> str:
-    if float(floor) == 1:
+    value = float(floor)
+    if value < 1:
+        depth = abs(int(value)) if value == int(value) else abs(value)
+        text = str(depth) if value == int(value) else f"{depth:g}"
+        return f"지하 {text}층"
+    if value == 1:
         return "1층"
-    if float(floor) == int(floor):
-        return f"{int(floor)}층"
-    return f"{float(floor)}층"
+    if value == int(value):
+        return f"{int(value)}층"
+    return f"{value:g}층"
 
 
 def _shop_floor_index_code(floor: object) -> str | None:
@@ -200,7 +209,9 @@ def _build_floor_dimension_groups(
         specs = list(RESIDENTIAL_FLOOR_GROUPS)
         work = work.copy()
         work["index_group_code"] = work["floor_index_code"]
-        work["index_group_label"] = work["floor_index_code"].map(_REL_FLOOR_LABELS)
+        if (work["index_group_code"] == "floor_rel_b").any():
+            specs = [BASEMENT_RELATIVE_GROUP, *specs]
+        work["index_group_label"] = work["index_group_code"].map(_REL_FLOOR_LABELS)
         return specs, work, warnings
 
     if mode == "grouped":
@@ -209,6 +220,8 @@ def _build_floor_dimension_groups(
         work["index_group_code"] = work["floor"].apply(
             lambda x: _floor_group_label(float(x)) if x is not None and not pd.isna(x) else None
         )
+        if (work["index_group_code"] == "floor_grp_b").any():
+            specs = [BASEMENT_GROUPED_GROUP, *specs]
         work["index_group_label"] = work["index_group_code"].map(GROUPED_FLOOR_LABELS)
         return specs, work, warnings
 
@@ -245,6 +258,28 @@ def _pick_regression_reference(
 
 def _pick_floor_regression_reference(group_counts: dict[str, int]) -> tuple[str, str] | None:
     return _pick_regression_reference(group_counts, RESIDENTIAL_FLOOR_GROUPS)
+
+
+def _per_building_dong_bases(reg: pd.DataFrame) -> dict[str, str]:
+    """단지마다 거래가 가장 많은 동. 동점이면 이름순. code → 그 단지의 기준 code."""
+    out: dict[str, str] = {}
+    if "building_key" not in reg.columns:
+        return out
+    codes = reg["index_group_code"].astype(str)
+    labels = reg["index_group_label"].astype(str)
+    for _, grp_index in reg.groupby(reg["building_key"].astype(str)).groups.items():
+        group_codes = codes.loc[grp_index]
+        counts = group_codes.value_counts()
+        if counts.empty:
+            continue
+        top = int(counts.max())
+        tied = [str(code) for code, n in counts.items() if int(n) == top]
+        label_of = labels.loc[grp_index].groupby(group_codes).first()
+        tied.sort(key=lambda code: str(label_of.get(code, code)))
+        base = tied[0]
+        for code in counts.index:
+            out[str(code)] = base
+    return out
 
 
 def _period_code(year: float | None, month: float | None) -> str | None:
@@ -623,11 +658,20 @@ def _reference_on_sample(
     if effective_dim == "area":
         areas = pd.to_numeric(reg["exclusive_area"], errors="coerce")
         med = float(areas.median())
-        nearest = (areas - med).abs().idxmin()
-        code = str(reg.loc[nearest, "index_group_code"])
-        label = str(reg.loc[nearest, "index_group_label"])
-        if reg_counts.get(code, 0) >= MIN_GROUP_FOR_DUMMY:
-            return code, label
+        best: tuple[tuple, str, str] | None = None
+        codes = reg["index_group_code"].astype(str)
+        for label, code, sort_v in group_specs:
+            if reg_counts.get(code, 0) < MIN_GROUP_FOR_DUMMY:
+                continue
+            group_area = areas[codes == code].dropna()
+            if group_area.empty:
+                continue
+            representative = float(group_area.median())
+            rank = (abs(representative - med), representative, float(sort_v or 0), label)
+            if best is None or rank < best[0]:
+                best = (rank, code, label)
+        if best is not None:
+            return best[1], best[2]
     return _pick_regression_reference(reg_counts, group_specs)
 
 
@@ -750,16 +794,40 @@ def compute_residential_floor_index_regression(
         codes: list[str] = []
         labels: list[str] = []
         dong_labels: dict[str, str] = {}
+        multi = (
+            "building_key" in work.columns
+            and work["building_key"].nunique(dropna=True) > 1
+        )
+        building_names: dict[str, str] = {}
+        if multi:
+            for bk, grp in work.groupby(work["building_key"].astype(str)):
+                name = ""
+                if "display_name" in grp.columns:
+                    raw_name = grp["display_name"].dropna().astype(str).str.strip()
+                    raw_name = raw_name[~raw_name.isin(["", "nan", "None"])]
+                    if not raw_name.empty:
+                        name = str(raw_name.iloc[0])
+                building_names[str(bk)] = name or str(bk)[:12]
         for _, row in work.iterrows():
             dong = row.get("dong")
             if dong is None or (isinstance(dong, float) and pd.isna(dong)):
                 lbl = "—"
             else:
                 lbl = _dong_label(str(dong))
-            code = _dong_code(lbl) if lbl != "—" else "dong_missing"
-            dong_labels[code] = lbl
+            if lbl == "—":
+                code = "dong_missing"
+                shown = lbl
+            elif multi:
+                bk = str(row.get("building_key"))
+                bname = building_names.get(bk, bk[:12])
+                shown = f"{bname} {lbl}"
+                code = "dong_" + hashlib.sha1(f"{bk}|{lbl}".encode("utf-8")).hexdigest()[:12]
+            else:
+                shown = lbl
+                code = _dong_code(lbl)
+            dong_labels[code] = shown
             codes.append(code)
-            labels.append(lbl)
+            labels.append(shown)
         work["index_group_code"] = codes
         work["index_group_label"] = labels
         counts = work["index_group_code"].value_counts()
@@ -917,6 +985,22 @@ def compute_residential_floor_index_regression(
                 f"{display_label}이 최종 회귀 표본에 없습니다. 지수·신뢰구간·p는 {base_label}=100 대비입니다."
             )
 
+    contrast_base: dict[str, str] = {}
+    omitted_codes = {reference_code}
+    if (
+        effective_dim == "dong"
+        and "building_key" in reg.columns
+        and reg["building_key"].astype(str).nunique() > 1
+    ):
+        contrast_base = _per_building_dong_bases(reg)
+        if contrast_base:
+            omitted_codes = set(contrast_base.values())
+            if len(omitted_codes) > 1:
+                base_label = "각 단지의 기준동"
+            warnings.append(
+                "동은 단지별로 나눕니다. 같은 동 번호라도 단지가 다르면 다른 칸이고, 100은 그 단지의 기준동입니다."
+            )
+
     reg = reg.copy()
     reg["ln_unit_price"] = np.log(reg["unit_price"].astype(float))
     parts: list[pd.DataFrame] = []
@@ -949,7 +1033,7 @@ def compute_residential_floor_index_regression(
     dummy_codes = [
         code
         for _, code, _ in group_specs
-        if code != reference_code and int(reg_counts.get(code, 0)) >= MIN_GROUP_FOR_DUMMY
+        if code not in omitted_codes and int(reg_counts.get(code, 0)) >= MIN_GROUP_FOR_DUMMY
     ]
     for code in dummy_codes:
         col = f"idx_{code}"
@@ -966,7 +1050,7 @@ def compute_residential_floor_index_regression(
     X = X.loc[valid]
     y = y.loc[valid]
     fitted_counts, _ = _group_count_maps(reg.loc[valid])
-    identified_codes = [reference_code, *dummy_codes]
+    identified_codes = list(dict.fromkeys([*omitted_codes, *dummy_codes]))
     if any(int(fitted_counts.get(code, 0)) < MIN_GROUP_FOR_DUMMY for code in identified_codes):
         warnings.append("결측을 뺀 뒤 구간 표본이 부족해 지수 산출 불가")
         reg_counts = fitted_counts
@@ -1003,10 +1087,12 @@ def compute_residential_floor_index_regression(
 
     coef_map: dict[str, dict] = {}
     for code in identified_codes:
-        if code == base_code:
+        this_base = contrast_base.get(code, base_code)
+        this_omitted = this_base if contrast_base else reference_code
+        if code == this_base:
             continue
         try:
-            contrast = _contrast_against_base(model, code, base_code, reference_code)
+            contrast = _contrast_against_base(model, code, this_base, this_omitted)
         except Exception:
             contrast = None
         if contrast is None:
@@ -1023,6 +1109,7 @@ def compute_residential_floor_index_regression(
         effective_dim,
         raw_counts=raw_counts,
         publish=True,
+        reference_codes=set(contrast_base.values()) if contrast_base else None,
     )
     regression_reference_floor = None
     if effective_dim == "floor" and reference_code != base_code:
@@ -1108,14 +1195,16 @@ def _cells_from_regression(
     *,
     raw_counts: dict[str, int] | None = None,
     publish: bool = True,
+    reference_codes: set[str] | None = None,
 ) -> list[dict]:
+    refs = reference_codes if reference_codes is not None else {reference_code}
     cells = []
     for label, code, sort_key in group_specs:
         count = int(group_counts.get(code, 0))
         count_raw = int(raw_counts.get(code, count)) if raw_counts is not None else count
         prices = group_prices.get(code, [])
         mean_p = float(np.mean(prices)) if prices else None
-        is_ref = publish and code == reference_code and count >= MIN_GROUP_FOR_DUMMY
+        is_ref = publish and code in refs and count >= MIN_GROUP_FOR_DUMMY
         coef = coef_map.get(code)
         if is_ref:
             index_val = 100.0

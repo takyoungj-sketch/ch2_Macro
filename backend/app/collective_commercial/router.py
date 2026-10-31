@@ -1001,6 +1001,8 @@ def cluster_floor_index(
     addr4_list: list[str] = Query(default=[]),
     contract_year_from: Optional[int] = None,
     contract_year_to: Optional[int] = None,
+    contract_date_from: Optional[date] = None,
+    contract_date_to: Optional[date] = None,
     dimension: str = Query("floor", pattern="^(floor|area)$"),
     floor_mode: str = Query("relative", pattern="^(relative|dummy|grouped|shop|factory)$"),
     experiment: bool = Query(False, description="표본 게이트 우회"),
@@ -1015,6 +1017,8 @@ def cluster_floor_index(
         addr4_list=addr4_list or None,
         contract_year_from=contract_year_from,
         contract_year_to=contract_year_to,
+        contract_date_from=contract_date_from,
+        contract_date_to=contract_date_to,
     )
     params["cluster_key"] = cluster_key
     rows = db.execute(

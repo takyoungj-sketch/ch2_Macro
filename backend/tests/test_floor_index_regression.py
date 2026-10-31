@@ -316,3 +316,97 @@ def test_sparse_building_does_not_join_the_reference_building():
     assert _cell(raw, "2층")["index"] == 120.0
     assert _cell(raw, "1층")["count_raw"] == 44
     assert _cell(raw, "1층")["count"] == 40
+
+
+def _dong_block(name, key, dong, price, n=20):
+    return _base_rows(
+        n,
+        unit_price=[price] * n,
+        dong=[dong] * n,
+        building_key=[key] * n,
+        display_name=[name] * n,
+        floor=[3] * n,
+    )
+
+
+def test_cohort_dong_index_keeps_same_numbers_apart():
+    frame = pd.concat(
+        [
+            _dong_block("A단지", "a", "101", 100.0),
+            _dong_block("A단지", "a", "102", 120.0),
+            _dong_block("B단지", "b", "101", 100.0),
+            _dong_block("B단지", "b", "102", 80.0),
+        ],
+        ignore_index=True,
+    )
+    raw = compute_residential_floor_index_regression(frame, asset_type="apartment", dimension="dong")
+    reversed_raw = compute_residential_floor_index_regression(
+        frame.iloc[::-1].reset_index(drop=True),
+        asset_type="apartment",
+        dimension="dong",
+    )
+    assert raw["reference_floor"] == "각 단지의 기준동"
+    assert _cell(raw, "A단지 101")["is_reference"]
+    assert _cell(raw, "B단지 101")["is_reference"]
+    assert _cell(raw, "A단지 102")["index"] == 120.0
+    assert _cell(raw, "B단지 102")["index"] == 80.0
+    assert _cell(reversed_raw, "A단지 102")["index"] == 120.0
+    assert _cell(reversed_raw, "B단지 102")["index"] == 80.0
+
+
+def test_area_reference_tie_uses_the_smaller_bucket():
+    small = _base_rows(40, exclusive_area=[60.0] * 40, unit_price=[100.0] * 40)
+    large = _base_rows(40, exclusive_area=[90.0] * 40, unit_price=[120.0] * 40)
+    forward = compute_residential_floor_index_regression(
+        pd.concat([small, large], ignore_index=True),
+        asset_type="apartment",
+        dimension="area",
+    )
+    backward = compute_residential_floor_index_regression(
+        pd.concat([large, small], ignore_index=True),
+        asset_type="apartment",
+        dimension="area",
+    )
+    assert forward["reference_floor"] == "60㎡"
+    assert backward["reference_floor"] == "60㎡"
+    assert _cell(forward, "90㎡")["index"] == _cell(backward, "90㎡")["index"] == 120.0
+
+
+def test_residential_basement_is_its_own_band():
+    frame = pd.concat(
+        [
+            _base_rows(20, floor=[-1] * 20, unit_price=[70.0] * 20),
+            _base_rows(20, floor=[1] * 20, unit_price=[100.0] * 20),
+            _base_rows(20, floor=[8] * 20, unit_price=[110.0] * 20),
+        ],
+        ignore_index=True,
+    )
+    relative = compute_residential_floor_index_regression(
+        frame, asset_type="apartment", dimension="floor", floor_mode="relative"
+    )
+    grouped = compute_residential_floor_index_regression(
+        frame, asset_type="apartment", dimension="floor", floor_mode="grouped"
+    )
+    assert _cell(relative, "지하")["count_raw"] == 20
+    assert _cell(relative, "1층")["count_raw"] == 20
+    assert "중층부" not in {c["label"] for c in relative["cells"] if c["count_raw"]}
+    assert _cell(grouped, "지하")["count_raw"] == 20
+    assert _cell(grouped, "1–5층")["count_raw"] == 20
+    assert _cell(grouped, "6–15층")["count_raw"] == 20
+
+
+def test_rowhouse_basement_stays_out_of_the_above_ground_bands():
+    frame = pd.concat(
+        [
+            _base_rows(16, floor=[-1] * 16, unit_price=[50.0] * 16),
+            _base_rows(16, floor=[1] * 16, unit_price=[100.0] * 16),
+            _base_rows(16, floor=[3] * 16, unit_price=[110.0] * 16),
+            _base_rows(16, floor=[5] * 16, unit_price=[120.0] * 16),
+        ],
+        ignore_index=True,
+    )
+    raw = compute_residential_floor_index_regression(
+        frame, asset_type="rowhouse", dimension="floor", floor_mode="relative"
+    )
+    assert _cell(raw, "1층")["count_raw"] == 16
+    assert "지하" not in {c["label"] for c in raw["cells"]}

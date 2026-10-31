@@ -39,7 +39,7 @@ def test_bins_match_product_relative_for_above_ground():
 def test_basement_is_out_of_experiment_bins():
     assert experiment_floor_bin(0, 15) is None
     assert experiment_floor_bin(-1, 15) is None
-    assert relative_floor_group(-1, 15) == "floor_rel_mid"
+    assert relative_floor_group(-1, 15) == "floor_rel_b"
 
 
 def test_region_cascade_keeps_gyeonggi_eup_in_metro():

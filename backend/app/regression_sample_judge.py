@@ -159,17 +159,23 @@ def blocked_note(verdict: SampleVerdict) -> str | None:
 
 
 def design_nullspace(exog) -> np.ndarray:
-    """설계행렬의 영공간. 완전계수이면 빈 배열이다."""
+    """설계행렬의 영공간. 완전계수이면 빈 배열이다.
+
+    항상 원래 설계행렬을 분해한다. XᵀX는 조건수가 제곱이 되어, 0인 방향을
+    독립 성분으로 센다. 행이 열 이상이면 절약 분해로 오른쪽 벡터가 모두 나온다.
+    열이 더 많으면 전체 오른쪽 벡터가 필요하고, 그때 왼쪽 행렬은 행 크기이다.
+    """
     arr = np.asarray(exog, dtype=float)
     if arr.ndim != 2 or arr.shape[0] == 0 or arr.shape[1] == 0:
         return np.zeros((0, 0))
-    _u, singular, vt = np.linalg.svd(arr, full_matrices=True)
+    n, k = int(arr.shape[0]), int(arr.shape[1])
+    _u, singular, vt = np.linalg.svd(arr, full_matrices=n < k)
     if singular.size == 0 or not np.isfinite(singular[0]) or singular[0] <= 0:
-        return np.eye(arr.shape[1])
-    tol = max(arr.shape) * np.finfo(float).eps * float(singular[0])
+        return np.eye(k)
+    tol = max(n, k) * np.finfo(float).eps * float(singular[0])
     rank = int(np.sum(singular > tol))
-    if rank >= arr.shape[1]:
-        return np.zeros((0, arr.shape[1]))
+    if rank >= k:
+        return np.zeros((0, k))
     return vt[rank:]
 
 

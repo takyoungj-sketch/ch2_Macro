@@ -72,10 +72,10 @@ function dimensionHelpText(dim: string, isRegression: boolean, floorMode?: Floor
     floorMode === "dummy"
       ? "개별 층 더미로 산출합니다."
       : floorMode === "grouped"
-        ? "절대 층 구간(1–5 / 6–15 / 16+)으로 산출합니다."
+        ? "절대 층 구간(지하 / 1–5 / 6–15 / 16+)으로 산출합니다. 지하는 1–5층에 넣지 않습니다."
         : floorMode === "rowhouse"
           ? "1층·중간층·관측 최상층입니다. 관측 최상층은 선택 기간의 최고 거래층입니다."
-          : "그 단지에서 선택 기간에 거래된 최고층 대비 상대 구간(1층·저·중·고·관측 최상층)입니다. 단지가 여럿이면 단지마다 나눕니다.";
+          : "그 단지에서 선택 기간에 거래된 최고층 대비 상대 구간(지하·1층·저·중·고·관측 최상층)입니다. 단지가 여럿이면 단지마다 나눕니다.";
   return `${base} ${modeHint}`;
 }
 
@@ -330,8 +330,7 @@ export default function FloorIndexPanel({
             ))}
           </select>
           <p className="text-[10px] text-slate-500 dark:text-slate-400">
-            화면 100은 표본이 있는
-            {floorMode === "grouped" ? " 1–5층" : " 1층"}
+            화면 100은 {reference_floor ?? (floorMode === "grouped" ? "1–5층" : "1층")}
             입니다. 지수·95% CI·p는 모두 이 기준 대비이고, 기준 칸의 p는 없습니다.
             {assetType === "rowhouse"
               ? " 관측 최상층은 선택 기간의 최고 거래층입니다."
