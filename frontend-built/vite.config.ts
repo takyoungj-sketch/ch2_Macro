@@ -20,6 +20,7 @@ export default defineConfig({
   server: {
     port: 5174,
     proxy: {
+      "/api/ai3": { target: process.env.AI3_API_TARGET || "http://127.0.0.1:8002", changeOrigin: false },
       "/api": {
         target: "http://127.0.0.1:8000",
         changeOrigin: true,

@@ -23,7 +23,6 @@ from app.region_sido import is_retired_sido_name, list_sido_names
 from app.built.regression.engine import predict_regression, run_regression
 from app.built.regression.selection.service import compare_regression, suggest_regression
 from app.recommendation.adapters.built import recommend_built_regression
-from app.recommendation.recommend2 import recommend2_built
 from app.recommendation.scope import resolve_built_analysis_scope
 from app.built.enrichment_join import wrap_tx_enrichment
 from app.built.enrichment_policy import split_zone_filter
@@ -50,7 +49,6 @@ from app.built.schemas import (
     RegressionRunResponse,
     RegressionScopeResponse,
     RegressionRecommendResponse,
-    Recommend2Response,
     RecommendationStage1,
     RecommendationSatisfaction,
     RegressionSelectionRequest,
@@ -1053,17 +1051,6 @@ def regression_recommend(body: RegressionSelectionRequest, db: Session = Depends
     """단계형 모형 탐색 — SSOT 풀 1단계; Twin 2단계는 run_stage2=true(사용자 opt-in)."""
     try:
         return recommend_built_regression(db.connection(), body)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-    except ImportError as e:
-        raise HTTPException(status_code=500, detail=f"statsmodels 필요: {e}") from e
-
-
-@router.post("/regression/recommend2", response_model=Recommend2Response)
-def regression_recommend2(body: RegressionRunRequest, db: Session = Depends(get_built_db)):
-    """모형추천2. 현행 /recommend 와 응답을 공유하지 않는다."""
-    try:
-        return recommend2_built(db.connection(), body)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except ImportError as e:

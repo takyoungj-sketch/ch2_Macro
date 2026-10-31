@@ -13,12 +13,15 @@ import { fetchProfileTwinNeighbors, runRegression, twinProfileForBuiltAsset } fr
 import { buildBuiltRecommendContext } from "../api/aiClient";
 import { BUILT_RECOMMEND_HELP } from "../utils/builtAnalysisHelp";
 import type { ProfileLinkTarget } from "../utils/profileLink";
-import { mapProfileTwinNeighbors, resolveTwinAnchorFromRequest } from "../utils/profileLink";
+import { mapProfileTwinNeighbors, resolveTwinAnchorFromRequest, profileTwinFullName } from "../utils/profileLink";
 import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import DraggableModalShell from "./DraggableModalShell";
 import RecommendStagePanel from "./RecommendStagePanel";
 import PredictPanel from "./PredictPanel";
+import TwinFitDetails from "./TwinFitDetails";
+import { contentSignature } from "../../../shared/regression-ui/signature";
+import { analysisPhase, phaseLabels } from "../../../shared/regression-ui/phase";
 
 type PredictTarget = {
   vars: RegressionVariableSpec;
@@ -26,13 +29,26 @@ type PredictTarget = {
   label: string;
   fitN?: number;
   regionCodes?: string[];
+  sampleLockBlocks?: string[];
 };
+
+function recommendationRefitBody(regBody: RegressionRunRequest, target: PredictTarget): RegressionRunRequest {
+  return {
+    ...regBody,
+    variables: target.vars,
+    response_scale: target.scale,
+    categorical_missing: "keep_unknown",
+    ...(target.sampleLockBlocks?.length ? { sample_lock_blocks: target.sampleLockBlocks } : {}),
+    ...(target.regionCodes?.length ? { region_codes: target.regionCodes } : {}),
+  };
+}
 
 type Props = {
   open: boolean;
   onClose: () => void;
   regBody: RegressionRunRequest;
   regData: RegressionRunResponse;
+  baselineRegBody?: RegressionRunRequest;
   recommendM: UseMutationResult<RegressionRecommendResponse, Error, RegressionSelectionRequest>;
   assetType: AssetType;
   regionLabel: string;
@@ -46,6 +62,7 @@ export default function RecommendationModal({
   onClose,
   regBody,
   regData,
+  baselineRegBody = regBody,
   recommendM,
   assetType,
   regionLabel,
@@ -58,9 +75,11 @@ export default function RecommendationModal({
   const [runStage2, setRunStage2] = useState(false);
   const [checkedTwinCodes, setCheckedTwinCodes] = useState<string[]>([]);
   const [twinRunId, setTwinRunId] = useState(0);
+  const [researchRunId, setResearchRunId] = useState(0);
   const [runTwinResearch, setRunTwinResearch] = useState(false);
   const [heldData, setHeldData] = useState<RegressionRecommendResponse | null>(null);
   const [localBaseline, setLocalBaseline] = useState<RegressionRecommendResponse | null>(null);
+  const [resultTwinCodes, setResultTwinCodes] = useState<string[]>([]);
   const launchedStage1 = useRef(false);
   const launchedTwin = useRef(false);
   const launchedResearch = useRef(false);
@@ -119,7 +138,7 @@ export default function RecommendationModal({
     const map: Record<string, string> = {};
     for (const n of twinQ.data?.neighbors ?? []) {
       const code = (n.twin_beopjungri_code || n.twin_eupmyeondong_code || "").trim();
-      const name = n.twin_beopjungri_name || n.twin_eupmyeondong_name || n.twin_sigungu_name;
+      const name = profileTwinFullName(n);
       if (code && name) map[code] = name;
     }
     return map;
@@ -130,8 +149,8 @@ export default function RecommendationModal({
       (twinQ.data?.neighbors ?? [])
         .map((n) => {
           const code = (n.twin_beopjungri_code || n.twin_eupmyeondong_code || "").trim();
-          const name = n.twin_beopjungri_name || n.twin_eupmyeondong_name || n.twin_sigungu_name || code;
-          return { code, rank: n.rank, label: name };
+          const name = profileTwinFullName(n) || "지역명 미제공";
+          return { code, rank: n.rank, label: name, similarityScore: n.similarity_score };
         })
         .filter((row) => row.code),
     [twinQ.data],
@@ -228,52 +247,32 @@ export default function RecommendationModal({
       run_stage2_research: true,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Twin 실험2 opt-in 후 재요청
-  }, [open, runTwinResearch, twinWaiting, twinNeighbors, checkedTwinCodes]);
+  }, [open, runTwinResearch, researchRunId, twinWaiting, twinNeighbors, checkedTwinCodes]);
 
   useEffect(() => {
     if (!open) return;
     const d = recommendM.data;
     if (!d) return;
     setHeldData(d);
+    setResultTwinCodes(recommendM.variables?.selected_twin_codes ?? []);
     if (!d.stage2?.ran) setLocalBaseline(d);
   }, [open, recommendM.data]);
 
   useEffect(() => {
     if (!open || !predictTarget) return;
-    predictFitM.mutate({
-      ...regBody,
-      variables: predictTarget.vars,
-      response_scale: predictTarget.scale,
-      ...(predictTarget.regionCodes?.length
-        ? { region_codes: predictTarget.regionCodes }
-        : {}),
-    });
+    predictFitM.mutate(recommendationRefitBody(regBody, predictTarget));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fit when target changes
   }, [open, predictTarget]);
 
   useEffect(() => {
     if (!open || !twin1Target) return;
-    twin1FitM.mutate({
-      ...regBody,
-      variables: twin1Target.vars,
-      response_scale: twin1Target.scale,
-      ...(twin1Target.regionCodes?.length
-        ? { region_codes: twin1Target.regionCodes }
-        : {}),
-    });
+    twin1FitM.mutate(recommendationRefitBody(regBody, twin1Target));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Twin1 fit when target changes
   }, [open, twin1Target]);
 
   useEffect(() => {
     if (!open || !researchTarget) return;
-    researchFitM.mutate({
-      ...regBody,
-      variables: researchTarget.vars,
-      response_scale: researchTarget.scale,
-      ...(researchTarget.regionCodes?.length
-        ? { region_codes: researchTarget.regionCodes }
-        : {}),
-    });
+    researchFitM.mutate(recommendationRefitBody(regBody, researchTarget));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Twin2 fit when target changes
   }, [open, researchTarget]);
 
@@ -291,44 +290,26 @@ export default function RecommendationModal({
       label: `Twin 실험2 · ${research.label}`,
       fitN: research.n,
       regionCodes: research.region_codes,
+      sampleLockBlocks: research.sample_lock_blocks?.length
+        ? research.sample_lock_blocks
+        : data.stage1.candidate_pool,
     });
   }, [open, recommendM.data]);
 
-  const predictRegBody = useMemo(() => {
-    if (!predictTarget) return null;
-    return {
-      ...regBody,
-      variables: predictTarget.vars,
-      response_scale: predictTarget.scale,
-      ...(predictTarget.regionCodes?.length
-        ? { region_codes: predictTarget.regionCodes }
-        : {}),
-    };
-  }, [regBody, predictTarget]);
+  const predictRegBody = useMemo(
+    () => (predictTarget ? recommendationRefitBody(regBody, predictTarget) : null),
+    [regBody, predictTarget],
+  );
 
-  const twin1RegBody = useMemo(() => {
-    if (!twin1Target) return null;
-    return {
-      ...regBody,
-      variables: twin1Target.vars,
-      response_scale: twin1Target.scale,
-      ...(twin1Target.regionCodes?.length
-        ? { region_codes: twin1Target.regionCodes }
-        : {}),
-    };
-  }, [regBody, twin1Target]);
+  const twin1RegBody = useMemo(
+    () => (twin1Target ? recommendationRefitBody(regBody, twin1Target) : null),
+    [regBody, twin1Target],
+  );
 
-  const researchRegBody = useMemo(() => {
-    if (!researchTarget) return null;
-    return {
-      ...regBody,
-      variables: researchTarget.vars,
-      response_scale: researchTarget.scale,
-      ...(researchTarget.regionCodes?.length
-        ? { region_codes: researchTarget.regionCodes }
-        : {}),
-    };
-  }, [regBody, researchTarget]);
+  const researchRegBody = useMemo(
+    () => (researchTarget ? recommendationRefitBody(regBody, researchTarget) : null),
+    [regBody, researchTarget],
+  );
 
   const aiRecommendContext = useMemo(() => {
     if (!recommendM.data) return null;
@@ -393,6 +374,18 @@ export default function RecommendationModal({
   const twin1Pending = Boolean(
     runStage2 && !runTwinResearch && (recommendM.isPending || twinWaiting),
   );
+  const twinSelectionChanged = Boolean(panelData?.stage2?.ran &&
+    contentSignature([...checkedTwinCodes].sort()) !== contentSignature([...resultTwinCodes].sort()));
+  const requestStage = recommendM.variables?.run_stage2_research ? "twin2"
+    : recommendM.variables?.run_stage2 ? "twin1" : "local";
+  const localPhase = analysisPhase({ pending: recommendM.isPending && requestStage === "local",
+    failed: recommendM.isError && requestStage === "local", hasResult: !!panelData });
+  const twinPhase = analysisPhase({ pending: recommendM.isPending && requestStage === "twin1",
+    failed: recommendM.isError && requestStage === "twin1", hasResult: !!panelData?.stage2?.ran,
+    changed: twinSelectionChanged, unavailable: !twinEnabled || twinQ.isError });
+  const researchPhase = analysisPhase({ pending: recommendM.isPending && requestStage === "twin2",
+    failed: recommendM.isError && requestStage === "twin2", hasResult: !!panelData?.stage2?.research_ran,
+    changed: twinSelectionChanged, unavailable: !twinEnabled || twinQ.isError });
 
   return (
     <DraggableModalShell
@@ -400,7 +393,7 @@ export default function RecommendationModal({
       onClose={onClose}
       titleId="recommendation-modal-title"
       title="Macro 모형 탐색"
-      subtitle="예측형 · 설명형 · 쌍둥이 확장. 기본 통계 식은 바꾸지 않습니다."
+      subtitle="예측형 · 설명형 · 쌍둥이 확장. 이 창에서 후보를 비교하며 기본 회귀 설정은 유지합니다."
       maxWidthClass="max-w-6xl"
       resizable
       allowFullscreen
@@ -417,7 +410,7 @@ export default function RecommendationModal({
       headerActions={
         <div className="flex items-center gap-1.5">
           <AnalysisHelpPanel explain={BUILT_RECOMMEND_HELP} />
-          <PublishAiContext context={recommendM.data && aiRecommendContext ? aiRecommendContext : null} />
+          <PublishAiContext context={!recommendM.isPending && !twinSelectionChanged && recommendM.data && aiRecommendContext ? aiRecommendContext : null} />
           <button
             type="button"
             className="btn btn-ghost text-sm"
@@ -434,6 +427,20 @@ export default function RecommendationModal({
       }
     >
       <div className="h-full min-h-0 space-y-3">
+        <section className="rounded-lg border border-slate-200 dark:border-slate-700 p-3 space-y-2 text-sm" aria-label="탐색 범위와 진행 상태">
+          <p><strong>현재 탐색 범위</strong> · {regionLabel} · {regBody.window_years ? `최근 ${regBody.window_years}년` : `${regBody.contract_year_from ?? "시작연도 제한 없음"} ~ ${regBody.contract_year_to ?? "종료연도 제한 없음"}`}
+            {regBody.as_of_month && ` · 기준월 ${regBody.as_of_month}`}</p>
+          <ol className="flex flex-wrap gap-x-5 gap-y-1" aria-live="polite">
+            <li>1. 지역 내 탐색 · {phaseLabels[localPhase]}</li>
+            <li>2. Twin1 · {phaseLabels[twinPhase]}</li>
+            <li>3. Twin2 · {phaseLabels[researchPhase]}</li>
+          </ol>
+          {panelData && <p>조회 {panelData.analysis_scope.scope_n_tx.toLocaleString("ko-KR")}건 · 탐색 {panelData.stage1.selection_n.toLocaleString("ko-KR")}건 · 적합 {panelData.stage1.fit_n.toLocaleString("ko-KR")}건{!panelData.analysis_scope.include_partial && Boolean(panelData.analysis_scope.partial_tx_count) && ` · 지분 ${panelData.analysis_scope.partial_tx_count}건 제외`} </p>}
+          {recommendM.isPending && panelData && <p role="status">새 결과를 계산 중입니다. 아래에는 이전 계산 결과가 남아 있습니다.</p>}
+          {recommendM.isError && panelData && <p role="status">이번 계산은 실패했습니다. 아래 이전 성공 결과가 이번 요청의 완료를 뜻하지 않습니다.</p>}
+          {twinQ.isError && <p role="alert">쌍둥이 지역 후보를 불러오지 못했습니다. 지역 내 탐색 결과와 구분해서 확인하세요.</p>}
+          {contentSignature(baselineRegBody) !== contentSignature(regBody) && <p>기본 회귀와 현재 탐색의 설정이 다릅니다. 기본 회귀 비교 열은 마지막 통계분석 조건입니다.</p>}
+        </section>
         {loading && (
           <p className="text-sm text-slate-400 text-center py-8">Macro 탐색 계산 중…</p>
         )}
@@ -449,31 +456,53 @@ export default function RecommendationModal({
             data={panelData}
             assetType={assetType}
             minePrimary={regData.primary}
-            mineScale={regBody.response_scale}
-            onAdopt={onAdopt}
-            onPredict={(vars, scale, label, opts) => {
+            mineScale={baselineRegBody.response_scale}
+            onAdopt={recommendM.isPending ? undefined : onAdopt}
+            onPredict={recommendM.isPending || twinSelectionChanged ? undefined : (vars, scale, label, opts) => {
+              if (recommendM.isPending || (opts?.slot && twinSelectionChanged)) return;
+              const slot = opts?.slot === "twin2" || label.startsWith("Twin 실험2")
+                ? "twin2"
+                : opts?.slot === "twin1" || label.startsWith("Twin 재적합")
+                  ? "twin1"
+                  : "local";
+              const twin1Lock = sourceData?.stage2?.inspect_pool?.sample_lock_blocks;
+              const twin2Lock = sourceData?.stage2?.research?.sample_lock_blocks;
+              const sampleLockBlocks = slot === "twin1"
+                ? (twin1Lock?.length ? twin1Lock : sourceData?.stage2?.inspect_pool?.blocks)
+                : slot === "twin2"
+                  ? (twin2Lock?.length ? twin2Lock : sourceData?.stage1.candidate_pool)
+                  : sourceData?.stage1.candidate_pool;
               const target = {
                 vars,
                 scale,
                 label,
                 fitN: resolveFitN(label, opts?.fitN),
                 regionCodes: opts?.regionCodes,
+                sampleLockBlocks: sampleLockBlocks ?? [],
               };
-              if (opts?.slot === "twin2" || label.startsWith("Twin 실험2")) {
+              if (slot === "twin2") {
                 setResearchTarget(target);
-              } else if (opts?.slot === "twin1" || label.startsWith("Twin 재적합")) {
+              } else if (slot === "twin1") {
                 setTwin1Target(target);
               } else {
                 setPredictTarget(target);
               }
             }}
             predictActiveLabel={predictTarget?.label ?? null}
+            predictOptions={!predictFitM.isPending && !predictFitM.isError ? predictFitM.data?.primary.predict_options : null}
             twin1PredictActiveLabel={twin1Target?.label ?? null}
+            twin1PredictIdentity={twin1Target ? contentSignature({ vars: twin1Target.vars, scale: twin1Target.scale, fitN: twin1Target.fitN, regionCodes: twin1Target.regionCodes }) : null}
+            researchPredictIdentity={researchTarget ? contentSignature({ vars: researchTarget.vars, scale: researchTarget.scale, fitN: researchTarget.fitN, regionCodes: researchTarget.regionCodes }) : null}
             researchPredictActiveLabel={researchTarget?.label ?? null}
             regionNameByCode={regionNameByCode}
             onRunTwin={
-              twinCandidateStatus === "ready"
+              twinCandidateStatus === "ready" && !recommendM.isPending
                 ? () => {
+                    setRunTwinResearch(false);
+                    launchedResearch.current = false;
+                    setTwin1Target(null);
+                    setResearchTarget(null);
+                    autoResearchPredictKey.current = null;
                     launchedTwin.current = false;
                     setTwinRunId((n) => n + 1);
                     setRunStage2(true);
@@ -482,6 +511,10 @@ export default function RecommendationModal({
             }
             twinChoices={twinChoices}
             checkedTwinCodes={checkedTwinCodes}
+            resultTwinCodes={resultTwinCodes}
+            twinSelectionChanged={twinSelectionChanged}
+            twinStatus={phaseLabels[twinPhase]}
+            researchStatus={phaseLabels[researchPhase]}
             onToggleTwinCode={(code) =>
               setCheckedTwinCodes((cur) =>
                 cur.includes(code) ? cur.filter((item) => item !== code) : [...cur, code],
@@ -489,12 +522,17 @@ export default function RecommendationModal({
             }
             twinRunning={twin1Pending}
             onRunTwinResearch={
-              twinCandidateStatus === "ready" ? () => setRunTwinResearch(true) : undefined
+              twinCandidateStatus === "ready" && !recommendM.isPending ? () => {
+                launchedResearch.current = false;
+                setResearchRunId(n => n + 1);
+                setRunTwinResearch(true);
+              } : undefined
             }
             twinResearchRunning={Boolean(
               runTwinResearch && (recommendM.isPending || twinWaiting),
             )}
             twinCandidateStatus={twinCandidateStatus}
+            busy={recommendM.isPending}
             predictPanel={
               <div className="mt-2 space-y-2">
                 {predictFitM.isPending && (
@@ -505,16 +543,17 @@ export default function RecommendationModal({
                     {(predictFitM.error as Error).message ?? "추정용 모형 적합 실패"}
                   </p>
                 )}
-                {predictFitM.data && predictRegBody && predictTarget && (
+                {!predictFitM.isPending && !predictFitM.isError && predictFitM.data && predictRegBody && predictTarget && (
                   <PredictPanel
                     embedded
+                    basicPresentation
                     regData={predictFitM.data as RegressionRunResponse}
                     regBody={predictRegBody}
                     vars={predictTarget.vars}
                     assetType={assetType}
                     regionLabel={regionLabel}
-                    modelHint={`${predictTarget.label} · ${predictTarget.scale}`}
-                    fitN={predictTarget.fitN ?? panelData.stage1.fit_n}
+                    modelHint={predictTarget.label}
+                    fitN={predictFitM.data.primary.n}
                     scopeNTx={panelData.analysis_scope.scope_n_tx}
                   />
                 )}
@@ -530,18 +569,22 @@ export default function RecommendationModal({
                     {(twin1FitM.error as Error).message ?? "추정용 모형 적합 실패"}
                   </p>
                 )}
-                {twin1FitM.data && twin1RegBody && twin1Target && (
+                {!twinSelectionChanged && !twin1FitM.isPending && !twin1FitM.isError && twin1FitM.data && twin1RegBody && twin1Target && (
+                  <>
+                  <TwinFitDetails result={twin1FitM.data.primary} scale={twin1Target.scale} assetType={assetType} />
                   <PredictPanel
                     embedded
+                    basicPresentation
                     regData={twin1FitM.data as RegressionRunResponse}
                     regBody={twin1RegBody}
                     vars={twin1Target.vars}
                     assetType={assetType}
                     regionLabel={regionLabel}
-                    modelHint={`${twin1Target.label} · ${twin1Target.scale}`}
-                    fitN={twin1Target.fitN ?? panelData.stage2?.inspect_pool?.n}
+                    modelHint="Twin1 · 기존 식 재적합"
+                    fitN={twin1FitM.data.primary.n}
                     scopeNTx={panelData.analysis_scope.scope_n_tx}
                   />
+                  </>
                 )}
               </div>
             }
@@ -555,18 +598,22 @@ export default function RecommendationModal({
                     {(researchFitM.error as Error).message ?? "추정용 모형 적합 실패"}
                   </p>
                 )}
-                {researchFitM.data && researchRegBody && researchTarget && (
+                {!twinSelectionChanged && !researchFitM.isPending && !researchFitM.isError && researchFitM.data && researchRegBody && researchTarget && (
+                  <>
+                  <TwinFitDetails result={researchFitM.data.primary} scale={researchTarget.scale} assetType={assetType} />
                   <PredictPanel
                     embedded
+                    basicPresentation
                     regData={researchFitM.data as RegressionRunResponse}
                     regBody={researchRegBody}
                     vars={researchTarget.vars}
                     assetType={assetType}
                     regionLabel={regionLabel}
-                    modelHint={`${researchTarget.label} · ${researchTarget.scale}`}
-                    fitN={researchTarget.fitN ?? panelData.stage2?.research?.n ?? panelData.stage1.fit_n}
+                    modelHint="Twin2 · 확장 표본 재탐색"
+                    fitN={researchFitM.data.primary.n}
                     scopeNTx={panelData.analysis_scope.scope_n_tx}
                   />
+                  </>
                 )}
               </div>
             }

@@ -1,4 +1,5 @@
-import { StatsGlossaryHelp } from "@ch2/stats-glossary";
+import AnalysisHelpPanel from "./AnalysisHelpPanel";
+import { BUILT_WINDOW_HELP } from "../utils/builtSettingsHelp";
 
 export type StatsWindowYears = 3 | 5 | 7;
 
@@ -26,7 +27,7 @@ export default function StatsWindowToggle({
         aria-pressed={active}
         disabled={disabled}
         onClick={() => onChange(y)}
-        className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-colors disabled:opacity-50 ${
+        className={`px-3 py-1 rounded-md text-sm font-semibold transition-colors disabled:opacity-50 ${
           active
             ? "bg-white dark:bg-slate-600 text-slate-800 dark:text-slate-100 shadow-sm"
             : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
@@ -39,9 +40,9 @@ export default function StatsWindowToggle({
 
   return (
     <div className="space-y-1">
-      <span className="text-xs text-slate-500 dark:text-slate-400 inline-flex items-center gap-1">
+      <span className="text-sm text-slate-500 dark:text-slate-400 inline-flex items-center gap-1">
         롤링 구간
-        <StatsGlossaryHelp termId="rolling_window" size="xs" />
+        <AnalysisHelpPanel explain={BUILT_WINDOW_HELP} title="롤링 구간 설명" />
       </span>
       <div
         className="flex gap-0.5 bg-slate-100 dark:bg-slate-700 rounded-lg p-0.5"

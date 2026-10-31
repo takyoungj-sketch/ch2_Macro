@@ -44,6 +44,13 @@ export function builtTxAdminCols(r: BuiltTransactionRow) {
   };
 }
 
+export function formatBuiltTxStructure(value?: string | null): string {
+  const label = value?.trim();
+  if (label === "RC") return "철콘";
+  if (label === "SRC") return "철골철콘";
+  return label || "—";
+}
+
 export function builtTxLotHoverTitle(r: BuiltTransactionRow): string | undefined {
   const recovered = r.recovered_lot?.trim();
   if (recovered) return recovered;

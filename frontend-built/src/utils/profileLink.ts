@@ -1,6 +1,13 @@
 import type { ProfileTwinCandidateNeighbor, ProfileTwinNeighborItem } from "../types";
 import type { BuiltAnalysisUnit } from "./builtAnalysisUnits";
 
+export function profileTwinFullName(neighbor: ProfileTwinNeighborItem): string {
+  const leaf = neighbor.twin_beopjungri_name || neighbor.twin_eupmyeondong_name;
+  return [neighbor.twin_sido_name, neighbor.twin_sigungu_name, leaf]
+    .map(part => part?.trim()).filter((part): part is string => Boolean(part))
+    .reduce((name, part) => !name || part.startsWith(`${name} `) ? part : name === part || name.endsWith(` ${part}`) ? name : `${name} ${part}`, "");
+}
+
 export type ProfileLinkTarget = { level: "eupmyeondong" | "sigungu" | "beopjungri"; code: string };
 
 /**

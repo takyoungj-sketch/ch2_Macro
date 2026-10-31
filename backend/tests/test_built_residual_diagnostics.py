@@ -246,3 +246,13 @@ def test_tiny_sample_returns_no_diagnostics():
         with_residuals=True, response_scale="linear",
     )
     assert res.residuals is None or res.residuals.n >= MIN_GROUP_N
+
+
+def test_influential_trade_carries_real_source_identity_only():
+    frame = _rows(n=200)
+    frame["transaction_id"] = np.arange(len(frame)) + 10000
+    diagnostic = _diag(frame)
+    assert diagnostic.influential
+    assert all(trade.transaction_id in set(frame.transaction_id) for trade in diagnostic.influential)
+    without_identity = _diag(frame.drop(columns="transaction_id"))
+    assert all(trade.transaction_id is None for trade in without_identity.influential)

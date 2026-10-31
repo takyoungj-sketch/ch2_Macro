@@ -73,7 +73,7 @@ export default function RegressionEquation({
           return (
             <span
               key={c.name}
-              className={clsx(faded && "opacity-40", significant && !faded && "font-semibold")}
+              className={clsx(faded && "text-slate-600 dark:text-slate-300", significant && !faded && "font-semibold")}
             >
               {" "}
               {sign} {mag}·{label}
@@ -81,7 +81,7 @@ export default function RegressionEquation({
           );
         })}
         {!showAll && hiddenCount > 0 && (
-          <span className="text-slate-400 text-xs font-sans not-italic">
+          <span className="text-slate-500 dark:text-slate-400 text-xs font-sans not-italic">
             {" "}
             · 외 {hiddenCount}개
           </span>
@@ -98,9 +98,9 @@ export default function RegressionEquation({
         </button>
       )}
 
-      <p className="text-[10px] text-slate-400">
+      <p className="text-[10px] text-slate-500 dark:text-slate-400">
         회귀식 유의 기준 p&lt;{EQUATION_SIG_P}
-        {!showAll && hiddenCount > 0 ? " · 기본은 유의 변수만" : showAll ? " · 비유의는 흐림" : ""}
+        {!showAll && hiddenCount > 0 ? " · 기본은 유의 계수만" : showAll ? " · 비유의 계수는 보통 굵기" : ""}
       </p>
       {references.length > 0 && (
         <p className="text-[10px] text-slate-500">

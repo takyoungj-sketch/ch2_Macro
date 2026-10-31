@@ -8,15 +8,13 @@ import {
   builtTxLotHoverTitle,
   builtTxSortValue,
   formatBuiltTxCell,
+  formatBuiltTxStructure,
   formatBuiltTxContractDate,
   type BuiltTxSortDir,
   type BuiltTxSortKey,
 } from "../utils/builtTxDisplay";
-import {
-  ENRICH_LIST_BADGE,
-  builtMatchHoverTitle,
-  isBuiltTitleMatch,
-} from "../utils/enrichmentConsent";
+import AnalysisHelpPanel from "./AnalysisHelpPanel";
+import { assessedPriceYearInfo, TRANSACTION_ZONE_HELP, TRANSACTION_ASSESSED_PRICE_HELP } from "../utils/builtTransactionHelp";
 
 const PAGE_SIZE = 25;
 
@@ -72,6 +70,7 @@ function buildCols(assetType: AssetType, enrich: boolean): ColDef[] {
 }
 
 function getSelectDisplayValue(r: BuiltTransactionRow, key: BuiltTxSortKey): string {
+  if (key === "structure_group") return formatBuiltTxStructure(r.structure_group);
   if (key === "contract_date") return formatBuiltTxContractDate(r);
   const v = builtTxSortValue(r, key);
   if (v == null || v === "") return "—";
@@ -421,11 +420,13 @@ export default function BuiltTransactionTable({
                 return (
                   <th
                     key={col.key}
+                    style={col.key === "lot" ? { width: "2.25rem", maxWidth: "2.25rem", paddingLeft: "0.25rem", paddingRight: "0.25rem" } : undefined}
                     className={clsx(
                       "border px-1.5 py-1 font-medium align-top",
                       col.align === "right" ? "text-right" : "text-left",
                     )}
                   >
+                    <div className="flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => handleSort(col.key)}
@@ -442,6 +443,9 @@ export default function BuiltTransactionTable({
                         </span>
                       )}
                     </button>
+                    {col.key === "zone_type" && enrich && <AnalysisHelpPanel explain={TRANSACTION_ZONE_HELP} />}
+                    {col.key === "assessed_land_price" && <AnalysisHelpPanel explain={TRANSACTION_ASSESSED_PRICE_HELP} />}
+                    </div>
 
                     {col.filterType === "select" && (
                       <div
@@ -499,6 +503,7 @@ export default function BuiltTransactionTable({
                         placeholder={col.textPlaceholder ?? "검색"}
                         className={clsx(
                           "mt-0.5 w-full min-w-0 px-1 py-0.5 text-[10px] font-normal border rounded bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 placeholder:text-slate-400",
+                          col.key === "lot" && "max-w-[1.75rem]",
                           textFilters[col.key]?.trim()
                             ? "border-blue-400"
                             : "border-slate-200 dark:border-slate-600",
@@ -571,6 +576,7 @@ export default function BuiltTransactionTable({
               pageRows.map((r) => {
                 const admin = builtTxAdminCols(r);
                 const byear = builtTxBuildingYear(r);
+                const priceYearInfo = assessedPriceYearInfo(r);
                 return (
                   <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
                     {showAssetCol && (
@@ -596,9 +602,9 @@ export default function BuiltTransactionTable({
                     <td className="border px-2 py-1 max-w-[88px] truncate" title={admin.ri ?? undefined}>
                       {formatBuiltTxCell(admin.ri)}
                     </td>
-                    <td className="border px-2 py-1 max-w-[4.5rem] truncate">
+                    <td className="border px-1 py-1 w-[2.25rem] max-w-[2.25rem]">
                       <span
-                        className={r.recovered_lot?.trim() ? "cursor-help" : undefined}
+                        className={clsx("block max-w-[1.75rem] truncate", r.recovered_lot?.trim() && "cursor-help")}
                         title={builtTxLotHoverTitle(r)}
                       >
                         {formatBuiltTxCell(admin.lot)}
@@ -611,15 +617,17 @@ export default function BuiltTransactionTable({
                       {formatBuiltTxCell(r.road_name)}
                     </td>
                     <td className="border px-2 py-1 whitespace-nowrap">
-                      <span title={r.zone_type_ledger ? `원장 ${r.zone_type_ledger}` : undefined}>
+                      <span title={r.zone_source === "title" ? "용도지역 출처: 계약연도 토지대장 보강 자료" : r.zone_source === "ledger" ? "용도지역 출처: 실거래 자료" : undefined}>
                         {formatBuiltTxCell(r.zone_type)}
                       </span>
-                      {enrich && isBuiltTitleMatch(r.match_tier) && (
+                      {enrich && r.zone_source === "title" && r.zone_type?.trim() && (
                         <span
-                          className="ml-1 inline-block rounded border border-slate-300 px-1 text-[9px] text-slate-600 dark:border-slate-500 dark:text-slate-300"
-                          title={builtMatchHoverTitle(r.match_tier, r.match_rule)}
+                          className="ml-1 cursor-help text-slate-500 dark:text-slate-300"
+                          title="용도지역 보강: 계약연도 토지대장 자료"
+                          role="img"
+                          aria-label="용도지역 보강: 계약연도 토지대장 자료"
                         >
-                          {ENRICH_LIST_BADGE}
+                          †
                         </span>
                       )}
                     </td>
@@ -628,14 +636,14 @@ export default function BuiltTransactionTable({
                     </td>
                     {enrich && (
                       <td className="border px-2 py-1 whitespace-nowrap">
-                        {formatBuiltTxCell(r.structure_group)}
+                        {formatBuiltTxStructure(r.structure_group)}
                       </td>
                     )}
                     {enrich && (
-                      <td className="border px-2 py-1 text-right tabular-nums whitespace-nowrap">
+                      <td className="border px-2 py-1 text-right tabular-nums whitespace-nowrap" title={r.assessed_land_price == null ? undefined : priceYearInfo.title}>
                         {r.assessed_land_price == null
                           ? "—"
-                          : `${fmtNum(r.assessed_land_price)}${r.assessed_land_price_year ? ` (${r.assessed_land_price_year})` : ""}`}
+                          : `${fmtNum(r.assessed_land_price)}${priceYearInfo.suffix}`}
                       </td>
                     )}
                     <td className="border px-2 py-1 text-right tabular-nums">{fmtNum(r.price)}</td>

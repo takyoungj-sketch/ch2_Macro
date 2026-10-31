@@ -76,6 +76,23 @@ def test_one_year_withholds_even_when_that_year_has_many_trades():
     assert "2025년 40건" in note
 
 
+def test_failed_search_year_withholds_even_when_two_folds_succeed():
+    search = CvPhase(
+        mape=8.0,
+        folds=2,
+        n_trades=30,
+        years=(2022, 2024),
+        held_years=(2022, 2023, 2024),
+        failure_reasons=((2023, "학습 표본 부족"),),
+    )
+    confirm = CvPhase(mape=9.0, folds=1, n_trades=12, years=(2025,), held_years=(2025,))
+    confirmed, note = representative_verdict(_fit(search, confirm))
+    assert confirmed is False
+    assert note is not None
+    assert "2023년" in note
+    assert "완료하지 못했습니다" in note
+
+
 def test_unscored_confirm_year_withholds():
     search = CvPhase(
         mape=12.0, folds=2, n_trades=20, years=(2023, 2024), held_years=(2023, 2024)

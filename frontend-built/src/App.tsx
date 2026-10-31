@@ -5,7 +5,6 @@ import CollapsibleLeftSidebar from "@ch2/macro-shell/CollapsibleLeftSidebar";
 import MacroStatsHeader from "@ch2/macro-shell/MacroStatsHeader";
 import { useUiColorScheme } from "@ch2/macro-shell/useUiColorScheme";
 import { useUiFontScale } from "@ch2/macro-shell/useUiFontScale";
-import Recommend2Modal from "./components/Recommend2Modal";
 import {
   fetchAddr2,
   fetchAddr3WithCounts,
@@ -67,6 +66,7 @@ import ResidualDiagnosticsCard from "./components/ResidualDiagnosticsCard";
 import { buildBuiltRegressionContext } from "./api/aiClient";
 import { recordAnalysisHistory } from "@ch2/ai-assistant/aiClient";
 import AnalysisHelpPanel from "./components/AnalysisHelpPanel";
+import { builtSettingsHelp, BUILT_TYPE_HELP, BUILT_REGION_HELP, BUILT_RI_HELP, BUILT_MISSING_HELP, BUILT_FILTER_HELP } from "./utils/builtSettingsHelp";
 import {
   BUILT_REGRESSION_HELP,
   BUILT_RESPONSE_SCALE_HELP,
@@ -192,11 +192,7 @@ function SampleFilterPanel({
 
   const filterBody = (
     <>
-      <p className="text-xs text-slate-500">
-        미선택 = 전체. 회귀·거래 목록·예측에 동일 적용됩니다.
-      </p>
-
-      <div className="grid grid-cols-1 gap-2 text-xs">
+      <div className="grid grid-cols-1 gap-2 text-sm">
         {(
           [
             ["gross_area", "gross_area_min", "gross_area_max"],
@@ -207,7 +203,7 @@ function SampleFilterPanel({
           const hint = contHint(col);
           return (
             <div key={col} className="space-y-1">
-              <div className="text-slate-600 font-medium">
+              <div className="text-slate-600 dark:text-slate-300 font-medium">
                 {formatCoefName(col, assetType)}
                 {hint && (
                   <span className="text-slate-400 font-normal">
@@ -242,7 +238,7 @@ function SampleFilterPanel({
       (scope?.building_uses?.length ?? 0) > 0 ||
       (scope?.road_width_labels?.length ?? 0) > 0 ? (
         <div className="space-y-2 pt-1">
-          <p className="text-xs font-medium text-slate-600">범주(더미) 변수</p>
+          <p className="text-sm font-medium text-slate-600">범주 필터</p>
           {showZone && (scope?.zone_types?.length ?? 0) > 0 && (
             <RegionChipPanel
               compact
@@ -301,19 +297,22 @@ function SampleFilterPanel({
 
   return (
     <div className="border border-slate-200 rounded-lg overflow-hidden">
+      <div className="flex items-center gap-1 bg-slate-50 pr-2 dark:bg-slate-800">
       <button
         type="button"
-        className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-xs bg-slate-50 hover:bg-slate-100 transition-colors"
+        className="flex-1 flex items-center justify-between gap-2 px-3 py-2 text-left text-sm bg-slate-50 hover:bg-slate-100 transition-colors dark:bg-slate-800"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
-        <span className="font-medium text-slate-800">표본 필터</span>
+        <span className="font-medium text-slate-800 dark:text-slate-100">표본 필터</span>
         <span className="text-slate-500 shrink-0 text-right">
           {sampleFilterSummary(sample)} · {countLabel}
           <span className="ml-1.5 inline-block w-3 text-center">{open ? "▾" : "▸"}</span>
         </span>
       </button>
-      {open && <div className="p-3 space-y-3 border-t border-slate-200 bg-white">{filterBody}</div>}
+      <AnalysisHelpPanel explain={BUILT_FILTER_HELP} title="표본 필터 설명" />
+      </div>
+      {open && <div className="p-3 space-y-3 border-t border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-900">{filterBody}</div>}
     </div>
   );
 }
@@ -444,10 +443,10 @@ function RegionChipPanel({
         <label
           key={o.id ?? o.name}
           className={clsx(
-            "flex items-center gap-1.5 text-xs px-2 py-1 rounded border cursor-pointer",
+            "flex items-center gap-1.5 text-sm px-2 py-1 rounded border cursor-pointer",
             selected.includes(o.name)
               ? "bg-slate-800 text-white border-slate-800"
-              : "bg-white text-slate-700 border-slate-200 hover:border-slate-400",
+              : "bg-white text-slate-700 border-slate-200 hover:border-slate-400 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600",
           )}
         >
           <input
@@ -473,19 +472,19 @@ function RegionChipPanel({
       <div className="border border-slate-200 rounded-lg overflow-hidden">
         <button
           type="button"
-          className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-xs bg-slate-50 hover:bg-slate-100 transition-colors"
+          className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm bg-slate-50 hover:bg-slate-100 transition-colors dark:bg-slate-800 dark:hover:bg-slate-700"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
         >
-          <span className="font-medium text-slate-800">{title}</span>
+          <span className="font-medium text-slate-800 dark:text-slate-100">{title}</span>
           <span className="text-slate-500 shrink-0">
             {summary}
             <span className="ml-1.5 inline-block w-3 text-center">{open ? "▾" : "▸"}</span>
           </span>
         </button>
         {open && (
-          <div className="p-2 space-y-2 border-t border-slate-200 bg-white">
-            <p className="text-xs text-slate-500">{hint}</p>
+          <div className="p-2 space-y-2 border-t border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-900">
+            <div className="flex items-center gap-1 text-sm text-slate-500">선택 기준 <AnalysisHelpPanel explain={builtSettingsHelp(`chip_${title}`, title, hint)} title={`${title} 선택 설명`} /></div>
             <div className="flex gap-2">
               {multiSelect && (
                 <button type="button" className="btn btn-ghost text-xs" onClick={onSelectAll} disabled={!options.length}>
@@ -506,9 +505,10 @@ function RegionChipPanel({
   return (
     <div className={compact ? "space-y-2" : "card space-y-2"}>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <h2 className="font-semibold text-sm">
+        <h2 className="font-semibold text-sm inline-flex items-center gap-1">
           {title}{" "}
           <span className="text-slate-500 font-normal">({selected.length}개 선택)</span>
+          <AnalysisHelpPanel explain={builtSettingsHelp(`region_${title}`, title, hint, BUILT_REGION_HELP.interpretation)} title={`${title} 설명`} />
         </h2>
         <div className="flex gap-2">
           {multiSelect && (
@@ -521,7 +521,6 @@ function RegionChipPanel({
           </button>
         </div>
       </div>
-      <p className="text-xs text-slate-500 mb-2">{hint}</p>
       {chipArea}
     </div>
   );
@@ -545,7 +544,6 @@ export default function App() {
   const [yearFrom] = useState<number | "">("");
   const [yearTo] = useState<number | "">("");
   const [txModalOpen, setTxModalOpen] = useState(false);
-  const [recommend2Open, setRecommend2Open] = useState(false);
   const [vars, setVars] = useState<RegressionVariableSpec>(() => defaultVarsForKinds(["commercial"]));
   const [excludeOutliers, setExcludeOutliers] = useState(false);
   const [includePartial, setIncludePartial] = useState(false);
@@ -1233,10 +1231,7 @@ export default function App() {
             )}
             <div className="space-y-3">
             <div className="space-y-1">
-              <span className="text-xs text-slate-500">유형</span>
-              <p className="text-[10px] text-slate-400 leading-snug">
-                기본은 상업. 필요 시 공장·단독을 추가해 2~3유형을 함께 분석합니다.
-              </p>
+              <span className="text-sm text-slate-500 inline-flex items-center gap-1">유형 <AnalysisHelpPanel explain={BUILT_TYPE_HELP} title="유형 선택 설명" /></span>
               <div className="flex flex-wrap gap-1.5">
                 {BUILT_ASSET_KINDS.map((kind) => {
                   const on = assetKinds.includes(kind);
@@ -1245,7 +1240,7 @@ export default function App() {
                       key={kind}
                       type="button"
                       className={clsx(
-                        "rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900",
+                        "rounded-md border px-2.5 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900",
                         on
                           ? "border-indigo-500 bg-indigo-600 text-white shadow-sm dark:border-indigo-300 dark:bg-indigo-500 dark:text-white"
                           : "border-slate-300 bg-white text-slate-700 hover:border-indigo-400 hover:bg-indigo-50 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-indigo-400 dark:hover:bg-slate-700",
@@ -1265,15 +1260,13 @@ export default function App() {
                 disabled={yearFilterActive}
               />
               {yearFilterActive && (
-                <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-snug">
+                <p className="text-sm text-amber-700 dark:text-amber-400 leading-snug">
                   연도가 선택되어 롤링 구간은 적용되지 않습니다.
                 </p>
               )}
               {/* 연도(from/to) UI 숨김 — 상태는 "" 유지 → 롤링 창만 사용. 복구 시 아래 블록 복원 */}
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-snug">
-                직전 월말 기준 롤링 {windowYears}년 창으로 집계합니다.
-              </p>
-              <label className="text-xs space-y-1 block">
+              <p className="inline-flex items-center gap-1 text-sm font-semibold text-slate-700 dark:text-slate-200">지역 선택 <AnalysisHelpPanel explain={BUILT_REGION_HELP} title="지역 선택 설명" /></p>
+              <label className="text-sm space-y-1 block">
                 <span className="text-slate-500">시도</span>
                 <select
                   className="input"
@@ -1295,13 +1288,13 @@ export default function App() {
                   ))}
                 </select>
                 {metaQ.isLoading && !metaQ.data && (
-                  <span className="text-slate-400 text-[11px]">시도 목록 불러오는 중…</span>
+                  <span className="text-slate-400 text-sm">시도 목록 불러오는 중…</span>
                 )}
                 {metaQ.isSuccess && !(metaQ.data?.addr1_list?.length) && (
-                  <span className="text-amber-700 text-[11px]">시도 목록이 비어 있습니다.</span>
+                  <span className="text-amber-700 text-sm">시도 목록이 비어 있습니다.</span>
                 )}
               </label>
-              <label className="text-xs space-y-1 block">
+              <label className="text-sm space-y-1 block">
                 <span className="text-slate-500">시군구</span>
                 <select
                   className="input"
@@ -1331,7 +1324,7 @@ export default function App() {
               compact
               multiSelect={LEFT_REGION_MULTI_SELECT}
               title={`${intermediateLabel} 선택`}
-              hint={`미선택 시 ${addr2ScopeLabel} 전체.`}
+              hint={`선택하지 않으면 ${addr2ScopeLabel} 전체를 분석합니다.`}
               selected={guList}
               options={guOptions}
               countsReady={guCountsQ.isSuccess}
@@ -1357,8 +1350,8 @@ export default function App() {
                 structureQ.isLoading
                   ? "지역 구조 확인 중…"
                   : hasIntermediate
-                    ? `${intermediateLabel} 선택 후 1개 · 인접은 지도에서 추가.`
-                    : `1개 선택(미선택 시 ${addr2ScopeLabel} 전체) · 인접은 지도에서 추가.`
+                    ? `${intermediateLabel}를 선택한 뒤 읍·면·동을 하나 고를 수 있습니다. 인접 지역은 지도에서 추가해 주세요.`
+                    : `읍·면·동을 하나 선택해 주세요. 선택하지 않으면 ${addr2ScopeLabel} 전체를 분석합니다. 인접 지역은 지도에서 추가할 수 있습니다.`
               }
               selected={leafList}
               options={visibleLeafOptions}
@@ -1393,6 +1386,7 @@ export default function App() {
                 <h2 className="font-semibold text-sm">
                   법정리 선택{" "}
                   <span className="text-slate-500 font-normal">({riList.length}개 선택)</span>
+                  <AnalysisHelpPanel explain={BUILT_RI_HELP} title="법정리 선택 설명" />
                 </h2>
                 <div className="flex gap-2">
                   {LEFT_REGION_MULTI_SELECT && (
@@ -1423,11 +1417,6 @@ export default function App() {
                   </button>
                 </div>
               </div>
-              <p className="text-xs text-slate-500">
-                {LEFT_REGION_MULTI_SELECT
-                  ? "선택 읍·면·동 아래 원장에 법정리(addr5)가 있으면 목록이 표시됩니다. 미선택 시 2-way · 리 선택 시 3-way(구 · 상위 읍·면 · 리)."
-                  : "왼쪽에서 리 1개(또는 해제=읍면동 단위). 인접 리는 지도에서 추가. 미선택 시 2-way · 리 선택 시 3-way."}
-              </p>
               <div className="flex flex-wrap gap-2 overflow-y-auto border border-slate-100 rounded p-2 max-h-36">
                 {(riQ.data ?? []).map((o) => {
                   const pick: RiPick = { eup: o.parent ?? "", ri: o.name };
@@ -1480,11 +1469,11 @@ export default function App() {
 
           <div className="space-y-3 border-t border-slate-200 pt-3">
             <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
-              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 inline-flex items-center gap-1">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 inline-flex items-center gap-1">
                 1. 변수 선택
                 <AnalysisHelpPanel explain={BUILT_VAR_SELECT_HELP} title="변수 선택 설명" />
               </p>
-              <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs">
+              <div className="flex flex-wrap gap-x-3 gap-y-2 text-sm">
                 {(
                   [
                     ["gross_area", "연면적"],
@@ -1530,17 +1519,14 @@ export default function App() {
                   </label>
                 ))}
               </div>
-              <p className="text-[10px] leading-snug text-slate-500 dark:text-slate-400">
-                모형 탐색은 이 체크 대부분을 읽지 않습니다. 구조·개별공시지가는 대장 보강과 체크가 있을 때만 반영됩니다.
-              </p>
             </section>
 
             <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
-              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 inline-flex items-center gap-1">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 inline-flex items-center gap-1">
                 2. 회귀모형 선택
                 <AnalysisHelpPanel explain={BUILT_RESPONSE_SCALE_HELP} title="회귀모형 선택 설명" />
               </p>
-              <div className="flex flex-col gap-1.5 text-xs">
+              <div className="flex flex-col gap-1.5 text-sm">
                 {(
                   [
                     ["linear", "선형"],
@@ -1569,30 +1555,22 @@ export default function App() {
                         }}
                       />
                       <span className="font-medium">{label}</span>
-                      {value === "loglog" && (
-                        <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                          금액과 면적만 로그. 연식·더미는 그대로.
-                        </span>
-                      )}
                     </label>
                   );
                 })}
               </div>
               {loglogReverted && (
-                <p className="text-amber-700 dark:text-amber-400 text-[10px] leading-snug">
-                  면적 변수를 껐으므로 log-log를 쓸 수 없어 선형으로 되돌렸습니다.
+                <p className="text-amber-700 dark:text-amber-400 text-sm leading-snug">
+                  면적 변수가 없어 선형 모형으로 변경했습니다.
                 </p>
               )}
             </section>
 
             <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
-              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                3. 결측치 처리
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 inline-flex items-center gap-1">
+                3. 결측치 처리 <AnalysisHelpPanel explain={BUILT_MISSING_HELP} title="결측치 처리 설명" />
               </p>
-              <p className="text-[10px] leading-snug text-slate-500 dark:text-slate-400">
-                선택한 범주형 변수에 적용
-              </p>
-              <div className="flex flex-col gap-1.5 text-xs">
+              <div className="flex flex-col gap-1.5 text-sm">
                 <label className="flex items-center gap-2">
                   <input
                     type="radio"
@@ -1615,11 +1593,11 @@ export default function App() {
             </section>
 
             <section className="rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 space-y-2">
-              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 inline-flex items-center gap-1">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 inline-flex items-center gap-1">
                 4. 분석 표본
                 <AnalysisHelpPanel explain={BUILT_SAMPLE_HELP} title="분석 표본 설명" />
               </p>
-              <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs">
+              <div className="flex flex-wrap gap-x-3 gap-y-2 text-sm">
                 <label className="flex items-center gap-1">
                   <input
                     type="checkbox"
@@ -1637,7 +1615,7 @@ export default function App() {
                   지분거래 포함
                 </label>
               </div>
-              <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs">
+              <div className="flex flex-wrap gap-x-3 gap-y-2 text-sm">
                 <label className="flex items-center gap-1">
                   <input
                     type="checkbox"
@@ -1653,7 +1631,7 @@ export default function App() {
                   건축물대장 보강
                 </label>
               </div>
-              <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs">
+              <div className="flex flex-wrap gap-x-3 gap-y-2 text-sm">
                 <label className="flex items-center gap-1">
                   <input
                     type="checkbox"
@@ -1680,8 +1658,8 @@ export default function App() {
 
           <div className="space-y-1.5">
             {regressionStale && (
-              <p className="text-amber-700 dark:text-amber-400 text-[10px] leading-snug">
-                선택이 바뀌었습니다. 「통계분석」을 다시 실행해야 오른쪽 결과가 갱신됩니다.
+              <p className="text-amber-700 dark:text-amber-400 text-sm leading-snug">
+                분석 조건이 바뀌었습니다. 아래 결과는 이전 조건으로 계산했습니다.
               </p>
             )}
             <button
@@ -1702,18 +1680,10 @@ export default function App() {
                   : "통계분석"}
             </button>
             {sampleGateNote && (
-              <p className="text-amber-700 dark:text-amber-400 text-[10px] leading-snug">
+              <p className="text-amber-700 dark:text-amber-400 text-sm leading-snug">
                 {sampleGateNote}
               </p>
             )}
-            <button
-              type="button"
-              className="btn btn-ghost w-full"
-              disabled={!addr2 || (!!addr2 && leafList.length > 0 && !structureQ.isSuccess)}
-              onClick={() => setRecommend2Open(true)}
-            >
-              모형추천2
-            </button>
           </div>
         </CollapsibleLeftSidebar>
 
@@ -1915,6 +1885,7 @@ export default function App() {
                   {regM.data.primary.residuals && (
                     <ResidualDiagnosticsCard
                       diagnostics={regM.data.primary.residuals}
+                      scopeLabel={regM.data.primary.scope_label || aiRegionLabel}
                       onOpenTransactions={() => setTxModalOpen(true)}
                     />
                   )}
@@ -1927,6 +1898,7 @@ export default function App() {
             <PredictDraftProvider key={builtAnalysisScopeKey(resultRegBody)}>
               <section id="built-step-predict-basic" className="px-4 pb-4 pt-0 scroll-mt-16">
                 <PredictPanel
+                  basicPresentation
                   regData={regM.data}
                   regBody={resultRegBody}
                   vars={appliedVars}
@@ -1953,12 +1925,6 @@ export default function App() {
         </div>
       </main>
 
-      <Recommend2Modal
-        open={recommend2Open}
-        onClose={() => setRecommend2Open(false)}
-        regBody={regBody}
-        assetType={assetType}
-      />
       <BuiltTransactionListModal
         open={txModalOpen}
         onClose={() => setTxModalOpen(false)}

@@ -165,7 +165,7 @@ def build_recommendation_conclusion(
         if tv and tv.summary_ko:
             bullets.append(
                 ConclusionBullet(
-                    kind="positive" if tv.twin_adopt_recommended else "neutral",
+                    kind="neutral",
                     text=tv.summary_ko,
                 )
             )
@@ -198,10 +198,9 @@ def build_recommendation_conclusion(
                 ConclusionBullet(
                     kind="neutral",
                     text=(
-                        f"Local CV-MAPE {local_cv:.1f}% → Twin {best_twin_cv:.1f}% "
-                        f"({local_cv - best_twin_cv:.1f}%p). "
-                        "유사 지역 거래를 추가했을 때 검증 오차가 감소했습니다. "
-                        "추가 표본을 포함한 구조가 Local보다 안정적인지 확인해 보세요."
+                        f"원래 지역 CV-MAPE {local_cv:.1f}%와 추가 지역을 포함한 CV-MAPE {best_twin_cv:.1f}%는 "
+                        f"{local_cv - best_twin_cv:.1f}%p 차이가 납니다. "
+                        "이 차이는 원래 지역 거래만의 예측이 좋아졌다는 뜻이 아닙니다."
                     ),
                 )
             )

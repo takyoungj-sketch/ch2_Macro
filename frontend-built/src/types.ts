@@ -242,6 +242,7 @@ export interface RecommendationPoolCandidate {
   prefix_k?: number;
   key_coefficients?: Record<string, number>;
   structure_score?: number | null;
+  sample_lock_blocks?: string[];
 }
 
 export type TwinValidationVerdictKind = "improved" | "tie" | "worse" | "skipped";
@@ -439,6 +440,8 @@ export interface RegressionRunRequest {
   leaf_level?: "addr3" | "addr4";
   exclude_outliers_iqr: boolean;
   categorical_missing?: "keep_unknown" | "drop";
+  /** 추천 추정. 탐색이 숫자 결측을 뺀 블록. 있으면 범주 빈칸은 미상으로 둔다. */
+  sample_lock_blocks?: string[];
   outlier_iqr_multiplier?: number;
   include_partial?: boolean;
   enrich?: boolean;
@@ -589,6 +592,7 @@ export interface ResidualScaleBin {
 
 export interface InfluentialTransaction {
   rank: number;
+  transaction_id?: number | null;
   label: string;
   contract_year?: number | null;
   zone_type?: string | null;
@@ -632,6 +636,7 @@ export interface ResidualDiagnostics {
 }
 
 export interface RegressionLevelResult {
+  analysis?: import("../../shared/regression-ui/types").RegressionAnalysisContext | null;
   admin_level: "sigungu" | "gu" | "eupmyeondong" | "beopjungri";
   scope_label?: string | null;
   n: number;
@@ -697,6 +702,7 @@ export interface RegressionRunResponse {
 }
 
 export interface RegressionPredictRequest extends RegressionRunRequest {
+  expected_model_signature?: string;
   admin_level: "sigungu" | "gu" | "eupmyeondong" | "beopjungri";
   gross_area?: number;
   land_area?: number;
@@ -911,6 +917,10 @@ export interface JointFTest {
 }
 
 export interface CvCoverage {
+  requested_years?: number[];
+  failure_reasons?: Record<string, string>;
+  status?: "available" | "partial" | "unavailable";
+  evaluation_signature?: string | null;
   mape?: number | null;
   folds?: number;
   n_trades?: number;
@@ -934,35 +944,6 @@ export interface ModelCandidate {
   joint_f_tests?: Record<string, JointFTest>;
   coefficients?: RegressionCoeff[];
   cv_report?: CandidateCvReport | null;
-}
-
-export interface Recommend2Side {
-  block_summary: string;
-  response_scale: ResponseScale;
-  n: number;
-  n_rank: number;
-  coverage_ratio?: number | null;
-  cv_mape?: number | null;
-  confirm_cv_mape?: number | null;
-  result: RegressionLevelResult;
-}
-
-export interface Recommend2Response {
-  notice: string;
-  scope_label: string;
-  n_pool: number;
-  pool_summary: string;
-  excluded: { detail: string }[];
-  primary: RegressionLevelResult;
-  variables: RegressionVariableSpec;
-  response_scale: ResponseScale;
-  cv_mape?: number | null;
-  confirm_cv_mape?: number | null;
-  cv_n?: number | null;
-  explanatory_scale?: ResponseScale | null;
-  explanatory_note: string;
-  sides: Recommend2Side[];
-  total_subsets: number;
 }
 
 export interface RegressionCompareResponse {

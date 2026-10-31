@@ -30,7 +30,7 @@ from app.recommendation.built_pool import filter_pool_by_coverage
 from app.built.regression.selection.blocks import BlockId, spec_from_blocks
 from app.built.regression.selection.context import SelectionContext, with_complete_case
 from app.built.regression.price_index import TimeAdjuster, last_complete_year
-from app.built.regression.selection.fit import BlockFitResult, fit_best_scale, fit_block_subset, rolling_time_cv_split
+from app.built.regression.selection.fit import BlockFitResult, fit_best_scale, fit_block_subset
 from app.built.regression.selection.best_subset import run_group_best_subset
 from app.built.schemas import (
     DecisionConfidence,
@@ -141,7 +141,7 @@ def research_full_twin_pool(
     admin_level: str,
     region_col: str | None,
 ) -> PoolingCandidateMetrics | None:
-    """Local+통과 Twin 1위 표본에서 Stage1과 같은 예측형 풀로 식을 다시 고른다."""
+    """통과한 선택 지역을 모두 합쳐 Stage1과 같은 예측형 풀로 식을 다시 고른다."""
     _gates, passed = filter_twins_by_hard_gates(
         conn,
         req=req,
@@ -151,19 +151,19 @@ def research_full_twin_pool(
     )
     if not passed:
         return None
-    rank1 = (passed[0],)
+    selected = tuple(passed)
     return _research_pool_variant(
         conn,
         local_ctx=local_ctx,
         req=req,
         search_pool=search_pool,
         variant_id="twin_research",
-        label="Local + Twin 1위 · 재탐색",
+        label="Local + 선택 지역 · 재탐색",
         anchor_region_codes=anchor_region_codes,
-        twin_codes=rank1,
+        twin_codes=selected,
         admin_level=admin_level,
         region_col=region_col,
-        prefix_k=1,
+        prefix_k=len(selected),
     )
 
 
@@ -232,8 +232,10 @@ def _metrics_from_fit(
     *,
     blocks: list[BlockId] | list[str] | None = None,
     prefix_k: int = 0,
+    sample_lock_blocks: list[str] | None = None,
 ) -> PoolingCandidateMetrics:
     block_list = list(blocks) if blocks is not None else []
+    lock = list(sample_lock_blocks) if sample_lock_blocks is not None else block_list
     return PoolingCandidateMetrics(
         candidate_id=candidate_id,
         label=label,
@@ -252,6 +254,7 @@ def _metrics_from_fit(
         response_scale=fit.response_scale,
         prefix_k=prefix_k,
         key_coefficients=key_coefficients_from_fit(fit),
+        sample_lock_blocks=lock,
     )
 
 
@@ -280,20 +283,26 @@ def _attach_search_confirm_cv(
 ) -> PoolingCandidateMetrics:
     if not metrics.blocks or metrics.response_scale is None:
         return metrics
+    from app.built.regression.selection.fit import _rolling_time_cv_mape, search_evaluation_complete
+
     spec = spec_from_blocks(metrics.blocks)
-    search, s_folds, confirm, c_folds, _skip = rolling_time_cv_split(
+    search, confirm = _rolling_time_cv_mape(
         df,
         spec,
         unified=unified,
         response_scale=metrics.response_scale,
         region_col=region_col,
+        holdout_last_year=True,
         time_adjuster=time_adjuster,
     )
-    if search is not None:
-        metrics.cv_mape = search
-        metrics.cv_folds = s_folds
-    metrics.confirm_cv_mape = confirm
-    metrics.confirm_cv_folds = c_folds
+    if search_evaluation_complete(search):
+        metrics.cv_mape = search.mape
+        metrics.cv_folds = search.folds
+    else:
+        metrics.cv_mape = None
+        metrics.cv_folds = search.folds
+    metrics.confirm_cv_mape = confirm.mape
+    metrics.confirm_cv_folds = confirm.folds
     return metrics
 
 
@@ -324,6 +333,7 @@ def _fit_pool_variant(
         window_years=req.window_years,
         include_partial=bool(getattr(req, "include_partial", False)),
         enrich=bool(getattr(req, "enrich", False)),
+        req=req,
     )
     if pooled_rows.empty:
         return None
@@ -419,6 +429,7 @@ def _research_pool_variant(
         window_years=req.window_years,
         include_partial=bool(getattr(req, "include_partial", False)),
         enrich=bool(getattr(req, "enrich", False)),
+        req=req,
     )
     if pooled_rows.empty:
         return None
@@ -481,6 +492,7 @@ def _research_pool_variant(
         pool_codes,
         blocks=list(primary.blocks),
         prefix_k=prefix_k,
+        sample_lock_blocks=list(pool_blocks),
     )
     return _attach_search_confirm_cv(
         metrics,

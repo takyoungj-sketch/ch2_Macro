@@ -31,6 +31,7 @@ def test_verdict_improved_when_delta_ge_epsilon():
     )
     assert v.verdict == "improved"
     assert v.twin_adopt_recommended is True
+    assert "원래 지역 거래만의 예측이 좋아졌다는 뜻은 아닙니다" in v.summary_ko
     assert v.cv_mape_delta == 21.47
     assert v.epsilon_pp == TWIN_VALIDATION_EPSILON_PP
 

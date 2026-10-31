@@ -6,6 +6,7 @@ import math
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
+from app.regression_contracts import RegressionAnalysisContext
 
 from app.ai.schemas import AnalysisExplain
 from app.collective.schemas import ModelComparison, ModelMetrics
@@ -219,6 +220,9 @@ class RegressionRunRequest(BaseModel):
     enrich: bool = False  # D-051. 기본 끄기. 켜면 표시 용도지역=필터.
     # 범주 빈칸. keep_unknown=미상으로 유지(기본). drop=그 식에서 해당 거래 제외.
     categorical_missing: Literal["keep_unknown", "drop"] = "keep_unknown"
+    # 추천 추정. 이 블록 전체로 숫자 결측을 한 번 뺀 뒤, variables만 적합한다.
+    # 비어 있지 않으면 범주 빈칸은 미상으로 둔다.
+    sample_lock_blocks: list[str] = Field(default_factory=list)
     # R0 analysis_scope — 프론트 analysisUnits 미러 (필터 로직에는 미사용)
     anchor_region_code: Optional[str] = None
     region_unit_hints: list[AnalysisRegionUnitHint] = Field(default_factory=list)
@@ -338,6 +342,7 @@ class InfluentialTransaction(BaseModel):
     """Cook 거리 상위 거래 — 「이 몇 건이 결과를 끌고 있다」."""
 
     rank: int
+    transaction_id: Optional[int] = None
     label: str
     contract_year: Optional[int] = None
     zone_type: Optional[str] = None
@@ -385,6 +390,7 @@ class ResidualDiagnostics(BaseModel):
 
 
 class RegressionLevelResult(BaseModel):
+    analysis: RegressionAnalysisContext | None = None
     admin_level: AdminLevel
     scope_label: Optional[str] = None
     n: int
@@ -527,6 +533,8 @@ class RecommendationPoolCandidate(BaseModel):
     prefix_k: int = 0
     key_coefficients: dict[str, float] = Field(default_factory=dict)
     structure_score: Optional[float] = None
+    # 이 후보를 적합하기 전에 숫자 결측을 뺀 블록. 추정은 같은 목록으로 표본을 고정한다.
+    sample_lock_blocks: list[str] = Field(default_factory=list)
 
 
 class TwinValidationVerdict(BaseModel):
@@ -569,7 +577,7 @@ class RecommendationStage2(BaseModel):
     twin_experiments: list[TwinExperimentStep] = Field(default_factory=list)
     # Twin1 예측용: Local 식 + region_leaf · 쌍둥이 1위 표본 (채택 여부와 무관)
     inspect_pool: Optional[RecommendationPoolCandidate] = None
-    # Twin 실험2: Local + Twin 1위 표본에서 예측형 식을 다시 고름 (확인용)
+    # Twin 실험2: 통과한 선택 지역을 모두 넣은 표본에서 예측형 식을 다시 고름 (확인용)
     research: Optional[RecommendationPoolCandidate] = None
     research_ran: bool = False
     research_skipped_reason: Optional[str] = None
@@ -589,6 +597,7 @@ class RegressionRecommendResponse(BaseModel):
 
 
 class RegressionPredictRequest(RegressionRunRequest):
+    expected_model_signature: Optional[str] = None
     admin_level: AdminLevel
     gross_area: Optional[float] = None
     land_area: Optional[float] = None
@@ -715,6 +724,7 @@ class PoolingCandidateMetrics(BaseModel):
     response_scale: Optional[ResponseScale] = None
     prefix_k: int = 0
     key_coefficients: dict[str, float] = Field(default_factory=dict)
+    sample_lock_blocks: list[str] = Field(default_factory=list)
 
 
 class DecisionConfidence(BaseModel):
@@ -786,12 +796,16 @@ class RegressionSuggestResponse(BaseModel):
 
 
 class CvCoverage(BaseModel):
+    evaluation_signature: Optional[str] = None
     """한 CV 구간에서 실제로 오차를 낸 연도와 거래 수. folds는 연도 수다."""
 
     mape: Optional[float] = None
     folds: int = 0
     n_trades: int = 0
     years: list[int] = Field(default_factory=list)
+    requested_years: list[int] = Field(default_factory=list)
+    failure_reasons: dict[str, str] = Field(default_factory=dict)
+    status: Literal["available", "partial", "unavailable"] = "unavailable"
 
 
 class CandidateCvReport(BaseModel):
@@ -813,43 +827,6 @@ class ModelCandidate(BaseModel):
     joint_f_tests: dict[str, JointFTest] = Field(default_factory=dict)
     coefficients: list[RegressionCoeff] = Field(default_factory=list)
     cv_report: Optional[CandidateCvReport] = None
-
-
-class Recommend2Excluded(BaseModel):
-    """추천2 풀에서 뺀 블록. 현행 추천 응답에는 넣지 않는다."""
-
-    detail: str
-
-
-class Recommend2Side(BaseModel):
-    """개별공시지가를 더한 옆 비교. 행이 달라 예측형 순위가 아니다."""
-
-    block_summary: str
-    response_scale: ResponseScale
-    n: int
-    n_rank: int
-    coverage_ratio: Optional[float] = None
-    cv_mape: Optional[float] = None
-    confirm_cv_mape: Optional[float] = None
-    result: RegressionLevelResult
-
-
-class Recommend2Response(BaseModel):
-    notice: str
-    scope_label: str
-    n_pool: int
-    pool_summary: str
-    excluded: list[Recommend2Excluded] = Field(default_factory=list)
-    primary: RegressionLevelResult
-    variables: RegressionVariableSpec
-    response_scale: ResponseScale
-    cv_mape: Optional[float] = None
-    confirm_cv_mape: Optional[float] = None
-    cv_n: Optional[int] = None
-    explanatory_scale: Optional[ResponseScale] = None
-    explanatory_note: str
-    sides: list[Recommend2Side] = Field(default_factory=list)
-    total_subsets: int = 0
 
 
 class RegressionCompareResponse(BaseModel):

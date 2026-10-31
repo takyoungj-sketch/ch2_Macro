@@ -151,7 +151,8 @@ table.data th {
     color: rgb(148 163 184);
   }
   html.dark .text-slate-400 {
-    color: rgb(100 116 139);
+    /* 임대·지역프로필의 기본 dark:text-slate-400과 같은 대비를 유지한다. */
+    color: rgb(148 163 184);
   }
   html.dark .text-red-500,
   html.dark .text-red-600,

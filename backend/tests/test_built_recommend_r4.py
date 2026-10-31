@@ -8,6 +8,18 @@ from app.built.schemas import RegressionCoeff, ResponseScale
 import pandas as pd
 
 
+def test_loglog_narratives_use_one_percent_and_never_rank_raw_magnitudes():
+    coefficients = [RegressionCoeff(name=n, estimate=v, p_value=.01)
+        for n, v in [("const", 100), ("gross_area", 1.112), ("assessed_land_price", .8978), ("loc_test", .1)]]
+    result = build_coefficient_narratives(coefficients, response_scale="loglog")
+    by_name = {c.name: c for c in result}
+    assert "const" not in by_name
+    assert "1.11%" in by_name["gross_area"].text_ko
+    assert "0.90%" in by_name["assessed_land_price"].text_ko
+    assert "%" in by_name["loc_test"].text_ko
+    assert not any(c.is_top_contributor or "**" in c.text_ko for c in result)
+
+
 def test_diagnostics_checklist_unsuitable():
     items = build_diagnostics_checklist(
         scope_n_tx=286,

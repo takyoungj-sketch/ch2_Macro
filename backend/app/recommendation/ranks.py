@@ -13,6 +13,10 @@ from app.recommendation.satisfaction import built_min_fit_n
 
 def _coverage(phase: CvPhase) -> CvCoverage:
     return CvCoverage(
+        requested_years=list(phase.held_years),
+        failure_reasons={str(year): reason for year, reason in phase.failure_reasons},
+        status="unavailable" if phase.mape is None else "partial" if phase.failure_reasons else "available",
+        evaluation_signature=phase.evaluation_signature,
         mape=phase.mape,
         folds=phase.folds,
         n_trades=phase.n_trades,
@@ -87,6 +91,11 @@ def representative_verdict(fit: BlockFitResult) -> tuple[bool, str | None]:
         when = _year_phrase(search.years)
         where = f"{when} " if when else ""
         reasons.append(f"탐색 CV는 {where}{search.n_trades}건입니다.")
+    missed = [year for year in search.held_years if year not in search.years]
+    if search.failure_reasons or missed:
+        when = _year_phrase(tuple(missed or [year for year, _reason in search.failure_reasons]))
+        where = f"{when} " if when else ""
+        reasons.append(f"탐색 CV는 {where}평가를 완료하지 못했습니다.")
     if confirm.held_years and confirm.mape is None:
         held = _year_phrase(confirm.held_years)
         reasons.append(f"마지막 연도({held}) 확인을 계산하지 못했습니다.")
@@ -130,7 +139,7 @@ def annotate_predictive_band(
     candidates: list[ModelCandidate],
     ns: list[int] | None = None,
 ) -> tuple[list, list[str]]:
-    """최저 CV-MAPE와의 차이. 1.0%p·같은 표본이면 성능 유사.
+    """최저 CV-MAPE와의 차이. 같은 평가 서명이 확인될 때만 성능 유사.
 
     해석 후보는 그 안에서 예측 최소의 같은 척도 식에 대지면적·연식만 더한 경우다.
     더한 열마다 전체 표본 계수가 유의하고, 대지면적은 양, 연식은 음일 때만 올린다.
@@ -154,17 +163,23 @@ def annotate_predictive_band(
     anchor = candidates[anchor_idx]
     min_cv = float(anchor.metrics.cv_mape)  # type: ignore[arg-type]
     anchor_n = counts[anchor_idx]
+    anchor_signature = anchor.cv_report.search.evaluation_signature if anchor.cv_report else None
     anchor_blocks = set(anchor.blocks)
 
     judgments: list[PredictiveJudgment] = []
     interpretive_lines: list[str] = []
     weak_lines: list[str] = []
     saw_other_n = False
+    saw_unverified = False
     for idx, candidate in enumerate(candidates):
         cv = candidate.metrics.cv_mape
         gap = None if cv is None else round(float(cv) - min_cv, 2)
         same_n = anchor_n is None or counts[idx] == anchor_n
-        in_band = gap is not None and gap <= PARITY_BAND_PP and same_n
+        candidate_signature = candidate.cv_report.search.evaluation_signature if candidate.cv_report else None
+        comparable = bool(anchor_signature and candidate_signature == anchor_signature and same_n)
+        in_band = gap is not None and gap <= PARITY_BAND_PP and comparable
+        if idx != anchor_idx and not comparable:
+            saw_unverified = True
         if gap is not None and gap <= PARITY_BAND_PP and not same_n:
             saw_other_n = True
         interpretive = False
@@ -203,11 +218,13 @@ def annotate_predictive_band(
             )
 
     notes = [
-        "최저 CV-MAPE보다 1.0%p 이내이고 표본 수가 같으면 성능 유사입니다. "
+        "최저 CV-MAPE보다 1.0%p 이내이고 실제 평가 거래·분할·오차 계산 기준이 같다고 확인된 경우 성능 유사입니다. "
         "이 폭은 화면 규칙이며, 그 식들이 통계적으로 같다는 뜻은 아닙니다."
     ]
     if saw_other_n:
         notes.append("표본 수가 다른 식은 차이가 1.0%p 이내여도 성능 유사에 넣지 않았습니다.")
+    if saw_unverified:
+        notes.append("평가 서명이 없거나 다른 후보는 직접 비교 가능 여부가 미확인입니다. 같은 표본 수만으로 성능 유사를 판정하지 않습니다.")
     notes.extend(interpretive_lines)
     notes.extend(weak_lines)
     return judgments, notes

@@ -3,13 +3,14 @@ import type { AssetType, RegressionCoeff, RegressionLevelResult } from "../types
 import { ADMIN_LABELS, levelCardTitle } from "../utils/regressionFormat";
 
 /** 연속변수 — 기준 범주가 없어 초점·상위 사이 부호를 바로 견줄 수 있다. */
-const CONTINUOUS_ORDER = ["gross_area", "land_area", "building_age", "road_code"] as const;
+const CONTINUOUS_ORDER = ["gross_area", "land_area", "building_age", "road_code", "assessed_land_price"] as const;
 
 const CONTINUOUS_LABELS: Record<string, string> = {
   gross_area: "연면적",
   land_area: "대지면적",
   building_age: "연식",
   road_code: "도로",
+  assessed_land_price: "log(개별공시지가)",
 };
 
 const DUMMY_GROUPS: Array<{ prefix: string; label: string; detachedLabel?: string }> = [
@@ -147,7 +148,7 @@ export default function UpperScopeModelDiff({ focus, upper, assetType, focusTitl
           <tbody>
             {rows.map((row) => {
               const isDummy = row.key.endsWith("_");
-              const differs = (row.focus > 0) !== (row.upper > 0);
+              const differs = row.focus !== row.upper;
               return (
                 <tr
                   key={row.key}
@@ -181,7 +182,7 @@ export default function UpperScopeModelDiff({ focus, upper, assetType, focusTitl
 
       {signRows.length > 0 && (
         <div className="space-y-1">
-          <p className="font-medium text-slate-700 dark:text-slate-200">공통 변수 계수 방향</p>
+          <p className="font-medium text-slate-700 dark:text-slate-200">공통 연속변수의 계수 부호</p>
           <ul className="space-y-0.5">
             {signRows.map((row) => (
               <li key={row.key} className="flex items-center gap-1.5">
@@ -192,12 +193,10 @@ export default function UpperScopeModelDiff({ focus, upper, assetType, focusTitl
                 <span
                   className={clsx(
                     "font-medium",
-                    row.holds
-                      ? "text-emerald-700 dark:text-emerald-300"
-                      : "text-rose-700 dark:text-rose-300",
+                    "text-slate-600 dark:text-slate-300",
                   )}
                 >
-                  {row.holds ? "유지" : "뒤바뀜"}
+                  {row.holds ? "부호 일치" : "부호 다름"}
                 </span>
                 {!row.bothSignificant && (
                   <span className="text-slate-400">· 한쪽 이상 유의하지 않음</span>
@@ -206,17 +205,16 @@ export default function UpperScopeModelDiff({ focus, upper, assetType, focusTitl
             ))}
           </ul>
           <p className="text-slate-500">
-            {signRows.length}개 중 {heldCount}개 방향 유지. 더미는 기준 범주가 단계마다 달라질 수
-            있어 부호를 견주지 않습니다.
+            {signRows.length}개 중 {heldCount}개 부호 일치. 부호 일치만으로 계수의 안정성이나 모형의 우수성을 판단하지 않습니다.
+            범주 계수는 기준이 달라질 수 있어 부호를 직접 비교하지 않습니다.
           </p>
         </div>
       )}
 
       <p className="text-slate-600 dark:text-slate-300 leading-relaxed border-t border-amber-200 dark:border-amber-800 pt-2">
         <strong>표본</strong> — {upperLevelLabel} {upper.n.toLocaleString("ko-KR")}건은 초점{" "}
-        {focus.n.toLocaleString("ko-KR")}건을 포함합니다(중첩). 독립된 두 표본의 비교가 아니므로
-        Adj R²·MAPE를 우열로 읽지 마세요. 표본 크기와 변수 구성이 동시에 다르면 두 지표는 비교
-        가능한 값이 아닙니다. 공통 변수의 방향이 유지되는지만 참고하세요.
+        {focus.n.toLocaleString("ko-KR")}건과 표본이 겹칠 수 있습니다. 필요한 변수와 결측 처리에 따라 실제 포함 관계는 달라질 수 있습니다.
+        서로 다른 표본의 Adj R²·학습 오차만으로 성능 우열을 판단하지 마세요.
       </p>
     </div>
   );

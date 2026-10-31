@@ -82,7 +82,9 @@ def test_small_n_moderate_cv_is_usable_not_stable():
     assert d.sample.label_ko == "표본 주의"
     assert d.stability.label_ko == "양호"
     assert d.composite.label_ko == "활용 가능"
-    assert "69건" in d.summary_ko
+    # The sample caution remains separate from the short conclusion.
+    assert "구조적 관계" in d.summary_ko
+    assert "69건" not in d.summary_ko
 
 
 def test_large_n_elevated_cv_is_careful():

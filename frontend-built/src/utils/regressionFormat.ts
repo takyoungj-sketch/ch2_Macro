@@ -155,13 +155,18 @@ function unitSuffix(name: string): string {
 
 function fmtManwon(v: number): string {
   const sign = v >= 0 ? "+" : "−";
-  return `${sign}${Math.abs(Math.round(v)).toLocaleString("ko-KR")}만원`;
+  const abs = Math.abs(v);
+  const amount = abs !== 0 && abs < 0.005 ? abs.toExponential(2)
+    : abs.toLocaleString("ko-KR", { maximumFractionDigits: abs < 1 ? 2 : 0 });
+  return `${sign}${amount}만원`;
 }
 
 function fmtPctFromLog(coef: number): string {
-  const pct = (Math.exp(coef) - 1) * 100;
+  const pct = Math.expm1(coef) * 100;
+  if (!Number.isFinite(pct)) return "계산 범위 초과";
   const sign = pct >= 0 ? "+" : "−";
-  return `${sign}${Math.abs(pct).toFixed(1)}%`;
+  const amount = pct !== 0 && Math.abs(pct) < .05 ? Math.abs(pct).toExponential(2) : Math.abs(pct).toFixed(1);
+  return `${sign}${amount}%`;
 }
 
 /** 계수표 설명형 문구 (집합부동산 effect_plain과 동일 톤) */
@@ -176,10 +181,9 @@ export function interpretCoefficient(
   const usesLogY = responseScale === "log" || responseScale === "loglog";
   if (name === "const") {
     if (usesLogY) {
-      const approx = Math.exp(coef);
-      return `기준 조건 log(금액) 출발점 (대략 ${Math.round(approx).toLocaleString("ko-KR")}만원 수준, 다른 변수·기준 범주 전제)`;
+      return `로그 금액 상수 ${formatCoefValue(coef)} (다른 설명변수 0·기준 범주 전제)`;
     }
-    return `기준 조건 출발 수준 약 ${Math.round(coef).toLocaleString("ko-KR")}만원 (다른 변수 0·기준 범주 전제)`;
+    return `기준 조건 출발 수준 ${formatCoefValue(coef)}만원 (다른 변수 0·기준 범주 전제)`;
   }
 
   const unit = unitSuffix(name);
@@ -187,13 +191,16 @@ export function interpretCoefficient(
   const ref = dummyReferenceDisplay(name, predictOptions);
   const vs = ref ? `기준(${ref}) 대비` : "기준 대비";
 
-  if (responseScale === "loglog" && (name === "gross_area" || name === "land_area")) {
-    const pct = (Math.pow(1.01, coef) - 1) * 100;
+  if (name === "assessed_land_price" || (responseScale === "loglog" && (name === "gross_area" || name === "land_area"))) {
+    const label = name === "assessed_land_price" ? "개별공시지가" : "면적";
+    if (!usesLogY) return `${label} 1% 증가 시 ${fmtManwon(coef * Math.log(1.01))}`;
+    const pct = Math.expm1(coef * Math.log(1.01)) * 100;
     const sign = pct >= 0 ? "+" : "−";
-    return `면적 1% 증가 시 금액 약 ${sign}${Math.abs(pct).toFixed(2)}% (탄력성 ≈ ${coef.toFixed(3)})`;
+    const amount = pct !== 0 && Math.abs(pct) < .005 ? Math.abs(pct).toExponential(2) : Math.abs(pct).toFixed(2);
+    return `${label} 1% 증가 시 금액 약 ${sign}${amount}% (탄력성 ≈ ${coef.toFixed(3)})`;
   }
 
-  if (responseScale === "log") {
+  if (usesLogY) {
     const pct = fmtPctFromLog(coef);
     if (isContinuousCoef(name)) return `${step}증가 시 금액 약 ${pct}`;
     return `${vs} 약 ${pct}`;
@@ -238,6 +245,8 @@ export const sigRowClass =
   "bg-emerald-50/90 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-100 font-medium";
 
 export function formatCoefValue(v: number): string {
+  if (!Number.isFinite(v)) return "—";
+  if (v !== 0 && Math.abs(v) < 0.00005) return v.toExponential(2);
   if (Math.abs(v) >= 100) return v.toLocaleString("ko-KR", { maximumFractionDigits: 0 });
   if (Math.abs(v) >= 1) {
     return v.toLocaleString("ko-KR", { maximumFractionDigits: 1 }).replace(/\.0$/, "");

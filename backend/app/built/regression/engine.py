@@ -295,7 +295,7 @@ def _fetch_df(conn, req: RegressionRunRequest, *, include_subregion: bool = True
 
     where, params = _build_where(req, conn=conn, include_subregion=include_subregion)
     inner = f"""
-        SELECT price, gross_area, land_area, building_age, road_code, road_width_label,
+        SELECT id AS transaction_id, price, gross_area, land_area, building_age, road_code, road_width_label,
                zone_type, building_use, asset_type, contract_year,
                addr1, addr2, addr3, addr4, addr5,
                sigungu_code, eupmyeondong_code, beopjungri_code,
@@ -320,7 +320,7 @@ def _fetch_df(conn, req: RegressionRunRequest, *, include_subregion: bool = True
         df = apply_wrapped_zone_columns(df)
     else:
         df = df.drop(columns=["transaction_hash"], errors="ignore")
-    return df
+    return df.sort_values("transaction_id", kind="stable").reset_index(drop=True) if "transaction_id" in df else df
 
 
 def _uses_addr4_leaf(df: pd.DataFrame) -> bool:
@@ -1337,11 +1337,18 @@ def _focus_cv_mape(
     response_scale: ResponseScale,
     region_col: str | None,
     enabled: bool,
+    diagnostics: dict | None = None,
 ) -> tuple[float | None, int, float | None, str | None]:
     """초점 식 하나의 연도 롤링 CV. 모형 추천의 탐색 CV·마지막 연도 확인과 같다."""
+    def unavailable(code, reason, status="unavailable"):
+        if diagnostics is not None:
+            diagnostics.update({key: dict(status=status, method=method, requested_folds=0,
+                reason_code=code, reason=reason) for key, method in (("search", "rolling_year"), ("confirm", "last_year"))})
     if not enabled:
+        unavailable("not_requested", "이 단계는 학습 적합만 제공하며 연도별 검증을 실행하지 않습니다.", "not_run")
         return None, 0, None, None
     if "contract_year" not in df.columns:
+        unavailable("missing_year", "계약연도가 없어 연도별 검증을 실행하지 못했습니다.")
         return None, 0, None, "CV-MAPE는 계약연도가 있어야 계산합니다."
     from app.built.regression.selection.fit import rolling_time_cv_split
 
@@ -1351,9 +1358,10 @@ def _focus_cv_mape(
             vars_spec,
             unified=unified,
             response_scale=response_scale,
-            region_col=region_col,
+            region_col=region_col, diagnostics=diagnostics,
         )
     except Exception:  # noqa: BLE001 — CV 실패가 회귀 결과를 막으면 안 된다
+        unavailable("fit_failure", "연도별 검증의 적합 또는 예측이 실패했습니다.")
         return None, 0, None, "CV-MAPE를 계산하지 못했습니다."
     if search is None:
         return None, int(folds or 0), confirm, skip or "CV-MAPE는 계약연도가 두 해 미만이면 계산하지 않습니다."
@@ -1523,13 +1531,14 @@ def _fit_ols(
     y_price = pd.to_numeric(df["price"], errors="coerce").loc[y.index].to_numpy()
     pred_price = _insample_pred_price(model, response_scale=response_scale)
     mape = _insample_mape_pct(y_price, pred_price)
+    validation = {}
     cv_mape, cv_folds, confirm_cv_mape, confirm_cv_note = _focus_cv_mape(
         df,
         vars_spec,
         unified=unified,
         response_scale=response_scale,
         region_col=region_col,
-        enabled=with_cv,
+        enabled=with_cv, diagnostics=validation,
     )
 
     # 잔차 진단은 초점 모형만 (P5). 상위 행정층 비교에는 이 화면이 없고, 그쪽 n은
@@ -1551,7 +1560,23 @@ def _fit_ols(
         except Exception:  # noqa: BLE001 — 진단 실패가 회귀 결과를 막으면 안 된다
             residuals = None
 
+    from app.regression_contracts import build_analysis_context
     return RegressionLevelResult(
+        analysis=build_analysis_context(
+            reference_categories={"용도지역": meta.zone_reference, "건축물 용도": meta.building_use_reference,
+                "구조": meta.structure_reference, "도로조건": meta.road_width_reference,
+                "유형": meta.asset_type_reference, "지역": meta.region_reference} if meta else {},
+            request=dict(variables=vars_spec.model_dump(), admin_level=level, scope_label=scope_label,
+                categorical_missing=categorical_missing, response_scale=response_scale),
+            rows=df.loc[y.index], coefficients=coefs, observation_unit="transaction",
+            target="price", target_unit="만원", response_scale=response_scale,
+            fit_n=n, exog=model.model.exog, source_n=len(df), metrics=[
+                dict(key="mape", role="training", scale="price", value=mape, n=n, method="in_sample"),
+                dict(key="mape", role="selection_validation", scale="price", value=cv_mape,
+                    method="rolling_year", reason=validation.get("search", {}).get("reason"), validation=validation.get("search")),
+                dict(key="mape", role="independent_confirmation", scale="price", value=confirm_cv_mape,
+                    method="last_year", reason=validation.get("confirm", {}).get("reason") or confirm_cv_note or "마지막 연도 확인을 제공하지 않습니다.", validation=validation.get("confirm")),
+            ]),
         admin_level=level,
         scope_label=scope_label,
         n=n,
@@ -1734,6 +1759,14 @@ def _build_scatter_bundle(
     scatter_df, admin_level, scope_label = _scatter_scope(
         wide_df, req, addr4_city, mode, conn=conn
     )
+    scatter_df = _lock_recommendation_sample(
+        scatter_df,
+        req,
+        admin_level=admin_level,
+        addr4_city=addr4_city,
+        mode=mode,
+        unified=is_unified(req.asset_type),
+    )
     region_col = _region_col_for_scatter(req.variables, admin_level, addr4_city)
     corrs = _correlations(scatter_df, req.variables)
     partials = _partial_regression_plots(
@@ -1810,10 +1843,44 @@ def _window_year_index(wide_df: pd.DataFrame, req: RegressionRunRequest) -> "Yea
     return index if index.available else None
 
 
+def _lock_recommendation_sample(
+    df: pd.DataFrame,
+    req: RegressionRunRequest,
+    *,
+    admin_level: str,
+    addr4_city: bool,
+    mode: CompareMode,
+    unified: bool,
+) -> pd.DataFrame:
+    """추천 추정은 탐색이 고정한 블록 전체의 숫자 결측을 먼저 뺀다."""
+    blocks = [str(b).strip() for b in (req.sample_lock_blocks or []) if str(b).strip()]
+    if not blocks or df.empty:
+        return df
+    from app.built.regression.selection.context import SelectionContext, with_complete_case
+
+    ctx = SelectionContext(
+        df=df,
+        scope_label="",
+        admin_level=admin_level,  # type: ignore[arg-type]
+        addr4_city=addr4_city,
+        mode=mode,
+        unified=unified,
+    )
+    return with_complete_case(ctx, blocks, region_col=None).df
+
+
+def _with_recommendation_missing_policy(req: RegressionRunRequest) -> RegressionRunRequest:
+    blocks = [str(b).strip() for b in (req.sample_lock_blocks or []) if str(b).strip()]
+    if not blocks or req.categorical_missing == "keep_unknown":
+        return req
+    return req.model_copy(update={"categorical_missing": "keep_unknown"})
+
+
 def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
     from app.recommendation.scope import built_analysis_scope_from_prepared
 
     wide_df, req, addr4_city, mode, partial_tx_count = _prepare_regression_scope(conn, req)
+    req = _with_recommendation_missing_policy(req)
     unified = is_unified(req.asset_type)
     scale = req.response_scale
     # 시군구 표본 하나로 지수를 세워 focus·상위 비교에 같은 기준시점을 쓴다 (D-075).
@@ -1836,6 +1903,9 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
 
     focus = _focus_admin_level(req, addr4_city)
     focus_df = _scope_for_level(wide_df, req, focus, addr4_city, mode, conn=conn)
+    focus_df = _lock_recommendation_sample(
+        focus_df, req, admin_level=focus, addr4_city=addr4_city, mode=mode, unified=unified
+    )
     focus_label = _label_for_level(req, wide_df, focus, addr4_city)
     primary = _fit_ols(
         focus_df,
@@ -1852,6 +1922,9 @@ def run_regression(conn, req: RegressionRunRequest) -> RegressionRunResponse:
         eup_scope = _eup_scope_for_level(level, focus, req)
         scoped = _scope_for_level(
             wide_df, req, level, addr4_city, mode, eup_scope=eup_scope, conn=conn
+        )
+        scoped = _lock_recommendation_sample(
+            scoped, req, admin_level=level, addr4_city=addr4_city, mode=mode, unified=unified
         )
         label = _label_for_level(
             req, wide_df, level, addr4_city, eup_scope=eup_scope
@@ -1940,6 +2013,13 @@ def predict_regression(conn, req: RegressionPredictRequest) -> RegressionPredict
     X_const = sm.add_constant(X)
     model = sm.OLS(y, X_const).fit()
     from app.regression_sample_judge import identification_note, judge_exog, provision_note
+    if getattr(req, "expected_model_signature", None) is not None:
+        from app.regression_contracts import build_analysis_context, require_model_signature
+        context = build_analysis_context(request={}, rows=df.loc[y.index],
+            coefficients=[dict(name=str(name), estimate=float(value)) for name, value in model.params.items()],
+            observation_unit="transaction", target="price", target_unit="만원",
+            response_scale=scale, fit_n=int(model.nobs))
+        require_model_signature(req.expected_model_signature, context.model_signature)
 
     verdict = judge_exog(model.model.exog)
     if verdict.tier == "blocked":

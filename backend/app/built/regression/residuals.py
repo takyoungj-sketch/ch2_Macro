@@ -474,6 +474,7 @@ def build_residual_diagnostics(
             influential.append(
                 InfluentialTransaction(
                     rank=rank,
+                    transaction_id=int(row["transaction_id"]) if pd.notna(row.get("transaction_id")) else None,
                     label=_tx_label(row, leaf_col),
                     contract_year=(
                         int(row["contract_year"])

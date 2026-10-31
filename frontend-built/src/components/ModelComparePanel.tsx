@@ -9,7 +9,7 @@ import type {
 } from "../types";
 import AnalysisHelpPanel from "./AnalysisHelpPanel";
 import { PublishAiContext } from "@ch2/ai-assistant/ActiveAiView";
-import { StatsGlossaryHelp } from "@ch2/stats-glossary";
+import { StatsGlossaryHelp } from "./StatsGlossaryHelp";
 import { CandidateValidationList } from "./CandidateValidationList";
 import { ModelComparisonCard } from "./ModelComparisonCard";
 import { PoolingEvaluationCard } from "./PoolingEvaluationCard";
