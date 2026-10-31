@@ -158,6 +158,77 @@ def blocked_note(verdict: SampleVerdict) -> str | None:
     return "계산 불가: " + ", ".join(verdict.reasons)
 
 
+def design_nullspace(exog) -> np.ndarray:
+    """설계행렬의 영공간. 완전계수이면 빈 배열이다."""
+    arr = np.asarray(exog, dtype=float)
+    if arr.ndim != 2 or arr.shape[0] == 0 or arr.shape[1] == 0:
+        return np.zeros((0, 0))
+    _u, singular, vt = np.linalg.svd(arr, full_matrices=True)
+    if singular.size == 0 or not np.isfinite(singular[0]) or singular[0] <= 0:
+        return np.eye(arr.shape[1])
+    tol = max(arr.shape) * np.finfo(float).eps * float(singular[0])
+    rank = int(np.sum(singular > tol))
+    if rank >= arr.shape[1]:
+        return np.zeros((0, arr.shape[1]))
+    return vt[rank:]
+
+
+def unidentified_column_names(exog, names: list[str]) -> set[str]:
+    """한 값으로 정해지지 않는 열 이름. names는 설계 열 순서다."""
+    null = design_nullspace(exog)
+    if null.size == 0:
+        return set()
+    bad: set[str] = set()
+    width = null.shape[1]
+    for index, name in enumerate(names):
+        if index >= width:
+            break
+        if float(np.linalg.norm(null[:, index])) > 1e-8:
+            bad.add(str(name))
+    return bad
+
+
+def prediction_is_identified(exog, row) -> bool:
+    """예측 행이 학습 열공간에 있으면 적합값과 구간을 낼 수 있다."""
+    null = design_nullspace(exog)
+    if null.size == 0:
+        return True
+    values = np.asarray(row, dtype=float).reshape(-1)
+    if values.shape[0] != null.shape[1] or not np.isfinite(values).all():
+        return False
+    return bool(np.allclose(null @ values, 0.0, atol=1e-5))
+
+
+def rows_are_identified(exog, rows) -> bool:
+    """검증 행이 학습에 없는 범주·공선 밖 조합을 쓰면 False."""
+    null = design_nullspace(exog)
+    if null.size == 0:
+        return True
+    grid = np.asarray(rows, dtype=float)
+    if grid.ndim == 1:
+        grid = grid.reshape(1, -1)
+    if grid.size == 0:
+        return True
+    if grid.shape[1] != null.shape[1] or not np.isfinite(grid).all():
+        return False
+    return bool(np.allclose(grid @ null.T, 0.0, atol=1e-5))
+
+
+def blank_unidentified_effects(rows: list[dict], exog, names: list[str]) -> list[dict]:
+    """식별되지 않는 계수는 수치를 남기고 표준오차·해석을 비운다."""
+    bad = unidentified_column_names(exog, names)
+    if not bad:
+        return rows
+    for row in rows:
+        if str(row.get("name")) not in bad:
+            continue
+        row["se"] = None
+        row["t"] = None
+        row["p"] = None
+        row["effect_plain"] = "이 계수는 한 값으로 정해지지 않습니다."
+    return rows
+
+
 def sample_notes(verdict: SampleVerdict, *, unit: str = "건") -> list[str]:
     """응답 warnings에 넣을 문장. 계산 불가이면 그 사유만 반환한다."""
     blocked = blocked_note(verdict)

@@ -49,6 +49,8 @@ def _fit_scales(y: pd.Series, x: pd.DataFrame) -> list[dict]:
         except Exception:
             continue
         pred = _insample_price_pred(model, xv, model_type)
+        if not np.isfinite(pred).all():
+            continue
         adj, mape, _rmse = _orig_scale_metrics(yv.to_numpy(), pred, k_params)
         if adj is None and mape is None:
             continue
@@ -76,13 +78,16 @@ def _attach_cv(row: dict, y: pd.Series, x: pd.DataFrame) -> None:
     if row["model_type"] == "log" and (yv <= 0).any():
         return
     xv = sm.add_constant(frame.drop(columns="__y"), has_constant="add")
-    cv_mape, _rmse = _cv_price_metrics(yv.to_numpy(), xv.to_numpy(), row["model_type"])
+    diagnostics = {}
+    cv_mape, _rmse = _cv_price_metrics(yv.to_numpy(), xv.to_numpy(), row["model_type"], diagnostics=diagnostics)
+    row["cv_diagnostics"] = diagnostics
     row["cv_mape"] = cv_mape
 
 
 def search_block_models(
     pool: list[str],
     build_xy: Callable[[list[str]], tuple[pd.Series, pd.DataFrame] | None],
+    *, observations: pd.DataFrame | None = None,
 ) -> list[dict]:
     """예측형·설명형 각 상위 후보. blocks 는 요청한 변수 이름이다."""
     if not pool:
@@ -98,7 +103,10 @@ def search_block_models(
                 cache[key] = None
         return cache[key]
 
-    best: dict[tuple, dict] = {}
+    # 변수마다 유효 행이 다른 상태에서 오차 순위를 매기지 않는다. 성공적으로
+    # 설계할 수 있는 후보들의 공통 완전 관측을 먼저 고정하고 분할도 공유한다.
+    designs = []
+    common = None
     for blocks in iter_block_subsets(pool):
         built = xy_for(blocks)
         if built is None:
@@ -106,6 +114,20 @@ def search_block_models(
         y, x = built
         if x is None or x.empty or len(y) < 5:
             continue
+        valid = np.isfinite(y.to_numpy(dtype=float)) & (y.to_numpy(dtype=float) > 0)
+        valid &= np.isfinite(x.to_numpy(dtype=float)).all(axis=1)
+        index = y.index[valid]
+        if len(index) < 5:
+            continue
+        common = index if common is None else common.intersection(index, sort=False)
+        designs.append((blocks, y, x))
+    if common is None or len(common) < 5:
+        return []
+
+    best: dict[tuple, dict] = {}
+    for blocks, y, x in designs:
+        y, x = y.loc[common], x.loc[common]
+        cache[tuple(blocks)] = (y, x)
         sig = tuple(sorted(str(col) for col in x.columns))
         if not sig:
             continue
@@ -176,8 +198,18 @@ def search_block_models(
         if purpose == "predictive" and len(rows) > FULL_CV_LIMIT:
             pool_rows = [row for row in ordered if row.get("cv_mape") is not None] or ordered
         for rank, row in enumerate(pool_rows[:TOP_K], start=1):
+            from app.regression_contracts import comparison_context
+            has_cv = row.get("cv_mape") is not None
+            comparison_rows = observations.loc[common] if observations is not None else pd.DataFrame(
+                {"target": xy_for(row["blocks"])[0]}, index=common)
+            comparison = comparison_context(comparison_rows, fit_n=row["n"],
+                evaluation_n=len(common) if has_cv else None,
+                method="random_kfold_5_seed42" if has_cv else "in_sample",
+                role="selection_validation" if has_cv else "training",
+                split=[part.tolist() for part in np.array_split(np.random.default_rng(42).permutation(len(common)), 5)] if has_cv else None)
             out.append(
                 {
+                    "comparison": comparison.model_dump(),
                     "rank": rank,
                     "purpose": purpose,
                     "blocks": list(row["blocks"]),
@@ -186,6 +218,7 @@ def search_block_models(
                     "adj_r_squared": row.get("adj_r_squared"),
                     "mape": row.get("mape"),
                     "cv_mape": row.get("cv_mape"),
+                    "cv_diagnostics": row.get("cv_diagnostics") or dict(status="not_run", requested_folds=5, eligible_n=len(common), reason_code="not_selected_for_validation", reason="탐색에서 교차검증 대상으로 선택하지 않은 후보입니다."),
                 }
             )
     return out

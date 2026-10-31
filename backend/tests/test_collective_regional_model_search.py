@@ -61,3 +61,34 @@ def test_search_includes_unchecked_variables_on_the_same_complexes():
     assert all("asset_type_dummy" not in item.blocks for item in found)
     assert all(item.n <= len(df) for item in found)
     assert all(item.hold_mape is None for item in found)
+
+
+def test_saturated_region_model_is_not_recommended():
+    rows = []
+    addrs = []
+    for i in range(24):
+        leaf = f"동{i}"
+        addrs.append(f"서울특별시|종로구|{leaf}")
+        rows.append({
+            "median": 500 + i * 15,
+            "match_tier": "A",
+            "households": 80 + i * 8,
+            "max_floor": 10,
+            "building_age": float(i % 9),
+            "parking_per_household": 1.0,
+            "assessed_land_price": 200 + i,
+            "structure_group": "철근콘크리트",
+            "builder_group": "한화",
+            "n_tx": 8,
+            "asset_type": "apartment",
+            "addr1": "서울특별시",
+            "addr2": "종로구",
+            "addr3": leaf,
+            "addr4": "",
+        })
+    req = RegionalRegressionRunRequest(
+        addr1="서울특별시", addr2="종로구", asset_type="apartment",
+        variables=RegionalRegressionVariables(structure=False, builder=False, asset_type_dummy=False),
+        model_type="linear", min_tx=5, region_dummy=True, region_addrs=addrs,
+    )
+    assert suggest_regional_regression(pd.DataFrame(rows), req, unified=False) == []

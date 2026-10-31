@@ -11,7 +11,7 @@ import FloorIndexMethodGuide from "./FloorIndexMethodGuide";
 import { type FloorMode } from "./BuildingRegressionPanel";
 
 const FLOOR_MODE_OPTIONS: { value: FloorMode; label: string }[] = [
-  { value: "relative", label: "상대 층 (1·저·중·고·최상)" },
+  { value: "relative", label: "상대 층 (1·저·중·고·관측 최상)" },
   { value: "dummy", label: "개별 층 더미" },
   { value: "grouped", label: "절대 구간 (1–5 / 6–15 / 16+)" },
 ];
@@ -74,8 +74,8 @@ function dimensionHelpText(dim: string, isRegression: boolean, floorMode?: Floor
       : floorMode === "grouped"
         ? "절대 층 구간(1–5 / 6–15 / 16+)으로 산출합니다."
         : floorMode === "rowhouse"
-          ? "1층·중간층·최상층입니다. 최상층은 그 건물의 거래 최고층입니다."
-          : "그 단지 최고층 대비 상대 구간(1층·저·중·고·최상층)입니다. 단지가 여럿이면 단지마다 나눕니다.";
+          ? "1층·중간층·관측 최상층입니다. 관측 최상층은 선택 기간의 최고 거래층입니다."
+          : "그 단지에서 선택 기간에 거래된 최고층 대비 상대 구간(1층·저·중·고·관측 최상층)입니다. 단지가 여럿이면 단지마다 나눕니다.";
   return `${base} ${modeHint}`;
 }
 
@@ -217,10 +217,10 @@ export default function FloorIndexPanel({
     explain,
     diagnostics,
     floor_mode: dataFloorMode,
-    regression_reference_floor,
   } = q.data;
 
   const isRegression = method === "regression_semilog";
+  const hasIndex = cells.some((c) => c.index != null);
 
   return (
     <div className="space-y-3">
@@ -301,7 +301,10 @@ export default function FloorIndexPanel({
           </span>
         ) : (
           <span className="text-slate-500 dark:text-slate-400">
-            기준 {reference_floor ?? "구간"}만 100 · 나머지 지수 없음 · n={n_total.toLocaleString("ko-KR")}
+            {hasIndex
+              ? `기준 ${reference_floor ?? "구간"}만 100 · 나머지 지수 없음`
+              : "비교할 구간이 부족해 지수를 비웠습니다"}
+            {" · "}n={n_total.toLocaleString("ko-KR")}
             {baseline_median != null && (
               <>
                 {" "}
@@ -329,12 +332,10 @@ export default function FloorIndexPanel({
           <p className="text-[10px] text-slate-500 dark:text-slate-400">
             화면 100은 표본이 있는
             {floorMode === "grouped" ? " 1–5층" : " 1층"}
-            입니다. p는 회귀에서 뺀 구간
-            {regression_reference_floor ? ` (${regression_reference_floor})` : " (거래가 가장 많은 칸)"}
-            과의 차이이고, 그 칸의 p는 없습니다.
+            입니다. 지수·95% CI·p는 모두 이 기준 대비이고, 기준 칸의 p는 없습니다.
             {assetType === "rowhouse"
-              ? " 최상층은 그 건물의 거래 최고층입니다."
-              : " 상대층은 단지마다 그 단지의 최고층으로 나눕니다."}
+              ? " 관측 최상층은 선택 기간의 최고 거래층입니다."
+              : " 상대층의 관측 최상층은 선택 기간에 그 단지에서 거래된 최고층입니다."}
           </p>
         </div>
       )}
@@ -368,7 +369,8 @@ export default function FloorIndexPanel({
       )}
 
       <p className="text-[10px] text-slate-500 dark:text-slate-400">
-        {dimensionHelpText(dim, isRegression, dimension === "floor" ? floorMode : undefined)} 셀 n&lt;15는 참고용입니다.
+        {dimensionHelpText(dim, isRegression, dimension === "floor" ? floorMode : undefined)}{" "}
+        건수는 원자료와 회귀에 넣은 수를 나눠 보여 줍니다. 회귀 건수 15 미만은 참고용입니다.
       </p>
 
       <div className="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-700">
@@ -379,7 +381,10 @@ export default function FloorIndexPanel({
                 {dimensionColumnLabel(dim)}
               </th>
               <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-right font-medium">
-                건수
+                원자료
+              </th>
+              <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-right font-medium">
+                회귀
               </th>
               <th className="border border-slate-200 dark:border-slate-600 px-2 py-1.5 text-right font-medium">
                 평균(만원/㎡)
@@ -403,7 +408,7 @@ export default function FloorIndexPanel({
             {cells.length === 0 && (
               <tr>
                 <td
-                  colSpan={isRegression ? 6 : 4}
+                  colSpan={isRegression ? 7 : 5}
                   className="border border-slate-200 dark:border-slate-600 px-2 py-4 text-center text-slate-400"
                 >
                   표시할 데이터가 없습니다.
@@ -411,13 +416,21 @@ export default function FloorIndexPanel({
               </tr>
             )}
             {cells.map((c) => (
-              <tr key={c.label} className={clsx(!c.is_reliable && "bg-amber-50/40 dark:bg-amber-950/20")}>
+              <tr
+                key={c.label}
+                className={clsx(c.count > 0 && !c.is_reliable && "bg-amber-50/40 dark:bg-amber-950/20")}
+              >
                 <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 whitespace-nowrap">
                   {c.label}
                   {c.is_reference && (
                     <span className="ml-1 text-[9px] text-indigo-600 dark:text-indigo-400 font-medium">기준</span>
                   )}
-                  {!c.is_reliable && <span className="ml-1 text-[9px] text-amber-600 dark:text-amber-400">n&lt;15</span>}
+                  {c.count > 0 && !c.is_reliable && (
+                    <span className="ml-1 text-[9px] text-amber-600 dark:text-amber-400">회귀 n&lt;15</span>
+                  )}
+                </td>
+                <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 text-right tabular-nums">
+                  {c.count_raw ?? c.count}
                 </td>
                 <td className="border border-slate-200 dark:border-slate-600 px-2 py-1 text-right tabular-nums">
                   {c.count}

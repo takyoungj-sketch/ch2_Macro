@@ -6,11 +6,13 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 
+from app.collective.regional_regression import engine
 from app.collective.regional_regression.engine import (
     MIN_FIT_N,
     MIN_TX,
     WEIGHT_N0,
     _asset_type_ref,
+    _category_support,
     _collapse_dummy,
     _design,
     assign_region_groups,
@@ -27,7 +29,11 @@ from app.collective.regional_regression.engine import (
     _usable_tier_mask,
     build_sample_funnel,
 )
-from app.collective.regional_regression.schemas import RegionalRegressionVariables
+from app.collective.regional_regression.schemas import (
+    RegionalRegressionPredictInputs,
+    RegionalRegressionRunRequest,
+    RegionalRegressionVariables,
+)
 
 
 def test_flags_split_csv():
@@ -636,5 +642,93 @@ def test_region_dummy_anchor_is_reference_intercept():
     assert x.loc[1, "region_1"] == 1
     assert "연수동" in labels["region_1"]
     assert labels["_region_ref"] == "충청북도 증평군 증평읍"
+
+
+def test_saturated_fit_is_not_computable():
+    n = 24
+    work = pd.DataFrame({"median": np.linspace(100, 200, n)})
+    x = pd.DataFrame(np.eye(n, n - 1), columns=[f"d{i}" for i in range(n - 1)])
+    fit = _fit_ols(work, x, model_type="linear")
+    assert fit is not None and fit["computable"] is False
+    assert any("잔차 자유도" in note for note in fit["sample_notes"])
+
+
+def test_holdout_only_structure_stays_in_the_score_and_is_marked():
+    train = pd.DataFrame({
+        "median": 500 + np.arange(48) * 4,
+        "households": 80 + np.arange(48),
+        "structure_group": "철근콘크리트",
+    })
+    hold = pd.DataFrame({
+        "median": 700 + np.arange(16) * 4,
+        "households": 90 + np.arange(16),
+        "structure_group": "벽돌",
+    })
+    work = pd.concat([train, hold], ignore_index=True)
+    v = RegionalRegressionVariables(
+        households=True, max_floor=False, building_age=False, parking=False,
+        structure=True, builder=False, asset_type_dummy=False,
+    )
+    support = _category_support(work.iloc[:48], v, region_levels=None, region_ref=None)
+    assert support.structure_levels == ("철근콘크리트",)
+    x, _labels, _warn = _design(work, v, **support.design_kwargs())
+    fit = _fit_ols(
+        work, x, model_type="linear", train_idx=work.index[:48], hold_idx=work.index[48:],
+        category_support=support,
+    )
+    assert fit["computable"] is True
+    assert fit["hold_mape"] is not None
+    assert fit["validation"]["status"] == "partial"
+    assert fit["validation"]["reason_code"] == "unseen_category"
+    assert "16곳 중 16곳" in fit["validation"]["reason"]
+    assert "기준 구조(철근콘크리트)" in fit["validation"]["reason"]
+
+
+def test_screen_other_matches_the_prediction_allow_list(monkeypatch):
+    n = 64
+    df = pd.DataFrame({
+        "building_key": [f"b{i}" for i in range(n)],
+        "display_name": [f"단지{i}" for i in range(n)],
+        "median": 800 + np.arange(n) * 3.0,
+        "match_tier": "A",
+        "households": 100 + np.arange(n),
+        "max_floor": 15,
+        "building_age": 10,
+        "parking_per_household": 1.0,
+        "n_tx": 8,
+        "asset_type": "apartment",
+        "structure_group": ["철근콘크리트"] * n,
+        "builder_group": "한화",
+    })
+    train_idx, hold_idx = _split_hold(df.index)
+    df.loc[list(train_idx[:4]), "structure_group"] = "특수구조"
+    df.loc[list(hold_idx[:2]), "structure_group"] = "특수구조"
+    req = RegionalRegressionRunRequest(
+        addr1="서울특별시", addr2="종로구", asset_type="apartment", model_type="linear",
+        variables=RegionalRegressionVariables(
+            households=True, max_floor=False, building_age=False, parking=False,
+            structure=True, builder=False, asset_type_dummy=False,
+        ),
+    )
+    monkeypatch.setattr(engine, "load_danji_frame", lambda conn, request: (df.copy(), {}))
+    result = engine.run_regional_regression(None, req, with_recommendation=False)
+    assert "기타" in result.predict_options["structure_group"]
+    assert "특수구조" not in result.predict_options["structure_group"]
+    assert all(c.name != "struct_특수구조" for c in result.coefficients)
+    assert any(c.name == "struct_기타" for c in result.coefficients)
+    predicted = engine.predict_regional(None, req, RegionalRegressionPredictInputs(
+        households=120, structure_group="기타"))
+    assert predicted["y_hat"] > 0
+    try:
+        engine.predict_regional(None, req, RegionalRegressionPredictInputs(
+            households=120, structure_group="특수구조"))
+        raised = False
+    except ValueError as exc:
+        raised = True
+        assert "구조" in str(exc)
+    assert raised
+    validation = next(metric.validation for metric in result.analysis.metrics if metric.role != "training")
+    assert validation.status == "partial"
+    assert "기타" in validation.reason
 
 

@@ -34,25 +34,25 @@ FLOOR_GROUP_LINES = [
 ]
 
 RESIDENTIAL_FLOOR_GROUP_LINES = [
-    "아파트·오피스텔·분양권: 그 단지 최고층 대비 1층·저층부·중층부·고층부·최상층.",
-    "코호트는 표본 전체 최고층이 아니라 단지마다 그 단지의 최고층으로 나눕니다.",
-    "1층 → 화면 지수 100% (표시 기준). p는 거래가 가장 많은 구간 대비입니다.",
-    "저층부 → 그 단지 최고층 대비 하위 30% (1·최상층 제외)",
-    "중층부 → 최고층 대비 30~70%",
-    "고층부 → 최고층 대비 70% 초과 (최상층 제외)",
-    "최상층 → 그 단지 최고층",
+    "아파트·오피스텔·분양권: 선택 기간에 그 단지에서 거래된 최고층 대비 1층·저층부·중층부·고층부·관측 최상층.",
+    "코호트는 표본 전체 최고층이 아니라 단지마다 그 단지의 최고 거래층으로 나눕니다.",
+    "1층 → 화면 지수 100% (표시 기준). 지수·신뢰구간·p는 이 기준 대비입니다.",
+    "저층부 → 그 단지 최고 거래층 대비 하위 30% (1·관측 최상층 제외)",
+    "중층부 → 최고 거래층 대비 30~70%",
+    "고층부 → 최고 거래층 대비 70% 초과 (관측 최상층 제외)",
+    "관측 최상층 → 선택 기간에 그 단지에서 거래된 최고층",
 ]
 
 ROWHOUSE_FLOOR_GROUP_LINES = [
-    "연립·다세대 기본: 1층 · 중간층(2층~최고층 바로 아래) · 최상층(그 건물 거래 최고층).",
+    "연립·다세대 기본: 1층 · 중간층(2층~최고층 바로 아래) · 관측 최상층(선택 기간의 최고 거래층).",
     "4~5층에 아파트용 저·중·고를 쓰지 않습니다. 표본이 충분하면 개별 층으로 바꿀 수 있습니다.",
-    "화면 100은 1층입니다. p는 거래가 가장 많은 칸 대비이고, 그 칸의 p는 없습니다.",
+    "화면 100은 1층입니다. 지수·신뢰구간·p는 1층 대비이고, 1층 칸의 p는 없습니다.",
 ]
 
 FACTORY_FLOOR_GROUP_LINES = [
     "공장·창고: 지하 · 1층 · 2층 · 3층 이상. 상가의 고층·초고층 구간을 쓰지 않습니다.",
     "층 정보가 적으면 면적대 탭을 우선합니다.",
-    "화면 100은 1층입니다. p는 거래가 가장 많은 칸 대비입니다.",
+    "화면 100은 1층입니다. 지수·신뢰구간·p는 1층 대비입니다.",
 ]
 
 
@@ -91,23 +91,23 @@ def _preset_answers_residential_floor_index(
     if floor_mode == "factory" or asset_type == "collective_factory":
         floor_how = (
             "공장·창고는 지하·1층·2층·3층 이상입니다. 상가의 고층·초고층 구간을 쓰지 않습니다. "
-            "화면 100은 1층이고, p는 거래가 가장 많은 칸 대비입니다."
+            "화면 100은 1층이고, 지수·신뢰구간·p는 1층 대비입니다."
         )
     elif floor_mode == "shop" or asset_type == "collective_shop":
         floor_how = (
             "상가는 지하심층(B2 이하)·지하1층·1층·2층·저층(3~4)·중층(5~9)·고층(10~19)·초고층(20+)입니다. "
-            "지하를 주거 중층부로 넣지 않습니다. 화면 100은 1층이고, p는 거래가 가장 많은 칸 대비입니다."
+            "지하를 주거 중층부로 넣지 않습니다. 화면 100은 1층이고, 지수·신뢰구간·p는 1층 대비입니다."
         )
     elif floor_mode == "rowhouse" or asset_type == "rowhouse":
         floor_how = (
-            "연립·다세대 기본은 1층·중간층·최상층입니다. 최상층은 그 건물의 거래 최고층입니다. "
-            "아파트용 저·중·고를 쓰지 않습니다. 화면 100은 1층이고, p는 거래가 가장 많은 칸 대비입니다."
+            "연립·다세대 기본은 1층·중간층·관측 최상층입니다. 관측 최상층은 선택 기간의 최고 거래층입니다. "
+            "아파트용 저·중·고를 쓰지 않습니다. 화면 100은 1층이고, 지수·신뢰구간·p는 1층 대비입니다."
         )
     else:
         floor_how = (
-            "아파트는 그 단지 최고층 대비 1층·저층부·중층부·고층부·최상층입니다. "
-            "여러 단지를 합치면 단지마다 그 단지의 최고층으로 나눕니다. "
-            "화면 100은 1층이고, p는 거래가 가장 많은 칸 대비입니다. 그 칸의 p는 없습니다."
+            "아파트는 선택 기간의 최고 거래층 대비 1층·저층부·중층부·고층부·관측 최상층입니다. "
+            "여러 단지를 합치면 단지마다 그 단지의 최고 거래층으로 나눕니다. "
+            "화면 100은 1층이고, 지수·신뢰구간·p는 1층 대비입니다. 1층 칸의 p는 없습니다."
         )
     if asset_type == "collective_factory":
         area_how = "집합공장은 연면적 100 / 300 / 1000㎡ 네 구간입니다. 30㎡ 눈금이 아닙니다."
@@ -154,7 +154,7 @@ def _preset_answers_residential_floor_index(
             "answer": (
                 "기준 구간이 100%입니다. 고층부 112%면, 통제한 조건에서 기준(보통 1층 또는 중앙 면적형)보다 "
                 "㎡당 단가가 약 12% 높은 패턴입니다. 95% 구간과 p값을 같이 보세요. "
-                "p는 회귀가 생략한 구간(거래 최다) 대비이며, 화면 1층=100 환산 후에도 그대로입니다."
+                "지수·95% 신뢰구간·p는 화면 기준(보통 1층) 대비입니다. 기준 칸의 p는 없습니다."
             ),
         },
         {
@@ -192,17 +192,18 @@ def _preset_answers_residential_regression(*, asset_type: str, cohort: bool) -> 
                 f"체크한 변수(전용면적, {age_note}층, {dong_note}{rights_note} 등)만 독립변수로 들어갑니다. "
                 "범주형 변수는 더미화(drop_first)되어 기준 범주 대비 계수로 표시됩니다. "
                 "코호트는 기본으로 거래 최다 단지 기준 단지 고정효과를 둡니다. "
-                "세대수·주차·공시지가·구조·유형을 켜면 FE 대신 그 변수로 단지 간 차이를 설명합니다."
+                "세대수·주차·공시지가·구조·유형이 실제 설계에 포함되면 FE 대신 그 변수로 단지 간 차이를 설명합니다. "
+                "체크해도 자료가 없거나 값이 같으면 생략될 수 있으며, 실제 반영 변수와 기준 범주는 분석 기준에서 확인합니다."
             ),
         },
         {
             "id": "interpret",
             "question": "계수를 어떻게 해석하나요?",
             "answer": (
-                "전용면적·연식·층(선형) 등 연속 변수: 계수 1단위 증가 시 금액(만원) 변화량. "
-                "더미 변수: 기준 범주 대비 금액 차이(만원). "
-                "R²는 모델이 가격 변동을 얼마나 설명하는지의 참고 지표입니다. "
-                "예측은 회귀 적합 후 입력값으로 개별 거래 금액·95% 구간을 추정합니다."
+                "선형 모형의 연속변수 계수는 해당 변수가 1단위 증가할 때의 금액 차이(만원)이고, 더미 계수는 기준 범주와의 금액 차이입니다. "
+                "로그 모형은 (exp(계수)−1)×100으로 금액의 비율 차이를 읽습니다. "
+                "R²는 선택한 종속변수 척도에서의 적합도이며 새로운 거래의 정확도를 뜻하지 않습니다. "
+                "조건별 추정에서는 거래시점과 필수 값을 입력합니다. 후보 순위는 공통 완전 관측의 선정용 검증 또는 학습 지표이며 독립 확인 결과는 아닙니다. 교차검증 미제공이면 분석 기준의 완료 분할 수와 실패 사유를 확인합니다. 일부 정상 예측만으로 전체 검증 오차를 제공하지 않습니다."
             ),
         },
         {
@@ -642,8 +643,8 @@ def build_residential_floor_index_explain(
     floor_mode_label = {
         "shop": "상가 층 (지하·1·2·저·중·고·초고층)",
         "factory": "공장·창고 층 (지하·1·2·3층 이상)",
-        "rowhouse": "연립·다세대 (1층·중간·최상)",
-        "relative": "아파트 상대층 (단지별 최고층 대비 1·저·중·고·최상)",
+        "rowhouse": "연립·다세대 (1층·중간·관측 최상)",
+        "relative": "아파트 상대층 (선택 기간 최고 거래층 대비 1·저·중·고·관측 최상)",
         "dummy": "개별 층 더미",
         "grouped": "절대 구간 (1–5 / 6–15 / 16+)",
     }.get(floor_mode, floor_mode)
@@ -697,7 +698,7 @@ def build_residential_floor_index_explain(
             + " + Σ γ_g·D_g"
         ),
         "index_rule": (
-            "지수_g = exp(γ_g) × 100. 회귀 omitted = 거래 최다 구간. 층 탭 화면은 1층=100%로 환산."
+            "지수_g = exp(β_g − β_화면기준) × 100. 층 탭 화면 기준은 1층=100이고, 신뢰구간·p도 그 대비입니다."
             if dim == "floor"
             else f"지수_g = exp(γ_g) × 100. 기준 {ref}=100% (면적 구간 더미, ln(면적) 미포함)."
         ),
@@ -707,7 +708,7 @@ def build_residential_floor_index_explain(
         "interpretation": [
             "표의 ‘평균’은 그 칸 원자료 평균, ‘지수’는 면적·연식·시점을 맞춘 뒤의 상대 %입니다. 둘이 어긋날 수 있습니다.",
             f"100보다 낮으면 기준({ref})보다 ㎡당 단가가 낮은 패턴입니다.",
-            "95% CI는 HC3 강건표준오차입니다. 화면의 100과 p는 다른 기준입니다. p는 회귀가 뺀 구간(거래 최다) 대비이고, 그 칸의 p는 없습니다.",
+            "95% CI는 화면 기준과의 계수 차이에 대한 HC3 강건표준오차입니다. 지수·신뢰구간·p의 기준은 같습니다. 기준 칸의 p는 없습니다.",
         ],
         "limitations": (
             [
@@ -775,13 +776,15 @@ def build_residential_regression_explain(
         hints = [f"종속변수: 금액(만원, 수준). 연속 변수는 1단위당 만원 변화. 표본 n={result.n}."]
         formula = "금액(만원) = β₀ + Σ β_k·X_k  (선형 OLS · 기본)"
     if result.r_squared is not None:
-        adj = round(result.adj_r_squared, 3) if result.adj_r_squared else "—"
+        adj = round(result.adj_r_squared, 3) if result.adj_r_squared is not None else "—"
         hints.append(f"R²={round(result.r_squared, 3)}, Adj.R²={adj} (적합척도).")
     if getattr(result, "model_comparison", None) is not None or getattr(result, "model_candidates", None):
         hints.append(
             f"모형: 사용자 선택({model_type}). 화면 모형 추천은 이 거래에서 변수와 선형·로그를 탐색한다. 정답 식이 아니다."
         )
-    hints.append(f"독립변수: {', '.join(active) if active else '(없음)'}.")
+    hints.append(f"선택한 변수: {', '.join(active) if active else '(없음)'}.")
+    active = list(dict.fromkeys(short_display_label(c.label) for c in result.coefficients if c.name != "const"))
+    hints.append(f"실제 반영 계수: {', '.join(active) if active else '(없음)'}.")
 
     market = build_market_interpretation_hints(
         result.coefficients, model_type=model_type
@@ -892,8 +895,10 @@ def build_commercial_regression_explain(
         hints = [f"종속변수: 금액(만원, 수준). 표본 n={result.n}."]
         formula = "금액(만원) = β₀ + Σ β_k·X_k  (선형 OLS · 기본)"
     if result.r_squared is not None:
-        hints.append(f"R²={round(result.r_squared, 3)}, Adj.R²={round(result.adj_r_squared, 3) if result.adj_r_squared else '—'}.")
-    hints.append(f"독립변수: {', '.join(active) if active else '(없음)'}.")
+        hints.append(f"R²={round(result.r_squared, 3)}, Adj.R²={round(result.adj_r_squared, 3) if result.adj_r_squared is not None else '—'}.")
+    hints.append(f"선택한 변수: {', '.join(active) if active else '(없음)'}.")
+    active = list(dict.fromkeys(short_display_label(c.label) for c in result.coefficients if c.name != "const"))
+    hints.append(f"실제 반영 계수: {', '.join(active) if active else '(없음)'}.")
 
     market = build_market_interpretation_hints(
         result.coefficients, model_type=model_type

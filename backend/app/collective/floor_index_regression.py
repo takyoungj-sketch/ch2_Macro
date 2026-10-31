@@ -43,7 +43,7 @@ RESIDENTIAL_FLOOR_GROUPS: list[tuple[str, str, float]] = [
     ("저층부", "floor_rel_low", 2),
     ("중층부", "floor_rel_mid", 3),
     ("고층부", "floor_rel_high", 4),
-    ("최상층", "floor_rel_top", 5),
+    ("관측 최상층", "floor_rel_top", 5),
 ]
 
 GROUPED_FLOOR_GROUPS: list[tuple[str, str, float]] = [
@@ -61,7 +61,7 @@ FACTORY_FLOOR_SPECS: list[tuple[str, str, float]] = [
 ROWHOUSE_FLOOR_SPECS: list[tuple[str, str, float]] = [
     ("1층", "floor_rh_1", 1),
     ("중간층", "floor_rh_mid", 2),
-    ("최상층", "floor_rh_top", 3),
+    ("관측 최상층", "floor_rh_top", 3),
 ]
 FLOOR_INDEX_MODES = frozenset({"relative", "dummy", "grouped", "rowhouse", "shop", "factory"})
 
@@ -247,105 +247,6 @@ def _pick_floor_regression_reference(group_counts: dict[str, int]) -> tuple[str,
     return _pick_regression_reference(group_counts, RESIDENTIAL_FLOOR_GROUPS)
 
 
-def _reg_index_for_code(
-    code: str,
-    regression_ref: str,
-    coef_map: dict[str, dict],
-) -> dict | None:
-    """회귀 기준층 대비 지수(%)."""
-    if code == regression_ref:
-        return {"index": 100.0, "index_lo": 100.0, "index_hi": 100.0, "gamma": None, "p_value": None}
-    return coef_map.get(code)
-
-
-def _label_for_code(code: str, group_specs: list[tuple[str, str, float | None]] | None = None) -> str:
-    if group_specs:
-        for label, c, _ in group_specs:
-            if c == code:
-                return label
-    for label, c, _ in RESIDENTIAL_FLOOR_GROUPS:
-        if c == code:
-            return label
-    if code in SHOP_FLOOR_LABELS:
-        return SHOP_FLOOR_LABELS[code]
-    if code in _FACTORY_FLOOR_LABELS:
-        return _FACTORY_FLOOR_LABELS[code]
-    if code in _ROWHOUSE_FLOOR_LABELS:
-        return _ROWHOUSE_FLOOR_LABELS[code]
-    return GROUPED_FLOOR_LABELS.get(code, code)
-
-
-def _apply_floor_display_reference(
-    cells: list[dict],
-    *,
-    regression_ref: str,
-    coef_map: dict[str, dict],
-    group_specs: list[tuple[str, str, float | None]],
-    group_counts: dict[str, int],
-    display_code: str,
-    display_label: str,
-) -> tuple[list[dict], list[str], str]:
-    """회귀 결과를 화면 기준(예: 1층=100)으로 환산. 표본 없으면 — 표시."""
-    extra_warnings: list[str] = []
-    code_by_label = {label: code for label, code, _ in group_specs}
-    reg_label = _label_for_code(regression_ref, group_specs)
-    display_count = group_counts.get(display_code, 0)
-
-    if display_count == 0:
-        extra_warnings.append(f"{display_label} 거래 없음 — 지수는 회귀 기준({reg_label})=100 대비")
-        for cell in cells:
-            code = code_by_label.get(cell["label"])
-            if code == display_code:
-                cell["index"] = None
-                cell["index_lo"] = None
-                cell["index_hi"] = None
-                cell["gamma"] = None
-                cell["p_value"] = None
-                cell["is_reference"] = False
-            else:
-                cell["is_reference"] = code == regression_ref
-        return cells, extra_warnings, reg_label
-
-    base = _reg_index_for_code(display_code, regression_ref, coef_map)
-    if base is None or not base.get("index"):
-        extra_warnings.append(
-            f"{display_label} 표본 부족 — 아래 지수는 회귀 기준({reg_label})=100 대비 값입니다."
-        )
-        for cell in cells:
-            code = code_by_label.get(cell["label"])
-            if code == display_code:
-                cell["index"] = None
-                cell["is_reference"] = False
-            else:
-                cell["is_reference"] = code == regression_ref
-        return cells, extra_warnings, reg_label
-
-    scale = 100.0 / float(base["index"])
-    for cell in cells:
-        code = code_by_label.get(cell["label"])
-        if code == display_code:
-            cell["index"] = 100.0
-            cell["index_lo"] = None
-            cell["index_hi"] = None
-            cell["gamma"] = None
-            cell["p_value"] = None
-            cell["is_reference"] = True
-        elif cell["index"] is not None:
-            cell["index"] = round(float(cell["index"]) * scale, 1)
-            if cell.get("index_lo") is not None:
-                cell["index_lo"] = round(float(cell["index_lo"]) * scale, 1)
-            if cell.get("index_hi") is not None:
-                cell["index_hi"] = round(float(cell["index_hi"]) * scale, 1)
-            cell["is_reference"] = False
-        else:
-            cell["is_reference"] = False
-
-    if regression_ref != display_code:
-        extra_warnings.append(f"회귀 기준: {reg_label}(표본 최다) → 화면 지수는 {display_label}=100")
-
-    return cells, extra_warnings, display_label
-
-
 def _period_code(year: float | None, month: float | None) -> str | None:
     """거래 시점 → 반기 코드(예: 2025H1). 월 결측이면 연도 코드로 폴백."""
     if year is None or pd.isna(year):
@@ -450,8 +351,8 @@ def _add_floor_control_dummies(
     *,
     floor_mode: str = "relative",
 ) -> None:
-    """층 구간을 통제변수로. 기준은 그 유형의 1층(또는 1층 상대칸)."""
-    if "floor_index_code" not in reg.columns:
+    """층 구간을 통제변수로. 빠진 기준은 표본이 있는 1층, 없으면 거래가 많은 구간."""
+    if "floor_index_code" not in reg.columns or reg.empty:
         return
     if floor_mode == "shop":
         groups: list[tuple[str, str, float | None]] = list(SHOP_FLOOR_SPECS)
@@ -469,15 +370,19 @@ def _add_floor_control_dummies(
         groups = list(RESIDENTIAL_FLOOR_GROUPS)
         ref = REFERENCE_FLOOR_CODE
         control_name = "relative_floor"
+    counts = reg["floor_index_code"].astype(str).value_counts()
+    eligible = [code for _, code, _ in groups if int(counts.get(code, 0)) >= MIN_GROUP_FOR_DUMMY]
+    if len(eligible) < 2:
+        return
+    omit = ref if ref in eligible else max(eligible, key=lambda c: int(counts.get(c, 0)))
     added = False
-    for _, code, _ in groups:
-        if code == ref:
+    for code in eligible:
+        if code == omit:
             continue
         col = f"ctrl_{code}"
-        reg[col] = (reg["floor_index_code"] == code).astype(float)
-        if reg[col].sum() >= MIN_GROUP_FOR_DUMMY:
-            parts.append(reg[[col]])
-            added = True
+        reg[col] = (reg["floor_index_code"].astype(str) == code).astype(float)
+        parts.append(reg[[col]])
+        added = True
     if added:
         controls.append(control_name)
 
@@ -522,6 +427,258 @@ def _add_building_use_dummies(reg: pd.DataFrame, parts: list[pd.DataFrame], cont
         reg[col] = dummies[col].astype(float)
         parts.append(reg[[col]])
     controls.append("building_use")
+
+
+_MISSING_INDEX_CODES = frozenset({"dong_missing", "area_missing", "rights_missing"})
+
+
+def _period_series(reg: pd.DataFrame) -> pd.Series:
+    if "contract_year" not in reg.columns:
+        return pd.Series(np.nan, index=reg.index, dtype=object)
+    months = (
+        reg["contract_month"]
+        if "contract_month" in reg.columns
+        else pd.Series(np.nan, index=reg.index)
+    )
+    return pd.Series(
+        [_period_code(y, m) for y, m in zip(reg["contract_year"], months)],
+        index=reg.index,
+        dtype=object,
+    )
+
+
+def _codes_at_least(series: pd.Series, minimum: int) -> set[str]:
+    counts = series.dropna().astype(str).value_counts()
+    return {str(code) for code, cnt in counts.items() if int(cnt) >= minimum}
+
+
+def _age_collinear_with_time(reg: pd.DataFrame) -> bool:
+    """연식이 절편 또는 반기 더미와 겹치면 True. 그 경우 연식은 통제에서 뺀다."""
+    if "building_age" not in reg.columns or reg.empty:
+        return True
+    age = pd.to_numeric(reg["building_age"], errors="coerce")
+    known = age.notna()
+    if int(known.sum()) < 2 or int(age[known].nunique()) < 2:
+        return True
+    if "contract_year" not in reg.columns:
+        return False
+    period = _period_series(reg)[known]
+    sub_age = age[known]
+    counts = period.dropna().astype(str).value_counts()
+    eligible = [str(code) for code, cnt in counts.items() if int(cnt) >= MIN_GROUP_FOR_DUMMY]
+    if len(eligible) < 2:
+        return False
+    ref = str(counts.idxmax())
+    columns = [
+        (period.astype(str) == code).astype(float).to_numpy()
+        for code in eligible
+        if code != ref
+    ]
+    if not columns:
+        return False
+    y = sub_age.to_numpy(dtype=float)
+    base = np.column_stack([np.ones(len(y)), *columns])
+    full = np.column_stack([base, y])
+    return int(np.linalg.matrix_rank(full)) == int(np.linalg.matrix_rank(base))
+
+
+def _drop_sparse_levels(reg: pd.DataFrame, series: pd.Series) -> pd.DataFrame:
+    """둘 이상의 범주가 있을 때 5건 미만·결측 행을 뺀다.
+
+    더미를 생략한 채 남겨 두면 그 행이 기준 범주와 같은 효과가 된다.
+    5건 이상인 범주가 하나도 없으면 통제를 만들지 않으므로 행은 그대로 둔다.
+    """
+    if reg.empty:
+        return reg
+    key = series.astype(str).where(series.notna(), other="__missing__")
+    counts = key.value_counts()
+    if len(counts) < 2:
+        return reg
+    keep = {
+        str(code)
+        for code, cnt in counts.items()
+        if str(code) != "__missing__" and int(cnt) >= MIN_GROUP_FOR_DUMMY
+    }
+    if not keep:
+        return reg
+    if len(keep) == len(counts):
+        return reg
+    return reg.loc[key.isin(keep)]
+
+
+def _regression_sample(
+    work: pd.DataFrame,
+    *,
+    effective_dim: str,
+    is_commercial: bool,
+) -> tuple[pd.DataFrame, dict]:
+    """결측·소표본 범주를 뺀 최종 회귀 표본.
+
+    층·반기·건물·용도에서 더미를 만들지 않는 범주는 표본에서도 뺀다.
+    빼는 동안 다른 범주가 5건 미만이 되면 다시 뺀다.
+    """
+    reg = work.copy()
+    reg = reg[reg["index_group_code"].notna()]
+    reg = reg[~reg["index_group_code"].astype(str).isin(_MISSING_INDEX_CODES)]
+    reg = reg[pd.to_numeric(reg["exclusive_area"], errors="coerce") > 0]
+    reg = reg[pd.to_numeric(reg["unit_price"], errors="coerce") > 0]
+    notes: dict = {
+        "use_time": False,
+        "use_fe": False,
+        "use_use": False,
+        "use_floor_control": False,
+        "use_age": False,
+        "age_note": None,
+        "reference_key": "",
+    }
+    if reg.empty:
+        return reg, notes
+
+    for _ in range(200):
+        before_n = len(reg)
+        before_codes = tuple(sorted(reg["index_group_code"].astype(str).unique()))
+        group = reg["index_group_code"].astype(str)
+        reg = reg.loc[group.isin(_codes_at_least(group, MIN_GROUP_FOR_DUMMY))]
+        if reg.empty:
+            break
+        reg = _drop_sparse_levels(reg, _period_series(reg))
+        if "building_key" in reg.columns:
+            reg = _drop_sparse_levels(reg, reg["building_key"])
+        if is_commercial and "building_use" in reg.columns:
+            uses = (
+                reg["building_use"]
+                .astype(str)
+                .str.strip()
+                .replace({"nan": pd.NA, "None": pd.NA, "": pd.NA})
+            )
+            reg = _drop_sparse_levels(reg, uses)
+        if effective_dim != "floor" and "floor_index_code" in reg.columns:
+            reg = _drop_sparse_levels(reg, reg["floor_index_code"])
+        if reg.empty:
+            break
+        if not _age_collinear_with_time(reg):
+            reg = reg.loc[pd.to_numeric(reg["building_age"], errors="coerce").notna()]
+            group = reg["index_group_code"].astype(str)
+            reg = reg.loc[group.isin(_codes_at_least(group, MIN_GROUP_FOR_DUMMY))]
+        if reg.empty:
+            break
+        after_codes = tuple(sorted(reg["index_group_code"].astype(str).unique()))
+        if len(reg) == before_n and after_codes == before_codes:
+            break
+
+    if reg.empty:
+        return reg, notes
+
+    notes["use_time"] = len(_codes_at_least(_period_series(reg), MIN_GROUP_FOR_DUMMY)) >= 2
+    if "building_key" in reg.columns:
+        key_keep = _codes_at_least(reg["building_key"].astype(str), MIN_GROUP_FOR_DUMMY)
+        if len(key_keep) >= 2:
+            notes["use_fe"] = True
+            notes["reference_key"] = str(reg["building_key"].astype(str).value_counts().idxmax())
+    if is_commercial and "building_use" in reg.columns:
+        uses = (
+            reg["building_use"]
+            .astype(str)
+            .str.strip()
+            .replace({"nan": pd.NA, "None": pd.NA, "": pd.NA})
+        )
+        notes["use_use"] = len(_codes_at_least(uses, MIN_GROUP_FOR_DUMMY)) >= 2
+    if effective_dim != "floor" and "floor_index_code" in reg.columns:
+        notes["use_floor_control"] = (
+            len(_codes_at_least(reg["floor_index_code"].astype(str), MIN_GROUP_FOR_DUMMY)) >= 2
+        )
+    notes["use_age"] = not _age_collinear_with_time(reg)
+    if "building_age" in work.columns and work["building_age"].notna().any() and not notes["use_age"]:
+        age = pd.to_numeric(work["building_age"], errors="coerce")
+        if int(age.nunique(dropna=True)) < 2:
+            notes["age_note"] = "연식이 한 값뿐이라 통제에서 뺐습니다."
+        else:
+            notes["age_note"] = "연식이 거래시점과 겹쳐 통제에서 뺐습니다."
+    return reg, notes
+
+
+def _group_count_maps(
+    frame: pd.DataFrame,
+) -> tuple[dict[str, int], dict[str, list[float]]]:
+    counts: dict[str, int] = defaultdict(int)
+    prices: dict[str, list[float]] = defaultdict(list)
+    if frame.empty or "index_group_code" not in frame.columns:
+        return counts, prices
+    for code, price in zip(frame["index_group_code"], frame["unit_price"]):
+        key = str(code)
+        counts[key] += 1
+        prices[key].append(float(price))
+    return counts, prices
+
+
+def _reference_on_sample(
+    reg: pd.DataFrame,
+    reg_counts: dict[str, int],
+    group_specs: list[tuple[str, str, float | None]],
+    *,
+    effective_dim: str,
+) -> tuple[str, str] | None:
+    if reg.empty:
+        return None
+    if effective_dim == "area":
+        areas = pd.to_numeric(reg["exclusive_area"], errors="coerce")
+        med = float(areas.median())
+        nearest = (areas - med).abs().idxmin()
+        code = str(reg.loc[nearest, "index_group_code"])
+        label = str(reg.loc[nearest, "index_group_label"])
+        if reg_counts.get(code, 0) >= MIN_GROUP_FOR_DUMMY:
+            return code, label
+    return _pick_regression_reference(reg_counts, group_specs)
+
+
+def _design_rank(x_const: pd.DataFrame) -> int:
+    arr = x_const.to_numpy(dtype=float)
+    if arr.size == 0:
+        return 0
+    return int(np.linalg.matrix_rank(arr))
+
+
+def _contrast_against_base(
+    model,
+    code: str,
+    base_code: str,
+    omitted_code: str,
+) -> dict | None:
+    """exp(β_code − β_base)×100 과 그 대비의 HC3 신뢰구간·p."""
+    if code == base_code:
+        return None
+    names = list(model.params.index)
+    row = np.zeros(len(names))
+
+    def _pos(group: str) -> int | None:
+        name = f"idx_{group}"
+        return names.index(name) if name in names else None
+
+    if code != omitted_code:
+        pos = _pos(code)
+        if pos is None:
+            return None
+        row[pos] += 1.0
+    if base_code != omitted_code:
+        pos = _pos(base_code)
+        if pos is None:
+            return None
+        row[pos] -= 1.0
+    if not np.any(row):
+        return None
+    tested = model.t_test(row.reshape(1, -1))
+    effect = float(np.asarray(tested.effect).reshape(-1)[0])
+    se = float(np.asarray(tested.sd).reshape(-1)[0])
+    p_value = float(np.asarray(tested.pvalue).reshape(-1)[0])
+    if not np.isfinite(effect) or not np.isfinite(se):
+        return None
+    return {
+        "gamma": round(effect, 4),
+        "p_value": round(p_value, 4) if np.isfinite(p_value) else None,
+        "index": round(float(np.exp(effect) * 100), 1),
+        "index_lo": round(float(np.exp(effect - 1.96 * se) * 100), 1),
+        "index_hi": round(float(np.exp(effect + 1.96 * se) * 100), 1),
+    }
 
 
 def compute_residential_floor_index_regression(
@@ -689,247 +846,201 @@ def compute_residential_floor_index_regression(
 
     n_total = len(work)
     baseline = float(np.median(work["unit_price"].astype(float)))
+    raw_counts, raw_prices = _group_count_maps(work)
+    reg, sample_meta = _regression_sample(
+        work,
+        effective_dim=effective_dim,
+        is_commercial=is_commercial,
+    )
+    if sample_meta.get("age_note"):
+        warnings.append(sample_meta["age_note"])
+    reg_counts, _ = _group_count_maps(reg)
 
-    group_counts: dict[str, int] = defaultdict(int)
-    group_prices: dict[str, list[float]] = defaultdict(list)
-    for _, row in work.iterrows():
-        code = row["index_group_code"]
-        group_counts[code] += 1
-        group_prices[code].append(float(row["unit_price"]))
+    for label, code, _ in group_specs:
+        raw_n = int(raw_counts.get(code, 0))
+        reg_n = int(reg_counts.get(code, 0))
+        if raw_n <= 0 or reg_n >= MIN_GROUP_FOR_DUMMY:
+            continue
+        if raw_n < MIN_GROUP_FOR_DUMMY:
+            warnings.append(f"{label} n={raw_n} — 표본 부족으로 회귀에서 제외, 지수 미산출")
+        else:
+            warnings.append(f"{label} 원자료 {raw_n}건 — 최종 회귀 표본에 남지 않아 지수 미산출")
 
-    if effective_dim == "floor":
-        picked = _pick_regression_reference(group_counts, group_specs)
-        if picked is None:
-            best_label, best_code = max(
+    def _blank(ref_label: str):
+        return _result_with_cells(
+            effective_dim,
+            ref_label,
+            [],
+            n_total,
+            0,
+            None,
+            baseline,
+            _cells_from_regression(
                 group_specs,
-                key=lambda x: group_counts.get(x[1], 0),
-            )[:2]
-            best_count = group_counts.get(best_code, 0)
-            warnings.append(
-                f"회귀 기준({best_label}) 거래 {best_count}건 — "
-                f"최소 {MIN_GROUP_FOR_DUMMY}건 필요, 회귀 지수 미산출"
-            )
-            display_code, display_label = _display_reference_for_mode(effective_floor_mode)
-            return _result_with_cells(
+                reg_counts,
+                raw_prices,
+                "",
+                {},
                 effective_dim,
-                display_label,
-                controls,
-                n_total,
-                0,
-                None,
-                baseline,
-                _cells_fallback(
-                    group_specs,
-                    group_counts,
-                    group_prices,
-                    display_code,
-                    baseline,
-                    effective_dim,
-                ),
-                warnings,
-                floor_mode=effective_floor_mode,
+                raw_counts=raw_counts,
+                publish=False,
+            ),
+            list(warnings),
+            floor_mode=effective_floor_mode if effective_dim == "floor" else None,
+        )
+
+    picked = _reference_on_sample(
+        reg,
+        reg_counts,
+        group_specs,
+        effective_dim=effective_dim,
+    )
+    if picked is None:
+        if effective_dim == "floor":
+            _, unavailable_label = _display_reference_for_mode(effective_floor_mode)
+        else:
+            unavailable_label = reference_label or "기준"
+        warnings.append(f"비교할 구간이 {MIN_GROUP_FOR_DUMMY}건 미만이라 지수 산출 불가")
+        return _blank(unavailable_label)
+
+    reference_code, reference_label = picked
+    if effective_dim == "floor":
+        display_code, display_label = _display_reference_for_mode(effective_floor_mode)
+    else:
+        display_code, display_label = reference_code, reference_label
+    if int(reg_counts.get(display_code, 0)) >= MIN_GROUP_FOR_DUMMY:
+        base_code, base_label = display_code, display_label
+    else:
+        base_code, base_label = reference_code, reference_label
+        if effective_dim == "floor":
+            warnings.append(
+                f"{display_label}이 최종 회귀 표본에 없습니다. 지수·신뢰구간·p는 {base_label}=100 대비입니다."
             )
-        reference_code, reference_label = picked
 
-    ref_count = group_counts.get(reference_code, 0)
-    if ref_count < MIN_GROUP_FOR_DUMMY:
-        warnings.append(
-            f"기준({reference_label}) 거래 {ref_count}건 — "
-            f"최소 {MIN_GROUP_FOR_DUMMY}건 필요, 회귀 지수 미산출"
-        )
-        display_ref, display_label = (
-            _display_reference_for_mode(effective_floor_mode)
-            if effective_dim == "floor"
-            else (reference_code, reference_label)
-        )
-        return _result_with_cells(
-            effective_dim,
-            display_label,
-            controls,
-            n_total,
-            0,
-            None,
-            baseline,
-            _cells_fallback(group_specs, group_counts, group_prices, display_ref, baseline, effective_dim),
-            warnings,
-            floor_mode=effective_floor_mode if effective_dim == "floor" else None,
-        )
-
-    reg = work.copy()
-    reg = reg[reg["exclusive_area"].astype(float) > 0]
-    if reg.empty:
-        warnings.append("전용면적 유효 거래 없음")
-        fb_ref, fb_label = (
-            _display_reference_for_mode(effective_floor_mode)
-            if effective_dim == "floor"
-            else (reference_code, reference_label)
-        )
-        return _result_with_cells(
-            effective_dim,
-            fb_label,
-            controls,
-            n_total,
-            0,
-            None,
-            baseline,
-            _cells_fallback(group_specs, group_counts, group_prices, fb_ref, baseline, effective_dim),
-            warnings,
-            floor_mode=effective_floor_mode if effective_dim == "floor" else None,
-        )
-
+    reg = reg.copy()
     reg["ln_unit_price"] = np.log(reg["unit_price"].astype(float))
     parts: list[pd.DataFrame] = []
 
-    # 면적 차원에서는 연속 ln(면적)과 면적 버킷 더미가 면적 효과를 이중으로 잡으므로
-    # ln(면적) 통제를 빼고 버킷 더미만 둔다. 그 외 차원은 규모 프리미엄을 통제한다.
     if effective_dim != "area":
-        reg["ln_exclusive_area"] = np.log(reg["exclusive_area"].astype(float))
-        parts.append(reg[["ln_exclusive_area"]])
-        controls.append("ln_gross_area" if is_commercial else "ln_exclusive_area")
+        ln_area = np.log(reg["exclusive_area"].astype(float))
+        if int(pd.Series(ln_area).nunique(dropna=True)) >= 2:
+            reg["ln_exclusive_area"] = ln_area
+            parts.append(reg[["ln_exclusive_area"]])
+            controls.append("ln_gross_area" if is_commercial else "ln_exclusive_area")
+        else:
+            warnings.append("면적이 한 값뿐이라 ln(면적) 통제를 뺐습니다.")
 
-    if reg["building_age"].notna().any():
+    if sample_meta["use_age"] and "building_age" in reg.columns:
         parts.append(reg[["building_age"]].astype(float))
         controls.append("building_age")
 
-    _add_time_dummies(reg, parts, controls)
+    if sample_meta["use_time"]:
+        _add_time_dummies(reg, parts, controls)
 
-    if effective_dim != "floor":
+    if sample_meta["use_floor_control"]:
         _add_floor_control_dummies(reg, parts, controls, floor_mode=control_floor_mode)
 
-    if is_commercial:
+    if sample_meta["use_use"]:
         _add_building_use_dummies(reg, parts, controls)
 
-    ref_bk = ""
-    if "building_key" in reg.columns and reg["building_key"].nunique() > 1:
-        ref_bk = str(reg["building_key"].value_counts().idxmax())
-        _add_building_fe(reg, parts, controls, reference_key=ref_bk)
+    if sample_meta["use_fe"] and sample_meta["reference_key"]:
+        _add_building_fe(reg, parts, controls, reference_key=sample_meta["reference_key"])
 
     dummy_codes = [
         code
         for _, code, _ in group_specs
-        if code != reference_code and group_counts.get(code, 0) >= MIN_GROUP_FOR_DUMMY
+        if code != reference_code and int(reg_counts.get(code, 0)) >= MIN_GROUP_FOR_DUMMY
     ]
-    for label, code, _ in group_specs:
-        if code != reference_code and 0 < group_counts.get(code, 0) < MIN_GROUP_FOR_DUMMY:
-            warnings.append(f"{label} n={group_counts[code]} — 구간 표본 부족, 지수 미산출")
-
     for code in dummy_codes:
         col = f"idx_{code}"
-        reg[col] = (reg["index_group_code"] == code).astype(float)
+        reg[col] = (reg["index_group_code"].astype(str) == code).astype(float)
         parts.append(reg[[col]])
 
-    if not dummy_codes:
-        warnings.append("회귀에 포함할 구간(기준 제외)이 없습니다.")
-        fb_ref, fb_label = (
-            _display_reference_for_mode(effective_floor_mode)
-            if effective_dim == "floor"
-            else (reference_code, reference_label)
-        )
-        return _result_with_cells(
-            effective_dim,
-            fb_label,
-            controls,
-            n_total,
-            0,
-            None,
-            baseline,
-            _cells_fallback(group_specs, group_counts, group_prices, fb_ref, baseline, effective_dim),
-            warnings,
-            floor_mode=effective_floor_mode if effective_dim == "floor" else None,
-        )
+    if not dummy_codes or not parts:
+        warnings.append("비교할 구간이 기준 하나만 남아 지수 산출 불가")
+        return _blank(base_label)
 
     X = pd.concat(parts, axis=1).astype(float)
     y = reg["ln_unit_price"]
     valid = X.notna().all(axis=1) & y.notna()
     X = X.loc[valid]
     y = y.loc[valid]
+    fitted_counts, _ = _group_count_maps(reg.loc[valid])
+    identified_codes = [reference_code, *dummy_codes]
+    if any(int(fitted_counts.get(code, 0)) < MIN_GROUP_FOR_DUMMY for code in identified_codes):
+        warnings.append("결측을 뺀 뒤 구간 표본이 부족해 지수 산출 불가")
+        reg_counts = fitted_counts
+        return _blank(base_label)
+
+    varying = [col for col in X.columns if int(X[col].nunique(dropna=True)) >= 2]
+    if any(col.startswith("idx_") and col not in varying for col in X.columns):
+        warnings.append("층 구간이 다른 항과 겹쳐 지수 산출 불가")
+        return _blank(base_label)
+    X = X[varying]
+    X = sm.add_constant(X, has_constant="add")
+    if _design_rank(X) < X.shape[1] and "building_age" in X.columns:
+        warnings.append("연식이 다른 항과 겹쳐 통제에서 뺐습니다.")
+        controls[:] = [name for name in controls if name != "building_age"]
+        X = X.drop(columns=["building_age"])
+    if _design_rank(X) < X.shape[1] or len(y) - _design_rank(X) < 1:
+        warnings.append("설계행렬 순위 또는 잔여 자유도가 부족해 지수 산출 불가")
+        return _blank(base_label)
 
     if len(y) < 30:
         warnings.append(f"회귀 표본 n={len(y)} — 참고용 (권장 n≥30)")
 
-    X = sm.add_constant(X, has_constant="add")
     try:
-        # HC3 강건표준오차 — 부동산 단가의 이분산성 대응 (계수는 OLS와 동일, SE만 보정)
         model = sm.OLS(y, X, missing="drop").fit(cov_type="HC3")
     except Exception as exc:
         warnings.append(f"회귀 실패: {exc}")
-        fb_ref, fb_label = (
-            _display_reference_for_mode(effective_floor_mode)
-            if effective_dim == "floor"
-            else (reference_code, reference_label)
-        )
-        return _result_with_cells(
-            effective_dim,
-            fb_label,
-            controls,
-            n_total,
-            0,
-            None,
-            baseline,
-            _cells_fallback(group_specs, group_counts, group_prices, fb_ref, baseline, effective_dim),
-            warnings,
-            floor_mode=effective_floor_mode if effective_dim == "floor" else None,
-        )
+        return _blank(base_label)
+    if not np.isfinite(np.asarray(model.params, dtype=float)).all():
+        warnings.append("계수가 식별되지 않아 지수 산출 불가")
+        return _blank(base_label)
 
     diagnostics, diag_warnings = _collinearity_diagnostics(X)
     warnings.extend(diag_warnings)
 
     coef_map: dict[str, dict] = {}
-    for code in dummy_codes:
-        col = f"idx_{code}"
-        if col not in model.params.index:
+    for code in identified_codes:
+        if code == base_code:
             continue
-        gamma = float(model.params[col])
-        se = float(model.bse[col]) if col in model.bse.index else None
-        p = float(model.pvalues[col]) if col in model.pvalues.index else None
-        idx_pct = round(float(np.exp(gamma)) * 100, 1)
-        idx_lo = round(float(np.exp(gamma - 1.96 * se)) * 100, 1) if se is not None else None
-        idx_hi = round(float(np.exp(gamma + 1.96 * se)) * 100, 1) if se is not None else None
-        coef_map[code] = {
-            "gamma": round(gamma, 4),
-            "p_value": round(p, 4) if p is not None else None,
-            "index": idx_pct,
-            "index_lo": idx_lo,
-            "index_hi": idx_hi,
-        }
+        try:
+            contrast = _contrast_against_base(model, code, base_code, reference_code)
+        except Exception:
+            contrast = None
+        if contrast is None:
+            warnings.append("기준 대비를 계산하지 못해 지수 산출 불가")
+            return _blank(base_label)
+        coef_map[code] = contrast
 
     cells = _cells_from_regression(
         group_specs,
-        group_counts,
-        group_prices,
-        reference_code,
+        reg_counts,
+        raw_prices,
+        base_code,
         coef_map,
         effective_dim,
+        raw_counts=raw_counts,
+        publish=True,
     )
-
-    result_warnings = list(warnings)
-    regression_reference_floor: str | None = None
-    reference_floor_label = reference_label
-    if effective_dim == "floor":
-        display_code, display_label = _display_reference_for_mode(effective_floor_mode)
-        cells, norm_warnings, reference_floor_label = _apply_floor_display_reference(
-            cells,
-            regression_ref=reference_code,
-            coef_map=coef_map,
-            group_specs=group_specs,
-            group_counts=group_counts,
-            display_code=display_code,
-            display_label=display_label,
+    regression_reference_floor = None
+    if effective_dim == "floor" and reference_code != base_code:
+        regression_reference_floor = reference_label
+        warnings.append(
+            f"회귀에서 뺀 구간은 {reference_label}입니다. 지수·신뢰구간·p는 {base_label}=100 대비입니다."
         )
-        result_warnings.extend(norm_warnings)
-        if reference_code != display_code:
-            regression_reference_floor = reference_label
 
     return _result_with_cells(
         effective_dim,
-        reference_floor_label,
+        base_label,
         controls,
         n_total,
         int(model.nobs),
         round(float(model.rsquared), 4) if model.rsquared is not None else None,
         baseline,
         cells,
-        result_warnings,
+        list(warnings),
         regression_reference_floor=regression_reference_floor,
         floor_mode=effective_floor_mode if effective_dim == "floor" else None,
         diagnostics=diagnostics,
@@ -994,18 +1105,22 @@ def _cells_from_regression(
     reference_code: str,
     coef_map: dict[str, dict],
     dimension: str,
+    *,
+    raw_counts: dict[str, int] | None = None,
+    publish: bool = True,
 ) -> list[dict]:
     cells = []
     for label, code, sort_key in group_specs:
-        count = group_counts.get(code, 0)
+        count = int(group_counts.get(code, 0))
+        count_raw = int(raw_counts.get(code, count)) if raw_counts is not None else count
         prices = group_prices.get(code, [])
         mean_p = float(np.mean(prices)) if prices else None
-        is_ref = code == reference_code
+        is_ref = publish and code == reference_code and count >= MIN_GROUP_FOR_DUMMY
         coef = coef_map.get(code)
         if is_ref:
             index_val = 100.0
             gamma = p_value = index_lo = index_hi = None
-        elif coef:
+        elif publish and coef and count >= MIN_GROUP_FOR_DUMMY:
             index_val = coef["index"]
             gamma = coef["gamma"]
             p_value = coef["p_value"]
@@ -1017,6 +1132,7 @@ def _cells_from_regression(
         cell: dict = {
             "label": label,
             "count": count,
+            "count_raw": count_raw,
             "mean_unit_price": _rnd_price(mean_p) if mean_p is not None else None,
             "index": index_val,
             "is_reliable": count >= MIN_RELIABLE_BUILDING_STATS,
@@ -1046,36 +1162,3 @@ def _cells_from_regression(
     cells.sort(key=_sort_key)
     return cells
 
-
-def _cells_fallback(
-    group_specs: list[tuple[str, str, float | None]],
-    group_counts: dict[str, int],
-    group_prices: dict[str, list[float]],
-    reference_code: str,
-    baseline: float,
-    dimension: str,
-) -> list[dict]:
-    cells = []
-    for label, code, sort_key in group_specs:
-        count = group_counts.get(code, 0)
-        prices = group_prices.get(code, [])
-        mean_p = float(np.mean(prices)) if prices else None
-        is_ref = code == reference_code
-        cells.append(
-            {
-                "label": label,
-                "floor": sort_key if dimension == "floor" else None,
-                "dong": label if dimension == "dong" and label != "—" else None,
-                "area": sort_key if dimension == "area" else None,
-                "count": count,
-                "mean_unit_price": _rnd_price(mean_p) if mean_p is not None else None,
-                "index": 100.0 if (is_ref and count > 0) else None,
-                "is_reliable": count >= MIN_RELIABLE_BUILDING_STATS,
-                "is_reference": is_ref and count > 0,
-                "gamma": None,
-                "p_value": None,
-                "index_lo": None,
-                "index_hi": None,
-            }
-        )
-    return cells

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import re
 from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -93,44 +94,73 @@ def _orig_scale_metrics(
 
 
 def _cv_price_metrics(
-    y_price: np.ndarray, x_const: np.ndarray, model_type: str, *, k: int = 5, seed: int = 42
+    y_price: np.ndarray, x_const: np.ndarray, model_type: str, *, k: int = 5, seed: int = 42,
+    diagnostics: dict | None = None,
 ) -> tuple[float | None, float | None]:
-    """5-fold 교차검증 MAPE(%)·RMSE(만원), 원척도."""
+    """전체 평가 거래를 검증한 경우만 원척도 MAPE·RMSE를 반환한다."""
     y = np.asarray(y_price, dtype=float)
     X = np.asarray(x_const, dtype=float)
-    n = y.size
+    valid = np.isfinite(y) & np.isfinite(X).all(axis=1)
+    input_n = len(y)
+    y, X = y[valid], X[valid]
+    n = len(y)
+    report = dict(status="unavailable", requested_folds=k, attempted_folds=0, completed_folds=0,
+        eligible_n=n, evaluated_n=0, excluded_n=input_n-n, reason_code=None, reason=None, failures=[])
+
+    def finish(code=None, reason=None, values=(None, None)):
+        report.update(reason_code=code, reason=reason, status="available" if code is None else "unavailable")
+        if diagnostics is not None:
+            diagnostics.clear()
+            diagnostics.update(report)
+        return values
+
     if n < CV_MIN_N:
-        return None, None
-    idx = np.arange(n)
-    rng = np.random.default_rng(seed)
-    rng.shuffle(idx)
+        return finish("insufficient_sample", f"유효 거래 {n}건으로 교차검증 최소 {CV_MIN_N}건에 못 미칩니다.")
+    if k < 2 or k > n:
+        return finish("invalid_split", "유효 거래 수에 맞는 검증 분할을 구성하지 못했습니다.")
+    if (y <= 0).any():
+        return finish("invalid_target", "양수가 아닌 거래금액이 있어 금액 오차율을 검증하지 못했습니다.")
+    idx = np.random.default_rng(seed).permutation(n)
     folds = np.array_split(idx, k)
     preds = np.full(n, np.nan)
     y_fit = np.log(y) if model_type == "log" else y
-    for fold in folds:
-        test = fold
-        train = np.setdiff1d(idx, fold, assume_unique=False)
+    for fold_number, test in enumerate(folds, start=1):
+        report["attempted_folds"] += 1
+        train = np.setdiff1d(idx, test, assume_unique=False)
+        code, reason = None, None
         if train.size <= X.shape[1] + 1:
-            continue
-        try:
-            m = sm.OLS(y_fit[train], X[train]).fit()
-            p = np.asarray(m.predict(X[test]), dtype=float)
-            if model_type == "log":
-                p = np.exp(p) * _duan_smearing(m.resid)
-            preds[test] = p
-        except Exception:
-            continue
-    mask = np.isfinite(preds) & np.isfinite(y)
-    if mask.sum() < 2:
-        return None, None
-    err = y[mask] - preds[mask]
-    nz = y[mask] != 0
-    mape = float(np.mean(np.abs(err[nz]) / y[mask][nz])) * 100 if nz.any() else None
+            code, reason = "insufficient_training", "설명변수 수에 비해 학습 거래가 부족합니다."
+        else:
+            from app.regression_sample_judge import rows_are_identified
+
+            if not rows_are_identified(X[train], X[test]):
+                code, reason = "unseen_category", "검증 거래에 학습되지 않은 범주가 있어 이 분할을 완료로 보지 않습니다."
+        if code is None:
+            try:
+                m = sm.OLS(y_fit[train], X[train]).fit()
+                p = np.asarray(m.predict(X[test]), dtype=float)
+                if model_type == "log":
+                    p = np.exp(p) * _duan_smearing(m.resid)
+                if p.shape != (len(test),) or not np.isfinite(p).all():
+                    code, reason = "invalid_prediction", "평가 거래 전체의 유한한 예측값을 확보하지 못했습니다."
+                else:
+                    preds[test] = p
+                    report["completed_folds"] += 1
+                    report["evaluated_n"] += len(test)
+            except Exception:
+                code, reason = "fit_failure", "해당 분할에서 모형 적합 또는 예측이 실패했습니다."
+        if code:
+            report["failures"].append(dict(fold=fold_number, code=code, reason=reason))
+    if report["completed_folds"] != k or not np.isfinite(preds).all():
+        codes = {f["code"] for f in report["failures"]}
+        code = next(iter(codes)) if len(codes) == 1 else "incomplete_validation"
+        return finish(code, f"{k}개 분할 중 {report['completed_folds']}개를 완료했습니다. 전체 교차검증 오차는 제공하지 않습니다.")
+    err = y - preds
+    mape = float(np.mean(np.abs(err) / np.abs(y))) * 100
     rmse = float(np.sqrt(np.mean(err**2)))
-    return (
-        round(mape, 2) if mape is not None else None,
-        round(rmse, 1) if rmse is not None else None,
-    )
+    if not np.isfinite([mape, rmse]).all():
+        return finish("invalid_metric", "전체 예측 후 유한한 오차 지표를 계산하지 못했습니다.")
+    return finish(values=(round(mape, 2), round(rmse, 1)))
 
 
 def _confidence_rating(mape: float | None, n: int) -> tuple[int, str]:
@@ -153,16 +183,20 @@ def fit_model_price_metrics(
     x_const: pd.DataFrame,
     model,
     model_type: str,
-) -> dict[str, float | str | None]:
+) -> dict[str, Any]:
     """선택 모델 1회 적합 기준 원척도 MAPE·adj R² (이중 OLS 비교 없음)."""
     k_params = max(x_const.shape[1] - 1, 0)
     pred = _insample_price_pred(model, x_const, model_type)
     adj, mape, rmse = _orig_scale_metrics(y.to_numpy(), pred, k_params)
-    cv_mape, cv_rmse = _cv_price_metrics(y.to_numpy(), x_const.to_numpy(), model_type)
+    diagnostics = {}
+    cv_mape, cv_rmse = _cv_price_metrics(y.to_numpy(), x_const.to_numpy(), model_type, diagnostics=diagnostics)
     basis: str = "cv" if cv_mape is not None else "insample"
     return {
         "price_adj_r_squared": adj,
         "mape": cv_mape if cv_mape is not None else mape,
+        "in_sample_mape": mape,
+        "cv_mape": cv_mape,
+        "cv_diagnostics": diagnostics,
         "rmse": cv_rmse if cv_rmse is not None else rmse,
         "metric_basis": basis,
     }
@@ -198,7 +232,8 @@ def _build_model_comparison(
             continue
         pred = _insample_price_pred(model, x_const, mt)
         adj, mape, rmse = _orig_scale_metrics(y.to_numpy(), pred, k_params)
-        cmape, crmse = _cv_price_metrics(y.to_numpy(), x_const.to_numpy(), mt)
+        diagnostics = {}
+        cmape, crmse = _cv_price_metrics(y.to_numpy(), x_const.to_numpy(), mt, diagnostics=diagnostics)
         cv_mape[mt] = cmape
         metrics[mt] = ModelMetrics(
             model_type=mt,
@@ -206,7 +241,8 @@ def _build_model_comparison(
             mape=mape,
             rmse=rmse,
             cv_mape=cmape,
-            cv_folds=5 if cmape is not None else 0,
+            cv_folds=diagnostics["completed_folds"],
+            cv_diagnostics=diagnostics,
             cv_method="kfold_random" if cmape is not None else None,
         )
 
@@ -421,6 +457,7 @@ def _add_nested_dong_columns(
 
 @dataclass
 class RegressionDesignMeta:
+    variable_states: dict[str, str] = field(default_factory=dict)
     column_labels: dict[str, str] = field(default_factory=dict)
     floor_mode: str = "relative"
     max_floor: float | None = None
@@ -438,6 +475,8 @@ class RegressionDesignMeta:
     building_counts: dict[str, int] = field(default_factory=dict)
     continuous_ranges: dict[str, tuple[float | None, float | None]] = field(default_factory=dict)
     floor_dummy_cols: list[str] = field(default_factory=list)
+    floor_reference_code: str | None = None
+    floor_trained_codes: list[str] = field(default_factory=list)
     structure_reference: str | None = None
     structure_dummy_cols: list[str] = field(default_factory=list)
     asset_type_reference: str | None = None
@@ -481,28 +520,55 @@ _FACTORY_FLOOR_LABELS: dict[str, str] = {
 }
 
 
+def _floor_level_token(floor: float) -> str:
+    value = float(floor)
+    return str(int(value)) if value == int(value) else f"{value:g}"
+
+
+def _categorical_floor_support(
+    levels: pd.Series,
+    columns: list[str],
+    column_name,
+) -> tuple[str | None, list[str]]:
+    """학습에 있는 층 열과, 더미에서 뺀 기준 열."""
+    present: list[str] = []
+    seen: set[str] = set()
+    for value in levels.dropna().unique():
+        name = column_name(value)
+        if not name or name in seen:
+            continue
+        present.append(str(name))
+        seen.add(str(name))
+    if len(present) == 1:
+        return present[0], present
+    column_set = {str(c) for c in columns}
+    omitted = [name for name in present if name not in column_set]
+    return (omitted[0] if len(omitted) == 1 else None), present
+
+
 def _labeled_floor_dummies(
     codes: pd.Series,
     label_map: dict[str, str],
-) -> tuple[pd.DataFrame, dict[str, str], list[str]]:
+) -> tuple[pd.DataFrame, dict[str, str], list[str], str | None, list[str]]:
     valid = codes.dropna()
     if valid.nunique() < 2:
-        return pd.DataFrame(index=codes.index), {}, []
+        reference, trained = _categorical_floor_support(codes, [], lambda value: str(value))
+        return pd.DataFrame(index=codes.index), {}, [], reference, trained
     dummies = pd.get_dummies(codes, prefix="", prefix_sep="", drop_first=True)
+    dummies.columns = dummies.columns.astype(str)
     missing = codes.isna()
     if missing.any() and not dummies.empty:
         dummies = dummies.astype(float)
         dummies.loc[missing, :] = np.nan
     labels = {c: f"{label_map.get(c, c)} (기준 대비)" for c in dummies.columns}
-    return dummies, labels, list(dummies.columns)
+    columns = list(dummies.columns)
+    reference, trained = _categorical_floor_support(codes, columns, lambda value: str(value))
+    return dummies, labels, columns, reference, trained
 
 
-def _add_contract_period_columns(
-    work: pd.DataFrame,
-) -> tuple[pd.DataFrame, dict[str, str], str | None]:
-    """반기 더미. 거래가 가장 많은 반기를 뺀다. 반기가 하나면 열을 만들지 않는다."""
+def _period_codes(work: pd.DataFrame) -> pd.Series | None:
     if "contract_year" not in work.columns:
-        return pd.DataFrame(index=work.index), {}, None
+        return None
     months = (
         work["contract_month"]
         if "contract_month" in work.columns
@@ -518,7 +584,16 @@ def _add_contract_period_columns(
             codes.append(str(y))
         else:
             codes.append(f"{y}H{1 if int(month) <= 6 else 2}")
-    series = pd.Series(codes, index=work.index)
+    return pd.Series(codes, index=work.index)
+
+
+def _add_contract_period_columns(
+    work: pd.DataFrame,
+) -> tuple[pd.DataFrame, dict[str, str], str | None]:
+    """반기 더미. 거래가 가장 많은 반기를 뺀다. 반기가 하나면 열을 만들지 않는다."""
+    series = _period_codes(work)
+    if series is None:
+        return pd.DataFrame(index=work.index), {}, None
     counts = series.dropna().value_counts()
     if len(counts) < 2:
         return pd.DataFrame(index=work.index), {}, None
@@ -541,17 +616,18 @@ def _add_floor_columns(
     mode: str,
     *,
     max_floor: float | None = None,
-) -> tuple[pd.DataFrame, dict[str, str], list[str]]:
-    """Returns dummies, labels, dummy column names (excl. reference)."""
+) -> tuple[pd.DataFrame, dict[str, str], list[str], str | None, list[str]]:
+    """더미, 라벨, 더미 열, 기준 층 열, 학습에 있는 층 열."""
     labels: dict[str, str] = {}
+    empty = pd.DataFrame(index=work.index)
     if "floor" not in work.columns or not work["floor"].notna().any():
-        return pd.DataFrame(index=work.index), labels, []
+        return empty, labels, [], None, []
 
     if mode == "linear":
         fl = pd.to_numeric(work["floor"], errors="coerce")
         out = fl.to_frame("floor")
         labels["floor"] = "층(선형)"
-        return out, labels, ["floor"]
+        return out, labels, ["floor"], None, []
 
     fl = work["floor"].astype(float)
 
@@ -588,19 +664,20 @@ def _add_floor_columns(
     if mode == "grouped":
         grp = fl.apply(lambda x: _floor_group_label(x) if pd.notna(x) else None)
         dummies = pd.get_dummies(grp, prefix="", prefix_sep="", drop_first=True)
+        column_name = lambda value: str(value)
     else:
         floor_str = fl.apply(
-            lambda x: (
-                str(int(x))
-                if pd.notna(x) and float(x) == int(float(x))
-                else (f"{float(x):g}" if pd.notna(x) else None)
-            )
+            lambda x: _floor_level_token(x) if pd.notna(x) else None
         )
         dummies = pd.get_dummies(floor_str, prefix="floor", drop_first=True)
+        column_name = lambda value: f"floor_{value}"
 
+    dummies.columns = dummies.columns.astype(str)
     dummy_cols = list(dummies.columns)
+    levels = grp if mode == "grouped" else floor_str
+    reference, trained = _categorical_floor_support(levels, dummy_cols, column_name)
     if dummies.empty:
-        return pd.DataFrame(index=work.index), labels, []
+        return pd.DataFrame(index=work.index), labels, [], reference, trained
 
     for c in dummies.columns:
         if c.startswith("floor_grp_"):
@@ -609,7 +686,21 @@ def _add_floor_columns(
             labels[c] = _REL_FLOOR_LABELS.get(c, c) + " (기준 대비)"
         else:
             labels[c] = f"층 {c.replace('floor_', '')} (기준 대비)"
-    return dummies, labels, dummy_cols
+    return dummies, labels, dummy_cols, reference, trained
+
+
+def _predict_floor_column(floor: float, mode: str, max_floor: float) -> str | None:
+    if mode == "relative":
+        return relative_floor_group(floor, max_floor)
+    if mode == "rowhouse":
+        return rowhouse_floor_group(floor, max_floor)
+    if mode == "shop":
+        return _shop_floor_code(floor)
+    if mode == "factory":
+        return _factory_floor_code(floor)
+    if mode == "grouped":
+        return _floor_group_label(floor)
+    return f"floor_{_floor_level_token(floor)}"
 
 
 def _floor_row_for_predict(
@@ -617,49 +708,37 @@ def _floor_row_for_predict(
     mode: str,
     max_floor: float,
     dummy_cols: list[str],
+    *,
+    reference_code: str | None = None,
+    trained_codes: list[str] | None = None,
 ) -> dict[str, float]:
     out = {c: 0.0 for c in dummy_cols}
-    if floor is None or pd.isna(floor):
-        return out
-    f = float(floor)
     if mode == "linear":
-        if "floor" in out:
-            out["floor"] = f
+        if floor is not None and not pd.isna(floor) and "floor" in out:
+            out["floor"] = float(floor)
         return out
-    if mode == "relative":
-        code = relative_floor_group(f, max_floor)
-        if code in out:
-            out[code] = 1.0
+    trained = set(trained_codes or [])
+    if floor is None or pd.isna(floor):
+        if trained:
+            raise ValueError("모형에 포함된 층을 선택해 주세요.")
         return out
-    if mode == "rowhouse":
-        code = rowhouse_floor_group(f, max_floor)
-        if code and code in out:
-            out[code] = 1.0
+    code = _predict_floor_column(float(floor), mode, max_floor)
+    if trained and (not code or code not in trained):
+        raise ValueError("모형에 포함된 층을 선택해 주세요.")
+    if reference_code and code == reference_code:
         return out
-    if mode == "shop":
-        code = _shop_floor_code(f)
-        if code and code in out:
-            out[code] = 1.0
+    if code and code in out:
+        out[code] = 1.0
         return out
-    if mode == "factory":
-        code = _factory_floor_code(f)
-        if code and code in out:
-            out[code] = 1.0
-        return out
-    if mode == "grouped":
-        grp = _floor_group_label(f)
-        if grp in out:
-            out[grp] = 1.0
-        return out
-    key = str(int(f)) if f == int(f) else f"{f:g}"
-    col = f"floor_{key}"
-    if col in out:
-        out[col] = 1.0
+    if trained:
+        raise ValueError("모형에 포함된 층을 선택해 주세요.")
     return out
 
 
 def _prepare_work(df: pd.DataFrame, req: CollectiveRegressionRequest) -> pd.DataFrame:
     work = df.copy()
+    if "transaction_id" in work.columns:
+        work = work.sort_values("transaction_id", kind="stable").reset_index(drop=True)
     work = work.dropna(subset=["price"])
     if req.exclude_outliers_iqr and len(work) >= 4:
         up = work["unit_price"].astype(float)
@@ -703,6 +782,7 @@ def _resolve_entering_attrs(
     work: pd.DataFrame,
     req: CollectiveRegressionRequest,
     warnings: list[str],
+    states: dict[str, str] | None = None,
 ) -> tuple[pd.DataFrame, set[str]]:
     v = req.variables
     entering: set[str] = set()
@@ -710,17 +790,26 @@ def _resolve_entering_attrs(
         if not getattr(v, flag, False):
             continue
         if col not in work.columns:
+            if states is not None:
+                states[flag] = "no_data"
             warnings.append(f"{label} 데이터 없음 — 생략")
             continue
         grain = _building_level_values(work, col)
         n_unique = int(grain.nunique(dropna=True))
         if n_unique < 2:
-            if "building_key" not in work.columns or work["building_key"].nunique() <= 1:
+            if states is not None:
+                states[flag] = "no_data" if not work[col].notna().any() else (
+                    "not_identifiable" if "building_key" not in work.columns or work["building_key"].nunique() <= 1 else "constant")
+            if not work[col].notna().any():
+                warnings.append(f"{label} 데이터 없음 — 생략")
+            elif "building_key" not in work.columns or work["building_key"].nunique() <= 1:
                 warnings.append(f"{label} — 단지 상수라 단일 단지에서는 식별되지 않습니다")
             else:
                 warnings.append(f"{label} — 단지 간 차이가 없어 생략")
             continue
         entering.add(col)
+        if states is not None:
+            states[flag] = "included"
 
     drop_cols = [c for c in entering if c in _ATTR_CONTINUOUS]
     if drop_cols:
@@ -735,6 +824,9 @@ def _resolve_entering_attrs(
             if int(grain.nunique(dropna=True)) >= 2:
                 still.add(col)
             else:
+                if states is not None:
+                    flag = next(flag for flag, c, _ in _ATTR_FLAG_COLS if c == col)
+                    states[flag] = "missing_after_filter"
                 label = next(lb for _, c, lb in _ATTR_FLAG_COLS if c == col)
                 warnings.append(f"{label} — 결측 제외 후 단지 간 차이가 없어 생략")
         entering = still
@@ -860,6 +952,65 @@ def _add_asset_type_dummies(
     meta.asset_type_dummy_cols = dummy_cols
 
 
+def restrict_sparse_training_rows(
+    work: pd.DataFrame,
+    *,
+    group_col: str | None,
+    group_label: str,
+    labels: dict[str, str] | None = None,
+    use_period: bool,
+    minimum: int = 5,
+) -> tuple[pd.DataFrame, list[str]]:
+    """5건 미만 단지·cluster·반기 거래는 기준 범주로 남기지 않고 학습에서 뺀다."""
+    names = labels or {}
+    notes: list[str] = []
+    seen: set[str] = set()
+    current = work
+    for _ in range(40):
+        before = len(current)
+        if group_col and group_col in current.columns:
+            keys = current[group_col].astype(str)
+            if keys.nunique() > 1:
+                counts = keys.value_counts()
+                small = [str(key) for key, count in counts.items() if int(count) < minimum]
+                large = {str(key) for key, count in counts.items() if int(count) >= minimum}
+                if small and large:
+                    for key in small:
+                        note = (
+                            f"{group_label} 제외 — {names.get(key, key[:12])} n={int(counts[key])} "
+                            f"(최소 {minimum}건), 학습에서 제외"
+                        )
+                        if note not in seen:
+                            notes.append(note)
+                            seen.add(note)
+                    current = current.loc[keys.isin(large)].copy()
+        if use_period:
+            series = _period_codes(current)
+            if series is not None:
+                counts = series.dropna().value_counts()
+                large_periods = {str(code) for code, count in counts.items() if int(count) >= minimum}
+                small_periods = [str(code) for code, count in counts.items() if int(count) < minimum]
+                if large_periods and (small_periods or bool(series.isna().any())):
+                    for code in sorted(small_periods):
+                        note = (
+                            f"거래시점 제외 — {code} n={int(counts[code])} "
+                            f"(최소 {minimum}건), 학습에서 제외"
+                        )
+                        if note not in seen:
+                            notes.append(note)
+                            seen.add(note)
+                    missing = int(series.isna().sum())
+                    if missing:
+                        note = f"거래시점 없음 {missing}건, 학습에서 제외"
+                        if note not in seen:
+                            notes.append(note)
+                            seen.add(note)
+                    current = current.loc[series.isin(large_periods)].copy()
+        if len(current) == before:
+            break
+    return current, notes
+
+
 def _build_design_matrix(
     work: pd.DataFrame,
     req: CollectiveRegressionRequest,
@@ -874,7 +1025,7 @@ def _build_design_matrix(
     labels: dict[str, str] = {"const": "절편"}
     parts: list[pd.DataFrame] = []
 
-    work, entering_attrs = _resolve_entering_attrs(work, req, warnings)
+    work, entering_attrs = _resolve_entering_attrs(work, req, warnings, states=meta.variable_states)
     meta.used_building_attrs = bool(entering_attrs)
     if work.empty:
         return (
@@ -886,6 +1037,24 @@ def _build_design_matrix(
         )
 
     display_names = building_display_names or {}
+    use_building_fe = (
+        cohort_mode
+        and not entering_attrs
+        and "building_key" in work.columns
+        and work["building_key"].nunique() > 1
+    )
+    building_names = {
+        str(key): display_names.get(str(key), str(key)[:12])
+        for key in (work["building_key"].astype(str).unique() if use_building_fe else [])
+    }
+    work, drop_notes = restrict_sparse_training_rows(
+        work,
+        group_col="building_key" if use_building_fe else None,
+        group_label="단지 FE",
+        labels=building_names,
+        use_period=bool(getattr(req.variables, "contract_period", False)),
+    )
+    warnings.extend(drop_notes)
     if "building_key" in work.columns:
         for bk, cnt in work.groupby("building_key").size().items():
             meta.building_counts[str(bk)] = int(cnt)
@@ -920,6 +1089,8 @@ def _build_design_matrix(
             meta.continuous_ranges["building_age"] = (rng.min, rng.max)
 
     floor_dummy_cols: list[str] = []
+    floor_reference_code: str | None = None
+    floor_trained_codes: list[str] = []
     if req.variables.floor and work["floor"].notna().any():
         maxes = row_max_floors(work)
         meta.max_floor = float(maxes.max()) if maxes.notna().any() else None
@@ -927,7 +1098,7 @@ def _build_design_matrix(
             for bk, mx in zip(work["building_key"].astype(str), maxes):
                 if pd.notna(mx):
                     meta.max_floor_by_building[bk] = float(mx)
-        floor_part, floor_labels, floor_dummy_cols = _add_floor_columns(
+        floor_part, floor_labels, floor_dummy_cols, floor_reference_code, floor_trained_codes = _add_floor_columns(
             work, meta.floor_mode, max_floor=meta.max_floor
         )
         if not floor_part.empty:
@@ -1000,6 +1171,8 @@ def _build_design_matrix(
 
     meta.column_labels = labels
     meta.floor_dummy_cols = floor_dummy_cols
+    meta.floor_reference_code = floor_reference_code
+    meta.floor_trained_codes = floor_trained_codes
 
     if not parts:
         empty_x = pd.DataFrame(index=work.index)
@@ -1012,6 +1185,9 @@ def _build_design_matrix(
 
 def _meta_to_predict_options(meta: RegressionDesignMeta, req: CollectiveRegressionRequest) -> CollectivePredictOptions:
     opts = CollectivePredictOptions(floor_mode=meta.floor_mode, max_floor=meta.max_floor)
+    opts.contract_period_reference = meta.time_reference
+    opts.contract_periods = sorted(set(([meta.time_reference] if meta.time_reference else [])
+        + [c.removeprefix("time_") for c in meta.column_labels if c.startswith("time_")]))
 
     if req.variables.exclusive_area and "exclusive_area" in meta.continuous_ranges:
         lo, hi = meta.continuous_ranges["exclusive_area"]
@@ -1073,6 +1249,7 @@ def _fit_regression(
     meta: RegressionDesignMeta,
     req: CollectiveRegressionRequest,
     base_warnings: list[str],
+    *, observations: pd.DataFrame | None = None,
 ) -> tuple[sm.regression.linear_model.RegressionResultsWrapper | None, CollectiveRegressionResponse]:
     if X.empty:
         return None, CollectiveRegressionResponse(
@@ -1098,7 +1275,7 @@ def _fit_regression(
             warnings=base_warnings + [f"회귀 실패: {exc}"],
         )
 
-    from app.regression_sample_judge import judge_exog, sample_notes
+    from app.regression_sample_judge import blank_unidentified_effects, judge_exog, sample_notes
 
     warnings = list(base_warnings)
     verdict = judge_exog(model.model.exog)
@@ -1134,12 +1311,30 @@ def _fit_regression(
         model_type=model_type,
         price_adj_r_squared=metrics.get("price_adj_r_squared"),
     )
+    enriched = blank_unidentified_effects(enriched, model.model.exog, list(model.params.index))
     coefs = [RegressionCoeff(**row) for row in enriched]
     sig_count = count_significant_coefficients(coefs)
 
     predict_options = _meta_to_predict_options(meta, req)
     comparison = _build_model_comparison(y, X_const)
+    from app.regression_contracts import build_analysis_context
+    analysis_rows = pd.concat([y.rename("price"), X], axis=1).loc[model.model.data.row_labels]
+    if observations is not None and "transaction_id" in observations.columns:
+        analysis_rows["transaction_id"] = observations.loc[analysis_rows.index, "transaction_id"]
     return model, CollectiveRegressionResponse(
+        analysis=build_analysis_context(request=req, rows=analysis_rows, coefficients=coefs,
+            source_rows=observations.loc[analysis_rows.index] if observations is not None else None,
+            variable_states=meta.variable_states,
+            reference_categories={"동": meta.dong_reference, "권리유형": meta.housing_subtype_reference,
+                "단지": meta.building_labels.get(meta.building_reference_key), "구조": meta.structure_reference,
+                "유형": meta.asset_type_reference, "거래시점": meta.time_reference},
+            observation_unit="transaction", target="price", target_unit="만원", response_scale=model_type,
+            fit_n=int(model.nobs), exog=model.model.exog, source_n=len(y), metrics=[
+                dict(key="mape", role="training", scale="price", value=metrics["in_sample_mape"], n=int(model.nobs), method="in_sample"),
+                dict(key="mape", role="selection_validation", scale="price", value=metrics["cv_mape"],
+                    n=int(model.nobs) if metrics["cv_mape"] is not None else None, method="random_kfold_5",
+                    reason=metrics["cv_diagnostics"].get("reason"), validation=metrics["cv_diagnostics"]),
+            ]),
         building_key="",
         display_name="",
         n=int(model.nobs),
@@ -1148,6 +1343,9 @@ def _fit_regression(
         adj_r_squared=float(model.rsquared_adj) if model.rsquared_adj is not None else None,
         price_adj_r_squared=price_adj,
         mape=metrics.get("mape"),
+        in_sample_mape=metrics.get("in_sample_mape"),
+        cv_mape=metrics.get("cv_mape"),
+        metric_basis=metrics["metric_basis"],
         f_p_value=float(model.f_pvalue) if model.f_pvalue is not None else None,
         significant_count=sig_count,
         equation=equation,
@@ -1185,19 +1383,50 @@ def _inputs_to_x_row(
     req: CollectiveRegressionRequest,
     inputs: CollectiveRegressionPredictInputs,
 ) -> pd.Series:
+    options = _meta_to_predict_options(meta, req)
+    scoped_dongs = [o.dong for o in options.dong_options
+        if not o.building_key or o.building_key == (inputs.building_key or meta.building_reference_key)]
+    categories = [("housing_subtype", options.housing_subtypes, "권리유형"),
+        ("structure_group", options.structure_groups, "구조"),
+        ("asset_type", options.asset_types, "유형"),
+        ("dong", scoped_dongs or options.dongs, "동")]
+    if meta.building_reference_key:
+        categories.append(("building_key", [meta.building_reference_key, *meta.building_fe_map], "단지"))
+    for name, allowed, label in categories:
+        value = getattr(inputs, name)
+        if allowed and value is not None and str(value).strip() not in allowed:
+            raise ValueError(f"모형에 포함된 {label} 값을 선택해 주세요.")
     row = {c: 0.0 for c in X.columns}
+    if meta.time_reference:
+        period = inputs.contract_period or meta.time_reference
+        if period != meta.time_reference:
+            column = f"time_{period}"
+            if column not in X.columns:
+                raise ValueError("모형에 포함된 거래시점을 선택해 주세요.")
+            row[column] = 1.0
+    for name in ("exclusive_area", "building_age", "floor", "households", "parking_per_household", "assessed_land_price"):
+        if name not in meta.continuous_ranges:
+            continue
+        value = getattr(inputs, name)
+        if value is None or not np.isfinite(value):
+            raise ValueError(f"{meta.column_labels.get(name, name)} 값을 입력해 주세요.")
+        if name in ("exclusive_area", "assessed_land_price") and value <= 0:
+            raise ValueError(f"{meta.column_labels.get(name, name)} 값은 0보다 커야 합니다.")
     if req.variables.exclusive_area and inputs.exclusive_area is not None:
         row["exclusive_area"] = float(inputs.exclusive_area)
     if req.variables.building_age and inputs.building_age is not None:
         row["building_age"] = float(inputs.building_age)
 
     floor_dummy_cols = meta.floor_dummy_cols
-    if req.variables.floor and floor_dummy_cols:
+    if req.variables.floor and (floor_dummy_cols or meta.floor_trained_codes):
         bk = str(inputs.building_key) if inputs.building_key else ""
         mx = meta.max_floor_by_building.get(bk)
         if mx is None:
             mx = float(meta.max_floor or inputs.floor or 1)
-        floor_vals = _floor_row_for_predict(inputs.floor, meta.floor_mode, mx, floor_dummy_cols)
+        floor_vals = _floor_row_for_predict(
+            inputs.floor, meta.floor_mode, mx, floor_dummy_cols,
+            reference_code=meta.floor_reference_code, trained_codes=meta.floor_trained_codes,
+        )
         for c, v in floor_vals.items():
             if c in row:
                 row[c] = v
@@ -1301,7 +1530,17 @@ def _run_regression_core(
         cohort_mode=cohort_mode,
         building_display_names=building_display_names,
     )
-    model, resp = _fit_regression(y, X, labels, meta, req, fe_warnings)
+    model, resp = _fit_regression(y, X, labels, meta, req, fe_warnings, observations=work)
+    if resp.analysis is not None:
+        from app.regression_contracts import grouped_sample_details
+        fitted_rows = work.loc[model.model.data.row_labels]
+        resp.analysis.sample_groups = grouped_sample_details(df, fitted_rows, key="building_key",
+            labels=meta.building_labels, reference=meta.building_reference_key, effects=meta.building_fe_map,
+            attributes=("households", "parking_per_household", "assessed_land_price"))
+        resp.analysis.source_n = len(df)
+        resp.analysis.sample_steps = [dict(label="조회 조건에 맞는 입력 거래", n=len(df), excluded=0),
+            dict(label="기본 값·이상치·범주 결측 확인 후", n=len(work), excluded=len(df)-len(work)),
+            dict(label="단지·변수 자료 확인 후 적합", n=resp.n, excluded=len(work)-resp.n)]
     resp.categorical_missing = req.categorical_missing
     resp.n_excluded_missing = n_excluded
     resp.missing_treatment_label = treatment_label(req.categorical_missing, n_excluded)
@@ -1314,7 +1553,13 @@ def run_building_regression(
     display_name: str,
     req: CollectiveRegressionRequest,
 ) -> CollectiveRegressionResponse:
-    _, _, _, resp = _run_regression_core(df, req, cohort_mode=False)
+    model, _, _, resp = _run_regression_core(df, req, cohort_mode=False)
+    if resp.analysis is not None and model is not None and not resp.analysis.sample_groups:
+        from app.regression_contracts import grouped_sample_details
+        prepared = _prepare_work(df, req)
+        resp.analysis.sample_groups = grouped_sample_details(df.assign(building_key=building_key),
+            prepared.loc[model.model.data.row_labels].assign(building_key=building_key), key="building_key",
+            labels={building_key: display_name}, attributes=("households", "parking_per_household", "assessed_land_price"))
     resp.building_key = building_key
     resp.display_name = display_name
     return _attach_model_candidates(resp, df, req, cohort_mode=False)
@@ -1416,6 +1661,8 @@ def _subject_pair_mape(
             )
         except Exception:
             continue
+    if not np.isfinite(pred_b).all() or not np.isfinite(pred_a).all():
+        return None, None, "cv"
     return _price_mape(yv, pred_b), _price_mape(yv, pred_a), "cv"
 
 
@@ -1643,11 +1890,12 @@ def suggest_collective_regression(
             return None
         return y, x
 
-    found = search_block_models(pool, build_xy)
+    found = search_block_models(pool, build_xy, observations=work)
     out: list[CollectiveModelCandidate] = []
     for row in found:
         out.append(
             CollectiveModelCandidate(
+                comparison=row.get("comparison"), cv_diagnostics=row.get("cv_diagnostics"),
                 rank=row["rank"],
                 purpose=row["purpose"],
                 blocks=row["blocks"],
@@ -1679,6 +1927,8 @@ def _attach_model_candidates(
             cohort_mode=cohort_mode,
             building_display_names=building_display_names,
         )
+        if not resp.model_candidates:
+            resp.warnings.append("공통 유효 표본에서 비교 가능한 모형 후보를 확보하지 못했습니다.")
     except Exception:
         resp.warnings.append("모형 추천 탐색을 마치지 못했습니다")
     return resp
@@ -1701,14 +1951,21 @@ def predict_regression(
     if model is None or X.empty:
         raise ValueError("; ".join(fit_resp.warnings) or "예측 불가 — 회귀 미추정")
 
+    from app.regression_contracts import require_model_signature
+    require_model_signature(getattr(req, "expected_model_signature", None),
+        fit_resp.analysis.model_signature if fit_resp.analysis else None)
+
     x_row = _inputs_to_x_row(X, meta, req, inputs)
     vals: dict[str, float] = {"const": 1.0}
     vals.update(x_row.to_dict())
     x_df = pd.DataFrame([vals]).reindex(columns=model.params.index, fill_value=0.0)
+
+    from app.regression_sample_judge import identification_note, judge_exog, prediction_is_identified, provision_note
+
+    if not prediction_is_identified(model.model.exog, x_df.iloc[0].to_numpy()):
+        raise ValueError("이 조건은 계수가 한 값으로 정해지지 않아 예측하지 않습니다.")
     frame = model.get_prediction(x_df).summary_frame(alpha=0.05)
     row = frame.iloc[0]
-
-    from app.regression_sample_judge import identification_note, judge_exog, provision_note
 
     warnings = _extrapolation_warnings(meta, inputs)
     predict_verdict = judge_exog(model.model.exog)
@@ -1739,6 +1996,7 @@ def predict_regression(
 
     return {
         "n": fit_resp.n,
+        "applied_contract_period": inputs.contract_period or meta.time_reference,
         "model_type": model_type,
         "y_hat": round(y_hat, 1),
         "pi_lower": round(pi_lower, 1),

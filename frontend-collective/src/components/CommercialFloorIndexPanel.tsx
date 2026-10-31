@@ -58,8 +58,8 @@ function dimensionHelpText(dim: string, isRegression: boolean, isFactory: boolea
   }
   if (isRegression) {
     return isFactory
-      ? "공장·창고 층은 지하·1·2·3층 이상입니다. 화면 100은 1층입니다. p는 거래가 가장 많은 칸 대비입니다."
-      : "상가 층은 지하·1·2·저·중·고·초고층입니다. 화면 100은 1층입니다. p는 거래가 가장 많은 칸 대비이고, 지하를 중층부에 넣지 않습니다.";
+      ? "공장·창고 층은 지하·1·2·3층 이상입니다. 화면 100은 1층입니다. 지수·95% CI·p는 모두 1층 대비입니다."
+      : "상가 층은 지하·1·2·저·중·고·초고층입니다. 화면 100은 1층입니다. 지수·95% CI·p는 모두 1층 대비이고, 지하를 중층부에 넣지 않습니다.";
   }
   if (isFactory) {
     return "층 정보가 적으면 지수가 비거나 참고용입니다. 면적대 탭을 우선하세요.";
@@ -223,8 +223,9 @@ export default function CommercialFloorIndexPanel({
     warnings,
     explain,
     diagnostics,
-    regression_reference_floor,
   } = q.data;
+
+  const hasIndex = (cells ?? []).some((c) => c.index != null);
 
   const isRegression = method === "regression_semilog";
 
@@ -252,7 +253,7 @@ export default function CommercialFloorIndexPanel({
       />
 
       {!floorIndexEligible && (
-        <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded px-2 py-1.5">
+        <p className="text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900 rounded px-2 py-1.5">
           {gateTip} — 실험 모드로 조회 중입니다.
         </p>
       )}
@@ -296,7 +297,10 @@ export default function CommercialFloorIndexPanel({
           </span>
         ) : (
           <span className="text-slate-500">
-            기준 {reference_floor ?? "구간"}만 100 · 나머지 지수 없음 · n={n_total.toLocaleString("ko-KR")}
+            {hasIndex
+              ? `기준 ${reference_floor ?? "구간"}만 100 · 나머지 지수 없음`
+              : "비교할 구간이 부족해 지수를 비웠습니다"}
+            {" · "}n={n_total.toLocaleString("ko-KR")}
             {baseline_median != null && <> · 중앙값 {fmt(baseline_median)} 만원/㎡</>}
           </span>
         )}
@@ -310,9 +314,7 @@ export default function CommercialFloorIndexPanel({
 
       {isRegression && dimension === "floor" && (
         <p className="text-[10px] text-slate-500">
-          화면 100은 {reference_floor ?? "1층"}입니다. p는 회귀에서 뺀 구간
-          {regression_reference_floor ? ` (${regression_reference_floor})` : " (거래가 가장 많은 칸)"}
-          과의 차이이고, 그 칸의 p는 없습니다.
+          화면 100은 {reference_floor ?? "1층"}입니다. 지수·95% CI·p는 모두 이 기준 대비이고, 기준 칸의 p는 없습니다.
         </p>
       )}
 
@@ -337,7 +339,7 @@ export default function CommercialFloorIndexPanel({
       )}
 
       <p className="text-[10px] text-slate-500">
-        {dimensionHelpText(dim, isRegression, isFactory)} 셀 n&lt;15는 참고용입니다.
+        {dimensionHelpText(dim, isRegression, isFactory)} 건수는 원자료와 회귀에 넣은 수를 나눠 보여 줍니다. 회귀 건수 15 미만은 참고용입니다.
       </p>
 
       <div className="overflow-x-auto rounded-lg border border-slate-100">
@@ -347,7 +349,8 @@ export default function CommercialFloorIndexPanel({
               <th className="border border-slate-200 px-2 py-1.5 text-left font-medium">
                 {dim === "area" ? (isFactory ? "면적대" : "면적형") : "층 구간"}
               </th>
-              <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">건수</th>
+              <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">원자료</th>
+              <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">회귀</th>
               <th className="border border-slate-200 px-2 py-1.5 text-right font-medium">평균(만원/㎡)</th>
               <th className="border border-slate-200 px-2 py-1.5 text-right font-bold text-indigo-700">지수</th>
               {isRegression && (
@@ -362,7 +365,7 @@ export default function CommercialFloorIndexPanel({
             {cells.length === 0 && (
               <tr>
                 <td
-                  colSpan={isRegression ? 6 : 4}
+                  colSpan={isRegression ? 7 : 5}
                   className="border border-slate-200 px-2 py-4 text-center text-slate-400"
                 >
                   표시할 데이터가 없습니다.
@@ -370,14 +373,17 @@ export default function CommercialFloorIndexPanel({
               </tr>
             )}
             {cells.map((c) => (
-              <tr key={c.label} className={clsx(!c.is_reliable && "bg-amber-50/40")}>
+              <tr key={c.label} className={clsx(c.count > 0 && !c.is_reliable && "bg-amber-50/40")}>
                 <td className="border border-slate-200 px-2 py-1 whitespace-nowrap">
                   {c.label}
                   {c.is_reference && (
                     <span className="ml-1 text-[9px] text-indigo-600 font-medium">기준</span>
                   )}
-                  {!c.is_reliable && <span className="ml-1 text-[9px] text-amber-600">n&lt;15</span>}
+                  {c.count > 0 && !c.is_reliable && (
+                    <span className="ml-1 text-[9px] text-amber-600">회귀 n&lt;15</span>
+                  )}
                 </td>
+                <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">{c.count_raw ?? c.count}</td>
                 <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">{c.count}</td>
                 <td className="border border-slate-200 px-2 py-1 text-right tabular-nums">{fmt(c.mean_unit_price)}</td>
                 <td className="border border-slate-200 px-2 py-1 text-right tabular-nums font-semibold text-indigo-600">

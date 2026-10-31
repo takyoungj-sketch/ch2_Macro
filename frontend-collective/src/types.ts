@@ -104,6 +104,7 @@ export interface FloorIndexCell {
   dong?: string | null;
   area?: number | null;
   count: number;
+  count_raw?: number | null;
   mean_unit_price?: number | null;
   index?: number | null;
   is_reliable: boolean;
@@ -352,6 +353,10 @@ export interface CommercialFloorIndexResponse {
 }
 
 export interface CommercialRegressionResponse {
+  analysis?: import("../../shared/regression-ui/types").RegressionAnalysisContext | null;
+  in_sample_mape?: number | null;
+  cv_mape?: number | null;
+  metric_basis?: "cv" | "insample";
   cluster_key: string;
   display_label: string;
   n: number;
@@ -368,6 +373,8 @@ export interface CommercialRegressionResponse {
   predict_options?: CommercialPredictOptions | null;
   model_comparison?: ModelComparison | null;
   model_candidates?: {
+    comparison?: import("../../shared/regression-ui/types").RegressionComparisonContext | null;
+    cv_diagnostics?: import("../../shared/regression-ui/types").RegressionValidationContext | null;
     rank: number;
     purpose?: "predictive" | "explanatory";
     blocks: string[];
@@ -382,6 +389,8 @@ export interface CommercialRegressionResponse {
 }
 
 export interface CommercialPredictOptions {
+  contract_periods?: string[];
+  contract_period_reference?: string | null;
   gross_area?: ContinuousRange | null;
   building_age?: ContinuousRange | null;
   floor?: ContinuousRange | null;
@@ -398,6 +407,7 @@ export interface CommercialPredictOptions {
 }
 
 export interface CommercialRegressionPredictInputs {
+  contract_period?: string | null;
   gross_area?: number | null;
   building_age?: number | null;
   floor?: number | null;
@@ -409,6 +419,7 @@ export interface CommercialRegressionPredictInputs {
 }
 
 export interface CommercialRegressionPredictResponse {
+  applied_contract_period?: string | null;
   n: number;
   model_type?: RegressionModelType;
   y_hat: number;
@@ -534,6 +545,8 @@ export interface DongOption {
 }
 
 export interface CollectivePredictOptions {
+  contract_periods?: string[];
+  contract_period_reference?: string | null;
   exclusive_area?: ContinuousRange | null;
   building_age?: ContinuousRange | null;
   floor?: ContinuousRange | null;
@@ -555,6 +568,7 @@ export interface CollectivePredictOptions {
 }
 
 export interface CollectiveRegressionPredictInputs {
+  contract_period?: string | null;
   exclusive_area?: number | null;
   building_age?: number | null;
   floor?: number | null;
@@ -571,6 +585,7 @@ export interface CollectiveRegressionPredictInputs {
 export type RegressionModelType = "log" | "linear";
 
 export interface CollectiveRegressionPredictResponse {
+  applied_contract_period?: string | null;
   n: number;
   model_type?: RegressionModelType;
   y_hat: number;
@@ -583,6 +598,7 @@ export interface CollectiveRegressionPredictResponse {
 }
 
 export interface ModelMetrics {
+  cv_diagnostics?: import("../../shared/regression-ui/types").RegressionValidationContext | null;
   model_type: RegressionModelType;
   adj_r_squared?: number | null;
   mape?: number | null;
@@ -607,6 +623,8 @@ export interface CollectiveRegressionSpec {
 }
 
 export interface CollectiveModelCandidate {
+  comparison?: import("../../shared/regression-ui/types").RegressionComparisonContext | null;
+  cv_diagnostics?: import("../../shared/regression-ui/types").RegressionValidationContext | null;
   rank: number;
   purpose?: "predictive" | "explanatory";
   blocks: string[];
@@ -647,6 +665,10 @@ export interface CohortAugmentation {
 }
 
 export interface CollectiveRegressionResponse {
+  analysis?: import("../../shared/regression-ui/types").RegressionAnalysisContext | null;
+  in_sample_mape?: number | null;
+  cv_mape?: number | null;
+  metric_basis?: "cv" | "insample";
   building_key: string;
   display_name: string;
   n: number;

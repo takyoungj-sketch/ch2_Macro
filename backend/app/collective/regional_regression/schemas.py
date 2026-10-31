@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
+from app.regression_contracts import RegressionAnalysisContext, RegressionComparisonContext, RegressionValidationContext
 
 from app.collective.schemas import RegressionCoeff
 
@@ -30,6 +31,7 @@ class RegionalRegressionRunRequest(BaseModel):
     region_codes: list[str] = Field(default_factory=list)
     region_code_level: Optional[str] = None
     region_addrs: list[str] = Field(default_factory=list)
+    evaluation_region_addrs: list[str] = Field(default_factory=list, max_length=20)
     window_years: int = 3
     asset_type: str = "apartment"
     variables: RegionalRegressionVariables = Field(default_factory=RegionalRegressionVariables)
@@ -53,6 +55,7 @@ class RegionalRegressionPredictInputs(BaseModel):
 
 
 class RegionalRegressionPredictRequest(RegionalRegressionRunRequest):
+    expected_model_signature: Optional[str] = None
     inputs: RegionalRegressionPredictInputs = Field(default_factory=RegionalRegressionPredictInputs)
 
 
@@ -100,6 +103,8 @@ class BlockContribution(BaseModel):
 class FittedBuildingRow(BaseModel):
     building_key: str
     display_name: str
+    transaction_n: Optional[int] = None
+    address: Optional[str] = None
     y: float
     y_hat: float
     ape: Optional[float] = None
@@ -129,6 +134,8 @@ class NewBuildAge0Gap(BaseModel):
 
 
 class RegionalModelCandidate(BaseModel):
+    validation: RegressionValidationContext | None = None
+    comparison: RegressionComparisonContext | None = None
     rank: int
     purpose: Literal["predictive", "explanatory"] = "predictive"
     blocks: list[str] = Field(default_factory=list)
@@ -139,12 +146,28 @@ class RegionalModelCandidate(BaseModel):
     hold_mape: Optional[float] = None
 
 
+class RegionalExtensionComparison(BaseModel):
+    status: Literal["available", "unavailable"]
+    reason: Optional[str] = None
+    evaluation_n: int = 0
+    fit_before_n: int = 0
+    fit_after_n: int = 0
+    mape_before: Optional[float] = None
+    mape_after: Optional[float] = None
+    evaluation_signature: Optional[str] = None
+    method: str = "same_base_regions_holdout_seed42"
+    role: Literal["selection_validation"] = "selection_validation"
+
+
 class RegionalRegressionRunResponse(BaseModel):
+    extension_comparison: RegionalExtensionComparison | None = None
+    analysis: RegressionAnalysisContext | None = None
     n: int
     model_type: Literal["linear", "log"]
     weight_mode: Literal["equal", "tx"] = "equal"
     n_effective: Optional[float] = None
     r_squared: Optional[float] = None
+    model_adj_r_squared: Optional[float] = None
     adj_r_squared: Optional[float] = None
     mape: Optional[float] = None
     hold_mape: Optional[float] = None

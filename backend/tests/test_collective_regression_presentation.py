@@ -93,6 +93,17 @@ def test_market_interpretation_hints():
     ]
     hints = build_market_interpretation_hints(coefs, model_type="linear")
     assert len(hints) == 2
-    assert "제3종일반주거" in hints[0]
-    assert "용도지역" not in hints[0]
+    assert "전용면적" in hints[0]
+    assert "제3종일반주거" in hints[1]
+    assert "용도지역" not in hints[1]
+
+
+def test_regional_effects_use_actual_target_unit_and_category_baseline():
+    assert "만원/㎡" in interpret_coefficient("max_floor", "최고층", .001,
+        model_type="linear", target_label="단지 중앙단가", target_unit="만원/㎡")
+    assert "+0만원" not in interpret_coefficient("max_floor", "최고층", .001, model_type="linear")
+    assert "기준 대비" in interpret_coefficient("region_1", "지역", .1, model_type="log")
+    assert "1단위" not in interpret_coefficient("addr4_test", "동", .1, model_type="log")
+    assert "로그 금액 상수" in interpret_coefficient("const", "절편", -20, model_type="log")
+    assert "0만원" not in interpret_coefficient("const", "절편", -20, model_type="log")
 
