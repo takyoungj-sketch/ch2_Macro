@@ -1,4 +1,5 @@
 export { default as StatsGlossaryHelp, MetricWithHelp } from "./StatsGlossaryHelp";
+export { StatsGlossaryPresentationProvider, type StatsGlossaryHelpProps } from "./StatsGlossaryHelp";
 export { STATS_GLOSSARY, getGlossaryEntry, type StatsGlossaryEntry } from "./statsGlossary";
 export { STATS_LEARN_URLS, getStatsLearnUrl } from "./statsLearnLinks";
 export {
