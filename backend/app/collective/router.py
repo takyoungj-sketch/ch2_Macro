@@ -12,6 +12,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session
 
+from app.collective.address import legal_dong
 from app.collective.analysis_explain import (
     build_residential_floor_index_explain,
     build_residential_regression_explain,
@@ -36,7 +37,7 @@ from app.collective.building_stats_query import (
     list_buildings_from_mart,
     list_buildings_live,
     list_presale_lifetime_from_mart,
-    list_related_presale_from_annual,
+    list_sigungu_presale_catalog,
     stats_as_of_label,
     stats_reference_date,
 )
@@ -87,8 +88,8 @@ from app.collective.schemas import (
     HistogramResponse,
     RegionOption,
     RegionStructureResponse,
-    RelatedPresaleCandidate,
-    RelatedPresaleResponse,
+    PresaleCatalogItem,
+    PresaleCatalogResponse,
     TransactionListResponse,
     YearlyStatPoint,
     YearlyStatsResponse,
@@ -688,28 +689,22 @@ def _get_building_meta(db: Session, building_key: str) -> tuple[str, str]:
     return str(meta["display_name"] or ""), str(meta["asset_type"] or "")
 
 
-@router.get("/buildings/{building_key}/related-presale", response_model=RelatedPresaleResponse)
-def related_presale_annual(
+@router.get("/buildings/{building_key}/presale-catalog", response_model=PresaleCatalogResponse)
+def presale_catalog(
     building_key: str,
     db: Session = Depends(get_collective_db),
-    limit: int = Query(20, ge=1, le=50),
-    min_score: float = Query(0.45, ge=0.0, le=1.0),
 ):
-    """장기추세용 — 같은 시군구 annual 분양권 후보(이름 유사도). 키 자동 병합 없음."""
-    resolved = list_related_presale_from_annual(
-        db.connection(),
-        building_key,
-        limit=limit,
-        min_score=min_score,
-    )
+    """장기추세 비교용 — 지금 단지와 같은 법정동의 분양권. 이름 유사도 추천 없음. 키 병합 없음."""
+    resolved = list_sigungu_presale_catalog(db.connection(), building_key)
     if resolved is None:
         raise HTTPException(404, "건물을 찾을 수 없습니다")
-    src, candidates = resolved
-    return RelatedPresaleResponse(
+    src, items = resolved
+    return PresaleCatalogResponse(
         source_building_key=building_key,
         source_display_name=str(src.get("display_name") or ""),
         source_asset_type=str(src.get("asset_type") or ""),
-        candidates=[RelatedPresaleCandidate(**c) for c in candidates],
+        source_dong=legal_dong(src.get("addr3"), src.get("addr4")),
+        items=[PresaleCatalogItem(**c) for c in items],
     )
 
 

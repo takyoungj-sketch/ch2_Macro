@@ -276,34 +276,41 @@ export async function fetchBuildingYearlyStats(
   return data;
 }
 
-export type RelatedPresaleCandidate = {
+export type PresaleCatalogItem = {
   building_key: string;
   display_name: string;
-  addr1?: string | null;
-  addr2?: string | null;
+  dong: string;
   addr3?: string | null;
   addr4?: string | null;
+  road_name?: string | null;
+  lot_number?: string | null;
   year_from: number;
   year_to: number;
   total_count: number;
-  score: number;
+  rights_label: string;
+  same_dong: boolean;
 };
 
-export type RelatedPresaleResponse = {
+export type PresaleCatalogResponse = {
   source_building_key: string;
   source_display_name: string;
   source_asset_type: string;
-  candidates: RelatedPresaleCandidate[];
+  source_dong: string;
+  items: PresaleCatalogItem[];
 };
 
-export async function fetchRelatedPresaleAnnual(
-  buildingKey: string,
-  params?: { limit?: number; min_score?: number },
-): Promise<RelatedPresaleResponse> {
-  const { data } = await api.get<RelatedPresaleResponse>(`/buildings/${buildingKey}/related-presale`, {
-    params,
-  });
+export async function fetchPresaleCatalog(buildingKey: string): Promise<PresaleCatalogResponse> {
+  const { data } = await api.get<PresaleCatalogResponse>(`/buildings/${buildingKey}/presale-catalog`);
   return data;
+}
+
+export function presaleCatalogAddress(item: PresaleCatalogItem): string {
+  const period =
+    item.year_from === item.year_to ? String(item.year_from) : `${item.year_from}–${item.year_to}`;
+  return [item.dong, item.road_name, item.lot_number, period, item.rights_label || "분양권"]
+    .map((v) => (v || "").trim())
+    .filter(Boolean)
+    .join(" ");
 }
 
 export async function fetchBuildingRollingStats(

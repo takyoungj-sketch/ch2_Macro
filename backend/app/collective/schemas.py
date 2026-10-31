@@ -203,24 +203,27 @@ class YearlyStatsResponse(BaseModel):
     data_source: Literal["mart", "live"] = "live"
 
 
-class RelatedPresaleCandidate(BaseModel):
+class PresaleCatalogItem(BaseModel):
     building_key: str
     display_name: str
-    addr1: Optional[str] = None
-    addr2: Optional[str] = None
+    dong: str = ""
     addr3: Optional[str] = None
     addr4: Optional[str] = None
+    road_name: Optional[str] = None
+    lot_number: Optional[str] = None
     year_from: int
     year_to: int
     total_count: int
-    score: float
+    rights_label: str = "분양권"
+    same_dong: bool = False
 
 
-class RelatedPresaleResponse(BaseModel):
+class PresaleCatalogResponse(BaseModel):
     source_building_key: str
     source_display_name: str
     source_asset_type: str
-    candidates: list[RelatedPresaleCandidate] = Field(default_factory=list)
+    source_dong: str = ""
+    items: list[PresaleCatalogItem] = Field(default_factory=list)
 
 
 class RollingStatPoint(BaseModel):
@@ -466,7 +469,6 @@ class ModelComparison(BaseModel):
     linear: Optional[ModelMetrics] = None
     loglog: Optional[ModelMetrics] = None
     recommended: Literal["log", "linear", "loglog"] = "log"
-    metric_basis: Literal["cv", "insample"] = "insample"
     confidence_stars: int = 0  # 0~5
     confidence_label: Optional[str] = None
 
@@ -489,7 +491,6 @@ class CohortAugmentation(BaseModel):
     added_n: int
     mape_before: Optional[float] = None
     mape_after: Optional[float] = None
-    metric_basis: Literal["cv", "insample"] = "insample"
     slopes: list[CohortSlopeShift] = Field(default_factory=list)
     note: str = ""
 
@@ -503,7 +504,6 @@ class CollectiveModelCandidate(BaseModel):
     n: int
     adj_r_squared: Optional[float] = None
     mape: Optional[float] = None
-    cv_mape: Optional[float] = None
 
 
 class CollectiveRegressionResponse(BaseModel):

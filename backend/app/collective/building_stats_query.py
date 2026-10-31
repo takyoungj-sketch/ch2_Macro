@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import re
 from datetime import date
-from difflib import SequenceMatcher
 from typing import Any, Optional
 
 from sqlalchemy import text
@@ -15,7 +13,7 @@ from app.collective.asset_scope import (
     apply_asset_type_filter,
     normalize_asset_type as _scope_normalize_asset_type,
 )
-from app.collective.address import split_building_addresses
+from app.collective.address import legal_dong, split_building_addresses
 from app.collective.analysis_gates import count_recent_transactions, evaluate_analysis_gates
 from app.collective.filters import apply_region_filters
 from app.collective.schemas import AnalysisFeatures, BuildingStatsRow
@@ -536,29 +534,135 @@ def building_yearly_resolved(
     return display_name, points, source
 
 
-_COMPACT_NAME_RE = re.compile(r"\s+")
+def order_presale_catalog(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """단지명 순으로 정렬한다."""
+    return sorted(items, key=lambda x: str(x.get("display_name") or ""))
 
 
-def _compact_building_name(name: str | None) -> str:
-    return _COMPACT_NAME_RE.sub("", (name or "").strip())
+def same_dong_presale_items(items: list[dict[str, Any]], src_dong: str) -> list[dict[str, Any]]:
+    """지금 단지의 법정동과 같은 분양권만 남긴다. 동이 없으면 빈 목록."""
+    dong = (src_dong or "").strip()
+    if not dong:
+        return []
+    return [item for item in items if (item.get("dong") or "") == dong]
 
 
-def _related_presale_name_score(
-    source_name: str,
-    candidate_name: str,
-    *,
-    same_dong: bool,
-) -> float:
-    """아파트 등 ↔ 분양권 annual 후보 이름 유사도 (키 병합 아님)."""
-    a = _compact_building_name(source_name)
-    b = _compact_building_name(candidate_name)
-    if not a or not b:
-        return 0.0
-    base = 0.28 if same_dong else 0.08
-    if a in b or b in a:
-        return min(1.0, base + 0.7)
-    ratio = SequenceMatcher(None, a, b).ratio()
-    return min(1.0, base + 0.7 * ratio)
+def _presale_road_lot(
+    conn: Connection,
+    building_keys: list[str],
+) -> dict[str, dict[str, Any]]:
+    """분양권 키의 대표 도로명·지번. 빈 값은 최빈값에서 뺀다."""
+    keys = [str(k).strip() for k in building_keys if str(k or "").strip()]
+    if not keys or not _table_exists(conn, "public.collective_transactions"):
+        return {}
+    rows = conn.execute(
+        text(
+            """
+            WITH base AS (
+                SELECT building_key,
+                       NULLIF(btrim(road_name), '') AS road_name,
+                       NULLIF(btrim(lot_number), '') AS lot_number
+                FROM collective_transactions
+                WHERE is_valid = true
+                  AND asset_type = 'presale'
+                  AND building_key = ANY(:keys)
+            ),
+            roads AS (
+                SELECT DISTINCT ON (building_key)
+                       building_key, road_name
+                FROM (
+                    SELECT building_key, road_name, COUNT(*) AS n
+                    FROM base
+                    WHERE road_name IS NOT NULL
+                    GROUP BY building_key, road_name
+                ) r
+                ORDER BY building_key, n DESC, road_name
+            ),
+            lots AS (
+                SELECT DISTINCT ON (building_key)
+                       building_key, lot_number
+                FROM (
+                    SELECT building_key, lot_number, COUNT(*) AS n
+                    FROM base
+                    WHERE lot_number IS NOT NULL
+                    GROUP BY building_key, lot_number
+                ) l
+                ORDER BY building_key, n DESC, lot_number
+            )
+            SELECT COALESCE(roads.building_key, lots.building_key) AS building_key,
+                   roads.road_name,
+                   lots.lot_number
+            FROM roads
+            FULL OUTER JOIN lots USING (building_key)
+            """
+        ),
+        {"keys": keys},
+    ).mappings().all()
+    out: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        key = str(row["building_key"] or "").strip()
+        if key:
+            out[key] = {"road_name": row.get("road_name"), "lot_number": row.get("lot_number")}
+    return out
+
+
+def list_sigungu_presale_catalog(
+    conn: Connection,
+    building_key: str,
+) -> tuple[dict[str, Any], list[dict[str, Any]]] | None:
+    """지금 단지와 같은 법정동의 분양권. 이름 유사도로 걸러내지 않는다. 키 병합 없음."""
+    src = building_addr_meta(conn, building_key)
+    if src is None:
+        return None
+    if not src.get("addr1") or not src.get("addr2"):
+        return src, []
+    if not _table_exists(conn, "public.collective_building_annual_stats"):
+        return src, []
+
+    rows = conn.execute(
+        text(
+            """
+            SELECT building_key,
+                   MAX(display_name) AS display_name,
+                   MAX(addr3) AS addr3,
+                   MAX(addr4) AS addr4,
+                   MIN(contract_year)::int AS year_from,
+                   MAX(contract_year)::int AS year_to,
+                   SUM(count)::int AS total_count
+            FROM collective_building_annual_stats
+            WHERE asset_type = 'presale'
+              AND addr1 = :a1
+              AND addr2 = :a2
+              AND building_key <> :bk
+            GROUP BY building_key
+            """
+        ),
+        {"a1": src["addr1"], "a2": src["addr2"], "bk": building_key},
+    ).mappings().all()
+
+    src_dong = legal_dong(src.get("addr3"), src.get("addr4"))
+    drafted = [
+        {
+            "building_key": r["building_key"],
+            "display_name": r["display_name"] or "",
+            "dong": legal_dong(r.get("addr3"), r.get("addr4")),
+            "addr3": r.get("addr3"),
+            "addr4": r.get("addr4"),
+            "year_from": int(r["year_from"]),
+            "year_to": int(r["year_to"]),
+            "total_count": int(r["total_count"] or 0),
+            "rights_label": "분양권",
+            "same_dong": True,
+        }
+        for r in rows
+    ]
+    matched = same_dong_presale_items(drafted, src_dong)
+    places = _presale_road_lot(conn, [str(r["building_key"] or "") for r in matched])
+    items: list[dict[str, Any]] = []
+    for r in matched:
+        place = places.get(str(r["building_key"] or "").strip(), {})
+        items.append({**r, "road_name": place.get("road_name"), "lot_number": place.get("lot_number")})
+    return src, order_presale_catalog(items)
 
 
 def building_addr_meta(
@@ -594,73 +698,6 @@ def building_addr_meta(
         {"bk": building_key},
     ).mappings().first()
     return dict(row) if row else None
-
-
-def list_related_presale_from_annual(
-    conn: Connection,
-    building_key: str,
-    *,
-    limit: int = 20,
-    min_score: float = 0.45,
-) -> tuple[dict[str, Any], list[dict[str, Any]]] | None:
-    """같은 시군구(·동) annual 분양권 후보. 키 병합 없이 점수순 제안."""
-    src = building_addr_meta(conn, building_key)
-    if src is None:
-        return None
-    if not src.get("addr1") or not src.get("addr2"):
-        return src, []
-    if not _table_exists(conn, "public.collective_building_annual_stats"):
-        return src, []
-
-    rows = conn.execute(
-        text(
-            """
-            SELECT building_key,
-                   MAX(display_name) AS display_name,
-                   MAX(addr1) AS addr1,
-                   MAX(addr2) AS addr2,
-                   MAX(addr3) AS addr3,
-                   MAX(addr4) AS addr4,
-                   MIN(contract_year)::int AS year_from,
-                   MAX(contract_year)::int AS year_to,
-                   SUM(count)::int AS total_count
-            FROM collective_building_annual_stats
-            WHERE asset_type = 'presale'
-              AND addr1 = :a1
-              AND addr2 = :a2
-              AND building_key <> :bk
-            GROUP BY building_key
-            """
-        ),
-        {"a1": src["addr1"], "a2": src["addr2"], "bk": building_key},
-    ).mappings().all()
-
-    src_name = str(src.get("display_name") or "")
-    src_dong = (src.get("addr3") or "").strip()
-    scored: list[dict[str, Any]] = []
-    for r in rows:
-        same_dong = bool(src_dong) and (r.get("addr3") or "").strip() == src_dong
-        score = _related_presale_name_score(
-            src_name, str(r.get("display_name") or ""), same_dong=same_dong
-        )
-        if score < min_score:
-            continue
-        scored.append(
-            {
-                "building_key": r["building_key"],
-                "display_name": r["display_name"] or "",
-                "addr1": r.get("addr1"),
-                "addr2": r.get("addr2"),
-                "addr3": r.get("addr3"),
-                "addr4": r.get("addr4"),
-                "year_from": int(r["year_from"]),
-                "year_to": int(r["year_to"]),
-                "total_count": int(r["total_count"] or 0),
-                "score": round(score, 3),
-            }
-        )
-    scored.sort(key=lambda x: (-x["score"], -x["total_count"], x["display_name"]))
-    return src, scored[:limit]
 
 
 def list_buildings_live(

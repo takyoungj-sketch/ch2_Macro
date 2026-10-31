@@ -19,6 +19,7 @@ export default function CohortTrendPanel({
   variant = "rolling",
   priceMetric,
   onPriceMetricChange,
+  combineSeries = true,
 }: {
   series: TrendSeries[];
   metric: CohortTrendMetric;
@@ -30,6 +31,8 @@ export default function CohortTrendPanel({
   variant?: "rolling" | "longTerm";
   priceMetric?: LongTermPriceMetric;
   onPriceMetricChange?: (m: LongTermPriceMetric) => void;
+  /** 다른 거래유형이 섞이면 가중평균 통합선을 그리지 않는다. */
+  combineSeries?: boolean;
 }) {
   const [showQuartiles, setShowQuartiles] = useState(false);
   const chartMetric: CohortTrendMetric =
@@ -40,9 +43,9 @@ export default function CohortTrendPanel({
   }, [priceMetric]);
 
   const combinedSeries = useMemo(() => {
-    if (variant !== "longTerm" || priceMetric !== "mean" || series.length < 2) return null;
+    if (!combineSeries || variant !== "longTerm" || priceMetric !== "mean" || series.length < 2) return null;
     return buildWeightedMeanCombinedSeries(series);
-  }, [variant, priceMetric, series]);
+  }, [combineSeries, variant, priceMetric, series]);
 
   return (
     <div className="space-y-3">

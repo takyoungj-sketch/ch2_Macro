@@ -1,3 +1,4 @@
+import TargetPicker from "../../../shared/regression-ui/TargetPicker";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useProductAccess } from "@ch2/macro-shell/productAccess";
 import { useQuery } from "@tanstack/react-query";
@@ -12,7 +13,8 @@ import {
   fetchBuildingRollingStats,
   fetchBuildingYearlyStats,
   fetchDanjiAttributes,
-  fetchRelatedPresaleAnnual,
+  fetchPresaleCatalog,
+  presaleCatalogAddress,
   fetchCohortHistogram,
   type BuildingStatsRow,
 } from "../api/client";
@@ -638,11 +640,22 @@ export default function BuildingDetailModal({
     enabled: panel === "danji",
   });
 
-  const relatedPresaleQ = useQuery({
-    queryKey: ["related-presale", row.building_key],
-    queryFn: () => fetchRelatedPresaleAnnual(row.building_key),
+  const presaleCatalogQ = useQuery({
+    queryKey: ["presale-catalog", row.building_key],
+    queryFn: () => fetchPresaleCatalog(row.building_key),
     enabled: showPresalePicker && canAttachPresaleAnnual && panel === "long_term",
   });
+  const presaleSearchOptions = useMemo(() => {
+    const added = new Set(presaleOverlay.map((p) => p.key));
+    return (presaleCatalogQ.data?.items ?? [])
+      .filter((c) => !added.has(c.building_key))
+      .map((c) => ({
+        key: c.building_key,
+        label: c.display_name,
+        address: presaleCatalogAddress(c),
+        count: c.total_count,
+      }));
+  }, [presaleCatalogQ.data, presaleOverlay]);
 
   const presaleOverlayQ = useQuery({
     queryKey: ["presale-overlay-year", row.building_key, presaleOverlay.map((p) => p.key)],
@@ -650,7 +663,7 @@ export default function BuildingDetailModal({
       Promise.all(
         presaleOverlay.map(async (p) => {
           const data = await fetchBuildingYearlyStats(p.key);
-          return { ...data, display_name: `분양권 · ${p.name || data.display_name}` };
+          return { ...data, display_name: `비교 분양권 · ${p.name || data.display_name}` };
         }),
       ),
     enabled:
@@ -1095,22 +1108,26 @@ export default function BuildingDetailModal({
           {panel === "long_term" && (
             <>
               {canAttachPresaleAnnual && !longTermCohortActive && (
-                <div className="mb-2 rounded border border-slate-200 dark:border-slate-600 bg-slate-50/80 dark:bg-slate-800/40 px-2 py-1.5 text-[10px]">
+                <div className="mb-2 rounded border border-slate-200 dark:border-slate-600 bg-slate-50/80 dark:bg-slate-800/40 px-2 py-1.5 text-[10px] space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-slate-700 dark:text-slate-200">과거 분양권 추세</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">확인된 과거 분양권</span>
+                    <span className="text-slate-500">확인된 과거 분양권 없음</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">분양권 직접 검색</span>
                     <span className="text-slate-500">
-                      아파트·연립·오피스텔에서 관련 분양권 annual을 겹쳐 봅니다 (자동 병합 없음)
+                      같은 동의 분양권을 비교 분양권으로만 겹칩니다
                     </span>
                     <button
                       type="button"
                       className="ml-auto px-2 py-0.5 rounded border border-slate-300 dark:border-slate-500 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700"
                       onClick={() => setShowPresalePicker((v) => !v)}
                     >
-                      {showPresalePicker ? "후보 닫기" : "후보 찾기"}
+                      {showPresalePicker ? "검색 닫기" : "분양권 검색"}
                     </button>
                   </div>
                   {presaleOverlay.length > 0 && (
-                    <div className="mt-1 flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1">
                       {presaleOverlay.map((p) => (
                         <button
                           key={p.key}
@@ -1119,48 +1136,44 @@ export default function BuildingDetailModal({
                           onClick={() => setPresaleOverlay((prev) => prev.filter((x) => x.key !== p.key))}
                           title="제거"
                         >
-                          분양권 · {p.name} ×
+                          비교 분양권 · {p.name} ×
                         </button>
                       ))}
                     </div>
                   )}
-                  {showPresalePicker && relatedPresaleQ.isLoading && (
-                    <p className="mt-1 text-slate-400">후보 검색 중…</p>
+                  {showPresalePicker && presaleCatalogQ.isLoading && (
+                    <p className="text-slate-400">분양권 목록을 불러오는 중…</p>
                   )}
-                  {showPresalePicker && relatedPresaleQ.isError && (
-                    <p className="mt-1 text-amber-700">관련 분양권을 불러오지 못했습니다.</p>
+                  {showPresalePicker && presaleCatalogQ.isError && (
+                    <p className="text-amber-700">분양권 목록을 불러오지 못했습니다.</p>
                   )}
-                  {showPresalePicker && relatedPresaleQ.data && (
-                    <div className="mt-1 max-h-36 overflow-y-auto space-y-0.5">
-                      {relatedPresaleQ.data.candidates.length === 0 ? (
-                        <p className="text-slate-400">같은 시군구에서 이름 유사 분양권 annual이 없습니다.</p>
-                      ) : (
-                        relatedPresaleQ.data.candidates.map((c) => {
-                          const added = presaleOverlay.some((p) => p.key === c.building_key);
-                          return (
-                            <button
-                              key={c.building_key}
-                              type="button"
-                              disabled={added || (presaleOverlay.length + 1 >= MAX_COHORT_BUILDINGS)}
-                              className="w-full text-left px-1.5 py-1 rounded hover:bg-white dark:hover:bg-slate-700 disabled:opacity-40"
-                              onClick={() =>
-                                setPresaleOverlay((prev) =>
-                                  prev.some((p) => p.key === c.building_key)
-                                    ? prev
-                                    : [...prev, { key: c.building_key, name: c.display_name }],
-                                )
-                              }
-                            >
-                              <span className="font-medium text-slate-800 dark:text-slate-100">{c.display_name}</span>
-                              <span className="ml-1 text-slate-500">
-                                {c.year_from}–{c.year_to} · n={c.total_count.toLocaleString("ko-KR")}
-                                {c.addr3 ? ` · ${c.addr3}` : ""}
-                              </span>
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
+                  {showPresalePicker && presaleCatalogQ.data && presaleCatalogQ.data.items.length === 0 && (
+                    <p className="text-slate-400">
+                      {presaleCatalogQ.data.source_dong
+                        ? `${presaleCatalogQ.data.source_dong} 분양권 거래가 없습니다.`
+                        : "이 동의 분양권 거래가 없습니다."}
+                    </p>
+                  )}
+                  {showPresalePicker && (presaleCatalogQ.data?.items.length ?? 0) > 0 && (
+                    <p className="text-slate-500">
+                      {presaleCatalogQ.data?.source_dong} 분양권만 표시합니다. 단지명, 주소, 사업블록으로 찾습니다.
+                    </p>
+                  )}
+                  {showPresalePicker && presaleSearchOptions.length > 0 && (
+                    <TargetPicker
+                      label="+ 비교 분양권"
+                      options={presaleSearchOptions}
+                      disabled={presaleOverlay.length + 1 >= MAX_COHORT_BUILDINGS}
+                      onChoose={(key) => {
+                        const item = presaleCatalogQ.data?.items.find((c) => c.building_key === key);
+                        if (!item) return;
+                        setPresaleOverlay((prev) =>
+                          prev.some((p) => p.key === key) || prev.length + 1 >= MAX_COHORT_BUILDINGS
+                            ? prev
+                            : [...prev, { key, name: item.display_name }],
+                        );
+                      }}
+                    />
                   )}
                 </div>
               )}
@@ -1196,15 +1209,20 @@ export default function BuildingDetailModal({
                   buildingCount={overlayLongTermSeries.length}
                   chartTitle={
                     typeSiblings.length > 0 && presaleOverlay.length > 0
-                      ? "연도별 추이 (본유형 + 같은 지번 유형 + 분양권)"
+                      ? "연도별 추이 (본유형 + 같은 지번 유형 + 비교 분양권)"
                       : typeSiblings.length > 0
                         ? "연도별 추이 (본유형 + 같은 지번 유형)"
-                        : "연도별 추이 (본단지 + 분양권)"
+                        : "연도별 추이 (본단지 + 비교 분양권)"
                   }
-                  note="유형·분양권은 키를 합치지 않은 sibling 비교 · 중앙값 병합 없음"
+                  note={
+                    presaleOverlay.length > 0
+                      ? "비교 분양권은 별도 선 · 가격을 합치거나 평균내지 않음"
+                      : "유형은 키를 합치지 않은 sibling 비교 · 중앙값 병합 없음"
+                  }
                   variant="longTerm"
                   priceMetric={longTermMetric}
                   onPriceMetricChange={setLongTermMetric}
+                  combineSeries={presaleOverlay.length === 0}
                 />
               )}
               {!longTermCohortActive &&

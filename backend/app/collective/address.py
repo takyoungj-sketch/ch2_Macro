@@ -11,6 +11,15 @@ def _is_gu(name: str) -> bool:
     return bool(name) and name.endswith("구")
 
 
+def legal_dong(addr3: str | None, addr4: str | None) -> str:
+    """법정 읍면동. 구가 있으면 addr4, 없으면 addr3."""
+    a3 = _strip(addr3)
+    a4 = _strip(addr4)
+    if _is_gu(a3):
+        return a4
+    return a3
+
+
 def format_jibun_address(
     *,
     addr3: str | None,
