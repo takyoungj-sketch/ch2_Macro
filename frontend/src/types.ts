@@ -400,6 +400,7 @@ export interface PartialRegressionSeries {
 }
 
 export interface LandRegressionResponse {
+  analysis?: import("../../shared/regression-ui/types").RegressionAnalysisContext | null;
   n: number;
   model_type: "log" | "linear";
   r_squared: number;
@@ -432,6 +433,7 @@ export interface LandModelCandidate {
 }
 
 export interface LandRegressionSuggestResponse {
+  excluded_blocks?: string[];
   candidates_by_aic: LandModelCandidate[];
   candidates_by_mape: LandModelCandidate[];
   n: number;
@@ -458,6 +460,7 @@ export interface LandPredictOptions {
 }
 
 export interface LandRegressionPredictRequest extends LandRegressionRequest {
+  expected_model_signature?: string;
   area_sqm?: number | null;
   contract_year?: number | null;
   road_condition?: string | null;
@@ -468,6 +471,7 @@ export interface LandRegressionPredictRequest extends LandRegressionRequest {
 }
 
 export interface LandRegressionPredictResponse {
+  log_smearing_factor?: number;
   n: number;
   model_type: "log" | "linear";
   y_hat: number;

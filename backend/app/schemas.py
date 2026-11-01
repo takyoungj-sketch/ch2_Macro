@@ -7,6 +7,7 @@ from datetime import date, datetime
 from typing import Annotated, Any, Literal, Optional
 
 from pydantic import AfterValidator, BaseModel, Field, field_validator, model_validator
+from app.regression_contracts import RegressionAnalysisContext
 
 
 # ---------------------------------------------------------------------------
@@ -760,6 +761,7 @@ class PartialRegressionSeries(BaseModel):
 
 
 class LandRegressionResponse(BaseModel):
+    analysis: RegressionAnalysisContext | None = None
     n: int
     model_type: Literal["log", "linear"]
     r_squared: float
@@ -792,6 +794,7 @@ class LandModelCandidate(BaseModel):
 
 
 class LandRegressionSuggestResponse(BaseModel):
+    excluded_blocks: list[str] = Field(default_factory=list)
     candidates_by_aic: list[LandModelCandidate] = Field(default_factory=list)
     candidates_by_mape: list[LandModelCandidate] = Field(default_factory=list)
     n: int
@@ -800,6 +803,7 @@ class LandRegressionSuggestResponse(BaseModel):
 
 
 class LandRegressionPredictRequest(LandRegressionRequest):
+    expected_model_signature: Optional[str] = None
     """POST /paid/matrix-cell-transactions/regression/predict — 단가(만원/㎡) 예측."""
     area_sqm: Optional[float] = None
     contract_year: Optional[int] = None
@@ -811,6 +815,7 @@ class LandRegressionPredictRequest(LandRegressionRequest):
 
 
 class LandRegressionPredictResponse(BaseModel):
+    log_smearing_factor: float = 1.0
     n: int
     model_type: Literal["log", "linear"]
     y_hat: float

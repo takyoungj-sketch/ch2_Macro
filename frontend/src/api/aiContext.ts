@@ -15,6 +15,7 @@ export function buildLandRegressionContext(
     zoneType: string;
     landCategory: string;
     modelType: "log" | "linear";
+    controlsChanged?: boolean;
   },
 ): AiContextPayload {
   return {
@@ -26,7 +27,9 @@ export function buildLandRegressionContext(
       ...regData,
       zone_type: opts.zoneType,
       land_category: opts.landCategory,
-      model_type: opts.modelType,
+      model_type: regData.model_type,
+      requested_model_type: opts.modelType,
+      controls_changed: Boolean(opts.controlsChanged),
     },
   };
 }

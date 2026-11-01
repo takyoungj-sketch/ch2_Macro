@@ -248,7 +248,7 @@ export default function LandRegressionScatterSection({
         ) : (
           <>
             <strong className="text-slate-600">통제 후</strong> — 회귀 모형에 포함된 다른 변수·더미
-            영향을 제거한 뒤, 계수 β와 같은 의미의 순수 관계를 봅니다.
+            영향을 제거한 두 잔차의 관계를 봅니다. 기울기는 해당 변수의 회귀계수 β입니다. 공시지가 부분회귀도는 모형 전체의 잔차 진단과 다르며, 인과관계를 뜻하지 않습니다.
           </>
         )}
       </p>

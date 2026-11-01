@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { contentSignature } from "../../../shared/regression-ui/signature";
 import {
   fetchLongTermTrend,
   fetchMatrixCellHistogram,
@@ -37,6 +38,7 @@ import LandTraitConsentModal from "./LandTraitConsentModal";
 import MatrixCellTransactionTable from "./MatrixCellTransactionTable";
 import MatrixCellTransactionAggregate from "./MatrixCellTransactionAggregate";
 import MatrixYearlyTrendChart from "./MatrixYearlyTrendChart";
+import LandModelRecommend from "./LandModelRecommend";
 import LandRegressionResults from "./LandRegressionResults";
 import LandRegressionScatterSection from "./LandRegressionScatterSection";
 import LandPredictPanel from "./LandPredictPanel";
@@ -198,7 +200,7 @@ export default function PaidMatrixYearlyModal({
     road_condition: true,
     deal_type: true,
     partial_ownership: false,
-    year_trend: true,
+    year_trend: false,
     beopjungri_fe: false,
     assessed_land_price: false,
   });
@@ -210,6 +212,9 @@ export default function PaidMatrixYearlyModal({
   const [regResult, setRegResult] = useState<LandRegressionResponse | null>(null);
   const [regSuggestion, setRegSuggestion] = useState<LandRegressionSuggestResponse | null>(null);
   const [regBody, setRegBody] = useState<LandRegressionRequest | null>(null);
+  const [regSuggestionBody, setRegSuggestionBody] = useState<LandRegressionRequest | null>(null);
+  const regRequestGen = useRef(0);
+  const regressionResultRef = useRef<HTMLDivElement>(null);
 
   const [txExportLoading, setTxExportLoading] = useState(false);
   const [txExportError, setTxExportError] = useState<string | null>(null);
@@ -226,6 +231,8 @@ export default function PaidMatrixYearlyModal({
   const [defaultSize] = useState(defaultPaidMatrixModalSize);
 
   useEffect(() => {
+    regRequestGen.current += 1;
+    setRegLoading(false);
     if (open) {
       setPanel("trend");
       setHistScope("all");
@@ -250,26 +257,17 @@ export default function PaidMatrixYearlyModal({
     }
   }, [open, zoneType, landCategory]);
 
-  const regControlsStale = useMemo(() => {
-    if (!regResult || !regBody) return false;
-    const keys = [
-      "area_sqm",
-      "log_area",
-      "road_condition",
-      "deal_type",
-      "partial_ownership",
-      "year_trend",
-      "beopjungri_fe",
-      "assessed_land_price",
-    ] as const satisfies readonly (keyof LandRegressionVariables)[];
-    const varsSame = keys.every((key) => Boolean(regBody.variables[key]) === Boolean(regVars[key]));
-    return (
-      !varsSame ||
-      regBody.model_type !== regModelType ||
-      (regBody.categorical_missing ?? "keep_unknown") !== categoricalMissing ||
-      regBody.exclude_outliers_iqr !== regExcludeOutlier
-    );
-  }, [regResult, regBody, regVars, regModelType, categoricalMissing, regExcludeOutlier]);
+  const currentRegRequest = useMemo<LandRegressionRequest | null>(() => filterRequest ? ({
+    ...filterRequest,
+    variables: regVars,
+    model_type: regModelType,
+    categorical_missing: categoricalMissing,
+    exclude_outliers_iqr: regExcludeOutlier,
+    outlier_iqr_multiplier: 3,
+    min_n: 15,
+  }) : null, [filterRequest, regVars, regModelType, categoricalMissing, regExcludeOutlier]);
+  const regControlsStale = Boolean(regResult && regBody && contentSignature(regBody) !== contentSignature(currentRegRequest));
+  const suggestionIsCurrent = contentSignature(regSuggestionBody) === contentSignature(currentRegRequest);
 
   const sortedRows = useMemo(() => sortMatrixRows(rows), [rows]);
 
@@ -292,8 +290,9 @@ export default function PaidMatrixYearlyModal({
       zoneType,
       landCategory,
       modelType: regModelType,
+      controlsChanged: regControlsStale,
     });
-  }, [regResult, scopeNote, zoneType, landCategory, regModelType]);
+  }, [regResult, scopeNote, zoneType, landCategory, regModelType, regControlsStale]);
 
   const aiPanelContext = useMemo(() => {
     const label = scopeNote?.trim() || `${zoneType} × ${landCategory}`;
@@ -1342,60 +1341,27 @@ export default function PaidMatrixYearlyModal({
                     disabled={regLoading}
                     onClick={async () => {
                       if (!filterRequest) return;
+                      const gen = ++regRequestGen.current;
                       setRegLoading(true);
                       setRegError(null);
                       setRegResult(null);
                       setRegBody(null);
                       try {
-                        const body: LandRegressionRequest = {
-                          ...filterRequest,
-                          variables: regVars,
-                          model_type: regModelType,
-                          categorical_missing: categoricalMissing,
-                          exclude_outliers_iqr: regExcludeOutlier,
-                          outlier_iqr_multiplier: 3,
-                          min_n: 15,
-                        };
+                        const body = currentRegRequest!;
                         const res = await fetchLandRegression(body);
+                        if (gen !== regRequestGen.current) return;
                         setRegBody(body);
                         setRegResult(res);
                       } catch (e) {
+                        if (gen !== regRequestGen.current) return;
                         setRegError(parseApiError(e).message);
                       } finally {
-                        setRegLoading(false);
+                        if (gen === regRequestGen.current) setRegLoading(false);
                       }
                     }}
                     className="px-4 py-1.5 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-50"
                   >
                     {regLoading ? "계산 중…" : "회귀 실행"}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={regLoading}
-                    onClick={async () => {
-                      if (!filterRequest) return;
-                      setRegLoading(true);
-                      setRegError(null);
-                      try {
-                        const body: LandRegressionRequest = {
-                          ...filterRequest,
-                          variables: { ...regVars, assessed_land_price: false },
-                          model_type: regModelType,
-                          categorical_missing: categoricalMissing,
-                          exclude_outliers_iqr: regExcludeOutlier,
-                          outlier_iqr_multiplier: 3,
-                          min_n: 15,
-                        };
-                        setRegSuggestion(await fetchLandRegressionSuggestion(body));
-                      } catch (e) {
-                        setRegError(parseApiError(e).message);
-                      } finally {
-                        setRegLoading(false);
-                      }
-                    }}
-                    className="px-4 py-1.5 rounded border border-indigo-500 text-indigo-700 text-xs font-semibold hover:bg-indigo-50 disabled:opacity-50"
-                  >
-                    {regLoading ? "계산 중…" : "모형 추천"}
                   </button>
                 </div>
               </div>
@@ -1406,39 +1372,22 @@ export default function PaidMatrixYearlyModal({
 
               {regControlsStale && (
                 <p className="text-[10px] text-amber-700">
-                  변수 또는 척도가 바뀌었습니다. 아래 식과 시나리오는 마지막 실행입니다. 회귀를 다시 실행하면 맞춥니다.
+                  분석 조건이 바뀌었습니다. 아래 결과는 이전 조건으로 계산했습니다.
                 </p>
               )}
 
-              {regResult && <LandRegressionResults data={regResult} />}
-
-              {regSuggestion && (
-                <div className="rounded-lg border border-indigo-200 bg-indigo-50/40 p-3 space-y-2 text-xs">
-                  <div className="font-semibold text-indigo-900">
-                    토지 모형 추천 · 공통 표본 n={regSuggestion.selection_n}
-                  </div>
-                  {regSuggestion.warnings.map((w) => (
-                    <p key={w} className="text-amber-700">⚠ {w}</p>
-                  ))}
-                  <div className="space-y-1">
-                    {regSuggestion.candidates_by_aic.map((candidate) => (
-                      <div key={`aic-${candidate.rank}`} className="rounded border border-indigo-100 bg-white px-2 py-1">
-                        #{candidate.rank} · {candidate.blocks.join(" + ")} · {candidate.model_type}
-                        {" · "}AIC {candidate.aic?.toFixed(1) ?? "—"}
-                        {" · "}MAPE {candidate.mape != null ? `${candidate.mape}%` : "—"}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {regResult && <div ref={regressionResultRef} tabIndex={-1} aria-label="회귀 결과"><LandRegressionResults data={regResult} /></div>}
 
               {regResult && (
-                <LandRegressionScatterSection
+                <details className="rounded border border-slate-200 px-3 py-2 dark:border-slate-700">
+                <summary className="cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-200">변수별 산점도</summary>
+                <div className="mt-3"><LandRegressionScatterSection
                   data={regResult}
                   regionLabel={scopeNote?.trim() || `${zoneType} × ${landCategory}`}
                   zoneType={zoneType}
                   landCategory={landCategory}
-                />
+                /></div>
+                </details>
               )}
 
               {regResult && regBody && (
@@ -1446,9 +1395,69 @@ export default function PaidMatrixYearlyModal({
                   regResult={regResult}
                   regBody={regBody}
                   vars={regBody.variables}
+                  disabled={regControlsStale || regLoading}
                   regionLabel={scopeNote?.trim() || `${zoneType} × ${landCategory}`}
                 />
               )}
+              <details className="rounded border border-slate-200 px-3 py-2 dark:border-slate-700">
+                <summary className="cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-200">다른 변수 조합 비교 · 모형 추천</summary>
+                <div className="mt-3 space-y-3">
+                  <button
+                    type="button"
+                    disabled={regLoading}
+                    onClick={async () => {
+                      if (!filterRequest) return;
+                      const gen = ++regRequestGen.current;
+                      setRegLoading(true);
+                      setRegError(null);
+                      try {
+                        const body = currentRegRequest!;
+                        const suggestion = await fetchLandRegressionSuggestion(body);
+                        if (gen !== regRequestGen.current) return;
+                        setRegSuggestion(suggestion);
+                        setRegSuggestionBody(body);
+                      } catch (e) {
+                        if (gen !== regRequestGen.current) return;
+                        setRegSuggestion(null);
+                        setRegSuggestionBody(null);
+                        setRegError(parseApiError(e).message);
+                      } finally {
+                        if (gen === regRequestGen.current) setRegLoading(false);
+                      }
+                    }}
+                    className="px-4 py-1.5 rounded border border-indigo-500 text-indigo-700 text-xs font-semibold hover:bg-indigo-50 disabled:opacity-50 dark:text-indigo-300 dark:hover:bg-indigo-950/30"
+                  >
+                    {regLoading ? "계산 중…" : regSuggestion && suggestionIsCurrent ? "후보 다시 불러오기" : "후보 불러오기"}
+                  </button>
+                  {regSuggestion && suggestionIsCurrent && <LandModelRecommend data={regSuggestion} pending={regLoading}
+                    differentSample={Boolean(regResult && (regSuggestion.selection_n !== regResult.n || regSuggestion.excluded_blocks?.includes("assessed_land_price")))}
+                    onAdopt={async candidate => {
+                      if (regLoading || !currentRegRequest) return;
+                      const body: LandRegressionRequest = { ...currentRegRequest, variables: { ...candidate.variables }, model_type: candidate.model_type };
+                      const gen = ++regRequestGen.current;
+                      setRegVars(body.variables);
+                      setRegModelType(body.model_type);
+                      setRegLoading(true);
+                      setRegError(null);
+                      setRegResult(null);
+                      setRegBody(null);
+                      try {
+                        const result = await fetchLandRegression(body);
+                        if (gen !== regRequestGen.current) return;
+                        setRegBody(body);
+                        setRegResult(result);
+                        requestAnimationFrame(() => {
+                          regressionResultRef.current?.focus({ preventScroll: true });
+                          regressionResultRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+                        });
+                      } catch (e) {
+                        if (gen === regRequestGen.current) setRegError(parseApiError(e).message);
+                      } finally {
+                        if (gen === regRequestGen.current) setRegLoading(false);
+                      }
+                    }} />}
+                </div>
+              </details>
             </div>
           )}
 

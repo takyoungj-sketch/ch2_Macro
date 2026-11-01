@@ -2,7 +2,6 @@ import { useState } from "react";
 import clsx from "clsx";
 import type { LandRegressionCoeff } from "../types";
 import {
-  EQUATION_SIG_P,
   formatCoefValue,
   isEquationSignificant,
   shortDisplayLabel,
@@ -28,12 +27,12 @@ export default function LandRegressionEquation({
   const sig = sortCoefficientsByVariableOrder(others.filter((c) => isEquationSignificant(c.p)));
   const nonsig = sortCoefficientsByVariableOrder(others.filter((c) => !isEquationSignificant(c.p)));
 
-  const visible = showAll ? [...sig, ...nonsig] : sig;
+  const visible = showAll ? sortCoefficientsByVariableOrder([...sig, ...nonsig]) : sig;
   const hiddenCount = nonsig.length;
 
   return (
     <div className="space-y-1">
-      <p className="text-sm font-mono leading-relaxed break-words text-slate-800">
+      <p className="text-base font-bold leading-relaxed break-words text-amber-700 dark:text-yellow-300">
         <span>
           {dep} = {formatCoefValue(intercept.coef)}
         </span>
@@ -45,15 +44,15 @@ export default function LandRegressionEquation({
           return (
             <span
               key={c.name}
-              className={clsx(faded && "opacity-40", significant && !faded && "font-semibold")}
+              className={clsx(faded && "text-slate-600 dark:text-slate-300", significant && !faded && "font-semibold")}
             >
               {" "}
-              {sign} {mag}·{shortDisplayLabel(c.label)}
+              {sign} {mag}·({shortDisplayLabel(c.label)})
             </span>
           );
         })}
         {!showAll && hiddenCount > 0 && (
-          <span className="text-slate-400 text-xs font-sans not-italic"> · 외 {hiddenCount}개</span>
+          <span className="text-slate-500 dark:text-slate-400 text-xs font-sans not-italic"> · 외 {hiddenCount}개</span>
         )}
       </p>
 
@@ -67,10 +66,6 @@ export default function LandRegressionEquation({
         </button>
       )}
 
-      <p className="text-[10px] text-slate-400">
-        회귀식 유의 기준 p&lt;{EQUATION_SIG_P}
-        {!showAll && hiddenCount > 0 ? " · 기본은 유의 변수만" : showAll ? " · 비유의는 흐림" : ""}
-      </p>
     </div>
   );
 }
